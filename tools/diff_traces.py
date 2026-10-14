@@ -239,7 +239,7 @@ def main() -> int:
 
         left, ldups, lerr = load_frames(cache_raw, "oracle trace")
         if lerr:
-            print(f"[FAIL] {cid}: oracle trace {lerr}")
+            print(f"[FAIL] {cid}: {lerr}")
             failed += 1
             continue
         if ldups:
@@ -277,7 +277,7 @@ def main() -> int:
 
         right, rdups, rerr = load_frames(dump.read_bytes(), "game-core dump")
         if rerr:
-            print(f"[FAIL] {cid}: game-core dump {rerr}")
+            print(f"[FAIL] {cid}: {rerr}")
             failed += 1
             continue
         if rdups:
