@@ -1,0 +1,39 @@
+# oracle/subroutines/ —— L2 子程序级差分用例
+
+**期望 = ROM 执行结果，实际 = game-core 同名函数**；三方全等才算绿：
+`case.out（golden，手推自 A 级反汇编语义） == 6502 核执行 ROM 原字节 == game-core::l2ports`。
+
+运行：
+
+```bash
+python3 tools/diff_subroutines.py        # subroutine-diff 门禁入口（薄封装）
+cargo test --workspace                   # 同一差分引擎单元测试（rust-tests 门禁内）
+```
+
+## case 格式（JSONL，一行一条）
+
+```json
+{"id":"…","subroutine":"…","entry":"bankNN:AAAA","stops":["bankNN:AAAA",…],
+ "in":{"regs":{"a":N,"x":N,"y":N,"p":N},"ram":{"hexaddr":byte}},
+ "out":{"regs":{"a":N,"x":N,"y":N},"writes":{"hexaddr":byte}}}
+```
+
+- `entry`/`stops` 为 `bankNN:AAAA`（CPU 地址 + bank 标签）。Metroid MMC1 布局：
+  bank0-6 → `$8000` 可切窗口（case 的 window_bank），bank7 → `$C000` 固定（rounds/r1 向量证据）。
+- `stops` 非空 ⇒ 执行到命中其一；为空 ⇒ 预压哨兵返回地址跑到 RTS（调用约定）。
+- `in.ram` 地址归一至 `$0000-$07FF`；`out.writes` 同（写集只记 RAM）。
+- **机械栈流量（JSR/PHA/哨兵压栈）不入写集**；栈页里的游戏变量（显式 STA $01xx）照常记录。
+- 差分面 = regs{a,x,y} + 写集；P 为执行副产物不入比对面（输入 P 影响分支，仍进 `in`）。
+- 有 PPU/APU/MMC1 寄存器副作用的例程不设 L2 用例（降级 L3，pipeline R3）。
+
+## 用例登记（先写用例再实现——TDD RED→GREEN）
+
+| id | subroutine | 语义来源（A 级） | 覆盖 |
+|---|---|---|---|
+| l2-c16d-set-ptr-lo-hi | sub_C16D | reference/seed bank07:C16D-C174：`LDA #1/STA $01/LDA #$FF/STA $00` | zp 写序、立即数 |
+| l2-c376-absx-zero-store | sub_C376 | bank07:C376-C37A：`LDA #0/STA $07A1,X`（stops 截断 PLA 尾部） | abs,X 变址 |
+| l2-c376-absx-x0 | sub_C376 | 同上，X=0 边界 | 变址边界 |
+
+新增用例规则：golden 必须手推自 seed 指令语义（A 级，注明行范围）；game-core 侧实现
+（`crates/game-core/src/l2ports.rs`）与用例同 commit 落地——**未实现例程不得入用例文件**
+（缺口走完备性矩阵 L0 + `unported!` 桩，不以红灯形式挂在门禁里）。

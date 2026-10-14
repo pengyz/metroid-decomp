@@ -1,0 +1,3 @@
+{"id": "l2-c16d-set-ptr-lo-hi", "subroutine": "sub_C16D", "entry": "bank07:C16D", "stops": ["bank07:C175"], "in": {"regs": {"a": 3, "x": 5, "y": 7}, "ram": {}}, "out": {"regs": {"a": 255, "x": 5, "y": 7}, "writes": {"00": 255, "01": 1}}}
+{"id": "l2-c376-absx-zero-store", "subroutine": "sub_C376", "entry": "bank07:C376", "stops": ["bank07:C37B"], "in": {"regs": {"a": 9, "x": 2, "y": 0}, "ram": {}}, "out": {"regs": {"a": 0, "x": 2, "y": 0}, "writes": {"7A3": 0}}}
+{"id": "l2-c376-absx-x0", "subroutine": "sub_C376", "entry": "bank07:C376", "stops": ["bank07:C37B"], "in": {"regs": {"a": 1, "x": 0, "y": 255}, "ram": {}}, "out": {"regs": {"a": 0, "x": 0, "y": 255}, "writes": {"7A1": 0}}}

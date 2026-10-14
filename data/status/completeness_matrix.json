@@ -18,7 +18,8 @@
       "denominator": 1
     },
     "symbol": {
-      "denominator": 450
+      "denominator": 450,
+      "covered": 2
     },
     "data": {
       "denominator": 193
@@ -1859,10 +1860,10 @@
       "id": "S-FUNC-07-C16D",
       "face": "symbol",
       "module": "engine",
-      "strength": "L0",
-      "covered": false,
-      "evidence": "bank07:C16D-C175（IDA 机械切分 size=8）",
-      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+      "strength": "L2",
+      "covered": true,
+      "evidence": "oracle/subroutines/l2_cases.jsonl#l2-c16d-set-ptr-lo-hi 三方全等 PASS（golden==ROM 执行==game-core）；语义来源 reference/seed bank07:C16D-C174",
+      "note": "L2 已验证（subroutine-diff 2026-10-14）"
     },
     "S-FUNC-07-C175": {
       "id": "S-FUNC-07-C175",
@@ -2048,10 +2049,10 @@
       "id": "S-FUNC-07-C376",
       "face": "symbol",
       "module": "engine",
-      "strength": "L0",
-      "covered": false,
-      "evidence": "bank07:C376-C37E（IDA 机械切分 size=8）",
-      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+      "strength": "L2",
+      "covered": true,
+      "evidence": "oracle/subroutines/l2_cases.jsonl#l2-c376-absx-zero-store 三方全等 PASS（golden==ROM 执行==game-core）；语义来源 reference/seed bank07:C376-C37A",
+      "note": "L2 已验证（subroutine-diff 2026-10-14）"
     },
     "S-FUNC-07-C3C6": {
       "id": "S-FUNC-07-C3C6",
