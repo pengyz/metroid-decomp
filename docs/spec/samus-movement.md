@@ -73,6 +73,15 @@ SAMUS_JUMP_DISPLACEMENT 为自跳跃起点的垂直像素位移（补码），�
 | bank07:$D0B5 SetSamusRoll | 滚球态置位（线索） | A（址）/C（语义） | 待 seed 复核 |
 | bank07:$E2FD-$E43E | 亚像素/速度积分写址区间 | A（址） | seed 105317-105458 |
 
+### 2.1 batch-1 靶点链（E37A 头部，2026-10-14 定尺寸）
+
+S-FUNC-07-E37A 头部（E37A-E3A4，accel/maxspeed 初始化）移植前置依赖：
+- `sub_E7AD`（E7AD-…：$301,X 取负 + sub_E8BE）及其子链；
+- `sub_D976`（D976-D9B9：$307/$7D 清零 + 敌槽扫描循环，调 F1xx 族 F186/F152/F1BF/F1FA/F1F4
+  + sub_D9BA + sub_DC82）——**深调用图，非 L2 可切片**，需独立 decomp-analyst 考证单元；
+- 语义线索（C 级，仅定位）：constants_ram 注释「EnemyReactToSamusProjectile/ExplodeEnemy…」。
+结论：头部移植=batch-1 的 F1xx 族考证先行（S 面格随矩阵聚类），完成后 E37A 整格计 covered。
+
 ## 3. 缺口显式声明（D7）
 
 - 未覆盖：跳跃弧线数值（初速/重力表）、滚球物理、碰撞/推墙、门/房间切换 X 重置语义、
