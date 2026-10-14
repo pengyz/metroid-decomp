@@ -4,6 +4,7 @@
 //! 三方全等裁定：case.out(golden) == 6502 核执行 ROM 原字节 == 本 crate 同名函数。
 
 pub mod gap;
+pub mod integrators;
 pub mod ram_map;
 pub mod l2ports;
 

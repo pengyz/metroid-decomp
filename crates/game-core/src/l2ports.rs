@@ -28,11 +28,34 @@ pub fn sub_c376(input: &L2In) -> L2Out {
     }
 }
 
+/// int_y_E3A5 —— bank07:E3A5-E3E4 垂直积分切片（证明级等价，见 integrators）。
+pub fn int_y_e3a5(input: &L2In) -> L2Out {
+    let mut st = crate::integrators::IntYState {
+        speed_i: input.ram[0x308 & 0x7FF],
+        speed_f: input.ram[0x312 & 0x7FF],
+        subpix: input.ram[0x310 & 0x7FF],
+    };
+    let accel = input.ram[0x314 & 0x7FF];
+    let out = crate::integrators::int_y(&mut st, accel);
+    L2Out {
+        a: out.disp,
+        x: out.reg_x,
+        y: if out.reg_y == 0xFF { input.y } else { out.reg_y },
+        writes: vec![
+            (0x0312, st.speed_f),
+            (0x0308, st.speed_i),
+            (0x0310, st.subpix),
+            (0x0000, out.disp),
+        ],
+    }
+}
+
 /// 按 L2 用例名查移植函数（l2-diff 裁定器用）。
 pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
     match name {
         "sub_C16D" => Some(sub_c16d),
         "sub_C376" => Some(sub_c376),
+        "int_y_E3A5" => Some(int_y_e3a5),
         _ => None,
     }
 }
