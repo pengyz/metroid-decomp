@@ -73,9 +73,9 @@
 
 全部 18 条知识条目自 gunnac_remake 迁入，其证据链发生在 **gunnac 项目语境**。实测
 **16/18 条含路径级悬空指针**（指向 gunnac 仓内历史路径，本仓不存在）+ 1 条内容级悬空。
-下表逐行由扫描命令生成（勿手写）：
+下表逐行由扫描器生成/复核（勿手写；R2 教训：brace 写法曾逃逸简易正则）：
 
-`python3 - <<'EOF' 对 docs/knowledge/*.md 提取 (docs|oracle|data|gates|tools|reference|crates|prompts)/… 路径并测本仓存在性 EOF`
+`python3 tools/kb_pointer_scan.py`（brace 展开版；`--json` 出机器可读）
 
 | 条目 | 本仓悬空指针（实测） |
 |---|---|
@@ -102,6 +102,7 @@
 条目内注明新证据；不允许把 gunnac 的游戏特定证据（如 shop-economy、gameplay-stage1）当作
 本项目结论引用。
 
-**扫描口径外指针（同样一律回 gunnac 核对）**：commit hash（实测 10 个，如 `50d0ce2`，本仓
-`git cat-file -e` 全部 NOT-IN-REPO）、任务号 `tXX`、`.archive/` 快照路径——路径扫描不覆盖
-此类引用，但效力相同：**本仓不可复现**。
+**扫描口径外指针（同样一律回 gunnac 核对）**：commit hash（实测 **9 个 commit**：`50d0ce2`
+`54f2809` `5fc2533` `94fd3c5` `9d7fe3f` `aa04ecf` `b863f9f` `c314e10` `caed518`，本仓
+`git cat-file -e` 全部 NOT-IN-REPO；另 1 个 attempt id `0938861c` 非 commit）、任务号 `tXX`、
+`.archive/` 快照路径——路径扫描不覆盖此类引用，但效力相同：**本仓不可复现**。

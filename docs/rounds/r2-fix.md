@@ -30,7 +30,18 @@
   类口径外指针未枚举（扫描正则不含 `{` 的教训）
 - **R3** `coverage_from_trace.py` docstring 与 N4 行为不一致（`execute-callback-verified`
   旧层级残留）
+  > 【2026-10-14 更正·V1】commit `5fbcce9` 的 subject/Evidence 声称「关键词全文归零 / grep 0 命中」
+  > ——**口径过宽，被证伪**：本文件 R3 归档定义行按定义必须保留历史 ID 字样（`execute-callback-verified`，
+  > 出现即定义），裸 grep 必命中。精确口径：**在用引用（tools/、data/、活跃文档）0 命中**；
+  > 归档定义行与 commit 历史保留原字样属预期（历史不改，正文更正）。
+  > 同口径更正：「commit hash×10」= **9 个 commit hash + 1 个 attempt id**（`0938861c`）。
 - **R4**（本文件）：N/R 系列 ID 无仓库定义 → 归档定义
+
+### V 系列（四轮复审·声明层整改）
+- **V1** 声明口径收窄：「全文归零」全称断言被归档行证伪 → 精确口径「在用引用 0 命中」；
+  hash 计数口径更正（9 commit + 1 attempt id）
+- **V2** README「内附复现」草图 → 真扫描器 `tools/kb_pointer_scan.py`（brace 展开，
+  R2 教训的根治）；grep 核验口径限定源文本（`tools/__pycache__` 缓存已清）
 
 ## 三轮收敛轨迹
 
@@ -38,7 +49,8 @@
 |---|---|---|
 | 二轮 | needs_revision | 4 项（声明重写/措辞收窄/锚点/数字） |
 | 三轮 | needs_revision | 3 处一行级（R1/R2/R3）+ R4 归档 |
-| 四轮 | （闭环复核中） | 仅验 R1–R4 |
+| 四轮 | needs_revision（仅声明层） | 实体 R1/R2/R4 全过；「全文归零」全称断言被归档行证伪 → V1/V2 口径整改 |
+| 五轮 | （闭环复核中） | 仅验 V1/V2 |
 
 ## 复审确认的「诚实残余」（pass 后无需整改，长期持有）
 
