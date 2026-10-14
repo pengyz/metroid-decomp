@@ -3,7 +3,7 @@
   "project": "metroid-decomp",
   "metrics": {
     "rom_files_verified": 1,
-    "seed_projection_files": 0,
+    "seed_projection_files": 1,
     "naming_ledger_entries": 0,
     "assets_manifest_entries": 0,
     "knowledge_entries": 18,
@@ -11,10 +11,16 @@
     "completeness_cells": 0
   },
   "assets": {},
-  "seed": {},
+  "seed": {
+    "reference/seed/metroid.asm": {
+      "sha256": "b4f0c5e43ac85b6b8d9cd0440ababd99d32e268ea297046f3e9552292e533383",
+      "lines": 110548
+    }
+  },
   "tolerated": [],
   "established": {
     "rom-integrity": true,
-    "knowledge-format": true
+    "knowledge-format": true,
+    "seed-integrity": true
   }
 }
