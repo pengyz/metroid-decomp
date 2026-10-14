@@ -50,7 +50,7 @@ PRG 128KB（8×16KB bank）+ CHR-RAM 8KB）重制：**以社区匹配反汇编�
 | `rom/` | 原始 ROM 只读归档（唯一资产真相源） | **任何字节修改 = 严重违规**；`gates/cli.py rom` 校验 sha256 |
 | `reference/seed/` | 冻结投影：规范化 6502 反汇编 listing | 不可变基准，重生成需 commit 说明 |
 | `reference/src/` | 命名/注释后的参考汇编轨道（可汇编、可比对） | 只允许语义等价的改名/注释/拆分；行为变化必须差分证据不变 |
-| `refs/` | 社区参考源码（m1disasm / MetroidMMC3 / nmikstas），只读 | **只作线索**；命名不直接采信（D5），不修改、不入 git（可重建） |
+| `refs/` | 社区参考源码（m1disasm / MetroidMMC3 / nmikstas），**git submodule 钉死**（= 等价性验证所用版本，证据锚点机械化） | **只作线索**（D5 命名不背书的纪律不变）；版本 bump 须单独 commit 并注明证据影响；只读不修改 |
 | `oracle/` | Mesen2 自动化宿主：Lua harness、输入回放、trace/RAM dump、截图 | 比对逻辑不得为"通过测试"放宽阈值 |
 | `analysis/` | 可再生工作区（IDA idb、Ghidra project、trace 导出） | 不入库；由 `rom/` + 工具可复现 |
 | `docs/spec/` | 规格书（S4 产物） | 每条结论必须带证据指针（汇编地址/字节偏移/trace id） |

@@ -1,0 +1,9 @@
+[submodule "refs/m1disasm"]
+	path = refs/m1disasm
+	url = https://github.com/metroidret/m1disasm.git
+[submodule "refs/MetroidMMC3"]
+	path = refs/MetroidMMC3
+	url = https://github.com/ZaneDubya/MetroidMMC3.git
+[submodule "refs/nmikstas-metroid-disassembly"]
+	path = refs/nmikstas-metroid-disassembly
+	url = https://github.com/nmikstas/metroid-disassembly.git

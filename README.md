@@ -27,7 +27,8 @@
 | `reference/seed/` | **冻结投影**：规范化 6502 反汇编（110,548 行，sha 锚定） | ✅ |
 | `oracle/scenarios/` | 场景 DSL（对拍语料） | ✅ |
 | `rom/` | 原版 ROM（只读归档） | ❌ 只入 README |
-| `refs/` `analysis/` `shots/` `tools/mesen2/` `tools/wla-dx-src/` | 社区参考源码 / 可再生工作区 / 截图 / 模拟器与汇编器二进制 | ❌ 可重建 |
+| `refs/` | 社区参考源码（**git submodule 钉死**等价性验证版，内容不入 git 对象） | ✅ gitlink |
+| `analysis/` `shots/` `tools/mesen2/` `tools/wla-dx-src/` | 可再生工作区 / 截图 / 模拟器与汇编器二进制 | ❌ 可重建 |
 
 ## 工具获取途径（全部可重建，故不入库）
 
@@ -52,6 +53,8 @@
 ## 快速开始
 
 ```bash
+# 克隆（含社区参考 submodule）：git clone --recursive <repo>
+
 # 0) 门禁预检（SKIP/TOLERATED 显式打印）
 python3 gates/cli.py status
 
