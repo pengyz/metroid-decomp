@@ -1,6 +1,11 @@
 # findings：$6AF4-$6BF3 区域的硬件矛盾（阻断 F152/F1BF 移植）
 
-> 状态：**矛盾未决**（2026-10-15）——C 级假设区，禁止据此移植/命名（AGENTS §3.5）。
+> 状态：**已定谳**（2026-10-15 当日二次考证）——$6000-$6Cxx = **WRAM 暂存区**。
+> 判据：①写址实存（bank01:81B4 `STA $6AFE,X`/82AB `STA $6B01,X` 等 7 处）②m1disasm 布局
+> 「ItemHistory …saved game data (not used)」+「16 slots of 16 bytes ($6AF4-$6BF3)」
+> ③实机证据：游戏内敌人正常运行（samus-move3 f1150 截图）——若 $6AFx 为 open bus 敌槽
+> 不可能工作。结论：卡带带 WRAM（作暂存，无电池存档功能——battery 位=0 与「(not used)」
+> 自洽：WRAM≠battery save）。
 
 ## 矛盾（A 级观测三则）
 
@@ -24,3 +29,11 @@
 
 F152/F1BF/F1FA 等读表件**移植冻结**，直至本矛盾定谳（走 hexdump → 实机 trace →
 mapper 考证三步）；F1xx 族其余微切片（F1F4/F1EE/F1E0，纯 RAM）不受影响已移植。
+
+
+## 定谳后处置（替代原「移植冻结」）
+
+- L2 引擎补 **$6000-$7FFF WRAM 映射**（8KB 缓冲；L2In 扩 wram 域；写集契约：$6AFx 侧写
+  记完整地址，2KB 镜像归一仅适用 $0000-$07FF）；
+- F152/F1BF 读表件**解冻**（待 WRAM 域落引擎后移植）；
+- 残留待考（低）：卡带板型精确名称/WRAM 实际尺寸上界（现按 8KB 保守建模）。

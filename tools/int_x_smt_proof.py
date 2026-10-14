@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""int_x 的 SMT miter 等价证明（2^40 域）+ 公式↔Rust 桥接采样。
+"""int_x 的 SMT miter 等价证明（2^40 域）+ 公式↔Rust 桥接采样（2^16 随机 + 边界族）。
 
 三层口径中的「模型内证明」：
   Side A = bank07:E3E5-E448 + sub_C2C5/C2BF/E449 的**指令语义逐条展开**（BV8 公式，
           与 seed 指令清单一一对应——本文件内注释带指令地址）
   Side B = game_core::integrators::int_x 的语义公式化
   断言「存在输入使任一输出不同」⇒ check() == unsat ⇒ 证明（公式层）。
-残余假设（显式声明）：Side B 公式 ↔ 真实 Rust 代码的同一性经 2^20 随机点桥接采样
+残余假设（显式声明）：Side B 公式 ↔ 真实 Rust 代码的同一性经 2^16 随机点 + 边界族桥接采样
 （int-x-bridge bin），非证明——与 int_y 的「解释器语义假设」同类，入账。
 """
 import random
@@ -113,7 +113,7 @@ def prove():
     print("求解结果未知:", r)
     return False
 
-def bridge(n=1 << 16):
+def bridge(n=1 << 16):  # 2^16 随机 + 1440 边界点 = 66976（2^20 系旧夸大，已更正）
     """公式↔Rust 桥接采样（残余假设量化）：2^20 随机点 + 边界点。"""
     rng = random.Random(0x9E3779B9)
     pts = []

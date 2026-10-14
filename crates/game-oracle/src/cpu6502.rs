@@ -23,6 +23,8 @@ pub struct Cpu {
     pub pc: u16,
     ram: Vec<u8>,
     prg: Vec<u8>,
+    /// $6000-$7FFF WRAM 8KB（敌槽/暂存区；实机证据见 findings/ram-region-6af4-contradiction.md）
+    wram: Vec<u8>,
     window_bank: usize,
     writes: Vec<(u16, u8)>,
 }
@@ -41,6 +43,7 @@ impl Cpu {
             pc: 0,
             ram: input.ram.clone(),
             prg: prg.to_vec(),
+            wram: { let mut w = input.wram.clone(); w.resize(0x2000, 0); w },
             window_bank,
             writes: Vec::new(),
         }
@@ -53,6 +56,7 @@ impl Cpu {
     fn read(&self, addr: u16) -> u8 {
         match addr {
             0x0000..=0x1FFF => self.ram[(addr as usize) & 0x7FF],
+            0x6000..=0x7FFF => self.wram[addr as usize - 0x6000],
             0x8000..=0xBFFF => self.prg[self.window_bank * 0x4000 + (addr as usize - 0x8000)],
             0xC000..=0xFFFF => self.prg[0x1C000 + (addr as usize - 0xC000)],
             _ => 0, // PPU/APU/IO/未映射 stub
@@ -64,6 +68,10 @@ impl Cpu {
             let norm = (addr as usize) & 0x7FF;
             self.ram[norm] = val;
             self.writes.push((norm as u16, val));
+        } else if (0x6000..0x8000).contains(&addr) {
+            // WRAM 写：记完整地址（$6AFx 域；2KB 镜像归一仅适用 $0000-$07FF）
+            self.wram[addr as usize - 0x6000] = val;
+            self.writes.push((addr, val));
         }
         // PPU/APU/mapper 寄存器写：L2 面忽略（有副作用的例程走 L3，pipeline R3）
     }

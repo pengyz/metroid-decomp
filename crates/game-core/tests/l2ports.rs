@@ -57,3 +57,17 @@ fn micro_slices_semantics() {
     let r = l2ports::sub_f1e0(&inp2);
     assert_eq!((r.a, r.writes), (0x32, vec![(0x0004, 0x32)])); // A+RAM[$301+Y] → $04
 }
+
+#[test]
+fn f152_wram_and_eor_zp_semantics() {
+    let mut inp = input(0, 50, 0);
+    inp.wram = vec![0; 0x2000];
+    inp.wram[0x6AFB + 50 - 0x6000] = 0b101; // wram[$6B2D] bit0=1
+    inp.ram[0x00FF] = 0b000;                 // EOR 零页 $FF = 0
+    let r = l2ports::sub_f152(&inp);
+    assert_eq!(r.a, 1); // (5 ^ 0) & 1 = 1
+    inp.ram[0x00FF] = 0b001; // 零页 $FF = 1 ⇒ 翻转 bit0
+    let r = l2ports::sub_f152(&inp);
+    assert_eq!(r.a, 0); // (5 ^ 1) & 1 = 0 —— EOR zp 语义锁定
+    assert_eq!(r.writes[2], (0x000B, r.a));
+}

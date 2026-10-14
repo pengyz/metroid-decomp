@@ -120,14 +120,23 @@ fn main() -> ExitCode {
             }
             let mut rng = Lcg::new(seed.wrapping_add(n as u64));
             let mut ram = vec![0u8; 0x800];
+            let mut wram = vec![0u8; 0x2000];
             for addr_s in &spec.ram_addrs {
                 let addr = u16::from_str_radix(addr_s, 16).map_err(|e| format!("{e}"));
                 match addr {
-                    Ok(a) => ram[(a as usize) & 0x7FF] = rng.next_u8(),
+                    Ok(a) => {
+                        let v = rng.next_u8();
+                        if (0x6000..0x8000).contains(&a) {
+                            wram[a as usize - 0x6000] = v; // $6AFx 敌槽/暂存域
+                        } else {
+                            ram[(a as usize) & 0x7FF] = v;
+                        }
+                    }
                     Err(e) => { eprintln!("ram_addrs 错误: {}", e); return ExitCode::from(2); }
                 }
             }
             let input = L2In {
+                wram,
                 a: rng.next_u8(),
                 x: rng.next_u8(),
                 y: rng.next_u8(),
@@ -157,7 +166,12 @@ fn main() -> ExitCode {
                 .iter()
                 .filter_map(|a| {
                     let addr = u16::from_str_radix(a, 16).ok()?;
-                    Some(format!("\"{a}\":{}", input.ram[(addr as usize) & 0x7FF]))
+                    let v = if (0x6000..0x8000).contains(&addr) {
+                        input.wram.get(addr as usize - 0x6000).copied().unwrap_or(0)
+                    } else {
+                        input.ram[(addr as usize) & 0x7FF]
+                    };
+                    Some(format!("\"{a}\":{}", v))
                 })
                 .collect();
             out_lines.push(format!(

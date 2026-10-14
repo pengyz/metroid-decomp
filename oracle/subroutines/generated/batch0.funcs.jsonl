@@ -5,3 +5,4 @@
 {"id": "gen-f1f4", "subroutine": "sub_F1F4", "entry": "bank07:F1F4", "stops": ["bank07:F1F9"], "samples": 8, "ram_addrs": []}
 {"id": "gen-f1ee", "subroutine": "sub_F1EE", "entry": "bank07:F1EE", "stops": ["bank07:F1F3"], "samples": 8, "ram_addrs": []}
 {"id": "gen-f1e0", "subroutine": "sub_F1E0", "entry": "bank07:F1E0", "stops": ["bank07:F1E6"], "samples": 8, "ram_addrs": ["0301", "0350", "0400"]}
+{"id": "gen-f152", "subroutine": "sub_F152", "entry": "bank07:F152", "stops": ["bank07:F185"], "samples": 8, "ram_addrs": ["0400", "0401", "6AFB", "6B4B"]}

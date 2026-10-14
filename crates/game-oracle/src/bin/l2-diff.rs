@@ -136,11 +136,17 @@ fn run_case(prg: &[u8], case: &Case) -> Result<(), String> {
         stops.push(parse_cpu_addr(s)?);
     }
     let mut ram = vec![0u8; 0x800];
+    let mut wram = vec![0u8; 0x2000];
     for (k, v) in &case.input.ram {
         let addr = u16::from_str_radix(k, 16).map_err(|e| format!("{e}"))? as usize;
-        ram[addr & 0x7FF] = *v;
+        if (0x6000..0x8000).contains(&addr) {
+            wram[addr - 0x6000] = *v; // $6AFx 敌槽/暂存域
+        } else {
+            ram[addr & 0x7FF] = *v;
+        }
     }
     let input = L2In {
+        wram,
         a: *case.input.regs.get("a").unwrap_or(&0),
         x: *case.input.regs.get("x").unwrap_or(&0),
         y: *case.input.regs.get("y").unwrap_or(&0),
