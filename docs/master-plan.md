@@ -1,7 +1,7 @@
 # master-plan — Metroid（NES/6502）Rust 重制总规划
 
 > 纪律以 [AGENTS.md](../AGENTS.md) 为准；管线以 [ai-decompile-pipeline.md](ai-decompile-pipeline.md) 为准。
-> 本文只排阶段与优先级，随进度滚动更新。
+> **长线目标与收敛回路以 [north-star.md](north-star.md) 为准**（稳定定义）；本文只排阶段与优先级，随进度滚动更新。
 
 ## 阶段状态（2026-10-14）
 
