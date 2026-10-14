@@ -23,6 +23,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import re
 import subprocess
 import sys
@@ -109,6 +110,17 @@ def sha256_file(path: Path) -> str:
     return h.hexdigest()
 
 
+def sha256_text_file(path: Path) -> str:
+    """文本锚点哈希：LF 归一化字节面（\\r\\n→\\n）的 sha256（Windows 适配，2026-10-14）。
+
+    锚点历史值按 LF 字节面计算（写侧 payload 以 "\\n" 拼接）；core.autocrlf=true 的检出
+    与文本模式写盘会把工作文件变成 CRLF——按原始字节判"sha 不符/被手工改动"是平台假阳性
+    （LF 归一后逐一吻合即证非篡改）。
+    语义边界：换行符差异不算内容改动；内容篡改照常检出。**二进制锚点（rom/、资产）禁用本
+    函数**——rom/ 任何字节改动=严重违规，必须原始字节判定。"""
+    return hashlib.sha256(path.read_bytes().replace(b"\r\n", b"\n")).hexdigest()
+
+
 def parse_sha256sums(path: Path) -> dict[str, str]:
     """解析 sha256sum 格式：`<hex>  <path>`（兼容单空格与 `*` 二进制标记）。"""
     entries: dict[str, str] = {}
@@ -168,6 +180,8 @@ def git_staged_files() -> list[str]:
         cwd=ROOT,
         capture_output=True,
         text=True,
+        encoding="utf-8",
+        errors="replace",
     )
     if proc.returncode != 0:
         raise RuntimeError(f"git diff --cached 失败（fail-closed）: {proc.stderr.strip()}")
@@ -245,7 +259,7 @@ def sync_state_anchors() -> None:
     for relpath in STATE_ANCHOR_FILES:
         p = ROOT / relpath
         if p.is_file():
-            wanted[relpath] = sha256_file(p)
+            wanted[relpath] = sha256_text_file(p)
     out: list[str] = []
     seen: set[str] = set()
     for ln in lines:
@@ -259,7 +273,7 @@ def sync_state_anchors() -> None:
     for relpath in STATE_ANCHOR_FILES:
         if relpath in wanted and relpath not in seen:
             out.append(f"{wanted[relpath]}  {relpath}")
-    anchor.write_text("\n".join(out) + "\n", encoding="utf-8")
+    anchor.write_text("\n".join(out) + "\n", encoding="utf-8", newline="\n")
 
 
 def save_baseline(data: dict) -> str:
@@ -267,7 +281,8 @@ def save_baseline(data: dict) -> str:
     validate_baseline(data)
     BASELINE_DIR.mkdir(parents=True, exist_ok=True)
     payload = baseline_payload(data)
-    BASELINE_PATH.write_text(payload, encoding="utf-8")
+    # newline="\n"：锚点按 LF 字节面登记，禁 Windows CRLF 翻译污染工作文件
+    BASELINE_PATH.write_text(payload, encoding="utf-8", newline="\n")
     digest = hashlib.sha256(payload.encode("utf-8")).hexdigest()
     sync_state_anchors()
     return digest
@@ -275,7 +290,7 @@ def save_baseline(data: dict) -> str:
 
 def append_history(record: dict) -> None:
     BASELINE_DIR.mkdir(parents=True, exist_ok=True)
-    with open(HISTORY_PATH, "a", encoding="utf-8") as f:
+    with open(HISTORY_PATH, "a", encoding="utf-8", newline="\n") as f:
         f.write(json.dumps(record, ensure_ascii=False) + "\n")
     sync_state_anchors()
 
@@ -339,7 +354,7 @@ def verify_baseline_integrity(baseline: dict, records: list[dict] | None = None,
     0b. 任一 metric 无历史下界可依 ⇒ 同上（只留 genesis 记录的删改同样被拒）；
     1. 历史记录自身回退（new < old）；
     2. metric 现值低于历史下界 ⇒『基线被手工调低』；
-    3. 最新历史记录的 baseline_sha256 与当前 baseline.json 字节 sha 不符 ⇒ sha 链断链。
+    3. 最新历史记录的 baseline_sha256 与当前 baseline.json sha（LF 归一）不符 ⇒ sha 链断链。
     """
     problems: list[str] = []
     if records is None:
@@ -366,7 +381,7 @@ def verify_baseline_integrity(baseline: dict, records: list[dict] | None = None,
     chain = [r for r in records if r.get("baseline_sha256")]
     if chain:
         want = chain[-1]["baseline_sha256"]
-        got = sha256_file(baseline_path or BASELINE_PATH)
+        got = sha256_text_file(baseline_path or BASELINE_PATH)
         if want != got:
             problems.append(
                 f"baseline.json 被手工改动（与历史 sha 链不符）：历史 {want[:12]}… 实际 {got[:12]}…"
@@ -534,7 +549,8 @@ def gate_rom_integrity() -> tuple[str, str]:
         if not p.is_file():
             problems.append(f"{rpath}: 文件缺失")
             continue
-        got = sha256_file(p)
+        # 状态文件=文本锚点（LF 归一判定）；rom/ 及其他=二进制（原始字节判定）
+        got = sha256_text_file(p) if rpath in STATE_ANCHOR_FILES else sha256_file(p)
         if got != want:
             extra = "【rom/ 任何字节改动=严重违规】" if rpath.startswith("rom/") else "【基线文件被手工改动】"
             problems.append(f"{rpath}: sha256 不符（锚点 {want[:12]}… 实际 {got[:12]}…）{extra}")
@@ -560,7 +576,7 @@ def gate_seed_integrity() -> tuple[str, str]:
         if p is None:
             problems.append(f"{rpath}: 基线登记的投影文件缺失")
             continue
-        got = sha256_file(p)
+        got = sha256_text_file(p)
         if meta.get("sha256") != got:
             problems.append(f"{rpath}: sha256 与冻结基准不符")
         if meta.get("lines") != sum(1 for _ in open(p, encoding="utf-8", errors="replace")):
@@ -698,9 +714,12 @@ def gate_rust_tests() -> tuple[str, str]:
         cwd=ROOT,
         capture_output=True,
         text=True,
+        encoding="utf-8",
+        errors="replace",
+        env=_child_env(),
     )
     if proc.returncode != 0:
-        tail = (proc.stdout + proc.stderr).strip().splitlines()[-5:]
+        tail = ((proc.stdout or "") + (proc.stderr or "")).strip().splitlines()[-5:]
         return FAIL, "cargo test --workspace 失败: " + " | ".join(tail)
     baseline = load_baseline()
     measured = current_metrics(baseline)["rust_test_count"]
@@ -708,6 +727,12 @@ def gate_rust_tests() -> tuple[str, str]:
     if measured < floor:
         return FAIL, f"测试数 ratchet 违规：现值 {measured} < 基线 {floor}"
     return PASS, f"cargo test --workspace 通过；测试数 {measured}（基线 {floor}）"
+
+
+def _child_env() -> dict:
+    """子进程固定 UTF-8 输出（Windows 适配：缺省 locale=GBK 时子进程中文/UTF-8 字节
+    与父侧解码不匹配——轻则乱码，重则 reader 线程炸掉把 stdout 变 None 掩盖真因）。"""
+    return dict(os.environ, PYTHONUTF8="1")
 
 
 def _gate_runner_dispatch(runner_name: str, prereq: Path, label: str) -> tuple[str, str]:
@@ -720,12 +745,13 @@ def _gate_runner_dispatch(runner_name: str, prereq: Path, label: str) -> tuple[s
         if not runner.is_file():
             missing.append(f"tools/{runner_name} 未建立")
         return SKIP, f"{label}：{'；'.join(missing)}（启用前置齐备后自动启用，显式 SKIP）"
-    proc = subprocess.run([sys.executable, str(runner)], cwd=ROOT, capture_output=True, text=True)
+    proc = subprocess.run([sys.executable, str(runner)], cwd=ROOT, capture_output=True, text=True,
+                          encoding="utf-8", errors="replace", env=_child_env())
     if proc.returncode != 0:
-        tail = (proc.stdout + proc.stderr).strip().splitlines()[-5:]
+        tail = ((proc.stdout or "") + (proc.stderr or "")).strip().splitlines()[-5:]
         return FAIL, f"{label} 差分不一致: " + " | ".join(tail)
     # G5 复审 F6：runner 摘要（腿状态等）回显进门禁 detail——工具层显式，门禁层不许静默吞
-    outs = [l for l in proc.stdout.strip().splitlines() if l.strip()]
+    outs = [l for l in (proc.stdout or "").strip().splitlines() if l.strip()]
     echo = ("；runner: " + " | ".join(l[:110] for l in outs[-2:])) if outs else ""
     return PASS, f"{label} 全绿（tools/{runner_name}）{echo}"
 
@@ -1101,7 +1127,7 @@ def cmd_selftest(_args) -> int:
         records = [{
             "ts": "t", "kind": "metric", "metric": "rust_test_count", "old": 0, "new": 5,
             "reason": "初始化", "metrics": dict(base["metrics"]),
-            "baseline_sha256": sha256_file(bpath),
+            "baseline_sha256": sha256_text_file(bpath),
         }]
         probs = verify_baseline_integrity(base, records, bpath)
         check("完整性校验通过（未污染且快照覆盖全指标）", probs == [], f"problems={probs}")
@@ -1141,7 +1167,7 @@ def cmd_selftest(_args) -> int:
             check("history_records 缺失前置校验", "历史缺失" in str(exc), str(exc))
         partial = [{                       # 只留单条记录 ≠ 下界锚：未覆盖 metric 必须报
             "ts": "t", "kind": "metric", "metric": "rust_test_count", "old": 0, "new": 5,
-            "reason": "r", "baseline_sha256": sha256_file(bpath),
+            "reason": "r", "baseline_sha256": sha256_text_file(bpath),
         }]
         probs = verify_baseline_integrity(base, partial, bpath)
         check("下界覆盖缺口被检出（只留部分记录不算下界锚）",
