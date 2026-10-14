@@ -5822,7 +5822,7 @@
       "strength": "L0",
       "covered": false,
       "evidence": "oracle/scenarios/boot-title.txt",
-      "note": "场景语料入口；行为面分母随 oracle 覆盖增长（coverage_from_trace.py）"
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
     }
   }
 }

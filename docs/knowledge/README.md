@@ -72,7 +72,7 @@
 > 论断，以本扫描为准。教训本身见 `pattern-repair-selfcheck-grep.md`（新引入事实未复核）。
 
 全部 18 条知识条目自 gunnac_remake 迁入，其证据链发生在 **gunnac 项目语境**。实测
-**15/18 条含路径级悬空指针**（指向 gunnac 仓内历史路径，本仓不存在）+ 1 条内容级悬空。
+**16/18 条含路径级悬空指针**（指向 gunnac 仓内历史路径，本仓不存在）+ 1 条内容级悬空。
 下表逐行由扫描命令生成（勿手写）：
 
 `python3 - <<'EOF' 对 docs/knowledge/*.md 提取 (docs|oracle|data|gates|tools|reference|crates|prompts)/… 路径并测本仓存在性 EOF`
@@ -95,8 +95,13 @@
 | pattern-evidence-spotcheck-independent-reproduction.md | docs/rounds/round-001/005/006/007.md |
 | pattern-visual-binding-needs-pixel-proof.md | docs/findings/orphan-run-recheck.md |
 | reference-gate-usage-and-skip-semantics.md | docs/rounds/round-005/008.md、prompts/README |
-| gotcha-git-add-commit-atomicity.md / pattern-repair-selfcheck-grep.md | 无悬空 |
+| gotcha-git-add-commit-atomicity.md | `docs/spec/{l5-plan,l4-visual-plan,m3-inventory}.md`（brace 跨行写法，初版扫描正则不含 `{` 而逃逸——2026-10-14 二更）3 路径悬空 |
+| pattern-repair-selfcheck-grep.md | 无悬空 |
 
 **引用规则**：表内指针一律回 gunnac_remake 核对原文证据；本项目重新取证后**改写指针**并在
 条目内注明新证据；不允许把 gunnac 的游戏特定证据（如 shop-economy、gameplay-stage1）当作
 本项目结论引用。
+
+**扫描口径外指针（同样一律回 gunnac 核对）**：commit hash（实测 10 个，如 `50d0ce2`，本仓
+`git cat-file -e` 全部 NOT-IN-REPO）、任务号 `tXX`、`.archive/` 快照路径——路径扫描不覆盖
+此类引用，但效力相同：**本仓不可复现**。

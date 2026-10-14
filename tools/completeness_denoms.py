@@ -106,7 +106,7 @@ def denoms_behavior() -> list[dict]:
             cells.append(cell(
                 f"B-SCN-{p.stem}", "behavior", "scenario",
                 f"oracle/scenarios/{p.name}",
-                "场景语料入口；行为面分母随 oracle 覆盖增长（coverage_from_trace.py）"))
+                "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"))
     return cells
 
 

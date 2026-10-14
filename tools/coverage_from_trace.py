@@ -10,11 +10,12 @@ tools/probe_exec_callback.lua）。因此本工具**内置 fail-loud 自校验**
 
   自校验（不变量）: 采集点 cpu.pc（确证执行过）⊆ 覆盖集
   不过 ⇒ mode 降级 unverified-exec-callback，**拒绝产出盲区差集**（禁止派生任务卡）；
-  通过 ⇒ mode=execute-callback-verified（方可作盲区线索，任务卡仍需人工确认）。
+  通过 ⇒ mode=execute-callback-selfcheck-pass——仍**仅线索**（不变量必要非充分，rounds/r2 N4），
+  语义根治前盲区差集恒拒绝、并集恒不吸收（ROOT_SEMANTICS_VERIFIED 开关）。
 
 覆盖来源分级（显式，不静默降级）：
-  execute-callback-verified   自校验通过的 execute 回调
-  unverified-exec-callback   自校验未过——仅存档，不得用于盲区派工
+  execute-callback-selfcheck-pass  自校验通过的 execute 回调——仅线索（N4）
+  unverified-exec-callback       自校验未过——仅存档，不得用于盲区派工
   capture-pc-sampled         退化为采集点 cpu.pc 采样（粗粒度）
   unsupported                无任何来源（报告为空，不冒充）
 
@@ -109,7 +110,7 @@ def main() -> int:
         mode, addrs = read_coverage(name)
         pcs = load_pc_samples(name)
         verified = False
-        if mode not in ("execute-callback", "execute-callback-verified"):
+        if mode not in ("execute-callback", "execute-callback-selfcheck-pass"):
             print(f"[{name}] ⚠ 覆盖来源 {mode}——不产出盲区差集（不冒充）")
             if mode == "unsupported":
                 rc = 1
