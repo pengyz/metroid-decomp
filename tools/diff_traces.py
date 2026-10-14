@@ -56,6 +56,10 @@ def check_case_schema(case) -> str | None:
             return f"case.{key} 缺失或非非空字符串"
     if not HEX64.match(case["oracle_sha256"]):
         return f"case.oracle_sha256 非 64 位 hex: {case['oracle_sha256']!r}"
+    if "frames" in case:
+        fv = case["frames"]
+        if isinstance(fv, bool) or not isinstance(fv, int) or fv <= 0:
+            return f"case.frames 须为正整数（缺省可省略，给了就必严）: {fv!r}"
     watch = case.get("watch")
     if not isinstance(watch, list) or not watch:
         return "case.watch 缺失或为空（空跑不得绿）"
@@ -120,17 +124,29 @@ def regen(scenario: str) -> bool:
     return proc.returncode == 0
 
 
-def load_frames(path: Path) -> tuple[dict[int, dict], list[int]]:
-    """读帧 trace；返回 (帧字典, 重复 f 列表)。重复 f 判 FAIL（防后行覆盖分歧行）。"""
+def load_frames(path: Path) -> tuple[dict[int, dict], list[int], str | None]:
+    """读帧 trace；返回 (帧字典, 重复 f 列表, 行级违规)。
+    重复 f 判 FAIL（防后行覆盖分歧行）；畸形行（非 JSON/缺键/类型错）= 行级违规。"""
     out: dict[int, dict] = {}
     dups: list[int] = []
-    for line in path.read_text(encoding="utf-8").splitlines():
-        r = json.loads(line)
+    for lineno, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+        if not line.strip():
+            continue
+        try:
+            r = json.loads(line)
+        except json.JSONDecodeError as e:
+            return out, dups, f"第 {lineno} 行非 JSON: {e}"
+        if not isinstance(r, dict) or "f" not in r or "w" not in r:
+            return out, dups, f"第 {lineno} 行缺 f/w 键或非对象"
         f = r["f"]
+        if isinstance(f, bool) or not isinstance(f, int):
+            return out, dups, f"第 {lineno} 行 f 非整数: {f!r}"
+        if not isinstance(r["w"], dict):
+            return out, dups, f"第 {lineno} 行 w 非对象"
         if f in out:
             dups.append(f)
         out[f] = r["w"]
-    return out, dups
+    return out, dups, None
 
 
 def compare_frames(left: dict, right: dict, watch: list[dict]) -> str | None:
@@ -192,7 +208,11 @@ def main() -> int:
             failed += 1
             continue
 
-        left, ldups = load_frames(cache)
+        left, ldups, lerr = load_frames(cache)
+        if lerr:
+            print(f"[FAIL] {cid}: oracle trace {lerr}")
+            failed += 1
+            continue
         if ldups:
             print(f"[FAIL] {cid}: oracle trace 重复帧行 {sorted(set(ldups))[:5]}（防覆盖掩盖分歧）")
             failed += 1
@@ -214,7 +234,11 @@ def main() -> int:
                   f"game-core 腿未启用（S5 落地生成 {dump.relative_to(ROOT)} 后自动启用）")
             continue
 
-        right, rdups = load_frames(dump)
+        right, rdups, rerr = load_frames(dump)
+        if rerr:
+            print(f"[FAIL] {cid}: game-core dump {rerr}")
+            failed += 1
+            continue
         if rdups:
             print(f"[FAIL] {cid}: game-core dump 重复帧行 {sorted(set(rdups))[:5]}（防覆盖掩盖分歧）")
             failed += 1
