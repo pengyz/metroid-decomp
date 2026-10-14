@@ -25,8 +25,16 @@
   未接通——schema 升级或加注后删除本行
 - [ ] **completeness provenance 悬空**：completeness_matrix.json provenance 写 tools/matrix_sync.py
   --export（该文件不存在；实际导出器=completeness_denoms.py）——修正指向后删除本行
-- [ ] **docs/spec/completeness.md 悬空引用**：completeness_matrix.json schema 的 source_of_truth
-  指向不存在的 docs/spec/completeness.md（§0/§6.1）——补齐文档或改指向（v2 复审 L6）
+- [x] ~~docs/spec/completeness.md 悬空引用~~（2026-10-14 已建 docs/spec/completeness.md，§0/§6.1 对齐 schema）
+
+## 批量批次表（completeness.md §2，batch-0 起步）
+
+| 批次 | 模块 | 状态 |
+|---|---|---|
+| batch-0 | 流水线自举：L2 case factory + 移动积分器切片 | 进行中 |
+| batch-1 | 移动系统收尾（UpdateSamus/跳跃引擎） | 未排期 |
+| batch-2 | D 面数据表解析（可与 batch-1 并行） | 未排期 |
+| batch-3+ | 战斗/门/房间/HUD/音频/密码（按矩阵聚类续排） | 未排期 |
 
 ## 首切片（垂直打通）
 
