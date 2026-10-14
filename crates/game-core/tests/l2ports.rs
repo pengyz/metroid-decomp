@@ -44,3 +44,16 @@ fn sub_c376_write_addr_mirrors_at_2k() {
     let out = l2ports::sub_c376(&input(0, 0x5F, 0));
     assert_eq!(out.writes, vec![(0x0000, 0x00)]);
 }
+
+#[test]
+fn micro_slices_semantics() {
+    let inp = input(0x30, 0x40, 0x50);
+    let r = l2ports::sub_f1f4(&inp);
+    assert_eq!((r.a, r.x, r.y, r.writes), (0x30, 0x30, 0x50, vec![])); // X-=0x10；A=结果
+    let r = l2ports::sub_f1ee(&inp);
+    assert_eq!((r.a, r.x, r.y, r.writes), (0x60, 0x40, 0x60, vec![])); // Y+=0x10；A=结果
+    let mut inp2 = input(0x10, 0x00, 0x4F); // Y=0x4F ⇒ 读 $0350
+    inp2.ram[0x350] = 0x22;
+    let r = l2ports::sub_f1e0(&inp2);
+    assert_eq!((r.a, r.writes), (0x32, vec![(0x0004, 0x32)])); // A+RAM[$301+Y] → $04
+}

@@ -19,7 +19,7 @@
     },
     "symbol": {
       "denominator": 450,
-      "covered": 3
+      "covered": 6
     },
     "data": {
       "denominator": 193
@@ -3732,27 +3732,27 @@
       "id": "S-FUNC-07-F1E0",
       "face": "symbol",
       "module": "engine",
-      "strength": "L0",
-      "covered": false,
-      "evidence": "bank07:F1E0-F1E7（IDA 机械切分 size=7）",
+      "strength": "L2",
+      "covered": true,
+      "evidence": "oracle/subroutines/l2_cases.jsonl#gen-f1e0-* 三方全等（对拍级，指令清单 4-5 条人核）",
       "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
     },
     "S-FUNC-07-F1EE": {
       "id": "S-FUNC-07-F1EE",
       "face": "symbol",
       "module": "engine",
-      "strength": "L0",
-      "covered": false,
-      "evidence": "bank07:F1EE-F1F4（IDA 机械切分 size=6）",
+      "strength": "L2",
+      "covered": true,
+      "evidence": "oracle/subroutines/l2_cases.jsonl#gen-f1ee-* 三方全等（对拍级，指令清单 4-5 条人核）",
       "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
     },
     "S-FUNC-07-F1F4": {
       "id": "S-FUNC-07-F1F4",
       "face": "symbol",
       "module": "engine",
-      "strength": "L0",
-      "covered": false,
-      "evidence": "bank07:F1F4-F1FA（IDA 机械切分 size=6）",
+      "strength": "L2",
+      "covered": true,
+      "evidence": "oracle/subroutines/l2_cases.jsonl#gen-f1f4-* 三方全等（对拍级，指令清单 4-5 条人核）",
       "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
     },
     "S-FUNC-07-F1FA": {

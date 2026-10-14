@@ -83,6 +83,33 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "sub_C376" => Some(sub_c376),
         "int_y_E3A5" => Some(int_y_e3a5),
         "int_x_E3E5" => Some(int_x_e3e5),
+        "sub_F1F4" => Some(sub_f1f4),
+        "sub_F1EE" => Some(sub_f1ee),
+        "sub_F1E0" => Some(sub_f1e0),
         _ => None,
     }
+}
+
+// ---- batch-1 F1xx 族微切片（对拍级：三方裁定；指令清单 5-7 条可人核）----
+
+/// sub_F1F4 —— bank07:F1F4-F1F9（TXA/SEC/SBC #$10/TAX）：X -= 0x10，A=X 结果，Y 透传。
+/// 语义证据（A 级）：seed metroid.asm 逐指令（5 条）；无 RAM 写。
+pub fn sub_f1f4(input: &L2In) -> L2Out {
+    let v = input.x.wrapping_sub(0x10);
+    L2Out { a: v, x: v, y: input.y, writes: vec![] }
+}
+
+/// sub_F1EE —— bank07:F1EE-F1F3（TYA/CLC/ADC #$10/TAY）：Y += 0x10，A=Y 结果，X 透传。
+/// 语义证据（A 级）：seed 逐指令（4 条）；无 RAM 写。
+pub fn sub_f1ee(input: &L2In) -> L2Out {
+    let v = input.y.wrapping_add(0x10);
+    L2Out { a: v, x: input.x, y: v, writes: vec![] }
+}
+
+/// sub_F1E0 —— bank07:F1E0-F1E6（CLC/ADC $301,Y/STA $04）：$04 ← A + RAM[$0301+Y]。
+/// 语义证据（A 级）：seed 逐指令（4 条）；写集 {$0004}；绝对,Y 寻址无跨界（$0301-$0400）。
+pub fn sub_f1e0(input: &L2In) -> L2Out {
+    let addr = (0x0301 + input.y as u16) & 0x7FF;
+    let v = input.a.wrapping_add(input.ram[addr as usize]);
+    L2Out { a: v, x: input.x, y: input.y, writes: vec![(0x0004, v)] }
 }
