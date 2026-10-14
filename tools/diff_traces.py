@@ -12,11 +12,14 @@
 
 裁判铁律（r3 F7「空跑不得绿」+ G5 复审 F1/F2 + 二轮 NEW-1/2/3——判定权不留静默绿面）：
   exit 2（manifest schema 级，先于一切比对）：
-  - manifest 缺失 / 非法 JSON / cases 非 list[dict] / case 缺必填键或类型错
+  - manifest 缺失 / 非法 JSON / 非法 UTF-8 / cases 非 list[dict] / case 缺必填键或类型错
+  - scenario 含路径字符（限 ^[A-Za-z0-9_-]+$，防 ../ 穿越自比对）/ 重复 case id
+  - watch label 重复 / watch 条目未知键（防 _span 注入）/ 左右路径同 inode 或 dump 为符号链接
   - watch 为空 / watch 条目非 dict / label 非空 str / base 1-4 位 hex / range 格式非法
   exit 1（case 级 FAIL）：
   - watch 字段**逐帧**存在性 + 值合法性（str、非空、偶数长、纯 hex）——oracle 侧先行，dump 侧同检
-  - range span 与字段字节长不符 / 重复帧行（同 f 多行）/ manifest.frames 与实测不符
+  - range span 与字段字节长不符 / 重复帧行（同 f 多行）/ 帧号负数 / 帧集为空（0 字节比对）
+  - dump 存在但不可读（目录/非常规）/ manifest.frames 与实测不符
   - sha 不符 / 帧集不一致 / 首分歧
   首分歧报告=帧号 + 字段 + CPU 地址（基址+偏移）+ 双侧值；hex 比对大小写归一（.upper()）。
 用法：python3 tools/diff_traces.py
@@ -39,6 +42,8 @@ HEX64 = re.compile(r"^[0-9a-fA-F]{64}$")
 HEXSTR = re.compile(r"^[0-9a-fA-F]*$")
 BASERE = re.compile(r"^[0-9a-fA-F]{1,4}$")
 RANGERE = re.compile(r"^([0-9a-fA-F]{1,4})-([0-9a-fA-F]{1,4})$")
+SCENRE = re.compile(r"^[A-Za-z0-9_-]+$")
+WATCH_KEYS = {"label", "base", "range"}
 
 
 def schema_error(msg: str) -> int:
@@ -54,6 +59,8 @@ def check_case_schema(case) -> str | None:
         v = case.get(key)
         if not isinstance(v, str) or not v.strip():
             return f"case.{key} 缺失或非非空字符串"
+    if not SCENRE.match(case["scenario"]):
+        return f"case.scenario 含路径字符（限字母数字_-，防穿越自比对）: {case['scenario']!r}"
     if not HEX64.match(case["oracle_sha256"]):
         return f"case.oracle_sha256 非 64 位 hex: {case['oracle_sha256']!r}"
     if "frames" in case:
@@ -63,12 +70,19 @@ def check_case_schema(case) -> str | None:
     watch = case.get("watch")
     if not isinstance(watch, list) or not watch:
         return "case.watch 缺失或为空（空跑不得绿）"
+    seen_labels = set()
     for w in watch:
         if not isinstance(w, dict):
             return f"watch 条目非对象: {w!r}"
+        unknown = set(w) - WATCH_KEYS
+        if unknown:
+            return f"watch 条目含未知键（防 _span 注入等）: {sorted(unknown)}"
         label, base = w.get("label"), w.get("base")
         if not isinstance(label, str) or not label.strip():
             return f"watch.label 缺失或非非空字符串: {w!r}"
+        if label in seen_labels:
+            return f"watch.label 重复（防静默降覆盖）: {label!r}"
+        seen_labels.add(label)
         if not isinstance(base, str) or not BASERE.match(base):
             return f"watch.base 须为 1-4 位 hex 字符串: {w!r}"
         rng = w.get("range")
@@ -129,7 +143,11 @@ def load_frames(path: Path) -> tuple[dict[int, dict], list[int], str | None]:
     重复 f 判 FAIL（防后行覆盖分歧行）；畸形行（非 JSON/缺键/类型错）= 行级违规。"""
     out: dict[int, dict] = {}
     dups: list[int] = []
-    for lineno, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+    try:
+        text = path.read_text(encoding="utf-8")
+    except UnicodeDecodeError as e:
+        return out, dups, f"非 UTF-8 编码: {e}"
+    for lineno, line in enumerate(text.splitlines(), 1):
         if not line.strip():
             continue
         try:
@@ -139,8 +157,8 @@ def load_frames(path: Path) -> tuple[dict[int, dict], list[int], str | None]:
         if not isinstance(r, dict) or "f" not in r or "w" not in r:
             return out, dups, f"第 {lineno} 行缺 f/w 键或非对象"
         f = r["f"]
-        if isinstance(f, bool) or not isinstance(f, int):
-            return out, dups, f"第 {lineno} 行 f 非整数: {f!r}"
+        if isinstance(f, bool) or not isinstance(f, int) or f < 0:
+            return out, dups, f"第 {lineno} 行 f 须为非负整数: {f!r}"
         if not isinstance(r["w"], dict):
             return out, dups, f"第 {lineno} 行 w 非对象"
         if f in out:
@@ -180,6 +198,8 @@ def main() -> int:
         return 2
     try:
         doc = json.loads(MANIFEST.read_text(encoding="utf-8"))
+    except UnicodeDecodeError as e:
+        return schema_error(f"非法 UTF-8: {e}")
     except json.JSONDecodeError as e:
         return schema_error(f"JSON 解析失败: {e}")
     cases = doc.get("cases") if isinstance(doc, dict) else None
@@ -187,6 +207,9 @@ def main() -> int:
         return schema_error(f"cases 须为数组: {type(cases).__name__}")
     if not cases:
         return schema_error("用例集为空（空跑不得绿）")
+    ids = [c.get("id") for c in cases if isinstance(c, dict)]
+    if len(ids) != len(set(ids)):
+        return schema_error(f"case.id 重复（防报告歧义）: {ids}")
     for case in cases:
         err = check_case_schema(case)
         if err:
@@ -203,7 +226,7 @@ def main() -> int:
                 failed += 1
                 continue
         digest = hashlib.sha256(cache.read_bytes()).hexdigest()
-        if digest != case["oracle_sha256"]:
+        if digest.lower() != case["oracle_sha256"].lower():
             print(f"[FAIL] {cid}: oracle trace sha256 不符 manifest（确定性破裂/缓存陈旧/篡改）")
             failed += 1
             continue
@@ -221,6 +244,10 @@ def main() -> int:
             print(f"[FAIL] {cid}: 帧数 {len(left)} != manifest.frames {case['frames']}")
             failed += 1
             continue
+        if not left:
+            print(f"[FAIL] {cid}: oracle trace 帧集为空（0 字节比对=空跑绿）")
+            failed += 1
+            continue
         # oracle 侧逐帧存在性+值合法性（R2；dump 缺席时同样不许空跑绿）
         v = check_frames_side(left, watch, "oracle")
         if v:
@@ -229,6 +256,14 @@ def main() -> int:
             continue
 
         dump = DUMPS / f"{scenario}.frames.jsonl"
+        if dump.exists() and (not dump.is_file() or dump.is_symlink()):
+            print(f"[FAIL] {cid}: game-core dump 不可读/非常规（目录或符号链接——禁自比对）")
+            failed += 1
+            continue
+        if dump.exists():
+            cs, ds = cache.stat(), dump.stat()
+            if (cs.st_dev, cs.st_ino) == (ds.st_dev, ds.st_ino):
+                return schema_error("左右路径同 inode（自比对禁止，含硬链接）")
         if not dump.is_file():
             print(f"[PASS] {cid}: oracle 腿已验（sha256 对锚、{len(left)} 帧、逐帧字段合法）；"
                   f"game-core 腿未启用（S5 落地生成 {dump.relative_to(ROOT)} 后自动启用）")
