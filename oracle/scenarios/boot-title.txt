@@ -1,0 +1,18 @@
+# 场景：boot-title —— reset → 标题屏（S2 首场景）
+# 用途：开机自检 → 复位（bank7:$FFB0）→ NMI/主循环 → 标题渲染全链路动态证据。
+# 帧计数约定见 tools/scenario_run.py 头部（inputPolled 递增）。
+name boot-title
+frames 300
+coverage
+
+# 无输入开机；标题屏约在 200-250 帧出现（冒烟实测 f00300 已完整渲染）
+capture 30 boot
+capture 120 init
+capture 240 title-in
+capture 299 title
+
+capture_every 60 probe
+
+# 状态向量：零页 + 栈/游戏变量区（Metroid MMC1 无 PRG-RAM，密码制无电池存档）
+watch_range 0000-00ff zp
+watch_range 0100-07ff iram

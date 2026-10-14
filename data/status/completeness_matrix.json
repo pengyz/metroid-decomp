@@ -4,7 +4,5825 @@
   "id_rule": "B=行为面 / S=符号面 / D=数据面 / R=规则面；格 ID 一经入分母永不复用（completeness.md §0）",
   "strength_scale": "L0-L4 矩阵轴（completeness.md §6.1）；与差分金字塔 L1-L5 是两条轴，勿混淆",
   "covered_rule": "covered ⇔ strength >= L1（带证据指针的分子登记；L0=入分母未验证）",
-  "cell_schema": ["id", "face", "module", "strength", "covered", "evidence", "note"],
-  "faces": {"behavior": {}, "symbol": {}, "data": {}, "rule": {}},
-  "cells": {}
+  "cell_schema": [
+    "id",
+    "face",
+    "module",
+    "strength",
+    "covered",
+    "evidence",
+    "note"
+  ],
+  "faces": {
+    "behavior": {
+      "denominator": 1
+    },
+    "symbol": {
+      "denominator": 450
+    },
+    "data": {
+      "denominator": 193
+    },
+    "rule": {
+      "denominator": 0
+    }
+  },
+  "cells": {
+    "S-FUNC-00-80C5": {
+      "id": "S-FUNC-00-80C5",
+      "face": "symbol",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:80C5-80C8（IDA 机械切分 size=3）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-00-8382": {
+      "id": "S-FUNC-00-8382",
+      "face": "symbol",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:8382-8437（IDA 机械切分 size=181）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-00-8786": {
+      "id": "S-FUNC-00-8786",
+      "face": "symbol",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:8786-8787（IDA 机械切分 size=1）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-00-87CF": {
+      "id": "S-FUNC-00-87CF",
+      "face": "symbol",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:87CF-87D6（IDA 机械切分 size=7）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-00-87D6": {
+      "id": "S-FUNC-00-87D6",
+      "face": "symbol",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:87D6-87D9（IDA 机械切分 size=3）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-00-87D9": {
+      "id": "S-FUNC-00-87D9",
+      "face": "symbol",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:87D9-881A（IDA 机械切分 size=65）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-00-881A": {
+      "id": "S-FUNC-00-881A",
+      "face": "symbol",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:881A-8871（IDA 机械切分 size=87）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-00-8871": {
+      "id": "S-FUNC-00-8871",
+      "face": "symbol",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:8871-887B（IDA 机械切分 size=10）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-00-8897": {
+      "id": "S-FUNC-00-8897",
+      "face": "symbol",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:8897-88BE（IDA 机械切分 size=39）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-00-88FE": {
+      "id": "S-FUNC-00-88FE",
+      "face": "symbol",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:88FE-8963（IDA 机械切分 size=101）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-00-8963": {
+      "id": "S-FUNC-00-8963",
+      "face": "symbol",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:8963-8976（IDA 机械切分 size=19）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-00-8976": {
+      "id": "S-FUNC-00-8976",
+      "face": "symbol",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:8976-8989（IDA 机械切分 size=19）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-00-8A8C": {
+      "id": "S-FUNC-00-8A8C",
+      "face": "symbol",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:8A8C-8A9A（IDA 机械切分 size=14）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-00-8B5F": {
+      "id": "S-FUNC-00-8B5F",
+      "face": "symbol",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:8B5F-8B6D（IDA 机械切分 size=14）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-00-8B9C": {
+      "id": "S-FUNC-00-8B9C",
+      "face": "symbol",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:8B9C-8BD4（IDA 机械切分 size=56）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-00-8BD4": {
+      "id": "S-FUNC-00-8BD4",
+      "face": "symbol",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:8BD4-8C39（IDA 机械切分 size=101）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-00-8C39": {
+      "id": "S-FUNC-00-8C39",
+      "face": "symbol",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:8C39-8C5E（IDA 机械切分 size=37）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-00-8C5E": {
+      "id": "S-FUNC-00-8C5E",
+      "face": "symbol",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:8C5E-8C7A（IDA 机械切分 size=28）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-00-8C7A": {
+      "id": "S-FUNC-00-8C7A",
+      "face": "symbol",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:8C7A-8D12（IDA 机械切分 size=152）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-00-8D12": {
+      "id": "S-FUNC-00-8D12",
+      "face": "symbol",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:8D12-8D3D（IDA 机械切分 size=43）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-00-8D3D": {
+      "id": "S-FUNC-00-8D3D",
+      "face": "symbol",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:8D3D-8DDE（IDA 机械切分 size=161）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-00-8DDE": {
+      "id": "S-FUNC-00-8DDE",
+      "face": "symbol",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:8DDE-8E07（IDA 机械切分 size=41）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-00-8E17": {
+      "id": "S-FUNC-00-8E17",
+      "face": "symbol",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:8E17-8E21（IDA 机械切分 size=10）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-00-8E21": {
+      "id": "S-FUNC-00-8E21",
+      "face": "symbol",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:8E21-8E2D（IDA 机械切分 size=12）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-00-8E2D": {
+      "id": "S-FUNC-00-8E2D",
+      "face": "symbol",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:8E2D-8E4E（IDA 机械切分 size=33）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-00-8E4E": {
+      "id": "S-FUNC-00-8E4E",
+      "face": "symbol",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:8E4E-8E6C（IDA 机械切分 size=30）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-00-8F2D": {
+      "id": "S-FUNC-00-8F2D",
+      "face": "symbol",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:8F2D-8F33（IDA 机械切分 size=6）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-00-8F33": {
+      "id": "S-FUNC-00-8F33",
+      "face": "symbol",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:8F33-8F46（IDA 机械切分 size=19）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-00-8F46": {
+      "id": "S-FUNC-00-8F46",
+      "face": "symbol",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:8F46-8F5A（IDA 机械切分 size=20）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-00-8F5A": {
+      "id": "S-FUNC-00-8F5A",
+      "face": "symbol",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:8F5A-8F60（IDA 机械切分 size=6）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-00-8F60": {
+      "id": "S-FUNC-00-8F60",
+      "face": "symbol",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:8F60-8FF1（IDA 机械切分 size=145）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-00-8FF1": {
+      "id": "S-FUNC-00-8FF1",
+      "face": "symbol",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:8FF1-9001（IDA 机械切分 size=16）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-00-9001": {
+      "id": "S-FUNC-00-9001",
+      "face": "symbol",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:9001-9011（IDA 机械切分 size=16）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-00-9011": {
+      "id": "S-FUNC-00-9011",
+      "face": "symbol",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:9011-9021（IDA 机械切分 size=16）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-00-909F": {
+      "id": "S-FUNC-00-909F",
+      "face": "symbol",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:909F-90BA（IDA 机械切分 size=27）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-00-90D1": {
+      "id": "S-FUNC-00-90D1",
+      "face": "symbol",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:90D1-90D7（IDA 机械切分 size=6）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-00-9180": {
+      "id": "S-FUNC-00-9180",
+      "face": "symbol",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:9180-92B4（IDA 机械切分 size=308）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-00-92D4": {
+      "id": "S-FUNC-00-92D4",
+      "face": "symbol",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:92D4-9325（IDA 机械切分 size=81）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-00-93C6": {
+      "id": "S-FUNC-00-93C6",
+      "face": "symbol",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:93C6-93F9（IDA 机械切分 size=51）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-00-93F9": {
+      "id": "S-FUNC-00-93F9",
+      "face": "symbol",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:93F9-940B（IDA 机械切分 size=18）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-00-940B": {
+      "id": "S-FUNC-00-940B",
+      "face": "symbol",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:940B-943F（IDA 机械切分 size=52）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-00-9450": {
+      "id": "S-FUNC-00-9450",
+      "face": "symbol",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:9450-945F（IDA 机械切分 size=15）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-00-947B": {
+      "id": "S-FUNC-00-947B",
+      "face": "symbol",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:947B-948F（IDA 机械切分 size=20）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-00-94DA": {
+      "id": "S-FUNC-00-94DA",
+      "face": "symbol",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:94DA-952C（IDA 机械切分 size=82）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-00-981E": {
+      "id": "S-FUNC-00-981E",
+      "face": "symbol",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:981E-9871（IDA 机械切分 size=83）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-00-9871": {
+      "id": "S-FUNC-00-9871",
+      "face": "symbol",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:9871-988A（IDA 机械切分 size=25）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-00-98AE": {
+      "id": "S-FUNC-00-98AE",
+      "face": "symbol",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:98AE-98C0（IDA 机械切分 size=18）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-00-9C45": {
+      "id": "S-FUNC-00-9C45",
+      "face": "symbol",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:9C45-9C7F（IDA 机械切分 size=58）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-00-9C7F": {
+      "id": "S-FUNC-00-9C7F",
+      "face": "symbol",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:9C7F-9C9A（IDA 机械切分 size=27）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-00-9C9A": {
+      "id": "S-FUNC-00-9C9A",
+      "face": "symbol",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:9C9A-9CFA（IDA 机械切分 size=96）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-01-8000": {
+      "id": "S-FUNC-01-8000",
+      "face": "symbol",
+      "module": "brinstar",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank01:8000-8003（IDA 机械切分 size=3）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-01-80B0": {
+      "id": "S-FUNC-01-80B0",
+      "face": "symbol",
+      "module": "brinstar",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank01:80B0-80B8（IDA 机械切分 size=8）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-01-80B8": {
+      "id": "S-FUNC-01-80B8",
+      "face": "symbol",
+      "module": "brinstar",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank01:80B8-80FB（IDA 机械切分 size=67）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-01-80FB": {
+      "id": "S-FUNC-01-80FB",
+      "face": "symbol",
+      "module": "brinstar",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank01:80FB-8134（IDA 机械切分 size=57）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-01-8134": {
+      "id": "S-FUNC-01-8134",
+      "face": "symbol",
+      "module": "brinstar",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank01:8134-816E（IDA 机械切分 size=58）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-01-816E": {
+      "id": "S-FUNC-01-816E",
+      "face": "symbol",
+      "module": "brinstar",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank01:816E-81B1（IDA 机械切分 size=67）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-01-81B1": {
+      "id": "S-FUNC-01-81B1",
+      "face": "symbol",
+      "module": "brinstar",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank01:81B1-81B8（IDA 机械切分 size=7）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-01-81B8": {
+      "id": "S-FUNC-01-81B8",
+      "face": "symbol",
+      "module": "brinstar",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank01:81B8-81C0（IDA 机械切分 size=8）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-01-81C0": {
+      "id": "S-FUNC-01-81C0",
+      "face": "symbol",
+      "module": "brinstar",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank01:81C0-81C7（IDA 机械切分 size=7）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-01-81C7": {
+      "id": "S-FUNC-01-81C7",
+      "face": "symbol",
+      "module": "brinstar",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank01:81C7-81F6（IDA 机械切分 size=47）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-01-81F6": {
+      "id": "S-FUNC-01-81F6",
+      "face": "symbol",
+      "module": "brinstar",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank01:81F6-81FC（IDA 机械切分 size=6）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-01-81FC": {
+      "id": "S-FUNC-01-81FC",
+      "face": "symbol",
+      "module": "brinstar",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank01:81FC-822B（IDA 机械切分 size=47）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-01-822B": {
+      "id": "S-FUNC-01-822B",
+      "face": "symbol",
+      "module": "brinstar",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank01:822B-8244（IDA 机械切分 size=25）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-01-8244": {
+      "id": "S-FUNC-01-8244",
+      "face": "symbol",
+      "module": "brinstar",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank01:8244-8318（IDA 机械切分 size=212）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-01-8318": {
+      "id": "S-FUNC-01-8318",
+      "face": "symbol",
+      "module": "brinstar",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank01:8318-83F5（IDA 机械切分 size=221）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-01-83F5": {
+      "id": "S-FUNC-01-83F5",
+      "face": "symbol",
+      "module": "brinstar",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank01:83F5-844B（IDA 机械切分 size=86）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-01-844B": {
+      "id": "S-FUNC-01-844B",
+      "face": "symbol",
+      "module": "brinstar",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank01:844B-84A7（IDA 机械切分 size=92）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-01-84A7": {
+      "id": "S-FUNC-01-84A7",
+      "face": "symbol",
+      "module": "brinstar",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank01:84A7-84FE（IDA 机械切分 size=87）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-01-84FE": {
+      "id": "S-FUNC-01-84FE",
+      "face": "symbol",
+      "module": "brinstar",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank01:84FE-855A（IDA 机械切分 size=92）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-01-855A": {
+      "id": "S-FUNC-01-855A",
+      "face": "symbol",
+      "module": "brinstar",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank01:855A-8563（IDA 机械切分 size=9）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-01-8563": {
+      "id": "S-FUNC-01-8563",
+      "face": "symbol",
+      "module": "brinstar",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank01:8563-856B（IDA 机械切分 size=8）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-01-856B": {
+      "id": "S-FUNC-01-856B",
+      "face": "symbol",
+      "module": "brinstar",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank01:856B-8572（IDA 机械切分 size=7）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-01-8B53": {
+      "id": "S-FUNC-01-8B53",
+      "face": "symbol",
+      "module": "brinstar",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank01:8B53-8B6D（IDA 机械切分 size=26）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-01-8B74": {
+      "id": "S-FUNC-01-8B74",
+      "face": "symbol",
+      "module": "brinstar",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank01:8B74-8B79（IDA 机械切分 size=5）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-01-8B87": {
+      "id": "S-FUNC-01-8B87",
+      "face": "symbol",
+      "module": "brinstar",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank01:8B87-8BD1（IDA 机械切分 size=74）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-01-8C76": {
+      "id": "S-FUNC-01-8C76",
+      "face": "symbol",
+      "module": "brinstar",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank01:8C76-8C84（IDA 机械切分 size=14）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-01-8CF7": {
+      "id": "S-FUNC-01-8CF7",
+      "face": "symbol",
+      "module": "brinstar",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank01:8CF7-8CFB（IDA 机械切分 size=4）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-01-8CFB": {
+      "id": "S-FUNC-01-8CFB",
+      "face": "symbol",
+      "module": "brinstar",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank01:8CFB-8D3A（IDA 机械切分 size=63）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-02-8000": {
+      "id": "S-FUNC-02-8000",
+      "face": "symbol",
+      "module": "norfair",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank02:8000-8003（IDA 机械切分 size=3）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-02-80B0": {
+      "id": "S-FUNC-02-80B0",
+      "face": "symbol",
+      "module": "norfair",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank02:80B0-80B8（IDA 机械切分 size=8）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-02-80B8": {
+      "id": "S-FUNC-02-80B8",
+      "face": "symbol",
+      "module": "norfair",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank02:80B8-80FB（IDA 机械切分 size=67）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-02-80FB": {
+      "id": "S-FUNC-02-80FB",
+      "face": "symbol",
+      "module": "norfair",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank02:80FB-8134（IDA 机械切分 size=57）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-02-8134": {
+      "id": "S-FUNC-02-8134",
+      "face": "symbol",
+      "module": "norfair",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank02:8134-816E（IDA 机械切分 size=58）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-02-816E": {
+      "id": "S-FUNC-02-816E",
+      "face": "symbol",
+      "module": "norfair",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank02:816E-81B1（IDA 机械切分 size=67）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-02-81B1": {
+      "id": "S-FUNC-02-81B1",
+      "face": "symbol",
+      "module": "norfair",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank02:81B1-81B8（IDA 机械切分 size=7）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-02-81B8": {
+      "id": "S-FUNC-02-81B8",
+      "face": "symbol",
+      "module": "norfair",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank02:81B8-81C0（IDA 机械切分 size=8）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-02-81C0": {
+      "id": "S-FUNC-02-81C0",
+      "face": "symbol",
+      "module": "norfair",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank02:81C0-81C7（IDA 机械切分 size=7）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-02-81C7": {
+      "id": "S-FUNC-02-81C7",
+      "face": "symbol",
+      "module": "norfair",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank02:81C7-81F6（IDA 机械切分 size=47）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-02-81F6": {
+      "id": "S-FUNC-02-81F6",
+      "face": "symbol",
+      "module": "norfair",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank02:81F6-81FC（IDA 机械切分 size=6）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-02-81FC": {
+      "id": "S-FUNC-02-81FC",
+      "face": "symbol",
+      "module": "norfair",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank02:81FC-822B（IDA 机械切分 size=47）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-02-822B": {
+      "id": "S-FUNC-02-822B",
+      "face": "symbol",
+      "module": "norfair",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank02:822B-8244（IDA 机械切分 size=25）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-02-8244": {
+      "id": "S-FUNC-02-8244",
+      "face": "symbol",
+      "module": "norfair",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank02:8244-8318（IDA 机械切分 size=212）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-02-8318": {
+      "id": "S-FUNC-02-8318",
+      "face": "symbol",
+      "module": "norfair",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank02:8318-83F5（IDA 机械切分 size=221）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-02-83F5": {
+      "id": "S-FUNC-02-83F5",
+      "face": "symbol",
+      "module": "norfair",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank02:83F5-844B（IDA 机械切分 size=86）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-02-844B": {
+      "id": "S-FUNC-02-844B",
+      "face": "symbol",
+      "module": "norfair",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank02:844B-84A7（IDA 机械切分 size=92）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-02-84A7": {
+      "id": "S-FUNC-02-84A7",
+      "face": "symbol",
+      "module": "norfair",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank02:84A7-84FE（IDA 机械切分 size=87）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-02-84FE": {
+      "id": "S-FUNC-02-84FE",
+      "face": "symbol",
+      "module": "norfair",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank02:84FE-855A（IDA 机械切分 size=92）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-02-855A": {
+      "id": "S-FUNC-02-855A",
+      "face": "symbol",
+      "module": "norfair",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank02:855A-8563（IDA 机械切分 size=9）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-02-8563": {
+      "id": "S-FUNC-02-8563",
+      "face": "symbol",
+      "module": "norfair",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank02:8563-856B（IDA 机械切分 size=8）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-02-856B": {
+      "id": "S-FUNC-02-856B",
+      "face": "symbol",
+      "module": "norfair",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank02:856B-8572（IDA 机械切分 size=7）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-02-8B53": {
+      "id": "S-FUNC-02-8B53",
+      "face": "symbol",
+      "module": "norfair",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank02:8B53-8B6D（IDA 机械切分 size=26）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-02-8B74": {
+      "id": "S-FUNC-02-8B74",
+      "face": "symbol",
+      "module": "norfair",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank02:8B74-8B79（IDA 机械切分 size=5）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-02-8B87": {
+      "id": "S-FUNC-02-8B87",
+      "face": "symbol",
+      "module": "norfair",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank02:8B87-8BD1（IDA 机械切分 size=74）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-02-8C76": {
+      "id": "S-FUNC-02-8C76",
+      "face": "symbol",
+      "module": "norfair",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank02:8C76-8C84（IDA 机械切分 size=14）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-02-8CF7": {
+      "id": "S-FUNC-02-8CF7",
+      "face": "symbol",
+      "module": "norfair",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank02:8CF7-8CFB（IDA 机械切分 size=4）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-02-8CFB": {
+      "id": "S-FUNC-02-8CFB",
+      "face": "symbol",
+      "module": "norfair",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank02:8CFB-8D3A（IDA 机械切分 size=63）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-03-8000": {
+      "id": "S-FUNC-03-8000",
+      "face": "symbol",
+      "module": "tourian",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank03:8000-8003（IDA 机械切分 size=3）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-03-80B0": {
+      "id": "S-FUNC-03-80B0",
+      "face": "symbol",
+      "module": "tourian",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank03:80B0-80B8（IDA 机械切分 size=8）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-03-80B8": {
+      "id": "S-FUNC-03-80B8",
+      "face": "symbol",
+      "module": "tourian",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank03:80B8-80FB（IDA 机械切分 size=67）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-03-80FB": {
+      "id": "S-FUNC-03-80FB",
+      "face": "symbol",
+      "module": "tourian",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank03:80FB-8134（IDA 机械切分 size=57）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-03-8134": {
+      "id": "S-FUNC-03-8134",
+      "face": "symbol",
+      "module": "tourian",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank03:8134-816E（IDA 机械切分 size=58）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-03-816E": {
+      "id": "S-FUNC-03-816E",
+      "face": "symbol",
+      "module": "tourian",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank03:816E-81B1（IDA 机械切分 size=67）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-03-81B1": {
+      "id": "S-FUNC-03-81B1",
+      "face": "symbol",
+      "module": "tourian",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank03:81B1-81B8（IDA 机械切分 size=7）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-03-81B8": {
+      "id": "S-FUNC-03-81B8",
+      "face": "symbol",
+      "module": "tourian",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank03:81B8-81C0（IDA 机械切分 size=8）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-03-81C0": {
+      "id": "S-FUNC-03-81C0",
+      "face": "symbol",
+      "module": "tourian",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank03:81C0-81C7（IDA 机械切分 size=7）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-03-81C7": {
+      "id": "S-FUNC-03-81C7",
+      "face": "symbol",
+      "module": "tourian",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank03:81C7-81F6（IDA 机械切分 size=47）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-03-81F6": {
+      "id": "S-FUNC-03-81F6",
+      "face": "symbol",
+      "module": "tourian",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank03:81F6-81FC（IDA 机械切分 size=6）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-03-81FC": {
+      "id": "S-FUNC-03-81FC",
+      "face": "symbol",
+      "module": "tourian",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank03:81FC-822B（IDA 机械切分 size=47）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-03-822B": {
+      "id": "S-FUNC-03-822B",
+      "face": "symbol",
+      "module": "tourian",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank03:822B-8244（IDA 机械切分 size=25）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-03-8244": {
+      "id": "S-FUNC-03-8244",
+      "face": "symbol",
+      "module": "tourian",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank03:8244-8318（IDA 机械切分 size=212）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-03-8318": {
+      "id": "S-FUNC-03-8318",
+      "face": "symbol",
+      "module": "tourian",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank03:8318-83F5（IDA 机械切分 size=221）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-03-83F5": {
+      "id": "S-FUNC-03-83F5",
+      "face": "symbol",
+      "module": "tourian",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank03:83F5-844B（IDA 机械切分 size=86）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-03-844B": {
+      "id": "S-FUNC-03-844B",
+      "face": "symbol",
+      "module": "tourian",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank03:844B-84A7（IDA 机械切分 size=92）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-03-84A7": {
+      "id": "S-FUNC-03-84A7",
+      "face": "symbol",
+      "module": "tourian",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank03:84A7-84FE（IDA 机械切分 size=87）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-03-84FE": {
+      "id": "S-FUNC-03-84FE",
+      "face": "symbol",
+      "module": "tourian",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank03:84FE-855A（IDA 机械切分 size=92）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-03-855A": {
+      "id": "S-FUNC-03-855A",
+      "face": "symbol",
+      "module": "tourian",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank03:855A-8563（IDA 机械切分 size=9）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-03-8563": {
+      "id": "S-FUNC-03-8563",
+      "face": "symbol",
+      "module": "tourian",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank03:8563-856B（IDA 机械切分 size=8）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-03-856B": {
+      "id": "S-FUNC-03-856B",
+      "face": "symbol",
+      "module": "tourian",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank03:856B-8572（IDA 机械切分 size=7）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-03-8B53": {
+      "id": "S-FUNC-03-8B53",
+      "face": "symbol",
+      "module": "tourian",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank03:8B53-8B6D（IDA 机械切分 size=26）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-03-8B74": {
+      "id": "S-FUNC-03-8B74",
+      "face": "symbol",
+      "module": "tourian",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank03:8B74-8B79（IDA 机械切分 size=5）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-03-8B87": {
+      "id": "S-FUNC-03-8B87",
+      "face": "symbol",
+      "module": "tourian",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank03:8B87-8BD1（IDA 机械切分 size=74）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-03-8C76": {
+      "id": "S-FUNC-03-8C76",
+      "face": "symbol",
+      "module": "tourian",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank03:8C76-8C84（IDA 机械切分 size=14）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-03-8CF7": {
+      "id": "S-FUNC-03-8CF7",
+      "face": "symbol",
+      "module": "tourian",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank03:8CF7-8CFB（IDA 机械切分 size=4）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-03-8CFB": {
+      "id": "S-FUNC-03-8CFB",
+      "face": "symbol",
+      "module": "tourian",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank03:8CFB-8D3A（IDA 机械切分 size=63）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-04-8000": {
+      "id": "S-FUNC-04-8000",
+      "face": "symbol",
+      "module": "kraid",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank04:8000-8003（IDA 机械切分 size=3）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-04-80B0": {
+      "id": "S-FUNC-04-80B0",
+      "face": "symbol",
+      "module": "kraid",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank04:80B0-80B8（IDA 机械切分 size=8）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-04-80B8": {
+      "id": "S-FUNC-04-80B8",
+      "face": "symbol",
+      "module": "kraid",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank04:80B8-80FB（IDA 机械切分 size=67）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-04-80FB": {
+      "id": "S-FUNC-04-80FB",
+      "face": "symbol",
+      "module": "kraid",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank04:80FB-8134（IDA 机械切分 size=57）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-04-8134": {
+      "id": "S-FUNC-04-8134",
+      "face": "symbol",
+      "module": "kraid",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank04:8134-816E（IDA 机械切分 size=58）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-04-816E": {
+      "id": "S-FUNC-04-816E",
+      "face": "symbol",
+      "module": "kraid",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank04:816E-81B1（IDA 机械切分 size=67）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-04-81B1": {
+      "id": "S-FUNC-04-81B1",
+      "face": "symbol",
+      "module": "kraid",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank04:81B1-81B8（IDA 机械切分 size=7）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-04-81B8": {
+      "id": "S-FUNC-04-81B8",
+      "face": "symbol",
+      "module": "kraid",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank04:81B8-81C0（IDA 机械切分 size=8）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-04-81C0": {
+      "id": "S-FUNC-04-81C0",
+      "face": "symbol",
+      "module": "kraid",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank04:81C0-81C7（IDA 机械切分 size=7）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-04-81C7": {
+      "id": "S-FUNC-04-81C7",
+      "face": "symbol",
+      "module": "kraid",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank04:81C7-81F6（IDA 机械切分 size=47）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-04-81F6": {
+      "id": "S-FUNC-04-81F6",
+      "face": "symbol",
+      "module": "kraid",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank04:81F6-81FC（IDA 机械切分 size=6）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-04-81FC": {
+      "id": "S-FUNC-04-81FC",
+      "face": "symbol",
+      "module": "kraid",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank04:81FC-822B（IDA 机械切分 size=47）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-04-822B": {
+      "id": "S-FUNC-04-822B",
+      "face": "symbol",
+      "module": "kraid",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank04:822B-8244（IDA 机械切分 size=25）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-04-8244": {
+      "id": "S-FUNC-04-8244",
+      "face": "symbol",
+      "module": "kraid",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank04:8244-8318（IDA 机械切分 size=212）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-04-8318": {
+      "id": "S-FUNC-04-8318",
+      "face": "symbol",
+      "module": "kraid",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank04:8318-83F5（IDA 机械切分 size=221）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-04-83F5": {
+      "id": "S-FUNC-04-83F5",
+      "face": "symbol",
+      "module": "kraid",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank04:83F5-844B（IDA 机械切分 size=86）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-04-844B": {
+      "id": "S-FUNC-04-844B",
+      "face": "symbol",
+      "module": "kraid",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank04:844B-84A7（IDA 机械切分 size=92）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-04-84A7": {
+      "id": "S-FUNC-04-84A7",
+      "face": "symbol",
+      "module": "kraid",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank04:84A7-84FE（IDA 机械切分 size=87）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-04-84FE": {
+      "id": "S-FUNC-04-84FE",
+      "face": "symbol",
+      "module": "kraid",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank04:84FE-855A（IDA 机械切分 size=92）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-04-855A": {
+      "id": "S-FUNC-04-855A",
+      "face": "symbol",
+      "module": "kraid",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank04:855A-8563（IDA 机械切分 size=9）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-04-8563": {
+      "id": "S-FUNC-04-8563",
+      "face": "symbol",
+      "module": "kraid",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank04:8563-856B（IDA 机械切分 size=8）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-04-856B": {
+      "id": "S-FUNC-04-856B",
+      "face": "symbol",
+      "module": "kraid",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank04:856B-8572（IDA 机械切分 size=7）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-04-8B53": {
+      "id": "S-FUNC-04-8B53",
+      "face": "symbol",
+      "module": "kraid",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank04:8B53-8B6D（IDA 机械切分 size=26）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-04-8B74": {
+      "id": "S-FUNC-04-8B74",
+      "face": "symbol",
+      "module": "kraid",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank04:8B74-8B79（IDA 机械切分 size=5）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-04-8B87": {
+      "id": "S-FUNC-04-8B87",
+      "face": "symbol",
+      "module": "kraid",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank04:8B87-8BD1（IDA 机械切分 size=74）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-04-8C76": {
+      "id": "S-FUNC-04-8C76",
+      "face": "symbol",
+      "module": "kraid",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank04:8C76-8C84（IDA 机械切分 size=14）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-04-8CF7": {
+      "id": "S-FUNC-04-8CF7",
+      "face": "symbol",
+      "module": "kraid",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank04:8CF7-8CFB（IDA 机械切分 size=4）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-04-8CFB": {
+      "id": "S-FUNC-04-8CFB",
+      "face": "symbol",
+      "module": "kraid",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank04:8CFB-8D3A（IDA 机械切分 size=63）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-05-8000": {
+      "id": "S-FUNC-05-8000",
+      "face": "symbol",
+      "module": "ridley",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank05:8000-8003（IDA 机械切分 size=3）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-05-80B0": {
+      "id": "S-FUNC-05-80B0",
+      "face": "symbol",
+      "module": "ridley",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank05:80B0-80B8（IDA 机械切分 size=8）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-05-80B8": {
+      "id": "S-FUNC-05-80B8",
+      "face": "symbol",
+      "module": "ridley",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank05:80B8-80FB（IDA 机械切分 size=67）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-05-80FB": {
+      "id": "S-FUNC-05-80FB",
+      "face": "symbol",
+      "module": "ridley",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank05:80FB-8134（IDA 机械切分 size=57）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-05-8134": {
+      "id": "S-FUNC-05-8134",
+      "face": "symbol",
+      "module": "ridley",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank05:8134-816E（IDA 机械切分 size=58）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-05-816E": {
+      "id": "S-FUNC-05-816E",
+      "face": "symbol",
+      "module": "ridley",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank05:816E-81B1（IDA 机械切分 size=67）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-05-81B1": {
+      "id": "S-FUNC-05-81B1",
+      "face": "symbol",
+      "module": "ridley",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank05:81B1-81B8（IDA 机械切分 size=7）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-05-81B8": {
+      "id": "S-FUNC-05-81B8",
+      "face": "symbol",
+      "module": "ridley",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank05:81B8-81C0（IDA 机械切分 size=8）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-05-81C0": {
+      "id": "S-FUNC-05-81C0",
+      "face": "symbol",
+      "module": "ridley",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank05:81C0-81C7（IDA 机械切分 size=7）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-05-81C7": {
+      "id": "S-FUNC-05-81C7",
+      "face": "symbol",
+      "module": "ridley",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank05:81C7-81F6（IDA 机械切分 size=47）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-05-81F6": {
+      "id": "S-FUNC-05-81F6",
+      "face": "symbol",
+      "module": "ridley",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank05:81F6-81FC（IDA 机械切分 size=6）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-05-81FC": {
+      "id": "S-FUNC-05-81FC",
+      "face": "symbol",
+      "module": "ridley",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank05:81FC-822B（IDA 机械切分 size=47）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-05-822B": {
+      "id": "S-FUNC-05-822B",
+      "face": "symbol",
+      "module": "ridley",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank05:822B-8244（IDA 机械切分 size=25）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-05-8244": {
+      "id": "S-FUNC-05-8244",
+      "face": "symbol",
+      "module": "ridley",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank05:8244-8318（IDA 机械切分 size=212）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-05-8318": {
+      "id": "S-FUNC-05-8318",
+      "face": "symbol",
+      "module": "ridley",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank05:8318-83F5（IDA 机械切分 size=221）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-05-83F5": {
+      "id": "S-FUNC-05-83F5",
+      "face": "symbol",
+      "module": "ridley",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank05:83F5-844B（IDA 机械切分 size=86）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-05-844B": {
+      "id": "S-FUNC-05-844B",
+      "face": "symbol",
+      "module": "ridley",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank05:844B-84A7（IDA 机械切分 size=92）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-05-84A7": {
+      "id": "S-FUNC-05-84A7",
+      "face": "symbol",
+      "module": "ridley",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank05:84A7-84FE（IDA 机械切分 size=87）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-05-84FE": {
+      "id": "S-FUNC-05-84FE",
+      "face": "symbol",
+      "module": "ridley",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank05:84FE-855A（IDA 机械切分 size=92）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-05-855A": {
+      "id": "S-FUNC-05-855A",
+      "face": "symbol",
+      "module": "ridley",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank05:855A-8563（IDA 机械切分 size=9）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-05-8563": {
+      "id": "S-FUNC-05-8563",
+      "face": "symbol",
+      "module": "ridley",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank05:8563-856B（IDA 机械切分 size=8）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-05-856B": {
+      "id": "S-FUNC-05-856B",
+      "face": "symbol",
+      "module": "ridley",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank05:856B-8572（IDA 机械切分 size=7）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-05-8B53": {
+      "id": "S-FUNC-05-8B53",
+      "face": "symbol",
+      "module": "ridley",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank05:8B53-8B6D（IDA 机械切分 size=26）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-05-8B74": {
+      "id": "S-FUNC-05-8B74",
+      "face": "symbol",
+      "module": "ridley",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank05:8B74-8B79（IDA 机械切分 size=5）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-05-8B87": {
+      "id": "S-FUNC-05-8B87",
+      "face": "symbol",
+      "module": "ridley",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank05:8B87-8BD1（IDA 机械切分 size=74）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-05-8C76": {
+      "id": "S-FUNC-05-8C76",
+      "face": "symbol",
+      "module": "ridley",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank05:8C76-8C84（IDA 机械切分 size=14）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-05-8CF7": {
+      "id": "S-FUNC-05-8CF7",
+      "face": "symbol",
+      "module": "ridley",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank05:8CF7-8CFB（IDA 机械切分 size=4）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-05-8CFB": {
+      "id": "S-FUNC-05-8CFB",
+      "face": "symbol",
+      "module": "ridley",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank05:8CFB-8D3A（IDA 机械切分 size=63）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-06-8000": {
+      "id": "S-FUNC-06-8000",
+      "face": "symbol",
+      "module": "graphics",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank06:8000-8001（IDA 机械切分 size=1）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-06-848C": {
+      "id": "S-FUNC-06-848C",
+      "face": "symbol",
+      "module": "graphics",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank06:848C-8490（IDA 机械切分 size=4）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-06-8844": {
+      "id": "S-FUNC-06-8844",
+      "face": "symbol",
+      "module": "graphics",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank06:8844-8862（IDA 机械切分 size=30）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-06-8B53": {
+      "id": "S-FUNC-06-8B53",
+      "face": "symbol",
+      "module": "graphics",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank06:8B53-8B6D（IDA 机械切分 size=26）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-06-8B74": {
+      "id": "S-FUNC-06-8B74",
+      "face": "symbol",
+      "module": "graphics",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank06:8B74-8B79（IDA 机械切分 size=5）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-06-8B87": {
+      "id": "S-FUNC-06-8B87",
+      "face": "symbol",
+      "module": "graphics",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank06:8B87-8BD1（IDA 机械切分 size=74）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-06-8CFB": {
+      "id": "S-FUNC-06-8CFB",
+      "face": "symbol",
+      "module": "graphics",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank06:8CFB-8D31（IDA 机械切分 size=54）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-06-A480": {
+      "id": "S-FUNC-06-A480",
+      "face": "symbol",
+      "module": "graphics",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank06:A480-A481（IDA 机械切分 size=1）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-C000": {
+      "id": "S-FUNC-07-C000",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:C000-C01A（IDA 机械切分 size=26）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-C0BC": {
+      "id": "S-FUNC-07-C0BC",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:C0BC-C0D9（IDA 机械切分 size=29）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-C0D9": {
+      "id": "S-FUNC-07-C0D9",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:C0D9-C114（IDA 机械切分 size=59）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-C114": {
+      "id": "S-FUNC-07-C114",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:C114-C158（IDA 机械切分 size=68）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-C158": {
+      "id": "S-FUNC-07-C158",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:C158-C16D（IDA 机械切分 size=21）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-C16D": {
+      "id": "S-FUNC-07-C16D",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:C16D-C175（IDA 机械切分 size=8）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-C175": {
+      "id": "S-FUNC-07-C175",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:C175-C19F（IDA 机械切分 size=42）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-C1D4": {
+      "id": "S-FUNC-07-C1D4",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:C1D4-C1E0（IDA 机械切分 size=12）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-C1E0": {
+      "id": "S-FUNC-07-C1E0",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:C1E0-C215（IDA 机械切分 size=53）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-C215": {
+      "id": "S-FUNC-07-C215",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:C215-C21F（IDA 机械切分 size=10）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-C21F": {
+      "id": "S-FUNC-07-C21F",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:C21F-C266（IDA 机械切分 size=71）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-C266": {
+      "id": "S-FUNC-07-C266",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:C266-C27C（IDA 机械切分 size=22）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-C27C": {
+      "id": "S-FUNC-07-C27C",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:C27C-C29A（IDA 机械切分 size=30）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-C29A": {
+      "id": "S-FUNC-07-C29A",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:C29A-C2A8（IDA 机械切分 size=14）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-C2A8": {
+      "id": "S-FUNC-07-C2A8",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:C2A8-C2B3（IDA 机械切分 size=11）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-C2BE": {
+      "id": "S-FUNC-07-C2BE",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:C2BE-C2BF（IDA 机械切分 size=1）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-C2BF": {
+      "id": "S-FUNC-07-C2BF",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:C2BF-C2C0（IDA 机械切分 size=1）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-C2C0": {
+      "id": "S-FUNC-07-C2C0",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:C2C0-C2C4（IDA 机械切分 size=4）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-C2C4": {
+      "id": "S-FUNC-07-C2C4",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:C2C4-C2C5（IDA 机械切分 size=1）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-C2C5": {
+      "id": "S-FUNC-07-C2C5",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:C2C5-C2C6（IDA 机械切分 size=1）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-C2C6": {
+      "id": "S-FUNC-07-C2C6",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:C2C6-C2CA（IDA 机械切分 size=4）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-C2CA": {
+      "id": "S-FUNC-07-C2CA",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:C2CA-C2E4（IDA 机械切分 size=26）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-C30C": {
+      "id": "S-FUNC-07-C30C",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:C30C-C318（IDA 机械切分 size=12）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-C318": {
+      "id": "S-FUNC-07-C318",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:C318-C328（IDA 机械切分 size=16）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-C328": {
+      "id": "S-FUNC-07-C328",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:C328-C36B（IDA 机械切分 size=67）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-C36B": {
+      "id": "S-FUNC-07-C36B",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:C36B-C376（IDA 机械切分 size=11）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-C376": {
+      "id": "S-FUNC-07-C376",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:C376-C37E（IDA 机械切分 size=8）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-C3C6": {
+      "id": "S-FUNC-07-C3C6",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:C3C6-C3D4（IDA 机械切分 size=14）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-C3D4": {
+      "id": "S-FUNC-07-C3D4",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:C3D4-C3DA（IDA 机械切分 size=6）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-C3DA": {
+      "id": "S-FUNC-07-C3DA",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:C3DA-C3FB（IDA 机械切分 size=33）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-C3FB": {
+      "id": "S-FUNC-07-C3FB",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:C3FB-C41D（IDA 机械切分 size=34）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-C41D": {
+      "id": "S-FUNC-07-C41D",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:C41D-C42C（IDA 机械切分 size=15）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-C434": {
+      "id": "S-FUNC-07-C434",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:C434-C439（IDA 机械切分 size=5）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-C439": {
+      "id": "S-FUNC-07-C439",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:C439-C43D（IDA 机械切分 size=4）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-C43D": {
+      "id": "S-FUNC-07-C43D",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:C43D-C447（IDA 机械切分 size=10）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-C447": {
+      "id": "S-FUNC-07-C447",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:C447-C44D（IDA 机械切分 size=6）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-C44D": {
+      "id": "S-FUNC-07-C44D",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:C44D-C45D（IDA 机械切分 size=16）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-C45D": {
+      "id": "S-FUNC-07-C45D",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:C45D-C46E（IDA 机械切分 size=17）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-C487": {
+      "id": "S-FUNC-07-C487",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:C487-C4A7（IDA 机械切分 size=32）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-C4AA": {
+      "id": "S-FUNC-07-C4AA",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:C4AA-C4B2（IDA 机械切分 size=8）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-C4B2": {
+      "id": "S-FUNC-07-C4B2",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:C4B2-C4D9（IDA 机械切分 size=39）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-C4D9": {
+      "id": "S-FUNC-07-C4D9",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:C4D9-C4DE（IDA 机械切分 size=5）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-C4DE": {
+      "id": "S-FUNC-07-C4DE",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:C4DE-C4E8（IDA 机械切分 size=10）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-C4E8": {
+      "id": "S-FUNC-07-C4E8",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:C4E8-C4EF（IDA 机械切分 size=7）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-C4EF": {
+      "id": "S-FUNC-07-C4EF",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:C4EF-C4FA（IDA 机械切分 size=11）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-C4FA": {
+      "id": "S-FUNC-07-C4FA",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:C4FA-C510（IDA 机械切分 size=22）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-C578": {
+      "id": "S-FUNC-07-C578",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:C578-C583（IDA 机械切分 size=11）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-C5D7": {
+      "id": "S-FUNC-07-C5D7",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:C5D7-C604（IDA 机械切分 size=45）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-C604": {
+      "id": "S-FUNC-07-C604",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:C604-C622（IDA 机械切分 size=30）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-C622": {
+      "id": "S-FUNC-07-C622",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:C622-C645（IDA 机械切分 size=35）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-C645": {
+      "id": "S-FUNC-07-C645",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:C645-C677（IDA 机械切分 size=50）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-C677": {
+      "id": "S-FUNC-07-C677",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:C677-C69F（IDA 机械切分 size=40）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-C69F": {
+      "id": "S-FUNC-07-C69F",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:C69F-C6C2（IDA 机械切分 size=35）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-C6C2": {
+      "id": "S-FUNC-07-C6C2",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:C6C2-C6D6（IDA 机械切分 size=20）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-C7AB": {
+      "id": "S-FUNC-07-C7AB",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:C7AB-C7D5（IDA 机械切分 size=42）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-C7D5": {
+      "id": "S-FUNC-07-C7D5",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:C7D5-C801（IDA 机械切分 size=44）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-C8B0": {
+      "id": "S-FUNC-07-C8B0",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:C8B0-C8BB（IDA 机械切分 size=11）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-C8BB": {
+      "id": "S-FUNC-07-C8BB",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:C8BB-C8D1（IDA 机械切分 size=22）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-C97E": {
+      "id": "S-FUNC-07-C97E",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:C97E-C9A6（IDA 机械切分 size=40）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-CA18": {
+      "id": "S-FUNC-07-CA18",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:CA18-CA30（IDA 机械切分 size=24）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-CA96": {
+      "id": "S-FUNC-07-CA96",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:CA96-CAA1（IDA 机械切分 size=11）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-CAA1": {
+      "id": "S-FUNC-07-CAA1",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:CAA1-CAC6（IDA 机械切分 size=37）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-CAC6": {
+      "id": "S-FUNC-07-CAC6",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:CAC6-CAEF（IDA 机械切分 size=41）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-CB29": {
+      "id": "S-FUNC-07-CB29",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:CB29-CB73（IDA 机械切分 size=74）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-CB73": {
+      "id": "S-FUNC-07-CB73",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:CB73-CB8E（IDA 机械切分 size=27）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-CB8E": {
+      "id": "S-FUNC-07-CB8E",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:CB8E-CB92（IDA 机械切分 size=4）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-CB92": {
+      "id": "S-FUNC-07-CB92",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:CB92-CB96（IDA 机械切分 size=4）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-CB96": {
+      "id": "S-FUNC-07-CB96",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:CB96-CB9E（IDA 机械切分 size=8）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-CB9E": {
+      "id": "S-FUNC-07-CB9E",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:CB9E-CBAC（IDA 机械切分 size=14）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-CBAC": {
+      "id": "S-FUNC-07-CBAC",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:CBAC-CBB4（IDA 机械切分 size=8）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-CBB4": {
+      "id": "S-FUNC-07-CBB4",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:CBB4-CBCA（IDA 机械切分 size=22）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-CBCA": {
+      "id": "S-FUNC-07-CBCA",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:CBCA-CBDE（IDA 机械切分 size=20）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-CBDE": {
+      "id": "S-FUNC-07-CBDE",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:CBDE-CBE2（IDA 机械切分 size=4）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-CBE2": {
+      "id": "S-FUNC-07-CBE2",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:CBE2-CBEF（IDA 机械切分 size=13）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-CBF3": {
+      "id": "S-FUNC-07-CBF3",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:CBF3-CBF9（IDA 机械切分 size=6）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-CBF9": {
+      "id": "S-FUNC-07-CBF9",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:CBF9-CBFD（IDA 机械切分 size=4）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-CBFD": {
+      "id": "S-FUNC-07-CBFD",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:CBFD-CC0D（IDA 机械切分 size=16）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-CC0D": {
+      "id": "S-FUNC-07-CC0D",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:CC0D-CC1A（IDA 机械切分 size=13）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-CE92": {
+      "id": "S-FUNC-07-CE92",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:CE92-CF2E（IDA 机械切分 size=156）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-CC98": {
+      "id": "S-FUNC-07-CC98",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:CC98-CCB7（IDA 机械切分 size=31）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-CCB7": {
+      "id": "S-FUNC-07-CCB7",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:CCB7-CCBE（IDA 机械切分 size=7）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-CDBF": {
+      "id": "S-FUNC-07-CDBF",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:CDBF-CDD7（IDA 机械切分 size=24）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-CD6D": {
+      "id": "S-FUNC-07-CD6D",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:CD6D-CD92（IDA 机械切分 size=37）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-CD92": {
+      "id": "S-FUNC-07-CD92",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:CD92-CD9C（IDA 机械切分 size=10）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-CD9C": {
+      "id": "S-FUNC-07-CD9C",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:CD9C-CDBF（IDA 机械切分 size=35）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-CDD7": {
+      "id": "S-FUNC-07-CDD7",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:CDD7-CDF6（IDA 机械切分 size=31）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-CE66": {
+      "id": "S-FUNC-07-CE66",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:CE66-CE84（IDA 机械切分 size=30）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-CE84": {
+      "id": "S-FUNC-07-CE84",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:CE84-CE92（IDA 机械切分 size=14）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-CF2E": {
+      "id": "S-FUNC-07-CF2E",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:CF2E-CF4C（IDA 机械切分 size=30）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-CF4C": {
+      "id": "S-FUNC-07-CF4C",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:CF4C-CF4E（IDA 机械切分 size=2）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-CF4E": {
+      "id": "S-FUNC-07-CF4E",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:CF4E-CF55（IDA 机械切分 size=7）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-CF55": {
+      "id": "S-FUNC-07-CF55",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:CF55-CF5D（IDA 机械切分 size=8）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-CF5D": {
+      "id": "S-FUNC-07-CF5D",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:CF5D-CF6B（IDA 机械切分 size=14）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-CF6B": {
+      "id": "S-FUNC-07-CF6B",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:CF6B-CF6E（IDA 机械切分 size=3）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-CF6E": {
+      "id": "S-FUNC-07-CF6E",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:CF6E-CF77（IDA 机械切分 size=9）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-CF81": {
+      "id": "S-FUNC-07-CF81",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:CF81-CF88（IDA 机械切分 size=7）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-CF88": {
+      "id": "S-FUNC-07-CF88",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:CF88-CFB7（IDA 机械切分 size=47）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-CFB7": {
+      "id": "S-FUNC-07-CFB7",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:CFB7-CFBE（IDA 机械切分 size=7）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-CFC5": {
+      "id": "S-FUNC-07-CFC5",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:CFC5-D002（IDA 机械切分 size=61）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-D09C": {
+      "id": "S-FUNC-07-D09C",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:D09C-D0B5（IDA 机械切分 size=25）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-D147": {
+      "id": "S-FUNC-07-D147",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:D147-D150（IDA 机械切分 size=9）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-D1EE": {
+      "id": "S-FUNC-07-D1EE",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:D1EE-D1F7（IDA 机械切分 size=9）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-D1F7": {
+      "id": "S-FUNC-07-D1F7",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:D1F7-D210（IDA 机械切分 size=25）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-D210": {
+      "id": "S-FUNC-07-D210",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:D210-D26F（IDA 机械切分 size=95）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-D2EB": {
+      "id": "S-FUNC-07-D2EB",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:D2EB-D2FA（IDA 机械切分 size=15）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-D2FA": {
+      "id": "S-FUNC-07-D2FA",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:D2FA-D306（IDA 机械切分 size=12）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-D306": {
+      "id": "S-FUNC-07-D306",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:D306-D315（IDA 机械切分 size=15）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-D315": {
+      "id": "S-FUNC-07-D315",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:D315-D33E（IDA 机械切分 size=41）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-D340": {
+      "id": "S-FUNC-07-D340",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:D340-D34D（IDA 机械切分 size=13）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-D34D": {
+      "id": "S-FUNC-07-D34D",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:D34D-D359（IDA 机械切分 size=12）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-D359": {
+      "id": "S-FUNC-07-D359",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:D359-D38A（IDA 机械切分 size=49）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-D38A": {
+      "id": "S-FUNC-07-D38A",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:D38A-D38E（IDA 机械切分 size=4）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-D38E": {
+      "id": "S-FUNC-07-D38E",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:D38E-D3A8（IDA 机械切分 size=26）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-D4BF": {
+      "id": "S-FUNC-07-D4BF",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:D4BF-D4CB（IDA 机械切分 size=12）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-D4CB": {
+      "id": "S-FUNC-07-D4CB",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:D4CB-D51F（IDA 机械切分 size=84）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-D5E4": {
+      "id": "S-FUNC-07-D5E4",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:D5E4-D5FC（IDA 机械切分 size=24）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-D651": {
+      "id": "S-FUNC-07-D651",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:D651-D65E（IDA 机械切分 size=13）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-D7B3": {
+      "id": "S-FUNC-07-D7B3",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:D7B3-D80E（IDA 机械切分 size=91）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-D79F": {
+      "id": "S-FUNC-07-D79F",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:D79F-D7B3（IDA 机械切分 size=20）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-D92C": {
+      "id": "S-FUNC-07-D92C",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:D92C-D94E（IDA 机械切分 size=34）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-D976": {
+      "id": "S-FUNC-07-D976",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:D976-D9BA（IDA 机械切分 size=68）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-D9BA": {
+      "id": "S-FUNC-07-D9BA",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:D9BA-D9D4（IDA 机械切分 size=26）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-D9D4": {
+      "id": "S-FUNC-07-D9D4",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:D9D4-DA1A（IDA 机械切分 size=70）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-DA1A": {
+      "id": "S-FUNC-07-DA1A",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:DA1A-DA39（IDA 机械切分 size=31）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-DA3D": {
+      "id": "S-FUNC-07-DA3D",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:DA3D-DA7C（IDA 机械切分 size=63）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-DA7C": {
+      "id": "S-FUNC-07-DA7C",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:DA7C-DAB0（IDA 机械切分 size=52）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-DAB0": {
+      "id": "S-FUNC-07-DAB0",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:DAB0-DAD2（IDA 机械切分 size=34）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-DB17": {
+      "id": "S-FUNC-07-DB17",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:DB17-DB2F（IDA 机械切分 size=24）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-DB2F": {
+      "id": "S-FUNC-07-DB2F",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:DB2F-DB37（IDA 机械切分 size=8）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-DB37": {
+      "id": "S-FUNC-07-DB37",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:DB37-DB42（IDA 机械切分 size=11）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-DB42": {
+      "id": "S-FUNC-07-DB42",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:DB42-DC1C（IDA 机械切分 size=218）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-DC1C": {
+      "id": "S-FUNC-07-DC1C",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:DC1C-DC54（IDA 机械切分 size=56）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-DC54": {
+      "id": "S-FUNC-07-DC54",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:DC54-DC67（IDA 机械切分 size=19）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-DC67": {
+      "id": "S-FUNC-07-DC67",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:DC67-DC7F（IDA 机械切分 size=24）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-DC7F": {
+      "id": "S-FUNC-07-DC7F",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:DC7F-DC82（IDA 机械切分 size=3）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-DC82": {
+      "id": "S-FUNC-07-DC82",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:DC82-DC8B（IDA 机械切分 size=9）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-DC8F": {
+      "id": "S-FUNC-07-DC8F",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:DC8F-DCB7（IDA 机械切分 size=40）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-DCC3": {
+      "id": "S-FUNC-07-DCC3",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:DCC3-DCF5（IDA 机械切分 size=50）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-FAB4": {
+      "id": "S-FUNC-07-FAB4",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:FAB4-FAEA（IDA 机械切分 size=54）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-DD97": {
+      "id": "S-FUNC-07-DD97",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:DD97-DDB0（IDA 机械切分 size=25）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-DE3D": {
+      "id": "S-FUNC-07-DE3D",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:DE3D-DE47（IDA 机械切分 size=10）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-DE47": {
+      "id": "S-FUNC-07-DE47",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:DE47-DE4A（IDA 机械切分 size=3）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-DE4A": {
+      "id": "S-FUNC-07-DE4A",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:DE4A-DF2D（IDA 机械切分 size=227）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-DF2D": {
+      "id": "S-FUNC-07-DF2D",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:DF2D-DF32（IDA 机械切分 size=5）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-DF6B": {
+      "id": "S-FUNC-07-DF6B",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:DF6B-DFA3（IDA 机械切分 size=56）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-DFA3": {
+      "id": "S-FUNC-07-DFA3",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:DFA3-DFDF（IDA 机械切分 size=60）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-E038": {
+      "id": "S-FUNC-07-E038",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:E038-E049（IDA 机械切分 size=17）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-E094": {
+      "id": "S-FUNC-07-E094",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:E094-E0C1（IDA 机械切分 size=45）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-E0C1": {
+      "id": "S-FUNC-07-E0C1",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:E0C1-E173（IDA 机械切分 size=178）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-E173": {
+      "id": "S-FUNC-07-E173",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:E173-E17B（IDA 机械切分 size=8）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-E17B": {
+      "id": "S-FUNC-07-E17B",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:E17B-E193（IDA 机械切分 size=24）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-E193": {
+      "id": "S-FUNC-07-E193",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:E193-E198（IDA 机械切分 size=5）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-E198": {
+      "id": "S-FUNC-07-E198",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:E198-E1AD（IDA 机械切分 size=21）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-E1AD": {
+      "id": "S-FUNC-07-E1AD",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:E1AD-E1B9（IDA 机械切分 size=12）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-E1E1": {
+      "id": "S-FUNC-07-E1E1",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:E1E1-E1F1（IDA 机械切分 size=16）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-E1F1": {
+      "id": "S-FUNC-07-E1F1",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:E1F1-E249（IDA 机械切分 size=88）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-E249": {
+      "id": "S-FUNC-07-E249",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:E249-E252（IDA 机械切分 size=9）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-E252": {
+      "id": "S-FUNC-07-E252",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:E252-E25D（IDA 机械切分 size=11）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-E25D": {
+      "id": "S-FUNC-07-E25D",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:E25D-E269（IDA 机械切分 size=12）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-E269": {
+      "id": "S-FUNC-07-E269",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:E269-E365（IDA 机械切分 size=252）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-E365": {
+      "id": "S-FUNC-07-E365",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:E365-E37A（IDA 机械切分 size=21）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-E37A": {
+      "id": "S-FUNC-07-E37A",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:E37A-E3E5（IDA 机械切分 size=107）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-E3E5": {
+      "id": "S-FUNC-07-E3E5",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:E3E5-E449（IDA 机械切分 size=100）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-E449": {
+      "id": "S-FUNC-07-E449",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:E449-E457（IDA 机械切分 size=14）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-E457": {
+      "id": "S-FUNC-07-E457",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:E457-E4A3（IDA 机械切分 size=76）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-E4A3": {
+      "id": "S-FUNC-07-E4A3",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:E4A3-E4F1（IDA 机械切分 size=78）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-E4F1": {
+      "id": "S-FUNC-07-E4F1",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:E4F1-E519（IDA 机械切分 size=40）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-E519": {
+      "id": "S-FUNC-07-E519",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:E519-E54A（IDA 机械切分 size=49）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-E54A": {
+      "id": "S-FUNC-07-E54A",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:E54A-E55E（IDA 机械切分 size=20）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-E564": {
+      "id": "S-FUNC-07-E564",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:E564-E571（IDA 机械切分 size=13）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-E626": {
+      "id": "S-FUNC-07-E626",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:E626-E668（IDA 机械切分 size=66）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-E668": {
+      "id": "S-FUNC-07-E668",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:E668-E6A7（IDA 机械切分 size=63）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-E6A7": {
+      "id": "S-FUNC-07-E6A7",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:E6A7-E6D2（IDA 机械切分 size=43）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-E6D2": {
+      "id": "S-FUNC-07-E6D2",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:E6D2-E6FF（IDA 机械切分 size=45）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-E720": {
+      "id": "S-FUNC-07-E720",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:E720-E770（IDA 机械切分 size=80）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-E792": {
+      "id": "S-FUNC-07-E792",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:E792-E7A2（IDA 机械切分 size=16）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-E7A2": {
+      "id": "S-FUNC-07-E7A2",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:E7A2-E7AD（IDA 机械切分 size=11）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-E7AD": {
+      "id": "S-FUNC-07-E7AD",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:E7AD-E880（IDA 机械切分 size=211）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-E880": {
+      "id": "S-FUNC-07-E880",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:E880-E88B（IDA 机械切分 size=11）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-E88B": {
+      "id": "S-FUNC-07-E88B",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:E88B-E8BE（IDA 机械切分 size=51）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-E8BE": {
+      "id": "S-FUNC-07-E8BE",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:E8BE-E8CE（IDA 机械切分 size=16）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-E8CE": {
+      "id": "S-FUNC-07-E8CE",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:E8CE-E8F1（IDA 机械切分 size=35）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-E90F": {
+      "id": "S-FUNC-07-E90F",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:E90F-E95F（IDA 机械切分 size=80）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-E95F": {
+      "id": "S-FUNC-07-E95F",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:E95F-E96A（IDA 机械切分 size=11）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-E96A": {
+      "id": "S-FUNC-07-E96A",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:E96A-E98E（IDA 机械切分 size=36）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-E98E": {
+      "id": "S-FUNC-07-E98E",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:E98E-E9B7（IDA 机械切分 size=41）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-E9B7": {
+      "id": "S-FUNC-07-E9B7",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:E9B7-E9BE（IDA 机械切分 size=7）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-EA05": {
+      "id": "S-FUNC-07-EA05",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:EA05-EA13（IDA 机械切分 size=14）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-EA2B": {
+      "id": "S-FUNC-07-EA2B",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:EA2B-EAC0（IDA 机械切分 size=149）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-EAC0": {
+      "id": "S-FUNC-07-EAC0",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:EAC0-EACA（IDA 机械切分 size=10）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-EB28": {
+      "id": "S-FUNC-07-EB28",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:EB28-EB4D（IDA 机械切分 size=37）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-EB85": {
+      "id": "S-FUNC-07-EB85",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:EB85-EB8C（IDA 机械切分 size=7）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-EC93": {
+      "id": "S-FUNC-07-EC93",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:EC93-EC9B（IDA 机械切分 size=8）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-EC9B": {
+      "id": "S-FUNC-07-EC9B",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:EC9B-ED51（IDA 机械切分 size=182）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-ED51": {
+      "id": "S-FUNC-07-ED51",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:ED51-ED5B（IDA 机械切分 size=10）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-ED5B": {
+      "id": "S-FUNC-07-ED5B",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:ED5B-ED65（IDA 机械切分 size=10）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-ED65": {
+      "id": "S-FUNC-07-ED65",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:ED65-ED7A（IDA 机械切分 size=21）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-ED7A": {
+      "id": "S-FUNC-07-ED7A",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:ED7A-ED8C（IDA 机械切分 size=18）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-ED8C": {
+      "id": "S-FUNC-07-ED8C",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:ED8C-ED98（IDA 机械切分 size=12）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-EF00": {
+      "id": "S-FUNC-07-EF00",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:EF00-EF09（IDA 机械切分 size=9）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-EF09": {
+      "id": "S-FUNC-07-EF09",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:EF09-EF13（IDA 机械切分 size=10）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-EF8C": {
+      "id": "S-FUNC-07-EF8C",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:EF8C-EF9A（IDA 机械切分 size=14）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-EF9E": {
+      "id": "S-FUNC-07-EF9E",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:EF9E-EFF4（IDA 机械切分 size=86）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-EFF8": {
+      "id": "S-FUNC-07-EFF8",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:EFF8-F018（IDA 机械切分 size=32）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-F01C": {
+      "id": "S-FUNC-07-F01C",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:F01C-F034（IDA 机械切分 size=24）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-F149": {
+      "id": "S-FUNC-07-F149",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:F149-F152（IDA 机械切分 size=9）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-F152": {
+      "id": "S-FUNC-07-F152",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:F152-F162（IDA 机械切分 size=16）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-F172": {
+      "id": "S-FUNC-07-F172",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:F172-F186（IDA 机械切分 size=20）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-F186": {
+      "id": "S-FUNC-07-F186",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:F186-F19A（IDA 机械切分 size=20）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-F19A": {
+      "id": "S-FUNC-07-F19A",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:F19A-F1A7（IDA 机械切分 size=13）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-F1A7": {
+      "id": "S-FUNC-07-F1A7",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:F1A7-F1B3（IDA 机械切分 size=12）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-F1BF": {
+      "id": "S-FUNC-07-F1BF",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:F1BF-F1CB（IDA 机械切分 size=12）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-F1D2": {
+      "id": "S-FUNC-07-F1D2",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:F1D2-F1E0（IDA 机械切分 size=14）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-F1E0": {
+      "id": "S-FUNC-07-F1E0",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:F1E0-F1E7（IDA 机械切分 size=7）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-F1EE": {
+      "id": "S-FUNC-07-F1EE",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:F1EE-F1F4（IDA 机械切分 size=6）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-F1F4": {
+      "id": "S-FUNC-07-F1F4",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:F1F4-F1FA（IDA 机械切分 size=6）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-F1FA": {
+      "id": "S-FUNC-07-F1FA",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:F1FA-F262（IDA 机械切分 size=104）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-F262": {
+      "id": "S-FUNC-07-F262",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:F262-F266（IDA 机械切分 size=4）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-F266": {
+      "id": "S-FUNC-07-F266",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:F266-F270（IDA 机械切分 size=10）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-F277": {
+      "id": "S-FUNC-07-F277",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:F277-F279（IDA 机械切分 size=2）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-F279": {
+      "id": "S-FUNC-07-F279",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:F279-F282（IDA 机械切分 size=9）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-F2B4": {
+      "id": "S-FUNC-07-F2B4",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:F2B4-F2CA（IDA 机械切分 size=22）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-F311": {
+      "id": "S-FUNC-07-F311",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:F311-F323（IDA 机械切分 size=18）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-F323": {
+      "id": "S-FUNC-07-F323",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:F323-F32A（IDA 机械切分 size=7）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-F32A": {
+      "id": "S-FUNC-07-F32A",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:F32A-F332（IDA 机械切分 size=8）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-F338": {
+      "id": "S-FUNC-07-F338",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:F338-F340（IDA 机械切分 size=8）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-F345": {
+      "id": "S-FUNC-07-F345",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:F345-F351（IDA 机械切分 size=12）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-F351": {
+      "id": "S-FUNC-07-F351",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:F351-F37F（IDA 机械切分 size=46）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-F37F": {
+      "id": "S-FUNC-07-F37F",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:F37F-F3AA（IDA 机械切分 size=43）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-F3AA": {
+      "id": "S-FUNC-07-F3AA",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:F3AA-F3BE（IDA 机械切分 size=20）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-F74B": {
+      "id": "S-FUNC-07-F74B",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:F74B-F752（IDA 机械切分 size=7）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-FAFF": {
+      "id": "S-FUNC-07-FAFF",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:FAFF-FB7B（IDA 机械切分 size=124）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-F93B": {
+      "id": "S-FUNC-07-F93B",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:F93B-F949（IDA 机械切分 size=14）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-F949": {
+      "id": "S-FUNC-07-F949",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:F949-F96A（IDA 机械切分 size=33）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-FA18": {
+      "id": "S-FUNC-07-FA18",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:FA18-FA1E（IDA 机械切分 size=6）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-FA41": {
+      "id": "S-FUNC-07-FA41",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:FA41-FA5B（IDA 机械切分 size=26）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-FA9D": {
+      "id": "S-FUNC-07-FA9D",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:FA9D-FAB4（IDA 机械切分 size=23）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-FAF2": {
+      "id": "S-FUNC-07-FAF2",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:FAF2-FAFF（IDA 机械切分 size=13）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-FB7B": {
+      "id": "S-FUNC-07-FB7B",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:FB7B-FB88（IDA 机械切分 size=13）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-FBDD": {
+      "id": "S-FUNC-07-FBDD",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:FBDD-FBEC（IDA 机械切分 size=15）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-FBEC": {
+      "id": "S-FUNC-07-FBEC",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:FBEC-FC5D（IDA 机械切分 size=113）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-FC65": {
+      "id": "S-FUNC-07-FC65",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:FC65-FC98（IDA 机械切分 size=51）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-FC98": {
+      "id": "S-FUNC-07-FC98",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:FC98-FCC1（IDA 机械切分 size=41）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-FD8F": {
+      "id": "S-FUNC-07-FD8F",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:FD8F-FDE3（IDA 机械切分 size=84）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-FDE3": {
+      "id": "S-FUNC-07-FDE3",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:FDE3-FE05（IDA 机械切分 size=34）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-FE05": {
+      "id": "S-FUNC-07-FE05",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:FE05-FE1B（IDA 机械切分 size=22）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-FE1B": {
+      "id": "S-FUNC-07-FE1B",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:FE1B-FE27（IDA 机械切分 size=12）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-FE27": {
+      "id": "S-FUNC-07-FE27",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:FE27-FE59（IDA 机械切分 size=50）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-FE6D": {
+      "id": "S-FUNC-07-FE6D",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:FE6D-FE79（IDA 机械切分 size=12）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-FECC": {
+      "id": "S-FUNC-07-FECC",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:FECC-FEDC（IDA 机械切分 size=16）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-FEDC": {
+      "id": "S-FUNC-07-FEDC",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:FEDC-FF3C（IDA 机械切分 size=96）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "S-FUNC-07-FFB0": {
+      "id": "S-FUNC-07-FFB0",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:FFB0-FFD5（IDA 机械切分 size=37）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+    },
+    "D-REG-00-000": {
+      "id": "D-REG-00-000",
+      "face": "data",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:833A-833B（data 连续段 1B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-00-001": {
+      "id": "D-REG-00-001",
+      "face": "data",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:8446-8447（data 连续段 1B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-00-002": {
+      "id": "D-REG-00-002",
+      "face": "data",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:84ED-84EE（data 连续段 1B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-00-003": {
+      "id": "D-REG-00-003",
+      "face": "data",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:8500-8501（data 连续段 1B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-00-004": {
+      "id": "D-REG-00-004",
+      "face": "data",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:8673-8674（data 连续段 1B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-00-005": {
+      "id": "D-REG-00-005",
+      "face": "data",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:868D-868E（data 连续段 1B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-00-006": {
+      "id": "D-REG-00-006",
+      "face": "data",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:86BF-86C0（data 连续段 1B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-00-007": {
+      "id": "D-REG-00-007",
+      "face": "data",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:8705-8706（data 连续段 1B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-00-008": {
+      "id": "D-REG-00-008",
+      "face": "data",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:8766-8767（data 连续段 1B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-00-009": {
+      "id": "D-REG-00-009",
+      "face": "data",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:8785-8796（data 连续段 17B）",
+      "note": "xref 消费者 2 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-00-010": {
+      "id": "D-REG-00-010",
+      "face": "data",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:89E2-89E4（data 连续段 2B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-00-011": {
+      "id": "D-REG-00-011",
+      "face": "data",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:8A31-8A32（data 连续段 1B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-00-012": {
+      "id": "D-REG-00-012",
+      "face": "data",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:8A60-8A61（data 连续段 1B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-00-013": {
+      "id": "D-REG-00-013",
+      "face": "data",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:8A74-8A75（data 连续段 1B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-00-014": {
+      "id": "D-REG-00-014",
+      "face": "data",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:8A9A-8A9B（data 连续段 1B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-00-015": {
+      "id": "D-REG-00-015",
+      "face": "data",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:8B43-8B58（data 连续段 21B）",
+      "note": "xref 消费者 1 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-00-016": {
+      "id": "D-REG-00-016",
+      "face": "data",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:9441-9442（data 连续段 1B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-00-017": {
+      "id": "D-REG-00-017",
+      "face": "data",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:95A8-95A9（data 连续段 1B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-00-018": {
+      "id": "D-REG-00-018",
+      "face": "data",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:95CC-95CD（data 连续段 1B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-00-019": {
+      "id": "D-REG-00-019",
+      "face": "data",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:95F0-95F1（data 连续段 1B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-00-020": {
+      "id": "D-REG-00-020",
+      "face": "data",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:9614-9639（data 连续段 37B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-00-021": {
+      "id": "D-REG-00-021",
+      "face": "data",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:965C-965D（data 连续段 1B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-00-022": {
+      "id": "D-REG-00-022",
+      "face": "data",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:9680-9681（data 连续段 1B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-00-023": {
+      "id": "D-REG-00-023",
+      "face": "data",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:9692-96A5（data 连续段 19B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-00-024": {
+      "id": "D-REG-00-024",
+      "face": "data",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:96B6-96B7（data 连续段 1B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-00-025": {
+      "id": "D-REG-00-025",
+      "face": "data",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:96C8-9711（data 连续段 73B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-00-026": {
+      "id": "D-REG-00-026",
+      "face": "data",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:9734-9735（data 连续段 1B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-00-027": {
+      "id": "D-REG-00-027",
+      "face": "data",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:974E-974F（data 连续段 1B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-00-028": {
+      "id": "D-REG-00-028",
+      "face": "data",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:976A-977D（data 连续段 19B）",
+      "note": "xref 消费者 1 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-00-029": {
+      "id": "D-REG-00-029",
+      "face": "data",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:97A0-97A1（data 连续段 1B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-00-030": {
+      "id": "D-REG-00-030",
+      "face": "data",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:97C4-97C5（data 连续段 1B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-00-031": {
+      "id": "D-REG-00-031",
+      "face": "data",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:97E7-97E9（data 连续段 2B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-00-032": {
+      "id": "D-REG-00-032",
+      "face": "data",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:98C2-98C4（data 连续段 2B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-00-033": {
+      "id": "D-REG-00-033",
+      "face": "data",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:990E-990F（data 连续段 1B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-00-034": {
+      "id": "D-REG-00-034",
+      "face": "data",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:9928-9929（data 连续段 1B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-00-035": {
+      "id": "D-REG-00-035",
+      "face": "data",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:993E-994B（data 连续段 13B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-00-036": {
+      "id": "D-REG-00-036",
+      "face": "data",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:9963-9970（data 连续段 13B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-00-037": {
+      "id": "D-REG-00-037",
+      "face": "data",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:99B4-99D5（data 连续段 33B）",
+      "note": "xref 消费者 1 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-00-038": {
+      "id": "D-REG-00-038",
+      "face": "data",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:9B8C-9B8D（data 连续段 1B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-00-039": {
+      "id": "D-REG-00-039",
+      "face": "data",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:9DA6-9DA7（data 连续段 1B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-00-040": {
+      "id": "D-REG-00-040",
+      "face": "data",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:9ECF-9ED3（data 连续段 4B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-00-041": {
+      "id": "D-REG-00-041",
+      "face": "data",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:9EE4-9F13（data 连续段 47B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-00-042": {
+      "id": "D-REG-00-042",
+      "face": "data",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:9F2A-9F4C（data 连续段 34B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-00-043": {
+      "id": "D-REG-00-043",
+      "face": "data",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:9FA1-9FA2（data 连续段 1B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-00-044": {
+      "id": "D-REG-00-044",
+      "face": "data",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:9FB7-9FB8（data 连续段 1B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-00-045": {
+      "id": "D-REG-00-045",
+      "face": "data",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:9FD1-9FD2（data 连续段 1B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-00-046": {
+      "id": "D-REG-00-046",
+      "face": "data",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:A07A-A07B（data 连续段 1B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-00-047": {
+      "id": "D-REG-00-047",
+      "face": "data",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:A13E-A13F（data 连续段 1B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-00-048": {
+      "id": "D-REG-00-048",
+      "face": "data",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:A165-A16C（data 连续段 7B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-00-049": {
+      "id": "D-REG-00-049",
+      "face": "data",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:A196-A1AB（data 连续段 21B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-00-050": {
+      "id": "D-REG-00-050",
+      "face": "data",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:A1D0-A1D9（data 连续段 9B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-00-051": {
+      "id": "D-REG-00-051",
+      "face": "data",
+      "module": "title",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank00:A1F2-C000（data 连续段 7694B）",
+      "note": "xref 消费者 10 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-01-000": {
+      "id": "D-REG-01-000",
+      "face": "data",
+      "module": "brinstar",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank01:8619-861A（data 连续段 1B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-01-001": {
+      "id": "D-REG-01-001",
+      "face": "data",
+      "module": "brinstar",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank01:87E6-87ED（data 连续段 7B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-01-002": {
+      "id": "D-REG-01-002",
+      "face": "data",
+      "module": "brinstar",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank01:884A-884E（data 连续段 4B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-01-003": {
+      "id": "D-REG-01-003",
+      "face": "data",
+      "module": "brinstar",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank01:8872-8890（data 连续段 30B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-01-004": {
+      "id": "D-REG-01-004",
+      "face": "data",
+      "module": "brinstar",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank01:890C-890D（data 连续段 1B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-01-005": {
+      "id": "D-REG-01-005",
+      "face": "data",
+      "module": "brinstar",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank01:896F-8973（data 连续段 4B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-01-006": {
+      "id": "D-REG-01-006",
+      "face": "data",
+      "module": "brinstar",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank01:8985-8986（data 连续段 1B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-01-007": {
+      "id": "D-REG-01-007",
+      "face": "data",
+      "module": "brinstar",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank01:89B7-89BB（data 连续段 4B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-01-008": {
+      "id": "D-REG-01-008",
+      "face": "data",
+      "module": "brinstar",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank01:89F7-89F8（data 连续段 1B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-01-009": {
+      "id": "D-REG-01-009",
+      "face": "data",
+      "module": "brinstar",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank01:8AAB-8AAC（data 连续段 1B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-01-010": {
+      "id": "D-REG-01-010",
+      "face": "data",
+      "module": "brinstar",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank01:8C84-8CF7（data 连续段 115B）",
+      "note": "xref 消费者 1 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-01-011": {
+      "id": "D-REG-01-011",
+      "face": "data",
+      "module": "brinstar",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank01:8D3A-C000（data 连续段 12998B）",
+      "note": "xref 消费者 4 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-02-000": {
+      "id": "D-REG-02-000",
+      "face": "data",
+      "module": "norfair",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank02:8619-861A（data 连续段 1B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-02-001": {
+      "id": "D-REG-02-001",
+      "face": "data",
+      "module": "norfair",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank02:87E6-87ED（data 连续段 7B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-02-002": {
+      "id": "D-REG-02-002",
+      "face": "data",
+      "module": "norfair",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank02:884A-884E（data 连续段 4B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-02-003": {
+      "id": "D-REG-02-003",
+      "face": "data",
+      "module": "norfair",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank02:8872-8890（data 连续段 30B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-02-004": {
+      "id": "D-REG-02-004",
+      "face": "data",
+      "module": "norfair",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank02:890C-890D（data 连续段 1B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-02-005": {
+      "id": "D-REG-02-005",
+      "face": "data",
+      "module": "norfair",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank02:896F-8973（data 连续段 4B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-02-006": {
+      "id": "D-REG-02-006",
+      "face": "data",
+      "module": "norfair",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank02:8985-8986（data 连续段 1B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-02-007": {
+      "id": "D-REG-02-007",
+      "face": "data",
+      "module": "norfair",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank02:89B7-89BB（data 连续段 4B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-02-008": {
+      "id": "D-REG-02-008",
+      "face": "data",
+      "module": "norfair",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank02:89F7-89F8（data 连续段 1B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-02-009": {
+      "id": "D-REG-02-009",
+      "face": "data",
+      "module": "norfair",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank02:8AAB-8AAC（data 连续段 1B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-02-010": {
+      "id": "D-REG-02-010",
+      "face": "data",
+      "module": "norfair",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank02:8C84-8CF7（data 连续段 115B）",
+      "note": "xref 消费者 1 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-02-011": {
+      "id": "D-REG-02-011",
+      "face": "data",
+      "module": "norfair",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank02:8D3A-C000（data 连续段 12998B）",
+      "note": "xref 消费者 4 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-03-000": {
+      "id": "D-REG-03-000",
+      "face": "data",
+      "module": "tourian",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank03:8619-861A（data 连续段 1B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-03-001": {
+      "id": "D-REG-03-001",
+      "face": "data",
+      "module": "tourian",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank03:87E6-87ED（data 连续段 7B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-03-002": {
+      "id": "D-REG-03-002",
+      "face": "data",
+      "module": "tourian",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank03:884A-884E（data 连续段 4B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-03-003": {
+      "id": "D-REG-03-003",
+      "face": "data",
+      "module": "tourian",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank03:8872-8890（data 连续段 30B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-03-004": {
+      "id": "D-REG-03-004",
+      "face": "data",
+      "module": "tourian",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank03:890C-890D（data 连续段 1B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-03-005": {
+      "id": "D-REG-03-005",
+      "face": "data",
+      "module": "tourian",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank03:896F-8973（data 连续段 4B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-03-006": {
+      "id": "D-REG-03-006",
+      "face": "data",
+      "module": "tourian",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank03:8985-8986（data 连续段 1B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-03-007": {
+      "id": "D-REG-03-007",
+      "face": "data",
+      "module": "tourian",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank03:89B7-89BB（data 连续段 4B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-03-008": {
+      "id": "D-REG-03-008",
+      "face": "data",
+      "module": "tourian",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank03:89F7-89F8（data 连续段 1B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-03-009": {
+      "id": "D-REG-03-009",
+      "face": "data",
+      "module": "tourian",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank03:8AAB-8AAC（data 连续段 1B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-03-010": {
+      "id": "D-REG-03-010",
+      "face": "data",
+      "module": "tourian",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank03:8C84-8CF7（data 连续段 115B）",
+      "note": "xref 消费者 1 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-03-011": {
+      "id": "D-REG-03-011",
+      "face": "data",
+      "module": "tourian",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank03:8D3A-C000（data 连续段 12998B）",
+      "note": "xref 消费者 4 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-04-000": {
+      "id": "D-REG-04-000",
+      "face": "data",
+      "module": "kraid",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank04:8619-861A（data 连续段 1B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-04-001": {
+      "id": "D-REG-04-001",
+      "face": "data",
+      "module": "kraid",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank04:87E6-87ED（data 连续段 7B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-04-002": {
+      "id": "D-REG-04-002",
+      "face": "data",
+      "module": "kraid",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank04:884A-884E（data 连续段 4B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-04-003": {
+      "id": "D-REG-04-003",
+      "face": "data",
+      "module": "kraid",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank04:8872-8890（data 连续段 30B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-04-004": {
+      "id": "D-REG-04-004",
+      "face": "data",
+      "module": "kraid",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank04:890C-890D（data 连续段 1B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-04-005": {
+      "id": "D-REG-04-005",
+      "face": "data",
+      "module": "kraid",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank04:896F-8973（data 连续段 4B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-04-006": {
+      "id": "D-REG-04-006",
+      "face": "data",
+      "module": "kraid",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank04:8985-8986（data 连续段 1B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-04-007": {
+      "id": "D-REG-04-007",
+      "face": "data",
+      "module": "kraid",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank04:89B7-89BB（data 连续段 4B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-04-008": {
+      "id": "D-REG-04-008",
+      "face": "data",
+      "module": "kraid",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank04:89F7-89F8（data 连续段 1B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-04-009": {
+      "id": "D-REG-04-009",
+      "face": "data",
+      "module": "kraid",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank04:8AAB-8AAC（data 连续段 1B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-04-010": {
+      "id": "D-REG-04-010",
+      "face": "data",
+      "module": "kraid",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank04:8C84-8CF7（data 连续段 115B）",
+      "note": "xref 消费者 1 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-04-011": {
+      "id": "D-REG-04-011",
+      "face": "data",
+      "module": "kraid",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank04:8D3A-C000（data 连续段 12998B）",
+      "note": "xref 消费者 4 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-05-000": {
+      "id": "D-REG-05-000",
+      "face": "data",
+      "module": "ridley",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank05:8619-861A（data 连续段 1B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-05-001": {
+      "id": "D-REG-05-001",
+      "face": "data",
+      "module": "ridley",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank05:87E6-87ED（data 连续段 7B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-05-002": {
+      "id": "D-REG-05-002",
+      "face": "data",
+      "module": "ridley",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank05:884A-884E（data 连续段 4B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-05-003": {
+      "id": "D-REG-05-003",
+      "face": "data",
+      "module": "ridley",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank05:8872-8890（data 连续段 30B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-05-004": {
+      "id": "D-REG-05-004",
+      "face": "data",
+      "module": "ridley",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank05:890C-890D（data 连续段 1B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-05-005": {
+      "id": "D-REG-05-005",
+      "face": "data",
+      "module": "ridley",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank05:896F-8973（data 连续段 4B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-05-006": {
+      "id": "D-REG-05-006",
+      "face": "data",
+      "module": "ridley",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank05:8985-8986（data 连续段 1B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-05-007": {
+      "id": "D-REG-05-007",
+      "face": "data",
+      "module": "ridley",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank05:89B7-89BB（data 连续段 4B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-05-008": {
+      "id": "D-REG-05-008",
+      "face": "data",
+      "module": "ridley",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank05:89F7-89F8（data 连续段 1B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-05-009": {
+      "id": "D-REG-05-009",
+      "face": "data",
+      "module": "ridley",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank05:8AAB-8AAC（data 连续段 1B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-05-010": {
+      "id": "D-REG-05-010",
+      "face": "data",
+      "module": "ridley",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank05:8C84-8CF7（data 连续段 115B）",
+      "note": "xref 消费者 1 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-05-011": {
+      "id": "D-REG-05-011",
+      "face": "data",
+      "module": "ridley",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank05:8D3A-C000（data 连续段 12998B）",
+      "note": "xref 消费者 4 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-06-000": {
+      "id": "D-REG-06-000",
+      "face": "data",
+      "module": "graphics",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank06:800C-800D（data 连续段 1B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-06-001": {
+      "id": "D-REG-06-001",
+      "face": "data",
+      "module": "graphics",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank06:805B-805C（data 连续段 1B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-06-002": {
+      "id": "D-REG-06-002",
+      "face": "data",
+      "module": "graphics",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank06:8094-8095（data 连续段 1B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-06-003": {
+      "id": "D-REG-06-003",
+      "face": "data",
+      "module": "graphics",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank06:80B4-80B5（data 连续段 1B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-06-004": {
+      "id": "D-REG-06-004",
+      "face": "data",
+      "module": "graphics",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank06:810C-810D（data 连续段 1B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-06-005": {
+      "id": "D-REG-06-005",
+      "face": "data",
+      "module": "graphics",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank06:819A-819B（data 连续段 1B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-06-006": {
+      "id": "D-REG-06-006",
+      "face": "data",
+      "module": "graphics",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank06:822F-8230（data 连续段 1B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-06-007": {
+      "id": "D-REG-06-007",
+      "face": "data",
+      "module": "graphics",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank06:8293-8294（data 连续段 1B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-06-008": {
+      "id": "D-REG-06-008",
+      "face": "data",
+      "module": "graphics",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank06:82C3-82C4（data 连续段 1B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-06-009": {
+      "id": "D-REG-06-009",
+      "face": "data",
+      "module": "graphics",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank06:8333-8334（data 连续段 1B）",
+      "note": "xref 消费者 1 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-06-010": {
+      "id": "D-REG-06-010",
+      "face": "data",
+      "module": "graphics",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank06:83BD-83BF（data 连续段 2B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-06-011": {
+      "id": "D-REG-06-011",
+      "face": "data",
+      "module": "graphics",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank06:8460-8464（data 连续段 4B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-06-012": {
+      "id": "D-REG-06-012",
+      "face": "data",
+      "module": "graphics",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank06:847E-847F（data 连续段 1B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-06-013": {
+      "id": "D-REG-06-013",
+      "face": "data",
+      "module": "graphics",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank06:84ED-84EE（data 连续段 1B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-06-014": {
+      "id": "D-REG-06-014",
+      "face": "data",
+      "module": "graphics",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank06:8750-875D（data 连续段 13B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-06-015": {
+      "id": "D-REG-06-015",
+      "face": "data",
+      "module": "graphics",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank06:8830-8831（data 连续段 1B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-06-016": {
+      "id": "D-REG-06-016",
+      "face": "data",
+      "module": "graphics",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank06:886D-887F（data 连续段 18B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-06-017": {
+      "id": "D-REG-06-017",
+      "face": "data",
+      "module": "graphics",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank06:88BE-88BF（data 连续段 1B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-06-018": {
+      "id": "D-REG-06-018",
+      "face": "data",
+      "module": "graphics",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank06:896A-898B（data 连续段 33B）",
+      "note": "xref 消费者 1 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-06-019": {
+      "id": "D-REG-06-019",
+      "face": "data",
+      "module": "graphics",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank06:89C4-89C5（data 连续段 1B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-06-020": {
+      "id": "D-REG-06-020",
+      "face": "data",
+      "module": "graphics",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank06:8A0E-8A0F（data 连续段 1B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-06-021": {
+      "id": "D-REG-06-021",
+      "face": "data",
+      "module": "graphics",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank06:8AAB-8AAC（data 连续段 1B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-06-022": {
+      "id": "D-REG-06-022",
+      "face": "data",
+      "module": "graphics",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank06:8BF2-8C18（data 连续段 38B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-06-023": {
+      "id": "D-REG-06-023",
+      "face": "data",
+      "module": "graphics",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank06:8C50-8C58（data 连续段 8B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-06-024": {
+      "id": "D-REG-06-024",
+      "face": "data",
+      "module": "graphics",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank06:8C84-8CFB（data 连续段 119B）",
+      "note": "xref 消费者 1 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-06-025": {
+      "id": "D-REG-06-025",
+      "face": "data",
+      "module": "graphics",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank06:8D31-C000（data 连续段 13007B）",
+      "note": "xref 消费者 5 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-07-000": {
+      "id": "D-REG-07-000",
+      "face": "data",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:C521-C522（data 连续段 1B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-07-001": {
+      "id": "D-REG-07-001",
+      "face": "data",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:C717-C72D（data 连续段 22B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-07-002": {
+      "id": "D-REG-07-002",
+      "face": "data",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:C742-C743（data 连续段 1B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-07-003": {
+      "id": "D-REG-07-003",
+      "face": "data",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:CA30-CA31（data 连续段 1B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-07-004": {
+      "id": "D-REG-07-004",
+      "face": "data",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:CC26-CC27（data 连续段 1B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-07-005": {
+      "id": "D-REG-07-005",
+      "face": "data",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:CFC3-CFC5（data 连续段 2B）",
+      "note": "xref 消费者 2 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-07-006": {
+      "id": "D-REG-07-006",
+      "face": "data",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:D002-D09C（data 连续段 154B）",
+      "note": "xref 消费者 1 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-07-007": {
+      "id": "D-REG-07-007",
+      "face": "data",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:D0B5-D1EE（data 连续段 313B）",
+      "note": "xref 消费者 4 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-07-008": {
+      "id": "D-REG-07-008",
+      "face": "data",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:D26F-D275（data 连续段 6B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-07-009": {
+      "id": "D-REG-07-009",
+      "face": "data",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:D2E3-D2EB（data 连续段 8B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-07-010": {
+      "id": "D-REG-07-010",
+      "face": "data",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:D33E-D340（data 连续段 2B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-07-011": {
+      "id": "D-REG-07-011",
+      "face": "data",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:D3A8-D4BF（data 连续段 279B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-07-012": {
+      "id": "D-REG-07-012",
+      "face": "data",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:D51F-D5E4（data 连续段 197B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-07-013": {
+      "id": "D-REG-07-013",
+      "face": "data",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:D5FC-D638（data 连续段 60B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-07-014": {
+      "id": "D-REG-07-014",
+      "face": "data",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:D65E-D798（data 连续段 314B）",
+      "note": "xref 消费者 1 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-07-015": {
+      "id": "D-REG-07-015",
+      "face": "data",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:D80E-D92C（data 连续段 286B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-07-016": {
+      "id": "D-REG-07-016",
+      "face": "data",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:D94E-D976（data 连续段 40B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-07-017": {
+      "id": "D-REG-07-017",
+      "face": "data",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:DA39-DA3D（data 连续段 4B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-07-018": {
+      "id": "D-REG-07-018",
+      "face": "data",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:DAD2-DADA（data 连续段 8B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-07-019": {
+      "id": "D-REG-07-019",
+      "face": "data",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:DC8B-DC8F（data 连续段 4B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-07-020": {
+      "id": "D-REG-07-020",
+      "face": "data",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:DCB7-DCC3（data 连续段 12B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-07-021": {
+      "id": "D-REG-07-021",
+      "face": "data",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:DE35-DE3D（data 连续段 8B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-07-022": {
+      "id": "D-REG-07-022",
+      "face": "data",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:E000-E012（data 连续段 18B）",
+      "note": "xref 消费者 5 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-07-023": {
+      "id": "D-REG-07-023",
+      "face": "data",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:E049-E094（data 连续段 75B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-07-024": {
+      "id": "D-REG-07-024",
+      "face": "data",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:E1B9-E1E1（data 连续段 40B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-07-025": {
+      "id": "D-REG-07-025",
+      "face": "data",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:E55E-E564（data 连续段 6B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-07-026": {
+      "id": "D-REG-07-026",
+      "face": "data",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:E6FF-E701（data 连续段 2B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-07-027": {
+      "id": "D-REG-07-027",
+      "face": "data",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:E770-E792（data 连续段 34B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-07-028": {
+      "id": "D-REG-07-028",
+      "face": "data",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:E8F1-E90F（data 连续段 30B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-07-029": {
+      "id": "D-REG-07-029",
+      "face": "data",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:EB06-EB24（data 连续段 30B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-07-030": {
+      "id": "D-REG-07-030",
+      "face": "data",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:EB4D-EC93（data 连续段 326B）",
+      "note": "xref 消费者 5 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-07-031": {
+      "id": "D-REG-07-031",
+      "face": "data",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:EDFE-EF00（data 连续段 258B）",
+      "note": "xref 消费者 2 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-07-032": {
+      "id": "D-REG-07-032",
+      "face": "data",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:EF9A-EF9E（data 连续段 4B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-07-033": {
+      "id": "D-REG-07-033",
+      "face": "data",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:EFF4-EFF8（data 连续段 4B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-07-034": {
+      "id": "D-REG-07-034",
+      "face": "data",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:F018-F01C（data 连续段 4B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-07-035": {
+      "id": "D-REG-07-035",
+      "face": "data",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:F0A2-F149（data 连续段 167B）",
+      "note": "xref 消费者 1 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-07-036": {
+      "id": "D-REG-07-036",
+      "face": "data",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:F162-F172（data 连续段 16B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-07-037": {
+      "id": "D-REG-07-037",
+      "face": "data",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:F1B3-F1D2（data 连续段 31B）",
+      "note": "xref 消费者 2 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-07-038": {
+      "id": "D-REG-07-038",
+      "face": "data",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:F1E7-F1EE（data 连续段 7B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-07-039": {
+      "id": "D-REG-07-039",
+      "face": "data",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:F270-F298（data 连续段 40B）",
+      "note": "xref 消费者 5 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-07-040": {
+      "id": "D-REG-07-040",
+      "face": "data",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:F2AD-F2B4（data 连续段 7B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-07-041": {
+      "id": "D-REG-07-041",
+      "face": "data",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:F2CA-F306（data 连续段 60B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-07-042": {
+      "id": "D-REG-07-042",
+      "face": "data",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:F332-F345（data 连续段 19B）",
+      "note": "xref 消费者 2 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-07-043": {
+      "id": "D-REG-07-043",
+      "face": "data",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:F3BE-F85A（data 连续段 1180B）",
+      "note": "xref 消费者 1 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-07-044": {
+      "id": "D-REG-07-044",
+      "face": "data",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:F870-F93B（data 连续段 203B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-07-045": {
+      "id": "D-REG-07-045",
+      "face": "data",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:F96A-FA41（data 连续段 215B）",
+      "note": "xref 消费者 7 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-07-046": {
+      "id": "D-REG-07-046",
+      "face": "data",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:FA5B-FA9D（data 连续段 66B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-07-047": {
+      "id": "D-REG-07-047",
+      "face": "data",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:FAEA-FAF2（data 连续段 8B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-07-048": {
+      "id": "D-REG-07-048",
+      "face": "data",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:FB88-FBDD（data 连续段 85B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-07-049": {
+      "id": "D-REG-07-049",
+      "face": "data",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:FC5D-FC65（data 连续段 8B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-07-050": {
+      "id": "D-REG-07-050",
+      "face": "data",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:FCC1-FD8F（data 连续段 206B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-07-051": {
+      "id": "D-REG-07-051",
+      "face": "data",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:FE59-FECC（data 连续段 115B）",
+      "note": "xref 消费者 2 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-07-052": {
+      "id": "D-REG-07-052",
+      "face": "data",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:FF3C-FF54（data 连续段 24B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-07-053": {
+      "id": "D-REG-07-053",
+      "face": "data",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:FF86-FFB0（data 连续段 42B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "D-REG-07-054": {
+      "id": "D-REG-07-054",
+      "face": "data",
+      "module": "engine",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "bank07:FFD5-10000（data 连续段 43B）",
+      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+    },
+    "B-SCN-boot-title": {
+      "id": "B-SCN-boot-title",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/boot-title.txt",
+      "note": "场景语料入口；行为面分母随 oracle 覆盖增长（coverage_from_trace.py）"
+    }
+  }
 }
