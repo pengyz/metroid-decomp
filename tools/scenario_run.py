@@ -5,9 +5,12 @@
 职责：
 1. 解析场景 DSL（oracle/scenarios/*.txt）——**DSL 语义只在本文件解析**（无第二套解析器）；
 2. 生成 analysis/_gen/<name>.lua = PLAN 表字面量 + tools/scenario_capture.lua 执行器；
-3. 驱动 Mesen2 2.1.1 采集：tools/mesen2/Mesen rom/Metroid (USA).nes <lua> /DoNotSaveSettings
-   （装载用法已验证；Linux 自管 Xvfb+DISPLAY 注入，Windows 原生 GUI 直跑；
-   emu.stop 不退进程 ⇒ 驱动等 DONE 标记后 SIGTERM/taskkill 收尾）；
+3. 驱动 Mesen2 2.1.1 采集：
+   - Windows：`Mesen --testRunner <lua> <rom> --timeout=N --enableStdout
+     --debug.scriptWindow.allowIoOsAccess=true`（headless：无窗口、Lua 自动执行、
+     emu.stop 后进程自退；2026-10-14 实测）；
+   - Unix：自管 Xvfb + `Mesen rom <lua> /DoNotSaveSettings`（装载用法已验证；
+     emu.stop 不退进程 ⇒ 驱动等 DONE 标记后 SIGTERM 收尾）；
 4. 校验产物并落 run 清单（可复现证据）。
 
 用法：
@@ -510,22 +513,31 @@ def run_scenario(name_or_path: str, timeout_s: float = 1800.0, keep_gen: bool = 
     dead_since: float | None = None
     try:
         # rounds/r2 F2：Xvfb/Mesen 创建全部收进 try，任一启动失败不泄漏 Xvfb。
-        # Windows：Mesen 原生 GUI 直跑（无 X 服务器），Xvfb/DISPLAY 仅 Unix 侧。
-        if display is not None:
+        # Windows：--testRunner headless（Mesen2 2.1.1 TestRunner.cs 语义，2026-10-14 实测）：
+        #   无窗口（ConsoleMode，UI 不启动）、Lua 自动执行、emu.stop 后进程自退（退出码=stop code）、
+        #   自动 DisableSaveSettings；--debug.scriptWindow.allowIoOsAccess=true 解锁脚本 io
+        #   （默认沙箱禁写）；Mesen 启动后把 CWD 切到 HomeFolder ⇒ Lua 产物必须绝对路径（PLAN 已是）。
+        #   /DoNotSaveSettings、Xvfb/DISPLAY 仅 GUI 模式需要（Unix 侧沿用已验证路径）。
+        env = dict(os.environ)
+        if IS_WINDOWS:
+            proc = subprocess.Popen(
+                [str(mesen), "--testRunner", str(lua_path), str(ROM),
+                 f"--timeout={int(timeout_s)}", "--enableStdout",
+                 "--debug.scriptWindow.allowIoOsAccess=true"],
+                cwd=ROOT, stdout=mesen_log, stderr=subprocess.STDOUT, text=True, env=env,
+            )
+        else:
             xvfb = subprocess.Popen(
                 ["Xvfb", display, "-screen", "0", "1280x1024x24", "-nolisten", "tcp"],
                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True,
             )
             wait_for_x(display, xvfb)
-        env = dict(os.environ)
-        if display is not None:
             env["DISPLAY"] = display
-        popen_extra = {} if IS_WINDOWS else {"start_new_session": True}
-        proc = subprocess.Popen(
-            [str(mesen), str(ROM), str(lua_path), "/DoNotSaveSettings"],
-            cwd=ROOT, stdout=mesen_log, stderr=subprocess.STDOUT, text=True,
-            env=env, **popen_extra,
-        )
+            proc = subprocess.Popen(
+                [str(mesen), str(ROM), str(lua_path), "/DoNotSaveSettings"],
+                cwd=ROOT, stdout=mesen_log, stderr=subprocess.STDOUT, text=True,
+                env=env, start_new_session=True,
+            )
         while not done_path.exists():
             now = time.time()
             el = now - t0
