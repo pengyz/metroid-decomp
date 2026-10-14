@@ -1,0 +1,13 @@
+# 文本统一 LF（Windows 适配，2026-10-14）：core.autocrlf=true 的检出会把工作文件改写成
+# CRLF，与 sha256 锚点/冻结基准的 LF 字节面漂移 ⇒ 门禁误报"基线被手工改动/断链"。
+# 教训见 docs/knowledge/gotcha-crlf-checkout-falsifies-byte-anchors.md。
+# 文本：检出/入库一律 LF；二进制：显式标记，禁止任何换行转换（rom/ 任何字节改动=严重违规）。
+* text=auto eol=lf
+*.png binary
+*.nes binary
+*.bin binary
+*.rom binary
+*.zip binary
+*.7z binary
+*.gz binary
+*.o binary
