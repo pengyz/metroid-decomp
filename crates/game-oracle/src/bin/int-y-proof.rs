@@ -8,7 +8,7 @@
 //! 零分歧 ⇒ 在声明域（该切片仅读 4 字节，指令清单可数）内 **数学穷尽证明**。
 //! 桥接状态（如实声明，r5 复审 E1）：本机不含对已审计 6502 核的抽样桥接；
 //! Side A 的可信度依据 = ①字节驱动（执行 ROM 原字节非转述）②审核员独立反汇编模型
-//! 3780 案复核一致（rounds/r5）③切片字节断言。假设台账见 docs/findings/l2-proof-assumptions.md。
+//! 3780 案复核一致（rounds/r6）③切片字节断言。假设台账见 docs/findings/l2-proof-assumptions.md。
 //!
 //! 用法: int-y-proof --rom <rom.nes>
 
