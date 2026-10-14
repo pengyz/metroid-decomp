@@ -1,0 +1,17 @@
+{
+  "note": "L3 用例 manifest——只存摘要（ROM 衍生 trace 不入库，红线）；trace 本体 analysis/traces/ 可再生",
+  "cases": [
+    {
+      "id": "l3-boot-title-oracle-determinism",
+      "scenario": "boot-title",
+      "frames": 300,
+      "watch": [
+        "zp",
+        "iram"
+      ],
+      "oracle_sha256": "4655a986264d0104bafd1779b936c436bf46b731771e7a1a51686f49141bcde2",
+      "determinism_evidence": "同场景双跑逐字节一致（2026-10-14，runA==runB sha 4655a986…）",
+      "game_core_leg": "S5 落地后自动启用（analysis/dump/<scenario>.frames.jsonl）"
+    }
+  ]
+}
