@@ -348,6 +348,10 @@ def run_scenario(name_or_path: str, timeout_s: float = 1800.0, keep_gen: bool = 
     # t54 F3 根因防护：串行锁只罩驱动进程——驱动崩溃/被强杀后 Mesen/Xvfb 孤儿仍在跑，
     # 与后续运行争显示/写同一批产物（实测 trace 交错、DONE 不落、30x 变慢）。启动前显式清扫。
     stale = subprocess.run(["pgrep", "-f", "tools/mesen2/Mesen"], capture_output=True, text=True).stdout.split()
+    # rounds/r2 F2：孤儿 Xvfb 同样清扫（匹配本驱动特征性几何参数；同参数他用 Xvfb 为已知附带风险）
+    stale += subprocess.run(
+        ["pgrep", "-f", r"Xvfb :[0-9]+ -screen 0 1280x1024x24 -nolisten tcp"],
+        capture_output=True, text=True).stdout.split()
     if stale:
         for pid in stale:
             try:
@@ -391,21 +395,24 @@ def run_scenario(name_or_path: str, timeout_s: float = 1800.0, keep_gen: bool = 
     # DONE 不落）。直接拉 Xvfb + DISPLAY 注入，Mesen 为直接子进程；进程组清理见 finally。
     # 场景仍必须**串行**运行（run-all 已是串行；勿并行多个 Mesen）。
     display = pick_display()
-    xvfb = subprocess.Popen(
-        ["Xvfb", display, "-screen", "0", "1280x1024x24", "-nolisten", "tcp"],
-        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True,
-    )
-    wait_for_x(display, xvfb)
-    env = dict(os.environ)
-    env["DISPLAY"] = display
-    proc = subprocess.Popen(
-        [str(MESEN), str(ROM), str(lua_path), "/DoNotSaveSettings"],
-        cwd=ROOT, stdout=mesen_log, stderr=subprocess.STDOUT, text=True,
-        start_new_session=True, env=env,
-    )
+    xvfb: subprocess.Popen | None = None
+    proc: subprocess.Popen | None = None
     timed_out = False
     dead_since: float | None = None
     try:
+        # rounds/r2 F2：Xvfb/Mesen 创建全部收进 try，任一启动失败不泄漏 Xvfb
+        xvfb = subprocess.Popen(
+            ["Xvfb", display, "-screen", "0", "1280x1024x24", "-nolisten", "tcp"],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True,
+        )
+        wait_for_x(display, xvfb)
+        env = dict(os.environ)
+        env["DISPLAY"] = display
+        proc = subprocess.Popen(
+            [str(MESEN), str(ROM), str(lua_path), "/DoNotSaveSettings"],
+            cwd=ROOT, stdout=mesen_log, stderr=subprocess.STDOUT, text=True,
+            start_new_session=True, env=env,
+        )
         while not done_path.exists():
             now = time.time()
             el = now - t0
@@ -430,27 +437,31 @@ def run_scenario(name_or_path: str, timeout_s: float = 1800.0, keep_gen: bool = 
             time.sleep(0.5)
     finally:
         def kill_group(sig) -> None:
+            if proc is None:
+                return
             try:
                 os.killpg(os.getpgid(proc.pid), sig)
             except (ProcessLookupError, PermissionError, OSError):
                 pass
 
-        if proc.poll() is None or not done_path.exists():
+        if proc is not None and (proc.poll() is None or not done_path.exists()):
             kill_group(signal.SIGTERM)
-        try:
-            proc.wait(timeout=10)
-        except subprocess.TimeoutExpired:
-            kill_group(signal.SIGKILL)
-            proc.wait(timeout=10)
-        mesen_log.close()
-        try:
-            xvfb.terminate()
-            xvfb.wait(timeout=5)
-        except Exception:
+        if proc is not None:
             try:
-                xvfb.kill()
+                proc.wait(timeout=10)
+            except subprocess.TimeoutExpired:
+                kill_group(signal.SIGKILL)
+                proc.wait(timeout=10)
+        mesen_log.close()
+        if xvfb is not None:
+            try:
+                xvfb.terminate()
+                xvfb.wait(timeout=5)
             except Exception:
-                pass
+                try:
+                    xvfb.kill()
+                except Exception:
+                    pass
     wall = round(time.time() - t0, 1)
 
     done_info = None

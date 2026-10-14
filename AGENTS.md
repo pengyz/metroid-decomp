@@ -30,7 +30,7 @@ PRG 128KB（8×16KB bank）+ CHR-RAM 8KB）重制：**以社区匹配反汇编�
 | D4 | Bug | Stage A **保真保留原版 quirks**（8 sprites/scanline、闪烁、掉帧、溢出、密码系统怪癖），只登记 [docs/bug-ledger.md](docs/bug-ledger.md)（`BUG-xxx`），Stage B 修复 |
 | D5 | 反编译路线 | 6502 **没有 Hex-Rays**，四方交叉：**m1disasm 社区匹配反汇编（已验证与 ROM 逐字节等价）** + IDA（`m65` 模块）静态分析/数据表/xref + Ghidra（6502 SLEIGH）伪代码 + Mesen2 动态 trace；**LLM 负责语义化，判定权在门禁**。第三方命名只作线索，语义结论必须自证（台账隔离） |
 | D6 | 版本范围 | 保真期只做 **NES_NTSC**（等价性证据：[docs/findings/rom-disasm-equivalence.md](docs/findings/rom-disasm-equivalence.md)）。PAL/FDS/MZM/CNS 等官方变体差异不进保真期，单列 findings |
-| D7 | 完备性 | **分母独立于测试、机械可导出**（矩阵四面 S/D/B/R，`tools/completeness_denoms.py`）；对拍只裁「对不对」、不证「全不全」（绿≠完整）。缺口左移四机制：① L2 勾格清单（有限分母逐格走 `未实现→已实现→有L2→已验证`）② Rust 侧 `unported!` fail-loud 桩（缺口确定性爆在 bank:addr，形态上与移植错可分）③ oracle 覆盖驱动语料（`coverage` 只增不减，盲区=下一条场景目标）④ 首分歧点四分类路由（缺口=一张任务卡，不进调试循环）。详见 [docs/ai-decompile-pipeline.md](docs/ai-decompile-pipeline.md) §4 |
+| D7 | 完备性 | **分母独立于测试、机械可导出——仅限 S 符号面 / D 数据面**（`tools/completeness_denoms.py`）。B 行为面分母=已登记场景清单（**行为空间无机械分母**）、R 规则面**完备性不可证**（S4 起登记）——两面属声明性覆盖，不是机械完备。对拍只裁「对不对」、不证「全不全」（绿≠完整）。**未覆盖缺口类（显式声明，rounds/r2 F3）**：D 面字段切分（S3 出字段级分母）、跨模块交互（调用序/共享 RAM 契约/NMI 同步）、时序边界（帧相位/NMI 时序）、R 面未写规则。缺口左移四机制：① L2 勾格清单（S 面有限分母逐格走 `未实现→已实现→有L2→已验证`）② Rust 侧 `unported!` fail-loud 桩（缺口确定性爆在 bank:addr）③ oracle 覆盖（**语义验证前=未验证线索**，自校验不过即降级，禁止派生任务卡）④ 首分歧点四分类路由（缺口=一张任务卡）。详见 [docs/ai-decompile-pipeline.md](docs/ai-decompile-pipeline.md) §4 |
 
 ## 1. 哲学（决策优先级）
 

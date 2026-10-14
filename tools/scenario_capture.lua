@@ -102,8 +102,10 @@ local function dumpRam(tag)
 end
 
 -- ---------------- 覆盖采集（PLAN.coverage；缺口左移机制③）
--- execute 类型内存回调记录执行过的 CPU 地址（真实指令级覆盖）；
--- 注册失败退回 "unsupported"，由 tools/coverage_from_trace.py 显式报告退化模式。
+-- ⚠ rounds/r2 F1（实测证伪）：字符串 "execute" 回调集合 ≠ 已执行地址集（近似总线读周期：
+-- 漏记 NMI/reset 入口首指令、混入操作数字节）；Mesen2 2.1.1 无 memCallbackType 枚举表。
+-- 本采集产物仅为**未验证线索**，须经 tools/coverage_from_trace.py 自校验（cpu.pc ⊆ 集合）
+-- 通过后方可作盲区线索；语义根治方案待立（CDL / 逐指令 trace）。
 local covSet, covN, covMode = {}, 0, "off"
 if PLAN.coverage then
   local function covHit(address)
