@@ -23,3 +23,6 @@ analysis/
 shots/
 analysis/
 tools/mesen2/
+
+# 编辑器本地配置
+.vscode/
