@@ -6,7 +6,7 @@
 - **卡死态**：`start@360 + a@420` 之后画面冻结在「无精灵房间」帧（像素全同：smoke f500 =
   samus-move f550/600/660 = sha `8cbf4a35…`），且**无限期持续**（samus-move2：f700–f1140 四帧全同）。
 - **解除**：追加一次确认输入（samus-move `start@540` / smoke `start@480+a@540`）后 ~150–200 帧
-  出现 Samus 精灵（samus-move OAM 变化自 f687）。`start@360 + a@420 + start@540` 序列可复现解锁。
+  出现 Samus 精灵（samus-move OAM 变化自 f687——OAM 结构/精灵签名语义为 **C 级假设**，待 A 级 OAM dump，见 design §3 F_a 谓词弱化声明）。`start@360 + a@420 + start@540` 序列可复现解锁。
 - **对照**：samus-move2（无追加确认）1200 帧始终卡死 ⇒ 追加确认是必要条件（3 次实验对照）。
 - 注：卡死态画面身份（密码屏残帧 vs 出生前房间态）**未定谳**——列为待证（见 C 组）。
 

@@ -20,6 +20,11 @@
 
 - [ ] **里程碑编号矛盾**：north-star.md（M3=核心系统/M4=全内容含密码）与 methodology.md
   （M3=含密码/M4=差分收口）M3/M4 定义不一致——统一口径后删除本行（state-fixture v3 L7）
+- [ ] **covered_rule 同步**（state-fixture v6 B1/M1）：completeness_matrix.json covered_rule 现为单判据
+  「covered⇔strength≥L1」，与 state-fixture §3(c)「B-SCN covered 以 invariant (c) 通过为前提」
+  未接通——schema 升级或加注后删除本行
+- [ ] **completeness provenance 悬空**：completeness_matrix.json provenance 写 tools/matrix_sync.py
+  --export（该文件不存在；实际导出器=completeness_denoms.py）——修正指向后删除本行
 - [ ] **docs/spec/completeness.md 悬空引用**：completeness_matrix.json schema 的 source_of_truth
   指向不存在的 docs/spec/completeness.md（§0/§6.1）——补齐文档或改指向（v2 复审 L6）
 
