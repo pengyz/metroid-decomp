@@ -1,0 +1,23 @@
+# 场景：samus-move —— G4 首切片证据（Samus 水平移动的 RAM 反应面）
+# 目的：以输入注入 + 全 RAM 观测自证移动语义（D5：第三方命名不采信）。
+# 帧序：开机→标题→Start/A 进游戏（冒烟实测 f500 前后入局）→ 行走右/左对照段。
+name samus-move
+frames 900
+coverage
+
+press 360 start
+press 420 a
+press 540 start
+
+# 600-720 按住右（行走）；750-870 按住左（反向对照）
+hold 600-720 right
+hold 750-870 left
+
+capture 550 in-game
+capture 720 after-right
+capture 870 after-left
+
+capture_every 60 probe
+
+watch_range 0000-00ff zp
+watch_range 0100-07ff iram

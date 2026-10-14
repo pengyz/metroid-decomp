@@ -1,0 +1,15 @@
+# 场景：samus-move2 —— 干净复测（r4 前提审计：samus-move 疑被 540 start 暂停污染）
+name samus-move2
+frames 1200
+watch_range 0000-00ff zp
+watch_range 0100-07ff iram
+
+press 360 start
+press 420 a
+
+capture 700 spawn
+hold 750-990 right
+capture 870 mid-right
+capture 990 after-right
+hold 1020-1140 left
+capture 1140 after-left

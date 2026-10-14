@@ -44,6 +44,7 @@ end
 -- 帧计数与计数器：必须先于 saveShot/dumpRam 等闭包声明（Lua 词法作用域，
 -- 声明在后的 local 不会被先前闭包捕获——t12 更正注）。
 local frame = 0
+local inputWarned = false
 local nTrace, nCap, nShot = 0, 0, 0
 
 -- ---------------- 输入计划展开为逐帧按键表
@@ -157,7 +158,11 @@ end
 emu.addEventCallback(function()
   frame = frame + 1
   local btn = schedule[frame] or {}
-  pcall(emu.setInput, btn, 0)
+  local okIn, errIn = pcall(emu.setInput, btn, 0)
+  if not okIn and not inputWarned then
+    inputWarned = true
+    log("setInput FAILED: " .. tostring(errIn))
+  end
 end, "inputPolled")
 
 emu.addEventCallback(function()

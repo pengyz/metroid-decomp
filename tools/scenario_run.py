@@ -251,7 +251,8 @@ def to_lua(v) -> str:
 
 def generate_lua(plan: dict, scenario_path: Path) -> tuple[str, str]:
     """返回 (lua 源码, lua sha256)。PLAN 前置 + 执行器整拼（无 dofile 依赖）。"""
-    plan_lua = dict(plan)
+    # None 字段（缺省 DSL 项如 capture_every）不进 Lua 表（r4 工程卫生：缺省场景必须可跑）
+    plan_lua = {k: v for k, v in plan.items() if v is not None}
     plan_lua["out_dir"] = str((TRACES_DIR).resolve())
     plan_lua["shots_dir"] = str((SHOTS_DIR).resolve())
     harness = HARNESS.read_text(encoding="utf-8")

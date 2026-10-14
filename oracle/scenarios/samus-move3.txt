@@ -1,0 +1,16 @@
+# 场景：samus-move3 —— 终局实验：解锁序列（start/a/start 实测解除卡死）+ spawn 后长按行走
+name samus-move3
+frames 1400
+watch_range 0000-00ff zp
+watch_range 0100-07ff iram
+
+press 360 start
+press 420 a
+press 540 start
+
+capture 800 spawn
+hold 850-1150 right
+capture 1000 mid-right
+capture 1150 after-right
+hold 1180-1330 left
+capture 1330 after-left
