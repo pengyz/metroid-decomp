@@ -44,6 +44,31 @@ pub const UPDATE_SAMUS_ENTRY: u16 = 0xCC0D;
 /// 地址证据（A 级）：seed bank07:C27C（metroid.asm:100448）；调用点 C13E/CC1F/CC7A。
 pub const JUMP_ENGINE_ENTRY: u16 = 0xC27C;
 
+/// 垂直速度整数部（有符号 16 位的高字节；与 SAMUS_SPEED_SUBPIXEL_Y 构成 frac+int）。
+/// 地址证据（A 级）：seed bank07:E3B1 `AD 08 03` / E3B6 `8D 08 03`（metroid.asm:105395±）。
+pub const SAMUS_SPEED_Y_INT: u16 = 0x0308;
+
+/// 水平速度整数部（与 SAMUS_SPEED_SUBPIXEL_X 构成 frac+int）。
+/// 地址证据（A 级）：seed bank07:E40D `6D 09 03` / E410 `8D 09 03`。
+pub const SAMUS_SPEED_X_INT: u16 = 0x0309;
+
+/// 垂直加速度增量输入。
+/// 地址证据（A 级）：seed bank07:E3AB `6D 14 03` ADC $314。
+pub const SAMUS_ACCEL_Y: u16 = 0x0314;
+
+/// 水平加速度增量输入。
+/// 地址证据（A 级）：seed bank07:E3FD `6D 15 03` ADC $315。
+pub const SAMUS_ACCEL_X: u16 = 0x0315;
+
+/// 水平最大速度来源输入（经 sub_E449 生成幅值钳位上限）。
+/// 地址证据（A 级）：seed bank07:E3E5 `AD 16 03` LDA $316。
+pub const SAMUS_MAXSPEED_X_SRC: u16 = 0x0316;
+
+/// 垂直速度整数钳位常量（积分器语义，A 级指令证据）。
+/// seed bank07:E3C3 `C9 06`（负向限幅 -6，LDX #$FA）/ E3C9 `C9 05`（正向限幅 5）。
+pub const SAMUS_SPEED_Y_CLAMP_POS: i8 = 5;
+pub const SAMUS_SPEED_Y_CLAMP_NEG: i8 = -6;
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -60,5 +85,10 @@ mod tests {
         assert_eq!(SAMUS_JUMP_DISPLACEMENT, 0x30F);
         assert_eq!(UPDATE_SAMUS_ENTRY, 0xCC0D);
         assert_eq!(JUMP_ENGINE_ENTRY, 0xC27C);
+        assert_eq!(SAMUS_SPEED_Y_INT, 0x308);
+        assert_eq!(SAMUS_SPEED_X_INT, 0x309);
+        assert_eq!(SAMUS_ACCEL_Y, 0x314);
+        assert_eq!(SAMUS_ACCEL_X, 0x315);
+        assert_eq!(SAMUS_MAXSPEED_X_SRC, 0x316);
     }
 }

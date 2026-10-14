@@ -1,6 +1,6 @@
 # spec：Samus 移动（首切片，v0）
 
-> 状态：v0 草稿（2026-10-14）——G4 pilot。规则全部带证据指针；语义标注 A/B/C 级。
+> 状态：v0.1（2026-10-14）——G4 pilot；v0.1 增补 R-mv-3 积分公式指令级解码（A 级）。规则全部带证据指针；语义标注 A/B/C 级。
 > 证据源：`reference/seed/metroid.asm`（冻结投影）、`analysis/traces/samus-move3.frames.jsonl`
 > （A 级动态观测）、m1disasm（**仅线索**，D5 命名不背书）。
 > 覆盖声明：本 spec 仅覆盖「水平/垂直移动状态变量与例程入口」层；跳跃弧线/滚球/碰撞
@@ -38,8 +38,15 @@
 右行稳态 SPEED_SUBPIXEL_X=0x80、SUBPIXEL_X=0x40 恒相位（等速特征）；反向后速度态切换（0xD0）。
 - 判定性：可判（计数器轨迹 vs 整像素进位关系）
 - 证据：trace f1000-f1330；seed STA 写址（A 级）
-- 级：B；**精度待验**：积分公式（每帧加多少、进位阈值）未定——需 seed 指令级考证
-  （bank07:E2FD-E43E 区间，S 面格）+ L2 case。
+- 级：**A 级公式（v0.1 指令级解码，seed bank07:E3A5-E445）**：
+  - 垂直：`speed_y(16bit: $308 int + $312 frac) += accel_y($314)`（CLC/ADC 进位链）；
+    **整数钳位 [-6, +5]**（E3C3 `CMP #6`/LDX #$FA=E3C5；E3C9 `CMP #5`；越限经 sub_D147
+    钳位后 STX $308）；`subpix_y($310) += speed frac`，进位加 speed int → 位移输出 $00。
+  - 水平：`speed_x(16bit: $309 + $313) += accel_x($315)`（BIT $315 符号扩展链）；
+    幅值钳位经 sub_E449（上限源自 maxspeed_src($316) × sub_C2C5/C2BF 变换）；
+    `subpix_x($311) += speed frac` 进位入整像素。
+  - 证据：metroid.asm 105390-105460（逐指令）；**残留待验**：sub_D147/sub_E449/sub_C2C5/C2BF
+    内部（S 面格，L2 可切片）、$314/$315 的写入来源（加速度表？下一段考证）。
 
 ### R-mv-4 跳跃位移计
 SAMUS_JUMP_DISPLACEMENT 为自跳跃起点的垂直像素位移（补码），落地后冻结。
