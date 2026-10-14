@@ -46,3 +46,14 @@
 5. golden/引擎共享同一 stops 截断窗口（同源考题）——关键格建议 L3/trace 背书语义边界；
 6. seed 数据区含 undoc 操作码（DCP）——L2 触及即 fail-loud（设计内）；
 7. `#[test]` 文本计数可被注释污染；8. iNES 无 trainer 假设。
+
+
+## 终局结论（r3 第二轮，verdict: pass）
+
+F1-F7 全部经独立复现证实（含 /tmp 独立构造：哨兵/双约定非终止 Err、6 条自选 X 镜像用例真 ROM
+全过、双写折叠判别力实证、todo!() RED 态回放 8 failed+2 passed 名单逐一吻合、3 项回退红灯复现）。
+E2E：cargo test 13/13、diff_subroutines 6/6、gates PASS=8 FAIL=0 SKIP=3。**G2/G3 正式闭环**。
+
+审核员新增遗留（并入持有清单）：红灯实录颗粒度偏松（建议贴输出/CI artifact）；矩阵 covered:true
+与「部分覆盖」note 并存建议引入 coverage 级别字段；MAX_STEPS=1M 唯一终止护栏；C16D「全区」措辞
+仅指地址域；Mesen2 D3 真相闭环未完成（继承项）。
