@@ -38,7 +38,7 @@
 | `docs-links` | 文档相对链接有效性 | 启用 |
 | `rust-tests` | `cargo test --workspace` + 测试数 ratchet | crates/ 创建后自动启用 |
 | `subroutine-diff` | L2：ROM 原字节执行 vs Rust 函数出入参比对 | oracle/subroutines 建立后启用 |
-| `trace-diff` | L3：帧级状态向量逐 tick 比对（oracle vs Rust） | S6 启用 |
+| `trace-diff` | L3：帧级状态向量逐 tick 比对（oracle vs Rust） | 启用（oracle 腿；game-core 腿 S5 自动启用） |
 | `visual-diff` | L4：截图逐像素（白名单外） | S6 启用 |
 | `completeness-ratchet` | 完备性矩阵覆盖只增不降 | 矩阵建立后启用 |
 

@@ -724,7 +724,10 @@ def _gate_runner_dispatch(runner_name: str, prereq: Path, label: str) -> tuple[s
     if proc.returncode != 0:
         tail = (proc.stdout + proc.stderr).strip().splitlines()[-5:]
         return FAIL, f"{label} 差分不一致: " + " | ".join(tail)
-    return PASS, f"{label} 全绿（tools/{runner_name}）"
+    # G5 复审 F6：runner 摘要（腿状态等）回显进门禁 detail——工具层显式，门禁层不许静默吞
+    outs = [l for l in proc.stdout.strip().splitlines() if l.strip()]
+    echo = ("；runner: " + " | ".join(l[:110] for l in outs[-2:])) if outs else ""
+    return PASS, f"{label} 全绿（tools/{runner_name}）{echo}"
 
 
 def gate_subroutine_diff() -> tuple[str, str]:
@@ -767,7 +770,7 @@ GATES: list[tuple[str, str, str, str, object]] = [
     ("docs-links", "启用", "check", "文档相对链接有效性", gate_docs_links),
     ("rust-tests", "crates/ 创建后自动启用", "check", "cargo test --workspace + 测试数 ratchet", gate_rust_tests),
     ("subroutine-diff", "oracle/subroutines 建立后启用", "all", "L2：ROM 原字节执行 vs Rust 函数出入参比对", gate_subroutine_diff),
-    ("trace-diff", "S6 启用", "trace", "L3：帧级状态向量逐 tick 比对（oracle vs Rust）", gate_trace_diff),
+    ("trace-diff", "启用（oracle 腿；game-core 腿 S5 自动启用）", "trace", "L3：帧级状态向量逐 tick 比对（oracle vs Rust）", gate_trace_diff),
     ("visual-diff", "S6 启用", "visual", "L4：截图逐像素（白名单外）", gate_visual_diff),
     ("completeness-ratchet", "矩阵建立后启用", "all", "完备性矩阵覆盖只增不降", gate_completeness_ratchet),
 ]
