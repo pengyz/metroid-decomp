@@ -115,6 +115,7 @@ macro_rules! unported { ($loc:expr) => {{ $crate::gap::record($loc); panic!("unp
 | 投影与 ROM 行为矛盾 | 投影错误 | decomp-analyst |
 | 原版 quirk 重现 | 参考 bug | 记 `BUG-xxx`（Stage A 保真，TOLERATED） |
 | 平台/渲染差异 | 平台差异 | 白名单（唯一合法例外，需用户确认） |
+| 夹具 A+1 同源断言 FAIL / fixture sha 不符 | **夹具失效/腐化** | 夹具维护：重走状态发现流程（docs/design/state-fixture-verification.md §6），不进 porter/spec 调试循环 |
 
 ## 5. 差分金字塔（验证层，L2 是 NES 特有的强武器）
 
