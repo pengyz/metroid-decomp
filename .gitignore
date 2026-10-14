@@ -26,3 +26,6 @@ tools/mesen2/
 
 # 编辑器本地配置
 .vscode/
+
+# Rust 构建产物（AGENTS §2 红线）
+target/
