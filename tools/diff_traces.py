@@ -10,19 +10,22 @@
   `oracle/traces/l3_manifest.json` 只存**摘要**；缓存缺失 ⇒ scenario_run 响亮重采集 ⇒
   sha256 对 manifest（持续复验 oracle 确定性）。
 
-裁判铁律（r3 F7「空跑不得绿」+ G5 复审 F1/F2 修正——判定权不留静默绿面）：
-  - manifest 缺失/空用例/非法 JSON ⇒ exit 2
-  - watch 为空 ⇒ exit 2；watch 字段**双侧存在性**逐一校验，缺任一 ⇒ FAIL
-  - 重复帧行（同 f 多行）⇒ FAIL（防后行覆盖分歧行）
-  - manifest.frames 与实测帧数不符 ⇒ FAIL
-  - 首分歧报告=帧号 + 字段 + **CPU 地址（基址+偏移）** + 双侧值
-  - hex 比对大小写归一（.upper()）；game-core 导出格式建议大写（归一后皆可）
+裁判铁律（r3 F7「空跑不得绿」+ G5 复审 F1/F2 + 二轮 NEW-1/2/3——判定权不留静默绿面）：
+  exit 2（manifest schema 级，先于一切比对）：
+  - manifest 缺失 / 非法 JSON / cases 非 list[dict] / case 缺必填键或类型错
+  - watch 为空 / watch 条目非 dict / label 非空 str / base 1-4 位 hex / range 格式非法
+  exit 1（case 级 FAIL）：
+  - watch 字段**逐帧**存在性 + 值合法性（str、非空、偶数长、纯 hex）——oracle 侧先行，dump 侧同检
+  - range span 与字段字节长不符 / 重复帧行（同 f 多行）/ manifest.frames 与实测不符
+  - sha 不符 / 帧集不一致 / 首分歧
+  首分歧报告=帧号 + 字段 + CPU 地址（基址+偏移）+ 双侧值；hex 比对大小写归一（.upper()）。
 用法：python3 tools/diff_traces.py
 """
 from __future__ import annotations
 
 import hashlib
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -31,6 +34,79 @@ ROOT = Path(__file__).resolve().parent.parent
 MANIFEST = ROOT / "oracle" / "traces" / "l3_manifest.json"
 TRACES = ROOT / "analysis" / "traces"
 DUMPS = ROOT / "analysis" / "dump"
+
+HEX64 = re.compile(r"^[0-9a-fA-F]{64}$")
+HEXSTR = re.compile(r"^[0-9a-fA-F]*$")
+BASERE = re.compile(r"^[0-9a-fA-F]{1,4}$")
+RANGERE = re.compile(r"^([0-9a-fA-F]{1,4})-([0-9a-fA-F]{1,4})$")
+
+
+def schema_error(msg: str) -> int:
+    print(f"L3 帧级: manifest schema 非法——fail-loud（exit 2）: {msg}")
+    return 2
+
+
+def check_case_schema(case) -> str | None:
+    """manifest schema 机械校验（R1/R3）；返回错误描述或 None。"""
+    if not isinstance(case, dict):
+        return f"case 非对象: {case!r}"
+    for key in ("id", "scenario", "oracle_sha256"):
+        v = case.get(key)
+        if not isinstance(v, str) or not v.strip():
+            return f"case.{key} 缺失或非非空字符串"
+    if not HEX64.match(case["oracle_sha256"]):
+        return f"case.oracle_sha256 非 64 位 hex: {case['oracle_sha256']!r}"
+    watch = case.get("watch")
+    if not isinstance(watch, list) or not watch:
+        return "case.watch 缺失或为空（空跑不得绿）"
+    for w in watch:
+        if not isinstance(w, dict):
+            return f"watch 条目非对象: {w!r}"
+        label, base = w.get("label"), w.get("base")
+        if not isinstance(label, str) or not label.strip():
+            return f"watch.label 缺失或非非空字符串: {w!r}"
+        if not isinstance(base, str) or not BASERE.match(base):
+            return f"watch.base 须为 1-4 位 hex 字符串: {w!r}"
+        rng = w.get("range")
+        if rng is not None:
+            m = RANGERE.match(rng) if isinstance(rng, str) else None
+            if not m:
+                return f"watch.range 格式非法（须 'HHHH-HHHH'）: {rng!r}"
+            span = int(m.group(2), 16) - int(m.group(1), 16) + 1
+            if span <= 0:
+                return f"watch.range 区间倒置: {rng!r}"
+            w["_span"] = span
+    return None
+
+
+def field_illegal(value) -> str | None:
+    """值合法性（R2）：str、非空、偶数长、纯 hex。"""
+    if not isinstance(value, str):
+        return f"非字符串: {value!r}"
+    if not value:
+        return "空串（0 字节比对=空跑绿）"
+    if len(value) % 2 != 0:
+        return f"奇数长度 hex: {value[:20]!r}…"
+    if not HEXSTR.match(value):
+        return f"非 hex 字符: {value[:20]!r}…"
+    return None
+
+
+def check_frames_side(frames: dict, watch: list[dict], side: str) -> str | None:
+    """逐帧存在性 + 值合法性（R2）+ range span 一致性；返回首个违规描述。"""
+    for f in sorted(frames):
+        w = frames[f]
+        for entry in watch:
+            label = entry["label"]
+            if label not in w:
+                return f"frame {f} watch 字段 {label} {side}侧缺失（逐帧存在性校验）"
+            bad = field_illegal(w[label])
+            if bad:
+                return f"frame {f} 字段 {label} {side}侧值违规: {bad}"
+            if "_span" in entry and len(w[label]) // 2 != entry["_span"]:
+                return (f"frame {f} 字段 {label} {side}侧字节长 {len(w[label]) // 2} "
+                        f"!= range span {entry['_span']}")
+    return None
 
 
 def regen(scenario: str) -> bool:
@@ -45,7 +121,7 @@ def regen(scenario: str) -> bool:
 
 
 def load_frames(path: Path) -> tuple[dict[int, dict], list[int]]:
-    """读帧 trace；返回 (帧字典, 重复 f 列表)。重复 f 由调用方判 FAIL（防覆盖掩盖分歧）。"""
+    """读帧 trace；返回 (帧字典, 重复 f 列表)。重复 f 判 FAIL（防后行覆盖分歧行）。"""
     out: dict[int, dict] = {}
     dups: list[int] = []
     for line in path.read_text(encoding="utf-8").splitlines():
@@ -57,12 +133,8 @@ def load_frames(path: Path) -> tuple[dict[int, dict], list[int]]:
     return out, dups
 
 
-def norm_hex(v: str) -> str:
-    return v.upper()
-
-
-def compare_frames(left: dict, right: dict, watch: list[dict], case_id: str) -> str | None:
-    """逐帧逐 watch 字段比对；返回首分歧描述（None=全同）。watch=[{label,base(hex)}]。"""
+def compare_frames(left: dict, right: dict, watch: list[dict]) -> str | None:
+    """逐帧逐 watch 字段比对（值已过合法性校验）；返回首分歧描述或 None。"""
     lframes, rframes = sorted(left), sorted(right)
     if lframes != rframes:
         only_l = sorted(set(lframes) - set(rframes))[:5]
@@ -71,20 +143,18 @@ def compare_frames(left: dict, right: dict, watch: list[dict], case_id: str) -> 
     for f in lframes:
         for w in watch:
             label, base = w["label"], int(w["base"], 16)
-            a, b = left[f].get(label), right[f].get(label)
-            if a is None or b is None:
-                side = "左" if a is None else "右"
-                return f"frame {f} watch 字段 {label} {side}侧缺失（存在性校验 FAIL）"
-            a, b = norm_hex(a), norm_hex(b)
+            a = left[f][label].upper()
+            b = right[f][label].upper()
             if a != b:
                 if len(a) != len(b):
-                    return f"frame {f} 字段 {label} 长度不一致: 左={len(a)//2}B 右={len(b)//2}B（无法偏移定位）"
-                off = next((i for i in range(0, len(a), 2) if a[i:i+2] != b[i:i+2]), None)
+                    return (f"frame {f} 字段 {label} 长度不一致: 左={len(a) // 2}B 右={len(b) // 2}B"
+                            f"（无法偏移定位）")
+                off = next((i for i in range(0, len(a), 2) if a[i:i + 2] != b[i:i + 2]), None)
                 if off is None:
                     return f"frame {f} 字段 {label} 分歧（归一后仍不等但无字节位差，疑结构差异）"
                 byte_i = off // 2
                 return (f"frame {f} 字段 {label} 分歧 @{label}(${base:04X})+0x{byte_i:03X}"
-                        f"=CPU ${base + byte_i:04X}: 左={a[off:off+8]}… 右={b[off:off+8]}…")
+                        f"=CPU ${base + byte_i:04X}: 左={a[off:off + 8]}… 右={b[off:off + 8]}…")
     return None
 
 
@@ -93,22 +163,23 @@ def main() -> int:
         print("L3 帧级: l3_manifest.json 缺失——fail-loud（空跑不得绿）")
         return 2
     try:
-        cases = json.loads(MANIFEST.read_text(encoding="utf-8")).get("cases", [])
+        doc = json.loads(MANIFEST.read_text(encoding="utf-8"))
     except json.JSONDecodeError as e:
-        print(f"L3 帧级: l3_manifest.json 非法 JSON——fail-loud: {e}")
-        return 2
+        return schema_error(f"JSON 解析失败: {e}")
+    cases = doc.get("cases") if isinstance(doc, dict) else None
+    if not isinstance(cases, list):
+        return schema_error(f"cases 须为数组: {type(cases).__name__}")
     if not cases:
-        print("L3 帧级: 用例集为空——fail-loud（r3 F7 口径）")
-        return 2
+        return schema_error("用例集为空（空跑不得绿）")
+    for case in cases:
+        err = check_case_schema(case)
+        if err:
+            return schema_error(err)
 
     failed = 0
     for case in cases:
         cid, scenario = case["id"], case["scenario"]
-        watch = case.get("watch", [])
-        if not watch:
-            print(f"[FAIL] {cid}: watch 为空——空跑不得绿（G5 复审 F1）")
-            failed += 1
-            continue
+        watch = case["watch"]
         cache = TRACES / f"{scenario}.frames.jsonl"
         if not cache.is_file():
             if not regen(scenario) or not cache.is_file():
@@ -126,20 +197,20 @@ def main() -> int:
             print(f"[FAIL] {cid}: oracle trace 重复帧行 {sorted(set(ldups))[:5]}（防覆盖掩盖分歧）")
             failed += 1
             continue
-        # watch 字段存在性：对 oracle 侧先行校验（dump 未启用时同样不许空跑绿）
-        missing_left = sorted({w["label"] for w in watch} - set(next(iter(left.values()), {})))
-        if missing_left:
-            print(f"[FAIL] {cid}: watch 字段在 oracle trace 缺失 {missing_left}（字段名校验 FAIL）")
-            failed += 1
-            continue
         if "frames" in case and len(left) != case["frames"]:
             print(f"[FAIL] {cid}: 帧数 {len(left)} != manifest.frames {case['frames']}")
+            failed += 1
+            continue
+        # oracle 侧逐帧存在性+值合法性（R2；dump 缺席时同样不许空跑绿）
+        v = check_frames_side(left, watch, "oracle")
+        if v:
+            print(f"[FAIL] {cid}: {v}")
             failed += 1
             continue
 
         dump = DUMPS / f"{scenario}.frames.jsonl"
         if not dump.is_file():
-            print(f"[PASS] {cid}: oracle 腿已验（sha256 对锚、{len(left)} 帧）；"
+            print(f"[PASS] {cid}: oracle 腿已验（sha256 对锚、{len(left)} 帧、逐帧字段合法）；"
                   f"game-core 腿未启用（S5 落地生成 {dump.relative_to(ROOT)} 后自动启用）")
             continue
 
@@ -148,7 +219,12 @@ def main() -> int:
             print(f"[FAIL] {cid}: game-core dump 重复帧行 {sorted(set(rdups))[:5]}（防覆盖掩盖分歧）")
             failed += 1
             continue
-        divergence = compare_frames(left, right, watch, cid)
+        v = check_frames_side(right, watch, "game-core")
+        if v:
+            print(f"[FAIL] {cid}: {v}")
+            failed += 1
+            continue
+        divergence = compare_frames(left, right, watch)
         if divergence:
             print(f"[FAIL] {cid}: 首分歧 {divergence}")
             failed += 1
