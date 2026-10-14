@@ -34,7 +34,11 @@ status: confirmed
   父侧 `encoding="utf-8", errors="replace"`、拼接用 `(proc.stdout or "")`。
 - 平台 API 显式分支（本次适配的对照表）：`msvcrt.locking` ↔ `fcntl.flock`（串行锁）、
   `taskkill /T /F` ↔ `os.killpg`（进程树清理）、PowerShell CIM 查询 ↔ `pgrep -f`（孤儿清扫）、
-  Windows 原生 GUI 直跑 ↔ 自管 Xvfb+DISPLAY、`getattr(signal, "SIGKILL", signal.SIGTERM)`。
+  ~~Windows 原生 GUI 直跑 ↔ 自管 Xvfb+DISPLAY~~、`getattr(signal, "SIGKILL", signal.SIGTERM)`。
+  > 【2026-10-14 更正】"Windows 原生 GUI 直跑"当日即被 `--testRunner` headless 配方取代
+  > （弹窗扰民 + io 沙箱 + CWD 偷换三坑，见
+  > [gotcha-mesen2-windows-headless-testrunner.md](gotcha-mesen2-windows-headless-testrunner.md)）；
+  > 对照表该行以 headless 为准。
 - Lua 侧同理：文本产物 `io.open(p, "wb")` 写 `"\n"`，C 运行时文本模式的 `\n→\r\n` 翻译会
   让 trace 字节面随平台漂移（oracle_sha256 锚定破裂）。
 - 看到"第二现场异常"（TypeError/AttributeError on None）先回头找第一个异常。

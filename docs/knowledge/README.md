@@ -66,6 +66,7 @@
 | [gotcha-workspace-drift-images-freeze-before-diff.md](gotcha-workspace-drift-images-freeze-before-diff.md) | gotcha | L4 比对禁读工作区漂移图——冻结 A/B 或新鲜渲染立即测（并行不可信家族第 4 员，95.32%→98.07% 活例） |
 | [gotcha-crlf-checkout-falsifies-byte-anchors.md](gotcha-crlf-checkout-falsifies-byte-anchors.md) | gotcha | CRLF 检出伪造"基线被手工改动"——文本锚点 LF 归一哈希 + 写侧 newline="\n"，二进制禁归一（本仓 Windows 适配实证） |
 | [gotcha-windows-unix-only-apis-and-locale-pipes.md](gotcha-windows-unix-only-apis-and-locale-pipes.md) | gotcha | Windows 工具链双坑——Unix-only 进程 API 断跑 + 管道 locale 解码把真因换成二次 TypeError（本仓 Windows 适配实证） |
+| [gotcha-mesen2-windows-headless-testrunner.md](gotcha-mesen2-windows-headless-testrunner.md) | gotcha | Mesen2 Windows 采集三坑与 headless 配方——io 沙箱/CWD 偷换/弹窗扰民，`--testRunner` 全解（跨模式字节确定性实证） |
 
 ## 迁移条目来源声明（2026-10-14 修订版；AGENTS §8 合规）
 
