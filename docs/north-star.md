@@ -20,7 +20,7 @@ Stage B 的一切改动不得回溯污染 Stage A 基线（分支或特性开关
 │              （角色 prompt + 范围 + 证据输入 + 完成判据 = 跑哪个门禁）│
 │ ② 逐步改写   porter 按 spec 逐规则搬运：                            │
 │              先 L2 用例后实现（TDD）；未实现例程一律 unported! 桩    │
-│ ③ 验证       gates L1–L4 + 覆盖自校验；首分歧点形态四分类路由       │
+│ ③ 验证       gates L1–L4 + 覆盖自校验；首分歧点形态分类路由（pipeline §4.2 现行 6 类）       │
 │ ④ 复核       独立审核员证伪复核（实施≠审核；verdict=pass 才算完成） │
 │ ⑤ 提交       pre-commit 总闸 + Evidence/Confidence 提交信息 + push  │
 │ ⑥ 收敛度量   矩阵 covered 只增不降；ratchet 无回退；剩余缺口显式    │

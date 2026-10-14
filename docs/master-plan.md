@@ -11,7 +11,7 @@
 | S0.5 纪律骨架 | AGENTS.md / prompts / gates / 数据模板迁移（gunnac_remake → 本仓库） | ✔ 完成 |
 | S1 静态投影 | IDA 8-bank export → seed 归一化冻结 | ✔ 完成（c416d34；**对抗复核 pass**，rounds/r1） |
 | S2 动态证据 | **Gate-in G2 ✔（L2 harness，r3 复审 pass）**；Mesen2 oracle 迁移✔；冒烟✔；首场景 trace✔；**待研（rounds/r2 F1/N3）**：指令级覆盖语义根治——CDL / Mesen Trace Logger / FCEUX trace 三选一，达成前 oracle 覆盖=仅线索 | 🔨 进行中 |
-| S3 语义考证 | 命名台账 + 数据表识别（constants_ram.asm 线索核）；**待办（rounds/r1）**：seed 区域角色标签证据化重措辞、items/funcs/xrefs trace 纠偏流程；**待办（rounds/r2 F3a）**：D 面字段级分母（字段切分缺口收编） | ⬜ |
+| S3 语义考证 | 命名台账 + 数据表识别（constants_ram.asm 线索核）；**待办（rounds/r1）**：seed 区域角色标签证据化重措辞、items/funcs/xrefs trace 纠偏流程；**待办（rounds/r2 F3a）**：D 面字段级分母；**密码系统逆向**（密码域覆盖面考证 + state-fixture 降级触发器裁决点，north-star M2 收口前判定） | ⬜ |
 | S4 规格书 | 首切片：Samus 移动/跳跃/滚球；**前置登记（rounds/r2 F3b/c）**：跨模块交互（调用序/共享 RAM 契约/NMI 同步）与时序边界 → R 面规则登记 | ⬜ |
 | S5 Rust 移植 | crates/game-core 骨架 + 首切片 | ⬜ |
 | S6 差分验证 | L2/L3 门禁点亮 | ⬜ |
@@ -21,7 +21,7 @@
 - [ ] **里程碑编号矛盾**：north-star.md（M3=核心系统/M4=全内容含密码）与 methodology.md
   （M3=含密码/M4=差分收口）M3/M4 定义不一致——统一口径后删除本行（state-fixture v3 L7）
 - [ ] **docs/completeness.md 悬空引用**：completeness_matrix.json schema 的 source_of_truth
-  指向不存在的 docs/completeness.md（§0/§6.1）——补齐文档或改指向（v2 复审 L6）
+  指向不存在的 docs/spec/completeness.md（§0/§6.1）——补齐文档或改指向（v2 复审 L6）
 
 ## 首切片（垂直打通）
 
