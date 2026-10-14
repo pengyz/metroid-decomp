@@ -19,13 +19,15 @@
 
 ## 根因微探针（tools/probe_exec_callback.lua，A 级证据）
 
-同帧双路注册 + 全程采样 cpu.pc，三分钟实跑（2875 帧）：
+同帧双路注册 + 全程采样 cpu.pc，实跑产物 `probe_meta.jsonl` **frames=7271**（`emu.stop()` 未止住
+脚本持续计数——与 F5 挂起现象同族、未根因化；初稿叙述"2875 帧"系脚本设计停止帧，2026-10-14 更正，
+落库数字以产物为准）：
 
 | 接口 | 实测 | 结论 |
 |---|---|---|
 | `addMemoryCallback(fn, "execute", $8000-$FFFF)` | 注册成功；集合 8513 地址；**`$C0D9`（每帧确证执行）∉ 集**、`$FFB0`∉ 集、`$C0DA`∈ 集；含 JSR 操作数第 3 字节 | 语义 ≈ 总线读周期（含操作数/数据读、缺中断入口首指令），**不是指令覆盖** |
 | `emu.memCallbackType.execute` 枚举 | **`emu.memCallbackType` = nil**（regB=false） | 2.1.1 无此枚举；执行器原 fallback 路径实为死代码 |
-| `emu.getState` cpu.pc 采样（inputPolled+endFrame 各 1 次/帧 ×2875） | **distinct=1，恒为 `$C0D9`** | 回调上下文中 getState 恒报 NMI 入口——帧采样覆盖路线不可用 |
+| `emu.getState` cpu.pc 采样（inputPolled+endFrame 各 1 次/帧 ×7271） | **distinct=1，恒为 `$C0D9`** | 回调上下文中 getState 恒报 NMI 入口——帧采样覆盖路线不可用 |
 
 → 机制③降级定位：oracle 覆盖 = **未验证线索**（自校验通过前禁止派生任务卡）；行为面分母维持
 场景清单（声明性）。根治方向（显式待研，master-plan S2）：Mesen2 Trace Logger / CDL 文件接口、

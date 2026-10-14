@@ -2,14 +2,16 @@
 # -*- coding: utf-8 -*-
 """tools/completeness_denoms.py —— 完备性矩阵分母机械导出器（缺口左移机制①）。
 
-原则（AGENTS.md D7）：**分母独立于测试、机械可导出**。本工具只登记分母（L0 入册未验证），
+原则（AGENTS.md D7）：**分母独立于测试、机械可导出——仅限 S 符号面 / D 数据面**
+（B/R 面为声明性分母，见下）。本工具只登记分母（L0 入册未验证），
 不产生任何覆盖分子；分子登记由角色任务带证据更新（ratchet：只升不降）。
 
 分母来源：
   S 符号面  analysis/ida/bank*.json 的 funcs（IDA 机械 entry 切分；标注"待 trace 纠偏"）
   D 数据面  analysis/ida/bank*.json 的 data items 连续段 + xref 消费者计数
-  B 行为面  oracle/scenarios/*.txt 场景清单（随 oracle 覆盖增长，见 coverage_from_trace.py）
-  R 规则面  docs/spec/ 规则条目（S4 起；空册起步）
+  B 行为面  oracle/scenarios/*.txt 场景清单（**声明性**：行为空间无机械分母；
+            不随已降级的 oracle 覆盖机制增长——rounds/r2 F3/N4）
+  R 规则面  docs/spec/ 规则条目（S4 起；**声明性**：规则完备性不可证）
 
 用法：python3 tools/completeness_denoms.py [--force]
   幂等：已存在的格子保留（不降级、不覆盖带证据的分子登记）；只追加新 id。

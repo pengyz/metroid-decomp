@@ -39,6 +39,11 @@ UNION = ROOT / "data" / "status" / "coverage_union.json"
 
 SEED_LINE = re.compile(r"^bank(\d\d):([0-9A-F]{4})\s")
 
+# rounds/r2 N4：自校验不变量（cpu.pc ⊆ 集合）仅为**必要条件**（采样点稀疏且恒为 NMI 入口），
+# PASS 也不证明"=执行地址集"。语义根治（CDL/trace logger/FCEUX，master-plan S2 待研）前，
+# 一切 execute 回调产物一律**仅线索**：盲区差集永远拒绝、并集永不吸收。
+ROOT_SEMANTICS_VERIFIED = False
+
 
 def load_seed_index() -> dict[str, tuple[str, str]]:
     idx: dict[str, tuple[str, str]] = {}
@@ -110,17 +115,20 @@ def main() -> int:
                 rc = 1
                 continue
         else:
-            # fail-loud 自校验：确证执行过的 pc 必须在覆盖集内
+            # fail-loud 自校验：确证执行过的 pc 必须在覆盖集内（必要非充分，N4）
             missing = sorted(p for p in pcs if p not in addrs)
             if pcs and not missing:
-                mode, verified = "execute-callback-verified", True
-                print(f"[{name}] 自校验 PASS: {len(pcs)} 个采集点 pc ⊆ 覆盖集")
+                verified = True
+                mode = "execute-callback-selfcheck-pass"
+                print(f"[{name}] 自校验 PASS（必要条件）: {len(pcs)} 个采集点 pc ⊆ 覆盖集")
             else:
                 mode = "unverified-exec-callback"
                 rc = 1
                 print(f"[{name}] 自校验 FAIL: {len(missing)}/{len(pcs)} 个确证执行过的 pc ∉ 覆盖集"
                       f"（如 {', '.join(f'{p:04X}' for p in missing[:6])}）"
                       "→ 降级 unverified，**拒绝产出盲区差集**（rounds/r2 F1）")
+            if not ROOT_SEMANTICS_VERIFIED:
+                print(f"[{name}] N4 钉死：语义根治前自校验 PASS 亦为**仅线索**——盲区差集拒绝、并集不吸收")
         fixed = sorted(a for a in addrs if a >= 0xC000)
         window = sorted(a for a in addrs if 0x8000 <= a < 0xC000)
         seed_hits = sorted({seed_idx[f"{a:04X}"] for a in fixed if f"{a:04X}" in seed_idx})
@@ -131,16 +139,17 @@ def main() -> int:
             "distinct_addresses": len(addrs),
             "fixed_bank7": {"count": len(fixed), "seed_lines_hit": len(seed_hits)},
             "window_8000": {"count": len(window), "bank_attribution": "unknown（可切窗口，不冒充归属）"},
-            "blind_spot_diff": "allowed" if verified else "refused（未验证语义，禁止派生任务卡）",
+            "blind_spot_diff": ("allowed" if (verified and ROOT_SEMANTICS_VERIFIED)
+                                else "refused（N4：语义根治前仅线索，禁止派生任务卡）"),
         }
         (TRACES / f"{name}.coverage-report.json").write_text(
             json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         print(f"[{name}] mode={mode} distinct={len(addrs)} "
               f"(bank7 fixed={len(fixed)} → seed 行 {len(seed_hits)}；window={len(window)} 归属未知)")
-        if verified:
+        if verified and ROOT_SEMANTICS_VERIFIED:
             union |= addrs
         else:
-            print(f"[{name}] 并集不吸收未验证集合（防污染只增不减语料）")
+            print(f"[{name}] 并集不吸收（N4：语义根治前 execute 回调产物不进只增不减语料）")
 
     if union:
         UNION.write_text(json.dumps(

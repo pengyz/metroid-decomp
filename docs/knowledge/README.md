@@ -65,14 +65,38 @@
 | [pattern-repair-selfcheck-grep.md](pattern-repair-selfcheck-grep.md) | pattern | 修复自查纪律——grep 目标行+新引入事实复核（三轮"声称已修"教训），修复≠声称修复 |
 | [gotcha-workspace-drift-images-freeze-before-diff.md](gotcha-workspace-drift-images-freeze-before-diff.md) | gotcha | L4 比对禁读工作区漂移图——冻结 A/B 或新鲜渲染立即测（并行不可信家族第 4 员，95.32%→98.07% 活例） |
 
-## 迁移条目来源声明（rounds/r2 F5，AGENTS §8 合规）
+## 迁移条目来源声明（2026-10-14 修订版；AGENTS §8 合规）
 
-以下条目自 gunnac_remake 项目迁入，其 **evidence 指针指向 gunnac 仓库内的历史路径**
-（本仓库不存在）；引用时须回到 gunnac_remake 核对，或在本项目重新取证后更新指针：
+> 【2026-10-14 更正】本节初版声明"仅 4 条目指针悬空（逐条列出）+ 其余条目与具体游戏无关"
+> ——经全量扫描**证伪**：4/4 归属全错、覆盖面漏计、"无关"为假断言。按 §6 更正文化撤回初版
+> 论断，以本扫描为准。教训本身见 `pattern-repair-selfcheck-grep.md`（新引入事实未复核）。
 
-- `decision-baseline-raise-policy.md`（指针：docs/spec/shop-economy.md 等）
-- `gotcha-stack-page-game-var-watch-coverage.md`（指针：oracle/traces/gameplay-stage1.weapons.jsonl）
-- `pattern-evidence-spotcheck-independent-reproduction.md`（指针：docs/findings/ram-watch-s3.md）
-- `reference-gate-usage-and-skip-semantics.md`（指针：oracle/subroutines/README.md）
+全部 18 条知识条目自 gunnac_remake 迁入，其证据链发生在 **gunnac 项目语境**。实测
+**15/18 条含路径级悬空指针**（指向 gunnac 仓内历史路径，本仓不存在）+ 1 条内容级悬空。
+下表逐行由扫描命令生成（勿手写）：
 
-其余条目为工具链/纪律通用教训，与具体游戏无关。
+`python3 - <<'EOF' 对 docs/knowledge/*.md 提取 (docs|oracle|data|gates|tools|reference|crates|prompts)/… 路径并测本仓存在性 EOF`
+
+| 条目 | 本仓悬空指针（实测） |
+|---|---|
+| decision-baseline-raise-policy.md | 路径无悬空；但引用 `docs/master-plan.md §5.5` 为**内容级悬空**（本仓 master-plan 无该节） |
+| decision-gate-trust-root-boundary.md | docs/knowledge/gate-trust-root-boundary.md、docs/rounds/round-012.md |
+| gotcha-concurrent-mesen-output-corruption.md | docs/findings/orphan-run-recheck.md、docs/findings/ram-watch-s3.md、oracle/scenarios/README.md |
+| gotcha-cpu-file-offset-conversion.md | docs/findings/adversarial-review-04.md |
+| gotcha-false-green-idle-assertions.md | docs/findings/coverage-audit.md、oracle/subroutines/l2_cases.jsonl |
+| gotcha-observation-granularity-fabricates-invariants.md | docs/findings/ram-watch-s3.md、docs/spec/shop-economy.md、oracle/traces/gameplay-stage1.weapons.jsonl |
+| gotcha-parallel-read-image-order-unreliable.md | docs/findings/ram-watch-s3.md |
+| gotcha-rate-limit-is-infrastructure-not-diff-routing.md | docs/rounds/round-008.md |
+| gotcha-register-address-is-not-nametable-target.md | docs/findings/stream-entry-r7.md |
+| gotcha-reusable-tools-belong-in-tools.md | docs/rounds/round-003/004/006/007.md、tools/chr_render.py、tools/da6502.py |
+| gotcha-stack-page-game-var-watch-coverage.md | oracle/subroutines/README.md |
+| gotcha-workspace-drift-images-freeze-before-diff.md | oracle/screens/actual |
+| pattern-cross-scope-conflict-escalation.md | docs/rounds/round-003/006/007.md |
+| pattern-evidence-spotcheck-independent-reproduction.md | docs/rounds/round-001/005/006/007.md |
+| pattern-visual-binding-needs-pixel-proof.md | docs/findings/orphan-run-recheck.md |
+| reference-gate-usage-and-skip-semantics.md | docs/rounds/round-005/008.md、prompts/README |
+| gotcha-git-add-commit-atomicity.md / pattern-repair-selfcheck-grep.md | 无悬空 |
+
+**引用规则**：表内指针一律回 gunnac_remake 核对原文证据；本项目重新取证后**改写指针**并在
+条目内注明新证据；不允许把 gunnac 的游戏特定证据（如 shop-economy、gameplay-stage1）当作
+本项目结论引用。
