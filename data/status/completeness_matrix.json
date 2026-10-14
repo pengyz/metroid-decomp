@@ -19,7 +19,7 @@
     },
     "symbol": {
       "denominator": 450,
-      "covered": 2
+      "covered": 3
     },
     "data": {
       "denominator": 193
@@ -3267,15 +3267,15 @@
       "strength": "L0",
       "covered": false,
       "evidence": "bank07:E37A-E3E5（IDA 机械切分 size=107）",
-      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+      "note": "部分覆盖（不计 covered）：尾部积分切片 E3A5-E3E4 已证明级等价（int_y，2^32 穷举）；头部 E37A-E3A4（accel/maxspeed 初始化）未移植——移植后方可整格计 covered"
     },
     "S-FUNC-07-E3E5": {
       "id": "S-FUNC-07-E3E5",
       "face": "symbol",
       "module": "engine",
-      "strength": "L0",
-      "covered": false,
-      "evidence": "bank07:E3E5-E449（IDA 机械切分 size=100）",
+      "strength": "L2",
+      "covered": true,
+      "evidence": "oracle/subroutines/l2_cases.jsonl#gen-int-x-0..3 三方全等 + SMT unsat（tools/int_x_smt_proof.py 2^40 域）+ 桥接 66976 点 0 分歧（efedd5e）",
       "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
     },
     "S-FUNC-07-E449": {
