@@ -78,3 +78,28 @@ fn l2_unsupported_opcode_fails_loud() {
     cpu.set_pc(0xC000);
     assert!(cpu.step().is_err());
 }
+
+// ---- r3 复核回归（F1/F2/F3；RED 先行）----
+
+#[test]
+fn sentinel_convention_nonterminating_fails_loud() {
+    // F1: 哨兵约定下死循环必须 Err（此前超步后静默截断返回 Ok）
+    // bank7:$C100: D0 FE (BNE -2 自环，Z=0 时永转)
+    let mut prg = vec![0u8; 0x20000];
+    prg[0x1C100..0x1C102].copy_from_slice(&[0xD0, 0xFE]);
+    let mut inp = input(0, 0, 0);
+    inp.p = 0x00; // Z=0 ⇒ BNE 恒跳
+    let r = run_subroutine(&prg, 0xC100, 7, &inp, &[]);
+    assert!(r.is_err(), "哨兵约定下非终止必须报错，不得静默截断");
+}
+
+#[test]
+fn double_write_collapses_to_final_value_map() {
+    // F3: 写集=最终值映射（同址多次写 last-wins）
+    // $C000: A9 01 85 01 A9 02 85 01 60 (LDA#1/STA $01/LDA#2/STA $01/RTS)
+    let mut prg = vec![0u8; 0x20000];
+    prg[0x1C000..0x1C008].copy_from_slice(&[0xA9, 0x01, 0x85, 0x01, 0xA9, 0x02, 0x85, 0x01]);
+    prg[0x1C008] = 0x60;
+    let out = run_subroutine(&prg, 0xC000, 7, &input(0, 0, 0), &[]).expect("run");
+    assert_eq!(out.writes, vec![(0x0001, 0x02)], "同址多写须折叠为最终值");
+}

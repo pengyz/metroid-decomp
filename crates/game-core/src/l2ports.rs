@@ -23,7 +23,8 @@ pub fn sub_c376(input: &L2In) -> L2Out {
         a: 0x00,
         x: input.x,
         y: input.y,
-        writes: vec![(0x07A1 + input.x as u16, 0x00)],
+        // r3 F2：契约要求写地址归一 $0000-$07FF（2KB RAM 镜像）
+        writes: vec![((0x07A1 + input.x as u16) & 0x7FF, 0x00)],
     }
 }
 

@@ -1863,7 +1863,7 @@
       "strength": "L2",
       "covered": true,
       "evidence": "oracle/subroutines/l2_cases.jsonl#l2-c16d-set-ptr-lo-hi 三方全等 PASS（golden==ROM 执行==game-core）；语义来源 reference/seed bank07:C16D-C174",
-      "note": "L2 已验证（subroutine-diff 2026-10-14）"
+      "note": "L2 已验证（subroutine-diff）：$C16D-$C174 八字节全区覆盖（含 zp 写序）；机械切分待纠偏"
     },
     "S-FUNC-07-C175": {
       "id": "S-FUNC-07-C175",
@@ -2052,7 +2052,7 @@
       "strength": "L2",
       "covered": true,
       "evidence": "oracle/subroutines/l2_cases.jsonl#l2-c376-absx-zero-store 三方全等 PASS（golden==ROM 执行==game-core）；语义来源 reference/seed bank07:C376-C37A",
-      "note": "L2 已验证（subroutine-diff 2026-10-14）"
+      "note": "L2 部分覆盖（r3 F4 收窄）：已验 $C376-$C37A 头部 + X∈{0,2,0x5E,0x5F,0xFF}（含 2KB 镜像边界）；PLA/PLA/RTS 尾部（$C37B-$C37D，双层返回控制流，L2Out 不可表达）与 X 全域未验——语义边界以 trace 证据为准（机械切分待纠偏）"
     },
     "S-FUNC-07-C3C6": {
       "id": "S-FUNC-07-C3C6",

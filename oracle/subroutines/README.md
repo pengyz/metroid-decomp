@@ -23,7 +23,9 @@ cargo test --workspace                   # 同一差分引擎单元测试（rust
 - `stops` 非空 ⇒ 执行到命中其一；为空 ⇒ 预压哨兵返回地址跑到 RTS（调用约定）。
 - `in.ram` 地址归一至 `$0000-$07FF`；`out.writes` 同（写集只记 RAM）。
 - **机械栈流量（JSR/PHA/哨兵压栈）不入写集**；栈页里的游戏变量（显式 STA $01xx）照常记录。
+- **写集 = 最终值映射**（同址多次写 last-wins，引擎侧 `final_writes` 折叠；写事件序列不入比对面）。
 - 差分面 = regs{a,x,y} + 写集；P 为执行副产物不入比对面（输入 P 影响分支，仍进 `in`）。
+- `out.regs` 缺省 0；未知键静默忽略（rounds/r3 F3 声明）。
 - 有 PPU/APU/MMC1 寄存器副作用的例程不设 L2 用例（降级 L3，pipeline R3）。
 
 ## 用例登记（先写用例再实现——TDD RED→GREEN）

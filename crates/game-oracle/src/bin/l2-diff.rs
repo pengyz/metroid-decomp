@@ -120,6 +120,10 @@ fn main() -> ExitCode {
             Err(msg) => { println!("[FAIL] {}: {}", case.id, msg); failed += 1; }
         }
     }
+    if total == 0 {
+        eprintln!("L2 三方裁定: 用例集为空——fail-loud（r3 F7：空跑不得绿）");
+        return ExitCode::from(2);
+    }
     println!("L2 三方裁定: {} 条用例, {} 失败（golden == ROM 执行 == game-core）", total, failed);
     if failed > 0 { ExitCode::from(1) } else { ExitCode::from(0) }
 }

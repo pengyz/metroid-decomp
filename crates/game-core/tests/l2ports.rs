@@ -37,3 +37,10 @@ fn unported_stubs_fail_loud_and_record() {
     assert_eq!(gap::recorded(), vec!["bank07:DEAD".to_string()]);
     gap::reset();
 }
+
+#[test]
+fn sub_c376_write_addr_mirrors_at_2k() {
+    // F2: 写地址须按契约归一 &0x7FF；X=0x5F ⇒ 真实 $0800 镜像 $0000
+    let out = l2ports::sub_c376(&input(0, 0x5F, 0));
+    assert_eq!(out.writes, vec![(0x0000, 0x00)]);
+}
