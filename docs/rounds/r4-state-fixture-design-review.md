@@ -1,7 +1,7 @@
-# rounds/r4 — state-fixture 设计复审账本（v1→v4，ID 定义与处置记录）
+# rounds/r4 — state-fixture 设计复审账本（v1→v7，ID 定义与处置记录）
 
 > 归档设计复审各轮 findings（此前仅存聊天——AGENTS §7 违规，本文件补正并作为计数唯一来源）。
-> 被审对象演进：design v1 → v2（a36d059）→ v3（5029223）→ v4（4db9f89）→ v5（本文件同轮）。
+> 被审对象演进：design v1 → v2（a36d059）→ v3（5029223）→ v4（4db9f89）→ v5 → v6（d1794af）→ v7（355be40 后续修正）。
 
 ## 复审轮次与 verdict
 
@@ -75,4 +75,6 @@
 4. completeness provenance 指向 tools/matrix_sync.py（实际导出器 completeness_denoms.py）悬空；
 5. F_a 弱谓词在密码链可假阳（密码链 F_a 谓词模板待定）；
 6. 场景帧数前置（frames ≥ F_a+k_max）未机械校验；
-7. 密码逆向排期依赖（S3）与降级触发器裁决点。
+7. 密码逆向排期依赖（S3）与降级触发器裁决点；
+8. 「直接副作用链」边界未操作化（判定者按消融记录自判，暂无机械边界——M-D 留账）；
+9. knowledge gotcha「四分类/规格缺口」旧词（历史条目，按更正文化不改正文，见 M-D 更正注）。

@@ -1,6 +1,6 @@
 # design：状态夹具验证机制（state-fixture）——设计与对抗性审查记录
 
-> 状态：设计稿 **v6**（2026-10-14）——v1→v5 五轮复审修正史与计数见 [rounds/r4](../rounds/r4-state-fixture-design-review.md)（唯一记账来源）。
+> 状态：设计稿 **v7**（2026-10-14）——v1→v6 六轮复审修正史与计数见 [rounds/r4](../rounds/r4-state-fixture-design-review.md)（唯一记账来源）。
 > 背景：原版无即时存档（密码系统），能力验证需状态级置入。
 > 符号约定（N5）：anchor 帧记 **F_a**（frame of anchor）；入局链的 A 键记 **(A 键)**——不再混用。
 
@@ -64,8 +64,8 @@ l2 golden=静态反汇编手推。savestates 仅作发现工具（analysis/，�
        **场景相对语义（B1-2）**：分类是（地址 × 场景）相对的，同一地址在不同场景夹具可
        异类（如形态位：变球场景=evolving、跳跃场景=invariant）⇒ `persistence` 标在
        **每场景的 fixture writes 条目**（per-scenario 覆写，非 fixture 级共享位）。
-       **判定者（B1-3）= 状态发现流程 §4 ④**（新增职责）；**证据义务（B1-4）**= 消融记录
-       中对该地址的写行为观察记录（无记录不得定类）。
+       **判定者（B1-3）= 状态发现流程 §4 ⑤ 登记步**（职责承载处，⑤ 内已写明）；
+       **证据义务（B1-4）**= 消融记录中对该地址的写行为观察记录（无记录不得定类）。
        **≥1 invariant 下限（B1-5）**：每夹具（每场景）至少 1 个 invariant 地址，否则须
        显式声明「(c) 不适用」且 B-SCN covered 需额外证据——防全标 evolving 把 (c) 空洞化
        （空集占真通过 ⇒ covered 无持久性证明 = 洗绿面）。
@@ -111,7 +111,7 @@ gotcha-stack-page 两次教训）。域外（mapper/PPU/APU 态）由共同历�
 ④ 假阴性处置：派生状态（换房/装载时才重算）缺失导致消融阴性 ≠ 因果否定——
    记入待查，换上下文重试；相关非因果地址（如 H2 疑影子对）按 b/c 剔除
 ⑤ 夹具登记：source_evidence 只存指针（场景 id / trace sha / 消融记录 id）；
-   **persistence 定类（B1-3/B1-4，判定者=本流程）**：按「受测能力窗口内该地址是否会被写
+   **persistence 定类（B1-3/B1-4，判定者=本流程 §4⑤ 登记步——与 §3(c) 指针一致）**：按「受测能力窗口内该地址是否会被写
    （含直接副作用链）」定 invariant/evolving，写行为观察记入消融记录（无记录不得定类），
    标于每场景 writes 条目（per-scenario）
 ```
@@ -150,10 +150,11 @@ RAM 夹具补位置/中间态。在考证完成前，两者并行、不预设优
 
 | 接口 | 约定 |
 |---|---|
-| **fixture manifest** | `oracle/fixtures/<name>.json` 含 `id`/`writes`（逐址 why+证据指针）/`source_evidence`（仅指针）/`anchor`（链 + F_a 判据）；sha256 入 l3_manifest case（**将增加** `fixture_id`+`fixture_sha256`+`k_max` 键 + 夹具 writes 条目 `persistence` 键（B1）——现状 case 无诸键，待实现）。**重基线防洗绿（L9）**：夹具值变更 ⇒ 相关 l3 case 重基线**且必须携带新 source_evidence + 新消融记录**，禁止无证据重基线 |
+| **fixture manifest** | `oracle/fixtures/<name>.json` 含 `id`/`writes`（逐址 why+证据指针）/`source_evidence`（仅指针）/`anchor`（链 + F_a 判据）；sha256 入 l3_manifest case（**将增加** `fixture_id`+`fixture_sha256`+`k_max` 键 + 夹具 writes 条目 `persistence` 键（B1，**per-scenario 覆写位**——只落每场景 writes 条目，manifest 共享层不带 persistence）——现状 case 无诸键，待实现）。**重基线防洗绿（L9）**：夹具值变更 ⇒ 相关 l3 case 重基线**且必须携带新 source_evidence + 新消融记录**，禁止无证据重基线 |
 | **runner/DSL 接口（D4）** |（以下均**待实现**）scenario DSL 增 `fixture <id>` 指令（scenario_run 解析 → scenario_capture 于 F_a 帧执行写入）；`fixture_sha256` 校验方 = diff_traces（case 携带）；同源三条件断言落点 = diff_traces fixture 扩展（(a) 跨侧、(b)(c) 双侧读回；(c) 为窗口末后置门）——待实现 |
 | **完备性矩阵（L6）** | 夹具 L3 场景入 **B 面分母**（B-SCN-* 格）；「能力×状态」可枚举=**声明性、语料驱动**（D7 口径）；金字塔轴=L3 帧级对拍；矩阵 strength 轴按其 schema **独立登记**（L0-L4，covered⇔≥L1）——两轴独立不换算（不得把金字塔层级直接写入 strength） |
-| **分类路由**（pipeline §4.2 现行 6 类；夹具类=第 6 类） | **失败分流（机械，L1/G2/G3/L-3/v6 B2 修正——判定序：先 (c) 后行为）**：⓪ (c) invariant 读回失败 ⇒ 夹具维护（优先于一切行为分流；含「行为全绿仅 (c) 失败」情形）；① 无夹具基线（同链裸跑）**全能力窗口**比对先行——基线红 ⇒ **转 §4.2 常规分类**（实现缺口/移植错/参考bug/投影错/平台差异——不进夹具维护；F14 修正：不塌缩为单类）；② 基线绿 + 带夹具红：首分歧帧=F_a+1 ⇒ 同源断言失败→夹具维护（重走状态发现）；首分歧帧∈(F_a+1, F_a+k_max] ⇒ **域审查**（角色 decomp-analyst，产出=域扩展或降级 L5 裁定）→ 按裁定路由；首分歧帧>F_a+k_max ⇒ 转 §4.2 常规分类（含参考bug/投影错/平台差异）。fixture sha 不符 ⇒ 夹具维护；帧集不一致 ⇒ 按 §4.2 二分（game-core 崩溃/截断⇒实现缺口/移植错；其余⇒夹具维护）（F6 细分）。**定义（可机械）**：漂移帧=diff_traces 首分歧帧；k_max=case 声明的能力观察窗口长（默认 120 帧）；窗口末帧=F_a+k_max（k_window 符号已废） |
+| **分类路由**（pipeline §4.2 现行 6 类；夹具类=第 6 类） | **失败分流（机械，L1/G2/G3/L-3/v6 B2 修正——判定序：先 (c) 后行为）**：⓪ (c) invariant 读回失败 ⇒ 夹具维护（优先于一切行为分流；含「行为全绿仅 (c) 失败」情形）；
+   **升级出口（M-C）**：夹具维护复测 2 轮不收敛 ⇒ 转 §4.2 常规分类（域审查可介入裁定）——防夹具维护死循环；① 无夹具基线（同链裸跑）**全能力窗口**比对先行——基线红 ⇒ **转 §4.2 常规分类**（实现缺口/移植错/参考bug/投影错/平台差异——不进夹具维护；F14 修正：不塌缩为单类）；② 基线绿 + 带夹具红：首分歧帧=F_a+1 ⇒ 同源断言失败→夹具维护（重走状态发现）；首分歧帧∈(F_a+1, F_a+k_max] ⇒ **域审查**（角色 decomp-analyst，产出=域扩展或降级 L5 裁定）→ 按裁定路由；首分歧帧>F_a+k_max ⇒ 转 §4.2 常规分类（含参考bug/投影错/平台差异）。fixture sha 不符 ⇒ 夹具维护；帧集不一致 ⇒ 按 §4.2 二分（game-core 崩溃/截断⇒实现缺口/移植错；其余⇒夹具维护）（F6 细分）。**定义（可机械）**：漂移帧=diff_traces 首分歧帧；k_max=case 声明的能力观察窗口长（默认 120 帧）；窗口末帧=F_a+k_max（k_window 符号已废） |
 
 **过渡期（D5，S5 前）**：game-core 腿未就绪 ⇒ 夹具场景单侧运行，标注 **proof-pending**
 （同源三条件断言未执行）；S5 后补验通过方可计入 B 面 covered。
@@ -204,6 +205,8 @@ F7 三接口 schema；F8 实施顺序重排。
 - 密码逆向延期 → 降级触发器（§5）。
 
 
+## 10. 复核修正记录（v5-v6，接 §8）
+
 ### v5 修正（v4 复审 F1-F15——F1-F14 明细见下表，F15=时序措辞并入 F3 处置；计数与轮次账见 rounds/r4）
 > 【2026-10-14 更正】此前「20 编号合并计 16 组」与「明细见 rounds/r4」两处失实已废止：计数以 rounds/r4 编号总表为准（v3 轮=16 号），本表自含 F4-F15 明细。
 | # | 复核发现 | v5 处置 |
@@ -221,7 +224,7 @@ F7 三接口 schema；F8 实施顺序重排。
 ### v6 修正（v5 复审五组条件 + 六轮复审最小修法集，摘要）
 | 组 | 处置 |
 |---|---|
-| B1 | §3(c) 五要素真落地（判定规则/场景相对/判定者/证据义务/≥1 invariant 下限）+ §4④ 登记职责 + per-scenario persistence |
+| B1 | §3(c) 五要素真落地（判定规则/场景相对/判定者/证据义务/≥1 invariant 下限）+ §4⑤ 登记职责 + per-scenario persistence |
 | B2 | 门语义/判定序/(c)-only 分支（v6 轮已落地，六轮复核确认） |
 | B3 | r4 双计数修正 + F15 处置 + 双向指针 |
 | M1 | covered_rule 待办落 master-plan（六轮复核确认） |
