@@ -20,7 +20,7 @@
 
 - [ ] **里程碑编号矛盾**：north-star.md（M3=核心系统/M4=全内容含密码）与 methodology.md
   （M3=含密码/M4=差分收口）M3/M4 定义不一致——统一口径后删除本行（state-fixture v3 L7）
-- [ ] **docs/completeness.md 悬空引用**：completeness_matrix.json schema 的 source_of_truth
+- [ ] **docs/spec/completeness.md 悬空引用**：completeness_matrix.json schema 的 source_of_truth
   指向不存在的 docs/spec/completeness.md（§0/§6.1）——补齐文档或改指向（v2 复审 L6）
 
 ## 首切片（垂直打通）
