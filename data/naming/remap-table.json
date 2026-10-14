@@ -1,0 +1,10 @@
+{
+  "schema": 1,
+  "layer": "remap",
+  "generated_by": "tools/seed_build.py（S1 交付后生成）",
+  "rom_sha256": "e6e6b7014685adae447ebb3833242815747bc1e5df83ade79f693fb67cf565b6",
+  "projection": "reference/seed/metroid.asm",
+  "counts": {},
+  "vectors": {},
+  "entries": []
+}

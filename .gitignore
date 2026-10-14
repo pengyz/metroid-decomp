@@ -1,0 +1,20 @@
+# 版权物：ROM 与任何从中提取的数据永不入库
+rom/*.nes
+rom/*.fds
+rom/*.bin
+rom/*.zip
+rom/*.7z
+rom/*.gz
+rom/*.rom
+out/
+build/
+__pycache__/
+*.o
+
+# 参考代码与构建产物（可重建，不入库）
+refs/
+tools/wla-dx-src/
+out/
+**/out/
+*.o
+analysis/

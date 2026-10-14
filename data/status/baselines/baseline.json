@@ -1,0 +1,20 @@
+{
+  "schema": 1,
+  "project": "metroid-decomp",
+  "metrics": {
+    "rom_files_verified": 1,
+    "seed_projection_files": 0,
+    "naming_ledger_entries": 0,
+    "assets_manifest_entries": 0,
+    "knowledge_entries": 18,
+    "rust_test_count": 0,
+    "completeness_cells": 0
+  },
+  "assets": {},
+  "seed": {},
+  "tolerated": [],
+  "established": {
+    "rom-integrity": true,
+    "knowledge-format": true
+  }
+}

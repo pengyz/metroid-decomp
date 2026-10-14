@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "source_of_truth": "docs/spec/completeness.md（本文件由 tools/matrix_sync.py --export 生成后人工核）",
+  "id_rule": "B=行为面 / S=符号面 / D=数据面 / R=规则面；格 ID 一经入分母永不复用（completeness.md §0）",
+  "strength_scale": "L0-L4 矩阵轴（completeness.md §6.1）；与差分金字塔 L1-L5 是两条轴，勿混淆",
+  "covered_rule": "covered ⇔ strength >= L1（带证据指针的分子登记；L0=入分母未验证）",
+  "cell_schema": ["id", "face", "module", "strength", "covered", "evidence", "note"],
+  "faces": {"behavior": {}, "symbol": {}, "data": {}, "rule": {}},
+  "cells": {}
+}
