@@ -85,7 +85,9 @@ def check_case_schema(case) -> str | None:
         seen_labels.add(label)
         if not isinstance(base, str) or not BASERE.match(base):
             return f"watch.base 须为 1-4 位 hex 字符串: {w!r}"
-        rng = w.get("range")
+        rng = w.get("range") if "range" in w else None
+        if "range" in w and w["range"] is None:
+            return f"watch.range 给了 null（给了就必严，缺省请删键）: {w!r}"
         if rng is not None:
             m = RANGERE.match(rng) if isinstance(rng, str) else None
             if not m:
@@ -138,13 +140,13 @@ def regen(scenario: str) -> bool:
     return proc.returncode == 0
 
 
-def load_frames(path: Path) -> tuple[dict[int, dict], list[int], str | None]:
-    """读帧 trace；返回 (帧字典, 重复 f 列表, 行级违规)。
-    重复 f 判 FAIL（防后行覆盖分歧行）；畸形行（非 JSON/缺键/类型错）= 行级违规。"""
+def load_frames(raw: bytes, where: str) -> tuple[dict[int, dict], list[int], str | None]:
+    """解析帧 trace（**单读**：sha 与解析同源同 bytes，消 TOCTOU 双读竞态——G5 R4-1）。
+    返回 (帧字典, 重复 f 列表, 行级违规)。重复 f 判 FAIL；畸形行 = 行级违规。"""
     out: dict[int, dict] = {}
     dups: list[int] = []
     try:
-        text = path.read_text(encoding="utf-8")
+        text = raw.decode("utf-8")
     except UnicodeDecodeError as e:
         return out, dups, f"非 UTF-8 编码: {e}"
     for lineno, line in enumerate(text.splitlines(), 1):
@@ -153,14 +155,14 @@ def load_frames(path: Path) -> tuple[dict[int, dict], list[int], str | None]:
         try:
             r = json.loads(line)
         except json.JSONDecodeError as e:
-            return out, dups, f"第 {lineno} 行非 JSON: {e}"
+            return out, dups, f"{where} 第 {lineno} 行非 JSON: {e}"
         if not isinstance(r, dict) or "f" not in r or "w" not in r:
-            return out, dups, f"第 {lineno} 行缺 f/w 键或非对象"
+            return out, dups, f"{where} 第 {lineno} 行缺 f/w 键或非对象"
         f = r["f"]
         if isinstance(f, bool) or not isinstance(f, int) or f < 0:
-            return out, dups, f"第 {lineno} 行 f 须为非负整数: {f!r}"
+            return out, dups, f"{where} 第 {lineno} 行 f 须为非负整数: {f!r}"
         if not isinstance(r["w"], dict):
-            return out, dups, f"第 {lineno} 行 w 非对象"
+            return out, dups, f"{where} 第 {lineno} 行 w 非对象"
         if f in out:
             dups.append(f)
         out[f] = r["w"]
@@ -207,6 +209,9 @@ def main() -> int:
         return schema_error(f"cases 须为数组: {type(cases).__name__}")
     if not cases:
         return schema_error("用例集为空（空跑不得绿）")
+    for c in cases:
+        if isinstance(c, dict) and "id" in c and not isinstance(c["id"], str):
+            return schema_error(f"case.id 须为字符串: {c['id']!r}")
     ids = [c.get("id") for c in cases if isinstance(c, dict)]
     if len(ids) != len(set(ids)):
         return schema_error(f"case.id 重复（防报告歧义）: {ids}")
@@ -225,13 +230,14 @@ def main() -> int:
                 print(f"[FAIL] {cid}: oracle trace 重采集失败")
                 failed += 1
                 continue
-        digest = hashlib.sha256(cache.read_bytes()).hexdigest()
+        cache_raw = cache.read_bytes()  # 单读：sha 与解析同源（R4-1）
+        digest = hashlib.sha256(cache_raw).hexdigest()
         if digest.lower() != case["oracle_sha256"].lower():
             print(f"[FAIL] {cid}: oracle trace sha256 不符 manifest（确定性破裂/缓存陈旧/篡改）")
             failed += 1
             continue
 
-        left, ldups, lerr = load_frames(cache)
+        left, ldups, lerr = load_frames(cache_raw, "oracle trace")
         if lerr:
             print(f"[FAIL] {cid}: oracle trace {lerr}")
             failed += 1
@@ -269,7 +275,7 @@ def main() -> int:
                   f"game-core 腿未启用（S5 落地生成 {dump.relative_to(ROOT)} 后自动启用）")
             continue
 
-        right, rdups, rerr = load_frames(dump)
+        right, rdups, rerr = load_frames(dump.read_bytes(), "game-core dump")
         if rerr:
             print(f"[FAIL] {cid}: game-core dump {rerr}")
             failed += 1
