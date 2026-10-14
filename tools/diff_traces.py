@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import re
 import subprocess
 import sys
@@ -131,11 +132,14 @@ def check_frames_side(frames: dict, watch: list[dict], side: str) -> str | None:
 
 def regen(scenario: str) -> bool:
     print(f"[regen] 缓存缺失——经 tools/scenario_run.py 重采集 {scenario}（响亮再生）")
+    # Windows 适配：PYTHONUTF8=1 令 Python 子进程输出 UTF-8，父侧固定 UTF-8 解码
+    # （缺 encoding 时按 GBK locale 解码 UTF-8 字节直接崩——2026-10-14 实测）
+    env = dict(os.environ, PYTHONUTF8="1")
     proc = subprocess.run(
         [sys.executable, str(ROOT / "tools" / "scenario_run.py"), "run", scenario, "--timeout", "300"],
-        cwd=ROOT, capture_output=True, text=True)
+        cwd=ROOT, capture_output=True, text=True, encoding="utf-8", errors="replace", env=env)
     if proc.returncode != 0:
-        tail = (proc.stdout + proc.stderr).strip().splitlines()[-5:]
+        tail = ((proc.stdout or "") + (proc.stderr or "")).strip().splitlines()[-5:]
         print(f"[regen] 重采集失败: {' | '.join(tail)}")
     return proc.returncode == 0
 

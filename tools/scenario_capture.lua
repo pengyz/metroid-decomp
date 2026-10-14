@@ -30,7 +30,9 @@ local donePath = PLAN.out_dir .. "/" .. name .. ".done"
 local logPath = PLAN.out_dir .. "/" .. name .. ".lua.log"
 
 local function log(s)
-  local f = io.open(logPath, "a")
+  -- 文本产物一律 "wb"/"ab" 二进制模式（2026-10-14 Windows 适配）：C 运行时文本模式会把
+  -- "\n" 翻译成 "\r\n"，trace/captures 字节面随平台漂移 ⇒ oracle_sha256 锚定破裂。
+  local f = io.open(logPath, "ab")
   if f then f:write(s .. "\n") f:close() end
 end
 
@@ -97,7 +99,7 @@ end
 
 local function dumpRam(tag)
   local p = string.format("%s/%s_f%05d_%s.ram.hex", PLAN.out_dir, name, frame, tag)
-  local f = io.open(p, "w")
+  local f = io.open(p, "wb")
   if f then f:write(readRange(0x0000, 0x07FF) .. "\n") f:close() return p end
   return nil
 end
@@ -122,13 +124,13 @@ if PLAN.coverage then
 end
 
 -- ---------------- 回调注册
-local traceF = assert(io.open(tracePath, "w"))
-local capF = assert(io.open(capPath, "w"))
+local traceF = assert(io.open(tracePath, "wb"))
+local capF = assert(io.open(capPath, "wb"))
 
 -- W-NEW 行缓冲 NMI 级插桩（t94）：probe_mem 写点 PC 轨迹（观察性，不改行为）
 if PLAN.probe_mem and #PLAN.probe_mem > 0 then
   local probePath = PLAN.out_dir .. "/" .. name .. ".probe.jsonl"
-  local probeF = io.open(probePath, "w")
+  local probeF = io.open(probePath, "wb")
   local probeN = 0
   local function probeLog(addr, val)
     if probeN > 3000000 then return end
@@ -203,7 +205,7 @@ emu.addEventCallback(function()
     capF:flush() capF:close()
     if PLAN.coverage then
       local covPath = PLAN.out_dir .. "/" .. name .. ".coverage.jsonl"
-      local covF = io.open(covPath, "w")
+      local covF = io.open(covPath, "wb")
       if covF then
         local addrs = {}
         for a, _ in pairs(covSet) do addrs[#addrs + 1] = a end
@@ -216,7 +218,7 @@ emu.addEventCallback(function()
         log("coverage dumped: " .. covN .. " addrs, mode=" .. covMode)
       end
     end
-    local d = io.open(donePath, "w")
+    local d = io.open(donePath, "wb")
     if d then
       d:write(string.format('{"frames":%d,"trace_lines":%d,"captures":%d,"shots":%d}\n',
         frames, nTrace, nCap, nShot))

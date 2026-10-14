@@ -5,8 +5,9 @@
 职责：
 1. 解析场景 DSL（oracle/scenarios/*.txt）——**DSL 语义只在本文件解析**（无第二套解析器）；
 2. 生成 analysis/_gen/<name>.lua = PLAN 表字面量 + tools/scenario_capture.lua 执行器；
-3. 驱动 Mesen2 2.1.1 采集：xvfb-run -a tools/mesen2/Mesen rom/Metroid (USA).nes <lua> /DoNotSaveSettings
-   （装载用法已验证；emu.stop 不退进程 ⇒ 驱动等 DONE 标记后 SIGTERM 收尾）；
+3. 驱动 Mesen2 2.1.1 采集：tools/mesen2/Mesen rom/Metroid (USA).nes <lua> /DoNotSaveSettings
+   （装载用法已验证；Linux 自管 Xvfb+DISPLAY 注入，Windows 原生 GUI 直跑；
+   emu.stop 不退进程 ⇒ 驱动等 DONE 标记后 SIGTERM/taskkill 收尾）；
 4. 校验产物并落 run 清单（可复现证据）。
 
 用法：
@@ -31,7 +32,6 @@
 from __future__ import annotations
 
 import argparse
-import fcntl
 import hashlib
 import json
 import os
@@ -42,9 +42,36 @@ import sys
 import time
 from pathlib import Path
 
+IS_WINDOWS = os.name == "nt"
+if IS_WINDOWS:
+    import msvcrt
+else:
+    import fcntl
+
+# Windows 无 SIGKILL：退化为 SIGTERM（调用侧 Windows 路径实际走 taskkill /F，语义为强杀）
+SIGKILL = getattr(signal, "SIGKILL", signal.SIGTERM)
+
 ROOT = Path(__file__).resolve().parent.parent
-MESEN = ROOT / "tools" / "mesen2" / "Mesen"
-import os
+MESEN_DIR = ROOT / "tools" / "mesen2"
+
+
+def find_mesen() -> Path:
+    """Mesen2 可执行定位（BYO 工具，tools/mesen2/ 不入库，见 docs/methodology.md）。
+
+    GUNNAC_MESEN 环境变量可覆盖；Windows 认 Mesen.exe/Mesen，Unix 认 Mesen。
+    缺失不在 import 期报错（list/gen 不需要 Mesen），run 前显式 fail-loud。"""
+    env = os.environ.get("GUNNAC_MESEN")
+    if env:
+        p = Path(env)
+        return p if p.is_absolute() else (ROOT / p)
+    names = ("Mesen.exe", "Mesen") if IS_WINDOWS else ("Mesen",)
+    for n in names:
+        p = MESEN_DIR / n
+        if p.is_file():
+            return p
+    return MESEN_DIR / names[0]
+
+
 def _abs(env: str, default: str) -> Path:
     v = os.environ.get(env)
     q = Path(v) if v else Path(default)
@@ -298,7 +325,7 @@ def archive_existing(name: str) -> str | None:
         shots_dst.mkdir(parents=True, exist_ok=True)
         shutil.move(str(src), str(shots_dst / src.name))
         moved = True
-    return str(dst.relative_to(ROOT)) if moved else None
+    return dst.relative_to(ROOT).as_posix() if moved else None
 
 
 
@@ -326,47 +353,128 @@ def normalize_paths_in_outputs(name: str) -> None:
 
     Lua 落盘需要绝对目录（PLAN.shots_dir），但 captures.jsonl/run.json 对外
     暴露的路径必须相对——2026-10-14 用户裁定。
+    Windows 适配：ROOT 前缀有 4 种形态（正/反斜杠 × Lua 原样/JSON 反斜杠转义），
+    全部剥除，产物 JSON 在两个平台字节面一致。
     """
-    prefix = str(ROOT) + "/"
+    root = str(ROOT)
+    esc = root.replace("\\", "\\\\")
+    prefixes = (root + "/", root + "\\", esc + "/", esc + "\\")
     for f in [TRACES_DIR / f"{name}.captures.jsonl", TRACES_DIR / f"{name}.run.json"]:
         if not f.is_file():
             continue
         txt = f.read_text(encoding="utf-8")
-        if prefix in txt:
-            f.write_text(txt.replace(prefix, ""), encoding="utf-8")
+        orig = txt
+        for prefix in prefixes:
+            txt = txt.replace(prefix, "")
+        if txt != orig:
+            f.write_text(txt, encoding="utf-8", newline="\n")
+
+
+class ScenarioLock:
+    """串行锁（t24 事故）：同一时刻只允许一个 Mesen 场景运行。
+
+    Unix=fcntl.flock；Windows=msvcrt.locking 锁文件首字节（空文件先垫 1 行）。
+    两侧语义一致：非阻塞获取失败 ⇒ 已有场景在跑。"""
+
+    def __init__(self, path: Path):
+        self.path = path
+        self.f = None
+
+    def acquire(self) -> None:
+        self.f = open(self.path, "a+")
+        try:
+            if IS_WINDOWS:
+                self.f.seek(0, os.SEEK_END)
+                if self.f.tell() == 0:
+                    self.f.write("lock\n")
+                    self.f.flush()
+                self.f.seek(0)
+                msvcrt.locking(self.f.fileno(), msvcrt.LK_NBLCK, 1)
+            else:
+                fcntl.flock(self.f.fileno(), fcntl.LK_EX | fcntl.LK_NB)
+        except OSError:
+            self.f.close()
+            self.f = None
+            raise ScenarioError("另一场景运行中（串行纪律）：analysis/.scenario.lock 被占用")
+
+    def release(self) -> None:
+        if self.f is None:
+            return
+        try:
+            if IS_WINDOWS:
+                self.f.seek(0)
+                msvcrt.locking(self.f.fileno(), msvcrt.LK_UNLCK, 1)
+            else:
+                fcntl.flock(self.f.fileno(), fcntl.LK_UN)
+        finally:
+            self.f.close()
+            self.f = None
+
+
+def kill_orphan_mesen(mesen: Path) -> int:
+    """t54 F3 根因防护：清扫驱动锁罩不到的孤儿 Mesen（驱动崩溃/被强杀后残留，
+    与后续运行争写同一批产物）。返回清除数。
+
+    Unix：pgrep -f + SIGKILL（含 rounds/r2 F2 孤儿 Xvfb——匹配本驱动特征性几何参数；
+    同参数他用 Xvfb 为已知附带风险）。
+    Windows：PowerShell CIM 按命令行过滤（Mesen 进程名 + mesen2/自定义路径特征）
+    + taskkill /T /F；自定义 GUNNAC_MESEN 路径若不含 mesen2 特征则靠精确路径匹配，
+    过宽匹配的附带风险与 Unix 侧 pgrep 同级。"""
+    if IS_WINDOWS:
+        pat = str(mesen).replace("'", "''")
+        script = (
+            "Get-CimInstance Win32_Process | Where-Object { $_.Name -like 'Mesen*' -and "
+            "($_.CommandLine -like '*mesen2*' -or $_.CommandLine -like '*" + pat + "*') } | "
+            "Select-Object -ExpandProperty ProcessId"
+        )
+        out = subprocess.run(["powershell", "-NoProfile", "-Command", script],
+                             capture_output=True, text=True,
+                             encoding="utf-8", errors="replace")
+        pids = [t for t in (out.stdout or "").split() if t.isdigit()]
+        for pid in pids:
+            subprocess.run(["taskkill", "/PID", pid, "/T", "/F"],
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        return len(pids)
+    pids = subprocess.run(["pgrep", "-f", "tools/mesen2/Mesen"],
+                          capture_output=True, text=True,
+                          encoding="utf-8", errors="replace").stdout.split()
+    # rounds/r2 F2：孤儿 Xvfb 同样清扫（匹配本驱动特征性几何参数；同参数他用 Xvfb 为已知附带风险）
+    pids += subprocess.run(
+        ["pgrep", "-f", r"Xvfb :[0-9]+ -screen 0 1280x1024x24 -nolisten tcp"],
+        capture_output=True, text=True, encoding="utf-8", errors="replace").stdout.split()
+    n = 0
+    for pid in pids:
+        try:
+            os.kill(int(pid), SIGKILL)
+            n += 1
+        except (ProcessLookupError, ValueError):
+            pass
+    return n
 
 
 def run_scenario(name_or_path: str, timeout_s: float = 1800.0, keep_gen: bool = True) -> dict:
     spath = scenario_path_of(name_or_path)
     plan = parse_scenario(spath)
     name = plan["name"]
-    # 串行锁（t24 事故）：同一时刻只允许一个 Mesen 场景运行
-    lock_f = open(ROOT / "analysis" / ".scenario.lock", "w")
-    try:
-        fcntl.flock(lock_f, fcntl.LOCK_EX | fcntl.LOCK_NB)
-    except OSError:
-        raise ScenarioError("另一场景运行中（串行纪律）：analysis/.scenario.lock 被占用")
+    mesen = find_mesen()
+    if not mesen.is_file():
+        raise ScenarioError(f"Mesen2 未就绪: {mesen}（BYO 工具，见 docs/methodology.md；GUNNAC_MESEN 可覆盖）")
+    # 串行锁（t24 事故）：同一时刻只允许一个 Mesen 场景运行（Unix flock / Windows msvcrt）
+    lock = ScenarioLock(ROOT / "analysis" / ".scenario.lock")
+    lock.acquire()
     # t54 F3 根因防护：串行锁只罩驱动进程——驱动崩溃/被强杀后 Mesen/Xvfb 孤儿仍在跑，
     # 与后续运行争显示/写同一批产物（实测 trace 交错、DONE 不落、30x 变慢）。启动前显式清扫。
-    stale = subprocess.run(["pgrep", "-f", "tools/mesen2/Mesen"], capture_output=True, text=True).stdout.split()
-    # rounds/r2 F2：孤儿 Xvfb 同样清扫（匹配本驱动特征性几何参数；同参数他用 Xvfb 为已知附带风险）
-    stale += subprocess.run(
-        ["pgrep", "-f", r"Xvfb :[0-9]+ -screen 0 1280x1024x24 -nolisten tcp"],
-        capture_output=True, text=True).stdout.split()
-    if stale:
-        for pid in stale:
-            try:
-                os.kill(int(pid), signal.SIGKILL)
-            except (ProcessLookupError, ValueError):
-                pass
-        print(f"  [清场] 清除孤儿 Mesen {len(stale)} 个（驱动侧锁覆盖不到的残留）")
+    n_stale = kill_orphan_mesen(mesen)
+    if n_stale:
+        print(f"  [清场] 清除孤儿 Mesen/Xvfb {n_stale} 个（驱动侧锁覆盖不到的残留）")
     archived = archive_existing(name)
     (TRACES_DIR).mkdir(parents=True, exist_ok=True)
     (SHOTS_DIR).mkdir(parents=True, exist_ok=True)
     GEN_DIR.mkdir(parents=True, exist_ok=True)
     lua_src, lua_sha = generate_lua(plan, spath)
     lua_path = GEN_DIR / f"{name}.lua"
-    lua_path.write_text(lua_src, encoding="utf-8")
+    # newline="\n"：生成物字节面跨平台一致（lua_sha 按 LF 计，禁 CRLF 翻译）
+    lua_path.write_text(lua_src, encoding="utf-8", newline="\n")
 
     # t54：观测/基线设置全部在 Mesen 启动前完成（此段崩溃不得孤儿化模拟器）
     cap_frames = [int(c["frame"]) for c in plan.get("captures", []) if "frame" in c]
@@ -395,24 +503,28 @@ def run_scenario(name_or_path: str, timeout_s: float = 1800.0, keep_gen: bool = 
     # 自管 Xvfb（t24 实测：xvfb-run 包装层偶发提前退出 → Xvfb 随之死 → Mesen 冻在中途帧、
     # DONE 不落）。直接拉 Xvfb + DISPLAY 注入，Mesen 为直接子进程；进程组清理见 finally。
     # 场景仍必须**串行**运行（run-all 已是串行；勿并行多个 Mesen）。
-    display = pick_display()
+    display = None if IS_WINDOWS else pick_display()
     xvfb: subprocess.Popen | None = None
     proc: subprocess.Popen | None = None
     timed_out = False
     dead_since: float | None = None
     try:
-        # rounds/r2 F2：Xvfb/Mesen 创建全部收进 try，任一启动失败不泄漏 Xvfb
-        xvfb = subprocess.Popen(
-            ["Xvfb", display, "-screen", "0", "1280x1024x24", "-nolisten", "tcp"],
-            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True,
-        )
-        wait_for_x(display, xvfb)
+        # rounds/r2 F2：Xvfb/Mesen 创建全部收进 try，任一启动失败不泄漏 Xvfb。
+        # Windows：Mesen 原生 GUI 直跑（无 X 服务器），Xvfb/DISPLAY 仅 Unix 侧。
+        if display is not None:
+            xvfb = subprocess.Popen(
+                ["Xvfb", display, "-screen", "0", "1280x1024x24", "-nolisten", "tcp"],
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True,
+            )
+            wait_for_x(display, xvfb)
         env = dict(os.environ)
-        env["DISPLAY"] = display
+        if display is not None:
+            env["DISPLAY"] = display
+        popen_extra = {} if IS_WINDOWS else {"start_new_session": True}
         proc = subprocess.Popen(
-            [str(MESEN), str(ROM), str(lua_path), "/DoNotSaveSettings"],
+            [str(mesen), str(ROM), str(lua_path), "/DoNotSaveSettings"],
             cwd=ROOT, stdout=mesen_log, stderr=subprocess.STDOUT, text=True,
-            start_new_session=True, env=env,
+            env=env, **popen_extra,
         )
         while not done_path.exists():
             now = time.time()
@@ -440,6 +552,11 @@ def run_scenario(name_or_path: str, timeout_s: float = 1800.0, keep_gen: bool = 
         def kill_group(sig) -> None:
             if proc is None:
                 return
+            if IS_WINDOWS:
+                # Windows 无进程组/SIGKILL 语义：taskkill /T /F = 整树 TerminateProcess
+                subprocess.run(["taskkill", "/PID", str(proc.pid), "/T", "/F"],
+                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                return
             try:
                 os.killpg(os.getpgid(proc.pid), sig)
             except (ProcessLookupError, PermissionError, OSError):
@@ -451,7 +568,7 @@ def run_scenario(name_or_path: str, timeout_s: float = 1800.0, keep_gen: bool = 
             try:
                 proc.wait(timeout=10)
             except subprocess.TimeoutExpired:
-                kill_group(signal.SIGKILL)
+                kill_group(SIGKILL)
                 proc.wait(timeout=10)
         mesen_log.close()
         if xvfb is not None:
@@ -472,8 +589,8 @@ def run_scenario(name_or_path: str, timeout_s: float = 1800.0, keep_gen: bool = 
     if trace_path.exists():
         with open(trace_path, encoding="utf-8") as f:
             n_lines = sum(1 for _ in f)
-    shots = sorted(str(p.relative_to(ROOT)) for p in (SHOTS_DIR).glob(f"{name}_f*.png"))
-    rams = sorted(str(p.relative_to(ROOT)) for p in (TRACES_DIR).glob(f"{name}_f*.ram.hex"))
+    shots = sorted(p.relative_to(ROOT).as_posix() for p in (SHOTS_DIR).glob(f"{name}_f*.png"))
+    rams = sorted(p.relative_to(ROOT).as_posix() for p in (TRACES_DIR).glob(f"{name}_f*.ram.hex"))
 
     manifest = {
         "scenario": relp(spath),
@@ -492,7 +609,7 @@ def run_scenario(name_or_path: str, timeout_s: float = 1800.0, keep_gen: bool = 
             else None
         ),
         "outputs": {
-            "trace": str(trace_path.relative_to(ROOT)),
+            "trace": trace_path.relative_to(ROOT).as_posix(),
             "captures": f"analysis/traces/{name}.captures.jsonl",
             "shots": shots,
             "ram_dumps": rams,
@@ -501,8 +618,7 @@ def run_scenario(name_or_path: str, timeout_s: float = 1800.0, keep_gen: bool = 
     mpath = TRACES_DIR / f"{name}.run.json"
     mpath.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
-    fcntl.flock(lock_f, fcntl.LOCK_UN)
-    lock_f.close()
+    lock.release()
     if archived:
         print(f"  已归档旧产物: {archived}（run 隔离，防踩踏）")
     ok = done_info is not None and not timed_out and n_lines > 0
@@ -513,7 +629,7 @@ def run_scenario(name_or_path: str, timeout_s: float = 1800.0, keep_gen: bool = 
     if done_info:
         print(f"  DONE: {json.dumps(done_info, ensure_ascii=False)}")
     print(f"  trace: {manifest['outputs']['trace']}")
-    print(f"  run清单: {mpath.relative_to(ROOT)}")
+    print(f"  run清单: {mpath.relative_to(ROOT).as_posix()}")
     if not ok:
         print(f"  !! 未完成（timed_out={timed_out}, done={done_info is not None}, trace_lines={n_lines}）")
     return manifest
@@ -555,7 +671,7 @@ def main() -> int:
             GEN_DIR.mkdir(parents=True, exist_ok=True)
             src, sha = generate_lua(plan, spath)
             out = GEN_DIR / f"{plan['name']}.lua"
-            out.write_text(src, encoding="utf-8")
+            out.write_text(src, encoding="utf-8", newline="\n")
             print(f"生成 {out.relative_to(ROOT)} sha256={sha}")
             return 0
         if args.cmd == "run":

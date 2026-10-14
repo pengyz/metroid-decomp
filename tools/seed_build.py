@@ -89,7 +89,8 @@ def main() -> None:
 
     assert covered == 0x20000, f"coverage {covered} != 131072"
     OUT.parent.mkdir(parents=True, exist_ok=True)
-    OUT.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    # newline="\n"：seed 冻结基准按 LF 字节面哈希，禁 Windows CRLF 翻译
+    OUT.write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
     n_lines = sum(1 for _ in open(OUT, encoding="utf-8"))
     print(f"wrote {OUT.relative_to(ROOT)} lines={n_lines} "
           f"items={totals['items']} funcs={totals['funcs']} xrefs={totals['xrefs']} "
