@@ -50,7 +50,7 @@
 | 二轮 | needs_revision | 4 项（声明重写/措辞收窄/锚点/数字） |
 | 三轮 | needs_revision | 3 处一行级（R1/R2/R3）+ R4 归档 |
 | 四轮 | needs_revision（仅声明层） | 实体 R1/R2/R4 全过；「全文归零」全称断言被归档行证伪 → V1/V2 口径整改 |
-| 五轮 | （闭环复核中） | 仅验 V1/V2 |
+| 五轮 | **pass** | V1/V2 独立复现通过；r2 复审闭环完成（2026-10-14）|
 
 ## 复审确认的「诚实残余」（pass 后无需整改，长期持有）
 
@@ -60,3 +60,12 @@
 4. gunnac 证据链（路径/hash/tXX）本仓不可复现，一律回源核对
 5. emu.stop 未止脚本 / DONE 挂起现象未根因化
 6. PASS 分支 exit=0（未验证态由 mode/N4 行/blind_spot_diff 三处表达）
+
+
+## 终局结论（五轮，verdict: pass）
+
+V1/V2 独立复现通过：精确口径「在用引用 0 命中」+ 归档例外属实；kb_pointer_scan.py 16/18 与表
+逐行一致；无一命令可证伪的全称断言；Confidence 95 + 残余声明恰当。**r2 复审正式闭环，G1 达成**。
+
+低 severity 备注（不阻塞，择机处理）：扫描器跨行 brace token 未折叠空白；「活跃文档」无形式定义；
+tools/ida/__pycache__ 仍在盘（gitignored）。
