@@ -1,0 +1,4 @@
+{"id": "gen-c16d", "subroutine": "sub_C16D", "entry": "bank07:C16D", "stops": ["bank07:C175"], "samples": 3, "ram_addrs": ["0000", "0001"]}
+{"id": "gen-c376", "subroutine": "sub_C376", "entry": "bank07:C376", "stops": ["bank07:C37B"], "samples": 3, "ram_addrs": ["07A1", "07FF"]}
+{"id": "gen-int-y", "subroutine": "int_y_E3A5", "entry": "bank07:E3A5", "stops": ["bank07:E3E4"], "samples": 4, "ram_addrs": ["0308", "0310", "0312", "0314"]}
+{"id": "gen-int-x", "subroutine": "int_x_E3E5", "entry": "bank07:E3E5", "stops": ["bank07:E448"], "samples": 4, "ram_addrs": ["0309", "0311", "0313", "0315", "0316"]}
