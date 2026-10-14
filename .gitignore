@@ -18,3 +18,8 @@ out/
 **/out/
 *.o
 analysis/
+
+# 运行截图/录屏：ROM 衍生数据，不入库
+shots/
+analysis/
+tools/mesen2/
