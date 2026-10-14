@@ -6,12 +6,21 @@
       "scenario": "boot-title",
       "frames": 300,
       "watch": [
-        "zp",
-        "iram"
+        {
+          "label": "zp",
+          "base": "0000",
+          "range": "0000-00ff"
+        },
+        {
+          "label": "iram",
+          "base": "0100",
+          "range": "0100-07ff"
+        }
       ],
       "oracle_sha256": "4655a986264d0104bafd1779b936c436bf46b731771e7a1a51686f49141bcde2",
       "determinism_evidence": "同场景双跑逐字节一致（2026-10-14，runA==runB sha 4655a986…）",
-      "game_core_leg": "S5 落地后自动启用（analysis/dump/<scenario>.frames.jsonl）"
+      "game_core_leg": "S5 落地后自动启用（analysis/dump/<scenario>.frames.jsonl）",
+      "watch_note": "显式基址区间（含栈页 $0100-$01FF；不用惯常分区假设——gotcha-stack-page 教训）"
     }
   ]
 }
