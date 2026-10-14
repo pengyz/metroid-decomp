@@ -45,8 +45,11 @@
   - 水平：`speed_x(16bit: $309 + $313) += accel_x($315)`（BIT $315 符号扩展链）；
     幅值钳位经 sub_E449（上限源自 maxspeed_src($316) × sub_C2C5/C2BF 变换）；
     `subpix_x($311) += speed frac` 进位入整像素。
-  - 证据：metroid.asm 105390-105460（逐指令）；**残留待验**：sub_D147/sub_E449/sub_C2C5/C2BF
-    内部（S 面格，L2 可切片）、$314/$315 的写入来源（加速度表？下一段考证）。
+  - 证据：metroid.asm 105390-105460（逐指令）；**子例程已定谳**：sub_D147=LDY#0/STY $308/
+    STY $312/RTS（钳位=速度重置 ±5.0/-6.0）、sub_E449=16 位取负（$00/$01）、sub_C2C5=ASL×4、
+    sub_C2BF=LSR×4（限幅=16×$316）。**残留待验**：$314/$315 的写入来源（加速度表？下一段考证）。
+  - quirk 保真注记（D4）：负向钳位阈值非对称——A=-int-(frac≠0)≥6 ⇒ -6.0 恰钳位而 -6.004
+    不钳（int_y/int_x 两侧一致，Stage A 保留；假设台账 l2-proof-assumptions.md A6）。
 
 ### R-mv-4 跳跃位移计
 SAMUS_JUMP_DISPLACEMENT 为自跳跃起点的垂直像素位移（补码），落地后冻结。

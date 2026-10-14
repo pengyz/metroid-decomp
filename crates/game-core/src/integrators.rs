@@ -41,7 +41,6 @@ pub fn int_y(st: &mut IntYState, accel: u8) -> IntYOut {
     st.speed_i = i;
 
     let mut reg_x = 5u8;
-    let mut reg_y = 0u8; // 调用方用 input y 覆盖：reg_y 标记是否被 D147 清零
     let mut y_wiped = false;
     if st.speed_i & 0x80 == 0 {
         // E3C9 正向：CMP #5（无符号），C=1 ⇔ speed_i >= 5 ⇒ 钳位（reg_x 保持 5）
@@ -110,6 +109,140 @@ mod tests {
         // a = 0-0xFA-(1-1) = 0x06 ≥ 6 ⇒ 钳位 {-6,0}；位移=-6
         assert_eq!(s2, IntYState { speed_i: 0xFA, speed_f: 0, subpix: 0 });
         assert_eq!(out2.disp, 0xFA);
+        let _ = out;
+    }
+}
+
+/// 水平积分器状态（= RAM 影子 $309/$313/$311）。
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct IntXState {
+    /// $309 速度整数部（补码）
+    pub speed_i: u8,
+    /// $313 速度小数部
+    pub speed_f: u8,
+    /// $311 亚像素累加
+    pub subpix: u8,
+}
+
+/// 水平积分器完整输出面（L2 面 = RAM 写集 + a/x/y）。
+pub struct IntXOut {
+    /// 位移（→$00 末值与 A 末值）
+    pub disp: u8,
+    /// X 末值：正路径=new frac、负路径=-frac（E403 TAX / E41C TAX）
+    pub reg_x: u8,
+    /// Y 末值：正路径=new int、负路径=neg int（E413 TAY / E422 TAY）
+    pub reg_y: u8,
+    /// $01 末值（限幅高字节；负路径经 sub_E449 取负）
+    pub lim_hi_final: u8,
+}
+
+/// 水平积分一步（bank07:E3E5，止于 E448 RTS）。
+///
+/// 语义（逐条，seed 105440+）：
+///   limit16 = 16 × max_src（$316：E3E8 sub_C2C5=<<4 → lo、E3F2 sub_C2BF=>>4 → hi）；
+///   frac += accel（CLC/ADC）；int += carry + (accel<0 ? 0xFF : 0)（BIT $315 测 accel 符号）；
+///   负路径：(X,Y)=|speed|（SEC/SBC 取负链）且 limit 取负（sub_E449）；
+///   16 位无符号 |speed| ≥ limit ⇒ 速度重置为 ±limit（frac:=$00、int:=$01）；
+///   subpix += frac（c1）；位移 = int + c1。
+pub fn int_x(st: &mut IntXState, accel: u8, max_src: u8) -> IntXOut {
+    let lim_lo = max_src << 4; // $02/$00 初值
+    let lim_hi = max_src >> 4; // $03/$01 初值
+
+    // E3F9-E400: frac += accel
+    let (f, c) = st.speed_f.overflowing_add(accel);
+    st.speed_f = f;
+    // E404-E410: int += carry + (accel 符号扩展)
+    let sign_ext = if accel & 0x80 != 0 { 0xFFu8 } else { 0u8 };
+    let t = st.speed_i.wrapping_add(sign_ext);
+    let (i, c2) = t.overflowing_add(u8::from(c));
+    let _ = c2;
+    st.speed_i = i;
+
+    let reg_x;
+    let reg_y;
+    let mut lim0 = lim_lo;
+    let mut lim1 = lim_hi;
+
+    if st.speed_i & 0x80 == 0 {
+        // 正路径：X=new frac、Y=new int
+        reg_x = st.speed_f;
+        reg_y = st.speed_i;
+    } else {
+        // 负路径：X=-frac（SEC/SBC），Y=-int-borrow；limit 取负（sub_E449）
+        reg_x = 0u8.wrapping_sub(st.speed_f);
+        let borrow = u8::from(st.speed_f == 0); // SBC 后 C=1 ⇔ frac==0
+        reg_y = 0u8.wrapping_sub(st.speed_i).wrapping_sub(1 - borrow);
+        // 16 位取负：(lim1:lim0) = -(lim_hi:lim_lo)
+        let new_lo = 0u8.wrapping_sub(lim_lo);
+        let b2 = u8::from(lim_lo == 0);
+        lim0 = new_lo;
+        lim1 = 0u8.wrapping_sub(lim_hi).wrapping_sub(1 - b2);
+    }
+
+    // E426-E42B: 16 位无符号 (reg_y:reg_x) vs ($03:$02)=(lim_hi:lim_lo)——CPX/SBC 借位链
+    let c_lo = reg_x >= lim_lo;
+    let sub_hi = reg_y.wrapping_sub(lim_hi).wrapping_sub(u8::from(!c_lo));
+    let borrow = reg_y < lim_hi || (reg_y == lim_hi && !c_lo);
+    let _ = sub_hi;
+    if !borrow {
+        // 钳位：frac := $00、int := $01（负路径已取负 ⇒ ±limit）
+        st.speed_f = lim0;
+        st.speed_i = lim1;
+    }
+
+    // E437-E43E: subpix += frac
+    let (p, c1) = st.subpix.overflowing_add(st.speed_f);
+    st.subpix = p;
+    // E441-E446: 位移 = int + c1
+    IntXOut {
+        disp: st.speed_i.wrapping_add(u8::from(c1)),
+        reg_x,
+        reg_y,
+        lim_hi_final: lim1,
+    }
+}
+
+#[cfg(test)]
+mod tests_x {
+    use super::*;
+
+    #[test]
+    fn int_x_plain_accumulation() {
+        let mut s = IntXState { speed_i: 0, speed_f: 0x10, subpix: 0xF0 };
+        let out = int_x(&mut s, 0x20, 0x10); // limit=0x0100
+        // frac=0x30 无进位；int=0+0+0=0；|0x0030|<0x0100 不钳；subpix=0xF0+0x30=0x20 进位
+        assert_eq!(s, IntXState { speed_i: 0, speed_f: 0x30, subpix: 0x20 });
+        assert_eq!(out.disp, 1);
+    }
+
+    #[test]
+    fn int_x_positive_clamp_to_limit() {
+        let mut s = IntXState { speed_i: 0x02, speed_f: 0x00, subpix: 0 };
+        let out = int_x(&mut s, 0x00, 0x10); // limit=0x0100，speed=0x0200 ≥ limit
+        assert_eq!(s, IntXState { speed_i: 0x01, speed_f: 0x00, subpix: 0 });
+        assert_eq!(out.disp, 1);
+        assert_eq!(out.reg_x, 0x00); // 钳位前 X=new frac=0
+        assert_eq!(out.reg_y, 0x02); // 钳位前 Y=new int=2
+    }
+
+    #[test]
+    fn int_x_negative_clamp_to_neg_limit() {
+        let mut s = IntXState { speed_i: 0xFE, speed_f: 0x00, subpix: 0 };
+        let out = int_x(&mut s, 0x00, 0x10);
+        // int=0xFE(-2)；|0xFE00|=0x0200 ≥ 0x0100 ⇒ 钳位 -0x0100 → {0x00,0xFF}
+        assert_eq!(s, IntXState { speed_i: 0xFF, speed_f: 0x00, subpix: 0 });
+        assert_eq!(out.disp, 0xFF);
+        assert_eq!(out.lim_hi_final, 0xFF); // limit 取负高字节
+    }
+
+    #[test]
+    fn int_x_accel_sign_extension() {
+        let mut s = IntXState { speed_i: 0x05, speed_f: 0xFF, subpix: 0 };
+        let out = int_x(&mut s, 0x01, 0xFF); // frac=0x00 进位；accel≥0 ⇒ int=5+1=6
+        assert_eq!(s.speed_i, 6);
+        let mut s2 = IntXState { speed_i: 0x05, speed_f: 0x00, subpix: 0 };
+        int_x(&mut s2, 0x80, 0xFF); // frac=0x80 无进位；accel<0 ⇒ int=5+0xFF=4
+        assert_eq!(s2.speed_i, 4);
         let _ = out;
     }
 }

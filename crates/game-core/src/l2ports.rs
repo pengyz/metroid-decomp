@@ -50,12 +50,39 @@ pub fn int_y_e3a5(input: &L2In) -> L2Out {
     }
 }
 
+/// int_x_E3E5 —— bank07:E3E5-E448 水平积分切片（SMT 证明级，见 integrators）。
+pub fn int_x_e3e5(input: &L2In) -> L2Out {
+    let mut st = crate::integrators::IntXState {
+        speed_i: input.ram[0x309 & 0x7FF],
+        speed_f: input.ram[0x313 & 0x7FF],
+        subpix: input.ram[0x311 & 0x7FF],
+    };
+    let accel = input.ram[0x315 & 0x7FF];
+    let max_src = input.ram[0x316 & 0x7FF];
+    let out = crate::integrators::int_x(&mut st, accel, max_src);
+    L2Out {
+        a: out.disp,
+        x: out.reg_x,
+        y: out.reg_y,
+        writes: vec![
+            (0x0313, st.speed_f),
+            (0x0309, st.speed_i),
+            (0x0311, st.subpix),
+            (0x0002, max_src << 4),
+            (0x0003, max_src >> 4),
+            (0x0001, out.lim_hi_final),
+            (0x0000, out.disp),
+        ],
+    }
+}
+
 /// 按 L2 用例名查移植函数（l2-diff 裁定器用）。
 pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
     match name {
         "sub_C16D" => Some(sub_c16d),
         "sub_C376" => Some(sub_c376),
         "int_y_E3A5" => Some(int_y_e3a5),
+        "int_x_E3E5" => Some(int_x_e3e5),
         _ => None,
     }
 }
