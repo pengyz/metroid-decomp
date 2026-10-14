@@ -15,6 +15,15 @@ type: gotcha
 - 与 d1794af（replace 静默未命中→声称落地）同族镜像：**声称的可复现性本身要可复现**。
 - 立规矩：commit Evidence 字段的命令逐条原样跑通才算证据；数字与命令一并抄录。
 
-## 复现
-`echo 'a**b' | grep -c 'a**b'` → 0（BRE）；`grep -Fc 'a**b'` → 1。
-首例：state-fixture v9（9fecd8a）Evidence 5 条中 2 条原样跑=0（rounds/r4 第 9 轮 F1）。
+## 复现（2026-10-15 更正——旧最小例 `a**b` 实测 BRE=1 不复现，本节按十轮复审改真失败例）
+
+```sh
+printf 'a **b\n' | grep -c 'a **b'    # BRE → 0（静默未命中）
+printf 'a **b\n' | grep -Fc 'a **b'   # -F  → 1
+```
+真实首例：state-fixture v9（9fecd8a）Evidence 中 `grep -c '情形；**升级出口（M-C）**'`
+原样跑=0 而 grep -F=1（rounds/r4 第 9 轮 F1）。
+
+> 【机理更正】旧句「`*` 重复前元素→/a*b/」不忠实：BRE 下 `**` 行为**上下文相关**
+> （'a**b' 命中 "a**b"/"ab"/"a*b" 各 1；'a **b' 与'情形；**…**' 却静默 0）——
+> 行为不可预测，故**一律 grep -F 或转义**，不逐上下文分析。
