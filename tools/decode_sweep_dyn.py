@@ -52,6 +52,11 @@ def window_bank_map(prg: dict[int, bytes]) -> dict[str, list[int]]:
 
 def load_run(prefix: Path) -> dict:
     out: dict = {"prefix": str(prefix)}
+    if not any(Path(f"{prefix}.{t}.jsonl").is_file()
+               for t in ("dispatch_summary", "exec_cov", "window")):
+        # P7-F2 fail-loud：错误/不存在的 traces 前缀静默按 0=「空跑绿」族
+        #（gotcha-negative-assertion-time-race 近亲——空数据与真 0 不可区分）
+        raise SystemExit(f"FATAL: traces 前缀无任何产物文件: {prefix}.*.jsonl")
     for tag in ("dispatch_summary", "exec_cov", "window"):
         p = Path(f"{prefix}.{tag}.jsonl")
         rows = []

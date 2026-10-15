@@ -142,6 +142,7 @@ def parse_scenario(path: Path) -> dict:
         "coverage_pc": [],
         "probe_mem": [],
         "probe_dispatch": [],
+        "entry_probe": [],
     }
     for lineno, raw in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
         line = raw.split("#", 1)[0].strip()
@@ -239,6 +240,28 @@ def parse_scenario(path: Path) -> dict:
                 raise err("probe_dispatch 地址须为 4 位 hex")
             if ad not in plan["probe_dispatch"]:
                 plan["probe_dispatch"].append(ad)
+        elif op == "entry_probe":
+            # task-12：执行路径调用图——函数级入口全量探针（callbackType.exec 真执行）。
+            # entry_probe <path>：path=JSON 数组（4 位 hex 字符串清单，tools/call_graph.py
+            # anchors 子命令生成）；登记后每入口记执行序/首帧/调用者边。
+            if len(args) != 1:
+                raise err("entry_probe 用法: entry_probe <anchors.json 路径>")
+            ap = Path(args[0])
+            if not ap.is_file():
+                ap = ROOT / args[0]
+            if not ap.is_file():
+                raise err(f"entry_probe 文件不存在: {args[0]}")
+            try:
+                lst = json.loads(ap.read_text(encoding="utf-8"))
+            except json.JSONDecodeError as e:
+                raise err(f"entry_probe JSON 解析失败: {e}")
+            if not isinstance(lst, list) or not lst:
+                raise err("entry_probe 文件须为非空 JSON 数组")
+            for ad in lst:
+                if not isinstance(ad, str) or len(ad) != 4 or \
+                        any(c not in "0123456789abcdef" for c in ad.lower()):
+                    raise err(f"entry_probe 元素须为 4 位 hex 字符串: {ad!r}")
+            plan["entry_probe"] = [str(a).lower() for a in lst]
         elif op == "watch_range":
             # watch_range <hex 起>-<hex 止> [标签]
             if len(args) not in (1, 2) or "-" not in args[0]:

@@ -220,9 +220,66 @@ if PLAN.probe_dispatch and #PLAN.probe_dispatch > 0 then
   dispMode = allOk and mode or "partial"
 end
 
+-- ---------------- task-12：执行路径入口探针（PLAN.entry_probe，callbackType.exec）
+-- 每地址一个回调（真 opcode fetch 语义）；聚合执行序（全局 seq）+ 调用者边
+-- （栈 ret-2 反推 site；site 首字节 0x20=JSR 边，否则 kind=other——顺流/JMP 入口）。
+-- 产物：<name>.entries.jsonl（每入口一行）+ <name>.edges.jsonl（调用边聚合）。
+local epStats, epEdges, epHits, epSeq = {}, {}, 0, 0
+local epMode = "off"
+if PLAN.entry_probe and #PLAN.entry_probe > 0 then
+  local function epHit(address)
+    epHits = epHits + 1
+    epSeq = epSeq + 1
+    local ok, st = pcall(emu.getState)
+    if not ok or not st then return end
+    local sp = st["cpu.sp"] or (st.cpu and st.cpu.sp)
+    local caller, kind = "none", "other"
+    if sp then
+      local plo = readByte(0x0100 + ((sp + 1) % 256))
+      local phi = readByte(0x0100 + ((sp + 2) % 256))
+      local site = (plo + phi * 256) - 2
+      caller = string.format("%04X", site)
+      if readByte(site) == 0x20 then kind = "jsr" end
+    end
+    local s = epStats[address]
+    if not s then
+      s = { n = 0, first_seq = epSeq, first_frame = frame, last_frame = frame }
+      epStats[address] = s
+    end
+    s.n = s.n + 1
+    s.last_frame = frame
+    local ek = caller .. "|" .. string.format("%04X", address) .. "|" .. kind
+    local e = epEdges[ek]
+    if not e then
+      e = { n = 0, first_seq = epSeq }
+      epEdges[ek] = e
+    end
+    e.n = e.n + 1
+  end
+  local allOk, mode = true, "exec-callback-enum"
+  for _, ad in ipairs(PLAN.entry_probe) do
+    local addr = tonumber(ad, 16)
+    local ok = false
+    if emu.callbackType and emu.callbackType.exec then
+      ok = pcall(emu.addMemoryCallback, epHit, emu.callbackType.exec, addr, addr)
+    end
+    if not ok then
+      ok = pcall(emu.addMemoryCallback, epHit, 2, addr, addr)
+      if not ok then
+        ok = pcall(emu.addMemoryCallback, epHit, "execute", addr, addr)
+        mode = "bus-access-degraded"
+      end
+    end
+    if not ok then allOk = false end
+  end
+  epMode = allOk and mode or "partial"
+  log(string.format("entry_probe %d 个地址 cb mode=%s", #PLAN.entry_probe, epMode))
+end
+
 -- ---------------- r3：$8000 窗口指纹时间线（A9 证据面：每帧 16 字节自证映射）
 local winF = nil
-if PLAN.probe_dispatch and #PLAN.probe_dispatch > 0 then
+if (PLAN.probe_dispatch and #PLAN.probe_dispatch > 0)
+    or (PLAN.entry_probe and #PLAN.entry_probe > 0) then
   winF = io.open(PLAN.out_dir .. "/" .. name .. ".window.jsonl", "wb")
 end
 
@@ -375,6 +432,37 @@ emu.addEventCallback(function()
         end
         sf:close()
         log("dispatch summary dumped: " .. #keys .. " triples, total " .. dispN)
+      end
+    end
+    -- task-12：入口执行序 + 调用边
+    if PLAN.entry_probe and #PLAN.entry_probe > 0 then
+      local ef = io.open(PLAN.out_dir .. "/" .. name .. ".entries.jsonl", "wb")
+      if ef then
+        ef:write(string.format('{"mode":"%s","addrs":%d,"hits":%d}\n',
+          epMode, #PLAN.entry_probe, epHits))
+        local keys = {}
+        for a, _ in pairs(epStats) do keys[#keys + 1] = a end
+        table.sort(keys)
+        for _, a in ipairs(keys) do
+          local s = epStats[a]
+          ef:write(string.format('{"a":"%04X","n":%d,"first_seq":%d,"first_frame":%d,"last_frame":%d}\n',
+            a, s.n, s.first_seq, s.first_frame, s.last_frame))
+        end
+        ef:close()
+      end
+      local gf = io.open(PLAN.out_dir .. "/" .. name .. ".edges.jsonl", "wb")
+      if gf then
+        local keys = {}
+        for k, _ in pairs(epEdges) do keys[#keys + 1] = k end
+        table.sort(keys)
+        for _, k in ipairs(keys) do
+          local e = epEdges[k]
+          local caller, callee, kind = k:match("^(%x+)|(%x+)|(%a+)$")
+          gf:write(string.format('{"caller":"%s","callee":"%s","kind":"%s","n":%d,"first_seq":%d}\n',
+            caller, callee, kind, e.n, e.first_seq))
+        end
+        gf:close()
+        log("entries dumped: " .. #keys .. " edges, " .. epHits .. " hits")
       end
     end
     local d = io.open(donePath, "wb")
