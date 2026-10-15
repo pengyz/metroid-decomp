@@ -1102,6 +1102,50 @@ def gate_tree_coherence() -> tuple[str, str]:
                   f"（未跟踪件掩盖破树侦测就位；行内 mod 块/#[path] 特例记局限）")
 
 
+# ---------------------------------------------------------------- doc-sync（双写同文门禁）
+# r12 遗留-7（F3 类漂移防再发）：pipeline↔design 双写片段必须逐字同文——v5 的 CANON
+# 提取手法泛化为机械门。提取正则对 (文件, 正则) 成对登记；捕获组去空白后须相等。
+
+DOC_SYNC_PAIRS: list[tuple[str, tuple[str, str], tuple[str, str]]] = [
+    ("unported-hit-face",
+     ("docs/ai-decompile-pipeline.md", r"检测面=(panic payload.*?)；spec-writer"),
+     ("docs/design/l3-gamecore-leg-verification.md", r"\| 实现缺口·unported!-hit \|([^|]*)\|")),
+]
+
+
+def doc_sync_errors(pairs, texts: dict[str, str]) -> list[str]:
+    """纯函数（自检可注入）：texts={路径:全文}；每对提取捕获组比对。"""
+    errs: list[str] = []
+    for name, (pa, ra), (pb, rb) in pairs:
+        ta, tb = texts.get(pa), texts.get(pb)
+        if ta is None or tb is None:
+            errs.append(f"{name}: 文件缺失（{pa if ta is None else pb}）")
+            continue
+        ma, mb = re.search(ra, ta), re.search(rb, tb)
+        if not ma or not mb:
+            errs.append(f"{name}: 片段提取失败（{pa if not ma else pb}——锚正则漂移）")
+            continue
+        if ma.group(1).strip() != mb.group(1).strip():
+            errs.append(f"{name}: 不同文（{pa} vs {pb}）——F3 类漂移，改双侧同步")
+    return errs
+
+
+def gate_doc_sync() -> tuple[str, str]:
+    texts: dict[str, str] = {}
+    for _name, (pa, _ra), (pb, _rb) in DOC_SYNC_PAIRS:
+        for p in (pa, pb):
+            fp = ROOT / p
+            if p not in texts:
+                if not fp.is_file():
+                    return FAIL, f"双写文件缺失（fail-loud）: {p}"
+                texts[p] = fp.read_text(encoding="utf-8", errors="replace")
+    errs = doc_sync_errors(DOC_SYNC_PAIRS, texts)
+    if errs:
+        return FAIL, "; ".join(errs)
+    return PASS, (f"{len(DOC_SYNC_PAIRS)} 对双写片段逐字同文（提取锚核过；"
+                  f"F3 类漂移机械拦截就位）")
+
+
 # ---------------------------------------------------------------- 门禁注册表
 # readme_state 必须与 gates/README.md「门禁清单」表的"状态"列逐字一致（selftest 自动比对）。
 
@@ -1122,6 +1166,8 @@ GATES: list[tuple[str, str, str, str, object]] = [
      "int_x SMT 证明+公式↔Rust 桥接复跑（证书防腐，int-y 穷举 GATES_PROOF_FULL=1）", gate_proof_checks),
     ("tree-coherence", "启用", "check",
      "Rust mod 引用⊆提交树（未跟踪件掩盖破树侦测）", gate_tree_coherence),
+    ("doc-sync", "启用", "check",
+     "双写片段逐字同文（pipeline↔design，F3 类漂移拦截）", gate_doc_sync),
 ]
 
 
@@ -1695,6 +1741,19 @@ def cmd_selftest(_args) -> int:
           len(errs) == 1 and "deep/leaf.rs" in errs[0], errs[0] if errs else "未报错")
     v, d = gate_tree_coherence()
     check("tree-coherence 门禁实跑（本仓）", v == PASS, d)
+
+    # 11) doc-sync：双写片段逐字同文（r12 遗留-7 机械门）
+    pairs = [("t", ("a.md", r"X=(.*?)\."), ("b.md", r"Y=([^|]*)\|"))]
+    errs = doc_sync_errors(pairs, {"a.md": "X=同文片段.", "b.md": "Y=同文片段|"})
+    check("doc-sync 同文 ⇒ 0 错", errs == [], f"errs={errs}")
+    errs = doc_sync_errors(pairs, {"a.md": "X=甲侧文本.", "b.md": "Y=乙侧文本|"})
+    check("doc-sync 打回不同文（F3 类漂移）", len(errs) == 1 and "不同文" in errs[0], errs)
+    errs = doc_sync_errors(pairs, {"a.md": "X=甲.", "b.md": "无锚文本"})
+    check("doc-sync 打回锚漂移（提取失败）", len(errs) == 1 and "提取失败" in errs[0], errs)
+    errs = doc_sync_errors(pairs, {"a.md": "X=甲."})
+    check("doc-sync 打回文件缺失", len(errs) == 1 and "缺失" in errs[0], errs)
+    v, d = gate_doc_sync()
+    check("doc-sync 门禁实跑（本仓 unported-hit-face 对）", v == PASS, d)
 
     failed = [c for c in cases if not c[1]]
     for name, ok, detail in cases:

@@ -180,6 +180,38 @@ def load_frames(raw: bytes, where: str) -> tuple[dict[int, dict], list[int], str
 INTERRUPT_FRAME_EXCLUDE = (0x01FC, 0x01FD, 0x01FE)
 
 
+def n12_gate_errors(root) -> list[str]:
+    """N-0012 机械门（l3 设计 §2.2 谓词，enforcement①=game-core 腿启用前置断言）：
+    `level∈{A,B}` ∧ `evidence 匹配 bank\\d+:\\$?[0-9A-Fa-f]{4}` ∧ `sub_GameRng 族案 ≥1`
+    ——任一不满足 ⇒ 报缺失项（调用方拒启腿）。三则均用现存字段/文件，可复跑。"""
+    import json as _json
+    import re as _re
+    errs: list[str] = []
+    try:
+        led = [_json.loads(l) for l in (root / "data/naming/ledger.jsonl").read_text(
+            encoding="utf-8").splitlines() if l.strip()]
+    except OSError as exc:
+        return [f"N-0012 机械门：台账不可读（fail-loud）: {exc}"]
+    rows = [r for r in led if r.get("id") == "N-0012"]
+    if not rows:
+        return ["N-0012 机械门：台账无 N-0012 行"]
+    r = rows[0]
+    if r.get("level") not in ("A", "B"):
+        errs.append(f"N-0012.level={r.get('level')!r}∉{{A,B}}（rename 流程升级未完成）")
+    if not _re.search(r"bank\d+:\$?[0-9A-Fa-f]{4}", r.get("evidence", "")):
+        errs.append("N-0012.evidence 缺 bankNN:AAAA 具体指针（占位/纯路径不算）")
+    try:
+        cases = [_json.loads(l) for l in (root / "oracle/subroutines/l2_cases.jsonl")
+                 .read_text(encoding="utf-8").splitlines() if l.strip()]
+        rng_n = sum(1 for c in cases
+                    if "GameRng" in str(c.get("id", "")) + str(c.get("subroutine", "")))
+    except OSError as exc:
+        return errs + [f"RNG 案计数源不可读（fail-loud）: {exc}"]
+    if rng_n < 1:
+        errs.append("RNG 序列 L2 案=0（计数源 oracle/subroutines/l2_cases.jsonl）")
+    return errs
+
+
 def leg_sample_point(doc: dict, side: str) -> str | None:
     """R2 per-leg 采样点声明：legs.<side>.sample_point 优先；legacy 顶层 sample_point
     兜底（混态期禁置全局键——v5 §5.3c 口径；per-leg 缺省=未迁 endFrame）。"""
@@ -337,6 +369,12 @@ def main() -> int:
         if not dump.is_file():
             print(f"[PASS] {cid}: oracle 腿已验（sha256 对锚、{len(left)} 帧、逐帧字段合法）；"
                   f"game-core 腿未启用（S5 落地生成 {dump.relative_to(ROOT)} 后自动启用）")
+            continue
+        # N-0012 机械门（enforcement①，l3 设计 §2.2）：game-core 腿启用前置断言
+        n12errs = n12_gate_errors(ROOT)
+        if n12errs:
+            print(f"[FAIL] {cid}: game-core 腿拒启——N-0012 机械门未过: {'; '.join(n12errs)}")
+            failed += 1
             continue
 
         right, rdups, rerr = load_frames(dump.read_bytes(), "game-core dump")
