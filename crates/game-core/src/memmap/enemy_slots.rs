@@ -87,9 +87,9 @@ mod tests {
         region[14] = 0x42; // slot0 字段 14（$6B02）
         region[SLOT_STRIDE + 0] = 0x51; // slot1 字段 0（$6B04）
         let slots = decode_slots(&region);
-        assert_eq!(slots[0]._todo_00, read_offset(&region, 0));
-        assert_eq!(slots[0]._todo_0e, read_offset(&region, 14));
-        assert_eq!(slots[1]._todo_00, read_offset(&region, SLOT_STRIDE as u8));
+        assert_eq!(slots[0].status, read_offset(&region, 0)); // status（N-0031）
+        assert_eq!(slots[0].type_, read_offset(&region, 14)); // type（N-0044）
+        assert_eq!(slots[1].status, read_offset(&region, SLOT_STRIDE as u8));
         assert_eq!(ENEMY_SLOTS_BASE + 14, 0x6B02); // 几何自证：字段 14 地址回归
     }
 }
