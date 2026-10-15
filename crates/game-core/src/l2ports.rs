@@ -97,6 +97,7 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "sub_F1CB" => Some(sub_f1cb),
         "sub_F1E7" => Some(sub_f1e7),
         "sub_F172" => Some(sub_f172),
+        "sub_F19A" => Some(sub_f19a),
         _ => None,
     }
 }
@@ -135,6 +136,29 @@ pub fn sub_f152(input: &L2In) -> L2Out {
     let w = input.wram.get(0x6AFB + x as usize - 0x6000).copied().unwrap_or(0);
     // F17F `45 FF` = EOR **零页 $FF**（RAM），非立即数——操作数类型以清单 # 前缀为准
     let vb = (w ^ input.ram[0x00FF]) & 1; // ^ RAM[$FF]（EOR zp，非立即数）
+    L2Out {
+        a: vb,
+        x: input.x,
+        y: input.y,
+        writes: vec![(0x0007, v7), (0x0009, v9), (0x000B, vb)],
+    }
+}
+
+/// sub_F19A —— bank07:F19A-F1A6（`LDA $B1,X / STA $07 / LDA $B2,X / STA $09 / LDA $B3,X /`
+/// 经 loc_F17F 共享尾：zp,X 变体坐标/属性读取）。
+/// L2 窗口 stops=bank07:F185（尾 RTS 址截断）。
+/// 语义（A 级：ROM 原字节 `B5 B1 85 07 B5 B2 85 09 B5 B3 4C 7F F1`）：
+/// **B5 B1-B3 = zp,X 8 位变址回绕**：有效址=(base+X)&$FF（X=$FF 时 $B1→$B0；16 位加会错读
+/// $01Bx 域）；$07←RAM[($B1+X)&$FF]、$09←RAM[($B2+X)&$FF]、$0B←(RAM[($B3+X)&$FF]^**RAM[$FF]**)&1
+/// （尾 45 FF=EOR 零页 $FF 非立即数）。末值 A=$0B；X/Y 透传。
+pub fn sub_f19a(input: &L2In) -> L2Out {
+    let x = input.x;
+    let a1 = 0xB1u8.wrapping_add(x) as usize;
+    let a2 = 0xB2u8.wrapping_add(x) as usize;
+    let a3 = 0xB3u8.wrapping_add(x) as usize;
+    let v7 = input.ram[a1];
+    let v9 = input.ram[a2];
+    let vb = (input.ram[a3] ^ input.ram[0x00FF]) & 1;
     L2Out {
         a: vb,
         x: input.x,

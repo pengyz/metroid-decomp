@@ -3704,10 +3704,10 @@
       "id": "S-FUNC-07-F19A",
       "face": "symbol",
       "module": "engine",
-      "strength": "L0",
-      "covered": false,
-      "evidence": "bank07:F19A-F1A7（IDA 机械切分 size=13）",
-      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+      "strength": "L2",
+      "covered": true,
+      "evidence": "oracle/subroutines/l2_cases.jsonl#gen-f19a-0..7 + #b-f19a-xff-wrap/b-f19a-x50-wrap/b-f19a-x0 三方全等（golden==ROM 执行==game-core）；语义来源 ROM 原字节 bank07:F19A-F1A6=B5 B1 85 07 B5 B2 85 09 B5 B3 + JMP loc_F17F（45 FF 29 01 85 0B 60）逐指令",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准；L2 窗口 stops=bank07:F185（尾 RTS 址截断）：**B5 B1-B3=zp,X 8 位变址回绕**（(base+X)&$FF，X=$FF→$B0/$B1/$B2）+尾 45 FF=EOR zp→$07/$09/$0B，A=$0B"
     },
     "S-FUNC-07-F1A7": {
       "id": "S-FUNC-07-F1A7",
