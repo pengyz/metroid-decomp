@@ -538,6 +538,20 @@ tools/ 面——lead 移交 verifier 落，scoping 诚实）④引爆面场景�
 - stat 对账：3 文件（engine/rng/l3-dump）与意图一致（清单第 6 项检查过）。
 - decomp 侧 5aeb48d（「二选一」错账→三家 $C0C9/$C436/$C10B 更正注）同步收讫 ✓。
 
+## task-10 批 26：NMIScreenWrite/9A07（95e43a5）——boot 态短路件 + 命名同 commit
+
+### verdict: pass
+
+四查过：①ROM/asm 锚 ✓（9A07=`a5 1f c9 1d`（LDA $1F/CMP #$1D）字节吻合；内容锚
+`NMIScreenWrite: ; 00:9A07`+「If titleRoutine not at end game, exit」注+
+MainRoutine/TitleRoutine=$1E/$1F 常量注址命中；boot/title 态短路零 RAM 写=
+单测 `assert_eq!(m.ram, [0u8; 0x800])` 钉死）②链规 17 ✓（asm 引证主体+Mesen2 无新调用）
+③命名同 commit ✓（N-0025..N-0027）④引爆迁移复现 `unported @ bank07:C1E0` ✓+
+stat 对账（3 源文件+台账+基线=意图一致，无新文件声称）。
+**P26-F1（声明精度·轻，行号族）**：Exit100 行号「:3608」实漂（refs 在 3594/3613、
+定义其后）——内容锚 `Exit100: rts` 在，行号不作引证依据（F6 口径）；轻症记档。
+findings 三族标注（r10）：1 轻（声明族）。基线 49、单测 33 全绿。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
