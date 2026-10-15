@@ -3740,10 +3740,10 @@
       "id": "S-FUNC-07-F1D2",
       "face": "symbol",
       "module": "engine",
-      "strength": "L0",
-      "covered": false,
-      "evidence": "bank07:F1D2-F1E0（IDA 机械切分 size=14）",
-      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+      "strength": "L2",
+      "covered": true,
+      "evidence": "oracle/subroutines/l2_cases.jsonl#gen-f1d2-0..7 + #b-f1d2-yff/b-f1d2-wrap 三方全等（golden==ROM 执行==game-core）；语义来源 ROM 原字节 bank07:F1D2-F1DF=A9 04/20 E0 F1/A9 08/18 79 02 03 85 05 60 逐指令",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准；L2 窗口 stops=bank07:F1DF（尾 RTS 址截断）：**A9 04/A9 08=LDA #立即数**（反向陷阱）→$04←4+RAM[$301+Y]、$05←8+RAM[$302+Y]，A=$05；入参 A 不影响"
     },
     "S-FUNC-07-F1E0": {
       "id": "S-FUNC-07-F1E0",

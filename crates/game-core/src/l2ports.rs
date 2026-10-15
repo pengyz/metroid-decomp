@@ -92,6 +92,7 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "sub_F140" => Some(sub_f140),
         "sub_F1A7" => Some(sub_f1a7),
         "sub_F1B3" => Some(sub_f1b3),
+        "sub_F1D2" => Some(sub_f1d2),
         _ => None,
     }
 }
@@ -152,6 +153,20 @@ pub fn sub_f186(input: &L2In) -> L2Out {
         y: input.y,
         writes: vec![(0x0006, v6), (0x0008, v8), (0x000A, va)],
     }
+}
+
+/// sub_F1D2 —— bank07:F1D2-F1DF（`LDA #4 / JSR F1E0 / LDA #8 /` 落 loc_F1D9 共享尾）。
+/// L2 窗口 stops=bank07:F1DF（尾 RTS 址截断，与 gen-f1bf 同约定）。
+/// 语义（A 级：ROM 原字节 `A9 04 20 E0 F1 A9 08 18 79 02 03 85 05 60` 逐指令）：
+/// **A9 04/A9 08 = LDA #立即数**（反向陷阱，勿读 zp $04/$08）：
+/// $04 ← 4 + RAM[$301+Y]（F1E0 尾 CLC/ADC $301,Y/STA $04）；
+/// $05 ← 8 + RAM[$302+Y]（loc_F1D9 CLC/ADC $302,Y/STA $05）。
+/// 末值 A=$05；X/Y 透传；入参 A 不影响（窗口首指令即 LDA #4）。
+pub fn sub_f1d2(input: &L2In) -> L2Out {
+    let y = input.y as u16;
+    let v4 = 4u8.wrapping_add(input.ram[(0x0301 + y) as usize & 0x7FF]);
+    let v5 = 8u8.wrapping_add(input.ram[(0x0302 + y) as usize & 0x7FF]);
+    L2Out { a: v5, x: input.x, y: input.y, writes: vec![(0x0004, v4), (0x0005, v5)] }
 }
 
 /// sub_F140 —— bank07:F140-F148 入口组合件（`JSR F1BF / JSR F186 / JMP F1FA`）。
