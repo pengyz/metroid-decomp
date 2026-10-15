@@ -18,7 +18,7 @@
       "denominator": 11
     },
     "symbol": {
-      "denominator": 474
+      "denominator": 478
     },
     "data": {
       "denominator": 193
@@ -6129,6 +6129,42 @@
       "covered": true,
       "evidence": "asm 考证件（bank00:$82ED-$82F2）——**L3 降级（R3）**：ScreenOff=NMI 等待自旋（WaitNMIPass_）L2 模型内死循环；行为面=L3 承载",
       "note": "denoms 补录格（title 30 例程批量 task-23 批2④编排簇）；链规 19 折叠形态；L3 降级显式（R3 显式非静默，D7 口径）"
+    },
+    "S-FUNC-00-80F9": {
+      "id": "S-FUNC-00-80F9",
+      "face": "symbol",
+      "module": "title",
+      "strength": "L2",
+      "covered": true,
+      "evidence": "oracle/subroutines/l2_cases.jsonl#b-fade-*（FadeInDelay 入口案族）三方全等（window_bank=0 显式）；语义来源 bank00:80F9（FadeDriver 同形折叠臂）",
+      "note": "denoms 补录格（task-23 批3①淡变族）；链规 19 同形折叠（FadeDriver 一骨架四臂）；窗口读表 $8B6D/$8A9A=A9 族口径显式钉窗"
+    },
+    "S-FUNC-00-812C": {
+      "id": "S-FUNC-00-812C",
+      "face": "symbol",
+      "module": "title",
+      "strength": "L2",
+      "covered": true,
+      "evidence": "oracle/subroutines/l2_cases.jsonl#b-fade-*（METROIDFadeIn 入口案族）三方全等（window_bank=0 显式）；语义来源 bank00:812C（FadeDriver 同形折叠臂）",
+      "note": "denoms 补录格（task-23 批3①淡变族）；链规 19 同形折叠（FadeDriver 一骨架四臂）；窗口读表 $8B6D/$8A9A=A9 族口径显式钉窗"
+    },
+    "S-FUNC-00-8243": {
+      "id": "S-FUNC-00-8243",
+      "face": "symbol",
+      "module": "title",
+      "strength": "L2",
+      "covered": true,
+      "evidence": "oracle/subroutines/l2_cases.jsonl#b-fade-*（MessageFadeIn 入口案族）三方全等（window_bank=0 显式）；语义来源 bank00:8243（FadeDriver 同形折叠臂）",
+      "note": "denoms 补录格（task-23 批3①淡变族）；链规 19 同形折叠（FadeDriver 一骨架四臂）；窗口读表 $8B6D/$8A9A=A9 族口径显式钉窗"
+    },
+    "S-FUNC-00-8263": {
+      "id": "S-FUNC-00-8263",
+      "face": "symbol",
+      "module": "title",
+      "strength": "L2",
+      "covered": true,
+      "evidence": "oracle/subroutines/l2_cases.jsonl#b-fade-*（MessageFadeOut 入口案族）三方全等（window_bank=0 显式）；语义来源 bank00:8263（FadeDriver 同形折叠臂）",
+      "note": "denoms 补录格（task-23 批3①淡变族）；链规 19 同形折叠（FadeDriver 一骨架四臂）；窗口读表 $8B6D/$8A9A=A9 族口径显式钉窗"
     }
   }
 }

@@ -81,6 +81,26 @@
       "id": "S-FUNC-00-82ED",
       "addr": "00:82ED",
       "evidence": "task-23 批2：TitleScreenOff（L3 降级 R3 显式）"
+    },
+    {
+      "id": "S-FUNC-00-80F9",
+      "addr": "00:80F9",
+      "evidence": "task-23 批3：FadeInDelay（FadeDriver 同形折叠臂，L2 三方全等）"
+    },
+    {
+      "id": "S-FUNC-00-812C",
+      "addr": "00:812C",
+      "evidence": "task-23 批3：METROIDFadeIn（FadeDriver 同形折叠臂，L2 三方全等）"
+    },
+    {
+      "id": "S-FUNC-00-8243",
+      "addr": "00:8243",
+      "evidence": "task-23 批3：MessageFadeIn（FadeDriver 同形折叠臂，L2 三方全等）"
+    },
+    {
+      "id": "S-FUNC-00-8263",
+      "addr": "00:8263",
+      "evidence": "task-23 批3：MessageFadeOut（FadeDriver 同形折叠臂，L2 三方全等）"
     }
   ],
   "d_wrongface": {

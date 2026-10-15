@@ -227,3 +227,112 @@ impl TitleSequence {
 // - 12 TitleScreenOff（bank00:$82ED-$82F2）：jsr ScreenOff（$FE 镜像写+**NMI 等待自旋**）
 //   + inc 相位——同上降级。
 // 域实施待 shell 依赖组合点（VRAM 队列/NMI 等待原语）可复用后补（链规 19 不硬造镜像）。
+
+// ---- 批3·①淡变族（02/03/0D/0E——**同形折叠主件**）----
+// 共形骨架=Timer3 门 + FrameCount 掩 + 表步进 + 完成转移（chain 19「同形族」正样）。
+// 窗口读表（A9 族口径——L2 案显式 window_bank=0 钉窗）：
+//   FADE_TABLE=$8B6D 组合 12B（[0..4]=fade-out 序、[5]=$FF 终止、[6..10]=fade-in 序、
+//   [11]=$FF——0D 的 `cmp #$0B` 端测=索引 11 即终止符位，双表单数组索引实证）；
+//   PAL_SELECT_TABLE=$8A9A 13B（idx12=$FF；idx10/11 双 0c——调色板 id 重复列，字节为准）。
+
+/// 淡变组合表（bank0:$8B6D 12B）。
+pub const FADE_TABLE: [u8; 12] = [0x0D, 0x0E, 0x0F, 0x10, 0x01, 0xFF, 0x01, 0x10, 0x0F, 0x0E, 0x0D, 0xFF];
+
+/// PalSelect 表（bank0:$8A9A 13B）。
+pub const PAL_SELECT_TABLE: [u8; 13] = [0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0C, 0xFF];
+
+/// 淡变驱动面（zp 快照）。
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct FadeFace {
+    pub timer3: u8,
+    pub frame_count: u8,
+    pub pal_index: u8,
+    pub fade_index: u8,
+    pub phase: u8,
+    /// PPUCTRL_ZP 镜像输入（02 `and #$FE` 源）。
+    pub ppuctrl: u8,
+}
+
+/// 淡变结果（写面语义标签经 memmap 映射；y_out=None=透传——LoadPalData/DoFadeOut 的
+/// `ldy` 会覆写 Y，端测/门出口不经步进器=透传）。
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct FadeOutcome {
+    pub phase: Option<u8>,
+    pub a_out: u8,
+    pub y_out: Option<u8>,
+    pub writes: Vec<(&'static str, u8)>,
+}
+
+/// 淡变驱动（4 员同形折叠——非 4 个镜像 fn）。
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum FadeDriver {
+    /// 02 FadeInDelay：一次性装配（$FF&=$FE、Timer3←8、PaletteDataIndex←4（`lsr` 复用））。
+    DelaySetup,
+    /// 03 METROIDFadeIn：Timer3 门 + &$0F 掩 + PalSelect 步进（Z=耗尽）+ 完成⇒Timer3←$20。
+    MetroidIn,
+    /// 0D MessageFadeIn：Timer3 门 + &7 掩 + 组合表步进 + 端测 idx==$0B。
+    MessageIn,
+    /// 0E MessageFadeOut：Timer3 门 + &7 掩 + 组合表步进 + 端测 idx==$05。
+    MessageOut,
+}
+
+impl FadeDriver {
+    /// 同形 tick（骨架唯一：门→掩→端/步）。
+    pub fn tick(&self, f: &FadeFace) -> FadeOutcome {
+        match self {
+            Self::DelaySetup => {
+                // `lda #$08 / sta Timer3 / lsr`（A=8→4 一指令双用）/`sta PaletteDataIndex`
+                FadeOutcome {
+                    phase: Some(f.phase.wrapping_add(1)),
+                    a_out: 4,
+                    y_out: None,
+                    writes: vec![("PPUCTRL_ZP", f.ppuctrl & 0xFE), ("TIMER3", 8),
+                                 ("PALETTE_INDEX", 4)],
+                }
+            }
+            Self::MetroidIn => {
+                if f.timer3 != 0 {
+                    return FadeOutcome { phase: None, a_out: f.timer3, y_out: None, writes: vec![] };
+                }
+                let m = f.frame_count & 0x0F;
+                if m != 0 {
+                    return FadeOutcome { phase: None, a_out: m, y_out: None, writes: vec![] };
+                }
+                // LoadPalData 步进（ldy pal_index；Z=表耗尽）
+                let t = PAL_SELECT_TABLE[f.pal_index as usize];
+                if t == 0xFF {
+                    return FadeOutcome { phase: Some(f.phase.wrapping_add(1)), a_out: 0x20,
+                                         y_out: Some(f.pal_index),
+                                         writes: vec![("TIMER3", 0x20)] };
+                }
+                FadeOutcome { phase: None, a_out: t, y_out: Some(f.pal_index),
+                              writes: vec![("PENDING_PAL", t), ("PALETTE_INDEX", f.pal_index.wrapping_add(1))] }
+            }
+            Self::MessageIn | Self::MessageOut => {
+                if f.timer3 != 0 {
+                    return FadeOutcome { phase: None, a_out: f.timer3, y_out: None, writes: vec![] };
+                }
+                let m = f.frame_count & 0x07;
+                if m != 0 {
+                    return FadeOutcome { phase: None, a_out: m, y_out: None, writes: vec![] };
+                }
+                let end = if *self == Self::MessageIn { 0x0B } else { 0x05 };
+                if f.fade_index == end {
+                    return if *self == Self::MessageIn {
+                        // 端测 0D：FadeDataIndex←0、Timer3←$30（480 帧=48×10）、inc（A=$30）
+                        FadeOutcome { phase: Some(f.phase.wrapping_add(1)), a_out: 0x30, y_out: None,
+                                      writes: vec![("FADE_INDEX", 0), ("TIMER3", 0x30)] }
+                    } else {
+                        // 端测 0E：FadeDataIndex←6（fade-in 序起点）、SpareMemCB←0、inc（A=0）
+                        FadeOutcome { phase: Some(f.phase.wrapping_add(1)), a_out: 0x00, y_out: None,
+                                      writes: vec![("FADE_INDEX", 6), ("SPARE_CB", 0)] }
+                    };
+                }
+                // DoFadeOut 步进（ldy fade_index）
+                let t = FADE_TABLE[f.fade_index as usize];
+                FadeOutcome { phase: None, a_out: t, y_out: Some(f.fade_index),
+                              writes: vec![("PENDING_PAL", t), ("FADE_INDEX", f.fade_index.wrapping_add(1))] }
+            }
+        }
+    }
+}

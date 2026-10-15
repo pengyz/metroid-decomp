@@ -118,6 +118,10 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "sub_InitializeAfterReset" => Some(sub_title_init),
         "sub_ChangeIntroNameTable" => Some(sub_title_nametable),
         "sub_PrepIntroRestart" => Some(sub_title_prep),
+        "sub_FadeInDelay" => Some(sub_fade_delay),
+        "sub_METROIDFadeIn" => Some(sub_metroid_fade_in),
+        "sub_MessageFadeIn" => Some(sub_message_fade_in),
+        "sub_MessageFadeOut" => Some(sub_message_fade_out),
         _ => None,
     }
 }
@@ -507,4 +511,26 @@ pub fn sub_title_nametable(input: &L2In) -> L2Out {
 /// 域形态：title::prep_restart 经 verify_shim::title_prep_restart。
 pub fn sub_title_prep(input: &L2In) -> L2Out {
     crate::verify_shim::title_prep_restart(input)
+}
+
+// ---- task-23 批3·①淡变族注册（FadeDriver 同形折叠——chain 19 同形族正样）----
+
+/// sub_FadeInDelay —— bank00:$80F9 注册名（批3①，DelaySetup 装配臂）。
+pub fn sub_fade_delay(input: &L2In) -> L2Out {
+    crate::verify_shim::title_fade_delay(input)
+}
+
+/// sub_METROIDFadeIn —— bank00:$812C 注册名（批3①，PalSelect 步进驱动）。
+pub fn sub_metroid_fade_in(input: &L2In) -> L2Out {
+    crate::verify_shim::title_metroid_fade_in(input)
+}
+
+/// sub_MessageFadeIn —— bank00:$8243 注册名（批3①，组合表步进驱动 idx 6→$0B）。
+pub fn sub_message_fade_in(input: &L2In) -> L2Out {
+    crate::verify_shim::title_message_fade_in(input)
+}
+
+/// sub_MessageFadeOut —— bank00:$8263 注册名（批3①，组合表步进驱动 idx 0→$05）。
+pub fn sub_message_fade_out(input: &L2In) -> L2Out {
+    crate::verify_shim::title_message_fade_out(input)
 }

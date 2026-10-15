@@ -566,3 +566,60 @@ pub fn title_prep_restart(input: &L2In) -> L2Out {
     let o = t.prep_restart(timer3, ff, music);
     title_orch_out(input, o)
 }
+
+// ---- task-23 批3·①淡变族适配（FadeDriver 同形折叠 4 员→4 注册面）----
+
+/// 淡变结果 → L2Out（标签经 memmap 映射；y=None 透传）。
+fn fade_out(input: &L2In, o: crate::title::FadeOutcome) -> L2Out {
+    let mut events: Vec<(u16, u8)> = Vec::new();
+    if let Some(p) = o.phase {
+        events.push(memmap::title_state::write_event_phase(p));
+    }
+    for (tag, v) in &o.writes {
+        let tag = if *tag == "PENDING_PAL" { "PALETTE_PENDING" } else { *tag };
+        let addr = match tag {
+            "PALETTE_PENDING" => crate::ram_map::PALETTE_PENDING,
+            "PALETTE_INDEX" => memmap::title_state::PALETTE_INDEX,
+            "FADE_INDEX" => memmap::title_state::FADE_INDEX,
+            "SPARE_CB" => memmap::title_state::SPARE_CB,
+            "TIMER3" => memmap::title_state::TIMER3,
+            "PPUCTRL_ZP" => crate::ram_map::PPUCTRL_ZP,
+            other => panic!("fade 未知写标签 {other}——fail-loud"),
+        };
+        events.push((addr, *v));
+    }
+    L2Out { a: o.a_out, x: input.x, y: o.y_out.unwrap_or(input.y), writes: merge_writes(events) }
+}
+
+/// 淡变面解码（zp 快照）。
+fn fade_face(input: &L2In) -> crate::title::FadeFace {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    crate::title::FadeFace {
+        timer3: r(memmap::title_state::TIMER3),
+        frame_count: r(crate::ram_map::FRAME_COUNT),
+        pal_index: r(memmap::title_state::PALETTE_INDEX),
+        fade_index: r(memmap::title_state::FADE_INDEX),
+        phase: r(crate::ram_map::TITLE_ROUTINE),
+        ppuctrl: r(crate::ram_map::PPUCTRL_ZP),
+    }
+}
+
+/// 批3 入口 02 适配（`sub_FadeInDelay` ← bank00:$80F9）。
+pub fn title_fade_delay(input: &L2In) -> L2Out {
+    fade_out(input, crate::title::FadeDriver::DelaySetup.tick(&fade_face(input)))
+}
+
+/// 批3 入口 03 适配（`sub_METROIDFadeIn` ← bank00:$812C）。
+pub fn title_metroid_fade_in(input: &L2In) -> L2Out {
+    fade_out(input, crate::title::FadeDriver::MetroidIn.tick(&fade_face(input)))
+}
+
+/// 批3 入口 0D 适配（`sub_MessageFadeIn` ← bank00:$8243）。
+pub fn title_message_fade_in(input: &L2In) -> L2Out {
+    fade_out(input, crate::title::FadeDriver::MessageIn.tick(&fade_face(input)))
+}
+
+/// 批3 入口 0E 适配（`sub_MessageFadeOut` ← bank00:$8263）。
+pub fn title_message_fade_out(input: &L2In) -> L2Out {
+    fade_out(input, crate::title::FadeDriver::MessageOut.tick(&fade_face(input)))
+}
