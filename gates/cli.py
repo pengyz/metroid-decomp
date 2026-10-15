@@ -1067,11 +1067,19 @@ def rust_mod_coherence_errors(sources: dict[str, str], present: set[str]) -> lis
 
 
 def gate_tree_coherence() -> tuple[str, str]:
+    """提交树 mod 引用解析（未跟踪件掩盖破树侦测）。
+
+    v2 语义修正（pathspec commit 实证，2026-10-15）：git 查询**剥 GIT_INDEX_FILE**——
+    pathspec commit 时 hook 持 temp index（仅 commit 内容），混用它与 worktree 内容
+    =跨源误报（docs-only 提交被他人未入库 WIP 连坐）。真 index 语义=「tracked∪staged
+    全景」，专抓「目标文件真不在树」（untracked 掩蔽类）。"""
+    clean_env = {k: v for k, v in os.environ.items() if k != "GIT_INDEX_FILE"}
     try:
         tracked = subprocess.run(["git", "ls-files", "*.rs"], cwd=ROOT, capture_output=True,
-                                 text=True, encoding="utf-8", errors="replace")
+                                 text=True, encoding="utf-8", errors="replace", env=clean_env)
         staged = subprocess.run(["git", "diff", "--cached", "--name-only"], cwd=ROOT,
-                                capture_output=True, text=True, encoding="utf-8", errors="replace")
+                                capture_output=True, text=True, encoding="utf-8",
+                                errors="replace", env=clean_env)
         if tracked.returncode != 0 or staged.returncode != 0:
             return FAIL, "git 查询失败（fail-loud，提交树一致性不可判）"
     except OSError as exc:

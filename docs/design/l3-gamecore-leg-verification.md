@@ -114,6 +114,8 @@ memmap/flow_scratch.rs）——v1 误列 WRAM 行（错域会导致 watch 重复
 清/隔离旧 dump，杜绝 stale 件冒充）② GameRng 桩 payload 补 bank:addr 字面量
 （现 `rng-algorithm-unverified` 无址漏检——引爆行须带 `unported @ bank?:addr` 形态）。
 ①② 属 game-oracle/game-core 实施面（porter），契约面已点名。
+**【R5 闭合注（2026-10-15）】①②已由 7e94719 实施闭合**（l3-dump stale 防御+GameRng
+桩 payload 带址 `bank07:C000`，r7 回归双闭实证）——本行转历史记录。
 | 实现缺口·崩溃/截断（非 unported!） | panic payload 无 unported! 形态 / dump 中途截断 | 按 §4.2 常规二分（实现缺口/移植错） |
 
 **红灯全形态落点（次要-13 补）**：
@@ -341,6 +343,8 @@ CheckPaletteWrite/CheckVRAMStructBufferWrite/WritePPUCtrl/WriteScroll/ReadJoyPad
 **残余销账**：
 - frameCount 误引勘误：§2/§8 的「oracle frameCount」凡指 Mesen 帧计数处以
   「Mesen 帧序（frameCount 为工具侧计数名）」表述为准（v1-v3 混用工具名与语义名）；
+  **【R4 更正注（2026-10-15）】本行「§2/§8」系错指针**——真触点=§1 帧号口径行+
+  §8 相位实测句（v5 已在两处原地标注）；本行指针随更正，勘误本体已落地；
 - **N4 互斥实证待补**：inputPolled≡tick 与超帧跳过的互斥面（慢帧）——重复 f 现则
   路由补「**游戏减速 quirk**」分支（D4 保真类，非差分失败）；实证=慢帧场景互斥测试
   （实施序 3b 随采样迁移一并验）；
