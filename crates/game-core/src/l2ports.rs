@@ -103,6 +103,7 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "sub_F270" => Some(sub_f270),
         "sub_F2DF" => Some(sub_f2df),
         "sub_F2D5" => Some(sub_f2d5),
+        "sub_F2AD" => Some(sub_f2ad),
         "sub_F2D8" => Some(sub_f2d8),
         _ => None,
     }
@@ -501,4 +502,12 @@ pub fn sub_f270(input: &L2In) -> L2Out {
 /// L2 窗口 stops=bank07:F2DE（JSR F332 内返回址 C2C9 不在 stops，逐址核过）。
 pub fn sub_f2d5(input: &L2In) -> L2Out {
     crate::verify_shim::f2d5(input)
+}
+
+/// sub_F2AD —— bank07:F2AD-F2DE 注册名（机械名只在注册注释，two-layer §4）。
+/// **域形态**（§5 新实施件）：跨 view 组合——`EnemyTodo040E::set_entry`（$040E+X←$81，
+/// F2B2 BNE 恒转）后落 F2D5 流 `EnemyTodo0404::or_writeback`（变换掩码）。
+/// L2 窗口 stops=bank07:F2DE；F2B4 块自 F2AD 入口不可达（BNE 恒转，F2BD BCS $F298 侧不入窗）。
+pub fn sub_f2ad(input: &L2In) -> L2Out {
+    crate::verify_shim::f2ad(input)
 }

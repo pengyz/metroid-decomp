@@ -61,3 +61,21 @@ pub fn f2d5(input: &L2In) -> L2Out {
     let writes = vec![memmap::enemy_todo_0404::write_event(input.x, a_out)];
     L2Out { a: a_out, x: input.x, y: input.y, writes }
 }
+
+/// f2ad 适配（注册名 `sub_F2AD` ← bank07:F2AD-F2DE，stops=bank07:F2DE）。
+///
+/// **跨 view 组合**（two-layer §1）：`EnemyTodo040E::set_entry`（state 直写 $81——memmap
+/// F2AD_STATE_INIT）后落 F2D5 流 `EnemyTodo0404::or_writeback`（掩码=memmap 变换掩码）。
+/// 写集：两域 write_event 依序推导（$040E+X、$0404+X）。
+pub fn f2ad(input: &L2In) -> L2Out {
+    let mut e040e = memmap::enemy_todo_040e::decode_todo_040e(&input.ram);
+    let mut v0404 = memmap::enemy_todo_0404::decode_todo_0404(&input.ram);
+    let state_v = e040e.set_entry(input.x, memmap::enemy_todo_040e::F2AD_STATE_INIT);
+    let mask = memmap::enemy_todo_0404::mask10_transformed(&input.ram);
+    let a_out = v0404.or_writeback(input.x, mask);
+    let writes = vec![
+        memmap::enemy_todo_040e::write_event(input.x, state_v),
+        memmap::enemy_todo_0404::write_event(input.x, a_out),
+    ];
+    L2Out { a: a_out, x: input.x, y: input.y, writes }
+}
