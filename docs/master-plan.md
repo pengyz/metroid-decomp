@@ -39,6 +39,19 @@
 排期：task-10 帧引擎+boots-to-title → task-11 samus 移动 demo；task-12 执行路径调用图
 （喂执行序队列）；task-13 L3 game-core 腿验证设计。bank7 剩余 176 入口=执行序触发积压池。
 
+## 里程碑 C 蓝图（2026-10-15 asm 架构考古产出——B 后启用）
+
+域划分照抄游戏自身组织（m1disasm 结构=游戏的模块说明书）：产品层域树
+core/frame（prg7）· world/{brinstar,norfair,tourian,kraid,ridley}（prg1-5）·
+gfx（prg6）· title（prg0）· audio（sound_engine）。B 后从「按函数爬」转「按域收割」：
+world 垂直（room_ptrs→metatiles→CHR→PPU 四级数据链）/ enemy 垂直（敌槽+分发 handler）/
+audio 垂直——每域=L3 场景+两层形态域模块。
+- **batch-2 蓝图**：关卡=数据四级引用链（room_ptrs/metatiles/palettes/items/
+  enemy_sprite_data 五件套/区域 bank 同构）——schema 已知，game-data 直接按层级建模；
+- **状态显式化（贯穿工作流）**：constants_ram 286 zp 名=typed view 候选矿，
+  memmap 随消费随显式化（命名台账+两层架构联动）；
+- 表驱动分发器（C27C A 值域）→ enum+match；宽放 18 overframe=Stage A 保真面。
+
 ## 批量批次表（completeness.md §2，batch-0 起步）
 
 | 批次 | 模块 | 状态 |
