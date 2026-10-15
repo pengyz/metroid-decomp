@@ -324,6 +324,27 @@ m2（漏 Y）10/11 幸存=[b-f2df-y0] 精确互证。covered 22、全量自跑 *
 verify_shim（委派）三层分离与 spec §1 一致；shim 侧仅 FLAG_C=0x01 标志位常量（非地址）。
 N-0001 域几何 16B×16 等 A 级自证与 ROM 字节（F28E/F295）可对（其 evidence 已逐条列址）。
 
+## 批 16/17：sub_F2ED（1b99278）+ sub_F2E8（e7372c7）——CD9C 探针路由 / Z 路由双流
+
+### verdict: pass
+
+**字节锚全通**（复杂件重手段）：F2ED=`b0 21 20 df f2 98 48 20 9c cd 68 a8 90 15 a9 80 …`
+——C=1 直出（BCS）/ JSR F2DF or_writeback / **TYA-PHA-PLA 恢复链**（A=Y_in 出口语义
+字节实锤）/ 探针 C=0 BCC 出口 / LDA #$80→STA $010F（**$010F=0x80 非 0x81**——其 ROM 腿
+打回后修正的手推，与字节一致）/ JSR F332 全变换（F340=`a5 10 49 03 60`=LDA $10/EOR #3
+半变换无 ASL ✓，F332=JSR F340+JMP C2C6 ASL×3 全变换）/ JSR F270 / F306 向量
+`ad ce 95 85 6e ad cf 95 85 6f`——**ROM 向量 $95CE/$95CF=03 38**（window_bank=7 约定
+prg[0x1D5CE]，我首读映射错已自纠）与申报一致。CD9C=`38 ac 00 03 88 d0 1b…`（SEC 起手
+进位关键输出 ✓）。F2E8=`20 40 f3 d0 eb`（JSR F340 半变换/BNE F2D8 Z 路由）✓。
+
+**口径核**：其「ROM 腿当场打回手推 golden 两处（A=Y_in 而非探针 A、$010F=0x80 非 0x81）
+后修正」披露=诚实文化样板，两处均经我字节级独立证实。RED 演示工作流偏移如实记录。
+covered 28、全量自跑 **315 条 0 失败**。
+
+**残余（P16-F1，advisory）**：CD9C 四路出口逐路表未入折叠注——含 CDB5 BNE +8 落 CDBF
+（RTS 后一字节）的出口语义、各出口终值 C/A 表；建议 memmap/cd9c.rs 折叠注补出口表，
+供后续复审方模型化（本案经字节锚+三方案件钉住，不影响判定）。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
