@@ -62,8 +62,10 @@ pub fn boot_init(mem: &mut FrameMemory) {
     mem.write_ram(io::PPU_SCROLL, 0x00); // STY $2005 ×2（Y=0）
     mem.write_ram(io::PPU_SCROLL, 0x00);
     mem.write_ram(0x001D, 0x01); // INY/STY $1D
+    // C158 单元（VRAM 清屏双遍——已端口）
+    c158_unit(mem);
     // 嵌套单元桩（执行序逐个引爆：每引爆一个端一个）
-    crate::unported!("bank07:C158");
+    crate::unported!("bank07:C1A3");
     #[allow(unreachable_code)]
     {
         // C158 后序（桩移除后可达；现为执行序地图占位）
@@ -84,6 +86,42 @@ pub fn boot_init(mem: &mut FrameMemory) {
             crate::unported!("bank07:C4DE");
         }
     }
+}
+
+/// L2 组件 → 内存态桥（组件库反哺：**既有验证件**经写集契约挂入帧引擎——
+/// 「L2 管线按需补给」反向流；写址为 L2 归一面（&0x7FF 同源））。
+fn l2_apply(mem: &mut FrameMemory, out: crate::L2Out) {
+    mem.regs.a = out.a;
+    mem.regs.x = out.x;
+    mem.regs.y = out.y;
+    for (addr, v) in out.writes {
+        mem.write_ram(addr, v);
+    }
+}
+
+/// C158 单元——VRAM 清屏（bank07:C158-C19E）：双遍填充 PPU nametable $2000/$2400/$2800
+/// （各 1280B=$FF；**PPU 面非 RAM watch**——渲染面保真待 task-13）+ ptr 态。
+///
+/// 结构（A 级精修表）：`20 6D C1`（JSR $C16D——**复用既有验证件 sub_c16d**：$01=1/$00=FF）
+/// → `$1D/$1F` 分派（**`C9 1D` CMP #$1D=立即数陷阱同族**）→ 尾共段（BNE 汇入 C16F
+/// `85 01` STA $01/$00=FF）→ PPU 面（`AD 02 20` 读 status/`$FF` 清 bit2/`STA $2000`/
+/// 表[$01-1]→$2006/`STA $2007` ×1280）→ C19E RTS（尾共段=次遍的出口）。
+/// 结束态（RAM 面）：$00=FF、$01=2|3、$FF&=!4、A=FF/X=0/Y=0。
+pub fn c158_unit(mem: &mut FrameMemory) {
+    // 首遍：L2 反哺复用（sub_c16d 契约= $01=1/$00=FF/A=FF，44 案时代验证件）
+    l2_apply(mem, crate::l2ports::sub_c16d(&crate::L2In::default()));
+    // 次遍：$1D/$1F 分派（C15B-C16B）→ 尾共段 $01∈{2,3}
+    let hi = if mem.read_ram(0x001D) == 0 || mem.read_ram(0x001F) != 0x1D { 2 } else { 3 };
+    mem.write_ram(0x0001, hi);
+    mem.write_ram(0x0000, 0xFF);
+    // $FF 清 bit2（AND #$FB/STA $FF/STA $2000——PPU ctrl NMI 位清）
+    let f = mem.read_ram(0x00FF) & 0xFB;
+    mem.write_ram(0x00FF, f);
+    // PPU 面（非 RAM watch）：LDX $2002（status 读）、表读 $C19F[$01-1]→$2006、$FF 填 ×1280
+    // 结束态：LDA $00 尾次 A=FF；循环计数 X/Y 归零
+    mem.regs.a = 0xFF;
+    mem.regs.x = 0;
+    mem.regs.y = 0;
 }
 
 /// MMC1 串行写（5 次 STA，值 LSR 递移——bank07:C01C/C02B/C4FA 形态；非 RAM 面）。
@@ -139,6 +177,22 @@ mod tests {
         assert_eq!(m.read_ram(0x0355), 0x55); // 值=偏移低字节
         assert_eq!(m.read_ram(0x0000), 0x00); // ZP 不触
         assert_eq!(m.read_ram(0x0180), 0x00); // 栈页不触
+    }
+
+    /// C158 分派双态（bank07:C15B-C16B）：$1D==0∨$1F≠$1D→$01=2；否则 3。
+    /// 首遍经 sub_c16d 反哺（$00=FF/A=FF）——组件库复用溯源。
+    #[test]
+    fn c158_dispatch_two_states_and_c16d_reuse() {
+        let mut m = FrameMemory::default();
+        c158_unit(&mut m); // $1D=0 → $01=2
+        assert_eq!(m.read_ram(0x0001), 2);
+        assert_eq!(m.read_ram(0x0000), 0xFF); // sub_c16d 反哺 + 尾共段
+        assert_eq!(m.regs.a, 0xFF); // C16D 契约 A=FF
+        let mut m2 = FrameMemory::default();
+        m2.write_ram(0x001D, 5);
+        m2.write_ram(0x001F, 0x1D);
+        c158_unit(&mut m2); // $1D≠0 ∧ $1F==$1D（立即数）→ $01=3
+        assert_eq!(m2.read_ram(0x0001), 3);
     }
 
     /// WRAM 环（bank07:C057-C06B）：$6000-$7FFF 同型填充。

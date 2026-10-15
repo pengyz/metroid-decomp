@@ -19,3 +19,7 @@ pub const TABLE_968B: [u8; 0x80] = [
 pub fn table_968b(y: u8) -> u8 {
     TABLE_968B[(y & 0x7F) as usize]
 }
+
+/// PPU nametable 高位表（bank07:C19F `20 24 28 2C`——C158 清屏目标 $2000/$2400/$2800/$2C00；
+/// 索引=$01-1，A 级字节）。
+pub const NAMETABLE_HI: [u8; 4] = [0x20, 0x24, 0x28, 0x2C];
