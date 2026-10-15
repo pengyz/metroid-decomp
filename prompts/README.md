@@ -86,3 +86,8 @@
     （`git commit -- <paths>`）只提交自己路径，**不动他人暂存**；提交遇外源负载/index
     竞争=守窗口重试，不 resort --no-verify。**撞 index.lock 先判活死**（ps 查持锁者）：
     活锁=等待其 COMMIT-OK 后重试（绝不删锁）；确认持锁进程已亡=死锁方可 rm 并留记录。
+
+15. **两层架构纪律**（docs/spec/two-layer-architecture.md，2026-10-15 方法论更正）：
+    产品层（域模块 struct+method）**禁裸地址**；地址只活在 memmap 映射层；语义命名走
+    data/naming 台账（A/B 级+证据字段）；sub_* 机械名只在 shim/映射层注释回指 bank:addr。
+    验证不变式一条不松：行为钉死=结构可换（L2 案在形态迁移中必须持续全绿）。
