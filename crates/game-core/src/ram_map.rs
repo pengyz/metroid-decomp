@@ -17,6 +17,13 @@ pub const PPUCTRL_ZP: u16 = 0x00FF;
 /// progress」）——**成环标志同源**（decomp e3f2473：$C0C9 清/NMI 端置，C0CC 轮询）。
 pub const NMI_STATUS: u16 = 0x001A;
 
+/// TitleRoutine=$1F（constants_ram.asm:479「Stores title routine number currently
+/// running」；Startup `sty TitleRoutine`（Y=0）——boot/title 态 < $1D 短路面）。
+pub const TITLE_ROUTINE: u16 = 0x001F;
+
+/// MainRoutine=$1E（constants_ram.asm:478「5 = Game paused, 3 = Game engine running」）。
+pub const MAIN_ROUTINE: u16 = 0x001E;
+
 /// Samus 屏幕 X 坐标。
 /// 语义证据（B 级）：samus-move3 trace——右行窗口 0x00→8E、左行 8F→70（单调随行向变化）；
 /// 地址证据（A 级）：m1disasm constants_ram.asm 线索 $51 + seed 移动反应面（G4 findings A4）。
