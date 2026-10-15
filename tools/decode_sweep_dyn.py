@@ -114,7 +114,10 @@ def main() -> int:
     prg = load_prg()
     wmap = window_bank_map(prg)
     run = load_run(Path(args.traces))
-    static = json.loads(Path(args.static).read_text(encoding="utf-8"))
+    sf = Path(args.static)
+    if not sf.is_file():
+        raise SystemExit(f"FATAL: --static 不存在: {sf}")
+    static = json.loads(sf.read_text(encoding="utf-8"))
 
     print(f"[decode-sweep-dyn] traces={args.traces}")
     print(f"[decode-sweep-dyn] dispatch: {len(run['dispatch_summary'])} 三元组, "

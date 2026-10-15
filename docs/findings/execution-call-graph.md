@@ -389,3 +389,33 @@ $F0CF → $F1EE
 $F0DA → $CE84
 $F0DF → $F140
 ```
+
+## 7. 【2026-10-15 修正·P12 三件（verifier 复审 pass 后转办）】
+
+> 本节数字**取代 §1/§3/附录 B 的「55 静态未见」**（历史主张保留，见下更正注）。
+
+1. **对账口径修正**（§3/附录 B 的 55 虚高）：「静态边」原只比 seed 代码项——
+   岛内流调用点+跳转表边同属静态 xref 证据面未入账（$E789→$E792 案：r2 已知调用点
+   被误报「静态未见」）。补全对账全集（静态边 1056→**1812 对**）后：
+   **动态 jsr 边静态未见 55→1**（唯一真未见 `$F438→$E094`——顺带构成
+   $F438-$F43D 尾段为代码的正面证据，呼应 r2 续篇 §8 尾段待查）。
+2. **P12-F2 多 bank 展开消歧**已入 call_graph merge：窗口 site 逐 bank 查
+   `20 lo hi`==callee ⇒ 唯一命中收编「静态证实@bankN」（本次 7 条全落 bank1，
+   与 verifier 抽核 4/4 同面）。
+3. **P12-F1 类级修复（修一个实例≠修一类）**：P7-F2 只修了 decode_sweep_dyn 一处——
+   **静默 0 类清扫**后共 5 处收敛为统一 `require_file`/FATAL 语义
+   （call_graph load_run 双腿 / anchors --static / --anchor-meta / merge --static /
+   decode_sweep --matrix / decode_sweep_dyn --static）。**8 项负测试逐点实测**：
+   ```
+   T1 call_graph merge --run 缺失        → FATAL: traces 前缀无任何产物文件: /nonexistent/ep.entries/.edges.jsonl
+   T2 call_graph merge --repeat 第二腿缺失 → FATAL: traces 前缀无任何产物文件: /nonexistent/run2.entries/.edges.jsonl
+   T3 call_graph anchors --static 显式缺失 → FATAL: anchors --static 不存在: /nonexistent/sweep.json
+   T4 call_graph merge --static 缺失      → FATAL: merge --static 不存在: /nonexistent/sweep.json
+   T5 call_graph --anchor-meta 显式缺失   → FATAL: --anchor-meta 不存在: /nonexistent/meta.json
+   T6 decode_sweep_dyn --traces 缺失      → FATAL: traces 前缀无任何产物文件: /nonexistent/ep.*.jsonl
+   T7 decode_sweep_dyn --static 缺失      → FATAL: --static 不存在: /nonexistent/sweep.json
+   T8 decode_sweep --matrix 缺失          → FATAL: --matrix 不存在: /nonexistent/m.json
+   ```
+   教训入知识库：[gotcha-silent-zero-fix-class-not-instance](../knowledge/gotcha-silent-zero-fix-class-not-instance.md)。
+4. **P12-F3 双跑命名对称化**：`--repeat` 产物一律 `<prefix>.run1.*` / `<prefix>.run2.*`
+   后缀（本次已就地重排：execpath-boot.run1/run2 ✓）；旧别名目录已删，防「工件缺失」误报。

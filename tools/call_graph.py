@@ -17,6 +17,8 @@
   merge --run <prefix> [--run <prefix> ...] [--phase boot,move] --static <sweep.json>
       [--anchor-meta <meta.json>] [--repeat <prefixA> <prefixB>]
       合并多场景执行序 → 端口队列（stdout）；--repeat 做换时刻双跑对照。
+      双跑存档约定（P12-F3，对称命名防「工件缺失」误报）：跑 1/跑 2 一律
+      <prefix>.run1.* 与 <prefix>.run2.* 后缀，勿用单侧别名目录。
 
 复跑链（可复现）：
   python3 tools/decode_sweep.py --json /tmp/sweep.json
@@ -57,6 +59,8 @@ def cmd_anchors(args) -> int:
         for m in re.finditer(r"\bsub_([0-9A-F]{4})\b", line):
             subs.add(int(m.group(1), 16))
     island_entries: set[int] = set()
+    if args.static:
+        require_file(args.static, "anchors --static")
     if args.static and Path(args.static).is_file():
         st = json.loads(Path(args.static).read_text(encoding="utf-8"))
         for isl in st.get("islands", []):
@@ -80,8 +84,20 @@ def cmd_anchors(args) -> int:
     return 0
 
 
+def require_file(path: str | Path, what: str) -> Path:
+    """类级语义（P12-F1，2026-10-15）：显式输入路径不存在=FATAL，绝不静默按 0/空。
+    「修一个实例≠修一类」——凡产物路径消费点统一走本函数。"""
+    fp = Path(path)
+    if not fp.is_file():
+        raise SystemExit(f"FATAL: {what} 不存在: {fp}")
+    return fp
+
+
 def load_run(prefix: str) -> dict:
     p = Path(prefix)
+    if not any(Path(f"{prefix}.{t}.jsonl").is_file()
+               for t in ("entries", "edges")):
+        raise SystemExit(f"FATAL: traces 前缀无任何产物文件: {prefix}.entries/.edges.jsonl")
     def rd(tag):
         f = Path(f"{prefix}.{tag}.jsonl")
         rows = []
@@ -114,8 +130,9 @@ def cmd_merge(args) -> int:
     ds = _load_decode_sweep()
     banks = ds.load_prg()
     islands, code_items, labels = ds.parse_seed(banks)
+    require_file(args.static, "merge --static")
     stat = static_edges(ds, banks, islands, code_items, labels)
-    stat_pairs = {(s, t) for _k, s, t in stat}
+    stat_pairs = {(s, t) for _k, s, t in stat}  # 对账全集（后随 call_sites/跳转表补入）
 
     runs = []
     for i, pref in enumerate(args.run):
@@ -225,6 +242,12 @@ def cmd_merge(args) -> int:
             add_edge(adj, jt["site"], jt["target"])
         for cs in stj.get("call_sites", []):  # 岛内流调用点（decode_sweep r2/r3）
             add_edge(adj, cs["addr"], cs["target"])
+        # 对账全集（口径修正）：静态边 ≠ 仅 seed 代码项——岛内流调用点+跳转表边同属
+        # 静态 xref 证据面，否则「静态未见」虚高（$E789→$E792 案：r2 已知调用点误报）。
+        for cs in stj.get("call_sites", []):
+            stat_pairs.add((cs["addr"], cs["target"]))
+        for jt in stj.get("jump_table_entries", []):
+            stat_pairs.add((jt["site"], jt["target"]))
     except (OSError, json.JSONDecodeError):
         pass
     for (c, t, kind), _g in edges_all.items():
@@ -287,9 +310,29 @@ def cmd_merge(args) -> int:
               f"{kind}@{best[0]} | f{best[1]['first_frame']} | n={nd['n']} | in={indeg[a]}")
 
     if missed_static:
-        print("\n== 动态边静态未见（登记）==")
-        for c, t in missed_static[:20]:
-            print(f"  ${c:04X} → ${t:04X}")
+        # P12-F2 多 bank 展开消歧：窗口 site 在各 bank 同址查 `20 lo hi`==callee——
+        # 唯一命中 ⇒「静态证实@bankN」（收编）；多命中 ⇒ 共享头；零命中 ⇒ 真未见。
+        resolved, shared, unres = [], [], []
+        for c, t in missed_static:
+            if 0x8000 <= c <= 0xBFFF:
+                o = c - 0x8000
+                hits = [k for k in range(7)
+                        if banks[k].data[o] == 0x20
+                        and (banks[k].data[o + 1] | (banks[k].data[o + 2] << 8)) == t]
+                if len(hits) == 1:
+                    resolved.append((c, t, hits[0]))
+                elif hits:
+                    shared.append((c, t, hits))
+                else:
+                    unres.append((c, t))
+            else:
+                unres.append((c, t))
+        print(f"\n== 动态边静态未见消歧（P12-F2 多 bank 展开）==")
+        print(f"  唯一命中收编 {len(resolved)}；共享头多解 {len(shared)}；真未见 {len(unres)}")
+        for c, t, k in resolved[:20]:
+            print(f"  静态证实@bank{k}: ${c:04X} → ${t:04X}")
+        for c, t in unres[:20]:
+            print(f"  真未见: ${c:04X} → ${t:04X}")
     return 0
 
 
@@ -312,6 +355,8 @@ def main() -> int:
     a2.add_argument("--repeat", nargs=2, default=None, help="换时刻双跑前缀对")
     args = ap.parse_args()
     am = getattr(args, "anchor_meta", None)
+    if am:
+        require_file(am, "--anchor-meta")
     if am and Path(am).is_file():
         meta = json.loads(Path(am).read_text(encoding="utf-8"))
         _SUB_CACHE = {int(a, 16) for a in meta.get("sub_labels", [])}

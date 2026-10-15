@@ -683,8 +683,11 @@ def source_types(sources: set[str] | list[str]) -> list[str]:
 
 
 def denom_impact(results, cands: dict, justified_ok: set, matrix_path: Path | None):
-    if not matrix_path or not matrix_path.is_file():
+    if not matrix_path:
         return None
+    if not matrix_path.is_file():
+        # 类级语义（P12-F1）：矩阵=显式输入（默认亦是仓库文件），缺失=FATAL 不静默
+        raise SystemExit(f"FATAL: --matrix 不存在: {matrix_path}")
     m = json.loads(matrix_path.read_text(encoding="utf-8"))
     cells = m.get("cells", {})
     dregs, sfuncs = [], set()
