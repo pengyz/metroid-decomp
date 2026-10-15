@@ -483,6 +483,22 @@ unported! fail-loud ✓。无新 findings。
 替换带断言（C4B2 教训固化 ✓）。C4B2 过渡注（asm :1256 PrepVertMirror 补注 offer）记档。
 findings 三族标注（r10）：本批 **0 新 findings**。基线 42。
 
+## task-10 批 24：CopyMap/A93E（89dcd24）——WorldMap 拷贝 + 命名同 commit 首例
+
+### verdict: pass
+
+四查全过：①ROM 抽查 ✓（WorldMap prg[0x253E..0x293E] 1024B、**非 FF=511** 逐数吻合；
+4 迭代×256B+指针终态 inc×4 语义自证）②链规 17① asm 引证抽核 ✓（prg0_title.asm:5153
+`CopyMap: ; 00:A93E`/5118 `WorldMap: ; 00:A53E`/constants_ram:1298 `WorldMapRAM ds $400
+;$7000-$73FF` 三行命中）③命名同 commit（裁定①首例）✓——N-0019..N-0021 证据指针齐
+（WorldMap/WorldMapRAM=A 级 asm 注证）④桩位表实态：CopyMap 桩已消化 ✓（余 C5D7 链次
+桩+C0D9 NMI 面桩+988A/C51F 游戏态桩）——实跑先触 C0D9=场景执行序使然，与链次申报
+不矛盾但措辞注：链序≠实跑序，自证以桩位表+单测为准。findings（r10 三族）：0 新。
+
+> 【方法面补录】否定结论第三查「**换相位**」（decomp
+> gotcha-sampling-point-is-blind-spot，源自 C0D9 冲突案）：负向断言复核=换工具×
+> 换时刻×**换相位**三维——采样点相位盲区会把「零写」变假阴性。入检查清单第 5 条并列项。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
