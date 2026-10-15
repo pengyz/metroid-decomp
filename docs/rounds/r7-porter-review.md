@@ -451,6 +451,17 @@ MMC1 control=$FF mode3 + C01A 序 PRG=0）成立。引爆点迁移复现：`unpo
 钉住（我方复跑 ✓）。单测 24+8、基线 40、全闸 PASS。游戏态 $988A 路径未端口=显式
 unported! fail-loud ✓。无新 findings。
 
+## task-10 批 22：C4B2 单元端口（dd8093e）——MMC1 control 串行写
+
+### verdict: pass
+
+字节核 ✓：C4B2=`ea ea a9 47 4a 4a 4a 29 01 85 00 a5 25 29 fe 05 00 85 25 8d…`
+（bit 提取→$25 位合成→STA $8000 串行）、C4D9 变体=`a5 fa 4c b6 c4`（尾跳 $C4B6，
+未入 boot 序 doc 注记 ✓）；boot 态 control=0x0E（mode3）与 $988A bank0 归属自证
+一致 ✓。引爆点迁移复现：`unported @ bank07:C4DE`。残桩复验：grep 双形 0 命中 ✓
+（其自录链规②反面教材——首击静默未命中被测试器抓、grep 自证归零——处置闭环）。
+单测 25 全绿、基线 41。无新 findings。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
