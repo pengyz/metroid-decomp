@@ -566,6 +566,26 @@ CheckVRAMStructBufferWrite 与声明一致）。
 宏行总数 31 实数）——EndGame=第 30 位的索引结论不受影响，总数计错一位记档。
 findings 三族（r10）：1 轻（声明族）。基线 50、单测 34 全绿。
 
+## task-18 批 28a：EnExtra 命名债清偿（211c623）——15 真名+残余显式入账
+
+### verdict: pass
+
+四点核：①**15 字段三重证据形制 ✓**（N-0031..N-0045 逐条抽核：A 行为触达
+（bank07:F28E `BD F4 6A`/`C9 04` status=frozen 面）+ B Object 同构（constants_ram
+`.struct EnExtra`/`.struct Object` 同名同注）+ B 用例静态（nmikstas/prg3_tourian
+`sta EnsExtra…` 用例面）——证据指针 18/18 在位）②**社区 Unknown 四字段自证 ✓**：
+subPixel 族=areas_common.asm:898 内容锚「apply sub-pixel speed to sub-pixel position」
+（引文逐字命中）+ IntX/IntY 同构；accel 族=`lda EnAccelYTable,y`（prg7_engine 内容锚
+命中）表喂互证——C→B 升级路径成立 ③**真不知 5 项 ✓**：N-0046 data1F=**拒采**（§3.2
+伪语义名纪律执行面）+「移动指令位模式修饰器假设，待行为自证升级」——假设级显式、
+**未越级当结论** ✓；N-0047/0404、N-0048/040E 留 _todo_+C 级假设注（三矿补查
+m1disasm 无名/nmikstas 用例面随记）=纪律正确 ④P27-F1 计数补正：当前无新引用面
+（grep 30/31 项零命中）——**下次引用 TitleRoutinePtrTable 须带 31 项**（记档待办）。
+轻症 2：areas_common 引证路径粒度（实址 SRC/areas_common.asm 非 brinstar/ 族，
+内容锚在不碍复现）；stat 对账 6 文件=意图一致 ✓。
+
+findings 三族（r10）：0 阻断、2 轻（声明族）。基线 48→55、命名 30→48（含批 26/27 后续）。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
