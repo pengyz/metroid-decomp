@@ -91,6 +91,7 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "sub_F1BF" => Some(sub_f1bf),
         "sub_F140" => Some(sub_f140),
         "sub_F1A7" => Some(sub_f1a7),
+        "sub_F1B3" => Some(sub_f1b3),
         _ => None,
     }
 }
@@ -185,6 +186,22 @@ pub fn sub_f1a7(input: &L2In) -> L2Out {
         .wrapping_add(input.ram[(0x0301 + y) as usize & 0x7FF]);
     let v5 = input.ram[(0x0302 + x) as usize & 0x7FF]
         .wrapping_add(input.ram[(0x0302 + y) as usize & 0x7FF]);
+    L2Out { a: v5, x: input.x, y: input.y, writes: vec![(0x0004, v4), (0x0005, v5)] }
+}
+
+/// sub_F1B3 —— bank07:F1B3-F1BE（`LDA $301,X / JSR F1E7 / LDA $302,X / JMP loc_F1CB` 共享尾变体）。
+/// L2 窗口 stops=bank07:F1D1（loc_F1CB 尾 RTS 址截断）。
+/// 语义（A 级：ROM 原字节 `BD 01 03 20 E7 F1 BD 02 03 4C CB F1` 逐指令）：
+/// $04 ← RAM[$301+X] + WRAM[$6AF5+Y]（F1E7 尾 CLC/ADC $6AF5,Y/STA $04）；
+/// $05 ← RAM[$302+X] + WRAM[$6AF6+Y]（loc_F1CB CLC/ADC $6AF6,Y/STA $05）。
+/// 末值 A=$05；X/Y 透传；ADC **abs,Y 读 WRAM $6AFx 域**（16 位加，$6AF5+Y≤$6BF4）。
+pub fn sub_f1b3(input: &L2In) -> L2Out {
+    let x = input.x as u16;
+    let y = input.y as usize;
+    let w5 = input.wram.get(0x6AF5 + y - 0x6000).copied().unwrap_or(0);
+    let w6 = input.wram.get(0x6AF6 + y - 0x6000).copied().unwrap_or(0);
+    let v4 = input.ram[(0x0301 + x) as usize & 0x7FF].wrapping_add(w5);
+    let v5 = input.ram[(0x0302 + x) as usize & 0x7FF].wrapping_add(w6);
     L2Out { a: v5, x: input.x, y: input.y, writes: vec![(0x0004, v4), (0x0005, v5)] }
 }
 
