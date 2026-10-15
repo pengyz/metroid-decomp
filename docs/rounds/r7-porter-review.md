@@ -652,6 +652,19 @@ bvc-bvs 双 iny 路径）/数据岛边界——第六案「解码错位一位类
 ②测试期望 lo/hi 序写反（**期望值错非模型错**——[hi][lo] 双证裁明）——诚实分级 ✓。
 findings（r10）：0 新。基线 66。
 
+## task-10 批 31：VRAMStructWrite/C2E4（3fdfc7b）——消费走带（对偶镜像）
+
+### verdict: pass
+
+四查+第 7 查：①asm 锚三处命中 ✓（`VRAMStructWriteData: ; 07:C2E4`/`VRAMStructWrite:
+; 07:C30C`（ldx PPUSTATUS 清 flip-flop/jmp WriteScroll 尾跳）/`SetPPUInc: ; 07:C318`
+（sta PPUCTRL+PPUCTRL_ZP）——地址与内容锚逐对）②**结构互核注②件 ✓**：段内 y 推进
+与生产端（批 30）互为镜像（非 RLE 每字节/RLE 值一次）——成对对表点自洽；尾跳栈深
+一层语义（WriteScroll RTS 回清理段）核对成立 ③单测 3 绿（走带镜像+ $FF 增量位断言+
+尾跳引爆）④引爆迁移 `bank07:C29A` ✓——**同帧生产→消费全通→尾跳**=真实执行序
+（C37E→C2E4→C29A 链贯通）。SetPPUInc 动 $FF=RAM watch 面可观测副作用显式标注 ✓。
+findings（r10）：0 新。基线 67。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
