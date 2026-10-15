@@ -87,6 +87,8 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "sub_F1EE" => Some(sub_f1ee),
         "sub_F1E0" => Some(sub_f1e0),
         "sub_F152" => Some(sub_f152),
+        "sub_F186" => Some(sub_f186),
+        "sub_F1BF" => Some(sub_f1bf),
         _ => None,
     }
 }
@@ -130,5 +132,39 @@ pub fn sub_f152(input: &L2In) -> L2Out {
         x: input.x,
         y: input.y,
         writes: vec![(0x0007, v7), (0x0009, v9), (0x000B, vb)],
+    }
+}
+
+/// sub_F186 —— bank07:F186-F199（Y 变体坐标/属性读取）：
+/// $06 ← RAM[$30D+Y]；$08 ← RAM[$30E+Y]；$0A ← (RAM[$30C+Y] ^ RAM[$FF]) & 1。
+/// 语义证据（A 级）：seed 逐指令；F193 `45 FF` = EOR **零页 $FF**（同 F17F 教训）。
+pub fn sub_f186(input: &L2In) -> L2Out {
+    let y = input.y as u16;
+    let v6 = input.ram[(0x030D + y) as usize & 0x7FF];
+    let v8 = input.ram[(0x030E + y) as usize & 0x7FF];
+    let va = (input.ram[(0x030C + y) as usize & 0x7FF] ^ input.ram[0x00FF]) & 1;
+    L2Out {
+        a: va,
+        x: input.x,
+        y: input.y,
+        writes: vec![(0x0006, v6), (0x0008, v8), (0x000A, va)],
+    }
+}
+
+/// sub_F1BF —— bank07:F1BF-F1DF（WRAM 源坐标累加，经 sub_F1E0/loc_F1D9 共享尾）：
+/// $04 ← WRAM[$6AF5+X] + RAM[$301+Y]；$05 ← WRAM[$6AF6+X] + RAM[$302+Y]。
+/// 语义证据（A 级）：seed 逐指令；$6AFx=WRAM 域（findings 定谳）。
+pub fn sub_f1bf(input: &L2In) -> L2Out {
+    let x = input.x as usize;
+    let y = input.y as u16;
+    let w1 = input.wram.get(0x6AF5 + x - 0x6000).copied().unwrap_or(0);
+    let w2 = input.wram.get(0x6AF6 + x - 0x6000).copied().unwrap_or(0);
+    let v4 = w1.wrapping_add(input.ram[(0x0301 + y) as usize & 0x7FF]);
+    let v5 = w2.wrapping_add(input.ram[(0x0302 + y) as usize & 0x7FF]);
+    L2Out {
+        a: v5,
+        x: input.x,
+        y: input.y,
+        writes: vec![(0x0004, v4), (0x0005, v5)],
     }
 }

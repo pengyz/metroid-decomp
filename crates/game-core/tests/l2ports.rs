@@ -71,3 +71,22 @@ fn f152_wram_and_eor_zp_semantics() {
     assert_eq!(r.a, 0); // (5 ^ 1) & 1 = 0 —— EOR zp 语义锁定
     assert_eq!(r.writes[2], (0x000B, r.a));
 }
+
+#[test]
+fn f186_f1bf_semantics() {
+    let mut inp = input(0x11, 0x02, 0x03); // Y=3
+    inp.ram[0x030D + 3] = 0xAA;
+    inp.ram[0x030E + 3] = 0xBB;
+    inp.ram[0x030C + 3] = 0b101;
+    inp.ram[0x00FF] = 0b001; // EOR 零页 $FF ⇒ bit0 翻转
+    let r = l2ports::sub_f186(&inp);
+    assert_eq!((r.a, r.writes), (0, vec![(0x0006, 0xAA), (0x0008, 0xBB), (0x000A, 0)]));
+    let mut inp2 = input(0, 0x02, 0x03);
+    inp2.wram = vec![0; 0x2000];
+    inp2.wram[0x6AF5 + 2 - 0x6000] = 0xF0;
+    inp2.wram[0x6AF6 + 2 - 0x6000] = 0x20;
+    inp2.ram[0x0301 + 3] = 0x20;
+    inp2.ram[0x0302 + 3] = 0x90;
+    let r = l2ports::sub_f1bf(&inp2);
+    assert_eq!((r.a, r.writes), (0xB0, vec![(0x0004, 0x10), (0x0005, 0xB0)])); // 8 位回绕加法
+}

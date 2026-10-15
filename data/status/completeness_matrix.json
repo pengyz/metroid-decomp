@@ -19,7 +19,7 @@
     },
     "symbol": {
       "denominator": 450,
-      "covered": 6
+      "covered": 9
     },
     "data": {
       "denominator": 193
@@ -3669,9 +3669,9 @@
       "id": "S-FUNC-07-F152",
       "face": "symbol",
       "module": "engine",
-      "strength": "L0",
-      "covered": false,
-      "evidence": "bank07:F152-F162（IDA 机械切分 size=16）",
+      "strength": "L2",
+      "covered": true,
+      "evidence": "oracle/subroutines/l2_cases.jsonl#gen-f152-* 三方全等（WRAM 读表件，EOR zp 语义）",
       "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
     },
     "S-FUNC-07-F172": {
@@ -3687,9 +3687,9 @@
       "id": "S-FUNC-07-F186",
       "face": "symbol",
       "module": "engine",
-      "strength": "L0",
-      "covered": false,
-      "evidence": "bank07:F186-F19A（IDA 机械切分 size=20）",
+      "strength": "L2",
+      "covered": true,
+      "evidence": "oracle/subroutines/l2_cases.jsonl#gen-f186-* 三方全等（Y 变体坐标读取）",
       "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
     },
     "S-FUNC-07-F19A": {
@@ -3714,9 +3714,9 @@
       "id": "S-FUNC-07-F1BF",
       "face": "symbol",
       "module": "engine",
-      "strength": "L0",
-      "covered": false,
-      "evidence": "bank07:F1BF-F1CB（IDA 机械切分 size=12）",
+      "strength": "L2",
+      "covered": true,
+      "evidence": "oracle/subroutines/l2_cases.jsonl#gen-f1bf-* 三方全等（WRAM 源坐标累加）",
       "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
     },
     "S-FUNC-07-F1D2": {
