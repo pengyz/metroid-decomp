@@ -107,3 +107,42 @@ pub fn f2ca(input: &L2In) -> L2Out {
     ];
     L2Out { a: a_out, x: input.x, y: input.y, writes }
 }
+
+/// f2ed 适配（注册名 `sub_F2ED` ← bank07:F2ED-F310，stops=bank07:F310）。
+///
+/// **carry 敏感 + CD9C 探针路由 + 跨 view 组合**：
+/// 入参 C=1（`B0 21` BCS $F310）⇒ 空写集直出；
+/// C=0 ⇒ EnemyTodo0404::or_writeback（$0404+Y←RAM[$10]|old，JSR F2DF）→ CD9C 探针
+/// （进位=关键输出）→ 探针 C=0 ⇒ 出口（A=探针 A）；
+/// 探针 C=1 ⇒ $010F←$80（暂存）+ EnemyAttrs::or_attribute（$030A+X←变换掩码|old，JSR F270）
+/// + $6E/$6F←ROM 向量常量（window_bank=7 约定 A9）；出口 A=ROM_VEC_HI。
+/// 写集：域 write_event + 暂存面事件推导。
+pub fn f2ed(input: &L2In) -> L2Out {
+    const FLAG_C: u8 = 0x01;
+    if input.p & FLAG_C != 0 {
+        return L2Out { a: input.a, x: input.x, y: input.y, writes: vec![] };
+    }
+    let mut v0404 = memmap::enemy_todo_0404::decode_todo_0404(&input.ram);
+    let a_df = v0404.or_writeback(input.y, memmap::enemy_todo_0404::mask10(&input.ram));
+    let probe = memmap::cd9c::probe(&input.ram, &input.wram, a_df);
+    if !probe.carry {
+        // F2F2 TYA/PHA/…/F2F7 PLA/TAY：出口 A=Y_in（探针 A 被 PLA 覆盖——ROM 裁定修正案）
+        return L2Out {
+            a: input.y,
+            x: input.x,
+            y: input.y,
+            writes: vec![memmap::enemy_todo_0404::write_event(input.y, a_df)],
+        };
+    }
+    let mut attrs = memmap::enemy_attrs::decode_attrs(&input.ram);
+    let mask = memmap::enemy_todo_0404::mask10_transformed(&input.ram);
+    let attr_v = attrs.or_attribute(input.x, mask);
+    let writes = vec![
+        memmap::enemy_todo_0404::write_event(input.y, a_df),
+        memmap::flow_scratch::event_010f(memmap::flow_scratch::F2ED_SCRATCH_INIT),
+        memmap::enemy_attrs::write_event(input.x, attr_v),
+        memmap::flow_scratch::event_vec_lo(memmap::flow_scratch::ROM_VEC_LO),
+        memmap::flow_scratch::event_vec_hi(memmap::flow_scratch::ROM_VEC_HI),
+    ];
+    L2Out { a: memmap::flow_scratch::ROM_VEC_HI, x: input.x, y: input.y, writes }
+}

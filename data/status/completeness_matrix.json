@@ -3907,6 +3907,15 @@
       "evidence": "oracle/subroutines/l2_cases.jsonl#gen-f2df-0..7 + #b-f2df-yff/b-f2df-y0/b-f2df-mask 三方全等（golden==ROM 执行==game-core）；语义来源 ROM 原字节 bank07:F2DF-F2E7=A5 10 19 04 04 99 04 04 60 逐指令",
       "note": "decode-gap 补录格（IDA 机械切分漏码当数据，decode-sweep r1 §3 岛 $F2CA-$F305 A 级）；denoms 机械切分待纠偏（decode-sweep/task-2 出 v2 后回填）；L2 窗口 stops=bank07:F2E7：$0404+Y←RAM[$10]|old（LDA zp $10 起手，入参 A 不影响），A=RAM[$10]|old；F2CA 族九入口第 2 件；【two-layer §5 迁移】已域化=enemy::EnemyTodo0404::or_writeback + verify_shim::f2df 委派（掩码=memmap 掩码源 zp），同批 11 案迁移前后双绿，旧字面转写 c523762 留史"
     },
+    "S-FUNC-07-F2ED": {
+      "id": "S-FUNC-07-F2ED",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L2",
+      "covered": true,
+      "evidence": "oracle/subroutines/l2_cases.jsonl#gen-f2ed-0..7 + #b-f2ed-c1-exit/b-f2ed-cd9c-c0/b-f2ed-full 三方全等（golden==ROM 执行==game-core）；语义来源 ROM 原字节 bank07:F2ED-F310=B0 21 20 DF F2 98 48 20 9C CD 68 A8 90 15 A9 80 8D 0F 01 20 32 F3 20 70 F2 + F306 尾逐指令 + CD9C 全区折叠",
+      "note": "decode-gap 补录格（IDA 机械切分漏码当数据，decode-sweep r1 §3 岛 $F2CA-$F305 A 级）；denoms 机械切分待纠偏（decode-sweep/task-2 出 v2 后回填）；【two-layer §5 新实施件】carry 敏感+CD9C 探针路由+跨 view（or_writeback→探针→set 暂存/or_attribute/ROM 向量）；出口 A=Y_in（TYA/PHA/PLA 恢复，ROM 裁定修正案）；L2 窗口 stops=bank07:F310（内返回址 F2E7/CDBE/C2C9/F276 逐址核过）；F2CA 族九入口第 7 件"
+    },
     "S-FUNC-07-F311": {
       "id": "S-FUNC-07-F311",
       "face": "symbol",

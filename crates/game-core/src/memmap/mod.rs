@@ -10,7 +10,9 @@
 //! 迁移注：存量 l2ports 切片转写（sub_F2xx 字面形态）按 §5 留作 verify_shim 参考件，
 //! 逐域被语义实现替换后退役——对拍连续性优先，暂不删。
 
+pub mod cd9c;
 pub mod enemy_attrs;
 pub mod enemy_slots;
 pub mod enemy_todo_0404;
 pub mod enemy_todo_040e;
+pub mod flow_scratch;
