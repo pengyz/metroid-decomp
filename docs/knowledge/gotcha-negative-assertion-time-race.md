@@ -19,14 +19,21 @@ type: gotcha
   gotcha-evidence-grep-needs-fixed-string 同族）——审计侧看到「不存在/红」时先问
   「哪个时刻、谁在写」。
 
-## 复现（2026-10-15，案情原文见 docs/rounds/r7-decode-sweep-review.md method 面）
+## 复现（2026-10-15）
+
+> 【2026-10-15 指针校正】原文引「r7-decode-sweep-review.md method 面」为悬空指针——
+> 教训原文实际落 [r7-design-closure.md](../rounds/r7-design-closure.md)「教训补录
+> （2026-10-15）：否定结论换时刻复核（负向断言的时效竞态面）」节（含案情/定义/
+> 聊天原文摘录；verifier「声称记账≠记账」自省案同在）。本条建链前未核目标，
+> 教训自用（先建目标后建引用 + 核目标存在）。
 ```
 t0: decomp 建 docs/findings/decode-sweep-report.md 引用
     ../knowledge/gotcha-policy-docstring-not-enforced.md（先引用后建目标——本体违规，
     教训：先建目标后建引用）
 t1: verifier check → docs-links 红；双工具核实目标不存在（负向断言成立）
 t2: decomp 落库 gotcha 条目
-t3: verifier 复核 → 自愈；撤回「不存在」误报并记账本条教训
+t3: verifier 复核 → 自愈；撤回「不存在」误报并**声称**记账（实落 r7-design-closure
+    为后补，「声称记账≠记账」自省见该节——见上指针校正注）
 ```
 门禁红在 t1 为真、目标在 t2 后存在——两句都对，靠**时点**区分。
 
