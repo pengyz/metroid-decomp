@@ -163,8 +163,9 @@ mod tests {
             })).unwrap_err())
         };
         let mut m = FrameMemory::default();
-        m.write_ram(GAME_MODE, 1); // boot/title 态
-        assert!(boom(&mut m).contains("unported @ bank07:C37E")); // 8AC7 已消化→C37E
+        m.write_ram(GAME_MODE, 1); // boot/title 态 → StarPaletteSwitch（已端口=全通）
+        check_palette_write(&mut m);
+        assert_eq!(m.read_ram(crate::ram_map::PPU_DATA_PENDING), 1); // 生产端效应断言
         let mut m2 = FrameMemory::default();
         m2.write_ram(GAME_MODE, 1);
         m2.write_ram(TITLE_ROUTINE, 0x1D); // ending
