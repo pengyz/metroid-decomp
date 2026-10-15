@@ -210,11 +210,41 @@ pub fn c4de_unit(mem: &mut FrameMemory) {
 fn c531_unit(mem: &mut FrameMemory) {
     mem.write_ram(0x0031, 0);
     mem.write_ram(0x001D, 1);
-    crate::unported!("bank07:C45D"); // 链首桩（每引爆一个端一个）
+    // ScreenNmiOff（asm :1165——已端口；内含 NMI 面引爆）
+    screen_nmi_off(mem);
+    crate::unported!("bank07:A93E"); // 链次桩（CopyMap——窗口件）
     #[allow(unreachable_code)]
     {
         // 后续链段：JSR $A93E（窗口件）/JSR $C158（c158_unit 复用）/ROM→WRAM 拷贝
         // （memmap 烘焙源）/JSR $C5D7/JMP $C487——逐段端口
+    }
+}
+
+/// ScreenNmiOff 单元（**asm 引证主体**，链规 17）——refs/m1disasm/SRC/prg7_engine.asm:1165
+/// `ScreenNmiOff: ; 07:C45D`（注：「Turn off both screen and NMI」）：`lda PPUMASK_ZP /
+/// and #~(PPUMASK_BG_ON|PPUMASK_OBJ_ON)`（hardware.asm:37/39 位掩码 0x08|0x10）→
+/// `jsr WriteAndWait ($C43D)`（:1129「Update value to be loaded into PPU control register」+
+/// :1133 `WaitNMIPass_`（「Indicate currently in NMI」`jsr ClearNMIStat`（:1117 `lda #$00 /
+/// sta NMIStatus`）→「Wait for NMI to end」自旋 $1A≠0）→ `lda PPUCTRL_ZP /
+/// and #~PPUCTRL_VBLKNMI_ON`（hardware.asm:28=0x80）/ `sta PPUCTRL_ZP` / `sta PPUCTRL`。
+/// ROM 抽查：`C45D: AD FE 20`…（注：asm 为 zp 符号形态，字节见 L2 窗口自证）。
+///
+/// **NMI 面引爆**（task-13 对表中）：自旋出口的 $1A 可观测值=NMI 端写值
+/// （prg7_engine.asm:280 `sty NMIStatus`）——NMI 单元未端口前不可发明，fail-loud
+/// 爆在 `bank07:C0D9`（lead 提前招呼已发）。
+pub fn screen_nmi_off(mem: &mut FrameMemory) {
+    use crate::ram_map::{NMI_STATUS, PPUMASK_ZP, PPUCTRL_ZP};
+    let _ = PPUCTRL_ZP;
+    let m = mem.read_ram(PPUMASK_ZP) & !(0x08u8 | 0x10);
+    mem.write_ram(PPUMASK_ZP, m); // WriteAndWait `sta PPUMASK_ZP`
+    mem.write_ram(NMI_STATUS, 0); // ClearNMIStat（C434）
+    crate::unported!("bank07:C0D9"); // NMI-end 标记写值（task-13 对表）
+    #[allow(unreachable_code)]
+    {
+        // 自旋出口后（C0D9 端口后可达）：PPUCTRL_ZP &= !0x80；STA PPUCTRL_ZP/PPUCTRL
+        let c = mem.read_ram(PPUCTRL_ZP) & !0x80;
+        mem.write_ram(PPUCTRL_ZP, c);
+        mem.write_io(io::PPU_CTRL, c);
     }
 }
 
@@ -341,10 +371,23 @@ mod tests {
         m.write_ram(0x0024, 1); // boot 态
         let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| c4de_unit(&mut m)));
         let msg = panic_message(&r.unwrap_err());
-        assert!(msg.contains("unported @ bank07:C45D"), "引爆点失准: {msg}");
+        assert!(msg.contains("unported @ bank07:C0D9"), "引爆点失准: {msg}");
         assert_eq!(m.read_ram(0x0024), 0); // C4E8 已跑
         assert_eq!(m.read_ram(0x0023), 0);
         assert_eq!(m.read_ram(0x0028), 0); // ($28&0x18)|0
+    }
+
+    /// ScreenNmiOff 可达面（$FE 遮蔽+$1A=0）+ NMI 面引爆（C0D9 fail-loud）。
+    #[test]
+    fn screen_nmi_off_masks_and_detonates_at_nmi_face() {
+        use crate::ram_map::{NMI_STATUS, PPUMASK_ZP};
+        let mut m = FrameMemory::default();
+        m.write_ram(PPUMASK_ZP, 0xFF);
+        let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| screen_nmi_off(&mut m)));
+        let msg = panic_message(&r.unwrap_err());
+        assert!(msg.contains("unported @ bank07:C0D9"), "引爆点失准: {msg}");
+        assert_eq!(m.read_ram(PPUMASK_ZP), 0xE7); // !(0x08|0x10) 遮蔽
+        assert_eq!(m.read_ram(NMI_STATUS), 0); // ClearNMIStat
     }
 
     /// WRAM 环（bank07:C057-C06B）：$6000-$7FFF 同型填充。

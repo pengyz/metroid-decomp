@@ -3,6 +3,20 @@
 //! 纪律（D5/AGENTS §3）：地址经 seed 字节自证=A 级；语义经 trace 行为相关性=B 级；
 //! 第三方命名（m1disasm）仅作线索，本模块名字为自证后采用的候选名（台账登记待批量期统一）。
 
+/// asm 命名采纳（链规 17/task-16 流：refs 候选→自证→台账 N-0014+）：
+
+/// PPUMASK_ZP=$FE（refs/m1disasm/SRC/constants_ram.asm:797「Data byte to be loaded into
+/// PPU control register 1」；ScreenNmiOff/WriteAndWait 面）。
+pub const PPUMASK_ZP: u16 = 0x00FE;
+
+/// PPUCTRL_ZP=$FF（constants_ram.asm:798「Data byte to be loaded into PPU control
+/// register 0」；NMI 使能位镜像面）。
+pub const PPUCTRL_ZP: u16 = 0x00FF;
+
+/// NMIStatus=$1A（constants_ram.asm:474「0=NMI in progress. anything else, NMI not in
+/// progress」）——**成环标志同源**（decomp e3f2473：$C0C9 清/NMI 端置，C0CC 轮询）。
+pub const NMI_STATUS: u16 = 0x001A;
+
 /// Samus 屏幕 X 坐标。
 /// 语义证据（B 级）：samus-move3 trace——右行窗口 0x00→8E、左行 8F→70（单调随行向变化）；
 /// 地址证据（A 级）：m1disasm constants_ram.asm 线索 $51 + seed 移动反应面（G4 findings A4）。
@@ -90,5 +104,13 @@ mod tests {
         assert_eq!(SAMUS_ACCEL_Y, 0x314);
         assert_eq!(SAMUS_ACCEL_X, 0x315);
         assert_eq!(SAMUS_MAXSPEED_X_SRC, 0x316);
+    }
+
+    /// asm 命名采纳常量的地址自证锁（N-0014/15/16：constants_ram.asm 797/798/474 注址）。
+    #[test]
+    fn boot_face_constants_match_asm_addresses() {
+        assert_eq!(PPUMASK_ZP, 0x00FE); // constants_ram.asm:797
+        assert_eq!(PPUCTRL_ZP, 0x00FF); // constants_ram.asm:798
+        assert_eq!(NMI_STATUS, 0x001A); // constants_ram.asm:474
     }
 }

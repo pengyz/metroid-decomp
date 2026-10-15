@@ -86,7 +86,7 @@ mod tests {
         let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| e.tick_frame()));
         let err = r.unwrap_err();
         let msg = panic_message(&err);
-        assert!(msg.contains("unported @ bank07:C45D"), "引爆点失准: {msg}");
+        assert!(msg.contains("unported @ bank07:C0D9"), "引爆点失准: {msg}");
     }
 
     /// tick_frame 执行序：tick 先行 + C01A 单元清零环生效 + 引爆前态可检。
