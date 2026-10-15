@@ -85,6 +85,11 @@ pub const SFX_MULTI_INIT: u16 = 0x0684;
 /// MusicInitFlags=$0685（「Music init flags」）。
 pub const MUSIC_INIT: u16 = 0x0685;
 
+/// SamusAge=$687D（asm 名；constants_ram 内容锚「ds 4 ;$687D ;In-game time used for
+/// ending. Units of 256 frames」+ $687E/$687F/$6880 进位族——**WRAM 面 4 字节**；
+/// UpdateAge `inc SamusAge,x` 面；标题态不触）。
+pub const SAMUS_AGE: u16 = 0x687D;
+
 /// MainRoutine=$1E（constants_ram.asm:478「5 = Game paused, 3 = Game engine running」）。
 pub const MAIN_ROUTINE: u16 = 0x001E;
 

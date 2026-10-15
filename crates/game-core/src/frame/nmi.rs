@@ -44,10 +44,7 @@ fn nmi_body(mem: &mut FrameMemory) {
     write_scroll(mem); // WriteScroll（asm :717——已端口）
     read_joy_pads(mem); // ReadJoyPads（asm :1215 族——已端口）
     sound_engine(mem); // SoundEngine（sound_engine.asm :384 族——已端口）
-    #[allow(unreachable_code)]
-    {
-        crate::unported!("bank07:C97E"); // UpdateAge（NMI 体末件）
-    }
+    update_age(mem); // UpdateAge（asm :2088 族——已端口；NMI 体末件）
 }
 
 /// NMIScreenWrite 单元（**asm 引证主体**，链规 17）——
@@ -260,6 +257,27 @@ pub fn write_scroll(mem: &mut FrameMemory) {
     mem.write_io(0x2005, y);
 }
 
+/// UpdateAge 单元（**asm 内容锚+结构互核注**）——
+/// refs/m1disasm/SRC/prg7_engine.asm `UpdateAge: ; 07:C97E`（注「Exit if at title/
+/// password screen」：`lda GameMode/bne @RTS`——**boot/title 态纯短路**；游戏路径
+/// （GameMode==0 ∧ MainRoutine==_id_GameEngine ∧ FrameCount==0）→`inc SamusAge,x`/
+/// `cmp #$D0` 进位族）。
+///
+/// **结构互核注**：三重短路门（GameMode/MainRoutine/FrameCount 节拍）——标题态全不触
+/// SamusAge（帧界可观测面零写）；游戏路径=**Samus 年龄域件**（task-11 面）fail-loud。
+pub fn update_age(mem: &mut FrameMemory) {
+    if mem.read_ram(crate::ram_map::GAME_MODE) != 0 {
+        return; // 标题/密码态即时 RTS
+    }
+    if mem.read_ram(crate::ram_map::MAIN_ROUTINE) != 3 {
+        return; // 非 GameEngine（注证：3 = Game engine running）→ RTS
+    }
+    if mem.read_ram(crate::ram_map::FRAME_COUNT) != 0 {
+        return; // 节拍门（每 256 帧一更）
+    }
+    crate::unported!("bank07:C97E-age"); // Samus 年龄域件（$D0 进位族——task-11 面）
+}
+
 /// 尾段（**恒量 1 写**——:279-280 `ldy #$01 / sty NMIStatus`）。
 /// 契约断言面：spin 出口采样点 $1A==1（§8.1②采样点对齐）。
 pub fn nmi_tail(mem: &mut FrameMemory) {
@@ -330,6 +348,23 @@ mod tests {
         check_palette_write(&mut m4);
     }
 
+    /// UpdateAge 标题态纯短路（GameMode≠0 ⇒ 零写即时出）+游戏路径引爆。
+    #[test]
+    fn update_age_title_short_circuits() {
+        use crate::ram_map::{FRAME_COUNT, GAME_MODE, MAIN_ROUTINE, SAMUS_AGE};
+        let mut m = FrameMemory::default();
+        m.write_ram(GAME_MODE, 1); // title 态
+        update_age(&mut m); // 短路（零写）
+        assert_eq!(m.read_wram(SAMUS_AGE), 0); // WRAM 面（$687D）
+        // 游戏路径（GameMode=0/主例程=3/帧计数=0）
+        m.write_ram(GAME_MODE, 0);
+        m.write_ram(MAIN_ROUTINE, 3);
+        m.write_ram(FRAME_COUNT, 0);
+        let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| update_age(&mut m)));
+        let msg = panic_message(&r.unwrap_err());
+        assert!(msg.contains("unported @ bank07:C97E-age"), "引爆点失准: {msg}");
+    }
+
     /// SoundEngine boot 面（全短路+6 旗同值写事件）+非零旗引爆。
     #[test]
     fn sound_engine_boot_face_and_flag_detonates() {
@@ -393,7 +428,7 @@ mod tests {
         m.write_ram(NMI_STATUS, 1);
         nmi_body(&mut m); // 不炸=跳过成功
         m.write_ram(NMI_STATUS, 0);
-        let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| nmi_body(&mut m)));
-        assert!(r.is_err(), "非超帧应进工作体桩");
+        nmi_body(&mut m); // NMI 体全通（boot 态各单元短路面）
+        assert_eq!(m.read_ram(crate::ram_map::SFX_PAUSED), 0); // 体效应面
     }
 }
