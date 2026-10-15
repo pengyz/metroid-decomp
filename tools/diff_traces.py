@@ -179,6 +179,31 @@ def load_frames(raw: bytes, where: str) -> tuple[dict[int, dict], list[int], str
 INTERRUPT_FRAME_EXCLUDE = (0x01FC, 0x01FD, 0x01FE)
 
 
+def check_nmi_anchor(frames: dict, watch: list[dict], sample_point: str | None,
+                     side: str) -> tuple[str | None, str]:
+    """恒 1 断言（l3 契约 §8.1 点 3，v4 B2 接线）：watch 覆盖 $001A 时逐帧断言 $1A==01。
+
+    采样点声明门：manifest 顶层 `sample_point`=="spin-exit" ⇒ 断言生效（≠01=NMI 面
+    退化诊断信号，FAIL）；缺省（endFrame 旧采样，oracle 迁移槽 3b 未走）⇒ 断言显式
+    **不适用**（note 随行打印，绝不静默装绿）。"""
+    anchor_w = [w for w in watch
+                if int(w["base"], 16) <= 0x001A < int(w["base"], 16) + w.get("_span", 0)]
+    if not anchor_w:
+        return None, ""
+    if sample_point != "spin-exit":
+        return None, (f"恒 1 断言不适用（{side}）：sample_point="
+                      f"{sample_point or 'endFrame(缺省)'}≠spin-exit（迁移槽 3b 未走，显式）")
+    w = anchor_w[0]
+    base = int(w["base"], 16)
+    off = (0x001A - base) * 2
+    for f in sorted(frames):
+        v = frames[f][w["label"]].upper()
+        if v[off:off + 2] != "01":
+            return (f"恒 1 断言失败（{side}）: frame {f} 字段 {w['label']} CPU $001A=0x"
+                    f"{v[off:off + 2]}（≠01）——NMI 面退化信号（spin 出口采样点，契约 §8.1 点 3）"), ""
+    return None, f"恒 1 断言过（{side}）：{len(frames)} 帧 $001A 全 01"
+
+
 def compare_frames(left: dict, right: dict, watch: list[dict]) -> tuple[str | None, int]:
     """逐帧逐 watch 字段比对（值已过合法性校验）；返回 (首分歧描述或 None, 排除分歧计数)。"""
     lframes, rframes = sorted(left), sorted(right)
@@ -275,6 +300,13 @@ def main() -> int:
             print(f"[FAIL] {cid}: {v}")
             failed += 1
             continue
+        aerr, anote = check_nmi_anchor(left, watch, doc.get("sample_point"), "oracle")
+        if aerr:
+            print(f"[FAIL] {cid}: {aerr}")
+            failed += 1
+            continue
+        if anote:
+            print(f"[note] {cid}: {anote}")
 
         dump = DUMPS / f"{scenario}.frames.jsonl"
         if dump.exists() and (not dump.is_file() or dump.is_symlink()):
@@ -304,6 +336,13 @@ def main() -> int:
             print(f"[FAIL] {cid}: {v}")
             failed += 1
             continue
+        aerr, anote = check_nmi_anchor(right, watch, doc.get("sample_point"), "game-core")
+        if aerr:
+            print(f"[FAIL] {cid}: {aerr}")
+            failed += 1
+            continue
+        if anote:
+            print(f"[note] {cid}: {anote}")
         divergence, excluded_hits = compare_frames(left, right, watch)
         excl_note = (f"（栈页中断帧面排除 {excluded_hits} 处分歧 $01FC-$01FE——§8.1②，显式打印）"
                      if excluded_hits else "")
