@@ -212,12 +212,34 @@ fn c531_unit(mem: &mut FrameMemory) {
     mem.write_ram(0x001D, 1);
     // ScreenNmiOff（asm :1165——已端口；内含 NMI 面引爆）
     screen_nmi_off(mem);
-    crate::unported!("bank07:A93E"); // 链次桩（CopyMap——窗口件）
+    // CopyMap（asm prg0_title.asm:5153——已端口）
+    copy_map(mem);
+    crate::unported!("bank07:C5D7"); // 链次桩（InitTitleGFX）
     #[allow(unreachable_code)]
     {
         // 后续链段：JSR $A93E（窗口件）/JSR $C158（c158_unit 复用）/ROM→WRAM 拷贝
         // （memmap 烘焙源）/JSR $C5D7/JMP $C487——逐段端口
     }
+}
+
+/// CopyMap 单元（**asm 引证主体**，链规 17）——refs/m1disasm/SRC/prg0_title.asm:5153
+/// `CopyMap: ; 00:A93E`：`lda #<WorldMap.b / sta Temp00_WorldMapPtr`…（$00/$01=源指针
+/// WorldMap 00:A53E；$02/$03=目的指针 WorldMapRAM $7000）→ `ldx #$04` 4 迭代×256B
+/// （`lda (ptr),y / sta (dest),y / iny / bne`）→ `inc ptr+1 / inc dest+1`（高字节 +4）
+/// → `rts`。拷贝面=WorldMap 1KB → WRAM $7000-$73FF（constants_ram.asm:1298 注证）。
+/// 终态（自证）：$00=0x3E/$01=0xA9（A5+4）/$02=0x00/$03=0x74（70+4）/X=0/A=末字节。
+/// ROM 抽查：WorldMap prg[0x253E..0x293E]（511/1024 非 FF）。
+pub fn copy_map(mem: &mut FrameMemory) {
+    use crate::memmap::world_map::{WORLD_MAP, WORLD_MAP_LEN, WORLD_MAP_RAM_BASE};
+    for i in 0..WORLD_MAP_LEN {
+        mem.write_wram(WORLD_MAP_RAM_BASE + i as u16, WORLD_MAP[i]);
+    }
+    mem.write_ram(0x0000, 0x3E); // Temp00_WorldMapPtr lo
+    mem.write_ram(0x0001, 0xA9); // hi（A5+4——inc ×4）
+    mem.write_ram(0x0002, 0x00); // Temp02_WorldMapRAMPtr lo
+    mem.write_ram(0x0003, 0x74); // hi（70+4）
+    mem.regs.x = 0;
+    mem.regs.a = WORLD_MAP[WORLD_MAP_LEN - 1];
 }
 
 /// ScreenNmiOff 单元（**asm 引证主体**，链规 17）——refs/m1disasm/SRC/prg7_engine.asm:1165
@@ -388,6 +410,19 @@ mod tests {
         assert!(msg.contains("unported @ bank07:C0D9"), "引爆点失准: {msg}");
         assert_eq!(m.read_ram(PPUMASK_ZP), 0xE7); // !(0x08|0x10) 遮蔽
         assert_eq!(m.read_ram(NMI_STATUS), 0); // ClearNMIStat
+    }
+
+    /// CopyMap：WRAM $7000-$73FF 拷贝 + 指针终态（asm 终态自证）。
+    #[test]
+    fn copy_map_fills_world_map_ram_and_ptr_end_state() {
+        use crate::memmap::world_map::{WORLD_MAP, WORLD_MAP_RAM_BASE};
+        let mut m = FrameMemory::default();
+        copy_map(&mut m);
+        assert_eq!(m.read_wram(WORLD_MAP_RAM_BASE), WORLD_MAP[0]);
+        assert_eq!(m.read_wram(WORLD_MAP_RAM_BASE + 0x3FF), WORLD_MAP[0x3FF]);
+        assert_eq!(m.read_ram(0x0001), 0xA9); // A5+4
+        assert_eq!(m.read_ram(0x0003), 0x74); // 70+4
+        assert_eq!(m.regs.x, 0);
     }
 
     /// WRAM 环（bank07:C057-C06B）：$6000-$7FFF 同型填充。
