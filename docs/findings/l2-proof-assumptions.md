@@ -15,6 +15,18 @@
 
 | A8 | int_y 微解释器 19 操作码语义=6502/2A03 手册（ADC/SBC/CMP/分支/JSR/RTS 栈）系手写语义表；int_x side_a 35 指令展开同类 | 信任（经 27 项探针+审核员逐条核+8.35M 独立指令级模拟加强） | int_y/int_x | side_a/解释器改动须重审计（int-x 复审遗留 1/2） |
 
+| A9 | ROM 常量烘焙的窗口态假设：F282/F2E8/F2ED 读 $95CE/$95CF/$968B+Y 窗口表——按 runner window_bank=7 烘焙 game-core const 表，假设**运行时 $8000 窗口=bank7** | 信任（task-8 porter 申报；r3 窗口态动态证据待 task-7③同族收口） | F2CA 族（task-8） | 若实跑场景窗口≠7，const 表需改为窗口参数化输入——L2 case 的 window_bank 字段即契约面 |
+
 > 【2026-10-14 更正】8051ed0 commit 声称「解释器语义假设在账」——当时账不存在（E2）。
 > 本文件即补账；int-y-proof.rs 头注释同步改为如实声明（E1：`--sample-bridge` 机制当时未实现，
 > 现状=int_y 规模桥接仍未做，登记于 A5）。
+
+> 【2026-10-15 更正·A9 证伪】task-7③ 动态收口（c27c-dispatch 场景 ×1600 帧 ×双跑）：
+> **A9「运行时 $8000 窗口=bank7」不成立**。窗口指纹自证（$8000-$800F×每帧+每分发事件，
+> 离线对各 PRG bank 首 16B 比对）：游戏期（f542-1600）窗口=banks1-5 类（区域 bank），
+> bank7 指纹 `8A48A205…` **0 帧 0 事件命中**；10968 个 C27C 分发事件无一发生在 bank7
+> 窗口态。⇒ F282/F2E8/F2ED 读 $95CE/$95CF/$968B+Y 实为**按区域 bank 查表**（语义即
+> 「敌人属性按区域」）——game-core const 表按 window_bank=7 烘焙**必须窗口参数化**
+> （L2 case window_bank 字段=契约面）。证据：
+> [decode-sweep-r3-dynamic-close.md](decode-sweep-r3-dynamic-close.md) §1.2（A 级）。
+> A9 状态由「信任」→「已证伪（动态 A 级）」；task-8/9 参数化改造为后续处置。

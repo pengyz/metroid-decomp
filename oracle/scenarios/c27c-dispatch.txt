@@ -1,0 +1,37 @@
+# 场景：c27c-dispatch —— task-7 r3 动态收口（C27C 分发探针 + 待查段 pc 覆盖）
+# 入局链（F_a 前提）：samus-move3 解锁序列（start/a/start 实测解除卡死）→ spawn →
+# 走+打触发敌人/弹丸行为分发（F36B/D4D0/FE2E 族）。证据用途：
+#   probe_dispatch C27C → A 值域=handler 选择面 + $8000 窗口指纹（A9 证据面）
+#   coverage_pc <待查段> → 7 格定谳的动态执行证据（未命中≠未执行，见工具注）
+name c27c-dispatch
+frames 1600
+watch_range 0000-00ff zp
+watch_range 0100-07ff iram
+
+press 360 start
+press 420 a
+press 540 start
+
+capture 800 spawn
+hold 850-1150 right
+press_every 20 860-1150 a
+capture 1150 after-right
+hold 1180-1330 left
+press_every 20 1180-1330 a
+capture 1330 after-left
+hold 1350-1550 right
+press_every 15 1350-1550 a
+capture 1550 after-right2
+
+probe_dispatch C27C
+# 7 格待查段（r2 续篇 §8 残余；banks0-6 两大岛缓排不在本场景面）
+coverage_pc D0E1-D146
+coverage_pc D198-D1ED
+coverage_pc D41A-D48B
+coverage_pc D58B-D5C0
+coverage_pc DAD9-DAD9
+coverage_pc E77B-E782
+coverage_pc E8FC-E903
+coverage_pc FBCA-FBDC
+coverage_pc FD08-FD5E
+coverage_pc FD84-FD8E

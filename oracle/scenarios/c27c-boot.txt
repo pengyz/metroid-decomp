@@ -1,0 +1,10 @@
+# 场景：c27c-boot —— task-7 r3 动态收口（标题侧分发：bank00 $8027 窗口站点）
+# 与 c27c-dispatch 构成换时刻双跑对；本场景跑 boot/title 路径（bank0 窗口态），
+# 顺带为 A9（运行时 $8000 窗口=bank7）提供反面观测面——标题期窗口=bank0 预期。
+name c27c-boot
+frames 300
+watch_range 0000-00ff zp
+watch_range 0100-07ff iram
+
+probe_dispatch C27C
+capture 250 title

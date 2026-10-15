@@ -139,7 +139,9 @@ def parse_scenario(path: Path) -> dict:
         "watch_ranges": [],
         "ramframe": False,
         "coverage": False,
+        "coverage_pc": [],
         "probe_mem": [],
+        "probe_dispatch": [],
     }
     for lineno, raw in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
         line = raw.split("#", 1)[0].strip()
@@ -215,6 +217,28 @@ def parse_scenario(path: Path) -> dict:
             if len(args) != 2:
                 raise err("probe_mem 用法: probe_mem <lo> <hi>（16 进制，NMI 级写点插桩）")
             plan["probe_mem"].append([args[0], args[1]])
+        elif op == "coverage_pc":
+            # r3 decode-sweep 动态收口：pc 过滤型指令入口覆盖（execute 回调 + cpu.pc==地址
+            # 才记——精确指令入口观测；已知盲点=中断入口首指令，见 scenario_capture.lua 注）。
+            # 可多次，区间针对待查段（勿全 bank 撒网：回调热度）。
+            if len(args) != 1 or "-" not in args[0]:
+                raise err("coverage_pc 用法: coverage_pc <hex起>-<hex止>（可多次）")
+            a_s, b_s = (s.lower() for s in args[0].split("-", 1))
+            if not (len(a_s) == 4 and len(b_s) == 4):
+                raise err("coverage_pc 区间须为 4 位 hex")
+            if int(a_s, 16) > int(b_s, 16):
+                raise err("coverage_pc 起点必须 <= 止点")
+            plan["coverage_pc"].append([a_s, b_s])
+        elif op == "probe_dispatch":
+            # r3：分发器入口探针（pc 过滤命中）——记 A/site/target + $8000 窗口指纹。
+            # site 由栈返回址-1 反推（site = ret-1 - 2），target = word(site+3+2*A)。
+            if len(args) != 1:
+                raise err("probe_dispatch 用法: probe_dispatch <hex 地址>（如 C27C）")
+            ad = args[0].lower()
+            if len(ad) != 4 or any(c not in "0123456789abcdef" for c in ad):
+                raise err("probe_dispatch 地址须为 4 位 hex")
+            if ad not in plan["probe_dispatch"]:
+                plan["probe_dispatch"].append(ad)
         elif op == "watch_range":
             # watch_range <hex 起>-<hex 止> [标签]
             if len(args) not in (1, 2) or "-" not in args[0]:
@@ -394,7 +418,7 @@ class ScenarioLock:
                 self.f.seek(0)
                 msvcrt.locking(self.f.fileno(), msvcrt.LK_NBLCK, 1)
             else:
-                fcntl.flock(self.f.fileno(), fcntl.LK_EX | fcntl.LK_NB)
+                fcntl.flock(self.f.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)  # Linux 名（LK_EX/LK_NB=BSD）
         except OSError:
             self.f.close()
             self.f = None
@@ -408,7 +432,7 @@ class ScenarioLock:
                 self.f.seek(0)
                 msvcrt.locking(self.f.fileno(), msvcrt.LK_UNLCK, 1)
             else:
-                fcntl.flock(self.f.fileno(), fcntl.LK_UN)
+                fcntl.flock(self.f.fileno(), fcntl.LOCK_UN)  # Linux 名（LK_UN=BSD）
         finally:
             self.f.close()
             self.f = None

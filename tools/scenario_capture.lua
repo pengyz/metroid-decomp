@@ -123,6 +123,109 @@ if PLAN.coverage then
   log("coverage mode: " .. covMode)
 end
 
+-- ---------------- r3：待查段指令入口覆盖（PLAN.coverage_pc）
+-- ⚠ 语义演进（probe_dispatch_diag v4/v7 A 级实证，2026-10-15）：
+--   字符串 "execute" 注册=**劣化语义**（操作数/数据读，opcode fetch 不可见——r2 F1
+--   全部怪象的根因）；`emu.callbackType.exec` 枚举注册=**真 opcode fetch 回调**
+--   （对照：C0BF str=0/enum=55，C0D9 str=0/enum=59——r2 F1 盲点可见）。
+-- 本模式用枚举注册 ⇒ **真指令入口覆盖**（A 级执行证据）。已知余量：中断劫持首条
+-- 指令（若回调在向量派发前注册时机受限——实测 C0D9 可见）。
+local covPcSet, covPcN, covPcMode, covPcHits = {}, 0, "off", 0
+if PLAN.coverage_pc and #PLAN.coverage_pc > 0 then
+  local function covPcHit(address)
+    covPcHits = covPcHits + 1
+    if not covPcSet[address] then
+      covPcSet[address] = true
+      covPcN = covPcN + 1
+    end
+  end
+  local allOk, mode = true, "exec-callback-enum"
+  for _, r in ipairs(PLAN.coverage_pc) do
+    local lo, hi = tonumber(r[1], 16), tonumber(r[2], 16)
+    local ok = false
+    if emu.callbackType and emu.callbackType.exec then
+      ok = pcall(emu.addMemoryCallback, covPcHit, emu.callbackType.exec, lo, hi)
+    end
+    if not ok then  -- 回退：数字 2（枚举值）；再退字符串（劣化语义，如实标注）
+      ok = pcall(emu.addMemoryCallback, covPcHit, 2, lo, hi)
+      if not ok then
+        ok = pcall(emu.addMemoryCallback, covPcHit, "execute", lo, hi)
+        mode = "bus-access-degraded"
+      end
+    end
+    allOk = allOk and ok
+    log(string.format("coverage_pc %04X-%04X cb=%s mode=%s", lo, hi, tostring(ok), mode))
+  end
+  covPcMode = allOk and mode or "partial"
+end
+
+-- ---------------- r3：分发器入口探针（PLAN.probe_dispatch）
+-- 注册=callbackType.exec（真 opcode fetch）；**站点签名**（ret-2..ret == 20 7C C2）
+-- 作不变量自校验（不匹配者单列 tail-jmp/异常入口，不静默丢弃）。
+-- site = ret-1 - 2（JSR 压返回址-1）；target = word(site+3+2*A)（C27C 静态语义）；
+-- A 真值性按「同 site 多次命中 a 应有分布」不变量核。
+-- 窗口指纹=$8000-$800F 16 字节（离线对各 PRG bank 自证映射——A9 假设证据面）。
+local dispAgg, dispEvents, dispN, dispRaw, dispCapN = {}, {}, 0, 0, 5000
+local dispMode = "off"
+if PLAN.probe_dispatch and #PLAN.probe_dispatch > 0 then
+  local function dspHit(address)
+    dispRaw = dispRaw + 1
+    local ok, st = pcall(emu.getState)
+    if not ok or not st then return end
+    local sp = st["cpu.sp"] or (st.cpu and st.cpu.sp)
+    if not sp then return end
+    local plo = readByte(0x0100 + ((sp + 1) % 256))
+    local phi = readByte(0x0100 + ((sp + 2) % 256))
+    local ret = plo + phi * 256
+    local site = ret - 2
+    local sig = (readByte(site) == 0x20 and readByte(site + 1) == 0x7C
+      and readByte(site + 2) == 0xC2)
+    local a = st["cpu.a"] or (st.cpu and st.cpu.a) or 0
+    local taddr = site + 3 + 2 * a
+    local tgt = readByte(taddr) + readByte(taddr + 1) * 256
+    local win = readRange(0x8000, 0x800F)
+    dispN = dispN + 1
+    local key = string.format("%s|%04X|%d|%04X", sig and "jsr" or "other", site, a, tgt)
+    local agg = dispAgg[key]
+    if not agg then
+      agg = { n = 0, first = frame, last = frame, wins = {} }
+      dispAgg[key] = agg
+    end
+    agg.n = agg.n + 1
+    agg.last = frame
+    agg.wins[win] = true
+    if dispN <= dispCapN then
+      dispEvents[#dispEvents + 1] = string.format(
+        '{"f":%d,"sig":"%s","site":"%04X","a":%d,"tgt":"%04X","win":"%s"}',
+        frame, sig and "jsr" or "other", site, a, tgt, win)
+    end
+  end
+  local allOk, mode = true, "exec-callback-enum"
+  for _, ad in ipairs(PLAN.probe_dispatch) do
+    local addr = tonumber(ad, 16)
+    local ok = false
+    if emu.callbackType and emu.callbackType.exec then
+      ok = pcall(emu.addMemoryCallback, dspHit, emu.callbackType.exec, addr, addr)
+    end
+    if not ok then
+      ok = pcall(emu.addMemoryCallback, dspHit, 2, addr, addr)
+      if not ok then
+        ok = pcall(emu.addMemoryCallback, dspHit, "execute", addr, addr)
+        mode = "bus-access-degraded"
+      end
+    end
+    allOk = allOk and ok
+    log(string.format("probe_dispatch %04X cb=%s mode=%s", addr, tostring(ok), mode))
+  end
+  dispMode = allOk and mode or "partial"
+end
+
+-- ---------------- r3：$8000 窗口指纹时间线（A9 证据面：每帧 16 字节自证映射）
+local winF = nil
+if PLAN.probe_dispatch and #PLAN.probe_dispatch > 0 then
+  winF = io.open(PLAN.out_dir .. "/" .. name .. ".window.jsonl", "wb")
+end
+
 -- ---------------- 回调注册
 local traceF = assert(io.open(tracePath, "wb"))
 local capF = assert(io.open(capPath, "wb"))
@@ -200,9 +303,15 @@ emu.addEventCallback(function()
 
   if frame % 120 == 0 then traceF:flush() end
 
+  -- r3：$8000 窗口指纹时间线（每帧一行；A9 证据面）
+  if winF then
+    winF:write(string.format('{"f":%d,"win":"%s"}\n', frame, readRange(0x8000, 0x800F)))
+  end
+
   if frame == frames then
     traceF:flush() traceF:close()
     capF:flush() capF:close()
+    if winF then winF:flush() winF:close() end
     if PLAN.coverage then
       local covPath = PLAN.out_dir .. "/" .. name .. ".coverage.jsonl"
       local covF = io.open(covPath, "wb")
@@ -216,6 +325,56 @@ emu.addEventCallback(function()
         end
         covF:close()
         log("coverage dumped: " .. covN .. " addrs, mode=" .. covMode)
+      end
+    end
+    -- r3：pc 过滤指令入口覆盖
+    if PLAN.coverage_pc and #PLAN.coverage_pc > 0 then
+      local p = PLAN.out_dir .. "/" .. name .. ".exec_cov.jsonl"
+      local f = io.open(p, "wb")
+      if f then
+        local addrs = {}
+        for a, _ in pairs(covPcSet) do addrs[#addrs + 1] = a end
+        table.sort(addrs)
+        f:write(string.format('{"mode":"%s","count":%d,"hits":%d,"blind":"interrupt-entry-first-opcodes"}\n',
+          covPcMode, covPcN, covPcHits))
+        for _, a in ipairs(addrs) do
+          f:write(string.format('{"a":"%04X"}\n', a))
+        end
+        f:close()
+        log("exec_cov dumped: " .. covPcN .. " addrs, mode=" .. covPcMode)
+      end
+    end
+    -- r3：分发探针事件 + 聚合（(site,a,tgt) 为键；wins=$8000 窗口指纹集）
+    if PLAN.probe_dispatch and #PLAN.probe_dispatch > 0 then
+      local ef = io.open(PLAN.out_dir .. "/" .. name .. ".dispatch.jsonl", "wb")
+      if ef then
+        ef:write(string.format('{"mode":"%s","events":%d,"total":%d,"raw_hits":%d}\n',
+          dispMode, #dispEvents, dispN, dispRaw))
+        for _, l in ipairs(dispEvents) do ef:write(l .. "\n") end
+        ef:close()
+      end
+      local sf = io.open(PLAN.out_dir .. "/" .. name .. ".dispatch_summary.jsonl", "wb")
+      if sf then
+        local keys = {}
+        for k, _ in pairs(dispAgg) do keys[#keys + 1] = k end
+        table.sort(keys)
+        for _, k in ipairs(keys) do
+          local agg = dispAgg[k]
+          local wins = {}
+          for w, _ in pairs(agg.wins) do wins[#wins + 1] = w end
+          table.sort(wins)
+          local sig, site, a, tgt = k:match("^(%a+)|(%x+)|(%d+)|(%x+)$")
+          sf:write(string.format(
+            '{"sig":"%s","site":"%s","a":%s,"tgt":"%s","n":%d,"first":%d,"last":%d,"wins":[%s]}\n',
+            sig, site, a, tgt, agg.n, agg.first, agg.last,
+            table.concat((function()
+              local q = {}
+              for _, w in ipairs(wins) do q[#q + 1] = jstr(w) end
+              return q
+            end)(), ",")))
+        end
+        sf:close()
+        log("dispatch summary dumped: " .. #keys .. " triples, total " .. dispN)
       end
     end
     local d = io.open(donePath, "wb")

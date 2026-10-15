@@ -105,6 +105,9 @@ MODE_LEN = {"imp": 1, "acc": 1, "imm": 2, "zp": 2, "zpx": 2, "zpy": 2,
             "izx": 2, "izy": 2, "rel": 2, "abs": 3, "abx": 3, "aby": 3, "ind": 3}
 BRANCHES = {"BPL", "BMI", "BVC", "BVS", "BCC", "BCS", "BNE", "BEQ"}
 TERMINATORS = {"RTS", "RTI", "JMP"}
+# 尾分发目标（r3 动态实证）：C27C=词表分发器（JMP ($000C) 不返回）；
+# $8024=JMP $C27C 蹦床（banks0-6 共享头，`JSR $8024` 同表约定——动态 sig=other 案破案）。
+TAIL_DISPATCH = {0xC27C, 0x8024}
 
 
 def _build_ops() -> dict[int, tuple[str, str, int]]:
@@ -268,6 +271,12 @@ def sweep_linear(banks: dict[int, Bank], k: int, entry: int,
         if mn in TERMINATORS:
             sw.terminator = (pc, mn)
             return sw
+        # 尾分发（r3 动态实证）：JSR $C27C / JSR $8024（$8024=4C 7C C2 蹦床）**永不返回**
+        # ——C27C 经 JMP ($000C) 跳 handler，handler RTS 回原调用者；其后字节=内联表，
+        # 线性流必须在此终止（否则穿表解码=假非法，CC36/CC1F 案）。
+        if mn == "JSR" and target in TAIL_DISPATCH:
+            sw.terminator = (pc, "JSR-tail-dispatch")
+            return sw
         pc += ln
     sw.fail = f"{max_instrs} 条未见 RTS/RTI/JMP（过长未终止）"
     return sw
@@ -326,6 +335,15 @@ class Classifier:
             for lo, hi in self.win_spans:
                 if lo <= t < hi:
                     return ("codespan", (lo, hi))
+        if k < 7 and 0xC000 <= t <= 0xFFFF:  # r3：窗口 bank 代码可调 bank7 固定区（$C45C 案）
+            if t in self.anchors[7]:
+                return ("anchor", None)
+            isl = find_island(self.islands[7], t)
+            if isl:
+                return ("island", isl)
+            span = find_code_span(self.code_items[7], t)
+            if span:
+                return ("codespan", span)
         return ("bad", None)
 
 
@@ -366,37 +384,45 @@ def scan(banks, islands, code_items, labels):
     #   ②结构规则：词表值命中「表尾地址」（表后紧跟内联 handler 首址，EA19/FC9A/FE2E
     #     三站点实证）→ 该处即表尾，其后的垃圾词（handler 字节当词读）一律不收。
     jump_table_entries: list[dict] = []
-    DISPATCH = bytes((0x20, 0x7C, 0xC2))
+    # 站点模式（r3 动态+静态互证）：20 7C C2（JSR $C27C 直调）与
+    # 20 24 80（JSR $8024 → 4C 7C C2 蹦床；banks0-6 共享头，动态 sig=other 案破案）。
+    SITE_PATTERNS = (bytes((0x20, 0x7C, 0xC2)), bytes((0x20, 0x24, 0x80)))
     for k in range(N_BANKS):
         bk = banks[k]
-        pos = 0
-        while True:
-            i = bk.data.find(DISPATCH, pos)
-            if i < 0:
-                break
-            pos = i + 1
-            site = bk.base + i
-            table: dict[int, int] = {}
-            for n in range(16):
-                waddr = site + 3 + 2 * n
-                if waddr + 1 >= bk.base + BANK_SIZE:
+        for DISPATCH in SITE_PATTERNS:
+            pos = 0
+            while True:
+                i = bk.data.find(DISPATCH, pos)
+                if i < 0:
                     break
-                t = bk.word(waddr)
-                ok = False
-                if bk.base <= t < bk.base + BANK_SIZE:
-                    kind, _info = cls.classify(k, t, set())
-                    if kind != "bad":
-                        sw = sweep_linear(banks, k, t)
-                        ok = sw.ok
-                if not ok:
-                    break  # ① 前缀规则
-                table[n] = t
-                if (site + 3 + 2 * (n + 1)) in table.values():
-                    break  # ② 结构规则：表尾=内联 handler 首址
-            for n, t in table.items():
-                cands.setdefault((k, t), set()).add(f"jump-table@{site:04X}#{n}")
-                jump_table_entries.append(
-                    {"bank": k, "site": site, "index": n, "target": t})
+                pos = i + 1
+                site = bk.base + i
+                table: dict[int, int] = {}
+                for n in range(16):
+                    waddr = site + 3 + 2 * n
+                    if waddr + 1 >= bk.base + BANK_SIZE:
+                        break
+                    t = bk.word(waddr)
+                    # 目标合法域：同 bank 窗口 ∪ bank7 固定区（$C45C 案：banks0-6
+                    # 站点的 handler 可落 $C000-$FFFF）。sweep 归属用目标实际 bank。
+                    k_eff = 7 if (k < 7 and 0xC000 <= t <= 0xFFFF) else k
+                    in_range = (bk.base <= t < bk.base + BANK_SIZE) or \
+                               (k < 7 and 0xC000 <= t <= 0xFFFF)
+                    ok = False
+                    if in_range:
+                        kind, _info = cls.classify(k, t, set())
+                        if kind != "bad":
+                            sw = sweep_linear(banks, k_eff, t)
+                            ok = sw.ok
+                    if not ok:
+                        break  # ① 前缀规则
+                    table[n] = (t, k_eff)
+                    if (site + 3 + 2 * (n + 1)) in [v[0] for v in table.values()]:
+                        break  # ② 结构规则：表尾=内联 handler 首址
+                for n, (t, k_eff) in table.items():
+                    cands.setdefault((k_eff, t), set()).add(f"jump-table@{site:04X}#{n}")
+                    jump_table_entries.append(
+                        {"bank": k_eff, "site": site, "index": n, "target": t})
 
     # ---- 入口不动点：采纳流贡献流 xref 入口 ----
     accepted: dict[tuple[int, int], Sweep] = {}
