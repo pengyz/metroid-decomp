@@ -1038,6 +1038,62 @@ def gate_proof_checks() -> tuple[str, str]:
     return PASS, detail + tail_ + f"；int_y 2^32 穷举证书复跑通过（{cert2}）；触发: {why}"
 
 
+# ---------------------------------------------------------------- tree-coherence（提交树一致性）
+# 事故根因（945fe41 缺 nmi.rs，2026-10-15）：pre-commit 验的是**工作树**——未跟踪件在盘
+# 掩盖提交树破（mod 引用目标没进 commit，新 checkout/CI 构建即炸）。机械门：staged/tracked
+# Rust 源的 `mod X;` 引用目标必须在**提交树**（git ls-files ∪ staged）内；工作区存在而
+# 提交树缺失 = 破树掩蔽，FAIL 并点名 git add。
+
+RUST_MOD_DECL_RE = re.compile(
+    r"^\s*(?:pub(?:\([^)]*\))?\s+)?mod\s+([A-Za-z_][A-Za-z0-9_]*)\s*;", re.M)
+
+
+def rust_mod_coherence_errors(sources: dict[str, str], present: set[str]) -> list[str]:
+    """纯函数（自检可注入）：sources={路径:内容}，present=提交树内 .rs 路径集。
+    每个 `mod X;` 声明须解析到 <dir>/X.rs 或 <dir>/X/mod.rs ∈ present；否则报错。
+    （行内 `mod X { … }` 块不在声明形，不匹配；`#[path=…]` 特例记局限不做展开。）"""
+    errs: list[str] = []
+    for path in sorted(sources):
+        base = path.rsplit("/", 1)[0] if "/" in path else ""
+        for m in RUST_MOD_DECL_RE.finditer(sources[path]):
+            name = m.group(1)
+            cands = ([f"{base}/{name}.rs", f"{base}/{name}/mod.rs"] if base
+                     else [f"{name}.rs", f"{name}/mod.rs"])
+            if not any(c in present for c in cands):
+                errs.append(
+                    f"{path}: `mod {name};` 解析失败——{cands[0]}（或 {cands[1]}）不在提交树"
+                    f"（若工作区存在=未跟踪件掩盖破树，git add 后重提）")
+    return errs
+
+
+def gate_tree_coherence() -> tuple[str, str]:
+    try:
+        tracked = subprocess.run(["git", "ls-files", "*.rs"], cwd=ROOT, capture_output=True,
+                                 text=True, encoding="utf-8", errors="replace")
+        staged = subprocess.run(["git", "diff", "--cached", "--name-only"], cwd=ROOT,
+                                capture_output=True, text=True, encoding="utf-8", errors="replace")
+        if tracked.returncode != 0 or staged.returncode != 0:
+            return FAIL, "git 查询失败（fail-loud，提交树一致性不可判）"
+    except OSError as exc:
+        return FAIL, f"git 不可达（fail-loud）: {exc}"
+    tracked_rs = {p for p in tracked.stdout.splitlines() if p.strip().endswith(".rs")}
+    staged_rs = {p for p in staged.stdout.splitlines() if p.strip().endswith(".rs")}
+    present = tracked_rs | staged_rs          # 提交树面（tracked ∪ staged-new）
+    sources: dict[str, str] = {}
+    for p in sorted(present):
+        fp = ROOT / p
+        if fp.is_file():
+            sources[p] = fp.read_text(encoding="utf-8", errors="replace")
+    errs = rust_mod_coherence_errors(sources, present)
+    if errs:
+        shown = "; ".join(errs[:5])
+        if len(errs) > 5:
+            shown += f"；…共 {len(errs)} 条"
+        return FAIL, shown
+    return PASS, (f"{len(present)} 个提交树 .rs 文件 mod 引用全部解析"
+                  f"（未跟踪件掩盖破树侦测就位；行内 mod 块/#[path] 特例记局限）")
+
+
 # ---------------------------------------------------------------- 门禁注册表
 # readme_state 必须与 gates/README.md「门禁清单」表的"状态"列逐字一致（selftest 自动比对）。
 
@@ -1056,6 +1112,8 @@ GATES: list[tuple[str, str, str, str, object]] = [
     ("completeness-ratchet", "矩阵建立后启用", "all", "完备性矩阵覆盖只增不降", gate_completeness_ratchet),
     ("proof-checks", "启用（按变更面触发；SMT+桥接内联；int_y 穷举留 CI/里程碑）", "check",
      "int_x SMT 证明+公式↔Rust 桥接复跑（证书防腐，int-y 穷举 GATES_PROOF_FULL=1）", gate_proof_checks),
+    ("tree-coherence", "启用", "check",
+     "Rust mod 引用⊆提交树（未跟踪件掩盖破树侦测）", gate_tree_coherence),
 ]
 
 
@@ -1607,6 +1665,28 @@ def cmd_selftest(_args) -> int:
     check("v2 commit-msg：ProofDeferred 字段齐备 ⇒ 接受", ok, "字段在位 ⇒ 接受")
     ok, _ = commit_msg_check("docs: x", ["docs/rounds/x.md"], proof_deferred_open=1)
     check("v2 commit-msg：欠账期但未触 S_intx ⇒ 免字段", ok, "非 S_intx 触面不涉欠账")
+
+    # 10) tree-coherence：提交树 mod 引用解析（945fe41 缺 nmi.rs 事故的机械门）
+    errs = rust_mod_coherence_errors(
+        {"crates/x/mod.rs": "pub mod nmi;\n"}, {"crates/x/mod.rs"})
+    check("tree-coherence 打回破树掩蔽（mod 目标不在提交树）",
+          len(errs) == 1 and "git add" in errs[0], errs[0] if errs else "未报错")
+    errs = rust_mod_coherence_errors(
+        {"crates/x/mod.rs": "pub mod nmi;\n", "crates/x/nmi.rs": "// ok\n"},
+        {"crates/x/mod.rs", "crates/x/nmi.rs"})
+    check("tree-coherence 全解析 ⇒ 0 错", errs == [], f"errs={errs}")
+    errs = rust_mod_coherence_errors(
+        {"crates/x/mod.rs": "mod inline_demo { fn f() {} }\npub mod ok;\n",
+         "crates/x/ok.rs": ""},
+        {"crates/x/mod.rs", "crates/x/ok.rs"})
+    check("tree-coherence 行内 mod 块不误报（仅 `mod X;` 声明形）", errs == [], f"errs={errs}")
+    errs = rust_mod_coherence_errors(
+        {"crates/x/deep/mod.rs": "pub mod leaf;\n"},
+        {"crates/x/deep/mod.rs"})
+    check("tree-coherence 嵌套目录解析（deep/leaf.rs 缺 ⇒ 报）",
+          len(errs) == 1 and "deep/leaf.rs" in errs[0], errs[0] if errs else "未报错")
+    v, d = gate_tree_coherence()
+    check("tree-coherence 门禁实跑（本仓）", v == PASS, d)
 
     failed = [c for c in cases if not c[1]]
     for name, ok, detail in cases:
