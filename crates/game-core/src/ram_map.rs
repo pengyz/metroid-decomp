@@ -52,6 +52,13 @@ pub const SCROLL_X: u16 = 0x00FD;
 /// ScrollY=$FC（constants_ram 内容锚「Y value loaded into scroll register」）。
 pub const SCROLL_Y: u16 = 0x00FC;
 
+/// MirrorCntrl=$FA（constants_ram 内容锚「If bit 3 is set, PPU set to horizontal
+/// mirroring」；boot 初始化 `sta MirrorCntrl`（$47）自证）。
+pub const MIRROR_CNTRL: u16 = 0x00FA;
+
+/// MMC1CTRL_ZP=$25（constants_ram 内容锚「Stores bits to be loaded into MMC1 Register 0」）。
+pub const MMC1CTRL_ZP: u16 = 0x0025;
+
 /// MainRoutine=$1E（constants_ram.asm:478「5 = Game paused, 3 = Game engine running」）。
 pub const MAIN_ROUTINE: u16 = 0x001E;
 

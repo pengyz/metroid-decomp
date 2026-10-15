@@ -96,7 +96,7 @@ mod tests {
     }
 
     /// 缺口确定性爆在 bank:addr（D7 机制②）——tick1=PreSpin 静默 yield；tick2=NMI 先行
-    /// 引爆（bank07:C44D WritePPUCtrl——生产→消费→清理段全通后 NMI 体次件）。
+    /// 引爆（bank07:C215 ReadJoyPads——NMI 体输入面次件）；C44D 全通。
     #[test]
     fn unported_detonates_at_bank_addr() {
         let mut e = FrameEngine::new();
@@ -104,7 +104,7 @@ mod tests {
         let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| e.tick_frame()));
         let err = r.unwrap_err();
         let msg = panic_message(&err);
-        assert!(msg.contains("unported @ bank07:C44D"), "引爆点失准: {msg}");
+        assert!(msg.contains("unported @ bank07:C215"), "引爆点失准: {msg}");
     }
 
     /// tick_frame 执行序（契约断言②：**f=1 帧界锚**——首 tick 后 clock=1）+ pre 链态。

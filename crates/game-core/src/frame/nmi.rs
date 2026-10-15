@@ -40,11 +40,11 @@ fn nmi_body(mem: &mut FrameMemory) {
     check_palette_write(mem); // CheckPaletteWrite（asm :507——已端口）
     check_vram_struct_write(mem); // CheckVRAMStructBufferWrite（asm :790——已端口）
     // 执行序补全（前版漏桩自查）：WritePPUCtrl/WriteScroll/ReadJoyPads（asm 调用序列）
-    crate::unported!("bank07:C44D"); // WritePPUCtrl（工作序列次件）
+    write_ppu_ctrl(mem); // WritePPUCtrl（asm :1150 族——已端口）
+    write_scroll(mem); // WriteScroll（asm :717——已端口）
+    crate::unported!("bank07:C215"); // ReadJoyPads（工作序列次件）
     #[allow(unreachable_code)]
     {
-        write_scroll(mem); // WriteScroll（asm :717——已端口）
-        crate::unported!("bank07:C215"); // ReadJoyPads
         crate::unported!("bank07:B3B4"); // SoundEngine（超帧也跑段）
     }
 }
@@ -152,6 +152,24 @@ pub fn vram_struct_write(mem: &mut FrameMemory) {
         }
         off += if rle { 5 } else { 3 + count }; // 段尾（iny/AddYToPtr00 域形）
     }
+}
+
+/// WritePPUCtrl 单元（**asm 内容锚+结构互核注**）——
+/// refs/m1disasm/SRC/prg7_engine.asm `WritePPUCtrl: ; 07:C44D`（注「Update PPU control
+/// registers」：`lda PPUCTRL_ZP/sta PPUCTRL`/`lda PPUMASK_ZP/sta PPUMASK`/
+/// `lda MirrorCntrl/jsr PrepPPUMirror`（$C4D9→`jmp SetPPUMirror`））。
+///
+/// **结构互核注**：①零直接 RAM 写，但 **SetPPUMirror 共享尾动 $00/$25**（三路汇入共享段
+/// ——boot 的 c4b2_unit 同段复用，域形=共享 fn 复刻共享结构）②寄存器面写走 write_io
+/// （$2000/$2001——NMI 使能位面同步 nmi_enabled 权威）③ExitSub（C45C）=共享 RTS 尾
+/// （asm 「Exit subroutines」）。
+pub fn write_ppu_ctrl(mem: &mut FrameMemory) {
+    let c = mem.read_ram(crate::ram_map::PPUCTRL_ZP);
+    mem.write_io(0x2000, c);
+    let m = mem.read_ram(crate::ram_map::PPUMASK_ZP);
+    mem.write_io(0x2001, m);
+    let mirror = mem.read_ram(crate::ram_map::MIRROR_CNTRL);
+    super::boot::set_ppu_mirror(mem, mirror);
 }
 
 /// WriteScroll 单元（**asm 内容锚+结构互核注**）——

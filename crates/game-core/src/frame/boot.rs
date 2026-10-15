@@ -161,11 +161,18 @@ pub fn c1a3_unit(mem: &mut FrameMemory) {
 /// boot 态：$25=0x0E（C06D 置）→ $00=0/$25=0x0E/A=0x0E；control=0x0E（mode3 ✓ 与
 /// $988A bank0 归属自证一致）。
 pub fn c4b2_unit(mem: &mut FrameMemory) {
-    let a_in = 0x47; // C4B4 `A9 47` 自载（C4D9 变体=$FA——尾跳入口另立）
+    set_ppu_mirror(mem, 0x47); // C4B4 `A9 47` 自载（C4D9 变体=$FA——同段）
+}
+
+/// SetPPUMirror 共享尾（bank07:C4B6 族；**asm 共享段**：PrepVertMirror（C4B2）/
+/// PrepPPUMirror（C4D9→`lda MirrorCntrl/jmp SetPPUMirror`）/WritePPUCtrl（C44D）三路
+/// 汇入——域形抽共享 fn 复刻共享段结构）：bit=(A>>3)&1（`lsr ×3/and #$01`）→
+/// $00=bit → $25=($25&!1)|bit（MMC1CTRL_ZP）→ MMC1CTRL 串行（寄存器面）。
+pub(crate) fn set_ppu_mirror(mem: &mut FrameMemory, a_in: u8) {
     let bit = (a_in >> 3) & 1;
     mem.write_ram(0x0000, bit);
-    let v = (mem.read_ram(0x0025) & 0xFE) | bit;
-    mem.write_ram(0x0025, v);
+    let v = (mem.read_ram(crate::ram_map::MMC1CTRL_ZP) & 0xFE) | bit;
+    mem.write_ram(crate::ram_map::MMC1CTRL_ZP, v);
     mmc1_serial_write(mem, io::MMC1_CTRL);
     mem.regs.a = v;
 }
