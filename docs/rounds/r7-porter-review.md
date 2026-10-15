@@ -586,6 +586,24 @@ m1disasm 无名/nmikstas 用例面随记）=纪律正确 ④P27-F1 计数补正�
 
 findings 三族（r10）：0 阻断、2 轻（声明族）。基线 48→55、命名 30→48（含批 26/27 后续）。
 
+## task-10 批 28b：StarPaletteSwitch/8AC7（ef1c9c3）——intro 星闪轮换（施工令五步节奏）
+
+### verdict: pass
+
+五点核：①asm 内容锚 ✓（`StarPaletteSwitch: ; 00:8AC7`+「every 16th frame/Is any
+other PPU data waiting」注+双门（FrameCount&0xF/VRAMStructBufferIndex）+表游标
+（IntroStarOffset&7→asl→tay）+表查+inc 链逐段命中）②**ROM 表提取逐字 True**：
+PtrTable prg[0x0AFF..] 8 项=8B0F/8B19/8B23/8B2D/8B37/8B41/8B4B/8B55 与烘焙面同源 ✓
+③单测 37 绿（双门+表游标态）+引爆迁移 `unported @ bank07:C2CA` ✓——**与执行序发现
+自洽**（消费端 C2CA 先于生产端 C37E=实测下一件即 C2CA）④intro.rs 在册 ✓（git ls-files
+命中+stat 对账 3 处——「第五案 add 失实」修复实证+checklist 第 6 项立规执行面）。
+**P28-F1（声明族·中，交叉核项）**：「清零环 Y 型填充使 $07A0=0xA0（**真机同态**）」
+在仓内工件面**不可复证**——boot-title frames 300 帧 $07A0 全 0（中间态在 f=1 采样窗外
+或未捕获）；主张现仅引擎侧单测支撑。处置：与 decomp VRAMStruct 宏族线**成对对表**
+（其捕获面是否见 0xA0 中间态）或补 boot 段中间态捕获；「真机同态」措辞在对表前降级
+「引擎侧同态」。
+findings 三族（r10）：1 中（声明族）。基线 61。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
