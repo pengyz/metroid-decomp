@@ -98,12 +98,58 @@ pub fn check_vram_struct_write(mem: &mut FrameMemory) {
     }
     mem.write_ram(0x0000, 0xA1); // Temp00_VRAMStructPtr lo（VRAMStructBuffer=$07A1）
     mem.write_ram(0x0001, 0x07); // hi
-    crate::unported!("bank07:C2E4"); // VRAMStructWrite/WriteData（缓冲走带——渲染面件）
+    vram_struct_write(mem); // 走带（asm :856——已端口；尾跳 WriteScroll 桩）
     #[allow(unreachable_code)]
     {
         mem.write_ram(VRAM_STRUCT_INDEX, 0);
         mem.write_ram(0x07A1, 0); // VRAMStructBuffer 清
         mem.write_ram(PPU_DATA_PENDING, 0);
+    }
+}
+
+/// VRAMStructWrite 走带件（**asm 内容锚+结构互核注**）——
+/// refs/m1disasm/SRC/prg7_engine.asm `VRAMStructWrite: ; 07:C30C`（主循环：`ldx
+/// PPUSTATUS`（清 flip-flop）/`ldy #$00/lda (ptr),y/bne VRAMStructWriteData`/
+/// `jmp WriteScroll`（hi=0=结束尾跳））+ `VRAMStructWriteData: ; 07:C2E4`（段处理：
+/// `sta PPUADDR`（hi）/`iny/lda (ptr),y/sta PPUADDR`（lo）/ctrl `asl`→`jsr SetPPUInc`
+/// （CF=bit7=增量 1/32）→`asl`（CF=bit6=RLE）→`and #$3F/tax` 计数→数据 loop
+/// `lda (ptr),y/sta PPUDATA/dex/bne`→`iny/jsr AddYToPtr00`）。
+///
+/// **结构互核注**：①段内 y 推进与生产端对偶（非 RLE 每字节 iny / RLE 值只取一次）——
+/// 生产/消费 y 算术**互为镜像**（成对对表点）②`jmp WriteScroll` 尾跳=走带退出语义
+/// （WriteScroll 的 RTS 回 CheckVRAMStructBufferWrite 清理段——栈深一层）③SetPPUInc
+/// **动 $FF**（PPUCTRL_ZP——RAM watch 面）：ctrl bit7=1→增量 32 置位 INCR_DOWN、
+/// bit7=0→清——段级 $FF 副作用=可观测面。
+/// PPU 面（PPUADDR/PPUDATA）=write_io 族（渲染面暂不建模——挂 task-13）。
+pub fn vram_struct_write(mem: &mut FrameMemory) {
+    let base = 0x07A1u16;
+    let mut off = 0usize; // 走带偏移（AddYToPtr00 的域形）
+    loop {
+        let hi = mem.read_ram(base + off as u16);
+        if hi == 0 {
+            crate::unported!("bank07:C29A"); // 尾跳 WriteScroll（走带退出——下一单元）
+        }
+        let lo = mem.read_ram(base + off as u16 + 1);
+        let ctrl = mem.read_ram(base + off as u16 + 2);
+        mem.write_io(0x2006, hi); // PPUADDR hi
+        mem.write_io(0x2006, lo); // PPUADDR lo
+        // SetPPUInc：ctrl bit7=PPU 增量位（0=1/1=32）→ $FF（PPUCTRL_ZP）
+        let f = mem.read_ram(crate::ram_map::PPUCTRL_ZP);
+        let f = if ctrl & 0x80 != 0 { f | 0x04 } else { f & !0x04 };
+        mem.write_ram(crate::ram_map::PPUCTRL_ZP, f);
+        mem.write_io(0x2000, f);
+        // 数据段（RLE=bit6；计数=低 6 位）
+        let count = (ctrl & 0x3F) as usize;
+        let rle = ctrl & 0x40 != 0;
+        let mut di = 3usize;
+        for k in 0..count {
+            let v = if rle { mem.read_ram(base + off as u16 + 4) } else {
+                mem.read_ram(base + off as u16 + 3 + k as u16)
+            };
+            let _ = di;
+            mem.write_io(0x2007, v); // PPUDATA（渲染面）
+        }
+        off += if rle { 5 } else { 3 + count }; // 段尾（iny/AddYToPtr00 域形）
     }
 }
 
@@ -177,6 +223,20 @@ mod tests {
         check_palette_write(&mut m4);
     }
 
+    /// 走带镜像测：生产→消费对偶（$FF 增量位更新+尾跳 C29A——结构互核注①③面）。
+    #[test]
+    fn vram_struct_walk_mirror_producer() {
+        use crate::ram_map::PPUCTRL_ZP;
+        let mut m = FrameMemory::default();
+        crate::frame::intro::star_palette_switch(&mut m); // 生产（双 call 缓冲）
+        m.write_ram(PPUCTRL_ZP, 0x90); // NMI 位+增量位预置
+        let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| vram_struct_write(&mut m)));
+        let msg = panic_message(&r.unwrap_err());
+        assert!(msg.contains("unported @ bank07:C29A"), "尾跳失准: {msg}");
+        // ctrl bit7=0（两段皆 0x03）⇒ $FF 增量位（0x04）清——SetPPUInc 域形
+        assert_eq!(m.read_ram(PPUCTRL_ZP) & 0x04, 0x00);
+    }
+
     /// C2CA 消费端：boot 态（$1B=0）静默 + pending 路径引爆 C2E4。
     #[test]
     fn check_vram_struct_boot_silent_and_pending_detonates() {
@@ -187,7 +247,7 @@ mod tests {
         m.write_ram(PPU_DATA_PENDING, 1);
         let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| check_vram_struct_write(&mut m)));
         let msg = panic_message(&r.unwrap_err());
-        assert!(msg.contains("unported @ bank07:C2E4"), "引爆点失准: {msg}");
+        assert!(msg.contains("unported @ bank07:C29A"), "引爆点失准: {msg}"); // 走带尾跳
     }
 
     /// 超帧跳过面：$1A≠0 ⇒ 工作体跳过（不炸桩）；$1A=0 ⇒ 进 GameMode 分派桩。
