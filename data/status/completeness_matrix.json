@@ -3668,10 +3668,10 @@
       "id": "S-FUNC-07-F149",
       "face": "symbol",
       "module": "engine",
-      "strength": "L0",
-      "covered": false,
-      "evidence": "bank07:F149-F152（IDA 机械切分 size=9）",
-      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+      "strength": "L2",
+      "covered": true,
+      "evidence": "oracle/subroutines/l2_cases.jsonl#gen-f149-0..7 + #b-f149-xyff/b-f149-wrap 三方全等（golden==ROM 执行==game-core）；语义来源 ROM 原字节 bank07:F149-F151=20 86 F1/20 D2 F1/4C FA F1 逐指令（JSR F186/JSR F1D2/JMP F1FA）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准；L2 窗口 stops=F1FA 入口截断（组合件=F186∘F1D2（$06/$08/$0A/$04/$05），碰撞尾独立切片 S-FUNC-07-F1FA）；lead 裁定顺带移植（消在册 L0 格）"
     },
     "S-FUNC-07-F152": {
       "id": "S-FUNC-07-F152",

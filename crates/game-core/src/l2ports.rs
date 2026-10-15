@@ -90,6 +90,7 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "sub_F186" => Some(sub_f186),
         "sub_F1BF" => Some(sub_f1bf),
         "sub_F140" => Some(sub_f140),
+        "sub_F149" => Some(sub_f149),
         "sub_F1A7" => Some(sub_f1a7),
         "sub_F1B3" => Some(sub_f1b3),
         "sub_F1D2" => Some(sub_f1d2),
@@ -193,6 +194,25 @@ pub fn sub_f1d2(input: &L2In) -> L2Out {
     let v4 = 4u8.wrapping_add(input.ram[(0x0301 + y) as usize & 0x7FF]);
     let v5 = 8u8.wrapping_add(input.ram[(0x0302 + y) as usize & 0x7FF]);
     L2Out { a: v5, x: input.x, y: input.y, writes: vec![(0x0004, v4), (0x0005, v5)] }
+}
+
+/// sub_F149 —— bank07:F149-F151 入口组合件（`JSR F186 / JSR F1D2 / JMP F1FA`）。
+/// L2 窗口止于 F1FA 入口（碰撞尾独立切片 S-FUNC-07-F1FA，stops=bank07:F1FA）。
+/// 语义（A 级：ROM 原字节 `20 86 F1 20 D2 F1 4C FA F1` 逐指令 + seed 各子例程）：
+/// 先 F186（$06←RAM[$30D+Y]、$08←RAM[$30E+Y]、$0A←(RAM[$30C+Y]^RAM[$FF])&1，EOR zp），
+/// 后 F1D2（$04←4+RAM[$301+Y]、$05←8+RAM[$302+Y]，LDA #立即数）。
+/// 末值 A=$05；写集 {$04,$05,$06,$08,$0A} 无重叠；X/Y 透传。
+pub fn sub_f149(input: &L2In) -> L2Out {
+    let f186 = sub_f186(input);
+    let f1d2 = sub_f1d2(input);
+    let mut writes = f186.writes;
+    writes.extend(f1d2.writes);
+    L2Out {
+        a: f1d2.a,
+        x: input.x,
+        y: input.y,
+        writes,
+    }
 }
 
 /// sub_F140 —— bank07:F140-F148 入口组合件（`JSR F1BF / JSR F186 / JMP F1FA`）。
