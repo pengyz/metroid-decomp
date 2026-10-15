@@ -252,3 +252,27 @@ asm 语义链：主端 ClearNMIStat（清 0）→ @loop spin → **下一次** N
 **待 porter 会签**：引擎侧 spin 建模按上述跨帧语义实现（或携带反证——若其 tick 结构
 有同帧合法模型，须以 asm 语义链+599 帧实测对表）；$1A watch 面处置二选一请带实现
 证据回来定案。
+
+### 8.1 对表定案（2026-10-15 终稿，冲突解案后）
+
+**证据冲突记录（不删）**：decomp 动态曾报「$1A 双写全在主循环相、NMI 零写、写点
+scanline<241」与本节提案正面冲突。**定案**（静态决定性证据 + 我方②号复核）：
+- `:279 ldy #$01` 为**常量写**（非 Y 依赖）——NMI 尾恒写 1；
+- 我方复核 NMI 全流：入口段（php/pha/txa/pha/tya/pha/OAMADDR/OAMDMA）**无 rti 短路**、
+  尾段 `sty NMIStatus` 位于 @endIf_A 超帧跳过目标之后=**无条件执行**——每条到达
+  handler 尾的 NMI 必写 $1A=1；
+- ⇒ decomp「NMI 零写」=**inputPolled 采样点相位盲区人工产物**（探针只覆盖主循环相，
+  NMI 相写在其眼皮外）——task-15④ 注记按证伪更正文化更正（lead 令）。
+
+**契约定案三点**：
+1. **spin=跨帧建模**（spin=tick 边界构造物，yield-to-next-tick-NMI；boot 链跨 tick
+   可恢复序列/boot_step 状态机=实现形态）；
+2. **$1A watch=采样点对齐保留**（NMI 时序锚）——采样点=spin 出口同源（④）后
+   相位敏感性消解；
+3. **恒 1 入契约断言**：采样点 $1A==1 为断言项——**≠1=NMI 面退化诊断信号**
+   （诊断力主张采纳：保留锚+断言 > 排除）。
+
+附：NMI 地图（C0D9 实施素材，porter 实读）——超帧跳过（$1A≠0 跳过 NMIScreenWrite/
+CheckPaletteWrite/CheckVRAMStructBufferWrite/WritePPUCtrl/WriteScroll/ReadJoyPads）
++OAMDMA（$200-$2FF→OAM）+SoundEngine/UpdateAge——里程碑 B「宽放 18 决策项」overframe
+容忍面在此，C0D9 单元实施按定案展开。
