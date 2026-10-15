@@ -552,6 +552,20 @@ stat 对账（3 源文件+台账+基线=意图一致，无新文件声称）。
 定义其后）——内容锚 `Exit100: rts` 在，行号不作引证依据（F6 口径）；轻症记档。
 findings 三族标注（r10）：1 轻（声明族）。基线 49、单测 33 全绿。
 
+## task-10 批 27：CheckPaletteWrite/C1E0（128e0a6）——NMI 调色板三路路由
+
+### verdict: pass
+
+四查过：①asm/ROM 锚 ✓（C1E0 三路路由字节面+内容锚 `CheckPaletteWrite: ; 07:C1E0`/
+`StarPaletteSwitch: ; 00:8AC7`/`EndGamePaletteWrite: ; 00:9F54` 命中）；**_id 表序
+自数证复核**（我方重数）：StartContinueScreen15=第 22 位（0x15 ✓）、EndGame=第 30 位
+（0x1D ✓）——与 NMIScreenWrite `cmp #$1D` 阈值互证自洽，三点结论全真 ②链规 17 ✓
+③命名同 commit ✓（N-0028..N-0030）④引爆迁移复现 `unported @ bank00:8AC7` ✓（次桩=
+CheckVRAMStructBufferWrite 与声明一致）。
+**P27-F1（声明精度·轻，计数族）**：表总长「30 项」实为 **31 项**（第 31=SetTimer，
+宏行总数 31 实数）——EndGame=第 30 位的索引结论不受影响，总数计错一位记档。
+findings 三族（r10）：1 轻（声明族）。基线 50、单测 34 全绿。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
