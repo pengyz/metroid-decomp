@@ -131,3 +131,29 @@ L5 批解析：28 调色板通过=28 失败=0 数据字节=139（ppu 址全落 $
 | 调色板语义名（power suit 等注释） | **C**（不入字段名，D5） |
 
 遗留：⑤ CHR 面（L4→pattern 接入，S6 素材）；items/enemy_sprite_data 两件套（下轮）。
+
+## 8. r4：③ items 模块（结构互核注·施工令②补款首用）
+
+**asm 内容锚**（items.asm:20-54 注释源）：章链=`[Y][word 下章址]`+短条目
+`[X][off1][type][data..$00]`；type 语义表（C 级候选名）$01=Squeept/$02=Power up/
+$03=Mellows/$04=Elevator/$05=MB cannon/$06=Mother brain/$07=Zeebetite/$08=Rinka/
+$09=Door/$0A=Palette change room（items.asm:45-54）。
+**自建解码互核（②补款）**：寻径公式 asm 注「offset-1」与字节不符——ROM 字节实证
+**next_entry = entry_start + off1**（@@x03@$A3D9 off1=05 → $A3DE=@@x0F 标签合）；
+单测 fixture=ROM 章字节抄录（含 asm 标签坐标断言）。
+
+**ROM 批量 + 标签集互核（输出原文）**：
+```
+③ items 批解析：15 条目（107B）；asm 标签互核：walk=15 vs labels=15 → ✓ 全合
+③ items 类型分布（type:数，语义见 items.asm:45-54 注释 C 级）: {2: 10, 3: 1, 4: 3, 10: 1}
+```
+
+| 结论 | 级 |
+|---|---|
+| 章链线格式+寻径公式 | **A**（asm 锚+ROM 15/15 标签互核+单测） |
+| 15 条目布局/坐标 | **A**（walk=labels 全合） |
+| type 语义名（Power up 等） | **C**（注释线索，不入字段名，D5） |
+| 型分布 {2:10,3:1,4:3,10:1} | **A**（批量实测） |
+
+施工令②补款实证：asm 注「offset-1」措辞本身错位——**锚在但须自建解码互核**的
+正面案例（与 TYA 位错案反向同款）。遗留：enemy_sprite_data 两件套之二 + ⑤ CHR 面。

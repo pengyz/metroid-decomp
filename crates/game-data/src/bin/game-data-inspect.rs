@@ -6,7 +6,7 @@
 //! 产出：47 房批解析 + 50 结构批解析 + L2 敌/门段（tail）长度/首字节聚类
 //!（C→B 自证素材：变长段结构一致性实证）。
 
-use game_data::{parse_vram_struct, parse_ptr_table, parse_room, parse_structure, brinstar};
+use game_data::{parse_spec_items, parse_vram_struct, parse_ptr_table, parse_room, parse_structure, brinstar};
 use std::collections::BTreeMap;
 use std::env;
 use std::fs;
@@ -129,4 +129,26 @@ fn main() {
         pal_ok, pal_bad, pal_bytes);
     assert_eq!(pal_bad, 0, "palette 批解析失败");
 
+    // ③ items 模块：asm 标签集互核（结构互核注：自建解码走址 ↔ m1disasm 标签坐标）
+    const SPEC_ITMS: u16 = 0xA3D6; // items.asm:56 SpecItmsTbl_{AREA} ; 01:A3D6
+    let (items, used) = parse_spec_items(&b1[at(SPEC_ITMS)..], SPEC_ITMS)
+        .expect("items 解析失败");
+    // asm 标签坐标（items.asm @y/@@x 注址全集，工具外人工抄录=互核基准）
+    let asm_labels: &[u16] = &[
+        0xA3D9, 0xA3DE, 0xA3E7, 0xA3ED, 0xA3F6, 0xA3FC, 0xA405, 0xA409,
+        0xA412, 0xA418, 0xA41F, 0xA425, 0xA42D, 0xA433, 0xA43C,
+    ];
+    let mut walk_addrs: Vec<u16> = items.iter().map(|i| i.addr).collect();
+    walk_addrs.sort_unstable();
+    let mut lab = asm_labels.to_vec();
+    lab.sort_unstable();
+    println!("③ items 批解析：{} 条目（{}B）；asm 标签互核：walk={} vs labels={} → {}",
+        items.len(), used, walk_addrs.len(), lab.len(),
+        if walk_addrs == lab { "✓ 全合" } else { "✗ 分歧" });
+    assert_eq!(walk_addrs, lab, "items 走址与 asm 标签分歧");
+    let mut tdist = std::collections::BTreeMap::new();
+    for i in &items {
+        *tdist.entry(i.item_type).or_insert(0usize) += 1;
+    }
+    println!("③ items 类型分布（type:数，语义见 items.asm:45-54 注释 C 级）: {:?}", tdist);
 }
