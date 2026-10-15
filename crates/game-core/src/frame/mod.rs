@@ -14,9 +14,12 @@ pub mod boot;
 pub mod clock;
 pub mod engine;
 pub mod memory;
+pub mod nmi;
 pub mod rng;
 
 pub use clock::{VirtualClock, TARGET_FPS};
 pub use engine::FrameEngine;
+pub use boot::io;
 pub use memory::{FrameMemory, Registers};
+pub use nmi::nmi_handler;
 pub use rng::GameRng;

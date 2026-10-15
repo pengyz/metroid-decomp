@@ -24,11 +24,13 @@ pub struct FrameMemory {
     pub wram: [u8; 0x2000],
     /// 寄存器面。
     pub regs: Registers,
+    /// NMI 使能态（PPUCTRL bit7——write_io($2000) 权威面；60Hz VBlank 调度开关）。
+    pub nmi_enabled: bool,
 }
 
 impl Default for FrameMemory {
     fn default() -> Self {
-        Self { ram: [0; 0x800], wram: [0; 0x2000], regs: Registers::default() }
+        Self { ram: [0; 0x800], wram: [0; 0x2000], regs: Registers::default(), nmi_enabled: false }
     }
 }
 
@@ -56,7 +58,10 @@ impl FrameMemory {
     /// IO/寄存器面写（PPU/APU/手柄——**不入 RAM**：write_ram 的 2KB 镜像归一会把
     /// $2000 等寄存器址漏进 RAM $0000——本方法是寄存器面唯一入口；渲染面建模挂点=task-13）。
     pub fn write_io(&mut self, addr: u16, v: u8) {
-        let _ = (addr, v); // S5 骨架：寄存器面暂不建模（RAM watch 不可见）；task-13 挂 PPU 态
+        if addr == 0x2000 {
+            self.nmi_enabled = v & 0x80 != 0; // PPUCTRL bit7=NMI 使能（hardware.asm:28）
+        }
+        // 其余寄存器面 S5 骨架暂不建模（RAM watch 不可见）；渲染面挂 task-13
     }
 
     /// watch 状态向量（zp/iram，大写 hex——与 oracle 帧 trace 同形）。

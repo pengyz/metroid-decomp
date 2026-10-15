@@ -34,6 +34,10 @@ pub mod io {
     pub const APU_4015: u16 = 0x4015;
     /// MMC1 control（bank07:C4C5 `8D 00 80` STA $8000 ×5 串行）。
     pub const MMC1_CTRL: u16 = 0x8000;
+    /// OAM 地址（NMI 头 `lda #$00 / sta OAMADDR`；hardware.asm:7 = $2003）。
+    pub const OAMADDR: u16 = 0x2003;
+    /// OAM DMA（NMI 头 `lda #>SpriteRAM / sta OAMDMA`；hardware.asm:84 = $4014）。
+    pub const OAMDMA: u16 = 0x4014;
 }
 
 /// zp 指针对（清零环用；bank07:C041 `84 01`/C045 `84 00`）。
@@ -41,7 +45,7 @@ const PTR_LO: u16 = 0x0000;
 const PTR_HI: u16 = 0x0001;
 
 /// bank07:$C01A 主初始化（执行序一步一单元；未端口步=unported! 引爆）。
-pub fn boot_init(mem: &mut FrameMemory) {
+pub fn boot_pre_spin(mem: &mut FrameMemory) {
     // ① MMC1 复位写（A=0：CHR0/CHR1 串行清零）
     mem.regs.a = 0x00;
     mmc1_serial_write(mem, io::MMC1_CHR0);
@@ -193,7 +197,7 @@ pub fn c4de_unit(mem: &mut FrameMemory) {
     mem.regs.a = mem.read_ram(0x0000); // C50D LDA $00（分派索引）
     // C510 分派（表 bank0:C51F `31 C5 52 C5 …`）
     match mem.regs.a {
-        0 => c531_unit(mem),
+        0 => c531_unit_pre(mem),
         _ => crate::unported!("bank00:C51F"), // 非 boot 表项未端口
     }
 }
@@ -207,19 +211,19 @@ pub fn c4de_unit(mem: &mut FrameMemory) {
 /// IntroStarsData→IntroStarSprite，$A0 字节）→ `jsr InitTitleGFX ($C5D7)` → `jmp NMIOn
 /// ($C487)`（「Turn on VBlank interrupts」）。ROM 抽查：`C531: A0 00 84 31 C8 84 1D`。
 /// 链首桩=ScreenNmiOff（C45D）——逐段端口。
-fn c531_unit(mem: &mut FrameMemory) {
-    mem.write_ram(0x0031, 0);
-    mem.write_ram(0x001D, 1);
-    // ScreenNmiOff（asm :1165——已端口；内含 NMI 面引爆）
-    screen_nmi_off(mem);
-    // CopyMap（asm prg0_title.asm:5153——已端口）
+fn c531_unit_pre(mem: &mut FrameMemory) {
+    mem.write_ram(0x0031, 0); // GamePaused=0
+    mem.write_ram(0x001D, 1); // GameMode=1（title）
+    // ScreenNmiOff（asm :1165——pre 段；spin=跨帧 yield（§8.1））
+    screen_nmi_off_pre(mem);
+}
+
+/// spin 出口后段（c531 链续——NMI 尾写 1 唤醒后执行）：ScreenNmiOff post → CopyMap →
+/// InitTitleGFX 桩。
+pub fn boot_post_spin(mem: &mut FrameMemory) {
+    screen_nmi_off_post(mem);
     copy_map(mem);
-    crate::unported!("bank07:C5D7"); // 链次桩（InitTitleGFX）
-    #[allow(unreachable_code)]
-    {
-        // 后续链段：JSR $A93E（窗口件）/JSR $C158（c158_unit 复用）/ROM→WRAM 拷贝
-        // （memmap 烘焙源）/JSR $C5D7/JMP $C487——逐段端口
-    }
+    crate::unported!("bank07:C5D7"); // InitTitleGFX（链次桩）
 }
 
 /// CopyMap 单元（**asm 引证主体**，链规 17）——refs/m1disasm/SRC/prg0_title.asm:5153
@@ -254,20 +258,20 @@ pub fn copy_map(mem: &mut FrameMemory) {
 /// **NMI 面引爆**（task-13 对表中）：自旋出口的 $1A 可观测值=NMI 端写值
 /// （prg7_engine.asm:280 `sty NMIStatus`）——NMI 单元未端口前不可发明，fail-loud
 /// 爆在 `bank07:C0D9`（lead 提前招呼已发）。
-pub fn screen_nmi_off(mem: &mut FrameMemory) {
-    use crate::ram_map::{NMI_STATUS, PPUMASK_ZP, PPUCTRL_ZP};
-    let _ = PPUCTRL_ZP;
+pub fn screen_nmi_off_pre(mem: &mut FrameMemory) {
+    use crate::ram_map::{NMI_STATUS, PPUMASK_ZP};
     let m = mem.read_ram(PPUMASK_ZP) & !(0x08u8 | 0x10);
     mem.write_ram(PPUMASK_ZP, m); // WriteAndWait `sta PPUMASK_ZP`
-    mem.write_ram(NMI_STATUS, 0); // ClearNMIStat（C434）
-    crate::unported!("bank07:C0D9"); // NMI-end 标记写值（task-13 对表）
-    #[allow(unreachable_code)]
-    {
-        // 自旋出口后（C0D9 端口后可达）：PPUCTRL_ZP &= !0x80；STA PPUCTRL_ZP/PPUCTRL
-        let c = mem.read_ram(PPUCTRL_ZP) & !0x80;
-        mem.write_ram(PPUCTRL_ZP, c);
-        mem.write_io(io::PPU_CTRL, c);
-    }
+    mem.write_ram(NMI_STATUS, 0); // ClearNMIStat（C434）——spin 入口（跨帧 yield）
+}
+
+/// spin 出口后段（§8.1 跨帧定案：NMI 尾写 1 后唤醒）：PPUCTRL_ZP &= !0x80；
+/// STA PPUCTRL_ZP/PPUCTRL（NMI 关）。
+pub fn screen_nmi_off_post(mem: &mut FrameMemory) {
+    use crate::ram_map::PPUCTRL_ZP;
+    let c = mem.read_ram(PPUCTRL_ZP) & !0x80;
+    mem.write_ram(PPUCTRL_ZP, c);
+    mem.write_io(io::PPU_CTRL, c);
 }
 
 /// MMC1 串行写（5 次 STA，值 LSR 递移——bank07:C01C/C02B/C4FA 形态；非 RAM 面）。
@@ -391,25 +395,25 @@ mod tests {
         c4de_unit(&mut m); // $24==0 → 早出
         assert_eq!(m.regs.a, 0x77);
         m.write_ram(0x0024, 1); // boot 态
-        let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| c4de_unit(&mut m)));
-        let msg = panic_message(&r.unwrap_err());
-        assert!(msg.contains("unported @ bank07:C0D9"), "引爆点失准: {msg}");
+        c4de_unit(&mut m); // 全链静默完成（spin yield 无炸——跨帧状态机）
         assert_eq!(m.read_ram(0x0024), 0); // C4E8 已跑
         assert_eq!(m.read_ram(0x0023), 0);
         assert_eq!(m.read_ram(0x0028), 0); // ($28&0x18)|0
     }
 
-    /// ScreenNmiOff 可达面（$FE 遮蔽+$1A=0）+ NMI 面引爆（C0D9 fail-loud）。
+    /// ScreenNmiOff pre 段（$FE 遮蔽+$1A=0 spin 入口）+ post 段（$FF 清 bit7/NMI 关）。
     #[test]
-    fn screen_nmi_off_masks_and_detonates_at_nmi_face() {
-        use crate::ram_map::{NMI_STATUS, PPUMASK_ZP};
+    fn screen_nmi_off_pre_post_semantics() {
+        use crate::ram_map::{NMI_STATUS, PPUMASK_ZP, PPUCTRL_ZP};
         let mut m = FrameMemory::default();
         m.write_ram(PPUMASK_ZP, 0xFF);
-        let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| screen_nmi_off(&mut m)));
-        let msg = panic_message(&r.unwrap_err());
-        assert!(msg.contains("unported @ bank07:C0D9"), "引爆点失准: {msg}");
+        m.write_ram(PPUCTRL_ZP, 0x90);
+        screen_nmi_off_pre(&mut m);
         assert_eq!(m.read_ram(PPUMASK_ZP), 0xE7); // !(0x08|0x10) 遮蔽
-        assert_eq!(m.read_ram(NMI_STATUS), 0); // ClearNMIStat
+        assert_eq!(m.read_ram(NMI_STATUS), 0); // ClearNMIStat（spin 入口）
+        screen_nmi_off_post(&mut m);
+        assert_eq!(m.read_ram(PPUCTRL_ZP), 0x10); // bit7 清
+        assert!(!m.nmi_enabled); // write_io($2000) 权威面
     }
 
     /// CopyMap：WRAM $7000-$73FF 拷贝 + 指针终态（asm 终态自证）。
