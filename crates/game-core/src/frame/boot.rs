@@ -32,6 +32,8 @@ pub mod io {
     pub const APU_4011: u16 = 0x4011;
     /// APU $4015（bank07:C0A3）。
     pub const APU_4015: u16 = 0x4015;
+    /// MMC1 control（bank07:C4C5 `8D 00 80` STA $8000 ×5 串行）。
+    pub const MMC1_CTRL: u16 = 0x8000;
 }
 
 /// zp 指针对（清零环用；bank07:C041 `84 01`/C045 `84 00`）。
@@ -73,7 +75,8 @@ pub fn boot_init(mem: &mut FrameMemory) {
         mem.write_ram(0x00FF, 0x90);
         mem.write_ram(0x00FE, 0x02);
         mem.write_ram(0x00FA, 0x47);
-        crate::unported!("bank07:C4B2");
+        // C4B2 单元（MMC1 control 串行写——已端口）
+        c4b2_unit(mem);
         #[allow(unreachable_code)]
         {
             mem.write_io(io::APU_4011, 0x00);
@@ -83,7 +86,7 @@ pub fn boot_init(mem: &mut FrameMemory) {
             mem.write_ram(0x002E, 0x11);
             mem.write_ram(0x002F, 0xFF);
             mem.write_ram(0x0024, 0x01);
-            crate::unported!("bank07:C4DE");
+            crate::unported!("bank07:C4DE"); // 下一单元（主循环件）
         }
     }
 }
@@ -145,6 +148,21 @@ pub fn c1a3_unit(mem: &mut FrameMemory) {
             crate::unported!("bank00:988A");
         }
     }
+}
+
+/// C4B2 单元——MMC1 control 串行写（bank07:C4B2-C4D8）：`A9 47/4A ×3/29 01` 取 bit
+/// （A=$47 入口自载；**C4D9 变体**=`A5 FA/4C B6 C4` 尾跳 $C4B6——A=$FA，未入 boot 序）→
+/// `$25=($25&!1)|bit`（RAM 面）→ `STA $8000` ×5 串行（寄存器面）。
+/// boot 态：$25=0x0E（C06D 置）→ $00=0/$25=0x0E/A=0x0E；control=0x0E（mode3 ✓ 与
+/// $988A bank0 归属自证一致）。
+pub fn c4b2_unit(mem: &mut FrameMemory) {
+    let a_in = 0x47; // C4B4 `A9 47` 自载（C4D9 变体=$FA——尾跳入口另立）
+    let bit = (a_in >> 3) & 1;
+    mem.write_ram(0x0000, bit);
+    let v = (mem.read_ram(0x0025) & 0xFE) | bit;
+    mem.write_ram(0x0025, v);
+    mmc1_serial_write(mem, io::MMC1_CTRL);
+    mem.regs.a = v;
 }
 
 /// MMC1 串行写（5 次 STA，值 LSR 递移——bank07:C01C/C02B/C4FA 形态；非 RAM 面）。
@@ -247,6 +265,17 @@ mod tests {
         let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| c1a3_unit(&mut m)));
         let msg = panic_message(&r.unwrap_err());
         assert!(msg.contains("unported @ bank00:988A"), "引爆点失准: {msg}");
+    }
+
+    /// C4B2 MMC1 control 状态面（boot 态 $25=0x0E→$00=0/$25=0x0E/A=0x0E）。
+    #[test]
+    fn c4b2_writes_control_state() {
+        let mut m = FrameMemory::default();
+        m.write_ram(0x0025, 0x0E);
+        c4b2_unit(&mut m);
+        assert_eq!(m.read_ram(0x0000), 0x00); // ($47>>3)&1=0
+        assert_eq!(m.read_ram(0x0025), 0x0E);
+        assert_eq!(m.regs.a, 0x0E);
     }
 
     /// WRAM 环（bank07:C057-C06B）：$6000-$7FFF 同型填充。
