@@ -3736,6 +3736,15 @@
       "evidence": "oracle/subroutines/l2_cases.jsonl#gen-f1bf-* 三方全等（WRAM 源坐标累加）",
       "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
     },
+    "S-FUNC-07-F1CB": {
+      "id": "S-FUNC-07-F1CB",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L2",
+      "covered": true,
+      "evidence": "oracle/subroutines/l2_cases.jsonl#gen-f1cb-0..7 + #b-f1cb-yff/b-f1cb-wrap 三方全等（golden==ROM 执行==game-core）；语义来源 ROM 原字节 bank07:F1CB-F1D1=18 79 F6 6A 85 05 60 逐指令",
+      "note": "decode-gap 补录格（IDA 机械切分漏码当数据，findings/seed-decode-gap-f0a2-f148.md A 级 ROM 字节）；denoms 机械切分待纠偏（decode-sweep/task-2 出 v2 后回填）；L2 窗口 stops=bank07:F1D1（尾 RTS 址截断）：**79 F6 6A=ADC abs,Y 读 WRAM $6AFx 域**→$05←A+WRAM[$6AF6+Y]，A=$05；F1B3 共享尾本体"
+    },
     "S-FUNC-07-F1D2": {
       "id": "S-FUNC-07-F1D2",
       "face": "symbol",
