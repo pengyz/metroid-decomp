@@ -106,6 +106,7 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "sub_F2AD" => Some(sub_f2ad),
         "sub_F2CA" => Some(sub_f2ca),
         "sub_F2ED" => Some(sub_f2ed),
+        "sub_F2E8" => Some(sub_f2e8),
         "sub_F2D8" => Some(sub_f2d8),
         _ => None,
     }
@@ -526,4 +527,11 @@ pub fn sub_f2ca(input: &L2In) -> L2Out {
 /// L2 窗口 stops=bank07:F310（内返回址 F2E7/CDBE/C2C9/F276 逐址核过不在 stops）。
 pub fn sub_f2ed(input: &L2In) -> L2Out {
     crate::verify_shim::f2ed(input)
+}
+
+/// sub_F2E8 —— bank07:F2E8-F310 注册名（机械名只在注册注释，two-layer §4）。
+/// **域形态**（§5 新实施件）：Z 路由双流组合（见 verify_shim::f2e8 doc）。
+/// L2 窗口 stops=F2DE/F310 双出口（内返回址 C2C9/F2E7/CDBE/F276 逐址核过）。
+pub fn sub_f2e8(input: &L2In) -> L2Out {
+    crate::verify_shim::f2e8(input)
 }

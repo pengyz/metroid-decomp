@@ -5,7 +5,7 @@
   "rom_sha256": "e6e6b7014685adae447ebb3833242815747bc1e5df83ade79f693fb67cf565b6",
   "projection": "reference/seed/metroid.asm",
   "counts": {
-    "mechanical_to_domain": 7
+    "mechanical_to_domain": 8
   },
   "vectors": {},
   "entries": [
@@ -63,6 +63,14 @@
       "domain": "enemy::{EnemyTodo0404::or_writeback + CD9C 探针 + EnemyAttrs::or_attribute + 暂存/ROM 向量}（carry 敏感跨 view）",
       "via": "verify_shim::f2ed",
       "evidence": "two-layer §5 新实施件（本 commit）；L2 案 gen-f2ed-*/b-f2ed-* 三方全等（三态 carry/探针路由面）",
+      "confidence": 95
+    },
+    {
+      "mechanical": "sub_F2E8",
+      "addr": "bank07:F2E8-F310",
+      "domain": "enemy::{EnemyTodo0404::or_writeback + f2ed_flow 组合}（Z 路由双流）",
+      "via": "verify_shim::f2e8",
+      "evidence": "two-layer §5 新实施件（本 commit）；L2 案 gen-f2e8-*/b-f2e8-* 三方全等（Z 路由+入口 A 面）",
       "confidence": 95
     }
   ]

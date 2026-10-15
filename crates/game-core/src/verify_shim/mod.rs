@@ -118,9 +118,14 @@ pub fn f2ca(input: &L2In) -> L2Out {
 /// + $6E/$6F←ROM 向量常量（window_bank=7 约定 A9）；出口 A=ROM_VEC_HI。
 /// 写集：域 write_event + 暂存面事件推导。
 pub fn f2ed(input: &L2In) -> L2Out {
+    f2ed_flow(input, input.a)
+}
+
+/// F2ED 流本体（a_entry=分支点 A：f2ed 为入参 A；f2e8 落入时为半变换掩码值）。
+fn f2ed_flow(input: &L2In, a_entry: u8) -> L2Out {
     const FLAG_C: u8 = 0x01;
     if input.p & FLAG_C != 0 {
-        return L2Out { a: input.a, x: input.x, y: input.y, writes: vec![] };
+        return L2Out { a: a_entry, x: input.x, y: input.y, writes: vec![] };
     }
     let mut v0404 = memmap::enemy_todo_0404::decode_todo_0404(&input.ram);
     let a_df = v0404.or_writeback(input.y, memmap::enemy_todo_0404::mask10(&input.ram));
@@ -145,4 +150,24 @@ pub fn f2ed(input: &L2In) -> L2Out {
         memmap::flow_scratch::event_vec_hi(memmap::flow_scratch::ROM_VEC_HI),
     ];
     L2Out { a: memmap::flow_scratch::ROM_VEC_HI, x: input.x, y: input.y, writes }
+}
+
+/// f2e8 适配（注册名 `sub_F2E8` ← bank07:F2E8-F310，stops=[bank07:F2DE, bank07:F310]）。
+///
+/// **Z 路由 + 双流组合**：JSR F340 半变换掩码（$10^3）非 0（`D0 EB` BNE $F2D8）⇒
+/// F2D8 流 or_writeback（$0404+X，掩码=半变换）出口 F2DE；
+/// 为 0 ⇒ 落 F2ED 流（入口 A=0——BCS 出口 A 与 f2ed 的入参 A 面不同，参数化复用）。
+pub fn f2e8(input: &L2In) -> L2Out {
+    let mask = memmap::enemy_todo_0404::mask10_xor3(&input.ram);
+    if mask != 0 {
+        let mut v0404 = memmap::enemy_todo_0404::decode_todo_0404(&input.ram);
+        let a_out = v0404.or_writeback(input.x, mask);
+        return L2Out {
+            a: a_out,
+            x: input.x,
+            y: input.y,
+            writes: vec![memmap::enemy_todo_0404::write_event(input.x, a_out)],
+        };
+    }
+    f2ed_flow(input, mask)
 }

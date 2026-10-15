@@ -47,6 +47,12 @@ pub fn mask10(ram: &[u8]) -> u8 {
     ram[MASK10_ZP as usize & 0x7FF]
 }
 
+/// 半变换掩码（F2E8 流）：RAM[$10] ^ 3（**无 ASL**——F340 `A5 10 49 03 60` 直接返回值，
+/// 与 F332 尾汇入的全变换不同）。证据（A 级字节）：bank07:F340。
+pub fn mask10_xor3(ram: &[u8]) -> u8 {
+    mask10(ram) ^ 0x03
+}
+
 /// 变换掩码（F2D5/F2AD 流）：((RAM[$10] ^ 3) << 3) & $FF。
 /// 证据（A 级字节）：bank07:F340 `A5 10 49 03 60`（LDA zp $10 / EOR #$03 / RTS）+
 /// bank07:C2C6 `0A 0A 0A 60`（ASL A ×3 / RTS——F332 尾 `4C C6 C2` JMP $C2C6 汇入）。
