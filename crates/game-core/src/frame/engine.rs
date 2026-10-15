@@ -86,7 +86,7 @@ mod tests {
         let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| e.tick_frame()));
         let err = r.unwrap_err();
         let msg = panic_message(&err);
-        assert!(msg.contains("unported @ bank07:C1A3"), "引爆点失准: {msg}");
+        assert!(msg.contains("unported @ bank07:C4B2"), "引爆点失准: {msg}");
     }
 
     /// tick_frame 执行序：tick 先行 + C01A 单元清零环生效 + 引爆前态可检。
@@ -98,8 +98,10 @@ mod tests {
         assert_eq!(e.mem.read_ram(0x0355), 0x55); // 清零环已跑（Y 型填充）
         assert_eq!(e.mem.read_ram(0x0025), 0x0E); // zp 初始化序已跑
         assert_eq!(e.mem.regs.sp, 0xFF); // TXS
-        assert_eq!(e.mem.read_ram(0x0000), 0xFF); // C158 首遍（sub_c16d 反哺）已跑
+        assert_eq!(e.mem.read_ram(0x0000), 0x00); // C1A3 ptr（$00=0，覆写 C158 的 FF——执行序后写胜）
+        assert_eq!(e.mem.read_ram(0x0001), 2); // C1A3 ptr 高位
         assert_eq!(e.mem.read_ram(0x00FF) & 0x04, 0x00); // C158 $FF 清 bit2
+        assert_eq!(e.mem.read_ram(0x0200), 0xF0); // C1A3 OAM 影子 F0 填充（帧 1 实测面）
     }
 
     /// GameRng 算法缺口面 fail-loud（未证不发明）。

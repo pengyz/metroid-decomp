@@ -53,6 +53,12 @@ impl FrameMemory {
         self.wram[(addr as usize - 0x6000) & 0x1FFF] = v;
     }
 
+    /// IO/寄存器面写（PPU/APU/手柄——**不入 RAM**：write_ram 的 2KB 镜像归一会把
+    /// $2000 等寄存器址漏进 RAM $0000——本方法是寄存器面唯一入口；渲染面建模挂点=task-13）。
+    pub fn write_io(&mut self, addr: u16, v: u8) {
+        let _ = (addr, v); // S5 骨架：寄存器面暂不建模（RAM watch 不可见）；task-13 挂 PPU 态
+    }
+
     /// watch 状态向量（zp/iram，大写 hex——与 oracle 帧 trace 同形）。
     pub fn watch_snapshot(&self) -> Vec<(&'static str, String)> {
         vec![
@@ -75,6 +81,17 @@ fn hex_upper(bytes: &[u8]) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// 寄存器面不漏 RAM 镜像（write_ram 的 &0x7FF 归一会把 $2000 漏进 $0000——
+    /// tick_frame 测试实抓回归案；寄存器面唯一入口=write_io）。
+    #[test]
+    fn write_io_does_not_leak_into_ram_mirror() {
+        let mut m = FrameMemory::default();
+        m.write_io(0x2000, 0x90);
+        m.write_io(0x2005, 0x00);
+        assert_eq!(m.read_ram(0x0000), 0x00);
+        assert_eq!(m.read_ram(0x0005), 0x00);
+    }
 
     /// 2KB 镜像归一 + watch 面编码（zp=512 hex、iram=3584 hex，大写）。
     #[test]

@@ -59,25 +59,25 @@ pub fn boot_init(mem: &mut FrameMemory) {
     mem.write_ram(0x0028, 0x00);
     mem.write_ram(0x00FD, 0x00);
     mem.write_ram(0x00FC, 0x00);
-    mem.write_ram(io::PPU_SCROLL, 0x00); // STY $2005 ×2（Y=0）
-    mem.write_ram(io::PPU_SCROLL, 0x00);
+    mem.write_io(io::PPU_SCROLL, 0x00); // STY $2005 ×2（Y=0）
+    mem.write_io(io::PPU_SCROLL, 0x00);
     mem.write_ram(0x001D, 0x01); // INY/STY $1D
     // C158 单元（VRAM 清屏双遍——已端口）
     c158_unit(mem);
-    // 嵌套单元桩（执行序逐个引爆：每引爆一个端一个）
-    crate::unported!("bank07:C1A3");
+    // C1A3 单元（OAM 影子清屏——已端口）
+    c1a3_unit(mem);
     #[allow(unreachable_code)]
     {
         // C158 后序（桩移除后可达；现为执行序地图占位）
-        mem.write_ram(io::PPU_CTRL, 0x90); // STA $2000（NMI 使能）
+        mem.write_io(io::PPU_CTRL, 0x90); // STA $2000（NMI 使能）
         mem.write_ram(0x00FF, 0x90);
         mem.write_ram(0x00FE, 0x02);
         mem.write_ram(0x00FA, 0x47);
         crate::unported!("bank07:C4B2");
         #[allow(unreachable_code)]
         {
-            mem.write_ram(io::APU_4011, 0x00);
-            mem.write_ram(io::APU_4015, 0x0F);
+            mem.write_io(io::APU_4011, 0x00);
+            mem.write_io(io::APU_4015, 0x0F);
             mem.write_ram(0x001F, 0x00);
             mem.write_ram(0x001E, 0x00);
             mem.write_ram(0x002E, 0x11);
@@ -124,6 +124,29 @@ pub fn c158_unit(mem: &mut FrameMemory) {
     mem.regs.y = 0;
 }
 
+/// C1A3 单元——OAM 影子清屏（bank07:C1A3-C1BB）：$0200-$02FF = $F0 填充（**帧 1 实测面**
+/// ——oracle 帧 1 $0200 页 F0 填充 256/256 命中）+ ptr 态（$00=0/$01=2）。
+///
+/// $1D≠0 ⇒ 尾跳窗口 $988A（bank00——boot 态 MMC1 自证：FFB0 序 control=$FF（mode3）+
+/// C01A 序 PRG reg=0 ⇒ $8000=bank0）。$988A 双检（`C9 1D` CMP 立即数同族陷阱/$C8/$2D）：
+/// boot 态全短路→$98AD RTS 直回；**游戏态路径未端口**（$989B DEC 循环+后续）——fail-loud。
+pub fn c1a3_unit(mem: &mut FrameMemory) {
+    for y in 0..=0xFFu8 {
+        mem.write_ram(0x0200 + y as u16, 0xF0);
+    }
+    mem.write_ram(0x0000, 0);
+    mem.write_ram(0x0001, 2);
+    if mem.read_ram(0x001D) != 0 {
+        // $988A 双检：$1F>=$1D 或 $C8==0 或 $2D bit0=1 ⇒ 出口 $98AD（RTS）
+        let in_game_path = mem.read_ram(0x001F) < 0x1D
+            && mem.read_ram(0x00C8) != 0
+            && mem.read_ram(0x002D) & 1 == 0;
+        if in_game_path {
+            crate::unported!("bank00:988A");
+        }
+    }
+}
+
 /// MMC1 串行写（5 次 STA，值 LSR 递移——bank07:C01C/C02B/C4FA 形态；非 RAM 面）。
 fn mmc1_serial_write(mem: &mut FrameMemory, _reg: u16) {
     let mut v = mem.regs.a;
@@ -167,6 +190,14 @@ fn clear_pages_wram(mem: &mut FrameMemory, mut page: u8, lo: u8) {
 mod tests {
     use super::*;
 
+    /// panic payload 双型兜底（String / &str——工具链形态差异）。
+    fn panic_message(err: &Box<dyn std::any::Any + Send>) -> String {
+        err.downcast_ref::<String>()
+            .cloned()
+            .or_else(|| err.downcast_ref::<&'static str>().map(|s| (*s).to_string()))
+            .unwrap_or_default()
+    }
+
     /// 清零环语义（bank07:C03F-C055）：pages $07..$02 值=偏移低字节；ZP/栈页不触。
     #[test]
     fn clear_ram_lo_fills_pages_with_low_byte() {
@@ -193,6 +224,29 @@ mod tests {
         m2.write_ram(0x001F, 0x1D);
         c158_unit(&mut m2); // $1D≠0 ∧ $1F==$1D（立即数）→ $01=3
         assert_eq!(m2.read_ram(0x0001), 3);
+    }
+
+    /// C1A3 OAM 影子清屏（帧 1 实测面）+ boot 态双检短路。
+    #[test]
+    fn c1a3_fills_oam_shadow_and_boot_short_circuits() {
+        let mut m = FrameMemory::default();
+        m.write_ram(0x001D, 1); // boot 态（C082 置位）
+        c1a3_unit(&mut m);
+        assert_eq!(m.read_ram(0x0200), 0xF0);
+        assert_eq!(m.read_ram(0x02FF), 0xF0);
+        assert_eq!(m.read_ram(0x01FF), 0x00); // 栈页不触
+        assert_eq!(m.read_ram(0x0001), 2);
+    }
+
+    /// C1A3 游戏态路径 fail-loud（$1F<$1D ∧ $C8≠0 ∧ $2D 偶——$989B DEC 循环未端口）。
+    #[test]
+    fn c1a3_ingame_path_detonates() {
+        let mut m = FrameMemory::default();
+        m.write_ram(0x001D, 1);
+        m.write_ram(0x00C8, 1); // $C8≠0
+        let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| c1a3_unit(&mut m)));
+        let msg = panic_message(&r.unwrap_err());
+        assert!(msg.contains("unported @ bank00:988A"), "引爆点失准: {msg}");
     }
 
     /// WRAM 环（bank07:C057-C06B）：$6000-$7FFF 同型填充。
