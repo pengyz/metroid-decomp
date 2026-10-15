@@ -17,3 +17,4 @@
 {"id": "gen-f149", "subroutine": "sub_F149", "entry": "bank07:F149", "stops": ["bank07:F1FA"], "samples": 8, "ram_addrs": ["0301", "0302", "030C", "030D", "030E", "00FF"]}
 {"id": "gen-f172", "subroutine": "sub_F172", "entry": "bank07:F172", "stops": ["bank07:F185"], "samples": 8, "ram_addrs": ["030C", "030D", "030E", "00FF"]}
 {"id": "gen-f19a", "subroutine": "sub_F19A", "entry": "bank07:F19A", "stops": ["bank07:F185"], "samples": 8, "ram_addrs": ["00B1", "00B2", "00B3", "00FF"]}
+{"id": "gen-f162", "subroutine": "sub_F162", "entry": "bank07:F162", "stops": ["bank07:F199"], "samples": 8, "ram_addrs": ["0400", "0401", "6AFB", "00FF"]}

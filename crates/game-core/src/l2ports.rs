@@ -98,6 +98,7 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "sub_F1E7" => Some(sub_f1e7),
         "sub_F172" => Some(sub_f172),
         "sub_F19A" => Some(sub_f19a),
+        "sub_F162" => Some(sub_f162),
         _ => None,
     }
 }
@@ -124,6 +125,27 @@ pub fn sub_f1e0(input: &L2In) -> L2Out {
     let addr = (0x0301 + input.y as u16) & 0x7FF;
     let v = input.a.wrapping_add(input.ram[addr as usize]);
     L2Out { a: v, x: input.x, y: input.y, writes: vec![(0x0004, v)] }
+}
+
+/// sub_F162 —— bank07:F162-F171（`LDA $400,Y / STA $06 / LDA $401,Y / STA $08 / LDA $6AFB,Y /`
+/// 经 F193 共享尾：Y 变体坐标/属性读取，F152 的对偶）。
+/// L2 窗口 stops=bank07:F199（F193 尾 RTS 址截断）。
+/// 语义（A 级：ROM 原字节 `B9 00 04 85 06 B9 01 04 85 08 B9 FB 6A 4C 93 F1`；F193 尾
+/// `45 FF 29 01 85 0A 60`）：$06←RAM[$400+Y]；$08←RAM[$401+Y]；
+/// $0A←(WRAM[$6AFB+Y] ^ **RAM[$FF]**)&1（45 FF=EOR 零页 $FF 非立即数，同 F152/F186 教训）。
+/// 末值 A=$0A；X/Y 透传。注：$F109 `JSR $F162` 实存（samus-movement.md 2.2 更正）。
+pub fn sub_f162(input: &L2In) -> L2Out {
+    let y = input.y as u16;
+    let v6 = input.ram[(0x0400 + y) as usize & 0x7FF];
+    let v8 = input.ram[(0x0401 + y) as usize & 0x7FF];
+    let w = input.wram.get(0x6AFB + y as usize - 0x6000).copied().unwrap_or(0);
+    let va = (w ^ input.ram[0x00FF]) & 1;
+    L2Out {
+        a: va,
+        x: input.x,
+        y: input.y,
+        writes: vec![(0x0006, v6), (0x0008, v8), (0x000A, va)],
+    }
 }
 
 /// sub_F152 —— bank07:F152-F185（经 loc_F17F 共享尾）：坐标/属性读取器（X 变体）。

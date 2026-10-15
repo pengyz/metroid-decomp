@@ -3682,6 +3682,15 @@
       "evidence": "oracle/subroutines/l2_cases.jsonl#gen-f152-* 三方全等（WRAM 读表件，EOR zp 语义）",
       "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
     },
+    "S-FUNC-07-F162": {
+      "id": "S-FUNC-07-F162",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L2",
+      "covered": true,
+      "evidence": "oracle/subroutines/l2_cases.jsonl#gen-f162-0..7 + #b-f162-yff/b-f162-wram-ff0 三方全等（golden==ROM 执行==game-core）；语义来源 ROM 原字节 bank07:F162-F171=B9 00 04 85 06 B9 01 04 85 08 B9 FB 6A 4C 93 F1 + F193 尾（45 FF 29 01 85 0A 60）逐指令",
+      "note": "decode-gap 补录格（IDA 机械切分漏码当数据，findings/seed-decode-gap-f0a2-f148.md A 级 ROM 字节；$F109 JSR $F162 实存=samus-movement.md 2.2 更正）；denoms 机械切分待纠偏（decode-sweep/task-2 出 v2 后回填）；L2 窗口 stops=bank07:F199（F193 尾 RTS 址截断）：$06←RAM[$400+Y]、$08←RAM[$401+Y]、$0A←(WRAM[$6AFB+Y]^RAM[$FF])&1（45 FF=EOR zp），A=$0A"
+    },
     "S-FUNC-07-F172": {
       "id": "S-FUNC-07-F172",
       "face": "symbol",
