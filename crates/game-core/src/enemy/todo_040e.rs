@@ -46,6 +46,6 @@ mod tests {
         let v = e040e.set_entry(5, 0x81);
         assert_eq!(v, 0x81);
         assert_eq!(e040e.entries()[5], 0x81); // 覆写非或（0xFF→0x81）
-        assert_eq!(crate::memmap::enemy_todo_040e::write_event(5, v), (0x0413, 0x81));
+        assert_eq!(crate::memmap::enemy_todo_040e::write_event(5, v), (crate::memmap::enemy_todo_040e::ENEMY_TODO_040E_BASE + 5, 0x81));
     }
 }

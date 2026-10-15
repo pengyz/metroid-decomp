@@ -5,6 +5,17 @@
 //! 对拍不变式（§3）：行为钉死=结构可换——同批 L2 案在域形态下持续全绿。
 
 use crate::{memmap, L2In, L2Out};
+use std::collections::BTreeMap;
+
+/// 写事件流 → **最终值映射**（同址 last-wins，地址序）——L2 写集契约（run_subroutine
+/// final_writes 同义）。组合流同址多写（如 f282 的 $0404+X 跨阶段重写）必须经此收敛。
+pub fn merge_writes(events: Vec<(u16, u8)>) -> Vec<(u16, u8)> {
+    let mut map: BTreeMap<u16, u8> = BTreeMap::new();
+    for (a, v) in events {
+        map.insert(a, v);
+    }
+    map.into_iter().collect()
+}
 
 /// f270 适配（注册名 `sub_F270` ← bank07:F270-F276，stops=bank07:F276）。
 ///
@@ -22,7 +33,7 @@ pub fn f270(input: &L2In) -> L2Out {
         a: a_out,
         x: input.x,
         y: input.y,
-        writes,
+        writes: merge_writes(writes),
     }
 }
 
@@ -170,4 +181,63 @@ pub fn f2e8(input: &L2In) -> L2Out {
         };
     }
     f2ed_flow(input, mask)
+}
+
+/// f282 适配（注册名 `sub_F282` ← bank07:F282-F310 全流）。
+///
+/// **哨兵返回约定窗**（lead 首拍裁定+边界定案）：stops=[]——F281 双重角色（外出口 vs
+/// JSR F338 经 F27B 尾的内返回）由**栈纪律**天然区分；内返回址 F281/F2DE/F310/CDBE/C2C9/
+/// F276 逐址核过。五路出口：
+/// ① 入参 C=1（`B0 FD` BCS $F281）⇒ 空写集直出（A/X/Y 透传）；
+/// ② JSR F2E8（内返回，写集并入）后 CD9C 探针 C=0（`90 1F` BCC $F2AD）⇒ 尾跳 F2AD 流
+///   （LDY #0 已置 Y=0——出窗 Y=0）；
+/// ③ 槽字段 0（WRAM[$6AF4+X]）≥4（`C9 04`/`B0 EC` BCS $F281）⇒ 出窗 A=字段 0，Y=0；
+/// ④ 槽字段 14（WRAM[$6B02+X]）<0x80 且 ROM 表[$968B+Y]&0x10≠0（`B9 8B 96`/`29 10`/
+/// `D0 DC` BNE $F281）⇒ 出窗 A=0x10，Y=字段 14（TAY）；
+/// ⑤ 全路径：$010F←字段 14；LDY #0；attrs[0]←(RAM[$10]<<3)|old（F338 尾汇 F27B，Y=0）；
+///   $6E/$6F←ROM 向量；出窗 A=ROM_VEC_HI，Y=0。
+/// 写集：域 write_event + 暂存面事件依序推导。
+pub fn f282(input: &L2In) -> L2Out {
+    const FLAG_C: u8 = 0x01;
+    if input.p & FLAG_C != 0 {
+        return L2Out { a: input.a, x: input.x, y: input.y, writes: vec![] };
+    }
+    // JSR F2E8（内返回）
+    let e = f2e8(input);
+    let mut writes = e.writes;
+    // JSR CD9C（探针）→ LDY #0 → BCC $F2AD
+    let probe = memmap::cd9c::probe(&input.ram, &input.wram, e.a);
+    if !probe.carry {
+        // 尾跳 F2AD 流——**状态链化**：F2AD 读 F2E8 写后态（b-f282-ad-tail 打回案教训）
+        let mut ram = input.ram.clone();
+        for (a, v) in &writes {
+            ram[(*a as usize) & 0x7FF] = *v;
+        }
+        let derived = L2In { ram, ..input.clone() };
+        let mut r = f2ad(&derived);
+        r.y = 0; // LDY #0 先行
+        writes.extend(r.writes);
+        return L2Out { a: r.a, x: input.x, y: 0, writes: merge_writes(writes) };
+    }
+    // ③ 槽字段 0 阈值
+    let f0 = memmap::enemy_slots::read_field00(&input.wram, input.x);
+    if f0 >= 4 {
+        return L2Out { a: f0, x: input.x, y: 0, writes };
+    }
+    // ④ 字段 14 → $010F 暂存 + TAY + 表查
+    let f14 = memmap::enemy_slots::read_field0e(&input.wram, input.x);
+    writes.push(memmap::flow_scratch::event_010f(f14));
+    if f14 & 0x80 == 0 {
+        let t = memmap::rom_tables::table_968b(f14);
+        if t & 0x10 != 0 {
+            return L2Out { a: t & 0x10, x: input.x, y: f14, writes };
+        }
+    }
+    // ⑤ 全路径
+    let mut attrs = memmap::enemy_attrs::decode_attrs(&input.ram);
+    let attr_v = attrs.or_attribute(0, memmap::enemy_todo_0404::mask10_shl3(&input.ram));
+    writes.push(memmap::enemy_attrs::write_event(0, attr_v));
+    writes.push(memmap::flow_scratch::event_vec_lo(memmap::flow_scratch::ROM_VEC_LO));
+    writes.push(memmap::flow_scratch::event_vec_hi(memmap::flow_scratch::ROM_VEC_HI));
+    L2Out { a: memmap::flow_scratch::ROM_VEC_HI, x: input.x, y: 0, writes }
 }

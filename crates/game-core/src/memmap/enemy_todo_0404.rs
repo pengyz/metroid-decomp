@@ -53,6 +53,13 @@ pub fn mask10_xor3(ram: &[u8]) -> u8 {
     mask10(ram) ^ 0x03
 }
 
+/// 移位掩码（F282 流 F338 尾）：(RAM[$10] << 3) & $FF（**无 EOR**）。
+/// 证据（A 级字节）：bank07:F338 `A5 10 0A 0A 0A 4C 7B F2`（LDA zp $10 / ASL A ×3 /
+/// JMP $F27B——汇入 F279 尾 ORA/STA $030A,Y（Y=0））。
+pub fn mask10_shl3(ram: &[u8]) -> u8 {
+    mask10(ram).wrapping_shl(3) & 0xFF
+}
+
 /// 变换掩码（F2D5/F2AD 流）：((RAM[$10] ^ 3) << 3) & $FF。
 /// 证据（A 级字节）：bank07:F340 `A5 10 49 03 60`（LDA zp $10 / EOR #$03 / RTS）+
 /// bank07:C2C6 `0A 0A 0A 60`（ASL A ×3 / RTS——F332 尾 `4C C6 C2` JMP $C2C6 汇入）。

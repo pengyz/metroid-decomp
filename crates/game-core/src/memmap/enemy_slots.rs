@@ -45,6 +45,18 @@ pub fn read_offset(region: &[u8; ENEMY_SLOTS_LEN], off: u8) -> u8 {
     region[off as usize]
 }
 
+/// 字段 0 字节偏移读（F282 流：`BD F4 6A` LDA $6AF4,X）。
+pub fn read_field00(wram: &[u8], x: u8) -> u8 {
+    wram[0xAF4 + x as usize]
+}
+
+/// 字段 14 字节偏移读（F282 流：`BD 02 6B` LDA $6B02,X）。
+/// 注：X 大时越出 16B×16 槽视图（≤$6C01 仍在 WRAM 域）——**字节偏移契约面优先**
+/// （L2 已证任意 X），槽视图为 256B 投影。
+pub fn read_field0e(wram: &[u8], x: u8) -> u8 {
+    wram[0xB02 + x as usize]
+}
+
 /// 字节偏移写（返回写址=BASE+off，供写集推导）。
 pub fn write_offset(region: &mut [u8; ENEMY_SLOTS_LEN], off: u8, v: u8) -> (u16, u8) {
     region[off as usize] = v;

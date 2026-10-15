@@ -12,6 +12,19 @@ pub struct Cd9cProbe {
     pub carry: bool,
 }
 
+/// 出口表（P16-F1；**地址=ROM 字节自证**，与复审模型转述的 CDB5/CDBF 差 1——
+/// 疑其解码行首计数差；行为等价已由 F2ED/F2E8/F282 全族 L2 案 ROM 裁定钉死）：
+///
+/// | # | 出口指令 | 目标 | 条件 | 出口 C | 出口 A |
+/// |---|---|---|---|---|---|
+/// | 1 | CDA1 `D0 1B` BNE | CDBE | ($0300-1)&$FF≠0 | 1（SEC 后未改） | A_in（LDA 未执行） |
+/// | 2 | CDA8 `F0 14` BEQ | CDBE | ($6878&8)==0 | 1 | 0（AND 结果） |
+/// | 3 | CDB4 `D0 08` BNE | CDBE | $0305≠$0C（前三关过） | 1（**CDB3 SEC 刚置**，覆盖 CMP 借位） | $0305 |
+/// | 4 | CDB9 `10 03` BPL | CDBE | $0305==$0C ∧ $0308 bit7=0 | 1（SEC 后 BIT 不改 C） | $0305 |
+/// | 5 | CDBB `CD 06 03` CMP 落 CDBE | CDBE | $0305==$0E ∨ ($0305==$0C ∧ $0308 bit7=1) | ($0305>=$0306) | $0305 |
+///
+/// 注：L2 输出面无 flags——出口 C 只作窗内分支输入；出口 A 观测面见 f2ed（被 PLA 覆盖为
+/// Y_in）与 f282（被后续 LDA 覆盖）——A 终值非探针 A 的两处流控已在各自 shim doc 钉死。
 /// 折叠执行 CD9C 语义（只读探针，无写集）。
 pub fn probe(ram: &[u8], wram: &[u8], a_in: u8) -> Cd9cProbe {
     let rd = |a: u16| -> u8 { ram[a as usize & 0x7FF] };

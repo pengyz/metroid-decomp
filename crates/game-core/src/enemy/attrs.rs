@@ -50,6 +50,6 @@ mod tests {
         // 值变化面：无变化
         assert!(crate::memmap::enemy_attrs::diff_writes(&before, &attrs).is_empty());
         // 写事件面：事件存在且经 memmap 映射（0x030A+5=0x030F）
-        assert_eq!(crate::memmap::enemy_attrs::write_event(5, v), (0x030F, 170));
+        assert_eq!(crate::memmap::enemy_attrs::write_event(5, v), (crate::memmap::enemy_attrs::ENEMY_ATTRS_BASE + 5, 170));
     }
 }

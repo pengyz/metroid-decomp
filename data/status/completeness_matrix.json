@@ -3862,6 +3862,15 @@
       "evidence": "oracle/subroutines/l2_cases.jsonl#gen-f2ad-0..7 + #b-f2ad-xff/b-f2ad-mask0-noop/b-f2ad-x0 三方全等（golden==ROM 执行==game-core）；语义来源 ROM 原字节 bank07:F2AD-F2DE=A9 81 9D 0E 04 D0 21 + F2D5 流（F332/F340/C2C6 尾）逐指令",
       "note": "decode-gap 补录格（IDA 机械切分漏码当数据，decode-sweep r1 §3 岛 $F2AD-$F2B3 A 级）；denoms 机械切分待纠偏（decode-sweep/task-2 出 v2 后回填）；【two-layer §5 新实施件】跨 view 组合=EnemyTodo040E::set_entry（$81 直写，F2B2 BNE 恒转）+ EnemyTodo0404::or_writeback（变换掩码）；L2 窗口 stops=bank07:F2DE（F2B4 块自入口不可达不入窗）；F2CA 族九入口第 5 件"
     },
+    "S-FUNC-07-F282": {
+      "id": "S-FUNC-07-F282",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L2",
+      "covered": true,
+      "evidence": "oracle/subroutines/l2_cases.jsonl#gen-f282-0..7 + #b-f282-c1-exit/b-f282-ad-tail/b-f282-f0-ge4/b-f282-table-exit/b-f282-full 三方全等（golden==ROM 执行==game-core，哨兵窗 stops=[]）；语义来源 ROM 原字节 bank07:F282-F310 全流逐指令 + CD9C 折叠（出口表）+ ROM 表 $968B 烘焙",
+      "note": "decode-gap 补录格（IDA 机械切分漏码当数据，decode-sweep r1 §3 岛 $F282-$F297 A 级，流跨岛）；denoms 机械切分待纠偏（decode-sweep/task-2 出 v2 后回填）；【two-layer §5 新实施件】**哨兵返回约定窗**（stops=[]，F281 双重角色=栈纪律区分，lead 裁定标准解法先例）+五路出口组合（c1 直出/F2AD 尾跳(状态链化)/槽字段阈值/ROM 表查/全路径）；写集=merge_writes 终值映射（组合流同址 last-wins 契约收敛）；F2CA 族九入口第 9 件（收官）"
+    },
     "S-FUNC-07-F2B4": {
       "id": "S-FUNC-07-F2B4",
       "face": "symbol",

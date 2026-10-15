@@ -50,6 +50,6 @@ mod tests {
         let v = v0404.or_writeback(5, 0); // 同值回写
         assert_eq!(v, 170);
         assert!(crate::memmap::enemy_todo_0404::diff_writes(&before, &v0404).is_empty());
-        assert_eq!(crate::memmap::enemy_todo_0404::write_event(5, v), (0x0409, 170));
+        assert_eq!(crate::memmap::enemy_todo_0404::write_event(5, v), (crate::memmap::enemy_todo_0404::ENEMY_TODO_0404_BASE + 5, 170));
     }
 }
