@@ -3862,6 +3862,15 @@
       "evidence": "bank07:F2B4-F2CA（IDA 机械切分 size=22）",
       "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
     },
+    "S-FUNC-07-F2DF": {
+      "id": "S-FUNC-07-F2DF",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L2",
+      "covered": true,
+      "evidence": "oracle/subroutines/l2_cases.jsonl#gen-f2df-0..7 + #b-f2df-yff/b-f2df-y0/b-f2df-mask 三方全等（golden==ROM 执行==game-core）；语义来源 ROM 原字节 bank07:F2DF-F2E7=A5 10 19 04 04 99 04 04 60 逐指令",
+      "note": "decode-gap 补录格（IDA 机械切分漏码当数据，decode-sweep r1 §3 岛 $F2CA-$F305 A 级）；denoms 机械切分待纠偏（decode-sweep/task-2 出 v2 后回填）；L2 窗口 stops=bank07:F2E7：$0404+Y←RAM[$10]|old（LDA zp $10 起手，入参 A 不影响），A=RAM[$10]|old；F2CA 族九入口第 2 件"
+    },
     "S-FUNC-07-F311": {
       "id": "S-FUNC-07-F311",
       "face": "symbol",

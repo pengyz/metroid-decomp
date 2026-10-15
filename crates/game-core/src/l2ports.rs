@@ -101,6 +101,7 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "sub_F162" => Some(sub_f162),
         "sub_F1FA" => Some(sub_f1fa),
         "sub_F270" => Some(sub_f270),
+        "sub_F2DF" => Some(sub_f2df),
         _ => None,
     }
 }
@@ -461,6 +462,16 @@ pub fn sub_f1fa(input: &L2In) -> L2Out {
 }
 
 // ---- task-8 F2CA 族（九入口共享 RTS 尾；decode-sweep r1 §3，切片边界定案见各 doc 注）----
+
+/// sub_F2DF —— bank07:F2DF-F2E7（`LDA $10 / ORA $0404,Y / STA $0404,Y / RTS`，F2CA 族 Y 侧尾）。
+/// L2 窗口 stops=bank07:F2E7（尾 RTS 址截断）。
+/// 语义（A 级：ROM 原字节 `A5 10 19 04 04 99 04 04 60`）：$0404+Y ← RAM[$10]|old（LDA zp $10
+/// 起手——入参 A 不影响），末值 A=RAM[$10]|old；X/Y 透传；abs,Y 16 位加（$404+Y≤$503）。
+pub fn sub_f2df(input: &L2In) -> L2Out {
+    let y = input.y as u16;
+    let v = input.ram[0x0010] | input.ram[(0x0404 + y) as usize & 0x7FF];
+    L2Out { a: v, x: input.x, y: input.y, writes: vec![((0x0404 + y) & 0x7FF, v)] }
+}
 
 /// sub_F270 —— bank07:F270-F276（`ORA $030A,X / STA $030A,X / RTS`）。
 /// L2 窗口 stops=bank07:F276（尾 RTS 址截断）。
