@@ -25,3 +25,26 @@ pub fn f270(input: &L2In) -> L2Out {
         writes,
     }
 }
+
+/// f2d8 适配（注册名 `sub_F2D8` ← bank07:F2D8-F2DE，stops=bank07:F2DE）。
+///
+/// 域方法：`enemy::EnemyTodo0404::or_writeback`（OR 回写，掩码=入参 A）。
+/// 写集：语义变更点经 memmap::enemy_todo_0404::write_event 推导。
+pub fn f2d8(input: &L2In) -> L2Out {
+    let mut v0404 = memmap::enemy_todo_0404::decode_todo_0404(&input.ram);
+    let a_out = v0404.or_writeback(input.x, input.a);
+    let writes = vec![memmap::enemy_todo_0404::write_event(input.x, a_out)];
+    L2Out { a: a_out, x: input.x, y: input.y, writes }
+}
+
+/// f2df 适配（注册名 `sub_F2DF` ← bank07:F2DF-F2E7，stops=bank07:F2E7）。
+///
+/// 域方法：`enemy::EnemyTodo0404::or_writeback`（OR 回写，掩码=memmap 掩码源 zp——F2DF 流
+/// `LDA zp $10` 起手，入参 A 不影响）。写集：write_event 推导。
+pub fn f2df(input: &L2In) -> L2Out {
+    let mut v0404 = memmap::enemy_todo_0404::decode_todo_0404(&input.ram);
+    let mask = memmap::enemy_todo_0404::mask10(&input.ram);
+    let a_out = v0404.or_writeback(input.y, mask);
+    let writes = vec![memmap::enemy_todo_0404::write_event(input.y, a_out)];
+    L2Out { a: a_out, x: input.x, y: input.y, writes }
+}

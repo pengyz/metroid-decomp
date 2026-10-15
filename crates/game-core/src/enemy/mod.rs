@@ -6,6 +6,8 @@
 
 pub mod attrs;
 pub mod slot;
+pub mod todo_0404;
 
 pub use attrs::EnemyAttrs;
 pub use slot::EnemySlot;
+pub use todo_0404::EnemyTodo0404;

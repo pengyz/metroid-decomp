@@ -4,7 +4,34 @@
   "generated_by": "tools/seed_build.py（S1 交付后生成）",
   "rom_sha256": "e6e6b7014685adae447ebb3833242815747bc1e5df83ade79f693fb67cf565b6",
   "projection": "reference/seed/metroid.asm",
-  "counts": {},
+  "counts": {
+    "mechanical_to_domain": 3
+  },
   "vectors": {},
-  "entries": []
+  "entries": [
+    {
+      "mechanical": "sub_F270",
+      "addr": "bank07:F270-F276",
+      "domain": "enemy::EnemyAttrs::or_attribute",
+      "via": "verify_shim::f270",
+      "evidence": "two-layer §5 迁移 commit 71cdebd；L2 案 gen-f270-*/b-f270-* 迁移前后双绿",
+      "confidence": 95
+    },
+    {
+      "mechanical": "sub_F2D8",
+      "addr": "bank07:F2D8-F2DE",
+      "domain": "enemy::EnemyTodo0404::or_writeback",
+      "via": "verify_shim::f2d8",
+      "evidence": "two-layer §5 迁移（本 commit）；L2 案 gen-f2d8-*/b-f2d8-* 双绿",
+      "confidence": 95
+    },
+    {
+      "mechanical": "sub_F2DF",
+      "addr": "bank07:F2DF-F2E7",
+      "domain": "enemy::EnemyTodo0404::or_writeback",
+      "via": "verify_shim::f2df",
+      "evidence": "two-layer §5 迁移（本 commit）；L2 案 gen-f2df-*/b-f2df-* 双绿",
+      "confidence": 95
+    }
+  ]
 }
