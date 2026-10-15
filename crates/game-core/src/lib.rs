@@ -1,11 +1,16 @@
 //! game-core —— 纯逻辑核（AGENTS.md D1/D7；无 I/O、确定性）。
 //!
-//! L2 子程序级移植面：`l2ports` 每个函数对应 `oracle/subroutines/l2_cases.jsonl` 一条用例，
-//! 三方全等裁定：case.out(golden) == 6502 核执行 ROM 原字节 == 本 crate 同名函数。
+//! 两层架构（docs/spec/two-layer-architecture.md）：产品层（enemy/ 等域模块，零地址字面量）
+//! + 映射层（memmap/，地址只此一层）+ 验证适配层（verify_shim/，域方法→L2In/L2Out 写集契约）。
+//! L2 三方全等裁定：case.out(golden) == 6502 核执行 ROM 原字节 == 本 crate 同名函数
+//! （l2ports 注册表机械名只在注册注释，产品层零机械名）。
 
 pub mod gap;
 pub mod integrators;
+pub mod enemy;
+pub mod memmap;
 pub mod ram_map;
+pub mod verify_shim;
 pub mod l2ports;
 
 /// L2 入参：寄存器 + 2KB RAM 快照（$0000-$07FF，镜像归一后）。

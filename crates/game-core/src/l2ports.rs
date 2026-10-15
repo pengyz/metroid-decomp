@@ -484,13 +484,12 @@ pub fn sub_f2df(input: &L2In) -> L2Out {
     L2Out { a: v, x: input.x, y: input.y, writes: vec![((0x0404 + y) & 0x7FF, v)] }
 }
 
-/// sub_F270 —— bank07:F270-F276（`ORA $030A,X / STA $030A,X / RTS`）。
+/// sub_F270 —— bank07:F270-F276 注册名（机械名只在注册注释，two-layer §4）。
 /// L2 窗口 stops=bank07:F276（尾 RTS 址截断）。
-/// 语义（A 级：ROM 原字节 `1D 0A 03 9D 0A 03 60`）：$030A+X ← A|old（ORA abs,X 自或后回写），
-/// 末值 A=A|old；X/Y 透传；abs,X 16 位加（$30A+X≤$409，无 zp 回绕）。
+/// **域形态**（two-layer §5 迁移件）：行为=`enemy::EnemyAttrs::or_attribute`（属性掩码 OR 回写），
+/// 经 `verify_shim::f270` 适配（写集由状态变更推导）；旧字面转写（ORA/STA abs,X 直写）见
+/// commit 551d307（§5 参考件）——迁移前后同批 L2 案 11 条双绿=「行为钉死=结构可换」实证。
+/// 语义证据（A 级：ROM 原字节 `1D 0A 03 9D 0A 03 60`）：$030A+X ← A|old，末值 A=A|old。
 pub fn sub_f270(input: &L2In) -> L2Out {
-    let x = input.x as u16;
-    let old = input.ram[(0x030A + x) as usize & 0x7FF];
-    let v = input.a | old;
-    L2Out { a: v, x: input.x, y: input.y, writes: vec![((0x030A + x) & 0x7FF, v)] }
+    crate::verify_shim::f270(input)
 }

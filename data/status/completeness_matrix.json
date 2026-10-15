@@ -3833,7 +3833,7 @@
       "strength": "L2",
       "covered": true,
       "evidence": "oracle/subroutines/l2_cases.jsonl#gen-f270-0..7 + #b-f270-xff/b-f270-a0/b-f270-x0 三方全等（golden==ROM 执行==game-core）；语义来源 ROM 原字节 bank07:F270-F276=1D 0A 03 9D 0A 03 60 逐指令",
-      "note": "decode-gap 补录格（IDA 机械切分漏码当数据，decode-sweep r1 §3 岛 $F270-$F276 A 级）；denoms 机械切分待纠偏（decode-sweep/task-2 出 v2 后回填）；L2 窗口 stops=bank07:F276：$030A+X←A|old（ORA abs,X 自或回写），A=A|old；F2CA 族九入口第 1 件"
+      "note": "decode-gap 补录格（IDA 机械切分漏码当数据，decode-sweep r1 §3 岛 $F270-$F276 A 级）；denoms 机械切分待纠偏（decode-sweep/task-2 出 v2 后回填）；L2 窗口 stops=bank07:F276：$030A+X←A|old（ORA abs,X 自或回写），A=A|old；F2CA 族九入口第 1 件；【two-layer §5 迁移】已域化=enemy::EnemyAttrs::or_attribute + verify_shim::f270 委派（同批 11 案迁移前后双绿），旧字面转写 551d307 留史"
     },
     "S-FUNC-07-F277": {
       "id": "S-FUNC-07-F277",
