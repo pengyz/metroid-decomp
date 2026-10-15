@@ -5381,7 +5381,7 @@
       "strength": "L0",
       "covered": false,
       "evidence": "bank07:CFC3-CFC5（data 连续段 2B）",
-      "note": "xref 消费者 2 处（机械口径）；字段切分待 S3 考证"
+      "note": "错面登记（实为代码，非数据面）——decode-sweep 首轮确定缺口，见 docs/findings/decode-sweep-report.md §6.1；covered 仍 False 待移植；denoms 机械切分待纠偏（task-5 分母 v2）"
     },
     "D-REG-07-006": {
       "id": "D-REG-07-006",
@@ -5390,7 +5390,7 @@
       "strength": "L0",
       "covered": false,
       "evidence": "bank07:D002-D09C（data 连续段 154B）",
-      "note": "xref 消费者 1 处（机械口径）；字段切分待 S3 考证"
+      "note": "错面登记（实为代码，非数据面）——decode-sweep 首轮确定缺口，见 docs/findings/decode-sweep-report.md §6.1；covered 仍 False 待移植；denoms 机械切分待纠偏（task-5 分母 v2）"
     },
     "D-REG-07-007": {
       "id": "D-REG-07-007",
@@ -5453,7 +5453,7 @@
       "strength": "L0",
       "covered": false,
       "evidence": "bank07:D5FC-D638（data 连续段 60B）",
-      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+      "note": "错面登记（实为代码，非数据面）——decode-sweep 首轮确定缺口，见 docs/findings/decode-sweep-report.md §6.1；covered 仍 False 待移植；denoms 机械切分待纠偏（task-5 分母 v2）"
     },
     "D-REG-07-014": {
       "id": "D-REG-07-014",
@@ -5462,7 +5462,7 @@
       "strength": "L0",
       "covered": false,
       "evidence": "bank07:D65E-D798（data 连续段 314B）",
-      "note": "xref 消费者 1 处（机械口径）；字段切分待 S3 考证"
+      "note": "错面登记（实为代码，非数据面）——decode-sweep 首轮确定缺口，见 docs/findings/decode-sweep-report.md §6.1；covered 仍 False 待移植；denoms 机械切分待纠偏（task-5 分母 v2）"
     },
     "D-REG-07-015": {
       "id": "D-REG-07-015",
@@ -5480,7 +5480,7 @@
       "strength": "L0",
       "covered": false,
       "evidence": "bank07:D94E-D976（data 连续段 40B）",
-      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+      "note": "错面登记（实为代码，非数据面）——decode-sweep 首轮确定缺口，见 docs/findings/decode-sweep-report.md §6.1；covered 仍 False 待移植；denoms 机械切分待纠偏（task-5 分母 v2）"
     },
     "D-REG-07-017": {
       "id": "D-REG-07-017",
@@ -5489,7 +5489,7 @@
       "strength": "L0",
       "covered": false,
       "evidence": "bank07:DA39-DA3D（data 连续段 4B）",
-      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+      "note": "错面登记（实为代码，非数据面）——decode-sweep 首轮确定缺口，见 docs/findings/decode-sweep-report.md §6.1；covered 仍 False 待移植；denoms 机械切分待纠偏（task-5 分母 v2）"
     },
     "D-REG-07-018": {
       "id": "D-REG-07-018",
@@ -5516,7 +5516,7 @@
       "strength": "L0",
       "covered": false,
       "evidence": "bank07:DCB7-DCC3（data 连续段 12B）",
-      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+      "note": "错面登记（实为代码，非数据面）——decode-sweep 首轮确定缺口，见 docs/findings/decode-sweep-report.md §6.1；covered 仍 False 待移植；denoms 机械切分待纠偏（task-5 分母 v2）"
     },
     "D-REG-07-021": {
       "id": "D-REG-07-021",
@@ -5534,7 +5534,7 @@
       "strength": "L0",
       "covered": false,
       "evidence": "bank07:E000-E012（data 连续段 18B）",
-      "note": "xref 消费者 5 处（机械口径）；字段切分待 S3 考证"
+      "note": "错面登记（实为代码，非数据面）——decode-sweep 首轮确定缺口，见 docs/findings/decode-sweep-report.md §6.1；covered 仍 False 待移植；denoms 机械切分待纠偏（task-5 分母 v2）"
     },
     "D-REG-07-023": {
       "id": "D-REG-07-023",
@@ -5597,7 +5597,7 @@
       "strength": "L0",
       "covered": false,
       "evidence": "bank07:EB06-EB24（data 连续段 30B）",
-      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+      "note": "错面登记（实为代码，非数据面）——decode-sweep 首轮确定缺口，见 docs/findings/decode-sweep-report.md §6.1；covered 仍 False 待移植；denoms 机械切分待纠偏（task-5 分母 v2）"
     },
     "D-REG-07-030": {
       "id": "D-REG-07-030",
@@ -5606,7 +5606,7 @@
       "strength": "L0",
       "covered": false,
       "evidence": "bank07:EB4D-EC93（data 连续段 326B）",
-      "note": "xref 消费者 5 处（机械口径）；字段切分待 S3 考证"
+      "note": "错面登记（实为代码，非数据面）——decode-sweep 首轮确定缺口，见 docs/findings/decode-sweep-report.md §6.1；covered 仍 False 待移植；denoms 机械切分待纠偏（task-5 分母 v2）"
     },
     "D-REG-07-031": {
       "id": "D-REG-07-031",
@@ -5624,7 +5624,7 @@
       "strength": "L0",
       "covered": false,
       "evidence": "bank07:EF9A-EF9E（data 连续段 4B）",
-      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+      "note": "错面登记（实为代码，非数据面）——decode-sweep 首轮确定缺口，见 docs/findings/decode-sweep-report.md §6.1；covered 仍 False 待移植；denoms 机械切分待纠偏（task-5 分母 v2）"
     },
     "D-REG-07-033": {
       "id": "D-REG-07-033",
@@ -5651,7 +5651,7 @@
       "strength": "L0",
       "covered": false,
       "evidence": "bank07:F0A2-F149（data 连续段 167B）",
-      "note": "xref 消费者 1 处（机械口径）；字段切分待 S3 考证"
+      "note": "错面登记（实为代码，非数据面）——decode-sweep 首轮确定缺口，见 docs/findings/decode-sweep-report.md §6.1；covered 仍 False 待移植；denoms 机械切分待纠偏（task-5 分母 v2）"
     },
     "D-REG-07-036": {
       "id": "D-REG-07-036",
@@ -5660,7 +5660,7 @@
       "strength": "L0",
       "covered": false,
       "evidence": "bank07:F162-F172（data 连续段 16B）",
-      "note": "错面登记（实为代码，非数据面）——seed 解码缺口 $F0A2-$F148，见 docs/findings/seed-decode-gap-f0a2-f148.md；covered 仍 False 待移植"
+      "note": "错面登记（实为代码，非数据面）——decode-sweep 首轮确定缺口，见 docs/findings/decode-sweep-report.md §6.1；covered 仍 False 待移植；denoms 机械切分待纠偏（task-5 分母 v2）"
     },
     "D-REG-07-037": {
       "id": "D-REG-07-037",
@@ -5669,7 +5669,7 @@
       "strength": "L0",
       "covered": false,
       "evidence": "bank07:F1B3-F1D2（data 连续段 31B）",
-      "note": "xref 消费者 2 处（机械口径）；字段切分待 S3 考证"
+      "note": "错面登记（实为代码，非数据面）——decode-sweep 首轮确定缺口，见 docs/findings/decode-sweep-report.md §6.1；covered 仍 False 待移植；denoms 机械切分待纠偏（task-5 分母 v2）"
     },
     "D-REG-07-038": {
       "id": "D-REG-07-038",
@@ -5678,7 +5678,7 @@
       "strength": "L0",
       "covered": false,
       "evidence": "bank07:F1E7-F1EE（data 连续段 7B）",
-      "note": "错面登记（实为代码，非数据面）——seed 解码缺口 $F0A2-$F148，见 docs/findings/seed-decode-gap-f0a2-f148.md；covered 仍 False 待移植"
+      "note": "错面登记（实为代码，非数据面）——decode-sweep 首轮确定缺口，见 docs/findings/decode-sweep-report.md §6.1；covered 仍 False 待移植；denoms 机械切分待纠偏（task-5 分母 v2）"
     },
     "D-REG-07-039": {
       "id": "D-REG-07-039",
@@ -5687,7 +5687,7 @@
       "strength": "L0",
       "covered": false,
       "evidence": "bank07:F270-F298（data 连续段 40B）",
-      "note": "xref 消费者 5 处（机械口径）；字段切分待 S3 考证"
+      "note": "错面登记（实为代码，非数据面）——decode-sweep 首轮确定缺口，见 docs/findings/decode-sweep-report.md §6.1；covered 仍 False 待移植；denoms 机械切分待纠偏（task-5 分母 v2）"
     },
     "D-REG-07-040": {
       "id": "D-REG-07-040",
@@ -5696,7 +5696,7 @@
       "strength": "L0",
       "covered": false,
       "evidence": "bank07:F2AD-F2B4（data 连续段 7B）",
-      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+      "note": "错面登记（实为代码，非数据面）——decode-sweep 首轮确定缺口，见 docs/findings/decode-sweep-report.md §6.1；covered 仍 False 待移植；denoms 机械切分待纠偏（task-5 分母 v2）"
     },
     "D-REG-07-041": {
       "id": "D-REG-07-041",
@@ -5705,7 +5705,7 @@
       "strength": "L0",
       "covered": false,
       "evidence": "bank07:F2CA-F306（data 连续段 60B）",
-      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+      "note": "错面登记（实为代码，非数据面）——decode-sweep 首轮确定缺口，见 docs/findings/decode-sweep-report.md §6.1；covered 仍 False 待移植；denoms 机械切分待纠偏（task-5 分母 v2）"
     },
     "D-REG-07-042": {
       "id": "D-REG-07-042",
@@ -5714,7 +5714,7 @@
       "strength": "L0",
       "covered": false,
       "evidence": "bank07:F332-F345（data 连续段 19B）",
-      "note": "xref 消费者 2 处（机械口径）；字段切分待 S3 考证"
+      "note": "错面登记（实为代码，非数据面）——decode-sweep 首轮确定缺口，见 docs/findings/decode-sweep-report.md §6.1；covered 仍 False 待移植；denoms 机械切分待纠偏（task-5 分母 v2）"
     },
     "D-REG-07-043": {
       "id": "D-REG-07-043",
@@ -5723,7 +5723,7 @@
       "strength": "L0",
       "covered": false,
       "evidence": "bank07:F3BE-F85A（data 连续段 1180B）",
-      "note": "xref 消费者 1 处（机械口径）；字段切分待 S3 考证"
+      "note": "错面登记（实为代码，非数据面）——decode-sweep 首轮确定缺口，见 docs/findings/decode-sweep-report.md §6.1；covered 仍 False 待移植；denoms 机械切分待纠偏（task-5 分母 v2）"
     },
     "D-REG-07-044": {
       "id": "D-REG-07-044",
@@ -5732,7 +5732,7 @@
       "strength": "L0",
       "covered": false,
       "evidence": "bank07:F870-F93B（data 连续段 203B）",
-      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+      "note": "错面登记（实为代码，非数据面）——decode-sweep 首轮确定缺口，见 docs/findings/decode-sweep-report.md §6.1；covered 仍 False 待移植；denoms 机械切分待纠偏（task-5 分母 v2）"
     },
     "D-REG-07-045": {
       "id": "D-REG-07-045",
@@ -5741,7 +5741,7 @@
       "strength": "L0",
       "covered": false,
       "evidence": "bank07:F96A-FA41（data 连续段 215B）",
-      "note": "xref 消费者 7 处（机械口径）；字段切分待 S3 考证"
+      "note": "错面登记（实为代码，非数据面）——decode-sweep 首轮确定缺口，见 docs/findings/decode-sweep-report.md §6.1；covered 仍 False 待移植；denoms 机械切分待纠偏（task-5 分母 v2）"
     },
     "D-REG-07-046": {
       "id": "D-REG-07-046",
@@ -5795,7 +5795,7 @@
       "strength": "L0",
       "covered": false,
       "evidence": "bank07:FE59-FECC（data 连续段 115B）",
-      "note": "xref 消费者 2 处（机械口径）；字段切分待 S3 考证"
+      "note": "错面登记（实为代码，非数据面）——decode-sweep 首轮确定缺口，见 docs/findings/decode-sweep-report.md §6.1；covered 仍 False 待移植；denoms 机械切分待纠偏（task-5 分母 v2）"
     },
     "D-REG-07-052": {
       "id": "D-REG-07-052",
@@ -5804,7 +5804,7 @@
       "strength": "L0",
       "covered": false,
       "evidence": "bank07:FF3C-FF54（data 连续段 24B）",
-      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+      "note": "错面登记（实为代码，非数据面）——decode-sweep 首轮确定缺口，见 docs/findings/decode-sweep-report.md §6.1；covered 仍 False 待移植；denoms 机械切分待纠偏（task-5 分母 v2）"
     },
     "D-REG-07-053": {
       "id": "D-REG-07-053",
