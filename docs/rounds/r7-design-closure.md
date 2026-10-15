@@ -235,3 +235,29 @@ A6 更正注（含 **Stage B 禁止「修 quirk」**）+[samus-movement.md](../s
    gotcha-listing-grep-not-rom-scan 同族第四案——跨格式检索须按字段面建模式。
 6. 先例转述指针漂移微案：lead 口径「rounds/r2 限流」实指 knowledge 迁移条目
    （其内指针尚指旧仓 round-008）——转述引用亦须回字面路径核对（本节已核正）。
+
+## 教训补录（2026-10-15）：否定结论换时刻复核（负向断言的时效竞态面）
+
+> 【自省】本教训曾于会话中对 decomp 声称「我记账」——**账内实际未落**（lead grep 核出、
+> 我方双工具复核 0 命中属实）。「声称记账≠记账」与 d1794af/a5e8f80 同族第三案（实施方
+> 本位），原地补录；knowledge 条目 gotcha-negative-assertion-time-race（4ae4ecd）建立
+> 时引「r7 method 面」为指针——**本节即该指针落点**。
+
+**案情**（本账 v11 修集提交窗口实发）：commit 前 `gates/cli.py check` 报
+`docs-links FAIL：docs/findings/decode-sweep-report.md → ../knowledge/
+gotcha-policy-docstring-not-enforced.md（目标不存在）`——据此向 decomp 发「目标不存在、
+卡全仓 pre-commit」路由单；约 1 分钟后 `ls` 即见该文件已存在（decomp 并行落库竞态），
+随即撤回更正。负向断言在两个时间点上翻转。
+
+**定义（「换时刻」确切语义）**：负向断言（「不存在 / 0 命中 / 未找到」）在共享工作区、
+并行作业环境下**有时效竞态面**——同一工具在不同时间点可得相反结果；发布前须**换时间点
+复跑**（间隔 ≥ 一个并行作业窗口）或在断言中**注明采样时刻**（as of <ts>），并优先引用
+可增量验证的正向证据。与「否定结论换工具复核」（空间维）成对：**空间 × 时间双维复核**。
+同族互证：TOCTOU/race（rounds/r5 R4-1 单读化）、gotcha-listing-grep-not-rom-scan
+（工具盲区）、gotcha-rate-limit-is-infrastructure-not-diff-routing（环境瞬态不进裁决）。
+
+**原文摘录**（当时仅存于聊天——现归档于此，供 knowledge 条目引用）：
+
+> 「刚复核：gotcha-policy-docstring-not-enforced.md 现已存在——上一条『目标不存在』是
+> 竞态误报（我 check 时刻条目未落）……教训我记账：负向断言（『不存在』）也有时效竞态面
+> ——否定结论换工具之外还要**换时刻**复核。」
