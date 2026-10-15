@@ -437,6 +437,20 @@ c1/8d 06`（$FF&=!4/STA $2000/表[$01-1]→$2006）✓；C19F 表=`20 24 28 2c` 
 =两层「判定层不变、结构可换」实证；PPU 面不在 RAM watch、渲染面保真留 task-13
 =口径诚实。无新 findings。
 
+## task-10 批 21：C1A3 单元端口（5843753）——OAM 影子清屏 + write_io 面隔离
+
+### verdict: pass
+
+字节核 ✓：C1A3=`a0 02 84 01 a0 00 84 00 a0 00 a9 f0 91 00 c8 d0 fb a5 1d f0 03 4c…`
+（ptr=$0200、$F0×256 填充循环、$1D≠0 尾跳）；$988A（bank0 窗口约定）=`a5 1f c9 1d
+b0 1d a5 c8 f0 19` 双检+boot 短路 → $98AD=`60` RTS ✓；bank0 归属自证口径（FFB0 序
+MMC1 control=$FF mode3 + C01A 序 PRG=0）成立。引爆点迁移复现：`unported @ bank07:C4B2`。
+**链规⑤活例第 3 案（测试器实抓）**：write_ram 的 `&0x7FF` 镜像归一将 PPU_CTRL=$90
+经 $2000 写**漏染 RAM $0000**（tick_frame assert 144≠0 当场抓）——修复=write_io
+寄存器面唯一入口（PPU/APU/手柄不入 RAM），回归测 `write_io_does_not_leak_into_ram_mirror`
+钉住（我方复跑 ✓）。单测 24+8、基线 40、全闸 PASS。游戏态 $988A 路径未端口=显式
+unported! fail-loud ✓。无新 findings。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
