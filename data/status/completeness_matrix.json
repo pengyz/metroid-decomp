@@ -3826,6 +3826,15 @@
       "evidence": "bank07:F266-F270（IDA 机械切分 size=10）",
       "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
     },
+    "S-FUNC-07-F270": {
+      "id": "S-FUNC-07-F270",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L2",
+      "covered": true,
+      "evidence": "oracle/subroutines/l2_cases.jsonl#gen-f270-0..7 + #b-f270-xff/b-f270-a0/b-f270-x0 三方全等（golden==ROM 执行==game-core）；语义来源 ROM 原字节 bank07:F270-F276=1D 0A 03 9D 0A 03 60 逐指令",
+      "note": "decode-gap 补录格（IDA 机械切分漏码当数据，decode-sweep r1 §3 岛 $F270-$F276 A 级）；denoms 机械切分待纠偏（decode-sweep/task-2 出 v2 后回填）；L2 窗口 stops=bank07:F276：$030A+X←A|old（ORA abs,X 自或回写），A=A|old；F2CA 族九入口第 1 件"
+    },
     "S-FUNC-07-F277": {
       "id": "S-FUNC-07-F277",
       "face": "symbol",

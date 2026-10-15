@@ -100,6 +100,7 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "sub_F19A" => Some(sub_f19a),
         "sub_F162" => Some(sub_f162),
         "sub_F1FA" => Some(sub_f1fa),
+        "sub_F270" => Some(sub_f270),
         _ => None,
     }
 }
@@ -457,4 +458,17 @@ pub fn sub_f1fa(input: &L2In) -> L2Out {
         .collect();
     writes.sort_unstable();
     L2Out { a: a_out, x: input.x, y: input.y, writes }
+}
+
+// ---- task-8 F2CA 族（九入口共享 RTS 尾；decode-sweep r1 §3，切片边界定案见各 doc 注）----
+
+/// sub_F270 —— bank07:F270-F276（`ORA $030A,X / STA $030A,X / RTS`）。
+/// L2 窗口 stops=bank07:F276（尾 RTS 址截断）。
+/// 语义（A 级：ROM 原字节 `1D 0A 03 9D 0A 03 60`）：$030A+X ← A|old（ORA abs,X 自或后回写），
+/// 末值 A=A|old；X/Y 透传；abs,X 16 位加（$30A+X≤$409，无 zp 回绕）。
+pub fn sub_f270(input: &L2In) -> L2Out {
+    let x = input.x as u16;
+    let old = input.ram[(0x030A + x) as usize & 0x7FF];
+    let v = input.a | old;
+    L2Out { a: v, x: input.x, y: input.y, writes: vec![((0x030A + x) & 0x7FF, v)] }
 }
