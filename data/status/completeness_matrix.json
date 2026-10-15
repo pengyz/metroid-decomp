@@ -18,7 +18,7 @@
       "denominator": 11
     },
     "symbol": {
-      "denominator": 464
+      "denominator": 465
     },
     "data": {
       "denominator": 193
@@ -5912,7 +5912,7 @@
       "strength": "L0",
       "covered": false,
       "evidence": "bank07:FE59-FECC（data 连续段 115B）",
-      "note": "混合格：按段重切（FE83 入 S 面补录格；FE79-FE82 留 D 面表）——docs/findings/decode-sweep-r2-jump-tables.md §5 定谳；S 段移植后 D 段字段切分待 S3"
+      "note": "混合格：按段重切（FE83 入 S 面补录格 S-FUNC-07-FE83【task-9 已补录+L2 移植】；FE79-FE82 留 D 面表）——docs/findings/decode-sweep-r2-jump-tables.md §5 定谳（边界 FE83-FECB 更正见 denoms_corrections）；D 段字段切分待 S3"
     },
     "D-REG-07-052": {
       "id": "D-REG-07-052",
@@ -6039,6 +6039,15 @@
       "covered": false,
       "evidence": "oracle/scenarios/vrambuf-probe.txt",
       "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "S-FUNC-07-FE83": {
+      "id": "S-FUNC-07-FE83",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L2",
+      "covered": true,
+      "evidence": "oracle/subroutines/l2_cases.jsonl#b-fe83-collision-horiz/collision-vert/collision-same-x/exit-y-far/exit-x-far/boundary-hit/boundary-miss/hi-unequal-x-hit/hi-unequal-y-exit 9 案三方全等（golden==ROM 执行==game-core，stops=[FEDB,CE92] 双出口）；语义来源 asm bank07:FE83-FECB 73B 结构互核 + tile_blast 域（docs 树 asm 主文档随模块）",
+      "note": "denoms 补录格（D-REG-07-051 按段重切 s_part——decode-sweep-r2 §5 定谳）；【task-9】UpdateTileBlast_Respawned 域化=tile_blast + f186/f1fa 核组合（carry 契约面不扩）；伤害链 F311→F338→F27B→F323 随钉（调用集比 r2 记录多 F311）；段界 FE83-FECB 73B（r2 FECA 边界更正，JMP 跨 FEC9-FECB）"
     }
   }
 }

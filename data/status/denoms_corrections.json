@@ -2,12 +2,41 @@
   "schema": "denoms-corrections/v1",
   "doc": "分母 v2 纠偏清单（2026-10-15 task-5③ 定稿）——机械导出（IDA 切分）+本清单=v2 分母。每条带证据指针（findings/rounds），非机械面的人工定谳显式可审。",
   "s_supplement": [
-    {"id": "S-FUNC-07-F140", "addr": "07:F140", "evidence": "findings/seed-decode-gap-f0a2-f148.md（A 级 ROM 字节）"},
-    {"id": "S-FUNC-07-F149", "addr": "07:F149", "evidence": "findings/seed-decode-gap-f0a2-f148.md"},
-    {"id": "S-FUNC-07-F162", "addr": "07:F162", "evidence": "findings/seed-decode-gap-f0a2-f148.md（JSR $F162@$F109 实存）"},
-    {"id": "S-FUNC-07-F1B3", "addr": "07:F1B3", "evidence": "findings/seed-decode-gap-f0a2-f148.md"},
-    {"id": "S-FUNC-07-F1CB", "addr": "07:F1CB", "evidence": "findings/seed-decode-gap-f0a2-f148.md"},
-    {"id": "S-FUNC-07-F1E7", "addr": "07:F1E7", "evidence": "findings/seed-decode-gap-f0a2-f148.md"}
+    {
+      "id": "S-FUNC-07-F140",
+      "addr": "07:F140",
+      "evidence": "findings/seed-decode-gap-f0a2-f148.md（A 级 ROM 字节）"
+    },
+    {
+      "id": "S-FUNC-07-F149",
+      "addr": "07:F149",
+      "evidence": "findings/seed-decode-gap-f0a2-f148.md"
+    },
+    {
+      "id": "S-FUNC-07-F162",
+      "addr": "07:F162",
+      "evidence": "findings/seed-decode-gap-f0a2-f148.md（JSR $F162@$F109 实存）"
+    },
+    {
+      "id": "S-FUNC-07-F1B3",
+      "addr": "07:F1B3",
+      "evidence": "findings/seed-decode-gap-f0a2-f148.md"
+    },
+    {
+      "id": "S-FUNC-07-F1CB",
+      "addr": "07:F1CB",
+      "evidence": "findings/seed-decode-gap-f0a2-f148.md"
+    },
+    {
+      "id": "S-FUNC-07-F1E7",
+      "addr": "07:F1E7",
+      "evidence": "findings/seed-decode-gap-f0a2-f148.md"
+    },
+    {
+      "id": "S-FUNC-07-FE83",
+      "addr": "07:FE83",
+      "evidence": "task-9 定谳：asm 主文档（m1disasm UpdateTileBlast_Respawned:07:FE83 内容锚 × ROM 73B 逐字节）+ L2 九案三方全等（oracle/subroutines/l2_cases.jsonl#b-fe83-*）"
+    }
   ],
   "d_wrongface": {
     "doc": "decode-sweep r1/r2 定谳的 27 格（实为代码非数据）——矩阵已注记，本清单=权威计数；移交 S 面定谳后逐格迁出",
@@ -15,12 +44,23 @@
     "count": 27
   },
   "segment_splits": [
-    {"cell": "D-REG-07-051", "s_part": "07:FE83-07:FECA（代码 A 级，入 S 面补录候选）", "d_part": "07:FE79-07:FE82（内嵌表 B 级留 D 面）", "evidence": "decode-sweep-r2-jump-tables.md §5"}
+    {
+      "cell": "D-REG-07-051",
+      "s_part": "07:FE83-07:FECA（代码 A 级，入 S 面补录候选）",
+      "d_part": "07:FE79-07:FE82（内嵌表 B 级留 D 面）",
+      "evidence": "decode-sweep-r2-jump-tables.md §5",
+      "note_2026_10_15": "【边界更正】ROM 逐字节+标签双证：S 段实为 07:FE83-07:FECA（73B/34 条——原记 FECA 系 r2 边界，task-9 结构互核补正：JMP 4C 92 CE 跨 FEC9-FECB，下标签 GetVRAMStringPtr:FECC）；S-FUNC-07-FE83 已补录（s_supplement），FE83 段 L2 移植完成"
+    }
   ],
   "residuals": {
     "doc": "残余待查（显式缺口类，D7 口径）——定谳后本清单更新",
-    "cells": ["D-REG-07-048", "D-REG-07-050"],
-    "tails": ["07:F438-07:F43D（6B 尾段，r2 遗留；P12 边 $F438→$E094 正面证据=代码性，待终谳）"],
+    "cells": [
+      "D-REG-07-048",
+      "D-REG-07-050"
+    ],
+    "tails": [
+      "07:F438-07:F43D（6B 尾段，r2 遗留；P12 边 $F438→$E094 正面证据=代码性，待终谳）"
+    ],
     "evidence": "decode-sweep-r3 定谳清单（027/028/011/012/007/018 已收）"
   },
   "v2_totals": {

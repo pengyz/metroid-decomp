@@ -267,3 +267,196 @@ pub fn game_rng(input: &L2In) -> L2Out {
         ],
     }
 }
+
+// ---- 移植核（task-9 抽取：l2ports 字面转写迁入本层=§5 参考件单一语义源；迁移前后
+//      既有 f186/f1fa 案双绿=「行为钉死=结构可换」实证；l2ports 侧留薄包装）----
+
+/// f186 核（注册名 `sub_F186` ← bank07:F186-F199）：$06←RAM[$30D+Y]、$08←RAM[$30E+Y]、
+/// $0A←(RAM[$30C+Y]^RAM[$FF])&1。地址经 memmap::object（EOR zp $FF 变换=F186 专属协议）。
+pub fn f186(input: &L2In) -> L2Out {
+    let y = input.y;
+    let v6 = memmap::object::read_pos_y(&input.ram, y);
+    let v8 = memmap::object::read_pos_x(&input.ram, y);
+    let va = (memmap::object::read_hi_raw(&input.ram, y) ^ input.ram[0x00FF]) & 1;
+    L2Out { a: va, x: input.x, y: input.y, writes: vec![(0x0006, v6), (0x0008, v8), (0x000A, va)] }
+}
+
+/// F266 尾（`STA $01 / BPL → RTS / JSR E449 / INC $10 / RTS`）。
+/// A<0 ⇒ E449 16 位取负 $00:$01 + INC $10。
+fn f1fa_f266(st: &mut [u8; 0x100], t: &mut [bool; 0x100], a: u8) {
+    st[0x01] = a;
+    t[0x01] = true;
+    if a & 0x80 != 0 {
+        let mut c = 1i32; // SEC
+        let tmp = 0 - st[0x00] as i32 - (1 - c);
+        c = if tmp >= 0 { 1 } else { 0 };
+        st[0x00] = (tmp & 0xFF) as u8;
+        t[0x00] = true;
+        let tmp = 0 - st[0x01] as i32 - (1 - c);
+        st[0x01] = (tmp & 0xFF) as u8;
+        t[0x01] = true;
+        st[0x10] = st[0x10].wrapping_add(1);
+        t[0x10] = true;
+    }
+}
+
+/// f1fa 核（注册名 `sub_F1FA` ← bank07:F1FA-F261 全窗）——**carry-aware**：返回
+/// (L2Out, carry)，carry=出口进位（**C=1 无碰撞 / C=0 命中盒重叠**——`bcs` 出口语义）。
+/// **carry 不进 L2Out 契约面**（lead 裁定：契约面不扩；FE83 组合经此取碰撞判定）。
+/// 语义不变（字面转写迁自 l2ports，既有 gen/b 案双绿）。
+pub fn f1fa_with_carry(input: &L2In) -> (L2Out, bool) {
+    let mut st = [0u8; 0x100];
+    st.copy_from_slice(&input.ram[..0x100]);
+    let mut t = [false; 0x100];
+    st[0x10] = 2;
+    t[0x10] = true;
+    let a3 = 2 & st[0x49];
+    st[0x03] = a3;
+    t[0x03] = true;
+    // 首轴：SEC/SBC $06
+    let c1 = if st[0x07] >= st[0x06] { 1i32 } else { 0i32 };
+    st[0x00] = st[0x07].wrapping_sub(st[0x06]);
+    t[0x00] = true;
+    if a3 != 0 {
+        // F224：LDA #0 / SBC #0（进位=首轴借位）/ JSR F266
+        let a = (0i32 - (1 - c1)) as u8 & 0xFF;
+        f1fa_f266(&mut st, &mut t, a);
+    } else if (st[0x0B] ^ st[0x0A]) == 0 {
+        let a = (0i32 - (1 - c1)) as u8 & 0xFF;
+        f1fa_f266(&mut st, &mut t, a);
+    } else {
+        // JSR F262：LDA $0B / SBC $0A（续 c1 借位）/ 落 F266
+        let tmp = st[0x0B] as i32 - st[0x0A] as i32 - (1 - c1);
+        let a = (tmp & 0xFF) as u8;
+        f1fa_f266(&mut st, &mut t, a);
+        // $00 -= 0x10，借位则 DEC $01（屏高 240 补偿）
+        let tmp = st[0x00] as i32 - 0x10;
+        st[0x00] = (tmp & 0xFF) as u8;
+        t[0x00] = true;
+        if tmp < 0 {
+            st[0x01] = st[0x01].wrapping_sub(1);
+            t[0x01] = true;
+        }
+    }
+    let a_out;
+    let carry;
+    if st[0x01] != 0 {
+        a_out = st[0x01]; // 出口 F22E：A=$01（SEC 后 C=1）
+        carry = true;
+    } else {
+        st[0x11] = st[0x00];
+        t[0x11] = true;
+        if st[0x00] >= st[0x04] {
+            a_out = st[0x00]; // 出口 F236（CMP $04 BCS）：A=$00，C=1
+            carry = true;
+        } else {
+            st[0x10] = st[0x10] << 1;
+            t[0x10] = true;
+            // 次轴：SEC/SBC $08
+            let c2 = if st[0x09] >= st[0x08] { 1i32 } else { 0i32 };
+            st[0x00] = st[0x09].wrapping_sub(st[0x08]);
+            t[0x00] = true;
+            if a3 == 0 || (st[0x0B] ^ st[0x0A]) == 0 {
+                // F251：SBC #0 / JSR F266
+                let a = (0i32 - (1 - c2)) as u8 & 0xFF;
+                f1fa_f266(&mut st, &mut t, a);
+            } else {
+                let tmp = st[0x0B] as i32 - st[0x0A] as i32 - (1 - c2);
+                let a = (tmp & 0xFF) as u8;
+                f1fa_f266(&mut st, &mut t, a);
+            }
+            if st[0x01] != 0 {
+                a_out = st[0x01]; // 出口 F259：A=$01，C=1
+                carry = true;
+            } else {
+                st[0x0F] = st[0x00];
+                t[0x0F] = true;
+                a_out = st[0x00]; // 落 F261（CMP $05 置 C）：A=$00
+                carry = st[0x00] >= st[0x05]; // **C=1 无碰撞 / C=0 重叠**
+            }
+        }
+    }
+    let mut writes: Vec<(u16, u8)> = (0..0x100u16)
+        .filter(|&i| t[i as usize])
+        .map(|i| (i, st[i as usize]))
+        .collect();
+    writes.sort_unstable();
+    (L2Out { a: a_out, x: input.x, y: input.y, writes }, carry)
+}
+
+/// f1fa 契约面投影（L2Out 单出——注册名 `sub_F1FA` 用；carry 面不进契约）。
+pub fn f1fa(input: &L2In) -> L2Out {
+    f1fa_with_carry(input).0
+}
+
+/// fe83 内部写应用（状态链化：事件=最终值映射来源；地址只经 memmap 常量/事件）。
+fn fe83_apply(ram: &mut [u8], events: &mut Vec<(u16, u8)>, addr: u16, v: u8) {
+    ram[addr as usize & 0x7FF] = v;
+    events.push((addr, v));
+}
+
+/// fe83 适配（注册名 `sub_FE83` ← bank07:FE83-FECB，stops=[bank07:FEDB, bank07:CE92] 双出口）。
+///
+/// **域形态**（two-layer §5 新实施件）：`tile_blast` 复活伤害序列（域模块 asm 主文档）。
+/// 组合链（状态链化——b-f282-ad-tail 教训）：删槽 routine → 房间 RAM 指针装配（+0x21
+/// **低字节进位丢弃 quirk**）→ 元块中心（FF3C）→ X 槽位装配 → f186 核（**Y 强制 0**
+/// ——FE83 `ldy #$00` 先行）→ 8×8 判定盒（4+radius）→ f1fa 核（carry=碰撞判定，契约面
+/// 不可见）→ carry=1 ⇒ 无碰撞出窗 FEDB（A=f1fa 出口 A）；carry=0 ⇒ 伤害链（F311→F338→
+/// F27B→F323：$010F←$E0、$030A+Y←($10<<3)|old（Y=0，复用 enemy_attrs 双语境面）、
+/// $73←($0F==0?0:1)、$6E/$6F←0）→ HealthChange←$50（$6E 终值 last-wins）→ 出窗 CE92（A=$50）。
+/// 出窗 Y=0 两路同（ldy #0 先行）；X 透传（槽偏移）。
+pub fn fe83(input: &L2In) -> L2Out {
+    let x = input.x;
+    let mut ram = input.ram.clone();
+    let mut events: Vec<(u16, u8)> = Vec::new();
+    // FE83-FE85：删槽（tile_blast 域）
+    let (a_del, v_del) = memmap::tile_blasts::write_event_routine(x, 0);
+    fe83_apply(&mut ram, &mut events, a_del, v_del);
+    // FE86-FE95：房间 RAM 指针 +0x21（进位丢弃 quirk——tile_blast 域折叠）
+    let ptr = crate::tile_blast::respawn_nametable_addr(memmap::tile_blasts::read_room_ram_ptr(&ram, x));
+    fe83_apply(&mut ram, &mut events, memmap::flow_scratch::PTR_LO, ptr as u8);
+    fe83_apply(&mut ram, &mut events, memmap::flow_scratch::PTR_HI, (ptr >> 8) as u8);
+    // FE96-FE98：元块中心（FF3C 语义——tile_blast 域）
+    let (cy, cx) = crate::tile_blast::metatile_center(ptr);
+    fe83_apply(&mut ram, &mut events, memmap::flow_scratch::CENTER_Y, cy);
+    fe83_apply(&mut ram, &mut events, memmap::flow_scratch::CENTER_X, cx);
+    // FE99-FEA2：X 槽位（元块）装配
+    fe83_apply(&mut ram, &mut events, memmap::flow_scratch::XSLOT_Y, cy);
+    fe83_apply(&mut ram, &mut events, memmap::flow_scratch::XSLOT_X, cx);
+    fe83_apply(&mut ram, &mut events, memmap::flow_scratch::XSLOT_HI, ((ptr >> 10) as u8) & 1);
+    // FEA9-FEB0：Y 槽位（f186 核；**Y 强制 0**——ldy #$00 先行）
+    let d1 = L2In { ram: ram.clone(), y: 0, ..input.clone() };
+    for (a, v) in f186(&d1).writes {
+        fe83_apply(&mut ram, &mut events, a, v);
+    }
+    // FEB1-FEBC：8×8 判定盒（4+Samus.radius）
+    let ry = crate::tile_blast::HITBOX_BASE.wrapping_add(memmap::object::read_radius_y(&ram));
+    let rx = crate::tile_blast::HITBOX_BASE.wrapping_add(memmap::object::read_radius_x(&ram));
+    fe83_apply(&mut ram, &mut events, memmap::flow_scratch::RAD_Y, ry);
+    fe83_apply(&mut ram, &mut events, memmap::flow_scratch::RAD_X, rx);
+    // FEBD-FEBF：碰撞判定（f1fa 核，状态链化）——**carry 极性**：C=1 无碰撞 / C=0 重叠
+    let d2 = L2In { ram: ram.clone(), y: 0, ..input.clone() };
+    let (r1fa, carry) = f1fa_with_carry(&d2);
+    for (a, v) in r1fa.writes {
+        fe83_apply(&mut ram, &mut events, a, v);
+    }
+    if carry {
+        // FEC0 `b0 19` BCS FEDB：**C=1 无碰撞**出窗（A=f1fa 出口 A；Y=0）
+        return L2Out { a: r1fa.a, x: input.x, y: 0, writes: merge_writes(events) };
+    }
+    // FEC2-FEC4：伤害链（F311→F338→F27B→F323——tile_blast 域折叠；Y=0 槽=Samus）
+    let is_hit_old = memmap::enemy_attrs::decode_attrs(&ram).entries()[0];
+    let h = crate::tile_blast::hurt_sequence(&crate::tile_blast::HurtParams {
+        dist_hi: ram[memmap::flow_scratch::DIST_HI as usize & 0x7FF],
+        dist_x: ram[memmap::flow_scratch::DIST_X as usize & 0x7FF],
+        is_hit_old,
+    });
+    fe83_apply(&mut ram, &mut events, memmap::flow_scratch::SCRATCH_010F, h.hurt_scratch);
+    fe83_apply(&mut ram, &mut events, memmap::enemy_attrs::write_event(0, h.is_hit).0, h.is_hit);
+    fe83_apply(&mut ram, &mut events, memmap::flow_scratch::KNOCKBACK_IS_BOMB, h.knockback);
+    fe83_apply(&mut ram, &mut events, memmap::flow_scratch::HEALTH_CHANGE_LO, 0);
+    fe83_apply(&mut ram, &mut events, memmap::flow_scratch::HEALTH_CHANGE_HI, 0);
+    // FEC5-FECB：HealthChange←$50（5 伤害）+ JMP $CE92（SubtractHealth——出窗不执行）
+    fe83_apply(&mut ram, &mut events, memmap::flow_scratch::HEALTH_CHANGE_LO, 0x50);
+    L2Out { a: 0x50, x: input.x, y: 0, writes: merge_writes(events) }
+}

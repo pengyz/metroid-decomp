@@ -110,6 +110,7 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "sub_F282" => Some(sub_f282),
         "sub_F2D8" => Some(sub_f2d8),
         "sub_GameRng" => Some(sub_game_rng),
+        "sub_FE83" => Some(sub_fe83),
         _ => None,
     }
 }
@@ -220,20 +221,11 @@ pub fn sub_f172(input: &L2In) -> L2Out {
     }
 }
 
-/// sub_F186 —— bank07:F186-F199（Y 变体坐标/属性读取）：
-/// $06 ← RAM[$30D+Y]；$08 ← RAM[$30E+Y]；$0A ← (RAM[$30C+Y] ^ RAM[$FF]) & 1。
-/// 语义证据（A 级）：seed 逐指令；F193 `45 FF` = EOR **零页 $FF**（同 F17F 教训）。
+/// sub_F186 —— bank07:F186-F199 注册名（机械名只在注册注释，two-layer §4）。
+/// **域形态**（task-9 抽取迁移）：语义核迁 verify_shim::f186（单一语义源；FE83 组合复用），
+/// 本薄包装保持注册面；迁移前后既有 gen/b 案双绿=「行为钉死=结构可换」。
 pub fn sub_f186(input: &L2In) -> L2Out {
-    let y = input.y as u16;
-    let v6 = input.ram[(0x030D + y) as usize & 0x7FF];
-    let v8 = input.ram[(0x030E + y) as usize & 0x7FF];
-    let va = (input.ram[(0x030C + y) as usize & 0x7FF] ^ input.ram[0x00FF]) & 1;
-    L2Out {
-        a: va,
-        x: input.x,
-        y: input.y,
-        writes: vec![(0x0006, v6), (0x0008, v8), (0x000A, va)],
-    }
+    crate::verify_shim::f186(input)
 }
 
 /// sub_F1CB —— bank07:F1CB-F1D1（`CLC / ADC $6AF6,Y / STA $05 / RTS`，F1B3 共享尾本体）。
@@ -362,111 +354,13 @@ pub fn sub_f1bf(input: &L2In) -> L2Out {
     }
 }
 
-// ---- sub_F1FA 碰撞逻辑（F1FA-F261 全窗，含内联 sub_F262/sub_F266/sub_E449）----
+// ---- sub_F1FA 碰撞逻辑（task-9 抽取迁移：语义核+carry 面迁 verify_shim::f1fa_with_carry
+//      ——单一语义源，FE83 组合经 carry 取碰撞判定；本处留薄包装，既有 gen/b 案双绿）----
 
-/// F266 尾（sub_F262 先做 `LDA $0B / SBC $0A` 续 F205/F23D 进位后落入本尾）：
-/// `STA $01 / BPL → RTS / JSR E449 / INC $10 / RTS`。
-/// A<0 ⇒ E449 16 位取负 $00:$01（LDA #0/SEC/SBC $00/STA $00/LDA #0/SBC $01/STA $01）+ INC $10。
-fn f1fa_f266(st: &mut [u8; 0x100], t: &mut [bool; 0x100], a: u8) {
-    st[0x01] = a;
-    t[0x01] = true;
-    if a & 0x80 != 0 {
-        let mut c = 1i32; // SEC
-        let tmp = 0 - st[0x00] as i32 - (1 - c);
-        c = if tmp >= 0 { 1 } else { 0 };
-        st[0x00] = (tmp & 0xFF) as u8;
-        t[0x00] = true;
-        let tmp = 0 - st[0x01] as i32 - (1 - c);
-        st[0x01] = (tmp & 0xFF) as u8;
-        t[0x01] = true;
-        st[0x10] = st[0x10].wrapping_add(1);
-        t[0x10] = true;
-    }
-}
-
-/// sub_F1FA —— bank07:F1FA-F261 碰撞逻辑全窗（stops=bank07:F261，唯一出口 F261）。
-/// 语义（A 级：ROM 原字节 F1FA-F261 + F262/F266/E449 全区逐指令；两轴路由相反——
-/// 首轴 `LDA $03/BNE F224`（$03≠0→符号扩展路）、次轴 `LDA $03/BEQ F251`（$03==0→符号扩展路）：
-/// ① $10←2、$03←2&RAM[$49]；$00←RAM[$07]-RAM[$06]（SEC/SBC，进位 C1 入 16 位链）。
-/// ② 链路（$03==0∧$0B≠$0A 首轴 / $03≠0∧$0B≠$0A 次轴）：$01←RAM[$0B]-RAM[$0A]-!C（SBC 续借位），
-///    负⇒E449 取负+INC $10；首轴另做 $00-=0x10（借位则 DEC $01）。
-///    符号扩展路：$01←0-0-!C（=借位符号扩展），负⇒同上取负。
-/// ③ $01≠0 ⇒ 出口（A=$01）；否则 $11←$00，$00<$04 才继续（否则出口 A=$00）；ASL $10；
-///    次轴 $00←RAM[$09]-RAM[$08]（同构）；$01≠0 ⇒ 出口 A=$01；否则 $0F←$00，落 F261（A=$00）。
-/// 写集=实写 zp 最终值映射（$00/$01/$03/$0F/$10/$11 按路径子集）；X/Y 透传。
+/// sub_F1FA —— bank07:F1FA-F261 注册名（机械名只在注册注释，two-layer §4）。
+/// 契约面=L2Out 单出（carry 不入面——lead 裁定契约不扩）；语义核见 verify_shim::f1fa。
 pub fn sub_f1fa(input: &L2In) -> L2Out {
-    let mut st = [0u8; 0x100];
-    st.copy_from_slice(&input.ram[..0x100]);
-    let mut t = [false; 0x100];
-    st[0x10] = 2;
-    t[0x10] = true;
-    let a3 = 2 & st[0x49];
-    st[0x03] = a3;
-    t[0x03] = true;
-    // 首轴：SEC/SBC $06
-    let c1 = if st[0x07] >= st[0x06] { 1i32 } else { 0i32 };
-    st[0x00] = st[0x07].wrapping_sub(st[0x06]);
-    t[0x00] = true;
-    if a3 != 0 {
-        // F224：LDA #0 / SBC #0（进位=首轴借位）/ JSR F266
-        let a = (0i32 - (1 - c1)) as u8 & 0xFF;
-        f1fa_f266(&mut st, &mut t, a);
-    } else if (st[0x0B] ^ st[0x0A]) == 0 {
-        let a = (0i32 - (1 - c1)) as u8 & 0xFF;
-        f1fa_f266(&mut st, &mut t, a);
-    } else {
-        // JSR F262：LDA $0B / SBC $0A（续 c1 借位）/ 落 F266
-        let tmp = st[0x0B] as i32 - st[0x0A] as i32 - (1 - c1);
-        let a = (tmp & 0xFF) as u8;
-        f1fa_f266(&mut st, &mut t, a);
-        // $00 -= 0x10，借位则 DEC $01
-        let tmp = st[0x00] as i32 - 0x10;
-        st[0x00] = (tmp & 0xFF) as u8;
-        t[0x00] = true;
-        if tmp < 0 {
-            st[0x01] = st[0x01].wrapping_sub(1);
-            t[0x01] = true;
-        }
-    }
-    let a_out;
-    if st[0x01] != 0 {
-        a_out = st[0x01]; // 出口 F22E：A=$01
-    } else {
-        st[0x11] = st[0x00];
-        t[0x11] = true;
-        if st[0x00] >= st[0x04] {
-            a_out = st[0x00]; // 出口 F236（CMP $04 BCS）：A=$00
-        } else {
-            st[0x10] = st[0x10] << 1;
-            t[0x10] = true;
-            // 次轴：SEC/SBC $08
-            let c2 = if st[0x09] >= st[0x08] { 1i32 } else { 0i32 };
-            st[0x00] = st[0x09].wrapping_sub(st[0x08]);
-            t[0x00] = true;
-            if a3 == 0 || (st[0x0B] ^ st[0x0A]) == 0 {
-                // F251：SBC #0 / JSR F266
-                let a = (0i32 - (1 - c2)) as u8 & 0xFF;
-                f1fa_f266(&mut st, &mut t, a);
-            } else {
-                let tmp = st[0x0B] as i32 - st[0x0A] as i32 - (1 - c2);
-                let a = (tmp & 0xFF) as u8;
-                f1fa_f266(&mut st, &mut t, a);
-            }
-            if st[0x01] != 0 {
-                a_out = st[0x01]; // 出口 F259：A=$01
-            } else {
-                st[0x0F] = st[0x00];
-                t[0x0F] = true;
-                a_out = st[0x00]; // 落 F261（CMP $05 仅置标志）：A=$00
-            }
-        }
-    }
-    let mut writes: Vec<(u16, u8)> = (0..0x100u16)
-        .filter(|&i| t[i as usize])
-        .map(|i| (i, st[i as usize]))
-        .collect();
-    writes.sort_unstable();
-    L2Out { a: a_out, x: input.x, y: input.y, writes }
+    crate::verify_shim::f1fa(input)
 }
 
 // ---- task-8 F2CA 族（九入口共享 RTS 尾；decode-sweep r1 §3，切片边界定案见各 doc 注）----
@@ -552,4 +446,13 @@ pub fn sub_f282(input: &L2In) -> L2Out {
 /// 台账 N-0012（升级 A 级，bankNN:AAAA 真址）。
 pub fn sub_game_rng(input: &L2In) -> L2Out {
     crate::verify_shim::game_rng(input)
+}
+
+/// sub_FE83 —— bank07:FE83-FECB 注册名（机械名只在注册注释，two-layer §4）。
+/// **域形态**（task-9 新实施件）：`tile_blast` 复活伤害序列 + f186/f1fa 核组合
+/// （见 verify_shim::fe83 doc + tile_blast 模块 asm 主文档）。
+/// L2 窗口 stops=[bank07:FEDB（无碰撞 RTS 址）, bank07:CE92（SubtractHealth 入口——
+/// JMP 尾目标，出窗不执行）]；段界 FE83-FECB 73B/34 条（r2 边界 FECA 更正见域模块注）。
+pub fn sub_fe83(input: &L2In) -> L2Out {
+    crate::verify_shim::fe83(input)
 }
