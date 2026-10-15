@@ -45,8 +45,13 @@
   - 水平：`speed_x(16bit: $309 + $313) += accel_x($315)`（BIT $315 符号扩展链）；
     幅值钳位经 sub_E449（上限源自 maxspeed_src($316) × sub_C2C5/C2BF 变换）；
     `subpix_x($311) += speed frac` 进位入整像素。
-  - 证据：metroid.asm 105390-105460（逐指令）；**残留待验**：sub_D147/sub_E449/sub_C2C5/C2BF
-    内部（S 面格，L2 可切片）、$314/$315 的写入来源（加速度表？下一段考证）。
+  - 证据：metroid.asm 105390-105460（逐指令）；**子例程已定谳**：sub_D147=LDY#0/STY $308/
+    STY $312/RTS（钳位=速度重置 ±5.0/-6.0）、sub_E449=16 位取负（$00/$01）、sub_C2C5=ASL×4、
+    sub_C2BF=LSR×4（限幅=16×$316）。**残留待验**：$314/$315 的写入来源（加速度表？下一段考证）。
+  - 钳位阈值语义（2026-10-15 更正——旧 quirk 注记系符号-幅值误读的**假怪癖**，已废）：
+    干净单调 |v|≥6.0 含边界（mag_hi=-int-(frac≠0)≥6）+ 上下限不对称（+5.0/-6.0）；
+    实测 -6.004($F9:$FF) 钳位、-5.996($FA:$01) 不钳（逃逸值比 -6.0 更小幅=正确行为）。
+    **Stage B 禁止按「修 quirk」处理**（会引入行为变更）；见 l2-proof-assumptions.md A6。
 
 ### R-mv-4 跳跃位移计
 SAMUS_JUMP_DISPLACEMENT 为自跳跃起点的垂直像素位移（补码），落地后冻结。
@@ -69,6 +74,15 @@ SAMUS_JUMP_DISPLACEMENT 为自跳跃起点的垂直像素位移（补码），�
 | bank07:$CFC3 SetSamusJump | 起跳状态置位（线索） | A（址）/C（语义） | seed 101678 |
 | bank07:$D0B5 SetSamusRoll | 滚球态置位（线索） | A（址）/C（语义） | 待 seed 复核 |
 | bank07:$E2FD-$E43E | 亚像素/速度积分写址区间 | A（址） | seed 105317-105458 |
+
+### 2.1 batch-1 靶点链（E37A 头部，2026-10-14 定尺寸）
+
+S-FUNC-07-E37A 头部（E37A-E3A4，accel/maxspeed 初始化）移植前置依赖：
+- `sub_E7AD`（E7AD-…：$301,X 取负 + sub_E8BE）及其子链；
+- `sub_D976`（D976-D9B9：$307/$7D 清零 + 敌槽扫描循环，调 F1xx 族 F186/F152/F1BF/F1FA/F1F4
+  + sub_D9BA + sub_DC82）——**深调用图，非 L2 可切片**，需独立 decomp-analyst 考证单元；
+- 语义线索（C 级，仅定位）：constants_ram 注释「EnemyReactToSamusProjectile/ExplodeEnemy…」。
+结论：头部移植=batch-1 的 F1xx 族考证先行（S 面格随矩阵聚类），完成后 E37A 整格计 covered。
 
 ## 3. 缺口显式声明（D7）
 
