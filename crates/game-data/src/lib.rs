@@ -156,6 +156,29 @@ pub fn parse_vram_struct(data: &[u8]) -> Option<(Vec<VramRecord>, usize)> {
 }
 
 #[cfg(test)]
+mod enemy_tests {
+    use super::*;
+
+    // fixture 抄自 enemy_sprite_data.asm:34-41（EnAnim_11/EnAnim_Waver0_L 双链）
+    #[test]
+    fn enemy_anim_chain() {
+        let raw = [0x0B, 0x0C, 0xFF, 0x0D, 0xFF]; // Waver1_L, Ripper_L?… 按 id 序 + FrameEnd
+        let (a, n) = parse_enemy_anim(&raw, 0x9D7B).unwrap();
+        assert_eq!(n, 3); // 首链至首个 $FF 消耗 3B（其余为下链——共享尾模型见 inspect 互核）
+        assert_eq!(a, EnemyAnim { addr: 0x9D7B, frames: vec![0x0B, 0x0C] });
+    }
+
+    #[test]
+    fn enemy_anim_seq_two_chains() {
+        let raw = [0x0B, 0x0C, 0xFF, 0x0D, 0xFF];
+        let (chains, n) = parse_enemy_anim_seq(&raw, 0x9D7B, 2).unwrap();
+        assert_eq!(n, raw.len());
+        assert_eq!(chains.len(), 2);
+        assert_eq!(chains[1], EnemyAnim { addr: 0x9D7E, frames: vec![0x0D] });
+    }
+}
+
+#[cfg(test)]
 mod item_tests {
     use super::*;
 
@@ -304,6 +327,48 @@ pub fn parse_spec_items(data: &[u8], base: u16) -> Option<(Vec<SpecialItem>, usi
         pos = next_off;
     }
     Some((items, used))
+}
+
+/// 敌人动画/帧链（m1disasm SRC/brinstar/enemy_sprite_data.asm 锚+实证）：
+/// - EnAnim=`[frame_id...] $FF 终`（_id_FrameEnd=$FF，constants.asm:116）；
+///   **共享尾结构（结构互核实证）**：标签=任意入口，链可顺流进下一标签无 FF（如
+///   EnAnim_11@$9D7B 流入 EnAnim_Waver0_L@$9D7D）——非断链序列，逐标签入口验证为准；
+///   frame_id=EnFramePtrTable1 表索引（PtrTableEntry 自动编号，macros.asm:75-86）；
+/// - EnFramePtrTable1=148 词（asm 计数）；帧体（EnFrame）线格式=`[place|pal][?][?]
+///   [tile..]` 含 EnPlace 子表引用——**体语义 C 级 _todo_**（v1 只做链+表层）。
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct EnemyAnim {
+    pub addr: u16,        // 链首址（asm 标签互核坐标）
+    pub frames: Vec<u8>,  // 帧 id 序列（$FF 已剥）
+}
+
+pub const ANIM_FRAME_END: u8 = 0xFF;
+
+/// 解析单条 EnAnim 链。返回 (链, 消耗字节数)。
+pub fn parse_enemy_anim(data: &[u8], addr: u16) -> Option<(EnemyAnim, usize)> {
+    let mut frames = Vec::new();
+    let mut i = 0usize;
+    loop {
+        let b = *data.get(i)?;
+        i += 1;
+        if b == ANIM_FRAME_END {
+            return Some((EnemyAnim { addr, frames }, i));
+        }
+        frames.push(b);
+    }
+}
+
+/// 连续 EnAnim 链序列解析（链首=addr 增长对齐；用于表后动画区批量走链）。
+/// 返回 (链表, 消耗字节数)。前提：链在内存中连续排布（asm 标签序列实证）。
+pub fn parse_enemy_anim_seq(data: &[u8], addr: u16, count: usize) -> Option<(Vec<EnemyAnim>, usize)> {
+    let mut out = Vec::new();
+    let mut off = 0usize;
+    for _ in 0..count {
+        let (a, n) = parse_enemy_anim(&data[off..], addr.wrapping_add(off as u16))?;
+        out.push(a);
+        off += n;
+    }
+    Some((out, off))
 }
 
 /// brinstar（bank1）锚点——m1disasm `SRC/brinstar/*.asm` 注址（A 级线索，等价性背书）。

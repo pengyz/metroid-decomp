@@ -157,3 +157,37 @@ $09=Door/$0A=Palette change room（items.asm:45-54）。
 
 施工令②补款实证：asm 注「offset-1」措辞本身错位——**锚在但须自建解码互核**的
 正面案例（与 TYA 位错案反向同款）。遗留：enemy_sprite_data 两件套之二 + ⑤ CHR 面。
+
+## 9. r5：③b enemy_sprite_data（共享尾结构实证·结构互核第三案）
+
+**asm 内容锚**（enemy_sprite_data.asm + constants.asm:116 + macros.asm:75-86）：
+EnAnim=`[frame_id...] $FF 终`（_id_FrameEnd=$FF）；frame_id=EnFramePtrTable1（01:9DE0）
+表索引（PtrTableEntry 自动编号）；帧体含 EnPlace 子表（体语义 C 级 _todo_）。
+**自建解码互核（②）**：断链序列模型被互核证伪——**共享尾结构**（标签=任意入口，
+链可顺流进下一标签无 FF：EnAnim_11@$9D7B 流入 EnAnim_Waver0_L@$9D7D）→ 互核模型改
+**逐标签入口验证**（每 asm 标签均起合法链至 $FF）。与 TYA 位错案（锚在界误读）/
+items「offset-1」案（锚在措辞错）同族第三例：**锚在≠模型对**。
+
+**ROM 批量 + 逐标签互核（输出原文）**：
+```
+③b 帧表 148 词：[0]=$9FC2（期望 $9FC2=EnFrame00 注址）→ ✓
+  入口 $9D7B: 3 帧 → $FF 终 ✓ [34, 35, 36]
+  入口 $9D7D: 1 帧 → $FF 终 ✓ [36]
+  入口 $9D7F: 3 帧 → $FF 终 ✓ [31, 32, 33]
+  入口 $9D81: 1 帧 → $FF 终 ✓ [33]
+  入口 $9D83: 1 帧 → $FF 终 ✓ [34]
+  入口 $9D85: 1 帧 → $FF 终 ✓ [31]
+③b EnAnim 逐标签互核（共享尾模型）：6 入口全合法=true
+```
+
+共享尾对账：$9D7D=[36]=$9D7B 链尾缀 ✓、$9D81=[33]=$9D7F 尾缀 ✓——**尾共享实证**
+（B 级结构结论：EnAnim 命名空间=入口点集合，非互斥链集合）。
+
+| 结论 | 级 |
+|---|---|
+| 帧表 148 词/首词 $9FC2 对拍 | **A** |
+| 共享尾链结构+逐入口合法 | **A**（ROM 6 入口+尾缀对账） |
+| 帧体（EnPlace/tile）语义 | **C**（_todo_） |
+| EnAnim 语义名（Waver/Ripper 注释） | **C**（D5 不入字段名） |
+
+遗留：⑤ CHR 面（L4→pattern）+ 帧体语义自证。

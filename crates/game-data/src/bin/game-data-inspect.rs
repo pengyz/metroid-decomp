@@ -6,7 +6,7 @@
 //! 产出：47 房批解析 + 50 结构批解析 + L2 敌/门段（tail）长度/首字节聚类
 //!（C→B 自证素材：变长段结构一致性实证）。
 
-use game_data::{parse_spec_items, parse_vram_struct, parse_ptr_table, parse_room, parse_structure, brinstar};
+use game_data::{parse_enemy_anim, parse_enemy_anim_seq, parse_spec_items, parse_vram_struct, parse_ptr_table, parse_room, parse_structure, brinstar};
 use std::collections::BTreeMap;
 use std::env;
 use std::fs;
@@ -151,4 +151,25 @@ fn main() {
         *tdist.entry(i.item_type).or_insert(0usize) += 1;
     }
     println!("③ items 类型分布（type:数，语义见 items.asm:45-54 注释 C 级）: {:?}", tdist);
+    // ③b enemy_sprite_data：帧表 148 词 + EnAnim 逐标签入口互核（共享尾结构实证：
+    // 标签=任意入口，非断链序列——互核=每 asm 标签均起合法链至 $FF）
+    const FRAME_PTRS: u16 = 0x9DE0; // EnFramePtrTable1_{AREA} ; 01:9DE0
+    const FRAME_COUNT: usize = 148;
+    let (fptrs, _) = parse_ptr_table(&b1[at(FRAME_PTRS)..], FRAME_COUNT).unwrap();
+    println!("③b 帧表 148 词：[0]=${:04X}（期望 $9FC2=EnFrame00 注址）→ {}",
+        fptrs[0], if fptrs[0] == 0x9FC2 { "✓" } else { "✗" });
+    assert_eq!(fptrs[0], 0x9FC2);
+    // asm EnAnim 标签坐标集（enemy_sprite_data.asm:34-41 段抄录）——逐入口验证
+    let asm_anim: &[u16] = &[0x9D7B, 0x9D7D, 0x9D7F, 0x9D81, 0x9D83, 0x9D85];
+    let mut all_ok = true;
+    for &a in asm_anim {
+        match parse_enemy_anim(&b1[at(a)..], a) {
+            Some((chain, _n)) => println!("  入口 ${:04X}: {} 帧 → $FF 终 ✓ {:?}", a,
+                chain.frames.len(), chain.frames),
+            None => { all_ok = false; println!("  入口 ${:04X}: ✗ 无 $FF 终", a); }
+        }
+    }
+    println!("③b EnAnim 逐标签互核（共享尾模型）：{} 入口全合法={}",
+        asm_anim.len(), all_ok);
+    assert!(all_ok, "EnAnim 入口验证失败");
 }
