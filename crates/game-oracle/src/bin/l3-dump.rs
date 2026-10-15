@@ -81,13 +81,26 @@ fn main() -> ExitCode {
     }
 
     let mut engine = FrameEngine::new();
+    // 键集声明（严重-7，task-22 slot③）：`w` 对象标签集=manifest watch 声明集（无隐藏标签）；
+    // 编码唯一源=memmap::frame_face（严重-6）。声明标签无对应编码面 ⇒ fail-loud（拒半成品）。
+    let watch_labels: Vec<&str> = case.watch.iter().map(|w| w.label.as_str()).collect();
+    let all_snap = engine.watch_snapshot();
+    for label in &watch_labels {
+        if !all_snap.iter().any(|(l, _)| l == label) {
+            eprintln!("manifest watch 标签 {label} 无对应编码面（memmap::frame_face::WATCH_FACES 未定义）——fail-loud");
+            return ExitCode::from(2);
+        }
+    }
     let mut out = String::new();
     for f in 1..=frames {
         engine.tick_frame(); // unported! 引爆 ⇒ panic（fail-loud，dump 不落盘）
         let snap = engine.watch_snapshot();
-        let w: Vec<String> = snap
+        let w: Vec<String> = watch_labels
             .iter()
-            .map(|(label, hex)| format!("\"{label}\":\"{hex}\""))
+            .map(|label| {
+                let (_, hex) = snap.iter().find(|(l, _)| l == label).expect("标签已预检");
+                format!("\"{label}\":\"{hex}\"")
+            })
             .collect();
         out.push_str(&format!("{{\"f\":{f},\"w\":{{{}}}}}\n", w.join(",")));
     }

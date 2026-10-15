@@ -45,6 +45,16 @@ BASERE = re.compile(r"^[0-9a-fA-F]{1,4}$")
 RANGERE = re.compile(r"^([0-9a-fA-F]{1,4})-([0-9a-fA-F]{1,4})$")
 SCENRE = re.compile(r"^[A-Za-z0-9_-]+$")
 WATCH_KEYS = {"label", "base", "range"}
+# 帧记录键集白名单（严重-7）：基础键 {f,w} + case.frame_keys 显式声明扩展键（如 ram）。
+FRAME_BASE_KEYS = {"f", "w"}
+# watch 面区间钉死规范（严重-5；与 game-core memmap/frame_face.rs WATCH_FACES 同表——
+# 双侧同表互指注，双腿编码长度必须一致（L3 diff 天然互检）。WRAM=$6000-$7FFF 全 8KB
+# （lead 2026-10-15 裁定：全状态无隐藏态；「$6000-$6Cxx」软上界正式作废）。
+CANONICAL_FACES = {
+    "zp": ("0000", "0000-00ff"),
+    "iram": ("0100", "0100-07ff"),
+    "wram": ("6000", "6000-7fff"),
+}
 
 
 def schema_error(msg: str) -> int:
@@ -56,7 +66,7 @@ def check_case_schema(case) -> str | None:
     """manifest schema 机械校验（R1/R3）；返回错误描述或 None。"""
     if not isinstance(case, dict):
         return f"case 非对象: {case!r}"
-    for key in ("id", "scenario", "oracle_sha256"):
+    for key in ("id", "scenario", "oracle_sha256", "scenario_sha256"):
         v = case.get(key)
         if not isinstance(v, str) or not v.strip():
             return f"case.{key} 缺失或非非空字符串"
@@ -64,6 +74,20 @@ def check_case_schema(case) -> str | None:
         return f"case.scenario 含路径字符（限字母数字_-，防穿越自比对）: {case['scenario']!r}"
     if not HEX64.match(case["oracle_sha256"]):
         return f"case.oracle_sha256 非 64 位 hex: {case['oracle_sha256']!r}"
+    if not HEX64.match(case["scenario_sha256"]):
+        return f"case.scenario_sha256 非 64 位 hex: {case['scenario_sha256']!r}"
+    fk = case.get("frame_keys")
+    if not isinstance(fk, list):
+        return "case.frame_keys 缺失或非数组（键集显式声明——可为空数组，缺键不行；严重-7）"
+    seen_fk: set[str] = set()
+    for k in fk:
+        if not isinstance(k, str) or not k.strip():
+            return f"case.frame_keys 含非非空字符串: {k!r}"
+        if k in FRAME_BASE_KEYS:
+            return f"case.frame_keys 声明基础键 {k!r}（f/w 固有，勿重复声明）"
+        if k in seen_fk:
+            return f"case.frame_keys 重复: {k!r}"
+        seen_fk.add(k)
     if "frames" in case:
         fv = case["frames"]
         if isinstance(fv, bool) or not isinstance(fv, int) or fv <= 0:
@@ -97,6 +121,12 @@ def check_case_schema(case) -> str | None:
             if span <= 0:
                 return f"watch.range 区间倒置: {rng!r}"
             w["_span"] = span
+        canon = CANONICAL_FACES.get(label)
+        if canon is not None:
+            declared = (base.lower(), (w.get("range") or "").lower())
+            if declared != canon:
+                return (f"watch[{label}] 区间与钉死规范不符（严重-5）: 期望 "
+                        f"base={canon[0]} range={canon[1]}，实得 base={base} range={w.get('range')}")
     return None
 
 
@@ -144,9 +174,12 @@ def regen(scenario: str) -> bool:
     return proc.returncode == 0
 
 
-def load_frames(raw: bytes, where: str) -> tuple[dict[int, dict], list[int], str | None]:
+def load_frames(raw: bytes, where: str, allowed_keys: set[str] | None = None,
+                w_labels: set[str] | None = None) -> tuple[dict[int, dict], list[int], str | None]:
     """解析帧 trace（**单读**：sha 与解析同源同 bytes，消 TOCTOU 双读竞态——G5 R4-1）。
-    返回 (帧字典, 重复 f 列表, 行级违规)。重复 f 判 FAIL；畸形行 = 行级违规。"""
+    返回 (帧字典, 重复 f 列表, 行级违规)。重复 f 判 FAIL；畸形行 = 行级违规。
+    **键集白名单**（严重-7，task-22 slot③）：allowed_keys=顶层键集（缺省={f,w}），
+    w_labels=`w` 对象标签集（缺省=不检）；未声明键=行级违规（隐藏字段拒绝）。"""
     out: dict[int, dict] = {}
     dups: list[int] = []
     try:
@@ -162,11 +195,21 @@ def load_frames(raw: bytes, where: str) -> tuple[dict[int, dict], list[int], str
             return out, dups, f"{where} 第 {lineno} 行非 JSON: {e}"
         if not isinstance(r, dict) or "f" not in r or "w" not in r:
             return out, dups, f"{where} 第 {lineno} 行缺 f/w 键或非对象"
+        allow = allowed_keys if allowed_keys is not None else FRAME_BASE_KEYS
+        unknown = set(r) - allow
+        if unknown:
+            return out, dups, (f"{where} 第 {lineno} 行含未声明键 {sorted(unknown)}"
+                               f"（键集白名单={sorted(allow)}——严重-7 隐藏字段拒绝）")
         f = r["f"]
         if isinstance(f, bool) or not isinstance(f, int) or f < 0:
             return out, dups, f"{where} 第 {lineno} 行 f 须为非负整数: {f!r}"
         if not isinstance(r["w"], dict):
             return out, dups, f"{where} 第 {lineno} 行 w 非对象"
+        if w_labels is not None:
+            w_unknown = set(r["w"]) - w_labels
+            if w_unknown:
+                return out, dups, (f"{where} 第 {lineno} 行 w 含未声明标签 {sorted(w_unknown)}"
+                                   f"（声明={sorted(w_labels)}——严重-7 隐藏字段拒绝）")
         if f in out:
             dups.append(f)
         out[f] = r["w"]
@@ -313,6 +356,20 @@ def main() -> int:
     for case in cases:
         cid, scenario = case["id"], case["scenario"]
         watch = case["watch"]
+        allowed = FRAME_BASE_KEYS | set(case["frame_keys"])
+        w_labels = {w["label"] for w in watch}
+        # scenario_sha256 载体复验（严重-10，task-22 slot④）：输入脚本 sha 对锚
+        scen_path = ROOT / "oracle" / "scenarios" / f"{scenario}.txt"
+        if not scen_path.is_file():
+            print(f"[FAIL] {cid}: 场景脚本缺失（scenario_sha256 无锚可对）: {scen_path}")
+            failed += 1
+            continue
+        scen_digest = hashlib.sha256(scen_path.read_bytes()).hexdigest()
+        if scen_digest.lower() != case["scenario_sha256"].lower():
+            print(f"[FAIL] {cid}: scenario_sha256 不符（输入脚本变更/manifest 陈旧——"
+                  f"脚本 {scen_digest[:16]}… vs manifest {case['scenario_sha256'][:16]}…）")
+            failed += 1
+            continue
         cache = TRACES / f"{scenario}.frames.jsonl"
         if not cache.is_file():
             if not regen(scenario) or not cache.is_file():
@@ -326,7 +383,7 @@ def main() -> int:
             failed += 1
             continue
 
-        left, ldups, lerr = load_frames(cache_raw, "oracle trace")
+        left, ldups, lerr = load_frames(cache_raw, "oracle trace", allowed, w_labels)
         if lerr:
             print(f"[FAIL] {cid}: {lerr}")
             failed += 1
@@ -377,7 +434,7 @@ def main() -> int:
             failed += 1
             continue
 
-        right, rdups, rerr = load_frames(dump.read_bytes(), "game-core dump")
+        right, rdups, rerr = load_frames(dump.read_bytes(), "game-core dump", allowed, w_labels)
         if rerr:
             print(f"[FAIL] {cid}: {rerr}")
             failed += 1

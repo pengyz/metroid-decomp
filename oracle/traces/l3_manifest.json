@@ -1,26 +1,29 @@
 {
-  "note": "L3 用例 manifest——只存摘要（ROM 衍生 trace 不入库，红线）；trace 本体 analysis/traces/ 可再生",
-  "cases": [
+ "note": "L3 用例 manifest——只存摘要（ROM 衍生 trace 不入库，红线）；trace 本体 analysis/traces/ 可再生",
+ "cases": [
+  {
+   "id": "l3-boot-title-oracle-determinism",
+   "scenario": "boot-title",
+   "frames": 300,
+   "watch": [
     {
-      "id": "l3-boot-title-oracle-determinism",
-      "scenario": "boot-title",
-      "frames": 300,
-      "watch": [
-        {
-          "label": "zp",
-          "base": "0000",
-          "range": "0000-00ff"
-        },
-        {
-          "label": "iram",
-          "base": "0100",
-          "range": "0100-07ff"
-        }
-      ],
-      "oracle_sha256": "4655a986264d0104bafd1779b936c436bf46b731771e7a1a51686f49141bcde2",
-      "determinism_evidence": "同场景双跑逐字节一致（2026-10-14，runA==runB sha 4655a986…）",
-      "game_core_leg": "S5 落地后自动启用（analysis/dump/<scenario>.frames.jsonl）",
-      "watch_note": "显式基址区间（含栈页 $0100-$01FF；不用惯常分区假设——gotcha-stack-page 教训）"
+     "label": "zp",
+     "base": "0000",
+     "range": "0000-00ff"
+    },
+    {
+     "label": "iram",
+     "base": "0100",
+     "range": "0100-07ff"
     }
-  ]
+   ],
+   "oracle_sha256": "4655a986264d0104bafd1779b936c436bf46b731771e7a1a51686f49141bcde2",
+   "determinism_evidence": "同场景双跑逐字节一致（2026-10-14，runA==runB sha 4655a986…）",
+   "game_core_leg": "S5 落地后自动启用（analysis/dump/<scenario>.frames.jsonl）",
+   "watch_note": "显式基址区间（含栈页 $0100-$01FF；不用惯常分区假设——gotcha-stack-page 教训）；区间钉死规范=game-core memmap/frame_face.rs WATCH_FACES（zp/iram/wram，WRAM=$6000-$7FFF 全 8KB——严重-5 软上界作废）；本案 watch=[zp,iram]（oracle_sha256 锚定既有 trace 面不动），涉 WRAM 新案按规范加 wram 条目",
+   "scenario_sha256": "2725053ff361d03505eac0977f5f403ddde3494d74344cceb413c3716802fdec",
+   "frame_keys": [],
+   "scenario_sha256_note": "锚=当前脚本 sha（task-22 slot④ 载体，diff_traces 对锚校验）；捕获时点脚本 sha=25b5206a…（run.json 在案，generated_lua_sha256=038e047e…）——e3f2473 注释更正（次要-15：陈旧「无 PRG-RAM」注）后脚本 sha 变 2725053f…，DSL 指令面未动（watch_range 逐行不变）=生成 lua 面不变，oracle_sha256 锚定 trace 仍有效；行为性脚本变更必须重采集并同步 oracle_sha256"
+  }
+ ]
 }
