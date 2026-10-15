@@ -96,6 +96,7 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "sub_F1D2" => Some(sub_f1d2),
         "sub_F1CB" => Some(sub_f1cb),
         "sub_F1E7" => Some(sub_f1e7),
+        "sub_F172" => Some(sub_f172),
         _ => None,
     }
 }
@@ -134,6 +135,26 @@ pub fn sub_f152(input: &L2In) -> L2Out {
     let w = input.wram.get(0x6AFB + x as usize - 0x6000).copied().unwrap_or(0);
     // F17F `45 FF` = EOR **零页 $FF**（RAM），非立即数——操作数类型以清单 # 前缀为准
     let vb = (w ^ input.ram[0x00FF]) & 1; // ^ RAM[$FF]（EOR zp，非立即数）
+    L2Out {
+        a: vb,
+        x: input.x,
+        y: input.y,
+        writes: vec![(0x0007, v7), (0x0009, v9), (0x000B, vb)],
+    }
+}
+
+/// sub_F172 —— bank07:F172-F185（`LDA $30D,X / STA $07 / LDA $30E,X / STA $09 / LDA $30C,X /`
+/// 经 loc_F17F 共享尾：X 变体坐标/属性读取）。
+/// L2 窗口 stops=bank07:F185（尾 RTS 址截断，与 gen-f152 同约定）。
+/// 语义（A 级：ROM 原字节 `BD 0D 03 85 07 BD 0E 03 85 09 BD 0C 03 45 FF 29 01 85 0B 60`）：
+/// $07 ← RAM[$30D+X]；$09 ← RAM[$30E+X]；$0B ← (RAM[$30C+X] ^ **RAM[$FF]**) & 1
+/// （F17F `45 FF` = EOR **零页 $FF**，非立即数——同 F152/F186 教训）。
+/// 末值 A=$0B；X/Y 透传。
+pub fn sub_f172(input: &L2In) -> L2Out {
+    let x = input.x as u16;
+    let v7 = input.ram[(0x030D + x) as usize & 0x7FF];
+    let v9 = input.ram[(0x030E + x) as usize & 0x7FF];
+    let vb = (input.ram[(0x030C + x) as usize & 0x7FF] ^ input.ram[0x00FF]) & 1;
     L2Out {
         a: vb,
         x: input.x,

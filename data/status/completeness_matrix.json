@@ -3686,10 +3686,10 @@
       "id": "S-FUNC-07-F172",
       "face": "symbol",
       "module": "engine",
-      "strength": "L0",
-      "covered": false,
-      "evidence": "bank07:F172-F186（IDA 机械切分 size=20）",
-      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+      "strength": "L2",
+      "covered": true,
+      "evidence": "oracle/subroutines/l2_cases.jsonl#gen-f172-0..7 + #b-f172-xff/b-f172-ffzero 三方全等（golden==ROM 执行==game-core）；语义来源 ROM 原字节 bank07:F172-F185=BD 0D 03 85 07 BD 0E 03 85 09 BD 0C 03 + loc_F17F（45 FF 29 01 85 0B 60）逐指令",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准；L2 窗口 stops=bank07:F185（尾 RTS 址截断，与 gen-f152 同约定）：$07←RAM[$30D+X]、$09←RAM[$30E+X]、$0B←(RAM[$30C+X]^RAM[$FF])&1（45 FF=EOR zp 非立即数），A=$0B"
     },
     "S-FUNC-07-F186": {
       "id": "S-FUNC-07-F186",
