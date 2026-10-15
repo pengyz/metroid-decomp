@@ -23,3 +23,12 @@
 ## 观测节奏
 
 每 5 个移植单元汇总一次（届时更新本文件对账表），task-16 命中率报告并入。
+
+## 观测记录
+
+### 2026-10-15 首采（链规 17 首件 e3da228，新流首用）
+- **结构性指标首兑现**：m1disasm 全链标签直出（Startup/ClearNameTables/EraseAllSprites/
+  PrepVertMirror/CheckBankSwitch/ScreenNmiOff/CopyMap/InitTitleGFX/NMIOn）——解码前置占比≈0；
+- **读解错误**：自纠 1 处（「-1,Y 形态」注记笔误被 asm 即刻消歧）——注意这是**注记**错非读解错
+  （asm 语义把它压到 0 时刻）；命名候选 7 条行为自证一次过；
+- 单元周期：C4DE 单元待测（e3da228 时间戳）；观察样本尚少，累计 5 单元出对账表。
