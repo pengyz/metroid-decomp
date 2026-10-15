@@ -1,0 +1,15 @@
+# 场景：vrambuf-probe —— P28-F1 成对对表（$07A0 VRAMStructBufferIndex 中间态捕获）
+# porter 8AC7 主张「清零环 Y 填充使 $07A0=0xA0（真机同态）」——写点级捕获核证。
+name vrambuf-move
+press 360 start
+press 420 a
+press 540 start
+hold 850-1150 right
+hold 1180-1330 left
+frames 1400
+watch_range 0000-00ff zp
+watch_range 0100-07ff iram
+
+
+
+probe_mem 07A0 07A0
