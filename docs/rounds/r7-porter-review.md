@@ -693,6 +693,17 @@ flow_scratch 原地更正注 ✓。**P14-F1（声明族·中）**：「产品层
 （本批残余：①frame/ 体字面量清扫决策——随 S5 L3 上线前一并裁定 ②b-f282 巧合族
 （表 bit4 同侧）=固有盲点已自报，突变族谱补录。）
 
+## task-10 批 32：WriteScroll/C29A（92b47f6）——滚动寄存器件（双路汇聚）
+
+### verdict: pass
+
+四查：①asm 锚 ✓（`WriteScroll: ; 07:C29A` 体四行 lda PPUSTATUS/ScrollX→PPUSCROLL/
+ScrollY→PPUSCROLL/rts 逐句；constants ScrollX($FD)/ScrollY($FC)）②结构互核注 ✓
+（零 RAM 写只读 $FC/$FD+双路汇聚同一 RTS 语义——尾跳路栈深一层回清理段/直调路回
+NMI 体，域形折叠核对成立）③走带清理段首次通达（三态清 $07A0/$07A1/$1B 可执行=
+镜像/pending 测完成态断言）④测面 44 绿（树愈后补跑——初测时 WIP 半重构 window_bank
+破树与本件无关，定损分离）。findings（r10）：0 新。基线 67。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
