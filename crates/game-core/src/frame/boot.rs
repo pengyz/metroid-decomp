@@ -432,6 +432,21 @@ mod tests {
         assert_eq!(m.regs.x, 0);
     }
 
+    /// **vs decomp 写点级捕获面对拍锚**（lead 令：解「单测与模型同源=补偿性错误温床」）：
+    /// 真机 $07A0 写值域（decomp 9e39d0d/7a81a9b 写点级实录）=boot {0,6,12}+游戏
+    /// {33,35,68}——本模型清零环写值必须 ⊆ 此域（外部锚≠模型同源，golden-less S5 面的
+    /// 独立对照）。
+    #[test]
+    fn clear_loop_writes_within_real_capture_domain() {
+        use crate::ram_map::VRAM_STRUCT_INDEX;
+        let real_boot_domain = [0u8, 6, 12]; // decomp 写点级实录（boot 300f）
+        let mut m = FrameMemory::default();
+        m.write_ram(VRAM_STRUCT_INDEX, 0xEE); // 预污哨兵
+        clear_pages(&mut m, 7, 2);
+        let v = m.read_ram(VRAM_STRUCT_INDEX);
+        assert!(real_boot_domain.contains(&v), "$07A0 写值 {v:#04x} 逸出真机捕获域");
+    }
+
     /// **P28-F1 回归锁**：清零环绝不 pattern-fill $07A0（VRAMStructBufferIndex）——
     /// decomp 写点级拆穿案固化（真机无 0xA0 写；Y 型误读=第六案）。
     #[test]
