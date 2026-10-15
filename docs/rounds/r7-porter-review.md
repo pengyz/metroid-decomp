@@ -634,6 +634,24 @@ data」/「start at address $07A1」/「data…now erased」注+清三态体）�
 捕获域、boot 静默（$1B=0 生产端未跑）与捕获 boot 相一致。
 findings（r10）：0 新（28b 模型更正案已结）。基线 63。
 
+## task-10 批 30：PrepPPUPaletteString/C37E（09f3918）——VRAM 写串解释器（结构互核注首件）
+
+### verdict: pass
+
+四查+第 7 查：①asm 内容锚链 ✓（PrepPPUPaletteString/LC385 [hi][lo] 序/WritePaletteStringByte/
+WritePPUByte/NextPPUByte（$4F 上限）/EndVRAMStruct（pla/pla 逃逸）/SeparateControlBits
+（and #$BF/#$3F）/AddYToPtr02 逐符号命中）②**数据岛自证 ✓**：IntroStarPalette 8×10B=
+prg[0x0B0F..0x0B5F] 80B 整（我方提取长核）+双流几何（stream1→$3F19/stream2→$3F1D
+10B 块）③单测 2 绿（16 帧门+双 call 缓冲 13B 逐字节断言）+引爆迁移 `bank07:C2E4`
+=渲染面下一件与声明一致 ④**捕获面对表（链规 18）✓**：[hi][lo][ctrl|data] 线格式与
+decomp A 级格式锚（VRAMStructData/Repeat/End 宏族 28/28 解析）双证——解释器输出
+几何∈捕获面格式域。
+**结构互核注三面**（施工令②补款首件）：y 复用三相/分支目标互核（bne 回数据节/
+bvc-bvs 双 iny 路径）/数据岛边界——第六案「解码错位一位类」防线制度化 ✓。
+端口过程两案自录（链规②）：①段间 iny 双计越界（相位误读族又一实例，互核注固化）
+②测试期望 lo/hi 序写反（**期望值错非模型错**——[hi][lo] 双证裁明）——诚实分级 ✓。
+findings（r10）：0 新。基线 66。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
