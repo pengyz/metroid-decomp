@@ -78,6 +78,10 @@
 12. **先建目标后建引用**（11 衍生，2 案共享树阻塞）：引用未落库的文档/条目=悬空链接
     ——docs-links 全树扫描会卡住**所有人**的提交（共享工作树）。先落目标再落引用，
     或引用暂以纯文本占位。
+14. **共享分支禁裸 amend**（1 案，r8 §1）：`git commit --amend` 改写的是**当时的 HEAD**
+    ——共享分支上 4 分钟内就可能被他人提交插队，amend 会顶替**别人的 commit message**。
+    须先核 `git log -1` 确认 HEAD 仍是自己的 commit；或改用「新 commit + 原地更正注」。
+    已发事故零内容损失（TREES-IDENTICAL），但 message 顶替=声明失实风险。
 13. **共享 index 卫生**（3 案）：`git add` 只加自己写路径的文件；commit 用 pathspec
     （`git commit -- <paths>`）只提交自己路径，**不动他人暂存**；提交遇外源负载/index
     竞争=守窗口重试，不 resort --no-verify。**撞 index.lock 先判活死**（ps 查持锁者）：
