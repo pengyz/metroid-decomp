@@ -728,6 +728,31 @@ evidence 命中 `bank07:C000`（bankNN:AAAA 具体正则）∧ sub_GameRng 族 8
 （本批残余：frame::GameRng 句柄仍桩——算法件已立（src/rng.rs），S5 引擎接线
 （句柄→RngState）待续，与 L3 实施序 §5 步骤 3 衔接。）
 
+## port2 task-9（6760260）：UpdateTileBlast_Respawned/FE83 域化+F311 伤害链随钉
+
+### verdict: pass
+
+### findings（逐项复现输出）
+
+**① 段界/调用集更正核——通过 ✓（申报精确）**：址精读定谳 `FEC9:4c FECA:92
+FECB:ce`=JMP $CE92 **恰跨 FEC9-FECB**、`FECC:bd`=下标签 GetVRAMStringPtr 双证——
+73B/34 条边界更正成立（r2 72B 实为失实，第六案族对称更正规范）；段内 jsr 目标
+重导=**[FF3C, F186, F1FA, F311] 四员逐字命中**（r2 漏 F311 实锤）；段首 `a9 00 9d
+00 05…`+**`18 69 21`（CLC ADC #+0x21=进位丢弃 quirk 结构自证）**。
+（自省注：我方探针两错——bank7 映射第五案+尾端独占切片——正址重导后申报全对。）
+**② 迁移双绿——通过 ✓**：f186/f1fa 核抽取后 377/0 复现（既有 368+9 新案全绿）；
+薄包装形制（l2ports 委托 verify_shim）=「行为钉死=结构可换」实证。
+**③ carry 面+极性突变——通过 ✓（手术实测）**：`f1fa_with_carry` C=1 无碰撞/C=0
+重叠显式不入 L2Out（契约不扩照裁定）；**极性翻转突变（if carry→!carry）：L2 9/9
+全打回**（恰 fe83 族，判别力承重）+还原 377/0 ✓。（观察：单测 54 对极性不敏感=
+L2 golden 才是该轴裁判——链规 18 同源原理的 L2 侧镜像。）
+**④ 伤害链写面入 golden——通过 ✓**：collision-horiz 案 golden writes 含
+**010F/030A/0073/006E/006F** 五键（申报链面全数）+指针槽位；quirk 夹具（$0508=$FF）
++单测 `respawn_addr_drops_carry` 钉死 ✓。
+**⑤ 账面——通过 ✓**：S-FUNC-07-FE83 补录格+段切更正注同 commit；基线 82/65 实读
+（77→82/63→65 仅上调）；N-0064/0065 指针在位。
+findings（r10）：0 新（含其自报的 r2 双失实更正=第六案族规范样本）。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
