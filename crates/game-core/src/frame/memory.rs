@@ -26,11 +26,15 @@ pub struct FrameMemory {
     pub regs: Registers,
     /// NMI 使能态（PPUCTRL bit7——write_io($2000) 权威面；60Hz VBlank 调度开关）。
     pub nmi_enabled: bool,
+    /// 手柄 1 输入面（场景驱动；boot-title=无输入 0）。
+    pub joy1: u8,
+    /// 手柄 2 输入面。
+    pub joy2: u8,
 }
 
 impl Default for FrameMemory {
     fn default() -> Self {
-        Self { ram: [0; 0x800], wram: [0; 0x2000], regs: Registers::default(), nmi_enabled: false }
+        Self { ram: [0; 0x800], wram: [0; 0x2000], regs: Registers::default(), nmi_enabled: false, joy1: 0, joy2: 0 }
     }
 }
 
@@ -64,23 +68,16 @@ impl FrameMemory {
         // 其余寄存器面 S5 骨架暂不建模（RAM watch 不可见）；渲染面挂 task-13
     }
 
-    /// watch 状态向量（zp/iram，大写 hex——与 oracle 帧 trace 同形）。
+    /// watch 状态向量（zp/iram/wram，大写 hex——与 oracle 帧 trace 同形）。
+    /// **编码唯一源=memmap::frame_face**（严重-6 对账闭合：废本层手写切片第二源）。
+    /// 委托化=task-22 slot①（lead 例外授权：只动委托结构不动语义）；wram 全 8KB 钉死（严重-5）。
     pub fn watch_snapshot(&self) -> Vec<(&'static str, String)> {
         vec![
-            ("zp", hex_upper(&self.ram[0x000..0x100])),
-            ("iram", hex_upper(&self.ram[0x100..0x800])),
+            ("zp", crate::memmap::frame_face::encode_zp(&self.ram)),
+            ("iram", crate::memmap::frame_face::encode_iram(&self.ram)),
+            ("wram", crate::memmap::frame_face::encode_wram(&self.wram)),
         ]
     }
-}
-
-/// 大写 hex 编码（watch 面）。
-fn hex_upper(bytes: &[u8]) -> String {
-    use std::fmt::Write;
-    let mut s = String::with_capacity(bytes.len() * 2);
-    for b in bytes {
-        let _ = write!(s, "{b:02X}");
-    }
-    s
 }
 
 #[cfg(test)]

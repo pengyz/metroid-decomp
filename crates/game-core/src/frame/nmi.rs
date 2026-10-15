@@ -42,7 +42,7 @@ fn nmi_body(mem: &mut FrameMemory) {
     // 执行序补全（前版漏桩自查）：WritePPUCtrl/WriteScroll/ReadJoyPads（asm 调用序列）
     write_ppu_ctrl(mem); // WritePPUCtrl（asm :1150 族——已端口）
     write_scroll(mem); // WriteScroll（asm :717——已端口）
-    crate::unported!("bank07:C215"); // ReadJoyPads（工作序列次件）
+    read_joy_pads(mem); // ReadJoyPads（asm :1215 族——已端口）
     #[allow(unreachable_code)]
     {
         crate::unported!("bank07:B3B4"); // SoundEngine（超帧也跑段）
@@ -154,6 +154,32 @@ pub fn vram_struct_write(mem: &mut FrameMemory) {
     }
 }
 
+/// ReadJoyPads 单元（**asm 内容锚+结构互核注**）——
+/// refs/m1disasm/SRC/prg7_engine.asm `ReadJoyPads: ; 07:C215`（`ldx #$00/stx $01/jsr
+/// ReadOnePad`（pad1）/`inx/inc $01`（fallthrough pad2））+ `ReadOnePad: ; 07:C21F`
+/// （strobe `sty JOY1`×2 →8 位串行 `lda JOY1,x/lsr/ora $00/lsr/rol` 累装→
+/// `sta Joy1Status,x`（**状态落 RAM**）→`eor $00` 变更检测→变更路径）。
+///
+/// **结构互核注**：①8 次 `rol` 累装=NES 串行位序（A,B,Select,Start,Up,Down,Left,Right）
+/// ——输入面域形=直接按钮字节（序列化等价自证）②变更路径（Joy1Change/$12 面）**boot
+/// 场景不触发**（无输入 0^0=0）——fail-loud 桩（输入场景=task-11 samus 移动 demo 的
+/// 引爆面）③fallthrough 双 pad（pad2 复用 ReadOnePad 无 jsr——栈面一层）。
+pub fn read_joy_pads(mem: &mut FrameMemory) {
+    for (idx, input) in [(0u16, mem.joy1), (1u16, mem.joy2)] {
+        // 串行累装域形：输入字节直配（strobe/shift 等价——8 次 rol 累装按钮字节）
+        let new = input;
+        let status_addr = crate::ram_map::JOY1_STATUS + idx;
+        let old = mem.read_ram(status_addr);
+        mem.write_ram(0x0001, idx as u8); // $01=pad #（scratch 面）
+        mem.write_ram(0x0000, old); // $00=前值（scratch 面）
+        mem.write_ram(status_addr, new); // `sta Joy1Status,x`
+        if new ^ old != 0 {
+            // 变更路径（Joy1Change/$12 面——输入场景件，task-11 引爆）
+            crate::unported!("bank07:C23x-change");
+        }
+    }
+}
+
 /// WritePPUCtrl 单元（**asm 内容锚+结构互核注**）——
 /// refs/m1disasm/SRC/prg7_engine.asm `WritePPUCtrl: ; 07:C44D`（注「Update PPU control
 /// registers」：`lda PPUCTRL_ZP/sta PPUCTRL`/`lda PPUMASK_ZP/sta PPUMASK`/
@@ -256,6 +282,21 @@ mod tests {
         assert!(boom(&mut m3).contains("unported @ bank07:C1FF"));
         let mut m4 = FrameMemory::default(); // GameMode=0 & 无 pending → 静默
         check_palette_write(&mut m4);
+    }
+
+    /// ReadJoyPads boot 面（无输入：$14/$15=0 落态+变更路径不触发）+输入变更引爆。
+    #[test]
+    fn read_joy_pads_boot_zero_and_change_detonates() {
+        use crate::ram_map::{JOY1_STATUS, JOY2_STATUS};
+        let mut m = FrameMemory::default(); // joy1/joy2=0
+        read_joy_pads(&mut m);
+        assert_eq!(m.read_ram(JOY1_STATUS), 0);
+        assert_eq!(m.read_ram(JOY2_STATUS), 0);
+        assert_eq!(m.read_ram(0x0001), 1); // pad # scratch 终态
+        m.joy1 = 0x20; // A 键（输入场景）
+        let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| read_joy_pads(&mut m)));
+        let msg = panic_message(&r.unwrap_err());
+        assert!(msg.contains("unported @ bank07:C23x-change"), "引爆点失准: {msg}");
     }
 
     /// 走带镜像测：生产→消费对偶（$FF 增量位更新+尾跳 C29A——结构互核注①③面）。

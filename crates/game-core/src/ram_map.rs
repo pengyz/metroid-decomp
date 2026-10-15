@@ -59,6 +59,16 @@ pub const MIRROR_CNTRL: u16 = 0x00FA;
 /// MMC1CTRL_ZP=$25（constants_ram 内容锚「Stores bits to be loaded into MMC1 Register 0」）。
 pub const MMC1CTRL_ZP: u16 = 0x0025;
 
+/// Joy1Status=$14（constants_ram 内容锚「These two addresses store all buttons currently
+/// being pressed on the two controllers」）。
+pub const JOY1_STATUS: u16 = 0x0014;
+
+/// Joy2Status=$15（同上注）。
+pub const JOY2_STATUS: u16 = 0x0015;
+
+/// Joy1Change=$12（constants_ram 内容锚「These addresses store any button changes」）。
+pub const JOY1_CHANGE: u16 = 0x0012;
+
 /// MainRoutine=$1E（constants_ram.asm:478「5 = Game paused, 3 = Game engine running」）。
 pub const MAIN_ROUTINE: u16 = 0x001E;
 
