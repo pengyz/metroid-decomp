@@ -1,0 +1,7 @@
+[package]
+name = "game-data"
+version = "0.1.0"
+edition = "2021"
+description = "Metroid remake —— 游戏数据解析（四级数据链：room→structure→metatile→CHR）"
+
+[dependencies]
