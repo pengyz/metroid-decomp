@@ -96,8 +96,8 @@ mod tests {
     }
 
     /// 缺口确定性爆在 bank:addr（D7 机制②）——tick1=PreSpin 静默 yield；tick2=NMI 先行
-    /// 引爆（bank07:C44D WritePPUCtrl——C2CA 消费端 boot 态静默（$1B=0）；执行序补桩后
-    /// 下一件；C2CA 先于 C37E 之序不变）。
+    /// 引爆（bank07:C37E PrepPPUPaletteString——**零填充更正**后 $07A0=0 队列门放行，
+    /// 生产端先行=真实执行序；前「消费端先于生产端」发现系 Y 型误读产物，撤回）。
     #[test]
     fn unported_detonates_at_bank_addr() {
         let mut e = FrameEngine::new();
@@ -105,7 +105,7 @@ mod tests {
         let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| e.tick_frame()));
         let err = r.unwrap_err();
         let msg = panic_message(&err);
-        assert!(msg.contains("unported @ bank07:C44D"), "引爆点失准: {msg}");
+        assert!(msg.contains("unported @ bank07:C37E"), "引爆点失准: {msg}");
     }
 
     /// tick_frame 执行序（契约断言②：**f=1 帧界锚**——首 tick 后 clock=1）+ pre 链态。
@@ -115,7 +115,7 @@ mod tests {
         e.tick_frame();
         assert_eq!(e.clock.ticks(), 1); // 契约②：f=1 帧界锚
         assert_eq!(e.phase, BootPhase::AwaitNmi); // spin yield 态
-        assert_eq!(e.mem.read_ram(0x0355), 0x55); // 清零环已跑（Y 型填充）
+        assert_eq!(e.mem.read_ram(0x0355), 0x00); // 清零环已跑（**零填充**——更正案）
         assert_eq!(e.mem.read_ram(0x0200), 0xF0); // C1A3 OAM 影子 F0 填充（帧 1 实测面）
         assert_eq!(e.mem.read_ram(0x0001), 2); // C1A3 ptr 高位
         assert!(e.mem.nmi_enabled); // C08A $2000=$90

@@ -11,9 +11,11 @@
 //! ROM 抽查佐证：PtrTable prg[0x0AFF..0x0B0F]（8 项=8B0F/8B19/8B23/8B2D/8B37/8B41/8B4B/
 //! 8B55 自证）；表数据 IntroStarPalette0-7（00:8B0F 族，8×10B）。
 //!
-//! **boot 中间态实证**：清零环 Y 型填充使 $07A0=0xA0 ⇒ 队列门如实拦截本单元至消费端
-//! （C2CA）复位——**引擎侧同态**（真机=asm 同码推断，采样窗外暂无工件实证——P28-F1
-//! 待 decomp VRAMStruct 捕获面核）；执行序=消费端先于生产端激活（engine 测试钉死）。
+//! 【更正 2026-10-15】前注「清零环 Y 型填充使 $07A0=0xA0 拦队列门/消费端先于生产端」
+//! **撤回**——Y 型系清零环端口误读（asm `tya ;A = 0` 环外一次性=零填充；BNE 目标错位
+//! 一位）；decomp 写点级捕获（$07A0 真机无 0xA0 写，写值域 boot {0,6,12}）反推定谳
+//! （P28-F1 升级为模型更正案）。**更正后**：$07A0=0 ⇒ 队列门放行，生产端本单元先行
+//! =真实执行序（engine 测试钉死）。
 //! 生产/消费对子：本族=VRAM 写串**生产端**（经 PrepPPUPaletteString 入 VRAMStructBuffer
 //! ——$07A0 面 **RAM watch 可观测**）；消费端=CheckVRAMStructBufferWrite（C2CA，NMI 工作
 //! 体）——C37E 单元落地时成对端口。

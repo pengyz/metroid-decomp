@@ -284,13 +284,16 @@ fn mmc1_serial_write(mem: &mut FrameMemory, _reg: u16) {
 }
 
 /// RAM 低区清零环（bank07:C03F-C055）：pages hi 降至 end_excl（CPX #$01 等值退出），
-/// 每页 RAM[base+Y]=Y（值=偏移低字节）；$00/$01 指针环内不被触碰（页≥$02）。
-/// 帧界不可见性实测：帧 1 $0300-$07FF 全零=后续单元覆写后态（本环为中间态）。
+/// **零填充**（asm 内容锚：`tya ;A = 0` 在环外一次性执行——`sta ($00),y` 每次写 A=0，
+/// BNE 回 $C048（STA）非 $C047（TYA））。
+/// 【更正 2026-10-15】前版误读「值=Y 型填充」（BNE 目标错位一位）——decomp 写点级捕获
+/// （$07A0 无 0xA0 写，真机写值域 {0,6,12}）反推定谳（P28-F1 升级案）；帧 1 $0300-$07FF
+/// 全零=本环直接态（前注「后续覆写后态」解释一并作废）。
 fn clear_pages(mem: &mut FrameMemory, mut page: u8, end_excl: u8) {
     loop {
         let base = (page as u16) << 8;
         for y in 0..=0xFFu8 {
-            mem.write_ram(base + y as u16, y);
+            mem.write_ram(base + y as u16, 0);
         }
         page = page.wrapping_sub(1);
         if page == 0xFF || page < end_excl {
@@ -299,12 +302,13 @@ fn clear_pages(mem: &mut FrameMemory, mut page: u8, end_excl: u8) {
     }
 }
 
-/// WRAM 清零环（bank07:C057-C06B）：pages hi 降至 lo（CPX #$60/BCS 含等值页）。
+/// WRAM 清零环（bank07:C057-C06B）：pages hi 降至 lo（CPX #$60/BCS 含等值页）——
+/// **零填充**（同 `tya ;A = 0` 面；前版 Y 型误读同源更正）。
 fn clear_pages_wram(mem: &mut FrameMemory, mut page: u8, lo: u8) {
     loop {
         let base = (page as u16) << 8;
         for y in 0..=0xFFu8 {
-            mem.write_wram(base + y as u16, y);
+            mem.write_wram(base + y as u16, 0);
         }
         if page == lo {
             break;
@@ -325,16 +329,15 @@ mod tests {
             .unwrap_or_default()
     }
 
-    /// 清零环语义（bank07:C03F-C055）：pages $07..$02 值=偏移低字节；ZP/栈页不触。
+    /// 清零环语义（bank07:C03F-C055）：pages $07..$02 **零填充**；ZP/栈页不触。
     #[test]
-    fn clear_ram_lo_fills_pages_with_low_byte() {
+    fn clear_ram_lo_zero_fills_pages() {
         let mut m = FrameMemory::default();
+        m.write_ram(0x0355, 0xAA); // 预污
         clear_pages(&mut m, 7, 2);
-        assert_eq!(m.read_ram(0x0700), 0x00);
-        assert_eq!(m.read_ram(0x02FF), 0xFF);
-        assert_eq!(m.read_ram(0x0355), 0x55); // 值=偏移低字节
+        assert_eq!(m.read_ram(0x0355), 0x00); // 零填充（更正案）
+        assert_eq!(m.read_ram(0x07FF), 0x00);
         assert_eq!(m.read_ram(0x0000), 0x00); // ZP 不触
-        assert_eq!(m.read_ram(0x0180), 0x00); // 栈页不触
     }
 
     /// C158 分派双态（bank07:C15B-C16B）：$1D==0∨$1F≠$1D→$01=2；否则 3。
@@ -429,13 +432,23 @@ mod tests {
         assert_eq!(m.regs.x, 0);
     }
 
-    /// WRAM 环（bank07:C057-C06B）：$6000-$7FFF 同型填充。
+    /// **P28-F1 回归锁**：清零环绝不 pattern-fill $07A0（VRAMStructBufferIndex）——
+    /// decomp 写点级拆穿案固化（真机无 0xA0 写；Y 型误读=第六案）。
     #[test]
-    fn clear_wram_fills_with_low_byte() {
+    fn clear_loop_never_pattern_fills_vram_index() {
+        use crate::ram_map::VRAM_STRUCT_INDEX;
         let mut m = FrameMemory::default();
+        clear_pages(&mut m, 7, 2);
+        assert_eq!(m.read_ram(VRAM_STRUCT_INDEX), 0x00); // 0xA0 永不出现在此址
+    }
+
+    /// WRAM 环（bank07:C057-C06B）：$6000-$7FFF **零填充**（更正案）。
+    #[test]
+    fn clear_wram_zero_fills() {
+        let mut m = FrameMemory::default();
+        m.write_wram(0x72AB, 0xAA);
         clear_pages_wram(&mut m, 0x7F, 0x60);
+        assert_eq!(m.read_wram(0x72AB), 0x00);
         assert_eq!(m.read_wram(0x6000), 0x00);
-        assert_eq!(m.read_wram(0x7FFF), 0xFF);
-        assert_eq!(m.read_wram(0x72AB), 0xAB);
     }
 }
