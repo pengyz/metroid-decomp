@@ -3763,6 +3763,15 @@
       "evidence": "oracle/subroutines/l2_cases.jsonl#gen-f1e0-* 三方全等（对拍级，指令清单 4-5 条人核）",
       "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
     },
+    "S-FUNC-07-F1E7": {
+      "id": "S-FUNC-07-F1E7",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L2",
+      "covered": true,
+      "evidence": "oracle/subroutines/l2_cases.jsonl#gen-f1e7-0..7 + #b-f1e7-yff/b-f1e7-wrap 三方全等（golden==ROM 执行==game-core）；语义来源 ROM 原字节 bank07:F1E7-F1ED=18 79 F5 6A 85 04 60 逐指令",
+      "note": "decode-gap 补录格（IDA 机械切分漏码当数据，findings/seed-decode-gap-f0a2-f148.md A 级 ROM 字节）；denoms 机械切分待纠偏（decode-sweep/task-2 出 v2 后回填）；L2 窗口 stops=bank07:F1ED（尾 RTS 址截断）：**79 F5 6A=ADC abs,Y 读 WRAM $6AFx 域**→$04←A+WRAM[$6AF5+Y]，A=$04；F1B3 共享尾本体"
+    },
     "S-FUNC-07-F1EE": {
       "id": "S-FUNC-07-F1EE",
       "face": "symbol",

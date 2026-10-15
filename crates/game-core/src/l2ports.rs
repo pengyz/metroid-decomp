@@ -94,6 +94,7 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "sub_F1B3" => Some(sub_f1b3),
         "sub_F1D2" => Some(sub_f1d2),
         "sub_F1CB" => Some(sub_f1cb),
+        "sub_F1E7" => Some(sub_f1e7),
         _ => None,
     }
 }
@@ -166,6 +167,18 @@ pub fn sub_f1cb(input: &L2In) -> L2Out {
     let w6 = input.wram.get(0x6AF6 + y - 0x6000).copied().unwrap_or(0);
     let v5 = input.a.wrapping_add(w6);
     L2Out { a: v5, x: input.x, y: input.y, writes: vec![(0x0005, v5)] }
+}
+
+/// sub_F1E7 —— bank07:F1E7-F1ED（`CLC / ADC $6AF5,Y / STA $04 / RTS`，F1B3 共享尾本体）。
+/// L2 窗口 stops=bank07:F1ED（尾 RTS 址截断）。
+/// 语义（A 级：ROM 原字节 `18 79 F5 6A 85 04 60` 逐指令）：
+/// **79 F5 6A = ADC abs,Y 读 WRAM $6AFx 域**（陷阱清单主踩点）：$04 ← A + WRAM[$6AF5+Y]。
+/// 末值 A=$04；X/Y 透传；入参 A 参与运算。
+pub fn sub_f1e7(input: &L2In) -> L2Out {
+    let y = input.y as usize;
+    let w5 = input.wram.get(0x6AF5 + y - 0x6000).copied().unwrap_or(0);
+    let v4 = input.a.wrapping_add(w5);
+    L2Out { a: v4, x: input.x, y: input.y, writes: vec![(0x0004, v4)] }
 }
 
 /// sub_F1D2 —— bank07:F1D2-F1DF（`LDA #4 / JSR F1E0 / LDA #8 /` 落 loc_F1D9 共享尾）。
