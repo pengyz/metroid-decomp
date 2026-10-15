@@ -21,6 +21,14 @@ pub const NMI_STATUS: u16 = 0x001A;
 /// running」；Startup `sty TitleRoutine`（Y=0）——boot/title 态 < $1D 短路面）。
 pub const TITLE_ROUTINE: u16 = 0x001F;
 
+/// GameMode=$1D（asm 名；InitBank0 `iny / sty GameMode`=1（title）自证；
+/// prg7_engine NMI/CheckPaletteWrite 分派面）。
+pub const GAME_MODE: u16 = 0x001D;
+
+/// PaletteDataPending=$1C（constants_ram.asm:476「Pending palette data. Palette # =
+/// PaletteDataPending - 1」）。
+pub const PALETTE_PENDING: u16 = 0x001C;
+
 /// MainRoutine=$1E（constants_ram.asm:478「5 = Game paused, 3 = Game engine running」）。
 pub const MAIN_ROUTINE: u16 = 0x001E;
 

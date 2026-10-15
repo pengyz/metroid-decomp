@@ -15,7 +15,7 @@
 
 use super::memory::FrameMemory;
 use super::io;
-use crate::ram_map::{NMI_STATUS, TITLE_ROUTINE};
+use crate::ram_map::{GAME_MODE, NMI_STATUS, PALETTE_PENDING, TITLE_ROUTINE};
 
 /// NMI 处理器（60Hz VBlank 调用）。
 pub fn nmi_handler(mem: &mut FrameMemory) {
@@ -34,10 +34,11 @@ fn nmi_body(mem: &mut FrameMemory) {
         return; // 超帧跳过（SoundEngine/UpdateAge 桩移至尾前独立段——见下）
     }
     // GameMode 分派（GameMode=$1D（N-00xx asm 名）：≠0 → NMIScreenWrite）
-    if mem.read_ram(0x001D) != 0 {
+    if mem.read_ram(GAME_MODE) != 0 {
         nmi_screen_write(mem); // NMIScreenWrite（asm :3590——已端口）
     }
-    crate::unported!("bank07:C1E0"); // CheckPaletteWrite 起的屏幕工作序列
+    check_palette_write(mem); // CheckPaletteWrite（asm :507——已端口）
+    crate::unported!("bank07:C2CA"); // CheckVRAMStructBufferWrite（工作序列次件）
     #[allow(unreachable_code)]
     {
         crate::unported!("bank07:B3B4"); // SoundEngine（超帧也跑段）
@@ -57,6 +58,28 @@ pub fn nmi_screen_write(mem: &mut FrameMemory) {
         return; // Exit100（:3596 `bcc Exit100`→:3608 rts）
     }
     crate::unported!("bank00:9C45"); // LoadCredits（结束画面路径首件）
+}
+
+/// CheckPaletteWrite 单元（**asm 引证主体**，链规 17）——
+/// refs/m1disasm/SRC/prg7_engine.asm:507 `CheckPaletteWrite: ; 07:C1E0`（注「branch if
+/// game at ending sequence」）路由三路：
+/// ①GameMode≠0 ∧ TitleRoutine≥`_id_EndGame`(=0x1D；TitleRoutinePtrTable 30 项第 30 位
+///   自数证)→`jmp EndGamePaletteWrite`（00:9F54——未端口）；
+/// ②`ldy PaletteDataPending`≠0→调色板写段（:535 族——未端口）；
+/// ③GameMode≠0 ∧ TitleRoutine<`_id_StartContinueScreen15`(=0x15；表第 22 位自数证)
+///   →`jmp StarPaletteSwitch`（00:8AC7——intro 星星闪烁轮换，**boot 路径**）；
+/// ④否则 RTS。
+pub fn check_palette_write(mem: &mut FrameMemory) {
+    if mem.read_ram(GAME_MODE) != 0 && mem.read_ram(TITLE_ROUTINE) >= 0x1D {
+        crate::unported!("bank00:9F54"); // EndGamePaletteWrite（结束路径）
+    }
+    if mem.read_ram(PALETTE_PENDING) != 0 {
+        crate::unported!("bank07:C1FF"); // 调色板写段（pending 路径）
+    }
+    if mem.read_ram(GAME_MODE) != 0 && mem.read_ram(TITLE_ROUTINE) < 0x15 {
+        crate::unported!("bank00:8AC7"); // StarPaletteSwitch（boot/intro 路径——下一单元）
+    }
+    // ④否则 RTS（静默）
 }
 
 /// 尾段（**恒量 1 写**——:279-280 `ldy #$01 / sty NMIStatus`）。
@@ -103,6 +126,29 @@ mod tests {
         let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| nmi_screen_write(&mut m)));
         let msg = panic_message(&r.unwrap_err());
         assert!(msg.contains("unported @ bank00:9C45"), "引爆点失准: {msg}");
+    }
+
+    /// CheckPaletteWrite 三路分派（boot→8AC7；ending→9F54；pending→C1FF）+ 静默路。
+    #[test]
+    fn check_palette_write_routes_three_paths() {
+        use crate::ram_map::{GAME_MODE, PALETTE_PENDING, TITLE_ROUTINE};
+        let boom = |m: &mut FrameMemory| {
+            panic_message(&std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                check_palette_write(m)
+            })).unwrap_err())
+        };
+        let mut m = FrameMemory::default();
+        m.write_ram(GAME_MODE, 1); // boot/title 态
+        assert!(boom(&mut m).contains("unported @ bank00:8AC7"));
+        let mut m2 = FrameMemory::default();
+        m2.write_ram(GAME_MODE, 1);
+        m2.write_ram(TITLE_ROUTINE, 0x1D); // ending
+        assert!(boom(&mut m2).contains("unported @ bank00:9F54"));
+        let mut m3 = FrameMemory::default();
+        m3.write_ram(PALETTE_PENDING, 2);
+        assert!(boom(&mut m3).contains("unported @ bank07:C1FF"));
+        let mut m4 = FrameMemory::default(); // GameMode=0 & 无 pending → 静默
+        check_palette_write(&mut m4);
     }
 
     /// 超帧跳过面：$1A≠0 ⇒ 工作体跳过（不炸桩）；$1A=0 ⇒ 进 GameMode 分派桩。
