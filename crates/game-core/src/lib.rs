@@ -8,6 +8,7 @@
 pub mod gap;
 pub mod integrators;
 pub mod enemy;
+pub mod frame;
 pub mod memmap;
 pub mod ram_map;
 pub mod verify_shim;
