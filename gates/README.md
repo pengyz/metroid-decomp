@@ -16,7 +16,7 @@
 | `python3 gates/cli.py trace` | 差分 L1–L3（含子程序级 L2） | 改 game-data/game-core 后 |
 | `python3 gates/cli.py visual` | 视觉 L4 | 改渲染后 |
 | `python3 gates/cli.py all` | 全量（所有门禁 + selftest） | 里程碑收尾 |
-| `python3 gates/cli.py selftest` | 工具链自证：ratchet 只升不降 / 基线↔历史完整性（历史下界·快照覆盖·sha 链·状态锚点）/ commit-msg 证据门禁 / SKIP·TOLERATED 显式打印 / 注册表↔本文件清单 + 命令面双向相等 | 改门禁后；`all` 内含 |
+| `python3 gates/cli.py selftest` | 工具链自证：ratchet 只升不降 / 基线↔历史完整性（历史下界·快照覆盖·sha 链·状态锚点）/ commit-msg 证据门禁 / SKIP·TOLERATED 显式打印 / 注册表↔本文件清单 + 命令面双向相等 / proof 证书标记校验（突变打回用例） | 改门禁后；`all` 内含 |
 | `python3 gates/cli.py baseline show\|update\|tolerate` | 基线管理：show=基线+历史；update=只升不降+强制 `--reason` 留痕；tolerate=登记显式 TOLERATED（强制 `--bug` BUG-xxx） | 基线/tolerance 变更 |
 | `python3 gates/cli.py commit-msg <msgfile>` | commit-msg 钩子入口（证据门禁本体） | 钩子自动调用 |
 
@@ -41,6 +41,20 @@
 | `trace-diff` | L3：帧级状态向量逐 tick 比对（oracle vs Rust） | 启用（oracle 腿；game-core 腿 S5 自动启用） |
 | `visual-diff` | L4：截图逐像素（白名单外） | S6 启用 |
 | `completeness-ratchet` | 完备性矩阵覆盖只增不降 | 矩阵建立后启用 |
+| `proof-checks` | int_x SMT 证明+公式↔Rust 桥接复跑（证书防腐） | 启用（SMT+桥接内联；int_y 穷举留 CI/里程碑） |
+
+### proof-checks（证书防腐，2026-10-15）
+
+证明证书（SMT unsat / 桥接 0 分歧 / 穷举 0 分歧）入库后若无机器复跑机制，代码改动后旧声明
+**静默腐烂**（int-x 复审遗留 3）。本门禁随 `check`/`all` 常跑：
+
+- 常驻腿：`tools/int_x_smt_proof.py`（SMT miter 2^40 + 公式↔Rust 桥接 66,976 点，实测 ~43s）；
+  前置 `cargo build --release -p game-oracle --bin int-x-bridge` **新鲜构建**——stale 桥接
+  二进制=假绿，正是腐烂面本身；
+- 可选腿：int_y 2^32 穷举（实测 ~4 分钟）——`GATES_PROOF_FULL=1 python3 gates/cli.py check`
+  启用（CI/里程碑）；默认显式 `SKIP` 打印，绝不静默；
+- 证书输出标记校验：`SMT PROOF…unsat`、`BRIDGE…分歧 0`、`EXHAUSTIVE PROOF…4294967296…
+  0 分歧`——exit 0 但标记消失/枚举面缩水/分歧非零一律 FAIL（防静默退化，selftest 含打回用例）。
 
 ## 设计原则
 

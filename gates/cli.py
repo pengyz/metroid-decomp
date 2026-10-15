@@ -783,6 +783,127 @@ def gate_completeness_ratchet() -> tuple[str, str]:
     return PASS, f"完备性已覆盖格 {measured}（基线 {floor}，只增不降）"
 
 
+# ---------------------------------------------------------------- proof-checks（证书防腐）
+# int-x 复审遗留 3：证明证书（SMT unsat / 桥接 0 分歧 / 穷举 0 分歧）入库后若无机器复跑，
+# 代码改动后旧声明静默腐烂。本门禁每次 check 复跑证书；桥接二进制必须由**当前源码**新鲜
+# 构建（stale 二进制=假绿，正是腐烂面本身）。
+
+PROOF_FULL_ENV = "GATES_PROOF_FULL"        # =1 时追加 int_y 2^32 穷举腿（CI/里程碑）
+PROOF_INTX_TIMEOUT_S = 180                 # 实测 43.3s（2026-10-15），留 4 倍余量
+PROOF_INTY_TIMEOUT_S = 900                 # 穷举实测 ~4 分钟，留余量
+PROOF_ROM_REL = Path("rom") / "Metroid (USA).nes"
+
+
+def intx_cert_output_ok(text: str) -> tuple[bool, str]:
+    """int_x 证书输出标记校验（防静默退化：exit 0 但证书标记消失/分歧非零 = FAIL）。"""
+    if "SMT PROOF" not in text or "unsat" not in text:
+        return False, "输出缺 SMT PROOF/unsat 证书标记（防静默退化：证明面消失不算通过）"
+    m = re.search(r"BRIDGE:.*分歧\s+(\d+)", text)
+    if not m:
+        return False, "输出缺 BRIDGE…分歧 N 证书标记（防静默退化：桥接面消失不算通过）"
+    bad = int(m.group(1))
+    if bad != 0:
+        return False, f"桥接分歧 {bad} ≠ 0（公式↔Rust 漂移：Rust 侧改动后证书失配）"
+    return True, "SMT PROOF(unsat) + BRIDGE 分歧 0 标记在位"
+
+
+def inty_cert_output_ok(text: str) -> tuple[bool, str]:
+    """int_y 穷举证书输出标记校验（枚举面缩水/分歧非零/标记消失一律打回）。"""
+    if "EXHAUSTIVE PROOF" not in text:
+        return False, "输出缺 EXHAUSTIVE PROOF 证书标记（防静默退化）"
+    if "4294967296" not in text:
+        return False, "穷举面缩水：输出缺 2^32 全枚举计数 4294967296"
+    if "0 分歧" not in text:
+        return False, "穷举输出缺『0 分歧』（出现分歧或标记消失）"
+    return True, "EXHAUSTIVE PROOF 4294967296 点全枚举 0 分歧标记在位"
+
+
+def _release_bin(name: str) -> Path | None:
+    for cand in (ROOT / "target" / "release" / name, ROOT / "target" / "release" / f"{name}.exe"):
+        if cand.is_file():
+            return cand
+    return None
+
+
+def _cargo_build_release_bin(bin_name: str, timeout_s: int = 600) -> tuple[str, str]:
+    """新鲜构建 release 二进制（成功返回 (PASS, 摘要)，失败返回 (FAIL, 原因)）。"""
+    try:
+        proc = subprocess.run(
+            ["cargo", "build", "--release", "-p", "game-oracle", "--bin", bin_name],
+            cwd=ROOT, capture_output=True, text=True, encoding="utf-8", errors="replace",
+            env=_child_env(), timeout=timeout_s,
+        )
+    except subprocess.TimeoutExpired:
+        return FAIL, f"cargo build --bin {bin_name} 超时（>{timeout_s}s）"
+    except OSError as exc:
+        return FAIL, f"cargo 不可达（fail-loud，证书复跑能力消失不得静默放行）: {exc}"
+    if proc.returncode != 0:
+        tail = ((proc.stdout or "") + (proc.stderr or "")).strip().splitlines()[-5:]
+        return FAIL, f"cargo build --bin {bin_name} 失败（桥接/穷举必须由当前源码构建，禁 stale 二进制）: " + " | ".join(tail)
+    return PASS, f"cargo build --release --bin {bin_name} 新鲜构建 ok"
+
+
+def gate_proof_checks() -> tuple[str, str]:
+    """proof-checks —— 证明证书防腐（int-x 复审遗留 3）。
+
+    常驻腿：tools/int_x_smt_proof.py（SMT miter 2^40 + 公式↔Rust 桥接 66,976 点，实测 43.3s）；
+    前置：cargo build --release --bin int-x-bridge 新鲜构建后才许跑桥接。
+    可选腿（PROOF_FULL_ENV=1，CI/里程碑）：int_y 2^32 穷举（实测 ~4 分钟）；门禁内默认
+    只跑 SMT+桥接，穷举显式 SKIP 打印（绝不静默）。
+    """
+    script = ROOT / "tools" / "int_x_smt_proof.py"
+    if not script.is_file():
+        return FAIL, ("『证书复跑脚本消失』：tools/int_x_smt_proof.py 缺失——int_x 证明证书已入库"
+                      "（efedd5e），复跑能力消失不得静默回 SKIP/PASS")
+    verdict, detail = _cargo_build_release_bin("int-x-bridge")
+    if verdict != PASS:
+        return FAIL, f"int_x 桥接前置失败: {detail}"
+    try:
+        proc = subprocess.run([sys.executable, str(script)], cwd=ROOT, capture_output=True,
+                              text=True, encoding="utf-8", errors="replace", env=_child_env(),
+                              timeout=PROOF_INTX_TIMEOUT_S)
+    except subprocess.TimeoutExpired:
+        return FAIL, f"int_x SMT+桥接复跑超时（>{PROOF_INTX_TIMEOUT_S}s）——禁止静默放行"
+    except OSError as exc:
+        return FAIL, f"int_x 证明脚本不可执行（fail-loud）: {exc}"
+    if proc.returncode != 0:
+        tail = ((proc.stdout or "") + (proc.stderr or "")).strip().splitlines()[-5:]
+        return FAIL, "int_x SMT/桥接复跑失败: " + " | ".join(tail)
+    ok, cert = intx_cert_output_ok(proc.stdout or "")
+    if not ok:
+        return FAIL, f"int_x 证书输出校验失败: {cert}"
+    outs = [l for l in (proc.stdout or "").strip().splitlines() if l.strip()]
+    echo = " | ".join(l[:110] for l in outs[-2:]) if outs else cert
+    detail = f"int_x SMT+桥接证书复跑通过（{cert}；输出原文: {echo}）"
+    if os.environ.get(PROOF_FULL_ENV, "") != "1":
+        return PASS, (detail + f"；int_y 2^32 穷举: SKIP（显式：~4 分钟留 CI/里程碑——"
+                      f"{PROOF_FULL_ENV}=1 python3 gates/cli.py check 启用）")
+    rom = ROOT / PROOF_ROM_REL
+    if not rom.is_file():
+        return FAIL, f"{PROOF_FULL_ENV}=1 显式要求穷举但 ROM 缺失: {PROOF_ROM_REL.as_posix()}（BYO-ROM，不得静默降级）"
+    verdict, detail_b = _cargo_build_release_bin("int-y-proof")
+    if verdict != PASS:
+        return FAIL, f"int_y 穷举前置失败: {detail_b}"
+    bin_path = _release_bin("int-y-proof")
+    if bin_path is None:
+        return FAIL, "『前置对象消失』：int-y-proof 二进制构建成功但落点不存在（target/release/）"
+    try:
+        proc2 = subprocess.run([str(bin_path), "--rom", str(rom)], cwd=ROOT, capture_output=True,
+                               text=True, encoding="utf-8", errors="replace", env=_child_env(),
+                               timeout=PROOF_INTY_TIMEOUT_S)
+    except subprocess.TimeoutExpired:
+        return FAIL, f"int_y 2^32 穷举超时（>{PROOF_INTY_TIMEOUT_S}s）——禁止静默放行"
+    except OSError as exc:
+        return FAIL, f"int_y 穷举不可执行（fail-loud）: {exc}"
+    if proc2.returncode != 0:
+        tail = ((proc2.stdout or "") + (proc2.stderr or "")).strip().splitlines()[-5:]
+        return FAIL, "int_y 2^32 穷举失败: " + " | ".join(tail)
+    ok2, cert2 = inty_cert_output_ok(proc2.stdout or "")
+    if not ok2:
+        return FAIL, f"int_y 穷举证书输出校验失败: {cert2}"
+    return PASS, detail + f"；int_y 2^32 穷举证书复跑通过（{cert2}）"
+
+
 # ---------------------------------------------------------------- 门禁注册表
 # readme_state 必须与 gates/README.md「门禁清单」表的"状态"列逐字一致（selftest 自动比对）。
 
@@ -799,6 +920,8 @@ GATES: list[tuple[str, str, str, str, object]] = [
     ("trace-diff", "启用（oracle 腿；game-core 腿 S5 自动启用）", "trace", "L3：帧级状态向量逐 tick 比对（oracle vs Rust）", gate_trace_diff),
     ("visual-diff", "S6 启用", "visual", "L4：截图逐像素（白名单外）", gate_visual_diff),
     ("completeness-ratchet", "矩阵建立后启用", "all", "完备性矩阵覆盖只增不降", gate_completeness_ratchet),
+    ("proof-checks", "启用（SMT+桥接内联；int_y 穷举留 CI/里程碑）", "check",
+     "int_x SMT 证明+公式↔Rust 桥接复跑（证书防腐，int-y 穷举 GATES_PROOF_FULL=1）", gate_proof_checks),
 ]
 
 
@@ -1250,7 +1373,8 @@ def cmd_selftest(_args) -> int:
 
     # 6) 注册表 ↔ gates/README.md 门禁清单逐字对齐 + 命令面双向相等（t10 R2）
     readme = (ROOT / "gates" / "README.md").read_text(encoding="utf-8")
-    section = readme.split("## 门禁清单", 1)[1].split("## ", 1)[0]
+    # "\n## " 切分：`###` 子标题不终止本节（"## " 裸串会误切在 "### " 处，proof-checks 小节实伤）
+    section = readme.split("## 门禁清单", 1)[1].split("\n## ", 1)[0]
     rows = re.findall(r"^\|\s*`([a-z0-9-]+)`\s*\|[^|]*\|\s*([^|]+?)\s*\|", section, re.M)
     readme_pairs = [(name, state) for name, state in rows]
     reg_pairs = [(e[0], e[1]) for e in GATES]
@@ -1274,6 +1398,26 @@ def cmd_selftest(_args) -> int:
         f.write_bytes(b"tampered")
         detected = entries.get("x.bin") != sha256_file(f)
         check("SHA256SUMS 篡改可检出", ok and detected, "一致→通过，改 1 字节→检出不符")
+
+    # 8) proof-checks 证书输出标记校验（防静默退化 + 突变敏感性：假想缺陷必须被打回）
+    good_x = ("SMT PROOF: int_x ≡ bank07:E3E5-E448 指令语义（BV8 miter）——反例不存在（unsat）\n"
+              "BRIDGE: 公式↔Rust 66976 采样点（含钳位阈值边界族），分歧 0\n")
+    ok, d = intx_cert_output_ok(good_x)
+    check("int_x 证书标记校验通过（SMT unsat + 桥接分歧 0）", ok, d)
+    ok, d = intx_cert_output_ok("SMT PROOF: …（unsat）\nBRIDGE: 公式↔Rust 66976 采样点，分歧 3\n")
+    check("突变打回：桥接分歧非零", not ok, d)
+    ok, d = intx_cert_output_ok("BRIDGE: 公式↔Rust 66976 采样点，分歧 0\n")
+    check("突变打回：SMT 标记消失（exit 0 假绿面）", not ok, d)
+    ok, d = intx_cert_output_ok("SMT PROOF: …（unsat）\n")
+    check("突变打回：BRIDGE 标记消失（exit 0 假绿面）", not ok, d)
+    good_y = ("EXHAUSTIVE PROOF: int_y ≡ bank07:E3A5-E3E4（字节驱动语义）——4294967296 输入点"
+              "全枚举（RAM 4B 全域），0 分歧\n")
+    ok, d = inty_cert_output_ok(good_y)
+    check("int_y 穷举证书标记校验通过（2^32 全枚举 0 分歧）", ok, d)
+    ok, d = inty_cert_output_ok("EXHAUSTIVE PROOF: …——2048 输入点全枚举（RAM 4B 全域），0 分歧\n")
+    check("突变打回：穷举面缩水（计数非 2^32）", not ok, d)
+    ok, d = inty_cert_output_ok("EXHAUSTIVE PROOF: …——4294967296 输入点全枚举（RAM 4B 全域），5 分歧\n")
+    check("突变打回：穷举分歧非零", not ok, d)
 
     failed = [c for c in cases if not c[1]]
     for name, ok, detail in cases:
