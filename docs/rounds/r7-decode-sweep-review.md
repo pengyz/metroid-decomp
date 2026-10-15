@@ -196,6 +196,23 @@ IDA funcs 包含映射+顺流边+xref/跳转表边口径写明。
 - **P12-F3**：对账口径修正随之落（工具输出对账面）。
 - 回归口径：判据扩面实测（FATAL 复现+消歧数字复跑），非「声称修了」。
 
+## task-17 r1 续审（abbadc6，game-data 四级数据链+brinstar 样例）——2026-10-15
+
+### verdict: pass
+
+### findings（逐项复现输出）
+
+**① 复现命令原样跑通（链规③）+ ROM 自重导 ✓**：
+`RoomPtrTable[0] = 0xa441`（其命令原文自跑命中期望）；Room00 19B 逐字节
+`02 40 01 02 48 01 02 50 03 02 5f 03 02 fd 02 a1 02 b1 ff`——**逐字节一致: True**
+（我方独立比对）；m1disasm 双工具互证表逐行 ✓。
+**② D5 命名纪律 ✓**：字段全解构名/_todo_（RoomObject/RoomDef/MetatileDef/tail「_todo_
+语义」注）；「Room00/StructPtrTable」仅存证据注不入产品名——「语义自证后走
+data/naming 台账」口径正确。
+**③ 新文件落库核（清单第 6 项）✓**：5 文件全在 commit——无漏 add。
+**④ 单测 4/4 ✓**。findings 三族（r10）：0 新。schema 四级链+区域五件套=task-5 分母
+v2 的 D 面素材，逐字段自证状态标注诚实。
+
 ## 遗留风险清单
 
 1. S 面 120 为 B 级估计——分母 v2 实际登记（lead task-5）以 decode-sweep 复跑 + 逐条
