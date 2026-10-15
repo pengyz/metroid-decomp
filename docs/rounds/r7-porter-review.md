@@ -182,6 +182,17 @@ gen-f1cb 8 条 0 不符入总账）。
 A_in=0 盲点案）；wrap 手推 A=255+5→4 吻合；S-FUNC-07-F1E7=补录格 covered、covered 15、
 全量自跑 **171 条 0 失败**。其自报判别值互证；P1-F1 数字入 body 持续合规。
 
+## 批 7：sub_F149（65eaba6）——入口组合件（JSR F186/JSR F1D2/JMP F1FA）
+
+### verdict: pass
+
+字节 `20 86 f1 20 d2 f1 4c fa f1` ✓（与 F140 同族碰撞尾：stops=F1FA 入口截断）；
+独立模型 10/10 全等；突变矩阵：morder（末值 A 误取前段 f186.a）10/10（其自报 m1 判别值
+b-f149-wrap a=2≠1 互证）、mimm（A9 误读 zp）10/10、mA 10/10、my（Y 漏变址）9/10——
+幸存 b-f149-wrap（**X=Y=0 固有盲点**，同 X=0/A_in=0 族，集合级判别）、m2a（EOR 立即数）
+4/10（偶 ram[FF] 判别集，同 f140 族）。其 m2「组合缺前段」=写集形状 5 键≠2 键，全案必打。
+S-FUNC-07-F149=L0→covered、covered 16、全量自跑 **181 条 0 失败**；P1-F1 持续合规。
+
 ## 遗留风险清单
 
 1. 后续批（F1D2/F1CB/F1E7/F172/F19A/F162/F1FA 排队，l2ports.rs 已见 F1D2 WIP）滚动复审。
