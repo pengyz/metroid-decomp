@@ -210,3 +210,45 @@ verdict: caught(<n>) | survived(固有盲因 | 缺口)     # 幸存须归因，�
 | 次要-13 | §3 红灯全形态落点（无首分歧/sha 不符/exit 2/崩溃截断） |
 | 次要-14 | §5.6 实施序验收义务（r5 遗留 4/5） |
 | 次要-15 | 已转 decomp task-15（boot-title.txt 陈旧注） |
+
+## 8. C0D9 对表结论（2026-10-15，verifier×porter 会师四点+一刀口）
+
+> 证据三方：porter asm 引证（prg7_engine.asm）+ 本设计 v3 契约面 + decomp
+> nmi-frame-evidence.nmi.jsonl（599 帧相位实测，analysis/traces/ 可再生）。
+
+**① 双 vblank 对齐** ✓ 无异议：启动双等=FFB0 序 `ad 02 20 10 fb`×2（我方字节核先证）；
+稳态单相 **scanline=241 ×599/599**（实测零漂移）；seq 单调 ✓。契约：NMI 建模点=
+tick 内 vblank 相（241）。
+
+**② 栈页三字节排除** ✓ 定案：NMI 压栈 sp=0xFC（594/599 稳态）⇒ 硬件压 PCH/PCL/P 于
+**$01FC-$01FE**——即批 21 实测「值漂移三字节」的真身（中断帧影子，非游戏状态）。
+**watch 面口径：$01FC-$01FE 排除严格比对**（声明为 interrupt-frame 面；余 19 字节
+主循环调用影子照比）。
+
+**③ $1A 双写相位** ✓ 语义钉死（asm）：`ldy #$01/sty NMIStatus`（:279-280，NMI 尾=
+「NMI finished」）+ `ClearNMIStat`（:1117，主端清 0）——每帧环**双写**（主清 0/NMI 置 1）；
+**成环标志=spin 出口同源**（:1118-1121 @loop `lda NMIStatus/beq @loop`，退出=1）。实测
+帧末 $1A：0×598 + 1×2——2 例=frameCount 边界恰落「NMI 写 1 后、主清 0 前」相位窗。
+**处置**：$1A 列**相位敏感面**（不入严格逐帧 watch；或双腿采样点对齐至 spin 出口后恒 1
+再比——二选一待 porter 带实现证据定案）。
+
+**④ 帧界采样点** ✓：NMI 首帧 f=1 锚（实测行自 f=1 起）与 v3「f=1 起、inputPolled≡tick」
+一致；契约=采样点=**spin 出口同源**（③ 的成环标志同一逻辑点——两腿同一采样语义）。
+
+**⑤ 刀口·NMI-end 自旋建模语义 —— 裁定提案：跨帧自旋（spin=tick 边界构造物）**
+
+asm 语义链：主端 ClearNMIStat（清 0）→ @loop spin → **下一次** NMI 完成尾写 1 → 退出
+——spin 等待的是**下一圈** NMI（跨帧）。故 1tick≜1帧 引擎的忠实建模：
+
+- spin=**tick 边界本身**（yield-until-next-NMI）：spin 退出点= tick N+1 的 NMI 尾
+  （$1A 写 1 之后）；
+- tick 内顺序=「NMI 处理（vblank 相 241）→ $1A 写 1 → spin 退出 → 主循环帧工作 →
+  ClearNMIStat 清 0 → spin（跨入下一 tick）」；
+- 「同帧退出」建模（NMI 于本 tick 早段、spin 本 tick 内退出）**不采纳**——与
+  ClearNMIStat 先清后等的 asm 语义矛盾（清 0 后本 tick 内无 NMI 写 1 者，spin 永挂）；
+- 帧级对拍面由此自洽：帧界采样=spin 出口（④），$1A 相位敏感面处置（③），栈页三字节
+  排除（②）。
+
+**待 porter 会签**：引擎侧 spin 建模按上述跨帧语义实现（或携带反证——若其 tick 结构
+有同帧合法模型，须以 asm 语义链+599 帧实测对表）；$1A watch 面处置二选一请带实现
+证据回来定案。

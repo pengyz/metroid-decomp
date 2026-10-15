@@ -472,6 +472,17 @@ unported! fail-loud ✓。无新 findings。
    运行态确证），账本可查；
 5. findings 三族标注（r10 数据源）：**读解误读族 / 契约族 / 声明族**。
 
+## task-10 批 23：CheckBankSwitch/C4DE（e3da228）——链规 17 首件
+
+### verdict: pass
+
+四查全过：①字节核 ✓（C4DE=`a4 24 f0 2d 20 e8 c4 4c 10 c5`、C531=`a0 00 84 31 c8 84 1d`
+与其 ROM 抽查佐证逐字同）②**链规 17① asm 引证主体** ✓——prg7_engine.asm:1296/1305/
+1351/1363/1376 五行抽核逐行命中（符号+注释在位）③链规 17② Mesen2 三用途标签 ✓
+（本笔明示「裁判」用途仅 L2 工厂 golden、无新调用）④引爆点迁移复现（C45D）+桩位
+替换带断言（C4B2 教训固化 ✓）。C4B2 过渡注（asm :1256 PrepVertMirror 补注 offer）记档。
+findings 三族标注（r10）：本批 **0 新 findings**。基线 42。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
