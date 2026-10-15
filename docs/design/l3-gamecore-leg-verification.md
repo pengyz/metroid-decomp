@@ -1,9 +1,12 @@
 # design：L3 game-core 腿验证设计（S5 前置，里程碑 B 配套）
 
-> 状态：**v4**（2026-10-15，task-13 二审返工轮）。v1（d0e3e1e）→v3（fd760ed+0172725）
-> →本版按二审（17f13cec，归档 [rounds/r11-task13-second-review](../rounds/r11-task13-second-review.md)）
-> 最小返工集五件+残余并修（对账见 §9）。**引证口径（遗留-6 采纳）：本文自 v4 起只用
-> 内容锚（符号名+注释/键名），不用行号**——行号漂移即引证腐烂（r9/r11 双实证）。
+> 状态：**v5**（2026-10-15，task-13 三审返工轮）。v1（d0e3e1e）→v3（fd760ed+0172725）
+> →v4（e9aa224）→本版按三审（302fcba5，归档
+> [rounds/r12-task13-third-review](../rounds/r12-task13-third-review.md)）五件最小集
+> 闭合（对账见 §9 v5 行）。**深层教训入案：错账注自身带错（B3b）——更正注也要被证伪
+> （二次更正文化）；「同文」类声称必须 diff 级自证（v5 已附逐字相等输出）**。**引证口径（遗留-6 采纳，v5 收窄）**：正文
+> 引证用内容锚（符号名+注释/键名）；勘误注中行号仅作历史定位（不作引证依据）
+> ——行号漂移即引证腐烂（r9/r11 双实证）。
 > 地基：trace-diff 五轮硬化史（rounds/r5）+ state-fixture 基线（rounds/r7-design-closure）
 > + 两层架构（docs/spec/two-layer-architecture.md）+ **A9 证伪**（窗口=区域 bank）。
 
@@ -16,6 +19,8 @@ diff_traces 同一裁定逻辑（无第二套扫描）；对拍只裁「对不�
 ## 1. trace 格式契约（任务①）
 
 **帧号口径（阻断-1）**：**f=1 起**（双腿实况：oracle frameCount 与 game-core tick 计数
+〔**原地更正（v5）**：此处「frameCount」=Mesen 工具侧帧计数名，语义名=「Mesen 帧序」；
+v1-v3 混用工具名与语义名——本行为真触点之一，另一处=§8 相位实测句〕
 均自 1 起；v1「f=0」废）。**inputPolled 序号 ≡ tick 序号**（同一输入帧恰一次 poll）。
 **分母语义**：场景帧级比对分母 = manifest.frames（= tick 总数 = inputPolled 总数）；
 缺帧/多帧 ⇒ diff_traces 帧集不一致 FAIL，不得按 f 起点歧义缩放分母。
@@ -69,14 +74,18 @@ memmap/flow_scratch.rs）——v1 误列 WRAM 行（错域会导致 watch 重复
    寄存器暂存/额外 zp 字节）——义务四则：①序列等价②快照可往返（serialize→注入→
    serialize 全等）③消费次数每 tick 对账④**状态面写集闭环**（取值例程经执行序引爆
    定位后，其读写面与钉名状态面互证：面外读写=0）。①-④ 全过才许称「全状态」。
-   **机械门（严重-8 修订：谓词可检化——schema 无 status 字段，v3 引用不存在字段已废）**：
-   L3 双腿启用前置断言——**可检谓词（用现存字段）**：
-   `N-0012.level ∈ {A, B}`（rename 流程升级后）`∧ N-0012.evidence 含 bank:addr 可复现指针
-   （naming-ledger 门禁正则面）∧ RNG 序列 L2 案 ≥1`；**enforcement 点指名**：
+   **机械门（严重-8 修订 v5：谓词可检化+正则具体化——schema 无 status 字段已废；
+   旧「含可复现指针」宽正则对占位 evidence 今日放行=空转，废）**：
+   L3 双腿启用前置断言——**可检谓词（现存字段+具体形态正则）**：
+   `N-0012.level ∈ {A, B}`（rename 流程升级后）`∧ N-0012.evidence 匹配
+   bank\d+:\$?[0-9A-Fa-f]{4}` 具体形态（**具体 bank:addr，占位/纯路径/纯语义句不算**）
+   `∧ RNG 序列 L2 案 ≥1`（计数源指名：oracle/subroutines/l2_cases.jsonl 中
+   subroutine=sub_GameRng 族 id 计数）；**enforcement 点指名+排期**：
    ① diff_traces game-core 腿启用前置检查（解析 data/naming/ledger.jsonl 的 N-0012 行，
-   断言上述谓词——不满足 ⇒ 拒启 game-core 腿并打印缺失项）② naming-ledger 门禁
-   （evidence 指针校验既有）。「定谳」=可检验条件而非文档形容词。现状安全（GameRng=
-   unported! 桩引爆）是巧合不是制度——门落位后制度接管；
+   断言上述谓词——不满足 ⇒ 拒启 game-core 腿并打印缺失项）——**实施排期=§5 步骤 2b**
+   ② naming-ledger 门禁（evidence 指针校验既有，宽正则保持——此处谓词为 RNG 专属收紧）。
+   「定谳」=可检验条件而非文档形容词。现状安全（GameRng=unported! 桩引爆）是巧合不是
+   制度——门落位后制度接管；
 3. **Mesen2 侧**：ROM sha256 锚定 + 输入脚本 sha（**manifest 补 `scenario_sha256` 键
    （严重-10 漏键补上）**）+ 冷启动 + RNG 全状态 watch。**双跑采信**：两时点各跑、
    dump_sha256 全同方采信——**记录时点义务**（何时/何命令/何状态三则随采信记录）；
@@ -99,7 +108,7 @@ memmap/flow_scratch.rs）——v1 误列 WRAM 行（错域会导致 watch 重复
 
 | 细分 | 检测面 | 路由 |
 |---|---|---|
-| 实现缺口·unported!-hit | panic payload（`unported @ bank:addr` 字面量）+ **exit 101** + **本次无新 dump**（产物 sha 与 run 元数据不匹配——**非「0 落盘」**：stale 旧 dump 不删会被误当有效腿= fail-open，检测面须机械可检） | spec-writer（缺口登记）→ porter（排期）；**矩阵格记 L0**（与 pipeline §4.2 表逐字同文） |
+| 实现缺口·unported!-hit | panic payload（`unported @ bank:addr` 字面量）+ **exit 101** + **本次无新 dump**（产物 sha 与 run 元数据不匹配；非「0 落盘」——stale 旧件须清理防 fail-open） | spec-writer（缺口登记）→ porter（排期）；**矩阵格记 L0**（与 pipeline §4.2 表逐字同文） |
 
 **配套实现项（S5 启用前必修，遗留-2 升级）**：① l3-dump 旧件清理逻辑（每 run 起点
 清/隔离旧 dump，杜绝 stale 件冒充）② GameRng 桩 payload 补 bank:addr 字面量
@@ -169,18 +178,25 @@ verdict: caught(<n>) | survived(固有盲因 | 缺口)     # 幸存须归因，�
    N-0012 升级 rename 流程 → 机械门解锁）——L3 双腿启用硬前置；
 2. memmap 整面 encode + watch_snapshot/l3-dump 改造点名件（严重-6）+ WRAM 机械
    区间钉死（严重-5）+ 帧记录键集白名单进 diff_traces（严重-7）；
+2b. **N-0012 机械门实施**（enforcement①：diff_traces game-core 腿启用前置断言——
+   §2.2 谓词解析+拒启打印；随 3c 一并落 tools/ 面）；
 3. game-core 腿 dump 导出器（**spin 出口采样**——§8.1 定案回写：v3「tick 末 encode」
    采到 $1A=0 态与定案（spin 出口 $1A=1）矛盾，**废**；采样点=spin 出口同源 →
    同构 jsonl 落 analysis/）；
 3b. **oracle 采样迁移槽**（遗留-1 配套）：oracle 腿 endFrame 采样 → spin 出口等价点
    迁移；迁移 ⇒ oracle_sha256 全量换锚（重采集+双跑换锚，run1/run2 对称命名）+
    **历史「帧末 $1A」口径作废明示**；
-3c. **恒 1 断言落 diff_traces**（B2 接线）：watch 面含 CPU $001A 时逐帧断言 $1A==01，
-   ≠01 ⇒ FAIL「NMI 面退化（spin 出口采样点 $1A≠1）」——机械承载（现仅 game-core
-   单测，比较器侧断言由本设计移交 verifier 落 tools/ 面）；
+3c. **恒 1 断言落 diff_traces**（B2 接线，**v5 门控回写**）：断言**仅在该腿声明
+   `sample_point=spin-exit` 时生效**——watch 面含 CPU $001A 且该腿 sample_point=
+   spin-exit ⇒ 逐帧断言 $1A==01，≠01 ⇒ FAIL「NMI 面退化（spin 出口采样点 $1A≠1）」；
+   腿未迁（endFrame 缺省）⇒ 断言**显式不适用**（note 随行打印）；watch 面不含 $001A
+   ⇒ 亦**显式 note**（防 watch 收窄静默失守——r12 探针 E/F 绕过面封堵）。
+   **键设计=按腿**（`sample_point` 收 per-leg 值：legs.oracle.sample_point /
+   legs.game-core.sample_point）——全局单键无法表达混态（r12 探针 D：一腿已迁一腿未迁
+   即误红）；**混态期禁置全局键**（迁移前 legacy 腿持 endFrame 值即可）；
 4. l3_manifest 双腿扩展（fixture_id/fixture_sha256/k_max/leg/dump_sha256/
-   **scenario_sha256**/regs_watch/RNG 全状态键）+ diff_traces fixture 扩展
-   （(a)(b)(c) 三条件，(c) 后置门）；
+   **scenario_sha256**/regs_watch/RNG 全状态键/**per-leg sample_point**（3c））+
+   diff_traces fixture 扩展（(a)(b)(c) 三条件，(c) 后置门）；
 5. 首批双场景（boot-title / samus-move3）+ §4 双门突变 schema 首轮；
 6. **验收义务（次要-14 补）**：r5 遗留 4「S5 后双侧重跑 T4/T5 路径」在双腿落地时
    执行并入验收记录；r5 遗留 5「多实例并发双写互踩」在多场景并发采集前复检。
@@ -237,22 +253,30 @@ verdict: caught(<n>) | survived(固有盲因 | 缺口)     # 幸存须归因，�
 稳态单相 **scanline=241 ×599/599**（实测零漂移）；seq 单调 ✓。契约：NMI 建模点=
 tick 内 vblank 相（241）。
 
-**② 栈页三字节排除** ✓ 定案（**v4 归因收口（B4）**）：$01FC-$01FE 为**调用栈共写区**
-——NMI 压栈（sp=0xFC 稳态 594/599，压 PCH/PCL/P）+ **主环 JSR 链同写**（$C0C2 链
-1821 次，二审据 e3f2473 定谳）——v3「单一中断帧影子」归因过窄已收口；**处置不变**
-（排除严格比对），论证更正为「调用栈影子=非游戏状态（值依调用深度/中断相位）」。
-余 19 字节主循环调用影子照比。
+**② 栈页三字节排除** ✓ 定案（**v4 归因收口（B4）；v5 数字改源表口径**）：$01FC-$01FE 为
+**调用栈共写区**——NMI 压栈（sp=0xFC 稳态 594/599，压 PCH/PCL/P）+ **主环调用链同写**
+（**e3f2473 源表四族口径 1225+596+5+1**——v4「$C0C2 链 1821 次」系两族混计冒名，
+无源数已删；其 caller 归属自评不作据）——v3「单一中断帧影子」归因过窄已收口；
+**处置不变**（排除严格比对），论证更正为「调用栈影子=非游戏状态（值依调用深度/
+中断相位）」。余位照比：**$01EB-$01FB+$01FF 共 18 位**（=21 位窗口−3 排除位，推导
+可溯）——v4「余 19 字节」无源数已删。
 
 **③ $1A 双写相位** ✓ 语义钉死（asm，**v4 引证改内容锚+B1/B3 勘误**）：NMI 尾
 `ldy #$01`（「NMI = finished」注旁）/`sty NMIStatus`——恒量 1；每帧环清 0/spin 在
 **主环 `lda #$00/sta NMIStatus` + `@loop_waitNMIEnd`（「If nonzero, NMI has ended」）**
 ——v3 引 `ClearNMIStat(:1117)` 当每帧环属**指针错位**（那是函数体；行号勘误
 :210-218）；@loop 轮询锚=`@loop: lda NMIStatus/beq @loop`（行号勘误 :1113-1114）。
-**成环标志=spin 出口同源**（退出=1）。**B3 机制更正**：v3/decomp「采样点盲区」归因
-与自家数据相抵（v=1:600+v=0:599=写全被捕获）——真机制=**归属失效**（scanline/pc
-回显陈旧+静态只扫 `sta $1A`(85 1A) 漏 `sta $1A,X` 类形态）；**写者三家**=$C0C9/
-$C436/$C10B（6172856 §6「写者二选一」错账撤回；其更正注更正归 decomp 落）。实测
-帧末 $1A：0×598 + 1×2——2 例=frameCount 边界恰落「NMI 写 1 后、主清 0 前」相位窗。
+**成环标志=spin 出口同源**（退出=1）。**B3 机制更正（v5 勘误并二次更正）**：v3/decomp
+「采样点盲区」归因与自家数据相抵（v=1:600+v=0:599=写全被捕获）——真机制=**归属失效**
+（scanline/pc 回显陈旧+静态只扫 `sta $1A`（85 1A）**漏 `sty $1A`（84 1A，NMI 尾写者）**
+——v4 写「漏 sta $1A,X 类形态」系操作码形态错，与 §8.1 自相矛盾已废）。**$1A 静态写点
+三家精确版**：$C0C9（主环清 0）/$C436（**ClearNMIStat 体 LDA #$00→STA=写 0**——
+5aeb48d 把其归「置位族」定性**错**，静态反证即函数体）/$C10B（NMI 尾 sty 置 1）——
+置位族**仅 $C10B**（「唯一非零写者」句为真）；5aeb48d 同文「静态写点仅 2」兄弟句
+一并错（实为 3 点 2 清 1 置）——**错账注自身带错（B3b）：更正注也要被证伪（二次更正
+文化）**，decomp 侧该注修订随行。实测帧末 $1A：0×598 + 1×2——2 例=Mesen 帧序边界
+〔**原地更正（v5）触点二**：此处「frameCount」同 §1 帧号口径行勘误——工具名/语义名
+混用，语义名=Mesen 帧序〕恰落「NMI 写 1 后、主清 0 前」相位窗。
 **处置**：$1A 列**相位敏感面**（不入严格逐帧 watch；或双腿采样点对齐至 spin 出口后恒 1
 再比——二选一待 porter 带实现证据定案）。
 
@@ -321,3 +345,12 @@ CheckPaletteWrite/CheckVRAMStructBufferWrite/WritePPUCtrl/WriteScroll/ReadJoyPad
   路由补「**游戏减速 quirk**」分支（D4 保真类，非差分失败）；实证=慢帧场景互斥测试
   （实施序 3b 随采样迁移一并验）；
 - 引证口径（遗留-6）：全文内容锚化已执行；r9/r11 行号漂移类问题 v4 起免疫。
+
+**v5 对账（r12 五件）**：①检测面真逐字同文（diff 级自证「逐字相等: True」输出随
+commit Evidence）②3c+§5.4 per-leg sample_point 键声明+门控回写+绕过面显式 note
+（探针 D/E/F 封堵）③frameCount 勘误改 §1 帧号口径行+§8 相位句双真触点原地标注
+④§8③ 操作码改 `sty $1A`（84 1A）+ $C436=写 0 二次更正（置位族仅 $C10B；「静态
+写点仅 2」兄弟句并正=3 点 2 清 1 置）⑤B4 数字改 e3f2473 源表四族 1225+596+5+1、
+无源数 1821/19 字节删（18 位推导可溯）+ N-0012 谓词 bankNN:AAAA 具体正则+计数源
+指名+enforcement① 入 §5 步骤 2b。F6 头注收窄（勘误行号仅历史定位）；F7 diff_traces
+注同 B4 归因。

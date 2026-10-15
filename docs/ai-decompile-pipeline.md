@@ -110,7 +110,7 @@ macro_rules! unported { ($loc:expr) => {{ $crate::gap::record($loc); panic!("unp
 
 | 失败形态 | 分类 | 路由 |
 |---|---|---|
-| panic @ `unported!(bank:addr)`（**实现缺口·unported!-hit 细分**） | **实现缺口** | 检测面=panic payload（bank:addr 字面量）+ exit 101 + **本次无新 dump**（产物 sha 与 run 元数据不匹配；非「0 落盘」——stale 旧件须清理防 fail-open）；spec-writer 补规则 → porter 排期（**矩阵格记 L0**）——L3 帧级同口径（l3-gamecore-leg-verification §3） |
+| panic @ `unported!(bank:addr)`（**实现缺口·unported!-hit 细分**） | **实现缺口** | 检测面=panic payload（`unported @ bank:addr` 字面量）+ **exit 101** + **本次无新 dump**（产物 sha 与 run 元数据不匹配；非「0 落盘」——stale 旧件须清理防 fail-open）；spec-writer 补规则 → porter 排期（**矩阵格记 L0**）——L3 帧级同口径（l3-gamecore-leg-verification §3） |
 | L3 状态向量漂移（已移植逻辑内静默分歧） | 移植错 | porter |
 | 投影与 ROM 行为矛盾 | 投影错误 | decomp-analyst |
 | 原版 quirk 重现 | 参考 bug | 记 `BUG-xxx`（Stage A 保真，TOLERATED） |

@@ -173,9 +173,10 @@ def load_frames(raw: bytes, where: str) -> tuple[dict[int, dict], list[int], str
     return out, dups, None
 
 
-# 栈页中断帧面（docs/design/l3-gamecore-leg-verification.md §8.1②，lead 移交实施）：
-# NMI 压栈 PCH/PCL/P 三字节（稳态 sp=0xFC ⇒ CPU $01FC-$01FE）是中断帧影子非游戏
-# 状态——排除严格比对；排除命中计数随行打印（绝不静默绿）。其余字节照比。
+# 栈页调用栈共写区（docs/design/l3-gamecore-leg-verification.md §8.1②，v5 归因收口）：
+# CPU $01FC-$01FE=调用栈影子共写区（NMI 压栈 PCH/PCL/P + 主环调用链同写——
+# e3f2473 源表四族口径）非游戏状态——排除严格比对；排除命中计数随行打印（绝不静默绿）。
+# 其余字节照比（$01EB-$01FB+$01FF 共 18 位）。
 INTERRUPT_FRAME_EXCLUDE = (0x01FC, 0x01FD, 0x01FE)
 
 
@@ -189,7 +190,10 @@ def check_nmi_anchor(frames: dict, watch: list[dict], sample_point: str | None,
     anchor_w = [w for w in watch
                 if int(w["base"], 16) <= 0x001A < int(w["base"], 16) + w.get("_span", 0)]
     if not anchor_w:
-        return None, ""
+        return None, (f"恒 1 断言不适用（{side}）：watch 面不含 CPU $001A"
+                      f"（收窄绕过显式 note——r12 探针 E/F 封堵，绝不静默）")
+    if not anchor_w[0].get("_span"):
+        return None, (f"恒 1 断言不适用（{side}）：watch 条目无 range span（键面不全显式 note）")
     if sample_point != "spin-exit":
         return None, (f"恒 1 断言不适用（{side}）：sample_point="
                       f"{sample_point or 'endFrame(缺省)'}≠spin-exit（迁移槽 3b 未走，显式）")
