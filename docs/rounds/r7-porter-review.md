@@ -225,6 +225,18 @@ b-f19a-xff-wrap（X=$FF→$B0/$B1/$B2）/b-f19a-x50-wrap（X=$50→$01/$02/$03�
 错读 $01Bx 域）在判别面内。S-FUNC-07-F19A=L0→covered、covered 18、全量自跑
 **202 条 0 失败**。双陷阱唯一同件处理正确；突变申报口径延续批 8 水准。
 
+## 批 10：sub_F162（f74ca15）——Y 变体（F152 对偶，decode-gap 争议件）
+
+### verdict: pass
+
+**解码锚点复认**：F109=`20 62 f1`（JSR $F162）实存 ✓——decode-gap 争议（ef80052 曾
+推迟）的定谳锚不变，补录格登记引 findings/seed-decode-gap + samus-movement 2.2 更正
+指针齐全。字节核 ✓（F162=B9 00 04/85 06/B9 01 04/85 08/B9 FB 6A/4C 93 F1——**WRAM
+$6AFB+Y 一读**；F193 尾=45 FF/29 01/85 0A/60）；独立模型 10/10 全等；突变矩阵与其
+申报**逐名互证**：m2a（EOR 误读）5/10、m2（WRAM 当 RAM）6/10、幸存=[gen-f162-2/-6/-7,
+b-f162-wram-ff0] 精确一致（LSB=0 固有等值解释正确——w 仅经 &1 入 (w^ram[FF])&1）。
+covered 19、全量自跑 **212 条 0 失败**。双/三陷阱族（45 FF+WRAM 域）处理正确。
+
 ## 遗留风险清单
 
 1. 后续批（F1D2/F1CB/F1E7/F172/F19A/F162/F1FA 排队，l2ports.rs 已见 F1D2 WIP）滚动复审。
