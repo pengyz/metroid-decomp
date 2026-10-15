@@ -69,6 +69,22 @@ pub const JOY2_STATUS: u16 = 0x0015;
 /// Joy1Change=$12（constants_ram 内容锚「These addresses store any button changes」）。
 pub const JOY1_CHANGE: u16 = 0x0012;
 
+/// 声态面（SFX/Music 初始化旗——constants_ram 内容锚族）：
+/// SFXPaused=$0602（「0=Game not paused, 1=Game paused」）。
+pub const SFX_PAUSED: u16 = 0x0602;
+/// SFXNoiseInitFlags=$0680（「Initialization flags for noise SFX」）。
+pub const SFX_NOISE_INIT: u16 = 0x0680;
+/// SFXSQ1InitFlags=$0681。
+pub const SFX_SQ1_INIT: u16 = 0x0681;
+/// SFXSQ2InitFlags=$0682（「never used」——社区注）。
+pub const SFX_SQ2_INIT: u16 = 0x0682;
+/// SFXTriInitFlags=$0683。
+pub const SFX_TRI_INIT: u16 = 0x0683;
+/// SFXMultiInitFlags=$0684。
+pub const SFX_MULTI_INIT: u16 = 0x0684;
+/// MusicInitFlags=$0685（「Music init flags」）。
+pub const MUSIC_INIT: u16 = 0x0685;
+
 /// MainRoutine=$1E（constants_ram.asm:478「5 = Game paused, 3 = Game engine running」）。
 pub const MAIN_ROUTINE: u16 = 0x001E;
 

@@ -43,9 +43,10 @@ fn nmi_body(mem: &mut FrameMemory) {
     write_ppu_ctrl(mem); // WritePPUCtrl（asm :1150 族——已端口）
     write_scroll(mem); // WriteScroll（asm :717——已端口）
     read_joy_pads(mem); // ReadJoyPads（asm :1215 族——已端口）
+    sound_engine(mem); // SoundEngine（sound_engine.asm :384 族——已端口）
     #[allow(unreachable_code)]
     {
-        crate::unported!("bank07:B3B4"); // SoundEngine（超帧也跑段）
+        crate::unported!("bank07:C97E"); // UpdateAge（NMI 体末件）
     }
 }
 
@@ -151,6 +152,51 @@ pub fn vram_struct_write(mem: &mut FrameMemory) {
             mem.write_io(0x2007, v); // PPUDATA（渲染面）
         }
         off += if rle { 5 } else { 3 + count }; // 段尾（iny/AddYToPtr00 域形）
+    }
+}
+
+/// SoundEngine 单元（**asm 内容锚+结构互核注**）——
+/// refs/m1disasm/SRC/sound_engine.asm `SoundEngine: ; $B3B4`（`lda #APU_5STEP|
+/// APU_IRQDISABLE/sta JOY2`（APU 帧配置——寄存器面）/静音门 `lda SFXNoiseInitFlags/lsr/
+/// bcs SoundEngine_SilenceMusic`/暂停门 `lda MainRoutine/cmp #_id_PauseMode/beq
+/// GameIsPaused`/`lda #$00/sta SFXPaused`/四 init 子件 jsr/`ClearInitFlags: ; $B3D6`
+/// （6 旗清））。
+///
+/// **结构互核注**：①四 init 子件=表分派短路（`RunSoundRoutine`→`jsr GetSoundRoutine`
+/// 旗检→`jmp (SoundRoutinePtr)`——flags=0 ⇒ 分派表出口 stub）：boot 态全 0 ⇒ 全短路
+/// ②ClearInitFlags 的 6 旗清=**同值写事件**（L2 契约面同款——b-f270-a0 教训族）
+/// ③声态 zp 全在 watch 面（$0602/$0680-85——iram 内可观测）。
+/// 非零旗路径（SFX 分派/静音/暂停）=fail-loud（音频域件随任务展开）。
+pub fn sound_engine(mem: &mut FrameMemory) {
+    mem.write_io(0x4017, 0x40 | 0x80); // APU_5STEP|IRQDISABLE（JOY2 口——APU 帧配置）
+    if mem.read_ram(crate::ram_map::SFX_NOISE_INIT) & 1 != 0 {
+        crate::unported!("bank07:B3EB"); // SoundEngine_SilenceMusic（静音路径）
+    }
+    if mem.read_ram(crate::ram_map::MAIN_ROUTINE) == 5 {
+        crate::unported!("bank07:B3EB-paused"); // GameIsPaused 路径（_id_PauseMode=5 注证）
+    }
+    mem.write_ram(crate::ram_map::SFX_PAUSED, 0); // `sta SFXPaused`
+    // 四 init 子件：flags=0 短路（RunSoundRoutine 分派出口）；非零=域件桩
+    for addr in [
+        crate::ram_map::SFX_NOISE_INIT,
+        crate::ram_map::SFX_MULTI_INIT,
+        crate::ram_map::SFX_TRI_INIT,
+        crate::ram_map::MUSIC_INIT,
+    ] {
+        if mem.read_ram(addr) != 0 {
+            crate::unported!("bank07:B31B"); // SFX/Music 分派域件
+        }
+    }
+    // ClearInitFlags（$B3D6）：6 旗清（同值写事件）
+    for addr in [
+        crate::ram_map::SFX_NOISE_INIT,
+        crate::ram_map::SFX_SQ1_INIT,
+        crate::ram_map::SFX_SQ2_INIT,
+        crate::ram_map::SFX_TRI_INIT,
+        crate::ram_map::SFX_MULTI_INIT,
+        crate::ram_map::MUSIC_INIT,
+    ] {
+        mem.write_ram(addr, 0);
     }
 }
 
@@ -282,6 +328,21 @@ mod tests {
         assert!(boom(&mut m3).contains("unported @ bank07:C1FF"));
         let mut m4 = FrameMemory::default(); // GameMode=0 & 无 pending → 静默
         check_palette_write(&mut m4);
+    }
+
+    /// SoundEngine boot 面（全短路+6 旗同值写事件）+非零旗引爆。
+    #[test]
+    fn sound_engine_boot_face_and_flag_detonates() {
+        use crate::ram_map::{MUSIC_INIT, SFX_NOISE_INIT, SFX_PAUSED, SFX_SQ1_INIT};
+        let mut m = FrameMemory::default();
+        sound_engine(&mut m);
+        assert_eq!(m.read_ram(SFX_PAUSED), 0);
+        assert_eq!(m.read_ram(SFX_NOISE_INIT), 0); // 6 旗清（同值写事件）
+        assert_eq!(m.read_ram(SFX_SQ1_INIT), 0);
+        m.write_ram(MUSIC_INIT, 1); // 音乐请求（输入场景）
+        let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| sound_engine(&mut m)));
+        let msg = panic_message(&r.unwrap_err());
+        assert!(msg.contains("unported @ bank07:B31B"), "引爆点失准: {msg}");
     }
 
     /// ReadJoyPads boot 面（无输入：$14/$15=0 落态+变更路径不触发）+输入变更引爆。
