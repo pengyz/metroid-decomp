@@ -43,7 +43,7 @@ fn nmi_body(mem: &mut FrameMemory) {
     crate::unported!("bank07:C44D"); // WritePPUCtrl（工作序列次件）
     #[allow(unreachable_code)]
     {
-        crate::unported!("bank07:C29A"); // WriteScroll
+        write_scroll(mem); // WriteScroll（asm :717——已端口）
         crate::unported!("bank07:C215"); // ReadJoyPads
         crate::unported!("bank07:B3B4"); // SoundEngine（超帧也跑段）
     }
@@ -127,7 +127,8 @@ pub fn vram_struct_write(mem: &mut FrameMemory) {
     loop {
         let hi = mem.read_ram(base + off as u16);
         if hi == 0 {
-            crate::unported!("bank07:C29A"); // 尾跳 WriteScroll（走带退出——下一单元）
+            write_scroll(mem); // 尾跳 WriteScroll（asm :717——已端口）；RTS 回清理段
+            return;
         }
         let lo = mem.read_ram(base + off as u16 + 1);
         let ctrl = mem.read_ram(base + off as u16 + 2);
@@ -151,6 +152,22 @@ pub fn vram_struct_write(mem: &mut FrameMemory) {
         }
         off += if rle { 5 } else { 3 + count }; // 段尾（iny/AddYToPtr00 域形）
     }
+}
+
+/// WriteScroll 单元（**asm 内容锚+结构互核注**）——
+/// refs/m1disasm/SRC/prg7_engine.asm `WriteScroll: ; 07:C29A`（注「X and Y scroll offsets
+/// are loaded serially」：`lda PPUSTATUS`（清 flip-flop）/`lda ScrollX/sta PPUSCROLL`/
+/// `lda ScrollY/sta PPUSCROLL`/`rts`）。
+///
+/// **结构互核注**：零 RAM 写（只读 ScrollX/Y——$FC/$FD 与 boot 初始化 `sty` 面互证）；
+/// 双路汇聚（走带尾跳 `jmp WriteScroll` + NMI 工作体直调）——**同一 RTS 语义**：
+/// 尾跳路的 RTS 回 CheckVRAMStructBufferWrite 清理段（栈深一层，走带注②面），直调路回
+/// NMI 体——域形折叠为普通返回，调用方各自续。
+pub fn write_scroll(mem: &mut FrameMemory) {
+    let x = mem.read_ram(crate::ram_map::SCROLL_X);
+    let y = mem.read_ram(crate::ram_map::SCROLL_Y);
+    mem.write_io(0x2005, x); // PPUSCROLL
+    mem.write_io(0x2005, y);
 }
 
 /// 尾段（**恒量 1 写**——:279-280 `ldy #$01 / sty NMIStatus`）。
@@ -230,9 +247,7 @@ mod tests {
         let mut m = FrameMemory::default();
         crate::frame::intro::star_palette_switch(&mut m); // 生产（双 call 缓冲）
         m.write_ram(PPUCTRL_ZP, 0x90); // NMI 位+增量位预置
-        let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| vram_struct_write(&mut m)));
-        let msg = panic_message(&r.unwrap_err());
-        assert!(msg.contains("unported @ bank07:C29A"), "尾跳失准: {msg}");
+        vram_struct_write(&mut m); // 全通（尾跳 WriteScroll 已端口）
         // ctrl bit7=0（两段皆 0x03）⇒ $FF 增量位（0x04）清——SetPPUInc 域形
         assert_eq!(m.read_ram(PPUCTRL_ZP) & 0x04, 0x00);
     }
@@ -245,9 +260,10 @@ mod tests {
         check_vram_struct_write(&mut m); // 静默
         assert_eq!(m.read_ram(VRAM_STRUCT_INDEX), 0);
         m.write_ram(PPU_DATA_PENDING, 1);
-        let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| check_vram_struct_write(&mut m)));
-        let msg = panic_message(&r.unwrap_err());
-        assert!(msg.contains("unported @ bank07:C29A"), "引爆点失准: {msg}"); // 走带尾跳
+        check_vram_struct_write(&mut m); // 空缓冲：终止符即刻→WriteScroll→清理段全通
+        assert_eq!(m.read_ram(PPU_DATA_PENDING), 0); // 清理段三态
+        assert_eq!(m.read_ram(VRAM_STRUCT_INDEX), 0);
+        assert_eq!(m.read_ram(0x07A1), 0);
     }
 
     /// 超帧跳过面：$1A≠0 ⇒ 工作体跳过（不炸桩）；$1A=0 ⇒ 进 GameMode 分派桩。

@@ -45,6 +45,13 @@ pub const VRAM_STRUCT_INDEX: u16 = 0x07A0;
 /// （社区注自相矛盾，取 PrepPPUPaletteString 写 1=待写语义））。
 pub const PPU_DATA_PENDING: u16 = 0x001B;
 
+/// ScrollX=$FD（constants_ram 内容锚「X value loaded into scroll register」；
+/// boot 初始化 `sty $FD`（Y=0）自证）。
+pub const SCROLL_X: u16 = 0x00FD;
+
+/// ScrollY=$FC（constants_ram 内容锚「Y value loaded into scroll register」）。
+pub const SCROLL_Y: u16 = 0x00FC;
+
 /// MainRoutine=$1E（constants_ram.asm:478「5 = Game paused, 3 = Game engine running」）。
 pub const MAIN_ROUTINE: u16 = 0x001E;
 
