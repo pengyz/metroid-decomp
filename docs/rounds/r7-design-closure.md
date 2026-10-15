@@ -214,6 +214,9 @@ A6 更正注（含 **Stage B 禁止「修 quirk」**）+[samus-movement.md](../s
   「ROM 三方（oracle/subroutines/generated/int_y_verif_3780.jsonl 三判别组 5/5+9/9+5/5，
   accel=0 子集）+ 活跃集三方」——落点 docs/findings/l2-proof-assumptions.md 属
   **decomp task-2 写路径（写路径互斥）**，已提交 lead 路由，verifier 不越界落笔。
+  【追记】**lead-applied per R11-F3（417e761）**：lead 取第三路自落一行，不开越界
+  先例（链规 13 反向应用：能不跨界就不跨界）；grep 复核 A6 已指
+  `int_y_verif_3780.jsonl` 字面路径（1 命中）——**R11-F3 闭合，三 findings 全清**。
 - 链规⑦自证：本追记所有断言均为上方刚打印输出原文；修文经 lead 复核批准（2026-10-15
   裁定），落地由 verifier 执行并 grep 自证——如需完全体独立性可再开第 12 轮抽查（择期）。
 
