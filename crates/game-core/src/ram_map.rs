@@ -41,6 +41,10 @@ pub const INTRO_STAR_OFFSET: u16 = 0x00C3;
 /// VRAMStructBuffer. #$4F bytes max」）——**RAM watch 面内**（iram $0100-$07FF）。
 pub const VRAM_STRUCT_INDEX: u16 = 0x07A0;
 
+/// PPUDataPending=$1B（constants_ram 内容锚「1=not PPU data pending, 1=data pending」
+/// （社区注自相矛盾，取 PrepPPUPaletteString 写 1=待写语义））。
+pub const PPU_DATA_PENDING: u16 = 0x001B;
+
 /// MainRoutine=$1E（constants_ram.asm:478「5 = Game paused, 3 = Game engine running」）。
 pub const MAIN_ROUTINE: u16 = 0x001E;
 

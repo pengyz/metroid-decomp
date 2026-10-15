@@ -15,7 +15,7 @@
 
 use super::memory::FrameMemory;
 use super::io;
-use crate::ram_map::{GAME_MODE, NMI_STATUS, PALETTE_PENDING, TITLE_ROUTINE};
+use crate::ram_map::{GAME_MODE, NMI_STATUS, PALETTE_PENDING, PPU_DATA_PENDING, TITLE_ROUTINE, VRAM_STRUCT_INDEX};
 
 /// NMI 处理器（60Hz VBlank 调用）。
 pub fn nmi_handler(mem: &mut FrameMemory) {
@@ -38,9 +38,13 @@ fn nmi_body(mem: &mut FrameMemory) {
         nmi_screen_write(mem); // NMIScreenWrite（asm :3590——已端口）
     }
     check_palette_write(mem); // CheckPaletteWrite（asm :507——已端口）
-    crate::unported!("bank07:C2CA"); // CheckVRAMStructBufferWrite（工作序列次件）
+    check_vram_struct_write(mem); // CheckVRAMStructBufferWrite（asm :790——已端口）
+    // 执行序补全（前版漏桩自查）：WritePPUCtrl/WriteScroll/ReadJoyPads（asm 调用序列）
+    crate::unported!("bank07:C44D"); // WritePPUCtrl（工作序列次件）
     #[allow(unreachable_code)]
     {
+        crate::unported!("bank07:C29A"); // WriteScroll
+        crate::unported!("bank07:C215"); // ReadJoyPads
         crate::unported!("bank07:B3B4"); // SoundEngine（超帧也跑段）
     }
 }
@@ -80,6 +84,27 @@ pub fn check_palette_write(mem: &mut FrameMemory) {
         super::intro::star_palette_switch(mem); // StarPaletteSwitch（asm 内容锚——已端口）
     }
     // ④否则 RTS（静默）
+}
+
+/// CheckVRAMStructBufferWrite 单元（**asm 内容锚引证主体**）——
+/// refs/m1disasm/SRC/prg7_engine.asm `CheckVRAMStructBufferWrite: ; 07:C2CA`（注「Exit if
+/// no PPU data to write」）：`lda PPUDataPending / beq @RTS`——**boot 态（$1B=0，生产端
+/// 未跑）⇒ 静默 RTS**；≠0 ⇒ ptr=$07A1（Temp00_VRAMStructPtr）→ `jsr VRAMStructWrite`
+/// （缓冲走带——PPU 面/渲染面）→ 清三态（VRAMStructBufferIndex/$07A1/PPUDataPending=0）。
+/// 消费端=StarPaletteSwitch 生产端的对子（$07A0 队列门复位面）。
+pub fn check_vram_struct_write(mem: &mut FrameMemory) {
+    if mem.read_ram(PPU_DATA_PENDING) == 0 {
+        return; // boot 态静默（@RTS）
+    }
+    mem.write_ram(0x0000, 0xA1); // Temp00_VRAMStructPtr lo（VRAMStructBuffer=$07A1）
+    mem.write_ram(0x0001, 0x07); // hi
+    crate::unported!("bank07:C2E4"); // VRAMStructWrite/WriteData（缓冲走带——渲染面件）
+    #[allow(unreachable_code)]
+    {
+        mem.write_ram(VRAM_STRUCT_INDEX, 0);
+        mem.write_ram(0x07A1, 0); // VRAMStructBuffer 清
+        mem.write_ram(PPU_DATA_PENDING, 0);
+    }
 }
 
 /// 尾段（**恒量 1 写**——:279-280 `ldy #$01 / sty NMIStatus`）。
@@ -149,6 +174,19 @@ mod tests {
         assert!(boom(&mut m3).contains("unported @ bank07:C1FF"));
         let mut m4 = FrameMemory::default(); // GameMode=0 & 无 pending → 静默
         check_palette_write(&mut m4);
+    }
+
+    /// C2CA 消费端：boot 态（$1B=0）静默 + pending 路径引爆 C2E4。
+    #[test]
+    fn check_vram_struct_boot_silent_and_pending_detonates() {
+        use crate::ram_map::{PPU_DATA_PENDING, VRAM_STRUCT_INDEX};
+        let mut m = FrameMemory::default(); // $1B=0
+        check_vram_struct_write(&mut m); // 静默
+        assert_eq!(m.read_ram(VRAM_STRUCT_INDEX), 0);
+        m.write_ram(PPU_DATA_PENDING, 1);
+        let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| check_vram_struct_write(&mut m)));
+        let msg = panic_message(&r.unwrap_err());
+        assert!(msg.contains("unported @ bank07:C2E4"), "引爆点失准: {msg}");
     }
 
     /// 超帧跳过面：$1A≠0 ⇒ 工作体跳过（不炸桩）；$1A=0 ⇒ 进 GameMode 分派桩。

@@ -12,7 +12,8 @@
 //! 8B55 自证）；表数据 IntroStarPalette0-7（00:8B0F 族，8×10B）。
 //!
 //! **boot 中间态实证**：清零环 Y 型填充使 $07A0=0xA0 ⇒ 队列门如实拦截本单元至消费端
-//! （C2CA）复位——真机同态；执行序=消费端先于生产端激活（engine 测试钉死）。
+//! （C2CA）复位——**引擎侧同态**（真机=asm 同码推断，采样窗外暂无工件实证——P28-F1
+//! 待 decomp VRAMStruct 捕获面核）；执行序=消费端先于生产端激活（engine 测试钉死）。
 //! 生产/消费对子：本族=VRAM 写串**生产端**（经 PrepPPUPaletteString 入 VRAMStructBuffer
 //! ——$07A0 面 **RAM watch 可观测**）；消费端=CheckVRAMStructBufferWrite（C2CA，NMI 工作
 //! 体）——C37E 单元落地时成对端口。
