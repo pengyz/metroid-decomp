@@ -470,7 +470,9 @@ unported! fail-loud ✓。无新 findings。
 4. **链规 17 已证等价原则**：①单元 spec 必须引 asm 段+注释——只现「重解码表」而无
    asm 段引用 = 违例判据 ②Mesen2 调用须带三用途标签（裁判 golden / bug 定位 /
    运行态确证），账本可查；
-5. findings 三族标注（r10 数据源）：**读解误读族 / 契约族 / 声明族**。
+5. findings 三族标注（r10 数据源）：**读解误读族 / 契约族 / 声明族**；
+6. **新文件落库核**：commit 声称的「（新）」文件 vs `git show --stat` 文件清单逐一对账
+   + `git ls-files` 在册核（批 25 漏检教训：工作区未跟踪件掩盖提交树破）。
 
 ## task-10 批 23：CheckBankSwitch/C4DE（e3da228）——链规 17 首件
 
@@ -501,7 +503,20 @@ findings 三族标注（r10）：本批 **0 新 findings**。基线 42。
 
 ## task-10 批 25：NMI 面单元/C0D9（945fe41）——§8.1 契约实施件
 
-### verdict: pass
+> 【2026-10-15 更正·撤回 pass】复验发现 **commit 不完整**：message 声称「frame/nmi.rs
+> （新）」但 `git show --stat` 实际 8 文件无 nmi.rs（盘上有、git 未跟踪）——mod.rs 已
+> `pub use nmi::nmi_handler;` ⇒ **HEAD 提交树构建破**（工作区被未跟踪件掩盖，我方
+> 单测跑在工作区故未觉）。原 verdict=pass **撤回改判 needs_revision**（待 nmi.rs 补
+> 入库后复验翻 pass）。两层教训：①手术灾难回滚后漏 git add（链规 14 漏步，文本手术
+> 家族+1）②**复审方漏检「声称新文件 vs git show --stat 落库对账」**——检查清单已补
+> （「声称≠落地」家族第五案，实施/复审双层盲）。
+
+### verdict: needs_revision → **pass（修后复验，82d627a）**
+
+> 【2026-10-15 修后追记】nmi.rs 补入库（82d627a，四重自证）——我方独立复验：
+> git ls-files 在册 ✓ / git show HEAD:nmi.rs=76 行 ✓ / create mode 自证 ✓ / nmi 三测
+> 复跑过 ✓。批 25 实施面质量维持原评（spin 状态机/契约断言/asm 引证全过），
+> 唯落库缺失已闭。结构性加固另落 gates（commit-tree 机械门，见 gates commit）。
 
 四查+契约核全过：①asm 引证抽核 ✓（:251 超帧门 `lda NMIStatus`、:279-280
 `ldy #$01/sty NMIStatus` 恒量写、constants_ram:474 NMIStatus=$1A 三处命中）②
@@ -513,6 +528,15 @@ tools/ 面——lead 移交 verifier 落，scoping 诚实）④引爆面场景�
 工程注（文本手术三案并档）：切片锚序倒置→空切片→replace("",new) 插文件头——
 编译 E0753 拆穿+回滚+锚序断言（ia<ib）重做，教训「切片手术先断言锚序」入案 ✓
 诚实文化满分。findings（r10 三族）：0 新。基线 47、全闸 PASS。
+
+## v4 路由两实施项修复回归（7e94719，2026-10-15 追记）——双闭 ✓
+
+- **stale fail-open 防御**：l3-dump run 起点删旧（清理失败=fail-loud 拒起跑）+临时名
+  +rename 原子写（半成品绿面双层封）——`[stale-clean]` 行+dump 条目数 0 实证在码 ✓；
+- **GameRng 桩带址**：`unported!("bank07:C000")`——asm 自证 `RandomNumbers: ; 07:C000`
+  （prg7_engine 内容锚，主环每帧 jsr）行核 ✓；引爆行检测面形态合规（无址违规已纠）。
+- stat 对账：3 文件（engine/rng/l3-dump）与意图一致（清单第 6 项检查过）。
+- decomp 侧 5aeb48d（「二选一」错账→三家 $C0C9/$C436/$C10B 更正注）同步收讫 ✓。
 
 ## 遗留风险清单
 
