@@ -39,11 +39,12 @@ impl FrameEngine {
         self.boot_step();
     }
 
-    /// boot 执行序一步（骨架：reset 序首拍 → 首个引爆点 bank07:C01A）。
+    /// boot 执行序一步（骨架：reset 序首拍 → bank07:C01A 单元 → 引爆点 bank07:C158）。
     fn boot_step(&mut self) {
         self.boot_prologue();
-        // reset 后 JMP $C01A 主初始化——未端口，确定性引爆在精确地址（D7 机制②）。
-        crate::unported!("bank07:C01A");
+        // C01A 主初始化单元（已端口：MMC1 写/栈指针/双清零环/zp 初始化序前段；
+        // 内嵌桩阵逐个引爆——当前引爆点 bank07:C158）。
+        super::boot::boot_init(&mut self.mem);
     }
 
     /// reset 序首拍（bank07:$FFB0-$FFD5 逐字节自证；零 RAM 写）。
@@ -85,19 +86,18 @@ mod tests {
         let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| e.tick_frame()));
         let err = r.unwrap_err();
         let msg = panic_message(&err);
-        assert!(msg.contains("unported @ bank07:C01A"), "引爆点失准: {msg}");
+        assert!(msg.contains("unported @ bank07:C158"), "引爆点失准: {msg}");
     }
 
-    /// reset 序首拍零 RAM 写（寄存器/PPU/MMC1 面——watch 面不动）。
+    /// tick_frame 执行序：tick 先行 + C01A 单元清零环生效 + 引爆前态可检。
     #[test]
-    fn boot_prologue_writes_no_ram() {
+    fn tick_frame_runs_boot_unit_before_detonation() {
         let mut e = FrameEngine::new();
-        let before = e.mem.ram;
         let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| e.tick_frame()));
-        assert_eq!(e.mem.ram, before);
-        assert_eq!(e.mem.regs.x, 0x00); // LDX #$00
-        assert_eq!(e.mem.regs.a, 0xFF); // ORA #$FF
         assert_eq!(e.clock.ticks(), 1); // tick 先行
+        assert_eq!(e.mem.read_ram(0x0355), 0x55); // 清零环已跑（Y 型填充）
+        assert_eq!(e.mem.read_ram(0x0025), 0x0E); // zp 初始化序已跑
+        assert_eq!(e.mem.regs.sp, 0xFF); // TXS
     }
 
     /// GameRng 算法缺口面 fail-loud（未证不发明）。

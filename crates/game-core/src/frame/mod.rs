@@ -7,9 +7,10 @@
 //! ⑤ L3 双腿（game-core 腿 dump ⇄ oracle 腿 trace，tools/diff_traces.py 裁定）。
 //!
 //! 执行序保真口径（栈页实证）：L3 watch 含栈页 $0100-$01FF，oracle 帧界存稳定残迹
-//! （$01EB-$01FF 19 非零字节 + 单字节漂移）——调用影子（驱动层）须复刻原调用结构的
+//! （$01EB-$01FF 19 非零字节跨 292 帧——偏离帧=开机段 0-7；$01FC-$01FE 三字节值漂移）——调用影子（驱动层）须复刻原调用结构的
 //! 栈写面；产品层域逻辑零栈字面量（机械址只在驱动/memmap）。
 
+pub mod boot;
 pub mod clock;
 pub mod engine;
 pub mod memory;
