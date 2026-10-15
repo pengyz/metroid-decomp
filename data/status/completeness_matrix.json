@@ -3713,10 +3713,10 @@
       "id": "S-FUNC-07-F1A7",
       "face": "symbol",
       "module": "engine",
-      "strength": "L0",
-      "covered": false,
-      "evidence": "bank07:F1A7-F1B3（IDA 机械切分 size=12）",
-      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+      "strength": "L2",
+      "covered": true,
+      "evidence": "oracle/subroutines/l2_cases.jsonl#gen-f1a7-0..7 + #b-f1a7-xyff/b-f1a7-x1-yff/b-f1a7-wrap 三方全等（golden==ROM 执行==game-core）；语义来源 ROM 原字节 bank07:F1A7-F1B2=BD 01 03/20 E0 F1/BD 02 03/4C D9 F1 逐指令（JMP 共享尾 loc_F1D9）",
+      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准；L2 窗口 stops=bank07:F1DF（F1D9 尾 RTS 址截断，与 gen-f1bf 同约定）：$04←RAM[$301+X]+RAM[$301+Y]、$05←RAM[$302+X]+RAM[$302+Y]，A=$05"
     },
     "S-FUNC-07-F1BF": {
       "id": "S-FUNC-07-F1BF",

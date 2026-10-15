@@ -90,6 +90,7 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "sub_F186" => Some(sub_f186),
         "sub_F1BF" => Some(sub_f1bf),
         "sub_F140" => Some(sub_f140),
+        "sub_F1A7" => Some(sub_f1a7),
         _ => None,
     }
 }
@@ -169,6 +170,22 @@ pub fn sub_f140(input: &L2In) -> L2Out {
         y: input.y,
         writes,
     }
+}
+
+/// sub_F1A7 —— bank07:F1A7-F1B2（`LDA $301,X / JSR F1E0 / LDA $302,X / JMP loc_F1D9` 共享尾变体）。
+/// L2 窗口 stops=bank07:F1DF（F1D9 尾 RTS 址截断，与 gen-f1bf 同约定）。
+/// 语义（A 级：ROM 原字节 `BD 01 03 20 E0 F1 BD 02 03 4C D9 F1` 逐指令）：
+/// $04 ← RAM[$301+X] + RAM[$301+Y]（F1E0 尾 CLC/ADC $301,Y/STA $04）；
+/// $05 ← RAM[$302+X] + RAM[$302+Y]（loc_F1D9 CLC/ADC $302,Y/STA $05）。
+/// 末值 A=$05；X/Y 透传；abs,X/abs,Y 16 位加（$301+X≤$400，无 zp 回绕）。
+pub fn sub_f1a7(input: &L2In) -> L2Out {
+    let x = input.x as u16;
+    let y = input.y as u16;
+    let v4 = input.ram[(0x0301 + x) as usize & 0x7FF]
+        .wrapping_add(input.ram[(0x0301 + y) as usize & 0x7FF]);
+    let v5 = input.ram[(0x0302 + x) as usize & 0x7FF]
+        .wrapping_add(input.ram[(0x0302 + y) as usize & 0x7FF]);
+    L2Out { a: v5, x: input.x, y: input.y, writes: vec![(0x0004, v4), (0x0005, v5)] }
 }
 
 /// sub_F1BF —— bank07:F1BF-F1DF（WRAM 源坐标累加，经 sub_F1E0/loc_F1D9 共享尾）：
