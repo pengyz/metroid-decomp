@@ -499,6 +499,21 @@ findings 三族标注（r10）：本批 **0 新 findings**。基线 42。
 > gotcha-sampling-point-is-blind-spot，源自 C0D9 冲突案）：负向断言复核=换工具×
 > 换时刻×**换相位**三维——采样点相位盲区会把「零写」变假阴性。入检查清单第 5 条并列项。
 
+## task-10 批 25：NMI 面单元/C0D9（945fe41）——§8.1 契约实施件
+
+### verdict: pass
+
+四查+契约核全过：①asm 引证抽核 ✓（:251 超帧门 `lda NMIStatus`、:279-280
+`ldy #$01/sty NMIStatus` 恒量写、constants_ram:474 NMIStatus=$1A 三处命中）②
+**spin 跨帧状态机** ✓（BootPhase: PreSpin→AwaitNmi→PostSpin→MainLoop；tick 序=
+NMI 尾写 1→spin 唤醒→帧工作→清 0→spin）与 §8.1①定案逐句对上 ③**契约断言三件套**
+✓（nmi_tail_writes_constant_one / f=1 帧界锚 / 超帧门双测实跑过；栈页排除=比较器侧
+tools/ 面——lead 移交 verifier 落，scoping 诚实）④引爆面场景序 ✓（tick2=NMI 先行→
+`unported @ bank00:9A07` 精确引爆，与我批 24「链序≠实跑序」注自洽）。
+工程注（文本手术三案并档）：切片锚序倒置→空切片→replace("",new) 插文件头——
+编译 E0753 拆穿+回滚+锚序断言（ia<ib）重做，教训「切片手术先断言锚序」入案 ✓
+诚实文化满分。findings（r10 三族）：0 新。基线 47、全闸 PASS。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
