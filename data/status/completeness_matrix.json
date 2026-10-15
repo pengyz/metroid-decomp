@@ -5652,7 +5652,7 @@
       "strength": "L0",
       "covered": false,
       "evidence": "bank07:F162-F172（data 连续段 16B）",
-      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+      "note": "错面登记（实为代码，非数据面）——seed 解码缺口 $F0A2-$F148，见 docs/findings/seed-decode-gap-f0a2-f148.md；covered 仍 False 待移植"
     },
     "D-REG-07-037": {
       "id": "D-REG-07-037",
@@ -5670,7 +5670,7 @@
       "strength": "L0",
       "covered": false,
       "evidence": "bank07:F1E7-F1EE（data 连续段 7B）",
-      "note": "xref 消费者 0 处（机械口径）；字段切分待 S3 考证"
+      "note": "错面登记（实为代码，非数据面）——seed 解码缺口 $F0A2-$F148，见 docs/findings/seed-decode-gap-f0a2-f148.md；covered 仍 False 待移植"
     },
     "D-REG-07-039": {
       "id": "D-REG-07-039",

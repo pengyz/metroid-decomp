@@ -84,6 +84,11 @@ S-FUNC-07-E37A 头部（E37A-E3A4，accel/maxspeed 初始化）移植前置依�
 - 语义线索（C 级，仅定位）：constants_ram 注释「EnemyReactToSamusProjectile/ExplodeEnemy…」。
 结论：头部移植=batch-1 的 F1xx 族考证先行（S 面格随矩阵聚类），完成后 E37A 整格计 covered。
 
+### 2.2 F162 变体状态更正（2026-10-15）
+「无调用点悬置」主张**已被证伪**：bank07:$F109 `JSR $F162` 实存（ROM 字节级），
+$F0A2-$F148 数据岛实为代码流（findings/seed-decode-gap-f0a2-f148.md）。F162/F1E7/F1EE
+族待 decode-sweep 定界后作为 batch-1 单元移植。
+
 ## 3. 缺口显式声明（D7）
 
 - 未覆盖：跳跃弧线数值（初速/重力表）、滚球物理、碰撞/推墙、门/房间切换 X 重置语义、

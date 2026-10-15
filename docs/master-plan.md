@@ -18,6 +18,9 @@
 
 ## 仓库级待办（设计复审暴露，暂无归属阶段）
 
+- [ ] **decode-sweep 工具 + 分母 v2**（seed-decode-gap 发现）：系统性扫描全部数据岛的
+  ROM 原字节解码（找 JSR/JMP 目标落界/回环模式），修正 S/D 分母错面后出 v2 导出；
+
 - [ ] **里程碑编号矛盾**：north-star.md（M3=核心系统/M4=全内容含密码）与 methodology.md
   （M3=含密码/M4=差分收口）M3/M4 定义不一致——统一口径后删除本行（state-fixture v3 L7）
 - [ ] **covered_rule 同步**（state-fixture v6 B1/M1）：completeness_matrix.json covered_rule 现为单判据
