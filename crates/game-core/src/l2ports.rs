@@ -109,6 +109,7 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "sub_F2E8" => Some(sub_f2e8),
         "sub_F282" => Some(sub_f282),
         "sub_F2D8" => Some(sub_f2d8),
+        "sub_GameRng" => Some(sub_game_rng),
         _ => None,
     }
 }
@@ -542,4 +543,13 @@ pub fn sub_f2e8(input: &L2In) -> L2Out {
 /// lead 首拍裁定的标准解法先例）+ 五路出口组合（见 verify_shim::f282 doc）。
 pub fn sub_f282(input: &L2In) -> L2Out {
     crate::verify_shim::f282(input)
+}
+
+/// sub_GameRng —— bank07:C000-C019 注册名（机械名只在注册注释，two-layer §4）。
+/// **域形态**（§5 新实施件）：`rng::RngState::step`（每调用步进 RN1+=0x19/RN2+=0x5F，
+/// A=RN1 终值）经 `verify_shim::game_rng` 适配；L2 窗口 stops=[]（哨兵约定，RTS@C019）。
+/// 考证（A 级三轨：asm 结构互核+种子序 C0AC+动态交叉）：docs/findings/game-rng-adjudication.md；
+/// 台账 N-0012（升级 A 级，bankNN:AAAA 真址）。
+pub fn sub_game_rng(input: &L2In) -> L2Out {
+    crate::verify_shim::game_rng(input)
 }

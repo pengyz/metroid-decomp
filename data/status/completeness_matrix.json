@@ -1814,10 +1814,10 @@
       "id": "S-FUNC-07-C000",
       "face": "symbol",
       "module": "engine",
-      "strength": "L0",
-      "covered": false,
-      "evidence": "bank07:C000-C01A（IDA 机械切分 size=26）",
-      "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
+      "strength": "L2",
+      "covered": true,
+      "evidence": "oracle/subroutines/l2_cases.jsonl#b-game-rng-boot-first-call/wrap-both/wrap-rn1-zero/wrap-rn2-max/xy-passthrough/a-dead-input/step-k255/zero-state 8 案三方全等（golden==ROM 执行==game-core，哨兵窗 stops=[]）；语义来源 asm bank07:C000-C019 26B 结构互核 + 闭式推导 + 动态交叉（docs/findings/game-rng-adjudication.md）",
+      "note": "IDA 机械切分 size=26 与语义边界 C000-C019 合（无纠偏）；【task-20 定谳】每调用 RN1+=0x19/RN2+=0x5F（mod 256）、A=RN1 终值、种子 bank07:$C0AC 0x11/0xFF；two-layer §5 域化=rng::RngState::step + verify_shim::game_rng；「every frame」注=调用聚合注（动态证 call≠frame，300 帧 295 调用）；N-0012 升 A 同 commit"
     },
     "S-FUNC-07-C0BC": {
       "id": "S-FUNC-07-C0BC",

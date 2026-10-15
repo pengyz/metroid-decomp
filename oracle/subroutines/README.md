@@ -42,6 +42,7 @@ cargo test --workspace                   # 同一差分引擎单元测试（rust
 | l2-c376-absx-zero-store | sub_C376 | bank07:C376-C37A：`LDA #0/STA $07A1,X`（stops 截断 PLA 尾部） | abs,X 变址 |
 | l2-c376-absx-x0 | sub_C376 | 同上，X=0 边界 | 变址边界 |
 | b-f282-*-w0..w7 / b-f2ed-full-w* / b-f2e8-fall-full-w*（32 案） | sub_F282/F2ED/F2E8 | 手推自 bank07:F282-F310 五路出口语义 + 逐 bank ROM 字节（prg[w×0x4000+0x15CE/0x168B]，python 一行自证） | **多窗口用例族**（task-14）：window_bank 0..7 全窗口，窗口表/向量按区域取数行为钉死 |
+| b-game-rng-*（8 案） | sub_GameRng | 手推自闭式推导（bank07:C000-C019 26B 结构互核：每调用 RN1+=0x19/RN2+=0x5F；种子 bank07:$C0AC）+ 动态交叉（docs/findings/game-rng-adjudication.md） | **RNG 序列族**（task-20）：步进语义/双轴回绕/X 保存恢复/A 死输入/写面={$2E,$2F} 面外=0——喂 N-0012 机械门谓词计数 |
 
 新增用例规则：golden 必须手推自 seed 指令语义（A 级，注明行范围）；game-core 侧实现
 （`crates/game-core/src/l2ports.rs`）与用例同 commit 落地——**未实现例程不得入用例文件**

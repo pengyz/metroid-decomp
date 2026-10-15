@@ -246,3 +246,24 @@ pub fn f282(input: &L2In) -> L2Out {
     writes.push(memmap::flow_scratch::event_vec_hi(vec_hi));
     L2Out { a: vec_hi, x: input.x, y: 0, writes }
 }
+
+/// game_rng 适配（注册名 `sub_GameRng` ← bank07:C000-C019，stops=[] 哨兵约定，RTS@C019）。
+///
+/// **域形态**（two-layer §5 新实施件）：`rng::RngState::step`（每调用步进 RN1+=0x19、
+/// RN2+=0x5F mod 256，A=RN1 终值）；写集=两轴 write_event 推导（**面外=0**——C000 全流
+/// 只寻址 $2E/$2F，栈流量机械不入面）。X 经栈保存恢复（TXA/PHA/PLA/TAX）、Y 不动、
+/// 入参 A 死输入（首条 TXA 覆盖）——三则均 L2 案钉死。
+/// 考证（A 级三轨）：docs/findings/game-rng-adjudication.md；台账 N-0012（升 A）。
+pub fn game_rng(input: &L2In) -> L2Out {
+    let mut st = memmap::rng_state::decode_rng_state(&input.ram);
+    let out = st.step();
+    L2Out {
+        a: out.a,
+        x: input.x,
+        y: input.y,
+        writes: vec![
+            memmap::rng_state::write_event_rn1(st.rn1),
+            memmap::rng_state::write_event_rn2(st.rn2),
+        ],
+    }
+}

@@ -16,5 +16,6 @@ pub mod enemy_slots;
 pub mod enemy_todo_0404;
 pub mod enemy_todo_040e;
 pub mod flow_scratch;
+pub mod rng_state;
 pub mod rom_tables;
 pub mod world_map;

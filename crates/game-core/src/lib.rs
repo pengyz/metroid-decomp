@@ -11,6 +11,7 @@ pub mod enemy;
 pub mod frame;
 pub mod memmap;
 pub mod ram_map;
+pub mod rng;
 pub mod verify_shim;
 pub mod l2ports;
 
