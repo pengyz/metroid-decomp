@@ -20,6 +20,12 @@
      代码区内部=弱通过（6502 跳进操作数的合法技巧）；RAM/未映射=失败；
   ③ JSR/JMP(abs) 目标同 ② 分类（JMP 间接的操作数是指针存放处，不作代码目标核查）。
   调入数据岛=解码缺口信号：登记调用点并给目标岛送入口候选（F0A2→F162 类）。
+  另：C27C 跳转表入口发现（`20 7C C2` 站点后随词表，表词=site+3+2*index；
+  $C45C=共享 RTS handler）——表驱入口带 jump-table@site#idx 佐证（P2-F1 佐证分类：
+  fallthrough / xref / stream-xref / jump-table 四类可区分）。
+
+检索纪律（P2-F2）：banks0-6 存在同偏移镜像岛（如 $8D3A 在 bank1-5 同址），
+记录/取数一律按 bank 索引（islands/results 均带 bank 字段），勿按裸地址聚合。
 
 入口佐证（verdict 分级依据）：fallthrough-from-code / xref-from-code /
 stream-xref（被采纳流调用/分支进来）= 有佐证；仅 island-start = 无佐证。
@@ -351,6 +357,47 @@ def scan(banks, islands, code_items, labels):
             if find_island(islands[k], a + n) is not None:
                 cands.setdefault((k, a + n), set()).add(f"fallthrough-from-code@{a:04X}")
 
+    # ---- C27C 跳转表入口发现（A 级：ROM 字节 20 7C C2 + 表词）----
+    # 分发器语义（bank7:$C27C 字节级解码）：PLA/PLA 取 JSR 返回址-1 →
+    # LDA (ptr),Y（Y=调用者 A+1）读表低字节 → TAX/INY 读高字节 → JMP ($000C)。
+    # 表词 = site+3+2*index（$C45C=共享 RTS handler，多站点复现）。
+    # 表长静态未知，双规则收口（负对照 $FF86 假入口教训）：
+    #   ①前缀规则：首个「越窗/流不成立」的词即表尾；
+    #   ②结构规则：词表值命中「表尾地址」（表后紧跟内联 handler 首址，EA19/FC9A/FE2E
+    #     三站点实证）→ 该处即表尾，其后的垃圾词（handler 字节当词读）一律不收。
+    jump_table_entries: list[dict] = []
+    DISPATCH = bytes((0x20, 0x7C, 0xC2))
+    for k in range(N_BANKS):
+        bk = banks[k]
+        pos = 0
+        while True:
+            i = bk.data.find(DISPATCH, pos)
+            if i < 0:
+                break
+            pos = i + 1
+            site = bk.base + i
+            table: dict[int, int] = {}
+            for n in range(16):
+                waddr = site + 3 + 2 * n
+                if waddr + 1 >= bk.base + BANK_SIZE:
+                    break
+                t = bk.word(waddr)
+                ok = False
+                if bk.base <= t < bk.base + BANK_SIZE:
+                    kind, _info = cls.classify(k, t, set())
+                    if kind != "bad":
+                        sw = sweep_linear(banks, k, t)
+                        ok = sw.ok
+                if not ok:
+                    break  # ① 前缀规则
+                table[n] = t
+                if (site + 3 + 2 * (n + 1)) in table.values():
+                    break  # ② 结构规则：表尾=内联 handler 首址
+            for n, t in table.items():
+                cands.setdefault((k, t), set()).add(f"jump-table@{site:04X}#{n}")
+                jump_table_entries.append(
+                    {"bank": k, "site": site, "index": n, "target": t})
+
     # ---- 入口不动点：采纳流贡献流 xref 入口 ----
     accepted: dict[tuple[int, int], Sweep] = {}
     rejected: dict[tuple[int, int], str] = {}
@@ -411,7 +458,8 @@ def scan(banks, islands, code_items, labels):
                 if not hits:
                     continue
                 is_just = (k2, e) in justified
-                entries.append({"entry": e, "justified": is_just, "cover": len(hits)})
+                entries.append({"entry": e, "justified": is_just, "cover": len(hits),
+                                "sources": sorted(cands.get((k2, e), set()))})
                 if is_just:
                     cov |= set(hits)
                     if sw.terminator:
@@ -431,6 +479,18 @@ def scan(banks, islands, code_items, labels):
             size = hi - lo
             ratio = len(cov) / size if size else 0.0
             blind_ratio = len(cov_blind) / size if size else 0.0
+            # 子区间剖面：未被有佐证流覆盖的连续段（混合岛定谳用）
+            uncov: list[list[int]] = []
+            a = lo
+            while a < hi:
+                if a in cov:
+                    a += 1
+                    continue
+                b = a
+                while b < hi and b not in cov:
+                    b += 1
+                uncov.append([a, b])
+                a = b
             if ratio >= CODE_COVER:
                 verdict = "code"
             elif ratio > 0 or blind_ratio >= BRUTE_COVER:
@@ -442,6 +502,7 @@ def scan(banks, islands, code_items, labels):
                 "verdict": verdict, "coverage": round(ratio, 3),
                 "blind_coverage": round(blind_ratio, 3),
                 "entries": entries,
+                "uncovered_ranges": [[s, e] for s, e in uncov],
                 "fail_reasons": {f"${e:04X}": r for (k2, e), r in sorted(rejected.items())
                                  if k2 == k and lo <= e < hi},
                 "terminators": sorted(set(terms)),
@@ -502,7 +563,46 @@ def scan(banks, islands, code_items, labels):
             r["fail_reasons"]["bruteforce"] = f"全偏移盲扫最大覆盖 {best:.2f}（< {BRUTE_COVER}）"
 
     return (results, sorted(set(call_sites)), cands, accepted, rejected,
-            brute_stats, called_islands)
+            brute_stats, called_islands, jump_table_entries)
+
+
+# ---------------------------------------------------------------------------
+# 未覆盖段数据消费者核查（混合岛定谳：未覆盖字节是否被代码当表读）
+# ---------------------------------------------------------------------------
+READ_MNS = {"LDA", "LDX", "LDY", "ADC", "SBC", "CMP", "CPX", "CPY",
+            "AND", "ORA", "EOR", "BIT", "INC", "DEC", "ASL", "LSR", "ROL", "ROR"}
+ABS_MODES = {"abs", "abx", "aby"}
+
+
+def uncovered_consumers(banks, code_items, accepted, results) -> None:
+    """给每个岛的未覆盖段登记数据消费者（abs/abx/aby 读改写指令的操作数落段内）。
+    消费者>0 ⇒ 该段=被代码消费的内嵌表（B 级定谳依据）；=0 ⇒ 待查。P2-F2：按 bank 索引。"""
+    instrs: dict[int, list[dict]] = {k: [] for k in range(N_BANKS)}
+    seen: set[tuple[int, int]] = set()
+    for (k, _e), sw in accepted.items():
+        for ins in sw.instrs:
+            if (k, ins["addr"]) not in seen:
+                seen.add((k, ins["addr"]))
+                instrs[k].append(ins)
+    for k in range(N_BANKS):
+        bk = banks[k]
+        for a, _n in code_items[k]:
+            if (k, a) in seen:
+                continue
+            hit = OPS.get(bk.byte(a))
+            if not hit:
+                continue
+            mn, mode, ln = hit
+            t = bk.word(a + 1) if mode in ABS_MODES else None
+            instrs[k].append({"addr": a, "mn": mn, "mode": mode, "len": ln, "target": t})
+    for r in results:
+        cons: dict[str, list[str]] = {}
+        for s, e in r["uncovered_ranges"]:
+            hits = [f"${ins['addr']:04X}:{ins['mn']}" for ins in instrs[r["bank"]]
+                    if ins["mn"] in READ_MNS and ins["mode"] in ABS_MODES
+                    and ins["target"] is not None and s <= ins["target"] < e]
+            cons[f"${s:04X}-${e - 1:04X}"] = sorted(set(hits))
+        r["uncovered_consumers"] = {rng: sites[:6] for rng, sites in cons.items()}
 
 
 # ---------------------------------------------------------------------------
@@ -537,7 +637,26 @@ def check_baseline(results, call_sites, islands) -> list[str]:
 # ---------------------------------------------------------------------------
 # S/D 分母影响素材（只读矩阵；登记归 lead）
 # ---------------------------------------------------------------------------
-def denom_impact(results, justified_ok: set, matrix_path: Path | None):
+def source_types(sources: set[str] | list[str]) -> list[str]:
+    """佐证来源分类（P2-F1：fallthrough/xref/stream-xref/jump-table 可区分）。"""
+    out = set()
+    for s in sources:
+        if s.startswith("fallthrough-from-code"):
+            out.add("fallthrough")
+        elif s.startswith("xref-from-code"):
+            out.add("xref")
+        elif s.startswith("stream-xref"):
+            out.add("stream-xref")
+        elif s.startswith("jump-table"):
+            out.add("jump-table")
+        elif s == "island-start":
+            out.add("island-start")
+        else:
+            out.add("other")
+    return sorted(out)
+
+
+def denom_impact(results, cands: dict, justified_ok: set, matrix_path: Path | None):
     if not matrix_path or not matrix_path.is_file():
         return None
     m = json.loads(matrix_path.read_text(encoding="utf-8"))
@@ -563,10 +682,18 @@ def denom_impact(results, justified_ok: set, matrix_path: Path | None):
                     "verdict": r["verdict"],
                     "already_annotated": "错面登记" in note,
                 })
-    s_missing = sorted(f"bank{k:02d}:${e:04X}" for (k, e) in justified_ok
-                       if f"S-FUNC-{k:02d}-{e:04X}" not in sfuncs)
+    detail = []
+    for (k, e) in sorted(justified_ok):
+        if f"S-FUNC-{k:02d}-{e:04X}" in sfuncs:
+            continue
+        src = sorted(cands.get((k, e), set()))
+        detail.append({"entry": f"bank{k:02d}:${e:04X}",
+                       "source_types": source_types(src),
+                       "sources": src})
+    s_missing = [d["entry"] for d in detail]
     return {"wrong_face_d_cells": wrong_face,
             "s_face_missing_entries": s_missing,
+            "s_face_missing_detail": detail,
             "s_face_missing_count": len(s_missing)}
 
 
@@ -586,8 +713,9 @@ def main() -> int:
     n_bytes = sum(hi - lo for v in islands.values() for lo, hi in v)
     print(f"[decode-sweep] rom sha256 ok; seed 数据岛 {n_isl} 个 / {n_bytes} 字节")
 
-    results, call_sites, cands, accepted, rejected, brute, called_islands = scan(
-        banks, islands, code_items, labels)
+    (results, call_sites, cands, accepted, rejected, brute, called_islands,
+     jump_tables) = scan(banks, islands, code_items, labels)
+    uncovered_consumers(banks, code_items, accepted, results)
 
     by_v = {"code": 0, "data": 0, "未决": 0}
     for r in results:
@@ -596,7 +724,8 @@ def main() -> int:
                      and "盲扫命中" in r["fail_reasons"]["bruteforce"])
     print(f"[decode-sweep] verdict：code={by_v['code']}  data={by_v['data']}  未决={by_v['未决']}"
           f"（岛 {n_isl}；被采纳流 {len(accepted)}，被拒 {len(rejected)}，"
-          f"入口候选 {len(cands)}；盲扫升级 {n_brute_up}）")
+          f"入口候选 {len(cands)}；盲扫升级 {n_brute_up}；"
+          f"C27C 跳转表入口 {len(jump_tables)}）")
 
     print("\n== verdict=code 岛（解码缺口）==")
     for r in results:
@@ -612,6 +741,9 @@ def main() -> int:
         ents = [f"${e['entry']:04X}" for e in r["entries"]]
         print(f"bank{r['bank']:02d}:${r['start']:04X}-${r['end'] - 1:04X} ({r['size']}B) "
               f"coverage={r['coverage']} blind={r['blind_coverage']} entries={ents}")
+        for rng, sites in r.get("uncovered_consumers", {}).items():
+            tag = f"消费者 {len(sites)} 处" if sites else "无消费者"
+            print(f"    未覆盖 {rng}: {tag}" + (f" 例 {sites[:3]}" if sites else ""))
         if args.verbose:
             for e, why in r["fail_reasons"].items():
                 print(f"    {e}: {why}")
@@ -632,7 +764,7 @@ def main() -> int:
 
     justified_ok = {(k, e) for (k, e), sw in accepted.items()
                     if any(s != "island-start" for s in cands.get((k, e), set()))}
-    impact = denom_impact(results, justified_ok, args.matrix)
+    impact = denom_impact(results, cands, justified_ok, args.matrix)
     if impact:
         print("\n== S/D 分母影响素材（只读矩阵；登记归 lead）==")
         for w in impact["wrong_face_d_cells"]:
@@ -641,9 +773,11 @@ def main() -> int:
             print(f"  {tag} {w['cell']} {w['range']} ⊇ {w['island']} "
                   f"verdict={w['verdict']} [{mark}]")
         print(f"  S 面少计估计：有佐证岛内入口不在 S-FUNC 分母 = "
-              f"{impact['s_face_missing_count']} 个："
-              + ", ".join(impact["s_face_missing_entries"][:20])
-              + (" …" if impact["s_face_missing_count"] > 20 else ""))
+              f"{impact['s_face_missing_count']} 个（每条带佐证类型，P2-F1）：")
+        for d in impact["s_face_missing_detail"][:20]:
+            print(f"    {d['entry']}  [{'+'.join(d['source_types'])}]")
+        if impact["s_face_missing_count"] > 20:
+            print(f"    …（余 {impact['s_face_missing_count'] - 20} 条见 --json）")
 
     if args.json:
         args.json.write_text(json.dumps({
@@ -652,9 +786,11 @@ def main() -> int:
                            for k, a, t, kind in sorted(call_sites)],
             "called_islands": [f"bank{k:02d}:${lo:04X}-${hi - 1:04X}"
                                for k, lo, hi in sorted(called_islands)],
+            "jump_table_entries": jump_tables,
             "denom_impact": impact,
             "counts": {**by_v, "islands": n_isl, "island_bytes": n_bytes,
-                       "bruteforce_upgrades": n_brute_up},
+                       "bruteforce_upgrades": n_brute_up,
+                       "jump_table_entries": len(jump_tables)},
         }, ensure_ascii=False, indent=2), encoding="utf-8")
         print(f"\n[decode-sweep] json → {args.json}")
 
