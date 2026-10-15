@@ -460,3 +460,53 @@ pub fn fe83(input: &L2In) -> L2Out {
     fe83_apply(&mut ram, &mut events, memmap::flow_scratch::HEALTH_CHANGE_LO, 0x50);
     L2Out { a: 0x50, x: input.x, y: 0, writes: merge_writes(events) }
 }
+
+// ---- task-23 批1·③助手簇（L2 入口面：per-entry 适配 → title 域折叠实现——链规 19
+//      「行为面逐入口钉/代码面一实现」；同码两两共用同一域方法）----
+
+/// title 助手簇适配（域结果 → L2Out 写事件经 memmap::title_state）。
+fn title_helper_out(input: &L2In, o: crate::title::HelperOutcome) -> L2Out {
+    let mut events: Vec<(u16, u8)> = Vec::new();
+    if let Some(p) = o.phase {
+        events.push(memmap::title_state::write_event_phase(p));
+    }
+    if let Some(t) = o.timer3 {
+        events.push(memmap::title_state::write_event_timer3(t));
+    }
+    if let Some((cb, c9)) = o.cleared {
+        // ClearSpareMem 写序：`85 cb` 先、`85 c9` 后（事件序随 ROM；终值映射收敛）
+        events.push(memmap::title_state::write_event_spare_cb(cb));
+        events.push(memmap::title_state::write_event_spare_c9(c9));
+    }
+    L2Out { a: o.a_out, x: input.x, y: input.y, writes: merge_writes(events) }
+}
+
+/// 批1 入口 0A/0B 适配（注册名 `sub_IncTitleRoutine` ← bank00:$806E，同码折叠；
+/// stops=[] 哨兵窗——`e6 1f 60` 单 RTS）。
+pub fn title_inc(input: &L2In) -> L2Out {
+    let mut t = crate::title::TitleSequence::new(memmap::title_state::read_phase(&input.ram));
+    let o = t.advance(input.a);
+    title_helper_out(input, o)
+}
+
+/// 批1 入口 10 适配（注册名 `sub_ClearSpareMem` ← bank00:$8068，**落穿共享尾**：
+/// 清 $CB/$9…$C9 两址 + 推进 + A←0）。
+pub fn title_clear_spare(input: &L2In) -> L2Out {
+    let mut t = crate::title::TitleSequence::new(memmap::title_state::read_phase(&input.ram));
+    let o = t.clear_spare_and_advance();
+    title_helper_out(input, o)
+}
+
+/// 批1 入口 0F 适配（注册名 `sub_DelayIntroReplay` ← bank00:$8283，推进+Timer3←$10）。
+pub fn title_replay_delay(input: &L2In) -> L2Out {
+    let mut t = crate::title::TitleSequence::new(memmap::title_state::read_phase(&input.ram));
+    let o = t.set_replay_delay();
+    title_helper_out(input, o)
+}
+
+/// 批1 入口 13/14 适配（注册名 `sub_TitleRoutineReturn` ← bank00:$82F3 同码 `60` 空臂）。
+pub fn title_no_op(input: &L2In) -> L2Out {
+    let t = crate::title::TitleSequence::new(memmap::title_state::read_phase(&input.ram));
+    let o = t.no_op(input.a);
+    title_helper_out(input, o)
+}

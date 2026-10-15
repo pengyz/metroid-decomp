@@ -36,6 +36,26 @@
       "id": "S-FUNC-07-FE83",
       "addr": "07:FE83",
       "evidence": "task-9 定谳：asm 主文档（m1disasm UpdateTileBlast_Respawned:07:FE83 内容锚 × ROM 73B 逐字节）+ L2 九案三方全等（oracle/subroutines/l2_cases.jsonl#b-fe83-*）"
+    },
+    {
+      "id": "S-FUNC-00-806E",
+      "addr": "00:806E",
+      "evidence": "task-23 批1：IncTitleRoutine（0A/0B 同码 `e6 1f 60`（字节级同段））+ L2 入口案三方全等"
+    },
+    {
+      "id": "S-FUNC-00-8068",
+      "addr": "00:8068",
+      "evidence": "task-23 批1：ClearSpareMem（`a9 00 85 cb 85 c9` 落穿 $806E 共享尾）+ L2 入口案三方全等"
+    },
+    {
+      "id": "S-FUNC-00-8283",
+      "addr": "00:8283",
+      "evidence": "task-23 批1：DelayIntroReplay（`e6 1f a9 10 85 2c 60`）+ L2 入口案三方全等"
+    },
+    {
+      "id": "S-FUNC-00-82F3",
+      "addr": "00:82F3",
+      "evidence": "task-23 批1：TitleRoutineReturn（13/14 同码 `60`）+ L2 入口案三方全等"
     }
   ],
   "d_wrongface": {

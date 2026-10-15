@@ -44,6 +44,7 @@ cargo test --workspace                   # 同一差分引擎单元测试（rust
 | b-f282-*-w0..w7 / b-f2ed-full-w* / b-f2e8-fall-full-w*（32 案） | sub_F282/F2ED/F2E8 | 手推自 bank07:F282-F310 五路出口语义 + 逐 bank ROM 字节（prg[w×0x4000+0x15CE/0x168B]，python 一行自证） | **多窗口用例族**（task-14）：window_bank 0..7 全窗口，窗口表/向量按区域取数行为钉死 |
 | b-game-rng-*（8 案） | sub_GameRng | 手推自闭式推导（bank07:C000-C019 26B 结构互核：每调用 RN1+=0x19/RN2+=0x5F；种子 bank07:$C0AC）+ 动态交叉（docs/findings/game-rng-adjudication.md） | **RNG 序列族**（task-20）：步进语义/双轴回绕/X 保存恢复/A 死输入/写面={$2E,$2F} 面外=0——喂 N-0012 机械门谓词计数 |
 | b-fe83-*（9 案） | sub_FE83 | 手推自 asm 语义模型（bank07:FE83-FECB 73B/34 条结构互核：伤害序列全流含 F311→F338→F27B→F323 链）× ROM 腿独立裁定 | **复活伤害族**（task-9）：碰撞/无碰撞双路 + CMP 边界对 + hi 不等两链 + 进位丢弃 quirk 夹具——carry 极性（C=1 无碰撞）经写面钉死 |
+| b-title-*（7 案） | sub_IncTitleRoutine/ClearSpareMem/DelayIntroReplay/TitleRoutineReturn | 手推自 asm 字节语义（bank00:$806E/$8068/$8283/$82F3 结构互核：落穿共享尾+Timer3 单位+同码对）× ROM 腿裁定 | **title 批1 助手簇**（task-23）：0A/0B/13/14 同码对逐入口钉（同码折叠=链规 19 首证）+ 落穿语义 + 写面「不写≠同值写」+ INC 回绕边界 |
 
 新增用例规则：golden 必须手推自 seed 指令语义（A 级，注明行范围）；game-core 侧实现
 （`crates/game-core/src/l2ports.rs`）与用例同 commit 落地——**未实现例程不得入用例文件**

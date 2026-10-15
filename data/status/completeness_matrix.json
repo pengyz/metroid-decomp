@@ -18,7 +18,7 @@
       "denominator": 11
     },
     "symbol": {
-      "denominator": 465
+      "denominator": 469
     },
     "data": {
       "denominator": 193
@@ -6048,6 +6048,42 @@
       "covered": true,
       "evidence": "oracle/subroutines/l2_cases.jsonl#b-fe83-collision-horiz/collision-vert/collision-same-x/exit-y-far/exit-x-far/boundary-hit/boundary-miss/hi-unequal-x-hit/hi-unequal-y-exit 9 案三方全等（golden==ROM 执行==game-core，stops=[FEDB,CE92] 双出口）；语义来源 asm bank07:FE83-FECB 73B 结构互核 + tile_blast 域（docs 树 asm 主文档随模块）",
       "note": "denoms 补录格（D-REG-07-051 按段重切 s_part——decode-sweep-r2 §5 定谳）；【task-9】UpdateTileBlast_Respawned 域化=tile_blast + f186/f1fa 核组合（carry 契约面不扩）；伤害链 F311→F338→F27B→F323 随钉（调用集比 r2 记录多 F311）；段界 FE83-FECB 73B（r2 FECA 边界更正，JMP 跨 FEC9-FECB）"
+    },
+    "S-FUNC-00-806E": {
+      "id": "S-FUNC-00-806E",
+      "face": "symbol",
+      "module": "title",
+      "strength": "L2",
+      "covered": true,
+      "evidence": "oracle/subroutines/l2_cases.jsonl#b-title-*（IncTitleRoutine 入口案）三方全等（golden==ROM 执行==game-core，stops=[] 哨兵窗）；语义来源 asm bank00:806E（0A/0B 同码 `e6 1f 60`（字节级同段））",
+      "note": "denoms 补录格（IDA 机械切分未单列——title 30 例程批量 task-23 批1③助手簇）；链规 19 折叠形态（代码面 title 域一实现）"
+    },
+    "S-FUNC-00-8068": {
+      "id": "S-FUNC-00-8068",
+      "face": "symbol",
+      "module": "title",
+      "strength": "L2",
+      "covered": true,
+      "evidence": "oracle/subroutines/l2_cases.jsonl#b-title-*（ClearSpareMem 入口案）三方全等（golden==ROM 执行==game-core，stops=[] 哨兵窗）；语义来源 asm bank00:8068（`a9 00 85 cb 85 c9` 落穿 $806E 共享尾）",
+      "note": "denoms 补录格（IDA 机械切分未单列——title 30 例程批量 task-23 批1③助手簇）；链规 19 折叠形态（代码面 title 域一实现）"
+    },
+    "S-FUNC-00-8283": {
+      "id": "S-FUNC-00-8283",
+      "face": "symbol",
+      "module": "title",
+      "strength": "L2",
+      "covered": true,
+      "evidence": "oracle/subroutines/l2_cases.jsonl#b-title-*（DelayIntroReplay 入口案）三方全等（golden==ROM 执行==game-core，stops=[] 哨兵窗）；语义来源 asm bank00:8283（`e6 1f a9 10 85 2c 60`）",
+      "note": "denoms 补录格（IDA 机械切分未单列——title 30 例程批量 task-23 批1③助手簇）；链规 19 折叠形态（代码面 title 域一实现）"
+    },
+    "S-FUNC-00-82F3": {
+      "id": "S-FUNC-00-82F3",
+      "face": "symbol",
+      "module": "title",
+      "strength": "L2",
+      "covered": true,
+      "evidence": "oracle/subroutines/l2_cases.jsonl#b-title-*（TitleRoutineReturn 入口案）三方全等（golden==ROM 执行==game-core，stops=[] 哨兵窗）；语义来源 asm bank00:82F3（13/14 同码 `60`）",
+      "note": "denoms 补录格（IDA 机械切分未单列——title 30 例程批量 task-23 批1③助手簇）；链规 19 折叠形态（代码面 title 域一实现）"
     }
   }
 }

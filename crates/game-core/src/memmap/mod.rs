@@ -21,4 +21,5 @@ pub mod object;
 pub mod rng_state;
 pub mod rom_tables;
 pub mod tile_blasts;
+pub mod title_state;
 pub mod world_map;

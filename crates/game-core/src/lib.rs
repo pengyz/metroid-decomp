@@ -13,6 +13,7 @@ pub mod memmap;
 pub mod ram_map;
 pub mod rng;
 pub mod tile_blast;
+pub mod title;
 pub mod verify_shim;
 pub mod l2ports;
 

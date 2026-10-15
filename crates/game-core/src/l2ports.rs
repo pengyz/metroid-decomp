@@ -111,6 +111,10 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "sub_F2D8" => Some(sub_f2d8),
         "sub_GameRng" => Some(sub_game_rng),
         "sub_FE83" => Some(sub_fe83),
+        "sub_IncTitleRoutine" => Some(sub_title_inc),
+        "sub_ClearSpareMem" => Some(sub_title_clear_spare),
+        "sub_DelayIntroReplay" => Some(sub_title_replay_delay),
+        "sub_TitleRoutineReturn" => Some(sub_title_no_op),
         _ => None,
     }
 }
@@ -455,4 +459,31 @@ pub fn sub_game_rng(input: &L2In) -> L2Out {
 /// JMP 尾目标，出窗不执行）]；段界 FE83-FECB 73B/34 条（r2 边界 FECA 更正见域模块注）。
 pub fn sub_fe83(input: &L2In) -> L2Out {
     crate::verify_shim::fe83(input)
+}
+
+// ---- task-23 批1·③助手簇注册（链规 19：L2 面逐入口钉（用例 id 分 0A/0B/13/14），
+//      注册面=折叠单元 4 件——同码两两共用一注册名）----
+
+/// sub_IncTitleRoutine —— bank00:$806E 注册名（0A/0B 同码 `e6 1f 60`，字节级同段）。
+/// 域形态：title::TitleSequence::advance（状态推进单一实现）经 verify_shim::title_inc。
+pub fn sub_title_inc(input: &L2In) -> L2Out {
+    crate::verify_shim::title_inc(input)
+}
+
+/// sub_ClearSpareMem —— bank00:$8068 注册名（`a9 00 85 cb 85 c9` **落穿** $806E 共享尾）。
+/// 域形态：title::clear_spare_and_advance 经 verify_shim::title_clear_spare。
+pub fn sub_title_clear_spare(input: &L2In) -> L2Out {
+    crate::verify_shim::title_clear_spare(input)
+}
+
+/// sub_DelayIntroReplay —— bank00:$8283 注册名（`e6 1f a9 10 85 2c 60`）。
+/// 域形态：title::set_replay_delay（Timer3←$10=160 帧延迟）经 verify_shim::title_replay_delay。
+pub fn sub_title_replay_delay(input: &L2In) -> L2Out {
+    crate::verify_shim::title_replay_delay(input)
+}
+
+/// sub_TitleRoutineReturn —— bank00:$82F3 注册名（13/14 同码 `60` 空臂）。
+/// 域形态：title::no_op 经 verify_shim::title_no_op。
+pub fn sub_title_no_op(input: &L2In) -> L2Out {
+    crate::verify_shim::title_no_op(input)
 }
