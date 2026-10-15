@@ -767,6 +767,27 @@ SetPPUMirror: ; 07:C4B6（lsr×3/and #01/ora 串行）/PrepPPUMirror: ; 07:C4D9�
 append 前查 max-ID」=共享 git index 同族并行面，入案 ✓。
 findings（r10）：0 新。基线 69。
 
+## port2 task-22（4e7346d）：L3 实施槽机械面——v5 §5 对应项勾销核
+
+### verdict: pass
+
+### findings（逐项复现输出）
+
+**四槽↔v5 §5 勾销**：①严重-6 ✓：memmap::frame_face=字段面唯一源（zp/iram/wram
+编码器+WATCH_FACES；三面 512/3584/16384 hex 冒烟）+watch_snapshot 薄委托（lead
+例外授权=只动结构不动语义）+l3-dump 声明集过滤（未声明标签 fail-loud exit 2）
+——〔归属纠偏：frame_face.rs=port2 task-22 新件（f3855d2 pathspec 吸入 in-flight
+mod.rs 声明而漏 untracked 新件=破树根因，94be180 补入；非 porter 面——第五变体
+「新件与声明同刻 add」两方各吃）〕②严重-5 ✓：**wram 0x6000-0x7FFF 全 8KB** 实读
+（双侧同表；软上界作废=全状态原则；与 FrameMemory 8KB 同框）③严重-7 ✓：**缺
+frame_keys 坏例现场 exit 2**（「可为空数组缺键不行」实跑）+w 标签⊆声明集+坏例
+2/2 打回链 ④严重-10 ✓：scenario_sha256 对锚 True 实测+溯源链 note。
+**零回退 ✓**：trace-diff 1 案 0 失败复现；85 测。**v5 §5 剩余槽在册**：3/3b（采样
+迁移）/per-leg sample_point 键/5/6。
+
+（方法面：stat 对账升格**逐文件归属核对**（第五变体）；共享树禁 stash（第七案）
+——我方验证改 worktree 法；FAIL 文案归属线索=gates backlog 低优先。）
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接

@@ -111,3 +111,8 @@ baseline 更新本就强制 `--reason`，摩擦可接受。
 
 钩子本体是 `gates/hooks/pre-commit`、`gates/hooks/commit-msg` 薄封装，只 `exec python3 gates/cli.py …`；
 扫描/裁定逻辑唯一存在于 `gates/cli.py`（无第二套扫描逻辑）。挂接幂等，外来 hook 自动备份。
+
+## backlog（低优先）
+
+- FAIL 文案归属线索（port2 提议，lead 2026-10-15 入账）：门禁 FAIL 时标注「哪个文件/谁的 diff
+  引入的红」——现排查靠人肉对圈；实现面=FAIL detail 附相关文件路径/近期改动 hint。
