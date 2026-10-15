@@ -29,6 +29,12 @@ pub fn write_event(idx: u8, v: u8) -> (u16, u8) {
     (ENEMY_TODO_040E_BASE + idx as u16, v)
 }
 
+/// F2CA 流状态值源读（abs,Y 16 位加：RAM[$0300+Y]）。
+/// 证据（A 级）：bank07:F2CC `B9 00 03` LDA $0300,Y → F2CF `9D 0E 04` STA $040E,X。
+pub fn state_source(ram: &[u8], y: u8) -> u8 {
+    ram[(0x0300u16 + y as u16) as usize & 0x7FF]
+}
+
 /// 状态变更 → 写集（仅值变化面，供一致性互检；L2 契约面用 write_event）。
 pub fn diff_writes(before: &EnemyTodo040E, after: &EnemyTodo040E) -> Vec<(u16, u8)> {
     let (b, a) = (before.entries(), after.entries());

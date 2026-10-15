@@ -5,7 +5,7 @@
   "rom_sha256": "e6e6b7014685adae447ebb3833242815747bc1e5df83ade79f693fb67cf565b6",
   "projection": "reference/seed/metroid.asm",
   "counts": {
-    "mechanical_to_domain": 5
+    "mechanical_to_domain": 6
   },
   "vectors": {},
   "entries": [
@@ -47,6 +47,14 @@
       "domain": "enemy::{EnemyTodo040E::set_entry + EnemyTodo0404::or_writeback}（跨 view）",
       "via": "verify_shim::f2ad",
       "evidence": "two-layer §5 新实施件（本 commit）；L2 案 gen-f2ad-*/b-f2ad-* 三方全等",
+      "confidence": 95
+    },
+    {
+      "mechanical": "sub_F2CA",
+      "addr": "bank07:F2CA-F2DE",
+      "domain": "enemy::{EnemyTodo040E::set_entry + EnemyAttrs::or_attribute + EnemyTodo0404::or_writeback}（carry 敏感跨 view）",
+      "via": "verify_shim::f2ca",
+      "evidence": "two-layer §5 新实施件（本 commit）；L2 案 gen-f2ca-*/b-f2ca-* 三方全等（双向 carry 面）",
       "confidence": 95
     }
   ]

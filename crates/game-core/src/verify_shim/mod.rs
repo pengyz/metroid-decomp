@@ -79,3 +79,31 @@ pub fn f2ad(input: &L2In) -> L2Out {
     ];
     L2Out { a: a_out, x: input.x, y: input.y, writes }
 }
+
+/// f2ca 适配（注册名 `sub_F2CA` ← bank07:F2CA-F2DE，stops=bank07:F2DE）。
+///
+/// **carry 敏感 + 跨 view 三方法组合**（lead 注记④双向 carry 面）：
+/// 入参 C=1（`BCS $F2DE`）⇒ 空写集直出（A/X/Y 透传）；
+/// C=0 ⇒ EnemyTodo040E::set_entry（$040E+X←RAM[$0300+Y]，值源=memmap::state_source）
+/// + EnemyAttrs::or_attribute（$030A+Y←RAM[$10]|old，F279 尾）
+/// + EnemyTodo0404::or_writeback（$0404+X←变换掩码|old，F2D5 流）。
+/// 写集：三域 write_event 依序推导。内返回址 F281（F279）/C2C9（F332）逐址核过不在 stops。
+pub fn f2ca(input: &L2In) -> L2Out {
+    const FLAG_C: u8 = 0x01;
+    if input.p & FLAG_C != 0 {
+        return L2Out { a: input.a, x: input.x, y: input.y, writes: vec![] };
+    }
+    let mut e040e = memmap::enemy_todo_040e::decode_todo_040e(&input.ram);
+    let mut attrs = memmap::enemy_attrs::decode_attrs(&input.ram);
+    let mut v0404 = memmap::enemy_todo_0404::decode_todo_0404(&input.ram);
+    let state_v = e040e.set_entry(input.x, memmap::enemy_todo_040e::state_source(&input.ram, input.y));
+    let attr_v = attrs.or_attribute(input.y, memmap::enemy_todo_0404::mask10(&input.ram));
+    let mask = memmap::enemy_todo_0404::mask10_transformed(&input.ram);
+    let a_out = v0404.or_writeback(input.x, mask);
+    let writes = vec![
+        memmap::enemy_todo_040e::write_event(input.x, state_v),
+        memmap::enemy_attrs::write_event(input.y, attr_v),
+        memmap::enemy_todo_0404::write_event(input.x, a_out),
+    ];
+    L2Out { a: a_out, x: input.x, y: input.y, writes }
+}

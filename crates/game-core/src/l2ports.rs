@@ -104,6 +104,7 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "sub_F2DF" => Some(sub_f2df),
         "sub_F2D5" => Some(sub_f2d5),
         "sub_F2AD" => Some(sub_f2ad),
+        "sub_F2CA" => Some(sub_f2ca),
         "sub_F2D8" => Some(sub_f2d8),
         _ => None,
     }
@@ -510,4 +511,11 @@ pub fn sub_f2d5(input: &L2In) -> L2Out {
 /// L2 窗口 stops=bank07:F2DE；F2B4 块自 F2AD 入口不可达（BNE 恒转，F2BD BCS $F298 侧不入窗）。
 pub fn sub_f2ad(input: &L2In) -> L2Out {
     crate::verify_shim::f2ad(input)
+}
+
+/// sub_F2CA —— bank07:F2CA-F2DE 注册名（机械名只在注册注释，two-layer §4）。
+/// **域形态**（§5 新实施件）：carry 敏感跨 view 三方法组合（见 verify_shim::f2ca doc）。
+/// L2 窗口 stops=bank07:F2DE（内返回址 F281/C2C9 逐址核过不在 stops）。
+pub fn sub_f2ca(input: &L2In) -> L2Out {
+    crate::verify_shim::f2ca(input)
 }

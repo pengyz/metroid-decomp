@@ -3871,6 +3871,15 @@
       "evidence": "bank07:F2B4-F2CA（IDA 机械切分 size=22）",
       "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
     },
+    "S-FUNC-07-F2CA": {
+      "id": "S-FUNC-07-F2CA",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L2",
+      "covered": true,
+      "evidence": "oracle/subroutines/l2_cases.jsonl#gen-f2ca-0..7 + #b-f2ca-c1-exit/b-f2ca-xyff/b-f2ca-mask0-noop 三方全等（golden==ROM 执行==game-core）；语义来源 ROM 原字节 bank07:F2CA-F2DE=B0 12 B9 00 03 9D 0E 04 20 79 F2 + F2D5 流逐指令",
+      "note": "decode-gap 补录格（IDA 机械切分漏码当数据，decode-sweep r1 §3 岛 $F2CA-$F305 A 级）；denoms 机械切分待纠偏（decode-sweep/task-2 出 v2 后回填）；【two-layer §5 新实施件】carry 敏感跨 view 三方法组合（入参 C=1 空写集直出；C=0=set_entry($040E+X←RAM[$0300+Y])+or_attribute($030A+Y←RAM[$10]|old，F279 尾)+or_writeback($0404+X 变换掩码)）；L2 窗口 stops=bank07:F2DE（内返回址 F281/C2C9 逐址核过）；F2CA 族九入口第 6 件"
+    },
     "S-FUNC-07-F2D5": {
       "id": "S-FUNC-07-F2D5",
       "face": "symbol",
