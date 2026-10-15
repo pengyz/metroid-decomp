@@ -86,7 +86,8 @@ pub fn boot_init(mem: &mut FrameMemory) {
             mem.write_ram(0x002E, 0x11);
             mem.write_ram(0x002F, 0xFF);
             mem.write_ram(0x0024, 0x01);
-            crate::unported!("bank07:C4DE"); // 下一单元（主循环件）
+            // C4DE 单元（PRG 换 bank+分派——已端口）
+            c4de_unit(mem);
         }
     }
 }
@@ -163,6 +164,58 @@ pub fn c4b2_unit(mem: &mut FrameMemory) {
     mem.write_ram(0x0025, v);
     mmc1_serial_write(mem, io::MMC1_CTRL);
     mem.regs.a = v;
+}
+
+/// C4DE 单元——PRG 换 bank + 跳转表分派（**asm 引证主体**，链规 17）：
+/// refs/m1disasm/SRC/prg7_engine.asm:1296 `CheckBankSwitch: ; 07:C4DE`
+/// （注：「Exit if zero(no bank switch issued). else Y contains bank#+1」）→
+/// :1305 `CheckBankSwitch_OK: ; 07:C4E8`（「clear BankSwitchPending…dey sty CurrentBank」）
+/// → `BankSwitch: ; 07:C4EF`（「tya sta Temp00_Bank / lda SwitchUpperBits and #$18」）→
+/// :1318 族 `MMCWritePrgBank: ; 07:C4FA`（「Write bit 0..4 of ROM bank #」×5 串行）
+/// → :1351 `GoBankInit: ; 07:C510`（「asl tay / jmp (Temp0A_BankInitPtr)」）+ 表 :1363
+/// `BankInitTable: ; 07:C51F`（.word InitBank0..5/ExitSub×3）。
+/// ROM 抽查佐证：`C4DE: A4 24 F0 2D 20 E8 C4 4C 10 C5`。
+/// boot 态 $24=1（C0B4 置）→ 索引 0 → 表项 InitBank0（$C531）。其他表项未端口——fail-loud。
+pub fn c4de_unit(mem: &mut FrameMemory) {
+    let y_in = mem.read_ram(0x0024);
+    if y_in == 0 {
+        return; // 早出（A 不动——C4E0 BEQ $C50F）
+    }
+    // C4E8 体（含 C4FA 共享段 PRG 串行写——与 C01A 折叠同源）
+    mem.write_ram(0x0024, 0);
+    let idx = y_in.wrapping_sub(1);
+    mem.write_ram(0x0023, idx);
+    mem.write_ram(0x0000, idx);
+    let v = (mem.read_ram(0x0028) & 0x18) | idx;
+    mem.write_ram(0x0028, v);
+    mem.regs.a = v;
+    mmc1_serial_write(mem, io::MMC1_PRG);
+    mem.regs.a = mem.read_ram(0x0000); // C50D LDA $00（分派索引）
+    // C510 分派（表 bank0:C51F `31 C5 52 C5 …`）
+    match mem.regs.a {
+        0 => c531_unit(mem),
+        _ => crate::unported!("bank00:C51F"), // 非 boot 表项未端口
+    }
+}
+
+/// C531 单元（boot 分派目标；**asm 引证主体**，链规 17）——
+/// refs/m1disasm/SRC/prg7_engine.asm:1376 `InitBank0: ; 07:C531`（「Title screen memory
+/// page」注）：`sty GamePaused`（$31=0）/`sty GameMode`（$1D=1）→ :1381 `jsr ScreenNmiOff
+/// ($C45D)`（「Waits for NMI to end then turns it off」）→ `jsr CopyMap ($A93E)`（「Copy game
+/// map from ROM to cartridge RAM $7000-$73FF」）→ `jsr ClearNameTables ($C158)`（**复用已
+/// 端口件**）→ 星星拷贝（「Loads sprite info for stars into RAM $6E00 thru 6E9F」，
+/// IntroStarsData→IntroStarSprite，$A0 字节）→ `jsr InitTitleGFX ($C5D7)` → `jmp NMIOn
+/// ($C487)`（「Turn on VBlank interrupts」）。ROM 抽查：`C531: A0 00 84 31 C8 84 1D`。
+/// 链首桩=ScreenNmiOff（C45D）——逐段端口。
+fn c531_unit(mem: &mut FrameMemory) {
+    mem.write_ram(0x0031, 0);
+    mem.write_ram(0x001D, 1);
+    crate::unported!("bank07:C45D"); // 链首桩（每引爆一个端一个）
+    #[allow(unreachable_code)]
+    {
+        // 后续链段：JSR $A93E（窗口件）/JSR $C158（c158_unit 复用）/ROM→WRAM 拷贝
+        // （memmap 烘焙源）/JSR $C5D7/JMP $C487——逐段端口
+    }
 }
 
 /// MMC1 串行写（5 次 STA，值 LSR 递移——bank07:C01C/C02B/C4FA 形态；非 RAM 面）。
@@ -276,6 +329,22 @@ mod tests {
         assert_eq!(m.read_ram(0x0000), 0x00); // ($47>>3)&1=0
         assert_eq!(m.read_ram(0x0025), 0x0E);
         assert_eq!(m.regs.a, 0x0E);
+    }
+
+    /// C4DE 早出（$24==0：A 不动）与状态面（$24=0/$23=idx/$00=idx/$28 组合）。
+    #[test]
+    fn c4de_early_exit_and_state_update() {
+        let mut m = FrameMemory::default();
+        m.regs.a = 0x77;
+        c4de_unit(&mut m); // $24==0 → 早出
+        assert_eq!(m.regs.a, 0x77);
+        m.write_ram(0x0024, 1); // boot 态
+        let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| c4de_unit(&mut m)));
+        let msg = panic_message(&r.unwrap_err());
+        assert!(msg.contains("unported @ bank07:C45D"), "引爆点失准: {msg}");
+        assert_eq!(m.read_ram(0x0024), 0); // C4E8 已跑
+        assert_eq!(m.read_ram(0x0023), 0);
+        assert_eq!(m.read_ram(0x0028), 0); // ($28&0x18)|0
     }
 
     /// WRAM 环（bank07:C057-C06B）：$6000-$7FFF 同型填充。
