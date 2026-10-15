@@ -58,6 +58,7 @@ PASS = "PASS"
 FAIL = "FAIL"
 SKIP = "SKIP"
 TOLERATED = "TOLERATED"
+DEFERRED = "DEFERRED"   # proof-checks v2：环境执行不能（≠证书失败，绝不计 PASS）
 
 # baseline.json.metrics 的固定键集合（ratchet 计数器，均为"只增"型）。
 METRIC_KEYS = (
@@ -783,15 +784,30 @@ def gate_completeness_ratchet() -> tuple[str, str]:
     return PASS, f"完备性已覆盖格 {measured}（基线 {floor}，只增不降）"
 
 
-# ---------------------------------------------------------------- proof-checks（证书防腐）
+# ---------------------------------------------------------------- proof-checks（证书防腐 v2）
 # int-x 复审遗留 3：证明证书（SMT unsat / 桥接 0 分歧 / 穷举 0 分歧）入库后若无机器复跑，
-# 代码改动后旧声明静默腐烂。本门禁每次 check 复跑证书；桥接二进制必须由**当前源码**新鲜
-# 构建（stale 二进制=假绿，正是腐烂面本身）。
+# 代码改动后旧声明静默腐烂。v2（2026-10-15 lead 批准，r7 设计节）：
+#   ① 按变更面触发：delta（staged∪worktree-vs-HEAD）∩ S_intx = ∅ ⇒ 显式 SKIP（docs-only
+#      commit 免 43s）；git 不可判 ⇒ 跑全量——**不确定绝不导向跳过**；
+#   ② 环境超时 ≠ 证书失败：证书坏=FAIL（无豁免）；执行不能（超时）=重试 1 次后
+#      DEFERRED(环境) + 复检欠账（gates/proof_deferred.jsonl，销账=任一次全量 PASS）。
+#      防绿底线不动：DEFERRED 绝不计 PASS，收尾行不打裸 PASS（PASS-WITH-DEFERRED）。
 
 PROOF_FULL_ENV = "GATES_PROOF_FULL"        # =1 时追加 int_y 2^32 穷举腿（CI/里程碑）
+PROOF_FORCE_ENV = "GATES_PROOF_FORCE"      # =1 无视变更面强制全量（CI/里程碑/销账）
+PROOF_DEFERRED_REL = Path("gates") / "proof_deferred.jsonl"   # 复检欠账（环境事件账，非尺子）
 PROOF_INTX_TIMEOUT_S = 180                 # 实测 43.3s（2026-10-15），留 4 倍余量
 PROOF_INTY_TIMEOUT_S = 900                 # 穷举实测 ~4 分钟，留余量
 PROOF_ROM_REL = Path("rom") / "Metroid (USA).nes"
+# S_intx 触发集：可影响证书三面（Side A 公式 / Rust 实现 / 桥接·穷举探针）的文件全入面。
+PROOF_SURFACE = (
+    "crates/game-core/src/integrators.rs",
+    "crates/game-core/src/l2ports.rs",
+    "tools/int_x_smt_proof.py",
+    "crates/game-oracle/src/bin/int-x-bridge.rs",
+    "crates/game-oracle/src/bin/int-y-proof.rs",
+)
+PROOF_DEFERRED_RE = re.compile(r"^ProofDeferred\s*[:：]\s*\S+", re.M)
 
 
 def intx_cert_output_ok(text: str) -> tuple[bool, str]:
@@ -818,6 +834,95 @@ def inty_cert_output_ok(text: str) -> tuple[bool, str]:
     return True, "EXHAUSTIVE PROOF 4294967296 点全枚举 0 分歧标记在位"
 
 
+def proof_delta_paths() -> list[str] | None:
+    """变更面名单 = staged ∪ worktree-vs-HEAD（改名两侧均计）；git 不可得 ⇒ None（fail-safe）。"""
+    out: list[str] = []
+    try:
+        for args in (["git", "diff", "--cached", "--name-status", "-M"],
+                     ["git", "diff", "--name-status", "-M"]):
+            proc = subprocess.run(args, cwd=ROOT, capture_output=True, text=True,
+                                  encoding="utf-8", errors="replace", env=_child_env())
+            if proc.returncode != 0:
+                return None
+            out.extend(parse_name_status(proc.stdout))
+    except OSError:
+        return None
+    return sorted({p.replace("\\", "/").lstrip("./") for p in out if p})
+
+
+def proof_trigger(force: bool, delta: list[str] | None) -> tuple[str, str]:
+    """触发判定（单一实现，门禁与自检共用）：返回 (run|skip, 理由)。不确定绝不导向 skip。"""
+    if force:
+        return "run", f"{PROOF_FORCE_ENV}=1 强制全量"
+    if delta is None:
+        return "run", "git 变更面不可判（fail-safe：按含面处理，跑全量）"
+    hit = sorted(set(delta) & set(PROOF_SURFACE))
+    if hit:
+        return "run", f"变更面命中 S_intx: {', '.join(hit[:5])}"
+    shown = ", ".join(delta[:5]) + ("…" if len(delta) > 5 else "")
+    return "skip", f"变更面不含 S_intx——delta={shown or '（空）'}"
+
+
+def proof_deferred_records(path: Path | None = None) -> list[dict]:
+    """复检欠账读取：缺失/空 ⇒ []（无欠账）。"""
+    p = path or (ROOT / PROOF_DEFERRED_REL)
+    if not p.is_file():
+        return []
+    out = []
+    for line in p.read_text(encoding="utf-8").splitlines():
+        if line.strip():
+            out.append(json.loads(line))
+    return out
+
+
+def proof_deferred_open(path: Path | None = None) -> int:
+    """未销账欠账数（0 ⇒ 无欠账）。"""
+    return sum(1 for r in proof_deferred_records(path) if not r.get("settled"))
+
+
+def proof_deferred_append(record: dict, path: Path | None = None) -> None:
+    """登记欠账（环境事件账；每条含解锁判据文本）。同步 sha 锚点防删账。"""
+    p = path or (ROOT / PROOF_DEFERRED_REL)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    with open(p, "a", encoding="utf-8", newline="\n") as f:
+        f.write(json.dumps(record, ensure_ascii=False) + "\n")
+    if path is None:
+        sync_state_anchors()   # 欠账文件入 sha 锚点：删账=rom-integrity FAIL（不静默消失）
+
+
+def proof_deferred_settle_all(evidence: str, path: Path | None = None) -> int:
+    """销账：任一次全量 PASS ⇒ 全部未销账行写 settled（含 PASS 输出原文）。返回销账数。"""
+    p = path or (ROOT / PROOF_DEFERRED_REL)
+    records = proof_deferred_records(p)
+    n = sum(1 for r in records if not r.get("settled"))
+    if n == 0:
+        return 0
+    ts = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    for r in records:
+        if not r.get("settled"):
+            r["settled"] = {"ts": ts, "evidence": evidence[:300]}
+    p.write_text("".join(json.dumps(r, ensure_ascii=False) + "\n" for r in records),
+                 encoding="utf-8", newline="\n")
+    sync_state_anchors()
+    return n
+
+
+def _run_with_timeout_retry(cmd: list[str], timeout_s: int, label: str) -> tuple[str, object, str]:
+    """执行→超时原样重试 1 次。status: ran | deferred | oserror。"""
+    note = ""
+    for attempt in (1, 2):
+        try:
+            proc = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True,
+                                  encoding="utf-8", errors="replace", env=_child_env(),
+                                  timeout=timeout_s)
+            return "ran", proc, f"{label} attempt={attempt}"
+        except subprocess.TimeoutExpired:
+            note = f"{label} attempt={attempt} wall-clock 超时（>{timeout_s}s）"
+        except OSError as exc:
+            return "oserror", None, f"{label} 不可达（fail-loud）: {exc}"
+    return "deferred", None, note
+
+
 def _release_bin(name: str) -> Path | None:
     for cand in (ROOT / "target" / "release" / name, ROOT / "target" / "release" / f"{name}.exe"):
         if cand.is_file():
@@ -825,83 +930,112 @@ def _release_bin(name: str) -> Path | None:
     return None
 
 
-def _cargo_build_release_bin(bin_name: str, timeout_s: int = 600) -> tuple[str, str]:
-    """新鲜构建 release 二进制（成功返回 (PASS, 摘要)，失败返回 (FAIL, 原因)）。"""
-    try:
-        proc = subprocess.run(
-            ["cargo", "build", "--release", "-p", "game-oracle", "--bin", bin_name],
-            cwd=ROOT, capture_output=True, text=True, encoding="utf-8", errors="replace",
-            env=_child_env(), timeout=timeout_s,
-        )
-    except subprocess.TimeoutExpired:
-        return FAIL, f"cargo build --bin {bin_name} 超时（>{timeout_s}s）"
-    except OSError as exc:
-        return FAIL, f"cargo 不可达（fail-loud，证书复跑能力消失不得静默放行）: {exc}"
-    if proc.returncode != 0:
-        tail = ((proc.stdout or "") + (proc.stderr or "")).strip().splitlines()[-5:]
-        return FAIL, f"cargo build --bin {bin_name} 失败（桥接/穷举必须由当前源码构建，禁 stale 二进制）: " + " | ".join(tail)
-    return PASS, f"cargo build --release --bin {bin_name} 新鲜构建 ok"
+def _deferred_detail(note: str, force_hint: bool = True) -> tuple[str, str]:
+    """DEFERRED 裁决 + 欠账登记 + 解锁判据（防静默绿：绝不计 PASS）。"""
+    record = {
+        "ts": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "kind": "proof-checks-deferred",
+        "detail": note,
+        "unlock": (f"解锁判据：任一次全量 proof-checks PASS（{PROOF_FORCE_ENV}=1 或变更面命中 "
+                   f"S_intx）即自动销账；含 S_intx 变更的 commit 在未销账期间必须带 "
+                   f"ProofDeferred: <本行 id>"),
+        "id": hashlib.sha256(note.encode("utf-8")).hexdigest()[:12],
+        "settled": None,
+    }
+    proof_deferred_append(record)
+    n = proof_deferred_open()
+    return DEFERRED, (f"环境执行不能（非证书失败）：{note}——已重试 1 次仍超时；"
+                     f"欠账 {record['id']} 已登记（未销账 {n}）；{record['unlock']}"
+                     f"【DEFERRED 绝不等于通过】")
 
 
 def gate_proof_checks() -> tuple[str, str]:
-    """proof-checks —— 证明证书防腐（int-x 复审遗留 3）。
+    """proof-checks v2 —— 证明证书防腐（int-x 复审遗留 3）。
 
-    常驻腿：tools/int_x_smt_proof.py（SMT miter 2^40 + 公式↔Rust 桥接 66,976 点，实测 43.3s）；
-    前置：cargo build --release --bin int-x-bridge 新鲜构建后才许跑桥接。
-    可选腿（PROOF_FULL_ENV=1，CI/里程碑）：int_y 2^32 穷举（实测 ~4 分钟）；门禁内默认
-    只跑 SMT+桥接，穷举显式 SKIP 打印（绝不静默）。
+    常驻腿：tools/int_x_smt_proof.py（SMT miter 2^40 + 公式↔Rust 桥接 66,976 点）；
+    可选腿（PROOF_FULL_ENV=1）：int_y 2^32 穷举（默认显式 SKIP 不静默）。
+    触发与超时语义见本节头注（r7 设计节为设计真相源）。
     """
-    script = ROOT / "tools" / "int_x_smt_proof.py"
-    if not script.is_file():
-        return FAIL, ("『证书复跑脚本消失』：tools/int_x_smt_proof.py 缺失——int_x 证明证书已入库"
-                      "（efedd5e），复跑能力消失不得静默回 SKIP/PASS")
-    verdict, detail = _cargo_build_release_bin("int-x-bridge")
-    if verdict != PASS:
-        return FAIL, f"int_x 桥接前置失败: {detail}"
+    missing = [p for p in PROOF_SURFACE if not (ROOT / p).is_file()]
+    if missing:
+        return FAIL, (f"『前置对象消失』：S_intx 证书锚面文件缺失 {missing}"
+                      f"——复跑能力消失不得静默回 SKIP/PASS")
+    force = os.environ.get(PROOF_FORCE_ENV, "") == "1"
+    delta = proof_delta_paths()
+    action, why = proof_trigger(force, delta)
+    if action == "skip":
+        debts = proof_deferred_open()
+        warn = f"；复检欠账 {debts} 未销（显式 WARN，欠账不静默消失）" if debts else ""
+        return SKIP, (f"{why}；{PROOF_FORCE_ENV}=1 强制复跑{warn}")
+    # ---- 全量腿：先新鲜构建桥接二进制（stale 二进制=假绿，正是腐烂面本身）
     try:
-        proc = subprocess.run([sys.executable, str(script)], cwd=ROOT, capture_output=True,
-                              text=True, encoding="utf-8", errors="replace", env=_child_env(),
-                              timeout=PROOF_INTX_TIMEOUT_S)
+        build = subprocess.run(
+            ["cargo", "build", "--release", "-p", "game-oracle", "--bin", "int-x-bridge"],
+            cwd=ROOT, capture_output=True, text=True, encoding="utf-8", errors="replace",
+            env=_child_env(), timeout=PROOF_INTX_TIMEOUT_S * 4,
+        )
     except subprocess.TimeoutExpired:
-        return FAIL, f"int_x SMT+桥接复跑超时（>{PROOF_INTX_TIMEOUT_S}s）——禁止静默放行"
+        return _deferred_detail(f"cargo build --bin int-x-bridge 超时（>{PROOF_INTX_TIMEOUT_S * 4}s）")
     except OSError as exc:
-        return FAIL, f"int_x 证明脚本不可执行（fail-loud）: {exc}"
+        return FAIL, f"cargo 不可达（fail-loud，证书复跑能力消失不得静默放行）: {exc}"
+    if build.returncode != 0:
+        tail = ((build.stdout or "") + (build.stderr or "")).strip().splitlines()[-5:]
+        return FAIL, ("cargo build --bin int-x-bridge 失败（桥接必须由当前源码构建，禁 stale 二进制"
+                      "——可能是移植 WIP 破坏编译，按 §4 定位层）: " + " | ".join(tail))
+    status, proc, note = _run_with_timeout_retry(
+        [sys.executable, str(ROOT / "tools" / "int_x_smt_proof.py")], PROOF_INTX_TIMEOUT_S, "int_x")
+    if status == "deferred":
+        return _deferred_detail(note)
+    if status == "oserror":
+        return FAIL, note
     if proc.returncode != 0:
         tail = ((proc.stdout or "") + (proc.stderr or "")).strip().splitlines()[-5:]
-        return FAIL, "int_x SMT/桥接复跑失败: " + " | ".join(tail)
+        return FAIL, f"int_x SMT/桥接复跑失败（{note}）: " + " | ".join(tail)
     ok, cert = intx_cert_output_ok(proc.stdout or "")
     if not ok:
-        return FAIL, f"int_x 证书输出校验失败: {cert}"
+        return FAIL, f"int_x 证书输出校验失败（{note}）: {cert}"
     outs = [l for l in (proc.stdout or "").strip().splitlines() if l.strip()]
     echo = " | ".join(l[:110] for l in outs[-2:]) if outs else cert
     detail = f"int_x SMT+桥接证书复跑通过（{cert}；输出原文: {echo}）"
     if os.environ.get(PROOF_FULL_ENV, "") != "1":
-        return PASS, (detail + f"；int_y 2^32 穷举: SKIP（显式：~4 分钟留 CI/里程碑——"
-                      f"{PROOF_FULL_ENV}=1 python3 gates/cli.py check 启用）")
+        settled = proof_deferred_settle_all(echo)
+        tail_ = f"；销账 {settled} 条欠账" if settled else ""
+        return PASS, (detail + tail_ + f"；int_y 2^32 穷举: SKIP（显式：~4 分钟留 CI/里程碑——"
+                      f"{PROOF_FULL_ENV}=1 python3 gates/cli.py check 启用）；触发: {why}")
     rom = ROOT / PROOF_ROM_REL
     if not rom.is_file():
         return FAIL, f"{PROOF_FULL_ENV}=1 显式要求穷举但 ROM 缺失: {PROOF_ROM_REL.as_posix()}（BYO-ROM，不得静默降级）"
-    verdict, detail_b = _cargo_build_release_bin("int-y-proof")
-    if verdict != PASS:
-        return FAIL, f"int_y 穷举前置失败: {detail_b}"
+    try:
+        build2 = subprocess.run(
+            ["cargo", "build", "--release", "-p", "game-oracle", "--bin", "int-y-proof"],
+            cwd=ROOT, capture_output=True, text=True, encoding="utf-8", errors="replace",
+            env=_child_env(), timeout=PROOF_INTX_TIMEOUT_S * 4,
+        )
+    except subprocess.TimeoutExpired:
+        return _deferred_detail("cargo build --bin int-y-proof 超时")
+    except OSError as exc:
+        return FAIL, f"cargo 不可达（fail-loud）: {exc}"
+    if build2.returncode != 0:
+        tail = ((build2.stdout or "") + (build2.stderr or "")).strip().splitlines()[-5:]
+        return FAIL, "cargo build --bin int-y-proof 失败: " + " | ".join(tail)
     bin_path = _release_bin("int-y-proof")
     if bin_path is None:
         return FAIL, "『前置对象消失』：int-y-proof 二进制构建成功但落点不存在（target/release/）"
-    try:
-        proc2 = subprocess.run([str(bin_path), "--rom", str(rom)], cwd=ROOT, capture_output=True,
-                               text=True, encoding="utf-8", errors="replace", env=_child_env(),
-                               timeout=PROOF_INTY_TIMEOUT_S)
-    except subprocess.TimeoutExpired:
-        return FAIL, f"int_y 2^32 穷举超时（>{PROOF_INTY_TIMEOUT_S}s）——禁止静默放行"
-    except OSError as exc:
-        return FAIL, f"int_y 穷举不可执行（fail-loud）: {exc}"
+    status2, proc2, note2 = _run_with_timeout_retry(
+        [str(bin_path), "--rom", str(rom)], PROOF_INTY_TIMEOUT_S, "int_y 穷举")
+    if status2 == "deferred":
+        return _deferred_detail(note2)
+    if status2 == "oserror":
+        return FAIL, note2
     if proc2.returncode != 0:
         tail = ((proc2.stdout or "") + (proc2.stderr or "")).strip().splitlines()[-5:]
-        return FAIL, "int_y 2^32 穷举失败: " + " | ".join(tail)
+        return FAIL, f"int_y 2^32 穷举失败（{note2}）: " + " | ".join(tail)
     ok2, cert2 = inty_cert_output_ok(proc2.stdout or "")
     if not ok2:
-        return FAIL, f"int_y 穷举证书输出校验失败: {cert2}"
-    return PASS, detail + f"；int_y 2^32 穷举证书复跑通过（{cert2}）"
+        return FAIL, f"int_y 穷举证书输出校验失败（{note2}）: {cert2}"
+    settled = proof_deferred_settle_all(echo + " | " + cert2)
+    tail_ = f"；销账 {settled} 条欠账" if settled else ""
+    return PASS, detail + tail_ + f"；int_y 2^32 穷举证书复跑通过（{cert2}）；触发: {why}"
 
 
 # ---------------------------------------------------------------- 门禁注册表
@@ -920,7 +1054,7 @@ GATES: list[tuple[str, str, str, str, object]] = [
     ("trace-diff", "启用（oracle 腿；game-core 腿 S5 自动启用）", "trace", "L3：帧级状态向量逐 tick 比对（oracle vs Rust）", gate_trace_diff),
     ("visual-diff", "S6 启用", "visual", "L4：截图逐像素（白名单外）", gate_visual_diff),
     ("completeness-ratchet", "矩阵建立后启用", "all", "完备性矩阵覆盖只增不降", gate_completeness_ratchet),
-    ("proof-checks", "启用（SMT+桥接内联；int_y 穷举留 CI/里程碑）", "check",
+    ("proof-checks", "启用（按变更面触发；SMT+桥接内联；int_y 穷举留 CI/里程碑）", "check",
      "int_x SMT 证明+公式↔Rust 桥接复跑（证书防腐，int-y 穷举 GATES_PROOF_FULL=1）", gate_proof_checks),
 ]
 
@@ -970,9 +1104,10 @@ def summarize(results: list[dict], baseline: dict) -> str:
     for r in results:
         counts[r["verdict"]] = counts.get(r["verdict"], 0) + 1
     counts[TOLERATED] = len(baseline.get("tolerated", []))
+    extra = f" DEFERRED={counts.get(DEFERRED, 0)}" if counts.get(DEFERRED) else ""
     return (
         f"SUMMARY: PASS={counts[PASS]} FAIL={counts[FAIL]} "
-        f"SKIP={counts[SKIP]} TOLERATED={counts[TOLERATED]}"
+        f"SKIP={counts[SKIP]} TOLERATED={counts[TOLERATED]}{extra}"
     )
 
 
@@ -999,26 +1134,38 @@ def touched_sensitive(paths: list[str]) -> list[str]:
     return hits
 
 
-def commit_msg_check(message: str, touched: list[str]) -> tuple[bool, str]:
+def commit_msg_check(message: str, touched: list[str], proof_deferred_open: int = 0) -> tuple[bool, str]:
     """触及 data/naming/、reference/、rom/ 的提交必须含 Evidence/Confidence 字段（AGENTS.md §9）。
 
     删除（D）与改名（R）的路径同样计为"触及"（t10 R4②）。
+    proof-checks v2：复检欠账未销且触及 S_intx ⇒ 必须带 ProofDeferred: <欠账 id>（r7 v2 解锁判据）。
     """
     hits = touched_sensitive(touched)
     body = "\n".join(ln for ln in message.splitlines() if not ln.lstrip().startswith("#"))
     if not hits:
-        return True, f"未触及 {SENSITIVE_TEXT}（触及文件 {len(touched)} 个），无需 Evidence/Confidence 字段"
-    missing = []
-    if not EVIDENCE_RE.search(body):
-        missing.append("Evidence")
-    if not CONFIDENCE_RE.search(body):
-        missing.append("Confidence")
-    if missing:
-        return False, (
-            f"拒绝 commit：触及 {', '.join(sorted(set(hits)))} 的提交必须含 Evidence/Confidence 字段"
-            f"（AGENTS.md §9），缺 {', '.join(missing)}"
-        )
-    return True, f"证据门禁通过：触及 {', '.join(sorted(set(hits)))}，Evidence/Confidence 字段齐备"
+        base = f"未触及 {SENSITIVE_TEXT}（触及文件 {len(touched)} 个），无需 Evidence/Confidence 字段"
+    else:
+        missing = []
+        if not EVIDENCE_RE.search(body):
+            missing.append("Evidence")
+        if not CONFIDENCE_RE.search(body):
+            missing.append("Confidence")
+        if missing:
+            return False, (
+                f"拒绝 commit：触及 {', '.join(sorted(set(hits)))} 的提交必须含 Evidence/Confidence 字段"
+                f"（AGENTS.md §9），缺 {', '.join(missing)}"
+            )
+        base = f"证据门禁通过：触及 {', '.join(sorted(set(hits)))}，Evidence/Confidence 字段齐备"
+    if proof_deferred_open:
+        surface_hit = sorted({p.replace('\\', '/').lstrip('./') for p in touched} & set(PROOF_SURFACE))
+        if surface_hit and not PROOF_DEFERRED_RE.search(body):
+            return False, (
+                f"拒绝 commit：复检欠账 {proof_deferred_open} 未销且触及 S_intx"
+                f"（{', '.join(surface_hit[:5])}）——必须含 ProofDeferred: <欠账 id>"
+                f"（r7 v2 解锁判据；先复跑 proof-checks 销账可免）"
+            )
+        base += f"；ProofDeferred 校验：欠账 {proof_deferred_open} 未销"
+    return True, base
 
 
 # ---------------------------------------------------------------- 命令实现
@@ -1063,7 +1210,13 @@ def cmd_status(_args) -> int:
     print(summarize(results, baseline or {"tolerated": []}))
     any_fail = (any(r["verdict"] == FAIL for r in results) or not ratchet_ok or bool(integrity)
                 or baseline is None)
-    print(f"STATUS: {'FAIL（见上方 FAIL 行）' if any_fail else 'OK（可动手；先看清 SKIP 项）'}")
+    open_debts = proof_deferred_open()
+    if any_fail:
+        print("STATUS: FAIL（见上方 FAIL 行）")
+    elif open_debts:
+        print(f"STATUS: OK-WITH-DEFERRED（复检欠账 {open_debts} 未销，显式：先看清 SKIP/欠账项）")
+    else:
+        print("STATUS: OK（可动手；先看清 SKIP 项）")
     return 1 if any_fail else 0
 
 
@@ -1093,6 +1246,11 @@ def cmd_check(_args) -> int:
               f"{'' if not integrity else ' [baseline-integrity: 历史缺失/基线被手工改动/调低，非自洽/单侧改写绕过已被检出]'}。"
               f"按 AGENTS.md §4 定位层后修复根因，禁止调阈值/加白名单掩盖。")
         return 1
+    open_debts = proof_deferred_open()
+    if open_debts:
+        print(f"CHECK: PASS-WITH-DEFERRED（复检欠账 {open_debts}，显式：DEFERRED 绝不计 PASS、"
+              f"欠账不静默消失；解锁判据=任一次全量 proof-checks PASS 自动销账）")
+        return 0
     print("CHECK: PASS（含 0 个静默跳过：所有 SKIP 均已显式打印）")
     return 0
 
@@ -1168,7 +1326,7 @@ def cmd_commit_msg(args) -> int:
     except RuntimeError as exc:
         print(f"commit-msg 拒绝（fail-closed）: {exc}")
         return 1
-    ok, detail = commit_msg_check(message, touched)
+    ok, detail = commit_msg_check(message, touched, proof_deferred_open=proof_deferred_open())
     print(f"commit-msg: {detail}")
     return 0 if ok else 1
 
@@ -1363,7 +1521,7 @@ def cmd_selftest(_args) -> int:
     )
     check(
         "每个门禁都有裁定行",
-        all(r["verdict"] in (PASS, FAIL, SKIP, TOLERATED) and r["detail"].strip() for r in results),
+        all(r["verdict"] in (PASS, FAIL, SKIP, TOLERATED, DEFERRED) and r["detail"].strip() for r in results),
         f"{len(results)} 个门禁均有 verdict+detail",
     )
     v1, _ = missing_precondition({"established": {}}, "naming-ledger", SKIP, "台账不存在")
@@ -1418,6 +1576,37 @@ def cmd_selftest(_args) -> int:
     check("突变打回：穷举面缩水（计数非 2^32）", not ok, d)
     ok, d = inty_cert_output_ok("EXHAUSTIVE PROOF: …——4294967296 输入点全枚举（RAM 4B 全域），5 分歧\n")
     check("突变打回：穷举分歧非零", not ok, d)
+
+    # 9) proof-checks v2：触发判定（不确定绝不导向跳过）+ DEFERRED 欠账 + ProofDeferred 字段
+    act, why = proof_trigger(False, ["docs/rounds/x.md"])
+    check("v2 触发：docs-only ⇒ skip（显式带 delta 摘要）", act == "skip" and "delta=" in why, why)
+    act, why = proof_trigger(False, ["crates/game-core/src/integrators.rs", "docs/a.md"])
+    check("v2 触发：S_intx 命中 ⇒ run", act == "run", why)
+    act, why = proof_trigger(False, None)
+    check("v2 触发：git 不可判 ⇒ run（不确定绝不导向跳过）", act == "run", why)
+    act, why = proof_trigger(True, ["docs/rounds/x.md"])
+    check("v2 触发：FORCE ⇒ run", act == "run", why)
+    with tempfile.TemporaryDirectory() as td:
+        dp = Path(td) / "proof_deferred.jsonl"
+        proof_deferred_append(
+            {"ts": "t", "kind": "proof-checks-deferred", "detail": "d", "unlock": "u",
+             "id": "abc123", "settled": None}, dp)
+        check("v2 欠账登记/未销计数", proof_deferred_open(dp) == 1,
+              f"open={proof_deferred_open(dp)}")
+        n = proof_deferred_settle_all("PASS 输出原文", dp)
+        check("v2 全量 PASS 销账（settled 落 PASS 原文）",
+              n == 1 and proof_deferred_open(dp) == 0
+              and "PASS 输出原文" in json.dumps(proof_deferred_records(dp), ensure_ascii=False),
+              f"settled={n}")
+    ok, _ = commit_msg_check("feat(core): x", ["crates/game-core/src/integrators.rs"],
+                             proof_deferred_open=1)
+    check("v2 commit-msg：欠账期触 S_intx 缺 ProofDeferred ⇒ 拒", not ok,
+          "欠账未销 + 触 S_intx ⇒ 必须带 ProofDeferred 字段")
+    ok, _ = commit_msg_check("feat(core): x\n\nProofDeferred: abc123",
+                             ["crates/game-core/src/integrators.rs"], proof_deferred_open=1)
+    check("v2 commit-msg：ProofDeferred 字段齐备 ⇒ 接受", ok, "字段在位 ⇒ 接受")
+    ok, _ = commit_msg_check("docs: x", ["docs/rounds/x.md"], proof_deferred_open=1)
+    check("v2 commit-msg：欠账期但未触 S_intx ⇒ 免字段", ok, "非 S_intx 触面不涉欠账")
 
     failed = [c for c in cases if not c[1]]
     for name, ok, detail in cases:
