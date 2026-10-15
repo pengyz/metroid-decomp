@@ -29,6 +29,18 @@ pub const GAME_MODE: u16 = 0x001D;
 /// PaletteDataPending - 1」）。
 pub const PALETTE_PENDING: u16 = 0x001C;
 
+/// FrameCount=$2D（constants_ram 内容锚「Increments every frame(overflows every 256
+/// frames)」；主循环 `inc FrameCount`）。
+pub const FRAME_COUNT: u16 = 0x002D;
+
+/// IntroStarOffset=$C3（constants_ram 内容锚「Contains offset into IntroStarPntr table
+/// for twinkle effect」）。
+pub const INTRO_STAR_OFFSET: u16 = 0x00C3;
+
+/// VRAMStructBufferIndex=$07A0（constants_ram 内容锚「# of bytes of data in
+/// VRAMStructBuffer. #$4F bytes max」）——**RAM watch 面内**（iram $0100-$07FF）。
+pub const VRAM_STRUCT_INDEX: u16 = 0x07A0;
+
 /// MainRoutine=$1E（constants_ram.asm:478「5 = Game paused, 3 = Game engine running」）。
 pub const MAIN_ROUTINE: u16 = 0x001E;
 

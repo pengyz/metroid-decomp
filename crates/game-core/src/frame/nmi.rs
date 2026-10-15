@@ -77,7 +77,7 @@ pub fn check_palette_write(mem: &mut FrameMemory) {
         crate::unported!("bank07:C1FF"); // 调色板写段（pending 路径）
     }
     if mem.read_ram(GAME_MODE) != 0 && mem.read_ram(TITLE_ROUTINE) < 0x15 {
-        crate::unported!("bank00:8AC7"); // StarPaletteSwitch（boot/intro 路径——下一单元）
+        super::intro::star_palette_switch(mem); // StarPaletteSwitch（asm 内容锚——已端口）
     }
     // ④否则 RTS（静默）
 }
@@ -139,7 +139,7 @@ mod tests {
         };
         let mut m = FrameMemory::default();
         m.write_ram(GAME_MODE, 1); // boot/title 态
-        assert!(boom(&mut m).contains("unported @ bank00:8AC7"));
+        assert!(boom(&mut m).contains("unported @ bank07:C37E")); // 8AC7 已消化→C37E
         let mut m2 = FrameMemory::default();
         m2.write_ram(GAME_MODE, 1);
         m2.write_ram(TITLE_ROUTINE, 0x1D); // ending
