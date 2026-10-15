@@ -1,0 +1,31 @@
+{
+  "schema": "denoms-corrections/v1",
+  "doc": "分母 v2 纠偏清单（2026-10-15 task-5③ 定稿）——机械导出（IDA 切分）+本清单=v2 分母。每条带证据指针（findings/rounds），非机械面的人工定谳显式可审。",
+  "s_supplement": [
+    {"id": "S-FUNC-07-F140", "addr": "07:F140", "evidence": "findings/seed-decode-gap-f0a2-f148.md（A 级 ROM 字节）"},
+    {"id": "S-FUNC-07-F149", "addr": "07:F149", "evidence": "findings/seed-decode-gap-f0a2-f148.md"},
+    {"id": "S-FUNC-07-F162", "addr": "07:F162", "evidence": "findings/seed-decode-gap-f0a2-f148.md（JSR $F162@$F109 实存）"},
+    {"id": "S-FUNC-07-F1B3", "addr": "07:F1B3", "evidence": "findings/seed-decode-gap-f0a2-f148.md"},
+    {"id": "S-FUNC-07-F1CB", "addr": "07:F1CB", "evidence": "findings/seed-decode-gap-f0a2-f148.md"},
+    {"id": "S-FUNC-07-F1E7", "addr": "07:F1E7", "evidence": "findings/seed-decode-gap-f0a2-f148.md"}
+  ],
+  "d_wrongface": {
+    "doc": "decode-sweep r1/r2 定谳的 27 格（实为代码非数据）——矩阵已注记，本清单=权威计数；移交 S 面定谳后逐格迁出",
+    "confirmed_ids_note": "逐 id 清单=decode-sweep-report.md §6.1（24+4-1 混合格）唯一来源；矩阵注记 26 条错面+1 混合（043 双名单计、051 转混合格）",
+    "count": 27
+  },
+  "segment_splits": [
+    {"cell": "D-REG-07-051", "s_part": "07:FE83-07:FECA（代码 A 级，入 S 面补录候选）", "d_part": "07:FE79-07:FE82（内嵌表 B 级留 D 面）", "evidence": "decode-sweep-r2-jump-tables.md §5"}
+  ],
+  "residuals": {
+    "doc": "残余待查（显式缺口类，D7 口径）——定谳后本清单更新",
+    "cells": ["D-REG-07-048", "D-REG-07-050"],
+    "tails": ["07:F438-07:F43D（6B 尾段，r2 遗留；P12 边 $F438→$E094 正面证据=代码性，待终谳）"],
+    "evidence": "decode-sweep-r3 定谳清单（027/028/011/012/007/018 已收）"
+  },
+  "v2_totals": {
+    "doc": "v2 分母口径：机械导出 + s_supplement − d_wrongface 迁出 + 段切——S 面少计 176 个有佐证入口（estimate，附录 B 口径）为上界参考，非定值；定值=机械格+本清单逐条",
+    "s_estimate_upper": 630,
+    "note": "estimate 口径保留于 completeness.md；本清单为定值账面（残余显式）"
+  }
+}

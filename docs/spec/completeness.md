@@ -8,7 +8,11 @@
 - **分母**：独立于测试、机械可导出——仅 S 符号面（机械初值 450 格 + decode-gap 补录格，
   现 455：F140/F149/F162/F1B3/F1CB/F1E7 补录）。
   **v2 估计（decode-sweep 首轮，docs/findings/decode-sweep-report.md §6.2/§6.3）**：
-  S 面另有 ~176 个有佐证入口待补录（r2 深挖上调 120→176，估计值非定值，附录 B+P2-F1 佐证四分类）⇒ v2 约 630；
+  **v2 定值机制（task-5③ 落地）**：v2 = 机械导出 + `data/status/denoms_corrections.json`
+  纠偏清单（补录格/错面/段切/残余四类逐条带证据指针）——`python3 tools/completeness_denoms.py`
+  合流输出。现行账面：S=464（含补录 6 格）D=193 B=11；错面待迁 27（decode-sweep-report §6.1
+  唯一清单）；残余待查 2 格+1 尾段显式。S 面少计 ~176 有佐证入口=上界估计（附录 B 口径），
+  定值随 task-12 调用图/decode-sweep 深挖逐条入清单；
   定值待 decode-sweep 深挖（task-6）+ denoms 纠偏落地（task-5③）。
   D 数据面 193 格分解：错面/数据确认/混合/待查逐 id 清单以 decode-sweep-r2-jump-tables.md §5 为唯一来源（矩阵注记 26 条错面+1 混合+1 基本确定+5 数据确认，计数不在此复述防二遍算术漂移）。
   （`tools/completeness_denoms.py` 从 seed 导出）。B 行为面分母=已登记场景清单（声明性）、

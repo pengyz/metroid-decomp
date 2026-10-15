@@ -36,6 +36,16 @@ BANK_ROLE = {0: "title", 1: "brinstar", 2: "norfair", 3: "tourian",
 DATA_MERGE_GAP = 16
 
 
+CORRECTIONS = Path("data/status/denoms_corrections.json")
+
+
+def load_corrections() -> dict:
+    """分母 v2 纠偏清单（denoms-corrections/v1）：机械导出之外的人工定谳面。"""
+    if not CORRECTIONS.is_file():
+        return {"s_supplement": [], "d_wrongface": {"count": 0}, "residuals": {"cells": [], "tails": []}}
+    return json.loads(CORRECTIONS.read_text(encoding="utf-8"))
+
+
 def load_matrix() -> dict:
     if OUT.is_file():
         return json.loads(OUT.read_text(encoding="utf-8"))
@@ -119,6 +129,17 @@ def main() -> int:
     cells = m["cells"] if not args.force else {}
     s_cells, d_cells = denoms_symbol_data()
     b_cells = denoms_behavior()
+    corr = load_corrections()
+    # v2 纠偏：补录格入面（已存则保留）；错面/段切/残余仅打印（权威记录在清单）
+    for sc in corr.get("s_supplement", []):
+        if sc["id"] not in cells:
+            cells[sc["id"]] = cell(sc["id"], "symbol", "decode-gap 补录", sc["addr"],
+                                   f"decode-gap 补录格（denoms v2 纠偏清单）；证据={sc['evidence']}")
+    rf = corr.get("residuals", {})
+    print(f"denoms v2 纠偏: 补录 +{len(corr.get('s_supplement', []))} S 格；"
+          f"错面待迁 {corr.get('d_wrongface', {}).get('count', 0)}；"
+          f"段切 {len(corr.get('segment_splits', []))}；"
+          f"残余待查 {len(rf.get('cells', []))} 格 + {len(rf.get('tails', []))} 尾段（显式）")
 
     added = kept = 0
     for c in s_cells + d_cells + b_cells:

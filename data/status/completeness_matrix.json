@@ -15,10 +15,10 @@
   ],
   "faces": {
     "behavior": {
-      "denominator": 4
+      "denominator": 11
     },
     "symbol": {
-      "denominator": 450
+      "denominator": 464
     },
     "data": {
       "denominator": 193
@@ -5975,6 +5975,69 @@
       "strength": "L0",
       "covered": false,
       "evidence": "oracle/scenarios/samus-move3.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-c27c-boot": {
+      "id": "B-SCN-c27c-boot",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/c27c-boot.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-c27c-dispatch": {
+      "id": "B-SCN-c27c-dispatch",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/c27c-dispatch.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-execpath-boot": {
+      "id": "B-SCN-execpath-boot",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/execpath-boot.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-execpath-move": {
+      "id": "B-SCN-execpath-move",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/execpath-move.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-nmi-frame-evidence": {
+      "id": "B-SCN-nmi-frame-evidence",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/nmi-frame-evidence.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-vrambuf-move": {
+      "id": "B-SCN-vrambuf-move",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/vrambuf-move.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-vrambuf-probe": {
+      "id": "B-SCN-vrambuf-probe",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/vrambuf-probe.txt",
       "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
     }
   }
