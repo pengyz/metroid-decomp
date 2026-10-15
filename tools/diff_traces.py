@@ -173,29 +173,40 @@ def load_frames(raw: bytes, where: str) -> tuple[dict[int, dict], list[int], str
     return out, dups, None
 
 
-def compare_frames(left: dict, right: dict, watch: list[dict]) -> str | None:
-    """逐帧逐 watch 字段比对（值已过合法性校验）；返回首分歧描述或 None。"""
+# 栈页中断帧面（docs/design/l3-gamecore-leg-verification.md §8.1②，lead 移交实施）：
+# NMI 压栈 PCH/PCL/P 三字节（稳态 sp=0xFC ⇒ CPU $01FC-$01FE）是中断帧影子非游戏
+# 状态——排除严格比对；排除命中计数随行打印（绝不静默绿）。其余字节照比。
+INTERRUPT_FRAME_EXCLUDE = (0x01FC, 0x01FD, 0x01FE)
+
+
+def compare_frames(left: dict, right: dict, watch: list[dict]) -> tuple[str | None, int]:
+    """逐帧逐 watch 字段比对（值已过合法性校验）；返回 (首分歧描述或 None, 排除分歧计数)。"""
     lframes, rframes = sorted(left), sorted(right)
     if lframes != rframes:
         only_l = sorted(set(lframes) - set(rframes))[:5]
         only_r = sorted(set(rframes) - set(lframes))[:5]
-        return f"帧集合不一致（左缺={only_r} 右缺={only_l}）"
+        return f"帧集合不一致（左缺={only_r} 右缺={only_l}）", 0
+    excluded_hits = 0
     for f in lframes:
         for w in watch:
             label, base = w["label"], int(w["base"], 16)
             a = left[f][label].upper()
             b = right[f][label].upper()
-            if a != b:
-                if len(a) != len(b):
-                    return (f"frame {f} 字段 {label} 长度不一致: 左={len(a) // 2}B 右={len(b) // 2}B"
-                            f"（无法偏移定位）")
-                off = next((i for i in range(0, len(a), 2) if a[i:i + 2] != b[i:i + 2]), None)
-                if off is None:
-                    return f"frame {f} 字段 {label} 分歧（归一后仍不等但无字节位差，疑结构差异）"
-                byte_i = off // 2
+            if a == b:
+                continue
+            if len(a) != len(b):
+                return (f"frame {f} 字段 {label} 长度不一致: 左={len(a) // 2}B 右={len(b) // 2}B"
+                        f"（无法偏移定位）"), excluded_hits
+            for i in range(0, len(a), 2):
+                if a[i:i + 2] == b[i:i + 2]:
+                    continue
+                byte_i = i // 2
+                if base + byte_i in INTERRUPT_FRAME_EXCLUDE:
+                    excluded_hits += 1   # 中排除面：计数、不判分歧（§8.1②）
+                    continue
                 return (f"frame {f} 字段 {label} 分歧 @{label}(${base:04X})+0x{byte_i:03X}"
-                        f"=CPU ${base + byte_i:04X}: 左={a[off:off + 8]}… 右={b[off:off + 8]}…")
-    return None
+                        f"=CPU ${base + byte_i:04X}: 左={a[i:i + 8]}… 右={b[i:i + 8]}…"), excluded_hits
+    return None, excluded_hits
 
 
 def main() -> int:
@@ -293,12 +304,14 @@ def main() -> int:
             print(f"[FAIL] {cid}: {v}")
             failed += 1
             continue
-        divergence = compare_frames(left, right, watch)
+        divergence, excluded_hits = compare_frames(left, right, watch)
+        excl_note = (f"（栈页中断帧面排除 {excluded_hits} 处分歧 $01FC-$01FE——§8.1②，显式打印）"
+                     if excluded_hits else "")
         if divergence:
-            print(f"[FAIL] {cid}: 首分歧 {divergence}")
+            print(f"[FAIL] {cid}: 首分歧 {divergence}{excl_note}")
             failed += 1
         else:
-            print(f"[PASS] {cid}: 逐帧状态向量全同（{len(left)} 帧）")
+            print(f"[PASS] {cid}: 逐帧状态向量全同（{len(left)} 帧）{excl_note}")
 
     total = len(cases)
     print(f"L3 帧级裁定: {total} 条用例, {failed} 失败")
