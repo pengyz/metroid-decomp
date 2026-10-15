@@ -126,7 +126,8 @@ pub fn f2ca(input: &L2In) -> L2Out {
 /// C=0 ⇒ EnemyTodo0404::or_writeback（$0404+Y←RAM[$10]|old，JSR F2DF）→ CD9C 探针
 /// （进位=关键输出）→ 探针 C=0 ⇒ 出口（A=探针 A）；
 /// 探针 C=1 ⇒ $010F←$80（暂存）+ EnemyAttrs::or_attribute（$030A+X←变换掩码|old，JSR F270）
-/// + $6E/$6F←ROM 向量常量（window_bank=7 约定 A9）；出口 A=ROM_VEC_HI。
+/// + $6E/$6F←ROM 向量（**窗口参数化**——`rom_tables::rom_vec(input.window_bank)`，
+/// A9 处置：game 期窗口=banks1-5 区域 bank，按区域取数）；出口 A=向量高位。
 /// 写集：域 write_event + 暂存面事件推导。
 pub fn f2ed(input: &L2In) -> L2Out {
     f2ed_flow(input, input.a)
@@ -153,14 +154,15 @@ fn f2ed_flow(input: &L2In, a_entry: u8) -> L2Out {
     let mut attrs = memmap::enemy_attrs::decode_attrs(&input.ram);
     let mask = memmap::enemy_todo_0404::mask10_transformed(&input.ram);
     let attr_v = attrs.or_attribute(input.x, mask);
+    let (vec_lo, vec_hi) = memmap::rom_tables::rom_vec(input.window_bank);
     let writes = vec![
         memmap::enemy_todo_0404::write_event(input.y, a_df),
         memmap::flow_scratch::event_010f(memmap::flow_scratch::F2ED_SCRATCH_INIT),
         memmap::enemy_attrs::write_event(input.x, attr_v),
-        memmap::flow_scratch::event_vec_lo(memmap::flow_scratch::ROM_VEC_LO),
-        memmap::flow_scratch::event_vec_hi(memmap::flow_scratch::ROM_VEC_HI),
+        memmap::flow_scratch::event_vec_lo(vec_lo),
+        memmap::flow_scratch::event_vec_hi(vec_hi),
     ];
-    L2Out { a: memmap::flow_scratch::ROM_VEC_HI, x: input.x, y: input.y, writes }
+    L2Out { a: vec_hi, x: input.x, y: input.y, writes }
 }
 
 /// f2e8 适配（注册名 `sub_F2E8` ← bank07:F2E8-F310，stops=[bank07:F2DE, bank07:F310]）。
@@ -193,9 +195,11 @@ pub fn f2e8(input: &L2In) -> L2Out {
 ///   （LDY #0 已置 Y=0——出窗 Y=0）；
 /// ③ 槽字段 0（WRAM[$6AF4+X]）≥4（`C9 04`/`B0 EC` BCS $F281）⇒ 出窗 A=字段 0，Y=0；
 /// ④ 槽字段 14（WRAM[$6B02+X]）<0x80 且 ROM 表[$968B+Y]&0x10≠0（`B9 8B 96`/`29 10`/
-/// `D0 DC` BNE $F281）⇒ 出窗 A=0x10，Y=字段 14（TAY）；
+/// `D0 DC` BNE $F281）⇒ 出窗 A=0x10，Y=字段 14（TAY）——**表读窗口参数化**
+/// （`rom_tables::table_968b(input.window_bank, ·)`，A9 处置：按区域查表）；
 /// ⑤ 全路径：$010F←字段 14；LDY #0；attrs[0]←(RAM[$10]<<3)|old（F338 尾汇 F27B，Y=0）；
-///   $6E/$6F←ROM 向量；出窗 A=ROM_VEC_HI，Y=0。
+///   $6E/$6F←ROM 向量（**窗口参数化**——`rom_tables::rom_vec(input.window_bank)`）；
+///   出窗 A=向量高位，Y=0。
 /// 写集：域 write_event + 暂存面事件依序推导。
 pub fn f282(input: &L2In) -> L2Out {
     const FLAG_C: u8 = 0x01;
@@ -224,11 +228,11 @@ pub fn f282(input: &L2In) -> L2Out {
     if f0 >= 4 {
         return L2Out { a: f0, x: input.x, y: 0, writes };
     }
-    // ④ 字段 14 → $010F 暂存 + TAY + 表查
+    // ④ 字段 14 → $010F 暂存 + TAY + 表查（窗口参数化——A9 处置按区域查表）
     let f14 = memmap::enemy_slots::read_field0e(&input.wram, input.x);
     writes.push(memmap::flow_scratch::event_010f(f14));
     if f14 & 0x80 == 0 {
-        let t = memmap::rom_tables::table_968b(f14);
+        let t = memmap::rom_tables::table_968b(input.window_bank, f14);
         if t & 0x10 != 0 {
             return L2Out { a: t & 0x10, x: input.x, y: f14, writes };
         }
@@ -237,7 +241,8 @@ pub fn f282(input: &L2In) -> L2Out {
     let mut attrs = memmap::enemy_attrs::decode_attrs(&input.ram);
     let attr_v = attrs.or_attribute(0, memmap::enemy_todo_0404::mask10_shl3(&input.ram));
     writes.push(memmap::enemy_attrs::write_event(0, attr_v));
-    writes.push(memmap::flow_scratch::event_vec_lo(memmap::flow_scratch::ROM_VEC_LO));
-    writes.push(memmap::flow_scratch::event_vec_hi(memmap::flow_scratch::ROM_VEC_HI));
-    L2Out { a: memmap::flow_scratch::ROM_VEC_HI, x: input.x, y: 0, writes }
+    let (vec_lo, vec_hi) = memmap::rom_tables::rom_vec(input.window_bank);
+    writes.push(memmap::flow_scratch::event_vec_lo(vec_lo));
+    writes.push(memmap::flow_scratch::event_vec_hi(vec_hi));
+    L2Out { a: vec_hi, x: input.x, y: 0, writes }
 }

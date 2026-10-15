@@ -15,6 +15,10 @@ struct Case {
     id: String,
     subroutine: String,
     entry: String,
+    /// $8000 窗口 bank（task-14 窗口参数化契约面，∈0..8）。缺省=entry bank 标签
+    /// （bank_of(entry)——既有案行为钉死）；多窗口用例族显式携带本字段。
+    #[serde(default)]
+    window_bank: Option<usize>,
     #[serde(default)]
     stops: Vec<String>,
     #[serde(rename = "in")]
@@ -130,7 +134,12 @@ fn main() -> ExitCode {
 
 fn run_case(prg: &[u8], case: &Case) -> Result<(), String> {
     let entry = parse_cpu_addr(&case.entry)?;
-    let window_bank = bank_of(&case.entry)?;
+    // task-14：窗口 bank 显式字段优先，缺省=entry bank 标签（既有案行为钉死）
+    let window_bank = match case.window_bank {
+        Some(w) if w < 8 => w,
+        Some(w) => return Err(format!("window_bank={w} 超出 0..8 契约域——fail-loud")),
+        None => bank_of(&case.entry)?,
+    };
     let mut stops = Vec::new();
     for s in &case.stops {
         stops.push(parse_cpu_addr(s)?);
@@ -155,6 +164,7 @@ fn run_case(prg: &[u8], case: &Case) -> Result<(), String> {
         y: *case.input.regs.get("y").unwrap_or(&0),
         p: *case.input.regs.get("p").unwrap_or(&0x24),
         ram,
+        window_bank,
     };
 
     // golden 侧

@@ -14,7 +14,7 @@ pub mod ram_map;
 pub mod verify_shim;
 pub mod l2ports;
 
-/// L2 入参：寄存器 + 2KB RAM 快照（$0000-$07FF，镜像归一后）。
+/// L2 入参：寄存器 + 2KB RAM 快照（$0000-$07FF，镜像归一后）+ 窗口态。
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct L2In {
     /// $6000-$7FFF WRAM（8KB，敌槽/暂存区——见 findings/ram-region-6af4-contradiction.md；缺省空=全 0）
@@ -24,11 +24,24 @@ pub struct L2In {
     pub y: u8,
     pub p: u8,
     pub ram: Vec<u8>,
+    /// $8000 窗口 bank（MMC1 16KB 窗口，契约 ∈0..8）——窗口读表取数面（task-14 窗口参数化，
+    /// A9 证伪处置；decode-sweep-r3-dynamic-close.md §1.2 A 级：game 期窗口=banks1-5 区域
+    /// bank）。L2 契约 case `window_bank` 字段即本面；缺省=7=entry bank 标签缺省约定
+    /// （bank07 用例行为钉死），runner 侧 l2-diff 按 case 字段/entry 标签填充。
+    pub window_bank: usize,
 }
 
 impl Default for L2In {
     fn default() -> Self {
-        Self { wram: vec![0; 0x2000], a: 0, x: 0, y: 0, p: 0x24, ram: vec![0; 0x800] }
+        Self {
+            wram: vec![0; 0x2000],
+            a: 0,
+            x: 0,
+            y: 0,
+            p: 0x24,
+            ram: vec![0; 0x800],
+            window_bank: 7,
+        }
     }
 }
 

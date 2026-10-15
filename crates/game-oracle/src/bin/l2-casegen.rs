@@ -19,6 +19,10 @@ struct FuncSpec {
     id: String,
     subroutine: String,
     entry: String,
+    /// $8000 窗口 bank（task-14 窗口参数化契约面，∈0..8）。缺省=entry bank 标签；
+    /// 多窗口 funcs 显式携带（生成 case 时透传该字段）。
+    #[serde(default)]
+    window_bank: Option<usize>,
     stops: Vec<String>,
     #[serde(default = "default_samples")]
     samples: usize,
@@ -100,12 +104,20 @@ fn main() -> ExitCode {
             Ok(a) => a,
             Err(e) => { eprintln!("{}", e); return ExitCode::from(2); }
         };
-        let window_bank = spec
-            .entry
-            .strip_prefix("bank")
-            .and_then(|r| r.split(':').next())
-            .and_then(|n| n.parse::<usize>().ok())
-            .unwrap_or(7);
+        // task-14：窗口 bank 显式字段优先，缺省=entry bank 标签（既有生成行为钉死）
+        let window_bank = match spec.window_bank {
+            Some(w) if w < 8 => w,
+            Some(w) => {
+                eprintln!("funcs 第 {} 行 window_bank={w} 超出 0..8 契约域——fail-loud", lineno + 1);
+                return ExitCode::from(2);
+            }
+            None => spec
+                .entry
+                .strip_prefix("bank")
+                .and_then(|r| r.split(':').next())
+                .and_then(|n| n.parse::<usize>().ok())
+                .unwrap_or(7),
+        };
         let mut stops = Vec::new();
         for s in &spec.stops {
             match parse_cpu_addr(s) {
@@ -160,6 +172,7 @@ fn main() -> ExitCode {
                 y: reg_y,
                 p: reg_p,
                 ram,
+                window_bank,
             };
             let run = match run_subroutine(&prg, entry, window_bank, &input, &stops) {
                 Ok(r) => r,
@@ -192,8 +205,13 @@ fn main() -> ExitCode {
                     format!("\"{:04X}\":{}", addr, v)
                 })
                 .collect();
+            // task-14：显式 window_bank 透传入 case（缺省不写——既有生成文本钉死）
+            let window_field = match spec.window_bank {
+                Some(w) => format!(",\"window_bank\":{w}"),
+                None => String::new(),
+            };
             out_lines.push(format!(
-                "{{\"id\":\"{id}-{n}\",\"subroutine\":\"{sub}\",\"entry\":\"{entry}\",\"stops\":[{stops}],\"in\":{{\"regs\":{{\"a\":{a},\"x\":{x},\"y\":{y},\"p\":{p}}},\"ram\":{{{ram_in}}}}},\"out\":{{\"regs\":{{\"a\":{ra},\"x\":{rx},\"y\":{ry}}},\"writes\":{{{writes}}}}}}}",
+                "{{\"id\":\"{id}-{n}\",\"subroutine\":\"{sub}\",\"entry\":\"{entry}\"{window_field},\"stops\":[{stops}],\"in\":{{\"regs\":{{\"a\":{a},\"x\":{x},\"y\":{y},\"p\":{p}}},\"ram\":{{{ram_in}}}}},\"out\":{{\"regs\":{{\"a\":{ra},\"x\":{rx},\"y\":{ry}}},\"writes\":{{{writes}}}}}}}",
                 id = spec.id,
                 sub = spec.subroutine,
                 entry = spec.entry,
