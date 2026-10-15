@@ -298,6 +298,32 @@ m2（漏 Y）10/11 幸存=[b-f2df-y0] 精确互证。covered 22、全量自跑 *
 > 带 A/B 级证据字段③行为钉死不变式（迁移前后同批 L2 案全绿）；方法论见
 > docs/spec/two-layer-architecture.md。
 
+## 批 14/15：F2D8（1d61521）+ 两层架构迁移轮（71cdebd/deed56e/4f63204/87b6b87/c2af8f8）
+
+### verdict: pass（批 14 过渡窗裁定 + 迁移轮链规 15 三口径全过）
+
+**批 14（F2D8）过渡窗裁定**：落库 13:22:22，两层架构 spec（bcb65fd）13:23:41——
+**先于 spec 79 秒**，旧形态宽限（同 F2DF「已落件不返工」精神）。实质：字节
+`1d 04 04 9d 04 04 60` ✓、基模 11/11、m1 11/11、mx 10/11（幸存 b-f2d8-x0 与申报互证）。
+
+**迁移轮（two-layer 首落地 ×5 commit）链规 15 三口径**：
+
+1. **产品层零地址字面量 ✓**：enemy/{attrs,slot,todo_0404,todo_040e}.rs 业务方法体零地址；
+   21 处 hex 分类实测——0x100×12=数组 size、0xFF/0x81=测试数据值、地址仅存
+   （a）注释引证（slot.rs:4、attrs.rs:52）（b）memmap 边界测试断言（write_event 地址）。
+   两条 advisory：注释/断言中的地址可下沉 memmap 注释（严格口径「地址只活 memmap」）。
+2. **命名台账 A/B 级证据 ✓**：data/naming/ledger.jsonl 8 条（N-0001..N-0008）逐条带
+   evidence（A 级地址自证 bank:addr 逐字节 + B 级语义概要）+confidence；C 级假设按
+   §3 纪律**降级 _todo_ 形态入账**（N-0005/N-0007「coords/state」之说未证不入名）——
+   伪语义命名防线正确；naming-ledger 门禁自启实测 PASS（8 条逐条校验证据指针）。
+3. **行为钉死不变式 ✓**：迁移前后同批 L2 案全绿——六族（f270/f2df/f2d8/f2d5/f2ad/f2ca）
+   各 11 案全在活跃集（33 条切片期老案零丢失），全量自跑 **304 条 0 失败**；
+   rust-tests 30（域层单测）；gates check 全绿。
+
+结构面：enemy（产品）/memmap（地址唯一层，encode/decode+write_event 推导写集）/
+verify_shim（委派）三层分离与 spec §1 一致；shim 侧仅 FLAG_C=0x01 标志位常量（非地址）。
+N-0001 域几何 16B×16 等 A 级自证与 ROM 字节（F28E/F295）可对（其 evidence 已逐条列址）。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
