@@ -102,6 +102,7 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "sub_F1FA" => Some(sub_f1fa),
         "sub_F270" => Some(sub_f270),
         "sub_F2DF" => Some(sub_f2df),
+        "sub_F2D5" => Some(sub_f2d5),
         "sub_F2D8" => Some(sub_f2d8),
         _ => None,
     }
@@ -492,4 +493,12 @@ pub fn sub_f2df(input: &L2In) -> L2Out {
 /// 语义证据（A 级：ROM 原字节 `1D 0A 03 9D 0A 03 60`）：$030A+X ← A|old，末值 A=A|old。
 pub fn sub_f270(input: &L2In) -> L2Out {
     crate::verify_shim::f270(input)
+}
+
+/// sub_F2D5 —— bank07:F2D5-F2DE 注册名（机械名只在注册注释，two-layer §4）。
+/// **域形态**（§5 新实施件）：`enemy::EnemyTodo0404::or_writeback`（OR 回写，掩码=memmap
+/// 变换掩码 ((RAM[$10]^3)<<3)——F340 EOR#3+C2C6 尾 ASL×3）经 `verify_shim::f2d5` 适配。
+/// L2 窗口 stops=bank07:F2DE（JSR F332 内返回址 C2C9 不在 stops，逐址核过）。
+pub fn sub_f2d5(input: &L2In) -> L2Out {
+    crate::verify_shim::f2d5(input)
 }

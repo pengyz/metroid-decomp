@@ -22,3 +22,4 @@
 {"id": "gen-f270", "subroutine": "sub_F270", "entry": "bank07:F270", "stops": ["bank07:F276"], "samples": 8, "ram_addrs": ["030A"]}
 {"id": "gen-f2df", "subroutine": "sub_F2DF", "entry": "bank07:F2DF", "stops": ["bank07:F2E7"], "samples": 8, "ram_addrs": ["0404", "0010"]}
 {"id": "gen-f2d8", "subroutine": "sub_F2D8", "entry": "bank07:F2D8", "stops": ["bank07:F2DE"], "samples": 8, "ram_addrs": ["0404"]}
+{"id": "gen-f2d5", "subroutine": "sub_F2D5", "entry": "bank07:F2D5", "stops": ["bank07:F2DE"], "samples": 8, "ram_addrs": ["0010", "0404"]}

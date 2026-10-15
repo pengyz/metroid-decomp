@@ -5,7 +5,7 @@
   "rom_sha256": "e6e6b7014685adae447ebb3833242815747bc1e5df83ade79f693fb67cf565b6",
   "projection": "reference/seed/metroid.asm",
   "counts": {
-    "mechanical_to_domain": 3
+    "mechanical_to_domain": 4
   },
   "vectors": {},
   "entries": [
@@ -31,6 +31,14 @@
       "domain": "enemy::EnemyTodo0404::or_writeback",
       "via": "verify_shim::f2df",
       "evidence": "two-layer §5 迁移（本 commit）；L2 案 gen-f2df-*/b-f2df-* 双绿",
+      "confidence": 95
+    },
+    {
+      "mechanical": "sub_F2D5",
+      "addr": "bank07:F2D5-F2DE",
+      "domain": "enemy::EnemyTodo0404::or_writeback",
+      "via": "verify_shim::f2d5",
+      "evidence": "two-layer §5 新实施件（本 commit）；L2 案 gen-f2d5-*/b-f2d5-* 三方全等",
       "confidence": 95
     }
   ]

@@ -48,3 +48,16 @@ pub fn f2df(input: &L2In) -> L2Out {
     let writes = vec![memmap::enemy_todo_0404::write_event(input.y, a_out)];
     L2Out { a: a_out, x: input.x, y: input.y, writes }
 }
+
+/// f2d5 适配（注册名 `sub_F2D5` ← bank07:F2D5-F2DE，stops=bank07:F2DE）。
+///
+/// 域方法：`enemy::EnemyTodo0404::or_writeback`（OR 回写，掩码=memmap 变换掩码
+/// ((RAM[$10]^3)<<3)——F340 `EOR #3`+C2C6 尾 `ASL×3`，变换逻辑住映射层）。
+/// 同域方法第 3 shim（F2D8/F2DF/F2D5 掩码来源三分）。
+pub fn f2d5(input: &L2In) -> L2Out {
+    let mut v0404 = memmap::enemy_todo_0404::decode_todo_0404(&input.ram);
+    let mask = memmap::enemy_todo_0404::mask10_transformed(&input.ram);
+    let a_out = v0404.or_writeback(input.x, mask);
+    let writes = vec![memmap::enemy_todo_0404::write_event(input.x, a_out)];
+    L2Out { a: a_out, x: input.x, y: input.y, writes }
+}

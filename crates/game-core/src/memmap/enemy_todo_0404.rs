@@ -46,3 +46,28 @@ pub fn diff_writes(before: &EnemyTodo0404, after: &EnemyTodo0404) -> Vec<(u16, u
 pub fn mask10(ram: &[u8]) -> u8 {
     ram[MASK10_ZP as usize & 0x7FF]
 }
+
+/// 变换掩码（F2D5/F2AD 流）：((RAM[$10] ^ 3) << 3) & $FF。
+/// 证据（A 级字节）：bank07:F340 `A5 10 49 03 60`（LDA zp $10 / EOR #$03 / RTS）+
+/// bank07:C2C6 `0A 0A 0A 60`（ASL A ×3 / RTS——F332 尾 `4C C6 C2` JMP $C2C6 汇入）。
+/// 变换逻辑住映射层（lead 口径）：产品层只见语义掩码。
+pub fn mask10_transformed(ram: &[u8]) -> u8 {
+    (mask10(ram) ^ 0x03).wrapping_shl(3) & 0xFF
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// 变换掩码=((RAM[$10]^3)<<3)&$FF（F340 `49 03`+C2C6 `0A 0A 0A` 字节语义）。
+    #[test]
+    fn mask10_transformed_matches_rom_semantics() {
+        let mut ram = vec![0u8; 0x800];
+        ram[0x10] = 0x0F;
+        assert_eq!(mask10_transformed(&ram), 0x60); // (0x0F^3)<<3
+        ram[0x10] = 0x03;
+        assert_eq!(mask10_transformed(&ram), 0x00); // 掩码 0（同值写事件面）
+        ram[0x10] = 0x80;
+        assert_eq!(mask10_transformed(&ram), 0x18); // 高位丢弃（8 位回绕）
+    }
+}
