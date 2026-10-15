@@ -89,6 +89,7 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "sub_F152" => Some(sub_f152),
         "sub_F186" => Some(sub_f186),
         "sub_F1BF" => Some(sub_f1bf),
+        "sub_F140" => Some(sub_f140),
         _ => None,
     }
 }
@@ -148,6 +149,25 @@ pub fn sub_f186(input: &L2In) -> L2Out {
         x: input.x,
         y: input.y,
         writes: vec![(0x0006, v6), (0x0008, v8), (0x000A, va)],
+    }
+}
+
+/// sub_F140 —— bank07:F140-F148 入口组合件（`JSR F1BF / JSR F186 / JMP F1FA`）。
+/// L2 窗口止于 F1FA 入口（碰撞尾独立切片 S-FUNC-07-F1FA，stops=bank07:F1FA）。
+/// 语义（A 级：ROM 原字节 `20 BF F1 20 86 F1 4C FA F1` 逐指令 + seed 各子例程）：
+/// 先 F1BF（$04←WRAM[$6AF5+X]+RAM[$301+Y]、$05←WRAM[$6AF6+X]+RAM[$302+Y]），
+/// 后 F186（$06←RAM[$30D+Y]、$08←RAM[$30E+Y]、$0A←(RAM[$30C+Y]^RAM[$FF])&1，EOR zp）。
+/// 末值 A=$0A；写集 {$04,$05,$06,$08,$0A} 无重叠；X/Y 透传。
+pub fn sub_f140(input: &L2In) -> L2Out {
+    let f1bf = sub_f1bf(input);
+    let f186 = sub_f186(input);
+    let mut writes = f1bf.writes;
+    writes.extend(f186.writes);
+    L2Out {
+        a: f186.a,
+        x: input.x,
+        y: input.y,
+        writes,
     }
 }
 

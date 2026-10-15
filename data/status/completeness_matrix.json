@@ -15,11 +15,10 @@
   ],
   "faces": {
     "behavior": {
-      "denominator": 1
+      "denominator": 4
     },
     "symbol": {
-      "denominator": 450,
-      "covered": 9
+      "denominator": 450
     },
     "data": {
       "denominator": 193
@@ -3656,6 +3655,15 @@
       "evidence": "bank07:F01C-F034（IDA 机械切分 size=24）",
       "note": "机械切分待纠偏（rounds/r1）：语义边界以 trace 证据为准"
     },
+    "S-FUNC-07-F140": {
+      "id": "S-FUNC-07-F140",
+      "face": "symbol",
+      "module": "engine",
+      "strength": "L2",
+      "covered": true,
+      "evidence": "oracle/subroutines/l2_cases.jsonl#gen-f140-0..7 + #b-f140-xyff/b-f140-wrap/b-f140-ffmask 三方全等（golden==ROM 执行==game-core）；语义来源 ROM 原字节 bank07:F140-F148=20 BF F1 / 20 86 F1 / 4C FA F1（JSR F1BF/JSR F186/JMP F1FA）逐指令自证",
+      "note": "decode-gap 补录格（IDA 机械切分漏码当数据，findings/seed-decode-gap-f0a2-f148.md A 级 ROM 字节）；denoms 机械切分待纠偏（decode-sweep/task-2 出 v2 后回填）；L2 窗口 stops=F1FA 入口截断：组合件=F1BF∘F186（$04/$05/$06/$08/$0A），碰撞尾独立切片 S-FUNC-07-F1FA"
+    },
     "S-FUNC-07-F149": {
       "id": "S-FUNC-07-F149",
       "face": "symbol",
@@ -5823,6 +5831,33 @@
       "strength": "L0",
       "covered": false,
       "evidence": "oracle/scenarios/boot-title.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-samus-move": {
+      "id": "B-SCN-samus-move",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/samus-move.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-samus-move2": {
+      "id": "B-SCN-samus-move2",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/samus-move2.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-samus-move3": {
+      "id": "B-SCN-samus-move3",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/samus-move3.txt",
       "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
     }
   }
