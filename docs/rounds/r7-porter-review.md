@@ -665,6 +665,34 @@ findings（r10）：0 新。基线 66。
 （C37E→C2E4→C29A 链贯通）。SetPPUInc 动 $FF=RAM watch 面可观测副作用显式标注 ✓。
 findings（r10）：0 新。基线 67。
 
+## port2 task-14（fc9acbb）：A9 处置——ROM 窗口表烘焙+window_bank 契约多窗口族
+
+### verdict: pass
+
+### findings（逐项复现输出）
+
+**① 突变敏感性——通过 ✓（我方独立判别力实测）**：基模证真先行「L2 三方裁定:
+360 条用例, 0 失败」复现 ✓；其实现侧突变（window≡7）RED 26/32 引用在案+巧合双案
+（b-f282 w0/w3）自报诚实；**我方输入侧翻窗突变**（32 案 window_bank+1 mod 8，
+/tmp 拷贝非侵树）：**31/32 打回**——幸存=b-f282-table-exit-w7（巧合族对称，与其
+自报巧合面互证）；族分布 8 bank×4 均布 ✓。判别力承重实证。
+**② ROM 字节级——通过 ✓（我方重导逐字）**：ROM_VEC_BY_BANK 8 向量两两不同=True
+（w7=03 38 与我 A9 时代先证一致）；TABLE_968B 抽样跨窗异值 ✓；烘焙面逐字吻合+
+逐 bank prg 偏移注在位。
+**③ 契约面——通过 ✓**：verify_shim 四站全窗口参数化；l2-diff `None=>bank_of
+(&case.entry)`（缺省=既有行为钉死，360/0 复现）+`w<8` 越界 fail-loud ✓；
+l2-casegen 显式携带才出键 ✓。bank 标签≠窗口 bank 两面分离如实。
+**④ 链规 15——通过（含 P14-F1）**：ROM 常量住 memmap/rom_tables（正位）✓、
+flow_scratch 原地更正注 ✓。**P14-F1（声明族·中）**：「产品层零地址零机械名未破」
+字面不实 repo 级——frame/ 体代码累计 132 处 ≥4 位 hex 字面量（io 命名常量块=正位，
+但 `read_ram(0x001D)` 类体使用=S5 积累态，非本 commit 所致）；处置：声明收窄
+「task-14 未新增」（为真）或另开 frame/ 体命名清扫工单——非本件阻断。
+**⑤ 证据面——通过 ✓**：CHECK: PASS（PASS=11 FAIL=0 SKIP=2）复现；基线 67→70、
+60→61 status 实读仅上调 ✓。
+
+（本批残余：①frame/ 体字面量清扫决策——随 S5 L3 上线前一并裁定 ②b-f282 巧合族
+（表 bit4 同侧）=固有盲点已自报，突变族谱补录。）
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接

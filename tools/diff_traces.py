@@ -180,20 +180,33 @@ def load_frames(raw: bytes, where: str) -> tuple[dict[int, dict], list[int], str
 INTERRUPT_FRAME_EXCLUDE = (0x01FC, 0x01FD, 0x01FE)
 
 
+def leg_sample_point(doc: dict, side: str) -> str | None:
+    """R2 per-leg 采样点声明：legs.<side>.sample_point 优先；legacy 顶层 sample_point
+    兜底（混态期禁置全局键——v5 §5.3c 口径；per-leg 缺省=未迁 endFrame）。"""
+    legs = doc.get("legs")
+    if isinstance(legs, dict):
+        leg = legs.get(side)
+        if isinstance(leg, dict) and leg.get("sample_point"):
+            return leg["sample_point"]
+    return doc.get("sample_point")
+
+
 def check_nmi_anchor(frames: dict, watch: list[dict], sample_point: str | None,
                      side: str) -> tuple[str | None, str]:
     """恒 1 断言（l3 契约 §8.1 点 3，v4 B2 接线）：watch 覆盖 $001A 时逐帧断言 $1A==01。
 
-    采样点声明门：manifest 顶层 `sample_point`=="spin-exit" ⇒ 断言生效（≠01=NMI 面
-    退化诊断信号，FAIL）；缺省（endFrame 旧采样，oracle 迁移槽 3b 未走）⇒ 断言显式
-    **不适用**（note 随行打印，绝不静默装绿）。"""
+    采样点声明门（R2 per-leg 消费）：manifest `legs.<side>.sample_point`=="spin-exit" ⇒
+    断言生效（≠01=NMI 面退化诊断信号，FAIL）；缺省/未迁 ⇒ 显式不适用（note 随行，
+    绝不静默装绿）。watch 不含 $001A ⇒ 亦显式 note（收窄绕过封堵，r12 探针 E/F）。"""
     anchor_w = [w for w in watch
                 if int(w["base"], 16) <= 0x001A < int(w["base"], 16) + w.get("_span", 0)]
     if not anchor_w:
         return None, (f"恒 1 断言不适用（{side}）：watch 面不含 CPU $001A"
                       f"（收窄绕过显式 note——r12 探针 E/F 封堵，绝不静默）")
     if not anchor_w[0].get("_span"):
-        return None, (f"恒 1 断言不适用（{side}）：watch 条目无 range span（键面不全显式 note）")
+        # 防御分支（R3 归因修正）：check_case_schema 后 _span 必在，正常流程不可达
+        return None, (f"恒 1 断言不适用（{side}）：watch 条目无 _span（防御分支——"
+                      f"schema 校验后不可达；仅直调误用面提示）")
     if sample_point != "spin-exit":
         return None, (f"恒 1 断言不适用（{side}）：sample_point="
                       f"{sample_point or 'endFrame(缺省)'}≠spin-exit（迁移槽 3b 未走，显式）")
@@ -304,7 +317,7 @@ def main() -> int:
             print(f"[FAIL] {cid}: {v}")
             failed += 1
             continue
-        aerr, anote = check_nmi_anchor(left, watch, doc.get("sample_point"), "oracle")
+        aerr, anote = check_nmi_anchor(left, watch, leg_sample_point(doc, "oracle"), "oracle")
         if aerr:
             print(f"[FAIL] {cid}: {aerr}")
             failed += 1
@@ -340,7 +353,7 @@ def main() -> int:
             print(f"[FAIL] {cid}: {v}")
             failed += 1
             continue
-        aerr, anote = check_nmi_anchor(right, watch, doc.get("sample_point"), "game-core")
+        aerr, anote = check_nmi_anchor(right, watch, leg_sample_point(doc, "game-core"), "game-core")
         if aerr:
             print(f"[FAIL] {cid}: {aerr}")
             failed += 1
