@@ -119,8 +119,13 @@ fn main() -> ExitCode {
                 seed = seed.wrapping_mul(31).wrapping_add(b as u64);
             }
             let mut rng = Lcg::new(seed.wrapping_add(n as u64));
-            let input_x_hint = rng.next_u8() as u16;
-            let input_y_hint = rng.next_u8() as u16;
+            // 寄存器先抽样——有效址 fixture 必须用**最终** x/y 值（v2 修正：独立 hint≠寄存器）
+            let reg_a = rng.next_u8();
+            let reg_x = rng.next_u8();
+            let reg_y = rng.next_u8();
+            let reg_p = rng.next_u8() | 0x20;
+            let input_x_hint = reg_x as u16;
+            let input_y_hint = reg_y as u16;
             let mut ram = vec![0u8; 0x800];
             let mut wram = vec![0u8; 0x2000];
             for addr_s in &spec.ram_addrs {
@@ -147,10 +152,10 @@ fn main() -> ExitCode {
             }
             let input = L2In {
                 wram,
-                a: rng.next_u8(),
-                x: rng.next_u8(),
-                y: rng.next_u8(),
-                p: rng.next_u8() | 0x20,
+                a: reg_a,
+                x: reg_x,
+                y: reg_y,
+                p: reg_p,
                 ram,
             };
             let run = match run_subroutine(&prg, entry, window_bank, &input, &stops) {
