@@ -115,6 +115,9 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "sub_ClearSpareMem" => Some(sub_title_clear_spare),
         "sub_DelayIntroReplay" => Some(sub_title_replay_delay),
         "sub_TitleRoutineReturn" => Some(sub_title_no_op),
+        "sub_InitializeAfterReset" => Some(sub_title_init),
+        "sub_ChangeIntroNameTable" => Some(sub_title_nametable),
+        "sub_PrepIntroRestart" => Some(sub_title_prep),
         _ => None,
     }
 }
@@ -486,4 +489,22 @@ pub fn sub_title_replay_delay(input: &L2In) -> L2Out {
 /// 域形态：title::no_op 经 verify_shim::title_no_op。
 pub fn sub_title_no_op(input: &L2In) -> L2Out {
     crate::verify_shim::title_no_op(input)
+}
+
+/// sub_InitializeAfterReset —— bank00:$8071 注册名（批2④；尾 jmp LoadStarSprites $98AE）。
+/// 域形态：title::init_after_reset 经 verify_shim::title_init_after_reset。
+pub fn sub_title_init(input: &L2In) -> L2Out {
+    crate::verify_shim::title_init_after_reset(input)
+}
+
+/// sub_ChangeIntroNameTable —— bank00:$822E 注册名（批2④）。
+/// 域形态：title::change_nametable 经 verify_shim::title_change_nametable。
+pub fn sub_title_nametable(input: &L2In) -> L2Out {
+    crate::verify_shim::title_change_nametable(input)
+}
+
+/// sub_PrepIntroRestart —— bank00:$82A3 注册名（批2④，双路径）。
+/// 域形态：title::prep_restart 经 verify_shim::title_prep_restart。
+pub fn sub_title_prep(input: &L2In) -> L2Out {
+    crate::verify_shim::title_prep_restart(input)
 }

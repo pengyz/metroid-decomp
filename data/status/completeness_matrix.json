@@ -18,7 +18,7 @@
       "denominator": 11
     },
     "symbol": {
-      "denominator": 469
+      "denominator": 474
     },
     "data": {
       "denominator": 193
@@ -6084,6 +6084,51 @@
       "covered": true,
       "evidence": "oracle/subroutines/l2_cases.jsonl#b-title-*（TitleRoutineReturn 入口案）三方全等（golden==ROM 执行==game-core，stops=[] 哨兵窗）；语义来源 asm bank00:82F3（13/14 同码 `60`）",
       "note": "denoms 补录格（IDA 机械切分未单列——title 30 例程批量 task-23 批1③助手簇）；链规 19 折叠形态（代码面 title 域一实现）"
+    },
+    "S-FUNC-00-8071": {
+      "id": "S-FUNC-00-8071",
+      "face": "symbol",
+      "module": "title",
+      "strength": "L2",
+      "covered": true,
+      "evidence": "oracle/subroutines/l2_cases.jsonl#b-title-init-00 三方全等（2230 写面：zp 16 项+WRAM 表驱动填充+星精灵拷贝）；语义来源 bank00:$8071-$80C7+尾 jmp LoadStarSprites $98AE",
+      "note": "denoms 补录格（title 30 例程批量 task-23 批2④编排簇）；链规 19 折叠形态"
+    },
+    "S-FUNC-00-822E": {
+      "id": "S-FUNC-00-822E",
+      "face": "symbol",
+      "module": "title",
+      "strength": "L2",
+      "covered": true,
+      "evidence": "oracle/subroutines/l2_cases.jsonl#b-title-nametable-0c 三方全等；语义来源 bank00:$822E-$8242 21B（$FF|=1 镜像+Timer3←8=80 帧二证）",
+      "note": "denoms 补录格（title 30 例程批量 task-23 批2④编排簇）；链规 19 折叠形态"
+    },
+    "S-FUNC-00-82A3": {
+      "id": "S-FUNC-00-82A3",
+      "face": "symbol",
+      "module": "title",
+      "strength": "L2",
+      "covered": true,
+      "evidence": "oracle/subroutines/l2_cases.jsonl#b-title-prep-11-{timer-pending,restart-music,dec-music} 三方全等（双路径+相位置 2）；语义来源 bank00:$82A3-$82EC 74B",
+      "note": "denoms 补录格（title 30 例程批量 task-23 批2④编排簇）；链规 19 折叠形态"
+    },
+    "S-FUNC-00-80D0": {
+      "id": "S-FUNC-00-80D0",
+      "face": "symbol",
+      "module": "title",
+      "strength": "L1",
+      "covered": true,
+      "evidence": "asm 考证件（bank00:$80D0-$80F8；APU 标志+PPU VRAM 面+ScreenOff/On）——**L3 降级（pipeline R3）**：NMI 等待自旋不设 L2 案；行为面=boot-title L3 场景承载",
+      "note": "denoms 补录格（title 30 例程批量 task-23 批2④编排簇）；链规 19 折叠形态；L3 降级显式（R3 显式非静默，D7 口径）"
+    },
+    "S-FUNC-00-82ED": {
+      "id": "S-FUNC-00-82ED",
+      "face": "symbol",
+      "module": "title",
+      "strength": "L1",
+      "covered": true,
+      "evidence": "asm 考证件（bank00:$82ED-$82F2）——**L3 降级（R3）**：ScreenOff=NMI 等待自旋（WaitNMIPass_）L2 模型内死循环；行为面=L3 承载",
+      "note": "denoms 补录格（title 30 例程批量 task-23 批2④编排簇）；链规 19 折叠形态；L3 降级显式（R3 显式非静默，D7 口径）"
     }
   }
 }

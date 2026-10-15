@@ -61,3 +61,124 @@ mod tests {
         assert_eq!(write_event_spare_cb(0), (SPARE_CB, 0));
     }
 }
+
+// ---- 批2 编排簇地址面（A 级内容锚：constants_ram.asm 逐址）----
+
+/// IntroMusicRestart=$D8（:755「After all title routines run twice, restarts intro music」）。
+pub const INTRO_MUSIC_RESTART: u16 = 0x00D8;
+/// IsSamus=$55（:548）。
+pub const IS_SAMUS: u16 = 0x0055;
+/// Joy1Change/Status/Retrig=$12/$14/$16（:465-469）。
+pub const JOY1_CHANGE: u16 = 0x0012;
+/// Joy1Status。
+pub const JOY1_STATUS: u16 = 0x0014;
+/// Joy1Retrig。
+pub const JOY1_RETRIG: u16 = 0x0016;
+/// PaletteDataIndex=$C1（:735）。
+pub const PALETTE_INDEX: u16 = 0x00C1;
+/// ScreenFlashPaletteIndex=$C2（:736）。
+pub const FLASH_INDEX: u16 = 0x00C2;
+/// IntroStarOffset=$C3（:737；ram_map INTRO_STAR_OFFSET 同址——唯一源=ram_map 复用面）。
+pub const INTRO_STAR_OFFSET: u16 = 0x00C3;
+/// FadeDataIndex=$C4（:738）。
+pub const FADE_INDEX: u16 = 0x00C4;
+/// SpriteLoadPending=$C8（:743「Set to #$00 after sprite RAM load complete」）。
+pub const SPRITE_LOAD_PENDING: u16 = 0x00C8;
+/// SpareMem 族（:723-754「Written to in title routine, but never accessed」）。
+pub const SPARE_B7: u16 = 0x00B7;
+/// SpareMemB8（ds 3 区首——写面只 $B8 单址）。
+pub const SPARE_B8: u16 = 0x00B8;
+/// SpareMemBB。
+pub const SPARE_BB: u16 = 0x00BB;
+/// SpareMemC5。
+pub const SPARE_C5: u16 = 0x00C5;
+/// SpareMemCC..D3/D7 族。
+pub const SPARE_CC: u16 = 0x00CC;
+/// SpareMemCD。
+pub const SPARE_CD: u16 = 0x00CD;
+/// SpareMemCE。
+pub const SPARE_CE: u16 = 0x00CE;
+/// SpareMemCF。
+pub const SPARE_CF: u16 = 0x00CF;
+/// SpareMemD0。
+pub const SPARE_D0: u16 = 0x00D0;
+/// SpareMemD1。
+pub const SPARE_D1: u16 = 0x00D1;
+/// SpareMemD2。
+pub const SPARE_D2: u16 = 0x00D2;
+/// SpareMemD3（ds 4 区首——写面只 $D3 单址）。
+pub const SPARE_D3: u16 = 0x00D3;
+/// SpareMemD7。
+pub const SPARE_D7: u16 = 0x00D7;
+/// NARPASSWORD=$69B2（WRAM；:1263「0=invinsible Samus not active」）。
+pub const NARPASSWORD: u16 = 0x69B2;
+/// SFXMultiInitFlags=$0684（RAM 声引擎标志；:1127「Initialization Flags for SFX and some
+/// music」——**非 APU 寄存器**：写面 L2 可钉，APU 效果经声引擎延迟施加）。
+pub const SFX_MULTI_INIT: u16 = 0x0684;
+/// Objects 块=$0300-$031F（PrepIntroRestart 清面）。
+pub const OBJECTS_CLEAR_BASE: u16 = 0x0300;
+/// 星精灵源 WRAM=$6E00-$6E9F（IntroStarSprite；LoadStarSprites 源面）。
+pub const STAR_SPRITE_SRC: u16 = 0x6E00;
+/// 星精灵目标 RAM=$0260-$02FF（SpriteRAM.24 起）。
+pub const STAR_SPRITE_DST: u16 = 0x0260;
+
+/// 批2 写事件映射（语义标签 → 事件；标签集合=OrchestrationOutcome.writes 的键域）。
+pub fn write_event_tag(tag: &str, v: u8) -> (u16, u8) {
+    let addr = match tag {
+        "PPUCTRL_ZP" => crate::ram_map::PPUCTRL_ZP,
+        "TIMER3" => TIMER3,
+        "SPARE_C9" => SPARE_C9,
+        "SPARE_CB" => SPARE_CB,
+        "INTRO_MUSIC_RESTART" => INTRO_MUSIC_RESTART,
+        "IS_SAMUS" => IS_SAMUS,
+        "JOY1_CHANGE" => JOY1_CHANGE,
+        "JOY1_STATUS" => JOY1_STATUS,
+        "JOY1_RETRIG" => JOY1_RETRIG,
+        "PALETTE_INDEX" => PALETTE_INDEX,
+        "FLASH_INDEX" => FLASH_INDEX,
+        "INTRO_STAR_OFFSET" => INTRO_STAR_OFFSET,
+        "FADE_INDEX" => FADE_INDEX,
+        "SPRITE_LOAD_PENDING" => SPRITE_LOAD_PENDING,
+        "SPARE_B7" => SPARE_B7,
+        "SPARE_B8" => SPARE_B8,
+        "SPARE_BB" => SPARE_BB,
+        "SPARE_C5" => SPARE_C5,
+        "SPARE_CC" => SPARE_CC,
+        "SPARE_CD" => SPARE_CD,
+        "SPARE_CE" => SPARE_CE,
+        "SPARE_CF" => SPARE_CF,
+        "SPARE_D0" => SPARE_D0,
+        "SPARE_D1" => SPARE_D1,
+        "SPARE_D2" => SPARE_D2,
+        "SPARE_D3" => SPARE_D3,
+        "SPARE_D7" => SPARE_D7,
+        "NARPASSWORD" => NARPASSWORD,
+        "SFX_MULTI_INIT" => SFX_MULTI_INIT,
+        "PTR_LO" => 0x0000,
+        "PTR_HI" => 0x0001,
+        "PTR_LO2" => 0x0002,
+        other => panic!("title_state 未知写标签 {other}——fail-loud"),
+    };
+    (addr, v)
+}
+
+/// Objects 清区展开（$0300-$031F，32 事件）。
+pub fn objects_clear_events() -> Vec<(u16, u8)> {
+    (0..0x20u16).map(|i| (OBJECTS_CLEAR_BASE + i, 0)).collect()
+}
+
+#[cfg(test)]
+mod tests_batch2 {
+    use super::*;
+
+    /// 批2 标签映射面（PPUCTRL_ZP 复用 ram_map 唯一源）。
+    #[test]
+    fn batch2_tag_mapping() {
+        assert_eq!(write_event_tag("PPUCTRL_ZP", 0xF9), (0x00FF, 0xF9));
+        assert_eq!(write_event_tag("SFX_MULTI_INIT", 0x10), (0x0684, 0x10));
+        assert_eq!(write_event_tag("NARPASSWORD", 0), (0x69B2, 0));
+        assert_eq!(objects_clear_events().len(), 32);
+        assert_eq!(objects_clear_events()[0], (0x0300, 0));
+        assert_eq!(objects_clear_events()[31], (0x031F, 0));
+    }
+}

@@ -510,3 +510,59 @@ pub fn title_no_op(input: &L2In) -> L2Out {
     let o = t.no_op(input.a);
     title_helper_out(input, o)
 }
+
+// ---- task-23 批2·④编排簇适配（00/0C/11；01/12 L3 降级不设案——见 title 模块底注）----
+
+/// 编排结果 → L2Out（语义标签经 memmap::title_state 映射；WRAM 填充/精灵拷贝展开）。
+fn title_orch_out(input: &L2In, o: crate::title::OrchestrationOutcome) -> L2Out {
+    let mut events: Vec<(u16, u8)> = Vec::new();
+    if let Some(p) = o.phase {
+        events.push(memmap::title_state::write_event_phase(p));
+    }
+    for (tag, v) in &o.writes {
+        if *tag == "OBJECTS_CLEAR" {
+            continue; // 展开在下方统一推
+        }
+        events.push(memmap::title_state::write_event_tag(tag, *v));
+    }
+    if o.writes.iter().any(|(t, _)| *t == "OBJECTS_CLEAR") {
+        events.extend(memmap::title_state::objects_clear_events());
+    }
+    if let Some(fill) = &o.wram_fill {
+        for (addr, v) in fill {
+            events.push((*addr, *v));
+        }
+    }
+    if let Some(sprites) = &o.sprite_copy {
+        for (addr, v) in sprites {
+            events.push((*addr, *v));
+        }
+    }
+    L2Out { a: o.a_out, x: o.x_out, y: o.y_out, writes: merge_writes(events) }
+}
+
+/// 批2 入口 00 适配（注册名 `sub_InitializeAfterReset` ← bank00:$8071，stops=[] 哨兵窗——
+/// 尾经 LoadStarSprites $98AE 的 RTS）。
+pub fn title_init_after_reset(input: &L2In) -> L2Out {
+    let mut t = crate::title::TitleSequence::new(memmap::title_state::read_phase(&input.ram));
+    let o = t.init_after_reset(&input.wram[0x0E00..0x0EA0]); // 星精灵源 $6E00-$6E9F
+    title_orch_out(input, o)
+}
+
+/// 批2 入口 0C 适配（注册名 `sub_ChangeIntroNameTable` ← bank00:$822E）。
+pub fn title_change_nametable(input: &L2In) -> L2Out {
+    let mut t = crate::title::TitleSequence::new(memmap::title_state::read_phase(&input.ram));
+    let ff = input.ram[crate::ram_map::PPUCTRL_ZP as usize & 0x7FF];
+    let o = t.change_nametable(ff);
+    title_orch_out(input, o)
+}
+
+/// 批2 入口 11 适配（注册名 `sub_PrepIntroRestart` ← bank00:$82A3，双路径）。
+pub fn title_prep_restart(input: &L2In) -> L2Out {
+    let mut t = crate::title::TitleSequence::new(memmap::title_state::read_phase(&input.ram));
+    let timer3 = input.ram[memmap::title_state::TIMER3 as usize & 0x7FF];
+    let ff = input.ram[crate::ram_map::PPUCTRL_ZP as usize & 0x7FF];
+    let music = input.ram[memmap::title_state::INTRO_MUSIC_RESTART as usize & 0x7FF];
+    let o = t.prep_restart(timer3, ff, music);
+    title_orch_out(input, o)
+}

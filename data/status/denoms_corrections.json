@@ -56,6 +56,31 @@
       "id": "S-FUNC-00-82F3",
       "addr": "00:82F3",
       "evidence": "task-23 批1：TitleRoutineReturn（13/14 同码 `60`）+ L2 入口案三方全等"
+    },
+    {
+      "id": "S-FUNC-00-8071",
+      "addr": "00:8071",
+      "evidence": "task-23 批2：InitializeAfterReset（L2 三方全等）"
+    },
+    {
+      "id": "S-FUNC-00-822E",
+      "addr": "00:822E",
+      "evidence": "task-23 批2：ChangeIntroNameTable（L2 三方全等）"
+    },
+    {
+      "id": "S-FUNC-00-82A3",
+      "addr": "00:82A3",
+      "evidence": "task-23 批2：PrepIntroRestart（L2 三方全等）"
+    },
+    {
+      "id": "S-FUNC-00-80D0",
+      "addr": "00:80D0",
+      "evidence": "task-23 批2：DrawIntroBackground（L3 降级 R3 显式）"
+    },
+    {
+      "id": "S-FUNC-00-82ED",
+      "addr": "00:82ED",
+      "evidence": "task-23 批2：TitleScreenOff（L3 降级 R3 显式）"
     }
   ],
   "d_wrongface": {

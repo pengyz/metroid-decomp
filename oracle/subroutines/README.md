@@ -45,6 +45,7 @@ cargo test --workspace                   # 同一差分引擎单元测试（rust
 | b-game-rng-*（8 案） | sub_GameRng | 手推自闭式推导（bank07:C000-C019 26B 结构互核：每调用 RN1+=0x19/RN2+=0x5F；种子 bank07:$C0AC）+ 动态交叉（docs/findings/game-rng-adjudication.md） | **RNG 序列族**（task-20）：步进语义/双轴回绕/X 保存恢复/A 死输入/写面={$2E,$2F} 面外=0——喂 N-0012 机械门谓词计数 |
 | b-fe83-*（9 案） | sub_FE83 | 手推自 asm 语义模型（bank07:FE83-FECB 73B/34 条结构互核：伤害序列全流含 F311→F338→F27B→F323 链）× ROM 腿独立裁定 | **复活伤害族**（task-9）：碰撞/无碰撞双路 + CMP 边界对 + hi 不等两链 + 进位丢弃 quirk 夹具——carry 极性（C=1 无碰撞）经写面钉死 |
 | b-title-*（7 案） | sub_IncTitleRoutine/ClearSpareMem/DelayIntroReplay/TitleRoutineReturn | 手推自 asm 字节语义（bank00:$806E/$8068/$8283/$82F3 结构互核：落穿共享尾+Timer3 单位+同码对）× ROM 腿裁定 | **title 批1 助手簇**（task-23）：0A/0B/13/14 同码对逐入口钉（同码折叠=链规 19 首证）+ 落穿语义 + 写面「不写≠同值写」+ INC 回绕边界 |
+| b-title-init-00/nametable-0c/prep-11-*（5 案） | sub_InitializeAfterReset/ChangeIntroNameTable/PrepIntroRestart | 手推自 asm 字节语义（bank00:$8071 表驱动填充模式+LoadStarSprites 尾链/$822E 21B/$82A3 双路径）× ROM 腿裁定 | **title 批2 编排簇**（task-23）：2230 写面填充模式钉 + 相位**置 2**（sty 非 inc）+ 双路径音乐重启/递减 + X/Y 尾面（$68/$FF）——01/12 L3 降级（R3）不设案显式记 |
 
 新增用例规则：golden 必须手推自 seed 指令语义（A 级，注明行范围）；game-core 侧实现
 （`crates/game-core/src/l2ports.rs`）与用例同 commit 落地——**未实现例程不得入用例文件**
