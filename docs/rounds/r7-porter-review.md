@@ -422,6 +422,21 @@ game_rng_detonates_until_verified 单测钉死）——与 task-13 §2「L3 双�
 两层三口径终态：frame/ 产品层零地址（13 hex=size/mask）✓；全闸绿（rust-tests 34、
 naming 12、proof-checks 触发面 SKIP 显式）。
 
+## task-10 批 20：C158 单元端口（faab3ac）——VRAM 清屏双遍 + L2 组件反哺首例
+
+### verdict: pass
+
+字节核全通：C158=`20 6d c1 a5 1d f0 06 a5 1f c9 1d f0 04 a9 02 d0 06 a9…`——
+**双遍结构**实锤（首遍 JSR sub_c16d=验证件反哺：C16D=`a9 01 85 01 a9 ff 85 00`
+与 l2-c16d-set-ptr-lo-hi 契约面 a=FF/$00=FF/$01=1 逐字对上；次遍经 C16F 尾入
+STA $01）；分派 `C9 1D`=**CMP 立即数**（陷阱同族正确）⇒ $01∈{2,3}；尾共段
+`a9 ff 85 00`=$00=FF；PPU 面 `ae 02 20/a5 ff 29 fb 85 ff/8d 00 20/a6 01 ca/bd 9f
+c1/8d 06`（$FF&=!4/STA $2000/表[$01-1]→$2006）✓；C19F 表=`20 24 28 2c` ✓。
+引爆点迁移自证复现：`unported @ bank07:C1A3`（C158 已消化）✓。单测 21+8 全绿、
+全闸 PASS、基线 37。**L2 组件反哺首例**（C16D 44 案时代验证件经 l2_apply 桥喂帧引擎）
+=两层「判定层不变、结构可换」实证；PPU 面不在 RAM watch、渲染面保真留 task-13
+=口径诚实。无新 findings。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
