@@ -68,6 +68,18 @@ fn main() -> ExitCode {
         return ExitCode::from(2);
     }
 
+    // stale fail-open 防御（verifier v4 路由①/r11）：run 起点删旧 dump——旧件不删会被
+    // diff_traces 当有效腿（fail-open）；本 bin 引爆即不落盘+落盘走临时名 rename。
+    let dump_dir = std::path::Path::new("analysis/dump");
+    let path = dump_dir.join(format!("{scenario}.frames.jsonl"));
+    if path.exists() {
+        if let Err(e) = std::fs::remove_file(&path) {
+            eprintln!("清理旧 dump 失败（fail-loud，拒带旧腿起跑）: {e}");
+            return ExitCode::from(1);
+        }
+        println!("[stale-clean] 旧 dump 已清: {}", path.display());
+    }
+
     let mut engine = FrameEngine::new();
     let mut out = String::new();
     for f in 1..=frames {
@@ -79,14 +91,17 @@ fn main() -> ExitCode {
             .collect();
         out.push_str(&format!("{{\"f\":{f},\"w\":{{{}}}}}\n", w.join(",")));
     }
-    let dump_dir = std::path::Path::new("analysis/dump");
     if let Err(e) = std::fs::create_dir_all(dump_dir) {
         eprintln!("建 dump 目录失败: {e}");
         return ExitCode::from(1);
     }
-    let path = dump_dir.join(format!("{scenario}.frames.jsonl"));
-    if let Err(e) = std::fs::write(&path, &out) {
-        eprintln!("写 dump 失败: {e}");
+    let tmp = dump_dir.join(format!("{scenario}.frames.jsonl.tmp"));
+    if let Err(e) = std::fs::write(&tmp, &out) {
+        eprintln!("写临时 dump 失败: {e}");
+        return ExitCode::from(1);
+    }
+    if let Err(e) = std::fs::rename(&tmp, &path) {
+        eprintln!("dump 落盘失败: {e}");
         return ExitCode::from(1);
     }
     println!("L3 game-core 腿: {frames} 帧 watch 向量 → {}", path.display());

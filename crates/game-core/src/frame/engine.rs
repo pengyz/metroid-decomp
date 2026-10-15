@@ -127,6 +127,6 @@ mod tests {
         let mut rng = GameRng::new();
         let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| rng.next_u8()));
         let msg = panic_message(&r.unwrap_err());
-        assert!(msg.contains("rng-algorithm-unverified"), "引爆点失准: {msg}");
+        assert!(msg.contains("unported @ bank07:C000"), "引爆点失准: {msg}");
     }
 }
