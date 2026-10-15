@@ -128,6 +128,7 @@ fn main() -> ExitCode {
             let input_y_hint = reg_y as u16;
             let mut ram = vec![0u8; 0x800];
             let mut wram = vec![0u8; 0x2000];
+            let mut written: Vec<u16> = Vec::new(); // 回显须覆盖全部落值址（含有效址）
             for addr_s in &spec.ram_addrs {
                 let addr = u16::from_str_radix(addr_s, 16).map_err(|e| format!("{e}"));
                 match addr {
@@ -142,8 +143,10 @@ fn main() -> ExitCode {
                             let v = rng.next_u8();
                             if (0x6000..0x8000).contains(&eff) {
                                 wram[eff as usize - 0x6000] = v;
+                                written.push(eff);
                             } else if eff < 0x2000 {
                                 ram[(eff as usize) & 0x7FF] = v;
+                                written.push(eff);
                             }
                         }
                     }
@@ -176,17 +179,17 @@ fn main() -> ExitCode {
                 .iter()
                 .map(|(a, v)| format!("\"{a}\":{v}"))
                 .collect();
-            let ram_in: Vec<String> = spec
-                .ram_addrs
+            written.sort_unstable();
+            written.dedup();
+            let ram_in: Vec<String> = written
                 .iter()
-                .filter_map(|a| {
-                    let addr = u16::from_str_radix(a, 16).ok()?;
-                    let v = if (0x6000..0x8000).contains(&addr) {
-                        input.wram.get(addr as usize - 0x6000).copied().unwrap_or(0)
+                .map(|addr| {
+                    let v = if (0x6000..0x8000).contains(addr) {
+                        input.wram[*addr as usize - 0x6000]
                     } else {
-                        input.ram[(addr as usize) & 0x7FF]
+                        input.ram[(*addr as usize) & 0x7FF]
                     };
-                    Some(format!("\"{a}\":{}", v))
+                    format!("\"{:04X}\":{}", addr, v)
                 })
                 .collect();
             out_lines.push(format!(
