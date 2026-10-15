@@ -753,6 +753,20 @@ L2 golden 才是该轴裁判——链规 18 同源原理的 L2 侧镜像。）
 （77→82/63→65 仅上调）；N-0064/0065 指针在位。
 findings（r10）：0 新（含其自报的 r2 双失实更正=第六案族规范样本）。
 
+## task-10 批 33：WritePPUCtrl/C44D（b1014c6）——PPU 控制同步+共享尾抽取
+
+### verdict: pass
+
+四查：①asm 锚 4/4 命中 ✓（WritePPUCtrl: ; 07:C44D/ExitSub: ; 07:C45C 共享 RTS/
+SetPPUMirror: ; 07:C4B6（lsr×3/and #01/ora 串行）/PrepPPUMirror: ; 07:C4D9——
+共享尾三路汇入（C4B2/C4D9/C44D）结构复刻=域形共享 fn ✓ ②共享尾副作用面显式
+（动 $00/$25=MMC1CTRL_ZP 可观测；寄存器面 write_io 同步）③测 56 绿（c4b2 共享
+复用后全过=结构可换实证）④引爆迁移 `bank07:C215`（ReadJoyPads 输入面次件）✓。
+**事故注·共享账本撞号**（自录）：port2 并行 append 撞 N-0061..N-0064 序列——
+重排 N-0066..N-0069+ID 唯一断言自证（我方复核 69 条唯一 ✓）；新纪律「共享账本
+append 前查 max-ID」=共享 git index 同族并行面，入案 ✓。
+findings（r10）：0 新。基线 69。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接

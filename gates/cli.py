@@ -612,6 +612,21 @@ def gate_assets_manifest() -> tuple[str, str]:
     return PASS, f"{len(assets)} 条资产 sha256/size 与 baseline.json assets 一致"
 
 
+def ledger_id_problems(ids: list[tuple[int, str]]) -> list[str]:
+    """纯函数（自检可注入）：ids=[(行号, id)]——重复 ID ⇒ 撞号报错；N- 序列非单调 ⇒ 报错。"""
+    errs: list[str] = []
+    seen: dict[str, int] = {}
+    for i, rid in ids:
+        if rid in seen:
+            errs.append(f"ID 撞号: {rid}（第{seen[rid]}行与第{i}行重复——并行 append 竞态面）")
+        else:
+            seen[rid] = i
+    nums = [int(m.group(1)) for _, rid in ids for m in [re.match(r"^N-(\d+)$", rid)] if m]
+    if nums != sorted(nums):
+        errs.append("ID 序列非单调递增（乱序=并行写入/重排残留）")
+    return errs
+
+
 def gate_naming_ledger() -> tuple[str, str]:
     ledger = ROOT / "data" / "naming" / "ledger.jsonl"
     if not ledger.is_file():
@@ -641,6 +656,18 @@ def gate_naming_ledger() -> tuple[str, str]:
             warnings.append(f"第{i}行缺 confidence（建议与 evidence 配套记录 0-100）")
         elif isinstance(confidence, bool) or not isinstance(confidence, (int, float)) or not 0 <= confidence <= 100:
             problems.append(f"第{i}行 confidence 非 0-100 数值: {confidence!r}")
+    # ID 唯一性+单调性（撞号案机械护栏，lead 2026-10-15：链规 13a 人规的机械兜底——
+    # port2/porter 并行 append 双写 N-0061..64 案；重复 ID 或逆序 ⇒ FAIL）
+    ids = []
+    for i, line in enumerate(lines, 1):
+        try:
+            rec = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        rid = rec.get("id") if isinstance(rec, dict) else None
+        if isinstance(rid, str):
+            ids.append((i, rid))
+    problems.extend(ledger_id_problems(ids))
     detail = f"{len(lines)} 条记录逐条校验证据指针"
     if warnings:
         detail += "；WARN（显式）: " + "; ".join(warnings)
@@ -1089,9 +1116,13 @@ def gate_tree_coherence() -> tuple[str, str]:
     present = tracked_rs | staged_rs          # 提交树面（tracked ∪ staged-new）
     sources: dict[str, str] = {}
     for p in sorted(present):
-        fp = ROOT / p
-        if fp.is_file():
-            sources[p] = fp.read_text(encoding="utf-8", errors="replace")
+        # v3 语义（WIP 连坐封堵，2026-10-15）：读 **index 内容**（git show :path）——
+        # 判「staged/committed 引用缺席文件」之破；worktree 未暂存 WIP（他人在途）
+        # 不连坐拦提交。945fe41 形态（mod.rs 已提交而目标未入库）仍拦 ✓。
+        blob = subprocess.run(["git", "show", f":{p}"], cwd=ROOT, capture_output=True,
+                              text=True, encoding="utf-8", errors="replace", env=clean_env)
+        if blob.returncode == 0:
+            sources[p] = blob.stdout
     errs = rust_mod_coherence_errors(sources, present)
     if errs:
         shown = "; ".join(errs[:5])
@@ -1754,6 +1785,16 @@ def cmd_selftest(_args) -> int:
     check("doc-sync 打回文件缺失", len(errs) == 1 and "缺失" in errs[0], errs)
     v, d = gate_doc_sync()
     check("doc-sync 门禁实跑（本仓 unported-hit-face 对）", v == PASS, d)
+
+    # 12) 台账 ID 唯一+单调（撞号案机械护栏，链规 13a 兜底）
+    errs = ledger_id_problems([(1, "N-0001"), (2, "N-0002"), (3, "N-0002")])
+    check("台账 ID 撞号打回", len(errs) == 1 and "撞号" in errs[0], errs)
+    errs = ledger_id_problems([(1, "N-0002"), (2, "N-0001")])
+    check("台账 ID 乱序打回", len(errs) == 1 and "非单调" in errs[0], errs)
+    errs = ledger_id_problems([(1, "N-0001"), (2, "N-0002"), (3, "N-0010")])
+    check("台账 ID 唯一单调 ⇒ 0 错", errs == [], f"errs={errs}")
+    v, d = gate_naming_ledger()
+    check("naming-ledger 门禁实跑（本仓 69 条含 ID 校验）", v == PASS, d)
 
     failed = [c for c in cases if not c[1]]
     for name, ok, detail in cases:
