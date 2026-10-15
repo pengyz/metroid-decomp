@@ -229,6 +229,24 @@ L2 47/47 全过 635 对象段、L3 50/50（130 行/440 元块）、tail $FF 终�
 **④ L4 $AEF0 锚点+「索引闭合校验待全表长度自证」=显式待办** ✓。
 findings 三族（r10）：0 新。
 
+## task-5③ 续审（2c9b6fb，denoms v2 纠偏机制）——2026-10-15
+
+### verdict: pass
+
+### findings（逐项复现输出）
+
+**① denoms 运行原文复现 ✓**：「补录 +6 S 格；错面待迁 27；段切 1；残余待查 2 格 + 1
+尾段（显式）」+「S=464 D=193 B=11 R=0；covered=29」逐字命中。
+**② 纠偏清单证据面 ✓**：denoms_corrections.json 七键结构（s_supplement/d_wrongface/
+segment_splits/residuals/v2_totals…）+ findings/decode-sweep 指针 11 处——四类逐条
+带证据指针=claim 兑现。
+**③ 新文件落库核（清单第 6 项）✓**：denoms_corrections.json 在 commit（4 文件
+stat=意图一致）。
+**④ 「v2 定值机制」grep=1 ✓**（completeness.md 口径分离：估计值 vs 定值账面）。
+**机制评**：纠偏清单机制（非工具内嵌硬编码）=权威记录与消费解耦——补录格自动入面/
+错面/段切/残余显式打印（不静默），机械导出+清单=可复现分母 ✓。
+findings 三族（r10）：0 新。
+
 ## 遗留风险清单
 
 1. S 面 120 为 B 级估计——分母 v2 实际登记（lead task-5）以 decode-sweep 复跑 + 逐条
