@@ -788,6 +788,17 @@ frame_keys 坏例现场 exit 2**（「可为空数组缺键不行」实跑）+w 
 （方法面：stat 对账升格**逐文件归属核对**（第五变体）；共享树禁 stash（第七案）
 ——我方验证改 worktree 法；FAIL 文案归属线索=gates backlog 低优先。）
 
+## task-10 批 34：UpdateAge/C97E（7e4e916）——NMI 体收官（全通里程碑）
+
+### verdict: pass
+
+四查：①asm 锚 ✓（`UpdateAge: ; 07:C97E`+三重门体（GameMode/MainRoutine==GameEngine/
+FrameCount 节拍）+SamusAge 使用面命中）②**速核更正自录 ✓**（假设值 0x34 作废→
+真址 $687D ds 4 WRAM 进位族——constants_ram 内容锚；三面同刻更正常/测/账=纪律好）
+③单测 59 绿（标题零写 WRAM 断言+游戏路径引爆）④引爆迁移 `bank07:C5D7` ✓——
+**NMI 体全通里程碑实证**（C0D9 体八件 boot 短路面贯通，引爆点移出 NMI 体进
+boot_post_spin 链）。findings（r10）：0 新。基线 83。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
