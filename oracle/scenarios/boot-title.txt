@@ -13,6 +13,9 @@ capture 299 title
 
 capture_every 60 probe
 
-# 状态向量：零页 + 栈/游戏变量区（Metroid MMC1 无 PRG-RAM，密码制无电池存档）
+# 状态向量：零页 + 栈/游戏变量区（密码制无电池存档）
+# 【2026-10-15 更正】原注「Metroid MMC1 无 PRG-RAM」与 $6AFx WRAM 定谳矛盾（陈旧注
+# 曾阻滞 watch 扩面决策）——$6AF4-$6BF3 敌槽区=WRAM 实存（Mesen2 实跑+写址+三方证据），
+# 定谳见 docs/findings/ram-region-6af4-contradiction.md；watch 扩面按 WRAM 口径决策。
 watch_range 0000-00ff zp
 watch_range 0100-07ff iram

@@ -226,6 +226,7 @@ end
 -- 产物：<name>.entries.jsonl（每入口一行）+ <name>.edges.jsonl（调用边聚合）。
 local epStats, epEdges, epHits, epSeq = {}, {}, 0, 0
 local epMode = "off"
+local nmiLog, nmiN = {}, 0   -- task-15：C0D9 帧界时间线（scanline/vblank 相位）
 if PLAN.entry_probe and #PLAN.entry_probe > 0 then
   local function epHit(address)
     epHits = epHits + 1
@@ -233,6 +234,11 @@ if PLAN.entry_probe and #PLAN.entry_probe > 0 then
     local ok, st = pcall(emu.getState)
     if not ok or not st then return end
     local sp = st["cpu.sp"] or (st.cpu and st.cpu.sp)
+    local scan = st["ppu.scanline"] or (st.ppu and st.ppu.scanline) or -1
+    local vb = st["ppu.statusFlags.verticalBlank"]
+    if vb == nil and st.ppu and st.ppu.statusFlags then
+      vb = st.ppu.statusFlags.verticalBlank
+    end
     local caller, kind = "none", "other"
     if sp then
       local plo = readByte(0x0100 + ((sp + 1) % 256))
@@ -243,11 +249,18 @@ if PLAN.entry_probe and #PLAN.entry_probe > 0 then
     end
     local s = epStats[address]
     if not s then
-      s = { n = 0, first_seq = epSeq, first_frame = frame, last_frame = frame }
+      s = { n = 0, first_seq = epSeq, first_frame = frame, last_frame = frame,
+            first_scanline = scan, first_vblank = vb, first_sp = sp }
       epStats[address] = s
     end
     s.n = s.n + 1
     s.last_frame = frame
+    if address == 0xC0D9 and nmiN < 4000 then
+      nmiN = nmiN + 1
+      nmiLog[#nmiLog + 1] = string.format(
+        '{"f":%d,"seq":%d,"scanline":%d,"vblank":%s,"sp":%s,"caller":"%s"}',
+        frame, epSeq, scan, tostring(vb), tostring(sp), caller)
+    end
     local ek = caller .. "|" .. string.format("%04X", address) .. "|" .. kind
     local e = epEdges[ek]
     if not e then
@@ -296,22 +309,50 @@ if PLAN.probe_mem and #PLAN.probe_mem > 0 then
     if probeN > 3000000 then return end
     probeN = probeN + 1
     local ok, st = pcall(emu.getState)
+    -- ⚠ pc 字段=回调地址回显（r3 v1 实证，非写者 PC）——写者归属用 caller（栈 ret-2
+    -- 反推 site，首字节 0x20=JSR 语境）；task-15 ③ 栈页残迹机理靠 caller/sp/scanline。
     local pc = (ok and st and st.cpu) and string.format("%04X", st.cpu.pc or 0) or "????"
     local fc = (ok and st) and (st.frameCount or 0) or 0
-    probeF:write(string.format('{"f":%d,"pc":"%s","a":"%04X","v":%d}\n', fc, pc, addr, val))
+    local sp = (ok and st) and st["cpu.sp"] or nil
+    local scan = (ok and st) and st["ppu.scanline"] or -1
+    local caller, kind = "none", "other"
+    if sp then
+      local plo = readByte(0x0100 + ((sp + 1) % 256))
+      local phi = readByte(0x0100 + ((sp + 2) % 256))
+      local site = (plo + phi * 256) - 2
+      caller = string.format("%04X", site)
+      if readByte(site) == 0x20 then kind = "jsr" end
+    end
+    probeF:write(string.format(
+      '{"f":%d,"pc":"%s","a":"%04X","v":%d,"caller":"%s","kind":"%s","sp":%s,"scanline":%d}\n',
+      fc, pc, addr, val, caller, kind, tostring(sp), scan))
     if probeN % 512 == 0 then probeF:flush() end
   end
   for _, r in ipairs(PLAN.probe_mem) do
     local lo, hi = tonumber(r[1], 16), tonumber(r[2], 16)
-    local ok = pcall(emu.addMemoryCallback, function(address, value)
-      probeLog(address, value)
-    end, "write", lo, hi)
+    -- r3 同族教训（task-15 实测）：字符串 "write" 注册=读写不分的劣化语义
+    -- （$1A 轮询读混入 1.37M/1.38M）——枚举 callbackType.write 才是真写点。
+    local wmode = "callbackType.write"
+    local ok = false
+    if emu.callbackType and emu.callbackType.write then
+      ok = pcall(emu.addMemoryCallback, function(address, value)
+        probeLog(address, value)
+      end, emu.callbackType.write, lo, hi)
+    end
     if not ok then
       ok = pcall(emu.addMemoryCallback, function(address, value)
         probeLog(address, value)
-      end, emu.memCallbackType and emu.memCallbackType.write or "write", lo, hi)
+      end, 1, lo, hi)
+      wmode = "numeric-1"
     end
-    probeF:write(string.format('{"probe":"%04X-%04X","cb":%s}\n', lo, hi, tostring(ok)))
+    if not ok then
+      ok = pcall(emu.addMemoryCallback, function(address, value)
+        probeLog(address, value)
+      end, "write", lo, hi)
+      wmode = "bus-access-degraded"
+    end
+    probeF:write(string.format('{"probe":"%04X-%04X","cb":%s,"mode":"%s"}\n',
+      lo, hi, tostring(ok), wmode))
     probeF:flush()
   end
   emu.addEventCallback(function() probeF:flush() end, "endFrame")
@@ -445,8 +486,9 @@ emu.addEventCallback(function()
         table.sort(keys)
         for _, a in ipairs(keys) do
           local s = epStats[a]
-          ef:write(string.format('{"a":"%04X","n":%d,"first_seq":%d,"first_frame":%d,"last_frame":%d}\n',
-            a, s.n, s.first_seq, s.first_frame, s.last_frame))
+          ef:write(string.format('{"a":"%04X","n":%d,"first_seq":%d,"first_frame":%d,"last_frame":%d,"first_scanline":%d,"first_vblank":%s,"first_sp":%s}\n',
+            a, s.n, s.first_seq, s.first_frame, s.last_frame,
+            s.first_scanline or -1, tostring(s.first_vblank), tostring(s.first_sp)))
         end
         ef:close()
       end
@@ -463,6 +505,16 @@ emu.addEventCallback(function()
         end
         gf:close()
         log("entries dumped: " .. #keys .. " edges, " .. epHits .. " hits")
+      end
+      -- task-15：C0D9 帧界时间线（scanline/vblank 相位证据）
+      if #nmiLog > 0 then
+        local nf = io.open(PLAN.out_dir .. "/" .. name .. ".nmi.jsonl", "wb")
+        if nf then
+          nf:write(string.format('{"root":"C0D9","hits":%d}\n', #nmiLog))
+          for _, l in ipairs(nmiLog) do nf:write(l .. "\n") end
+          nf:close()
+          log("nmi timeline dumped: " .. #nmiLog)
+        end
       end
     end
     local d = io.open(donePath, "wb")

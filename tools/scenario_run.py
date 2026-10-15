@@ -359,12 +359,12 @@ def archive_existing(name: str) -> str | None:
     stamp = time.strftime("%Y%m%d-%H%M%S")
     dst = TRACES_DIR / ".archive" / f"{name}-{stamp}"
     moved = False
-    for pat in (f"{name}.frames.jsonl", f"{name}.captures.jsonl", f"{name}.done",
-                f"{name}.run.json", f"{name}.lua.log", f"{name}.mesen.log"):
-        src = TRACES_DIR / pat
-        if src.exists():
+    # 类级修复（task-15 实测）：按 `<name>.*` 全量归档——旧 6 族白名单漏了
+    # probe/entries/edges/nmi/dispatch/window/exec_cov 等新产物族（run1 被覆盖案）。
+    for src in sorted(TRACES_DIR.glob(f"{name}.*")):
+        if src.is_file():
             dst.mkdir(parents=True, exist_ok=True)
-            shutil.move(str(src), str(dst / pat))
+            shutil.move(str(src), str(dst / src.name))
             moved = True
     for src in (TRACES_DIR).glob(f"{name}_f*.ram.hex"):
         dst.mkdir(parents=True, exist_ok=True)

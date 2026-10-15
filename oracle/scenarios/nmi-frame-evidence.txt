@@ -1,0 +1,17 @@
+# 场景：nmi-frame-evidence —— task-15 NMI/帧界动态证据
+# ① C0D9 NMI 面：entry_probe（nmi.jsonl 帧界时间线：scanline/vblank 相位）
+# ② 双 vblank 对齐：reset 面 FFBA/FFBF 两段等 vblank 循环（静态）+ 首 NMI 帧界（动态）
+# ③ 栈页残迹 $01FC-$01FE：probe_mem 写点 + caller/sp 归属（谁写/何时写/栈深）
+# ④ 主循环成环相位：probe_mem $1A 标志写点 + C0BC/C000 入口相位（帧界对表）
+name nmi-frame-evidence
+frames 600
+watch_range 0000-00ff zp
+watch_range 0100-07ff iram
+
+capture 120 init
+capture 300 title-in
+capture 599 title
+
+entry_probe analysis/_gen/anchors.json
+probe_mem 001A 001A
+probe_mem 01FC 01FE
