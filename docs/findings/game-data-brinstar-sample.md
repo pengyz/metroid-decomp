@@ -101,3 +101,33 @@ L4 元块表锚点：$AEF0（MetatileDefs，索引闭合校验待全表长度自
 
 **L3/L4 批量面**：50 结构/130 行/440 元块全解析 ✓（行布局批量一致）；
 L4 索引闭合（元块索引×4 < 表长）待 MetatileDefs 全表长度自证（下轮）。
+
+## 7. r3：③ palettes 模块 + ④ L4 索引闭合（2026-10-15，常设施工令节奏）
+
+**asm 锚引证主体**：
+- 线格式宏 `VRAMStructData`（macros.asm:32-56：`[hi][lo]` PPU 大端址 + `[len]` + data）/
+  `VRAMStructDataRepeat`（macros.asm:58-70：`[hi][lo]` + `[reps|$40]` + 1B 值）/
+  `VRAMStructEnd`（macros.asm:71-73：`$00`）；
+- 调用面 `PalettePtrTable`（prg1_brinstar.asm:55；`01:9560`）+ `PtrTableEntryArea`
+  = 纯词表（macros.asm:88-101）；注址互证 Palette00($A271)/Palette01($A295)；
+- 元块总数 65=metatiles.asm 260 数据项/4（asm 数得）；调色板 28=PtrTableEntryArea 计数。
+
+**代码层证据（asm 锚引 + ROM 抽查）**：`parse_vram_struct`（结构级：记录序列至 $00，
+双记录族）——**asm 锚证救过一次**：首版只实现 Data 族（逐记录+$00），ROM 批解析 1/28 失败
+→ 回 macros.asm 查得 Repeat 族（reps|$40 标记）才全过（参考 asm=主裁判的实证）。
+
+**用例对拍（8/8 绿）+ ROM 批量（输出原文）**：
+```
+L4 索引闭合：max 元块索引=63 ×4=252 < 表长 260B → ✓
+L5 调色板指针 28 词：[0]=$A271（期望 $A271）[1]=$A295（期望 $A295）
+L5 批解析：28 调色板通过=28 失败=0 数据字节=139（ppu 址全落 $3Fxx 面 ✓）
+```
+
+| 结论 | 级 |
+|---|---|
+| VRAMStruct 双族线格式 | **A**（macros.asm 宏体+ROM 28/28 解析） |
+| PalettePtrTable 28 词 + 注址对拍 | **A**（ROM×asm 注址） |
+| L4 索引闭合（max 63<65） | **A**（批解析+asm 表长） |
+| 调色板语义名（power suit 等注释） | **C**（不入字段名，D5） |
+
+遗留：⑤ CHR 面（L4→pattern 接入，S6 素材）；items/enemy_sprite_data 两件套（下轮）。

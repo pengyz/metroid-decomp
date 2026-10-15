@@ -6,7 +6,7 @@
 //! 产出：47 房批解析 + 50 结构批解析 + L2 敌/门段（tail）长度/首字节聚类
 //!（C→B 自证素材：变长段结构一致性实证）。
 
-use game_data::{parse_ptr_table, parse_room, parse_structure, brinstar};
+use game_data::{parse_vram_struct, parse_ptr_table, parse_room, parse_structure, brinstar};
 use std::collections::BTreeMap;
 use std::env;
 use std::fs;
@@ -79,6 +79,54 @@ fn main() {
     println!("L3 批解析：50 结构全通过={} 失败={} 行={} 元块={}",
         s_bad == 0, s_bad, rows_total, tiles_total);
     // L4 索引闭合：结构引用的元块索引×4 < MetatileDefs 表长（按 m1disasm 91 行×4B ≈ 40 项估）
-    println!("L4 元块表锚点：${:04X}（MetatileDefs，索引闭合校验待全表长度自证）",
-        brinstar::METATILE_DEFS.1);
+    println!("L4 元块表锚点：${:04X}", brinstar::METATILE_DEFS.1);
+    // L3b：元块索引闭合（L4 判据④）：结构引用 max_idx < MetatileDefs 表长（65，asm 数得）
+    let mut max_idx = 0u8;
+    for w in &sptrs {
+        let o = at(*w);
+        if let Some((rows, _)) = parse_structure(&b1[o..]) {
+            for row in rows {
+                for &m in &row {
+                    max_idx = max_idx.max(m);
+                }
+            }
+        }
+    }
+    println!("L4 索引闭合：max 元块索引={} ×4={} < 表长 {}B → {}",
+        max_idx, max_idx as usize * 4, brinstar::METATILE_COUNT * 4,
+        if (max_idx as usize) < brinstar::METATILE_COUNT { "✓" } else { "✗ 违例" });
+    assert!((max_idx as usize) < brinstar::METATILE_COUNT, "L4 索引闭合失败");
+
+    // ③ palettes 模块批解析（VRAMStruct 线格式，macros.asm:32-56/71-73 锚证）
+    let (pptrs, _) = parse_ptr_table(&b1[at(brinstar::PALETTE_PTRS.1)..], brinstar::PALETTE_COUNT).unwrap();
+    println!("L5 调色板指针 {} 词：[0]=${:04X}（期望 ${:04X}）[1]=${:04X}（期望 ${:04X}）",
+        brinstar::PALETTE_COUNT, pptrs[0], brinstar::PALETTE00.1, pptrs[1], brinstar::PALETTE01.1);
+    assert_eq!(pptrs[0], brinstar::PALETTE00.1, "palette 对拍失败");
+    assert_eq!(pptrs[1], brinstar::PALETTE01.1, "palette 对拍失败");
+    let mut pal_ok = 0usize;
+    let mut pal_bad = 0usize;
+    let mut pal_bytes = 0usize;
+    for w in &pptrs {
+        let o = at(*w);
+        match parse_vram_struct(&b1[o..]) {
+            Some((recs, _n)) => {
+                pal_ok += 1;
+                for r in &recs {
+                    let a = match r {
+                        game_data::VramRecord::Data { ppu_addr, data } => {
+                            pal_bytes += data.len();
+                            *ppu_addr
+                        }
+                        game_data::VramRecord::Repeat { ppu_addr, .. } => *ppu_addr,
+                    };
+                    assert!(matches!(a, 0x3F00..=0x3F1F), "ppu 地址越界 ${:04X}", a);
+                }
+            }
+            None => pal_bad += 1,
+        }
+    }
+    println!("L5 批解析：28 调色板通过={} 失败={} 数据字节={}（ppu 址全落 $3Fxx 面 ✓）",
+        pal_ok, pal_bad, pal_bytes);
+    assert_eq!(pal_bad, 0, "palette 批解析失败");
+
 }
