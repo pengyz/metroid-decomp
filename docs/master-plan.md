@@ -30,6 +30,15 @@
   --export（该文件不存在；实际导出器=completeness_denoms.py）——修正指向后删除本行
 - [x] ~~docs/spec/completeness.md 悬空引用~~（2026-10-14 已建 docs/spec/completeness.md，§0/§6.1 对齐 schema）
 
+## 里程碑 B（2026-10-15 用户裁定——集成期转向）
+
+**主里程碑口径**：L3 双腿帧级对拍在 **boot-title + samus 移动 demo** 两场景通过
+（含渲染 PPU 写入面；对齐「移动先行」原排序）。从分母序批量端口**转向执行序集成**：
+帧引擎先跑，unported! 桩阵按真实执行序引爆缺口，每引爆一个端一个（L2 管线降为
+组件库按需补给，证明机/三方/突变全保留）。batch-2（game-data 数据表）提前为帧引擎供料。
+排期：task-10 帧引擎+boots-to-title → task-11 samus 移动 demo；task-12 执行路径调用图
+（喂执行序队列）；task-13 L3 game-core 腿验证设计。bank7 剩余 176 入口=执行序触发积压池。
+
 ## 批量批次表（completeness.md §2，batch-0 起步）
 
 | 批次 | 模块 | 状态 |
