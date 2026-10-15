@@ -1,9 +1,9 @@
 # findings：$6AF4-$6BF3 区域的硬件矛盾（阻断 F152/F1BF 移植）
 
 > 状态：**已定谳**（2026-10-15 当日二次考证）——$6000-$6Cxx = **WRAM 暂存区**。
-> 判据：①写址实存（bank01:81B4 `STA $6AFE,X`/82AB `STA $6B01,X` 等 7 处）②m1disasm 布局
+> 判据：①写址实存（bank01 `$6Axx` abs,X 恰 7 处：81B4/820C `$6AFE`、81C3/81D7 `$6AFF`、838A `$6AFC`、83EA `$6AFD`、855F `$6AFB`；82AB `$6B01`/82CD `$6B03` 系 $6Bxx 另计）②m1disasm 布局
 > 「ItemHistory …saved game data (not used)」+「16 slots of 16 bytes ($6AF4-$6BF3)」
-> ③实机证据：游戏内敌人正常运行（samus-move3 f1150 截图）——若 $6AFx 为 open bus 敌槽
+> ③实跑证据（Mesen2=D3 真相源，非真机）：游戏内敌人正常运行（samus-move3 f1150 截图，再生命令见 samus-movement-observations.md）——若 $6AFx 为 open bus 敌槽
 > 不可能工作。结论：卡带带 WRAM（作暂存，无电池存档功能——battery 位=0 与「(not used)」
 > 自洽：WRAM≠battery save）。
 

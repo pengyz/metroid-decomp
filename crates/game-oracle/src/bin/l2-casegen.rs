@@ -119,17 +119,27 @@ fn main() -> ExitCode {
                 seed = seed.wrapping_mul(31).wrapping_add(b as u64);
             }
             let mut rng = Lcg::new(seed.wrapping_add(n as u64));
+            let input_x_hint = rng.next_u8() as u16;
+            let input_y_hint = rng.next_u8() as u16;
             let mut ram = vec![0u8; 0x800];
             let mut wram = vec![0u8; 0x2000];
             for addr_s in &spec.ram_addrs {
                 let addr = u16::from_str_radix(addr_s, 16).map_err(|e| format!("{e}"));
                 match addr {
                     Ok(a) => {
-                        let v = rng.next_u8();
-                        if (0x6000..0x8000).contains(&a) {
-                            wram[a as usize - 0x6000] = v; // $6AFx 敌槽/暂存域
-                        } else {
-                            ram[(a as usize) & 0x7FF] = v;
+                        // 字面地址必须在可写域（fail-loud）；辅助有效址 base+X/base+Y 可跳
+                        if !((0x6000..0x8000).contains(&a) || a < 0x2000) {
+                            eprintln!("ram_addrs 地址 ${a:04X} 不在可写域（<$2000 / $6000-$7FFF）——fail-loud");
+                            return ExitCode::from(2);
+                        }
+                        // 判别力修复（F1xx 复审 2）：基址与变址有效址都赋值
+                        for eff in [a, a.wrapping_add(input_x_hint), a.wrapping_add(input_y_hint)] {
+                            let v = rng.next_u8();
+                            if (0x6000..0x8000).contains(&eff) {
+                                wram[eff as usize - 0x6000] = v;
+                            } else if eff < 0x2000 {
+                                ram[(eff as usize) & 0x7FF] = v;
+                            }
                         }
                     }
                     Err(e) => { eprintln!("ram_addrs 错误: {}", e); return ExitCode::from(2); }

@@ -141,8 +141,11 @@ fn run_case(prg: &[u8], case: &Case) -> Result<(), String> {
         let addr = u16::from_str_radix(k, 16).map_err(|e| format!("{e}"))? as usize;
         if (0x6000..0x8000).contains(&addr) {
             wram[addr - 0x6000] = *v; // $6AFx 敌槽/暂存域
+        } else if addr < 0x2000 {
+            ram[addr & 0x7FF] = *v; // 2KB 镜像归一（仅此域）
         } else {
-            ram[addr & 0x7FF] = *v;
+            eprintln!("[FAIL] 用例地址 ${addr:04X} 不在可写域（<$2000 RAM 镜像 / $6000-$7FFF WRAM）——fail-loud");
+            return Err(format!("用例地址越界 ${addr:04X}"));
         }
     }
     let input = L2In {

@@ -118,7 +118,7 @@ pub fn sub_f1e0(input: &L2In) -> L2Out {
 }
 
 /// sub_F152 —— bank07:F152-F185（经 loc_F17F 共享尾）：坐标/属性读取器（X 变体）。
-/// $07 ← RAM[$400+X]；$09 ← RAM[$401+X]；$0B ← (WRAM[$6AFB+X] ^ $FF) & 1。
+/// $07 ← RAM[$400+X]；$09 ← RAM[$401+X]；$0B ← (WRAM[$6AFB+X] ^ **RAM[$FF]**) & 1（EOR zp）。
 /// 语义证据（A 级）：seed 逐指令；$6AFx 域=WRAM 暂存区（findings/ram-region-6af4-contradiction.md 定谳）。
 pub fn sub_f152(input: &L2In) -> L2Out {
     let x = input.x as u16;
@@ -126,7 +126,7 @@ pub fn sub_f152(input: &L2In) -> L2Out {
     let v9 = input.ram[(0x0401 + x) as usize & 0x7FF];
     let w = input.wram.get(0x6AFB + x as usize - 0x6000).copied().unwrap_or(0);
     // F17F `45 FF` = EOR **零页 $FF**（RAM），非立即数——操作数类型以清单 # 前缀为准
-    let vb = (w ^ input.ram[0x00FF]) & 1;
+    let vb = (w ^ input.ram[0x00FF]) & 1; // ^ RAM[$FF]（EOR zp，非立即数）
     L2Out {
         a: vb,
         x: input.x,
