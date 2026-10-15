@@ -609,6 +609,31 @@ PtrTable prg[0x0AFF..] 8 项=8B0F/8B19/8B23/8B2D/8B37/8B41/8B4B/8B55 与烘焙�
 「引擎侧同态」。
 findings 三族（r10）：1 中（声明族）。基线 61。
 
+## task-10 批 28b 重裁（50af369 TYA 更正后）+ 批 29（e9dd8c4）——2026-10-15
+
+### 批 28b verdict: pass（原 pass 撤回后重裁通过）
+
+> 【模型更正案全程记】P28-F1 升级模型更正案（8AC7 TYA 位错一位=「值=Y」误译）——
+> **模型错×单测绿=同源补偿**实证；新判据（链规 18 捕获面对表）即由此案立规。
+
+三点重裁：①**TYA 修正核 ✓**：asm 结构实证 `tya ;A = 0` 在 @loop_A **环外**（BNE 锚
+@loop_B=STA 环写 A=0）——零填充模型正确、旧 Y 型=解码错位一位（第六案入档）②
+**撤回注核 ✓**：intro.rs 更正注 3 处+N-0049/N-0052 台账注含更正（原地留痕）；执行序
+发现撤回（「消费端先于生产端」为误读产物——生产端先行=真实序）③**捕获面对表 ✓**：
+零填充模型 vs 真机写值域 {0,6,12}/{33,35,68}（9e39d0d 写点级）——模型写值∈捕获域、
+0xA0 零命中互证；引爆断言回 `bank07:C37E`（生产端先行）复现 ✓。测 40 绿。
+
+### 批 29 verdict: pass（CheckVRAMStructBufferWrite/C2CA，e9dd8c4）
+
+五查+第 7 查：①asm 内容锚 ✓（`CheckVRAMStructBufferWrite: ; 07:C2CA`「Exit if no PPU
+data」/「start at address $07A1」/「data…now erased」注+清三态体）②**NMI 工作序漏桩
+自查补全 ✓**（WritePPUCtrl C44D/WriteScroll C29A/ReadJoyPads C215/SoundEngine B3B4
+逐位对齐 asm 调用序——自查抓回跳步=执行序失真根治）③单测 7 绿（boot 静默/pending
+引爆双面）+引爆迁移 `bank07:C44D` 与消费端序自洽 ④PPU_DATA_PENDING 社区注自相矛盾
+如实记录（取生产端 sty 语义）✓ ⑤**捕获面对表（链规 18 首用）✓**：清三态模型写 0∈
+捕获域、boot 静默（$1B=0 生产端未跑）与捕获 boot 相一致。
+findings（r10）：0 新（28b 模型更正案已结）。基线 63。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
