@@ -393,6 +393,35 @@ F2CA 族九入口（F270/F2DF/F2D8/F2D5/F2AD/F2CA/F2ED/F2E8/F282）**9/9 全部�
 （专设边界案 1/1 招招正中 + 突变如实申报）达到本会话最高水位。**verdict=pass ⇒
 task-8 翻 complete**。
 
+## task-10 批 19：S5 帧引擎骨架（c73ab66）——60Hz tick/全内存/unported! 桩阵/l3-dump
+
+### verdict: pass
+
+**① 引爆面三自证复现 ✓**：`cargo test -p game-core frame` 4/4（boot_prologue_writes_no_ram
+/ game_rng_detonates_until_verified / unported_detonates_at_bank_addr /
+ram_mirror_and_watch_face）；l3-dump 引爆 CLI 复现原文
+`panicked … unported @ bank07:C01A`（引爆即不落盘=禁半成品绿 ✓）。FFB0 reset 序
+`78 d8 a2 00 … 8d 00 c0`（SEI/CLD/PPU 关/双 vblank/MMC1 复位写）+ 向量 FFFC=FFB0/
+FFFA=C0D9 逐字节吻合；C01A=`a9 00 8d 00` 主初始化首址 ✓。
+**② FrameMemory 镜像契约同源 ✓**：`addr & 0x7FF` 2KB 归一两侧逐字同（frame/memory.rs
+与 l2ports.rs L2In 读写面），watch 面 zp=512/iram=3584 大写 hex 与 l3_manifest 同形。
+**③ GameRng C 级 fail-loud 姿势 ✓**：算法未证不发明（N-0012 入账+unported! 桩+
+game_rng_detonates_until_verified 单测钉死）——与 task-13 §2「L3 双腿启用硬前置」
+一致。台账 N-0009..N-0012 四条证据指针齐（A/B/C 级分布如实）。
+**④ 栈页残迹口径——实质成立，两处精度偏（P10-F1）**：主导帧态 **19 非零字节 ✓**
+（$01EB-$01FF）；帧数实测 **292**（申报 293，偏离帧=0-7 开机段）；「$01FE 单字节漂移」
+实为 **$01FC-$01FE 三字节值漂移**（主导窗内值有变位置实测）——措辞/计数需校，
+残迹存在与调用影子结论不变。
+
+### findings 汇总
+
+| # | 分类 | 内容 | 处置 |
+|---|---|---|---|
+| P10-F1 | 声明精度 | 栈页残迹：293 帧→实测 292；「$01FE 单字节漂移」→实为 $01FC-$01FE 三字节 | 回 porter 校 doc 口径；非阻断（实质成立） |
+
+两层三口径终态：frame/ 产品层零地址（13 hex=size/mask）✓；全闸绿（rust-tests 34、
+naming 12、proof-checks 触发面 SKIP 显式）。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
