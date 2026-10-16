@@ -11,8 +11,8 @@
   **v2 定值机制（task-5③ 落地）**：v2 = 机械导出 + `data/status/denoms_corrections.json`
   纠偏清单（补录格/错面/段切/残余四类逐条带证据指针）——`python3 tools/completeness_denoms.py`
   合流输出。现行账面：S=464（含补录 6 格）D=193 B=11；错面待迁 27（decode-sweep-report §6.1
-  唯一清单）；残余待查 2 格+1 尾段显式。S 面少计 ~176 有佐证入口=上界估计（附录 B 口径），
-  定值随 task-12 调用图/decode-sweep 深挖逐条入清单；
+  唯一清单）；残余待查 2 格+1 尾段显式。**定值表（task-27 收口，估计口径退役）**：巨尾段切分 S=15578B/1855 段、D=45954B/148 段
+  （段界 A 级/字节合计 B 级 ±~5%）——完整账面见 denoms_corrections.json v2_totals；
   定值待 decode-sweep 深挖（task-6）+ denoms 纠偏落地（task-5③）。
   D 数据面 193 格分解：错面/数据确认/混合/待查逐 id 清单以 decode-sweep-r2-jump-tables.md §5 为唯一来源（矩阵注记 26 条错面+1 混合+1 基本确定+5 数据确认，计数不在此复述防二遍算术漂移）。
   （`tools/completeness_denoms.py` 从 seed 导出）。B 行为面分母=已登记场景清单（声明性）、

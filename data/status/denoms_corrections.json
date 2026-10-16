@@ -116,6 +116,11 @@
       "id": "S-FUNC-00-814D",
       "addr": "00:814D",
       "evidence": "task-23 批4a：METROIDSparkle（EffectDriver 臂，L2 三方全等）"
+    },
+    {
+      "id": "S-FUNC-banks06-8C84-FAMILY",
+      "addr": "00-06:$8C84-$8CF6（5 bank 同构代码岛，A 级 decode-sweep×ref_atlas 双工具 code 1.00）",
+      "evidence": "docs/findings/decode-sweep-r4-banks0-6.md（5×$8C84-$8CF6 定谳）"
     }
   ],
   "d_wrongface": {
@@ -141,11 +146,20 @@
     "tails": [
       "07:F438-07:F43D（6B 尾段，r2 遗留；P12 边 $F438→$E094 正面证据=代码性，待终谳）"
     ],
-    "evidence": "decode-sweep-r3 定谳清单（027/028/011/012/007/018 已收）"
+    "evidence": "decode-sweep-r3 定谳清单（027/028/011/012/007/018 已收）",
+    "islands": [
+      "banks0-6:$8D3A-$BFFF×5（12998B 混居巨尾——nmikstas 标签密度切分锚表 2862-3806/bank 待切分）"
+    ],
+    "cells_note": "r4 未决 6 岛显式（decode-sweep-r4 §1）；R6 慢帧分支未路由=未观测≠不存在"
   },
   "v2_totals": {
-    "doc": "v2 分母口径：机械导出 + s_supplement − d_wrongface 迁出 + 段切——S 面少计 176 个有佐证入口（estimate，附录 B 口径）为上界参考，非定值；定值=机械格+本清单逐条",
-    "s_estimate_upper": 630,
-    "note": "estimate 口径保留于 completeness.md；本清单为定值账面（残余显式）"
+    "doc": "v2 定值表（task-27 巨尾段切分 3266d7c + r1-r4 累计）——估计值口径退役，定值账面如下",
+    "giant_tails_s_code_bytes": 15578,
+    "giant_tails_s_segments": 1855,
+    "giant_tails_d_data_bytes": 45954,
+    "giant_tails_d_segments": 148,
+    "confidence": "段界/段数 A 级（nmikstas 标签锚定）；字节合计 B 级（走址漂移 ±~5%，覆盖 93-96%）",
+    "residual": "未分段 4-7%/bank 留逐段复核（decode-sweep-r4 findings §4）",
+    "note": "code 段碎密（均 8-9B=逐指令标签形态→移植单元按调用图聚类）；data 段大块（均 300-370B=game-data 四级链素材）；复跑 ref_atlas segs --json（2500+ 段不入库）"
   }
 }
