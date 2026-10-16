@@ -126,15 +126,15 @@ mod tests {
         assert!(samples.iter().all(|a| *a == 1), "恒 1 断言失守: {samples:?}");
     }
 
-    /// 占位臂首分歧记账（**批6b 演进后形**：01/12 已深路径化——下一占位点=0x15
-    /// $90BA；直测桥面（不经引擎 tick——声引擎缺口 B31B 新域件另案））。
+    /// 占位臂首分歧记账（**稳定锚形**（lead 照准随 15/1B 同带）：0x18 $9147=
+    /// 批6b 最后清偿件（EnterPassword 专件）——一改永逸解锚前移循环；直测桥面）。
     #[test]
     fn placeholder_arm_records_divergence() {
         let mut m = crate::frame::FrameMemory::default();
-        m.write_ram(crate::ram_map::TITLE_ROUTINE, 0x15); // StartContinueScreen15（占位）
+        m.write_ram(crate::ram_map::TITLE_ROUTINE, 0x18); // EnterPassword（稳定锚）
         crate::frame::title_bridge::main_title_routine(&mut m);
         let recorded = crate::frame::DIVERGENCES.with(|d| d.borrow().clone());
-        assert!(recorded.contains(&0x90BA), "占位记账失守: {recorded:?}");
+        assert!(recorded.contains(&0x9147), "占位记账失守: {recorded:?}");
     }
 
     /// tick_frame 执行序（契约断言②：**f=1 帧界锚**——首 tick 后 clock=1）+ pre 链态。

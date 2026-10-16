@@ -719,6 +719,55 @@ pub fn end_game(is_credits: u8, frame_count: u8, palette: u8, room_ptr: u8, x_in
 // 18 EnterPassword（$9147 起）：深路（密码格光标/字符输入面）待 shell 组合点后续批
 // （L2 可钉面=START⇒jmp CheckPassword 停点——随 18 专件补）。
 
+
+// ---- 批6b：ClearAll 共享段面（15/1B/1C/17 共用——ScreenOff spin①+NT/Erase/Dec 面+
+//      WaitNMIPass spin②；段=帧界）----
+
+/// ClearAll 段0 事件（ScreenOff 前置：$FE&=~$18+$1A←0）。
+pub fn clear_all_seg0_events(ppumask: u8) -> Vec<(u16, u8)> {
+    vec![(0x00FE, ppumask & !0x18), (0x001A, 0)]
+}
+
+/// ClearAll 段1 事件（ClearNameTables NT0+NT1 面 + EraseAllSprites 256 面 +
+/// DecSpriteYCoord 奇偶门面 + $FF&=$FC + $FC/$FD←0 + $1A←0）。
+/// 语义注：DecSpriteYCoord=**偶帧才减**（`lda FrameCount/lsr/bcs`）+40 星双面 dec
+/// （$6E00+x 源面+$0260+x 精灵面）+SpriteLoadPending←0；TitleRoutine≥0x1D 出。
+pub fn clear_all_seg1_events(ram: &[u8], wram: &[u8], frame_count: u8, phase: u8,
+                             ppuctrl: u8) -> Vec<(u16, u8)> {
+    let mut e = Vec::new();
+    // ClearNameTables（title 路 NT0+NT1 两轮；$FF&=~INCR_DOWN(0x04)）
+    let ff = ppuctrl & 0xFB;
+    e.push((0x0001, 0x01)); e.push((0x0000, 0xFF)); e.push((0x00FF, ff));
+    e.push((0x0001, 0x02)); e.push((0x0000, 0xFF)); e.push((0x00FF, ff));
+    // EraseAllSprites（$01←2/$00←0 + $0200-$02FF←$F0）
+    e.push((0x0001, 0x02)); e.push((0x0000, 0x00));
+    for a in 0x0200u16..0x0300 {
+        e.push((a, 0xF0));
+    }
+    // DecSpriteYCoord（title 路 GameMode≠0 链入）：TitleRoutine<0x1D 且 SpriteLoadPending≠0
+    // 且偶帧 ⇒ 40 星双面 dec + $C8←0
+    let pending = ram[0x00C8 & 0x7FF];
+    if phase < 0x1D && pending != 0 && (frame_count & 1) == 0 {
+        for i in (0..0xA0u16).step_by(4).rev() {
+            let s = wram.get(0x0E00 + i as usize).copied().unwrap_or(0);
+            let d = ram.get(0x0260 + i as usize).map(|v| *v).unwrap_or(0);
+            e.push((0x6E00 + i, s.wrapping_sub(1)));
+            e.push((0x0260 + i, d.wrapping_sub(1)));
+        }
+        e.push((0x00C8, 0));
+    }
+    // ClearAll 体尾：$FF&=$FC、$FC/$FD←0、$1A←0（WaitNMIPass 前置）
+    let ff2 = ff & 0xFC;
+    e.push((0x00FF, ff2)); e.push((0x00FC, 0)); e.push((0x00FD, 0)); e.push((0x001A, 0));
+    e
+}
+
+/// ClearAll 段2 事件（VBOffAndHorzWrite：$FF&=~$84——PPUCTRL_INCR_DOWN(0x04)|
+/// VBLKNMI_ON(0x80)；hardware.asm:18 位值自证）。
+pub fn clear_all_seg2_events(ff_in: u8) -> Vec<(u16, u8)> {
+    vec![(0x00FF, ff_in & !0x84)]
+}
+
 // ==== 会师接线契约（task-23 × frame/ B 跑）====
 //
 // 【① 分发入口形状】统一入口=**本文件 `dispatch_step`**（phase→臂匹配归 title 域所有；
@@ -751,6 +800,10 @@ pub enum ShellCall {
     EraseAllSprites,
     /// NMI 等待点（§8.1：帧界让出，下帧续）。
     NmiYield,
+    /// WaitNMIPass（$1A←0+spin——1 spin）。
+    WaitNMIPass,
+    /// VBOffAndHorzWrite（$FF&=~$84+PPUCTRL 真写——0 spin）。
+    VBOffAndHorzWrite,
 }
 
 /// title 域一 tick 结果（写面=语义标签事件（已映射址）；shell=组合点；exit=分发出口）。
@@ -897,21 +950,71 @@ pub fn dispatch_step(face: &TitleFace) -> TitleStep {
                 },
             }
         }
-        // ---- 五降级占位臂（12/01 已深路径化——15/1B/1C/17 spin 点=NmiYield；逐件落）----
+        // ---- 批6b：15/1B StartContinueScreen（**同码共享臂**（字节级同段 $90BA）——
+        //      4 段 3 spin：ClearAll①②+TurnOnDisplay ScreenOn③）----
+        0x15 | 0x1B => {
+            let pm = face.ram[0x00FE & 0x7FF];
+            let ff = face.ram[0x00FF & 0x7FF];
+            match face.cursor {
+                0 => TitleStep {
+                    events: clear_all_seg0_events(pm), shell: vec![ShellCall::ScreenOff],
+                    a_out: None, x_out: None, y_out: None,
+                    jumped: None, unported: None, next_cursor: 1,
+                },
+                1 => TitleStep {
+                    events: clear_all_seg1_events(&face.ram, &face.wram, face.frame_count,
+                                                  face.phase, ff),
+                    shell: vec![ShellCall::ClearNameTables, ShellCall::EraseAllSprites,
+                                ShellCall::WaitNMIPass],
+                    a_out: None, x_out: None, y_out: None,
+                    jumped: None, unported: None, next_cursor: 2,
+                },
+                2 => {
+                    // VBOff 面 + PrepareVram($9984) + 体写 + NMIOn 面 + ScreenOn 面 + spin③
+                    let mut events = clear_all_seg2_events(ff & 0xFB & 0xFC);
+                    events.push((0x0325, 0)); // StartContinue←0
+                    events.push((crate::ram_map::PALETTE_PENDING, 0x0D)); // _id_Palette0C+1
+                    events.push(crate::memmap::title_state::write_event_phase(0x16)); // ←ChooseStartContinue
+                    events.push((0x00FF, (ff & 0xFB & 0xFC & !0x84) | 0x80)); // NMIOn：$FF|=$80
+                    events.push((0x00FE, pm | 0x1E)); // ScreenOn：$FE|=$1E
+                    events.push((0x001A, 0));
+                    TitleStep {
+                        events, shell: vec![ShellCall::VBOffAndHorzWrite,
+                                            ShellCall::PrepareVram(0x9984),
+                                            ShellCall::NMIOn, ShellCall::ScreenOn],
+                        a_out: None, x_out: None, y_out: None,
+                        jumped: None, unported: None, next_cursor: 3,
+                    }
+                }
+                _ => TitleStep {
+                    events: vec![], shell: vec![], a_out: None, x_out: None, y_out: None,
+                    jumped: None, unported: None, next_cursor: 0,
+                },
+            }
+        }
+        // ---- 五降级占位臂（12/01/15/1B 已深路径化——1C/17 spin 点=NmiYield；逐件落）----
         0x01 | 0x12 | 0x15 | 0x1B | 0x1C | 0x17 => TitleStep {
             events: vec![], shell: vec![ShellCall::NmiYield], a_out: None, x_out: None,
             y_out: None, jumped: None, next_cursor: 0,
             unported: Some(match face.phase {
-                0x15 | 0x1B => 0x90BA,
-                0x17 => 0x911A, _ => 0x939E,
+                                0x17 => 0x911A, _ => 0x939E,
             }),
         },
         // ---- 真未武装（18 深路专件/0x1E SetTimer 随件）----
-        _ => TitleStep { events: vec![], shell: vec![], a_out: None, x_out: None, y_out: None,
-                         jumped: None, next_cursor: 0,
-                         unported: Some(match face.phase {
-                             0x18 => 0x9147, _ => 0xC4AA,
-                         }) },
+        // 未武装分流（lead 稳定锚裁定）：0x18=**记账形**（已排期专件——NmiYield 让出≠
+        // 引爆，稳定锚）；0x1E=**引爆形**（fail-loud 样本至 SetTimer 随件落）。
+        _ => {
+            let addr = match face.phase { 0x18 => 0x9147, _ => 0xC4AA };
+            if face.phase == 0x18 {
+                TitleStep { events: vec![], shell: vec![ShellCall::NmiYield], a_out: None,
+                            x_out: None, y_out: None,
+                            jumped: None, next_cursor: 0, unported: Some(addr) }
+            } else {
+                TitleStep { events: vec![], shell: vec![], a_out: None, x_out: None,
+                            y_out: None,
+                            jumped: None, next_cursor: 0, unported: Some(addr) }
+            }
+        }
     }
 }
 

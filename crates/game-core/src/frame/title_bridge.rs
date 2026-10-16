@@ -80,11 +80,12 @@ mod tests {
         assert_eq!(events[31], (0x031F, 0));
     }
 
-    /// 未武装臂表址爆（per-entry 形——B 跑分歧面前沿）。
+    /// 未武装臂表址爆（per-entry 形——**0x1E 引爆形**（lead 稳定锚裁定分流：0x18 归
+    /// 记账形锚件/0x1E 留 fail-loud 样本至 SetTimer 随件落））。
     #[test]
     fn bridge_unported_arm_detonates_with_table_addr() {
         let mut m = FrameMemory::default();
-        m.write_ram(TITLE_ROUTINE, 0x18); // EnterPassword（真未武装）
+        m.write_ram(TITLE_ROUTINE, 0x1E); // SetTimer（真未武装 fail-loud 样本）
         let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| main_title_routine(&mut m)));
         let err = r.unwrap_err();
         let msg = err.downcast_ref::<String>().cloned()
