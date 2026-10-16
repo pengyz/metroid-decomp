@@ -156,6 +156,21 @@
       "id": "S-FUNC-00-939E",
       "addr": "00:939E",
       "evidence": "task-23 批5：GameOver"
+    },
+    {
+      "id": "S-FUNC-00-911A",
+      "addr": "00:911A",
+      "evidence": "task-23 批6a：LoadPasswordScreen"
+    },
+    {
+      "id": "S-FUNC-00-9359",
+      "addr": "00:9359",
+      "evidence": "task-23 批6a：DisplayPassword"
+    },
+    {
+      "id": "S-FUNC-00-9AA7",
+      "addr": "00:9AA7",
+      "evidence": "task-23 批6a：EndGame"
     }
   ],
   "d_wrongface": {

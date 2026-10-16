@@ -130,6 +130,8 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "sub_Crosshairs" => Some(sub_crosshairs_step),
         "sub_ChooseStartContinue" => Some(sub_menu_choose),
         "sub_WaitForSTART" => Some(sub_wait_start),
+        "sub_DisplayPassword" => Some(sub_password_gate),
+        "sub_EndGame" => Some(sub_end_game),
         _ => None,
     }
 }
@@ -584,4 +586,14 @@ pub fn sub_menu_choose(input: &L2In) -> L2Out {
 /// sub_WaitForSTART —— bank00:9394 注册名（批5⑤；START⇒jmp CheckPassword 停点）。
 pub fn sub_wait_start(input: &L2In) -> L2Out {
     crate::verify_shim::title_wait_start(input)
+}
+
+/// sub_DisplayPassword —— bank00:9359 注册名（批6a；门面，深路 L3 降级）。
+pub fn sub_password_gate(input: &L2In) -> L2Out {
+    crate::verify_shim::title_password_gate(input)
+}
+
+/// sub_EndGame —— bank00:9AA7 注册名（批6a；星装载+调色板循环+JumpEngine 停点）。
+pub fn sub_end_game(input: &L2In) -> L2Out {
+    crate::verify_shim::title_end_game(input)
 }

@@ -816,3 +816,19 @@ pub fn title_wait_start(input: &L2In) -> L2Out {
     let joy = input.ram[memmap::title_state::JOY1_CHANGE as usize & 0x7FF];
     menu_out(input, crate::title::wait_for_start(joy))
 }
+
+// ---- task-23 批6a·19/1D 适配 ----
+
+/// 批6a 入口 19 适配（`sub_DisplayPassword` ← bank00:9359 门面）。
+pub fn title_password_gate(input: &L2In) -> L2Out {
+    let timer3 = input.ram[memmap::title_state::TIMER3 as usize & 0x7FF];
+    menu_out(input, crate::title::password_display_gate(timer3))
+}
+
+/// 批6a 入口 1D 适配（`sub_EndGame` ← bank00:9AA7；停点=JumpEngine 表目目标）。
+pub fn title_end_game(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    menu_out(input, crate::title::end_game(r(0x007B), r(crate::ram_map::FRAME_COUNT),
+                                           r(crate::ram_map::PALETTE_PENDING), r(0x0033),
+                                           input.x, input.y))
+}

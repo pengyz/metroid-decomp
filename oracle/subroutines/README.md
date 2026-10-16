@@ -49,6 +49,7 @@ cargo test --workspace                   # 同一差分引擎单元测试（rust
 | b-fade-*（11 案） | sub_FadeInDelay/METROIDFadeIn/MessageFadeIn/MessageFadeOut | 手推自 asm 字节语义（FadeDriver 同形骨架+组合表 $8B6D 12B/PalSelect $8A9A 13B——「[5]/[11]=$FF」双表单数组索引实证）× ROM 腿裁定 | **title 批3 淡变族**（task-23，chain 19 同形折叠正样）：门/掩/端/步四路 + Y=步进器 ldy 语义 + window_bank=0 显式钉窗（A9 族口径） |
 | b-cross-*（14 案） | sub_METROIDFadeOut/Crosshairs/MoreCrosshairs | 手推自 asm 字节语义（CrossMissile 字节真偏移 xChange@6/yChange@7 同偏移双语义 `.db` 别名之谜+运动引擎 php/pla 端判+CalcDisplacement FrameCount 抖动除 16）× ROM 腿裁定 | **title 批4b crosshairs 三件**（task-23）：**BUG 保真 D4**（`cmp PPUCTRL_ZP`=zp 面夹具双钉）+ A 毒化语义 + 07 无条件 DoFadeOut 不对称 + 09 死码残迹写面 |
 | b-menu-*（7 案） | sub_ChooseStartContinue/WaitForSTART | 手推自 asm 字节语义（hardware.asm BUTTON 位 START=$10/SELECT=$20 非标准布局自证+both-quirk 掩后 cmp 双不入）× ROM 腿裁定 | **title 批5 菜单簇**（task-23，链规 20 轻仪式件）：START/SELECT/同按/空闲四路 + **jmp 出口走 stops 面**（InitializeStats $932B/CheckPassword $8C5E 停点）——15/1B/1C L3 降级（R3 NMI 自旋族）显式记 |
+| b-pw-19-gate/b-end-1d-*（4 案） | sub_DisplayPassword/EndGame | 手推自 asm 字节语义（JumpEngine $C27C「X/Y 保存恢复+A=目标高字节」+RoutinePtr 末值=目标址+星环 Y 轨迹）× ROM 腿裁定 | **title 批6a 密码/结局簇**（task-23）：19 门面 + 1D 星装载/调色板回绕/JumpEngine 停点分发——17/18 深路 L3 降级（R3）显式记 |
 
 新增用例规则：golden 必须手推自 seed 指令语义（A 级，注明行范围）；game-core 侧实现
 （`crates/game-core/src/l2ports.rs`）与用例同 commit 落地——**未实现例程不得入用例文件**

@@ -18,7 +18,7 @@
       "denominator": 11
     },
     "symbol": {
-      "denominator": 488
+      "denominator": 491
     },
     "data": {
       "denominator": 193
@@ -6255,6 +6255,33 @@
       "covered": true,
       "evidence": "oracle/subroutines/l2_cases.jsonl#b-menu-*（GameOver）asm 考证件+L3 场景承载；语义来源 bank00:939E",
       "note": "denoms 补录格（task-23 批5⑤菜单簇；链规 20 轻仪式件）；L3 降级显式（R3）"
+    },
+    "S-FUNC-00-911A": {
+      "id": "S-FUNC-00-911A",
+      "face": "symbol",
+      "module": "title",
+      "strength": "L1",
+      "covered": true,
+      "evidence": "asm 考证件——L3 降级（R3）：ClearAll+PreparePPUProcess_+jmp TurnOnDisplay（NMI 自旋族）",
+      "note": "denoms 补录格（task-23 批6a）；L3 降级显式（R3）"
+    },
+    "S-FUNC-00-9359": {
+      "id": "S-FUNC-00-9359",
+      "face": "symbol",
+      "module": "title",
+      "strength": "L2",
+      "covered": true,
+      "evidence": "b-pw-19-gate 三方全等（Timer3 门面；深路 L3 降级 R3 显式）",
+      "note": "denoms 补录格（task-23 批6a）"
+    },
+    "S-FUNC-00-9AA7": {
+      "id": "S-FUNC-00-9AA7",
+      "face": "symbol",
+      "module": "title",
+      "strength": "L2",
+      "covered": true,
+      "evidence": "b-end-1d-* 三方全等（星装载 156B+调色板循环+JumpEngine 停点分发）",
+      "note": "denoms 补录格（task-23 批6a）"
     }
   }
 }
