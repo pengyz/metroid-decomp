@@ -969,6 +969,17 @@ bmi 位 7=站立旗（Object $0300 面扩展）；JumpEngine 栈返回读=match 
 全覆盖+落态/站立直入引爆）。R-mv 挂点（spec 源=samus-movement.md v0.1 随笔）注记 ✓。
 findings（r10）：0 新。基线 105。
 
+## task-25 次件：samus/physics 域首件（af6ed55）——坐标热件+VertAccelerate 头
+
+### verdict: pass
+
+四查：①asm 锚五处全中 ✓（Xminus16: F1F4/Xplus4: E193/VertAccelerate: E37A/
+ObjectCheckMoveDown: E7AD/SamusCollisionWithSolidEntities: D976——与 task-19 考证件
+三址**同源互证**）②E37A 体链字节面 ✓（AccelY 空中跳过→maxspeed 0x18→8 像素对齐
+几何节流→双卫件桩）=R-mv-6 条件集 spec §2.3 对齐 ✓ ③测 2 绿 ④命名批 14 条 D5
+登记（items type 11 词双源 B 级）+链规 19 域形 ✓。
+findings（r10）：0 新。基线 107。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
