@@ -1,0 +1,24 @@
+# 场景：sc-item-pickup2 —— task-34 批次 2：道具拾取真达成（坐标定位路径）
+# 情报：道具 (Y=14, X=2) type=2 电力块 data=0496（房内像素 x=04,y=0x96=150 左缘低位）
+#       Samus 出生屏 (14,3)——左行穿门至 (14,2) 后搜寻左缘低位
+# 事件核（写点级）：probe_mem 6988-698f（PasswordByte00 族位图写）+ pw watch
+# 可达性声明：房内像素定位 best-effort（左缘+跳落搜寻）；未达如实降级（不冒领）
+name sc-item-pickup2
+frames 1500
+watch_range 0000-00ff zp
+watch_range 0100-07ff iram
+watch_range 6988-698f pw
+
+press 360 start
+press 420 a
+press 540 start
+hold 850-1200 left
+press 1220 a
+hold 1240-1400 left
+press 1260 a
+press 1320 a
+press 1380 a
+
+sample_point spin-exit
+probe_mem 6988 698f
+bundle_capture 1250 analysis/bundles/sc-item-pickup2

@@ -1,0 +1,18 @@
+# 场景：sc-item-pickup8 —— 拾取终径 v5（行走+跳组合疑被抑——停步站跳实验：
+# 行至 x≈104 停步（hold 995-1018）→ 站立长按跳（hold 1025-1055 a）扫 y=152）
+name sc-item-pickup8
+frames 1300
+watch_range 0000-00ff zp
+watch_range 0100-07ff iram
+watch_range 6988-698f pw
+
+press 360 start
+press 420 a
+press 540 start
+hold 995-1018 left
+hold 1025-1055 a
+hold 1065-1090 a
+
+sample_point spin-exit
+probe_mem 6988 698f
+bundle_capture 1100 analysis/bundles/sc-item-pickup8

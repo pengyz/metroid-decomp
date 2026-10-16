@@ -1,0 +1,22 @@
+# 场景：sc-hit —— task-34 批次 2：受击真达成（主动迎撞路径）
+# 情报：敌房 (14,5)（右行两门后）——敌槽活跃（批次 1 实证 366 帧间变更）；
+#       策略=驻留敌房+跳跃吸引（多数敌向 Samus 移动）→接触伤害
+# 事件核（写点级）：probe_mem 030A-030A（SamusHit 写面）+ $0308/$030A watch
+# 可达性声明：接触时机受敌 AI 影响 best-effort；未达如实降级
+name sc-hit
+frames 1550
+watch_range 0000-00ff zp
+watch_range 0100-07ff iram
+
+press 360 start
+press 420 a
+press 540 start
+hold 850-1050 right
+hold 1060-1250 right
+press 1300 a
+press 1380 a
+press 1460 a
+
+sample_point spin-exit
+probe_mem 030A 030A
+bundle_capture 1400 analysis/bundles/sc-hit

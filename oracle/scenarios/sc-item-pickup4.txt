@@ -1,0 +1,26 @@
+# 场景：sc-item-pickup4 —— 拾取终径（考古修正：packed yyyyxxxx→道具位 (x=104,y=152)）
+# 调径=左行全程**跳频扫掠**（每 ~40f 一跳——x=104 时跳幅经 y=152）
+name sc-item-pickup4
+frames 1400
+watch_range 0000-00ff zp
+watch_range 0100-07ff iram
+watch_range 6988-698f pw
+
+press 360 start
+press 420 a
+press 540 start
+hold 850-1300 left
+press 880 a
+press 920 a
+press 960 a
+press 1000 a
+press 1040 a
+press 1080 a
+press 1120 a
+press 1160 a
+press 1200 a
+press 1240 a
+
+sample_point spin-exit
+probe_mem 6988 698f
+bundle_capture 1100 analysis/bundles/sc-item-pickup4

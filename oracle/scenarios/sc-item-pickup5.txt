@@ -1,0 +1,19 @@
+# 场景：sc-item-pickup5 —— 拾取终径 v2（轨迹诊断：出生锁至 f1000，x=104 运动头 10 帧掠过）
+# 调径=锁后即动+**头帧跳**（f1005 a=x≈104 处起跳扫 y=152）
+name sc-item-pickup5
+frames 1300
+watch_range 0000-00ff zp
+watch_range 0100-07ff iram
+watch_range 6988-698f pw
+
+press 360 start
+press 420 a
+press 540 start
+hold 995-1250 left
+press 1008 a
+press 1050 a
+press 1100 a
+
+sample_point spin-exit
+probe_mem 6988 698f
+bundle_capture 1100 analysis/bundles/sc-item-pickup5

@@ -1,0 +1,19 @@
+# 场景：sc-hit2 —— 受击终径（敌位侦察：slot1 敌 (x=224,y=176) 邻 Samus 终位 (236,193)）
+# 调径=入敌房后**微步回蹭+驻留**（左移贴近敌位+等待巡逻接触）
+name sc-hit2
+frames 1600
+watch_range 0000-00ff zp
+watch_range 0100-07ff iram
+
+press 360 start
+press 420 a
+press 540 start
+hold 850-1050 right
+hold 1060-1250 right
+hold 1280-1330 left
+press 1360 a
+hold 1400-1550 left
+
+sample_point spin-exit
+probe_mem 030A 030A
+bundle_capture 1450 analysis/bundles/sc-hit2

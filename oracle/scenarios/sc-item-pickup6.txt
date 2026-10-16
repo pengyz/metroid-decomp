@@ -1,0 +1,19 @@
+# 场景：sc-item-pickup6 —— 拾取终径 v3（跳形实证：站跳达 y=158 vs 道具 y=152 差 6px
+# ——需跑跳增高于 x≈104 处起跳；1008 太贴解锁边被吞→改 1020 起跳）
+name sc-item-pickup6
+frames 1300
+watch_range 0000-00ff zp
+watch_range 0100-07ff iram
+watch_range 6988-698f pw
+
+press 360 start
+press 420 a
+press 540 start
+hold 995-1250 left
+press 1020 a
+press 1075 a
+press 1130 a
+
+sample_point spin-exit
+probe_mem 6988 698f
+bundle_capture 1100 analysis/bundles/sc-item-pickup6

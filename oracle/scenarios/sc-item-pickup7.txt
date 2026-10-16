@@ -1,0 +1,18 @@
+# 场景：sc-item-pickup7 —— 拾取终径 v4（跳形破案：press=2f 点按=2px 小跳——
+# Metroid 可变跳高，**hold a 长按=全高跳**；x≈104 处 hold 跳扫 y=152）
+name sc-item-pickup7
+frames 1300
+watch_range 0000-00ff zp
+watch_range 0100-07ff iram
+watch_range 6988-698f pw
+
+press 360 start
+press 420 a
+press 540 start
+hold 995-1250 left
+hold 1018-1045 a
+hold 1075-1100 a
+
+sample_point spin-exit
+probe_mem 6988 698f
+bundle_capture 1100 analysis/bundles/sc-item-pickup7

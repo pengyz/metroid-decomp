@@ -1,0 +1,22 @@
+# 场景：sc-item-pickup3 —— task-34 批次 2：拾取调径（壁跳扫掠）
+# 情报修正：run2 实测 Samus 终位 (X=04,Y=C1) vs 道具 (X=04,Y=96)——X 精确命中，
+# Y 在下方 43px。调径=左行至壁后**原地跳扫 y 区间**（跳幅~100px 经 150）
+# 事件核（写点级）：probe_mem 6988-698f
+name sc-item-pickup3
+frames 1400
+watch_range 0000-00ff zp
+watch_range 0100-07ff iram
+watch_range 6988-698f pw
+
+press 360 start
+press 420 a
+press 540 start
+hold 850-1150 left
+press 1180 a
+press 1230 a
+press 1280 a
+press 1330 a
+
+sample_point spin-exit
+probe_mem 6988 698f
+bundle_capture 1200 analysis/bundles/sc-item-pickup3
