@@ -1304,6 +1304,16 @@ nmi.rs 四 init 桩接线=B31B 行清 ③测 100 绿（6 位扫真旗形）。
 三方全等（439/0 新案）+测 101。handler 细行族开（缺口演化面逐端清）。findings
 （r10）：0 新。
 
+## task-38（579486d+c753345）：测试执行面超时护栏硬化——spin 挂死防御四面
+
+### verdict: pass（工具面）
+
+四面核：①L2 步数上限（MAX_STEPS=1M+fail-loud——JMP-to-self 40ms 限时打回实证）
+②引擎 watchdog 测（spin_program_bounded_fail_not_hang=**坏例先喂范式**+30s 耗时锚）
+③createSavestate 无参**机械防**（lint_mesen_lua.py 禁用清单 2 条+写盘前内联双保险
+——坏例 exit 1 拒跑实证）④超时=FAIL 显式（diff_subroutines 600s 限时打回非挂死）。
+lint 56 目标 PASS+watchdog 0.05s 限时 ✓。基线 131→132。findings（r10）：0 新。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
