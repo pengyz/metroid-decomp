@@ -34,7 +34,12 @@ def main() -> int:
     else:
         cmd += ["--cases", str(ROOT / "oracle" / "subroutines" / "l2_cases.jsonl")]
 
-    proc = subprocess.run(cmd, cwd=ROOT)
+    # task-38 ④：超时=FAIL 显式（防挂死——超限打回非悬挂；l2 引擎侧另有 MAX_STEPS 1M）
+    try:
+        proc = subprocess.run(cmd, cwd=ROOT, timeout=600)
+    except subprocess.TimeoutExpired:
+        print(f"[FAIL] {cmd[1] if len(cmd) > 1 else cmd}: 超时 >600s（task-38 护栏——限时打回非挂死）")
+        raise SystemExit(1)
     return proc.returncode
 
 

@@ -364,6 +364,14 @@ def to_lua(v) -> str:
     raise TypeError(f"不可序列化为 Lua: {v!r}")
 
 
+def _lint_lua_text(text: str, label: str) -> None:
+    """task-38 ③：禁用面机械防（与 tools/lint_mesen_lua.py 同源清单）。"""
+    import re as _re
+    for pat in (r"emu\.createSavestate\s*\(\s*\)", r"emu\.loadSavestate\s*\(\s*\)"):
+        if _re.search(pat, text):
+            raise SystemExit(f"[task-38 lint] {label}: 禁用面命中 {pat}——挂死面拒跑")
+
+
 def generate_lua(plan: dict, scenario_path: Path) -> tuple[str, str]:
     """返回 (lua 源码, lua sha256)。PLAN 前置 + 执行器整拼（无 dofile 依赖）。"""
     # None 字段（缺省 DSL 项如 capture_every）不进 Lua 表（r4 工程卫生：缺省场景必须可跑）
@@ -575,6 +583,7 @@ def run_scenario(name_or_path: str, timeout_s: float = 1800.0, keep_gen: bool = 
     lua_src, lua_sha = generate_lua(plan, spath)
     lua_path = GEN_DIR / f"{name}.lua"
     # newline="\n"：生成物字节面跨平台一致（lua_sha 按 LF 计，禁 CRLF 翻译）
+    _lint_lua_text(lua_src, str(lua_path))  # task-38 ③：禁用面机械防（挂死面拒跑）
     lua_path.write_text(lua_src, encoding="utf-8", newline="\n")
 
     # t54：观测/基线设置全部在 Mesen 启动前完成（此段崩溃不得孤儿化模拟器）

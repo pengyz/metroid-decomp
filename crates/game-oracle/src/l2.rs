@@ -80,3 +80,37 @@ impl Cpu {
         self.sp = self.sp.wrapping_sub(1);
     }
 }
+
+// === task-38 ②：引擎单测 watchdog——spin 构造测试（坏例先喂：JMP-to-self 永不达
+// stops → MAX_STEPS 限时打回=挂死防实证；测试限时=步数上限即 watchdog）。===
+#[cfg(test)]
+mod task38_watchdog {
+    use super::*;
+
+    /// spin 坏例：入口处 JMP $8000（自跳死循环）——无 stops。
+    /// 判据：run_subroutine 在 MAX_STEPS 上限 fail-loud（超步数错误），不挂死。
+    #[test]
+    fn spin_program_bounded_fail_not_hang() {
+        let mut prg = vec![0u8; 0x20000]; // 128KB PRG（Cpu::new 断言面）
+        prg[0x0000] = 0x4C; // JMP abs（bank0 偏移 0=$8000 窗口映射）
+        prg[0x0001] = 0x00;
+        prg[0x0002] = 0x80; // $8000 = 自身（spin 死循环）
+        let input = game_core::L2In {
+            wram: vec![0; 0x2000],
+            ram: vec![0; 0x800],
+            a: 0,
+            x: 0,
+            y: 0,
+            p: 0,
+            window_bank: 0,
+        };
+        let t0 = std::time::Instant::now();
+        let res = run_subroutine(&prg, 0x8000, 0, &input, &[]);
+        let dt = t0.elapsed();
+        assert!(res.is_err(), "spin 坏例必须 fail-loud（超步数错误）——实得 {res:?}");
+        let e = res.unwrap_err();
+        assert!(e.contains("超步数"), "错误须显式=超步数上限：{e}");
+        // watchdog 语义：限时打回（1M 步 Rust 引擎应秒级）——防挂死回归锚
+        assert!(dt.as_secs() < 30, "spin 打回耗时 {}s（>30s=护栏失效）", dt.as_secs());
+    }
+}
