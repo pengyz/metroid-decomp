@@ -59,3 +59,33 @@ pw 值集: {'0000000000000000'}   ← 拾取未触发
 
 **下一步**（碰撞族使能考古——30 分钟件）：sub_D976 F1xx 族调用面（task-19 考证件
 现成）+主环/帧环碰撞检查调用点的使能条件判定。
+
+## 6. 【碰撞族使能考古一锤·2026-10-17】判定书（发现即入账）
+
+**根因定位**（A 级）：触摸判定族未开火=**UpdateItems（$DB37）每帧提前退出**——
+触摸槽 $0340-$034F **写点级实录：仅 f558 boot 清零一次，此后从未填充**
+（probe_mem 0340-034F 全程）⇒ AreObjectsTouching（$DC7F）的几何输入槽空置，
+精确重叠永不触发=**结构性判死**（非几何/路径问题的最终坐实）。
+
+**门模型**（B 级，UpdateItems/$DB37 指令流）：
+```
+CheckOneItem($DB42) → PowerUpType==$FF? → GetObjCoords($D79F)
+  → [门1] lda ($04),y / CMP #$A0 / BCC exit   ← 实心瓦判定（道具位瓦片 <$A0 即退）
+  → [门2] DrawFrame / SpritePagePos==前值? / BEQ exit  ← 绘制成功判定
+  → AreObjectsTouching($DC7F)（X=0 Samus 对象 × Y=$40 道具槽）
+```
+- 槽从未填充 ⇒ 门1 或门2 每帧拦停（更新链在绘制前半途而废）；
+- **重叠帧截图实录**（shots/sc-item-pickup16_f01179_overlap.png）：画面右上黄色
+  胶囊状精灵（道具候选渲染物，位置与解码 (104,152) 相差——可见性判别材料）；
+- **模式位级根因候选**（三则留档）：①道具位瓦片实心（解码偏移/放置模型语义）
+  ②绘制门 SpritePagePos 全满 ③GetObjCoords 的 NT/滚动语义偏移。
+
+**玩法语义发现入账**（「发现即入账」）：
+1. **触摸判定模型**：对象槽几何（field-major $0300+base+index）×AreObjectsTouching
+   ——道具触碰=对象槽坐标比对（非精灵重叠直判）；
+2. **道具放置判定**：UpdateItems 实心瓦门=「可通行瓦上才渲染/可拾取」——道具位
+   语义=walkable-tile 锚定；
+3. 受击侧同假说覆盖（sub_D976 的 EnStatus==$04 冻结门=同一「状态门控碰撞」模式族）。
+
+**下一锤**（备）：门1/门2 判别（probe_mem PowerUpAnimFrame 写点=绘制跑过否；
+GetObjCoords 瓦指针读 room RAM 实录）——30 分钟件。

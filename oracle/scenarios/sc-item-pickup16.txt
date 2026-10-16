@@ -1,0 +1,21 @@
+# 场景：sc-item-pickup16 —— 碰撞族使能考古判别实验（一锤）：
+# ①probe_mem 0340-034F（触摸槽写点级——瞬态写不漏）②capture 1179（重叠帧截图=
+# 道具可见性判别：实心瓦门（不可见）vs 槽填充分支（可见））
+name sc-item-pickup16
+frames 1500
+watch_range 0000-00ff zp
+watch_range 0100-07ff iram
+watch_range 6988-698f pw
+
+press 360 start
+press 420 a
+press 540 start
+hold 1015-1300 right
+hold 1168-1205 a
+
+capture 1179 overlap
+capture 1150 pre-overlap
+
+sample_point spin-exit
+probe_mem 0340 034f
+bundle_capture 1250 analysis/bundles/sc-item-pickup16
