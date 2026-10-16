@@ -188,19 +188,12 @@
     }
   ],
   "residuals": {
-    "doc": "残余待查（显式缺口类，D7 口径）——定谳后本清单更新",
-    "cells": [
-      "D-REG-07-048",
-      "D-REG-07-050"
-    ],
-    "tails": [
-      "07:F438-07:F43D（6B 尾段，r2 遗留；P12 边 $F438→$E094 正面证据=代码性，待终谳）"
-    ],
-    "evidence": "decode-sweep-r3 定谳清单（027/028/011/012/007/018 已收）",
-    "islands": [
-      "banks0-6:$8D3A-$BFFF×5（12998B 混居巨尾——nmikstas 标签密度切分锚表 2862-3806/bank 待切分）"
-    ],
-    "cells_note": "r4 未决 6 岛显式（decode-sweep-r4 §1）；R6 慢帧分支未路由=未观测≠不存在"
+    "doc": "残余栏清空（2026-10-17 task-35 终谳——三类全转定谳，decode-sweep 线 r1→r4 全线无零头）",
+    "cells": [],
+    "tails": [],
+    "islands": [],
+    "final_adjudication": "findings/decode-sweep-final-adjudication.md（048=code/050A=code+Table18 内嵌/050B=code/007 尾 23B=data 指针表+Table07/018 尾 8B=data 双表（code→data 更正）/F438 尾 6B=code（P12+asm 双证）/F438 邻段=code）",
+    "cells_note": "r4 未决 6 岛已由巨尾切分收编（v2_totals）；R6 慢帧分支未路由注照留（未观测≠不存在）"
   },
   "v2_totals": {
     "doc": "v2 定值表（task-27 巨尾段切分 3266d7c + r1-r4 累计）——估计值口径退役，定值账面如下",
