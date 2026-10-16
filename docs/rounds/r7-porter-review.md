@@ -1082,6 +1082,19 @@ findings（r10）：0 新。基线 113。
 （$80D0×297 缺口图）；**账外/账清照红**；账清⇒strict 自然转绿——记账面非放行面 ✓。
 实测：「0 失败, 1 记账容忍」+CHECK: PASS=12。findings（r10）：0 新。
 
+## 双卫件②（9d4d8e7）：SamusCollisionWithSolidEntities/D976——全仪式关键件
+
+### verdict: pass
+
+四查：①asm 锚 ✓（D976 双旗清（`lda #$00/sta SamusOnElevator/sta OnFrozenEnemy`=
+同值写事件先行=b-f270-a0 族复用）+冻敌环/电梯面双路）②**is_samus_on_top 共享判定件**
+✓（@isSamusOnTop 双 jsr 实存=冻敌/电梯共用；一像素重合判据+下方排除）③Xminus16
+走槽实证（17k+ hits 来源=敌槽遍历自证）④测 8 绿（判定三面+双旗清先行+环引爆）+
+VertAccelerate 卫件接线（D976 桩→单元）。
+**归属注双向记录** ✓：其载「verifier 812d0f8 共享 pathspec 带走基线 113 入树」=
+F172 族第 3 例（我面：**baseline 文件在 pathspec 内须逐件归属核对**——我 checklist
+第 6 项升「逐文件归属」措辞生效）。findings（r10）：0 新。基线 115。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
