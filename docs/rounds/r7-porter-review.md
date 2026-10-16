@@ -946,6 +946,29 @@ closure，旧调用面不变=最小 API）③链规 13c ✓（文件级 pathspec
 §8.1（0172725）随文 ✓。**v5 §5 槽 3 缝面勾销**——余 decomp 侧接（迁同点+dump_manifest
 sample_point=spin-exit）即 B 解锁。findings（r10）：0 新。基线 103。
 
+## task-24 ② 收尾（3260447）——task-24 翻板 complete
+
+### verdict: pass（快核）
+
+三点 ✓：①缝同点语义（l3-dump 采样迁 tick_frame_with 缝=NMI 尾写 1 后/帧工作前=
+oracle $C0D3 同点）②legs.game-core.sample_point=spin-exit 落键（B 跑行集对账注
+随行）③**双腿采样对齐**（oracle+game-core 双 spin-exit）+trace 门 1 案 0 失败。
+**task-24 五件全落（3b/3/3c/④/⑤）——翻板 complete**；B 跑唯一剩余=移植面放行
+（bank00:8000 title 簇）。
+
+## task-25 首件：samus/handler 状态机脊柱（021a692）——链规 19 域形第三次用
+
+### verdict: pass
+
+三查：①**10 态表整段命中 bank7:CC22** ✓（GoSamusHandler `.word` 十项声明序逐字——
+Stand CC36/Run CCC2/Jump D002/Roll D0E1/PntUp D198/Door D3A8/JumpPntUp 复用 D002/
+Dead D41A/Dead2 D41F/Elevator D423；首扫未中=我索引二次偏移 bug 自纠后 seg.find 中）
+②结构互核注三面 ✓（10 态表=GoMainRoutine/title 31 项同构法**第三次用**=脊柱范式成形；
+bmi 位 7=站立旗（Object $0300 面扩展）；JumpEngine 栈返回读=match 分派复刻）——
+**链规 19 第 8 查过**（枚举+分发壳+10 态桩阵=业务结构形，非镜像）③测 2 绿（表序
+全覆盖+落态/站立直入引爆）。R-mv 挂点（spec 源=samus-movement.md v0.1 随笔）注记 ✓。
+findings（r10）：0 新。基线 105。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
