@@ -312,6 +312,46 @@ def cmd_leads(args) -> int:
     return 0
 
 
+def cmd_segs(args) -> int:
+    """task-27 巨尾段级切分：nmikstas 走址 span（标签锚定起点）在指定区间内
+    同型合并 → 段级 code/data 清单（分母 v2 定值素材）。"""
+    spans, _aliases, div = parse_nmikstas()
+    lo, hi = int(args.range.split("-")[0], 16), int(args.range.split("-")[1], 16)
+    total_div = sum(1 for d in div if lo <= d["label"] < hi)
+    segs = {}  # bank -> [(start,end,kind)]
+    for sp in spans:
+        if sp["kind"] not in ("code", "data"):
+            continue
+        a, b = max(sp["start"], lo), min(sp["end"], hi)
+        if a >= b:
+            continue
+        L = segs.setdefault(sp["bank"], [])
+        if L and L[-1][1] == a and L[-1][2] == sp["kind"]:
+            L[-1] = (L[-1][0], b, sp["kind"])
+        else:
+            L.append((a, b, sp["kind"]))
+    print(f"[ref_atlas] 巨尾切分 ${lo:04X}-${hi-1:04X}；区间内走址-标签分歧 {total_div}"
+          f"（span 标签锚定起点，段界=锚定点；±漂移如实）")
+    grand = {"code": 0, "data": 0}
+    for k in sorted(segs):
+        code_n = sum(e - a for a, e, t in segs[k] if t == "code")
+        data_n = sum(e - a for a, e, t in segs[k] if t == "data")
+        grand["code"] += code_n
+        grand["data"] += data_n
+        n_code = sum(1 for _a, _e, t in segs[k] if t == "code")
+        n_data = sum(1 for _a, _e, t in segs[k] if t == "data")
+        print(f"  bank{k:02d}: 段 {len(segs[k])}（code {n_code} 段/{code_n}B + "
+              f"data {n_data} 段/{data_n}B） 覆盖 {code_n + data_n}B/{hi - lo}B")
+    print(f"  合计: code {grand['code']}B data {grand['data']}B（五 bank 摊开）")
+    if args.json:
+        import json as _j
+        out = {str(k): [{"start": a, "end": e, "kind": t} for a, e, t in segs[k]]
+               for k in sorted(segs)}
+        Path(args.json).write_text(_j.dumps(out, indent=1), encoding="utf-8")
+        print(f"[ref_atlas] json → {args.json}")
+    return 0
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="task-16 refs 语义线索图谱")
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -320,8 +360,15 @@ def main() -> int:
     r1.add_argument("--json", default=None)
     r2 = sub.add_parser("leads")
     r2.add_argument("--json", default=None)
+    r3 = sub.add_parser("segs")
+    r3.add_argument("--range", default="8D3A-BFFF")
+    r3.add_argument("--json", default=None)
     args = ap.parse_args()
-    return cmd_reconcile(args) if args.cmd == "reconcile" else cmd_leads(args)
+    if args.cmd == "reconcile":
+        return cmd_reconcile(args)
+    if args.cmd == "leads":
+        return cmd_leads(args)
+    return cmd_segs(args)
 
 
 if __name__ == "__main__":
