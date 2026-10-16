@@ -62,6 +62,22 @@ mod tests {
         assert_eq!(x_plus_4(0xFF), 0x03); // wrap
     }
 
+    /// 积分器拼装面（R-mv-2：vert_integrate——RAM 三态往返+位移）。
+    #[test]
+    fn vert_integrate_ram_roundtrip() {
+        let mut m = FrameMemory::default();
+        m.write_ram(SAMUS_SPEED_Y_I, 0x02);
+        m.write_ram(SAMUS_SPEED_Y_F, 0x80);
+        m.write_ram(SAMUS_ACCEL_Y, 0x1A);
+        let disp = vert_integrate(&mut m);
+        // frac 0x80+0x1A=0x9A（进 0）→ int 保持 0x02；subpix 0+0x9A 无进位（c1=0）
+        // → disp=int+c1=2（期望值自算修正——「期望值错非模型错」族）
+        assert_eq!(disp, 2);
+        assert_eq!(m.read_ram(SAMUS_SPEED_Y_I), 0x02);
+        assert_eq!(m.read_ram(SAMUS_SPEED_Y_F), 0x9A);
+        assert_eq!(m.regs.a, disp);
+    }
+
     /// @isSamusOnTop 顶部判定（一像素重合判据+下方排除）。
     #[test]
     fn is_samus_on_top_semantics() {
@@ -208,4 +224,54 @@ pub fn is_samus_on_top(dist_hi: u8, dist_y: u8, target_radius_y: u8) -> bool {
         return false; // 在下方
     }
     (dist_y as u16 + 1) == target_radius_y as u16 // 一像素重合判据
+}
+
+// ==== 积分器收编（task-25——int_x/int_y 证明级件拼装；R-mv 规则面）====
+
+/// Samus 速度/亚像素面（IntYState/IntXState 三态——integrators.rs 考证件：
+/// $308/$312/$310（Y 速整/速小/亚像素）+ $309/$313/$311（X 面）——`.struct Object`
+/// speedI/subPixel/data12/13 字段位；data12/13=速小（积分器考证定谳——社区注
+/// 「Object attribute data」=C 级旧猜测更正）。
+pub const SAMUS_SPEED_Y_I: u16 = 0x0308;
+pub const SAMUS_SPEED_Y_F: u16 = 0x0312;
+pub const SAMUS_SUBPIX_Y: u16 = 0x0310;
+pub const SAMUS_SPEED_X_I: u16 = 0x0309;
+pub const SAMUS_SPEED_X_F: u16 = 0x0313;
+pub const SAMUS_SUBPIX_X: u16 = 0x0311;
+
+/// 垂直积分拼装（R-mv-2 速度积分面）：RAM 三态→IntYState→int_y（E3A5 族）→写回。
+/// 返回本帧整像素位移（补码）。
+pub fn vert_integrate(mem: &mut FrameMemory) -> u8 {
+    let mut st = crate::integrators::IntYState {
+        speed_i: mem.read_ram(SAMUS_SPEED_Y_I),
+        speed_f: mem.read_ram(SAMUS_SPEED_Y_F),
+        subpix: mem.read_ram(SAMUS_SUBPIX_Y),
+    };
+    let accel = mem.read_ram(SAMUS_ACCEL_Y);
+    let out = crate::integrators::int_y(&mut st, accel);
+    mem.write_ram(SAMUS_SPEED_Y_I, st.speed_i);
+    mem.write_ram(SAMUS_SPEED_Y_F, st.speed_f);
+    mem.write_ram(SAMUS_SUBPIX_Y, st.subpix);
+    mem.regs.a = out.disp;
+    mem.regs.x = out.reg_x;
+    mem.regs.y = out.reg_y;
+    out.disp
+}
+
+/// 水平积分拼装（R-mv-3 速度积分面）：RAM 三态→IntXState→int_x（max_src=HorzSpeedMax）。
+pub fn horz_integrate(mem: &mut FrameMemory) -> u8 {
+    let mut st = crate::integrators::IntXState {
+        speed_i: mem.read_ram(SAMUS_SPEED_X_I),
+        speed_f: mem.read_ram(SAMUS_SPEED_X_F),
+        subpix: mem.read_ram(SAMUS_SUBPIX_X),
+    };
+    let accel = mem.read_ram(crate::ram_map::SAMUS_ACCEL_X); // 待名址随考证
+    let max_src = mem.read_ram(crate::ram_map::SAMUS_HORZ_SPEED_MAX);
+    let out = crate::integrators::int_x(&mut st, accel, max_src);
+    mem.write_ram(SAMUS_SPEED_X_I, st.speed_i);
+    mem.write_ram(SAMUS_SPEED_X_F, st.speed_f);
+    mem.write_ram(SAMUS_SUBPIX_X, st.subpix);
+    mem.regs.a = out.disp;
+    mem.regs.x = out.reg_x;
+    out.disp
 }

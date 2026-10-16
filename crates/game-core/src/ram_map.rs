@@ -128,6 +128,7 @@ pub const SAMUS_STATUS: u16 = 0x0300;
 /// reach」——R-mv 跑速面）。
 pub const SAMUS_HORZ_SPEED_MAX: u16 = 0x0316;
 
+
 /// SamusOnElevator=$0307（=Samus.data07；内容锚「0=Samus not on elevator, 1=on」）。
 pub const SAMUS_ON_ELEVATOR: u16 = 0x0307;
 
