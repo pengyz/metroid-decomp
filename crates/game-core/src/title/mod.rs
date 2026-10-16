@@ -1106,7 +1106,16 @@ pub fn dispatch_step(face: &TitleFace) -> TitleStep {
             TitleStep { events, shell: vec![], a_out: None, x_out: None, y_out: None,
                         jumped, unported: None, next_cursor: 0 }
         }
-        // 未武装分流（lead 稳定锚裁定）：0x1E=**引爆形**（fail-loud 样本至 SetTimer 随件落）。
+        // ---- 0x1E SetTimer（随件——`85 2c 86 20 a9 09` 字节真：Timer3←A/NextRoutine←X/
+        //      MainRoutine($1E)←_id_WaitTimer(0x09)）----
+        0x1E => TitleStep {
+            events: vec![(crate::memmap::title_state::TIMER3, face.a),
+                         (0x0020, face.x), // NextRoutine
+                         (0x001E, 0x09)],  // MainRoutine←WaitTimer
+            shell: vec![], a_out: Some(0x09), x_out: Some(face.x), y_out: Some(face.y),
+            jumped: None, unported: None, next_cursor: 0,
+        },
+        // 域外相位（契约违例面——fail-loud 样本）
         _ => TitleStep { events: vec![], shell: vec![], a_out: None, x_out: None,
                          y_out: None,
                          jumped: None, next_cursor: 0, unported: Some(0xC4AA) },
@@ -1128,7 +1137,10 @@ mod dispatch_contract_tests {
         assert_eq!(s.unported, None, "0x18 专件应已臂化");
         let mut f2 = face.clone(); f2.phase = 0x1E;
         let s = dispatch_step(&f2);
-        assert_eq!(s.unported, Some(0xC4AA), "0x1E 留引爆形");
+        assert_eq!(s.unported, None, "0x1E SetTimer 已臂化（title 全清）");
+        let mut f4 = face.clone(); f4.phase = 0xFF;
+        let s = dispatch_step(&f4);
+        assert_eq!(s.unported, Some(0xC4AA), "域外相位=契约违例引爆形");
         let mut f3 = face.clone(); f3.phase = 0x0A;
         let face = f3;
         let s = dispatch_step(&face);

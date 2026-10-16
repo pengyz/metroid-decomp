@@ -14,6 +14,7 @@ pub mod ram_map;
 pub mod samus;
 pub mod rng;
 pub mod tile_blast;
+pub mod sound;
 pub mod title;
 pub mod verify_shim;
 pub mod l2ports;
