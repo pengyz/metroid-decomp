@@ -1,0 +1,34 @@
+# 场景：sc-bomb-blast —— 四果收官第三斩：fixture 注炸弹能力→爆破瓦破顶→拾取
+# 能力双闸（CheckBombLaunch $D151 指令流）：SamusGear 位 0（gr_BOMBS）+形态球
+# （gr_MARUMARI 位 4）+FIRE（B 键）。fixture 注 $6878=$11（双位）。
+# 径：入 (14,2) 停走廊压跳区（x≈104，pickups 实证顶棚 x=95-107）→注能力→
+# 形态（down）→炸弹（b）×3→破顶（$4E 爆破瓦假说）→解形态→跳上棚顶→触达道具
+# 事件核：pw 写点/PowerUpType 清/截图（破顶可视）/$70
+name sc-bomb-blast
+frames 1600
+watch_range 0000-00ff zp
+watch_range 0100-07ff iram
+watch_range 6878-6878 gear
+watch_range 6988-698f pw
+
+press 360 start
+press 420 a
+press 540 start
+hold 995-1017 left
+press 1030 down
+press 1050 b
+press 1110 b
+press 1170 b
+press 1230 down
+press 1260 a
+hold 1280-1320 a
+hold 1280-1320 left
+hold 1320-1450 left
+
+capture 1200 after-bombs
+capture 1330 after-climb
+
+sample_point spin-exit
+fixture 1020 6878 11 invariant
+probe_mem 6988 698f
+bundle_capture 1250 analysis/bundles/sc-bomb-blast
