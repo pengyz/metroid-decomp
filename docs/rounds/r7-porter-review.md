@@ -1251,6 +1251,18 @@ ClearInitFlags: $B3D6/GetSoundRoutine: $B4BD 实存+结构互核注五条（静�
 **title 账面全清** ✓（0x18+0x1E 均臂化=31 项账面终形）；sound/ 域骨架（SfxCycle 八
 cycle+scan_sound_flags MSB 优先位扫描）=B31B 分派层地基。findings（r10）：0 新。
 
+## task-33 ③：验收义务收尾（r5 遗留 4/5）——并发采集复检实录
+
+### verdict: pass（义务勾销）
+
+**r5 遗留 5·并发采集复检 ✓**：WIP 在飞时（l3-dump.rs 变更在盘=真并发条件）新采
+boot-title 两跑——sha `4f9ca791…` **与锚逐字节复现**（跨时刻+并发树条件确定性成立；
+fresh re-collect=旧 run2 归档同 hash=双跑确定性三重验证（原双跑/跨时刻/并发））。
+**r5 遗留 4·双侧重跑 ✓**：oracle 腿新采复现+game-core 腿恢复态推进（bundle 件
+实证）——双腿机制均在复跑态。demo 双跑三验锚（4f9ca791）不变=零回退。
+**task-33 三件全勾销**（①manifest 余键核毕（三对余键各挂上游）②突变矩阵首轮
+（37e94f8）③本账）——task-13 契约「设计→验收」程序路**收官**。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
