@@ -117,6 +117,29 @@ mod tests {
         assert!(SamusHandler::from_index(10).is_none());
     }
 
+    /// BitScan 首位扫描（bit 号语义）。
+    #[test]
+    fn bit_scan_first_set_bit() {
+        assert_eq!(bit_scan(0x01), 0);
+        assert_eq!(bit_scan(0x02), 1);
+        assert_eq!(bit_scan(0x04), 2);
+        assert_eq!(bit_scan(0x08), 3);
+        assert_eq!(bit_scan(0x00), 8);
+    }
+
+    /// SamusStand 转移核（ActionTable：右/左→Run(1)、下→Roll(3)、上→PntUp(4)）。
+    #[test]
+    fn samus_stand_action_table_transitions() {
+        use crate::ram_map::{JOY1_STATUS, SAMUS_STATUS};
+        for (joy, want) in [(0x01u8, 1u8), (0x02, 1), (0x04, 3), (0x08, 4)] {
+            let mut m = FrameMemory::default();
+            m.write_ram(JOY1_STATUS, joy);
+            let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| samus_stand(&mut m)));
+            assert!(r.is_err()); // 尾部 SetSamusData 桩（CD6D）——转移核先行
+            assert_eq!(m.read_ram(SAMUS_STATUS), want, "ActionTable[{joy:#x}]");
+        }
+    }
+
     /// UpdateSamus 面：PageIndex/IsSamus 落态+位 7 站立直入引爆。
     #[test]
     fn update_samus_spine_face() {
@@ -131,4 +154,107 @@ mod tests {
         assert_eq!(m.read_ram(PAGE_INDEX), 0);
         assert_eq!(m.read_ram(IS_SAMUS), 1); // dec 前态（引爆先于收尾）
     }
+}
+
+// ==== 10 态肉·批1（轻仪式——链规 20）====
+
+/// BUTTON 位面（hardware.asm 内容锚：%00000001 RIGHT…%10000000 A）。
+pub mod button {
+    pub const RIGHT: u8 = 0x01;
+    pub const LEFT: u8 = 0x02;
+    pub const DOWN: u8 = 0x04;
+    pub const UP: u8 = 0x08;
+    pub const START: u8 = 0x10;
+    pub const SELECT: u8 = 0x20;
+    pub const B: u8 = 0x40;
+    pub const A: u8 = 0x80;
+}
+
+/// ActionTable（asm :2804 内容锚 `ActionTable: ; 07:CC87`——ROM 自证 `01 01 03 04`）：
+/// 索引=BitScan 位号（0=右/1=左/2=下/3=上）→ 转移目标态（sa_Run/sa_Run/sa_Roll/
+/// sa_PntUp）。
+pub const ACTION_TABLE: [u8; 4] = [1, 1, 3, 4];
+
+/// SetSamusStand_NoFootstep 折叠（**字节自证**——asm :CF5D/`NoHorzMoveNoDelay: ;
+/// 07:CF81`；名址映射以 ROM 字节为准：`20 81 cf 8c 00 03 a5 14 29 08 d0 0e a9 07 8d 05 03
+/// 8d 06 03 a9 00 8d 04 03 60`——jsr CF81/sty $0300/lda $14/and #$08/bne/lda #$07/
+/// sta $0305/sta $0306/lda #$00/sta $0304/rts）。
+///
+/// **结构互核注**：asm 标签（animResetIndex/animIndex/animDelay）↔字节址（$0305/$0306/
+/// $0304）映射=**本码字节自证**（名址一致性随 task-18 残余考证）；CF81=jsr CFB7+sty $0304
+/// （Y 写面）；**BUG 注保真**（fire 动画单帧——D4 保留）。
+pub fn set_samus_stand_no_footstep(mem: &mut FrameMemory) {
+    let y = 0u8; // 链内 Y 终值=0（CF4C `ldy #$00` 先行——字节自证）
+    // CF4C：speedX_i/speedX_f←0（`8c 09 03 8c 13 03`）
+    mem.write_ram(0x0309, 0);
+    mem.write_ram(0x0313, 0);
+    // CFB7：accelX←Y（`8c 15 03`）
+    mem.write_ram(0x0315, y);
+    // CF81：$0304←Y（`8c 04 03`）
+    mem.write_ram(0x0304, y);
+    // CF5D：status←Y（`8c 00 03`——stand=0）
+    mem.write_ram(crate::ram_map::SAMUS_STATUS, y);
+    if mem.read_ram(crate::ram_map::JOY1_STATUS) & button::UP != 0 {
+        // SetSamusPntUp（CF77：`a9 04 8d 00 03 a9 27 20 6b cf`）
+        mem.write_ram(crate::ram_map::SAMUS_STATUS, 4);
+        mem.write_ram(0x0305, 0x27);
+        mem.write_ram(0x0306, 0x27);
+    } else {
+        // 站立动画（`a9 07 8d 05 03 8d 06 03`）
+        mem.write_ram(0x0305, 0x07);
+        mem.write_ram(0x0306, 0x07);
+    }
+    mem.write_ram(0x0304, 0); // SetSamusNextAnim 尾（`a9 00 8d 04 03`）
+}
+
+/// BitScan（asm 内容锚 `BitScan: ; 07:E1E1`）：A 首个置位 bit 号（8=无置位）。
+pub fn bit_scan(mut a: u8) -> u8 {
+    for i in 0..8u8 {
+        if a & 1 != 0 {
+            return i;
+        }
+        a >>= 1;
+    }
+    8
+}
+
+/// SamusStand 处理件（**asm 内容锚+结构互核注**——10 态肉批1）：
+/// `SamusStand: ; 07:CC36`——输入面（Joy1Status mask SELECT|START）→[BUG 注保真：
+/// fire 动画单帧 bug（D4 保留）]→方向面（DOWN|LEFT|RIGHT 或 Joy1Change UP）→
+/// BitScan→**ActionTable 转移核**（R-mv-1 状态转移面）→FIRE（Joy1Change|Retrig）
+/// →JUMP（sa_Jump）→SetSamusData（CD6D）。
+/// 嵌套件桩：SetSamusStand_NoFootstep（CF5D）/FireSamusProjectile（D1EE）/
+/// SetSamusData（CD6D）——随队列填。
+pub fn samus_stand(mem: &mut FrameMemory) {
+    use button::*;
+    let joy = mem.read_ram(crate::ram_map::JOY1_STATUS);
+    if joy & !(SELECT | START) != 0 {
+        set_samus_stand_no_footstep(mem); // CF5D（BUG 注保真面——已端口）
+    }
+    let mut input = joy & (DOWN | LEFT | RIGHT);
+    if input == 0 {
+        if mem.read_ram(crate::ram_map::JOY1_CHANGE) & UP != 0 {
+            input = UP; // 上帧 UP 按下（Joy1Change 面）
+        }
+    }
+    if input != 0 {
+        let bit = bit_scan(input);
+        if bit < 4 {
+            if bit < 2 {
+                mem.write_ram(crate::ram_map::SAMUS_DIR, bit); // 1=left, 0=right
+            }
+            // 转移核：ActionTable[bit] → status（R-mv-1）
+            mem.write_ram(crate::ram_map::SAMUS_STATUS, ACTION_TABLE[bit as usize]);
+        }
+    }
+    // FIRE（Joy1Change|Joy1Retrig 高位）→ FireSamusProjectile
+    let fire = mem.read_ram(crate::ram_map::JOY1_CHANGE) | mem.read_ram(crate::memmap::title_state::JOY1_RETRIG);
+    if fire & A != 0 {
+        crate::unported!("bank07:D1EE"); // FireSamusProjectile
+    }
+    // JUMP（Joy1Change bit7）→ sa_Jump
+    if mem.read_ram(crate::ram_map::JOY1_CHANGE) & A != 0 {
+        mem.write_ram(crate::ram_map::SAMUS_STATUS, 2); // sa_Jump
+    }
+    crate::unported!("bank07:CD6D"); // SetSamusData（动画数据面）
 }

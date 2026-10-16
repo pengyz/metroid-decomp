@@ -124,6 +124,10 @@ pub const IS_SAMUS: u16 = 0x0055;
 /// not in use」+位 7=站立旗（GoSamusHandler `bmi` 面））。
 pub const SAMUS_STATUS: u16 = 0x0300;
 
+/// SamusDir（asm 名；SamusStand `sta SamusDir`（「1=left, 0=right」注）——速核
+/// constants_ram 随 task-25 流回填（现 C 级假设面）。
+pub const SAMUS_DIR: u16 = 0x031A;
+
 /// SamusHorzSpeedMax=$0316（内容锚「Used to calc maximum horizontal speed Samus can
 /// reach」——R-mv 跑速面）。
 pub const SAMUS_HORZ_SPEED_MAX: u16 = 0x0316;
