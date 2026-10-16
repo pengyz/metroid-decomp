@@ -164,6 +164,20 @@ pub fn c4b2_unit(mem: &mut FrameMemory) {
     set_ppu_mirror(mem, 0x47); // C4B4 `A9 47` 自载（C4D9 变体=$FA——同段）
 }
 
+/// NMIOn 单元（**asm 内容锚+结构互核注**）——
+/// refs/m1disasm/SRC/prg7_engine.asm `NMIOn: ; 07:C487`（`@loop: lda PPUSTATUS/and
+/// #PPUSTATUS_VBLK/bne @loop`（等 vblank 结束）/`lda PPUCTRL_ZP/ora #PPUCTRL_VBLKNMI_ON/
+/// bne LC481`/`LC481: sta PPUCTRL/sta PPUCTRL_ZP`（**置 NMI 位**））。
+///
+/// **结构互核注**：①PPUSTATUS 轮询=瞬时级（序幕双 vblank 先例——task-13 对齐注）②
+/// $FF bit7 置=write_io($2000) 同步 **nmi_enabled 复启**（ScreenNmiOff 的关↔NMIOn 的开
+/// =boot 链 NMI 开关配对面）③`bne LC481` 恒转（ora 非零——相位互核）。
+pub fn nmi_on(mem: &mut FrameMemory) {
+    let f = mem.read_ram(crate::ram_map::PPUCTRL_ZP) | 0x80;
+    mem.write_io(0x2000, f);
+    mem.write_ram(crate::ram_map::PPUCTRL_ZP, f);
+}
+
 /// SetPPUMirror 共享尾（bank07:C4B6 族；**asm 共享段**：PrepVertMirror（C4B2）/
 /// PrepPPUMirror（C4D9→`lda MirrorCntrl/jmp SetPPUMirror`）/WritePPUCtrl（C44D）三路
 /// 汇入——域形抽共享 fn 复刻共享段结构）：bit=(A>>3)&1（`lsr ×3/and #$01`）→
@@ -231,7 +245,7 @@ pub fn boot_post_spin(mem: &mut FrameMemory) {
     screen_nmi_off_post(mem);
     copy_map(mem);
     super::gfx::init_title_gfx(mem); // InitTitleGFX（asm :1493 族——已端口）
-    crate::unported!("bank07:C487"); // NMIOn（链次桩——VBlank 中断重启）
+    nmi_on(mem); // NMIOn（asm 内容锚——已端口；boot 链末件）
 }
 
 /// CopyMap 单元（**asm 引证主体**，链规 17）——refs/m1disasm/SRC/prg0_title.asm:5153
@@ -385,6 +399,16 @@ mod tests {
         let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| c1a3_unit(&mut m)));
         let msg = panic_message(&r.unwrap_err());
         assert!(msg.contains("unported @ bank00:988A"), "引爆点失准: {msg}");
+    }
+
+    /// NMIOn：$FF bit7 置+nmi_enabled 复启（开关配对面）。
+    #[test]
+    fn nmi_on_reenables_nmi() {
+        let mut m = FrameMemory::default();
+        m.write_ram(crate::ram_map::PPUCTRL_ZP, 0x10);
+        nmi_on(&mut m);
+        assert_eq!(m.read_ram(crate::ram_map::PPUCTRL_ZP), 0x90);
+        assert!(m.nmi_enabled);
     }
 
     /// C4B2 MMC1 control 状态面（boot 态 $25=0x0E→$00=0/$25=0x0E/A=0x0E）。

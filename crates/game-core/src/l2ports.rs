@@ -125,6 +125,7 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "sub_LoadFlashTimer" => Some(sub_flash_timer),
         "sub_FlashEffect" => Some(sub_flash_effect),
         "sub_METROIDSparkle" => Some(sub_sparkle_step),
+        "sub_METROIDFadeOut" => Some(sub_metroid_fade_out),
         _ => None,
     }
 }
@@ -551,4 +552,10 @@ pub fn sub_flash_effect(input: &L2In) -> L2Out {
 /// sub_METROIDSparkle —— bank00:$814D 注册名（批4a，SparkleStep=4 跑运动链）。
 pub fn sub_sparkle_step(input: &L2In) -> L2Out {
     crate::verify_shim::title_sparkle_step(input)
+}
+
+/// sub_METROIDFadeOut —— bank00:$8163 注册名（批4b；FadeDriver::MetroidOut——完成臂含
+/// InitCrossMissiles **BUG 保真**（`cmp PPUCTRL_ZP` zp 面）+无条件 DoFadeOut 不对称）。
+pub fn sub_metroid_fade_out(input: &L2In) -> L2Out {
+    crate::verify_shim::title_metroid_fade_out(input)
 }

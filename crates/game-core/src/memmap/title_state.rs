@@ -84,6 +84,10 @@ pub const INTRO_STAR_OFFSET: u16 = 0x00C3;
 pub const FADE_INDEX: u16 = 0x00C4;
 /// SpriteLoadPending=$C8（:743「Set to #$00 after sprite RAM load complete」）。
 pub const SPRITE_LOAD_PENDING: u16 = 0x00C8;
+/// CrossMsl0to3SlowDelay=$BC（:727）。
+pub const CROSS_SLOW_DELAY: u16 = 0x00BC;
+/// SecondCrosshairSprites=$BF（:732）。
+pub const SECOND_CROSS: u16 = 0x00BF;
 /// SpareMem 族（:723-754「Written to in title routine, but never accessed」）。
 pub const SPARE_B7: u16 = 0x00B7;
 /// SpareMemB8（ds 3 区首——写面只 $B8 单址）。
@@ -199,7 +203,10 @@ pub fn effect_event(tag: (u8, u8, u8)) -> Vec<(u16, u8)> {
         return vec![(SPRITE_RAM4_BASE + (slot & 1) as u16 * INTRO_SPR_STRIDE + off as u16, v)];
     }
     if slot & 0x20 != 0 {
-        return vec![(off as u16, v)]; // zp 指针写（$00/$01）
+        return vec![(off as u16, v)]; // zp 面（off=址）
+    }
+    if slot == 0x10 {
+        return vec![(INTRO_SPR_BASE + off as u16, v)]; // INTRO_SPR_BASE 相对原始偏移
     }
     if slot & 0x40 != 0 {
         return vec![match off {

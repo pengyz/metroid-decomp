@@ -706,3 +706,35 @@ pub fn title_sparkle_step(input: &L2In) -> L2Out {
     let o = crate::title::EffectDriver::SparkleStep.tick(&f, &mut top, &mut bottom);
     effect_out(input, o, None)
 }
+
+/// 批4b 入口 07 适配（`sub_METROIDFadeOut` ← bank00:$8163；FadeDriver::MetroidOut 臂）。
+pub fn title_metroid_fade_out(input: &L2In) -> L2Out {
+    let f = crate::title::FadeFace {
+        timer3: input.ram[memmap::title_state::TIMER3 as usize & 0x7FF],
+        frame_count: input.ram[crate::ram_map::FRAME_COUNT as usize & 0x7FF],
+        pal_index: 0,
+        fade_index: input.ram[memmap::title_state::FADE_INDEX as usize & 0x7FF],
+        phase: input.ram[crate::ram_map::TITLE_ROUTINE as usize & 0x7FF],
+        ppuctrl: input.ram[crate::ram_map::PPUCTRL_ZP as usize & 0x7FF],
+    };
+    let o = crate::title::FadeDriver::MetroidOut.tick(&f);
+    let mut events: Vec<(u16, u8)> = Vec::new();
+    if let Some(p) = o.phase {
+        events.push(memmap::title_state::write_event_phase(p));
+    }
+    for (tag, v) in &o.writes {
+        let addr = match *tag {
+            "TIMER3" => memmap::title_state::TIMER3,
+            "CROSS_SLOW_DELAY" => memmap::title_state::CROSS_SLOW_DELAY,
+            "SECOND_CROSS" => memmap::title_state::SECOND_CROSS,
+            "PENDING_PAL" => crate::ram_map::PALETTE_PENDING,
+            "FADE_INDEX" => memmap::title_state::FADE_INDEX,
+            other => panic!("metroid_out 未知写标签 {other}——fail-loud"),
+        };
+        events.push((addr, *v));
+    }
+    for tag in &o.slot_writes {
+        events.extend(memmap::title_state::effect_event(*tag));
+    }
+    L2Out { a: o.a_out, x: input.x, y: o.y_out.unwrap_or(input.y), writes: merge_writes(events) }
+}

@@ -262,6 +262,8 @@ pub struct FadeOutcome {
     pub a_out: u8,
     pub y_out: Option<u8>,
     pub writes: Vec<(&'static str, u8)>,
+    /// 槽面写（InitCrossMissiles 标记三元组——memmap::title_state::effect_event 映射）。
+    pub slot_writes: Vec<SlotWriteTag>,
 }
 
 /// 淡变驱动（4 员同形折叠——非 4 个镜像 fn）。
@@ -275,6 +277,9 @@ pub enum FadeDriver {
     MessageIn,
     /// 0E MessageFadeOut：Timer3 门 + &7 掩 + 组合表步进 + 端测 idx==$05。
     MessageOut,
+    /// 07 METROIDFadeOut：&7 掩 + 端测 idx==4（完成臂=InitCrossMissiles+Timer3/SlowDelay←8+
+    /// SecondCrosshair←0+inc）+ **无条件** DoFadeOut（与 0D/0E 的完成后跳步不对称——asm 字节实证）。
+    MetroidOut,
 }
 
 impl FadeDriver {
@@ -284,6 +289,7 @@ impl FadeDriver {
             Self::DelaySetup => {
                 // `lda #$08 / sta Timer3 / lsr`（A=8→4 一指令双用）/`sta PaletteDataIndex`
                 FadeOutcome {
+                    slot_writes: vec![],
                     phase: Some(f.phase.wrapping_add(1)),
                     a_out: 4,
                     y_out: None,
@@ -293,45 +299,75 @@ impl FadeDriver {
             }
             Self::MetroidIn => {
                 if f.timer3 != 0 {
-                    return FadeOutcome { phase: None, a_out: f.timer3, y_out: None, writes: vec![] };
+                    return FadeOutcome { slot_writes: vec![], phase: None, a_out: f.timer3, y_out: None, writes: vec![] };
                 }
                 let m = f.frame_count & 0x0F;
                 if m != 0 {
-                    return FadeOutcome { phase: None, a_out: m, y_out: None, writes: vec![] };
+                    return FadeOutcome { slot_writes: vec![], phase: None, a_out: m, y_out: None, writes: vec![] };
                 }
                 // LoadPalData 步进（ldy pal_index；Z=表耗尽）
                 let t = PAL_SELECT_TABLE[f.pal_index as usize];
                 if t == 0xFF {
-                    return FadeOutcome { phase: Some(f.phase.wrapping_add(1)), a_out: 0x20,
+                    return FadeOutcome { slot_writes: vec![], phase: Some(f.phase.wrapping_add(1)), a_out: 0x20,
                                          y_out: Some(f.pal_index),
                                          writes: vec![("TIMER3", 0x20)] };
                 }
-                FadeOutcome { phase: None, a_out: t, y_out: Some(f.pal_index),
+                FadeOutcome { slot_writes: vec![], phase: None, a_out: t, y_out: Some(f.pal_index),
                               writes: vec![("PENDING_PAL", t), ("PALETTE_INDEX", f.pal_index.wrapping_add(1))] }
+            }
+            Self::MetroidOut => {
+                let m = f.frame_count & 0x07;
+                if m != 0 {
+                    return FadeOutcome { slot_writes: vec![], phase: None, a_out: m, y_out: None, writes: vec![] };
+                }
+                let mut writes: Vec<(&'static str, u8)> = vec![];
+                if f.fade_index == 4 {
+                    // 完成臂（`20 97 88` InitCrossMissiles + `a9 08 85 2c 85 bc` + `a9 00 85 bf`
+                    // + `e6 1f`）——槽面写经 MARKS 展开在 shim
+                    let slot_writes = sparkle::init_cross_missiles(f.ppuctrl);
+                    writes.push(("TIMER3", 8));
+                    writes.push(("CROSS_SLOW_DELAY", 8));
+                    writes.push(("SECOND_CROSS", 0));
+                    // phase inc 由 tick 统一推
+                    // 无条件 DoFadeOut 随后执行
+                    let t = FADE_TABLE[f.fade_index as usize];
+                    if t != 0xFF {
+                        writes.push(("PENDING_PAL", t));
+                        writes.push(("FADE_INDEX", f.fade_index.wrapping_add(1)));
+                    }
+                    return FadeOutcome { slot_writes: vec![], phase: Some(f.phase.wrapping_add(1)), a_out: t,
+                                         y_out: Some(f.fade_index), writes };
+                }
+                let t = FADE_TABLE[f.fade_index as usize];
+                if t != 0xFF {
+                    writes.push(("PENDING_PAL", t));
+                    writes.push(("FADE_INDEX", f.fade_index.wrapping_add(1)));
+                }
+                FadeOutcome { slot_writes: vec![], phase: None, a_out: t, y_out: Some(f.fade_index), writes }
             }
             Self::MessageIn | Self::MessageOut => {
                 if f.timer3 != 0 {
-                    return FadeOutcome { phase: None, a_out: f.timer3, y_out: None, writes: vec![] };
+                    return FadeOutcome { slot_writes: vec![], phase: None, a_out: f.timer3, y_out: None, writes: vec![] };
                 }
                 let m = f.frame_count & 0x07;
                 if m != 0 {
-                    return FadeOutcome { phase: None, a_out: m, y_out: None, writes: vec![] };
+                    return FadeOutcome { slot_writes: vec![], phase: None, a_out: m, y_out: None, writes: vec![] };
                 }
                 let end = if *self == Self::MessageIn { 0x0B } else { 0x05 };
                 if f.fade_index == end {
                     return if *self == Self::MessageIn {
                         // 端测 0D：FadeDataIndex←0、Timer3←$30（480 帧=48×10）、inc（A=$30）
-                        FadeOutcome { phase: Some(f.phase.wrapping_add(1)), a_out: 0x30, y_out: None,
+                        FadeOutcome { slot_writes: vec![], phase: Some(f.phase.wrapping_add(1)), a_out: 0x30, y_out: None,
                                       writes: vec![("FADE_INDEX", 0), ("TIMER3", 0x30)] }
                     } else {
                         // 端测 0E：FadeDataIndex←6（fade-in 序起点）、SpareMemCB←0、inc（A=0）
-                        FadeOutcome { phase: Some(f.phase.wrapping_add(1)), a_out: 0x00, y_out: None,
+                        FadeOutcome { slot_writes: vec![], phase: Some(f.phase.wrapping_add(1)), a_out: 0x00, y_out: None,
                                       writes: vec![("FADE_INDEX", 6), ("SPARE_CB", 0)] }
                     };
                 }
                 // DoFadeOut 步进（ldy fade_index）
                 let t = FADE_TABLE[f.fade_index as usize];
-                FadeOutcome { phase: None, a_out: t, y_out: Some(f.fade_index),
+                FadeOutcome { slot_writes: vec![], phase: None, a_out: t, y_out: Some(f.fade_index),
                               writes: vec![("PENDING_PAL", t), ("FADE_INDEX", f.fade_index.wrapping_add(1))] }
             }
         }
