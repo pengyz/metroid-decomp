@@ -235,3 +235,19 @@ pub fn effect_event(tag: (u8, u8, u8)) -> Vec<(u16, u8)> {
     }
     vec![(INTRO_SPR_BASE + slot as u16 * INTRO_SPR_STRIDE + off as u16, v)]
 }
+
+// ==== 会师契约应用件（② outcome 应用面）====
+
+/// 应用 TitleStep 写事件到内存面（桥侧一步到位；或直读 step.events 自行投影）。
+/// RAM/WRAM 归一：addr<$2000 → 镜像 &0x7FF；$6000-$7FFF → wram；其他域 fail-loud。
+pub fn apply_title_step(ram: &mut [u8], wram: &mut [u8], events: &[(u16, u8)]) {
+    for &(addr, v) in events {
+        if addr < 0x2000 {
+            ram[(addr as usize) & 0x7FF] = v;
+        } else if (0x6000..0x8000).contains(&addr) {
+            wram[addr as usize - 0x6000] = v;
+        } else {
+            panic!("apply_title_step 域外写 ${addr:04X}——fail-loud");
+        }
+    }
+}

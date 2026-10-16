@@ -718,3 +718,160 @@ pub fn end_game(is_credits: u8, frame_count: u8, palette: u8, room_ptr: u8, x_in
 // NMI 自旋）+PreparePPUProcess_+**jmp TurnOnDisplay**（NMIOn+ScreenOn 自旋）；
 // 18 EnterPassword（$9147 起）：深路（密码格光标/字符输入面）待 shell 组合点后续批
 // （L2 可钉面=START⇒jmp CheckPassword 停点——随 18 专件补）。
+
+// ==== 会师接线契约（task-23 × frame/ B 跑）====
+//
+// 【① 分发入口形状】统一入口=**本文件 `dispatch_step`**（phase→臂匹配归 title 域所有；
+// 桥侧只解码→调用→应用）。入参 `TitleFace` 由 `memmap::title_state::decode_title_face`
+// 解码（star_src=WRAM $6E00-$6E9F 面、ff=zp $FF、joy=Joy1Change $12、…——逐字段注）。
+// 【② outcome 应用面】`memmap::title_state::apply_title_step`（标签→址映射统一在
+// memmap（two-layer §1）；桥侧亦可直读 step.events 已是 (addr,val) 事件）。
+// 【③ 未武装臂】`TitleStep::Unported{ table_addr }` 返回值——**桥侧爆**
+// `unported!("bank00:<表址>")`（你的 per-entry 形状照用；表址在本匹配内逐臂给）。
+// 五降级件=**占位臂**（RAM 面已武装 + `TitleStep::Shell(Vec<ShellCall>)` 组合点声明——
+// spin 点=ShellCall::NmiYield（§8.1 spin 跨帧建模口径：桥侧按帧界让出，下一帧续）；
+// PPU/VRAM 效果由你侧 shell 执行——01/12/15/1B/1C 深效果=L3 裁决面）。
+
+/// shell 组合点 ABI（title 域声明、frame/ shell 执行——两层边界）。
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ShellCall {
+    /// ScreenOff 族（$FE 镜像面+NMI 等待——**NmiYield 语义**）。
+    ScreenOff,
+    /// ScreenOn 族（同上）。
+    ScreenOn,
+    /// NMIOn（PPUCTRL_ZP|=$80+NMI 等待）。
+    NMIOn,
+    /// ClearNameTables（VRAM 清面——你侧 intro.rs 生产端组合）。
+    ClearNameTables,
+    /// PreparePPUProcess_（VRAM 写串——ptr=内联结构体址，你侧生产端装载）。
+    PrepareVram(u16),
+    /// InitPasswordFontGFX（图案面）。
+    InitPasswordFontGfx,
+    /// EraseAllSprites（$0200-$02FF←$F0）。
+    EraseAllSprites,
+    /// NMI 等待点（§8.1：帧界让出，下帧续）。
+    NmiYield,
+}
+
+/// title 域一 tick 结果（写面=语义标签事件（已映射址）；shell=组合点；exit=分发出口）。
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct TitleStep {
+    pub events: Vec<(u16, u8)>,
+    pub shell: Vec<ShellCall>,
+    pub a_out: Option<u8>,
+    pub x_out: Option<u8>,
+    pub y_out: Option<u8>,
+    /// 跳转出口（jmp InitializeStats/CheckPassword 等——桥侧按停点或转接处理）。
+    pub jumped: Option<u16>,
+    /// 未武装臂（桥侧 `unported!("bank00:…")` 爆）。
+    pub unported: Option<u16>,
+}
+
+/// 解码入参面（memmap::title_state::decode_title_face 产出本型）。
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct TitleFace {
+    pub phase: u8,
+    pub a: u8,
+    pub x: u8,
+    pub y: u8,
+    pub timer3: u8,
+    pub frame_count: u8,
+    pub joy_change: u8,
+    pub ppuctrl: u8,
+    pub star_src: [u8; 0xA0],
+    pub wram: Vec<u8>,
+    pub ram: Vec<u8>,
+}
+
+/// **统一分发入口**（B 跑接线点）：phase→臂。已武装臂=批1-6a 交付面；未武装=Unported
+/// 表址返回；五降级件=占位臂（RAM 面+Shell 组合点，深效果 L3 裁决面）。
+pub fn dispatch_step(face: &TitleFace) -> TitleStep {
+    let l2in = crate::L2In {
+        ram: face.ram.clone(), wram: face.wram.clone(),
+        a: face.a, x: face.x, y: face.y, p: 0x24, window_bank: 0,
+    };
+    let step_from_l2 = |o: crate::L2Out| TitleStep {
+        events: o.writes, shell: vec![], a_out: Some(o.a), x_out: Some(o.x), y_out: Some(o.y),
+        jumped: None, unported: None,
+    };
+    use crate::verify_shim as sh;
+    match face.phase {
+        0x00 => step_from_l2(sh::title_init_after_reset(&l2in)),
+        0x0A | 0x0B => step_from_l2(sh::title_inc(&l2in)),
+        0x0C => step_from_l2(sh::title_change_nametable(&l2in)),
+        0x0D | 0x0E | 0x02 | 0x03 | 0x07 => step_from_l2(match face.phase {
+            0x02 => sh::title_fade_delay(&l2in), 0x03 => sh::title_metroid_fade_in(&l2in),
+            0x07 => sh::title_metroid_fade_out(&l2in), 0x0D => sh::title_message_fade_in(&l2in),
+            _ => sh::title_message_fade_out(&l2in),
+        }),
+        0x04 => step_from_l2(sh::title_flash_timer(&l2in)),
+        0x05 => step_from_l2(sh::title_flash_effect(&l2in)),
+        0x06 => step_from_l2(sh::title_sparkle_step(&l2in)),
+        0x08 => step_from_l2(sh::title_crosshairs_step(&l2in)),
+        0x09 => step_from_l2(sh::title_crosshair_continue(&l2in)),
+        0x0F => step_from_l2(sh::title_replay_delay(&l2in)),
+        0x10 => step_from_l2(sh::title_clear_spare(&l2in)),
+        0x11 => step_from_l2(sh::title_prep_restart(&l2in)),
+        0x13 | 0x14 => step_from_l2(sh::title_no_op(&l2in)),
+        0x19 => step_from_l2(sh::title_password_gate(&l2in)),
+        // jmp 出口臂（直域调——jumped 面透出；B 跑桥侧按转接/停点处理）
+        0x16 => {
+            let joy = face.ram[crate::memmap::title_state::JOY1_CHANGE as usize & 0x7FF];
+            let sc = face.ram[0x0325 & 0x7FF];
+            let o = menu_choose(joy, sc);
+            TitleStep { events: o.writes, shell: vec![], a_out: Some(o.a_out),
+                        x_out: o.x_out.or(Some(face.x)), y_out: o.y_out.or(Some(face.y)),
+                        jumped: if o.jumped { Some(0x932B) } else { None }, unported: None }
+        }
+        0x1A => {
+            let joy = face.ram[crate::memmap::title_state::JOY1_CHANGE as usize & 0x7FF];
+            let o = wait_for_start(joy);
+            TitleStep { events: o.writes, shell: vec![], a_out: Some(o.a_out),
+                        x_out: o.x_out.or(Some(face.x)), y_out: o.y_out.or(Some(face.y)),
+                        jumped: if o.jumped { Some(0x8C5E) } else { None }, unported: None }
+        }
+        0x1D => {
+            let r = |a: u16| face.ram[a as usize & 0x7FF];
+            let o = end_game(r(0x007B), r(crate::ram_map::FRAME_COUNT),
+                             r(crate::ram_map::PALETTE_PENDING), r(0x0033), face.x, face.y);
+            TitleStep { events: o.writes, shell: vec![], a_out: Some(o.a_out),
+                        x_out: o.x_out.or(Some(face.x)), y_out: o.y_out.or(Some(face.y)),
+                        jumped: if o.jumped { Some(0x9AD5) } else { None }, unported: None }
+        }
+        // ---- 五降级+17：占位臂（spin 点=NmiYield；深效果 L3 裁决面；表址供桥侧首分歧记账）----
+        0x01 | 0x12 | 0x15 | 0x1B | 0x1C | 0x17 => TitleStep {
+            events: vec![], shell: vec![ShellCall::NmiYield], a_out: None, x_out: None,
+            y_out: None, jumped: None,
+            unported: Some(match face.phase {
+                0x01 => 0x80D0, 0x12 => 0x82ED, 0x15 | 0x1B => 0x90BA,
+                0x17 => 0x911A, _ => 0x939E,
+            }),
+        },
+        // ---- 真未武装（18 深路专件/0x1E SetTimer 随件）----
+        _ => TitleStep { events: vec![], shell: vec![], a_out: None, x_out: None, y_out: None,
+                         jumped: None,
+                         unported: Some(match face.phase {
+                             0x18 => 0x9147, _ => 0xC4AA,
+                         }) },
+    }
+}
+
+#[cfg(test)]
+mod dispatch_contract_tests {
+    use super::*;
+
+    /// 契约面：已武装臂不回 Unported（00 例）；真未武装回表址（0x18/0x1E 例）。
+    #[test]
+    fn dispatch_arms_and_unported_faces() {
+        let face = TitleFace {
+            phase: 0x18, a: 0, x: 0, y: 0, timer3: 0, frame_count: 0, joy_change: 0,
+            ppuctrl: 0x90, star_src: [0; 0xA0], wram: vec![0; 0x2000], ram: vec![0; 0x800],
+        };
+        let s = dispatch_step(&face);
+        assert_eq!(s.unported, Some(0x9147));
+        let face = TitleFace { phase: 0x0A, ..face };
+        let s = dispatch_step(&face);
+        assert_eq!(s.unported, None);
+        assert!(s.events.iter().any(|&(a, _)| a == 0x001F));
+    }
+}
