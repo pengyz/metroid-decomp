@@ -149,3 +149,89 @@ mod tests {
         assert_eq!(get_sound_routine(&b, &tbl, 0x04).1, Some(14)); // 4+(7-2)×2
     }
 }
+
+// ---- task-30 handler 细行首件：B673 SamusHitSFXInit（SFX 处理器族起点）----
+// asm 主文档：sound_engine.asm `SamusHitSFXInit: ; $B673`（镜面 sig 三银行自证）。
+// 结构互核注：①LoadSFXData=4 字节**间接写 APU 寄存器**（`(SFXDataPtr),y → (APURegisterPtr),y`）
+// ②zp $E0-$E5 **双语义并用**（表指针族↔APU/Data 指针族——时分复用面）③RNG 消费
+// （RandomNumber1 $2E——task-20 域面）④UpdateContFlags `and #$00` 死操作（asm 注
+// 「was this value non-zero at some point」——字节真照建）。
+
+/// SFXData@SamusHitSQ1SQ2（bank 窗 $B225 4B——`c1 89 02 0f`）。
+pub const SAMUS_HIT_SFX_DATA: [u8; 4] = [0xC1, 0x89, 0x02, 0x0F];
+
+/// handler 结果（RAM 面=L2 案写集；APU 面=域测钉序）。
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct HandlerOutcome {
+    pub ram_events: Vec<(u16, u8)>,
+    /// APU 写序（(寄存器址, 值)——L2 引擎 stub 忽略面，域测钉）。
+    pub apu_events: Vec<(u16, u8)>,
+    pub a_out: u8,
+    pub x_out: u8,
+    pub y_out: u8,
+}
+
+/// B673 SamusHitSFXInit 语义折叠（rng1=RandomNumber1 面；channel_type=ChannelType $065C
+/// 面；current_flags=CurrentSoundFlags $064D 面）。
+pub fn samus_hit_sfx_init(rng1: u8, channel_type: u8, current_flags: u8) -> HandlerOutcome {
+    let mut ram = Vec::new();
+    let mut apu = Vec::new();
+    // LoadSFXData@SQ1：指针面+4B 间接写
+    ram.push((0x00E0, 0x00)); // APURegisterPtr←SQ1_VOL $4000
+    ram.push((0x00E1, 0x40));
+    ram.push((0x00E2, 0x25)); // SFXDataPtr←$B225
+    ram.push((0x00E3, 0xB2));
+    for i in 0..4u16 {
+        apu.push((0x4000 + i, SAMUS_HIT_SFX_DATA[i as usize]));
+    }
+    // 随机 SQ1 周期低（APU）
+    apu.push((0x4002, rng1 & 0x0F));
+    // 帧数=1..4
+    let frames = (rng1 & 0x03).wrapping_add(1);
+    // MultiSFXInit
+    ram.push((0x0664, frames)); // SFXMultiLength
+    // LoadSFXData@SQ2：指针面+4B 间接写
+    ram.push((0x00E0, 0x04)); // SQ2_VOL $4004
+    ram.push((0x00E1, 0x40));
+    ram.push((0x00E2, 0x25));
+    ram.push((0x00E3, 0xB2));
+    for i in 0..4u16 {
+        apu.push((0x4004 + i, SAMUS_HIT_SFX_DATA[i as usize]));
+    }
+    // UpdateContFlags（`and #$00` 死操作照建：结果=CurrentSoundFlags）
+    ram.push((0x0688 + channel_type as u16, current_flags));
+    // 通道占用面
+    ram.push((0x0653, 1)); // SQ1UsedBySFX
+    ram.push((0x0654, 2)); // SQ2UsedBySFX
+    // 清表（MultiSFXInit 尾 6 地址）
+    for a in [0x0689u16, 0x0671, 0x0675, 0x0679, 0x0669, 0x0607] {
+        ram.push((a, 0));
+    }
+    // 随机 SQ2 周期低（APU）
+    let sq2_lo = (rng1 >> 2) & 0x0F;
+    apu.push((0x4006, sq2_lo));
+    // 出口 A=末 A-setter（SQ2 随机写后 and #$0F 值——非清表 0！）
+    HandlerOutcome { ram_events: ram, apu_events: apu, a_out: sq2_lo, x_out: channel_type, y_out: 4 }
+}
+
+#[cfg(test)]
+mod handler_tests {
+    use super::*;
+
+    /// B673 APU 写序（域测钉——L2 面不可见）：SQ1 4B→随机周期→SQ2 4B→随机周期。
+    #[test]
+    fn samus_hit_apu_write_order() {
+        let o = samus_hit_sfx_init(0x55, 3, 0x40);
+        let apu: Vec<(u16, u8)> = o.apu_events.clone();
+        assert_eq!(apu[0], (0x4000, 0xC1));
+        assert_eq!(apu[4], (0x4002, 0x05)); // rng&0x0F
+        assert_eq!(apu[5], (0x4004, 0xC1));
+        assert_eq!(apu[9], (0x4006, 0x15 & 0x0F)); // (rng>>2)&0x0F=0x05? 0x55>>2=0x15→5
+        assert_eq!(o.a_out, 5); // 末 A-setter=(rng>>2)&0x0F
+        assert_eq!(o.x_out, 3);
+        assert_eq!(o.y_out, 4);
+        // RAM 面：SFXMultiLength←(0x55&3)+1=2
+        assert!(o.ram_events.contains(&(0x0664, 2)));
+        assert!(o.ram_events.contains(&(0x068B, 0x40))); // cont 旗址 $0688+ct
+    }
+}

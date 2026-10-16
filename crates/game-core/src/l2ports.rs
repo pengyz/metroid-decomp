@@ -132,6 +132,7 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "sub_WaitForSTART" => Some(sub_wait_start),
         "sub_DisplayPassword" => Some(sub_password_gate),
         "sub_EndGame" => Some(sub_end_game),
+        "sub_SamusHitSFXInit" => Some(sub_samus_hit_sfx),
         _ => None,
     }
 }
@@ -596,4 +597,10 @@ pub fn sub_password_gate(input: &L2In) -> L2Out {
 /// sub_EndGame —— bank00:9AA7 注册名（批6a；星装载+调色板循环+JumpEngine 停点）。
 pub fn sub_end_game(input: &L2In) -> L2Out {
     crate::verify_shim::title_end_game(input)
+}
+
+/// sub_SamusHitSFXInit —— bank00:B673 注册名（task-30 handler 首件；镜面 sig 自证）。
+/// 域形态：sound::samus_hit_sfx_init（L2 面=RAM 写集；APU 写序=域测钉）。
+pub fn sub_samus_hit_sfx(input: &L2In) -> L2Out {
+    crate::verify_shim::sound_samus_hit_init(input)
 }
