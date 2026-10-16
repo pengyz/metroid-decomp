@@ -1240,6 +1240,17 @@ restore_mss 三直映功能面证成；恢复态连贯推进至 C23x-change fail
 双腿逐帧对拍待 task-30 机制无阻）④工程修正三件（触发帧语义/相对路径崩回调/MEMTYPE）
 =稳健面 ✓。findings（r10）：0 新。
 
+## task-30 首件（dbfaa23）：sound/ 域骨架+0x1E SetTimer——B31B 清偿路径
+
+### verdict: pass
+
+三查：①**SetTimer 字节全宽实存 bank7:$C4AA** ✓（`85 2c 86 20 a9 09 d0 f5` 逐字——
+我首扫 bank0 未中=bank 映射陷阱族自纠后 bank7 命中）②asm 锚 ✓（SoundEngine: $B3B4/
+ClearInitFlags: $B3D6/GetSoundRoutine: $B4BD 实存+结构互核注五条（静音旗位0/MSB 优先/
+表步进/Multi 特例/6 旗清））③测 96 绿（126 全绿基线）。
+**title 账面全清** ✓（0x18+0x1E 均臂化=31 项账面终形）；sound/ 域骨架（SfxCycle 八
+cycle+scan_sound_flags MSB 优先位扫描）=B31B 分派层地基。findings（r10）：0 新。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
