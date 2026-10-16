@@ -1,0 +1,5 @@
+{
+  "schema": 1,
+  "whitelist": [],
+  "note": "视觉白名单=唯一允许的例外清单（AGENTS §5：字体/调色板映射等）；变更需用户确认并记录。初始为空（像素级零容差起步）——条目格式 {file: glob, rect:[x,y,w,h], reason, approved_by}。task-31 建立（lead 派发+用户裁定的验证体系收官层）。"
+}
