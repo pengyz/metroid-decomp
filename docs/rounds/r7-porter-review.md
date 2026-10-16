@@ -898,6 +898,19 @@ CurrentBank 回切）/数据岛边界）+速核更正链第 2 例（JustInBailey
 先行于链序申报**（「次桩=C487」=boot 链序；实跑序先触 C0BC 主循环相=桩表双桩并存，
 措辞注同批 24 族；C5D7 已消化 ✓）。findings（r10）：0 新（措辞注不计）。基线 98。
 
+## task-10 批 38：NMIOn/C487（c07e23d）——boot 链全通里程碑
+
+### verdict: pass
+
+四查：①asm 锚 3/3 ✓（`NMIOn: ; 07:C487`/`LC481: ; 07:C481`/`bne LC481 Branch always`
+逐行命中；PPUCTRL_VBLKNMI_ON 面）②结构互核注 ✓（PPUSTATUS 轮询瞬时级=序幕双 vblank
+先例衔接/NMI 开关配对面 ScreenNmiOff↔NMIOn（$FF bit7+write_io $2000+ nmi_enabled 复启）
+三面同步）③测 72 绿（三 tick 引爆断言=tick2 boot 链全通+tick3 主循环相）④**boot 链
+全通里程碑 ✓**——reset→C01A→C158→C1A3→C4B2→C4DE→C531→ScreenNmiOff（spin 跨帧）→
+CopyMap→InitTitleGFX→NMIOn 全链贯通；我方实测引爆已推进至 `bank00:8000`（C0BC 分发壳
+已被在途成环件消化=里程碑超前兑现，与 port2 title 簇会师点即至）。
+findings（r10）：0 新。基线 99。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
