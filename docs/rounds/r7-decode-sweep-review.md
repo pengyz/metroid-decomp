@@ -295,6 +295,16 @@ findings 三族（r10）：0 新。
 F_a 族延伸 ✓；MSS↔FrameMemory 映射=porter 分工显式。探针件 20 处 API 面在位；
 v1 猜名 API 全错（枚举面救场）=考证方法续 ✓。findings 三族（r10）：0 新。
 
+## task-34 场景库批 1（52c90f6）：玩法场景族四包——证据预备仓（抽检）
+
+### verdict: pass（抽检）
+
+四包（门转场/房间滚换/敌遭遇/道具拾取）spin-exit+双跑逐字节一致（三 sha）+
+bundle 快照随包（任意起点素材库）✓。**事件核两佳**：①道具拾取=**如实降级**
+（pw 面全 00=未达→D7 不冒领，搜寻路径素材注）②标注更正（~~$69/$6A~~=TempX/TempY
+→真道具位图 PasswordByte00($6988) 定义锚）原地更正+补 pw watch 重采。
+438/0+CHECK PASS。findings 三族（r10）：0 新。
+
 ## 遗留风险清单
 
 1. S 面 120 为 B 级估计——分母 v2 实际登记（lead task-5）以 decode-sweep 复跑 + 逐条
