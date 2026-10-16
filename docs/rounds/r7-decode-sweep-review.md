@@ -270,6 +270,20 @@ D 面 193 格/covered=44 实读）。
 **④ 面分布=dest 语义 C 级显式标注 ✓**（精灵 2/背景 16/其它 6——不越级）。
 findings 三族（r10）：0 新。
 
+## decode-sweep r4（0bbc0d4，task-21）+ E37A 考证件（900f84c，task-19）——2026-10-16
+
+### verdict: pass（双件合核）
+
+**task-21 r4 findings**：①五岛段两两一致实证 ✓（bank1-5 $8C84-$8CF6 共享 114B 逐字
+——A 级定谳成立）②未决巨尾标签密度=段级切分锚表（分母 v2 增量清单三注随
+denoms_corrections，lead 域合并）③**R6 慢帧互斥实证（我 r12 挂账项销）**：全在库
+15 份 frames 工件 f 唯一+严格单调 **0 违例**（我方自跑复现）——inputPolled≡tick
+本环境成立；慢帧 quirk 分支维持未路由（未观测≠不存在+触发面复测法在案）=诚实。
+**task-19 考证件 findings**：①三址 ROM 全宽吻合 ✓（E7AD/D976/E37A 引文逐字——
+我方复核；首次 exp 截短自误自纠）②语义考证+R-mv-6 规则落 spec §2.3=task-4 半输入
+就位 ③遗留显式（F1xx 族 batch-1 阻塞面/门位语义）=不越级。
+findings 三族（r10）：0 新。
+
 ## 遗留风险清单
 
 1. S 面 120 为 B 级估计——分母 v2 实际登记（lead task-5）以 decode-sweep 复跑 + 逐条
