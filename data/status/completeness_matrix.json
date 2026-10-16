@@ -18,7 +18,7 @@
       "denominator": 11
     },
     "symbol": {
-      "denominator": 484
+      "denominator": 488
     },
     "data": {
       "denominator": 193
@@ -6219,6 +6219,42 @@
       "covered": true,
       "evidence": "oracle/subroutines/l2_cases.jsonl#b-cross-*（MoreCrosshairs 入口案族）三方全等（window_bank=0 显式）",
       "note": "denoms 补录格（task-23 批4b crosshairs 三件）；crosshair_continue 组合臂（爆炸+闪光尾跳 / 死码残迹写面）；字节真偏移（struct 列表≠机器布局二证）"
+    },
+    "S-FUNC-00-90BA": {
+      "id": "S-FUNC-00-90BA",
+      "face": "symbol",
+      "module": "title",
+      "strength": "L1",
+      "covered": true,
+      "evidence": "oracle/subroutines/l2_cases.jsonl#b-menu-*（StartContinueScreen15/1B）asm 考证件+L3 场景承载；语义来源 bank00:90BA",
+      "note": "denoms 补录格（task-23 批5⑤菜单簇；链规 20 轻仪式件）；L3 降级显式（R3）"
+    },
+    "S-FUNC-00-90D7": {
+      "id": "S-FUNC-00-90D7",
+      "face": "symbol",
+      "module": "title",
+      "strength": "L2",
+      "covered": true,
+      "evidence": "oracle/subroutines/l2_cases.jsonl#b-menu-*（ChooseStartContinue）三方全等；语义来源 bank00:90D7",
+      "note": "denoms 补录格（task-23 批5⑤菜单簇；链规 20 轻仪式件）"
+    },
+    "S-FUNC-00-9394": {
+      "id": "S-FUNC-00-9394",
+      "face": "symbol",
+      "module": "title",
+      "strength": "L2",
+      "covered": true,
+      "evidence": "oracle/subroutines/l2_cases.jsonl#b-menu-*（WaitForSTART）三方全等；语义来源 bank00:9394",
+      "note": "denoms 补录格（task-23 批5⑤菜单簇；链规 20 轻仪式件）"
+    },
+    "S-FUNC-00-939E": {
+      "id": "S-FUNC-00-939E",
+      "face": "symbol",
+      "module": "title",
+      "strength": "L1",
+      "covered": true,
+      "evidence": "oracle/subroutines/l2_cases.jsonl#b-menu-*（GameOver）asm 考证件+L3 场景承载；语义来源 bank00:939E",
+      "note": "denoms 补录格（task-23 批5⑤菜单簇；链规 20 轻仪式件）；L3 降级显式（R3）"
     }
   }
 }

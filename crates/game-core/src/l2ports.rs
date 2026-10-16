@@ -128,6 +128,8 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "sub_METROIDFadeOut" => Some(sub_metroid_fade_out),
         "sub_MoreCrosshairs" => Some(sub_crosshair_continue),
         "sub_Crosshairs" => Some(sub_crosshairs_step),
+        "sub_ChooseStartContinue" => Some(sub_menu_choose),
+        "sub_WaitForSTART" => Some(sub_wait_start),
         _ => None,
     }
 }
@@ -572,4 +574,14 @@ pub fn sub_crosshair_continue(input: &L2In) -> L2Out {
 /// 运动引擎 8 槽调度+爆炸组合）。
 pub fn sub_crosshairs_step(input: &L2In) -> L2Out {
     crate::verify_shim::title_crosshairs_step(input)
+}
+
+/// sub_ChooseStartContinue —— bank00:90D7 注册名（批5⑤；both-quirk+jmp InitializeStats 停点）。
+pub fn sub_menu_choose(input: &L2In) -> L2Out {
+    crate::verify_shim::title_menu_choose(input)
+}
+
+/// sub_WaitForSTART —— bank00:9394 注册名（批5⑤；START⇒jmp CheckPassword 停点）。
+pub fn sub_wait_start(input: &L2In) -> L2Out {
+    crate::verify_shim::title_wait_start(input)
 }

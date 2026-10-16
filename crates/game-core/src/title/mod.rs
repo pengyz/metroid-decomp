@@ -596,3 +596,68 @@ pub fn crosshairs_step(flash: u8, timer3: u8, pal_index: u8, second: u8, frame_c
                     x_out: x3.or(x_track), y_out: y3.or(Some(0xFF)), // LoadStarSprites Y 末=$FF（可被爆炸覆写）
                     writes, sparkle_init: false }
 }
+
+// ---- 批5·⑤菜单簇（16/1A L2；15/1B/1C L3 降级（R3 NMI 自旋族）——链规 20 轻仪式件）----
+
+/// 菜单结果（exit=Jump 时停点语义：`jmp InitializeStats`/`jmp CheckPassword`）。
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct MenuOutcome {
+    pub phase: Option<u8>,
+    pub a_out: u8,
+    pub x_out: Option<u8>,
+    pub y_out: Option<u8>,
+    pub writes: Vec<(u16, u8)>, // 直址写面（菜单面=RAM/精灵面，已字节定）
+    /// true=`jmp` 出口（L2 stops 面）；false=RTS。
+    pub jumped: bool,
+}
+
+/// StartContTbl（bank0:$9118 2B）。
+pub const START_CONT_TBL: [u8; 2] = [0x60, 0x78];
+
+/// 16 ChooseStartContinue（$90D7-$9117 65B）。
+/// 结构互核注：**both-quirk**——Joy1Change 同按 START|SELECT（$30）时 `cmp` 两路**皆不入**
+/// （掩后 $30≠$10 亦 ≠$20）——字节语义保真。
+pub fn menu_choose(joy_change: u8, start_continue: u8) -> MenuOutcome {
+    let masked = joy_change & 0x30;
+    let mut sc = start_continue;
+    let mut w = Vec::new();
+    if masked == 0x10 {
+        if sc == 0 {
+            // `jmp InitializeStats`（$932B）——L2 stops 停点
+            // jmp 停点面：A=掩后值（cmp 不动 A）、Y=ldy StartContinue
+            return MenuOutcome { phase: None, a_out: masked, x_out: None, y_out: Some(sc),
+                                 writes: w, jumped: true };
+        }
+        w.push((0x001F, 0x17)); // TitleRoutine←_id_LoadPasswordScreen
+    }
+    if masked == 0x20 {
+        sc ^= 1;
+        w.push((0x0325, sc));
+        w.push((0x0683, 0x08)); // SFXTriInitFlags|=sfxTri_Beep（夹具 0 起=精确值）
+    }
+    let y = sc;
+    w.push((0x0200, START_CONT_TBL[y as usize]));
+    w.push((0x0201, 0x6E));
+    w.push((0x0202, 0x03));
+    w.push((0x0203, 0x50));
+    MenuOutcome { phase: None, a_out: 0x50, x_out: None, y_out: Some(y), writes: w, jumped: false }
+}
+
+/// 1A WaitForSTART（$9394-$939D 10B）：START 按下→`jmp CheckPassword`（$8C5E 停点）。
+pub fn wait_for_start(joy_change: u8) -> MenuOutcome {
+    let m = joy_change & 0x10;
+    if m == 0 {
+        return MenuOutcome { phase: None, a_out: 0, x_out: None, y_out: None,
+                             writes: Vec::new(), jumped: false };
+    }
+    MenuOutcome { phase: None, a_out: 0x10, x_out: None, y_out: None,
+                  writes: Vec::new(), jumped: true }
+}
+
+// 【批5·L3 降级件（R3 显式——NMI 自旋族，同 01/12 口径）】
+// - 15/1B StartContinueScreen（$90BA-$90D0 同码共享）：ClearAll（ScreenOff NMI 自旋+
+//   ClearNameTables VRAM+EraseAllSprites）+PreparePPUProcess_+落穿 TurnOnDisplay
+//   （NMIOn+**jmp ScreenOn**=WaitNMIPass_ 自旋）——L2 模型内死循环不设案；
+// - 1C GameOver（$939E-$93B8）：ClearAll+PreparePPUProcess_+InitPasswordFontGFX+NMIOn+
+//   Timer3←$10+TitleRoutine←_id_DisplayPassword+jmp ScreenOn——同上降级。
+// 行为面=boot-title L3 场景承载；域实施待 shell 组合点（链规 19 不硬造镜像）。

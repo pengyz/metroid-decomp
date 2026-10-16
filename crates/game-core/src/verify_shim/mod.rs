@@ -795,3 +795,24 @@ pub fn title_crosshairs_step(input: &L2In) -> L2Out {
     L2Out { a: o.a_out, x: o.x_out.unwrap_or(input.x), y: o.y_out.unwrap_or(input.y),
             writes: merge_writes(events) }
 }
+
+// ---- task-23 批5·⑤菜单簇适配（16/1A；jmp 出口走 stops 面）----
+
+/// 菜单结果 → L2Out（直址写面）。
+fn menu_out(input: &L2In, o: crate::title::MenuOutcome) -> L2Out {
+    L2Out { a: o.a_out, x: o.x_out.unwrap_or(input.x), y: o.y_out.unwrap_or(input.y),
+            writes: merge_writes(o.writes) }
+}
+
+/// 批5 入口 16 适配（`sub_ChooseStartContinue` ← bank00:90D7；START+SC=0 ⇒ jmp $932B 停点）。
+pub fn title_menu_choose(input: &L2In) -> L2Out {
+    let joy = input.ram[memmap::title_state::JOY1_CHANGE as usize & 0x7FF];
+    let sc = input.ram[0x0325 & 0x7FF];
+    menu_out(input, crate::title::menu_choose(joy, sc))
+}
+
+/// 批5 入口 1A 适配（`sub_WaitForSTART` ← bank00:9394；START ⇒ jmp $8C5E 停点）。
+pub fn title_wait_start(input: &L2In) -> L2Out {
+    let joy = input.ram[memmap::title_state::JOY1_CHANGE as usize & 0x7FF];
+    menu_out(input, crate::title::wait_for_start(joy))
+}
