@@ -313,6 +313,13 @@ bundle 快照随包（任意起点素材库）✓。**事件核两佳**：①道
 格式 packed yyyyxxxx 破案）+9 路径包 bundle 素材（ObjectX/Y+JumpDsp 逐帧轨迹=
 几何考古原始数据）。trace 门 9 案 0 失败。findings 三族（r10）：0 新。
 
+## 批次 2 终局（cdc16c7）抽检：拾取攻防战 v1-v12 终录——负证据形核
+
+### verdict: pass（抽检）
+
+决定性负证据 A 级形合格（v12 精确重叠 dx=0/dy=3 逐帧实录+12 径变体轨迹全在库）；
+碰撞族共用阻断=**假说标注**（非结论混入）✓。findings 三族（r10）：0 新。
+
 ## 遗留风险清单
 
 1. S 面 120 为 B 级估计——分母 v2 实际登记（lead task-5）以 decode-sweep 复跑 + 逐条
