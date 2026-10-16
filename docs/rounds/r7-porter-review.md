@@ -1263,6 +1263,16 @@ fresh re-collect=旧 run2 归档同 hash=双跑确定性三重验证（原双跑
 **task-33 三件全勾销**（①manifest 余键核毕（三对余键各挂上游）②突变矩阵首轮
 （37e94f8）③本账）——task-13 契约「设计→验收」程序路**收官**。
 
+## samus-move manifest 条目（84a8a8a）：9 案全景落定——task-33 ① 面续（键完备）
+
+### verdict: pass
+
+三查：①manifest 键完备 ✓（9 案全 legs.*.rows/missing/head_skip 登记——boot-title
+双腿 295/297、samus-move 885、sc 四包 1083/1083/1331/1381、fixture/bundle 件；
+samus-move 条目含 game-core 腿注（10 态会师腿=预期前沿 B31B 声引擎分派））②
+spin-exit 采样声明+watch 面=观测面不改行为 ✓（双跑重锚 034c3693，885 行缺帧如实）
+③trace 门 9 案 0 失败 0 记账容忍 ✓。findings（r10）：0 新。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
