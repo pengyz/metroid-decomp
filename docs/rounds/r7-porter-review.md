@@ -911,6 +911,16 @@ CopyMap→InitTitleGFX→NMIOn 全链贯通；我方实测引爆已推进至 `ba
 已被在途成环件消化=里程碑超前兑现，与 port2 title 簇会师点即至）。
 findings（r10）：0 新。基线 99。
 
+## task-24 L3 首跑 A 引爆报告（e4548e9）——检测面四证据复现
+
+### verdict: pass
+
+A 跑四证据**我方独立复现**：预置 888 帧伪件→`[stale-clean] 旧 dump 已清` ✓（stale
+防御运行时复验=7e94719 配套兑现）→`unported @ bank00:8000` 精确爆 ✓（go_main_routine
+会师点）→dump 条目数 0 ✓（禁半成品绿）。**=我 v5 §3 检测面设计（exit 101 ∧本次无
+新 dump）的运行时形态兑现**。三 tick 语义复核=契约 §8.1 tick 内序运行时自证 ✓；
+B 跑备忘（首分歧三面+恒 1 断言）随行。findings（r10）：0 新。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
