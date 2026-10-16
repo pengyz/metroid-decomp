@@ -380,6 +380,12 @@ title 深路径对拍素材包注册（trace 门 11 案 0 失败）。findings �
 
 素材入库（trace 门 12 案 0 失败）。findings 三族（r10）：0 新。
 
+## task-39 场景库批 5（fd6043b）抽检：morph/隧道+滚行导航双包
+
+### verdict: pass（抽检）
+
+move 深域预备仓双包（trace 门 14 案 0 失败）。findings 三族（r10）：0 新。
+
 ## 遗留风险清单
 
 1. S 面 120 为 B 级估计——分母 v2 实际登记（lead task-5）以 decode-sweep 复跑 + 逐条
