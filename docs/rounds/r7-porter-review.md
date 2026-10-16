@@ -886,6 +886,18 @@ bank0:$8151 实存（complete=0x0A 非列表 0x0C ✓）；bank0 6E 页绝对,X 
 409 条 0 失败（400 零回退）复现 ✓。findings（r10）：0 新。
 **批 4b 绿灯**：形态延续安全（BUG 保真注记口径照此）。
 
+## task-10 批 37：InitTitleGFX/C5D7（4b5c80c）——GFX 载入序列+描述子烘焙面
+
+### verdict: pass
+
+四查：①GFXInfo 8 件×7B ROM 提取 ✓（**[0]=06 00 80 00 00 a0 09=bank6:8000→dest0
+size 2464——与 task-17 r6 GFX 转运表首项互证**（跨 task 数字对上=数据链×载入链同源）；
+8 件 hex 逐字在案）②结构互核注三面 ✓（7B 描述子=宏体自证/BankSwitch 双切（$00 终态=
+CurrentBank 回切）/数据岛边界）+速核更正链第 2 例（JustInBailey 假设 $32 作废→$69B3
+三面同刻）③单测 1 绿（末件 Solid_1FC0 终态断言）④引爆行 `bank07:C0BC`=**成环件
+先行于链序申报**（「次桩=C487」=boot 链序；实跑序先触 C0BC 主循环相=桩表双桩并存，
+措辞注同批 24 族；C5D7 已消化 ✓）。findings（r10）：0 新（措辞注不计）。基线 98。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
