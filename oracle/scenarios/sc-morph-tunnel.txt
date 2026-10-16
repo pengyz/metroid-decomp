@@ -1,0 +1,24 @@
+# 场景：sc-morph-tunnel —— task-39 批 5：morph 隧道穿行（球体可达性差异径）
+# 探索径：坑区（x=4-8,y=193）底滚行+走廊右端（x=240+）+滚行穿越低口
+# 事件核：$0300=3（滚行态）+可达域差异（站立禁行区×球体可入=隧道候选）
+name sc-morph-tunnel
+frames 1600
+watch_range 0000-00ff zp
+watch_range 0100-07ff iram
+watch_range 6878-6878 gear
+
+press 360 start
+press 420 a
+press 540 start
+hold 995-1010 left
+press 1020 down
+hold 1030-1250 left
+press 1260 down
+hold 1280-1500 right
+
+capture 1150 in-pit-or-tunnel
+capture 1400 right-explore
+
+sample_point spin-exit
+fixture 1015 6878 11 invariant
+bundle_capture 1200 analysis/bundles/sc-morph-tunnel

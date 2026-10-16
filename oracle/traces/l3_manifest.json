@@ -627,6 +627,120 @@
           "note": "title 域 0x19/1A/1B/1C 对拍素材——死亡/终局链移植域验证仓"
         }
       }
+    },
+    {
+      "id": "l3-sc-roll-nav",
+      "scenario": "sc-roll-nav",
+      "frames": 1500,
+      "watch": [
+        {
+          "label": "zp",
+          "base": "0000",
+          "range": "0000-00ff"
+        },
+        {
+          "label": "iram",
+          "base": "0100",
+          "range": "0100-07ff"
+        },
+        {
+          "label": "gear",
+          "base": "6878",
+          "range": "6878-6878"
+        }
+      ],
+      "oracle_sha256": "7967f861e79fb78eed210bc0078e46c8121f465d9a178e1d9e083d642cbeb126",
+      "determinism_evidence": "双跑逐字节一致（2026-10-17 sha 7967f861…）",
+      "scenario_sha256": "1506bc6a03b03324743a0f92c525825316b785e93acf63caafb828c02d911a7a",
+      "frame_keys": [],
+      "legs": {
+        "oracle": {
+          "sample_point": "spin-exit",
+          "rows": 1483,
+          "missing": [
+            2,
+            4,
+            5,
+            6,
+            361,
+            362,
+            363,
+            542,
+            543,
+            544,
+            545,
+            546,
+            547,
+            548,
+            1011,
+            1012,
+            1500
+          ],
+          "head_skip": 1,
+          "note": "球形滚行+地形穿越（move 深域）——形态球视觉实证（截图橙球）+滚行动力学：下坡 177→200（球体 y=200 底层）+**x 回绕穿屏**（14→255 连续滚行=NT 边界穿越）+~1px/f 滚速；事件核注：$0300 sa_Roll 瞬态面（spin 采样盲区）→视觉+轨迹为实证面；bundle=analysis/bundles/sc-roll-nav.mss"
+        },
+        "game-core": {
+          "sample_point": null,
+          "note": "m2 深路径（morph/隧道域）对拍素材——bundle-ff 模式即用"
+        }
+      }
+    },
+    {
+      "id": "l3-sc-morph-tunnel",
+      "scenario": "sc-morph-tunnel",
+      "frames": 1600,
+      "watch": [
+        {
+          "label": "zp",
+          "base": "0000",
+          "range": "0000-00ff"
+        },
+        {
+          "label": "iram",
+          "base": "0100",
+          "range": "0100-07ff"
+        },
+        {
+          "label": "gear",
+          "base": "6878",
+          "range": "6878-6878"
+        }
+      ],
+      "oracle_sha256": "8ff3f5ab27940ca6e3da1a2edf0653507f7d67efd9aabdacf8fe554d7cd2a80e",
+      "determinism_evidence": "双跑逐字节一致（2026-10-17 sha 8ff3f5ab…）",
+      "scenario_sha256": "196e0d098582705bdaead6d18fef7e20f56d0f4c49a874ff16fb3854769d40dd",
+      "frame_keys": [],
+      "legs": {
+        "oracle": {
+          "sample_point": "spin-exit",
+          "rows": 1583,
+          "missing": [
+            2,
+            4,
+            5,
+            6,
+            361,
+            362,
+            363,
+            542,
+            543,
+            544,
+            545,
+            546,
+            547,
+            548,
+            1011,
+            1012,
+            1600
+          ],
+          "head_skip": 1,
+          "note": "morph 隧道探索（球体可达性差异径）——球体 y=200 底层连续穿屏（x 回绕 255→0→…）=疑似地下通道连续面（站立层 193 不可及）；可达域差异素材；bundle=analysis/bundles/sc-morph-tunnel.mss"
+        },
+        "game-core": {
+          "sample_point": null,
+          "note": "m2 深路径（morph/隧道域）对拍素材——bundle-ff 模式即用"
+        }
+      }
     }
   ]
 }

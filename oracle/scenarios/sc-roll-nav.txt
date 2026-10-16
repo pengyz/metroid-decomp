@@ -1,0 +1,26 @@
+# 场景：sc-roll-nav —— task-39 批 5：球形滚行+地形穿越（move 深域素材）
+# 能力=三斩已证（fixture $6878=$11 gr_BOMBS|gr_MARUMARI）；形态=down（sa_Roll=3）
+# 事件核：$0300 ObjAction=3（sa_Roll）+滚行轨迹（速度/转向动力学）
+# 径：入 (14,2) 走廊→fixture 注能力→形态→左/右滚行穿越（走廊+坑区+棚下）
+name sc-roll-nav
+frames 1500
+watch_range 0000-00ff zp
+watch_range 0100-07ff iram
+watch_range 6878-6878 gear
+
+press 360 start
+press 420 a
+press 540 start
+hold 995-1017 left
+press 1025 down
+hold 1040-1180 left
+press 1190 down
+hold 1210-1350 right
+press 1360 down
+
+capture 1100 rolling-left
+capture 1280 rolling-right
+
+sample_point spin-exit
+fixture 1020 6878 11 invariant
+bundle_capture 1150 analysis/bundles/sc-roll-nav
