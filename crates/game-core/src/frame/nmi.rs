@@ -174,15 +174,14 @@ pub fn sound_engine(mem: &mut FrameMemory) {
     }
     mem.write_ram(crate::ram_map::SFX_PAUSED, 0); // `sta SFXPaused`
     // 四 init 子件：flags=0 短路（RunSoundRoutine 分派出口）；非零=域件桩
-    for addr in [
-        crate::ram_map::SFX_NOISE_INIT,
-        crate::ram_map::SFX_MULTI_INIT,
-        crate::ram_map::SFX_TRI_INIT,
-        crate::ram_map::MUSIC_INIT,
+    // 四 init 链走分派（B31B 行清偿——port2 分派核会师接点）
+    for (flag, block) in [
+        (crate::ram_map::SFX_NOISE_INIT, 0xB289u16),
+        (crate::ram_map::SFX_MULTI_INIT, 0xB2A7),
+        (crate::ram_map::SFX_TRI_INIT, 0xB29D),
+        (crate::ram_map::MUSIC_INIT, 0xB2B1),
     ] {
-        if mem.read_ram(addr) != 0 {
-            crate::unported!("bank07:B31B"); // SFX/Music 分派域件
-        }
+        super::sound_hook::sound_dispatch_chain(mem, flag, block, 0);
     }
     // ClearInitFlags（$B3D6）：6 旗清（同值写事件）
     for addr in [
@@ -374,10 +373,10 @@ mod tests {
         assert_eq!(m.read_ram(SFX_PAUSED), 0);
         assert_eq!(m.read_ram(SFX_NOISE_INIT), 0); // 6 旗清（同值写事件）
         assert_eq!(m.read_ram(SFX_SQ1_INIT), 0);
-        m.write_ram(MUSIC_INIT, 1); // 音乐请求（输入场景）
+        m.write_ram(MUSIC_INIT, 0x80); // 音乐请求（位 7——6 位扫面：位 0/1 不扫）
         let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| sound_engine(&mut m)));
         let msg = panic_message(&r.unwrap_err());
-        assert!(msg.contains("unported @ bank07:B31B"), "引爆点失准: {msg}");
+        assert!(msg.contains("unported @ bank07:"), "handler 记账点失准: {msg}");
     }
 
     /// ReadJoyPads boot 面（无输入：$14/$15=0 落态+变更路径不触发）+输入变更引爆。

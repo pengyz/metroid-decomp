@@ -25,6 +25,7 @@ pub mod intro;
 pub mod memory;
 pub mod nmi;
 pub mod rng;
+pub mod sound_hook;
 pub mod title_bridge;
 
 pub use clock::{VirtualClock, TARGET_FPS};
