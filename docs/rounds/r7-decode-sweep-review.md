@@ -254,6 +254,22 @@ findings 三族（r10）：0 新。
 边界算术核：$FE83-$FECB=**73B** 逐数吻合；段首字节抽读在位（变长条目族=34 条随
 r2 口径）；调用集补 F311 四员=更正注随行。更正文化规范（原地注+不删历史）✓。
 
+## task-17 r6 续审（f9bc0ec，CHR 面——四级链闭合·主目标达成）——2026-10-16
+
+### verdict: pass
+
+### findings（逐项复现输出）
+
+**① GFX 转运表复现 ✓**：24 项（168B）全解析+首项 `bank:6 src:32768 dest:0 size:2464`
+=asm 互核 GFX_Samus=06:8000 dest $0000 逐字；7B/项结构（[bank][src][dest][len]）
+双锚（prg7_engine 注+macros 宏体）✓。
+**② 四级链闭合 ✓**：room_ptrs→rooms→structure_ptrs→structures→metatiles→tile×16→
+GFX 块（24 项）——全链地址锚+字节级对拍（r1-r6 各节）=**task-17 主目标达成**（分母
+D 面 193 格/covered=44 实读）。
+**③ 测面 ✓**：14/14；tile_chr_offset（NES 2bpp×16B）=A 级平台语义。
+**④ 面分布=dest 语义 C 级显式标注 ✓**（精灵 2/背景 16/其它 6——不越级）。
+findings 三族（r10）：0 新。
+
 ## 遗留风险清单
 
 1. S 面 120 为 B 级估计——分母 v2 实际登记（lead task-5）以 decode-sweep 复跑 + 逐条
