@@ -935,6 +935,17 @@ B 跑备忘（首分歧三面+恒 1 断言）随行。findings（r10）：0 新�
 归档 glob 修 .run1./.run2. 排除=对照件被吞自反三案收口 ✓。
 findings（r10）：0 新。**v5 §5 剩余槽**：game-core 导出器缝（显式待）/4 键余项/5/6。
 
+## task-24 最后件：spin 出口采样缝 tick_frame_with（6a858c9）——B 解锁前置
+
+### verdict: pass
+
+三查：①缝位语义测 ✓（73 测含 tick1=(0,0,false)/tick2=(1,0) 双面断言=$1A 恒 1+
+FrameCount 未增=**契约断言①的缝位运行时形态**）②委托形 ✓（tick_frame 委托无操作
+closure，旧调用面不变=最小 API）③链规 13c ✓（文件级 pathspec 显式清单+无新件 stat
+核）。采样点=oracle $C0D3 同点（NMI 尾写 1 后/帧工作前）=§8.1④ 同源 ✓；契约引证
+§8.1（0172725）随文 ✓。**v5 §5 槽 3 缝面勾销**——余 decomp 侧接（迁同点+dump_manifest
+sample_point=spin-exit）即 B 解锁。findings（r10）：0 新。基线 103。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
