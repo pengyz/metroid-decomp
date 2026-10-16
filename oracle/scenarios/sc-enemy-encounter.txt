@@ -1,0 +1,16 @@
+# 场景：sc-enemy-encounter —— task-34 ① 敌遭遇族（冻结敌/接触伤害面）
+# 事件锚：穿门入敌房续行（move3 f1150 敌活动实证）；bundle=遭遇中段（f1200）
+# 事件核：敌槽区（$3xx）活动 + $030A SamusHit 接触面 + $0308 垂直速度态
+name sc-enemy-encounter
+frames 1350
+watch_range 0000-00ff zp
+watch_range 0100-07ff iram
+
+press 360 start
+press 420 a
+press 540 start
+hold 850-1050 right
+hold 1060-1300 right
+
+sample_point spin-exit
+bundle_capture 1200 analysis/bundles/sc-enemy-encounter

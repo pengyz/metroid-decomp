@@ -1,0 +1,15 @@
+# 场景：sc-door-transition —— task-34 ① 门转场族（SamusEnterDoor 面）
+# 事件锚：右行穿门（move3 实证转场 gap~1002-1003）；bundle=门前态（f990）
+# 事件核：行集 gap（spin 空窗）+ $58 SamusDoorData 写面（door 变量活动）
+name sc-door-transition
+frames 1100
+watch_range 0000-00ff zp
+watch_range 0100-07ff iram
+
+press 360 start
+press 420 a
+press 540 start
+hold 850-1050 right
+
+sample_point spin-exit
+bundle_capture 990 analysis/bundles/sc-door-transition

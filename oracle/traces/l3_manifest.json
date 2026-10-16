@@ -197,6 +197,223 @@
           "note": "bundle 恢复腿（restore_mss 三直映——porter a72d37a 映射件）"
         }
       }
+    },
+    {
+      "id": "l3-sc-door-transition",
+      "scenario": "sc-door-transition",
+      "frames": 1100,
+      "watch": [
+        {
+          "label": "zp",
+          "base": "0000",
+          "range": "0000-00ff"
+        },
+        {
+          "label": "iram",
+          "base": "0100",
+          "range": "0100-07ff"
+        }
+      ],
+      "oracle_sha256": "684eb72307f6f3037e30bc6cd799224934cdc322d72342b8af0b07358d68c559",
+      "determinism_evidence": "双跑逐字节一致（2026-10-16 run1==run2 sha 684eb723…）",
+      "scenario_sha256": "b887991d2df8711d5ee33ffbdbfe034034a5ac62090b8de8852d3f724909a377",
+      "frame_keys": [],
+      "legs": {
+        "oracle": {
+          "sample_point": "spin-exit",
+          "rows": 1083,
+          "missing": [
+            2,
+            4,
+            5,
+            6,
+            361,
+            362,
+            363,
+            542,
+            543,
+            544,
+            545,
+            546,
+            547,
+            548,
+            1002,
+            1003,
+            1100
+          ],
+          "head_skip": 1,
+          "note": "门转场族（SamusEnterDoor 面）——事件锚=1002-1003 转场 gap 实证；bundle=门前态 f990；bundle=analysis/bundles/sc-door-transition.mss（12514B MSS+三直映 JSON）"
+        },
+        "game-core": {
+          "sample_point": null,
+          "note": "移植线到域后 bundle-ff 模式即比"
+        }
+      }
+    },
+    {
+      "id": "l3-sc-room-scroll",
+      "scenario": "sc-room-scroll",
+      "frames": 1100,
+      "watch": [
+        {
+          "label": "zp",
+          "base": "0000",
+          "range": "0000-00ff"
+        },
+        {
+          "label": "iram",
+          "base": "0100",
+          "range": "0100-07ff"
+        }
+      ],
+      "oracle_sha256": "684eb72307f6f3037e30bc6cd799224934cdc322d72342b8af0b07358d68c559",
+      "determinism_evidence": "双跑逐字节一致（2026-10-16 run1==run2 sha 684eb723…）",
+      "scenario_sha256": "a8ad954d251cab212f31c930f5068bfcd00c746e3ba39369bf54fa4824694b4a",
+      "frame_keys": [],
+      "legs": {
+        "oracle": {
+          "sample_point": "spin-exit",
+          "rows": 1083,
+          "missing": [
+            2,
+            4,
+            5,
+            6,
+            361,
+            362,
+            363,
+            542,
+            543,
+            544,
+            545,
+            546,
+            547,
+            548,
+            1002,
+            1003,
+            1100
+          ],
+          "head_skip": 1,
+          "note": "房间滚换族（SetupRoom/GetNameTable 面）——同路径滚换相 bundle=f1002 gap 边界；bundle=analysis/bundles/sc-room-scroll.mss（12602B MSS+三直映 JSON）"
+        },
+        "game-core": {
+          "sample_point": null,
+          "note": "移植线到域后 bundle-ff 模式即比"
+        }
+      }
+    },
+    {
+      "id": "l3-sc-enemy-encounter",
+      "scenario": "sc-enemy-encounter",
+      "frames": 1350,
+      "watch": [
+        {
+          "label": "zp",
+          "base": "0000",
+          "range": "0000-00ff"
+        },
+        {
+          "label": "iram",
+          "base": "0100",
+          "range": "0100-07ff"
+        }
+      ],
+      "oracle_sha256": "39d58f388cc88c60b2aea56523bff550782aace77941ee4d8dbbd9e39c703dc2",
+      "determinism_evidence": "双跑逐字节一致（2026-10-16 run1==run2 sha 39d58f38…）",
+      "scenario_sha256": "82d7570e9b60b74eac6bef272016f3b42f47557e2f0b88c75c22bd97910a654e",
+      "frame_keys": [],
+      "legs": {
+        "oracle": {
+          "sample_point": "spin-exit",
+          "rows": 1331,
+          "missing": [
+            2,
+            4,
+            5,
+            6,
+            361,
+            362,
+            363,
+            542,
+            543,
+            544,
+            545,
+            546,
+            547,
+            548,
+            1002,
+            1003,
+            1188,
+            1189,
+            1350
+          ],
+          "head_skip": 1,
+          "note": "敌遭遇族——敌槽区 $300-35F 帧间变更 366/1331+AnimResetIndex/ObjVertSpeed 活动（有敌活动无接触伤害）；转场 gap 1002-1003/1188-1189；bundle=f1200；bundle=analysis/bundles/sc-enemy-encounter.mss（11824B MSS+三直映 JSON）"
+        },
+        "game-core": {
+          "sample_point": null,
+          "note": "移植线到域后 bundle-ff 模式即比"
+        }
+      }
+    },
+    {
+      "id": "l3-sc-item-pickup",
+      "scenario": "sc-item-pickup",
+      "frames": 1400,
+      "watch": [
+        {
+          "label": "zp",
+          "base": "0000",
+          "range": "0000-00ff"
+        },
+        {
+          "label": "iram",
+          "base": "0100",
+          "range": "0100-07ff"
+        },
+        {
+          "label": "pw",
+          "base": "6988",
+          "range": "6988-698f"
+        }
+      ],
+      "oracle_sha256": "758348ab9833ef9e7450dfff72689d7ff188d47d21f633ac281b4ee717d80f55",
+      "determinism_evidence": "双跑逐字节一致（2026-10-16 run1==run2 sha 758348ab…）",
+      "scenario_sha256": "d27b72e9fe17e3e693cf736bf3cad6d95135e03c8d3b7a3860daadebda2f6929",
+      "frame_keys": [],
+      "legs": {
+        "oracle": {
+          "sample_point": "spin-exit",
+          "rows": 1381,
+          "missing": [
+            2,
+            4,
+            5,
+            6,
+            361,
+            362,
+            363,
+            542,
+            543,
+            544,
+            545,
+            546,
+            547,
+            548,
+            1002,
+            1003,
+            1207,
+            1208,
+            1400
+          ],
+          "head_skip": 1,
+          "note": "道具拾取族（best-effort）——【如实降级】pw 面 $6988-698F 全 00=拾取未达，降级为搜寻路径 bundle 素材（D7 不冒领）；转场 gap 1002-1003/1207-1208；bundle=f1250；bundle=analysis/bundles/sc-item-pickup.mss（11667B MSS+三直映 JSON）"
+        },
+        "game-core": {
+          "sample_point": null,
+          "note": "移植线到域后 bundle-ff 模式即比"
+        }
+      }
     }
   ]
 }

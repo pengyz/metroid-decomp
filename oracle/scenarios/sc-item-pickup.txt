@@ -1,0 +1,27 @@
+# 场景：sc-item-pickup —— task-34 ① 道具拾取族（best-effort 路径——可达性如实）
+# 事件锚：穿门入敌房+跳跃搜寻（a 键间隔跳）；bundle=搜寻段（f1250）
+# 事件核：【更正 2026-10-16】~~$69/$6A 面~~（实为 TempX/TempY 临时量——标注错）
+# → 真道具位图=PasswordByte00($6988，「Stores status of items 0 thru 7」定义锚)
+# + 行集 gap（拾取冻结面）
+# 【可达性声明】：拾取点位=SpecItmsTbl 世界坐标×行走路径碰运气——事件未达则
+# 本包降级为「搜寻路径 bundle 素材」（D7 如实，不冒领拾取达成）
+name sc-item-pickup
+frames 1400
+watch_range 0000-00ff zp
+watch_range 0100-07ff iram
+watch_range 6988-698f pw
+
+press 360 start
+press 420 a
+press 540 start
+hold 850-1050 right
+hold 1060-1250 right
+press 1080 a
+press 1140 a
+press 1200 a
+hold 1260-1380 right
+press 1290 a
+press 1350 a
+
+sample_point spin-exit
+bundle_capture 1250 analysis/bundles/sc-item-pickup
