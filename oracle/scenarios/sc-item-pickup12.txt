@@ -1,0 +1,17 @@
+# 场景：sc-item-pickup12 —— 拾取终径 v9（空间解盲：PowerUpNameTable=01=右半屏——
+# 道具房内 x=256+104=360, y=152。径=入房右行长距穿过 x=360（站立精灵高覆盖 y152））
+name sc-item-pickup12
+frames 1500
+watch_range 0000-00ff zp
+watch_range 0100-07ff iram
+watch_range 6988-698f pw
+
+press 360 start
+press 420 a
+press 540 start
+hold 995-1010 left
+hold 1015-1400 right
+
+sample_point spin-exit
+probe_mem 6988 698f
+bundle_capture 1250 analysis/bundles/sc-item-pickup12

@@ -1,0 +1,16 @@
+# 场景：sc-item-pickup15 —— 拾取终径 v12（v11 穿点 x=97 差 7px——起跳再延 5f）
+name sc-item-pickup15
+frames 1500
+watch_range 0000-00ff zp
+watch_range 0100-07ff iram
+watch_range 6988-698f pw
+
+press 360 start
+press 420 a
+press 540 start
+hold 1015-1300 right
+hold 1168-1205 a
+
+sample_point spin-exit
+probe_mem 6988 698f
+bundle_capture 1250 analysis/bundles/sc-item-pickup15

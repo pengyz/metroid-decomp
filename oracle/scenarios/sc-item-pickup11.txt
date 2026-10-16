@@ -1,0 +1,19 @@
+# 场景：sc-item-pickup11 —— 拾取终径 v8（助跑跳：v7 天窗跳成功但飘移不足
+# 落 x=78<棚始 x≈90——径=壁处折返助跑（右行加速）→天窗跳带速右飘→落棚顶）
+name sc-item-pickup11
+frames 1400
+watch_range 0000-00ff zp
+watch_range 0100-07ff iram
+watch_range 6988-698f pw
+
+press 360 start
+press 420 a
+press 540 start
+hold 995-1115 left
+hold 1120-1138 right
+hold 1138-1185 a
+hold 1138-1320 right
+
+sample_point spin-exit
+probe_mem 6988 698f
+bundle_capture 1250 analysis/bundles/sc-item-pickup11

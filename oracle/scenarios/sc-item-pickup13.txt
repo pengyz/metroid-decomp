@@ -1,0 +1,18 @@
+# 场景：sc-item-pickup13 —— 拾取终径 v10（二屏实掠确认：f1185 掠 x=100@y=193
+# ——道具二屏 (104,152) 差 y 41px。径=右行过屏界（f1119 x 重置=NT 切换）→
+# 二屏 x≈104 处起跳扫 y=152）
+name sc-item-pickup13
+frames 1500
+watch_range 0000-00ff zp
+watch_range 0100-07ff iram
+watch_range 6988-698f pw
+
+press 360 start
+press 420 a
+press 540 start
+hold 1015-1300 right
+hold 1178-1215 a
+
+sample_point spin-exit
+probe_mem 6988 698f
+bundle_capture 1250 analysis/bundles/sc-item-pickup13

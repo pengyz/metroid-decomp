@@ -1,0 +1,17 @@
+# 场景：sc-item-pickup14 —— 拾取终径 v11（v10 差 15px：起跳 x=107 穿 y=152 时漂至 119
+# ——起跳提前至 x≈90（f1164），升段 x 漂 12-15px 恰穿 (104,152)）
+name sc-item-pickup14
+frames 1500
+watch_range 0000-00ff zp
+watch_range 0100-07ff iram
+watch_range 6988-698f pw
+
+press 360 start
+press 420 a
+press 540 start
+hold 1015-1300 right
+hold 1163-1200 a
+
+sample_point spin-exit
+probe_mem 6988 698f
+bundle_capture 1250 analysis/bundles/sc-item-pickup14
