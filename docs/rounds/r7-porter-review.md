@@ -980,6 +980,19 @@ ObjectCheckMoveDown: E7AD/SamusCollisionWithSolidEntities: D976——与 task-19
 登记（items type 11 词双源 B 级）+链规 19 域形 ✓。
 findings（r10）：0 新。基线 107。
 
+## task-23 批4b（9e29210）：crosshairs 三件——BUG 保真 D4 焦点复核（链规 21 我域）
+
+### verdict: pass（BUG quirk 焦点面+抽检制）
+
+**焦点面（BUG quirk/D4）**：①`cmp PPUCTRL_ZP` 字节形实证 ✓——bank0:$88A0=`c5 ff`
+（CMP zp 形）对照 bank0 五处 `c9 ff`（立即数形）——「supposed to be #$FF」bug 的
+字节面钉死；②夹具双钉判别力 ✓（RAM[$FF]=$90⇒载 0xFF 面（bug 行为）/$FF⇒跳过
+——双 fixture 分踩 bug 两臂=判别力设计在案）③A 毒化语义（`lda #$00` 使二组完成判
+当帧必败）+死码残迹写面（$030D/$030E/$0306 abandoned 仍写）=D4 保真执行面 ✓。
+**抽检面（链规 20 同形批）**：423 条 0 失败（409 零回退+14 新案）✓；字节真偏移二证
+（xChange@0x06/yChange@0x07 同偏移双语义=.db 别名之谜解——「asm=规格非模板」续案）
+✓。findings（r10）：0 新。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
