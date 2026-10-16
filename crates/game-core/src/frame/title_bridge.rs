@@ -20,6 +20,7 @@ pub fn main_title_routine(mem: &mut FrameMemory) {
     }
     let face = crate::title::TitleFace {
         phase,
+        cursor: mem.title_cursor,
         a: mem.regs.a,
         x: mem.regs.x,
         y: mem.regs.y,
@@ -32,6 +33,7 @@ pub fn main_title_routine(mem: &mut FrameMemory) {
         ram: mem.ram.to_vec(),
     };
     let step = crate::title::dispatch_step(&face);
+    mem.title_cursor = step.next_cursor; // 跨帧游标存回（>0=spin 续点/0=完成复位）
     if let Some(addr) = step.unported {
         if step.shell.contains(&crate::title::ShellCall::NmiYield) {
             // **占位臂**（表址供首分歧记账+NmiYield 帧界让出——B 跑分类面，非引爆）

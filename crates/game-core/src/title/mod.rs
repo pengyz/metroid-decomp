@@ -765,12 +765,16 @@ pub struct TitleStep {
     pub jumped: Option<u16>,
     /// 未武装臂（桥侧 `unported!("bank00:…")` 爆）。
     pub unported: Option<u16>,
+    /// 下一帧游标（0=入口完成复位；>0=spin 续点——桥侧存回 FrameMemory 传回）。
+    pub next_cursor: u8,
 }
 
 /// 解码入参面（memmap::title_state::decode_title_face 产出本型）。
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TitleFace {
     pub phase: u8,
+    /// 入口内跨帧子步游标（spin 件续点；0=入口首段）。
+    pub cursor: u8,
     pub a: u8,
     pub x: u8,
     pub y: u8,
@@ -792,7 +796,7 @@ pub fn dispatch_step(face: &TitleFace) -> TitleStep {
     };
     let step_from_l2 = |o: crate::L2Out| TitleStep {
         events: o.writes, shell: vec![], a_out: Some(o.a), x_out: Some(o.x), y_out: Some(o.y),
-        jumped: None, unported: None,
+        jumped: None, unported: None, next_cursor: 0,
     };
     use crate::verify_shim as sh;
     match face.phase {
@@ -821,14 +825,14 @@ pub fn dispatch_step(face: &TitleFace) -> TitleStep {
             let o = menu_choose(joy, sc);
             TitleStep { events: o.writes, shell: vec![], a_out: Some(o.a_out),
                         x_out: o.x_out.or(Some(face.x)), y_out: o.y_out.or(Some(face.y)),
-                        jumped: if o.jumped { Some(0x932B) } else { None }, unported: None }
+                        jumped: if o.jumped { Some(0x932B) } else { None }, unported: None, next_cursor: 0 }
         }
         0x1A => {
             let joy = face.ram[crate::memmap::title_state::JOY1_CHANGE as usize & 0x7FF];
             let o = wait_for_start(joy);
             TitleStep { events: o.writes, shell: vec![], a_out: Some(o.a_out),
                         x_out: o.x_out.or(Some(face.x)), y_out: o.y_out.or(Some(face.y)),
-                        jumped: if o.jumped { Some(0x8C5E) } else { None }, unported: None }
+                        jumped: if o.jumped { Some(0x8C5E) } else { None }, unported: None, next_cursor: 0 }
         }
         0x1D => {
             let r = |a: u16| face.ram[a as usize & 0x7FF];
@@ -836,20 +840,75 @@ pub fn dispatch_step(face: &TitleFace) -> TitleStep {
                              r(crate::ram_map::PALETTE_PENDING), r(0x0033), face.x, face.y);
             TitleStep { events: o.writes, shell: vec![], a_out: Some(o.a_out),
                         x_out: o.x_out.or(Some(face.x)), y_out: o.y_out.or(Some(face.y)),
-                        jumped: if o.jumped { Some(0x9AD5) } else { None }, unported: None }
+                        jumped: if o.jumped { Some(0x9AD5) } else { None }, unported: None, next_cursor: 0 }
         }
-        // ---- 五降级+17：占位臂（spin 点=NmiYield；深效果 L3 裁决面；表址供桥侧首分歧记账）----
+        // ---- 批6b 深路径：12 TitleScreenOff（模式件——1 spin 2 段跨帧）----
+        // 段0=$FE 镜像面（ScreenOff 前置）+ScreenOff spin；段1=inc 相位（完成）。
+        0x12 => {
+            let pm = face.ram[0x00FE & 0x7FF];
+            match face.cursor {
+                0 => TitleStep {
+                    events: vec![(0x00FE, pm & !0x18)], // ScreenOff：~(BG_ON|OBJ_ON)=~%00011000（hardware.asm:37/39）
+                    shell: vec![ShellCall::ScreenOff], a_out: None, x_out: None, y_out: None,
+                    jumped: None, unported: None, next_cursor: 1,
+                },
+                _ => TitleStep {
+                    events: vec![crate::memmap::title_state::write_event_phase(face.phase.wrapping_add(1))],
+                    shell: vec![], a_out: None, x_out: None, y_out: None,
+                    jumped: None, unported: None, next_cursor: 0,
+                },
+            }
+        }
+        // ---- 批6b：01 DrawIntroBackground（3 段 2 spin——全仪式关键件）----
+        // 段0=APU 标志面+ScreenOff（$FE&=~$18+$1A←0+spin①）｜段1=ClearNameTables RAM 面
+        // （NT0+NT1 两轮 $01/$00/$FF 面）+PrepareVram($82F4 PPU 侧)+体写+ScreenOn（$FE|=$1E+
+        // $1A←0+spin②）｜段2=完成。
+        0x01 => {
+            let pm = face.ram[0x00FE & 0x7FF];
+            let ff = face.ram[0x00FF & 0x7FF];
+            match face.cursor {
+                0 => TitleStep {
+                    events: vec![(0x00F0, 0x10), (0x0684, 0x10),
+                                 (0x00FE, pm & !0x18), (0x001A, 0)],
+                    shell: vec![ShellCall::ScreenOff], a_out: None, x_out: None, y_out: None,
+                    jumped: None, unported: None, next_cursor: 1,
+                },
+                1 => TitleStep {
+                    events: vec![
+                        // ClearNameTables（title 路 NT0+NT1 两轮；$FF&=~INCR_DOWN(0x04)）
+                        (0x0001, 0x01), (0x0000, 0xFF), (0x00FF, ff & 0xFB),
+                        (0x0001, 0x02), (0x0000, 0xFF), (0x00FF, ff & 0xFB),
+                        // 体写
+                        (crate::ram_map::PALETTE_PENDING, 0x01), (0x00C5, 0x01),
+                        (0x00FF, (ff & 0xFB) & 0xFC),
+                        crate::memmap::title_state::write_event_phase(face.phase.wrapping_add(1)),
+                        (0x00D7, 0),
+                        // ScreenOn 面（$FE|=$1E）
+                        (0x00FE, pm | 0x1E), (0x001A, 0),
+                    ],
+                    shell: vec![ShellCall::ClearNameTables, ShellCall::PrepareVram(0x82F4),
+                                ShellCall::ScreenOn],
+                    a_out: None, x_out: None, y_out: None,
+                    jumped: None, unported: None, next_cursor: 2,
+                },
+                _ => TitleStep {
+                    events: vec![], shell: vec![], a_out: None, x_out: None, y_out: None,
+                    jumped: None, unported: None, next_cursor: 0,
+                },
+            }
+        }
+        // ---- 五降级占位臂（12/01 已深路径化——15/1B/1C/17 spin 点=NmiYield；逐件落）----
         0x01 | 0x12 | 0x15 | 0x1B | 0x1C | 0x17 => TitleStep {
             events: vec![], shell: vec![ShellCall::NmiYield], a_out: None, x_out: None,
-            y_out: None, jumped: None,
+            y_out: None, jumped: None, next_cursor: 0,
             unported: Some(match face.phase {
-                0x01 => 0x80D0, 0x12 => 0x82ED, 0x15 | 0x1B => 0x90BA,
+                0x15 | 0x1B => 0x90BA,
                 0x17 => 0x911A, _ => 0x939E,
             }),
         },
         // ---- 真未武装（18 深路专件/0x1E SetTimer 随件）----
         _ => TitleStep { events: vec![], shell: vec![], a_out: None, x_out: None, y_out: None,
-                         jumped: None,
+                         jumped: None, next_cursor: 0,
                          unported: Some(match face.phase {
                              0x18 => 0x9147, _ => 0xC4AA,
                          }) },
@@ -864,7 +923,7 @@ mod dispatch_contract_tests {
     #[test]
     fn dispatch_arms_and_unported_faces() {
         let face = TitleFace {
-            phase: 0x18, a: 0, x: 0, y: 0, timer3: 0, frame_count: 0, joy_change: 0,
+            phase: 0x18, cursor: 0, a: 0, x: 0, y: 0, timer3: 0, frame_count: 0, joy_change: 0,
             ppuctrl: 0x90, star_src: [0; 0xA0], wram: vec![0; 0x2000], ram: vec![0; 0x800],
         };
         let s = dispatch_step(&face);

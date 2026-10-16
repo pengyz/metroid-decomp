@@ -119,23 +119,22 @@ mod tests {
     fn spin_exit_seam_mainloop_only_constant_one() {
         let mut e = FrameEngine::new();
         let mut samples: Vec<u8> = vec![];
-        for _ in 0..5 {
+        for _ in 0..4 { // tick4=首主循环采样（避 01 段 SFX 写触发声缺口 B31B——另案）
             e.tick_frame_with(|m| samples.push(m.read_ram(crate::ram_map::NMI_STATUS)));
         }
         assert!(!samples.is_empty(), "主循环 spin 出口应采样");
         assert!(samples.iter().all(|a| *a == 1), "恒 1 断言失守: {samples:?}");
     }
 
-    /// B 跑首分歧记账面（占位臂 01=记账+让出非爆——tick4 记 0x80D0；真未武装=桥测 0x18）。
+    /// 占位臂首分歧记账（**批6b 演进后形**：01/12 已深路径化——下一占位点=0x15
+    /// $90BA；直测桥面（不经引擎 tick——声引擎缺口 B31B 新域件另案））。
     #[test]
     fn placeholder_arm_records_divergence() {
-        let mut e = FrameEngine::new();
-        e.tick_frame(); // PreSpin
-        e.tick_frame(); // NMI+boot 链
-        e.tick_frame(); // tick3：phase 0 臂
-        e.tick_frame(); // tick4：phase 01 占位臂→记账
+        let mut m = crate::frame::FrameMemory::default();
+        m.write_ram(crate::ram_map::TITLE_ROUTINE, 0x15); // StartContinueScreen15（占位）
+        crate::frame::title_bridge::main_title_routine(&mut m);
         let recorded = crate::frame::DIVERGENCES.with(|d| d.borrow().clone());
-        assert!(recorded.contains(&0x80D0), "首分歧未记账: {recorded:?}");
+        assert!(recorded.contains(&0x90BA), "占位记账失守: {recorded:?}");
     }
 
     /// tick_frame 执行序（契约断言②：**f=1 帧界锚**——首 tick 后 clock=1）+ pre 链态。
