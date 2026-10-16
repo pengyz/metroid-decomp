@@ -1122,6 +1122,17 @@ findings（r10）：0 新。
 
 ClearAll 共享段复用（链规 19 折叠续）+434/0 零回退+测 86 绿。findings（r10）：0 新。
 
+## 积分器收编（aad1988）：int_x/int_y 拼装进 samus/physics——R-mv-2/3 规则面
+
+### verdict: pass
+
+三查：①钳位语义双面 ✓（负向幅值≥6⇒{int:-6,frac:0}/正向 int≥5⇒{5,0}——integrators.rs
+考证件字节级推导注在位；E3A5 族证明级件=前账 int-y 证明面复用）②R-mv-2/3 规则面承载
+（垂直速度积分/水平+max_src=HorzSpeedMax 钳位）=spec 面 ✓ ③测 86 绿（RAM 往返+
+位移语义期望值自算修正案）。
+**更正注记档** ✓：data12/13=速小（积分器考证定谳）——社区注「Object attribute data」
+C 级旧猜测原地更正（证伪文化续）。findings（r10）：0 新。基线 116。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
