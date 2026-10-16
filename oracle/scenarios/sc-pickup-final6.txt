@@ -1,0 +1,22 @@
+# 场景：sc-pickup-final6 —— 四果收官 v6：停点微调（v5 行至 x=4 过头——行速 1.4px/f
+# 反推 x=35@f1068；跳窗计算复核：x=35 起跳 41px 漂移@y≈103<110 过壁顶 ✓）
+name sc-pickup-final6
+frames 1500
+watch_range 0000-00ff zp
+watch_range 0100-07ff iram
+watch_range 6988-698f pw
+
+press 360 start
+press 420 a
+press 540 start
+hold 995-1068 left
+hold 1072-1132 a
+hold 1072-1132 right
+hold 1135-1320 right
+
+capture 1110 over-wall
+capture 1180 near-item
+
+sample_point spin-exit
+probe_mem 6988 698f
+bundle_capture 1250 analysis/bundles/sc-pickup-final6

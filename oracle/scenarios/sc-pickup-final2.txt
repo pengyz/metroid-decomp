@@ -1,0 +1,24 @@
+# 场景：sc-pickup-final2 —— 四果收官 v2：坡顶高位径（越墙左壁）
+# 模型修正：左壁 x=76 墙顶 y≈110（v8 apex 110 恰触）——坡顶 (11,158)（pickup6
+# 实证）起跳 apex≈96<110 **越墙顶**→右飘落棚顶（y=152）→右行 x=104 触达
+# （v1 走+跳合流无跳——改为停步起跳：hold a 前先停）
+name sc-pickup-final2
+frames 1500
+watch_range 0000-00ff zp
+watch_range 0100-07ff iram
+watch_range 6988-698f pw
+
+press 360 start
+press 420 a
+press 540 start
+hold 995-1088 left
+hold 1092-1150 a
+hold 1092-1150 right
+hold 1155-1320 right
+
+capture 1130 mid-arc
+capture 1250 near-item
+
+sample_point spin-exit
+probe_mem 6988 698f
+bundle_capture 1250 analysis/bundles/sc-pickup-final2

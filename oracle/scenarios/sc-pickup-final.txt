@@ -1,0 +1,25 @@
+# 场景：sc-pickup-final —— 四果收官：右缘起跳径（顶棚顶面落点）
+# 模型（v1-v17 轨迹库+装载态槽坐标定谳）：道具 (104,152,箱±3)=棚顶（棚 x≈76-128
+# 顶 152）；左壁 x=76 高柱阻左径；右缘 x≈132 起跳**左飘**过棚缘（128）→落顶 y=152
+# →左行 x=104 触达（站在顶 y=152 与道具箱 dy=0 重叠）
+# 事件核：pw 位图写点（$6988 族）/PowerUpType 清（拾取后道具消失）/截图
+name sc-pickup-final
+frames 1500
+watch_range 0000-00ff zp
+watch_range 0100-07ff iram
+watch_range 6988-698f pw
+
+press 360 start
+press 420 a
+press 540 start
+hold 995-1010 left
+hold 1014-1065 a
+hold 1014-1065 left
+hold 1065-1250 left
+
+capture 1100 mid-arc
+capture 1200 near-item
+
+sample_point spin-exit
+probe_mem 6988 698f
+bundle_capture 1250 analysis/bundles/sc-pickup-final

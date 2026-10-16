@@ -1,0 +1,21 @@
+# 场景：sc-pickup-final4 —— 四果收官 v4：零步起跳（起跑点 x≈128=棚缘本体！
+# v3 败因=左行 12 帧已入棚下（x=115 顶棚压跳）——径=输入解锁帧即跳+左飘）
+name sc-pickup-final4
+frames 1500
+watch_range 0000-00ff zp
+watch_range 0100-07ff iram
+watch_range 6988-698f pw
+
+press 360 start
+press 420 a
+press 540 start
+hold 1002-1062 a
+hold 1002-1062 left
+hold 1065-1250 left
+
+capture 1040 mid-arc
+capture 1120 near-item
+
+sample_point spin-exit
+probe_mem 6988 698f
+bundle_capture 1250 analysis/bundles/sc-pickup-final4

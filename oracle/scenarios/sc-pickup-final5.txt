@@ -1,0 +1,24 @@
+# 场景：sc-pickup-final5 —— 四果收官 v5：壁顶窗穿越径（双壁定谳后的唯一自由点）
+# 双壁：x=76 带 y=110-154（v8/final2）+x=116 门楣带 y=99-155（final4）——
+# 自由穿越=x=76@y<110（壁顶窗）。径=x≈35 起跳+右飘（1px/f 恒漂——apex 窗
+# 30-58 帧内 x=35+41=76@y≈103<110 ✓）→过窗→落棚顶 (104,152)
+name sc-pickup-final5
+frames 1500
+watch_range 0000-00ff zp
+watch_range 0100-07ff iram
+watch_range 6988-698f pw
+
+press 360 start
+press 420 a
+press 540 start
+hold 995-1085 left
+hold 1090-1150 a
+hold 1090-1150 right
+hold 1155-1320 right
+
+capture 1130 over-wall
+capture 1200 near-item
+
+sample_point spin-exit
+probe_mem 6988 698f
+bundle_capture 1250 analysis/bundles/sc-pickup-final5

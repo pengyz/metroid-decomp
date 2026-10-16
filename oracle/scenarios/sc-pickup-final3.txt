@@ -1,0 +1,24 @@
+# 场景：sc-pickup-final3 —— 四果收官 v3：右缘停步起跳径（几何终判定谳）
+# 判定：左壁 x=76 封带 y≈110-154（v8/final2 双证）——左径物理不可达；右缘 x=128
+# **无壁**（棚顶面 y=152 上空自由）——v1 败因=走+跳合流不触发（停步才跳）。
+# 径：左行早停 x≈135（棚缘 128 右侧）→停步起跳+左飘→过棚缘上空→落棚顶 (104,152)
+name sc-pickup-final3
+frames 1500
+watch_range 0000-00ff zp
+watch_range 0100-07ff iram
+watch_range 6988-698f pw
+
+press 360 start
+press 420 a
+press 540 start
+hold 995-1007 left
+hold 1012-1072 a
+hold 1012-1072 left
+hold 1075-1250 left
+
+capture 1050 mid-arc
+capture 1150 near-item
+
+sample_point spin-exit
+probe_mem 6988 698f
+bundle_capture 1250 analysis/bundles/sc-pickup-final3
