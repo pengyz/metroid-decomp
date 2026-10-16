@@ -1133,6 +1133,19 @@ ClearAll 共享段复用（链规 19 折叠续）+434/0 零回退+测 86 绿。f
 **更正注记档** ✓：data12/13=速小（积分器考证定谳）——社区注「Object attribute data」
 C 级旧猜测原地更正（证伪文化续）。findings（r10）：0 新。基线 116。
 
+## task-28（d84cef6）：samus-move3 双腿场景包+fixture DSL——v5 §5 槽 4/5 面（契约面）
+
+### verdict: pass
+
+四查：①**fixture DSL=我 state-fixture §3 F_a 注入模型落码 ✓**（`fixture <帧> <addr>
+<值> [invariant|evolving]`；frame/addr/value/**persistence** 键=r7 不变式语义；
+scenario_run 解析+capture 采样前注入+run.json 记录——设计 v9/v11 引证随码）②oracle
+spin-exit 采样+**run1/run2 对称双跑逐字节一致**（06bf0d35 换锚；1383 行/17 缺帧
+行集全录 legs.*（head_skip=1））③game-core 引爆面 `bank07:B31B`=声引擎缺口域件
+（与跨帧游标契约账的 B31B 记档合流=task-11 排程坐标，fail-loud 不落盘）④恒 1 断言/
+键集白名单随案激活（双腿 sample_point=spin-exit）+trace 门 2 案 0 失败 1 记账容忍 ✓。
+findings（r10）：0 新。**v5 §5 槽 4/5 主体勾销**（fixture DSL+双腿场景包+双跑换锚）。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
