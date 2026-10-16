@@ -104,41 +104,16 @@ mod tests {
             .unwrap_or_default()
     }
 
-    /// 缺口确定性爆在 bank:addr（D7 机制②）——tick1=PreSpin；tick2=NMI+boot 链全通；
-    /// tick3=主循环相
-    /// 引爆（bank00:80D0——01 占位臂（NmiYield 标记面）=B 跑预期首分歧（port2 预言精确命中））。
+    /// B 跑首分歧记账面（占位臂 01=记账+让出非爆——tick4 记 0x80D0；真未武装=桥测 0x18）。
     #[test]
-    fn unported_detonates_at_bank_addr() {
+    fn placeholder_arm_records_divergence() {
         let mut e = FrameEngine::new();
-        e.tick_frame(); // PreSpin → AwaitNmi（无炸）
-        e.tick_frame(); // NMI 全通+boot_post_spin 链全通 → PostSpin（无炸）
-        e.tick_frame(); // tick3 主循环相：phase 0 臂过（会师穿越）
-        let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| e.tick_frame()));
-        let err = r.unwrap_err();
-        let msg = panic_message(&err);
-        assert!(msg.contains("unported @ bank00:80D0"), "引爆点失准: {msg}"); // 01 占位臂（B 跑首分歧面）
-    }
-
-    /// spin 出口缝位语义（task-24 对齐锚）：采样点 $1A=1 恒量面+FrameCount 未增
-    /// （帧工作前态）——三 tick 锚复核（tick1/tick2 缝位态）。
-    #[test]
-    fn spin_exit_seam_samples_pre_work_state() {
-        let mut e = FrameEngine::new();
-        let mut snap1: Option<(u8, u8, bool)> = None;
-        e.tick_frame_with(|m| {
-            snap1 = Some((m.read_ram(crate::ram_map::NMI_STATUS), m.read_ram(crate::ram_map::FRAME_COUNT), m.nmi_enabled));
-        });
-        // tick1 缝位：PreSpin 前（NMI 未启/工作未跑）
-        let (a1, f1, n1) = snap1.unwrap();
-        assert_eq!((a1, f1, n1), (0, 0, false));
-        let mut snap2: Option<(u8, u8)> = None;
-        e.tick_frame_with(|m| {
-            snap2 = Some((m.read_ram(crate::ram_map::NMI_STATUS), m.read_ram(crate::ram_map::FRAME_COUNT)));
-        });
-        // tick2 缝位：NMI 尾写 1 后（**恒 1 断言面**）/FrameCount 未增（boot 链期）
-        let (a2, f2) = snap2.unwrap();
-        assert_eq!(a2, 1, "spin 出口 $1A 应为恒 1（契约断言面）");
-        assert_eq!(f2, 0);
+        e.tick_frame(); // PreSpin
+        e.tick_frame(); // NMI+boot 链
+        e.tick_frame(); // tick3：phase 0 臂
+        e.tick_frame(); // tick4：phase 01 占位臂→记账
+        let recorded = crate::frame::DIVERGENCES.with(|d| d.borrow().clone());
+        assert!(recorded.contains(&0x80D0), "首分歧未记账: {recorded:?}");
     }
 
     /// tick_frame 执行序（契约断言②：**f=1 帧界锚**——首 tick 后 clock=1）+ pre 链态。

@@ -33,8 +33,13 @@ pub fn main_title_routine(mem: &mut FrameMemory) {
     };
     let step = crate::title::dispatch_step(&face);
     if let Some(addr) = step.unported {
+        if step.shell.contains(&crate::title::ShellCall::NmiYield) {
+            // **占位臂**（表址供首分歧记账+NmiYield 帧界让出——B 跑分类面，非引爆）
+            super::DIVERGENCES.with(|d| d.borrow_mut().push(addr));
+            return;
+        }
         let loc = format!("bank00:{addr:04X}");
-        crate::unported!(&loc); // 未武装臂（per-entry 爆——B 跑分歧面）
+        crate::unported!(&loc); // 真未武装（18/1E——深路专件/随件）：per-entry 爆
     }
     title_state::apply_title_step(&mut mem.ram, &mut mem.wram, &step.events);
     if let Some(a) = step.a_out {
@@ -62,6 +67,15 @@ mod tests {
         let mut m = FrameMemory::default();
         main_title_routine(&mut m); // phase 0（InitializeAfterReset）
         assert_eq!(m.read_ram(TITLE_ROUTINE), 1); // 相位推进
+    }
+
+    /// OBJECTS_CLEAR 复合标签展开（「标签展开在 shim」契约点——$0300-$031F 32 事件）。
+    #[test]
+    fn objects_clear_label_expands_in_shim() {
+        let events = crate::memmap::title_state::objects_clear_events();
+        assert_eq!(events.len(), 32);
+        assert_eq!(events[0], (0x0300, 0));
+        assert_eq!(events[31], (0x031F, 0));
     }
 
     /// 未武装臂表址爆（per-entry 形——B 跑分歧面前沿）。

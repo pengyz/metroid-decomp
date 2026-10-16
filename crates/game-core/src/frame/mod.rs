@@ -10,6 +10,12 @@
 //! （$01EB-$01FF 19 非零字节跨 292 帧——偏离帧=开机段 0-7；$01FC-$01FE 三字节值漂移）——调用影子（驱动层）须复刻原调用结构的
 //! 栈写面；产品层域逻辑零栈字面量（机械址只在驱动/memmap）。
 
+/// B 跑首分歧记账面（占位臂表址收集——分类报告输入；thread-local 每引擎实例）。
+thread_local! {
+    pub(crate) static DIVERGENCES: std::cell::RefCell<Vec<u16>> =
+        std::cell::RefCell::new(Vec::new());
+}
+
 pub mod boot;
 pub mod clock;
 pub mod engine;
