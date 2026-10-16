@@ -257,6 +257,24 @@ mod tests {
         assert_eq!(m.read_ram(0x0304), 0xFF); // dec wrap
     }
 
+    /// Door 状态机（入门相短路+延迟倒数面）。
+    #[test]
+    fn samus_door_state_machine_face() {
+        use crate::ram_map::{DOOR_DELAY, DOOR_ENTRY_STATUS};
+        let mut m = FrameMemory::default();
+        m.write_ram(DOOR_ENTRY_STATUS, 2); // 入门相（<$05）→短路
+        samus_door(&mut m);
+        m.write_ram(DOOR_ENTRY_STATUS, 5); // 移动相
+        m.write_ram(DOOR_DELAY, 3);
+        let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| samus_door(&mut m)));
+        let err = r.unwrap_err();
+        let msg = err.downcast_ref::<String>().cloned()
+            .or_else(|| err.downcast_ref::<&'static str>().map(|s| (*s).to_string()))
+            .unwrap_or_default();
+        assert!(msg.contains("unported @ bank07:D3AE"), "MoveOutDoor 爆点失准: {msg}");
+        assert_eq!(m.read_ram(DOOR_DELAY), 2); // 倒数先行
+    }
+
     /// UpdateSamus 面：PageIndex/IsSamus 落态+位 7 站立直入引爆。
     #[test]
     fn update_samus_spine_face() {
@@ -461,10 +479,28 @@ pub fn samus_dead2(mem: &mut FrameMemory) {
     mem.write_ram(0x0304, d);
 }
 
-/// SamusDoor/Elevator（D3A8/D423——门滚动/电梯态壳）：随深路径件填（桩形）。
-pub fn samus_door(_mem: &mut FrameMemory) {
-    crate::unported!("bank07:D3A8"); // 门滚动态（ScrollDoor 族——随件）
+/// SamusDoor 处理件（字节自证 D3A8 区——门滚动态状态机）：
+/// `lda DoorEntryStatus($56)/cmp #$05/bcc`（<$55 入门相）→`dec DoorDelay($59)/bne
+/// MoveOutDoor`（延迟倒数）→完成相（`asl/bcc`→`lsr/sta DoorEntryStatus`）→敌清链
+/// （Door_DeleteOffscreenEnemies/Doors_RemoveIfOffScreen/GotoClearAllMetroidLatches）
+/// →音乐面（ItemRoomMusicStatus/StartMusic）。深链件=桩（随件填）。
+pub fn samus_door(mem: &mut FrameMemory) {
+    let status = mem.read_ram(crate::ram_map::DOOR_ENTRY_STATUS);
+    if status < 0x05 {
+        return; // 入门相（Lx055 路——ScrollDoor 族另面）
+    }
+    let delay = mem.read_ram(crate::ram_map::DOOR_DELAY).wrapping_sub(1);
+    mem.write_ram(crate::ram_map::DOOR_DELAY, delay);
+    if delay != 0 {
+        crate::unported!("bank07:D3AE"); // MoveOutDoor（移动面——随件）
+    }
+    crate::unported!("bank07:D3BA"); // 完成相敌清链（随件）
 }
-pub fn samus_elevator(_mem: &mut FrameMemory) {
-    crate::unported!("bank07:D423"); // 电梯态（Elevator.status 面——随件）
+
+/// SamusElevator 处理件（字节自证 D423 区——电梯态）：
+/// `lda Elevator.status/cmp #$03/cmp #$08`（态门）→ElevatorType 方向（bit7=up）→
+/// 屏幕 Y 检（Samus.y-ScrollY≥$84→ScrollDown）→wrap 检（SCRN_VY-1）。深链件=桩。
+pub fn samus_elevator(mem: &mut FrameMemory) {
+    let _ = mem;
+    crate::unported!("bank07:D42E"); // 方向/滚动链（随件）
 }

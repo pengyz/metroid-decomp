@@ -132,6 +132,13 @@ pub const SAMUS_DIR: u16 = 0x004D;
 /// ——跳跃位移面（$18/$20 阈值族）。
 pub const SAMUS_JUMP_DISP: u16 = 0x030F;
 
+/// DoorEntryStatus=$56（constants_ram 内容锚「0=Not in door, 1=In right door, 2=In
+/// left door, 3=Scroll up…」）。
+pub const DOOR_ENTRY_STATUS: u16 = 0x0056;
+
+/// DoorDelay=$59（内容锚「Number of frames to delay when Samus entering/exiting doors」）。
+pub const DOOR_DELAY: u16 = 0x0059;
+
 /// SamusHorzSpeedMax=$0316（内容锚「Used to calc maximum horizontal speed Samus can
 /// reach」——R-mv 跑速面）。
 pub const SAMUS_HORZ_SPEED_MAX: u16 = 0x0316;
