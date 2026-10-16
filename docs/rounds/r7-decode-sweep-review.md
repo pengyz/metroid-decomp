@@ -350,6 +350,14 @@ title 深路径对拍素材包注册（trace 门 11 案 0 失败）。findings �
 被证伪原地更正=更正文化规范执行）+UpdateItems 门模型定谳（门 0/1/2 全图）+几何
 定谳（道具顶棚顶面最近逼近 (64,152)）。findings 三族（r10）：0 新（更正案记档）。
 
+## task-37 终局（cbe6518）抽检：死亡/终局全链——更正链三翻案范例
+
+### verdict: pass（抽检）
+
+四果收账三果（一果如实留缺）+gotcha-unloaded-state-probe-misread 教训入库（实验
+条件错误类=lead 点名）+**更正链三翻案全部原地留痕**（batch-2 阻断→几何→三果全达成
+——更正文化范例级）。trace 门 11 案 0 失败。findings 三族（r10）：0 新。
+
 ## 遗留风险清单
 
 1. S 面 120 为 B 级估计——分母 v2 实际登记（lead task-5）以 decode-sweep 复跑 + 逐条
