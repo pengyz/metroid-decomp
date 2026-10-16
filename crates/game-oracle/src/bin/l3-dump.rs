@@ -93,16 +93,21 @@ fn main() -> ExitCode {
     }
     let mut out = String::new();
     for f in 1..=frames {
-        engine.tick_frame(); // unported! 引爆 ⇒ panic（fail-loud，dump 不落盘）
-        let snap = engine.watch_snapshot();
-        let w: Vec<String> = watch_labels
-            .iter()
-            .map(|label| {
-                let (_, hex) = snap.iter().find(|(l, _)| l == label).expect("标签已预检");
-                format!("\"{label}\":\"{hex}\"")
-            })
-            .collect();
-        out.push_str(&format!("{{\"f\":{f},\"w\":{{{}}}}}\n", w.join(",")));
+        // task-24 ②：spin 出口采样（tick_frame_with 缝=NMI 尾写 1 后/帧工作前——
+        // oracle $C0D3 同点）；unported! 引爆 ⇒ panic（fail-loud，dump 不落盘）。
+        let mut row = String::new();
+        engine.tick_frame_with(|mem| {
+            let snap = mem.watch_snapshot();
+            let w: Vec<String> = watch_labels
+                .iter()
+                .map(|label| {
+                    let (_, hex) = snap.iter().find(|(l, _)| l == label).expect("标签已预检");
+                    format!("\"{label}\":\"{hex}\"")
+                })
+                .collect();
+            row = format!("{{\"f\":{f},\"w\":{{{}}}}}\n", w.join(","));
+        });
+        out.push_str(&row);
     }
     if let Err(e) = std::fs::create_dir_all(dump_dir) {
         eprintln!("建 dump 目录失败: {e}");
