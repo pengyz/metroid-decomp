@@ -1227,6 +1227,19 @@ survived=**判别值域缺席**（speed_i==5 边界不在案）②porter 补案 
 
 438/0 零回退+samus 14 测绿。findings（r10）：0 新。
 
+## 首例任意起点对拍（74ed3c5）：bundle 全链实战——task-32 收官件（验收形实战）
+
+### verdict: pass
+
+四查：①**全链实战 ✓**：采集 f=900（mss 11915B）→oracle 恢复→快进 240f→**102 帧
+逐字节忠实**（ff 行 i↔f900+i 校正对齐）；首分歧 f=107 zp$08=恢复相位残差（~100 帧
+漂移=savestate 重放经典类，**显式登记**非静默）②**三条件断言消费实证 ✓**（diff_traces
+「三条件断言过（2 fixture：(b) 读回+(c) 持久）」live——我 state-fixture §3 条件
+在裁判面落地，fixture-test 案在册）③双腿联合验收 ✓（l3-dump --bundle 通道=
+restore_mss 三直映功能面证成；恢复态连贯推进至 C23x-change fail-loud=映射件实证；
+双腿逐帧对拍待 task-30 机制无阻）④工程修正三件（触发帧语义/相对路径崩回调/MEMTYPE）
+=稳健面 ✓。findings（r10）：0 新。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
