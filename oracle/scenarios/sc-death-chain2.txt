@@ -1,0 +1,22 @@
+# 场景：sc-death-chain2 —— 死亡链 v2（v1 双击实录血 3→2→1——补击径：延长+
+# 敌房游走（右/左振荡）引第三击→血尽→死亡→Game Over 链）
+# 事件核：$70 闪烁+血量三段递减+$1F 死亡链（0x19/0x1A/0x1B/0x1C）
+name sc-death-chain2
+frames 2100
+watch_range 0000-00ff zp
+watch_range 0100-07ff iram
+
+press 360 start
+press 420 a
+press 540 start
+hold 850-1050 right
+hold 1060-1185 right
+hold 1350-1500 right
+hold 1550-1700 left
+hold 1750-1950 right
+
+capture 1400 mid
+capture 2050 late
+
+sample_point spin-exit
+bundle_capture 1250 analysis/bundles/sc-death-chain2

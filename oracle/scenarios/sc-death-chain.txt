@@ -1,0 +1,19 @@
+# 场景：sc-death-chain —— task-37 死亡/终局链径（受击果已收：move3 f1188 命中
+# 实锤 $70 闪烁 50f——受击点 (103,190) 站桩敌房→连续受击→血尽→死亡→Game Over 链）
+# 事件核：$70 闪烁计数（受击）+$0106 血量递减+$1F→死亡/GAME OVER/0x19/0x1A
+name sc-death-chain
+frames 1600
+watch_range 0000-00ff zp
+watch_range 0100-07ff iram
+
+press 360 start
+press 420 a
+press 540 start
+hold 850-1050 right
+hold 1060-1185 right
+
+capture 1300 mid-wait
+capture 1550 late
+
+sample_point spin-exit
+bundle_capture 1250 analysis/bundles/sc-death-chain

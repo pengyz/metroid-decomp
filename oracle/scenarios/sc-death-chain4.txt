@@ -1,0 +1,20 @@
+# 场景：sc-death-chain4 —— 死亡链 v4（编码修正：血量=(ones,tens)=($0106 高半,
+# $0107 低半)——v3 误压 10 血；改压 1 血（$0106=10）→一击 8 伤→血尽→死亡链）
+name sc-death-chain4
+frames 1800
+watch_range 0000-00ff zp
+watch_range 0100-07ff iram
+
+press 360 start
+press 420 a
+press 540 start
+hold 850-1050 right
+hold 1060-1185 right
+hold 1350-1550 right
+
+capture 1600 late
+
+sample_point spin-exit
+fixture 1250 0106 10 invariant
+fixture 1250 0107 00 invariant
+bundle_capture 1250 analysis/bundles/sc-death-chain4

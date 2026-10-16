@@ -1,0 +1,23 @@
+# 场景：sc-death-chain3 —— 死亡链 v3（fixture 压血 1+引敌一击必杀——
+# v1/v2 双击确定性复现（f1202/1281 同刻同位）；fixture 1250 血量=1→下一击→
+# 血尽→死亡→Game Over 链（fixture×真实伤害路径合流））
+# 事件核：$70 闪烁+血尽+$1F 死亡链（0x19/0x1A/0x1B/0x1C）
+name sc-death-chain3
+frames 1800
+watch_range 0000-00ff zp
+watch_range 0100-07ff iram
+
+press 360 start
+press 420 a
+press 540 start
+hold 850-1050 right
+hold 1060-1185 right
+hold 1350-1550 right
+
+capture 1600 late
+capture 1750 end
+
+sample_point spin-exit
+fixture 1250 0106 00 invariant
+fixture 1250 0107 01 invariant
+bundle_capture 1250 analysis/bundles/sc-death-chain3
