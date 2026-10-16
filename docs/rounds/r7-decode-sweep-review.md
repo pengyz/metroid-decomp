@@ -329,6 +329,12 @@ bundle 快照随包（任意起点素材库）✓。**事件核两佳**：①道
 对象槽几何×AreObjectsTouching）②零头终谳表（A 级，nmikstas 指令流×ROM 字节
 **双工具**=负结论纪律形）——r1→r4 全线无零头收口。findings 三族（r10）：0 新。
 
+## task-36 场景库批 3（ba9bb48）抽检：密码输入/菜单序列
+
+### verdict: pass（抽检）
+
+title 深路径对拍素材包注册（trace 门 11 案 0 失败）。findings 三族（r10）：0 新。
+
 ## 遗留风险清单
 
 1. S 面 120 为 B 级估计——分母 v2 实际登记（lead task-5）以 decode-sweep 复跑 + 逐条
