@@ -1056,6 +1056,19 @@ tick 序号键面=decomp f 键任务卡。修复面（缝语义限主循环 spin
 测 83 绿；**测丢失案自录**（缝语义测误删恢复+「重构全量重写的测试保全检查」入自查
 清单）=诚实文化续。findings（r10）：0 新。
 
+## 会师契约半件（5352035）：dispatch_step+TitleStep/ShellCall ABI——契约面合账
+
+### verdict: pass
+
+三查：①**ABI 契约一致 ✓**——ShellCall::NmiYield=「§8.1 spin 跨帧建模口径：桥侧按帧界
+让出」（我契约①原文入 ABI 文档，content anchor 核）；armed 臂 L2 件单源委托
+（verify_shim 适配器=B 跑/L2 行为面零分叉）②三态表照落（armed/占位六件 NmiYield+
+表址/真未武装 0x18、0x1E）③测 83（armed 不回 Unported/未武装回表址两面）。
+**依赖维度案注**（f3855d2 同族第二维）：桥 :34 实调 dispatch_step 而半件曾悬空 HEAD
+——symbol 级悬空 tree-coherence 不覆盖（mod 面才覆盖），rust-tests 编译面拦之；
+案例注记：**新件依赖链须同块或先行落**（与「新件与声明同刻 add」并列）。
+findings（r10）：0 新。基线 113。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
