@@ -44,7 +44,7 @@ pub fn vert_accelerate(mem: &mut FrameMemory) {
     if aligned {
         object_check_move_down(mem); // ObjectCheckMoveDown（asm :8035——壳已端口）
     }
-    crate::unported!("bank07:D976"); // SamusCollisionWithSolidEntities（电梯冻敌双旗）
+    samus_collision_with_solid_entities(mem); // D976（asm :5117——壳已端口）
     // 双旗门（D976 内部置位后检查）
     // if mem.read_ram(SAMUS_ON_ELEVATOR) != 0 || mem.read_ram(ON_FROZEN_ENEMY) != 0 { return; }
     // mem.write_ram(SAMUS_ACCEL_Y, 0x1A); // R-mv-6 下落发起
@@ -60,6 +60,32 @@ mod tests {
         assert_eq!(x_minus_16(0x10), 0x00);
         assert_eq!(x_minus_16(0x05), 0xF5); // wrap
         assert_eq!(x_plus_4(0xFF), 0x03); // wrap
+    }
+
+    /// @isSamusOnTop 顶部判定（一像素重合判据+下方排除）。
+    #[test]
+    fn is_samus_on_top_semantics() {
+        assert!(is_samus_on_top(0x00, 0x0F, 0x10)); // dist_y+1==radius_y=顶
+        assert!(!is_samus_on_top(0x02, 0x0F, 0x10)); // dist_hi bit2=下方
+        assert!(!is_samus_on_top(0x00, 0x08, 0x10)); // 侧面（>1px 重合）
+    }
+
+    /// D976 双旗清（同值写事件——清零先行面）。
+    #[test]
+    fn solid_entities_clears_flags_then_walk() {
+        let mut m = FrameMemory::default();
+        m.write_ram(SAMUS_ON_ELEVATOR, 1);
+        m.write_ram(ON_FROZEN_ENEMY, 1);
+        let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            samus_collision_with_solid_entities(&mut m)
+        }));
+        let err = r.unwrap_err();
+        let msg = err.downcast_ref::<String>().cloned()
+            .or_else(|| err.downcast_ref::<&'static str>().map(|s| (*s).to_string()))
+            .unwrap_or_default();
+        assert!(msg.contains("unported @ bank07:D983"), "冻敌环失准: {msg}");
+        assert_eq!(m.read_ram(SAMUS_ON_ELEVATOR), 0); // 双旗清先行
+        assert_eq!(m.read_ram(ON_FROZEN_ENEMY), 0);
     }
 
     /// 瓦片分类面（E7AD 族阈值——task-19 定谳）。
@@ -152,4 +178,34 @@ pub fn object_check_move_down(mem: &mut FrameMemory) -> bool {
     // 壳：A = -radiusY（向下偏移）——几何面
     let _ry = mem.read_ram(SAMUS_RADIUS_Y);
     crate::unported!("bank07:E7B5"); // ObjectCheckMoveVertical（几何+瓦片环——嵌套件）
+}
+
+/// SamusCollisionWithSolidEntities（**asm 内容锚+结构互核注**——全仪式关键件②）：
+/// refs/m1disasm/SRC/prg7_engine.asm `SamusCollisionWithSolidEntities: ; 07:D976`（注
+/// 「Default to Samus not being on an elevator or on a frozen enemy」：双旗清→冻敌环
+/// （`ldx #$50`/`EnsExtra.0.status,x` 冻结检→几何碰撞→@isSamusOnTop→`inc OnFrozenEnemy`）
+/// →`jsr Xminus16/bpl @loop`（**X-=16 走槽**——热件实证面）→电梯面（`lda Elevator.status/
+/// beq`/`jsr LDC82`/`@isSamusOnTop`→`inc SamusOnElevator`））。
+///
+/// **结构互核注**：①Xminus16 热件的真实走槽用例（17k+ hits 面来源=敌槽遍历）②@isSamusOnTop
+/// 顶部判定（Temp10_DistHi bit2=垂直差向+Temp11_DistY 一像素重合判据）③双旗=**同值写
+/// 事件**（清零先行——b-f270-a0 教训族复用）。
+/// 嵌套件桩（随拼装填）：GetObjectYSlotPosition/GetEnemyXSlotPosition/
+/// GetRadiusSumsOfEnXSlotAndObjYSlot/CheckCollisionOfXSlotAndYSlot（F1FA 族）/LDC82。
+pub fn samus_collision_with_solid_entities(mem: &mut FrameMemory) {
+    // 双旗清（注「Default to … not being on an elevator or on a frozen enemy」）
+    mem.write_ram(SAMUS_ON_ELEVATOR, 0);
+    mem.write_ram(ON_FROZEN_ENEMY, 0);
+    crate::unported!("bank07:D983"); // 冻敌环（嵌套几何件族——F1FA 族随拼装）
+}
+
+/// @isSamusOnTop 顶部判定（asm :D9BA 内容锚——冻结敌/电梯共用）：
+/// `lda Temp10_DistHi/and #$02/bne no`（垂直差向=下方?）→`ldy Temp11_DistY/iny/
+/// cpy Temp04_YSlotRadiusY/beq Exit8`（**一像素重合=站在顶**）。
+/// 返回 true=站在目标顶部。
+pub fn is_samus_on_top(dist_hi: u8, dist_y: u8, target_radius_y: u8) -> bool {
+    if dist_hi & 0x02 != 0 {
+        return false; // 在下方
+    }
+    (dist_y as u16 + 1) == target_radius_y as u16 // 一像素重合判据
 }
