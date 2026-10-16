@@ -78,6 +78,27 @@ mod tests {
         assert_eq!(m.regs.a, disp);
     }
 
+    /// D147 双写微件（speedY/subpixY 清零全端口）。
+    #[test]
+    fn stop_vert_movement_clears_two_faces() {
+        let mut m = FrameMemory::default();
+        m.write_ram(SAMUS_SPEED_Y_I, 0x80);
+        m.write_ram(SAMUS_SUBPIX_Y, 0x55);
+        stop_vert_movement(&mut m);
+        assert_eq!(m.read_ram(SAMUS_SPEED_Y_I), 0);
+        assert_eq!(m.read_ram(SAMUS_SUBPIX_Y), 0);
+    }
+
+    /// CD92 镜像位（SamusDir bit0→bit4 OR 入 $6B）。
+    #[test]
+    fn set_mirror_cntrl_bit_or_face() {
+        let mut m = FrameMemory::default();
+        m.write_ram(crate::ram_map::SAMUS_DIR, 1);
+        m.write_ram(0x006B, 0x03);
+        set_mirror_cntrl_bit(&mut m);
+        assert_eq!(m.read_ram(0x006B), 0x13); // bit4 置
+    }
+
     /// @isSamusOnTop 顶部判定（一像素重合判据+下方排除）。
     #[test]
     fn is_samus_on_top_semantics() {
@@ -274,4 +295,31 @@ pub fn horz_integrate(mem: &mut FrameMemory) -> u8 {
     mem.regs.a = out.disp;
     mem.regs.x = out.reg_x;
     out.disp
+}
+
+// ==== m2 预拼装·批1（移动深路径嵌套件——D147/CD92 全折+CD6D 壳）====
+
+/// StopVertMovement（**字节自证** D147 `a0 00 8c 08 03 8c 10 03 60`——ldy #$00/
+/// sty $0308（speedY）/sty $0310（subpixY）/rts）：**双写微件全端口**。
+pub fn stop_vert_movement(mem: &mut FrameMemory) {
+    mem.write_ram(SAMUS_SPEED_Y_I, 0);
+    mem.write_ram(SAMUS_SUBPIX_Y, 0);
+}
+
+/// SetMirrorCntrlBit（**字节自证** CD92 `a5 4d 20 ?? ?? 0d 6b 00 8d 6b 00 60`——
+/// `lda SamusDir($4D)/jsr Amul16`（bit0→bit4）`/ora ObjectCntrl($6B)/sta $6B/rts`）：
+/// 朝向镜像位 OR 入 $6B（bit4 面）。
+pub fn set_mirror_cntrl_bit(mem: &mut FrameMemory) {
+    let v = (mem.read_ram(crate::ram_map::SAMUS_DIR) & 1) << 4;
+    let c = mem.read_ram(0x006B) | v;
+    mem.write_ram(0x006B, c);
+}
+
+/// SetSamusData 壳（asm 内容锚 `SetSamusData: ; 07:CD6D`——动画/调色/绘制链）：
+/// UpdateObjAnim（DC8F）/IsScrewAttackActive（CD9C——攻螺旋转调色：FrameCount 节拍
+/// `$80|PRIORITY`→$6B）/CheckHealthStatus（CDFA）/LavaAndMoveCheck（E269）/
+/// MetroidOnSamus（$92）蓝化（`$81|PRIORITY`→$6B）/SetMirrorCntrlBit（CD92 已折）/
+/// jmp ObjDrawFrame（DE4A）。深链件=桩（m2 后续批）。
+pub fn set_samus_data(mem: &mut FrameMemory) {
+    crate::unported!("bank07:DC8F"); // UpdateObjAnim（动画更新链首件）
 }

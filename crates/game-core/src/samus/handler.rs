@@ -127,7 +127,7 @@ pub fn samus_run(mem: &mut FrameMemory) {
                         mem.write_ram(ANIM_RESET_INDEX, 0x35);
                     }
                     if mem.read_ram(crate::ram_map::JOY1_STATUS) & A == 0 {
-                        crate::unported!("bank07:D147"); // StopVertMovement
+                        super::physics::stop_vert_movement(mem); // D147（已全折）
                     }
                 }
             }
@@ -214,7 +214,7 @@ mod tests {
         let msg = err.downcast_ref::<String>().cloned()
             .or_else(|| err.downcast_ref::<&'static str>().map(|s| (*s).to_string()))
             .unwrap_or_default();
-        assert!(msg.contains("unported @ bank07:D147"), "松开爆点失准: {msg}");
+        assert!(msg.contains("unported @ bank07:D015"), "松开后链爆点失准: {msg}"); // D147 已折→D015
     }
 
     /// SamusRoll 球形解除（radiusY+=8 可观测写面）。
@@ -391,7 +391,7 @@ pub fn samus_stand(mem: &mut FrameMemory) {
     if mem.read_ram(crate::ram_map::JOY1_CHANGE) & A != 0 {
         mem.write_ram(crate::ram_map::SAMUS_STATUS, 2); // sa_Jump
     }
-    crate::unported!("bank07:CD6D"); // SetSamusData（动画数据面）
+    super::physics::set_samus_data(mem); // CD6D（壳已端口）
 }
 
 // ==== 10 态肉·批3（SamusJump/SamusRoll——同形轻仪式）====
@@ -407,7 +407,7 @@ pub fn samus_jump(mem: &mut FrameMemory) {
     let speed_y_i = mem.read_ram(crate::samus::physics::SAMUS_SPEED_Y_I);
     if speed_y_i & 0x80 != 0 && disp >= 0x20 {
         if mem.read_ram(crate::ram_map::JOY1_STATUS) & A == 0 {
-            crate::unported!("bank07:D147"); // StopVertMovement（松开起跳）
+            super::physics::stop_vert_movement(mem); // D147（已全折）（松开起跳）
         }
     }
     crate::unported!("bank07:D015"); // SamusJump_CheckHorzMovement 族（水平检链）
@@ -462,14 +462,14 @@ pub fn samus_pnt_up(mem: &mut FrameMemory) {
     if mem.read_ram(crate::ram_map::JOY1_CHANGE) & A != 0 {
         mem.write_ram(crate::ram_map::SAMUS_STATUS, 6); // sa_PntJump
     }
-    crate::unported!("bank07:CD6D"); // SetSamusData（动画面）
+    super::physics::set_samus_data(mem); // CD6D（壳已端口）
 }
 
 /// SamusDead 处理件（字节自证 D41A `a9 01 4c 6d cd`——lda #$01/jmp SetSamusData）：
 /// 可观测=SetSamusData 效果（动画面）——桩。
 pub fn samus_dead(mem: &mut FrameMemory) {
     mem.regs.a = 0x01;
-    crate::unported!("bank07:CD6D"); // SetSamusData（A=1 参数面）
+    mem.regs.a = 0x01; super::physics::set_samus_data(mem); // CD6D（A=1 参数面）
 }
 
 /// SamusDead2 处理件（字节自证 D41F `ce 05 03 60`——dec Samus.animDelay/rts）：
