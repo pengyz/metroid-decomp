@@ -125,7 +125,11 @@ fn main() -> ExitCode {
                 Err(e) => { eprintln!("{}", e); return ExitCode::from(2); }
             }
         }
-        for n in 0..spec.samples {
+        // 边界相位（b-int-y-boundary-5 教训族——判别值域补全）：samples 后追加 4 案，
+        // 钳位边界池 [5,6,0xFA,0xF9]（正 5/6+负幅 6/7）——**LCG 流保持**（每值仍抽一
+        // 次 rng 只覆值）——既有案 golden 不动（additive 保证）。
+        const BOUNDARY_POOL: [u8; 4] = [5, 6, 0xFA, 0xF9];
+        for n in 0..spec.samples + BOUNDARY_POOL.len() {
             let mut seed: u64 = 0;
             for b in spec.id.bytes() {
                 seed = seed.wrapping_mul(31).wrapping_add(b as u64);
@@ -152,7 +156,12 @@ fn main() -> ExitCode {
                         }
                         // 判别力修复（F1xx 复审 2）：基址与变址有效址都赋值
                         for eff in [a, a.wrapping_add(input_x_hint), a.wrapping_add(input_y_hint)] {
-                            let v = rng.next_u8();
+                            let v_raw = rng.next_u8(); // LCG 流保持（值可覆）
+                            let v = if n < spec.samples {
+                                v_raw
+                            } else {
+                                BOUNDARY_POOL[(n - spec.samples + eff as usize) % BOUNDARY_POOL.len()]
+                            };
                             if (0x6000..0x8000).contains(&eff) {
                                 wram[eff as usize - 0x6000] = v;
                                 written.push(eff);
