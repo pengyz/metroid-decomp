@@ -1017,6 +1017,19 @@ findings（r10）：0 新。基线 107。
 批6a（本账抽检）——**31 项 title 系收口（26 L2+5 L3）**，模型自纠战绩（六/二/三轮
 +y-polarity 反写/marker 掩码吞槽=模型侧判别力代表样本）记档。findings（r10）：0 新。
 
+## 会师接线桥（65c830d）：bank00:8000 穿越——B 跑放行件①（关键件焦点）
+
+### verdict: pass
+
+**穿越实证 ✓**：l3-dump 实跑爆点移至 `unported @ bank00:802A-phase`（title_bridge.rs
+未武装臂面=TitleRoutinePtrTable 分发）——**8000 引爆点消除**（tick3 主循环相 phase 0
+臂推进）；tick4 爆点=未武装臂面=B 跑分歧面前沿 ✓。测 81 绿（穿越测+outcome 应用面）。
+**契约三答对表 ✓**（port2 ②契约）：①分发形状（臂直调形→其 dispatch_step 切换注）
+②outcome 纯委托（write_event_tag 标签解析+objects_clear_events 复合展开=桥责边界
+清晰）③未武装臂=表址返回（per-entry 爆）。armed/占位/真未武装三态表（批1-6a armed；
+01/12/15/1B/1C/17 NmiYield 占位=B 跑首分歧预期面；0x18/0x1E 真未武装）=显式 ✓。
+链规 13c 新件同块 add ✓。findings（r10）：0 新。基线 111。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
