@@ -5,5 +5,7 @@
 //! spec 源=docs/spec/samus-movement.md（R-mv-1..5 v0.1）——细化随笔落（lead 裁定）。
 
 pub mod handler;
+pub mod physics;
 
 pub use handler::{update_samus, SamusHandler};
+pub use physics::{vert_accelerate, x_minus_16, x_plus_4};

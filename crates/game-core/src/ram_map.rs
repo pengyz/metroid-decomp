@@ -124,6 +124,22 @@ pub const IS_SAMUS: u16 = 0x0055;
 /// not in use」+位 7=站立旗（GoSamusHandler `bmi` 面））。
 pub const SAMUS_STATUS: u16 = 0x0300;
 
+/// SamusHorzSpeedMax=$0316（内容锚「Used to calc maximum horizontal speed Samus can
+/// reach」——R-mv 跑速面）。
+pub const SAMUS_HORZ_SPEED_MAX: u16 = 0x0316;
+
+/// SamusOnElevator=$0307（=Samus.data07；内容锚「0=Samus not on elevator, 1=on」）。
+pub const SAMUS_ON_ELEVATOR: u16 = 0x0307;
+
+/// OnFrozenEnemy=$7D（内容锚「#$01=Samus standing on frozen enemy」）。
+pub const ON_FROZEN_ENEMY: u16 = 0x007D;
+
+/// Samus.radiusY=$0301（`.struct Object` radiusY——N-0032 同构族）。
+pub const SAMUS_RADIUS_Y: u16 = 0x0301;
+
+/// Samus.y=$030D（`.struct Object` y——「Object y position in room」）。
+pub const SAMUS_Y: u16 = 0x030D;
+
 /// MainRoutine=$1E（constants_ram.asm:478「5 = Game paused, 3 = Game engine running」）。
 pub const MAIN_ROUTINE: u16 = 0x001E;
 
