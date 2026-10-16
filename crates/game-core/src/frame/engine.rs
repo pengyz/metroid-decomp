@@ -54,12 +54,20 @@ impl FrameEngine {
     }
 
     /// 推进一帧（60Hz tick）——**tick 序**（契约 §8.1①）：NMI（尾写 $1A=1）→ spin 唤醒
-    /// → 帧工作 → 清 0 → spin yield。
+    /// → 帧工作 → 清 0 → spin yield。采样=无操作（快照用 tick_frame_with）。
     pub fn tick_frame(&mut self) {
+        self.tick_frame_with(|_| {});
+    }
+
+    /// 推进一帧+**spin 出口采样缝**（task-24 对齐：oracle $C0D3 同点——NMI 尾写 1 后/
+    /// 帧工作前；$1A=1 恒量面+FrameCount 未增=缝位语义锚）。
+    pub fn tick_frame_with<F: FnMut(&FrameMemory)>(&mut self, mut on_spin_exit: F) {
         self.clock.tick();
         if self.mem.nmi_enabled {
             super::nmi::nmi_handler(&mut self.mem);
         }
+        // === spin 出口采样缝（$C0D3 对齐）===
+        on_spin_exit(&self.mem);
         match self.phase {
             BootPhase::PreSpin => {
                 super::boot::boot_pre_spin(&mut self.mem);
@@ -108,6 +116,28 @@ mod tests {
         let err = r.unwrap_err();
         let msg = panic_message(&err);
         assert!(msg.contains("unported @ bank00:8000"), "引爆点失准: {msg}");
+    }
+
+    /// spin 出口缝位语义（task-24 对齐锚）：采样点 $1A=1 恒量面+FrameCount 未增
+    /// （帧工作前态）——三 tick 锚复核（tick1/tick2 缝位态）。
+    #[test]
+    fn spin_exit_seam_samples_pre_work_state() {
+        let mut e = FrameEngine::new();
+        let mut snap1: Option<(u8, u8, bool)> = None;
+        e.tick_frame_with(|m| {
+            snap1 = Some((m.read_ram(crate::ram_map::NMI_STATUS), m.read_ram(crate::ram_map::FRAME_COUNT), m.nmi_enabled));
+        });
+        // tick1 缝位：PreSpin 前（NMI 未启/工作未跑）
+        let (a1, f1, n1) = snap1.unwrap();
+        assert_eq!((a1, f1, n1), (0, 0, false));
+        let mut snap2: Option<(u8, u8)> = None;
+        e.tick_frame_with(|m| {
+            snap2 = Some((m.read_ram(crate::ram_map::NMI_STATUS), m.read_ram(crate::ram_map::FRAME_COUNT)));
+        });
+        // tick2 缝位：NMI 尾写 1 后（**恒 1 断言面**）/FrameCount 未增（boot 链期）
+        let (a2, f2) = snap2.unwrap();
+        assert_eq!(a2, 1, "spin 出口 $1A 应为恒 1（契约断言面）");
+        assert_eq!(f2, 0);
     }
 
     /// tick_frame 执行序（契约断言②：**f=1 帧界锚**——首 tick 后 clock=1）+ pre 链态。
