@@ -1,0 +1,22 @@
+# 场景：sc-touch-gate2 —— task-37 终径：顶棚顶面落点径（几何全图定谳）
+# 模型：(14,2) 走廊顶 x≈76-128（底 175/顶 152）+左壁 x=76 高柱+天窗 x=4-75 全跳区
+# ——道具 (104,152)=顶棚顶面。径=走至 x≈130（顶右缘）→跳+左飘→落顶→左行 x=104 触达
+# 事件核：触摸（预计 pw 位图或道具消失）+槽坐标+轨迹
+name sc-touch-gate2
+frames 1400
+watch_range 0000-00ff zp
+watch_range 0100-07ff iram
+watch_range 6988-698f pw
+
+press 360 start
+press 420 a
+press 540 start
+hold 995-1035 left
+hold 1045-1110 right
+hold 1115-1165 a
+hold 1115-1165 left
+hold 1170-1280 left
+
+sample_point spin-exit
+probe_mem 6988 698f
+bundle_capture 1200 analysis/bundles/sc-touch-gate2

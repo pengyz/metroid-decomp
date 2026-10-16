@@ -1,0 +1,17 @@
+# 场景：sc-touch-gate —— task-37 门 1/门 2 判别锤（装载路径×槽探针）
+# 假说修正：UpdateItems LDB4A-56 每帧填槽（PowerUpY/X/Hi=$034D/E/C）——先前探针
+# 跑未进 (14,2) 装载面（Type=$FF LDB48 早退）故无写。判别=装载后槽写点+门 2 绘制面。
+name sc-touch-gate
+frames 1300
+watch_range 0000-00ff zp
+watch_range 0100-07ff iram
+
+press 360 start
+press 420 a
+press 540 start
+hold 995-1035 left
+hold 1040-1085 a
+
+sample_point spin-exit
+probe_mem 0340 034f
+bundle_capture 1150 analysis/bundles/sc-touch-gate
