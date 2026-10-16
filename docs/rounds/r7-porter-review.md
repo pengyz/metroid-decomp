@@ -1297,6 +1297,13 @@ nmi.rs 四 init 桩接线=B31B 行清 ③测 100 绿（6 位扫真旗形）。
 细行**（port2 预言「B31B 行→handler 细行」字面兑现）=缺口演化面（每引爆一个端一个）
 ✓。**矩阵二轮解遮蔽条件成熟**（帧值类突变可测面扩至 B673 前）。findings（r10）：0 新。
 
+## task-30 handler 细行首件（7af2492）抽检：B673 SamusHitSFXInit
+
+### verdict: pass（抽检）
+
+三方全等（439/0 新案）+测 101。handler 细行族开（缺口演化面逐端清）。findings
+（r10）：0 新。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
