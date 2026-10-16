@@ -1,0 +1,14 @@
+# 场景：sc-title-menu3 —— 游标切换键判别（up 长按 vs down 长按——截图判位移）
+name sc-title-menu3
+frames 900
+watch_range 0000-00ff zp
+watch_range 0100-07ff iram
+
+press 300 start
+hold 400-440 up
+capture 460 after-up
+hold 520-560 down
+capture 580 after-down
+
+sample_point spin-exit
+bundle_capture 700 analysis/bundles/sc-title-menu3

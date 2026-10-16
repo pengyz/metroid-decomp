@@ -1,0 +1,21 @@
+# 场景：sc-title-menu —— task-36 批次 3：START/CONTINUE 菜单序列（15/1B/1A 面）
+# 路径考古（nmikstas Bank00 $8054-$805E 分发表）：0x15=StartContScrn（菜单屏）/
+# 0x16=ChooseStartCont（选择）/0x1B=StartContScrn 二例/0x1A=WaitForSTART
+# 事件核：$1F 时间线（目标 0x15→0x16）+截图像
+name sc-title-menu
+frames 900
+watch_range 0000-00ff zp
+watch_range 0100-07ff iram
+
+press 300 start
+capture 320 menu-or-title
+press 400 up
+press 430 down
+capture 450 after-toggle
+press 500 a
+capture 520 after-choose
+press 600 start
+capture 620 after-start2
+
+sample_point spin-exit
+bundle_capture 700 analysis/bundles/sc-title-menu

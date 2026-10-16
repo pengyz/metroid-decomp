@@ -1,0 +1,18 @@
+# 场景：sc-title-menu2 —— 批次 3 调径 v2（菜单屏实达 ✓：游标 START——down 切
+# CONTINUE+双确认键试（a 后 start）；事件核=$1F→0x16 后游标位移/确认转段+截图）
+name sc-title-menu2
+frames 900
+watch_range 0000-00ff zp
+watch_range 0100-07ff iram
+
+press 300 start
+capture 320 menu
+press 400 down
+capture 420 cursor-continue
+press 500 a
+capture 520 after-a
+press 600 start
+capture 620 after-start-confirm
+
+sample_point spin-exit
+bundle_capture 700 analysis/bundles/sc-title-menu2

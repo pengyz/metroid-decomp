@@ -1,0 +1,21 @@
+# 场景：title-recon —— task-36 侦察：title 导航地图（SELECT/A/B/方向探索）
+# 事件核：$1F TitleRoutine 时间线（zp watch）+截图像（capture 后判屏）
+name title-recon
+frames 900
+watch_range 0000-00ff zp
+watch_range 0100-07ff iram
+
+press 300 select
+capture 310 after-select1
+press 400 select
+capture 410 after-select2
+press 500 a
+capture 510 after-a
+press 600 b
+capture 610 after-b
+press 700 up
+press 730 down
+capture 740 after-ud
+
+sample_point spin-exit
+bundle_capture 800 analysis/bundles/title-recon

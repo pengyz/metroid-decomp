@@ -464,6 +464,107 @@
           "note": "porter 10 态收尾（ba73f10）后会师腿——预期前沿=B31B 声引擎分派"
         }
       }
+    },
+    {
+      "id": "l3-sc-title-menu2",
+      "scenario": "sc-title-menu2",
+      "frames": 900,
+      "watch": [
+        {
+          "label": "zp",
+          "base": "0000",
+          "range": "0000-00ff"
+        },
+        {
+          "label": "iram",
+          "base": "0100",
+          "range": "0100-07ff"
+        }
+      ],
+      "oracle_sha256": "4ef3e07f46105f73604a1f1902cce0b1265806a07ad6eda413fe154021656f3b",
+      "determinism_evidence": "双跑逐字节一致（2026-10-17 sha 4ef3e07f…）",
+      "scenario_sha256": "45be419ce6499cb3549ab32d9358a04eea958da2449e35d905d10196fd842b5b",
+      "frame_keys": [],
+      "legs": {
+        "oracle": {
+          "sample_point": "spin-exit",
+          "rows": 885,
+          "missing": [
+            2,
+            4,
+            5,
+            6,
+            301,
+            302,
+            303,
+            602,
+            603,
+            604,
+            605,
+            606,
+            607,
+            608,
+            900
+          ],
+          "head_skip": 1,
+          "note": "title 菜单序列（15/1B/1A 面）——菜单屏实达（START/CONTINUE+游标）+确认=START→游戏起始分支（f620 截图实证）；切换键考古=SELECT（$90EB）；bundle=analysis/bundles/sc-title-menu2.mss"
+        },
+        "game-core": {
+          "sample_point": null,
+          "note": "title 深路径件（0x18/15/1B）对拍素材——移植线到域即比"
+        }
+      }
+    },
+    {
+      "id": "l3-sc-password-entry3",
+      "scenario": "sc-password-entry3",
+      "frames": 1200,
+      "watch": [
+        {
+          "label": "zp",
+          "base": "0000",
+          "range": "0000-00ff"
+        },
+        {
+          "label": "iram",
+          "base": "0100",
+          "range": "0100-07ff"
+        },
+        {
+          "label": "pw",
+          "base": "6988",
+          "range": "6988-698f"
+        }
+      ],
+      "oracle_sha256": "2151171cc25623cdeffcc2192c972f6e50a0873a66df44f63eafd537fcee8435",
+      "determinism_evidence": "双跑逐字节一致（2026-10-17 sha 2151171c…）",
+      "scenario_sha256": "a82e6d051e051fb617314717755b89049333e7867eab03a028384f2e539b770b",
+      "frame_keys": [],
+      "legs": {
+        "oracle": {
+          "sample_point": "spin-exit",
+          "rows": 1189,
+          "missing": [
+            2,
+            4,
+            5,
+            6,
+            301,
+            302,
+            303,
+            502,
+            503,
+            504,
+            1200
+          ],
+          "head_skip": 1,
+          "note": "密码输入序列（0x18 深路径 face）——$1F→0x17→**0x18 EnterPassword 实达**+字符录入「22」显示实证（f740 截图）；输入序列=right/a/b/select（光标/循环/退格面）；bundle=analysis/bundles/sc-password-entry3.mss"
+        },
+        "game-core": {
+          "sample_point": null,
+          "note": "title 深路径件（0x18/15/1B）对拍素材——移植线到域即比"
+        }
+      }
     }
   ]
 }
