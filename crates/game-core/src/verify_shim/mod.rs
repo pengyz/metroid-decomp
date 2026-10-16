@@ -736,5 +736,62 @@ pub fn title_metroid_fade_out(input: &L2In) -> L2Out {
     for tag in &o.slot_writes {
         events.extend(memmap::title_state::effect_event(*tag));
     }
-    L2Out { a: o.a_out, x: input.x, y: o.y_out.unwrap_or(input.y), writes: merge_writes(events) }
+    L2Out { a: o.a_out, x: o.x_out.unwrap_or(input.x), y: o.y_out.unwrap_or(input.y), writes: merge_writes(events) }
+}
+
+/// 批4b 入口 09 适配（`sub_MoreCrosshairs` ← bank00:$81D1；组合臂）。
+pub fn title_crosshair_continue(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    // $0305/$0306 属 RAM $0300 块（归一 $0000-$07FF 面）
+    let anim_reset = input.ram[0x0305 & 0x7FF];
+    let o = crate::title::crosshair_continue(
+        r(crate::ram_map::FLASH_SCREEN), r(memmap::title_state::FLASH_INDEX),
+        r(memmap::title_state::CROSS_EXPLODE_INDEX), r(memmap::title_state::IS_UPDATING_CROSS),
+        r(crate::ram_map::FRAME_COUNT), anim_reset, r(crate::ram_map::TITLE_ROUTINE),
+        &mut crate::title::sparkle::SparkleSlot::default(),
+        &mut crate::title::sparkle::SparkleSlot::default());
+    let mut events: Vec<(u16, u8)> = Vec::new();
+    if let Some(p) = o.phase {
+        events.push(memmap::title_state::write_event_phase(p));
+    }
+    for tag in &o.writes {
+        events.extend(memmap::title_state::effect_event(*tag));
+    }
+    L2Out { a: o.a_out, x: o.x_out.unwrap_or(input.x), y: o.y_out.unwrap_or(input.y),
+            writes: merge_writes(events) }
+}
+
+/// 批4b 入口 08 适配（`sub_Crosshairs` ← bank00:$8182）。
+pub fn title_crosshairs_step(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    let mut slots: [crate::title::sparkle::CrossMissile; 8] = Default::default();
+    for (i, s) in slots.iter_mut().enumerate() {
+        let base = memmap::title_state::INTRO_SPR_BASE as usize + i * 0x10;
+        let wr = |off: usize| input.wram.get(base + off - 0x6000).copied().unwrap_or(0);
+        // 字节真偏移（机器操作数）：y0/tile1/attr2/x3/xChange6/yChange7/completeA/
+        // speedX C/speedY D/dirX E/dirY F——`.db` 行=同偏移别名（0x06/0x07 两语义并用）
+        s.y = wr(0); s.tile = wr(1); s.attr = wr(2); s.x = wr(3);
+        s.complete = wr(0x0A); s.x_change = wr(0x06); s.y_change = wr(0x07);
+        s.speed_x = wr(0x0C); s.speed_y = wr(0x0D);
+        s.dir_x = wr(0x0E); s.dir_y = wr(0x0F);
+    }
+    let mut slow = r(memmap::title_state::CROSS_SLOW_DELAY);
+    let mut spawn = r(0x00BD);
+    let star_src: Vec<u8> = (0..0xA0u16)
+        .map(|y| input.wram.get(0x0E00 + y as usize).copied().unwrap_or(0)).collect();
+    let o = crate::title::crosshairs_step(
+        r(crate::ram_map::FLASH_SCREEN), r(memmap::title_state::TIMER3),
+        r(memmap::title_state::FLASH_INDEX), r(memmap::title_state::SECOND_CROSS),
+        r(crate::ram_map::FRAME_COUNT), r(memmap::title_state::CROSS_EXPLODE_INDEX),
+        r(memmap::title_state::IS_UPDATING_CROSS), r(crate::ram_map::TITLE_ROUTINE),
+        &mut slots, &mut slow, &mut spawn, &star_src);
+    let mut events: Vec<(u16, u8)> = Vec::new();
+    if let Some(p) = o.phase {
+        events.push(memmap::title_state::write_event_phase(p));
+    }
+    for tag in &o.writes {
+        events.extend(memmap::title_state::effect_event(*tag));
+    }
+    L2Out { a: o.a_out, x: o.x_out.unwrap_or(input.x), y: o.y_out.unwrap_or(input.y),
+            writes: merge_writes(events) }
 }

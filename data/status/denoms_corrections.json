@@ -121,6 +121,21 @@
       "id": "S-FUNC-banks06-8C84-FAMILY",
       "addr": "00-06:$8C84-$8CF6（5 bank 同构代码岛，A 级 decode-sweep×ref_atlas 双工具 code 1.00）",
       "evidence": "docs/findings/decode-sweep-r4-banks0-6.md（5×$8C84-$8CF6 定谳）"
+    },
+    {
+      "id": "S-FUNC-00-8163",
+      "addr": "00:8163",
+      "evidence": "task-23 批4b：METROIDFadeOut（L2 三方全等，BUG 保真 D4 族）"
+    },
+    {
+      "id": "S-FUNC-00-8182",
+      "addr": "00:8182",
+      "evidence": "task-23 批4b：Crosshairs（L2 三方全等，BUG 保真 D4 族）"
+    },
+    {
+      "id": "S-FUNC-00-81D1",
+      "addr": "00:81D1",
+      "evidence": "task-23 批4b：MoreCrosshairs（L2 三方全等，BUG 保真 D4 族）"
     }
   ],
   "d_wrongface": {

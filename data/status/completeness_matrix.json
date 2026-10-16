@@ -18,7 +18,7 @@
       "denominator": 11
     },
     "symbol": {
-      "denominator": 481
+      "denominator": 484
     },
     "data": {
       "denominator": 193
@@ -6192,6 +6192,33 @@
       "covered": true,
       "evidence": "oracle/subroutines/l2_cases.jsonl#b-fx-*（METROIDSparkle 入口案）三方全等（window_bank=0 显式）",
       "note": "denoms 补录格（task-23 批4a②特效簇）；SparkleStep=4 跑运动链（BUG 保真×2）；字节真偏移（struct 列表≠机器布局金样本）"
+    },
+    "S-FUNC-00-8163": {
+      "id": "S-FUNC-00-8163",
+      "face": "symbol",
+      "module": "title",
+      "strength": "L2",
+      "covered": true,
+      "evidence": "oracle/subroutines/l2_cases.jsonl#b-cross-*（METROIDFadeOut 入口案族）三方全等（window_bank=0 显式）",
+      "note": "denoms 补录格（task-23 批4b crosshairs 三件）；FadeDriver::MetroidOut 臂（完成臂 InitCrossMissiles BUG 保真+无条件 DoFadeOut）；字节真偏移（struct 列表≠机器布局二证）"
+    },
+    "S-FUNC-00-8182": {
+      "id": "S-FUNC-00-8182",
+      "face": "symbol",
+      "module": "title",
+      "strength": "L2",
+      "covered": true,
+      "evidence": "oracle/subroutines/l2_cases.jsonl#b-cross-*（Crosshairs 入口案族）三方全等（window_bank=0 显式）",
+      "note": "denoms 补录格（task-23 批4b crosshairs 三件）；crosshairs_step 编排（A 毒化语义+运动引擎 8 槽+爆炸组合）；字节真偏移（struct 列表≠机器布局二证）"
+    },
+    "S-FUNC-00-81D1": {
+      "id": "S-FUNC-00-81D1",
+      "face": "symbol",
+      "module": "title",
+      "strength": "L2",
+      "covered": true,
+      "evidence": "oracle/subroutines/l2_cases.jsonl#b-cross-*（MoreCrosshairs 入口案族）三方全等（window_bank=0 显式）",
+      "note": "denoms 补录格（task-23 批4b crosshairs 三件）；crosshair_continue 组合臂（爆炸+闪光尾跳 / 死码残迹写面）；字节真偏移（struct 列表≠机器布局二证）"
     }
   }
 }

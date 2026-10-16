@@ -260,6 +260,8 @@ pub struct FadeFace {
 pub struct FadeOutcome {
     pub phase: Option<u8>,
     pub a_out: u8,
+    /// X 末值（None=透传；07 完成臂=InitCrossMissiles 循环出口 $FF）。
+    pub x_out: Option<u8>,
     pub y_out: Option<u8>,
     pub writes: Vec<(&'static str, u8)>,
     /// 槽面写（InitCrossMissiles 标记三元组——memmap::title_state::effect_event 映射）。
@@ -290,6 +292,7 @@ impl FadeDriver {
                 // `lda #$08 / sta Timer3 / lsr`（A=8→4 一指令双用）/`sta PaletteDataIndex`
                 FadeOutcome {
                     slot_writes: vec![],
+                    x_out: None,
                     phase: Some(f.phase.wrapping_add(1)),
                     a_out: 4,
                     y_out: None,
@@ -299,26 +302,26 @@ impl FadeDriver {
             }
             Self::MetroidIn => {
                 if f.timer3 != 0 {
-                    return FadeOutcome { slot_writes: vec![], phase: None, a_out: f.timer3, y_out: None, writes: vec![] };
+                    return FadeOutcome { slot_writes: vec![], x_out: None, phase: None, a_out: f.timer3, y_out: None, writes: vec![] };
                 }
                 let m = f.frame_count & 0x0F;
                 if m != 0 {
-                    return FadeOutcome { slot_writes: vec![], phase: None, a_out: m, y_out: None, writes: vec![] };
+                    return FadeOutcome { slot_writes: vec![], x_out: None, phase: None, a_out: m, y_out: None, writes: vec![] };
                 }
                 // LoadPalData 步进（ldy pal_index；Z=表耗尽）
                 let t = PAL_SELECT_TABLE[f.pal_index as usize];
                 if t == 0xFF {
-                    return FadeOutcome { slot_writes: vec![], phase: Some(f.phase.wrapping_add(1)), a_out: 0x20,
+                    return FadeOutcome { slot_writes: vec![], x_out: None, phase: Some(f.phase.wrapping_add(1)), a_out: 0x20,
                                          y_out: Some(f.pal_index),
                                          writes: vec![("TIMER3", 0x20)] };
                 }
-                FadeOutcome { slot_writes: vec![], phase: None, a_out: t, y_out: Some(f.pal_index),
+                FadeOutcome { slot_writes: vec![], x_out: None, phase: None, a_out: t, y_out: Some(f.pal_index),
                               writes: vec![("PENDING_PAL", t), ("PALETTE_INDEX", f.pal_index.wrapping_add(1))] }
             }
             Self::MetroidOut => {
                 let m = f.frame_count & 0x07;
                 if m != 0 {
-                    return FadeOutcome { slot_writes: vec![], phase: None, a_out: m, y_out: None, writes: vec![] };
+                    return FadeOutcome { slot_writes: vec![], x_out: None, phase: None, a_out: m, y_out: None, writes: vec![] };
                 }
                 let mut writes: Vec<(&'static str, u8)> = vec![];
                 if f.fade_index == 4 {
@@ -335,7 +338,8 @@ impl FadeDriver {
                         writes.push(("PENDING_PAL", t));
                         writes.push(("FADE_INDEX", f.fade_index.wrapping_add(1)));
                     }
-                    return FadeOutcome { slot_writes: vec![], phase: Some(f.phase.wrapping_add(1)), a_out: t,
+                    // X 末=InitCrossMissiles `dex/bpl` 64 跑出口（$3F 递减至 $FF）
+                    return FadeOutcome { slot_writes, x_out: Some(0xFF), phase: Some(f.phase.wrapping_add(1)), a_out: t,
                                          y_out: Some(f.fade_index), writes };
                 }
                 let t = FADE_TABLE[f.fade_index as usize];
@@ -343,31 +347,31 @@ impl FadeDriver {
                     writes.push(("PENDING_PAL", t));
                     writes.push(("FADE_INDEX", f.fade_index.wrapping_add(1)));
                 }
-                FadeOutcome { slot_writes: vec![], phase: None, a_out: t, y_out: Some(f.fade_index), writes }
+                FadeOutcome { slot_writes: vec![], x_out: None, phase: None, a_out: t, y_out: Some(f.fade_index), writes }
             }
             Self::MessageIn | Self::MessageOut => {
                 if f.timer3 != 0 {
-                    return FadeOutcome { slot_writes: vec![], phase: None, a_out: f.timer3, y_out: None, writes: vec![] };
+                    return FadeOutcome { slot_writes: vec![], x_out: None, phase: None, a_out: f.timer3, y_out: None, writes: vec![] };
                 }
                 let m = f.frame_count & 0x07;
                 if m != 0 {
-                    return FadeOutcome { slot_writes: vec![], phase: None, a_out: m, y_out: None, writes: vec![] };
+                    return FadeOutcome { slot_writes: vec![], x_out: None, phase: None, a_out: m, y_out: None, writes: vec![] };
                 }
                 let end = if *self == Self::MessageIn { 0x0B } else { 0x05 };
                 if f.fade_index == end {
                     return if *self == Self::MessageIn {
                         // 端测 0D：FadeDataIndex←0、Timer3←$30（480 帧=48×10）、inc（A=$30）
-                        FadeOutcome { slot_writes: vec![], phase: Some(f.phase.wrapping_add(1)), a_out: 0x30, y_out: None,
+                        FadeOutcome { slot_writes: vec![], x_out: None, phase: Some(f.phase.wrapping_add(1)), a_out: 0x30, y_out: None,
                                       writes: vec![("FADE_INDEX", 0), ("TIMER3", 0x30)] }
                     } else {
                         // 端测 0E：FadeDataIndex←6（fade-in 序起点）、SpareMemCB←0、inc（A=0）
-                        FadeOutcome { slot_writes: vec![], phase: Some(f.phase.wrapping_add(1)), a_out: 0x00, y_out: None,
+                        FadeOutcome { slot_writes: vec![], x_out: None, phase: Some(f.phase.wrapping_add(1)), a_out: 0x00, y_out: None,
                                       writes: vec![("FADE_INDEX", 6), ("SPARE_CB", 0)] }
                     };
                 }
                 // DoFadeOut 步进（ldy fade_index）
                 let t = FADE_TABLE[f.fade_index as usize];
-                FadeOutcome { slot_writes: vec![], phase: None, a_out: t, y_out: Some(f.fade_index),
+                FadeOutcome { slot_writes: vec![], x_out: None, phase: None, a_out: t, y_out: Some(f.fade_index),
                               writes: vec![("PENDING_PAL", t), ("FADE_INDEX", f.fade_index.wrapping_add(1))] }
             }
         }
@@ -484,4 +488,111 @@ impl EffectOutcome {
         }
         self
     }
+}
+
+// ---- 批4b·09 MoreCrosshairs（组合臂：UpdateCrossExplode + FlashIntroScreen 尾跳 /
+//      或 inc+死码写面（030D/030E/0306——「abandoned code」残迹仍写，字节实证保真））----
+
+/// 09 组合结果（复用 EffectOutcome 写面）。
+pub fn crosshair_continue(flash: u8, pal_index: u8, explode_index: u8, is_updating: u8,
+                          frame_count: u8, anim_reset: u8, phase: u8,
+                          top: &mut sparkle::SparkleSlot, bottom: &mut sparkle::SparkleSlot) -> EffectOutcome {
+    if flash != 0 {
+        let (_a1, x1, _y1, mut sw) = sparkle::update_cross_explode(is_updating, explode_index, frame_count);
+        let (a2, y2, sw2) = sparkle::flash_intro_screen(pal_index);
+        sw.extend(sw2);
+        // 尾 `jmp FlashIntroScreen`——A/Y 以 flash 出口为准（ldy 索引覆写 Y）；X 保留 explode
+        // 末值（inx 轨迹）。
+        return EffectOutcome { phase: None, a_out: a2, x_out: x1, y_out: y2,
+                               writes: sw, sparkle_init: false };
+    }
+    // 死码写面（`a9 60 8d 0d 03 a9 7c 8d 0e 03 ad 05 03 8d 06 03`——abandoned code 残迹）
+    EffectOutcome {
+        phase: Some(phase.wrapping_add(1)),
+        a_out: anim_reset, // 末 `lda $0305 / sta $0306`——A=animResetIndex
+        x_out: None,
+        y_out: None,
+        // 标记 0x02=$0300 块面（off=址内偏移）——死码残迹写（D4 保真：abandoned code 仍写）
+        writes: vec![(0x02, 0x0D, 0x60), (0x02, 0x0E, 0x7C), (0x02, 0x06, anim_reset)],
+        sparkle_init: false,
+    }
+}
+
+// ---- 批4b·08 Crosshairs 编排（flash→Timer3 门→完成检（**A 毒化语义**）→运动/爆炸组合）----
+
+/// 08 编排（$8182-$81D0）。结构互核注：**A 毒化**——激活块 `lda #$00/sta $C6` 使随后
+/// `and IntroSprs.4.complete` 链恒 0（当帧二组完成判必失败）——字节语义保真。
+#[allow(clippy::too_many_arguments)]
+pub fn crosshairs_step(flash: u8, timer3: u8, pal_index: u8, second: u8, frame_count: u8,
+                       explode_index: u8, is_updating: u8, phase: u8,
+                       slots: &mut [sparkle::CrossMissile; 8], slow: &mut u8, spawn: &mut u8,
+                       star_src: &[u8]) -> EffectOutcome {
+    let mut writes: Vec<SlotWriteTag> = Vec::new();
+    let mut y_track: Option<u8> = None;
+    let mut x_track: Option<u8> = None;
+    if flash != 0 {
+        let (a_f, y2, sw) = sparkle::flash_intro_screen(pal_index);
+        let _ = a_f;
+        y_track = y2;
+        writes.extend(sw);
+    }
+    if timer3 != 0 {
+        return EffectOutcome { phase: None, a_out: timer3, x_out: x_track, y_out: y_track,
+                               writes, sparkle_init: false };
+    }
+    let first4 = slots[0].complete & slots[1].complete & slots[2].complete & slots[3].complete;
+    if first4 == 0 {
+        let (sw, x, y) = sparkle::update_cross_missiles(slots, slow, spawn, frame_count);
+        writes.extend(sw);
+        x_track = x.or(x_track);
+        y_track = y.or(y_track);
+        let (a3, x3, y3, sw) = sparkle::update_cross_explode(is_updating, explode_index, frame_count);
+        writes.extend(sw);
+        return EffectOutcome { phase: None, a_out: a3,
+                               x_out: x3.or(x_track), y_out: y3.or(y_track),
+                               writes, sparkle_init: false };
+    }
+    // 第二组激活块（A 毒化）
+    let mut a_and = 1u8;
+    let mut ex_idx = explode_index;
+    let mut ex_flag = is_updating;
+    if second == 1 {
+        // beq @endIf_B——A=1 入 and 链
+    } else {
+        writes.push((0x20, 0xBF, second.wrapping_add(1)));
+        ex_flag = 1;
+        writes.push((0x20, 0xC7, 1));
+        writes.push((0x20, 0xC0, 1));
+        ex_idx = 0;
+        writes.push((0x20, 0xC6, 0));
+        a_and = 0; // `lda #$00` 毒化
+    }
+    let second4 = slots[4].complete & slots[5].complete & slots[6].complete & slots[7].complete;
+    if a_and & second4 == 0 {
+        let (sw, x, y) = sparkle::update_cross_missiles(slots, slow, spawn, frame_count);
+        writes.extend(sw);
+        x_track = x.or(x_track);
+        y_track = y.or(y_track);
+        let (a3, x3, y3, sw) = sparkle::update_cross_explode(ex_flag, ex_idx, frame_count);
+        writes.extend(sw);
+        return EffectOutcome { phase: None, a_out: a3,
+                               x_out: x3.or(x_track), y_out: y3.or(y_track),
+                               writes, sparkle_init: false };
+    }
+    // 末块：LoadStarSprites + 置位 + inc → 爆炸（新置位）
+    ex_flag = 1;
+    writes.push((0x20, 0xC7, 1));
+    writes.push((0x20, 0xC0, 1));
+    for y in (0..0xA0u16).rev() {
+        writes.push((0x08, (0x60 + y) as u8, star_src.get(y as usize).copied().unwrap_or(0)));
+    }
+    writes.push((0x20, 0xC8, 0));
+    ex_idx = 0;
+    writes.push((0x20, 0xC6, 0));
+    let phase_new = phase.wrapping_add(1);
+    let (a3, x3, y3, sw) = sparkle::update_cross_explode(ex_flag, ex_idx, frame_count);
+    writes.extend(sw);
+    EffectOutcome { phase: Some(phase_new), a_out: a3,
+                    x_out: x3.or(x_track), y_out: y3.or(Some(0xFF)), // LoadStarSprites Y 末=$FF（可被爆炸覆写）
+                    writes, sparkle_init: false }
 }

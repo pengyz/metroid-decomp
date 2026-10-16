@@ -126,6 +126,8 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "sub_FlashEffect" => Some(sub_flash_effect),
         "sub_METROIDSparkle" => Some(sub_sparkle_step),
         "sub_METROIDFadeOut" => Some(sub_metroid_fade_out),
+        "sub_MoreCrosshairs" => Some(sub_crosshair_continue),
+        "sub_Crosshairs" => Some(sub_crosshairs_step),
         _ => None,
     }
 }
@@ -558,4 +560,16 @@ pub fn sub_sparkle_step(input: &L2In) -> L2Out {
 /// InitCrossMissiles **BUG 保真**（`cmp PPUCTRL_ZP` zp 面）+无条件 DoFadeOut 不对称）。
 pub fn sub_metroid_fade_out(input: &L2In) -> L2Out {
     crate::verify_shim::title_metroid_fade_out(input)
+}
+
+/// sub_MoreCrosshairs —— bank00:$81D1 注册名（批4b；组合臂 UpdateCrossExplode+FlashIntroScreen
+/// 尾跳 / 死码残迹写面——D4 保真）。
+pub fn sub_crosshair_continue(input: &L2In) -> L2Out {
+    crate::verify_shim::title_crosshair_continue(input)
+}
+
+/// sub_Crosshairs —— bank00:$8182 注册名（批4b；flash/Timer3 门+完成检 A 毒化语义+
+/// 运动引擎 8 槽调度+爆炸组合）。
+pub fn sub_crosshairs_step(input: &L2In) -> L2Out {
+    crate::verify_shim::title_crosshairs_step(input)
 }

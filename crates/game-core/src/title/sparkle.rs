@@ -204,7 +204,7 @@ mod tests {
 /// InitCrossMissiles 初值表（bank0:$88BE 64B——X=$3F..0 双槽装载面）。
 pub const INIT_CROSS_TBL: [u8; 64] = [
     0x20, 0xC5, 0x80, 0x00, 0xFF, 0xFF, 0x74, 0x58, 0xFF, 0xFF, 0x00, 0xFF, 0x1D, 0x0E, 0x01, 0x01,
-    0x20, 0xC5, 0xC0, 0xF8, 0xFF, 0xFF, 0x74, 0x58, 0xFF, 0xFF, 0x00, 0xFF, 0x1F, 0x0E, 0x80, 0x01,
+    0x20, 0xC5, 0xC0, 0xF8, 0xFF, 0xFF, 0x7C, 0x58, 0xFF, 0xFF, 0x00, 0xFF, 0x1F, 0x0E, 0x80, 0x01,
     0xC8, 0xC5, 0x00, 0x00, 0xFF, 0xFF, 0x74, 0x60, 0xFF, 0xFF, 0x00, 0xFF, 0x1D, 0x1A, 0x01, 0x80,
     0xC8, 0xC5, 0x40, 0xF8, 0xFF, 0xFF, 0x7C, 0x60, 0xFF, 0xFF, 0x00, 0xFF, 0x1F, 0x1A, 0x80, 0x80,
 ];
@@ -230,4 +230,219 @@ pub fn init_cross_missiles(ff_zp: u8) -> Vec<SlotWrite> {
     w.push((0x10, 0x6D, 0x16)); // 槽6.speedY(0x0D)←$16
     w.push((0x10, 0x7D, 0x16)); // 槽7.speedY←$16
     w
+}
+
+// ---- 批4b·crosshairs 子机器（UpdateCrossExplode/FlashIntroScreen——09/08 组合点）----
+
+/// CrossExplode 长度表（bank0:$89AA 5B——DataTbl 终止索引）。
+pub const CROSS_EXPLODE_LENGTH_TBL: [u8; 5] = [0x05, 0x19, 0x41, 0x19, 0x05];
+
+/// CrossExplode 数据表（bank0:$8A4B 68B）。
+pub const CROSS_EXPLODE_DATA_TBL: [u8; 68] = [
+    0x10, 0x5A, 0xC0, 0x00, 0x79, 0x14, 0x52, 0xC8, 0x00, 0x79, 0x18, 0x5A, 0xC2, 0x40, 0x71, 0x1C,
+    0x5A, 0xC2, 0x00, 0x81, 0x20, 0x62, 0xC8, 0x80, 0x79, 0x14, 0x52, 0xC9, 0x00, 0x79, 0x18, 0x5A,
+    0xC1, 0x00, 0x71, 0x1C, 0x5A, 0xC1, 0x00, 0x81, 0x20, 0x62, 0xC9, 0x00, 0x79, 0x24, 0x4A, 0xC8,
+    0x00, 0x79, 0x28, 0x5A, 0xC2, 0x40, 0x69, 0x2C, 0x5A, 0xC2, 0x00, 0x89, 0x30, 0x6A, 0xC8, 0x80,
+    0x79, 0xA4, 0xC1, 0xB9,
+];
+
+/// ScreenFlash 调色板表（bank0:$8ABD 10B，$FF 终止）。
+pub const SCREEN_FLASH_PAL_TBL: [u8; 10] = [0x11, 0x01, 0x11, 0x01, 0x11, 0x11, 0x01, 0x11, 0x01, 0xFF];
+
+/// UpdateCrossExplode（$8976-$89A9）语义折叠。
+/// 返回 (A, X, Y 末值, 写面)。标记：0x20=zp 面；0x08=SpriteRAM $0200 相对原始偏移。
+pub fn update_cross_explode(is_updating: u8, index: u8, frame_count: u8) -> (u8, Option<u8>, Option<u8>, Vec<SlotWrite>) {
+    let mut w: Vec<SlotWrite> = Vec::new();
+    if is_updating == 0 {
+        return (0, None, None, w); // `lda $C7 / beq`——A=0 出
+    }
+    let mut idx = index;
+    if index > 4 {
+        return (1, None, None, w); // `cpy #$04 / bne` 出（A=标志值 1）
+    }
+    if index == 4 {
+        w.push((0x20, 0xC7, 0)); // 末索引：清绘制标志
+    }
+    let end = CROSS_EXPLODE_LENGTH_TBL[idx as usize];
+    w.push((0x20, 0x00, end)); // $00←终止索引
+    let mut y: usize = 0;
+    let mut x: u8 = 0;
+    loop {
+        x = CROSS_EXPLODE_DATA_TBL[y];
+        y += 1;
+        loop {
+            let v = CROSS_EXPLODE_DATA_TBL[y];
+            w.push((0x08, x, v)); // sta $0200,x
+            x = x.wrapping_add(1);
+            y += 1;
+            if x & 3 == 0 {
+                break;
+            }
+        }
+        if y == end as usize {
+            break;
+        }
+    }
+    // 尾：`lda FrameCount / lsr / bcc` 奇帧才 `inc $C6`（每两帧进一格）
+    let a = frame_count >> 1;
+    if frame_count & 1 != 0 {
+        idx = idx.wrapping_add(1);
+        w.push((0x20, 0xC6, idx));
+    }
+    (a, Some(x), Some(y as u8), w)
+}
+
+/// FlashIntroScreen（$8AA7-$8ABC）语义折叠：ScreenFlashPalTbl 步进（$FF 端⇒清索引+标志）。
+/// 返回 (A, Y 末值, 写面)。
+pub fn flash_intro_screen(index: u8) -> (u8, Option<u8>, Vec<SlotWrite>) {
+    let mut w: Vec<SlotWrite> = Vec::new();
+    let y = index;
+    let t = *SCREEN_FLASH_PAL_TBL.get(index as usize).unwrap_or(&0xFF);
+    if t == 0xFF {
+        w.push((0x20, 0xC2, 0));
+        w.push((0x20, 0xC0, 0));
+        return (0, Some(y), w); // `lda #$00 / sta …`——A=0 出
+    }
+    w.push((0x20, 0x1C, t)); // PaletteDataPending
+    w.push((0x20, 0xC2, index.wrapping_add(1)));
+    (t, Some(y), w)
+}
+
+// ---- 批4b·cross-missile 运动引擎（UpdateCrossMissiles/Coords/CalcDisplacement 折叠）----
+
+/// 一枚 cross-missile 槽面（步距 $10；字节真偏移：y0/tile1/attr2/x3/completeA/
+/// speedY 0x0D/speedX 0x0E/xChange 0x07(=crossMissileXChange 位)/yChange 0x06/
+/// dirX 0x10/dirY 0x11——后两偏移经机器操作数核）。
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct CrossMissile {
+    pub y: u8,
+    pub tile: u8,
+    pub attr: u8,
+    pub x: u8,
+    pub complete: u8,
+    pub y_change: u8,
+    pub x_change: u8,
+    pub speed_y: u8,
+    pub speed_x: u8,
+    pub dir_x: u8,
+    pub dir_y: u8,
+}
+
+/// @CalcDisplacement（$9871）：FrameCount 抖动除 16（写面 zp $04/$00——NMI 温p 面）。
+pub fn calc_displacement(speed: u8, frame_count: u8) -> (u8, Vec<SlotWrite>) {
+    let mut w = Vec::new();
+    let mut t4 = speed;
+    let mut t0: u8 = 8;
+    w.push((0x20, 0x04, t4));
+    w.push((0x20, 0x00, t0));
+    loop {
+        let carry = t4 & 1;
+        t4 >>= 1;
+        if carry != 0 && (frame_count & t0) == 0 {
+            t4 = t4.wrapping_add(1);
+        }
+        t0 >>= 1;
+        w.push((0x20, 0x04, t4));
+        w.push((0x20, 0x00, t0));
+        if t0 == 0 {
+            break;
+        }
+    }
+    (t4, w)
+}
+
+/// UpdateCrossMissileCoords（$981E）→ carry（1=仍在动）。y 轨迹经 tr。
+pub fn missile_coords(m: &mut CrossMissile, slot: u8, frame_count: u8, tr: &mut (Option<u8>, Option<u8>))
+    -> (bool, Vec<SlotWrite>) {
+    let mut w = Vec::new();
+    let (d, w1) = calc_displacement(m.speed_x, frame_count);
+    w.extend(w1);
+    tr.1 = Some(m.dir_x); // ldy dirX
+    let disp = if m.dir_x & 0x80 != 0 { 0u8.wrapping_sub(d).wrapping_add(1) } else { d };
+    m.x = m.x.wrapping_add(disp);
+    w.push((0x30 + slot, 0x03, m.x));
+    let sbc_carry = if m.x >= m.x_change { 1u8 } else { 0u8 };
+    if sbc_carry ^ (m.dir_x & 1) == 0 {
+        // x 完成 → 快照
+        m.y = m.y_change;
+        m.x = m.x_change;
+        w.push((0x30 + slot, 0x00, m.y));
+        w.push((0x11, 0x03, m.x));
+        return (false, w);
+    }
+    let (d, w2) = calc_displacement(m.speed_y, frame_count);
+    w.extend(w2);
+    tr.1 = Some(m.dir_y); // ldy dirY
+    let disp = if m.dir_y & 0x80 != 0 { 0u8.wrapping_sub(d).wrapping_add(1) } else { d };
+    m.y = m.y.wrapping_add(disp);
+    w.push((0x30 + slot, 0x00, m.y));
+    let sbc2 = if m.y >= m.y_change { 1u8 } else { 0u8 };
+    if sbc2 ^ (m.dir_y & 1) == 0 {
+        m.y = m.y_change;
+        m.x = m.x_change;
+        w.push((0x30 + slot, 0x00, m.y));
+        w.push((0x11, 0x03, m.x));
+        return (false, w);
+    }
+    (true, w)
+}
+
+/// UpdateCrossMissile（$8963）：complete 检→Coords→WriteIntroSprite。
+pub fn update_missile(m: &mut CrossMissile, slot: u8, frame_count: u8, tr: &mut (Option<u8>, Option<u8>))
+    -> Vec<SlotWrite> {
+    let mut w = Vec::new();
+    if m.complete != 0 {
+        return w;
+    }
+    let (moving, w1) = missile_coords(m, slot, frame_count, tr);
+    w.extend(w1);
+    if !moving {
+        m.complete = 1;
+        w.push((0x30 + slot, 0x0A, 1));
+    }
+    // WriteIntroSprite（y-1 修正）
+    w.push((0x38 + slot, 0x00, m.y.wrapping_sub(1)));
+    w.push((0x38 + slot, 0x01, m.tile));
+    w.push((0x38 + slot, 0x02, m.attr));
+    w.push((0x38 + slot, 0x03, m.x));
+    w
+}
+
+/// UpdateCrossMissiles（$88FE）调度（槽3 经 spawn 门单跑 tail 技法）。
+/// slots=8 枚；slow/spawn 为 $BC/$BD 面；返回写面 + (X,Y) 轨迹。
+pub fn update_cross_missiles(slots: &mut [CrossMissile; 8], slow: &mut u8, spawn: &mut u8,
+                             frame_count: u8) -> (Vec<SlotWrite>, Option<u8>, Option<u8>) {
+    let mut w = Vec::new();
+    let mut tr: (Option<u8>, Option<u8>) = (None, None);
+    if *slow != 0 {
+        *slow = slow.wrapping_sub(1);
+        w.push((0x20, 0xBC, *slow));
+        if *slow == 0 {
+            for (i, s) in slots.iter_mut().enumerate() {
+                s.speed_x <<= 1;
+                s.speed_y <<= 1;
+                w.push((0x30 + i as u8, 0x0E, s.speed_x));
+                w.push((0x30 + i as u8, 0x0D, s.speed_y));
+            }
+        }
+    }
+    for i in 0..3usize {
+        tr.0 = Some(i as u8 * 0x10);
+        w.extend(update_missile(&mut slots[i], i as u8, frame_count, &mut tr));
+    }
+    tr.0 = Some(0x30);
+    if *spawn != 0 {
+        *spawn = spawn.wrapping_sub(1);
+        w.push((0x20, 0xBD, *spawn));
+        if *spawn != 0 {
+            w.extend(update_missile(&mut slots[3], 3, frame_count, &mut tr)); // tail-call 后 rts
+            return (w, tr.0, tr.1);
+        }
+    }
+    w.extend(update_missile(&mut slots[3], 3, frame_count, &mut tr));
+    for i in 4..8usize {
+        tr.0 = Some(i as u8 * 0x10);
+        w.extend(update_missile(&mut slots[i], i as u8, frame_count, &mut tr));
+    }
+    (w, tr.0, tr.1)
 }

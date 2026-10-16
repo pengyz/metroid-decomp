@@ -240,3 +240,6 @@ mod tests {
         assert_eq!(NMI_STATUS, 0x001A); // constants_ram.asm:474
     }
 }
+
+/// FlashScreen=$C0（:734「#$01=Flash screen during crosshairs routine」）。
+pub const FLASH_SCREEN: u16 = 0x00C0;

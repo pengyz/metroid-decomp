@@ -84,6 +84,10 @@ pub const INTRO_STAR_OFFSET: u16 = 0x00C3;
 pub const FADE_INDEX: u16 = 0x00C4;
 /// SpriteLoadPending=$C8（:743「Set to #$00 after sprite RAM load complete」）。
 pub const SPRITE_LOAD_PENDING: u16 = 0x00C8;
+/// CrossExplodeLengthIndex=$C6（:741）。
+pub const CROSS_EXPLODE_INDEX: u16 = 0x00C6;
+/// IsUpdatingCrossExplode=$C7（:742）。
+pub const IS_UPDATING_CROSS: u16 = 0x00C7;
 /// CrossMsl0to3SlowDelay=$BC（:727）。
 pub const CROSS_SLOW_DELAY: u16 = 0x00BC;
 /// SecondCrosshairSprites=$BF（:732）。
@@ -202,11 +206,23 @@ pub fn effect_event(tag: (u8, u8, u8)) -> Vec<(u16, u8)> {
     if slot & 0x80 != 0 {
         return vec![(SPRITE_RAM4_BASE + (slot & 1) as u16 * INTRO_SPR_STRIDE + off as u16, v)];
     }
-    if slot & 0x20 != 0 {
-        return vec![(off as u16, v)]; // zp 面（off=址）
+    if slot == 0x20 {
+        return vec![(off as u16, v)]; // zp 面（off=址）——精确判（0x30 族槽标记不得落此）
     }
     if slot == 0x10 {
         return vec![(INTRO_SPR_BASE + off as u16, v)]; // INTRO_SPR_BASE 相对原始偏移
+    }
+    if slot == 0x08 {
+        return vec![(0x0200 + off as u16, v)]; // SpriteRAM $0200 相对（UpdateCrossExplode 面）
+    }
+    if (0x30..0x38).contains(&slot) {
+        return vec![(INTRO_SPR_BASE + (slot - 0x30) as u16 * INTRO_SPR_STRIDE + off as u16, v)];
+    }
+    if (0x38..0x40).contains(&slot) {
+        return vec![(SPRITE_RAM4_BASE + (slot - 0x38) as u16 * INTRO_SPR_STRIDE + off as u16, v)];
+    }
+    if slot == 0x02 {
+        return vec![(0x0300 + off as u16, v)]; // Objects $0300 块面（09 死码残迹）
     }
     if slot & 0x40 != 0 {
         return vec![match off {
