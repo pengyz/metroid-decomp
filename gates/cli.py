@@ -789,7 +789,18 @@ def gate_subroutine_diff() -> tuple[str, str]:
 
 
 def gate_trace_diff() -> tuple[str, str]:
-    return _gate_runner_dispatch("diff_traces.py", ROOT / "oracle" / "traces", "L3 帧级 trace")
+    verdict, detail = _gate_runner_dispatch("diff_traces.py", ROOT / "oracle" / "traces", "L3 帧级 trace")
+    # 已知偏差签名级降级（AGENTS §6 TOLERATED 消费面，2026-10-15 立）：FAIL 且失败
+    # 细节含某条 tolerated 登记的 item 串（精确签名子串匹配）⇒ verdict=TOLERATED
+    # ——不阻塞 ≠ 绿（SUMMARY 显式 TOLERATED 计数；收尾行绝不打裸 PASS）；签名外
+    # 分歧/新分歧照常 FAIL。登记=baseline tolerate 笔（gate/item/bug/reason 显式）。
+    if verdict == FAIL:
+        baseline = load_baseline()
+        for item in baseline.get("tolerated", []):
+            if item.get("gate") == "trace-diff" and item.get("item") and item["item"] in detail:
+                return TOLERATED, (f"已登记已知偏差（签名命中）: {item['bug']}: {item['reason']}"
+                                   f"——原明细: {detail}")
+    return verdict, detail
 
 
 def gate_visual_diff() -> tuple[str, str]:
