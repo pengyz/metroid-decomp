@@ -305,6 +305,14 @@ bundle 快照随包（任意起点素材库）✓。**事件核两佳**：①道
 →真道具位图 PasswordByte00($6988) 定义锚）原地更正+补 pw watch 重采。
 438/0+CHECK PASS。findings 三族（r10）：0 新。
 
+## task-34 场景库批 2（082409c）抽检：拾取/受击路径考古收敛
+
+### verdict: pass（抽检）
+
+双未达如实（8 路径变体 pw 面全 00=D7 不冒领）+考古三件硬材料（A 级：道具定位
+格式 packed yyyyxxxx 破案）+9 路径包 bundle 素材（ObjectX/Y+JumpDsp 逐帧轨迹=
+几何考古原始数据）。trace 门 9 案 0 失败。findings 三族（r10）：0 新。
+
 ## 遗留风险清单
 
 1. S 面 120 为 B 级估计——分母 v2 实际登记（lead task-5）以 decode-sweep 复跑 + 逐条
