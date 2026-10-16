@@ -1146,6 +1146,22 @@ spin-exit 采样+**run1/run2 对称双跑逐字节一致**（06bf0d35 换锚；1
 键集白名单随案激活（双腿 sample_point=spin-exit）+trace 门 2 案 0 失败 1 记账容忍 ✓。
 findings（r10）：0 新。**v5 §5 槽 4/5 主体勾销**（fixture DSL+双腿场景包+双跑换锚）。
 
+## task-31（76c8aa7）：L4 视觉对拍奠基——visual-diff SKIP→ENABLED 裁定把关（关键件全仪式）
+
+### verdict: pass——**ENABLED 核准**（verifier 门面裁定）
+
+五面证伪+加验两靶：①selftest 四对照独立复跑 ✓（同帧全同/1 像素打回/白名单放行/
+尺寸打回——`selftest: PASS` 原文）②**白名单空表零容差** ✓（`whitelist: []` grep 证
+0 条目；条目格式 {file,rect,reason,approved_by}+「变更需用户确认并记录」注随表=
+AGENTS §5 白名单纪律执行面就位）③金面 7 帧 0 失败（门禁面可复跑）✓ ④**PNG 解码
+显式拒收** ✓（depth≠8/ctype∉{2,6}/interlace≠0 三面 PngError——防静默错比）⑤
+**判别力实证** ✓：1 像素打回首分歧定位 `@2,1 金=102030ff 采=102130ff`（坐标+双色
+值）+selftest 破即拒跑机制。**基线影响核** ✓：SKIP→ENABLED 声明随 commit；渲染腿
+未启用（S6）显式注。
+**裁定**：visual-diff 门禁 ENABLED 生效（L1-L4 四层收官=验证体系完整性关键件）；
+白名单空表起步=像素级零容差，后续任何条目须用户确认+记录（我门面把关续）。
+findings（r10）：0 新。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
