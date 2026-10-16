@@ -201,6 +201,39 @@ mod tests {
         assert_eq!(m.read_ram(ANIM_RESET_INDEX), 0x35);
     }
 
+    /// SamusJump 位移门（≥$20+JUMP 松开→StopVertMovement 爆点）。
+    #[test]
+    fn samus_jump_release_gate() {
+        use crate::ram_map::{JOY1_STATUS, SAMUS_JUMP_DISP};
+        let mut m = FrameMemory::default();
+        m.write_ram(crate::samus::physics::SAMUS_SPEED_Y_I, 0x80); // 上升
+        m.write_ram(SAMUS_JUMP_DISP, 0x20); // ≥$20
+        m.write_ram(JOY1_STATUS, 0); // JUMP 松开
+        let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| samus_jump(&mut m)));
+        let err = r.unwrap_err();
+        let msg = err.downcast_ref::<String>().cloned()
+            .or_else(|| err.downcast_ref::<&'static str>().map(|s| (*s).to_string()))
+            .unwrap_or_default();
+        assert!(msg.contains("unported @ bank07:D147"), "松开爆点失准: {msg}");
+    }
+
+    /// SamusRoll 球形解除（radiusY+=8 可观测写面）。
+    #[test]
+    fn samus_roll_breakout_writes_radius() {
+        use crate::ram_map::{JOY1_CHANGE, JOY1_STATUS, SAMUS_RADIUS_Y};
+        let mut m = FrameMemory::default();
+        m.write_ram(JOY1_CHANGE, 0x08); // UP 开门
+        m.write_ram(JOY1_STATUS, 0); // DOWN 未按
+        m.write_ram(SAMUS_RADIUS_Y, 0x10);
+        let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| samus_roll(&mut m)));
+        let err = r.unwrap_err();
+        let msg = err.downcast_ref::<String>().cloned()
+            .or_else(|| err.downcast_ref::<&'static str>().map(|s| (*s).to_string()))
+            .unwrap_or_default();
+        assert!(msg.contains("unported @ bank07:E796"), "站立检爆点失准: {msg}");
+        assert_eq!(m.read_ram(SAMUS_RADIUS_Y), 0x18); // +8
+    }
+
     /// UpdateSamus 面：PageIndex/IsSamus 落态+位 7 站立直入引爆。
     #[test]
     fn update_samus_spine_face() {
@@ -318,4 +351,40 @@ pub fn samus_stand(mem: &mut FrameMemory) {
         mem.write_ram(crate::ram_map::SAMUS_STATUS, 2); // sa_Jump
     }
     crate::unported!("bank07:CD6D"); // SetSamusData（动画数据面）
+}
+
+// ==== 10 态肉·批3（SamusJump/SamusRoll——同形轻仪式）====
+
+/// SamusJump 处理件（asm 内容锚 `SamusJump: ; 07:D002`——跳跃物理+输入面）：
+/// 位移/速向门（JumpDsplcmnt≥$20+JUMP 松开→StopVertMovement）→水平检（嵌套件）→
+/// UP→JumpPntUp 动画+sa_PntJump(6) 状态→Fire 检→岩浆跳（SetSamusJump+3 帧延迟）→
+/// 触地检（AccelY）。嵌套件桩：SamusJump_CheckHorzMovement/LCF2E/
+/// SamusJump_CheckFire/SetSamusJump/SetSamusData_3FrameAnimDelay。
+pub fn samus_jump(mem: &mut FrameMemory) {
+    use button::*;
+    let disp = mem.read_ram(crate::ram_map::SAMUS_JUMP_DISP);
+    let speed_y_i = mem.read_ram(crate::samus::physics::SAMUS_SPEED_Y_I);
+    if speed_y_i & 0x80 != 0 && disp >= 0x20 {
+        if mem.read_ram(crate::ram_map::JOY1_STATUS) & A == 0 {
+            crate::unported!("bank07:D147"); // StopVertMovement（松开起跳）
+        }
+    }
+    crate::unported!("bank07:D015"); // SamusJump_CheckHorzMovement 族（水平检链）
+}
+
+/// SamusRoll 处理件（asm 内容锚 `SamusRoll: ; 07:D0E1`——球形解除面）：
+/// UP/JUMP 开门+DOWN 闭门→**radiusY+=8**（$0301 写面——可观测）→ObjectCheckMoveUp
+/// 站立可行检→位移 11px→SetSamusStand。嵌套件桩：ObjectCheckMoveUp（E7AD 族）/
+/// ApplySpeedToPosition/SetSamusStand。
+pub fn samus_roll(mem: &mut FrameMemory) {
+    use button::*;
+    let change = mem.read_ram(crate::ram_map::JOY1_CHANGE);
+    let open_gate = (change & UP != 0) || (change & A != 0); // UP 或 JUMP
+    if open_gate && mem.read_ram(crate::ram_map::JOY1_STATUS) & DOWN == 0 {
+        // 球形解除：radiusY+=8（字节自证 `clc/adc #$08/sta Samus.radiusY`）
+        let ry = mem.read_ram(crate::ram_map::SAMUS_RADIUS_Y).wrapping_add(8);
+        mem.write_ram(crate::ram_map::SAMUS_RADIUS_Y, ry);
+        crate::unported!("bank07:E796"); // ObjectCheckMoveUp（站立可行检）
+    }
+    crate::unported!("bank07:D0E1-tail"); // 滚动保持面（尾段）
 }
