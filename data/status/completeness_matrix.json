@@ -18,7 +18,7 @@
       "denominator": 11
     },
     "symbol": {
-      "denominator": 478
+      "denominator": 481
     },
     "data": {
       "denominator": 193
@@ -6165,6 +6165,33 @@
       "covered": true,
       "evidence": "oracle/subroutines/l2_cases.jsonl#b-fade-*（MessageFadeOut 入口案族）三方全等（window_bank=0 显式）；语义来源 bank00:8263（FadeDriver 同形折叠臂）",
       "note": "denoms 补录格（task-23 批3①淡变族）；链规 19 同形折叠（FadeDriver 一骨架四臂）；窗口读表 $8B6D/$8A9A=A9 族口径显式钉窗"
+    },
+    "S-FUNC-00-8142": {
+      "id": "S-FUNC-00-8142",
+      "face": "symbol",
+      "module": "title",
+      "strength": "L2",
+      "covered": true,
+      "evidence": "oracle/subroutines/l2_cases.jsonl#b-fx-*（LoadFlashTimer 入口案）三方全等（window_bank=0 显式）",
+      "note": "denoms 补录格（task-23 批4a②特效簇）；装配臂（Timer3←8）；字节真偏移（struct 列表≠机器布局金样本）"
+    },
+    "S-FUNC-00-8109": {
+      "id": "S-FUNC-00-8109",
+      "face": "symbol",
+      "module": "title",
+      "strength": "L2",
+      "covered": true,
+      "evidence": "oracle/subroutines/l2_cases.jsonl#b-fx-*（FlashEffect 入口案）三方全等（window_bank=0 显式）",
+      "note": "denoms 补录格（task-23 批4a②特效簇）；FlashStep 驱动（LoadPalData+LoadSparkleData 组合+尾补丁）；字节真偏移（struct 列表≠机器布局金样本）"
+    },
+    "S-FUNC-00-814D": {
+      "id": "S-FUNC-00-814D",
+      "face": "symbol",
+      "module": "title",
+      "strength": "L2",
+      "covered": true,
+      "evidence": "oracle/subroutines/l2_cases.jsonl#b-fx-*（METROIDSparkle 入口案）三方全等（window_bank=0 显式）",
+      "note": "denoms 补录格（task-23 批4a②特效簇）；SparkleStep=4 跑运动链（BUG 保真×2）；字节真偏移（struct 列表≠机器布局金样本）"
     }
   }
 }

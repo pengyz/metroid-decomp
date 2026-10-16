@@ -101,6 +101,21 @@
       "id": "S-FUNC-00-8263",
       "addr": "00:8263",
       "evidence": "task-23 批3：MessageFadeOut（FadeDriver 同形折叠臂，L2 三方全等）"
+    },
+    {
+      "id": "S-FUNC-00-8142",
+      "addr": "00:8142",
+      "evidence": "task-23 批4a：LoadFlashTimer（EffectDriver 臂，L2 三方全等）"
+    },
+    {
+      "id": "S-FUNC-00-8109",
+      "addr": "00:8109",
+      "evidence": "task-23 批4a：FlashEffect（EffectDriver 臂，L2 三方全等）"
+    },
+    {
+      "id": "S-FUNC-00-814D",
+      "addr": "00:814D",
+      "evidence": "task-23 批4a：METROIDSparkle（EffectDriver 臂，L2 三方全等）"
     }
   ],
   "d_wrongface": {

@@ -182,3 +182,33 @@ mod tests_batch2 {
         assert_eq!(objects_clear_events()[31], (0x031F, 0));
     }
 }
+
+// ---- 批4a 特效簇映射面（IntroSpr 槽 $6EA0/$6EB0 步距 $10 + SpriteRAM.4 面 $0210/$0220）----
+
+/// IntroSpr 槽 0 基址（LoadSparkleData `sta IntroSprs.0.y,x` 落 $6EA0 实证）。
+pub const INTRO_SPR_BASE: u16 = 0x6EA0;
+/// 槽步距（X=0/$10）。
+pub const INTRO_SPR_STRIDE: u16 = 0x10;
+/// SpriteRAM.4 面基址（WriteIntroSprite 目标；SpriteRAM=$0200，.4=+16）。
+pub const SPRITE_RAM4_BASE: u16 = 0x0210;
+
+/// 特效写标签映射（slot|0x80=SpriteRAM 面；slot 0x40=调色板面（off 0=C1 clamp/1=C1/2=1C））。
+pub fn effect_event(tag: (u8, u8, u8)) -> Vec<(u16, u8)> {
+    let (slot, off, v) = tag;
+    if slot & 0x80 != 0 {
+        return vec![(SPRITE_RAM4_BASE + (slot & 1) as u16 * INTRO_SPR_STRIDE + off as u16, v)];
+    }
+    if slot & 0x20 != 0 {
+        return vec![(off as u16, v)]; // zp 指针写（$00/$01）
+    }
+    if slot & 0x40 != 0 {
+        return vec![match off {
+            0 => (PALETTE_INDEX, v),
+            1 => (PALETTE_INDEX, v),
+            2 => (crate::ram_map::PALETTE_PENDING, v),
+            3 => (TIMER3, v),
+            _ => panic!("effect 未知调色板偏移 {off}——fail-loud"),
+        }];
+    }
+    vec![(INTRO_SPR_BASE + slot as u16 * INTRO_SPR_STRIDE + off as u16, v)]
+}

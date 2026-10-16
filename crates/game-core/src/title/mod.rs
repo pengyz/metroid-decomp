@@ -19,6 +19,7 @@
 //! （第三方注采纳三重自证：字节+递减率+行为）；③SpareMemC9 常量面=dw（$C9/$CA）而
 //! ClearSpareMem 只写 $C9 低字节（`85 c9` zp 单址）——写面以字节为准。
 
+pub mod sparkle;
 /// 状态机骨架（批1 建形，枚举臂随批2-6 逐簇补）：TitleRoutine 相位面。
 /// _id 表序=分发序（StartContinueScreen15=0x15 / EndGame=0x1D 锚——128e0a6 自数证）。
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -334,5 +335,117 @@ impl FadeDriver {
                               writes: vec![("PENDING_PAL", t), ("FADE_INDEX", f.fade_index.wrapping_add(1))] }
             }
         }
+    }
+}
+
+// ---- 批4a·②特效簇（04/05/06——EffectDriver 三臂；06 组合 sparkle::update_sparkle_sprites）----
+
+/// 特效驱动（04/05/06——门/掩/完成转移共形骨架的第二族折叠）。
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum EffectDriver {
+    /// 04 LoadFlashTimer：Timer3 门 + 装配（Timer3←8、inc）。
+    FlashTimerSetup,
+    /// 05 FlashEffect：&3 掩 + PalSelect 步进 + 完成（idx==4）⇒ LoadSparkleData+Timer3←$18。
+    FlashStep,
+    /// 06 METROIDSparkle：Timer3 门 + 双 complete 检 + 4 跑运动链。
+    SparkleStep,
+}
+
+/// 特效面（zp+槽面输入）。
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct EffectFace {
+    pub timer3: u8,
+    pub frame_count: u8,
+    pub pal_index: u8,
+    pub phase: u8,
+    pub complete0: u8,
+    pub complete1: u8,
+}
+
+/// 特效结果（写面含槽写——(slot|0x80=SpriteRAM 标记, 偏移, 值)）。
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct EffectOutcome {
+    pub phase: Option<u8>,
+    pub a_out: u8,
+    pub x_out: Option<u8>,
+    pub y_out: Option<u8>,
+    pub writes: Vec<SlotWriteTag>,
+    /// 05 完成臂：LoadSparkleData 装载面（两槽同值）。
+    pub sparkle_init: bool,
+}
+
+/// 槽写标签（重导 sparkle 域）。
+pub type SlotWriteTag = sparkle::SlotWrite;
+
+impl EffectDriver {
+    /// 特效 tick（04/05 无槽写；06 运动链经 sparkle 域）。
+    pub fn tick(&self, f: &EffectFace, top: &mut sparkle::SparkleSlot,
+                bottom: &mut sparkle::SparkleSlot) -> EffectOutcome {
+        match self {
+            Self::FlashTimerSetup => {
+                if f.timer3 != 0 {
+                    return EffectOutcome { phase: None, a_out: f.timer3, x_out: None, y_out: None,
+                                           writes: vec![], sparkle_init: false };
+                }
+                EffectOutcome { phase: Some(f.phase.wrapping_add(1)), a_out: 8, x_out: None, y_out: None,
+                                writes: vec![(0x40 | 0, 3, 8)], sparkle_init: false }
+            }
+            Self::FlashStep => {
+                if f.frame_count & 3 != 0 {
+                    return EffectOutcome { phase: None, a_out: f.frame_count & 3, x_out: None,
+                                           y_out: None, writes: vec![], sparkle_init: false };
+                }
+                let c1 = f.pal_index & 3;
+                let t = PAL_SELECT_TABLE[c1 as usize];
+                let mut pending: Option<u8> = None;
+                let mut idx = c1;
+                if t != 0xFF {
+                    pending = Some(t);
+                    idx = c1.wrapping_add(1);
+                }
+                if f.timer3 != 0 {
+                    return EffectOutcome { phase: None, a_out: f.timer3, x_out: None,
+                                           y_out: Some(c1), writes: vec![], sparkle_init: false, }
+                        .with_pal(c1, idx, pending);
+                }
+                if idx != 4 {
+                    return EffectOutcome { phase: None, a_out: idx, x_out: None,
+                                           y_out: Some(c1), writes: vec![], sparkle_init: false }
+                        .with_pal(c1, idx, pending);
+                }
+                let mut o = EffectOutcome { phase: Some(f.phase.wrapping_add(1)), a_out: 0x18,
+                                            x_out: Some(0xFF), y_out: Some(c1), writes: vec![],
+                                            sparkle_init: true };
+                o = o.with_pal(c1, idx, pending);
+                o
+            }
+            Self::SparkleStep => {
+                if f.timer3 != 0 {
+                    return EffectOutcome { phase: None, a_out: f.timer3, x_out: None, y_out: None,
+                                           writes: vec![], sparkle_init: false };
+                }
+                if f.complete0 & f.complete1 == 1 {
+                    return EffectOutcome { phase: Some(f.phase.wrapping_add(1)), a_out: 1,
+                                           x_out: None, y_out: None, writes: vec![],
+                                           sparkle_init: false };
+                }
+                let r = sparkle::update_sparkle_sprites(top, bottom);
+                // X 末=ldx #$10（UpdateSparkleSprites 中点装载）；Y 末=最后 coord `ldy idx/iny`
+                EffectOutcome { phase: None, a_out: r.a_out, x_out: Some(0x10), y_out: Some(r.y_out),
+                                writes: r.writes, sparkle_init: false }
+            }
+        }
+    }
+}
+
+impl EffectOutcome {
+    /// 05 调色板面合成（clamp 写+步进写）。
+    fn with_pal(mut self, clamped: u8, idx: u8, pending: Option<u8>) -> Self {
+        self.writes.push((0x40 | 0, 0, clamped)); // 0x40=PALETTE_INDEX 标记
+        self.writes.push((0x40 | 0, 1, idx));
+        if let Some(t) = pending {
+            self.writes.push((0x40 | 0, 2, t)); // 2=PENDING 标记
+        }
+        self
     }
 }

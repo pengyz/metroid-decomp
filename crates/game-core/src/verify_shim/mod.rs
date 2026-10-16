@@ -623,3 +623,86 @@ pub fn title_message_fade_in(input: &L2In) -> L2Out {
 pub fn title_message_fade_out(input: &L2In) -> L2Out {
     fade_out(input, crate::title::FadeDriver::MessageOut.tick(&fade_face(input)))
 }
+
+// ---- task-23 批4a·②特效簇适配（04/05/06）----
+
+/// 特效结果 → L2Out（槽/调色板标签经 memmap::title_state::effect_event）。
+fn effect_out(input: &L2In, o: crate::title::EffectOutcome, init: Option<[u8; 11]>) -> L2Out {
+    let mut events: Vec<(u16, u8)> = Vec::new();
+    if let Some(p) = o.phase {
+        events.push(memmap::title_state::write_event_phase(p));
+    }
+    for tag in &o.writes {
+        events.extend(memmap::title_state::effect_event(*tag));
+    }
+    if o.sparkle_init {
+        if let Some(init) = init {
+            for (i, v) in init.iter().enumerate() {
+                events.push((memmap::title_state::INTRO_SPR_BASE + i as u16, *v));
+                events.push((memmap::title_state::INTRO_SPR_BASE + memmap::title_state::INTRO_SPR_STRIDE + i as u16, *v));
+            }
+        }
+        // LoadSparkleData 尾补丁（`a9 6b 8d b0 6e a9 dc 8d b3 6e`——注释≠语义样本：列表注
+        // 描述补丁后状态，代码含同值装载+两笔硬编码补丁）
+        events.push((memmap::title_state::INTRO_SPR_BASE + memmap::title_state::INTRO_SPR_STRIDE, 0x6B));
+        events.push((memmap::title_state::INTRO_SPR_BASE + memmap::title_state::INTRO_SPR_STRIDE + 3, 0xDC));
+        events.push(memmap::title_state::write_event_timer3(0x18));
+    }
+    L2Out { a: o.a_out, x: o.x_out.unwrap_or(input.x), y: o.y_out.unwrap_or(input.y),
+            writes: merge_writes(events) }
+}
+
+/// 批4a 入口 04 适配（`sub_LoadFlashTimer` ← bank00:$8142）。
+pub fn title_flash_timer(input: &L2In) -> L2Out {
+    let f = crate::title::EffectFace {
+        timer3: input.ram[memmap::title_state::TIMER3 as usize & 0x7FF],
+        frame_count: input.ram[crate::ram_map::FRAME_COUNT as usize & 0x7FF],
+        pal_index: input.ram[memmap::title_state::PALETTE_INDEX as usize & 0x7FF],
+        phase: input.ram[crate::ram_map::TITLE_ROUTINE as usize & 0x7FF],
+        complete0: 0, complete1: 0,
+    };
+    let mut top = crate::title::sparkle::SparkleSlot::default();
+    let mut bottom = crate::title::sparkle::SparkleSlot::default();
+    let o = crate::title::EffectDriver::FlashTimerSetup.tick(&f, &mut top, &mut bottom);
+    effect_out(input, o, None)
+}
+
+/// 批4a 入口 05 适配（`sub_FlashEffect` ← bank00:$8109）。
+pub fn title_flash_effect(input: &L2In) -> L2Out {
+    let f = crate::title::EffectFace {
+        timer3: input.ram[memmap::title_state::TIMER3 as usize & 0x7FF],
+        frame_count: input.ram[crate::ram_map::FRAME_COUNT as usize & 0x7FF],
+        pal_index: input.ram[memmap::title_state::PALETTE_INDEX as usize & 0x7FF],
+        phase: input.ram[crate::ram_map::TITLE_ROUTINE as usize & 0x7FF],
+        complete0: 0, complete1: 0,
+    };
+    let mut top = crate::title::sparkle::SparkleSlot::default();
+    let mut bottom = crate::title::sparkle::SparkleSlot::default();
+    let o = crate::title::EffectDriver::FlashStep.tick(&f, &mut top, &mut bottom);
+    effect_out(input, o, Some(crate::title::sparkle::INIT_SPARKLE_DATA))
+}
+
+/// 槽面解码（memmap 读→SparkleSlot）。
+fn decode_sparkle(input: &L2In, base: u16) -> crate::title::sparkle::SparkleSlot {
+    let r = |off: u16| input.wram.get(base as usize + off as usize - 0x6000).copied().unwrap_or(0);
+    crate::title::sparkle::SparkleSlot {
+        y: r(0), tile_id: r(1), attrib: r(2), x: r(3), index: r(4), next_delay: r(5),
+        y_change: r(6), x_change: r(7), change_delay: r(8), byte_type: r(9), complete: r(0x0A),
+    }
+}
+
+/// 批4a 入口 06 适配（`sub_METROIDSparkle` ← bank00:$814D）。
+pub fn title_sparkle_step(input: &L2In) -> L2Out {
+    let f = crate::title::EffectFace {
+        timer3: input.ram[memmap::title_state::TIMER3 as usize & 0x7FF],
+        frame_count: input.ram[crate::ram_map::FRAME_COUNT as usize & 0x7FF],
+        pal_index: 0,
+        phase: input.ram[crate::ram_map::TITLE_ROUTINE as usize & 0x7FF],
+        complete0: input.wram.get(0x0EAA).copied().unwrap_or(0),  // $6EAA=complete 槽0（字节真 `ad aa 6e`）
+        complete1: input.wram.get(0x0EBA).copied().unwrap_or(0),  // $6EBA=complete 槽1（`2d ba 6e`）
+    };
+    let mut top = decode_sparkle(input, memmap::title_state::INTRO_SPR_BASE);
+    let mut bottom = decode_sparkle(input, memmap::title_state::INTRO_SPR_BASE + memmap::title_state::INTRO_SPR_STRIDE);
+    let o = crate::title::EffectDriver::SparkleStep.tick(&f, &mut top, &mut bottom);
+    effect_out(input, o, None)
+}

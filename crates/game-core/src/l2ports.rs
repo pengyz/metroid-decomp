@@ -122,6 +122,9 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "sub_METROIDFadeIn" => Some(sub_metroid_fade_in),
         "sub_MessageFadeIn" => Some(sub_message_fade_in),
         "sub_MessageFadeOut" => Some(sub_message_fade_out),
+        "sub_LoadFlashTimer" => Some(sub_flash_timer),
+        "sub_FlashEffect" => Some(sub_flash_effect),
+        "sub_METROIDSparkle" => Some(sub_sparkle_step),
         _ => None,
     }
 }
@@ -533,4 +536,19 @@ pub fn sub_message_fade_in(input: &L2In) -> L2Out {
 /// sub_MessageFadeOut —— bank00:$8263 注册名（批3①，组合表步进驱动 idx 0→$05）。
 pub fn sub_message_fade_out(input: &L2In) -> L2Out {
     crate::verify_shim::title_message_fade_out(input)
+}
+
+/// sub_LoadFlashTimer —— bank00:$8142 注册名（批4a，FlashTimerSetup 装配臂）。
+pub fn sub_flash_timer(input: &L2In) -> L2Out {
+    crate::verify_shim::title_flash_timer(input)
+}
+
+/// sub_FlashEffect —— bank00:$8109 注册名（批4a，FlashStep 驱动）。
+pub fn sub_flash_effect(input: &L2In) -> L2Out {
+    crate::verify_shim::title_flash_effect(input)
+}
+
+/// sub_METROIDSparkle —— bank00:$814D 注册名（批4a，SparkleStep=4 跑运动链）。
+pub fn sub_sparkle_step(input: &L2In) -> L2Out {
+    crate::verify_shim::title_sparkle_step(input)
 }
