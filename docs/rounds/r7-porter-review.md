@@ -865,6 +865,27 @@ idx10/11 双 0c 字节为准 ✓。**④ window_bank=0 显式钉窗**（A9 契�
 只取 commit 前最后一次 check 完整行」）；r12 Evidence 计数失实同族记档。
 findings（r10）：1 轻（声明族·已自首）。批 4（②特效族 6 件）绿灯延续。
 
+## port2 task-23 批4a（3f5f15e）：title ②特效簇——「asm=规格非模板」金样本
+
+### verdict: pass
+
+### findings（逐项复现输出）
+
+**① struct 偏移机器码重导——通过 ✓（金样本成立）**：`ad aa 6e`（LDA $6EAA）=
+bank0:$8151 实存（complete=0x0A 非列表 0x0C ✓）；bank0 6E 页绝对,X 操作数偏移集
+={A0..AA,AC,AD,B0,E0}——**xChange=7/changeDelay=8/byteType=9/complete=0x0A 全在集**
+✓（列表声明 `.db` 非布局分配=「asm=规格来源非代码模板」的教科书实证；偏移从机器
+操作数提取=正方法）。
+**② 注释≠语义 ×2——通过 ✓**：尾补丁 `a9 6b 8d b0 6e`@bank0:$87B9 实存（「$6EB0=$6B」
+注=补丁后状态、代码=同值装载+尾补丁——节选遮蔽实锤）；byteType「branch always」注
+=数据主张非字节事实（口径精确）。
+**③ BUG 保真 ×2（D4）——通过 ✓**：tileID eor #3（Should be C6/C7）+尾补丁行为按
+有 bug 行为出 golden（Stage A 不修+N-0090 注记）=保真纪律执行面。
+**④ 运动链 26 写面全逐址+落穿双跑 4 串行**（第二跑读写后态）✓。
+**⑤ TDD 自纠四轮**（struct 偏移/X-Y/尾补丁/相位写）均打回定位——模型独立性战绩续 ✓。
+409 条 0 失败（400 零回退）复现 ✓。findings（r10）：0 新。
+**批 4b 绿灯**：形态延续安全（BUG 保真注记口径照此）。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
