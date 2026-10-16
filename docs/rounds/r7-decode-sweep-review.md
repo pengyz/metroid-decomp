@@ -374,6 +374,12 @@ title 深路径对拍素材包注册（trace 门 11 案 0 失败）。findings �
 假说**证伪降级**=更正链第四案原地留痕+拾取能力限制四果终账收口）。findings 三族
 （r10）：0 新。
 
+## 场景批 4（42a589e）抽检：game-over 全链包（0x19/1A/1B/1C 素材）
+
+### verdict: pass（抽检）
+
+素材入库（trace 门 12 案 0 失败）。findings 三族（r10）：0 新。
+
 ## 遗留风险清单
 
 1. S 面 120 为 B 级估计——分母 v2 实际登记（lead task-5）以 decode-sweep 复跑 + 逐条
