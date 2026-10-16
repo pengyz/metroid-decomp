@@ -1198,6 +1198,17 @@ RN1_STEP 8/8、carry 9/9 前账战绩为族级判别力证据）；门 2 判别�
 - 帧值类突变二轮（B31B 清偿后重测 M1v2/M2 同形）；
 - 首批突变族谱登记（检测面族=帧级新族）。
 
+## MSS↔FrameMemory 映射（a72d37a）：task-32 分工件——spec §4 收官缝
+
+### verdict: pass
+
+三查：①三直映 ✓（RAM/WRAM/regs 直映+ps↔p 同义名+nmi_enabled $FF bit7 推导——
+spec §4 接缝表引证随码）②扩展面注 ✓（mapper/ppu/clock 分工表显式：A9 后遗同面/
+S6 渲染腿不含/时钟 RNG 待 task-10）③测 92 绿（往返保真断言）；验收形=装载后
+watch_snapshot==oracle F_a+1 采样（声明域逐字节）=L3 集成验收形 ✓。
+**括号失衡案自录**（mss_map_tests 误入 impl 体=rindex 锚症结）=工具教训记档。
+findings（r10）：0 新。基线 122。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
