@@ -133,6 +133,7 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "sub_DisplayPassword" => Some(sub_password_gate),
         "sub_EndGame" => Some(sub_end_game),
         "sub_SamusHitSFXInit" => Some(sub_samus_hit_sfx),
+        "sub_SamusHitSFXCont" => Some(sub_samus_hit_cont),
         _ => None,
     }
 }
@@ -603,4 +604,9 @@ pub fn sub_end_game(input: &L2In) -> L2Out {
 /// 域形态：sound::samus_hit_sfx_init（L2 面=RAM 写集；APU 写序=域测钉）。
 pub fn sub_samus_hit_sfx(input: &L2In) -> L2Out {
     crate::verify_shim::sound_samus_hit_init(input)
+}
+
+/// sub_SamusHitSFXCont —— bank00:B650 注册名（task-30 handler 对件；Init/Cont 收口）。
+pub fn sub_samus_hit_cont(input: &L2In) -> L2Out {
+    crate::verify_shim::sound_samus_hit_cont(input)
 }

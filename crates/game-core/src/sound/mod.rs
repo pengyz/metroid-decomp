@@ -235,3 +235,78 @@ mod handler_tests {
         assert!(o.ram_events.contains(&(0x068B, 0x40))); // cont 旗址 $0688+ct
     }
 }
+
+/// B650 SamusHitSFXCont 语义折叠（Init/Cont 对收口）：
+/// ①IncrementSFXFrame（$B4A9）：frame←frame+1；==length⇒**复位+Z=1**（末帧语义）；
+/// ②Z=1 ⇒ EndMultiSFX（$B5CD）：SQ1/SQ2_VOL←$10（静音）+SWEEP←$7F（APU 面）+
+/// ClearCurrentSoundFlagsAndContFlags（$064D←0+UpdateContFlags $0688+ct←0）；
+/// ③Z=0 ⇒ 续帧重载（LoadSFXData 双通道 4B+随机双写——同 Init 面）。
+pub fn samus_hit_sfx_cont(rng1: u8, channel_type: u8, frame: u8, length: u8)
+    -> HandlerOutcome {
+    let mut ram = Vec::new();
+    let mut apu = Vec::new();
+    let ct = channel_type as u16;
+    let frame2 = frame.wrapping_add(1);
+    ram.push((0x0665 + ct, frame2));
+    if frame2 == length {
+        // 复位+EndMultiSFX 面
+        ram.push((0x0665 + ct, 0));
+        apu.push((0x4000, 0x10)); apu.push((0x4004, 0x10)); // 静音
+        apu.push((0x4001, 0x7F)); apu.push((0x4005, 0x7F)); // SWEEP 禁
+        ram.push((0x064D, 0));
+        ram.push((0x0688 + ct, 0));
+        // EndMultiSFX 尾面（golden≠ROM 打回补）：音乐重开旗+SQ1/SQ2 通道释放
+        ram.push((0x0607, 1)); // LoadMusicSQ1SQ2PeriodsFlag←1（音乐周期重写信号）
+        ram.push((0x0653, 0)); // SQ1UsedBySFX 释放
+        ram.push((0x0654, 0)); // SQ2UsedBySFX 释放
+        return HandlerOutcome { ram_events: ram, apu_events: apu,
+                                a_out: 0, x_out: channel_type, y_out: 0x22 }; // Y 透传（本路无 LoadSFXData）
+    }
+    // 续帧重载（指针面×2+APU 8B+随机双写）
+    for base in [0x4000u16, 0x4004] {
+        ram.push((0x00E0, (base & 0xFF) as u8));
+        ram.push((0x00E1, (base >> 8) as u8));
+        ram.push((0x00E2, 0x25));
+        ram.push((0x00E3, 0xB2));
+        for i in 0..4u16 {
+            apu.push((base + i, SAMUS_HIT_SFX_DATA[i as usize]));
+        }
+        if base == 0x4000 {
+            apu.push((0x4002, rng1 & 0x0F));
+        } else {
+            let sq2 = (rng1 >> 2) & 0x0F;
+            apu.push((0x4006, sq2));
+            return HandlerOutcome { ram_events: ram, apu_events: apu,
+                                    a_out: sq2, x_out: channel_type, y_out: 4 };
+        }
+    }
+    unreachable!("结构不可达——base 循环第二轮必返");
+}
+
+#[cfg(test)]
+mod cont_tests {
+    use super::*;
+
+    /// 续帧路（frame+1≠length）：重载+随机双写。
+    #[test]
+    fn cont_continue_reloads() {
+        let o = samus_hit_sfx_cont(0x55, 4, 1, 4);
+        assert!(o.ram_events.contains(&(0x0669, 2))); // $0665+4←frame2
+        assert_eq!(o.a_out, 5);
+        assert_eq!(o.apu_events.iter().filter(|a| a.0 == 0x4002).count(), 2); // 数据字节+随机覆写
+    }
+
+    /// 末帧路（frame+1==length）：复位+EndMultiSFX（静音+清旗）。
+    #[test]
+    fn cont_end_silences_and_clears() {
+        let o = samus_hit_sfx_cont(0x55, 4, 3, 4);
+        assert!(o.ram_events.contains(&(0x0669, 0)));  // 复位
+        assert!(o.ram_events.contains(&(0x064D, 0)));  // CurrentSoundFlags 清
+        assert!(o.ram_events.contains(&(0x068C, 0)));  // $0688+4 cont 旗清
+        assert!(o.apu_events.contains(&(0x4000, 0x10)));
+        assert!(o.apu_events.contains(&(0x4005, 0x7F)));
+        assert_eq!(o.a_out, 0);
+        assert!(o.ram_events.contains(&(0x0607, 1)));
+        assert!(o.ram_events.contains(&(0x0653, 0)));
+    }
+}

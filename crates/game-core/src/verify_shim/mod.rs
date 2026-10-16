@@ -841,3 +841,13 @@ pub fn sound_samus_hit_init(input: &L2In) -> L2Out {
     let o = crate::sound::samus_hit_sfx_init(r(0x002E), r(0x065C & 0x7FF), r(0x064D & 0x7FF));
     L2Out { a: o.a_out, x: o.x_out, y: o.y_out, writes: merge_writes(o.ram_events) }
 }
+
+/// B650 适配（`sub_SamusHitSFXCont` ← bank00:B650 镜面）。
+pub fn sound_samus_hit_cont(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    let ct = r(0x065C & 0x7FF);
+    let frame = r((0x0665 + ct as u16) & 0x7FF);
+    let length = r((0x0660 + ct as u16) & 0x7FF);
+    let o = crate::sound::samus_hit_sfx_cont(r(0x002E), ct, frame, length);
+    L2Out { a: o.a_out, x: o.x_out, y: o.y_out, writes: merge_writes(o.ram_events) }
+}
