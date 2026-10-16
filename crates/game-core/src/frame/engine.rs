@@ -66,8 +66,11 @@ impl FrameEngine {
         if self.mem.nmi_enabled {
             super::nmi::nmi_handler(&mut self.mem);
         }
-        // === spin 出口采样缝（$C0D3 对齐）===
-        on_spin_exit(&self.mem);
+        // === spin 出口采样缝（$C0D3 对齐）——**仅主循环 spin 出口**（boot 链无主循环
+        // spin——oracle 295 行=主循环 spin 出口数自证；boot tick 不采样）。
+        if self.phase == BootPhase::MainLoop {
+            on_spin_exit(&self.mem);
+        }
         match self.phase {
             BootPhase::PreSpin => {
                 super::boot::boot_pre_spin(&mut self.mem);
@@ -102,6 +105,19 @@ mod tests {
             .cloned()
             .or_else(|| err.downcast_ref::<&'static str>().map(|s| (*s).to_string()))
             .unwrap_or_default()
+    }
+
+    /// spin 出口缝位语义（task-24 对齐锚）：**仅主循环 spin 出口采样**（boot tick 不采
+    /// ——oracle 295 行=主循环 spin 出口数自证）；采样点恒 1 断言（契约断言①面）。
+    #[test]
+    fn spin_exit_seam_mainloop_only_constant_one() {
+        let mut e = FrameEngine::new();
+        let mut samples: Vec<u8> = vec![];
+        for _ in 0..5 {
+            e.tick_frame_with(|m| samples.push(m.read_ram(crate::ram_map::NMI_STATUS)));
+        }
+        assert!(!samples.is_empty(), "主循环 spin 出口应采样");
+        assert!(samples.iter().all(|a| *a == 1), "恒 1 断言失守: {samples:?}");
     }
 
     /// B 跑首分歧记账面（占位臂 01=记账+让出非爆——tick4 记 0x80D0；真未武装=桥测 0x18）。
