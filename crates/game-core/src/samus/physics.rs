@@ -42,7 +42,7 @@ pub fn vert_accelerate(mem: &mut FrameMemory) {
     // 8 像素对齐检测（几何节流）
     let aligned = (mem.read_ram(SAMUS_Y).wrapping_add(mem.read_ram(SAMUS_RADIUS_Y)) & 0x07) == 0;
     if aligned {
-        crate::unported!("bank07:E7AD"); // ObjectCheckMoveDown（向下阻挡——task-19 考证件）
+        object_check_move_down(mem); // ObjectCheckMoveDown（asm :8035——壳已端口）
     }
     crate::unported!("bank07:D976"); // SamusCollisionWithSolidEntities（电梯冻敌双旗）
     // 双旗门（D976 内部置位后检查）
@@ -62,6 +62,33 @@ mod tests {
         assert_eq!(x_plus_4(0xFF), 0x03); // wrap
     }
 
+    /// 瓦片分类面（E7AD 族阈值——task-19 定谳）。
+    #[test]
+    fn tile_class_thresholds() {
+        assert_eq!(tile_class(0x4E), TileClass::BlankSolid);
+        assert_eq!(tile_class(0x00), TileClass::Solid);
+        assert_eq!(tile_class(0x7F), TileClass::Solid);
+        assert_eq!(tile_class(0x80), TileClass::Blastable);
+        assert_eq!(tile_class(0x9F), TileClass::Blastable);
+        assert_eq!(tile_class(0xA0), TileClass::DoorScrollToggle);
+        assert_eq!(tile_class(0xA1), TileClass::DoorScrollHoriz);
+        assert_eq!(tile_class(0xA2), TileClass::Walkable);
+    }
+
+    /// ObjectCheckMoveDown 壳引爆（嵌套件 E7B5）。
+    #[test]
+    fn object_check_move_down_detonates_at_nested() {
+        let mut m = FrameMemory::default();
+        let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            object_check_move_down(&mut m)
+        }));
+        let err = r.unwrap_err();
+        let msg = err.downcast_ref::<String>().cloned()
+            .or_else(|| err.downcast_ref::<&'static str>().map(|s| (*s).to_string()))
+            .unwrap_or_default();
+        assert!(msg.contains("unported @ bank07:E7B5"), "嵌套件失准: {msg}");
+    }
+
     /// VertAccelerate 头：空中跳过+地面 maxspeed 初始化+对齐检测引爆。
     #[test]
     fn vert_accelerate_head_face() {
@@ -77,7 +104,52 @@ mod tests {
         let msg = err.downcast_ref::<String>().cloned()
             .or_else(|| err.downcast_ref::<&'static str>().map(|s| (*s).to_string()))
             .unwrap_or_default();
-        assert!(msg.contains("unported @ bank07:E7AD"), "对齐卫件失准: {msg}");
+        assert!(msg.contains("unported @ bank07:E7B5"), "对齐卫件失准: {msg}"); // E7AD 壳已通→嵌套件
         assert_eq!(m.read_ram(SAMUS_HORZ_SPEED_MAX), 0x18); // maxspeed 已初始化
     }
+}
+
+/// 瓦片分类（**asm 内容锚+结构互核注**）——E7AD 族分类面（task-19 瓦片分类定谳）：
+/// `cmp #$4E`（实心空白）/`CheckBlastTile` carry=0⇔tile<$80=**实心**/`cmp #$A0`（≥$A0=
+/// 可走）/$80-$9F=可破族。Samus 特例：$A0=滚动切换门/$A1=水平滚动门→SamusDoorData 面。
+///
+/// **结构互核注**：三段阈值分层（$4E 特例→<$80 实心→$80-9F 可破→≥$A0 可走）+门双特例
+/// ——R-mv 阻挡规则的承载面（spec 面）。
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum TileClass {
+    /// $4E 实心空白（子弹撞击面）。
+    BlankSolid,
+    /// <$80 实心（阻挡）。
+    Solid,
+    /// $80-$9F 可破（blastable——$98-$9F 除外族随证）。
+    Blastable,
+    /// $A0 滚动切换门（Samus 特例）。
+    DoorScrollToggle,
+    /// $A1 水平滚动门（Samus 特例）。
+    DoorScrollHoriz,
+    /// ≥$A2 可走。
+    Walkable,
+}
+
+/// 瓦片分类纯函数（E7AD 族阈值面——task-19 考证）。
+pub fn tile_class(t: u8) -> TileClass {
+    match t {
+        0x4E => TileClass::BlankSolid,
+        t if t < 0x80 => TileClass::Solid,
+        t if t < 0xA0 => TileClass::Blastable,
+        0xA0 => TileClass::DoorScrollToggle,
+        0xA1 => TileClass::DoorScrollHoriz,
+        _ => TileClass::Walkable,
+    }
+}
+
+/// ObjectCheckMoveDown 壳（asm :8035 内容锚——向下阻挡检测）：
+/// `ldx PageIndex/lda #$00/sec/sbc Objects.0.radiusY,x`（半径几何）→ ObjectCheckMoveVertical
+/// → CheckMoveVertical（radiusX==0 ⇒ sec 出）→ 瓦片环（MakeRoomRAMPtr/分类面）。
+/// 嵌套件桩（随拼装填）：StoreObjectPositionToTemp/GetNumBlocksToCheck/
+/// CalculateFirstBGCollisionPoint/MakeRoomRAMPtr。
+pub fn object_check_move_down(mem: &mut FrameMemory) -> bool {
+    // 壳：A = -radiusY（向下偏移）——几何面
+    let _ry = mem.read_ram(SAMUS_RADIUS_Y);
+    crate::unported!("bank07:E7B5"); // ObjectCheckMoveVertical（几何+瓦片环——嵌套件）
 }
