@@ -6,7 +6,7 @@
 //! 产出：47 房批解析 + 50 结构批解析 + L2 敌/门段（tail）长度/首字节聚类
 //!（C→B 自证素材：变长段结构一致性实证）。
 
-use game_data::{parse_enemy_anim, parse_enemy_anim_seq, parse_spec_items, parse_vram_struct, parse_ptr_table, parse_room, parse_structure, brinstar};
+use game_data::{parse_gfx_info, parse_enemy_anim, parse_enemy_anim_seq, parse_spec_items, parse_vram_struct, parse_ptr_table, parse_room, parse_structure, brinstar};
 use std::collections::BTreeMap;
 use std::env;
 use std::fs;
@@ -172,4 +172,17 @@ fn main() {
     println!("③b EnAnim 逐标签互核（共享尾模型）：{} 入口全合法={}",
         asm_anim.len(), all_ok);
     assert!(all_ok, "EnAnim 入口验证失败");
+    // ⑤ CHR 面：GFX 转运表批解析 + asm 互核（首两项注址）
+    const GFX_INFO: u16 = 0xC6E0; // prg7_engine.asm:1669 GFXInfo ; 07:C6E0
+    const GFX_COUNT: usize = 24;  // GFXInfoEntry 计数
+    let b7 = &prg[0x1C000..0x20000];
+    let (g, used) = parse_gfx_info(&b7[(GFX_INFO - 0xC000) as usize..], GFX_COUNT).expect("gfx 解析失败");
+    println!("⑤ GFX 转运表 24 项（{}B）：[0]={:?}（asm 互核 GFX_Samus=06:8000 dest $0000）→ {}",
+        used, g[0], if g[0].bank == 6 && g[0].src == 0x8000 && g[0].dest == 0x0000 { "✓" } else { "✗" });
+    assert_eq!((g[0].bank, g[0].src, g[0].dest), (6, 0x8000, 0x0000));
+    let spr = g.iter().filter(|e| e.dest == 0x0000).count();
+    let bgr = g.iter().filter(|e| e.dest >= 0x1000).count();
+    println!("⑤ 面分布（dest 语义 C 级）：精灵面(=$0000)={} 背景面(>=$1000)={} 其它={}",
+        spr, bgr, GFX_COUNT - spr - bgr);
+
 }

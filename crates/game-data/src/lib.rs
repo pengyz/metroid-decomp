@@ -156,6 +156,30 @@ pub fn parse_vram_struct(data: &[u8]) -> Option<(Vec<VramRecord>, usize)> {
 }
 
 #[cfg(test)]
+mod gfx_tests {
+    use super::*;
+
+    // fixture=ROM bank7:$C6E0 首两项（asm 互核：GFX_Samus 06:8000 dest $0000 /
+    // GFX_EndingSprites，prg7_engine.asm:1669-1673 注释）
+    #[test]
+    fn gfx_info_table_records() {
+        let raw = [0x06, 0x00, 0x80, 0x00, 0x00, 0xA0, 0x09,
+                   0x04, 0x60, 0x8D, 0x00, 0x00, 0x20, 0x05];
+        let (t, n) = parse_gfx_info(&raw, 2).unwrap();
+        assert_eq!(n, raw.len());
+        assert_eq!(t[0], GfxInfo { bank: 6, src: 0x8000, dest: 0x0000, size: 0x09A0 });
+        assert_eq!(t[1], GfxInfo { bank: 4, src: 0x8D60, dest: 0x0000, size: 0x0520 });
+    }
+
+    #[test]
+    fn tile_chr_offset_2bpp() {
+        assert_eq!(tile_chr_offset(0), 0);
+        assert_eq!(tile_chr_offset(0x02), 32);
+        assert_eq!(tile_chr_offset(0xFF), 4080); // 256 tiles × 16B = 4KB 面
+    }
+}
+
+#[cfg(test)]
 mod enemy_tests {
     use super::*;
 
@@ -369,6 +393,38 @@ pub fn parse_enemy_anim_seq(data: &[u8], addr: u16, count: usize) -> Option<(Vec
         off += n;
     }
     Some((out, off))
+}
+
+/// GFX 转运表（prg7_engine.asm:1665-1669 线格式注 + macros.asm:101-107 宏体，A 级锚）：
+/// 7B/项=`[bank][src 16le][dest 16le][len 16le]`——src=PRG 内 gfx 起址（bank:src），
+/// dest=PPU 目标（$0000=精灵面/$1000+=背景面），len=字节数。语义名（Samus/Brinstar
+/// rooms 等注释）C 级不入字段。L4→CHR 面：元块图块索引（0-255）×16B=NES 2bpp
+/// 图样偏移（tile_chr_offset），落在 gfx 块（哪一块=dest 语义，C 级待自证）。
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct GfxInfo {
+    pub bank: u8,
+    pub src: u16,
+    pub dest: u16,
+    pub size: u16,
+}
+
+/// 解析 GFX 转运表（n 项×7B）。返回 (表, 消耗字节数)。
+pub fn parse_gfx_info(data: &[u8], n: usize) -> Option<(Vec<GfxInfo>, usize)> {
+    let mut v = Vec::with_capacity(n);
+    for k in 0..n {
+        let o = k * 7;
+        let bank = *data.get(o)?;
+        let src = u16::from_le_bytes([*data.get(o + 1)?, *data.get(o + 2)?]);
+        let dest = u16::from_le_bytes([*data.get(o + 3)?, *data.get(o + 4)?]);
+        let size = u16::from_le_bytes([*data.get(o + 5)?, *data.get(o + 6)?]);
+        v.push(GfxInfo { bank, src, dest, size });
+    }
+    Some((v, n * 7))
+}
+
+/// L4→CHR：图块索引（0-255）→ NES 2bpp 图样字节偏移（16B/tile，A 级平台语义）。
+pub fn tile_chr_offset(tile: u8) -> usize {
+    tile as usize * 16
 }
 
 /// brinstar（bank1）锚点——m1disasm `SRC/brinstar/*.asm` 注址（A 级线索，等价性背书）。

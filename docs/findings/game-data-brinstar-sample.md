@@ -191,3 +191,30 @@ items「offset-1」案（锚在措辞错）同族第三例：**锚在≠模型�
 | EnAnim 语义名（Waver/Ripper 注释） | **C**（D5 不入字段名） |
 
 遗留：⑤ CHR 面（L4→pattern）+ 帧体语义自证。
+
+## 10. r6：⑤ CHR 面（GFX 转运表+L4→CHR 接通，四级链闭合）
+
+**asm 内容锚**（prg7_engine.asm:1665-1669 线格式注 + macros.asm:101-107 宏体）：
+GFX 转运表 7B/项=`[bank][src 16le][dest 16le][len 16le]`；dest=$0000 精灵面/
+$1000+ 背景面（语义注 C 级）；24 项（GFXInfoEntry 计数）。L4→CHR 平台语义
+（A 级）：图块索引×16B=NES 2bpp 图样偏移（tile_chr_offset）。
+**ROM 批量 + asm 互核（输出原文）**：
+```
+⑤ GFX 转运表 24 项（168B）：[0]=GfxInfo { bank: 6, src: 32768, dest: 0, size: 2464 }（asm 互核 GFX_Samus=06:8000 dest $0000）→ ✓
+⑤ 面分布（dest 语义 C 级）：精灵面(=$0000)=2 背景面(>=$1000)=16 其它=6
+```
+
+**四级链闭合**（task-17 主目标达成）：
+`room_ptrs(A314) → rooms(A441) → structure_ptrs(A372) → structures(AC84) →
+metatiles(AEF0, 65 项) → tile×16B → GFX 块（GFXInfo 07:C6E0 24 项，bank6/4… 转运）`
+——全链地址锚+字节级对拍齐（r1-r6 各节）。
+
+| 结论 | 级 |
+|---|---|
+| GFX 线格式+24 项+首项互核 | **A**（asm 注+ROM 逐字段） |
+| L4→CHR tile×16 映射 | **A**（NES 2bpp 平台语义） |
+| 面分布 2/16/6 | **A**（批量实测） |
+| dest 面语义/gfx 块↔房间归属 | **C**（_todo_） |
+
+遗留（下一轮）：gfx 块↔区域归属自证（dest 语义）、帧体（EnPlace）语义、
+items type 语义表自证（$01-$0A 注释线索）。
