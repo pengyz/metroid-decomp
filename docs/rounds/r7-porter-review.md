@@ -1320,6 +1320,12 @@ lint 56 目标 PASS+watchdog 0.05s 限时 ✓。基线 131→132。findings（r1
 
 移动深路径嵌套件（439/0 零回退+测 101）。findings（r10）：0 新。
 
+## task-30 handler 对件（8bb4371）抽检：B650 SamusHitSFXCont
+
+### verdict: pass（抽检）
+
+Init/Cont 族收口（441/0 双案+测 103）。findings（r10）：0 新。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
