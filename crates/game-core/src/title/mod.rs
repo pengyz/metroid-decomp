@@ -1097,20 +1097,19 @@ pub fn dispatch_step(face: &TitleFace) -> TitleStep {
             }),
         },
         // ---- 真未武装（18 深路专件/0x1E SetTimer 随件）----
-        // 未武装分流（lead 稳定锚裁定）：0x18=**记账形**（已排期专件——NmiYield 让出≠
-        // 引爆，稳定锚）；0x1E=**引爆形**（fail-loud 样本至 SetTimer 随件落）。
-        _ => {
-            let addr = match face.phase { 0x18 => 0x9147, _ => 0xC4AA };
-            if face.phase == 0x18 {
-                TitleStep { events: vec![], shell: vec![ShellCall::NmiYield], a_out: None,
-                            x_out: None, y_out: None,
-                            jumped: None, next_cursor: 0, unported: Some(addr) }
-            } else {
-                TitleStep { events: vec![], shell: vec![], a_out: None, x_out: None,
-                            y_out: None,
-                            jumped: None, next_cursor: 0, unported: Some(addr) }
-            }
+        // ---- 批6b 终件：0x18 EnterPassword（单段帧常驻 UI——armed）----
+        0x18 => {
+            let joy = face.ram[crate::memmap::title_state::JOY1_CHANGE as usize & 0x7FF];
+            let joy_retrig = face.ram[0x0016 & 0x7FF];
+            let (events, jumped) = enter_password_body(&face.ram, &face.wram, face.frame_count,
+                                                       joy, joy_retrig, face.phase);
+            TitleStep { events, shell: vec![], a_out: None, x_out: None, y_out: None,
+                        jumped, unported: None, next_cursor: 0 }
         }
+        // 未武装分流（lead 稳定锚裁定）：0x1E=**引爆形**（fail-loud 样本至 SetTimer 随件落）。
+        _ => TitleStep { events: vec![], shell: vec![], a_out: None, x_out: None,
+                         y_out: None,
+                         jumped: None, next_cursor: 0, unported: Some(0xC4AA) },
     }
 }
 
@@ -1126,10 +1125,164 @@ mod dispatch_contract_tests {
             ppuctrl: 0x90, star_src: [0; 0xA0], wram: vec![0; 0x2000], ram: vec![0; 0x800],
         };
         let s = dispatch_step(&face);
-        assert_eq!(s.unported, Some(0x9147));
-        let face = TitleFace { phase: 0x0A, ..face };
+        assert_eq!(s.unported, None, "0x18 专件应已臂化");
+        let mut f2 = face.clone(); f2.phase = 0x1E;
+        let s = dispatch_step(&f2);
+        assert_eq!(s.unported, Some(0xC4AA), "0x1E 留引爆形");
+        let mut f3 = face.clone(); f3.phase = 0x0A;
+        let face = f3;
         let s = dispatch_step(&face);
         assert_eq!(s.unported, None);
         assert!(s.events.iter().any(|&(a, _)| a == 0x001F));
     }
+}
+
+// ---- 批6b 终件：0x18 EnterPassword 专件（单段 0-spin 帧常驻 UI——类 16 形）----
+// 结构互核注：①WritePPUByte 溢出 quirk（缓冲 $4F 满⇒写 0 终止+**双 PLA 断链**——
+// 正常流不触发，忠实注记）②缓冲协 X 链 vs WriteVRAMString 重载 $07A0（每行 stx 回写）——
+// 字节忠实照建（msg 头 3+15 链写不回写、字符串面重载起点——重叠面=字节真行为，行集裁）
+// ③beep 写门（`lda $16/and #$0F/beq`——Joy1Retrig dpad 位门，注称 dpad 触发 ✓ 成立）
+// ④A/B 位=Joy1Change 位7/位6（hardware.asm:95-96）。
+
+/// ERROR TRY AGAIN 文（bank0:$8759 15B）。
+pub const PW_ERR_MSG: [u8; 15] = [0x0E,0x1B,0x1B,0x18,0x1B,0xFF,0x1D,0x1B,0x22,0xFF,0x0A,0x10,0x0A,0x12,0x17];
+/// 空白覆盖文（bank0:$8768 15B 全 $FF）。
+pub const PW_NOERR_MSG: [u8; 15] = [0xFF; 15];
+/// PasswordRowTbl（bank0:$9998 5×2B 行指针）。
+pub const PW_ROW_TBL: [u16; 5] = [0x99A2, 0x99AF, 0x99BC, 0x99C9, 0x99D6];
+/// 字符格（bank0:$99A2 起 65B——0x00-0x3F 递序+末位 $FF）。
+pub const PW_GRID: [u8; 65] = [
+    0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0A,0x0B,0x0C,0x0D,0x0E,0x0F,
+    0x10,0x11,0x12,0x13,0x14,0x15,0x16,0x17,0x18,0x19,0x1A,0x1B,0x1C,0x1D,0x1E,0x1F,
+    0x20,0x21,0x22,0x23,0x24,0x25,0x26,0x27,0x28,0x29,0x2A,0x2B,0x2C,0x2D,0x2E,0x2F,
+    0x30,0x31,0x32,0x33,0x34,0x35,0x36,0x37,0x38,0x39,0x3A,0x3B,0x3C,0x3D,0x3E,0x3F,
+    0xFF,
+];
+/// CursorPosXTbl（bank0:$92C8 12B）。
+pub const CURSOR_X_TBL: [u8; 12] = [0x48,0x50,0x58,0x60,0x68,0x70,0x80,0x88,0x90,0x98,0xA0,0xA8];
+/// CharSelectYTbl（bank0:$92B6 5B）。
+pub const CHARSEL_Y_TBL: [u8; 5] = [0x77,0x87,0x97,0xA7,0xB7];
+/// CharSelectXTbl（bank0:$92BB 13B）。
+pub const CHARSEL_X_TBL: [u8; 13] = [0x20,0x30,0x40,0x50,0x60,0x70,0x80,0x90,0xA0,0xB0,0xC0,0xD0,0xE0];
+
+/// 0x18 EnterPassword 帧体（单段；事件=全量 RAM 面；jumped=START⇒$8C5E）。
+#[allow(clippy::too_many_arguments)]
+pub fn enter_password_body(ram: &[u8], wram: &[u8], frame_count: u8, joy: u8, joy_retrig: u8,
+                           phase: u8) -> (Vec<(u16, u8)>, Option<u16>) {
+    let mut e = Vec::new();
+    // ① EraseAllSprites 面（$01←2/$00←0+$0200-$02FF←$F0+DecSpriteYCoord 奇偶门）
+    e.push((0x0001, 0x02)); e.push((0x0000, 0x00));
+    for a in 0x0200u16..0x0300 { e.push((a, 0xF0)); }
+    let pending = ram[0x00C8 & 0x7FF];
+    if phase < 0x1D && pending != 0 && (frame_count & 1) == 0 {
+        for i in (0..0xA0u16).step_by(4).rev() {
+            let s = wram.get(0x0E00 + i as usize).copied().unwrap_or(0);
+            let d = ram.get(0x0260 + i as usize).copied().unwrap_or(0);
+            e.push((0x6E00 + i, s.wrapping_sub(1)));
+            e.push((0x0260 + i, d.wrapping_sub(1)));
+        }
+        e.push((0x00C8, 0));
+    }
+    // ② START 出口（jumped $8C5E——前置写面已含）
+    if joy & 0x10 != 0 {
+        return (e, Some(0x8C5E));
+    }
+    // ③ 缓冲头（$1B←1；X 链自 $07A0）+msg 15 文（X 链不回写——字节真）
+    e.push((0x001B, 1));
+    let idx = ram[0x07A0 & 0x7FF] as u16;
+    let msg: &[u8; 15] = if ram[0x002C & 0x7FF] != 0 { &PW_ERR_MSG } else { &PW_NOERR_MSG };
+    // 头：$21,$A8,$0F（WritePPUByte 链写）
+    let mut x = idx;
+    e.push((0x07A1 + (x & 0x7F), 0x21)); x = x.wrapping_add(1);
+    e.push((0x07A1 + (x & 0x7F), 0xA8)); x = x.wrapping_add(1);
+    e.push((0x07A1 + (x & 0x7F), 0x0F)); x = x.wrapping_add(1);
+    for &b in msg.iter() {
+        e.push((0x07A1 + (x & 0x7F), b)); x = x.wrapping_add(1);
+    }
+    // ④ 指针面（$02/$03←msg 源）——err/noerr 两路
+    e.push((0x0002, if ram[0x002C & 0x7FF] != 0 { 0x59 } else { 0x68 }));
+    e.push((0x0003, 0x87));
+    // ⑤ A 路（Joy1Change 位7）
+    if joy & 0x80 != 0 {
+        e.push((0x0683, ram[0x0683 & 0x7FF] | 0x01)); // SFXTriInitFlags|=beep
+        let cursor = ram[0x0320 & 0x7FF];
+        // 格映射（$91A8 链：0-5→+9、6-11→+0A、12-17→+3D、18-23→+3E）
+        let pos = if cursor >= 0x12 { cursor.wrapping_add(0x3E) }
+                  else if cursor >= 0x0C { cursor.wrapping_add(0x3D) }
+                  else if cursor >= 0x06 { cursor.wrapping_add(0x0A) }
+                  else { cursor.wrapping_add(0x09) };
+        e.push((0x0006, pos));
+        let row = ram[0x0321 & 0x7FF] as usize & 0x07;
+        let tbl = PW_ROW_TBL[row.min(4)];
+        e.push((0x0000, (tbl & 0xFF) as u8));
+        e.push((0x0001, (tbl >> 8) as u8));
+        let col = ram[0x0322 & 0x7FF] as usize;
+        let tile = PW_GRID.get(row.min(4) * 13 + col.min(12)).copied().unwrap_or(0xFF);
+        e.push((0x0781, tile));       // VRAMStringRAMBuffer
+        e.push((0x0780, 0x11));       // 维面（1×1）
+        // PrepareWriteVRAMStringRAM：$00←pos/$01←$21/$02←$80/$03←$07
+        e.push((0x0000, pos)); e.push((0x0001, 0x21));
+        e.push((0x0002, 0x80)); e.push((0x0003, 0x07));
+        // WriteVRAMString：$1B←1；$05←1/$04←1；X←$07A0 重载；写 [21,pos,01,tile]；$07A0←X+4
+        e.push((0x001B, 1));
+        e.push((0x0005, 0x01)); e.push((0x0004, 0x01));
+        e.push((0x07A1 + (idx as u16 & 0x7F), 0x21));
+        e.push((0x07A1 + ((idx as u16 + 1) & 0x7F), pos));
+        e.push((0x07A1 + ((idx as u16 + 2) & 0x7F), 0x01));
+        e.push((0x07A1 + ((idx as u16 + 3) & 0x7F), tile));
+        e.push((0x07A0, ((idx as u16 + 4) & 0xFF) as u8));
+        // PasswordChar[cursor]←tile + 光标进位回绕
+        e.push((0x699A + cursor as u16, tile));
+        let nc = if cursor >= 0x17 { 0 } else { cursor.wrapping_add(1) };
+        e.push((0x0320, nc));
+    }
+    // ⑥ B 路（位6——退格回绕）
+    if joy & 0x40 != 0 {
+        let cursor = ram[0x0320 & 0x7FF];
+        let nc = cursor.wrapping_sub(1);
+        let nc = if cursor == 0 { 0x17 } else { nc };
+        e.push((0x0320, nc));
+    }
+    // ⑦ 光标闪（FrameCount 位3 门）：SpriteRAM.1 面
+    let cursor_now = ram[0x0320 & 0x7FF]; // 注：体序=进/退格后重读
+    if frame_count & 0x08 != 0 {
+        let y = if cursor_now < 0x0C { 0x3F } else { 0x4F };
+        e.push((0x0210, y));
+        e.push((0x0211, 0x6E));
+        e.push((0x0212, 0x20)); // OAMDATA_PRIORITY
+        let xi = (if cursor_now >= 0x0C { cursor_now.wrapping_sub(0x0C) } else { cursor_now }) as usize;
+        e.push((0x0213, CURSOR_X_TBL.get(xi.min(11)).copied().unwrap_or(0x48)));
+    }
+    // ⑧ dpad（Joy1Retrig 低半字节门）：beep+行/列回绕+CharSelect 精灵（位3 门）
+    let dpad = joy_retrig & 0x0F;
+    if dpad != 0 {
+        e.push((0x0683, ram[0x0683 & 0x7FF] | 0x08)); // beep（门内——注释 ✓）
+        let mut row = ram[0x0321 & 0x7FF];
+        let mut col = ram[0x0322 & 0x7FF];
+        if dpad & 0x01 != 0 { // right
+            col = col.wrapping_add(1);
+            if col == 0x0D { col = 0; row = row.wrapping_add(1); if row == 5 { row = 0; } }
+            e.push((0x0321, row)); e.push((0x0322, col));
+        }
+        if dpad & 0x02 != 0 { // left
+            if col == 0 { col = 0x0C; row = if row == 0 { 4 } else { row.wrapping_sub(1) }; }
+            else { col = col.wrapping_sub(1); }
+            e.push((0x0321, row)); e.push((0x0322, col));
+        }
+        if dpad & 0x04 != 0 { // down
+            row = row.wrapping_add(1); if row == 5 { row = 0; }
+            e.push((0x0321, row));
+        }
+        if dpad & 0x08 != 0 { // up
+            row = if row == 0 { 4 } else { row.wrapping_sub(1) };
+            e.push((0x0321, row));
+        }
+        if frame_count & 0x08 != 0 {
+            e.push((0x0220, CHARSEL_Y_TBL.get(row as usize % 5).copied().unwrap_or(0x77)));
+            e.push((0x0221, 0x6E));
+            e.push((0x0222, 0x20));
+            e.push((0x0223, CHARSEL_X_TBL.get(col as usize % 13).copied().unwrap_or(0x20)));
+        }
+    }
+    (e, None)
 }
