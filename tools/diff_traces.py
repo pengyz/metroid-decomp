@@ -256,8 +256,9 @@ def n12_gate_errors(root) -> list[str]:
 
 
 def leg_sample_point(doc: dict, side: str) -> str | None:
-    """R2 per-leg 采样点声明：legs.<side>.sample_point 优先；legacy 顶层 sample_point
-    兜底（混态期禁置全局键——v5 §5.3c 口径；per-leg 缺省=未迁 endFrame）。"""
+    """R2 per-leg 采样点声明：**case 级** legs.<side>.sample_point 优先（task-24 钉位：
+    legs 属 case——不同 case=不同场景/腿配）；legacy 顶层 sample_point 兜底
+    （混态期禁置全局键——v5 §5.3c 口径；per-leg 缺省=未迁 endFrame）。"""
     legs = doc.get("legs")
     if isinstance(legs, dict):
         leg = legs.get(side)
@@ -416,7 +417,7 @@ def main() -> int:
             print(f"[FAIL] {cid}: {v}")
             failed += 1
             continue
-        aerr, anote = check_nmi_anchor(left, watch, leg_sample_point(doc, "oracle"), "oracle")
+        aerr, anote = check_nmi_anchor(left, watch, leg_sample_point(case, "oracle"), "oracle")
         if aerr:
             print(f"[FAIL] {cid}: {aerr}")
             failed += 1
@@ -458,7 +459,7 @@ def main() -> int:
             print(f"[FAIL] {cid}: {v}")
             failed += 1
             continue
-        aerr, anote = check_nmi_anchor(right, watch, leg_sample_point(doc, "game-core"), "game-core")
+        aerr, anote = check_nmi_anchor(right, watch, leg_sample_point(case, "game-core"), "game-core")
         if aerr:
             print(f"[FAIL] {cid}: {aerr}")
             failed += 1
