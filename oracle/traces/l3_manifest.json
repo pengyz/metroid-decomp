@@ -565,6 +565,68 @@
           "note": "title 深路径件（0x18/15/1B）对拍素材——移植线到域即比"
         }
       }
+    },
+    {
+      "id": "l3-sc-death-chain4",
+      "scenario": "sc-death-chain4",
+      "frames": 1800,
+      "watch": [
+        {
+          "label": "zp",
+          "base": "0000",
+          "range": "0000-00ff"
+        },
+        {
+          "label": "iram",
+          "base": "0100",
+          "range": "0100-07ff"
+        }
+      ],
+      "oracle_sha256": "76703b43df5fbe4bbeb27c0f64998f4c5eb7f8e7341be009bd85249b2608f379",
+      "determinism_evidence": "双跑逐字节一致（2026-10-17 sha 76703b43…）",
+      "scenario_sha256": "b47f82de54b95bb263bbe32f02546f53273c1225d8d68c620166fd82745f41e3",
+      "frame_keys": [],
+      "legs": {
+        "oracle": {
+          "sample_point": "spin-exit",
+          "rows": 1773,
+          "missing": [
+            2,
+            4,
+            5,
+            6,
+            361,
+            362,
+            363,
+            542,
+            543,
+            544,
+            545,
+            546,
+            547,
+            548,
+            1002,
+            1003,
+            1409,
+            1411,
+            1412,
+            1413,
+            1414,
+            1573,
+            1574,
+            1575,
+            1576,
+            1577,
+            1800
+          ],
+          "head_skip": 1,
+          "note": "game-over 全链包（0x19/1A/1B/1C 素材）——fixture 压血 1+真击→血尽 0000→f1410 0x1C GAME OVER→f1415 0x19 DisplayPassword→f1578 0x1A WaitForSTART 全链实录；bundle=analysis/bundles/sc-death-chain4.mss"
+        },
+        "game-core": {
+          "sample_point": null,
+          "note": "title 域 0x19/1A/1B/1C 对拍素材——死亡/终局链移植域验证仓"
+        }
+      }
     }
   ]
 }
