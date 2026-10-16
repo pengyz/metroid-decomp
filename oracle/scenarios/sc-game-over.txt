@@ -1,0 +1,22 @@
+# 场景：sc-game-over —— 批次 4：game-over 链（0x19/0x1A/0x1B 面）fixture 注入径
+# 破局巧径：fixture DSL（task-28 ①）注入血量 0（$0106/$0107=HealthLo/Hi 定义锚）
+# →游戏死局处理→Game Over 链→$1F→0x19 DisplayPassword→0x1A WaitForSTART
+# 事件核：$1F 时间线（目标 0x19/0x1A/0x1B）+截图像+probe_mem 0106-0107（回写/清零面）
+name sc-game-over
+frames 1300
+watch_range 0000-00ff zp
+watch_range 0100-07ff iram
+
+press 360 start
+press 420 a
+press 540 start
+
+capture 860 post-fixture
+capture 1000 mid-wait
+capture 1200 late
+
+sample_point spin-exit
+fixture 850 0106 00 invariant
+fixture 850 0107 00 invariant
+probe_mem 0106 0107
+bundle_capture 950 analysis/bundles/sc-game-over
