@@ -138,6 +138,7 @@ def parse_scenario(path: Path) -> dict:
         "capture_every": None,
         "watch": [],
         "sample_point": None,  # task-24 3b: spin-exit | 缺省 endFrame（混态期 legacy）
+        "fixtures": [],  # task-28 ①: {frame, addr, value, persistence}——F_a 注入（设计 v9/v11）
         "watch_ranges": [],
         "ramframe": False,
         "coverage": False,
@@ -220,6 +221,22 @@ def parse_scenario(path: Path) -> dict:
             if len(args) != 2:
                 raise err("probe_mem 用法: probe_mem <lo> <hi>（16 进制，NMI 级写点插桩）")
             plan["probe_mem"].append([args[0], args[1]])
+        elif op == "fixture":
+            # task-28 ①：夹具状态设置（state-fixture 设计 §3 F_a 注入模型）——
+            # fixture <帧号> <hex地址> <hex值> [invariant|evolving]
+            # （persistence 语义：invariant=窗口末读回断言；evolving=演化观测面）
+            if len(args) not in (3, 4):
+                raise err("fixture 用法: fixture <帧号> <hex地址> <hex值> [invariant|evolving]")
+            if not args[0].isdigit():
+                raise err(f"fixture 帧号须为非负整数: {args[0]!r}")
+            for a in args[1:3]:
+                if len(a) not in (2, 4) or any(c not in "0123456789abcdef" for c in a.lower()):
+                    raise err(f"fixture 地址/值须为 hex（2/4 位地址、2 位值）: {a!r}")
+            pers = args[3].lower() if len(args) == 4 else "invariant"
+            if pers not in ("invariant", "evolving"):
+                raise err(f"fixture persistence 须为 invariant|evolving: {args[3]!r}")
+            plan["fixtures"].append({"frame": int(args[0]), "addr": args[1].lower(),
+                                     "value": args[2].lower(), "persistence": pers})
         elif op == "sample_point":
             # task-24 3b：L3 采样点声明——spin-exit=$C0D3 @exitLoop_waitNMIEnd
             # （m1disasm prg7_engine.asm:218）；缺省=endFrame（legacy/混态期）。
@@ -666,6 +683,7 @@ def run_scenario(name_or_path: str, timeout_s: float = 1800.0, keep_gen: bool = 
         "generated_lua_sha256": lua_sha,
         "frames": plan["frames"],
         "sample_point": plan.get("sample_point") or "endFrame",
+        "fixtures": plan.get("fixtures") or [],
         "trace_lines": n_lines,
         "done": done_info,
         "timed_out": timed_out,

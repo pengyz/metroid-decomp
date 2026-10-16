@@ -52,6 +52,59 @@
         }
       },
       "legacy_sample_point_note": "混态期禁置全局 sample_point 键（v5 §5.3c）——per-leg 值在 legs.*；game-core 腿未迁（null=endFrame 缺省）时恒 1 断言显式不适用。"
+    },
+    {
+      "id": "l3-samus-move3-oracle-determinism",
+      "scenario": "samus-move3",
+      "frames": 1400,
+      "watch": [
+        {
+          "label": "zp",
+          "base": "0000",
+          "range": "0000-00ff"
+        },
+        {
+          "label": "iram",
+          "base": "0100",
+          "range": "0100-07ff"
+        }
+      ],
+      "oracle_sha256": "06bf0d3562721be98bd657ec9a5d79eadc37179b886fad0e903adf8c367cf474",
+      "determinism_evidence": "同场景双跑逐字节一致（2026-10-16，run1==run2 sha 06bf0d35…）",
+      "scenario_sha256": "e294b12ec664f12340b32dfba9272a05b1a1e472f5856ca3c8c9765b0b461ec7",
+      "frame_keys": [],
+      "legs": {
+        "oracle": {
+          "sample_point": "spin-exit",
+          "rows": 1383,
+          "missing": [
+            2,
+            4,
+            5,
+            6,
+            361,
+            362,
+            363,
+            542,
+            543,
+            544,
+            545,
+            546,
+            547,
+            548,
+            1002,
+            1003,
+            1400
+          ],
+          "head_skip": 1,
+          "note": "spin-exit 采样（task-24 同源）；缺帧=boot 相 [2,4,5,6]+解锁/转场相位（主循环未过 spin 出口）——行集事实如实。"
+        },
+        "game-core": {
+          "sample_point": null,
+          "rows": null,
+          "note": "task-28 ③：l3-dump --scenario samus-move3 就绪（移动链引爆面=task-11 前置证据）；porter 移动链填够即开移动版 B 跑（判据卡注）。"
+        }
+      }
     }
   ]
 }

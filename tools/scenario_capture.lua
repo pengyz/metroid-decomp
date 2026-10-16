@@ -411,8 +411,28 @@ if samplePoint == "spin-exit" then
   log("sample_point=spin-exit @C0D3 注册: " .. tostring(ok))
 end
 
+-- task-28 ①：夹具写入（F_a 帧执行——设计 §3 注入模型；断言面在 diff_traces）
+local fixtureApplied = false
+local function applyFixtures()
+  if fixtureApplied then return end
+  local due = false
+  for _, fx in ipairs(PLAN.fixtures or {}) do
+    if fx.frame == frame then due = true end
+  end
+  if not due then return end
+  for _, fx in ipairs(PLAN.fixtures or {}) do
+    if fx.frame == frame then
+      emu.write(tonumber(fx.addr, 16), tonumber(fx.value, 16), "cpu")
+      log(string.format("fixture applied f=%d $%s=$%s (%s)", frame, fx.addr, fx.value, fx.persistence))
+    end
+  end
+  fixtureApplied = true
+end
+
 emu.addEventCallback(function()
   if frame < 1 or frame > frames then return end
+
+  applyFixtures() -- F_a 注入在采样前（断言 (b) F_a+1 读回=期望值口径）
 
   if samplePoint ~= "spin-exit" then
     sampleTrace() -- legacy endFrame 采样（混态期未迁腿）

@@ -14,3 +14,9 @@ capture 1000 mid-right
 capture 1150 after-right
 hold 1180-1330 left
 capture 1330 after-left
+
+# task-28 ②：双腿采样同源（task-24 迁移面）——spin-exit 采样
+sample_point spin-exit
+# ①夹具注：本场景解锁序列（start/a/start G4 A1）自然达态，**fixture 不需要**——
+# 夹具机制（fixture 指令，设计 §3 F_a 注入）备用于密码链覆盖不到的态（位置/中间态）。
+# ③game-core 腿：l3-dump --scenario samus-move3（移动链引爆面=task-11 前置证据）。
