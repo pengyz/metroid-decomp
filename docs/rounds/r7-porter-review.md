@@ -1273,6 +1273,18 @@ samus-move 条目含 game-core 腿注（10 态会师腿=预期前沿 B31B 声引
 spin-exit 采样声明+watch 面=观测面不改行为 ✓（双跑重锚 034c3693，885 行缺帧如实）
 ③trace 门 9 案 0 失败 0 记账容忍 ✓。findings（r10）：0 新。
 
+## task-30 分派核（9dc12a7）：GetSoundRoutine 6 位扫描——B31B 清偿主体
+
+### verdict: pass
+
+三查：①**六轮止字节实证 ✓**（@loop_B $B4DE iny/iny/cmp #$10 结构面——scan_sound_flags
+正名 6 位（位7..2/位0 静音/位1 保留），先版 8 位误**原地正名**=纠正文化续）②asm 锚
+$B4BD-$B4F8 逐字（4B 装载循环/asl 六轮/双字解析/RestoreSFXFlags）+结构互核注三条
+（6 轮非 8/双字头表步进/默认例程=无旗自续=八 cycle 驱动面）③测 100 绿（域测三件）。
+multi_music 特例=粗形+$BC53 深证随笔（显式待证不冒领）✓。
+**B31B 清偿主体过**——矩阵二轮（帧值类突变解遮蔽）待声引擎全落定后开（照 lead 排程）。
+findings（r10）：0 新。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
