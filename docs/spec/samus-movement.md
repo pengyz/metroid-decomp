@@ -89,6 +89,25 @@ S-FUNC-07-E37A 头部（E37A-E3A4，accel/maxspeed 初始化）移植前置依�
 $F0A2-$F148 数据岛实为代码流（findings/seed-decode-gap-f0a2-f148.md）。F162/F1E7/F1EE
 族待 decode-sweep 定界后作为 batch-1 单元移植。
 
+### 2.3 E37A 头部考证半交付（2026-10-16，task-19）
+
+考证记录：[e37a-header-forensics.md](../findings/e37a-header-forensics.md)（三址
+ROM↔nmikstas 逐字节互核 A 级）。**R-mv-6 下落发起规则**（新增，B 级=指令流+注释锚）：
+
+- **前置**：SamusGravity($0314)==0（非升非降）；
+- **相位门**：`(ObjectY($030D)+ObjRadY) and #$07 == 0`（8 像素网格合拍才检碰撞）；
+- **阻挡门**：`sub_E7AD`（E7AD）CF=1 畅通（CF=0=撞实心瓦/门——瓦片分类：
+  <$80 实心、$80-$9F 可炸、≥$A0 可行、$4E 特例；Samus 面 $A0/$A1 写
+  SamusDoorData($58) 门标志）；
+- **支撑面门**：`sub_D976`（D976）双旗判定——SamusOnElevator($0307)/OnFrozenEnemy($7D)
+  （敌槽扫描 EnStatus==$04 冻结面 + 电梯面 ElevatorStatus($0320)，命中旗经
+  sub_D9BA 写 SamusHit($030A)）；
+- **效果**：两旗皆 0 ⇒ `SamusGravity=$1A`（下落重力）→ X=#$05 极速 →
+  VertCntrLinear 溢出积分→ObjVertSpeed（重力积分链，R-mv-3 衔接）。
+
+移植半注：sub_E7AD/sub_D976 均为深调用图（F1xx 族+几何子链）——**非 L2 可切片**，
+batch-1 需 F1xx 族考证先行（遗留清单见 findings §7）。命名候选全 C 级待台账自证。
+
 ## 3. 缺口显式声明（D7）
 
 - 未覆盖：跳跃弧线数值（初速/重力表）、滚球物理、碰撞/推墙、门/房间切换 X 重置语义、
