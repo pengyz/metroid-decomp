@@ -100,6 +100,20 @@ pub const SWITCH_UPPER: u16 = 0x0028;
 /// without suit」——WRAM 面；InitTitleGFX `lda JustInBailey/beq` 门）。
 pub const JUST_IN_BAILEY: u16 = 0x69B3;
 
+/// TimerDelay=$29（constants_ram 内容锚「Count down from 9 to 0. Decremented every frame」
+/// ——10 帧预分频）。
+pub const TIMER_DELAY: u16 = 0x0029;
+/// Timer1=$2A（「Decremented every frame after set」）。
+pub const TIMER1: u16 = 0x002A;
+/// Timer2=$2B（同上）。
+pub const TIMER2: u16 = 0x002B;
+/// Timer3=$2C（「Decremented every 10 frames after set」）。
+pub const TIMER3: u16 = 0x002C;
+/// RandomNumber1=$2E（「Random numbers used throughout the game」）。
+pub const RANDOM1: u16 = 0x002E;
+/// RandomNumber2=$2F（同上）。
+pub const RANDOM2: u16 = 0x002F;
+
 /// MainRoutine=$1E（constants_ram.asm:478「5 = Game paused, 3 = Game engine running」）。
 pub const MAIN_ROUTINE: u16 = 0x001E;
 

@@ -72,7 +72,8 @@ impl FrameEngine {
                 }
             }
             BootPhase::PostSpin | BootPhase::MainLoop => {
-                crate::unported!("bank07:C0BC"); // 主循环相（成环件——未端口）
+                super::mainloop::main_loop_iter(&mut self.mem); // 主循环一迭代（C0BC 体）
+                self.phase = BootPhase::MainLoop;
             }
         }
     }
@@ -97,7 +98,7 @@ mod tests {
 
     /// 缺口确定性爆在 bank:addr（D7 机制②）——tick1=PreSpin；tick2=NMI+boot 链全通；
     /// tick3=主循环相
-    /// 引爆（bank07:C0BC——**boot 链全通**后主循环相首件（分发壳/成环面））。
+    /// 引爆（bank00:8000 MainTitleRoutine——主循环相会师点；C0BC 体四件全通）。
     #[test]
     fn unported_detonates_at_bank_addr() {
         let mut e = FrameEngine::new();
@@ -106,7 +107,7 @@ mod tests {
         let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| e.tick_frame()));
         let err = r.unwrap_err();
         let msg = panic_message(&err);
-        assert!(msg.contains("unported @ bank07:C0BC"), "引爆点失准: {msg}");
+        assert!(msg.contains("unported @ bank00:8000"), "引爆点失准: {msg}");
     }
 
     /// tick_frame 执行序（契约断言②：**f=1 帧界锚**——首 tick 后 clock=1）+ pre 链态。
@@ -123,13 +124,5 @@ mod tests {
         assert_eq!(e.mem.read_ram(crate::ram_map::NMI_STATUS), 0); // spin 入口（ClearNMIStat）
     }
 
-    /// GameRng 算法缺口面 fail-loud（未证不发明）。
-    #[test]
-    fn game_rng_detonates_until_verified() {
-        let mut rng = GameRng::new();
-        let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| rng.next_u8()));
-        let msg = panic_message(&r.unwrap_err());
-        assert!(msg.contains("unported @ bank07:C000"), "引爆点失准: {msg}");
-    }
 }
 

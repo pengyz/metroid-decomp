@@ -1,25 +1,35 @@
-//! GameRng——游戏 PRNG（**算法未考证**：不发明，AGENTS §3）。
+//! GameRng——游戏 PRNG（**算法已考证**：RandomNumber1/2 双累加器）。
 //!
-//! 对齐 oracle 的算法待执行序引爆定位（zp RNG 面 + 取值例程 bank:addr）后按 rename 流程
-//! 落账；未证前为 fail-loud 桩——首次消费即爆（形态与 unported! 缺口面一致）。
+//! asm 引证（A 级）：refs/m1disasm/SRC/prg7_engine.asm `RandomNumbers: ; 07:C000`（注
+//! 「RandomNumber1 is increased by #$19 every frame / RandomNumber2 … by #$5F every
+//! frame」——体 `ldx #$05` 循环 `+5/+$13`×5=**+$19/+$5F 合成值注体互证**）。
+//! 实现走 frame::mainloop::random_numbers（RAM 态面 $2E/$2F）；本 handle 保留为 D1
+//! 接口占位。【N-0012 解案】原「算法未证」桩（bank07:C000 fail-loud）已退役——执行序
+//! 引爆定位+asm 考证闭环（口径：C 级缺口→引爆定位→asm 自证→解案）。
 
-/// 游戏 PRNG 句柄（算法缺口面）。
-///
-/// 缺口址自证：asm refs/m1disasm/SRC/prg7_engine.asm:33 `RandomNumbers: ; 07:C000`
-/// （注：「RandomNumber1 is increased by #$19 every frame / RandomNumber2 … by #$5F」——
-/// 累加器族算法，主循环 `jsr RandomNumbers ($C000)` 每帧调用）；算法细节未端口——
-/// 爆在精确址（检测面要求 bank:addr 字面量，verifier v4 路由②）。
+/// 游戏 PRNG 句柄（算法=双累加器——步进走 mainloop::random_numbers）。
 #[derive(Clone, Debug, Default)]
 pub struct GameRng;
 
 impl GameRng {
-    /// 新建（种子语义随算法考证落定）。
+    /// 新建（种子=RAM 态 $2E/$2F 的 boot 初值 $11/$FF——C0AC 自证）。
     pub fn new() -> Self {
         Self
     }
 
-    /// 下一字节（算法未证——fail-loud）。
-    pub fn next_u8(&mut self) -> u8 {
-        crate::unported!("bank07:C000")
+    /// 算法步进（纯函数面）：(n1+$19, n2+$5F)——asm 合成值自证。
+    pub fn step(n1: u8, n2: u8) -> (u8, u8) {
+        (n1.wrapping_add(0x19), n2.wrapping_add(0x5F))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// 算法合成值（注×5 互证面）。
+    #[test]
+    fn game_rng_step_resolved() {
+        assert_eq!(GameRng::step(0x11, 0xFF), (0x2A, 0x5E));
     }
 }
