@@ -139,6 +139,8 @@ def parse_scenario(path: Path) -> dict:
         "watch": [],
         "sample_point": None,  # task-24 3b: spin-exit | 缺省 endFrame（混态期 legacy）
         "fixtures": [],  # task-28 ①: {frame, addr, value, persistence}——F_a 注入（设计 v9/v11）
+        "bundle_capture": None,  # task-32 收官: {frame, out}——MSS+三直映采集
+        "bundle_load": None,     # task-32 收官: {path}——任意起点装载
         "watch_ranges": [],
         "ramframe": False,
         "coverage": False,
@@ -237,6 +239,17 @@ def parse_scenario(path: Path) -> dict:
                 raise err(f"fixture persistence 须为 invariant|evolving: {args[3]!r}")
             plan["fixtures"].append({"frame": int(args[0]), "addr": args[1].lower(),
                                      "value": args[2].lower(), "persistence": pers})
+        elif op == "bundle_capture":
+            # task-32 收官：bundle 采集——bundle_capture <帧> <输出前缀>
+            # （exec 回调上下文 createSavestate→<前缀>.mss + <前缀>.json 三直映）
+            if len(args) != 2 or not args[0].isdigit():
+                raise err("bundle_capture 用法: bundle_capture <帧> <输出前缀>")
+            plan["bundle_capture"] = {"frame": int(args[0]), "out": args[1]}
+        elif op == "bundle_load":
+            # task-32 收官：任意起点装载——bundle_load <前缀>（首 spin 出口装载）
+            if len(args) != 1:
+                raise err("bundle_load 用法: bundle_load <前缀>")
+            plan["bundle_load"] = {"path": args[0]}
         elif op == "sample_point":
             # task-24 3b：L3 采样点声明——spin-exit=$C0D3 @exitLoop_waitNMIEnd
             # （m1disasm prg7_engine.asm:218）；缺省=endFrame（legacy/混态期）。
@@ -357,6 +370,19 @@ def generate_lua(plan: dict, scenario_path: Path) -> tuple[str, str]:
     plan_lua = {k: v for k, v in plan.items() if v is not None}
     plan_lua["out_dir"] = str((TRACES_DIR).resolve())
     plan_lua["shots_dir"] = str((SHOTS_DIR).resolve())
+    # task-32：bundle 输出前缀解析绝对路径（Mesen CWD≠仓库根——相对路径 io.open
+    # 静默失败崩回调实录）+ 建父目录
+    if plan_lua.get("bundle_capture"):
+        out = Path(plan_lua["bundle_capture"]["out"])
+        if not out.is_absolute():
+            out = ROOT / out
+        out.parent.mkdir(parents=True, exist_ok=True)
+        plan_lua["bundle_capture"]["out"] = str(out.resolve())
+    if plan_lua.get("bundle_load"):
+        lp = Path(plan_lua["bundle_load"]["path"])
+        if not lp.is_absolute():
+            lp = ROOT / lp
+        plan_lua["bundle_load"]["path"] = str(lp.resolve())
     harness = HARNESS.read_text(encoding="utf-8")
     src = (
         f"-- 生成文件：勿手改。来源 {relp(scenario_path)}"
@@ -684,6 +710,8 @@ def run_scenario(name_or_path: str, timeout_s: float = 1800.0, keep_gen: bool = 
         "frames": plan["frames"],
         "sample_point": plan.get("sample_point") or "endFrame",
         "fixtures": plan.get("fixtures") or [],
+        "bundle_capture": plan.get("bundle_capture"),
+        "bundle_load": plan.get("bundle_load"),
         "trace_lines": n_lines,
         "done": done_info,
         "timed_out": timed_out,

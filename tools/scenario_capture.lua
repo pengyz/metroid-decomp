@@ -372,8 +372,66 @@ end, "inputPolled")
 -- m1disasm prg7_engine.asm:218 注址；缺省=endFrame legacy 同步面）。
 local samplePoint = PLAN.sample_point or "endFrame"
 local lastSampled = -1
+-- task-32 收官：bundle 采集/装载（**exec 回调上下文**——createSavestate/loadSavestate
+-- 约束实录：须主 CPU exec 内存回调内；sampleTrace 即该上下文（$C0D3 缝））
+local bundleDone = false
+local function bundleOps()
+  if bundleDone then return end
+  if PLAN.bundle_load and frame >= 1 then
+    local f = io.open(PLAN.bundle_load.path .. ".mss", "rb")
+    if f then
+      local blob = f:read("*a")
+      f:close()
+      local okl, errl = pcall(emu.loadSavestate, blob)
+      log(string.format("bundle load f=%d bytes=%d ok=%s err=%s",
+        frame, #blob, tostring(okl), tostring(errl)))
+      bundleDone = true
+    else
+      log("bundle load FAILED: " .. PLAN.bundle_load.path .. ".mss 不可读——fail-loud")
+      error("bundle load 失败（缺 .mss）")
+    end
+    return
+  end
+  -- F_a 采样对齐=**首个 ≥ 目标帧的 spin 出口**（缺帧稳健——f=900 缺帧实录：
+  -- 严格相等错过，task-32 实战修正）
+  if PLAN.bundle_capture and frame >= PLAN.bundle_capture.frame then
+    local oka, blob = pcall(emu.createSavestate)
+    if not oka or type(blob) ~= "string" then
+      log("bundle capture FAILED: " .. tostring(blob))
+      error("bundle 采集失败")
+    end
+    local out = PLAN.bundle_capture.out
+    local mf = io.open(out .. ".mss", "wb")
+    if not mf then
+      log("bundle capture FAILED: 不可写 " .. out .. ".mss（绝对路径面已修，fail-loud）")
+      error("bundle 采集写盘失败")
+    end
+    mf:write(blob)
+    mf:close()
+    -- 三直映面（spec §4：RAM/WRAM/regs——game-core restore_mss 输入）
+    local ram = readRange(0x0000, 0x07FF)
+    local wram = readRange(0x6000, 0x7FFF)
+    local st = emu.getState()
+    local jf = io.open(out .. ".json", "wb")
+    if not jf then
+      log("bundle capture FAILED: 不可写 " .. out .. ".json")
+      error("bundle 采集写盘失败")
+    end
+    jf:write(string.format(
+      '{"mss_bytes":%d,"ram":"%s","wram":"%s","regs":{"a":%d,"x":%d,"y":%d,"sp":%d,"pc":%d,"ps":%d},"frame":%d}',
+      #blob, ram, wram,
+      st["cpu.a"] or -1, st["cpu.x"] or -1, st["cpu.y"] or -1,
+      st["cpu.sp"] or -1, st["cpu.pc"] or -1, st["cpu.ps"] or -1, frame))
+    jf:close()
+    log(string.format("bundle captured f=%d（目标 %d，首个 ≥ 采样点）mss=%dB → %s.{mss,json}",
+      frame, PLAN.bundle_capture.frame, #blob, out))
+    bundleDone = true
+  end
+end
+
 local function sampleTrace()
   if frame < 1 or frame > frames then return end
+  bundleOps() -- exec 回调上下文（约束满足）
   if lastSampled == frame then return end -- once-per-frame 守卫（spin 多次进环防重）
   lastSampled = frame
 

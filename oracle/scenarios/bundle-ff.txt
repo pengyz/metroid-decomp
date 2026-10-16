@@ -1,0 +1,12 @@
+# 场景：bundle-ff —— task-32 收官：任意起点快进对拍（装载→右持 240f）
+# 对拍基准：bundle-capture/连续 run 的 f900-1140 窗（右持 850-1150 内）——
+# 装载态快进 == 连续态同窗（bundle 恢复忠实性判据）
+name bundle-ff
+frames 240
+watch_range 0000-00ff zp
+watch_range 0100-07ff iram
+
+hold 1-240 right
+
+sample_point spin-exit
+bundle_load analysis/bundles/mid-move

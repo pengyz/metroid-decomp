@@ -105,6 +105,98 @@
           "note": "task-28 ③：l3-dump --scenario samus-move3 就绪（移动链引爆面=task-11 前置证据）；porter 移动链填够即开移动版 B 跑（判据卡注）。"
         }
       }
+    },
+    {
+      "id": "l3-fixture-three-conditions",
+      "scenario": "fixture-test",
+      "frames": 300,
+      "watch": [
+        {
+          "label": "zp",
+          "base": "0000",
+          "range": "0000-00ff"
+        },
+        {
+          "label": "iram",
+          "base": "0100",
+          "range": "0100-07ff"
+        }
+      ],
+      "oracle_sha256": "d65a320a9ed32c0e0958f623ac26732f4fb10ef3a7febb68bebc9d45fe77066f",
+      "determinism_evidence": "fixture-test 单跑锚（fixture 场景确定性=注入帧定点，双跑待扩）",
+      "scenario_sha256": "6be28292727281b0845f544d9e7d63b468998a97e903b94ff40d9341bcdfc8eb",
+      "frame_keys": [],
+      "fixtures": [
+        {
+          "frame": 200,
+          "addr": "0700",
+          "value": "ab",
+          "persistence": "invariant",
+          "evidence": "docs/spec/state-bundle-schema.md §3 实测原文"
+        },
+        {
+          "frame": 200,
+          "addr": "0701",
+          "value": "cd",
+          "persistence": "evolving",
+          "evidence": "docs/spec/state-bundle-schema.md §3 实测原文"
+        }
+      ],
+      "legs": {
+        "oracle": {
+          "sample_point": "spin-exit",
+          "rows": 295,
+          "missing": [
+            2,
+            4,
+            5,
+            6,
+            300
+          ],
+          "head_skip": 1
+        },
+        "game-core": {
+          "sample_point": null
+        }
+      }
+    },
+    {
+      "id": "l3-bundle-ff-arbitrary-start",
+      "scenario": "bundle-ff",
+      "frames": 240,
+      "watch": [
+        {
+          "label": "zp",
+          "base": "0000",
+          "range": "0000-00ff"
+        },
+        {
+          "label": "iram",
+          "base": "0100",
+          "range": "0100-07ff"
+        }
+      ],
+      "oracle_sha256": "2b3911b8396583b1232b0d447d81ac88b1a8cbcb29501e6b6f7f2c94b5757abd",
+      "determinism_evidence": "bundle 装载快进（MSS 全机恢复——任意起点对拍面）",
+      "scenario_sha256": "b536de884e69c83190f08b9afcade862e766611e2ec1700bd1a4f783452d9403",
+      "frame_keys": [],
+      "legs": {
+        "oracle": {
+          "sample_point": "spin-exit",
+          "rows": 237,
+          "missing": [
+            103,
+            104,
+            240
+          ],
+          "head_skip": 1,
+          "note": "装载后快进——与连续 run f900+ 窗对拍：102 帧逐字节忠实，首分歧 ff f=107↔cont f=1004 zp$08（恢复相位面，findings 在案）"
+        },
+        "game-core": {
+          "sample_point": null,
+          "note": "bundle 恢复腿（restore_mss 三直映——porter a72d37a 映射件）"
+        }
+      }
     }
   ]
 }

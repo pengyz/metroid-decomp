@@ -478,6 +478,51 @@ def main() -> int:
         if anote:
             print(f"[note] {cid}: {anote}")
 
+        # task-32 余件：三条件断言消费（fixture 声明→(b) 写读回/(c) invariant 持久；
+        # (a)=声明域内 F_a+1 全等即 compare_frames 本体）
+        fx_errs = []
+        for fx in case.get("fixtures") or []:
+            addr = int(fx["addr"], 16)
+            val = int(fx["value"], 16)
+            fa = int(fx["frame"])
+            label, off = None, 0
+            # 块定位：逐 watch 域找 addr
+            for w in watch:
+                base = int(w["base"], 16)
+                key = w["label"]
+                lens = {len(left[f][key]) for f in left} if left else set()
+                if not lens:
+                    continue
+                ln = next(iter(lens)) // 2
+                if base <= addr < base + ln:
+                    label, off = key, (addr - base) * 2
+                    break
+            if label is None:
+                fx_errs.append(f"fixture $%04X 不在 watch 声明域（显式 fail）" % addr)
+                continue
+            def rd(f):
+                row = left.get(f)
+                if row is None:
+                    return None
+                return int(row[label][off:off + 2], 16)
+            b_val = rd(fa + 1)
+            if b_val is None:
+                fx_errs.append(f"(b) fixture $%04X F_a+1（f%d）行缺——显式 fail" % (addr, fa + 1))
+            elif b_val != val:
+                fx_errs.append(f"(b) fixture $%04X F_a+1 读回 {b_val:02X}≠期望 {val:02X}")
+            if fx.get("persistence") == "invariant":
+                last_f = max(left) if left else 0
+                c_val = rd(last_f)
+                if c_val != val:
+                    fx_errs.append(f"(c) invariant $%04X 窗口末 f%d={c_val}≠期望 {val:02X}"
+                                   % (addr, last_f))
+        if fx_errs:
+            for e in fx_errs:
+                print(f"[FAIL] {cid}: 三条件断言: {e}")
+            failed += 1
+            continue
+        if case.get("fixtures"):
+            print(f"[note] {cid}: 三条件断言过（{len(case['fixtures'])} fixture：(b) 读回+(c) 持久）")
         dump = DUMPS / f"{scenario}.frames.jsonl"
         if dump.exists() and (not dump.is_file() or dump.is_symlink()):
             print(f"[FAIL] {cid}: game-core dump 不可读/非常规（目录或符号链接——禁自比对）")

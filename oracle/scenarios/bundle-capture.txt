@@ -1,0 +1,14 @@
+# 场景：bundle-capture —— task-32 收官：samus-move 中段状态采集（f900 右持中）
+# bundle={MSS blob（oracle 装载面）+ ram/wram/regs 三直映（game-core restore_mss 面）}
+name bundle-capture
+frames 1000
+watch_range 0000-00ff zp
+watch_range 0100-07ff iram
+
+press 360 start
+press 420 a
+press 540 start
+hold 850-1000 right
+
+sample_point spin-exit
+bundle_capture 900 analysis/bundles/mid-move
