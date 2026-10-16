@@ -804,6 +804,8 @@ pub enum ShellCall {
     WaitNMIPass,
     /// VBOffAndHorzWrite（$FF&=~$84+PPUCTRL 真写——0 spin）。
     VBOffAndHorzWrite,
+    /// DisplayInputCharacters（$940B：$00/$01 指针 RAM 面已含臂事件；字符面 PPU 侧——0 spin）。
+    DisplayInputCharacters,
 }
 
 /// title 域一 tick 结果（写面=语义标签事件（已映射址）；shell=组合点；exit=分发出口）。
@@ -1035,7 +1037,58 @@ pub fn dispatch_step(face: &TitleFace) -> TitleStep {
                 },
             }
         }
-        // ---- 五降级占位臂（12/01/15/1B/1C 已深路径化——17 spin 点=NmiYield；专件随后）----
+        // ---- 批6b：17 LoadPasswordScreen（4 段 3 spin——ClearAll①②+TurnOnDisplay③；
+        //      体写面：PrepareVram($99E3)+InitPasswordFontGFX+DisplayInputCharacters
+        //      （RAM 面=$00/$01 指针写；字符面 PPU 侧）+调色板/光标初始化+inc+尾链）----
+        0x17 => {
+            let pm = face.ram[0x00FE & 0x7FF];
+            let ff = face.ram[0x00FF & 0x7FF];
+            match face.cursor {
+                0 => TitleStep {
+                    events: clear_all_seg0_events(pm), shell: vec![ShellCall::ScreenOff],
+                    a_out: None, x_out: None, y_out: None,
+                    jumped: None, unported: None, next_cursor: 1,
+                },
+                1 => TitleStep {
+                    events: clear_all_seg1_events(&face.ram, &face.wram, face.frame_count,
+                                                  face.phase, ff),
+                    shell: vec![ShellCall::ClearNameTables, ShellCall::EraseAllSprites,
+                                ShellCall::WaitNMIPass],
+                    a_out: None, x_out: None, y_out: None,
+                    jumped: None, unported: None, next_cursor: 2,
+                },
+                2 => {
+                    let mut events = clear_all_seg2_events(ff & 0xFB & 0xFC);
+                    // DisplayInputCharacters RAM 面（$00/$01 指针）
+                    events.push((0x0000, 0)); events.push((0x0001, 0));
+                    // 体写（$912C 起字节序：1C←_id_Palette12+1=0x13、$321/$322/$2C←0、
+                    // $320←0、$324←0、inc、jmp TurnOnDisplay 尾链）
+                    events.push((crate::ram_map::PALETTE_PENDING, 0x13));
+                    events.push((0x0321, 0)); events.push((0x0322, 0));
+                    events.push((crate::memmap::title_state::TIMER3, 0));
+                    events.push((0x0320, 0));
+                    events.push((0x0324, 0));
+                    events.push(crate::memmap::title_state::write_event_phase(face.phase.wrapping_add(1)));
+                    events.push((0x00FF, (ff & 0xFB & 0xFC & !0x84) | 0x80)); // NMIOn
+                    events.push((0x00FE, pm | 0x1E)); // ScreenOn
+                    events.push((0x001A, 0));
+                    TitleStep {
+                        events, shell: vec![ShellCall::VBOffAndHorzWrite,
+                                            ShellCall::PrepareVram(0x99E3),
+                                            ShellCall::InitPasswordFontGfx,
+                                            ShellCall::DisplayInputCharacters,
+                                            ShellCall::NMIOn, ShellCall::ScreenOn],
+                        a_out: None, x_out: None, y_out: None,
+                        jumped: None, unported: None, next_cursor: 3,
+                    }
+                }
+                _ => TitleStep {
+                    events: vec![], shell: vec![], a_out: None, x_out: None, y_out: None,
+                    jumped: None, unported: None, next_cursor: 0,
+                },
+            }
+        }
+        // ---- 五降级占位臂（12/01/15/1B/1C/17 已深路径化——0x18 专件=稳定锚随后）----
         0x01 | 0x12 | 0x15 | 0x1B | 0x1C | 0x17 => TitleStep {
             events: vec![], shell: vec![ShellCall::NmiYield], a_out: None, x_out: None,
             y_out: None, jumped: None, next_cursor: 0,
