@@ -234,6 +234,29 @@ mod tests {
         assert_eq!(m.read_ram(SAMUS_RADIUS_Y), 0x18); // +8
     }
 
+    /// PntUp 松开回 Stand+方向转移（表 3B 界互核）。
+    #[test]
+    fn samus_pnt_up_release_and_direction() {
+        use crate::ram_map::{JOY1_STATUS, SAMUS_STATUS};
+        let mut m = FrameMemory::default();
+        m.write_ram(JOY1_STATUS, 0x04); // DOWN（UP 松开）
+        let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| samus_pnt_up(&mut m)));
+        assert!(r.is_err()); // SetSamusData 桩
+        assert_eq!(m.read_ram(SAMUS_STATUS), 3); // 表[2]=Roll
+    }
+
+    /// Dead2 微件（dec animDelay 全可端）。
+    #[test]
+    fn samus_dead2_decrements_anim_delay() {
+        let mut m = FrameMemory::default();
+        m.write_ram(0x0304, 5);
+        samus_dead2(&mut m);
+        assert_eq!(m.read_ram(0x0304), 4);
+        m.write_ram(0x0304, 0);
+        samus_dead2(&mut m);
+        assert_eq!(m.read_ram(0x0304), 0xFF); // dec wrap
+    }
+
     /// UpdateSamus 面：PageIndex/IsSamus 落态+位 7 站立直入引爆。
     #[test]
     fn update_samus_spine_face() {
@@ -387,4 +410,61 @@ pub fn samus_roll(mem: &mut FrameMemory) {
         crate::unported!("bank07:E796"); // ObjectCheckMoveUp（站立可行检）
     }
     crate::unported!("bank07:D0E1-tail"); // 滚动保持面（尾段）
+}
+
+// ==== 10 态肉·批4（PntUp/Dead/Dead2/Door/Elevator——轻仪式收尾）====
+
+/// PntUp 状态表（字节自证 D1EB 3B `01 01 03`——x=BitScan(0..2)=右/左/下→Run/Run/Roll；
+/// 第 4 字节 `a5`=FireSamusProjectile 首码（表界互核：表长 3=D1EE 处 jsr 目标））。
+pub const PNT_UP_STATUS_TABLE: [u8; 3] = [1, 1, 3];
+
+/// SamusPntUp 处理件（字节自证 D198 区）：UP 保持/松开→sa_Stand(0)；DOWN|LEFT|RIGHT
+/// →BitScan→SamusDir（x<2）+表转移；FIRE→FireSamusProjectile 桩；JUMP→sa_PntJump(6)
+/// →SetSamusData 桩+JumpEngine 尾。
+pub fn samus_pnt_up(mem: &mut FrameMemory) {
+    use button::*;
+    let joy = mem.read_ram(crate::ram_map::JOY1_STATUS);
+    if joy & UP == 0 {
+        mem.write_ram(crate::ram_map::SAMUS_STATUS, 0); // 松开→Stand
+    }
+    let dirs = joy & (DOWN | LEFT | RIGHT);
+    if dirs != 0 {
+        let bit = bit_scan(dirs) as usize;
+        if bit < 2 {
+            mem.write_ram(crate::ram_map::SAMUS_DIR, bit as u8);
+        }
+        if bit < 3 {
+            mem.write_ram(crate::ram_map::SAMUS_STATUS, PNT_UP_STATUS_TABLE[bit]);
+        }
+    }
+    let fire = mem.read_ram(crate::ram_map::JOY1_CHANGE) | mem.read_ram(crate::memmap::title_state::JOY1_RETRIG);
+    if fire & A != 0 {
+        crate::unported!("bank07:D1EE"); // FireSamusProjectile（上射）
+    }
+    if mem.read_ram(crate::ram_map::JOY1_CHANGE) & A != 0 {
+        mem.write_ram(crate::ram_map::SAMUS_STATUS, 6); // sa_PntJump
+    }
+    crate::unported!("bank07:CD6D"); // SetSamusData（动画面）
+}
+
+/// SamusDead 处理件（字节自证 D41A `a9 01 4c 6d cd`——lda #$01/jmp SetSamusData）：
+/// 可观测=SetSamusData 效果（动画面）——桩。
+pub fn samus_dead(mem: &mut FrameMemory) {
+    mem.regs.a = 0x01;
+    crate::unported!("bank07:CD6D"); // SetSamusData（A=1 参数面）
+}
+
+/// SamusDead2 处理件（字节自证 D41F `ce 05 03 60`——dec Samus.animDelay/rts）：
+/// **全可端微件**（单写面）。
+pub fn samus_dead2(mem: &mut FrameMemory) {
+    let d = mem.read_ram(ANIM_RESET_INDEX.wrapping_sub(1)).wrapping_sub(1); // animDelay=$0304
+    mem.write_ram(0x0304, d);
+}
+
+/// SamusDoor/Elevator（D3A8/D423——门滚动/电梯态壳）：随深路径件填（桩形）。
+pub fn samus_door(_mem: &mut FrameMemory) {
+    crate::unported!("bank07:D3A8"); // 门滚动态（ScrollDoor 族——随件）
+}
+pub fn samus_elevator(_mem: &mut FrameMemory) {
+    crate::unported!("bank07:D423"); // 电梯态（Elevator.status 面——随件）
 }
