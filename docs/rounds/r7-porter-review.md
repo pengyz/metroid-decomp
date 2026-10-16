@@ -1095,6 +1095,19 @@ VertAccelerate 卫件接线（D976 桩→单元）。
 F172 族第 3 例（我面：**baseline 文件在 pathspec 内须逐件归属核对**——我 checklist
 第 6 项升「逐文件归属」措辞生效）。findings（r10）：0 新。基线 115。
 
+## 跨帧游标契约（f832c21）：cursor 双行——§8.1① spin 语义延伸（契约面）
+
+### verdict: pass
+
+三查：①**cursor 契约形 ✓**（TitleFace.cursor←mem.title_cursor/dispatch 后
+`mem.title_cursor = step.next_cursor`（>0=spin 续点/0=完成复位）——跨帧件段索引=
+我 §8.1①「spin=边界构造物」的子步延伸，语义一致）②引擎双测改形=批6b 演进**非回归**
+（port2 对账注）——账面自洽 ✓ ③测 85 绿。
+**真集成发现记档** ✓：01 臂 SFX 写（$0684←$10，D4 保真面）触发 NMI 声引擎分派
+`unported!("bank07:B31B")`=**新缺口域件**（声引擎 B31B 族——lead 缺口地图加行）。
+**红窗最小修注**（「谁的错谁快修优先于面权」）=并发礼仪好范例记档。
+findings（r10）：0 新（B31B=缺口地图行项，非本件瑕疵）。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
