@@ -17,14 +17,7 @@
       "lines": 110548
     }
   },
-  "tolerated": [
-    {
-      "gate": "trace-diff",
-      "item": "帧集合不一致（左缺=[4, 5, 6, 300] 右缺=[1, 3]）",
-      "bug": "TASK-24B2-FKEY（非 BUG-xxx；b2 帧键分歧任务卡）",
-      "reason": "L3 B 跑首次可比较即出的预期分歧（b2 帧键对齐=裁决面本体）；b1 采样对齐已闭（恒 1 双腿 295/297 全过）；decomp l3-dump f 键任务卡完成⇒移除本笔回归严格；签名外分歧照常 FAIL（签名级有界）"
-    }
-  ],
+  "tolerated": [],
   "established": {
     "rom-integrity": true,
     "knowledge-format": true,

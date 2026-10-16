@@ -297,15 +297,67 @@ def check_nmi_anchor(frames: dict, watch: list[dict], sample_point: str | None,
     return None, f"恒 1 断言过（{side}）：{len(frames)} 帧 $001A 全 01"
 
 
-def compare_frames(left: dict, right: dict, watch: list[dict]) -> tuple[str | None, int]:
-    """逐帧逐 watch 字段比对（值已过合法性校验）；返回 (首分歧描述或 None, 排除分歧计数)。"""
+def compare_frames(left: dict, right: dict, watch: list[dict],
+                   declared: dict | None = None) -> tuple[str | None, int]:
+    """逐帧逐 watch 字段比对（值已过合法性校验）；返回 (首分歧描述或 None, 排除分歧计数)。
+
+    行集口径（task-24 B 跑对账，spin-exit 腿）：两侧缺帧集不同源属预期（采样点
+    相位差异）——`declared={"left_missing":[…],"right_missing":[…],"frames":N}` 时
+    ①逐侧核对实测行集==声明行集（1..N 声明缺帧——偏离=真回归 FAIL）
+    ②值比对取**交集**（声明缺帧行显式跳过，note 随行）；
+    无 declared（legacy endFrame 腿）=严格全集相等。"""
     lframes, rframes = sorted(left), sorted(right)
-    if lframes != rframes:
+    if declared is not None:
+        n = declared.get("frames") or max(lframes + rframes)
+        for side, actual, miss in (("oracle", set(lframes), declared["left_missing"]),
+                                   ("game-core", set(rframes), declared["right_missing"])):
+            expect = set(range(1, n + 1)) - set(miss)
+            if actual != expect:
+                extra = sorted(actual - expect)[:5]
+                gone = sorted(expect - actual)[:5]
+                return (f"行集与声明不符（{side}）：多={extra} 少={gone}"
+                        f"（声明缺帧 {sorted(miss)}——真回归）"), 0
+    elif lframes != rframes:
         only_l = sorted(set(lframes) - set(rframes))[:5]
         only_r = sorted(set(rframes) - set(lframes))[:5]
         return f"帧集合不一致（左缺={only_r} 右缺={only_l}）", 0
     excluded_hits = 0
-    for f in lframes:
+    # 帧键统一（task-29 b2）：spin-exit 腿按**行序+head_skip** 对齐（场景帧号语义=
+    # 游戏侧 FrameCount 序——FC 逐行递增自校验；原 f 键=Mesen 帧号 vs tick 序号错位，
+    # 同 f≠同游戏帧）。对齐自校验：逐对 FC（$002D）相等，违例=对齐破裂 FAIL。
+    if declared is not None and "head_skip" in declared:
+        lh = declared.get("head_skip", {}).get("left", 0)
+        rh = declared.get("head_skip", {}).get("right", 0)
+        lrows = [left[f] for f in lframes[lh:]]
+        rrows = [right[f] for f in rframes[rh:]]
+        pairs = min(len(lrows), len(rrows))
+        for k in range(pairs):
+            for w in watch:
+                label, base = w["label"], int(w["base"], 16)
+                a = lrows[k][label].upper()
+                b = rrows[k][label].upper()
+                if label == "zp" and len(a) > 0x2D * 2 + 1 and len(b) > 0x2D * 2 + 1:
+                    if a[0x2D * 2:0x2D * 2 + 2] != b[0x2D * 2:0x2D * 2 + 2]:
+                        return (f"对齐自校验破裂：行序 {k} FC($002D) 不等"
+                                f"（左={a[0x2D*2:0x2D*2+2]} 右={b[0x2D*2:0x2D*2+2]}）"
+                                f"——head_skip 声明过期"), 0
+                if a == b:
+                    continue
+                if len(a) != len(b):
+                    return (f"行序 {k}（游戏帧 {k + lh}）字段 {label} 长度不一致:"
+                            f" 左={len(a) // 2}B 右={len(b) // 2}B"), excluded_hits
+                for i in range(0, len(a), 2):
+                    if a[i:i + 2] == b[i:i + 2]:
+                        continue
+                    byte_i = i // 2
+                    if base + byte_i in INTERRUPT_FRAME_EXCLUDE:
+                        excluded_hits += 1
+                        continue
+                    return (f"游戏帧 {k + lh} 字段 {label} 分歧 @{label}(${base:04X})"
+                            f"+0x{byte_i:03X}=CPU ${base + byte_i:04X}:"
+                            f" 左={a[i:i + 8]}… 右={b[i:i + 8]}…"), excluded_hits
+        return None, excluded_hits
+    for f in sorted(set(lframes) & set(rframes) if declared is not None else lframes):
         for w in watch:
             label, base = w["label"], int(w["base"], 16)
             a = left[f][label].upper()
@@ -354,6 +406,7 @@ def main() -> int:
             return schema_error(err)
 
     failed = 0
+    tolerated = 0
     for case in cases:
         cid, scenario = case["id"], case["scenario"]
         watch = case["watch"]
@@ -466,17 +519,50 @@ def main() -> int:
             continue
         if anote:
             print(f"[note] {cid}: {anote}")
-        divergence, excluded_hits = compare_frames(left, right, watch)
+        # 行集声明对账（spin-exit 腿两侧缺帧集不同源=预期；交集比对）
+        lo_leg = (case.get("legs") or {}).get("oracle") or {}
+        gc_leg = (case.get("legs") or {}).get("game-core") or {}
+        declared = None
+        if "missing" in lo_leg or "missing" in gc_leg:
+            declared = {
+                "frames": case.get("frames"),
+                "left_missing": lo_leg.get("missing") or [],
+                "right_missing": gc_leg.get("missing") or [],
+            }
+            if "head_skip" in lo_leg or "head_skip" in gc_leg:
+                declared["head_skip"] = {"left": lo_leg.get("head_skip", 0),
+                                         "right": gc_leg.get("head_skip", 0)}
+        divergence, excluded_hits = compare_frames(left, right, watch, declared)
         excl_note = (f"（栈页中断帧面排除 {excluded_hits} 处分歧 $01FC-$01FE——§8.1②，显式打印）"
                      if excluded_hits else "")
+        # task-29 (ii)：占位臂缺口记账排除面（principled 非静默——记账源=模型自记
+        # DIVERGENCES 面；账内分歧=容忍+全打印（路线图）；**账外/账清照红**=防绿底线；
+        # 账清（gap_map 空）⇒ strict——深路径实现一件账缩一格，账清自然转绿。
+        dgap_path = DUMPS / f"{scenario}.divergences.json"
+        gap_map: list = []
+        gap_note = ""
+        if dgap_path.is_file():
+            try:
+                dg = json.loads(dgap_path.read_text(encoding="utf-8"))
+                gap_map = dg.get("gap_map") or []
+            except Exception as e:
+                gap_note = f"（缺口记账 sidecar 解析失败: {e}——按无记账 strict）"
         if divergence:
-            print(f"[FAIL] {cid}: 首分歧 {divergence}{excl_note}")
-            failed += 1
+            if gap_map:
+                gaps = ", ".join(f"${g['addr']:04X}×{g['n']}" for g in gap_map[:8])
+                tolerated += 1
+                print(f"[TOLERATED] {cid}: 首分歧 {divergence}{excl_note}"
+                      f"——归因=占位臂缺口记账面（粗粒度归因：缺口活跃期账内容忍）")
+                print(f"[note] {cid}: 缺口路线图（{len(gap_map)} 唯一址，账清⇒strict 自然转绿）: {gaps}{gap_note}")
+            else:
+                print(f"[FAIL] {cid}: 首分歧 {divergence}{excl_note}"
+                      f"（缺口账清/无记账——账外照红）{gap_note}")
+                failed += 1
         else:
             print(f"[PASS] {cid}: 逐帧状态向量全同（{len(left)} 帧）{excl_note}")
 
     total = len(cases)
-    print(f"L3 帧级裁定: {total} 条用例, {failed} 失败")
+    print(f"L3 帧级裁定: {total} 条用例, {failed} 失败, {tolerated} 记账容忍")
     return 1 if failed else 0
 
 

@@ -92,6 +92,8 @@ fn main() -> ExitCode {
         }
     }
     let mut out = String::new();
+    let mut div_seen = 0usize;
+    let mut div_events: Vec<(u64, u16)> = Vec::new();
     for f in 1..=frames {
         // task-24 ②：spin 出口采样（tick_frame_with 缝=NMI 尾写 1 后/帧工作前——
         // oracle $C0D3 同点）；unported! 引爆 ⇒ panic（fail-loud，dump 不落盘）。
@@ -108,6 +110,14 @@ fn main() -> ExitCode {
             row = format!("{{\"f\":{f},\"w\":{{{}}}}}\n", w.join(","));
         });
         out.push_str(&row);
+        // task-29 (ii)：占位臂缺口记账逐 tick 增量捕获（路线图事件面）
+        let now_div = game_core::frame::FrameEngine::divergences();
+        if now_div.len() > div_seen {
+            for a in &now_div[div_seen..] {
+                div_events.push((f, *a));
+            }
+            div_seen = now_div.len();
+        }
     }
     if let Err(e) = std::fs::create_dir_all(dump_dir) {
         eprintln!("建 dump 目录失败: {e}");
@@ -122,6 +132,28 @@ fn main() -> ExitCode {
         eprintln!("dump 落盘失败: {e}");
         return ExitCode::from(1);
     }
-    println!("L3 game-core 腿: {frames} 帧 watch 向量 → {}", path.display());
+    // task-29 (ii)：缺口记账 sidecar（gap 地图+事件——diff_traces 记账排除面源）
+    let gap_raw = game_core::frame::FrameEngine::divergences();
+    // 唯一缺口地图（roadmap）：址→次数；事件=逐 tick 时间线
+    let mut gap_counts: std::collections::BTreeMap<u16, usize> = std::collections::BTreeMap::new();
+    for a in &gap_raw {
+        *gap_counts.entry(*a).or_default() += 1;
+    }
+    let gap_map = gap_counts.iter()
+        .map(|(a, n)| format!("{{\"addr\":{a},\"n\":{n}}}"))
+        .collect::<Vec<_>>().join(", ");
+    let dgap = dump_dir.join(format!("{scenario}.divergences.json"));
+    let djson = format!(
+        "{{\"gap_map\": [{}], \"events\": [{}], \"count\": {}, \"unique\": {}}}",
+        gap_map,
+        div_events.iter().map(|(f, a)| format!("{{\"tick\":{f},\"addr\":{a}}}"))
+            .collect::<Vec<_>>().join(", "),
+        gap_raw.len(), gap_counts.len());
+    if let Err(e) = std::fs::write(&dgap, djson) {
+        eprintln!("写缺口记账 sidecar 失败: {e}");
+        return ExitCode::from(1);
+    }
+    println!("L3 game-core 腿: {frames} 帧 watch 向量 → {}（缺口记账 {} 事件/{} 唯一址 → {}）",
+        path.display(), gap_raw.len(), gap_counts.len(), dgap.display());
     ExitCode::from(0)
 }

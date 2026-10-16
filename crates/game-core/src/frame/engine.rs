@@ -93,6 +93,12 @@ impl FrameEngine {
     pub fn watch_snapshot(&self) -> Vec<(&'static str, String)> {
         self.mem.watch_snapshot()
     }
+
+    /// 占位臂缺口记账面（task-29 (ii)）：自进程启动以来占位臂记账的缺口址序列
+    /// （unported 例行入口址——DIVERGENCES 面，title_bridge 记账源）。
+    pub fn divergences() -> Vec<u16> {
+        super::DIVERGENCES.with(|d| d.borrow().clone())
+    }
 }
 
 #[cfg(test)]
