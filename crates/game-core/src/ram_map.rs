@@ -124,9 +124,13 @@ pub const IS_SAMUS: u16 = 0x0055;
 /// not in use」+位 7=站立旗（GoSamusHandler `bmi` 面））。
 pub const SAMUS_STATUS: u16 = 0x0300;
 
-/// SamusDir（asm 名；SamusStand `sta SamusDir`（「1=left, 0=right」注）——速核
-/// constants_ram 随 task-25 流回填（现 C 级假设面）。
-pub const SAMUS_DIR: u16 = 0x031A;
+/// SamusDir=$4D（asm 名；SamusStand `sta SamusDir`（「1=left, 0=right」注）+
+/// SamusRun `ldx SamusDir` 字节自证 `a6 4d`——【速核更正第 3 案】假设 $031A 作废）。
+pub const SAMUS_DIR: u16 = 0x004D;
+
+/// SamusJumpDsplcmnt=$030F（字节自证 `ac 0f 03`（SamusRun `ldy SamusJumpDsplcmnt`）
+/// ——跳跃位移面（$18/$20 阈值族）。
+pub const SAMUS_JUMP_DISP: u16 = 0x030F;
 
 /// SamusHorzSpeedMax=$0316（内容锚「Used to calc maximum horizontal speed Samus can
 /// reach」——R-mv 跑速面）。

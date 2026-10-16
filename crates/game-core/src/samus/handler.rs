@@ -100,6 +100,45 @@ pub fn go_samus_handler(mem: &mut FrameMemory) {
     crate::unported!(handler.handler_addr());
 }
 
+/// SamusRun 处理件（**字节自证**——10 态肉批2；asm :CCC2）：
+/// 跳跃动画状态机（`ldy SamusJumpDsplcmnt/bit Samus.speedY($308)`）：
+/// 下落（bit7=0）：位移<$18→unspin（anim=$0C）；上升（bit7=1）：位移≥$18→salto（$0E，
+/// 若现 anim≠$20 JumpFire）→≥$20 时 UP 按→JumpPntUp（$35）+A 未按→StopVertMovement。
+/// 字节自证（CCC2 区逐字）：anim 常量 $0C=Jump/$20=JumpFire/$0E=Salto/$35=JumpPntUp。
+/// 尾段（CD02+run 动画/movement）+StopVertMovement（D147）=桩（随队列填）。
+pub fn samus_run(mem: &mut FrameMemory) {
+    use button::*;
+    let disp = mem.read_ram(crate::ram_map::SAMUS_JUMP_DISP);
+    let speed_y_i = mem.read_ram(super::physics::SAMUS_SPEED_Y_I);
+    if mem.read_ram(crate::ram_map::SAMUS_ACCEL_Y) != 0 {
+        if speed_y_i & 0x80 == 0 {
+            // 下落：位移<$18→unspin
+            if disp < 0x18 {
+                mem.write_ram(ANIM_RESET_INDEX, 0x0C);
+            }
+        } else {
+            // 上升：≥$18→salto（若现≠JumpFire）
+            if disp >= 0x18 {
+                if mem.read_ram(ANIM_RESET_INDEX) != 0x20 {
+                    mem.write_ram(ANIM_RESET_INDEX, 0x0E);
+                }
+                if disp >= 0x20 {
+                    if mem.read_ram(crate::ram_map::JOY1_STATUS) & UP != 0 {
+                        mem.write_ram(ANIM_RESET_INDEX, 0x35);
+                    }
+                    if mem.read_ram(crate::ram_map::JOY1_STATUS) & A == 0 {
+                        crate::unported!("bank07:D147"); // StopVertMovement
+                    }
+                }
+            }
+        }
+    }
+    crate::unported!("bank07:CD02"); // 尾段（run 动画/movement 面）
+}
+
+/// 动画面址（字节自证：$0305=animResetIndex（CF5D/CCC2 同址一致））。
+pub const ANIM_RESET_INDEX: u16 = 0x0305;
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -138,6 +177,28 @@ mod tests {
             assert!(r.is_err()); // 尾部 SetSamusData 桩（CD6D）——转移核先行
             assert_eq!(m.read_ram(SAMUS_STATUS), want, "ActionTable[{joy:#x}]");
         }
+    }
+
+    /// SamusRun 跳跃动画状态机（字节自证阈值面：$18/$20+anim 常量）。
+    #[test]
+    fn samus_run_jump_anim_state_machine() {
+        use crate::ram_map::{JOY1_STATUS, SAMUS_JUMP_DISP};
+        // 下落（speedY_i=0）+位移 0x10 → anim=$0C
+        let mut m = FrameMemory::default();
+        m.write_ram(crate::ram_map::SAMUS_ACCEL_Y, 1);
+        m.write_ram(SAMUS_JUMP_DISP, 0x10);
+        let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| samus_run(&mut m)));
+        assert!(r.is_err());
+        assert_eq!(m.read_ram(ANIM_RESET_INDEX), 0x0C);
+        // 上升（speedY_i=0x80）+位移 0x28+UP → anim=$35
+        let mut m = FrameMemory::default();
+        m.write_ram(crate::ram_map::SAMUS_ACCEL_Y, 1);
+        m.write_ram(crate::samus::physics::SAMUS_SPEED_Y_I, 0x80);
+        m.write_ram(SAMUS_JUMP_DISP, 0x28);
+        m.write_ram(JOY1_STATUS, 0x88); // UP+A（A 防 StopVertMovement 爆）
+        let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| samus_run(&mut m)));
+        assert!(r.is_err()); // 尾段 CD02 桩
+        assert_eq!(m.read_ram(ANIM_RESET_INDEX), 0x35);
     }
 
     /// UpdateSamus 面：PageIndex/IsSamus 落态+位 7 站立直入引爆。
