@@ -992,7 +992,50 @@ pub fn dispatch_step(face: &TitleFace) -> TitleStep {
                 },
             }
         }
-        // ---- 五降级占位臂（12/01/15/1B 已深路径化——1C/17 spin 点=NmiYield；逐件落）----
+        // ---- 批6b：1C GameOver（4 段 3 spin——ClearAll①②+NMIOn/ScreenOn③；体写面：
+        //      PrepareVram($93B9)+InitPasswordFontGFX+Timer3←$10+相位←0x19（DisplayPassword））----
+        0x1C => {
+            let pm = face.ram[0x00FE & 0x7FF];
+            let ff = face.ram[0x00FF & 0x7FF];
+            match face.cursor {
+                0 => TitleStep {
+                    events: clear_all_seg0_events(pm), shell: vec![ShellCall::ScreenOff],
+                    a_out: None, x_out: None, y_out: None,
+                    jumped: None, unported: None, next_cursor: 1,
+                },
+                1 => TitleStep {
+                    events: clear_all_seg1_events(&face.ram, &face.wram, face.frame_count,
+                                                  face.phase, ff),
+                    shell: vec![ShellCall::ClearNameTables, ShellCall::EraseAllSprites,
+                                ShellCall::WaitNMIPass],
+                    a_out: None, x_out: None, y_out: None,
+                    jumped: None, unported: None, next_cursor: 2,
+                },
+                2 => {
+                    // VBOff+PrepareVram(@VRAMStruct $93B9)+InitPasswordFontGFX+NMIOn+
+                    // 体写（Timer3←$10、相位←0x19）+ScreenOn+spin③
+                    let mut events = clear_all_seg2_events(ff & 0xFB & 0xFC);
+                    events.push((crate::memmap::title_state::TIMER3, 0x10));
+                    events.push(crate::memmap::title_state::write_event_phase(0x19));
+                    events.push((0x00FF, (ff & 0xFB & 0xFC & !0x84) | 0x80)); // NMIOn
+                    events.push((0x00FE, pm | 0x1E)); // ScreenOn
+                    events.push((0x001A, 0));
+                    TitleStep {
+                        events, shell: vec![ShellCall::VBOffAndHorzWrite,
+                                            ShellCall::PrepareVram(0x93B9),
+                                            ShellCall::InitPasswordFontGfx,
+                                            ShellCall::NMIOn, ShellCall::ScreenOn],
+                        a_out: None, x_out: None, y_out: None,
+                        jumped: None, unported: None, next_cursor: 3,
+                    }
+                }
+                _ => TitleStep {
+                    events: vec![], shell: vec![], a_out: None, x_out: None, y_out: None,
+                    jumped: None, unported: None, next_cursor: 0,
+                },
+            }
+        }
+        // ---- 五降级占位臂（12/01/15/1B/1C 已深路径化——17 spin 点=NmiYield；专件随后）----
         0x01 | 0x12 | 0x15 | 0x1B | 0x1C | 0x17 => TitleStep {
             events: vec![], shell: vec![ShellCall::NmiYield], a_out: None, x_out: None,
             y_out: None, jumped: None, next_cursor: 0,
