@@ -921,6 +921,20 @@ A 跑四证据**我方独立复现**：预置 888 帧伪件→`[stale-clean] 旧
 新 dump）的运行时形态兑现**。三 tick 语义复核=契约 §8.1 tick 内序运行时自证 ✓；
 B 跑备忘（首分歧三面+恒 1 断言）随行。findings（r10）：0 新。
 
+## task-24 L3 采样迁移（546e961）——v5 §5 槽 3b/③/⑤ 勾销
+
+### verdict: pass
+
+三面复现 ✓：①**双跑换锚**（run1/run2 **对称命名**=P7-F1 教训兑现——295 行逐字节
+一致；oracle_sha256 4655→4f9ca791 换锚+「帧末 $1A」口径作废明示=v5 3b 要求全落）
+②**per-leg sample_point 键**（legs.oracle.sample_point=spin-exit；混态禁置全局键=
+§5.3c 口径照办）③行集口径改口（spin-exit 腿=295 行（缺 f=2,4,5,6+尾帧=5 缺帧
+算术合）；legacy 腿全集=两制并存显式）+trace 门 1 案 0 失败 ✓。采样点=$C0D3
+（@exitLoop_waitNMIEnd）=**§8.1④ spin 出口同源 ✓**。
+②游戏侧导出器共享面待缝=显式未完（findings §5 请求唤醒点快照缝——诚实降级）。
+归档 glob 修 .run1./.run2. 排除=对照件被吞自反三案收口 ✓。
+findings（r10）：0 新。**v5 §5 剩余槽**：game-core 导出器缝（显式待）/4 键余项/5/6。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
