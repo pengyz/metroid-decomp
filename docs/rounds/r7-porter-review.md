@@ -1030,6 +1030,18 @@ findings（r10）：0 新。基线 107。
 01/12/15/1B/1C/17 NmiYield 占位=B 跑首分歧预期面；0x18/0x1E 真未武装）=显式 ✓。
 链规 13c 新件同块 add ✓。findings（r10）：0 新。基线 111。
 
+## 桥二段（87fdd02）：dispatch_step 统一入口——B 跑放行件②终形（契约面）
+
+### verdict: pass
+
+**统一入口三步契约形 ✓**（解码 TitleFace→title::dispatch_step 分发→apply_title_step
+唯一源应用）——两层分工归位（映射在其域/28 面旧臂直调形删除）；unported 表址爆
+per-entry 形+jumped 转接面（爆=转接件随接显式）。测 82 绿。
+**B 跑首分歧面预言字面命中 ✓**：实跑爆点 `unported @ bank00:80D0`=01 占位臂
+（DrawIntroBackground/NmiYield 标记面）——port2「B 跑预期首分歧=bank00:80D0」
+**字面命中**（B 跑 300 帧首跑就绪，首分歧前沿已知）。
+findings（r10）：0 新。基线 112。**B 跑放行件①②双过——首跑 B 就绪态确认**。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
