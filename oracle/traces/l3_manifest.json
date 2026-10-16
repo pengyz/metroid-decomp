@@ -1,29 +1,40 @@
 {
- "note": "L3 用例 manifest——只存摘要（ROM 衍生 trace 不入库，红线）；trace 本体 analysis/traces/ 可再生",
- "cases": [
-  {
-   "id": "l3-boot-title-oracle-determinism",
-   "scenario": "boot-title",
-   "frames": 300,
-   "watch": [
+  "note": "L3 用例 manifest——只存摘要（ROM 衍生 trace 不入库，红线）；trace 本体 analysis/traces/ 可再生",
+  "cases": [
     {
-     "label": "zp",
-     "base": "0000",
-     "range": "0000-00ff"
-    },
-    {
-     "label": "iram",
-     "base": "0100",
-     "range": "0100-07ff"
+      "id": "l3-boot-title-oracle-determinism",
+      "scenario": "boot-title",
+      "frames": 300,
+      "watch": [
+        {
+          "label": "zp",
+          "base": "0000",
+          "range": "0000-00ff"
+        },
+        {
+          "label": "iram",
+          "base": "0100",
+          "range": "0100-07ff"
+        }
+      ],
+      "oracle_sha256": "4f9ca79109d638de88301eaddffb576023ef770e5c79f7de71179c869a90ff38",
+      "determinism_evidence": "同场景双跑逐字节一致（2026-10-16 spin-exit 迁移后重锚，run1==run2 sha 4f9ca791…）；历史锚 4655a986…=endFrame 采样面（口径已作废，见 migration_note）",
+      "game_core_leg": "S5 落地后自动启用（analysis/dump/<scenario>.frames.jsonl）",
+      "watch_note": "显式基址区间（含栈页 $0100-$01FF；不用惯常分区假设——gotcha-stack-page 教训）；区间钉死规范=game-core memmap/frame_face.rs WATCH_FACES（zp/iram/wram，WRAM=$6000-$7FFF 全 8KB——严重-5 软上界作废）；本案 watch=[zp,iram]（oracle_sha256 锚定既有 trace 面不动），涉 WRAM 新案按规范加 wram 条目",
+      "scenario_sha256": "1865bfd01499497f79d8a09cf39b728d09dc47ea62777830b14bd7eec681a4ec",
+      "frame_keys": [],
+      "scenario_sha256_note": "锚=当前脚本 sha（task-22 slot④ 载体，diff_traces 对锚校验）；捕获时点脚本 sha=25b5206a…（run.json 在案，generated_lua_sha256=038e047e…）——e3f2473 注释更正（次要-15：陈旧「无 PRG-RAM」注）后脚本 sha 变 2725053f…，DSL 指令面未动（watch_range 逐行不变）=生成 lua 面不变，oracle_sha256 锚定 trace 仍有效；行为性脚本变更必须重采集并同步 oracle_sha256",
+      "migration_note": "task-24 3b 采样迁移（2026-10-16）：endFrame→spin-exit（$C0D3 @exitLoop_waitNMIEnd，m1disasm prg7_engine.asm:218）；oracle_sha256 全量换锚 4655a986…→4f9ca791…。【口径作废明示】历史「帧末 $1A」口径作废——帧末采样处 $1A 处于清 0/置 1 交接窗（相位敏感面）；spin 出口 $1A 恒 1 可断言（3c 门控面）。行集事实：295 行（f=1,3,7..299——boot 相入主环前缺 f=2,4,5,6；尾帧 300=spin-exit 落 DONE 截断后）；diff 键面对账（game-core 腿行集需同源对齐或显式排除缺帧行）随 3c 首跑验收核。",
+      "legs": {
+        "oracle": {
+          "sample_point": "spin-exit",
+          "rows": 295
+        },
+        "game-core": {
+          "sample_point": null
+        }
+      },
+      "legacy_sample_point_note": "混态期禁置全局 sample_point 键（v5 §5.3c）——per-leg 值在 legs.*；game-core 腿未迁（null=endFrame 缺省）时恒 1 断言显式不适用。"
     }
-   ],
-   "oracle_sha256": "4655a986264d0104bafd1779b936c436bf46b731771e7a1a51686f49141bcde2",
-   "determinism_evidence": "同场景双跑逐字节一致（2026-10-14，runA==runB sha 4655a986…）",
-   "game_core_leg": "S5 落地后自动启用（analysis/dump/<scenario>.frames.jsonl）",
-   "watch_note": "显式基址区间（含栈页 $0100-$01FF；不用惯常分区假设——gotcha-stack-page 教训）；区间钉死规范=game-core memmap/frame_face.rs WATCH_FACES（zp/iram/wram，WRAM=$6000-$7FFF 全 8KB——严重-5 软上界作废）；本案 watch=[zp,iram]（oracle_sha256 锚定既有 trace 面不动），涉 WRAM 新案按规范加 wram 条目",
-   "scenario_sha256": "2725053ff361d03505eac0977f5f403ddde3494d74344cceb413c3716802fdec",
-   "frame_keys": [],
-   "scenario_sha256_note": "锚=当前脚本 sha（task-22 slot④ 载体，diff_traces 对锚校验）；捕获时点脚本 sha=25b5206a…（run.json 在案，generated_lua_sha256=038e047e…）——e3f2473 注释更正（次要-15：陈旧「无 PRG-RAM」注）后脚本 sha 变 2725053f…，DSL 指令面未动（watch_range 逐行不变）=生成 lua 面不变，oracle_sha256 锚定 trace 仍有效；行为性脚本变更必须重采集并同步 oracle_sha256"
-  }
- ]
+  ]
 }

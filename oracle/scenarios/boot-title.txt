@@ -13,6 +13,11 @@ capture 299 title
 
 capture_every 60 probe
 
+# task-24 3b：L3 采样迁移——spin 出口采样（$C0D3 @exitLoop_waitNMIEnd）
+# 【2026-10-16 口径作废明示】历史「帧末 $1A」口径自本迁移起作废（帧末采样相位敏感，
+# $1A 于帧末处于清 0/置 1 交接窗——v5 契约 §8.1 采样点=spin 出口同源，$1A 恒 1 可断言）。
+sample_point spin-exit
+
 # 状态向量：零页 + 栈/游戏变量区（密码制无电池存档）
 # 【2026-10-15 更正】原注「Metroid MMC1 无 PRG-RAM」与 $6AFx WRAM 定谳矛盾（陈旧注
 # 曾阻滞 watch 扩面决策）——$6AF4-$6BF3 敌槽区=WRAM 实存（Mesen2 实跑+写址+三方证据），

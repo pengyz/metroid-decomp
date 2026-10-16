@@ -37,6 +37,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 import os
 import shutil
 import signal
@@ -136,6 +137,7 @@ def parse_scenario(path: Path) -> dict:
         "captures": [],
         "capture_every": None,
         "watch": [],
+        "sample_point": None,  # task-24 3b: spin-exit | 缺省 endFrame（混态期 legacy）
         "watch_ranges": [],
         "ramframe": False,
         "coverage": False,
@@ -218,6 +220,12 @@ def parse_scenario(path: Path) -> dict:
             if len(args) != 2:
                 raise err("probe_mem 用法: probe_mem <lo> <hi>（16 进制，NMI 级写点插桩）")
             plan["probe_mem"].append([args[0], args[1]])
+        elif op == "sample_point":
+            # task-24 3b：L3 采样点声明——spin-exit=$C0D3 @exitLoop_waitNMIEnd
+            # （m1disasm prg7_engine.asm:218）；缺省=endFrame（legacy/混态期）。
+            if len(args) != 1 or args[0] not in ("spin-exit", "endFrame"):
+                raise err("sample_point 用法: sample_point spin-exit|endFrame")
+            plan["sample_point"] = args[0]
         elif op == "coverage_pc":
             # r3 decode-sweep 动态收口：pc 过滤型指令入口覆盖（execute 回调 + cpu.pc==地址
             # 才记——精确指令入口观测；已知盲点=中断入口首指令，见 scenario_capture.lua 注）。
@@ -362,7 +370,7 @@ def archive_existing(name: str) -> str | None:
     # 类级修复（task-15 实测）：按 `<name>.*` 全量归档——旧 6 族白名单漏了
     # probe/entries/edges/nmi/dispatch/window/exec_cov 等新产物族（run1 被覆盖案）。
     for src in sorted(TRACES_DIR.glob(f"{name}.*")):
-        if src.is_file():
+        if src.is_file() and not re.search(r"\.run[12]\.", src.name):
             dst.mkdir(parents=True, exist_ok=True)
             shutil.move(str(src), str(dst / src.name))
             moved = True
@@ -657,6 +665,7 @@ def run_scenario(name_or_path: str, timeout_s: float = 1800.0, keep_gen: bool = 
         "generated_lua": lua_path.relative_to(ROOT).as_posix() if keep_gen else None,
         "generated_lua_sha256": lua_sha,
         "frames": plan["frames"],
+        "sample_point": plan.get("sample_point") or "endFrame",
         "trace_lines": n_lines,
         "done": done_info,
         "timed_out": timed_out,

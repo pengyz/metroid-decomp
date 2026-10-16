@@ -392,7 +392,17 @@ def main() -> int:
             print(f"[FAIL] {cid}: oracle trace 重复帧行 {sorted(set(ldups))[:5]}（防覆盖掩盖分歧）")
             failed += 1
             continue
-        if "frames" in case and len(left) != case["frames"]:
+        # 行集语义按腿采样点分口径（task-24 3b 迁移改口）：spin-exit 腿行集=legs.*.rows
+        # （boot 相缺帧+尾帧截断=如实行集，295≠300 属正常）；endFrame legacy 腿=frames 全集。
+        oracle_leg = (case.get("legs") or {}).get("oracle") or {}
+        if oracle_leg.get("sample_point") == "spin-exit":
+            exp_rows = oracle_leg.get("rows")
+            if exp_rows is not None and len(left) != exp_rows:
+                print(f"[FAIL] {cid}: 行数 {len(left)} != legs.oracle.rows {exp_rows}"
+                      f"（spin-exit 行集口径）")
+                failed += 1
+                continue
+        elif "frames" in case and len(left) != case["frames"]:
             print(f"[FAIL] {cid}: 帧数 {len(left)} != manifest.frames {case['frames']}")
             failed += 1
             continue

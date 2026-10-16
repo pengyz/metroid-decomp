@@ -368,8 +368,14 @@ emu.addEventCallback(function()
   end
 end, "inputPolled")
 
-emu.addEventCallback(function()
+-- task-24 3b：采样函数化——sample_point 分流（spin-exit=$C0D3 @exitLoop_waitNMIEnd，
+-- m1disasm prg7_engine.asm:218 注址；缺省=endFrame legacy 同步面）。
+local samplePoint = PLAN.sample_point or "endFrame"
+local lastSampled = -1
+local function sampleTrace()
   if frame < 1 or frame > frames then return end
+  if lastSampled == frame then return end -- once-per-frame 守卫（spin 多次进环防重）
+  lastSampled = frame
 
   -- 逐帧状态向量
   local wparts = {}
@@ -386,6 +392,32 @@ emu.addEventCallback(function()
   traceF:write(line .. "}\n")
   nTrace = nTrace + 1
 
+  -- r3：$8000 窗口指纹时间线（随采样点）
+  if winF then
+    winF:write(string.format('{"f":%d,"win":"%s"}\n', frame, readRange(0x8000, 0x800F)))
+  end
+end
+
+if samplePoint == "spin-exit" then
+  -- spin 出口采样：$C0D3 指令入口（callbackType.exec 真执行，r3 语义）
+  local ok = false
+  if emu.callbackType and emu.callbackType.exec then
+    ok = pcall(emu.addMemoryCallback, function() sampleTrace() end,
+      emu.callbackType.exec, 0xC0D3, 0xC0D3)
+  end
+  if not ok then
+    ok = pcall(emu.addMemoryCallback, function() sampleTrace() end, 2, 0xC0D3, 0xC0D3)
+  end
+  log("sample_point=spin-exit @C0D3 注册: " .. tostring(ok))
+end
+
+emu.addEventCallback(function()
+  if frame < 1 or frame > frames then return end
+
+  if samplePoint ~= "spin-exit" then
+    sampleTrace() -- legacy endFrame 采样（混态期未迁腿）
+  end
+
   -- 采集点（显式 tag 或 capture_every）
   local tag = capAt[frame]
   if not tag and everyN > 0 and frame % everyN == 0 then tag = everyTag end
@@ -400,11 +432,6 @@ emu.addEventCallback(function()
   end
 
   if frame % 120 == 0 then traceF:flush() end
-
-  -- r3：$8000 窗口指纹时间线（每帧一行；A9 证据面）
-  if winF then
-    winF:write(string.format('{"f":%d,"win":"%s"}\n', frame, readRange(0x8000, 0x800F)))
-  end
 
   if frame == frames then
     traceF:flush() traceF:close()
