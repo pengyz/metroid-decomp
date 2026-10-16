@@ -414,6 +414,56 @@
           "note": "移植线到域后 bundle-ff 模式即比"
         }
       }
+    },
+    {
+      "id": "l3-samus-move-oracle-determinism",
+      "scenario": "samus-move",
+      "frames": 900,
+      "watch": [
+        {
+          "label": "zp",
+          "base": "0000",
+          "range": "0000-00ff"
+        },
+        {
+          "label": "iram",
+          "base": "0100",
+          "range": "0100-07ff"
+        }
+      ],
+      "oracle_sha256": "034c3693a77c2dc612d718c3943d9f119ec7424c24426b7f4028b2f8032e1af6",
+      "determinism_evidence": "双跑逐字节一致（2026-10-16 run1==run2 sha 034c3693…）",
+      "scenario_sha256": "0fe2c7de06f619aa3265acb4c7942ed7837c1880a9160e33b04a7decaf385ec3",
+      "frame_keys": [],
+      "legs": {
+        "oracle": {
+          "sample_point": "spin-exit",
+          "rows": 885,
+          "missing": [
+            2,
+            4,
+            5,
+            6,
+            361,
+            362,
+            363,
+            542,
+            543,
+            544,
+            545,
+            546,
+            547,
+            548,
+            900
+          ],
+          "head_skip": 1,
+          "note": "G4 首切片（移动 RAM 反应面）——spin-exit 迁移后重锚（旧 coverage 面行集：boot [2,4,5,6]+解锁转场 [361-363,542-548]+尾 900）"
+        },
+        "game-core": {
+          "sample_point": null,
+          "note": "porter 10 态收尾（ba73f10）后会师腿——预期前沿=B31B 声引擎分派"
+        }
+      }
     }
   ]
 }

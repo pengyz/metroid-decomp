@@ -3,6 +3,8 @@
 # 帧序：开机→标题→Start/A 进游戏（冒烟实测 f500 前后入局）→ 行走右/左对照段。
 name samus-move
 frames 900
+watch_range 0000-00ff zp
+watch_range 0100-07ff iram
 coverage
 
 press 360 start
@@ -18,6 +20,9 @@ capture 720 after-right
 capture 870 after-left
 
 capture_every 60 probe
+
+# task-24 同源：spin-exit 采样（会师对拍面——porter 2026-10-16 请求条目）
+sample_point spin-exit
 
 watch_range 0000-00ff zp
 watch_range 0100-07ff iram
