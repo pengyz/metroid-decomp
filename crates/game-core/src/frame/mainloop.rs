@@ -66,7 +66,8 @@ pub fn update_timer(mem: &mut FrameMemory) {
 /// GameMode=0 ⇒ START 检查/主例程分发（游戏面——task-11 面 fail-loud）。
 pub fn go_main_routine(mem: &mut FrameMemory) {
     if mem.read_ram(GAME_MODE) != 0 {
-        crate::unported!("bank00:8000"); // MainTitleRoutine（会师点——title 簇分发）
+        super::title_bridge::main_title_routine(mem); // **会师接线**（bank00:8000 穿越）
+        return; // 标题路终（asm：`jmp MainTitleRoutine` 尾跳语义）
     }
     crate::unported!("bank07:C11B-game"); // 游戏面（START 检查/主例程分发——task-11 面）
 }
@@ -105,16 +106,12 @@ mod tests {
         assert_eq!(m.read_ram(TIMER3), 1);
     }
 
-    /// GoMainRoutine 标题路引爆会师点（bank00:8000）。
+    /// GoMainRoutine 标题路**会师穿越**（bank00:8000 已通——phase 0 臂推进效应）。
     #[test]
-    fn go_main_routine_title_detonates_at_meeting_point() {
+    fn go_main_routine_title_crosses_meeting_point() {
         let mut m = FrameMemory::default();
-        m.write_ram(GAME_MODE, 1);
-        let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| go_main_routine(&mut m)));
-        let err = r.unwrap_err();
-        let msg = err.downcast_ref::<String>().cloned()
-            .or_else(|| err.downcast_ref::<&'static str>().map(|s| (*s).to_string()))
-            .unwrap_or_default();
-        assert!(msg.contains("unported @ bank00:8000"), "会师点失准: {msg}");
+        m.write_ram(GAME_MODE, 1); // TitleRoutine=0=InitializeAfterReset
+        go_main_routine(&mut m); // 桥穿越（phase 0 臂执行）
+        assert_eq!(m.read_ram(crate::ram_map::TITLE_ROUTINE), 1); // 相位推进（inc $1F）
     }
 }

@@ -19,6 +19,7 @@ pub mod intro;
 pub mod memory;
 pub mod nmi;
 pub mod rng;
+pub mod title_bridge;
 
 pub use clock::{VirtualClock, TARGET_FPS};
 pub use engine::FrameEngine;
