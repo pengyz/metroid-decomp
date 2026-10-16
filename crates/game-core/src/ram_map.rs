@@ -114,6 +114,16 @@ pub const RANDOM1: u16 = 0x002E;
 /// RandomNumber2=$2F（同上）。
 pub const RANDOM2: u16 = 0x002F;
 
+/// PageIndex=$4B（constants_ram 内容锚「Index to object data」）。
+pub const PAGE_INDEX: u16 = 0x004B;
+
+/// IsSamus=$55（constants_ram 内容锚「1=Samus object being accessed, 0=not Samus」）。
+pub const IS_SAMUS: u16 = 0x0055;
+
+/// Samus.status=$0300（`.struct Object` 首字段内容锚「Status of object. 0=object slot
+/// not in use」+位 7=站立旗（GoSamusHandler `bmi` 面））。
+pub const SAMUS_STATUS: u16 = 0x0300;
+
 /// MainRoutine=$1E（constants_ram.asm:478「5 = Game paused, 3 = Game engine running」）。
 pub const MAIN_ROUTINE: u16 = 0x001E;
 
