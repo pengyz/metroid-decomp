@@ -1314,6 +1314,12 @@ nmi.rs 四 init 桩接线=B31B 行清 ③测 100 绿（6 位扫真旗形）。
 ——坏例 exit 1 拒跑实证）④超时=FAIL 显式（diff_subroutines 600s 限时打回非挂死）。
 lint 56 目标 PASS+watchdog 0.05s 限时 ✓。基线 131→132。findings（r10）：0 新。
 
+## m2 预拼装批1（9372b7f）抽检：D147/CD92 全折+CD6D 壳
+
+### verdict: pass（抽检）
+
+移动深路径嵌套件（439/0 零回退+测 101）。findings（r10）：0 新。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
