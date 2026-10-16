@@ -284,6 +284,17 @@ denoms_corrections，lead 域合并）③**R6 慢帧互斥实证（我 r12 挂�
 就位 ③遗留显式（F1xx 族 batch-1 阻塞面/门位语义）=不越级。
 findings 三族（r10）：0 新。
 
+## task-32 首件（4940c87）：savestate 装载能力探针定谳——state-bundle 前置
+
+### verdict: pass（能力矩阵件）
+
+能力矩阵 A 级 ✓：createSavestate=全机 MSS blob（标记 $33→恢复 $55 实证）+loadSavestate
+续行+**上下文约束实录**（须主 CPU exec 回调内=fixture 触发路径同点——与我 §3 F_a
+注入模型接点一致）+getState/setState=寄存器级不含 RAM（键族全枚举）+禁用项显式
+（无参 createSavestate 阻塞）。bundle schema 雏形（snapshot+fixture 叠写+anchor）=
+F_a 族延伸 ✓；MSS↔FrameMemory 映射=porter 分工显式。探针件 20 处 API 面在位；
+v1 猜名 API 全错（枚举面救场）=考证方法续 ✓。findings 三族（r10）：0 新。
+
 ## 遗留风险清单
 
 1. S 面 120 为 B 级估计——分母 v2 实际登记（lead task-5）以 decode-sweep 复跑 + 逐条
