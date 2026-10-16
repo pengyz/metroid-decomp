@@ -106,16 +106,17 @@ mod tests {
 
     /// 缺口确定性爆在 bank:addr（D7 机制②）——tick1=PreSpin；tick2=NMI+boot 链全通；
     /// tick3=主循环相
-    /// 引爆（bank00:8000 MainTitleRoutine——主循环相会师点；C0BC 体四件全通）。
+    /// 引爆（bank00:80D0——01 占位臂（NmiYield 标记面）=B 跑预期首分歧（port2 预言精确命中））。
     #[test]
     fn unported_detonates_at_bank_addr() {
         let mut e = FrameEngine::new();
         e.tick_frame(); // PreSpin → AwaitNmi（无炸）
         e.tick_frame(); // NMI 全通+boot_post_spin 链全通 → PostSpin（无炸）
+        e.tick_frame(); // tick3 主循环相：phase 0 臂过（会师穿越）
         let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| e.tick_frame()));
         let err = r.unwrap_err();
         let msg = panic_message(&err);
-        assert!(msg.contains("unported @ bank00:8000"), "引爆点失准: {msg}");
+        assert!(msg.contains("unported @ bank00:80D0"), "引爆点失准: {msg}"); // 01 占位臂（B 跑首分歧面）
     }
 
     /// spin 出口缝位语义（task-24 对齐锚）：采样点 $1A=1 恒量面+FrameCount 未增
