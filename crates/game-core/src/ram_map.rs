@@ -90,6 +90,16 @@ pub const MUSIC_INIT: u16 = 0x0685;
 /// UpdateAge `inc SamusAge,x` 面；标题态不触）。
 pub const SAMUS_AGE: u16 = 0x687D;
 
+/// CurrentBank=$23（asm 名；c4de 面 `sty CurrentBank` 自证）。
+pub const CURRENT_BANK: u16 = 0x0023;
+
+/// SwitchUpperBits=$28（asm 名；BankSwitch `lda SwitchUpperBits/and #$18/ora` 面）。
+pub const SWITCH_UPPER: u16 = 0x0028;
+
+/// JustInBailey=$69B3（asm 名；constants_ram 内容锚「0 = Samus has suit, 1 = Samus is
+/// without suit」——WRAM 面；InitTitleGFX `lda JustInBailey/beq` 门）。
+pub const JUST_IN_BAILEY: u16 = 0x69B3;
+
 /// MainRoutine=$1E（constants_ram.asm:478「5 = Game paused, 3 = Game engine running」）。
 pub const MAIN_ROUTINE: u16 = 0x001E;
 

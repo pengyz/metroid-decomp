@@ -13,6 +13,7 @@
 pub mod boot;
 pub mod clock;
 pub mod engine;
+pub mod gfx;
 pub mod intro;
 pub mod memory;
 pub mod nmi;
@@ -20,6 +21,7 @@ pub mod rng;
 
 pub use clock::{VirtualClock, TARGET_FPS};
 pub use engine::FrameEngine;
+pub use gfx::init_title_gfx;
 pub use intro::star_palette_switch;
 pub use boot::io;
 pub use memory::{FrameMemory, Registers};

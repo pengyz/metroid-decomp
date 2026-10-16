@@ -230,7 +230,8 @@ fn c531_unit_pre(mem: &mut FrameMemory) {
 pub fn boot_post_spin(mem: &mut FrameMemory) {
     screen_nmi_off_post(mem);
     copy_map(mem);
-    crate::unported!("bank07:C5D7"); // InitTitleGFX（链次桩）
+    super::gfx::init_title_gfx(mem); // InitTitleGFX（asm :1493 族——已端口）
+    crate::unported!("bank07:C487"); // NMIOn（链次桩——VBlank 中断重启）
 }
 
 /// CopyMap 单元（**asm 引证主体**，链规 17）——refs/m1disasm/SRC/prg0_title.asm:5153
@@ -282,7 +283,7 @@ pub fn screen_nmi_off_post(mem: &mut FrameMemory) {
 }
 
 /// MMC1 串行写（5 次 STA，值 LSR 递移——bank07:C01C/C02B/C4FA 形态；非 RAM 面）。
-fn mmc1_serial_write(mem: &mut FrameMemory, _reg: u16) {
+pub(crate) fn mmc1_serial_write(mem: &mut FrameMemory, _reg: u16) {
     let mut v = mem.regs.a;
     for _ in 0..5 {
         let _ = v; // STA reg（MMC1 移位面——RAM watch 不可见）
