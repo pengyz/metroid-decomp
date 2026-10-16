@@ -335,6 +335,13 @@ bundle 快照随包（任意起点素材库）✓。**事件核两佳**：①道
 
 title 深路径对拍素材包注册（trace 门 11 案 0 失败）。findings 三族（r10）：0 新。
 
+## 批次 4（8323a3e）抽检：title 仓补完三件
+
+### verdict: pass（抽检）
+
+录入缓冲定址+退格如实+game-over 链实验三件（trace 门 11 案 0 失败）。findings 三族
+（r10）：0 新。
+
 ## 遗留风险清单
 
 1. S 面 120 为 B 级估计——分母 v2 实际登记（lead task-5）以 decode-sweep 复跑 + 逐条
