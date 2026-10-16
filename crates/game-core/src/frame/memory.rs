@@ -113,3 +113,54 @@ mod tests {
         assert!(snap[0].1.chars().all(|c| c.is_ascii_uppercase() || c.is_ascii_digit()));
     }
 }
+
+/// MSS↔FrameMemory 映射（**spec §4 分工件**——docs/spec/state-bundle-schema.md §4
+/// 接缝表；双腿任意起点收官缝）：
+/// · RAM 区（$0000-$07FF）→ ram[0x800] **直映**（A 级）
+/// · WRAM（$6000-$7FFF）→ wram[0x2000] **直映**
+/// · CPU 寄存器（cpu.a/x/y/sp/pc/ps）→ regs 直映（ps↔p=status 同义名）
+/// · mapper.prgReg/chrReg/prgMode=**memmap 扩展面**（task-14 A9 后遗同面——随接）
+/// · ppu.*=S6 渲染腿（bundle v1 不含）；apu/clock=时钟/RNG 对表（task-10 定谳后接）。
+impl FrameMemory {
+    /// MSS 恢复构造（直映三面）。
+    pub fn restore_mss(ram: &[u8], wram: &[u8], regs: Registers) -> Self {
+        assert!(ram.len() >= 0x800, "MSS RAM 面不足 $800");
+        assert!(wram.len() >= 0x2000, "MSS WRAM 面不足 $2000");
+        let mut mem = Self::default();
+        mem.ram.copy_from_slice(&ram[..0x800]);
+        mem.wram.copy_from_slice(&wram[..0x2000]);
+        mem.regs = regs;
+        mem.nmi_enabled = mem.ram[0x00FF] & 0x80 != 0;
+        mem
+    }
+
+    /// 导出 MSS 面（反向——三直映；bundle 生产侧用）。
+    pub fn capture_mss(&self) -> (Vec<u8>, Vec<u8>, Registers) {
+        (self.ram.to_vec(), self.wram.to_vec(), self.regs)
+    }
+}
+
+#[cfg(test)]
+mod mss_map_tests {
+    use super::*;
+
+    /// MSS 映射保真（三直映往返+nmi 推导）。
+    #[test]
+    fn restore_mss_maps_all_faces() {
+        let mut ram = vec![0u8; 0x800];
+        ram[0x001A] = 1;
+        ram[0x00FF] = 0x90;
+        let mut wram = vec![0u8; 0x2000];
+        wram[0x1234] = 0xAB;
+        let regs = Registers { a: 1, x: 2, y: 3, sp: 4, pc: 0x8000, p: 0x24 }; // MSS ps↔p（status 同义）
+        let mem = FrameMemory::restore_mss(&ram, &wram, regs);
+        assert_eq!(mem.read_ram(0x001A), 1);
+        assert_eq!(mem.read_wram(0x7234), 0xAB);
+        assert_eq!((mem.regs.a, mem.regs.pc), (1, 0x8000));
+        assert!(mem.nmi_enabled);
+        let (r2, w2, regs2) = mem.capture_mss();
+        assert_eq!(&r2[..0x800], &ram[..]);
+        assert_eq!(&w2[..0x2000], &wram[..]);
+        assert_eq!(regs2, regs);
+    }
+}
