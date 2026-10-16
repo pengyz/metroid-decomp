@@ -422,8 +422,11 @@ local function applyFixtures()
   if not due then return end
   for _, fx in ipairs(PLAN.fixtures or {}) do
     if fx.frame == frame then
-      emu.write(tonumber(fx.addr, 16), tonumber(fx.value, 16), "cpu")
-      log(string.format("fixture applied f=%d $%s=$%s (%s)", frame, fx.addr, fx.value, fx.persistence))
+      -- task-32 实战修正：MEMTYPE=8 数值枚举（探针实证 emu.memType.cpu=nil/"cpu" 待验
+      -- ——write 用 MEMTYPE 同 readByte 口径）
+      local okw, errw = pcall(emu.write, tonumber(fx.addr, 16), tonumber(fx.value, 16), MEMTYPE)
+      log(string.format("fixture applied f=%d $%s=$%s (%s) ok=%s err=%s",
+        frame, fx.addr, fx.value, fx.persistence, tostring(okw), tostring(errw)))
     end
   end
   fixtureApplied = true

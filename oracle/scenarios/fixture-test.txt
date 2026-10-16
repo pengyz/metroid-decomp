@@ -1,0 +1,14 @@
+# 场景：fixture-test —— task-32 fixture DSL 实战补账（F_a 注入三条件验证面）
+# 夹具：f200 写 $0700=$AB（invariant——窗口末读回断言面）+ $0701=$CD（evolving）
+# 判据：F_a+1 采样读回==期望（b）；invariant 窗口末仍在（c）；记录=run.json fixtures
+name fixture-test
+frames 300
+watch_range 0000-00ff zp
+watch_range 0100-07ff iram
+
+capture 120 init
+capture 299 title
+
+sample_point spin-exit
+fixture 200 0700 ab invariant
+fixture 200 0701 cd evolving
