@@ -1069,6 +1069,19 @@ tick 序号键面=decomp f 键任务卡。修复面（缝语义限主循环 spin
 案例注记：**新件依赖链须同块或先行落**（与「新件与声明同刻 add」并列）。
 findings（r10）：0 新。基线 113。
 
+## task-29（2f789cf）：b2 帧键对齐+缺口记账排除面+TOLERATED 撤销——生命周期闭环
+
+### verdict: pass
+
+三核：①**TOLERATED 撤销合法性 ✓**——退出条件成就（f 键对齐）；baseline tolerant
+1→0 实读+历史留痕（tolerated-removed+sha 链）+「TOLERATED:（无）」——**我 812d0f8
+登记的生命周期闭环**（登记→退出成就→撤销留痕）②**b2 修复正道 ✓**：行序+head_skip
+（oracle=1/game-core=0）对齐+**FC($002D) 逐对自校验**（真帧身份锚——同 f≠同游戏帧
+的错位假象解）；FC 集合全同+逐行递增；原「f=7 首分歧 35 地址」=键错位假象原地降级 ✓
+③**缺口记账排除面（ii）边界核 ✓**：账内分歧=TOLERATED-by-accounting 全打印路线图
+（$80D0×297 缺口图）；**账外/账清照红**；账清⇒strict 自然转绿——记账面非放行面 ✓。
+实测：「0 失败, 1 记账容忍」+CHECK: PASS=12。findings（r10）：0 新。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
