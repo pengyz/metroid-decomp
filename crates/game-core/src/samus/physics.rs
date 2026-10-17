@@ -99,6 +99,25 @@ mod tests {
         assert_eq!(m.read_ram(0x006B), 0x13); // bit4 置
     }
 
+    /// IsScrewAttackActive 三门面（status==1+gear 位+anim 面）。
+    #[test]
+    fn is_screw_attack_three_gates() {
+        use crate::ram_map::{gear, SAMUS_GEAR, SAMUS_STATUS};
+        let mut m = FrameMemory::default();
+        assert!(!is_screw_attack_active(&m)); // status=0 门
+        m.write_ram(SAMUS_STATUS, 1);
+        assert!(!is_screw_attack_active(&m)); // gear 门
+        m.write_ram(SAMUS_GEAR, gear::SCREWATTACK);
+        assert!(!is_screw_attack_active(&m)); // anim 面（reset=0 非 Salto/Jump）
+        m.write_ram(0x0305, 0x0E); // Salto
+        assert!(is_screw_attack_active(&m));
+        m.write_ram(0x0305, 0x0C); // Jump+上升
+        m.write_ram(SAMUS_SPEED_Y_I, 0x80);
+        assert!(is_screw_attack_active(&m));
+        m.write_ram(SAMUS_SPEED_Y_I, 0x00); // 下降
+        assert!(!is_screw_attack_active(&m));
+    }
+
     /// UpdateObjAnim 倒数+表走+回绕（struct 字段面）。
     #[test]
     fn update_obj_anim_walks_table() {
@@ -341,7 +360,14 @@ pub fn set_mirror_cntrl_bit(mem: &mut FrameMemory) {
 /// jmp ObjDrawFrame（DE4A）。深链件=桩（m2 后续批）。
 pub fn set_samus_data(mem: &mut FrameMemory) {
     update_obj_anim(mem, mem.regs.a); // DC8F（已端口——A=延迟初值面）
-    crate::unported!("bank07:CD9C"); // IsScrewAttackActive（链二件）
+    if is_screw_attack_active(mem) {
+        // 攻螺旋转调色（asm：`lda FrameCount/lsr/and #$03/ora #$80|PRIORITY/sta $6B`）
+        let v = ((mem.read_ram(crate::ram_map::FRAME_COUNT) >> 1) & 0x03) | 0x80;
+        mem.write_ram(0x006B, v);
+    }
+    crate::unported!("bank07:CDFA"); // CheckHealthStatus（链三件——受击/闪烁/低血面）
+    // 链余件（随件）：LavaAndMoveCheck（E269）/MetroidOnSamus($92) 蓝化/
+    // set_mirror_cntrl_bit（CD92 已折——随接）/ObjDrawFrame（DE4A 显示面）
 }
 
 // ==== m2 深链·批2（UpdateObjAnim——CD6D 链首件）====
@@ -394,4 +420,30 @@ pub fn update_obj_anim(mem: &mut FrameMemory, a_in: u8) {
         return;
     }
     crate::unported!("bank07:DCB1-wrap"); // FF 回绕超界（表不变量破裂——fail-loud）
+}
+
+/// IsScrewAttackActive（**asm 内容锚**——CD6D 链二件）：`sec`（默认 inactive）→
+/// `ldy Samus.status/dey/bne RTS`（status==1（run/旋跳））→`lda SamusGear($6878)/and
+/// #gr_SCREWATTACK($08)/beq`（无能力→inactive）→`lda Samus.animResetIndex/cmp
+/// #ObjAnim_SamusSalto($0E)/beq active`→`cmp #ObjAnim_SamusJump($0C)/sec/bne`→
+/// 上升检（speedY）→active。**纯读 carry 出**（无 RAM 写）。
+///
+/// **结构互核注**：anim 常量互证（Salto=$0E/Jump=$0C——SamusRun 字节面同源）；
+/// 能力回环位面（gr_SCREWATTACK=$08——T45-4 考证窗核心常量）。
+pub fn is_screw_attack_active(mem: &FrameMemory) -> bool {
+    if mem.read_ram(crate::ram_map::SAMUS_STATUS) != 1 {
+        return false;
+    }
+    if mem.read_ram(crate::ram_map::SAMUS_GEAR) & 0x08 == 0 {
+        return false;
+    }
+    let anim = mem.read_ram(0x0305); // animResetIndex
+    if anim == 0x0E {
+        return true; // Salto（翻滚）
+    }
+    if anim != 0x0C {
+        return false;
+    }
+    // 中性跳动画：上升中=active（speedY bit7=up）
+    mem.read_ram(SAMUS_SPEED_Y_I) & 0x80 != 0
 }

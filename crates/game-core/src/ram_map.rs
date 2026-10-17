@@ -90,6 +90,23 @@ pub const MUSIC_INIT: u16 = 0x0685;
 /// UpdateAge `inc SamusAge,x` 面；标题态不触）。
 pub const SAMUS_AGE: u16 = 0x687D;
 
+/// SamusGear=$6878（constants_ram 内容锚「Stores power-up items Samus has」——能力
+/// 回环位面（T45-4 考证窗核心））。
+pub const SAMUS_GEAR: u16 = 0x6878;
+
+/// SamusGear 位组（constants.asm 内容锚逐位）：BOMBS=01/HIGHJUMP=02/LONGBEAM=04/
+/// SCREWATTACK=08/MARUMARI=10/VARIA=20/WAVEBEAM=40/ICEBEAM=80。
+pub mod gear {
+    pub const BOMBS: u8 = 0x01;
+    pub const HIGHJUMP: u8 = 0x02;
+    pub const LONGBEAM: u8 = 0x04;
+    pub const SCREWATTACK: u8 = 0x08;
+    pub const MARUMARI: u8 = 0x10;
+    pub const VARIA: u8 = 0x20;
+    pub const WAVEBEAM: u8 = 0x40;
+    pub const ICEBEAM: u8 = 0x80;
+}
+
 /// CurrentBank=$23（asm 名；c4de 面 `sty CurrentBank` 自证）。
 pub const CURRENT_BANK: u16 = 0x0023;
 
