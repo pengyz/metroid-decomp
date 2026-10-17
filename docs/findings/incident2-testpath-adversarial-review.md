@@ -13,6 +13,7 @@
 | P3 | 2^32 穷举环 | game-oracle/bin/int-y-proof.rs:56（`loop{}`） | 有界但 **~4 分钟级**（proof-checks 门 SKIP 守护——显式触发才跑） | `cargo run -p game-oracle --bin int-y-proof` | 长时占用（超时面非死挂——sub-agent tool 超时上限下=「卡死」体感） |
 | P4 | **pre-commit hook 无超时** | .git/hooks/pre-commit（`exec python3 gates/cli.py check` **裸 exec**） | 门禁任一环挂⇒**commit 永久阻塞**⇒sub-agent bash call 不返⇒工作流卡死 | 插入挂死测→`git commit` | 见 P1 机理（cargo test 环节挂⇒hook 挂） |
 | P5 | 幽灵环审计（阴性） | title/sparkle.rs:270/273/338 | 表界 panic 终止/`t0>>=1` 有界——**非挂死** | — | 审计阴性（排除） |
+| P6 | **cargo cache 锁自旋** | cargo 全局 cache（F_SETLK 重试自旋——decomp strace 实录合流） | 锁持有方不释放⇒等待方**自旋外观挂死**（非真死锁——重试型活锁） | 双 cargo 并发（同 CARGO_HOME）+strace 观 F_SETLK | strace 实录（decomp 线）：F_SETLK 重试循环=外观挂死机制 |
 
 **测试点挂死面清单（①）**：135 个 #[test] **零阻塞原语**（全有界 for/断言——grep+逐段扫描
 阴性）；挂死面**不在测试代码**在**被测运行时环**（P1）与**执行基座**（P2/P4）。
@@ -41,6 +42,13 @@ port2 层叠线（runner:776 裸 subprocess.run/MCP connection.ts:308 裸 await 
 subagent turn 无 deadline）=**层叠真空链**；本线=**机理面**（VRAM walk 无终止符=其 0x18
 分析的 WritePPUByte 溢出 quirk 族同源：缓冲满⇒0 终止+双 PLA 断链——无终止符走环=无限环
 =挂死机理互证）。两线合围：**机理（无终止符环）× 层叠（无界基座）= 卡死通路全图**。
+
+## 环境双独立（根治令执行态）
+
+- `CARGO_TARGET_DIR=/tmp/tgt-porter`（artifact 锁物理消除）
+- `CARGO_HOME=/tmp/cargo-home-porter`（cache 锁物理消除——**硬链快照法**：
+  `cp -al ~/.cargo /tmp/cargo-home-porter`——registry 缓存共享内容/锁域独立）
+- 每 cargo 命令 export 前缀（bash 会话不持久——命令级钉死）。
 
 ## 修复建议（按防线深度）
 
