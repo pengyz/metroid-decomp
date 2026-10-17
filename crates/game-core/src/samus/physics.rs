@@ -99,6 +99,27 @@ mod tests {
         assert_eq!(m.read_ram(0x006B), 0x13); // bit4 置
     }
 
+    /// CheckHealthStatus 受击面（$70/$72/$77/speedY/AccelY 写面）+无敌倒数。
+    #[test]
+    fn check_health_status_hit_face() {
+        use crate::ram_map::{SAMUS_ACCEL_Y, SAMUS_INVINCIBLE_DELAY, SAMUS_KNOCKBACK_DIR};
+        let mut m = FrameMemory::default();
+        m.write_ram(0x030A, 0x20); // 受击（hit 标志）
+        m.write_ram(crate::ram_map::SAMUS_KNOCKBACK_IS_BOMB, 0);
+        let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| check_health_status(&mut m)));
+        assert!(r.is_err()); // IsSamusDead/Beep 链桩
+        assert_eq!(m.read_ram(SAMUS_INVINCIBLE_DELAY), 0x32);
+        assert_eq!(m.read_ram(SAMUS_KNOCKBACK_DIR), 0xFF);
+        assert_eq!(m.read_ram(SAMUS_SPEED_Y_I), 0xFD);
+        assert_eq!(m.read_ram(SAMUS_ACCEL_Y), 0x38);
+        // 无敌倒数面（无受击标志）
+        let mut m = FrameMemory::default();
+        m.write_ram(SAMUS_INVINCIBLE_DELAY, 3);
+        let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| check_health_status(&mut m)));
+        assert!(r.is_err()); // CheckHealthBeep 桩
+        assert_eq!(m.read_ram(SAMUS_INVINCIBLE_DELAY), 2); // 倒数先行
+    }
+
     /// IsScrewAttackActive 三门面（status==1+gear 位+anim 面）。
     #[test]
     fn is_screw_attack_three_gates() {
@@ -365,7 +386,8 @@ pub fn set_samus_data(mem: &mut FrameMemory) {
         let v = ((mem.read_ram(crate::ram_map::FRAME_COUNT) >> 1) & 0x03) | 0x80;
         mem.write_ram(0x006B, v);
     }
-    crate::unported!("bank07:CDFA"); // CheckHealthStatus（链三件——受击/闪烁/低血面）
+    check_health_status(mem); // CDFA（链三件——已端口）
+    crate::unported!("bank07:E269"); // LavaAndMoveCheck（链四件）
     // 链余件（随件）：LavaAndMoveCheck（E269）/MetroidOnSamus($92) 蓝化/
     // set_mirror_cntrl_bit（CD92 已折——随接）/ObjDrawFrame（DE4A 显示面）
 }
@@ -446,4 +468,40 @@ pub fn is_screw_attack_active(mem: &FrameMemory) -> bool {
     }
     // 中性跳动画：上升中=active（speedY bit7=up）
     mem.read_ram(SAMUS_SPEED_Y_I) & 0x80 != 0
+}
+
+/// CheckHealthStatus（**asm 内容锚**——CD6D 链三件）：受击面（`lda Samus.isHit($030A)/
+/// and #$20`（hit 标志）→`SamusInvincibleDelay($70)←$32`（50 帧）/`SamusKnockbackDir
+/// ($72)←$FF`（默认无推）/`SamusKnockbackIsBomb77($77)←KnockbackIsBomb($73)` 镜像/
+/// 击退方向（isHit bit3→$72）/`speedY($0308)←$FD`（击退上抛）/`SamusAccelY($0314)←$38`
+/// （击退重力））→Lx006 无敌倒数（`dec $70`+击退衰减（KnockbackDir 驱动 X 速
+/// （Adiv16=帧/16）））→CheckHealthBeep（低血蜂鸣——桩）。
+/// 嵌套件桩：SFX_SamusHit（音频面）/IsSamusDead/CheckHealthBeep。
+pub fn check_health_status(mem: &mut FrameMemory) {
+    let is_hit = mem.read_ram(0x030A); // Samus.isHit（struct 权威）
+    if is_hit & 0x20 != 0 {
+        // 受击面
+        mem.write_ram(crate::ram_map::SAMUS_INVINCIBLE_DELAY, 0x32); // 50 帧
+        mem.write_ram(crate::ram_map::SAMUS_KNOCKBACK_DIR, 0xFF);
+        let bomb = mem.read_ram(crate::ram_map::SAMUS_KNOCKBACK_IS_BOMB);
+        mem.write_ram(crate::ram_map::SAMUS_KNOCKBACK_IS_BOMB77, bomb);
+        if bomb != 0 {
+            // 击退方向（isHit bit3→方向（0=左/1=右））
+            let dir = (is_hit & 0x08) >> 3;
+            mem.write_ram(crate::ram_map::SAMUS_KNOCKBACK_DIR, dir);
+        }
+        mem.write_ram(SAMUS_SPEED_Y_I, 0xFD); // 击退上抛
+        mem.write_ram(SAMUS_ACCEL_Y, 0x38); // 击退重力
+        crate::unported!("bank07:CE25"); // IsSamusDead/CheckHealthBeep 链
+    }
+    // Lx006：无敌倒数（i-frames 帧驱动击退衰减）
+    let delay = mem.read_ram(crate::ram_map::SAMUS_INVINCIBLE_DELAY);
+    if delay != 0 {
+        mem.write_ram(crate::ram_map::SAMUS_INVINCIBLE_DELAY, delay - 1);
+        let dir = mem.read_ram(crate::ram_map::SAMUS_KNOCKBACK_DIR);
+        if dir.wrapping_add(1) != 0 {
+            crate::unported!("bank07:CE52"); // 击退 X 速衰减面（Adiv16 族——随件）
+        }
+    }
+    crate::unported!("bank07:CE7x"); // CheckHealthBeep（低血蜂鸣——随件）
 }

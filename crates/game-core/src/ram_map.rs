@@ -94,6 +94,16 @@ pub const SAMUS_AGE: u16 = 0x687D;
 /// 回环位面（T45-4 考证窗核心））。
 pub const SAMUS_GEAR: u16 = 0x6878;
 
+/// SamusInvincibleDelay=$70（constants_ram 内容锚「Samus's invincibility frames delay
+/// counter」——受击 50 帧闪烁面）。
+pub const SAMUS_INVINCIBLE_DELAY: u16 = 0x0070;
+/// SamusKnockbackDir=$72（内容锚「#\$00=Push left/#\$01=Push right/#\$FF=No push」）。
+pub const SAMUS_KNOCKBACK_DIR: u16 = 0x0072;
+/// SamusKnockbackIsBomb=$73（内容锚「bit 7: 0=hurt, 1=bombed」）。
+pub const SAMUS_KNOCKBACK_IS_BOMB: u16 = 0x0073;
+/// SamusKnockbackIsBomb77=$77（内容锚「set to SamusKnockbackIsBomb」——镜像面）。
+pub const SAMUS_KNOCKBACK_IS_BOMB77: u16 = 0x0077;
+
 /// SamusGear 位组（constants.asm 内容锚逐位）：BOMBS=01/HIGHJUMP=02/LONGBEAM=04/
 /// SCREWATTACK=08/MARUMARI=10/VARIA=20/WAVEBEAM=40/ICEBEAM=80。
 pub mod gear {
