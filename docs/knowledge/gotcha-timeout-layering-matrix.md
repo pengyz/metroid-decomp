@@ -41,7 +41,8 @@ tags: [超时, 挂死, spawn, mcp, cargo-lock, 防复发]
 □ 子 agent 任务：长活拆批+轮询收束（turn deadline 前）
 □ MCP 接线：调用面 60s 保持；连接期挂死先手=重挂服务
 □ 共享资源（锁/构建目录/输出目录）：独立化（CARGO_TARGET_DIR+CARGO_HOME **双独立**）或 fail-fast 锁
-□ **锁型辨识**：flock（文件级/随 fd 生命周期）vs fcntl F_SETLK（inode 级/跨硬链共享）——独立化方案按锁型核：硬链快照共享数据但**锁 sidecar 按 home 新建**才隔离（~/.cargo/.global-cache 真锁面=fcntl——target 独立只半治实录）
+□ **锁型辨识**：flock（文件级/随 fd 生命周期）vs fcntl F_SETLK（inode 级/跨硬链共享）——独立化方案按锁型核
+□ **inode 级机检**（事故③实证：硬链快照共享 inode=fcntl 锁共享=「跑验证必卡死」真因）：`test <A> -ef <B> && echo 同 inode=锁共享 || echo 异 inode=隔离`（或 `stat -c '%i %n'` 对读）——锁文件类独立化必跑此检；硬链快照（cp -al）对 fcntl 锁**无效**（我矩阵本行曾自预告此答案——机检补上才闭环）
 □ 长跑进程：后台 job 记 id+收口
 □ 检查点：每个真空面要么补界要么在任务卡「遗留假设」声明豁免理由
 ```
