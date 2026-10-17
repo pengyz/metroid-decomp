@@ -1326,6 +1326,17 @@ lint 56 目标 PASS+watchdog 0.05s 限时 ✓。基线 131→132。findings（r1
 
 Init/Cont 族收口（441/0 双案+测 103）。findings（r10）：0 新。
 
+## task-44 W1 首波（aab48d8）：音乐索引核+BeepSFXInit——B 跑触发面
+
+### verdict: pass
+
+三查：①字节面（六 bank 镜面族正确读法）✓：$B7D9=`ad 8b 06 29`（LDA $068B=
+SFXTriContFlags 守卫面实证）+$BC53=`a9 ff 8d 5e`（无旗⇒$FF）——**bank 映射陷阱
+自纠**（可切窗 $8000-$BFFF≠bank7；首探 bank6 数据区误读→全 bank 镜面扫描定谳）
+②max→覆写语义更正（multi_music_index_step 粗形替换）=纠正文化 ✓ ③结构互核注
+（块名≠索引释义：0=SQ1/1=SQ2/2=Tri/3=Noise/4=Multi 双证；公式 base+ct 不变仅名称
+注记）=口径精确 ✓。sound 测 9 绿。findings（r10）：0 新。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
