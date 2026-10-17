@@ -1362,6 +1362,12 @@ sound 测 11 绿。**Statue 考证件**：$687B/$687C 双 boss 状态位→Passw
 +开放项显式（字打包位段/Statue 抬升例/红门轰开=不冒领）。
 findings（r10）：0 新。
 
+## m2 深链批3（8ded8e7）抽检：IsScrewAttackActive+gear 能力位组
+
+### verdict: pass（抽检）
+
+441/0 零回退+测 109。findings（r10）：0 新。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
