@@ -99,6 +99,25 @@ mod tests {
         assert_eq!(m.read_ram(0x006B), 0x13); // bit4 置
     }
 
+    /// UpdateObjAnim 倒数+表走+回绕（struct 字段面）。
+    #[test]
+    fn update_obj_anim_walks_table() {
+        let mut m = FrameMemory::default();
+        // animDelay=1（倒数→0 落入表走）；animIndex=0（SamusRun 首帧）
+        m.write_ram(0x0304, 1);
+        m.write_ram(0x0306, 0);
+        update_obj_anim(&mut m, 0x07);
+        assert_eq!(m.read_ram(0x0304), 0x07); // 初值入参
+        assert_eq!(m.read_ram(0x0303), 0x03); // 表[0]=SamusRun0
+        assert_eq!(m.read_ram(0x0306), 0x01); // 索引推进
+        // 回绕面：animIndex 指向 FF（表尾界标）→reset 续走
+        m.write_ram(0x0304, 1);
+        m.write_ram(0x0305, 0); // resetIndex=0
+        m.write_ram(0x0306, 0x03); // 表[3]=FF
+        update_obj_anim(&mut m, 0x07);
+        assert_eq!(m.read_ram(0x0303), 0x03); // 回绕到 reset 后取表[0]
+    }
+
     /// @isSamusOnTop 顶部判定（一像素重合判据+下方排除）。
     #[test]
     fn is_samus_on_top_semantics() {
@@ -321,5 +340,58 @@ pub fn set_mirror_cntrl_bit(mem: &mut FrameMemory) {
 /// MetroidOnSamus（$92）蓝化（`$81|PRIORITY`→$6B）/SetMirrorCntrlBit（CD92 已折）/
 /// jmp ObjDrawFrame（DE4A）。深链件=桩（m2 后续批）。
 pub fn set_samus_data(mem: &mut FrameMemory) {
-    crate::unported!("bank07:DC8F"); // UpdateObjAnim（动画更新链首件）
+    update_obj_anim(mem, mem.regs.a); // DC8F（已端口——A=延迟初值面）
+    crate::unported!("bank07:CD9C"); // IsScrewAttackActive（链二件）
+}
+
+// ==== m2 深链·批2（UpdateObjAnim——CD6D 链首件）====
+
+/// ObjectAnimIndexTbl 烘焙（$8572 起 0x99B——bank1-5 镜面；`03 04 05 ff` 首序列
+/// 自证（ObjAnim_SamusRun 3 帧+End）；$FF=_id_FrameEnd 界标）。
+const OBJECT_ANIM_INDEX_TBL: &[u8] = &[
+    0x03, 0x04, 0x05, 0xFF, 0x07, 0xFF, 0x17, 0x08, 0xFF, 0x22, 0xFF, 0x04, 0x10, 0xFF, 0x17, 0x18,
+    0x19, 0x1A, 0xFF, 0x03, 0x17, 0xFF, 0x1E, 0x1D, 0x1C, 0x1B, 0xFF, 0x28, 0xFF, 0x2A, 0xF7, 0xFF,
+    0x12, 0xFF, 0x0C, 0x0D, 0x0E, 0xFF, 0x30, 0x2B, 0xFF, 0x31, 0x31, 0x33, 0xF7, 0xFF, 0x33, 0x33,
+    0x31, 0xFF, 0x35, 0xFF, 0x39, 0x38, 0xFF, 0x40, 0x41, 0x42, 0xFF, 0x46, 0xFF, 0x47, 0xFF, 0x48,
+    0xFF, 0x07, 0xF7, 0xF7, 0x07, 0xF7, 0xF7, 0xF7, 0x07, 0xF7, 0xF7, 0xF7, 0xF7, 0x07, 0xF7, 0xFF,
+    0x23, 0xF7, 0xF7, 0x23, 0xF7, 0xF7, 0xF7, 0x23, 0xF7, 0xF7, 0xF7, 0xF7, 0x23, 0xF7, 0xFF, 0x07,
+    0xF7, 0xF7, 0xF7, 0xF7, 0x07, 0xF7, 0xF7, 0xF7, 0x07, 0xF7, 0xF7, 0x07, 0xF7, 0xFF, 0x23, 0xF7,
+    0xF7, 0xF7, 0xF7, 0x23, 0xF7, 0xF7, 0xF7, 0x23, 0xF7, 0xF7, 0x23, 0xF7, 0xFF, 0x4B, 0xFF, 0x4E,
+    0x4F, 0xFF, 0x3C, 0x4A, 0x49, 0x4A, 0x4D, 0x4A, 0x4D, 0xF7, 0xFF, 0x26, 0xFF, 0x25, 0xFF, 0x27,
+    0xFF, 0x67, 0x67, 0x67, 0x68, 0x68, 0x69, 0xF7, 0xFF,
+];
+
+/// UpdateObjAnim（**字节自证+struct 权威**——CD6D 链首件）：
+/// `ldx PageIndex/ldy animDelay($0304,x)/beq`→`dec`→`bne RTS`（倒数等待）→
+/// `animDelay←A`（初值入参）→`ldy animIndex($0306,x)`→@getAnimFrame：`lda
+/// ObjectAnimIndexTbl,y/cmp #$FF/beq @resetAnimIndex`→`animFrame($0303)←/animIndex
+/// ←y+1/rts`；@resetAnimIndex=`ldy animResetIndex($0305,x)/jmp @getAnimFrame`（回绕续走）。
+///
+/// **结构互核注**：FF 回绕环=**挂死风险**（resetIndex 指向 FF 邻域⇒真机同挂——表不变量
+/// 依赖）——界护栏 16 次回绕 fail-loud（P1 同族防御；真机语义=表健全态等价）。
+/// 字段偏移=struct 权威（constants_ram:217-224：animFrame $0303/animDelay $0304/
+/// animResetIndex $0305/animIndex $0306）。
+pub fn update_obj_anim(mem: &mut FrameMemory, a_in: u8) {
+    let base = 0x0300u16; // PageIndex=0（Samus 槽——他槽随件）
+    let delay = mem.read_ram(base + 0x04);
+    if delay != 0 {
+        let d = delay - 1;
+        mem.write_ram(base + 0x04, d);
+        if d != 0 {
+            return;
+        }
+    }
+    mem.write_ram(base + 0x04, a_in);
+    let mut y = mem.read_ram(base + 0x06) as usize;
+    for _ in 0..16u32 {
+        let frame = *OBJECT_ANIM_INDEX_TBL.get(y).unwrap_or(&0xFF);
+        if frame == 0xFF {
+            y = mem.read_ram(base + 0x05) as usize; // 回绕续走
+            continue;
+        }
+        mem.write_ram(base + 0x03, frame);
+        mem.write_ram(base + 0x06, y.wrapping_add(1) as u8);
+        return;
+    }
+    crate::unported!("bank07:DCB1-wrap"); // FF 回绕超界（表不变量破裂——fail-loud）
 }
