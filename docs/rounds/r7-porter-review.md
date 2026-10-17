@@ -1351,6 +1351,17 @@ SFXTriContFlags 守卫面实证）+$BC53=`a9 ff 8d 5e`（无旗⇒$FF）——**
 表烘焙+FF 回绕界（441/0 零回退+测 106）。链规 13d（复采/采样窗口板上登记=lead
 协同面规则）随行非我复审面。findings（r10）：0 新。
 
+## 双件合审（ed7f55b W1 曲径臂 + fd949c1 Statue 考证件）
+
+### verdict: pass（双件）
+
+**W1 曲径臂**：三址六 bank 镜面一致实证（$B9E4=`a9 7f 8d` 禁扫/$BC8B=`aa a8` duty
+对称 tax-tay）+SONG_INTRO_HEADER 13B 烘焙（宏展开形）+残面显式（W4 波次注）+
+sound 测 11 绿。**Statue 考证件**：$687B/$687C 双 boss 状态位→PasswordByte0F 状态
+模型（porter 对表源）+ItemData 世界路线图 50+ 项全坐标（L9029-L908D A 级内容锚）
++开放项显式（字打包位段/Statue 抬升例/红门轰开=不冒领）。
+findings（r10）：0 新。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
