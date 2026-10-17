@@ -39,3 +39,16 @@ flock(1)≠fcntl 锁型（独立锁空间——flock target 目录无效实录�
 - 注入 3 次（bad-tape 用例/持锁 25s/无界 mock）；
 - 打回 3 次（0.173s/6s/5s 全限时）；
 - 还原全绿（L2 441 案 0 失败+行数 diff 一致+锁/模拟全清）。
+
+## 补令执行记录（CARGO_HOME 独立+硬链快照，2026-10-17）
+
+```sh
+cp -al ~/.cargo /tmp/cargo-home-decomp   # 硬链快照（同盘 631M→零拷贝）
+# 全防实证：持原始 .global-cache 锁 × 双独立 → exit=0 22s（真建+锁不沾）✓
+CARGO_HOME=/tmp/cargo-home-decomp CARGO_TARGET_DIR=/tmp/tgt-decomp cargo build …
+```
+- 双独立全免疫实录：持锁 20s 窗内构建成功（22s=真实编译，零锁等待）；
+- 后续 decomp 侧 cargo 全部带双独立环境（CARGO_HOME+CARGO_TARGET_DIR）；
+- 硬链面注：同盘（/dev/mapper/vgubuntu-root）零拷贝；.global-cache 硬链共享
+  inode——**写入仍共享**（cargo 更新 cache=双写同一 inode！）——独立目录若需真隔离
+  需断链（cp -a 全拷）；当前为「锁隔离」目的（锁在文件字节段=独立路径即独立锁）✓。
