@@ -395,3 +395,54 @@ mod w1_tests {
         assert!(o.ram_events.contains(&(0x068A, 0x40))); // cont[2]←flags
     }
 }
+
+// ---- task-44 W1 曲径：XYMusicInit 臂 + SongIntro 曲头烘焙 ----
+
+/// SongIntro 曲头（bank 窗 $BD8C 13B——SongHeader 宏 5B+4 通道字）。
+/// 宏面：NoteLengthsTbl@7/$00/$F0/$02/$05（NTSC 口径）；通道字=SongIntroSQ1/SQ2/Tri/Noise
+/// （BANK 别名面——实际表址随烘焙深证）。
+pub const SONG_INTRO_HEADER: [u8; 13] = [
+    0x07, 0x00, 0xF0, 0x02, 0x05, // 宏 5B（NoteLengthsTbl@7 等）
+    0x00, 0x01, 0x00, 0x03, 0x00, 0x05, 0x00, 0x07, // 4 通道字（$0100/$0300/$0500/$0700 别名形）
+];
+
+/// XYMusicInit 路径 W1 面（$BC8B 三连之一 SetVolumeAndDisableSweep $B9E4 + Cont 旗面）：
+/// $0648/$0649←$7F（禁扫）+$0628←duty（X）+$0629←duty（Y 同值——tax/tay 对称）+
+/// MusicContFlags($068D)←CurrentSoundFlags（InitializeMusic 首步）+曲头 13B 烘焙面注记。
+/// 返回 (RAM 事件, APU 事件占位)。
+pub fn xy_music_init_w1(duty: u8, current_flags: u8) -> HandlerOutcome {
+    let mut ram = Vec::new();
+    // SetVolumeAndDisableSweep
+    ram.push((0x0648, 0x7F)); // MusicSQ1Sweep
+    ram.push((0x0649, 0x7F)); // MusicSQ2Sweep
+    ram.push((0x0628, duty)); // MusicSQ1DutyEnvelope←X
+    ram.push((0x0629, duty)); // MusicSQ2DutyEnvelope←Y（tax/tay 同值）
+    // InitializeMusic 首步：MusicContFlags←CurrentSoundFlags
+    ram.push((0x068D, current_flags));
+    // 残面（InitializeMusic 曲头装载深径+UpdateAllMusicChannels 帧径）=W1 残件注记
+    HandlerOutcome { ram_events: ram, apu_events: Vec::new(), a_out: duty,
+                     x_out: duty, y_out: duty }
+}
+
+#[cfg(test)]
+mod w1_music_tests {
+    use super::*;
+
+    /// XYMusicInit W1 面（禁扫双写+duty 对称+Cont 旗）。
+    #[test]
+    fn xy_music_init_w1_face() {
+        let o = xy_music_init_w1(0x34, 0x40);
+        assert!(o.ram_events.contains(&(0x0648, 0x7F)));
+        assert!(o.ram_events.contains(&(0x0649, 0x7F)));
+        assert!(o.ram_events.contains(&(0x0628, 0x34)));
+        assert!(o.ram_events.contains(&(0x0629, 0x34)));
+        assert!(o.ram_events.contains(&(0x068D, 0x40)));
+    }
+
+    /// 曲头烘焙面（13B 形：5B 宏+4 通道字）。
+    #[test]
+    fn song_intro_header_shape() {
+        assert_eq!(SONG_INTRO_HEADER.len(), 13);
+        assert_eq!(&SONG_INTRO_HEADER[0..5], &[0x07, 0x00, 0xF0, 0x02, 0x05]);
+    }
+}
