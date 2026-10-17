@@ -104,6 +104,12 @@ pub const SAMUS_KNOCKBACK_IS_BOMB: u16 = 0x0073;
 /// SamusKnockbackIsBomb77=$77（内容锚「set to SamusKnockbackIsBomb」——镜像面）。
 pub const SAMUS_KNOCKBACK_IS_BOMB77: u16 = 0x0077;
 
+/// SamusInLava=$64（constants_ram 内容锚「#\$01=Samus in lava, #\$00=She is not」）。
+pub const SAMUS_IN_LAVA: u16 = 0x0064;
+
+/// HealthChange=$6E（内容锚「Amount to add/subtract from Health」——dw 双字节）。
+pub const HEALTH_CHANGE: u16 = 0x006E;
+
 /// SamusGear 位组（constants.asm 内容锚逐位）：BOMBS=01/HIGHJUMP=02/LONGBEAM=04/
 /// SCREWATTACK=08/MARUMARI=10/VARIA=20/WAVEBEAM=40/ICEBEAM=80。
 pub mod gear {

@@ -99,6 +99,22 @@ mod tests {
         assert_eq!(m.read_ram(0x006B), 0x13); // bit4 置
     }
 
+    /// LavaAndMoveCheck 状态门（Elevator/Dead 面）+E25D 嵌套桩。
+    #[test]
+    fn lava_check_status_gates() {
+        use crate::ram_map::SAMUS_STATUS;
+        let mut m = FrameMemory::default();
+        m.write_ram(SAMUS_STATUS, 7); // Dead→短路
+        lava_and_move_check(&mut m); // 无炸（短路）
+        m.write_ram(SAMUS_STATUS, 1); // run→E25D 桩
+        let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| lava_and_move_check(&mut m)));
+        let err = r.unwrap_err();
+        let msg = err.downcast_ref::<String>().cloned()
+            .or_else(|| err.downcast_ref::<&'static str>().map(|s| (*s).to_string()))
+            .unwrap_or_default();
+        assert!(msg.contains("unported @ bank07:E25D"), "岩浆检桩失准: {msg}");
+    }
+
     /// CheckHealthStatus 受击面（$70/$72/$77/speedY/AccelY 写面）+无敌倒数。
     #[test]
     fn check_health_status_hit_face() {
@@ -387,7 +403,8 @@ pub fn set_samus_data(mem: &mut FrameMemory) {
         mem.write_ram(0x006B, v);
     }
     check_health_status(mem); // CDFA（链三件——已端口）
-    crate::unported!("bank07:E269"); // LavaAndMoveCheck（链四件）
+    lava_and_move_check(mem); // E269（链四件——已端口）
+    crate::unported!("bank07:CD92-tail"); // 链余件（Metroid 蓝化/DE4A 显示面——随件）
     // 链余件（随件）：LavaAndMoveCheck（E269）/MetroidOnSamus($92) 蓝化/
     // set_mirror_cntrl_bit（CD92 已折——随接）/ObjDrawFrame（DE4A 显示面）
 }
@@ -504,4 +521,26 @@ pub fn check_health_status(mem: &mut FrameMemory) {
         }
     }
     crate::unported!("bank07:CE7x"); // CheckHealthBeep（低血蜂鸣——随件）
+}
+
+/// LavaAndMoveCheck（**asm 内容锚**——CD6D 链四件）：状态门（Elevator 续/Dead 出）→
+/// IsSamusInLava（E25D——carry clear=in lava）→岩浆面（`SamusKnockbackDir($72)←$FF`
+/// （不推）/ClearHealthChange（F323）/`SamusInvincibleDelay($70)←$32`（闪）/
+/// FrameCount&3==0→SFX_SamusJump（4 帧跳 SFX））→伤害面（8 帧节拍：无 Varia 双伤/
+/// **有 Varia 半伤**（gr_VARIA 位再用——carry 每隔帧））→`HealthChange($6E)←$07/
+/// SubtractHealth`→`SamusInLava($64)←in-lava 状态`。
+/// 嵌套件桩：IsSamusInLava/ClearHealthChange/SFX_SamusJump/SubtractHealth。
+pub fn lava_and_move_check(mem: &mut FrameMemory) {
+    let status = mem.read_ram(crate::ram_map::SAMUS_STATUS);
+    if status != 4 {
+        // sa_Elevator=4（表序）——非电梯
+        if status >= 7 {
+            return; // sa_Dead(7)/sa_Dead2(8) 出
+        }
+    }
+    crate::unported!("bank07:E25D"); // IsSamusInLava（岩浆检——链内件）
+    // 岩浆面（后随 E25D 裁定）：
+    // mem.write_ram(SAMUS_KNOCKBACK_DIR, 0xFF); mem.write_ram(SAMUS_INVINCIBLE_DELAY, 0x32);
+    // FrameCount&3==0→SFX_SamusJump；8 帧伤害（Varia 半伤）；HealthChange←$07；
+    // mem.write_ram(SAMUS_IN_LAVA, 1);
 }
