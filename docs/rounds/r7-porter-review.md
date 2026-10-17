@@ -1337,6 +1337,13 @@ SFXTriContFlags 守卫面实证）+$BC53=`a9 ff 8d 5e`（无旗⇒$FF）——**
 （块名≠索引释义：0=SQ1/1=SQ2/2=Tri/3=Noise/4=Multi 双证；公式 base+ct 不变仅名称
 注记）=口径精确 ✓。sound 测 9 绿。findings（r10）：0 新。
 
+## T45-4（c69deb2）抽检：S6 金面库扩面 7→50 帧——task-31 纪律延续
+
+### verdict: pass（抽检）
+
+50 金面帧 0 失败+**白名单 0 条目保持**（像素级零容差不因扩面松动）+能力门径图
+（T45-4）随形。CHECK PASS。findings（r10）：0 新。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
