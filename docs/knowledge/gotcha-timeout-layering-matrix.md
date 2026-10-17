@@ -47,3 +47,10 @@ tags: [超时, 挂死, spawn, mcp, cargo-lock, 防复发]
 ```
 
 【分类】A 级（源码行引文+根治令实证）；【置信】92
+
+## 【2026-10-17 更正·锁隔离硬链陷阱】
+`cp -al` 硬链快照**不能隔离 fcntl 锁**——锁文件（.global-cache/.package-cache）被硬链=
+共享 inode=五 agent 抢同一把锁（link=5 实证，「跑验证必卡死」的真因）。
+**正确引导法**：硬链快照后必须 `rm <home>/.global-cache <home>/.package-cache`（cargo 自建=
+独立 inode）；机检：`ls -i /tmp/cargo-home-*/.global-cache | awk '{print $1}' | sort | uniq -d`
+应为空。层叠矩阵「锁型辨识」行的教训兑现：**独立化按锁型核到 inode 级**。
