@@ -11,5 +11,8 @@ press 420 a
 press 540 start
 hold 850-1050 right
 
+capture 860 spawn
+capture 1050 post-door
+
 sample_point spin-exit
 bundle_capture 990 analysis/bundles/sc-door-transition

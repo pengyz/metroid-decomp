@@ -216,7 +216,7 @@
       ],
       "oracle_sha256": "684eb72307f6f3037e30bc6cd799224934cdc322d72342b8af0b07358d68c559",
       "determinism_evidence": "双跑逐字节一致（2026-10-16 run1==run2 sha 684eb723…）",
-      "scenario_sha256": "b887991d2df8711d5ee33ffbdbfe034034a5ac62090b8de8852d3f724909a377",
+      "scenario_sha256": "9b14fdbf70d8dd7b8c068836a493b7226ed8120bf88ef0331b17060f847063c9",
       "frame_keys": [],
       "legs": {
         "oracle": {
@@ -268,7 +268,7 @@
       ],
       "oracle_sha256": "684eb72307f6f3037e30bc6cd799224934cdc322d72342b8af0b07358d68c559",
       "determinism_evidence": "双跑逐字节一致（2026-10-16 run1==run2 sha 684eb723…）",
-      "scenario_sha256": "a8ad954d251cab212f31c930f5068bfcd00c746e3ba39369bf54fa4824694b4a",
+      "scenario_sha256": "5af36a1125d2c692d90c00f9c103a052919e13cd107cedbdd255e91eeebee6a1",
       "frame_keys": [],
       "legs": {
         "oracle": {
@@ -320,7 +320,7 @@
       ],
       "oracle_sha256": "39d58f388cc88c60b2aea56523bff550782aace77941ee4d8dbbd9e39c703dc2",
       "determinism_evidence": "双跑逐字节一致（2026-10-16 run1==run2 sha 39d58f38…）",
-      "scenario_sha256": "82d7570e9b60b74eac6bef272016f3b42f47557e2f0b88c75c22bd97910a654e",
+      "scenario_sha256": "b57c91e4cf92629cea3b24e1c2ec88c972dbe16baa4e5d98c76c7a2d6fdecf8d",
       "frame_keys": [],
       "legs": {
         "oracle": {
@@ -379,7 +379,7 @@
       ],
       "oracle_sha256": "758348ab9833ef9e7450dfff72689d7ff188d47d21f633ac281b4ee717d80f55",
       "determinism_evidence": "双跑逐字节一致（2026-10-16 run1==run2 sha 758348ab…）",
-      "scenario_sha256": "d27b72e9fe17e3e693cf736bf3cad6d95135e03c8d3b7a3860daadebda2f6929",
+      "scenario_sha256": "85c9e4860cd51fec2a4afd26455241537ec58453c9bf54e0872a1127a3e016d6",
       "frame_keys": [],
       "legs": {
         "oracle": {

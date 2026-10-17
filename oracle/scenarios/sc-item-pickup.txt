@@ -23,5 +23,8 @@ hold 1260-1380 right
 press 1290 a
 press 1350 a
 
+capture 860 spawn
+capture 1050 corridor
+
 sample_point spin-exit
 bundle_capture 1250 analysis/bundles/sc-item-pickup
