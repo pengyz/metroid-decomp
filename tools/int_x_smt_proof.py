@@ -128,9 +128,17 @@ def bridge(n=1 << 16):  # 2^16 随机 + 1440 边界点 = 66976（2^20 系旧夸�
                     for py in (0, 0xFF):
                         pts.append((si, sf, acc, py, m))
     inp = "".join(f"{a:02x} {b:02x} {c:02x} {d:02x} {e:02x}\n" for a, b, c, d, e in pts)
-    proc = subprocess.run(
-        ["./target/release/int-x-bridge"], input=inp, capture_output=True, text=True, check=True
-    )
+    # 事故②对抗审：SMT 桥无超时=真空面（病态求解可永转）——补 120s（实测秒级，
+    # 40 倍余量；超限=FAIL 显式）。注意：路径随 CARGO_TARGET_DIR 独立化迁移。
+    import os as _os
+    _tgt = _os.environ.get("CARGO_TARGET_DIR", "target")
+    _bridge = _tgt + "/release/int-x-bridge" if _tgt.startswith("/") else f"./{_tgt}/release/int-x-bridge"
+    try:
+        proc = subprocess.run(
+            [_bridge], input=inp, capture_output=True, text=True,
+            check=True, timeout=120)
+    except subprocess.TimeoutExpired:
+        raise SystemExit("[事故②护栏] int-x-bridge 超时 >120s——限时打回非挂死")
     lines = proc.stdout.strip().splitlines()
     assert len(lines) == len(pts), f"桥接输出数不符 {len(lines)} != {len(pts)}"
     from z3 import simplify

@@ -165,9 +165,16 @@ def regen(scenario: str) -> bool:
     # Windows 适配：PYTHONUTF8=1 令 Python 子进程输出 UTF-8，父侧固定 UTF-8 解码
     # （缺 encoding 时按 GBK locale 解码 UTF-8 字节直接崩——2026-10-14 实测）
     env = dict(os.environ, PYTHONUTF8="1")
-    proc = subprocess.run(
-        [sys.executable, str(ROOT / "tools" / "scenario_run.py"), "run", scenario, "--timeout", "300"],
-        cwd=ROOT, capture_output=True, text=True, encoding="utf-8", errors="replace", env=env)
+    # 事故②对抗审：外层 spawn 无超时=真空面（scenario_run 自身挂死则永等）——补 360s
+    # 上限（--timeout 300+60s 余量；超限=FAIL 显式）
+    try:
+        proc = subprocess.run(
+            [sys.executable, str(ROOT / "tools" / "scenario_run.py"), "run", scenario, "--timeout", "300"],
+            cwd=ROOT, capture_output=True, text=True, encoding="utf-8", errors="replace",
+            env=env, timeout=360)
+    except subprocess.TimeoutExpired:
+        print(f"[regen] 外层超时 >360s（事故②护栏——限时打回非挂死）: {scenario}")
+        return False
     if proc.returncode != 0:
         tail = ((proc.stdout or "") + (proc.stderr or "")).strip().splitlines()[-5:]
         print(f"[regen] 重采集失败: {' | '.join(tail)}")
