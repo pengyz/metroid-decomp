@@ -1197,6 +1197,41 @@ def gate_doc_sync() -> tuple[str, str]:
                   f"F3 类漂移机械拦截就位）")
 
 
+def gate_shared_inode_locks() -> tuple[str, str]:
+    """事故③护栏（2026-10-17）：CARGO_HOME 锁文件跨家共享 inode 机检。
+
+    真因回顾：`cp -al` 硬链快照使 ~/.cargo 与 /tmp/cargo-home-* 的 .global-cache
+    等锁文件**共享 inode**——fcntl 锁按 inode 记账，一家持锁=全家阻塞（「跑验证必
+    卡死」）。重建快照忘删旧锁=复发面。机检：三锁文件（.global-cache/.package-cache/
+    .package-cache-mutate）在全部 CARGO_HOME 候选间 inode 必须唯一（= `ls -i` uniq -d
+    为空的跨家版）；共享 inode ⇒ FAIL（fail-loud）。
+    """
+    import glob as _glob
+    homes = [Path.home() / ".cargo"]
+    homes += [Path(p) for p in sorted(_glob.glob("/tmp/cargo-home-*"))]
+    lock_names = (".global-cache", ".package-cache", ".package-cache-mutate")
+    inode_map: dict[int, list[str]] = {}
+    checked = 0
+    for home in homes:
+        if not home.is_dir():
+            continue
+        for name in lock_names:
+            p = home / name
+            if p.exists():
+                try:
+                    st = p.stat()
+                except OSError:
+                    continue
+                inode_map.setdefault(st.st_ino, []).append(str(p))
+                checked += 1
+    shared = {ino: paths for ino, paths in inode_map.items() if len(paths) > 1}
+    if shared:
+        detail = "；".join(f"inode {ino}×{paths}" for ino, paths in list(shared.items())[:3])
+        return FAIL, (f"共享 inode 锁检出（事故③复发面）: {detail}——"
+                      "硬链快照忘删锁：断链或重建独立快照后复检")
+    return PASS, f"共享 inode 锁 0（{checked} 锁文件/{len(homes)} 家 inode 全唯一）"
+
+
 # ---------------------------------------------------------------- 门禁注册表
 # readme_state 必须与 gates/README.md「门禁清单」表的"状态"列逐字一致（selftest 自动比对）。
 
@@ -1219,6 +1254,8 @@ GATES: list[tuple[str, str, str, str, object]] = [
      "Rust mod 引用⊆提交树（未跟踪件掩盖破树侦测）", gate_tree_coherence),
     ("doc-sync", "启用", "check",
      "双写片段逐字同文（pipeline↔design，F3 类漂移拦截）", gate_doc_sync),
+    ("shared-inode-locks", "启用（事故③护栏）", "check",
+     "CARGO_HOME 锁文件跨家共享 inode 机检（硬链快照忘删锁=挂死复发面拦截）", gate_shared_inode_locks),
 ]
 
 
