@@ -183,6 +183,7 @@ def git_staged_files() -> list[str]:
         text=True,
         encoding="utf-8",
         errors="replace",
+        timeout=30,  # 事故②修复：有界（index.lock 竞争不无限阻塞——超时=FAIL 显式）
     )
     if proc.returncode != 0:
         raise RuntimeError(f"git diff --cached 失败（fail-closed）: {proc.stderr.strip()}")
@@ -737,15 +738,19 @@ def gate_docs_links() -> tuple[str, str]:
 def gate_rust_tests() -> tuple[str, str]:
     if not (ROOT / "crates").is_dir() or not (ROOT / "Cargo.toml").is_file():
         return SKIP, "crates/ 尚未创建（创建后自动启用）"
-    proc = subprocess.run(
-        ["cargo", "test", "--workspace"],
-        cwd=ROOT,
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-        env=_child_env(),
-    )
+    try:
+        proc = subprocess.run(
+            ["cargo", "test", "--workspace"],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            env=_child_env(),
+            timeout=600,  # 事故②修复：有界（artifact 锁等待/挂死测不无限阻塞——超时=FAIL 显式）
+        )
+    except subprocess.TimeoutExpired:
+        return FAIL, "cargo test --workspace 超时（>600s）——事故②修复面：锁等待/挂死测不无限阻塞，超时=FAIL 显式"
     if proc.returncode != 0:
         tail = ((proc.stdout or "") + (proc.stderr or "")).strip().splitlines()[-5:]
         return FAIL, "cargo test --workspace 失败: " + " | ".join(tail)
@@ -773,8 +778,12 @@ def _gate_runner_dispatch(runner_name: str, prereq: Path, label: str) -> tuple[s
         if not runner.is_file():
             missing.append(f"tools/{runner_name} 未建立")
         return SKIP, f"{label}：{'；'.join(missing)}（启用前置齐备后自动启用，显式 SKIP）"
-    proc = subprocess.run([sys.executable, str(runner)], cwd=ROOT, capture_output=True, text=True,
-                          encoding="utf-8", errors="replace", env=_child_env())
+    try:
+        proc = subprocess.run([sys.executable, str(runner)], cwd=ROOT, capture_output=True, text=True,
+                              encoding="utf-8", errors="replace", env=_child_env(),
+                              timeout=900)  # 事故②修复：外层篱笆（>内部 600s——runner 自身挂死不无限阻塞）
+    except subprocess.TimeoutExpired:
+        return FAIL, f"{label} runner 超时（>900s）——事故②修复面：外层篱笆，超时=FAIL 显式"
     if proc.returncode != 0:
         tail = ((proc.stdout or "") + (proc.stderr or "")).strip().splitlines()[-5:]
         return FAIL, f"{label} 差分不一致: " + " | ".join(tail)
