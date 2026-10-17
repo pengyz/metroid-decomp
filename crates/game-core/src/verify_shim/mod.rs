@@ -888,3 +888,29 @@ pub fn sound_energy_pickup(input: &L2In) -> L2Out {
     let r = |a: u16| input.ram[a as usize & 0x7FF];
     w2_out(input, crate::sound::energy_pickup_sfx_init(r(0x065C & 0x7FF), r(0x064D & 0x7FF)))
 }
+
+// ---- task-44 W3 中频 handler 族适配（6 件）----
+pub fn sound_spit_flame(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    w2_out(input, crate::sound::spit_flame_sfx_init(r(0x065C & 0x7FF), r(0x064D & 0x7FF)))
+}
+pub fn sound_screw_attack(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    w2_out(input, crate::sound::screw_attack_sfx_init(r(0x065C & 0x7FF), r(0x064D & 0x7FF)))
+}
+pub fn sound_bomb_explode(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    w2_out(input, crate::sound::bomb_explode_sfx_init(r(0x065C & 0x7FF), r(0x064D & 0x7FF)))
+}
+pub fn sound_boss_hit(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    w2_out(input, crate::sound::boss_hit_sfx_init(r(0x065C & 0x7FF), r(0x064D & 0x7FF)))
+}
+pub fn sound_incorrect_password(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    w2_out(input, crate::sound::incorrect_password_sfx_init(r(0x065C & 0x7FF), r(0x064D & 0x7FF)))
+}
+pub fn sound_samus_jump(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    w2_out(input, crate::sound::samus_jump_sfx_init(r(0x068D & 0x7FF), r(0x065C & 0x7FF), r(0x064D & 0x7FF)))
+}

@@ -140,6 +140,12 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "sub_MissileLaunchSFXInit" => Some(sub_missile_launch),
         "sub_MissilePickupSFXInit" => Some(sub_missile_pickup),
         "sub_EnergyPickupSFXInit" => Some(sub_energy_pickup),
+        "sub_SpitFlameSFXInit" => Some(sub_spit_flame),
+        "sub_ScrewAttackSFXInit" => Some(sub_screw_attack),
+        "sub_BombExplodeSFXInit" => Some(sub_bomb_explode),
+        "sub_BossHitSFXInit" => Some(sub_boss_hit),
+        "sub_IncorrectPasswordSFXInit" => Some(sub_incorrect_password),
+        "sub_SamusJumpSFXInit" => Some(sub_samus_jump),
         _ => None,
     }
 }
@@ -624,3 +630,11 @@ pub fn sub_bullet_fire(input: &L2In) -> L2Out { crate::verify_shim::sound_bullet
 pub fn sub_missile_launch(input: &L2In) -> L2Out { crate::verify_shim::sound_missile_launch(input) }
 pub fn sub_missile_pickup(input: &L2In) -> L2Out { crate::verify_shim::sound_missile_pickup(input) }
 pub fn sub_energy_pickup(input: &L2In) -> L2Out { crate::verify_shim::sound_energy_pickup(input) }
+
+/// W3 中频族注册（bank00 镜面：B50F/B52B/B583/B5EC/B695/B703）。
+pub fn sub_spit_flame(input: &L2In) -> L2Out { crate::verify_shim::sound_spit_flame(input) }
+pub fn sub_screw_attack(input: &L2In) -> L2Out { crate::verify_shim::sound_screw_attack(input) }
+pub fn sub_bomb_explode(input: &L2In) -> L2Out { crate::verify_shim::sound_bomb_explode(input) }
+pub fn sub_boss_hit(input: &L2In) -> L2Out { crate::verify_shim::sound_boss_hit(input) }
+pub fn sub_incorrect_password(input: &L2In) -> L2Out { crate::verify_shim::sound_incorrect_password(input) }
+pub fn sub_samus_jump(input: &L2In) -> L2Out { crate::verify_shim::sound_samus_jump(input) }

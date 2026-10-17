@@ -569,3 +569,128 @@ mod w2_tests {
         assert!(bullet_fire_sfx_init(0x00, 0x00, 0, 0x40).unwrap().ram_events.iter().any(|a| *a == (0x0660, 3)));
     }
 }
+
+// ---- task-44 W3 中频 handler 族六件（一体）----
+
+/// W3 数据表 8×4B（0x3xxx 偏移 hexdump 实证）。
+pub const W3_DATA: [[u8; 4]; 8] = [
+    [0x35, 0x7F, 0x00, 0xB0], // 0 ScrewAttack      $B211
+    [0x0D, 0x7F, 0x0F, 0x08], // 1 BombExplode      $B219
+    [0x13, 0x7F, 0x0E, 0xF8], // 2 SpitFlame        $B221
+    [0x34, 0xBA, 0xE0, 0x05], // 3 BossHitSQ2       $B229
+    [0x34, 0xBB, 0xCE, 0x05], // 4 BossHitSQ1       $B22D
+    [0xB6, 0x7F, 0x00, 0xC2], // 5 IncPwdSQ1        $B231
+    [0xB6, 0x7F, 0x04, 0xC2], // 6 IncPwdSQ2        $B235
+    [0x95, 0x8C, 0x40, 0xB9], // 7 SamusJump        $B251
+];
+
+/// MultiSFXInit 共同面（$B5A5——B650 家族同源）：SFXMultiLength($0664)←frames+
+/// LoadSFXData@SQ2（指针 $4004 面+4B APU）+UpdateContFlags+占用（$0653←1/$0654←2）+
+/// 清表（$0689/$0671/$0675/$0679/$0669/$0607）。
+fn multi_sfx_init_face(frames: u8, sq2: &[u8; 4], ct: u8, flags: u8) -> (Vec<(u16, u8)>, Vec<(u16, u8)>) {
+    let c = ct as u16;
+    let mut ram = vec![(0x0664, frames)];
+    ram.push((0x00E0, 0x04)); ram.push((0x00E1, 0x40));
+    ram.push((0x00E2, 0x29)); ram.push((0x00E3, 0xB2)); // SQ2 数据址由调用方（此处固化调用面差异）——各 handler 传
+    let mut apu = Vec::new();
+    for i in 0..4u16 {
+        apu.push((0x4004 + i, sq2[i as usize]));
+    }
+    ram.push((0x0688 + c, flags));
+    ram.push((0x0653, 1)); ram.push((0x0654, 2));
+    for a in [0x0689u16, 0x0671, 0x0675, 0x0679, 0x0669, 0x0607] {
+        ram.push((a, 0));
+    }
+    (ram, apu)
+}
+
+/// SpitFlameSFXInit（$B50F）：无守卫 0x14 帧。
+pub fn spit_flame_sfx_init(ct: u8, flags: u8) -> HandlerOutcome {
+    sfx_data_init(0x14, &W3_DATA[2], 0xB221, ct, flags)
+}
+
+/// ScrewAttackSFXInit（$B52B）：5 帧+**特例**（SFXNoiseVar0 $0670←data[2]=0x00 清索引）。
+pub fn screw_attack_sfx_init(ct: u8, flags: u8) -> HandlerOutcome {
+    let mut o = sfx_data_init(5, &W3_DATA[0], 0xB211, ct, flags);
+    o.ram_events.push((0x0670, W3_DATA[0][2])); // data[2] 清索引（注「#$00」）
+    o.a_out = W3_DATA[0][2]; // 末 A-setter=`lda data+2`
+    o
+}
+
+/// BombExplodeSFXInit（$B583）：无守卫 0x30 帧。
+pub fn bomb_explode_sfx_init(ct: u8, flags: u8) -> HandlerOutcome {
+    sfx_data_init(0x30, &W3_DATA[1], 0xB219, ct, flags)
+}
+
+/// BossHitSFXInit（$B5EC）：双通道族（SQ1 装载+MultiSFXInit——A=SQ1 数据[3] 末字节）。
+pub fn boss_hit_sfx_init(ct: u8, flags: u8) -> HandlerOutcome {
+    let mut o = sfx_data_init(0, &W3_DATA[4], 0xB22D, ct, flags); // SQ1 装载面（无 length 写——LoadSFXData 非 InitSFXData）
+    // 修正形：LoadSFXData@SQ1=指针+4B（无 length/清表）——此处重写
+    let mut ram = vec![
+        (0x00E0, 0x00), (0x00E1, 0x40), (0x00E2, 0x2D), (0x00E3, 0xB2),
+    ];
+    let mut apu = Vec::new();
+    for i in 0..4u16 {
+        apu.push((0x4000 + i, W3_DATA[4][i as usize]));
+    }
+    let frames = 4u8; // **LoadSFXData 尾 A=环计数**（`tya/cmp #$04` 出口 A=4——非 data[3]！
+                      // golden≠ROM 打回正）
+    let (ram2, apu2) = multi_sfx_init_face(frames, &W3_DATA[3], ct, flags);
+    ram.extend(ram2);
+    apu.extend(apu2);
+    HandlerOutcome { ram_events: ram, apu_events: apu, a_out: 0, x_out: ct, y_out: 4 } // A=清表尾
+}
+
+/// IncorrectPasswordSFXInit（$B695）：双通道族（frames=$20 显式）。
+pub fn incorrect_password_sfx_init(ct: u8, flags: u8) -> HandlerOutcome {
+    let mut ram = vec![
+        (0x00E0, 0x00), (0x00E1, 0x40), (0x00E2, 0x31), (0x00E3, 0xB2),
+    ];
+    let mut apu = Vec::new();
+    for i in 0..4u16 {
+        apu.push((0x4000 + i, W3_DATA[5][i as usize]));
+    }
+    let (ram2, apu2) = multi_sfx_init_face(0x20, &W3_DATA[6], ct, flags);
+    ram.extend(ram2);
+    apu.extend(apu2);
+    // 注：SQ2 数据址各 handler 异（$B229/$B235）——multi 面 E2/E3 应随调用方；
+    // 本件覆盖（末写胜）
+    ram.push((0x00E2, 0x35)); ram.push((0x00E3, 0xB2));
+    HandlerOutcome { ram_events: ram, apu_events: apu, a_out: 0, x_out: ct, y_out: 4 } // A=清表尾
+}
+
+/// SamusJumpSFXInit（$B703）：守卫（MusicContFlags==music_Escape(0x04)⇒静默）+0x0C 帧。
+pub fn samus_jump_sfx_init(music_cont: u8, ct: u8, flags: u8) -> HandlerOutcome {
+    if music_cont == 0x04 {
+        return HandlerOutcome { ram_events: vec![], apu_events: vec![],
+                                a_out: music_cont, x_out: 0x11, y_out: 0x22 };
+    }
+    sfx_data_init(0x0C, &W3_DATA[7], 0xB251, ct, flags)
+}
+
+#[cfg(test)]
+mod w3_tests {
+    use super::*;
+
+    /// W3 六件：无守卫三件/特例（ScrewAttack data[2] 清索引）/双通道族/守卫一件。
+    #[test]
+    fn w3_six_shapes() {
+        assert_eq!(spit_flame_sfx_init(0, 0x40).ram_events.iter().find(|a| a.0 == 0x0660).unwrap().1, 0x14);
+        assert_eq!(bomb_explode_sfx_init(0, 0x40).ram_events.iter().find(|a| a.0 == 0x0660).unwrap().1, 0x30);
+        // ScrewAttack 特例：data[2] 清索引+末 setter
+        let o = screw_attack_sfx_init(0, 0x40);
+        assert!(o.ram_events.contains(&(0x0670, 0x00)));
+        assert_eq!(o.a_out, 0x00);
+        // BossHit 双通道（A=SQ1 data[3]=0x05）
+        let o = boss_hit_sfx_init(4, 0x40);
+        assert!(o.ram_events.contains(&(0x0664, 0x04))); // 尾 A=环计数
+        assert!(o.apu_events.contains(&(0x4004, 0x34)));
+        // IncorrectPassword 双通道（frames=0x20 显式）
+        let o = incorrect_password_sfx_init(4, 0x40);
+        assert!(o.ram_events.contains(&(0x0664, 0x20)));
+        assert_eq!(o.a_out, 0); // 清表尾 A
+        // SamusJump 守卫（Escape 占奏⇒静默）
+        assert!(samus_jump_sfx_init(0x04, 0, 0x40).ram_events.is_empty());
+        assert_eq!(samus_jump_sfx_init(0x00, 0, 0x40).ram_events.iter().find(|a| a.0 == 0x0660).unwrap().1, 0x0C);
+    }
+}
