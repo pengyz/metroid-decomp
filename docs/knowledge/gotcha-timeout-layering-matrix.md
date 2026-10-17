@@ -40,7 +40,8 @@ tags: [超时, 挂死, spawn, mcp, cargo-lock, 防复发]
 □ 命令/子进程：显式 timeout= 或三层环（死线+存活检+单调推进）
 □ 子 agent 任务：长活拆批+轮询收束（turn deadline 前）
 □ MCP 接线：调用面 60s 保持；连接期挂死先手=重挂服务
-□ 共享资源（锁/构建目录/输出目录）：独立化（CARGO_TARGET_DIR 式）或 fail-fast 锁
+□ 共享资源（锁/构建目录/输出目录）：独立化（CARGO_TARGET_DIR+CARGO_HOME **双独立**）或 fail-fast 锁
+□ **锁型辨识**：flock（文件级/随 fd 生命周期）vs fcntl F_SETLK（inode 级/跨硬链共享）——独立化方案按锁型核：硬链快照共享数据但**锁 sidecar 按 home 新建**才隔离（~/.cargo/.global-cache 真锁面=fcntl——target 独立只半治实录）
 □ 长跑进程：后台 job 记 id+收口
 □ 检查点：每个真空面要么补界要么在任务卡「遗留假设」声明豁免理由
 ```
