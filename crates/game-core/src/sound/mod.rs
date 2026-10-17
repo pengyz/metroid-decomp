@@ -310,3 +310,88 @@ mod cont_tests {
         assert!(o.ram_events.contains(&(0x0653, 0)));
     }
 }
+
+// ---- task-44 W1 首波：音乐索引核 + Beep handler（B 跑触发面）----
+// 结构互核注：**块名≠索引释义**（constants_ram 块首名 SFXNoiseLength 等=源序别名；
+// 索引语义=0=SQ1/1=SQ2/2=Tri/3=Noise/4=Multi（InitSFXData $B452 分派机+ChannelType 注
+// 双证）——公式 base+ct 不变（L2 案已验），仅名称解读注记）。
+
+/// FindMusicInitIndex（$BC53）语义折叠：无旗⇒$FF；MSB 优先位序（inc/asl/bcc 环）。
+/// MusicInitIndex 位序=曲号（注表：0x0B=Intro——boot-title 触发面）。
+pub fn find_music_init_index(flags: u8) -> u8 {
+    if flags == 0 {
+        return 0xFF;
+    }
+    let mut idx = 0xFFu8;
+    let mut a = flags;
+    loop {
+        idx = idx.wrapping_add(1);
+        let carry = a & 0x80 != 0;
+        a = a.wrapping_shl(1);
+        if carry {
+            return idx;
+        }
+    }
+}
+
+/// MusicInitIndexAdd8（$BC64）：+8（Multi 表偏移面）。
+pub fn music_init_index_add8(index: u8) -> u8 {
+    index.wrapping_add(8)
+}
+
+/// SFXData@Beep（bank 窗 $B279 4B——`09 7f 30 48`）。
+pub const BEEP_SFX_DATA: [u8; 4] = [0x09, 0x7F, 0x30, 0x48];
+
+/// BeepSFXInit（$B7D9）语义折叠：守卫（SFXTriContFlags 位7 SamusDie 演奏中⇒不响）+
+/// 3 帧+InitSFXData@Tri 面（length[ct]←3+指针面+4B APU+UpdateContFlags+占用面）。
+/// ct=ChannelType（Tri=2）。
+pub fn beep_sfx_init(tri_cont_flags: u8, current_flags: u8, channel_type: u8) -> HandlerOutcome {
+    let mut ram = Vec::new();
+    let mut apu = Vec::new();
+    if tri_cont_flags & 0x80 != 0 {
+        // SamusDie 占奏——静默退出（无写）
+        return HandlerOutcome { ram_events: ram, apu_events: apu,
+                                a_out: tri_cont_flags, x_out: channel_type, y_out: 0x79 };
+    }
+    let ct = channel_type as u16;
+    ram.push((0x0660 + ct, 3)); // length←3 帧
+    // InitSFXData@Tri：指针面（TRI_LINEAR $4008）+4B APU
+    ram.push((0x00E0, 0x08));
+    ram.push((0x00E1, 0x40));
+    ram.push((0x00E2, 0x79)); // SFXData@Beep=$B279
+    ram.push((0x00E3, 0xB2));
+    for i in 0..4u16 {
+        apu.push((0x4008 + i, BEEP_SFX_DATA[i as usize]));
+    }
+    ram.push((0x0688 + ct, current_flags)); // UpdateContFlags（and #$00 死操作照建）
+    ram.push((0x0652 + ct, channel_type));  // 占用面（`sta $0652,x` A=X=ct）
+    // 出口：InitSFXData 尾 txa/sta 后 A=ct
+    HandlerOutcome { ram_events: ram, apu_events: apu, a_out: channel_type,
+                     x_out: channel_type, y_out: 0x79 }
+}
+
+#[cfg(test)]
+mod w1_tests {
+    use super::*;
+
+    /// 音乐索引核（无旗 $FF/MSB 优先位序——0x0B=Intro 注表锚）。
+    #[test]
+    fn music_index_scan_msb_first() {
+        assert_eq!(find_music_init_index(0), 0xFF);
+        assert_eq!(find_music_init_index(0x80), 0);
+        assert_eq!(find_music_init_index(0x08), 4);
+        assert_eq!(find_music_init_index(0x08).wrapping_add(8), 0x0C); // Add8 面
+        assert_eq!(music_init_index_add8(0x03), 0x0B);
+    }
+
+    /// Beep 守卫（SamusDie 占奏⇒静默无写）+3 帧装载。
+    #[test]
+    fn beep_guard_and_load() {
+        let o = beep_sfx_init(0x80, 0x40, 2);
+        assert!(o.ram_events.is_empty(), "SamusDie 占奏应静默");
+        let o = beep_sfx_init(0x00, 0x40, 2);
+        assert!(o.ram_events.contains(&(0x0662, 3))); // length[2]←3
+        assert!(o.apu_events.contains(&(0x4008, 0x09)));
+        assert!(o.ram_events.contains(&(0x068A, 0x40))); // cont[2]←flags
+    }
+}
