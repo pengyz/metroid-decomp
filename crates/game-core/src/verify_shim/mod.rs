@@ -851,3 +851,40 @@ pub fn sound_samus_hit_cont(input: &L2In) -> L2Out {
     let o = crate::sound::samus_hit_sfx_cont(r(0x002E), ct, frame, length);
     L2Out { a: o.a_out, x: o.x_out, y: o.y_out, writes: merge_writes(o.ram_events) }
 }
+
+// ---- task-44 W2 高频 handler 族适配（6 件）----
+
+fn w2_out(input: &L2In, o: crate::sound::HandlerOutcome) -> L2Out {
+    L2Out { a: o.a_out, x: o.x_out, y: o.y_out, writes: merge_writes(o.ram_events) }
+}
+
+/// W2 适配（entry 面：bank00:B598/B710/B716/B56E/B6CD/B6E7 镜面）。
+pub fn sound_samus_walk(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    w2_out(input, crate::sound::samus_walk_sfx_init(r(0x0688), r(0x065C & 0x7FF), r(0x064D & 0x7FF)))
+}
+pub fn sound_enemy_hit(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    w2_out(input, crate::sound::enemy_hit_sfx_init(r(0x065C & 0x7FF), r(0x064D & 0x7FF)))
+}
+pub fn sound_bullet_fire(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    let ct = r(0x065C & 0x7FF);
+    match crate::sound::bullet_fire_sfx_init(r(0x061F), r(0x0689), ct, r(0x064D & 0x7FF)) {
+        Some(o) => w2_out(input, o),
+        None => w2_out(input, crate::sound::HandlerOutcome {
+            ram_events: vec![], apu_events: vec![], a_out: r(0x061F), x_out: ct, y_out: 0x4D }),
+    }
+}
+pub fn sound_missile_launch(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    w2_out(input, crate::sound::missile_launch_sfx_init(r(0x065C & 0x7FF), r(0x064D & 0x7FF)))
+}
+pub fn sound_missile_pickup(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    w2_out(input, crate::sound::missile_pickup_sfx_init(r(0x065C & 0x7FF), r(0x064D & 0x7FF)))
+}
+pub fn sound_energy_pickup(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    w2_out(input, crate::sound::energy_pickup_sfx_init(r(0x065C & 0x7FF), r(0x064D & 0x7FF)))
+}

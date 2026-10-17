@@ -134,6 +134,12 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "sub_EndGame" => Some(sub_end_game),
         "sub_SamusHitSFXInit" => Some(sub_samus_hit_sfx),
         "sub_SamusHitSFXCont" => Some(sub_samus_hit_cont),
+        "sub_SamusWalkSFXInit" => Some(sub_samus_walk),
+        "sub_EnemyHitSFXInit" => Some(sub_enemy_hit),
+        "sub_BulletFireSFXInit" => Some(sub_bullet_fire),
+        "sub_MissileLaunchSFXInit" => Some(sub_missile_launch),
+        "sub_MissilePickupSFXInit" => Some(sub_missile_pickup),
+        "sub_EnergyPickupSFXInit" => Some(sub_energy_pickup),
         _ => None,
     }
 }
@@ -610,3 +616,11 @@ pub fn sub_samus_hit_sfx(input: &L2In) -> L2Out {
 pub fn sub_samus_hit_cont(input: &L2In) -> L2Out {
     crate::verify_shim::sound_samus_hit_cont(input)
 }
+
+/// W2 高频族注册（bank00 镜面：B598/B710/B716/B56E/B6CD/B6E7）。
+pub fn sub_samus_walk(input: &L2In) -> L2Out { crate::verify_shim::sound_samus_walk(input) }
+pub fn sub_enemy_hit(input: &L2In) -> L2Out { crate::verify_shim::sound_enemy_hit(input) }
+pub fn sub_bullet_fire(input: &L2In) -> L2Out { crate::verify_shim::sound_bullet_fire(input) }
+pub fn sub_missile_launch(input: &L2In) -> L2Out { crate::verify_shim::sound_missile_launch(input) }
+pub fn sub_missile_pickup(input: &L2In) -> L2Out { crate::verify_shim::sound_missile_pickup(input) }
+pub fn sub_energy_pickup(input: &L2In) -> L2Out { crate::verify_shim::sound_energy_pickup(input) }

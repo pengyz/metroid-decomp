@@ -312,9 +312,10 @@ mod cont_tests {
 }
 
 // ---- task-44 W1 首波：音乐索引核 + Beep handler（B 跑触发面）----
-// 结构互核注：**块名≠索引释义**（constants_ram 块首名 SFXNoiseLength 等=源序别名；
-// 索引语义=0=SQ1/1=SQ2/2=Tri/3=Noise/4=Multi（InitSFXData $B452 分派机+ChannelType 注
-// 双证）——公式 base+ct 不变（L2 案已验），仅名称解读注记）。
+// 结构互核注：【2026-10-18 更正】先版「块名≠索引释义」注**反转**——W2 七案 ROM 打回
+// 实证（ct=3⇒指针低 $08=$4008 Tri）：真映射 0=Noise/1=SQ1/2=SQ2/3=Tri/4=Multi；
+// **块名（SFXNoiseLength $0660=ct0=Noise…）是对的**，ChannelType 注（0=SQ1…）=误注。
+// 公式 base+ct 不变；清表尾面（$0607/frame/Var0-2）随案补。
 
 /// FindMusicInitIndex（$BC53）语义折叠：无旗⇒$FF；MSB 优先位序（inc/asl/bcc 环）。
 /// MusicInitIndex 位序=曲号（注表：0x0B=Intro——boot-title 触发面）。
@@ -444,5 +445,127 @@ mod w1_music_tests {
     fn song_intro_header_shape() {
         assert_eq!(SONG_INTRO_HEADER.len(), 13);
         assert_eq!(&SONG_INTRO_HEADER[0..5], &[0x07, 0x00, 0xF0, 0x02, 0x05]);
+    }
+}
+
+// ---- task-44 W2 高频 handler 族六件（共核 InitSFXData 面+薄壳守卫形）----
+
+/// W2 数据表 6×4B（bank 窗面——0x3xxx 偏移 hexdump 实证）。
+pub const W2_DATA: [[u8; 4]; 6] = [
+    [0x19, 0x7F, 0x0E, 0xA0], // MissileLaunch $B215
+    [0x89, 0x7F, 0x67, 0x18], // EnergyPickup  $B23D
+    [0x8B, 0x7F, 0xFD, 0x28], // MissilePickup $B241
+    [0xD6, 0x82, 0x58, 0xF8], // ShortRangeShot $B24D
+    [0x1D, 0x9A, 0x20, 0x8F], // EnemyHit      $B255
+    [0x16, 0x7F, 0x0B, 0x18], // SamusWalk     $B21D
+];
+
+/// InitSFXData 共同面（$B452 语义折叠）——**通道映射 ROM 证反转**（七案打回实证：
+/// ct=3⇒指针低 08=$4008 Tri）：0=Noise $400C/1=SQ1 $4000/2=SQ2 $4004/3=Tri $4008。
+/// ChannelType 注（0=SQ1…）=**误注**（块名（SFXNoiseLength $0660=ct0=Noise…）反而是对的
+/// ——【更正】先版「块名≠索引释义」注反转：块名=索引释义，注=误）。
+/// 写面：length($0660+ct)+指针+cont($0688+ct)+used($0652+ct)+**清表尾**（$0607←0+
+/// frame($0665+ct)←0+Var0($0670+ct)/Var1($0674+ct)/Var2($0678+ct)←0——Var 块步距 4）。
+/// 出口：A=0（清表 lda #0 尾）/X=ct/Y=4（LoadSFXData 环 ldy #0 出口）。
+pub fn sfx_data_init(frames: u8, data: &[u8; 4], data_addr: u16, ct: u8, current_flags: u8)
+    -> HandlerOutcome {
+    let c = ct as u16;
+    let apu_base: u16 = match ct { 0 => 0x400C, 1 => 0x4000, 2 => 0x4004, _ => 0x4008 };
+    let mut ram = vec![
+        (0x0660 + c, frames),
+        (0x00E0, (apu_base & 0xFF) as u8),
+        (0x00E1, (apu_base >> 8) as u8),
+        (0x00E2, (data_addr & 0xFF) as u8),
+        (0x00E3, (data_addr >> 8) as u8),
+        (0x0688 + c, current_flags),
+        (0x0652 + c, ct),
+        (0x0607, 0), (0x0665 + c, 0),
+        (0x0670 + c, 0), (0x0674 + c, 0), (0x0678 + c, 0),
+    ];
+    let mut apu = Vec::new();
+    for i in 0..4u16 {
+        apu.push((apu_base + i, data[i as usize]));
+    }
+    ram.sort_by_key(|a| a.0);
+    HandlerOutcome { ram_events: ram, apu_events: apu, a_out: 0, x_out: ct, y_out: 4 }
+}
+
+/// SamusWalkSFXInit（$B598）：守卫（NoiseCont 位 0x20|0x10|0x04 占奏⇒静默）+3 帧。
+pub fn samus_walk_sfx_init(noise_cont: u8, ct: u8, flags: u8) -> HandlerOutcome {
+    if noise_cont & 0x34 != 0 {
+        return HandlerOutcome { ram_events: vec![], apu_events: vec![],
+                                a_out: noise_cont, x_out: 0x11, y_out: 0x22 }; // 守卫出口全透传
+    }
+    sfx_data_init(3, &W2_DATA[5], 0xB21D, ct, flags)
+}
+
+/// EnemyHitSFXInit（$B710）：无守卫+8 帧。
+pub fn enemy_hit_sfx_init(ct: u8, flags: u8) -> HandlerOutcome {
+    sfx_data_init(8, &W2_DATA[4], 0xB255, ct, flags)
+}
+
+/// BulletFireSFXInit（$B716）短光束路：ice（位0）/long（位7）分支=W3 变体件（此处
+/// 返回 None 标记非短光束）；SQ1Cont 守卫（0xCC 占奏⇒静默）；短光束=3 帧。
+pub fn bullet_fire_sfx_init(has_beam: u8, sq1_cont: u8, ct: u8, flags: u8)
+    -> Option<HandlerOutcome> {
+    if has_beam & 0x01 != 0 { return None; }          // ⇒ HasIceBeamSFXInit（W3）
+    if sq1_cont & 0xCC != 0 {
+        return Some(HandlerOutcome { ram_events: vec![], apu_events: vec![],
+                                     a_out: sq1_cont, x_out: 0x11, y_out: 0x22 }); // 守卫出口全透传
+    }
+    if has_beam & 0x80 != 0 { return None; }          // ⇒ HasLongBeamSFXInit（W3）
+    Some(sfx_data_init(3, &W2_DATA[3], 0xB24D, ct, flags))
+}
+
+/// MissileLaunchSFXInit（$B56E）：0x18 帧+**特例**（SFXNoiseVar0 $0670←$0A 噪声音高索引）。
+pub fn missile_launch_sfx_init(ct: u8, flags: u8) -> HandlerOutcome {
+    let mut o = sfx_data_init(0x18, &W2_DATA[0], 0xB215, ct, flags);
+    o.ram_events.push((0x0670, 0x0A)); // 特例（此写在清表后——终值 0x0A）
+    o.a_out = 0x0A; // 末 A-setter=`lda #$0A`
+    o
+}
+
+/// MissilePickupSFXInit（$B6CD）：无守卫+5 帧。
+pub fn missile_pickup_sfx_init(ct: u8, flags: u8) -> HandlerOutcome {
+    sfx_data_init(5, &W2_DATA[2], 0xB241, ct, flags)
+}
+
+/// EnergyPickupSFXInit（$B6E7）：无守卫+6 帧。
+pub fn energy_pickup_sfx_init(ct: u8, flags: u8) -> HandlerOutcome {
+    sfx_data_init(6, &W2_DATA[1], 0xB23D, ct, flags)
+}
+
+#[cfg(test)]
+mod w2_tests {
+    use super::*;
+
+    /// 共核面（frames/指针/APU 4B/cont/占用）。
+    #[test]
+    fn sfx_data_init_common_face() {
+        let o = sfx_data_init(3, &W2_DATA[5], 0xB21D, 3, 0x40);
+        assert!(o.ram_events.contains(&(0x0663, 3)));   // length[3]
+        assert!(o.ram_events.contains(&(0x068B, 0x40))); // cont[3]
+        assert!(o.apu_events.contains(&(0x4008, 0x16))); // Tri 基址（映射反转证）
+        assert_eq!(o.y_out, 4); // LoadSFXData 环出口（ldy #0 后 iny×4）
+    }
+
+    /// W2 六件：守卫/无守卫/特例三分形。
+    #[test]
+    fn w2_six_shapes() {
+        // SamusWalk 守卫命中⇒静默
+        assert!(samus_walk_sfx_init(0x20, 3, 0x40).ram_events.is_empty());
+        assert_eq!(samus_walk_sfx_init(0x00, 3, 0x40).ram_events.iter().find(|a| a.0 == 0x0663).unwrap().1, 3);
+        // 无守卫三件
+        assert_eq!(enemy_hit_sfx_init(0, 0x40).ram_events.iter().find(|a| a.0 == 0x0660).unwrap().1, 8);
+        assert_eq!(missile_pickup_sfx_init(1, 0x40).ram_events.iter().find(|a| a.0 == 0x0661).unwrap().1, 5);
+        assert_eq!(energy_pickup_sfx_init(1, 0x40).ram_events.iter().find(|a| a.0 == 0x0661).unwrap().1, 6);
+        // MissileLaunch 特例（NoiseVar0）
+        assert!(missile_launch_sfx_init(3, 0x40).ram_events.contains(&(0x0670, 0x0A)));
+        // BulletFire 短光束/守卫/变体分支
+        assert!(bullet_fire_sfx_init(0x80, 0, 0, 0x40).is_none()); // long beam 变体
+        assert!(bullet_fire_sfx_init(0x01, 0, 0, 0x40).is_none()); // ice 变体
+        let o = bullet_fire_sfx_init(0x00, 0xCC, 0, 0x40).unwrap();
+        assert!(o.ram_events.is_empty()); // SQ1Cont 守卫
+        assert!(bullet_fire_sfx_init(0x00, 0x00, 0, 0x40).unwrap().ram_events.iter().any(|a| *a == (0x0660, 3)));
     }
 }
