@@ -1534,3 +1534,15 @@ pub fn s2_cluster_051(input: &L2In) -> L2Out {
 pub fn s2_cluster_053(input: &L2In) -> L2Out {
     L2Out { a: 0, x: input.x, y: input.y, writes: vec![] }
 }
+
+// ---- SC-S2-24 簇入口适配（s2_cluster_054 ← bank07:CD9C IsScrewAttackActive）----
+
+/// s2_cluster_054 适配（$CD9C IsScrewAttackActive——Y=ram[\$0300]-1（ldy/dey 链）/
+/// A 透传/X 透传；无写面）。
+pub fn s2_cluster_054(input: &L2In) -> L2Out {
+    let v300 = input.ram[0x0300 & 0x7FF];
+    L2Out {
+        a: input.a, x: input.x, y: v300.wrapping_sub(1),
+        writes: vec![],
+    }
+}
