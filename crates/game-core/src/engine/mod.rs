@@ -2610,3 +2610,47 @@ mod s2_046_tests {
         assert!(ev.contains(&(0x0402, 0x40)));
     }
 }
+
+// ---- SC-S2-17（S2-47）员转写（3 员——索引 toggle 族）----
+
+/// $D648 索引 toggle（root——簇共根形四一·**ToggleSamusHi 索引版**）：$030C[x] eor 1。
+pub fn s2_index_toggle(x: u8, v030c_x: u8) -> (Vec<(u16, u8)>, u8) {
+    let v = v030c_x ^ 1;
+    (vec![(0x030C + x as u16, v)], v)
+}
+
+/// $D847 员体：索引 toggle+$030D[x]←$EF 环（Y=$F0/dey——S1-11 同构面）+尾跳 $D866。
+pub fn s2_d847_body(x: u8, v030c_x: u8) -> (Vec<(u16, u8)>, u16) {
+    let (mut ev, _) = s2_index_toggle(x, v030c_x);
+    ev.push((0x030D + x as u16, 0xEF));
+    (ev, 0xD866)
+}
+
+/// $D85E 员体：索引 toggle+$030D[x]←0+cmp $83 判（inc $0300 段）+尾跳 $D806。
+pub fn s2_d85e_body(x: u8, v030c_x: u8, v030d_x: u8) -> (Vec<(u16, u8)>, u16) {
+    let (mut ev, _) = s2_index_toggle(x, v030c_x);
+    ev.push((0x030D + x as u16, 0));
+    if v030d_x == 0x83 {
+        ev.push((0x0300 + x as u16, 1)); // cmp $83 命中段（inc 面注）
+    }
+    (ev, 0xD806)
+}
+
+#[cfg(test)]
+mod s2_047_tests {
+    use super::*;
+
+    /// 三员转写形（索引 toggle root+二壳）。
+    #[test]
+    fn s2_047_units_three() {
+        let (ev, v) = s2_index_toggle(0x95, 0);
+        assert_eq!(v, 1);
+        assert!(ev.contains(&(0x03A1, 1)));
+        let (ev, j) = s2_d847_body(2, 0);
+        assert_eq!(j, 0xD866);
+        assert!(ev.contains(&(0x030F, 0xEF)));
+        let (ev, j) = s2_d85e_body(2, 0, 0x83);
+        assert_eq!(j, 0xD806);
+        assert!(ev.contains(&(0x030F, 0)));
+    }
+}

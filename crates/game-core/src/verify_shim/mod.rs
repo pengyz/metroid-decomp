@@ -1384,3 +1384,16 @@ pub fn s2_cluster_045(input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-S2-17 簇入口适配（s2_cluster_047 ← bank07:D648 索引 toggle 族）----
+
+/// s2_cluster_047 适配（$D648：$030C[x] eor 1——**ToggleSamusHi 索引版**；A=toggle
+/// 结果/X/Y 透传）。
+pub fn s2_cluster_047(input: &L2In) -> L2Out {
+    let x = input.x as usize;
+    let v = input.ram.get(0x30C + x).copied().unwrap_or(0) ^ 1;
+    L2Out {
+        a: v, x: input.x, y: input.y,
+        writes: merge_writes(vec![(0x030C + input.x as u16, v)]),
+    }
+}
