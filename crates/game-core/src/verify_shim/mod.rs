@@ -1082,3 +1082,24 @@ pub fn s1_cluster_11(input: &L2In) -> L2Out {
 pub fn s1_cluster_12(input: &L2In) -> L2Out {
     L2Out { a: input.a.wrapping_neg(), x: input.x, y: input.y, writes: vec![] }
 }
+
+// ---- SC-S1-14 簇入口适配（s1_cluster_14 ← bank07:D6BF Table0D 族）----
+
+/// s1_cluster_14 适配（$D6BF 流——$D78B root 指针计算：$00←A/$04←($0A-A)/
+/// $05←(($0B-借位)&7)|$60；出口 A=X/Y=0（txa 面））。
+pub fn s1_cluster_14(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    let v0a = r(0x000A);
+    let v0b = r(0x000B);
+    let (d, borrow) = v0a.overflowing_sub(input.a);
+    let bsub = v0b.wrapping_sub(if borrow { 1 } else { 0 });
+    // 分路面（案实核二正）：**$04 >= $C0**（cmp #$C0 径）⇒深层覆写 $00/$04←$80
+    // （先版误用位5 判——bne X 判跳序正：X≠0 跳过位5 检直入 $05/$C0 链）
+    let (v00, v04) = if d >= 0xC0 { (0x80u8, 0x80u8) } else { (input.a, d) };
+    L2Out {
+        a: input.x, x: input.x, y: 0,
+        writes: merge_writes(vec![
+            (0x0000, v00), (0x0004, v04), (0x0005, (bsub & 7) | 0x60),
+        ]),
+    }
+}

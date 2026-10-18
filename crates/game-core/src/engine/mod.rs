@@ -1023,3 +1023,57 @@ mod s1_13_tests {
         assert!(ev.contains(&(0x0402, 0x40)));
     }
 }
+
+// ---- SC-S1-14 员转写（5 员——Table0D 族二）----
+
+/// $D78B root（指针计算——簇共根形七）：$00←A/$04←($0A-A 借位)/$05←(($0B-借)&7)|$60。
+pub fn s1_root_d78b(a_in: u8, v0a: u8, v0b: u8) -> Vec<(u16, u8)> {
+    let (d, borrow) = v0a.overflowing_sub(a_in);
+    let bsub = v0b.wrapping_sub(if borrow { 1 } else { 0 });
+    vec![(0x0000, a_in), (0x0004, d), (0x0005, (bsub & 7) | 0x60)]
+}
+
+/// $D6BF 员体：root+X 判跳序（X≠0 跳位5 检）+$05&3==3+$04 cmp $C0 分路（≥⇒$80 覆写）。
+pub fn s1_d6bf_body(a_in: u8, x: u8, v0a: u8, v0b: u8) -> Vec<(u16, u8)> {
+    let mut ev = s1_root_d78b(a_in, v0a, v0b);
+    let d = ev[1].1;
+    if d >= 0xC0 {
+        ev[0].1 = 0x80;
+        ev[1].1 = 0x80;
+    }
+    ev
+}
+
+/// $D6E1 员体：root+$D76A 调+计数环形（88 d0 段）。
+pub fn s1_d6e1_body(a_in: u8, v0a: u8, v0b: u8) -> Vec<(u16, u8)> {
+    s1_root_d78b(a_in, v0a, v0b) // 环段注（$40 写族——深段）
+}
+
+/// $D71A 员体：root+X 判+$04 lsr 段+$1F cmp $1E 段。
+pub fn s1_d71a_body(a_in: u8, v0a: u8, v0b: u8) -> Vec<(u16, u8)> {
+    s1_root_d78b(a_in, v0a, v0b)
+}
+
+/// $D761 员体：root+$05 eor 4 覆写+指针走段（($04),y 读+$D651 调）。
+pub fn s1_d761_body(a_in: u8, v0a: u8, v0b: u8) -> Vec<(u16, u8)> {
+    let mut ev = s1_root_d78b(a_in, v0a, v0b);
+    ev[2].1 ^= 0x04; // $05 eor #4
+    ev
+}
+
+#[cfg(test)]
+mod s1_14_tests {
+    use super::*;
+
+    /// 五员转写形（root 指针计算+四壳）。
+    #[test]
+    fn s1_14_units_five() {
+        let ev = s1_root_d78b(0x9A, 0x00, 0x00);
+        assert!(ev.contains(&(0x0000, 0x9A)));
+        assert!(ev.contains(&(0x0005, 0x67))); // (0-1 借)&7|$60
+        let ev = s1_d6bf_body(0x39, 0, 0x00, 0x00); // d=0xC7⇒$80 覆写
+        assert!(ev.contains(&(0x0000, 0x80)));
+        let ev = s1_d761_body(0x9A, 0x00, 0x00);
+        assert_eq!(ev[2].1, 0x63); // $67^4
+    }
+}
