@@ -2552,3 +2552,61 @@ mod s2_045_tests {
         assert!(ev.contains(&(0x0302, 8)));
     }
 }
+
+// ---- SC-S2-16（S2-46）员转写（3 员——$D66B 动画步进族；L2 真 0 留白）----
+
+/// $D66B 动画步进（root——簇共根形四十）：lda #3→AnimDrawObject 尾跳+\$2D bit0 判
+/// （清⇒早退/置⇒\$030F[x] dec 计数+表选写（\$37/\$82 二值——S1-19 同构面））。
+/// 返回 (写事件, 计数结果)。
+pub fn s2_anim_step(x: u8, v2d: u8, v030f_x: u8, v0300_x: u8) -> (Vec<(u16, u8)>, u8) {
+    if v2d & 1 == 0 {
+        return (vec![], 3); // 早退径（A=3 面）
+    }
+    let d = v030f_x.wrapping_sub(1);
+    let mut ev = vec![(0x030F + x as u16, d)];
+    if d == 0 {
+        let v = if v0300_x == 9 { 0x82 } else { 0x37 };
+        ev.push((0x0400 + x as u16, v)); // 表选写（S1-19 同构）
+    }
+    (ev, d)
+}
+
+/// $D68E 员体：jmp $D66B（尾形）+inc $030F[x]+$D6A7 调+$0303[x] sbc $F7 判
+/// （S1-13 同构面）。
+pub fn s2_d68e_body(x: u8, v030f_x: u8, v0303_x: u8) -> Vec<(u16, u8)> {
+    let mut ev = vec![(0x030F + x as u16, v030f_x.wrapping_add(1))];
+    if v0303_x.wrapping_sub(0xF7) == 0 {
+        ev.push((0x0300 + x as u16, v0303_x));
+    }
+    ev
+}
+
+/// $D6A4 员体：jmp $D66B+指针拷贝（$04/$05→$0A/$0B——S1-13 同构）+$030F[x] 三判段。
+pub fn s2_d6a4_body(x: u8, v030f_x: u8, v04: u8, v05: u8) -> Vec<(u16, u8)> {
+    let mut ev = vec![(0x000A, v04), (0x000B, v05)];
+    if v030f_x == 2 {
+        ev.push((0x0400 + x as u16, 0x40)); // 判 2 命中段（S1-13 同构）
+    }
+    ev
+}
+
+#[cfg(test)]
+mod s2_046_tests {
+    use super::*;
+
+    /// 三员转写形（$D66B 动画步进 root+二壳）。
+    #[test]
+    fn s2_046_units_three() {
+        assert_eq!(s2_anim_step(2, 0, 5, 0).1, 3); // 早退径
+        let (ev, d) = s2_anim_step(2, 1, 5, 0);
+        assert_eq!(d, 4);
+        assert!(ev.contains(&(0x0311, 4)));
+        let (ev, _) = s2_anim_step(2, 1, 1, 9);
+        assert!(ev.contains(&(0x0402, 0x82))); // 表选（$0300==9）
+        let ev = s2_d68e_body(2, 5, 0xF7);
+        assert!(ev.contains(&(0x0302, 0xF7)));
+        let ev = s2_d6a4_body(2, 2, 8, 9);
+        assert!(ev.contains(&(0x000A, 8)));
+        assert!(ev.contains(&(0x0402, 0x40)));
+    }
+}
