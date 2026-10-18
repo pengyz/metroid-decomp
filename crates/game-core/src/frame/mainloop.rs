@@ -142,7 +142,40 @@ pub fn more_init(mem: &mut FrameMemory) {
     let pt = mem.read_ram(0x6885); // AreaPaletteToggle
     mem.write_ram(0x0076, pt); // PaletteToggle（constants_ram:609）
     mem.write_ram(0x005A, 0xFF); // RoomNumber=$FF（constants_ram:567——undefined room）
-    crate::unported!("bank07:C85x"); // CopyAreaPointers→GetRoomNum→SetupRoom 环（房间链）
+    copy_area_pointers(mem); // C8B0（已端口）
+    get_room_num(mem); // E720（已端口——壳）
+    crate::unported!("bank07:EA2B"); // SetupRoom 环（房间链三件）
+}
+
+/// AreaPointers_ROM 烘焙（prg1 Brinstar——`14 a3 72 a3 f0 ae e0 9d e0 9e 0e 9f 6a 9d`
+/// ROM 命中（$959A）——7 指针：RoomPtrTable/StructPtrTable/MetatileDefs/EnFramePtrTable1/2/
+/// EnPlacePtrTable/EnAnimTable）。
+const AREA_POINTERS_ROM: [u8; 14] = [0x14, 0xA3, 0x72, 0xA3, 0xF0, 0xAE, 0xE0, 0x9D, 0xE0, 0x9E, 0x0E, 0x9F, 0x6A, 0x9D];
+
+/// CopyAreaPointers（**asm 内容锚** `CopyAreaPointers: ; 07:C8B0`）：14B 拷
+/// AreaPointers_ROM→AreaPointers_RAM（$3B-$48——7 指针结构体）。
+pub fn copy_area_pointers(mem: &mut FrameMemory) {
+    for (i, b) in AREA_POINTERS_ROM.iter().enumerate() {
+        mem.write_ram(0x003B + i as u16, *b);
+    }
+}
+
+/// GetRoomNum 壳（**asm 内容锚** `GetRoomNum: ; 07:E720`）：ScrollDir 横/纵分流门+
+/// ScrollBlock 门（横滚门挡）+MapPos 数学（MapPosY*16+MapPosX）→RoomPtrTable 查表
+/// →RoomNumber($5A)。表查=数据面（game-data 房间模型协同——S6-7）。
+pub fn get_room_num(mem: &mut FrameMemory) {
+    let dir = mem.read_ram(0x0003); // ScrollDir
+    if dir & 1 != 0 {
+        // 横滚面：ScrollBlock 门（门挡=停滚语义）
+        let _a = dir.wrapping_add(0xFF).wrapping_add(1); // A=1（左）/2（右）
+        // OnNameTable0（EC93）/ScrollBlock 门——门挡时 RTS（不载房）
+        crate::unported!("bank07:EC93"); // OnNameTable0+横滚门面
+    }
+    // 纵面：MapPosY*16+MapPosX → 查表
+    let map_y = mem.read_ram(0x004F);
+    let map_x = mem.read_ram(0x0050);
+    let idx = ((map_y as u16) << 4).wrapping_add(map_x as u16);
+    crate::unported!("bank07:E73x"); // RoomPtrTable 查表（game-data 房间模型——S6-7）
 }
 /// UpdateTimer 单元（**asm 内容锚**）——`UpdateTimer: ; 07:C266`：TimerDelay 预分频
 /// （dec/bpl——10 帧节拍，归零重置 9 并含 Timer3）→ Timer1/2/3 非零递减。
