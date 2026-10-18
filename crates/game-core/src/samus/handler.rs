@@ -402,6 +402,12 @@ pub fn samus_stand(mem: &mut FrameMemory) {
 /// 触地检（AccelY）。嵌套件桩：SamusJump_CheckHorzMovement/LCF2E/
 /// SamusJump_CheckFire/SetSamusJump/SetSamusData_3FrameAnimDelay。
 pub fn samus_jump(mem: &mut FrameMemory) {
+    // **高跳语义**（asm Lx017-Lx018：`ldy #$18/lda SamusGear/and #gr_HIGHJUMP/beq/ldy #$12`
+    // →`sty SamusAccelY`——**重力常数**：$18=普通/$12=高跳（低重力=高跳！decomp 疑②证实）。
+    let gear = mem.read_ram(crate::ram_map::SAMUS_GEAR);
+    let gravity = if gear & crate::ram_map::gear::HIGHJUMP != 0 { 0x12 } else { 0x18 };
+    mem.write_ram(crate::ram_map::SAMUS_ACCEL_Y, gravity);
+
     use button::*;
     let disp = mem.read_ram(crate::ram_map::SAMUS_JUMP_DISP);
     let speed_y_i = mem.read_ram(crate::samus::physics::SAMUS_SPEED_Y_I);
