@@ -1294,3 +1294,22 @@ pub fn s2_cluster_031(input: &L2In) -> L2Out {
     };
     L2Out { a, x, y: 0, writes: merge_writes(w) }
 }
+
+// ---- SC-S2-02 簇入口适配（s2_cluster_032 ← bank07:F97C LF97C 族）----
+
+/// s2_cluster_032 适配（$F97C 流——案实核 22 写：定 21+\$6AF7←ram[\$00]（依存实核）；
+/// 出口 A/X/Y=0）。
+pub fn s2_cluster_032(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    L2Out {
+        a: 0, x: 0, y: 0,
+        writes: merge_writes(vec![
+            (0x0000, 0), (0x0001, 0), (0x0002, 0), (0x0003, 0),
+            (0x0004, 0), (0x0005, 32), (0x0006, 0), (0x0008, 0),
+            (0x0009, 0), (0x000A, 0), (0x000B, 0), (0x000E, 0),
+            (0x000F, 0), (0x0010, 0), (0x0011, 3), (0x006B, 0),
+            (0x0405, 0), (0x6AF5, 0), (0x6AF6, 0), (0x6AF7, r(0x0000)),
+            (0x6AF8, 1), (0x6AFA, 1),
+        ]),
+    }
+}

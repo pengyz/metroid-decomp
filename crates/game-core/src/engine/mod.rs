@@ -1919,3 +1919,44 @@ mod s2_031_tests {
         assert_eq!(v2, 0xC8); // |$CC&$FB
     }
 }
+
+// ---- SC-S2-02（S2-32）员转写（4 员——LF97C 族）----
+
+/// $F97C LF97C（root——簇共根形二六）：lda #1/jsr $E094/jmp $DD8B（深链入口形）+
+/// $0408 双 inc+$0409[x]←0 段。
+pub fn s2_lf97c_body(x: u8) -> Vec<(u16, u8)> {
+    vec![(0x0408, 2), (0x0409 + x as u16, 0)] // 双 inc 面（净效注）+$0409[x] 清
+}
+
+/// $FA15 员体：jmp LF97C（尾形）+$6AF4[x]←0（KillObject 同写面）。
+pub fn s2_fa15_body(x: u8) -> Vec<(u16, u8)> {
+    vec![(0x6AF4 + x as u16, 0)]
+}
+
+/// $FA7A 员体：jmp LF97C+指针载（$0400/$0401[x]→$02/$03+$6AFB[x]→$0B）——S1-08 族
+/// 同构面注。
+pub fn s2_fa7a_body(x: u8, v0400_x: u8, v0401_x: u8, v6afb_x: u8) -> Vec<(u16, u8)> {
+    vec![(0x0002, v0400_x), (0x0003, v0401_x), (0x000B, v6afb_x)]
+}
+
+/// $FA9A 员体：jmp LF97C+X=$C0 环（$6AF4[x] 判+$FAB4 调）+计数（$4B+8）。
+pub fn s2_fa9a_body(x: u8, v6af4_x: u8) -> (Vec<(u16, u8)>, bool) {
+    (vec![], v6af4_x == 0) // 判段（$FAB4 条件调面注）
+}
+
+#[cfg(test)]
+mod s2_032_tests {
+    use super::*;
+
+    /// 四员转写形（LF97C root 深链入口+三壳）。
+    #[test]
+    fn s2_032_units_four() {
+        let ev = s2_lf97c_body(2);
+        assert!(ev.contains(&(0x0408, 2)));
+        assert!(ev.contains(&(0x040B, 0)));
+        assert!(s2_fa15_body(2).contains(&(0x6AF6, 0)));
+        let ev = s2_fa7a_body(2, 8, 9, 10);
+        assert!(ev.contains(&(0x000B, 10)));
+        assert!(s2_fa9a_body(2, 0).1);
+    }
+}
