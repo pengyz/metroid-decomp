@@ -90,15 +90,18 @@ fn a1_cluster_001(input: &L2In) -> L2Out {
     if let Some(v) = cntrl_write {
         writes.push((0x006B, v));
     }
-    if clear_hit {
-        writes.push((0x03CA, 0)); // Ens.isHit（槽面——随考证）
+    if clear_hit && r(0x03CA) != 0 {
+        writes.push((0x03CA, 0)); // Ens.isHit（**净变更形**——golden 写面=变更集）
     }
     let _ = draw;
     // EnemyMove 移效（**映射定案**：8 案同址——$6AF7(y)/$6AF8(**=A 输入**)/$6AFA(hi=1)
     // +$0404/$040E（zp scratch=0/0 固定面）——case 对读实证）
     writes.push((0x0404, 0));
     writes.push((0x040E, 0));
-    writes.push((0x6AF7, r(0x6AF7))); // y=移效果（EnemyGetDeltaY 语义——下窗精化）
+    let delta = crate::enemy::common::enemy_delta_sign_mag(r(0x03C8)); // 移速字节（槽面）
+    let y_in = input.wram.get(0xAF7).copied().unwrap_or(0); // **wram 域面**（$6AF7=$6000+0xAF7）
+    let y_out = (y_in as i16 + delta as i16) as u8; // y 效果（Δ 应用）
+    writes.push((0x6AF7, y_out));
     writes.push((0x6AF8, input.a)); // **subpix=A 输入**（case 对读 8/8 证）
     writes.push((0x6AFA, 1)); // hi=1（定值面）
     L2Out { a: 0, x: 0, y: 1, writes } // 出口残迹 (0,0,1)（观测值逐钉）

@@ -87,3 +87,14 @@ pub fn update_enemy_common(
     // UpdateEnemyAnim（F407 族——随件）
     update_enemy_common_no_move(slot, object_cntrl, special_attribs)
 }
+
+/// 敌 ΔY 符号幅解码（**asm 内容锚** `EnemyGetDeltaY_SignMagSpeed: ; $827F`）：
+/// 移字符串字节（延时面+符号幅速度字节）→Δ（bit7=符号/低 7 位=幅——SignedMag 形）。
+pub fn enemy_delta_sign_mag(speed_byte: u8) -> i8 {
+    let mag = (speed_byte & 0x7F) as i8;
+    if speed_byte & 0x80 != 0 {
+        -mag
+    } else {
+        mag
+    }
+}
