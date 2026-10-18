@@ -4956,3 +4956,46 @@ mod s4_106_tests {
         assert!(ev2.contains(&(0x0305, 0x6B)));
     }
 }
+
+// ---- SC-S4-17（S4-107）员转写（2 员——$C8BB 清零环族；L2 真 0 留白）----
+
+/// $C8BB 员体（root——簇共根形百一）：X 环（X=$00→$47：$97[x]←0+$6AF4[x]←0）
+/// +$48+ 段（跳过）+$92←X+jmp $95AB（S3-22 接面——rts 桩阵）。
+/// 返回 (写事件, 环面)。
+pub fn s4_c8bb_clear() -> Vec<(u16, u8)> {
+    let mut ev = Vec::new();
+    for x in 0..0x48u16 {
+        ev.push((0x0097 + x, 0));
+        ev.push((0x6AF4 + x, 0));
+    }
+    ev.push((0x0092, 0x48));
+    ev
+}
+
+/// $D909 员体：$C8BB+写对（$4B←$20/$0305←$6B/$0306←$5F——S4-15/16 同构面）+
+/// $0500+x←$7A/$0305←$6E 链。
+pub fn s4_d909_body() -> (Vec<(u16, u8)>, u16) {
+    let mut ev = s4_c8bb_clear();
+    ev.push((0x004B, 0x20));
+    ev.push((0x0305, 0x6B));
+    ev.push((0x0306, 0x5F));
+    (ev, 0x95AB)
+}
+
+#[cfg(test)]
+mod s4_107_tests {
+    use super::*;
+
+    /// 二员转写形（$C8BB 清零环 root+一壳）。
+    #[test]
+    fn s4_107_units_two() {
+        let ev = s4_c8bb_clear();
+        assert_eq!(ev.len(), 0x48 * 2 + 1);
+        assert!(ev.contains(&(0x0097, 0)));
+        assert!(ev.contains(&(0x6B3B, 0))); // $6AF4+$47
+        assert!(ev.contains(&(0x0092, 0x48)));
+        let (ev2, j) = s4_d909_body();
+        assert_eq!(j, 0x95AB);
+        assert!(ev2.contains(&(0x0305, 0x6B)));
+    }
+}
