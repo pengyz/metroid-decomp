@@ -8,6 +8,27 @@
       "reason": "EnemyMove（F3xx 族）移效写面（$6AFF 族）转写余——golden 全路径含移效 vs 适配骨架面（SC-A1-001 卡工序）",
       "exit": "EnemyMove 转写落→账清转 strict",
       "registered": "2026-10-19"
+    },
+    {
+      "id": "SC-S1-17-TRANSCRIBE",
+      "case_prefix": "s1-17-case",
+      "reason": "S1-17 簇转写中（批产迭代态——3 案语义差随转写收敛）",
+      "exit": "S1-17 卡转写落→账清转 strict",
+      "registered": "2026-10-19"
+    },
+    {
+      "id": "SC-S1-17-CROSSCARD-S105",
+      "case_prefix": "s1-17-case-5",
+      "reason": "深径多路（golden 含 $0200 精灵区写族 ~200 项+出口 regs 变）——$D055/$CF2E 跨卡调用（$D052∈S1-05 SetSamusData 族（已随移动链落））——golden 全路径含他卡效应=正常（lead 裁定②记账面）",
+      "exit": "源卡 S1-05 域深径建模落（或跨卡调用接线）→账清转 strict",
+      "registered": "2026-10-19"
+    },
+    {
+      "id": "SC-S1-17-CROSSCARD-S105-B",
+      "case_prefix": "s1-17-case-6",
+      "reason": "同 case-5（跨卡 S1-05 深径效应）",
+      "exit": "同 case-5",
+      "registered": "2026-10-19"
     }
   ]
 }
