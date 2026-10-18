@@ -108,6 +108,18 @@ ROM↔nmikstas 逐字节互核 A 级）。**R-mv-6 下落发起规则**（新增
 移植半注：sub_E7AD/sub_D976 均为深调用图（F1xx 族+几何子链）——**非 L2 可切片**，
 batch-1 需 F1xx 族考证先行（遗留清单见 findings §7）。命名候选全 C 级待台账自证。
 
+### R-mv-7 高跳重力规则（新增，A 级=字节自证）
+
+**语义**：跳跃启动时重力常数按 gear 位分流——`gr_HIGHJUMP（$02）置位⇒SamusAccelY=$12
+（低重力=高跳）/否则 $18（普通）`。生效点=jump 启动面（SFX_SamusJump 后）。
+
+**证据**（asm 内容锚）：`Lx017: ; 07:CFF0`（prg7_engine：
+`jsr SFX_SamusJump/ldy #$18/lda SamusGear/and #gr_HIGHJUMP/beq Lx018/ldy #$12/
+Lx018: sty SamusAccelY`）——字节自证可复现。
+
+**移植注**：samus_jump 启动面折（handler.rs——241cbd7）；decomp 跳动学线疑②定案
+（物理常数 $18/$12）。
+
 ## 3. 缺口显式声明（D7）
 
 - 未覆盖：跳跃弧线数值（初速/重力表）、滚球物理、碰撞/推墙、门/房间切换 X 重置语义、
