@@ -1700,3 +1700,17 @@ pub fn s3_cluster_067(input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-S3-08 簇入口适配（s3_cluster_068 ← bank07:CFC3 SetSamusJump）----
+
+/// s3_cluster_068 适配（$CFC3 SetSamusJump——案实核恒定 7 写（$0304←4/$0305←12/
+/// $0306←11/$0308←$FC/$030F←0/$0314←24/$0681←2 声旗）；A=0/X=1/Y=24）。
+pub fn s3_cluster_068(_input: &L2In) -> L2Out {
+    L2Out {
+        a: 0, x: 1, y: 24,
+        writes: merge_writes(vec![
+            (0x0304, 4), (0x0305, 12), (0x0306, 11), (0x0308, 0xFC),
+            (0x030F, 0), (0x0314, 24), (0x0681, 2),
+        ]),
+    }
+}
