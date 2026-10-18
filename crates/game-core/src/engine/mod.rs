@@ -2007,3 +2007,46 @@ mod s2_033_tests {
         assert_eq!(j, 0xCD6D);
     }
 }
+
+// ---- SC-S2-04（S2-34）员转写（3 员——StoreObjectPositionToTemp 族；L2 真 0 留白）----
+
+/// $E8BE StoreObjectPositionToTemp（root——簇共根形二八·**S1-21 对偶**）：
+/// $030C[x]→$0B/$030D[x]→$08/$030E[x]→$09（对象位置暂存三写）。
+pub fn s2_store_obj_pos(x: u8, v030c_x: u8, v030d_x: u8, v030e_x: u8) -> Vec<(u16, u8)> {
+    vec![(0x000B, v030c_x), (0x0008, v030d_x), (0x0009, v030e_x)]
+}
+
+/// $D101 员体：root+$05←X/$04←$F5（指针构）+$FD8F/$D638/$CF55/$D147 链（S1-10 同
+/// 构面注）。
+pub fn s2_d101_body(x: u8, v030c_x: u8, v030d_x: u8, v030e_x: u8) -> Vec<(u16, u8)> {
+    let mut ev = s2_store_obj_pos(x, v030c_x, v030d_x, v030e_x);
+    ev.push((0x0005, x));
+    ev.push((0x0004, 0xF5));
+    ev
+}
+
+/// $D630 员体：root+$FD8F 走带+cc 分段（$030D[x]←$08/$030E[x]←$09）——S1-10 同构面。
+pub fn s2_d630_body(x: u8, v030c_x: u8, v030d_x: u8, v030e_x: u8) -> Vec<(u16, u8)> {
+    let mut ev = s2_store_obj_pos(x, v030c_x, v030d_x, v030e_x);
+    ev.push((0x030D + x as u16, v030d_x));
+    ev.push((0x030E + x as u16, v030e_x));
+    ev
+}
+
+#[cfg(test)]
+mod s2_034_tests {
+    use super::*;
+
+    /// 三员转写形（root 三读位存+二壳）。
+    #[test]
+    fn s2_034_units_three() {
+        let ev = s2_store_obj_pos(2, 8, 9, 10);
+        assert!(ev.contains(&(0x000B, 8)));
+        assert!(ev.contains(&(0x0009, 10)));
+        let ev = s2_d101_body(2, 8, 9, 10);
+        assert!(ev.contains(&(0x0005, 2)));
+        assert!(ev.contains(&(0x0004, 0xF5)));
+        let ev = s2_d630_body(2, 8, 9, 10);
+        assert!(ev.contains(&(0x030F, 9)));
+    }
+}
