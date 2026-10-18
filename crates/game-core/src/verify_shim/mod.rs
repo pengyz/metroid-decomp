@@ -1952,3 +1952,30 @@ pub fn s4_cluster_112(input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-S4-29 簇入口适配（s4_cluster_119 ← bank07:EB77——bank7 双表烘焙）----
+
+/// $969B 延迟表（bank7 固定区烘焙——256 项首段）。
+pub const EN_DELAY_TBL_B7: [u8; 8] = [3, 56, 233, 247, 208, 3, 157, 0];
+/// $962B 体力表（bank7 固定区烘焙）。
+pub const EN_HEALTH_TBL_B7: [u8; 8] = [189, 8, 3, 133, 4, 32, 190, 232];
+
+/// s4_cluster_119 适配（$F85A InitEnemyForceSpeedDelayAndHealth——**bank7 双表**
+/// （y=ram[\$6B02] 索引——默认 0 径）：\$969B[y]→\$040D[x]/\$962B[y]→\$040B[x]
+/// （\$040F[x] 负⇒asl——案实核未取）；A=末值/X 透传/Y=0）。
+pub fn s4_cluster_119(input: &L2In) -> L2Out {
+    let y = (input.ram[0x6B02 & 0x7FF] % 8) as usize;
+    let t1 = EN_DELAY_TBL_B7[y];
+    let mut t2 = EN_HEALTH_TBL_B7[y];
+    let v040f = input.ram[(0x40F + input.x as usize) & 0x7FF];
+    if (v040f as i8) < 0 {
+        t2 <<= 1; // asl 径（负判——案实核未取）
+    }
+    L2Out {
+        a: t2, x: input.x, y: 0,
+        writes: merge_writes(vec![
+            (0x040D + input.x as u16, t1),
+            (0x040B + input.x as u16, t2),
+        ]),
+    }
+}

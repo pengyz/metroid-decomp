@@ -5370,3 +5370,43 @@ mod s4_118_tests {
         assert_eq!(ev2.len(), 2);
     }
 }
+
+// ---- SC-S4-29（S4-119）员转写（2 员——InitEnemyDelayAndHealth 族·S4 收官卡）----
+
+/// $F85A InitEnemyForceSpeedTowardsSamusDelayAndHealth（root——簇共根形百十三）：
+/// **bank7 双表**（y=$6B02 索引）：$969B[y]→$040D[x]（延迟）/$962B[y]→$040B[x]
+/// （体力——$040F[x] 负⇒asl）。
+/// 返回 (写事件, A=末值)。
+pub fn s4_init_enemy_delay_health(x: u8, y_idx: u8, v040f_x: u8) -> (Vec<(u16, u8)>, u8) {
+    let y = (y_idx % 8) as usize;
+    let t1 = crate::verify_shim::EN_DELAY_TBL_B7[y];
+    let mut t2 = crate::verify_shim::EN_HEALTH_TBL_B7[y];
+    if (v040f_x as i8) < 0 {
+        t2 <<= 1;
+    }
+    (vec![(0x040D + x as u16, t1), (0x040B + x as u16, t2)], t2)
+}
+
+/// $EB77 员体：InitEnemyDelayHealth+jmp $F85A（尾形——S4-28 接面）+取负段
+/// （S4-115 同构面）。
+pub fn s4_eb77_body(x: u8, y_idx: u8, v040f_x: u8) -> (Vec<(u16, u8)>, u16) {
+    let (ev, _) = s4_init_enemy_delay_health(x, y_idx, v040f_x);
+    (ev, 0xF85A)
+}
+
+#[cfg(test)]
+mod s4_119_tests {
+    use super::*;
+
+    /// 二员转写形（InitEnemyDelayHealth bank7 双表 root+一壳）——S4 收官。
+    #[test]
+    fn s4_119_units_two() {
+        let (ev, a) = s4_init_enemy_delay_health(60, 0, 0);
+        assert_eq!(a, 189); // bank7 $962B[0] 案实核
+        assert!(ev.contains(&(0x0449, 3))); // $040D[60]←$969B[0]=3
+        assert!(ev.contains(&(0x0447, 189))); // $040B[60]←189
+        let (ev2, j) = s4_eb77_body(60, 0, 0);
+        assert_eq!(j, 0xF85A);
+        assert_eq!(ev2.len(), 2);
+    }
+}
