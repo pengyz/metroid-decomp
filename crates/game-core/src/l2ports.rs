@@ -98,7 +98,17 @@ fn a1_cluster_001(input: &L2In) -> L2Out {
     // +$0404/$040E（zp scratch=0/0 固定面）——case 对读实证）
     writes.push((0x0404, 0));
     writes.push((0x040E, 0));
-    // EnemyGetDeltaY 全链（输入字段链：type/data05/movementIndex/instrIndex/delay）
+    // **D3 框架颠覆定案**：$6AF7=animFrame（表字节）/$6AF8=animDelay/$6AFA=animIndex
+    // ——UpdateEnemyAnim 写面（非 y 移位！）
+    let (anim_frame, anim_delay, anim_index) = crate::enemy::common::update_enemy_anim_frame(
+        r(0x0306 + input.x as usize),  // animIndex（槽面）
+        r(0x0304 + input.x as usize),  // animDelay
+        r(0x0305 + input.x as usize),  // resetAnimIndex
+        input.a,                     // 新延时（A 输入）
+    );
+    writes.push((0x6AF7, anim_frame));
+    writes.push((0x6AF8, anim_delay));
+    writes.push((0x6AFA, anim_index));
     let (delta, new_delay, new_idx, _elapsed) = crate::enemy::common::enemy_get_delta_y(
         r(0x0300),       // type（EnsExtra——槽面）
         r(0x0305),       // data05（Ens.0.data05）
