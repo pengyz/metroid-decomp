@@ -127,6 +127,24 @@ pub fn prep_ppu_palette_string(mem: &mut FrameMemory, src: &[u8]) {
 mod tests {
     use super::*;
 
+    /// WriteVRAMString 块写手（段头三字节+名表换行 +$20——S6-1 面）。
+    #[test]
+    fn write_vram_string_blocks() {
+        let mut m = FrameMemory::default();
+        m.write_ram(0x0000, 0x00); // dst lo
+        m.write_ram(0x0001, 0x20); // dst hi（$2000）
+        // 宽2|高2 打包=0x22；瓦数据 4 字节
+        let src = [0x22u8, 0xAA, 0xBB, 0xCC, 0xDD];
+        write_vram_string(&mut m, &src);
+        // 行1：[20][00][02][AA][BB]；行2：[20][20][02][CC][DD]
+        let buf: Vec<u8> = (0..10).map(|k| m.read_ram(0x07A1 + k)).collect();
+        assert_eq!(buf, vec![0x20, 0x00, 0x02, 0xAA, 0xBB,
+                             0x20, 0x20, 0x02, 0xCC, 0xDD]);
+        assert_eq!(m.read_ram(VRAM_STRUCT_INDEX), 10);
+        assert_eq!(m.read_ram(0x0001), 0x20); // 尾指针 $2040
+        assert_eq!(m.read_ram(0x0000), 0x40);
+    }
+
     /// 16 帧门（FrameCount&0xF≠0 ⇒ 静默）。
     #[test]
     fn star_palette_16frame_gate() {
@@ -153,4 +171,48 @@ mod tests {
         assert_eq!(m.read_ram(PPU_DATA_PENDING), 1);
         assert_eq!(m.read_ram(INTRO_STAR_OFFSET), 1);
     }
+}
+
+/// WriteVRAMString（**asm 内容锚**——S6-1 生产者族；task-42 spec §2.1）：
+/// `WriteVRAMString: ; 07:C328`（`PPUDataPending←1`/宽=src[0]&$0F/高=src[0]>>4
+/// （Adiv16）/@loop_row：`[hi][lo][宽]` 段头三字节→@loop_tile：瓦数据逐字 WritePPUByte
+/// →`stx index`/`AddYToPtr00 +$20`（**名表换行**（32 增量））/高--/环）。
+///
+/// **结构互核注**：行间 +$20=名表换行语义（spec §2.1 自证）；段头宽=长度（解码器
+/// 同构消费——[hi][lo][len][tile…] 行 chunk）；src 格式=[宽|高 打包字节][瓦数据...]。
+pub fn write_vram_string(mem: &mut FrameMemory, src: &[u8]) {
+    mem.write_ram(PPU_DATA_PENDING, 1); // `sty PPUDataPending`
+    let packed = src[0];
+    let width = (packed & 0x0F) as usize;
+    let height = (packed >> 4) as usize;
+    let mut x = mem.read_ram(VRAM_STRUCT_INDEX) as usize;
+    let mut dst = (mem.read_ram(0x0001) as u16) << 8 | mem.read_ram(0x0000) as u16;
+    let mut yi = 1usize; // src 游标
+    for _row in 0..height {
+        // 段头三字节（[hi][lo][宽]）
+        let hi = (dst >> 8) as u8;
+        let lo = dst as u8;
+        for b in [hi, lo, width as u8] {
+            if x >= 0x4F {
+                crate::unported!("bank07:C36E-full"); // 缓冲满（溢出安全面——spec 注）
+            }
+            mem.write_ram(0x07A1 + x as u16, b);
+            x += 1;
+        }
+        // 瓦数据
+        for _ in 0..width {
+            if x >= 0x4F {
+                crate::unported!("bank07:C36E-full");
+            }
+            let t = src.get(yi).copied().unwrap_or(0);
+            mem.write_ram(0x07A1 + x as u16, t);
+            x += 1;
+            yi += 1;
+        }
+        mem.write_ram(VRAM_STRUCT_INDEX, x as u8); // stx
+        dst = dst.wrapping_add(0x20); // 名表换行（+$20——32 增量）
+    }
+    // 尾态：PPU 指针推进（Temp00_PPURAMPtr←dst）
+    mem.write_ram(0x0000, dst as u8);
+    mem.write_ram(0x0001, (dst >> 8) as u8);
 }
