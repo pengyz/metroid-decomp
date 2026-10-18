@@ -974,6 +974,9 @@ pub fn dispatch_step(face: &TitleFace) -> TitleStep {
                 2 => {
                     // VBOff 面 + PrepareVram($9984) + 体写 + NMIOn 面 + ScreenOn 面 + spin③
                     let mut events = clear_all_seg2_events(ff & 0xFB & 0xFC);
+                    // 绘制面补（三分靶根因件）：L9984 blob→VRAMStruct 缓冲实写
+                    let bidx = face.ram[0x07A0 & 0x7FF];
+                    events.extend(vram_struct_buffer_events(bidx, &START_CONTINUE_BLOB));
                     events.push((0x0325, 0)); // StartContinue←0
                     events.push((crate::ram_map::PALETTE_PENDING, 0x0D)); // _id_Palette0C+1
                     events.push(crate::memmap::title_state::write_event_phase(0x16)); // ←ChooseStartContinue
@@ -1342,4 +1345,22 @@ mod tick_head_tests {
         assert!(ev.contains(&(0x00D1, 0)));
         assert!(ev.contains(&(0x00FF, 0x90))); // 0x91&0xFC
     }
+}
+
+/// L9984 "START CONTINUE" VRAMStruct blob（bank0:$9984 20B——[hi][lo][len][data…]+终止）。
+pub const START_CONTINUE_BLOB: [u8; 20] = [
+    0x21, 0x8C, 0x05, 0x1C, 0x1D, 0x0A, 0x1B, 0x1D,       // $218C "START" 5B
+    0x21, 0xEC, 0x08, 0x0C, 0x18, 0x17, 0x1D, 0x12, 0x17, 0x1E, 0x0E, // $21EC "CONTINUE" 8B
+    0x00,                                                  // VRAMStructEnd
+];
+
+/// VRAMStruct 缓冲写事件（绘制面通用——blob→$07A1+idx 走带+PPUDataPending 触发）。
+/// idx=当前 $07A0 缓冲索引；写后索引推进由 NMI 冲刷复位（对 0x18 面同构）。
+pub fn vram_struct_buffer_events(idx: u8, blob: &[u8]) -> Vec<(u16, u8)> {
+    let mut ev = Vec::with_capacity(blob.len() + 1);
+    for (i, b) in blob.iter().enumerate() {
+        ev.push((0x07A1 + ((idx as usize + i) & 0x7F) as u16, *b));
+    }
+    ev.push((0x001B, 1)); // PPUDataPending←1（NMI 冲刷触发）
+    ev
 }
