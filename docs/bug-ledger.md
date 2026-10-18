@@ -23,3 +23,19 @@
 ## 台账（当前为空 —— 尚无已证实的原版 bug 登记）
 
 <!-- 新登记追加在下方，按编号递增；证伪不删历史，原地标注日期更正（AGENTS.md §3.6） -->
+
+## BUG-001: morph×楔交互=游戏态损坏（radius 0 退化+位置冻结）
+
+- 现象: morph 球态行进撞楔（球盒 16px 跨 8px 瓦壁——$5D 类）后 un-morph——
+  status=8（站立）但 radiusY/radiusX=0 退化+位置冻结（speedY=$FD 持续上推）——
+  Samus 卡死不可动；
+- 复现: sc-elevator-ride f3380-3750（morph×楔交互）——
+  morph 触发（x>120 down）→球滚→撞楔（$5D 壁 x 143）→UP 脱球→状态损坏；
+  探针实录：stat($300) 7→8/radiusY($301)=0/radiusX($302)=0/speedY($308)=$FD/ScrY($52)=200 冻结；
+- 影响: **差分验证需登记为已知偏差**（TOLERATED+BUG-001 引）——game-core 移植
+  面需保真复现（Stage A 保留 quirk——D4）——玩法影响=楔区 morph=永久卡死；
+- 证据: 三环探针输出（docs/spec/map-connectivity-graph.md §38）；
+  SetSamusRoll/SamusRoll/ObjectCheckMoveUp 指令流（07:D0B5/D0E1/E7A2）；
+- trace id: analysis/traces/sc-elevator-ride.frames.jsonl f3380-3750（探针窗）；
+- Stage 处置: **Stage A 保真不修**（D4）——代码侧注 `// BUG-001`（porter 移植时引用）；
+- 登记: 2026-10-19 decomp（lead D4 台账令）
