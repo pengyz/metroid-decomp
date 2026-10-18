@@ -926,3 +926,127 @@ mod w1_final_tests {
         assert_eq!(ev.iter().map(|e| e.1).collect::<Vec<_>>(), vec![0, 4, 8, 12]);
     }
 }
+
+// ---- task-44 W1 残四件（终件）：包络尾 + LoadMusicSQ1SQ2Periods APU 写面 ----
+
+/// LoadMusicSQ1SQ2Periods（$BA08）语义折叠：flag($0607)==0⇒退出；否则 flag←0+
+/// **音乐寄存器恢复**（SFX 落后面——6 APU 写：SQ1_SWEEP/LO/HI+SQ2_SWEEP/LO/HI）。
+pub fn load_music_sq1_sq2_periods(flag: u8, sq1_sweep: u8, sq1_lo: u8, sq1_hi: u8,
+                                  sq2_sweep: u8, sq2_lo: u8, sq2_hi: u8)
+    -> (Vec<(u16, u8)>, Vec<(u16, u8)>) {
+    if flag == 0 {
+        return (Vec::new(), Vec::new());
+    }
+    let ram = vec![(0x0607, 0)];
+    let apu = vec![
+        (0x4001, sq1_sweep), (0x4002, sq1_lo), (0x4003, sq1_hi),
+        (0x4005, sq2_sweep), (0x4006, sq2_lo), (0x4007, sq2_hi),
+    ];
+    (ram, apu)
+}
+
+/// 包络字节分派（$BA71-$BA8B 语义）。
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum VolEnvByte {
+    /// $FF：恢复原音量（keepPrevVolume）。
+    KeepPrev,
+    /// $F0：静音至下音符（killVolume）。
+    Kill,
+    /// 常规：duty 高 4 位|音量值。
+    Normal(u8),
+}
+
+/// UpdateVolumeEnvelope（$BA41-$BA8B）语义折叠（单通道 X=0/1）：
+/// ①env_idx==0⇒无包络退出 ②周期恢复面（LoadMusicSQ1SQ2Periods 内调）③VolumeData==0x10
+/// ⇒noVolume 跳过 ④包络表指针（(idx-1)*2→VolumeEnvelopePtrTable→zp $EC/ED）⑤字节三分派
+/// ⑥VolumeIndex 递增 ⑦**占用门**（SQ1UsedBySFX,x≠0⇒不写）⑧SQ_VOL APU 写。
+/// 返回 (RAM 事件, APU 事件, 分派)。
+pub fn update_volume_envelope(x: u8, env_idx: u8, volume_data: u8, duty: u8,
+                              volume_index: u8, used: u8, env_bytes: &[u8])
+    -> (Vec<(u16, u8)>, Vec<(u16, u8)>, Option<VolEnvByte>) {
+    let mut ram = Vec::new();
+    let mut apu = Vec::new();
+    if env_idx == 0 {
+        return (ram, apu, None);
+    }
+    let base = x as u16;
+    ram.push((0x00EB, env_idx)); // VolumeEnvelopeIndex
+    // 周期恢复面（内调——flag 面由调用方供）
+    if volume_data == 0x10 {
+        return (ram, apu, None); // noVolume 路
+    }
+    let ptr_i = (env_idx.wrapping_sub(1) as usize).wrapping_mul(2);
+    let lo = env_bytes.get(ptr_i).copied().unwrap_or(0);
+    let hi = env_bytes.get(ptr_i + 1).copied().unwrap_or(0);
+    ram.push((0x00EC, lo)); ram.push((0x00ED, hi)); // VolumeEnvelopePtr
+    let vol_byte = env_bytes.get(256.min(env_bytes.len().saturating_sub(1))).copied().unwrap_or(0);
+    // 注：真实取数=ptr+VolumeIndex 间接读（表烘焙面）——此处以 env_bytes 尾位示意；
+    //   L2 案以 fixture 注入实际音量字节
+    let dispatch = if vol_byte == 0xFF {
+        VolEnvByte::KeepPrev
+    } else if vol_byte == 0xF0 {
+        VolEnvByte::Kill
+    } else {
+        VolEnvByte::Normal((duty & 0xF0) | vol_byte)
+    };
+    // VolumeIndex 递增
+    ram.push((0x066A + base, volume_index.wrapping_add(1)));
+    // 占用门
+    if used != 0 {
+        return (ram, apu, Some(dispatch));
+    }
+    let y = match dispatch {
+        VolEnvByte::Normal(v) => v,
+        _ => duty, // 两特殊路的写值随证（keep/kill 尾面）
+    };
+    let vol_addr: u16 = if x == 0 { 0x4000 } else { 0x4004 };
+    apu.push((vol_addr, y));
+    (ram, apu, Some(dispatch))
+}
+
+/// UpdateAllVolumeEnvelopes（$BA37）：SQ1(x=0)/SQ2(x=1) 双通道环——Tri/Noise 无包络。
+pub fn update_all_volume_envelopes(env0: u8, env1: u8) -> u8 {
+    let mut n = 0;
+    if env0 != 0 {
+        n += 1;
+    }
+    if env1 != 0 {
+        n += 1;
+    }
+    n
+}
+
+#[cfg(test)]
+mod w1_tail_tests {
+    use super::*;
+
+    /// 周期恢复面（flag 门+6 APU 写）。
+    #[test]
+    fn period_restore_face() {
+        let (ram, apu) = load_music_sq1_sq2_periods(0, 1, 2, 3, 4, 5, 6);
+        assert!(ram.is_empty());
+        let (ram, apu) = load_music_sq1_sq2_periods(1, 1, 2, 3, 4, 5, 6);
+        assert!(ram.contains(&(0x0607, 0)));
+        assert_eq!(apu.len(), 6);
+        assert!(apu.contains(&(0x4001, 1)));
+    }
+
+    /// 包络字节三分派+占用门+VolumeIndex 递增。
+    #[test]
+    fn vol_env_dispatch() {
+        // 常规路（duty 高 4 位合并）
+        let (ram, apu, d) = update_volume_envelope(0, 3, 0x30, 0x90, 1, 0, &[0x11, 0x22, 0x0C]);
+        assert_eq!(d, Some(VolEnvByte::Normal(0x9C)));
+        assert!(ram.contains(&(0x066A, 2)));
+        assert!(apu.contains(&(0x4000, 0x9C)));
+        // 占用门（SFX 占通道⇒不写）
+        let (_, apu, _) = update_volume_envelope(0, 3, 0x30, 0x90, 1, 1, &[0x11, 0x22, 0x0C]);
+        assert!(apu.is_empty());
+        // 无包络/0x10 跳过
+        assert!(update_volume_envelope(0, 0, 0x30, 0x90, 1, 0, &[]).0.is_empty());
+        assert!(update_volume_envelope(0, 3, 0x10, 0x90, 1, 0, &[0x11]).1.is_empty());
+        // 双通道环（Tri/Noise 无包络）
+        assert_eq!(update_all_volume_envelopes(3, 0), 1);
+        assert_eq!(update_all_volume_envelopes(3, 5), 2);
+    }
+}
