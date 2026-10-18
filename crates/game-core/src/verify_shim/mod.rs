@@ -1845,3 +1845,14 @@ pub fn s4_cluster_094(input: &L2In) -> L2Out {
 pub fn s4_cluster_096(input: &L2In) -> L2Out {
     L2Out { a: input.a, x: input.x, y: 0, writes: vec![] }
 }
+
+// ---- SC-S4-07 簇入口适配（s4_cluster_097 ← bank07:CB9A SFX_BombExplode 族）----
+
+/// s4_cluster_097 适配（$CB9A SFX_BombExplode——案实核恒定：$0680←$10（声旗）；
+/// A=$10/X=0/Y 透传——SFX 族六现）。
+pub fn s4_cluster_097(input: &L2In) -> L2Out {
+    L2Out {
+        a: 0x10, x: 0, y: input.y,
+        writes: merge_writes(vec![(0x0680, 0x10)]),
+    }
+}

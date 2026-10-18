@@ -4559,3 +4559,40 @@ mod s4_096_tests {
         assert!(ev.contains(&(0x0004, 9)));
     }
 }
+
+// ---- SC-S4-07（S4-97）员转写（2 员——SFX_BombExplode 族）----
+
+/// $CB9A SFX_BombExplode（root——簇共根形九一·**SFX 族六现**）：SFX id 装载链
+/// （$10/$20/$08/$01/$02/$04 六 id）+X=0（ldx）。
+/// 返回 (声旗写, SFX id)。
+pub fn s4_sfx_bomb_explode() -> (Vec<(u16, u8)>, u8) {
+    (vec![(0x0680, 0x10)], 0x10) // sfxNoise_BombExplode=$10（案实核恒定）
+}
+
+/// $D68B 员体：SFX_BombExplode 尾形+尾跳 $D66B（S3-25 接面）+$030F[x] inc+$D6A7 调
+/// （S2-05 接面）+$0303[x] sbc $F7 判（S1-13 同构）。
+pub fn s4_d68b_body(x: u8, v030f_x: u8, v0303_x: u8) -> (Vec<(u16, u8)>, u16) {
+    let (mut ev, _) = s4_sfx_bomb_explode();
+    ev.push((0x030F + x as u16, v030f_x.wrapping_add(1)));
+    if v0303_x.wrapping_sub(0xF7) == 0 {
+        ev.push((0x0300 + x as u16, v0303_x));
+    }
+    (ev, 0xD66B)
+}
+
+#[cfg(test)]
+mod s4_097_tests {
+    use super::*;
+
+    /// 二员转写形（SFX_BombExplode 六现 root+一壳）。
+    #[test]
+    fn s4_097_units_two() {
+        let (ev, id) = s4_sfx_bomb_explode();
+        assert_eq!(id, 0x10);
+        assert!(ev.contains(&(0x0680, 0x10)));
+        let (ev2, j) = s4_d68b_body(2, 5, 0xF7);
+        assert_eq!(j, 0xD66B);
+        assert!(ev2.contains(&(0x0311, 6)));
+        assert!(ev2.contains(&(0x0302, 0xF7)));
+    }
+}
