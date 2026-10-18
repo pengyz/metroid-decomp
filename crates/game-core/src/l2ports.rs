@@ -105,6 +105,9 @@ fn a1_cluster_001(input: &L2In) -> L2Out {
         r(0x030D),       // movementIndex
         r(0x030E),       // movementInstrIndex
         r(0x0348),       // delay
+        r(0x0355),       // speedSubPixelY（槽面——随考证）
+        r(0x0356),       // speedY
+        r(0x0357),       // accelY
     );
     let y_in = input.y; // **y 源=输入 Y 寄存器**（案值对读 8/8：y_gold=regs.y+Δ（u8 环绕））
     let y_out = (y_in as i16 + delta as i16) as u8; // y 效果（Δ 应用）
@@ -213,6 +216,7 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "s1_cluster_28" => Some(sub_s1_cluster_28),
         "s2_cluster_030" => Some(sub_s2_cluster_030),
         "s2_cluster_031" => Some(sub_s2_cluster_031),
+        "s2_cluster_032" => Some(sub_s2_cluster_032),
         _ => None,
     }
 }
@@ -813,4 +817,9 @@ pub fn sub_s2_cluster_030(input: &L2In) -> L2Out {
 /// s2_cluster_031 —— bank07:F702 簇入口注册（SC-S2-01）。
 pub fn sub_s2_cluster_031(input: &L2In) -> L2Out {
     crate::verify_shim::s2_cluster_031(input)
+}
+
+/// s2_cluster_032 —— bank07:F97C 簇入口注册（SC-S2-02）。
+pub fn sub_s2_cluster_032(input: &L2In) -> L2Out {
+    crate::verify_shim::s2_cluster_032(input)
 }
