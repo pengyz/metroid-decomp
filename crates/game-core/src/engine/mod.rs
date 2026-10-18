@@ -4807,3 +4807,35 @@ mod s4_102_tests {
         assert!(ev.contains(&(0x001C, 1)));
     }
 }
+
+// ---- SC-S4-13（S4-103）员转写（2 员——WaitNMIPass 族；L2 真 0 留白）----
+
+/// $C43F WaitNMIPass_（root——簇共根形九七）：ClearNMIStat 调（$C434）+$1A 判
+/// （beq -4 **自旋等待**（NMI 传递面））+rts。
+/// 返回 (NMI 已传, 自旋面)。
+pub fn s4_wait_nmi_pass(v1a: u8) -> (bool, bool) {
+    (v1a != 0, true) // beq 自旋（NMI 未传⇒等待）
+}
+
+/// $D8FA 员体：WaitNMIPass+链（$CB73/$D92C（StartMusic——S2-36 接面）/$C447/
+/// $C8B0/$C8BB——sound 域帧链五调）+$4B←$20 面。
+pub fn s4_d8fa_body(v1a: u8) -> (Vec<(u16, u8)>, u16) {
+    let (passed, _) = s4_wait_nmi_pass(v1a);
+    let mut ev = vec![(0x004B, 0x20)];
+    (ev, 0xC447)
+}
+
+#[cfg(test)]
+mod s4_103_tests {
+    use super::*;
+
+    /// 二员转写形（WaitNMIPass 自旋 root+一壳）。
+    #[test]
+    fn s4_103_units_two() {
+        assert_eq!(s4_wait_nmi_pass(1), (true, true));
+        assert_eq!(s4_wait_nmi_pass(0), (false, true)); // 自旋面
+        let (ev, j) = s4_d8fa_body(1);
+        assert_eq!(j, 0xC447);
+        assert!(ev.contains(&(0x004B, 0x20)));
+    }
+}
