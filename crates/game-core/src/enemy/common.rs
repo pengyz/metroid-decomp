@@ -161,3 +161,50 @@ pub fn enemy_get_delta_y(
         (enemy_delta_sign_mag(speed), delay.wrapping_add(1), instr_index, false)
     }
 }
+
+/// 指令流逐字节执行（**asm 内容锚** `@ReadByte: ; $825B`——全支分派）：
+/// <$F0=符号幅速度命令（SignMagSpeed）/$FA=触发休止/$FB=停止/$FC=重复至失败/
+/// $FD=清跳跃位移/$FE=重复至无Δ后休止/$FF=重启字符串。
+/// 状态面：instrIndex/delay/jumpDsplcmnt——跨帧累积（每 tick 一指令处理）。
+/// 返回（Δ, 新 instrIndex, 新 delay, 命令族）。
+pub fn enemy_stream_exec(
+    strs: &[u8], base: u16, instr_index: u8, delay: u8,
+) -> (i8, u8, u8, &'static str) {
+    let get = |i: u16| -> u8 {
+        let off = base.wrapping_sub(0x97EF).wrapping_add(i) as usize;
+        strs.get(off).copied().unwrap_or(0xFF)
+    };
+    let mut idx = instr_index;
+    let mut dly = delay;
+    for _ in 0..32u8 { // 界卫（重启/休止循环——fail-safe）
+        let cmd = get(idx as u16);
+        match cmd {
+            0xF0..=0xF9 => { /* 保留控制（随件） */ idx = idx.wrapping_add(1); }
+            0xFA => return (0, idx.wrapping_add(1), dly, "rest"),
+            0xFB => return (0, idx, dly, "stop"),
+            0xFC => return (0, idx, dly, "repeat-until-fail"),
+            0xFD => { idx = idx.wrapping_add(1); /* 清跳跃位移（字段面随件） */ }
+            0xFE => return (0, idx, dly, "repeat-until-no-delta"),
+            0xFF => { idx = 0; /* 重启字符串 */ }
+            _ => {
+                // 符号幅速度命令（SignMagSpeed 延时面）
+                let target = cmd;
+                if target.wrapping_sub(dly) == 0 {
+                    // 延时归零支：delay←0+index+2→重读
+                    dly = 0;
+                    idx = idx.wrapping_add(2);
+                    continue;
+                }
+                dly = dly.wrapping_add(1);
+                let speed = get(idx as u16 + 1);
+                let sig = if speed & 0x80 != 0 {
+                    -((speed & 0x7F) as i8)
+                } else {
+                    (speed & 0x7F) as i8
+                };
+                return (sig, idx, dly, "speed");
+            }
+        }
+    }
+    (0, idx, dly, "guard-exit")
+}
