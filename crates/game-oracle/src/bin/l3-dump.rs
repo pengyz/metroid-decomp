@@ -35,16 +35,18 @@ fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().collect();
     let mut scenario = String::new();
     let mut manifest_path = String::from("oracle/traces/l3_manifest.json");
+    let mut bundle: Option<String> = None;
     let mut i = 1;
     while i < args.len() {
         match args[i].as_str() {
             "--scenario" => { scenario = args.get(i + 1).cloned().unwrap_or_default(); i += 2; }
             "--manifest" => { manifest_path = args.get(i + 1).cloned().unwrap_or_default(); i += 2; }
+            "--bundle" => { bundle = args.get(i + 1).cloned(); i += 2; }  // task-32 任意起点
             other => { eprintln!("未知参数: {other}"); return ExitCode::from(2); }
         }
     }
     if scenario.is_empty() {
-        eprintln!("用法: l3-dump --scenario <name> [--manifest <path>]");
+        eprintln!("用法: l3-dump --scenario <name> [--manifest <path>] [--bundle <前缀>]");
         return ExitCode::from(2);
     }
     let text = match std::fs::read_to_string(&manifest_path) {
@@ -91,13 +93,85 @@ fn main() -> ExitCode {
             return ExitCode::from(2);
         }
     }
+    // task-32：任意起点恢复腿（bundle JSON 三直映→restore_mss，spec §4 映射件）
+    if let Some(bp) = &bundle {
+        #[derive(serde::Deserialize)]
+        struct BundleRegs { a: u8, x: u8, y: u8, sp: u8, pc: u16, ps: u8 }
+        #[derive(serde::Deserialize)]
+        struct Bundle { ram: String, wram: String, regs: BundleRegs }
+        fn hexb(s: &str) -> Vec<u8> {
+            (0..s.len() / 2).map(|i| u8::from_str_radix(&s[i * 2..i * 2 + 2], 16).unwrap_or(0)).collect()
+        }
+        let text = std::fs::read_to_string(format!("{bp}.json"))
+            .map_err(|e| { eprintln!("bundle 读取失败: {e}"); }).ok();
+        let Some(text) = text else { return ExitCode::from(2); };
+        let b: Bundle = match serde_json::from_str(&text) {
+            Ok(b) => b,
+            Err(e) => { eprintln!("bundle 解析失败: {e}"); return ExitCode::from(2); }
+        };
+        let ram = hexb(&b.ram);
+        let wram = hexb(&b.wram);
+        let regs = game_core::frame::Registers {
+            a: b.regs.a, x: b.regs.x, y: b.regs.y,
+            p: b.regs.ps, sp: b.regs.sp, pc: b.regs.pc,
+        };
+        engine.mem = game_core::frame::FrameMemory::restore_mss(&ram, &wram, regs);
+        println!("[bundle] restore_mss 已装: ram={}B wram={}B pc=${:04X}",
+            ram.len(), wram.len(), b.regs.pc);
+    }
+
     let mut out = String::new();
     let mut div_seen = 0usize;
     let mut div_events: Vec<(u64, u16)> = Vec::new();
     for f in 1..=frames {
-        // task-24 ②：spin 出口采样（tick_frame_with 缝=NMI 尾写 1 后/帧工作前——
+    
+    // ===== 输入回放（scenario DSL：press <f> <btn>=f..f+len-1 按住/hold <a-b> <btn>=a..b）=====
+    // （task-11 移动臂驱动面——B 案：输入未喂则 GameMode 恒 1 不入局）
+    fn btn_bit(name: &str) -> u8 {
+        match name.to_ascii_lowercase().as_str() {
+            "a" => 0x80, "b" => 0x40, "select" => 0x20, "start" => 0x10,
+            "up" => 0x08, "down" => 0x04, "left" => 0x02, "right" => 0x01,
+            _ => 0,
+        }
+    }
+    let mut press_len: u32 = 2;
+    let mut inputs: std::collections::HashMap<u64, u8> = std::collections::HashMap::new();
+    let scen_path = std::path::Path::new("oracle/scenarios").join(format!("{scenario}.txt"));
+    if let Ok(text) = std::fs::read_to_string(&scen_path) {
+        for line in text.lines() {
+            let line = line.trim();
+            if line.starts_with("press_len ") {
+                if let Ok(v) = line[10..].trim().parse::<u32>() { press_len = v; }
+            } else if line.starts_with("press ") {
+                let parts: Vec<&str> = line.split_whitespace().collect();
+                if parts.len() >= 3 {
+                    if let (Ok(f), Some(bit)) = (parts[1].parse::<u64>(), Some(btn_bit(parts[2]))) {
+                        for k in 0..press_len {
+                            *inputs.entry(f + k as u64).or_insert(0) |= bit;
+                        }
+                    }
+                }
+            } else if line.starts_with("hold ") {
+                let parts: Vec<&str> = line.split_whitespace().collect();
+                if parts.len() >= 3 {
+                    if let Some((a, b)) = parts[1].split_once('-') {
+                        if let (Ok(a), Ok(b), Some(bit)) = (a.parse::<u64>(), b.parse::<u64>(), Some(btn_bit(parts[2]))) {
+                            for f in a..=b {
+                                *inputs.entry(f).or_insert(0) |= bit;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // task-24 ②：spin 出口采样（tick_frame_with 缝=NMI 尾写 1 后/帧工作前——
         // oracle $C0D3 同点）；unported! 引爆 ⇒ panic（fail-loud，dump 不落盘）。
         let mut row = String::new();
+        // 输入喂入（当前帧按钮面——joy1）
+        let fi = f as u64; // lead 最小修（E0425 变量名漂移——port2 WIP 中段态破点）
+        engine.mem.joy1 = inputs.get(&fi).copied().unwrap_or(0);
         engine.tick_frame_with(|mem| {
             let snap = mem.watch_snapshot();
             let w: Vec<String> = watch_labels

@@ -60,6 +60,19 @@ pub fn encode_wram(wram: &[u8]) -> String {
 mod tests {
     use super::*;
 
+    /// 三面平铺不变量：zp+iram 无缝无叠覆盖 $0000-$07FF（encode 唯一源契约守卫）。
+    /// 栈影子区（$0100-$01FF）在 iram 面内——排除由比较器侧声明（§8.1② 整栈排除），
+    /// 本面保持全覆盖=实现表面可见性单一口径。
+    #[test]
+    fn face_regions_tile_ram_without_gap() {
+        let mut ram = [0u8; 0x800];
+        for (i, b) in ram.iter_mut().enumerate() {
+            *b = (i % 251) as u8; // 非对称填充=位移错位可检
+        }
+        let full = hex_upper(&ram);
+        assert_eq!(format!("{}{}", encode_zp(&ram), encode_iram(&ram)), full);
+    }
+
     /// 三面编码长度（512/3584/16384）与大写形态。
     #[test]
     fn face_encodings_match_pinned_lengths() {
