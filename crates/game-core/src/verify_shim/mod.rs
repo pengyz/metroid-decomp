@@ -1186,3 +1186,29 @@ pub fn s1_cluster_21(input: &L2In) -> L2Out {
         writes: merge_writes(vec![(0x0009, v09), (0x0008, v08), (0x000B, v0b)]),
     }
 }
+
+// ---- SC-S1-22 簇入口适配（s1_cluster_22 ← bank07:EAD4 EnemyLoop VM）----
+
+/// s1_cluster_22 适配（$EAD4 对象指令 VM——**走带=A 进位加**（$EF09：$00/$01+=A）+
+/// 指令 nibble 分派（8 表项）+JumpEngine 面（$0C/$0D←目标/$69←X/$6A←Y(0)）。
+/// 出口 A=目标高位/X 透传/Y=0。
+pub fn s1_cluster_22(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    let lo0 = r(0x0000);
+    let hi0 = r(0x0001);
+    let (lo, carry) = lo0.overflowing_add(input.a);
+    let hi = hi0.wrapping_add(if carry { 1 } else { 0 });
+    // 指令读（新址）：op nibble→8 表项
+    const TABLE: [u16; 8] = [0xC45C, 0xEB06, 0xEB8C, 0xC45C, 0xEC04, 0xC45C, 0xEC2F, 0xEC57];
+    let op = r(((hi as u16) << 8) | lo as u16) & 0x07;
+    let target = TABLE[op as usize];
+    let mut w = vec![(0x0000, lo)];
+    if carry {
+        w.push((0x0001, hi));
+    }
+    w.push((0x000C, (target & 0xFF) as u8));
+    w.push((0x000D, (target >> 8) as u8));
+    w.push((0x0069, input.x)); // TempX
+    w.push((0x006A, 0));       // TempY（ldy #0 面）
+    L2Out { a: (target >> 8) as u8, x: input.x, y: 0, writes: merge_writes(w) }
+}

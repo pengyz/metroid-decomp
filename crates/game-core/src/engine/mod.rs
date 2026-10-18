@@ -1441,3 +1441,52 @@ mod s1_21_tests {
         assert_eq!(s1_f91f_body(2, 8, 9, 10).1, 0xFA49);
     }
 }
+
+// ---- SC-S1-22 员转写（4 员——EnemyLoop 对象指令 VM）----
+
+/// $EF09 走带推进（VM 核件）：$00/$01 += A（16 位进位加）。
+pub fn s1_vm_advance(lo: u8, hi: u8, addend: u8) -> (u8, u8) {
+    let (l, c) = lo.overflowing_add(addend);
+    (l, hi.wrapping_add(if c { 1 } else { 0 }))
+}
+
+/// $EAD4 EnemyLoop（root——簇共根形十五·**对象指令 VM**）：走带+指令 nibble 分派
+/// （8 表项）+JumpEngine 面（RoutinePtr/TempX/TempY）。
+pub fn s1_enemy_loop(a_in: u8, x_in: u8, lo: u8, hi: u8, op_byte: u8)
+    -> (Vec<(u16, u8)>, u8, u8, u8) {
+    const TABLE: [u16; 8] = [0xC45C, 0xEB06, 0xEB8C, 0xC45C, 0xEC04, 0xC45C, 0xEC2F, 0xEC57];
+    let (nlo, nhi) = s1_vm_advance(lo, hi, a_in);
+    let target = TABLE[(op_byte & 7) as usize];
+    let ev = vec![(0x0000, nlo), (0x0001, nhi),
+                  (0x000C, (target & 0xFF) as u8), (0x000D, (target >> 8) as u8),
+                  (0x0069, x_in), (0x006A, 0)];
+    (ev, (target >> 8) as u8, x_in, 0)
+}
+
+/// $EB09 员体（op1 族）：记录长返回形（**lda #3/rts**——3B 记录）。
+pub fn s1_eb09_rec_len() -> u8 { 3 }
+
+/// $EB8F Lx230 员体：jmp 回驱尾形（记录内走面——iny 链）。
+pub fn s1_lx230_stub() -> u16 { 0xEAD4 }
+
+/// $EC54 Lx237 员体：jmp 回驱尾形+槽走面（$0728[x] 环）。
+pub fn s1_lx237_stub() -> u16 { 0xEAD4 }
+
+#[cfg(test)]
+mod s1_22_tests {
+    use super::*;
+
+    /// VM 件四形（推进/分派/记录长/回驱尾）。
+    #[test]
+    fn s1_22_vm_shapes() {
+        assert_eq!(s1_vm_advance(181, 0, 125), (50, 1));
+        assert_eq!(s1_vm_advance(76, 0, 36), (112, 0));
+        let (ev, a, x, y) = s1_enemy_loop(125, 137, 181, 0, 0);
+        assert_eq!(a, 0xC4);
+        assert!(ev.contains(&(0x0000, 50)));
+        assert!(ev.contains(&(0x000C, 0x5C)));
+        assert_eq!((x, y), (137, 0));
+        assert_eq!(s1_eb09_rec_len(), 3);
+        assert_eq!(s1_lx230_stub(), 0xEAD4);
+    }
+}
