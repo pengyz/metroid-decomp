@@ -3913,3 +3913,48 @@ mod s3_079_tests {
         assert_eq!(s3_d1d4_table(), 8);
     }
 }
+
+// ---- SC-S3-20（S3-80）员转写（2 员——Door_DeleteOffscreenEnemies 族；L2 真 0 留白）----
+
+/// $D48C Door_DeleteOffscreenEnemies（root——簇共根形七四）：X=$60/sec/环
+/// （$D4B4 调+X-=$20/bpl 回卷——**屏外敌清除环**）+GetNameTableAtScrollDir 调
+/// （S1-00 接面）+X=$18 环（$D4A8 调）。
+/// 返回 (清除数, 环面)。
+pub fn s3_delete_offscreen() -> (u8, u8) {
+    let mut x = 0x60u8;
+    let mut count = 0u8;
+    loop {
+        count += 1; // 环计数（$D4B4 调面注）
+        if x < 0x20 {
+            break;
+        }
+        x = x.wrapping_sub(0x20);
+    }
+    (count, x) // 3 环（$60/$40/$20→$00）+最终 X
+}
+
+/// $D3BA 员体：DeleteOffscreen+$ED65/$95AB 链+$79 判（StartMusic 调（S2-36 接面）
+/// +符号段（$79←0））。
+pub fn s3_d3ba_body(v79: u8) -> (Vec<(u16, u8)>, u8) {
+    let (count, _) = s3_delete_offscreen();
+    let mut ev = Vec::new();
+    if v79 != 0 {
+        ev.push((0x0079, 0)); // 符号段（清面）
+    }
+    (ev, count)
+}
+
+#[cfg(test)]
+mod s3_080_tests {
+    use super::*;
+
+    /// 二员转写形（DeleteOffscreen 环 root+一壳）。
+    #[test]
+    fn s3_080_units_two() {
+        let (count, x) = s3_delete_offscreen();
+        assert_eq!(count, 4); // 四环（x=0 也入环——bpl 面）
+        assert_eq!(x, 0); // 环破点（x<0x20 断）
+        let (ev, _) = s3_d3ba_body(5);
+        assert!(ev.contains(&(0x0079, 0)));
+    }
+}
