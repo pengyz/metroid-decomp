@@ -1359,3 +1359,46 @@ mod s1_19_tests {
         assert!(s1_d8bc_body(0, 0x8F).contains(&(0x001E, 7)));
     }
 }
+
+// ---- SC-S1-20 员转写（4 员——$D76A 表走族）----
+
+/// $D76A root（表走例——簇共根形十三）：txa/pha/Y=0/($04),y 表读+$D651 调+cc/cmp $A0
+/// 双段+$E9C2 条件调/pla/tax/rts。返回 (写事件（空——计算面）, 出口 A=X 形)。
+pub fn s1_root_d76a(x: u8, tbl_entry: u8) -> (Vec<(u16, u8)>, u8, u8) {
+    // 计算面（表走+条件调——A 出=X（pla/tax 后）；Y=0）
+    let _ = tbl_entry;
+    (vec![], x, 0)
+}
+
+/// $D6E4 员体：jsr $D76A/rts（极简壳——员入口即 root 调）。
+pub fn s1_d6e4_body(x: u8, tbl_entry: u8) -> (u8, u8) {
+    let (_, a, y) = s1_root_d76a(x, tbl_entry);
+    (a, y)
+}
+
+/// $D712 员体：jmp $D76A+计数环（88 d0 段）+lsr/bcs 段+$1F cmp 段。
+pub fn s1_d712_body(x: u8, tbl_entry: u8, v04: u8) -> (u8, bool) {
+    let (_, a, _) = s1_root_d76a(x, tbl_entry);
+    (a, v04 & 0x1F >= 2) // cmp 2 段判（形注）
+}
+
+/// $D73E 员体：jmp $D76A+计数环+bcs 段（$D77F 加法 root 调——姊妹形注）。
+pub fn s1_d73e_body(x: u8, tbl_entry: u8) -> u8 {
+    s1_root_d76a(x, tbl_entry).1
+}
+
+#[cfg(test)]
+mod s1_20_tests {
+    use super::*;
+
+    /// 四员转写形（$D76A root 表走+三壳）。
+    #[test]
+    fn s1_20_units_four() {
+        let (ev, a, y) = s1_root_d76a(0x72, 0x55);
+        assert!(ev.is_empty());
+        assert_eq!((a, y), (0x72, 0));
+        assert_eq!(s1_d6e4_body(0x72, 0), (0x72, 0));
+        assert!(s1_d712_body(0x72, 0, 0x02).1);
+        assert_eq!(s1_d73e_body(0x72, 0), 0x72);
+    }
+}

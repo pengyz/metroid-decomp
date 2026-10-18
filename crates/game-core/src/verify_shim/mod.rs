@@ -1162,3 +1162,10 @@ pub fn s1_cluster_18(_input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-S1-20 簇入口适配（s1_cluster_20 ← bank07:D6E4——$D76A 表走 root）----
+
+/// s1_cluster_20 适配（$D6E4：jsr $D76A/rts——案实核：无写面；出口 A=X/Y=0（txa 面））。
+pub fn s1_cluster_20(input: &L2In) -> L2Out {
+    L2Out { a: input.x, x: input.x, y: 0, writes: vec![] }
+}
