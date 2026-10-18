@@ -1,0 +1,10 @@
+{
+  "schema": "a3-pregen/v1",
+  "yield": {
+    "ok": 34,
+    "fail": 2,
+    "cases": 272
+  },
+  "note": "A3 批 L2 案族预出（bank02 域簇 1-36）——簇首×4 LCG→ROM golden；产率注：窗口 bank 歧义前置照注（重定向歧义回退实录=S 系 yield.json）",
+  "reproduce": "逐条韧性跑法（casegen 单条失败即停）"
+}
