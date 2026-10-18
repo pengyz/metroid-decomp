@@ -21,15 +21,18 @@ press 1980 b
 hold 2500-2660 a
 hold 2550-2920 right
 press 2580 b
-hold 3100-3260 a
 hold 3150-3520 right
+hold 3520-4500 right
+press 3600 b
+press 4000 b
+hold 4500-5500 right
+press 4600 b
+press 5000 b
+hold 5500-7000 right
+press 5600 b
+press 6100 b
+press 6600 b
 press 3180 b
-nav 3330-3560 x 150
-nav 3560-3800 jump 176
-nav 3560-3800 x 155
-nav 3800-4300 jump 64
-nav 3800-4300 x 250
-nav 4300-5200 x 250
 hold 5300-5460 a
 hold 5350-5800 right
 press 5400 b
@@ -38,7 +41,6 @@ hold 5950-6400 right
 press 6000 b
 hold 6500-6660 a
 hold 6550-7000 right
-press 6600 b
 
 capture 3800 corridor-in
 capture 4300 corridor-out
