@@ -772,3 +772,72 @@ mod s1_09_tests {
         assert_eq!(s1_d8b4_body(0x4F).1, 0xD806);
     }
 }
+
+// ---- SC-S1-10 员转写（5 员——Table18 族；L2 真 0 留白）----
+
+/// $FD8F root（Table18）：$02←($49&2)/$04 三径算（bmi/beq/常规加法+$F0 钳）。
+/// 返回 ($02 写, 计算值)。
+pub fn s1_root_fd8f(v49: u8, v04: u8, v08: u8) -> (Vec<(u16, u8)>, u8) {
+    let ev = vec![(0x0002, v49 & 0x02)];
+    let v = if (v04 as i8) < 0 {
+        v04 // bmi 径（未加法段注）
+    } else if v04 == 0 {
+        v04 // beq 径
+    } else {
+        // adc 进位判别（bcs 跳钳——溢出时无钳）；无进位且 ≥$F0⇒+$0F 钳
+        let (s, carry) = v04.overflowing_add(v08);
+        if carry { s } else if s >= 0xF0 { s.wrapping_add(0x0F) } else { s }
+    };
+    (ev, v)
+}
+
+/// $D10A 员体：root+三子调链（$D638/$CF55）+$0306 dec+$D147 调+jmp $D144。
+pub fn s1_d10a_body(v0306: u8) -> (Vec<(u16, u8)>, u16) {
+    (vec![(0x0306, v0306.wrapping_sub(1))], 0xD144)
+}
+
+/// $D633 员体：root+cc 分段（$030D[x]←$08/$030E[x]←$09+$0B 位判段）。
+pub fn s1_d633_body(x: u8, v08: u8, v09: u8, v0b: u8) -> Vec<(u16, u8)> {
+    let mut ev = vec![(0x030D + x as u16, v08), (0x030E + x as u16, v09)];
+    if v0b & 0x01 == 0 {
+        ev.push((0x030C + x as u16, v0b)); // 位0 未置段
+    }
+    ev
+}
+
+/// $F924 员体：root+尾跳 $FA49+$6AF5[y]/$6AF6[y]←2+$0405[y]|=。
+pub fn s1_f924_body(y: u8, v0405_y: u8) -> (Vec<(u16, u8)>, u16) {
+    (vec![(0x6AF5 + y as u16, 2), (0x6AF6 + y as u16, 2),
+          (0x0405 + y as u16, v0405_y | 2)], 0xFA49)
+}
+
+/// $FCED 员体：root+cc 分段（$B4[x]|=2）+cs 分段（$FD6C 调）+$B5[x] cmp $50 段。
+pub fn s1_fced_body(x: u8, v_b4x: u8, v_b5x: u8) -> (Vec<(u16, u8)>, Option<u16>) {
+    let ev = vec![(0x00B4 + x as u16, v_b4x | 0x02)];
+    let call = if v_b5x >= 0x50 { Some(0xFD6C) } else { None };
+    (ev, call)
+}
+
+#[cfg(test)]
+mod s1_10_tests {
+    use super::*;
+
+    /// 五员转写形（Table18 root 三径算+四壳）。
+    #[test]
+    fn s1_10_units_five() {
+        assert_eq!(s1_root_fd8f(0x03, 0x10, 0x20).0, vec![(0x0002, 0x02)]);
+        assert_eq!(s1_root_fd8f(0, 0x10, 0x20).1, 0x30);
+        assert_eq!(s1_root_fd8f(0, 0x70, 0x90).1, 0x00); // 溢出进位跳钳（正值入参）
+        assert_eq!(s1_root_fd8f(0, 0x80, 0).1, 0x80); // bmi 径
+        assert_eq!(s1_root_fd8f(0, 0x50, 0xAF).1, 0x0E); // 钳+0F 回卷（正值入参）
+        assert_eq!(s1_d10a_body(5).0, vec![(0x0306, 4)]);
+        let ev = s1_d633_body(2, 8, 9, 0);
+        assert!(ev.contains(&(0x030F, 8))); // x=2 ⇒ $030D+2←v08
+        assert!(ev.contains(&(0x0310, 9))); // $030E+2←v09
+        let (ev, j) = s1_f924_body(3, 0x05);
+        assert_eq!(j, 0xFA49);
+        assert!(ev.contains(&(0x6AF8, 2)));
+        let (_, call) = s1_fced_body(2, 0, 0x50);
+        assert_eq!(call, Some(0xFD6C));
+    }
+}
