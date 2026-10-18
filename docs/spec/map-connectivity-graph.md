@@ -554,3 +554,15 @@
   「绕过房 19/25 通行面——场景目的=elevator 骑行」）；
 - **战役终盘**（45 轮）：八房进+BUG-001+根因全链+G 系方法库 17 系——
   **sc-elevator-ride 主径 2 窗败→②后备**（裁定序执行 ✓）。
+
+## 46. 【2026-10-19 收窄交付】②后备三件落（①②✓③ pending）
+
+- **①bundle_capture 落点**（d00ed9a）：f3800 mapX=10 态（房 19——mss+RAM+regs
+  快照）——bundle_load 起跑基 ✓；
+- **②bundle_load 场景**（8183f37）：骑行面输入序（东行跑跳+nav x 舵+DOWN 激活
+  窗）+事件核三项设计（MapPos==22,11/D7B3/ElevatorType bit7=0）✓；
+- **③manifest 注册=pending**（D7 如实）：bundle_load×trace=trace 0 行（工具注）
+  ——manifest 条回退（L3 绿保）——**trace 工具修=③ 前置**（bundle_load 态
+  watch 读空根因待查）；
+- **收窄交付形执行**（lead 令）：逐件 commit ✓（d00ed9a/8183f37）——防上下文
+  耗尽 ✓。
