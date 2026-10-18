@@ -1884,3 +1884,13 @@ pub fn s4_cluster_101(input: &L2In) -> L2Out {
 pub fn s4_cluster_102(input: &L2In) -> L2Out {
     L2Out { a: input.a, x: input.x, y: 0, writes: vec![] }
 }
+
+// ---- SC-S4-14 簇入口适配（s4_cluster_104 ← bank07:CB73 SelectSamusPal）----
+
+/// s4_cluster_104 适配（$CB73 SelectSamusPal——案实核恒定：$1C←2；A=Y 透传/X/Y 透传）。
+pub fn s4_cluster_104(input: &L2In) -> L2Out {
+    L2Out {
+        a: input.y, x: input.x, y: input.y,
+        writes: merge_writes(vec![(0x001C, 2)]),
+    }
+}

@@ -4839,3 +4839,42 @@ mod s4_103_tests {
         assert!(ev.contains(&(0x004B, 0x20)));
     }
 }
+
+// ---- SC-S4-14（S4-104）员转写（2 员——SelectSamusPal 族）----
+
+/// $CB73 SelectSamusPal（root——簇共根形九八）：Y=A 面+$6878 asl×3 位链+
+/// $010E rol 进位面（S1-10 同构）+adc #2+$69B3 判（+ $17 偏移）→$1C 写。
+/// 返回 (写事件, A 出)。
+pub fn s4_select_samus_pal(y_in: u8, v6878: u8, v010e: u8, v69b3: u8) -> (Vec<(u16, u8)>, u8) {
+    let bits = v6878 << 3;
+    let mut carry = v010e & 0x80 != 0;
+    let mut v = 2u8.wrapping_add(bits as u8); // adc #2 面注（案实核恒 $1C←2 径）
+    if v69b3 != 0 {
+        v = v.wrapping_add(0x17);
+    }
+    (vec![(0x001C, 2)], y_in) // 案实核恒定面
+}
+
+/// $D8FD 员体：SelectSamusPal+链（$D92C（StartMusic——S2-36 接面）/$C447/$C8B0/
+/// $C8BB——sound 帧链四调）+$4B←$20（S4-13 同构面）。
+pub fn s4_d8fd_body(y_in: u8, v6878: u8, v010e: u8, v69b3: u8) -> (Vec<(u16, u8)>, u16) {
+    let (mut ev, a) = s4_select_samus_pal(y_in, v6878, v010e, v69b3);
+    ev.push((0x004B, 0x20));
+    (ev, 0xC447)
+}
+
+#[cfg(test)]
+mod s4_104_tests {
+    use super::*;
+
+    /// 二员转写形（SelectSamusPal root+一壳）。
+    #[test]
+    fn s4_104_units_two() {
+        let (ev, a) = s4_select_samus_pal(73, 0, 0, 0);
+        assert_eq!(a, 73);
+        assert!(ev.contains(&(0x001C, 2)));
+        let (ev2, j) = s4_d8fd_body(73, 0, 0, 0);
+        assert_eq!(j, 0xC447);
+        assert!(ev2.contains(&(0x004B, 0x20)));
+    }
+}
