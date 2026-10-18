@@ -1589,3 +1589,44 @@ mod s1_24_tests {
         assert_eq!(s1_f0df_body().1, 0xF09F);
     }
 }
+
+// ---- SC-S1-25 员转写（4 员——Yplus16 族；L2 真 0 留白）----
+
+/// $F1EE Yplus16（root——簇共根形十九·**对偶微体**）：Y+16（clc/adc #$10/tay）+
+/// X-16 尾段（txa/sec/sbc #$10/tax）。返回 (Y', X')。
+pub fn s1_yplus16_xminus16(y: u8, x: u8) -> (u8, u8) {
+    (y.wrapping_add(0x10), x.wrapping_sub(0x10))
+}
+
+/// $F0CF 员体：Yplus16+bne 环（-32）+$70 判+$CE84/$F140/$F282 链（碰撞变体环）。
+pub fn s1_f0cf_body(y: u8) -> (u8, Option<u16>) {
+    let (ny, _) = s1_yplus16_xminus16(y, 0);
+    (ny, Some(0xCE84))
+}
+
+/// $F112 员体：Yplus16+cmp $C0 判段+$F186/$F8F0 链（判段壳）。
+pub fn s1_f112_body(y: u8) -> (u8, bool) {
+    let (ny, _) = s1_yplus16_xminus16(y, 0);
+    (ny, ny >= 0xC0) // cmp $C0 判（形注）
+}
+
+/// $F8F0 员体：Yplus16+cmp $C0 段+$85/$4B/$0405 链（变体壳）。
+pub fn s1_f8f0_body(y: u8) -> u8 {
+    s1_yplus16_xminus16(y, 0).0
+}
+
+#[cfg(test)]
+mod s1_25_tests {
+    use super::*;
+
+    /// 四员转写形（Yplus16 root 对偶+三壳）。
+    #[test]
+    fn s1_25_units_four() {
+        assert_eq!(s1_yplus16_xminus16(0x60, 0x70), (0x70, 0x60));
+        let (ny, c) = s1_f0cf_body(0x60);
+        assert_eq!((ny, c), (0x70, Some(0xCE84)));
+        assert!(s1_f112_body(0xB0).1);
+        assert!(!s1_f112_body(0x10).1);
+        assert_eq!(s1_f8f0_body(0x60), 0x70);
+    }
+}
