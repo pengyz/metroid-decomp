@@ -1553,3 +1553,13 @@ pub fn s2_cluster_054(input: &L2In) -> L2Out {
 pub fn s2_cluster_055(input: &L2In) -> L2Out {
     L2Out { a: input.a << 3, x: input.x, y: input.y, writes: vec![] }
 }
+
+// ---- SC-S2-28 簇入口适配（s2_cluster_058 ← bank07:F416 PageIndex 族）----
+
+/// s2_cluster_058 适配（$F416——案实核恒定：$0404←0/$040E←0；A=0/X=0/Y 透传）。
+pub fn s2_cluster_058(input: &L2In) -> L2Out {
+    L2Out {
+        a: 0, x: 0, y: input.y,
+        writes: merge_writes(vec![(0x0404, 0), (0x040E, 0)]),
+    }
+}

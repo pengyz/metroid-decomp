@@ -3054,3 +3054,48 @@ mod s2_057_tests {
         assert_eq!(s2_f404_body(2, 0).1, 0x95E5);
     }
 }
+
+// ---- SC-S2-28（S2-58）员转写（3 员——PageIndex 族）----
+
+/// $F416 员体（root——簇共根形五二）：$4B X 载+$040F[x] 符号段（$6B←$A3）+
+/// $6AF4[x] 判（$DDB8 调）。返回 (写事件, 判段)。
+pub fn s2_page_index(x: u8, v040f_x: u8, v6af4_x: u8) -> (Vec<(u16, u8)>, bool) {
+    let mut ev = Vec::new();
+    if (v040f_x as i8) < 0 {
+        ev.push((0x006B, 0xA3)); // 符号段（$6B 写）
+    }
+    let call = v6af4_x != 0;
+    (ev, call)
+}
+
+/// $F480 员体：jmp $F416（尾形）+$0404[x] and $24 判段（$FA18 调——S1-08 接面）。
+pub fn s2_f480_body(x: u8, v040f_x: u8, v6af4_x: u8) -> (Vec<(u16, u8)>, u16) {
+    let (ev, _) = s2_page_index(x, v040f_x, v6af4_x);
+    (ev, 0xF416)
+}
+
+/// $F4EB 员体：jmp $F416+$040F[x] dec 计数段（$040C[x] 面）。
+pub fn s2_f4eb_body(x: u8, v040f_x: u8, v040c_x: u8) -> Vec<(u16, u8)> {
+    let d = v040f_x.wrapping_sub(1);
+    vec![(0x040F + x as u16, d), (0x6AF4 + x as u16, v040c_x & 0x3F)]
+}
+
+#[cfg(test)]
+mod s2_058_tests {
+    use super::*;
+
+    /// 三员转写形（PageIndex root+二壳）。
+    #[test]
+    fn s2_058_units_three() {
+        let (ev, c) = s2_page_index(2, 0x80, 5);
+        assert!(c);
+        assert!(ev.contains(&(0x006B, 0xA3)));
+        let (ev2, c2) = s2_page_index(2, 0x10, 0);
+        assert!(!c2);
+        assert!(ev2.is_empty());
+        assert_eq!(s2_f480_body(2, 0, 0).1, 0xF416);
+        let ev = s2_f4eb_body(2, 5, 0x7F);
+        assert!(ev.contains(&(0x0411, 4)));
+        assert!(ev.contains(&(0x6AF6, 0x3F)));
+    }
+}
