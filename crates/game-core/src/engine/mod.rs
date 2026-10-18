@@ -1675,3 +1675,48 @@ mod s1_26_tests {
         assert_eq!((j, b), (None, true));
     }
 }
+
+// ---- SC-S1-27 员转写（4 员——CheckCollision 族；L2 真 0 留白）----
+
+/// $F1FA CheckCollisionOfXSlotAndYSlot（root——簇共根形二一）：$10←2/$49&2→$03/
+/// $07-$06→$00（delta）+$03 判段（$0B^$0A 段）。
+/// 返回 (写事件, delta)。
+pub fn s1_check_collision(v49: u8, v06: u8, v07: u8) -> (Vec<(u16, u8)>, u8) {
+    let delta = v07.wrapping_sub(v06);
+    (vec![(0x0010, 2), (0x0003, v49 & 2), (0x0000, delta)], delta)
+}
+
+/// $F10C 员体：碰撞链（$F1FA+$F2ED/Yplus16/IsSamusDead 链+cmp $C0 段）。
+pub fn s1_f10c_body(v49: u8, v06: u8, v07: u8) -> (Vec<(u16, u8)>, u8) {
+    s1_check_collision(v49, v06, v07)
+}
+
+/// $F146 员体：jmp $F1FA（尾形）+$0400/$0401[x] 指针载段（$07/$09 写族）。
+pub fn s1_f146_body(x: u8, v0400_x: u8, v0401_x: u8) -> Vec<(u16, u8)> {
+    vec![(0x0007, v0400_x), (0x0009, v0401_x)]
+}
+
+/// $FEBD 员体：$F1FA+cs 分段（$F311 调+$6E←$50）+bd 03 05 表载段。
+pub fn s1_febd_body(v49: u8, v06: u8, v07: u8) -> (Vec<(u16, u8)>, Option<u16>) {
+    let (ev, _) = s1_check_collision(v49, v06, v07);
+    (ev, Some(0xF311))
+}
+
+#[cfg(test)]
+mod s1_27_tests {
+    use super::*;
+
+    /// 四员转写形（CheckCollision root delta+三壳）。
+    #[test]
+    fn s1_27_units_four() {
+        let (ev, d) = s1_check_collision(2, 0x10, 0x30);
+        assert_eq!(d, 0x20);
+        assert!(ev.contains(&(0x0010, 2)));
+        assert!(ev.contains(&(0x0003, 2)));
+        let (_, d2) = s1_f10c_body(2, 0x10, 0x30);
+        assert_eq!(d2, 0x20);
+        let ev = s1_f146_body(2, 8, 9);
+        assert!(ev.contains(&(0x0007, 8)));
+        assert_eq!(s1_febd_body(2, 0x10, 0x30).1, Some(0xF311));
+    }
+}
