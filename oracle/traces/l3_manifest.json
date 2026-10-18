@@ -36,8 +36,8 @@
             6,
             300
           ],
-          "head_skip": 1,
-          "note": "帧键统一（task-29 b2）：行序对齐+head_skip=1（oracle 首行 GF=0/F=1 多采）；FC($002D) 逐行递增=对齐自校验键。"
+          "head_skip": 0,
+          "note": "帧键统一（task-29 b2）：行序对齐+head_skip=1（oracle 首行 GF=0/F=1 多采）；FC($002D) 逐行递增=对齐自校验键。；【2026-10-18 head_skip 终值】缝门控修行集后 FC 配对 295/295 全等=skip0×skip0（旧 head_skip=1=f 键时代语义——FC 语义终值=0）"
         },
         "game-core": {
           "sample_point": "spin-exit",
