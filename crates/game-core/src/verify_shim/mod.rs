@@ -1894,3 +1894,18 @@ pub fn s4_cluster_104(input: &L2In) -> L2Out {
         writes: merge_writes(vec![(0x001C, 2)]),
     }
 }
+
+// ---- SC-S4-16 簇入口适配（s4_cluster_106 ← bank07:C8B0 表拷贝）----
+
+/// $959A 表（ROM 烘焙——14 项）。
+pub const SFX_REG_INIT_TBL: [u8; 14] = [115, 1, 115, 1, 83, 1, 19, 1, 147, 1, 211, 1, 243, 255];
+
+/// s4_cluster_106 适配（$C8B0 表拷贝——$959A[x]→$3B+x（x=$0D→0 bpl 环）；
+/// A=表末值/X=$FF/Y 透传）。
+pub fn s4_cluster_106(input: &L2In) -> L2Out {
+    let mut w = Vec::new();
+    for i in 0..14u16 {
+        w.push((0x003B + i, SFX_REG_INIT_TBL[i as usize]));
+    }
+    L2Out { a: SFX_REG_INIT_TBL[0], x: 0xFF, y: input.y, writes: merge_writes(w) }
+}

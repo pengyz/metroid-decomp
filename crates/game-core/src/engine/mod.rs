@@ -4915,3 +4915,44 @@ mod s4_105_tests {
         assert!(ev2.contains(&(0x0306, 0x5F)));
     }
 }
+
+// ---- SC-S4-16（S4-106）员转写（2 员——$C8B0 表拷贝族）----
+
+/// $C8B0 员体（root——簇共根形一百·**ROM 表烘焙**）：$959A 表（14 项）→$3B+x 块
+/// （X=$0D→0 bpl 环）。
+/// 返回 (写事件, 表末值)。
+pub fn s4_c8b0_copy(x_in: u8) -> (Vec<(u16, u8)>, u8) {
+    let mut ev = Vec::new();
+    for i in 0..14u16 {
+        ev.push((0x003B + i, crate::verify_shim::SFX_REG_INIT_TBL[i as usize]));
+    }
+    (ev, crate::verify_shim::SFX_REG_INIT_TBL[0])
+}
+
+/// $D906 员体：$C8B0+$C8BB 链（sound 帧二调）+$4B←$20+$0305←$6B/$0306←$5F+
+/// $0500+x←$7A 写族（S1-12 同构面）。
+pub fn s4_d906_body(x_in: u8) -> (Vec<(u16, u8)>, u16) {
+    let (mut ev, _) = s4_c8b0_copy(x_in);
+    ev.push((0x004B, 0x20));
+    ev.push((0x0305, 0x6B));
+    ev.push((0x0306, 0x5F));
+    (ev, 0xC8BB)
+}
+
+#[cfg(test)]
+mod s4_106_tests {
+    use super::*;
+
+    /// 二员转写形（$C8B0 表拷贝 root+一壳）。
+    #[test]
+    fn s4_106_units_two() {
+        let (ev, v) = s4_c8b0_copy(0);
+        assert_eq!(v, 115);
+        assert_eq!(ev.len(), 14);
+        assert!(ev.contains(&(0x003B, 115)));
+        assert!(ev.contains(&(0x0048, 255)));
+        let (ev2, j) = s4_d906_body(0);
+        assert_eq!(j, 0xC8BB);
+        assert!(ev2.contains(&(0x0305, 0x6B)));
+    }
+}
