@@ -505,3 +505,93 @@ mod s1_03_unit_tests {
         assert!(ev.is_empty());
     }
 }
+
+// ---- SC-S1-04 员转写（7 员——PlaySnd3 族二；L2 真 0 留白）----
+
+/// $F3D5 员体：jsr $F682（InitEnResting）+jsr $F676（旗面位移）+$0409,x 判别分路。
+pub fn s1_f3d5_body(a_in: u8, x: u8, v0409_x: u8) -> (Vec<(u16, u8)>, u16) {
+    let (ev1, _) = s1_f676(a_in, x);
+    let mut ev = vec![(0x6AF9 + x as u16, a_in), (0x6AFA + x as u16, a_in),
+                      (0x6AF8 + x as u16, 0)];
+    ev.extend(ev1);
+    (ev, if v0409_x == 0 { 0xF7BA } else { 0xF40A })
+}
+
+/// $F628 员体：$F844 计算（Y）+$960B[y] 表载→root+$0406[x]←0+槽搜（$F62E 同构）。
+pub fn s1_f628_body(a_in: u8, x: u8, tbl_entry: u8, wram: &[u8]) -> (Vec<(u16, u8)>, u16) {
+    let mut ev = vec![(0x6AF9 + x as u16, a_in), (0x6AFA + x as u16, a_in),
+                      (0x6AF8 + x as u16, 0), (0x0406 + x as u16, tbl_entry)];
+    let mut slot: u16 = 0xC0;
+    while slot < 0xE0 {
+        if wram.get(0xAF4 + slot as usize).copied().unwrap_or(0) == 0 { break; }
+        slot += 8;
+    }
+    (ev, slot)
+}
+
+/// $F682 InitEnRestingAnimIndex：$963B[y] 表值 vs $6AF9[x]——等⇒rts/不等⇒三写
+/// （$6AF9/$6AFA←表值/$6AF8←0）。
+pub fn s1_f682_body(x: u8, tbl_entry: u8, v6af9_x: u8) -> Vec<(u16, u8)> {
+    if tbl_entry == v6af9_x {
+        return Vec::new();
+    }
+    vec![(0x6AF9 + x as u16, tbl_entry), (0x6AFA + x as u16, tbl_entry), (0x6AF8 + x as u16, 0)]
+}
+
+/// $F699 InitEnActiveAnimIndex：$965B[y] vs $6AF9[x]——等⇒跳过/不等⇒root+计数段。
+pub fn s1_f699_body(a_in: u8, x: u8, tbl_entry: u8, v6af9_x: u8) -> Vec<(u16, u8)> {
+    if tbl_entry == v6af9_x {
+        return Vec::new();
+    }
+    vec![(0x6AF9 + x as u16, a_in), (0x6AFA + x as u16, a_in), (0x6AF8 + x as u16, 0)]
+}
+
+/// $F7D9 员体：jsr $F699+指针构（$00/$01←$97D1+$96CB[y] 偏移——zp 指针面）。
+pub fn s1_f7d9_body(y: u8, tbl_entry: u8) -> Vec<(u16, u8)> {
+    let ptr = 0x97D1u16.wrapping_add(tbl_entry as u16);
+    vec![(0x0000, (ptr & 0xFF) as u8), (0x0001, (ptr >> 8) as u8)]
+}
+
+/// $F844 GetEnemyTypeTimes2PlusFacingDirection：$0405,x 符号（bpl 不移/bmi 三 lsr
+/// ——**进位链**=末 lsr 出位）+`lda $6B02,x`（**替换 A**）+rol（过进位）→Y。
+/// 返回 Y 值（golden≠core 语义正：lda 替 A 非混合）。
+pub fn s1_f844_body(x: u8, v0405_x: u8, v6b02_x: u8) -> u8 {
+    let carry = if (v0405_x as i8) >= 0 {
+        0 // bpl 不移——进位不变（入位面注）
+    } else {
+        (v0405_x >> 2) & 1 // 末 lsr 出位（三移：>>3 后出位=原 bit2）
+    };
+    (v6b02_x << 1) | carry
+}
+
+/// $FB8A 员体：$F844 计算+$6B01,x 读+$6B03,x inc/dec 互抵+条件 $C3D4（TwosCompliment）
+/// +cmp #8 分段。
+pub fn s1_fb8a_body(x: u8, v6b01_x: u8) -> (Vec<(u16, u8)>, Option<u16>) {
+    // inc/dec 互抵（净效 0——asm 对形注）；负值⇒$C3D4 调
+    let call = if (v6b01_x as i8) < 0 { Some(0xC3D4) } else { None };
+    (vec![(0x6B03 + x as u16, v6b01_x)], call) // 互抵净写注（inc 后 dec 回）
+}
+
+#[cfg(test)]
+mod s1_04_tests {
+    use super::*;
+
+    /// 七员转写形。
+    #[test]
+    fn s1_04_units_seven() {
+        let w = vec![0u8; 0x2000];
+        let (_, j) = s1_f3d5_body(1, 2, 0);
+        assert_eq!(j, 0xF7BA);
+        let (_, slot) = s1_f628_body(1, 2, 0x55, &w);
+        assert_eq!(slot, 0xC0);
+        assert!(s1_f682_body(2, 5, 5).is_empty());
+        assert!(s1_f682_body(2, 5, 6).contains(&(0x6AFB, 5)));
+        assert!(s1_f699_body(1, 2, 5, 5).is_empty());
+        let ev = s1_f7d9_body(3, 0x2F);
+        assert!(ev.contains(&(0x0000, 0x00))); // $97D1+0x2F=$9800 low
+        assert_eq!(s1_f844_body(0, 0x04, 0x80), 0x00); // bpl：无移进位 0
+        assert_eq!(s1_f844_body(0, 0x84, 0x00), 0x01); // bmi：进位=bit2→rol
+        let (_, call) = s1_fb8a_body(2, 0x80);
+        assert_eq!(call, Some(0xC3D4));
+    }
+}
