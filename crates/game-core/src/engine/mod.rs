@@ -314,3 +314,96 @@ mod s1_02_tests {
         assert!(!s1_flag_gate(0x10));
     }
 }
+
+// ---- SC-S1-02 残 7 员（旗门 handler 族+$F3D8）----
+
+/// $F3D8 员体：jsr $F676（旗面位移写）+$0409,x 判别（beq⇒跳 $F7BA/jmp $F40A）+
+/// $0405,x asl/bmi 分段。返回 (写事件（$F676 面随根值）, 分路面)。
+pub fn s1_f3d8(root_val: u8, x: u8, v0409_x: u8) -> (Vec<(u16, u8)>, u16) {
+    let (ev, _) = s1_f676(root_val, x);
+    let next = if v0409_x == 0 { 0xF7BA } else { 0xF40A };
+    (ev, next)
+}
+
+/// $F503 员体（旗门）：命中⇒栈操作族（pla/jsr $F515/pha/pla）+尾跳 $F423（A=$A0）；
+/// 未命中⇒$040C,x 写族。
+/// 返回 (写事件, A 出口, 尾跳面)。
+pub fn s1_f503(root_val: u8, x: u8) -> (Vec<(u16, u8)>, u8, u16) {
+    if s1_flag_gate(root_val) {
+        (vec![], 0xA0, 0xF423) // 命中：栈族+尾跳（$F515 子调面注）
+    } else {
+        (vec![(0x040C + x as u16, root_val)], 0x04, 0xF400) // 未命中：写族+续流
+    }
+}
+
+/// $F55C 员体（旗门）：命中⇒$040B,x←5+尾跳 $95A8；未命中⇒rts（空）。
+pub fn s1_f55c(root_val: u8, x: u8) -> (Vec<(u16, u8)>, Option<u16>) {
+    if s1_flag_gate(root_val) {
+        (vec![(0x040B + x as u16, 5)], Some(0x95A8))
+    } else {
+        (vec![], None) // rts 出口
+    }
+}
+
+/// $F56C 员体（旗门反向）：未命中⇒jsr $CBB8+尾跳 $F42D；命中⇒$040B,x==$FF 判别段。
+pub fn s1_f56c(root_val: u8, x: u8) -> Option<u16> {
+    if !s1_flag_gate(root_val) {
+        Some(0xCBB8) // 未命中：子调+尾跳（$F42D 面注）
+    } else {
+        None // 命中：判别段（$FF 比较面注）
+    }
+}
+
+/// $F5AC 员体（旗门）：命中⇒$040E,x==$0B 判别（未等⇒回卷）；未命中⇒$6AF4,x==$04 判别。
+pub fn s1_f5ac(root_val: u8, x: u8, v040e_x: u8, v6af4_x: u8) -> bool {
+    if s1_flag_gate(root_val) {
+        v040e_x == 0x0B
+    } else {
+        v6af4_x == 0x04
+    }
+}
+
+/// $F5CC 员体（旗门反向）：未命中⇒$040E,x 双判别（$0B/$81）+$6AF4,x←6；
+/// 命中⇒跳过族。
+/// 返回 (写事件, 判别结果)。
+pub fn s1_f5cc(root_val: u8, x: u8, v040e_x: u8) -> (Vec<(u16, u8)>, bool) {
+    if s1_flag_gate(root_val) {
+        return (vec![], false);
+    }
+    if v040e_x == 0x0B || v040e_x == 0x81 {
+        return (vec![], true);
+    }
+    (vec![(0x6AF4 + x as u16, 6)], false)
+}
+
+/// $F7FC 员体：root bpl⇒跳过；bmi⇒$0406,x←0+$0407,x←0+$972B[y]→$6AFE,x 表载。
+pub fn s1_f7fc(root_val: u8, x: u8, tbl_entry: u8) -> Vec<(u16, u8)> {
+    if (root_val as i8) >= 0 {
+        return Vec::new(); // bpl 跳过
+    }
+    vec![(0x0406 + x as u16, 0), (0x0407 + x as u16, 0), (0x6AFE + x as u16, tbl_entry)]
+}
+
+#[cfg(test)]
+mod s1_02_residual_tests {
+    use super::*;
+
+    /// 残 7 员六形（判别/栈跳/旗门正反/双判别/bpl 跳过）。
+    #[test]
+    fn s1_02_residual_seven() {
+        assert_eq!(s1_f3d8(0x21, 0, 0).1, 0xF7BA);
+        assert_eq!(s1_f3d8(0x21, 0, 1).1, 0xF40A);
+        assert_eq!(s1_f503(0x20, 0).1, 0xA0);
+        assert!(s1_f503(0x00, 0).0.contains(&(0x040C, 0)));
+        assert_eq!(s1_f55c(0x20, 0).1, Some(0x95A8));
+        assert_eq!(s1_f55c(0x00, 0).1, None);
+        assert_eq!(s1_f56c(0x00, 0), Some(0xCBB8));
+        assert_eq!(s1_f56c(0x20, 0), None);
+        assert!(s1_f5ac(0x20, 0, 0x0B, 0));
+        assert!(s1_f5ac(0x00, 0, 0, 0x04));
+        assert!(s1_f5cc(0x00, 0, 0x0B).1);
+        assert!(s1_f5cc(0x00, 0, 3).0.contains(&(0x6AF4, 6)));
+        assert!(s1_f7fc(0x80, 0, 0x55).contains(&(0x6AFE, 0x55)));
+        assert!(s1_f7fc(0x00, 0, 0x55).is_empty());
+    }
+}
