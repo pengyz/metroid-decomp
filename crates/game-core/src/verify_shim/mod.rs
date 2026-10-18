@@ -1856,3 +1856,10 @@ pub fn s4_cluster_097(input: &L2In) -> L2Out {
         writes: merge_writes(vec![(0x0680, 0x10)]),
     }
 }
+
+// ---- SC-S4-09 簇入口适配（s4_cluster_099 ← bank07:D831——透传类）----
+
+/// s4_cluster_099 适配（$D831 $E6A7 链——案实核透传类（A=0/X/Y 透传）；无写面）。
+pub fn s4_cluster_099(input: &L2In) -> L2Out {
+    L2Out { a: 0, x: input.x, y: input.y, writes: vec![] }
+}
