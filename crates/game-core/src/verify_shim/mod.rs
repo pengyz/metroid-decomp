@@ -1728,3 +1728,14 @@ pub fn s3_cluster_070(input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-S3-11 簇入口适配（s3_cluster_071 ← bank07:CBEF SFX_SamusBall 族）----
+
+/// s3_cluster_071 适配（$CBEF SFX_SamusBall——案实核恒定：$0683←$02（声旗）；
+/// A=$02/X=3/Y 透传——SFX 族三现）。
+pub fn s3_cluster_071(input: &L2In) -> L2Out {
+    L2Out {
+        a: 0x02, x: 3, y: input.y,
+        writes: merge_writes(vec![(0x0683, 0x02)]),
+    }
+}

@@ -3572,3 +3572,35 @@ mod s3_070_tests {
         assert_eq!((a, j), (3, 0xCD6D));
     }
 }
+
+// ---- SC-S3-11（S3-71）员转写（2 员——SFX_SamusBall 族）----
+
+/// $CBEF SFX_SamusBall（root——簇共根形六五·**SFX 族三现**）：SFX id 装载链
+/// （$02/$08/$40/$80 四 id）+X=3/4（ldx）。
+/// 返回 (声旗写, SFX id)。
+pub fn s3_sfx_samus_ball() -> (Vec<(u16, u8)>, u8) {
+    (vec![(0x0683, 0x02)], 0x02) // sfxTri_SamusBall=$02（案实核恒定）
+}
+
+/// $D0D8 员体：SFX_SamusBall 尾形+$0300←0+$12 位3/位7 双判段。
+pub fn s3_d0d8_body(v12: u8) -> (Vec<(u16, u8)>, bool) {
+    let (mut ev, _) = s3_sfx_samus_ball();
+    ev.push((0x0300, 0));
+    (ev, v12 & 0x08 != 0)
+}
+
+#[cfg(test)]
+mod s3_071_tests {
+    use super::*;
+
+    /// 二员转写形（SFX_SamusBall 三现 root+一壳）。
+    #[test]
+    fn s3_071_units_two() {
+        let (ev, id) = s3_sfx_samus_ball();
+        assert_eq!(id, 0x02);
+        assert!(ev.contains(&(0x0683, 0x02)));
+        let (ev2, b) = s3_d0d8_body(0x08);
+        assert!(b);
+        assert!(ev2.contains(&(0x0300, 0)));
+    }
+}
