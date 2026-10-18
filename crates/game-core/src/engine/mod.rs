@@ -2102,3 +2102,52 @@ mod s2_035_tests {
         assert!(ev.contains(&(0x0300, 0x55)));
     }
 }
+
+// ---- SC-S2-06（S2-36）员转写（3 员——StartMusic 族；L2 真 0 留白）----
+
+/// $D92C StartMusic（root——簇共根形三十）：$0320 cmp 6 判+$032F 符号判+$95CD 表读
+/// +$79 三判段（bmi/beq/常态——音乐触发面）。
+/// 返回 (触发曲 ID, 判段结果)。
+pub fn s2_start_music(v0320: u8, v032f: u8, v79: u8, tbl_val: u8) -> (u8, bool) {
+    if v0320 == 6 && (v032f as i8) < 0 {
+        return (0, false); // 电梯态跳过段
+    }
+    let (song, hit) = if (v79 as i8) < 0 {
+        (0x81u8, true) // bmi 段（$81 曲 ID）
+    } else if v79 == 0 {
+        (tbl_val, false) // beq 段（表读曲）
+    } else {
+        (tbl_val, true) // 常态段
+    };
+    (song, hit)
+}
+
+/// $D3C8 员体：StartMusic+$79 二值段（0/$80）+$6987 判（$CC07 调段）。
+pub fn s2_d3c8_body(v0320: u8, v032f: u8, v79: u8, tbl_val: u8) -> (Vec<(u16, u8)>, u8) {
+    let (song, _) = s2_start_music(v0320, v032f, v79, tbl_val);
+    let v79n = if (v79 as i8) < 0 { 0x00 } else { 0x80 };
+    (vec![(0x0079, v79n)], song)
+}
+
+/// $D900 员体：StartMusic+$C447/$C8B0/$C8BB 链+$4B←$20+$0305←$6B/$0306←$5F 写族。
+pub fn s2_d900_body(v0320: u8, v032f: u8, v79: u8, tbl_val: u8) -> Vec<(u16, u8)> {
+    let (_, _) = s2_start_music(v0320, v032f, v79, tbl_val);
+    vec![(0x004B, 0x20), (0x0305, 0x6B), (0x0306, 0x5F)]
+}
+
+#[cfg(test)]
+mod s2_036_tests {
+    use super::*;
+
+    /// 三员转写形（StartMusic 触发判 root+二壳）。
+    #[test]
+    fn s2_036_units_three() {
+        assert_eq!(s2_start_music(6, 0x80, 0, 5), (0, false));
+        assert_eq!(s2_start_music(0, 0, 0x80, 5), (0x81, true));
+        assert_eq!(s2_start_music(0, 0, 0x10, 5), (5, true));
+        let (ev, _) = s2_d3c8_body(0, 0, 0x80, 5);
+        assert!(ev.contains(&(0x0079, 0)));
+        let ev = s2_d900_body(0, 0, 0x10, 5);
+        assert!(ev.contains(&(0x0305, 0x6B)));
+    }
+}
