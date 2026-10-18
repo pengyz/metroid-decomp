@@ -1546,3 +1546,10 @@ pub fn s2_cluster_054(input: &L2In) -> L2Out {
         writes: vec![],
     }
 }
+
+// ---- SC-S2-25 簇入口适配（s2_cluster_055 ← bank07:C2C6 Amul8）----
+
+/// s2_cluster_055 适配（$C2C6 Amul8：asl×3——A×8（回卷）；X/Y 透传；无写面）。
+pub fn s2_cluster_055(input: &L2In) -> L2Out {
+    L2Out { a: input.a << 3, x: input.x, y: input.y, writes: vec![] }
+}

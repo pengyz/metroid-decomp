@@ -2937,3 +2937,39 @@ mod s2_054_tests {
         assert!(ev.contains(&(0x010F, 0x80)));
     }
 }
+
+// ---- SC-S2-25（S2-55）员转写（3 员——Amul8 族）----
+
+/// $C2C6 Amul8（root——簇共根形四九·**Adiv8 对偶**）：asl×3（A×8 回卷）。
+pub fn s2_amul8(a_in: u8) -> u8 {
+    a_in << 3
+}
+
+/// $F335 员体：jmp Amul8（尾形）+$10×8+$F27B 跳面（S1-07 同构面）。
+pub fn s2_f335_body(v10: u8) -> (u8, u16) {
+    (s2_amul8(v10), 0xF27B)
+}
+
+/// $FF4E 员体：Amul8+sta $03（返回面）+$0504[x] dec 计数段。
+pub fn s2_ff4e_body(a_in: u8, x: u8, v0504_x: u8) -> (Vec<(u16, u8)>, u8) {
+    let v = s2_amul8(a_in);
+    let d = v0504_x.wrapping_sub(1);
+    (vec![(0x0003, v), (0x0504 + x as u16, d)], v)
+}
+
+#[cfg(test)]
+mod s2_055_tests {
+    use super::*;
+
+    /// 三员转写形（Amul8 ×8 root 对偶+二壳）。
+    #[test]
+    fn s2_055_units_three() {
+        assert_eq!(s2_amul8(133), 40); // 133×8&0xFF
+        assert_eq!(s2_amul8(1), 8);
+        assert_eq!(s2_f335_body(0x10).0, 0x80);
+        let (ev, v) = s2_ff4e_body(1, 2, 5);
+        assert_eq!(v, 8);
+        assert!(ev.contains(&(0x0003, 8)));
+        assert!(ev.contains(&(0x0506, 4)));
+    }
+}
