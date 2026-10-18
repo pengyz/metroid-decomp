@@ -4422,3 +4422,40 @@ mod s4_092_tests {
         assert!(ev2.contains(&(0x0302, 0)));
     }
 }
+
+// ---- SC-S4-03（S4-93）员转写（2 员——$D517 AnimDraw 接面族；L2 真 0 留白）----
+
+/// $D517 员体（root——簇共根形八七）：lda #1→AnimDrawObject（S1-19 接面）+
+/// $71 dec+rts；尾段（$0500[x] 双 inc+$0501[x]←0——S3-089 同构面）。
+/// 返回 (写事件, $71 出)。
+pub fn s4_d517_body(x: u8, v71: u8, v0500_x: u8) -> (Vec<(u16, u8)>, u8) {
+    let n = v0500_x.wrapping_add(2); // 双 inc
+    (vec![(0x0500 + x as u16, n), (0x0501 + x as u16, 0),
+          (0x0071, v71.wrapping_sub(1))], v71.wrapping_sub(1))
+}
+
+/// $D5D7 员体：jmp $D517（尾形）+$030A[x] Table0D 形（S3-088 同构面——判+清+表值）。
+pub fn s4_d5d7_body(x: u8, v030a_x: u8) -> (Vec<(u16, u8)>, u16) {
+    let mut ev = Vec::new();
+    if v030a_x != 0 {
+        ev.push((0x030A + x as u16, 0));
+    }
+    (ev, 0xD517)
+}
+
+#[cfg(test)]
+mod s4_093_tests {
+    use super::*;
+
+    /// 二员转写形（$D517 AnimDraw 接面 root+一壳）。
+    #[test]
+    fn s4_093_units_two() {
+        let (ev, v) = s4_d517_body(2, 5, 3);
+        assert_eq!(v, 4);
+        assert!(ev.contains(&(0x0502, 5))); // 3+2 双 inc
+        assert!(ev.contains(&(0x0503, 0)));
+        let (ev2, j) = s4_d5d7_body(2, 5);
+        assert_eq!(j, 0xD517);
+        assert!(ev2.contains(&(0x030C, 0)));
+    }
+}
