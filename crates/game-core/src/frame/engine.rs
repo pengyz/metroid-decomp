@@ -68,7 +68,9 @@ impl FrameEngine {
         }
         // === spin 出口采样缝（$C0D3 对齐）——**仅主循环 spin 出口**（boot 链无主循环
         // spin——oracle 295 行=主循环 spin 出口数自证；boot tick 不采样）。
-        if self.phase == BootPhase::MainLoop {
+        // 缝位=**首个主循环界唤醒**（PostSpin+MainLoop——oracle f=1 语义（工作前）；
+        // PreSpin/AwaitNmi=boot 内部等待不采）。
+        if self.phase == BootPhase::PostSpin || self.phase == BootPhase::MainLoop {
             on_spin_exit(&self.mem);
         }
         match self.phase {

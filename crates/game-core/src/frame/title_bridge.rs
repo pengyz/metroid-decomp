@@ -11,6 +11,11 @@ use crate::ram_map::{
     FRAME_COUNT, JOY1_CHANGE, PPUCTRL_ZP, TITLE_ROUTINE,
 };
 
+/// TitleRoutinePtrTable 烘焙（00:802A——31 项；JumpEngineRoutinePtr=$0C/$0D 面）。
+const TITLE_ROUTINE_PTR_TABLE: [u16; 31] = [
+0x8071, 0x80D0, 0x80F9, 0x812C, 0x8142, 0x8109, 0x814D, 0x8163, 0x8182, 0x81D1, 0x806E, 0x806E, 0x822E, 0x8243, 0x8263, 0x8283, 0x8068, 0x82A3, 0x82ED, 0x82F3, 0x82F3, 0x90BA, 0x90D7, 0x911A, 0x9147, 0x9359, 0x9394, 0x90BA, 0x939E, 0x9AA7, 0xC4AA,
+];
+
 /// MainTitleRoutine 分发一步（asm 内容锚 `MainTitleRoutine: ; 00:8000`）。
 pub fn main_title_routine(mem: &mut FrameMemory) {
     let phase = mem.read_ram(TITLE_ROUTINE);
@@ -32,6 +37,13 @@ pub fn main_title_routine(mem: &mut FrameMemory) {
         wram: mem.wram.to_vec(),
         ram: mem.ram.to_vec(),
     };
+    // JumpEngine 指针写（asm C27C：`pla/sta JumpEngineRoutinePtr/pla/sta $0D`——
+    // 分发目标址入 $0C/$0D（B 案 $0C/$0D=$8071 对形））
+    if (phase as usize) < 31 {
+        let target = TITLE_ROUTINE_PTR_TABLE[phase as usize];
+        mem.write_ram(0x000C, target as u8);
+        mem.write_ram(0x000D, (target >> 8) as u8);
+    }
     let step = crate::title::dispatch_step(&face);
     mem.title_cursor = step.next_cursor; // 跨帧游标存回（>0=spin 续点/0=完成复位）
     if let Some(addr) = step.unported {

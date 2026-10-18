@@ -233,7 +233,14 @@ pub fn sound_dispatch_chain(mem: &mut FrameMemory, flag_addr: u16, block_win: u1
     }
     let flags = mem.read_ram(flag_addr);
     let block = load_block(block_win);
+    // GetSoundRoutine 指针面（B4BD 字节：`stx $E4/sty $E5`（块址）→4B 拷→$E2-$E5
+    // （TablePtr/DefaultRoutine）→`sta $065C`（ChannelType）——B 案 $E0-$E5 残迹面）。
+    mem.write_ram(0x00E4, block_win as u8);
+    mem.write_ram(0x00E5, (block_win >> 8) as u8);
     let (ptr, hit) = sound::get_sound_routine(&block, table_slice(block.table_ptr), flags);
+    mem.write_ram(0x00E2, ptr as u8);
+    mem.write_ram(0x00E3, (ptr >> 8) as u8);
+    mem.write_ram(0x065C, block.channel_type);
     let _ = hit;
     if ptr == RTS_TERMINAL {
         return; // 无音/终端（GetSoundRoutine@RTS）
@@ -256,7 +263,26 @@ pub fn sound_dispatch_chain(mem: &mut FrameMemory, flag_addr: u16, block_win: u1
         }
         return;
     }
-    // handler 记账点（落地前=新记账——缺口演化面）
+    // handler 接点（联合清偿面：port2 域件+我钩应用——B673 同形逐件接）
+    if ptr == 0xB673 {
+        // 契约：samus_hit_sfx_init(rng1=$2E/channel_type=$065C/current_flags=$064D)
+        let out = sound::samus_hit_sfx_init(
+            mem.read_ram(0x002E),
+            mem.read_ram(0x065C),
+            mem.read_ram(0x064D),
+        );
+        for (a, v) in out.ram_events {
+            mem.write_ram(a, v);
+        }
+        for (a, v) in out.apu_events {
+            mem.write_io(a, v); // APU 寄存器面（L2 stub 域）
+        }
+        mem.regs.a = out.a_out;
+        mem.regs.x = out.x_out;
+        mem.regs.y = out.y_out;
+        return;
+    }
+    // handler 记账点（未接域件=新记账——缺口演化面）
     let loc = format!("bank07:{ptr:04X}");
     crate::unported!(&loc);
 }

@@ -223,6 +223,19 @@ pub fn read_joy_pads(mem: &mut FrameMemory) {
         if new ^ old != 0 {
             // 变更路径（Joy1Change/$12 面——输入场景件，task-11 引爆）
             crate::unported!("bank07:C23x-change");
+        } else {
+            // 同键路径（asm C24D+：`lda Joy1Status/x/cmp $00/bne` 同→`dec RetrigDelay1,x`
+            // ——**B 案 $18 机理**：清零后每 NMI dec（0→FF→FE…）；归零→重触发 sty $20
+            // 路径（变更件桩））。
+            let d = mem.read_ram(0x0018 + idx).wrapping_sub(1);
+            mem.write_ram(0x0018 + idx, d);
+            if d == 0 {
+                // 重触发路径（asm C25x：`sta Joy1Retrig,x`（A=当前状态）/`ldy #$08`→
+                // `sty RetrigDelay1,x`（快重触发率 $08）——无输入亦可达（dec 归零自然
+                // 触发——B 跑 300 帧实证）。
+                mem.write_ram(crate::memmap::title_state::JOY1_RETRIG + idx, new);
+                mem.write_ram(0x0018 + idx, 0x08);
+            }
         }
     }
 }
@@ -290,6 +303,43 @@ pub fn nmi_tail(mem: &mut FrameMemory) {
 
 #[cfg(test)]
 mod tests {
+    /// 【$C3 案复现】boot 态（GameMode=1/TitleRoutine=0/FrameCount=0）intro 路应 inc $C3。
+    #[test]
+    fn c3_intro_route_repro() {
+        use crate::ram_map::{FRAME_COUNT, GAME_MODE, INTRO_STAR_OFFSET, PALETTE_PENDING, TITLE_ROUTINE};
+        let mut m = FrameMemory::default();
+        m.write_ram(GAME_MODE, 1);
+        m.write_ram(TITLE_ROUTINE, 0);
+        m.write_ram(FRAME_COUNT, 0);
+        m.write_ram(PALETTE_PENDING, 0);
+        check_palette_write(&mut m);
+        println!("[repro-clean] $C3={} $1C={} $2D={}", m.read_ram(INTRO_STAR_OFFSET), m.read_ram(PALETTE_PENDING), m.read_ram(FRAME_COUNT));
+        assert_eq!(m.read_ram(INTRO_STAR_OFFSET), 1, "intro 路应 inc $C3");
+        // 全 boot 序列态复现
+        let mut m2 = FrameMemory::default();
+        crate::frame::boot::boot_pre_spin(&mut m2);
+        crate::frame::boot::boot_post_spin(&mut m2);
+        println!("[boot-state] $C3={} $1C={} $2D={} $1D={} $1F={} $07A0={}",
+            m2.read_ram(INTRO_STAR_OFFSET), m2.read_ram(PALETTE_PENDING), m2.read_ram(FRAME_COUNT),
+            m2.read_ram(GAME_MODE), m2.read_ram(TITLE_ROUTINE), m2.read_ram(0x07A0));
+        check_palette_write(&mut m2);
+        println!("[boot-后] $C3={}", m2.read_ram(INTRO_STAR_OFFSET));
+    }
+
+    /// 【B 案机理】RetrigDelay 同键 dec（清零后每 NMI：0→FF→FE——帧 1 FE 实证）。
+    #[test]
+    fn joy_retrig_delay_decrement() {
+        use crate::ram_map::{JOY1_STATUS, JOY2_STATUS};
+        let mut m = FrameMemory::default();
+        // 两次 read_joy_pads（无输入同键）→ $18: 0→FF→FE / $19 同
+        read_joy_pads(&mut m);
+        read_joy_pads(&mut m);
+        assert_eq!(m.read_ram(0x0018), 0xFE); // B 案机理面
+        assert_eq!(m.read_ram(0x0019), 0xFE);
+        assert_eq!(m.read_ram(JOY1_STATUS), 0);
+        assert_eq!(m.read_ram(JOY2_STATUS), 0);
+    }
+
     /// 【S6-5】寄存器影子契约：$FF/$FE 影子驱动 $2000/$2001+滚动双写面。
     #[test]
     fn register_shadow_contract() {

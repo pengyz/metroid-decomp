@@ -127,6 +127,18 @@ pub fn prep_ppu_palette_string(mem: &mut FrameMemory, src: &[u8]) {
 mod tests {
     use super::*;
 
+    /// 【复审残余 4】终止符断言独立案（review 4 案之 4——覆盖恢复）。
+    #[test]
+    fn terminator_byte_assertion_standalone() {
+        let mut m = FrameMemory::default();
+        m.write_ram(0x0000, 0x00);
+        m.write_ram(0x0001, 0x20);
+        write_vram_string(&mut m, &[0x22, 0x11, 0x22, 0x33, 0x44]); // 2×2 块
+        // 段末（x=10）=终止符 0（EndVRAMStruct 契约——索引不动）
+        assert_eq!(m.read_ram(0x07A1 + 10), 0x00);
+        assert_eq!(m.read_ram(VRAM_STRUCT_INDEX), 10); // 索引=段末（终止符不计）
+    }
+
     /// 【返工补案 1】单行块（宽=3|高=1）+**终止符断言**（F1——+末=0 且索引不动）。
     #[test]
     fn write_vram_string_single_row_terminator() {
