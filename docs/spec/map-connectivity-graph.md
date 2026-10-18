@@ -488,3 +488,15 @@
   ——sc-loop v5 触发式（条件持续判）；
 - **状态盘**：八房进+BUG-001 落+楔避径——余=morph 触发法（v5）→跳 $5D→
   东段→N 爬升。
+
+## 41. 【2026-10-19 v5 触发轮】accelY=$307 判修+morph 顽脆定格
+
+- **v5 触发+寄存器修正**：grounded 判=$307（SamusAccelY——SetSamusRoll 读面）
+  非 $308（speedY）——**寄存器语义修正**（三环探针方法续用）；
+- **非叠窗修**（toggle churn 防）：morph 窗 3330-3500/un 窗 3550-3750 非叠——
+  morph/un 翻转防 ✓；
+- **morph 顽脆定格**（D7 如实）：$307=0 判+非叠窗+DOWN 边沿皆备——morph 仍跳
+  （y=193 站立态）——**残因四候选**（SetSamusRoll 调用链/Joy1Change 边沿相位/
+  SamusDir 判/其他状态门）——下窗=调用链细读（DOWN→SetSamusRoll 全链）；
+- **状态盘**（275 步窗）：八房进+BUG-001+寄存器修正+非叠窗法——余=morph 顽脆
+  （调用链）→跳 $5D→东段→N 爬升。
