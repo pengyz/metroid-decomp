@@ -148,7 +148,7 @@ pub fn vram_struct_write(mem: &mut FrameMemory) {
             let _ = di;
             mem.write_io(0x2007, v); // PPUDATA（渲染面）
         }
-        off += if rle { 5 } else { 3 + count }; // 段尾（iny/AddYToPtr00 域形）
+        off += if rle { 4 } else { 3 + count }; // 段尾（RLE=3 hdr+1 val=4——F5 修正：非 +5）
     }
 }
 
@@ -285,6 +285,31 @@ pub fn nmi_tail(mem: &mut FrameMemory) {
 
 #[cfg(test)]
 mod tests {
+    /// 【返工补案 5】F5 镜像测（RLE 步长——生产/消费对偶：RLE 段=4B 非 +5）。
+    #[test]
+    fn vram_walk_rle_step_mirror() {
+        // 构造 RLE 段：[20][00][45][AA]（hi=20/lo=00/ctrl=0x45（RLE+5）/val=AA）
+        // 段长=4（3 hdr+1 val）→ 下段头应在 +4
+        let mut m = FrameMemory::default();
+        let seg = [0x20u8, 0x00, 0x45, 0xAA, 0x20, 0x10, 0x03, 0x01, 0x02, 0x03, 0x00];
+        for (i, b) in seg.iter().enumerate() {
+            m.write_ram(0x07A1 + i as u16, *b);
+        }
+        let mut off = 0usize;
+        let mut chunks = 0;
+        loop {
+            let hi = m.read_ram(0x07A1 + off as u16);
+            if hi == 0 { break; }
+            let ctrl = m.read_ram(0x07A1 + off as u16 + 2);
+            let rle = ctrl & 0x40 != 0;
+            let count = (ctrl & 0x3F) as usize;
+            off += if rle { 4 } else { 3 + count }; // F5 修正步长
+            chunks += 1;
+        }
+        assert_eq!(chunks, 2); // RLE 段（4B）+非 RLE 段（3+3=6B）→终止
+        assert_eq!(off, 10); // 4+6
+    }
+
     /// SpriteRAM 解析+8/scanline quirk（D4 保真面）。
     #[test]
     fn sprite_state_and_scanline_limit() {

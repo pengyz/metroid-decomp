@@ -127,6 +127,64 @@ pub fn prep_ppu_palette_string(mem: &mut FrameMemory, src: &[u8]) {
 mod tests {
     use super::*;
 
+    /// 【返工补案 1】单行块（宽=3|高=1）+**终止符断言**（F1——+末=0 且索引不动）。
+    #[test]
+    fn write_vram_string_single_row_terminator() {
+        let mut m = FrameMemory::default();
+        write_vram_string(&mut m, &[0x13, 0xAA, 0xBB, 0xCC]); // 高1|宽3
+        let buf: Vec<u8> = (0..8).map(|k| m.read_ram(0x07A1 + k)).collect();
+        // [00][00][03][AA][BB][CC][00 终止][—]
+        assert_eq!(&buf[..7], &[0x00, 0x00, 0x03, 0xAA, 0xBB, 0xCC, 0x00]);
+        assert_eq!(m.read_ram(VRAM_STRUCT_INDEX), 6); // 索引=段末（终止符不计）
+    }
+
+    /// 【返工补案 2】1×N 竖排（宽=1|高=3）——行间换行几何。
+    #[test]
+    fn write_vram_string_single_col() {
+        let mut m = FrameMemory::default();
+        m.write_ram(0x0000, 0x00);
+        m.write_ram(0x0001, 0x20);
+        write_vram_string(&mut m, &[0x31, 0xAA, 0xBB, 0xCC]); // 高3|宽1
+        let buf: Vec<u8> = (0..12).map(|k| m.read_ram(0x07A1 + k)).collect();
+        assert_eq!(&buf[..12], &[0x20, 0x00, 0x01, 0xAA,
+                                0x20, 0x20, 0x01, 0xBB,
+                                0x20, 0x40, 0x01, 0xCC]);
+    }
+
+    /// 【返工补案 3】恰满边界（F2——asm 精确序：写 79B 后溢出=0x4E 后中止）。
+    #[test]
+    fn write_vram_string_exact_full_boundary() {
+        let mut m = FrameMemory::default();
+        // 高1|宽16+高1|宽16…：构造恰 79B 场景——宽16|高2 行 chunk=2*(3+16)=38B（不足）
+        // 直接验共享件：写 79 字节成功、第 80 触发溢出域
+        let mut x = 0usize;
+        // asm 精确序：写 0..0x4E（79B）→第 79 写后 inx=$4F⇒溢出信号（字节已落 0x4E）
+        for i in 0..78u8 {
+            match write_ppu_byte_to_buffer(&mut m, x, i) {
+                Some(nx) => x = nx,
+                None => panic!("78B 内不应溢出（i={i}）"),
+            }
+        }
+        assert_eq!(x, 0x4E);
+        assert!(write_ppu_byte_to_buffer(&mut m, x, 0x4E).is_none()); // 第 79 写→溢出信号
+        assert_eq!(m.read_ram(0x07A1 + 0x4E), 0x4E); // 字节已落（asm 先写后检）
+    }
+
+    /// 【返工补案 4】终止符覆盖语义（F1——双 call 连续：终止符被下 call 覆写）。
+    #[test]
+    fn end_vram_struct_terminator_overwrite() {
+        let mut m = FrameMemory::default();
+        m.write_ram(0x0000, 0x00);
+        m.write_ram(0x0001, 0x21); // dst=$2100（hi≠0）
+        write_vram_string(&mut m, &[0x11, 0xAA]); // 单块 4B（[21][00][01][AA]）
+        assert_eq!(m.read_ram(0x07A1 + 4), 0x00); // 终止符在 +4（索引=4 不动语义）
+        // 下 call 从同索引覆写（终止符位置被新块头 hi 覆写）
+        m.write_ram(0x0000, 0x00);
+        m.write_ram(0x0001, 0x21);
+        write_vram_string(&mut m, &[0x11, 0xBB]);
+        assert_eq!(m.read_ram(0x07A1 + 4), 0x21); // 新块头 hi 覆写旧终止符
+    }
+
     /// WriteVRAMString 块写手（段头三字节+名表换行 +$20——S6-1 面）。
     #[test]
     fn write_vram_string_blocks() {
@@ -141,6 +199,7 @@ mod tests {
         assert_eq!(buf, vec![0x20, 0x00, 0x02, 0xAA, 0xBB,
                              0x20, 0x20, 0x02, 0xCC, 0xDD]);
         assert_eq!(m.read_ram(VRAM_STRUCT_INDEX), 10);
+        assert_eq!(m.read_ram(0x07A1 + 10), 0x00); // **终止符断言**（F1 遮蔽修复）
         assert_eq!(m.read_ram(0x0001), 0x20); // 尾指针 $2040
         assert_eq!(m.read_ram(0x0000), 0x40);
     }
@@ -173,6 +232,28 @@ mod tests {
     }
 }
 
+/// WritePPUByte 共享件（**asm 精确序**——F2 边界契约）：`sta VRAMStructBuffer,x/
+/// inx/cpx #$4F/bcc @RTS`——**先写后检**：写 x=0..0x4E（79B）→inx 至 $4F⇒溢出。
+/// 返回 Some(新 x) 或 None（溢出——调用方走 EndVRAMStruct 语义：补 0 终止+中止）。
+fn write_ppu_byte_to_buffer(mem: &mut FrameMemory, x: usize, byte: u8) -> Option<usize> {
+    mem.write_ram(0x07A1 + x as u16, byte);
+    let x = x + 1;
+    if x < 0x4F {
+        Some(x)
+    } else {
+        None // 溢出（asm 0x4E 后中止——容量=79B）
+    }
+}
+
+/// EndVRAMStruct 终止件（asm 内容锚 `EndVRAMStruct: ; 07:C376`）：`lda #$00/sta
+/// VRAMStructBuffer,x`（终止符——**索引不动**）+溢出安全（PLA PLA 逃逸域形=中止）。
+fn end_vram_struct(mem: &mut FrameMemory, x: usize) {
+    if x < 0x4F {
+        mem.write_ram(0x07A1 + x as u16, 0);
+    }
+    // 索引不推进（终止符在当前 x——下 call 覆写语义）
+}
+
 /// WriteVRAMString（**asm 内容锚**——S6-1 生产者族；task-42 spec §2.1）：
 /// `WriteVRAMString: ; 07:C328`（`PPUDataPending←1`/宽=src[0]&$0F/高=src[0]>>4
 /// （Adiv16）/@loop_row：`[hi][lo][宽]` 段头三字节→@loop_tile：瓦数据逐字 WritePPUByte
@@ -181,38 +262,38 @@ mod tests {
 /// **结构互核注**：行间 +$20=名表换行语义（spec §2.1 自证）；段头宽=长度（解码器
 /// 同构消费——[hi][lo][len][tile…] 行 chunk）；src 格式=[宽|高 打包字节][瓦数据...]。
 pub fn write_vram_string(mem: &mut FrameMemory, src: &[u8]) {
-    mem.write_ram(PPU_DATA_PENDING, 1); // `sty PPUDataPending`
+    mem.write_ram(PPU_DATA_PENDING, 1);
     let packed = src[0];
     let width = (packed & 0x0F) as usize;
     let height = (packed >> 4) as usize;
     let mut x = mem.read_ram(VRAM_STRUCT_INDEX) as usize;
     let mut dst = (mem.read_ram(0x0001) as u16) << 8 | mem.read_ram(0x0000) as u16;
-    let mut yi = 1usize; // src 游标
+    let mut yi = 1usize;
+    let mut overflowed = false;
     for _row in 0..height {
-        // 段头三字节（[hi][lo][宽]）
         let hi = (dst >> 8) as u8;
         let lo = dst as u8;
         for b in [hi, lo, width as u8] {
-            if x >= 0x4F {
-                crate::unported!("bank07:C36E-full"); // 缓冲满（溢出安全面——spec 注）
+            match write_ppu_byte_to_buffer(mem, x, b) {
+                Some(nx) => x = nx,
+                None => { overflowed = true; break; }
             }
-            mem.write_ram(0x07A1 + x as u16, b);
-            x += 1;
         }
-        // 瓦数据
+        if overflowed { break; }
         for _ in 0..width {
-            if x >= 0x4F {
-                crate::unported!("bank07:C36E-full");
-            }
             let t = src.get(yi).copied().unwrap_or(0);
-            mem.write_ram(0x07A1 + x as u16, t);
-            x += 1;
             yi += 1;
+            match write_ppu_byte_to_buffer(mem, x, t) {
+                Some(nx) => x = nx,
+                None => { overflowed = true; break; }
+            }
         }
-        mem.write_ram(VRAM_STRUCT_INDEX, x as u8); // stx
-        dst = dst.wrapping_add(0x20); // 名表换行（+$20——32 增量）
+        if overflowed { break; }
+        mem.write_ram(VRAM_STRUCT_INDEX, x as u8);
+        dst = dst.wrapping_add(0x20);
     }
-    // 尾态：PPU 指针推进（Temp00_PPURAMPtr←dst）
+    // **F1：正常路径 EndVRAMStruct 终止符**（asm C376 契约——0+$7A1,X 索引不动）
+    end_vram_struct(mem, x);
     mem.write_ram(0x0000, dst as u8);
     mem.write_ram(0x0001, (dst >> 8) as u8);
 }
