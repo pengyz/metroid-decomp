@@ -1415,6 +1415,18 @@ suite 455/0 零回退+测 121 ✓。findings（r10）：0 新。
 ③W1 残三件（音符载 _Continued 解+四通道环）。suite 455/0+测 130 ✓。
 findings（r10）：0 新。
 
+## 四件合账抽检（840ad00 S6-6/7 RenderState + 79490b3 zp 全清 + ad3904b head_skip 终值 + 45641b5 栈面排除）
+
+### verdict: pass（抽检·四件）
+
+①S6-6/7 渲染态面（CHR/名表/PPUADDR 建模=L4 视觉腿底座）②zp 全清 23→0（声指针
+机理定案 $E0=TablePtr——**$B4CA=`99 e0 00 c8` 拷形实证**（STA $00E0,Y/INY））✓
+③**head_skip 终值=0**（FC 配对 295/295 全等=skip0×skip0 实测；旧 head_skip=1=
+f 键时代语义残——FC 语义终值=我行集契约面收口 ✓）④栈面排除（45641b5 我自件=
+源级 0 读实证注记）。suite 455/0 ✓；L3 现红 1 失败 1 记账容忍=porter B 迭代态
+行集声明滞后（记账面在案，非此四件归因）。
+findings（r10）：0 新。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
