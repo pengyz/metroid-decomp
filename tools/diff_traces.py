@@ -609,6 +609,19 @@ def main() -> int:
                 gap_map = dg.get("gap_map") or []
             except Exception as e:
                 gap_note = f"（缺口记账 sidecar 解析失败: {e}——按无记账 strict）"
+        # 持久声明面（手编止血——dump 重生不丢；visual_gap_map 同构）：data/status/
+        # trace_gap_map.json 合并入账（场景匹配条目→gap_map 格式）
+        _tgm = ROOT / "data" / "status" / "trace_gap_map.json"
+        if _tgm.is_file():
+            try:
+                for e in json.loads(_tgm.read_text(encoding="utf-8")).get("entries", []):
+                    if e.get("scenario") != scenario:
+                        continue
+                    for a in e.get("addrs", []):
+                        gap_map.append({"addr": int(a, 16), "n": 0, "persistent": e["id"]})
+                    gap_note += f"（持久声明 {e['id']}：{e.get('reason','')}｜退出={e.get('exit','')}）"
+            except Exception as ex:
+                gap_note += f"（trace_gap_map 解析失败: {ex}）"
         if divergence:
             if gap_map:
                 gaps = ", ".join(f"${g['addr']:04X}×{g['n']}" for g in gap_map[:8])

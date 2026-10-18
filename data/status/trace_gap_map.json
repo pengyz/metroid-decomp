@@ -1,0 +1,22 @@
+{
+  "schema": "trace-gap-map/v1",
+  "doc": "L3 记账持久声明（手编止血——dump 重生不丢！与 visual_gap_map 同构：迭代态已知缺口，账清转 strict）",
+  "entries": [
+    {
+      "id": "TEMPX-FILL-69",
+      "scenario": "samus-move",
+      "addrs": ["0069", "006A"],
+      "reason": "TempX/TempY ($69/$6A) 填充缺=真行为差（相位假说证伪实录）——porter 修复批在途",
+      "exit": "porter TempX/TempY 填充修落地→账清转 strict",
+      "registered": "2026-10-18"
+    },
+    {
+      "id": "TEMPX-FILL-69-BT",
+      "scenario": "boot-title",
+      "addrs": ["0069", "006A"],
+      "reason": "同族（boot 臂 TempX/TempY 填充缺）",
+      "exit": "同 TEMPX-FILL-69",
+      "registered": "2026-10-18"
+    }
+  ]
+}

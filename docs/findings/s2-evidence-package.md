@@ -28,7 +28,7 @@
 | S2-47 | 3 | $D648 ToggleObjectXSlotHi, $D847, $D85E |
 | S2-48 | 3 | $EB8C LoadDoor, $EB92 SpawnDoorRoutine, $EEF4 SpawnDoor |
 | S2-49 | 3 | $EC04 LoadElevator, $EC09 SpawnElevatorRoutine, $EEA1 SpawnElevator |
-| S2-50 | 3 | $EEC6 MotherBrainHandler, $EEEB, $EEF1 |
+| S2-50 | 3 | $EEC6, $EEEB, $EEF1 |
 | S2-51 | 3 | $F0E5, $F136, $F1F4 Xminus16 |
 | S2-52 | 3 | $F133, $F311 SamusHurt_F311, $FEC2 |
 | S2-53 | 3 | $CE92 SubtractHealth, $F13D GotoSubtractHealth, $FEC9 |
@@ -36,7 +36,7 @@
 | S2-55 | 3 | $C2C6 Amul8, $F335, $FF4E |
 | S2-56 | 3 | $F3CF, $F401 UpdateEnemy_Active_BranchA, $F6B9 UpdateEnemy_ForceSpeedTowardsSamus |
 | S2-57 | 3 | $F3D2, $F404, $F75B UpdateEnemy_EnData05DistanceToSamusThreshold |
-| S2-58 | 3 | $F416 DoOneEnemy, $F480, $F4EB |
+| S2-58 | 3 | $F416, $F480, $F4EB |
 | S2-59 | 3 | $F50B, $F515 LF515, $F554 |
 
 ## 2. asm 锚预消化

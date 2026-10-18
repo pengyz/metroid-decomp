@@ -8,28 +8,28 @@
 
 | 簇 | 员数 | 成员（addr+名+指令头） |
 |---|---|---|
-| A5-23 | 3 | $9871 `JSR $9A06`; $987A `JSR $9A06`; $9A06 `LSR` |
-| A5-24 | 3 | $9900 `JSR $9A10`; $9909 `JSR $9A10`; $9A10 `ASL` |
-| A5-25 | 2 | $9926 `JSR $99C3`; $99C3 `LDA #$00` |
-| A5-26 | 2 | $9929 `JSR $99BD`; $99BD `TXA` |
-| A5-27 | 2 | $9958 `JSR $99E4`; $99E4 `LDA $030E` |
-| A5-28 | 3 | $995E `JSR $99F4`; $99F4 `LDA $09`; $9AF1 `JSR $99F4` |
-| A5-29 | 2 | $9961 `JMP $9967`; $9967 `LDA $6AF4,X` |
-| A5-30 | 5 | $99B8 `JSR $9B1B`; $99BE `JSR $9B1B`; $9AFC `JSR $9B1B`; $9B0C `JSR $9B1B`; $9B1B `LSR` |
-| A5-31 | 2 | $99D1 `STA $6AFF,X`; $9A3A `JSR $99D1` |
-| A5-32 | 2 | $9A83 `JSR $9AF9`; $9AF9 `LDA $00` |
-| A5-33 | 3 | $9B03 `JSR $9B20`; $9B13 `JSR $9B20`; $9B20 `ASL` |
-| A5-34 | 2 | $9DF2 MotherBrain_Idle_CollideWithSamus `LDA $030C`; $9E22 MotherBrain_Idle `JSR $9DF2` |
-| A5-35 | 2 | $9E25 `JSR $9FED`; $9FED MotherBrain_Idle_HandleBeingHit `LDA $9E` |
-| A5-36 | 2 | $9E28 `JSR $A01B`; $A01B MotherBrain_Idle_UpdateAnimBrain `DEC $9A` |
-| A5-37 | 2 | $9E2B `JSR $A02E`; $A02E MotherBrain_Idle_UpdateAnimEye `DEC $9B` |
-| A5-38 | 3 | $9E2E `JSR $A041`; $9E83 `JMP $9E2E`; $A041 MotherBrain_DrawSprites `LDA #$E0` |
-| A5-39 | 2 | $9E31 ClearMotherBrainIsHit `LDA #$00`; $9E3E `JMP $9E31` |
-| A5-40 | 4 | $9E36 MotherBrain_Hurt `JSR $9E43`; $9E43 UpdateMotherBrainFlashDelay `DEC $9F`; $9E52 MotherBrain_Killed `JSR $9E43`; $9E93 `JSR $9E43` |
-| A5-41 | 4 | $9E6C `JSR $9EF9`; $9EA4 `JSR $9EF9`; $9EF9 Xplus16 `TXA`; $A00C `JSR $9EF9` |
-| A5-42 | 2 | $9E8E `JSR $A072`; $A072 MotherBrain_Disappear_Disintegrate `LDY MotherBrainHits` |
-| A5-43 | 2 | $9ED0 `JMP $9ED6`; $9ED6 `LDA $0685` |
-| A5-44 | 3 | $9F49; $9F69 MotherBrain_SpawnDoor `LDA $50`; $9FDA MotherBrain_SetTimeBomb_ScrollBackOnScreen `JSR $9F69` |
+| A5-23 | 3 | $9871, $987A, $9A06 |
+| A5-24 | 3 | $9900, $9909, $9A10 |
+| A5-25 | 2 | $9926, $99C3 |
+| A5-26 | 2 | $9929, $99BD |
+| A5-27 | 2 | $9958, $99E4 |
+| A5-28 | 3 | $995E, $99F4, $9AF1 |
+| A5-29 | 2 | $9961, $9967 |
+| A5-30 | 5 | $99B8, $99BE, $9AFC, $9B0C, $9B1B |
+| A5-31 | 2 | $99D1, $9A3A |
+| A5-32 | 2 | $9A83, $9AF9 |
+| A5-33 | 3 | $9B03, $9B13, $9B20 |
+| A5-34 | 2 | $9DF2 MotherBrain_Idle_CollideWithSamus, $9E22 MotherBrain_Idle |
+| A5-35 | 2 | $9E25, $9FED MotherBrain_Idle_HandleBeingHit |
+| A5-36 | 2 | $9E28, $A01B MotherBrain_Idle_UpdateAnimBrain |
+| A5-37 | 2 | $9E2B, $A02E MotherBrain_Idle_UpdateAnimEye |
+| A5-38 | 3 | $9E2E, $9E83, $A041 MotherBrain_DrawSprites |
+| A5-39 | 2 | $9E31 ClearMotherBrainIsHit, $9E3E |
+| A5-40 | 4 | $9E36 MotherBrain_Hurt, $9E43 UpdateMotherBrainFlashDelay, $9E52 MotherBrain_Killed, $9E93 |
+| A5-41 | 4 | $9E6C, $9EA4, $9EF9 Xplus16, $A00C |
+| A5-42 | 2 | $9E8E, $A072 MotherBrain_Disappear_Disintegrate |
+| A5-43 | 2 | $9ED0, $9ED6 |
+| A5-44 | 3 | $9F49 MotherBrain_SetTimeBomb, $9F69 MotherBrain_SpawnDoor, $9FDA MotherBrain_SetTimeBomb_ScrollBackOnScreen |
 
 ## 1.5 消化口径（F13 钉死）
 
