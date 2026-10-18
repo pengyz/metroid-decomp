@@ -28,11 +28,10 @@ nav 3300-3400 x 140
 press 3410 down
 press 3440 b
 press 3480 b
-press 3520 down
+press 4100 up
 nav 3540-3900 x 250
 hold 3540-3950 right
 nav 3950-4500 x 250
-nav 3950-4500 jump 80
 nav 4500-7000 x 250
 
 capture 3500 bomb-fuse
