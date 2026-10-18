@@ -1,5 +1,5 @@
-# 场景：sc-elevator-ride —— 楔避径（安全 morph→洞滚→房 19 西缘脱球→跳 $5D）
-# BUG-001 注：morph×楔=状态损坏——morph 仅于安全位（避楔区）
+# 场景：sc-elevator-ride —— 主径=站立过顶（跑跳高跨门战术——既定复用）
+# 裁定①：主径 2 窗预算（西门高跨→房 19→跳 $5D→东段）
 name sc-elevator-ride
 frames 7200
 watch_range 0000-00ff zp
@@ -23,27 +23,31 @@ hold 2500-2660 a
 hold 2550-2920 right
 press 2580 b
 hold 3100-3260 a
-hold 3150-3310 right
+hold 3150-3520 right
 press 3180 b
-nav 3280-3320 x 120
-trigger 3340-3520 307 == 00 press down
-trigger 3400-3800 052 > 195 hold right
-trigger 3550-3750 051 < 132 press up
-nav 3900-4200 x 120
-hold 4250-4410 a
-hold 4300-4700 right
-press 4350 b
-nav 4700-5400 x 250
-hold 5000-5160 a
-hold 5050-5500 right
-press 5100 b
-nav 5500-7000 x 250
-hold 5700-5860 a
-hold 5750-6200 right
-press 5800 b
+nav 3300-3400 x 130
+hold 3420-3580 a
+hold 3460-3700 right
+hold 3720-3880 a
+hold 3760-4200 right
+press 3850 b
+press 3950 b
+nav 4200-5000 x 250
+hold 4800-4960 a
+hold 4850-5300 right
+press 4900 b
+hold 5400-5560 a
+hold 5450-5900 right
+press 5500 b
+hold 6000-6160 a
+hold 6050-6500 right
+press 6100 b
+hold 6600-6760 a
+hold 6650-7100 right
+press 6700 b
 
-capture 3800 room19-west
-capture 4400 jump-5d
+capture 3800 over-top1
+capture 4600 over-top2
 capture 6900 east-end
 
 sample_point spin-exit
