@@ -144,7 +144,7 @@ pub fn more_init(mem: &mut FrameMemory) {
     mem.write_ram(0x005A, 0xFF); // RoomNumber=$FF（constants_ram:567——undefined room）
     copy_area_pointers(mem); // C8B0（已端口）
     get_room_num(mem); // E720（已端口——壳）
-    crate::unported!("bank07:EA2B"); // SetupRoom 环（房间链三件）
+    setup_room(mem); // EA2B（已端口——壳）
 }
 
 /// AreaPointers_ROM 烘焙（prg1 Brinstar——`14 a3 72 a3 f0 ae e0 9d e0 9e 0e 9f 6a 9d`
@@ -171,11 +171,39 @@ pub fn get_room_num(mem: &mut FrameMemory) {
         // OnNameTable0（EC93）/ScrollBlock 门——门挡时 RTS（不载房）
         crate::unported!("bank07:EC93"); // OnNameTable0+横滚门面
     }
-    // 纵面：MapPosY*16+MapPosX → 查表
-    let map_y = mem.read_ram(0x004F);
-    let map_x = mem.read_ram(0x0050);
-    let idx = ((map_y as u16) << 4).wrapping_add(map_x as u16);
-    crate::unported!("bank07:E73x"); // RoomPtrTable 查表（game-data 房间模型——S6-7）
+    // 纵面（LE733）：$00=(MapY*32)+MapX+$7000（WorldMapRAM 索引）→`lda ($00),y`→
+    // $FF=未用（RTS carry 置）→`sta RoomNumber($5A)`。
+    let map_y = mem.read_ram(0x004F) as u16;
+    let map_x = mem.read_ram(0x0050) as u16;
+    let idx = (map_y << 5).wrapping_add(map_x); // MapY*32+MapX（asm rol×2 域形）
+    let room = mem.read_wram(0x7000 + idx); // WorldMapRAM=$7000（全址形）
+    if room == 0xFF {
+        return; // 未用房间（carry 置——RTS）
+    }
+    mem.write_ram(0x005A, room); // RoomNumber
+}
+
+/// SetupRoom 壳（**asm 内容锚** `SetupRoom: ; 07:EA2B`）：RoomNumber 分支（$FF=RTS/
+/// $FE=占位跳/≥$F0=AttribTableWrite/其余=载房）→RoomPtrTable 查表（**AreaPointers_RAM
+/// .RoomPtrTable=$3B/$3C 间接**——`lda (AreaPointers_RAM.RoomPtrTable),y`）→RoomPtr($33/$34)
+/// →RoomPalette 读→AddToRoomPtr/SelectRoomRAM/InitTables→DrawRoom（**S6-7 房间绘制链**
+/// ——嵌套桩：game-data 房间模型协同）。
+pub fn setup_room(mem: &mut FrameMemory) {
+    let room = mem.read_ram(0x005A);
+    if room == 0xFF {
+        return; // 未定义房（RTS）
+    }
+    if room == 0xFE {
+        crate::unported!("bank07:EA5D"); // 占位字节路
+    }
+    if room >= 0xF0 {
+        crate::unported!("bank07:EA9x"); // AttribTableWrite（属性表数据路）
+    }
+    // RoomPtrTable 查表（AreaPointers_RAM.RoomPtrTable=$3B/$3C 间接——基址拷自 $959A）
+    let base = (mem.read_ram(0x003C) as u16) << 8 | mem.read_ram(0x003B) as u16;
+    let y = (room as u16) << 1;
+    // 间接读（窗口面——ROM 数据在 WRAM $7000 区？数据面随 S6-7 协同——桩）
+    crate::unported!("bank07:EA4x"); // RoomPtrTable 间接读（S6-7 房间模型协同）
 }
 /// UpdateTimer 单元（**asm 内容锚**）——`UpdateTimer: ; 07:C266`：TimerDelay 预分频
 /// （dec/bpl——10 帧节拍，归零重置 9 并含 Timer3）→ Timer1/2/3 非零递减。
