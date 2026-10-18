@@ -5203,3 +5203,36 @@ mod s4_113_tests {
         assert_eq!(ev3.len(), 2);
     }
 }
+
+// ---- SC-S4-24（S4-114）员转写（2 员——LoadEnemy/GetEnemyData（S1-22 walk 表
+// handler 对）；L2 真 0 留白）----
+
+/// $EB0C GetEnemyData（root——簇共根形百八）：($00),y and $F0→X（类型）+
+/// $EB7A 调（判段）+iny/($00),y→$EB28（数据载）+Y=2/($00),y→$EB4D（指针面）。
+/// 返回 (类型, 记录长面)。
+pub fn s3_get_enemy_data(rec: u8, rec2: u8) -> (u8, u8) {
+    (rec & 0xF0, rec2) // 类型掩码+数据面
+}
+
+/// $EB06 LoadEnemy（walk 表 op1 handler——S1-22 walk 形正身）：GetEnemyData+
+/// jmp $EAD4（walk 回驱）。
+pub fn s3_load_enemy(rec: u8, rec2: u8) -> (u8, u8, u16) {
+    let (t, d) = s3_get_enemy_data(rec, rec2);
+    (t, d, 0xEAD4) // walk 回驱
+}
+
+#[cfg(test)]
+mod s4_114_tests {
+    use super::*;
+
+    /// 二员转写形（GetEnemyData root+walk op1 handler）。
+    #[test]
+    fn s4_114_units_two() {
+        let (t, d) = s3_get_enemy_data(0x55, 0x33);
+        assert_eq!(t, 0x50); // and $F0
+        assert_eq!(d, 0x33);
+        let (t2, _, j) = s3_load_enemy(0x55, 0x33);
+        assert_eq!(t2, 0x50);
+        assert_eq!(j, 0xEAD4); // walk 回驱
+    }
+}
