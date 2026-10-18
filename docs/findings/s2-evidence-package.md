@@ -8,36 +8,41 @@
 
 | 簇 | 员数 | 成员（bank7:addr+名标签） |
 |---|---|---|
-| S2-30 | 4 | $F6E2, $F711, $F7B3 AndEnData05, $F83B |
-| S2-31 | 4 | $F702, $F735, $F744 OrEnData05, $F761 |
-| S2-32 | 4 | $F97C LF97C, $FA15 Lx367, $FA7A, $FA9A |
-| S2-33 | 3 | $CF2E LCF2E, $D018, $D133 |
-| S2-34 | 3 | $D101, $D630, $E8BE StoreObjectPositionToTemp |
-| S2-35 | 3 | $D120, $D1A9, $E1E1 BitScan |
-| S2-36 | 3 | $D3C8, $D900, $D92C StartMusic |
-| S2-37 | 3 | $CDFA CheckHealthStatus, $D406, $D411 Lx055 |
-| S2-38 | 3 | $CD92 SetMirrorCntrlBit, $D414, $D483 Lx063 |
-| S2-39 | 3 | $D43D, $D89D, $E519 ScrollDown |
-| S2-40 | 3 | $D450, $D46E, $D47E LD47E |
-| S2-41 | 3 | $D45D, $D897, $E4F1 ScrollUp |
-| S2-42 | 3 | $8296, $D560, $F9BE |
-| S2-43 | 3 | $832F, $D56A, $F9C8 |
-| S2-44 | 3 | $D61B, $D651 CheckBlastTile, $D770 |
-| S2-45 | 3 | $D2FA InitObjectXSlotAnimIndex, $D660, $D685 |
-| S2-46 | 3 | $D66B DrawBomb, $D68E, $D6A4 |
-| S2-47 | 3 | $D648 ToggleObjectXSlotHi, $D847, $D85E |
-| S2-48 | 3 | $EB8C LoadDoor, $EB92 SpawnDoorRoutine, $EEF4 SpawnDoor |
-| S2-49 | 3 | $EC04 LoadElevator, $EC09 SpawnElevatorRoutine, $EEA1 SpawnElevator |
-| S2-50 | 3 | $EEC6, $EEEB, $EEF1 |
-| S2-51 | 3 | $F0E5, $F136, $F1F4 Xminus16 |
-| S2-52 | 3 | $F133, $F311 SamusHurt_F311, $FEC2 |
-| S2-53 | 3 | $CE92 SubtractHealth, $F13D GotoSubtractHealth, $FEC9 |
-| S2-54 | 3 | $CD9C IsScrewAttackActive, $F287, $F2F4 |
-| S2-55 | 3 | $C2C6 Amul8, $F335, $FF4E |
-| S2-56 | 3 | $F3CF, $F401 UpdateEnemy_Active_BranchA, $F6B9 UpdateEnemy_ForceSpeedTowardsSamus |
-| S2-57 | 3 | $F3D2, $F404, $F75B UpdateEnemy_EnData05DistanceToSamusThreshold |
-| S2-58 | 3 | $F416, $F480, $F4EB |
-| S2-59 | 3 | $F50B, $F515 LF515, $F554 |
+| S2-30 | 4 | $F6E2; $F711; $F7B3 AndEnData05 `and $0405,x`; $F83B |
+| S2-31 | 4 | $F702; $F735; $F744 OrEnData05 `ora $0405,x`; $F761 |
+| S2-32 | 4 | $F97C LF97C `lda #$01`; $FA15; $FA7A; $FA9A |
+| S2-33 | 3 | $CF2E LCF2E `LDA SamusHit`; $D018; $D133 |
+| S2-34 | 3 | $D101; $D630; $E8BE StoreObjectPositionToTemp `lda ObjectHi,x` |
+| S2-35 | 3 | $D120; $D1A9; $E1E1 BitScan `stx $0E` |
+| S2-36 | 3 | $D3C8; $D900; $D92C StartMusic `lda ElevatorStatus` |
+| S2-37 | 3 | $CDFA CheckHealthStatus `lda SamusHit`; $D406; $D411 |
+| S2-38 | 3 | $CD92 SetmirrorCntrlBit `LDA SamusDir`; $D414; $D483 |
+| S2-39 | 3 | $D43D; $D89D; $E519 |
+| S2-40 | 3 | $D450; $D46E; $D47E SamusElevator `lda FrameCount` |
+| S2-41 | 3 | $D45D; $D897; $E4F1 |
+| S2-42 | 3 | $8296; $D560; $F9BE |
+| S2-43 | 3 | $832F; $D56A; $F9C8 |
+| S2-44 | 3 | $D61B; $D651 CheckBlastTile `ldy InArea`; $D770 |
+| S2-45 | 3 | $D2FA SetProjectileAnim `sta AnimResetIndex,x`; $D660; $D685 |
+| S2-46 | 3 | $D66B; $D68E; $D6A4 |
+| S2-47 | 3 | $D648; $D847; $D85E |
+| S2-48 | 3 | $EB8C; $EB92 SpawnDoorRoutine `iny`; $EEF4 DoorHandler `jsr LEB92` |
+| S2-49 | 3 | $EC04; $EC09 SpawnElevatorRoutine `lda ElevatorStatus`; $EEA1 ElevatorHandler `jsr LEC09` |
+| S2-50 | 3 | $EEC6 `lda #$01`; $EEEB; $EEF1 |
+| S2-51 | 3 | $F0E5; $F136; $F1F4 |
+| S2-52 | 3 | $F133; $F311 SamusHurt_F311 `bcs Exit22`; $FEC2 |
+| S2-53 | 3 | $CE92 SubtractHealth `lda HealthLoChange`; $F13D; $FEC9 |
+| S2-54 | 3 | $CD9C IsScrewAttackActive `SEC`; $F287; $F2F4 |
+| S2-55 | 3 | $C2C6 Amul8 `ASL`; $F335; $FF4E |
+| S2-56 | 3 | $F3CF; $F401; $F6B9 UpdateEnemy_ForceSpeedTowardsSamus `lda #$00` |
+| S2-57 | 3 | $F3D2; $F404; $F75B UpdateEnemy_EnData05DistanceToSamusThreshold `lda #$E7` |
+| S2-58 | 3 | $F416 `ldx PageIndex`; $F480; $F4EB |
+| S2-59 | 3 | $F50B; $F515 LF515 `sta $040C,x`; $F554 |
+
+## 1.5 消化口径（F13 钉死——A 区 v3 法同用）
+
+**标签口径三级**：①名注优先（nmikstas Name:/m1disasm 注释锚）②L 行尾注次之
+（nmikstas 注释语义）③指令头兜底（操作码直读）。
 
 ## 2. asm 锚预消化
 

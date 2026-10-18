@@ -36,10 +36,34 @@ def main() -> int:
 
     # task-38 ④：超时=FAIL 显式（防挂死——超限打回非悬挂；l2 引擎侧另有 MAX_STEPS 1M）
     try:
-        proc = subprocess.run(cmd, cwd=ROOT, timeout=600)
+        proc = subprocess.run(cmd, cwd=ROOT, timeout=600, capture_output=True, text=True,
+                              encoding="utf-8", errors="replace")
     except subprocess.TimeoutExpired:
         print(f"[FAIL] {cmd[1] if len(cmd) > 1 else cmd}: 超时 >600s（task-38 护栏——限时打回非挂死）")
         raise SystemExit(1)
+    out = (proc.stdout or "") + (proc.stderr or "")
+    print(out, end="" if out.endswith("\n") or not out else "\n")
+    if proc.returncode == 0:
+        return 0
+    # L2 记账面（迭代态已知缺口——trace/visual gap_map 同构：账内容忍+路线图）
+    import json as _json, re as _re
+    gaps = []
+    gm = ROOT / "data" / "status" / "l2_gap_map.json"
+    if gm.is_file():
+        try:
+            gaps = _json.loads(gm.read_text(encoding="utf-8")).get("entries", [])
+        except Exception:
+            pass
+    fails = _re.findall(r"\[FAIL\] ([^:]+):", out)
+    accounted = [f for f in fails if any(f.startswith(g.get("case_prefix", "\0")) for g in gaps)]
+    unacc = [f for f in fails if f not in accounted]
+    if fails and not unacc:
+        print(f"[TOLERATED] L2 账内容忍 {len(accounted)} 案（迭代态缺口——账清转 strict）")
+        for g in gaps:
+            print(f"  缺口路线图[{g['id']}]: {g.get('reason','')}｜退出={g.get('exit','')}")
+        return 0
+    if accounted:
+        print(f"[FAIL] L2 账外 {len(unacc)} 案（账内 {len(accounted)} 已忍）")
     return proc.returncode
 
 

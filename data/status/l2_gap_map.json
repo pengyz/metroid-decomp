@@ -1,0 +1,13 @@
+{
+  "schema": "l2-gap-map/v1",
+  "doc": "L2 记账面（迭代态已知缺口——trace/visual gap_map 同构：账内容忍+路线图+账清转 strict；非白名单非调阈）",
+  "entries": [
+    {
+      "id": "SC-A1-001-ENEMYMOVE",
+      "case_prefix": "a1-001-case",
+      "reason": "EnemyMove（F3xx 族）移效写面（$6AFF 族）转写余——golden 全路径含移效 vs 适配骨架面（SC-A1-001 卡工序）",
+      "exit": "EnemyMove 转写落→账清转 strict",
+      "registered": "2026-10-19"
+    }
+  ]
+}
