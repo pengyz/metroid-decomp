@@ -2510,3 +2510,45 @@ mod s2_044_tests {
         assert!(ev.contains(&(0x0004, 0x85)));
     }
 }
+
+// ---- SC-S2-15（S2-45）员转写（3 员——SetProjectileAnim 族）----
+
+/// $D2FA SetProjectileAnim（root——簇共根形三九·**SetSamusAnim 索引版对偶**）：
+/// $0305[x]←A/$0306[x]←A/$0304[x]←0。
+pub fn s2_set_projectile_anim(x: u8, a_in: u8) -> (Vec<(u16, u8)>, u8) {
+    (vec![(0x0305 + x as u16, a_in), (0x0306 + x as u16, a_in), (0x0304 + x as u16, 0)], 0)
+}
+
+/// $D660 员体：SetProjectileAnim+$030F[x]←$18+inc $0300[x]+尾跳 $DE47（A=3 面）。
+pub fn s2_d660_body(x: u8, a_in: u8) -> (Vec<(u16, u8)>, u16) {
+    let (mut ev, _) = s2_set_projectile_anim(x, a_in);
+    ev.push((0x030F + x as u16, 0x18));
+    (ev, 0xDE47)
+}
+
+/// $D685 员体：SetProjectileAnim+inc $0300[x]+$CB9A 调+尾跳 $D66B。
+pub fn s2_d685_body(x: u8, a_in: u8, v0300_x: u8) -> (Vec<(u16, u8)>, u16) {
+    let (mut ev, _) = s2_set_projectile_anim(x, a_in);
+    ev.push((0x0300 + x as u16, v0300_x.wrapping_add(1)));
+    (ev, 0xD66B)
+}
+
+#[cfg(test)]
+mod s2_045_tests {
+    use super::*;
+
+    /// 三员转写形（SetProjectileAnim 对偶 root+二壳）。
+    #[test]
+    fn s2_045_units_three() {
+        let (ev, a) = s2_set_projectile_anim(0xAF, 60);
+        assert_eq!(a, 0);
+        assert!(ev.contains(&(0x03B4, 60)));
+        assert!(ev.contains(&(0x03B3, 0)));
+        let (ev, j) = s2_d660_body(2, 5);
+        assert_eq!(j, 0xDE47);
+        assert!(ev.contains(&(0x0311, 0x18)));
+        let (ev, j) = s2_d685_body(2, 5, 7);
+        assert_eq!(j, 0xD66B);
+        assert!(ev.contains(&(0x0302, 8)));
+    }
+}

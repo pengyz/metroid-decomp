@@ -1370,3 +1370,17 @@ pub fn s2_cluster_044(input: &L2In) -> L2Out {
         writes: vec![],
     }
 }
+
+// ---- SC-S2-15 簇入口适配（s2_cluster_045 ← bank07:D2FA SetProjectileAnim）----
+
+/// s2_cluster_045 适配（$D2FA SetProjectileAnim：$0305[x]←A/$0306[x]←A/$0304[x]←0
+/// ——**SetSamusAnim 索引版对偶**；A 归零出口/X/Y 透传）。
+pub fn s2_cluster_045(input: &L2In) -> L2Out {
+    let x = input.x as u16;
+    L2Out {
+        a: 0, x: input.x, y: input.y,
+        writes: merge_writes(vec![
+            (0x0305 + x, input.a), (0x0306 + x, input.a), (0x0304 + x, 0),
+        ]),
+    }
+}
