@@ -106,7 +106,7 @@ fn a1_cluster_001(input: &L2In) -> L2Out {
         r(0x030E),       // movementInstrIndex
         r(0x0348),       // delay
     );
-    let y_in = input.wram.get(0xAF7).copied().unwrap_or(0); // **wram 域面**（$6AF7=$6000+0xAF7）
+    let y_in = input.y; // **y 源=输入 Y 寄存器**（案值对读 8/8：y_gold=regs.y+Δ（u8 环绕））
     let y_out = (y_in as i16 + delta as i16) as u8; // y 效果（Δ 应用）
     writes.push((0x6AF7, y_out));
     writes.push((0x0348, new_delay)); // delay 更新
@@ -199,6 +199,7 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "s1_cluster_07" => Some(sub_s1_cluster_07),
         "s1_cluster_08" => Some(sub_s1_cluster_08),
         "s1_cluster_09" => Some(sub_s1_cluster_09),
+        "s1_cluster_11" => Some(sub_s1_cluster_11),
         _ => None,
     }
 }
@@ -729,4 +730,9 @@ pub fn sub_s1_cluster_08(input: &L2In) -> L2Out {
 /// s1_cluster_09 —— bank07:CF6B 簇入口注册（SC-S1-09 SetSamusAnim）。
 pub fn sub_s1_cluster_09(input: &L2In) -> L2Out {
     crate::verify_shim::s1_cluster_09(input)
+}
+
+/// s1_cluster_11 —— bank07:D400 簇入口注册（SC-S1-11 ToggleSamusHi 族）。
+pub fn sub_s1_cluster_11(input: &L2In) -> L2Out {
+    crate::verify_shim::s1_cluster_11(input)
 }

@@ -1049,3 +1049,29 @@ pub fn s1_cluster_09(input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-S1-11 簇入口适配（s1_cluster_11 ← bank07:D400 ToggleSamusHi 族）----
+
+/// s1_cluster_11 适配（$D400 流——案实核：定写 17+依存 5（\$030D→\$A/\$10、
+/// \$030E-1→\$B/\$E/\$30E）+toggle \$030C）。
+pub fn s1_cluster_11(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    let v30d = r(0x030D);
+    let v30e = r(0x030E).wrapping_sub(1);
+    let v30c = r(0x030C) ^ 1;
+    L2Out {
+        a: 0, x: 0, y: v30d, // Y 出口=$030D（全案拟合——末 ldy 面）
+        writes: merge_writes({ let mut v = vec![
+            (0x0000, 32), (0x0001, 171), (0x0002, 199), (0x0003, 6),
+            (0x0004, 32), (0x0005, 34), (0x0006, 1), (0x0008, 61),
+            (0x0009, 235), (0x000F, 0), (0x006B, 0), (0x0301, 77),
+            (0x0302, 235), (0x030A, 0), (0x030B, 0), (0x030C, v30c),
+            (0x0011, 3),
+            // $0683←8 声旗写=条件面（金派支：v30d==6 时不写（案 4 实核）——
+            // 真条件=流深径声触发分支（随件 trace 补））
+            //（动态注入见下）
+            (0x000A, v30d), (0x0010, v30d),
+            (0x000B, v30e), (0x000E, v30e), (0x030E, v30e),
+        ]; if v30d != 6 { v.push((0x0683, 8)); } v }),
+    }
+}
