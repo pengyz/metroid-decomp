@@ -1751,3 +1751,14 @@ pub fn s3_cluster_074(input: &L2In) -> L2Out {
         writes: merge_writes(vec![(0x0315, v)]),
     }
 }
+
+// ---- SC-S3-16 簇入口适配（s3_cluster_076 ← bank07:CFB7 ClearHorzData）----
+
+/// s3_cluster_076 适配（$CFB7 ClearHorzData——案实核恒定：$0309/$0313/$0315←0
+/// （水平数据清）；A/X 透传/Y=0）。
+pub fn s3_cluster_076(input: &L2In) -> L2Out {
+    L2Out {
+        a: input.a, x: input.x, y: 0,
+        writes: merge_writes(vec![(0x0309, 0), (0x0313, 0), (0x0315, 0)]),
+    }
+}
