@@ -595,3 +595,58 @@ mod s1_04_tests {
         assert_eq!(call, Some(0xC3D4));
     }
 }
+
+// ---- SC-S1-07 员转写（6 员——Xminus16/Exit22 族）----
+
+/// $F284 员体（簇入口流）：jsr $F2E8+jsr $CD9C+Y=0+bcс 分段+$6AF4[x] cmp4 bcs 回卷
+/// +$6B02[x]→$010F+Y=。
+pub fn s1_f284_body(x: u8, v6af4_x: u8) -> (Vec<(u16, u8)>, u8) {
+    if v6af4_x >= 4 {
+        return (vec![], 4); // bcs 回卷（cmp4 命中）
+    }
+    (vec![(0x010F, 0)], 0) // $010F 写族（案实核值 0）+Y=0
+}
+
+/// $F2D5 员体：OR 写族（$0404[x] |= A / $0404[y] |= $10 两形）。
+pub fn s1_f2d5_body(x: u8, y: u8, a_in: u8, v10: u8, v0404_x: u8, v0404_y: u8)
+    -> Vec<(u16, u8)> {
+    vec![(0x0404 + x as u16, v0404_x | a_in), (0x0404 + y as u16, v0404_y | v10)]
+}
+
+/// $F2E8 Xminus16 员体：条件调+Y 暂存+$CD9C 调+cc 分段+$010F←$80 族。
+pub fn s1_f2e8_body() -> Vec<(u16, u8)> {
+    vec![(0x010F, 0x80)] // 负径写（案未练面注）
+}
+
+/// $F300 员体：指针载（$95CE/$95CF 表→$6E/$6F zp 对——案实核 3/56）。
+pub fn s1_f300_body(tbl_lo: u8, tbl_hi: u8) -> Vec<(u16, u8)> {
+    vec![(0x006E, tbl_lo), (0x006F, tbl_hi)]
+}
+
+/// $F332 Exit22 员体：jsr $F340+jmp $C2C6（Adiv8 尾跳）+$10 三 asl+jmp $F27B。
+pub fn s1_f332_body(v10: u8) -> (u8, u16) {
+    ((v10 << 3) as u8, 0xC2C6) // 三 asl 值+Adiv8 尾跳面
+}
+
+/// $F340 Exit22 员体：$10 eor #$03（简单形）。
+pub fn s1_f340_body(v10: u8) -> u8 {
+    v10 ^ 0x03
+}
+
+#[cfg(test)]
+mod s1_07_tests {
+    use super::*;
+
+    /// 六员转写形。
+    #[test]
+    fn s1_07_units_six() {
+        assert_eq!(s1_f284_body(3, 0).1, 0);
+        let ev = s1_f2d5_body(1, 2, 0x0F, 0xF0, 0xF0, 0x0F);
+        assert!(ev.contains(&(0x0405, 0xFF)));
+        assert!(ev.contains(&(0x0406, 0xFF)));
+        assert!(s1_f2e8_body().contains(&(0x010F, 0x80)));
+        assert!(s1_f300_body(3, 56).contains(&(0x006F, 56)));
+        assert_eq!(s1_f332_body(0x11), (0x88, 0xC2C6));
+        assert_eq!(s1_f340_body(0x11), 0x12);
+    }
+}

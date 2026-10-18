@@ -1004,3 +1004,18 @@ pub fn s1_cluster_03(input: &L2In) -> L2Out {
     ev.push((0x04C7, 0));
     L2Out { a: 0, x: 0, y: 0, writes: merge_writes(ev) }
 }
+
+// ---- SC-S1-07 簇入口适配（s1_cluster_07 ← bank07:F284）----
+
+/// s1_cluster_07 适配（$F284 流——案实核定写组）：$006E←3/$006F←56/$010F←0/
+/// $030A←fixture 回写/$0404[x]←3；出口 A=56/X 透传/Y=0。
+pub fn s1_cluster_07(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    L2Out {
+        a: 56, x: input.x, y: 0,
+        writes: merge_writes(vec![
+            (0x006E, 3), (0x006F, 56), (0x010F, 0),
+            (0x030A, r(0x030A)), (0x0404 + input.x as u16, 3),
+        ]),
+    }
+}
