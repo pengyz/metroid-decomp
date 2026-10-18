@@ -8,36 +8,40 @@
 
 | 簇 | 员数 | 成员（bank7:addr+名标签） |
 |---|---|---|
-| S5-120 | 2 | $EBC8, $EE41 LEE41 |
-| S5-121 | 2 | $EE11, $EE3D PrepareItemID |
-| S5-122 | 2 | $DC67 CreateItemID, $EE47 |
-| S5-123 | 2 | $EE6B, $EE86 SpawnMellow |
-| S5-124 | 2 | $95B1, $EEA6 SpawnCannon |
-| S5-125 | 2 | $95B4, $EEAE SpawnMotherBrain |
-| S5-126 | 2 | $95B7, $EECA SpawnZebetite |
-| S5-127 | 2 | $95BA, $EEEE SpawnRinkaSpawner |
-| S5-128 | 2 | $F0A8, $F152 GetEnemyXSlotPosition |
-| S5-129 | 2 | $F0CC, $F2CA CollisionDetectionEnemy_ReactToCollisionWithSamusProjectile |
-| S5-130 | 2 | $F0E2, $F282 CollisionDetectionEnemy_ReactToCollisionWithSamus |
-| S5-131 | 2 | $F09F, $F0EA |
-| S5-132 | 2 | $F0EF, $F172 GetObjectXSlotPosition |
-| S5-133 | 2 | $F106, $F1B3 GetRadiusSumsOfObjXSlotAndEnYSlot |
-| S5-134 | 2 | $F109, $F162 GetEnemyYSlotPosition |
-| S5-135 | 2 | $F10F, $F2ED CollisionDetectionEnProjectile_ReactToCollisionWithSamus |
-| S5-136 | 2 | $DC82 LDC82, $F130 |
-| S5-137 | 2 | $F16F, $F193 GetYSlotPosition_Common |
-| S5-138 | 2 | $F1B6, $F1E7 AddEnemyYSlotRadiusY |
-| S5-139 | 2 | $F1BC, $F1CB AddEnemyYSlotRadiusX |
-| S5-140 | 2 | $F279 SetSamusProjectileIsHit, $F2D2 |
-| S5-141 | 2 | $F2DF CollisionDetectionEnProjectile_ReactToCollisionWithSamus_F2DF, $F2EF |
-| S5-142 | 2 | $F270 LF270, $F303 |
-| S5-143 | 2 | $F3E0, $F7BA UpdateEnemy_Resting_TryBecomingActive |
-| S5-144 | 2 | $F407, $F51E RemoveEnemyIfItIsInLava |
-| S5-145 | 2 | $95E5, $F40D UpdateEnemy_Explode |
-| S5-146 | 2 | $E094 UpdateEnemyAnim, $F410 UpdateEnemyCommon |
-| S5-147 | 2 | $8058, $F413 |
-| S5-148 | 2 | $DD8B DrawEnemy, $F42A |
-| S5-149 | 2 | $CEF9 AddHealth, $F4B1 |
+| S5-120 | 2 | $EBC8; $EE41 LEE41 `sta $07` |
+| S5-121 | 2 | $EE11 ($EE3D)Get unique item ID. `jsr PrepareItemID`; $EE3D PrepareItemID `sta $09` |
+| S5-122 | 2 | $DC67 CreateItemID `LDA $07`; $EE47 ($DC67)Get unique item ID. `jmp CreateItemID` |
+| S5-123 | 2 | $EE6B; $EE86 SpawnMellow `lda $B0,x` |
+| S5-124 | 2 | $95B1; $EEA6 CannonHandler `jsr $95B1` |
+| S5-125 | 2 | $95B4; $EEAE MotherBrainHandler `jsr $95B4` |
+| S5-126 | 2 | $95B7; $EECA ZeebetiteHandler `jsr $95B7` |
+| S5-127 | 2 | $95BA; $EEEE RinkaHandler `jsr $95BA` |
+| S5-128 | 2 | $F0A8; $F152 GetEnemyXSlotPosition `lda EnYRoomPos,x` |
+| S5-129 | 2 | $F0CC; $F2CA CollisionDetectionEnemy_ReactToCollisionWithSamusProjectile `bcs +++` |
+| S5-130 | 2 | $F0E2; $F282 CollisionDetectionEnemy_ReactToCollisionWithSamus `bcs Exit17` |
+| S5-131 | 2 | $F09F slot active? `lda EnStatus,x`; $F0EA |
+| S5-132 | 2 | $F0EF; $F172 GetObject0CoordData `lda ObjectY,x` |
+| S5-133 | 2 | $F106; $F1B3 DistFromObj0ToEn1 `lda ObjRadY,x` |
+| S5-134 | 2 | $F109; $F162 GetEnemyYSlotPosition `lda EnYRoomPos,y` |
+| S5-135 | 2 | $F10F; $F2ED CollisionDetectionEnProjectile_ReactToCollisionWithSamus `bcs +` |
+| S5-136 | 2 | $DC82 LDC82 `JSR LF172`; $F130 |
+| S5-137 | 2 | $F16F; $F193 GetYSlotPosition_Common `eor PPUCNT0ZP` |
+| S5-138 | 2 | $F1B6; $F1E7 AddEnemyYSlotRadiusY `clc` |
+| S5-139 | 2 | $F1BC; $F1CB AddEnemy1XRadius `clc` |
+| S5-140 | 2 | $F279 SetSamusProjectileIsHit `lda $10`; $F2D2 |
+| S5-141 | 2 | $F2DF CollisionDetectionEnProjectile_ReactToCollisionWithSamus_F2DF `lda $10`; $F2EF |
+| S5-142 | 2 | $F270 LF270 `ora $030A,x`; $F303 |
+| S5-143 | 2 | $F3E0; $F7BA UpdateEnemy_Resting_TryBecomingActive `dec EnDelay,x` |
+| S5-144 | 2 | $F407; $F51E RemoveEnemyIfItIsInLava `lda ScrollDir` |
+| S5-145 | 2 | $95E5; $F40D |
+| S5-146 | 2 | $E094 UpdateEnemyAnim `ldx PageIndex`; $F410 UpdateEnemyCommon `jsr UpdateEnemyAnim` |
+| S5-147 | 2 | $8058; $F413 |
+| S5-148 | 2 | $DD8B DrawEnemy `ldx PageIndex`; $F42A |
+| S5-149 | 2 | $CEF9 AddHealth `LDA HealthLo`; $F4B1 |
+
+## 1.5 消化口径（F13 钉死——v3 法）
+
+**标签口径三级**：①名注优先 ②L 行尾注次之 ③指令头兜底。
 
 ## 2. asm 锚预消化
 

@@ -8,12 +8,16 @@
 
 | 簇 | 员数 | 成员（bank7:addr+名标签） |
 |---|---|---|
-| S7-175 | 2 | $FA2A, $FA7D GetEnemyRoomRAMPtr |
-| S7-176 | 2 | $E96A MakeRoomRAMPtr, $FA8E |
-| S7-177 | 2 | $F693 ClearEnAnimDelay, $FBBC |
-| S7-178 | 2 | $FCC1 UpdateMellow_RunAI, $FD5F UpdateMellow_StorePositionToTemp |
-| S7-179 | 2 | $FCFA, $FD6C UpdateMellow_LoadPositionFromTemp |
-| S7-180 | 2 | $FE95, $FF3C GetPosAtNameTableAddr |
+| S7-175 | 2 | $FA2A; $FA7D GetEnemyRoomRAMPtr `ldx PageIndex` |
+| S7-176 | 2 | $E96A MakeCartRAMPtr `LDA #$18`; $FA8E |
+| S7-177 | 2 | $F693 ClearEnAnimDelay `lda #$00`; $FBBC |
+| S7-178 | 2 | $FCC1 UpdateMellow_RunAI `jsr LFD5F`; $FD5F Table18 `lda $B3,x` |
+| S7-179 | 2 | $FCFA; $FD6C UpdateMellow_LoadPositionFromTemp `lda $08` |
+| S7-180 | 2 | $FE95; $FF3C DrawTileBlast `lda $00` |
+
+## 1.5 消化口径（F13 钉死——v3 法）
+
+**标签口径三级**：①名注优先 ②L 行尾注次之 ③指令头兜底。
 
 ## 2. asm 锚预消化
 
