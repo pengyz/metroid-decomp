@@ -1,5 +1,4 @@
-# 场景：sc-elevator-ride —— 双级径实跑（sc-loop 全 nav 驱动——G 系最终精度面）
-# 径：(3,14)→(22,11) 31 房 BFS；房 25=步台→顶廊双级径（s31 通廊 y64-79）
+# 场景：sc-elevator-ride —— 逐房跳制（房 19 门跳+东段纯行零跳——避楔）
 name sc-elevator-ride
 frames 7200
 watch_range 0000-00ff zp
@@ -8,43 +7,39 @@ watch_range 0100-07ff iram
 press 360 start
 press 420 a
 press 540 start
-hold 850-1900 right
 fixture 900 6878 13 invariant
+hold 850-1900 right
 press 950 b
 press 1050 b
 press 1150 b
 hold 1340-1500 a
 press 1420 b
+press 1480 b
 hold 1900-2060 a
 hold 1950-2320 right
 press 1980 b
 hold 2500-2660 a
 hold 2550-2920 right
 press 2580 b
+hold 3100-3260 a
 hold 3150-3520 right
-hold 3520-4500 right
-press 3600 b
-press 4000 b
-hold 4500-5500 right
-press 4600 b
-press 5000 b
-hold 5500-7000 right
-press 5600 b
-press 6100 b
-press 6600 b
 press 3180 b
-hold 5300-5460 a
-hold 5350-5800 right
+hold 3520-7000 right
+press 3600 b
+press 3900 b
+press 4200 b
+press 4500 b
+press 4800 b
+press 5100 b
 press 5400 b
-hold 5900-6060 a
-hold 5950-6400 right
+press 5700 b
 press 6000 b
-hold 6500-6660 a
-hold 6550-7000 right
+press 6300 b
+press 6600 b
 
-capture 3800 corridor-in
-capture 4300 corridor-out
-capture 7000 east-end
+capture 2000 east-mid
+capture 5000 east-deep
+capture 6900 east-end
 
 sample_point spin-exit
-bundle_capture 7000 analysis/bundles/sc-elevator-ride
+bundle_capture 6900 analysis/bundles/sc-elevator-ride
