@@ -1,0 +1,24 @@
+# 探跑：电梯径探测（长右行+周期抓帧——找 $D7B3/SetupRoom 签名）
+name sc-elev-probe
+frames 3200
+watch_range 0000-00ff zp
+watch_range 0100-07ff iram
+
+press 360 start
+press 420 a
+press 540 start
+hold 850-1200 right
+hold 1250-1600 right
+hold 1650-2000 right
+hold 2050-2400 right
+hold 2450-2800 right
+hold 2850-3150 right
+
+capture 1200 probe1
+capture 1600 probe2
+capture 2000 probe3
+capture 2400 probe4
+capture 2800 probe5
+capture 3150 probe6
+
+sample_point spin-exit

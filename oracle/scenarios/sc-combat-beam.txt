@@ -1,0 +1,26 @@
+# 场景：sc-combat-beam —— task-40 🟡 combat 武器变体（beam 面——fixture gear 注入）
+# 事件锚：fixture 注 LONGBEAM（$6878=$04）→敌房接触+beam 射击（武器面战斗）
+# 事件核：$6878 gear 写面+beam 投射物活动（$3xx 槽）+受击/血量面
+# 判据：双跑 sha 对锚+事件核实证+D7 如实
+name sc-combat-beam
+frames 1500
+watch_range 0000-00ff zp
+watch_range 0100-07ff iram
+watch_range 6878-6878 gear
+
+press 360 start
+press 420 a
+press 540 start
+hold 850-1050 right
+hold 1060-1450 right
+press 1150 b
+press 1180 b
+press 1210 b
+press 1240 b
+
+capture 1150 enemy-in
+capture 1280 beam-mid
+
+sample_point spin-exit
+fixture 1100 6878 04 invariant
+bundle_capture 1250 analysis/bundles/sc-combat-beam

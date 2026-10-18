@@ -810,6 +810,43 @@
       "scenario_sha256": "d7468110b080e7b69e922c44aaceb6db4e26d00dd4495de3b4fff22ce6d79146",
       "frame_keys": [],
       "scenario_sha256_note": "场景书 sha（DSL 冻结）"
+    },
+    {
+      "id": "l3-sc-combat-beam",
+      "scenario": "sc-combat-beam",
+      "frames": 1500,
+      "watch": [
+        {
+          "label": "zp",
+          "base": "0000",
+          "range": "0000-00ff"
+        },
+        {
+          "label": "iram",
+          "base": "0100",
+          "range": "0100-07ff"
+        },
+        {
+          "label": "gear",
+          "base": "6878",
+          "range": "6878-6878"
+        }
+      ],
+      "oracle_sha256": "d55cf5717794afb2645e00aea2649fd623cef2eb461ed48154e4f51a5db6e808",
+      "determinism_evidence": "双跑 sha 对锚+gear fixture 写面实证（$6878=04@f1219）+受击 $030A@1401",
+      "scenario_sha256": "c6f430c8d8d7893e8c852658116838ea0d70f7460f84ed843cb570f195c84579",
+      "frame_keys": [],
+      "scenario_sha256_note": "场景书 sha（DSL 冻结）",
+      "legs": {
+        "oracle": {
+          "sample_point": "spin-exit",
+          "rows": 1481,
+          "missing": [],
+          "head_skip": 0,
+          "sha256": "d55cf5717794afb2645e00aea2649fd623cef2eb461ed48154e4f51a5db6e808",
+          "note": "combat 武器变体（beam 面——fixture gear 注入）"
+        }
+      }
     }
   ]
 }
