@@ -898,3 +898,64 @@ mod s1_11_tests {
         assert!(ev.contains(&(0x0308, 0)));
     }
 }
+
+// ---- SC-S1-12 员转写（5 员——TwosCompliment 族）----
+
+/// $C3D4 TwosCompliment（root——簇共根形五）：A=eor #$FF/clc/adc #$01（取负）。
+pub fn s1_twos_compliment(a_in: u8) -> u8 {
+    a_in.wrapping_neg()
+}
+
+/// $D57A 员体：取负+$0309[x]←+双子调（$D609/$D624）+尾跳 $D4F8。
+pub fn s1_d57a_body(a_in: u8, x: u8) -> (Vec<(u16, u8)>, u16) {
+    (vec![(0x0309 + x as u16, s1_twos_compliment(a_in))], 0xD4F8)
+}
+
+/// $F7A7 员体：取负+三 lsr+$02 cmp 段+$0405[x] 位合写。
+pub fn s1_f7a7_body(a_in: u8, x: u8, v06: u8, v0405_x: u8) -> Vec<(u16, u8)> {
+    let v = s1_twos_compliment(a_in) >> 3;
+    let mut ev = Vec::new();
+    if v >= 0x02 {
+        ev.push((0x0405 + x as u16, v0405_x & v06));
+    }
+    ev
+}
+
+/// $F9D9 员体：取负+$0403[x]←+plp 分段（$0402[x] fz 判+表载 $95E0）。
+pub fn s1_f9d9_body(a_in: u8, x: u8, tbl_entry: u8) -> Vec<(u16, u8)> {
+    let v = s1_twos_compliment(a_in);
+    vec![(0x0403 + x as u16, v), (0x6AF9 + x as u16, tbl_entry)]
+}
+
+/// $FB9C 员体：取负+cmp 8/16 双段+位析（Y&1 表比对+$6AF9[x] 写）。
+pub fn s1_fb9c_body(a_in: u8, x: u8, y: u8) -> (Vec<(u16, u8)>, bool) {
+    let v = s1_twos_compliment(a_in);
+    if v < 8 {
+        (vec![], false)
+    } else if v >= 0x10 {
+        (vec![], false) // bcs 回卷段
+    } else {
+        (vec![(0x6AF9 + x as u16, y & 1)], true)
+    }
+}
+
+#[cfg(test)]
+mod s1_12_tests {
+    use super::*;
+
+    /// 五员转写形（取负 root+四壳）。
+    #[test]
+    fn s1_12_units_five() {
+        assert_eq!(s1_twos_compliment(0xFF), 0x01);
+        assert_eq!(s1_twos_compliment(0), 0);
+        assert_eq!(s1_twos_compliment(0x80), 0x80);
+        let (ev, j) = s1_d57a_body(0xFF, 2);
+        assert_eq!(j, 0xD4F8);
+        assert!(ev.contains(&(0x030B, 1)));
+        let ev = s1_f7a7_body(0xF0, 2, 0x0F, 0xFF); // 取负=0x10>>3=2⇒写
+        assert!(ev.contains(&(0x0407, 0x0F)));
+        let ev = s1_f9d9_body(0xFF, 2, 0x55);
+        assert!(ev.contains(&(0x6AFB, 0x55)));
+        assert!(s1_fb9c_body(0xF8, 2, 3).1); // 取负=8⇒中段
+    }
+}

@@ -1075,3 +1075,10 @@ pub fn s1_cluster_11(input: &L2In) -> L2Out {
         ]; if v30d != 6 { v.push((0x0683, 8)); } v }),
     }
 }
+
+// ---- SC-S1-12 簇入口适配（s1_cluster_12 ← bank07:C3D4 TwosCompliment）----
+
+/// s1_cluster_12 适配（$C3D4：eor #$FF/clc/adc #$01——A 取负；无写面；X/Y 透传）。
+pub fn s1_cluster_12(input: &L2In) -> L2Out {
+    L2Out { a: input.a.wrapping_neg(), x: input.x, y: input.y, writes: vec![] }
+}
