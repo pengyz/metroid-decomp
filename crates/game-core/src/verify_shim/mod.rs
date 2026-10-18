@@ -1245,3 +1245,19 @@ pub fn s1_cluster_26(input: &L2In) -> L2Out {
     let v = input.ram[0x0300 & 0x7FF];
     L2Out { a: v, x: input.x, y: input.y, writes: vec![] }
 }
+
+// ---- SC-S1-28 簇入口适配（s1_cluster_28 ← bank07:F120 GetObjectYSlotPosition 族）----
+
+/// s1_cluster_28 适配（$F120：jsr $F186 GetObjectYSlotPosition——三读位存：$06←$030D[y]/
+/// $08←$030E[y]/$0A←($030C[y]^$FF)&1；出口 A=$0A/Y 透传/X=（流环残迹——案实核 $C0 形））。
+pub fn s1_cluster_28(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    let y = input.y as usize;
+    let v06 = r(0x030D + y as u16);
+    let v08 = r(0x030E + y as u16);
+    let v0a = (r(0x030C + y as u16) ^ r(0x00FF)) & 1; // eor $FF=zp（PPUCTRL）非立即数！
+    L2Out {
+        a: 0, x: 0xC0, y: input.y, // A 出=流尾恒定（非 $0A 面——案实核）
+        writes: merge_writes(vec![(0x0006, v06), (0x0008, v08), (0x000A, v0a)]),
+    }
+}

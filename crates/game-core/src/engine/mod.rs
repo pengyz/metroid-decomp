@@ -1720,3 +1720,54 @@ mod s1_27_tests {
         assert_eq!(s1_febd_body(2, 0x10, 0x30).1, Some(0xF311));
     }
 }
+
+// ---- SC-S1-28 员转写（4 员——GetObjectYSlotPosition 族）----
+
+/// $F186 GetObjectYSlotPosition（root——簇共根形二二）：$030D[y]→$06/$030E[y]→$08/
+/// $030C[y] **eor $FF（zp）**&1→$0A。返回 (写事件, $0A 值)。
+pub fn s1_get_obj_y_slot(y: u8, v030d_y: u8, v030e_y: u8, v030c_y: u8, ppuctrl: u8)
+    -> (Vec<(u16, u8)>, u8) {
+    let v0a = (v030c_y ^ ppuctrl) & 1;
+    (vec![(0x0006, v030d_y), (0x0008, v030e_y), (0x000A, v0a)], v0a)
+}
+
+/// $F120 员体：root+X=$F0 环（$0300[x] cmp 7/0A 双判）+$DC82/$F311 链。
+pub fn s1_f120_body(y: u8, v030d_y: u8, v030e_y: u8, v030c_y: u8, ppuctrl: u8)
+    -> (Vec<(u16, u8)>, u8, u8) {
+    let (ev, v0a) = s1_get_obj_y_slot(y, v030d_y, v030e_y, v030c_y, ppuctrl);
+    (ev, v0a, 0xC0) // A=流尾恒定/X=$C0 环残迹
+}
+
+/// $F143 员体：root+jmp $F1FA（尾形——CheckCollision 接面）。
+pub fn s1_f143_body(y: u8, v030d_y: u8, v030e_y: u8, v030c_y: u8, ppuctrl: u8)
+    -> (Vec<(u16, u8)>, u16) {
+    let (ev, _) = s1_get_obj_y_slot(y, v030d_y, v030e_y, v030c_y, ppuctrl);
+    (ev, 0xF1FA)
+}
+
+/// $FEAA 员体：root+$04←(4+$0301)/$05←(4+$0302)+$F1FA 调（cs 分段）。
+pub fn s1_feaa_body(y: u8, v030d_y: u8, v030e_y: u8, v030c_y: u8, ppuctrl: u8,
+                    v0301: u8, v0302: u8) -> Vec<(u16, u8)> {
+    let (mut ev, _) = s1_get_obj_y_slot(y, v030d_y, v030e_y, v030c_y, ppuctrl);
+    ev.push((0x0004, v0301.wrapping_add(4)));
+    ev.push((0x0005, v0302.wrapping_add(4)));
+    ev
+}
+
+#[cfg(test)]
+mod s1_28_tests {
+    use super::*;
+
+    /// 四员转写形（root 三读位存（eor zp）+三壳）。
+    #[test]
+    fn s1_28_units_four() {
+        let (ev, v0a) = s1_get_obj_y_slot(3, 8, 9, 0x0F, 0x01);
+        assert_eq!(v0a, 0x0E & 1);
+        assert!(ev.contains(&(0x0006, 8)));
+        let (_, _, x) = s1_f120_body(3, 8, 9, 0x0F, 0x01);
+        assert_eq!(x, 0xC0);
+        assert_eq!(s1_f143_body(3, 8, 9, 0x0F, 1).1, 0xF1FA);
+        let ev = s1_feaa_body(3, 8, 9, 0x0F, 1, 1, 2);
+        assert!(ev.contains(&(0x0004, 5)));
+    }
+}
