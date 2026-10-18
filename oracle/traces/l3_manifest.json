@@ -455,12 +455,18 @@
             548,
             900
           ],
-          "head_skip": 1,
-          "note": "G4 首切片（移动 RAM 反应面）——spin-exit 迁移后重锚（旧 coverage 面行集：boot [2,4,5,6]+解锁转场 [361-363,542-548]+尾 900）"
+          "head_skip": 0,
+          "note": "G4 首切片（移动 RAM 反应面）——spin-exit 迁移后重锚（旧 coverage 面行集：boot [2,4,5,6]+解锁转场 [361-363,542-548]+尾 900）；【2026-10-18 head_skip 终值】FC 语义 0（同 boot-title 三组合定谳法）"
         },
         "game-core": {
-          "sample_point": null,
-          "note": "porter 10 态收尾（ba73f10）后会师腿——预期前沿=B31B 声引擎分派"
+          "sample_point": "spin-exit",
+          "rows": 898,
+          "missing": [
+            1,
+            2
+          ],
+          "head_skip": 0,
+          "note": "【2026-10-18 声明迁移（槽 3b）】sample_point endFrame 缺省→spin-exit 显式（dump=f3..900 898 行——缝门控修同源）；FC 配对 skip0×skip0=885/885 全等（FC 回绕双解 (0,0)/(1,1)——f 键消歧：双腿同缝=行键即帧键）"
         }
       }
     },

@@ -231,7 +231,13 @@ def load_frames(raw: bytes, where: str, allowed_keys: set[str] | None = None,
 # ③ 行为依赖核查（2026-10-18）：nmikstas 源级 0 处绝对寻址读 $01xx（原始字节扫描
 # 141 命中全假阳=数据巧合）——栈页无「被读作数据」行为依赖。
 # 升级条件：若发现栈区被读作数据（行为依赖）⇒ 升建模卡（jsr/rts 栈写建模转正）。
-INTERRUPT_FRAME_EXCLUDE = (0x0100, 0x01FF)
+# 45641b5 契约修订：排除窗=整栈影子区 $0100-$01FF（3 字节窗废）——
+# **区间判非元组 membership**（实录 bug：in (0x100,0x1FF)=端点相等，中段照比致 $01EB 账外红）
+INTERRUPT_FRAME_EXCLUDE_LO, INTERRUPT_FRAME_EXCLUDE_HI = 0x0100, 0x01FF
+
+
+def _stack_excluded(addr: int) -> bool:
+    return INTERRUPT_FRAME_EXCLUDE_LO <= addr <= INTERRUPT_FRAME_EXCLUDE_HI
 
 
 def n12_gate_errors(root) -> list[str]:
@@ -361,7 +367,7 @@ def compare_frames(left: dict, right: dict, watch: list[dict],
                     if a[i:i + 2] == b[i:i + 2]:
                         continue
                     byte_i = i // 2
-                    if base + byte_i in INTERRUPT_FRAME_EXCLUDE:
+                    if _stack_excluded(base + byte_i):
                         excluded_hits += 1
                         continue
                     return (f"游戏帧 {k + lh} 字段 {label} 分歧 @{label}(${base:04X})"
@@ -382,7 +388,7 @@ def compare_frames(left: dict, right: dict, watch: list[dict],
                 if a[i:i + 2] == b[i:i + 2]:
                     continue
                 byte_i = i // 2
-                if base + byte_i in INTERRUPT_FRAME_EXCLUDE:
+                if _stack_excluded(base + byte_i):
                     excluded_hits += 1   # 中排除面：计数、不判分歧（§8.1②）
                     continue
                 return (f"frame {f} 字段 {label} 分歧 @{label}(${base:04X})+0x{byte_i:03X}"
@@ -589,7 +595,7 @@ def main() -> int:
                 declared["head_skip"] = {"left": lo_leg.get("head_skip", 0),
                                          "right": gc_leg.get("head_skip", 0)}
         divergence, excluded_hits = compare_frames(left, right, watch, declared)
-        excl_note = (f"（栈页中断帧面排除 {excluded_hits} 处分歧 $01FC-$01FE——§8.1②，显式打印）"
+        excl_note = (f"（栈影子区排除 {excluded_hits} 处分歧 $0100-$01FF——45641b5 整栈窗，显式打印）"
                      if excluded_hits else "")
         # task-29 (ii)：占位臂缺口记账排除面（principled 非静默——记账源=模型自记
         # DIVERGENCES 面；账内分歧=容忍+全打印（路线图）；**账外/账清照红**=防绿底线；
