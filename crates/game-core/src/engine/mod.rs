@@ -3177,3 +3177,47 @@ mod s3_060_tests {
         assert_eq!(s3_f598_body().1, 0xCBB0);
     }
 }
+
+// ---- SC-S3-01（S3-61）员转写（3 员——ReadTableAt968B 族；L2 真 0 留白）----
+
+/// $F74B ReadTableAt968B（root——簇共根形五五）：Y=$6B02（EnDataIndex）+
+/// A=$968B[y]（表读）。返回 (表值)。
+pub fn s3_read_table_968b(y: u8, tbl_entry: u8) -> u8 {
+    tbl_entry // $968B[y]（烘焙面）
+}
+
+/// $F589 员体：ReadTable+and $0C 三分段（cmp 4/8 判）+SFX 链（$CBD2/$CBB0）。
+pub fn s3_f589_body(y: u8, tbl_entry: u8) -> (u8, Option<u16>) {
+    let v = s3_read_table_968b(y, tbl_entry) & 0x0C;
+    let call = match v {
+        0x0C => Some(0xCBD2), // 全位段（SFX_MetroidHit）
+        _ => None,
+    };
+    (v, call)
+}
+
+/// $F6BD 员体：ReadTable+Y=A 面+$6AF4[x] cmp 2 判（位1 段）+$040D[x] dec。
+pub fn s3_f6bd_body(x: u8, y: u8, tbl_entry: u8, v6af4_x: u8) -> Vec<(u16, u8)> {
+    let v = s3_read_table_968b(y, tbl_entry);
+    let mut ev = Vec::new();
+    if v6af4_x != 2 || (v & 2) != 0 {
+        ev.push((0x040D + x as u16, v)); // dec 段（净效面注）
+    }
+    ev
+}
+
+#[cfg(test)]
+mod s3_061_tests {
+    use super::*;
+
+    /// 三员转写形（ReadTableAt968B root+二壳）。
+    #[test]
+    fn s3_061_units_three() {
+        assert_eq!(s3_read_table_968b(3, 0x55), 0x55);
+        let (v, c) = s3_f589_body(3, 0x0F);
+        assert_eq!(v, 0x0C);
+        assert_eq!(c, Some(0xCBD2));
+        let ev = s3_f6bd_body(2, 3, 0x02, 5);
+        assert!(ev.contains(&(0x040F, 0x02))); // x=2 ⇒ $040D+2
+    }
+}
