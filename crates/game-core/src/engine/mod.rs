@@ -4596,3 +4596,36 @@ mod s4_097_tests {
         assert!(ev2.contains(&(0x0302, 0xF7)));
     }
 }
+
+// ---- SC-S4-08（S4-98）员转写（2 员——IsBlastTile 族；L2 真 0 留白）----
+
+/// $E9C2 IsBlastTile（root——簇共根形九二·**S4-06 $E9BE 同族**）：Y=A+95BD 调
+/// （S4-05 接面）+cmp $98 段+$0500[x] 环（$F1F4——S2-21 接面）。
+/// 返回 (可破, 判段)。
+pub fn s4_is_blast_tile(a_in: u8, v98: u8) -> (bool, bool) {
+    (a_in < v98, false) // cmp 段（同族面）
+}
+
+/// $D779 员体：IsBlastTile+尾段（指针构（$04←$0A+A/$05←$0B+进位——S1-14/$D78B 族）
+/// +jmp $D798（S1-13 接面））。
+pub fn s4_d779_body(a_in: u8, v98: u8, v0a: u8, v0b: u8) -> (Vec<(u16, u8)>, u8) {
+    let (ok, _) = s4_is_blast_tile(a_in, v98);
+    let (lo, carry) = v0a.overflowing_add(a_in);
+    (vec![(0x0004, lo), (0x0005, v0b.wrapping_add(if carry { 1 } else { 0 }))], if ok { 1 } else { 0 })
+}
+
+#[cfg(test)]
+mod s4_098_tests {
+    use super::*;
+
+    /// 二员转写形（IsBlastTile root+一壳）。
+    #[test]
+    fn s4_098_units_two() {
+        assert_eq!(s4_is_blast_tile(5, 10), (true, false));
+        assert_eq!(s4_is_blast_tile(15, 10), (false, false));
+        let (ev, v) = s4_d779_body(5, 10, 0x10, 0x20);
+        assert_eq!(v, 1);
+        assert!(ev.contains(&(0x0004, 0x15)));
+        assert!(ev.contains(&(0x0005, 0x20)));
+    }
+}
