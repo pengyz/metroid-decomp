@@ -41,12 +41,11 @@
         },
         "game-core": {
           "sample_point": "spin-exit",
-          "rows": 297,
-          "note": "帧键统一（task-29 b2）：tick 序号键→场景帧号语义（行序+FC 自校验）；head_skip=0；尾部多 3 行（GF 295-297/tick 298-300）随对齐交集显式。",
+          "rows": 298,
+          "note": "帧键统一（task-29 b2）：tick 序号键→场景帧号语义（行序+FC 自校验）；head_skip=0；尾部多 3 行（GF 295-297/tick 298-300）随对齐交集显式。；【2026-10-18 行集同步】缝门控修（PostSpin+MainLoop）后 dump=f3..300（298 行/缺 [1,2]）——与 dump 同步 strict 面转",
           "missing": [
             1,
-            2,
-            3
+            2
           ],
           "head_skip": 0
         }
