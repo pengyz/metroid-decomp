@@ -221,8 +221,15 @@ pub fn read_joy_pads(mem: &mut FrameMemory) {
         mem.write_ram(0x0000, old); // $00=前值（scratch 面）
         mem.write_ram(status_addr, new); // `sta Joy1Status,x`
         if new ^ old != 0 {
-            // 变更路径（Joy1Change/$12 面——输入场景件，task-11 引爆）
-            crate::unported!("bank07:C23x-change");
+            // 变更路径（**asm 内容锚** C23x——B 按钮摘除技巧+变更掩码+delay 重置）：
+            // `lda $00/and #~BUTTON_B/sta $00/eor Joy1Status`（B 摘除域形）→
+            // `and Joy1Status/sta Joy1Change,x/sta Joy1Retrig,x`（变更掩码双写）→
+            // `ldy #$20`（变更重置率）→同键检（≠→跳 dec）→`sty RetrigDelay1,x`（$20）。
+            let b_removed = old & !0x40; // ~BUTTON_B（$40=B）
+            let changed = (b_removed ^ new) & new;
+            mem.write_ram(crate::memmap::title_state::JOY1_CHANGE + idx, changed);
+            mem.write_ram(crate::memmap::title_state::JOY1_RETRIG + idx, changed);
+            mem.write_ram(0x0018 + idx, 0x20); // 变更重置率 $20
         } else {
             // 同键路径（asm C24D+：`lda Joy1Status/x/cmp $00/bne` 同→`dec RetrigDelay1,x`
             // ——**B 案 $18 机理**：清零后每 NMI dec（0→FF→FE…）；归零→重触发 sty $20
@@ -498,10 +505,11 @@ mod tests {
         assert_eq!(m.read_ram(JOY1_STATUS), 0);
         assert_eq!(m.read_ram(JOY2_STATUS), 0);
         assert_eq!(m.read_ram(0x0001), 1); // pad # scratch 终态
-        m.joy1 = 0x20; // A 键（输入场景）
-        let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| read_joy_pads(&mut m)));
-        let msg = panic_message(&r.unwrap_err());
-        assert!(msg.contains("unported @ bank07:C23x-change"), "引爆点失准: {msg}");
+        m.joy1 = 0x20; // 按钮按下（输入场景——变更路已折）
+        read_joy_pads(&mut m);
+        // 变更路效果：Change/Retrig←掩码 + delay←$20 重置
+        assert_eq!(m.read_ram(crate::memmap::title_state::JOY1_CHANGE), 0x20);
+        assert_eq!(m.read_ram(0x0018), 0x20); // 变更重置率
     }
 
     /// 走带镜像测：生产→消费对偶（$FF 增量位更新+尾跳 C29A——结构互核注①③面）。

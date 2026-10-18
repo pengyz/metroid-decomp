@@ -94,6 +94,14 @@ pub const SAMUS_AGE: u16 = 0x687D;
 /// 回环位面（T45-4 考证窗核心））。
 pub const SAMUS_GEAR: u16 = 0x6878;
 
+/// InitializeStats 清零族（prg0_title `InitializeStats: ; 00:932B`——13 写面）。
+pub const SAMUS_STAT00: u16 = 0x6871;
+pub const ENERGY_TANK_COUNT: u16 = 0x6874;
+pub const MISSILE_COUNT: u16 = 0x6876;
+pub const MAX_MISSILES: u16 = 0x6877;
+pub const AT_ENDING: u16 = 0x69B2;
+pub const BANK_SWITCH_PENDING: u16 = 0x0028;
+
 /// SamusInvincibleDelay=$70（constants_ram 内容锚「Samus's invincibility frames delay
 /// counter」——受击 50 帧闪烁面）。
 pub const SAMUS_INVINCIBLE_DELAY: u16 = 0x0070;

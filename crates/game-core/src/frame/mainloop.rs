@@ -43,6 +43,48 @@ pub fn random_numbers(mem: &mut FrameMemory) {
     mem.regs.a = n1;
 }
 
+
+/// MainRoutinePtrTable 烘焙（07:C141——10 项；表址自证）。
+const MAIN_ROUTINE_PTR_TABLE: [u16; 10] = [
+    0xC801, 0xC81D, 0xC8D1, 0xC92B, 0xC9A6, // AreaInit/MoreInit/SamusInit/GameEngine/PrepareGameOver
+    0xC9B1, 0xC9C4, 0xC155, 0xC9D7, 0xC494, // PauseMode/GoPassword/IncrementRoutine/SamusIntro/WaitTimer
+];
+
+/// 游戏侧主例程分发（**asm 内容锚**——T45-3 移动臂首靶；C11B+ 面）：
+/// START 检查（暂停切换）→`lda MainRoutine($1E)/jsr JumpEngine`→MainRoutinePtrTable
+/// 10 项分派。未武装臂=per-entry 爆（移动臂迭代分类面）。
+pub fn game_main_routine(mem: &mut FrameMemory) {
+    let mr = mem.read_ram(crate::ram_map::MAIN_ROUTINE);
+    if (mr as usize) < 10 {
+        let target = MAIN_ROUTINE_PTR_TABLE[mr as usize];
+        // JumpEngine 指针写（$0C/$0D——同标题面）
+        mem.write_ram(0x000C, target as u8);
+        mem.write_ram(0x000D, (target >> 8) as u8);
+    }
+    match mr {
+        0 => area_init(mem), // AreaInit（已端口——移动臂迭代驱动首件）
+        _ => {
+            let loc = format!("bank07:{:04X}", MAIN_ROUTINE_PTR_TABLE.get(mr as usize).copied().unwrap_or(0));
+            crate::unported!(&loc); // 其余态（MoreInit 起——迭代分类）
+        }
+    }
+}
+
+/// AreaInit（**asm 内容锚** `AreaInit: ; 07:C801`——游戏侧区域初始化）：
+/// `ScrollX($26)/ScrollY($25)←0`/`PPUCTRL_ZP($FF)&=$FC`（名表 0）/`inc MainRoutine`
+/// （→MoreInit）/`ABStatus←Joy1Status&(A|B)`/`jsr EraseAllSprites`（C1A3 已折）/
+/// `lda #$10/jsr IsEngineRunning`（CA18——页切检桩）。
+pub fn area_init(mem: &mut FrameMemory) {
+    mem.write_ram(crate::ram_map::SCROLL_X, 0);
+    mem.write_ram(crate::ram_map::SCROLL_Y, 0);
+    let ff = mem.read_ram(crate::ram_map::PPUCTRL_ZP) & 0xFC;
+    mem.write_ram(crate::ram_map::PPUCTRL_ZP, ff);
+    mem.write_ram(crate::ram_map::MAIN_ROUTINE, mem.read_ram(crate::ram_map::MAIN_ROUTINE).wrapping_add(1));
+    let ab = mem.read_ram(crate::memmap::title_state::JOY1_STATUS) & 0xC0;
+    mem.write_ram(0x0027, ab); // ABStatus（:254 族）
+    crate::frame::boot::c1a3_unit(mem); // EraseAllSprites（已折）
+    crate::unported!("bank07:CA18"); // IsEngineRunning（页切检——随件）
+}
 /// UpdateTimer 单元（**asm 内容锚**）——`UpdateTimer: ; 07:C266`：TimerDelay 预分频
 /// （dec/bpl——10 帧节拍，归零重置 9 并含 Timer3）→ Timer1/2/3 非零递减。
 pub fn update_timer(mem: &mut FrameMemory) {
@@ -69,7 +111,7 @@ pub fn go_main_routine(mem: &mut FrameMemory) {
         super::title_bridge::main_title_routine(mem); // **会师接线**（bank00:8000 穿越）
         return; // 标题路终（asm：`jmp MainTitleRoutine` 尾跳语义）
     }
-    crate::unported!("bank07:C11B-game"); // 游戏面（START 检查/主例程分发——task-11 面）
+    game_main_routine(mem); // 游戏侧分发（C11B+——T45-3 移动臂首靶）
 }
 
 #[cfg(test)]

@@ -44,6 +44,21 @@ pub fn main_title_routine(mem: &mut FrameMemory) {
         mem.write_ram(0x000C, target as u8);
         mem.write_ram(0x000D, (target >> 8) as u8);
     }
+    // **MainTitleRoutine 头**（$8000-$8027 分派头——port2 契约：头在 JumpEngine 前跑）：
+    // `cmp #$15/bcs`+`lda Joy1Change/and #$10/beq`→hit⇒TitleRoutine←$1B（**0x15/0x1B
+    // 共体双入口**——$90BA）+四 spare 清（$D1/$BB/$B7/$B8）+$FF&=$FC（名表 0）。
+    let cursor = mem.read_ram(crate::ram_map::TITLE_ROUTINE); // 当前相位（头检面）
+    let (head_hit, head_events, head_new) = crate::title::title_tick_head(
+        cursor,
+        mem.read_ram(crate::memmap::title_state::JOY1_CHANGE),
+        mem.read_ram(crate::ram_map::PPUCTRL_ZP),
+    );
+    if head_hit {
+        for (addr, val) in head_events {
+            mem.write_ram(addr, val);
+        }
+        mem.write_ram(crate::ram_map::TITLE_ROUTINE, head_new); // 0x1B 落位
+    }
     let step = crate::title::dispatch_step(&face);
     mem.title_cursor = step.next_cursor; // 跨帧游标存回（>0=spin 续点/0=完成复位）
     if let Some(addr) = step.unported {
@@ -66,8 +81,26 @@ pub fn main_title_routine(mem: &mut FrameMemory) {
         mem.regs.y = y;
     }
     if let Some(addr) = step.jumped {
-        let loc = format!("bank00:{addr:04X}-jump");
-        crate::unported!(&loc); // 跳转出口（InitializeStats/CheckPassword 转接面——随接）
+        if addr == 0x932B {
+            // InitializeStats（**asm 内容锚** `InitializeStats: ; 00:932B`——游戏启动
+            // 统计面）：13 写清零（SamusStat00/EnergyTankCount/SamusGear/MissileCount/
+            // MaxMissiles/KraidStatueStatus/RidleyStatueStatus/SamusAge×4/AtEnding/
+            // JustInBailey）+`BankSwitchPending($28)←2`（Brinstar 页切换）。
+            for a in [
+                crate::ram_map::SAMUS_STAT00, crate::ram_map::ENERGY_TANK_COUNT,
+                crate::ram_map::SAMUS_GEAR, crate::ram_map::MISSILE_COUNT,
+                crate::ram_map::MAX_MISSILES, 0x687B, 0x687C,
+                crate::ram_map::SAMUS_AGE, crate::ram_map::SAMUS_AGE + 1,
+                crate::ram_map::SAMUS_AGE + 2, crate::ram_map::SAMUS_AGE + 3,
+                crate::ram_map::AT_ENDING, crate::ram_map::JUST_IN_BAILEY,
+            ] {
+                mem.write_ram(a, 0);
+            }
+            mem.write_ram(crate::ram_map::BANK_SWITCH_PENDING, 2);
+        } else {
+            let loc = format!("bank00:{addr:04X}-jump");
+            crate::unported!(&loc); // 其余跳转出口（CheckPassword 转接面——随接）
+        }
     }
 }
 

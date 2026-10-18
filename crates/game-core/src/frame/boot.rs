@@ -221,6 +221,21 @@ pub fn c4de_unit(mem: &mut FrameMemory) {
     // B 案 $0A/$0B=$C531 对形；InitBank0=$C531）
     mem.write_ram(0x000A, 0x31);
     mem.write_ram(0x000B, 0xC5);
+    // **$28 运行时派发**（C4DE：`ldy BankSwitchPending/beq RTS/jsr CheckBankSwitch_OK
+    // /jmp GoBankInit`——**GameMode←0=InitBank2（$C583）写点**（移动臂游戏启动链））。
+    let pending = mem.read_ram(crate::ram_map::BANK_SWITCH_PENDING);
+    if pending != 0 {
+        mem.write_ram(crate::ram_map::BANK_SWITCH_PENDING, 0); // CheckBankSwitch_OK 清
+        mem.write_ram(0x0028 + 1, pending.wrapping_sub(1)); // CurrentBank（$29）
+        if pending == 2 {
+            // InitBank2（asm `InitBank2: ; 07:C583`：`lda #$00/sta GameMode`（Play！）/
+            // `jsr ScreenNmiOff`/`jsr InitNorfairGFX`/`jmp NMIOn`）
+            mem.write_ram(crate::ram_map::GAME_MODE, 0);
+            mem.write_ram(crate::ram_map::NMI_STATUS, 1); // ScreenNmiOff 域形
+        } else {
+            crate::unported!("bank07:C552-init"); // 其余 bank init（随件）
+        }
+    }
     // InitBank0 星拷（asm：IntroStarsData（$98C0 ROM）→WRAM $6E00-$6E9F——B 案
     // 精灵页 $0260 源面；`LoadStarSprites: ; 00:98AE` 注「loaded into RAM $6E00 thru
     // $6E9F in InitBank0 routine」自证）。
