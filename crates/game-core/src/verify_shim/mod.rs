@@ -1714,3 +1714,17 @@ pub fn s3_cluster_068(_input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-S3-10 簇入口适配（s3_cluster_070 ← bank07:CF77 SetSamusPntUp）----
+
+/// s3_cluster_070 适配（$CF77 SetSamusPntUp——案实核恒定 7 写（$0300←4/
+/// $0305/$0306←$27（SetSamusAnim）/清组 4）；A=0/X 透传/Y=0）。
+pub fn s3_cluster_070(input: &L2In) -> L2Out {
+    L2Out {
+        a: 0, x: input.x, y: 0,
+        writes: merge_writes(vec![
+            (0x0300, 4), (0x0304, 0), (0x0305, 39), (0x0306, 39),
+            (0x0309, 0), (0x0313, 0), (0x0315, 0),
+        ]),
+    }
+}
