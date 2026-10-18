@@ -1619,3 +1619,19 @@ pub fn s3_cluster_063(input: &L2In) -> L2Out {
         writes: merge_writes(vec![(0x0405 + input.x as u16, 0)]),
     }
 }
+
+// ---- SC-S3-04 簇入口适配（s3_cluster_064 ← bank07:F96A EnProjectile 族）----
+
+/// s3_cluster_064 适配（$FA5B EnemyBecomePickupIfHit 链——**三依存同源**（ram[\$0400]：
+/// \$02←直值/\$04←&\$40/\$05←(>>6&7)|\$60）；A/X/Y=0）。
+pub fn s3_cluster_064(input: &L2In) -> L2Out {
+    let v = input.ram[0x0400 & 0x7FF];
+    L2Out {
+        a: 0, x: 0, y: 0,
+        writes: merge_writes(vec![
+            (0x0002, v), (0x0003, 0),
+            (0x0004, v & 0x40), (0x0005, ((v >> 6) & 7) | 0x60),
+            (0x000B, 0),
+        ]),
+    }
+}

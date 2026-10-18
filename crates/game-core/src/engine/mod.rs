@@ -3305,3 +3305,50 @@ mod s3_063_tests {
         assert!(!ev2.contains(&(0x0082, 2)));
     }
 }
+
+// ---- SC-S3-04（S3-64）员转写（3 员——EnProjectile 族）----
+
+/// $FA5B EnemyBecomePickupIfHit（root——簇共根形五八）：$0404[x] 判（beq 段）
+/// （命中⇒$0404[x]←0/$6AF4[x]←5 转化）+$6AF7[x] cmp $F7 段（dec）。
+/// 返回 (写事件, 转化与否)。
+pub fn s3_become_pickup(x: u8, v0404_x: u8) -> (Vec<(u16, u8)>, bool) {
+    if v0404_x != 0 {
+        (vec![(0x0404 + x as u16, 0), (0x6AF4 + x as u16, 5)], true) // 转化面
+    } else {
+        (vec![], false)
+    }
+}
+
+/// $F96A UpdateEnProjectile_Resting：EnemyBecomePickupIfHit+$FA1E 调+$6AF4[x] 判
+/// （$FA60 调）+尾跳（$E094 面）。
+pub fn s3_f96a_body(x: u8, v0404_x: u8) -> (Vec<(u16, u8)>, bool) {
+    s3_become_pickup(x, v0404_x)
+}
+
+/// $F991 UpdateEnProjectile_Active：EnemyBecomePickupIfHit+$040A[x] and $FE+
+/// $97A7[y] 表载→$0A/$0B 指针面。
+pub fn s3_f991_body(x: u8, v0404_x: u8, tbl_lo: u8, tbl_hi: u8) -> Vec<(u16, u8)> {
+    let (mut ev, _) = s3_become_pickup(x, v0404_x);
+    ev.push((0x000A, tbl_lo));
+    ev.push((0x000B, tbl_hi));
+    ev
+}
+
+#[cfg(test)]
+mod s3_064_tests {
+    use super::*;
+
+    /// 三员转写形（EnemyBecomePickupIfHit root+二壳）。
+    #[test]
+    fn s3_064_units_three() {
+        let (ev, t) = s3_become_pickup(2, 5);
+        assert!(t);
+        assert!(ev.contains(&(0x0406, 0)));
+        assert!(ev.contains(&(0x6AF6, 5)));
+        assert!(!s3_become_pickup(2, 0).1);
+        let (ev, _) = s3_f96a_body(2, 5);
+        assert_eq!(ev.len(), 2);
+        let ev = s3_f991_body(2, 5, 0x55, 0x66);
+        assert!(ev.contains(&(0x000B, 0x66)));
+    }
+}
