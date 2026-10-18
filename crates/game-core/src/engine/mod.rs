@@ -1402,3 +1402,42 @@ mod s1_20_tests {
         assert_eq!(s1_d73e_body(0x72, 0), 0x72);
     }
 }
+
+// ---- SC-S1-21 员转写（4 员——StoreEnemyPositionToTemp 族）----
+
+/// $E792 StoreEnemyPositionToTemp（root——簇共根形十四）：$0401[x]→$09/$0400[x]→$08/
+/// $6AFB[x]→$0B（敌位置暂存三写）。
+pub fn s1_store_enemy_pos(x: u8, v0401_x: u8, v0400_x: u8, v6afb_x: u8) -> Vec<(u16, u8)> {
+    vec![(0x0009, v0401_x), (0x0008, v0400_x), (0x000B, v6afb_x)]
+}
+
+/// $E789 员体：root+$6AF6[x] 读+尾跳 $E7BD（pos 面三写+续流）。
+pub fn s1_e789_body(x: u8, v0401_x: u8, v0400_x: u8, v6afb_x: u8) -> (Vec<(u16, u8)>, u16) {
+    (s1_store_enemy_pos(x, v0401_x, v0400_x, v6afb_x), 0xE7BD)
+}
+
+/// $E906 员体：root+$6AF5[y] 读+尾跳 $E89B（$02 符号段注）。
+pub fn s1_e906_body(x: u8, v0401_x: u8, v0400_x: u8, v6afb_x: u8) -> (Vec<(u16, u8)>, u16) {
+    (s1_store_enemy_pos(x, v0401_x, v0400_x, v6afb_x), 0xE89B)
+}
+
+/// $F91F 员体：root+A→Y 暂存+尾跳 $FA49（$FD8F 加法 root 调——姊妹形注）。
+pub fn s1_f91f_body(x: u8, v0401_x: u8, v0400_x: u8, v6afb_x: u8) -> (Vec<(u16, u8)>, u16) {
+    (s1_store_enemy_pos(x, v0401_x, v0400_x, v6afb_x), 0xFA49)
+}
+
+#[cfg(test)]
+mod s1_21_tests {
+    use super::*;
+
+    /// 四员转写形（StoreEnemyPositionToTemp root+三壳）。
+    #[test]
+    fn s1_21_units_four() {
+        let ev = s1_store_enemy_pos(2, 8, 9, 10);
+        assert!(ev.contains(&(0x0009, 8)));
+        assert!(ev.contains(&(0x000B, 10)));
+        assert_eq!(s1_e789_body(2, 8, 9, 10).1, 0xE7BD);
+        assert_eq!(s1_e906_body(2, 8, 9, 10).1, 0xE89B);
+        assert_eq!(s1_f91f_body(2, 8, 9, 10).1, 0xFA49);
+    }
+}

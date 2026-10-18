@@ -1169,3 +1169,20 @@ pub fn s1_cluster_18(_input: &L2In) -> L2Out {
 pub fn s1_cluster_20(input: &L2In) -> L2Out {
     L2Out { a: input.x, x: input.x, y: 0, writes: vec![] }
 }
+
+// ---- SC-S1-21 簇入口适配（s1_cluster_21 ← bank07:E789 StoreEnemyPositionToTemp 族）----
+
+/// s1_cluster_21 适配（$E789：jsr $E792 StoreEnemyPositionToTemp——三写位存：
+/// $09←$0401[x]/$08←$0400[x]/$0B←$6AFB[x]；出口 A=（末值面）/X/Y 透传）。
+pub fn s1_cluster_21(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    let w = |off: usize| input.wram.get(off).copied().unwrap_or(0);
+    let x = input.x as usize;
+    let v09 = r(0x0401 + x as u16);
+    let v08 = r(0x0400 + x as u16);
+    let v0b = w(0xAFB + x); // $6AFB[x]（wram 域面）
+    L2Out {
+        a: v0b, x: input.x, y: input.y,
+        writes: merge_writes(vec![(0x0009, v09), (0x0008, v08), (0x000B, v0b)]),
+    }
+}
