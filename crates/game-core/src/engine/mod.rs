@@ -3099,3 +3099,45 @@ mod s2_058_tests {
         assert!(ev.contains(&(0x6AF6, 0x3F)));
     }
 }
+
+// ---- SC-S2-29（S2-59）员转写（3 员——LF515 族）----
+
+/// $F515 LF515（root——簇共根形五三）：$040C[x]←A/$6AF4[x]←4（状态写对）。
+pub fn s2_lf515(x: u8, a_in: u8) -> (Vec<(u16, u8)>, u8) {
+    (vec![(0x040C + x as u16, a_in), (0x6AF4 + x as u16, 4)], 4)
+}
+
+/// $F50B 员体：LF515+栈操作族（pha/pla）+尾跳 $F423（A=$A0 面——S1-11 同构）。
+pub fn s2_f50b_body(x: u8, a_in: u8) -> (Vec<(u16, u8)>, u16) {
+    let (ev, _) = s2_lf515(x, a_in);
+    (ev, 0xF423)
+}
+
+/// $F554 员体：LF515+$040D[x]←$40+$80B0 调（S1-02 接面）+位5 判段（$040B[x]←5）。
+pub fn s2_f554_body(x: u8, a_in: u8, v80b0: u8) -> (Vec<(u16, u8)>, u16) {
+    let (mut ev, _) = s2_lf515(x, a_in);
+    ev.push((0x040D + x as u16, 0x40));
+    if v80b0 & 0x20 != 0 {
+        ev.push((0x040B + x as u16, 5));
+    }
+    (ev, 0x95A8)
+}
+
+#[cfg(test)]
+mod s2_059_tests {
+    use super::*;
+
+    /// 三员转写形（LF515 root 写对+二壳）。
+    #[test]
+    fn s2_059_units_three() {
+        let (ev, v) = s2_lf515(2, 45);
+        assert_eq!(v, 4);
+        assert!(ev.contains(&(0x040E, 45)));
+        assert!(ev.contains(&(0x6AF6, 4)));
+        assert_eq!(s2_f50b_body(2, 45).1, 0xF423);
+        let (ev, j) = s2_f554_body(2, 45, 0x20);
+        assert_eq!(j, 0x95A8);
+        assert!(ev.contains(&(0x040F, 0x40)));
+        assert!(ev.contains(&(0x040D, 5)));
+    }
+}
