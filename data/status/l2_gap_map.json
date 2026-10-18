@@ -57,6 +57,20 @@
       "reason": "深径多路（$0200 区写族 100-220 项——S1-17 同款跨卡效应链（S1-05 深径））——golden 含他卡效应=正常",
       "exit": "源卡 S1-05 深径建模落→账清转 strict",
       "registered": "2026-10-19"
+    },
+    {
+      "id": "SC-S2-043-XDOMAIN-VRAM",
+      "case_prefix": "s2-043-case",
+      "reason": "全 8 案深径：$07A0-$07EF VRAM 缓冲写族（80B vram_struct 面）=**S6/title 已折域效应**（跨域账目形——显示链机件效应（DisplayInputCharacters/vram_struct 族））",
+      "exit": "S6/title 显示链建模清（VRAM 缓冲写族接线）→账清转 strict",
+      "registered": "2026-10-19"
+    },
+    {
+      "id": "SC-S2-043-XCARD-MOVE",
+      "case_prefix": "s2-043-case",
+      "reason": "全 8 案深径：$00-$06 zp 工作面+残迹 regs 变=移动链效应（跨卡账目形——S1-05 族）",
+      "exit": "源卡移动链建模清→账清转 strict",
+      "registered": "2026-10-19"
     }
   ]
 }

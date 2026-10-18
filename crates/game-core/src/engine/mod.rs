@@ -2421,3 +2421,48 @@ mod s2_042_tests {
         assert!(ev.contains(&(0x0404, 0x55)));
     }
 }
+
+// ---- SC-S2-13（S2-43）员转写（3 员——$832F 符号扩展族）----
+
+/// $832F 符号扩展帮手（root——簇共根形三七）：tax/and $08（符号位 php）/and $07
+/// （值 3 位）/plp/beq+3/**jsr TwosCompliment**（负⇒取负）/sta $00。
+/// 返回 (写事件, 值)。
+pub fn s2_sign_extend(a_in: u8) -> (Vec<(u16, u8)>, u8) {
+    let sign = a_in & 0x08 != 0;
+    let v3 = a_in & 0x07;
+    let v = if sign { v3.wrapping_neg() } else { v3 };
+    (vec![(0x0000, v)], v)
+}
+
+/// $D56A 员体：$832F+$4B X 载+$0309[x]←+Y=A+$0502[x] lsr/bcs 段（取负条件调）。
+pub fn s2_d56a_body(x: u8, a_in: u8, v0502_x: u8) -> Vec<(u16, u8)> {
+    let (mut ev, v) = s2_sign_extend(a_in);
+    ev.push((0x0309 + x as u16, if v0502_x & 1 != 0 { v.wrapping_neg() } else { v }));
+    ev
+}
+
+/// $F9C8 员体：$832F+$4B X 载+$0403[x]←+$040A[x] lsr/php 段（取负条件形）。
+pub fn s2_f9c8_body(x: u8, a_in: u8, v040a_x: u8) -> Vec<(u16, u8)> {
+    let (mut ev, v) = s2_sign_extend(a_in);
+    ev.push((0x0403 + x as u16, if v040a_x & 1 != 0 { v.wrapping_neg() } else { v }));
+    ev
+}
+
+#[cfg(test)]
+mod s2_043_tests {
+    use super::*;
+
+    /// 三员转写形（$832F 符号扩展 root+二壳）——本卡自身效应独立盖。
+    #[test]
+    fn s2_043_units_three() {
+        let (ev, v) = s2_sign_extend(0x05);
+        assert_eq!(v, 5);
+        assert!(ev.contains(&(0x0000, 5)));
+        let (_, v2) = s2_sign_extend(0x0D); // 符号位⇒取负
+        assert_eq!(v2, 0xFB); // -5
+        let ev = s2_d56a_body(2, 5, 1);
+        assert!(ev.contains(&(0x030B, 0xFB))); // 取负条件
+        let ev = s2_f9c8_body(2, 5, 0);
+        assert!(ev.contains(&(0x0405, 5)));
+    }
+}
