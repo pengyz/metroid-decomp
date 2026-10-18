@@ -32,11 +32,13 @@ pub struct FrameMemory {
     pub joy1: u8,
     /// 手柄 2 输入面。
     pub joy2: u8,
+    /// 渲染态（S6-6/7 建模+S6-10 喂入面——L4 视觉腿底座）。
+    pub render: crate::frame::render::RenderState,
 }
 
 impl Default for FrameMemory {
     fn default() -> Self {
-        Self { ram: [0; 0x800], wram: [0; 0x2000], regs: Registers::default(), nmi_enabled: false, title_cursor: 0, joy1: 0, joy2: 0 }
+        Self { ram: [0; 0x800], wram: [0; 0x2000], regs: Registers::default(), nmi_enabled: false, title_cursor: 0, joy1: 0, joy2: 0, render: crate::frame::render::RenderState::default() }
     }
 }
 
@@ -64,8 +66,16 @@ impl FrameMemory {
     /// IO/寄存器面写（PPU/APU/手柄——**不入 RAM**：write_ram 的 2KB 镜像归一会把
     /// $2000 等寄存器址漏进 RAM $0000——本方法是寄存器面唯一入口；渲染面建模挂点=task-13）。
     pub fn write_io(&mut self, addr: u16, v: u8) {
-        if addr == 0x2000 {
-            self.nmi_enabled = v & 0x80 != 0; // PPUCTRL bit7=NMI 使能（hardware.asm:28）
+        match addr {
+            0x2000 => self.nmi_enabled = v & 0x80 != 0, // PPUCTRL bit7=NMI（hardware.asm:28）
+            0x2006 => self.render.write_reg_2006(v),   // PPUADDR flip-flop（S6-10 接线）
+            0x2007 => {
+                // PPUDATA→RenderState 喂入（S6-10 ①——840ad00 建模件运行时喂入面）
+                // 增量位=PPUCTRL bit2（1/32）——从 ram $FF 读
+                let inc = if self.ram[0x00FF] & 0x04 != 0 { 32u16 } else { 1u16 };
+                self.render.write_ppudata(v, inc);
+            }
+            _ => {} // 其余寄存器面 S5 骨架暂不建模
         }
         // 其余寄存器面 S5 骨架暂不建模（RAM watch 不可见）；渲染面挂 task-13
     }
@@ -82,6 +92,22 @@ impl FrameMemory {
     }
 }
 
+
+    /// 【S6-10 接线】write_io PPU 面喂入 RenderState（$2006 flip-flop+$2007 分域）。
+    #[test]
+    fn write_io_feeds_render_state() {
+        let mut m = FrameMemory::default();
+        m.write_io(0x2006, 0x10); // hi
+        m.write_io(0x2006, 0x00); // lo → $1000
+        m.write_io(0x2007, 0xAB); // CHR 写
+        assert_eq!(m.render.chr[0x1000], 0xAB);
+        m.write_io(0x2006, 0x20);
+        m.write_io(0x2006, 0x00); // $2000
+        m.ram[0x00FF] = 0x04; // 32 增量
+        m.write_io(0x2007, 0xCD); // 名表写+32 步进
+        assert_eq!(m.render.nametable[0], 0xCD);
+        assert_eq!(m.render.ppuaddr, 0x2020);
+    }
 #[cfg(test)]
 mod tests {
     use super::*;

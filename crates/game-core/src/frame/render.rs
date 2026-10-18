@@ -17,11 +17,13 @@ pub struct RenderState {
     pub nametable: Vec<u8>,
     /// PPUADDR 当前地址（$2006 双写累积）。
     pub ppuaddr: u16,
+    /// $2006 flip-flop（true=下一写为 hi）。
+    pub latch_hi: bool,
 }
 
 impl Default for RenderState {
     fn default() -> Self {
-        Self { chr: vec![0; 0x2000], nametable: vec![0; 0x800], ppuaddr: 0 }
+        Self { chr: vec![0; 0x2000], nametable: vec![0; 0x800], ppuaddr: 0, latch_hi: true }
     }
 }
 
@@ -33,6 +35,13 @@ impl RenderState {
         } else {
             self.ppuaddr = (self.ppuaddr & 0xFF00) | byte as u16;
         }
+    }
+
+    /// $2006 写（flip-flop 自动——先 hi 后 lo）。
+    pub fn write_reg_2006(&mut self, v: u8) {
+        let is_hi = self.latch_hi;
+        self.latch_hi = !self.latch_hi;
+        self.write_ppuaddr(v, is_hi);
     }
 
     /// $2007 写（按 PPUADDR 分域：$0000-$1FFF=CHR/$2000-$2FFF=名表）+地址步进。
