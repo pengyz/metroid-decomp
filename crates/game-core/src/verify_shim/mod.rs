@@ -1924,3 +1924,17 @@ pub fn s4_cluster_108(input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-S4-20 簇入口适配（s4_cluster_110 ← bank07:E778 EnemyCheckMoveVertical）----
+
+/// s4_cluster_110 适配（$E778 EnemyCheckMoveVertical——案实核：$02←A/$04←8/
+/// $08/$09/$0B←0 零组；A=0/X/Y 透传）。
+pub fn s4_cluster_110(input: &L2In) -> L2Out {
+    L2Out {
+        a: 0, x: input.x, y: input.y,
+        writes: merge_writes(vec![
+            (0x0002, input.a), (0x0004, 8),
+            (0x0008, 0), (0x0009, 0), (0x000B, 0),
+        ]),
+    }
+}

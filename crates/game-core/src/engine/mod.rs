@@ -5064,3 +5064,36 @@ mod s4_109_tests {
         assert!(ev.contains(&(0x007D, 0)));
     }
 }
+
+// ---- SC-S4-20（S4-110）员转写（2 员——EnemyCheckMoveVertical 族）----
+
+/// $E783 EnemyCheckMoveVertical（root——簇共根形百四）：$02←A（减数面）+
+/// $04←8（步长）+$E792 调（S2-38 接面——StoreEnemyPositionToTemp）+
+/// $6AF6[x]→$E7BD（尾面）。
+/// 返回 (写事件, 步长)。
+pub fn s4_enemy_move_vert(x: u8, a_in: u8) -> (Vec<(u16, u8)>, u8) {
+    (vec![(0x0002, a_in), (0x0004, 8)], 8)
+}
+
+/// $E778 员体：jmp $E783（尾形）+$6AF5[x] sbc 面（0-$6AF5[x]→$02——S2-38 同构）。
+pub fn s4_e778_body(x: u8, a_in: u8, v6af5_x: u8) -> (Vec<(u16, u8)>, u8) {
+    let (mut ev, _) = s4_enemy_move_vert(x, a_in);
+    ev[0] = (0x0002, 0u8.wrapping_sub(v6af5_x)); // 减数面（sbc 径）
+    (ev, 8)
+}
+
+#[cfg(test)]
+mod s4_110_tests {
+    use super::*;
+
+    /// 二员转写形（EnemyCheckMoveVertical root+一壳）。
+    #[test]
+    fn s4_110_units_two() {
+        let (ev, s) = s4_enemy_move_vert(2, 20);
+        assert_eq!(s, 8);
+        assert!(ev.contains(&(0x0002, 20)));
+        assert!(ev.contains(&(0x0004, 8)));
+        let (ev2, _) = s4_e778_body(2, 20, 5);
+        assert!(ev2.contains(&(0x0002, 0xFB))); // 0-5
+    }
+}
