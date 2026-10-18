@@ -1771,3 +1771,66 @@ mod s1_28_tests {
         assert!(ev.contains(&(0x0004, 5)));
     }
 }
+
+// ---- SC-S1-29 员转写（4 员——EnemyReactToSamusProjectile 族；L2 真 0 留白·S1 末卡）----
+
+/// $F536 EnemyReactToSamusProjectile（root——簇共根形二三）：$040F[x]→$0A+$0404[x]
+/// 位5 判（beq 段）+$040E[x] cmp 3 判段。
+/// 返回 (写事件, 判段结果)。
+pub fn s1_enemy_react_projectile(x: u8, v040f_x: u8, v0404_x: u8, v040e_x: u8)
+    -> (Vec<(u16, u8)>, bool) {
+    let ev = vec![(0x000A, v040f_x)];
+    let hit = (v0404_x & 0x20 != 0) && v040e_x == 3;
+    (ev, hit)
+}
+
+/// $F3E3 员体：jmp $F40A（尾形）+$0405[x] asl/bmi 段+位5 判段（$96BB[y] 表载→$09 写）。
+pub fn s1_f3e3_body(x: u8, v0405_x: u8, v6b02_x: u8, tbl_entry: u8) -> Vec<(u16, u8)> {
+    let mut ev = Vec::new();
+    if (v0405_x as i8) < 0 {
+        return ev; // bmi 段
+    }
+    if v0405_x & 0x20 != 0 {
+        ev.push((0x0409 + x as u16, tbl_entry)); // 表载写
+    }
+    ev
+}
+
+/// $F40A UpdateEnemy_Active_BranchB：$F536 调+尾跳 $95E5（活跃分支 B 面）。
+pub fn s1_update_active_b(x: u8, v040f_x: u8, v0404_x: u8, v040e_x: u8)
+    -> (Vec<(u16, u8)>, u16) {
+    let (ev, _) = s1_enemy_react_projectile(x, v040f_x, v0404_x, v040e_x);
+    (ev, 0x95E5)
+}
+
+/// $F43E UpdateEnemy_Frozen：$F536 调+$6AF4[x] cmp 3 判（冻结判）+$6B 位7 段+
+/// $2D 位段（$A1 写族）。
+pub fn s1_update_frozen(x: u8, v040f_x: u8, v0404_x: u8, v040e_x: u8,
+                        v6af4_x: u8, v6b: u8) -> (Vec<(u16, u8)>, bool) {
+    let (mut ev, hit) = s1_enemy_react_projectile(x, v040f_x, v0404_x, v040e_x);
+    let frozen = v6af4_x == 3;
+    if !frozen && (v6b & 0x80) == 0 {
+        ev.push((0x006B, 0xA1));
+    }
+    (ev, frozen)
+}
+
+#[cfg(test)]
+mod s1_29_tests {
+    use super::*;
+
+    /// 四员转写形（react root 判段+三壳）——S1 末卡。
+    #[test]
+    fn s1_29_units_four() {
+        let (ev, hit) = s1_enemy_react_projectile(2, 5, 0x20, 3);
+        assert!(hit);
+        assert!(ev.contains(&(0x000A, 5)));
+        let (_, hit2) = s1_enemy_react_projectile(2, 5, 0x00, 3);
+        assert!(!hit2);
+        let ev = s1_f3e3_body(2, 0x20, 0, 0x55);
+        assert!(ev.contains(&(0x040B, 0x55))); // x=2 ⇒ $0409+2
+        assert_eq!(s1_update_active_b(2, 5, 0x20, 3).1, 0x95E5);
+        let (_, frozen) = s1_update_frozen(2, 5, 0x20, 3, 3, 0);
+        assert!(frozen);
+    }
+}
