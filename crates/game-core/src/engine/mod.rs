@@ -407,3 +407,101 @@ mod s1_02_residual_tests {
         assert!(s1_f7fc(0x00, 0, 0x55).is_empty());
     }
 }
+
+// ---- SC-S1-03 员转写（8 员——root PlaySnd3 族；一卡一闭面）----
+
+/// $F62E 员体（簇入口流）：root+$0406[x]←0+槽搜（$C0 by 8→$E0 首 $6AF4[s]==0）。
+/// 返回 (写事件, 槽址)。
+pub fn s1_f62e_body(a_in: u8, x: u8, wram: &[u8]) -> (Vec<(u16, u8)>, u16) {
+    let mut ev = vec![(0x6AF9 + x as u16, a_in), (0x6AFA + x as u16, a_in),
+                      (0x6AF8 + x as u16, 0), (0x0406 + x as u16, 0)];
+    let mut slot: u16 = 0xC0;
+    while slot < 0xE0 {
+        if wram.get(0xAF4 + slot as usize).copied().unwrap_or(0) == 0 { break; }
+        slot += 8;
+    }
+    (ev, slot)
+}
+
+/// $F649 员体：root+$0406[x]←$0A+$6AF4[x] inc+$0407[x]←（$0A 位7?3:0）。
+pub fn s1_f649_body(a_in: u8, x: u8, v6af4_x: u8, v0a: u8) -> Vec<(u16, u8)> {
+    vec![(0x6AF9 + x as u16, a_in), (0x6AFA + x as u16, a_in),
+         (0x6AF8 + x as u16, 0),
+         (0x0406 + x as u16, 0x0A),
+         (0x6AF4 + x as u16, v6af4_x.wrapping_add(1)),
+         (0x0407 + x as u16, if (v0a as i8) < 0 { 3 } else { 0 })]
+}
+
+/// $F68D root（PlaySnd3）：$6AF9[x]←A/$6AFA[x]←A/$6AF8[x]←0（A 归零出口）。
+pub fn s1_root_f68d(a_in: u8, x: u8) -> (Vec<(u16, u8)>, u8) {
+    (vec![(0x6AF9 + x as u16, a_in), (0x6AFA + x as u16, a_in), (0x6AF8 + x as u16, 0)], 0)
+}
+
+/// $F6A4 员体：root+计数环（$967B[y]&$7F 次 dec $6AFA[x]）。
+pub fn s1_f6a4_body(a_in: u8, x: u8, tbl_val: u8, v6afa_x: u8) -> (Vec<(u16, u8)>, u8) {
+    let n = tbl_val & 0x7F;
+    let mut ev = vec![(0x6AF9 + x as u16, a_in), (0x6AF8 + x as u16, 0)];
+    ev.push((0x6AFA + x as u16, v6afa_x.wrapping_sub(n)));
+    (ev, n)
+}
+
+/// $F8A2 员体：root+$6AF4[y]←1+$F92A 表载→$0403[y]+$0402[y]←0。
+pub fn s1_f8a2_body(a_in: u8, y: u8, tbl_entry: u8) -> Vec<(u16, u8)> {
+    vec![(0x6AF9 + y as u16, a_in), (0x6AFA + y as u16, a_in), (0x6AF8 + y as u16, 0),
+         (0x6AF4 + y as u16, 1), (0x0403 + y as u16, tbl_entry), (0x0402 + y as u16, 0)]
+}
+
+/// $FA0A 员体：root+$0409[x]←$0A→尾跳 $F97C。
+pub fn s1_fa0a_body(a_in: u8, x: u8) -> (Vec<(u16, u8)>, u16) {
+    (vec![(0x6AF9 + x as u16, a_in), (0x6AFA + x as u16, a_in), (0x6AF8 + x as u16, 0),
+          (0x0409 + x as u16, 0x0A)], 0xF97C)
+}
+
+/// $FA97 员体：root→尾跳 $F97C+槽搜族（$C0 by 8——$FAB4 调面注）。
+pub fn s1_fa97_body(a_in: u8, x: u8) -> (Vec<(u16, u8)>, u16) {
+    (vec![(0x6AF9 + x as u16, a_in), (0x6AFA + x as u16, a_in), (0x6AF8 + x as u16, 0)],
+     0xF97C)
+}
+
+/// $FBC7 员体：jmp root（尾形）+比对段（$965B[y] vs $6AF9[x]——等⇒回卷/不等⇒写+jmp $F690）。
+/// 返回 (写事件, 跳面)。
+pub fn s1_fbc7_body(y: u8, x: u8, tbl_val: u8, v6af9_x: u8) -> (Vec<(u16, u8)>, u16) {
+    if tbl_val == v6af9_x {
+        (vec![], 0xF62E) // 回卷（beq -80 形——回驱动器）
+    } else {
+        (vec![(0x6AF9 + x as u16, tbl_val)], 0xF690)
+    }
+}
+
+#[cfg(test)]
+mod s1_03_unit_tests {
+    use super::*;
+
+    /// 八员转写形（root 三写/槽搜/计数环/表载/尾跳/比对回卷）。
+    #[test]
+    fn s1_03_units_eight() {
+        let w = vec![0u8; 0x2000];
+        let (ev, slot) = s1_f62e_body(0xBD, 0x57, &w);
+        assert_eq!(slot, 0xC0);
+        assert!(ev.contains(&(0x6B50, 0xBD)));
+        let ev = s1_f649_body(1, 2, 5, 0x80);
+        assert!(ev.contains(&(0x0409, 3))); // x=2 ⇒ $0407+2
+        let (ev, a) = s1_root_f68d(9, 2);
+        assert_eq!(a, 0);
+        assert!(ev.contains(&(0x6AFA, 0))); // 零写=$6AF8+2
+        assert!(ev.contains(&(0x6AFB, 9)));
+        let (ev, n) = s1_f6a4_body(1, 2, 0x85, 10);
+        assert_eq!(n, 5);
+        assert!(ev.contains(&(0x6AFC, 5))); // x=2 ⇒ $6AFA+2
+        let ev = s1_f8a2_body(1, 2, 0x55);
+        assert!(ev.contains(&(0x0405, 0x55)));
+        let (ev, j) = s1_fa0a_body(1, 2);
+        assert_eq!(j, 0xF97C);
+        assert!(ev.contains(&(0x040B, 0x0A)));
+        let (_, j) = s1_fa97_body(1, 2);
+        assert_eq!(j, 0xF97C);
+        let (ev, j) = s1_fbc7_body(3, 2, 5, 5);
+        assert_eq!(j, 0xF62E);
+        assert!(ev.is_empty());
+    }
+}
