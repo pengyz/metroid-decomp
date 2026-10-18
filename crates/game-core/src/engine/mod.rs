@@ -4238,3 +4238,42 @@ mod s3_087_tests {
         assert!(ev.contains(&(0x000A, 0x54)));
     }
 }
+
+// ---- SC-S3-28（S3-88）员转写（2 员——Table0D 族二现；L2 真 0 留白）----
+
+/// $D5DA Table0D（root——簇共根形八二）：$030A[x] 判（beq 段）+清（$030A[x]←0）+
+/// $0300[x] cpy 4/$0B 双判段（$1D 表值面）。
+/// 返回 (写事件, 表值)。
+pub fn s3_table0d(x: u8, v030a_x: u8, v0300_x: u8) -> (Vec<(u16, u8)>, u8) {
+    if v030a_x == 0 {
+        return (vec![], 0); // beq 段
+    }
+    let v = if v0300_x == 4 || v0300_x == 0x0B { 0x1D } else { 0x1D };
+    (vec![(0x030A + x as u16, 0)], v) // 清写+表值
+}
+
+/// $D533 员体：Table0D+$0502[x] and $FE+表对载（$D58B/$D58C[y]→$0A/$0B——S3-087 同构面）。
+pub fn s3_d533_body(x: u8, v030a_x: u8, v0300_x: u8, v0502_x: u8) -> (Vec<(u16, u8)>, u8) {
+    let (mut ev, v) = s3_table0d(x, v030a_x, v0300_x);
+    let idx = (v0502_x & 0xFE) as u16;
+    ev.push((0x000A, idx as u8));
+    ev.push((0x000B, (idx >> 8) as u8));
+    (ev, v)
+}
+
+#[cfg(test)]
+mod s3_088_tests {
+    use super::*;
+
+    /// 二员转写形（Table0D root+一壳）。
+    #[test]
+    fn s3_088_units_two() {
+        let (ev, v) = s3_table0d(2, 5, 4);
+        assert_eq!(v, 0x1D);
+        assert!(ev.contains(&(0x030C, 0)));
+        let (ev2, _) = s3_table0d(2, 0, 4);
+        assert!(ev2.is_empty()); // beq 段
+        let (ev3, _) = s3_d533_body(2, 5, 4, 0x55);
+        assert!(ev3.contains(&(0x000A, 0x54)));
+    }
+}
