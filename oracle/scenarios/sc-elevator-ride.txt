@@ -1,8 +1,8 @@
-# 场景：sc-elevator-ride —— 真起点径推（(3,14)→(22,11) 31 房 BFS）精化迭代
-# 径：E×8 N×7 E×2 S×4 E×9——真 MapPos=$50/$4F（早注 $53/$54 误已更正）
-# 事件核：$D7B3 状态机写面+MapPos 到 (22,11)+站台 DOWN 激活
+# 场景：sc-elevator-ride —— 穿门终形（净序列——无输入重叠）
+# 径：(3,14)→(22,11) 31 房 BFS；卡点=房 19 东门（行 5-7 s3——高跳 112px 可达）
+# 事件核：$D7B3 状态机+MapPos 到 (22,11)+站台 DOWN 激活
 name sc-elevator-ride
-frames 6000
+frames 4800
 watch_range 0000-00ff zp
 watch_range 0100-07ff iram
 watch_range 6878-6878 gear
@@ -10,37 +10,31 @@ watch_range 6878-6878 gear
 press 360 start
 press 420 a
 press 540 start
-hold 850-2900 right
+hold 850-4600 right
+fixture 900 6878 13 invariant
 press 950 b
-fixture 940 6878 13 invariant
-press 1100 a
-press 1130 a
-press 1150 b
-press 1170 a
-press 1210 a
-press 1250 a
-hold 1170-1350 right
-press 1290 b
-press 1330 a
-press 1370 a
-hold 1350-1520 right
-hold 1410-1460 left
-hold 1470-1530 a
-hold 1500-1650 right
-press 1540 b
-press 1580 b
-hold 1560-1590 a
-hold 1600-1750 right
-press 1640 b
-hold 1700-1730 a
-hold 1730-1900 right
-hold 1850-1880 a
-hold 1880-2200 right
+press 1050 b
+hold 1300-1450 a
+hold 1480-1630 a
+hold 1660-1810 a
+hold 1840-1990 a
+hold 2020-2170 a
+hold 2200-2350 a
+hold 2380-2530 a
+hold 2560-2710 a
+hold 2740-2890 a
+hold 2920-3070 a
+hold 3100-3250 a
+hold 3280-3430 a
+hold 3460-3610 a
+hold 3640-3790 a
+hold 3820-3970 a
+hold 4000-4150 a
+hold 4180-4330 a
+hold 4360-4510 a
 
-capture 1800 east-run
-capture 3200 climb-start
-capture 4400 climb-mid
-capture 5800 ride-end
+capture 1700 door-jump
+capture 2400 post-door
 
 sample_point spin-exit
-bundle_capture 5800 analysis/bundles/sc-elevator-ride
+bundle_capture 2400 analysis/bundles/sc-elevator-ride
