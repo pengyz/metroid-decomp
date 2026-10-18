@@ -125,7 +125,10 @@ pub fn enemy_get_delta_y(
     }
     // 朝向（data05 bit7：水平/垂直）→movementIndex*2+facing→*2→指针
     let facing = if data05 & 0x80 != 0 { (data05 >> 2) & 1 } else { data05 & 1 };
-    let idx = ((movement_index as usize) * 2 + (facing as usize)) * 2;
+    // **8 位回绕**（asm `rol/asl` u8 语义——case-6 Δ=+48 实值对读证：movementIndex=249
+    // rol→0xF2（carry=bit7）→asl→0xE4——usize 无界误案修）
+    let rolled = movement_index.wrapping_shl(1) | facing; // rol 域形（carry=facing）
+    let idx = (rolled.wrapping_shl(1)) as usize; // asl（u8 回绕）
     let ptr_full = ENEMY_MOVEMENT_PTRS.get(idx / 2).copied().unwrap_or(0x97F5) as usize; // **全指针**（u16——低字节截断案修）
     let str_off = ptr_full.wrapping_sub(0x97EF); // 窗址→字符串体偏移（全指针）
     // SignMagSpeed：字符串[instrIndex]=延时字节-[delay]==0→归零+索引+2
