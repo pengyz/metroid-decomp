@@ -1,54 +1,49 @@
-# 场景：sc-elevator-ride —— 主径=站立过顶（跑跳高跨门战术——既定复用）
-# 裁定①：主径 2 窗预算（西门高跨→房 19→跳 $5D→东段）
+# 场景：sc-elevator-ride —— ②bundle_load 起跑（elevator 骑行面）
+# D7 声明：绕过房 19/25 通行面（bundle 落点 f3800=房 19 mapX=10 态）——场景目的=elevator 骑行
+# 事件核：$D7B3 状态机+MapPos (22,11)+站台 DOWN 激活（ElevatorType bit7=0）
 name sc-elevator-ride
 frames 7200
 watch_range 0000-00ff zp
 watch_range 0100-07ff iram
 
-press 360 start
-press 420 a
-press 540 start
-fixture 900 6878 13 invariant
-hold 850-1900 right
-press 950 b
-press 1050 b
-press 1150 b
-hold 1340-1500 a
-press 1420 b
-press 1480 b
-hold 1900-2060 a
-hold 1950-2320 right
-press 1980 b
-hold 2500-2660 a
-hold 2550-2920 right
-press 2580 b
-hold 3100-3260 a
-hold 3150-3520 right
-press 3180 b
-nav 3300-3400 x 130
-hold 3420-3580 a
-hold 3460-3700 right
-hold 3720-3880 a
-hold 3760-4200 right
-press 3850 b
-press 3950 b
-nav 4200-5000 x 250
-hold 4800-4960 a
-hold 4850-5300 right
-press 4900 b
-hold 5400-5560 a
-hold 5450-5900 right
-press 5500 b
-hold 6000-6160 a
-hold 6050-6500 right
-press 6100 b
-hold 6600-6760 a
-hold 6650-7100 right
-press 6700 b
+bundle_load analysis/bundles/sc-elevator-ride.json
 
-capture 3800 over-top1
-capture 4600 over-top2
-capture 6900 east-end
+hold 100-3000 right
+press 200 b
+press 400 b
+press 600 b
+hold 800-960 a
+hold 850-1300 right
+press 900 b
+hold 1400-1560 a
+hold 1450-1900 right
+press 1500 b
+hold 2000-2160 a
+hold 2050-2500 right
+press 2100 b
+nav 2600-4000 x 250
+hold 3000-3160 a
+hold 3050-3500 right
+press 3100 b
+hold 3600-3760 a
+hold 3650-4100 right
+press 3700 b
+nav 4200-5500 x 250
+hold 4300-4460 a
+hold 4350-4800 right
+press 4400 b
+hold 5000-5160 a
+hold 5050-5500 right
+press 5100 b
+nav 5600-6800 x 128
+press 6000 down
+press 6100 down
+press 6200 down
+hold 6300-7000 down
+
+capture 3000 ride-mid
+capture 5500 ride-deep
+capture 6900 elevator-activate
 
 sample_point spin-exit
-bundle_capture 3800 analysis/bundles/sc-elevator-ride
+bundle_capture 6900 analysis/bundles/sc-elevator-ride-end
