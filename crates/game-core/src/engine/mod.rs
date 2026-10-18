@@ -1128,3 +1128,75 @@ mod s1_15_tests {
         assert!(!s1_d746_body(1, 0, 0).is_empty());
     }
 }
+
+// ---- SC-S1-16 员转写（5 员——CheckForItem 族；L2 真 0 留白）----
+
+/// $EE4A CheckForItem（root——簇共根形九）：$6886 计数环（Y 递减 2 步——$07/$06 对
+/// 比 $6886[y]/$6885[y]）——**carry=找到**（clс 找到/... sec 未找形注）。
+/// 返回 found。
+pub fn s1_check_for_item(y0: u8, v06: u8, v07: u8, item_lo: &[u8], item_hi: &[u8]) -> bool {
+    let mut y = y0;
+    while y > 0 {
+        if item_hi.get(y as usize).copied().unwrap_or(0) == v07
+            && item_lo.get(y as usize).copied().unwrap_or(0) == v06 {
+            return true;
+        }
+        y = y.wrapping_sub(2);
+    }
+    false
+}
+
+/// $EBCB 员体：CheckForItem+cc 分段（$0300[x]←1）+名称表写族（$030C[x]/$EBFC[y]）。
+pub fn s1_ebcb_body(found: bool, x: u8, y: u8, tbl_entry: u8) -> Vec<(u16, u8)> {
+    let mut ev = Vec::new();
+    if !found {
+        ev.push((0x0300 + x as u16, 1));
+    }
+    ev.push((0x030C + x as u16, tbl_entry));
+    ev
+}
+
+/// $EE14 员体：CheckForItem+cc 分段（$0748[x]←$09+$0749[x]←（表&$F0）|$08）。
+pub fn s1_ee14_body(found: bool, x: u8, v09: u8, tbl_entry: u8) -> Vec<(u16, u8)> {
+    if found {
+        return Vec::new(); // bcs 跳过
+    }
+    vec![(0x0748 + x as u16, v09), (0x0749 + x as u16, (tbl_entry & 0xF0) | 0x08)]
+}
+
+/// $EEB9 员体：CheckForItem+cs 分段（$98←8/$99←0）。
+pub fn s1_eeb9_body(found: bool) -> Vec<(u16, u8)> {
+    if found {
+        vec![(0x0098, 8), (0x0099, 0)]
+    } else {
+        Vec::new()
+    }
+}
+
+/// $EED7 员体：CheckForItem+cs 分段（$0758[x]←$81/$075D[x]←1/$075B[x]←7）。
+pub fn s1_eed7_body(found: bool, x: u8) -> Vec<(u16, u8)> {
+    if found {
+        vec![(0x0758 + x as u16, 0x81), (0x075D + x as u16, 1), (0x075B + x as u16, 7)]
+    } else {
+        Vec::new()
+    }
+}
+
+#[cfg(test)]
+mod s1_16_tests {
+    use super::*;
+
+    /// 五员转写形（CheckForItem root+四分路壳）。
+    #[test]
+    fn s1_16_units_five() {
+        assert!(s1_check_for_item(2, 5, 6, &[0, 0, 5], &[0, 0, 6])); // Y 索引同基
+        assert!(!s1_check_for_item(2, 5, 7, &[0, 0, 5], &[0, 0, 6]));
+        assert!(s1_ebcb_body(false, 2, 3, 0x55).contains(&(0x0302, 1))); // x=2 ⇒ $0300+2
+        let ev = s1_ee14_body(false, 2, 0x09, 0xF8);
+        assert!(ev.contains(&(0x074A, 0x09)));
+        assert!(ev.contains(&(0x074B, 0xF8)));
+        assert!(s1_eeb9_body(true).contains(&(0x0098, 8)));
+        let ev = s1_eed7_body(true, 2);
+        assert!(ev.contains(&(0x075A, 0x81)));
+    }
+}
