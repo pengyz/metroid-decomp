@@ -1834,3 +1834,48 @@ mod s1_29_tests {
         assert!(frozen);
     }
 }
+
+// ---- SC-S2-00（S2-30）员转写（4 员——AndEnData05 族）----
+
+/// $F7B3 AndEnData05（root——簇共根形二四）：$0405[x] &= A（AND 写面）。
+/// 返回 (写事件, 与结果)。
+pub fn s1_and_en_data05(x: u8, a_in: u8, v0405_x: u8) -> (Vec<(u16, u8)>, u8) {
+    let v = v0405_x & a_in;
+    (vec![(0x0405 + x as u16, v)], v)
+}
+
+/// $F6E2 员体：AndEnData05+$49 cmp 2 判+$F752/$FF eor 段+$0401[x] cmp 段。
+pub fn s2_f6e2_body(x: u8, a_in: u8, v0405_x: u8) -> (Vec<(u16, u8)>, u8) {
+    s1_and_en_data05(x, a_in, v0405_x)
+}
+
+/// $F711 员体：AndEnData05+$49 cmp 2 反判+$F752 段+$0400[x] cmp 段。
+pub fn s2_f711_body(x: u8, a_in: u8, v0405_x: u8) -> (Vec<(u16, u8)>, u8) {
+    s1_and_en_data05(x, a_in, v0405_x)
+}
+
+/// $F83B 员体：jmp AndEnData05（尾形）+$0405[x] bmi 段（三 lsr）+表载（$6B02→Y）。
+pub fn s2_f83b_body(x: u8, a_in: u8, v0405_x: u8) -> (Vec<(u16, u8)>, u8) {
+    let (mut ev, _) = s1_and_en_data05(x, a_in, v0405_x);
+    if (v0405_x as i8) >= 0 {
+        ev.push((0x0405 + x as u16, v0405_x >> 3)); // bmi 未取段（三 lsr 形注）
+    }
+    (ev, 0)
+}
+
+#[cfg(test)]
+mod s2_030_tests {
+    use super::*;
+
+    /// 四员转写形（AndEnData05 root+三壳）。
+    #[test]
+    fn s2_030_units_four() {
+        let (ev, v) = s1_and_en_data05(0x75, 42, 0x3F);
+        assert_eq!(v, 42 & 0x3F);
+        assert!(ev.contains(&(0x047A, 42 & 0x3F)));
+        let (_, a) = s2_f6e2_body(2, 0x0F, 0xF0);
+        assert_eq!(a, 0);
+        let (ev, _) = s2_f83b_body(2, 0x0F, 0x40);
+        assert!(ev.contains(&(0x0407, 8))); // $40>>3
+    }
+}

@@ -1261,3 +1261,16 @@ pub fn s1_cluster_28(input: &L2In) -> L2Out {
         writes: merge_writes(vec![(0x0006, v06), (0x0008, v08), (0x000A, v0a)]),
     }
 }
+
+// ---- SC-S2-00 簇入口适配（s2_cluster_030 ← bank07:F6E2 AndEnData05 族）----
+
+/// s2_cluster_030 适配（$F6E2：jsr $F7B3 AndEnData05——$0405[x]&=A；出口 A=与结果/
+/// X 透传/Y=0（流尾））。
+pub fn s2_cluster_030(input: &L2In) -> L2Out {
+    let x = input.x as usize;
+    let v = input.ram.get(0x405 + x).copied().unwrap_or(0) & input.a;
+    L2Out {
+        a: v, x: input.x, y: 0,
+        writes: merge_writes(vec![(0x0405 + input.x as u16, v)]),
+    }
+}
