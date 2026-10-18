@@ -959,3 +959,67 @@ mod s1_12_tests {
         assert!(s1_fb9c_body(0xF8, 2, 3).1); // 取负=8⇒中段
     }
 }
+
+// ---- SC-S1-13 员转写（5 员——Table0D 族；L2 真 0 留白）----
+
+/// $D79F GetObjCoords（root——簇共根形六）：$030D[x]→$02/$030E[x]→$03/$030C[x]→$0B
+/// +尾跳 $E96A。
+pub fn s1_get_obj_coords(x: u8, v030d_x: u8, v030e_x: u8, v030c_x: u8)
+    -> (Vec<(u16, u8)>, u16) {
+    (vec![(0x0002, v030d_x), (0x0003, v030e_x), (0x000B, v030c_x)], 0xE96A)
+}
+
+/// $D580 员体：jsr $D609+cc 分段（$D624 调）+尾跳 $D4F8。
+pub fn s1_d580_body(carry: bool) -> (Vec<(u16, u8)>, u16) {
+    (vec![], if carry { 0xD4F8 } else { 0xD624 })
+}
+
+/// $D609 Table0D 员体：GetObjCoords+表走（($04),y cmp $A0 bcs 段+$95C0 调+$4E 判）。
+pub fn s1_d609_body(x: u8, v030d_x: u8, v030e_x: u8, v030c_x: u8, v04_ptr_lo: u8)
+    -> (Vec<(u16, u8)>, u16) {
+    let (ev, j) = s1_get_obj_coords(x, v030d_x, v030e_x, v030c_x);
+    (ev, j) // 表走段（$A0/$4E 判——深段注）
+}
+
+/// $D694 员体：jsr $D6A7+$0303[x] sbc $F7 判（等⇒$0300[x]←+尾跳 $D66B）。
+pub fn s1_d694_body(x: u8, v0303_x: u8) -> (Vec<(u16, u8)>, u16) {
+    let d = v0303_x.wrapping_sub(0xF7);
+    if d == 0 {
+        (vec![(0x0300 + x as u16, v0303_x)], 0xD66B)
+    } else {
+        (vec![], 0xD66B)
+    }
+}
+
+/// $D6A7 Table0D 员体：GetObjCoords+指针拷贝（$04/$05→$0A/$0B）+$030F[x] 三判段
+/// （dey 计数——$40 写族注）。
+pub fn s1_d6a7_body(x: u8, v030d_x: u8, v030e_x: u8, v030c_x: u8, v030f_x: u8)
+    -> Vec<(u16, u8)> {
+    let (mut ev, _) = s1_get_obj_coords(x, v030d_x, v030e_x, v030c_x);
+    ev.push((0x000A, v030d_x)); // $04/$05 面拷贝（GetObjCoords 后 $04←…深段注）
+    ev.push((0x000B, v030c_x));
+    if v030f_x == 2 {
+        ev.push((0x0400 + x as u16, 0x40)); // 判 2 命中段（$40 写）
+    }
+    ev
+}
+
+#[cfg(test)]
+mod s1_13_tests {
+    use super::*;
+
+    /// 五员转写形（GetObjCoords root+四壳）。
+    #[test]
+    fn s1_13_units_five() {
+        let (ev, j) = s1_get_obj_coords(2, 8, 9, 10);
+        assert_eq!(j, 0xE96A);
+        assert!(ev.contains(&(0x0002, 8)));
+        assert!(ev.contains(&(0x000B, 10)));
+        assert_eq!(s1_d580_body(false).1, 0xD624);
+        assert_eq!(s1_d580_body(true).1, 0xD4F8);
+        let (ev, _) = s1_d694_body(2, 0xF7);
+        assert!(ev.contains(&(0x0302, 0xF7)));
+        let ev = s1_d6a7_body(2, 8, 9, 10, 2);
+        assert!(ev.contains(&(0x0402, 0x40)));
+    }
+}
