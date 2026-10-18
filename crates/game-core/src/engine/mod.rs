@@ -5236,3 +5236,36 @@ mod s4_114_tests {
         assert_eq!(j, 0xEAD4); // walk 回驱
     }
 }
+
+// ---- SC-S4-25（S4-115）员转写（2 员——IsSlotTaken 族；L2 真 0 留白）----
+
+/// $EB7A IsSlotTaken（root——簇共根形百九）：$6AF4[x] 判（beq⇒取负段）+
+/// $0405[x] and 2（占用判）+取负段（$FF^$49 and 1——S1-10 镜面尾面）。
+/// 返回 (占用, 判段)。
+pub fn s4_is_slot_taken(x: u8, v6af4_x: u8, v0405_x: u8, vff: u8, v49: u8) -> (bool, bool) {
+    if v6af4_x == 0 {
+        return ((vff ^ v49) & 1 != 0, true); // 取负段（S1-10 尾面）
+    }
+    ((v0405_x & 2) != 0, false) // 占用判
+}
+
+/// $EB11 员体：IsSlotTaken+bne 段（数据载链（S4-114 续面））+lda #3/rts 面。
+pub fn s4_eb11_body(x: u8, v6af4_x: u8, v0405_x: u8, vff: u8, v49: u8) -> (u8, u8) {
+    let (taken, _) = s4_is_slot_taken(x, v6af4_x, v0405_x, vff, v49);
+    (if taken { 0 } else { 3 }, 3) // lda #3 面（S4-114 续）
+}
+
+#[cfg(test)]
+mod s4_115_tests {
+    use super::*;
+
+    /// 二员转写形（IsSlotTaken root+一壳）。
+    #[test]
+    fn s4_115_units_two() {
+        assert_eq!(s4_is_slot_taken(2, 5, 2, 0, 0), (true, false)); // 占用
+        assert_eq!(s4_is_slot_taken(2, 5, 0, 0, 0), (false, false)); // 空槽
+        assert_eq!(s4_is_slot_taken(2, 0, 0, 0xFF, 0x49), (false, true)); // 取负段
+        let (v, _) = s4_eb11_body(2, 5, 2, 0, 0);
+        assert_eq!(v, 0);
+    }
+}
