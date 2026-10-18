@@ -1,5 +1,4 @@
-# 场景：sc-elevator-ride —— 双战术（投射物射壁+bomb 炸洞+引信窗）
-# 原版必通=可爆破谜格（$1C 含 $4E——S2 族）
+# 场景：sc-elevator-ride —— 爆破窗通行时序（引信 120f→窗 320f 内走穿）
 name sc-elevator-ride
 frames 7200
 watch_range 0000-00ff zp
@@ -26,22 +25,18 @@ hold 3100-3260 a
 hold 3150-3520 right
 press 3180 b
 nav 3300-3400 x 140
-press 3320 b
-press 3350 b
-press 3380 b
 press 3410 down
 press 3440 b
 press 3480 b
-press 3520 b
-press 3560 b
-press 3600 b
-press 3640 down
-hold 3650-4100 a
-nav 4100-4800 x 250
-nav 4100-4800 jump 80
-nav 4800-7000 x 250
+press 3520 down
+nav 3540-3900 x 250
+hold 3540-3950 right
+nav 3950-4500 x 250
+nav 3950-4500 jump 80
+nav 4500-7000 x 250
 
-capture 3600 bomb-zone
+capture 3500 bomb-fuse
+capture 3700 blast-window
 capture 4200 post-blast
 capture 6900 east-end
 
