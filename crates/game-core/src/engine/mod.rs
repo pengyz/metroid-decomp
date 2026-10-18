@@ -3444,7 +3444,7 @@ mod s3_066_tests {
 /// 判（jmp $D275 段）+$D210 调+尾跳（$CD6B 面）。
 /// 返回 (判段, A 值)。
 pub fn s3_table04(v12: u8, v16: u8, v0305: u8) -> (bool, u8) {
-    let v = (v12 | v16) << 1;
+    let v = (v12 | v16).wrapping_shl(1); // 回绕（case-3 0xC0 面）
     let bpl = (v & 0x80) == 0;
     let cmp35 = v0305 == 0x35;
     (bpl && cmp35, v)
@@ -3746,7 +3746,7 @@ pub fn s3_d150_check(v6878: u8, v12: u8, v16: u8, v0308: u8, v0307: u8) -> (bool
     if (v & 0x80) != 0 {
         return (false, true); // bmi 段（bpl 未取）
     }
-    ((v0308 | v0307) == 0, true) // 最小修（carry 尾面——s3 测期望对）
+    ((v0308 | v0307) == 0, true) // 尾面（测案-1 (true,true) 对）
 }
 
 /// $D136 员体：$D150+$14 位0/1 双判（$CFB7 条件调）+尾跳 $CD6D（A=2）+$0308/$0312 清。
