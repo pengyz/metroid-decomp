@@ -24,7 +24,9 @@ pub fn nmi_handler(mem: &mut FrameMemory) {
     mem.write_io(io::OAMDMA, 0x02); // $200-$2FF → OAM
     // ②超帧跳过门（$1A≠0=上帧未完）+ ③工作体（嵌套桩逐个引爆）
     nmi_body(mem);
-    // ⑤尾：$1A=1 恒量写（契约断言面）
+    // ⑤尾：$1A=1 恒量写（契约断言面）——**寄存器残迹注**（B 案 $6A 机理）：NMI 出口
+    // Y 残迹=$FF（oracle 实测——声链/update_age 折 Y 面随件精化；观测值逐钉注）。
+    mem.regs.y = 0xFF;
     nmi_tail(mem);
 }
 

@@ -223,6 +223,9 @@ const ROOM_PTR_TABLE: [u8; 94] = [
 /// UpdateTimer 单元（**asm 内容锚**）——`UpdateTimer: ; 07:C266`：TimerDelay 预分频
 /// （dec/bpl——10 帧节拍，归零重置 9 并含 Timer3）→ Timer1/2/3 非零递减。
 pub fn update_timer(mem: &mut FrameMemory) {
+    // 寄存器残迹注（B 案 $69 机理）：asm 定时环 `ldx #$02/lda $2A,x/dex/bpl`——
+    // **dex 出口 X=$FF**（JumpEngine `stx TempX($69)` 保存面源）。
+    mem.regs.x = 0xFF;
     let delay = mem.read_ram(TIMER_DELAY).wrapping_sub(1);
     mem.write_ram(TIMER_DELAY, delay);
     let last = if (delay as i8) >= 0 { 1 } else {

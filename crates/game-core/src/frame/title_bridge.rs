@@ -37,6 +37,10 @@ pub fn main_title_routine(mem: &mut FrameMemory) {
         wram: mem.wram.to_vec(),
         ram: mem.ram.to_vec(),
     };
+    // **JumpEngine TempX/TempY 保存**（asm C27C：`sty TempY($6A)/stx TempX($69)`——
+    // B 案 $69/$6A=FF/FF 机理：调用点寄存器保存（帧 3 面））
+    mem.write_ram(0x0069, mem.regs.x);
+    mem.write_ram(0x006A, mem.regs.y);
     // JumpEngine 指针写（asm C27C：`pla/sta JumpEngineRoutinePtr/pla/sta $0D`——
     // 分发目标址入 $0C/$0D（B 案 $0C/$0D=$8071 对形））
     if (phase as usize) < 31 {
@@ -62,6 +66,15 @@ pub fn main_title_routine(mem: &mut FrameMemory) {
     let step = crate::title::dispatch_step(&face);
     mem.title_cursor = step.next_cursor; // 跨帧游标存回（>0=spin 续点/0=完成复位）
     if let Some(addr) = step.unported {
+        // shell 组合点执行（S6-4 精灵面迭代件——F4/F0 填充约定面）
+        for sc in &step.shell {
+            use crate::title::ShellCall::*;
+            match sc {
+                EraseAllSprites => crate::frame::boot::c1a3_unit(mem), // $F0 填充
+                ClearNameTables => crate::frame::boot::c158_unit(mem),
+                _ => {} // 其余壳（ScreenOff/NMIOn 等——NmiYield 判定下）
+            }
+        }
         if step.shell.contains(&crate::title::ShellCall::NmiYield) {
             // **占位臂**（表址供首分歧记账+NmiYield 帧界让出——B 跑分类面，非引爆）
             super::DIVERGENCES.with(|d| d.borrow_mut().push(addr));
