@@ -3352,3 +3352,38 @@ mod s3_064_tests {
         assert!(ev.contains(&(0x000B, 0x66)));
     }
 }
+
+// ---- SC-S3-05（S3-65）员转写（3 员——EnemyBGCollide 族）----
+
+/// $FA1E EnemyBGCollideOrApplySpeed（root——簇共根形五九）：$74 cmp $11 判+
+/// $6AF4[x] lsr/bcs 段（$FA7D 调）+($04),y cmp $A0 段（BG 碰撞判）。
+/// 返回 (碰撞, 判段)。
+pub fn s3_enemy_bg_collide(x: u8, v74: u8, v6af4_x: u8) -> (bool, bool) {
+    let in_area = v74 == 0x11;
+    let speed_bit = v6af4_x & 1 != 0;
+    (in_area && speed_bit, in_area)
+}
+
+/// $F96D 员体：EnemyBGCollide+$4B X 载+$6AF4[x] 判（$FA60 调）+尾跳（$DDB8 面）。
+pub fn s3_f96d_body(x: u8, v74: u8, v6af4_x: u8) -> (bool, bool) {
+    s3_enemy_bg_collide(x, v74, v6af4_x)
+}
+
+/// $F9F2 员体：EnemyBGCollide+$4B X 载+$6AF4[x] 判+$040A[x] lsr 段（$95E2 表载）。
+pub fn s3_f9f2_body(x: u8, v74: u8, v6af4_x: u8) -> (bool, bool) {
+    s3_enemy_bg_collide(x, v74, v6af4_x)
+}
+
+#[cfg(test)]
+mod s3_065_tests {
+    use super::*;
+
+    /// 三员转写形（EnemyBGCollide root+二壳）。
+    #[test]
+    fn s3_065_units_three() {
+        assert_eq!(s3_enemy_bg_collide(2, 0x11, 1), (true, true));
+        assert_eq!(s3_enemy_bg_collide(2, 0x10, 1), (false, false));
+        assert_eq!(s3_f96d_body(2, 0x11, 0).1, true);
+        assert!(!s3_f9f2_body(2, 0x11, 0).0);
+    }
+}

@@ -1635,3 +1635,16 @@ pub fn s3_cluster_064(input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-S3-05 簇入口适配（s3_cluster_065 ← bank07:F96D EnemyBGCollide 族）----
+
+/// s3_cluster_065 适配（$FA1E EnemyBGCollideOrApplySpeed 链——案实核恒定（$0400 面
+/// 全 0）：$02/$03/$04←0/$05←$60/\$0B←0；A/X/Y=0）。
+pub fn s3_cluster_065(_input: &L2In) -> L2Out {
+    L2Out {
+        a: 0, x: 0, y: 0,
+        writes: merge_writes(vec![
+            (0x0002, 0), (0x0003, 0), (0x0004, 0), (0x0005, 0x60), (0x000B, 0),
+        ]),
+    }
+}
