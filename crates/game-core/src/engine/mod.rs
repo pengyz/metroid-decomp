@@ -4036,3 +4036,38 @@ mod s3_082_tests {
         assert_eq!(v2, 0x80);
     }
 }
+
+// ---- SC-S3-23（S3-83）员转写（2 员——TourianMusic 族）----
+
+/// $CC07 TourianMusic（root——簇共根形七七·**SFX 族五现**）：SFX id 装载链
+/// （$40——Tourian 曲触发）+X=5（ldx）+$4B/$55 面+$CC1A 调。
+/// 返回 (声旗写, SFX id)。
+pub fn s3_tourian_music() -> (Vec<(u16, u8)>, u8) {
+    (vec![(0x0685, 0x40)], 0x40) // sfxNoise_Tourian=$40（案实核恒定）
+}
+
+/// $D3DD 员体：TourianMusic+$6987←0+$58 位段（$0300←）+清组（$58/$56←0）。
+pub fn s3_d3dd_body(v58: u8) -> (Vec<(u16, u8)>, u8) {
+    let (mut ev, id) = s3_tourian_music();
+    ev.push((0x6987, 0));
+    ev.push((0x0300, v58 & 0x0F));
+    ev.push((0x0058, 0));
+    ev.push((0x0056, 0));
+    (ev, id)
+}
+
+#[cfg(test)]
+mod s3_083_tests {
+    use super::*;
+
+    /// 二员转写形（TourianMusic 五现 root+一壳）。
+    #[test]
+    fn s3_083_units_two() {
+        let (ev, id) = s3_tourian_music();
+        assert_eq!(id, 0x40);
+        assert!(ev.contains(&(0x0685, 0x40)));
+        let (ev2, _) = s3_d3dd_body(0x35);
+        assert!(ev2.contains(&(0x0300, 5)));
+        assert!(ev2.contains(&(0x6987, 0)));
+    }
+}

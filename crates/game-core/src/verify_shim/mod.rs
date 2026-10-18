@@ -1773,3 +1773,14 @@ pub fn s3_cluster_077(input: &L2In) -> L2Out {
         writes: merge_writes(vec![(0x0683, 0x01)]),
     }
 }
+
+// ---- SC-S3-23 簇入口适配（s3_cluster_083 ← bank07:CC07 TourianMusic 族）----
+
+/// s3_cluster_083 适配（$CC07 TourianMusic——案实核恒定：$0685←$40（声旗）；
+/// A=$40/X=5/Y 透传——SFX 族五现）。
+pub fn s3_cluster_083(input: &L2In) -> L2Out {
+    L2Out {
+        a: 0x40, x: 5, y: input.y,
+        writes: merge_writes(vec![(0x0685, 0x40)]),
+    }
+}
