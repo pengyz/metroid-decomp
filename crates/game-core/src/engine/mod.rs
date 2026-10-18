@@ -4071,3 +4071,40 @@ mod s3_083_tests {
         assert!(ev2.contains(&(0x6987, 0)));
     }
 }
+
+// ---- SC-S3-24（S3-84）员转写（2 员——DrawFrame 族）----
+
+/// $DE4A DrawFrame（root——簇共根形七八）：$4B X 载+$0303[x] cmp $F7 判（jmp $DF2D）
+/// +cmp 7 判（$6B 位4 清）+$030D 段（绘制帧分派——S1-22 walk 表目标面）。
+/// 返回 (写事件, 判段)。
+pub fn s3_draw_frame(x: u8, v0303_x: u8) -> (Vec<(u16, u8)>, u16) {
+    if v0303_x == 0xF7 {
+        (vec![], 0xDF2D) // jmp 段
+    } else if v0303_x == 7 {
+        (vec![(0x006B, 0xEF)], 0xDE4A) // 位4 清段
+    } else {
+        (vec![], 0xDE4A)
+    }
+}
+
+/// $D417 员体：jmp DrawFrame（尾形）+$0304 dec+$0320 cmp 3/8 双判段。
+pub fn s3_d417_body(x: u8, v0303_x: u8, v0304: u8) -> (Vec<(u16, u8)>, u16) {
+    let (mut ev, j) = s3_draw_frame(x, v0303_x);
+    ev.push((0x0304, v0304.wrapping_sub(1)));
+    (ev, j)
+}
+
+#[cfg(test)]
+mod s3_084_tests {
+    use super::*;
+
+    /// 二员转写形（DrawFrame 分派 root+一壳）。
+    #[test]
+    fn s3_084_units_two() {
+        assert_eq!(s3_draw_frame(2, 0xF7).1, 0xDF2D);
+        let (ev, _) = s3_draw_frame(2, 7);
+        assert!(ev.contains(&(0x006B, 0xEF)));
+        let (ev2, _) = s3_d417_body(2, 0, 5);
+        assert!(ev2.contains(&(0x0304, 4)));
+    }
+}

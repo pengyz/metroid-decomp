@@ -1784,3 +1784,24 @@ pub fn s3_cluster_083(input: &L2In) -> L2Out {
         writes: merge_writes(vec![(0x0685, 0x40)]),
     }
 }
+
+// ---- SC-S3-24 簇入口适配（s3_cluster_084 ← bank07:D417 DrawFrame 族）----
+
+/// s3_cluster_084 适配（$D417 DrawFrame 链——**S1-17 修剪变体**（19 写：定 15+
+/// 依存 4（\$030D→\$A/\$10、\$030E→\$B/\$E））；A=0/X=0/Y=\$030D）。
+pub fn s3_cluster_084(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    let v30d = r(0x030D);
+    let v30e = r(0x030E);
+    L2Out {
+        a: 0, x: 0, y: v30d,
+        writes: merge_writes(vec![
+            (0x0000, 32), (0x0001, 171), (0x0002, 199), (0x0003, 6),
+            (0x0004, 32), (0x0005, 34), (0x0006, 0), (0x0008, 61),
+            (0x0009, 235), (0x000F, 0), (0x0011, 3), (0x006B, 0),
+            (0x0301, 77), (0x0302, 235), (0x030B, 0),
+            (0x000A, v30d), (0x0010, v30d),
+            (0x000B, v30e), (0x000E, v30e),
+        ]),
+    }
+}
