@@ -153,6 +153,7 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "sub_MetroidHitSFXInit" => Some(sub_metroid_hit),
         "sub_SamusDieSFXInit" => Some(sub_samus_die),
         "sub_StatueRaiseSFXInit" => Some(sub_statue_raise),
+        "s1_cluster_00" => Some(sub_s1_cluster_00),
         _ => None,
     }
 }
@@ -654,3 +655,8 @@ pub fn sub_bomb_launch(input: &L2In) -> L2Out { crate::verify_shim::sound_bomb_l
 pub fn sub_metroid_hit(input: &L2In) -> L2Out { crate::verify_shim::sound_metroid_hit(input) }
 pub fn sub_samus_die(input: &L2In) -> L2Out { crate::verify_shim::sound_samus_die(input) }
 pub fn sub_statue_raise(input: &L2In) -> L2Out { crate::verify_shim::sound_statue_raise(input) }
+
+/// s1_cluster_00 —— bank07:D498 簇入口注册（SC-S1-00——尾共享形）。
+pub fn sub_s1_cluster_00(input: &L2In) -> L2Out {
+    crate::verify_shim::s1_cluster_00(input)
+}

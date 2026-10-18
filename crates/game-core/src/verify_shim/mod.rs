@@ -944,3 +944,14 @@ pub fn sound_statue_raise(input: &L2In) -> L2Out {
     let r = |a: u16| input.ram[a as usize & 0x7FF];
     w2_out(input, crate::sound::statue_raise_sfx_init(r(0x065C & 0x7FF), r(0x064D & 0x7FF)))
 }
+
+// ---- SC-S1-00 簇入口适配（s1_cluster_00 ← bank07:D498）----
+
+/// s1_cluster_00 适配（$D498 尾共享形簇入口——root Y→X 循环四配写）。
+pub fn s1_cluster_00(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    let root = (r(0x00FF) ^ r(0x0049)) & 1; // GetNameTableAtScrollDir
+    let ev = crate::engine::s1_d498(root, &input.ram);
+    let match0 = root == r(0x072C); // fallthrough 末次（X=0）
+    L2Out { a: if match0 { 0xFF } else { root }, x: 0, y: root, writes: merge_writes(ev) }
+}
