@@ -1762,3 +1762,14 @@ pub fn s3_cluster_076(input: &L2In) -> L2Out {
         writes: merge_writes(vec![(0x0309, 0), (0x0313, 0), (0x0315, 0)]),
     }
 }
+
+// ---- SC-S3-17 簇入口适配（s3_cluster_077 ← bank07:CBA8 SFX_BombLaunch 族）----
+
+/// s3_cluster_077 适配（$CBA8 SFX_BombLaunch——案实核恒定：$0683←$01（声旗）；
+/// A=$01/X=3/Y 透传——SFX 族四现）。
+pub fn s3_cluster_077(input: &L2In) -> L2Out {
+    L2Out {
+        a: 0x01, x: 3, y: input.y,
+        writes: merge_writes(vec![(0x0683, 0x01)]),
+    }
+}

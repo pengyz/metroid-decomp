@@ -3808,3 +3808,36 @@ mod s3_076_tests {
         assert!(ev2.contains(&(0x0308, 0)));
     }
 }
+
+// ---- SC-S3-17（S3-77）员转写（2 员——SFX_BombLaunch 族）----
+
+/// $CBA8 SFX_BombLaunch（root——簇共根形七一·**SFX 族四现**）：SFX id 装载链
+/// （$01/$02/$04/$10/$20/$40 六 id）+X=3（ldx）。
+/// 返回 (声旗写, SFX id)。
+pub fn s3_sfx_bomb_launch() -> (Vec<(u16, u8)>, u8) {
+    (vec![(0x0683, 0x01)], 0x01) // sfxTri_BombLaunch=$01（案实核恒定）
+}
+
+/// $D194 员体：SFX_BombLaunch 尾形+$14 位3 判（$0300←0 段）+位0-2 判（$E1E1 调）。
+pub fn s3_d194_body(v14: u8) -> (Vec<(u16, u8)>, u8) {
+    let (mut ev, id) = s3_sfx_bomb_launch();
+    if v14 & 0x08 == 0 {
+        ev.push((0x0300, 0));
+    }
+    (ev, id)
+}
+
+#[cfg(test)]
+mod s3_077_tests {
+    use super::*;
+
+    /// 二员转写形（SFX_BombLaunch 四现 root+一壳）。
+    #[test]
+    fn s3_077_units_two() {
+        let (ev, id) = s3_sfx_bomb_launch();
+        assert_eq!(id, 0x01);
+        assert!(ev.contains(&(0x0683, 0x01)));
+        let (ev2, _) = s3_d194_body(0);
+        assert!(ev2.contains(&(0x0300, 0)));
+    }
+}
