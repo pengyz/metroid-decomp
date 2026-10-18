@@ -4277,3 +4277,41 @@ mod s3_088_tests {
         assert!(ev3.contains(&(0x000A, 0x54)));
     }
 }
+
+// ---- SC-S3-29（S3-89）员转写（2 员——DrawBullet 族；L2 真 0 留白·S3 收官卡）----
+
+/// $D522 DrawBullet（root——簇共根形八三）：$0500[x] inc（动画计数）+$0501[x]←0+
+/// $71←1+链（$D5FC/$D5DA——S3-087/088 接面）。
+/// 返回 (写事件, 计数值)。
+pub fn s3_draw_bullet(x: u8, v0500_x: u8) -> (Vec<(u16, u8)>, u8) {
+    let n = v0500_x.wrapping_add(1);
+    (vec![(0x0500 + x as u16, n), (0x0501 + x as u16, 0), (0x0071, 1)], n)
+}
+
+/// $D552 员体：jmp DrawBullet（尾形）+$0501[x] cmp/inc 段+$8296 调（S2-42 接面
+/// ——条件取负）+$0308[x]←。
+pub fn s3_d552_body(x: u8, v0500_x: u8, v0501_x: u8, tbl_val: u8) -> (Vec<(u16, u8)>, u8) {
+    let (mut ev, n) = s3_draw_bullet(x, v0500_x);
+    if v0501_x != n {
+        ev.push((0x0501 + x as u16, v0501_x.wrapping_add(1)));
+    }
+    ev.push((0x0308 + x as u16, tbl_val));
+    (ev, n)
+}
+
+#[cfg(test)]
+mod s3_089_tests {
+    use super::*;
+
+    /// 二员转写形（DrawBullet root+一壳）——S3 收官。
+    #[test]
+    fn s3_089_units_two() {
+        let (ev, n) = s3_draw_bullet(2, 5);
+        assert_eq!(n, 6);
+        assert!(ev.contains(&(0x0502, 6)));
+        assert!(ev.contains(&(0x0503, 0)));
+        assert!(ev.contains(&(0x0071, 1)));
+        let (ev2, _) = s3_d552_body(2, 5, 3, 0x55);
+        assert!(ev2.contains(&(0x030A, 0x55)));
+    }
+}
