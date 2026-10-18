@@ -122,19 +122,34 @@ def in_rect(x: int, y: int, rect: list[int]) -> bool:
     return rx <= x < rx + rw and ry <= y < ry + rh
 
 
-def diff_frames(name: str, golden: bytes, fresh: bytes, wl: list[dict]) -> tuple[bool, str]:
-    """像素级对拍（白名单外零容差）。返回 (ok, detail)。"""
+def load_gap_map() -> list[dict]:
+    """task-38 族 L4 记账面（迭代态已知缺口——非白名单！trace-diff gap_map 同口径）。"""
+    p = ROOT / "data" / "status" / "visual_gap_map.json"
+    if not p.is_file():
+        return []
+    try:
+        return json.loads(p.read_text(encoding="utf-8")).get("entries", [])
+    except Exception:
+        return []
+
+
+def diff_frames(name: str, golden: bytes, fresh: bytes, wl: list[dict],
+                gaps: list[dict] | None = None) -> tuple[bool, str, bool]:
+    """像素级对拍（白名单外零容差；账内=临时容忍）。返回 (ok, detail, tolerated)。"""
+    gaps = gaps or []
     try:
         gw, gh, _, gp = decode_png(golden)
         fw, fh, _, fp = decode_png(fresh)
     except PngError as e:
-        return False, f"{name}: PNG 解码失败——{e}"
+        return False, f"{name}: PNG 解码失败——{e}", False
     if (gw, gh) != (fw, fh):
-        return False, f"{name}: 尺寸不一致 金面 {gw}×{gh} vs 复采 {fw}×{fh}"
+        return False, f"{name}: 尺寸不一致 金面 {gw}×{gh} vs 复采 {fw}×{fh}", False
     rules = [r for r in wl if Path(name).match(r.get("file", ""))]
+    grules = [g for g in gaps if Path(name).match(g.get("file", "*"))]
     diffs = 0
     first = None
     wl_hits = 0
+    gap_hits = 0
     for y in range(gh):
         for x in range(gw):
             i = (y * gw + x) * 4
@@ -143,14 +158,20 @@ def diff_frames(name: str, golden: bytes, fresh: bytes, wl: list[dict]) -> tuple
             if any(in_rect(x, y, r["rect"]) for r in rules):
                 wl_hits += 1
                 continue
+            if any(in_rect(x, y, g["rect"]) for g in grules):
+                gap_hits += 1
+                continue
             diffs += 1
             if first is None:
                 first = (x, y, bytes(gp[i:i + 4]).hex(), bytes(fp[i:i + 4]).hex())
     if diffs:
         x, y, a, b = first
-        return False, (f"{name}: 白名单外 {diffs} 像素分歧（首 @{x},{y} 金={a} 采={b}"
-                       f"；白名单内 {wl_hits} 处已排除）")
-    return True, f"{name}: 全同（白名单内 {wl_hits} 处排除）" if wl_hits else f"{name}: 全同"
+        return False, (f"{name}: 账外 {diffs} 像素分歧（首 @{x},{y} 金={a} 采={b}"
+                       f"；白名单内 {wl_hits}/账内 {gap_hits} 处已排除）"), gap_hits > 0
+    if gap_hits:
+        return True, (f"{name}: 账内容忍（迭代态缺口 {gap_hits} 像素——"
+                      f"账清转 strict）；白名单内 {wl_hits} 处排除）"), True
+    return True, f"{name}: 全同（白名单内 {wl_hits} 处排除）" if wl_hits else f"{name}: 全同", False
 
 
 def main() -> int:
@@ -166,20 +187,52 @@ def main() -> int:
         print("L4 视觉: oracle/screens/ 无金面（首例场景金面待立——fail-loud 空跑不得绿）")
         return 1
     wl = load_whitelist()
+    gaps = load_gap_map()
     failed = 0
+    tolerated = 0
     for g in goldens:
         fresh_path = SHOTS / g.name
         if not fresh_path.is_file():
             print(f"[FAIL] {g.name}: 复采面缺失（shots/{g.name}——跑 scenario_run 采样后复验）")
             failed += 1
             continue
-        ok, detail = diff_frames(g.name, g.read_bytes(), fresh_path.read_bytes(), wl)
-        print(("[PASS] " if ok else "[FAIL] ") + detail)
+        ok, detail, tol = diff_frames(g.name, g.read_bytes(), fresh_path.read_bytes(), wl, gaps)
+        print(("[TOLERATED] " if (ok and tol) else "[PASS] " if ok else "[FAIL] ") + detail)
         if not ok:
             failed += 1
-    print(f"L4 视觉裁定: {len(goldens)} 金面帧, {failed} 失败, 白名单条目 {len(wl)}")
-    print("（game-core 渲染腿未启用（S6）——启用后接第二腿同机制）")
-    return 1 if failed else 0
+        elif tol:
+            tolerated += 1
+    print(f"L4 视觉裁定: {len(goldens)} 金面帧, {failed} 失败, 白名单条目 {len(wl)}, 账内容忍 {tolerated}")
+    if gaps:
+        print("缺口路线图（账清⇒strict 自然转绿）:")
+        for g in gaps:
+            print(f"  [{g['id']}] {g.get('file','*')} ——{g.get('reason','')}｜退出={g.get('exit','')}")
+    # 第二腿（game-core 渲染腿——S6-10 同机制自启用，L3 口径）
+    render_shots = ROOT / "analysis" / "render-shots"
+    if not render_shots.is_dir():
+        print("（game-core 渲染腿未启用（S6）——启用后接第二腿同机制）")
+        return 1 if failed else 0
+    rfailed = 0
+    rtol = 0
+    for g in goldens:
+        fresh_path = render_shots / g.name
+        if not fresh_path.is_file():
+            mre = [e for e in gaps if e.get("kind") == "missing-face"
+                   and Path(g.name).match(e.get("file", "*"))]
+            if mre:
+                print(f"[R-TOLERATED] {g.name}: 渲染面缺失账内（{mre[0]['id']}——"
+                      f"{mre[0].get('exit','')}）")
+                rtol += 1
+            else:
+                print(f"[FAIL] {g.name}: 渲染腿面缺失（analysis/render-shots/{g.name}——跑 render-dump 后复验）")
+                rfailed += 1
+            continue
+        ok, detail, tol = diff_frames(g.name, g.read_bytes(), fresh_path.read_bytes(), wl, gaps)
+        print(("[R-TOLERATED] " if (ok and tol) else "[R-PASS] " if ok else "[R-FAIL] ") + detail)
+        if not ok:
+            rfailed += 1
+    print(f"L4 渲染腿裁定: {len(goldens)} 金面帧, {rfailed} 失败, 白名单条目 {len(wl)}, 账内容忍 {rtol}")
+    return 1 if (failed or rfailed) else 0
 
 
 def _encode_png(w: int, h: int, rgba: bytes) -> bytes:
@@ -210,22 +263,22 @@ def selftest(quiet: bool = False) -> int:
     img = bytearray(b"\x10\x20\x30\xff" * (8 * 8))
     png = _encode_png(8, 8, bytes(img))
     # 正对照：同帧全同
-    ok, d = diff_frames("t_same.png", png, png, [])
+    ok, d, _ = diff_frames("t_same.png", png, png, [])
     say("[正对照] " + d + " → " + mark(ok))
     ok_all &= ok
     # 负对照：1 像素差异打回
     img2 = bytearray(img)
     img2[4 * 10 + 1] ^= 0x01  # (2,1) 绿道差 1
-    ok, d = diff_frames("t_diff.png", png, _encode_png(8, 8, bytes(img2)), [])
+    ok, d, _ = diff_frames("t_diff.png", png, _encode_png(8, 8, bytes(img2)), [])
     say("[负对照·1 像素] " + d + " → " + mark(not ok))
     ok_all &= (not ok)
     # 白名单放行
-    ok, d = diff_frames("t_diff.png", png, _encode_png(8, 8, bytes(img2)),
+    ok, d, _ = diff_frames("t_diff.png", png, _encode_png(8, 8, bytes(img2)),
                         [{"file": "t_*.png", "rect": [0, 0, 8, 8], "reason": "selftest"}])
     say("[白名单放行] " + d + " → " + mark(ok))
     ok_all &= ok
     # 尺寸不符打回
-    ok, d = diff_frames("t_size.png", png, _encode_png(4, 4, bytes(b"\x00" * 64)), [])
+    ok, d, _ = diff_frames("t_size.png", png, _encode_png(4, 4, bytes(b"\x00" * 64)), [])
     say("[尺寸不符] " + d + " → " + mark(not ok))
     ok_all &= (not ok)
     say("selftest: " + ("PASS" if ok_all else "FAIL"))

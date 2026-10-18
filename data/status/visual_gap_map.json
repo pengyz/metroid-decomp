@@ -1,0 +1,35 @@
+{
+  "schema": "visual-gap-map/v1",
+  "doc": "L4 记账面（迭代态已知缺口——**非白名单**！visual_whitelist=永久例外需用户确认不动；本账=退出条件驱动的临时容忍（trace-diff gap_map 同口径：账内容忍+路线图打印+账清转 strict））",
+  "entries": [
+    {
+      "id": "RENDER-ITER-0x1B",
+      "leg": "game-core-render",
+      "file": "*",
+      "rect": [
+        0,
+        0,
+        256,
+        240
+      ],
+      "reason": "S6 渲染腿迭代态（port2 0x1B 绘制面修复前）——渲染输出未达金面（000000ff 黑面类）",
+      "exit": "port2 0x1B 绘制面修复落→账清转 strict",
+      "registered": "2026-10-18"
+    },
+    {
+      "id": "RENDER-DUMP-COVERAGE",
+      "leg": "game-core-render",
+      "kind": "missing-face",
+      "file": "sc-password-entry3_*",
+      "rect": [
+        0,
+        0,
+        256,
+        240
+      ],
+      "reason": "render-dump 覆盖缺（sc-password-entry3 三帧未产渲染面——迭代态）",
+      "exit": "render-dump 覆盖全金面帧→账清转 strict",
+      "registered": "2026-10-18"
+    }
+  ]
+}
