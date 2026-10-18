@@ -263,6 +263,15 @@ tick 内 vblank 相（241）。
 中断相位）」。余位照比：**$01EB-$01FB+$01FF 共 18 位**（=21 位窗口−3 排除位，推导
 可溯）——v4「余 19 字节」无源数已删。
 
+> 【2026-10-18 裁定修订】排除窗 3 字节→**整栈影子区 $0100-$01FF**。论证：①栈值=
+> 实现表面产物（调用深度/调用点/PLA-PLA 弃值技巧——EndVRAMStruct 弹弃自己压的返回
+> 地址）不进行为面 ②链规 19：jsr/rts 栈写建模=重现原调用结构=1:1 结构镜像明禁
+> ③行为依赖核查：nmikstas 源级 0 处绝对寻址读 $01xx（raw 扫 141 命中全假阳）。
+> **D7 声明**：栈影子=实现表面（同 PPU 内部态族），声明性排除+排除命中随行打印。
+> **升级条件**：若发现栈区被读作数据（行为依赖）⇒ 升建模卡（jsr/rts 栈写建模转正）。
+> 机器面=tools/diff_traces.py INTERRUPT_FRAME_EXCLUDE=(0x0100,0x01FF)。
+
+
 **③ $1A 双写相位** ✓ 语义钉死（asm，**v4 引证改内容锚+B1/B3 勘误**）：NMI 尾
 `ldy #$01`（「NMI = finished」注旁）/`sty NMIStatus`——恒量 1；每帧环清 0/spin 在
 **主环 `lda #$00/sta NMIStatus` + `@loop_waitNMIEnd`（「If nonzero, NMI has ended」）**

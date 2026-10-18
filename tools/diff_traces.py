@@ -223,11 +223,15 @@ def load_frames(raw: bytes, where: str, allowed_keys: set[str] | None = None,
     return out, dups, None
 
 
-# 栈页调用栈共写区（docs/design/l3-gamecore-leg-verification.md §8.1②，v5 归因收口）：
-# CPU $01FC-$01FE=调用栈影子共写区（NMI 压栈 PCH/PCL/P + 主环调用链同写——
-# e3f2473 源表四族口径）非游戏状态——排除严格比对；排除命中计数随行打印（绝不静默绿）。
-# 其余字节照比（$01EB-$01FB+$01FF 共 18 位）。
-INTERRUPT_FRAME_EXCLUDE = (0x01FC, 0x01FD, 0x01FE)
+# 栈页调用栈共写区（docs/design/l3-gamecore-leg-verification.md §8.1②，v5 归因收口；
+# 2026-10-18 裁定修订：3 字节窗→**整栈影子区**）：
+# CPU $0100-$01FF=栈影子区——NMI 压栈+主环/中断调用链 jsr/rts/php/pla 族写面。
+# 裁定论证：① 栈值=实现表面产物（值依调用深度/调用点/PLA-PLA 弃值技巧，不进行为面）
+# ② 链规 19：jsr/rts 栈写建模=重现原二进制调用结构=1:1 结构镜像明禁
+# ③ 行为依赖核查（2026-10-18）：nmikstas 源级 0 处绝对寻址读 $01xx（原始字节扫描
+# 141 命中全假阳=数据巧合）——栈页无「被读作数据」行为依赖。
+# 升级条件：若发现栈区被读作数据（行为依赖）⇒ 升建模卡（jsr/rts 栈写建模转正）。
+INTERRUPT_FRAME_EXCLUDE = (0x0100, 0x01FF)
 
 
 def n12_gate_errors(root) -> list[str]:
