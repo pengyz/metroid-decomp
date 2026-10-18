@@ -1508,3 +1508,21 @@ pub fn s2_cluster_050(input: &L2In) -> L2Out {
     w.push((0x006A, 0));
     L2Out { a: (target >> 8) as u8, x: input.x, y: 0, writes: merge_writes(w) }
 }
+
+// ---- SC-S2-21 簇入口适配（s2_cluster_051 ← bank07:F0E5 Xminus16 位置族）----
+
+/// s2_cluster_051 适配（$F0E5 Xminus16 位置流——案实核：$030D→$06/$07 对、
+/// $030E→$08/$09 对、0→$0A/$0B 对；出口 A=0/X=$C0（环残迹）/Y=0）。
+pub fn s2_cluster_051(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    let v30d = r(0x030D);
+    let v30e = r(0x030E);
+    L2Out {
+        a: 0, x: 0xC0, y: 0,
+        writes: merge_writes(vec![
+            (0x0006, v30d), (0x0007, v30d),
+            (0x0008, v30e), (0x0009, v30e),
+            (0x000A, 0), (0x000B, 0),
+        ]),
+    }
+}

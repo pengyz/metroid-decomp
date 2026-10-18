@@ -2770,3 +2770,44 @@ mod s2_050_tests {
         assert_eq!(s2_eef1_body(0x7F).1, 0xEDD6);
     }
 }
+
+// ---- SC-S2-21（S2-51）员转写（3 员——Xminus16 位置族）----
+
+/// $F1F4 Xminus16（root——簇共根形四五·**S1-07 对偶**）：X-16（txa/sec/sbc #$10/tax）
+/// +CheckCollision 尾段（S1-27 同构面）。
+pub fn s2_xminus16(x: u8) -> (u8, u8) {
+    (x.wrapping_sub(0x10), 2) // X-16 + $10←2（尾段面）
+}
+
+/// $F0E5 员体：Xminus16+位置对写族（$030D→$06/$07、$030E→$08/$09、0→$0A/$0B
+/// ——案实核）+$6AF4[y] 判段（cmp 5/…）。
+pub fn s2_f0e5_body(x: u8, v30d: u8, v30e: u8) -> (Vec<(u16, u8)>, u8) {
+    let (nx, _) = s2_xminus16(x);
+    (vec![(0x0006, v30d), (0x0007, v30d),
+          (0x0008, v30e), (0x0009, v30e),
+          (0x000A, 0), (0x000B, 0)], nx)
+}
+
+/// $F136 员体：Xminus16+cmp $C0 判+尾跳 $CE92（S1-26 接面——IsSamusDead 族）。
+pub fn s2_f136_body(x: u8) -> (Vec<(u16, u8)>, u16) {
+    let (nx, _) = s2_xminus16(x);
+    let _ = nx;
+    (vec![], 0xCE92)
+}
+
+#[cfg(test)]
+mod s2_051_tests {
+    use super::*;
+
+    /// 三员转写形（Xminus16 对偶 root+二壳）。
+    #[test]
+    fn s2_051_units_three() {
+        assert_eq!(s2_xminus16(0x70), (0x60, 2));
+        let (ev, nx) = s2_f0e5_body(0xC3, 155, 143);
+        assert_eq!(nx, 0xB3);
+        assert!(ev.contains(&(0x0006, 155)));
+        assert!(ev.contains(&(0x0009, 143)));
+        assert!(ev.contains(&(0x000B, 0)));
+        assert_eq!(s2_f136_body(0xC3).1, 0xCE92);
+    }
+}
