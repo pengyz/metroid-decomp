@@ -955,3 +955,13 @@ pub fn s1_cluster_00(input: &L2In) -> L2Out {
     let match0 = root == r(0x072C); // fallthrough 末次（X=0）
     L2Out { a: if match0 { 0xFF } else { root }, x: 0, y: root, writes: merge_writes(ev) }
 }
+
+// ---- SC-S1-01 簇入口适配（s1_cluster_01 ← bank07:D806 DrawElevator 驱动器）----
+
+/// s1_cluster_01 适配（$D806 驱动器：$2D bit0 判别——清⇒bcc $D79E=rts 即退（无写类）；
+/// 置⇒jmp $DE4A（jumped 面——8 案未练（fixture $2D=0 族），残面注记））。
+/// 出口：A=$2D>>1（lsr 后）/X/Y 透传。
+pub fn s1_cluster_01(input: &L2In) -> L2Out {
+    let v2d = input.ram[0x002D & 0x7FF];
+    L2Out { a: v2d >> 1, x: input.x, y: input.y, writes: vec![] }
+}

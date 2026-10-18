@@ -161,3 +161,40 @@ mod s1_residual_tests {
         assert!(ev.contains(&(0x0006, 0x4F)));
     }
 }
+
+// ---- SC-S1-01 残面：$D806 驱动器活跃径 handlers（10 员族——jmp 回驱形）----
+// 【结构互核注】员体形=[jmp $D806 尾][handler 体]——尾=前员出口回驱（流式布局）；
+// handler 体末=**jmp $D806 回驱**（状态机循环面）。8 案覆盖=早退类（$2D bit0 清）；
+// 活跃径（bit0 置→$DE4A 链）=本残面（无案覆盖——已实现级）。
+
+/// $D824 handler（$D821 员体）：$030E←$80/条件调 $E6A7/$E6D2→回驱 $D806。
+/// ($FD 判别+$030E,x 读面）。
+pub fn s1_d824(x: u8, v030e_x: u8, vfd: u8) -> (Vec<(u16, u8)>, u16) {
+    let mut ev = vec![(0x030E, 0x80)];
+    let diff = v030e_x.wrapping_sub(vfd);
+    let sub = if (diff as i8) >= 0 { 0xE6A7 } else { 0xE6D2 }; // bmi 分路
+    (ev, sub) // 调用面+jmp $D806 回驱（调用点=子例——jumped 面二阶）
+}
+
+/// $D837 handler（$D834 员体）：jsr $E6D2→回驱（极简形）。
+pub fn s1_d837() -> u16 { 0xE6D2 }
+
+/// $D892 handler（$D88F 员体）：$030F,x 符号分路（bpl⇒$E519/bmi⇒$E4F1）→回驱。
+pub fn s1_d892(v030f_x: u8) -> u16 {
+    if (v030f_x as i8) >= 0 { 0xE519 } else { 0xE4F1 }
+}
+
+#[cfg(test)]
+mod s1_01_tests {
+    use super::*;
+
+    /// 活跃径 handler 三分形（条件调/极简/符号分路）。
+    #[test]
+    fn s1_01_handlers() {
+        assert_eq!(s1_d824(0, 0x80, 0x10).1, 0xE6A7);
+        assert_eq!(s1_d824(0, 0x10, 0x80).1, 0xE6D2);
+        assert_eq!(s1_d837(), 0xE6D2);
+        assert_eq!(s1_d892(0x7F), 0xE519);
+        assert_eq!(s1_d892(0x80), 0xE4F1);
+    }
+}
