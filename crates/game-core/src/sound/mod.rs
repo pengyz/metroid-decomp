@@ -694,3 +694,82 @@ mod w3_tests {
         assert_eq!(samus_jump_sfx_init(0x00, 0, 0x40).ram_events.iter().find(|a| a.0 == 0x0660).unwrap().1, 0x0C);
     }
 }
+
+// ---- task-44 W1 残面首件：InitializeMusic 深径 + UpdateAllMusicChannels 帧径入口 ----
+
+/// CheckMusicFlags（$B3FC）语义折叠：MusicContFlags==CurrentSoundFlags⇒**同曲重开**
+/// （GotoClearSpecialAddresses：清计数器面）；否则全清（InitializeSoundAddresses 面）。
+/// 返回 same: bool（true=清计数器路/false=全清路）。
+pub fn check_music_flags(music_cont: u8, current_flags: u8) -> bool {
+    music_cont == current_flags
+}
+
+/// InitializeMusic（$BF19）语义折叠：MusicContFlags←CurrentSoundFlags+**13B 曲头装载**
+/// （SongHeaderEndInitIndex→NoteLengthTblOffset($062B) 起 13B——SONG_INTRO_HEADER 面）+
+/// InstrDelay($0640-$0643)←1×4+InstrID($0638-$063B)←0×4。
+/// 注：SongHeaderOffsetTable[MusicInitIndex]→曲头源址（表烘焙面）。
+pub fn initialize_music(current_flags: u8, header: &[u8; 13]) -> Vec<(u16, u8)> {
+    let mut ram = vec![(0x068D, current_flags)]; // MusicContFlags
+    for (i, b) in header.iter().enumerate() {
+        ram.push((0x062B + i as u16, *b));
+    }
+    for a in [0x0640u16, 0x0641, 0x0642, 0x0643] {
+        ram.push((a, 1));
+    }
+    for a in [0x0638u16, 0x0639, 0x063A, 0x063B] {
+        ram.push((a, 0));
+    }
+    ram
+}
+
+/// ResetVolumeIndex（$B9F3）：新音符始（InstrDelay==1）⇒VolumeIndex←1（SQ1/SQ2 对）。
+pub fn reset_volume_index(sq1_delay: u8, sq2_delay: u8) -> Vec<(u16, u8)> {
+    let mut ram = Vec::new();
+    if sq1_delay == 1 {
+        ram.push((0x066A, 1)); // MusicSQ1VolumeIndex
+    }
+    if sq2_delay == 1 {
+        ram.push((0x066C, 1)); // MusicSQ2VolumeIndex（$066A+2 块形——随证）
+    }
+    ram
+}
+
+/// UpdateAllMusicChannels 帧径入口（$BAA5）：ResetVolumeIndex+ThisSoundChannel($064B)←0
+/// （SQ1 面）——UpdateMusicChannel 逐通道环=帧径深件（残面注记）。
+pub fn update_all_music_channels_entry(sq1_delay: u8, sq2_delay: u8) -> Vec<(u16, u8)> {
+    let mut ram = reset_volume_index(sq1_delay, sq2_delay);
+    ram.push((0x064B, 0)); // ThisSoundChannel←SQ1
+    ram
+}
+
+#[cfg(test)]
+mod w1_residual_tests {
+    use super::*;
+
+    /// CheckMusicFlags 双路（同曲清计数器/异曲全清）。
+    #[test]
+    fn check_music_flags_two_paths() {
+        assert!(check_music_flags(0x08, 0x08));
+        assert!(!check_music_flags(0x08, 0x04));
+    }
+
+    /// InitializeMusic 深径（13B 头载+双初始化面）。
+    #[test]
+    fn initialize_music_deep_face() {
+        let ram = initialize_music(0x40, &SONG_INTRO_HEADER);
+        assert!(ram.contains(&(0x068D, 0x40)));
+        assert!(ram.contains(&(0x062B, 0x07))); // 头首字节
+        assert!(ram.contains(&(0x0637, 0x07))); // 头末字节（13B 末=通道字末）
+        assert!(ram.contains(&(0x0640, 1)));
+        assert!(ram.contains(&(0x063B, 0)));
+    }
+
+    /// 帧径入口（VolumeIndex 复位对+通道起点）。
+    #[test]
+    fn frame_entry_face() {
+        let ram = update_all_music_channels_entry(1, 0);
+        assert!(ram.contains(&(0x066A, 1)));
+        assert!(!ram.iter().any(|a| a.0 == 0x066C));
+        assert!(ram.contains(&(0x064B, 0)));
+    }
+}
