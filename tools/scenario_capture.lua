@@ -390,9 +390,9 @@ emu.addEventCallback(function()
           elseif cur > n.target + 3 and v >= 0 then btn[neg] = true
           elseif cur > n.target + 3 and v < 0 then -- 滑行接近
           elseif cur < n.target - 3 and v > 0 then -- 滑行接近
-          else -- 目标带内：回正微调
-            if cur < n.target then btn[pos] = true
-            elseif cur > n.target then btn[neg] = true end
+          else -- 目标带内：**反向刹车**（动量消解——过冲防）
+            if v > 0 then btn[neg] = true
+            elseif v < 0 then btn[pos] = true end
           end
         end
       end
