@@ -5335,3 +5335,38 @@ mod s4_117_tests {
         assert_eq!(ev2.len(), 3);
     }
 }
+
+// ---- SC-S4-28（S4-118）员转写（2 员——InitEnemyFacing 族；L2 真 0 留白）----
+
+/// $FB7B InitEnemyFacingDirectionAxisAndDelay（root——簇共根形百十二）：
+/// $80B0 调（GetRandomNumber——S1-02 接面）+ror $0405,x（随机朝向）+
+/// $96BB[y] 表载→$0409[x]（延迟面）。
+/// 返回 (写事件, 朝向值)。
+pub fn s4_init_enemy_facing(x: u8, y: u8, rand: u8, tbl_val: u8) -> (Vec<(u16, u8)>, u8) {
+    let facing = rand.rotate_right(1); // ror 面（进位取自随机）
+    (vec![(0x0405 + x as u16, facing), (0x0409 + x as u16, tbl_val)], facing)
+}
+
+/// $EB74 员体：InitEnemyFacing+jmp $F85A（尾面——S2-25 接面）+取负段
+/// （$FF^$49 and 1——S4-115 同构面）。
+pub fn s4_eb74_body(x: u8, y: u8, rand: u8, tbl_val: u8) -> (Vec<(u16, u8)>, u16) {
+    let (ev, _) = s4_init_enemy_facing(x, y, rand, tbl_val);
+    (ev, 0xF85A)
+}
+
+#[cfg(test)]
+mod s4_118_tests {
+    use super::*;
+
+    /// 二员转写形（InitEnemyFacing root+一壳）。
+    #[test]
+    fn s4_118_units_two() {
+        let (ev, f) = s4_init_enemy_facing(2, 3, 5, 0x55);
+        assert_eq!(f, 0x82); // 5 ror 1
+        assert!(ev.contains(&(0x0407, 0x82)));
+        assert!(ev.contains(&(0x040B, 0x55)));
+        let (ev2, j) = s4_eb74_body(2, 3, 5, 0x55);
+        assert_eq!(j, 0xF85A);
+        assert_eq!(ev2.len(), 2);
+    }
+}
