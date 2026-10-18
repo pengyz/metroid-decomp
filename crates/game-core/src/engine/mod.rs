@@ -3638,3 +3638,44 @@ mod s3_072_tests {
         assert!(ev2.contains(&(0x0004, 0xF5)));
     }
 }
+
+// ---- SC-S3-13（S3-73）员转写（2 员——LoadObjectPositionFromTemp 族；L2 真 0 留白）----
+
+/// $D638 LoadObjectPositionFromTemp（root——簇共根形六七·**S1-21/S2-34 Store 对偶**）：
+/// $08→$030D[x]/$09→$030E[x]/$0B 位0 判（$030C[x] eor 1）。
+/// 返回 (写事件, 位0)。
+pub fn s3_load_obj_pos(x: u8, v08: u8, v09: u8, v0b: u8, v030c_x: u8) -> (Vec<(u16, u8)>, bool) {
+    let mut ev = vec![(0x030D + x as u16, v08), (0x030E + x as u16, v09)];
+    let bit0 = v0b & 1 != 0;
+    if bit0 {
+        ev.push((0x030C + x as u16, v030c_x ^ 1));
+    }
+    (ev, bit0)
+}
+
+/// $D10D 员体：LoadObjectPosition+SetSamusStand 调（S2-18 接面）+$0306 dec+
+/// StopVertMovement+尾跳 $D144。
+pub fn s3_d10d_body(x: u8, v08: u8, v09: u8, v0b: u8, v030c_x: u8, v0306: u8)
+    -> (Vec<(u16, u8)>, u16) {
+    let (mut ev, _) = s3_load_obj_pos(x, v08, v09, v0b, v030c_x);
+    ev.push((0x0306, v0306.wrapping_sub(1)));
+    (ev, 0xD144)
+}
+
+#[cfg(test)]
+mod s3_073_tests {
+    use super::*;
+
+    /// 二员转写形（LoadObjectPositionFromTemp 对偶 root+一壳）。
+    #[test]
+    fn s3_073_units_two() {
+        let (ev, b) = s3_load_obj_pos(2, 8, 9, 1, 5);
+        assert!(b);
+        assert!(ev.contains(&(0x030F, 8)));
+        assert!(ev.contains(&(0x0310, 9)));
+        assert!(ev.contains(&(0x030E, 4))); // 5^1
+        let (ev2, j) = s3_d10d_body(2, 8, 9, 0, 5, 5);
+        assert_eq!(j, 0xD144);
+        assert!(ev2.contains(&(0x0306, 4)));
+    }
+}
