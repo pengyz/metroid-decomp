@@ -142,6 +142,7 @@ def parse_scenario(path: Path) -> dict:
         "press_len": PRESS_LEN_DEFAULT,
         "presses": [],
         "navs": [],
+        "triggers": [],
         "holds": [],
         "captures": [],
         "capture_every": None,
@@ -180,6 +181,26 @@ def parse_scenario(path: Path) -> dict:
             if len(args) != 1 or not args[0].isdigit() or int(args[0]) <= 0:
                 raise err("press_len 需要正整数")
             plan["press_len"] = int(args[0])
+        elif op == "trigger":
+            # sc-loop v3 触发式：trigger <f1-f2> <reg> <op> <val> <hold|press> <按钮...>
+            # 条件（RAM 检测）触发按键——复现确定性（时窗→状态触发）
+            if len(args) < 6:
+                raise err("trigger 用法: trigger <起>-<止> <reg> <!|==|>|< > <val> <hold|press> <按钮...>")
+            try:
+                lo, hi = parse_range(args[0])
+            except ValueError as e:
+                raise err(f"trigger 区间错: {e}")
+            reg = int(args[1], 16)
+            op_ = args[2]
+            if op_ not in ("!=", "==", ">", "<"):
+                raise err(f"trigger op 未知: {op_}")
+            val = int(args[3], 0)
+            mode = args[4]
+            if mode not in ("hold", "press"):
+                raise err(f"trigger mode 未知: {mode}")
+            btns = args[5:]
+            plan["triggers"].append({"from": lo, "to": hi, "reg": reg, "op": op_,
+                                     "val": val, "mode": mode, "buttons": btns})
         elif op == "nav":
             # sc-loop 反馈制导航：nav <f1-f2> <x|mapx|jump> <target> [按钮...]
             # 实时读 RAM（ScrX=$51/ScrY=$52/MapX=$50）→条件按键（G 系共用底）

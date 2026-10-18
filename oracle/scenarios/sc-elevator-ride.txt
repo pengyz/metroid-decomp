@@ -1,4 +1,4 @@
-# 场景：sc-elevator-ride —— 爆破窗通行时序（引信 120f→窗 320f 内走穿）
+# 场景：sc-elevator-ride —— sc-loop v3 触发式（爆破态触发走穿——复现确定性）
 name sc-elevator-ride
 frames 7200
 watch_range 0000-00ff zp
@@ -24,19 +24,19 @@ press 2580 b
 hold 3100-3260 a
 hold 3150-3520 right
 press 3180 b
+trigger 3300-3650 051 > 137 press down
+trigger 3350-4400 052 > 195 hold right
+trigger 3350-4400 051 > 137 press down
+trigger 3600-4600 050 == 10 press up
+nav 4500-5200 x 250
+nav 5200-7000 x 250
 nav 3300-3400 x 140
-press 3410 down
-press 3440 b
-press 3480 b
-press 4100 up
-nav 3540-3900 x 250
-hold 3540-3950 right
-nav 3950-4500 x 250
-nav 4500-7000 x 250
+nav 4300-5000 x 250
+nav 5000-7000 x 250
 
-capture 3500 bomb-fuse
-capture 3700 blast-window
-capture 4200 post-blast
+capture 3600 blast-detect
+capture 4000 blast-walk
+capture 4500 post-blast
 capture 6900 east-end
 
 sample_point spin-exit

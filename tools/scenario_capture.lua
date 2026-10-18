@@ -366,6 +366,20 @@ emu.addEventCallback(function()
   local btn = schedule[frame] or {}
   -- sc-loop 反馈制导航（G 系共用底）：实时读 RAM→条件按键（nav 命令驱动）
   -- 种类：x=ScrX($51) 左右舵/mapx=MapX($50) 房向舵/jump=ScrY($52) 低则跳
+  -- sc-loop v3 触发式（条件触发按键——复现确定性）：RAM 检测→触发
+  for _, t in ipairs(PLAN.triggers or {}) do
+    if frame >= t.from and frame <= t.to then
+      local v = readByte(t.reg)
+      local ok = false
+      if t.op == "!=" then ok = v ~= t.val
+      elseif t.op == "==" then ok = v == t.val
+      elseif t.op == ">" then ok = v > t.val
+      elseif t.op == "<" then ok = v < t.val end
+      if ok then
+        for _, b in ipairs(t.buttons) do btn[b] = true end
+      end
+    end
+  end
   for _, n in ipairs(PLAN.navs or {}) do
     if frame >= n.from and frame <= n.to then
       local cur
