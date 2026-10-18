@@ -1,4 +1,4 @@
-# 场景：sc-elevator-ride —— sc-loop v3 触发式（爆破态触发走穿——复现确定性）
+# 场景：sc-elevator-ride —— 球滚连环（触发式 morph-tunnel 连用）
 name sc-elevator-ride
 frames 7200
 watch_range 0000-00ff zp
@@ -24,17 +24,20 @@ press 2580 b
 hold 3100-3260 a
 hold 3150-3520 right
 press 3180 b
+nav 3300-3400 x 140
 trigger 3300-3650 051 > 137 press down
 trigger 3350-4400 052 > 195 hold right
 trigger 3350-4400 051 > 137 press down
-trigger 3600-4600 050 == 10 press up
-nav 3300-3400 x 140
-nav 4300-5000 x 250
-nav 5000-7000 x 250
+trigger 4200-6500 052 > 195 hold right
+hold 4400-4560 a
+hold 5000-5160 a
+hold 5600-5760 a
+hold 6200-6360 a
+nav 4300-6500 x 250
+nav 6500-7000 x 250
 
-capture 3600 blast-detect
-capture 4000 blast-walk
-capture 4500 post-blast
+capture 3800 roll1
+capture 5000 roll-mid
 capture 6900 east-end
 
 sample_point spin-exit
