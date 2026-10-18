@@ -2,7 +2,7 @@
 # 径：(3,14)→(22,11) 31 房 BFS；卡点=房 19 东门（行 5-7 s3——高跳 112px 可达）
 # 事件核：$D7B3 状态机+MapPos 到 (22,11)+站台 DOWN 激活
 name sc-elevator-ride
-frames 4800
+frames 8800
 watch_range 0000-00ff zp
 watch_range 0100-07ff iram
 watch_range 6878-6878 gear
@@ -10,28 +10,47 @@ watch_range 6878-6878 gear
 press 360 start
 press 420 a
 press 540 start
-hold 850-4600 right
+hold 850-1900 right
 fixture 900 6878 13 invariant
 press 950 b
 press 1050 b
-hold 1300-1450 a
-hold 1480-1630 a
-hold 1660-1810 a
-hold 1840-1990 a
-hold 2020-2170 a
-hold 2200-2350 a
-hold 2380-2530 a
-hold 2560-2710 a
-hold 2740-2890 a
-hold 2920-3070 a
-hold 3100-3250 a
-hold 3280-3430 a
-hold 3460-3610 a
-hold 3640-3790 a
-hold 3820-3970 a
-hold 4000-4150 a
-hold 4180-4330 a
-hold 4360-4510 a
+press 1150 b
+hold 1340-1500 a
+press 1420 b
+press 1480 b
+hold 1900-2060 a
+hold 1950-2320 right
+press 1980 b
+hold 2500-2660 a
+hold 2550-2920 right
+press 2580 b
+hold 3100-3260 a
+hold 3150-3520 right
+press 3180 b
+hold 3700-3860 a
+hold 3740-4100 right
+press 3820 b
+hold 4300-4460 a
+hold 4340-4700 right
+press 4420 b
+hold 4900-5060 a
+hold 4940-5300 right
+press 5020 b
+hold 5500-5660 a
+hold 5540-5900 right
+press 5620 b
+hold 6100-6260 a
+hold 6140-6500 right
+press 6220 b
+hold 6700-6860 a
+hold 6740-7100 right
+press 6820 b
+hold 7300-7460 a
+hold 7340-7700 right
+press 7420 b
+hold 7900-8060 a
+hold 7940-8300 right
+press 8020 b
 
 capture 1700 door-jump
 capture 2400 post-door
