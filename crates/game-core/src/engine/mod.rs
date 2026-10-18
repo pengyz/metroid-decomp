@@ -4159,3 +4159,49 @@ mod s3_085_tests {
         assert!(ev3.contains(&(0x6B0D, 0))); // 25
     }
 }
+
+// ---- SC-S3-26（S3-86）员转写（2 员——环体内件（S1-00/S3-25 环正身）；L2 真 0 留白）----
+
+/// $D4A8 环体 sub（root——簇共根形八十·**S1-00/S3-25 环正身**）：Y==$072C[x] 比对⇒
+/// $0728[x]←$FF（命中写）。
+/// 返回 (写事件, 命中)。
+pub fn s3_ring_body(x: u8, y: u8, v072c_x: u8) -> (Vec<(u16, u8)>, bool) {
+    if y == v072c_x {
+        (vec![(0x0728 + x as u16, 0xFF)], true)
+    } else {
+        (vec![], false)
+    }
+}
+
+/// $D49E 环（$08 步——**sbc 进位面同则**（入参 C⇒步 8/9））：$D4A8 调+X-步回卷。
+pub fn s3_ring_loop(x_in: u8, y: u8, v072c: &[u8], carry: bool) -> Vec<(u16, u8)> {
+    let mut ev = Vec::new();
+    let mut x = x_in;
+    loop {
+        let v = v072c.get(x as usize).copied().unwrap_or(0);
+        let (w, _) = s3_ring_body(x, y, v);
+        ev.extend(w);
+        let step: u8 = if carry { 0x08 } else { 0x09 };
+        let nx = x.wrapping_sub(step);
+        if nx == 0 { break; } // bne 破点（零断——与 bpl 异形注）
+        x = nx;
+    }
+    ev
+}
+
+#[cfg(test)]
+mod s3_086_tests {
+    use super::*;
+
+    /// 二员转写形（环体 sub+进位步进环）。
+    #[test]
+    fn s3_086_units_two() {
+        let (ev, hit) = s3_ring_body(0x18, 5, 5);
+        assert!(hit);
+        assert!(ev.contains(&(0x0740, 0xFF)));
+        let ev2 = s3_ring_loop(0x18, 0, &[0; 0x20], true); // carry⇒步 8
+        assert_eq!(ev2.len(), 3); // 24/16/8→0 断
+        let ev3 = s3_ring_loop(0x18, 0, &[0; 0x20], false); // borrow⇒步 9
+        assert!(ev3.len() >= 2);
+    }
+}
