@@ -1951,6 +1951,18 @@ LDA $030C,X/EOR #$01/STA $030C,X——与 S1-11 $E249（`ad/8d` 非索引 toggle
 对偶**（bd/9d=abs,X 索引版）逐字命中 ③L3 0 失败容忍不增 ④员面双扫桩 0（3 员真现）。
 测 198。findings（r10）：0 新。
 
+## SC-S2-18 卡审（9374cfb）——跨卡溯源链/记录长表抽核（VM 深件二号）
+
+### verdict: pass
+
+四条核：①L2 面 s2-048-case×8（**7 strict 0 败+1 账内**）✓（增量 701→709=+8 精确；
+账内 22→23=+1 算术合（case-4 CROSSCARD））②**溯源链抽核 ✓**：walk 表 handler
+跨卡实证（$EC2F∈S1-00/$EC04∈S2-49 溯源定案）+$F0A2 深分派非本卡员→CROSSCARD
+记账=归属分判精确 ③**走带/记录长表抽核 ✓**：$EB8C=`20 92 eb 4c d4 ea`（JSR $EB92/
+JMP $EAD4=S1-22 VM root 同链回驱）+$EB92=`c8 b1 00 48 20 c5 c2`（INY/LDA ($00),Y
+记录 fetch/JSR Amul16）——多记录走带+记录长表（op2=2/op1=3）结构合形 ④员面双扫
+桩 0（3 员真现）。测 198+。findings（r10）：0 新。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
