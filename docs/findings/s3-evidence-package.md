@@ -8,36 +8,40 @@
 
 | 簇 | 员数 | 成员（bank7:addr+名标签） |
 |---|---|---|
-| S3-60 | 3 | $CBD2 SFX_MetroidHit, $F530 Lx314, $F598 |
-| S3-61 | 3 | $F589, $F6BD, $F74B ReadTableAt968B |
-| S3-62 | 3 | $CBB0 SFX_EnemyHit, $F59D PlaySnd1, $F5A2 PlaySnd2 |
-| S3-63 | 3 | $F6EB, $F71A, $F752 LoadEnHiToYAndLoadEorHiToCarry |
-| S3-64 | 3 | $F96A UpdateEnProjectile_Resting, $F991 UpdateEnProjectile_Active, $FA5B EnemyBecomePickupIfHit |
-| S3-65 | 3 | $F96D, $F9F2 Lx365, $FA1E EnemyBGCollideOrApplySpeed |
-| S3-66 | 2 | $D015 Lx019, $D055 SamusJump_CheckHorzMovement |
-| S3-67 | 2 | $D02B, $D09C SamusJump_CheckFire |
-| S3-68 | 2 | $CFC3, $D036 |
-| S3-69 | 2 | $CD6B, $D039 |
-| S3-70 | 2 | $CF77 SetSamusPntUp, $D048 |
-| S3-71 | 2 | $CBEF SFX_SamusBall, $D0D8 |
-| S3-72 | 2 | $D0FA, $E7A2 ObjectCheckMoveUp |
-| S3-73 | 2 | $D10D, $D638 LoadObjectPositionFromTemp |
-| S3-74 | 2 | $CCB7 SetSamusRunAccel, $D130 |
-| S3-75 | 2 | $D136, $D150 CheckBombLaunch |
-| S3-76 | 2 | $CFB7 StopHorzMovement, $D13F |
-| S3-77 | 2 | $CBA8 SFX_BombLaunch, $D194 |
-| S3-78 | 2 | $D1C0, $D1EE FireSamusProjectile |
-| S3-79 | 2 | $C27C JumpEngine, $D1D4 |
-| S3-80 | 2 | $D3BA, $D48C Door_DeleteOffscreenEnemies |
-| S3-81 | 2 | $D3BD, $ED65 Doors_RemoveIfOffScreen |
-| S3-82 | 2 | $95AB, $D3C0 |
-| S3-83 | 2 | $CC07 TourianMusic, $D3DD |
-| S3-84 | 2 | $D417, $DE4A ObjDrawFrame |
-| S3-85 | 2 | $D48F, $D4B4 |
-| S3-86 | 2 | $D49E, $D4A8 |
-| S3-87 | 2 | $D530, $D5FC UpdateBullet_DeleteIfOffScreen |
-| S3-88 | 2 | $D533, $D5DA UpdateBullet_ExplodeIfHitSprite |
-| S3-89 | 2 | $D522 LD522, $D552 |
+| S3-60 | 3 | $CBD2 SFX_MetroidHit `LDA #$20`; $F530; $F598 |
+| S3-61 | 3 | $F589; $F6BD; $F74B ReadTableAt968B `ldy EnDataIndex,x` |
+| S3-62 | 3 | $CBB0 SFX_EnemyHit `LDA #$04`; $F59D; $F5A2 |
+| S3-63 | 3 | $F6EB; $F71A; $F752 LoadEnHiToYAndLoadEorHiToCarry `lda EnNameTable,x` |
+| S3-64 | 3 | $F96A UpdateEnProjectile_Resting `jsr LFA5B`; $F991 UpdateEnProjectile_Active `jsr LFA5B`; $FA5B EnemyBecomePickupIfHit `lda $0404,x` |
+| S3-65 | 3 | $F96D; $F9F2; $FA1E EnemyBGCollideOrApplySpeed `lda InArea` |
+| S3-66 | 2 | $D015; $D055 SamusJump `ldx #$01` |
+| S3-67 | 2 | $D02B; $D09C Table04 `lda Joy1Change` |
+| S3-68 | 2 | $CFC3 SetSamusJump `LDY #an_SamusJump`; $D036 |
+| S3-69 | 2 | $CD6B `lda #$03`; $D039 |
+| S3-70 | 2 | $CF77 SetSamusPntUp `* LDA #sa_PntUp`; $D048 |
+| S3-71 | 2 | $CBEF SFX_SamusBall `LDA #$02`; $D0D8 |
+| S3-72 | 2 | $D0FA; $E7A2 CheckMoveUp `ldx PageIndex` |
+| S3-73 | 2 | $D10D; $D638 LoadObjectPositionFromTemp `lda $08` |
+| S3-74 | 2 | $CCB7 SetSamusRunAccel `lda RunAccelerationTbl`; $D130 |
+| S3-75 | 2 | $D136; $D150 |
+| S3-76 | 2 | $CFB7 ClearHorzData `JSR ClearHorzMvmntData`; $D13F |
+| S3-77 | 2 | $CBA8 SFX_BombLaunch `LDA #$01`; $D194 |
+| S3-78 | 2 | $D1C0; $D1EE FireWeapon `lda Joy1Status` |
+| S3-79 | 2 | $C27C ChooseRoutine `ASL`; $D1D4 |
+| S3-80 | 2 | $D3BA; $D48C Door_DeleteOffscreenEnemies `ldx #$60` |
+| S3-81 | 2 | $D3BD; $ED65 Doors_RemoveIfOffScreen `ldx #$B0` |
+| S3-82 | 2 | $95AB; $D3C0 |
+| S3-83 | 2 | $CC07 TourianMusic `LDA #$40`; $D3DD |
+| S3-84 | 2 | $D417; $DE4A DrawFrame `ldx PageIndex` |
+| S3-85 | 2 | $D48F; $D4B4 `lda $0405,x` |
+| S3-86 | 2 | $D49E; $D4A8 `tya` |
+| S3-87 | 2 | $D530; $D5FC UpdateBullet_DeleteIfOffScreen `lda ObjectOnScreen,x` |
+| S3-88 | 2 | $D533; $D5DA Table0D `lda $030A,x` |
+| S3-89 | 2 | $D522 DrawBullet `inc $0500,x`; $D552 |
+
+## 1.5 消化口径（F13 钉死——v3 法）
+
+**标签口径三级**：①名注优先 ②L 行尾注次之 ③指令头兜底。
 
 ## 2. asm 锚预消化
 
