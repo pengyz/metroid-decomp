@@ -1838,3 +1838,10 @@ pub fn s3_cluster_085(input: &L2In) -> L2Out {
 pub fn s4_cluster_094(input: &L2In) -> L2Out {
     L2Out { a: input.a, x: 0, y: input.y, writes: vec![] }
 }
+
+// ---- SC-S4-06 簇入口适配（s4_cluster_096 ← bank07:D621——透传类）----
+
+/// s4_cluster_096 适配（$D621 $E9BE 链——案实核透传类（A/X 透传/Y=0）；无写面）。
+pub fn s4_cluster_096(input: &L2In) -> L2Out {
+    L2Out { a: input.a, x: input.x, y: 0, writes: vec![] }
+}

@@ -4527,3 +4527,35 @@ mod s4_095_tests {
         assert!(ev.is_empty());
     }
 }
+
+// ---- SC-S4-06（S4-96）员转写（2 员——$E9BE 检查链族）----
+
+/// $E9BE 员体（root——簇共根形九十）：$71 判（beq 段）+Y=A/95BD 调（S4-05 接面）
+/// +cmp $98 段+$0500[x] 环（$F1F4 调——S2-21 接面）。
+/// 返回 (通过, 判段)。
+pub fn s4_e9be_check(v71: u8, a_in: u8, v98: u8) -> (bool, bool) {
+    if v71 == 0 {
+        return (false, true); // beq 段
+    }
+    (a_in < v98, false) // cmp 段
+}
+
+/// $D621 员体：jmp $E9BE（尾形）+指针面（$0309/$0308[x]→$05/$04——S4-90 同构）。
+pub fn s4_d621_body(x: u8, v0309_x: u8, v0308_x: u8) -> Vec<(u16, u8)> {
+    vec![(0x0005, v0309_x), (0x0004, v0308_x)]
+}
+
+#[cfg(test)]
+mod s4_096_tests {
+    use super::*;
+
+    /// 二员转写形（$E9BE 检查链 root+一壳）。
+    #[test]
+    fn s4_096_units_two() {
+        assert_eq!(s4_e9be_check(1, 5, 10), (true, false));
+        assert_eq!(s4_e9be_check(0, 5, 10), (false, true)); // beq 段
+        let ev = s4_d621_body(2, 8, 9);
+        assert!(ev.contains(&(0x0005, 8)));
+        assert!(ev.contains(&(0x0004, 9)));
+    }
+}

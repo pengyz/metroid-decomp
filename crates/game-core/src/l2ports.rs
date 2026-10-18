@@ -250,6 +250,7 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "s3_cluster_084" => Some(sub_s3_cluster_084),
         "s3_cluster_085" => Some(sub_s3_cluster_085),
         "s4_cluster_094" => Some(sub_s4_cluster_094),
+        "s4_cluster_096" => Some(sub_s4_cluster_096),
         _ => None,
     }
 }
@@ -1020,4 +1021,9 @@ pub fn sub_s3_cluster_085(input: &L2In) -> L2Out {
 /// s4_cluster_094 —— bank07:D606 簇入口注册（SC-S4-04 IsWalkableTile）。
 pub fn sub_s4_cluster_094(input: &L2In) -> L2Out {
     crate::verify_shim::s4_cluster_094(input)
+}
+
+/// s4_cluster_096 —— bank07:D621 簇入口注册（SC-S4-06）。
+pub fn sub_s4_cluster_096(input: &L2In) -> L2Out {
+    crate::verify_shim::s4_cluster_096(input)
 }
