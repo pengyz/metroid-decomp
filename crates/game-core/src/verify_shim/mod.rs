@@ -1598,3 +1598,14 @@ pub fn s3_cluster_060(input: &L2In) -> L2Out {
         writes: merge_writes(vec![(0x0683, 0x20)]),
     }
 }
+
+// ---- SC-S3-02 簇入口适配（s3_cluster_062 ← bank07:CBB0 SFX_EnemyHit 族）----
+
+/// s3_cluster_062 适配（$CBB0 SFX_EnemyHit——案实核恒定：$0681←$04（声旗）；
+/// A=$04/X=1/Y 透传——S3-00 对偶形）。
+pub fn s3_cluster_062(input: &L2In) -> L2Out {
+    L2Out {
+        a: 0x04, x: 1, y: input.y,
+        writes: merge_writes(vec![(0x0681, 0x04)]),
+    }
+}

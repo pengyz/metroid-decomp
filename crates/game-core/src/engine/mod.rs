@@ -3221,3 +3221,39 @@ mod s3_061_tests {
         assert!(ev.contains(&(0x040F, 0x02))); // x=2 ⇒ $040D+2
     }
 }
+
+// ---- SC-S3-02（S3-62）员转写（3 员——SFX_EnemyHit 族）----
+
+/// $CBB0 SFX_EnemyHit（root——簇共根形五六·**S3-00 对偶**）：SFX id 装载链
+/// （$04/$10/$20/$40/$80 五 id）+X=1（ldx #1）。
+/// 返回 (声旗写, SFX id)。
+pub fn s3_sfx_enemy_hit() -> (Vec<(u16, u8)>, u8) {
+    (vec![(0x0681, 0x04)], 0x04) // sfxNoise_EnemyHit=$04（案实核恒定）
+}
+
+/// $F59D 员体：SFX_EnemyHit 链（双调+$CBCE 调）+$80B0 位5 段（$040E[x] cmp $0B 判）。
+pub fn s3_f59d_body(x: u8, v040e_x: u8) -> (Vec<(u16, u8)>, bool) {
+    let (ev, _) = s3_sfx_enemy_hit();
+    (ev, v040e_x == 0x0B)
+}
+
+/// $F5A2 员体：SFX_EnemyHit+$CBCE 调+$80B0 位5 段（$F59D 同构面）。
+pub fn s3_f5a2_body(x: u8, v040e_x: u8) -> (Vec<(u16, u8)>, bool) {
+    s3_f59d_body(x, v040e_x)
+}
+
+#[cfg(test)]
+mod s3_062_tests {
+    use super::*;
+
+    /// 三员转写形（SFX_EnemyHit 对偶 root+二壳）。
+    #[test]
+    fn s3_062_units_three() {
+        let (ev, id) = s3_sfx_enemy_hit();
+        assert_eq!(id, 0x04);
+        assert!(ev.contains(&(0x0681, 0x04)));
+        let (_, b) = s3_f59d_body(2, 0x0B);
+        assert!(b);
+        assert!(!s3_f5a2_body(2, 0x05).1);
+    }
+}
