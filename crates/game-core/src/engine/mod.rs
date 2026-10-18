@@ -66,3 +66,98 @@ mod tests {
         assert!(ev.contains(&(0x008A, 0x01)));
     }
 }
+
+// ---- SC-S1-00 残员 6 件（共享尾族深件）----
+// 【结构互核注】①$D498 尾共享形：sub($D4A8) 经 jsr 三调（X=$18/$10/$08）+**fallthrough
+// 第四次**（X=0 内联执行=sub 体+其 rts=主例出口）②$EC89/$EE33 共享尾=尾跳他例
+// （$EC54/$DC67 jumped 面）③$EBD9 对象槽三写（$030C/$030D/$030E）+帮手内联。
+
+/// $D498（尾共享形）：根值 Y；X 循环 $18/$10/$08/0——每次若 Y==$072C[x]⇒$0728[x]←$FF。
+/// 返回写事件集。
+pub fn s1_d498(root_val: u8, iram: &[u8]) -> Vec<(u16, u8)> {
+    let mut ev = Vec::new();
+    for x in [0x18u16, 0x10, 0x08, 0x00] {
+        let cmp_v = iram.get(0x72C + x as usize).copied().unwrap_or(0);
+        if root_val == cmp_v {
+            ev.push((0x0728 + x, 0xFF));
+        }
+    }
+    ev
+}
+
+/// $EB68：根值→$6AFB[x]（wram）+位运算段+$FB7B 调用→**jmp $F85A**（jumped 面）。
+/// 返回 (写事件, jumped 目标)。
+pub fn s1_eb68(root_val: u8, x: u8) -> (Vec<(u16, u8)>, u16) {
+    (vec![(0x6AFB + x as u16, root_val)], 0xF85A)
+}
+
+/// $EBD9 对象槽初始化：$030C[x]←根值+$030E[x]←tbl[$EBFC+y]+$030D[x]←$68+
+/// 帮手内联（$6C15[y] |= y|$6C15[根^1]）→A=2。
+/// tbl_lo/tbl_hi=$EBFC/$EBFE 表项（烘焙面）。
+pub fn s1_ebd9(root_val: u8, x: u8, y: u8, tbl_lo: u8, tbl_hi: u8, wram: &mut [u8])
+    -> (Vec<(u16, u8)>, u8) {
+    let mut ev = vec![(0x030C + x as u16, root_val), (0x030E + x as u16, tbl_hi),
+                      (0x030D + x as u16, 0x68)];
+    let xs = root_val ^ 1;
+    let or_v = y | wram.get(0xC15 + xs as usize).copied().unwrap_or(0);
+    let idx = 0xC15 + y as usize;
+    if idx < wram.len() { wram[idx] = or_v; }
+    ev.push((0x6C15 + y as u16, or_v));
+    (ev, 2)
+}
+
+/// $EC2F LoadStatues：$036C←根值+$0370←($687C 符号?$40:$30)+$036F←($687B 符号?$60:$50)
+/// +$54←Y+$0360←1→**jmp $EAD4**（jumped 面）。
+pub fn s1_load_statues(root_val: u8, y: u8, w687b: u8, w687c: u8)
+    -> (Vec<(u16, u8)>, u16) {
+    let ev = vec![
+        (0x036C, root_val),
+        (0x0370, if (w687c as i8) >= 0 { 0x40 } else { 0x30 }),
+        (0x036F, if (w687b as i8) >= 0 { 0x60 } else { 0x50 }),
+        (0x0054, y),
+        (0x0360, 1),
+    ];
+    (ev, 0xEAD4)
+}
+
+/// $EC89：$072C[x]←根值→**共享尾 $EC54**（bne 恒走——jumped 面）。
+pub fn s1_ec89(root_val: u8, x: u8) -> (Vec<(u16, u8)>, u16) {
+    (vec![(0x072C + x as u16, root_val)], 0xEC54)
+}
+
+/// $EE33：$074B[x]←根值+$09←3/指针面（$07←$50/$06←$4F）→**jmp $DC67**（jumped 面）。
+pub fn s1_ee33(root_val: u8, x: u8, zp4f: u8, zp50: u8) -> (Vec<(u16, u8)>, u16) {
+    let ev = vec![(0x074B + x as u16, root_val), (0x0009, 3),
+                  (0x0007, zp50), (0x0006, zp4f)];
+    (ev, 0xDC67)
+}
+
+#[cfg(test)]
+mod s1_residual_tests {
+    use super::*;
+
+    /// 残员 6 件：尾共享/尾跳/槽写三分形。
+    #[test]
+    fn s1_residual_shapes() {
+        let iram = { let mut v = vec![0u8; 0x800]; v[0x744] = 7; v }; // $072C+0x18=0x744
+        let ev = s1_d498(7, &iram);
+        assert!(ev.contains(&(0x0740, 0xFF))); // $0728+0x18
+        assert_eq!(ev.len(), 1);
+        let (ev, j) = s1_eb68(1, 2);
+        assert_eq!(j, 0xF85A);
+        assert!(ev.contains(&(0x6AFD, 1)));
+        let mut w = vec![0u8; 0x2000];
+        let (ev, a) = s1_ebd9(1, 2, 3, 0x55, 0x66, &mut w);
+        assert_eq!(a, 2);
+        assert!(ev.contains(&(0x0310, 0x66))); // x=2 ⇒ $030E+2
+        let (ev, j) = s1_load_statues(1, 2, 0x80, 0x7F);
+        assert_eq!(j, 0xEAD4);
+        assert!(ev.contains(&(0x0370, 0x40)));
+        assert!(ev.contains(&(0x036F, 0x50)));
+        let (ev, j) = s1_ec89(1, 2);
+        assert_eq!(j, 0xEC54);
+        let (ev, j) = s1_ee33(1, 2, 0x4F, 0x50);
+        assert_eq!(j, 0xDC67);
+        assert!(ev.contains(&(0x0006, 0x4F)));
+    }
+}
