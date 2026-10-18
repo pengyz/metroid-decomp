@@ -2377,3 +2377,47 @@ mod s2_041_tests {
         assert_eq!(s2_d897_body(0, 0).1, 0xD806);
     }
 }
+
+// ---- SC-S2-12（S2-42）员转写（3 员——$8296 条件取负族；L2 真 0 留白）----
+
+/// $8296 条件取负帮手（root——簇共根形三六·**banks1-5 镜面共享**（areas_common 形三））：
+/// asl/php/jsr $C2BE（半径换算）/plp/bcc+4/**eor #$FF/adc #$00**（条件取负）。
+/// 返回 (计算值, 取负与否)。
+pub fn s2_cond_negate(a_in: u8, carry: bool) -> (u8, bool) {
+    let shifted = a_in << 1;
+    // $C2BE 半径换算段（值面注——烘焙面）；条件取负（carry⇒negate）
+    if carry {
+        ((!shifted).wrapping_add(1), true)
+    } else {
+        (shifted, false)
+    }
+}
+
+/// $D560 员体：$8296+$4B X 载+$0308[x]←（$0A),y 表读+$832F 调+$0309[x]←+表载段。
+pub fn s2_d560_body(x: u8, a_in: u8, carry: bool, tbl_val: u8) -> Vec<(u16, u8)> {
+    let (v, _) = s2_cond_negate(a_in, carry);
+    vec![(0x0308 + x as u16, tbl_val), (0x0309 + x as u16, v)]
+}
+
+/// $F9BE 员体：$8296+$4B X 载+$0402[x]←+$832F 调+$0403[x]←+位段。
+pub fn s2_f9be_body(x: u8, a_in: u8, carry: bool, tbl_val: u8) -> Vec<(u16, u8)> {
+    let (v, _) = s2_cond_negate(a_in, carry);
+    vec![(0x0402 + x as u16, tbl_val), (0x0403 + x as u16, v)]
+}
+
+#[cfg(test)]
+mod s2_042_tests {
+    use super::*;
+
+    /// 三员转写形（$8296 条件取负 root 镜面共享+二壳）。
+    #[test]
+    fn s2_042_units_three() {
+        assert_eq!(s2_cond_negate(0x10, false), (0x20, false));
+        assert_eq!(s2_cond_negate(0x10, true), (0xE0, true)); // ~0x20+1
+        let ev = s2_d560_body(2, 0x10, false, 0x55);
+        assert!(ev.contains(&(0x030A, 0x55)));
+        assert!(ev.contains(&(0x030B, 0x20)));
+        let ev = s2_f9be_body(2, 0x10, false, 0x55);
+        assert!(ev.contains(&(0x0404, 0x55)));
+    }
+}
