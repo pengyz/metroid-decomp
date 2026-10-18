@@ -3604,3 +3604,37 @@ mod s3_071_tests {
         assert!(ev2.contains(&(0x0300, 0)));
     }
 }
+
+// ---- SC-S3-12（S3-72）员转写（2 员——CheckMoveUp 族；L2 真 0 留白）----
+
+/// $E7A2 CheckMoveUp（root——簇共根形六六）：$4B X 载+$0301[x]+8（上移检查——
+/// jmp $E7B5 尾面）+减法段（0-$0301[x]→$02——StoreObjectPositionToTemp 调面）。
+/// 返回 (写事件, delta)。
+pub fn s3_check_move_up(x: u8, v0301_x: u8) -> (Vec<(u16, u8)>, u8) {
+    (vec![(0x0002, 0u8.wrapping_sub(v0301_x))], v0301_x.wrapping_add(8))
+}
+
+/// $D0FA 员体：CheckMoveUp+cc 分段（StoreObjectPositionToTemp 调（S1-21 接面）+
+/// 指针构（$05←X/$04←$F5）+链（$FD8F/$D638/$CF55——S1-10/S2-18 接面））。
+pub fn s3_d0fa_body(x: u8, v0301_x: u8) -> (Vec<(u16, u8)>, u8) {
+    let (mut ev, d) = s3_check_move_up(x, v0301_x);
+    ev.push((0x0005, x));
+    ev.push((0x0004, 0xF5));
+    (ev, d)
+}
+
+#[cfg(test)]
+mod s3_072_tests {
+    use super::*;
+
+    /// 二员转写形（CheckMoveUp root+一壳）。
+    #[test]
+    fn s3_072_units_two() {
+        let (ev, d) = s3_check_move_up(2, 5);
+        assert_eq!(d, 13); // 5+8
+        assert!(ev.contains(&(0x0002, 0xFB))); // 0-5
+        let (ev2, _) = s3_d0fa_body(2, 5);
+        assert!(ev2.contains(&(0x0005, 2)));
+        assert!(ev2.contains(&(0x0004, 0xF5)));
+    }
+}
