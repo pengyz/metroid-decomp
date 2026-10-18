@@ -4673,3 +4673,47 @@ mod s4_099_tests {
         assert_eq!(ev2.len(), 2);
     }
 }
+
+// ---- SC-S4-10（S4-100）员转写（2 员——$E6D2 态步进 inc 对偶族）----
+
+/// $E6D2 员体（root——簇共根形九四·**$E6A7 inc 版对偶**）：$49 cmp 3/2 双判+
+/// inc（$49/$50/$FD 面——S4-099 对偶）。
+/// 返回 (写事件, 状态值)。
+pub fn s4_e6d2_step(v49: u8, vfd: u8) -> (Vec<(u16, u8)>, u8) {
+    if v49 == 3 {
+        return (vec![], v49); // beq 段
+    }
+    if v49 != 2 {
+        return (vec![], v49); // bne 段
+    }
+    let mut ev = vec![(0x0049, 3)];
+    if vfd != 0 {
+        ev.push((0x0050, 1));
+    }
+    (ev, 3)
+}
+
+/// $D837 员体：$E6D2+尾跳 $D806（S1-01 回驱——四现注）+$030F[x] bpl 段。
+pub fn s4_d837_body(v49: u8, vfd: u8) -> (Vec<(u16, u8)>, u16) {
+    let (ev, _) = s4_e6d2_step(v49, vfd);
+    (ev, 0xD806)
+}
+
+#[cfg(test)]
+mod s4_100_tests {
+    use super::*;
+
+    /// 二员转写形（$E6D2 inc 对偶 root+一壳）。
+    #[test]
+    fn s4_100_units_two() {
+        assert_eq!(s4_e6d2_step(3, 0).1, 3); // beq 段
+        assert_eq!(s4_e6d2_step(5, 0).1, 5); // bne 段
+        let (ev, v) = s4_e6d2_step(2, 5);
+        assert_eq!(v, 3);
+        assert!(ev.contains(&(0x0049, 3)));
+        assert!(ev.contains(&(0x0050, 1)));
+        let (ev2, j) = s4_d837_body(2, 5);
+        assert_eq!(j, 0xD806);
+        assert_eq!(ev2.len(), 2);
+    }
+}
