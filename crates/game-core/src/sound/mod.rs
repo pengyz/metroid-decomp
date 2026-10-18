@@ -1050,3 +1050,100 @@ mod w1_tail_tests {
         assert_eq!(update_all_volume_envelopes(3, 5), 2);
     }
 }
+
+// ---- task-44 W4 尾区 handler 族（Tri 周期面共形）----
+
+/// W4 数据表 7×4B（0x3xxx hexdump 实证）。
+pub const W4_DATA: [[u8; 4]; 7] = [
+    [0x07, 0x7F, 0x40, 0x28], // 0 BombLaunch1 $B265
+    [0x7F, 0x7F, 0xDD, 0x3B], // 1 SamusBall    $B26D
+    [0x7F, 0x7F, 0xFF, 0x98], // 2 MetroidHit   $B271
+    [0x7F, 0x7F, 0x40, 0x08], // 3 SamusDie     $B275
+    [0x03, 0x7F, 0x42, 0x18], // 4 BigEnemyHit  $B27D
+    [0x03, 0x7F, 0x11, 0x09], // 5 StatueRaise  $B281
+    [0x7F, 0x7F, 0x30, 0xB2], // 6 Door         $B285
+];
+
+/// Tri 周期面共形（$0610-$0613 块）：PeriodLow/High+ChangeLow/High（滑音 delta）。
+fn tri_period_face(period_lo: u8, period_hi: u8, change_lo: u8, change_hi: u8)
+    -> Vec<(u16, u8)> {
+    vec![(0x0610, period_lo), (0x0611, period_hi),
+         (0x0612, change_lo), (0x0613, change_hi)]
+}
+
+/// DoorOpenCloseSFXInit（$B7AC）：周期面（data[2]/data[3]&7）+滑音 $000F+0x1F 帧。
+pub fn door_open_close_sfx_init(ct: u8, flags: u8) -> HandlerOutcome {
+    let mut o = sfx_data_init(0x1F, &W4_DATA[6], 0xB285, ct, flags);
+    o.ram_events.extend(tri_period_face(0x30, 0xB2 & 7, 0x0F, 0x00));
+    o
+}
+
+/// BigEnemyHitSFXInit（$B7EF）：滑音 $0012+周期面+0x0A 帧。
+pub fn big_enemy_hit_sfx_init(ct: u8, flags: u8) -> HandlerOutcome {
+    let mut o = sfx_data_init(0x0A, &W4_DATA[4], 0xB27D, ct, flags);
+    o.ram_events.extend(tri_period_face(0x42, 0x18 & 7, 0x12, 0x00));
+    o
+}
+
+/// SamusToBallSFXInit（$B834）：8 帧+**Divisor←5**（1/5 分频）+周期面。
+pub fn samus_to_ball_sfx_init(ct: u8, flags: u8) -> HandlerOutcome {
+    let mut o = sfx_data_init(8, &W4_DATA[1], 0xB26D, ct, flags);
+    o.ram_events.push((0x0616, 5)); // SFXTriPeriodDivisor
+    // 注：SamusToBall **无滑音面写**（asm 只设 Period 两项——golden≠core 打回正）
+    o.ram_events.push((0x0610, 0xDD));
+    o.ram_events.push((0x0611, 0x3B & 7));
+    o.a_out = 0x3B & 7; // 末 setter=PeriodHigh（and #$07 后）
+    o
+}
+
+/// BombLaunchSFXInit（$B878）：4 帧纯装载（无周期面）。
+pub fn bomb_launch_sfx_init(ct: u8, flags: u8) -> HandlerOutcome {
+    sfx_data_init(4, &W4_DATA[0], 0xB265, ct, flags)
+}
+
+/// MetroidHitSFXInit（$B8A7）：3 帧+**RndTriPeriods RNG 面**（TRI_LO←rng|$6C/
+/// TRI_HI←(rng&1)|$F8——APU 随机周期）。
+pub fn metroid_hit_sfx_init(rng1: u8, ct: u8, flags: u8) -> HandlerOutcome {
+    let mut o = sfx_data_init(3, &W4_DATA[2], 0xB271, ct, flags);
+    o.apu_events.push((0x4008, rng1 | 0x6C));
+    o.apu_events.push((0x400A, (rng1 & 1) | 0xF8));
+    o.a_out = (rng1 & 1) | 0xF8;
+    o
+}
+
+/// SamusDieSFXInit（$B8D2）：**InitializeSoundAddresses 全清前置**（残面注记——
+/// 清面多址组合随件）+0x0E 帧+Divisor←$15+周期面（PeriodHigh←0）。
+pub fn samus_die_sfx_init(ct: u8, flags: u8) -> HandlerOutcome {
+    let mut o = sfx_data_init(0x0E, &W4_DATA[3], 0xB275, ct, flags);
+    o.ram_events.push((0x0616, 0x15));
+    o.ram_events.extend(tri_period_face(0x40, 0, 0, 0));
+    o
+}
+
+/// StatueRaiseSFXInit（$B921）：周期面+滑音 $000B+6 帧。
+pub fn statue_raise_sfx_init(ct: u8, flags: u8) -> HandlerOutcome {
+    let mut o = sfx_data_init(6, &W4_DATA[5], 0xB281, ct, flags);
+    o.ram_events.extend(tri_period_face(0x11, 0x09 & 7, 0x0B, 0x00));
+    o
+}
+
+#[cfg(test)]
+mod w4_tests {
+    use super::*;
+
+    /// W4 尾区七件：周期面/滑音/Divisor/RNG 面分形。
+    #[test]
+    fn w4_tail_shapes() {
+        assert!(door_open_close_sfx_init(2, 0x40).ram_events.contains(&(0x0610, 0x30)));
+        assert!(big_enemy_hit_sfx_init(2, 0x40).ram_events.contains(&(0x0612, 0x12)));
+        let o = samus_to_ball_sfx_init(2, 0x40);
+        assert!(o.ram_events.contains(&(0x0616, 5)));
+        assert_eq!(o.a_out, 0x3B & 7);
+        assert_eq!(bomb_launch_sfx_init(0, 0x40).ram_events.iter().find(|a| a.0 == 0x0660).unwrap().1, 4);
+        let o = metroid_hit_sfx_init(0x55, 2, 0x40);
+        assert!(o.apu_events.contains(&(0x4008, 0x55 | 0x6C)));
+        assert!(o.apu_events.contains(&(0x400A, 0x55 & 1 | 0xF8)));
+        assert!(samus_die_sfx_init(2, 0x40).ram_events.contains(&(0x0616, 0x15)));
+        assert!(statue_raise_sfx_init(2, 0x40).ram_events.contains(&(0x0613, 0)));
+    }
+}

@@ -914,3 +914,33 @@ pub fn sound_samus_jump(input: &L2In) -> L2Out {
     let r = |a: u16| input.ram[a as usize & 0x7FF];
     w2_out(input, crate::sound::samus_jump_sfx_init(r(0x068D & 0x7FF), r(0x065C & 0x7FF), r(0x064D & 0x7FF)))
 }
+
+// ---- task-44 W4 尾区适配（7 件）----
+pub fn sound_door_open_close(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    w2_out(input, crate::sound::door_open_close_sfx_init(r(0x065C & 0x7FF), r(0x064D & 0x7FF)))
+}
+pub fn sound_big_enemy_hit(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    w2_out(input, crate::sound::big_enemy_hit_sfx_init(r(0x065C & 0x7FF), r(0x064D & 0x7FF)))
+}
+pub fn sound_samus_to_ball(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    w2_out(input, crate::sound::samus_to_ball_sfx_init(r(0x065C & 0x7FF), r(0x064D & 0x7FF)))
+}
+pub fn sound_bomb_launch(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    w2_out(input, crate::sound::bomb_launch_sfx_init(r(0x065C & 0x7FF), r(0x064D & 0x7FF)))
+}
+pub fn sound_metroid_hit(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    w2_out(input, crate::sound::metroid_hit_sfx_init(r(0x002E), r(0x065C & 0x7FF), r(0x064D & 0x7FF)))
+}
+pub fn sound_samus_die(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    w2_out(input, crate::sound::samus_die_sfx_init(r(0x065C & 0x7FF), r(0x064D & 0x7FF)))
+}
+pub fn sound_statue_raise(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    w2_out(input, crate::sound::statue_raise_sfx_init(r(0x065C & 0x7FF), r(0x064D & 0x7FF)))
+}

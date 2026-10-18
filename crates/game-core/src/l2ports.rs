@@ -146,6 +146,13 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "sub_BossHitSFXInit" => Some(sub_boss_hit),
         "sub_IncorrectPasswordSFXInit" => Some(sub_incorrect_password),
         "sub_SamusJumpSFXInit" => Some(sub_samus_jump),
+        "sub_DoorOpenCloseSFXInit" => Some(sub_door_open_close),
+        "sub_BigEnemyHitSFXInit" => Some(sub_big_enemy_hit),
+        "sub_SamusToBallSFXInit" => Some(sub_samus_to_ball),
+        "sub_BombLaunchSFXInit" => Some(sub_bomb_launch),
+        "sub_MetroidHitSFXInit" => Some(sub_metroid_hit),
+        "sub_SamusDieSFXInit" => Some(sub_samus_die),
+        "sub_StatueRaiseSFXInit" => Some(sub_statue_raise),
         _ => None,
     }
 }
@@ -638,3 +645,12 @@ pub fn sub_bomb_explode(input: &L2In) -> L2Out { crate::verify_shim::sound_bomb_
 pub fn sub_boss_hit(input: &L2In) -> L2Out { crate::verify_shim::sound_boss_hit(input) }
 pub fn sub_incorrect_password(input: &L2In) -> L2Out { crate::verify_shim::sound_incorrect_password(input) }
 pub fn sub_samus_jump(input: &L2In) -> L2Out { crate::verify_shim::sound_samus_jump(input) }
+
+/// W4 尾区注册（bank00 镜面：B7AC/B7EF/B834/B878/B8A7/B8D2/B921）。
+pub fn sub_door_open_close(input: &L2In) -> L2Out { crate::verify_shim::sound_door_open_close(input) }
+pub fn sub_big_enemy_hit(input: &L2In) -> L2Out { crate::verify_shim::sound_big_enemy_hit(input) }
+pub fn sub_samus_to_ball(input: &L2In) -> L2Out { crate::verify_shim::sound_samus_to_ball(input) }
+pub fn sub_bomb_launch(input: &L2In) -> L2Out { crate::verify_shim::sound_bomb_launch(input) }
+pub fn sub_metroid_hit(input: &L2In) -> L2Out { crate::verify_shim::sound_metroid_hit(input) }
+pub fn sub_samus_die(input: &L2In) -> L2Out { crate::verify_shim::sound_samus_die(input) }
+pub fn sub_statue_raise(input: &L2In) -> L2Out { crate::verify_shim::sound_statue_raise(input) }
