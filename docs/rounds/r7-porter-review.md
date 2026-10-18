@@ -2630,6 +2630,17 @@ $E89B=`d0 02 38 60 84 02 a2 00` vs S4-111 $E7BD=`d0 02 38 60 85 03 a8 a2`——
 （997/29 账内稳）④员面双扫桩 0（2 员真现）。测 264（族域述**120 测里程碑**）。
 findings（r10）：0 新。S4 余 6 卡预告随账。
 
+## SC-S4-24 卡审（abcb5ff）——walk handler 正身第四例（S1-22 归位）
+
+### verdict: pass
+
+四条核：①L2 留白**真 0 三方核 ✓**（pregen/l2_cases 全 0）②**walk handler 正身
+抽核 ✓✓**：$EB06=`20 0c eb 4c d4 ea`=JSR $EB0C/**JMP $EAD4 回驱**（walk 表 op1
+handler 归位）+$EB0C=`b1 00 29 f0 aa 20 7a eb`=LDA ($00),Y/**AND #$F0 类型掩码**/
+TAX/JSR $EB7A——「GetEnemyData 掩码+判+数据载+指针面」逐字命中；**正身模式第四例**
+（S1-22 trace op1→本卡员面归位）③L3 0 失败容忍不增（997/29 账内稳）④员面双扫
+桩 0（2 员真现）。测 265。findings（r10）：0 新。S4 余 5 卡收官段预告随账。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
