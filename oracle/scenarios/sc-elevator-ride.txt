@@ -1,4 +1,4 @@
-# 场景：sc-elevator-ride —— 球滚连环（触发式 morph-tunnel 连用）
+# 场景：sc-elevator-ride —— 过顶径终解（西开区脱球→站立跳越 mass 顶）
 name sc-elevator-ride
 frames 7200
 watch_range 0000-00ff zp
@@ -26,15 +26,24 @@ hold 3150-3520 right
 press 3180 b
 nav 3300-3400 x 140
 trigger 3300-3650 051 > 137 press down
-trigger 3350-4400 052 > 195 hold right
-trigger 3350-4400 051 > 137 press down
-trigger 4200-6500 052 > 195 hold right
-trigger 4200-6500 052 > 195 hold a
-nav 4300-6500 x 250
-nav 6500-7000 x 250
+trigger 3350-4200 052 > 195 hold right
+nav 3900-4200 x 100
+press 4250 up
+nav 4300-4600 x 50
+hold 4650-4810 a
+hold 4700-5100 right
+press 4750 b
+nav 5100-5600 x 250
+hold 5300-5460 a
+hold 5350-5800 right
+press 5400 b
+nav 5800-7000 x 250
+hold 6000-6160 a
+hold 6050-6500 right
+press 6100 b
 
-capture 3800 roll1
-capture 5000 roll-mid
+capture 4300 un-morph-west
+capture 4900 jump-cross
 capture 6900 east-end
 
 sample_point spin-exit
