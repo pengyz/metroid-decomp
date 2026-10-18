@@ -1,28 +1,51 @@
-# 场景：sc-elevator-ride —— 地图连通图径推输入序（G 系基建实证核）
-# 径：(14,2)→(22,11) 26 房 BFS 路径——E S W W S×8 E×5 N N E×4 S S
-# 事件核：$D7B3 状态机写面（1→2→3→8→9）+Samus.y 逐帧+MapPos 到 (22,11)
+# 场景：sc-elevator-ride —— 真起点径推（(3,14)→(22,11) 31 房 BFS）精化迭代
+# 径：E×8 N×7 E×2 S×4 E×9——真 MapPos=$50/$4F（早注 $53/$54 误已更正）
+# 事件核：$D7B3 状态机写面+MapPos 到 (22,11)+站台 DOWN 激活
 name sc-elevator-ride
-frames 9500
+frames 6000
 watch_range 0000-00ff zp
 watch_range 0100-07ff iram
 
 press 360 start
 press 420 a
 press 540 start
+hold 850-2900 right
+press 950 b
+fixture 940 6878 11 invariant
+press 1150 b
+press 1200 down
+hold 1220-1500 right
+press 1510 down
+press 1520 b
+press 1350 b
+press 1550 b
+press 1750 b
+press 1950 b
+press 2150 b
+press 2350 b
+press 2550 b
+press 2750 b
+press 2950 a
+hold 2970-3100 right
+press 3150 a
+hold 3170-3300 left
+press 3350 a
+hold 3370-3500 left
+press 3550 a
+hold 3570-3700 right
+press 3750 a
+hold 3770-3900 left
+press 3950 a
+hold 3970-4100 right
+press 4150 a
+hold 4170-4300 left
+press 4350 a
+hold 4370-4600 right
 
-hold 850-1060 right
-hold 1070-1280 right
-hold 1290-1710 left
-hold 1720-3400 right
-hold 3410-4460 right
-hold 4470-4890 right
-hold 4900-5740 right
-hold 5750-6170 right
-capture 1500 depart
-capture 3000 mid-vert
-capture 5200 mid-east
-capture 7500 near-target
-capture 9200 elevator-arrive
+capture 1800 east-run
+capture 3200 climb-start
+capture 4400 climb-mid
+capture 5800 ride-end
 
 sample_point spin-exit
-bundle_capture 9200 analysis/bundles/sc-elevator-ride
+bundle_capture 5800 analysis/bundles/sc-elevator-ride
