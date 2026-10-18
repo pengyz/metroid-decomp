@@ -274,3 +274,43 @@ mod s1_01_residual_tests {
         assert!(ev.contains(&(0x0307, 0)));
     }
 }
+
+// ---- SC-S1-02：$80B0 族（9 员——**跨 bank 镜面实证** banks1-5 共享码）----
+// 【结构互核注】①root $80B0=3 指令微体（ldy $6B02/lda $977B,y（窗口表）/asl/rts）——
+// 簇共根形二（SC-S1-00 同构）②员体形=`jsr $80B0 / and #$20 / 分支`（旗门形——
+// root<<1 & $20 判别）③L2 面=0 案留白（pregen 真 0 ✓ 教训条核）。
+
+/// $80B0 root（banks1-5 镜面——`ldy $6B02 / lda $977B,y / asl / rts`）：
+/// A=(ROM 表[$977B+Y]<<1)；Y=RAM $6B02 值。表=窗口区（bank 相关——烘焙面注）。
+pub fn s1_root_80b0(w6b02: u8, tbl_entry: u8) -> u8 {
+    tbl_entry << 1
+}
+
+/// $F676 员体（UpdateEnemy_Resting_UpdateEnData1F）：jsr root/三 asl/and #$C0/
+/// sta $6B03,x/rts——短件（旗面位移+掩码写）。
+pub fn s1_f676(root_val: u8, x: u8) -> (Vec<(u16, u8)>, u8) {
+    let v = ((root_val << 3) & 0xC0) as u8;
+    (vec![(0x6B03 + x as u16, v)], v)
+}
+
+/// 旗门形共面（员体主干：jsr root/and #$20/分支——root 位5 判别）。
+/// 返回旗命中（bool）。
+pub fn s1_flag_gate(root_val: u8) -> bool {
+    root_val & 0x20 != 0
+}
+
+#[cfg(test)]
+mod s1_02_tests {
+    use super::*;
+
+    /// root+短件+旗门三形。
+    #[test]
+    fn s1_02_shapes() {
+        assert_eq!(s1_root_80b0(5, 0x21), 0x42);
+        let (ev, v) = s1_f676(0x21, 2);
+        assert_eq!(v, (0x21 << 3) & 0xC0);
+        assert!(ev.contains(&(0x6B05, v)));
+        assert!(s1_flag_gate(0x20));
+        assert!(!s1_flag_gate(0x10));
+    }
+}
