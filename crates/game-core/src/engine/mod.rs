@@ -4345,3 +4345,43 @@ mod s4_090_tests {
         assert_eq!(ev2.len(), 2);
     }
 }
+
+// ---- SC-S4-01（S4-91）员转写（2 员——$D4F8 态机族；L2 真 0 留白）----
+
+/// $D4F8 员体（root——簇共根形八五·**S4-90 尾跳目标正身**）：$4B X 载+cc 分段+
+/// $6878 位2 判+$030F[x] dec 计数（零⇒$0300[x]←0 清）+$0405[x] 段。
+/// 返回 (写事件, 计数结果)。
+pub fn s4_d4f8_body(x: u8, carry: bool, v6878: u8, v030f_x: u8) -> (Vec<(u16, u8)>, u8) {
+    let mut ev = Vec::new();
+    if carry && (v6878 & 4) == 0 {
+        let d = v030f_x.wrapping_sub(1);
+        ev.push((0x030F + x as u16, d));
+        if d == 0 {
+            ev.push((0x0300 + x as u16, 0)); // 零清段
+        }
+    }
+    (ev, v030f_x)
+}
+
+/// $D588 员体：jmp $D4F8（尾形——S4-90 接面）+表数据区（$D58B 起指针对——三现注）。
+pub fn s4_d588_body(x: u8, carry: bool, v6878: u8, v030f_x: u8) -> (Vec<(u16, u8)>, u16) {
+    let (ev, _) = s4_d4f8_body(x, carry, v6878, v030f_x);
+    (ev, 0xD4F8)
+}
+
+#[cfg(test)]
+mod s4_091_tests {
+    use super::*;
+
+    /// 二员转写形（$D4F8 态机 root+一壳）。
+    #[test]
+    fn s4_091_units_two() {
+        let (ev, _) = s4_d4f8_body(2, true, 0, 5);
+        assert!(ev.contains(&(0x0311, 4)));
+        let (ev2, _) = s4_d4f8_body(2, true, 0, 1);
+        assert!(ev2.contains(&(0x0302, 0))); // 零清段
+        let (ev3, j) = s4_d588_body(2, true, 0, 5);
+        assert_eq!(j, 0xD4F8);
+        assert_eq!(ev3.len(), 1);
+    }
+}
