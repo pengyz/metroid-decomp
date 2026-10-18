@@ -118,10 +118,13 @@ pub fn enemy_get_delta_y(
     type_: u8, data05: u8, movement_index: u8,
     instr_index: u8, delay: u8,
 ) -> (i8, u8, u8, bool) {
-    // LoadTableAt977B：type→flags（bit7=加速路径）
+    // LoadTableAt977B：type→flags（*2 后 bit7=加速路径——case-6 $45 bit6 ✓ 实证）
     let flags = L977B[(type_ & 0x3F) as usize];
-    if flags & 0x40 != 0 { // *2 后 bit7=加速（asl 后判）
-        return (0, delay, instr_index, false); // 加速路径（随件）
+    if flags & 0x40 != 0 {
+        // **加速路径**（$833F EnemyGetDeltaY_UsingAcceleration——speed 积分面）：
+        // 极速 ±14 钳+亚像素+进位链（asm：`adc Ens.0.speedSubPixelY/sta/lda
+        // Ens.0.speedY/adc #$00/sta`——IntY 同构）。
+        return (0, delay, instr_index, false); // Δ=speed 字段（下窗积分折）
     }
     // 朝向（data05 bit7：水平/垂直）→movementIndex*2+facing→*2→指针
     let facing = if data05 & 0x80 != 0 { (data05 >> 2) & 1 } else { data05 & 1 };
