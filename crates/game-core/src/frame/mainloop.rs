@@ -245,7 +245,12 @@ pub fn game_engine(mem: &mut FrameMemory) {
 /// ——T45-1 已折）**/…/CollisionDetection（D976/F1FA 族）/…→精灵清尾（$F4 残槽填充）。
 pub fn update_world(mem: &mut FrameMemory) {
     mem.write_ram(0x0006, 0); // SpritePagePos←0（:256 族）
-    crate::unported!("bank07:F345"); // UpdateAllEnemies（敌面——port2 域）
+    // UpdateAllEnemies（F345——port2 敌面域；随件）
+    crate::unported!("bank07:F345");
+    // UpdateSamusProjectiles（D4BF——随件）
+    crate::unported!("bank07:D4BF");
+    crate::samus::update_samus(mem); // UpdateSamus（CC0D——**samus 域件会师**！）
+    crate::frame::statue::update_all_statues(mem); // UpdateAllStatues（D9D4——T45-1 会师）
     // 例程序（随件逐个）：UpdateSamusProjectiles(D4BF)/UpdateSamus(CC0D——samus 域
     // 会师)/AreaRoutine(95C3)/UpdateElevator(D7B3)/UpdateAllStatues(D9D4 已折)/
     // UpdateAllEnemyExplosions/UpdateAllMellows/UpdateAllEnProjectiles/
