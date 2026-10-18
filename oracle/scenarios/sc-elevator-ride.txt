@@ -27,23 +27,19 @@ press 2580 b
 hold 3100-3260 a
 hold 3150-3520 right
 press 3180 b
+nav 3330-3450 x 120
+nav 3450-3800 jump 128
+nav 3450-3800 x 120
+nav 3800-4200 jump 64
+nav 3800-4200 x 130
+nav 4200-5000 x 250
+nav 5000-6000 x 250
+nav 6000-7500 x 250
+nav 4200-7500 jump 193
 press 3600 b
-hold 3330-3420 left
-hold 3430-3600 a
-hold 3470-3650 left
-hold 3660-3830 a
-hold 3700-3880 left
-hold 3890-4060 a
-hold 3930-4200 right
 press 4000 b
-hold 4250-4420 a
-hold 4290-4700 right
 press 4360 b
-hold 4750-4920 a
-hold 4790-5200 right
 press 4860 b
-hold 5250-5420 a
-hold 5290-5700 right
 press 5360 b
 capture 1700 door-jump
 capture 2400 post-door

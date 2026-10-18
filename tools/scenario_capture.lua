@@ -61,6 +61,9 @@ end
 for _, e in ipairs(PLAN.holds) do addRange(e.from, e.to, e.buttons) end
 for _, e in ipairs(PLAN.presses) do addRange(e.frame, e.frame + pressLen - 1, e.buttons) end
 
+-- sc-loop 导航速度估计表（navPrev[key]={x}）
+local navPrev = {}
+
 -- 采集点索引
 local capAt = {}
 for _, e in ipairs(PLAN.captures) do capAt[e.frame] = e.tag end
@@ -361,6 +364,40 @@ end
 emu.addEventCallback(function()
   frame = frame + 1
   local btn = schedule[frame] or {}
+  -- sc-loop 反馈制导航（G 系共用底）：实时读 RAM→条件按键（nav 命令驱动）
+  -- 种类：x=ScrX($51) 左右舵/mapx=MapX($50) 房向舵/jump=ScrY($52) 低则跳
+  for _, n in ipairs(PLAN.navs or {}) do
+    if frame >= n.from and frame <= n.to then
+      local cur
+      if n.kind == "x" then cur = readByte(0x51)
+      elseif n.kind == "mapx" then cur = readByte(0x50)
+      elseif n.kind == "jump" then cur = readByte(0x52)
+      end
+      if cur then
+        if n.kind == "jump" then
+          if cur > n.target then
+            for _, b in ipairs(n.buttons) do btn[b] = true end
+          end
+        else
+          -- 速度阻尼舵（v 反馈——动量滑行/过冲回正）：approaching=松键滑行
+          local key = n.kind
+          navPrev[key] = navPrev[key] or {}
+          local prev = navPrev[key][1]
+          navPrev[key][1] = cur
+          local v = prev and (cur - prev) or 0
+          local neg, pos = n.buttons[1] or "left", n.buttons[2] or "right"
+          if cur < n.target - 3 and v <= 0 then btn[pos] = true
+          elseif cur > n.target + 3 and v >= 0 then btn[neg] = true
+          elseif cur > n.target + 3 and v < 0 then -- 滑行接近
+          elseif cur < n.target - 3 and v > 0 then -- 滑行接近
+          else -- 目标带内：回正微调
+            if cur < n.target then btn[pos] = true
+            elseif cur > n.target then btn[neg] = true end
+          end
+        end
+      end
+    end
+  end
   local okIn, errIn = pcall(emu.setInput, btn, 0)
   if not okIn and not inputWarned then
     inputWarned = true

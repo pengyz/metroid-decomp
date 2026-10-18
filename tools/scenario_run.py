@@ -125,6 +125,14 @@ def relp(path: Path) -> str:
 
 # ---------------------------------------------------------------- DSL 解析
 
+def parse_range(text: str) -> tuple:
+    """<起>-<止> 区间解析（hold/nav 共用）。"""
+    a_s, b_s = text.split("-", 1)
+    if not (a_s.isdigit() and b_s.isdigit()) or int(a_s) > int(b_s):
+        raise ValueError("区间必须是 起<=止 的非负整数")
+    return int(a_s), int(b_s)
+
+
 def parse_scenario(path: Path) -> dict:
     """解析场景 DSL → PLAN dict。所有语义判定唯一入口。"""
     path = Path(path)
@@ -133,6 +141,7 @@ def parse_scenario(path: Path) -> dict:
         "frames": None,
         "press_len": PRESS_LEN_DEFAULT,
         "presses": [],
+        "navs": [],
         "holds": [],
         "captures": [],
         "capture_every": None,
@@ -171,6 +180,22 @@ def parse_scenario(path: Path) -> dict:
             if len(args) != 1 or not args[0].isdigit() or int(args[0]) <= 0:
                 raise err("press_len 需要正整数")
             plan["press_len"] = int(args[0])
+        elif op == "nav":
+            # sc-loop 反馈制导航：nav <f1-f2> <x|mapx|jump> <target> [按钮...]
+            # 实时读 RAM（ScrX=$51/ScrY=$52/MapX=$50）→条件按键（G 系共用底）
+            if len(args) < 3:
+                raise err("nav 用法: nav <起>-<止> <x|mapx|jump> <目标> [按钮...]")
+            try:
+                lo, hi = parse_range(args[0])
+            except ValueError as e:
+                raise err(f"nav 区间错: {e}")
+            kind = args[1]
+            if kind not in ("x", "mapx", "jump"):
+                raise err(f"nav 种类未知: {kind}（x/mapx/jump）")
+            target = int(args[2], 0)
+            btns = args[3:] if len(args) > 3 else (["a"] if kind == "jump" else ["left", "right"])
+            plan["navs"].append({"from": lo, "to": hi, "kind": kind,
+                                 "target": target, "buttons": btns})
         elif op == "press":
             if len(args) < 2 or not args[0].isdigit():
                 raise err("press 用法: press <帧号> <按钮...>")
