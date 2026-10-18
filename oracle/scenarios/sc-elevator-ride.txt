@@ -27,15 +27,24 @@ press 2580 b
 hold 3100-3260 a
 hold 3150-3520 right
 press 3180 b
-nav 3330-3450 x 120
-nav 3450-3800 jump 128
-nav 3450-3800 x 120
-nav 3800-4200 jump 64
-nav 3800-4200 x 130
-nav 4200-5000 x 250
-nav 5000-6000 x 250
-nav 6000-7500 x 250
-nav 4200-7500 jump 193
+nav 3330-3500 x 120
+nav 3500-4000 jump 128
+nav 3500-4000 x 125
+nav 4000-4500 jump 64
+nav 4300-4700 x 250
+nav 4700-7500 x 250
+hold 5000-5160 a
+hold 5050-5500 right
+press 5100 b
+hold 5600-5760 a
+hold 5650-6100 right
+press 5700 b
+hold 6200-6360 a
+hold 6250-6700 right
+press 6300 b
+hold 6800-6960 a
+hold 6850-7300 right
+press 6900 b
 press 3600 b
 press 4000 b
 press 4360 b
