@@ -5164,3 +5164,42 @@ mod s4_112_tests {
         assert!(ev2.contains(&(0x0003, 0xFB))); // 0-5
     }
 }
+
+// ---- SC-S4-23（S4-113）员转写（2 员——CheckMoveRight 族；L2 真 0 留白）----
+
+/// $E89B CheckMoveRight（root——簇共根形百七·**S4-111 CheckMoveDown 同构对**）：
+/// Y 判（beq⇒sec/rts 段）+$08-Y and 7（delta 低位）+inx 补偿+$E8CE 调→$04。
+/// 返回 (写事件, delta 低位)。
+pub fn s4_check_move_right(y_in: u8, v08: u8) -> (Vec<(u16, u8)>, u8) {
+    if y_in == 0 {
+        return (vec![], 0); // beq⇒sec/rts 段
+    }
+    let d = v08.wrapping_sub(y_in) & 7;
+    let step = if d == 0 { 0 } else { 1 };
+    (vec![(0x0004, d), (0x0002, step)], d)
+}
+
+/// $E90C 员体：jmp $E89B（尾形）+$02 符号段（$E95F/$F0 判——负径检查链）。
+pub fn s4_e90c_body(y_in: u8, v08: u8) -> (Vec<(u16, u8)>, u16) {
+    let (ev, _) = s4_check_move_right(y_in, v08);
+    (ev, 0xE89B)
+}
+
+#[cfg(test)]
+mod s4_113_tests {
+    use super::*;
+
+    /// 二员转写形（CheckMoveRight 同构对 root+一壳）。
+    #[test]
+    fn s4_113_units_two() {
+        let (ev, d) = s4_check_move_right(0, 5);
+        assert_eq!(d, 0); // beq 段
+        assert!(ev.is_empty());
+        let (ev2, d2) = s4_check_move_right(3, 5);
+        assert_eq!(d2, 2); // (5-3)&7
+        assert!(ev2.contains(&(0x0004, 2)));
+        let (ev3, j) = s4_e90c_body(3, 5);
+        assert_eq!(j, 0xE89B);
+        assert_eq!(ev3.len(), 2);
+    }
+}
