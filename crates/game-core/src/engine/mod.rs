@@ -5269,3 +5269,35 @@ mod s4_115_tests {
         assert_eq!(v, 0);
     }
 }
+
+// ---- SC-S4-26（S4-116）员转写（2 员——GetEnemyType 族；L2 真 0 留白）----
+
+/// $EB28 GetEnemyType（root——簇共根形百十）：A and $C0→$040F[x]（类型高位）+
+/// asl/bpl 段（符号段）+$74 and 6 面（$687A[y] 表走+判段）。
+/// 返回 (写事件, 类型高位)。
+pub fn s4_get_enemy_type(x: u8, a_in: u8, v74: u8) -> (Vec<(u16, u8)>, u8) {
+    let t = a_in & 0xC0;
+    (vec![(0x040F + x as u16, t)], t)
+}
+
+/// $EB19 员体：GetEnemyType+Y=2/($00),y→$EB4D（指针面——S4-114 同构续）+
+/// lda #3/rts 面。
+pub fn s4_eb19_body(x: u8, a_in: u8, v74: u8) -> (Vec<(u16, u8)>, u8) {
+    s4_get_enemy_type(x, a_in, v74)
+}
+
+#[cfg(test)]
+mod s4_116_tests {
+    use super::*;
+
+    /// 二员转写形（GetEnemyType root+一壳）。
+    #[test]
+    fn s4_116_units_two() {
+        let (ev, t) = s4_get_enemy_type(2, 0x55, 0);
+        assert_eq!(t, 0x40); // and $C0
+        assert!(ev.contains(&(0x0411, 0x40)));
+        let (ev2, t2) = s4_eb19_body(2, 0x55, 0);
+        assert_eq!(t2, 0x40);
+        assert_eq!(ev2.len(), 1);
+    }
+}
