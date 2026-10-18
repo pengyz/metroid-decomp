@@ -11,11 +11,24 @@ press 420 a
 press 540 start
 hold 850-2900 right
 press 950 b
-fixture 940 6878 11 invariant
+fixture 940 6878 13 invariant
+press 1100 a
+press 1130 a
 press 1150 b
-press 1200 down
+press 1170 a
+press 1210 a
+press 1250 a
+hold 1170-1350 right
+press 1290 b
+press 1330 a
+press 1370 a
+hold 1350-1520 right
+press 1540 a
+hold 1550-1750 right
+press 1580 b
+press 1650 b
+hold 1750-2100 right
 hold 1220-1500 right
-press 1510 down
 press 1520 b
 press 1350 b
 press 1550 b
