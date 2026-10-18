@@ -239,6 +239,7 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "s3_cluster_064" => Some(sub_s3_cluster_064),
         "s3_cluster_065" => Some(sub_s3_cluster_065),
         "s3_cluster_066" => Some(sub_s3_cluster_066),
+        "s3_cluster_067" => Some(sub_s3_cluster_067),
         _ => None,
     }
 }
@@ -954,4 +955,9 @@ pub fn sub_s3_cluster_065(input: &L2In) -> L2Out {
 /// s3_cluster_066 —— bank07:D015 簇入口注册（SC-S3-06 SamusJump）。
 pub fn sub_s3_cluster_066(input: &L2In) -> L2Out {
     crate::verify_shim::s3_cluster_066(input)
+}
+
+/// s3_cluster_067 —— bank07:D02B 簇入口注册（SC-S3-07）。
+pub fn sub_s3_cluster_067(input: &L2In) -> L2Out {
+    crate::verify_shim::s3_cluster_067(input)
 }

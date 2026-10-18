@@ -3437,3 +3437,41 @@ mod s3_066_tests {
         assert_eq!((x, y), (0, 0));
     }
 }
+
+// ---- SC-S3-07（S3-67）员转写（2 员——Table04 族）----
+
+/// $D09C Table04（root——簇共根形六一）：$12|$16 asl/bpl 环（回卷面）+$0305 cmp $35
+/// 判（jmp $D275 段）+$D210 调+尾跳（$CD6B 面）。
+/// 返回 (判段, A 值)。
+pub fn s3_table04(v12: u8, v16: u8, v0305: u8) -> (bool, u8) {
+    let v = (v12 | v16) << 1;
+    let bpl = (v & 0x80) == 0;
+    let cmp35 = v0305 == 0x35;
+    (bpl && cmp35, v)
+}
+
+/// $D02B 员体：Table04+$64 判（$12 符号段）+$CFC3 调+尾跳 $CD6B（S1-09 接面）。
+pub fn s3_d02b_body(v12: u8, v16: u8, v0305: u8, v64: u8) -> (Vec<(u16, u8)>, u8) {
+    let (hit, v) = s3_table04(v12, v16, v0305);
+    let mut ev = Vec::new();
+    if v64 != 0 && (v12 as i8) >= 0 {
+        ev.push((0x0305, 7)); // 面注（写族随链）
+    }
+    (ev, v)
+}
+
+#[cfg(test)]
+mod s3_067_tests {
+    use super::*;
+
+    /// 二员转写形（Table04 root+一壳）。
+    #[test]
+    fn s3_067_units_two() {
+        let (hit, v) = s3_table04(0x10, 0x20, 0x35);
+        assert!(hit); // 0x30<<1=0x60（正）+cmp35⇒hit
+        let (hit2, _) = s3_table04(0x10, 0x10, 0x35);
+        assert!(hit2); // 0x20<<1=0x40（正）+cmp35
+        let (ev, _) = s3_d02b_body(0x10, 0x10, 0x35, 5);
+        assert!(!ev.is_empty());
+    }
+}
