@@ -1,23 +1,10 @@
 {
   "schema": "s1-pregen/v1",
-  "note": "S1 批 L2 案族预出（casegen golden factory——移植线到簇即对拍）：19/30 簇产案 152 条；11 簇非入口（簇首=跳板桩/内标签——超步数 fail-loud 拒收=casegen 韧性语义）；案族=s1-pregen/cases.jsonl（golden 自 ROM 产出）——移植到簇后并入主语料 l2_cases.jsonl（三方面拍开启）",
   "yield": {
     "ok": 19,
     "fail": 11,
     "cases": 152
   },
-  "fail_ids": [
-    "s1-02",
-    "s1-04",
-    "s1-05",
-    "s1-10",
-    "s1-13",
-    "s1-16",
-    "s1-19",
-    "s1-24",
-    "s1-25",
-    "s1-27",
-    "s1-29"
-  ],
-  "reproduce": "cargo run -p game-oracle --bin l2-casegen -- --rom \"rom/Metroid (USA).nes\" --funcs oracle/subroutines/s1-pregen/funcs.jsonl --out /tmp/x.jsonl（逐条韧性跑——单条失败即停语义）"
+  "note": "S1 批 L2 案族预出（casegen golden factory）——簇首入口×4 LCG 样本，golden 自 ROM 产出。产率改进项（跳板桩→bank7 真入口）**尝试后如实回退**：窗口 bank 歧义（$8xxx 桩体物理 bank 未定——重定向误读致 S1 降 2 例）——改进前置=窗口 bank 消歧（task-14 面）。",
+  "reproduce": "cargo run -p game-oracle --bin l2-casegen -- --rom \"rom/Metroid (USA).nes\" --funcs oracle/subroutines/s1-pregen/funcs.jsonl --out /tmp/x.jsonl（逐条韧性跑）"
 }
