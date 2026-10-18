@@ -1349,3 +1349,13 @@ pub fn s2_cluster_038(input: &L2In) -> L2Out {
     let v = ((r(0x004D) << 4) as u8) | r(0x006B);
     L2Out { a: v, x: input.x, y: input.y, writes: merge_writes(vec![(0x006B, v)]) }
 }
+
+// ---- SC-S2-10 簇入口适配（s2_cluster_040 ← bank07:D450 SamusElevator 族）----
+
+/// s2_cluster_040 适配（$D450：jmp $D47E SamusElevator——$2D bit0 判：清⇒rts 早退
+/// （A=$2D>>1 无写）；置⇒SetmirrorCntrlBit+AnimDrawObject 链（写族注））。
+pub fn s2_cluster_040(input: &L2In) -> L2Out {
+    let v2d = input.ram[0x002D & 0x7FF];
+    let carry = v2d & 1;
+    L2Out { a: v2d >> 1, x: input.x, y: input.y, writes: vec![] } // 早退径（8 案形）
+}
