@@ -1298,3 +1298,48 @@ pub fn enter_password_body(ram: &[u8], wram: &[u8], frame_count: u8, joy: u8, jo
     }
     (e, None)
 }
+
+// ---- 跨域点件：MainTitleRoutine 头（$8000-$8027——START→菜单转移在分派头非臂内）----
+// 结构互核注：①转移目标=**0x1B**（StartContinueScreen1B——非 0x15！0x15/0x1B 共体 $90BA
+// 双入口）②guard=TitleRoutine < _id_StartContinueScreen15(0x15)（intro 期判定）+
+// Joy1Change&BUTTON_START($10) ③转移副作用：SpareMemD1($D1)/BB($BB)/B7($B7)/B8($B8)←0
+// 清+PPUCTRL_ZP($FF)&=$FC（名表 0）。
+
+/// MainTitleRoutine 头语义折叠：返回 (转移命中?, 事件, 新 TitleRoutine)。
+/// 转移命中⇒事件=四 spare 清+$FF&=$FC；未命中⇒(false, [], 原值)。
+pub fn title_tick_head(title_routine: u8, joy_change: u8, ppuctrl: u8)
+    -> (bool, Vec<(u16, u8)>, u8) {
+    if title_routine >= 0x15 {
+        return (false, Vec::new(), title_routine);
+    }
+    if joy_change & 0x10 == 0 {
+        return (false, Vec::new(), title_routine);
+    }
+    let events = vec![
+        (0x00D1, 0), (0x00BB, 0), (0x00B7, 0), (0x00B8, 0), // spare 清
+        (0x00FF, ppuctrl & 0xFC),                           // PPUCTRL_ZP&=$FC
+    ];
+    (true, events, 0x1B)
+}
+
+#[cfg(test)]
+mod tick_head_tests {
+    use super::*;
+
+    /// 头转移三态（guard/副作用/目标 0x1B）。
+    #[test]
+    fn title_tick_head_three_faces() {
+        // guard 未过（已是菜单期）
+        let (hit, ev, r) = title_tick_head(0x1B, 0x10, 0x91);
+        assert!(!hit && ev.is_empty() && r == 0x1B);
+        // START 未按
+        let (hit, _, r) = title_tick_head(4, 0x00, 0x91);
+        assert!(!hit && r == 4);
+        // 转移命中（intro 期+START）
+        let (hit, ev, r) = title_tick_head(4, 0x10, 0x91);
+        assert!(hit);
+        assert_eq!(r, 0x1B);
+        assert!(ev.contains(&(0x00D1, 0)));
+        assert!(ev.contains(&(0x00FF, 0x90))); // 0x91&0xFC
+    }
+}
