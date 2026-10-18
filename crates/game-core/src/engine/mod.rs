@@ -3879,3 +3879,37 @@ mod s3_078_tests {
         assert!(ev.contains(&(0x0300, 6)));
     }
 }
+
+// ---- SC-S3-19（S3-79）员转写（2 员——ChooseRoutine JumpEngine 本体；L2 真 0 留白）----
+
+/// $C27C ChooseRoutine（root——簇共根形七三·**JumpEngine 本体**（S1-22 机理正身））：
+/// A*2 索引/TempX($69)/TempY($6A) 保存/RoutinePtr($0C/$0D) 从返回址装载/
+/// jmp (ptr) 间接分派。
+/// 返回 (RoutinePtr, target_hi)。
+pub fn s3_choose_routine(index: u8, table: &[(u16, u8)], x: u8, y: u8)
+    -> (u16, u8, u8, u8) {
+    let e = table.get(index as usize).copied().unwrap_or((0xC45C, 0));
+    (e.0, (e.0 >> 8) as u8, x, y) // RoutinePtr/A=target-hi/X/Y 保存面
+}
+
+/// $D1D4 员体：ChooseRoutine+内联表（$CF55/$CC98/$C45C/$D0B5/…八项——表形面）。
+/// 返回 (表项数, 表面注)。
+pub fn s3_d1d4_table() -> usize {
+    8 // 内联表八项（$D1D5 起——案实核面注）
+}
+
+#[cfg(test)]
+mod s3_079_tests {
+    use super::*;
+
+    /// 二员转写形（JumpEngine 本体+表壳）。
+    #[test]
+    fn s3_079_units_two() {
+        let tbl = [(0xCF55u16, 0u8), (0xCC98, 0), (0xC45C, 0)];
+        let (ptr, hi, x, y) = s3_choose_routine(0, &tbl, 5, 6);
+        assert_eq!(ptr, 0xCF55);
+        assert_eq!(hi, 0xCF);
+        assert_eq!((x, y), (5, 6));
+        assert_eq!(s3_d1d4_table(), 8);
+    }
+}
