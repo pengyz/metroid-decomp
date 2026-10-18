@@ -1359,3 +1359,14 @@ pub fn s2_cluster_040(input: &L2In) -> L2Out {
     let carry = v2d & 1;
     L2Out { a: v2d >> 1, x: input.x, y: input.y, writes: vec![] } // 早退径（8 案形）
 }
+
+// ---- SC-S2-14 簇入口适配（s2_cluster_044 ← bank07:D61B CheckBlastTile 族）----
+
+/// s2_cluster_044 适配（$D61B：jsr $D651 CheckBlastTile 比较链——A 透传（cmp 不改 A）/
+/// X 透传/Y=ram[\$74]（ldy 面）；无写面）。
+pub fn s2_cluster_044(input: &L2In) -> L2Out {
+    L2Out {
+        a: input.a, x: input.x, y: input.ram[0x0074 & 0x7FF],
+        writes: vec![],
+    }
+}

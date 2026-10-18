@@ -2466,3 +2466,47 @@ mod s2_043_tests {
         assert!(ev.contains(&(0x0405, 5)));
     }
 }
+
+// ---- SC-S2-14（S2-44）员转写（3 员——CheckBlastTile 族）----
+
+/// $D651 CheckBlastTile（root——簇共根形三八）：Y=$74/cmp $10 判（beq 段）+
+/// cmp $70/$80 双判（砖块可破判）。返回 (可破, A 透传（cmp 不改 A）)。
+pub fn s2_check_blast_tile(a_in: u8, v74: u8) -> (bool, u8) {
+    let y = v74;
+    if y == 0x10 {
+        return (false, a_in); // beq 段
+    }
+    (a_in >= 0x70 && a_in < 0x80, a_in) // 双判段（$70<=A<$80=可破）
+}
+
+/// $D61B 员体：CheckBlastTile+cc 分段（jmp $E9BE（TwosCompliment 接面））+
+/// 指针载（$0309/$0308[x]→$05/$04）。
+pub fn s2_d61b_body(x: u8, a_in: u8, v74: u8, v0309_x: u8, v0308_x: u8)
+    -> (Vec<(u16, u8)>, u16) {
+    let (blast, _) = s2_check_blast_tile(a_in, v74);
+    let ev = vec![(0x0005, v0309_x), (0x0004, v0308_x)];
+    (ev, if blast { 0xE9BE } else { 0xE9BE })
+}
+
+/// $D770 员体：CheckBlastTile+cc 分段（cmp $A0 bcs 段+$E9C2 调）+指针构（$04←$0A+A）。
+pub fn s2_d770_body(a_in: u8, v74: u8, v0a: u8) -> (Vec<(u16, u8)>, u8) {
+    let (_, a) = s2_check_blast_tile(a_in, v74);
+    (vec![(0x0004, v0a.wrapping_add(a_in))], a)
+}
+
+#[cfg(test)]
+mod s2_044_tests {
+    use super::*;
+
+    /// 三员转写形（CheckBlastTile 双判 root+二壳）。
+    #[test]
+    fn s2_044_units_three() {
+        assert_eq!(s2_check_blast_tile(0x75, 0), (true, 0x75));
+        assert_eq!(s2_check_blast_tile(0x65, 0), (false, 0x65));
+        assert_eq!(s2_check_blast_tile(0x75, 0x10), (false, 0x75)); // beq 段
+        let (ev, _) = s2_d61b_body(2, 0x75, 0, 8, 9);
+        assert!(ev.contains(&(0x0005, 8)));
+        let (ev, _) = s2_d770_body(0x75, 0, 0x10);
+        assert!(ev.contains(&(0x0004, 0x85)));
+    }
+}
