@@ -85,6 +85,20 @@
       "reason": "case-4 流依存 handler 链：walk 表 handler **跨卡实证**（$EC2F∈S1-00 LoadStatues/$EC04∈S2-49 SpawnElevator）+$F0A2 深分派（非本卡员（本卡=$EB8C/$EB92/$EEF4））——golden 全路径含他卡效应=正常（S1-17 CROSSCARD 形）",
       "exit": "源卡（S1-00 已落/S2-49 在产）handler 集建模清→账清转 strict",
       "registered": "2026-10-19"
+    },
+    {
+      "id": "SC-S3-066-CROSSCARD-5",
+      "case_prefix": "s3-066-case-5",
+      "reason": "深径多路（$0200 区写族 ~200 项——S1-17/S2-031 同款跨卡效应链（S1-05 深径））——golden 含他卡效应=正常",
+      "exit": "源卡移动链建模清→账清转 strict",
+      "registered": "2026-10-19"
+    },
+    {
+      "id": "SC-S3-066-CROSSCARD-6",
+      "case_prefix": "s3-066-case-6",
+      "reason": "深径多路（$0200 区写族 ~200 项——S1-17/S2-031 同款跨卡效应链（S1-05 深径））——golden 含他卡效应=正常",
+      "exit": "源卡移动链建模清→账清转 strict",
+      "registered": "2026-10-19"
     }
   ]
 }
