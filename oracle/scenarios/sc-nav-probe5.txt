@@ -1,0 +1,28 @@
+# 导航探跑 5：坑区下降径×MapPos（向 Y=11 拓进——Norfair 电梯 (22,11)）
+name sc-nav-probe5
+frames 3200
+watch_range 0000-00ff zp
+watch_range 0100-07ff iram
+
+press 360 start
+press 420 a
+press 540 start
+hold 850-1050 right
+hold 1060-1250 right
+press 1260 down
+hold 1280-1500 left
+press 1510 down
+hold 1530-1750 left
+hold 1800-2100 right
+press 2110 down
+hold 2130-2500 right
+hold 2550-2850 right
+press 2880 down
+hold 2900-3150 right
+
+capture 1550 descent1
+capture 2100 descent2
+capture 2850 descent3
+capture 3150 nav-end
+
+sample_point spin-exit
