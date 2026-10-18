@@ -186,6 +186,7 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "sub_StatueRaiseSFXInit" => Some(sub_statue_raise),
         "s1_cluster_00" => Some(sub_s1_cluster_00),
         "s1_cluster_01" => Some(sub_s1_cluster_01),
+        "s1_cluster_03" => Some(sub_s1_cluster_03),
         _ => None,
     }
 }
@@ -696,4 +697,9 @@ pub fn sub_s1_cluster_00(input: &L2In) -> L2Out {
 /// s1_cluster_01 —— bank07:D806 簇入口注册（SC-S1-01——驱动器判别形）。
 pub fn sub_s1_cluster_01(input: &L2In) -> L2Out {
     crate::verify_shim::s1_cluster_01(input)
+}
+
+/// s1_cluster_03 —— bank07:F62E 簇入口注册（SC-S1-03——PlaySnd3 族）。
+pub fn sub_s1_cluster_03(input: &L2In) -> L2Out {
+    crate::verify_shim::s1_cluster_03(input)
 }

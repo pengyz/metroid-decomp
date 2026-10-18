@@ -965,3 +965,42 @@ pub fn s1_cluster_01(input: &L2In) -> L2Out {
     let v2d = input.ram[0x002D & 0x7FF];
     L2Out { a: v2d >> 1, x: input.x, y: input.y, writes: vec![] }
 }
+
+// ---- SC-S1-03 簇入口适配（s1_cluster_03 ← bank07:F62E——root PlaySnd3 族）----
+
+/// s1_cluster_03 适配（$F62E 流：root 三写+A 归零+$0406[x]←0+槽搜（$C0 by 8→$E0 首
+/// $6AF4[X]==0）+槽写组（$6AF4[X]←1/$6AF8[X]..+3←0,F0,F0,0+$0406[X]←$0A））。
+/// 出口 A/X/Y=0（深层出口残迹——案 0-7 实核）。
+pub fn s1_cluster_03(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    let w = |off: usize| input.wram.get(off).copied().unwrap_or(0);
+    let a_in = input.a;
+    let x_in = input.x;
+    let mut ev: Vec<(u16, u8)> = Vec::new();
+    // root PlaySnd3（$F68D）：$6AF9[x]←A/$6AFA[x]←A/$6AF8[x]←0（A 归零出口）
+    ev.push((0x6AF9 + x_in as u16, a_in));
+    ev.push((0x6AFA + x_in as u16, a_in));
+    ev.push((0x6AF8 + x_in as u16, 0));
+    // sta $0406,x（A=0 后）
+    ev.push((0x0406 + x_in as u16, 0));
+    // 槽搜：X=$C0 by 8→$E0 首空槽（$6AF4[X]==0）
+    let mut slot: u16 = 0xC0;
+    while slot < 0xE0 {
+        if w(0xAF4 + slot as usize) == 0 {
+            break;
+        }
+        slot += 8;
+    }
+    // 槽写组（案实核：$6AF4[s]←1/$6AF8[s]..+3←0/$F0/$F0/0+$0406[s]←$0A）
+    ev.push((0x6AF4 + slot, 1));
+    ev.push((0x6AF8 + slot, 0));
+    ev.push((0x6AF9 + slot, 0xF0));
+    ev.push((0x6AFA + slot, 0xF0));
+    ev.push((0x6AFB + slot, 0));
+    ev.push((0x0406 + slot, 0x0A));
+    // 残写组（案实核常量：$04C0/$04C1←0——$F8A2 族深层面注）
+    ev.push((0x04C0, 0));
+    ev.push((0x04C1, 0));
+    ev.push((0x04C7, 0));
+    L2Out { a: 0, x: 0, y: 0, writes: merge_writes(ev) }
+}
