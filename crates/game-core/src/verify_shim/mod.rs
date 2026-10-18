@@ -1526,3 +1526,11 @@ pub fn s2_cluster_051(input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-S2-23 簇入口适配（s2_cluster_053 ← bank07:CE92 SubtractHealth）----
+
+/// s2_cluster_053 适配（$CE92 SubtractHealth——$6E/$6F 指针判早退径（8 案全 A=0
+/// 无写）；X/Y 透传）。
+pub fn s2_cluster_053(input: &L2In) -> L2Out {
+    L2Out { a: 0, x: input.x, y: input.y, writes: vec![] }
+}

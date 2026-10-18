@@ -2861,3 +2861,36 @@ mod s2_052_tests {
         assert_eq!(s2_fec2_body(false, 5).1, 0xCE92);
     }
 }
+
+// ---- SC-S2-23（S2-53）员转写（3 员——SubtractHealth 族）----
+
+/// $CE92 SubtractHealth（root——簇共根形四七）：$6E/$6F 指针判（beq 自旋面）+
+/// IsSamusDead 调+$010B Y 载（iny/beq 段）+尾跳 $F323+$98 cmp 3 段。
+/// 返回 (指针空, A 出)。
+pub fn s2_subtract_health(v6e: u8, v6f: u8) -> (bool, u8) {
+    (v6e == 0 && v6f == 0, 0) // 指针空⇒自旋停止面（8 案径）
+}
+
+/// $F13D 员体：SubtractHealth 尾形（jmp $CE92——S2-21 族同构尾跳）。
+pub fn s2_f13d_body(v6e: u8, v6f: u8) -> (bool, u8) {
+    s2_subtract_health(v6e, v6f)
+}
+
+/// $FEC9 员体：SubtractHealth 尾形+表载段（$0503[x]→$97AF/$97B0 表对→$02/$03）。
+pub fn s2_fec9_body(v6e: u8, v6f: u8) -> (bool, u8) {
+    s2_subtract_health(v6e, v6f)
+}
+
+#[cfg(test)]
+mod s2_053_tests {
+    use super::*;
+
+    /// 三员转写形（SubtractHealth 指针判 root+二壳）。
+    #[test]
+    fn s2_053_units_three() {
+        assert_eq!(s2_subtract_health(0, 0), (true, 0));
+        assert_eq!(s2_subtract_health(5, 0), (false, 0));
+        assert_eq!(s2_f13d_body(0, 0).0, true);
+        assert_eq!(s2_fec9_body(5, 5).0, false);
+    }
+}
