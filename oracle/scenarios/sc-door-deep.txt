@@ -1,0 +1,23 @@
+# 场景：sc-door-deep —— task-40 待采清单 🟡 门深径族（G2 素材——UpdateAllDoors 实达面）
+# 事件锚：蓝门射击开门（isHit=4 写→dec DoorHitPoints→Open 态）→穿门→LetSamusIn/Scroll
+# 事件核：门对象区写面（DoorHitPoints/Objects.0.isHit）+door-open-chain.md 状态机 3-5 相
+# 判据：双跑 sha 对锚+事件核实证（门对象写面窗口）+D7 如实（B 行为面声明覆盖）
+name sc-door-deep
+frames 1300
+watch_range 0000-00ff zp
+watch_range 0100-07ff iram
+
+press 360 start
+press 420 a
+press 540 start
+hold 850-1010 right
+press 960 b
+press 980 b
+hold 1020-1250 right
+
+capture 980 pre-hit
+capture 1020 door-open
+capture 1150 post-door
+
+sample_point spin-exit
+bundle_capture 1000 analysis/bundles/sc-door-deep

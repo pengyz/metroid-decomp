@@ -746,6 +746,70 @@
           "note": "m2 深路径（morph/隧道域）对拍素材——bundle-ff 模式即用"
         }
       }
+    },
+    {
+      "scenario": "sc-door-deep",
+      "legs": {
+        "oracle": {
+          "sample_point": "spin-exit",
+          "rows": 1281,
+          "missing": [],
+          "head_skip": 0,
+          "sha256": "634db9e504ddbdc39439520c24348f0a1b768c39ee20b067a3d765a78d7ffd10",
+          "note": "门深径（UpdateAllDoors 实达面——gap@987 转场窗实证）"
+        }
+      },
+      "id": "l3-sc-door-deep",
+      "frames": 1300,
+      "watch": [
+        {
+          "label": "zp",
+          "base": "0000",
+          "range": "0000-00ff"
+        },
+        {
+          "label": "iram",
+          "base": "0100",
+          "range": "0100-07ff"
+        }
+      ],
+      "oracle_sha256": "634db9e504ddbdc39439520c24348f0a1b768c39ee20b067a3d765a78d7ffd10",
+      "determinism_evidence": "双跑 sha 对锚（同帧逐字节）+事件核实证（写面窗实录）",
+      "scenario_sha256": "f23207450076935bba7243d2f13abd8d3c66f8cc0a1b9bd55bdaa432dce5c40e",
+      "frame_keys": [],
+      "scenario_sha256_note": "场景书 sha（DSL 冻结）"
+    },
+    {
+      "scenario": "sc-combat-variant",
+      "legs": {
+        "oracle": {
+          "sample_point": "spin-exit",
+          "rows": 1481,
+          "missing": [],
+          "head_skip": 0,
+          "sha256": "f858721aa32a7a829abc35b997790a2c36dcbd3fc2025e3b5f86939e40329969",
+          "note": "受击主动径（碰撞族实达面——血量递减+$030A 接触实证）"
+        }
+      },
+      "id": "l3-sc-combat-variant",
+      "frames": 1500,
+      "watch": [
+        {
+          "label": "zp",
+          "base": "0000",
+          "range": "0000-00ff"
+        },
+        {
+          "label": "iram",
+          "base": "0100",
+          "range": "0100-07ff"
+        }
+      ],
+      "oracle_sha256": "f858721aa32a7a829abc35b997790a2c36dcbd3fc2025e3b5f86939e40329969",
+      "determinism_evidence": "双跑 sha 对锚（同帧逐字节）+事件核实证（写面窗实录）",
+      "scenario_sha256": "d7468110b080e7b69e922c44aaceb6db4e26d00dd4495de3b4fff22ce6d79146",
+      "frame_keys": [],
+      "scenario_sha256_note": "场景书 sha（DSL 冻结）"
     }
   ]
 }

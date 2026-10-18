@@ -1,0 +1,23 @@
+# 场景：sc-combat-variant —— task-40 待采清单 🟡 受击主动径族（G2 素材——碰撞族实达面）
+# 事件锚：敌房接触受击（AreObjectsTouching→SamusHit→血量递减 $0106/$0107）+受击响应
+# 事件核：$030A SamusHit 接触面+血量字节递减+受击闪烁（invulnerability 窗）+敌槽活动
+# 判据：双跑 sha 对锚+事件核实证（受击写面窗口）+D7 如实
+name sc-combat-variant
+frames 1500
+watch_range 0000-00ff zp
+watch_range 0100-07ff iram
+
+press 360 start
+press 420 a
+press 540 start
+hold 850-1050 right
+hold 1060-1450 right
+press 1200 b
+press 1230 b
+
+capture 1150 enemy-in
+capture 1280 combat-mid
+capture 1400 combat-post
+
+sample_point spin-exit
+bundle_capture 1250 analysis/bundles/sc-combat-variant
