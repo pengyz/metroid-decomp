@@ -126,8 +126,8 @@ pub fn enemy_get_delta_y(
     // 朝向（data05 bit7：水平/垂直）→movementIndex*2+facing→*2→指针
     let facing = if data05 & 0x80 != 0 { (data05 >> 2) & 1 } else { data05 & 1 };
     let idx = ((movement_index as usize) * 2 + (facing as usize)) * 2;
-    let ptr_lo = (ENEMY_MOVEMENT_PTRS.get(idx / 2).copied().unwrap_or(0x97F5) & 0xFF) as usize; // 界卫（fail-safe 表缺=静止字符串）
-    let str_off = ptr_lo.wrapping_sub(0x97EF); // 窗址→字符串体偏移
+    let ptr_full = ENEMY_MOVEMENT_PTRS.get(idx / 2).copied().unwrap_or(0x97F5) as usize; // **全指针**（u16——低字节截断案修）
+    let str_off = ptr_full.wrapping_sub(0x97EF); // 窗址→字符串体偏移（全指针）
     // SignMagSpeed：字符串[instrIndex]=延时字节-[delay]==0→归零+索引+2
     let d = MOVEMENT_STRINGS.get(str_off + instr_index as usize).copied().unwrap_or(0);
     if d.wrapping_sub(delay) == 0 {
