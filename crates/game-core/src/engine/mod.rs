@@ -4878,3 +4878,40 @@ mod s4_104_tests {
         assert!(ev2.contains(&(0x004B, 0x20)));
     }
 }
+
+// ---- SC-S4-15（S4-105）员转写（2 员——ScreenOn 族；L2 真 0 留白）----
+
+/// $C447 ScreenOn（root——簇共根形九九）：$FE or $1E 判（bne -16 段）+
+/// $FF→$2000（PPUCTRL）/$FE→$2001（PPUMASK）/面（$FA→$C4D9 调）。
+/// 返回 (PPU 写对, 屏开)。
+pub fn s4_screen_on(vfe: u8, vff: u8) -> (Vec<(u16, u8)>, bool) {
+    (vec![(0x2000, vff), (0x2001, vfe)], true) // PPU 寄存器写对（RAM 面注 $2000/$2001）
+}
+
+/// $D903 员体：ScreenOn+链（$C8B0/$C8BB——sound 帧链（S4-13 同构））+
+/// $4B←$20+$0305←$6B/$0306←$5F 写对（S1-12 同构面）。
+pub fn s4_d903_body(vfe: u8, vff: u8) -> (Vec<(u16, u8)>, u16) {
+    let (mut ev, _) = s4_screen_on(vfe, vff);
+    ev.push((0x004B, 0x20));
+    ev.push((0x0305, 0x6B));
+    ev.push((0x0306, 0x5F));
+    (ev, 0xC8B0)
+}
+
+#[cfg(test)]
+mod s4_105_tests {
+    use super::*;
+
+    /// 二员转写形（ScreenOn PPU 写对 root+一壳）。
+    #[test]
+    fn s4_105_units_two() {
+        let (ev, on) = s4_screen_on(0x1E, 0x80);
+        assert!(on);
+        assert!(ev.contains(&(0x2000, 0x80)));
+        assert!(ev.contains(&(0x2001, 0x1E)));
+        let (ev2, j) = s4_d903_body(0x1E, 0x80);
+        assert_eq!(j, 0xC8B0);
+        assert!(ev2.contains(&(0x0305, 0x6B)));
+        assert!(ev2.contains(&(0x0306, 0x5F)));
+    }
+}
