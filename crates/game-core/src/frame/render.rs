@@ -19,11 +19,13 @@ pub struct RenderState {
     pub ppuaddr: u16,
     /// $2006 flip-flop（true=下一写为 hi）。
     pub latch_hi: bool,
+    /// PPU 调色板 RAM（$3F00-$3F1F 32B——S6-10 渲染腿供面；「随件」兑现）。
+    pub palette: [u8; 32],
 }
 
 impl Default for RenderState {
     fn default() -> Self {
-        Self { chr: vec![0; 0x2000], nametable: vec![0; 0x800], ppuaddr: 0, latch_hi: true }
+        Self { chr: vec![0; 0x2000], nametable: vec![0; 0x800], ppuaddr: 0, latch_hi: true, palette: [0x0F; 32] }
     }
 }
 
@@ -59,7 +61,11 @@ impl RenderState {
                     self.nametable[i] = v;
                 }
             }
-            _ => {} // 调色板域（$3F00）等——随件
+            0x3F00..=0x3FFF => {
+                let i = (self.ppuaddr - 0x3F00) as usize & 0x1F;
+                self.palette[i] = v;
+            }
+            _ => {} // 其余域——随件
         }
         self.ppuaddr = self.ppuaddr.wrapping_add(increment);
     }
