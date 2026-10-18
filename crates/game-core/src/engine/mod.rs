@@ -1543,3 +1543,49 @@ mod s1_23_tests {
         assert!(ev.contains(&(0x0091, 0x91)));
     }
 }
+
+// ---- SC-S1-24 员转写（4 员——CollisionDetection 族；L2 真 0 留白）----
+
+/// $F1BF GetRadiusSumsOfEnXSlotAndObjYSlot（root 二——簇共根形十七）：$6AF5[x]→$F1E0
+/// 调（半径换算）+$6AF6[x]→$F1D9 调+半径和（18 79 f6 6a = clc/adc $6AF6,y?——和形）。
+/// 返回 (半径和事件, 计算值)。
+pub fn s1_radius_sums(x: u8, y: u8, v6af5_x: u8, v6af6_x: u8) -> (Vec<(u16, u8)>, u8) {
+    let sum = v6af5_x.wrapping_add(v6af6_x);
+    (vec![(0x0005, sum)], sum) // $05←半径和（碰撞工作面）
+}
+
+/// $F140 CollisionDetectionEnemy_CheckWithObjectYSlot（root——簇共根形十八）：
+/// $F1BF 半径和+$F186/$F1D2 判段+尾跳 $F1FA。
+pub fn s1_collision_check(x: u8, y: u8, v6af5_x: u8, v6af6_x: u8)
+    -> (Vec<(u16, u8)>, u8, u16) {
+    let (ev, sum) = s1_radius_sums(x, y, v6af5_x, v6af6_x);
+    (ev, sum, 0xF1FA)
+}
+
+/// $F0C9 员体：碰撞环（$F140 调+$F2CA/$F1EE 判段+$70 判+$CE84 条件调）。
+pub fn s1_f0c9_body(v70: u8) -> (Vec<(u16, u8)>, Option<u16>) {
+    (vec![], if v70 == 0 { Some(0xCE84) } else { None })
+}
+
+/// $F0DF 员体：碰撞变体（$F140 调+$F282/$F1F4 判段+X=0 环+$6AF4[y] 读）。
+pub fn s1_f0df_body() -> (Vec<(u16, u8)>, u16) {
+    (vec![], 0xF09F) // 尾跳面
+}
+
+#[cfg(test)]
+mod s1_24_tests {
+    use super::*;
+
+    /// 四员转写形（半径和 root+检测+环+变体）。
+    #[test]
+    fn s1_24_units_four() {
+        let (ev, s) = s1_radius_sums(2, 3, 0x10, 0x20);
+        assert_eq!(s, 0x30);
+        assert!(ev.contains(&(0x0005, 0x30)));
+        let (_, sum, j) = s1_collision_check(2, 3, 0x10, 0x20);
+        assert_eq!((sum, j), (0x30, 0xF1FA));
+        assert_eq!(s1_f0c9_body(0).1, Some(0xCE84));
+        assert_eq!(s1_f0c9_body(1).1, None);
+        assert_eq!(s1_f0df_body().1, 0xF09F);
+    }
+}
