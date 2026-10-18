@@ -4315,3 +4315,33 @@ mod s3_089_tests {
         assert!(ev2.contains(&(0x030A, 0x55)));
     }
 }
+
+// ---- SC-S4-00（S4-90）员转写（2 员——UpdateBullet_Move 族；L2 真 0 留白·S4 首卡）----
+
+/// $D624 员体（root——簇共根形八四）：$4B X 载+$0309/$0308[x]→$05/$04 指针面+
+/// StoreObjectPositionToTemp 调（S1-21 接面）+$FD8F 走带（S1-10 接面）+cc 回卷。
+/// 返回 (写事件, 指针面)。
+pub fn s4_update_bullet_move(x: u8, v0309_x: u8, v0308_x: u8) -> Vec<(u16, u8)> {
+    vec![(0x0005, v0309_x), (0x0004, v0308_x)] // 指针面（$05/$04 对）
+}
+
+/// $D585 员体：$D624+尾跳 $D4F8（S2-07 接面）+表数据区（$D58B 起——指针对面）。
+pub fn s4_d585_body(x: u8, v0309_x: u8, v0308_x: u8) -> (Vec<(u16, u8)>, u16) {
+    (s4_update_bullet_move(x, v0309_x, v0308_x), 0xD4F8)
+}
+
+#[cfg(test)]
+mod s4_090_tests {
+    use super::*;
+
+    /// 二员转写形（UpdateBullet_Move 指针面 root+一壳）。
+    #[test]
+    fn s4_090_units_two() {
+        let ev = s4_update_bullet_move(2, 8, 9);
+        assert!(ev.contains(&(0x0005, 8)));
+        assert!(ev.contains(&(0x0004, 9)));
+        let (ev2, j) = s4_d585_body(2, 8, 9);
+        assert_eq!(j, 0xD4F8);
+        assert_eq!(ev2.len(), 2);
+    }
+}
