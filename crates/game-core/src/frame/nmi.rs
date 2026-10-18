@@ -29,6 +29,11 @@ pub fn nmi_handler(mem: &mut FrameMemory) {
 }
 
 /// 工作体（超帧门+屏幕工作序列——嵌套桩）。
+/// NMI 工作体——**写序契约**（spec §1 严格序；S6-5 影子面）：
+/// b.NMIScreenWrite→c.CheckPaletteWrite→d.CheckVRAMStructBufferWrite（VRAM 冲刷）→
+/// e.WritePPUCtrl（$FF/$FE 影子）→f.WriteScroll（**滚动写在 VRAM 冲刷后**——关键时序；
+/// `lda PPUSTATUS` 翻转复位先于 $2005 双写（spec §3.5））→g.ReadJoyPads→声/龄面。
+/// ScrollDir（Temp02/03=$02/$03——$00=纵房/$02=横房）=scratch 面（非持久影子）。
 fn nmi_body(mem: &mut FrameMemory) {
     if mem.read_ram(NMI_STATUS) != 0 {
         return; // 超帧跳过（SoundEngine/UpdateAge 桩移至尾前独立段——见下）
@@ -285,6 +290,20 @@ pub fn nmi_tail(mem: &mut FrameMemory) {
 
 #[cfg(test)]
 mod tests {
+    /// 【S6-5】寄存器影子契约：$FF/$FE 影子驱动 $2000/$2001+滚动双写面。
+    #[test]
+    fn register_shadow_contract() {
+        let mut m = FrameMemory::default();
+        m.write_ram(crate::ram_map::PPUCTRL_ZP, 0x90);
+        m.write_ram(crate::ram_map::PPUMASK_ZP, 0x1E);
+        write_ppu_ctrl(&mut m);
+        assert!(m.nmi_enabled); // bit7 影子同步
+        m.write_ram(crate::ram_map::SCROLL_X, 0x12);
+        m.write_ram(crate::ram_map::SCROLL_Y, 0x34);
+        write_scroll(&mut m);
+        assert_eq!(m.read_ram(crate::ram_map::SCROLL_X), 0x12);
+    }
+
     /// 【返工补案 5】F5 镜像测（RLE 步长——生产/消费对偶：RLE 段=4B 非 +5）。
     #[test]
     fn vram_walk_rle_step_mirror() {
