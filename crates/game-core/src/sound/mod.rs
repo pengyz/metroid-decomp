@@ -1211,3 +1211,70 @@ mod music_family_tests {
         assert_eq!(&SONG_HEADERS[0..5], &[0x0B, 0xFF, 0xF5, 0x00, 0x00]);
     }
 }
+
+// ---- task-44 W4 收官：InitializeSoundAddresses 全清面 + GotoMusic 6 桩 ----
+
+/// InitializeSoundAddresses（$B404）语义折叠——三清子件组合：
+/// ①ClearMusicAndSFXAddresses（$B41D）：占用 3+LoadPeriodsFlag+cont 5+MusicCont=**10 写**
+/// ②ClearSounds（$B43E）：SQ1/SQ2/NOISE_VOL←$10+TRI_LINEAR/DMC_RAW←0=**5 APU 写**
+/// ③ClearSpecialAddresses（$B40E）：TriCounterCntrl/SFXPaused/MusicLoopFlags/
+/// MusicLoopsOnEnd=**4 写**。
+/// 返回 (RAM 事件, APU 事件)。
+pub fn initialize_sound_addresses() -> (Vec<(u16, u8)>, Vec<(u16, u8)>) {
+    let mut ram = Vec::new();
+    // ① 音乐/SFX 地址清
+    for a in [0x0653u16, 0x0654, 0x0655, 0x0607,
+              0x0688, 0x0689, 0x068A, 0x068B, 0x068C, 0x068D] {
+        ram.push((a, 0));
+    }
+    // ③ 特殊地址清
+    for a in [0x062Du16, 0x0602, 0x065D, 0x062C] {
+        ram.push((a, 0));
+    }
+    // ② 声道寄存器清（APU 面）
+    let apu = vec![
+        (0x4000, 0x10), (0x4004, 0x10), (0x400C, 0x10),
+        (0x4008, 0x00), (0x4011, 0x00),
+    ];
+    (ram, apu)
+}
+
+/// GotoMusic00-05Init 跳板 6 桩（$BC77-$BC86——`jmp MusicNNInit` 语义=L2 面直调目标）。
+/// 返回目标址（L2 案按 jumped 面）。
+pub fn goto_music_init(index: u8) -> Option<u16> {
+    match index {
+        0 => Some(0xBCAA), // Music00Init
+        1 => Some(0xBCA4), // Music01Init
+        2 => Some(0xBC9A), // Music02Init
+        3 => Some(0xBC96), // Music03Init
+        4 => Some(0xBC89), // Music04Init
+        5 => Some(0xBC9E), // Music05Init
+        _ => None,
+    }
+}
+
+#[cfg(test)]
+mod w4_final_tests {
+    use super::*;
+
+    /// 全清面（14 RAM+5 APU）。
+    #[test]
+    fn clear_all_sound_addresses() {
+        let (ram, apu) = initialize_sound_addresses();
+        assert_eq!(ram.len(), 14);
+        assert_eq!(apu.len(), 5);
+        assert!(ram.contains(&(0x0653, 0)));
+        assert!(ram.contains(&(0x068D, 0)));
+        assert!(ram.contains(&(0x062C, 0)));
+        assert!(apu.contains(&(0x4000, 0x10)));
+        assert!(apu.contains(&(0x4011, 0)));
+    }
+
+    /// GotoMusic 6 桩（jmp 目标形）。
+    #[test]
+    fn goto_music_stubs() {
+        assert_eq!(goto_music_init(0), Some(0xBCAA));
+        assert_eq!(goto_music_init(5), Some(0xBC9E));
+        assert_eq!(goto_music_init(6), None);
+    }
+}
