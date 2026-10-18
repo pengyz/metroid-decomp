@@ -1479,3 +1479,32 @@ pub fn s2_cluster_049(input: &L2In) -> L2Out {
     w.push((0x006A, 0));
     L2Out { a: (target >> 8) as u8, x: input.x, y: 0, writes: merge_writes(w) }
 }
+
+// ---- SC-S2-20 簇入口适配（s2_cluster_050 ← bank07:EEC6 ItemCheck VM 族）----
+
+/// s2_cluster_050 适配（$EEC6——S2-18/19 walk 形三连：走带+JumpEngine 面
+/// （handler 无写面（op-0 类径））。
+pub fn s2_cluster_050(input: &L2In) -> L2Out {
+    let r = |a: u32| input.ram.get(a as usize & 0x7FF).copied().unwrap_or(0);
+    const LEN: [u32; 8] = [0, 3, 2, 0, 2, 0, 2, 2];
+    let mut ptr: u32 = (((r(0x0001) as u32) << 8) | r(0x0000) as u32).wrapping_add(1); // 入口记录长 1（$EEC6 lda #1 面）
+    let mut target = 0xC45Cu16;
+    let mut guard = 0;
+    loop {
+        guard += 1;
+        if guard > 16 { break; }
+        let op = r(ptr) & 7;
+        target = [0xC45C, 0xEB06, 0xEB8C, 0xC45C, 0xEC04, 0xC45C, 0xEC2F, 0xEC57][op as usize];
+        if LEN[op as usize] == 0 { break; }
+        ptr = ptr.wrapping_add(LEN[op as usize] as u32);
+    }
+    let mut w = vec![(0x0000, (ptr & 0xFF) as u8)];
+    if (ptr >> 8) as u8 != r(0x0001) {
+        w.push((0x0001, (ptr >> 8) as u8));
+    }
+    w.push((0x000C, (target & 0xFF) as u8));
+    w.push((0x000D, (target >> 8) as u8));
+    w.push((0x0069, input.x));
+    w.push((0x006A, 0));
+    L2Out { a: (target >> 8) as u8, x: input.x, y: 0, writes: merge_writes(w) }
+}

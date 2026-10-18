@@ -2733,3 +2733,40 @@ mod s2_049_tests {
         assert_eq!(s2_eea1_body(3, 0).1, 0xEDD6);
     }
 }
+
+// ---- SC-S2-20（S2-50）员转写（3 员——ItemCheck VM 族）----
+
+/// $EEC6 员体（root——簇共根形四四·**入口长 1**（lda #1 面））：CheckForItem 调+
+/// 指针面（$07←X>>1+$3C/$06←0）+cs 分段（$81 写族）。
+/// 返回 (写事件, 记录长)。
+pub fn s2_eec6_body(x: u8) -> (Vec<(u16, u8)>, u8) {
+    let v07 = (x >> 1).wrapping_add(0x3C);
+    (vec![(0x0007, v07), (0x0006, 0)], 1) // 记录长 1（lda #1）
+}
+
+/// $EEEB 员体：jmp $EEC6（尾形）+$95BA 调+二回驱。
+pub fn s2_eeeb_body(x: u8) -> (Vec<(u16, u8)>, u8) {
+    s2_eec6_body(x)
+}
+
+/// $EEF1 员体：jmp $EEC6+$EB92 调+jmp $EDD6（S2-23 接面——S2-18 同构）。
+pub fn s2_eef1_body(x: u8) -> (Vec<(u16, u8)>, u16) {
+    let (ev, _) = s2_eec6_body(x);
+    (ev, 0xEDD6)
+}
+
+#[cfg(test)]
+mod s2_050_tests {
+    use super::*;
+
+    /// 三员转写形（入口长 1 root+二壳）。
+    #[test]
+    fn s2_050_units_three() {
+        let (ev, len) = s2_eec6_body(0x7F);
+        assert_eq!(len, 1);
+        assert!(ev.contains(&(0x0007, (0x7Fu8 >> 1).wrapping_add(0x3C))));
+        assert!(ev.contains(&(0x0006, 0)));
+        assert_eq!(s2_eeeb_body(0x7F).1, 1);
+        assert_eq!(s2_eef1_body(0x7F).1, 0xEDD6);
+    }
+}
