@@ -2228,3 +2228,60 @@ mod s2_038_tests {
         assert_eq!(s2_d483_body(2, 0).1, 0xDE47);
     }
 }
+
+// ---- SC-S2-09（S2-39）员转写（3 员——$E519 状态步进族；L2 真 0 留白）----
+
+/// $E519 状态步进（root——簇共根形三三）：$49 dex 判段（beq/bpl/常态三分）+
+/// $4F inc 族（$FC 二判）。
+/// 返回 (写事件, 步进结果)。
+pub fn s2_state_step(v49: u8, vfc: u8) -> (Vec<(u16, u8)>, u8) {
+    let d = v49.wrapping_sub(1);
+    if d == 0 {
+        return (vec![], 0); // beq 段
+    }
+    if (d as i8) >= 0 {
+        return (vec![], d); // bpl 段
+    }
+    let mut ev = vec![(0x0049, v49.wrapping_add(1))];
+    if vfc == 0 {
+        ev.push((0x004F, 1)); // $FC beq 段（inc $4F）
+    }
+    (ev, d)
+}
+
+/// $D43D 员体：$E519+$030D Y 载（cmp $EF 判）+ToggleSamusHi+$030D←$FF 环（S1-11 同构面）。
+pub fn s2_d43d_body(v49: u8, vfc: u8, v030d: u8) -> (Vec<(u16, u8)>, u16) {
+    let (mut ev, _) = s2_state_step(v49, vfc);
+    if v030d == 0xEF {
+        ev.push((0x030D, 0xFF));
+    }
+    (ev, 0xD47E)
+}
+
+/// $D89D 员体：$E519+尾跳 $D806（回驱动器——S1-01 族）+$0300[x] inc 计数段。
+pub fn s2_d89d_body(v49: u8, vfc: u8, x: u8, v0300_x: u8) -> (Vec<(u16, u8)>, u16) {
+    let (mut ev, _) = s2_state_step(v49, vfc);
+    ev.push((0x0300 + x as u16, v0300_x.wrapping_add(1)));
+    (ev, 0xD806)
+}
+
+#[cfg(test)]
+mod s2_039_tests {
+    use super::*;
+
+    /// 三员转写形（$E519 状态步进 root+二壳）。
+    #[test]
+    fn s2_039_units_three() {
+        assert_eq!(s2_state_step(1, 0).1, 0); // beq 段
+        assert_eq!(s2_state_step(0x70, 0).1, 0x6F); // bpl 段
+        let (ev, _) = s2_state_step(0, 0); // $49=0⇒dex 负⇒inc 径
+        assert!(ev.contains(&(0x0049, 1)));
+        assert!(ev.contains(&(0x004F, 1)));
+        let (ev, j) = s2_d43d_body(0, 0, 0xEF);
+        assert_eq!(j, 0xD47E);
+        assert!(ev.contains(&(0x030D, 0xFF)));
+        let (ev, j) = s2_d89d_body(0, 0, 2, 5);
+        assert_eq!(j, 0xD806);
+        assert!(ev.contains(&(0x0302, 6)));
+    }
+}
