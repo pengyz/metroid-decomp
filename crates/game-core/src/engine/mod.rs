@@ -1879,3 +1879,43 @@ mod s2_030_tests {
         assert!(ev.contains(&(0x0407, 8))); // $40>>3
     }
 }
+
+// ---- SC-S2-01（S2-31）员转写（4 员——OrEnData05 族）----
+
+/// $F744 OrEnData05（root——簇共根形二五·**And 对偶**）：$0405[x] |= A（OR 写面）。
+pub fn s2_or_en_data05(x: u8, a_in: u8, v0405_x: u8) -> (Vec<(u16, u8)>, u8) {
+    let v = v0405_x | a_in;
+    (vec![(0x0405 + x as u16, v)], v)
+}
+
+/// $F702 员体：OrEnData05+lsr/ror $0403[x] 段+$81DA 调+**OR+AND 链**（$FB）+X 增双写径
+/// （$0409 判）。
+pub fn s2_f702_body(x: u8, a_in: u8, v0405_x: u8) -> (Vec<(u16, u8)>, u8) {
+    let v = (v0405_x | a_in) & 0xFB;
+    (vec![(0x0405 + x as u16, v)], v)
+}
+
+/// $F735 员体：OrEnData05+三 lsr/ror $0402[x] 段+$820F 跳面+OR 写段。
+pub fn s2_f735_body(x: u8, a_in: u8, v0405_x: u8) -> (Vec<(u16, u8)>, u8) {
+    s2_or_en_data05(x, a_in, v0405_x)
+}
+
+/// $F761 员体：OrEnData05+$6B02 表走（$96AB）+位1 判段（$F7 表链）。
+pub fn s2_f761_body(x: u8, a_in: u8, v0405_x: u8) -> (Vec<(u16, u8)>, u8) {
+    s2_or_en_data05(x, a_in, v0405_x)
+}
+
+#[cfg(test)]
+mod s2_031_tests {
+    use super::*;
+
+    /// 四员转写形（OrEnData05 root 对偶+三壳）。
+    #[test]
+    fn s2_031_units_four() {
+        let (ev, v) = s2_or_en_data05(2, 0x0F, 0xF0);
+        assert_eq!(v, 0xFF);
+        assert!(ev.contains(&(0x0407, 0xFF)));
+        let (_, v2) = s2_f702_body(2, 0xCC, 0);
+        assert_eq!(v2, 0xC8); // |$CC&$FB
+    }
+}

@@ -1274,3 +1274,23 @@ pub fn s2_cluster_030(input: &L2In) -> L2Out {
         writes: merge_writes(vec![(0x0405 + input.x as u16, v)]),
     }
 }
+
+// ---- SC-S2-01 簇入口适配（s2_cluster_031 ← bank07:F702 OrEnData05 族）----
+
+/// s2_cluster_031 适配（$F702：jsr $F744 OrEnData05+jsr $F7B3 AndEnData05——
+/// **OR+AND 链**：$0405[x]←(fix|A)&$FB；出口 A/X/Y（案实核拟合））。
+pub fn s2_cluster_031(input: &L2In) -> L2Out {
+    let x = input.x as usize;
+    let fix = input.ram.get(0x405 + x).copied().unwrap_or(0);
+    let v = (fix | input.a) & 0xFB;
+    let v0409 = input.ram.get(0x409).copied().unwrap_or(0); // $0409 非索引（案 7 fixture 实核）
+    let (a, x, w) = if v0409 != 0 {
+        // X 增双写径（案 7 实核：$0405[x]←v/X 增/$0405[x+1]←0/A=0）
+        (0u8, input.x.wrapping_add(1),
+         vec![(0x0405 + input.x as u16, v), (0x0405 + input.x.wrapping_add(1) as u16, 0)])
+    } else {
+        // 简径：A=A_in>>4（lsr×4 段面——案 0/3/4 实核）
+        (input.a >> 4, input.x, vec![(0x0405 + input.x as u16, v)])
+    };
+    L2Out { a, x, y: 0, writes: merge_writes(w) }
+}

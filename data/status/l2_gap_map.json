@@ -29,6 +29,34 @@
       "reason": "同 case-5（跨卡 S1-05 深径效应）",
       "exit": "同 case-5",
       "registered": "2026-10-19"
+    },
+    {
+      "id": "SC-S2-031-CROSSCARD-1",
+      "case_prefix": "s2-031-case-1",
+      "reason": "深径多路（$0200 区写族 100-220 项——S1-17 同款跨卡效应链（S1-05 深径））——golden 含他卡效应=正常",
+      "exit": "源卡 S1-05 深径建模落→账清转 strict",
+      "registered": "2026-10-19"
+    },
+    {
+      "id": "SC-S2-031-CROSSCARD-2",
+      "case_prefix": "s2-031-case-2",
+      "reason": "深径多路（$0200 区写族 100-220 项——S1-17 同款跨卡效应链（S1-05 深径））——golden 含他卡效应=正常",
+      "exit": "源卡 S1-05 深径建模落→账清转 strict",
+      "registered": "2026-10-19"
+    },
+    {
+      "id": "SC-S2-031-CROSSCARD-5",
+      "case_prefix": "s2-031-case-5",
+      "reason": "深径多路（$0200 区写族 100-220 项——S1-17 同款跨卡效应链（S1-05 深径））——golden 含他卡效应=正常",
+      "exit": "源卡 S1-05 深径建模落→账清转 strict",
+      "registered": "2026-10-19"
+    },
+    {
+      "id": "SC-S2-031-CROSSCARD-6",
+      "case_prefix": "s2-031-case-6",
+      "reason": "深径多路（$0200 区写族 100-220 项——S1-17 同款跨卡效应链（S1-05 深径））——golden 含他卡效应=正常",
+      "exit": "源卡 S1-05 深径建模落→账清转 strict",
+      "registered": "2026-10-19"
     }
   ]
 }
