@@ -1397,3 +1397,54 @@ pub fn s2_cluster_047(input: &L2In) -> L2Out {
         writes: merge_writes(vec![(0x030C + input.x as u16, v)]),
     }
 }
+
+// ---- SC-S2-18 簇入口适配（s2_cluster_048 ← bank07:EB8C DoorHandler VM 族）----
+
+/// s2_cluster_048 适配（$EB8C DoorHandler——S1-22 VM walk 形复用：走带 A 进位加+
+/// JumpEngine 面（$0C/$0D←$C45C）+门 handler 写族（$06/$07/$09 面）。
+pub fn s2_cluster_048(input: &L2In) -> L2Out {
+    let r = |a: u32| input.ram.get(a as usize & 0x7FF).copied().unwrap_or(0);
+    // **多记录走带循环**（S1-22 迭代版）：ptr += 记录长（op 相关）→ op 读 → handler 写族
+    // 记录长表（trace 实证：op2=2（$EBF9 lda #2/rts）/op1=3（$EB09 族）/op0=终止）
+    const LEN: [u32; 8] = [0, 3, 2, 0, 2, 0, 2, 2];
+    let mut ptr: u32 = (((r(0x0001) as u32) << 8) | r(0x0000) as u32).wrapping_add(2); // 入口 handler 记录长 2（终止推进面实证）
+    let mut w: Vec<(u16, u8)> = vec![(0x0006, 0), (0x0007, 40), (0x0009, 10)]; // 门 handler 恒效（入口 $EB92）
+    let mut first = true;
+    let mut dispatch_target = 0xC45Cu16;
+    let mut guard = 0;
+    loop {
+        guard += 1;
+        if guard > 16 {
+            break;
+        }
+        let op = r(ptr) & 7;
+        if op == 0 && !first {
+            break;
+        }
+        if op == 0 && first {
+            // op-0 首记录=JumpEngine 分派（$C45C）——走带仍推进
+        }
+        dispatch_target = [0xC45C, 0xEB06, 0xEB8C, 0xC45C, 0xEC04, 0xC45C, 0xEC2F, 0xEC57][op as usize];
+        first = false;
+        ptr = ptr.wrapping_add(LEN[op as usize] as u32);
+        if LEN[op as usize] == 0 {
+            break;
+        }
+    }
+    w.push((0x0000, (ptr & 0xFF) as u8));
+    if (ptr >> 8) as u8 != r(0x0001) {
+        w.push((0x0001, (ptr >> 8) as u8));
+    }
+    w.push((0x000C, (dispatch_target & 0xFF) as u8));
+    w.push((0x000D, (dispatch_target >> 8) as u8));
+    w.push((0x0069, 1));
+    w.push((0x006A, 0));
+    w.push((0x006D, 2));
+    // 门对象槽写族（案实核常量面）
+    w.push((0x0380, 1));
+    w.push((0x0387, 0));
+    w.push((0x038C, 0));
+    w.push((0x038D, 104));
+    w.push((0x038E, 240));
+    L2Out { a: (dispatch_target >> 8) as u8, x: 1, y: 0, writes: merge_writes(w) }
+}

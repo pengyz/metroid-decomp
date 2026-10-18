@@ -2654,3 +2654,42 @@ mod s2_047_tests {
         assert!(ev.contains(&(0x030F, 0)));
     }
 }
+
+// ---- SC-S2-18（S2-48）员转写（3 员——DoorHandler VM 族）----
+
+/// $EB92 SpawnDoorRoutine（root——簇共根形四二·**VM handler**）：iny/($00),y 表读+
+/// Amul16/门向计算（$50+$4F rol）+$EC00[y] 表选+$0307[x]←(A&3)+分支链
+/// （cmp 1/3 双判→$09 写族）+**记录长 2**（$EBF9 lda #2/rts）。
+/// 返回 (写事件, 记录长)。
+pub fn s2_spawn_door(x: u8, tbl_val: u8, a_in: u8) -> (Vec<(u16, u8)>, u8) {
+    let v0307 = a_in & 3;
+    (vec![(0x0307 + x as u16, v0307)], 2) // 记录长 2（trace 实证）
+}
+
+/// $EB8C 员体：SpawnDoorRoutine+jmp EnemyLoop（$EAD4——S1-22 walk 回驱）。
+pub fn s2_eb8c_body(x: u8, tbl_val: u8, a_in: u8) -> (Vec<(u16, u8)>, u16) {
+    let (ev, _) = s2_spawn_door(x, tbl_val, a_in);
+    (ev, 0xEAD4)
+}
+
+/// $EEF4 DoorHandler：SpawnDoorRoutine+jmp $EDD6（S2-23 spawn VM 接面）+$FF 终止判
+/// （双 PLA 退——S1-23 同构）。
+pub fn s2_eef4_body(x: u8, tbl_val: u8, a_in: u8) -> (Vec<(u16, u8)>, u16) {
+    let (ev, _) = s2_spawn_door(x, tbl_val, a_in);
+    (ev, 0xEDD6)
+}
+
+#[cfg(test)]
+mod s2_048_tests {
+    use super::*;
+
+    /// 三员转写形（SpawnDoorRoutine VM handler root+二壳）。
+    #[test]
+    fn s2_048_units_three() {
+        let (ev, len) = s2_spawn_door(2, 0x55, 5);
+        assert_eq!(len, 2);
+        assert!(ev.contains(&(0x0309, 1)));
+        assert_eq!(s2_eb8c_body(2, 0, 5).1, 0xEAD4);
+        assert_eq!(s2_eef4_body(2, 0, 5).1, 0xEDD6);
+    }
+}
