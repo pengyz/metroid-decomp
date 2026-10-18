@@ -2641,6 +2641,17 @@ TAX/JSR $EB7A——「GetEnemyData 掩码+判+数据载+指针面」逐字命中
 （S1-22 trace op1→本卡员面归位）③L3 0 失败容忍不增（997/29 账内稳）④员面双扫
 桩 0（2 员真现）。测 265。findings（r10）：0 新。S4 余 5 卡收官段预告随账。
 
+## SC-S4-25 卡审（9ed2805）——IsSlotTaken 占用判抽核
+
+### verdict: pass
+
+四条核：①L2 留白**真 0 三方核 ✓**（pregen/l2_cases 全 0）②**占用判抽核 ✓✓**：
+$EB7A=`bd f4 6a f0 05 bd 05 04 29 02`=LDA $6AF4,X/BEQ（⇒取负段）/LDA $0405,X/
+**AND #$02 占用判**——逐字命中（S1-10 镜面尾面随证）③L3 0 失败容忍不增（997/29
+账内稳）④员面双扫桩 0（2 员真现）。L3 elevator-ride 腿态注：空帧 fail-loud 正确
+守住（lead 裁定①②③执行毕）——闸解待 decomp 补 dump。测 266。findings（r10）：
+0 新。S4 余 4 卡收官预告随账。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
