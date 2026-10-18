@@ -1,5 +1,5 @@
-# 场景：sc-elevator-ride —— ScrX 带 nav 过顶径（130 爬升带+顶跨+东段）
-# 卷语义：ScrX=名表坐标（卷界 112）——nav 目标=ScrX 带
+# 场景：sc-elevator-ride —— 双战术（投射物射壁+bomb 炸洞+引信窗）
+# 原版必通=可爆破谜格（$1C 含 $4E——S2 族）
 name sc-elevator-ride
 frames 7200
 watch_range 0000-00ff zp
@@ -25,30 +25,24 @@ press 2580 b
 hold 3100-3260 a
 hold 3150-3520 right
 press 3180 b
-nav 3330-3600 x 128
-press 3350 down
-press 3400 b
-press 3450 b
-press 3500 b
-press 3550 b
+nav 3300-3400 x 140
+press 3320 b
+press 3350 b
+press 3380 b
+press 3410 down
+press 3440 b
+press 3480 b
+press 3520 b
+press 3560 b
 press 3600 b
-press 3650 b
-press 3700 down
-nav 3750-4400 x 250
-nav 3750-4400 jump 80
-nav 4400-7000 x 250
-hold 5500-5660 a
-hold 5550-6000 right
-press 5600 b
-hold 6100-6260 a
-hold 6150-6600 right
-press 6200 b
-hold 6700-6860 a
-hold 6750-7100 right
-press 6800 b
+press 3640 down
+hold 3650-4100 a
+nav 4100-4800 x 250
+nav 4100-4800 jump 80
+nav 4800-7000 x 250
 
-capture 4000 climb
-capture 4800 top-cross
+capture 3600 bomb-zone
+capture 4200 post-blast
 capture 6900 east-end
 
 sample_point spin-exit
