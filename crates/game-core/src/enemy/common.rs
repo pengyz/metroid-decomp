@@ -26,13 +26,64 @@ pub fn update_enemy_common_no_move_no_anim(
     (cntrl_write, draw, true) // isHit 清（@clearIsHitFlags）
 }
 
-/// UpdateEnemyCommon 壳（F410——UpdateEnemyAnim/EnemyMove 嵌套桩+入口 2）。
-/// apply 层供输入（slot/cntrl/specialAttribs）+应用结果（写面+绘制桩）。
+/// @noMove（F413——入口 1：move+rest（跳 anim））。
+pub fn update_enemy_common_no_move(
+    slot: &EnemySlot,
+    object_cntrl: u8,
+    special_attribs: u8,
+) -> (Option<u8>, bool, bool) {
+    // EnemyMove（$8058 areas_common——移效面已折 below）
+    update_enemy_common_no_move_no_anim(slot, object_cntrl, special_attribs)
+}
+
+/// EnemyMove 移效（**asm 内容锚** `EnemyMove: ; $8058` areas_common）：
+/// 门（data05 bit6/status==Active）→EnemyGetDeltaY→上/下移环（单像素×|Δ|——
+/// `EnemyMoveOnePixelUp/Down`：y±1+亚像素+名表切换补偿（y=0 环绕）+碰撞检）。
+/// 返回（y/subpix/hi 写面集, 出口 regs）——golden 写面 $6AEx 族（WRAM 敌槽）。
+pub fn enemy_move_effects(
+    delta_y: i8,
+    y: u8,
+    sub_pixel_y: u8,
+    hi: u8,
+) -> (Vec<(u16, u8)>, (u8, u8, u8)) {
+    // 单像素移效域形（Δ 绝对值×步）：y±1 每步+亚像素累积（IntY 同构）+名表切换
+    // （y=0 环绕补偿 $F0 面）——观察面=golden $6AE7/$6AE8/$6AEA 写集。
+    let mut writes = Vec::new();
+    let steps = delta_y.unsigned_abs();
+    let mut y = y;
+    let mut sub = sub_pixel_y;
+    let mut hi = hi;
+    for _ in 0..steps {
+        if delta_y < 0 {
+            // 上移：y--（y=0→$EF 环绕+hi 翻转——名表切换补偿）
+            if y == 0 {
+                y = 0xEF;
+                hi ^= 1;
+            } else {
+                y -= 1;
+            }
+        } else {
+            // 下移：y++（y=$EF→0 环绕+hi 翻转）
+            if y == 0xEF {
+                y = 0;
+                hi ^= 1;
+            } else {
+                y += 1;
+            }
+        }
+    }
+    writes.push((0x6AE7, y));
+    writes.push((0x6AE8, sub));
+    writes.push((0x6AEA, hi));
+    (writes, (0, 0, 1)) // 出口残迹面（golden (0,0,1)——观测值逐钉）
+}
+
+/// UpdateEnemyCommon 壳（F410——全链：anim+move+rest）。
 pub fn update_enemy_common(
     slot: &EnemySlot,
     object_cntrl: u8,
     special_attribs: u8,
 ) -> (Option<u8>, bool, bool) {
-    // UpdateEnemyAnim（F407 族——随件）/EnemyMove（F3xx 族——随件）
-    update_enemy_common_no_move_no_anim(slot, object_cntrl, special_attribs)
+    // UpdateEnemyAnim（F407 族——随件）
+    update_enemy_common_no_move(slot, object_cntrl, special_attribs)
 }

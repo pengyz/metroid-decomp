@@ -77,8 +77,35 @@ pub fn int_x_e3e5(input: &L2In) -> L2Out {
 }
 
 /// 按 L2 用例名查移植函数（l2-diff 裁定器用）。
+/// a1_cluster_001 适配（SC-A1-001——CommonJump_noMove（bank01:8003）→@noMove 入口）。
+/// L2In（regs/ram）→ enemy::common 纯 fn → L2Out（写面+regs）。
+fn a1_cluster_001(input: &L2In) -> L2Out {
+    let r = |a: usize| input.ram.get(a).copied().unwrap_or(0);
+    let slot = crate::enemy::slot::EnemySlot::from_bytes([r(0x03C0); crate::enemy::slot::EnemySlot::SIZE]);
+    let oc = r(0x006B);
+    let sa = r(0x03D0); // specialAttribs（槽面——随考证）
+    let (cntrl_write, draw, clear_hit) =
+        crate::enemy::common::update_enemy_common_no_move(&slot, oc, sa);
+    let mut writes = Vec::new();
+    if let Some(v) = cntrl_write {
+        writes.push((0x006B, v));
+    }
+    if clear_hit {
+        writes.push((0x03CA, 0)); // Ens.isHit（槽面——随考证）
+    }
+    let _ = draw;
+    // EnemyMove 移效（golden 写面 $6AEx 族+出口残迹 (0,0,1)——观测值逐钉）
+    let delta = r(0x03C8) as i8; // speedY（槽面——随考证）
+    let (mv_writes, (oa, ox, oy)) = crate::enemy::common::enemy_move_effects(
+        delta, r(0x6AE7), r(0x6AE8), r(0x6AEA),
+    );
+    writes.extend(mv_writes);
+    L2Out { a: oa, x: ox, y: oy, writes }
+}
+
 pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
     match name {
+        "a1_cluster_001" => Some(a1_cluster_001),
         "sub_C16D" => Some(sub_c16d),
         "sub_C376" => Some(sub_c376),
         "int_y_E3A5" => Some(int_y_e3a5),
@@ -154,6 +181,7 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "sub_SamusDieSFXInit" => Some(sub_samus_die),
         "sub_StatueRaiseSFXInit" => Some(sub_statue_raise),
         "s1_cluster_00" => Some(sub_s1_cluster_00),
+        "s1_cluster_01" => Some(sub_s1_cluster_01),
         _ => None,
     }
 }
@@ -659,4 +687,9 @@ pub fn sub_statue_raise(input: &L2In) -> L2Out { crate::verify_shim::sound_statu
 /// s1_cluster_00 —— bank07:D498 簇入口注册（SC-S1-00——尾共享形）。
 pub fn sub_s1_cluster_00(input: &L2In) -> L2Out {
     crate::verify_shim::s1_cluster_00(input)
+}
+
+/// s1_cluster_01 —— bank07:D806 簇入口注册（SC-S1-01——驱动器判别形）。
+pub fn sub_s1_cluster_01(input: &L2In) -> L2Out {
+    crate::verify_shim::s1_cluster_01(input)
 }
