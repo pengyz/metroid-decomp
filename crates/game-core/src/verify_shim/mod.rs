@@ -1103,3 +1103,22 @@ pub fn s1_cluster_14(input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-S1-15 簇入口适配（s1_cluster_15 ← bank07:D6ED——$D77F 加法 root）----
+
+/// s1_cluster_15 适配（$D6ED 流——$D77F 加法 root：$04←(A+$0A)/$05←(($0B+进位)&7)|$60；
+/// X 判跳序+$C0 分路（S1-14 同构）；出口 A=X/Y=0）。
+pub fn s1_cluster_15(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    let v0a = r(0x000A);
+    let v0b = r(0x000B);
+    let (s, carry) = v0a.overflowing_add(input.a);
+    let bsum = v0b.wrapping_add(if carry { 1 } else { 0 });
+    let v05 = (bsum & 7) | 0x60;
+    // 注：①加法 root 无 $00 面（$D77F 不写 $00）②**无 $80 覆写支**（S1-15 分支形
+    // 异（d0 ee 回环非 f0 前跳）——8 案全无覆写实证；S1-14 误带二正）
+    L2Out {
+        a: input.x, x: input.x, y: 0,
+        writes: merge_writes(vec![(0x0004, s), (0x0005, v05)]),
+    }
+}

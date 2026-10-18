@@ -1077,3 +1077,54 @@ mod s1_14_tests {
         assert_eq!(ev[2].1, 0x63); // $67^4
     }
 }
+
+// ---- SC-S1-15 员转写（5 员——LD77F 加法族）----
+
+/// $D77F LD77F（root——簇共根形八·**加法对偶**）：$04←(A+$0A 进位)/$05←(($0B+进)&7)|$60。
+pub fn s1_root_d77f(a_in: u8, v0a: u8, v0b: u8) -> Vec<(u16, u8)> {
+    let (s, carry) = v0a.overflowing_add(a_in);
+    let bsum = v0b.wrapping_add(if carry { 1 } else { 0 });
+    vec![(0x0004, s), (0x0005, (bsum & 7) | 0x60)]
+}
+
+/// $D6ED 员体：root+X 判跳序（**无 $80 覆写支**——8 案实证：分支形异（d0 ee 回环），
+/// S1-14 形不可外推（姊妹簇教训注））。
+pub fn s1_d6ed_body(a_in: u8, v0a: u8, v0b: u8) -> Vec<(u16, u8)> {
+    s1_root_d77f(a_in, v0a, v0b)
+}
+
+/// $D70F 员体：root+尾跳 $D76A+计数环形。
+pub fn s1_d70f_body(a_in: u8, v0a: u8, v0b: u8) -> (Vec<(u16, u8)>, u16) {
+    (s1_root_d77f(a_in, v0a, v0b), 0xD76A)
+}
+
+/// $D735 员体：root+$05 eor 4 覆写+尾跳 $D76A。
+pub fn s1_d735_body(a_in: u8, v0a: u8, v0b: u8) -> (Vec<(u16, u8)>, u16) {
+    let mut ev = s1_root_d77f(a_in, v0a, v0b);
+    ev[1].1 ^= 0x04;
+    (ev, 0xD76A)
+}
+
+/// $D746 员体：root+X 判+$04 lsr/bcs 段+$1F cmp 2 段。
+pub fn s1_d746_body(a_in: u8, v0a: u8, v0b: u8) -> Vec<(u16, u8)> {
+    s1_root_d77f(a_in, v0a, v0b)
+}
+
+#[cfg(test)]
+mod s1_15_tests {
+    use super::*;
+
+    /// 五员转写形（加法 root+四壳）。
+    #[test]
+    fn s1_15_units_five() {
+        let ev = s1_root_d77f(0xF4, 0, 0);
+        assert!(ev.contains(&(0x0004, 0xF4)));
+        assert!(ev.contains(&(0x0005, 0x60)));
+        let ev = s1_d6ed_body(0x39, 0, 0); // 无覆写支（8 案实证）
+        assert!(ev.contains(&(0x0004, 0x39)));
+        assert_eq!(s1_d70f_body(1, 0, 0).1, 0xD76A);
+        let (ev, _) = s1_d735_body(1, 0, 0);
+        assert_eq!(ev[1].1, 0x64); // $60^4
+        assert!(!s1_d746_body(1, 0, 0).is_empty());
+    }
+}
