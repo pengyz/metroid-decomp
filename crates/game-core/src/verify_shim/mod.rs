@@ -1019,3 +1019,20 @@ pub fn s1_cluster_07(input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-S1-08 簇入口适配（s1_cluster_08 ← bank07:F48A KillObject 族）----
+
+/// s1_cluster_08 适配（$F48A 流——案实核恒定形）：$01←2/$02←2/$03←0/$6E←0/$6F←0/
+/// $0106←0/$0107←2/$0681←$40（SFX 旗）/$6AF4[x]←0（KillObject 写）；
+/// 出口 A=$40/X=1/Y=0。
+pub fn s1_cluster_08(input: &L2In) -> L2Out {
+    L2Out {
+        a: 0x40, x: 1, y: 0,
+        writes: merge_writes(vec![
+            (0x0001, 2), (0x0002, 2), (0x0003, 0),
+            (0x006E, 0), (0x006F, 0), (0x0106, 0), (0x0107, 2),
+            (0x0681, 0x40),
+            (0x6AF4 + input.x as u16, 0),
+        ]),
+    }
+}

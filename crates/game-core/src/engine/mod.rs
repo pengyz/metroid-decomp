@@ -650,3 +650,69 @@ mod s1_07_tests {
         assert_eq!(s1_f340_body(0x11), 0x12);
     }
 }
+
+// ---- SC-S1-08 员转写（6 员——KillObject 族）----
+
+/// $F48A 员体（簇入口流）：KillObject+$6AF7[y] cmp $80 分段+栈形+X=$03 环。
+pub fn s1_f48a_body(x: u8) -> Vec<(u16, u8)> {
+    vec![(0x6AF4 + x as u16, 0)] // KillObject 写（案实核形）
+}
+
+/// $F4DF 员体：KillObject+$6B←（$2D 位1 判）+$040F[x] dec 计数族+jmp $F416。
+pub fn s1_f4df_body(x: u8, v2d: u8, v040f_x: u8) -> (Vec<(u16, u8)>, u16) {
+    let hi = if v2d & 0x02 != 0 { 0xA1 } else { 0xA0 };
+    (vec![(0x6AF4 + x as u16, 0), (0x006B, hi),
+          (0x040F + x as u16, v040f_x.wrapping_sub(1))], 0xF416)
+}
+
+/// $F52D 员体：jmp KillObject（尾形）+$040F[x]→$0A+$0404[x] 位5 判段。
+pub fn s1_f52d_body(x: u8, v040f_x: u8, v0404_x: u8) -> Vec<(u16, u8)> {
+    let mut ev = vec![(0x6AF4 + x as u16, 0), (0x000A, v040f_x)];
+    if v0404_x & 0x20 == 0 {
+        ev.push((0x040E + x as u16, v0404_x)); // 位5 未置段（写族注）
+    }
+    ev
+}
+
+/// $FA18 KillObject：$6AF4[x]←0（敌槽清——击杀写）。
+pub fn s1_fa18_kill(x: u8) -> (Vec<(u16, u8)>, u8) {
+    (vec![(0x6AF4 + x as u16, 0)], 0)
+}
+
+/// $FA77 员体：KillObject+尾跳 $F97C+指针载（$0400/$0401[x]→$02/$03+$6AFB[x]→$0B）。
+pub fn s1_fa77_body(x: u8, v0400_x: u8, v0401_x: u8, v6afb_x: u8) -> (Vec<(u16, u8)>, u16) {
+    (vec![(0x6AF4 + x as u16, 0), (0x0002, v0400_x), (0x0003, v0401_x),
+          (0x000B, v6afb_x)], 0xF97C)
+}
+
+/// $FA91 员体：KillObject+$95DC 表载→root（$F68D）+尾跳 $F97C。
+pub fn s1_fa91_body(x: u8, tbl_entry: u8) -> (Vec<(u16, u8)>, u16) {
+    (vec![(0x6AF4 + x as u16, 0),
+          (0x6AF9 + x as u16, tbl_entry), (0x6AFA + x as u16, tbl_entry),
+          (0x6AF8 + x as u16, 0)], 0xF97C)
+}
+
+#[cfg(test)]
+mod s1_08_tests {
+    use super::*;
+
+    /// 六员转写形（KillObject 共写+分支族）。
+    #[test]
+    fn s1_08_units_six() {
+        assert!(s1_f48a_body(2).contains(&(0x6AF6, 0)));
+        let (ev, j) = s1_f4df_body(2, 0x02, 5);
+        assert_eq!(j, 0xF416);
+        assert!(ev.contains(&(0x006B, 0xA1)));
+        let ev = s1_f52d_body(2, 5, 0x10);
+        assert!(ev.contains(&(0x000A, 5)));
+        let (ev, a) = s1_fa18_kill(2);
+        assert_eq!(a, 0);
+        assert!(ev.contains(&(0x6AF6, 0)));
+        let (ev, j) = s1_fa77_body(2, 1, 2, 3);
+        assert_eq!(j, 0xF97C);
+        assert!(ev.contains(&(0x000B, 3)));
+        let (ev, j) = s1_fa91_body(2, 0x55);
+        assert_eq!(j, 0xF97C);
+        assert!(ev.contains(&(0x6AFB, 0x55)));
+    }
+}
