@@ -1,0 +1,28 @@
+# 场景：sc-elevator-ride —— 地图连通图径推输入序（G 系基建实证核）
+# 径：(14,2)→(22,11) 26 房 BFS 路径——E S W W S×8 E×5 N N E×4 S S
+# 事件核：$D7B3 状态机写面（1→2→3→8→9）+Samus.y 逐帧+MapPos 到 (22,11)
+name sc-elevator-ride
+frames 9500
+watch_range 0000-00ff zp
+watch_range 0100-07ff iram
+
+press 360 start
+press 420 a
+press 540 start
+
+hold 850-1060 right
+hold 1070-1280 right
+hold 1290-1710 left
+hold 1720-3400 right
+hold 3410-4460 right
+hold 4470-4890 right
+hold 4900-5740 right
+hold 5750-6170 right
+capture 1500 depart
+capture 3000 mid-vert
+capture 5200 mid-east
+capture 7500 near-target
+capture 9200 elevator-arrive
+
+sample_point spin-exit
+bundle_capture 9200 analysis/bundles/sc-elevator-ride
