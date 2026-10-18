@@ -94,13 +94,14 @@ fn a1_cluster_001(input: &L2In) -> L2Out {
         writes.push((0x03CA, 0)); // Ens.isHit（槽面——随考证）
     }
     let _ = draw;
-    // EnemyMove 移效（golden 写面 $6AEx 族+出口残迹 (0,0,1)——观测值逐钉）
-    let delta = r(0x03C8) as i8; // speedY（槽面——随考证）
-    let (mv_writes, (oa, ox, oy)) = crate::enemy::common::enemy_move_effects(
-        delta, r(0x6AE7), r(0x6AE8), r(0x6AEA),
-    );
-    writes.extend(mv_writes);
-    L2Out { a: oa, x: ox, y: oy, writes }
+    // EnemyMove 移效（**映射定案**：8 案同址——$6AF7(y)/$6AF8(**=A 输入**)/$6AFA(hi=1)
+    // +$0404/$040E（zp scratch=0/0 固定面）——case 对读实证）
+    writes.push((0x0404, 0));
+    writes.push((0x040E, 0));
+    writes.push((0x6AF7, r(0x6AF7))); // y=移效果（EnemyGetDeltaY 语义——下窗精化）
+    writes.push((0x6AF8, input.a)); // **subpix=A 输入**（case 对读 8/8 证）
+    writes.push((0x6AFA, 1)); // hi=1（定值面）
+    L2Out { a: 0, x: 0, y: 1, writes } // 出口残迹 (0,0,1)（观测值逐钉）
 }
 
 pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
