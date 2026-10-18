@@ -72,6 +72,13 @@ pub fn main_title_routine(mem: &mut FrameMemory) {
             match sc {
                 EraseAllSprites => crate::frame::boot::c1a3_unit(mem), // $F0 填充
                 ClearNameTables => crate::frame::boot::c158_unit(mem),
+                RemoveIntroSprites => {
+                    // **F4 离屏惯例**（C1BC：「sprite values with #$F4——bottom right+
+                    // blank graphic」——S6-4 精灵面迭代件；port2 fcda70b 变体就绪）
+                    for i in 0..0x100u16 {
+                        mem.write_ram(0x0200 + i, 0xF4);
+                    }
+                }
                 _ => {} // 其余壳（ScreenOff/NMIOn 等——NmiYield 判定下）
             }
         }
