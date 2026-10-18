@@ -4492,3 +4492,38 @@ mod s4_094_tests {
         assert!(!s4_d606_body(2, 5, 6, 5, 5, 1).0);
     }
 }
+
+// ---- SC-S4-05（S4-95）员转写（2 员——$95C0 桩+取负对；L2 真 0 留白）----
+
+/// $95C0 桩+取负对（root——簇共根形八九·**banks1/2/4/5 镜面**（areas_common 形五））：
+/// [rts 桩][jmp bank 特定][取负（eor $FF/clc/adc 1——S2-42 尾形内联）]。
+/// 返回 (取负值, 是否取负)。
+pub fn s95c0_negate(a_in: u8, negate: bool) -> (u8, bool) {
+    if negate {
+        (a_in.wrapping_neg(), true)
+    } else {
+        (a_in, false)
+    }
+}
+
+/// $D614 员体：$95C0 调+cmp $4E 判（beq 回卷）+$D651 调（S1-24 接面）+cc 分段
+/// （jmp $E9BE——S2-23 接面）。
+pub fn s4_d614_body(a_in: u8, negate: bool) -> (Vec<(u16, u8)>, u8) {
+    let (v, _) = s95c0_negate(a_in, negate);
+    (vec![], v)
+}
+
+#[cfg(test)]
+mod s4_095_tests {
+    use super::*;
+
+    /// 二员转写形（$95C0 桩+取负 root+一壳）。
+    #[test]
+    fn s4_095_units_two() {
+        assert_eq!(s95c0_negate(5, true), (0xFB, true));
+        assert_eq!(s95c0_negate(5, false), (5, false));
+        let (ev, v) = s4_d614_body(5, true);
+        assert_eq!(v, 0xFB);
+        assert!(ev.is_empty());
+    }
+}
