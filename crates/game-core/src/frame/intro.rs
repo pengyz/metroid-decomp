@@ -170,6 +170,27 @@ mod tests {
         assert_eq!(m.read_ram(0x07A1 + 0x4E), 0x4E); // 字节已落（asm 先写后检）
     }
 
+    /// 【溢出路补钉】（port2 字节对表）：溢出⇒终止写在**重载 committed 索引**
+    /// （非溢出点）——丢弃未提交段语义。
+    #[test]
+    fn overflow_terminator_at_committed_index() {
+        let mut m = FrameMemory::default();
+        // committed 索引=3（模拟已提交段末）
+        m.write_ram(VRAM_STRUCT_INDEX, 3);
+        // 走 x=0..0x4E 连写（溢出第 79 写）——committed 索引仍=3
+        let mut x = 0usize;
+        let mut overflowed = false;
+        for i in 0..200u8 {
+            match write_ppu_byte_to_buffer(&mut m, x, i | 0x80) {
+                Some(nx) => x = nx,
+                None => { overflowed = true; break; }
+            }
+        }
+        assert!(overflowed);
+        assert_eq!(m.read_ram(0x07A1 + 3), 0x00); // **终止在重载索引 3**（非 0x4E）
+        assert_eq!(m.read_ram(0x07A1 + 0x4E) & 0x80, 0x80); // 溢出点字节已落（先写后检）
+    }
+
     /// 【返工补案 4】终止符覆盖语义（F1——双 call 连续：终止符被下 call 覆写）。
     #[test]
     fn end_vram_struct_terminator_overwrite() {
@@ -241,7 +262,12 @@ fn write_ppu_byte_to_buffer(mem: &mut FrameMemory, x: usize, byte: u8) -> Option
     if x < 0x4F {
         Some(x)
     } else {
-        None // 溢出（asm 0x4E 后中止——容量=79B）
+        // **溢出路**（port2 字节对表——`ldx $07A0`（重载 committed 索引）/`lda #0/
+        // sta $07A1,x`（终止写在**重载索引**非溢出点）/`pla pla`（双 PLA 断链））。
+        // 语义=**丢弃未提交段**（终止落上次 stx 索引处）。
+        let committed = mem.read_ram(VRAM_STRUCT_INDEX) as u16;
+        mem.write_ram(0x07A1 + committed, 0);
+        None // 调用方返回（双 PLA 断链域形=中止）
     }
 }
 
