@@ -285,6 +285,21 @@ pub fn nmi_tail(mem: &mut FrameMemory) {
 
 #[cfg(test)]
 mod tests {
+    /// SpriteRAM 解析+8/scanline quirk（D4 保真面）。
+    #[test]
+    fn sprite_state_and_scanline_limit() {
+        let mut m = FrameMemory::default();
+        for i in 0..10u16 {
+            m.write_ram(0x0200 + i * 4, 50);
+            m.write_ram(0x0200 + i * 4 + 1, i as u8);
+        }
+        let sprites = sprite_state(&m);
+        assert_eq!(sprites.len(), 64);
+        assert_eq!(sprites[0].y, 50);
+        let counts = scanline_sprite_limit(&sprites);
+        assert_eq!(counts[55], 8); // 10 精灵同线→限 8（quirk 保真）
+    }
+
     use super::*;
 
     /// panic payload 双型兜底。
@@ -526,4 +541,46 @@ pub fn palette_write_pending(mem: &mut FrameMemory) {
         }
         o = if rle { o + 4 } else { d };
     }
+}
+
+/// SpriteRAM 状态建模（**S6-4——task-42 spec OAM 面**）：
+/// $0200-$02FF=64 精灵×4B（y/tile/attr/x）；**8 sprites/scanline quirk**（D4 保真
+/// bug：扫描线第 9 精灵丢弃）。
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Sprite {
+    pub y: u8,
+    pub tile: u8,
+    pub attr: u8,
+    pub x: u8,
+}
+
+/// 解析 SpriteRAM（$0200-$02FF——watch 面 raw）→64 精灵视图。
+pub fn sprite_state(mem: &FrameMemory) -> Vec<Sprite> {
+    (0..64u16)
+        .map(|i| {
+            let b = 0x0200 + i * 4;
+            Sprite {
+                y: mem.read_ram(b),
+                tile: mem.read_ram(b + 1),
+                attr: mem.read_ram(b + 2),
+                x: mem.read_ram(b + 3),
+            }
+        })
+        .collect()
+}
+
+/// 8 sprites/scanline quirk（**D4 保真 bug**）：逐扫描线可见精灵计数，第 9+ 丢弃。
+pub fn scanline_sprite_limit(sprites: &[Sprite]) -> [u8; 240] {
+    let mut counts = [0u8; 240];
+    for sp in sprites {
+        if sp.y >= 0xEF {
+            continue;
+        }
+        for line in (sp.y as usize)..((sp.y as usize + 8).min(240)) {
+            if counts[line] < 8 {
+                counts[line] += 1;
+            }
+        }
+    }
+    counts
 }

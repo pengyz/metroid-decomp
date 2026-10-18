@@ -404,7 +404,12 @@ pub fn set_samus_data(mem: &mut FrameMemory) {
     }
     check_health_status(mem); // CDFA（链三件——已端口）
     lava_and_move_check(mem); // E269（链四件——已端口）
-    crate::unported!("bank07:CD92-tail"); // 链余件（Metroid 蓝化/DE4A 显示面——随件）
+    // Metroid 蓝化（asm：`lda MetroidOnSamus($92)/beq/lda #$81|PRIORITY/sta $6B`）
+    if mem.read_ram(crate::ram_map::METROID_ON_SAMUS) != 0 {
+        mem.write_ram(0x006B, 0x81);
+    }
+    set_mirror_cntrl_bit(mem); // CD92（已折——朝向镜像位）
+    crate::unported!("bank07:DE4A"); // ObjDrawFrame（显示面——S6 渲染卡随接）
     // 链余件（随件）：LavaAndMoveCheck（E269）/MetroidOnSamus($92) 蓝化/
     // set_mirror_cntrl_bit（CD92 已折——随接）/ObjDrawFrame（DE4A 显示面）
 }
