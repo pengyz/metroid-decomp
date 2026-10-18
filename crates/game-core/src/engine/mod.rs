@@ -1302,3 +1302,60 @@ mod s1_18_tests {
         assert!(ev.contains(&(0x0311, 0x8F)));
     }
 }
+
+// ---- SC-S1-19 员转写（4 员——AnimDrawObject 族；L2 真 0 留白）----
+
+/// $DE47 AnimDrawObject（root——簇共根形十二）：$DC8F 调+$4B X 载+$0303[x] 双 cmp 分路
+/// （$F7⇒$DF2D/$07⇒$6B 位清段）。
+pub fn s1_anim_draw_object(x: u8, v0303_x: u8) -> (u16, Option<Vec<(u16, u8)>>) {
+    match v0303_x {
+        0xF7 => (0xDF2D, None),
+        0x07 => (0xDE47, Some(vec![(0x006B, 0xEF)])), // 位清段（and $EF——读改写面注）
+        _ => (0xDE47, None),
+    }
+}
+
+/// $D488 员体：jmp AnimDrawObject（尾形——三员同构）。
+pub fn s1_d488_body() -> u16 { 0xDE47 }
+
+/// $D66D 员体：jmp AnimDrawObject+$2D lsr 判+$030F[x] dec 计数+双 cmp 分段
+/// （$37/$82 写族——表选形）。
+pub fn s1_d66d_body(x: u8, v2d: u8, v030f_x: u8) -> (Vec<(u16, u8)>, u16) {
+    let mut ev = Vec::new();
+    let d = v030f_x.wrapping_sub(1);
+    ev.push((0x030F + x as u16, d));
+    if d == 0 {
+        let v = if v2d & 1 != 0 { 0x82 } else { 0x37 };
+        ev.push((0x0400 + x as u16, v)); // 表选写（$37/$82 二值）
+    }
+    (ev, 0xDE47)
+}
+
+/// $D8BC 员体：jmp AnimDrawObject+$030F[x] cmp $8F 段（$1E←7/$6883 inc 等深段注）。
+pub fn s1_d8bc_body(x: u8, v030f_x: u8) -> Vec<(u16, u8)> {
+    if v030f_x == 0x8F {
+        vec![(0x001E, 7)] // 命中段（$6883 inc 等深面注）
+    } else {
+        Vec::new()
+    }
+}
+
+#[cfg(test)]
+mod s1_19_tests {
+    use super::*;
+
+    /// 四员转写形（AnimDrawObject root+三壳）。
+    #[test]
+    fn s1_19_units_four() {
+        assert_eq!(s1_anim_draw_object(0, 0xF7).0, 0xDF2D);
+        let (_, ev) = s1_anim_draw_object(0, 0x07);
+        assert!(ev.unwrap().contains(&(0x006B, 0xEF)));
+        assert_eq!(s1_d488_body(), 0xDE47);
+        let (ev, j) = s1_d66d_body(2, 1, 5);
+        assert_eq!(j, 0xDE47);
+        assert!(ev.contains(&(0x0311, 4)));
+        let (ev, _) = s1_d66d_body(2, 1, 1);
+        assert!(ev.contains(&(0x0402, 0x82)));
+        assert!(s1_d8bc_body(0, 0x8F).contains(&(0x001E, 7)));
+    }
+}
