@@ -114,3 +114,34 @@ mod task38_watchdog {
         assert!(dt.as_secs() < 30, "spin 打回耗时 {}s（>30s=护栏失效）", dt.as_secs());
     }
 }
+
+/// run_subroutine 插桩变体（**trace 面**——PC/opcode/regs 逐字节实证（D3 最终真相））。
+pub fn run_subroutine_traced(
+    prg: &[u8], entry: u16, window_bank: usize,
+    input: &L2In, stops: &[u16], max_trace: usize,
+) -> Result<(L2RunResult, Vec<(u16, u8, u8, u8)>), String> {
+    let mut cpu = Cpu::new(prg, window_bank, input);
+    cpu.set_pc(entry);
+    if stops.is_empty() {
+        cpu.sp = 0xF8;
+        let ret = SENTINEL.wrapping_sub(1);
+        cpu.push8((ret >> 8) as u8);
+        cpu.push8((ret & 0xFF) as u8);
+    }
+    let mut trace = Vec::new();
+    for _ in 0..MAX_STEPS {
+        if stops.contains(&cpu.pc) || cpu.pc == SENTINEL {
+            break;
+        }
+        let pc = cpu.pc;
+        if trace.len() < max_trace {
+            trace.push((pc, cpu.a, cpu.x, cpu.y)); // pc+regs（opcode 随件）
+        }
+        cpu.step()?;
+    }
+    let r = L2RunResult {
+        a: cpu.a, x: cpu.x, y: cpu.y,
+        writes: final_writes(cpu.take_writes()),
+    };
+    Ok((r, trace))
+}
