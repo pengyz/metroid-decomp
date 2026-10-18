@@ -4385,3 +4385,40 @@ mod s4_091_tests {
         assert_eq!(ev3.len(), 1);
     }
 }
+
+// ---- SC-S4-02（S4-92）员转写（2 员——$D4EB 链入口族；L2 真 0 留白）----
+
+/// $D4EB 员体（root——簇共根形八六）：$71←1+链（$D5FC/$D5DA/$D609——S3-087/088/
+/// S1-10 三接面）+$4B X 载+cc/\$6878 位2 判段。
+/// 返回 (写事件, 链面)。
+pub fn s4_d4eb_body(x: u8, carry: bool, v6878: u8) -> (Vec<(u16, u8)>, bool) {
+    let mut ev = vec![(0x0071, 1)];
+    let pass = !(carry && (v6878 & 4) == 0);
+    (ev, pass)
+}
+
+/// $D5C5 员体：jmp $D4EB（尾形）+$71←1+$0303[x] sbc $F7 判（零⇒$0300[x]←0 清+
+/// 尾跳 $D517）。
+pub fn s4_d5c5_body(x: u8, v0303_x: u8) -> (Vec<(u16, u8)>, u16) {
+    let mut ev = vec![(0x0071, 1)];
+    if v0303_x.wrapping_sub(0xF7) == 0 {
+        ev.push((0x0300 + x as u16, 0));
+    }
+    (ev, 0xD517)
+}
+
+#[cfg(test)]
+mod s4_092_tests {
+    use super::*;
+
+    /// 二员转写形（$D4EB 链入口 root+一壳）。
+    #[test]
+    fn s4_092_units_two() {
+        let (ev, p) = s4_d4eb_body(2, true, 0);
+        assert!(ev.contains(&(0x0071, 1)));
+        assert!(!p); // 链判段
+        let (ev2, j) = s4_d5c5_body(2, 0xF7);
+        assert_eq!(j, 0xD517);
+        assert!(ev2.contains(&(0x0302, 0)));
+    }
+}
