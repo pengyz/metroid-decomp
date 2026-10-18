@@ -64,6 +64,7 @@ pub fn game_main_routine(mem: &mut FrameMemory) {
     match mr {
         0 => area_init(mem), // AreaInit（已端口——移动臂迭代驱动首件）
         1 => more_init(mem), // MoreInit（已端口——区域/房间链头）
+        3 => game_engine(mem), // GameEngine（已端口——移动帧环壳）
         _ => {
             let loc = format!("bank07:{:04X}", MAIN_ROUTINE_PTR_TABLE.get(mr as usize).copied().unwrap_or(0));
             crate::unported!(&loc); // 其余态（MoreInit 起——迭代分类）
@@ -220,6 +221,39 @@ const ROOM_PTR_TABLE: [u8; 94] = [
         0x48, 0xAB, 0x71, 0xAB, 0x92, 0xAB, 0xBF, 0xAB, 0x24, 0xAC, 0x4D, 0xAC, 0x6A, 0xAC,
 ];
 
+
+/// GameEngine 移动帧环壳（**asm 内容锚** `GameEngine: ; 07:C92B`）：
+/// ScrollDoor×2（E1F1 双调=双速滚门）/NARPASSWORD quirk（**D4 保真**——每帧全能力
+/// /血/弹）/UpdateWorld（CB29——**m2 深链核心**：Samus/敌人/房间瓦更新——嵌套桩）/
+/// 延时旗（MiniBossKill/PowerUp→SetTimer 240 帧）/死亡链（animDelay 爆炸等待→
+/// SilenceMusic→MotherBrain 检→GameOver）。
+pub fn game_engine(mem: &mut FrameMemory) {
+    crate::unported!("bank07:E1F1"); // ScrollDoor×2（门滚——随件）
+    // NARPASSWORD quirk（D4 保真：每帧全能力）
+    if mem.read_ram(0x0686) != 0 {
+        // NARPASSWORD 面（址随考——$686 族）
+        mem.write_ram(crate::ram_map::HEALTH_CHANGE + 1, 0x03); // Health+1
+        mem.write_ram(crate::ram_map::SAMUS_GEAR, 0xFF);
+        mem.write_ram(crate::ram_map::MISSILE_COUNT, 0x05);
+    }
+    update_world(mem); // CB29（m2 深链核心——已端口壳）
+}
+
+/// UpdateWorld 壳（**asm 内容锚** `UpdateWorld: ; 07:CB29`——m2 深链 19 例程面）：
+/// SpritePagePos←0→UpdateAllEnemies/UpdateSamusProjectiles/**UpdateSamus（CC0D
+/// ——samus 域件已折会师）**/AreaRoutine/UpdateElevator/**UpdateAllStatues（D9D4
+/// ——T45-1 已折）**/…/CollisionDetection（D976/F1FA 族）/…→精灵清尾（$F4 残槽填充）。
+pub fn update_world(mem: &mut FrameMemory) {
+    mem.write_ram(0x0006, 0); // SpritePagePos←0（:256 族）
+    crate::unported!("bank07:F345"); // UpdateAllEnemies（敌面——port2 域）
+    // 例程序（随件逐个）：UpdateSamusProjectiles(D4BF)/UpdateSamus(CC0D——samus 域
+    // 会师)/AreaRoutine(95C3)/UpdateElevator(D7B3)/UpdateAllStatues(D9D4 已折)/
+    // UpdateAllEnemyExplosions/UpdateAllMellows/UpdateAllEnProjectiles/
+    // UpdateAllSkreeProjectiles/SamusEnterDoor(8B13)/UpdateAllDoors(门链已考)/
+    // UpdateAllTileBlasts/CollisionDetection(D976/F1FA)/DisplayBar(E0C1)/
+    // UpdateAllPipeBugHoles/CheckMissileToggle/UpdateAllPowerUps(DB37)/
+    // UpdateTourianItems(FDE3)→精灵清尾（$F4 残槽）。
+}
 /// UpdateTimer 单元（**asm 内容锚**）——`UpdateTimer: ; 07:C266`：TimerDelay 预分频
 /// （dec/bpl——10 帧节拍，归零重置 9 并含 Timer3）→ Timer1/2/3 非零递减。
 pub fn update_timer(mem: &mut FrameMemory) {
