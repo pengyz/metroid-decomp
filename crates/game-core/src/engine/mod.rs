@@ -3841,3 +3841,41 @@ mod s3_077_tests {
         assert!(ev2.contains(&(0x0300, 0)));
     }
 }
+
+// ---- SC-S3-18（S3-78）员转写（2 员——FireWeapon 族；L2 真 0 留白）----
+
+/// $D1EE FireWeapon（root——簇共根形七二）：$14 位3 判（beq 段——未按⇒跳）+
+/// jmp $D275（开火径）+槽搜段（Y=$D0 环：$0300[y] 判+$E1EE 调）。
+/// 返回 (开火, 槽位)。
+pub fn s3_fire_weapon(v14: u8) -> (bool, Option<u8>) {
+    if v14 & 0x08 == 0 {
+        return (false, None); // beq 段（未按）
+    }
+    (true, Some(0xD0)) // 开火径（槽搜起始面注）
+}
+
+/// $D1C0 员体：FireWeapon+$12 符号段（$0300←6）+尾跳 $CD6D（A=4）+JumpEngine 面
+/// （$0300 分派——S1-22 同构面注）。
+pub fn s3_d1c0_body(v14: u8, v12: u8) -> (Vec<(u16, u8)>, u16) {
+    let (fire, _) = s3_fire_weapon(v14);
+    let mut ev = Vec::new();
+    if fire && (v12 as i8) < 0 {
+        ev.push((0x0300, 6));
+    }
+    (ev, 0xCD6D)
+}
+
+#[cfg(test)]
+mod s3_078_tests {
+    use super::*;
+
+    /// 二员转写形（FireWeapon root+一壳）。
+    #[test]
+    fn s3_078_units_two() {
+        assert_eq!(s3_fire_weapon(0), (false, None)); // beq 段
+        assert_eq!(s3_fire_weapon(0x08), (true, Some(0xD0)));
+        let (ev, j) = s3_d1c0_body(0x08, 0x80);
+        assert_eq!(j, 0xCD6D);
+        assert!(ev.contains(&(0x0300, 6)));
+    }
+}
