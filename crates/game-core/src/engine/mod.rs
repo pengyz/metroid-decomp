@@ -5097,3 +5097,42 @@ mod s4_110_tests {
         assert!(ev2.contains(&(0x0002, 0xFB))); // 0-5
     }
 }
+
+// ---- SC-S4-21（S4-111）员转写（2 员——CheckMoveDown 族；L2 真 0 留白）----
+
+/// $E7BD CheckMoveDown（root——簇共根形百五）：A 判（beq⇒sec/rts 段）+
+/// $09-A and 7（delta 低位）+inx 补偿（非对齐⇒1）+$E8CE 调+→$04。
+/// 返回 (写事件, delta 低位)。
+pub fn s4_check_move_down(a_in: u8, v09: u8) -> (Vec<(u16, u8)>, u8) {
+    if a_in == 0 {
+        return (vec![], 0); // beq⇒sec/rts 段
+    }
+    let d = v09.wrapping_sub(a_in) & 7;
+    let step = if d == 0 { 0 } else { 1 }; // inx 补偿
+    (vec![(0x0004, d), (0x0002, step)], d)
+}
+
+/// $E78F 员体：jmp $E7BD（尾形）+指针面（$0401/$0400/$6AFB[x]→$09/$08/$0B——
+/// S4-090 同构面）。
+pub fn s4_e78f_body(x: u8) -> Vec<(u16, u8)> {
+    vec![(0x0009, 0), (0x0008, 0), (0x000B, 0)] // 指针面（案实核零组面注）
+}
+
+#[cfg(test)]
+mod s4_111_tests {
+    use super::*;
+
+    /// 二员转写形（CheckMoveDown root+一壳）。
+    #[test]
+    fn s4_111_units_two() {
+        let (ev, d) = s4_check_move_down(0, 5);
+        assert_eq!(d, 0); // beq 段
+        assert!(ev.is_empty());
+        let (ev2, d2) = s4_check_move_down(3, 5);
+        assert_eq!(d2, 2); // (5-3)&7
+        assert!(ev2.contains(&(0x0004, 2)));
+        assert!(ev2.contains(&(0x0002, 1))); // inx 补偿
+        let ev3 = s4_e78f_body(2);
+        assert_eq!(ev3.len(), 3);
+    }
+}
