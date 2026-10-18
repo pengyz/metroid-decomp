@@ -806,6 +806,8 @@ pub enum ShellCall {
     VBOffAndHorzWrite,
     /// DisplayInputCharacters（$940B：$00/$01 指针 RAM 面已含臂事件；字符面 PPU 侧——0 spin）。
     DisplayInputCharacters,
+    /// RemoveIntroSprites（$C1BC：精灵值载 $F4——右下+空图形=离屏惯例；intro 每帧壳）。
+    RemoveIntroSprites,
 }
 
 /// title 域一 tick 结果（写面=语义标签事件（已映射址）；shell=组合点；exit=分发出口）。
@@ -863,11 +865,17 @@ pub fn dispatch_step(face: &TitleFace) -> TitleStep {
             0x07 => sh::title_metroid_fade_out(&l2in), 0x0D => sh::title_message_fade_in(&l2in),
             _ => sh::title_message_fade_out(&l2in),
         }),
-        0x04 => step_from_l2(sh::title_flash_timer(&l2in)),
-        0x05 => step_from_l2(sh::title_flash_effect(&l2in)),
-        0x06 => step_from_l2(sh::title_sparkle_step(&l2in)),
-        0x08 => step_from_l2(sh::title_crosshairs_step(&l2in)),
-        0x09 => step_from_l2(sh::title_crosshair_continue(&l2in)),
+        // intro 效果族每帧壳（L8022 路 RemoveIntroSprites $C1BC——F4 离屏惯例）
+        0x04 => { let mut s = step_from_l2(sh::title_flash_timer(&l2in));
+                  s.shell.insert(0, ShellCall::RemoveIntroSprites); s }
+        0x05 => { let mut s = step_from_l2(sh::title_flash_effect(&l2in));
+                  s.shell.insert(0, ShellCall::RemoveIntroSprites); s }
+        0x06 => { let mut s = step_from_l2(sh::title_sparkle_step(&l2in));
+                  s.shell.insert(0, ShellCall::RemoveIntroSprites); s }
+        0x08 => { let mut s = step_from_l2(sh::title_crosshairs_step(&l2in));
+                  s.shell.insert(0, ShellCall::RemoveIntroSprites); s }
+        0x09 => { let mut s = step_from_l2(sh::title_crosshair_continue(&l2in));
+                  s.shell.insert(0, ShellCall::RemoveIntroSprites); s }
         0x0F => step_from_l2(sh::title_replay_delay(&l2in)),
         0x10 => step_from_l2(sh::title_clear_spare(&l2in)),
         0x11 => step_from_l2(sh::title_prep_restart(&l2in)),
