@@ -5,6 +5,7 @@
 //! F2CA 族九入口 = 本域方法集素材（decode-sweep r1 §3；切片考证=单元 spec 输入）。
 
 pub mod attrs;
+pub mod common;
 pub mod slot;
 pub mod todo_0404;
 pub mod todo_040e;
