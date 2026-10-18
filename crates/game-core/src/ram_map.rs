@@ -102,6 +102,9 @@ pub const MAX_MISSILES: u16 = 0x6877;
 pub const AT_ENDING: u16 = 0x69B2;
 pub const BANK_SWITCH_PENDING: u16 = 0x0028;
 
+/// InArea=$74（constants_ram 内容锚「Samus is in the following area」）。
+pub const IN_AREA: u16 = 0x0074;
+
 /// SamusInvincibleDelay=$70（constants_ram 内容锚「Samus's invincibility frames delay
 /// counter」——受击 50 帧闪烁面）。
 pub const SAMUS_INVINCIBLE_DELAY: u16 = 0x0070;

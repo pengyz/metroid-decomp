@@ -63,6 +63,7 @@ pub fn game_main_routine(mem: &mut FrameMemory) {
     }
     match mr {
         0 => area_init(mem), // AreaInit（已端口——移动臂迭代驱动首件）
+        1 => more_init(mem), // MoreInit（已端口——区域/房间链头）
         _ => {
             let loc = format!("bank07:{:04X}", MAIN_ROUTINE_PTR_TABLE.get(mr as usize).copied().unwrap_or(0));
             crate::unported!(&loc); // 其余态（MoreInit 起——迭代分类）
@@ -83,7 +84,65 @@ pub fn area_init(mem: &mut FrameMemory) {
     let ab = mem.read_ram(crate::memmap::title_state::JOY1_STATUS) & 0xC0;
     mem.write_ram(0x0027, ab); // ABStatus（:254 族）
     crate::frame::boot::c1a3_unit(mem); // EraseAllSprites（已折）
-    crate::unported!("bank07:CA18"); // IsEngineRunning（页切检——随件）
+    is_engine_running(mem, 0x10); // CA18（已端口——A=$10 Brinstar 页备）
+}
+
+/// BankTable 烘焙（07:CA30——16 项（A&0xF 索引→BankSwitchPending 值））。
+const BANK_TABLE: [u8; 16] = [0x02, 0x03, 0x05, 0x04, 0x06, 0x48, 0x48, 0x20, 0x96, 0xCA, 0xAD, 0x84, 0x68, 0x10, 0x0D, 0x29];
+
+/// IsEngineRunning（**asm 内容锚** `IsEngineRunning: ; 07:CA18`）：
+/// `ldy MainRoutine/cpy #IncrementRoutine(7)/beq RTS`（淡入/等待）→`cpy #GameEngine(3)/
+/// beq SwitchBank`→否则 RTS。SwitchBank（CA23）：`sta InArea($74)/and #$0F/tay/
+/// lda BankTable,y/sta BankSwitchPending($28)/jmp CheckBankSwitch`（已折）。
+pub fn is_engine_running(mem: &mut FrameMemory, a_in: u8) {
+    let mr = mem.read_ram(crate::ram_map::MAIN_ROUTINE);
+    if mr == 7 {
+        return; // IncrementRoutine（淡入/等待——RTS）
+    }
+    if mr != 3 {
+        return; // 非 GameEngine——RTS（AreaInit 调用点=此路（MainRoutine=1））
+    }
+    // SwitchBank
+    mem.write_ram(crate::ram_map::IN_AREA, a_in);
+    let idx = (a_in & 0x0F) as usize;
+    mem.write_ram(crate::ram_map::BANK_SWITCH_PENDING, BANK_TABLE[idx]);
+    crate::frame::boot::c4de_unit(mem); // CheckBankSwitch（已折）
+}
+
+/// MoreInit（**asm 内容锚** `MoreInit: ; 07:C81D`——区域/房间链头）：
+/// PaletteDataPending←1/SpareMem75←$FF/四清（AtEnding/DoorEntryStatus/SamusDoorData/
+/// UpdatingSamusProjectile←0）/清环（$7A-$DE+$300-$3FE——**off-by-one bug=D4 保真**
+/// （「should clear $DF」注））/ScreenOff/ClearNameTables（已折）/EraseAllSprites（已折）
+/// /ScrollBlock 族清/ScrollDir←2/AreaMapPos→MapPos/PaletteToggle/RoomNumber←$FF/
+/// CopyAreaPointers→GetRoomNum→SetupRoom 环（房间链——嵌套桩）。
+pub fn more_init(mem: &mut FrameMemory) {
+    mem.write_ram(crate::ram_map::PALETTE_PENDING, 1); // Palette00+1
+    mem.write_ram(0x0075, 0xFF);
+    for a in [crate::ram_map::AT_ENDING, 0x0056, 0x0057, 0x0055] {
+        mem.write_ram(a, 0); // 四清（DoorEntryStatus=$56/SamusDoorData=$57/UpdatingSamusProjectile=$55）
+    }
+    // 清环（$7A-$DE+$300-$3FE——off-by-one bug 保真（D4））
+    for a in 0x7A..=0xDEu16 {
+        mem.write_ram(a, 0);
+    }
+    for a in 0x0300..=0x03FEu16 {
+        mem.write_ram(a, 0);
+    }
+    mem.write_ram(crate::ram_map::NMI_STATUS, 0); // ScreenOff 域形（屏/可见性关）
+    crate::frame::boot::c158_unit(mem); // ClearNameTables（已折）
+    crate::frame::boot::c1a3_unit(mem); // EraseAllSprites（已折）
+    mem.write_ram(0x005A, 0); // ScrollBlockOnNameTable3
+    mem.write_ram(0x0053, 0); // ScrollBlockOnNameTable0
+    mem.write_ram(0x0030, 1); // SpareMem30
+    mem.write_ram(0x0003, 2); // ScrollDir=2（横房）
+    let map_x = mem.read_ram(0x6884); // AreaMapPosX（WRAM 源——随考证）
+    mem.write_ram(0x0050, map_x); // MapPosX（constants_ram:543）
+    let map_y = mem.read_ram(0x6883); // AreaMapPosY
+    mem.write_ram(0x004F, map_y); // MapPosY（constants_ram:542）
+    let pt = mem.read_ram(0x6885); // AreaPaletteToggle
+    mem.write_ram(0x0076, pt); // PaletteToggle（constants_ram:609）
+    mem.write_ram(0x005A, 0xFF); // RoomNumber=$FF（constants_ram:567——undefined room）
+    crate::unported!("bank07:C85x"); // CopyAreaPointers→GetRoomNum→SetupRoom 环（房间链）
 }
 /// UpdateTimer 单元（**asm 内容锚**）——`UpdateTimer: ; 07:C266`：TimerDelay 预分频
 /// （dec/bpl——10 帧节拍，归零重置 9 并含 Timer3）→ Timer1/2/3 非零递减。
