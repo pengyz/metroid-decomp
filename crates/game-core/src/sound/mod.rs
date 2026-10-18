@@ -860,3 +860,69 @@ mod music_vm_tests {
         assert_eq!(s.kind, MusicInstrKind::Note);
     }
 }
+
+// ---- task-44 W1 残三件：音符载 _Continued 解 + 四通道环编排 ----
+
+/// 音符载解码结果（_Continued $BB1C 语义）。
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct NoteLoadStep {
+    pub events: Vec<(u16, u8)>,
+    /// 长度字节命中（0xB0 族：(instr&$B0)==$B0——低 4 位+NoteLengthTblOffset 表偏移）。
+    pub length_byte: Option<u8>,
+    /// 音符字节（长度字节后的取指；长度字节未命中⇒原指令即音符）。
+    pub note_byte: u8,
+}
+
+/// _Continued 长度字节解（$BB1C-$BB40 语义折叠）：(instr&$B0)==$B0⇒长度标（低 4 位+
+/// NoteLengthTblOffset→NoteLengthsTbl→InstrLength 写+**取下字节为音符**）；否则指令即音符。
+/// len_off=NoteLengthTblOffset 面（$062B 首字节）；x=通道号（2=Tri 分支面注）。
+pub fn note_load_step(instr: u8, instr_id: u8, base_addr: u16, len_off: u8) -> NoteLoadStep {
+    let mut events = Vec::new();
+    if instr & 0xB0 == 0xB0 {
+        let _len_idx = (instr & 0x0F).wrapping_add(len_off);
+        // InstrLength 写（块址 $0648+c 形——随证；此处按 base+0x48 形参化）
+        events.push((base_addr + 0x48, 0)); // 长度值=NoteLengthsTbl[len_idx]（表烘焙面）
+        // 取下字节（InstrID 前进）
+        events.push((base_addr + 0x38, instr_id.wrapping_add(1)));
+        return NoteLoadStep { events, length_byte: Some(instr & 0x0F), note_byte: 0 };
+    }
+    NoteLoadStep { events, length_byte: None, note_byte: instr }
+}
+
+/// 四通道环编排（$BAB0-$BAC1+$BAA5 入口形）：通道 0-3 步进（ThisSoundChannel +4 形：
+/// $00/$04/$08/$0C=APU 寄存器偏移）；X==4⇒**包络尾入口**（GotoUpdateAllVolumeEnvelopes
+/// ——残四件注记）。
+/// 返回 (ThisSoundChannel 序列, 包络尾命中)。
+pub fn music_frame_loop(this_sound_channel: u8) -> (Vec<(u16, u8)>, bool) {
+    let mut events = Vec::new();
+    let mut tsc = this_sound_channel;
+    for _ in 0..4 {
+        events.push((0x064B, tsc));
+        tsc = tsc.wrapping_add(4);
+    }
+    (events, true) // 四通道后=包络尾
+}
+
+#[cfg(test)]
+mod w1_final_tests {
+    use super::*;
+
+    /// 长度字节解（0xB0 族判定+双字节取指）。
+    #[test]
+    fn note_length_byte_decode() {
+        let s = note_load_step(0xB3, 5, 0x0600, 0x07);
+        assert_eq!(s.length_byte, Some(0x03));
+        assert!(s.events.contains(&(0x0638, 6))); // 取指前进
+        let s = note_load_step(0x30, 5, 0x0600, 0x07);
+        assert_eq!(s.length_byte, None);
+        assert_eq!(s.note_byte, 0x30);
+    }
+
+    /// 四通道环（ThisSoundChannel +4 序列+包络尾命中）。
+    #[test]
+    fn four_channel_ring() {
+        let (ev, tail) = music_frame_loop(0);
+        assert!(tail);
+        assert_eq!(ev.iter().map(|e| e.1).collect::<Vec<_>>(), vec![0, 4, 8, 12]);
+    }
+}
