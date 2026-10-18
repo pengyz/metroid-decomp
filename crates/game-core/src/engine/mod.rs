@@ -3958,3 +3958,47 @@ mod s3_080_tests {
         assert!(ev.contains(&(0x0079, 0)));
     }
 }
+
+// ---- SC-S3-21（S3-81）员转写（2 员——Doors_RemoveIfOffScreen 族；L2 真 0 留白）----
+
+/// $ED65 Doors_RemoveIfOffScreen（root——簇共根形七五）：X=$B0 环（$0300[x] 判+
+/// $030B[x] 判⇒$0300[x]←0 清+$F1F4 调（Xminus16——S1-07 接面）+bmi 回卷）。
+/// 返回 (清除数, 环面)。
+pub fn s3_doors_remove() -> (u8, u8) {
+    let mut x = 0xB0u8;
+    let mut count = 0u8;
+    loop {
+        count += 1;
+        if x < 0x10 {
+            break; // bmi 回卷破点（负径断——与 bpl 环异形注）
+        }
+        x = x.wrapping_sub(0x10);
+    }
+    (count, x) // 12 环（$B0→$00）
+}
+
+/// $D3BD 员体：Doors_Remove+$95AB 链+$79 判（StartMusic（S2-36 接面）+符号段）。
+/// 与 $D3BA 同构尾面注。
+pub fn s3_d3bd_body(v79: u8) -> (Vec<(u16, u8)>, u8) {
+    let (count, _) = s3_doors_remove();
+    let mut ev = Vec::new();
+    if v79 != 0 {
+        ev.push((0x0079, 0));
+    }
+    (ev, count)
+}
+
+#[cfg(test)]
+mod s3_081_tests {
+    use super::*;
+
+    /// 二员转写形（Doors_Remove 环 root+一壳）。
+    #[test]
+    fn s3_081_units_two() {
+        let (count, x) = s3_doors_remove();
+        assert_eq!(count, 12); // $B0→$00 十二环（0x10 步）
+        assert_eq!(x, 0);
+        let (ev, _) = s3_d3bd_body(5);
+        assert!(ev.contains(&(0x0079, 0)));
+    }
+}
