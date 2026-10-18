@@ -27,7 +27,7 @@ press 3180 b
 nav 3300-3400 x 140
 trigger 3380-3600 051 > 120 press down
 trigger 3350-3900 052 > 195 hold right
-trigger 3700-4200 050 == 10 press up
+trigger 3420-3620 051 < 135 press up
 nav 3950-4200 x 140
 hold 4250-4410 a
 hold 4300-4700 right
