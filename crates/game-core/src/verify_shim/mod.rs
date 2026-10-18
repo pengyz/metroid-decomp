@@ -1212,3 +1212,27 @@ pub fn s1_cluster_22(input: &L2In) -> L2Out {
     w.push((0x006A, 0));       // TempY（ldy #0 面）
     L2Out { a: (target >> 8) as u8, x: input.x, y: 0, writes: merge_writes(w) }
 }
+
+// ---- SC-S1-23 簇入口适配（s1_cluster_23 ← bank07:EDD6 ChooseSpawningRoutine VM）----
+
+/// s1_cluster_23 适配（$EDD6 spawn VM——S1-22 同构走带（A 进位加）+spawn 分派表
+/// （6+ 表项：$C45C/$EDF8/$EDFE/$EE63/$EEA1/$EEA6…）+JumpEngine 面）。
+pub fn s1_cluster_23(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    let lo0 = r(0x0000);
+    let hi0 = r(0x0001);
+    let (lo, carry) = lo0.overflowing_add(input.a);
+    let hi = hi0.wrapping_add(if carry { 1 } else { 0 });
+    const TABLE: [u16; 8] = [0xC45C, 0xEDF8, 0xEDFE, 0xEE63, 0xEEA1, 0xEEA6, 0xC45C, 0xC45C];
+    let op = r(((hi as u16) << 8) | lo as u16) & 0x07;
+    let target = TABLE[op as usize];
+    let mut w = vec![(0x0000, lo)];
+    if carry {
+        w.push((0x0001, hi));
+    }
+    w.push((0x000C, (target & 0xFF) as u8));
+    w.push((0x000D, (target >> 8) as u8));
+    w.push((0x0069, input.x));
+    w.push((0x006A, 0));
+    L2Out { a: (target >> 8) as u8, x: input.x, y: 0, writes: merge_writes(w) }
+}

@@ -1490,3 +1490,56 @@ mod s1_22_tests {
         assert_eq!(s1_lx230_stub(), 0xEAD4);
     }
 }
+
+// ---- SC-S1-23 员转写（4 员——ChooseSpawningRoutine spawn VM）----
+
+/// $EDD6 ChooseSpawningRoutine（root——簇共根形十六·**spawn VM**（S1-22 同构走带））：
+/// 走带+spawn 分派表+JumpEngine 面。
+pub fn s1_choose_spawning(a_in: u8, x_in: u8, lo: u8, hi: u8, op_byte: u8)
+    -> (Vec<(u16, u8)>, u8, u8, u8) {
+    const TABLE: [u16; 8] = [0xC45C, 0xEDF8, 0xEDFE, 0xEE63, 0xEEA1, 0xEEA6, 0xC45C, 0xC45C];
+    let (nlo, nhi) = s1_vm_advance(lo, hi, a_in);
+    let target = TABLE[(op_byte & 7) as usize];
+    let ev = vec![(0x0000, nlo), (0x0001, nhi),
+                  (0x000C, (target & 0xFF) as u8), (0x000D, (target >> 8) as u8),
+                  (0x0069, x_in), (0x006A, 0)];
+    (ev, (target >> 8) as u8, x_in, 0)
+}
+
+/// $EE83 SpawnMellows_exit：$B0[x] 读+$B1/$B2/$B3[y] 三写族（Mellows spawn 面）。
+pub fn s1_spawn_mellows(y: u8, x_in: u8, v2f: u8) -> Vec<(u16, u8)> {
+    let b1 = (x_in.wrapping_add(x_in)) & 0x7F;
+    vec![(0x00B1 + y as u16, b1), (0x00B2 + y as u16, b1.wrapping_add(v2f)),
+         (0x00B3 + y as u16, 0)] // root 调面（$EB85 名表判）
+}
+
+/// $EEAB SpawnCannon_exit：$95B4 调+指针面（$07←$38/$06←0）+$EE4A 调+cs 段（$98←8）。
+pub fn s1_spawn_cannon() -> Vec<(u16, u8)> {
+    vec![(0x0007, 0x38), (0x0006, 0)]
+}
+
+/// $EEF7 员体：$49→$91+$FF 终止判（68 68 60 双 PLA 退——**走带终止形**）+推进续流。
+pub fn s1_eef7(v49: u8) -> (Vec<(u16, u8)>, bool) {
+    (vec![(0x0091, v49)], true) // 终止形注（双 PLA 退出面）
+}
+
+#[cfg(test)]
+mod s1_23_tests {
+    use super::*;
+
+    /// 四员转写形（spawn VM+三壳）。
+    #[test]
+    fn s1_23_units_four() {
+        let (ev, a, x, y) = s1_choose_spawning(189, 185, 37, 0, 0);
+        assert_eq!(a, 0xC4);
+        assert!(ev.contains(&(0x0000, 226)));
+        assert_eq!((x, y), (185, 0));
+        let ev = s1_spawn_mellows(3, 0x40, 0x10);
+        assert!(ev.contains(&(0x00B4, 0)));
+        let ev = s1_spawn_cannon();
+        assert!(ev.contains(&(0x0007, 0x38)));
+        let (ev, t) = s1_eef7(0x91);
+        assert!(t);
+        assert!(ev.contains(&(0x0091, 0x91)));
+    }
+}
