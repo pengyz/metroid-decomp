@@ -1,4 +1,5 @@
-# 场景：sc-elevator-ride —— 路由修正（球续东→房 19 脱球→跳 $5D→东段）
+# 场景：sc-elevator-ride —— 楔避径（安全 morph→洞滚→房 19 西缘脱球→跳 $5D）
+# BUG-001 注：morph×楔=状态损坏——morph 仅于安全位（避楔区）
 name sc-elevator-ride
 frames 7200
 watch_range 0000-00ff zp
@@ -24,11 +25,12 @@ press 2580 b
 hold 3100-3260 a
 hold 3150-3520 right
 press 3180 b
-nav 3300-3400 x 140
-trigger 3380-3600 051 > 120 press down
-trigger 3350-3900 052 > 195 hold right
-trigger 3420-3620 051 < 135 press up
-nav 3950-4200 x 140
+nav 3300-3380 x 120
+trigger 3380-3500 051 < 130 press down
+trigger 3400-3800 052 > 195 hold right
+trigger 3750-4100 050 == 10 press up
+trigger 3750-4100 051 < 132 press up
+nav 3900-4200 x 120
 hold 4250-4410 a
 hold 4300-4700 right
 press 4350 b
@@ -41,8 +43,8 @@ hold 5700-5860 a
 hold 5750-6200 right
 press 5800 b
 
-capture 4000 room19-un-morph
-capture 4500 jump-5d
+capture 3800 room19-west
+capture 4400 jump-5d
 capture 6900 east-end
 
 sample_point spin-exit
