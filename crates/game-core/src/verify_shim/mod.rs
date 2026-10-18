@@ -1909,3 +1909,18 @@ pub fn s4_cluster_106(input: &L2In) -> L2Out {
     }
     L2Out { a: SFX_REG_INIT_TBL[0], x: 0xFF, y: input.y, writes: merge_writes(w) }
 }
+
+// ---- SC-S4-18 簇入口适配（s4_cluster_108 ← bank07:D96B ToggleScroll）----
+
+/// s4_cluster_108 适配（$E252 ToggleScroll——$49←$49^3/$FA←$FA^8（双 XOR 切换）；
+/// A=0/X/Y 透传）。
+pub fn s4_cluster_108(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    L2Out {
+        a: 0, x: input.x, y: input.y,
+        writes: merge_writes(vec![
+            (0x0049, r(0x0049) ^ 3),
+            (0x00FA, r(0x00FA) ^ 8),
+        ]),
+    }
+}
