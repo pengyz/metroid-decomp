@@ -5136,3 +5136,31 @@ mod s4_111_tests {
         assert_eq!(ev3.len(), 3);
     }
 }
+
+// ---- SC-S4-22（S4-112）员转写（2 员——EnemyCheckMoveHorizontal 族）----
+
+/// $E904 EnemyCheckMoveHorizontalBranch（root——簇共根形百六·**S4-110 竖移同构**）：
+/// $03←A（减数面）+$E792 调（S2-38 接面）+$6AF5[x]→$E89B（尾面）。
+/// 返回 (写事件, 减数面)。
+pub fn s4_enemy_move_horiz(x: u8, a_in: u8) -> Vec<(u16, u8)> {
+    vec![(0x0003, a_in)]
+}
+
+/// $E8F9 员体：jmp $E904（尾形）+$6AF6[x] sbc 面（0-$6AF6[x]→$03——S4-110 同构）。
+pub fn s4_e8f9_body(x: u8, v6af6_x: u8) -> Vec<(u16, u8)> {
+    vec![(0x0003, 0u8.wrapping_sub(v6af6_x))] // sbc 径面
+}
+
+#[cfg(test)]
+mod s4_112_tests {
+    use super::*;
+
+    /// 二员转写形（EnemyCheckMoveHorizontal root+一壳）。
+    #[test]
+    fn s4_112_units_two() {
+        let ev = s4_enemy_move_horiz(2, 187);
+        assert!(ev.contains(&(0x0003, 187)));
+        let ev2 = s4_e8f9_body(2, 5);
+        assert!(ev2.contains(&(0x0003, 0xFB))); // 0-5
+    }
+}

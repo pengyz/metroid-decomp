@@ -1938,3 +1938,17 @@ pub fn s4_cluster_110(input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-S4-22 簇入口适配（s4_cluster_112 ← bank07:E8F9——S4-110 同构）----
+
+/// s4_cluster_112 适配（$E8F9 EnemyCheckMoveHorizontal——案实核（S4-110 同构）：
+/// $03←A/零组（$08/$09/$0B）；A=0/X 透传/Y=0）。
+pub fn s4_cluster_112(input: &L2In) -> L2Out {
+    L2Out {
+        a: 0, x: input.x, y: 0,
+        writes: merge_writes(vec![
+            (0x0003, input.a),
+            (0x0008, 0), (0x0009, 0), (0x000B, 0),
+        ]),
+    }
+}
