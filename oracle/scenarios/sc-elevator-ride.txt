@@ -28,8 +28,6 @@ trigger 3300-3650 051 > 137 press down
 trigger 3350-4400 052 > 195 hold right
 trigger 3350-4400 051 > 137 press down
 trigger 3600-4600 050 == 10 press up
-nav 4500-5200 x 250
-nav 5200-7000 x 250
 nav 3300-3400 x 140
 nav 4300-5000 x 250
 nav 5000-7000 x 250
