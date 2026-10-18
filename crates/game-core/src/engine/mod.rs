@@ -5031,3 +5031,36 @@ mod s4_108_tests {
         assert!(ev2.contains(&(0x0049, 6)));
     }
 }
+
+// ---- SC-S4-19（S4-109）员转写（2 员——$D892 step 分派族；L2 真 0 留白）----
+
+/// $D892 员体（root——簇共根形百三）：$030F[x] 符号段（bpl⇒$E519 step/
+/// bmi⇒$E4F1 stepback——S1-09/11 对偶分派）+尾跳 $D806。
+/// 返回 (方向, 尾跳)。
+pub fn s4_d892_dispatch(v030f_x: u8) -> (bool, u16) {
+    let back = (v030f_x as i8) < 0;
+    (back, 0xD806) // back=stepback/否则 step
+}
+
+/// $D973 员体：jmp $D892（尾形）+$0307←0/$7D←0 清对+$50 X 面+$F186 调
+/// （S2-20 接面——GetObjectYSlotPosition）+$6AF4[x] cmp 4 判段。
+pub fn s4_d973_body(x: u8, v030f_x: u8) -> (Vec<(u16, u8)>, u16) {
+    let (back, j) = s4_d892_dispatch(v030f_x);
+    (vec![(0x0307, 0), (0x007D, 0)], j)
+}
+
+#[cfg(test)]
+mod s4_109_tests {
+    use super::*;
+
+    /// 二员转写形（step 分派 root+一壳）。
+    #[test]
+    fn s4_109_units_two() {
+        assert_eq!(s4_d892_dispatch(0x80), (true, 0xD806)); // stepback
+        assert_eq!(s4_d892_dispatch(0x10), (false, 0xD806)); // step
+        let (ev, j) = s4_d973_body(2, 0x80);
+        assert_eq!(j, 0xD806);
+        assert!(ev.contains(&(0x0307, 0)));
+        assert!(ev.contains(&(0x007D, 0)));
+    }
+}
