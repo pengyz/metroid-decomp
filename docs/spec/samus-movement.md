@@ -120,6 +120,18 @@ Lx018: sty SamusAccelY`）——字节自证可复现。
 **移植注**：samus_jump 启动面折（handler.rs——241cbd7）；decomp 跳动学线疑②定案
 （物理常数 $18/$12）。
 
+### R-mv-8 变高跳规则（新增，B 级=decomp 实测+asm 语义）
+
+**语义**：跳跃上升 >32px 后 JUMP 键松开即截断上升——**跳高=A 按住时长**（变高跳）。
+结合 R-mv-7（重力 $18/$12）：跳高=A 按时长×重力档。
+
+**证据**：decomp 跳高线实测（af6bd25——A/B 测 gear $00=86px/$02=92px/$13=92px
+高跳生效 ✓）+asm SamusJump（`cmp #$20/bcc`（32px 阈）/`bit Samus.speedY/bpl`（下降
+检））——B 级（实测+指令流）。
+
+**移植注**：samus_jump（handler.rs JumpDsplcmnt $18/$20 态机——241cbd7 R-mv-7 面
++变高跳截断面随件）；decomp B 线物理 stat 协同注（LCFF3/SamusJump=game-core 同源）。
+
 ## 3. 缺口显式声明（D7）
 
 - 未覆盖：跳跃弧线数值（初速/重力表）、滚球物理、碰撞/推墙、门/房间切换 X 重置语义、
