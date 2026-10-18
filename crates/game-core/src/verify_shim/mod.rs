@@ -1148,3 +1148,17 @@ pub fn s1_cluster_17(input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-S1-18 簇入口适配（s1_cluster_18 ← bank07:CF55 SetSamusStand）----
+
+/// s1_cluster_18 适配（$CF55 SetSamusStand——案实核恒定 8 写：$0300/$0304/$0309/
+/// $0313/$0315←0、$0305/$0306←7（站立姿常量）、$0680←8（声旗）；A/X/Y=0）。
+pub fn s1_cluster_18(_input: &L2In) -> L2Out {
+    L2Out {
+        a: 0, x: 0, y: 0,
+        writes: merge_writes(vec![
+            (0x0300, 0), (0x0304, 0), (0x0305, 7), (0x0306, 7),
+            (0x0309, 0), (0x0313, 0), (0x0315, 0), (0x0680, 8),
+        ]),
+    }
+}
