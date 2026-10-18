@@ -2324,3 +2324,56 @@ mod s2_040_tests {
         assert_eq!(a, 0);
     }
 }
+
+// ---- SC-S2-11（S2-41）员转写（3 员——$E4F1 状态回退族；L2 真 0 留白）----
+
+/// $E4F1 状态回退（root——簇共根形三五·**$E519 对偶**）：$49 beq/cmp1 二判+
+/// $49 dec+$4F dec 族（$FC 二判）。
+/// 返回 (写事件, 状态值)。
+pub fn s2_state_stepback(v49: u8, vfc: u8) -> (Vec<(u16, u8)>, u8) {
+    if v49 == 0 {
+        return (vec![], 0); // beq 段
+    }
+    if v49 != 1 {
+        return (vec![], v49); // cmp 1 非等段
+    }
+    let mut ev = vec![(0x0049, 0)];
+    if vfc == 0 {
+        ev.push((0x004F, 0xFF)); // $FC beq 段（dec $4F——回卷面注）
+    }
+    (ev, 0)
+}
+
+/// $D45D 员体：$E4F1+$030D 判（ToggleSamusHi+$030D←$F0 环）+尾跳 $D47E。
+pub fn s2_d45d_body(v49: u8, vfc: u8, v030d: u8) -> (Vec<(u16, u8)>, u16) {
+    let (mut ev, _) = s2_state_stepback(v49, vfc);
+    if v030d == 0 {
+        ev.push((0x030D, 0xEF)); // $F0 环（dey 形——S1-11 同构面）
+    }
+    (ev, 0xD47E)
+}
+
+/// $D897 员体：$E4F1+尾跳 $D806（回驱——S1-01 族）。
+pub fn s2_d897_body(v49: u8, vfc: u8) -> (Vec<(u16, u8)>, u16) {
+    let (ev, _) = s2_state_stepback(v49, vfc);
+    (ev, 0xD806)
+}
+
+#[cfg(test)]
+mod s2_041_tests {
+    use super::*;
+
+    /// 三员转写形（$E4F1 状态回退 root 对偶+二壳）。
+    #[test]
+    fn s2_041_units_three() {
+        assert_eq!(s2_state_stepback(0, 0).1, 0); // beq 段
+        assert_eq!(s2_state_stepback(5, 0).1, 5); // cmp1 非等段
+        let (ev, _) = s2_state_stepback(1, 0);
+        assert!(ev.contains(&(0x0049, 0)));
+        assert!(ev.contains(&(0x004F, 0xFF)));
+        let (ev, j) = s2_d45d_body(1, 0, 0);
+        assert_eq!(j, 0xD47E);
+        assert!(ev.contains(&(0x030D, 0xEF)));
+        assert_eq!(s2_d897_body(0, 0).1, 0xD806);
+    }
+}
