@@ -98,10 +98,19 @@ fn a1_cluster_001(input: &L2In) -> L2Out {
     // +$0404/$040E（zp scratch=0/0 固定面）——case 对读实证）
     writes.push((0x0404, 0));
     writes.push((0x040E, 0));
-    let delta = crate::enemy::common::enemy_delta_sign_mag(r(0x03C8)); // 移速字节（槽面）
+    // EnemyGetDeltaY 全链（输入字段链：type/data05/movementIndex/instrIndex/delay）
+    let (delta, new_delay, new_idx, _elapsed) = crate::enemy::common::enemy_get_delta_y(
+        r(0x0300),       // type（EnsExtra——槽面）
+        r(0x0305),       // data05（Ens.0.data05）
+        r(0x030D),       // movementIndex
+        r(0x030E),       // movementInstrIndex
+        r(0x0348),       // delay
+    );
     let y_in = input.wram.get(0xAF7).copied().unwrap_or(0); // **wram 域面**（$6AF7=$6000+0xAF7）
     let y_out = (y_in as i16 + delta as i16) as u8; // y 效果（Δ 应用）
     writes.push((0x6AF7, y_out));
+    writes.push((0x0348, new_delay)); // delay 更新
+    writes.push((0x030E, new_idx)); // instrIndex 更新
     writes.push((0x6AF8, input.a)); // **subpix=A 输入**（case 对读 8/8 证）
     writes.push((0x6AFA, 1)); // hi=1（定值面）
     L2Out { a: 0, x: 0, y: 1, writes } // 出口残迹 (0,0,1)（观测值逐钉）
