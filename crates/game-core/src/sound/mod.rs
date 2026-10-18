@@ -773,3 +773,90 @@ mod w1_residual_tests {
         assert!(ram.contains(&(0x064B, 0)));
     }
 }
+
+// ---- task-44 W1 残二件：UpdateMusicChannel 音乐指令 VM 步进 ----
+// 结构互核注：指令集=0x00 SongEnd/0xFF SongRepeat/（A&$C0）==$C0 SongRepeatSetup（低 6 位
+// =重复计数）/余=音符载（_Continued 残面）。重复机：RepeatCounter 递减回卷 RepeatID。
+
+/// 音乐指令 VM 步进结果。
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct MusicVmStep {
+    pub events: Vec<(u16, u8)>,
+    /// 指令分类（供音符载残面分派）。
+    pub kind: MusicInstrKind,
+}
+
+/// 指令分类。
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum MusicInstrKind {
+    /// 0x00：曲终（GotoEndOrLoopMusic——EndOrLoopMusic 面）。
+    SongEnd,
+    /// 0xFF：重复（计数回卷）。
+    SongRepeat,
+    /// 0xC0 族：重复设置（低 6 位=计数）。
+    SongRepeatSetup,
+    /// 余：音符载（_Continued 残面）。
+    Note,
+}
+
+/// UpdateMusicChannel VM 步进（$BAC2-$BB15 语义折叠；单通道面——X 索引由调用方循环）：
+/// delay←delay-1（≠0⇒无步进）；指令字节三分派+重复机。
+/// 通道基址块：InstrDelay $0640+c/InstrID $0638+c/RepeatCounter $0644+c?/RepeatID $0648+c?
+/// （块址随证——先以形参传）。
+pub fn music_channel_vm_step(instr: u8, delay: u8, instr_id: u8, repeat_counter: u8,
+                             repeat_id: u8, base_addr: u16) -> MusicVmStep {
+    let mut events = Vec::new();
+    let mut id = instr_id;
+    if delay != 0 {
+        return MusicVmStep { events, kind: MusicInstrKind::Note }; // 未到期——无步进（kind 无关）
+    }
+    // LoadNextMusicChannelInstr：Y=InstrID; inc; 读指令
+    id = id.wrapping_add(1);
+    events.push((base_addr + 0x38, id)); // InstrID 写（$0638+c 形）
+    if instr == 0x00 {
+        return MusicVmStep { events, kind: MusicInstrKind::SongEnd };
+    }
+    if instr == 0xFF {
+        if repeat_counter == 0 {
+            return MusicVmStep { events, kind: MusicInstrKind::SongRepeat };
+        }
+        events.push((base_addr + 0x44, repeat_counter.wrapping_sub(1))); // RepeatCounter
+        events.push((base_addr + 0x38, repeat_id));                       // InstrID←RepeatID
+        return MusicVmStep { events, kind: MusicInstrKind::SongRepeat };
+    }
+    if instr & 0xC0 == 0xC0 {
+        events.push((base_addr + 0x44, (instr & 0x3F).wrapping_sub(1)));
+        events.push((base_addr + 0x48, instr_id)); // RepeatID←（inc 前的 InstrID）
+        return MusicVmStep { events, kind: MusicInstrKind::SongRepeatSetup };
+    }
+    MusicVmStep { events, kind: MusicInstrKind::Note }
+}
+
+#[cfg(test)]
+mod music_vm_tests {
+    use super::*;
+
+    /// VM 三分派+重复机（计数回卷/设置低 6 位）。
+    #[test]
+    fn music_vm_dispatch() {
+        // 延迟未到——无步进
+        let s = music_channel_vm_step(0x00, 3, 5, 0, 0, 0x0600);
+        assert!(s.events.is_empty());
+        // 曲终
+        let s = music_channel_vm_step(0x00, 0, 5, 0, 0, 0x0600);
+        assert_eq!(s.kind, MusicInstrKind::SongEnd);
+        assert!(s.events.contains(&(0x0638, 6)));
+        // 重复回卷（计数≠0）
+        let s = music_channel_vm_step(0xFF, 0, 5, 3, 2, 0x0600);
+        assert_eq!(s.kind, MusicInstrKind::SongRepeat);
+        assert!(s.events.contains(&(0x0644, 2)));
+        assert!(s.events.contains(&(0x0638, 2))); // InstrID←RepeatID
+        // 重复设置（低 6 位-1）
+        let s = music_channel_vm_step(0xC5, 0, 5, 0, 0, 0x0600);
+        assert_eq!(s.kind, MusicInstrKind::SongRepeatSetup);
+        assert!(s.events.contains(&(0x0644, 4))); // (5-1)
+        // 音符载
+        let s = music_channel_vm_step(0x30, 0, 5, 0, 0, 0x0600);
+        assert_eq!(s.kind, MusicInstrKind::Note);
+    }
+}
