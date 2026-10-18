@@ -4459,3 +4459,36 @@ mod s4_093_tests {
         assert!(ev2.contains(&(0x030C, 0)));
     }
 }
+
+// ---- SC-S4-04（S4-94）员转写（2 员——IsWalkableTile 族）----
+
+/// $E81E IsWalkableTile（root——簇共根形八八）：$71 判（beq 段）+XOR 掩码链
+/// （$05^$5D[x] and 4/$04^$5C[x] and $1F——可走判双段）。
+/// 返回 (可走, 判段)。
+pub fn s4_is_walkable(x: u8, v05: u8, v04: u8, v5d_x: u8, v5c_x: u8, v71: u8) -> (bool, bool) {
+    if v71 == 0 {
+        return (false, true); // beq 段
+    }
+    let b1 = (v05 ^ v5d_x) & 4;
+    let b2 = (v04 ^ v5c_x) & 0x1F;
+    (b1 == 0 && b2 == 0, false)
+}
+
+/// $D606 员体：jmp IsWalkableTile（尾形）+$D79F 走带（S1-13 接面）+($04),y cmp $A0 段。
+pub fn s4_d606_body(x: u8, v05: u8, v04: u8, v5d_x: u8, v5c_x: u8, v71: u8) -> (bool, bool) {
+    s4_is_walkable(x, v05, v04, v5d_x, v5c_x, v71)
+}
+
+#[cfg(test)]
+mod s4_094_tests {
+    use super::*;
+
+    /// 二员转写形（IsWalkableTile XOR 掩码 root+一壳）。
+    #[test]
+    fn s4_094_units_two() {
+        assert_eq!(s4_is_walkable(2, 5, 5, 5, 5, 1), (true, false));
+        assert_eq!(s4_is_walkable(2, 5, 5, 5, 6, 1), (false, false)); // b2 段
+        assert_eq!(s4_is_walkable(2, 5, 5, 5, 5, 0), (false, true)); // beq 段
+        assert!(!s4_d606_body(2, 5, 6, 5, 5, 1).0);
+    }
+}

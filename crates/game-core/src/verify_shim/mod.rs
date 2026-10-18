@@ -1831,3 +1831,10 @@ pub fn s3_cluster_085(input: &L2In) -> L2Out {
     w.push((0x0728, 0xFF));
     L2Out { a: 0xFF, x: 0, y: 0, writes: merge_writes(w) }
 }
+
+// ---- SC-S4-04 簇入口适配（s4_cluster_094 ← bank07:D606 IsWalkableTile 族）----
+
+/// s4_cluster_094 适配（$D606 IsWalkableTile 链——案实核：A 透传/X=0/Y 透传；无写面）。
+pub fn s4_cluster_094(input: &L2In) -> L2Out {
+    L2Out { a: input.a, x: 0, y: input.y, writes: vec![] }
+}
