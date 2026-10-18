@@ -2192,3 +2192,39 @@ mod s2_037_tests {
         assert_eq!(s2_d411_body(0).1, 0xDE4A);
     }
 }
+
+// ---- SC-S2-08（S2-38）员转写（3 员——SetmirrorCntrlBit 族）----
+
+/// $CD92 SetmirrorCntrlBit（root——簇共根形三二）：$4D Amul16（×16）+ora $6B→$6B
+/// （镜像控制位置位）。
+pub fn s2_set_mirror_cntrl(v4d: u8, v6b: u8) -> (Vec<(u16, u8)>, u8) {
+    let v = (v4d << 4) | v6b;
+    (vec![(0x006B, v)], v)
+}
+
+/// $D414 员体：SetmirrorCntrlBit+jmp $DE4A（S1-11 流区双视注记——$D40E 同形尾跳）。
+pub fn s2_d414_body(v4d: u8, v6b: u8) -> (Vec<(u16, u8)>, u16) {
+    let (ev, _) = s2_set_mirror_cntrl(v4d, v6b);
+    (ev, 0xDE4A)
+}
+
+/// $D483 员体：SetmirrorCntrlBit+lda #1/jmp $DE47（AnimDrawObject 接面——S1-19 族）。
+pub fn s2_d483_body(v4d: u8, v6b: u8) -> (Vec<(u16, u8)>, u16) {
+    let (ev, _) = s2_set_mirror_cntrl(v4d, v6b);
+    (ev, 0xDE47)
+}
+
+#[cfg(test)]
+mod s2_038_tests {
+    use super::*;
+
+    /// 三员转写形（SetmirrorCntrlBit Amul16+OR+二壳）。
+    #[test]
+    fn s2_038_units_three() {
+        let (ev, v) = s2_set_mirror_cntrl(0x02, 0x0F);
+        assert_eq!(v, 0x2F);
+        assert!(ev.contains(&(0x006B, 0x2F)));
+        assert_eq!(s2_d414_body(2, 0).1, 0xDE4A);
+        assert_eq!(s2_d483_body(2, 0).1, 0xDE47);
+    }
+}

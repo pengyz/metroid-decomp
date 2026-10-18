@@ -1339,3 +1339,13 @@ pub fn s2_cluster_037(input: &L2In) -> L2Out {
     }
     L2Out { a: 0, x: 3, y: 0xFF, writes: vec![] } // hit 径（$70/$72 写族注）
 }
+
+// ---- SC-S2-08 簇入口适配（s2_cluster_038 ← bank07:CD92 SetmirrorCntrlBit）----
+
+/// s2_cluster_038 适配（$CD92 SetmirrorCntrlBit：\$4D Amul16（×16）+ora \$6B→\$6B；
+/// 出口 A=OR 结果/X/Y 透传）。
+pub fn s2_cluster_038(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    let v = ((r(0x004D) << 4) as u8) | r(0x006B);
+    L2Out { a: v, x: input.x, y: input.y, writes: merge_writes(vec![(0x006B, v)]) }
+}
