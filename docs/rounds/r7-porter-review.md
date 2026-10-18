@@ -1405,6 +1405,16 @@ M-S2 钳位阈复核（首轮闭环 438/0→438/1 caught）引为族级判别力
 一致）+指令三分派/重复机字节面引证+VM 测五面 ③S6-3 调色板链（共享解码器 ROM 源）。
 suite 455/0 零回退+测 121 ✓。findings（r10）：0 新。
 
+## 三件合账抽检（c047b50 Statue 门控族 + 1b41865 开门链定谳 + 9b5865d W1 残三件）
+
+### verdict: pass（抽检·三件）
+
+①T45-1 Statue 门控族（全仪式关键件）——锚形合规（asm+constants_ram 双源
+（TileBlasts $0500/Statue 槽面）+door-open-chain §4 对表引证）②开门链 A 级定谳
+——**$8B79=`ad 86 68` 双身实证 ✓**（NumUniqueItems 字节级核）+残余 4 收口
+③W1 残三件（音符载 _Continued 解+四通道环）。suite 455/0+测 130 ✓。
+findings（r10）：0 新。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
