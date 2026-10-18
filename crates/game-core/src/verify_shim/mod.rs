@@ -1587,3 +1587,14 @@ pub fn s2_cluster_059(input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-S3-00 簇入口适配（s3_cluster_060 ← bank07:CBD2 SFX_MetroidHit 族）----
+
+/// s3_cluster_060 适配（$CBD2 SFX_MetroidHit——案实核恒定：$0683←$20（声旗）；
+/// A=$20/X=3/Y 透传）。
+pub fn s3_cluster_060(input: &L2In) -> L2Out {
+    L2Out {
+        a: 0x20, x: 3, y: input.y,
+        writes: merge_writes(vec![(0x0683, 0x20)]),
+    }
+}

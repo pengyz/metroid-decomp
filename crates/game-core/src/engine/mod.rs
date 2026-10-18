@@ -3141,3 +3141,39 @@ mod s2_059_tests {
         assert!(ev.contains(&(0x040D, 5)));
     }
 }
+
+// ---- SC-S3-00（S3-60）员转写（3 员——SFX_MetroidHit 族）----
+
+/// $CBD2 SFX_MetroidHit（root——簇共根形五四·**SFX 分派链**）：SFX id 装载链
+/// （lda #id/bne 链——$20/$02/$40/$04/$80 五 id）+X=3（ldx #2/ora 面）。
+/// 返回 (声旗写, SFX id)。
+pub fn s3_sfx_metroid_hit() -> (Vec<(u16, u8)>, u8) {
+    (vec![(0x0683, 0x20)], 0x20) // sfxTri_MetroidHit=$20（案实核恒定）
+}
+
+/// $F530 员体：SFX_MetroidHit+jmp $F673（S1-04 接面）+$040F[x]→$0A 面。
+pub fn s3_f530_body(x: u8, v040f_x: u8) -> (Vec<(u16, u8)>, u16) {
+    let (ev, _) = s3_sfx_metroid_hit();
+    (ev, 0xF673)
+}
+
+/// $F598 员体：SFX_MetroidHit 链（$CBB0 SFX_EnemyHit 调+$CBCE 调）+$80B0 位5 段。
+pub fn s3_f598_body() -> (Vec<(u16, u8)>, u16) {
+    let (ev, _) = s3_sfx_metroid_hit();
+    (ev, 0xCBB0)
+}
+
+#[cfg(test)]
+mod s3_060_tests {
+    use super::*;
+
+    /// 三员转写形（SFX_MetroidHit 声旗 root+二壳）。
+    #[test]
+    fn s3_060_units_three() {
+        let (ev, id) = s3_sfx_metroid_hit();
+        assert_eq!(id, 0x20);
+        assert!(ev.contains(&(0x0683, 0x20)));
+        assert_eq!(s3_f530_body(2, 5).1, 0xF673);
+        assert_eq!(s3_f598_body().1, 0xCBB0);
+    }
+}
