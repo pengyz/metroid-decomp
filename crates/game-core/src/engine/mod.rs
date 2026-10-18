@@ -3257,3 +3257,51 @@ mod s3_062_tests {
         assert!(!s3_f5a2_body(2, 0x05).1);
     }
 }
+
+// ---- SC-S3-03（S3-63）员转写（3 员——LoadEnHiToY 族）----
+
+/// $F752 LoadEnHiToYAndLoadEorHiToCarry（root——簇共根形五七）：$6AFB[x]→Y+
+/// eor $030C+lsr（**进位=异或高位**）。返回 (Y 值, carry)。
+pub fn s3_load_en_hi(x: u8, v6afb_x: u8, v030c: u8) -> (u8, bool) {
+    let y = v6afb_x;
+    let e = y ^ v030c;
+    (y, e & 1 != 0) // lsr 进位=bit0
+}
+
+/// $F6EB 员体：LoadEnHi+cc 分段（$FF eor 段）+$0401[x] cmp 段（$82 inc）。
+pub fn s3_f6eb_body(x: u8, v6afb_x: u8, v030c: u8, v0401_x: u8) -> (Vec<(u16, u8)>, u8) {
+    let (y, carry) = s3_load_en_hi(x, v6afb_x, v030c);
+    let mut ev = vec![(0x0405 + x as u16, 0)]; // 案实核恒定面
+    if v0401_x == v030c {
+        ev.push((0x0082, 1)); // cmp 等段（inc 面注）
+    }
+    (ev, y)
+}
+
+/// $F71A 员体：LoadEnHi+cc 分段+$0400[x] cmp 段（$82 双 inc）。
+pub fn s3_f71a_body(x: u8, v6afb_x: u8, v030c: u8, v0400_x: u8) -> (Vec<(u16, u8)>, u8) {
+    let (y, _) = s3_load_en_hi(x, v6afb_x, v030c);
+    let mut ev = vec![(0x0405 + x as u16, 0)];
+    if v0400_x == v030c {
+        ev.push((0x0082, 2)); // 双 inc 面注
+    }
+    (ev, y)
+}
+
+#[cfg(test)]
+mod s3_063_tests {
+    use super::*;
+
+    /// 三员转写形（LoadEnHi root+二壳）。
+    #[test]
+    fn s3_063_units_three() {
+        let (y, c) = s3_load_en_hi(2, 5, 4);
+        assert_eq!(y, 5);
+        assert!(c); // 5^4=1⇒carry
+        let (ev, _) = s3_f6eb_body(2, 5, 4, 4);
+        assert!(ev.contains(&(0x0407, 0)));
+        assert!(ev.contains(&(0x0082, 1)));
+        let (ev2, _) = s3_f71a_body(2, 5, 4, 5);
+        assert!(!ev2.contains(&(0x0082, 2)));
+    }
+}

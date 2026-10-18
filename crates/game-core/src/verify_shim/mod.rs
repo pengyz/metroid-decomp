@@ -1609,3 +1609,13 @@ pub fn s3_cluster_062(input: &L2In) -> L2Out {
         writes: merge_writes(vec![(0x0681, 0x04)]),
     }
 }
+
+// ---- SC-S3-03 簇入口适配（s3_cluster_063 ← bank07:F6EB EnHi 族）----
+
+/// s3_cluster_063 适配（$F6EB LoadEnHiToY 链——案实核恒定：$0405[x]←0；A=0/X 透传/Y=0）。
+pub fn s3_cluster_063(input: &L2In) -> L2Out {
+    L2Out {
+        a: 0, x: input.x, y: 0,
+        writes: merge_writes(vec![(0x0405 + input.x as u16, 0)]),
+    }
+}
