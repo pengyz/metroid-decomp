@@ -198,3 +198,79 @@ mod s1_01_tests {
         assert_eq!(s1_d892(0x80), 0xE4F1);
     }
 }
+
+// ---- SC-S1-01 残员 6 handler（流式块形——入口=jmp 尾+体至回驱/尾跳）----
+
+/// $D83A 员体（$D83D）：$030F,x 符号分路——负⇒[$030D,x==0?jsr $D648]+$030D,x←$EF
+/// （ldy #$F0/dey/tya）+尾跳 $D866；非负⇒inc $030D,x。
+/// 返回 (写事件, 子调/尾跳面)。
+pub fn s1_d83a_body(x: u8, v030f_x: u8, v030d_x: u8) -> (Vec<(u16, u8)>, Option<u16>) {
+    if (v030f_x as i8) >= 0 {
+        (vec![(0x030D + x as u16, v030d_x.wrapping_add(1))], None)
+    } else {
+        let mut ev = Vec::new();
+        let call = if v030d_x == 0 { Some(0xD648) } else { None };
+        ev.push((0x030D + x as u16, 0xEF)); // $F0-1
+        (ev, call.or(Some(0xD866)))
+    }
+}
+
+/// $D86D 员体（$D870）：$FC==0⇒四写（$0305←$4E/$0306←$41/$0305,x←$5D/$0306,x←$50）；
+/// ≠0⇒跳过（bne +30）。
+pub fn s1_d86d_body(x: u8, vfc: u8) -> Vec<(u16, u8)> {
+    if vfc != 0 {
+        return Vec::new();
+    }
+    vec![(0x0305, 0x4E), (0x0306, 0x41),
+         (0x0305 + x as u16, 0x5D), (0x0306 + x as u16, 0x50)]
+}
+
+/// $D89A 员体（$D89D）：jsr $E519→jmp $D806 回驱（极简形二）。
+pub fn s1_d89a_body() -> u16 { 0xE519 }
+
+/// $D8A0 员体（$D8A3）：inc $0300,x+cmp #$08 命中⇒$0303,x←$23+jsr $CF6B(A=4)→回驱。
+/// 返回 (写事件, 子调面)。
+pub fn s1_d8a0_body(x: u8, v0300_x: u8) -> (Vec<(u16, u8)>, Option<u16>) {
+    let nv = v0300_x.wrapping_add(1);
+    let mut ev = vec![(0x0300 + x as u16, nv)];
+    if nv == 0x08 {
+        ev.push((0x0303 + x as u16, 0x23));
+        (ev, Some(0xCF6B))
+    } else {
+        (ev, None)
+    }
+}
+
+/// $D8B7 员体（$D8BA）：lda #$01→jmp $DE47（尾跳形）+残段（$030F,x==$8F 命中⇒
+/// $1E←7/$6883 inc/$33←0 等——深段注记）。
+pub fn s1_d8b7_body() -> (u8, u16) { (0x01, 0xDE47) }
+
+/// $D970 员体（$D973）：jmp $D892（回驱二段）+init 段（$0307←0/$7D←0+jsr $F186……）。
+/// 返回 (写事件, 子调面)。
+pub fn s1_d970_body() -> (Vec<(u16, u8)>, u16) {
+    (vec![(0x0307, 0), (0x007D, 0)], 0xF186)
+}
+
+#[cfg(test)]
+mod s1_01_residual_tests {
+    use super::*;
+
+    /// 残 6 员：符号分路/条件四写/极简/计数命中/尾跳/init 六形。
+    #[test]
+    fn s1_01_residual_six() {
+        assert_eq!(s1_d83a_body(0, 0x7F, 5).0, vec![(0x030D, 6)]);
+        let (ev, call) = s1_d83a_body(0, 0x80, 0);
+        assert!(ev.contains(&(0x030D, 0xEF)));
+        assert_eq!(call, Some(0xD648));
+        assert!(s1_d86d_body(0, 0).contains(&(0x0305, 0x4E)));
+        assert!(s1_d86d_body(0, 1).is_empty());
+        assert_eq!(s1_d89a_body(), 0xE519);
+        let (ev, call) = s1_d8a0_body(2, 7);
+        assert!(ev.contains(&(0x0302, 8)));
+        assert_eq!(call, Some(0xCF6B));
+        assert_eq!(s1_d8b7_body(), (0x01, 0xDE47));
+        let (ev, call) = s1_d970_body();
+        assert_eq!(call, 0xF186);
+        assert!(ev.contains(&(0x0307, 0)));
+    }
+}
