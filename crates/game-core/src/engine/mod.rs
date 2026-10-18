@@ -5301,3 +5301,37 @@ mod s4_116_tests {
         assert_eq!(ev2.len(), 1);
     }
 }
+
+// ---- SC-S4-27（S4-117）员转写（2 员——LEB4D 敌初始化族；L2 真 0 留白）----
+
+/// $EB4D LEB4D（root——簇共根形百十一）：Y=A/and $F0 or 8→$0400[x]（态写1）+
+/// $C2C5 调（乘表）+or $0C→$0401[x]（态写2）+$6AF4[x]←1（激活面）。
+/// 返回 (写事件, 态值)。
+pub fn s4_leb4d(x: u8, a_in: u8) -> (Vec<(u16, u8)>, u8) {
+    let v = (a_in & 0xF0) | 8;
+    (vec![(0x0400 + x as u16, v),
+          (0x0401 + x as u16, 0x0C),
+          (0x6AF4 + x as u16, 1)], v)
+}
+
+/// $EB20 员体：LEB4D+栈操作族（pha/pla）+lda #3/rts 面（S4-116 同构续）。
+pub fn s4_eb20_body(x: u8, a_in: u8) -> (Vec<(u16, u8)>, u8) {
+    s4_leb4d(x, a_in)
+}
+
+#[cfg(test)]
+mod s4_117_tests {
+    use super::*;
+
+    /// 二员转写形（LEB4D 敌初始化 root+一壳）。
+    #[test]
+    fn s4_117_units_two() {
+        let (ev, v) = s4_leb4d(2, 0x55);
+        assert_eq!(v, 0x58); // (0x55&0xF0)|8
+        assert!(ev.contains(&(0x0402, 0x58)));
+        assert!(ev.contains(&(0x0403, 0x0C)));
+        assert!(ev.contains(&(0x6AF6, 1)));
+        let (ev2, _) = s4_eb20_body(2, 0x55);
+        assert_eq!(ev2.len(), 3);
+    }
+}
