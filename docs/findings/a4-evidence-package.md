@@ -14,7 +14,7 @@
 | A4-03 | 3 | $8027 `JMP $FD8F`; $995B `JSR $8027`; $9AE7 `JSR $8027` |
 | A4-04 | 3 | $803C `JMP $DD8B`; $A05C `JSR $803C`; $A069 `JSR $803C` |
 | A4-05 | 4 | $803F `JMP $FEDC`; $9F2E `JSR $803F`; $9FBD `JMP $803F`; $A0A0 `JMP $803F` |
-| A4-06 | 3 | $8042 `JMP SubtractHealth`; $9999 `JSR $8042`; $9E1F `JMP $8042` |
+| A4-06 | 3 | $8042 ($CE92) `JMP SubtractHealth`; $9999 `JSR $8042`; $9E1F `JMP $8042` |
 | A4-07 | 2 | $8BB1 `LDA $0307,X`; $8CED `JMP $8BB1` |
 | A4-08 | 2 | $8C61 `LDA #$01`; $8CF4 `JMP $8C61` |
 | A4-09 | 2 | $8C71 `LDX PageIndex`; $8CC3 `JMP $8C71` |
@@ -31,6 +31,12 @@
 | A4-20 | 2 | $97E2 `LDA $81`; $99AB `JMP $97E2` |
 | A4-21 | 7 | $9817 `JSR $99B7`; $98B0 `JSR $99B7`; $990F `JSR $99B7`; $9964 `JSR $99AE`; $996E `JSR $99AE` …+2 |
 | A4-22 | 2 | $981F `JMP $9899`; $9899 `LDA $81` |
+
+## 1.5 消化口径（F13 钉死）
+
+**标签口径三级**：①名注优先（nmikstas Name: 或 m1disasm `Name: ; BB:XXXX`）
+②L 行尾注次之（nmikstas 注释语义）③指令头兜底（操作码直读）。表头列
+「addr+名+指令头」中「名」列=①②并取（有则显）；口径随包不变。
 
 ## 2. 跨区出边（bank03→bank7 引擎调用——残余随件）
 

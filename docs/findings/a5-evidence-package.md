@@ -31,6 +31,12 @@
 | A5-43 | 2 | $9ED0 `JMP $9ED6`; $9ED6 `LDA $0685` |
 | A5-44 | 3 | $9F49; $9F69 MotherBrain_SpawnDoor `LDA $50`; $9FDA MotherBrain_SetTimeBomb_ScrollBackOnScreen `JSR $9F69` |
 
+## 1.5 消化口径（F13 钉死）
+
+**标签口径三级**：①名注优先（nmikstas Name: 或 m1disasm `Name: ; BB:XXXX`）
+②L 行尾注次之（nmikstas 注释语义）③指令头兜底（操作码直读）。表头列
+「addr+名+指令头」中「名」列=①②并取（有则显）；口径随包不变。
+
 ## 2. 跨区出边（bank03→bank7 引擎调用——残余随件）
 
 | bank7 目标 | 调用次数 |

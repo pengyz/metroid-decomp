@@ -12,7 +12,7 @@
 | A1-01 | 5 | $8003 `JMP $F438`; $99B2 `JMP $8003`; $9A46 `JMP $8003`; $9B2F `JMP $8003`; $9B97 `JMP $8003` |
 | A1-02 | 6 | $8006 `JMP $F416`; $99B5 `JMP $8006`; $9A49 `JMP $8006`; $9A8C `JMP $8006`; $9B2A `JMP $8006` …+1 |
 | A1-03 | 2 | $8009 `JMP $F852`; $9A4C `JSR $8009` |
-| A1-04 | 3 | $800C `JMP UpdateEnemyAnim`; $9A89 `JSR $800C`; $9C14 `JSR $800C` |
+| A1-04 | 3 | $800C ($E094) `JMP UpdateEnemyAnim`; $9A89 `JSR $800C`; $9C14 `JSR $800C` |
 | A1-05 | 2 | $800F `JMP $F68D`; $9A9D `JMP $800F` |
 | A1-06 | 3 | $801B `JMP $FB88`; $99C5 `JSR $801B`; $99F4 `JSR $801B` |
 | A1-07 | 2 | $801E `JMP $FBCA`; $99DF `JSR $801E` |
@@ -30,6 +30,12 @@
 | A1-19 | 2 | $8C8A `JSR $8CFB`; $8CFB `LDA #$4E` |
 | A1-20 | 2 | $8C97 `JSR $C2BF`; $C2BF |
 | A1-21 | 2 | $8CB6 `JSR $C2C5`; $C2C5 |
+
+## 1.5 消化口径（F13 钉死）
+
+**标签口径三级**：①名注优先（nmikstas Name: 或 m1disasm `Name: ; BB:XXXX`）
+②L 行尾注次之（nmikstas 注释语义）③指令头兜底（操作码直读）。表头列
+「addr+名+指令头」中「名」列=①②并取（有则显）；口径随包不变。
 
 ## 2. 跨区出边（bank01→bank7 引擎调用——残余随件）
 

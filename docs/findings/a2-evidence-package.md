@@ -31,6 +31,12 @@
 | A2-42 | 2 | $9BD2 `LDA $0405,X`; $9C1A `JMP $9BD2` |
 | A2-43 | 2 | $9C1F `JSR $9C2A`; $9C2A `LDY EnStatus,X` |
 
+## 1.5 消化口径（F13 钉死）
+
+**标签口径三级**：①名注优先（nmikstas Name: 或 m1disasm `Name: ; BB:XXXX`）
+②L 行尾注次之（nmikstas 注释语义）③指令头兜底（操作码直读）。表头列
+「addr+名+指令头」中「名」列=①②并取（有则显）；口径随包不变。
+
 ## 2. 跨区出边（bank01→bank7 引擎调用——残余随件）
 
 | bank7 目标 | 调用次数 |
