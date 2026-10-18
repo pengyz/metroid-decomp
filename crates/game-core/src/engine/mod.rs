@@ -4002,3 +4002,37 @@ mod s3_081_tests {
         assert!(ev.contains(&(0x0079, 0)));
     }
 }
+
+// ---- SC-S3-22（S3-82）员转写（2 员——$95AB rts 桩阵族；L2 真 0 留白）----
+
+/// $95AB rts 桩阵（root——簇共根形七六·**banks1/2/4/5 镜面共享**（areas_common 形四））：
+/// 四 rts 桩（nop nop 填充——空转面）。返回 (桩数, 有效面)。
+pub fn s3_stub_array() -> (usize, bool) {
+    (4, true) // 四 rts 桩（镜面共享面）
+}
+
+/// $D3C0 员体：rts 桩阵调+$79 判（StartMusic（S2-36 接面）+符号段（$79←0/$80））。
+/// 与 $D3BA/$D3BD 同构尾面三现注。
+pub fn s3_d3c0_body(v79: u8) -> (Vec<(u16, u8)>, u8) {
+    let mut ev = Vec::new();
+    let v = if v79 != 0 { 0u8 } else { 0x80u8 }; // 符号段二值面
+    ev.push((0x0079, v));
+    (ev, v)
+}
+
+#[cfg(test)]
+mod s3_082_tests {
+    use super::*;
+
+    /// 二员转写形（rts 桩阵 root+一壳）。
+    #[test]
+    fn s3_082_units_two() {
+        let (n, ok) = s3_stub_array();
+        assert_eq!((n, ok), (4, true));
+        let (ev, v) = s3_d3c0_body(5);
+        assert_eq!(v, 0);
+        assert!(ev.contains(&(0x0079, 0)));
+        let (_, v2) = s3_d3c0_body(0);
+        assert_eq!(v2, 0x80);
+    }
+}
