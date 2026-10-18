@@ -51,4 +51,4 @@ capture 4600 over-top2
 capture 6900 east-end
 
 sample_point spin-exit
-bundle_capture 6900 analysis/bundles/sc-elevator-ride
+bundle_capture 3800 analysis/bundles/sc-elevator-ride
