@@ -1,81 +1,71 @@
-//! game-core::render —— 渲染输出面（S6 线：RenderState→帧缓冲契约）。
+//! game-core::render —— S6-8 名表清屏（收编于 frame/render.rs RenderState——单一型纪律）。
 //!
-//! spec 主文档：docs/spec/rendering-chain.md（task-42）+docs/spec/s6-9-visual-leg.md
-//! （decomp 529f567）。本模块=S6-8 起步（名表清屏建模）——S6-1..7/9 逐卡滚动。
-//!
+//! spec 主文档：docs/spec/rendering-chain.md §2.3（task-42）。
 //! 【结构互核注】①名表清屏=ClearNameTables $C158 语义：NT0 恒清+模式分路
-//! （GameMode==Play(0)⇒NT1；否则 TitleRoutine==EndGame⇒NT2 否则 NT1）②ClearNameTable
-//! $C175 填充环：PPU 复位锁+PPUCTRL_ZP&=~INCR_DOWN（增量=1）+HiPPUTable 表取高址+
-//! **4 页×256B 填充**（$FF 面）③属性表=名表后 $3FF-$2FF 段随清（名表+属性整块）。
+//! （GameMode==Play(0)⇒NT1；否则 TitleRoutine==EndGame(0x1D)⇒NT2 否则 NT1）
+//! ②ClearNameTable $C175 填充环：4 页×256B 填充（名表+属性整块 $400B）
+//! ③镜像映射：NT2/NT3 垂直镜像→NT0/NT1 区（frame/render.rs 2KB 面覆盖 $2000-$27FF）。
+//! 【2026-10-18 收编】先版自建 RenderState=与 840ad00 重复（卡图澄清后收编——单一型）。
 
-/// RenderState（S6 面：名表/CHR/PPU 影子——帧缓冲产出源）。
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct RenderState {
-    /// 4 名表（各 0x400B：0x3C0 名表+0x40 属性表）。
-    pub nametables: [[u8; 0x400]; 4],
-    /// PPUCTRL 影子（$FF）。
-    pub ppuctrl: u8,
-    /// PPUADDR 影子（地址锁状态——写序建模面）。
-    pub ppuaddr: u16,
+use crate::frame::render::RenderState;
+
+/// 名表区映射（NT 号→frame/render.rs nametable vec 偏移——垂直镜像 NT2→0/NT3→1）。
+fn nt_offset(nt_plus1: u8) -> usize {
+    let nt = nt_plus1.wrapping_sub(1) as usize;
+    (nt & 1) * 0x400
 }
 
-impl Default for RenderState {
-    fn default() -> Self {
-        Self { nametables: [[0; 0x400]; 4], ppuctrl: 0, ppuaddr: 0 }
-    }
-}
-
-/// ClearNameTable（$C175）：单名表填充环（4 页×256B——名表+属性整块 $400B←fill）+
-/// RAM 面（$00←fill/$01←NT+1/$FF&=~$04）。
-/// 返回 RAM 写事件（PPU 副作用=名表填充直反映 RenderState）。
-pub fn clear_name_table(rs: &mut RenderState, nt_plus1: u8, fill: u8) -> Vec<(u16, u8)> {
-    let nt = (nt_plus1.wrapping_sub(1) as usize) & 3;
-    for b in rs.nametables[nt].iter_mut() {
+/// ClearNameTable（$C175）：单名表填充环（名表+属性整块 $400B←fill）+
+/// RAM 面（$00←fill/$01←NT+1/$FF&=~$04——PPUCTRL INCR_DOWN 清）。
+pub fn clear_name_table(rs: &mut RenderState, nt_plus1: u8, fill: u8, ppuctrl: u8)
+    -> (Vec<(u16, u8)>, u8) {
+    let off = nt_offset(nt_plus1);
+    for b in rs.nametable[off..off + 0x400].iter_mut() {
         *b = fill;
     }
-    // RAM 面（Temp00_FillValue=$00/Temp01_NameTablePlus1=$01/PPUCTRL_ZP=$FF）
-    rs.ppuctrl &= !0x04; // PPUCTRL_INCR_DOWN 清（增量=1）
-    vec![(0x0000, fill), (0x0001, nt_plus1), (0x00FF, rs.ppuctrl)]
+    let new_ctrl = ppuctrl & !0x04;
+    (vec![(0x0000, fill), (0x0001, nt_plus1), (0x00FF, new_ctrl)], new_ctrl)
 }
 
-/// ClearNameTables（$C158）：NT0 恒清+模式分路（Play(0)⇒NT1；EndGame(0x1D)⇒NT2 否则 NT1）。
-/// 返回 RAM 写事件（两轮）。
-pub fn clear_name_tables(rs: &mut RenderState, game_mode: u8, title_routine: u8) -> Vec<(u16, u8)> {
-    let mut events = clear_name_table(rs, 1, 0xFF); // NT0（NT+1=1）
-    let nt2 = if game_mode != 0 { title_routine == 0x1D } else { false };
+/// ClearNameTables（$C158）：NT0 恒清+模式分路（Play⇒NT1；EndGame(0x1D)⇒NT2 否则 NT1）。
+/// 返回 (RAM 写事件, 新 PPUCTRL)。
+pub fn clear_name_tables(rs: &mut RenderState, game_mode: u8, title_routine: u8, ppuctrl: u8)
+    -> (Vec<(u16, u8)>, u8) {
+    let (mut events, ctrl) = clear_name_table(rs, 1, 0xFF, ppuctrl);
+    let nt2 = game_mode != 0 && title_routine == 0x1D;
     let nt_plus1 = if nt2 { 3 } else { 2 };
-    events.extend(clear_name_table(rs, nt_plus1, 0xFF));
-    events
+    let (ev2, ctrl2) = clear_name_table(rs, nt_plus1, 0xFF, ctrl);
+    events.extend(ev2);
+    (events, ctrl2)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    /// 名表清屏双面（NT0 恒清+模式分路）。
+    /// 名表清屏双面（NT0 恒清+模式分路+镜像映射）。
     #[test]
     fn clear_name_tables_dispatch() {
         let mut rs = RenderState::default();
-        let ev = clear_name_tables(&mut rs, 0, 0); // Play 模式⇒NT1
-        assert!(rs.nametables[0].iter().all(|b| *b == 0xFF));
-        assert!(rs.nametables[1].iter().all(|b| *b == 0xFF));
-        assert!(rs.nametables[2].iter().all(|b| *b == 0x00));
-        assert!(ev.contains(&(0x0001, 1)));
-        assert!(ev.contains(&(0x0001, 2)));
-        // EndGame（0x1D）⇒NT2
+        let (ev, ctrl) = clear_name_tables(&mut rs, 0, 0, 0x95);
+        // Play⇒NT1：NT0(0x000-0x3FF)+NT1(0x400-0x7FF) 清
+        assert!(rs.nametable[0..0x800].iter().all(|b| *b == 0xFF));
+        assert!(ev.iter().any(|e| *e == (0x0001, 1)));
+        assert!(ev.iter().any(|e| *e == (0x0001, 2)));
+        assert_eq!(ctrl, 0x91); // INCR_DOWN 清
+        // EndGame(0x1D)⇒NT2（镜像→NT0 区——再次清）
         let mut rs = RenderState::default();
-        clear_name_tables(&mut rs, 1, 0x1D);
-        assert!(rs.nametables[2].iter().all(|b| *b == 0xFF));
-        assert!(rs.nametables[1].iter().all(|b| *b == 0x00));
+        let (ev, _) = clear_name_tables(&mut rs, 1, 0x1D, 0);
+        assert!(ev.iter().any(|e| *e == (0x0001, 3)));
+        assert!(rs.nametable[0..0x400].iter().all(|b| *b == 0xFF)); // NT2→NT0 区
     }
 
-    /// 单名表填充（含 PPUCTRL INCR_DOWN 清）。
+    /// 镜像映射（NT2/3→0/1 区）。
     #[test]
-    fn clear_single_name_table() {
-        let mut rs = RenderState { ppuctrl: 0x95, ..Default::default() };
-        let ev = clear_name_table(&mut rs, 3, 0xFF);
-        assert!(rs.nametables[2].iter().all(|b| *b == 0xFF));
-        assert_eq!(rs.ppuctrl, 0x91); // 0x95 & ~0x04
-        assert!(ev.contains(&(0x00FF, 0x91)));
+    fn nt_mirroring_map() {
+        assert_eq!(nt_offset(1), 0);
+        assert_eq!(nt_offset(2), 0x400);
+        assert_eq!(nt_offset(3), 0); // NT2→NT0 区（垂直镜像）
+        assert_eq!(nt_offset(4), 0x400);
     }
 }
