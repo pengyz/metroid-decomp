@@ -1236,3 +1236,12 @@ pub fn s1_cluster_23(input: &L2In) -> L2Out {
     w.push((0x006A, 0));
     L2Out { a: (target >> 8) as u8, x: input.x, y: 0, writes: merge_writes(w) }
 }
+
+// ---- SC-S1-26 簇入口适配（s1_cluster_26 ← bank07:CE84 IsSamusDead）----
+
+/// s1_cluster_26 适配（$CE84 IsSamusDead：$0300 cmp 7/8/$FF 三判链——出口 A=$0300
+/// （cmp 不改 A 面）；无写；X/Y 透传）。
+pub fn s1_cluster_26(input: &L2In) -> L2Out {
+    let v = input.ram[0x0300 & 0x7FF];
+    L2Out { a: v, x: input.x, y: input.y, writes: vec![] }
+}

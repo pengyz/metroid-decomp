@@ -1630,3 +1630,48 @@ mod s1_25_tests {
         assert_eq!(s1_f8f0_body(0x60), 0x70);
     }
 }
+
+// ---- SC-S1-26 员转写（4 员——IsSamusDead 族）----
+
+/// $CE84 IsSamusDead（root——簇共根形二十）：$0300 cmp 7/8/$FF 三判链（死亡态判别）。
+/// 返回 (判别结果, A 出=$0300（cmp 不改 A）)。
+pub fn s1_is_samus_dead(v0300: u8) -> (bool, u8) {
+    let dead = v0300 == 7 || v0300 == 8 || v0300 == 0xFF;
+    (dead, v0300)
+}
+
+/// $F0DA 员体：IsSamusDead+beq 分段（死亡⇒跳过）+$F140/$F282/$F1F4 链（碰撞环）。
+pub fn s1_f0da_body(v0300: u8) -> Option<u16> {
+    let (dead, _) = s1_is_samus_dead(v0300);
+    if dead { None } else { Some(0xF140) }
+}
+
+/// $F101 员体：IsSamusDead+beq 分段+$F1B3/$F162/$F1FA/$F2ED/Yplus16 链。
+pub fn s1_f101_body(v0300: u8) -> Option<u16> {
+    let (dead, _) = s1_is_samus_dead(v0300);
+    if dead { None } else { Some(0xF1B3) }
+}
+
+/// $F11B 员体：IsSamusDead+beq 分段+$F186+X=$F0 环+$0300 cmp 7/0A 双判。
+pub fn s1_f11b_body(v0300: u8) -> (Option<u16>, bool) {
+    let (dead, _) = s1_is_samus_dead(v0300);
+    (if dead { None } else { Some(0xF186) }, v0300 == 7 || v0300 == 0x0A)
+}
+
+#[cfg(test)]
+mod s1_26_tests {
+    use super::*;
+
+    /// 四员转写形（IsSamusDead root 三判链+三壳）。
+    #[test]
+    fn s1_26_units_four() {
+        assert!(s1_is_samus_dead(7).0);
+        assert!(!s1_is_samus_dead(5).0);
+        assert_eq!(s1_is_samus_dead(0xAF), (false, 0xAF));
+        assert_eq!(s1_f0da_body(5), Some(0xF140));
+        assert_eq!(s1_f0da_body(7), None);
+        assert_eq!(s1_f101_body(5), Some(0xF1B3));
+        let (j, b) = s1_f11b_body(7);
+        assert_eq!((j, b), (None, true));
+    }
+}
