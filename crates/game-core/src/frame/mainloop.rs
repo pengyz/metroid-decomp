@@ -199,12 +199,27 @@ pub fn setup_room(mem: &mut FrameMemory) {
     if room >= 0xF0 {
         crate::unported!("bank07:EA9x"); // AttribTableWrite（属性表数据路）
     }
-    // RoomPtrTable 查表（AreaPointers_RAM.RoomPtrTable=$3B/$3C 间接——基址拷自 $959A）
-    let base = (mem.read_ram(0x003C) as u16) << 8 | mem.read_ram(0x003B) as u16;
-    let y = (room as u16) << 1;
-    // 间接读（窗口面——ROM 数据在 WRAM $7000 区？数据面随 S6-7 协同——桩）
-    crate::unported!("bank07:EA4x"); // RoomPtrTable 间接读（S6-7 房间模型协同）
+    // RoomPtrTable 查表（AreaPointers_RAM.RoomPtrTable=$3B/$3C 间接——基址拷自 $959A
+    // = $A314（Brinstar）——表 47 项烘焙（prg1 提取自证：A441/A454/A45C…））。
+    let y = (room as usize) << 1;
+    let lo = ROOM_PTR_TABLE[y] as u16;
+    let hi = ROOM_PTR_TABLE[y + 1] as u16;
+    mem.write_ram(0x0033, lo as u8); // RoomPtr（constants_ram:508）
+    mem.write_ram(0x0034, hi as u8);
+    // 首字节读（房间数据——RoomPalette）+DrawRoom 链（S6-7 绘制面）
+    crate::unported!("bank07:EAAA"); // DrawRoom（S6-7 房间绘制链——嵌套桩）
 }
+
+/// RoomPtrTable 烘焙（prg1 Brinstar $A314——47 项；提取自证：A441/A454/A45C…AC6A）。
+const ROOM_PTR_TABLE: [u8; 94] = [
+        0x41, 0xA4, 0x54, 0xA4, 0x5C, 0xA4, 0x80, 0xA4, 0xBB, 0xA4, 0xED, 0xA4, 0x24, 0xA5, 0x5A, 0xA5,
+        0x87, 0xA5, 0xB9, 0xA5, 0xDD, 0xA5, 0x15, 0xA6, 0x35, 0xA6, 0x61, 0xA6, 0x8D, 0xA6, 0xB1, 0xA6,
+        0xDB, 0xA6, 0x15, 0xA7, 0x3C, 0xA7, 0x68, 0xA7, 0x8B, 0xA7, 0xA3, 0xA7, 0xD0, 0xA7, 0xF1, 0xA7,
+        0x1B, 0xA8, 0x5B, 0xA8, 0x8B, 0xA8, 0xB1, 0xA8, 0xE7, 0xA8, 0x10, 0xA9, 0x2B, 0xA9, 0x6B, 0xA9,
+        0x97, 0xA9, 0xC6, 0xA9, 0xF6, 0xA9, 0x20, 0xAA, 0x56, 0xAA, 0xA4, 0xAA, 0xE6, 0xAA, 0x19, 0xAB,
+        0x48, 0xAB, 0x71, 0xAB, 0x92, 0xAB, 0xBF, 0xAB, 0x24, 0xAC, 0x4D, 0xAC, 0x6A, 0xAC,
+];
+
 /// UpdateTimer 单元（**asm 内容锚**）——`UpdateTimer: ; 07:C266`：TimerDelay 预分频
 /// （dec/bpl——10 帧节拍，归零重置 9 并含 Timer3）→ Timer1/2/3 非零递减。
 pub fn update_timer(mem: &mut FrameMemory) {
@@ -277,3 +292,4 @@ mod tests {
         assert_eq!(m.read_ram(crate::ram_map::TITLE_ROUTINE), 1); // 相位推进（inc $1F）
     }
 }
+

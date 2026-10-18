@@ -240,7 +240,10 @@ pub fn sound_dispatch_chain(mem: &mut FrameMemory, flag_addr: u16, block_win: u1
     let (ptr, hit) = sound::get_sound_routine(&block, table_slice(block.table_ptr), flags);
     // 指针位序（B4CA 面）：MusicLoop 步（flag=$065D）写 $E0/$E1（中间 ptr）；
     // 终步写 $E2/$E3（B337 面）。oracle 实证：$E0=$BC26（RunMusicInit）/$E2=$BC4B（终）。
-    if block_win == 0xB2B1 || block_win == 0xB2B6 { // 音乐族（BC36/B4CA 4B 拷形）
+    if block_win == 0xB2B1 || block_win == 0xB2B6 {
+        // 音乐族（BC36/B4CA 4B 拷形）——**FindMusicInitIndex init**（BC53：`lda #$FF/
+        // sta MusicInitIndex($065E)`——B 案 $065E=FF 面；scan 后 Add8 随件）
+        mem.write_ram(0x065E, 0xFF);
         // $E0/$E1=**TablePtr**（block[0/1]——B4CA 4B 拷形；oracle 实证 $BC26=MusicRoutineTbl）
         mem.write_ram(0x00E0, block.table_ptr as u8);
         mem.write_ram(0x00E1, (block.table_ptr >> 8) as u8);
@@ -270,24 +273,62 @@ pub fn sound_dispatch_chain(mem: &mut FrameMemory, flag_addr: u16, block_win: u1
         }
         return;
     }
-    // handler 接点（联合清偿面：port2 域件+我钩应用——B673 同形逐件接）
-    if ptr == 0xB673 {
-        // 契约：samus_hit_sfx_init(rng1=$2E/channel_type=$065C/current_flags=$064D)
-        let out = sound::samus_hit_sfx_init(
-            mem.read_ram(0x002E),
-            mem.read_ram(0x065C),
-            mem.read_ram(0x064D),
-        );
-        for (a, v) in out.ram_events {
-            mem.write_ram(a, v);
+    // ===== handler 接点（22 件批量接——port2 清单；B673 同形）=====
+    // 契约：`sound::<fn>(params) -> HandlerOutcome{ram_events, apu_events, a/x/y_out}`
+    // （纯函数；我供输入（RAM 面）/应用结果（RAM+APU+regs））。
+    {
+        let ct = mem.read_ram(0x065C);
+        let flags = mem.read_ram(0x064D);
+        let out: Option<sound::HandlerOutcome> = match ptr {
+            0xB673 => Some(sound::samus_hit_sfx_init(mem.read_ram(0x002E), ct, flags)),
+            0xB834 => Some(sound::samus_to_ball_sfx_init(ct, flags)),
+            0xB650 => Some(sound::samus_hit_sfx_cont(
+                mem.read_ram(0x002E), ct,
+                mem.read_ram(0x0665u16 + ct as u16),
+                mem.read_ram(0x0660u16 + ct as u16),
+            )),
+            0xB598 => Some(sound::samus_walk_sfx_init(mem.read_ram(0x0688), ct, flags)),
+            0xB710 => Some(sound::enemy_hit_sfx_init(ct, flags)),
+            0xB716 => sound::bullet_fire_sfx_init(
+                mem.read_ram(0x061F), mem.read_ram(0x0689), ct, flags,
+            ), // Option（None=ice/long 变体分支——钩按分支标）
+            0xB56E => Some(sound::missile_launch_sfx_init(ct, flags)),
+            0xB6CD => Some(sound::missile_pickup_sfx_init(ct, flags)),
+            0xB6E7 => Some(sound::energy_pickup_sfx_init(ct, flags)),
+            0xB50F => Some(sound::spit_flame_sfx_init(ct, flags)),
+            0xB52B => Some(sound::screw_attack_sfx_init(ct, flags)),
+            0xB583 => Some(sound::bomb_explode_sfx_init(ct, flags)),
+            0xB5EC => Some(sound::boss_hit_sfx_init(ct, flags)),
+            0xB695 => Some(sound::incorrect_password_sfx_init(ct, flags)),
+            0xB703 => Some(sound::samus_jump_sfx_init(mem.read_ram(0x068D), ct, flags)),
+            0xB7AC => Some(sound::door_open_close_sfx_init(ct, flags)),
+            0xB7EF => Some(sound::big_enemy_hit_sfx_init(ct, flags)),
+            0xB878 => Some(sound::bomb_launch_sfx_init(ct, flags)),
+            0xB8A7 => Some(sound::metroid_hit_sfx_init(mem.read_ram(0x002E), ct, flags)),
+            0xB921 => Some(sound::statue_raise_sfx_init(ct, flags)),
+            0xB7D9 => Some(sound::beep_sfx_init(mem.read_ram(0x068B), flags, ct)),
+            0xB8D2 => {
+                // ⚠️InitializeSoundAddresses 全清前置（清单注）
+                sound::initialize_sound_addresses();
+                Some(sound::samus_die_sfx_init(ct, flags))
+            }
+            _ => None,
+        };
+        if let Some(out) = out {
+            for (a, v) in out.ram_events {
+                mem.write_ram(a, v);
+            }
+            for (a, v) in out.apu_events {
+                mem.write_io(a, v); // APU 寄存器面（L2 stub 域）
+            }
+            mem.regs.a = out.a_out;
+            mem.regs.x = out.x_out;
+            mem.regs.y = out.y_out;
+            return;
         }
-        for (a, v) in out.apu_events {
-            mem.write_io(a, v); // APU 寄存器面（L2 stub 域）
+        if ptr != 0 {
+            // 已知 handler 域但函数未在 sound::（编译期核）——记账点兜底
         }
-        mem.regs.a = out.a_out;
-        mem.regs.x = out.x_out;
-        mem.regs.y = out.y_out;
-        return;
     }
     // handler 记账点（未接域件=新记账——缺口演化面）
     let loc = format!("bank07:{ptr:04X}");
