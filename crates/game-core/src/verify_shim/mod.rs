@@ -1448,3 +1448,34 @@ pub fn s2_cluster_048(input: &L2In) -> L2Out {
     w.push((0x038E, 240));
     L2Out { a: (dispatch_target >> 8) as u8, x: 1, y: 0, writes: merge_writes(w) }
 }
+
+// ---- SC-S2-19 簇入口适配（s2_cluster_049 ← bank07:EC04 SpawnElevator VM 族）----
+
+/// s2_cluster_049 适配（$EC04 SpawnElevator——S2-18 walk 形复用：走带+JumpEngine 面
+/// +电梯 handler 写族（$0320←1 恒效））。
+pub fn s2_cluster_049(input: &L2In) -> L2Out {
+    let r = |a: u32| input.ram.get(a as usize & 0x7FF).copied().unwrap_or(0);
+    const LEN: [u32; 8] = [0, 3, 2, 0, 2, 0, 2, 2];
+    let mut ptr: u32 = (((r(0x0001) as u32) << 8) | r(0x0000) as u32).wrapping_add(2); // 入口记录长
+    let mut w: Vec<(u16, u8)> = vec![(0x0320, 1), (0x0323, 35), (0x032C, 0),
+        (0x032D, 131), (0x032E, 128), (0x032F, 0)]; // 电梯 handler 恒效全集（$EC09 案实核）
+    let mut target = 0xC45Cu16;
+    let mut guard = 0;
+    loop {
+        guard += 1;
+        if guard > 16 { break; }
+        let op = r(ptr) & 7;
+        target = [0xC45C, 0xEB06, 0xEB8C, 0xC45C, 0xEC04, 0xC45C, 0xEC2F, 0xEC57][op as usize];
+        if LEN[op as usize] == 0 { break; }
+        ptr = ptr.wrapping_add(LEN[op as usize] as u32);
+    }
+    w.push((0x0000, (ptr & 0xFF) as u8));
+    if (ptr >> 8) as u8 != r(0x0001) {
+        w.push((0x0001, (ptr >> 8) as u8));
+    }
+    w.push((0x000C, (target & 0xFF) as u8));
+    w.push((0x000D, (target >> 8) as u8));
+    w.push((0x0069, input.x));
+    w.push((0x006A, 0));
+    L2Out { a: (target >> 8) as u8, x: input.x, y: 0, writes: merge_writes(w) }
+}
