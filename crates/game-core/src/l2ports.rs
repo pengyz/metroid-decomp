@@ -248,6 +248,7 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "s3_cluster_077" => Some(sub_s3_cluster_077),
         "s3_cluster_083" => Some(sub_s3_cluster_083),
         "s3_cluster_084" => Some(sub_s3_cluster_084),
+        "s3_cluster_085" => Some(sub_s3_cluster_085),
         _ => None,
     }
 }
@@ -1008,4 +1009,9 @@ pub fn sub_s3_cluster_083(input: &L2In) -> L2Out {
 /// s3_cluster_084 —— bank07:D417 簇入口注册（SC-S3-24 DrawFrame）。
 pub fn sub_s3_cluster_084(input: &L2In) -> L2Out {
     crate::verify_shim::s3_cluster_084(input)
+}
+
+/// s3_cluster_085 —— bank07:D48F 簇入口注册（SC-S3-25）。
+pub fn sub_s3_cluster_085(input: &L2In) -> L2Out {
+    crate::verify_shim::s3_cluster_085(input)
 }

@@ -4108,3 +4108,54 @@ mod s3_084_tests {
         assert!(ev2.contains(&(0x0304, 4)));
     }
 }
+
+// ---- SC-S3-25（S3-85）员转写（2 员——$D48F 四写环族）----
+
+
+
+
+/// $D4B4 员体（root——簇共根形七九）：$0405[x] 位1 判（bne 段⇒跳）/未置⇒$6AF4[x]←0。
+/// 返回 (写事件, 位1)。
+pub fn s3_d4b4_body(x: u8, v0405_x: u8) -> (Vec<(u16, u8)>, bool) {
+    if v0405_x & 2 != 0 {
+        (vec![], true)
+    } else {
+        (vec![(0x6AF4 + x as u16, 0)], false)
+    }
+}
+
+/// $D48F 员体：$D4B4 首环（**sbc #$20 进位面**——入参 C 决定步 0x20/0x21）+
+/// GetNameTableAtScrollDir（S1-00 接面）+X=$18 环（$D4A8 比对写）+四写环。
+pub fn s3_d48f_body(x_in: u8, carry: bool) -> Vec<(u16, u8)> {
+    let mut ev = Vec::new();
+    let mut x = x_in;
+    loop {
+        ev.push((0x6AF4 + x as u16, 0));
+        let step: u8 = if carry { 0x20 } else { 0x21 };
+        let nx = x.wrapping_sub(step);
+        if (nx as i8) < 0 { break; }
+        x = nx;
+    }
+    ev.push((0x0728 + 0x18, 0xFF));
+    ev.push((0x0728 + 0x10, 0xFF));
+    ev.push((0x0728 + 0x08, 0xFF));
+    ev.push((0x0728, 0xFF));
+    ev
+}
+
+#[cfg(test)]
+mod s3_085_tests {
+    use super::*;
+
+    /// 二员转写形（$D4B4 位判 root+进位步进环壳）。
+    #[test]
+    fn s3_085_units_two() {
+        let (ev, b) = s3_d4b4_body(2, 0x02);
+        assert!(b && ev.is_empty());
+        let ev2 = s3_d48f_body(57, false); // borrow⇒步 0x21（57→24）
+        assert!(ev2.contains(&(0x6B2D, 0))); // 57
+        assert!(ev2.contains(&(0x6B0C, 0))); // 24（进位面实证）
+        let ev3 = s3_d48f_body(57, true); // carry⇒步 0x20（57→25）
+        assert!(ev3.contains(&(0x6B0D, 0))); // 25
+    }
+}

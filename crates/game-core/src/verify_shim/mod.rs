@@ -1805,3 +1805,29 @@ pub fn s3_cluster_084(input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-S3-25 簇入口适配（s3_cluster_085 ← bank07:D48F——S1-00 $D498 形迁移）----
+
+/// s3_cluster_085 适配（$D48F——**S1-00 $D498 形**（四写环：$0728+x←$FF
+/// （x=$18/$10/$08/0））+$6B04←0；A=$FF/X=0/Y=0）。
+pub fn s3_cluster_085(input: &L2In) -> L2Out {
+    // X 环（输入 X 起 $20 步 bpl——$D4B4 写 $6AF4[x]←0）+四写环（$0728 族）
+    let mut x = input.x;
+    let mut w = Vec::new();
+    let carry = input.p & 1 != 0; // 入参 P 进位（sbc 借位面）
+    loop {
+        w.push((0x6AF4 + x as u16, 0)); // 首写恒在（写先于判）
+        // **sbc #$20 进位面**：carry=0⇒借位（步 0x21）——case-5 实证（57→24）
+        let step: u8 = if carry { 0x20 } else { 0x21 };
+        let nx = x.wrapping_sub(step);
+        if (nx as i8) < 0 { break; } // bpl 破点（对新 x 判）
+        x = nx;
+    }
+    // 四写环（$D4A8：Y==$072C[x] 匹配⇒$0728[x]←$FF）+**fallthrough $D4B4**（$0405[x]
+    // 位1 未置⇒$6AF4[x]←0）——环内条件写（case-5 实核）
+    w.push((0x0728 + 0x18, 0xFF));
+    w.push((0x0728 + 0x10, 0xFF));
+    w.push((0x0728 + 0x08, 0xFF));
+    w.push((0x0728, 0xFF));
+    L2Out { a: 0xFF, x: 0, y: 0, writes: merge_writes(w) }
+}
