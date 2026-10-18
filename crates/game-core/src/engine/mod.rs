@@ -4205,3 +4205,36 @@ mod s3_086_tests {
         assert!(ev3.len() >= 2);
     }
 }
+
+// ---- SC-S3-27（S3-87）员转写（2 员——UpdateBullet_DeleteIfOffScreen 族；L2 真 0 留白）----
+
+/// $D5FC UpdateBullet_DeleteIfOffScreen（root——簇共根形八一）：$030B[x] lsr/bcs
+/// **自旋环**（-7 回卷——屏内判定自旋面）+lda #0/beq 段+jmp $E81E。
+/// 返回 (在屏, carry)。
+pub fn s3_bullet_on_screen(v030b_x: u8) -> (bool, bool) {
+    let c = v030b_x & 1 != 0;
+    (!c, c) // bcs 自旋（屏外）/未置⇒屏内
+}
+
+/// $D530 员体：DeleteIfOffScreen+$D5DA 调+$0502[x] and $FE+表对载（$D58B/$D58C[y]
+/// →$0A/$0B——指针面）。
+pub fn s3_d530_body(x: u8, v030b_x: u8, v0502_x: u8) -> (Vec<(u16, u8)>, u8) {
+    let (on, _) = s3_bullet_on_screen(v030b_x);
+    let idx = (v0502_x & 0xFE) as u16;
+    (vec![(0x000A, idx as u8), (0x000B, (idx >> 8) as u8)], if on { 1 } else { 0 })
+}
+
+#[cfg(test)]
+mod s3_087_tests {
+    use super::*;
+
+    /// 二员转写形（DeleteIfOffScreen 自旋判 root+一壳）。
+    #[test]
+    fn s3_087_units_two() {
+        assert_eq!(s3_bullet_on_screen(0), (true, false)); // 屏内
+        assert_eq!(s3_bullet_on_screen(1), (false, true)); // 屏外自旋
+        let (ev, v) = s3_d530_body(2, 0, 0x55);
+        assert_eq!(v, 1);
+        assert!(ev.contains(&(0x000A, 0x54)));
+    }
+}
