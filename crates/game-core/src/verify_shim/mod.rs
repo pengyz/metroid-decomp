@@ -1877,3 +1877,10 @@ pub fn s4_cluster_100(input: &L2In) -> L2Out {
 pub fn s4_cluster_101(input: &L2In) -> L2Out {
     L2Out { a: 0, x: input.x, y: input.y, writes: vec![] }
 }
+
+// ---- SC-S4-12 簇入口适配（s4_cluster_102 ← bank07:CA18 IsEngineRunning）----
+
+/// s4_cluster_102 适配（$CA18 IsEngineRunning 链——案实核透传类（A/X 透传/Y=0）；无写面）。
+pub fn s4_cluster_102(input: &L2In) -> L2Out {
+    L2Out { a: input.a, x: input.x, y: 0, writes: vec![] }
+}

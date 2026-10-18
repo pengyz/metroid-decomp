@@ -4767,3 +4767,43 @@ mod s4_101_tests {
         assert!(ev3.contains(&(0x0306, 0x41)));
     }
 }
+
+// ---- SC-S4-12（S4-102）员转写（2 员——IsEngineRunning 族）----
+
+/// $CA18 IsEngineRunning（root——簇共根形九六）：$1E（MainRoutine）cpy 7/3 双判
+/// （rts 段）+$74←A（掩码 $0F→$CA30[y] 表载→$24）+jmp $C4DE（S1-15 接面）。
+/// 返回 (运行, 表值)。
+pub fn s4_is_engine_running(v1e: u8, a_in: u8) -> (bool, u8) {
+    if v1e == 7 || v1e == 3 {
+        (true, a_in) // 运行段
+    } else {
+        (false, a_in) // rts 段
+    }
+}
+
+/// $D8E7 员体：IsEngineRunning+$76 eor 7 面+$74 cmp $12 段（$1C←1）+链（$C43F/
+/// $C473——sound 域接面（S1-16 同族面注））。
+pub fn s4_d8e7_body(v1e: u8, a_in: u8, v76: u8, v74: u8) -> (Vec<(u16, u8)>, u8) {
+    let (running, v) = s4_is_engine_running(v1e, a_in);
+    let mut ev = vec![(0x0076, v76 ^ 7)];
+    if v74 >= 0x12 {
+        ev.push((0x001C, 1));
+    }
+    (ev, v)
+}
+
+#[cfg(test)]
+mod s4_102_tests {
+    use super::*;
+
+    /// 二员转写形（IsEngineRunning root+一壳）。
+    #[test]
+    fn s4_102_units_two() {
+        assert_eq!(s4_is_engine_running(7, 5), (true, 5));
+        assert_eq!(s4_is_engine_running(3, 5), (true, 5));
+        assert_eq!(s4_is_engine_running(5, 5), (false, 5));
+        let (ev, _) = s4_d8e7_body(7, 5, 7, 0x12);
+        assert!(ev.contains(&(0x0076, 0)));
+        assert!(ev.contains(&(0x001C, 1)));
+    }
+}
