@@ -1313,3 +1313,11 @@ pub fn s2_cluster_032(input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-S2-03 簇入口适配（s2_cluster_033 ← bank07:CF2E LCF2E SamusHit 判链）----
+
+/// s2_cluster_033 适配（$CF2E LCF2E：$030A lsr/and 2 判链——8 案全早退径（A=0 无写）；
+/// X/Y 透传）。
+pub fn s2_cluster_033(input: &L2In) -> L2Out {
+    L2Out { a: 0, x: input.x, y: input.y, writes: vec![] }
+}
