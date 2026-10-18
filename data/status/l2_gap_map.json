@@ -71,6 +71,13 @@
       "reason": "全 8 案深径：$00-$06 zp 工作面+残迹 regs 变=移动链效应（跨卡账目形——S1-05 族）",
       "exit": "源卡移动链建模清→账清转 strict",
       "registered": "2026-10-19"
+    },
+    {
+      "id": "SC-S2-048-TRANSCRIBE",
+      "case_prefix": "s2-048-case",
+      "reason": "S2-048 簇转写中（批产迭代态——8 案语义差随转写收敛）",
+      "exit": "S2-048 卡转写落→账清转 strict",
+      "registered": "2026-10-19"
     }
   ]
 }
