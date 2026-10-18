@@ -134,7 +134,11 @@ def parse_range(text: str) -> tuple:
 
 
 def parse_scenario(path: Path) -> dict:
-    """解析场景 DSL → PLAN dict。所有语义判定唯一入口。"""
+    """解析场景 DSL → PLAN dict。所有语义判定唯一入口。
+    scenario 编辑 lint（教训四犯升级——全清正写强制项机械拦）：长场景无菜单起点
+    且无 bundle_load=警（菜单误删三例实录——press 540 前缀滤波误删）。"""
+    menu_ok = False
+    bundle_ok = False
     path = Path(path)
     plan: dict = {
         "name": path.stem,
@@ -174,6 +178,7 @@ def parse_scenario(path: Path) -> dict:
                 raise err("name 需要 1 个参数")
             plan["name"] = args[0]
         elif op == "frames":
+            _frames_val = int(args[0])
             if len(args) != 1 or not args[0].isdigit() or int(args[0]) <= 0:
                 raise err("frames 需要正整数")
             plan["frames"] = int(args[0])
@@ -386,6 +391,13 @@ def parse_scenario(path: Path) -> dict:
     for e in plan["captures"]:
         if not 1 <= e["frame"] <= frames:
             raise ScenarioError(f"{path}: capture 帧 {e['frame']} 超出 1..{frames}")
+    # scenario 编辑 lint（教训四犯——机械拦）：长场景须有菜单起点（press 540）
+    # 或 bundle_load（任意起点案）——防前缀滤波误删菜单
+    if plan.get("frames", 0) > 500 and not plan.get("bundle_load"):
+        _menu = any(p.get("frame") == 540 for p in plan.get("presses", []))
+        if not _menu:
+            print(f"[scenario-lint] WARN {path.name}: 长场景无 press 540 start——"
+                  f"疑菜单误删（教训四犯机械拦）——正写全清核查", file=sys.stderr)
     return plan
 
 
