@@ -500,3 +500,15 @@
   SamusDir 判/其他状态门）——下窗=调用链细读（DOWN→SetSamusRoll 全链）；
 - **状态盘**（275 步窗）：八房进+BUG-001+寄存器修正+非叠窗法——余=morph 顽脆
   （调用链）→跳 $5D→东段→N 爬升。
+
+## 42. 【2026-10-19 调用链轮】BitScan 根因破（RIGHT+DOWN=sa_Run）+顽脆续
+
+- **调用链全解**（$D1A3-D1CC 分派器）：Joy1Status & (DOWN|LEFT|RIGHT) →BitScan
+  （最低置位）→**@statusTable[bit]**（[0]=sa_Run(RIGHT)/[1]=sa_Run(LEFT)/
+  [2]=sa_Roll(DOWN)）→status→JumpEngine→SetSamusRoll；
+- **BitScan 根因破**（残因候选①排 ✓）：**RIGHT/LEFT+DOWN=sa_Run（非 morph！）**
+  ——BitScan 取最低位（RIGHT=bit0 优先）——**morph=DOWN 无方向键**（独按判）；
+- **右松修试**（hold right 3310 止+morph 3330 后）：morph 仍跳（y=193）——
+  **顽脆续**（残因②③④：Joy1Change 相位/SamusDir 残值/其他状态门）；
+- **状态盘**（280 步窗）：八房进+BitScan 根因+调用链全解——余=morph 顽脆
+  （状态门深核）→跳 $5D→东段→N 爬升。

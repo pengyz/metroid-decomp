@@ -23,7 +23,7 @@ hold 2500-2660 a
 hold 2550-2920 right
 press 2580 b
 hold 3100-3260 a
-hold 3150-3520 right
+hold 3150-3310 right
 press 3180 b
 nav 3300-3380 x 120
 trigger 3330-3500 307 == 00 press down
