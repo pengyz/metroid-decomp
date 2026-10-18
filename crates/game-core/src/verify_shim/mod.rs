@@ -1036,3 +1036,16 @@ pub fn s1_cluster_08(input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-S1-09 簇入口适配（s1_cluster_09 ← bank07:CF6B SetSamusAnim）----
+
+/// s1_cluster_09 适配（$CF6B SetSamusAnim：$0305←A/$0306←A/$0304←0——A 归零出口；
+/// X/Y 透传）。
+pub fn s1_cluster_09(input: &L2In) -> L2Out {
+    L2Out {
+        a: 0, x: input.x, y: input.y,
+        writes: merge_writes(vec![
+            (0x0305, input.a), (0x0306, input.a), (0x0304, 0),
+        ]),
+    }
+}
