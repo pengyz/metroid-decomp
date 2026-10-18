@@ -2050,3 +2050,55 @@ mod s2_034_tests {
         assert!(ev.contains(&(0x030F, 9)));
     }
 }
+
+// ---- SC-S2-05（S2-35）员转写（3 员——BitScan 族；L2 真 0 留白）----
+
+/// $E1E1 BitScan（root——簇共根形二九·**位扫描微体**）：stx $0E/X=0/lsr 环（找首置位）
+/// ——A 出=位索引（0-7；8=无置位）/X 透传（$0E 暂存）。
+pub fn s2_bit_scan(a_in: u8, x_in: u8) -> (u8, u8) {
+    for i in 0..8u8 {
+        if (a_in >> i) & 1 != 0 {
+            return (i, x_in);
+        }
+    }
+    (8, x_in)
+}
+
+/// $D120 员体：BitScan+cmp 2 判（<$2⇒$4D←+SetSamusAnim($16)+$CCB7/$CF2E/$D150 链）。
+pub fn s2_d120_body(a_in: u8, x_in: u8) -> (Vec<(u16, u8)>, u8) {
+    let (idx, _) = s2_bit_scan(a_in, x_in);
+    if idx < 2 {
+        (vec![(0x004D, idx)], 0x16) // SetSamusAnim($16) 面
+    } else {
+        (vec![], idx)
+    }
+}
+
+/// $D1A9 员体：BitScan+cmp 2 判+X 载（$4D→A）+$D1EB 表载→$0300（三写族）。
+pub fn s2_d1a9_body(a_in: u8, x_in: u8, tbl_entry: u8) -> (Vec<(u16, u8)>, u8) {
+    let (idx, _) = s2_bit_scan(a_in, x_in);
+    let mut ev = Vec::new();
+    if idx < 2 {
+        ev.push((0x004D, idx));
+    }
+    ev.push((0x0300, tbl_entry));
+    (ev, idx)
+}
+
+#[cfg(test)]
+mod s2_035_tests {
+    use super::*;
+
+    /// 三员转写形（BitScan 位扫描 root+二壳）。
+    #[test]
+    fn s2_035_units_three() {
+        assert_eq!(s2_bit_scan(0x01, 5), (0, 5));
+        assert_eq!(s2_bit_scan(0x08, 5), (3, 5));
+        assert_eq!(s2_bit_scan(0, 5), (8, 5));
+        let (ev, a) = s2_d120_body(0x01, 0);
+        assert_eq!(a, 0x16);
+        assert!(ev.contains(&(0x004D, 0)));
+        let (ev, _) = s2_d1a9_body(0x08, 0, 0x55);
+        assert!(ev.contains(&(0x0300, 0x55)));
+    }
+}
