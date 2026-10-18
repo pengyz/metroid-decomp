@@ -1739,3 +1739,15 @@ pub fn s3_cluster_071(input: &L2In) -> L2Out {
         writes: merge_writes(vec![(0x0683, 0x02)]),
     }
 }
+
+// ---- SC-S3-14 簇入口适配（s3_cluster_074 ← bank07:CCB7 SetSamusRunAccel）----
+
+/// s3_cluster_074 适配（$CCB7 SetSamusRunAccel——$CCC0[x] 表读→$0315；A=表值/
+/// X/Y 透传）。
+pub fn s3_cluster_074(input: &L2In) -> L2Out {
+    let v = crate::engine::RUN_ACCEL_TBL[input.x as usize];
+    L2Out {
+        a: v, x: input.x, y: input.y,
+        writes: merge_writes(vec![(0x0315, v)]),
+    }
+}
