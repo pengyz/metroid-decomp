@@ -4717,3 +4717,53 @@ mod s4_100_tests {
         assert_eq!(ev2.len(), 2);
     }
 }
+
+// ---- SC-S4-11（S4-101）员转写（2 员——$D851 动画计数族）----
+
+/// $D851 员体（root——簇共根形九五）：$030D[x] inc（动画计数）+cmp $F0 判（回卷
+/// ⇒$D648 调（S2-47 接面）+清）+cmp $83 判（$0300 inc 段）。
+/// 返回 (写事件, 计数值)。
+pub fn s4_d851_anim(x: u8, v030d_x: u8) -> (Vec<(u16, u8)>, u8) {
+    let n = v030d_x.wrapping_add(1);
+    let mut ev = vec![(0x030D + x as u16, n)];
+    if n == 0xF0 {
+        ev.push((0x030D + x as u16, 0)); // 回卷清
+    }
+    if n == 0x83 {
+        ev.push((0x0300, 1)); // inc 段面注
+    }
+    (ev, n)
+}
+
+/// $D866 员体：cmp $83 判（$0300 inc）+尾跳 $D806（S1-01 回驱——五现注）+$FC 判
+/// （$0305←$4E/$0306←$41 写对——S1-12 同构面）。
+pub fn s4_d866_body(v030d_x: u8, vfc: u8) -> (Vec<(u16, u8)>, u16) {
+    let mut ev = Vec::new();
+    if v030d_x == 0x83 {
+        ev.push((0x0300, 1));
+    }
+    if vfc == 0 {
+        ev.push((0x0305, 0x4E));
+        ev.push((0x0306, 0x41));
+    }
+    (ev, 0xD806)
+}
+
+#[cfg(test)]
+mod s4_101_tests {
+    use super::*;
+
+    /// 二员转写形（$D851 动画计数 root+一壳）。
+    #[test]
+    fn s4_101_units_two() {
+        let (ev, n) = s4_d851_anim(2, 5);
+        assert_eq!(n, 6);
+        assert!(ev.contains(&(0x030F, 6)));
+        let (ev2, _) = s4_d851_anim(2, 0xEF);
+        assert!(ev2.contains(&(0x030F, 0))); // 回卷清
+        let (ev3, j) = s4_d866_body(0x83, 0);
+        assert_eq!(j, 0xD806);
+        assert!(ev3.contains(&(0x0305, 0x4E)));
+        assert!(ev3.contains(&(0x0306, 0x41)));
+    }
+}
