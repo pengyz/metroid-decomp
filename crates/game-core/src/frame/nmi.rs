@@ -184,7 +184,7 @@ pub fn sound_engine(mem: &mut FrameMemory) {
         (crate::ram_map::SFX_NOISE_INIT, 0xB289u16),
         (crate::ram_map::SFX_MULTI_INIT, 0xB2A7),
         (crate::ram_map::SFX_TRI_INIT, 0xB29D),
-        (crate::ram_map::MUSIC_INIT, 0xB2B1),
+        (crate::ram_map::MUSIC_INIT, 0xB2B1), // MusicInit（BC36 两步 else：$065D=0→B2B1）
     ] {
         super::sound_hook::sound_dispatch_chain(mem, flag, block, 0);
     }

@@ -238,6 +238,13 @@ pub fn sound_dispatch_chain(mem: &mut FrameMemory, flag_addr: u16, block_win: u1
     mem.write_ram(0x00E4, block_win as u8);
     mem.write_ram(0x00E5, (block_win >> 8) as u8);
     let (ptr, hit) = sound::get_sound_routine(&block, table_slice(block.table_ptr), flags);
+    // 指针位序（B4CA 面）：MusicLoop 步（flag=$065D）写 $E0/$E1（中间 ptr）；
+    // 终步写 $E2/$E3（B337 面）。oracle 实证：$E0=$BC26（RunMusicInit）/$E2=$BC4B（终）。
+    if block_win == 0xB2B1 || block_win == 0xB2B6 { // 音乐族（BC36/B4CA 4B 拷形）
+        // $E0/$E1=**TablePtr**（block[0/1]——B4CA 4B 拷形；oracle 实证 $BC26=MusicRoutineTbl）
+        mem.write_ram(0x00E0, block.table_ptr as u8);
+        mem.write_ram(0x00E1, (block.table_ptr >> 8) as u8);
+    }
     mem.write_ram(0x00E2, ptr as u8);
     mem.write_ram(0x00E3, (ptr >> 8) as u8);
     mem.write_ram(0x065C, block.channel_type);
