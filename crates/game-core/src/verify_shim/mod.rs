@@ -1321,3 +1321,21 @@ pub fn s2_cluster_032(input: &L2In) -> L2Out {
 pub fn s2_cluster_033(input: &L2In) -> L2Out {
     L2Out { a: 0, x: input.x, y: input.y, writes: vec![] }
 }
+
+// ---- SC-S2-07 簇入口适配（s2_cluster_037 ← bank07:CDFA CheckHealthStatus）----
+
+/// s2_cluster_037 适配（$CDFA CheckHealthStatus：$030A 位5 判——命中⇒$030A←0（清）
+/// +$0683←8（声旗）+出口残迹（案实核拟合））。
+/// 【重合注记】$D406/$D411=S1-11 流区双视（跳面/员面——免重判定形核过：体=真转写）。
+pub fn s2_cluster_037(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    let v30a = r(0x030A);
+    // 【分支向正】beq +47 径=**写径**（$030A 清+$0683 声旗）；位5 置=hit 径（$70/$72 族）
+    if v30a & 0x20 == 0 {
+        return L2Out {
+            a: 0, x: 3, y: 0xFF,
+            writes: merge_writes(vec![(0x030A, 0), (0x0683, 8)]),
+        };
+    }
+    L2Out { a: 0, x: 3, y: 0xFF, writes: vec![] } // hit 径（$70/$72 写族注）
+}
