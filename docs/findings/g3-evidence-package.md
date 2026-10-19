@@ -42,3 +42,16 @@
   测试——rust_test 365→379 纯增（无回退三证：全测过/无删测/无跳过）」；
 - **烤案 yield 态收**（g3-pregen）：预备态（cases 0——golden 推导=批产期随做）——
   批产开工随行支援面就绪。
+
+## 5. SC-G3-00 预取证形（首卡——porter A 批收口即接）
+
+- **卡面**：G3-引擎核簇（SoundEngine $B3B4 六员——引擎核/例程表×4/旗清）；
+- **证据锚**（A 级）：sound_engine.asm:384-425（引擎核流）+constants_ram:1123-1129
+  （旗族 RAM）+CC09（旗偏移数学）；
+- **行为概要**（B 级）：APU 5 步同步（JOY2 写）→SilenceMusic 判（旗 bit0）→Pause 判
+  （MainRoutine）→四 Runner 序（NoiseInit→MultiInit→TriInit→MusicLoop）→六旗清
+  （ClearInitFlags）；
+- **RAM 面**：$0680-$0688 旗族块+$0686 ScrewAttack0686+五 ContFlags 族；
+- **烤案面**（g3-pregen）：g3-000-case（bank07:B3B4×4 LCG→ROM golden）——
+  ram_addrs=旗族块；
+- **验收**：L2 增量+L3 回归+全案绿（施工图 §2 口径）。
