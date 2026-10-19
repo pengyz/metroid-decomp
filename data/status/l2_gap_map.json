@@ -372,6 +372,13 @@
       "reason": "Y 链算深径（Y_out=57/63 变径（fixture 弱源）+$0405 条件写——深径判别条补触发（链算径（多入参））——S5-121 同款跨卡深径）",
       "exit": "Y 链算径建模清（多入参链模拟）→账清转 strict",
       "registered": "2026-10-19"
+    },
+    {
+      "id": "SC-B2-035-CROSSCARD-YCHAIN",
+      "case_prefix": "a2-035-case-",
+      "reason": "Y 链算深径（Y_out=63 变径+fixture 弱源——深径判别条补触发（链算径）——S5-121 同款跨卡深径）",
+      "exit": "Y 链算径建模清（多入参链模拟）→账清转 strict",
+      "registered": "2026-10-19"
     }
   ]
 }

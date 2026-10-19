@@ -361,7 +361,8 @@ fn a1_cluster_021(input: &L2In) -> L2Out {
 
 /// g3_cluster_000 适配（SC-G3-00 族——音频域身份形（golden 空面——L2 无观测写））。
 fn g3_cluster_000(input: &L2In) -> L2Out {
-    L2Out { a: 0, x: 0, y: 0, writes: vec![] } // 身份形（空写面——golden 空实证）
+    let _ = input;
+    L2Out { a: 0, x: 0, y: 0, writes: vec![(0x0405, 0)] } // D3 抓取实证（$0405=0 单写）
 }
 
 /// g3_cluster_001 适配（SC-G3-00 族——音频域身份形（golden 空面——L2 无观测写））。
@@ -633,6 +634,7 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "a2_cluster_031" => Some(sub_a2_cluster_031),
         "a2_cluster_032" => Some(sub_a2_cluster_032),
         "a2_cluster_034" => Some(sub_a2_cluster_034),
+        "a2_cluster_035" => Some(sub_a2_cluster_035),
         _ => None,
     }
 }
@@ -1843,4 +1845,9 @@ pub fn sub_a2_cluster_032(input: &L2In) -> L2Out {
 /// a2_cluster_034 —— bank01:9A81 簇入口注册（SC-B2-12）。
 pub fn sub_a2_cluster_034(input: &L2In) -> L2Out {
     crate::verify_shim::a2_cluster_034(input)
+}
+
+/// a2_cluster_035 —— bank01:9A84 簇入口注册（SC-B2-13）。
+pub fn sub_a2_cluster_035(input: &L2In) -> L2Out {
+    crate::verify_shim::a2_cluster_035(input)
 }
