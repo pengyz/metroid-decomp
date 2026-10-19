@@ -6513,3 +6513,44 @@ mod s6_151_tests {
         assert_eq!(ev3.len(), 1); // 位判跳
     }
 }
+
+// ---- SC-S6-02（S6-152）员转写（2 员——ObjectCntrl 族）----
+
+/// $F423 sta ObjectCntrl（root——簇共根形百四五）：$6B←A（ObjectCntrl 写）+
+/// $6AF4[x] 判（beq⇒跳/$DD8B 调（S5-148 接面））+$0404/$040E[x]←0 清对
+/// （S5-148 同族）。
+/// 返回 (写事件, 清面)。
+pub fn s6_object_cntrl(x: u8, a_in: u8, v6af4_x: u8) -> (Vec<(u16, u8)>, bool) {
+    let mut ev = vec![(0x006B, a_in)];
+    let skip = v6af4_x == 0;
+    if !skip {
+        ev.push((0x0404 + x as u16, 0));
+        ev.push((0x040E + x as u16, 0));
+    }
+    (ev, !skip)
+}
+
+/// $F512 员体：jmp $F423（尾形）+$040C[x]←A+$6AF4[x]←4 状态写对（S5-147 同族）。
+pub fn s6_f512_body(x: u8, a_in: u8) -> (Vec<(u16, u8)>, u16) {
+    (vec![(0x040C + x as u16, a_in), (0x6AF4 + x as u16, 4)], 0xF423)
+}
+
+#[cfg(test)]
+mod s6_152_tests {
+    use super::*;
+
+    /// 二员转写形（ObjectCntrl root+一壳）。
+    #[test]
+    fn s6_152_units_two() {
+        let (ev, cl) = s6_object_cntrl(2, 164, 5);
+        assert!(cl);
+        assert!(ev.contains(&(0x006B, 164)));
+        assert!(ev.contains(&(0x0406, 0)));
+        assert!(ev.contains(&(0x0410, 0)));
+        let (ev2, _) = s6_object_cntrl(2, 164, 0);
+        assert_eq!(ev2.len(), 1); // beq 跳（仅 $6B）
+        let (ev3, j) = s6_f512_body(2, 45);
+        assert_eq!(j, 0xF423);
+        assert!(ev3.contains(&(0x6AF6, 4)));
+    }
+}

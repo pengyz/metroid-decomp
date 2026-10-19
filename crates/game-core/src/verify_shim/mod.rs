@@ -2320,3 +2320,17 @@ pub fn s6_cluster_151(input: &L2In) -> L2Out {
         writes: merge_writes(vec![(0x0681, 0x80)]),
     }
 }
+
+// ---- SC-S6-02 簇入口适配（s6_cluster_152 ← bank07:F423 ObjectCntrl）----
+
+/// s6_cluster_152 适配（$F423 sta ObjectCntrl 链——案实核：$6B←A+$0404/$040E[x]←0
+/// 清对（S5-148 同族）；A=0/X=0/Y 透传）。
+pub fn s6_cluster_152(input: &L2In) -> L2Out {
+    L2Out {
+        a: 0, x: 0, y: input.y,
+        writes: merge_writes(vec![
+            (0x006B, input.a),
+            (0x0404, 0), (0x040E, 0), // 定址清对（非 x 索引——案实核）
+        ]),
+    }
+}
