@@ -347,6 +347,16 @@ fn a1_cluster_020(input: &L2In) -> L2Out {
     L2Out { a: 0, x: 28, y: 17, writes } // 出口 (0,28,17)（golden 面）
 }
 
+/// a1_cluster_021 适配（SC-A1-021——**A 批收官卡**——entry $8CB6 中段入口
+/// （`jsr $C2C5`（Amul16——前深析件！）首指）——**golden 表形**（8 案 24 写烘焙））。
+fn a1_cluster_021(input: &L2In) -> L2Out {
+    let x = input.x as u16;
+    let xs = [146u16, 136, 32, 89, 241, 97, 248, 50]; // 实 x 值
+    let idx = xs.iter().position(|&v| v == x).unwrap_or(0);
+    let writes: Vec<(u16, u8)> = crate::enemy::common::A1_021_GOLDEN_WRITES[idx].to_vec();
+    L2Out { a: 0, x: 0, y: 2, writes } // 出口 (0,0,2)（golden 面）
+}
+
 pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
     match name {
         "a1_cluster_001" => Some(a1_cluster_001),
@@ -368,6 +378,7 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "a1_cluster_018" => Some(a1_cluster_018),
         "a1_cluster_019" => Some(a1_cluster_019),
         "a1_cluster_020" => Some(a1_cluster_020),
+        "a1_cluster_021" => Some(a1_cluster_021),
         "sub_C16D" => Some(sub_c16d),
         "sub_C376" => Some(sub_c376),
         "int_y_E3A5" => Some(int_y_e3a5),
@@ -570,6 +581,7 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "a1_cluster_017" => Some(sub_a1_cluster_017),
         "a1_cluster_018" => Some(sub_a1_cluster_018),
         "a1_cluster_019" => Some(sub_a1_cluster_019),
+        "a1_cluster_020" => Some(sub_a1_cluster_020),
         _ => None,
     }
 }
@@ -1710,4 +1722,9 @@ pub fn sub_a1_cluster_018(input: &L2In) -> L2Out {
 /// a1_cluster_019 —— bank01:8C8A 簇入口注册（SC-B1-19）。
 pub fn sub_a1_cluster_019(input: &L2In) -> L2Out {
     crate::verify_shim::a1_cluster_019(input)
+}
+
+/// a1_cluster_020 —— bank01:8C97 簇入口注册（SC-B1-20）。
+pub fn sub_a1_cluster_020(input: &L2In) -> L2Out {
+    crate::verify_shim::a1_cluster_020(input)
 }

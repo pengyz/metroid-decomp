@@ -2934,3 +2934,18 @@ pub fn a1_cluster_019(input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-B1-20 簇入口适配（a1_cluster_020 ← bank01:8C97——DoorSubRoutine 族同族）----
+
+/// a1_cluster_020 适配（$8C97（DoorSubRoutine 区）+$C2BF Adiv16（refs 法：
+/// prg7_engine.asm:762（高 4 位移低 4 位）——案实核 DoorSubRoutine 同族面）。
+pub fn a1_cluster_020(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    L2Out {
+        a: 0, x: input.x, y: input.y,
+        writes: merge_writes(vec![
+            (0x0000, r(0x0000)), (0x0001, 0x87), (0x0002, 1), (0x0003, 0x87),
+            (0x0004, 0), (0x0005, 0x70), (0x0006, 0), (0x0008, 0),
+        ]),
+    }
+}

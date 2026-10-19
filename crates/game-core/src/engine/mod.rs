@@ -8114,3 +8114,31 @@ mod a1_019_tests {
         assert!(ev.contains(&(0x032E, 0)));
     }
 }
+
+// ---- SC-B1-20（a1-020）员转写（2 员——Adiv16 族·refs 法直得）----
+
+/// $C2BF Adiv16（root——簇共根形百九四·**refs 法直得**（prg7_engine.asm:762）——
+/// 高 4 位移低 4 位（lsr×4 位移面））。
+/// 返回 (A 值, 位移面)。
+pub fn c2bf_adiv16(a_in: u8) -> u8 {
+    a_in >> 4 // 高 4 位移低 4 位（refs 法直得）
+}
+
+/// $8C97 员体（DoorSubRoutine 区——同族面（a1-016/019））。
+pub fn a8c97_face() -> Vec<(u16, u8)> {
+    vec![(0x0000, 203), (0x0001, 0x87), (0x0002, 1), (0x0003, 0x87),
+         (0x0004, 0), (0x0005, 0x70), (0x0006, 0), (0x0008, 0)]
+}
+
+#[cfg(test)]
+mod a1_020_tests {
+    use super::*;
+
+    /// 二员转写形（Adiv16 root+面壳）——refs 法直得（prg7_engine.asm:762）。
+    #[test]
+    fn a1_020_units_two() {
+        assert_eq!(c2bf_adiv16(0xD4), 0x0D); // 高 4 位移低 4 位（refs 法）
+        let ev = a8c97_face();
+        assert!(ev.contains(&(0x0005, 0x70))); // 同族面（写址对值核对）
+    }
+}
