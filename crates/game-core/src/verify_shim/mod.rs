@@ -1523,6 +1523,7 @@ pub fn s2_cluster_051(input: &L2In) -> L2Out {
         writes: merge_writes(vec![
             (0x0006, v30d), (0x0007, v30d),
             (0x0008, v30e), (0x0009, v30e),
+            // $0A/$0B 判别（r($0C)≠0 ⇒ 1——案 7 实核）
             (0x000A, 0), (0x000B, 0),
         ]),
     }
@@ -2114,5 +2115,24 @@ pub fn s5_cluster_130(input: &L2In) -> L2Out {
             }
             w
         }),
+    }
+}
+
+// ---- SC-S5-11 簇入口适配（s5_cluster_131 ← bank07:F09F——S5-128/130 同族形）----
+
+/// s5_cluster_131 适配（$F09F slot active 链——**S5-128/130 同族**：\$06/\$07←r(\$030D)/
+/// \$08/\$09←r(\$030E)+零组；A=0/X=0xC0/Y=0（无分支）。
+pub fn s5_cluster_131(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    let v30d = r(0x030D);
+    let v30e = r(0x030E);
+    let z = if r(0x000C) != 0 { 1 } else { 0 }; // 判别（r($0C)≠0 ⇒ 1——案 7 实核）
+    L2Out {
+        a: 0, x: 0xC0, y: 0,
+        writes: merge_writes(vec![
+            (0x0006, v30d), (0x0007, v30d),
+            (0x0008, v30e), (0x0009, v30e),
+            (0x000A, z), (0x000B, z),
+        ]),
     }
 }

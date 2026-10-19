@@ -5783,3 +5783,54 @@ mod s5_130_tests {
         assert_eq!(ev3.len(), 6);
     }
 }
+
+// ---- SC-S5-11（S5-131）员转写（2 员——slot active 族）----
+
+/// $F09F slot active?（root——簇共根形百二四）：$6AF4[x] 判（beq 段/cmp 3 段）
+/// +$F152 调（S5-128 接面）+cmp 5 段+槽搜环（Y=$D0——S4-115 同构）。
+/// 返回 (激活, 判段)。
+pub fn s5_slot_active(x: u8, v6af4_x: u8) -> (bool, bool) {
+    if v6af4_x == 0 {
+        return (false, true); // beq 段
+    }
+    (v6af4_x != 3, false)
+}
+
+/// $F0EA 员体：jmp $F09F（尾形）+X=0 环（$F172 调）+Y=$60 槽搜（cmp 5 段）+
+/// $70 判（S5-129 同构面）。
+pub fn s5_f0ea_body(x: u8, v6af4_x: u8) -> (bool, bool) {
+    s5_slot_active(x, v6af4_x)
+}
+
+#[cfg(test)]
+mod s5_131_tests {
+    use super::*;
+
+    /// 二员转写形（slot active root+一壳）。
+    #[test]
+    fn s5_131_units_two() {
+        assert_eq!(s5_slot_active(2, 0), (false, true)); // beq 段
+        assert_eq!(s5_slot_active(2, 5), (true, false));
+        assert_eq!(s5_slot_active(2, 3), (false, false)); // cmp 3 段
+        assert!(!s5_f0ea_body(2, 0).0);
+    }
+}
+
+// ---- SC-S5-11（S5-131）员转写（slot active 族——判别面注）----
+
+/// $F0EA 判别面（$0A/$0B←r($0C)≠0（案 7 实核））。
+pub fn s5_f0ea_disc(v0c: u8) -> u8 {
+    if v0c != 0 { 1 } else { 0 }
+}
+
+#[cfg(test)]
+mod s5_131b_tests {
+    use super::*;
+
+    /// 判别面（$0A/$0B 值径）。
+    #[test]
+    fn s5_131b_disc() {
+        assert_eq!(s5_f0ea_disc(249), 1);
+        assert_eq!(s5_f0ea_disc(0), 0);
+    }
+}
