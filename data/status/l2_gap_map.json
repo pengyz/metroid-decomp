@@ -1142,6 +1142,13 @@
       "reason": "【预登记/补账】md-samusdoor-case 簇（批产 WIP——A 批预登记制）",
       "exit": "md-samusdoor-case 落→账清转 strict",
       "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-MD-004-IMPL",
+      "case_prefix": "a1-027-case",
+      "reason": "【预登记】臂深化卡序续（SC-MD-004 SamusPntUp 族——开工前置步先登记）",
+      "exit": "arm_cluster_005 移植/转写落→账清转 strict",
+      "registered": "2026-10-20"
     }
   ]
 }
