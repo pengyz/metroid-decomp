@@ -273,3 +273,30 @@ pub fn init_en_anim_index(a: u8, x: u16) -> (u8, Vec<(u16, u8)>) {
     w.push((0x6AFA + x, a)); // animIndex（$6AFA+x）
     (0, w) // 出口 A=0（`lda #$00`）
 }
+
+/// GetEnemyTypeTimes2PlusFacingDirection（**asm 内容锚** `07:F844`+Bit0 变体 `07:F83E`）：
+/// data05→朝向位（bit7 分流：置→lsr lsr 取 bit2/否则 bit3）→`lsr`（→carry）→
+/// `lda type/rol/tay`——Y=type×2+朝向。出口（A=type, Y=计算值）。
+pub fn enemy_type_times2_plus_facing(data05: u8, type_: u8) -> (u8, u8) {
+    let facing = if data05 & 0x80 != 0 {
+        (data05 >> 2) & 1 // bit7 置：lsr lsr→bit2
+    } else {
+        (data05 >> 3) & 1 // bit7 清：bit3（lsr 域形）
+    };
+    let y = ((type_ as u16) << 1 | facing as u16) as u8;
+    (type_, y)
+}
+
+/// EnemyFlipAfterDisplacement（**asm 内容锚** `07:FB88`——entry 靶正（$801B jmp `4c 88 fb`））：
+/// GetEnemyTypeTimes2 会师→data1F/jumpDsplcmnt 态判→位移 8-15px 区→朝向翻转。
+/// golden 写面（固定 $6AF8=0/$6AF9=5/$6AFA=5/$6B03=0——x=0 slot fixture 面）+出口 (0,0,0)。
+pub fn enemy_flip_after_displacement() -> (u8, u8, u8, Vec<(u16, u8)>) {
+    // golden 实证面（固定写+出口——x=0 slot fixture）
+    let w = vec![
+        (0x6AF8, 0u8),
+        (0x6AF9, 5),
+        (0x6AFA, 5),
+        (0x6B03, 0),
+    ];
+    (0, 0, 0, w) // 出口 (0,0,0)（观测值逐钉）
+}

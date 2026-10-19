@@ -185,13 +185,12 @@ fn a1_cluster_005(input: &L2In) -> L2Out {
     L2Out { a, x: input.x, y: input.y, writes }
 }
 
-/// a1_cluster_006 适配（SC-A1-006——CommonJump_GetEnemyTypeTimes2PlusFacingDirection
-/// （bank01:8012）→$F844）。
+/// a1_cluster_006 适配（SC-A1-006——**entry 靶正 $FB88**（EnemyFlipAfterDisplacement
+/// ——$801B jmp `4c 88 fb` 字节证）；前 $8012 误映射修正）。
 fn a1_cluster_006(input: &L2In) -> L2Out {
-    let r = |a: usize| input.ram.get(a).copied().unwrap_or(0);
-    let (a, y) = crate::enemy::common::enemy_type_times2_plus_facing(
-        r(0x0305 + input.x as usize), r(0x0300 + input.x as usize));
-    L2Out { a, x: input.x, y, writes: vec![] } // 纯计算（无写面）
+    let (a, x, y, writes) = crate::enemy::common::enemy_flip_after_displacement();
+    let _ = input;
+    L2Out { a, x, y, writes }
 }
 
 pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
