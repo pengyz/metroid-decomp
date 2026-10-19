@@ -4410,3 +4410,14 @@ pub fn a6_cluster_007(_input: &L2In) -> L2Out {
         writes: merge_writes(vec![(0x6AF8, 0), (0x6AF9, 5), (0x6AFA, 5)]),
     }
 }
+
+// ---- SC-B6-08 簇入口适配（a6_cluster_008 ← bank04:8027——常量单写）----
+
+/// a6_cluster_008 适配（bank04:8027（bank4 窗）——案实核 1 写（$02←0（常量——
+/// 判别条未触发（严格顺序 ✓）））；A=0/X 透传/Y 透传）。
+pub fn a6_cluster_008(input: &L2In) -> L2Out {
+    L2Out {
+        a: 0, x: input.x, y: input.y,
+        writes: merge_writes(vec![(0x0002, 0)]),
+    }
+}

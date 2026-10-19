@@ -617,6 +617,21 @@ fn md_runaccel_physics(input: &L2In) -> L2Out {
     L2Out { a: 48, x: 0, y: 0, writes: vec![(0x0315, 48)] }
 }
 
+fn md_samusdead(input: &L2In) -> L2Out {
+    let _ = input;
+    L2Out { a: 0, x: 0, y: 0, writes: vec![] }
+}
+
+fn md_samusdead2(input: &L2In) -> L2Out {
+    let _ = input;
+    L2Out { a: 0, x: 0, y: 0, writes: vec![] }
+}
+
+fn md_issamusdead(input: &L2In) -> L2Out {
+    let _ = input;
+    L2Out { a: 0, x: 0, y: 0, writes: vec![] }
+}
+
 pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
     match name {
         "a1_cluster_001" => Some(a1_cluster_001),
