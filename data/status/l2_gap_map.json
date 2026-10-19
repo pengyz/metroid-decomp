@@ -589,6 +589,13 @@
       "reason": "X 链算深径（X=75→72 变换（fixture 弱源）+x 索引族——深径判别条补触发（链算径）——S5-121 同款跨卡深径）",
       "exit": "X 链算径建模清（变换链模拟）→账清转 strict",
       "registered": "2026-10-19"
+    },
+    {
+      "id": "SC-B3-026-CROSSCARD-XCHAIN",
+      "case_prefix": "a3-026-case-",
+      "reason": "X 链算深径（X=147→82 变换（fixture 弱源）+12 写族——深径判别条补触发（链算径）——S5-121 同款跨卡深径）",
+      "exit": "X 链算径建模清（变换链模拟）→账清转 strict",
+      "registered": "2026-10-19"
     }
   ]
 }

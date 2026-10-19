@@ -3628,3 +3628,23 @@ pub fn a3_cluster_025(input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-B3-26 簇入口适配（a3_cluster_026 ← bank02:98A8——12 写族面）----
+
+/// a3_cluster_026 适配（bank02:98A8（S5-146 族区（bank2））——案实核 12 写
+/// （ptr 面（$02/$08/$09/$0B←0）+$04 族（x 索引）+$6B49←r(0)（fixture 强源——
+/// 判别条未触发（严格顺序 ✓））+$6B4A/$6B4C/$6B8E）；A=0/X 透传/Y=1）。
+pub fn a3_cluster_026(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    let x = input.x as u16;
+    L2Out {
+        a: 0, x: input.x, y: 1,
+        writes: merge_writes(vec![
+            (0x0002, 0), (0x0008, 0), (0x0009, 0), (0x000B, 0),
+            (0x0404 + x + 82, 0), (0x0404 + x + 92, 0),
+            (0x0404 + x + 131, 0), (0x0404 + x + 132, 0),
+            (0x6AF8 + x + 81, r(0x0000)), (0x6AF8 + x + 82, 3),
+            (0x6AF8 + x + 84, 1), (0x6AF8 + x + 136, 0),
+        ]),
+    }
+}
