@@ -1233,6 +1233,55 @@
       "reason": "【预登记/补账】md_updatesamus 簇（批产 WIP——A 批预登记制）",
       "exit": "md_updatesamus 落→账清转 strict",
       "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-B6-004-CROSSCARD-VALCHAIN",
+      "case_prefix": "a6-004-case-",
+      "reason": "值链算深径（$6AF8←163（fixture 弱源——多入参链算）——深径判别条补触发（链算径）——S5-121 同款跨卡深径）",
+      "exit": "值链算径建模清（$6B 族链模拟）→账清转 strict",
+      "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-MD-006-IMPL",
+      "case_prefix": "a1-024-case",
+      "reason": "【预登记】臂深化卡序续（SC-MD-006 SamusRun 族——开工前置步先登记）",
+      "exit": "arm_cluster_002 移植/转写落→账清转 strict",
+      "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-MD_GOSAMUSHANDLER-IMPL",
+      "case_prefix": "md_gosamushandler",
+      "reason": "【预登记/补账】md_gosamushandler 簇（批产 WIP——A 批预登记制）",
+      "exit": "md_gosamushandler 落→账清转 strict",
+      "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-MD_SAMUSRUN-IMPL",
+      "case_prefix": "md_samusrun",
+      "reason": "【预登记/补账】md_samusrun 簇（批产 WIP——A 批预登记制）",
+      "exit": "md_samusrun 落→账清转 strict",
+      "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-MD_SAMUSSTAND-IMPL",
+      "case_prefix": "md_samusstand",
+      "reason": "【预登记/补账】md_samusstand 簇（批产 WIP——A 批预登记制）",
+      "exit": "md_samusstand 落→账清转 strict",
+      "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-MD_SETDATA-IMPL",
+      "case_prefix": "md_setdata",
+      "reason": "【预登记/补账】md_setdata 簇（批产 WIP——A 批预登记制）",
+      "exit": "md_setdata 落→账清转 strict",
+      "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-MD_SETDATA3FRAME-IMPL",
+      "case_prefix": "md_setdata3frame",
+      "reason": "【预登记/补账】md_setdata3frame 簇（批产 WIP——A 批预登记制）",
+      "exit": "md_setdata3frame 落→账清转 strict",
+      "registered": "2026-10-20"
     }
   ]
 }
