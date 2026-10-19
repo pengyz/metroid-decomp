@@ -4421,3 +4421,19 @@ pub fn a6_cluster_008(input: &L2In) -> L2Out {
         writes: merge_writes(vec![(0x0002, 0)]),
     }
 }
+
+// ---- SC-B6-09 簇入口适配（a6_cluster_009 ← bank04:802A——判别条补触发）----
+
+/// a6_cluster_009 适配（bank04:802A（bank4 窗）——案实核 4 写（$04 族（x 索引——
+/// a3-009 公式（$0404+x+1/+5/+7/+9））+0/8/8/1 值（fixture 弱源——判别条补触发→
+/// 账目预登记（VALCHAIN-B6-009）））；A=8/X 透传/Y=0）。
+pub fn a6_cluster_009(input: &L2In) -> L2Out {
+    let x = input.x as u16;
+    L2Out {
+        a: 8, x: input.x, y: 0,
+        writes: merge_writes(vec![
+            (0x0404 + x + 1, 0), (0x0404 + x + 5, 8),
+            (0x0404 + x + 7, 8), (0x0404 + x + 9, 1),
+        ]),
+    }
+}

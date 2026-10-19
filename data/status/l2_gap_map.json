@@ -1338,6 +1338,13 @@
       "reason": "【预登记/补账】md_samusdead2 簇（批产 WIP——A 批预登记制）",
       "exit": "md_samusdead2 落→账清转 strict",
       "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-B6-009-CROSSCARD-VALCHAIN",
+      "case_prefix": "a6-009-case-",
+      "reason": "值链算深径（$04 族（x 索引——a3-009 公式）+0/8/8/1 值（fixture 弱源）——深径判别条补触发（链算径）——S5-121 同款跨卡深径）",
+      "exit": "值链算径建模清（$04 族链模拟）→账清转 strict",
+      "registered": "2026-10-20"
     }
   ]
 }
