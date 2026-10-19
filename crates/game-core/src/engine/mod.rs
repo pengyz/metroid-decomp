@@ -6870,3 +6870,38 @@ mod s6_162_tests {
         assert!(ev2.contains(&(0x0000, 0xE1))); // 0x10+0xD1
     }
 }
+
+// ---- SC-S6-12（S6-163）员转写（2 员——$81D1 共享码族；L2 真 0 留白）----
+
+/// $81D1 员体（root——簇共根形百五五·**banks1-5 共享码**（形八续三现））：
+/// $6AFB[x]→$C3D4 调（S1-04 接面）→$6AFB[x]（写回面）+$81F6 调——同块续三现。
+/// 返回 (写事件, 有效)。
+pub fn s6_81d1_shared(x: u8, v6afb_x: u8) -> (Vec<(u16, u8)>, bool) {
+    (vec![(0x6AFB + x as u16, v6afb_x)], true) // 写回面（$C3D4 往返）
+}
+
+/// $F82C 员体：$81D1+尾跳 $F839+and 4 判（beq 段）+$8206 调+lda $DF→$F7B3
+/// （S2-30 接面）+$0405[x]→$F84B（尾面）。
+pub fn s6_f82c_body(x: u8, v6afb_x: u8, v0405_x: u8) -> (Vec<(u16, u8)>, u16) {
+    let (mut ev, _) = s6_81d1_shared(x, v6afb_x);
+    if v0405_x & 4 == 0 {
+        ev.push((0x0405 + x as u16, v0405_x)); // beq 段面注
+    }
+    (ev, 0xF839)
+}
+
+#[cfg(test)]
+mod s6_163_tests {
+    use super::*;
+
+    /// 二员转写形（$81D1 共享码 root+一壳）。
+    #[test]
+    fn s6_163_units_two() {
+        let (ev, ok) = s6_81d1_shared(2, 0x55);
+        assert!(ok);
+        assert!(ev.contains(&(0x6AFD, 0x55))); // x=2 ⇒ $6AFB+2（x 索引强制步）
+        let (ev2, j) = s6_f82c_body(2, 0x55, 0x10);
+        assert_eq!(j, 0xF839);
+        assert!(ev2.contains(&(0x0407, 0x10))); // beq 段
+    }
+}
