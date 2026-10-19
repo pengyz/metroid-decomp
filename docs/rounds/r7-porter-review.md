@@ -4721,6 +4721,25 @@ B5-036 预登记 ✓**（160 条目=MOTHERBRAIN 族四条）：284 写>20 阈值
 预登记→L2 并案=严格顺序续 ③8 案账内 ④员面双扫桩 0（2 员真现）。测 448。
 findings（r10）：0 新。SC-B5-13（B 区余 94 卡）预告随账。
 
+## SC-B5-13+SC-MD-002 双卡审（命名正身四现/臂深化收束）
+
+### SC-B5-13 verdict: pass
+
+①**命名正身四现 ✓✓**：prg3_tourian.asm:1549 `MotherBrain_Idle_UpdateAnimBrain:
+; 03:A01B` ↔ bank3 $9E28=`20 1b a0`（JSR $A01B）——refs 法命名正身四现（谱系：
+DrawDoor→MotherBrain_Idle→HandleBeingHit→**UpdateAnimBrain**）②MOTHERBRAIN-
+B5-037 预登记 ✓（161 条目=MOTHERBRAIN 族五条）：283 写判别条触发→预登记→L2
+并案=严格顺序续 ③8 案账内 ④员面双扫桩 0。测 449。
+
+### SC-MD-002 verdict: pass（臂深化收束）
+
+①**8/9 过 ✓**（arm 9 案物理面 golden 面=ROM 实证：md_jumpengine/setsamusjump
+PASS+b-w3-samusjump/guard 附面+物理面 8 案）②**D7 声明形 ✓**（余 1 例=a1-030
+golden 面 776=0 单写 L3 路由显式声明）③**gap_map arm_deepening_closure 更新 ✓**
+（SC-MD-001/002-IMPL+簇 IMPL 路线图出口显式=收束账目在案）④态差核（9 案稳/
+就绪态保持）+闸 PASS。测 449。findings（r10）：0 新。SC-B5-14/SC-MD-003 接续
+预告随账。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
