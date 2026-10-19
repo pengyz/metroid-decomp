@@ -10874,3 +10874,29 @@ mod a5_036_tests {
         assert_eq!(b3_9e25_mb_idle(), (0x9E22, true)); // a5-035 直连
     }
 }
+
+// ---- SC-B5-13（a5-037）员转写（2 员——MotherBrain 族续二现（refs 法直得））----
+
+/// bank03:9E2B MotherBrain_Idle_UpdateAnimBrain（root——簇共根形二百八八·
+/// **MotherBrain 域续二现**（refs 法直得——$9E28/$A01B MotherBrain_Idle_UpdateAnimBrain））。
+/// 返回 (目标址, 桩面)。
+pub fn b3_9e2b_mb_update_anim() -> (u16, bool) {
+    (0xA01B, true) // MotherBrain_Idle_UpdateAnimBrain（refs 法直得）
+}
+
+/// $9E28 员体（MotherBrain_Idle_HandleBeingHit 族续（refs 法直得——同族面））。
+pub fn b3_9e28_mb_handle() -> (u16, bool) {
+    (0x9FED, true) // MotherBrain_Idle_HandleBeingHit（a5-036 直连）
+}
+
+#[cfg(test)]
+mod a5_037_tests {
+    use super::*;
+
+    /// 二员转写形（MotherBrain_Idle_UpdateAnimBrain root+handle 面）——refs 法直得。
+    #[test]
+    fn a5_037_units_two() {
+        assert_eq!(b3_9e2b_mb_update_anim(), (0xA01B, true)); // refs 法直得
+        assert_eq!(b3_9e28_mb_handle(), (0x9FED, true)); // a5-036 直连
+    }
+}
