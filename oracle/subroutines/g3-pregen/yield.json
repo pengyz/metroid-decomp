@@ -3,12 +3,13 @@
   "yield": {
     "ok": 0,
     "fail": 0,
-    "cases": 0,
+    "cases": 1,
     "funcs": 6
   },
   "note": "G3 批 L2 案族预备（音频面簇——g3-evidence-package 7 簇/42 员）——golden 推导法：簇首×4 LCG→ROM golden（同 a 系）；**预备态**（golden 推导=批产期随做）",
   "reproduce": "逐条韧性跑法（casegen 单条失败即停）",
   "golden_method": "簇首入口×4 LCG 输入→Mesen2 ROM golden 抓取→cases.jsonl in/out 对——ram_addrs=旗族 RAM 块（$0680-$0688）+声道状态",
   "batch_ready": "G3 批产开工随行预备完（2026-10-19）——porter A 批收口即接 G3 首卡",
-  "golden_method_note": "簇首×4 LCG→ROM golden（同 a 系）——ram_addrs=旗族 RAM 块($0680-$0688)"
+  "golden_method_note": "簇首×4 LCG→ROM golden（同 a 系）——ram_addrs=旗族 RAM 块($0680-$0688)",
+  "bake_status": "首案骨架落（g3-000-case-0 SilenceMusic 路径——golden 手推在途）——随行态：G3 卡逐卡烤案"
 }
