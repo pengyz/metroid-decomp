@@ -169,6 +169,13 @@
       "reason": "【预登记】a1-005 簇（porter 在途 WIP——A 批预登记制首件：败案在=账目在前置化——实现/转写缺口预账）",
       "exit": "a1_cluster_005 移植/转写落→账清转 strict",
       "registered": "2026-10-19"
+    },
+    {
+      "id": "SC-A1-006-IMPL",
+      "case_prefix": "a1-006-case",
+      "reason": "【预登记/补账】a1-006 簇（批产 WIP——A 批预登记制：败案在=账目在前置化）",
+      "exit": "a1-006 落→账清转 strict",
+      "registered": "2026-10-19"
     }
   ]
 }

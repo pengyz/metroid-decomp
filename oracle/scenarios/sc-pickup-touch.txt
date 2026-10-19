@@ -4,9 +4,9 @@
 # v5 下落径：x=104-112=pit 口（f1045 落坑 y=193）——坑底直上跳（ScrY==193 trigger）
 # v5-v7 迭代收：pit(x=27) 全跳可达 vs 走廊(x=104-108) 2px 压跳（plain hold 复证）
 # 顶障复证（非 trigger bug——v7 同压）——走廊径闭/物品浮于顶障上方（y=152>顶 y~173）
-# 【hi 位重定】全部近接帧=异名表（Samus hi=0 vs item hi=1——真 Δx=256！）
-# 真触达目标=MapX=3 同表窗（ScrX=104±7/y=152±18）——v1 f1174（ScrX=143/y=151=右高度）
-# 差 39px=同屏窗 x 收——morph tunnel/上层=MapX=3 屏 x104-143 墙带待试（v8 设计在手）
+# v8-v9 收：nav 舵效实证（ScrX 137→117 刹车 ✓）+碰撞机制定（F172/F186：hi XOR PPUCTRL）
+# 触达前提=Samus raw hi==item hi(1)——全跑 hi=0=永不可触（v9 Δx=80=room-x 真框）
+# 下一径=Samus hi 翻转径（房 NT3 半区入径——房 pin 表/瓦图待考）
 # nav 化：ScrX→104（=$68=物品 x）+A 持（跳向 y=$98 高位物品）
 # 事件核：pw 位图置位（$6988+）/PowerUps type 04→拾取态/UniqueItemHistory 链
 name sc-pickup-touch
@@ -19,12 +19,13 @@ press 360 start
 press 420 a
 press 540 start
 fixture 900 6878 13 invariant
-hold 995-1016 left
-hold 1018-1024 right
-hold 1026-1070 a
+hold 995-1068 left
+hold 1072-1132 a
+hold 1072-1105 right
 
 
-capture 1110 pit-jump
+nav 1108-1260 x 98
+capture 1110 over-wall
 capture 1180 near-item
 capture 1500 touch-window
 capture 1800 post
