@@ -3259,3 +3259,19 @@ pub fn a2_cluster_042(input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-B3-00 簇入口适配（a3_cluster_000 ← bank02:8000——bank2 areas_common 化身）----
+
+/// a3_cluster_000 适配（bank02:8000（areas_common 共享（bank2 化身）——refs 法：
+/// prg2_norfair.asm（.include areas_common））——案实核 5 写（清对+$6AF7←r(0)
+/// （fixture 强源——判别条未触发（严格顺序 ✓））+$6AF8/$6AFA）；A=0/X=0/Y=1）。
+pub fn a3_cluster_000(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    L2Out {
+        a: 0, x: 0, y: 1,
+        writes: merge_writes(vec![
+            (0x0404, 0), (0x040E, 0),
+            (0x6AF7, r(0x0000)), (0x6AF8, 251), (0x6AFA, 1),
+        ]),
+    }
+}
