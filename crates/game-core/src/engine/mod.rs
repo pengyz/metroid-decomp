@@ -6627,3 +6627,39 @@ mod s6_155_tests {
         assert_eq!(ev3.len(), 1); // beq 回卷段（仅声旗）
     }
 }
+
+// ---- SC-S6-05（S6-156）员转写（2 员——$F42D 清对族）----
+
+/// $F42D 员体（root——簇共根形百四八·**S6-152 定址清对同族**）：$4B X 载+
+/// $0404/$040E[x]←0 清对+rts。
+/// 返回 (写事件, 清对)。
+pub fn s6_f42d_clear(x: u8) -> Vec<(u16, u8)> {
+    vec![(0x0404, 0), (0x040E, 0)] // 定址清对（S6-152 同族）
+}
+
+/// $F576 员体：jmp $F42D（尾形）+$040B[x] cmp $FF 判（beq 回卷——S6-155 同族）+
+/// $0A 位6/bvs 段（$CBD6 接面）+$F74B and $0C（S3-23 接面）。
+pub fn s6_f576_body(x: u8, v040b_x: u8) -> (Vec<(u16, u8)>, u16) {
+    let mut ev = s6_f42d_clear(x);
+    if v040b_x != 0xFF {
+        ev.push((0x0300 + x as u16, 0)); // 非回卷段面注
+    }
+    (ev, 0xF42D)
+}
+
+#[cfg(test)]
+mod s6_156_tests {
+    use super::*;
+
+    /// 二员转写形（$F42D 定址清对 root+一壳）。
+    #[test]
+    fn s6_156_units_two() {
+        let ev = s6_f42d_clear(2);
+        assert_eq!(ev.len(), 2);
+        assert!(ev.contains(&(0x0404, 0)));
+        assert!(ev.contains(&(0x040E, 0)));
+        let (ev2, j) = s6_f576_body(2, 0x10);
+        assert_eq!(j, 0xF42D);
+        assert!(ev2.contains(&(0x0302, 0)));
+    }
+}

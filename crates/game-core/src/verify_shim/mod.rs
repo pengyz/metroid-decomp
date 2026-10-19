@@ -2353,3 +2353,14 @@ pub fn s6_cluster_155(input: &L2In) -> L2Out {
         writes: merge_writes(vec![(0x0681, 0x20)]),
     }
 }
+
+// ---- SC-S6-05 簇入口适配（s6_cluster_156 ← bank07:F42D——定址清对（S6-152 同族））----
+
+/// s6_cluster_156 适配（$F42D ldx PageIndex 链——案实核定址清对（$0404/$040E←0
+/// （S6-152 同族））；A=0/X=0/Y 透传）。
+pub fn s6_cluster_156(input: &L2In) -> L2Out {
+    L2Out {
+        a: 0, x: 0, y: input.y,
+        writes: merge_writes(vec![(0x0404, 0), (0x040E, 0)]),
+    }
+}
