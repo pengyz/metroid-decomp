@@ -3607,6 +3607,18 @@ bank7 $C2C5=`0a 0a 0a 0a 60`（ASL×4/RTS）——与 Adiv16（`4a×4` LSR÷16�
 （2 员真现）。测 353。findings（r10）：0 新。**SC-B2-00（a2-022 族=a2 批开 19 族）
 预告随账**。
 
+## SC-B2-00 卡审（d6830a7）——a2 批开（TourianMusic SFX 十四现·DOORCHAIN 账内）
+
+### verdict: pass
+
+四条核：①L2 面 a2-022-case×8 **全账内**（S5-121 先例形：gap_map DOORCHAIN 记账）
+✓（pregen 8 案实核；败 76→70=A 系续闭非本卡）②**SFX 十四现双轨 ✓✓**：prg7_engine
+.asm:2696-97 `TourianMusic: ; 07:CC07 / lda #music_Tourian` ↔ bank7 $CC07=`a9 40`
+（LDA #$40=music_Tourian 值）——**语义常量↔字节直合**（refs 法直得含语义名）③
+**a2 批行数核辨识 ✓**（22 行非 19 族——3 真 0 留白卡随辨=行数核纪律续）④员面
+双扫桩 0（2 员真现）。测 354。findings（r10）：0 新。SC-B2-01（B 区余 184 卡）
+预告随账。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
