@@ -10186,3 +10186,29 @@ mod a4_010_tests {
         assert_eq!(b3_8c8d_goto(), (0x8C7E, true));
     }
 }
+
+// ---- SC-B4-11（a4-011）员转写（2 员——DoorSubRoutine8C8A 族（bank3 化身））----
+
+/// bank03:8C8A DoorSubRoutine8C8A（root——簇共根形二百六四·**bank3 化身**
+/// （a1-019 同款——refs 法：areas_common.asm（bank3 复现）））。
+/// 返回 (目标址, 桩面)。
+pub fn b3_8c8a_door_sub() -> (u16, bool) {
+    (0x8C8A, true) // DoorSubRoutine8C8A（bank3 化身（a1-019 直连））
+}
+
+/// $8CFB WriteDoorBGTiles_Solid（bank3 化身——a1-019 同款（asm:1697））。
+pub fn b3_8cfb_write_door_bg() -> (u16, bool) {
+    (0x8CFB, true) // WriteDoorBGTiles_Solid（bank3 化身直连）
+}
+
+#[cfg(test)]
+mod a4_011_tests {
+    use super::*;
+
+    /// 二员转写形（DoorSubRoutine8C8A bank3 化身 root+跳转面）。
+    #[test]
+    fn a4_011_units_two() {
+        assert_eq!(b3_8c8a_door_sub(), (0x8C8A, true)); // a1-019 直连
+        assert_eq!(b3_8cfb_write_door_bg(), (0x8CFB, true)); // a1-019 同款
+    }
+}
