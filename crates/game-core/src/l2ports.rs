@@ -155,10 +155,18 @@ fn a1_cluster_002(input: &L2In) -> L2Out {
     L2Out { a: 0, x: 0, y: input.y, writes }
 }
 
+/// a1_cluster_003 适配（SC-A1-003——CommonJump_CrawlerAIRoutine_ShouldCrawlerMove
+/// （bank01:8009）→$F852 纯计算）。
+fn a1_cluster_003(input: &L2In) -> L2Out {
+    let a = crate::enemy::common::crawler_should_move(input.x, *input.ram.get(0x002D).unwrap_or(&0));
+    L2Out { a, x: input.x, y: input.y, writes: vec![] } // 纯计算（无写面）
+}
+
 pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
     match name {
         "a1_cluster_001" => Some(a1_cluster_001),
         "a1_cluster_002" => Some(a1_cluster_002),
+        "a1_cluster_003" => Some(a1_cluster_003),
         "sub_C16D" => Some(sub_c16d),
         "sub_C376" => Some(sub_c376),
         "int_y_E3A5" => Some(int_y_e3a5),
@@ -317,6 +325,7 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "s5_cluster_148" => Some(sub_s5_cluster_148),
         "s5_cluster_149" => Some(sub_s5_cluster_149),
         "s6_cluster_150" => Some(sub_s6_cluster_150),
+        "s6_cluster_151" => Some(sub_s6_cluster_151),
         _ => None,
     }
 }
@@ -1237,4 +1246,9 @@ pub fn sub_s5_cluster_149(input: &L2In) -> L2Out {
 /// s6_cluster_150 —— bank07:CBBC 簇入口注册（SC-S6-00 SFX_EnergyPickup）。
 pub fn sub_s6_cluster_150(input: &L2In) -> L2Out {
     crate::verify_shim::s6_cluster_150(input)
+}
+
+/// s6_cluster_151 —— bank07:CBC0 簇入口注册（SC-S6-01 SFX_MissilePickup）。
+pub fn sub_s6_cluster_151(input: &L2In) -> L2Out {
+    crate::verify_shim::s6_cluster_151(input)
 }

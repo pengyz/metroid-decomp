@@ -6477,3 +6477,39 @@ mod s6_150_tests {
         assert_eq!(ev2.len(), 1);
     }
 }
+
+// ---- SC-S6-01（S6-151）员转写（2 员——SFX_MissilePickup 族）----
+
+/// $CBC0 SFX_MissilePickup（root——簇共根形百四四·**SFX 族八现**）：SFX id 装载链
+/// （$80/$01/$40/$04/$20/$02 六 id）+X=1（ldx）。
+/// 返回 (声旗写, SFX id)。
+pub fn s6_sfx_missile_pickup() -> (Vec<(u16, u8)>, u8) {
+    (vec![(0x0681, 0x80)], 0x80) // sfxNoise_MissilePickup=$80（案实核恒定）
+}
+
+/// $F4D1 员体：SFX_MissilePickup 尾形+$2D 位判（$040D[x] dec 段）+$2D 位1/lsr
+/// 面（$A0 or 面——S1-10 同构）。
+pub fn s6_f4d1_body(x: u8, v2d: u8, v040d_x: u8) -> (Vec<(u16, u8)>, u8) {
+    let (mut ev, id) = s6_sfx_missile_pickup();
+    if v2d & 3 == 0 {
+        ev.push((0x040D + x as u16, v040d_x.wrapping_sub(1)));
+    }
+    (ev, id)
+}
+
+#[cfg(test)]
+mod s6_151_tests {
+    use super::*;
+
+    /// 二员转写形（SFX_MissilePickup 八现 root+一壳）。
+    #[test]
+    fn s6_151_units_two() {
+        let (ev, id) = s6_sfx_missile_pickup();
+        assert_eq!(id, 0x80);
+        assert!(ev.contains(&(0x0681, 0x80)));
+        let (ev2, _) = s6_f4d1_body(2, 0, 5);
+        assert!(ev2.contains(&(0x040F, 4))); // dec 段（x=2 ⇒ $040D+2）
+        let (ev3, _) = s6_f4d1_body(2, 3, 5);
+        assert_eq!(ev3.len(), 1); // 位判跳
+    }
+}

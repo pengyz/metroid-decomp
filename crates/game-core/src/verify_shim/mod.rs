@@ -2309,3 +2309,14 @@ pub fn s6_cluster_150(input: &L2In) -> L2Out {
         writes: merge_writes(vec![(0x0681, 0x40)]),
     }
 }
+
+// ---- SC-S6-01 簇入口适配（s6_cluster_151 ← bank07:CBC0 SFX_MissilePickup 族）----
+
+/// s6_cluster_151 适配（$CBC0 SFX_MissilePickup——案实核恒定：$0681←$80（声旗）；
+/// A=$80/X=1/Y 透传——SFX 族八现）。
+pub fn s6_cluster_151(input: &L2In) -> L2Out {
+    L2Out {
+        a: 0x80, x: 1, y: input.y,
+        writes: merge_writes(vec![(0x0681, 0x80)]),
+    }
+}
