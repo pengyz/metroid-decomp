@@ -575,6 +575,13 @@
       "reason": "【预登记】G3 卡序三卡（SC-G3-02 RunSoundRoutine 簇——开工前置步先登记）",
       "exit": "g3_cluster_002 移植/转写落→账清转 strict",
       "registered": "2026-10-19"
+    },
+    {
+      "id": "SC-B3-023-CROSSCARD-SELECTPAL",
+      "case_prefix": "a3-023-case-",
+      "reason": "SelectSamusPalette OAM 深径链（54 写（>20 深径判别条触发）——a2-026 同款（bank2 化身）——预登记先行（严格顺序）——S5-121 同款跨卡深径）",
+      "exit": "SelectPal 链径建模清（全链模拟）→账清转 strict",
+      "registered": "2026-10-19"
     }
   ]
 }

@@ -9486,3 +9486,30 @@ mod a3_022_tests {
         assert!(ev.contains(&(0x0683, 64))); // 写址对值核对
     }
 }
+
+// ---- SC-B3-23（a3-023）员转写（2 员——SelectSamusPalette 族（bank2 化身））----
+
+/// bank02:8CE3 SelectSamusPalette 族（root——簇共根形二百四十·**bank2 化身**
+/// （a2-026 同款——refs 法：prg7_engine.asm:2535（bank2 复现）））。
+/// 返回 (目标址, 桩面)。
+pub fn b2_8ce3_select_pal() -> (u16, bool) {
+    (0xCB73, true) // jmp SelectSamusPalette（bank2 化身（a2-026 直连））
+}
+
+/// $CB73 SelectSamusPalette（bank2 化身——a2-026 同款（prg7_engine.asm:2535））。
+/// 返回 (调色板面, 有效)。
+pub fn b2_cb73_select_pal() -> (u8, bool) {
+    (0, true) // 调色板选择面
+}
+
+#[cfg(test)]
+mod a3_023_tests {
+    use super::*;
+
+    /// 二员转写形（SelectSamusPalette bank2 化身 root+调色板面）。
+    #[test]
+    fn a3_023_units_two() {
+        assert_eq!(b2_8ce3_select_pal(), (0xCB73, true)); // a2-026 直连
+        assert!(b2_cb73_select_pal().1); // 调色板选择面
+    }
+}
