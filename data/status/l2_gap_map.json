@@ -1128,6 +1128,13 @@
       "reason": "MotherBrain OAM 深径链（283 写（>20 深径判别条触发）——$9E28/$A01B MotherBrain_Idle_UpdateAnimBrain（refs 法直得）——预登记先行（严格顺序）——S5-121 同款跨卡深径）",
       "exit": "MotherBrain OAM 绘制径建模清（全链模拟）→账清转 strict",
       "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-MD-003-IMPL",
+      "case_prefix": "a1-028-case",
+      "reason": "【预登记】臂深化卡序续（SC-MD-003 SamusDoor 族——开工前置步先登记）",
+      "exit": "arm_cluster_006 移植/转写落→账清转 strict",
+      "registered": "2026-10-20"
     }
   ]
 }
