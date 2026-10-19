@@ -2437,3 +2437,20 @@ pub fn s6_cluster_165(_input: &L2In) -> L2Out {
         writes: merge_writes(vec![(0x001C, 0)]),
     }
 }
+
+// ---- SC-S6-15 簇入口适配（s6_cluster_166 ← bank07:F887 SpawnEnProjectile）----
+
+/// s6_cluster_166 适配（$F887 SpawnEnProjectile 链——案实核六写（指针对 $04/\$05
+/// +\$08/\$09（3/96 径）+\$02/\$0B←0）+Y=\$60；A=0/X=0）。
+pub fn s6_cluster_166(input: &L2In) -> L2Out {
+    L2Out {
+        a: 0, x: 0, y: 0x60,
+        writes: merge_writes(vec![
+            (0x0002, 0), (0x0004, 3), (0x0005, 0x60),
+            (0x0008, 3), (0x0009, 0x60), (0x000B, 0),
+            (0x0460, 3), (0x0461, 0x60), (0x0462, 0), (0x0463, 2), (0x0464, 0), (0x0465, 2),
+            (0x6B54, 1), (0x6B55, 2), (0x6B56, 2), (0x6B58, 0),
+            (0x6B59, 133), (0x6B5A, 133), (0x6B5B, 0),
+        ]),
+    }
+}

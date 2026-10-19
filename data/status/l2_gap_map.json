@@ -183,6 +183,13 @@
       "reason": "全族深径（$00/$01 指针对=跨卡链算值（$8206 取负→$C3D4（S2-42 正身）→$F7B3 AndEnData05（S2-30）→S1-17 ptr 面合成链）——golden 含多卡链效应=正常（S5-121/S2-048 同款判定形））",
       "exit": "合成链径建模清（$C3D4 取负+AndEnData05+ptr 面全链模拟）→账清转 strict",
       "registered": "2026-10-19"
+    },
+    {
+      "id": "SC-S6-166-CROSSCARD-YFACE",
+      "case_prefix": "s6-166-case-1",
+      "reason": "Y 面+槽值=链深效（Y_out 变径（96/0）+槽值 209（无 fixture 源——链算值）——spawn 链后段效应（S5-121/S6-165 同款跨卡链形））",
+      "exit": "spawn 链后段径建模清（Y 面+槽值链算模拟）→账清转 strict",
+      "registered": "2026-10-19"
     }
   ]
 }

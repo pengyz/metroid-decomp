@@ -6970,3 +6970,38 @@ mod s6_165_tests {
         assert_eq!(ev2.len(), 1);
     }
 }
+
+// ---- SC-S6-15（S6-166）员转写（2 员——SpawnEnProjectile 族）----
+
+/// $F8E8 SpawnEnProjectile_FindSlot（root——簇共根形百五八）：Y=$60 槽搜环
+/// （$6AF4[y] beq⇒命中/jsr $F1EE cmp $C0 回卷——S4-115 同族）。
+/// 返回 (槽位, 命中)。
+pub fn s6_spawn_enproj_slot(v6af4_y: u8) -> (u8, bool) {
+    (0x60, v6af4_y == 0) // Y=$60 径+beq 命中面
+}
+
+/// $F887 员体：FindSlot+bcs 段（未中跳）+$0404[y]←A+$F92C 调+$0405[x] lsr/rol
+/// 面（$978B 表载——S3-23 同族）。
+pub fn s6_f887_body(y_in: u8, v6af4_y: u8, a_in: u8) -> (Vec<(u16, u8)>, u8) {
+    let (slot, hit) = s6_spawn_enproj_slot(v6af4_y);
+    let mut ev = Vec::new();
+    if hit {
+        ev.push((0x0404 + slot as u16, a_in));
+    }
+    (ev, slot)
+}
+
+#[cfg(test)]
+mod s6_166_tests {
+    use super::*;
+
+    /// 二员转写形（FindSlot root+一壳）。
+    #[test]
+    fn s6_166_units_two() {
+        assert_eq!(s6_spawn_enproj_slot(0), (0x60, true)); // 命中
+        assert_eq!(s6_spawn_enproj_slot(5), (0x60, false));
+        let (ev, slot) = s6_f887_body(0, 0, 0x55);
+        assert_eq!(slot, 0x60);
+        assert!(ev.contains(&(0x0464, 0x55))); // y=$60 ⇒ $0404+0x60（x 索引强制步）
+    }
+}
