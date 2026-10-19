@@ -6032,3 +6032,36 @@ mod s5_137_tests {
         assert!(ev2.contains(&(0x0009, 9)));
     }
 }
+
+// ---- SC-S5-18（S5-138）员转写（2 员——AddEnemyYSlotRadiusY 族）----
+
+/// $F1E7 AddEnemyYSlotRadiusY（root——簇共根形百三一）：clc/adc $6AF5[y]→$04
+/// （半径加面）+尾段（Y+$10/X-$10 对——S1-07/S3-12 同构）。
+/// 返回 (写事件, 半径和)。
+pub fn s5_add_en_y_radius(y: u8, a_in: u8, v6af5_y: u8) -> (Vec<(u16, u8)>, u8) {
+    let v = a_in.wrapping_add(v6af5_y); // clc/adc（无进位面）
+    (vec![(0x0004, v)], v)
+}
+
+/// $F1B6 员体：AddEnemyYSlotRadiusY+$0302[x]→$F1CB（尾面）+$6AF5/$6AF6[x] 对
+/// （$F1E0/$F1D9 双径——S5-133 同构）。
+pub fn s5_f1b6_body(y: u8, a_in: u8, v6af5_y: u8) -> (Vec<(u16, u8)>, u8) {
+    let (mut ev, _) = s5_add_en_y_radius(y, a_in, v6af5_y);
+    ev.push((0x0005, 0));
+    (ev, 0)
+}
+
+#[cfg(test)]
+mod s5_138_tests {
+    use super::*;
+
+    /// 二员转写形（AddEnemyYSlotRadiusY root+一壳）。
+    #[test]
+    fn s5_138_units_two() {
+        let (ev, v) = s5_add_en_y_radius(3, 68, 5);
+        assert_eq!(v, 73); // clc/adc（68+5）
+        assert!(ev.contains(&(0x0004, 73)));
+        let (ev2, _) = s5_f1b6_body(3, 68, 5);
+        assert!(ev2.contains(&(0x0005, 0)));
+    }
+}

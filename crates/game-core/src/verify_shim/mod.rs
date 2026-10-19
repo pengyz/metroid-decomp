@@ -2188,3 +2188,14 @@ pub fn s5_cluster_137(input: &L2In) -> L2Out {
         writes: merge_writes(vec![(0x000A, v)]),
     }
 }
+
+// ---- SC-S5-18 簇入口适配（s5_cluster_138 ← bank07:F1B6——AddEnemyYSlotRadiusY）----
+
+/// s5_cluster_138 适配（$F1B6 AddEnemyYSlotRadiusY 链——案实核：$04←A（clc/adc
+/// 面）/$05←0；A=0/X/Y 透传）。
+pub fn s5_cluster_138(input: &L2In) -> L2Out {
+    L2Out {
+        a: 0, x: input.x, y: input.y,
+        writes: merge_writes(vec![(0x0004, input.a), (0x0005, 0)]),
+    }
+}
