@@ -37,6 +37,7 @@ local MEMTYPE = PLAN.memtype or 8
 local name = PLAN.name
 local frames = PLAN.frames
 local pressLen = PLAN.press_len or 2
+local triggerPrev, triggerPress = {}, {}
 local tracePath = PLAN.out_dir .. "/" .. name .. ".frames.jsonl"
 local capPath = PLAN.out_dir .. "/" .. name .. ".captures.jsonl"
 local donePath = PLAN.out_dir .. "/" .. name .. ".done"
@@ -389,7 +390,20 @@ emu.addEventCallback(function()
       elseif t.op == ">" then ok = v > t.val
       elseif t.op == "<" then ok = v < t.val end
       if ok then
-        for _, b in ipairs(t.buttons) do btn[b] = true end
+        -- 【2026-10-19 探针修】press 模式补（t.mode 前忽略=工具缺口）：hold=持续按/
+        -- press=边沿触发 pressLen 帧按压（prevCond 上升沿）
+        if t.mode == "press" then
+          local prev = triggerPrev[t] or false
+          if ok and not prev then triggerPress[t] = frame + pressLen - 1 end
+          triggerPrev[t] = ok
+          if triggerPress[t] and frame <= triggerPress[t] then
+            for _, b in ipairs(t.buttons) do btn[b] = true end
+          end
+        else
+          for _, b in ipairs(t.buttons) do btn[b] = true end
+        end
+      else
+        triggerPrev[t] = false
       end
     end
   end
