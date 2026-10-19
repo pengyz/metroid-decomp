@@ -6729,3 +6729,45 @@ mod s6_158_tests {
         assert!(ev2.contains(&(0x0410, 0x0B))); // 判段（x=2 ⇒ $040E+2）
     }
 }
+
+// ---- SC-S6-08（S6-159）员转写（2 员——InArea 检查链族；L2 真 0 留白）----
+
+/// $DCFC 员体（root——簇共根形百五一）：$74（InArea）cmp $13 判（bne 段）+
+/// $6B02[x] cmp 4/2 双判（beq 双径）+$040C[x] asl/bmi 段（区域检查链）。
+/// 返回 (判段, 区域值)。
+pub fn s6_dcfc_area(v74: u8, v6b02_x: u8, v040c_x: u8) -> (bool, u8) {
+    if v74 != 0x13 {
+        return (false, v74); // bne 段
+    }
+    if v6b02_x == 4 || v6b02_x == 2 {
+        return (true, v6b02_x); // 双 beq 径
+    }
+    ((v040c_x << 1) & 0x80 != 0, v74) // asl/bmi 段
+}
+
+/// $F623 员体：$DCFC+$4B X 载+$F844 调+$960B[y] 表载+$F68D 调+$0406[x]←+槽搜
+/// （X=$C0——S4-115 同族）。
+pub fn s6_f623_body(x: u8, v74: u8, v6b02_x: u8, v040c_x: u8, tbl: u8) -> (Vec<(u16, u8)>, u8) {
+    let (hit, v) = s6_dcfc_area(v74, v6b02_x, v040c_x);
+    let mut ev = Vec::new();
+    if hit {
+        ev.push((0x0406 + x as u16, tbl));
+    }
+    (ev, v)
+}
+
+#[cfg(test)]
+mod s6_159_tests {
+    use super::*;
+
+    /// 二员转写形（$DCFC InArea 检查链 root+一壳）。
+    #[test]
+    fn s6_159_units_two() {
+        assert_eq!(s6_dcfc_area(0x10, 0, 0), (false, 0x10)); // bne 段
+        assert_eq!(s6_dcfc_area(0x13, 4, 0), (true, 4)); // beq 径
+        assert_eq!(s6_dcfc_area(0x13, 2, 0), (true, 2));
+        assert_eq!(s6_dcfc_area(0x13, 5, 0x40), (true, 0x13)); // asl/bmi 段
+        let (ev, _) = s6_f623_body(2, 0x13, 4, 0, 0x55);
+        assert!(ev.contains(&(0x0408, 0x55))); // x=2 ⇒ $0406+2（x 索引强制步）
+    }
+}
