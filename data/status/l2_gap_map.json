@@ -995,6 +995,69 @@
       "reason": "值链算深径（23 写（>20 深径判别条触发）——S5-121 同款跨卡深径（a5 批））",
       "exit": "值链算径建模清（$04/$6B 族链模拟）→账清转 strict",
       "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-B5-026-CROSSCARD-VALCHAIN",
+      "case_prefix": "a5-026-case-",
+      "reason": "值链算深径（$006B←162（fixture 弱源——a4-021 同款）——深径判别条补触发（链算径）——S5-121 同款跨卡深径）",
+      "exit": "值链算径建模清（$04/$6B 族链模拟）→账清转 strict",
+      "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-MD-002-IMPL",
+      "case_prefix": "a1-026-case",
+      "reason": "【预登记】臂深化卡序续（SC-MD-002 SamusRoll 族——开工前置步先登记）",
+      "exit": "arm_cluster_004 移植/转写落→账清转 strict",
+      "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-A1-022-CASE-0-IMPL",
+      "case_prefix": "a1-022-case-0",
+      "reason": "【预登记/补账】a1-022-case-0 簇（批产 WIP——A 批预登记制）",
+      "exit": "a1-022-case-0 落→账清转 strict",
+      "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-A1-023-CASE-0-IMPL",
+      "case_prefix": "a1-023-case-0",
+      "reason": "【预登记/补账】a1-023-case-0 簇（批产 WIP——A 批预登记制）",
+      "exit": "a1-023-case-0 落→账清转 strict",
+      "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-A1-024-CASE-0-IMPL",
+      "case_prefix": "a1-024-case-0",
+      "reason": "【预登记/补账】a1-024-case-0 簇（批产 WIP——A 批预登记制）",
+      "exit": "a1-024-case-0 落→账清转 strict",
+      "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-A1-027-CASE-0-IMPL",
+      "case_prefix": "a1-027-case-0",
+      "reason": "【预登记/补账】a1-027-case-0 簇（批产 WIP——A 批预登记制）",
+      "exit": "a1-027-case-0 落→账清转 strict",
+      "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-A1-028-CASE-0-IMPL",
+      "case_prefix": "a1-028-case-0",
+      "reason": "【预登记/补账】a1-028-case-0 簇（批产 WIP——A 批预登记制）",
+      "exit": "a1-028-case-0 落→账清转 strict",
+      "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-A1-029-CASE-0-IMPL",
+      "case_prefix": "a1-029-case-0",
+      "reason": "【预登记/补账】a1-029-case-0 簇（批产 WIP——A 批预登记制）",
+      "exit": "a1-029-case-0 落→账清转 strict",
+      "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-A1-030-CASE-0-IMPL",
+      "case_prefix": "a1-030-case-0",
+      "reason": "【预登记/补账】a1-030-case-0 簇（批产 WIP——A 批预登记制）",
+      "exit": "a1-030-case-0 落→账清转 strict",
+      "registered": "2026-10-20"
     }
   ]
 }
