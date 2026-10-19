@@ -9600,3 +9600,31 @@ mod a3_026_tests {
         assert_eq!(b2_9a42_face(82, 239).len(), 12);
     }
 }
+
+// ---- SC-B3-27（a3-027）员转写（2 员——bank2 8 写族面）----
+
+/// bank02:98B0 员体（root——簇共根形二百四四·bank2 8 写族面（3 员））。
+/// 返回 (写事件, 有效)。
+pub fn b2_98b0_face(v0: u8) -> Vec<(u16, u8)> {
+    vec![(0x0404, 0), (0x040E, 0), (0x040F, 0), (0x0410, 0),
+         (0x6AF7, v0), (0x6AF8, 3), (0x6AFA, 1), (0x6B0A, 0)]
+}
+
+/// $9A52/$9AC7 员体（同族面（连现））。
+pub fn b2_9a52_face(v0: u8) -> Vec<(u16, u8)> {
+    b2_98b0_face(v0)
+}
+
+#[cfg(test)]
+mod a3_027_tests {
+    use super::*;
+
+    /// 二员转写形（bank2 8 写族面 root+一壳）。
+    #[test]
+    fn a3_027_units_two() {
+        let ev = b2_98b0_face(90);
+        assert_eq!(ev.len(), 8);
+        assert!(ev.contains(&(0x6AF7, 90))); // fixture 强源（写址对值核对）
+        assert_eq!(b2_9a52_face(90).len(), 8);
+    }
+}

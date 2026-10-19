@@ -603,6 +603,13 @@
       "reason": "【预登记】G3 卡序四卡（SC-G3-03 RunSFXMultiInit 簇——开工前置步先登记）",
       "exit": "g3_cluster_003 移植/转写落→账清转 strict",
       "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-B3-027-CROSSCARD-XCHAIN",
+      "case_prefix": "a3-027-case-",
+      "reason": "X 链算深径（$04 族 x 索引变径（0x40F/0x410 vs 0x405/0x406——多入参链算）——深径判别条补触发（链算径）——S5-121 同款跨卡深径）",
+      "exit": "X 链算径建模清（变换链模拟）→账清转 strict",
+      "registered": "2026-10-19"
     }
   ]
 }
