@@ -7708,3 +7708,32 @@ mod a1_005_tests {
         assert!(ev.contains(&(0x6AFD, 0x55)));
     }
 }
+
+// ---- SC-B1-06（a1-006）员转写（2 员——EnemyFlipAfterDisplacement 族·refs 法）----
+
+/// $801B CommonJump_EnemyFlipAfterDisplacement（root——簇共根形百八十·桩阵七现
+/// （形九续）——refs 法：areas_common.asm:53 `jmp EnemyFlipAfterDisplacement`）。
+/// 返回 (目标址, 桩面)。
+pub fn a801b_common_jump() -> (u16, bool) {
+    (0xE0A3, true) // jmp EnemyFlipAfterDisplacement（refs 法）
+}
+
+/// EnemyFlipAfterDisplacement 四写面（定址面——案实核）。
+pub fn a801b_flip_face() -> Vec<(u16, u8)> {
+    vec![(0x6AF8, 0), (0x6AF9, 5), (0x6AFA, 5), (0x6B03, 0)]
+}
+
+#[cfg(test)]
+mod a1_006_tests {
+    use super::*;
+
+    /// 二员转写形（EnemyFlipAfterDisplacement root+面壳）——refs 法三现。
+    #[test]
+    fn a1_006_units_two() {
+        assert!(a801b_common_jump().1);
+        let ev = a801b_flip_face();
+        assert!(ev.contains(&(0x6AF8, 0)));
+        assert!(ev.contains(&(0x6AF9, 5))); // 定址面（写址对值核对）
+        assert!(ev.contains(&(0x6B03, 0)));
+    }
+}

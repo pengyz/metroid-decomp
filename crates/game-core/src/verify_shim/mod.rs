@@ -2729,3 +2729,17 @@ pub fn a1_cluster_005(input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-B1-06 簇入口适配（a1_cluster_006 ← bank01:801B——refs 法三现）----
+
+/// a1_cluster_006 适配（$801B CommonJump_EnemyFlipAfterDisplacement（refs 法：
+/// asm:53）——案实核四写（$6AF8←0/$6AF9←5/$6AFA←5/$6B03←0（定址面））；
+/// A=0/X=0/Y=0）。
+pub fn a1_cluster_006(_input: &L2In) -> L2Out {
+    L2Out {
+        a: 0, x: 0, y: 0,
+        writes: merge_writes(vec![
+            (0x6AF8, 0), (0x6AF9, 5), (0x6AFA, 5), (0x6B03, 0),
+        ]),
+    }
+}
