@@ -6412,3 +6412,36 @@ mod s5_148_tests {
         assert!(ev.contains(&(0x0410, 0)));
     }
 }
+
+// ---- SC-S5-29（S5-149）员转写（2 员——AddHealth 族·S5 真收官卡）----
+
+/// $CEF9 AddHealth（root——簇共根形百四二）：$0106←$03（HealthLo 载）+$6E clc/adc
+/// 链（$C3DA 调——加法进位面）+$0107/$6F 对（HealthHi 面）。
+/// 返回 (写事件, 七写零组面)。
+pub fn s5_add_health() -> Vec<(u16, u8)> {
+    vec![(0x0001, 0), (0x0002, 0), (0x0003, 0),
+         (0x006E, 0), (0x006F, 0), (0x0106, 0), (0x0107, 0)]
+}
+
+/// $F4B1 员体：AddHealth+尾跳 $CBBC（S1-16 接面——sound 域）+$6B02 判（$1E 段）
+/// +$6879/$687A cmp 链（饱和加面）。
+pub fn s5_f4b1_body() -> (Vec<(u16, u8)>, u16) {
+    (s5_add_health(), 0xCBBC)
+}
+
+#[cfg(test)]
+mod s5_149_tests {
+    use super::*;
+
+    /// 二员转写形（AddHealth 恒定零组 root+一壳）——S5 真收官。
+    #[test]
+    fn s5_149_units_two() {
+        let ev = s5_add_health();
+        assert_eq!(ev.len(), 7);
+        assert!(ev.contains(&(0x0106, 0)));
+        assert!(ev.contains(&(0x006F, 0)));
+        let (ev2, j) = s5_f4b1_body();
+        assert_eq!(j, 0xCBBC);
+        assert_eq!(ev2.len(), 7);
+    }
+}

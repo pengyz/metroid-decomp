@@ -134,8 +134,9 @@ fn a1_cluster_001(input: &L2In) -> L2Out {
 fn a1_cluster_002(input: &L2In) -> L2Out {
     let r = |a: usize| input.ram.get(a).copied().unwrap_or(0);
     let slot = crate::enemy::slot::EnemySlot::from_bytes([r(0x03C0); crate::enemy::slot::EnemySlot::SIZE]);
+    let sa = r(0x03C0 + 0x10 + input.x as usize); // **sa=槽面**（Ens.0.specialAttribs,x——$03D0 fixture 误源（D3 迹证：8006 无 $6B 写=sa 位7=0））
     let (cntrl_write, draw, clear_hit) =
-        crate::enemy::common::update_enemy_common_no_move_no_anim(&slot, r(0x006B), r(0x03D0));
+        crate::enemy::common::update_enemy_common_no_move_no_anim(&slot, r(0x006B), sa);
     let mut writes = Vec::new();
     if let Some(v) = cntrl_write {
         if v != r(0x006B) {
@@ -314,6 +315,7 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "s5_cluster_142" => Some(sub_s5_cluster_142),
         "s5_cluster_146" => Some(sub_s5_cluster_146),
         "s5_cluster_148" => Some(sub_s5_cluster_148),
+        "s5_cluster_149" => Some(sub_s5_cluster_149),
         _ => None,
     }
 }
@@ -1224,4 +1226,9 @@ pub fn sub_s5_cluster_146(input: &L2In) -> L2Out {
 /// s5_cluster_148 —— bank07:DD8B 簇入口注册（SC-S5-28）。
 pub fn sub_s5_cluster_148(input: &L2In) -> L2Out {
     crate::verify_shim::s5_cluster_148(input)
+}
+
+/// s5_cluster_149 —— bank07:CEF9 簇入口注册（SC-S5-29 AddHealth）。
+pub fn sub_s5_cluster_149(input: &L2In) -> L2Out {
+    crate::verify_shim::s5_cluster_149(input)
 }

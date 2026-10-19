@@ -2284,3 +2284,17 @@ pub fn s5_cluster_148(input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-S5-29 簇入口适配（s5_cluster_149 ← bank07:CEF9 AddHealth·S5 真收官）----
+
+/// s5_cluster_149 适配（$CEF9 AddHealth——案实核恒定零组 7 写（$01/$02/$03/$6E/$6F/
+/// $0106/$0107←0）；A=0/X/Y 透传）。
+pub fn s5_cluster_149(input: &L2In) -> L2Out {
+    L2Out {
+        a: 0, x: input.x, y: input.y,
+        writes: merge_writes(vec![
+            (0x0001, 0), (0x0002, 0), (0x0003, 0),
+            (0x006E, 0), (0x006F, 0), (0x0106, 0), (0x0107, 0),
+        ]),
+    }
+}
