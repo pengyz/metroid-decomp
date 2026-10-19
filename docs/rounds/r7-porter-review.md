@@ -4913,6 +4913,17 @@ $801B **全同续**（CommonJump 表 bank4 复现七现）②**VALCHAIN-B6-006 �
 （form 300=员面真现谱系破三百）。测 461。findings（r10）：0 新。SC-B6-07（B 区
 余 80 卡）预告随账。
 
+## SC-B6-07 卡审（c90eecf）——bank4 化身八现（3 写族三现）
+
+### verdict: pass
+
+四条核：①**bank4 化身八现 ✓✓**：bank04:801E=`4c ca fb 4c 70 f8 4c 7c` 与 bank1
+$801E **全同续**（CommonJump 表 bank4 复现八现）②**VALCHAIN-B6-007 预登记 ✓**
+（186 条目）：$6AF8/$6AF9/$6AFA←0/5/5 fixture 弱源判别条补触发→预登记→L2 并案
+=严格顺序续 ③3 写族三现（$6AF8/$6AF9/$6AFA 同族面）+8 案 strict 0 败（首提全过）
+④员面双扫桩 0（2 员真现）。测 462。findings（r10）：0 新。SC-B6-08（B 区余 79 卡）
+预告随账。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
