@@ -8943,3 +8943,28 @@ mod a3_002_tests {
         assert!(ev.contains(&(0x0404, 0))); // 定址清对（写址对值核对）
     }
 }
+
+// ---- SC-B3-03（a3-003）员转写（2 员——bank2 化身透传族）----
+
+/// bank02:8009 areas_common 化身（root——簇共根形二百二十·bank2 化身四现）。
+/// 返回 (化身面, 有效)。
+pub fn b2_8009_areas_incarnation() -> (bool, bool) {
+    (true, true) // areas_common 共享（bank2 化身四现）
+}
+
+/// $9996 员体（bank2 同族面（透传类））。
+pub fn a9996_face(a: u8, x: u8, y: u8) -> (u8, u8, u8) {
+    (a, x, y) // 透传类
+}
+
+#[cfg(test)]
+mod a3_003_tests {
+    use super::*;
+
+    /// 二员转写形（bank2 化身四现 root+透传面）。
+    #[test]
+    fn a3_003_units_two() {
+        assert!(b2_8009_areas_incarnation().0);
+        assert_eq!(a9996_face(5, 6, 7), (5, 6, 7)); // 透传类
+    }
+}

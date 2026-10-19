@@ -3303,3 +3303,11 @@ pub fn a3_cluster_002(input: &L2In) -> L2Out {
         writes: merge_writes(vec![(0x0404, 0), (0x040E, 0)]),
     }
 }
+
+// ---- SC-B3-03 簇入口适配（a3_cluster_003 ← bank02:8009——透传类）----
+
+/// a3_cluster_003 适配（bank02:8009（areas_common 化身——bank2）——案实核透传类
+/// （A/X/Y 透传；无写面（0 写（判别条未触发（严格顺序 ✓）））。
+pub fn a3_cluster_003(input: &L2In) -> L2Out {
+    L2Out { a: input.a, x: input.x, y: input.y, writes: vec![] }
+}
