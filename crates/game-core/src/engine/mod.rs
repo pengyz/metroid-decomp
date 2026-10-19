@@ -10992,3 +10992,53 @@ mod a5_040_tests {
         assert_eq!(b3_9e3e_mb_face().len(), 3);
     }
 }
+
+// ---- SC-B5-17（a5-041）员转写（4 员——MotherBrain 数据面族；L2 真 0 留白）----
+
+/// $9E36 MotherBrain_Hurt（root——簇共根形二百九二·**MotherBrain 域续六现**
+/// （refs 法直得——$9E36 MotherBrain_Hurt 命名正身八现）——数据面（hexdump 直得：
+/// anim 表族（$A08B 表对载））。
+/// 返回 (数据面, 有效)。
+pub fn b3_9e36_mb_hurt_data() -> (Vec<u16>, bool) {
+    (vec![0xA08B], true) // anim 表（hexdump 直得）
+}
+
+/// $9E43 UpdateMotherBrainFlashDelay（refs 法直得——同族面——数据面）。
+/// 返回 (数据面, 有效)。
+pub fn b3_9e43_mb_flash_data() -> (Vec<u16>, bool) {
+    (vec![0xA08B, 0xA09F, 0xA0B3], true) // anim 表族（hexdump 直得）
+}
+
+/// $9E52 MotherBrain_Killed（refs 法直得——同族面——数据面）。
+/// 返回 (数据面, 有效)。
+pub fn b3_9e52_mb_killed_data() -> (Vec<u16>, bool) {
+    (vec![0xA0B3, 0xA0BE, 0xA0C9, 0xA0D2, 0xA0DB, 0xA0E6], true) // anim 表族（hexdump 直得）
+}
+
+/// $9E93 员体（同族面（连现）——数据面）。
+/// 返回 (数据面, 有效)。
+pub fn b3_9e93_mb_data() -> (Vec<u16>, bool) {
+    (vec![0xA0F6, 0xA0FE, 0xA106, 0xA10E, 0xA116, 0xA11E, 0xA126, 0xA12E], true) // anim 表族（hexdump 直得）
+}
+
+#[cfg(test)]
+mod a5_041_tests {
+    use super::*;
+
+    /// 四员转写形（MotherBrain 数据面族 root+三壳）——真 0 留白形。
+    #[test]
+    fn a5_041_units_four() {
+        let (d1, ok1) = b3_9e36_mb_hurt_data();
+        assert!(ok1);
+        assert_eq!(d1[0], 0xA08B); // anim 表（写址对值核对）
+        let (d2, ok2) = b3_9e43_mb_flash_data();
+        assert!(ok2);
+        assert_eq!(d2.len(), 3);
+        let (d3, ok3) = b3_9e52_mb_killed_data();
+        assert!(ok3);
+        assert_eq!(d3.len(), 6);
+        let (d4, ok4) = b3_9e93_mb_data();
+        assert!(ok4);
+        assert_eq!(d4.len(), 8);
+    }
+}
