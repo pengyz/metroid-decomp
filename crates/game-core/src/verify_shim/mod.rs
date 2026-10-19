@@ -2004,3 +2004,21 @@ pub fn s5_cluster_121(input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-S5-02 簇入口适配（s5_cluster_122 ← bank07:DC67 CreateItemID）----
+
+/// s5_cluster_122 适配（$DC67 CreateItemID——**位打包**：$06←Amul8($07)|$06/
+/// $07←($09<<2)|($07>>3)；A=0/X/Y 透传）。
+pub fn s5_cluster_122(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    let v07 = r(0x0007);
+    let v06 = r(0x0006);
+    let v09 = r(0x0009);
+    L2Out {
+        a: 0, x: input.x, y: input.y,
+        writes: merge_writes(vec![
+            (0x0006, (v07 << 3) | v06),   // Amul8+ora 面
+            (0x0007, (v09 << 2) | (v07 >> 3)), // 位打包面
+        ]),
+    }
+}

@@ -5443,3 +5443,37 @@ mod s5_120_tests {
         assert!(ev2.contains(&(0x0302, 1)));
     }
 }
+
+// ---- SC-S5-02（S5-122）员转写（2 员——CreateItemID 族）----
+
+/// $DC67 CreateItemID（root——簇共根形百十五·**位打包**）：$06←Amul8($07)|$06/
+/// $07←($09<<2)|($07>>3)（lsr×3/asl×2 位场拼装）。
+/// 返回 (写事件, 位包值)。
+pub fn s5_create_item_id(v07: u8, v06: u8, v09: u8) -> (Vec<(u16, u8)>, u8) {
+    let n06 = (v07 << 3) | v06;
+    let n07 = (v09 << 2) | (v07 >> 3);
+    (vec![(0x0006, n06), (0x0007, n07)], n07)
+}
+
+/// $EE47 员体：jmp CreateItemID（尾形——S5-01 接面）+$6886 判（比对段——S5-01 同族）。
+pub fn s5_ee47_body(v07: u8, v06: u8, v09: u8) -> (Vec<(u16, u8)>, u16) {
+    let (ev, _) = s5_create_item_id(v07, v06, v09);
+    (ev, 0xDC67)
+}
+
+#[cfg(test)]
+mod s5_122_tests {
+    use super::*;
+
+    /// 二员转写形（CreateItemID 位打包 root+一壳）。
+    #[test]
+    fn s5_122_units_two() {
+        let (ev, v) = s5_create_item_id(0x05, 0x03, 0x02);
+        assert_eq!(ev[0], (0x0006, 0x2B)); // (5<<3)|3
+        assert_eq!(v, 0x08); // (2<<2)|(5>>3)=8|0
+        assert!(ev.contains(&(0x0007, 8)));
+        let (ev2, j) = s5_ee47_body(5, 3, 2);
+        assert_eq!(j, 0xDC67);
+        assert_eq!(ev2.len(), 2);
+    }
+}
