@@ -8683,3 +8683,34 @@ mod a2_037b_tests {
         assert!(ev.contains(&(0x6B66, 0))); // $6AF8+110
     }
 }
+
+// ---- SC-B2-16（a2-038）员转写（2 员——$9B92 8 写族面）----
+
+/// $9B92 员体（root——簇共根形二百十二·8 写族面（a2-037 公式直用））。
+/// 返回 (写事件, 有效)。
+pub fn a9b92_face(x: u8, v0: u8) -> Vec<(u16, u8)> {
+    vec![(0x0404, 0), (0x040E, 0),
+         (0x0404 + x as u16 - 4, 0), (0x0404 + x as u16 - 3, 0),
+         (0x6AF7, v0), (0x6AF8, 3), (0x6AFA, 1),
+         (0x6AF8 + x as u16 + 3, 0)]
+}
+
+/// $9C96 员体（同族面（连现））。
+pub fn a9c96_face(x: u8, v0: u8) -> Vec<(u16, u8)> {
+    a9b92_face(x, v0)
+}
+
+#[cfg(test)]
+mod a2_038_tests {
+    use super::*;
+
+    /// 二员转写形（$9B92 8 写族面 root+一壳）。
+    #[test]
+    fn a2_038_units_two() {
+        let ev = a9b92_face(179, 47);
+        assert_eq!(ev.len(), 8);
+        assert!(ev.contains(&(0x04B3, 0))); // x 偏差面（写址对值核对）
+        assert!(ev.contains(&(0x6BAE, 0)));
+        assert_eq!(a9c96_face(179, 47).len(), 8);
+    }
+}
