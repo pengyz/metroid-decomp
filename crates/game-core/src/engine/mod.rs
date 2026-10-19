@@ -8200,3 +8200,33 @@ mod a2_022_tests {
         assert!(ev2.contains(&(0x0005, 0x70))); // 同族面（写址对值核对）
     }
 }
+
+// ---- SC-B2-01（a2-023）员转写（2 员——MotherBrainMusic 族·refs 法直得）----
+
+/// $CC03 MotherBrainMusic（root——簇共根形百九七·**refs 法直得**（prg7_engine.asm:2692）
+/// ——MotherBrain 音乐面（**SFX 族十五现**！））。
+/// 返回 (声旗写, SFX id)。
+pub fn cc03_mother_brain_music() -> (Vec<(u16, u8)>, u8) {
+    (vec![(0x0681, 0x20)], 0x20) // sfxNoise_MotherBrainMusic（案实核径）
+}
+
+/// $8CC0 员体（DoorSubRoutine 区——同族面（连现））。
+pub fn a8cc0_face() -> Vec<(u16, u8)> {
+    vec![(0x0000, 203), (0x0001, 0x87), (0x0002, 1), (0x0003, 0x87),
+         (0x0004, 0), (0x0005, 0x70), (0x0006, 0), (0x0008, 0)]
+}
+
+#[cfg(test)]
+mod a2_023_tests {
+    use super::*;
+
+    /// 二员转写形（MotherBrainMusic root+面壳）——refs 法直得（prg7_engine.asm:2692）。
+    #[test]
+    fn a2_023_units_two() {
+        let (ev, id) = cc03_mother_brain_music();
+        assert_eq!(id, 0x20); // SFX 族十五现（MotherBrainMusic）
+        assert!(ev.contains(&(0x0681, 0x20)));
+        let ev2 = a8cc0_face();
+        assert!(ev2.contains(&(0x0005, 0x70))); // 同族面（写址对值核对）
+    }
+}

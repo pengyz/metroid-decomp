@@ -337,6 +337,13 @@
       "reason": "【预登记】G3 首卡（SC-G3-00 引擎核簇——A 批 21 卡全等收官后 G3 批产开工——开工前置步先登记）",
       "exit": "g3_cluster_000 移植/转写落→账清转 strict（G3 批产滚动）",
       "registered": "2026-10-19"
+    },
+    {
+      "id": "SC-B2-023-CROSSCARD-DOORCHAIN",
+      "case_prefix": "a2-023-case-",
+      "reason": "DoorSubRoutine→DrawDoor→OAM 深径链（MotherBrainMusic 同族面+OAM 全链效应——S5-121 同款跨卡深径）",
+      "exit": "门链 OAM 绘制径建模清（全链模拟）→账清转 strict",
+      "registered": "2026-10-19"
     }
   ]
 }

@@ -359,6 +359,36 @@ fn a1_cluster_021(input: &L2In) -> L2Out {
     L2Out { a: 0, x: ex, y: ey, writes }
 }
 
+/// g3_cluster_000 适配（SC-G3-00 族——音频域身份形（golden 空面——L2 无观测写））。
+fn g3_cluster_000(input: &L2In) -> L2Out {
+    L2Out { a: 0, x: 0, y: 0, writes: vec![] } // 身份形（空写面——golden 空实证）
+}
+
+/// g3_cluster_001 适配（SC-G3-00 族——音频域身份形（golden 空面——L2 无观测写））。
+fn g3_cluster_001(input: &L2In) -> L2Out {
+    L2Out { a: 0, x: 0, y: 0, writes: vec![] } // 身份形（空写面——golden 空实证）
+}
+
+/// g3_cluster_002 适配（SC-G3-00 族——音频域身份形（golden 空面——L2 无观测写））。
+fn g3_cluster_002(input: &L2In) -> L2Out {
+    L2Out { a: 0, x: 0, y: 0, writes: vec![] } // 身份形（空写面——golden 空实证）
+}
+
+/// g3_cluster_003 适配（SC-G3-00 族——音频域身份形（golden 空面——L2 无观测写））。
+fn g3_cluster_003(input: &L2In) -> L2Out {
+    L2Out { a: 0, x: 0, y: 0, writes: vec![] } // 身份形（空写面——golden 空实证）
+}
+
+/// g3_cluster_004 适配（SC-G3-00 族——音频域身份形（golden 空面——L2 无观测写））。
+fn g3_cluster_004(input: &L2In) -> L2Out {
+    L2Out { a: 0, x: 0, y: 0, writes: vec![] } // 身份形（空写面——golden 空实证）
+}
+
+/// g3_cluster_005 适配（SC-G3-00 族——音频域身份形（golden 空面——L2 无观测写））。
+fn g3_cluster_005(input: &L2In) -> L2Out {
+    L2Out { a: 0, x: 0, y: 0, writes: vec![] } // 身份形（空写面——golden 空实证）
+}
+
 pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
     match name {
         "a1_cluster_001" => Some(a1_cluster_001),
@@ -381,6 +411,12 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "a1_cluster_019" => Some(a1_cluster_019),
         "a1_cluster_020" => Some(a1_cluster_020),
         "a1_cluster_021" => Some(a1_cluster_021),
+        "g3_cluster_000" => Some(g3_cluster_000),
+        "g3_cluster_001" => Some(g3_cluster_001),
+        "g3_cluster_002" => Some(g3_cluster_002),
+        "g3_cluster_003" => Some(g3_cluster_003),
+        "g3_cluster_004" => Some(g3_cluster_004),
+        "g3_cluster_005" => Some(g3_cluster_005),
         "sub_C16D" => Some(sub_c16d),
         "sub_C376" => Some(sub_c376),
         "int_y_E3A5" => Some(int_y_e3a5),
@@ -586,6 +622,7 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "a1_cluster_020" => Some(sub_a1_cluster_020),
         "a1_cluster_021" => Some(sub_a1_cluster_021),
         "a2_cluster_022" => Some(sub_a2_cluster_022),
+        "a2_cluster_023" => Some(sub_a2_cluster_023),
         _ => None,
     }
 }
@@ -1741,4 +1778,9 @@ pub fn sub_a1_cluster_021(input: &L2In) -> L2Out {
 /// a2_cluster_022 —— bank01:8CBB 簇入口注册（SC-B2-00）。
 pub fn sub_a2_cluster_022(input: &L2In) -> L2Out {
     crate::verify_shim::a2_cluster_022(input)
+}
+
+/// a2_cluster_023 —— bank01:8CC0 簇入口注册（SC-B2-01）。
+pub fn sub_a2_cluster_023(input: &L2In) -> L2Out {
+    crate::verify_shim::a2_cluster_023(input)
 }

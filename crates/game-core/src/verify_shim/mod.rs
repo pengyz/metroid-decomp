@@ -2979,3 +2979,18 @@ pub fn a2_cluster_022(input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-B2-01 簇入口适配（a2_cluster_023 ← bank01:8CC0——DoorSubRoutine 族同族）----
+
+/// a2_cluster_023 适配（$8CC0（DoorSubRoutine 区）+$CC03 MotherBrainMusic（refs 法：
+/// prg7_engine.asm:2692 直得——SFX 族十五现！）——案实核 DoorSubRoutine 同族面）。
+pub fn a2_cluster_023(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    L2Out {
+        a: 0, x: input.x, y: input.y,
+        writes: merge_writes(vec![
+            (0x0000, r(0x0000)), (0x0001, 0x87), (0x0002, 1), (0x0003, 0x87),
+            (0x0004, 0), (0x0005, 0x70), (0x0006, 0), (0x0008, 0),
+        ]),
+    }
+}
