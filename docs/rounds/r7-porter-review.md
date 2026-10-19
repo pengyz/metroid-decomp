@@ -4030,6 +4030,18 @@ bank1 $8BB1 **全同**（=a1-015 DrawDoor 同形（LDA $0307,X/CMP #$03 判）**
 同型瞬态注（败 194/账 188=6 非账目=A 系 WIP）。测 390。findings（r10）：0 新。
 SC-B3-13（B 区余 150 卡）预告随账。
 
+## SC-B3-13 卡审（1907b3f）——DoorSubRoutine bank2 化身（DOORSUB-B3-013）
+
+### verdict: pass
+
+四条核：①**DoorSubRoutine bank2 化身 ✓✓**：bank02:8C61=`a9 01 9d 0f 03 20 fb 8c`
+与 bank1 $8C61 **全同**（=a1-016 DoorSubRoutine8C61 同形（LDA #$01/STA $030F,X
+门重关面）**跨 bank 复现**——门族图谱 bank2 化身二现）②**DOORSUB-B3-013 预登记
+✓**（72 条目=**CHAIN 六类**：DOORCHAIN/YCHAIN/VALCHAIN/ACHAIN/DRAWDOOR/
+DOORSUB）：60 写>20 阈值判别条触发→预登记→L2 并案=严格顺序续 ③8 案账内 ④员面
+双扫桩 0（2 员真现）。测 391。findings（r10）：0 新。SC-B3-14（B 区余 149 卡）
+预告随账。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
