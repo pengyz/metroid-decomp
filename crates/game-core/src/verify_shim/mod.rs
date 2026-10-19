@@ -2585,3 +2585,14 @@ pub fn s7_cluster_176(input: &L2In) -> L2Out {
         writes: merge_writes(vec![(0x0004, v04 & 0xFF), (0x0005, 0x60)]),
     }
 }
+
+// ---- SC-S7-02 簇入口适配（s7_cluster_177 ← bank07:F693 ClearEnAnimDelay）----
+
+/// s7_cluster_177 适配（$F693 ClearEnAnimDelay——案实核：$6AF8[x]←0 单写
+/// （x 索引强制步——S5-146 同族清面）；A=0/X 透传/Y 透传）。
+pub fn s7_cluster_177(input: &L2In) -> L2Out {
+    L2Out {
+        a: 0, x: input.x, y: input.y,
+        writes: merge_writes(vec![(0x6AF8 + input.x as u16, 0)]),
+    }
+}

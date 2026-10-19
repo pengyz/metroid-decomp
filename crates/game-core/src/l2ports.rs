@@ -251,11 +251,11 @@ fn a1_cluster_011(input: &L2In) -> L2Out {
 /// $8033 jmp `4c 1e fa` 字节证）——**golden 实证面**（值形 8/8 恒：zp $02-$05/$0B
 /// 固定 0/0/0/96/0——x 无关））。
 fn a1_cluster_012(input: &L2In) -> L2Out {
-    let _ = input;
+    let page_index = *input.ram.get(0x0026).unwrap_or(&0); // **x 源=PageIndex**（`ldx PageIndex`——c7=250 证）
     let writes = vec![
         (0x0002, 0u8), (0x0003, 0), (0x0004, 0), (0x0005, 96), (0x000B, 0),
     ];
-    L2Out { a: 0, x: 0, y: 0, writes } // 出口 (0,0,0)（golden 主形——c7 x=250 计算面余）
+    L2Out { a: 0, x: page_index, y: 0, writes } // 出口 (0,PageIndex,0)（golden 面）
 }
 
 pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
@@ -449,6 +449,7 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "s6_cluster_174" => Some(sub_s6_cluster_174),
         "s7_cluster_175" => Some(sub_s7_cluster_175),
         "s7_cluster_176" => Some(sub_s7_cluster_176),
+        "s7_cluster_177" => Some(sub_s7_cluster_177),
         _ => None,
     }
 }
@@ -1469,4 +1470,9 @@ pub fn sub_s7_cluster_175(input: &L2In) -> L2Out {
 /// s7_cluster_176 —— bank07:E96A 簇入口注册（SC-S7-01 MakeCartRAMPtr）。
 pub fn sub_s7_cluster_176(input: &L2In) -> L2Out {
     crate::verify_shim::s7_cluster_176(input)
+}
+
+/// s7_cluster_177 —— bank07:F693 簇入口注册（SC-S7-02）。
+pub fn sub_s7_cluster_177(input: &L2In) -> L2Out {
+    crate::verify_shim::s7_cluster_177(input)
 }

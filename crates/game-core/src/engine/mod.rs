@@ -7397,3 +7397,33 @@ mod s7_176_tests {
         assert_eq!(ev2.len(), 2);
     }
 }
+
+// ---- SC-S7-02（S7-177）员转写（2 员——ClearEnAnimDelay 族）----
+
+/// $F693 ClearEnAnimDelay（root——簇共根形百七十·**S5-146 同族清面**）：
+/// $6AF8[x]←0（动画延迟清）。
+/// 返回 (写事件, 清面)。
+pub fn s7_clear_en_anim_delay(x: u8) -> Vec<(u16, u8)> {
+    vec![(0x6AF8 + x as u16, 0)]
+}
+
+/// $FBBC 员体：jmp ClearEnAnimDelay（尾形）+$963B[y] 表走+cmp $6AF9[x] 判
+/// （beq 回卷——S6-173 同族）+尾跳 $F68D（S5-128 同族面）。
+pub fn s7_fbbc_body(x: u8) -> (Vec<(u16, u8)>, u16) {
+    (s7_clear_en_anim_delay(x), 0xF693)
+}
+
+#[cfg(test)]
+mod s7_177_tests {
+    use super::*;
+
+    /// 二员转写形（ClearEnAnimDelay root+一壳）。
+    #[test]
+    fn s7_177_units_two() {
+        let ev = s7_clear_en_anim_delay(2);
+        assert!(ev.contains(&(0x6AFA, 0))); // x=2 ⇒ $6AF8+2（写址对值核对）
+        let (ev2, j) = s7_fbbc_body(2);
+        assert_eq!(j, 0xF693);
+        assert_eq!(ev2.len(), 1);
+    }
+}
