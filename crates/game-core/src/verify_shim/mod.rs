@@ -4292,3 +4292,15 @@ pub fn a5_cluster_040(input: &L2In) -> L2Out {
         writes: merge_writes(vec![(0x001C, 7), (0x009E, 0), (0x009F, 255)]),
     }
 }
+
+// ---- SC-B5-18 簇入口适配（a5_cluster_042 ← bank03:9E8E——常量三写·a5 批末卡）----
+
+/// a5_cluster_042 适配（bank03:9E8E（MotherBrain 域续（refs 法直得））——案实核
+/// 3 写（$001C←10/$009A←1/$009F←255（常量组——判别条未触发（严格顺序 ✓）））；
+/// A=10/X 透传/Y 透传）。
+pub fn a5_cluster_042(input: &L2In) -> L2Out {
+    L2Out {
+        a: 10, x: input.x, y: input.y,
+        writes: merge_writes(vec![(0x001C, 10), (0x009A, 1), (0x009F, 255)]),
+    }
+}

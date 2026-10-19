@@ -11042,3 +11042,31 @@ mod a5_041_tests {
         assert_eq!(d4.len(), 8);
     }
 }
+
+// ---- SC-B5-18（a5-042）员转写（2 员——MotherBrain 域续七现（refs 法直得）·a5 批末卡）----
+
+/// bank03:9E8E 员体（root——簇共根形二百九三·**MotherBrain 域续七现**（refs 法
+/// 直得——$9E6C/$9EA4/$9EF9 Xplus16/$A00C 命名正身九现）——常量三写（a5 批末卡））。
+/// 返回 (写事件, 有效)。
+pub fn b3_9e8e_mb_face() -> Vec<(u16, u8)> {
+    vec![(0x001C, 10), (0x009A, 1), (0x009F, 255)] // 常量三写
+}
+
+/// $9E6C/$9EA4/$9EF9 Xplus16/$A00C 员体（同族面（连现——命名正身九现））。
+pub fn b3_9e6c_mb_face() -> Vec<(u16, u8)> {
+    b3_9e8e_mb_face()
+}
+
+#[cfg(test)]
+mod a5_042_tests {
+    use super::*;
+
+    /// 二员转写形（MotherBrain 域续七现 root+常量三写面）——refs 法直得（a5 批末卡）。
+    #[test]
+    fn a5_042_units_two() {
+        let ev = b3_9e8e_mb_face();
+        assert_eq!(ev.len(), 3);
+        assert!(ev.contains(&(0x009F, 255))); // 常量三写（写址对值核对）
+        assert_eq!(b3_9e6c_mb_face().len(), 3);
+    }
+}

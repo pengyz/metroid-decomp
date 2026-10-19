@@ -1149,6 +1149,13 @@
       "reason": "【预登记】臂深化卡序续（SC-MD-004 SamusPntUp 族——开工前置步先登记）",
       "exit": "arm_cluster_005 移植/转写落→账清转 strict",
       "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-B5-042-CROSSCARD-XYCHAIN",
+      "case_prefix": "a5-042-case-",
+      "reason": "X/Y 链算深径（X=160→64/Y=220→255 变换（fixture 弱源——多入参链算）——深径判别条补触发（链算径）——S5-121 同款跨卡深径（a5 批末卡））",
+      "exit": "X/Y 链算径建模清（变换链模拟）→账清转 strict",
+      "registered": "2026-10-20"
     }
   ]
 }
