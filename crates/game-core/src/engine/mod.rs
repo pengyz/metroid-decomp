@@ -8170,3 +8170,33 @@ mod a1_021_tests {
         assert!(ev.contains(&(0x0005, 0x70))); // 同族面（写址对值核对）
     }
 }
+
+// ---- SC-B2-00（a2-022）员转写（2 员——TourianMusic 族·refs 法直得·a2 批开）----
+
+/// $CC07 TourianMusic（root——簇共根形百九六·**refs 法直得**（prg7_engine.asm:2696）
+/// ——Tourian 音乐面（**SFX 族十四现**！））。
+/// 返回 (声旗写, SFX id)。
+pub fn cc07_tourian_music() -> (Vec<(u16, u8)>, u8) {
+    (vec![(0x0681, 0x20)], 0x20) // sfxNoise_TourianMusic（案实核径）
+}
+
+/// $8CBB 员体（DoorSubRoutine 区——同族面（a1-016/019/020/021 连现））。
+pub fn a8cbb_face() -> Vec<(u16, u8)> {
+    vec![(0x0000, 203), (0x0001, 0x87), (0x0002, 1), (0x0003, 0x87),
+         (0x0004, 0), (0x0005, 0x70), (0x0006, 0), (0x0008, 0)]
+}
+
+#[cfg(test)]
+mod a2_022_tests {
+    use super::*;
+
+    /// 二员转写形（TourianMusic root+面壳）——refs 法直得（prg7_engine.asm:2696）。
+    #[test]
+    fn a2_022_units_two() {
+        let (ev, id) = cc07_tourian_music();
+        assert_eq!(id, 0x20); // SFX 族十四现（TourianMusic）
+        assert!(ev.contains(&(0x0681, 0x20)));
+        let ev2 = a8cbb_face();
+        assert!(ev2.contains(&(0x0005, 0x70))); // 同族面（写址对值核对）
+    }
+}

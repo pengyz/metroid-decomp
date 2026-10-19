@@ -323,6 +323,13 @@
       "reason": "【预登记】a1-021 簇（porter 严格顺序单发十一例——A 批收官卡——开工前置步先登记）",
       "exit": "a1_cluster_021 移植/转写落→账清转 strict（A 批收官）",
       "registered": "2026-10-19"
+    },
+    {
+      "id": "SC-B2-022-CROSSCARD-DOORCHAIN",
+      "case_prefix": "a2-022-case-",
+      "reason": "DoorSubRoutine→DrawDoor→OAM 深径链（52+ 写（TourianMusic 同族面+OAM 全链效应）——S5-121/S1-17-CROSSCARD-S105 同款跨卡深径）",
+      "exit": "门链 OAM 绘制径建模清（DoorSubRoutine→DrawDoor→OAM 全链模拟）→账清转 strict",
+      "registered": "2026-10-19"
     }
   ]
 }
