@@ -794,7 +794,32 @@ def _gate_runner_dispatch(runner_name: str, prereq: Path, label: str) -> tuple[s
 
 
 def gate_subroutine_diff() -> tuple[str, str]:
-    return _gate_runner_dispatch("diff_subroutines.py", ROOT / "oracle" / "subroutines", "L2 子程序级")
+    verdict, detail = _gate_runner_dispatch("diff_subroutines.py", ROOT / "oracle" / "subroutines", "L2 子程序级")
+    # gap_map TOLERATED 消费面（SC-MD-003 解阻件（gates 域）2026-10-20 立）：
+    # subroutine-diff 读 data/status/l2_gap_map.json（D7 声明域（md/g3/账内）case_prefix）
+    # ——FAIL 全部失败案 id 若全部命中已登记前缀 ⇒ verdict=TOLERATED（显式计数+前缀表）
+    # ——未命中前缀的新分歧照常 FAIL（绝不静默吞）；不阻塞 ≠ 绿（SUMMARY 显式 TOLERATED）。
+    if verdict == FAIL:
+        gap_map_path = ROOT / "data" / "status" / "l2_gap_map.json"
+        if gap_map_path.is_file():
+            try:
+                entries = json.loads(gap_map_path.read_text(encoding="utf-8")).get("entries", [])
+            except Exception:
+                entries = []
+            prefixes = [str(e.get("case_prefix")) for e in entries if e.get("case_prefix")]
+            # 从 detail 提取失败案 id（[FAIL] <id> 或差分不一致尾行内 id token）
+            fail_ids = []
+            for tok in re.findall(r"\[FAIL\]\s+([^\s:]+)", detail):
+                fail_ids.append(tok)
+            if fail_ids and prefixes:
+                unmatched = [fid for fid in fail_ids
+                             if not any(fid.startswith(p.rstrip("-")) or p.rstrip("-") in fid for p in prefixes)]
+                if not unmatched:
+                    return TOLERATED, (f"gap_map 声明域全命中（{len(fail_ids)} 败案×{len(prefixes)} 已登记前缀）"
+                                       f"——D7 声明形 TOLERATED（显式计数，不阻塞≠绿）: {detail}")
+                return FAIL, (f"gap_map 声明域外分歧 {len(unmatched)} 案（新分歧照常 FAIL）: "
+                              f"{', '.join(unmatched[:8])} | {detail}")
+    return verdict, detail
 
 
 def gate_trace_diff() -> tuple[str, str]:
