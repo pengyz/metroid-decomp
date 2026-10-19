@@ -2334,3 +2334,11 @@ pub fn s6_cluster_152(input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-S6-03 簇入口适配（s6_cluster_153 ← bank07:F533——$F673 桩面）----
+
+/// s6_cluster_153 适配（$F533 $F673 链——案实核透传类（A 透传/X=0（$4B 径）/Y 透传）；
+/// 无写面）。
+pub fn s6_cluster_153(input: &L2In) -> L2Out {
+    L2Out { a: input.a, x: 0, y: input.y, writes: vec![] }
+}

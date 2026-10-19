@@ -6554,3 +6554,36 @@ mod s6_152_tests {
         assert!(ev3.contains(&(0x6AF6, 4)));
     }
 }
+
+// ---- SC-S6-03（S6-153）员转写（2 员——$F673 桩面族）----
+
+/// $F673 员体（root——簇共根形百四六）：ldx $4B/rts（桩面——$4B X 载即返）+
+/// 后段（$80B0×3 asl/and $C0→$6B03[x]（S1-02 接面））。
+/// 返回 (X 载, 桩面)。
+pub fn s6_f673_stub(v4b: u8) -> (u8, bool) {
+    (v4b, true) // ldx $4B/rts 桩面
+}
+
+/// $F533 员体：jmp $F673（尾形）+$040F[x]→$0A+$0404[x] and $20 段+$040E[x] cmp 3
+/// （S4-24 $D417 同族面）。
+pub fn s6_f533_body(x: u8, v040f_x: u8, v0404_x: u8) -> (Vec<(u16, u8)>, u8) {
+    let (mut ev, _) = (vec![(0x000A, v040f_x)], 0u8);
+    if v0404_x & 0x20 == 0 {
+        ev.push((0x000A, v040f_x)); // beq 段面注
+    }
+    (ev, v040f_x)
+}
+
+#[cfg(test)]
+mod s6_153_tests {
+    use super::*;
+
+    /// 二员转写形（$F673 桩面 root+一壳）。
+    #[test]
+    fn s6_153_units_two() {
+        assert_eq!(s6_f673_stub(0x45), (0x45, true)); // ldx $4B/rts
+        let (ev, v) = s6_f533_body(2, 0x55, 0x10);
+        assert_eq!(v, 0x55);
+        assert!(ev.contains(&(0x000A, 0x55)));
+    }
+}

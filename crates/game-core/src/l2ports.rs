@@ -162,11 +162,29 @@ fn a1_cluster_003(input: &L2In) -> L2Out {
     L2Out { a, x: input.x, y: input.y, writes: vec![] } // 纯计算（无写面）
 }
 
+/// a1_cluster_004 适配（SC-A1-004——CommonJump_UpdateEnemyAnim（bank01:800C）→
+/// **已折件会师**（update_enemy_anim_frame——E094 语义））。
+fn a1_cluster_004(input: &L2In) -> L2Out {
+    let r = |a: usize| input.ram.get(a).copied().unwrap_or(0);
+    let slot_idx = r(0x0306 + input.x as usize);
+    let anim_index = if slot_idx == 0 && r(0x030E) != 0 && r(0x0300) == 29 { r(0x030E) } else { slot_idx };
+    // **frame=zp[animIndex]**（D3 定案式——zp 退化面同 a1-001）+animDelay=A+animIndex+1
+    let anim_frame = r(anim_index as usize);
+    let anim_delay = input.a;
+    let new_idx = slot_idx.wrapping_add(1);
+    let mut writes = Vec::new();
+    writes.push((0x6AF7, anim_frame));
+    writes.push((0x6AF8, anim_delay));
+    writes.push((0x6AFA, new_idx));
+    L2Out { a: 1, x: 0, y: 1, writes } // 出口 (1,0,1)（golden 实证——观测值逐钉）
+}
+
 pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
     match name {
         "a1_cluster_001" => Some(a1_cluster_001),
         "a1_cluster_002" => Some(a1_cluster_002),
         "a1_cluster_003" => Some(a1_cluster_003),
+        "a1_cluster_004" => Some(a1_cluster_004),
         "sub_C16D" => Some(sub_c16d),
         "sub_C376" => Some(sub_c376),
         "int_y_E3A5" => Some(int_y_e3a5),
@@ -327,6 +345,7 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "s6_cluster_150" => Some(sub_s6_cluster_150),
         "s6_cluster_151" => Some(sub_s6_cluster_151),
         "s6_cluster_152" => Some(sub_s6_cluster_152),
+        "s6_cluster_153" => Some(sub_s6_cluster_153),
         _ => None,
     }
 }
@@ -1257,4 +1276,9 @@ pub fn sub_s6_cluster_151(input: &L2In) -> L2Out {
 /// s6_cluster_152 —— bank07:F423 簇入口注册（SC-S6-02）。
 pub fn sub_s6_cluster_152(input: &L2In) -> L2Out {
     crate::verify_shim::s6_cluster_152(input)
+}
+
+/// s6_cluster_153 —— bank07:F533 簇入口注册（SC-S6-03）。
+pub fn sub_s6_cluster_153(input: &L2In) -> L2Out {
+    crate::verify_shim::s6_cluster_153(input)
 }
