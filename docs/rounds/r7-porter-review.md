@@ -4752,6 +4752,28 @@ UpdateAnimEye: ; 03:A02E` ↔ bank3 $9E2B=`20 2e a0`（JSR $A02E）——refs �
 表对载）+$A02E tile/anim 16B）④员面双扫桩 0（2 员真现）。测 450。
 findings（r10）：0 新。SC-B5-15（B 区余 92 卡）预告随账。
 
+## SC-B5-15+SC-MD-003 双卡审（DrawSprites 命名正身六现/臂深化三卡收口）
+
+### SC-B5-15 verdict: pass
+
+①**命名正身六现 ✓✓**：prg3_tourian.asm:1590 `MotherBrain_DrawSprites: ; 03:A041`
+↔ bank3 $9E2E=`20 41 a0`（JSR $A041）——refs 法命名正身六现（**六步谱系**：
+DrawDoor→MotherBrain_Idle→HandleBeingHit→UpdateAnimBrain→UpdateAnimEye→
+**DrawSprites**）②**常量单写面 ✓✓**：$9E31=`a9 00 85 9e 60`（LDA #$00/STA $9E/
+RTS=「$009E←0」逐字命中）③判别条十四现负例（1 写常量→不触发=严格顺序 ✓）+
+8 案 strict 0 败（首提全过）④员面双扫桩 0（2 员真现）。共根形**二百九十**（form
+290）。测 451。
+
+### SC-MD-003 verdict: pass（臂深化三卡收口）
+
+①**stops=$D422 rts 直证 ✓✓**：$D422 首字节=`60`（rts——stops 位法字节证）②
+**D7 注册 ✓**（md-samusdoor L3 TOLERATED）：md-samusdoor-case=[FAIL] 未知操作码
+$22 @ $0005（L2 核 fail-loud 不静默跳过）+路线图出口显式（SC-MD-SAMUSDOOR-
+CASE-IMPL）③**verifier 闸集 ✓**（gap_map TOLERATED 消费面（741358c 我方 gates
+域件）=总闸全绿 15 门 0 FAIL——SC-MD-003 解阻实证）④全件落：asm 辨定+D3 抓取
+21 写面+转换+适配+stops 修+D7 注册=六段完。测 451。findings（r10）：0 新。
+SC-B5-16/SC-MD-004 接续预告随账。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
