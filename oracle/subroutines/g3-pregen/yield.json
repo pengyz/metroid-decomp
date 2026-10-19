@@ -18,5 +18,6 @@
   "g3_00_closure": "SC-G3-00 收口随行态：烤案件全（g3-000 占位+锚+交叉验参照）——ROM golden 替换=卡收官前置（bank07 窗形修协同中）",
   "result_face_check": "果面核全过（六案/funcs/交叉验/施工卡包/stops 实值/占位标注）——G3 支援面全景态稳",
   "result_face_check_incremental": "果面核增量随行（态差核——L2 ? 案/? 败+六案态稳）——G3 支援面滚动态",
-  "result_run": "果面跑随行（全闸跑核过——CHECK: PASS）+烤案对照保持——G3 支援面滚动态"
+  "result_run": "果面跑随行（全闸跑核过——CHECK: PASS）+烤案对照保持——G3 支援面滚动态",
+  "runner_trace": "runner trace 随行（L2 跑迹核过——全绿态）+烤案对照保持——G3 支援面滚动态"
 }
