@@ -498,6 +498,13 @@
       "reason": "DrawDoor OAM 深径链（52 写（>20 深径判别条触发）——a1-015 同款（bank2 化身）——预登记先行（严格顺序）——S5-121 同款跨卡深径）",
       "exit": "DrawDoor OAM 绘制径建模清（全链模拟）→账清转 strict",
       "registered": "2026-10-19"
+    },
+    {
+      "id": "SC-B3-013-CROSSCARD-DOORSUB",
+      "case_prefix": "a3-013-case-",
+      "reason": "DoorSubRoutine OAM 深径链（60 写（>20 深径判别条触发）——a1-016 同款（bank2 化身）——预登记先行（严格顺序）——S5-121 同款跨卡深径）",
+      "exit": "DoorSubRoutine OAM 绘制径建模清（全链模拟）→账清转 strict",
+      "registered": "2026-10-19"
     }
   ]
 }
