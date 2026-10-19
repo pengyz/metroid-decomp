@@ -2692,3 +2692,10 @@ pub fn a1_cluster_002(input: &L2In) -> L2Out {
         writes: merge_writes(vec![(0x0404, 0), (0x040E, 0)]),
     }
 }
+
+// ---- SC-B1-03 簇入口适配（a1_cluster_003 ← bank01:8009——透传类）----
+
+/// a1_cluster_003 适配（$8009 jmp 桩链——案实核透传类（A=3/X/Y 透传）；无写面）。
+pub fn a1_cluster_003(input: &L2In) -> L2Out {
+    L2Out { a: 3, x: input.x, y: input.y, writes: vec![] }
+}

@@ -7626,3 +7626,29 @@ mod a1_002_tests {
         assert!(ev.contains(&(0x040E, 0))); // 定址清对（写址对值核对）
     }
 }
+
+// ---- SC-B1-03（a1-003）员转写（2 员——$8009 jmp 桩链族）----
+
+/// $8009 jmp 桩链（root——簇共根形百七七·**bank1 dispatch 桩阵四现**（形九续））：
+/// A=3 载面（lda #3/rts 桩——S6-153 同族）。
+/// 返回 (A 值, 桩面)。
+pub fn a8009_jmp_chain() -> (u8, bool) {
+    (3, true) // A=3 载面
+}
+
+/// $9A4C 员体：$8009 链+透传面（a1-003 同族面）。
+pub fn a9a4c_body(x: u8, y: u8) -> (u8, u8, u8) {
+    (3, x, y) // 透传类
+}
+
+#[cfg(test)]
+mod a1_003_tests {
+    use super::*;
+
+    /// 二员转写形（$8009 jmp 桩链 root+一壳）。
+    #[test]
+    fn a1_003_units_two() {
+        assert_eq!(a8009_jmp_chain(), (3, true));
+        assert_eq!(a9a4c_body(5, 6), (3, 5, 6)); // 透传类
+    }
+}
