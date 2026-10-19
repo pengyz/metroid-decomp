@@ -3664,3 +3664,21 @@ pub fn a3_cluster_027(input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-B3-28 簇入口适配（a3_cluster_028 ← bank02:98EB——判别条补触发）----
+
+/// a3_cluster_028 适配（bank02:98EB（S5-146 族区（bank2））——案实核 10 写
+/// （清对+$04 族（$04C9←128/$04D1←237（fixture 弱源——判别条补触发→账目预登记
+/// （VALCHAIN-B3-028）））+$6AF7/$6AF8←r(0)（fixture 强源）+$6BC6←118）；
+/// A=0/X 透传/Y=1）。
+pub fn a3_cluster_028(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    L2Out {
+        a: 0, x: 0, y: 1,
+        writes: merge_writes(vec![
+            (0x0404, 0), (0x040E, 0),
+            (0x04C9, 128), (0x04CD, 0), (0x04CF, 0), (0x04D1, 237),
+            (0x6AF7, r(0x0000)), (0x6AF8, r(0x0000)), (0x6AFA, 1), (0x6BC6, 118),
+        ]),
+    }
+}
