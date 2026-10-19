@@ -4358,6 +4358,17 @@ $8027 **全同续**（CommonJump 表 bank3 复现四现=CommonJump_ApplySpeedToP
 hexdump 直得）④员面双扫桩 0（3 员真现）。测 418。findings（r10）：0 新。
 SC-B4-05（B 区余 124 卡）预告随账。
 
+## SC-B4-05 卡审（20913c3）——DrawTileBlast bank3 化身（DRAWTILEBLAST-B4-005）
+
+### verdict: pass
+
+四条核：①**化身 ✓✓**：bank03:803F=`4c dc fe 4c 92 ce 4c fb` 与 bank1 $803F
+**全同**（=a1-015 同形（**JMP $FEDC DrawTileBlast** 直连桩）**跨 bank 复现**）②
+**DRAWTILEBLAST-B4-005 预登记 ✓**（**100 条目里程碑**！）：25 写>20 阈值判别条
+触发→预登记→L2 并案=严格顺序续（CHAIN 族二十类全谱）③8 案账内 ④员面双扫桩 0
+（2 员真现（4 员））。测 419。findings（r10）：0 新。SC-B4-06（B 区余 123 卡）
+预告随账。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
