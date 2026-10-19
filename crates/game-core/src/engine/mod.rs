@@ -10964,3 +10964,31 @@ mod a5_039_tests {
         assert!(ev.contains(&(0x009E, 0))); // 常量单写（写址对值核对）
     }
 }
+
+// ---- SC-B5-16（a5-040）员转写（2 员——MotherBrain 域续五现（refs 法直得））----
+
+/// bank03:9E36 ClearMotherBrainIsHit 族（root——簇共根形二百九一·**MotherBrain
+/// 域续五现**（refs 法直得——$9E31 ClearMotherBrainIsHit 命名正身七现））。
+/// 返回 (写事件, 有效)。
+pub fn b3_9e36_mb_clear_hit() -> Vec<(u16, u8)> {
+    vec![(0x001C, 7), (0x009E, 0), (0x009F, 255)] // 常量三写
+}
+
+/// $9E3E 员体（同族面（连现））。
+pub fn b3_9e3e_mb_face() -> Vec<(u16, u8)> {
+    b3_9e36_mb_clear_hit()
+}
+
+#[cfg(test)]
+mod a5_040_tests {
+    use super::*;
+
+    /// 二员转写形（ClearMotherBrainIsHit root+常量三写面）——refs 法直得。
+    #[test]
+    fn a5_040_units_two() {
+        let ev = b3_9e36_mb_clear_hit();
+        assert_eq!(ev.len(), 3);
+        assert!(ev.contains(&(0x009F, 255))); // 常量三写（写址对值核对）
+        assert_eq!(b3_9e3e_mb_face().len(), 3);
+    }
+}
