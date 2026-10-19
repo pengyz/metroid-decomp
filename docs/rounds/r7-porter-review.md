@@ -3659,6 +3659,18 @@ SetObjectXSlotAnimIndex 语义）③refs asm 直得（SetObjectXSlotAnimIndex �
 asm:1602/1674 在谱）④员面双扫桩 0（2 员真现）。测 356。findings（r10）：0 新。
 SC-B2-03（B 区余 182 卡）预告随账。
 
+## SC-B2-03 卡审（fa11255）——SFX_Door 十六现正身归档（预登记先行续）
+
+### verdict: pass
+
+四条核：①**预登记先行续 ✓**（55 写深径判别触发→SC-B2-025-CROSSCARD-DOORCHAIN
+条目在库（51 总）→L2 并案——**严格顺序稳定执行**（新法二连验证））②**SFX 十六现
+正身双轨 ✓✓**：prg7_engine.asm:2648-49 `SFX_Door: ; 07:CBDA / lda #sfxTri_Door`
+↔ bank7 $CBDA=`a9 40`（LDA #$40=sfxTri_Door 值）——语义常量↔字节直合（**机理正身
+系列**：a1-018 注的 SFX_Door 正身归档=旗写面注→init 本体归位）③L3 账目面（8 案
+账内）④员面双扫桩 0（2 员真现）。测 357。findings（r10）：0 新。
+SC-B2-04（B 区余 181 卡）预告随账。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
