@@ -10,5 +10,6 @@
   "reproduce": "逐条韧性跑法（casegen 单条失败即停）",
   "golden_method": "簇首入口×4 LCG 输入→Mesen2 ROM golden 抓取→cases.jsonl in/out 对——ram_addrs=Samus 状态面（$0300 族）",
   "cluster_source": "arm-evidence-package.md §1.5（派发表全形——9 簇/14 员）",
-  "bake_status": "9 簇烤案占位全（推导注——golden 手推在途）——ROM golden 替换候窗形修"
+  "bake_status": "9 簇烤案占位全（推导注——golden 手推在途）——ROM golden 替换候窗形修",
+  "capture_ready": "抓取随行态：arm 9 簇占位+推导注全（a1-025 SamusJump 全形深注）——**候 bank07 窗形修落**→Mesen2 抓取→三方对拍（质量底线 #1）"
 }
