@@ -300,3 +300,22 @@ pub fn enemy_flip_after_displacement() -> (u8, u8, u8, Vec<(u16, u8)>) {
     ];
     (0, 0, 0, w) // 出口 (0,0,0)（观测值逐钉）
 }
+
+/// EnemyActiveAnimIndex 烘焙（bank1 $965B——32B（type×2+facing 索引域）；per-area）。
+const ENEMY_ACTIVE_ANIM_INDEX: [u8; 32] = [0x05, 0x05, 0x0B, 0x0B, 0x17, 0x13, 0x1B, 0x19, 0x23, 0x23, 0x35, 0x35, 0x48, 0x48, 0x50, 0x4D, 0x6C, 0x6F, 0x5B, 0x5D, 0x5F, 0x64, 0x69, 0x69, 0x69, 0x69, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
+
+/// InitEnActiveAnimIndex_NoInitOffset（**asm 内容锚** `07:FBCA`——entry 靶正（$801E jmp
+/// `4c ca fb`））：GetEnemyTypeTimes2 会师→表[y] 读→同判（cmp resetAnimIndex→Exit）→
+/// **双写**（resetAnimIndex←表[y]/jmp SetEnAnimIndex（animIndex←同））。
+pub fn init_en_active_anim_index(data05: u8, type_: u8, reset_anim_index: u8, x: u16)
+    -> (u8, u8, Vec<(u16, u8)>) {
+    let (_, y) = enemy_type_times2_plus_facing(data05, type_);
+    let tbl_val = ENEMY_ACTIVE_ANIM_INDEX.get(y as usize).copied().unwrap_or(0);
+    if tbl_val == reset_anim_index {
+        return (tbl_val, y, vec![]); // Exit13（同动画——无写）
+    }
+    let mut w = Vec::new();
+    w.push((0x6AF9 + x, tbl_val)); // resetAnimIndex←表[y]（WRAM 槽面）
+    w.push((0x6AFA + x, tbl_val)); // animIndex←同（SetEnAnimIndex）
+    (tbl_val, y, w)
+}
