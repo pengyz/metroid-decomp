@@ -2542,3 +2542,14 @@ pub fn s6_cluster_172(input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-S6-23 簇入口适配（s6_cluster_174 ← bank07:F518 LF518——S6 收官卡）----
+
+/// s6_cluster_174 适配（$F518 LF518——案实核：$6AF4[x]←4 单写（x 索引强制步）；
+/// A=4/X 透传/Y 透传）。
+pub fn s6_cluster_174(input: &L2In) -> L2Out {
+    L2Out {
+        a: 4, x: input.x, y: input.y,
+        writes: merge_writes(vec![(0x6AF4 + input.x as u16, 4)]),
+    }
+}

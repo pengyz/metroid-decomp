@@ -7262,3 +7262,35 @@ mod s6_173_tests {
         assert!(ev2.contains(&(0x040B, 4))); // inc 面（3+1）
     }
 }
+
+// ---- SC-S6-23（S6-174）员转写（2 员——LF518 族·S6 收官卡）----
+
+/// $F518 LF518（root——簇共根形百六六）：$6AF4[x]←4（态写——lda #4/sta/rts 桩面）。
+/// 返回 (写事件, 态值)。
+pub fn s6_lf518_state(x: u8) -> (Vec<(u16, u8)>, u8) {
+    (vec![(0x6AF4 + x as u16, 4)], 4)
+}
+
+/// $FA0D 员体：LF518+$0409[x]←$0A（延迟置）+尾跳 $F97C（S6-173 接面）+
+/// 尾段（$6AF4[x]←0 清面（S6-172 对偶））。
+pub fn s6_fa0d_body(x: u8) -> (Vec<(u16, u8)>, u16) {
+    let (mut ev, _) = s6_lf518_state(x);
+    ev.push((0x0409 + x as u16, 0x0A));
+    (ev, 0xF97C)
+}
+
+#[cfg(test)]
+mod s6_174_tests {
+    use super::*;
+
+    /// 二员转写形（LF518 root+一壳）——S6 收官。
+    #[test]
+    fn s6_174_units_two() {
+        let (ev, v) = s6_lf518_state(2);
+        assert_eq!(v, 4);
+        assert!(ev.contains(&(0x6AF6, 4))); // x=2 ⇒ $6AF4+2（写址对值核对）
+        let (ev2, j) = s6_fa0d_body(2);
+        assert_eq!(j, 0xF97C);
+        assert!(ev2.contains(&(0x040B, 0x0A))); // x=2 ⇒ $0409+2
+    }
+}
