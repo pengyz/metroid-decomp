@@ -274,6 +274,13 @@
       "reason": "【预登记】a1-016 簇（porter 严格顺序单发六例——开工前置步先登记）",
       "exit": "a1_cluster_016 移植/转写落→账清转 strict",
       "registered": "2026-10-19"
+    },
+    {
+      "id": "SC-A1-017-IMPL",
+      "case_prefix": "a1-017-case",
+      "reason": "【预登记】a1-017 簇（porter 严格顺序单发七例——开工前置步先登记）",
+      "exit": "a1_cluster_017 移植/转写落→账清转 strict",
+      "registered": "2026-10-19"
     }
   ]
 }
