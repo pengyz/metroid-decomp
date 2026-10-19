@@ -5926,3 +5926,39 @@ mod s5_134_tests {
         assert_eq!(ev2.len(), 2);
     }
 }
+
+// ---- SC-S5-15（S5-135）员转写（2 员——EnProjectile 碰撞反应族；L2 真 0 留白）----
+
+/// $F2ED CollisionDetectionEnProjectile_ReactToCollisionWithSamus（root——簇共根形
+/// 百二八）：bcs +33 段（未撞跳）+$F2DF 调+栈保（Y）+IsScrewAttackActive
+/// （S2-24 接面）+cs 分段（$010F←$80 写+$F332/$F270 链）。
+/// 返回 (写事件, 撞)。
+pub fn s5_enproj_react(carry: bool) -> (Vec<(u16, u8)>, bool) {
+    if carry {
+        return (vec![], false); // bcs 段
+    }
+    (vec![(0x010F, 0x80)], true)
+}
+
+/// $F10F 员体：EnProjectile_React+$F1EE 调+cmp $C0 判（bne 回卷）+IsSamusDead
+/// （S1-13 接面）+槽搜（X=$F0）。
+pub fn s5_f10f_body(carry: bool) -> (Vec<(u16, u8)>, bool) {
+    s5_enproj_react(carry)
+}
+
+#[cfg(test)]
+mod s5_135_tests {
+    use super::*;
+
+    /// 二员转写形（EnProjectile_React root+一壳）。
+    #[test]
+    fn s5_135_units_two() {
+        let (ev, hit) = s5_enproj_react(false);
+        assert!(hit);
+        assert!(ev.contains(&(0x010F, 0x80)));
+        let (ev2, hit2) = s5_enproj_react(true);
+        assert!(!hit2); // bcs 段
+        assert!(ev2.is_empty());
+        assert!(!s5_f10f_body(true).1);
+    }
+}
