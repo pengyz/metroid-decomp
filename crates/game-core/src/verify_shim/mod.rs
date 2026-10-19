@@ -2199,3 +2199,15 @@ pub fn s5_cluster_138(input: &L2In) -> L2Out {
         writes: merge_writes(vec![(0x0004, input.a), (0x0005, 0)]),
     }
 }
+
+// ---- SC-S5-19 簇入口适配（s5_cluster_139 ← bank07:F1BC——AddEnemy1XRadius·S5 收官）----
+
+/// s5_cluster_139 适配（$F1BC AddEnemy1XRadius 链——**S5-138 对偶**：$05←A+r($6AF6+y)
+/// （clc/adc 面）；A/X/Y 透传）。
+pub fn s5_cluster_139(input: &L2In) -> L2Out {
+    let v = input.a.wrapping_add(input.ram[(0x6AF6 + input.y as usize) & 0x7FF]);
+    L2Out {
+        a: input.a, x: input.x, y: input.y,
+        writes: merge_writes(vec![(0x0005, v)]),
+    }
+}

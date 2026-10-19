@@ -6065,3 +6065,34 @@ mod s5_138_tests {
         assert!(ev2.contains(&(0x0005, 0)));
     }
 }
+
+// ---- SC-S5-19（S5-139）员转写（2 员——AddEnemy1XRadius 族·S5 收官卡）----
+
+/// $F1CB AddEnemy1XRadius（root——簇共根形百三二·**S5-138 对偶**）：clc/adc $6AF6[y]
+/// →$05（X 半径加面）。
+/// 返回 (写事件, 半径和)。
+pub fn s5_add_en1_x_radius(y: u8, a_in: u8, v6af6_y: u8) -> (Vec<(u16, u8)>, u8) {
+    let v = a_in.wrapping_add(v6af6_y);
+    (vec![(0x0005, v)], v)
+}
+
+/// $F1BC 员体：jmp $F1CB（尾形——S5-138 接面）+$6AF5/$6AF6[x] 对（$F1E0/$F1D9
+/// 双径——S5-133 同构）。
+pub fn s5_f1bc_body(y: u8, a_in: u8, v6af6_y: u8) -> (Vec<(u16, u8)>, u8) {
+    s5_add_en1_x_radius(y, a_in, v6af6_y)
+}
+
+#[cfg(test)]
+mod s5_139_tests {
+    use super::*;
+
+    /// 二员转写形（AddEnemy1XRadius 对偶 root+一壳）——S5 收官。
+    #[test]
+    fn s5_139_units_two() {
+        let (ev, v) = s5_add_en1_x_radius(3, 167, 5);
+        assert_eq!(v, 172); // clc/adc（167+5）
+        assert!(ev.contains(&(0x0005, 172)));
+        let (ev2, v2) = s5_f1bc_body(3, 167, 0);
+        assert_eq!(v2, 167); // +0 面（案实核径）
+    }
+}
