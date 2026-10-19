@@ -4936,6 +4936,16 @@ SAMUSRUN-IMPL）③**案态全 D7 声明形 ✓**：md_setsamusrun/setsamusrunac
 （fail-loud）——全显式声明（L3 路由 TOLERATED 覆盖）④态差核（9 案稳/就绪态
 保持）+闸 PASS。测 463。findings（r10）：0 新。SC-MD-007 接续预告随账。
 
+## SC-B6-08 卡审（2580329）——bank4 化身九现（常量单写面·320 测）
+
+### verdict: pass
+
+四条核：①**bank4 化身九现 ✓✓**：bank04:8027=`4c 8f fd 4c 6e eb 4c 44` 与 bank1
+$8027 **全同续**（CommonJump 表 bank4 复现九现）②**判别条十五现负例 ✓**（1 写
+常量（$02←0）→不触发=严格顺序 ✓）+常量单写面（$9A9F 壳）③8 案 strict 0 败
+（首提全过）④员面双扫桩 0（2 员真现）。测 463（族域述**320 测里程碑**）。
+findings（r10）：0 新。SC-B6-09（B 区余 78 卡）预告随账。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
