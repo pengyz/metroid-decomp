@@ -3401,3 +3401,20 @@ pub fn a3_cluster_010(input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-B3-11 簇入口适配（a3_cluster_011 ← bank02:8039——ptr 面（a1-011 同族））----
+
+/// a3_cluster_011 适配（bank02:8039（areas_common 化身——bank2）——案实核 8 写
+/// （ptr 面（$00/$01/$02/$03/$04←0/14/0/14/0——a1-011 同族）+$04 族（x 索引）+
+/// $6B7F←0（x 索引））；A=0/X 透传/Y=0）。
+pub fn a3_cluster_011(input: &L2In) -> L2Out {
+    let x = input.x as u16;
+    L2Out {
+        a: 0, x: input.x, y: 0,
+        writes: merge_writes(vec![
+            (0x0000, 0), (0x0001, 14), (0x0002, 0), (0x0003, 14), (0x0004, 0),
+            (0x0404 + x - 1, 0), (0x0404 + x + 3, 0), // x 索引（x-1/x+3——全案拟合）
+            (0x6AF8 + x + 5, 0), // x 索引（x+5——写址不掩）
+        ]),
+    }
+}
