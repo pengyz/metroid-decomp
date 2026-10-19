@@ -27,6 +27,9 @@
 # 门过渡假设证伪（v5-v11 MapX 3→2 门过渡 hi 不变=对照）——x wrap=真翻转机制
 # 屏 hi 奇偶律（B 级）：偶 MapX=hi1/奇=hi0（(4)=1/(5)=0 交替实录）——item(2,14) hi=1 ✓ 偶屏律吻合
 # v13 负：over-wall+降段西推——hi 未翻（西推未穿 wrap 界——x 轨迹未达 0/255）
+# v15 收：同表最近接 f1247 Δy=1/Δx=16（带外 9px——史上最接近！）——物品 f1051 离屏（时机差）
+# v16 待：x 收 16→7+物品存活窗对齐（wrap 早穿已实证 f1128 ✓ 214 帧 hi=1）
+# v14 实证：hi=1 173 帧 ✓+同表 Δx=0——但物品 f1252 离屏移除（时机差=wrap 太晚）
 # 累计盘（v1-v13）：机制全解（hi XOR PPUCTRL/x wrap 翻转/奇偶律/球态炸弹/碰撞半径和 18/7）
 # 几何全解（房23 双屏/12 结构/门(222,5)/物品台地/pit 底）——触达差=wrap 界穿径一击
 # nav 化：ScrX→104（=$68=物品 x）+A 持（跳向 y=$98 高位物品）
@@ -41,10 +44,9 @@ press 360 start
 press 420 a
 press 540 start
 fixture 900 6878 13 invariant
-hold 995-1068 left
-hold 1072-1132 a
-hold 1072-1105 right
-hold 1140-1300 left
+hold 995-1016 left
+hold 1020-1800 right
+hold 1140-1200 a
 capture 1110 over-wall
 capture 1180 near-item
 capture 1500 touch-window
