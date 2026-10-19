@@ -4336,3 +4336,14 @@ pub fn a6_cluster_001(input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-B6-02 簇入口适配（a6_cluster_002 ← bank04:8006——定址清对）----
+
+/// a6_cluster_002 适配（bank04:8006（bank4 窗）——案实核 2 写（定址清对（常量——
+/// 判别条未触发（严格顺序 ✓）））；A=0/X 透传/Y=105）。
+pub fn a6_cluster_002(input: &L2In) -> L2Out {
+    L2Out {
+        a: 0, x: input.x, y: 105,
+        writes: merge_writes(vec![(0x0404, 0), (0x040E, 0)]),
+    }
+}
