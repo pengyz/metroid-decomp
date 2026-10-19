@@ -3,7 +3,11 @@
 -- DSL 语义只在 tools/scenario_run.py 解析（无第二套解析逻辑）；本文件只执行 PLAN。
 --
 
--- 【2026-10-19 探针修支援注】trigger/probe 条件窗语义：trigger 走廊窗正常（v2 顶障
+-- 【2026-10-19 条件窗语义深勘】trigger 语义（实读 374-385）：条件评估=**同帧注入**
+-- （readByte 当帧判→btn 置位同帧）——评估帧=生效帧（无延迟设计）；
+-- **根因假设**（C→B 升）：回调相位（endFrame vs inputPolled）——endFrame 回调注入
+-- 的 setInput 落在游戏输入轮询后（1 帧延迟或吞键）——走廊窗效应可辨（2px）/pit 窗
+-- 零效应疑=相位+时序叠加——**inputPolled 回调注入=待验方向**（探针修根因径）。
 -- 2px 实证）但 pit 窗零效应（v5——sc-pickup-touch 战役注）——疑=trigger 条件匹配窗
 -- 与 nav/hold 动作窗时序边界（条件评估帧 vs 动作生效帧）——待深勘。
 -- API 依据（Mesen2 2.1.1 实测探针，见任务 t8/t12 记录）：
