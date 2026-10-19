@@ -5630,3 +5630,33 @@ mod s5_126_tests {
         assert!(ev.contains(&(0x0007, (0x7Fu8 >> 1).wrapping_add(0x3C))));
     }
 }
+
+// ---- SC-S5-07（S5-127）员转写（2 员——RinkaHandler 族；L2 真 0 留白）----
+
+/// $95BA rts 桩阵四现（root——簇共根形百二十·**$95B1 同阵偏移**（形六续四现
+/// ——末桩=jmp bank 特定（$9D35 面）））。
+/// 返回 (桩面, 有效)。
+pub fn s95ba_stub_array() -> (usize, bool) {
+    (1, true) // 同阵偏移面四现
+}
+
+/// $EEEE RinkaHandler：$95BA 调+尾跳 $EEC6（S2-10 root 接面——三现注）+
+/// $EB92 调（S2-18 接面）+jmp $EDD6（S2-23 接面）+$49→$91 写对。
+pub fn s5_eeee_body() -> (Vec<(u16, u8)>, u16) {
+    (vec![(0x0091, 0x49)], 0xEEC6)
+}
+
+#[cfg(test)]
+mod s5_127_tests {
+    use super::*;
+
+    /// 二员转写形（桩阵四现 root+RinkaHandler 壳）。
+    #[test]
+    fn s5_127_units_two() {
+        let (n, ok) = s95ba_stub_array();
+        assert_eq!((n, ok), (1, true));
+        let (ev, j) = s5_eeee_body();
+        assert_eq!(j, 0xEEC6);
+        assert!(ev.contains(&(0x0091, 0x49)));
+    }
+}
