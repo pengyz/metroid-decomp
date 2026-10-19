@@ -65,3 +65,19 @@
   ② **GetItem SRAM 写链尾环**（pw 位图置位写链——拾取事件链最后一环）；
 - **G2 素材线全景收官**：boss face×3+elevator 家族+物品真径×2+触达战役素材
   （v1-v22 全解）+消费方场景×4（manifest 全录）——**素材→场景环全闭**。
+
+## 【2026-10-19 Kraid/Ridley 战斗行为深采】（C→A/B 升——boss 战斗面）
+
+- **Kraid 战斗面**（A 级：prg4:171-173 派发表）：type 08=KraidAIRoutine（boss）/
+  09=KraidLintAIRoutine（lint 弹）/0A=KraidNailAIRoutine（nail 弹）——**双弹种攻击**；
+- **Ridley 战斗面**（A 级：prg5:173-174 派发表）：type 09=RidleyAIRoutine（boss）/
+  0A=RidleyFireballAIRoutine（fireball 弹）——**单弹种攻击**；
+- **攻击计数器**（A 级：constants_ram:627-628）：KraidLintCounter($7E)=lint 发射计时/
+  KraidNailCounter($7F)=nail 发射计时——**Ridley 共用 $7E**（"Accidentally used by
+  Ridley too"——quirk 注：D4 台账候选）；
+- **移动面**（A 级）：EnemyMovementChoice_KraidLint/KraidNail（prg1:369-370）+
+  EnemyMovementChoice_Ridley(05:97DB)/RidleyFireball（prg5:353-354）；
+- **动画面**：EnAnim_KraidLint/KraidNailIdle/KraidNailMoving（"crashes" 注——
+  弹动画注名）+EnAnim_RidleyFireball；
+- **C→B 升**：boss 战斗面（AI 派发/攻击弹种/计数器/移动）——行为语义（AI 状态机
+  流程/攻击模式序列）=C 级余（AI 例程体深读=后续）。
