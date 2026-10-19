@@ -95,3 +95,22 @@
 - **动面**：10 帧动画换（CommonEnemyStub）；
 - **C 余**：Ridley AI 状态机（enemies/ridley.asm 待读）+boss 行为语义（攻击模式
   序列的战术面）——下一窗。
+
+## 【2026-10-19 Ridley AI 状态机+战术面】（C→A/B 升——C 余续毕）
+
+- **Ridley AI 状态机**（A 级：enemies/ridley.asm:2-34=05:9A13）：六态同构（Normal/
+  Explode/Exit/Pickup）+爆态弹清（EnsExtra.1-5→NoEnemy）——**与 Kraid 同构状态机**；
+- **战术面**：EnAnim_RidleyHopping（**跳跃移动**）+EnemyFlipAfterDisplacement
+  （位移后翻向）+3 帧动画换；
+- **攻击模式序列**（A 级：ridley.asm:75+=05:9A79）：RidleyTryToLaunchFireball——
+  **FireballCounter($80) 0x60 默认/隔帧减/（计数×2 & 0x0F)==0x0A 判**——
+  **连发模式**（disasm 注：every 16 frames 8 times, then pause 128 frames——
+  8 连发×16f+128f 停循环）；
+- **弹 AI**（ridley.asm:37+）：data05 面向变判（past vs current——变向即 Remove）
+  +2 帧动画；
+- **【2026-10-19 更正注】**（BUG-002 精度）：RidleyFireballCounter=**$80 独立**
+  （constants_ram:629）——BUG-002 复现注「fireball 计时读 $7E」**精度不足**：
+  fireball 计时=$80 自有；$7E 共用（"Accidentally used by Ridley too" 原注）
+  =Ridley **他路径**（具体路径待查——BUG-002 复现段保留待精化）；
+- **C 余终态**：boss 行为战术面（AI 状态机/攻击序/移动/弹 AI 全解）——
+  Kraid/Ridley 战斗面深采收（G2 待采清单清）。
