@@ -35,3 +35,19 @@
   面——elevator/statue=对象状态机两例）；
 - **遗留假设**（C 级）：statue 对象调度入口（UpdateStatue?）待③行为面；boss 敌
   对象类型码（EnemyInit 表）待关联。
+
+## ③boss 行为面（A 级：prg7 指令锚）
+
+- **statue 行为链**（prg7:5207-5254 UpdateStatue 状态机）：
+  - `UpdateStatue`（07:5252 调——Kraid statue 索引 `Statue-Objects`）
+  - `UpdateStatueBGTiles`（5207/5211/5231/5239 多点调——**BG 瓦更新**=
+    雕像升起的视觉面）
+  - Kraid statue 索引计算：`KraidStatueStatus-KraidStatueStatus+(Statue-Objects)`
+    （5251 行——对象槽定位）+ Ridley 同形（5254）；
+- **行为链定**（B 级）：Kraid/Ridley 击破→`KraidStatueStatus`/`RidleyStatueStatus`
+  （$00/$02 临时）→`RaiseState`（bit7=已升）→`UpdateStatueBGTiles`（BG 瓦=升起
+  动画）→`StatuesBridgeIsSpawned`（桥生成）→**Tourian 通**；
+- **G2 素材线**（boss face 三件落）：①五域结构/②statue 对象 RAM 图/③行为链
+  ——**boss 面素材预位完**（🔴 序首件）——下一：elevator 家族扩（🟡）/物品真径；
+- **遗留**（C 级）：UpdateStatue 全指令流（状态转移细义）+boss 敌行为（Kraid/
+  Ridley 战斗面）=G2 后续件。
