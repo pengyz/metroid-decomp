@@ -4355,3 +4355,18 @@ pub fn a6_cluster_002(input: &L2In) -> L2Out {
 pub fn a6_cluster_003(input: &L2In) -> L2Out {
     L2Out { a: input.a, x: input.x, y: input.y, writes: vec![] }
 }
+
+// ---- SC-B6-04 簇入口适配（a6_cluster_004 ← bank04:800C——判别条补触发）----
+
+/// a6_cluster_004 适配（bank04:800C（bank4 窗）——案实核 3 写（$6AF7←r(0)
+/// （fixture 强源）+$6AF8←163（fixture 弱源——判别条补触发→账目预登记
+/// （VALCHAIN-B6-004））+$6AFA←1）；A=1/X 透传/Y=1）。
+pub fn a6_cluster_004(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    L2Out {
+        a: 1, x: input.x, y: 1,
+        writes: merge_writes(vec![
+            (0x6AF7, r(0x0000)), (0x6AF8, 163), (0x6AFA, 1),
+        ]),
+    }
+}
