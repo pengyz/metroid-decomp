@@ -4336,6 +4336,28 @@ $8006 **全同续**（CommonJump 表 bank3 复现三现）②**XCHAIN-B4-002 预
 ③2 写定址清对（常量）实核+8 案账内 ④员面双扫桩 0（2 员真现）。测 416。
 findings（r10）：0 新。SC-B4-03（B 区余 126 卡）预告随账。
 
+## SC-B4-03 卡审（3c21314）——bank3 化身四现（判别条十一现负例）
+
+### verdict: pass
+
+四条核：①**bank3 化身四现 ✓✓**：bank03:8027=`4c 8f fd 4c 6e eb 4c 44` 与 bank1
+$8027 **全同续**（CommonJump 表 bank3 复现四现=CommonJump_ApplySpeedToPosition
+项）②**判别条十一现负例 ✓**（1 写常量（$02←0）→不触发=严格顺序 ✓）+X/Y 透传
+（非定值辨识续）③8 案 strict 0 败（首提全过）④员面双扫桩 0（2 员真现（常量
+单写——3 员））。测 417。findings（r10）：0 新。SC-B4-04（B 区余 125 卡）预告随账。
+
+## SC-B4-04 卡审（871cd8f）——bank3 化身五现/桩阵十六现（1 空白卡）
+
+### verdict: pass
+
+四条核：①L2 留白**真 0 三方核 ✓**（pregen/l2_cases 全 0——**a4 批 1 空白卡
+辨识**随账）②**桩阵十六现 ✓✓（形九续）**：bank03:803C=`4c 8b dd 4c dc fe 4c
+92 ce 4c fb c3` 与 bank1 $803C **全同**——JMP 桩阵四形逐字（**DrawEnemy**（$DD8B）
+/**DrawTileBlast**（$FEDC）/**SubtractHealth**（$CE92）/**Base10Subtract**（$C3FB）
+——hexdump 直得=bank3 化身五现）③数据面 2 件（$A05C 16B tile/anim+$A069——
+hexdump 直得）④员面双扫桩 0（3 员真现）。测 418。findings（r10）：0 新。
+SC-B4-05（B 区余 124 卡）预告随账。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
