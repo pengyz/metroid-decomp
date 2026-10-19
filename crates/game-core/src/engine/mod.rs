@@ -10026,3 +10026,30 @@ mod a4_004_tests {
         assert_eq!(d[0], 0xE0); // 数据面（hexdump 直得）
     }
 }
+
+// ---- SC-B4-05（a4-005）员转写（2 员——DrawTileBlast 族（bank3 化身））----
+
+/// bank03:803F CommonJump_DrawTileBlast（root——簇共根形二百五八·**bank3 化身**
+/// （a1-015 同款——refs 法：areas_common.asm:87（bank3 复现）））。
+/// 返回 (目标址, 桩面)。
+pub fn b3_803f_draw_tile_blast() -> (u16, bool) {
+    (0x803F, true) // CommonJump_DrawTileBlast（bank3 化身（a1-015 直连））
+}
+
+/// $9F2E/$9FBD/$A0A0 员体（bank3 同族面（4 员））。
+pub fn b3_9f2e_face() -> Vec<(u16, u8)> {
+    vec![(0x0000, 0), (0x0001, 0x87), (0x0002, 1), (0x0003, 0x87)]
+}
+
+#[cfg(test)]
+mod a4_005_tests {
+    use super::*;
+
+    /// 二员转写形（DrawTileBlast bank3 化身 root+同族面）。
+    #[test]
+    fn a4_005_units_two() {
+        assert_eq!(b3_803f_draw_tile_blast(), (0x803F, true)); // a1-015 直连
+        let ev = b3_9f2e_face();
+        assert!(ev.contains(&(0x0001, 0x87))); // 同族面（写址对值核对）
+    }
+}

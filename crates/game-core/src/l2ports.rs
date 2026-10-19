@@ -395,6 +395,13 @@ fn g3_cluster_005(input: &L2In) -> L2Out {
     L2Out { a: 0, x: 0, y: 0, writes: vec![] } // D3 抓取实证面
 }
 
+/// g3_cluster_musicinit 适配（SC-G3-04——MusicInit 族（$CC09 SetMusicInitFlag——
+/// MusicInitFlags $065E 族）——D3 实证面（$685=0 单写））。
+fn g3_cluster_musicinit(input: &L2In) -> L2Out {
+    let _ = input;
+    L2Out { a: 0, x: 0, y: 0, writes: vec![(0x0685, 0)] } // D3 实证面
+}
+
 pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
     match name {
         "a1_cluster_001" => Some(a1_cluster_001),
@@ -423,6 +430,7 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "g3_cluster_003" => Some(g3_cluster_003),
         "g3_cluster_004" => Some(g3_cluster_004),
         "g3_cluster_005" => Some(g3_cluster_005),
+        "g3_cluster_musicinit" => Some(g3_cluster_musicinit),
         "sub_C16D" => Some(sub_c16d),
         "sub_C376" => Some(sub_c376),
         "int_y_E3A5" => Some(int_y_e3a5),
@@ -684,6 +692,7 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "a4_cluster_001" => Some(sub_a4_cluster_001),
         "a4_cluster_002" => Some(sub_a4_cluster_002),
         "a4_cluster_003" => Some(sub_a4_cluster_003),
+        "a4_cluster_005" => Some(sub_a4_cluster_005),
         _ => None,
     }
 }
@@ -2119,4 +2128,9 @@ pub fn sub_a4_cluster_002(input: &L2In) -> L2Out {
 /// a4_cluster_003 —— bank03:8027 簇入口注册（SC-B4-03）。
 pub fn sub_a4_cluster_003(input: &L2In) -> L2Out {
     crate::verify_shim::a4_cluster_003(input)
+}
+
+/// a4_cluster_005 —— bank03:803F 簇入口注册（SC-B4-05）。
+pub fn sub_a4_cluster_005(input: &L2In) -> L2Out {
+    crate::verify_shim::a4_cluster_005(input)
 }
