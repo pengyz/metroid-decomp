@@ -31,8 +31,6 @@ pub fn final_writes(events: Vec<(u16, u8)>) -> Vec<(u16, u8)> {
 }
 const MAX_STEPS: usize = 1_000_000;
 
-/// 在 prg（128KB PRG，8×16KB）上执行单个子程序。
-/// `entry` 为 CPU 地址；`window_bank` 为 $8000 窗口 bank 号（全程生效；bank07 用例令 window_bank=7，
 /// 窗口态假设见 rounds/r3 遗留风险）。
 pub fn run_subroutine(
     prg: &[u8],
@@ -73,7 +71,6 @@ pub fn run_subroutine(
 }
 
 impl Cpu {
-    /// L2 引擎专用：压栈一字节（与 cpu6502::push 语义一致）。
     pub(crate) fn push8(&mut self, v: u8) {
         let addr = 0x0100 | self.sp as u16;
         self.store_ram(addr, v);
@@ -87,7 +84,6 @@ impl Cpu {
 mod task38_watchdog {
     use super::*;
 
-    /// spin 坏例：入口处 JMP $8000（自跳死循环）——无 stops。
     /// 判据：run_subroutine 在 MAX_STEPS 上限 fail-loud（超步数错误），不挂死。
     #[test]
     fn spin_program_bounded_fail_not_hang() {
@@ -209,6 +205,8 @@ mod trace_probe {
         for (pc, a, n) in &wps {
             println!("  wp pc={pc:04X} A={a:02X} n={n}");
         }
+
+
     }
 }
 
@@ -253,6 +251,29 @@ mod g3_probe {
             let (r, _t) = run_subroutine_traced(prg, entry, 7, &input, &[], 64)
                 .unwrap_or((L2RunResult { a: 0, x: 0, y: 0, writes: vec![] }, vec![]));
             println!("{name}(${entry:04X}): a={} x={} y={} 写={:?}", r.a, r.x, r.y, r.writes);
+        }
+    }
+
+    /// SC-G3-03 探针（LCG fixture 装载（$0680 输入族）×D3 抓取——写面对实证）。
+    #[test]
+    fn g3_lcg_capture() {
+        let rom = std::fs::read(concat!(env!("CARGO_MANIFEST_DIR"), "/../../rom/Metroid (USA).nes")).expect("ROM");
+        let prg = &rom[0x10..0x20010];
+        let fixtures: [(u16, &str, u8); 4] = [
+            (0xB3B4, "g3-000", 1), (0xB31B, "g3-001", 0), (0xB337, "g3-002", 0), (0xB34B, "g3-003", 0),
+        ];
+        for (entry, name, v0680) in fixtures {
+            let mut ram = vec![0u8; 0x800];
+            ram[0x0680] = v0680;
+            let input = L2In {
+                wram: vec![0; 0x2000], a: 0, x: 0, y: 0, p: 0,
+                ram, window_bank: 7,
+            };
+            let wps = run_subroutine_writepoints(prg, entry, 7, &input, &[]).unwrap_or_default();
+            println!("{name}($0680={v0680}): 写点={:?}", wps);
+            let (r, _t) = run_subroutine_traced(prg, entry, 7, &input, &[], 64)
+                .unwrap_or((L2RunResult { a: 0, x: 0, y: 0, writes: vec![] }, vec![]));
+            println!("{name}: 写面对={:?}", r.writes);
         }
     }
 
