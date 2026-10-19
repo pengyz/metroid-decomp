@@ -249,3 +249,15 @@ pub fn update_enemy_anim_frame(
     }
     (0, dly, idx) // 界卫出（回绕不收敛——fail-safe）
 }
+
+/// CrawlerAIRoutine_ShouldCrawlerMove（**asm 内容锚** `07:F852`——ROM 字节证
+/// （$8009 jmp 靶 `4c 52 f8`））：
+/// `txa/lsr×3（slot/8）/adc FrameCount/lsr`→A=（x>>3+FrameCount）>>1——
+/// bits 0-1=移动判（0=不动）；**纯计算**（无写面）。
+pub fn crawler_should_move(x: u8, frame_count: u8) -> u8 {
+    // **adc 进位面**（lsr×3 置 carry=x bit2——`adc FrameCount` 带进位加！）
+    let carry = (x >> 2) & 1;
+    let slot = (x >> 3) as u16;
+    let sum = slot.wrapping_add(frame_count as u16).wrapping_add(carry as u16);
+    (sum >> 1) as u8
+}
