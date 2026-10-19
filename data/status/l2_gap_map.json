@@ -155,6 +155,13 @@
       "reason": "a1-002 批产迭代态案语义差（case-7：core 多写 $6B=163（(107,163)）——golden 无此写——转写收敛面）",
       "exit": "a1-002 卡转写落→账清转 strict",
       "registered": "2026-10-19"
+    },
+    {
+      "id": "SC-A1-004-IMPL",
+      "case_prefix": "a1-004-case",
+      "reason": "a1_cluster_004 缺移植函数（实现缺口——批产 WIP 簇；全 8 案随转写收敛）",
+      "exit": "a1_cluster_004 移植落→账清转 strict",
+      "registered": "2026-10-19"
     }
   ]
 }
