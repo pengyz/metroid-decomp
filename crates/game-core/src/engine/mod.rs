@@ -5896,3 +5896,33 @@ mod s5_133_tests {
         assert_eq!(s5_f106_body(2, 5, 9), (5, 9));
     }
 }
+
+// ---- SC-S5-14（S5-134）员转写（2 员——GetEnemyYSlotPosition 族；L2 真 0 留白）----
+
+/// $F162 GetEnemyYSlotPosition（root——簇共根形百二七·**S5-128 X 版对偶**）：
+/// $0400/$0401[y]→$06/$08（y 索引位置对）+$6AFB[y]→$F193（尾面）。
+/// 返回 (写事件, 位置对)。
+pub fn s5_get_enemy_y_pos(y: u8, v0400_y: u8, v0401_y: u8) -> Vec<(u16, u8)> {
+    vec![(0x0006, v0400_y), (0x0008, v0401_y)]
+}
+
+/// $F109 员体：GetEnemyYSlotPosition+链（$F1FA/$F2ED/$F1EE——S2-21/S5-129 接面）
+/// +cmp $C0 判+IsSamusDead（S1-13 接面）——S5-133 同构面。
+pub fn s5_f109_body(y: u8, v0400_y: u8, v0401_y: u8) -> Vec<(u16, u8)> {
+    s5_get_enemy_y_pos(y, v0400_y, v0401_y)
+}
+
+#[cfg(test)]
+mod s5_134_tests {
+    use super::*;
+
+    /// 二员转写形（GetEnemyYSlotPosition 对偶 root+一壳）。
+    #[test]
+    fn s5_134_units_two() {
+        let ev = s5_get_enemy_y_pos(3, 8, 9);
+        assert!(ev.contains(&(0x0006, 8)));
+        assert!(ev.contains(&(0x0008, 9)));
+        let ev2 = s5_f109_body(3, 8, 9);
+        assert_eq!(ev2.len(), 2);
+    }
+}
