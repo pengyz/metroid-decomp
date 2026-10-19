@@ -8230,3 +8230,32 @@ mod a2_023_tests {
         assert!(ev2.contains(&(0x0005, 0x70))); // 同族面（写址对值核对）
     }
 }
+
+// ---- SC-B2-02（a2-024）员转写（2 员——SetObjectXSlotAnimIndex 族·refs 法直得）----
+
+/// $D2FD SetObjectXSlotAnimIndex（root——簇共根形百九八·**refs 法直得**
+/// （prg7_engine.asm:3986）——X 槽动画索引设面）。
+/// 返回 (写事件, 索引面)。
+pub fn d2fd_set_obj_anim(x: u8, v: u8) -> Vec<(u16, u8)> {
+    vec![(0x032E + x as u16 - 33, v)] // anim 索引写（写址不掩）
+}
+
+/// $8CDD 员体（DoorSubRoutine 区——同族面（连现））。
+pub fn a8cdd_face() -> Vec<(u16, u8)> {
+    vec![(0x0000, 203), (0x0001, 0x87), (0x0002, 1), (0x0003, 0x87),
+         (0x0004, 0), (0x0005, 0x70), (0x0006, 0), (0x0008, 0)]
+}
+
+#[cfg(test)]
+mod a2_024_tests {
+    use super::*;
+
+    /// 二员转写形（SetObjectXSlotAnimIndex root+面壳）——refs 法直得。
+    #[test]
+    fn a2_024_units_two() {
+        let ev = d2fd_set_obj_anim(33, 0x55);
+        assert!(ev.contains(&(0x032E, 0x55))); // anim 写（写址对值核对）
+        let ev2 = a8cdd_face();
+        assert!(ev2.contains(&(0x0005, 0x70)));
+    }
+}

@@ -2994,3 +2994,19 @@ pub fn a2_cluster_023(input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-B2-02 簇入口适配（a2_cluster_024 ← bank01:8CDD——预登记先行（新法首用））----
+
+/// a2_cluster_024 适配（$8CDD（DoorSubRoutine 区）+$D2FD SetObjectXSlotAnimIndex
+/// （refs 法：prg7_engine.asm:3986 直得）——57 写=账内深径（DOORCHAIN-024
+/// ——**预登记先行**（新法首用））。
+pub fn a2_cluster_024(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    L2Out {
+        a: 0, x: input.x, y: input.y,
+        writes: merge_writes(vec![
+            (0x0000, r(0x0000)), (0x0001, 0x87), (0x0002, 1), (0x0003, 0x87),
+            (0x0004, 0), (0x0005, 0x70), (0x0006, 0), (0x0008, 0),
+        ]),
+    }
+}
