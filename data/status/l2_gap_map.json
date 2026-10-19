@@ -141,6 +141,13 @@
       "reason": "全族深径（$07 写=walk-VM 深链（$EDD6 分派→handler 集∈S2-48/49 族（walk 表 handler））——golden 含 VM handler 效应=正常（S2-048/S2-013 同款判定形））",
       "exit": "walk-VM handler 集建模清（S2-48/49 族域深化）→账清转 strict；或跨卡调用接线",
       "registered": "2026-10-19"
+    },
+    {
+      "id": "SC-S5-123-TRANSCRIBE",
+      "case_prefix": "s5-123-case",
+      "reason": "S5-123 簇转写中（批产迭代态——2 案语义差随转写收敛）",
+      "exit": "S5-123 卡转写落→账清转 strict",
+      "registered": "2026-10-19"
     }
   ]
 }
