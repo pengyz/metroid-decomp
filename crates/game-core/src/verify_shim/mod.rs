@@ -2596,3 +2596,25 @@ pub fn s7_cluster_177(input: &L2In) -> L2Out {
         writes: merge_writes(vec![(0x6AF8 + input.x as u16, 0)]),
     }
 }
+
+// ---- SC-S7-03 簇入口适配（s7_cluster_178 ← bank07:FCC1 UpdateMellow_RunAI）----
+
+/// s7_cluster_178 适配（$FD5F Table18 链——案实核六写指针面（$0B←r($B3+x)/
+/// $08←r($B1+x)/$09←r($B2+x)+$02←0/$04/$05←($08/$09 写回对））；A=1/X 透传/Y=4）。
+pub fn s7_cluster_178(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    let x = input.x as u16;
+    let v08 = r(0x00B1 + x & 0x7FF); // 2KB 掩码辨识条
+    let v09 = r(0x00B2 + x & 0x7FF);
+    L2Out {
+        a: 1, x: input.x, y: 4,
+        writes: merge_writes(vec![
+            (0x0002, 0), (0x000B, r(0x00B3 + x & 0x7FF)),
+            (0x0008, v08), (0x0009, v09),
+            (0x0004, v08), (0x0005, v09),
+            (0x0040, v08), (0x0041, v09), (0x0042, 0), (0x0043, 1),
+            (0x04F0, v08), (0x04F1, v09),
+            (0x6BEB, 0),
+        ]),
+    }
+}

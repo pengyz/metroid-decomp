@@ -7427,3 +7427,40 @@ mod s7_177_tests {
         assert_eq!(ev2.len(), 1);
     }
 }
+
+// ---- SC-S7-03（S7-178）员转写（2 员——UpdateMellow_RunAI 族）----
+
+/// $FD5F Table18（root——簇共根形百七一·**S5-123 spawn 族同构**）：
+/// $B3[x]→$0B/$B1[x]→$08/$B2[x]→$09（三表载）+写回对（$08/$09→$04/$05）。
+/// 返回 (写事件, 表值)。
+pub fn s7_table18(x: u8, v_b1: u8, v_b2: u8, v_b3: u8) -> Vec<(u16, u8)> {
+    vec![(0x000B, v_b3), (0x0008, v_b1), (0x0009, v_b2),
+         (0x0004, v_b1), (0x0005, v_b2)]
+}
+
+/// $FCC1 UpdateMellow_RunAI：Table18+$B4[x] cmp 2 判（bcs 段）+$08 cmp $030D
+/// （cpx 面）+$B4[x] or 2（态写——S5-123 同族）。
+pub fn s7_fcc1_body(x: u8, v_b1: u8, v_b2: u8, v_b3: u8, v_b4_x: u8)
+    -> (Vec<(u16, u8)>, u8) {
+    let mut ev = s7_table18(x, v_b1, v_b2, v_b3);
+    if v_b4_x < 2 {
+        ev.push((0x00B4 + x as u16, v_b4_x | 2)); // bcs 段外（or 2 态写）
+    }
+    (ev, v_b4_x)
+}
+
+#[cfg(test)]
+mod s7_178_tests {
+    use super::*;
+
+    /// 二员转写形（Table18 root+一壳）。
+    #[test]
+    fn s7_178_units_two() {
+        let ev = s7_table18(2, 4, 1, 0);
+        assert!(ev.contains(&(0x0008, 4)));
+        assert!(ev.contains(&(0x0004, 4))); // 写回对（写址对值核对）
+        assert!(ev.contains(&(0x000B, 0)));
+        let (ev2, _) = s7_fcc1_body(2, 4, 1, 0, 1);
+        assert!(ev2.contains(&(0x00B6, 3))); // x=2 ⇒ $B4+2（x 索引强制步）
+    }
+}
