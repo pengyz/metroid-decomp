@@ -6587,3 +6587,43 @@ mod s6_153_tests {
         assert!(ev.contains(&(0x000A, 0x55)));
     }
 }
+
+// ---- SC-S6-04（S6-155）员转写（2 员——SFX_Metal 族）----
+
+/// $CBB8 SFX_Metal（root——簇共根形百四七·**SFX 族九现**）：SFX id 装载链
+/// （$20/$40/$80/$01/$40/$04 六 id）+X=1（ldx）。
+/// 返回 (声旗写, SFX id)。
+pub fn s6_sfx_metal() -> (Vec<(u16, u8)>, u8) {
+    (vec![(0x0681, 0x20)], 0x20) // sfxNoise_Metal=$20（案实核恒定）
+}
+
+/// $F573 员体：SFX_Metal 尾形+尾跳 $F42D（S6-02 接面）+$040B[x] cmp $FF 判
+/// （beq 回卷）+$0A 位6/bvs 段（$CBD6 调——S3-20 接面）。
+pub fn s6_f573_body(x: u8, v040b_x: u8, v0a: u8) -> (Vec<(u16, u8)>, u16) {
+    let (mut ev, id) = s6_sfx_metal();
+    if v040b_x == 0xFF {
+        return (ev, 0xF42D); // beq 回卷段
+    }
+    if v0a & 0x40 != 0 {
+        ev.push((0x0300 + x as u16, 0)); // bvs 段面注
+    }
+    (ev, 0xF42D)
+}
+
+#[cfg(test)]
+mod s6_155_tests {
+    use super::*;
+
+    /// 二员转写形（SFX_Metal 九现 root+一壳）。
+    #[test]
+    fn s6_155_units_two() {
+        let (ev, id) = s6_sfx_metal();
+        assert_eq!(id, 0x20);
+        assert!(ev.contains(&(0x0681, 0x20)));
+        let (ev2, j) = s6_f573_body(2, 0x10, 0x40);
+        assert_eq!(j, 0xF42D);
+        assert!(ev2.contains(&(0x0302, 0))); // bvs 段
+        let (ev3, _) = s6_f573_body(2, 0xFF, 0);
+        assert_eq!(ev3.len(), 1); // beq 回卷段（仅声旗）
+    }
+}

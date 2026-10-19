@@ -2342,3 +2342,14 @@ pub fn s6_cluster_152(input: &L2In) -> L2Out {
 pub fn s6_cluster_153(input: &L2In) -> L2Out {
     L2Out { a: input.a, x: 0, y: input.y, writes: vec![] }
 }
+
+// ---- SC-S6-04 簇入口适配（s6_cluster_155 ← bank07:CBB8 SFX_Metal 族）----
+
+/// s6_cluster_155 适配（$CBB8 SFX_Metal——案实核恒定：$0681←$20（声旗）；
+/// A=$20/X=1/Y 透传——SFX 族九现）。
+pub fn s6_cluster_155(input: &L2In) -> L2Out {
+    L2Out {
+        a: 0x20, x: 1, y: input.y,
+        writes: merge_writes(vec![(0x0681, 0x20)]),
+    }
+}
