@@ -8431,3 +8431,31 @@ mod a2_030_tests {
         assert_eq!(a99e2_face().len(), 7);
     }
 }
+
+// ---- SC-B2-09（a2-031）员转写（2 员——$99CC S5-146 族同族面）----
+
+/// $99CC 员体（root——簇共根形二百五·S5-146 族同族面（6 写））。
+/// 返回 (写事件, 有效)。
+pub fn a99cc_face(v0: u8) -> Vec<(u16, u8)> {
+    vec![(0x0001, 8), (0x0404, 0), (0x040E, 0),
+         (0x6AF7, v0), (0x6AF8, v0), (0x6AFA, 1)]
+}
+
+/// $9BCF 员体（同族面（连现））。
+pub fn a9bcf_face(v0: u8) -> Vec<(u16, u8)> {
+    a99cc_face(v0)
+}
+
+#[cfg(test)]
+mod a2_031_tests {
+    use super::*;
+
+    /// 二员转写形（$99CC 同族面 root+一壳）。
+    #[test]
+    fn a2_031_units_two() {
+        let ev = a99cc_face(88);
+        assert_eq!(ev.len(), 6);
+        assert!(ev.contains(&(0x6AF8, 88))); // 双写（写址对值核对）
+        assert_eq!(a9bcf_face(88).len(), 6);
+    }
+}
