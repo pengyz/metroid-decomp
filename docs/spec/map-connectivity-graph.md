@@ -566,3 +566,14 @@
   watch 读空根因待查）；
 - **收窄交付形执行**（lead 令）：逐件 commit ✓（d00ed9a/8183f37）——防上下文
   耗尽 ✓。
+
+## 47. 【2026-10-19 ③转 porter】bundle 载入态 trace 终止条件扩展（l3-dump 域）
+
+- **③工具修转 porter**（lead 路由）：bundle 载入态 trace=**帧数制终止**（替代
+  spin-exit——载入态无 spin 退出）——l3-dump 域（porter 侧）；
+- **修后一键落态**（我侧待）：manifest 同构案（五场 schema 修案：id/scenario 防
+  穿越/legs dict/watch 对象/sha 64hex）+dump 配对（ram.hex ×3+shots ×3 在）
+  ——trace 通即落；
+- **收窄交付形确认**（lead：防上下文耗尽有效）——①②✓逐件 commit 形续用；
+- **sc-elevator-ride 全案态**：八房进（主径）+②后备三件（①②✓③待）+BUG-001+
+  G 系方法库 17 系——**elevator 骑行面**（场景目的）=③ 落后走通。
