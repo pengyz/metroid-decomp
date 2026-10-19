@@ -2743,3 +2743,15 @@ pub fn a1_cluster_006(_input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-B1-07 簇入口适配（a1_cluster_007 ← bank01:801E——a1-006 双生（refs 法））----
+
+/// a1_cluster_007 适配（$801E CommonJump_InitEnActiveAnimIndex_NoInitOffset
+/// （refs 法：asm:54）——案实核三写定址面（$6AF8←0/$6AF9←5/$6AFA←5（a1-006 双生））；
+/// A=0/X=0/Y=0）。
+pub fn a1_cluster_007(_input: &L2In) -> L2Out {
+    L2Out {
+        a: 0, x: 0, y: 0,
+        writes: merge_writes(vec![(0x6AF8, 0), (0x6AF9, 5), (0x6AFA, 5)]),
+    }
+}

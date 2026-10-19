@@ -7737,3 +7737,31 @@ mod a1_006_tests {
         assert!(ev.contains(&(0x6B03, 0)));
     }
 }
+
+// ---- SC-B1-07（a1-007）员转写（2 员——InitEnActiveAnimIndex 族·refs 法）----
+
+/// $801E CommonJump_InitEnActiveAnimIndex_NoInitOffset（root——簇共根形百八一·
+/// 桩阵八现（形九续）——refs 法：asm:54 `jmp InitEnActiveAnimIndex_NoInitOffset`）。
+/// 返回 (目标址, 桩面)。
+pub fn a801e_common_jump() -> (u16, bool) {
+    (0xE0A6, true) // jmp InitEnActiveAnimIndex_NoInitOffset（refs 法）
+}
+
+/// InitEnActiveAnimIndex 三写面（a1-006 双生——定址面）。
+pub fn a801e_init_active_face() -> Vec<(u16, u8)> {
+    vec![(0x6AF8, 0), (0x6AF9, 5), (0x6AFA, 5)]
+}
+
+#[cfg(test)]
+mod a1_007_tests {
+    use super::*;
+
+    /// 二员转写形（InitEnActiveAnimIndex root+面壳）——refs 法四现。
+    #[test]
+    fn a1_007_units_two() {
+        assert!(a801e_common_jump().1);
+        let ev = a801e_init_active_face();
+        assert_eq!(ev.len(), 3);
+        assert!(ev.contains(&(0x6AF9, 5))); // 定址面（写址对值核对）
+    }
+}
