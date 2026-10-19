@@ -17,8 +17,11 @@
 # 【房23 实证】双屏高房（结构对象 y 行 12-30=480px）——item hi=1=下屏（行 15-30）✓
 # 【房23 语义形】rooms.asm:682（01:AA20）：首字节 \$02+12 结构放置三元组+\$FD+5 敌+\$FF
 # 敌清单实证：Zoomer×2/Waver/Zeb spawner/Ripper（obj1 辨识=房载敌闭环）
-# 结构放置=[x 0x00-0xDE][y_packed][struct_id 1-3]——StructPtrTable(01:\$A372) 尺寸解=下一窗
-# 降段开口 x 定位=struct 几何细析后 v12 一击
+# 【StructPtrTable 几何解】struct01=平台（8 宽条×2+中柱——AC97）/struct02=墙（2 宽×8 行）
+# struct03=门瓦柱（$06 门瓦×3 行——ACC9）——房23 门@(DE,5)=上屏右缘东出口（G 系门层同款）
+# y_packed 解：[旗 001=下屏][y 行 5-14]——下屏结构 8 处（行 6-9）/上屏 4 处（右缘 x 208-222）
+# 物品台地=struct01@(63,9)=下屏 x99 平台（item y=152=行 9.5 台顶 ✓）
+# v12 设计：上屏开放地面（x<208）降落→hi 翻→下屏→行 9 台地→同表窗触达
 # nav 化：ScrX→104（=$68=物品 x）+A 持（跳向 y=$98 高位物品）
 # 事件核：pw 位图置位（$6988+）/PowerUps type 04→拾取态/UniqueItemHistory 链
 name sc-pickup-touch

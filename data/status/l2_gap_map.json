@@ -190,6 +190,13 @@
       "reason": "Y 面+槽值=链深效（Y_out 变径（96/0）+槽值 209（无 fixture 源——链算值）——spawn 链后段效应（S5-121/S6-165 同款跨卡链形））",
       "exit": "spawn 链后段径建模清（Y 面+槽值链算模拟）→账清转 strict",
       "registered": "2026-10-19"
+    },
+    {
+      "id": "SC-A1-009-IMPL",
+      "case_prefix": "a1-009-case",
+      "reason": "【预登记/补账】a1-009 簇（批产 WIP——A 批预登记制）",
+      "exit": "a1-009 落→账清转 strict",
+      "registered": "2026-10-19"
     }
   ]
 }
