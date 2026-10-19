@@ -3083,3 +3083,18 @@ pub fn a2_cluster_029(input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-B2-08 簇入口适配（a2_cluster_030 ← bank01:99C8——S5-146 族同族）----
+
+/// a2_cluster_030 适配（$99C8（S5-146 族区）——案实核 7 写（$00/$01←6/8+清对+
+/// $6AF7/$6AF8←6+$6AFA←1）；A=0/X=0/Y=1）。
+pub fn a2_cluster_030(_input: &L2In) -> L2Out {
+    L2Out {
+        a: 0, x: 0, y: 1,
+        writes: merge_writes(vec![
+            (0x0000, 6), (0x0001, 8),
+            (0x0404, 0), (0x040E, 0),
+            (0x6AF7, 6), (0x6AF8, 6), (0x6AFA, 1),
+        ]),
+    }
+}
