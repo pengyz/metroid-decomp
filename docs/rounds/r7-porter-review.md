@@ -3584,6 +3584,17 @@ lda #$4E ; door tile` ↔ bank1 $8CFB=`a9 4e`（LDA #$4E=door tile）——语�
 WriteDoorBGTiles 全谱直得）+a1-016 同族面 8 案全合 ④员面双扫桩 0（2 员真现）。
 测 351。findings（r10）：0 新。SC-B1-20（B 区余 187 卡）预告随账。
 
+## SC-B1-20 卡审（f8707ac）——Adiv16 位移面（refs 跨域速效）
+
+### verdict: pass
+
+四条核：①L2 面 a1-020-case×8 并入+**族 8 案 0 败（首提全过）**✓（16=8×2 已计；
+败 62→69=A 系 WIP 在途非本卡归因）②**Adiv16 位移面双轨 ✓✓**：prg7_engine.asm:761-62
+`Adiv16: ; 07:C2BF / lsr`（×4=÷16）↔ bank7 $C2BF=`4a 4a 4a 4a 60`（LSR×4/RTS）
+——语义注释↔字节直合（**prg7_engine 域二现**=refs 跨域速效实证）③DoorSubRoutine
+同族面 8 案全合 ④员面双扫桩 0（2 员真现）。测 352。findings（r10）：0 新。
+SC-B1-21（B 区余 186 卡）预告随账。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
