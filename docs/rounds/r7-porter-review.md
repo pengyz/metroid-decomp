@@ -4879,6 +4879,17 @@ SETDATA/SETDATA3FRAME））③**闸集落 ✓**（gap_map TOLERATED 消费面=59
 协调优先件（挡 port2）——D7 声明域全族注册=门层保险面全覆盖）④态差核（稳/
 就绪态保持）+闸 PASS。测 459。findings（r10）：0 新。SC-MD-006 接续预告随账。
 
+## SC-B6-04 卡审（6783e1d）——bank4 化身五现（VALCHAIN-B6-004）
+
+### verdict: pass
+
+四条核：①**bank4 化身五现 ✓✓**：bank04:800C=`4c 94 e0 4c 8d f6 4c 3e` 与 bank1
+$800C **全同续**（CommonJump 表 bank4 复现五现）②**VALCHAIN-B6-004 预登记 ✓**
+（183 条目）：fixture 强弱源同卡双辨（强源 $6AF7←r(0) 不触发/弱源 $6AF8←163
+判别条补触发）→预登记→L2 并案=严格顺序续 ③3 写实核（清对+$6AFA←1）+8 案账内
+④员面双扫桩 0（3 员真现）。测 459。findings（r10）：0 新。SC-B6-05（B 区余
+82 卡）预告随账。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
