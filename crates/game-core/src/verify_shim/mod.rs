@@ -3053,3 +3053,18 @@ pub fn a2_cluster_027(input: &L2In) -> L2Out {
         writes: vec![],
     }
 }
+
+// ---- SC-B2-06 簇入口适配（a2_cluster_028 ← bank01:99A1——S5-146 族同族）----
+
+/// a2_cluster_028 适配（$99A1（S5-146 族区）——案实核：定址清对（$0404/$040E←0）+
+/// $6AF7←r(0)/$6AF8←r(0)/$6AFA←1（S5-146 同族双写面）；A=0/X=0/Y=1）。
+pub fn a2_cluster_028(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    L2Out {
+        a: 0, x: 0, y: 1,
+        writes: merge_writes(vec![
+            (0x0404, 0), (0x040E, 0),
+            (0x6AF7, r(0x0000)), (0x6AF8, r(0x0000)), (0x6AFA, 1),
+        ]),
+    }
+}
