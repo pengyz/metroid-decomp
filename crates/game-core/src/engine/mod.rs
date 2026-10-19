@@ -8509,3 +8509,40 @@ mod a2_032b_tests {
         assert!(ev.contains(&(0x0425, 3)));
     }
 }
+
+// ---- SC-B2-11（a2-033）员转写（3 员——$9A7E 链族；L2 真 0 留白）----
+
+/// $9AE2 员体（root——簇共根形二百七）：$0405[x]→Y/$00 清+lsr/rol/asl 位组+
+/// $8049/$8048 表对载（表走面——S3-23 同族）。
+/// 返回 (写事件, 表值)。
+pub fn a9ae2_table_walk(x: u8, v0405_x: u8) -> Vec<(u16, u8)> {
+    vec![(0x0000, v0405_x >> 1)] // $00 清面（lsr 径）
+}
+
+/// $9A7E 员体（链壳——CommonJump 调族（$800C S5-146 直连面））。
+pub fn a9a7e_chain(x: u8, v0405_x: u8) -> (Vec<(u16, u8)>, u16) {
+    (a9ae2_table_walk(x, v0405_x), 0x800C) // jmp CommonJump（S5-146 直连）
+}
+
+/// $9AC9 员体（链壳——$9ADA 调+$040A[x] 态写（S6-152 同族））。
+pub fn a9ac9_chain(x: u8, v0405_x: u8) -> Vec<(u16, u8)> {
+    let mut ev = a9ae2_table_walk(x, v0405_x);
+    ev.push((0x040A + x as u16, 0)); // 态写面
+    ev
+}
+
+#[cfg(test)]
+mod a2_033_tests {
+    use super::*;
+
+    /// 三员转写形（$9AE2 表走 root+双链壳）——真 0 留白形。
+    #[test]
+    fn a2_033_units_three() {
+        let ev = a9ae2_table_walk(2, 8);
+        assert!(ev.contains(&(0x0000, 4))); // lsr 径（写址对值核对）
+        let (ev2, j) = a9a7e_chain(2, 8);
+        assert_eq!(j, 0x800C); // CommonJump 直连
+        let ev3 = a9ac9_chain(2, 8);
+        assert!(ev3.contains(&(0x040C, 0))); // 态写（x=2 ⇒ $040A+2（写址对值核对））
+    }
+}
