@@ -3114,3 +3114,20 @@ pub fn a2_cluster_031(input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-B2-10 簇入口适配（a2_cluster_032 ← bank01:9A74——15 写族）----
+
+/// a2_cluster_032 适配（$9A74（S5-146 族区）——案实核 15 写（ptr 面+$04 族
+/// +清对+$6AF7-$6AFA 族）；A=0/X=0/Y=63）。
+pub fn a2_cluster_032(input: &L2In) -> L2Out {
+    let x = input.x as u16;
+    L2Out {
+        a: 0, x: 0, y: 63,
+        writes: merge_writes(vec![
+            (0x0000, 1), (0x0003, 8), (0x0008, 0), (0x0009, 0), (0x000B, 0),
+            (0x0401, 255), (0x0404, 0), (0x040A, 1), (0x040E, 0),
+            (0x0404 + x + 1, 1), (0x0404 + x + 6, 3), // x 索引（写址不掩）
+            (0x6AF7, 0), (0x6AF8, 3), (0x6AF9, 62), (0x6AFA, 63),
+        ]),
+    }
+}
