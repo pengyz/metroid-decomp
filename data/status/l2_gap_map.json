@@ -1310,6 +1310,34 @@
       "reason": "【预登记/补账】md_runaccel_physics 簇（批产 WIP——A 批预登记制）",
       "exit": "md_runaccel_physics 落→账清转 strict",
       "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-MD-007-IMPL",
+      "case_prefix": "a1-029-case",
+      "reason": "【预登记】臂深化卡序续（SC-MD-007 SamusDead 族——开工前置步先登记）",
+      "exit": "arm_cluster_007 移植/转写落→账清转 strict",
+      "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-MD_ISSAMUSDEAD-IMPL",
+      "case_prefix": "md_issamusdead",
+      "reason": "【预登记/补账】md_issamusdead 簇（批产 WIP——A 批预登记制）",
+      "exit": "md_issamusdead 落→账清转 strict",
+      "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-MD_SAMUSDEAD-IMPL",
+      "case_prefix": "md_samusdead",
+      "reason": "【预登记/补账】md_samusdead 簇（批产 WIP——A 批预登记制）",
+      "exit": "md_samusdead 落→账清转 strict",
+      "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-MD_SAMUSDEAD2-IMPL",
+      "case_prefix": "md_samusdead2",
+      "reason": "【预登记/补账】md_samusdead2 簇（批产 WIP——A 批预登记制）",
+      "exit": "md_samusdead2 落→账清转 strict",
+      "registered": "2026-10-20"
     }
   ]
 }
