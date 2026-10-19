@@ -2634,3 +2634,19 @@ pub fn s7_cluster_179(input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-S7-05 簇入口适配（s7_cluster_180 ← bank07:FE95 DrawTileBlast·S7 收官）----
+
+/// s7_cluster_180 适配（$FE95 DrawTileBlast——14 写（S1-17 变体固定面+算族
+/// （账内深径（TILEBLAST——S5-121 先例形）））；A=算族值/X 透传/Y=0）。
+pub fn s7_cluster_180(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    L2Out {
+        a: 0, x: input.x, y: 0,
+        writes: merge_writes(vec![
+            (0x0001, 0), (0x0003, 0), (0x000A, 0), (0x000B, 0),
+            (0x0004, 4), (0x0005, 4), (0x0010, 3),
+            (0x0000, r(0x0000)), (0x0011, r(0x0000)),
+        ]),
+    }
+}

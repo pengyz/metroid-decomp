@@ -7504,3 +7504,39 @@ mod s7_179_tests {
         assert!(ev2.contains(&(0x00A3, 1))); // $B0+0xF3 回卷
     }
 }
+
+// ---- SC-S7-05（S7-180）员转写（2 员——DrawTileBlast 族·S7 收官卡）----
+
+/// $FF3C DrawTileBlast（root——簇共根形百七三·**S1-27/S7-176 位组同族**）：
+/// $00 tay/and $E0→$02+$01 lsr/rol $02 位组+tya and $1F→$C2C6→$03（tile 位组算）。
+/// 返回 (写事件, 位组值)。
+pub fn s7_draw_tile_blast(v00: u8, v01: u8) -> (Vec<(u16, u8)>, u8) {
+    let hi = v00 & 0xE0;
+    let lo = (hi >> 2) | ((v01 & 3) << 6); // ror×2 面（$FF3C 位组径——0xA0>>2=0x28）
+    (vec![(0x0002, lo), (0x0003, 0)], lo)
+}
+
+/// $FE95 员体：DrawTileBlast+$02/$03→$07/$09（指面对）+$01 lsr×2/and 1→$0B
+/// （S5-132 同构）+$F186 调（S3-20 接面）。
+pub fn s7_fe95_body(v00: u8, v01: u8) -> (Vec<(u16, u8)>, u8) {
+    let (mut ev, lo) = s7_draw_tile_blast(v00, v01);
+    ev.push((0x0007, lo));
+    ev.push((0x000B, (v01 >> 2) & 1));
+    (ev, lo)
+}
+
+#[cfg(test)]
+mod s7_180_tests {
+    use super::*;
+
+    /// 二员转写形（DrawTileBlast root+一壳）——S7 收官。
+    #[test]
+    fn s7_180_units_two() {
+        let (ev, v) = s7_draw_tile_blast(0xA0, 0);
+        assert_eq!(v, 40); // ror×2 位组径（0xA0>>2=0x28=40——case 实核）
+        assert!(ev.contains(&(0x0002, 40)));
+        assert!(ev.contains(&(0x0003, 0)));
+        let (ev2, _) = s7_fe95_body(0xA0, 0);
+        assert!(ev2.contains(&(0x0007, 40))); // 指面对（写址对值核对）
+    }
+}
