@@ -847,6 +847,44 @@
           "note": "combat 武器变体（beam 面——fixture gear 注入）"
         }
       }
+    },
+    {
+      "id": "l3-sc-elevator-ride",
+      "scenario": "sc-elevator-ride",
+      "scenario_sha256": "2cbceb597baa140c7e98638391b26b0451603fc736a4592ff3b67c6939554858",
+      "frames": 7200,
+      "frame_keys": [
+        "zp",
+        "iram"
+      ],
+      "legs": {
+        "oracle": {
+          "sample_point": "endFrame",
+          "rows": 7200,
+          "missing": [],
+          "head_skip": 0,
+          "note": "bundle_load f3800 落点（路径修+.mss 配对——endFrame 采样）"
+        }
+      },
+      "game_core_leg": "disabled-s5",
+      "oracle_sha256": "a78050ec61792b0daf3468f4e258aeecfced5687eeabe8d43c3713ff6fa3b698",
+      "watch": [
+        {
+          "label": "zp",
+          "base": "0000",
+          "range": "0000-00ff"
+        },
+        {
+          "label": "iram",
+          "base": "0100",
+          "range": "0100-07ff"
+        }
+      ],
+      "determinism_evidence": "bundle_load f3800 落点（mss+RAM 快照）",
+      "legacy_sample_point_note": "endFrame（bundle 载入态帧末采样——2610df9 语义）",
+      "migration_note": "②后备：bundle_load 起跑（D7：绕过房 19/25 通行面——elevator 骑行面）",
+      "scenario_sha256_note": "bundle_load 场景件（路径修：.mss 配对）",
+      "watch_note": "zp+iram（事件核：MapPos/D7B3/ElevatorType）"
     }
   ]
 }
