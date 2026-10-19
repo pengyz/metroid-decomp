@@ -34,7 +34,9 @@
 # 物品活 f1011-1252（hi=0）/hi=1 自 f1329（物已死）——路由上两窗不重叠=触达结构性差
 # 【swap 点定】死点=MapX 3→4 界 @roomx≈143（f1252——房界 crossing 非 wrap）
 # 物品存活=MapX≤3 窗（房 (2,14)-(3,14) 域）——出界即死（RemoveIfOffScreen）
-# v18 两向：房内 wrap（roomx 255 界→hi=1）或 MapX≤3 内 hi=1 径（门过渡 hi 处理）
+# v18 负：wrap f1128（213 帧 hi=1）/物死 f1051——**77f 差恒定**（两路由同差=v17 对照）
+# 结构性差终定：死点=MapX 界 crossing 恒先于 wrap 77f——②门过渡 hi 处理根因=下一勘
+# 战役态（v1-v18）：机制/几何/三窗/swap 点/77f 恒差全解——触达收=②向一击
 # v14 实证：hi=1 173 帧 ✓+同表 Δx=0——但物品 f1252 离屏移除（时机差=wrap 太晚）
 # 累计盘（v1-v13）：机制全解（hi XOR PPUCTRL/x wrap 翻转/奇偶律/球态炸弹/碰撞半径和 18/7）
 # 几何全解（房23 双屏/12 结构/门(222,5)/物品台地/pit 底）——触达差=wrap 界穿径一击
@@ -50,10 +52,10 @@ press 360 start
 press 420 a
 press 540 start
 fixture 900 6878 13 invariant
-hold 995-1068 left
-hold 1072-1132 a
-hold 1072-1800 right
-nav 1140-1300 x 250
+hold 995-1016 left
+hold 1020-1500 right
+nav 1150-1350 x 104
+hold 1155-1230 a
 capture 1110 over-wall
 capture 1180 near-item
 capture 1500 touch-window
