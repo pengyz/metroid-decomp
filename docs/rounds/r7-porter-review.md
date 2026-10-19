@@ -4053,6 +4053,17 @@ $8C71 **全同**（=a1-017 DoorSubRoutine8C71 同形（LDX $4B/JMP $8BB1 直连�
 严格顺序续 ③8 案账内 ④员面双扫桩 0（2 员真现）。测 392（族域述**250 测里程碑**）。
 findings（r10）：0 新。SC-B3-15（B 区余 148 卡）预告随账。
 
+## SC-B3-15 卡审（5ea242f）——DoorSubRoutine8C76 bank2 化身（XCHAIN-B3-015）
+
+### verdict: pass
+
+四条核：①**DoorSubRoutine8C76 bank2 化身 ✓✓**：bank02:8C76=`a9 30 9d 05 03 38
+e9 02` 与 bank1 $8C76 **全同**（=a1-018 同形（LDA #$30/STA $0305,X anim 写）
+**跨 bank 复现**）②**XCHAIN-B3-015 预登记 ✓**（74 条目=**CHAIN 八类**）：X 变换
+（95→3 链算径）判别条补触发→预登记→L2 并案=严格顺序续 ③4 写实核（anim 态写+
+SFX_Door $0683←64）+8 案账内 ④员面双扫桩 0（2 员真现）。测 393。
+findings（r10）：0 新。SC-B3-16（B 区余 147 卡）预告随账。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
