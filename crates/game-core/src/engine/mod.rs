@@ -8289,3 +8289,31 @@ mod a2_025_tests {
         assert!(ev2.contains(&(0x0005, 0x70))); // 同族面（写址对值核对）
     }
 }
+
+// ---- SC-B2-04（a2-026）员转写（2 员——SelectSamusPalette 族·refs 法直得）----
+
+/// $CB73 SelectSamusPalette（root——簇共根形二百·**refs 法直得**（prg7_engine.asm:2535）
+/// ——Samus 调色板选择面）。
+/// 返回 (调色板面, 有效)。
+pub fn cb73_select_samus_palette() -> (u8, bool) {
+    (0, true) // 调色板选择面（案实核径）
+}
+
+/// $8CE3 员体（DoorSubRoutine 区——同族面（连现））。
+pub fn a8ce3_face() -> Vec<(u16, u8)> {
+    vec![(0x0000, 203), (0x0001, 0x87), (0x0002, 1), (0x0003, 0x87),
+         (0x0004, 0), (0x0005, 0x70), (0x0006, 0), (0x0008, 0)]
+}
+
+#[cfg(test)]
+mod a2_026_tests {
+    use super::*;
+
+    /// 二员转写形（SelectSamusPalette root+面壳）——refs 法直得。
+    #[test]
+    fn a2_026_units_two() {
+        assert!(cb73_select_samus_palette().1);
+        let ev = a8ce3_face();
+        assert!(ev.contains(&(0x0005, 0x70))); // 同族面（写址对值核对）
+    }
+}

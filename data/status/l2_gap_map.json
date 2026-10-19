@@ -358,6 +358,13 @@
       "reason": "DoorSubRoutine→DrawDoor→OAM 深径链（55 写（>20 深径判别条触发）——预登记先行（新法续——严格顺序纪律）——S5-121 同款跨卡深径）",
       "exit": "门链 OAM 绘制径建模清（全链模拟）→账清转 strict",
       "registered": "2026-10-19"
+    },
+    {
+      "id": "SC-B2-026-CROSSCARD-DOORCHAIN",
+      "case_prefix": "a2-026-case-",
+      "reason": "DoorSubRoutine→DrawDoor→OAM 深径链（54 写（>20 深径判别条触发）——预登记先行（新法续——严格顺序纪律）——S5-121 同款跨卡深径）",
+      "exit": "门链 OAM 绘制径建模清（全链模拟）→账清转 strict",
+      "registered": "2026-10-19"
     }
   ]
 }
