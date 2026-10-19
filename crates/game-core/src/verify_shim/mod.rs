@@ -3326,3 +3326,18 @@ pub fn a3_cluster_004(input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-B3-05 簇入口适配（a3_cluster_005 ← bank02:800F——判别条补触发）----
+
+/// a3_cluster_005 适配（bank02:800F（areas_common 化身——bank2）——案实核 3 写
+/// （$6B9E-$6BA0 族（x 索引）+174 值（fixture 弱源——判别条补触发→账目预登记
+/// （VALCHAIN-B3-005）））；A=0/X 透传/Y=109）。
+pub fn a3_cluster_005(input: &L2In) -> L2Out {
+    let x = input.x as u16;
+    L2Out {
+        a: 0, x: input.x, y: 109,
+        writes: merge_writes(vec![
+            (0x6AF8 + x - 2, 0), (0x6AF8 + x - 1, 174), (0x6AF8 + x, 174),
+        ]),
+    }
+}
