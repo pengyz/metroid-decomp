@@ -3506,6 +3506,17 @@ S3-05 族）——asm 直读↔字节直合（九现连续速效=a1-004..012 九
 （S7-175 同族）实核随证 ④员面双扫桩 0（2 员真现）。测 344。findings（r10）：0 新。
 SC-B1-13 预告随账。
 
+## SC-B1-13 卡审（a17adab）——refs 法十现（加速版同族）
+
+### verdict: pass
+
+四条核：①L2 面 a1-013-case×8 并入+**族 8 案 0 败（首提全过）**✓（16=8×2 已计；
+败 62 稳）②**refs 法十现双轨 ✓✓**：asm:78-79 `CommonJump_EnemyGetDeltaY_
+UsingAcceleration: ; $8036 / jmp EnemyGetDeltaY_UsingAcceleration` ↔ bank1 $8036=
+`4c 3f 83`（JMP $833F）——asm 直读↔字节直合（**十现=a1-004..013 十连全验**）
+③四写（写址不掩）实核+a1-010 加速版同族随证 ④员面双扫桩 0（2 员真现）。测 345。
+findings（r10）：0 新。SC-B1-14（B 区余 193 卡）预告随账。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
