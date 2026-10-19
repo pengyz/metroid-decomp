@@ -4489,6 +4489,18 @@ findings（r10）：0 新。SC-B4-14（B 区余 115 卡）预告随账。
 触发→预登记→L2 并案=严格顺序续 ③8 案账内 ④员面双扫桩 0（2 员真现）。测 428。
 findings（r10）：0 新。SC-B4-15（B 区余 114 卡）预告随账。
 
+## SC-B4-15 卡审（fbdf2d1）——MotherBrainMusic bank3 化身（SFX 十五现）
+
+### verdict: pass
+
+四条核：①**MotherBrainMusic 三 bank 全谱 ✓✓✓**：bank1/2/3 $8CC0=`20 03 cc 4c
+71 8c a5 56` **三 bank 全同**（=a2-023 同形（JSR $CC03 调用链）——SFX 族三 bank
+复现全谱二员（Tourian/MotherBrain））+**十五现声旗面 ✓**：bank7 $CC03=`a9 02
+d0 02`（LDA #$02=music_MotherBrain——SFX 十五现）②**MOTHERBRAIN-B4-015 预登记
+✓**（130 条目）：53 写>20 阈值判别条触发→预登记→L2 并案=严格顺序续 ③8 案
+账内 ④员面双扫桩 0（2 员真现）。测 429。findings（r10）：0 新。SC-B4-16（B 区余
+113 卡）预告随账。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
