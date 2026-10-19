@@ -8142,3 +8142,31 @@ mod a1_020_tests {
         assert!(ev.contains(&(0x0005, 0x70))); // 同族面（写址对值核对）
     }
 }
+
+// ---- SC-B1-21（a1-021）员转写（2 员——Amul16 族·refs 法直得）----
+
+/// $C2C5 Amul16（root——簇共根形百九五·**refs 法直得**（prg7_engine.asm:776）——
+/// 乘 16（Adiv16 对偶——低 4 位移高 4 位））。
+/// 返回 (A 值, 位移面)。
+pub fn c2c5_amul16(a_in: u8) -> u8 {
+    a_in << 4 // 乘 16（Adiv16 对偶——refs 法直得）
+}
+
+/// $8CB6 员体（DoorSubRoutine 区——同族面（a1-016/019/020 连现））。
+pub fn a8cb6_face() -> Vec<(u16, u8)> {
+    vec![(0x0000, 203), (0x0001, 0x87), (0x0002, 1), (0x0003, 0x87),
+         (0x0004, 0), (0x0005, 0x70), (0x0006, 0), (0x0008, 0)]
+}
+
+#[cfg(test)]
+mod a1_021_tests {
+    use super::*;
+
+    /// 二员转写形（Amul16 root+面壳）——refs 法直得（prg7_engine.asm:776）。
+    #[test]
+    fn a1_021_units_two() {
+        assert_eq!(c2c5_amul16(0x0D), 0xD0); // 乘 16（Adiv16 对偶——refs 法）
+        let ev = a8cb6_face();
+        assert!(ev.contains(&(0x0005, 0x70))); // 同族面（写址对值核对）
+    }
+}
