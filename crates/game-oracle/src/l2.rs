@@ -187,24 +187,24 @@ mod trace_probe {
         let prg = &rom[0x10..0x20010];
         let mut ram = vec![0u8; 0x800];
         // case 全量装载（保真面——D3 迹实证输入）
-        for (k, v) in [("0000",249u8),("00E2",6),("00E7",250),("0300",249),("030D",5),
-                        ("030E",6),("03E2",6),("03E7",250),("03EF",250),("03F0",249),
-                        ("03F4",249),("03F5",5)] {
+        for (k, v) in [("0000",249u8),("0053",0),("00D0",0),("0300",249),("030D",5),
+                        ("030E",6),("0353",0),("0360",0),("0361",0),("03D0",249),
+                        ("03DD",0),("03DE",0)] {
             ram[usize::from_str_radix(k, 16).unwrap()] = v;
         }
         let input = L2In {
             wram: vec![0; 0x2000],
-            a: 192, x: 231, y: 226, p: 106,
+            a: 104, x: 80, y: 83, p: 106,
             ram, window_bank: 1,
         };
-        let (r, trace) = run_subroutine_traced(prg, 0x8003, 1, &input, &[], 64)
+        let (r, trace) = run_subroutine_traced(prg, 0x8006, 1, &input, &[], 64)
             .expect("trace run");
-        println!("case-7 结果: a={} x={} y={}（Δ 期望 y=249）", r.a, r.x, r.y);
+        println!("case-7 结果: a={} x={} y={}（期望 y=83）", r.a, r.x, r.y);
         println!("执行迹（pc/regs）:");
         for (i, (pc, a, x, y)) in trace.iter().enumerate().take(24) {
             println!("  [{i:2}] pc={pc:04X} a={a:02X} x={x:02X} y={y:02X}");
         }
-        let wps = run_subroutine_writepoints(prg, 0x8003, 1, &input, &[]).expect("wps");
+        let wps = run_subroutine_writepoints(prg, 0x8006, 1, &input, &[]).expect("wps");
         println!("写点迹（pc/A/写数）:");
         for (pc, a, n) in &wps {
             println!("  wp pc={pc:04X} A={a:02X} n={n}");
