@@ -8,7 +8,8 @@
 # 触达前提=Samus raw hi==item hi(1)——全跑 hi=0=永不可触（v9 Δx=80=room-x 真框）
 # 【hi 机制定】hi=垂直名表（ElevatorMove y 240↔0 wrap+horizontal mirroring——prg7:4890-4914）
 # 物品=房下方屏（hi=1/y=152 屏内）——Samus 全程上方屏（hi=0）——触达=垂直径（y>240 wrap 翻转）
-# 下一试：pit 深降/房下屏入径（MapY 14→15 或 y wrap 降段）
+# v11：球态入 ✓（ObjAction=3 球态实证）+炸弹置——炸穿未果（坑底非爆破面）
+# 降径重定：垂直连接=房他段（MapY 14→15 竖井/门径——坑底爆破径证伪）
 # nav 化：ScrX→104（=$68=物品 x）+A 持（跳向 y=$98 高位物品）
 # 事件核：pw 位图置位（$6988+）/PowerUps type 04→拾取态/UniqueItemHistory 链
 name sc-pickup-touch
@@ -26,7 +27,10 @@ hold 1072-1132 a
 hold 1072-1105 right
 
 
-nav 1108-1260 x 98
+hold 1035-1250 down
+press 1055 b
+press 1115 b
+press 1175 b
 capture 1110 over-wall
 capture 1180 near-item
 capture 1500 touch-window
