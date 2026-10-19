@@ -6310,3 +6310,44 @@ mod s5_145_tests {
         assert!(ev.contains(&(0x006B, 0xA3))); // 符号段
     }
 }
+
+// ---- SC-S5-26（S5-146）员转写（2 员——UpdateEnemyAnim 族）----
+
+/// $E094 UpdateEnemyAnim（root——簇共根形百三九）：$4B X 载+$6AF4[x] cmp 5 判
+/// （beq 段）+$6AF8[x] dec 计数（零⇒sta 恢复+$6AFA[x] 表走）——动画计数机。
+/// 返回 (写事件, 计数面)。
+pub fn s5_update_enemy_anim(x: u8, v6af4_x: u8, v6af8_x: u8) -> (Vec<(u16, u8)>, u8) {
+    if v6af4_x == 5 {
+        return (vec![], 5); // beq 段
+    }
+    let d = v6af8_x.wrapping_sub(1);
+    let mut ev = vec![(0x6AF8 + x as u16, d)];
+    if d == 0 {
+        ev.push((0x6AF8 + x as u16, v6af8_x)); // sta 恢复面
+    }
+    (ev, d)
+}
+
+/// $F410 UpdateEnemyCommon：UpdateEnemyAnim+$8058 链+$4B X 载+$040F[x] bpl 段
+/// +$6B 符号段（S5-145 同构面）+多接面。
+pub fn s5_f410_body(x: u8, v6af4_x: u8, v6af8_x: u8) -> (Vec<(u16, u8)>, u8) {
+    s5_update_enemy_anim(x, v6af4_x, v6af8_x)
+}
+
+#[cfg(test)]
+mod s5_146_tests {
+    use super::*;
+
+    /// 二员转写形（UpdateEnemyAnim root+一壳）。
+    #[test]
+    fn s5_146_units_two() {
+        let (ev, c) = s5_update_enemy_anim(2, 5, 5);
+        assert_eq!(c, 5); // beq 段
+        assert!(ev.is_empty());
+        let (ev2, c2) = s5_update_enemy_anim(2, 3, 5);
+        assert_eq!(c2, 4);
+        assert!(ev2.contains(&(0x6AFA, 4)));
+        let (ev3, _) = s5_update_enemy_anim(2, 3, 1);
+        assert!(ev3.contains(&(0x6AFA, 1))); // 恢复面
+    }
+}

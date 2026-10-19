@@ -2250,3 +2250,17 @@ pub fn s5_cluster_142(input: &L2In) -> L2Out {
         writes: merge_writes(vec![(0x030A + input.x as u16, v)]),
     }
 }
+
+// ---- SC-S5-26 簇入口适配（s5_cluster_146 ← bank07:E094 UpdateEnemyAnim）----
+
+/// s5_cluster_146 适配（$E094 UpdateEnemyAnim——案实核：$6AF7←r(0)/$6AF8←A/
+/// $6AFA←1；A=1/X=0/Y=1）。
+pub fn s5_cluster_146(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    L2Out {
+        a: 1, x: 0, y: 1,
+        writes: merge_writes(vec![
+            (0x6AF7, r(0x0000)), (0x6AF8, input.a), (0x6AFA, 1),
+        ]),
+    }
+}
