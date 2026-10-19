@@ -2650,3 +2650,19 @@ pub fn s7_cluster_180(input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-B1-00 簇入口适配（a1_cluster_000 ← bank01:8000——B 区批产首卡）----
+
+/// a1_cluster_000 适配（$8000 jmp 桩链（bank1 dispatch）——案实核：定址清对
+/// （$0404/$040E←0（S6-152 同族））+$6AF7←r(0)+$6AF8←A+$6AFA←1（S5-146 同族）；
+/// A=0/X=0/Y=1）。
+pub fn a1_cluster_000(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    L2Out {
+        a: 0, x: 0, y: 1,
+        writes: merge_writes(vec![
+            (0x0404, 0), (0x040E, 0),
+            (0x6AF7, r(0x0000)), (0x6AF8, input.a), (0x6AFA, 1),
+        ]),
+    }
+}

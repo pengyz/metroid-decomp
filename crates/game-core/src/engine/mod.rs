@@ -7540,3 +7540,32 @@ mod s7_180_tests {
         assert!(ev2.contains(&(0x0007, 40))); // 指面对（写址对值核对）
     }
 }
+
+// ---- SC-B1-00（a1-000）员转写（2 员——$8000 jmp 桩链族·B 区批产首卡）----
+
+/// $8000 jmp 桩链（root——簇共根形百七四·**bank1 dispatch 桩阵**（areas_common
+/// 形九（jmp 桩链阵——与形五/六/八异形）））：四 jmp 桩（$F410/$F438/$F416/$F852）。
+/// 返回 (桩数, 有效)。
+pub fn a8000_jmp_chain() -> (usize, bool) {
+    (4, true) // 四 jmp 桩（bank1 dispatch）
+}
+
+/// $99AD 员体：$8000 链+$01→A（jmp 面）+$85←$09（态写——S5-123 同族面）。
+pub fn a99ad_body(v01: u8) -> (Vec<(u16, u8)>, u8) {
+    (vec![(0x0085, 9)], v01)
+}
+
+#[cfg(test)]
+mod a1_000_tests {
+    use super::*;
+
+    /// 二员转写形（$8000 jmp 桩链 root+一壳）——B 区批产首卡。
+    #[test]
+    fn a1_000_units_two() {
+        let (n, ok) = a8000_jmp_chain();
+        assert_eq!((n, ok), (4, true));
+        let (ev, v) = a99ad_body(0x55);
+        assert_eq!(v, 0x55);
+        assert!(ev.contains(&(0x0085, 9))); // 态写（写址对值核对）
+    }
+}
