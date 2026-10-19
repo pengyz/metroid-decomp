@@ -10347,3 +10347,32 @@ mod a4_016_tests {
         assert!(ev.contains(&(0x032E, 0x55))); // 写址对值核对
     }
 }
+
+// ---- SC-B4-17（a4-017）员转写（2 员——SFX_Door 族（bank3 化身））----
+
+/// bank03:8CE0 SFX_Door 族（root——簇共根形二百七十·**bank3 化身**（a2-025 同款
+/// ——refs 法：prg7_engine.asm:2648（bank3 复现）））。
+/// 返回 (目标址, 桩面)。
+pub fn b3_8ce0_sfx_door() -> (u16, bool) {
+    (0xCBDA, true) // jmp SFX_Door（bank3 化身（a2-025 直连））
+}
+
+/// $CBDA SFX_Door（bank3 化身——a2-025 同款（prg7_engine.asm:2648））。
+/// 返回 (声旗写, SFX id)。
+pub fn b3_cbda_sfx_door() -> (Vec<(u16, u8)>, u8) {
+    (vec![(0x0683, 64)], 64) // sfxNoise_Door（SFX 族十六现正身）
+}
+
+#[cfg(test)]
+mod a4_017_tests {
+    use super::*;
+
+    /// 二员转写形（SFX_Door bank3 化身 root+声旗面）。
+    #[test]
+    fn a4_017_units_two() {
+        assert_eq!(b3_8ce0_sfx_door(), (0xCBDA, true)); // a2-025 直连
+        let (ev, id) = b3_cbda_sfx_door();
+        assert_eq!(id, 64); // SFX 族十六现正身
+        assert!(ev.contains(&(0x0683, 64))); // 写址对值核对
+    }
+}
