@@ -73,7 +73,7 @@ fn l2_sub_c376_absx_indexed_write() {
 
 #[test]
 fn l2_unsupported_opcode_fails_loud() {
-    let prg = prg_with(0x0000, &[0x02]); // 非法操作码（6502 undoc，L2 面不支持）
+    let prg = prg_with(0x0000, &[0xFF]); // 非法操作码（6502 undoc ISB——L2 面不支持（$02=JAM 已支持（undoc 族落）））
     let mut cpu = Cpu::new(&prg, 7, &input(0, 0, 0));
     cpu.set_pc(0xC000);
     assert!(cpu.step().is_err());
