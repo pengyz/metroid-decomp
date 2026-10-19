@@ -701,6 +701,76 @@
       "reason": "DrawTileBlast OAM 深径链（25 写（>20 深径判别条触发）——$803F bank3 化身（a1-015 同款）——预登记先行（严格顺序）——S5-121 同款跨卡深径）",
       "exit": "DrawTileBlast OAM 绘制径建模清（全链模拟）→账清转 strict",
       "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-B4-006-CROSSCARD-ACHAIN",
+      "case_prefix": "a4-006-case-",
+      "reason": "A 链算深径（A=139→0 变换（fixture 弱源——多入参链算）——深径判别条补触发（链算径）——S5-121 同款跨卡深径）",
+      "exit": "A 链算径建模清（变换链模拟）→账清转 strict",
+      "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-B4-007-CROSSCARD-DRAWDOOR",
+      "case_prefix": "a4-007-case-",
+      "reason": "DrawDoor OAM 深径链（52 写（>20 深径判别条触发）——$8BB1 bank3 化身（a1-015 同款）——预登记先行（严格顺序）——S5-121 同款跨卡深径）",
+      "exit": "DrawDoor OAM 绘制径建模清（全链模拟）→账清转 strict",
+      "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-G3-SFX-BOMBEXPLODE-IMPL",
+      "case_prefix": "g3-sfx-bombexplode",
+      "reason": "【预登记/补账】g3-sfx-bombexplode 簇（批产 WIP——A 批预登记制）",
+      "exit": "g3-sfx-bombexplode 落→账清转 strict",
+      "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-G3-SFX-BOMBLAUNCH-IMPL",
+      "case_prefix": "g3-sfx-bomblaunch",
+      "reason": "【预登记/补账】g3-sfx-bomblaunch 簇（批产 WIP——A 批预登记制）",
+      "exit": "g3-sfx-bomblaunch 落→账清转 strict",
+      "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-G3-SFX-ENEMYHIT-IMPL",
+      "case_prefix": "g3-sfx-enemyhit",
+      "reason": "【预登记/补账】g3-sfx-enemyhit 簇（批产 WIP——A 批预登记制）",
+      "exit": "g3-sfx-enemyhit 落→账清转 strict",
+      "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-G3-SFX-JUMP-IMPL",
+      "case_prefix": "g3-sfx-jump",
+      "reason": "【预登记/补账】g3-sfx-jump 簇（批产 WIP——A 批预登记制）",
+      "exit": "g3-sfx-jump 落→账清转 strict",
+      "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-G3-SFX-MISSILE-IMPL",
+      "case_prefix": "g3-sfx-missile",
+      "reason": "【预登记/补账】g3-sfx-missile 簇（批产 WIP——A 批预登记制）",
+      "exit": "g3-sfx-missile 落→账清转 strict",
+      "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-G3-SFX-NOISEINIT-IMPL",
+      "case_prefix": "g3-sfx-noiseinit",
+      "reason": "【预登记/补账】g3-sfx-noiseinit 簇（批产 WIP——A 批预登记制）",
+      "exit": "g3-sfx-noiseinit 落→账清转 strict",
+      "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-G3-SFX-OUTOFPIPE-IMPL",
+      "case_prefix": "g3-sfx-outofpipe",
+      "reason": "【预登记/补账】g3-sfx-outofpipe 簇（批产 WIP——A 批预登记制）",
+      "exit": "g3-sfx-outofpipe 落→账清转 strict",
+      "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-G3-SFX-WALK-IMPL",
+      "case_prefix": "g3-sfx-walk",
+      "reason": "【预登记/补账】g3-sfx-walk 簇（批产 WIP——A 批预登记制）",
+      "exit": "g3-sfx-walk 落→账清转 strict",
+      "registered": "2026-10-20"
     }
   ]
 }
