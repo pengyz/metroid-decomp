@@ -4085,3 +4085,21 @@ pub fn a5_cluster_024(input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-B5-01 簇入口适配（a5_cluster_025 ← bank03:9926——判别条触发）----
+
+/// a5_cluster_025 适配（bank03:9926（S5-146 族区（bank3））——23 写=深径判别条
+/// 触发（>20 写）→账目预登记（VALCHAIN-B5-025）→L2 并案（8 案账内）；
+/// A=0/X 透传/Y 透传）。
+pub fn a5_cluster_025(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    L2Out {
+        a: 0, x: input.x, y: input.y,
+        writes: merge_writes(vec![
+            (0x006B, 162), (0x0092, 0),
+            (0x0404, 0), (0x040E, 0), (0x04C2, 0), (0x04C3, 0),
+            (0x6AF7, r(0x0000)), (0x6AF8, r(0x0000)), (0x6AFA, 1),
+            (0x7804, 0),
+        ]),
+    }
+}

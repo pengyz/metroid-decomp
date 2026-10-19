@@ -988,6 +988,13 @@
       "reason": "【预登记/补账】md_setsamusjump 簇（批产 WIP——A 批预登记制）",
       "exit": "md_setsamusjump 落→账清转 strict",
       "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-B5-025-CROSSCARD-VALCHAIN",
+      "case_prefix": "a5-025-case-",
+      "reason": "值链算深径（23 写（>20 深径判别条触发）——S5-121 同款跨卡深径（a5 批））",
+      "exit": "值链算径建模清（$04/$6B 族链模拟）→账清转 strict",
+      "registered": "2026-10-20"
     }
   ]
 }
