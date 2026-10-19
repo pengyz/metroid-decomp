@@ -58,7 +58,35 @@
    "c1-7 槽面 $0306+x"=animIndex 槽位——**双面=异字段（x vs animIndex）**，
    非同字段异位（原 echo「animIndex 按路径异位」表述过粗——以此为准）。
 
+## 5. GetItem 事件链（A 级：prg7 全链锚）
+
+**拾取判定段**（$DBA5 簇）：
+1. `AreObjectsTouching($DC7F)`——**Samus(slot0)×PowerUpDraw($0340)碰撞判定**
+   （ldx #$00/ldy #$40——radius 和×碰撞检查；carry clear=触碰）；
+2. `PowerUpMusic($CBF9)`——拾取音乐；
+3. `GetItemXYPos($DC1C)`——取 item X/Y（Temp08_ItemHi/Temp09_ItemType）；
+4. `CreateItemID($DC67)`——**item ID 打包 IIIIIIXX XXXYYYYY**（I=type 6b/X=图 X 5b/
+   Y=图 Y 5b——task-16 径正式锚定）→`AddItemToHistory($DC54)`——**UniqueItemHistory
+   写入+NumberOfUniqueItems 递增**（拾取历史）；
+5. 回查：`CheckForItem($EE4A)`——carry set=已有该物（UniqueItemHistory 双字节 ID 匹配
+   循环）→已收物品不再生成（respawn 抑制）。
+
+**pw 面解**（$6988-$6999=PasswordByte）：$6988-698F=物品 0-58 状态位图（59 物品）/
+$6990=起点+suit 位/$6991=SamusGear/$6992=MissileCount/$6997=Statue 态(b4-7)/$6999=校验和。
+
+## 6. pu_* 物品类全表（A 级：constants.asm 43-52 行锚）
+
+| code | 类 | code | 类 |
+|---|---|---|---|
+| $00 | BOMBS | $05 | VARIA（suit） |
+| $01 | HIGHJUMP | $06 | WAVEBEAM |
+| $02 | LONGBEAM | $07 | ICEBEAM |
+| $03 | SCREWATTACK | $08 | ENERGYTANK |
+| $04 | MARUMARI（morph） | $09 | MISSILES |
+
+——**ItemData word 6 位 type→物品类全表解**（遗留项清）。
+
 ## 遗留（C 级假设区）
 
-- GetItem 事件链（拾取判定入口——PowerUps.type→SRAM $6988 位图写链）待考证；
-- ItemData word 6 位 type→物品类全表（missile/tank/door 族）待解。
+- 物品位序→SpecItmsTbl 条目序映射（59 位图 index↔条目链序）待考；
+- 触达段 nav trigger 化（PowerUps $0748 面新 watch——下版场景件）。
