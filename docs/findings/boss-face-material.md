@@ -51,3 +51,17 @@
   ——**boss 面素材预位完**（🔴 序首件）——下一：elevator 家族扩（🟡）/物品真径；
 - **遗留**（C 级）：UpdateStatue 全指令流（状态转移细义）+boss 敌行为（Kraid/
   Ridley 战斗面）=G2 后续件。
+
+## 【2026-10-19 待采清单余面盘点+G2 素材线收官注】
+
+- **boss 战斗深场景余面**（在手 vs 待采）：
+  - 在手：sc-boss-combat 事件核实证（gear invariant/敌槽态变/animIndex 运动）
+    +obj1=房载敌辨识（GetEnemyData 槽 nibble）+房 23 敌清单（Zoomer×2/Waver/Zeb/
+    Ripper 注名）+En/EnExtra 结构（$0400 族）；
+  - 待采（C 级）：Kraid/Ridley 战斗行为面（boss AI 状态机/攻击模式——boss 房未达）
+    +敌 AI 状态语义（ObjAction 码表——战斗面深解）；
+- **G2 素材线收官注**（C 级遗留显式——后续考证件）：
+  ① **wrap 侧 39px 带径**（v22 收束态——struct02 墙 x 115/155 间径精确定位）；
+  ② **GetItem SRAM 写链尾环**（pw 位图置位写链——拾取事件链最后一环）；
+- **G2 素材线全景收官**：boss face×3+elevator 家族+物品真径×2+触达战役素材
+  （v1-v22 全解）+消费方场景×4（manifest 全录）——**素材→场景环全闭**。
