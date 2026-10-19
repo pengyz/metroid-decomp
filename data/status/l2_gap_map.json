@@ -1058,6 +1058,13 @@
       "reason": "【预登记/补账】a1-030-case-0 簇（批产 WIP——A 批预登记制）",
       "exit": "a1-030-case-0 落→账清转 strict",
       "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-B5-027-CROSSCARD-VALCHAIN",
+      "case_prefix": "a5-027-case-",
+      "reason": "值链算深径（$006B←162（fixture 弱源——a4-021 同款）——深径判别条补触发（链算径）——S5-121 同款跨卡深径）",
+      "exit": "值链算径建模清（$04/$6B 族链模拟）→账清转 strict",
+      "registered": "2026-10-20"
     }
   ]
 }
