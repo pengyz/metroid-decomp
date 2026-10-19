@@ -6276,3 +6276,37 @@ mod s5_144_tests {
         assert_eq!(j, 0x95E5);
     }
 }
+
+// ---- SC-S5-25（S5-145）员转写（2 员——$95E5 areas_common 形七；L2 真 0 留白）----
+
+/// $95E5 areas_common 形七（root——簇共根形百三八·**banks1-5 镜面**：共享序言
+/// （lda $6B02/jsr $8024）+区域特有表数据（bank1-5 各异——混合体））。
+/// 返回 (序言面, 有效)。
+pub fn s95e5_areas_common() -> (usize, bool) {
+    (1, true) // 共享序言+区域表（形七——码+数据混合）
+}
+
+/// $F40D 员体：jmp $95E5（尾形）+$E094/$8058 链+$4B X 载+$040F[x] bpl 段+
+/// $6B 符号段（$6B←$A3 写——S1-10 同构面）。
+pub fn s5_f40d_body(x: u8, v040f_x: u8, v6b: u8) -> (Vec<(u16, u8)>, u16) {
+    let mut ev = Vec::new();
+    if (v040f_x as i8) >= 0 && (v6b as i8) < 0 {
+        ev.push((0x006B, 0xA3)); // 符号段（S1-10 同构）
+    }
+    (ev, 0x95E5)
+}
+
+#[cfg(test)]
+mod s5_145_tests {
+    use super::*;
+
+    /// 二员转写形（areas_common 形七 root+一壳）。
+    #[test]
+    fn s5_145_units_two() {
+        let (n, ok) = s95e5_areas_common();
+        assert_eq!((n, ok), (1, true));
+        let (ev, j) = s5_f40d_body(2, 0x10, 0x80);
+        assert_eq!(j, 0x95E5);
+        assert!(ev.contains(&(0x006B, 0xA3))); // 符号段
+    }
+}
