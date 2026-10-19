@@ -10674,3 +10674,28 @@ mod a5_029_tests {
         assert_eq!(b3_99f4_face(43).len(), 7);
     }
 }
+
+// ---- SC-B5-06（a5-030）员转写（2 员——bank3 透传族二现）----
+
+/// bank03:99B8 areas_common 化身（root——簇共根形二百八一·bank3 化身七现）。
+/// 返回 (化身面, 有效)。
+pub fn b3_99b8_areas_incarnation() -> (bool, bool) {
+    (true, true) // areas_common 共享（bank3 化身七现）
+}
+
+/// $9967 员体（bank3 同族面（透传类——2 员））。
+pub fn b3_9967_face(a: u8, x: u8, y: u8) -> (u8, u8, u8) {
+    (a, x, y) // 透传类
+}
+
+#[cfg(test)]
+mod a5_030_tests {
+    use super::*;
+
+    /// 二员转写形（bank3 化身七现 root+透传面）。
+    #[test]
+    fn a5_030_units_two() {
+        assert!(b3_99b8_areas_incarnation().0);
+        assert_eq!(b3_9967_face(5, 6, 7), (5, 6, 7)); // 透传类
+    }
+}
