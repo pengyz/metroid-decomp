@@ -4,7 +4,9 @@
 # v5 下落径：x=104-112=pit 口（f1045 落坑 y=193）——坑底直上跳（ScrY==193 trigger）
 # v5-v7 迭代收：pit(x=27) 全跳可达 vs 走廊(x=104-108) 2px 压跳（plain hold 复证）
 # 顶障复证（非 trigger bug——v7 同压）——走廊径闭/物品浮于顶障上方（y=152>顶 y~173）
-# 真径=顶障上方接入（上层通道/morph tunnel 族）=后续假设
+# 【hi 位重定】全部近接帧=异名表（Samus hi=0 vs item hi=1——真 Δx=256！）
+# 真触达目标=MapX=3 同表窗（ScrX=104±7/y=152±18）——v1 f1174（ScrX=143/y=151=右高度）
+# 差 39px=同屏窗 x 收——morph tunnel/上层=MapX=3 屏 x104-143 墙带待试（v8 设计在手）
 # nav 化：ScrX→104（=$68=物品 x）+A 持（跳向 y=$98 高位物品）
 # 事件核：pw 位图置位（$6988+）/PowerUps type 04→拾取态/UniqueItemHistory 链
 name sc-pickup-touch
