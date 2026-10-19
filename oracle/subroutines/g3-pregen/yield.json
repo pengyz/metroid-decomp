@@ -12,5 +12,6 @@
   "batch_ready": "G3 批产开工随行预备完（2026-10-19）——porter A 批收口即接 G3 首卡",
   "golden_method_note": "簇首×4 LCG→ROM golden（同 a 系）——ram_addrs=旗族 RAM 块($0680-$0688)",
   "bake_status": "六案占位全（g3-000..005——逐簇推导注+锚）——ROM golden 替换候 bank07 窗形修",
-  "cross_check_ready": "g3-000 交叉验参照就绪（20 写址全——hand-derived 占位）——ROM golden 到手即对拍（对上=强证/对不上=抓 bug）"
+  "cross_check_ready": "g3-000 交叉验参照就绪（20 写址全——hand-derived 占位）——ROM golden 到手即对拍（对上=强证/对不上=抓 bug）",
+  "table_map": "六例程表全形（$B2BB-$B30B——48 指针：Noise/SQ1/Tri Init+Cont 各 8 项）——旗位→例程映射注落"
 }
