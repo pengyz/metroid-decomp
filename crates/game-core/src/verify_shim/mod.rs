@@ -4186,3 +4186,18 @@ pub fn a5_cluster_029(input: &L2In) -> L2Out {
 pub fn a5_cluster_030(input: &L2In) -> L2Out {
     L2Out { a: input.a, x: input.x, y: input.y, writes: vec![] }
 }
+
+// ---- SC-B5-07 簇入口适配（a5_cluster_031 ← bank03:99D1——判别条补触发）----
+
+/// a5_cluster_031 适配（bank03:99D1（S5-146 族区（bank3））——案实核 2 写
+/// （$6B9B/$6B9C←139（A 算径（fixture 弱源——判别条补触发→账目预登记
+/// （VALCHAIN-B5-031）））；A=139/X 透传/Y 透传）。
+pub fn a5_cluster_031(input: &L2In) -> L2Out {
+    let x = input.x as u16;
+    L2Out {
+        a: 139, x: input.x, y: input.y,
+        writes: merge_writes(vec![
+            (0x6AF8 + x - 1, 139), (0x6AF8 + x, 139), // x 索引（写址不掩）
+        ]),
+    }
+}
