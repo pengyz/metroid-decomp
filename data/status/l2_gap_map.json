@@ -533,6 +533,13 @@
       "reason": "Adiv16 OAM 深径链（55 写（>20 深径判别条触发）——a1-020 同款（bank2 化身）——预登记先行（严格顺序）——S5-121 同款跨卡深径）",
       "exit": "Adiv16 链径建模清（全链模拟）→账清转 strict",
       "registered": "2026-10-19"
+    },
+    {
+      "id": "SC-B3-018-CROSSCARD-AMUL16",
+      "case_prefix": "a3-018-case-",
+      "reason": "Amul16 OAM 深径链（53 写（>20 深径判别条触发）——a1-021 同款（bank2 化身）——预登记先行（严格顺序）——S5-121 同款跨卡深径）",
+      "exit": "Amul16 链径建模清（全链模拟）→账清转 strict",
+      "registered": "2026-10-19"
     }
   ]
 }
