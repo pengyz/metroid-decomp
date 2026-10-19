@@ -6351,3 +6351,32 @@ mod s5_146_tests {
         assert!(ev3.contains(&(0x6AFA, 1))); // 恢复面
     }
 }
+
+// ---- SC-S5-27（S5-147）员转写（2 员——$8058 areas_common 形八；L2 真 0 留白）----
+
+/// $8058 areas_common 形八（root——簇共根形百四十·**banks1-5 纯码镜面**：$4B X 载+
+/// $0405[x] asl/bmi 段+$6AF4[x] cmp 判——与形五/六桩阵、形七混合体异形（纯码））。
+/// 返回 (判段, 有效)。
+pub fn s8058_areas_common(x: u8, v0405_x: u8) -> (bool, bool) {
+    let bmi = (v0405_x << 1) & 0x80 != 0;
+    (!bmi, true) // bmi 段（负⇒跳）
+}
+
+/// $F413 员体：$8058+$4B X 载+$040F[x] bpl 段+$6B 符号段（S5-145/146 同构）+
+/// $6AF4[x] 判（$FA60 调面）。
+pub fn s5_f413_body(x: u8, v0405_x: u8) -> (bool, bool) {
+    s8058_areas_common(x, v0405_x)
+}
+
+#[cfg(test)]
+mod s5_147_tests {
+    use super::*;
+
+    /// 二员转写形（areas_common 形八 root+一壳）。
+    #[test]
+    fn s5_147_units_two() {
+        assert_eq!(s8058_areas_common(2, 0x10), (true, true)); // asl 后正
+        assert_eq!(s8058_areas_common(2, 0xC0), (false, true)); // bmi 段（0xC0<<1=0x80 负——S3-075 教训）
+        assert!(!s5_f413_body(2, 0xC0).0);
+    }
+}
