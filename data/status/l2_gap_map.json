@@ -638,6 +638,27 @@
       "reason": "值链算深径（$6B73-$6B75 族+105 值（fixture 弱源——多入参链算）——深径判别条补触发（链算径）——S5-121 同款跨卡深径）",
       "exit": "值链算径建模清（$6B 族链模拟）→账清转 strict",
       "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-G3-04-IMPL",
+      "case_prefix": "g3-004-case",
+      "reason": "【预登记】G3 卡序（G3-——LoadSFXData 簇——开工前置步先登记）",
+      "exit": "g3-004 移植/转写落→账清转 strict",
+      "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-G3-05-IMPL",
+      "case_prefix": "g3-005-case",
+      "reason": "【预登记】G3 卡序（G3-——EndOrLoopMusic 簇——开工前置步先登记）",
+      "exit": "g3-005 移植/转写落→账清转 strict",
+      "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-G3-06-IMPL",
+      "case_prefix": "g3-006-case",
+      "reason": "【预登记】G3 卡序（G3-——SFX 例程族（12 员）——开工前置步先登记）",
+      "exit": "g3-006 移植/转写落→账清转 strict",
+      "registered": "2026-10-20"
     }
   ]
 }
