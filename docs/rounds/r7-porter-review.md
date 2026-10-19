@@ -3422,6 +3422,16 @@ pregen 8 案在库+l2 16 案并入=**ID 序列 a1-000..004 全在无跳号**（s
 再用）④员面双扫桩 0（2 员真现）。测 336。findings（r10）：0 新。
 SC-B1-05（refs 法先用）预告随账。
 
+## SC-B1-05 卡审（9ae9ed0）——refs 法二现（InitEnAnimIndex）
+
+### verdict: pass
+
+四条核：①L2 面 a1-005-case×8 并入+**族 8 案 0 败（首提全过）**✓（16=8×2 已计；
+败 78 稳）②**refs 法二现双轨 ✓✓**：asm:36-37 `CommonJump_InitEnAnimIndex: ;
+$800F / jmp InitEnAnimIndex` ↔ bank1 $800F=`4c 8d f6`——asm 直读↔字节直合
+（S6-170 双生直连=S5-146 系扩展）③L3 0 失败容忍不增 ④员面双扫桩 0（2 员真现）。
+测 337。findings（r10）：0 新。SC-B1-06（B 区余 201 卡）预告随账。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
