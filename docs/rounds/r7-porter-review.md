@@ -4663,6 +4663,17 @@ $99D1=数据区=bank 特定）②**VALCHAIN-B5-031 预登记 ✓**（156 条目�
 **300 测里程碑**）+**B 区半程点过**（余 99 卡=半程后段）。findings（r10）：0 新。
 SC-B5-08（B 区余 99 卡）预告随账。
 
+## SC-B5-08 卡审（dd0d9d9）——CommonJump 直连+Y 环（1 空白卡辨识）
+
+### verdict: pass
+
+四条核：①L2 留白**真 0 三方核 ✓**（pregen/l2_cases 全 0——**a5 批 1 空白卡
+辨识**随账）②**Y 环抽核 ✓（walk-ring Y 递减变体）**：$9A3A=`20 d1 99 9d fc 6a
+9d fd 6a`=JSR $99D1（链壳直连）/STA $6AFC,X/STA $6AFD,X（索引写环体）——
+Y-=1 环（walk-ring 族 Y 递减变体——SC-B2-17 X-=10/SC-B3-31 Y-=4 同族谱系续）
+③链壳直得（hexdump——CommonJump $801E 直连面+$00←0x0F）④员面双扫桩 0
+（2 员真现）。测 444。findings（r10）：0 新。SC-B5-09（B 区余 98 卡）预告随账。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
