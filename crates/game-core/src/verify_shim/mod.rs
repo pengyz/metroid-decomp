@@ -2477,3 +2477,19 @@ pub fn s6_cluster_167(input: &L2In) -> L2Out {
         }),
     }
 }
+
+// ---- SC-S6-18 簇入口适配（s6_cluster_169 ← bank07:F8D3 SetEnProjectilePosition）----
+
+/// s6_cluster_169 适配（$F8D3 链——案实核：零组（$02/$08/$09/$0B）+
+/// \$0400[y]/\$0401[y]←0 对（y 索引——S6-167 基址）；A=0/X=0/Y 透传）。
+pub fn s6_cluster_169(input: &L2In) -> L2Out {
+    let y = input.y as u16;
+    L2Out {
+        a: 0, x: 0, y: input.y,
+        writes: merge_writes(vec![
+            (0x0002, 0), (0x0008, 0), (0x0009, 0), (0x000B, 0),
+            (0x0400 + y, 0), (0x0401 + y, 0),
+            (0x6AF4 + y + 7, 0), // 尾址=$6AF4+(y+7)（案 0/1 实核）
+        ]),
+    }
+}

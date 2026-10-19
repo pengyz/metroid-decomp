@@ -7083,3 +7083,39 @@ mod s6_168_tests {
         assert!(ev3.contains(&(0x0005, 0x22)));
     }
 }
+
+// ---- SC-S6-18（S6-169）员转写（2 员——SetEnProjectilePosition 族）----
+
+/// $F91D SpawnEnProjectile_SetEnProjectilePosition（root——簇共根形百六一）：
+/// $4B X 载+$E792 调（S2-38 接面——StoreEnemyPositionToTemp）+tya/tay 面+
+/// $FD8F 走带（S1-10 接面）+尾跳 $FA49。
+/// 返回 (写事件, 位置面)。
+pub fn s6_set_enproj_pos(x: u8, v0309_x: u8, v0308_x: u8) -> Vec<(u16, u8)> {
+    vec![(0x0005, v0309_x), (0x0004, v0308_x)] // 位置对（S4-090 同构）
+}
+
+/// $F8D3 员体：SetEnProjectilePosition+$4B X 载+bit $87/bvs 段+$0405[x] and 1
+/// （$0083[y] 表载——S1-04 同族）+零组+y 对面。
+pub fn s6_f8d3_body(x: u8, y: u8, v0309_x: u8, v0308_x: u8) -> (Vec<(u16, u8)>, u16) {
+    let mut ev = s6_set_enproj_pos(x, v0309_x, v0308_x);
+    ev.push((0x0400 + y as u16, 0));
+    ev.push((0x0401 + y as u16, 0));
+    (ev, 0xFA49)
+}
+
+#[cfg(test)]
+mod s6_169_tests {
+    use super::*;
+
+    /// 二员转写形（SetEnProjectilePosition root+一壳）。
+    #[test]
+    fn s6_169_units_two() {
+        let ev = s6_set_enproj_pos(2, 8, 9);
+        assert!(ev.contains(&(0x0005, 8)));
+        assert!(ev.contains(&(0x0004, 9)));
+        let (ev2, j) = s6_f8d3_body(2, 0xEF, 8, 9);
+        assert_eq!(j, 0xFA49);
+        assert!(ev2.contains(&(0x04EF, 0))); // y=0xEF ⇒ $0400+y（y 索引强制步）
+        assert!(ev2.contains(&(0x04F0, 0)));
+    }
+}

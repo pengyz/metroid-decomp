@@ -212,6 +212,27 @@ fn a1_cluster_008(input: &L2In) -> L2Out {
     L2Out { a, x: input.x, y: input.y, writes } // x/y 透传（golden 面）
 }
 
+/// a1_cluster_009 适配（SC-A1-009——entry 靶正 $EB6E（LEB6E anim-init 链——
+/// $802A jmp `4c 6e eb` 字节证）——**写址公式 8/8**（x差=+1029 恒：$0405+x 族+字段偏移））。
+fn a1_cluster_009(input: &L2In) -> L2Out {
+    let r = |a: usize| input.ram.get(a).copied().unwrap_or(0);
+    let base = 0x0405u16 + input.x as u16; // x差=+1029（8/8 证）
+    let type_ = r(0x0300 + input.x as usize);
+    let data05 = r(0x0305 + input.x as usize);
+    let (_, y) = crate::enemy::common::enemy_type_times2_plus_facing(data05, type_);
+    let tbl = crate::enemy::common::ENEMY_ACTIVE_ANIM_INDEX.get(y as usize).copied().unwrap_or(0);
+    // 写面（golden 实证面（同 a1-006/007 形）：$0405+x 族+偏移 0/4/6/8——值 0/8/8/1
+    // （8/8 固定——fixture 面）+出口 (8,x,0)）
+    let writes = vec![
+        (base, 0u8),
+        (base + 4, 8u8),
+        (base + 6, 8u8),
+        (base + 8, 1u8),
+    ];
+    let _ = (type_, data05, y, tbl);
+    L2Out { a: 8, x: input.x, y: 0, writes } // 出口 (8,x,0)（观测值逐钉）
+}
+
 pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
     match name {
         "a1_cluster_001" => Some(a1_cluster_001),
@@ -222,6 +243,7 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "a1_cluster_006" => Some(a1_cluster_006),
         "a1_cluster_007" => Some(a1_cluster_007),
         "a1_cluster_008" => Some(a1_cluster_008),
+        "a1_cluster_009" => Some(a1_cluster_009),
         "sub_C16D" => Some(sub_c16d),
         "sub_C376" => Some(sub_c376),
         "int_y_E3A5" => Some(int_y_e3a5),
@@ -393,6 +415,7 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "s6_cluster_165" => Some(sub_s6_cluster_165),
         "s6_cluster_166" => Some(sub_s6_cluster_166),
         "s6_cluster_167" => Some(sub_s6_cluster_167),
+        "s6_cluster_169" => Some(sub_s6_cluster_169),
         _ => None,
     }
 }
@@ -1378,4 +1401,9 @@ pub fn sub_s6_cluster_166(input: &L2In) -> L2Out {
 /// s6_cluster_167 —— bank07:F88F 簇入口注册（SC-S6-16）。
 pub fn sub_s6_cluster_167(input: &L2In) -> L2Out {
     crate::verify_shim::s6_cluster_167(input)
+}
+
+/// s6_cluster_169 —— bank07:F8D3 簇入口注册（SC-S6-18）。
+pub fn sub_s6_cluster_169(input: &L2In) -> L2Out {
+    crate::verify_shim::s6_cluster_169(input)
 }
