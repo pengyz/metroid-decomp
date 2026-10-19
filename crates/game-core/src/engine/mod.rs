@@ -8373,3 +8373,33 @@ mod a2_028_tests {
         assert_eq!(a99d0_face(149).len(), 5);
     }
 }
+
+// ---- SC-B2-07（a2-029）员转写（2 员——$99BA S5-146 族+ptr 对面）----
+
+/// $99BA 员体（root——簇共根形二百三·S5-146 族+ptr 对面（$85/$86←A 对））。
+/// 返回 (写事件, 有效)。
+pub fn a99ba_face(a_in: u8) -> Vec<(u16, u8)> {
+    vec![(0x0085, a_in), (0x0086, a_in), (0x0000, 6), (0x0001, 8),
+         (0x0404, 0), (0x040E, 0),
+         (0x6AF7, 0), (0x6AF8, 6), (0x6AF9, 5), (0x6AFA, 6), (0x6B03, 0)]
+}
+
+/// $99D5 员体（同族面（连现））。
+pub fn a99d5_face(a_in: u8) -> Vec<(u16, u8)> {
+    a99ba_face(a_in)
+}
+
+#[cfg(test)]
+mod a2_029_tests {
+    use super::*;
+
+    /// 二员转写形（$99BA 同族面 root+一壳）。
+    #[test]
+    fn a2_029_units_two() {
+        let ev = a99ba_face(159);
+        assert!(ev.contains(&(0x0085, 159))); // ptr 对（写址对值核对）
+        assert!(ev.contains(&(0x0086, 159)));
+        assert!(ev.contains(&(0x6AF9, 5)));
+        assert_eq!(a99d5_face(159).len(), 11);
+    }
+}
