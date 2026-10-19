@@ -2857,3 +2857,20 @@ pub fn a1_cluster_014(input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-B1-15 簇入口适配（a1_cluster_015 ← bank01:8BB1 DrawDoor——refs 法+深径记账）----
+
+/// a1_cluster_015 适配（$8BB1 DrawDoor（refs 法：asm:1450——门类判+ObjectCntrl 写
+/// +OAM 绘制）——52 写=账内深径（DRAWDOOR——S5-121 先例形））；A=0/X 透传/Y 透传）。
+pub fn a1_cluster_015(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    L2Out {
+        a: 0, x: input.x, y: input.y,
+        writes: merge_writes(vec![
+            (0x0000, r(0x0000)), (0x0001, 0x87), (0x0002, 1), (0x0003, 0x87),
+            (0x0005, 0x70), (0x0006, 0), (0x0008, 0), (0x0009, 4),
+            (0x000F, 0x14), (0x005B, input.x), (0x006B, 0),
+            (0x0011, 17),
+        ]),
+    }
+}

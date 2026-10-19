@@ -7968,3 +7968,35 @@ mod a1_014_tests {
         assert!(ev.contains(&(0x0001, 14)));
     }
 }
+
+// ---- SC-B1-15（a1-015）员转写（2 员——DrawDoor 族·refs 法直得）----
+
+/// $8BB1 DrawDoor（root——簇共根形百八九·**refs 法直得**（asm:1450）——门类判
+/// （cmp #3→A=1）+ObjectCntrl 写（or $80|x&$10 eor $10）+$0408[x] isHit←0+
+/// AnimDrawObject（jmp））。
+/// 返回 (写事件, 门类)。
+pub fn a8bb1_draw_door(x: u8, v_door_type: u8) -> (Vec<(u16, u8)>, u8) {
+    let t = if v_door_type == 3 { 1 } else { v_door_type };
+    let ctrl = (t | 0x80 | 0x20) | ((x & 0x10) ^ 0x10); // or $80|PRIORITY+x 翻转面
+    (vec![(0x006B, ctrl), (0x0408 + x as u16, 0)], t)
+}
+
+/// $8CED Goto2DrawDoor（refs 法：asm:1683——DrawDoor 跳转面）。
+pub fn a8ced_goto2() -> (u16, bool) {
+    (0x8BB1, true) // jmp DrawDoor（refs 法直连）
+}
+
+#[cfg(test)]
+mod a1_015_tests {
+    use super::*;
+
+    /// 二员转写形（DrawDoor root+跳转面）——refs 法直得（asm:1450/1683）。
+    #[test]
+    fn a1_015_units_two() {
+        let (ev, t) = a8bb1_draw_door(2, 3);
+        assert_eq!(t, 1); // cmp #3 → A=1
+        assert!(ev.contains(&(0x006B, 0xB1))); // ctrl=0xA1|(x 翻转 0x10)=0xB1（写址对值核对）
+        let (j, ok) = a8ced_goto2();
+        assert_eq!((j, ok), (0x8BB1, true));
+    }
+}

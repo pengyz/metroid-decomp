@@ -281,6 +281,20 @@
       "reason": "【预登记】a1-017 簇（porter 严格顺序单发七例——开工前置步先登记）",
       "exit": "a1_cluster_017 移植/转写落→账清转 strict",
       "registered": "2026-10-19"
+    },
+    {
+      "id": "SC-B1-015-CROSSCARD-DRAWDOOR",
+      "case_prefix": "a1-015-case-",
+      "reason": "DrawDoor OAM 精灵深径（52 写（$0200-$021B 精灵族+ptr 面+态写）——refs 法直得结构（DrawDoor: asm:1450）+OAM 绘制链算（S1-17-CROSSCARD-S105 同款跨卡深径））",
+      "exit": "DrawDoor OAM 绘制径建模清（AnimDrawObject+OAM 链全模拟）→账清转 strict",
+      "registered": "2026-10-19"
+    },
+    {
+      "id": "SC-A1-018-IMPL",
+      "case_prefix": "a1-018-case",
+      "reason": "【预登记/补账】a1-018 簇（批产 WIP——A 批预登记制）",
+      "exit": "a1-018 落→账清转 strict",
+      "registered": "2026-10-19"
     }
   ]
 }
