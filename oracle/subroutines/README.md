@@ -2,6 +2,12 @@
 
 **期望 = ROM 执行结果，实际 = game-core 同名函数**；三方全等才算绿：
 `case.out（golden，手推自 A 级反汇编语义） == 6502 核执行 ROM 原字节 == game-core::l2ports`。
+> 【2026-10-19 更正】（质量底线裁定——AGENTS.md D3 优先）：golden **自 ROM 产出**
+> （Mesen2 执行 ROM 原字节抓取）为质量底线 #1 不降；「手推自 A 级反汇编语义」=
+> **显式占位**（hand-derived 标注——runner 未支持期占位件）——**卡收官前置=ROM 执行
+> golden 替换**（l2-diff bank07 窗形修后→Mesen2 抓取→三方对拍才可 verdict pass）。
+> 手推值可作 ROM golden 交叉验参照（对上=强证/对不上=抓 bug）。README 口径与
+> AGENTS.md 冲突时以 AGENTS.md 为准（单一真相源）。
 
 运行：
 
