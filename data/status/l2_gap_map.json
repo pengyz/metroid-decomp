@@ -659,6 +659,13 @@
       "reason": "【预登记】G3 卡序（G3-——SFX 例程族（12 员）——开工前置步先登记）",
       "exit": "g3-006 移植/转写落→账清转 strict",
       "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-B3-035-CROSSCARD-VALCHAIN",
+      "case_prefix": "a3-035-case-",
+      "reason": "值链算深径（1 值径（fixture 弱源——多入参链算）——深径判别条补触发（链算径）——S5-121 同款跨卡深径）",
+      "exit": "值链算径建模清（$6B 族链模拟）→账清转 strict",
+      "registered": "2026-10-20"
     }
   ]
 }
