@@ -148,6 +148,13 @@
       "reason": "S5-123 簇转写中（批产迭代态——2 案语义差随转写收敛）",
       "exit": "S5-123 卡转写落→账清转 strict",
       "registered": "2026-10-19"
+    },
+    {
+      "id": "SC-A1-002-CASE7",
+      "case_prefix": "a1-002-case-7",
+      "reason": "a1-002 批产迭代态案语义差（case-7：core 多写 $6B=163（(107,163)）——golden 无此写——转写收敛面）",
+      "exit": "a1-002 卡转写落→账清转 strict",
+      "registered": "2026-10-19"
     }
   ]
 }
