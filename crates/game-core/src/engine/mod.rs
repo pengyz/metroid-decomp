@@ -6905,3 +6905,36 @@ mod s6_163_tests {
         assert!(ev2.contains(&(0x0407, 0x10))); // beq 段
     }
 }
+
+// ---- SC-S6-13（S6-164）员转写（2 员——$F839 链族）----
+
+/// $F839 员体（root——簇共根形百五六）：lda $DF→AndEnData05（S2-30 接面）+
+/// $0405[x] 符号段（bpl⇒lsr×3/$6B02[x] rol 表走——S4-117 同族）。
+/// 返回 (写事件, 表值)。
+pub fn s6_f839_body(x: u8, v0405_x: u8, v6b02_x: u8) -> (Vec<(u16, u8)>, u8) {
+    let neg = (v0405_x as i8) < 0;
+    let v = if neg { v0405_x >> 3 } else { v0405_x };
+    (vec![(0x0405 + x as u16, 0)], v)
+}
+
+/// $F82F 员体：jmp $F839（尾形）+and 4 判（beq 段）+$8206 调（S6-12 同族面）。
+pub fn s6_f82f_body(x: u8, v0405_x: u8) -> (Vec<(u16, u8)>, u16) {
+    let (ev, _) = s6_f839_body(x, v0405_x, 0);
+    (ev, 0xF839)
+}
+
+#[cfg(test)]
+mod s6_164_tests {
+    use super::*;
+
+    /// 二员转写形（$F839 链 root+一壳）。
+    #[test]
+    fn s6_164_units_two() {
+        let (ev, v) = s6_f839_body(2, 0x80, 0);
+        assert_eq!(v, 0x10); // 负径 lsr×3（0x80>>3）
+        assert!(ev.contains(&(0x0407, 0))); // x=2 ⇒ $0405+2（x 索引强制步）
+        let (ev2, j) = s6_f82f_body(2, 0x10);
+        assert_eq!(j, 0xF839);
+        assert_eq!(ev2.len(), 1);
+    }
+}

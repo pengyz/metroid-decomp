@@ -2415,3 +2415,14 @@ pub fn s6_cluster_162(input: &L2In) -> L2Out {
         writes: merge_writes(vec![(0x0681, 0x08)]),
     }
 }
+
+// ---- SC-S6-13 簇入口适配（s6_cluster_164 ← bank07:F82F——$0405[x] 单写）----
+
+/// s6_cluster_164 适配（$F82F $F839 链——案实核：$0405[x]←0 单写（x 索引强制步）；
+/// A=0/X 透传/Y 透传）。
+pub fn s6_cluster_164(input: &L2In) -> L2Out {
+    L2Out {
+        a: 0, x: input.x, y: input.y,
+        writes: merge_writes(vec![(0x0405 + input.x as u16, 0)]),
+    }
+}

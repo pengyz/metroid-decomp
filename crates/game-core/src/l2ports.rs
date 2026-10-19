@@ -185,6 +185,15 @@ fn a1_cluster_005(input: &L2In) -> L2Out {
     L2Out { a, x: input.x, y: input.y, writes }
 }
 
+/// a1_cluster_006 适配（SC-A1-006——CommonJump_GetEnemyTypeTimes2PlusFacingDirection
+/// （bank01:8012）→$F844）。
+fn a1_cluster_006(input: &L2In) -> L2Out {
+    let r = |a: usize| input.ram.get(a).copied().unwrap_or(0);
+    let (a, y) = crate::enemy::common::enemy_type_times2_plus_facing(
+        r(0x0305 + input.x as usize), r(0x0300 + input.x as usize));
+    L2Out { a, x: input.x, y, writes: vec![] } // 纯计算（无写面）
+}
+
 pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
     match name {
         "a1_cluster_001" => Some(a1_cluster_001),
@@ -192,6 +201,7 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "a1_cluster_003" => Some(a1_cluster_003),
         "a1_cluster_004" => Some(a1_cluster_004),
         "a1_cluster_005" => Some(a1_cluster_005),
+        "a1_cluster_006" => Some(a1_cluster_006),
         "sub_C16D" => Some(sub_c16d),
         "sub_C376" => Some(sub_c376),
         "int_y_E3A5" => Some(int_y_e3a5),
@@ -359,6 +369,7 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "s6_cluster_158" => Some(sub_s6_cluster_158),
         "s6_cluster_160" => Some(sub_s6_cluster_160),
         "s6_cluster_162" => Some(sub_s6_cluster_162),
+        "s6_cluster_164" => Some(sub_s6_cluster_164),
         _ => None,
     }
 }
@@ -1324,4 +1335,9 @@ pub fn sub_s6_cluster_160(input: &L2In) -> L2Out {
 /// s6_cluster_162 —— bank07:CBA4 簇入口注册（SC-S6-11 SFX_OutOfPipe）。
 pub fn sub_s6_cluster_162(input: &L2In) -> L2Out {
     crate::verify_shim::s6_cluster_162(input)
+}
+
+/// s6_cluster_164 —— bank07:F82F 簇入口注册（SC-S6-13）。
+pub fn sub_s6_cluster_164(input: &L2In) -> L2Out {
+    crate::verify_shim::s6_cluster_164(input)
 }
