@@ -20,3 +20,18 @@
 
 - boss 房号精确清单待②（boss 对象面——敌类型→房关联）；
 - Mother Brain=Tourian 核心房（it_MotherBrain=$6 常量——statue/item 类关联待）。
+
+## ②boss 对象面（A 级：constants_ram 锚）
+
+- **Statue 对象族**（$0360-0370 RAM 图——constants_ram 851/900-903 行）：
+  - `Statue instanceof Object`（$0360 起——对象结构同 Samus/敌族）
+  - `KraidStatueRaiseState = Statue.animDelay`（#01=未升/#02=升中/bit7=已升）
+  - `RidleyStatueRaiseState = Statue.animResetIndex`
+  - `KraidStatueIsHit = Statue.animIndex`（#00=未击/#01=已击）
+  - `Temp00_KraidStatueStatus=$00`/`Temp02_RidleyStatueStatus=$02`（临时态）
+  - `StatuesBridgeIsSpawned=$54`（桥生成标志——Tourian 桥面）
+- **boss 面=statue 门机制**（B 级）：Kraid/Ridley 雕像=Tourian 门（击破两
+  boss→雕像升→桥生→Tourian 通）——**boss 面核心=statue 状态机**（$D7B3 同族
+  面——elevator/statue=对象状态机两例）；
+- **遗留假设**（C 级）：statue 对象调度入口（UpdateStatue?）待③行为面；boss 敌
+  对象类型码（EnemyInit 表）待关联。
