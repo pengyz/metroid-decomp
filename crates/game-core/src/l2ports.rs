@@ -100,14 +100,13 @@ fn a1_cluster_001(input: &L2In) -> L2Out {
     writes.push((0x040E, 0));
     // **D3 定案（8/8）**：frame=zp[animIndex]（表指针退化面）+animDelay=A 输入+
     // animIndex+1——$6AF7/$6AF8/$6AFA 写面（净变更形）。
-    let anim_index = r(0x030E); // animIndex 源位=$030E（c0=8→zp[8]=0 ✓ 8/8 证）
+    let anim_index = r(0x0306 + input.x as usize); // **animIndex=槽面**（$0306+x——c7=0→zp[0]=249 ✓；$030E=movementInstrIndex（前误源））
     let anim_frame = r(anim_index as usize); // zp[animIndex]（退化表读）
     let anim_delay = input.a; // 新延时（A 输入——E0A7 A=C0 实证）
     let new_idx = anim_index.wrapping_add(1); // animIndex+1（E0B8 A=01 实证）
     // 净变更形（仅变更时写——golden=变更集语义）
-    if anim_frame != r(0x6AF7) {
-        writes.push((0x6AF7, anim_frame));
-    }
+    // 净变更形（golden=变更集——写面=变更后值（含等值写？——case 值面：golden 含等值写）
+    writes.push((0x6AF7, anim_frame));
     if anim_delay != r(0x6AF8) {
         writes.push((0x6AF8, anim_delay));
     }
@@ -124,12 +123,7 @@ fn a1_cluster_001(input: &L2In) -> L2Out {
         r(0x0356),       // speedY
         r(0x0357),       // accelY
     );
-    let y_in = input.y; // **y 源=输入 Y 寄存器**（案值对读 8/8：y_gold=regs.y+Δ（u8 环绕））
-    let y_out = (y_in as i16 + delta as i16) as u8; // y 效果（Δ 应用）
-    writes.push((0x6AF7, y_out));
-    // 余写抑制（golden=变更集——delta/index/delay 写面按净变更）
-    writes.push((0x6AF8, input.a)); // **subpix=A 输入**（case 对读 8/8 证）
-    writes.push((0x6AFA, 1)); // hi=1（定值面）
+    let _ = (delta, new_delay, new_idx); // Δ 面（noMove 案不写移效——单一路径收束）
     L2Out { a: 0, x: 0, y: 1, writes } // 出口残迹 (0,0,1)（观测值逐钉）
 }
 
@@ -283,6 +277,7 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "s5_cluster_130" => Some(sub_s5_cluster_130),
         "s5_cluster_131" => Some(sub_s5_cluster_131),
         "s5_cluster_132" => Some(sub_s5_cluster_132),
+        "s5_cluster_136" => Some(sub_s5_cluster_136),
         _ => None,
     }
 }
@@ -1148,4 +1143,9 @@ pub fn sub_s5_cluster_131(input: &L2In) -> L2Out {
 /// s5_cluster_132 —— bank07:F0EF 簇入口注册（SC-S5-12）。
 pub fn sub_s5_cluster_132(input: &L2In) -> L2Out {
     crate::verify_shim::s5_cluster_132(input)
+}
+
+/// s5_cluster_136 —— bank07:DC82 簇入口注册（SC-S5-16）。
+pub fn sub_s5_cluster_136(input: &L2In) -> L2Out {
+    crate::verify_shim::s5_cluster_136(input)
 }

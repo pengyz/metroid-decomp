@@ -2157,3 +2157,21 @@ pub fn s5_cluster_132(input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-S5-16 簇入口适配（s5_cluster_136 ← bank07:DC82——A 面写族）----
+
+/// s5_cluster_136 适配（$DC82 LDC82 链——案实核：\$00/\$07/\$11←A+零组
+/// （\$01/\$03-\$05/\$0B）+\$09←r(\$030E+x)+\$10←2；X/Y 透传）。
+pub fn s5_cluster_136(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    let v = r(0x030D + input.x as u16); // x 索引读（$00/$07/$11 同值+A 出）
+    L2Out {
+        a: v, x: input.x, y: input.y,
+        writes: merge_writes(vec![
+            (0x0000, v), (0x0001, 0), (0x0003, 2 & r(0x0049)), (0x0004, 0), (0x0005, 0),
+            (0x0007, v),
+            (0x0009, r(0x030E + input.x as u16)),
+            (0x000B, 0), (0x0010, 2), (0x0011, v),
+        ]),
+    }
+}

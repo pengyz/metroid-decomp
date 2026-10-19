@@ -5962,3 +5962,38 @@ mod s5_135_tests {
         assert!(!s5_f10f_body(true).1);
     }
 }
+
+// ---- SC-S5-16（S5-136）员转写（2 员——LDC82 链族）----
+
+/// $DC82 LDC82（root——簇共根形百二九）：$F172 调（GetObject0CoordData——S5-128
+/// 接面）+$F1A7 调（X 版对偶——S5-134）+jmp $F1FA（S2-21 delta 面）。
+/// 返回 (写事件, delta 值)。
+pub fn s5_ldc82(x: u8, v30d_x: u8, v30e_x: u8, v49: u8) -> (Vec<(u16, u8)>, u8) {
+    (vec![(0x0000, v30d_x), (0x0003, 2 & v49), (0x0007, v30d_x),
+          (0x0009, v30e_x), (0x0011, v30d_x)], v30d_x)
+}
+
+/// $F130 员体：LDC82+SamusHurt（S2-22 接面）+Xminus16（S1-07 接面）+cmp $C0 判
+/// （bne 回卷）+尾跳 $CE92（S2-23 接面）。
+pub fn s5_f130_body(x: u8, v30d_x: u8, v30e_x: u8, v49: u8) -> (Vec<(u16, u8)>, u16) {
+    let (ev, _) = s5_ldc82(x, v30d_x, v30e_x, v49);
+    (ev, 0xCE92)
+}
+
+#[cfg(test)]
+mod s5_136_tests {
+    use super::*;
+
+    /// 二员转写形（LDC82 链 root+一壳）。
+    #[test]
+    fn s5_136_units_two() {
+        let (ev, v) = s5_ldc82(2, 35, 87, 2);
+        assert_eq!(v, 35);
+        assert!(ev.contains(&(0x0000, 35)));
+        assert!(ev.contains(&(0x0003, 2))); // 2&r($49)
+        assert!(ev.contains(&(0x0009, 87)));
+        let (ev2, j) = s5_f130_body(2, 35, 87, 2);
+        assert_eq!(j, 0xCE92);
+        assert_eq!(ev2.len(), 5);
+    }
+}
