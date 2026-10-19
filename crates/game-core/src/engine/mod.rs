@@ -7324,3 +7324,39 @@ mod s6_154_tests {
         assert_eq!(ev2.len(), 1);
     }
 }
+
+// ---- SC-S7-00（S7-175）员转写（2 员——GetEnemyRoomRAMPtr 族）----
+
+/// $FA7D GetEnemyRoomRAMPtr（root——簇共根形百六八·**S4-090/S6-171 同族**）：
+/// $0400/$0401[x]→$02/$03（位置对载）+$6AFB[x]→$0B（面载）+尾跳 $E96A
+/// （S2-30 接面）。
+/// 返回 (写事件, 指针面)。
+pub fn s7_get_en_room_ptr(x: u8, v0400_x: u8, v0401_x: u8, v6afb_x: u8) -> Vec<(u16, u8)> {
+    vec![(0x0002, v0400_x), (0x0003, v0401_x), (0x000B, v6afb_x)]
+}
+
+/// $FA2A 员体：GetEnemyRoomRAMPtr+($04),y 表走+cmp $A0 段（bcc 37）+
+/// $0402/$0403[x]→$04/$05 指面对（S1-17 同族面）。
+pub fn s7_fa2a_body(x: u8, y: u8, v0400_x: u8, v0401_x: u8, v6afb_x: u8, ptr: u8)
+    -> (Vec<(u16, u8)>, u8) {
+    let mut ev = s7_get_en_room_ptr(x, v0400_x, v0401_x, v6afb_x);
+    ev.push((0x0004, 0));
+    ev.push((0x0005, ptr));
+    (ev, ptr)
+}
+
+#[cfg(test)]
+mod s7_175_tests {
+    use super::*;
+
+    /// 二员转写形（GetEnemyRoomRAMPtr root+一壳）。
+    #[test]
+    fn s7_175_units_two() {
+        let ev = s7_get_en_room_ptr(2, 8, 9, 5);
+        assert!(ev.contains(&(0x0002, 8)));
+        assert!(ev.contains(&(0x000B, 5)));
+        let (ev2, v) = s7_fa2a_body(2, 3, 8, 9, 5, 0x60);
+        assert_eq!(v, 0x60);
+        assert!(ev2.contains(&(0x0005, 0x60))); // 指面对（写址对值核对）
+    }
+}

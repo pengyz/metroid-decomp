@@ -2553,3 +2553,21 @@ pub fn s6_cluster_174(input: &L2In) -> L2Out {
         writes: merge_writes(vec![(0x6AF4 + input.x as u16, 4)]),
     }
 }
+
+// ---- SC-S7-00 簇入口适配（s7_cluster_175 ← bank07:FA2A GetEnemyRoomRAMPtr）----
+
+/// s7_cluster_175 适配（$FA7D GetEnemyRoomRAMPtr 链——案实核五写指针面
+/// （$02←r($0400+x)/$03←r($0401+x)/$0B←r($6AFB+x)/$04←0/$05←96）；
+/// A=0/X=0/Y=0）。
+pub fn s7_cluster_175(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    let x = input.x as u16;
+    L2Out {
+        a: 0, x: 0, y: 0,
+        writes: merge_writes(vec![
+            (0x0002, r(0x0400 + x)), (0x0003, r(0x0401 + x)),
+            (0x000B, r(0x6AFB + x & 0x7FF)), // 2KB 掩码辨识条
+            (0x0004, 0), (0x0005, 0x60),
+        ]),
+    }
+}
