@@ -3932,6 +3932,40 @@ $800C **全同续**（CommonJump 表 bank2 复现五现=CommonJump_UpdateEnemyAn
 （2 员真现）。测 382（族域述**240 测里程碑**）。findings（r10）：0 新。
 SC-B3-05（a2-043 随段首并审）预告随账。
 
+## SC-B3-05 卡审（69b65de）——bank2 化身六现（VALCHAIN-B3-005 预登记）
+
+### verdict: pass
+
+四条核：①**bank2 化身六现 ✓✓**：bank02:800F=`4c 8d f6 4c 3e f8 4c 5a` 与 bank1
+$800F **全同续**（CommonJump 表 bank2 复现六现=CommonJump_InitEnAnimIndex 项）
+②**VALCHAIN-B3-005 预登记 ✓**（67 条目）：174 值链算径判别条补触发→预登记→L2
+并案=严格顺序续 ③x 索引公式自纠（写址对值核对条——$6AF8+x/x+1/x+2）随账+3 写
+实核+8 案账内 ④员面双扫桩 0（2 员真现）。测 383。findings（r10）：0 新。
+SC-B3-06（a2-043 随段首并审）预告随账。
+
+## SC-G3-00 卡审（G3 首卡诚实收口）——4/6 全等+缺口声明面核
+
+### verdict: pass（诚实收口形=D7 声明纪律样板）
+
+四条核：①**4/6 全等面 ✓**：g3-000..003 **[PASS]×4**（ROM golden 全等实证）②
+**缺口声明面 ✓（D7 声明纪律）**：g3-004=[FAIL] 执行超步数上限（疑似缺 stops 或
+不终止）entry=$B368（JAM 超步）+g3-005=[FAIL] BRK @ $0EF0（L2 面不支持，走 L3）
+——**显式缺口**（原因+出口显式：SC-G3-002/003-IMPL 路线图（退出=g3-002/003 落→
+账清转 strict））=诚实收口（缺口声明≠静默遗漏）③**烤案件全**（占位+锚+交叉验
+参照=fixture 完整）+**SC-G3-01 预登记在册**（67 条目含 G3 全族 6 条：00/001/002/
+003/004/005-IMPL）④员面真现（stops 面协同中随注）。测 383+。findings（r10）：
+0 新。G3 卡序接续（SC-G3-01 RunSFXNoiseInit 簇）预告随账。
+
+## SC-B3-06 卡审（952ab67）——bank2 化身七现（VALCHAIN-B3-006 预登记）
+
+### verdict: pass
+
+四条核：①**bank2 化身七现 ✓✓**：bank02:801E=`4c ca fb 4c 70 f8 4c 7c` 与 bank1
+$801E **全同续**（CommonJump 表 bank2 复现七现=InitEnActiveAnimIndex_NoInitOffset
+项）②**VALCHAIN-B3-006 预登记 ✓**（68 条目）：fixture 弱源辨识+判别条补触发→
+预登记→L2 并案=严格顺序续 ③3 写实核+8 案账内 ④员面双扫桩 0（2 员真现）。
+测 384。findings（r10）：0 新。SC-B3-07（a2-043 随段首并审）预告随账。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
