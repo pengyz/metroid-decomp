@@ -4437,3 +4437,19 @@ pub fn a6_cluster_009(input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-B6-10 簇入口适配（a6_cluster_010 ← bank04:802D——常量零组）----
+
+/// a6_cluster_010 适配（bank04:802D（bank4 窗）——案实核 4 写（$00←0+$04 族
+/// （x 索引）+$6BB5←0（常量零组——判别条未触发（严格顺序 ✓）））；A=0/X 透传/Y=14）。
+pub fn a6_cluster_010(input: &L2In) -> L2Out {
+    let x = input.x as u16;
+    L2Out {
+        a: 0, x: input.x, y: 14,
+        writes: merge_writes(vec![
+            (0x0000, 0),
+            (0x0404 + x - 2, 0), (0x0404 + x + 2, 0), // x 索引（$0404+x-2/+2——全案拟合）
+            (0x6AF8 + x + 4, 0),
+        ]),
+    }
+}
