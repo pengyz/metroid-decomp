@@ -179,12 +179,19 @@ fn a1_cluster_004(input: &L2In) -> L2Out {
     L2Out { a: 1, x: 0, y: 1, writes } // 出口 (1,0,1)（golden 实证——观测值逐钉）
 }
 
+/// a1_cluster_005 适配（SC-A1-005——CommonJump_InitEnAnimIndex（bank01:800F）→$F68D）。
+fn a1_cluster_005(input: &L2In) -> L2Out {
+    let (a, writes) = crate::enemy::common::init_en_anim_index(input.a, input.x as u16);
+    L2Out { a, x: input.x, y: input.y, writes }
+}
+
 pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
     match name {
         "a1_cluster_001" => Some(a1_cluster_001),
         "a1_cluster_002" => Some(a1_cluster_002),
         "a1_cluster_003" => Some(a1_cluster_003),
         "a1_cluster_004" => Some(a1_cluster_004),
+        "a1_cluster_005" => Some(a1_cluster_005),
         "sub_C16D" => Some(sub_c16d),
         "sub_C376" => Some(sub_c376),
         "int_y_E3A5" => Some(int_y_e3a5),

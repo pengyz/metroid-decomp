@@ -261,3 +261,15 @@ pub fn crawler_should_move(x: u8, frame_count: u8) -> u8 {
     let sum = slot.wrapping_add(frame_count as u16).wrapping_add(carry as u16);
     (sum >> 1) as u8
 }
+
+/// InitEnAnimIndex 三入口族（**asm 内容锚** `07:F68D/F690/F693`）：
+/// InitEnAnimIndex：A→resetAnimIndex；SetEnAnimIndex：A→animIndex；
+/// ClearEnAnimDelay：animDelay←0（A←0）——三写面+出口 A=0。
+pub fn init_en_anim_index(a: u8, x: u16) -> (u8, Vec<(u16, u8)>) {
+    // **WRAM 敌槽址公式**（x差=+4 恒——8/8 证）：写址=$6AF8+x 族（delay/reset/index 连续）
+    let mut w = Vec::new();
+    w.push((0x6AF8 + x, 0)); // animDelay←0（$6AF8+x）
+    w.push((0x6AF9 + x, a)); // resetAnimIndex（$6AF9+x）
+    w.push((0x6AFA + x, a)); // animIndex（$6AFA+x）
+    (0, w) // 出口 A=0（`lda #$00`）
+}
