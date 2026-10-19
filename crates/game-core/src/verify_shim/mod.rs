@@ -3793,3 +3793,14 @@ pub fn a4_cluster_001(input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-B4-02 簇入口适配（a4_cluster_002 ← bank03:8006——定址清对）----
+
+/// a4_cluster_002 适配（bank03:8006（bank3 窗）——案实核 2 写（定址清对（常量——
+/// 判别条未触发（严格顺序 ✓）））；A=0/X 透传/Y=170）。
+pub fn a4_cluster_002(input: &L2In) -> L2Out {
+    L2Out {
+        a: 0, x: input.x, y: 170,
+        writes: merge_writes(vec![(0x0404, 0), (0x040E, 0)]),
+    }
+}
