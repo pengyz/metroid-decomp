@@ -561,6 +561,20 @@
       "reason": "SetObjectXSlotAnimIndex OAM 深径链（57 写（>20 深径判别条触发）——a2-024 同款（bank2 化身）——预登记先行（严格顺序）——S5-121 同款跨卡深径）",
       "exit": "SetObjAnim 链径建模清（全链模拟）→账清转 strict",
       "registered": "2026-10-19"
+    },
+    {
+      "id": "SC-B3-022-CROSSCARD-SFXDOOR",
+      "case_prefix": "a3-022-case-",
+      "reason": "SFX_Door OAM 深径链（55 写（>20 深径判别条触发）——a2-025 同款（bank2 化身）——预登记先行（严格顺序）——S5-121 同款跨卡深径）",
+      "exit": "SFX_Door 链径建模清（全链模拟）→账清转 strict",
+      "registered": "2026-10-19"
+    },
+    {
+      "id": "SC-G3-02-IMPL",
+      "case_prefix": "g3-002-case",
+      "reason": "【预登记】G3 卡序三卡（SC-G3-02 RunSoundRoutine 簇——开工前置步先登记）",
+      "exit": "g3_cluster_002 移植/转写落→账清转 strict",
+      "registered": "2026-10-19"
     }
   ]
 }
