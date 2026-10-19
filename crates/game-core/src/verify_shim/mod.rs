@@ -2779,3 +2779,20 @@ pub fn a1_cluster_009(input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-B1-10 簇入口适配（a1_cluster_010 ← bank01:802D——refs 法七现）----
+
+/// a1_cluster_010 适配（$802D CommonJump_EnemyGetDeltaY（refs 法：asm:69）——
+/// 案实核四写（$00←0/$04F7←0/$04FB←0/$6BF1←0（zp 回卷族——x=245 径））；
+/// A=0/X 透传/Y=14）。
+pub fn a1_cluster_010(input: &L2In) -> L2Out {
+    L2Out {
+        a: 0, x: input.x, y: 14,
+        writes: merge_writes(vec![
+            (0x0000, 0),
+            (0x0404 + input.x as u16 - 2, 0),
+            (0x0404 + input.x as u16 + 2, 0),
+            (0x6AF4 + input.x as u16 + 8, 0), // 写址不掩（2KB 掩码辨识条——读掩写不掩）
+        ]),
+    }
+}

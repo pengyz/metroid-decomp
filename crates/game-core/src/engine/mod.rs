@@ -7820,3 +7820,34 @@ mod a1_009_tests {
         assert!(ev.contains(&(0x04B8, 1))); // 定址面（写址对值核对）
     }
 }
+
+// ---- SC-B1-10（a1-010）员转写（2 员——EnemyGetDeltaY 族·refs 法）----
+
+/// $802D CommonJump_EnemyGetDeltaY（root——簇共根形百八四·桩阵十一现（形九续）
+/// ——refs 法：asm:69 `jmp EnemyGetDeltaY`）。
+/// 返回 (目标址, 桩面)。
+pub fn a802d_common_jump() -> (u16, bool) {
+    (0xE0B0, true) // jmp EnemyGetDeltaY（refs 法）
+}
+
+/// EnemyGetDeltaY 四写面（定址面+x 索引面——案实核）。
+pub fn a802d_face(x: u8) -> Vec<(u16, u8)> {
+    vec![(0x0000, 0),
+         (0x0404 + x as u16 - 2, 0),
+         (0x0404 + x as u16 + 2, 0),
+         (0x6AF4 + x as u16 + 8, 0)] // 写址不掩（2KB 掩码辨识条）
+}
+
+#[cfg(test)]
+mod a1_010_tests {
+    use super::*;
+
+    /// 二员转写形（EnemyGetDeltaY root+面壳）——refs 法七现。
+    #[test]
+    fn a1_010_units_two() {
+        assert!(a802d_common_jump().1);
+        let ev = a802d_face(0xF5);
+        assert!(ev.contains(&(0x6BF1, 0))); // 写址不掩（x=0xF5 ⇒ 0x6AF4+0xF5+8）
+        assert!(ev.contains(&(0x04F7, 0)));
+    }
+}
