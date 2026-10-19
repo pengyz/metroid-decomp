@@ -527,6 +527,51 @@ fn md_checkfire(input: &L2In) -> L2Out {
     L2Out { a: 0, x: 0, y: 0, writes: vec![] }
 }
 
+fn arm_cluster_000(input: &L2In) -> L2Out {
+    let _ = input;
+    L2Out { a: 0, x: 0, y: 0, writes: vec![] }
+}
+
+fn arm_cluster_001(input: &L2In) -> L2Out {
+    let _ = input;
+    L2Out { a: 0, x: 0, y: 0, writes: vec![] }
+}
+
+fn arm_cluster_002(input: &L2In) -> L2Out {
+    let _ = input;
+    L2Out { a: 0, x: 0, y: 0, writes: vec![] }
+}
+
+fn arm_cluster_003(input: &L2In) -> L2Out {
+    let _ = input;
+    L2Out { a: 0, x: 0, y: 0, writes: vec![] }
+}
+
+fn arm_cluster_004(input: &L2In) -> L2Out {
+    let _ = input;
+    L2Out { a: 0, x: 0, y: 0, writes: vec![] }
+}
+
+fn arm_cluster_005(input: &L2In) -> L2Out {
+    let _ = input;
+    L2Out { a: 0, x: 0, y: 0, writes: vec![] }
+}
+
+fn arm_cluster_006(input: &L2In) -> L2Out {
+    let _ = input;
+    L2Out { a: 0, x: 0, y: 0, writes: vec![] }
+}
+
+fn arm_cluster_007(input: &L2In) -> L2Out {
+    let _ = input;
+    L2Out { a: 0, x: 0, y: 0, writes: vec![] }
+}
+
+fn arm_cluster_008(input: &L2In) -> L2Out {
+    let _ = input;
+    L2Out { a: 0, x: 0, y: 0, writes: vec![] }
+}
+
 pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
     match name {
         "a1_cluster_001" => Some(a1_cluster_001),
@@ -581,6 +626,15 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "md_samusjump" => Some(md_samusjump),
         "md_checkhorz" => Some(md_checkhorz),
         "md_checkfire" => Some(md_checkfire),
+        "arm_cluster_000" => Some(arm_cluster_000),
+        "arm_cluster_001" => Some(arm_cluster_001),
+        "arm_cluster_002" => Some(arm_cluster_002),
+        "arm_cluster_003" => Some(arm_cluster_003),
+        "arm_cluster_004" => Some(arm_cluster_004),
+        "arm_cluster_005" => Some(arm_cluster_005),
+        "arm_cluster_006" => Some(arm_cluster_006),
+        "arm_cluster_007" => Some(arm_cluster_007),
+        "arm_cluster_008" => Some(arm_cluster_008),
         "sub_C16D" => Some(sub_c16d),
         "sub_C376" => Some(sub_c376),
         "int_y_E3A5" => Some(int_y_e3a5),
@@ -861,6 +915,7 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "a4_cluster_021" => Some(sub_a4_cluster_021),
         "a5_cluster_024" => Some(sub_a5_cluster_024),
         "a5_cluster_025" => Some(sub_a5_cluster_025),
+        "a5_cluster_026" => Some(sub_a5_cluster_026),
         _ => None,
     }
 }
@@ -2391,4 +2446,9 @@ pub fn sub_a5_cluster_024(input: &L2In) -> L2Out {
 /// a5_cluster_025 —— bank03:9926 簇入口注册（SC-B5-01）。
 pub fn sub_a5_cluster_025(input: &L2In) -> L2Out {
     crate::verify_shim::a5_cluster_025(input)
+}
+
+/// a5_cluster_026 —— bank03:9929 簇入口注册（SC-B5-02）。
+pub fn sub_a5_cluster_026(input: &L2In) -> L2Out {
+    crate::verify_shim::a5_cluster_026(input)
 }
