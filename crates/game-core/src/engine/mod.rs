@@ -9188,3 +9188,29 @@ mod a3_011_tests {
         assert!(ev.contains(&(0x6B7F, 0))); // $6AF8+135
     }
 }
+
+// ---- SC-B3-12（a3-012）员转写（2 员——DrawDoor 族（bank2 化身））----
+
+/// bank02:8BB1 DrawDoor（root——簇共根形二百二九·**bank2 化身**（a1-015 同款
+/// ——refs 法：areas_common.asm:1450（bank2 复现）））。
+/// 返回 (目标址, 桩面)。
+pub fn b2_8bb1_draw_door() -> (u16, bool) {
+    (0x8BB1, true) // DrawDoor（bank2 化身——a1-015 直连）
+}
+
+/// $8CED Goto2DrawDoor（bank2 化身——a1-015 同款（asm:1683））。
+pub fn b2_8ced_goto2() -> (u16, bool) {
+    (0x8BB1, true) // jmp DrawDoor（bank2 化身直连）
+}
+
+#[cfg(test)]
+mod a3_012_tests {
+    use super::*;
+
+    /// 二员转写形（DrawDoor bank2 化身 root+跳转面）。
+    #[test]
+    fn a3_012_units_two() {
+        assert_eq!(b2_8bb1_draw_door(), (0x8BB1, true)); // a1-015 直连
+        assert_eq!(b2_8ced_goto2(), (0x8BB1, true));
+    }
+}
