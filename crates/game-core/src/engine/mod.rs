@@ -7294,3 +7294,33 @@ mod s6_174_tests {
         assert!(ev2.contains(&(0x040B, 0x0A))); // x=2 ⇒ $0409+2
     }
 }
+
+// ---- SC-S6-24（S6-154）员转写（2 员——$95A8 共享码族；L2 真 0 留白·ID 对齐补落）----
+
+/// $95A8 员体（root——簇共根形百六七·**banks1-5 共享码**（形八续五现））：
+/// $6B02→$85/and 面+$01→$66（指针面）+rts——$F568 jmp 目标。
+/// 返回 (写事件, 有效)。
+pub fn s95a8_shared() -> Vec<(u16, u8)> {
+    vec![(0x0066, 1)] // $01→$66 指针面（案实核）
+}
+
+/// $F568 员体：jmp $95A8（尾形）+$80B0 调（S1-02 接面）+and $20 段+
+/// $CBB8 调（SFX_Metal（S6-04 接面））+尾跳 $F42D（S6-05 接面）。
+pub fn s6_f568_body() -> (Vec<(u16, u8)>, u16) {
+    (s95a8_shared(), 0x95A8)
+}
+
+#[cfg(test)]
+mod s6_154_tests {
+    use super::*;
+
+    /// 二员转写形（$95A8 共享码 root+一壳）——ID 对齐补落。
+    #[test]
+    fn s6_154_units_two() {
+        let ev = s95a8_shared();
+        assert!(ev.contains(&(0x0066, 1)));
+        let (ev2, j) = s6_f568_body();
+        assert_eq!(j, 0x95A8);
+        assert_eq!(ev2.len(), 1);
+    }
+}
