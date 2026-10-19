@@ -911,6 +911,13 @@
       "reason": "MotherBrainMusic OAM 深径链（53 写（>20 深径判别条触发）——$8CC0/$CC03 bank3 化身（a2-023 同款）——预登记先行（严格顺序）——S5-121 同款跨卡深径）",
       "exit": "MotherBrainMusic 链径建模清（全链模拟）→账清转 strict",
       "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-B4-016-CROSSCARD-SETOBJANIM",
+      "case_prefix": "a4-016-case-",
+      "reason": "SetObjectXSlotAnimIndex OAM 深径链（57 写（>20 深径判别条触发）——$8CDD/$D2FD bank3 化身（a2-024 同款）——预登记先行（严格顺序）——S5-121 同款跨卡深径）",
+      "exit": "SetObjAnim 链径建模清（全链模拟）→账清转 strict",
+      "registered": "2026-10-20"
     }
   ]
 }
