@@ -996,6 +996,48 @@
       "legacy_sample_point_note": "endFrame（帧末采样——2610df9 语义）",
       "watch_note": "zp+iram（事件核：elevator 三断言——$0307 站台判/ElevatorType bit7/MapPos 域切换）",
       "shared_template_note": "三案输入模板同（travel 节拍）——消费差=断言集（pickup/statue/elevator 三观察面）"
+    },
+    {
+      "id": "l3-sc-pickup-touch",
+      "scenario": "sc-pickup-touch",
+      "scenario_sha256": "13a5eaf017aba60d9eba786233cd12a633aab5db24fd3334063636110f15c9d4",
+      "frames": 2000,
+      "frame_keys": [
+        "zp",
+        "iram",
+        "pw"
+      ],
+      "legs": {
+        "oracle": {
+          "sample_point": "endFrame",
+          "rows": 2000,
+          "missing": [],
+          "head_skip": 0,
+          "note": "触达战役 v1-v22 沉淀档案（三条件同窗 v20 实证+机制/几何/工具注全解——v22 预算封顶收束）"
+        }
+      },
+      "game_core_leg": "disabled-s5",
+      "oracle_sha256": "5cfd95d57b5e57ba1a5006845d61273437867f3a057f798b5d8db9f9c582cca3",
+      "watch": [
+        {
+          "label": "zp",
+          "base": "0000",
+          "range": "0000-00ff"
+        },
+        {
+          "label": "iram",
+          "base": "0100",
+          "range": "0100-07ff"
+        },
+        {
+          "label": "pw",
+          "base": "6988",
+          "range": "6988-698f"
+        }
+      ],
+      "determinism_evidence": "战役 22 迭代单跑序列（sc-pickup-touch.txt 全档案——工具注：Mesen 静默崩瞬态×5 重跑即全形）",
+      "watch_note": "zp+iram+pw（拾取三断言面：pw 位图/PowerUps type/同表活）",
+      "campaign_note": "v1-v22 全解沉淀：hi XOR PPUCTRL 碰撞/x wrap 翻转/ToggleSamusHi/屏奇偶律/存活窗西行解/房23 几何全解"
     }
   ]
 }
