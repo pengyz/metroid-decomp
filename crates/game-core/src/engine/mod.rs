@@ -7652,3 +7652,30 @@ mod a1_003_tests {
         assert_eq!(a9a4c_body(5, 6), (3, 5, 6)); // 透传类
     }
 }
+
+// ---- SC-B1-04（a1-004）员转写（2 员——CommonJump_UpdateEnemyAnim 族·refs 法直连）----
+
+/// $800C CommonJump_UpdateEnemyAnim（root——簇共根形百七八·**bank1 dispatch 桩阵
+/// 五现**（形九续）——refs/asm 法：areas_common.asm:33 `jmp UpdateEnemyAnim ($E094)`）。
+/// 返回 (目标址, 桩面)。
+pub fn a800c_common_jump() -> (u16, bool) {
+    (0xE094, true) // jmp UpdateEnemyAnim（S5-146 直连——refs 法）
+}
+
+/// $E094 UpdateEnemyAnim 直连面（S5-146 已转写单元——复用面注）。
+pub fn a800c_dispatch(v6af4_x: u8, v6af8_x: u8) -> (Vec<(u16, u8)>, u8) {
+    s5_update_enemy_anim(0, v6af4_x, v6af8_x) // S5-146 单元直连
+}
+
+#[cfg(test)]
+mod a1_004_tests {
+    use super::*;
+
+    /// 二员转写形（CommonJump_UpdateEnemyAnim root+直连壳）——refs 法首用。
+    #[test]
+    fn a1_004_units_two() {
+        assert_eq!(a800c_common_jump(), (0xE094, true)); // refs 法直连
+        let (ev, _) = a800c_dispatch(3, 5);
+        assert!(!ev.is_empty()); // S5-146 单元复用面
+    }
+}

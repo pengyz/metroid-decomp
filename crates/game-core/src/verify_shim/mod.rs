@@ -2699,3 +2699,18 @@ pub fn a1_cluster_002(input: &L2In) -> L2Out {
 pub fn a1_cluster_003(input: &L2In) -> L2Out {
     L2Out { a: 3, x: input.x, y: input.y, writes: vec![] }
 }
+
+// ---- SC-B1-04 簇入口适配（a1_cluster_004 ← bank01:800C——S5-146 同族（refs 法直连））----
+
+/// a1_cluster_004 适配（$800C CommonJump_UpdateEnemyAnim→$E094（S5-146 直连
+/// ——refs/asm 法：areas_common.asm:33）——案实核：$6AF7←r(0)/$6AF8←A/$6AFA←1
+/// （S5-146 同族）；A=1/X=0/Y=1）。
+pub fn a1_cluster_004(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    L2Out {
+        a: 1, x: 0, y: 1,
+        writes: merge_writes(vec![
+            (0x6AF7, r(0x0000)), (0x6AF8, input.a), (0x6AFA, 1),
+        ]),
+    }
+}
