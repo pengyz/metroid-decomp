@@ -10900,3 +10900,39 @@ mod a5_037_tests {
         assert_eq!(b3_9e28_mb_handle(), (0x9FED, true)); // a5-036 直连
     }
 }
+
+// ---- SC-B5-14（a5-038）员转写（2 员——MotherBrain 数据面；L2 真 0 留白）----
+
+/// $9E2B 员体（root——簇共根形二百八九·**MotherBrain 域续三现**（refs 法直得——
+/// $A02E MotherBrain_Idle_UpdateAnimEye 命名正身五现）——数据面（hexdump 直得：
+/// 表/anim 数据（$A06D/$A07B/$A082/$A08B 表对载））。
+/// 返回 (数据面, 有效)。
+pub fn b3_9e2b_mb_data() -> (Vec<u16>, bool) {
+    (vec![0xA06D, 0xA07B, 0xA082, 0xA08B], true) // 表对载（hexdump 直得）
+}
+
+/// $A02E 员体（MotherBrain_Idle_UpdateAnimEye（refs 法直得——同族面）——数据面
+/// （hexdump 直得：tile/anim 数据（16B））。
+/// 返回 (数据面, 有效)。
+pub fn b3_a02e_mb_data() -> (Vec<u8>, bool) {
+    (vec![0xFD, 0xE2, 0xB5, 0xB3, 0xFF, 0x27, 0x06, 0x08,
+          0xFC, 0x04, 0x00, 0xC0, 0xC1, 0xFF, 0x27, 0x06], true) // 数据面（hexdump 直得）
+}
+
+#[cfg(test)]
+mod a5_038_tests {
+    use super::*;
+
+    /// 二员转写形（MotherBrain 数据面 root+一壳）——真 0 留白形。
+    #[test]
+    fn a5_038_units_two() {
+        let (targets, ok) = b3_9e2b_mb_data();
+        assert!(ok);
+        assert_eq!(targets.len(), 4); // 表对载（hexdump 直得）
+        assert_eq!(targets[0], 0xA06D); // 写址对值核对
+        let (d, ok2) = b3_a02e_mb_data();
+        assert!(ok2);
+        assert_eq!(d.len(), 16);
+        assert_eq!(d[0], 0xFD); // 数据面（hexdump 直得）
+    }
+}
