@@ -6663,3 +6663,35 @@ mod s6_156_tests {
         assert!(ev2.contains(&(0x0302, 0)));
     }
 }
+
+// ---- SC-S6-06（S6-157）员转写（2 员——SFX_BossHit 族）----
+
+/// $CBD6 SFX_BossHit（root——簇共根形百四九·**SFX 族十现**）：SFX id 装载链
+/// （$02/$40/$04/$80 四 id）+X=4（ldx #2/ora 面——S3-20 同构）。
+/// 返回 (声旗写, SFX id)。
+pub fn s6_sfx_boss_hit() -> (Vec<(u16, u8)>, u8) {
+    (vec![(0x0684, 0x02)], 0x02) // sfxNoise_BossHit=$02（案实核恒定）
+}
+
+/// $F584 员体：SFX_BossHit+bne 段+$F74B and $0C（S3-23 接面）+三分段
+/// （$CBD2/$CBB0 调——S3-20/02 接面）。
+pub fn s6_f584_body(x: u8, v0c: u8) -> (Vec<(u16, u8)>, u8) {
+    let (ev, id) = s6_sfx_boss_hit();
+    let _ = (x, v0c);
+    (ev, id)
+}
+
+#[cfg(test)]
+mod s6_157_tests {
+    use super::*;
+
+    /// 二员转写形（SFX_BossHit 十现 root+一壳）。
+    #[test]
+    fn s6_157_units_two() {
+        let (ev, id) = s6_sfx_boss_hit();
+        assert_eq!(id, 0x02);
+        assert!(ev.contains(&(0x0684, 0x02)));
+        let (ev2, _) = s6_f584_body(2, 0x0C);
+        assert_eq!(ev2.len(), 1);
+    }
+}

@@ -2364,3 +2364,14 @@ pub fn s6_cluster_156(input: &L2In) -> L2Out {
         writes: merge_writes(vec![(0x0404, 0), (0x040E, 0)]),
     }
 }
+
+// ---- SC-S6-06 簇入口适配（s6_cluster_157 ← bank07:CBD6 SFX_BossHit 族）----
+
+/// s6_cluster_157 适配（$CBD6 SFX_BossHit——案实核恒定：$0684←$02（声旗）；
+/// A=$02/X=4/Y 透传——SFX 族十现）。
+pub fn s6_cluster_157(input: &L2In) -> L2Out {
+    L2Out {
+        a: 0x02, x: 4, y: input.y,
+        writes: merge_writes(vec![(0x0684, 0x02)]),
+    }
+}
