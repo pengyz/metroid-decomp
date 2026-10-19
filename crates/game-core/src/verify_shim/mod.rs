@@ -2136,3 +2136,24 @@ pub fn s5_cluster_131(input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-S5-12 簇入口适配（s5_cluster_132 ← bank07:F0EF——x/y 双索引读族）----
+
+/// s5_cluster_132 适配（$F0EF GetObject0CoordData 链——**x/y 双索引读**：
+/// \$07←r(\$030D+x)/\$09←r(\$030E+x)/\$0B←(r(\$030C+x)^\$FF)&1（面翻）/
+/// \$06←r(\$030D+y)/\$08←r(\$030E+y)+\$0A←0；A=0/X=0xC0/Y=0）。
+pub fn s5_cluster_132(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    let x = input.x as u16;
+    let y = input.y as u16; // y=入参（$F172 尾段 y 读——$60 为链后段非此径）
+    L2Out {
+        a: 0, x: 0xC0, y: 0,
+        writes: merge_writes(vec![
+            (0x0007, r(0x030D + x)), (0x0009, r(0x030E + x)), // x 索引读
+            // **eor $FF=zp 读**（S2-07 教训再证——非立即数！）
+            (0x000B, (r(0x030C + x) ^ r(0x00FF)) & 1),
+            (0x0006, r(0x030D)), (0x0008, r(0x030E)), // 基读面（非 y 索引）
+            (0x000A, 0),
+        ]),
+    }
+}

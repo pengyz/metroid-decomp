@@ -5834,3 +5834,38 @@ mod s5_131b_tests {
         assert_eq!(s5_f0ea_disc(0), 0);
     }
 }
+
+// ---- SC-S5-12（S5-132）员转写（2 员——GetObject0CoordData 族）----
+
+/// $F172 GetObject0CoordData（root——簇共根形百二五）：x 索引读（$030D/$030E[x]
+/// →$07/$09）+**eor $FF=zp 读**（S2-07 教训——$030C[x]^r($FF) and 1→$0B）
+/// +基读面（$030D/$030E→$06/$08）。
+/// 返回 (写事件, 面翻)。
+pub fn s5_get_obj0_coord(x: u8, v30d: u8, v30e: u8, v30c_x: u8, vff: u8) -> Vec<(u16, u8)> {
+    vec![(0x0007, v30d), (0x0009, v30e),
+         (0x000B, (v30c_x ^ vff) & 1),
+         (0x0006, v30d), (0x0008, v30e),
+         (0x000A, 0)]
+}
+
+/// $F0EF 员体：GetObject0CoordData+Y=$60 槽搜（cmp 5 段）+$70 判+IsSamusDead
+/// （S1-13 接面）——S5-131 同构面。
+pub fn s5_f0ef_body(x: u8, v30d: u8, v30e: u8, v30c_x: u8, vff: u8) -> Vec<(u16, u8)> {
+    s5_get_obj0_coord(x, v30d, v30e, v30c_x, vff)
+}
+
+#[cfg(test)]
+mod s5_132_tests {
+    use super::*;
+
+    /// 二员转写形（GetObject0CoordData root+一壳）。
+    #[test]
+    fn s5_132_units_two() {
+        let ev = s5_get_obj0_coord(2, 214, 148, 5, 0);
+        assert!(ev.contains(&(0x0007, 214)));
+        assert!(ev.contains(&(0x0006, 214))); // 基读面
+        assert!(ev.contains(&(0x000B, 1))); // 5^0&1
+        let ev2 = s5_f0ef_body(2, 214, 148, 4, 0);
+        assert!(ev2.contains(&(0x000B, 0))); // 4^0&1=0
+    }
+}
