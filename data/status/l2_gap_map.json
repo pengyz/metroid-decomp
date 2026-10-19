@@ -309,6 +309,13 @@
       "reason": "DoorSubRoutine8C61 OAM 深径（60 写（门重关链（DoorHitPoints←1+BG 瓦片+status←2+anim+DrawDoor OAM）——refs 法直得结构（asm:1579）+OAM 绘制链算（S1-17-CROSSCARD-S105 同款））",
       "exit": "DoorSubRoutine OAM 绘制径建模清（WriteDoorBGTiles+DrawDoor 链全模拟）→账清转 strict",
       "registered": "2026-10-19"
+    },
+    {
+      "id": "SC-A1-020-IMPL",
+      "case_prefix": "a1-020-case",
+      "reason": "【预登记】a1-020 簇（porter 严格顺序单发十例——开工前置步先登记）",
+      "exit": "a1_cluster_020 移植/转写落→账清转 strict",
+      "registered": "2026-10-19"
     }
   ]
 }
