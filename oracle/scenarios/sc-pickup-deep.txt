@@ -1,0 +1,28 @@
+# 场景：sc-pickup-deep —— 物品真径深场景（G2 待采余面②）
+# 消费：item-route-material.md（SpecItmsTbl→房坐标→拾取链——B→A 实证环深面）
+# 节拍基：sc-pickup-final6 over-wall 径（995-1068 left→1072-1132 a+right→1135+ right）
+# 深面①：SRAM 拾取位（$6988-$698F pw 面——拾取持久化位图）
+# 深面②：物品对象槽（$0340-$034F probe——拾取前后态变）
+# 事件核三断言：pw 拾取位变/物品槽态变($0340-034F)/拾取后稳定
+name sc-pickup-deep
+frames 1800
+watch_range 0000-00ff zp
+watch_range 0100-07ff iram
+watch_range 6988-698f pw
+
+press 360 start
+press 420 a
+press 540 start
+fixture 900 6878 13 invariant
+hold 995-1068 left
+hold 1072-1132 a
+hold 1072-1132 right
+hold 1135-1750 right
+
+capture 1110 over-wall
+capture 1180 near-item
+capture 1500 item-zone
+capture 1700 post
+
+sample_point endFrame
+probe_mem 0340 034f
