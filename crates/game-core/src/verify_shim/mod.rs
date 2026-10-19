@@ -2426,3 +2426,14 @@ pub fn s6_cluster_164(input: &L2In) -> L2Out {
         writes: merge_writes(vec![(0x0405 + input.x as u16, 0)]),
     }
 }
+
+// ---- SC-S6-14 簇入口适配（s6_cluster_165 ← bank07:8206——ptr 面（账内深径））----
+
+/// s6_cluster_165 适配（$8206 共享码链——$1C←0 恒定面+ptr 对（账内深径
+/// （CROSSCARD-PTRPAIR——S5-121 先例形））；A=0/X=0/Y=0）。
+pub fn s6_cluster_165(_input: &L2In) -> L2Out {
+    L2Out {
+        a: 0, x: 0, y: 0,
+        writes: merge_writes(vec![(0x001C, 0)]),
+    }
+}

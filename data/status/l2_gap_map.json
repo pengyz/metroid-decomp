@@ -176,6 +176,13 @@
       "reason": "【预登记/补账】a1-006 簇（批产 WIP——A 批预登记制：败案在=账目在前置化）",
       "exit": "a1-006 落→账清转 strict",
       "registered": "2026-10-19"
+    },
+    {
+      "id": "SC-S6-165-CROSSCARD-PTRPAIR",
+      "case_prefix": "s6-165-case-",
+      "reason": "全族深径（$00/$01 指针对=跨卡链算值（$8206 取负→$C3D4（S2-42 正身）→$F7B3 AndEnData05（S2-30）→S1-17 ptr 面合成链）——golden 含多卡链效应=正常（S5-121/S2-048 同款判定形））",
+      "exit": "合成链径建模清（$C3D4 取负+AndEnData05+ptr 面全链模拟）→账清转 strict",
+      "registered": "2026-10-19"
     }
   ]
 }

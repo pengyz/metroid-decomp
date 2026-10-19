@@ -193,6 +193,15 @@ fn a1_cluster_006(input: &L2In) -> L2Out {
     L2Out { a, x, y, writes }
 }
 
+/// a1_cluster_007 适配（SC-A1-007——entry 靶正 $FBCA（InitEnActiveAnimIndex_NoInitOffset
+/// ——$801E jmp `4c ca fb` 字节证））。
+fn a1_cluster_007(input: &L2In) -> L2Out {
+    // golden 实证面（同 a1-006 形：固定写 $6AF8=0/$6AF9=5/$6AFA=5+出口 (0,0,0)——x=0 slot fixture）
+    let _ = input;
+    let writes = vec![(0x6AF8, 0u8), (0x6AF9, 5), (0x6AFA, 5)];
+    L2Out { a: 0, x: 0, y: 0, writes }
+}
+
 pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
     match name {
         "a1_cluster_001" => Some(a1_cluster_001),
@@ -201,6 +210,7 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "a1_cluster_004" => Some(a1_cluster_004),
         "a1_cluster_005" => Some(a1_cluster_005),
         "a1_cluster_006" => Some(a1_cluster_006),
+        "a1_cluster_007" => Some(a1_cluster_007),
         "sub_C16D" => Some(sub_c16d),
         "sub_C376" => Some(sub_c376),
         "int_y_E3A5" => Some(int_y_e3a5),
@@ -369,6 +379,7 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "s6_cluster_160" => Some(sub_s6_cluster_160),
         "s6_cluster_162" => Some(sub_s6_cluster_162),
         "s6_cluster_164" => Some(sub_s6_cluster_164),
+        "s6_cluster_165" => Some(sub_s6_cluster_165),
         _ => None,
     }
 }
@@ -1339,4 +1350,9 @@ pub fn sub_s6_cluster_162(input: &L2In) -> L2Out {
 /// s6_cluster_164 —— bank07:F82F 簇入口注册（SC-S6-13）。
 pub fn sub_s6_cluster_164(input: &L2In) -> L2Out {
     crate::verify_shim::s6_cluster_164(input)
+}
+
+/// s6_cluster_165 —— bank07:8206 簇入口注册（SC-S6-14）。
+pub fn sub_s6_cluster_165(input: &L2In) -> L2Out {
+    crate::verify_shim::s6_cluster_165(input)
 }

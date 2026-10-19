@@ -6938,3 +6938,35 @@ mod s6_164_tests {
         assert_eq!(ev2.len(), 1);
     }
 }
+
+// ---- SC-S6-14（S6-165）员转写（2 员——$8206 取负写回族；L2 账内深径）----
+
+/// $8206 员体（root——簇共根形百五七·**banks1-5 共享码**（形八续四现）——
+/// $6AFE[x] **取负写回**（$C3D4 取负正身（S2-42 尾形归档——机理正身第五例））。
+/// 返回 (写事件, 取负面)。
+pub fn s6_8206_negate(x: u8, v6afe_x: u8) -> (Vec<(u16, u8)>, u8) {
+    let neg = v6afe_x.wrapping_neg();
+    (vec![(0x6AFE + x as u16, neg)], neg)
+}
+
+/// $F836 员体：$8206+lda $DF→AndEnData05（S2-30 接面）+尾面（$F839 同族）。
+pub fn s6_f836_body(x: u8, v6afe_x: u8) -> (Vec<(u16, u8)>, u16) {
+    let (ev, _) = s6_8206_negate(x, v6afe_x);
+    (ev, 0xF7B3)
+}
+
+#[cfg(test)]
+mod s6_165_tests {
+    use super::*;
+
+    /// 二员转写形（$8206 取负写回 root+一壳）。
+    #[test]
+    fn s6_165_units_two() {
+        let (ev, neg) = s6_8206_negate(2, 5);
+        assert_eq!(neg, 0xFB); // 取负
+        assert!(ev.contains(&(0x6B00, 0xFB))); // x=2 ⇒ $6AFE+2（x 索引强制步）
+        let (ev2, j) = s6_f836_body(2, 5);
+        assert_eq!(j, 0xF7B3);
+        assert_eq!(ev2.len(), 1);
+    }
+}
