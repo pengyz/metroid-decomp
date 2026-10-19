@@ -6771,3 +6771,38 @@ mod s6_159_tests {
         assert!(ev.contains(&(0x0408, 0x55))); // x=2 ⇒ $0406+2（x 索引强制步）
     }
 }
+
+// ---- SC-S6-09（S6-160）员转写（2 员——$81DA 共享码族）----
+
+/// $81DA 员体（root——簇共根形百五二·**banks1-5 共享码**（areas_common 形八续））：
+/// $81F6 调+bne 段+$80B0 调（S1-02 接面）+sec/bpl 段——定域六写填面（$CE-$D3←A）。
+/// 返回 (写事件, 环出)。
+pub fn s6_81da_fill(a_in: u8) -> (Vec<(u16, u8)>, u8) {
+    (vec![(0x00CE, a_in), (0x00CF, a_in), (0x00D0, a_in),
+          (0x00D1, a_in), (0x00D2, a_in), (0x00D3, a_in)], 0xE0)
+}
+
+/// $F70C 员体：$81DA+AndEnData05（S2-30 接面）+$49 cmp 2 判（bcc 段）+
+/// $F752 调（S3-23 接面）+eor $FF 面（S5-132 同构——zp 读辨识条）。
+pub fn s6_f70c_body(a_in: u8, v49: u8) -> (Vec<(u16, u8)>, u16) {
+    let (ev, _) = s6_81da_fill(a_in);
+    (ev, 0xF7B3)
+}
+
+#[cfg(test)]
+mod s6_160_tests {
+    use super::*;
+
+    /// 二员转写形（$81DA 定域六写填 root+一壳）。
+    #[test]
+    fn s6_160_units_two() {
+        let (ev, xo) = s6_81da_fill(91);
+        assert_eq!(ev.len(), 6);
+        assert_eq!(xo, 0xE0); // 环出
+        assert!(ev.contains(&(0x00CE, 91))); // 定域填（非 x 索引——辨识条）
+        assert!(ev.contains(&(0x00D3, 91)));
+        let (ev2, j) = s6_f70c_body(91, 2);
+        assert_eq!(j, 0xF7B3);
+        assert_eq!(ev2.len(), 6);
+    }
+}

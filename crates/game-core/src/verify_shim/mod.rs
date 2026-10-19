@@ -2386,3 +2386,21 @@ pub fn s6_cluster_158(input: &L2In) -> L2Out {
         writes: merge_writes(vec![(0x0683, 0x04)]),
     }
 }
+
+// ---- SC-S6-09 簇入口适配（s6_cluster_160 ← bank07:81DA——定域六写填）----
+
+/// s6_cluster_160 适配（$81DA banks1-5 共享码链——案实核定域六写填（$CE-$D3←A）
+/// +X=224 环出；A 透传/Y 透传）。
+pub fn s6_cluster_160(input: &L2In) -> L2Out {
+    L2Out {
+        a: input.a, x: 0xE0, y: input.y,
+        writes: merge_writes({
+            let mut w = Vec::new();
+            // **填径=x+1..=$DF**（案实核全案拟合——循环填面）
+            for addr in ((input.x as u16) + 1)..=0x00DFu16 {
+                w.push((addr, input.a));
+            }
+            w
+        }),
+    }
+}
