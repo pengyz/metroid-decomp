@@ -67,3 +67,18 @@
   g3-004 注（LoadSFXData APU 写不入 out.writes）；
 - **验收协同**：窗形修落→ROM golden 抓取→六案三方对拍（golden==6502 核==game-core）
   ——verdict pass 前置=ROM golden 替换（质量底线 #1）。
+
+## 7. stops 面协同参照（porter 修面——jmp 间接案例边界设计）
+
+- **问题面**：RunSFXNoiseInit 等 jmp(SoundRoutinePtr) 间接转——例程 RTS 返
+  RunSoundRoutine 后再 jmp（**无限环险**）——runner 哨兵返回约定不适用（jmp 非
+  jsr——哨兵不弹）；
+- **stops 设计三案**（参照——porter 修面裁定）：
+  ① **例程入口 stops**（推荐）：stops=[ScrewAttackSFXInit, MissileLaunchSFXInit,
+  BombExplodeSFXInit, SamusWalkSFXInit, SpitFlameSFXInit]（$B2BB 表 5 员入口）
+  ——执行至例程入口即停（写集=例程前段：旗判+表查）；
+  ② GetSoundRoutine@RTS stops（无旗出口）：stops=[$B4BD@RTS]——旗零路径全跑；
+  ③ 例程 RTS stops（全写集）：stops=例程体出口（5 员 RTS）——写集全（含 LoadSFXData）
+  ——但需 runner 支持多 stops 命中；
+- **推荐注**：①（例程入口）=边界最简（写集可预测）——③（全写集）=卡收官对拍用
+  （ROM golden 全效应）——**两段式**（①预烤/③收官）=折中案。
