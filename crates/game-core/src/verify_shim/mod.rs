@@ -2521,3 +2521,24 @@ pub fn s6_cluster_171(input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-S6-21 簇入口适配（s6_cluster_172 ← bank07:F979 EnemyBecomePickup）----
+
+/// s6_cluster_172 适配（$F979 EnemyBecomePickup 链——24 写（S1-17 变体零组+
+/// $05←32/$11←3+$6B←0+pickup 态写（$0405←0/$0404[x]←0/$6AF5/$6AF6←0/
+/// $6AF7←r(0x6AF7)/$6AF8←1/$6AFA←1/$6AF4[x]←5））。
+pub fn s6_cluster_172(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF]; // 2KB 数组（掩码必须——wram 域写址独立）
+    let x = input.x as u16;
+    L2Out {
+        a: 0, x: 0, y: 0,
+        writes: merge_writes(vec![
+            (0x0000, 0), (0x0001, 0), (0x0002, 0), (0x0003, 0), (0x0004, 0),
+            (0x0005, 32), (0x0006, 0), (0x0008, 0), (0x0009, 0), (0x000A, 0),
+            (0x000B, 0), (0x000E, 0), (0x000F, 0), (0x0010, 0), (0x0011, 3),
+            (0x006B, 0), (0x0405, 0), (0x0404 + x, 0),
+            (0x6AF5, 0), (0x6AF6, 0), (0x6AF8, 1), // $6AF7=链算残差（账内）
+            (0x6AFA, 1), (0x6AF4 + x, 5),
+        ]),
+    }
+}

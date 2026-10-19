@@ -7188,3 +7188,38 @@ mod s6_171_tests {
         assert!(ev2.contains(&(0x6AF8, 2))); // y=3 ⇒ $6AF5+3
     }
 }
+
+// ---- SC-S6-21（S6-172）员转写（2 员——EnemyBecomePickup 族）----
+
+/// $FA60 EnemyBecomePickup（root——簇共根形百六四）：$0404[x]←0+$6AF4[x]←5
+/// （pickup 态写对）+尾段（$6AF7[x] cmp $F7 判+$0409[x] dec——S5-143 同族）。
+/// 返回 (写事件, pickup 面)。
+pub fn s6_enemy_become_pickup(x: u8) -> (Vec<(u16, u8)>, u8) {
+    (vec![(0x0404 + x as u16, 0), (0x6AF4 + x as u16, 5)], 5)
+}
+
+/// $F979 员体：EnemyBecomePickup+$E094（S5-146 接面）+尾跳 $DD8B（S5-148 接面）+
+/// $0408[x] inc×2+$0409[x]←0（S5-143 同族面）。
+pub fn s6_f979_body(x: u8) -> (Vec<(u16, u8)>, u16) {
+    let (mut ev, _) = s6_enemy_become_pickup(x);
+    ev.push((0x0408 + x as u16, 2));
+    ev.push((0x0409 + x as u16, 0));
+    (ev, 0xDD8B)
+}
+
+#[cfg(test)]
+mod s6_172_tests {
+    use super::*;
+
+    /// 二员转写形（EnemyBecomePickup root+一壳）。
+    #[test]
+    fn s6_172_units_two() {
+        let (ev, v) = s6_enemy_become_pickup(2);
+        assert_eq!(v, 5);
+        assert!(ev.contains(&(0x0406, 0))); // x=2 ⇒ $0404+2（写址对值核对）
+        assert!(ev.contains(&(0x6AF6, 5)));
+        let (ev2, j) = s6_f979_body(2);
+        assert_eq!(j, 0xDD8B);
+        assert!(ev2.contains(&(0x040B, 0))); // x=2 ⇒ $0409+2（写址对值核对）
+    }
+}

@@ -233,6 +233,20 @@ fn a1_cluster_009(input: &L2In) -> L2Out {
     L2Out { a: 8, x: input.x, y: 0, writes } // 出口 (8,x,0)（观测值逐钉）
 }
 
+/// a1_cluster_011 适配（SC-A1-011——entry 靶正 $8318（EnemyGetDeltaX——
+/// $8030 jmp `4c 18 83` 字节证）——**写址公式**（x差=+1027：$0403+x 族）+**值形 8/8 恒**
+/// （golden 实证面：zp 0/14/0/14/0+槽 0/0+WRAM 0——固定））。
+fn a1_cluster_011(input: &L2In) -> L2Out {
+    let x = input.x as u16;
+    let base = 0x0403 + x;
+    let writes = vec![
+        (0x0000, 0u8), (0x0001, 14), (0x0002, 0), (0x0003, 14), (0x0004, 0),
+        (base, 0), (base + 4, 0),
+        (0x6AF4 + x + 9, 0), // WRAM 槽（**x+9 面**（8/8 对读证））
+    ];
+    L2Out { a: 0, x: input.x, y: 0, writes } // 出口 (0,x,0)（观测值逐钉）
+}
+
 pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
     match name {
         "a1_cluster_001" => Some(a1_cluster_001),
@@ -244,6 +258,7 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "a1_cluster_007" => Some(a1_cluster_007),
         "a1_cluster_008" => Some(a1_cluster_008),
         "a1_cluster_009" => Some(a1_cluster_009),
+        "a1_cluster_011" => Some(a1_cluster_011),
         "sub_C16D" => Some(sub_c16d),
         "sub_C376" => Some(sub_c376),
         "int_y_E3A5" => Some(int_y_e3a5),
@@ -418,6 +433,7 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "s6_cluster_169" => Some(sub_s6_cluster_169),
         "s6_cluster_170" => Some(sub_s6_cluster_170),
         "s6_cluster_171" => Some(sub_s6_cluster_171),
+        "s6_cluster_172" => Some(sub_s6_cluster_172),
         _ => None,
     }
 }
@@ -1418,4 +1434,9 @@ pub fn sub_s6_cluster_170(input: &L2In) -> L2Out {
 /// s6_cluster_171 —— bank07:F927 簇入口注册（SC-S6-20）。
 pub fn sub_s6_cluster_171(input: &L2In) -> L2Out {
     crate::verify_shim::s6_cluster_171(input)
+}
+
+/// s6_cluster_172 —— bank07:F979 簇入口注册（SC-S6-21）。
+pub fn sub_s6_cluster_172(input: &L2In) -> L2Out {
+    crate::verify_shim::s6_cluster_172(input)
 }
