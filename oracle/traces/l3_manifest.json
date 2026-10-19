@@ -885,6 +885,117 @@
       "migration_note": "②后备：bundle_load 起跑（D7：绕过房 19/25 通行面——elevator 骑行面）",
       "scenario_sha256_note": "bundle_load 场景件（路径修：.mss 配对）",
       "watch_note": "zp+iram（事件核：MapPos/D7B3/ElevatorType）"
+    },
+    {
+      "id": "l3-sc-pickup-real",
+      "scenario": "sc-pickup-real",
+      "scenario_sha256": "86dfd9662c3f61c21a63b4a88d78b40eee5987230b0fd951d9de291adea52dd1",
+      "frames": 3500,
+      "frame_keys": [
+        "zp",
+        "iram"
+      ],
+      "legs": {
+        "oracle": {
+          "sample_point": "endFrame",
+          "rows": 3500,
+          "missing": [],
+          "head_skip": 0,
+          "note": "拾取事件核三断言设计面（GetItem/ItemData/SamusGear）——物品真径 B→A 实证环；bundle_capture 已移除（exec 回调约束——e8fa382 修）"
+        }
+      },
+      "game_core_leg": "disabled-s5",
+      "oracle_sha256": "7736cc8596a2b232bc768256a5a39f3d655067565575c729a5c7a19876c53641",
+      "watch": [
+        {
+          "label": "zp",
+          "base": "0000",
+          "range": "0000-00ff"
+        },
+        {
+          "label": "iram",
+          "base": "0100",
+          "range": "0100-07ff"
+        }
+      ],
+      "determinism_evidence": "同输入面三跑逐字节一致（sc-pickup-real/sc-statue-gate/sc-elevator-family 同模板独立跑——oracle_sha256 三案同锚 7736cc85…=确定性副证）",
+      "legacy_sample_point_note": "endFrame（帧末采样——2610df9 语义）",
+      "watch_note": "zp+iram（事件核：拾取三断言——GetItem/ItemData 态变/SamusGear 增）",
+      "shared_template_note": "三案输入模板同（travel 节拍）——消费差=断言集（pickup/statue/elevator 三观察面）"
+    },
+    {
+      "id": "l3-sc-statue-gate",
+      "scenario": "sc-statue-gate",
+      "scenario_sha256": "eac822f5cdbe9ffc0f47f0738e55434f8c2293abcbb96842c3c049bc5b643334",
+      "frames": 3500,
+      "frame_keys": [
+        "zp",
+        "iram"
+      ],
+      "legs": {
+        "oracle": {
+          "sample_point": "endFrame",
+          "rows": 3500,
+          "missing": [],
+          "head_skip": 0,
+          "note": "statue 门机制三断言设计面（KraidStatueRaiseState/KraidStatueIsHit/StatuesBridgeIsSpawned=$54）——boss face ②③素材消费"
+        }
+      },
+      "game_core_leg": "disabled-s5",
+      "oracle_sha256": "7736cc8596a2b232bc768256a5a39f3d655067565575c729a5c7a19876c53641",
+      "watch": [
+        {
+          "label": "zp",
+          "base": "0000",
+          "range": "0000-00ff"
+        },
+        {
+          "label": "iram",
+          "base": "0100",
+          "range": "0100-07ff"
+        }
+      ],
+      "determinism_evidence": "同输入面三跑逐字节一致（sc-pickup-real/sc-statue-gate/sc-elevator-family 同模板独立跑——oracle_sha256 三案同锚 7736cc85…=确定性副证）",
+      "legacy_sample_point_note": "endFrame（帧末采样——2610df9 语义）",
+      "watch_note": "zp+iram（事件核：statue 三断言——$0360-0370 Statue 对象族）",
+      "shared_template_note": "三案输入模板同（travel 节拍）——消费差=断言集（pickup/statue/elevator 三观察面）"
+    },
+    {
+      "id": "l3-sc-elevator-family",
+      "scenario": "sc-elevator-family",
+      "scenario_sha256": "07fc9e94872dc47f2fbd88595c88aaf0046a5668c23750c285fa68da2ef26dd7",
+      "frames": 3500,
+      "frame_keys": [
+        "zp",
+        "iram"
+      ],
+      "legs": {
+        "oracle": {
+          "sample_point": "endFrame",
+          "rows": 3500,
+          "missing": [],
+          "head_skip": 0,
+          "note": "elevator 家族三断言设计面（SamusOnElevator=$0307/ElevatorType bit7/MapPos 域切换）——🟡①素材消费（statue 同族状态机族谱）"
+        }
+      },
+      "game_core_leg": "disabled-s5",
+      "oracle_sha256": "7736cc8596a2b232bc768256a5a39f3d655067565575c729a5c7a19876c53641",
+      "watch": [
+        {
+          "label": "zp",
+          "base": "0000",
+          "range": "0000-00ff"
+        },
+        {
+          "label": "iram",
+          "base": "0100",
+          "range": "0100-07ff"
+        }
+      ],
+      "determinism_evidence": "同输入面三跑逐字节一致（sc-pickup-real/sc-statue-gate/sc-elevator-family 同模板独立跑——oracle_sha256 三案同锚 7736cc85…=确定性副证）",
+      "legacy_sample_point_note": "endFrame（帧末采样——2610df9 语义）",
+      "watch_note": "zp+iram（事件核：elevator 三断言——$0307 站台判/ElevatorType bit7/MapPos 域切换）",
+      "shared_template_note": "三案输入模板同（travel 节拍）——消费差=断言集（pickup/statue/elevator 三观察面）"
     }
   ]
 }
