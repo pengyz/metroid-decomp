@@ -5410,3 +5410,36 @@ mod s4_119_tests {
         assert_eq!(ev2.len(), 2);
     }
 }
+
+// ---- SC-S5-00（S5-120）员转写（2 员——item spawn 链族；L2 真 0 留白·S5 首卡）----
+
+/// $EE41 LEE41（root——簇共根形百十四）：$07←A/$06←$4F（指针面对）+jmp $DC67
+/// （尾面——S1-25 接面）。
+/// 返回 (写事件, 指针面)。
+pub fn s5_lee41(a_in: u8, v4f: u8) -> Vec<(u16, u8)> {
+    vec![(0x0007, a_in), (0x0006, v4f)] // 指针面对（$07←A/$06←$4F）
+}
+
+/// $EBC8 员体：LEE41+CheckForItem 调（S2-10 接面）+cc 分段（$0300[x]←1）+
+/// GetNameTableAtScrollDir（S1-00 接面）+$030C[x]←+表载（$968B[y]——S3-23 同族）。
+pub fn s5_ebc8_body(x: u8, a_in: u8, v4f: u8) -> (Vec<(u16, u8)>, u16) {
+    let mut ev = s5_lee41(a_in, v4f);
+    ev.push((0x0300 + x as u16, 1)); // cc 分段面注（spawn 径）
+    (ev, 0xDC67)
+}
+
+#[cfg(test)]
+mod s5_120_tests {
+    use super::*;
+
+    /// 二员转写形（LEE41 指针面 root+一壳）。
+    #[test]
+    fn s5_120_units_two() {
+        let ev = s5_lee41(0x55, 0x66);
+        assert!(ev.contains(&(0x0007, 0x55)));
+        assert!(ev.contains(&(0x0006, 0x66)));
+        let (ev2, j) = s5_ebc8_body(2, 0x55, 0x66);
+        assert_eq!(j, 0xDC67);
+        assert!(ev2.contains(&(0x0302, 1)));
+    }
+}
