@@ -3387,3 +3387,17 @@ pub fn a3_cluster_009(input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-B3-10 簇入口适配（a3_cluster_010 ← bank02:8036——常量零组）----
+
+/// a3_cluster_010 适配（bank02:8036（areas_common 化身——bank2）——案实核 4 写
+/// （常量零组（$00/$0409/$040D/$6B03←0）——判别条未触发（严格顺序 ✓））；
+/// A=0/X 透传/Y 透传）。
+pub fn a3_cluster_010(input: &L2In) -> L2Out {
+    L2Out {
+        a: 0, x: input.x, y: input.y,
+        writes: merge_writes(vec![
+            (0x0000, 0), (0x0409, 0), (0x040D, 0), (0x6B03, 0),
+        ]),
+    }
+}
