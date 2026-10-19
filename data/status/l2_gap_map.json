@@ -365,6 +365,13 @@
       "reason": "DoorSubRoutine→DrawDoor→OAM 深径链（54 写（>20 深径判别条触发）——预登记先行（新法续——严格顺序纪律）——S5-121 同款跨卡深径）",
       "exit": "门链 OAM 绘制径建模清（全链模拟）→账清转 strict",
       "registered": "2026-10-19"
+    },
+    {
+      "id": "SC-B2-034-CROSSCARD-YCHAIN",
+      "case_prefix": "a2-034-case-",
+      "reason": "Y 链算深径（Y_out=57/63 变径（fixture 弱源）+$0405 条件写——深径判别条补触发（链算径（多入参））——S5-121 同款跨卡深径）",
+      "exit": "Y 链算径建模清（多入参链模拟）→账清转 strict",
+      "registered": "2026-10-19"
     }
   ]
 }
