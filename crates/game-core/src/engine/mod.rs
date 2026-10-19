@@ -7039,3 +7039,47 @@ mod s6_167_tests {
         assert!(ev2.contains(&(0x000A, 2)));
     }
 }
+
+// ---- SC-S6-17（S6-168）员转写（2 员——SpawnEnProjectile_F8F8 族；L2 真 0 留白）----
+
+/// $F8F8 SpawnEnProjectile_F8F8（root——簇共根形百六十）：$85 cmp 2 判（bcc 段）+
+/// $4B X 载+$0405[x] lsr/$88 rol 面（S6-166 同族）+and 7→$040A[y]（态写1）+
+/// $6AF4[y]←2（态写2）。
+/// 返回 (写事件, 判段)。
+pub fn s6_f8f8_spawn(x: u8, y: u8, v85: u8, v88: u8, v0405_x: u8) -> (Vec<(u16, u8)>, bool) {
+    if v85 < 2 {
+        return (vec![], false); // bcc 段
+    }
+    let v = ((v88 << 1) | (v0405_x >> 7)) & 7; // rol/lsr 面
+    (vec![(0x040A + y as u16, v), (0x6AF4 + y as u16, 2)], true)
+}
+
+/// $F8BD 员体：$F8F8+$0405[x] lsr/pla/tax 面+$97A3/$979B 表对载→$04/$05
+/// （指针面——S3-23 同族）。
+pub fn s6_f8bd_body(x: u8, y: u8, v85: u8, v88: u8, v0405_x: u8, t97a3: u8, t979b: u8)
+    -> (Vec<(u16, u8)>, u16) {
+    let (mut ev, _) = s6_f8f8_spawn(x, y, v85, v88, v0405_x);
+    ev.push((0x0004, t97a3));
+    ev.push((0x0005, t979b));
+    (ev, 0xC41D)
+}
+
+#[cfg(test)]
+mod s6_168_tests {
+    use super::*;
+
+    /// 二员转写形（$F8F8 SpawnEnProjectile root+一壳）。
+    #[test]
+    fn s6_168_units_two() {
+        let (ev, ok) = s6_f8f8_spawn(2, 3, 5, 0, 0);
+        assert!(ok);
+        assert!(ev.contains(&(0x040D, 0))); // y=3 ⇒ $040A+3（x 索引强制步）
+        assert!(ev.contains(&(0x6AF7, 2))); // y=3 ⇒ $6AF4+3
+        let (ev2, ok2) = s6_f8f8_spawn(2, 3, 1, 0, 0);
+        assert!(!ok2); // bcc 段
+        let (ev3, j) = s6_f8bd_body(2, 3, 5, 0, 0, 0x11, 0x22);
+        assert_eq!(j, 0xC41D);
+        assert!(ev3.contains(&(0x0004, 0x11)));
+        assert!(ev3.contains(&(0x0005, 0x22)));
+    }
+}
