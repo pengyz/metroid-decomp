@@ -4216,3 +4216,11 @@ pub fn a5_cluster_033(input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-B5-10 簇入口适配（a5_cluster_034 ← bank03:9DF2——透传类）----
+
+/// a5_cluster_034 适配（bank03:9DF2（bank3 窗）——案实核透传类（regs 透传；无写面
+/// （0 写（判别条未触发（严格顺序 ✓）））。
+pub fn a5_cluster_034(input: &L2In) -> L2Out {
+    L2Out { a: input.a, x: input.x, y: input.y, writes: vec![] }
+}
