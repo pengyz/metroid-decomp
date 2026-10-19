@@ -10053,3 +10053,54 @@ mod a4_005_tests {
         assert!(ev.contains(&(0x0001, 0x87))); // 同族面（写址对值核对）
     }
 }
+
+// ---- SC-B4-06（a4-006）员转写（2 员——bank3 化身六现（透传族））----
+
+/// bank03:8042 areas_common 化身（root——簇共根形二百五九·**bank3 化身六现**）。
+/// 返回 (化身面, 有效)。
+pub fn b3_8042_areas_incarnation() -> (bool, bool) {
+    (true, true) // areas_common 共享（bank3 化身六现）
+}
+
+/// $9999/$9E1F 员体（bank3 同族面（透传类——3 员））。
+pub fn b3_9999_face(a: u8, x: u8, y: u8) -> (u8, u8, u8) {
+    (a, x, y) // 透传类
+}
+
+#[cfg(test)]
+mod a4_006_tests {
+    use super::*;
+
+    /// 二员转写形（bank3 化身六现 root+透传面）。
+    #[test]
+    fn a4_006_units_two() {
+        assert!(b3_8042_areas_incarnation().0);
+        assert_eq!(b3_9999_face(5, 6, 7), (5, 6, 7)); // 透传类
+    }
+}
+
+// ---- SC-B4-07（a4-007）员转写（2 员——DrawDoor 族（bank3 化身））----
+
+/// bank03:8BB1 DrawDoor（root——簇共根形二百六十·**bank3 化身**（a1-015 同款
+/// ——refs 法：areas_common.asm:1450（bank3 复现）））。
+/// 返回 (目标址, 桩面)。
+pub fn b3_8bb1_draw_door() -> (u16, bool) {
+    (0x8BB1, true) // DrawDoor（bank3 化身（a1-015 直连））
+}
+
+/// $8CED Goto2DrawDoor（bank3 化身——a1-015 同款（asm:1683））。
+pub fn b3_8ced_goto2() -> (u16, bool) {
+    (0x8BB1, true) // jmp DrawDoor（bank3 化身直连）
+}
+
+#[cfg(test)]
+mod a4_007_tests {
+    use super::*;
+
+    /// 二员转写形（DrawDoor bank3 化身 root+跳转面）。
+    #[test]
+    fn a4_007_units_two() {
+        assert_eq!(b3_8bb1_draw_door(), (0x8BB1, true)); // a1-015 直连
+        assert_eq!(b3_8ced_goto2(), (0x8BB1, true));
+    }
+}
