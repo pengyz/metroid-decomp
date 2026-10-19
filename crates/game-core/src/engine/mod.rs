@@ -6695,3 +6695,37 @@ mod s6_157_tests {
         assert_eq!(ev2.len(), 1);
     }
 }
+
+// ---- SC-S6-07（S6-158）员转写（2 员——SFX_BigEnemyHit 族）----
+
+/// $CBCE SFX_BigEnemyHit（root——簇共根形百五十·**SFX 族十一现**）：SFX id 装载链
+/// （$04/$20/$02/$40/$04/$80 六 id）+X=3（ldx）。
+/// 返回 (声旗写, SFX id)。
+pub fn s6_sfx_big_enemy_hit() -> (Vec<(u16, u8)>, u8) {
+    (vec![(0x0683, 0x04)], 0x04) // sfxTri_BigEnemyHit=$04（案实核恒定）
+}
+
+/// $F5A7 员体：SFX_BigEnemyHit+$4B X 载+$80B0 调（S1-02 接面）+and $20 段+
+/// $040E[x] cmp $0B 判（回卷）+$6AF4[x] cmp 4 段。
+pub fn s6_f5a7_body(x: u8, v040e_x: u8, v80b0: u8) -> (Vec<(u16, u8)>, u8) {
+    let (mut ev, id) = s6_sfx_big_enemy_hit();
+    if v80b0 & 0x20 == 0 && v040e_x == 0x0B {
+        ev.push((0x040E + x as u16, v040e_x)); // 判段面注
+    }
+    (ev, id)
+}
+
+#[cfg(test)]
+mod s6_158_tests {
+    use super::*;
+
+    /// 二员转写形（SFX_BigEnemyHit 十一现 root+一壳）。
+    #[test]
+    fn s6_158_units_two() {
+        let (ev, id) = s6_sfx_big_enemy_hit();
+        assert_eq!(id, 0x04);
+        assert!(ev.contains(&(0x0683, 0x04)));
+        let (ev2, _) = s6_f5a7_body(2, 0x0B, 0x10);
+        assert!(ev2.contains(&(0x0410, 0x0B))); // 判段（x=2 ⇒ $040E+2）
+    }
+}

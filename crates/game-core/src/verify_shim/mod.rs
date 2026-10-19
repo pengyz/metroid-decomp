@@ -2375,3 +2375,14 @@ pub fn s6_cluster_157(input: &L2In) -> L2Out {
         writes: merge_writes(vec![(0x0684, 0x02)]),
     }
 }
+
+// ---- SC-S6-07 簇入口适配（s6_cluster_158 ← bank07:CBCE SFX_BigEnemyHit 族）----
+
+/// s6_cluster_158 适配（$CBCE SFX_BigEnemyHit——案实核恒定：$0683←$04（声旗）；
+/// A=$04/X=3/Y 透传——SFX 族十一现）。
+pub fn s6_cluster_158(input: &L2In) -> L2Out {
+    L2Out {
+        a: 0x04, x: 3, y: input.y,
+        writes: merge_writes(vec![(0x0683, 0x04)]),
+    }
+}
