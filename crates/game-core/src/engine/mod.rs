@@ -10769,3 +10769,31 @@ mod a5_032_tests {
         assert_eq!(n, 4); // 4 迭代（3→2→1→0→break）
     }
 }
+
+// ---- SC-B5-09（a5-033）员转写（2 员——bank3 3 写族面二现（x 索引））----
+
+/// bank03:9B03 员体（root——簇共根形二百八四·bank3 3 写族面二现（2 员——x 索引））。
+/// 返回 (写事件, 有效)。
+pub fn b3_9b03_face(x: u8, v1: u8) -> Vec<(u16, u8)> {
+    let x = x as u16;
+    vec![(0x0404 + x + 3, 0), (0x0404 + x + 6, v1), (0x0404 + x + 7, 0)]
+}
+
+/// $9A83/$9AF9 员体（同族面（连现））。
+pub fn b3_9a83_face(x: u8, v1: u8) -> Vec<(u16, u8)> {
+    b3_9b03_face(x, v1)
+}
+
+#[cfg(test)]
+mod a5_033_tests {
+    use super::*;
+
+    /// 二员转写形（bank3 3 写族面二现 root+一壳）。
+    #[test]
+    fn a5_033_units_two() {
+        let ev = b3_9b03_face(140, 224);
+        assert_eq!(ev.len(), 3);
+        assert!(ev.contains(&(0x0496, 224))); // x=140 ⇒ $0404+146（写址对值核对）
+        assert_eq!(b3_9a83_face(140, 224).len(), 3);
+    }
+}
