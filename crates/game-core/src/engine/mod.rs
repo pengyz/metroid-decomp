@@ -7005,3 +7005,37 @@ mod s6_166_tests {
         assert!(ev.contains(&(0x0464, 0x55))); // y=$60 ⇒ $0404+0x60（x 索引强制步）
     }
 }
+
+// ---- SC-S6-16（S6-167）员转写（2 员——Table15 族）----
+
+/// $F92C Table15（root——簇共根形百五九）：$6AF5/$6AF6[y]←2（对写）+$0405[y] or 2
+/// （三写面——Table15 命名面）。
+/// 返回 (写事件, 表值)。
+pub fn s6_table15(y: u8) -> (Vec<(u16, u8)>, u8) {
+    (vec![(0x6AF5 + y as u16, 2), (0x6AF6 + y as u16, 2),
+          (0x0405 + y as u16, 2)], 2)
+}
+
+/// $F88F 员体：Table15+$0405[x] lsr/rol 面（$978B 表载——S3-23 同族）+
+/// $F68D 调+$4B X 载（S6-166 同族面）。
+pub fn s6_f88f_body(x: u8, y: u8) -> (Vec<(u16, u8)>, u8) {
+    let (mut ev, v) = s6_table15(y);
+    ev.push((0x000A, v)); // 表载面注
+    (ev, v)
+}
+
+#[cfg(test)]
+mod s6_167_tests {
+    use super::*;
+
+    /// 二员转写形（Table15 root+一壳）。
+    #[test]
+    fn s6_167_units_two() {
+        let (ev, v) = s6_table15(3);
+        assert_eq!(v, 2);
+        assert!(ev.contains(&(0x6AF8, 2))); // y=3 ⇒ $6AF5+3（x 索引强制步）
+        assert!(ev.contains(&(0x0408, 2)));
+        let (ev2, _) = s6_f88f_body(2, 3);
+        assert!(ev2.contains(&(0x000A, 2)));
+    }
+}

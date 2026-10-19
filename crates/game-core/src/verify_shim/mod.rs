@@ -2454,3 +2454,26 @@ pub fn s6_cluster_166(input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-S6-16 簇入口适配（s6_cluster_167 ← bank07:F88F——S6-166 同族六写）----
+
+/// s6_cluster_167 适配（$F88F Table15 链——**S6-166 同族**六写 ptr 面
+/// （$02/$04/$05/$08/$09/$0B）；A=0/X=0/Y 透传）。
+pub fn s6_cluster_167(input: &L2In) -> L2Out {
+    L2Out {
+        a: 0, x: 0, y: input.y,
+        writes: merge_writes({
+            let y = input.y as u16;
+            vec![
+                (0x0002, 0), (0x0004, 3), (0x0005, 0x60),
+                (0x0008, 3), (0x0009, 0x60), (0x000B, 0),
+                // **slot 基=$0400+y**（S6-166 同径（Y=$60 特例=0x460））
+                (0x0400 + y, 3), (0x0401 + y, 0x60), (0x0402 + y, 0),
+                (0x0403 + y, 2), (0x0405 + y, 2),
+                // **slot 基=$6AF4+y**
+                (0x6AF4 + y, 1), (0x6AF5 + y, 2), (0x6AF6 + y, 2), (0x6AF8 + y, 0),
+                (0x6AF9 + y, 133), (0x6AFA + y, 133), (0x6AFB + y, 0),
+            ]
+        }),
+    }
+}

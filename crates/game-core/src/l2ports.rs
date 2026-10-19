@@ -202,6 +202,16 @@ fn a1_cluster_007(input: &L2In) -> L2Out {
     L2Out { a: 0, x: 0, y: 0, writes }
 }
 
+/// a1_cluster_008 适配（SC-A1-008——entry 靶正 $FD8F（ApplySpeedToPosition——
+/// $8027 jmp `4c 8f fd` 字节证））。
+fn a1_cluster_008(input: &L2In) -> L2Out {
+    let r = |a: usize| input.ram.get(a).copied().unwrap_or(0);
+    let (a, _, _, writes) = crate::enemy::common::apply_speed_to_position(
+        r(0x0003), r(0x0304 + input.x as usize), r(0x0308 + input.x as usize),
+        r(0x0305 + input.x as usize), r(0x0309 + input.x as usize));
+    L2Out { a, x: input.x, y: input.y, writes } // x/y 透传（golden 面）
+}
+
 pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
     match name {
         "a1_cluster_001" => Some(a1_cluster_001),
@@ -211,6 +221,7 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "a1_cluster_005" => Some(a1_cluster_005),
         "a1_cluster_006" => Some(a1_cluster_006),
         "a1_cluster_007" => Some(a1_cluster_007),
+        "a1_cluster_008" => Some(a1_cluster_008),
         "sub_C16D" => Some(sub_c16d),
         "sub_C376" => Some(sub_c376),
         "int_y_E3A5" => Some(int_y_e3a5),
@@ -381,6 +392,7 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "s6_cluster_164" => Some(sub_s6_cluster_164),
         "s6_cluster_165" => Some(sub_s6_cluster_165),
         "s6_cluster_166" => Some(sub_s6_cluster_166),
+        "s6_cluster_167" => Some(sub_s6_cluster_167),
         _ => None,
     }
 }
@@ -1361,4 +1373,9 @@ pub fn sub_s6_cluster_165(input: &L2In) -> L2Out {
 /// s6_cluster_166 —— bank07:F887 簇入口注册（SC-S6-15）。
 pub fn sub_s6_cluster_166(input: &L2In) -> L2Out {
     crate::verify_shim::s6_cluster_166(input)
+}
+
+/// s6_cluster_167 —— bank07:F88F 簇入口注册（SC-S6-16）。
+pub fn sub_s6_cluster_167(input: &L2In) -> L2Out {
+    crate::verify_shim::s6_cluster_167(input)
 }
