@@ -2766,3 +2766,16 @@ pub fn a1_cluster_008(input: &L2In) -> L2Out {
         writes: merge_writes(vec![(0x0002, 0)]),
     }
 }
+
+// ---- SC-B1-09 簇入口适配（a1_cluster_009 ← bank01:802A——refs 法六现）----
+
+/// a1_cluster_009 适配（$802A CommonJump_0E→$EB6E（refs 法：asm:66）——案实核四写
+/// （$04B0←0/$04B4←8/$04B6←8/$04B8←1（定址面））；A=8/X 透传/Y=0）。
+pub fn a1_cluster_009(input: &L2In) -> L2Out {
+    L2Out {
+        a: 8, x: input.x, y: 0,
+        writes: merge_writes(vec![
+            (0x04B0, 0), (0x04B4, 8), (0x04B6, 8), (0x04B8, 1),
+        ]),
+    }
+}

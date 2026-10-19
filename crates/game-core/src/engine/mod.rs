@@ -7792,3 +7792,31 @@ mod a1_008_tests {
         assert!(ev.contains(&(0x0002, 0))); // 单写（写址对值核对）
     }
 }
+
+// ---- SC-B1-09（a1-009）员转写（2 员——CommonJump_0E 族·refs 法）----
+
+/// $802A CommonJump_0E（root——簇共根形百八三·桩阵十现（形九续）——refs 法：
+/// asm:66 `jmp LEB6E`）。
+/// 返回 (目标址, 桩面)。
+pub fn a802a_common_jump() -> (u16, bool) {
+    (0xEB6E, true) // jmp LEB6E（refs 法）
+}
+
+/// CommonJump_0E 四写面（定址面——案实核）。
+pub fn a802a_face() -> Vec<(u16, u8)> {
+    vec![(0x04B0, 0), (0x04B4, 8), (0x04B6, 8), (0x04B8, 1)]
+}
+
+#[cfg(test)]
+mod a1_009_tests {
+    use super::*;
+
+    /// 二员转写形（CommonJump_0E root+面壳）——refs 法六现。
+    #[test]
+    fn a1_009_units_two() {
+        assert_eq!(a802a_common_jump(), (0xEB6E, true));
+        let ev = a802a_face();
+        assert_eq!(ev.len(), 4);
+        assert!(ev.contains(&(0x04B8, 1))); // 定址面（写址对值核对）
+    }
+}
