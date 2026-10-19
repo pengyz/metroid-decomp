@@ -3478,3 +3478,18 @@ pub fn a3_cluster_015(input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-B3-16 簇入口适配（a3_cluster_016 ← bank02:8C8A——a1-019 同款）----
+
+/// a3_cluster_016 适配（bank02:8C8A（DoorSubRoutine8C8A——bank2 化身（a1-019
+/// 同款））——60 写=账内深径（DOORSUB8C8A——预登记先行）；A=0/X 透传/Y 透传）。
+pub fn a3_cluster_016(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    L2Out {
+        a: 0, x: input.x, y: input.y,
+        writes: merge_writes(vec![
+            (0x0000, r(0x0000)), (0x0001, 0x89), (0x0002, 0x51), (0x0003, 0x87),
+            (0x0004, 0x75), (0x0005, 0xB0), (0x0006, 0), (0x0008, 8),
+        ]),
+    }
+}
