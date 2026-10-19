@@ -55,3 +55,15 @@
 - **烤案面**（g3-pregen）：g3-000-case（bank07:B3B4×4 LCG→ROM golden）——
   ram_addrs=旗族块；
 - **验收**：L2 增量+L3 回归+全案绿（施工图 §2 口径）。
+
+## 6. bank07 窗形修协同面（l2-diff entry 形扩测试面预备）
+
+- **协同注**（porter 在做——l2-diff bank07 窗形修）：g3 案 entry=**bank07: 形**
+  （B3B4/B31B/B337/B34B/B368/B3F0——固定 bank $C000 域）+window_bank=7 显式；
+- **测试面预备**（g3 六案=形扩测试面）：
+  ① bank07 固定窗形（$C000 域——非 $8000 切窗）——entry bank 标签=窗口 bank（合一）；
+  ② window_bank=7 显式携带（README 契约面：L2In.window_bank 同取）；
+  ③ **写集面**：RAM 写（$0000-$07FF 归一）vs APU 写（$4000 族——非 RAM 不记）——
+  g3-004 注（LoadSFXData APU 写不入 out.writes）；
+- **验收协同**：窗形修落→ROM golden 抓取→六案三方对拍（golden==6502 核==game-core）
+  ——verdict pass 前置=ROM golden 替换（质量底线 #1）。
