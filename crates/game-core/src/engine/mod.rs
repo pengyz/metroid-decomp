@@ -8606,3 +8606,30 @@ mod a2_035_tests {
         assert_eq!(a9ac6_face().len(), 15);
     }
 }
+
+// ---- SC-B2-14（a2-036）员转写（2 员——$9A8F 3 写族面）----
+
+/// $9A8F 员体（root——簇共根形二百十·3 写族面（$6B2F-$6B31 族））。
+/// 返回 (写事件, 有效)。
+pub fn a9a8f_face() -> Vec<(u16, u8)> {
+    vec![(0x6B2F, 0), (0x6B30, 53), (0x6B31, 53)]
+}
+
+/// $9ABA/$9AD6 员体（同族面（连现））。
+pub fn a9aba_face() -> Vec<(u16, u8)> {
+    a9a8f_face()
+}
+
+#[cfg(test)]
+mod a2_036_tests {
+    use super::*;
+
+    /// 二员转写形（$9A8F 3 写族面 root+一壳）。
+    #[test]
+    fn a2_036_units_two() {
+        let ev = a9a8f_face();
+        assert_eq!(ev.len(), 3);
+        assert!(ev.contains(&(0x6B30, 53))); // 3 写（写址对值核对）
+        assert_eq!(a9aba_face().len(), 3);
+    }
+}

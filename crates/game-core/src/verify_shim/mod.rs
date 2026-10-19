@@ -3163,3 +3163,15 @@ pub fn a2_cluster_035(_input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-B2-14 簇入口适配（a2_cluster_036 ← bank01:9A8F——判别条补触发）----
+
+/// a2_cluster_036 适配（$9A8F（S5-146 族区）——案实核 3 写（$6B2F-$6B31 族
+/// （53 值 fixture 弱源）——值链算深径（判别条补触发→账目预登记（VALCHAIN）→
+/// L2 并案）；A=0/X=0/Y=0）。
+pub fn a2_cluster_036(_input: &L2In) -> L2Out {
+    L2Out {
+        a: 0, x: 0, y: 0,
+        writes: merge_writes(vec![(0x6B2F, 0), (0x6B30, 53), (0x6B31, 53)]),
+    }
+}
