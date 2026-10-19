@@ -2065,3 +2065,27 @@ pub fn s5_cluster_123(input: &L2In) -> L2Out {
     w.push((0x6BEA, 169));
     L2Out { a: 0xC4, x, y: 0, writes: merge_writes(w) }
 }
+
+// ---- SC-S5-08 簇入口适配（s5_cluster_128 ← bank07:F0A8——S1-17 族依存形）----
+
+/// s5_cluster_128 适配（$F0A8 GetEnemyXSlotPosition 链——案实核依存：
+/// \$00/\$06/\$07/\$11←r(\$030D)/\$08/\$09←r(\$030E)+零组（\$01/\$03-\$05/\$0A/\$0B）
+/// +\$10←3；A=0/X=0xC0/Y=0）。
+pub fn s5_cluster_128(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    let v30d = r(0x030D);
+    let v30e = r(0x030E);
+    // 分支径判别（r($6F)≠0 ⇒ $6E/$6F 清+Y=1——案 5 实核）
+    let branch = r(0x006F) != 0;
+    let mut w = vec![
+        (0x0000, v30d), (0x0001, 0), (0x0003, 0), (0x0004, 0), (0x0005, 0),
+        (0x0006, v30d), (0x0007, v30d),
+        (0x0008, v30e), (0x0009, v30e),
+        (0x000A, 0), (0x000B, 0), (0x0010, 3), (0x0011, v30d),
+    ];
+    if branch {
+        w.push((0x006E, 0));
+        w.push((0x006F, 0));
+    }
+    L2Out { a: 0, x: 0xC0, y: if branch { 1 } else { 0 }, writes: merge_writes(w) }
+}

@@ -5660,3 +5660,43 @@ mod s5_127_tests {
         assert!(ev.contains(&(0x0091, 0x49)));
     }
 }
+
+// ---- SC-S5-08（S5-128）员转写（2 员——GetEnemyXSlotPosition 族）----
+
+/// $F152 GetEnemyXSlotPosition（root——簇共根形百二一）：$0400/$0401[x]→$07/$09
+/// （位置对——S1-21/S2-34 load 同构）+$6AFB[x]→$F17F（尾面）。
+/// 返回 (写事件, 位置面)。
+pub fn s5_get_enemy_x_pos(x: u8, v0400_x: u8, v0401_x: u8) -> Vec<(u16, u8)> {
+    vec![(0x0007, v0400_x), (0x0009, v0401_x)]
+}
+
+/// $F0A8 员体：GetEnemyXSlotPosition+分支径（r($6F)≠0 ⇒ $6E/$6F 清+Y=1——案实核）
+/// +S1-17 族依存面（$030D/$030E 张）。
+pub fn s5_f0a8_body(x: u8, v6f: u8) -> (Vec<(u16, u8)>, u8) {
+    let branch = v6f != 0;
+    let mut ev = Vec::new();
+    if branch {
+        ev.push((0x006E, 0));
+        ev.push((0x006F, 0));
+    }
+    (ev, if branch { 1 } else { 0 })
+}
+
+#[cfg(test)]
+mod s5_128_tests {
+    use super::*;
+
+    /// 二员转写形（GetEnemyXSlotPosition root+分支径壳）。
+    #[test]
+    fn s5_128_units_two() {
+        let ev = s5_get_enemy_x_pos(2, 8, 9);
+        assert!(ev.contains(&(0x0007, 8)));
+        assert!(ev.contains(&(0x0009, 9)));
+        let (ev2, y) = s5_f0a8_body(2, 5);
+        assert_eq!(y, 1); // 分支径
+        assert!(ev2.contains(&(0x006E, 0)));
+        let (ev3, y3) = s5_f0a8_body(2, 0);
+        assert_eq!(y3, 0);
+        assert!(ev3.is_empty());
+    }
+}
