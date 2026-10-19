@@ -1303,6 +1303,13 @@
       "reason": "值链算深径（$6AF8-$6AFA←0/5/5（fixture 弱源——a6-006 同款）——深径判别条补触发（链算径）——S5-121 同款跨卡深径）",
       "exit": "值链算径建模清（$6B 族链模拟）→账清转 strict",
       "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-MD_RUNACCEL_PHYSICS-IMPL",
+      "case_prefix": "md_runaccel_physics",
+      "reason": "【预登记/补账】md_runaccel_physics 簇（批产 WIP——A 批预登记制）",
+      "exit": "md_runaccel_physics 落→账清转 strict",
+      "registered": "2026-10-20"
     }
   ]
 }
