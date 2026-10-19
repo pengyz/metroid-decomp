@@ -2825,3 +2825,20 @@ pub fn a1_cluster_012(_input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-B1-13 簇入口适配（a1_cluster_013 ← bank01:8036——a1-010 同族（refs 法））----
+
+/// a1_cluster_013 适配（$8036 CommonJump_EnemyGetDeltaY_UsingAcceleration（refs 法：
+/// asm:78）——案实核四写（a1-010 同族（$00/x±2 对/$6AF4+x+8——写址不掩））；
+/// A=0/X 透传/Y=14）。
+pub fn a1_cluster_013(input: &L2In) -> L2Out {
+    L2Out {
+        a: 0, x: input.x, y: 14,
+        writes: merge_writes(vec![
+            (0x0000, 0),
+            (0x0404 + input.x as u16 - 2, 0),
+            (0x0404 + input.x as u16 + 2, 0),
+            (0x6AF4 + input.x as u16 + 8, 0), // 写址不掩
+        ]),
+    }
+}

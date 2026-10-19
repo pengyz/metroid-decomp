@@ -7908,3 +7908,34 @@ mod a1_012_tests {
         assert!(ev.contains(&(0x0005, 0x60))); // 指针面（写址对值核对）
     }
 }
+
+// ---- SC-B1-13（a1-013）员转写（2 员——EnemyGetDeltaY_UsingAcceleration 族·refs 法）----
+
+/// $8036 CommonJump_EnemyGetDeltaY_UsingAcceleration（root——簇共根形百八七·
+/// 桩阵十四现（形九续）——refs 法：asm:78（a1-010 加速版））。
+/// 返回 (目标址, 桩面)。
+pub fn a8036_common_jump() -> (u16, bool) {
+    (0xE0B9, true) // jmp EnemyGetDeltaY_UsingAcceleration（refs 法）
+}
+
+/// EnemyGetDeltaY_UsingAcceleration 四写面（a1-010 同族——写址不掩）。
+pub fn a8036_face(x: u8) -> Vec<(u16, u8)> {
+    vec![(0x0000, 0),
+         (0x0404 + x as u16 - 2, 0),
+         (0x0404 + x as u16 + 2, 0),
+         (0x6AF4 + x as u16 + 8, 0)]
+}
+
+#[cfg(test)]
+mod a1_013_tests {
+    use super::*;
+
+    /// 二员转写形（EnemyGetDeltaY_UsingAcceleration root+面壳）——refs 法十现。
+    #[test]
+    fn a1_013_units_two() {
+        assert!(a8036_common_jump().1);
+        let ev = a8036_face(0xF0);
+        assert!(ev.contains(&(0x6BEC, 0))); // x=0xF0 ⇒ 0x6AF4+0xF0+8（写址对值核对）
+        assert!(ev.contains(&(0x04F2, 0)));
+    }
+}
