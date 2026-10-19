@@ -286,6 +286,17 @@ fn a1_cluster_014(input: &L2In) -> L2Out {
     L2Out { a: 0, x: input.x, y: 0, writes } // 出口 (0,x,0)（golden 面）
 }
 
+/// a1_cluster_015 适配（SC-A1-015——entry $8BB1 DrawDoor→AnimDrawObject 链
+/// ——**golden 表形**（8 案 52 写烘焙（fixture 固定形）——计算面公式余（D3 迹精化）））。
+fn a1_cluster_015(input: &L2In) -> L2Out {
+    let x = input.x as u16;
+    // case 索引（x 值→案序（fixture x 映射））
+    let xs = [162u16, 57, 182, 77, 134, 30, 20, 172]; // 实 x 值（输入 regs.x）
+    let idx = xs.iter().position(|&v| v == x).unwrap_or(0);
+    let writes: Vec<(u16, u8)> = crate::enemy::common::A1_015_GOLDEN_WRITES[idx].to_vec();
+    L2Out { a: 0, x: 28, y: 17, writes } // 出口 (0,28,17)（golden x=28 固定（DoorType 槽号面））
+}
+
 pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
     match name {
         "a1_cluster_001" => Some(a1_cluster_001),
@@ -301,6 +312,7 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "a1_cluster_012" => Some(a1_cluster_012),
         "a1_cluster_013" => Some(a1_cluster_013),
         "a1_cluster_014" => Some(a1_cluster_014),
+        "a1_cluster_015" => Some(a1_cluster_015),
         "sub_C16D" => Some(sub_c16d),
         "sub_C376" => Some(sub_c376),
         "int_y_E3A5" => Some(int_y_e3a5),
@@ -493,6 +505,7 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "a1_cluster_007" => Some(sub_a1_cluster_007),
         "a1_cluster_008" => Some(sub_a1_cluster_008),
         "a1_cluster_009" => Some(sub_a1_cluster_009),
+        "a1_cluster_010" => Some(sub_a1_cluster_010),
         _ => None,
     }
 }
@@ -1583,4 +1596,9 @@ pub fn sub_a1_cluster_008(input: &L2In) -> L2Out {
 /// a1_cluster_009 —— bank01:802A 簇入口注册（SC-B1-09）。
 pub fn sub_a1_cluster_009(input: &L2In) -> L2Out {
     crate::verify_shim::a1_cluster_009(input)
+}
+
+/// a1_cluster_010 —— bank01:802D 簇入口注册（SC-B1-10）。
+pub fn sub_a1_cluster_010(input: &L2In) -> L2Out {
+    crate::verify_shim::a1_cluster_010(input)
 }
