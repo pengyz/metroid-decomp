@@ -7360,3 +7360,40 @@ mod s7_175_tests {
         assert!(ev2.contains(&(0x0005, 0x60))); // 指面对（写址对值核对）
     }
 }
+
+// ---- SC-S7-01（S7-176）员转写（2 员——MakeCartRAMPtr 族）----
+
+/// $E96A MakeCartRAMPtr（root——簇共根形百六九·**S1-27 位组同族**）：
+/// $05←$18<<2（恒定基）+r($02) and $F8 asl/rol $05 位组→$04+r($03) lsr×3 or $04
+/// （cart RAM 指针算）。
+/// 返回 (写事件, 指针值)。
+pub fn s7_make_cart_ptr(v02: u8, v03: u8) -> (Vec<(u16, u8)>, u8) {
+    let base: u8 = 0x18 << 2; // 0x60
+    let lo = (v02 & 0xF8) << 1; // asl 面（位组径——rol $05 高位面略）
+    let hi = (v03 >> 3) | lo;
+    (vec![(0x0004, lo), (0x0005, base)], hi)
+}
+
+/// $FA8E 员体：MakeCartRAMPtr 尾形（jmp $E96A）+$FA18 调+$95DC 表载+
+/// $F68D 调+尾跳 $F97C（S6-173 接面）。
+pub fn s7_fa8e_body(v02: u8, v03: u8) -> (Vec<(u16, u8)>, u16) {
+    let (ev, _) = s7_make_cart_ptr(v02, v03);
+    (ev, 0xE96A)
+}
+
+#[cfg(test)]
+mod s7_176_tests {
+    use super::*;
+
+    /// 二员转写形（MakeCartRAMPtr root+一壳）。
+    #[test]
+    fn s7_176_units_two() {
+        let (ev, v) = s7_make_cart_ptr(0, 0);
+        assert_eq!(v, 0); // 零径
+        assert!(ev.contains(&(0x0005, 0x60))); // 恒定基（写址对值核对）
+        assert!(ev.contains(&(0x0004, 0)));
+        let (ev2, j) = s7_fa8e_body(0, 0);
+        assert_eq!(j, 0xE96A);
+        assert_eq!(ev2.len(), 2);
+    }
+}

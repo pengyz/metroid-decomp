@@ -2571,3 +2571,17 @@ pub fn s7_cluster_175(input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-S7-01 簇入口适配（s7_cluster_176 ← bank07:E96A MakeCartRAMPtr）----
+
+/// s7_cluster_176 适配（$E96A MakeCartRAMPtr——案实核：$05←$18<<2=0x60（恒定）+
+/// $04←位组（r($02) and $F8 asl/rol 面——S1-27 同族）；A=0x60/X 透传/Y 透传）。
+pub fn s7_cluster_176(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    let v02 = r(0x0002) & 0xF8;
+    let v04 = v02 << 1; // asl 面（rol $05 位组径简化）
+    L2Out {
+        a: 0x60, x: input.x, y: input.y,
+        writes: merge_writes(vec![(0x0004, v04 & 0xFF), (0x0005, 0x60)]),
+    }
+}

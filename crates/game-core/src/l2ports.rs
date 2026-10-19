@@ -448,6 +448,7 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "s6_cluster_172" => Some(sub_s6_cluster_172),
         "s6_cluster_174" => Some(sub_s6_cluster_174),
         "s7_cluster_175" => Some(sub_s7_cluster_175),
+        "s7_cluster_176" => Some(sub_s7_cluster_176),
         _ => None,
     }
 }
@@ -1463,4 +1464,9 @@ pub fn sub_s6_cluster_174(input: &L2In) -> L2Out {
 /// s7_cluster_175 —— bank07:FA2A 簇入口注册（SC-S7-00 GetEnemyRoomRAMPtr）。
 pub fn sub_s7_cluster_175(input: &L2In) -> L2Out {
     crate::verify_shim::s7_cluster_175(input)
+}
+
+/// s7_cluster_176 —— bank07:E96A 簇入口注册（SC-S7-01 MakeCartRAMPtr）。
+pub fn sub_s7_cluster_176(input: &L2In) -> L2Out {
+    crate::verify_shim::s7_cluster_176(input)
 }
