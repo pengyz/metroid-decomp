@@ -3517,6 +3517,17 @@ UsingAcceleration: ; $8036 / jmp EnemyGetDeltaY_UsingAcceleration` ↔ bank1 $80
 ③四写（写址不掩）实核+a1-010 加速版同族随证 ④员面双扫桩 0（2 员真现）。测 345。
 findings（r10）：0 新。SC-B1-14（B 区余 193 卡）预告随账。
 
+## SC-B1-14 卡审（4ab3a8d）——refs 法十一现（加速版 X 同族）
+
+### verdict: pass
+
+四条核：①L2 面 a1-014-case×8 并入+**族 8 案 0 败（首提全过）**✓（16=8×2 已计；
+败 62 稳）②**refs 法十一现双轨 ✓✓**：asm:81-82 `CommonJump_EnemyGetDeltaX_
+UsingAcceleration: ; $8039 / jmp EnemyGetDeltaX_UsingAcceleration` ↔ bank1 $8039=
+`4c 95 83`（JMP $8395）——asm 直读↔字节直合（**十一现=a1-004..014 十一连全验**）
+③六写（写址不掩）实核+a1-011 加速版同族随证 ④员面双扫桩 0（2 员真现）。测 346。
+findings（r10）：0 新。SC-B1-15（B 区余 192 卡）预告随账。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
