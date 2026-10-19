@@ -6240,3 +6240,39 @@ mod s5_143_tests {
         assert_eq!(s5_f3e0_body(2, 5, 0).1, 0xF40A);
     }
 }
+
+// ---- SC-S5-24（S5-144）员转写（2 员——RemoveEnemyIfItIsInLava 族；L2 真 0 留白）----
+
+/// $F51E RemoveEnemyIfItIsInLava（root——簇共根形百三七）：$49（ScrollDir）cmp 2
+/// 判（bcc 段）+$0400[x] cmp $EC 判（bcc 段⇒跳/jmp $FA18 熔岩径）+SFX 链
+/// （$CBD2——S3-20 接面）。
+/// 返回 (移除, 判段)。
+pub fn s5_remove_lava(x: u8, v49: u8, v0400_x: u8) -> (bool, bool) {
+    if v49 < 2 {
+        return (false, true); // bcc 段
+    }
+    (v0400_x >= 0xEC, false) // 熔岩径判
+}
+
+/// $F407 员体：RemoveEnemyIfItIsInLava+$F536 调（S2-26 接面）+尾跳 $95E5
+/// （S1-24 接面）+$E094/$8058 链。
+pub fn s5_f407_body(x: u8, v49: u8, v0400_x: u8) -> (bool, u16) {
+    let (rm, _) = s5_remove_lava(x, v49, v0400_x);
+    (rm, 0x95E5)
+}
+
+#[cfg(test)]
+mod s5_144_tests {
+    use super::*;
+
+    /// 二员转写形（RemoveEnemyIfItIsInLava root+一壳）。
+    #[test]
+    fn s5_144_units_two() {
+        assert_eq!(s5_remove_lava(2, 1, 0), (false, true)); // bcc 段
+        assert_eq!(s5_remove_lava(2, 3, 0xF0), (true, false)); // 熔岩径
+        assert_eq!(s5_remove_lava(2, 3, 0x10), (false, false));
+        let (rm, j) = s5_f407_body(2, 3, 0xF0);
+        assert!(rm);
+        assert_eq!(j, 0x95E5);
+    }
+}
