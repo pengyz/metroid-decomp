@@ -5477,3 +5477,64 @@ mod s5_122_tests {
         assert_eq!(ev2.len(), 2);
     }
 }
+
+// ---- SC-S5-03（S5-123）员转写（2 员——SpawnMellow 族）----
+
+/// $EE86 SpawnMellow（root——簇共根形百十六）：$B0+x 占用判（beq 段）+
+/// x+$8A+carry and $7F→$B1/$B2[x]（同值对）+$B3[x]←0+$B0[x]←1（spawn 四写组
+/// ——**zp 寻址回卷**）。
+/// 返回 (写事件, spawn 值)。
+pub fn s5_spawn_mellow(x: u8, v8a: u8, carry: bool, occupied: bool) -> (Vec<(u16, u8)>, u8) {
+    if occupied {
+        return (vec![], 0); // beq 段（占用跳）
+    }
+    let v = x.wrapping_add(v8a).wrapping_add(if carry { 1 } else { 0 }) & 0x7F;
+    (vec![((0x00B0 + x as u16) & 0xFF, 1),
+          ((0x00B1 + x as u16) & 0xFF, v),
+          ((0x00B2 + x as u16) & 0xFF, v),
+          ((0x00B3 + x as u16) & 0xFF, 0)], v)
+}
+
+/// $EE6B 员体：SpawnMellow+X 环（**sec 归一化定步 8**——bpl 破点）+尾写族
+/// （$8A←0/$6BE4←1/$6BE9/$6BEA←169）+walk 环面（+1 推进）。
+/// 返回 (写事件, 环 x-out)。
+pub fn s5_ee6b_body(x_in: u8, v8a: u8, carry: bool, occupied: &[bool]) -> (Vec<(u16, u8)>, u8) {
+    let mut ev = Vec::new();
+    let mut x = x_in;
+    let mut first = true;
+    let mut i = 0;
+    loop {
+        let occ = occupied.get(i).copied().unwrap_or(false);
+        let (w, _) = s5_spawn_mellow(x, v8a, if first { carry } else { true }, occ);
+        ev.extend(w);
+        first = false;
+        i += 1;
+        let nx = x.wrapping_sub(8);
+        if (nx as i8) < 0 { x = nx; break; }
+        x = nx;
+    }
+    ev.push((0x008A, 0));
+    ev.push((0x6BE4, 1));
+    ev.push((0x6BE9, 169));
+    ev.push((0x6BEA, 169));
+    (ev, x)
+}
+
+#[cfg(test)]
+mod s5_123_tests {
+    use super::*;
+
+    /// 二员转写形（SpawnMellow 四写组 root+X 环壳）。
+    #[test]
+    fn s5_123_units_two() {
+        let (ev, v) = s5_spawn_mellow(3, 0, true, false);
+        assert_eq!(v, 4); // 3+0+1
+        assert!(ev.contains(&(0x00B3, 1)));
+        assert!(ev.contains(&(0x00B4, 4)));
+        let (ev2, _) = s5_spawn_mellow(3, 0, true, true);
+        assert!(ev2.is_empty()); // 占用跳
+        let (ev3, xo) = s5_ee6b_body(16, 0, false, &[false; 4]);
+        assert_eq!(xo, 0xF8); // 16→8→0→-8(0xF8) 破值
+        assert!(ev3.contains(&(0x6BE4, 1)));
+    }
+}

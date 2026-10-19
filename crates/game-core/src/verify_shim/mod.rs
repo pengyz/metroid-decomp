@@ -2022,3 +2022,46 @@ pub fn s5_cluster_122(input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-S5-03 簇入口适配（s5_cluster_123 ← bank07:EE6B SpawnMellow 族）----
+
+/// s5_cluster_123 适配（$EE6B SpawnMellow——walk 环（+1 推进+\$C45C 分派）
+/// +进位步进环（\$EE86 spawn——X-8（sbc 进位面）bpl 破点）+条件 spawn 四写组
+/// （\$B0+x 占用判）+尾写族（\$8A←0/\$6BE4←1/\$6BE9/\$6BEA←169）。
+pub fn s5_cluster_123(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    let carry = input.p & 1 != 0;
+    let mut w = Vec::new();
+    let mut x = input.x;
+    let mut first = true;
+    loop {
+        // $EE86 spawn（$B0+x 占用判⇒跳）
+        if r((0x00B0 + x as u16) & 0xFF) == 0 {
+            // **adc 进位面**（txa/adc $8A——carry 入参面：x+$8A+carry）
+            // carry：首迭代=入参 P/后续=环内 sec/sbc 残留（恒 1）——分径
+            let c = if first { carry } else { true };
+            let v = x.wrapping_add(r(0x008A)).wrapping_add(if c { 1 } else { 0 }) & 0x7F;
+            w.push(((0x00B0 + x as u16) & 0xFF, 1)); // zp 寻址回卷
+            w.push(((0x00B1 + x as u16) & 0xFF, v));
+            w.push(((0x00B2 + x as u16) & 0xFF, v)); // 案实核同值面
+            w.push(((0x00B3 + x as u16) & 0xFF, 0));
+        }
+        first = false;
+        let nx = x.wrapping_sub(8); // **sec 归一化**（txa/sec/sbc #$08——定步 8）
+        if (nx as i8) < 0 {
+            x = nx;
+            break; // bpl 破点（对新 x 判）
+        }
+        x = nx;
+    }
+    w.push((0x0000, r(0x0000).wrapping_add(1))); // walk +1 推进
+    w.push((0x000C, 92));
+    w.push((0x000D, 196));
+    w.push((0x0069, x));
+    w.push((0x006A, 0));
+    w.push((0x008A, 0));
+    w.push((0x6BE4, 1));
+    w.push((0x6BE9, 169));
+    w.push((0x6BEA, 169));
+    L2Out { a: 0xC4, x, y: 0, writes: merge_writes(w) }
+}
