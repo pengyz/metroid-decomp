@@ -3551,6 +3551,17 @@ $8C61=`a9 01 9d 0f 03`（LDA #$01/STA $030F,X=DoorHitPoints 写）——语义�
 双扫桩 0（2 员真现）。测 348。findings（r10）：0 新。SC-B1-17（B 区余 190 卡）
 预告随账。
 
+## SC-B1-17 卡审（ddc404c）——门族图谱三现直连链（DoorSubRoutine8C71）
+
+### verdict: pass
+
+四条核：①L2 面 a1-017-case×8 并入+**族 8 案 0 败（首提全过）**✓（16=8×2 已计；
+败 62 稳）②**门族三现直连链抽核 ✓✓**：bank1 $8C71=`a6 4b 4c b1 8b`=LDX $4B（
+PageIndex 载）/**JMP $8BB1（jmp DrawDoor 直连）**——「ldx PageIndex/jmp DrawDoor」
+逐字命中；门族图谱三现链（DrawDoor→DoorSubRoutine8C61→8C71 直连=asm:1683 区
+直得）③a1-015 DrawDoor 同族面+8 案全合（结构直拟）④员面双扫桩 0（2 员真现）。
+测 349。findings（r10）：0 新。SC-B1-18（B 区余 189 卡）预告随账。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
