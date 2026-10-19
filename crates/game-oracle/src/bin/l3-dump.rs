@@ -172,7 +172,9 @@ fn main() -> ExitCode {
         // 输入喂入（当前帧按钮面——joy1）
         let fi = f as u64; // lead 最小修（E0425 变量名漂移——port2 WIP 中段态破点）
         engine.mem.joy1 = inputs.get(&fi).copied().unwrap_or(0);
+        let mut row_fired = false;
         engine.tick_frame_with(|mem| {
+            row_fired = true;
             let snap = mem.watch_snapshot();
             let w: Vec<String> = watch_labels
                 .iter()
@@ -183,7 +185,14 @@ fn main() -> ExitCode {
                 .collect();
             row = format!("{{\"f\":{f},\"w\":{{{}}}}}\n", w.join(","));
         });
-        out.push_str(&row);
+        if !row_fired {
+            // **bundle 载入态回退**（spin 缝不触发——帧末逐 tick 采样（帧数制终止面））
+            let snap = engine.mem.watch_snapshot();
+            let w: Vec<String> = snap.iter().map(|(k, v)| format!("\"{k}\":\"{v}\"")).collect();
+            out.push_str(&format!("{{\"f\":{f},\"w\":{{{}}}}}\n", w.join(",")));
+        } else {
+            out.push_str(&row);
+        }
         // task-29 (ii)：占位臂缺口记账逐 tick 增量捕获（路线图事件面）
         let now_div = game_core::frame::FrameEngine::divergences();
         if now_div.len() > div_seen {
