@@ -2805,6 +2805,17 @@ $F2CA=`b0 12 b9 00 03 9d 0e 04`=BCS/LDA $0300,Y/**STA $040E,X 态写**/JSR——
 （2 员真现）。x 索引**九犯自纠**（强制步持续）。测 279。findings（r10）：0 新。
 SC-S5-10（pregen 有案实值先核）预告随账。
 
+## SC-S5-10 卡审（a8d04e6）——CollisionReactWithSamus carry 分支径抽核
+
+### verdict: pass
+
+四条核：①L2 面 s5-130-case×8 并入（**pregen 实值 8/8 先核 ✓**）+**族 8 案 0 败**
+✓（增量 1037→1045=+8 精确；账内 36 稳）②**carry 分支径抽核 ✓**：$F282=
+`b0 fd 20 e8 f2 20 9c cd`=**BCS 分径**/JSR $F2E8（S1-07 Xminus16）/JSR $CD9C
+（S2-24 接面）——「carry=0⇒附加写族+Y=1」结构合形（案 0/3 对读实核）；$F0E2 链形
+随证 ③L3 0 失败容忍不增 ④员面双扫桩 0（2 员真现）。测 280。findings（r10）：0 新。
+SC-S5-11（pregen 先核）预告随账。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
