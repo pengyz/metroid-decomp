@@ -8000,3 +8000,32 @@ mod a1_015_tests {
         assert_eq!((j, ok), (0x8BB1, true));
     }
 }
+
+// ---- SC-B1-16（a1-016）员转写（2 员——DoorSubRoutine8C61 族·refs 法直得）----
+
+/// $8C61 DoorSubRoutine8C61（root——簇共根形百九十·**refs 法直得**（asm:1579）——
+/// 门重关：DoorHitPoints[x]←1+WriteDoorBGTiles_Solid+status[x]←2+
+/// DoorSubRoutine8C76（anim）+DrawDoor 跳转面）。
+/// 返回 (写事件, 门态)。
+pub fn a8c61_door_sub(x: u8) -> Vec<(u16, u8)> {
+    vec![(0x0409 + x as u16, 1), (0x0405 + x as u16, 2)] // HitPoints←1+status←2
+}
+
+/// $8CF4 jmp DoorSubRoutine8C61（refs 法：asm:1692 直连）。
+pub fn a8cf4_goto() -> (u16, bool) {
+    (0x8C61, true)
+}
+
+#[cfg(test)]
+mod a1_016_tests {
+    use super::*;
+
+    /// 二员转写形（DoorSubRoutine8C61 root+跳转面）——refs 法直得（asm:1579/1692）。
+    #[test]
+    fn a1_016_units_two() {
+        let ev = a8c61_door_sub(2);
+        assert!(ev.contains(&(0x040B, 1))); // HitPoints←1（写址对值核对）
+        assert!(ev.contains(&(0x0407, 2))); // status←2
+        assert_eq!(a8cf4_goto(), (0x8C61, true));
+    }
+}
