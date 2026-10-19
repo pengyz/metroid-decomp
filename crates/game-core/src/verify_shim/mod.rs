@@ -3361,3 +3361,14 @@ pub fn a3_cluster_006(_input: &L2In) -> L2Out {
 pub fn a3_cluster_007(input: &L2In) -> L2Out {
     L2Out { a: input.a, x: input.x, y: input.y, writes: vec![] }
 }
+
+// ---- SC-B3-08 簇入口适配（a3_cluster_008 ← bank02:8027——常量单写）----
+
+/// a3_cluster_008 适配（bank02:8027（areas_common 化身——bank2）——案实核 1 写
+/// （$02←0（常量——判别条未触发（严格顺序 ✓）））；A=0/X 透传/Y=2）。
+pub fn a3_cluster_008(input: &L2In) -> L2Out {
+    L2Out {
+        a: 0, x: input.x, y: input.y, // Y 透传（a3-002 同款自纠）
+        writes: merge_writes(vec![(0x0002, 0)]),
+    }
+}

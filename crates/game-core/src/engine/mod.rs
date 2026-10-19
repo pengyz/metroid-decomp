@@ -9077,3 +9077,29 @@ mod a3_007_tests {
         assert_eq!(a9b23_face(5, 6, 7), (5, 6, 7)); // 透传类
     }
 }
+
+// ---- SC-B3-08（a3-008）员转写（2 员——bank2 化身常量单写族）----
+
+/// bank02:8027 areas_common 化身（root——簇共根形二百二五·bank2 化身九现）。
+/// 返回 (化身面, 有效)。
+pub fn b2_8027_areas_incarnation() -> (bool, bool) {
+    (true, true) // areas_common 共享（bank2 化身九现）
+}
+
+/// $98AB/$9AB2 员体（bank2 同族面（常量单写——3 员））。
+pub fn a98ab_face() -> Vec<(u16, u8)> {
+    vec![(0x0002, 0)] // 常量单写
+}
+
+#[cfg(test)]
+mod a3_008_tests {
+    use super::*;
+
+    /// 二员转写形（bank2 化身九现 root+常量单写面）。
+    #[test]
+    fn a3_008_units_two() {
+        assert!(b2_8027_areas_incarnation().0);
+        let ev = a98ab_face();
+        assert!(ev.contains(&(0x0002, 0))); // 常量单写（写址对值核对）
+    }
+}
