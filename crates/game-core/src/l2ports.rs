@@ -90,8 +90,10 @@ fn a1_cluster_001(input: &L2In) -> L2Out {
     if let Some(v) = cntrl_write {
         writes.push((0x006B, v));
     }
-    if clear_hit && r(0x03CA) != 0 {
-        writes.push((0x03CA, 0)); // Ens.isHit（**净变更形**——golden 写面=变更集）
+    // isHit=槽面 $030A+x（**净变更形**——0→0 无变更不写（c6 案：$03CA=5 非 isHit 面））
+    let ishit_addr = 0x030A + input.x as usize;
+    if clear_hit && r(ishit_addr) != 0 {
+        writes.push((ishit_addr as u16, 0));
     }
     let _ = draw;
     // EnemyMove 移效（**映射定案**：8 案同址——$6AF7(y)/$6AF8(**=A 输入**)/$6AFA(hi=1)
@@ -283,6 +285,7 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "s5_cluster_139" => Some(sub_s5_cluster_139),
         "s5_cluster_140" => Some(sub_s5_cluster_140),
         "s5_cluster_141" => Some(sub_s5_cluster_141),
+        "s5_cluster_142" => Some(sub_s5_cluster_142),
         _ => None,
     }
 }
@@ -1178,4 +1181,9 @@ pub fn sub_s5_cluster_140(input: &L2In) -> L2Out {
 /// s5_cluster_141 —— bank07:F2DF 簇入口注册（SC-S5-21）。
 pub fn sub_s5_cluster_141(input: &L2In) -> L2Out {
     crate::verify_shim::s5_cluster_141(input)
+}
+
+/// s5_cluster_142 —— bank07:F270 簇入口注册（SC-S5-22）。
+pub fn sub_s5_cluster_142(input: &L2In) -> L2Out {
+    crate::verify_shim::s5_cluster_142(input)
 }

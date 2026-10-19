@@ -2237,3 +2237,16 @@ pub fn s5_cluster_141(input: &L2In) -> L2Out {
         writes: merge_writes(vec![(0x0404 + input.y as u16, v)]),
     }
 }
+
+// ---- SC-S5-22 簇入口适配（s5_cluster_142 ← bank07:F270——OR 旗族三现（x 版））----
+
+/// s5_cluster_142 适配（$F270 LF270——**OR 旗族三现**（x 版）：$030A[x]←A|r($030A[x])；
+/// A/X/Y 透传）。
+pub fn s5_cluster_142(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    let v = input.a | r(0x030A + input.x as u16);
+    L2Out {
+        a: input.a, x: input.x, y: input.y,
+        writes: merge_writes(vec![(0x030A + input.x as u16, v)]),
+    }
+}

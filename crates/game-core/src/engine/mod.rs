@@ -6164,3 +6164,36 @@ mod s5_141_tests {
         assert!(ev2.contains(&(0x010F, 0x80)));
     }
 }
+
+// ---- SC-S5-22（S5-142）员转写（2 员——LF270 族）----
+
+/// $F270 LF270（root——簇共根形百三五·**OR 旗族三现（x 版）**）：$030A[x]←A|r($030A[x])。
+/// 返回 (写事件, OR 值)。
+pub fn s5_lf270_or(x: u8, a_in: u8, v030a_x: u8) -> (Vec<(u16, u8)>, u8) {
+    let v = a_in | v030a_x;
+    (vec![(0x030A + x as u16, v)], v)
+}
+
+/// $F303 员体：LF270+指针载（$95CE/$95CF→$6E/$6F——S1-14 同构面）。
+pub fn s5_f303_body(x: u8, a_in: u8, v030a_x: u8, tce: u8, tcf: u8) -> (Vec<(u16, u8)>, u8) {
+    let (mut ev, v) = s5_lf270_or(x, a_in, v030a_x);
+    ev.push((0x006E, tce));
+    ev.push((0x006F, tcf));
+    (ev, v)
+}
+
+#[cfg(test)]
+mod s5_142_tests {
+    use super::*;
+
+    /// 二员转写形（LF270 OR 三现 root+一壳）。
+    #[test]
+    fn s5_142_units_two() {
+        let (ev, v) = s5_lf270_or(5, 0x10, 0x20);
+        assert_eq!(v, 0x30);
+        assert!(ev.contains(&(0x030F, 0x30)));
+        let (ev2, _) = s5_f303_body(5, 0x10, 0x20, 0x11, 0x22);
+        assert!(ev2.contains(&(0x006E, 0x11)));
+        assert!(ev2.contains(&(0x006F, 0x22)));
+    }
+}
