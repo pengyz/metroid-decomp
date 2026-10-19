@@ -81,3 +81,17 @@
   弹动画注名）+EnAnim_RidleyFireball；
 - **C→B 升**：boss 战斗面（AI 派发/攻击弹种/计数器/移动）——行为语义（AI 状态机
   流程/攻击模式序列）=C 级余（AI 例程体深读=后续）。
+
+## 【2026-10-19 C 余续采】Kraid AI 状态机+攻击模式序列（C→A/B 升）
+
+- **AI 状态机**（A 级：enemies/kraid.asm:4-34）：EnsExtra.status 分支——0/1/2=
+  Normal（攻击序+动面）/3=Explode（弹清：EnsExtra.1-5→NoEnemy）/4,6=Exit/5=Pickup
+  fallthrough——**六态状态机**；
+- **攻击模式序列**（A 级：kraid.asm:248+/303+）：KraidTryToLaunchLint（$7E 计数
+  0x80 默认/隔帧减（FrameCount bit1）/计数×2 补偿/归零发射）+KraidTryToLaunchNail
+  （$7F 计数 0x60 默认）——**双弹周期**（lint≈256f/nail≈192f）；
+- **弹 AI**（A 级：kraid.asm:38+）：KraidLintAIRoutine——data05 bit1 隐身判/bit7
+  活跃判/爆态→Remove（NoEnemy）——**KraidNailAIRoutine=jmp 共享 lint 处理器**（同族）；
+- **动面**：10 帧动画换（CommonEnemyStub）；
+- **C 余**：Ridley AI 状态机（enemies/ridley.asm 待读）+boss 行为语义（攻击模式
+  序列的战术面）——下一窗。
