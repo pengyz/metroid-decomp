@@ -1,0 +1,30 @@
+# 场景：sc-pickup-touch —— 触达段 nav trigger 化（f1180 窗——G2 后续件）
+# 依据：sc-pickup-deep PowerUps 实证——MARUMARI(type=04) y=$98 x=$68 hi=1
+#       f1013 生成/f1200-1500 离屏移除（RemoveIfOffScreen）=全程未触碰
+# v3：f1174 高度反向舵（dy=1-2/dx=39——nav x 104 反向刹车闭 x 差）
+# nav 化：ScrX→104（=$68=物品 x）+A 持（跳向 y=$98 高位物品）
+# 事件核：pw 位图置位（$6988+）/PowerUps type 04→拾取态/UniqueItemHistory 链
+name sc-pickup-touch
+frames 2000
+watch_range 0000-00ff zp
+watch_range 0100-07ff iram
+watch_range 6988-698f pw
+
+press 360 start
+press 420 a
+press 540 start
+fixture 900 6878 13 invariant
+hold 995-1068 left
+hold 1072-1132 a
+hold 1072-1132 right
+
+trigger 995-1035 0051 == 112 hold a
+nav 1150-1400 x 104 a
+
+capture 1110 over-wall
+capture 1180 near-item
+capture 1500 touch-window
+capture 1800 post
+
+sample_point endFrame
+probe_mem 0748 0757
