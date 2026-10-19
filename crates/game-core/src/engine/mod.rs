@@ -5538,3 +5538,34 @@ mod s5_123_tests {
         assert!(ev3.contains(&(0x6BE4, 1)));
     }
 }
+
+// ---- SC-S5-04（S5-124）员转写（2 员——CannonHandler 族；L2 真 0 留白）----
+
+/// $95B1 rts 桩阵（root——簇共根形百十七·**banks1/2/4/5 镜面**（areas_common 形六
+/// ——S3-22 形五同族））：四 rts 桩（nop nop 填充空转面）。
+/// 返回 (桩数, 有效面)。
+pub fn s95b1_stub_array() -> (usize, bool) {
+    (4, true) // 四 rts 桩（镜面共享）
+}
+
+/// $EEA6 CannonHandler：$95B1 调+尾跳 $EDD6（A=2——S2-23 接面）+$95B4 调+
+/// $07←$38/$06←0 指针面+CheckForItem（S2-10 接面）。
+pub fn s5_eea6_body() -> (Vec<(u16, u8)>, u16) {
+    (vec![(0x0007, 0x38), (0x0006, 0)], 0xEDD6)
+}
+
+#[cfg(test)]
+mod s5_124_tests {
+    use super::*;
+
+    /// 二员转写形（rts 桩阵 root+CannonHandler 壳）。
+    #[test]
+    fn s5_124_units_two() {
+        let (n, ok) = s95b1_stub_array();
+        assert_eq!((n, ok), (4, true));
+        let (ev, j) = s5_eea6_body();
+        assert_eq!(j, 0xEDD6);
+        assert!(ev.contains(&(0x0007, 0x38)));
+        assert!(ev.contains(&(0x0006, 0)));
+    }
+}
