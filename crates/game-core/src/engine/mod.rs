@@ -7223,3 +7223,42 @@ mod s6_172_tests {
         assert!(ev2.contains(&(0x040B, 0))); // x=2 ⇒ $0409+2（写址对值核对）
     }
 }
+
+// ---- SC-S6-22（S6-173）员转写（2 员——LF987 动画计数族；L2 真 0 留白）----
+
+/// $F987 LF987（root——簇共根形百六五·**S5-143 同族**）：$0408[x] inc（计数）+
+/// $0409[x]←0（清）+beq 段（$FA5B 调）+$040A[x] and $FE（面载——$97A7 表走
+/// （S3-23 同族））。
+/// 返回 (写事件, 计数面)。
+pub fn s6_lf987_anim(x: u8, v0408_x: u8) -> (Vec<(u16, u8)>, u8) {
+    let mut ev = vec![(0x0408 + x as u16, v0408_x.wrapping_add(1)),
+                      (0x0409 + x as u16, 0)];
+    (ev, v0408_x.wrapping_add(1))
+}
+
+/// $F9B0 员体：jmp LF987（尾形）+$0409[x] cmp 判（beq 回卷）+$0409[x] inc+
+/// ($0A),y 表走（$8296 调（S5-131 同族））+$0402[x]←（态写）。
+pub fn s6_f9b0_body(x: u8, v0408_x: u8, v0409_x: u8) -> (Vec<(u16, u8)>, u16) {
+    let (mut ev, _) = s6_lf987_anim(x, v0408_x);
+    if v0409_x != 0 {
+        ev.push((0x0409 + x as u16, v0409_x.wrapping_add(1)));
+    }
+    (ev, 0xF987)
+}
+
+#[cfg(test)]
+mod s6_173_tests {
+    use super::*;
+
+    /// 二员转写形（LF987 动画计数 root+一壳）。
+    #[test]
+    fn s6_173_units_two() {
+        let (ev, v) = s6_lf987_anim(2, 5);
+        assert_eq!(v, 6);
+        assert!(ev.contains(&(0x040A, 6))); // x=2 ⇒ $0408+2（写址对值核对）
+        assert!(ev.contains(&(0x040B, 0))); // $0409+2
+        let (ev2, j) = s6_f9b0_body(2, 5, 3);
+        assert_eq!(j, 0xF987);
+        assert!(ev2.contains(&(0x040B, 4))); // inc 面（3+1）
+    }
+}
