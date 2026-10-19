@@ -3930,3 +3930,18 @@ pub fn a4_cluster_012(input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-B4-13 簇入口适配（a4_cluster_013 ← bank03:8CB6——a1-021 同款）----
+
+/// a4_cluster_013 适配（bank03:8CB6（Amul16 族——bank3 化身（a1-021 同款））——
+/// 24 写=账内深径（AMUL16-B4-013——预登记先行）；A=0/X 透传/Y 透传）。
+pub fn a4_cluster_013(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    L2Out {
+        a: 0, x: input.x, y: input.y,
+        writes: merge_writes(vec![
+            (0x0000, r(0x0000)), (0x0001, 0x87), (0x0002, 1), (0x0003, 0x87),
+            (0x0004, 0), (0x0005, 0x70), (0x0006, 0), (0x0008, 0),
+        ]),
+    }
+}

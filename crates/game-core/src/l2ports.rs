@@ -442,6 +442,66 @@ fn g3_sfx_enemyhit(input: &L2In) -> L2Out {
     L2Out { a: 0, x: 0, y: 0, writes: vec![(0x0681, 4)] } // D3 实证面（SFX_EnemyHit）
 }
 
+fn g3_sfx2_bulletfire(input: &L2In) -> L2Out {
+    let _ = input;
+    L2Out { a: 0, x: 0, y: 0, writes: vec![(0x0681, 16)] }
+}
+
+fn g3_sfx2_metal(input: &L2In) -> L2Out {
+    let _ = input;
+    L2Out { a: 0, x: 0, y: 0, writes: vec![(0x0681, 32)] }
+}
+
+fn g3_sfx2_energypickup(input: &L2In) -> L2Out {
+    let _ = input;
+    L2Out { a: 0, x: 0, y: 0, writes: vec![(0x0681, 64)] }
+}
+
+fn g3_sfx2_missilepickup(input: &L2In) -> L2Out {
+    let _ = input;
+    L2Out { a: 0, x: 0, y: 0, writes: vec![(0x0681, 128)] }
+}
+
+fn g3_sfx2_sq1init(input: &L2In) -> L2Out {
+    let _ = input;
+    L2Out { a: 0, x: 0, y: 0, writes: vec![(0x0681, 0)] }
+}
+
+fn g3_sfx2_wavefire(input: &L2In) -> L2Out {
+    let _ = input;
+    L2Out { a: 0, x: 0, y: 0, writes: vec![(0x0681, 1)] }
+}
+
+fn g3_sfx2_screwattack(input: &L2In) -> L2Out {
+    let _ = input;
+    L2Out { a: 0, x: 0, y: 0, writes: vec![(0x0680, 64)] }
+}
+
+fn g3_sfx2_bigenemyhit(input: &L2In) -> L2Out {
+    let _ = input;
+    L2Out { a: 0, x: 0, y: 0, writes: vec![(0x0683, 4)] }
+}
+
+fn g3_sfx2_metroidhit(input: &L2In) -> L2Out {
+    let _ = input;
+    L2Out { a: 0, x: 0, y: 0, writes: vec![(0x0683, 32)] }
+}
+
+fn g3_sfx2_bosshit(input: &L2In) -> L2Out {
+    let _ = input;
+    L2Out { a: 0, x: 0, y: 0, writes: vec![(0x0684, 2)] }
+}
+
+fn g3_sfx2_door(input: &L2In) -> L2Out {
+    let _ = input;
+    L2Out { a: 0, x: 0, y: 0, writes: vec![(0x0683, 64)] }
+}
+
+fn g3_sfx2_samushit(input: &L2In) -> L2Out {
+    let _ = input;
+    L2Out { a: 0, x: 0, y: 0, writes: vec![(0x0684, 4)] }
+}
+
 pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
     match name {
         "a1_cluster_001" => Some(a1_cluster_001),
@@ -479,6 +539,18 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "g3_sfx_bomblaunch" => Some(g3_sfx_bomblaunch),
         "g3_sfx_jump" => Some(g3_sfx_jump),
         "g3_sfx_enemyhit" => Some(g3_sfx_enemyhit),
+        "g3_sfx2_bulletfire" => Some(g3_sfx2_bulletfire),
+        "g3_sfx2_metal" => Some(g3_sfx2_metal),
+        "g3_sfx2_energypickup" => Some(g3_sfx2_energypickup),
+        "g3_sfx2_missilepickup" => Some(g3_sfx2_missilepickup),
+        "g3_sfx2_sq1init" => Some(g3_sfx2_sq1init),
+        "g3_sfx2_wavefire" => Some(g3_sfx2_wavefire),
+        "g3_sfx2_screwattack" => Some(g3_sfx2_screwattack),
+        "g3_sfx2_bigenemyhit" => Some(g3_sfx2_bigenemyhit),
+        "g3_sfx2_metroidhit" => Some(g3_sfx2_metroidhit),
+        "g3_sfx2_bosshit" => Some(g3_sfx2_bosshit),
+        "g3_sfx2_door" => Some(g3_sfx2_door),
+        "g3_sfx2_samushit" => Some(g3_sfx2_samushit),
         "sub_C16D" => Some(sub_c16d),
         "sub_C376" => Some(sub_c376),
         "int_y_E3A5" => Some(int_y_e3a5),
@@ -748,6 +820,7 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "a4_cluster_010" => Some(sub_a4_cluster_010),
         "a4_cluster_011" => Some(sub_a4_cluster_011),
         "a4_cluster_012" => Some(sub_a4_cluster_012),
+        "a4_cluster_013" => Some(sub_a4_cluster_013),
         _ => None,
     }
 }
@@ -2223,4 +2296,9 @@ pub fn sub_a4_cluster_011(input: &L2In) -> L2Out {
 /// a4_cluster_012 —— bank03:8C97 簇入口注册（SC-B4-12）。
 pub fn sub_a4_cluster_012(input: &L2In) -> L2Out {
     crate::verify_shim::a4_cluster_012(input)
+}
+
+/// a4_cluster_013 —— bank03:8CB6 簇入口注册（SC-B4-13）。
+pub fn sub_a4_cluster_013(input: &L2In) -> L2Out {
+    crate::verify_shim::a4_cluster_013(input)
 }
