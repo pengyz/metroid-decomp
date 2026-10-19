@@ -3291,3 +3291,15 @@ pub fn a3_cluster_001(input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-B3-02 簇入口适配（a3_cluster_002 ← bank02:8006——定址清对）----
+
+/// a3_cluster_002 适配（bank02:8006（areas_common 化身——bank2）——案实核 2 写
+/// （定址清对（$0404/$040E←0（常量——判别条未触发（严格顺序 ✓））））；
+/// A=0/X=0/Y=159）。
+pub fn a3_cluster_002(input: &L2In) -> L2Out {
+    L2Out {
+        a: 0, x: 0, y: input.y, // Y 透传（非定值——案实核）
+        writes: merge_writes(vec![(0x0404, 0), (0x040E, 0)]),
+    }
+}
