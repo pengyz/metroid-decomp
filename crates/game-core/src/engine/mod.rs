@@ -6197,3 +6197,46 @@ mod s5_142_tests {
         assert!(ev2.contains(&(0x006F, 0x22)));
     }
 }
+
+// ---- SC-S5-23（S5-143）员转写（2 员——UpdateEnemy_Resting 族；L2 真 0 留白）----
+
+/// $F7BA UpdateEnemy_Resting_TryBecomingActive（root——簇共根形百三六）：
+/// $0409[x] dec（延迟倒数）（零⇒$0405[x] 位3 判（bne⇒跳/未置⇒$0409[x] inc 恢复）
+/// +$6B02[x] cmp 7 段（激活判））。
+/// 返回 (写事件, 激活)。
+pub fn s5_update_resting(x: u8, v0409_x: u8, v0405_x: u8) -> (Vec<(u16, u8)>, bool) {
+    let d = v0409_x.wrapping_sub(1);
+    let mut ev = vec![(0x0409 + x as u16, d)];
+    if d != 0 {
+        return (ev, false); // bne 段（未到）
+    }
+    if v0405_x & 8 == 0 {
+        ev.push((0x0409 + x as u16, v0409_x)); // inc 恢复面
+    }
+    (ev, v0405_x & 8 != 0)
+}
+
+/// $F3E0 员体：UpdateEnemy_Resting+jmp $F40A（S4-20 接面——尾跳五现注）+
+/// $0405[x] asl/bmi 段+and $20 段（$6B02 表走（S4-117 同族））。
+pub fn s5_f3e0_body(x: u8, v0409_x: u8, v0405_x: u8) -> (Vec<(u16, u8)>, u16) {
+    let (ev, _) = s5_update_resting(x, v0409_x, v0405_x);
+    (ev, 0xF40A)
+}
+
+#[cfg(test)]
+mod s5_143_tests {
+    use super::*;
+
+    /// 二员转写形（UpdateEnemy_Resting root+一壳）。
+    #[test]
+    fn s5_143_units_two() {
+        let (ev, act) = s5_update_resting(2, 5, 0);
+        assert!(!act); // bne 段（未到）
+        assert!(ev.contains(&(0x040B, 4)));
+        let (ev2, act2) = s5_update_resting(2, 1, 8);
+        assert!(act2); // 倒数零+位3 置⇒激活
+        let (ev3, _) = s5_update_resting(2, 1, 0);
+        assert!(ev3.contains(&(0x040B, 1))); // inc 恢复面
+        assert_eq!(s5_f3e0_body(2, 5, 0).1, 0xF40A);
+    }
+}
