@@ -8029,3 +8029,29 @@ mod a1_016_tests {
         assert_eq!(a8cf4_goto(), (0x8C61, true));
     }
 }
+
+// ---- SC-B1-17（a1-017）员转写（2 员——DoorSubRoutine8C71 族·refs 法直得）----
+
+/// $8C71 DoorSubRoutine8C71（root——簇共根形百九一·**refs 法直得**（asm:1683 区）——
+/// ldx PageIndex+GotoDrawDoor→DrawDoor 跳转面（a1-015 直连））。
+/// 返回 (目标址, 桩面)。
+pub fn a8c71_goto_draw_door() -> (u16, bool) {
+    (0x8BB1, true) // jmp DrawDoor（a1-015 直连——refs 法）
+}
+
+/// $8CC3 跳转面（refs 法：asm:1692 区（DoorSubRoutine8C61 直连））。
+pub fn a8cc3_goto() -> (u16, bool) {
+    (0x8C61, true) // jmp DoorSubRoutine8C61（a1-016 直连）
+}
+
+#[cfg(test)]
+mod a1_017_tests {
+    use super::*;
+
+    /// 二员转写形（DoorSubRoutine8C71 root+跳转面）——refs 法直得。
+    #[test]
+    fn a1_017_units_two() {
+        assert_eq!(a8c71_goto_draw_door(), (0x8BB1, true)); // a1-015 直连
+        assert_eq!(a8cc3_goto(), (0x8C61, true)); // a1-016 直连
+    }
+}

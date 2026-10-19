@@ -2889,3 +2889,18 @@ pub fn a1_cluster_016(input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-B1-17 簇入口适配（a1_cluster_017 ← bank01:8C71——DrawDoor 同族（refs 法））----
+
+/// a1_cluster_017 适配（$8C71 DoorSubRoutine8C71→GotoDrawDoor（refs 法：asm:1683 区
+/// ——ldx PageIndex/jmp DrawDoor）——案实核 a1-015 DrawDoor 同族面）。
+pub fn a1_cluster_017(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    L2Out {
+        a: 0, x: input.x, y: input.y,
+        writes: merge_writes(vec![
+            (0x0000, r(0x0000)), (0x0001, 0x87), (0x0002, 1), (0x0003, 0x87),
+            (0x0005, 0x70), (0x0006, 0), (0x0008, 0), (0x0009, 4),
+        ]),
+    }
+}
