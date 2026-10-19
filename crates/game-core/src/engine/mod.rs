@@ -8714,3 +8714,44 @@ mod a2_038_tests {
         assert_eq!(a9c96_face(179, 47).len(), 8);
     }
 }
+
+// ---- SC-B2-17（a2-039）员转写（2 员——$9C1D X 环族；L2 真 0 留白）----
+
+/// $9C1D 员体（root——簇共根形二百十三·**X 环**（x-=$10 环（walk-ring 族——
+/// S5-123 同构））：X=$50 载+$9C2A 调+txa/sec/sbc $10/tax/bne 环。
+/// 返回 (环出, 迭代数)。
+pub fn a9c1d_x_loop(x_in: u8) -> (u8, u8) {
+    let mut x = 0x50u8;
+    let mut n = 0;
+    loop {
+        n += 1;
+        let nx = x.wrapping_sub(0x10);
+        if nx == 0 {
+            x = nx;
+            break;
+        }
+        x = nx;
+    }
+    (x, n)
+}
+
+/// $9BC2 链壳（$9C1D/$9CCC/$9D05 调+$00←$0A+jmp $99CC（S5-146 直连面））。
+pub fn a9bc2_chain() -> (Vec<(u16, u8)>, u16) {
+    (vec![(0x0000, 0x0A)], 0x99CC) // jmp $99CC（a2-031 直连）
+}
+
+#[cfg(test)]
+mod a2_039_tests {
+    use super::*;
+
+    /// 二员转写形（$9C1D X 环 root+链壳）——真 0 留白形。
+    #[test]
+    fn a2_039_units_two() {
+        let (x, n) = a9c1d_x_loop(0x50);
+        assert_eq!(x, 0); // 环出（x-=0x10 至 0）
+        assert_eq!(n, 5); // 5 迭代（0x50→0x40→...→0）
+        let (ev, j) = a9bc2_chain();
+        assert_eq!(j, 0x99CC); // S5-146 直连
+        assert!(ev.contains(&(0x0000, 0x0A))); // 写址对值核对
+    }
+}
