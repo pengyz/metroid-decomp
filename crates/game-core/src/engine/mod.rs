@@ -8784,3 +8784,32 @@ mod a2_040_tests {
         assert_eq!(a9ccc_face().len(), 9);
     }
 }
+
+// ---- SC-B2-19（a2-041）员转写（2 员——$9BC8 8 写族面）----
+
+/// $9BC8 员体（root——簇共根形二百十五·8 写族面（ptr（$7F）+S5-146 族））。
+/// 返回 (写事件, 有效)。
+pub fn a9bc8_face() -> Vec<(u16, u8)> {
+    vec![(0x0000, 10), (0x0001, 8), (0x007F, 95),
+         (0x0404, 0), (0x040E, 0),
+         (0x6AF7, 10), (0x6AF8, 10), (0x6AFA, 1)]
+}
+
+/// $9D05 员体（同族面（连现））。
+pub fn a9d05_face() -> Vec<(u16, u8)> {
+    a9bc8_face()
+}
+
+#[cfg(test)]
+mod a2_041_tests {
+    use super::*;
+
+    /// 二员转写形（$9BC8 8 写族面 root+一壳）。
+    #[test]
+    fn a2_041_units_two() {
+        let ev = a9bc8_face();
+        assert_eq!(ev.len(), 8);
+        assert!(ev.contains(&(0x007F, 95))); // ptr（写址对值核对）
+        assert_eq!(a9d05_face().len(), 8);
+    }
+}

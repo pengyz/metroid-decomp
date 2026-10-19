@@ -3227,3 +3227,18 @@ pub fn a2_cluster_040(_input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-B2-19 簇入口适配（a2_cluster_041 ← bank01:9BC8——判别条补触发）----
+
+/// a2_cluster_041 适配（$9BC8（S5-146 族区）——案实核 8 写（ptr（$7F←95）+清对+
+/// $6AF7/$6AF8←10（fixture 弱源——判别条补触发→账目预登记（VALCHAIN-041）））。
+pub fn a2_cluster_041(_input: &L2In) -> L2Out {
+    L2Out {
+        a: 0, x: 0, y: 1,
+        writes: merge_writes(vec![
+            (0x0000, 10), (0x0001, 8), (0x007F, 95),
+            (0x0404, 0), (0x040E, 0),
+            (0x6AF7, 10), (0x6AF8, 10), (0x6AFA, 1),
+        ]),
+    }
+}
