@@ -277,4 +277,163 @@ mod g3_probe {
         }
     }
 
+
+    /// SC-G3-04 探针（MusicInit 族（$CC09 SetMusicInitFlag）×$065E 监视——D3 实证）。
+    #[test]
+    fn g3_musicinit_capture() {
+        let rom = std::fs::read(concat!(env!("CARGO_MANIFEST_DIR"), "/../../rom/Metroid (USA).nes")).expect("ROM");
+        let prg = &rom[0x10..0x20010];
+        let input = L2In {
+            wram: vec![0; 0x2000], a: 0, x: 0, y: 0, p: 0,
+            ram: vec![0; 0x800], window_bank: 7,
+        };
+        let wps = run_subroutine_writepoints(prg, 0xCC09, 7, &input, &[]).unwrap_or_default();
+        println!("MusicInit($CC09): 写点={:?}", wps);
+        let (r, _t) = run_subroutine_traced(prg, 0xCC09, 7, &input, &[], 64)
+            .unwrap_or((L2RunResult { a: 0, x: 0, y: 0, writes: vec![] }, vec![]));
+        println!("MusicInit: 写面对={:?}", r.writes);
+    }
+
+
+    /// SC-G3-05 探针（SFX 族（$CB96-$CBB0）×D3 抓取——写面对实证）。
+    #[test]
+    fn g3_sfx_capture() {
+        let rom = std::fs::read(concat!(env!("CARGO_MANIFEST_DIR"), "/../../rom/Metroid (USA).nes")).expect("ROM");
+        let prg = &rom[0x10..0x20010];
+        let entries: [(u16, &str); 8] = [
+            (0xCB96, "SFX_SamusWalk"), (0xCB9A, "SFX_BombExplode"), (0xCB9E, "SFX_MissileLaunch"),
+            (0xCBA0, "SetSFXNoiseInitFlag"), (0xCBA4, "SFX_OutOfPipe"), (0xCBA8, "SFX_BombLaunch"),
+            (0xCBAC, "SFX_SamusJump"), (0xCBB0, "SFX_EnemyHit"),
+        ];
+        for (entry, name) in entries {
+            let input = L2In {
+                wram: vec![0; 0x2000], a: 0, x: 0, y: 0, p: 0,
+                ram: vec![0; 0x800], window_bank: 7,
+            };
+            let wps = run_subroutine_writepoints(prg, entry, 7, &input, &[]).unwrap_or_default();
+            let (r, _t) = run_subroutine_traced(prg, entry, 7, &input, &[], 64)
+                .unwrap_or((L2RunResult { a: 0, x: 0, y: 0, writes: vec![] }, vec![]));
+            println!("{name}(${entry:04X}): 写面对={:?} 点={:?}", r.writes, wps.len());
+        }
+    }
+
+
+    /// SC-G3-06 探针（SFX 族 12 员（$CBB4-$CBDE）×D3 抓取——写面对实证）。
+    #[test]
+    fn g3_sfx2_capture() {
+        let rom = std::fs::read(concat!(env!("CARGO_MANIFEST_DIR"), "/../../rom/Metroid (USA).nes")).expect("ROM");
+        let prg = &rom[0x10..0x20010];
+        let entries: [(u16, &str); 12] = [
+            (0xCBB4, "SFX_BulletFire"), (0xCBB8, "SFX_Metal"), (0xCBBC, "SFX_EnergyPickup"),
+            (0xCBC0, "SFX_MissilePickup"), (0xCBC2, "SetSFXSQ1InitFlag"), (0xCBC6, "SFX_WaveFire"),
+            (0xCBCA, "SFX_ScrewAttack"), (0xCBCE, "SFX_BigEnemyHit"), (0xCBD2, "SFX_MetroidHit"),
+            (0xCBD6, "SFX_BossHit"), (0xCBDA, "SFX_Door"), (0xCBDE, "SFX_SamusHit"),
+        ];
+        for (entry, name) in entries {
+            let input = L2In {
+                wram: vec![0; 0x2000], a: 0, x: 0, y: 0, p: 0,
+                ram: vec![0; 0x800], window_bank: 7,
+            };
+            let (r, _t) = run_subroutine_traced(prg, entry, 7, &input, &[], 64)
+                .unwrap_or((L2RunResult { a: 0, x: 0, y: 0, writes: vec![] }, vec![]));
+            println!("{name}(${entry:04X}): 写面对={:?}", r.writes);
+        }
+    }
+
+
+    /// SC-MD-001 探针（SamusJump 族 5 员（跳动链）×D3 抓取——ROM 执行 golden）。
+    #[test]
+    fn md_jump_capture() {
+        let rom = std::fs::read(concat!(env!("CARGO_MANIFEST_DIR"), "/../../rom/Metroid (USA).nes")).expect("ROM");
+        let prg = &rom[0x10..0x20010];
+        let entries: [(u16, &str); 5] = [
+            (0xC27C, "JumpEngine"), (0xCFC3, "SetSamusJump"), (0xD002, "SamusJump"),
+            (0xD055, "CheckHorzMovement"), (0xD09C, "CheckFire"),
+        ];
+        for (entry, name) in entries {
+            let input = L2In {
+                wram: vec![0; 0x2000], a: 0, x: 0, y: 0, p: 0,
+                ram: vec![0; 0x800], window_bank: 7,
+            };
+            let (r, _t) = run_subroutine_traced(prg, entry, 7, &input, &[], 64)
+                .unwrap_or((L2RunResult { a: 0, x: 0, y: 0, writes: vec![] }, vec![]));
+            println!("{name}(${entry:04X}): 写面对={:?} 出=({},{},{})", r.writes, r.a, r.x, r.y);
+        }
+    }
+
+
+    /// SC-MD-002 探针（arm 9 案（物理族 $CC0D-$D423）×D3 批抓取——ROM 执行 golden）。
+    #[test]
+    fn md_arm_capture() {
+        let rom = std::fs::read(concat!(env!("CARGO_MANIFEST_DIR"), "/../../rom/Metroid (USA).nes")).expect("ROM");
+        let prg = &rom[0x10..0x20010];
+        let entries: [(u16, &str); 9] = [
+            (0xCC0D, "a1-022"), (0xCC36, "a1-023"), (0xCCC2, "a1-024"), (0xD002, "a1-025"),
+            (0xD0E1, "a1-026"), (0xD198, "a1-027"), (0xD3A8, "a1-028"), (0xD41A, "a1-029"), (0xD423, "a1-030"),
+        ];
+        for (entry, name) in entries {
+            let input = L2In {
+                wram: vec![0; 0x2000], a: 0, x: 0, y: 0, p: 0,
+                ram: vec![0; 0x800], window_bank: 7,
+            };
+            let (r, _t) = run_subroutine_traced(prg, entry, 7, &input, &[], 64)
+                .unwrap_or((L2RunResult { a: 0, x: 0, y: 0, writes: vec![] }, vec![]));
+            println!("{name}(${entry:04X}): 写面对={:?}", r.writes);
+        }
+    }
+
+
+    /// SC-MD-003 探针（SamusDoor($D3A8——门交互物理族）×D3 抓取——ROM 执行 golden）。
+    #[test]
+    fn md_samusdoor_capture() {
+        let rom = std::fs::read(concat!(env!("CARGO_MANIFEST_DIR"), "/../../rom/Metroid (USA).nes")).expect("ROM");
+        let prg = &rom[0x10..0x20010];
+        let input = L2In {
+            wram: vec![0; 0x2000], a: 0, x: 0, y: 0, p: 0,
+            ram: vec![0; 0x800], window_bank: 7,
+        };
+        let (r, _t) = run_subroutine_traced(prg, 0xD3A8, 7, &input, &[], 64)
+            .unwrap_or((L2RunResult { a: 0, x: 0, y: 0, writes: vec![] }, vec![]));
+        println!("SamusDoor($D3A8): 写面对={:?} 出=({},{},{})", r.writes, r.a, r.x, r.y);
+    }
+
+
+    /// SC-MD-004 探针（SamusPntUp 族（$D198/$CF77——瞄准面）×D3 抓取——ROM 执行 golden）。
+    #[test]
+    fn md_pntup_capture() {
+        let rom = std::fs::read(concat!(env!("CARGO_MANIFEST_DIR"), "/../../rom/Metroid (USA).nes")).expect("ROM");
+        let prg = &rom[0x10..0x20010];
+        for (entry, name) in [(0xD198u16, "SamusPntUp"), (0xCF77, "SetSamusPntUp")] {
+            let input = L2In {
+                wram: vec![0; 0x2000], a: 0, x: 0, y: 0, p: 0,
+                ram: vec![0; 0x800], window_bank: 7,
+            };
+            let (r, _t) = run_subroutine_traced(prg, entry, 7, &input, &[], 64)
+                .unwrap_or((L2RunResult { a: 0, x: 0, y: 0, writes: vec![] }, vec![]));
+            println!("{name}(${entry:04X}): 写面对={:?} 出=({},{},{})", r.writes, r.a, r.x, r.y);
+        }
+    }
+
+
+    /// SC-MD-005 探针（Samus 状态机族 9 员（UpdateSamus/Stand/Run 族）×D3 抓取）。
+    #[test]
+    fn md_statemachine_capture() {
+        let rom = std::fs::read(concat!(env!("CARGO_MANIFEST_DIR"), "/../../rom/Metroid (USA).nes")).expect("ROM");
+        let prg = &rom[0x10..0x20010];
+        let entries: [(u16, &str); 9] = [
+            (0xCC0D, "UpdateSamus"), (0xCC1A, "GoSamusHandler"), (0xCC36, "SamusStand"),
+            (0xCC8B, "SetSamusExplode"), (0xCC98, "SetSamusRun"), (0xCCB7, "SetSamusRunAccel"),
+            (0xCCC2, "SamusRun"), (0xCD6B, "SetSamusData3Frame"), (0xCD6D, "SetSamusData"),
+        ];
+        for (entry, name) in entries {
+            let input = L2In {
+                wram: vec![0; 0x2000], a: 0, x: 0, y: 0, p: 0,
+                ram: vec![0; 0x800], window_bank: 7,
+            };
+            let (r, _t) = run_subroutine_traced(prg, entry, 7, &input, &[], 64)
+                .unwrap_or((L2RunResult { a: 0, x: 0, y: 0, writes: vec![] }, vec![]));
+            println!("{name}(${entry:04X}): 写面对={:?} 出=({},{},{})", r.writes, r.a, r.x, r.y);
+        }
+    }
+
     }

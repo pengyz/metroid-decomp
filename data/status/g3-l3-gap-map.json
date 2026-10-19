@@ -25,8 +25,46 @@
       "class": "L3-route",
       "reason": "SFX 族 8 例程（D3 实证面——L2 stops 余）",
       "declared": "SC-G3-05 抓取全（D7）"
+    },
+    {
+      "id": "g3-sfx2-*",
+      "class": "L3-route",
+      "reason": "SFX 族 12 员（D3 实证面（旗位族）——L2 stops 余）",
+      "declared": "SC-G3-06 收口（G3 全簇）"
+    },
+    {
+      "id": "md-jump-*",
+      "class": "L3-route",
+      "reason": "SamusJump 族 5 员（D3 ROM 执行 golden（41 写物理面）——L2 转换余/undoc/BKR）",
+      "declared": "SC-MD-001（移动臂深化首卡）"
+    },
+    {
+      "id": "arm-a1-030",
+      "class": "L3-route",
+      "reason": "a1-030（$D423）golden 面（776=0 单写——L2 stops 余）",
+      "declared": "SC-MD-002 收口（8/9+D7）"
+    },
+    {
+      "id": "md-samusdoor",
+      "class": "L3-route",
+      "reason": "SamusDoor($D3A8) stops 面（$22 runaway——L3 路由）",
+      "declared": "SC-MD-003（门交互物理族）"
+    },
+    {
+      "id": "md-pntup-*",
+      "class": "L3-route",
+      "reason": "SamusPntUp 族（$D198/$CF77——瞄准面（45+7 写）——stops 面（BRK/截余））",
+      "declared": "SC-MD-004（瞄准面）"
+    },
+    {
+      "id": "md-statemachine-*",
+      "class": "L3-route",
+      "reason": "Samus 状态机族 9 员（35-45 写物理面（D3 ROM 执行 golden）——stops 面（L3 路由））",
+      "declared": "SC-MD-005（物理深化）"
     }
   ],
   "tolerated": true,
-  "baseline_note": "D7 声明性覆盖（非机械完备）——L3 trace 面（账清转 strict）"
+  "baseline_note": "D7 声明性覆盖（非机械完备）——L3 trace 面（账清转 strict）",
+  "g3_full_cluster_closure": "SC-G3-00..06 七簇收口（42 员——D7 声明形（L3 路由）+D3 实证面（旗位族））",
+  "arm_deepening_closure": "SC-MD-001..002 收口（8/9+D7（SC-MD-001 过审+SC-MD-002 8/9）——移动臂深化收束报）"
 }
