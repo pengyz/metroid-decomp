@@ -4403,6 +4403,25 @@ findings（r10）：0 新。SC-B4-07 预告随账。
 ③8 案账内 ④员面双扫桩 0（2 员真现）。测 421。findings（r10）：0 新。
 SC-B4-08（B 区余 121 卡）预告随账。
 
+## SC-B4-08+SC-G3-05 双卡审（门族三 bank 谱续/G3 五卡收口）
+
+### SC-B4-08 verdict: pass
+
+①**门族三 bank 谱续 ✓✓✓**：bank1/2/3 $8C61=`a9 01 9d 0f 03 20 fb 8c` **三 bank
+全同**（=a1-016 DoorSubRoutine8C61 同形门重关面——门族三 bank 复现全谱续
+（DrawDoor→8C61 双员三 bank））②DOORSUB-B4-008 预登记 ✓（111 条目）：60 写
+判别条触发→预登记→L2 并案=严格顺序续 ③8 案账内 ④员面双扫桩 0。测 422。
+
+### SC-G3-05 verdict: pass（D7 声明形四连）
+
+①**g3-sfx 族 8 簇名形全清 ✓**（fam 即 id 形——前缀修正（去 -case 后缀误加）+
+账外复验全账内）②**D7 声明形四连 ✓**（SC-G3-00/01/04/05 样板链）：7 簇=BRK
+@ $0001（L2 面不支持走 L3）显式缺口+路线图出口显式（SC-G3-SFX-BOMBEXPLODE/
+BOMBLAUNCH-IMPL 等）③**bombexplode 跑通 ✓**（golden=(0,0,0,[(1664,16)])≠rom=
+(16,0,0,[])——**行为级缺口**（非执行阻塞）=跑通实证+缺口性质升级注）④闸 PASS
+（458 测（workspace 域）/game-core 423）。findings（r10）：0 新。G3 末簇 06 接续
+预告随账。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
