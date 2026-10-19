@@ -9322,3 +9322,29 @@ mod a3_016_tests {
         assert_eq!(b2_8cfb_write_door_bg(), (0x8CFB, true)); // a1-019 同款
     }
 }
+
+// ---- SC-B3-17（a3-017）员转写（2 员——Adiv16 族（bank2 化身））----
+
+/// bank02:8C97 Adiv16 族（root——簇共根形二百三四·**bank2 化身**（a1-020 同款
+/// ——refs 法：prg7_engine.asm:762（bank2 复现）））。
+/// 返回 (目标址, 桩面)。
+pub fn b2_8c97_adiv16() -> (u16, bool) {
+    (0xC2BF, true) // jmp Adiv16（bank2 化身（a1-020 直连））
+}
+
+/// $C2BF Adiv16（bank2 化身——a1-020 同款（prg7_engine.asm:762））。
+pub fn b2_c2bf_adiv16(a_in: u8) -> u8 {
+    a_in >> 4 // 高 4 位移低 4 位（refs 法直得）
+}
+
+#[cfg(test)]
+mod a3_017_tests {
+    use super::*;
+
+    /// 二员转写形（Adiv16 bank2 化身 root+位移面）。
+    #[test]
+    fn a3_017_units_two() {
+        assert_eq!(b2_8c97_adiv16(), (0xC2BF, true)); // a1-020 直连
+        assert_eq!(b2_c2bf_adiv16(0xD4), 0x0D); // 高 4 位移低 4 位
+    }
+}
