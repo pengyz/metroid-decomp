@@ -51,3 +51,18 @@
   **音乐数据布局=序列格式/音符编码待考**（C 余）；
 - **SFX 体**（B 级）：CB96 族例程=旗置位→SFXData 查表→Init/Cont 例程执行——
   例程体细读=待（C 余）。
+
+## 5. 【2026-10-19 G3 C 余续采】序列格式+SFX 数据体（C→A/B 升）
+
+- **SFXData 全表**（A 级：sound_engine.asm:25-96=$B200-）：**28 SFX 项×4 字节
+  APU 参数**（GamePaused/ScrewAttack/MissileLaunch/BombExplode/SamusWalk/SpitFlame/
+  SamusHit/BossHit×2/IncorrectPassword×2/TimeBombTick/EnergyPickup/MissilePickup/
+  Metal/LongRangeShot/ShortRangeShot/SamusJump/EnemyHit/OutOfPipe/WaveBeam/IceBeam/
+  BombLaunch×2/SamusBall/MetroidHit/SamusDie/Beep/BigEnemyHit/**StatueRaise**/Door）
+  +鼓点项×4（noise 音乐 3 字节）；
+- **序列/表格式**（A 级：GetSoundRoutineData 注=B289 表）：每行=[SoundRoutineTablePtr
+  词][SoundRoutinePtr 词][ChannelType 字节]——ChannelType：0=Noise/1=SQ1/3=Tri/
+  4=Multi——**指针对+通道型三元组格式**；
+- **4 字节 SFX 格式**（B 级）：APU 寄存器参数（byte1=周期/byte2=$7F 常见（音量/旗）/
+  byte3-4=包络/时值——细语义待考）；
+- **G2 面交叉续**：StatueRaise SFX 项（$B281）+Door（$B285）——statue/门声面 ✓。
