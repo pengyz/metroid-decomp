@@ -1,0 +1,35 @@
+# 场景：sc-boss-combat —— boss face 战斗深场景（G2 待采余面①）
+# 消费：boss-face-material.md（敌对象族=statue/boss 同族 Object 结构——战斗面）
+# 深面①：animIndex 运动验证（fixture 约定回音——c1-7 槽面 $0306+x 运动实证）
+# 深面②：战斗事件链（beam 命中→敌槽态变（ObjAction/animIndex 槽面）→击破/驱离）
+# 事件核三断言：gear($6878) invariant/敌槽 $0300+x 态变窗口(1150-1500)/战斗后稳定
+name sc-boss-combat
+frames 1600
+watch_range 0000-00ff zp
+watch_range 0100-07ff iram
+watch_range 6878-6878 gear
+
+press 360 start
+press 420 a
+press 540 start
+fixture 1100 6878 04 invariant
+hold 850-1050 right
+hold 1060-1550 right
+press 1150 b
+press 1180 b
+press 1210 b
+press 1240 b
+press 1300 b
+press 1330 b
+press 1360 b
+press 1390 b
+press 1420 b
+press 1450 b
+press 1480 b
+
+capture 1150 enemy-in
+capture 1280 beam-mid
+capture 1500 combat-post
+
+sample_point endFrame
+probe_mem 0300 035f
