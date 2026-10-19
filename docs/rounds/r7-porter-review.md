@@ -4774,6 +4774,19 @@ CASE-IMPL）③**verifier 闸集 ✓**（gap_map TOLERATED 消费面（741358c �
 21 写面+转换+适配+stops 修+D7 注册=六段完。测 451。findings（r10）：0 新。
 SC-B5-16/SC-MD-004 接续预告随账。
 
+## SC-B5-16 卡审（b9d6190）——ClearMotherBrainIsHit 命名正身七现（常量组 3 写）
+
+### verdict: pass
+
+四条核：①**命名正身七现 ✓✓**：prg3_tourian.asm:1131 `ClearMotherBrainIsHit:
+; 03:9E31` ↔ bank3 $9E31=`a9 00 85 9e 60`（LDA #$00/STA $9E/RTS=Clear 语义直合）
+——refs 法命名正身**七步谱系**（DrawDoor→MotherBrain_Idle→HandleBeingHit→
+UpdateAnimBrain→UpdateAnimEye→DrawSprites→**ClearMotherBrainIsHit**）②常量组
+3 写面 ✓：$9E36=`20 43 9e b9 41 9e 85 1c 4c 31`（JSR 链+STA $1C=「$001C←7」
++常量组（$009E←0/$009F←255 案钉）+JMP $9E31 回链）③判别条十四现负例（3 写
+常量组→不触发=严格顺序 ✓）+8 案 strict 0 败（首提全过）④员面双扫桩 0（2 员
+真现）。测 452。findings（r10）：0 新。SC-B5-17（B 区余 90 卡）预告随账。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
