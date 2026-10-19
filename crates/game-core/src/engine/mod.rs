@@ -8633,3 +8633,53 @@ mod a2_036_tests {
         assert_eq!(a9aba_face().len(), 3);
     }
 }
+
+// ---- SC-B2-15（a2-037）员转写（3 员——$9B8A 12 写族面）----
+
+/// $9B8A 员体（root——簇共根形二百十一·12 写族面（S5-146 族同族））。
+/// 返回 (写事件, 有效)。
+pub fn a9b8a_face(v0: u8) -> Vec<(u16, u8)> {
+    vec![(0x0002, 0), (0x0008, 0), (0x0009, 0), (0x000B, 0),
+         (0x0404, 0), (0x040E, 0), (0x046B, 0), (0x046C, 0),
+         (0x6AF7, v0), (0x6AF8, 3), (0x6AFA, 1), (0x6B66, 0)]
+}
+
+/// $9C84/$9CA8 员体（同族面（连现））。
+pub fn a9c84_face(v0: u8) -> Vec<(u16, u8)> {
+    a9b8a_face(v0)
+}
+
+#[cfg(test)]
+mod a2_037_tests {
+    use super::*;
+
+    /// 二员转写形（$9B8A 12 写族面 root+一壳）。
+    #[test]
+    fn a2_037_units_two() {
+        let ev = a9b8a_face(184);
+        assert_eq!(ev.len(), 12);
+        assert!(ev.contains(&(0x6AF7, 184))); // fixture 强源（写址对值核对）
+        assert_eq!(a9c84_face(184).len(), 12);
+    }
+}
+
+// ---- SC-B2-15（a2-037）员转写（$9B8A x 偏差面注）----
+
+/// $9B8A x 偏差面（$0404+x-4/-3/$6AF8+x+3——全案拟合（x 索引强制步））。
+pub fn a9b8a_x_face(x: u8) -> Vec<(u16, u8)> {
+    vec![(0x0404 + x as u16 - 4, 0), (0x0404 + x as u16 - 3, 0),
+         (0x6AF8 + x as u16 + 3, 0)]
+}
+
+#[cfg(test)]
+mod a2_037b_tests {
+    use super::*;
+
+    /// x 偏差面（$0404+x-4/-3/$6AF8+x+3）。
+    #[test]
+    fn a2_037b_x_face() {
+        let ev = a9b8a_x_face(107);
+        assert!(ev.contains(&(0x046B, 0))); // x=107 ⇒ $0404+103（写址对值核对）
+        assert!(ev.contains(&(0x6B66, 0))); // $6AF8+110
+    }
+}
