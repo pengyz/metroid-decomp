@@ -218,6 +218,13 @@
       "reason": "$6AF7 链算残差（232/217 等——fixture 无源（wram 域初值/链算写回）——pickup 链后段效应（S5-121/S6-165/166 同款跨卡链形））",
       "exit": "pickup 链后段径建模清（$6AF7 写回源模拟——wram 初值/链算径）→账清转 strict",
       "registered": "2026-10-19"
+    },
+    {
+      "id": "SC-A1-012-IMPL",
+      "case_prefix": "a1-012-case",
+      "reason": "【预登记】a1-012 簇（porter 严格顺序单发二例——开工前置步先登记——实现/转写缺口预账）",
+      "exit": "a1_cluster_012 移植/转写落→账清转 strict",
+      "registered": "2026-10-19"
     }
   ]
 }
