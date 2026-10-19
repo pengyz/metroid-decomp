@@ -7,10 +7,10 @@
 pub mod attrs;
 pub mod common;
 pub mod slot;
-pub mod todo_0404;
-pub mod todo_040e;
+pub mod enemy_collision_flags;
+pub mod enemy_state;
 
 pub use attrs::EnemyAttrs;
 pub use slot::EnemySlot;
-pub use todo_0404::EnemyTodo0404;
-pub use todo_040e::EnemyTodo040E;
+pub use enemy_collision_flags::EnemyCollisionFlags;
+pub use enemy_state::EnemyState;

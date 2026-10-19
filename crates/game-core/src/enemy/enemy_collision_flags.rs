@@ -1,4 +1,4 @@
-//! 敌方 $0404 数组域模型（F2CA 族第 2/3 件载体；地址侧=memmap::enemy_todo_0404）。
+//! 敌方 $0404 数组域模型（F2CA 族第 2/3 件载体；地址侧=memmap::enemy_collision_flags）。
 //!
 //! 命名降级（lead 裁定）：语义**未证**——「coords」之说按 `_todo_`+证据注纪律降级
 //! （data/naming 台账 N-0005 记 C 级假设：coords 假设待语义考证后按 rename 流程升级）。
@@ -6,13 +6,13 @@
 //! bank07:F2DF `19 04 04`/`99 04 04`（ORA/STA $0404,Y，LDA zp $10 起手）。
 //! 行为（B 级语义概要级）：OR 回写（与 EnemyAttrs::or_attribute 同形——掩码来源由 shim 侧定）。
 
-/// 敌方 $0404 数组（字节偏移契约面；地址域由 memmap::enemy_todo_0404 承载）。
+/// 敌方 $0404 数组（字节偏移契约面；地址域由 memmap::enemy_collision_flags 承载）。
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct EnemyTodo0404 {
+pub struct EnemyCollisionFlags {
     entries: [u8; 0x100],
 }
 
-impl EnemyTodo0404 {
+impl EnemyCollisionFlags {
     /// 从字节偏移契约面构造（memmap codec 解码入口）。
     pub fn new(entries: [u8; 0x100]) -> Self {
         Self { entries }
@@ -45,11 +45,11 @@ mod tests {
     fn or_writeback_noop_write_is_still_event() {
         let mut entries = [0u8; 0x100];
         entries[5] = 170;
-        let before = EnemyTodo0404::new(entries);
+        let before = EnemyCollisionFlags::new(entries);
         let mut v0404 = before.clone();
         let v = v0404.or_writeback(5, 0); // 同值回写
         assert_eq!(v, 170);
-        assert!(crate::memmap::enemy_todo_0404::diff_writes(&before, &v0404).is_empty());
-        assert_eq!(crate::memmap::enemy_todo_0404::write_event(5, v), (crate::memmap::enemy_todo_0404::ENEMY_TODO_0404_BASE + 5, 170));
+        assert!(crate::memmap::enemy_collision_flags::diff_writes(&before, &v0404).is_empty());
+        assert_eq!(crate::memmap::enemy_collision_flags::write_event(5, v), (crate::memmap::enemy_collision_flags::ENEMY_COLLISION_FLAGS_BASE + 5, 170));
     }
 }

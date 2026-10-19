@@ -13,8 +13,8 @@
 pub mod cd9c;
 pub mod enemy_attrs;
 pub mod enemy_slots;
-pub mod enemy_todo_0404;
-pub mod enemy_todo_040e;
+pub mod enemy_collision_flags;
+pub mod enemy_state;
 pub mod flow_scratch;
 pub mod frame_face;
 pub mod object;

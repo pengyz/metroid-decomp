@@ -39,54 +39,54 @@ pub fn f270(input: &L2In) -> L2Out {
 
 /// f2d8 适配（注册名 `sub_F2D8` ← bank07:F2D8-F2DE，stops=bank07:F2DE）。
 ///
-/// 域方法：`enemy::EnemyTodo0404::or_writeback`（OR 回写，掩码=入参 A）。
-/// 写集：语义变更点经 memmap::enemy_todo_0404::write_event 推导。
+/// 域方法：`enemy::EnemyCollisionFlags::or_writeback`（OR 回写，掩码=入参 A）。
+/// 写集：语义变更点经 memmap::enemy_collision_flags::write_event 推导。
 pub fn f2d8(input: &L2In) -> L2Out {
-    let mut v0404 = memmap::enemy_todo_0404::decode_todo_0404(&input.ram);
+    let mut v0404 = memmap::enemy_collision_flags::decode_enemy_collision_flags(&input.ram);
     let a_out = v0404.or_writeback(input.x, input.a);
-    let writes = vec![memmap::enemy_todo_0404::write_event(input.x, a_out)];
+    let writes = vec![memmap::enemy_collision_flags::write_event(input.x, a_out)];
     L2Out { a: a_out, x: input.x, y: input.y, writes }
 }
 
 /// f2df 适配（注册名 `sub_F2DF` ← bank07:F2DF-F2E7，stops=bank07:F2E7）。
 ///
-/// 域方法：`enemy::EnemyTodo0404::or_writeback`（OR 回写，掩码=memmap 掩码源 zp——F2DF 流
+/// 域方法：`enemy::EnemyCollisionFlags::or_writeback`（OR 回写，掩码=memmap 掩码源 zp——F2DF 流
 /// `LDA zp $10` 起手，入参 A 不影响）。写集：write_event 推导。
 pub fn f2df(input: &L2In) -> L2Out {
-    let mut v0404 = memmap::enemy_todo_0404::decode_todo_0404(&input.ram);
-    let mask = memmap::enemy_todo_0404::mask10(&input.ram);
+    let mut v0404 = memmap::enemy_collision_flags::decode_enemy_collision_flags(&input.ram);
+    let mask = memmap::enemy_collision_flags::mask10(&input.ram);
     let a_out = v0404.or_writeback(input.y, mask);
-    let writes = vec![memmap::enemy_todo_0404::write_event(input.y, a_out)];
+    let writes = vec![memmap::enemy_collision_flags::write_event(input.y, a_out)];
     L2Out { a: a_out, x: input.x, y: input.y, writes }
 }
 
 /// f2d5 适配（注册名 `sub_F2D5` ← bank07:F2D5-F2DE，stops=bank07:F2DE）。
 ///
-/// 域方法：`enemy::EnemyTodo0404::or_writeback`（OR 回写，掩码=memmap 变换掩码
+/// 域方法：`enemy::EnemyCollisionFlags::or_writeback`（OR 回写，掩码=memmap 变换掩码
 /// ((RAM[$10]^3)<<3)——F340 `EOR #3`+C2C6 尾 `ASL×3`，变换逻辑住映射层）。
 /// 同域方法第 3 shim（F2D8/F2DF/F2D5 掩码来源三分）。
 pub fn f2d5(input: &L2In) -> L2Out {
-    let mut v0404 = memmap::enemy_todo_0404::decode_todo_0404(&input.ram);
-    let mask = memmap::enemy_todo_0404::mask10_transformed(&input.ram);
+    let mut v0404 = memmap::enemy_collision_flags::decode_enemy_collision_flags(&input.ram);
+    let mask = memmap::enemy_collision_flags::mask10_transformed(&input.ram);
     let a_out = v0404.or_writeback(input.x, mask);
-    let writes = vec![memmap::enemy_todo_0404::write_event(input.x, a_out)];
+    let writes = vec![memmap::enemy_collision_flags::write_event(input.x, a_out)];
     L2Out { a: a_out, x: input.x, y: input.y, writes }
 }
 
 /// f2ad 适配（注册名 `sub_F2AD` ← bank07:F2AD-F2DE，stops=bank07:F2DE）。
 ///
-/// **跨 view 组合**（two-layer §1）：`EnemyTodo040E::set_entry`（state 直写 $81——memmap
-/// F2AD_STATE_INIT）后落 F2D5 流 `EnemyTodo0404::or_writeback`（掩码=memmap 变换掩码）。
+/// **跨 view 组合**（two-layer §1）：`EnemyState::set_entry`（state 直写 $81——memmap
+/// F2AD_STATE_INIT）后落 F2D5 流 `EnemyCollisionFlags::or_writeback`（掩码=memmap 变换掩码）。
 /// 写集：两域 write_event 依序推导（$040E+X、$0404+X）。
 pub fn f2ad(input: &L2In) -> L2Out {
-    let mut e040e = memmap::enemy_todo_040e::decode_todo_040e(&input.ram);
-    let mut v0404 = memmap::enemy_todo_0404::decode_todo_0404(&input.ram);
-    let state_v = e040e.set_entry(input.x, memmap::enemy_todo_040e::F2AD_STATE_INIT);
-    let mask = memmap::enemy_todo_0404::mask10_transformed(&input.ram);
+    let mut e040e = memmap::enemy_state::decode_enemy_state(&input.ram);
+    let mut v0404 = memmap::enemy_collision_flags::decode_enemy_collision_flags(&input.ram);
+    let state_v = e040e.set_entry(input.x, memmap::enemy_state::F2AD_STATE_INIT);
+    let mask = memmap::enemy_collision_flags::mask10_transformed(&input.ram);
     let a_out = v0404.or_writeback(input.x, mask);
     let writes = vec![
-        memmap::enemy_todo_040e::write_event(input.x, state_v),
-        memmap::enemy_todo_0404::write_event(input.x, a_out),
+        memmap::enemy_state::write_event(input.x, state_v),
+        memmap::enemy_collision_flags::write_event(input.x, a_out),
     ];
     L2Out { a: a_out, x: input.x, y: input.y, writes }
 }
@@ -95,26 +95,26 @@ pub fn f2ad(input: &L2In) -> L2Out {
 ///
 /// **carry 敏感 + 跨 view 三方法组合**（lead 注记④双向 carry 面）：
 /// 入参 C=1（`BCS $F2DE`）⇒ 空写集直出（A/X/Y 透传）；
-/// C=0 ⇒ EnemyTodo040E::set_entry（$040E+X←RAM[$0300+Y]，值源=memmap::state_source）
+/// C=0 ⇒ EnemyState::set_entry（$040E+X←RAM[$0300+Y]，值源=memmap::state_source）
 /// + EnemyAttrs::or_attribute（$030A+Y←RAM[$10]|old，F279 尾）
-/// + EnemyTodo0404::or_writeback（$0404+X←变换掩码|old，F2D5 流）。
+/// + EnemyCollisionFlags::or_writeback（$0404+X←变换掩码|old，F2D5 流）。
 /// 写集：三域 write_event 依序推导。内返回址 F281（F279）/C2C9（F332）逐址核过不在 stops。
 pub fn f2ca(input: &L2In) -> L2Out {
     const FLAG_C: u8 = 0x01;
     if input.p & FLAG_C != 0 {
         return L2Out { a: input.a, x: input.x, y: input.y, writes: vec![] };
     }
-    let mut e040e = memmap::enemy_todo_040e::decode_todo_040e(&input.ram);
+    let mut e040e = memmap::enemy_state::decode_enemy_state(&input.ram);
     let mut attrs = memmap::enemy_attrs::decode_attrs(&input.ram);
-    let mut v0404 = memmap::enemy_todo_0404::decode_todo_0404(&input.ram);
-    let state_v = e040e.set_entry(input.x, memmap::enemy_todo_040e::state_source(&input.ram, input.y));
-    let attr_v = attrs.or_attribute(input.y, memmap::enemy_todo_0404::mask10(&input.ram));
-    let mask = memmap::enemy_todo_0404::mask10_transformed(&input.ram);
+    let mut v0404 = memmap::enemy_collision_flags::decode_enemy_collision_flags(&input.ram);
+    let state_v = e040e.set_entry(input.x, memmap::enemy_state::state_source(&input.ram, input.y));
+    let attr_v = attrs.or_attribute(input.y, memmap::enemy_collision_flags::mask10(&input.ram));
+    let mask = memmap::enemy_collision_flags::mask10_transformed(&input.ram);
     let a_out = v0404.or_writeback(input.x, mask);
     let writes = vec![
-        memmap::enemy_todo_040e::write_event(input.x, state_v),
+        memmap::enemy_state::write_event(input.x, state_v),
         memmap::enemy_attrs::write_event(input.y, attr_v),
-        memmap::enemy_todo_0404::write_event(input.x, a_out),
+        memmap::enemy_collision_flags::write_event(input.x, a_out),
     ];
     L2Out { a: a_out, x: input.x, y: input.y, writes }
 }
@@ -123,7 +123,7 @@ pub fn f2ca(input: &L2In) -> L2Out {
 ///
 /// **carry 敏感 + CD9C 探针路由 + 跨 view 组合**：
 /// 入参 C=1（`B0 21` BCS $F310）⇒ 空写集直出；
-/// C=0 ⇒ EnemyTodo0404::or_writeback（$0404+Y←RAM[$10]|old，JSR F2DF）→ CD9C 探针
+/// C=0 ⇒ EnemyCollisionFlags::or_writeback（$0404+Y←RAM[$10]|old，JSR F2DF）→ CD9C 探针
 /// （进位=关键输出）→ 探针 C=0 ⇒ 出口（A=探针 A）；
 /// 探针 C=1 ⇒ $010F←$80（暂存）+ EnemyAttrs::or_attribute（$030A+X←变换掩码|old，JSR F270）
 /// + $6E/$6F←ROM 向量（**窗口参数化**——`rom_tables::rom_vec(input.window_bank)`，
@@ -139,8 +139,8 @@ fn f2ed_flow(input: &L2In, a_entry: u8) -> L2Out {
     if input.p & FLAG_C != 0 {
         return L2Out { a: a_entry, x: input.x, y: input.y, writes: vec![] };
     }
-    let mut v0404 = memmap::enemy_todo_0404::decode_todo_0404(&input.ram);
-    let a_df = v0404.or_writeback(input.y, memmap::enemy_todo_0404::mask10(&input.ram));
+    let mut v0404 = memmap::enemy_collision_flags::decode_enemy_collision_flags(&input.ram);
+    let a_df = v0404.or_writeback(input.y, memmap::enemy_collision_flags::mask10(&input.ram));
     let probe = memmap::cd9c::probe(&input.ram, &input.wram, a_df);
     if !probe.carry {
         // F2F2 TYA/PHA/…/F2F7 PLA/TAY：出口 A=Y_in（探针 A 被 PLA 覆盖——ROM 裁定修正案）
@@ -148,15 +148,15 @@ fn f2ed_flow(input: &L2In, a_entry: u8) -> L2Out {
             a: input.y,
             x: input.x,
             y: input.y,
-            writes: vec![memmap::enemy_todo_0404::write_event(input.y, a_df)],
+            writes: vec![memmap::enemy_collision_flags::write_event(input.y, a_df)],
         };
     }
     let mut attrs = memmap::enemy_attrs::decode_attrs(&input.ram);
-    let mask = memmap::enemy_todo_0404::mask10_transformed(&input.ram);
+    let mask = memmap::enemy_collision_flags::mask10_transformed(&input.ram);
     let attr_v = attrs.or_attribute(input.x, mask);
     let (vec_lo, vec_hi) = memmap::rom_tables::rom_vec(input.window_bank);
     let writes = vec![
-        memmap::enemy_todo_0404::write_event(input.y, a_df),
+        memmap::enemy_collision_flags::write_event(input.y, a_df),
         memmap::flow_scratch::event_010f(memmap::flow_scratch::F2ED_SCRATCH_INIT),
         memmap::enemy_attrs::write_event(input.x, attr_v),
         memmap::flow_scratch::event_vec_lo(vec_lo),
@@ -171,15 +171,15 @@ fn f2ed_flow(input: &L2In, a_entry: u8) -> L2Out {
 /// F2D8 流 or_writeback（$0404+X，掩码=半变换）出口 F2DE；
 /// 为 0 ⇒ 落 F2ED 流（入口 A=0——BCS 出口 A 与 f2ed 的入参 A 面不同，参数化复用）。
 pub fn f2e8(input: &L2In) -> L2Out {
-    let mask = memmap::enemy_todo_0404::mask10_xor3(&input.ram);
+    let mask = memmap::enemy_collision_flags::mask10_xor3(&input.ram);
     if mask != 0 {
-        let mut v0404 = memmap::enemy_todo_0404::decode_todo_0404(&input.ram);
+        let mut v0404 = memmap::enemy_collision_flags::decode_enemy_collision_flags(&input.ram);
         let a_out = v0404.or_writeback(input.x, mask);
         return L2Out {
             a: a_out,
             x: input.x,
             y: input.y,
-            writes: vec![memmap::enemy_todo_0404::write_event(input.x, a_out)],
+            writes: vec![memmap::enemy_collision_flags::write_event(input.x, a_out)],
         };
     }
     f2ed_flow(input, mask)
@@ -239,7 +239,7 @@ pub fn f282(input: &L2In) -> L2Out {
     }
     // ⑤ 全路径
     let mut attrs = memmap::enemy_attrs::decode_attrs(&input.ram);
-    let attr_v = attrs.or_attribute(0, memmap::enemy_todo_0404::mask10_shl3(&input.ram));
+    let attr_v = attrs.or_attribute(0, memmap::enemy_collision_flags::mask10_shl3(&input.ram));
     writes.push(memmap::enemy_attrs::write_event(0, attr_v));
     let (vec_lo, vec_hi) = memmap::rom_tables::rom_vec(input.window_bank);
     writes.push(memmap::flow_scratch::event_vec_lo(vec_lo));
@@ -2657,6 +2657,21 @@ pub fn s7_cluster_180(input: &L2In) -> L2Out {
 /// （$0404/$040E←0（S6-152 同族））+$6AF7←r(0)+$6AF8←A+$6AFA←1（S5-146 同族）；
 /// A=0/X=0/Y=1）。
 pub fn a1_cluster_000(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    L2Out {
+        a: 0, x: 0, y: 1,
+        writes: merge_writes(vec![
+            (0x0404, 0), (0x040E, 0),
+            (0x6AF7, r(0x0000)), (0x6AF8, input.a), (0x6AFA, 1),
+        ]),
+    }
+}
+
+// ---- SC-B1-01 簇入口适配（a1_cluster_001 ← bank01:8003——a1-000 同族形）----
+
+/// a1_cluster_001 适配（$8003 jmp 桩链——**a1-000 同族**（定址清对+$6AF7←r(0)/
+/// $6AF8←A/$6AFA←1（S5-146 同族））；A=0/X=0/Y=1）。
+pub fn a1_cluster_001(input: &L2In) -> L2Out {
     let r = |a: u16| input.ram[a as usize & 0x7FF];
     L2Out {
         a: 0, x: 0, y: 1,

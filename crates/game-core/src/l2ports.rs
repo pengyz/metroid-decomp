@@ -484,6 +484,7 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "s7_cluster_179" => Some(sub_s7_cluster_179),
         "s7_cluster_180" => Some(sub_s7_cluster_180),
         "a1_cluster_000" => Some(sub_a1_cluster_000),
+        "a1_cluster_001" => Some(sub_a1_cluster_001),
         _ => None,
     }
 }
@@ -739,7 +740,7 @@ pub fn sub_f1fa(input: &L2In) -> L2Out {
 // ---- task-8 F2CA 族（九入口共享 RTS 尾；decode-sweep r1 §3，切片边界定案见各 doc 注）----
 
 /// sub_F2D8 —— bank07:F2D8-F2DE 注册名（机械名只在注册注释，two-layer §4）。
-/// **域形态**（§5 迁移件）：`enemy::EnemyTodo0404::or_writeback`（OR 回写，掩码=入参 A）
+/// **域形态**（§5 迁移件）：`enemy::EnemyCollisionFlags::or_writeback`（OR 回写，掩码=入参 A）
 /// 经 `verify_shim::f2d8` 适配；旧字面转写见 commit 1d61521（§5 参考件）——同批 L2 案双绿。
 /// L2 窗口 stops=bank07:F2DE（尾 RTS 址截断）。
 /// 语义（A 级：ROM 原字节 `1D 04 04 9D 04 04 60`）：$0404+X ← A|old（入参 A 参与——与 F2DF
@@ -749,7 +750,7 @@ pub fn sub_f2d8(input: &L2In) -> L2Out {
 }
 
 /// sub_F2DF —— bank07:F2DF-F2E7 注册名（机械名只在注册注释，two-layer §4）。
-/// **域形态**（§5 迁移件）：`enemy::EnemyTodo0404::or_writeback`（OR 回写，掩码=memmap 掩码源
+/// **域形态**（§5 迁移件）：`enemy::EnemyCollisionFlags::or_writeback`（OR 回写，掩码=memmap 掩码源
 /// zp——LDA zp $10 起手，入参 A 不影响）经 `verify_shim::f2df` 适配；旧字面转写见 commit c523762。
 /// L2 窗口 stops=bank07:F2E7（尾 RTS 址截断）。
 /// 语义（A 级：ROM 原字节 `A5 10 19 04 04 99 04 04 60`）：$0404+Y ← RAM[$10]|old（LDA zp $10
@@ -769,7 +770,7 @@ pub fn sub_f270(input: &L2In) -> L2Out {
 }
 
 /// sub_F2D5 —— bank07:F2D5-F2DE 注册名（机械名只在注册注释，two-layer §4）。
-/// **域形态**（§5 新实施件）：`enemy::EnemyTodo0404::or_writeback`（OR 回写，掩码=memmap
+/// **域形态**（§5 新实施件）：`enemy::EnemyCollisionFlags::or_writeback`（OR 回写，掩码=memmap
 /// 变换掩码 ((RAM[$10]^3)<<3)——F340 EOR#3+C2C6 尾 ASL×3）经 `verify_shim::f2d5` 适配。
 /// L2 窗口 stops=bank07:F2DE（JSR F332 内返回址 C2C9 不在 stops，逐址核过）。
 pub fn sub_f2d5(input: &L2In) -> L2Out {
@@ -777,8 +778,8 @@ pub fn sub_f2d5(input: &L2In) -> L2Out {
 }
 
 /// sub_F2AD —— bank07:F2AD-F2DE 注册名（机械名只在注册注释，two-layer §4）。
-/// **域形态**（§5 新实施件）：跨 view 组合——`EnemyTodo040E::set_entry`（$040E+X←$81，
-/// F2B2 BNE 恒转）后落 F2D5 流 `EnemyTodo0404::or_writeback`（变换掩码）。
+/// **域形态**（§5 新实施件）：跨 view 组合——`EnemyState::set_entry`（$040E+X←$81，
+/// F2B2 BNE 恒转）后落 F2D5 流 `EnemyCollisionFlags::or_writeback`（变换掩码）。
 /// L2 窗口 stops=bank07:F2DE；F2B4 块自 F2AD 入口不可达（BNE 恒转，F2BD BCS $F298 侧不入窗）。
 pub fn sub_f2ad(input: &L2In) -> L2Out {
     crate::verify_shim::f2ad(input)
@@ -1529,4 +1530,9 @@ pub fn sub_s7_cluster_180(input: &L2In) -> L2Out {
 /// a1_cluster_000 —— bank01:8000 簇入口注册（SC-B1-00）。
 pub fn sub_a1_cluster_000(input: &L2In) -> L2Out {
     crate::verify_shim::a1_cluster_000(input)
+}
+
+/// a1_cluster_001 —— bank01:8003 簇入口注册（SC-B1-01）。
+pub fn sub_a1_cluster_001(input: &L2In) -> L2Out {
+    crate::verify_shim::a1_cluster_001(input)
 }
