@@ -2752,6 +2752,17 @@ $95B1 banks1/2/4/5=`60 ea ea 60 ea ea 60 ea` 全同（rts 桩阵续面——area
 双扫桩 0（2 员真现）+CannonHandler 多接面（S2-23/S2-10）随证。注释断行自纠随账。
 测 274。findings（r10）：0 新。SC-S5-05（pregen 先核）预告随账。
 
+## SC-S5-05 卡审（67ca457）——MotherBrainHandler 同阵偏移/指针面抽核
+
+### verdict: pass
+
+四条核：①L2 留白**真 0 三方核 ✓**（pregen/l2_cases 全 0）②**同阵偏移抽核 ✓**：
+$95B4=$95B1 同阵偏移二现（areas_common 形六续——bank 侧映射形：banks1/2/4/5
+桩阵/他 bank 代码=call site JSR $95B4 的 bank 特定语义）；壳形 ✓：$EEAE=
+`20 b4 95 a9 38 85 07`=JSR $95B4/LDA #$38/**STA $07 指针面**——S2-10 接面随证
+③L3 0 失败容忍不增（1029/36 账内稳）④员面双扫桩 0（2 员真现）。测 275。
+findings（r10）：0 新。SC-S5-06（pregen 先核）预告随账。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
