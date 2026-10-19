@@ -2,6 +2,10 @@
 -- 由 tools/scenario_run.py 把 PLAN 表字面量前置后整拼为 analysis/_gen/<name>.lua 喂给 Mesen2 2.1.1。
 -- DSL 语义只在 tools/scenario_run.py 解析（无第二套解析逻辑）；本文件只执行 PLAN。
 --
+
+-- 【2026-10-19 探针修支援注】trigger/probe 条件窗语义：trigger 走廊窗正常（v2 顶障
+-- 2px 实证）但 pit 窗零效应（v5——sc-pickup-touch 战役注）——疑=trigger 条件匹配窗
+-- 与 nav/hold 动作窗时序边界（条件评估帧 vs 动作生效帧）——待深勘。
 -- API 依据（Mesen2 2.1.1 实测探针，见任务 t8/t12 记录）：
 --   emu.addEventCallback(fn, "inputPolled"|"endFrame")  帧回调
 --   emu.setInput({a=..,b=..,start=..,select=..,up=..,down=..,left=..,right=..}, 0)  注入按键
