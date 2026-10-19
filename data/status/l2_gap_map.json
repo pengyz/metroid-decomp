@@ -1,6 +1,6 @@
 {
   "schema": "l2-gap-map/v1",
-  "doc": "L2 记账面（迭代态已知缺口——trace/visual gap_map 同构：账内容忍+路线图+账清转 strict；非白名单非调阈）",
+  "doc": "L2 记账面（迭代态已知缺口——trace/visual gap_map 同构：账内容忍+路线图+账清转 strict；非白名单非调阈）。**A 批预登记制**（2026-10-19 稳定性根治）：SC-A1-0xx-IMPL 簇级账目随卡开工**预登记**（败案在=账目在的前置化）——新败案自动在账内=容忍态稳定=红视不复发；预登记条目 reason 注「预登记」+exit 注卡落转 strict。",
   "entries": [
     {
       "id": "SC-A1-001-ENEMYMOVE",
@@ -161,6 +161,13 @@
       "case_prefix": "a1-004-case",
       "reason": "a1_cluster_004 缺移植函数（实现缺口——批产 WIP 簇；全 8 案随转写收敛）",
       "exit": "a1_cluster_004 移植落→账清转 strict",
+      "registered": "2026-10-19"
+    },
+    {
+      "id": "SC-A1-005-IMPL",
+      "case_prefix": "a1-005-case",
+      "reason": "【预登记】a1-005 簇（porter 在途 WIP——A 批预登记制首件：败案在=账目在前置化——实现/转写缺口预账）",
+      "exit": "a1_cluster_005 移植/转写落→账清转 strict",
       "registered": "2026-10-19"
     }
   ]
