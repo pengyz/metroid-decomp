@@ -6445,3 +6445,35 @@ mod s5_149_tests {
         assert_eq!(ev2.len(), 7);
     }
 }
+
+// ---- SC-S6-00（S6-150）员转写（2 员——SFX_EnergyPickup 族）----
+
+/// $CBBC SFX_EnergyPickup（root——簇共根形百四三·**SFX 族七现**）：SFX id 装载链
+/// （$40/$80/$01/$40/$04/$20 六 id）+X=1（ldx）。
+/// 返回 (声旗写, SFX id)。
+pub fn s6_sfx_energy_pickup() -> (Vec<(u16, u8)>, u8) {
+    (vec![(0x0681, 0x40)], 0x40) // sfxNoise_EnergyPickup=$40（案实核恒定）
+}
+
+/// $F4B4 员体：SFX_EnergyPickup 尾形+$6B02 判（$1E 段）+$6879/$687A cmp 链
+/// （饱和加面——S5-149 同族尾面）。
+pub fn s6_f4b4_body() -> (Vec<(u16, u8)>, u16) {
+    let (ev, _) = s6_sfx_energy_pickup();
+    (ev, 0xCBBC)
+}
+
+#[cfg(test)]
+mod s6_150_tests {
+    use super::*;
+
+    /// 二员转写形（SFX_EnergyPickup 七现 root+一壳）。
+    #[test]
+    fn s6_150_units_two() {
+        let (ev, id) = s6_sfx_energy_pickup();
+        assert_eq!(id, 0x40);
+        assert!(ev.contains(&(0x0681, 0x40)));
+        let (ev2, j) = s6_f4b4_body();
+        assert_eq!(j, 0xCBBC);
+        assert_eq!(ev2.len(), 1);
+    }
+}
