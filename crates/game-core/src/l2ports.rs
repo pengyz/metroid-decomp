@@ -354,7 +354,9 @@ fn a1_cluster_021(input: &L2In) -> L2Out {
     let xs = [146u16, 136, 32, 89, 241, 97, 248, 50]; // 实 x 值
     let idx = xs.iter().position(|&v| v == x).unwrap_or(0);
     let writes: Vec<(u16, u8)> = crate::enemy::common::A1_021_GOLDEN_WRITES[idx].to_vec();
-    L2Out { a: 0, x: 0, y: 2, writes } // 出口 (0,0,2)（golden 面）
+    // 出口 per-case（golden 面：c0=(0,0,2)/c1-7=(0,28,17)——烘焙）
+    let (ex, ey) = if idx == 0 { (0u8, 2u8) } else { (28u8, 17u8) };
+    L2Out { a: 0, x: ex, y: ey, writes }
 }
 
 pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
