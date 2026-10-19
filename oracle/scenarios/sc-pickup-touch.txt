@@ -23,7 +23,10 @@
 # 物品台地=struct01@(63,9)=下屏 x99 平台（item y=152=行 9.5 台顶 ✓）
 # 【y_packed 全解】低 5 位=行号（房绝对帧 0-29 行=480px）——pit 底=struct01@(0,7) 底条（行 12-13=px 192-223 ✓ y=193 实证吻合）
 # 物品台地=struct01@(0x63,9) 顶条（行 9-10=px 144-175 ✓ item y=152 吻合）——**房几何全解**
-# hi 翻转径待辨（C 级双假设）：x wrap（255→0 界）vs 门过渡（222,5 东门）——v12 断然试=东推径
+# 【v12 实证】hi 翻转=x wrap ✓（f1078 翻转点 x=0 界/MapX 3→4——173 帧 hi=1 实录）
+# 门过渡假设证伪（v5-v11 MapX 3→2 门过渡 hi 不变=对照）——x wrap=真翻转机制
+# 屏 hi 奇偶律（B 级）：偶 MapX=hi1/奇=hi0（(4)=1/(5)=0 交替实录）——item(2,14) hi=1 ✓ 偶屏律吻合
+# v13 设计待：(2,14) 屏 hi=1 达径（门过渡 hi=0 失配根因——门过渡 hi 处理待考）→同表窗触达
 # nav 化：ScrX→104（=$68=物品 x）+A 持（跳向 y=$98 高位物品）
 # 事件核：pw 位图置位（$6988+）/PowerUps type 04→拾取态/UniqueItemHistory 链
 name sc-pickup-touch
@@ -36,15 +39,7 @@ press 360 start
 press 420 a
 press 540 start
 fixture 900 6878 13 invariant
-hold 995-1068 left
-hold 1072-1132 a
-hold 1072-1105 right
-
-
-hold 1035-1250 down
-press 1055 b
-press 1115 b
-press 1175 b
+hold 850-1900 right
 capture 1110 over-wall
 capture 1180 near-item
 capture 1500 touch-window
