@@ -12,5 +12,6 @@
   "cluster_source": "arm-evidence-package.md §1.5（派发表全形——9 簇/14 员）",
   "bake_status": "9 簇烤案占位全（推导注——golden 手推在途）——ROM golden 替换候窗形修",
   "capture_ready": "抓取随行态：arm 9 簇占位+推导注全（a1-025 SamusJump 全形深注）——**候 bank07 窗形修落**→Mesen2 抓取→三方对拍（质量底线 #1）",
-  "md002_coordination": "SC-MD-002 协同（a1-026 全要素核过——推导深/BUG 注/子例程锚）——就绪态"
+  "md002_coordination": "SC-MD-002 协同（a1-026 全要素核过——推导深/BUG 注/子例程锚）——就绪态",
+  "md002_incremental": "SC-MD-002 协同续（态差核过——9 案稳/注在）——就绪态保持"
 }
