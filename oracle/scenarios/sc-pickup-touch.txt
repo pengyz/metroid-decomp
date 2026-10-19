@@ -34,7 +34,8 @@
 # 物品活 f1011-1252（hi=0）/hi=1 自 f1329（物已死）——路由上两窗不重叠=触达结构性差
 # 【swap 点定】死点=MapX 3→4 界 @roomx≈143（f1252——房界 crossing 非 wrap）
 # 物品存活=MapX≤3 窗（房 (2,14)-(3,14) 域）——出界即死（RemoveIfOffScreen）
-# v21 负：Δy=71/Δx=124 恒（wrap 侧地形挡——西推收距未达）——同表活续证（f1633）
+# v22 判=负（预算封顶裁——Δy 39/Δx 140）——**战役收束转面**（v1-v22 沉淀档案化）
+# 收束令：G2 素材余面/待采清单/scenario manifest 全注——21+1 迭代全解档案（本文件=战役档案）
 # 战役收束（v1-v21）：三条件同窗 ✓（v20）+机制/几何/存活窗全解——触达差=wrap 侧 39px 带一击
 # 墙跳越✓（wrap f1187）——差=Δx 124/Δy 71（wrap 侧 x=255→物品 x=104 距）——v21：西推收距+跳触
 # 存活窗解法=西行（东行触发 MapX 3→4 死点/西行无界）——v20 待：x=4 墙跳越→x=0 wrap→hi=1
@@ -60,8 +61,9 @@ fixture 900 6878 13 invariant
 hold 995-1068 left
 hold 1075-1150 left
 hold 1155-1260 a
-hold 1265-1700 left
-hold 1560-1650 a
+hold 1265-1500 left
+hold 1500-1580 a
+hold 1585-1850 left
 capture 1110 over-wall
 capture 1180 near-item
 capture 1500 touch-window
