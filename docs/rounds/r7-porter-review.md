@@ -4124,6 +4124,17 @@ $B3BD 窗 +45 rts 实证；$B329 超 48B 窗=**窗限诚实注**（routine 长�
 双案 PASS 不窜补足））④员面真现。测 399。findings（r10）：0 新（窗限注非判定）。
 G3 卡序 02..06 接续预告随账。
 
+## SC-B3-21 卡审（913ef33）——SetObjectXSlotAnimIndex bank2 化身（SETOBJANIM）
+
+### verdict: pass
+
+四条核：①**化身 ✓✓**：bank02:8CDD=`20 fd d2 20 da cb 20 73` 与 bank1 $8CDD
+**全同**（=a2-024 同形（**JSR $D2FD** 调用链）**跨 bank 复现**）+**anim 写面 ✓**：
+bank7 $D2FD=`9d 06 03 a9 00 9d`（STA $0306,X/**abs,X 写址不掩**——S1-09/S2-15
+三写族索引变体）②**SETOBJANIM-B3-021 预登记 ✓**（80 条目=CHAIN 十四类）：57 写
+>20 阈值判别条触发→预登记→L2 并案=严格顺序续 ③8 案账内 ④员面双扫桩 0
+（2 员真现）。测 399。findings（r10）：0 新。SC-B3-22（B 区余 142 卡）预告随账。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
