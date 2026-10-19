@@ -3562,6 +3562,17 @@ PageIndex 载）/**JMP $8BB1（jmp DrawDoor 直连）**——「ldx PageIndex/jm
 直得）③a1-015 DrawDoor 同族面+8 案全合（结构直拟）④员面双扫桩 0（2 员真现）。
 测 349。findings（r10）：0 新。SC-B1-18（B 区余 189 卡）预告随账。
 
+## SC-B1-18 卡审（d8ecf02）——refs 直得+SFX_Door 声旗十三现
+
+### verdict: pass
+
+四条核：①L2 面 a1-018-case×8 并入+**族 8 案 0 败**✓（16=8×2 已计；败 62 稳）②
+**refs 直得+十三现双轨 ✓**：asm:1596 `DoorSubRoutine8C76: ; $8C76` ↔ bank1 $8C76=
+`a9 30 9d 05 03`（LDA #$30/**STA $0305,X** anim 写）——结构直合；**SFX_Door 声旗
+十三现**（$0683←64=0x40——SFX 谱系十三部续）8 案钉 ③L3 0 失败容忍不增 ④员面
+双扫桩 0（2 员真现）。测 350。findings（r10）：0 新。SC-B1-19（B 区余 188 卡）
+预告随账。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
