@@ -6,7 +6,9 @@
 # 顶障复证（非 trigger bug——v7 同压）——走廊径闭/物品浮于顶障上方（y=152>顶 y~173）
 # v8-v9 收：nav 舵效实证（ScrX 137→117 刹车 ✓）+碰撞机制定（F172/F186：hi XOR PPUCTRL）
 # 触达前提=Samus raw hi==item hi(1)——全跑 hi=0=永不可触（v9 Δx=80=room-x 真框）
-# 下一径=Samus hi 翻转径（房 NT3 半区入径——房 pin 表/瓦图待考）
+# 【hi 机制定】hi=垂直名表（ElevatorMove y 240↔0 wrap+horizontal mirroring——prg7:4890-4914）
+# 物品=房下方屏（hi=1/y=152 屏内）——Samus 全程上方屏（hi=0）——触达=垂直径（y>240 wrap 翻转）
+# 下一试：pit 深降/房下屏入径（MapY 14→15 或 y wrap 降段）
 # nav 化：ScrX→104（=$68=物品 x）+A 持（跳向 y=$98 高位物品）
 # 事件核：pw 位图置位（$6988+）/PowerUps type 04→拾取态/UniqueItemHistory 链
 name sc-pickup-touch
