@@ -418,6 +418,13 @@ impl Cpu {
             0xC2 => { self.fetch(); } // NOP imm（undocumented——D3 字节证）
             0x4B => { let v = self.fetch() & self.a; self.a = v >> 1; self.set_zn(self.a); } // ALR imm
             0x07 => { let a = self.addr_zp(); let v = self.read(a); let c = (v >> 7) & 1; let v2 = v << 1; self.write(a, v2); self.set_flag(FLAG_C, c != 0); self.a |= v2; self.set_zn(self.a); } // SLO zp
+            0xF4 => { self.addr_zpx(); } // NOP zpx（undocumented——D3 字节证）
+            0xFA => { self.addr_absx(); } // NOP abx（undocumented）
+            0x04 => { self.addr_zp(); } // NOP zp（undocumented）
+            0x02 => { self.pc = self.pc.wrapping_sub(1); return Ok(()); } // JAM/KIL（undocumented halt——D4 保真：停采（核止））
+            0xAB => { self.a = self.fetch() & self.a; self.x = self.a; self.set_zn(self.a); } // LAX imm（undocumented）
+            0xF3 => { let a = self.addr_izy(); let v = self.read(a); let r = self.a.wrapping_sub(v).wrapping_sub(if self.get_flag(FLAG_C) {0} else {1}); self.set_flag(FLAG_C, (self.a as u16) >= (v as u16) + if self.get_flag(FLAG_C) {0} else {1}); self.set_flag(FLAG_V, ((self.a ^ v) & (self.a ^ r) & 0x80) != 0); self.a = r; self.set_zn(self.a); } // ISC izy（undocumented）
+            0x7C => { let a = self.addr_absx(); let v = self.read(a); let r = self.a.wrapping_sub(v).wrapping_sub(if self.get_flag(FLAG_C) {0} else {1}); self.set_flag(FLAG_C, (self.a as u16) >= (v as u16) + if self.get_flag(FLAG_C) {0} else {1}); self.set_flag(FLAG_V, ((self.a ^ v) & (self.a ^ r) & 0x80) != 0); self.a = r; self.set_zn(self.a); } // ISC abx（undocumented）
             _ => {
                 return Err(format!(
                     "未知操作码 ${:02X} @ ${:04X}（L2 核 fail-loud，不静默跳过）",
