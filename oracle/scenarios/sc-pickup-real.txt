@@ -1,0 +1,32 @@
+# 场景：sc-pickup-real —— 物品拾取事件核（SpecItmsTbl→房坐标→拾取链）
+# 消费方：G2 🟡②物品真径（B 级→A 级实证环——拾取事件核）
+# 事件核：GetItem 链（拾取）+ItemData 态变（拾取后）+SamusGear 增（装备类）
+name sc-pickup-real
+frames 4000
+watch_range 0000-00ff zp
+watch_range 0100-07ff iram
+
+press 360 start
+press 420 a
+press 540 start
+fixture 900 6878 13 invariant
+hold 850-3200 right
+press 950 b
+press 1150 b
+hold 1340-1500 a
+press 1420 b
+hold 1900-2060 a
+hold 1950-2320 right
+press 1980 b
+hold 2500-2660 a
+hold 2550-2920 right
+press 2580 b
+hold 3100-3260 a
+press 3180 b
+
+capture 2000 approach-item
+capture 3500 pickup-zone
+capture 3900 post-pickup
+
+sample_point endFrame
+bundle_capture 3900 analysis/bundles/sc-pickup-real
