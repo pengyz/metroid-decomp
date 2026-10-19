@@ -3619,6 +3619,19 @@ bank7 $C2C5=`0a 0a 0a 0a 60`（ASL×4/RTS）——与 Adiv16（`4a×4` LSR÷16�
 双扫桩 0（2 员真现）。测 354。findings（r10）：0 新。SC-B2-01（B 区余 184 卡）
 预告随账。
 
+## SC-B2-01 卡审（f656f80）——MotherBrainMusic SFX 十五现（DOORCHAIN 账内）
+
+### verdict: pass（附观察项：6 案非账目=预登记滞后疑）
+
+四条核：①L2 面 a2-023-case×8 **全账内**（DOORCHAIN 同款 S5-121 先例形）✓（pregen
+8 案实核）②**SFX 十五现双轨 ✓✓**：prg7_engine.asm:2692-93 `MotherBrainMusic:
+; 07:CC03 / lda #music_MotherBrain` ↔ bank7 $CC03=`a9 02`（LDA #$02=music_
+MotherBrain 值）——语义常量↔字节直合 ③L3 账目面 ④员面双扫桩 0（2 员真现）。
+**观察项（非本卡）**：套件面 84 败/账内 78=**6 案非账目**（败族全知名（s7-180/
+s7-178/s6-172/s6-165/s2-043/a2-022/a2-023 等全已登记）+A 系 WIP 在途族）——
+**预登记滞后疑**（gap_map 回归测试预告件正相关——请 lead 酌情提前触发）。测 355。
+findings（r10）：0 新（观察项非判定）。SC-B2-02（B 区余 183 卡）预告随账。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
