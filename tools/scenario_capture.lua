@@ -43,6 +43,7 @@ local name = PLAN.name
 local frames = PLAN.frames
 local pressLen = PLAN.press_len or 2
 local triggerPrev, triggerPress = {}, {}
+local btnOrder, btnSeq = {}, 0
 local tracePath = PLAN.out_dir .. "/" .. name .. ".frames.jsonl"
 local capPath = PLAN.out_dir .. "/" .. name .. ".captures.jsonl"
 local donePath = PLAN.out_dir .. "/" .. name .. ".done"
@@ -402,10 +403,10 @@ emu.addEventCallback(function()
           if ok and not prev then triggerPress[t] = frame + pressLen - 1 end
           triggerPrev[t] = ok
           if triggerPress[t] and frame <= triggerPress[t] then
-            for _, b in ipairs(t.buttons) do btn[b] = true end
+            for _, b in ipairs(t.buttons) do btn[b] = true; btnSeq = btnSeq + 1; btnOrder[b] = btnSeq end
           end
         else
-          for _, b in ipairs(t.buttons) do btn[b] = true end
+          for _, b in ipairs(t.buttons) do btn[b] = true; btnSeq = btnSeq + 1; btnOrder[b] = btnSeq end
         end
       else
         triggerPrev[t] = false
@@ -422,7 +423,7 @@ emu.addEventCallback(function()
       if cur then
         if n.kind == "jump" then
           if cur > n.target then
-            for _, b in ipairs(n.buttons) do btn[b] = true end
+            for _, b in ipairs(n.buttons) do btn[b] = true; btnSeq = btnSeq + 1; btnOrder[b] = btnSeq end
           end
         else
           -- 速度阻尼舵（v 反馈——动量滑行/过冲回正）：approaching=松键滑行
@@ -432,8 +433,8 @@ emu.addEventCallback(function()
           navPrev[key][1] = cur
           local v = prev and (cur - prev) or 0
           local neg, pos = n.buttons[1] or "left", n.buttons[2] or "right"
-          if cur < n.target - 3 and v <= 0 then btn[pos] = true
-          elseif cur > n.target + 3 and v >= 0 then btn[neg] = true
+          if cur < n.target - 3 and v <= 0 then btn[pos] = true; btnSeq = btnSeq + 1; btnOrder[pos] = btnSeq
+          elseif cur > n.target + 3 and v >= 0 then btn[neg] = true; btnSeq = btnSeq + 1; btnOrder[neg] = btnSeq
           elseif cur > n.target + 3 and v < 0 then -- 滑行接近
           elseif cur < n.target - 3 and v > 0 then -- 滑行接近
           else -- 目标带内：**反向刹车**（动量消解——过冲防）
@@ -443,6 +444,14 @@ emu.addEventCallback(function()
         end
       end
     end
+  end
+  -- 【2026-10-19 DSL 冲突消解】互斥键表（lead 裁定）：LEFT/RIGHT、UP/DOWN 同帧双真
+  -- =后写覆盖（btnOrder 序——确定性）；同键多源 OR 保持（原语义不动）。
+  if btn.left and btn.right then
+    if (btnOrder.left or 0) < (btnOrder.right or 0) then btn.left = nil else btn.right = nil end
+  end
+  if btn.up and btn.down then
+    if (btnOrder.up or 0) < (btnOrder.down or 0) then btn.up = nil else btn.down = nil end
   end
   local okIn, errIn = pcall(emu.setInput, btn, 0)
   if not okIn and not inputWarned then

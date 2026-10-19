@@ -92,7 +92,9 @@ PRESS_LEN_DEFAULT = 2
 
 
 class ScenarioError(Exception):
-    """DSL 解析/校验错误（带 文件:行号）。"""
+    """DSL 冲突消解规则（2026-10-19 lead 裁定）：①互斥键表（LEFT/RIGHT、UP/DOWN）同帧
+双真=后写覆盖（btnOrder 确定性序）②同键多源 OR 保持③冲突消解显式（scenario_capture.lua
+互斥段）。DSL 解析/校验错误（带 文件:行号）。"""
 
 
 def pick_display() -> str:
