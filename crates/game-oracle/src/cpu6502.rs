@@ -413,6 +413,11 @@ impl Cpu {
             0x8A => { self.a = self.x; self.set_zn(self.a); }
             0x9A => { self.sp = self.x; }
             0x98 => { self.a = self.y; self.set_zn(self.a); }
+            // **undocumented 6502 族**（D4 保真面——g3 音频域实证（$C2/$4B/$07 族））：
+            // $C2=NOP imm（跳 1 字节）/$4B=ALR imm（AND+LSR）/$07=SLO zp（ASL+ORA）
+            0xC2 => { self.fetch(); } // NOP imm（undocumented——D3 字节证）
+            0x4B => { let v = self.fetch() & self.a; self.a = v >> 1; self.set_zn(self.a); } // ALR imm
+            0x07 => { let a = self.addr_zp(); let v = self.read(a); let c = (v >> 7) & 1; let v2 = v << 1; self.write(a, v2); self.set_flag(FLAG_C, c != 0); self.a |= v2; self.set_zn(self.a); } // SLO zp
             _ => {
                 return Err(format!(
                     "未知操作码 ${:02X} @ ${:04X}（L2 核 fail-loud，不静默跳过）",
