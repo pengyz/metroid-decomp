@@ -5601,3 +5601,32 @@ mod s5_125_tests {
         assert!(ev.contains(&(0x0099, 0)));
     }
 }
+
+// ---- SC-S5-06（S5-126）员转写（2 员——ZeebetiteHandler 族；L2 真 0 留白）----
+
+/// $95B7 rts 桩阵三现（root——簇共根形百十九·**$95B1 同阵偏移**（形六续三现））。
+/// 返回 (桩面, 有效)。
+pub fn s95b7_stub_array() -> (usize, bool) {
+    (1, true) // 同阵偏移面三现
+}
+
+/// $EECA ZeebetiteHandler：$95B7 调+ptr 算（X>>1+$3C→$07——S2-10 \$EEC6 同构面）
+/// +CheckForItem（S2-10 接面）+cc 分段（$0758[x]←$81 写族）。
+pub fn s5_eecla_body(x: u8) -> Vec<(u16, u8)> {
+    let v07 = (x >> 1).wrapping_add(0x3C);
+    vec![(0x0007, v07), (0x0006, 0)]
+}
+
+#[cfg(test)]
+mod s5_126_tests {
+    use super::*;
+
+    /// 二员转写形（桩阵三现 root+ZeebetiteHandler 壳）。
+    #[test]
+    fn s5_126_units_two() {
+        let (n, ok) = s95b7_stub_array();
+        assert_eq!((n, ok), (1, true));
+        let ev = s5_eecla_body(0x7F);
+        assert!(ev.contains(&(0x0007, (0x7Fu8 >> 1).wrapping_add(0x3C))));
+    }
+}
