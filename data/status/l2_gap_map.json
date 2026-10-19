@@ -267,6 +267,13 @@
       "reason": "$6AF7 变换径（250→189 链算（r(0) 直写径 7/8 合/case-6 变换变体）——B 区链算深径（S5-121/S6-166 同款））",
       "exit": "$6AF7 变换径建模清（链算变换模拟）→账清转 strict",
       "registered": "2026-10-19"
+    },
+    {
+      "id": "SC-A1-016-IMPL",
+      "case_prefix": "a1-016-case",
+      "reason": "【预登记】a1-016 簇（porter 严格顺序单发六例——开工前置步先登记）",
+      "exit": "a1_cluster_016 移植/转写落→账清转 strict",
+      "registered": "2026-10-19"
     }
   ]
 }

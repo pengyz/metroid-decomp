@@ -33,3 +33,21 @@
 - 音乐数据布局（音乐表/序列格式/音符编码）=待考；
 - SFX 例程体（CB96 族——旗置位→发声参数流）=待读；
 - 声旗 RAM 布局（SFXNoiseInitFlags 等地址锚——constants_ram 待查）。
+
+## 4. 【2026-10-19 G3 批产取证包】C→A/B 四面升（引擎体/音乐面/SFX 体/声旗 RAM）
+
+- **声旗 RAM 布局**（A 级：constants_ram:1123-1129）：$0680 SFXNoise/$0681 SQ1/
+  $0682 SQ2（**never used**）/$0683 Tri/$0684 Multi/$0685 Music——**六旗连续块**
+  +$0686 ScrewAttack0686/$0688 SFXNoiseContFlags（续行旗）——CC09 偏移数学吻合；
+- **引擎核**（A 级：sound_engine.asm:384+=SoundEngine $B3B4）：APU 5 步同步
+  （JOY2=APU_5STEP|IRQDISABLE）→SilenceMusic 判（旗 bit0）→Pause 判（MainRoutine）→
+  **四 Runner 序**（NoiseInit→MultiInit→TriInit→**MusicLoopRoutine($BC36)**）→
+  ClearInitFlags（六旗清）；
+- **引擎结构**（A 级）：SFXData($B200) 数据表+Init/Cont 例程表×4（Noise/Tri 各二）
+  +Runner 族×7（B31B-B35C）+LoadSFXData($B368)+PauseSFX($B38F)+EndOrLoopMusic
+  （$B3F0——MusicLoopsOnEnd 循环判）；
+- **音乐面**（B 级）：引擎二分（song init/loop 分离——sound_engine.asm:19 注）+
+  音乐数据（noise 通道鼓点数据+SoundRoutineTablePtr/SoundRoutinePtr 指针对）——
+  **音乐数据布局=序列格式/音符编码待考**（C 余）；
+- **SFX 体**（B 级）：CB96 族例程=旗置位→SFXData 查表→Init/Cont 例程执行——
+  例程体细读=待（C 余）。
