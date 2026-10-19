@@ -15,7 +15,10 @@
 # 【瓦图解析配方】RoomPtrTable(01:\$A314=ROM 0x6324)→房号（GetRoomNum \$E720）→房数据（OBJ_END=\$FD/END=\$FF）
 # MaruMari=(2,14)=房23（\$17——trace zp \$5A 实证）——房数据 ROM 0x6801（指针 \$A7F1）
 # 【房23 实证】双屏高房（结构对象 y 行 12-30=480px）——item hi=1=下屏（行 15-30）✓
-# 12 结构对象三元组（type/x/y）：y=12-30 分布——降段开口=行 14-15 界（上屏底→下屏）待细析
+# 【房23 语义形】rooms.asm:682（01:AA20）：首字节 \$02+12 结构放置三元组+\$FD+5 敌+\$FF
+# 敌清单实证：Zoomer×2/Waver/Zeb spawner/Ripper（obj1 辨识=房载敌闭环）
+# 结构放置=[x 0x00-0xDE][y_packed][struct_id 1-3]——StructPtrTable(01:\$A372) 尺寸解=下一窗
+# 降段开口 x 定位=struct 几何细析后 v12 一击
 # nav 化：ScrX→104（=$68=物品 x）+A 持（跳向 y=$98 高位物品）
 # 事件核：pw 位图置位（$6988+）/PowerUps type 04→拾取态/UniqueItemHistory 链
 name sc-pickup-touch
