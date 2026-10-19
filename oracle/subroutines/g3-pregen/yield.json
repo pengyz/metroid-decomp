@@ -21,5 +21,6 @@
   "result_run": "果面跑随行（全闸跑核过——CHECK: PASS）+烤案对照保持——G3 支援面滚动态",
   "runner_trace": "runner trace 随行（L2 跑迹核过——全绿态）+烤案对照保持——G3 支援面滚动态",
   "l3_route": "L3 路由随行（trace-diff 路态核过——22 案 0 败）+烤案对照保持——G3 支援面滚动态",
-  "stops_position_incremental": "stops 位增量随行（态差核全过——六案稳/stops 实值/空 stops/note 全）——G3 支援面滚动态"
+  "stops_position_incremental": "stops 位增量随行（态差核全过——六案稳/stops 实值/空 stops/note 全）——G3 支援面滚动态",
+  "capture_ready": "抓取随行态：ROM golden 抓取就绪（六案占位+锚+推导+探针面全）——**候 bank07 窗形修落**（porter 协同中）→Mesen2 抓取→三方对拍（质量底线 #1）"
 }
