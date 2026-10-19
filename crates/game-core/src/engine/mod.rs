@@ -9268,3 +9268,31 @@ mod a3_014_tests {
         assert_eq!(b2_8cc3_goto(), (0x8C61, true)); // a1-016 直连
     }
 }
+
+// ---- SC-B3-15（a3-015）员转写（2 员——DoorSubRoutine8C76 族（bank2 化身））----
+
+/// bank02:8C76 DoorSubRoutine8C76（root——簇共根形二百三二·**bank2 化身**（a1-018
+/// 同款——refs 法：areas_common.asm:1692（bank2 复现）））。
+/// 返回 (写事件, SFX 面)。
+pub fn b2_8c76_door_anim() -> (Vec<(u16, u8)>, u8) {
+    (vec![(0x0363, 0), (0x0364, 48), (0x0365, 46), (0x0683, 64)], 64) // SFX_Door
+}
+
+/// $8C8D 跳转面（bank2 化身——a1-018 同款（DoorSubRoutine8C7E 直连））。
+pub fn b2_8c8d_goto() -> (u16, bool) {
+    (0x8C7E, true) // jmp DoorSubRoutine8C7E（bank2 化身直连）
+}
+
+#[cfg(test)]
+mod a3_015_tests {
+    use super::*;
+
+    /// 二员转写形（DoorSubRoutine8C76 bank2 化身 root+跳转面）。
+    #[test]
+    fn a3_015_units_two() {
+        let (ev, sfx) = b2_8c76_door_anim();
+        assert_eq!(sfx, 64); // SFX_Door（SFX 族十六现正身）
+        assert!(ev.contains(&(0x0683, 64))); // 写址对值核对
+        assert_eq!(b2_8c8d_goto(), (0x8C7E, true));
+    }
+}

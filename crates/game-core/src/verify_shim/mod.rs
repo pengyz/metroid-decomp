@@ -3464,3 +3464,17 @@ pub fn a3_cluster_014(input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-B3-15 簇入口适配（a3_cluster_015 ← bank02:8C76——a1-018 同族）----
+
+/// a3_cluster_015 适配（bank02:8C76（DoorSubRoutine8C76——bank2 化身（a1-018
+/// 同款））——案实核 4 写（anim 态写（$0363/$0364/$0365←0/48/46）+SFX_Door
+/// （$0683←64）——判别条未触发（严格顺序 ✓））；A=64/X 透传/Y 透传）。
+pub fn a3_cluster_015(input: &L2In) -> L2Out {
+    L2Out {
+        a: 64, x: input.x, y: input.y,
+        writes: merge_writes(vec![
+            (0x0363, 0), (0x0364, 48), (0x0365, 46), (0x0683, 64),
+        ]),
+    }
+}
