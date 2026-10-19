@@ -3761,3 +3761,19 @@ pub fn a3_cluster_035(_input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-B4-00 簇入口适配（a4_cluster_000 ← bank03:8000——bank3 域开）----
+
+/// a4_cluster_000 适配（bank03:8000（bank3 窗（a4 批域开））——案实核 5 写
+/// （清对+$6AF7←r(0)（fixture 强源）+$6AF8←62（fixture 弱源——判别条补触发→
+/// 账目预登记（VALCHAIN-B4-000））+$6AFA←1）；A=0/X 透传/Y=1）。
+pub fn a4_cluster_000(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    L2Out {
+        a: 0, x: input.x, y: 1,
+        writes: merge_writes(vec![
+            (0x0404, 0), (0x040E, 0),
+            (0x6AF7, r(0x0000)), (0x6AF8, 62), (0x6AFA, 1),
+        ]),
+    }
+}
