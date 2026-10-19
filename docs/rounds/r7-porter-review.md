@@ -4501,6 +4501,17 @@ d0 02`（LDA #$02=music_MotherBrain——SFX 十五现）②**MOTHERBRAIN-B4-015
 账内 ④员面双扫桩 0（2 员真现）。测 429。findings（r10）：0 新。SC-B4-16（B 区余
 113 卡）预告随账。
 
+## SC-B4-16 卡审（1b0c65b）——SetObjectXSlotAnimIndex bank3 化身（anim 写址不掩）
+
+### verdict: pass
+
+四条核：①**SetObjectXSlotAnimIndex 三 bank 全谱 ✓✓✓**：bank1/2/3 $8CDD=
+`20 fd d2 20 da cb 20 73` **三 bank 全同**（=a2-024 同形（JSR $D2FD 调用链））
++**anim 写面 ✓**：bank7 $D2FD=`9d 06 03 a9 00 9d`（STA $0306,X/**abs,X 写址
+不掩**）②**SETOBJANIM-B4-016 预登记 ✓**（131 条目）：57 写>20 阈值判别条触发→
+预登记→L2 并案=严格顺序续 ③8 案账内 ④员面双扫桩 0（2 员真现）。测 430。
+findings（r10）：0 新。SC-B4-17（B 区余 112 卡）预告随账。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
