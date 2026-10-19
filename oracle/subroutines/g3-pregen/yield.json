@@ -14,5 +14,6 @@
   "bake_status": "六案占位全（g3-000..005——逐簇推导注+锚）——ROM golden 替换候 bank07 窗形修",
   "cross_check_ready": "g3-000 交叉验参照就绪（20 写址全——hand-derived 占位）——ROM golden 到手即对拍（对上=强证/对不上=抓 bug）",
   "table_map": "六例程表全形（$B2BB-$B30B——48 指针：Noise/SQ1/Tri Init+Cont 各 8 项）——旗位→例程映射注落",
-  "cross_compare": "六案对照全过（形一致/entry 一致/golden 占位标注全/推导注全）——烤案对照面就绪（ROM golden 到手即三方对拍）"
+  "cross_compare": "六案对照全过（形一致/entry 一致/golden 占位标注全/推导注全）——烤案对照面就绪（ROM golden 到手即三方对拍）",
+  "g3_00_closure": "SC-G3-00 收口随行态：烤案件全（g3-000 占位+锚+交叉验参照）——ROM golden 替换=卡收官前置（bank07 窗形修协同中）"
 }

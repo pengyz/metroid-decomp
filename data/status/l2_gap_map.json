@@ -463,6 +463,13 @@
       "reason": "值链算深径（$6B9E-$6BA0 族（x 索引）+174 值（fixture 弱源——多入参链算）——深径判别条补触发（链算径）——S5-121 同款跨卡深径）",
       "exit": "值链算径建模清（$6AF8 族链模拟）→账清转 strict",
       "registered": "2026-10-19"
+    },
+    {
+      "id": "SC-G3-01-IMPL",
+      "case_prefix": "g3-001-case",
+      "reason": "【预登记】G3 卡序二卡（SC-G3-01 RunSFXNoiseInit 簇——开工前置步先登记）",
+      "exit": "g3_cluster_001 移植/转写落→账清转 strict",
+      "registered": "2026-10-19"
     }
   ]
 }
