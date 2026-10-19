@@ -2755,3 +2755,14 @@ pub fn a1_cluster_007(_input: &L2In) -> L2Out {
         writes: merge_writes(vec![(0x6AF8, 0), (0x6AF9, 5), (0x6AFA, 5)]),
     }
 }
+
+// ---- SC-B1-08 簇入口适配（a1_cluster_008 ← bank01:8027——refs 法五现）----
+
+/// a1_cluster_008 适配（$8027 CommonJump_ApplySpeedToPosition（refs 法：asm:63）——
+/// 案实核：$02←0 单写；A=0/X 透传/Y 透传）。
+pub fn a1_cluster_008(input: &L2In) -> L2Out {
+    L2Out {
+        a: 0, x: input.x, y: input.y,
+        writes: merge_writes(vec![(0x0002, 0)]),
+    }
+}

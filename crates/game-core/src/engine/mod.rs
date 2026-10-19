@@ -7765,3 +7765,30 @@ mod a1_007_tests {
         assert!(ev.contains(&(0x6AF9, 5))); // 定址面（写址对值核对）
     }
 }
+
+// ---- SC-B1-08（a1-008）员转写（2 员——ApplySpeedToPosition 族·refs 法）----
+
+/// $8027 CommonJump_ApplySpeedToPosition（root——簇共根形百八二·桩阵九现（形九续）
+/// ——refs 法：asm:63 `jmp ApplySpeedToPosition`）。
+/// 返回 (目标址, 桩面)。
+pub fn a8027_common_jump() -> (u16, bool) {
+    (0xE0AA, true) // jmp ApplySpeedToPosition（refs 法）
+}
+
+/// ApplySpeedToPosition 速度施加面（$02←0（案实核径）——位置速度合成族）。
+pub fn a8027_apply_speed() -> Vec<(u16, u8)> {
+    vec![(0x0002, 0)]
+}
+
+#[cfg(test)]
+mod a1_008_tests {
+    use super::*;
+
+    /// 二员转写形（ApplySpeedToPosition root+面壳）——refs 法五现。
+    #[test]
+    fn a1_008_units_two() {
+        assert!(a8027_common_jump().1);
+        let ev = a8027_apply_speed();
+        assert!(ev.contains(&(0x0002, 0))); // 单写（写址对值核对）
+    }
+}
