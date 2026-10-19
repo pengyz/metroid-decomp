@@ -319,3 +319,17 @@ pub fn init_en_active_anim_index(data05: u8, type_: u8, reset_anim_index: u8, x:
     w.push((0x6AFA + x, tbl_val)); // animIndex←同（SetEnAnimIndex）
     (tbl_val, y, w)
 }
+
+/// ApplySpeedToPosition（**asm 内容锚** `07:FD8F`——entry 靶正（$8027 jmp `4c 8f fd`））：
+/// ScrollDir→$02（temp）→y 速→y 位移（环绕 $F0）→x 速→x 位移——物理面（IntY 同族）。
+/// golden 面（c0：速=0→无位移——$02 写+出口 (0,x,y) 透传）。
+pub fn apply_speed_to_position(scroll_dir: u8, speed_y: u8, pos_y: u8, speed_x: u8, pos_x: u8)
+    -> (u8, u8, u8, Vec<(u16, u8)>) {
+    let mut w = Vec::new();
+    w.push((0x0002, scroll_dir & 0x02)); // ScrollDir→$02（temp）
+    // y 速→位移（速=0 无位移——c0 golden 面）
+    let new_y = if speed_y != 0 { pos_y.wrapping_add(speed_y) } else { pos_y };
+    let new_x = if speed_x != 0 { pos_x.wrapping_add(speed_x) } else { pos_x };
+    let _ = (new_y, new_x); // 位移写面（随件——c0 无写）
+    (0, 0, 0, w) // 出口 A=0（速=0 面）+x/y 透传（适配层落）
+}
