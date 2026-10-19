@@ -295,6 +295,13 @@
       "reason": "【预登记/补账】a1-018 簇（批产 WIP——A 批预登记制）",
       "exit": "a1-018 落→账清转 strict",
       "registered": "2026-10-19"
+    },
+    {
+      "id": "SC-A1-019-IMPL",
+      "case_prefix": "a1-019-case",
+      "reason": "【预登记】a1-019 簇（porter 严格顺序单发九例——开工前置步先登记）",
+      "exit": "a1_cluster_019 移植/转写落→账清转 strict",
+      "registered": "2026-10-19"
     }
   ]
 }
