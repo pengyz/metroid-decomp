@@ -10132,3 +10132,29 @@ mod a4_008_tests {
         assert_eq!(b3_8cf4_goto(), (0x8C61, true));
     }
 }
+
+// ---- SC-B4-09（a4-009）员转写（2 员——DoorSubRoutine8C71 族（bank3 化身））----
+
+/// bank03:8C71 DoorSubRoutine8C71（root——簇共根形二百六二·**bank3 化身**
+/// （a1-017 同款——refs 法：areas_common.asm:1683（bank3 复现）））。
+/// 返回 (目标址, 桩面)。
+pub fn b3_8c71_goto_draw_door() -> (u16, bool) {
+    (0x8BB1, true) // jmp DrawDoor（bank3 化身（a1-015 直连））
+}
+
+/// $8CC3 跳转面（bank3 化身——a1-017 同款（a1-016 直连））。
+pub fn b3_8cc3_goto() -> (u16, bool) {
+    (0x8C61, true) // jmp DoorSubRoutine8C61（bank3 化身直连）
+}
+
+#[cfg(test)]
+mod a4_009_tests {
+    use super::*;
+
+    /// 二员转写形（DoorSubRoutine8C71 bank3 化身 root+跳转面）。
+    #[test]
+    fn a4_009_units_two() {
+        assert_eq!(b3_8c71_goto_draw_door(), (0x8BB1, true)); // a1-015 直连
+        assert_eq!(b3_8cc3_goto(), (0x8C61, true)); // a1-016 直连
+    }
+}
