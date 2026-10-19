@@ -8259,3 +8259,33 @@ mod a2_024_tests {
         assert!(ev2.contains(&(0x0005, 0x70)));
     }
 }
+
+// ---- SC-B2-03（a2-025）员转写（2 员——SFX_Door 族·refs 法直得·正身归档）----
+
+/// $CBDA SFX_Door（root——簇共根形百九九·**refs 法直得**（prg7_engine.asm:2648）——
+/// SFX 族十六现**正身**（a1-018 注的正身归档——机理正身系列））。
+/// 返回 (声旗写, SFX id)。
+pub fn cbda_sfx_door() -> (Vec<(u16, u8)>, u8) {
+    (vec![(0x0683, 64)], 64) // sfxNoise_Door（a1-018 实核径）
+}
+
+/// $8CE0 员体（DoorSubRoutine 区——同族面（连现））。
+pub fn a8ce0_face() -> Vec<(u16, u8)> {
+    vec![(0x0000, 203), (0x0001, 0x87), (0x0002, 1), (0x0003, 0x87),
+         (0x0004, 0), (0x0005, 0x70), (0x0006, 0), (0x0008, 0)]
+}
+
+#[cfg(test)]
+mod a2_025_tests {
+    use super::*;
+
+    /// 二员转写形（SFX_Door root+面壳）——refs 法直得·正身归档。
+    #[test]
+    fn a2_025_units_two() {
+        let (ev, id) = cbda_sfx_door();
+        assert_eq!(id, 64); // SFX 族十六现正身（SFX_Door）
+        assert!(ev.contains(&(0x0683, 64)));
+        let ev2 = a8ce0_face();
+        assert!(ev2.contains(&(0x0005, 0x70))); // 同族面（写址对值核对）
+    }
+}
