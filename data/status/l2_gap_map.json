@@ -540,6 +540,13 @@
       "reason": "Amul16 OAM 深径链（53 写（>20 深径判别条触发）——a1-021 同款（bank2 化身）——预登记先行（严格顺序）——S5-121 同款跨卡深径）",
       "exit": "Amul16 链径建模清（全链模拟）→账清转 strict",
       "registered": "2026-10-19"
+    },
+    {
+      "id": "SC-B3-019-CROSSCARD-TOURIAN",
+      "case_prefix": "a3-019-case-",
+      "reason": "TourianMusic OAM 深径链（53 写（>20 深径判别条触发）——a2-022 同款（bank2 化身）——预登记先行（严格顺序）——S5-121 同款跨卡深径）",
+      "exit": "TourianMusic 链径建模清（全链模拟）→账清转 strict",
+      "registered": "2026-10-19"
     }
   ]
 }

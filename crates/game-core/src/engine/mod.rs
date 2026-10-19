@@ -9374,3 +9374,31 @@ mod a3_018_tests {
         assert_eq!(b2_c2c5_amul16(0x0D), 0xD0); // 乘 16（Adiv16 对偶）
     }
 }
+
+// ---- SC-B3-19（a3-019）员转写（2 员——TourianMusic 族（bank2 化身））----
+
+/// bank02:8CBB TourianMusic 族（root——簇共根形二百三六·**bank2 化身**（a2-022
+/// 同款——refs 法：prg7_engine.asm:2696（bank2 复现）））。
+/// 返回 (声旗写, SFX id)。
+pub fn b2_8cbb_tourian_music() -> (Vec<(u16, u8)>, u8) {
+    (vec![(0x0681, 0x20)], 0x20) // sfxNoise_TourianMusic（SFX 族十四现）
+}
+
+/// $CC07 TourianMusic（bank2 化身——a2-022 同款（prg7_engine.asm:2696））。
+pub fn b2_cc07_tourian() -> (Vec<(u16, u8)>, u8) {
+    b2_8cbb_tourian_music()
+}
+
+#[cfg(test)]
+mod a3_019_tests {
+    use super::*;
+
+    /// 二员转写形（TourianMusic bank2 化身 root+声旗面）。
+    #[test]
+    fn a3_019_units_two() {
+        let (ev, id) = b2_8cbb_tourian_music();
+        assert_eq!(id, 0x20); // SFX 族十四现
+        assert!(ev.contains(&(0x0681, 0x20))); // 写址对值核对
+        assert!(b2_cc07_tourian().0.len() == 1);
+    }
+}
