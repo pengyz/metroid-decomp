@@ -7939,3 +7939,32 @@ mod a1_013_tests {
         assert!(ev.contains(&(0x04F2, 0)));
     }
 }
+
+// ---- SC-B1-14（a1-014）员转写（2 员——EnemyGetDeltaX_UsingAcceleration 族·refs 法）----
+
+/// $8039 CommonJump_EnemyGetDeltaX_UsingAcceleration（root——簇共根形百八八·
+/// 桩阵十五现（形九续）——refs 法：asm:81（a1-011 加速版））。
+/// 返回 (目标址, 桩面)。
+pub fn a8039_common_jump() -> (u16, bool) {
+    (0xE0BC, true) // jmp EnemyGetDeltaX_UsingAcceleration（refs 法）
+}
+
+/// EnemyGetDeltaX_UsingAcceleration 六写面（a1-011 同族——写址不掩）。
+pub fn a8039_face(x: u8) -> Vec<(u16, u8)> {
+    vec![(0x0000, 0), (0x0001, 14), (0x0002, 0), (0x0003, 14),
+         (0x0004, 0), (0x0404 + x as u16 - 1, 0)]
+}
+
+#[cfg(test)]
+mod a1_014_tests {
+    use super::*;
+
+    /// 二员转写形（EnemyGetDeltaX_UsingAcceleration root+面壳）——refs 法十一现。
+    #[test]
+    fn a1_014_units_two() {
+        assert!(a8039_common_jump().1);
+        let ev = a8039_face(43);
+        assert!(ev.contains(&(0x042E, 0))); // x=43 ⇒ $0404+42（写址对值核对）
+        assert!(ev.contains(&(0x0001, 14)));
+    }
+}
