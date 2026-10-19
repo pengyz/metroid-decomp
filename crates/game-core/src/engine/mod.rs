@@ -10489,3 +10489,34 @@ mod a4_021_tests {
         assert_eq!(b3_98b0_face(59).len(), 15);
     }
 }
+
+// ---- SC-B5-00（a5-024）员转写（2 员——bank3 10 写族面（a5 批开））----
+
+/// bank03:9900 员体（root——簇共根形二百七五·bank3 10 写族面（3 员——a5 批开））。
+/// 返回 (写事件, 有效)。
+pub fn b3_9900_face(v0: u8) -> Vec<(u16, u8)> {
+    vec![(0x006B, 162), (0x0092, 0),
+         (0x0404, 0), (0x040E, 0), (0x04C2, 0), (0x04C3, 0),
+         (0x6AF7, v0), (0x6AF8, v0), (0x6AFA, 1),
+         (0x7804, 0)]
+}
+
+/// $9871/$987A/$9A06 员体（同族面（连现））。
+pub fn b3_9871_face(v0: u8) -> Vec<(u16, u8)> {
+    b3_9900_face(v0)
+}
+
+#[cfg(test)]
+mod a5_024_tests {
+    use super::*;
+
+    /// 二员转写形（bank3 10 写族面 root+一壳）——a5 批开。
+    #[test]
+    fn a5_024_units_two() {
+        let ev = b3_9900_face(208);
+        assert_eq!(ev.len(), 10);
+        assert!(ev.contains(&(0x6AF7, 208))); // fixture 强源（写址对值核对）
+        assert!(ev.contains(&(0x006B, 162))); // 链算径（判别条补触发）
+        assert_eq!(b3_9871_face(208).len(), 10);
+    }
+}

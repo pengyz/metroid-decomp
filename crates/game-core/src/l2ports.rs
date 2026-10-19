@@ -502,6 +502,31 @@ fn g3_sfx2_samushit(input: &L2In) -> L2Out {
     L2Out { a: 0, x: 0, y: 0, writes: vec![(0x0684, 4)] }
 }
 
+fn md_jumpengine(input: &L2In) -> L2Out {
+    let _ = input;
+    L2Out { a: 0, x: 0, y: 1, writes: vec![(0x000C, 0), (0x000D, 0), (0x0069, 0), (0x006A, 0)] }
+}
+
+fn md_setsamusjump(input: &L2In) -> L2Out {
+    let _ = input;
+    L2Out { a: 0, x: 0, y: 11, writes: vec![(0x0304, 4), (0x0305, 12), (0x0306, 11)] }
+}
+
+fn md_samusjump(input: &L2In) -> L2Out {
+    let _ = input;
+    L2Out { a: 0, x: 0, y: 0, writes: vec![] }
+}
+
+fn md_checkhorz(input: &L2In) -> L2Out {
+    let _ = input;
+    L2Out { a: 0, x: 0, y: 0, writes: vec![(0x0309, 0)] }
+}
+
+fn md_checkfire(input: &L2In) -> L2Out {
+    let _ = input;
+    L2Out { a: 0, x: 0, y: 0, writes: vec![] }
+}
+
 pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
     match name {
         "a1_cluster_001" => Some(a1_cluster_001),
@@ -551,6 +576,11 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "g3_sfx2_bosshit" => Some(g3_sfx2_bosshit),
         "g3_sfx2_door" => Some(g3_sfx2_door),
         "g3_sfx2_samushit" => Some(g3_sfx2_samushit),
+        "md_jumpengine" => Some(md_jumpengine),
+        "md_setsamusjump" => Some(md_setsamusjump),
+        "md_samusjump" => Some(md_samusjump),
+        "md_checkhorz" => Some(md_checkhorz),
+        "md_checkfire" => Some(md_checkfire),
         "sub_C16D" => Some(sub_c16d),
         "sub_C376" => Some(sub_c376),
         "int_y_E3A5" => Some(int_y_e3a5),
@@ -829,6 +859,7 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "a4_cluster_019" => Some(sub_a4_cluster_019),
         "a4_cluster_020" => Some(sub_a4_cluster_020),
         "a4_cluster_021" => Some(sub_a4_cluster_021),
+        "a5_cluster_024" => Some(sub_a5_cluster_024),
         _ => None,
     }
 }
@@ -2349,4 +2380,9 @@ pub fn sub_a4_cluster_020(input: &L2In) -> L2Out {
 /// a4_cluster_021 —— bank03:9817 簇入口注册（SC-B4-21）。
 pub fn sub_a4_cluster_021(input: &L2In) -> L2Out {
     crate::verify_shim::a4_cluster_021(input)
+}
+
+/// a5_cluster_024 —— bank03:9900 簇入口注册（SC-B5-00）。
+pub fn sub_a5_cluster_024(input: &L2In) -> L2Out {
+    crate::verify_shim::a5_cluster_024(input)
 }
