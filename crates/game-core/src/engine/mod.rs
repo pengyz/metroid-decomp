@@ -7152,3 +7152,39 @@ mod s6_170_tests {
         assert_eq!(ev2.len(), 2);
     }
 }
+
+// ---- SC-S6-20（S6-171）员转写（2 员——LoadEnemyPositionFromTemp 族）----
+
+/// $FA49 LoadEnemyPositionFromTemp（root——簇共根形百六三·**S4-090 同族**）：
+/// $08/$09→$0400/$0401[x]（位置对载）+$0B and 1→$6AFB[x]（面载）。
+/// 返回 (写事件, 位置面)。
+pub fn s6_load_en_pos_tmp(x: u8, v08: u8, v09: u8, v0b: u8) -> Vec<(u16, u8)> {
+    vec![(0x0400 + x as u16, v08), (0x0401 + x as u16, v09),
+         (0x6AFB + x as u16, v0b & 1)]
+}
+
+/// $F927 员体：jmp LoadEnemyPositionFromTemp（尾形）+数据对（$02/$FE）+
+/// $6AF5/$6AF6[y]←2 对写+$0405[y] or 2（S6-167 Table15 同族面）。
+pub fn s6_f927_body(x: u8, y: u8, v08: u8, v09: u8, v0b: u8) -> (Vec<(u16, u8)>, u16) {
+    let mut ev = s6_load_en_pos_tmp(x, v08, v09, v0b);
+    ev.push((0x6AF5 + y as u16, 2));
+    ev.push((0x6AF6 + y as u16, 2));
+    (ev, 0xFA49)
+}
+
+#[cfg(test)]
+mod s6_171_tests {
+    use super::*;
+
+    /// 二员转写形（LoadEnemyPositionFromTemp root+一壳）。
+    #[test]
+    fn s6_171_units_two() {
+        let ev = s6_load_en_pos_tmp(2, 8, 9, 3);
+        assert!(ev.contains(&(0x0402, 8))); // x=2 ⇒ $0400+2（写址对值核对）
+        assert!(ev.contains(&(0x0403, 9)));
+        assert!(ev.contains(&(0x6AFD, 1))); // 3&1=1
+        let (ev2, j) = s6_f927_body(2, 3, 8, 9, 3);
+        assert_eq!(j, 0xFA49);
+        assert!(ev2.contains(&(0x6AF8, 2))); // y=3 ⇒ $6AF5+3
+    }
+}

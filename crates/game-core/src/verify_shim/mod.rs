@@ -2507,3 +2507,17 @@ pub fn s6_cluster_170(input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-S6-20 簇入口适配（s6_cluster_171 ← bank07:F927 LoadEnemyPositionFromTemp）----
+
+/// s6_cluster_171 适配（$FA49 LoadEnemyPositionFromTemp——案实核：$0400/$0401[x]←0
+/// +$6AFB[x]←0（x 索引三写——S4-090 同族）；A=0/X 透传/Y 透传）。
+pub fn s6_cluster_171(input: &L2In) -> L2Out {
+    let x = input.x as u16;
+    L2Out {
+        a: 0, x: input.x, y: input.y,
+        writes: merge_writes(vec![
+            (0x0400 + x, 0), (0x0401 + x, 0), (0x6AFB + x, 0),
+        ]),
+    }
+}
