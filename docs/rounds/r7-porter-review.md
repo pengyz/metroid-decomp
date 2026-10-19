@@ -4709,6 +4709,18 @@ $9E22=`20 f2 9d`（JSR $9DF2）——**refs 法命名正身**（语义名↔字�
 触发（迄今最大写数）→预登记→L2 并案=严格顺序续 ③8 案账内 ④员面双扫桩 0
 （2 员真现）。测 447。findings（r10）：0 新。SC-B5-12（B 区余 95 卡）预告随账。
 
+## SC-B5-12 卡审（fa83ef5）——HandleBeingHit 命名正身三现（MotherBrain 域续）
+
+### verdict: pass
+
+四条核：①**命名正身三现 ✓✓**：prg3_tourian.asm:1510 `MotherBrain_Idle_
+HandleBeingHit: ; 03:9FED` ↔ bank3 $9E25=`20 ed 9f`（JSR $9FED）——**refs 法命名
+正身三现**（语义名↔字节调用直合：DrawDoor（SC-B1-15 首现）→MotherBrain_Idle
+（SC-B5-11 二现）→HandleBeingHit（本卡三现）——命名正身谱系）②**MOTHERBRAIN-
+B5-036 预登记 ✓**（160 条目=MOTHERBRAIN 族四条）：284 写>20 阈值判别条触发→
+预登记→L2 并案=严格顺序续 ③8 案账内 ④员面双扫桩 0（2 员真现）。测 448。
+findings（r10）：0 新。SC-B5-13（B 区余 94 卡）预告随账。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
