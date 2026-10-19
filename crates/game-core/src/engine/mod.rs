@@ -8317,3 +8317,30 @@ mod a2_026_tests {
         assert!(ev.contains(&(0x0005, 0x70))); // 同族面（写址对值核对）
     }
 }
+
+// ---- SC-B2-05（a2-027）员转写（2 员——TwosComplement 族·refs 法直得）----
+
+/// $95C6 TwosComplement（root——簇共根形二百一·**refs 法直得**（areas_common.asm
+/// ——取负（flip negative to positive））——**取负体正身二现**（$C3D4 取负正身
+/// 同族——机理正身系列））。
+/// 返回 (A 值, 取负面)。
+pub fn s95c6_twos_complement(a_in: u8) -> u8 {
+    a_in.wrapping_neg() // 二补取负（refs 法直得）
+}
+
+/// $9B19 员体（TwosComplement 调用面——同族面）。
+pub fn a9b19_face(a_in: u8) -> u8 {
+    s95c6_twos_complement(a_in)
+}
+
+#[cfg(test)]
+mod a2_027_tests {
+    use super::*;
+
+    /// 二员转写形（TwosComplement root+调用面）——refs 法直得（取负正身二现）。
+    #[test]
+    fn a2_027_units_two() {
+        assert_eq!(s95c6_twos_complement(63), 193); // -63=0xC1（refs 法直得）
+        assert_eq!(a9b19_face(63), 193); // 调用面（写址对值核对）
+    }
+}

@@ -3041,3 +3041,15 @@ pub fn a2_cluster_026(input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-B2-05 簇入口适配（a2_cluster_027 ← bank01:95C6 TwosComplement——透传+取负）----
+
+/// a2_cluster_027 适配（$95C6 TwosComplement（refs 法：areas_common.asm（取负——
+/// flip negative to positive））——案实核：A=取负（A_in 的二补）/X/Y 透传；无写面
+/// （透传类（深径判别条未触发（0 写）——预登记不需（严格顺序 ✓））。
+pub fn a2_cluster_027(input: &L2In) -> L2Out {
+    L2Out {
+        a: input.a.wrapping_neg(), x: input.x, y: input.y,
+        writes: vec![],
+    }
+}
