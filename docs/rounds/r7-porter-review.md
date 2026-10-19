@@ -4064,6 +4064,17 @@ e9 02` 与 bank1 $8C76 **全同**（=a1-018 同形（LDA #$30/STA $0305,X anim �
 SFX_Door $0683←64）+8 案账内 ④员面双扫桩 0（2 员真现）。测 393。
 findings（r10）：0 新。SC-B3-16（B 区余 147 卡）预告随账。
 
+## SC-B3-16 卡审（07dfd9c）——DoorSubRoutine8C8A bank2 化身（门族五现跨 bank）
+
+### verdict: pass
+
+四条核：①**门族五现跨 bank ✓✓**：bank02:8C8A=`20 fb 8c 20 76 8c a6 4b` 与 bank1
+$8C8A **全同**（=a1-019 同形（**JSR $8CFB WriteDoorBGTiles_Solid**/JSR $8C76 链）
+**跨 bank 复现**——门族图谱 bank2 化身五现全谱（DrawDoor→8C61→8C71→8C76→
+8C8A/WriteDoorBGTiles））②**DOORSUB8C8A 预登记 ✓**（75 条目=CHAIN 九类）：60 写
+>20 阈值判别条触发→预登记→L2 并案=严格顺序续 ③8 案账内 ④员面双扫桩 0
+（2 员真现）。测 394。findings（r10）：0 新。SC-B3-17（B 区余 146 卡）预告随账。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
