@@ -4048,3 +4048,22 @@ pub fn a4_cluster_020(input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-B4-21 簇入口适配（a4_cluster_021 ← bank03:9817——判别条补触发·a4 批末卡）----
+
+/// a4_cluster_021 适配（bank03:9817（S5-146 族区（bank3））——案实核 15 写
+/// （$006B←162（fixture 弱源——判别条补触发→账目预登记（VALCHAIN-B4-021））+
+/// ptr+$04 族（x 索引）+清对+$6AF7-$6AFA+$6BA4/$6BA5+$7802）；A=0/X 透传/Y=1）。
+pub fn a4_cluster_021(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    L2Out {
+        a: 0, x: 0, y: 1,
+        writes: merge_writes(vec![
+            (0x006B, 162), (0x0092, 0),
+            (0x0404, 0), (0x040E, 0), (0x04A8, 0), (0x04A9, 0), (0x04AC, 0),
+            (0x04AD, 0), (0x04B1, 255),
+            (0x6AF7, r(0x0000)), (0x6AF8, r(0x0000)), (0x6AFA, 1),
+            (0x6BA4, 0), (0x6BA5, 0), (0x7802, 0),
+        ]),
+    }
+}

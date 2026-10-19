@@ -10457,3 +10457,35 @@ mod a4_020_tests {
         assert_eq!(b3_99ab_face(14).len(), 5);
     }
 }
+
+// ---- SC-B4-21（a4-021）员转写（2 员——bank3 15 写族面·a4 批末卡）----
+
+/// bank03:9817 员体（root——簇共根形二百七四·bank3 15 写族面（7 员——a4 批末卡））。
+/// 返回 (写事件, 有效)。
+pub fn b3_9817_face(v0: u8) -> Vec<(u16, u8)> {
+    vec![(0x006B, 162), (0x0092, 0),
+         (0x0404, 0), (0x040E, 0), (0x04A8, 0), (0x04A9, 0), (0x04AC, 0),
+         (0x04AD, 0), (0x04B1, 255),
+         (0x6AF7, v0), (0x6AF8, v0), (0x6AFA, 1),
+         (0x6BA4, 0), (0x6BA5, 0), (0x7802, 0)]
+}
+
+/// $98B0/$990F/$9964/$996E/$99AE/$99B7 员体（同族面（连现））。
+pub fn b3_98b0_face(v0: u8) -> Vec<(u16, u8)> {
+    b3_9817_face(v0)
+}
+
+#[cfg(test)]
+mod a4_021_tests {
+    use super::*;
+
+    /// 二员转写形（bank3 15 写族面 root+一壳）——a4 批末卡。
+    #[test]
+    fn a4_021_units_two() {
+        let ev = b3_9817_face(59);
+        assert_eq!(ev.len(), 15);
+        assert!(ev.contains(&(0x6AF7, 59))); // fixture 强源（写址对值核对）
+        assert!(ev.contains(&(0x006B, 162))); // 链算径（判别条补触发）
+        assert_eq!(b3_98b0_face(59).len(), 15);
+    }
+}
