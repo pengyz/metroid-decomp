@@ -1198,6 +1198,41 @@
       "reason": "【预登记】臂深化卡序续（SC-MD-005 SamusStand 族——开工前置步先登记）",
       "exit": "arm_cluster_001 移植/转写落→账清转 strict",
       "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-B6-003-CROSSCARD-ACHAIN",
+      "case_prefix": "a6-003-case-",
+      "reason": "A 链算深径（A=52→15 变换（fixture 弱源——多入参链算）——深径判别条补触发（链算径）——S5-121 同款跨卡深径）",
+      "exit": "A 链算径建模清（变换链模拟）→账清转 strict",
+      "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-MD_SETSAMUSEXPLODE-IMPL",
+      "case_prefix": "md_setsamusexplode",
+      "reason": "【预登记/补账】md_setsamusexplode 簇（批产 WIP——A 批预登记制）",
+      "exit": "md_setsamusexplode 落→账清转 strict",
+      "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-MD_SETSAMUSRUN-IMPL",
+      "case_prefix": "md_setsamusrun",
+      "reason": "【预登记/补账】md_setsamusrun 簇（批产 WIP——A 批预登记制）",
+      "exit": "md_setsamusrun 落→账清转 strict",
+      "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-MD_SETSAMUSRUNACCEL-IMPL",
+      "case_prefix": "md_setsamusrunaccel",
+      "reason": "【预登记/补账】md_setsamusrunaccel 簇（批产 WIP——A 批预登记制）",
+      "exit": "md_setsamusrunaccel 落→账清转 strict",
+      "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-MD_UPDATESAMUS-IMPL",
+      "case_prefix": "md_updatesamus",
+      "reason": "【预登记/补账】md_updatesamus 簇（批产 WIP——A 批预登记制）",
+      "exit": "md_updatesamus 落→账清转 strict",
+      "registered": "2026-10-20"
     }
   ]
 }
