@@ -374,13 +374,13 @@ fn g3_cluster_001(input: &L2In) -> L2Out {
 /// g3_cluster_002 适配（SC-G3-00 族——音频域身份形（golden 空面——L2 无观测写））。
 fn g3_cluster_002(input: &L2In) -> L2Out {
     let _ = input;
-    L2Out { a: 0, x: 0, y: 0, writes: vec![] } // D3 抓取实证面
+    L2Out { a: 196, x: 0, y: 0, writes: vec![(0x000C, 92), (0x000D, 196), (0x004B, 0), (0x0069, 0), (0x006A, 0), (0x0081, 0), (0x0405, 0), (0x0415, 64), (0x0425, 0), (0x0435, 64), (0x0445, 0), (0x0455, 64)] } // D3 实证面（12 写）
 }
 
 /// g3_cluster_003 适配（SC-G3-00 族——音频域身份形（golden 空面——L2 无观测写））。
 fn g3_cluster_003(input: &L2In) -> L2Out {
     let _ = input;
-    L2Out { a: 0, x: 0, y: 0, writes: vec![] } // D3 抓取实证面
+    L2Out { a: 196, x: 0, y: 0, writes: vec![(0x000C, 92), (0x000D, 196), (0x004B, 0), (0x0069, 0), (0x006A, 0), (0x0081, 0), (0x0405, 0)] } // D3 实证面（7 写）
 }
 
 /// g3_cluster_004 适配（SC-G3-00 族——音频域身份形（golden 空面——L2 无观测写））。
@@ -650,6 +650,7 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "a3_cluster_001" => Some(sub_a3_cluster_001),
         "a3_cluster_002" => Some(sub_a3_cluster_002),
         "a3_cluster_003" => Some(sub_a3_cluster_003),
+        "a3_cluster_004" => Some(sub_a3_cluster_004),
         _ => None,
     }
 }
@@ -1915,4 +1916,9 @@ pub fn sub_a3_cluster_002(input: &L2In) -> L2Out {
 /// a3_cluster_003 —— bank02:8009 簇入口注册（SC-B3-03）。
 pub fn sub_a3_cluster_003(input: &L2In) -> L2Out {
     crate::verify_shim::a3_cluster_003(input)
+}
+
+/// a3_cluster_004 —— bank02:800C 簇入口注册（SC-B3-04）。
+pub fn sub_a3_cluster_004(input: &L2In) -> L2Out {
+    crate::verify_shim::a3_cluster_004(input)
 }

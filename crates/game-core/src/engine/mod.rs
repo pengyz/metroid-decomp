@@ -8968,3 +8968,31 @@ mod a3_003_tests {
         assert_eq!(a9996_face(5, 6, 7), (5, 6, 7)); // 透传类
     }
 }
+
+// ---- SC-B3-04（a3-004）员转写（2 员——bank2 化身 3 写族面）----
+
+/// bank02:800C areas_common 化身（root——簇共根形二百二一·bank2 化身五现）。
+/// 返回 (化身面, 有效)。
+pub fn b2_800c_areas_incarnation() -> (bool, bool) {
+    (true, true) // areas_common 共享（bank2 化身五现）
+}
+
+/// $99D3 员体（bank2 同族面（3 写族（S5-146 族同族）））。
+pub fn a99d3_face(v0: u8, v1: u8) -> Vec<(u16, u8)> {
+    vec![(0x6AF7, v0), (0x6AF8, v1), (0x6AFA, 1)]
+}
+
+#[cfg(test)]
+mod a3_004_tests {
+    use super::*;
+
+    /// 二员转写形（bank2 化身五现 root+3 写面）。
+    #[test]
+    fn a3_004_units_two() {
+        assert!(b2_800c_areas_incarnation().0);
+        let ev = a99d3_face(227, 147);
+        assert_eq!(ev.len(), 3);
+        assert!(ev.contains(&(0x6AF7, 227))); // fixture 强源（写址对值核对）
+        assert!(ev.contains(&(0x6AF8, 147))); // 链算径（判别条补触发）
+    }
+}

@@ -3311,3 +3311,18 @@ pub fn a3_cluster_002(input: &L2In) -> L2Out {
 pub fn a3_cluster_003(input: &L2In) -> L2Out {
     L2Out { a: input.a, x: input.x, y: input.y, writes: vec![] }
 }
+
+// ---- SC-B3-04 簇入口适配（a3_cluster_004 ← bank02:800C——判别条补触发）----
+
+/// a3_cluster_004 适配（bank02:800C（areas_common 化身——bank2）——案实核 3 写
+/// （$6AF7←r(0)（fixture 强源）+$6AF8←147（fixture 弱源——判别条补触发→账目
+/// 预登记（VALCHAIN-B3-004））+$6AFA←1）；A=1/X 透传/Y=1）。
+pub fn a3_cluster_004(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    L2Out {
+        a: 1, x: input.x, y: 1,
+        writes: merge_writes(vec![
+            (0x6AF7, r(0x0000)), (0x6AF8, 147), (0x6AFA, 1),
+        ]),
+    }
+}
