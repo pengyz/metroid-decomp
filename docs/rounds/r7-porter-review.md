@@ -4523,6 +4523,17 @@ a6 4b` **三 bank 全同**（=a2-025 同形（JSR $CBDA 调用链））+**十六
 并案=严格顺序续 ③8 案账内 ④员面双扫桩 0（2 员真现）。测 431。findings（r10）：
 0 新。SC-B4-18（B 区余 111 卡）预告随账。
 
+## SC-B4-18 卡审（00380ce）——SelectSamusPalette bank3 化身（调色板选择面）
+
+### verdict: pass
+
+四条核：①**SelectSamusPalette 三 bank 全谱 ✓✓✓**：bank1/2/3 $8CE3=`20 73 cb
+a6 4b a9 02 9d` **三 bank 全同**（=a2-026 同形（JSR $CB73 调用链））+**调色板
+选择面 ✓**：bank7 $CB73=`98 48 ad 78`（TYA/PHA/LDA $6878——SC-B2-04 refs 注
+直合面三 bank 复现）②**SELECTPAL-B4-018 预登记 ✓**（133 条目）：54 写>20 阈值
+判别条触发→预登记→L2 并案=严格顺序续 ③8 案账内 ④员面双扫桩 0（2 员真现）。
+测 432。findings（r10）：0 新。SC-B4-19（B 区余 110 卡）预告随账。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
