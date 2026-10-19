@@ -4433,6 +4433,17 @@ BOMBLAUNCH-IMPL 等）③**bombexplode 跑通 ✓**（golden=(0,0,0,[(1664,16)])
 预登记→L2 并案=严格顺序续 ③4 写实核+8 案账内 ④员面双扫桩 0（2 员真现）。
 测 424。findings（r10）：0 新。SC-B4-11（B 区余 118 卡）预告随账。
 
+## SC-B4-11 卡审（594b387）——DoorSubRoutine8C8A bank3 化身（门族 bank3 五现）
+
+### verdict: pass
+
+四条核：①**门族 bank3 五现 ✓✓✓**：bank1/2/3 $8C8A=`20 fb 8c 20 76 8c a6 4b`
+**三 bank 全同**（=a1-019 同形（JSR $8CFB WriteDoorBGTiles_Solid/JSR $8C76 链）
+——门族三 bank 复现全谱五现（DrawDoor→8C61→8C71→8C76→8C8A/WriteDoorBGTiles））
+②**DOORSUB8C8A-B4-011 预登记 ✓**（114 条目）：60 写>20 阈值判别条触发→预登记
+→L2 并案=严格顺序续 ③8 案账内 ④员面双扫桩 0（2 员真现）。测 425。
+findings（r10）：0 新。SC-B4-12（B 区余 117 卡）预告随账。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
