@@ -4384,3 +4384,17 @@ pub fn a6_cluster_005(input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-B6-06 簇入口适配（a6_cluster_006 ← bank04:801B——判别条补触发）----
+
+/// a6_cluster_006 适配（bank04:801B（bank4 窗）——案实核 4 写（$6AF8/$6AF9/$6AFA
+/// ←0/5/5（fixture 弱源——判别条补触发→账目预登记（VALCHAIN-B6-006））+$6B03）；
+/// A=0/X 透传/Y=0）。
+pub fn a6_cluster_006(_input: &L2In) -> L2Out {
+    L2Out {
+        a: 0, x: 0, y: 0,
+        writes: merge_writes(vec![
+            (0x6AF8, 0), (0x6AF9, 5), (0x6AFA, 5), (0x6B03, 0),
+        ]),
+    }
+}
