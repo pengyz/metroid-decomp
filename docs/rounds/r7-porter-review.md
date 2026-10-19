@@ -3786,6 +3786,18 @@ LDA #$03/**JSR $800C（CommonJump 直连）**——a2-032/034 同族 15 写面�
 同型瞬态注（败 113/账 108=5 非账目=A 系 WIP）。测 368。findings（r10）：0 新。
 SC-B2-14（B 区余 171 卡）预告随账。
 
+## SC-B2-14 卡审（a2dcce8）——VALCHAIN 预登记四现（值链算深径）
+
+### verdict: pass
+
+四条核：①**VALCHAIN 预登记先行四现 ✓**：SC-B2-036-CROSSCARD-VALCHAIN 条目
+在库（55 总——CHAIN 族全谱 8 条：DOORCHAIN×5+YCHAIN×2+VALCHAIN×1）——值链算
+深径（53 值 fixture 弱源）判别条补触发→预登记→L2 并案=严格顺序稳定四现 ②字节形
+✓：$9A8F=`bd 05 04 4a bd 0a 04 29`=LDA $0405,X/LSR/LDA $040A,X/AND（3 写族面
+值链算合形=$6B2F-$6B31 族 8 案钉）③账目面（账 108→116=+8 VALCHAIN 合）④员面
+双扫桩 0（2 员真现）。同型瞬态注（败 121/账 116=5 非账目=A 系 WIP）。测 369。
+findings（r10）：0 新。SC-B2-15（B 区余 170 卡）预告随账。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
