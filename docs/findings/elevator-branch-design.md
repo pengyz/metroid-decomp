@@ -102,3 +102,18 @@ SamusOnElevator（站上平台）+ 方向键按下（ElevatorType 位 7 定向�
   （系统径——一次解算全图）；
   ②多轮探跑战役（10+ 轮开环拓进——逐段 MapPos 校准）；
 - 判：①系统径优先（解算后输入序一次成型——径导航余步=全图连通性考证窗）。
+
+## 7. 【2026-10-19 G2 🟡①】elevator 家族扩（A 级锚全列）
+
+- **家族面**（elevator-branch-design §5/§6 续）：
+  - **三电梯**（SpecItmsTbl type=$04）：Tourian(3,2)→$03/Norfair(22,11)→$01/
+    Kraid(7,18)→$02——**目的域三向**（Norfair=missile-free=sc-elevator-ride 目标）；
+  - **系统锚**（A 级全列）：`$D7B3 UpdateElevator`（10 态 JumpEngine：0 无/1 Idle/
+    2 ScrollXToCenter/3 Move/4 ScrollY/5-7 fade/8 Move/9 Stop）——
+    `SamusOnElevator=$0307`（站台判）+`ElevatorType bit7`（1=UP/0=DOWN 激活）+
+    `$D423 SamusElevator`（骑行：Y±1+ScrollY 跟随+ToggleSamusHi 包裹）；
+  - **statue 同族注**（G2 boss face ②③锚复用）：elevator($D7B3)/statue(UpdateStatue)
+    =**对象状态机两例**（10 态 JumpEngine vs RaiseState/BGTiles）——G 系状态机
+    族谱=game-core 移植面 L2 对拍锚族；
+- **家族扩余**（🟡续）：elevator 目的域切换细义（$01/$02/$03 域码→域载入链）+
+  ToggleSamusHi 包裹语义=后续件。
