@@ -3484,6 +3484,17 @@ asm:69-70 `CommonJump_EnemyGetDeltaY: ; $802D / jmp EnemyGetDeltaY` ↔ bank1 $8
 （2KB 掩码辨识条再证——S5-03/S6 辨识谱系续用）④员面双扫桩 0（2 员真现）。测 342。
 findings（r10）：0 新。SC-B1-11（B 区余 196 卡）预告随账。
 
+## SC-B1-11 卡审（a1-011）——refs 法八现（EnemyGetDeltaX·S7-178 Y 版对偶）
+
+### verdict: pass
+
+四条核：①L2 面 a1-011-case×8 并入（16=8×2 已计）+**首提全过**✓（增量 1541
+→1557=+16=双卡落；败 62 稳）②**refs 法八现双轨 ✓✓**：asm:72-73 `CommonJump_
+EnemyGetDeltaX: ; $8030 / jmp EnemyGetDeltaX` ↔ bank1 $8030=`4c 18 83`（JMP
+$8318）——asm 直读↔字节直合（八现连续速效）③**S7-178 Y 版对偶 ✓**（EnemyGetDeltaX
+X 版=delta 族 X/Y 对偶谱系（S7-178 Y 侧对应））④员面双扫桩 0（2 员真现）。测 343。
+findings（r10）：0 新。SC-B1-12（B 区余 195 卡）预告随账。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
