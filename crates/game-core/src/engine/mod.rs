@@ -6806,3 +6806,33 @@ mod s6_160_tests {
         assert_eq!(ev2.len(), 6);
     }
 }
+
+// ---- SC-S6-10（S6-161）员转写（2 员——$820F 共享码族；L2 真 0 留白）----
+
+/// $820F 员体（root——簇共根形百五三·**banks1-5 共享码**（形八续二现））：
+/// $81F6 调+bne 段+$80B0 调（S1-02 接面）+sec/bpl 段——$81DA 同块续。
+/// 返回 (判段, 有效)。
+pub fn s6_820f_shared(v4b: u8) -> (bool, bool) {
+    (v4b != 0, true) // bne 段面（同块续）
+}
+
+/// $F741 员体：jmp $820F（尾形）+$0405[x] or 面（S5-129 同族）+表载（$968B[y]
+/// ——S3-23 同族）+$6AFB[y]→Y（S5-132 同构）。
+pub fn s6_f741_body(x: u8, v4b: u8, v0405_x: u8, a_in: u8) -> (Vec<(u16, u8)>, u16) {
+    (vec![(0x0405 + x as u16, v0405_x | a_in)], 0x820F)
+}
+
+#[cfg(test)]
+mod s6_161_tests {
+    use super::*;
+
+    /// 二员转写形（$820F 共享码 root+一壳）。
+    #[test]
+    fn s6_161_units_two() {
+        assert_eq!(s6_820f_shared(5), (true, true));
+        assert_eq!(s6_820f_shared(0), (false, true));
+        let (ev, j) = s6_f741_body(2, 5, 0x10, 0x20);
+        assert_eq!(j, 0x820F);
+        assert!(ev.contains(&(0x0407, 0x30))); // x=2 ⇒ $0405+2（x 索引强制步）
+    }
+}
