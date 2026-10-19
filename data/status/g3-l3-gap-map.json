@@ -61,6 +61,12 @@
       "class": "L3-route",
       "reason": "Samus 状态机族 9 员（35-45 写物理面（D3 ROM 执行 golden）——stops 面（L3 路由））",
       "declared": "SC-MD-005（物理深化）"
+    },
+    {
+      "id": "md-samusrun-*",
+      "class": "L3-route",
+      "reason": "SamusRun 族跑动物理（$CCC2/$CCB7——41 写物理面（D3 ROM 执行 golden）——BRK/$22（L3 路由））",
+      "declared": "SC-MD-006（跑动物理）"
     }
   ],
   "tolerated": true,
