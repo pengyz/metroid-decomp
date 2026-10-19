@@ -4740,6 +4740,18 @@ golden 面 776=0 单写 L3 路由显式声明）③**gap_map arm_deepening_closu
 就绪态保持）+闸 PASS。测 449。findings（r10）：0 新。SC-B5-14/SC-MD-003 接续
 预告随账。
 
+## SC-B5-14 卡审（311dfb2）——UpdateAnimEye 命名正身五现（2 空白卡）
+
+### verdict: pass
+
+四条核：①L2 留白**真 0 三方核 ✓**（pregen/l2_cases 全 0——**a5 批 2 空白卡
+辨识**随账）②**命名正身五现 ✓✓**：prg3_tourian.asm:1570 `MotherBrain_Idle_
+UpdateAnimEye: ; 03:A02E` ↔ bank3 $9E2B=`20 2e a0`（JSR $A02E）——refs 法命名正身
+五现（谱系五步：DrawDoor→MotherBrain_Idle→HandleBeingHit→UpdateAnimBrain→
+**UpdateAnimEye**）③数据面 2 件（hexdump 直得：表/anim（$A06D/$A07B/$A082/$A08B
+表对载）+$A02E tile/anim 16B）④员面双扫桩 0（2 员真现）。测 450。
+findings（r10）：0 新。SC-B5-15（B 区余 92 卡）预告随账。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
