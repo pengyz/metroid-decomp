@@ -9539,3 +9539,32 @@ mod a3_024_tests {
         assert_eq!(b2_993d_face(63), 193); // 调用面（写址对值核对）
     }
 }
+
+// ---- SC-B3-25（a3-025）员转写（2 员——bank2 S5-146 族同族面）----
+
+/// bank02:9839 员体（root——簇共根形二百四二·bank2 S5-146 族同族面（5 员））。
+/// 返回 (写事件, 有效)。
+pub fn b2_9839_face(x: u8, v0: u8) -> Vec<(u16, u8)> {
+    vec![(0x0404 + x as u16, 0), (0x0404 + x as u16 + 10, 0),
+         (0x6AF8 + x as u16 - 1, v0), (0x6AF8 + x as u16, v0),
+         (0x6AF8 + x as u16 + 2, 1)]
+}
+
+/// $98D0/$98F1/$9AE6/$9B5F 员体（同族面（连现））。
+pub fn b2_98d0_face(x: u8, v0: u8) -> Vec<(u16, u8)> {
+    b2_9839_face(x, v0)
+}
+
+#[cfg(test)]
+mod a3_025_tests {
+    use super::*;
+
+    /// 二员转写形（bank2 S5-146 族同族面 root+一壳）。
+    #[test]
+    fn a3_025_units_two() {
+        let ev = b2_9839_face(72, 120);
+        assert_eq!(ev.len(), 5);
+        assert!(ev.contains(&(0x6B3F, 120))); // x=72 ⇒ $6AF8+71（写址对值核对）
+        assert_eq!(b2_98d0_face(72, 120).len(), 5);
+    }
+}

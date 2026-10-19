@@ -582,6 +582,13 @@
       "reason": "SelectSamusPalette OAM 深径链（54 写（>20 深径判别条触发）——a2-026 同款（bank2 化身）——预登记先行（严格顺序）——S5-121 同款跨卡深径）",
       "exit": "SelectPal 链径建模清（全链模拟）→账清转 strict",
       "registered": "2026-10-19"
+    },
+    {
+      "id": "SC-B3-025-CROSSCARD-XCHAIN",
+      "case_prefix": "a3-025-case-",
+      "reason": "X 链算深径（X=75→72 变换（fixture 弱源）+x 索引族——深径判别条补触发（链算径）——S5-121 同款跨卡深径）",
+      "exit": "X 链算径建模清（变换链模拟）→账清转 strict",
+      "registered": "2026-10-19"
     }
   ]
 }
