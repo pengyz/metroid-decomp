@@ -5700,3 +5700,40 @@ mod s5_128_tests {
         assert!(ev3.is_empty());
     }
 }
+
+// ---- SC-S5-09（S5-129）员转写（2 员——CollisionReact 族；L2 真 0 留白）----
+
+/// $F2CA CollisionDetectionEnemy_ReactToCollisionWithSamusProjectile（root——簇共根形
+/// 百二二）：bcs +18 段（未撞跳）+$0300[y]→$040E[x]（态写）+$F279/$F332 调
+/// +$0404[x] or 面（碰撞标记）。
+/// 返回 (写事件, 撞)。
+pub fn s5_collision_react(x: u8, y: u8, v0300_y: u8, carry: bool) -> (Vec<(u16, u8)>, bool) {
+    if carry {
+        return (vec![], false); // bcs 段（未撞）
+    }
+    (vec![(0x040E + x as u16, v0300_y)], true)
+}
+
+/// $F0CC 员体：CollisionReact+$F1EE 调（bne 回卷）+$70 判（IsSamusDead（S1-13
+/// 接面）+碰撞链（S2-26 接面））。
+pub fn s5_f0cc_body(x: u8, y: u8, v0300_y: u8, carry: bool) -> (Vec<(u16, u8)>, bool) {
+    s5_collision_react(x, y, v0300_y, carry)
+}
+
+#[cfg(test)]
+mod s5_129_tests {
+    use super::*;
+
+    /// 二员转写形（CollisionReact root+一壳）。
+    #[test]
+    fn s5_129_units_two() {
+        let (ev, hit) = s5_collision_react(2, 3, 5, false);
+        assert!(hit);
+        assert!(ev.contains(&(0x0410, 5))); // x=2 ⇒ $040E+2
+        let (ev2, hit2) = s5_collision_react(2, 3, 5, true);
+        assert!(!hit2); // bcs 段
+        assert!(ev2.is_empty());
+        let (ev3, _) = s5_f0cc_body(2, 3, 5, false);
+        assert_eq!(ev3.len(), 1);
+    }
+}
