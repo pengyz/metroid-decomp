@@ -34,7 +34,8 @@
 # 物品活 f1011-1252（hi=0）/hi=1 自 f1329（物已死）——路由上两窗不重叠=触达结构性差
 # 【swap 点定】死点=MapX 3→4 界 @roomx≈143（f1252——房界 crossing 非 wrap）
 # 物品存活=MapX≤3 窗（房 (2,14)-(3,14) 域）——出界即死（RemoveIfOffScreen）
-# v19 收：物品全程存活 ✓（西径存活窗解——type 04 全程驻留）+wrap 被 x=4 墙挡（roomx 4 恒）
+# v20 突破：同表活首现（f1228）！hi=1 814 帧+物全程活——**三条件同窗 ✓**
+# 墙跳越✓（wrap f1187）——差=Δx 124/Δy 71（wrap 侧 x=255→物品 x=104 距）——v21：西推收距+跳触
 # 存活窗解法=西行（东行触发 MapX 3→4 死点/西行无界）——v20 待：x=4 墙跳越→x=0 wrap→hi=1
 # 死因双证：MapX 3→4 crossing=死点（v17/v18 同——存活窗 MapX≤3 确认）
 # 【②向根因定】ToggleSamusHi($E249)=x/y wrap 专属翻转（MoveOutDoor x=0/255 界+y wrap 239 界）
@@ -56,8 +57,9 @@ press 420 a
 press 540 start
 fixture 900 6878 13 invariant
 hold 995-1068 left
-hold 1075-1400 left
-hold 1410-1500 a
+hold 1075-1150 left
+hold 1155-1260 a
+hold 1155-1500 left
 capture 1110 over-wall
 capture 1180 near-item
 capture 1500 touch-window
