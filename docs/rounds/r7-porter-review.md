@@ -4018,6 +4018,18 @@ $8039 **全同续**（CommonJump 表复现十二现=EnemyGetDeltaX_UsingAccelera
 0 败（首提全过）④员面双扫桩 0（2 员真现）。测 389。findings（r10）：0 新。
 SC-B3-12（a2-043 随段首并审）预告随账。
 
+## SC-B3-12 卡审（b2367e2）——DrawDoor bank2 化身（DRAWDOOR-B3-012 预登记）
+
+### verdict: pass
+
+四条核：①**DrawDoor bank2 化身 ✓✓**：bank02:8BB1=`bd 07 03 c9 03 d0 02 a9` 与
+bank1 $8BB1 **全同**（=a1-015 DrawDoor 同形（LDA $0307,X/CMP #$03 判）**跨 bank
+复现**——门族图谱 bank2 化身实证）②**DRAWDOOR-B3-012 预登记 ✓**（71 条目=
+**CHAIN 五类**：DOORCHAIN/YCHAIN/VALCHAIN/ACHAIN/DRAWDOOR）：52 写>20 阈值
+判别条触发→预登记→L2 并案=严格顺序续 ③8 案账内 ④员面双扫桩 0（2 员真现）。
+同型瞬态注（败 194/账 188=6 非账目=A 系 WIP）。测 390。findings（r10）：0 新。
+SC-B3-13（B 区余 150 卡）预告随账。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
