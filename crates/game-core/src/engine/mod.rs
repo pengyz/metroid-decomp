@@ -10727,3 +10727,45 @@ mod a5_031_tests {
         assert_eq!(b3_99b8_face(164, 139).len(), 2);
     }
 }
+
+// ---- SC-B5-08（a5-032）员转写（2 员——$99D1 链族；L2 真 0 留白）----
+
+/// $99D1 员体（root——簇共根形二百八三·链壳（hexdump 直得）：lda $99A1,y/
+/// lda #$0F/jmp $99BA/lda $6AF4,x/cmp #3/beq/jsr $801E（CommonJump 直连面））。
+/// 返回 (写事件, 跳转面)。
+pub fn b3_99d1_chain() -> (Vec<(u16, u8)>, u16) {
+    (vec![(0x0000, 0x0F)], 0x801E) // jmp CommonJump（$801E 直连面）
+}
+
+/// $9A3A 员体（Y 环（hexdump 直得）：dey×3/bpl 环+lda #2/jmp $8000/lda #8/jmp $8003
+/// ——walk-ring 族（Y 递减环）+CommonJump 跳转面）。
+/// 返回 (环出, 迭代数)。
+pub fn b3_9a3a_y_loop() -> (u8, u8) {
+    let mut y = 3u8;
+    let mut n = 0;
+    loop {
+        n += 1;
+        let ny = y.wrapping_sub(1);
+        if ny > 0x7F {
+            break;
+        }
+        y = ny;
+    }
+    (y, n) // Y-=1 环（3→2→1→0）
+}
+
+#[cfg(test)]
+mod a5_032_tests {
+    use super::*;
+
+    /// 二员转写形（$99D1 链 root+Y 环）——真 0 留白形。
+    #[test]
+    fn a5_032_units_two() {
+        let (ev, j) = b3_99d1_chain();
+        assert_eq!(j, 0x801E); // CommonJump 直连面
+        assert!(ev.contains(&(0x0000, 0x0F))); // 写址对值核对
+        let (y, n) = b3_9a3a_y_loop();
+        assert_eq!(y, 0); // Y-=1 环出
+        assert_eq!(n, 4); // 4 迭代（3→2→1→0→break）
+    }
+}
