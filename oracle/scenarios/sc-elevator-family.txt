@@ -1,0 +1,32 @@
+# 场景：sc-elevator-family —— elevator 家族消费方（🟡①素材消费）
+# 消费：elevator-branch-design.md §7（三电梯+系统锚——$D7B3 10 态/$0307/ElevatorType）
+# 事件核：SamusOnElevator（$0307）/ElevatorType bit7（方向激活）/MapPos 域切换
+#         三断言——elevator 状态机观察面（statue 同族状态机族谱对拍锚）
+name sc-elevator-family
+frames 3500
+watch_range 0000-00ff zp
+watch_range 0100-07ff iram
+
+press 360 start
+press 420 a
+press 540 start
+fixture 900 6878 13 invariant
+hold 850-3200 right
+press 950 b
+press 1150 b
+hold 1340-1500 a
+press 1420 b
+hold 1900-2060 a
+hold 1950-2320 right
+press 1980 b
+hold 2500-2660 a
+hold 2550-2920 right
+press 2580 b
+hold 3100-3260 a
+press 3180 b
+
+capture 2000 approach
+capture 3000 elevator-zone
+capture 3400 post
+
+sample_point endFrame
