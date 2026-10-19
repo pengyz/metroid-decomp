@@ -11,5 +11,6 @@
   "golden_method": "簇首入口×4 LCG 输入→Mesen2 ROM golden 抓取→cases.jsonl in/out 对——ram_addrs=旗族 RAM 块（$0680-$0688）+声道状态",
   "batch_ready": "G3 批产开工随行预备完（2026-10-19）——porter A 批收口即接 G3 首卡",
   "golden_method_note": "簇首×4 LCG→ROM golden（同 a 系）——ram_addrs=旗族 RAM 块($0680-$0688)",
-  "bake_status": "首案骨架落（g3-000-case-0 SilenceMusic 路径——golden 手推在途）——随行态：G3 卡逐卡烤案"
+  "bake_status": "首案骨架落（g3-000-case-0 SilenceMusic 路径——golden 手推在途）——随行态：G3 卡逐卡烤案",
+  "cross_check_ready": "g3-000 交叉验参照就绪（20 写址全——hand-derived 占位）——ROM golden 到手即对拍（对上=强证/对不上=抓 bug）"
 }
