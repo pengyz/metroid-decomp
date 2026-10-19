@@ -771,6 +771,13 @@
       "reason": "【预登记/补账】g3-sfx-walk 簇（批产 WIP——A 批预登记制）",
       "exit": "g3-sfx-walk 落→账清转 strict",
       "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-B4-008-CROSSCARD-DOORSUB",
+      "case_prefix": "a4-008-case-",
+      "reason": "DoorSubRoutine OAM 深径链（60 写（>20 深径判别条触发）——$8C61 bank3 化身（a1-016 同款）——预登记先行（严格顺序）——S5-121 同款跨卡深径）",
+      "exit": "门链 OAM 绘制径建模清（全链模拟）→账清转 strict",
+      "registered": "2026-10-20"
     }
   ]
 }
