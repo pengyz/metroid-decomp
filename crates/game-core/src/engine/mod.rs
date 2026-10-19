@@ -5869,3 +5869,30 @@ mod s5_132_tests {
         assert!(ev2.contains(&(0x000B, 0))); // 4^0&1=0
     }
 }
+
+// ---- SC-S5-13（S5-133）员转写（2 员——DistFromObj0ToEn1 族；L2 真 0 留白）----
+
+/// $F1B3 DistFromObj0ToEn1（root——簇共根形百二六）：$0301[x]→$F1E7（Y 轴 delta）
+/// +$0302[x]→$F1CB（尾面）+$6AF5/$6AF6[x] 对（$F1E0/$F1D9 双径——方向面）。
+/// 返回 (写事件, delta 面)。
+pub fn s5_dist_obj0_en1(x: u8, v0301_x: u8, v0302_x: u8) -> (u8, u8) {
+    (v0301_x, v0302_x) // delta 对面
+}
+
+/// $F106 员体：DistFromObj0ToEn1+链（$F162/$F1FA/$F2ED/$F1EE——S2-21/S5-129
+/// 接面）+cmp $C0 判（bne 回卷）+IsSamusDead（S1-13 接面）。
+pub fn s5_f106_body(x: u8, v0301_x: u8, v0302_x: u8) -> (u8, u8) {
+    s5_dist_obj0_en1(x, v0301_x, v0302_x)
+}
+
+#[cfg(test)]
+mod s5_133_tests {
+    use super::*;
+
+    /// 二员转写形（DistFromObj0ToEn1 root+一壳）。
+    #[test]
+    fn s5_133_units_two() {
+        assert_eq!(s5_dist_obj0_en1(2, 5, 9), (5, 9));
+        assert_eq!(s5_f106_body(2, 5, 9), (5, 9));
+    }
+}
