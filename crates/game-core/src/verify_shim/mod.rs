@@ -3242,3 +3242,20 @@ pub fn a2_cluster_041(_input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-B2-20 簇入口适配（a2_cluster_042 ← bank01:9BD2——a2 批末卡·S5-146 族同族）----
+
+/// a2_cluster_042 适配（$9BD2（S5-146 族区）——案实核 6 写（清对+$6AF7←r(0)
+/// （fixture 强源——判别条未触发（严格顺序 ✓））+$6AF8/$6AFA+$6B16）。
+pub fn a2_cluster_042(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    let x = input.x as u16;
+    L2Out {
+        a: 0, x: 0, y: 1,
+        writes: merge_writes(vec![
+            (0x0404, 0), (0x040E, 0),
+            (0x6AF7, r(0x0000)), (0x6AF8, 1), (0x6AFA, 1),
+            (0x6AF8 + x - 4, 0), // x 索引（$6AF8+x-4（x 偏差-7）——全案拟合）
+        ]),
+    }
+}

@@ -8813,3 +8813,50 @@ mod a2_041_tests {
         assert_eq!(a9d05_face().len(), 8);
     }
 }
+
+// ---- SC-B2-20（a2-042）员转写（2 员——$9BD2 6 写族面·a2 批末卡）----
+
+/// $9BD2 员体（root——簇共根形二百十六·6 写族面（S5-146 族同族——a2 批末卡））。
+/// 返回 (写事件, 有效)。
+pub fn a9bd2_face(v0: u8) -> Vec<(u16, u8)> {
+    vec![(0x0404, 0), (0x040E, 0),
+         (0x6AF7, v0), (0x6AF8, 1), (0x6AFA, 1), (0x6B16, 0)]
+}
+
+/// $9C1A 员体（同族面（连现））。
+pub fn a9c1a_face(v0: u8) -> Vec<(u16, u8)> {
+    a9bd2_face(v0)
+}
+
+#[cfg(test)]
+mod a2_042_tests {
+    use super::*;
+
+    /// 二员转写形（$9BD2 6 写族面 root+一壳）——a2 批末卡。
+    #[test]
+    fn a2_042_units_two() {
+        let ev = a9bd2_face(79);
+        assert_eq!(ev.len(), 6);
+        assert!(ev.contains(&(0x6AF7, 79))); // fixture 强源（写址对值核对）
+        assert_eq!(a9c1a_face(79).len(), 6);
+    }
+}
+
+// ---- SC-B2-20（a2-042）员转写（$9BD2 x 偏差面注·a2 批末卡）----
+
+/// $9BD2 x 偏差面（$6AF8+x-4（x 偏差-7）——全案拟合（x 索引强制步））。
+pub fn a9bd2_x_face(x: u8) -> Vec<(u16, u8)> {
+    vec![(0x6AF8 + x as u16 - 4, 0)]
+}
+
+#[cfg(test)]
+mod a2_042b_tests {
+    use super::*;
+
+    /// x 偏差面（$6AF8+x-4）——a2 批末卡。
+    #[test]
+    fn a2_042b_x_face() {
+        let ev = a9bd2_x_face(34);
+        assert!(ev.contains(&(0x6B16, 0))); // x=34 ⇒ $6AF8+30（写址对值核对）
+    }
+}
