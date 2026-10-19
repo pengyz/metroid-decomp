@@ -2211,3 +2211,16 @@ pub fn s5_cluster_139(input: &L2In) -> L2Out {
         writes: merge_writes(vec![(0x0005, v)]),
     }
 }
+
+// ---- SC-S5-20 簇入口适配（s5_cluster_140 ← bank07:F279 SetSamusProjectileIsHit）----
+
+/// s5_cluster_140 适配（$F279 SetSamusProjectileIsHit——OR 写面：$030A[y]←
+/// r($10)|r($030A[y])；A=0/X/Y 透传）。
+pub fn s5_cluster_140(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    let v = r(0x0010) | r(0x030A + input.y as u16);
+    L2Out {
+        a: 0, x: input.x, y: input.y,
+        writes: merge_writes(vec![(0x030A + input.y as u16, v)]),
+    }
+}

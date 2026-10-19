@@ -6096,3 +6096,35 @@ mod s5_139_tests {
         assert_eq!(v2, 167); // +0 面（案实核径）
     }
 }
+
+// ---- SC-S5-20（S5-140）员转写（2 员——SetSamusProjectileIsHit 族）----
+
+/// $F279 SetSamusProjectileIsHit（root——簇共根形百三三）：$030A[y]←r($10)|r($030A[y])
+/// （OR 命中旗面）。
+/// 返回 (写事件, 命中值)。
+pub fn s5_set_proj_is_hit(y: u8, v10: u8, v030a_y: u8) -> (Vec<(u16, u8)>, u8) {
+    let v = v10 | v030a_y;
+    (vec![(0x030A + y as u16, v)], v)
+}
+
+/// $F2D2 员体：SetSamusProjectileIsHit+$F332 调+$0404[x] or 面（S5-129 同构）+
+/// y 版对（$0404[y] OR——S5-129 对偶面）。
+pub fn s5_f2d2_body(y: u8, v10: u8, v030a_y: u8) -> (Vec<(u16, u8)>, u8) {
+    s5_set_proj_is_hit(y, v10, v030a_y)
+}
+
+#[cfg(test)]
+mod s5_140_tests {
+    use super::*;
+
+    /// 二员转写形（SetSamusProjectileIsHit root+一壳）。
+    #[test]
+    fn s5_140_units_two() {
+        let (ev, v) = s5_set_proj_is_hit(5, 0x10, 0x20);
+        assert_eq!(v, 0x30); // OR
+        assert!(ev.contains(&(0x030F, 0x30)));
+        let (ev2, v2) = s5_f2d2_body(5, 0, 0);
+        assert_eq!(v2, 0);
+        assert!(ev2.contains(&(0x030F, 0)));
+    }
+}
