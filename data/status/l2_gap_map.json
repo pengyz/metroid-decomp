@@ -939,6 +939,13 @@
       "reason": "值链算深径（$006B←162（fixture 弱源——多入参链算）——深径判别条补触发（链算径）——S5-121 同款跨卡深径（a4 批末卡））",
       "exit": "值链算径建模清（$04/$6B 族链模拟）→账清转 strict",
       "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-MD-001-IMPL",
+      "case_prefix": "a1-025-case",
+      "reason": "【预登记】移动臂深化首卡（SC-MD-001 SamusJump 族——开工前置步先登记）",
+      "exit": "arm_cluster_003 移植/转写落→账清转 strict",
+      "registered": "2026-10-20"
     }
   ]
 }
