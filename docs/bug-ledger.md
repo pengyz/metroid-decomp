@@ -39,3 +39,20 @@
 - trace id: analysis/traces/sc-elevator-ride.frames.jsonl f3380-3750（探针窗）；
 - Stage 处置: **Stage A 保真不修**（D4）——代码侧注 `// BUG-001`（porter 移植时引用）；
 - 登记: 2026-10-19 decomp（lead D4 台账令）
+
+## BUG-002: Ridley 共用 KraidLintCounter($7E)=弹种计时互扰
+
+- 现象: Ridley 战斗弹种（fireball）发射计时读写 **KraidLintCounter($7E)**——
+  Kraid lint 计时表被 Ridley 复用（m1disasm 注："Accidentally used by Ridley too"）——
+  两 boss 计时面共享一址；
+- 复现: 机制级（代码链）——Ridley 弹种计时路径读 $7E（Kraid lint 计时）——
+  触发条件=Ridley 战斗中 fireball 发射计时与 Kraid lint 计时同域；
+- 影响: **计时互扰**（若两 boss 同域计时=互相干扰——正常流程单 boss 无感）——
+  差分验证登记为已知偏差（TOLERATED+BUG-002 引）——game-core 移植保真复现
+  （Stage A 保留 quirk——D4）；
+- 证据: constants_ram:627-628（KraidLintCounter $7E 注+KraidNailCounter $7F 注——
+  "Accidentally used by Ridley too" 原注）+prg4:171-173（Kraid 弹种派发）+
+  prg5:173-174（Ridley 弹种派发）；
+- trace id: 未采（boss 战斗场景未达——代码链实证代：disasm 注+RAM 图双锚）；
+- Stage 处置: **Stage A 保真不修**（D4）——代码侧注 `// BUG-002: 保留原行为`（porter
+  移植 KraidLintCounter/fireball 计时路径时引用）。
