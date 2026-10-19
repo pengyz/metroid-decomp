@@ -9717,3 +9717,54 @@ mod a3_030_tests {
         assert!(ev2.contains(&(0x6B01, 0x3A))); // x=0 ⇒ $6AF8+9（写址对值核对）
     }
 }
+
+// ---- SC-B3-31（a3-031）员转写（3 员——$99C8 链族；L2 真 0 留白）----
+
+/// $99C8 员体（root——簇共根形二百四八·ptr 写链（hexdump 直得）：$00←6/$01←8
+/// +jmp $99A1（直连面）+jmp $99BA（直连面））。
+/// 返回 (写事件, 跳转面)。
+pub fn b2_99c8_chain() -> (Vec<(u16, u8)>, u16) {
+    (vec![(0x0000, 6), (0x0001, 8)], 0x99A1) // jmp $99A1（直连面）
+}
+
+/// $9A16 员体（x 索引写链（hexdump 直得）：dec $6B01,x/bne/lda #0/sta $6AF4,x
+/// +Y 环（ldy #12/sta $A0,y——Y 循环写））。
+/// 返回 (写事件, 有效)。
+pub fn b2_9a16_chain(x: u8) -> Vec<(u16, u8)> {
+    vec![(0x6AF8 + x as u16 + 9, 0), (0x6AF4 + x as u16, 0)] // x 索引写（写址不掩）
+}
+
+/// $9A2F 员体（Y 环（hexdump 直得）：sta $A3,y/ldx #0/lda $6AFB,x/sta $A3,y
+/// /dey×4/bpl 环——walk-ring 族（Y 递减环））。
+/// 返回 (环出, 迭代数)。
+pub fn b2_9a2f_y_loop() -> (u8, u8) {
+    let mut y = 12u8;
+    let mut n = 0;
+    loop {
+        n += 1;
+        let ny = y.wrapping_sub(4);
+        if ny > 0x7F {
+            break;
+        }
+        y = ny;
+    }
+    (y, n) // Y-=4 环（12→8→4→0）
+}
+
+#[cfg(test)]
+mod a3_031_tests {
+    use super::*;
+
+    /// 三员转写形（$99C8 链 root+双链壳）——真 0 留白形。
+    #[test]
+    fn a3_031_units_three() {
+        let (ev, j) = b2_99c8_chain();
+        assert_eq!(j, 0x99A1); // 直连面
+        assert!(ev.contains(&(0x0000, 6))); // 写址对值核对
+        let ev2 = b2_9a16_chain(0);
+        assert!(ev2.contains(&(0x6B01, 0))); // x=0 ⇒ $6AF8+9（写址对值核对）
+        let (y, n) = b2_9a2f_y_loop();
+        assert_eq!(y, 0); // Y-=4 环出
+        assert_eq!(n, 4); // 4 迭代（12→8→4→0→break）
+    }
+}
