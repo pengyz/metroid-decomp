@@ -4696,6 +4696,19 @@ EOR $9D/BNE 透传变換合形）——bank3 化身八现（bank1 $9DF2=数据�
 预登记→L2 并案=严格顺序续 ③0 写透传面+8 案账内 ④员面双扫桩 0（3 员真现）。
 测 446。findings（r10）：0 新。SC-B5-11（B 区余 96 卡）预告随账。
 
+## SC-B5-11 卡审（4a19bf2）——MotherBrain 域开（命名正身二现·284 写深径）
+
+### verdict: pass
+
+四条核：①**MotherBrain 域开命名正身二现 ✓✓**：prg3_tourian.asm:1124-25
+`MotherBrain_Idle: ; 03:9E22 / jsr MotherBrain_Idle_CollideWithSamus` ↔ bank3
+$9E22=`20 f2 9d`（JSR $9DF2）——**refs 法命名正身**（语义名↔字节调用直合=
+命名正身二现（SC-B1-15 DrawDoor 首现续））+$9DF2 `MotherBrain_Idle_CollideWithSamus:
+; 03:9DF2` 双名正身（D5 纪律：refs 名自证落账）②**MOTHERBRAIN-B5-035 预登记 ✓**
+（159 条目=MOTHERBRAIN 族三条（a3-020/a4-015/a5-035））：**284 写**>20 阈值判别条
+触发（迄今最大写数）→预登记→L2 并案=严格顺序续 ③8 案账内 ④员面双扫桩 0
+（2 员真现）。测 447。findings（r10）：0 新。SC-B5-12（B 区余 95 卡）预告随账。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
