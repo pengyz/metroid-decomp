@@ -130,9 +130,34 @@ fn a1_cluster_001(input: &L2In) -> L2Out {
     L2Out { a: 0, x: 0, y: 1, writes } // 出口残迹 (0,0,1)（观测值逐钉）
 }
 
+/// a1_cluster_002 适配（SC-A1-002——CommonJump_noMoveNoAnim（bank01:8006）→@noMoveNoAnim）。
+fn a1_cluster_002(input: &L2In) -> L2Out {
+    let r = |a: usize| input.ram.get(a).copied().unwrap_or(0);
+    let slot = crate::enemy::slot::EnemySlot::from_bytes([r(0x03C0); crate::enemy::slot::EnemySlot::SIZE]);
+    let (cntrl_write, draw, clear_hit) =
+        crate::enemy::common::update_enemy_common_no_move_no_anim(&slot, r(0x006B), r(0x03D0));
+    let mut writes = Vec::new();
+    if let Some(v) = cntrl_write {
+        if v != r(0x006B) {
+            writes.push((0x006B, v)); // 净变更形
+        }
+    }
+    let ishit_addr = 0x030A + input.x as usize;
+    if clear_hit && r(ishit_addr) != 0 {
+        writes.push((ishit_addr as u16, 0));
+    }
+    writes.push((0x0404, 0)); // zp scratch（golden 面）
+    writes.push((0x040E, 0));
+    let _ = draw;
+    // **@noMoveNoAnim=尾面**（无 anim 写——anim 步在前（a1-001 面）！）+出口 y=输入透传
+    // （golden (0,0,72) 实证——72=input.y）。
+    L2Out { a: 0, x: 0, y: input.y, writes }
+}
+
 pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
     match name {
         "a1_cluster_001" => Some(a1_cluster_001),
+        "a1_cluster_002" => Some(a1_cluster_002),
         "sub_C16D" => Some(sub_c16d),
         "sub_C376" => Some(sub_c376),
         "int_y_E3A5" => Some(int_y_e3a5),
@@ -288,6 +313,7 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "s5_cluster_141" => Some(sub_s5_cluster_141),
         "s5_cluster_142" => Some(sub_s5_cluster_142),
         "s5_cluster_146" => Some(sub_s5_cluster_146),
+        "s5_cluster_148" => Some(sub_s5_cluster_148),
         _ => None,
     }
 }
@@ -1193,4 +1219,9 @@ pub fn sub_s5_cluster_142(input: &L2In) -> L2Out {
 /// s5_cluster_146 —— bank07:E094 簇入口注册（SC-S5-26）。
 pub fn sub_s5_cluster_146(input: &L2In) -> L2Out {
     crate::verify_shim::s5_cluster_146(input)
+}
+
+/// s5_cluster_148 —— bank07:DD8B 簇入口注册（SC-S5-28）。
+pub fn sub_s5_cluster_148(input: &L2In) -> L2Out {
+    crate::verify_shim::s5_cluster_148(input)
 }

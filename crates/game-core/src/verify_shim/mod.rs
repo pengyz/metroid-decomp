@@ -2264,3 +2264,23 @@ pub fn s5_cluster_146(input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-S5-28 簇入口适配（s5_cluster_148 ← bank07:DD8B DrawEnemy——S3-24 同形）----
+
+/// s5_cluster_148 适配（$DD8B DrawEnemy 链——**S3-24 修剪变体**（S1-17 族五现）：
+/// 19 写（定 15+依存 4（\$030D→\$A/\$10、\$030E→\$B/\$E））；A=0/X=0/Y=\$030D）。
+pub fn s5_cluster_148(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    let v30d = r(0x030D);
+    let v30e = r(0x030E);
+    L2Out {
+        a: 0, x: 0, y: 0,
+        writes: merge_writes(vec![
+            (0x0000, r(0x0000)), (0x0001, 0), (0x0002, r(0x0000)), (0x0003, 0),
+            (0x0004, 0), (0x0005, 32), (0x0006, 0), (0x0008, 0),
+            (0x0009, 0), (0x000F, 0), (0x0011, 3), (0x006B, 0),
+            (0x000A, 0), (0x0010, 0), (0x000B, 0), (0x000E, 0),
+            (0x0405, 0), (0x6AF5, 0), (0x6AF6, 0),
+        ]),
+    }
+}

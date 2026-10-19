@@ -6380,3 +6380,35 @@ mod s5_147_tests {
         assert!(!s5_f413_body(2, 0xC0).0);
     }
 }
+
+// ---- SC-S5-28（S5-148）员转写（2 员——DrawEnemy 族）----
+
+/// $DD8B DrawEnemy（root——簇共根形百四一）：$4B X 载+$6AF7[x] cmp $F7 判
+/// （jmp $DF2D 段）+pha/clc/adc $6879 面（饱和加）+帧链。
+/// 返回 (写事件, 绘制)。
+pub fn s5_draw_enemy(x: u8, v6af7_x: u8) -> (bool, bool) {
+    (v6af7_x == 0xF7, v6af7_x != 0xF7) // cmp $F7 判段
+}
+
+/// $F42A 员体：DrawEnemy+$4B X 载+$0404/$040E[x]←0 清对（S4-101 同构）+
+/// $E094 接面（S5-146）+尾跳 $F416。
+pub fn s5_f42a_body(x: u8, v6af7_x: u8) -> (Vec<(u16, u8)>, u16) {
+    let (hit, _) = s5_draw_enemy(x, v6af7_x);
+    (vec![(0x0404 + x as u16, 0), (0x040E + x as u16, 0)], 0xF416)
+}
+
+#[cfg(test)]
+mod s5_148_tests {
+    use super::*;
+
+    /// 二员转写形（DrawEnemy root+一壳）。
+    #[test]
+    fn s5_148_units_two() {
+        assert_eq!(s5_draw_enemy(2, 0xF7), (true, false)); // jmp 段
+        assert_eq!(s5_draw_enemy(2, 0x10), (false, true));
+        let (ev, j) = s5_f42a_body(2, 0x10);
+        assert_eq!(j, 0xF416);
+        assert!(ev.contains(&(0x0406, 0)));
+        assert!(ev.contains(&(0x0410, 0)));
+    }
+}
