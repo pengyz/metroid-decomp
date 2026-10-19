@@ -24,5 +24,6 @@
   "stops_position_incremental": "stops 位增量随行（态差核全过——六案稳/stops 实值/空 stops/note 全）——G3 支援面滚动态",
   "capture_ready": "抓取随行态：ROM golden 抓取就绪（六案占位+锚+推导+探针面全）——**候 bank07 窗形修落**（porter 协同中）→Mesen2 抓取→三方对拍（质量底线 #1）",
   "capture_incremental": "抓取增量随行（态差核过——六案稳/就绪注在）——候窗形修态保持",
-  "card04_accompanying": "卡包序 04 随行（g3-004 全要素核过——推导/stops/占位/window_bank）+烤案对照保持"
+  "card04_accompanying": "卡包序 04 随行（g3-004 全要素核过——推导/stops/占位/window_bank）+烤案对照保持",
+  "card04_incremental": "SC-G3-04 增量随行（态差核过——六案稳/注在）——就绪态保持"
 }
