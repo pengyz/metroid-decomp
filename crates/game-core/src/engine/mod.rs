@@ -6128,3 +6128,39 @@ mod s5_140_tests {
         assert!(ev2.contains(&(0x030F, 0)));
     }
 }
+
+// ---- SC-S5-21（S5-141）员转写（2 员——CollisionReact_F2DF 族）----
+
+/// $F2DF 员体（root——簇共根形百三四·**S5-140 同族**）：$0404[y]←r($10)|r($0404[y])
+/// （OR 碰撞旗面）。
+/// 返回 (写事件, 碰撞值)。
+pub fn s5_f2df_or(y: u8, v10: u8, v0404_y: u8) -> (Vec<(u16, u8)>, u8) {
+    let v = v10 | v0404_y;
+    (vec![(0x0404 + y as u16, v)], v)
+}
+
+/// $F2EF 员体：$F2DF+栈保（Y）+IsScrewAttackActive（S2-24 接面）+cs 分段
+/// （$010F←$80——S5-135 同构面）。
+pub fn s5_f2ef_body(y: u8, v10: u8, v0404_y: u8, carry: bool) -> (Vec<(u16, u8)>, bool) {
+    let (mut ev, _) = s5_f2df_or(y, v10, v0404_y);
+    if !carry {
+        ev.push((0x010F, 0x80));
+    }
+    (ev, !carry)
+}
+
+#[cfg(test)]
+mod s5_141_tests {
+    use super::*;
+
+    /// 二员转写形（$F2DF OR 面 root+一壳）。
+    #[test]
+    fn s5_141_units_two() {
+        let (ev, v) = s5_f2df_or(5, 0x10, 0x20);
+        assert_eq!(v, 0x30);
+        assert!(ev.contains(&(0x0409, 0x30)));
+        let (ev2, hit) = s5_f2ef_body(5, 0, 0, false);
+        assert!(hit);
+        assert!(ev2.contains(&(0x010F, 0x80)));
+    }
+}
