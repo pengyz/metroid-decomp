@@ -3539,6 +3539,18 @@ $8BB1=`bd 07 03 c9 03`（LDA $0307,X=DoorType 载/CMP #$03 判）——**asm 语
 0x10——写址对值核对条扩展）随账 ④员面双扫桩 0（2 员真现）。测 347。
 findings（r10）：0 新。SC-B1-16 预告随账。
 
+## SC-B1-16 卡审（36f2c9e）——refs 直得深径破解二现（DoorSubRoutine8C61）
+
+### verdict: pass
+
+四条核：①L2 面 a1-016-case×8 并入+**族 8 案 0 败（首提全过）**✓（16=8×2 已计；
+败 62 稳）②**refs 直得双轨 ✓✓（深径破解二现）**：asm:1579-83 `DoorSubRoutine8C61:
+; $8C61 / ; set door hit points to 1 / lda #$01 / sta DoorHitPoints,x` ↔ bank1
+$8C61=`a9 01 9d 0f 03`（LDA #$01/STA $030F,X=DoorHitPoints 写）——语义注释↔字节
+结构直合（DoorSubRoutine→DrawDoor→OAM 链深径直拟）③8 案全合（结构直拟）④员面
+双扫桩 0（2 员真现）。测 348。findings（r10）：0 新。SC-B1-17（B 区余 190 卡）
+预告随账。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
