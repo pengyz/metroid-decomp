@@ -3442,6 +3442,17 @@ $800F / jmp InitEnAnimIndex` ↔ bank1 $800F=`4c 8d f6`——asm 直读↔字节
 ③四写定址面实核（$6AF8←0/$6AF9←5/$6AFA←5/$6B03←0）随证 ④员面双扫桩 0
 （2 员真现）。测 338。findings（r10）：0 新。SC-B1-07（B 区余 200 卡）预告随账。
 
+## SC-B1-07 卡审（1f12ac6）——refs 法四现（InitEnActiveAnimIndex·200 测）
+
+### verdict: pass
+
+四条核：①L2 面 a1-007-case×8 并入+**族 8 案 0 败（首提全过）**✓（16=8×2 已计；
+败 78 稳）②**refs 法四现双轨 ✓✓**：asm:54-55 `CommonJump_InitEnActiveAnimIndex_
+NoInitOffset: ; $801E / jmp InitEnActiveAnimIndex_NoInitOffset` ↔ bank1 $801E=
+`4c ca fb`（JMP $FBCA）——asm 直读↔字节直合（四现连续速效）③三写定址面
+（a1-006 双生）随证 ④员面双扫桩 0（2 员真现）。测 339（族域述**200 测里程碑**）。
+findings（r10）：0 新。SC-B1-08（B 区余 199 卡）预告随账。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
