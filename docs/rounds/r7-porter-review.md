@@ -4835,6 +4835,50 @@ banks1/2/4/5））②**VALCHAIN-B6-000 预登记 ✓**（168 条目）：fixture
 +8 案账内+员面双扫桩 0（3 员真现）。测 455。findings（r10）：0 新。SC-B6-01
 （B 区余 87 卡）预告随账。
 
+## SC-B6-01 卡审（63700ef）——bank4 化身二现（VALCHAIN-B6-001）
+
+### verdict: pass
+
+四条核：①**bank4 化身二现 ✓✓**：bank04:8003=`4c 38 f4 4c 16 f4 4c 52` 与 bank1
+$8003 **全同续**（CommonJump 表 bank4 复现二现）②**VALCHAIN-B6-001 预登记 ✓**
+（169 条目）：fixture 强弱源同卡双辨（强源 $6AF7←r(0) 不触发/弱源 $6AF8←10
+判别条补触发）→预登记→L2 并案=严格顺序续 ③5 写实核（清对+$6AFA←1）+8 案账内
+④员面双扫桩 0（4 员真现）。测 457。findings（r10）：0 新。SC-B6-02 接续预告随账。
+
+## SC-B6-02 卡审（548f4b5）——bank4 化身三现（XCHAIN-B6-002）
+
+### verdict: pass
+
+四条核：①**bank4 化身三现 ✓✓**：bank04:8006=`4c 16 f4 4c 52 f8 4c 94` 与 bank1
+$8006 **全同续**（CommonJump 表 bank4 复现三现）②**XCHAIN-B6-002 预登记 ✓**
+（171 条目）：X 变换（88→0 链算径）判别条补触发→预登记→L2 并案=严格顺序续
+③2 写定址清对（常量）实核+8 案账内 ④员面双扫桩 0（5 员真现）。测 457。
+findings（r10）：0 新。SC-B6-03（B 区余 84 卡）预告随账。
+
+## SC-B6-03 卡审（49a2f88）——bank4 化身四现（ACHAIN-B6-003）
+
+### verdict: pass
+
+四条核：①**bank4 化身四现 ✓✓**：bank04:8009=`4c 52 f8 4c 94 e0 4c 8d` 与 bank1
+$8009 **全同续**（CommonJump 表 bank4 复现四现）②**ACHAIN-B6-003 预登记 ✓**
+（176 条目）：A 变换（52→15 链算径）判别条补触发→预登记→L2 并案=严格顺序续
+③0 写透传面+8 案账内 ④员面双扫桩 0（2 员真现）。测 458。findings（r10）：0 新。
+SC-B6-04（B 区余 83 卡）预告随账。
+
+## SC-MD-005 卡审（臂深化五卡收口）——状态机族 9 员+D7 全族注册（闸集落）
+
+### verdict: pass（臂深化五卡收口=闸集全族注册完型）
+
+四条核：①**状态机族 9 员 ✓**（D3 ROM golden——35-45 写物理面实证）+转换精修
+（a1-023 全要素核过：推导深/BUG 注/锚）②**D7 注册全落 ✓**（59271e5 全族 10 条
+注册）：md-statemachine-*+全族 TOLERATED——**MD 域条目 23 在库**（gap_map 183
+总：SC-MD-001..006 IMPL+17 簇 IMPL 全谱（SAMUSJUMP/SETSAMUSJUMP/CHECKFIRE/
+CHECKHORZ/JUMPENGINE/SAMUSDOOR/SAMUSPNTUP/SETSAMUSPNTUP/SETSAMUSEXPLODE/
+SETSAMUSRUN/SETSAMUSRUNACCEL/UPDATESAMUS/GOSAMUSHANDLER/SAMUSRUN/SAMUSSTAND/
+SETDATA/SETDATA3FRAME））③**闸集落 ✓**（gap_map TOLERATED 消费面=59271e5 闸红
+协调优先件（挡 port2）——D7 声明域全族注册=门层保险面全覆盖）④态差核（稳/
+就绪态保持）+闸 PASS。测 459。findings（r10）：0 新。SC-MD-006 接续预告随账。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
