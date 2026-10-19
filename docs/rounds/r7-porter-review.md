@@ -3528,6 +3528,17 @@ UsingAcceleration: ; $8039 / jmp EnemyGetDeltaX_UsingAcceleration` ↔ bank1 $80
 ③六写（写址不掩）实核+a1-011 加速版同族随证 ④员面双扫桩 0（2 员真现）。测 346。
 findings（r10）：0 新。SC-B1-15（B 区余 192 卡）预告随账。
 
+## SC-B1-15 卡审（de94a7e）——refs 法直得（DrawDoor 结构直拟）
+
+### verdict: pass
+
+四条核：①L2 面 a1-015-case×8 并入+**族 8 案 0 败**✓（16=8×2 已计；败 62 稳）②
+**refs 法直得双轨 ✓✓**：asm:1450-52 `DrawDoor: ; $8BB1 / lda DoorType,x` ↔ bank1
+$8BB1=`bd 07 03 c9 03`（LDA $0307,X=DoorType 载/CMP #$03 判）——**asm 语义注释
+↔字节结构直合**（refs 法直得速效：结构直拟 8 案全合）③ctrl 断言自纠（x 翻转面
+0x10——写址对值核对条扩展）随账 ④员面双扫桩 0（2 员真现）。测 347。
+findings（r10）：0 新。SC-B1-16 预告随账。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
