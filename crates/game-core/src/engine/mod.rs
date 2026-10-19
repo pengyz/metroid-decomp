@@ -9993,3 +9993,36 @@ mod a4_003_tests {
         assert!(ev.contains(&(0x0002, 0))); // 常量单写（写址对值核对）
     }
 }
+
+// ---- SC-B4-04（a4-004）员转写（3 员——$803C CommonJump 表 bank3 化身；L2 真 0 留白）----
+
+/// $803C CommonJump 表 bank3 化身（root——簇共根形二百五七·**bank3 化身五现**
+/// （hexdump 直得：jmp $DD8B（DrawEnemy）/jmp $FEDC（DrawTileBlast）/jmp $CE92
+/// （SubtractHealth）/jmp $C3FB（Base10Subtract）——桩阵十六现（形九续）））。
+/// 返回 (目标址列表, 桩面)。
+pub fn b3_803c_common_table() -> (Vec<u16>, bool) {
+    (vec![0xDD8B, 0xFEDC, 0xCE92, 0xC3FB], true) // 桩阵四形（bank3 化身）
+}
+
+/// $A05C/$A069 员体（数据面（hexdump 直得——tile/anim 数据））。
+pub fn b3_a05c_data() -> Vec<u8> {
+    vec![0xE0, 0xE1, 0xFD, 0xE2, 0xE0, 0xE1, 0xFF, 0x67, 0x06, 0x08,
+         0xF0, 0xF1, 0xFD, 0xE2, 0xF0, 0xF1] // 数据面（hexdump 直得）
+}
+
+#[cfg(test)]
+mod a4_004_tests {
+    use super::*;
+
+    /// 二员转写形（$803C CommonJump 表 bank3 化身 root+数据面）——真 0 留白形。
+    #[test]
+    fn a4_004_units_two() {
+        let (targets, ok) = b3_803c_common_table();
+        assert!(ok);
+        assert_eq!(targets.len(), 4); // 桩阵四形（bank3 化身）
+        assert_eq!(targets[0], 0xDD8B); // DrawEnemy（写址对值核对）
+        let d = b3_a05c_data();
+        assert_eq!(d.len(), 16);
+        assert_eq!(d[0], 0xE0); // 数据面（hexdump 直得）
+    }
+}
