@@ -624,6 +624,20 @@
       "reason": "值链算深径（$0400←79/$6AF9/$6AFA←114/115（fixture 弱源——多入参链算）——深径判别条补触发（链算径）——S5-121 同款跨卡深径）",
       "exit": "值链算径建模清（$04/$6B 族链模拟）→账清转 strict",
       "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-B3-033-CROSSCARD-VALCHAIN",
+      "case_prefix": "a3-033-case-",
+      "reason": "值链算深径（$6AF9/$6AFA←114/115（fixture 弱源——a3-032 同款）——深径判别条补触发（链算径）——S5-121 同款跨卡深径）",
+      "exit": "值链算径建模清（$6B 族链模拟）→账清转 strict",
+      "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-B3-034-CROSSCARD-VALCHAIN",
+      "case_prefix": "a3-034-case-",
+      "reason": "值链算深径（$6B73-$6B75 族+105 值（fixture 弱源——多入参链算）——深径判别条补触发（链算径）——S5-121 同款跨卡深径）",
+      "exit": "值链算径建模清（$6B 族链模拟）→账清转 strict",
+      "registered": "2026-10-20"
     }
   ]
 }

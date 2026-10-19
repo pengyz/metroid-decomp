@@ -9796,3 +9796,61 @@ mod a3_032_tests {
         assert_eq!(b2_99f5_face().len(), 10);
     }
 }
+
+// ---- SC-B3-33（a3-033）员转写（2 员——bank2 15 写族面）----
+
+/// bank02:99CE 员体（root——簇共根形二百五十·bank2 15 写族面（4 员））。
+/// 返回 (写事件, 有效)。
+pub fn b2_99ce_face() -> Vec<(u16, u8)> {
+    vec![(0x0000, 1), (0x0002, 0), (0x0004, 8), (0x0008, 0), (0x0009, 0),
+         (0x000B, 0),
+         (0x0400, 1), (0x0404, 0), (0x040A, 1), (0x040E, 0),
+         (0x6AF7, 0), (0x6AF8, 3), (0x6AF9, 114), (0x6AFA, 115), (0x6B01, 255)]
+}
+
+/// $9A13/$9A1D/$9A27 员体（同族面（连现））。
+pub fn b2_9a13_face() -> Vec<(u16, u8)> {
+    b2_99ce_face()
+}
+
+#[cfg(test)]
+mod a3_033_tests {
+    use super::*;
+
+    /// 二员转写形（bank2 15 写族面 root+一壳）。
+    #[test]
+    fn a3_033_units_two() {
+        let ev = b2_99ce_face();
+        assert_eq!(ev.len(), 15);
+        assert!(ev.contains(&(0x6AFA, 115))); // 链算径（判别条补触发——写址对值核对）
+        assert_eq!(b2_9a13_face().len(), 15);
+    }
+}
+
+// ---- SC-B3-34（a3-034）员转写（2 员——bank2 3 写族面）----
+
+/// bank02:99DC 员体（root——簇共根形二百五一·bank2 3 写族面（3 员——x 索引））。
+/// 返回 (写事件, 有效)。
+pub fn b2_99dc_face(x: u8, v1: u8) -> Vec<(u16, u8)> {
+    let x = x as u16;
+    vec![(0x6AF8 + x + 43, 0), (0x6AF8 + x + 44, v1), (0x6AF8 + x + 45, v1)]
+}
+
+/// $9A07/$9A23 员体（同族面（连现））。
+pub fn b2_9a07_face(x: u8, v1: u8) -> Vec<(u16, u8)> {
+    b2_99dc_face(x, v1)
+}
+
+#[cfg(test)]
+mod a3_034_tests {
+    use super::*;
+
+    /// 二员转写形（bank2 3 写族面 root+一壳）。
+    #[test]
+    fn a3_034_units_two() {
+        let ev = b2_99dc_face(80, 105);
+        assert_eq!(ev.len(), 3);
+        assert!(ev.contains(&(0x6B74, 105))); // x=80 ⇒ $6AF8+124（写址对值核对）
+        assert_eq!(b2_9a07_face(80, 105).len(), 3);
+    }
+}

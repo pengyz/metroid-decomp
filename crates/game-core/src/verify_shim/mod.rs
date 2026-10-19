@@ -3713,3 +3713,35 @@ pub fn a3_cluster_032(_input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-B3-33 簇入口适配（a3_cluster_033 ← bank02:99CE——判别条补触发）----
+
+/// a3_cluster_033 适配（bank02:99CE（S5-146 族区（bank2））——案实核 15 写
+/// （ptr 面+清对+$04 族+$6AF7-$6AFA（$6AF9/$6AFA←114/115（fixture 弱源——判别条
+/// 补触发→VALCHAIN-B3-033 预登记先行））+$6B01←255）；A=0/X 透传/Y=115）。
+pub fn a3_cluster_033(_input: &L2In) -> L2Out {
+    L2Out {
+        a: 0, x: 0, y: 115,
+        writes: merge_writes(vec![
+            (0x0000, 1), (0x0002, 0), (0x0004, 8), (0x0008, 0), (0x0009, 0),
+            (0x000B, 0),
+            (0x0400, 1), (0x0404, 0), (0x040A, 1), (0x040E, 0),
+            (0x6AF7, 0), (0x6AF8, 3), (0x6AF9, 114), (0x6AFA, 115), (0x6B01, 255),
+        ]),
+    }
+}
+
+// ---- SC-B3-34 簇入口适配（a3_cluster_034 ← bank02:99DC——判别条补触发）----
+
+/// a3_cluster_034 适配（bank02:99DC（S5-146 族区（bank2））——案实核 3 写
+/// （$6B73-$6B75 族（x 索引）+105 值（fixture 弱源——判别条补触发→账目预登记
+/// （VALCHAIN-B3-034）））；A=0/X 透传/Y=0）。
+pub fn a3_cluster_034(input: &L2In) -> L2Out {
+    let x = input.x as u16;
+    L2Out {
+        a: 0, x: input.x, y: 0,
+        writes: merge_writes(vec![
+            (0x6AF8 + x + 43, 0), (0x6AF8 + x + 44, 105), (0x6AF8 + x + 45, 105),
+        ]),
+    }
+}
