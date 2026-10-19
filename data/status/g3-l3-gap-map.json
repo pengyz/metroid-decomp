@@ -1,0 +1,32 @@
+{
+  "schema": "g3-l3-gap-map/v1",
+  "note": "G3 批 D7 缺口声明（L3 路由——执行深径（BRK/超步））——SC-G3-00..05 收口形",
+  "gap_map": [
+    {
+      "id": "g3-002..005",
+      "class": "L3-route",
+      "reason": "BRK/超步（执行深径——L2 核不支持）",
+      "declared": "SC-G3-00 过审（D7 样板）"
+    },
+    {
+      "id": "g3-001 LCG",
+      "class": "L3-route",
+      "reason": "BRK@$0001（stops 面）",
+      "declared": "SC-G3-03 收口（3/4+D7）"
+    },
+    {
+      "id": "g3-musicinit",
+      "class": "L3-route",
+      "reason": "BRK@$0001（stops 面）",
+      "declared": "SC-G3-04 收口（D7）"
+    },
+    {
+      "id": "g3-sfx-*",
+      "class": "L3-route",
+      "reason": "SFX 族 8 例程（D3 实证面——L2 stops 余）",
+      "declared": "SC-G3-05 抓取全（D7）"
+    }
+  ],
+  "tolerated": true,
+  "baseline_note": "D7 声明性覆盖（非机械完备）——L3 trace 面（账清转 strict）"
+}

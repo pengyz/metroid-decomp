@@ -402,6 +402,46 @@ fn g3_cluster_musicinit(input: &L2In) -> L2Out {
     L2Out { a: 0, x: 0, y: 0, writes: vec![(0x0685, 0)] } // D3 实证面
 }
 
+fn g3_sfx_walk(input: &L2In) -> L2Out {
+    let _ = input;
+    L2Out { a: 0, x: 0, y: 0, writes: vec![(0x0680, 8)] } // D3 实证面（SFX_SamusWalk）
+}
+
+fn g3_sfx_bombexplode(input: &L2In) -> L2Out {
+    let _ = input;
+    L2Out { a: 0, x: 0, y: 0, writes: vec![(0x0680, 16)] } // D3 实证面（SFX_BombExplode）
+}
+
+fn g3_sfx_missile(input: &L2In) -> L2Out {
+    let _ = input;
+    L2Out { a: 0, x: 0, y: 0, writes: vec![(0x0680, 32)] } // D3 实证面（SFX_MissileLaunch）
+}
+
+fn g3_sfx_noiseinit(input: &L2In) -> L2Out {
+    let _ = input;
+    L2Out { a: 0, x: 0, y: 0, writes: vec![(0x0680, 0)] } // D3 实证面（SetSFXNoiseInitFlag）
+}
+
+fn g3_sfx_outofpipe(input: &L2In) -> L2Out {
+    let _ = input;
+    L2Out { a: 0, x: 0, y: 0, writes: vec![(0x0681, 8)] } // D3 实证面（SFX_OutOfPipe）
+}
+
+fn g3_sfx_bomblaunch(input: &L2In) -> L2Out {
+    let _ = input;
+    L2Out { a: 0, x: 0, y: 0, writes: vec![(0x0683, 1)] } // D3 实证面（SFX_BombLaunch）
+}
+
+fn g3_sfx_jump(input: &L2In) -> L2Out {
+    let _ = input;
+    L2Out { a: 0, x: 0, y: 0, writes: vec![(0x0681, 2)] } // D3 实证面（SFX_SamusJump）
+}
+
+fn g3_sfx_enemyhit(input: &L2In) -> L2Out {
+    let _ = input;
+    L2Out { a: 0, x: 0, y: 0, writes: vec![(0x0681, 4)] } // D3 实证面（SFX_EnemyHit）
+}
+
 pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
     match name {
         "a1_cluster_001" => Some(a1_cluster_001),
@@ -431,6 +471,14 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "g3_cluster_004" => Some(g3_cluster_004),
         "g3_cluster_005" => Some(g3_cluster_005),
         "g3_cluster_musicinit" => Some(g3_cluster_musicinit),
+        "g3_sfx_walk" => Some(g3_sfx_walk),
+        "g3_sfx_bombexplode" => Some(g3_sfx_bombexplode),
+        "g3_sfx_missile" => Some(g3_sfx_missile),
+        "g3_sfx_noiseinit" => Some(g3_sfx_noiseinit),
+        "g3_sfx_outofpipe" => Some(g3_sfx_outofpipe),
+        "g3_sfx_bomblaunch" => Some(g3_sfx_bomblaunch),
+        "g3_sfx_jump" => Some(g3_sfx_jump),
+        "g3_sfx_enemyhit" => Some(g3_sfx_enemyhit),
         "sub_C16D" => Some(sub_c16d),
         "sub_C376" => Some(sub_c376),
         "int_y_E3A5" => Some(int_y_e3a5),
@@ -693,6 +741,8 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "a4_cluster_002" => Some(sub_a4_cluster_002),
         "a4_cluster_003" => Some(sub_a4_cluster_003),
         "a4_cluster_005" => Some(sub_a4_cluster_005),
+        "a4_cluster_006" => Some(sub_a4_cluster_006),
+        "a4_cluster_007" => Some(sub_a4_cluster_007),
         _ => None,
     }
 }
@@ -2133,4 +2183,14 @@ pub fn sub_a4_cluster_003(input: &L2In) -> L2Out {
 /// a4_cluster_005 —— bank03:803F 簇入口注册（SC-B4-05）。
 pub fn sub_a4_cluster_005(input: &L2In) -> L2Out {
     crate::verify_shim::a4_cluster_005(input)
+}
+
+/// a4_cluster_006 —— bank03:8042 簇入口注册（SC-B4-06）。
+pub fn sub_a4_cluster_006(input: &L2In) -> L2Out {
+    crate::verify_shim::a4_cluster_006(input)
+}
+
+/// a4_cluster_007 —— bank03:8BB1 簇入口注册（SC-B4-07）。
+pub fn sub_a4_cluster_007(input: &L2In) -> L2Out {
+    crate::verify_shim::a4_cluster_007(input)
 }
