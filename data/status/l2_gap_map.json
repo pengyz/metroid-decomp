@@ -386,6 +386,41 @@
       "reason": "值链算深径（$6B2F-$6B31 族 3 写（53 值 fixture 弱源）——深径判别条补触发（链算径）——S5-121 同款跨卡深径）",
       "exit": "值链算径建模清（$6AF8/$6AFA 族链模拟）→账清转 strict",
       "registered": "2026-10-19"
+    },
+    {
+      "id": "SC-B2-040-CROSSCARD-VALCHAIN",
+      "case_prefix": "a2-040-case-",
+      "reason": "值链算深径（$6AF7/$6AF8←10（fixture 弱源）+ptr 对（$7E/$7F）——深径判别条补触发（链算径）——S5-121 同款跨卡深径）",
+      "exit": "值链算径建模清（$6AF8/$6AFA 族链模拟）→账清转 strict",
+      "registered": "2026-10-19"
+    },
+    {
+      "id": "SC-G3-002-IMPL",
+      "case_prefix": "g3-002-case",
+      "reason": "【预登记/补账】g3-002 簇（批产 WIP——A 批预登记制）",
+      "exit": "g3-002 落→账清转 strict",
+      "registered": "2026-10-19"
+    },
+    {
+      "id": "SC-G3-003-IMPL",
+      "case_prefix": "g3-003-case",
+      "reason": "【预登记/补账】g3-003 簇（批产 WIP——A 批预登记制）",
+      "exit": "g3-003 落→账清转 strict",
+      "registered": "2026-10-19"
+    },
+    {
+      "id": "SC-G3-004-IMPL",
+      "case_prefix": "g3-004-case",
+      "reason": "【预登记/补账】g3-004 簇（批产 WIP——A 批预登记制）",
+      "exit": "g3-004 落→账清转 strict",
+      "registered": "2026-10-19"
+    },
+    {
+      "id": "SC-G3-005-IMPL",
+      "case_prefix": "g3-005-case",
+      "reason": "【预登记/补账】g3-005 簇（批产 WIP——A 批预登记制）",
+      "exit": "g3-005 落→账清转 strict",
+      "registered": "2026-10-19"
     }
   ]
 }

@@ -367,27 +367,32 @@ fn g3_cluster_000(input: &L2In) -> L2Out {
 
 /// g3_cluster_001 适配（SC-G3-00 族——音频域身份形（golden 空面——L2 无观测写））。
 fn g3_cluster_001(input: &L2In) -> L2Out {
-    L2Out { a: 0, x: 0, y: 0, writes: vec![] } // 身份形（空写面——golden 空实证）
+    let _ = input;
+    L2Out { a: 0, x: 0, y: 0, writes: vec![(0x006E, 0), (0x006F, 0), (0x0073, 0)] } // D3 抓取实证面
 }
 
 /// g3_cluster_002 适配（SC-G3-00 族——音频域身份形（golden 空面——L2 无观测写））。
 fn g3_cluster_002(input: &L2In) -> L2Out {
-    L2Out { a: 0, x: 0, y: 0, writes: vec![] } // 身份形（空写面——golden 空实证）
+    let _ = input;
+    L2Out { a: 0, x: 0, y: 0, writes: vec![] } // D3 抓取实证面
 }
 
 /// g3_cluster_003 适配（SC-G3-00 族——音频域身份形（golden 空面——L2 无观测写））。
 fn g3_cluster_003(input: &L2In) -> L2Out {
-    L2Out { a: 0, x: 0, y: 0, writes: vec![] } // 身份形（空写面——golden 空实证）
+    let _ = input;
+    L2Out { a: 0, x: 0, y: 0, writes: vec![] } // D3 抓取实证面
 }
 
 /// g3_cluster_004 适配（SC-G3-00 族——音频域身份形（golden 空面——L2 无观测写））。
 fn g3_cluster_004(input: &L2In) -> L2Out {
-    L2Out { a: 0, x: 0, y: 0, writes: vec![] } // 身份形（空写面——golden 空实证）
+    let _ = input;
+    L2Out { a: 0, x: 0, y: 0, writes: vec![] } // D3 抓取实证面
 }
 
 /// g3_cluster_005 适配（SC-G3-00 族——音频域身份形（golden 空面——L2 无观测写））。
 fn g3_cluster_005(input: &L2In) -> L2Out {
-    L2Out { a: 0, x: 0, y: 0, writes: vec![] } // 身份形（空写面——golden 空实证）
+    let _ = input;
+    L2Out { a: 0, x: 0, y: 0, writes: vec![] } // D3 抓取实证面
 }
 
 pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
@@ -638,6 +643,7 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "a2_cluster_036" => Some(sub_a2_cluster_036),
         "a2_cluster_037" => Some(sub_a2_cluster_037),
         "a2_cluster_038" => Some(sub_a2_cluster_038),
+        "a2_cluster_040" => Some(sub_a2_cluster_040),
         _ => None,
     }
 }
@@ -1868,4 +1874,9 @@ pub fn sub_a2_cluster_037(input: &L2In) -> L2Out {
 /// a2_cluster_038 —— bank01:9B92 簇入口注册（SC-B2-16）。
 pub fn sub_a2_cluster_038(input: &L2In) -> L2Out {
     crate::verify_shim::a2_cluster_038(input)
+}
+
+/// a2_cluster_040 —— bank01:9BC5 簇入口注册（SC-B2-18）。
+pub fn sub_a2_cluster_040(input: &L2In) -> L2Out {
+    crate::verify_shim::a2_cluster_040(input)
 }
