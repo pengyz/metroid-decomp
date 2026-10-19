@@ -2796,3 +2796,32 @@ pub fn a1_cluster_010(input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-B1-11 簇入口适配（a1_cluster_011 ← bank01:8030——refs 法八现）----
+
+/// a1_cluster_011 适配（$8030 CommonJump_EnemyGetDeltaX（refs 法：asm:72）——
+/// 案实核六写（$00/$02/$04←0+$01/$03←14+$0404+x-1←0（写址不掩））；
+/// A=0/X 透传/Y=0）。
+pub fn a1_cluster_011(input: &L2In) -> L2Out {
+    L2Out {
+        a: 0, x: input.x, y: 0,
+        writes: merge_writes(vec![
+            (0x0000, 0), (0x0001, 14), (0x0002, 0), (0x0003, 14),
+            (0x0004, 0), (0x0404 + input.x as u16 - 1, 0), // 写址不掩
+        ]),
+    }
+}
+
+// ---- SC-B1-12 簇入口适配（a1_cluster_012 ← bank01:8033——S7-175 同族（refs 法））----
+
+/// a1_cluster_012 适配（$8033 CommonJump_EnemyBGCollideOrApplySpeed（refs 法：
+/// asm:75）——案实核五写（$02/$03/$04←0+$05←96+$0B←0（S7-175 同族指针面））；
+/// A=0/X=0/Y=0）。
+pub fn a1_cluster_012(_input: &L2In) -> L2Out {
+    L2Out {
+        a: 0, x: 0, y: 0,
+        writes: merge_writes(vec![
+            (0x0002, 0), (0x0003, 0), (0x0004, 0), (0x0005, 0x60), (0x000B, 0),
+        ]),
+    }
+}

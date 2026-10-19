@@ -7851,3 +7851,60 @@ mod a1_010_tests {
         assert!(ev.contains(&(0x04F7, 0)));
     }
 }
+
+// ---- SC-B1-11（a1-011）员转写（2 员——EnemyGetDeltaX 族·refs 法）----
+
+/// $8030 CommonJump_EnemyGetDeltaX（root——簇共根形百八五·桩阵十二现（形九续）
+/// ——refs 法：asm:72 `jmp EnemyGetDeltaX`（S7-178 对偶））。
+/// 返回 (目标址, 桩面)。
+pub fn a8030_common_jump() -> (u16, bool) {
+    (0xE0B3, true) // jmp EnemyGetDeltaX（refs 法——S7-178 Y 版对偶）
+}
+
+/// EnemyGetDeltaX 六写面（指面对+x 索引面——案实核）。
+pub fn a8030_face(x: u8) -> Vec<(u16, u8)> {
+    vec![(0x0000, 0), (0x0001, 14), (0x0002, 0), (0x0003, 14),
+         (0x0004, 0), (0x0404 + x as u16 - 1, 0)] // 写址不掩
+}
+
+#[cfg(test)]
+mod a1_011_tests {
+    use super::*;
+
+    /// 二员转写形（EnemyGetDeltaX root+面壳）——refs 法八现。
+    #[test]
+    fn a1_011_units_two() {
+        assert!(a8030_common_jump().1);
+        let ev = a8030_face(60);
+        assert!(ev.contains(&(0x043F, 0))); // x=60 ⇒ $0404+59（写址对值核对）
+        assert!(ev.contains(&(0x0001, 14)));
+    }
+}
+
+// ---- SC-B1-12（a1-012）员转写（2 员——EnemyBGCollideOrApplySpeed 族·refs 法）----
+
+/// $8033 CommonJump_EnemyBGCollideOrApplySpeed（root——簇共根形百八六·桩阵十三现
+/// （形九续）——refs 法：asm:75 `jmp EnemyBGCollideOrApplySpeed`（S7-175 同族））。
+/// 返回 (目标址, 桩面)。
+pub fn a8033_common_jump() -> (u16, bool) {
+    (0xE0B6, true) // jmp EnemyBGCollideOrApplySpeed（refs 法）
+}
+
+/// EnemyBGCollide 五写面（指针面（S7-175 同族）——案实核）。
+pub fn a8033_face() -> Vec<(u16, u8)> {
+    vec![(0x0002, 0), (0x0003, 0), (0x0004, 0), (0x0005, 0x60), (0x000B, 0)]
+}
+
+#[cfg(test)]
+mod a1_012_tests {
+    use super::*;
+
+    /// 二员转写形（EnemyBGCollide root+面壳）——refs 法九现。
+    #[test]
+    fn a1_012_units_two() {
+        assert!(a8033_common_jump().1);
+        let ev = a8033_face();
+        assert_eq!(ev.len(), 5);
+        assert!(ev.contains(&(0x0005, 0x60))); // 指针面（写址对值核对）
+    }
+}
