@@ -134,6 +134,13 @@
       "reason": "S5-121 簇转写中（批产迭代态——7 案语义差随转写收敛）",
       "exit": "S5-121 卡转写落→账清转 strict",
       "registered": "2026-10-19"
+    },
+    {
+      "id": "SC-S5-121-CROSSCARD-WALKVM",
+      "case_prefix": "s5-121-case-",
+      "reason": "全族深径（$07 写=walk-VM 深链（$EDD6 分派→handler 集∈S2-48/49 族（walk 表 handler））——golden 含 VM handler 效应=正常（S2-048/S2-013 同款判定形））",
+      "exit": "walk-VM handler 集建模清（S2-48/49 族域深化）→账清转 strict；或跨卡调用接线",
+      "registered": "2026-10-19"
     }
   ]
 }

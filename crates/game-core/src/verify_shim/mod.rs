@@ -1979,3 +1979,28 @@ pub fn s4_cluster_119(input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-S5-01 簇入口适配（s4_cluster_121 ← bank07:EE11——walk 环三现+指针面）----
+
+/// s5_cluster_121 适配（$EE11 PrepareItemID 链——**walk 环形三现**（+3 入口记录长+
+/// $C45C 分派+TempX/TempY）+指针面（$06←0/$07←链值/$09←A）+四常（$30←A/
+/// $31/$32←8/$33←0）；A=$C4/X 透传/Y=0）。
+pub fn s5_cluster_121(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    let v00 = r(0x0000).wrapping_add(3); // +3 入口记录长
+    L2Out {
+        a: 0xC4, x: input.x, y: 0,
+        writes: merge_writes(vec![
+            (0x0000, v00),
+            (0x0006, 0), (0x0007, r(0x03E8).wrapping_add(41)), // 链值试拟（案 0: 75+41=116）
+            (0x0009, input.a),
+            (0x000C, 92), (0x000D, 196), // $C45C 分派面
+            (0x0069, input.x), (0x006A, 0),
+            // x 索引写（$0748+x——**RAM 窗回卷**（&0x7FF）——案 0: $830→$30 实证）
+            ((0x0748 + input.x as u16) & 0x7FF, input.a),
+            ((0x0749 + input.x as u16) & 0x7FF, 8),
+            ((0x074A + input.x as u16) & 0x7FF, 8),
+            ((0x074B + input.x as u16) & 0x7FF, 0),
+        ]),
+    }
+}
