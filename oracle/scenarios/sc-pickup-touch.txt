@@ -12,6 +12,8 @@
 # 降径重定：垂直连接=房他段（MapY 14→15 竖井/门径——坑底爆破径证伪）
 # 【几何考锚】RoomPtr（prg7:494）/GetRoomNum($E720)/ScrollDir（Brinstar=left/他区=down——prg7:1881/2000）
 # v12 设计待：房 pin 表解析（房 (2,14) 瓦图缘开口）→降段定位→hi 翻转→同表窗触达
+# 【瓦图解析配方】RoomPtrTable(01:\$A314=ROM 0x6324)→房号（GetRoomNum \$E720）→房数据（OBJ_END=\$FD/END=\$FF）
+# MaruMari=(2,14) 实证（map-connectivity-graph line56）——房号查表+瓦图缘开口=下一窗深件
 # nav 化：ScrX→104（=$68=物品 x）+A 持（跳向 y=$98 高位物品）
 # 事件核：pw 位图置位（$6988+）/PowerUps type 04→拾取态/UniqueItemHistory 链
 name sc-pickup-touch
