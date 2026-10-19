@@ -8055,3 +8055,33 @@ mod a1_017_tests {
         assert_eq!(a8cc3_goto(), (0x8C61, true)); // a1-016 直连
     }
 }
+
+// ---- SC-B1-18（a1-018）员转写（2 员——DoorSubRoutine8C76 族·refs 法直得）----
+
+/// $8C76 DoorSubRoutine8C76（root——簇共根形百九二·**refs 法直得**（asm:1692 区）——
+/// animResetIndex 载+sec/sbc 面+SetObjectXSlotAnimIndex+SFX_Door 跳转）。
+/// 返回 (写事件, SFX 面)。
+pub fn a8c76_door_anim(x: u8) -> (Vec<(u16, u8)>, u8) {
+    (vec![(0x032E + x as u16 - 33, 0), (0x032F + x as u16 - 33, 48),
+          (0x0683, 64)], 64) // SFX_Door 声旗（SFX 族十三现！）
+}
+
+/// $8C8D 跳转面（refs 法：asm:1692 区（DoorSubRoutine8C7E 直连））。
+pub fn a8c8d_goto() -> (u16, bool) {
+    (0x8C7E, true) // jmp DoorSubRoutine8C7E
+}
+
+#[cfg(test)]
+mod a1_018_tests {
+    use super::*;
+
+    /// 二员转写形（DoorSubRoutine8C76 root+跳转面）——refs 法直得。
+    #[test]
+    fn a1_018_units_two() {
+        let (ev, sfx) = a8c76_door_anim(33);
+        assert_eq!(sfx, 64); // SFX_Door
+        assert!(ev.contains(&(0x0683, 64))); // SFX 声旗（SFX 族十三现）
+        assert!(ev.contains(&(0x032E, 0))); // anim 态写（写址对值核对）
+        assert_eq!(a8c8d_goto(), (0x8C7E, true));
+    }
+}

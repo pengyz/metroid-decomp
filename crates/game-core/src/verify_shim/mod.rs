@@ -2904,3 +2904,18 @@ pub fn a1_cluster_017(input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-B1-18 簇入口适配（a1_cluster_018 ← bank01:8C76——refs 法直得）----
+
+/// a1_cluster_018 适配（$8C76 DoorSubRoutine8C76（refs 法：asm:1692 区——anim 载
+/// +SFX_Door）——案实核四写（$032E←0/$032F←48/$0330←46（anim 态写）+$0683←64
+/// （SFX_Door 声旗））；A=64/X=3/Y 透传）。
+pub fn a1_cluster_018(input: &L2In) -> L2Out {
+    L2Out {
+        a: 64, x: 3, y: input.y,
+        writes: merge_writes(vec![
+            (0x032E, 0), (0x032F, 48), (0x0330, 46),
+            (0x0683, 64), // SFX_Door 声旗
+        ]),
+    }
+}
