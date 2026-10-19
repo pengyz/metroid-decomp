@@ -3595,6 +3595,18 @@ WriteDoorBGTiles 全谱直得）+a1-016 同族面 8 案全合 ④员面双扫桩
 同族面 8 案全合 ④员面双扫桩 0（2 员真现）。测 352。findings（r10）：0 新。
 SC-B1-21（B 区余 186 卡）预告随账。
 
+## SC-B1-21 卡审（aae1a8e）——Amul16 对偶（prg7_engine 三现·OAM 深径账内）
+
+### verdict: pass
+
+四条核：①L2 面 a1-021-case×8 **全账内**（S5-121 先例形：OAM 深径链记账——
+DoorSubRoutine→DrawDoor→OAM 全链效应）✓（16=8×2 已计；败 76 账目面全）②**Amul16
+对偶双轨 ✓✓**：prg7_engine.asm:775-78 `Amul16: ; 07:C2C5 / asl`（×4=×16）↔
+bank7 $C2C5=`0a 0a 0a 0a 60`（ASL×4/RTS）——与 Adiv16（`4a×4` LSR÷16）**完美
+乘除对偶**（prg7_engine 域三现）③OAM 深径账内+退出条件随证 ④员面双扫桩 0
+（2 员真现）。测 353。findings（r10）：0 新。**SC-B2-00（a2-022 族=a2 批开 19 族）
+预告随账**。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
