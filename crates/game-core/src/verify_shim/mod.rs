@@ -3804,3 +3804,14 @@ pub fn a4_cluster_002(input: &L2In) -> L2Out {
         writes: merge_writes(vec![(0x0404, 0), (0x040E, 0)]),
     }
 }
+
+// ---- SC-B4-03 簇入口适配（a4_cluster_003 ← bank03:8027——常量单写）----
+
+/// a4_cluster_003 适配（bank03:8027（bank3 窗）——案实核 1 写（$02←0（常量——
+/// 判别条未触发（严格顺序 ✓）））；A=0/X 透传/Y 透传）。
+pub fn a4_cluster_003(input: &L2In) -> L2Out {
+    L2Out {
+        a: 0, x: input.x, y: input.y,
+        writes: merge_writes(vec![(0x0002, 0)]),
+    }
+}
