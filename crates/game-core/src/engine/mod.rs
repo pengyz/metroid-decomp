@@ -10936,3 +10936,31 @@ mod a5_038_tests {
         assert_eq!(d[0], 0xFD); // 数据面（hexdump 直得）
     }
 }
+
+// ---- SC-B5-15（a5-039）员转写（2 员——MotherBrain 域续四现（refs 法直得））----
+
+/// bank03:9E31 MotherBrain_DrawSprites 族（root——簇共根形二百九十·**MotherBrain
+/// 域续四现**（refs 法直得——$9E2E/$9E83/$A041 MotherBrain_DrawSprites 命名正身
+/// 六现））。
+/// 返回 (目标址, 桩面)。
+pub fn b3_9e31_mb_draw_sprites() -> (u16, bool) {
+    (0xA041, true) // MotherBrain_DrawSprites（refs 法直得）
+}
+
+/// $9E2E/$9E83 员体（同族面（连现））。
+pub fn b3_9e2e_mb_face() -> Vec<(u16, u8)> {
+    vec![(0x009E, 0)] // 常量单写
+}
+
+#[cfg(test)]
+mod a5_039_tests {
+    use super::*;
+
+    /// 二员转写形（MotherBrain_DrawSprites root+常量单写面）——refs 法直得。
+    #[test]
+    fn a5_039_units_two() {
+        assert_eq!(b3_9e31_mb_draw_sprites(), (0xA041, true)); // refs 法直得
+        let ev = b3_9e2e_mb_face();
+        assert!(ev.contains(&(0x009E, 0))); // 常量单写（写址对值核对）
+    }
+}

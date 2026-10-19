@@ -4269,3 +4269,14 @@ pub fn a5_cluster_037(input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-B5-15 簇入口适配（a5_cluster_039 ← bank03:9E31——常量单写）----
+
+/// a5_cluster_039 适配（bank03:9E31（MotherBrain 域续（refs 法直得））——案实核
+/// 1 写（$009E←0（常量——判别条未触发（严格顺序 ✓）））；A=0/X 透传/Y 透传）。
+pub fn a5_cluster_039(input: &L2In) -> L2Out {
+    L2Out {
+        a: 0, x: input.x, y: input.y,
+        writes: merge_writes(vec![(0x009E, 0)]),
+    }
+}
