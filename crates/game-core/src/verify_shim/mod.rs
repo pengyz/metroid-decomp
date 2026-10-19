@@ -2681,3 +2681,14 @@ pub fn a1_cluster_001(input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-B1-02 簇入口适配（a1_cluster_002 ← bank01:8006——定址清对）----
+
+/// a1_cluster_002 适配（$8006 jmp 桩链——案实核定址清对（$0404/$040E←0
+/// （S6-152 同族））；A=0/X=0/Y 透传）。
+pub fn a1_cluster_002(input: &L2In) -> L2Out {
+    L2Out {
+        a: 0, x: 0, y: input.y,
+        writes: merge_writes(vec![(0x0404, 0), (0x040E, 0)]),
+    }
+}

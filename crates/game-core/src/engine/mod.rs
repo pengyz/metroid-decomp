@@ -7569,3 +7569,60 @@ mod a1_000_tests {
         assert!(ev.contains(&(0x0085, 9))); // 态写（写址对值核对）
     }
 }
+
+// ---- SC-B1-01（a1-001）员转写（2 员——$8003 jmp 桩链族·5 员）----
+
+/// $8003 jmp 桩链（root——簇共根形百七五·**bank1 dispatch 桩阵二现**（形九续））：
+/// jmp 桩阵（$8003 链面——a1-000 同族）。
+/// 返回 (桩面, 有效)。
+pub fn a8003_jmp_chain() -> (usize, bool) {
+    (1, true) // 同阵二现
+}
+
+/// $99B2 员体：$8003 链+$01→A（jmp 面）+$85 态写（a1-000 同族面）。
+pub fn a99b2_body(v01: u8) -> (Vec<(u16, u8)>, u8) {
+    (vec![(0x0085, 9)], v01)
+}
+
+#[cfg(test)]
+mod a1_001_tests {
+    use super::*;
+
+    /// 二员转写形（$8003 jmp 桩链 root+一壳）。
+    #[test]
+    fn a1_001_units_two() {
+        let (n, ok) = a8003_jmp_chain();
+        assert_eq!((n, ok), (1, true));
+        let (ev, v) = a99b2_body(0x55);
+        assert_eq!(v, 0x55);
+        assert!(ev.contains(&(0x0085, 9))); // 态写（写址对值核对）
+    }
+}
+
+// ---- SC-B1-02（a1-002）员转写（2 员——$8006 jmp 桩链族·6 员）----
+
+/// $8006 jmp 桩链（root——簇共根形百七六·**bank1 dispatch 桩阵三现**（形九续））。
+/// 返回 (桩面, 有效)。
+pub fn a8006_jmp_chain() -> (usize, bool) {
+    (1, true) // 同阵三现
+}
+
+/// $99B5 员体：$8006 链+定址清对面（a1-002 同族面）。
+pub fn a99b5_body() -> Vec<(u16, u8)> {
+    vec![(0x0404, 0), (0x040E, 0)] // 定址清对（S6-152 同族）
+}
+
+#[cfg(test)]
+mod a1_002_tests {
+    use super::*;
+
+    /// 二员转写形（$8006 jmp 桩链 root+一壳）。
+    #[test]
+    fn a1_002_units_two() {
+        let (n, ok) = a8006_jmp_chain();
+        assert_eq!((n, ok), (1, true));
+        let ev = a99b5_body();
+        assert!(ev.contains(&(0x0404, 0)));
+        assert!(ev.contains(&(0x040E, 0))); // 定址清对（写址对值核对）
+    }
+}
