@@ -6836,3 +6836,37 @@ mod s6_161_tests {
         assert!(ev.contains(&(0x0407, 0x30))); // x=2 ⇒ $0405+2（x 索引强制步）
     }
 }
+
+// ---- SC-S6-11（S6-162）员转写（2 员——SFX_OutOfPipe 族）----
+
+/// $CBA4 SFX_OutOfPipe（root——簇共根形百五四·**SFX 族十二现**）：SFX id 装载链
+/// （$08/$01/$02/$04/$10/$20 六 id）+X=1（ldx）。
+/// 返回 (声旗写, SFX id)。
+pub fn s6_sfx_out_of_pipe() -> (Vec<(u16, u8)>, u8) {
+    (vec![(0x0681, 0x08)], 0x08) // sfxNoise_OutOfPipe=$08（案实核恒定）
+}
+
+/// $F7D1 员体：SFX_OutOfPipe+$4B X 载+$6AF4[x] inc+$F699 调+$96CB[y] 表载
+/// +adc $D1→$00（指针面——S3-23 同族）。
+pub fn s6_f7d1_body(x: u8, v6af4_x: u8, tbl: u8) -> (Vec<(u16, u8)>, u8) {
+    let (mut ev, id) = s6_sfx_out_of_pipe();
+    ev.push((0x6AF4 + x as u16, v6af4_x.wrapping_add(1)));
+    ev.push((0x0000, tbl.wrapping_add(0xD1))); // adc $D1 面（进位面注）
+    (ev, id)
+}
+
+#[cfg(test)]
+mod s6_162_tests {
+    use super::*;
+
+    /// 二员转写形（SFX_OutOfPipe 十二现 root+一壳）。
+    #[test]
+    fn s6_162_units_two() {
+        let (ev, id) = s6_sfx_out_of_pipe();
+        assert_eq!(id, 0x08);
+        assert!(ev.contains(&(0x0681, 0x08)));
+        let (ev2, _) = s6_f7d1_body(2, 5, 0x10);
+        assert!(ev2.contains(&(0x6AF6, 6))); // x=2 ⇒ $6AF4+2（x 索引强制步）
+        assert!(ev2.contains(&(0x0000, 0xE1))); // 0x10+0xD1
+    }
+}

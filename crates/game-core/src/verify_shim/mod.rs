@@ -2404,3 +2404,14 @@ pub fn s6_cluster_160(input: &L2In) -> L2Out {
         }),
     }
 }
+
+// ---- SC-S6-11 簇入口适配（s6_cluster_162 ← bank07:CBA4 SFX_OutOfPipe 族）----
+
+/// s6_cluster_162 适配（$CBA4 SFX_OutOfPipe——案实核恒定：$0681←$08（声旗）；
+/// A=$08/X=1/Y 透传——SFX 族十二现）。
+pub fn s6_cluster_162(input: &L2In) -> L2Out {
+    L2Out {
+        a: 0x08, x: 1, y: input.y,
+        writes: merge_writes(vec![(0x0681, 0x08)]),
+    }
+}
