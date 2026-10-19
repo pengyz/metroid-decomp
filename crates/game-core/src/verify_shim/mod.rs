@@ -2618,3 +2618,19 @@ pub fn s7_cluster_178(input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-S7-04 簇入口适配（s7_cluster_179 ← bank07:FCFA UpdateMellow_LoadPositionFromTemp）----
+
+/// s7_cluster_179 适配（$FD6C 链——案实核：**zp 回卷**（($B1+x)&0xFF/$B2+x/$B3+x
+/// （S5-03 教训再证））+定写三（$04F0/$04F1/$6BEB←0）；A=0/X 透传/Y 透传）。
+pub fn s7_cluster_179(input: &L2In) -> L2Out {
+    let x = input.x as u16;
+    L2Out {
+        a: 0, x: input.x, y: input.y,
+        writes: merge_writes(vec![
+            ((0x00B1 + x) & 0xFF, 0), ((0x00B2 + x) & 0xFF, 0),
+            ((0x00B3 + x) & 0xFF, 0), // zp 寻址回卷（S5-03 教训再证）
+            (0x04F0, 0), (0x04F1, 0), (0x6BEB, 0),
+        ]),
+    }
+}

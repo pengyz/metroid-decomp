@@ -7464,3 +7464,43 @@ mod s7_178_tests {
         assert!(ev2.contains(&(0x00B6, 3))); // x=2 ⇒ $B4+2（x 索引强制步）
     }
 }
+
+// ---- SC-S7-04（S7-179）员转写（2 员——UpdateMellow_LoadPositionFromTemp 族）----
+
+/// $FD6C UpdateMellow_LoadPositionFromTemp（root——簇共根形百七二·**S7-178 双写面**）：
+/// $08/$09→$B1/$B2[x]（zp 回卷）+$04F0/$04F1（定写对）+$0B and 1→$B3[x]+$6BEB。
+/// 返回 (写事件, 位置面)。
+pub fn s7_mellow_load_pos(x: u8, v08: u8, v09: u8, v0b: u8) -> Vec<(u16, u8)> {
+    let xw = (0x00B1 + x as u16) & 0xFF; // zp 回卷（S5-03 教训）
+    vec![(xw, v08), ((xw + 1) & 0xFF, v09), ((xw + 2) & 0xFF, v0b & 1),
+         (0x04F0, v08), (0x04F1, v09), (0x6BEB, v0b & 1)]
+}
+
+/// $FCFA 员体：LoadPositionFromTemp+$B5[x] cmp $50 判（bcc 段）+$B0[x]←1/$B5[x]←0
+/// （S5-123 同族面）+$030E sec/sbc $B1[x]（delta 面（S2-21 同构））。
+pub fn s7_fcfa_body(x: u8, v08: u8, v09: u8, v0b: u8, v_b5_x: u8) -> (Vec<(u16, u8)>, u16) {
+    let mut ev = s7_mellow_load_pos(x, v08, v09, v0b);
+    if v_b5_x >= 0x50 {
+        ev.push(((0x00B0 + x as u16) & 0xFF, 1));
+    } else {
+        ev.push(((0x00B5 + x as u16) & 0xFF, 0));
+    }
+    (ev, 0xFD6C)
+}
+
+#[cfg(test)]
+mod s7_179_tests {
+    use super::*;
+
+    /// 二员转写形（LoadPositionFromTemp root+一壳）。
+    #[test]
+    fn s7_179_units_two() {
+        let ev = s7_mellow_load_pos(0xF3, 8, 9, 1);
+        assert!(ev.contains(&(0x00A4, 8))); // zp 回卷（0xB1+0xF3=0x1A4→0xA4）
+        assert!(ev.contains(&(0x04F0, 8)));
+        assert!(ev.contains(&(0x6BEB, 1)));
+        let (ev2, j) = s7_fcfa_body(0xF3, 8, 9, 1, 0x60);
+        assert_eq!(j, 0xFD6C);
+        assert!(ev2.contains(&(0x00A3, 1))); // $B0+0xF3 回卷
+    }
+}
