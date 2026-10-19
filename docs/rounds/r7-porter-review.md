@@ -3671,6 +3671,18 @@ SC-B2-03（B 区余 182 卡）预告随账。
 账内）④员面双扫桩 0（2 员真现）。测 357。findings（r10）：0 新。
 SC-B2-04（B 区余 181 卡）预告随账。
 
+## SC-B2-04 卡审（dba6583）——SelectSamusPalette（共根形二百里程碑）
+
+### verdict: pass
+
+四条核：①**预登记先行三连 ✓**（54 写深径判别→SC-B2-026-CROSSCARD-DOORCHAIN
+条目在库（52 总）→L2 并案——严格顺序稳定三连）②**refs 双轨 ✓✓**：prg7_engine
+.asm:2535-38 `SelectSamusPalette: ; 07:CB73 / ;Temp storage of Y on the stack. /
+tya / pha` ↔ bank7 $CB73=`98 48`（TYA/PHA=Y 栈暂存）——**语义注释↔字节直合**
+（与 SC-S4-14 验字节同形——refs 法补足语义归档）③**共根形二百里程碑记档**（form
+200：$CB73 调色板选择面）④员面双扫桩 0（2 员真现）。测 358。findings（r10）：
+0 新。SC-B2-05（B 区余 180 卡）预告随账。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
