@@ -1156,6 +1156,20 @@
       "reason": "X/Y 链算深径（X=160→64/Y=220→255 变换（fixture 弱源——多入参链算）——深径判别条补触发（链算径）——S5-121 同款跨卡深径（a5 批末卡））",
       "exit": "X/Y 链算径建模清（变换链模拟）→账清转 strict",
       "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-MD_SAMUSPNTUP-IMPL",
+      "case_prefix": "md_samuspntup",
+      "reason": "【预登记/补账】md_samuspntup 簇（批产 WIP——A 批预登记制）",
+      "exit": "md_samuspntup 落→账清转 strict",
+      "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-MD_SETSAMUSPNTUP-IMPL",
+      "case_prefix": "md_setsamuspntup",
+      "reason": "【预登记/补账】md_setsamuspntup 簇（批产 WIP——A 批预登记制）",
+      "exit": "md_setsamuspntup 落→账清转 strict",
+      "registered": "2026-10-20"
     }
   ]
 }
