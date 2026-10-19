@@ -4007,6 +4007,17 @@ $8036 **全同续**（CommonJump 表复现十一现=EnemyGetDeltaY_UsingAccelera
 预登记→L2 并案=严格顺序续 ③4 写常量零组实核+8 案账内 ④员面双扫桩 0（3 员
 真现）。测 388。findings（r10）：0 新。SC-B3-11（a2-043 随段首并审）预告随账。
 
+## SC-B3-11 卡审（f4dd5f2）——bank2 化身十二现（x 公式全案拟合）
+
+### verdict: pass
+
+四条核：①**bank2 化身十二现 ✓✓**：bank02:8039=`4c 95 83 4c 8b dd 4c dc` 与 bank1
+$8039 **全同续**（CommonJump 表复现十二现=EnemyGetDeltaX_UsingAcceleration 项）
+②**x 公式全案拟合 ✓**：$0404+x-1/+3/$6AF8+x+5 三偏面 8 案钉（x 偏差谱系续
+（x-1/x+3/x+5））+ptr 面（a1-011 同族（14 值径））实核 ③8 写实核+8 案 strict
+0 败（首提全过）④员面双扫桩 0（2 员真现）。测 389。findings（r10）：0 新。
+SC-B3-12（a2-043 随段首并审）预告随账。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
