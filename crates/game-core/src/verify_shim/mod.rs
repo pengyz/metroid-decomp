@@ -2493,3 +2493,17 @@ pub fn s6_cluster_169(input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-S6-19 簇入口适配（s6_cluster_170 ← bank07:F690 SetEnAnimIndex）----
+
+/// s6_cluster_170 适配（$F690 SetEnAnimIndex——案实核：$6AF8[x]←0/$6AFA[x]←A
+/// （x 索引对写——S5-146 同族）；A=0/X 透传/Y 透传）。
+pub fn s6_cluster_170(input: &L2In) -> L2Out {
+    L2Out {
+        a: 0, x: input.x, y: input.y,
+        writes: merge_writes(vec![
+            (0x6AF8 + input.x as u16, 0),
+            (0x6AFA + input.x as u16, input.a),
+        ]),
+    }
+}

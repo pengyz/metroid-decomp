@@ -7119,3 +7119,36 @@ mod s6_169_tests {
         assert!(ev2.contains(&(0x04F0, 0)));
     }
 }
+
+// ---- SC-S6-19（S6-170）员转写（2 员——SetEnAnimIndex 族）----
+
+/// $F690 SetEnAnimIndex（root——簇共根形百六二·**S5-146 同族**）：$6AFA[x]←A
+/// （动画索引）+$6AF8[x]←0（计数清）。
+/// 返回 (写事件, 索引)。
+pub fn s6_set_en_anim(x: u8, a_in: u8) -> (Vec<(u16, u8)>, u8) {
+    (vec![(0x6AF8 + x as u16, 0), (0x6AFA + x as u16, a_in)], a_in)
+}
+
+/// $F8E5 员体：jmp SetEnAnimIndex（尾形）+Y=$60 槽搜（S6-166 同族面）+
+/// cmp $C0 判（回卷——S5-133 同构）。
+pub fn s6_f8e5_body(x: u8, a_in: u8) -> (Vec<(u16, u8)>, u16) {
+    let (ev, _) = s6_set_en_anim(x, a_in);
+    (ev, 0xF690)
+}
+
+#[cfg(test)]
+mod s6_170_tests {
+    use super::*;
+
+    /// 二员转写形（SetEnAnimIndex root+一壳）。
+    #[test]
+    fn s6_170_units_two() {
+        let (ev, v) = s6_set_en_anim(2, 0x55);
+        assert_eq!(v, 0x55);
+        assert!(ev.contains(&(0x6AFA, 0))); // x=2 ⇒ $6AF8+2（x 索引强制步）
+        assert!(ev.contains(&(0x6AFC, 0x55))); // x=2 ⇒ $6AFA+2（写址对值核对）
+        let (ev2, j) = s6_f8e5_body(2, 0x55);
+        assert_eq!(j, 0xF690);
+        assert_eq!(ev2.len(), 2);
+    }
+}
