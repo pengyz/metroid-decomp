@@ -2089,3 +2089,30 @@ pub fn s5_cluster_128(input: &L2In) -> L2Out {
     }
     L2Out { a: 0, x: 0xC0, y: if branch { 1 } else { 0 }, writes: merge_writes(w) }
 }
+
+// ---- SC-S5-10 簇入口适配（s5_cluster_130 ← bank07:F0E2——S5-128 同族形）----
+
+/// s5_cluster_130 适配（$F0E2 CollisionReactWithSamus 链——**S5-128 同族**：
+/// \$06/\$07←r(\$030D)/\$08/\$09←r(\$030E)+零组；A=0/X=0xC0/Y=1）。
+pub fn s5_cluster_130(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    let v30d = r(0x030D);
+    let v30e = r(0x030E);
+    L2Out {
+        a: 0, x: 0xC0, y: if input.p & 1 == 0 { 1 } else { 0 },
+        writes: merge_writes({
+            let mut w = vec![
+                (0x0006, v30d), (0x0007, v30d),
+                (0x0008, v30e), (0x0009, v30e),
+                (0x000A, 0), (0x000B, 0),
+            ];
+            // 分支径（carry=0 ⇒ 附加写+Y=1——案 0/3 实核）
+            if input.p & 1 == 0 {
+                w.push((0x006E, 0)); w.push((0x006F, 0));
+                w.push((0x010F, 0)); w.push((0x030A, 0));
+                w.push((0x0404 + input.x as u16, 3));
+            }
+            w
+        }),
+    }
+}

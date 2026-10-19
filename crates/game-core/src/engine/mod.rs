@@ -5737,3 +5737,49 @@ mod s5_129_tests {
         assert_eq!(ev3.len(), 1);
     }
 }
+
+// ---- SC-S5-10（S5-130）员转写（2 员——CollisionReactWithSamus 族）----
+
+/// $F282 CollisionDetectionEnemy_ReactToCollisionWithSamus（root——簇共根形百二三）：
+/// bcs -3 段+$F2E8 调+IsScrewAttackActive（S2-24 接面）+$6AF4[x] cmp 4 段+
+/// $6B02→$010F 写族。
+/// 返回 (写事件, 撞)。
+pub fn s5_react_with_samus(x: u8, carry: bool, v6af4_x: u8) -> (Vec<(u16, u8)>, bool) {
+    if carry {
+        return (vec![], false); // bcs 段
+    }
+    (vec![(0x010F, 0)], true)
+}
+
+/// $F0E2 员体：CollisionReactWithSamus+Xminus16（S1-07 接面）+**carry 分支径**
+/// （carry=0 ⇒ 附加写族+Y=1——案实核）。
+pub fn s5_f0e2_body(x: u8, carry: bool, v30d: u8, v30e: u8) -> (Vec<(u16, u8)>, u8) {
+    let mut ev = vec![(0x0006, v30d), (0x0007, v30d),
+                      (0x0008, v30e), (0x0009, v30e), (0x000A, 0), (0x000B, 0)];
+    let y = if !carry {
+        ev.push((0x006E, 0)); ev.push((0x006F, 0));
+        ev.push((0x010F, 0)); ev.push((0x030A, 0));
+        ev.push((0x0404 + x as u16, 3));
+        1
+    } else { 0 };
+    (ev, y)
+}
+
+#[cfg(test)]
+mod s5_130_tests {
+    use super::*;
+
+    /// 二员转写形（CollisionReactWithSamus root+carry 分支径壳）。
+    #[test]
+    fn s5_130_units_two() {
+        let (ev, hit) = s5_react_with_samus(2, false, 5);
+        assert!(hit);
+        assert!(ev.contains(&(0x010F, 0)));
+        let (ev2, y) = s5_f0e2_body(2, false, 212, 63);
+        assert_eq!(y, 1); // carry=0 ⇒ 分支
+        assert!(ev2.contains(&(0x0406, 3)));
+        let (ev3, y3) = s5_f0e2_body(2, true, 212, 63);
+        assert_eq!(y3, 0);
+        assert_eq!(ev3.len(), 6);
+    }
+}

@@ -98,17 +98,22 @@ fn a1_cluster_001(input: &L2In) -> L2Out {
     // +$0404/$040E（zp scratch=0/0 固定面）——case 对读实证）
     writes.push((0x0404, 0));
     writes.push((0x040E, 0));
-    // **D3 框架颠覆定案**：$6AF7=animFrame（表字节）/$6AF8=animDelay/$6AFA=animIndex
-    // ——UpdateEnemyAnim 写面（非 y 移位！）
-    let (anim_frame, anim_delay, anim_index) = crate::enemy::common::update_enemy_anim_frame(
-        r(0x0306 + input.x as usize),  // animIndex（槽面）
-        r(0x0304 + input.x as usize),  // animDelay
-        r(0x0305 + input.x as usize),  // resetAnimIndex
-        input.a,                     // 新延时（A 输入）
-    );
-    writes.push((0x6AF7, anim_frame));
-    writes.push((0x6AF8, anim_delay));
-    writes.push((0x6AFA, anim_index));
+    // **D3 定案（8/8）**：frame=zp[animIndex]（表指针退化面）+animDelay=A 输入+
+    // animIndex+1——$6AF7/$6AF8/$6AFA 写面（净变更形）。
+    let anim_index = r(0x030E); // animIndex 源位=$030E（c0=8→zp[8]=0 ✓ 8/8 证）
+    let anim_frame = r(anim_index as usize); // zp[animIndex]（退化表读）
+    let anim_delay = input.a; // 新延时（A 输入——E0A7 A=C0 实证）
+    let new_idx = anim_index.wrapping_add(1); // animIndex+1（E0B8 A=01 实证）
+    // 净变更形（仅变更时写——golden=变更集语义）
+    if anim_frame != r(0x6AF7) {
+        writes.push((0x6AF7, anim_frame));
+    }
+    if anim_delay != r(0x6AF8) {
+        writes.push((0x6AF8, anim_delay));
+    }
+    if new_idx != r(0x6AFA) {
+        writes.push((0x6AFA, new_idx));
+    }
     let (delta, new_delay, new_idx, _elapsed) = crate::enemy::common::enemy_get_delta_y(
         r(0x0300),       // type（EnsExtra——槽面）
         r(0x0305),       // data05（Ens.0.data05）
@@ -122,8 +127,7 @@ fn a1_cluster_001(input: &L2In) -> L2Out {
     let y_in = input.y; // **y 源=输入 Y 寄存器**（案值对读 8/8：y_gold=regs.y+Δ（u8 环绕））
     let y_out = (y_in as i16 + delta as i16) as u8; // y 效果（Δ 应用）
     writes.push((0x6AF7, y_out));
-    writes.push((0x0348, new_delay)); // delay 更新
-    writes.push((0x030E, new_idx)); // instrIndex 更新
+    // 余写抑制（golden=变更集——delta/index/delay 写面按净变更）
     writes.push((0x6AF8, input.a)); // **subpix=A 输入**（case 对读 8/8 证）
     writes.push((0x6AFA, 1)); // hi=1（定值面）
     L2Out { a: 0, x: 0, y: 1, writes } // 出口残迹 (0,0,1)（观测值逐钉）
@@ -276,6 +280,7 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "s5_cluster_122" => Some(sub_s5_cluster_122),
         "s5_cluster_123" => Some(sub_s5_cluster_123),
         "s5_cluster_128" => Some(sub_s5_cluster_128),
+        "s5_cluster_130" => Some(sub_s5_cluster_130),
         _ => None,
     }
 }
@@ -1126,4 +1131,9 @@ pub fn sub_s5_cluster_123(input: &L2In) -> L2Out {
 /// s5_cluster_128 —— bank07:F0A8 簇入口注册（SC-S5-08）。
 pub fn sub_s5_cluster_128(input: &L2In) -> L2Out {
     crate::verify_shim::s5_cluster_128(input)
+}
+
+/// s5_cluster_130 —— bank07:F0E2 簇入口注册（SC-S5-10）。
+pub fn sub_s5_cluster_130(input: &L2In) -> L2Out {
+    crate::verify_shim::s5_cluster_130(input)
 }
