@@ -2919,3 +2919,18 @@ pub fn a1_cluster_018(input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-B1-19 簇入口适配（a1_cluster_019 ← bank01:8C8A——a1-016 同族（refs 法））----
+
+/// a1_cluster_019 适配（$8C8A（refs 法：DoorSubRoutine8C7E 区）+$8CFB
+/// WriteDoorBGTiles_Solid（asm:1697）——案实核 a1-016 DoorSubRoutine 同族面）。
+pub fn a1_cluster_019(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    L2Out {
+        a: 0, x: input.x, y: input.y,
+        writes: merge_writes(vec![
+            (0x0000, r(0x0000)), (0x0001, 0x89), (0x0002, 0x51), (0x0003, 0x87),
+            (0x0004, 0x75), (0x0005, 0xB0), (0x0006, 0), (0x0008, 8),
+        ]),
+    }
+}

@@ -8085,3 +8085,32 @@ mod a1_018_tests {
         assert_eq!(a8c8d_goto(), (0x8C7E, true));
     }
 }
+
+// ---- SC-B1-19（a1-019）员转写（2 员——WriteDoorBGTiles 族·refs 法直得）----
+
+/// $8CFB WriteDoorBGTiles_Solid（root——簇共根形百九三·**refs 法直得**（asm:1697）——
+/// 门 BG 瓦片实心写面（a1-016 调用面））。
+/// 返回 (目标址, 桩面)。
+pub fn a8cfb_write_door_bg() -> (u16, bool) {
+    (0x8CFB, true) // WriteDoorBGTiles_Solid（refs 法）
+}
+
+/// $8C8A 员体（DoorSubRoutine8C7E 区——SetObjectXSlotAnimIndex+SFX_Door 跳转
+/// （a1-018 同族面））。
+pub fn a8c8a_face(x: u8) -> Vec<(u16, u8)> {
+    vec![(0x032E + x as u16 - 33, 0), (0x032F + x as u16 - 33, 48), (0x0683, 64)]
+}
+
+#[cfg(test)]
+mod a1_019_tests {
+    use super::*;
+
+    /// 二员转写形（WriteDoorBGTiles root+面壳）——refs 法直得（asm:1697）。
+    #[test]
+    fn a1_019_units_two() {
+        assert_eq!(a8cfb_write_door_bg(), (0x8CFB, true));
+        let ev = a8c8a_face(33);
+        assert!(ev.contains(&(0x0683, 64))); // SFX_Door（写址对值核对）
+        assert!(ev.contains(&(0x032E, 0)));
+    }
+}
