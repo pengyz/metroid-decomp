@@ -9686,3 +9686,34 @@ mod a3_029_tests {
         assert_eq!(b2_98f4_face(229).len(), 5);
     }
 }
+
+// ---- SC-B3-30（a3-030）员转写（2 员——$99BE 链族；L2 真 0 留白）----
+
+/// $99BE 员体（root——簇共根形二百四七·CommonJump $801B 调链（hexdump 直得）：
+/// lda $6AF4,x/cmp #3/beq/jsr $801B（EnemyFlipAfterDisplacement）+$00←6）。
+/// 返回 (写事件, 跳转面)。
+pub fn b2_99be_chain(x: u8) -> (Vec<(u16, u8)>, u16) {
+    (vec![(0x0000, 6)], 0x801B) // jmp CommonJump（$801B 直连面）
+}
+
+/// $9A0A 员体（x 索引写链（hexdump 直得）：cmp #$11/bcs/lda #$3A/sta $6B01,x
+/// /bne/dec $6B01,x/bne——x 索引写（写址不掩））。
+/// 返回 (写事件, 有效)。
+pub fn b2_9a0a_chain(x: u8) -> Vec<(u16, u8)> {
+    vec![(0x6AF8 + x as u16 + 9, 0x3A)] // $6B01=x 索引（写址不掩）
+}
+
+#[cfg(test)]
+mod a3_030_tests {
+    use super::*;
+
+    /// 二员转写形（$99BE 链 root+x 索引写链）——真 0 留白形。
+    #[test]
+    fn a3_030_units_two() {
+        let (ev, j) = b2_99be_chain(2);
+        assert_eq!(j, 0x801B); // CommonJump 直连面
+        assert!(ev.contains(&(0x0000, 6))); // 写址对值核对
+        let ev2 = b2_9a0a_chain(0);
+        assert!(ev2.contains(&(0x6B01, 0x3A))); // x=0 ⇒ $6AF8+9（写址对值核对）
+    }
+}
