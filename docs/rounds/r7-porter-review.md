@@ -4099,6 +4099,19 @@ bank1 $8CB6 **全同**（=a1-021 同形（**JSR $C2C5** 调用链）**跨 bank �
 顺序续 ③8 案账内 ④员面双扫桩 0（2 员真现）。测 396。findings（r10）：0 新。
 SC-B3-19（B 区余 144 卡）预告随账。
 
+## SC-B3-19/20 双卡审（TourianMusic/MotherBrainMusic bank2 化身）
+
+### verdict: pass（双卡）
+
+四条核：①**双化身 ✓✓**：bank02:8CBB=`20 07 cc d0 03 20 03 cc` 与 bank1 $8CBB
+**全同**（TourianMusic 族 bank2 化身（a2-022 同款——JSR $CC07 声旗面调用链））+
+bank02:8CC0=`20 03 cc 4c 71 8c` 与 bank1 $8CC0 **全同**（MotherBrainMusic 族
+bank2 化身（a2-023 同款——JSR $CC03 调用链））——SFX 十四/十五现声旗面双胞跨 bank
+复现 ②**预登记双条 ✓**（CHAIN 十三类全谱）：SC-B3-019-CROSSCARD-TOURIAN+
+SC-B3-020-CROSSCARD-MOTHERBRAIN（79 总）——53 写×2 判别条触发→预登记→L2 并案
+=严格顺序双续 ③双 8 案账内（16 案合）④员面双扫桩 0（各 2 员真现）。测 398。
+findings（r10）：0 新。SC-B3-21 接续预告随账。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
