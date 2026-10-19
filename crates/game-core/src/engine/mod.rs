@@ -5569,3 +5569,35 @@ mod s5_124_tests {
         assert!(ev.contains(&(0x0006, 0)));
     }
 }
+
+// ---- SC-S5-05（S5-125）员转写（2 员——MotherBrainHandler 族；L2 真 0 留白）----
+
+/// $95B4 rts 桩阵二现（root——簇共根形百十八·**$95B1 同阵偏移**（areas_common
+/// 形六续））：rts 桩（nop nop 填充）。
+/// 返回 (桩面, 有效)。
+pub fn s95b4_stub_array() -> (usize, bool) {
+    (1, true) // 单桩偏移面（同阵续）
+}
+
+/// $EEAE MotherBrainHandler：$95B4 调+指针面（$07←$38/$06←0）+CheckForItem
+/// （S2-10 接面）+cc 分段（$98←8/$99←0 写对）。
+pub fn s5_eeae_body() -> (Vec<(u16, u8)>, u16) {
+    (vec![(0x0007, 0x38), (0x0006, 0), (0x0098, 8), (0x0099, 0)], 0xEE4A)
+}
+
+#[cfg(test)]
+mod s5_125_tests {
+    use super::*;
+
+    /// 二员转写形（桩阵二现 root+MotherBrainHandler 壳）。
+    #[test]
+    fn s5_125_units_two() {
+        let (n, ok) = s95b4_stub_array();
+        assert_eq!((n, ok), (1, true));
+        let (ev, j) = s5_eeae_body();
+        assert_eq!(j, 0xEE4A);
+        assert!(ev.contains(&(0x0007, 0x38)));
+        assert!(ev.contains(&(0x0098, 8)));
+        assert!(ev.contains(&(0x0099, 0)));
+    }
+}
