@@ -2175,3 +2175,16 @@ pub fn s5_cluster_136(input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-S5-17 簇入口适配（s5_cluster_137 ← bank07:F16F——$F193 单写族）----
+
+/// s5_cluster_137 适配（$F16F $F193 链——**eor $FF=zp 读三现**：$0A←(A^r($FF))&1；
+/// X/Y 透传）。
+pub fn s5_cluster_137(input: &L2In) -> L2Out {
+    let vff = input.ram[0x00FF & 0x7FF];
+    let v = (input.a ^ vff) & 1;
+    L2Out {
+        a: v, x: input.x, y: input.y, // A 出=面翻值
+        writes: merge_writes(vec![(0x000A, v)]),
+    }
+}

@@ -5997,3 +5997,38 @@ mod s5_136_tests {
         assert_eq!(ev2.len(), 5);
     }
 }
+
+// ---- SC-S5-17（S5-137）员转写（2 员——GetYSlotPosition_Common 族）----
+
+/// $F193 GetYSlotPosition_Common（root——簇共根形百三十·**eor $FF=zp 读三现**）：
+/// A^r($FF) and 1→$0A（面翻）+尾段（$B1/$B2/$B3[x]→$07/$09 对——S5-128 同族）。
+/// 返回 (写事件, 面翻)。
+pub fn s5_get_y_common(a_in: u8, vff: u8) -> (Vec<(u16, u8)>, u8) {
+    let v = (a_in ^ vff) & 1;
+    (vec![(0x000A, v)], v)
+}
+
+/// $F16F 员体：jmp $F193（尾形）+x 索引读对（$030D/$030E[x]→$07/$09——S5-128
+/// 同族）+$030C[x] eor 面（S5-132 同构）。
+pub fn s5_f16f_body(x: u8, a_in: u8, vff: u8, v30d_x: u8, v30e_x: u8) -> (Vec<(u16, u8)>, u8) {
+    let (mut ev, v) = s5_get_y_common(a_in, vff);
+    ev.push((0x0007, v30d_x));
+    ev.push((0x0009, v30e_x));
+    (ev, v)
+}
+
+#[cfg(test)]
+mod s5_137_tests {
+    use super::*;
+
+    /// 二员转写形（GetYSlotPosition_Common root+一壳）。
+    #[test]
+    fn s5_137_units_two() {
+        let (ev, v) = s5_get_y_common(5, 0);
+        assert_eq!(v, 1); // 5^0&1
+        assert!(ev.contains(&(0x000A, 1)));
+        let (ev2, _) = s5_f16f_body(2, 5, 0, 8, 9);
+        assert!(ev2.contains(&(0x0007, 8)));
+        assert!(ev2.contains(&(0x0009, 9)));
+    }
+}
