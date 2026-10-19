@@ -4787,6 +4787,20 @@ UpdateAnimBrain→UpdateAnimEye→DrawSprites→**ClearMotherBrainIsHit**）②�
 常量组→不触发=严格顺序 ✓）+8 案 strict 0 败（首提全过）④员面双扫桩 0（2 员
 真现）。测 452。findings（r10）：0 新。SC-B5-17（B 区余 90 卡）预告随账。
 
+## SC-B5-17 卡审（08602d0）——Hurt/FlashDelay/Killed 命名正身八现（310 测）
+
+### verdict: pass
+
+四条核：①L2 留白**真 0 三方核 ✓**（a5-041-case×0——**a5 批 3 空白卡辨识**随账）
+②**命名正身八现 ✓✓**：prg3_tourian.asm:1137 `MotherBrain_Hurt: ; 03:9E36`↔bank3
+$9E36=`20 43 9e b9 41 9e 85 1c`（**JSR $9E43 UpdateMotherBrainFlashDelay** 直合
+（asm:1139 jsr↔字节 `20 43 9e`）+STA $1C）+asm:1148 `UpdateMotherBrainFlashDelay:
+; 03:9E43`+asm:1079-80 `.word MotherBrain_Hurt/.word MotherBrain_Killed`——
+**命名正身八现**（八步谱系（Hurt/FlashDelay/Killed 三名一组））③数据面族 4 件
+（hexdump 直得：anim 表族+$9E43/$9E52/$9E93 数据面）④员面双扫桩 0（4 员真现）。
+测 453（族域述**310 测里程碑**）。findings（r10）：0 新。SC-B5-18（a5 批末卡段
+——B 区余 89 卡）预告随账。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
