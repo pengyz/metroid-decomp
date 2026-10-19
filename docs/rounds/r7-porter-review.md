@@ -3453,6 +3453,16 @@ NoInitOffset: ; $801E / jmp InitEnActiveAnimIndex_NoInitOffset` ↔ bank1 $801E=
 （a1-006 双生）随证 ④员面双扫桩 0（2 员真现）。测 339（族域述**200 测里程碑**）。
 findings（r10）：0 新。SC-B1-08（B 区余 199 卡）预告随账。
 
+## SC-B1-08 卡审（f6b68e0）——refs 法五现（ApplySpeedToPosition）
+
+### verdict: pass
+
+四条核：①L2 面 a1-008-case×8 并入+**族 8 案 0 败（首提全过）**✓（16=8×2 已计；
+败 78 稳）②**refs 法五现双轨 ✓✓**：asm:63-64 `CommonJump_ApplySpeedToPosition:
+; $8027 / jmp ApplySpeedToPosition` ↔ bank1 $8027=`4c 8f fd`（JMP $FD8F=S1-10
+走带族）——asm 直读↔字节直合（五现连续速效）③$02←0 单写实核随证 ④员面双扫桩 0
+（2 员真现）。测 340。findings（r10）：0 新。SC-B1-09（B 区余 198 卡）预告随账。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
