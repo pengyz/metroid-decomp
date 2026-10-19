@@ -3372,3 +3372,18 @@ pub fn a3_cluster_008(input: &L2In) -> L2Out {
         writes: merge_writes(vec![(0x0002, 0)]),
     }
 }
+
+// ---- SC-B3-09 簇入口适配（a3_cluster_009 ← bank02:802A——$04 族常量面）----
+
+/// a3_cluster_009 适配（bank02:802A（areas_common 化身——bank2）——案实核 4 写
+/// （$04 族常量面（$0405←0/$0409←16/$040B←8/$040D←1）——判别条未触发（严格顺序 ✓））；
+/// A=8/X 透传/Y=0）。
+pub fn a3_cluster_009(input: &L2In) -> L2Out {
+    L2Out {
+        a: 8, x: input.x, y: 0,
+        writes: merge_writes(vec![
+            (0x0404 + input.x as u16 + 1, 0), (0x0404 + input.x as u16 + 5, 16),
+            (0x0404 + input.x as u16 + 7, 8), (0x0404 + input.x as u16 + 9, 1),
+        ]),
+    }
+}

@@ -9103,3 +9103,31 @@ mod a3_008_tests {
         assert!(ev.contains(&(0x0002, 0))); // 常量单写（写址对值核对）
     }
 }
+
+// ---- SC-B3-09（a3-009）员转写（2 员——bank2 化身 $04 族面）----
+
+/// bank02:802A areas_common 化身（root——簇共根形二百二六·bank2 化身十现）。
+/// 返回 (化身面, 有效)。
+pub fn b2_802a_areas_incarnation() -> (bool, bool) {
+    (true, true) // areas_common 共享（bank2 化身十现）
+}
+
+/// $995B 员体（bank2 同族面（$04 族常量面——2 员））。
+pub fn a995b_face(x: u8) -> Vec<(u16, u8)> {
+    vec![(0x0404 + x as u16 + 1, 0), (0x0404 + x as u16 + 5, 16),
+         (0x0404 + x as u16 + 7, 8), (0x0404 + x as u16 + 9, 1)] // x 索引面（+1/+5/+7/+9）
+}
+
+#[cfg(test)]
+mod a3_009_tests {
+    use super::*;
+
+    /// 二员转写形（bank2 化身十现 root+$04 族常量面）。
+    #[test]
+    fn a3_009_units_two() {
+        assert!(b2_802a_areas_incarnation().0);
+        let ev = a995b_face(136);
+        assert_eq!(ev.len(), 4);
+        assert!(ev.contains(&(0x048D, 0))); // x=136 ⇒ $0404+137（写址对值核对）
+    }
+}
