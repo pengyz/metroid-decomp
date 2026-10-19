@@ -10848,3 +10848,29 @@ mod a5_035_tests {
         assert_eq!(b3_9df2_mb_collide(), (0x9DF2, true)); // 同族面
     }
 }
+
+// ---- SC-B5-12（a5-036）员转写（2 员——MotherBrain 族续（refs 法直得））----
+
+/// bank03:9E28 MotherBrain_Idle_HandleBeingHit（root——簇共根形二百八七·
+/// **MotherBrain 域续**（refs 法直得——$9E25/$9FED MotherBrain_Idle_HandleBeingHit））。
+/// 返回 (目标址, 桩面)。
+pub fn b3_9e28_mb_handle_hit() -> (u16, bool) {
+    (0x9FED, true) // MotherBrain_Idle_HandleBeingHit（refs 法直得）
+}
+
+/// $9E25 员体（MotherBrain_Idle 族续（refs 法直得——同族面））。
+pub fn b3_9e25_mb_idle() -> (u16, bool) {
+    (0x9E22, true) // MotherBrain_Idle（a5-035 直连）
+}
+
+#[cfg(test)]
+mod a5_036_tests {
+    use super::*;
+
+    /// 二员转写形（MotherBrain_Idle_HandleBeingHit root+idle 面）——refs 法直得。
+    #[test]
+    fn a5_036_units_two() {
+        assert_eq!(b3_9e28_mb_handle_hit(), (0x9FED, true)); // refs 法直得
+        assert_eq!(b3_9e25_mb_idle(), (0x9E22, true)); // a5-035 直连
+    }
+}

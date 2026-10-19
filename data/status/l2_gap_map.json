@@ -1114,6 +1114,13 @@
       "reason": "MotherBrain OAM 深径链（284 写（>20 深径判别条触发）——$9DF2/$9E22 MotherBrain_Idle 族（refs 法直得）——预登记先行（严格顺序）——S5-121 同款跨卡深径）",
       "exit": "MotherBrain OAM 绘制径建模清（全链模拟）→账清转 strict",
       "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-B5-036-CROSSCARD-MOTHERBRAIN",
+      "case_prefix": "a5-036-case-",
+      "reason": "MotherBrain OAM 深径链（284 写（>20 深径判别条触发）——$9E25/$9FED MotherBrain_Idle_HandleBeingHit（refs 法直得）——预登记先行（严格顺序）——S5-121 同款跨卡深径）",
+      "exit": "MotherBrain OAM 绘制径建模清（全链模拟）→账清转 strict",
+      "registered": "2026-10-20"
     }
   ]
 }
