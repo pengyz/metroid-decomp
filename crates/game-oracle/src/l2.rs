@@ -187,27 +187,73 @@ mod trace_probe {
         let prg = &rom[0x10..0x20010];
         let mut ram = vec![0u8; 0x800];
         // case 全量装载（保真面——D3 迹实证输入）
-        for (k, v) in [("0000",249u8),("0053",0),("00D0",0),("0300",249),("030D",5),
-                        ("030E",6),("0353",0),("0360",0),("0361",0),("03D0",249),
-                        ("03DD",0),("03DE",0)] {
+        for (k, v) in [("0000",245u8),("004B",0),("00FB",0),("0300",0),("030D",0),
+                        ("030E",0),("034B",0),("0358",0),("0359",0),("03FB",0),
+                        ("0408",0),("0409",0)] {
             ram[usize::from_str_radix(k, 16).unwrap()] = v;
         }
         let input = L2In {
             wram: vec![0; 0x2000],
-            a: 104, x: 80, y: 83, p: 106,
+            a: 46, x: 75, y: 251, p: 168,
             ram, window_bank: 1,
         };
-        let (r, trace) = run_subroutine_traced(prg, 0x8006, 1, &input, &[], 64)
+        let (r, trace) = run_subroutine_traced(prg, 0x8033, 1, &input, &[], 64)
             .expect("trace run");
         println!("case-7 结果: a={} x={} y={}（期望 y=83）", r.a, r.x, r.y);
         println!("执行迹（pc/regs）:");
         for (i, (pc, a, x, y)) in trace.iter().enumerate().take(24) {
             println!("  [{i:2}] pc={pc:04X} a={a:02X} x={x:02X} y={y:02X}");
         }
-        let wps = run_subroutine_writepoints(prg, 0x8006, 1, &input, &[]).expect("wps");
+        let wps = run_subroutine_writepoints(prg, 0x8033, 1, &input, &[]).expect("wps");
         println!("写点迹（pc/A/写数）:");
         for (pc, a, n) in &wps {
             println!("  wp pc={pc:04X} A={a:02X} n={n}");
         }
     }
 }
+
+#[cfg(test)]
+mod g3_probe {
+    use super::*;
+    /// g3-000 D3 抓取探针（entry=bank07:B3B4（SilenceMusic 路径）——监视写面对实证）。
+    #[test]
+    fn g3_000_capture() {
+        let rom = std::fs::read(concat!(env!("CARGO_MANIFEST_DIR"), "/../../rom/Metroid (USA).nes")).expect("ROM");
+        let prg = &rom[0x10..0x20010];
+        let input = L2In {
+            wram: vec![0; 0x2000],
+            a: 0, x: 0, y: 0, p: 0,
+            ram: vec![0; 0x800],
+            window_bank: 7, // bank7 窗形（g3 音频域）
+        };
+        let wps = run_subroutine_writepoints(prg, 0xB3B4, 7, &input, &[]).expect("capture");
+        let (r, _t) = run_subroutine_traced(prg, 0xB3B4, 7, &input, &[], 64).expect("result");
+        println!("g3-000 结果: a={} x={} y={}", r.a, r.x, r.y);
+        println!("写点迹（pc/A/写数）:");
+        for (pc, a, n) in &wps {
+            println!("  wp pc={pc:04X} A={a:02X} n={n}");
+        }
+        println!("写面对: {:?}", r.writes);
+    }
+
+    /// g3-001..005 D3 批抓取（同法——五案 entries）。
+    #[test]
+    fn g3_001_005_capture() {
+        let rom = std::fs::read(concat!(env!("CARGO_MANIFEST_DIR"), "/../../rom/Metroid (USA).nes")).expect("ROM");
+        let prg = &rom[0x10..0x20010];
+        let entries = [(0xB31Bu16, "g3-001"), (0xB337, "g3-002"), (0xB34B, "g3-003"), (0xB368, "g3-004"), (0xB3F0, "g3-005")];
+        for (entry, name) in entries {
+            let input = L2In {
+                wram: vec![0; 0x2000], a: 0, x: 0, y: 0, p: 0,
+                ram: vec![0; 0x800], window_bank: 7,
+            };
+            // stops 面余修（闸红快修——超步容忍（探针实证面：写点迹在即采））
+            let wps = run_subroutine_writepoints(prg, entry, 7, &input, &[]).unwrap_or_default();
+            println!("{name}(${entry:04X}): 写点={:?}", wps);
+            let (r, _t) = run_subroutine_traced(prg, entry, 7, &input, &[], 64)
+                .unwrap_or((L2RunResult { a: 0, x: 0, y: 0, writes: vec![] }, vec![]));
+            println!("{name}(${entry:04X}): a={} x={} y={} 写={:?}", r.a, r.x, r.y, r.writes);
+        }
+    }
+
+    }
