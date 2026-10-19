@@ -4422,6 +4422,17 @@ BOMBLAUNCH-IMPL 等）③**bombexplode 跑通 ✓**（golden=(0,0,0,[(1664,16)])
 （458 测（workspace 域）/game-core 423）。findings（r10）：0 新。G3 末簇 06 接续
 预告随账。
 
+## SC-B4-10 卡审（093fbbe）——DoorSubRoutine8C76 bank3 化身（XCHAIN-B4-010）
+
+### verdict: pass
+
+四条核：①**门族三 bank 谱续三 ✓✓✓**：bank1/2/3 $8C76=`a9 30 9d 05 03 38 e9 02`
+**三 bank 全同**（=a1-018 DoorSubRoutine8C76 同形（anim 写 LDA #$30/STA $0305,X）
+——门族三 bank 复现全谱三员（DrawDoor→8C61→8C76）+SFX_Door 声旗（$0683←64）
+②**XCHAIN-B4-010 预登记 ✓**（113 条目）：X 变换（223→3 链算径）判别条补触发→
+预登记→L2 并案=严格顺序续 ③4 写实核+8 案账内 ④员面双扫桩 0（2 员真现）。
+测 424。findings（r10）：0 新。SC-B4-11（B 区余 118 卡）预告随账。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
