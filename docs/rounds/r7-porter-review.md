@@ -4924,6 +4924,18 @@ $801E **全同续**（CommonJump 表 bank4 复现八现）②**VALCHAIN-B6-007 �
 ④员面双扫桩 0（2 员真现）。测 462。findings（r10）：0 新。SC-B6-08（B 区余 79 卡）
 预告随账。
 
+## SC-MD-006 卡审（臂深化六卡收口）——SamusRun 跑动物理四段完+D7 注册
+
+### verdict: pass（臂深化六卡收口=SamusRun 族完型）
+
+四条核：①**SamusRun 族跑动物理四段完 ✓**（D3 ROM 执行 golden（41 写物理面）
++转换+适配+D7）②**D7 注册落 ✓**（027665b=md-samusrun-* L3 路由 TOLERATED）：
+samusrun 域条目 3 在库（gap_map 187 总：SC-MD_SETSAMUSRUN/SETSAMUSRUNACCEL/
+SAMUSRUN-IMPL）③**案态全 D7 声明形 ✓**：md_setsamusrun/setsamusrunaccel/samusrun
+=BRK @ $0001/$06C7（L2 面不支持走 L3）+md_samusrun_physics=未知操作码 $22
+（fail-loud）——全显式声明（L3 路由 TOLERATED 覆盖）④态差核（9 案稳/就绪态
+保持）+闸 PASS。测 463。findings（r10）：0 新。SC-MD-007 接续预告随账。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
