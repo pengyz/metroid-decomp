@@ -4512,6 +4512,17 @@ d0 02`（LDA #$02=music_MotherBrain——SFX 十五现）②**MOTHERBRAIN-B4-015
 预登记→L2 并案=严格顺序续 ③8 案账内 ④员面双扫桩 0（2 员真现）。测 430。
 findings（r10）：0 新。SC-B4-17（B 区余 112 卡）预告随账。
 
+## SC-B4-17 卡审（e321f80）——SFX_Door bank3 化身（十六现正身）
+
+### verdict: pass
+
+四条核：①**SFX_Door 三 bank 全谱 ✓✓✓**：bank1/2/3 $8CE0=`20 da cb 20 73 cb
+a6 4b` **三 bank 全同**（=a2-025 同形（JSR $CBDA 调用链））+**十六现正身声旗面
+✓**：bank7 $CBDA=`a9 40 d0 17`（LDA #$40=sfxTri_Door——SFX 十六现正身）②
+**SFXDOOR-B4-017 预登记 ✓**（132 条目）：55 写>20 阈值判别条触发→预登记→L2
+并案=严格顺序续 ③8 案账内 ④员面双扫桩 0（2 员真现）。测 431。findings（r10）：
+0 新。SC-B4-18（B 区余 111 卡）预告随账。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
