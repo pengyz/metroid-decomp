@@ -35,7 +35,8 @@
 # 【swap 点定】死点=MapX 3→4 界 @roomx≈143（f1252——房界 crossing 非 wrap）
 # 物品存活=MapX≤3 窗（房 (2,14)-(3,14) 域）——出界即死（RemoveIfOffScreen）
 # v18 负：wrap f1128（213 帧 hi=1）/物死 f1051——**77f 差恒定**（两路由同差=v17 对照）
-# 结构性差终定：死点=MapX 界 crossing 恒先于 wrap 77f——②门过渡 hi 处理根因=下一勘
+# 【②向根因定】ToggleSamusHi($E249)=x/y wrap 专属翻转（MoveOutDoor x=0/255 界+y wrap 239 界）
+# 门过渡不设 hi（仅 wrap 翻）——hi=1 径=x wrap 穿（MapX 2→3 scroll 界=存活窗内唯一 wrap 点）
 # 战役态（v1-v18）：机制/几何/三窗/swap 点/77f 恒差全解——触达收=②向一击
 # v14 实证：hi=1 173 帧 ✓+同表 Δx=0——但物品 f1252 离屏移除（时机差=wrap 太晚）
 # 累计盘（v1-v13）：机制全解（hi XOR PPUCTRL/x wrap 翻转/奇偶律/球态炸弹/碰撞半径和 18/7）
