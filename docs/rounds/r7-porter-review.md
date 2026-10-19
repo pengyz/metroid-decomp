@@ -4591,6 +4591,19 @@ STA $0402,X/LDA $6AFF,X 索引写=10 写族面）+bank03:9926=`20 c3 99 20 bd 99
 账内+fixture 强弱源辨识（强源 $6AF7/$6AF8←r(0)）+员面双扫桩 0。测 437。
 findings（r10）：0 新。SC-B5-02（B 区余 105 卡）预告随账。
 
+## SC-MD-001 卡审（移动臂深化首卡收口）——四段完+D7 声明形（臂深化面）
+
+### verdict: pass（移动臂首卡收口=四段完）
+
+四条核：①**stops=$D095 rts 直证 ✓✓**：$D095 首字节=`60`（rts——$60 扫 256B
+窗首位命中=stops 位法字节证）②**2/5 全等 ✓**（D3 ROM 执行 golden）：md_jumpengine
++md_setsamusjump **[PASS]**（ROM 面全等）+b-w3-samusjump/guard PASS（附面）
+③**D7 声明形 ✓**（SC-G3-00 样板扩展=移动臂深化面）：md_samusjump=fixture 面差
+（golden=capture 面（probe input）vs L2 空 fixture——L3 路由声明）+md_checkhorz/
+checkfire=BRK @ $0001（L2 面不支持走 L3）+路线图出口显式（SC-MD_CHECKFIRE-IMPL）
+④**samusjump 41 写物理面**（golden 41 写对面实证）+**undoc $AB 扩**（oracle 未文档
+操作码扩展）随证。测 438。findings（r10）：0 新。SC-MD-002（臂深化卡序）预告随账。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
