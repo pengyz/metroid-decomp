@@ -946,6 +946,48 @@
       "reason": "【预登记】移动臂深化首卡（SC-MD-001 SamusJump 族——开工前置步先登记）",
       "exit": "arm_cluster_003 移植/转写落→账清转 strict",
       "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-B5-000-CROSSCARD-VALCHAIN",
+      "case_prefix": "a5-024-case-",
+      "reason": "值链算深径（$006B←162（fixture 弱源——a4-021 同款）——深径判别条补触发（链算径）——S5-121 同款跨卡深径（a5 批开））",
+      "exit": "值链算径建模清（$04/$6B 族链模拟）→账清转 strict",
+      "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-MD_CHECKFIRE-IMPL",
+      "case_prefix": "md_checkfire",
+      "reason": "【预登记/补账】md_checkfire 簇（批产 WIP——A 批预登记制）",
+      "exit": "md_checkfire 落→账清转 strict",
+      "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-MD_CHECKHORZ-IMPL",
+      "case_prefix": "md_checkhorz",
+      "reason": "【预登记/补账】md_checkhorz 簇（批产 WIP——A 批预登记制）",
+      "exit": "md_checkhorz 落→账清转 strict",
+      "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-MD_JUMPENGINE-IMPL",
+      "case_prefix": "md_jumpengine",
+      "reason": "【预登记/补账】md_jumpengine 簇（批产 WIP——A 批预登记制）",
+      "exit": "md_jumpengine 落→账清转 strict",
+      "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-MD_SAMUSJUMP-IMPL",
+      "case_prefix": "md_samusjump",
+      "reason": "【预登记/补账】md_samusjump 簇（批产 WIP——A 批预登记制）",
+      "exit": "md_samusjump 落→账清转 strict",
+      "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-MD_SETSAMUSJUMP-IMPL",
+      "case_prefix": "md_setsamusjump",
+      "reason": "【预登记/补账】md_setsamusjump 簇（批产 WIP——A 批预登记制）",
+      "exit": "md_setsamusjump 落→账清转 strict",
+      "registered": "2026-10-20"
     }
   ]
 }
