@@ -7679,3 +7679,32 @@ mod a1_004_tests {
         assert!(!ev.is_empty()); // S5-146 单元复用面
     }
 }
+
+// ---- SC-B1-05（a1-005）员转写（2 员——InitEnAnimIndex 族·refs 法）----
+
+/// $800F CommonJump_InitEnAnimIndex（root——簇共根形百七九·bank1 dispatch 桩阵
+/// 六现（形九续）——refs 法：areas_common.asm:36 `jmp InitEnAnimIndex`）。
+/// 返回 (目标址, 桩面)。
+pub fn a800f_common_jump() -> (u16, bool) {
+    (0xE08F, true) // jmp InitEnAnimIndex（S6-170 双生——refs 法）
+}
+
+/// InitEnAnimIndex 三写面（$6AF8[x]←0/$6AFA[x]←A/$6AFB[x]←A——S6-170 同族扩展）。
+pub fn a800f_init_anim(x: u8, a_in: u8) -> Vec<(u16, u8)> {
+    vec![(0x6AF8 + x as u16, 0), (0x6AFA + x as u16, a_in), (0x6AFB + x as u16, a_in)]
+}
+
+#[cfg(test)]
+mod a1_005_tests {
+    use super::*;
+
+    /// 二员转写形（InitEnAnimIndex root+面壳）——refs 法二现。
+    #[test]
+    fn a1_005_units_two() {
+        assert!(a800f_common_jump().1);
+        let ev = a800f_init_anim(2, 0x55);
+        assert!(ev.contains(&(0x6AFA, 0))); // x=2 ⇒ $6AF8+2（写址对值核对）
+        assert!(ev.contains(&(0x6AFC, 0x55)));
+        assert!(ev.contains(&(0x6AFD, 0x55)));
+    }
+}

@@ -2714,3 +2714,18 @@ pub fn a1_cluster_004(input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-B1-05 簇入口适配（a1_cluster_005 ← bank01:800F——S6-170 双生（refs 法））----
+
+/// a1_cluster_005 适配（$800F CommonJump_InitEnAnimIndex（refs 法：asm:36）——
+/// 案实核：$6AF8[x]←0/$6AFA[x]←A/$6AFB[x]←A（x 索引三写——S6-170 同族）；
+/// A=0/X 透传/Y 透传）。
+pub fn a1_cluster_005(input: &L2In) -> L2Out {
+    let x = input.x as u16;
+    L2Out {
+        a: 0, x: input.x, y: input.y,
+        writes: merge_writes(vec![
+            (0x6AF8 + x, 0), (0x6AFA + x, input.a), (0x6AFB + x, input.a),
+        ]),
+    }
+}
