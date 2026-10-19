@@ -66,3 +66,17 @@
 - **4 字节 SFX 格式**（B 级）：APU 寄存器参数（byte1=周期/byte2=$7F 常见（音量/旗）/
   byte3-4=包络/时值——细语义待考）；
 - **G2 面交叉续**：StatueRaise SFX 项（$B281）+Door（$B285）——statue/门声面 ✓。
+
+## 6. 【2026-10-19 G3 取证包完备】音乐音符编码+例程体（C→A/B 升——批产粮草）
+
+- **MusicNotesTbl**（A 级：sound_engine.asm:2477=$BE77）：**音符索引→APU 周期表**
+  （2 字节/项——索引 #00=A1(55Hz)/#02=No sound/#04=C#2…#40=Ab4——**半音阶全表**
+  （A1-Ab4+续）——16 位周期 lo/hi；**音符编码=索引×2 查表→APU 周期寄存器**；
+- **例程体细读**（A 级）：CheckMusicFlags($B3FC)（MusicContFlags vs CurrentSoundFlags
+  ——同曲判/清场分支）+InitializeSoundAddresses($B404)（清 MusicAndSFX/Special
+  Addresses——**声道占用旗**：SQ1UsedBySFX/SQ2UsedBySFX/TriUsedBySFX+五 ContFlags
+  族+MusicContFlags）+EndOrLoopMusic（MusicLoopsOnEnd 循环判）；
+- **音乐播放流**（B 级）：RunMusicLoopRoutine($BC36)→MusicNotesTbl 查表（1905-1910
+  双字节读）→APU 周期写——音符流细读=C 余（播放循环体）。
+- **G3 取证包完备态**：引擎核/旗族谱系/声旗 RAM/SFXData 全表/序列格式/音符编码表
+  ——**批产粮草全**（音符编码+例程体双升）。
