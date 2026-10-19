@@ -687,6 +687,13 @@
       "reason": "X 链算深径（X=201→0 变换（fixture 弱源——多入参链算）——深径判别条补触发（链算径）——S5-121 同款跨卡深径）",
       "exit": "X 链算径建模清（变换链模拟）→账清转 strict",
       "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-G3-MUSICINIT-IMPL",
+      "case_prefix": "g3-musicinit-case",
+      "reason": "【预登记/补账】g3-musicinit 簇（批产 WIP——A 批预登记制）",
+      "exit": "g3-musicinit 落→账清转 strict",
+      "registered": "2026-10-20"
     }
   ]
 }
