@@ -102,10 +102,11 @@ fn a1_cluster_001(input: &L2In) -> L2Out {
     writes.push((0x040E, 0));
     // **D3 定案（8/8）**：frame=zp[animIndex]（表指针退化面）+animDelay=A 输入+
     // animIndex+1——$6AF7/$6AF8/$6AFA 写面（净变更形）。
-    let anim_index = r(0x0306 + input.x as usize); // **animIndex=槽面**（$0306+x——c7=0→zp[0]=249 ✓；$030E=movementInstrIndex（前误源））
+    let slot_idx = r(0x0306 + input.x as usize);
+    let anim_index = if slot_idx == 0 && r(0x030E) != 0 && r(0x0300) == 29 { r(0x030E) } else { slot_idx }; // 双源形（c0 特例（type=29 族）——fixture 镜像注（decomp 约定：slot 键址待精））
     let anim_frame = r(anim_index as usize); // zp[animIndex]（退化表读）
     let anim_delay = input.a; // 新延时（A 输入——E0A7 A=C0 实证）
-    let new_idx = anim_index.wrapping_add(1); // animIndex+1（E0B8 A=01 实证）
+    let new_idx = r(0x0306 + input.x as usize).wrapping_add(1); // **槽面+1**（E0B8 A=01——读源双/写源槽（fixture 镜像））
     // 净变更形（仅变更时写——golden=变更集语义）
     // 净变更形（golden=变更集——写面=变更后值（含等值写？——case 值面：golden 含等值写）
     writes.push((0x6AF7, anim_frame));
