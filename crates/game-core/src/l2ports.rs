@@ -1056,6 +1056,7 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "a7_cluster_024" => Some(sub_a7_cluster_024),
         "a7_cluster_025" => Some(sub_a7_cluster_025),
         "a7_cluster_026" => Some(sub_a7_cluster_026),
+        "a7_cluster_027" => Some(sub_a7_cluster_027),
         _ => None,
         "md_samusdead" => Some(md_samusdead),
         "md_samusdead2" => Some(md_samusdead2),
@@ -2800,4 +2801,9 @@ pub fn sub_a7_cluster_025(input: &L2In) -> L2Out {
 /// a7_cluster_026 —— bank04:8CE3 簇入口注册（SC-B7-04）。
 pub fn sub_a7_cluster_026(input: &L2In) -> L2Out {
     crate::verify_shim::a7_cluster_026(input)
+}
+
+/// a7_cluster_027 —— bank04:9905 簇入口注册（SC-B7-05）。
+pub fn sub_a7_cluster_027(input: &L2In) -> L2Out {
+    crate::verify_shim::a7_cluster_027(input)
 }

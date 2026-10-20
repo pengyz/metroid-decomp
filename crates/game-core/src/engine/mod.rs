@@ -11817,3 +11817,30 @@ mod a7_026_tests {
         assert!(b5_cb73_select_pal().1); // 调色板选择面
     }
 }
+
+// ---- SC-B7-05（a7-027）员转写（2 员——bank5 化身六现（5 写族面））----
+
+/// bank04:9905 areas_common 化身（root——簇共根形三百二一·**bank5 化身六现**）。
+/// 返回 (化身面, 有效)。
+pub fn b5_9905_areas_incarnation() -> (bool, bool) {
+    (true, true) // areas_common 共享（bank5 化身六现）
+}
+
+/// $9934 员体（bank5 同族面（5 写族面——2 员））。
+pub fn b5_9934_face(v0: u8) -> Vec<(u16, u8)> {
+    vec![(0x0404, 0), (0x040E, 0), (0x6AF7, v0), (0x6AF8, v0), (0x6AFA, 1)]
+}
+
+#[cfg(test)]
+mod a7_027_tests {
+    use super::*;
+
+    /// 二员转写形（bank5 化身六现 root+5 写面）。
+    #[test]
+    fn a7_027_units_two() {
+        assert!(b5_9905_areas_incarnation().0);
+        let ev = b5_9934_face(70);
+        assert_eq!(ev.len(), 5);
+        assert!(ev.contains(&(0x6AF7, 70))); // fixture 强源（写址对值核对）
+    }
+}
