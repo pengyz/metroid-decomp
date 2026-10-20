@@ -5950,6 +5950,26 @@ case-7 **仍 FAIL**（golden (27383, 0)=$6AF7←0（r(0) fixture 值）vs core (
 **动作要求**：账清 commit（gap_map 条目 status→cleared（或移除）=账清转 strict
 落定）。findings（r10）：1（账清 commit 待落（非缺陷=流程末步））。
 
+## a9-026 $6AF7←0 径建模件+SC-B2-041 修复件双审（实测核——A 级原文）
+
+### ① a9-026 $6AF7←0 径建模件 verdict: pass | ② SC-B2-041 修复件 verdict: pass
+
+**实测 diff 输出原文（A 级——非声称核）**：
+```
+a9-026: [PASS]×8（0 FAIL）✓✓✓✓✓✓✓✓
+a2-041: [PASS]×8（0 FAIL）✓✓✓✓✓✓✓✓
+```
+
+四条核：①**实测 diff 全绿 ✓✓**（双件 8/8+8/8=「一修双清」效果（$6AF7←0 径
+建模（r(0) fixture 值链算（case 变值径））=SC-B2-041 case-7/SC-B9-026 case-4
+同型双案一修双闭））②**$6AF7←0 径实现 ✓**（r(0) fixture 值链算（case 变值径）：
+golden (27383, 0)=$6AF7←0（r(0) 值）=core 实现合形——case 变值径（10/0 双径链算）
+③**双案同型核 ✓**（SC-B2-041 case-7/SC-B9-026 case-4=$6AF7←0 径同型=一修双清
+（96cc23a））④**账清落定核 ✓**：SC-B3-033=**cleared**（账清 commit 落）+五件
+（SC-B2-041/SC-B9-026/SC-B6-005/SC-B8-005/SC-B9-036）**已退出**（gap_map 条目
+移除=账清转 strict 落定）——L2 收敛面（账清）全落。测 540 全绿+L2 3107/1001
+（账目面全合）。findings（r10）：0 新。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
