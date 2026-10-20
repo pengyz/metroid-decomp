@@ -5805,6 +5805,32 @@ a6 22+a7 21+a8 19+a9 19=**206 行**（a1-a9 九批 pregen 全账）③**收官�
 **收官审料结论**：三主战场收束全 ✓+AGENTS Gate 全过（15 PASS/0 FAIL/0 WARN）+
 TOLERATED 声明域显式+残余收敛面全显式注——**Stage A 收官定谳（用户验收面）就绪**。
 
+## SC-B3-033+SC-B2-041 建模件双审（L2 收敛审——账清转 strict 核）
+
+### SC-B3-033 verdict: pass（建模定案面）+ L2 收敛注（gap 案=实现待落）
+
+四条核：①**建模定案 ✓（A 级）**：双缺口（ptr 面条件写（case-1 absent——条件径）
++$0400 值链算（1 vs 103——chain-compute））——案组分析（8 案）+差分取证（1 败→
+双缺口定案）=**gap 定义与 case-1 失败面精确匹配**（core (1024,1)+多写 vs golden
+(1024,103)=$0400 值链算 gap+条件径 gap）②**fixture 依赖辨识 ✓**（条件径=fixture
+依赖（case-1 absent=ptr 条件写））③**L2 案态**：7/8 PASS+case-1=gap 案（建模定案
+面=实现待落（port2 在产））——**账清转 strict 退出条件**（实现落→8 案全等→条目
+退出）④套件面（测 540 全绿（game-core））。findings（r10）：0 新（建模定案精确）。
+
+### SC-B2-041 verdict: pass（建模定案面）+ L2 收敛注（gap 案=实现待落）
+
+四条核：①**建模定案 ✓（A 级）**：条件径（$81=EnemyStatusPreAI（**refs 法直得**
+（constants_ram.asm:633））——$81 三分支（fixture 缺失依赖））+值链算（$6AF7←10/0
+）——hexdump 取证（$9BC8/$99CC/$99A1 解）=**gap 定义与 case-3 失败面精确匹配**
+（core 多写 (127,95)=fixture 依赖分支 gap）②**refs/asm 优先参考照条 ✓**（EnemyStatusPreAI
+=$81（constants_ram.asm:633 直得）——refs 法先用）③**L2 案态**：7/8 PASS+case-3=
+gap 案（建模定案面=实现待落（port2 在产））——**账清转 strict 退出条件**（实现落→
+8 案全等→条目退出）④套件面（测 540 全绿）。findings（r10）：0 新（建模定案精确）。
+
+**双件总判**：建模定案面双 pass（A 级证据+gap 精确匹配失败面）——L2 收敛注（gap
+案=实现待落（port2 在产）+账清转 strict 退出条件显式）。SC-B3-033/SC-B2-041 接续
+预告随账。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
