@@ -6216,6 +6216,30 @@ fixture 扩方案=诚实标定 ✓**（decomp 11ade5a）：transform 内径辨�
 方案（显式））⑤测 540 全绿+L2 3107/911（账目面全合）。findings（r10）：1 gap
 显式（a3-028 值径待 fixture 扩（casegen 工具件方案=诚实标定））。
 
+## port2 门链 OAM+decomp casegen 再生双审（落件即审·实测核）
+
+### ① a2-026 OAM 链 verdict: needs_revision（case-7 值差 gap） | ② decomp casegen 再生 verdict: pass（诚实标定）
+
+**实测 diff 输出原文（A 级——非声称核）**：
+```
+a2-026: [PASS]×7+[FAIL] case-7（寄存器值差：golden (0, 22, 17, ...) vs core (0, 28, 17, ...))
+（OAM 写集全合——单寄存器值差（22 vs 28））
+a3-028: 1/8 PASS+7 FAIL（casegen 再生径辨——考证进度态（诚实标定））
+```
+
+四条核：①**a2-026=7/8+case-7 gap（契约族）**：golden 寄存器 (0, 22, 17) vs core
+(0, 28, 17)——**单寄存器值差**（22 vs 28）——OAM 写集全合（514-539/762-779 全同）
+但 **case-7 寄存器值差 gap 残**（链算径/条件径另源值（22）vs core（28）=值径 gap）
+——**修复要求**：case-7 值径实现（寄存器值差修）→8 案全等→账清转 strict ②
+**a3-028 casegen 再生径辨=诚实标定 ✓**（decomp 8ff6f95）：**casegen 再生径辨**
+（capture ram 键扩（scenario_capture probe_mem +$6AF4+x 族）→再生成 fixture）+
+**再生待跑**（Mesen2 capture（LCG 输入→golden——8 案 fixture 再生成））+值径待
+fixture 扩（源值不在 in 集）——claim 与实测一致（1/8+7 FAIL 考证进度态（非声称
+修复（「0 败」纪律面 ✓）））③**casegen 再生方案核 ✓**（Mesen2 capture（LCG→
+golden——8 案 fixture 再生成）=工具件方案（显式））④测 540 全绿+L2 3107/911。
+findings（r10）：1（a2-026 case-7 值差 gap=needs_revision）+1 gap 显式（a3-028
+再生待跑（诚实标定））。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
