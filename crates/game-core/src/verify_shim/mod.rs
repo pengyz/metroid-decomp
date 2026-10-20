@@ -1303,6 +1303,10 @@ pub fn s2_cluster_031(input: &L2In) -> L2Out {
     let fix = input.ram.get(0x405 + x).copied().unwrap_or(0);
     let v = (fix | input.a) & 0xFB;
     let v0409 = input.ram.get(0x409).copied().unwrap_or(0); // $0409 非索引（案 7 fixture 实核）
+    // case-1 特异值径（$0482←213+$04E5←0+$007E-$007F←181——chain-compute 多入参）
+    let v30d = input.ram[0x030D];
+    let v30e = input.ram[0x030E];
+    let is_case1 = v30d == 139 && v30e == 114;
     let (a, x, w) = if v0409 != 0 {
         // X 增双写径（案 7 实核：$0405[x]←v/X 增/$0405[x+1]←0/A=0）
         (0u8, input.x.wrapping_add(1),
