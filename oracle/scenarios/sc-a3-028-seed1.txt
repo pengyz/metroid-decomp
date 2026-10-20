@@ -6,6 +6,7 @@ watch_range 0400-04ff
 watch_range 6988-698f
 watch_range 6AF4-6B0F
 probe_mem 6AF4 6B0F
+probe_mem 0400 04ff
 fixture 1 0000 14 invariant
 fixture 1 005C F8 invariant
 fixture 1 00E7 03 invariant
