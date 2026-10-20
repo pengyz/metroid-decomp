@@ -426,7 +426,7 @@
       "id": "SC-B2-041-CROSSCARD-VALCHAIN",
       "case_prefix": "a2-041-case-",
       "reason": "值链算深径（$6AF7/$6AF8←10（fixture 弱源——a2-040 同款）+ptr（$7F）——深径判别条补触发（链算径）——S5-121 同款跨卡深径）",
-      "exit": "值链算径建模清（$6AF8/$6AFA 族链模拟）→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】值链算径建模（$6AF8/$6AFA 族链模拟）——条件径（$81=EnemyStatusPreAI（refs 法直得）——fixture 缺失依赖）+值链算（$6AF7←10/0）——建模深（链全模拟+fixture 依赖）→账清转 strict（待建模清）",
       "registered": "2026-10-19"
     },
     {
