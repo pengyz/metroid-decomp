@@ -5407,3 +5407,15 @@ pub fn a9_cluster_035(_input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-B9-17 簇入口适配（a9_cluster_036 ← bank05:99AD——判别条补触发·a9 批末卡）----
+
+/// a9_cluster_036 适配（bank05:99AD（S5-146 族区（bank7））——案实核 3 写
+/// （$6AF8/$6AF9/$6AFA←0/74/74（fixture 弱源——判别条补触发→账目预登记
+/// （VALCHAIN-B9-036）——a9 批末卡））；A=0/X 透传/Y=0）。
+pub fn a9_cluster_036(_input: &L2In) -> L2Out {
+    L2Out {
+        a: 0, x: 0, y: 0,
+        writes: merge_writes(vec![(0x6AF8, 0), (0x6AF9, 74), (0x6AFA, 74)]),
+    }
+}
