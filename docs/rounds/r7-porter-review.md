@@ -6040,6 +6040,24 @@ case 变址实现）③**链算径 ✓**（case 变值径（$6AF7=r(0) fixture �
 （与 SC-B3-033 同型））。测 540 全绿+L2 3107/972（账目面全合）。findings（r10）：
 0 新（修复 3 精确）。
 
+## port2 门链 OAM+decomp 账清落定建模清双审（落件即审·实测核）
+
+### ① port2 门链 OAM verdict: 待落（在产（gfx.rs/matrix WIP）） | ② decomp 账清落定 verdict: pass
+
+**实测 diff 输出原文（A 级——非声称核）**：
+```
+a8-004: [PASS]×8（0 FAIL）✓✓✓✓✓✓✓✓
+a7-041: [PASS]（case-0 复核——账清落定后全等维持）
+```
+
+四条核：①**a8-004 实测 8/8 全绿 ✓✓**：双修（x 归零（golden x=0）+$6AF8=input.a
+（值链算径））=L2 并案全等 ②**a7-041 账清落定 ✓**：SC-A7-041-CASE-1..7-IMPL
+7 条目→**cleared**（修后 8/8 全等复核达成=流程末步落定（与 SC-B3-033 同型））
+③**双修正确性 ✓**（x 归零+值链算径=case 变值实现）④①port2 门链 OAM=**在产**
+（gfx.rs/l2.rs/completeness_matrix WIP 未 commit）——落件即审续（OAM 链模拟
+（DoorSubRoutine→DrawDoor→OAM 绘制径）+账清转 strict 核）。测 540 全绿+
+L2 3107/964（账目面全合）。findings（r10）：0 新。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
