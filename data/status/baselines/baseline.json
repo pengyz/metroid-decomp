@@ -6,8 +6,8 @@
     "seed_projection_files": 1,
     "naming_ledger_entries": 182,
     "assets_manifest_entries": 0,
-    "knowledge_entries": 34,
-    "rust_test_count": 365,
+    "knowledge_entries": 35,
+    "rust_test_count": 584,
     "completeness_cells": 57
   },
   "assets": {},
