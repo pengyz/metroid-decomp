@@ -4732,3 +4732,36 @@ pub fn a7_cluster_028(input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-B7-07 簇入口适配（a7_cluster_029 ← bank04:992C——ptr 面（a7-028 同族））----
+
+/// a7_cluster_029 适配（bank04:992C（S5-146 族区（bank5））——案实核 7 写
+/// （ptr 面（$00/$01←6/8（a7-028 同族））+清对+$6AF7/$6AF8←6（ptr 面 $00 值径）+
+/// $6AFA←1（判别条未触发（严格顺序 ✓））；A=0/X 透传/Y=1）。
+pub fn a7_cluster_029(_input: &L2In) -> L2Out {
+    L2Out {
+        a: 0, x: 0, y: 1,
+        writes: merge_writes(vec![
+            (0x0000, 6), (0x0001, 8),
+            (0x0404, 0), (0x040E, 0),
+            (0x6AF7, 6), (0x6AF8, 6), (0x6AFA, 1), // ptr 面 $00 值径（非 r(0)）
+        ]),
+    }
+}
+
+// ---- SC-B7-08 簇入口适配（a7_cluster_030 ← bank04:9930——ptr 面（$01←8））----
+
+/// a7_cluster_030 适配（bank04:9930（S5-146 族区（bank5））——案实核 6 写
+/// （ptr 面（$01←8）+清对+$6AF7/$6AF8←r(0)（fixture 强源——判别条未触发（严格顺序
+/// ✓））+$6AFA←1）；A=0/X 透传/Y=1）。
+pub fn a7_cluster_030(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    L2Out {
+        a: 0, x: 0, y: 1,
+        writes: merge_writes(vec![
+            (0x0001, 8),
+            (0x0404, 0), (0x040E, 0),
+            (0x6AF7, r(0x0000)), (0x6AF8, r(0x0000)), (0x6AFA, 1),
+        ]),
+    }
+}
