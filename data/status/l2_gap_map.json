@@ -1541,6 +1541,13 @@
       "reason": "值链算深径（$04 族+多值（fixture 弱源——多入参链算）——深径判别条补触发（链算径）——S5-121 同款跨卡深径）",
       "exit": "值链算径建模清（$04 族链模拟）→账清转 strict",
       "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-B7-038-CROSSCARD-MOTHERBRAIN",
+      "case_prefix": "a7-038-case-",
+      "reason": "MotherBrain OAM 深径链（59 写（>20 深径判别条触发）——$9AD4/$9B2F（refs 法直得）——预登记先行（严格顺序）——S5-121 同款跨卡深径）",
+      "exit": "MotherBrain OAM 绘制径建模清（全链模拟）→账清转 strict",
+      "registered": "2026-10-20"
     }
   ]
 }

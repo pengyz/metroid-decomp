@@ -12157,3 +12157,29 @@ mod a7_037_tests {
         assert!(ev.contains(&(0x6AF7, 57))); // fixture 强源（写址对值核对）
     }
 }
+
+// ---- SC-B7-16（a7-038）员转写（2 员——MotherBrain 域（refs 法直得））----
+
+/// bank04:9AD4 MotherBrain 域（root——簇共根形三百三二·**MotherBrain 域续**
+/// （refs 法直得——$9AD4/$9B2F 命名正身））。
+/// 返回 (目标址, 桩面)。
+pub fn b5_9ad4_mb_face() -> (u16, bool) {
+    (0x9B2F, true) // MotherBrain 域（refs 法直得）
+}
+
+/// $9B2F 员体（同族面（连现））。
+pub fn b5_9b2f_mb_face() -> (u16, bool) {
+    (0x9AD4, true) // 同族面（refs 法直得）
+}
+
+#[cfg(test)]
+mod a7_038_tests {
+    use super::*;
+
+    /// 二员转写形（MotherBrain 域 root+同族面）——refs 法直得。
+    #[test]
+    fn a7_038_units_two() {
+        assert_eq!(b5_9ad4_mb_face(), (0x9B2F, true)); // refs 法直得
+        assert_eq!(b5_9b2f_mb_face(), (0x9AD4, true)); // 同族面
+    }
+}
