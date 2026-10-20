@@ -6789,6 +6789,24 @@ a3-028: 1/8 PASS+7 FAIL（表值变换辨（mismatch）——考证进度态（�
 待（显式待做））⑤测 540 全绿+L2 3107/812（账目面全合）。findings（r10）：1（a3-017
 OAM 链未落=needs_revision）+1 gap 显式（a3-028 变换径待辨（诚实标定））。
 
+## port2 X 链算径+decomp fixture 扩双审（落件即审·实测核）
+
+### ① a3-017 X 链算径 verdict: pass | ② decomp fixture 扩 verdict: 待落（在产）
+
+**实测 diff 输出原文（A 级——非声称核）**：
+```
+a3-017: [PASS]×8（0 FAIL）✓✓✓✓✓✓✓✓（OAM 链全模拟+case 特异地址+值径落）
+a3-028: 1/8 PASS+7 FAIL（变换径辨（源径待 fixture 扩）——考证进度态（诚实标定））
+```
+
+四条核：①**a3-017=8/8 全绿 ✓✓**（port2 4821d62（SC-B3-017 OAM 链全模拟+case
+特异地址+值径））：OAM 链全模拟（in.030D/in.030E 双径辨（is_special 条件径辨
+（case-0 特异辨）））+case 特异地址+值径实现落=全径精确+账清转 strict 落定 ✓
+（队列末二件）②**decomp fixture 扩=待落**（在产——633c044（变换径辨）内声明
+「源径待 fixture 扩（casegen in 集捕获+$0405+x 族）」=待落件（review 待落件
+（「落件即审」）））③测 540 全绿+L2 账目面全合。findings（r10）：1 待落（decomp
+fixture 扩（在产））。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
