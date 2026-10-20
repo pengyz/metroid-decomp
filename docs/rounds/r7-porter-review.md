@@ -5039,6 +5039,21 @@ SC-B6-16（B 区余 71 卡）预告随账。
 （族域述**330 测里程碑**）。findings（r10）：0 新。SC-B6-19（B 区余 68 卡）
 预告随账。
 
+## 移动臂深化收束审（八卡收官）——SC-MD-001..008 收束定谳
+
+### verdict: pass（移动臂深化收束全=D3 全链+D7 全录）
+
+四条核：①**八卡收官 ✓**（SC-MD-001..008 全件）：SamusJump/SamusDoor/SamusPntUp/
+状态机/SamusRun/SamusDead/SamusElevator 族——**Samus 物理域七全**（跳动/奔跑/
+瞄准/门/死亡/电梯/状态机）②**D3 ROM 执行 golden 全链 ✓**（物理面 35-45 写系列
++状态机 9 员+跑动 41 写——ROM 实证全链）③**D7 声明形全录 ✓**：md_samusjump
+（fixture 面差 L3 路由）+md_checkhorz/checkfire（BRK L3）+全族 TOLERATED 注册
+（gap_map 23+ MD 域条目全谱（183→199+ 总）——显式缺口+路线图出口全显式）④
+**方法论沉淀**（臂深化资产）：六段方法链（预登记→asm 辨定→D3 抓取→烤案转换→
+stops 位法→D7 声明形）+教训类三件（插位症四现（块类型辨！）/名形症/fixture
+镜像面）——可复用（后续主战场）。测 474。findings（r10）：0 新。
+**新主战场接续**（master-plan G 序——移动臂深化收束全 ✓）预告随账。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
