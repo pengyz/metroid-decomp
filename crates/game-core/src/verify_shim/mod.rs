@@ -3391,15 +3391,29 @@ pub fn a2_cluster_032(input: &L2In) -> L2Out {
 
 /// a2_cluster_034 适配（$9A81（S5-146 族区）——案实核 16 写（ptr 面+$04 族
 /// +S5-146 族+$6B01）；A=0/X=0/Y=57）。
-pub fn a2_cluster_034(_input: &L2In) -> L2Out {
+pub fn a2_cluster_034(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    // 值链算径：case-1/3/4/5/6→$6AF9←62/$6AFA←63；case-0/2/7→$6AF9←56/$6AFA←57
+    // （chain-compute 多入参（in.030D 四径辨））——非固定值！
+    let v30d = r(0x030D);
+    let is_62 = v30d == 85 || v30d == 142 || v30d == 6 || v30d == 250 || v30d == 249;
+    let v85 = if is_62 { 62 } else { 56 };
+    let v86 = if is_62 { 63 } else { 57 };
+    // $0405←1 条件径（case-0 有/case-1 无——chain-compute 多入参）
+    let has_405 = !is_62; // case-0/2/7→有；case-1/3/4/5/6→无
+    let mut writes = vec![
+        (0x0000u16, 1), (0x0002, 0), (0x0004, 8), (0x0008, 0), (0x0009, 0),
+        (0x000B, 0),
+        (0x0400, 1), (0x0404, 0), (0x040A, 1), (0x040E, 0),
+        (0x6AF7, 0), (0x6AF8, 3), (0x6AF9, v85), (0x6AFA, v86), (0x6B01, 255),
+    ];
+    if has_405 {
+        writes.push((0x0405, 1));
+    }
+    // Y 计算径：Y=$6AFA 值（chain-compute 多入参）
     L2Out {
-        a: 0, x: 0, y: 57,
-        writes: merge_writes(vec![
-            (0x0000, 1), (0x0002, 0), (0x0004, 8), (0x0008, 0), (0x0009, 0),
-            (0x000B, 0),
-            (0x0400, 1), (0x0404, 0), (0x0405, 1), (0x040A, 1), (0x040E, 0),
-            (0x6AF7, 0), (0x6AF8, 3), (0x6AF9, 56), (0x6AFA, 57), (0x6B01, 255),
-        ]),
+        a: 0, x: 0, y: v86,
+        writes: merge_writes(writes),
     }
 }
 
@@ -6001,7 +6015,7 @@ pub fn a9_cluster_034(_input: &L2In) -> L2Out {
         a: 0, x: 0, y: 78,
         writes: merge_writes(vec![
             (0x0000, 1), (0x0002, 0), (0x0004, 8), (0x0008, 0), (0x0009, 0), (0x000B, 0),
-            (0x0400, 1), (0x0404, 0), (0x0405, 1), (0x040A, 1), (0x040E, 0),
+            (0x0400, 1), (0x0404, 0), (0x040A, 1), (0x040E, 0),
             (0x6AF7, 0), (0x6AF8, 3), (0x6AF9, 77), (0x6AFA, 78), (0x6B01, 255),
         ]),
     }
