@@ -6261,6 +6261,33 @@ probe_mem/watch_ranges DSL（plan 文件+$6AF4+x 族扩→Mesen2 capture 再生�
 ④测 540 全绿+L2 3107/909（账目面全合）。findings（r10）：1 gap 显式（a3-028 再生
 待跑（诚实标定））。
 
+## SC-B3-012 OAM 链+decomp 值径考证双审（落件即审·实测核）
+
+### ① SC-B3-012 OAM 链 verdict: needs_revision | ② decomp 值径考证 verdict: pass（诚实标定）
+
+**实测 diff 输出原文（A 级——非声称核）**：
+```
+a3-012: [PASS]×5+[FAIL]×3（case-3/4/7——值链算径 gap）
+[FAIL] a3-012-case-3: golden=(..., (522, 32), (526, 32), ...)  core=(..., (522, 112), (526, 112), ...)
+[FAIL] a3-012-case-4: golden=(..., (4, 64), (5, 96), (514, 96), (522, 32), ...)  core=(..., (4, 0), (5, 112), (514, 48), (522, 112), ...)
+[FAIL] a3-012-case-7: golden=(..., (522, 32), (526, 32), ...)  core=(..., (522, 112), (526, 112), ...)
+a3-028: 1/8 PASS+7 FAIL（再生待径辨——考证进度态（诚实标定））
+```
+
+四条核：①**a3-012=5/8+case-3/4/7 gap（契约族）**：golden OAM attr 值（522/526←32）
+vs core（522/526←112）——**值链算径 gap**（chain-compute 多入参（case-3 值链算径
+复杂）——attr 值（32 vs 112）+寄存器值（case-4 (4,64)/(5,96) vs (4,0)/(5,112)））
+——OAM 链全模拟近全（case-0/1/2/5/6 全等 ✓）但 **case-3/4/7 值链算径 gap 残**——
+**修复要求**：值链算径实现（chain-compute 多入参（attr/寄存器 case 变值））→8 案
+全等→账清转 strict ②**a3-028 再生待径辨=诚实标定 ✓**（decomp 4561883）：**casegen
+再生待径辨**（plan 文件无（oracle/scenarios/ 无 a3-028 相关）——casegen fixture
+生成=**外部 capture 径**（LCG→Mesen2 golden（ad hoc）））+**再生待 plan 建**
+（probe_mem+$6AF4+x 族 plan→Mesen2 capture）+值径待 fixture 扩——claim 与实测
+一致（1/8+7 FAIL 考证进度态（非声称修复（「0 败」纪律面 ✓）））③**再生径辨核 ✓**
+（plan 文件缺失辨+外部 capture 径辨+plan 建待做（显式））④测 540 全绿+L2 3107/904。
+findings（r10）：1（a3-012 case-3/4/7 值链算径 gap=needs_revision）+1 gap 显式
+（a3-028 再生待 plan 建（诚实标定））。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
