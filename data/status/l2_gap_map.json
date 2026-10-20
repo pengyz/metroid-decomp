@@ -97,7 +97,7 @@
       "id": "SC-S3-066-CROSSCARD-6",
       "case_prefix": "s3-066-case-6",
       "reason": "深径多路（$0200 区写族 ~200 项——S1-17/S2-031 同款跨卡效应链（S1-05 深径））——golden 含他卡效应=正常",
-      "exit": "【2026-10-20 建模缺口定案】源卡移动链建模清——链=源卡深径建模（refs 法直得（S1-05 域/移动链/handler 集/VRAM 缓冲写族）——全链模拟）→账清转 strict（待建模清）",
+      "exit": "【2026-10-20 建模缺口定案 v2】已知 pattern 转写（refs/asm 优先参考）——转写 case 变值复杂（chain-compute 多入参（fixture 依赖（case 特异 OAM 数据径（anim 帧数据——$0680←8/$0683←8——case 特异））））→账清转 strict（待建模清）",
       "registered": "2026-10-19"
     },
     {
