@@ -1758,6 +1758,13 @@
       "reason": "SFX_Door OAM 深径链（55 写（>20 深径判别条触发）——$8CE0/$CBDA bank7 化身（a2-025 同款）——预登记先行（严格顺序）——S5-121 同款跨卡深径（B 区收官批））",
       "exit": "SFX_Door 链径建模清（全链模拟）→账清转 strict",
       "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-B9-024-CROSSCARD-SELECTPAL",
+      "case_prefix": "a9-024-case-",
+      "reason": "SelectSamusPalette OAM 深径链（54 写（>20 深径判别条触发）——$8CE3/$CB73 bank7 化身（a2-026 同款）——预登记先行（严格顺序）——S5-121 同款跨卡深径（B 区收官批））",
+      "exit": "SelectPal 链径建模清（全链模拟）→账清转 strict",
+      "registered": "2026-10-20"
     }
   ]
 }
