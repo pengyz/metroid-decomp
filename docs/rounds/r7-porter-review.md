@@ -5054,6 +5054,19 @@ stops 位法→D7 声明形）+教训类三件（插位症四现（块类型辨�
 镜像面）——可复用（后续主战场）。测 474。findings（r10）：0 新。
 **新主战场接续**（master-plan G 序——移动臂深化收束全 ✓）预告随账。
 
+## SC-B6-19/20 双卡审（DoorSubRoutine8C8A+Adiv16 bank4 双化身）
+
+### verdict: pass（双卡）
+
+四条核：①**双化身 ✓✓**：bank04:8C8A=`20 fb 8c 20 76 8c a6 4b` 与 bank1 $8C8A
+**全同**（a1-019 同形（JSR $8CFB WriteDoorBGTiles_Solid 链）=门族四 bank 谱五员
+（DrawDoor→8C61→8C71→8C76→8C8A））+bank04:8C97=`20 bf c2 45 91 4a 90 08` 与
+bank1 $8C97 **全同**（a1-020 同形（JSR $C2BF 调用链）=Adiv16 四 bank 谱）②**双预
+登记 ✓**（202 条目=DOORSUB8C8A-B6-019（60 写触发）+ADIV16-B6-020（54 写触发））
+——深径判别条双触发→预登记→L2 并案=严格顺序双续 ③refs 法直得（$C2BF Adiv16
+位移面（`4a×4 60` ÷16））+双 8 案账内 ④员面双扫桩 0。测 475。findings（r10）：
+0 新。SC-B6-21（a6 批末卡段——B 区余 66 卡）预告随账。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
