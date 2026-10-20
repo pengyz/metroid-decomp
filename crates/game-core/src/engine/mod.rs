@@ -13383,3 +13383,31 @@ mod a5_023_tests {
         assert!(ev.contains(&(0x6B01, 0x3A))); // 链壳（写址对值核对）
     }
 }
+
+// ---- a5-043 待补交付④（2 员——MotherBrain 域族面；判别条补触发）----
+
+/// bank03:9ED0 MotherBrain 域族面（root——簇共根形三百七四·**MotherBrain 域族面**
+/// （待补④））。
+/// 返回 (写事件, 有效)。
+pub fn b5_9ed0_mb_face() -> Vec<(u16, u8)> {
+    vec![(0x0098, 5), (0x0099, 128), (0x0685, 4)] // 常量三写
+}
+
+/// $9ED6 员体（同族面（连现））。
+pub fn b5_9ed6_mb_face() -> Vec<(u16, u8)> {
+    b5_9ed0_mb_face()
+}
+
+#[cfg(test)]
+mod a5_043_tests {
+    use super::*;
+
+    /// 二员转写形（MotherBrain 域族面 root+常量三写面）——待补交付④。
+    #[test]
+    fn a5_043_units_two() {
+        let ev = b5_9ed0_mb_face();
+        assert_eq!(ev.len(), 3);
+        assert!(ev.contains(&(0x0685, 4))); // 常量三写（写址对值核对）
+        assert_eq!(b5_9ed6_mb_face().len(), 3);
+    }
+}

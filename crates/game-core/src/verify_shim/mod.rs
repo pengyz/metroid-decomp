@@ -5437,3 +5437,15 @@ pub fn a4_cluster_022(input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- a5-043 待补交付④ 簇入口适配（a5_cluster_043 ← bank03:9ED0——判别条补触发）----
+
+/// a5_cluster_043 适配（bank03:9ED0（MotherBrain 域（refs 法直得））——案实核
+/// 3 写（$0098/$0099/$0685←5/128/4（fixture 弱源——判别条补触发→账目预登记
+/// （VALCHAIN-B5-043）——待补④））；A=128/X 透传/Y 透传）。
+pub fn a5_cluster_043(input: &L2In) -> L2Out {
+    L2Out {
+        a: 128, x: input.x, y: input.y,
+        writes: merge_writes(vec![(0x0098, 5), (0x0099, 128), (0x0685, 4)]),
+    }
+}
