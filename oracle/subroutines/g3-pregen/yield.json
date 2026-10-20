@@ -38,5 +38,6 @@
   "t45_state": "T45 场景包协同续（三断言面核过——zp/iram/pw 全+四段注全）——G4 消费方就绪态",
   "g5_closure": "G5 收官随行（分母/Gate 面态差核过——终形稳/Gate 稳）——G5 收官支撑态",
   "g5_closure_2": "G5 收官随行续（态差核过——分母/Gate 稳）——收官支撑态保持",
-  "tolerated_face": "G5 收官随行（收敛族+TOLERATED 消费面核过——L4 3 项账内容忍在列）——收官支撑态保持"
+  "tolerated_face": "G5 收官随行（收敛族+TOLERATED 消费面核过——L4 3 项账内容忍在列）——收官支撑态保持",
+  "convergence_incremental": "收敛族协同续（态差核过——L4 三步径/WARN 候裁面在列）——收官支撑态保持"
 }
