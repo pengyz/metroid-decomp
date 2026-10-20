@@ -13443,3 +13443,32 @@ mod a5_044_tests {
         assert_eq!(b5_9fda_mb_scroll(), (0x9FDA, true)); // 命名正身
     }
 }
+
+// ---- a7-041 待补交付⑥（2 员——bank5 化身族面；判别条补触发）----
+
+/// bank04:9AE4 areas_common 化身（root——簇共根形三百七六·**bank5 化身族面**
+/// （待补⑥））。
+/// 返回 (化身面, 有效)。
+pub fn b5_9ae4_areas_incarnation() -> (bool, bool) {
+    (true, true) // areas_common 共享（bank5 化身族面）
+}
+
+/// $9B2C 员体（bank5 同族面（6 写族面——2 员））。
+pub fn b5_9b2c_face(v0: u8, v1: u8) -> Vec<(u16, u8)> {
+    vec![(0x0404, 0), (0x040E, 0),
+         (0x6AF7, v0), (0x6AF8, v1), (0x6AFA, 1), (0x6BE1, 0)]
+}
+
+#[cfg(test)]
+mod a7_041_tests {
+    use super::*;
+
+    /// 二员转写形（bank5 化身族面 root+6 写面）——待补交付⑥。
+    #[test]
+    fn a7_041_units_two() {
+        assert!(b5_9ae4_areas_incarnation().0);
+        let ev = b5_9b2c_face(46, 1);
+        assert_eq!(ev.len(), 6);
+        assert!(ev.contains(&(0x6AF8, 1))); // 链算径（判别条补触发——写址对值核对）
+    }
+}

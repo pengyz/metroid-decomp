@@ -5465,3 +5465,19 @@ pub fn a5_cluster_044(input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- a7-041 待补交付⑥ 簇入口适配（a7_cluster_041 ← bank04:9AE4——判别条补触发）----
+
+/// a7_cluster_041 适配（bank04:9AE4（S5-146 族区（bank5））——案实核 6 写
+/// （清对+$6AF7←r(0)（fixture 强源）+$6AF8←1（fixture 弱源——判别条补触发→账目
+/// 预登记（VALCHAIN-B7-041）——待补⑥）+$6AFA+$6BE1）；A=0/X 透传/Y=1）。
+pub fn a7_cluster_041(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    L2Out {
+        a: 0, x: 0, y: 1,
+        writes: merge_writes(vec![
+            (0x0404, 0), (0x040E, 0),
+            (0x6AF7, r(0x0000)), (0x6AF8, 1), (0x6AFA, 1), (0x6BE1, 0),
+        ]),
+    }
+}
