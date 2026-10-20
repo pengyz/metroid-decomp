@@ -6058,6 +6058,26 @@ a7-041: [PASS]（case-0 复核——账清落定后全等维持）
 （DoorSubRoutine→DrawDoor→OAM 绘制径）+账清转 strict 核）。测 540 全绿+
 L2 3107/964（账目面全合）。findings（r10）：0 新。
 
+## port2 门链 OAM+decomp VALCHAIN 双审（落件即审·实测核）
+
+### ① port2 门链 OAM verdict: 部分 pass（队首 2 件账清 ✓+SC-B2-022 定义落+实现未落）| ② decomp VALCHAIN verdict: pass
+
+**实测 diff 输出原文（A 级——非声称核）**：
+```
+a1-015: [PASS]×8（0 FAIL）✓✓✓✓✓✓✓✓    a1-016: [PASS]×8（0 FAIL）✓✓✓✓✓✓✓✓
+a2-022: [FAIL]×8（OAM 链全模拟未落——gap 残（fixture 依赖））
+```
+
+四条核：①**队首 2 件账清 ✓✓**（SC-B1-015/016=8/8+8/8 全绿（建模已落（8/8 首提
+全过）claim 实测核 ✓）——账清转 strict 落定（b0a8412 TOLERATED 消费））②
+**SC-B2-022 建模缺口定案 v2 ✓（定义落）**：条件径（fixture $0409/$040A→OAM
+absent（explode 路径）——全案拟合）+OAM 数据径（$0200←变量（fixture 依赖））+
+ptr 面径（$00←203（fixture 依赖））——OAM 链全模拟（fixture 依赖）建模=定义
+精确（A 级（案组分析 8 案+条件径定案））③**实现未落**（a2-022=8/8 FAIL=OAM 链
+全模拟实现待落（gap 残=fixture 依赖径））——队列第二件（OAM 链全模拟）=实现
+在产 ④②decomp VALCHAIN 队列首二件=8/8+8/8 全绿 ✓（建模清落）。测 540 全绿+
+L2 3107/964。findings（r10）：1（SC-B2-022 实现待落（gap 残=定义已精确））。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
