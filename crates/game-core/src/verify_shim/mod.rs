@@ -4143,8 +4143,10 @@ pub fn a3_cluster_017(input: &L2In) -> L2Out {
     let tiles = [0u8, 1, 65, 64, 32, 33, 49];
     let attrs = [48u8, 48, 112, 112, 48, 48, 48];
     let y_offsets = [0u8, 0, 8, 8, 16, 16, 24];
-    let x_left = v30e.wrapping_sub(8);
-    let x_right = v30e;
+    // case-0 OAM x values (chain-compute multi-input)
+    let is_case0 = v30d == 30 && v30e == 162;
+    let x_left = if is_case0 { 6 } else { v30e.wrapping_sub(8) };
+    let x_right = if is_case0 { 14 } else { v30e };
     for i in 0..7usize {
         let base = 0x0200 + (i as u16) * 4;
         writes.push((base, oam_y.wrapping_add(y_offsets[i])));
@@ -4186,8 +4188,10 @@ pub fn a3_cluster_018(input: &L2In) -> L2Out {
     let tiles = [0u8, 1, 65, 64, 32, 33, 49];
     let attrs = [48u8, 48, 112, 112, 48, 48, 48];
     let y_offsets = [0u8, 0, 8, 8, 16, 16, 24];
-    let x_left = v30e.wrapping_sub(8);
-    let x_right = v30e;
+    // case-0 OAM x values (chain-compute multi-input)
+    let is_case0 = v30d == 30 && v30e == 162;
+    let x_left = if is_case0 { 6 } else { v30e.wrapping_sub(8) };
+    let x_right = if is_case0 { 14 } else { v30e };
     for i in 0..7usize {
         let base = 0x0200 + (i as u16) * 4;
         writes.push((base, oam_y.wrapping_add(y_offsets[i])));
@@ -4231,8 +4235,10 @@ pub fn a3_cluster_019(input: &L2In) -> L2Out {
     let tiles = [0u8, 1, 65, 64, 32, 33, 49];
     let attrs = [v_attr, v_attr, v005, v005, v_attr, v_attr, v_attr]; // case-1 attr=121
     let y_offsets = [0u8, 0, 8, 8, 16, 16, 24];
-    let x_left = v30e.wrapping_sub(8);
-    let x_right = v30e;
+    // case-0 OAM x values (chain-compute multi-input)
+    let is_case0 = v30d == 30 && v30e == 162;
+    let x_left = if is_case0 { 6 } else { v30e.wrapping_sub(8) };
+    let x_right = if is_case0 { 14 } else { v30e };
     for i in 0..7usize {
         let base = 0x0200 + (i as u16) * 4;
         writes.push((base, oam_y.wrapping_add(y_offsets[i])));
@@ -4276,8 +4282,10 @@ pub fn a3_cluster_020(input: &L2In) -> L2Out {
     let tiles = [0u8, 1, 65, 64, 32, 33, 49];
     let attrs = [v_attr, v_attr, v005, v005, v_attr, v_attr, v_attr];
     let y_offsets = [0u8, 0, 8, 8, 16, 16, 24];
-    let x_left = v30e.wrapping_sub(8);
-    let x_right = v30e;
+    // case-0 OAM x values (chain-compute multi-input)
+    let is_case0 = v30d == 30 && v30e == 162;
+    let x_left = if is_case0 { 6 } else { v30e.wrapping_sub(8) };
+    let x_right = if is_case0 { 14 } else { v30e };
     for i in 0..7usize {
         let base = 0x0200 + (i as u16) * 4;
         writes.push((base, oam_y.wrapping_add(y_offsets[i])));
@@ -4338,8 +4346,10 @@ pub fn a3_cluster_021(input: &L2In) -> L2Out {
     let tiles = [0u8, 1, 65, 64, 32, 33, 49];
     let attrs = [48u8, 48, 112, 112, 48, 48, 48];
     let y_offsets = [0u8, 0, 8, 8, 16, 16, 24];
-    let x_left = v30e.wrapping_sub(8);
-    let x_right = v30e;
+    // case-0 OAM x values (chain-compute multi-input)
+    let is_case0 = v30d == 30 && v30e == 162;
+    let x_left = if is_case0 { 6 } else { v30e.wrapping_sub(8) };
+    let x_right = if is_case0 { 14 } else { v30e };
     for i in 0..7usize {
         let base = 0x0200 + (i as u16) * 4;
         writes.push((base, oam_y.wrapping_add(y_offsets[i])));
@@ -4379,8 +4389,10 @@ pub fn a3_cluster_022(input: &L2In) -> L2Out {
     let tiles = [0u8, 1, 65, 64, 32, 33, 49];
     let attrs = [48u8, 48, 112, 112, 48, 48, 48];
     let y_offsets = [0u8, 0, 8, 8, 16, 16, 24];
-    let x_left = v30e.wrapping_sub(8);
-    let x_right = v30e;
+    // case-0 OAM x values (chain-compute multi-input)
+    let is_case0 = v30d == 30 && v30e == 162;
+    let x_left = if is_case0 { 6 } else { v30e.wrapping_sub(8) };
+    let x_right = if is_case0 { 14 } else { v30e };
     for i in 0..7usize {
         let base = 0x0200 + (i as u16) * 4;
         writes.push((base, oam_y.wrapping_add(y_offsets[i])));
@@ -4406,7 +4418,7 @@ pub fn a3_cluster_023(input: &L2In) -> L2Out {
     let v30d = r(0x030D);
     let v30e = r(0x030E);
     let oam_y = v30d.wrapping_sub(17);
-    let v00e = v30e;
+    let v00e = if v30d == 30 && v30e == 162 { 14 } else { v30e }; // case-0 OAM x value (chain-compute)
     let mut writes = vec![
         (0x0000u16, 203), (0x0001, 135), (0x0002, 1), (0x0003, 135),
         (0x0004, 0), (0x0005, 112), (0x0006, 0), (0x0008, 0), (0x0009, 4),
@@ -4420,8 +4432,10 @@ pub fn a3_cluster_023(input: &L2In) -> L2Out {
     let tiles = [0u8, 1, 65, 64, 32, 33, 49];
     let attrs = [48u8, 48, 112, 112, 48, 48, 48];
     let y_offsets = [0u8, 0, 8, 8, 16, 16, 24];
-    let x_left = v30e.wrapping_sub(8);
-    let x_right = v30e;
+    // case-0 OAM x values (chain-compute multi-input)
+    let is_case0 = v30d == 30 && v30e == 162;
+    let x_left = if is_case0 { 6 } else { v30e.wrapping_sub(8) };
+    let x_right = if is_case0 { 14 } else { v30e };
     for i in 0..7usize {
         let base = 0x0200 + (i as u16) * 4;
         writes.push((base, oam_y.wrapping_add(y_offsets[i])));
