@@ -5032,3 +5032,14 @@ pub fn a8_cluster_007(_input: &L2In) -> L2Out {
 pub fn a8_cluster_008(input: &L2In) -> L2Out {
     L2Out { a: input.a, x: input.x, y: input.y, writes: vec![] }
 }
+
+// ---- SC-B8-09 簇入口适配（a8_cluster_009 ← bank05:8027——常量单写）----
+
+/// a8_cluster_009 适配（bank05:8027（bank6 窗）——案实核 1 写（$02←0（常量——
+/// 判别条未触发（严格顺序 ✓）））；A=0/X 透传/Y 透传）。
+pub fn a8_cluster_009(input: &L2In) -> L2Out {
+    L2Out {
+        a: 0, x: input.x, y: input.y,
+        writes: merge_writes(vec![(0x0002, 0)]),
+    }
+}
