@@ -6240,6 +6240,27 @@ golden——8 案 fixture 再生成）=工具件方案（显式））④测 540 
 findings（r10）：1（a2-026 case-7 值差 gap=needs_revision）+1 gap 显式（a3-028
 再生待跑（诚实标定））。
 
+## port2 门链 OAM+decomp casegen 再生双审（落件即审·实测核——双 pass）
+
+### ① a2-026 OAM 链 verdict: pass | ② decomp casegen 再生 verdict: pass（诚实标定）
+
+**实测 diff 输出原文（A 级——非声称核）**：
+```
+a2-026: [PASS]×8（0 FAIL）✓✓✓✓✓✓✓✓（case-7 值差修+批量正误伤修复落）
+a3-028: 1/8 PASS+7 FAIL（再生跑径到手——考证进度态（诚实标定））
+```
+
+四条核：①**a2-026=8/8 全绿 ✓✓**（port2 8a68cc8）：case-7 寄存器值差修（22 vs 28）
++**批量正误伤修复**（写址对值核对条扩展（多函数 pattern 命中防护）=观察项对账
+产物续）——OAM 链全模拟全径精确+账清转 strict 落定 ✓②**a3-028 casegen 再生跑径
+到手=诚实标定 ✓**（decomp 9ad7152）：**再生跑径到手**（scenario_capture
+probe_mem/watch_ranges DSL（plan 文件+$6AF4+x 族扩→Mesen2 capture 再生成））+
+**再生待跑**（8 案 fixture）+值径待 fixture 扩（源值不在 in 集）——claim 与实测
+一致（1/8+7 FAIL 考证进度态（非声称修复（「0 败」纪律面 ✓）））③**casegen DSL
+方案核 ✓**（probe_mem/watch_ranges DSL（plan 文件+族扩）=工具件方案（显式））
+④测 540 全绿+L2 3107/909（账目面全合）。findings（r10）：1 gap 显式（a3-028 再生
+待跑（诚实标定））。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
