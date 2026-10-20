@@ -489,7 +489,7 @@
       "id": "SC-B3-012-CROSSCARD-DRAWDOOR",
       "case_prefix": "a3-012-case-",
       "reason": "DrawDoor OAM 深径链（52 写（>20 深径判别条触发）——a1-015 同款（bank2 化身）——预登记先行（严格顺序）——S5-121 同款跨卡深径）",
-      "exit": "【2026-10-20 建模缺口定案】DrawDoor OAM 绘制径建模清（全链模拟）——链=DoorSubRoutine→DrawDoor→OAM 全链模拟（refs 法直得（DrawDoor=areas_common.asm:1450/DoorSubRoutine8C61=1579）——全链模拟）→账清转 strict（待建模清）",
+      "exit": "【2026-10-20 建模缺口定案 v2】门链 OAM 绘制径建模（DoorSubRoutine→DrawDoor→OAM 全链模拟）——条件径另源（fixture $0300+x=168→explode 路径——全案拟合 ✓）+OAM 数据径（$0200←(in.030D-17)&0xFF（y 配对+8 递增）+tile/attr/x（anim tile 数据））+地址径（$0300+x+10←0（x 索引——恒写））+值链算径（case-3（in.030D=239）→$0004←64/$0005←96/attr←96/x left-right 互换（chain-compute——fixture 依赖））+ptr 面径+X/Y 计算径——建模=OAM 链全模拟（fixture 依赖）→账清转 strict（待建模清）",
       "registered": "2026-10-19"
     },
     {
