@@ -7015,6 +7015,27 @@ a3-028: 1/8 PASS+7 FAIL（+4/+8 源径辨（mismatch）——考证进度态（�
 全绿+L2 账目面全合。findings（r10）：1（a3-021 转写部分落续=needs_revision）+1 gap
 显式（a3-028 +4/+8 源待辨（诚实标定））。
 
+## port2 已知 pattern+decomp +4/+8 源径辨续双审（落件即审·实测核——双 pass）
+
+### ① a3-021 已知 pattern verdict: pass | ② decomp +4/+8 源径辨续 verdict: pass（诚实标定）
+
+**实测 diff 输出原文（A 级——非声称核）**：
+```
+a3-021: [PASS]×8（0 FAIL）✓✓✓✓✓✓✓✓（转写补全实落（寄存器+多写径））
+a3-028: 1/8 PASS+7 FAIL（+4/+8 源径辨续（mismatch）——考证进度态（诚实标定））
+```
+
+四条核：①**a3-021=8/8 全绿 ✓✓**（port2 df8bc75（SC-B3-021 转写补全实落（寄存器+
+多写径）））：转写补全**实落**（「实落（非声称！）」判据照做——寄存器值+多写径实际
+落地（golden (0, 203), (1, 135)... + (1022/1024, 823/825...) = core 合形））=全径
+精确+账清转 strict 落定 ✓②**a3-028 +4/+8 源径辨续=诚实标定 ✓**（decomp 16391f9）：
+**+4/+8 源径辨续**（其他径考证：fixture in ram（20/248/3/86/...）vs golden +4/+8
+（16/140）——**mismatch**（fixture 值≠golden——源待辨（**表值≠fixture≠golden**）））
++transform 待深挖——claim 与实测一致（1/8+7 FAIL 考证进度态（非声称修复（「0 败」
+纪律面 ✓）））③**+4/+8 源径辨续核 ✓**（fixture in ram vs golden mismatch 实录
+（表值≠fixture≠golden 三方辨识（显式）））④测 540 全绿+L2 3107/757（账目面全合）。
+findings（r10）：1 gap 显式（a3-028 +4/+8 源待辨（诚实标定））。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
