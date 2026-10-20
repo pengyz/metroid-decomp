@@ -286,7 +286,7 @@
       "id": "SC-B1-015-CROSSCARD-DRAWDOOR",
       "case_prefix": "a1-015-case-",
       "reason": "DrawDoor OAM 精灵深径（52 写（$0200-$021B 精灵族+ptr 面+态写）——refs 法直得结构（DrawDoor: asm:1450）+OAM 绘制链算（S1-17-CROSSCARD-S105 同款跨卡深径））",
-      "exit": "【2026-10-20 建模缺口定案】DrawDoor OAM 绘制径建模清（AnimDrawObject+OAM 链全模拟）——链=DoorSubRoutine→DrawDoor→OAM 全链模拟（refs 法直得（DrawDoor=areas_common.asm:1450/DoorSubRoutine8C61=1579）——全链模拟）→账清转 strict（待建模清）",
+      "exit": "【2026-10-20 消费】【2026-10-20 建模缺口定案】DrawDoor OAM 绘制径建模清（AnimDrawObject+OAM 链全模拟）——链=DoorSubRoutine（建模已落——8/8 首提全过）→账清转 strict ✓",
       "registered": "2026-10-19"
     },
     {
@@ -307,7 +307,7 @@
       "id": "SC-B1-016-CROSSCARD-DOORSUB",
       "case_prefix": "a1-016-case-",
       "reason": "DoorSubRoutine8C61 OAM 深径（60 写（门重关链（DoorHitPoints←1+BG 瓦片+status←2+anim+DrawDoor OAM）——refs 法直得结构（asm:1579）+OAM 绘制链算（S1-17-CROSSCARD-S105 同款））",
-      "exit": "【2026-10-20 建模缺口定案】DoorSubRoutine OAM 绘制径建模清（WriteDoorBGTiles+DrawDoor 链全模拟）——链=DoorSubRoutine→DrawDoor→OAM 全链模拟（refs 法直得（DrawDoor=areas_common.asm:1450/DoorSubRoutine8C61=1579）——全链模拟）→账清转 strict（待建模清）",
+      "exit": "【2026-10-20 消费】【2026-10-20 建模缺口定案】DoorSubRoutine OAM 绘制径建模清（WriteDoorBGTiles+DrawDoor 链全模拟）——链=DoorSubRoutine（建模已落——8/8 首提全过）→账清转 strict ✓",
       "registered": "2026-10-19"
     },
     {
