@@ -6508,6 +6508,28 @@ watch）——probe 仅写点（清 0）））+**fixture 扩待**（watch_range+
 540 全绿+L2 3107/882。findings（r10）：1（a2-035 case-5 寄存器值差=needs_revision）
 +1 gap 显式（a3-028 fixture 扩待（watch_range+6AF4-6B0F）（诚实标定））。
 
+## port2 门链 OAM+decomp fixture 扩再生成双审（落件即审·实测核——双 pass）
+
+### ① a2-035 OAM 链 verdict: pass | ② decomp fixture 扩再生成 verdict: pass（诚实标定）
+
+**实测 diff 输出原文（A 级——非声称核）**：
+```
+a2-035: [PASS]×8（0 FAIL）✓✓✓✓✓✓✓✓（\$0009 值链算（case-5）落）
+a3-028: 1/8 PASS+7 FAIL（fixture 扩再生成 DONE（源值全 0=链非简单源辨）——考证进度态（诚实标定））
+```
+
+四条核：①**a2-035=8/8 全绿 ✓✓**（port2 95bc249（SC-B2-035 $0009 值链算（case-5）））：
+case-5 寄存器值差修（$0009 值链算（250 vs 0）实现落）=全径精确+账清转 strict
+落定 ✓②**a3-028 fixture 扩再生成 DONE=诚实标定 ✓**（decomp dab81d4）：**fixture
+扩再生成 DONE**（watch_range+6AF4-6B0F——**8 案 capture 再生成**）+**源值全 0**
+（帧 0-5（清前/清后）——SRAM 初值）——**值径待深挖**（**链非简单源**（源 0→
+golden 114/108 mismatch）——**transform 内径待辨**）——claim 与实测一致（1/8+7 FAIL
+考证进度态（非声称修复（「0 败」纪律面 ✓）））③**fixture 扩再生成实录核 ✓**
+（watch_range 6AF4-6B0F+8 案 capture+源值帧核（帧 0-5 全 0））④**链非简单源辨核 ✓**
+（源 0→golden 114/108 mismatch=transform 内径待辨（显式））⑤测 540 全绿+
+L2 3107/880（账目面全合）。findings（r10）：1 gap 显式（a3-028 transform 内径待辨
+（链非简单源（源 0→golden 114/108））（诚实标定））。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
