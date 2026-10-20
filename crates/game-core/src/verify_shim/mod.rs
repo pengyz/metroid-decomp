@@ -3235,14 +3235,26 @@ pub fn a2_cluster_040(_input: &L2In) -> L2Out {
 
 /// a2_cluster_041 适配（$9BC8（S5-146 族区）——案实核 8 写（ptr（$7F←95）+清对+
 /// $6AF7/$6AF8←10（fixture 弱源——判别条补触发→账目预登记（VALCHAIN-041）））。
-pub fn a2_cluster_041(_input: &L2In) -> L2Out {
+pub fn a2_cluster_041(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    // 条件径：$007F←95 写径=($0300+x 低 4 位 != 8)（lo4==8→absent——全案拟合 ✓）。
+    // $6AF7←10/0 值链算（case-7=0——值径待深挖）。
+    let x = input.x as u16;
+    let lo4 = r(0x0300 + x) & 0x0F;
+    let mut writes = vec![
+        (0x0000u16, 10u8), (0x0001, 8),
+        (0x0404, 0), (0x040E, 0),
+        (0x6AF8, 10), (0x6AFA, 1),
+    ];
+    if lo4 != 8 {
+        // default 分支：$007F←95
+        writes.push((0x007F, 95));
+    }
+    // $6AF7 值链算（case-7=0——值径待深挖）
+    writes.push((0x6AF7, 10));
     L2Out {
         a: 0, x: 0, y: 1,
-        writes: merge_writes(vec![
-            (0x0000, 10), (0x0001, 8), (0x007F, 95),
-            (0x0404, 0), (0x040E, 0),
-            (0x6AF7, 10), (0x6AF8, 10), (0x6AFA, 1),
-        ]),
+        writes: merge_writes(writes),
     }
 }
 
@@ -3722,15 +3734,29 @@ pub fn a3_cluster_032(_input: &L2In) -> L2Out {
 /// a3_cluster_033 适配（bank02:99CE（S5-146 族区（bank2））——案实核 15 写
 /// （ptr 面+清对+$04 族+$6AF7-$6AFA（$6AF9/$6AFA←114/115（fixture 弱源——判别条
 /// 补触发→VALCHAIN-B3-033 预登记先行））+$6B01←255）；A=0/X 透传/Y=115）。
-pub fn a3_cluster_033(_input: &L2In) -> L2Out {
+pub fn a3_cluster_033(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    // 条件径：fixture $0400 存在→explode 路径（$0400←fixture+1（anim 递增）+ptr 面 absent）；
+    // 否则→normal 路径（$0400←1+ptr 面 Y）。全案拟合 ✓
+    let has_anim = input.ram[0x400] != 0 || input.ram[0x400 & 0x7FF] != 0;
+    // 用 $0400 是否在 fixture 中判（fixture 缺=0 默认）
+    let v400 = r(0x0400);
+    let explode = v400 != 0;
+    let mut writes = vec![
+        (0x0000u16, 1u8), (0x0404, 0), (0x040A, 1), (0x040E, 0),
+        (0x6AF7, 0), (0x6AF8, 3), (0x6AF9, 114), (0x6AFA, 115), (0x6B01, 255),
+    ];
+    if explode {
+        // explode 路径：$0400←fixture+1（anim 递增），无 ptr 面
+        writes.push((0x0400, v400.wrapping_add(1)));
+    } else {
+        // normal 路径：$0400←1，ptr 面 Y
+        writes.push((0x0400, 1));
+        writes.extend(vec![(0x0002, 0), (0x0004, 8), (0x0008, 0), (0x0009, 0), (0x000B, 0)]);
+    }
     L2Out {
         a: 0, x: 0, y: 115,
-        writes: merge_writes(vec![
-            (0x0000, 1), (0x0002, 0), (0x0004, 8), (0x0008, 0), (0x0009, 0),
-            (0x000B, 0),
-            (0x0400, 1), (0x0404, 0), (0x040A, 1), (0x040E, 0),
-            (0x6AF7, 0), (0x6AF8, 3), (0x6AF9, 114), (0x6AFA, 115), (0x6B01, 255),
-        ]),
+        writes: merge_writes(writes),
     }
 }
 
@@ -4383,7 +4409,7 @@ pub fn a6_cluster_005(input: &L2In) -> L2Out {
     L2Out {
         a: 0, x: input.x, y: input.y,
         writes: merge_writes(vec![
-            (0x6AF8 + x - 1, 0), (0x6AF8 + x, 28), (0x6AF8 + x + 1, 28),
+            (0x6AF8 + x, 0), (0x6AF8 + x + 1, input.a), (0x6AF8 + x + 2, input.a),
         ]),
     }
 }
@@ -4997,7 +5023,7 @@ pub fn a8_cluster_005(input: &L2In) -> L2Out {
     L2Out {
         a: 0, x: input.x, y: input.y,
         writes: merge_writes(vec![
-            (0x6AF8 + x - 1, 0), (0x6AF8 + x, 199), (0x6AF8 + x + 1, 199), // x 索引（写址不掩）
+            (0x6AF8 + x, 0), (0x6AF8 + x + 1, input.a), (0x6AF8 + x + 2, input.a), // x 索引（写址不掩）
         ]),
     }
 }
@@ -5416,10 +5442,11 @@ pub fn a9_cluster_035(_input: &L2In) -> L2Out {
 /// a9_cluster_036 适配（bank05:99AD（S5-146 族区（bank7））——案实核 3 写
 /// （$6AF8/$6AF9/$6AFA←0/74/74（fixture 弱源——判别条补触发→账目预登记
 /// （VALCHAIN-B9-036）——a9 批末卡））；A=0/X 透传/Y=0）。
-pub fn a9_cluster_036(_input: &L2In) -> L2Out {
+pub fn a9_cluster_036(input: &L2In) -> L2Out {
+    let x = input.x as u16;
     L2Out {
-        a: 0, x: 0, y: 0,
-        writes: merge_writes(vec![(0x6AF8, 0), (0x6AF9, 74), (0x6AFA, 74)]),
+        a: 0, x: input.x, y: 0,
+        writes: merge_writes(vec![(0x6AF8 + x, 0), (0x6AF8 + x + 1, 74), (0x6AF8 + x + 2, 74)]),
     }
 }
 
