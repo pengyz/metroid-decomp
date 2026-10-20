@@ -5464,6 +5464,20 @@ bank 含 bank6 非镜像域的 code 区）=共根形三百四八）②**DRAWDOOR
 ④员面双扫桩 0（2 员真现）。测 509。findings（r10）：0 新。SC-B8-14（B 区余
 34 卡）预告随账。
 
+## SC-B8-14 卡审（fd8620f）——DoorSubRoutine8C61 bank6 化身（DOORSUB-B8-014）
+
+### verdict: pass
+
+四条核：①**DoorSubRoutine8C61 bank6 化身 ✓（claim 位逐字）**：bank05:8C61=
+`a9 01 9d 0f 03 20 fb 8c`（=a1-016 同形门重关面（LDA #$01/STA $030F,X/JSR
+$8CFB）——bank6 化身（第 6 切换 bank（prg[5]）））②**门族谱辨析照条**（命名
+惯例记档）：门族六 bank 全谱（DrawDoor $8BB1）✓（SC-B8-13 已核 bank1-6 全同）
+——8C61 成员=5 bank（prg[1-5]）+prg[6]（$8C61 位=数据区=bank6 域内容（该 offset
+非代码））——claim 未断言 8C61 六 bank 谱（仅 DrawDoor 六 bank）=claim 边界精确
+③**DOORSUB-B8-014 预登记 ✓**（243 条目）：60 写>20 阈值判别条触发→预登记→L2
+并案=严格顺序续 ④8 案账内+员面双扫桩 0（2 员真现）。测 510。findings（r10）：
+0 新。SC-B8-15（B 区余 33 卡）预告随账。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
