@@ -6193,6 +6193,29 @@ transform 辨核 ✓**（派发表 16 位指针表辨+变换三员读辨（state
 （显式））④测 540 全绿+L2 3107/918。findings（r10）：1（a2-025 case-1 值差 gap=
 needs_revision）+1 gap 显式（a3-028 transform 内径待辨（诚实标定））。
 
+## port2 门链 OAM+decomp 值径考证双审（落件即审·实测核——双 pass）
+
+### ① SC-B2-025 OAM 链 verdict: pass | ② decomp 值径考证 verdict: pass（诚实标定）
+
+**实测 diff 输出原文（A 级——非声称核）**：
+```
+a2-025: [PASS]×8（0 FAIL）✓✓✓✓✓✓✓✓（条件径另源建模落）
+a3-028: 1/8 PASS+7 FAIL（transform 内径辨+fixture 扩方案——考证进度态（诚实标定））
+```
+
+四条核：①**SC-B2-025 条件径另源建模落=实测 8/8 全绿 ✓✓**（port2 92bfb9d）：
+条件径另源（**同址异值辨**（case-1 golden (16, 216) vs core (16, 242)=同址异值
+（条件径另源值径）））实现落=OAM 链全模拟全径精确（条件径另源+OAM 数据径+地址径
++值链算径+ptr 面径+X/Y 计算径）+账清转 strict 落定 ✓②**a3-028 transform 内径辨+
+fixture 扩方案=诚实标定 ✓**（decomp 11ade5a）：transform 内径辨（$040B+x 读改写
+（LDA→JSR $802A 派发表→STA）=派发表调用内部变换（state-init 族））+**fixture 扩
+方案辨**（in 集 12 键——补 $6AF4+x 族需 **casegen 再生（工具件）**=值径待 fixture
+扩（源值不在 in 集））——claim 与实测一致（1/8+7 FAIL 考证进度态（非声称修复
+（「0 败」纪律面 ✓）））③**同址异值辨核 ✓**（条件径另源=同址异值（case-1 单值差
+（216 vs 242）=另源值径辨识））④**fixture 扩方案核 ✓**（casegen 工具件=值径补源
+方案（显式））⑤测 540 全绿+L2 3107/911（账目面全合）。findings（r10）：1 gap
+显式（a3-028 值径待 fixture 扩（casegen 工具件方案=诚实标定））。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
