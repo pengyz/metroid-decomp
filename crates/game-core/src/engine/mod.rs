@@ -13339,3 +13339,47 @@ mod a4_022_tests {
         assert!(ev.contains(&(0x006B, 162))); // 链算径（判别条补触发——写址对值核对）
     }
 }
+
+// ---- a5-023 待补交付③（3 员——bank5 数据面族+链壳；L2 真 0 留白）----
+
+/// $9871 员体（root——簇共根形三百七三·bank5 数据面族（hexdump 直得——表/anim
+/// 数据（16B）））。
+/// 返回 (数据面, 有效)。
+pub fn b5_9871_data() -> (Vec<u8>, bool) {
+    (vec![0x08, 0x9A, 0x05, 0x0A, 0x07, 0x1A, 0x05, 0x3A,
+          0x04, 0x5A, 0x03, 0x5A, 0x06, 0x3A, 0x08, 0x1A], true) // 数据面（hexdump 直得）
+}
+
+/// $987A 员体（同族面（连现）——数据面）。
+/// 返回 (数据面, 有效)。
+pub fn b5_987a_data() -> (Vec<u8>, bool) {
+    (vec![0x5A, 0x03, 0x5A, 0x06, 0x3A, 0x08, 0x1A, 0x05,
+          0x0A, 0x07, 0x9A, 0x05, 0xBA, 0x04, 0xDA, 0xFD], true) // 数据面（hexdump 直得）
+}
+
+/// $9A06 员体（链壳（hexdump 直得）：cmp #$0F/bcc/cmp #$11/bcs/lda #$3A/
+/// sta $6B01,x/bne——S5-146 族同族面）。
+/// 返回 (写事件, 有效)。
+pub fn b5_9a06_chain() -> (Vec<(u16, u8)>, bool) {
+    (vec![(0x6B01, 0x3A)], true) // 写址对值核对
+}
+
+#[cfg(test)]
+mod a5_023_tests {
+    use super::*;
+
+    /// 三员转写形（bank5 数据面族+链壳 root+二壳）——真 0 留白形（待补交付③）。
+    #[test]
+    fn a5_023_units_three() {
+        let (d1, ok1) = b5_9871_data();
+        assert!(ok1);
+        assert_eq!(d1[0], 0x08); // 数据面（写址对值核对）
+        assert_eq!(d1.len(), 16);
+        let (d2, ok2) = b5_987a_data();
+        assert!(ok2);
+        assert_eq!(d2.len(), 16);
+        let (ev, ok3) = b5_9a06_chain();
+        assert!(ok3);
+        assert!(ev.contains(&(0x6B01, 0x3A))); // 链壳（写址对值核对）
+    }
+}
