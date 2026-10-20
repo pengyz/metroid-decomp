@@ -6575,6 +6575,33 @@ $80F9）=辨识精确（显式））④**base 族值径辨核 ✓**（0/16/0/140
 （账目面全合）。findings（r10）：1 gap 显式（a3-028 base 族 transform 待辨
 （state-init vs base 族 mismatch）（诚实标定））。
 
+## port2 X 链算径+decomp routine 逐员辨双审（落件即审·实测核）
+
+### ① a3-013 X 链算径 verdict: needs_revision | ② decomp routine 逐员辨 verdict: pass（诚实标定）
+
+**实测 diff 输出原文（A 级——非声称核）**：
+```
+a3-013: [FAIL]×8（X 链算径 gap——x 偏移 +8+寄存器值差）
+（golden OAM 值（512←158/516←166/520←174...）vs core（512←166/516←174/520←182...）
+=值 +8 偏移；case-4 golden (0, 17, 11) vs core (0, 24, 11)=寄存器值差）
+a3-028: 1/8 PASS+7 FAIL（routine 逐员辨落——考证进度态（诚实标定））
+```
+
+四条核：①**a3-013=8/8 FAIL（契约族）**：golden OAM 值（512←158/516←166/520←174/
+524←182/528←190/532←198）vs core（512←166/516←174/520←182/524←190/528←198/
+532←206）——**x 链算径 gap**（值 +8 偏移（in.030D/in.030E 双径辨））+case-4 寄存器
+值差（golden (0, 17, 11) vs core (0, 24, 11)）——**修复要求**：X 链算径实现
+（in.030D/in.030E 双径（chain-compute））+寄存器值差修→8 案全等→账清转 strict
+②**a3-028 routine 逐员辨落=诚实标定 ✓**（decomp 0d185b8）：**routine 逐员辨落**
+（$8071（STY $CC-$D3+$69B2/$CB 状态 init）/$80D0（STA $F0/$0684+JSR $C439/$C158/
+$C20E）/$80F9（STA $FF/$2C/$C1+INC $1F）——**内写径=zp/$0684/$69B2 族**）+**base
+族（0x0405+x）待 sub-call 辨**（$C439/$C158/$C20E 内径）——claim 与实测一致
+（1/8+7 FAIL 考证进度态（非声称修复（「0 败」纪律面 ✓）））③**routine 逐员辨核 ✓**
+（$8071/$80D0/$80F9 三员（24B each）+内写径辨（zp/$0684/$69B2 族）（显式））④
+**sub-call 待辨核 ✓**（$C439/$C158/$C20E 内径（显式待做））⑤测 540 全绿+L2 3107/862。
+findings（r10）：1（a3-013 X 链算径 gap=needs_revision）+1 gap 显式（a3-028 base
+族 sub-call 待辨（诚实标定））。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
