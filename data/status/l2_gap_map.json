@@ -27,7 +27,7 @@
       "id": "SC-S1-17-CROSSCARD-S105-B",
       "case_prefix": "s1-17-case-6",
       "reason": "同 case-5（跨卡 S1-05 深径效应）",
-      "exit": "同 case-5",
+      "exit": "【2026-10-20 建模缺口定案】同 case-5——转写落→账清转 strict（待转写清）",
       "registered": "2026-10-19"
     },
     {
@@ -944,7 +944,7 @@
       "id": "SC-MD-001-IMPL",
       "case_prefix": "a1-025-case",
       "reason": "【预登记】移动臂深化首卡（SC-MD-001 SamusJump 族——开工前置步先登记）",
-      "exit": "arm_cluster_003 移植/转写落→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】arm_cluster_003 移植/转写落——转写落→账清转 strict（待转写清）",
       "registered": "2026-10-20"
     },
     {
@@ -1007,7 +1007,7 @@
       "id": "SC-MD-002-IMPL",
       "case_prefix": "a1-026-case",
       "reason": "【预登记】臂深化卡序续（SC-MD-002 SamusRoll 族——开工前置步先登记）",
-      "exit": "arm_cluster_004 移植/转写落→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】arm_cluster_004 移植/转写落——转写落→账清转 strict（待转写清）",
       "registered": "2026-10-20"
     },
     {
@@ -1133,21 +1133,21 @@
       "id": "SC-MD-003-IMPL",
       "case_prefix": "a1-028-case",
       "reason": "【预登记】臂深化卡序续（SC-MD-003 SamusDoor 族——开工前置步先登记）",
-      "exit": "arm_cluster_006 移植/转写落→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】arm_cluster_006 移植/转写落——转写落→账清转 strict（待转写清）",
       "registered": "2026-10-20"
     },
     {
       "id": "SC-MD-SAMUSDOOR-CASE-IMPL",
       "case_prefix": "md-samusdoor-case",
       "reason": "【预登记/补账】md-samusdoor-case 簇（批产 WIP——A 批预登记制）",
-      "exit": "md-samusdoor-case 落→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】md-samusdoor-case 落——转写落→账清转 strict（待转写清）",
       "registered": "2026-10-20"
     },
     {
       "id": "SC-MD-004-IMPL",
       "case_prefix": "a1-027-case",
       "reason": "【预登记】臂深化卡序续（SC-MD-004 SamusPntUp 族——开工前置步先登记）",
-      "exit": "arm_cluster_005 移植/转写落→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】arm_cluster_005 移植/转写落——转写落→账清转 strict（待转写清）",
       "registered": "2026-10-20"
     },
     {
@@ -1196,7 +1196,7 @@
       "id": "SC-MD-005-IMPL",
       "case_prefix": "a1-023-case",
       "reason": "【预登记】臂深化卡序续（SC-MD-005 SamusStand 族——开工前置步先登记）",
-      "exit": "arm_cluster_001 移植/转写落→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】arm_cluster_001 移植/转写落——转写落→账清转 strict（待转写清）",
       "registered": "2026-10-20"
     },
     {
@@ -1245,7 +1245,7 @@
       "id": "SC-MD-006-IMPL",
       "case_prefix": "a1-024-case",
       "reason": "【预登记】臂深化卡序续（SC-MD-006 SamusRun 族——开工前置步先登记）",
-      "exit": "arm_cluster_002 移植/转写落→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】arm_cluster_002 移植/转写落——转写落→账清转 strict（待转写清）",
       "registered": "2026-10-20"
     },
     {
@@ -1315,7 +1315,7 @@
       "id": "SC-MD-007-IMPL",
       "case_prefix": "a1-029-case",
       "reason": "【预登记】臂深化卡序续（SC-MD-007 SamusDead 族——开工前置步先登记）",
-      "exit": "arm_cluster_007 移植/转写落→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】arm_cluster_007 移植/转写落——转写落→账清转 strict（待转写清）",
       "registered": "2026-10-20"
     },
     {
@@ -1364,7 +1364,7 @@
       "id": "SC-MD-008-IMPL",
       "case_prefix": "a1-030-case",
       "reason": "【预登记】臂深化卡序续（SC-MD-008 SamusElevator 族——开工前置步先登记）",
-      "exit": "arm_cluster_008 移植/转写落→账清转 strict（臂深化收官卡）",
+      "exit": "【2026-10-20 建模缺口定案】arm_cluster_008 移植/转写落——转写落→账清转 strict（待转写清）",
       "registered": "2026-10-20"
     },
     {
@@ -1406,7 +1406,7 @@
       "id": "SC-G4-001-IMPL",
       "case_prefix": "g4-001-case",
       "reason": "【预登记】G4 通关集成首卡（SC-G4-001 T45-3/5/6 通关径面——开工前置步先登记）",
-      "exit": "g4_cluster_001 移植/转写落→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】g4_cluster_001 移植/转写落——转写落→账清转 strict（待转写清）",
       "registered": "2026-10-20"
     },
     {
@@ -1434,21 +1434,21 @@
       "id": "SC-G4_COLLISION_MB-IMPL",
       "case_prefix": "g4_collision_mb",
       "reason": "【预登记/补账】g4_collision_mb 簇（批产 WIP——A 批预登记制）",
-      "exit": "g4_collision_mb 落→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】g4_collision_mb 落——转写落→账清转 strict（待转写清）",
       "registered": "2026-10-20"
     },
     {
       "id": "SC-G4_COLLISION_ZEBETITE-IMPL",
       "case_prefix": "g4_collision_zebetite",
       "reason": "【预登记/补账】g4_collision_zebetite 簇（批产 WIP——A 批预登记制）",
-      "exit": "g4_collision_zebetite 落→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】g4_collision_zebetite 落——转写落→账清转 strict（待转写清）",
       "registered": "2026-10-20"
     },
     {
       "id": "SC-G4_DELETESPRITES-IMPL",
       "case_prefix": "g4_deletesprites",
       "reason": "【预登记/补账】g4_deletesprites 簇（批产 WIP——A 批预登记制）",
-      "exit": "g4_deletesprites 落→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】g4_deletesprites 落——转写落→账清转 strict（待转写清）",
       "registered": "2026-10-20"
     },
     {
@@ -1511,7 +1511,7 @@
       "id": "SC-G5-001-IMPL",
       "case_prefix": "g5-001-case",
       "reason": "【预登记】G5 Stage A 收官首卡（SC-G5-001 分母账面终形+AGENTS Gate 面——开工前置步先登记）",
-      "exit": "g5_cluster_001 移植/转写落→账清转 strict（Stage A 收官）",
+      "exit": "【2026-10-20 建模缺口定案】g5_cluster_001 移植/转写落——转写落→账清转 strict（待转写清）",
       "registered": "2026-10-20"
     },
     {
@@ -1623,56 +1623,56 @@
       "id": "SC-A8-008-CASE-0-IMPL",
       "case_prefix": "a8-008-case-0",
       "reason": "【预登记/补账】a8-008-case-0 簇（批产 WIP——A 批预登记制）",
-      "exit": "a8-008-case-0 落→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】a8-008-case-0 落——转写落→账清转 strict（待转写清）",
       "registered": "2026-10-20"
     },
     {
       "id": "SC-A8-008-CASE-1-IMPL",
       "case_prefix": "a8-008-case-1",
       "reason": "【预登记/补账】a8-008-case-1 簇（批产 WIP——A 批预登记制）",
-      "exit": "a8-008-case-1 落→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】a8-008-case-1 落——转写落→账清转 strict（待转写清）",
       "registered": "2026-10-20"
     },
     {
       "id": "SC-A8-008-CASE-2-IMPL",
       "case_prefix": "a8-008-case-2",
       "reason": "【预登记/补账】a8-008-case-2 簇（批产 WIP——A 批预登记制）",
-      "exit": "a8-008-case-2 落→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】a8-008-case-2 落——转写落→账清转 strict（待转写清）",
       "registered": "2026-10-20"
     },
     {
       "id": "SC-A8-008-CASE-3-IMPL",
       "case_prefix": "a8-008-case-3",
       "reason": "【预登记/补账】a8-008-case-3 簇（批产 WIP——A 批预登记制）",
-      "exit": "a8-008-case-3 落→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】a8-008-case-3 落——转写落→账清转 strict（待转写清）",
       "registered": "2026-10-20"
     },
     {
       "id": "SC-A8-008-CASE-4-IMPL",
       "case_prefix": "a8-008-case-4",
       "reason": "【预登记/补账】a8-008-case-4 簇（批产 WIP——A 批预登记制）",
-      "exit": "a8-008-case-4 落→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】a8-008-case-4 落——转写落→账清转 strict（待转写清）",
       "registered": "2026-10-20"
     },
     {
       "id": "SC-A8-008-CASE-5-IMPL",
       "case_prefix": "a8-008-case-5",
       "reason": "【预登记/补账】a8-008-case-5 簇（批产 WIP——A 批预登记制）",
-      "exit": "a8-008-case-5 落→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】a8-008-case-5 落——转写落→账清转 strict（待转写清）",
       "registered": "2026-10-20"
     },
     {
       "id": "SC-A8-008-CASE-6-IMPL",
       "case_prefix": "a8-008-case-6",
       "reason": "【预登记/补账】a8-008-case-6 簇（批产 WIP——A 批预登记制）",
-      "exit": "a8-008-case-6 落→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】a8-008-case-6 落——转写落→账清转 strict（待转写清）",
       "registered": "2026-10-20"
     },
     {
       "id": "SC-A8-008-CASE-7-IMPL",
       "case_prefix": "a8-008-case-7",
       "reason": "【预登记/补账】a8-008-case-7 簇（批产 WIP——A 批预登记制）",
-      "exit": "a8-008-case-7 落→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】a8-008-case-7 落——转写落→账清转 strict（待转写清）",
       "registered": "2026-10-20"
     },
     {
