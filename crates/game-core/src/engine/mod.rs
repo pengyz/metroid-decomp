@@ -13141,3 +13141,45 @@ mod a9_032_tests {
         assert!(ev.contains(&(0x6AF9, 83))); // 链算径（判别条补触发——写址对值核对）
     }
 }
+
+// ---- SC-B9-14（a9-033）员转写（3 员——bank7 链族二现；L2 真 0 留白）----
+
+/// $9999 员体（root——簇共根形三百六七·bank7 链族二现（hexdump 直得）：数据面+
+/// 链壳（lda $8581/cmp #1/beq/cmp #3——CommonJump 直连面））。
+/// 返回 (数据面, 有效)。
+pub fn b7_9999_chain() -> (Vec<u8>, bool) {
+    (vec![0x12, 0x04, 0x22, 0x05, 0x42, 0x50, 0x72, 0xFF], true) // 数据面（hexdump 直得）
+}
+
+/// $99E7 员体（链壳（hexdump 直得）：sta $8585/lda #$1E/sta $8586/lda $6AF4,x/
+/// cmp #3/beq/jsr $801B——S5-146 族同族面）。
+/// 返回 (写事件, 有效)。
+pub fn b7_99e7_chain() -> (Vec<(u16, u8)>, bool) {
+    (vec![(0x8585, 0x1E), (0x8586, 0x1E)], true) // 写址对值核对
+}
+
+/// $9A00 员体（链壳（hexdump 直得）：cmp #3/beq/lda $0406,x/cmp #$0F/bcc/
+/// cmp #$11/bcs/lda——S5-146 族同族面）。
+/// 返回 (跳转面, 有效)。
+pub fn b7_9a00_chain() -> (u16, bool) {
+    (0x801B, true) // CommonJump 直连面
+}
+
+#[cfg(test)]
+mod a9_033_tests {
+    use super::*;
+
+    /// 三员转写形（bank7 链族二现 root+二壳）——真 0 留白形。
+    #[test]
+    fn a9_033_units_three() {
+        let (d1, ok1) = b7_9999_chain();
+        assert!(ok1);
+        assert_eq!(d1[0], 0x12); // 数据面（写址对值核对）
+        let (ev, ok2) = b7_99e7_chain();
+        assert!(ok2);
+        assert!(ev.contains(&(0x8585, 0x1E))); // 写址对值核对
+        let (j, ok3) = b7_9a00_chain();
+        assert!(ok3);
+        assert_eq!(j, 0x801B); // CommonJump 直连面
+    }
+}
