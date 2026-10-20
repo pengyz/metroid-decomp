@@ -13067,3 +13067,47 @@ mod a9_030_tests {
         assert!(ev.contains(&(0x6BE1, 136))); // 链算径（判别条补触发——写址对值核对）
     }
 }
+
+// ---- SC-B9-12（a9-031）员转写（3 员——bank7 数据面族；L2 真 0 留白）----
+
+/// $98F2 员体（root——簇共根形三百六五·bank7 数据面族（hexdump 直得——表/anim
+/// 数据（16B）））。
+/// 返回 (数据面, 有效)。
+pub fn b7_98f2_data() -> (Vec<u8>, bool) {
+    (vec![0x02, 0xFB, 0x04, 0xEB, 0x04, 0xDB, 0x05, 0xBB,
+          0x03, 0x9B, 0x04, 0x0B, 0x05, 0x1B, 0x03, 0x3B], true) // 数据面（hexdump 直得）
+}
+
+/// $98F8 员体（同族面（连现）——数据面）。
+/// 返回 (数据面, 有效)。
+pub fn b7_98f8_data() -> (Vec<u8>, bool) {
+    (vec![0x05, 0xBB, 0x03, 0x9B, 0x04, 0x0B, 0x05, 0x1B,
+          0x03, 0x3B, 0x05, 0x5B, 0x04, 0x6B, 0x50, 0x7B], true) // 数据面（hexdump 直得）
+}
+
+/// $994D 员体（同族面（连现）——数据面）。
+/// 返回 (数据面, 有效)。
+pub fn b7_994d_data() -> (Vec<u8>, bool) {
+    (vec![0xFF, 0x02, 0xFA, 0x04, 0xEA, 0x04, 0xDA, 0x05,
+          0xBA, 0x03, 0x9A, 0x04, 0x0A, 0x05, 0x1A, 0x03], true) // 数据面（hexdump 直得）
+}
+
+#[cfg(test)]
+mod a9_031_tests {
+    use super::*;
+
+    /// 三员转写形（bank7 数据面族 root+二壳）——真 0 留白形。
+    #[test]
+    fn a9_031_units_three() {
+        let (d1, ok1) = b7_98f2_data();
+        assert!(ok1);
+        assert_eq!(d1[0], 0x02); // 数据面（写址对值核对）
+        assert_eq!(d1.len(), 16);
+        let (d2, ok2) = b7_98f8_data();
+        assert!(ok2);
+        assert_eq!(d2.len(), 16);
+        let (d3, ok3) = b7_994d_data();
+        assert!(ok3);
+        assert_eq!(d3[0], 0xFF); // 数据面（hexdump 直得）
+    }
+}
