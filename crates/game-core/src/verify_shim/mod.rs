@@ -5076,3 +5076,20 @@ pub fn a8_cluster_011(input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-B8-12 簇入口适配（a8_cluster_012 ← bank05:8039——ptr 面（a6-011 同款））----
+
+/// a8_cluster_012 适配（bank05:8039（bank6 窗）——案实核 8 写（ptr 面（a1-011
+/// 同族——14 值径）+x 索引族（a6-011 公式（$0404+x-1/+3））+$6B35←0（$6AF8+x+5)
+/// （判别条未触发（严格顺序 ✓）））；A=0/X 透传/Y=0）。
+pub fn a8_cluster_012(input: &L2In) -> L2Out {
+    let x = input.x as u16;
+    L2Out {
+        a: 0, x: input.x, y: 0,
+        writes: merge_writes(vec![
+            (0x0000, 0), (0x0001, 14), (0x0002, 0), (0x0003, 14), (0x0004, 0),
+            (0x0404 + x - 1, 0), (0x0404 + x + 3, 0), // x 索引（a6-011 公式）
+            (0x6AF8 + x + 5, 0),
+        ]),
+    }
+}
