@@ -20,7 +20,7 @@
       "id": "SC-S1-17-CROSSCARD-S105",
       "case_prefix": "s1-17-case-5",
       "reason": "深径多路（golden 含 $0200 精灵区写族 ~200 项+出口 regs 变）——$D055/$CF2E 跨卡调用（$D052∈S1-05 SetSamusData 族（已随移动链落））——golden 全路径含他卡效应=正常（lead 裁定②记账面）",
-      "exit": "源卡 S1-05 域深径建模落（或跨卡调用接线）→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】源卡 S1-05 域深径建模落（或跨卡调用接线）——链=源卡深径建模（refs 法直得（S1-05 域/移动链/handler 集/VRAM 缓冲写族）——全链模拟）→账清转 strict（待建模清）",
       "registered": "2026-10-19"
     },
     {
@@ -34,42 +34,42 @@
       "id": "SC-S2-031-CROSSCARD-1",
       "case_prefix": "s2-031-case-1",
       "reason": "深径多路（$0200 区写族 100-220 项——S1-17 同款跨卡效应链（S1-05 深径））——golden 含他卡效应=正常",
-      "exit": "源卡 S1-05 深径建模落→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】源卡 S1-05 深径建模落——链=源卡深径建模（refs 法直得（S1-05 域/移动链/handler 集/VRAM 缓冲写族）——全链模拟）→账清转 strict（待建模清）",
       "registered": "2026-10-19"
     },
     {
       "id": "SC-S2-031-CROSSCARD-2",
       "case_prefix": "s2-031-case-2",
       "reason": "深径多路（$0200 区写族 100-220 项——S1-17 同款跨卡效应链（S1-05 深径））——golden 含他卡效应=正常",
-      "exit": "源卡 S1-05 深径建模落→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】源卡 S1-05 深径建模落——链=源卡深径建模（refs 法直得（S1-05 域/移动链/handler 集/VRAM 缓冲写族）——全链模拟）→账清转 strict（待建模清）",
       "registered": "2026-10-19"
     },
     {
       "id": "SC-S2-031-CROSSCARD-5",
       "case_prefix": "s2-031-case-5",
       "reason": "深径多路（$0200 区写族 100-220 项——S1-17 同款跨卡效应链（S1-05 深径））——golden 含他卡效应=正常",
-      "exit": "源卡 S1-05 深径建模落→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】源卡 S1-05 深径建模落——链=源卡深径建模（refs 法直得（S1-05 域/移动链/handler 集/VRAM 缓冲写族）——全链模拟）→账清转 strict（待建模清）",
       "registered": "2026-10-19"
     },
     {
       "id": "SC-S2-031-CROSSCARD-6",
       "case_prefix": "s2-031-case-6",
       "reason": "深径多路（$0200 区写族 100-220 项——S1-17 同款跨卡效应链（S1-05 深径））——golden 含他卡效应=正常",
-      "exit": "源卡 S1-05 深径建模落→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】源卡 S1-05 深径建模落——链=源卡深径建模（refs 法直得（S1-05 域/移动链/handler 集/VRAM 缓冲写族）——全链模拟）→账清转 strict（待建模清）",
       "registered": "2026-10-19"
     },
     {
       "id": "SC-S2-043-XDOMAIN-VRAM",
       "case_prefix": "s2-043-case",
       "reason": "全 8 案深径：$07A0-$07EF VRAM 缓冲写族（80B vram_struct 面）=**S6/title 已折域效应**（跨域账目形——显示链机件效应（DisplayInputCharacters/vram_struct 族））",
-      "exit": "S6/title 显示链建模清（VRAM 缓冲写族接线）→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】S6/title 显示链建模清（VRAM 缓冲写族接线）——链=源卡深径建模（refs 法直得（S1-05 域/移动链/handler 集/VRAM 缓冲写族）——全链模拟）→账清转 strict（待建模清）",
       "registered": "2026-10-19"
     },
     {
       "id": "SC-S2-043-XCARD-MOVE",
       "case_prefix": "s2-043-case",
       "reason": "全 8 案深径：$00-$06 zp 工作面+残迹 regs 变=移动链效应（跨卡账目形——S1-05 族）",
-      "exit": "源卡移动链建模清→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】源卡移动链建模清——链=源卡深径建模（refs 法直得（S1-05 域/移动链/handler 集/VRAM 缓冲写族）——全链模拟）→账清转 strict（待建模清）",
       "registered": "2026-10-19"
     },
     {
@@ -83,49 +83,49 @@
       "id": "SC-S2-048-CROSSCARD-WALK",
       "case_prefix": "s2-048-case-4",
       "reason": "case-4 流依存 handler 链：walk 表 handler **跨卡实证**（$EC2F∈S1-00 LoadStatues/$EC04∈S2-49 SpawnElevator）+$F0A2 深分派（非本卡员（本卡=$EB8C/$EB92/$EEF4））——golden 全路径含他卡效应=正常（S1-17 CROSSCARD 形）",
-      "exit": "源卡（S1-00 已落/S2-49 在产）handler 集建模清→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】源卡（S1-00 已落/S2-49 在产）handler 集建模清——链=源卡深径建模（refs 法直得（S1-05 域/移动链/handler 集/VRAM 缓冲写族）——全链模拟）→账清转 strict（待建模清）",
       "registered": "2026-10-19"
     },
     {
       "id": "SC-S3-066-CROSSCARD-5",
       "case_prefix": "s3-066-case-5",
       "reason": "深径多路（$0200 区写族 ~200 项——S1-17/S2-031 同款跨卡效应链（S1-05 深径））——golden 含他卡效应=正常",
-      "exit": "源卡移动链建模清→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】源卡移动链建模清——链=源卡深径建模（refs 法直得（S1-05 域/移动链/handler 集/VRAM 缓冲写族）——全链模拟）→账清转 strict（待建模清）",
       "registered": "2026-10-19"
     },
     {
       "id": "SC-S3-066-CROSSCARD-6",
       "case_prefix": "s3-066-case-6",
       "reason": "深径多路（$0200 区写族 ~200 项——S1-17/S2-031 同款跨卡效应链（S1-05 深径））——golden 含他卡效应=正常",
-      "exit": "源卡移动链建模清→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】源卡移动链建模清——链=源卡深径建模（refs 法直得（S1-05 域/移动链/handler 集/VRAM 缓冲写族）——全链模拟）→账清转 strict（待建模清）",
       "registered": "2026-10-19"
     },
     {
       "id": "SC-S3-067-CROSSCARD-5",
       "case_prefix": "s3-067-case-5",
       "reason": "深径多路（298 写——S1-17/S2-031/S3-066 同款跨卡效应链（S1-05 深径））",
-      "exit": "源卡移动链建模清→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】源卡移动链建模清——链=源卡深径建模（refs 法直得（S1-05 域/移动链/handler 集/VRAM 缓冲写族）——全链模拟）→账清转 strict（待建模清）",
       "registered": "2026-10-19"
     },
     {
       "id": "SC-S3-067-CROSSCARD-6",
       "case_prefix": "s3-067-case-6",
       "reason": "深径多路（298 写——S1-17/S2-031/S3-066 同款跨卡效应链（S1-05 深径））",
-      "exit": "源卡移动链建模清→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】源卡移动链建模清——链=源卡深径建模（refs 法直得（S1-05 域/移动链/handler 集/VRAM 缓冲写族）——全链模拟）→账清转 strict（待建模清）",
       "registered": "2026-10-19"
     },
     {
       "id": "SC-S3-084-CROSSCARD-5",
       "case_prefix": "s3-084-case-5",
       "reason": "深径多路（276 写——S1-17/S2-031/S3-066/067 同款跨卡效应链（S1-05 深径））",
-      "exit": "源卡移动链建模清→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】源卡移动链建模清——链=源卡深径建模（refs 法直得（S1-05 域/移动链/handler 集/VRAM 缓冲写族）——全链模拟）→账清转 strict（待建模清）",
       "registered": "2026-10-19"
     },
     {
       "id": "SC-S3-084-CROSSCARD-6",
       "case_prefix": "s3-084-case-6",
       "reason": "深径多路（276 写——S1-17/S2-031/S3-066/067 同款跨卡效应链（S1-05 深径））",
-      "exit": "源卡移动链建模清→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】源卡移动链建模清——链=源卡深径建模（refs 法直得（S1-05 域/移动链/handler 集/VRAM 缓冲写族）——全链模拟）→账清转 strict（待建模清）",
       "registered": "2026-10-19"
     },
     {
@@ -139,7 +139,7 @@
       "id": "SC-S5-121-CROSSCARD-WALKVM",
       "case_prefix": "s5-121-case-",
       "reason": "全族深径（$07 写=walk-VM 深链（$EDD6 分派→handler 集∈S2-48/49 族（walk 表 handler））——golden 含 VM handler 效应=正常（S2-048/S2-013 同款判定形））",
-      "exit": "walk-VM handler 集建模清（S2-48/49 族域深化）→账清转 strict；或跨卡调用接线",
+      "exit": "【2026-10-20 建模缺口定案】walk-VM handler 集建模清（S2-48/49 族域深化）——链=源卡深径建模（refs 法直得（S1-05 域/移动链/handler 集/VRAM 缓冲写族）——全链模拟）→账清转 strict（待建模清）",
       "registered": "2026-10-19"
     },
     {
@@ -1252,7 +1252,7 @@
       "id": "SC-MD_GOSAMUSHANDLER-IMPL",
       "case_prefix": "md_gosamushandler",
       "reason": "【预登记/补账】md_gosamushandler 簇（批产 WIP——A 批预登记制）",
-      "exit": "md_gosamushandler 落→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】md_gosamushandler 落——链=源卡深径建模（refs 法直得（S1-05 域/移动链/handler 集/VRAM 缓冲写族）——全链模拟）→账清转 strict（待建模清）",
       "registered": "2026-10-20"
     },
     {
