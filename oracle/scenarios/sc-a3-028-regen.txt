@@ -5,13 +5,15 @@
 # --- 烤案源（LCG 输入——簇首×4 LCG→ROM golden 同法）---
 # 8 案 fixture 再生成（case-0..7——LCG 种子）
 
+frames 2000
+
 # --- 观察面（zp+iram+pw——三断言面）---
-watch zp 0000-00ff
-watch iram 0100-07ff
-watch pw 6988-698f
+watch_range 0000-00ff
+watch_range 0100-07ff
+watch_range 6988-698f
 
 # --- 值径源族（fixture 扩——$6AF4+x 族 ram）---
-probe_mem 6AF4-6B0F
+probe_mem 6AF4 6B0F
 
 # --- 再生径注（transform 内径辨——$040B+x 读改写（派发表内部变换））---
 # 值径考证续（transform 内径——$040B+x 读改写内部写径（state-init 族））
