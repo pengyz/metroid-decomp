@@ -496,7 +496,7 @@
       "id": "SC-B3-013-CROSSCARD-DOORSUB",
       "case_prefix": "a3-013-case-",
       "reason": "DoorSubRoutine OAM 深径链（60 写（>20 深径判别条触发）——a1-016 同款（bank2 化身）——预登记先行（严格顺序）——S5-121 同款跨卡深径）",
-      "exit": "【2026-10-20 建模缺口定案 v2】门链 OAM 绘制径建模（DoorSubRoutine→DrawDoor→OAM 全链模拟）——族特异 pattern（a3-013 DOORSUB：OAM 6 精灵 24 写+ptr 面 21 写+$0300 区 10 写+SFX $0683←64+新址 $615D-$61FD 6 写——全径复杂（chain-compute 多入参））→账清转 strict（待建模清）",
+      "exit": "【2026-10-20 消费】【2026-10-20 建模缺口定案 v2】门链 OAM 绘制径建模（DoorSubRoutine（建模落（X 链算径（chain-compute（in.030D/in.030E 双径辨）+case-4 anim 帧数据径+值径（case-5/6/7 特异）+多写补（\\$03D4/\\$03CA/\\$0362←1）——全径精确））——L2 8/8 全等（A 级））→账清转 strict ✓",
       "registered": "2026-10-19"
     },
     {
