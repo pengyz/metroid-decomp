@@ -3,6 +3,7 @@ frames 2000
 watch_range 0000-00ff
 watch_range 0100-07ff
 watch_range 6988-698f
+watch_range 6AF4-6B0F
 probe_mem 6AF4 6B0F
 fixture 1 0000 05 invariant
 fixture 1 0022 FA invariant
