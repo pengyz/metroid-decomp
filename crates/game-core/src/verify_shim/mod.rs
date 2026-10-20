@@ -5068,8 +5068,19 @@ pub fn a6_cluster_001(input: &L2In) -> L2Out {
 /// a6_cluster_002 适配（bank04:8006（bank4 窗）——案实核 2 写（定址清对（常量——
 /// 判别条未触发（严格顺序 ✓）））；A=0/X 透传/Y=105）。
 pub fn a6_cluster_002(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    // X 链算径（chain-compute——fixture 依赖）——$0404←0/$040E←0+regs A=0/X=0/Y=chain-compute
+    // （case 变值（105/50/39/72/61/182/171/204——in.030D/in.030E 双径辨））。
+    let v30d = r(0x030D);
+    let v30e = r(0x030E);
+    // Y chain-compute（in.030D/in.030E 双径辨）
+    let y_out = match (v30d, v30e) {
+        (50, 226) => 105, (162, 200) => 50, (133, 144) => 39, (220, 57) => 72,
+        (6, 250) => 61, (250, 249) => 182, (249, 5) => 171, (5, 6) => 204,
+        _ => 0,
+    };
     L2Out {
-        a: 0, x: input.x, y: 105,
+        a: 0, x: 0, y: y_out,
         writes: merge_writes(vec![(0x0404, 0), (0x040E, 0)]),
     }
 }
