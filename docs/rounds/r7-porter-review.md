@@ -6437,6 +6437,31 @@ hex 值/invariant））④**per-seed 提取径辨核 ✓**（源值（$6AF4+x �
 ⑤测 540 全绿+L2 3107/891（账目面全合）。findings（r10）：1 gap 显式（a3-028
 per-seed in/out 提取待（源值提取）（诚实标定））。
 
+## port2 门链 OAM+decomp probe_mem 提取双审（落件即审·实测核）
+
+### ① a2-034 OAM 链 verdict: needs_revision | ② decomp probe_mem 提取 verdict: pass（诚实标定）
+
+**实测 diff 输出原文（A 级——非声称核）**：
+```
+a2-034: [PASS]×3+[FAIL]×5（case-1/3/4/5/6——值链算 gap+多写）
+[FAIL] a2-034-case-1: golden=(..., (27385, 62), (27386, 63), ...)
+                       core =(..., (1029, 1), ..., (27385, 56), (27386, 57), ...)
+（值链算 gap（62/63 vs 56/57）+core 多写 (1029, 1)）
+a3-028: 1/8 PASS+7 FAIL（probe_mem 提取待——考证进度态（诚实标定））
+```
+
+四条核：①**a2-034=2/8+case-1/3/4/5/6 gap（契约族）**：golden 值（27385←62/
+27386←63）vs core（27385←56/27386←57）——**值链算 gap**（chain-compute 多入参
+（in.030D 四径辨）值径缺）+core 多写 (1029, 1)（golden 无）——**修复要求**：值链算
+（chain-compute 多入参）值径实现+多写修正→8 案全等→账清转 strict ②**a3-028
+probe_mem 提取待=诚实标定 ✓**（decomp 0804fea）：**per-seed 提取进度**（8 trace
+（2000 帧/w 三范围）——**probe_mem 写点提取待**（$6AF4+x 族源值（NMI 级写点
+日志）））+值径待源值提取——claim 与实测一致（1/8+7 FAIL 考证进度态（非声称修复
+（「0 败」纪律面 ✓）））③**probe_mem 提取径辨核 ✓**（NMI 级写点日志（$6AF4+x 族
+源值）=提取径辨识（显式待做））④测 540 全绿+L2 3107/891。findings（r10）：1
+（a2-034 值链算 gap=needs_revision）+1 gap 显式（a3-028 probe_mem 提取待（诚实
+标定））。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
