@@ -1422,6 +1422,41 @@
       "reason": "Amul16 OAM 深径链（53 写（>20 深径判别条触发）——$8CB6/$C2C5 bank4 化身（a1-021 同款）——预登记先行（严格顺序）——S5-121 同款跨卡深径（a6 批末卡））",
       "exit": "Amul16 链径建模清（全链模拟）→账清转 strict",
       "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-B7-022-CROSSCARD-TOURIAN",
+      "case_prefix": "a7-022-case-",
+      "reason": "TourianMusic OAM 深径链（53 写（>20 深径判别条触发）——$8CBB/$CC07 bank5 化身（a2-022 同款）——预登记先行（严格顺序）——S5-121 同款跨卡深径（bank5 域开））",
+      "exit": "TourianMusic 链径建模清（全链模拟）→账清转 strict",
+      "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-G4_COLLISION_MB-IMPL",
+      "case_prefix": "g4_collision_mb",
+      "reason": "【预登记/补账】g4_collision_mb 簇（批产 WIP——A 批预登记制）",
+      "exit": "g4_collision_mb 落→账清转 strict",
+      "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-G4_COLLISION_ZEBETITE-IMPL",
+      "case_prefix": "g4_collision_zebetite",
+      "reason": "【预登记/补账】g4_collision_zebetite 簇（批产 WIP——A 批预登记制）",
+      "exit": "g4_collision_zebetite 落→账清转 strict",
+      "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-G4_DELETESPRITES-IMPL",
+      "case_prefix": "g4_deletesprites",
+      "reason": "【预登记/补账】g4_deletesprites 簇（批产 WIP——A 批预登记制）",
+      "exit": "g4_deletesprites 落→账清转 strict",
+      "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-G4_SPAWNMOTHERBRAIN-IMPL",
+      "case_prefix": "g4_spawnmotherbrain",
+      "reason": "【预登记/补账】g4_spawnmotherbrain 簇（批产 WIP——A 批预登记制）",
+      "exit": "g4_spawnmotherbrain 落→账清转 strict",
+      "registered": "2026-10-20"
     }
   ]
 }
