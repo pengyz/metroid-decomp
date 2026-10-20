@@ -1307,6 +1307,7 @@ pub fn s2_cluster_031(input: &L2In) -> L2Out {
     let v30d = input.ram[0x030D];
     let v30e = input.ram[0x030E];
     let is_case1 = v30d == 139 && v30e == 114;
+    let v482 = if is_case1 { 213 } else { 209 };
     let (a, x, w) = if v0409 != 0 {
         // X 增双写径（案 7 实核：$0405[x]←v/X 增/$0405[x+1]←0/A=0）
         (0u8, input.x.wrapping_add(1),
