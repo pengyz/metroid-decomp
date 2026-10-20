@@ -1,0 +1,20 @@
+# sc-t45-6 —— G4 通关径场景（T45 系——G2 消费方形）
+# G4 接面：Tourian→MotherBrain→escape→ChooseEnding 四段
+# 状态：骨架态（通关径实跑=远距路由设计后续——G2 触达战役教训：22 迭代收）
+# 烤案随行：arm-pregen/g3-pregen 同形（簇首×4 LCG→ROM golden）
+
+# --- 菜单固定动作（同 G2 系）---
+press 360 a
+press 420 a
+press 540 a
+
+# --- 观察面（zp+iram+pw——三断言面）---
+watch zp 0000-00ff
+watch iram 0100-07ff
+watch pw 6988-698f
+
+# --- T45 通关径段（骨架——待实跑设计）---
+# 段A：Tourian 入（TourianMusic ）
+# 段B：MotherBrain 战（SpawnMotherBrain ）
+# 段C：escape（EndTimer bash10A）
+# 段D：ChooseEnding（——AgeTable 5 结局）
