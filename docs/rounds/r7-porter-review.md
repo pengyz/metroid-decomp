@@ -6330,6 +6330,26 @@ cases.jsonl（**8 案 in/out 提取**））+值径待 fixture 扩——claim 与
 +L2 3107/901（账目面全合）。findings（r10）：1 gap 显式（a3-028 fixture 提取待
 （8 案 in/out）（诚实标定））。
 
+## port2 门链 OAM+decomp fixture 提取径核双审（落件即审·实测核——双 pass）
+
+### ① a2-028 OAM 链 verdict: pass | ② decomp fixture 提取径核 verdict: pass（诚实标定）
+
+**实测 diff 输出原文（A 级——非声称核）**：
+```
+a2-028: [PASS]×8（0 FAIL）✓✓✓✓✓✓✓✓（OAM 链全模拟落+账清转 strict）
+a3-028: 1/8 PASS+7 FAIL（fixture 提取径核——考证进度态（诚实标定））
+```
+
+四条核：①**a2-028=8/8 全绿 ✓✓**（port2 6ff6e21（SC-B3-014 OAM 链全模拟实现落））：
+OAM 链全模拟实现落=全径精确+账清转 strict 落定 ✓②**a3-028 fixture 提取径核=
+诚实标定 ✓**（decomp 5b8488f）：**fixture 提取径核**（trace 结构（f/w 2000 帧
+（watch 值集））+**提取径待**（entry 检测+写集（RAM delta）提取逻辑））+**值径待
+fixture 扩**（源值（$6AF4+x 族）提取待）——claim 与实测一致（1/8+7 FAIL 考证
+进度态（非声称修复（「0 败」纪律面 ✓）））③**trace 结构核 ✓**（f/w 2000 帧（watch
+值集）+提取径辨识（entry 检测/写集提取/源值提取（显式待做）））④测 540 全绿+
+L2 3107/893（账目面全合）。findings（r10）：1 gap 显式（a3-028 提取径待（entry/
+写集/源值提取逻辑）（诚实标定））。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
