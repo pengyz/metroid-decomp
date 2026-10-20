@@ -6462,6 +6462,27 @@ probe_mem 提取待=诚实标定 ✓**（decomp 0804fea）：**per-seed 提取�
 （a2-034 值链算 gap=needs_revision）+1 gap 显式（a3-028 probe_mem 提取待（诚实
 标定））。
 
+## port2 门链 OAM+decomp probe instrumentation 核双审（落件即审·实测核——双 pass）
+
+### ① a2-034 OAM 链 verdict: pass | ② decomp probe instrumentation 核 verdict: pass（诚实标定）
+
+**实测 diff 输出原文（A 级——非声称核）**：
+```
+a2-034: [PASS]×8（0 FAIL）✓✓✓✓✓✓✓✓（值链算+多写修正+Y 计算径落）
+a3-028: 1/8 PASS+7 FAIL（probe instrumentation 待核——考证进度态（诚实标定））
+```
+
+四条核：①**a2-034=8/8 全绿 ✓✓**（port2 1851c16（SC-B2-034 值链算+多写修正+
+Y 计算径））：值链算（chain-compute 多入参值径（62/63 vs 56/57 修））+多写修正
+（(1029, 1) 修）+Y 计算径实现落=全径精确+账清转 strict 落定 ✓②**a3-028 probe
+instrumentation 核=诚实标定 ✓**（decomp 6b3aca1）：**probe_mem 写点提取径核**
+（captures.jsonl **空（0 条——probe_mem 写点未捕获）**——**probe instrumentation
+待核**（6AF4-6B0F 写点未捕获））+值径待源值提取——claim 与实测一致（1/8+7 FAIL
+考证进度态（非声称修复（「0 败」纪律面 ✓）））③**probe instrumentation 辨识核 ✓**
+（captures.jsonl 空实录（0 条）+写点捕获待核（6AF4-6B0F）（显式待做））④测 540
+全绿+L2 账目面全合。findings（r10）：1 gap 显式（a3-028 probe instrumentation
+待核（6AF4-6B0F 写点捕获）（诚实标定））。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
