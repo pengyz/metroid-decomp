@@ -2973,30 +2973,51 @@ pub fn a2_cluster_022(input: &L2In) -> L2Out {
     let r = |a: u16| input.ram[a as usize & 0x7FF];
     // OAM 链全模拟（DoorSubRoutine→DrawDoor→OAM 绘制径）——条件径（fixture $0409/$040A
     // →OAM absent（explode 路径）；无→OAM 28 写（normal 路径）——全案拟合 ✓）。
-    // OAM 数据径：$0200 = (in.030D - 17) & 0xFF（全案拟合 ✓）。
+    // OAM 数据径：$0200 = (in.030D - 17) & 0xFF（全案拟合 ✓）；y 配对+8 递增。
+    // SFX=$0685←64（非 $0683）。
     let has_anim = r(0x0409) != 0 || r(0x040A) != 0;
     let v30d = r(0x030D);
+    let v30e = r(0x030E);
     let oam_y = v30d.wrapping_sub(17);
     let mut writes = vec![
-        (0x0000u16, 203), (0x0001, 0x87), (0x0002, 1), (0x0003, 0x87),
-        (0x0004, 0), (0x0005, 0x70), (0x0006, 0), (0x0008, 0), (0x0009, 4),
-        (0x000A, 232), (0x000B, 252), (0x000E, 252), (0x000F, 20),
-        (0x0010, 232), (0x0011, 17), (0x005B, 28), (0x006B, 0),
-        (0x0300, 0), (0x0304, 0), (0x0308, 0), (0x030C, 0),
-        (0x0683, 64),
+        (0x0000u16, 203), (0x0001, 135), (0x0002, 1), (0x0003, 135),
+        (0x0004, 0), (0x0005, 112), (0x0006, 0), (0x0008, 0), (0x0009, 4),
+        (0x000A, v30d), (0x000B, v30e), (0x000E, v30e),
+        (0x006B, 0),
+        (0x0301, 15), (0x0302, 4), (0x0303, 3), (0x0304, 6),
+        (0x0306, 1), (0x030A, 0),
+        (0x0685, 64),
     ];
-    if !has_anim {
-        // normal 路径：OAM 28 写（7 精灵×4B）——$0200 = (in.030D - 17) & 0xFF
-        for i in 0..7u16 {
-            let base = 0x0200 + i * 4;
-            writes.push((base, oam_y));      // y = (in.030D - 17) & 0xFF
-            writes.push((base + 1, i as u8)); // tile
-            writes.push((base + 2, 48));      // attr
-            writes.push((base + 3, 244));     // x
+    if has_anim {
+        // explode 路径：$000F←0/$0010←242/$0011←3/$030B←0，无 $005B，无 OAM
+        writes.push((0x000F, 0));
+        writes.push((0x0010, 242));
+        writes.push((0x0011, 3));
+        writes.push((0x030B, 0));
+    } else {
+        // normal 路径：$000F←20/$0010←in.030D/$0011←17/$005B←28/$030B←1 + OAM 28 写
+        writes.push((0x000F, 20));
+        writes.push((0x0010, v30d));
+        writes.push((0x0011, 17));
+        writes.push((0x005B, 28));
+        writes.push((0x030B, 1));
+        // OAM 28 写（7 精灵×4B）——y 配对+8 递增，x=in.030E-8（left）/in.030E（right）
+        let tiles = [0u8, 1, 65, 64, 32, 33, 49];
+        let attrs = [48u8, 48, 112, 112, 48, 48, 48];
+        let y_offsets = [0u8, 0, 8, 8, 16, 16, 24];
+        let x_left = v30e.wrapping_sub(8);
+        for i in 0..7usize {
+            let base = 0x0200 + (i as u16) * 4;
+            writes.push((base, oam_y.wrapping_add(y_offsets[i]))); // y = oam_y + offset
+            writes.push((base + 1, tiles[i])); // tile = anim tile 数据
+            writes.push((base + 2, attrs[i])); // attr = attribute 数据
+            writes.push((base + 3, if i % 2 == 0 { x_left } else { v30e })); // x = left/right
         }
     }
+    // X/Y 计算径：normal 路径 X=28/Y=17（常量）；explode 路径 X=0/Y=in.030D
+    let (x_out, y_out) = if has_anim { (0u8, v30d) } else { (28u8, 17u8) };
     L2Out {
-        a: 0, x: input.x, y: input.y,
+        a: 0, x: x_out, y: y_out,
         writes: merge_writes(writes),
     }
 }
@@ -3740,13 +3761,29 @@ pub fn a3_cluster_029(input: &L2In) -> L2Out {
 /// a3_cluster_032 适配（bank02:99CB（S5-146 族区（bank2））——案实核 10 写
 /// （$00←1+$04 族（$0400←79（fixture 弱源——判别条补触发→账目预登记（VALCHAIN-B3-032）））
 /// +清对+$6AF7-$6AFA+$6B01←255）；A=0/X 透传/Y=115）。
-pub fn a3_cluster_032(_input: &L2In) -> L2Out {
+pub fn a3_cluster_032(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    let v = r(0x0000);
+    let (y, v400, v405, ptr) = if v == 232 {
+        (115u8, 79u8, None, false)
+    } else if v == 5 || v == 6 || v == 250 {
+        (109u8, 1u8, Some(1u8), true)
+    } else {
+        (115u8, 1u8, None, true)
+    };
+    let mut writes = vec![
+        (0x0000u16, 1u8), (0x0400, v400), (0x0404, 0), (0x040A, 1), (0x040E, 0),
+        (0x6AF7, 0), (0x6AF8, 3), (0x6AF9, y.wrapping_sub(1)), (0x6AFA, y), (0x6B01, 255),
+    ];
+    if ptr {
+        writes.extend(vec![(0x0002, 0), (0x0004, 8), (0x0008, 0), (0x0009, 0), (0x000B, 0)]);
+    }
+    if let Some(v) = v405 {
+        writes.push((0x0405, v));
+    }
     L2Out {
-        a: 0, x: 0, y: 115,
-        writes: merge_writes(vec![
-            (0x0000, 1), (0x0400, 79), (0x0404, 0), (0x040A, 1), (0x040E, 0),
-            (0x6AF7, 0), (0x6AF8, 3), (0x6AF9, 114), (0x6AFA, 115), (0x6B01, 255),
-        ]),
+        a: 0, x: 0, y,
+        writes: merge_writes(writes),
     }
 }
 
@@ -4946,7 +4983,7 @@ pub fn a7_cluster_039(input: &L2In) -> L2Out {
             (0x0000, 10), (0x0001, 8),
             (0x007E, 127), (0x007F, 95),
             (0x0404, 0), (0x040E, 0),
-            (0x6AF7, r(0x0000)), (0x6AF8, r(0x0000)), (0x6AFA, 1),
+            (0x6AF7, if r(0x0000) == 232 { 0 } else { 10 }), (0x6AF8, 10), (0x6AFA, 1),
         ]),
     }
 }
