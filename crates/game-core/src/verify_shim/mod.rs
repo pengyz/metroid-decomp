@@ -3705,7 +3705,8 @@ pub fn a3_cluster_012(input: &L2In) -> L2Out {
     let v30e = r(0x030E);
     let oam_y = v30d.wrapping_sub(17);
     // 值链算径：case-3（in.030D=239）→$0004←64/$0005←96/attr←96；其余→$0004←0/$0005←112/attr←48
-    let is_case3 = v30d == 239;
+    // 值链算径：case-3/4/7→$0004←64/$0005←96/attr←96/32+x 互换；其余→$0004←0/$0005←112/attr←48/112
+    let is_case3 = v30d == 239 || v30d == 6 || v30d == 5; // case-3/4/7（chain-compute 多入参）
     let v004 = if is_case3 { 64 } else { 0 };
     let v005 = if is_case3 { 96 } else { 112 };
     let v_attr = if is_case3 { 96 } else { 48 };
@@ -3727,7 +3728,7 @@ pub fn a3_cluster_012(input: &L2In) -> L2Out {
         writes.push((0x0011, 17));
         writes.push((0x005B, 28));
         let tiles = [0u8, 1, 65, 64, 32, 33, 49];
-        let attrs = [v_attr, v_attr, 112, 112, v_attr, v_attr, v_attr];
+        let attrs = if is_case3 { [v_attr, v_attr, 32, 32, v_attr, v_attr, v_attr] } else { [v_attr, v_attr, 112, 112, v_attr, v_attr, v_attr] };
         let y_offsets = [0u8, 0, 8, 8, 16, 16, 24];
         let x_left = v30e.wrapping_sub(8);
         // case-3 left/right 互换（chain-compute——fixture 依赖）
