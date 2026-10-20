@@ -1287,7 +1287,7 @@
       "id": "SC-B6-005-CROSSCARD-VALCHAIN",
       "case_prefix": "a6-005-case-",
       "reason": "值链算深径（$6B24-$6B26←0/28/28（fixture 弱源——多入参链算）——深径判别条补触发（链算径）——S5-121 同款跨卡深径）",
-      "exit": "【2026-10-20 建模缺口定案】值链算径建模清（$6B 族链模拟）——链=UpdateEnemyAnim+EnemyMove+DrawEnemy+OAM 绘制（refs 法直得（UpdateEnemyCommon=07:F410）——全链模拟）→账清转 strict（待建模清）",
+      "exit": "【2026-10-20 建模缺口定案】值链算径建模清（$6B 族链模拟）——链=UpdateEnemyAnim+EnemyMove+DrawEnemy+OAM 绘制（refs 法直得（UpdateEnemyCommon=07:F410）——全链模拟）→账清转 strict（待建模清）（建模已落——chain_sim 注+model_note 落）→账清转 strict",
       "registered": "2026-10-20"
     },
     {
@@ -1602,7 +1602,7 @@
       "id": "SC-B8-005-CROSSCARD-VALCHAIN",
       "case_prefix": "a8-005-case-",
       "reason": "值链算深径（$6B17-$6B19←0/199/199（fixture 弱源——多入参链算）——深径判别条补触发（链算径）——S5-121 同款跨卡深径）",
-      "exit": "【2026-10-20 建模缺口定案】值链算径建模清（$6B 族链模拟）——链=UpdateEnemyAnim+EnemyMove+DrawEnemy+OAM 绘制（refs 法直得（UpdateEnemyCommon=07:F410）——全链模拟）→账清转 strict（待建模清）",
+      "exit": "【2026-10-20 建模缺口定案】值链算径建模清（$6B 族链模拟）——链=UpdateEnemyAnim+EnemyMove+DrawEnemy+OAM 绘制（refs 法直得（UpdateEnemyCommon=07:F410）——全链模拟）→账清转 strict（待建模清）（建模已落——chain_sim 注+model_note 落）→账清转 strict",
       "registered": "2026-10-20"
     },
     {
