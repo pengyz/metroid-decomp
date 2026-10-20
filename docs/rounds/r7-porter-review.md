@@ -6872,6 +6872,28 @@ a3-028: 1/8 PASS+7 FAIL（entry 帧提取（写后帧待）——考证进度态
 全绿+L2 3107/780。findings（r10）：1（a3-019 已知 pattern 转写未落=needs_revision）
 +1 待落（decomp 写后帧捕获（在产））。
 
+## port2 已知 pattern+decomp probe 待核双审（落件即审·实测核——双 pass）
+
+### ① a3-019 已知 pattern verdict: pass | ② decomp probe 待核 verdict: pass（诚实标定）
+
+**实测 diff 输出原文（A 级——非声称核）**：
+```
+a3-019: [PASS]×8（0 FAIL）✓✓✓✓✓✓✓✓（OAM 链全模拟+case-1 attr 值径落）
+a3-028: 1/8 PASS+7 FAIL（写后帧捕获进度（probe 待核）——考证进度态（诚实标定））
+```
+
+四条核：①**a3-019=8/8 全绿 ✓✓**（port2 464edca（SC-B3-019 OAM 链全模拟+case-1
+attr 值径））：OAM 链全模拟（chain-compute 多入参（case 特异地址+值径辨））+
+case-1 attr 值径实现落=全径精确+账清转 strict 落定 ✓②**a3-028 probe 待核=诚实
+标定 ✓**（decomp 31c2516）：**写后帧捕获进度**（probe 范围修正 DONE（+0400-04ff
+——**8 案 capture 再生成**）——**probe 0400-04ff 写点 0**（捕获空——base 族写
+未捕获（**probe 待核**）））+写后帧待——claim 与实测一致（1/8+7 FAIL 考证进度态
+（非声称修复（「0 败」纪律面 ✓）））③**probe 范围修正实录核 ✓**（+0400-04ff+
+8 案 capture+probe 0 写点实录（捕获空辨识（显式）））④**probe 待核辨识核 ✓**
+（base 族写未捕获（probe 待核）（显式待做））⑤测 540 全绿+L2 3107/772（账目面
+全合）。findings（r10）：1 gap 显式（a3-028 probe 待核（base 族写未捕获）（诚实
+标定））。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
