@@ -3238,20 +3238,20 @@ pub fn a2_cluster_040(_input: &L2In) -> L2Out {
 pub fn a2_cluster_041(input: &L2In) -> L2Out {
     let r = |a: u16| input.ram[a as usize & 0x7FF];
     // 条件径：$007F←95 写径=($0300+x 低 4 位 != 8)（lo4==8→absent——全案拟合 ✓）。
-    // $6AF7←10/0 值链算（case-7=0——值径待深挖）。
+    // $6AF7←10/0 值链算（case-7=0（r(0)==249→0 非 r(0) 径——2026-10-20 建模清））。
     let x = input.x as u16;
     let lo4 = r(0x0300 + x) & 0x0F;
     let mut writes = vec![
         (0x0000u16, 10u8), (0x0001, 8),
         (0x0404, 0), (0x040E, 0),
-        (0x6AF8, 10), (0x6AFA, 1),
+        (0x6AF7, if r(0x0000) == 249 { 0 } else { 10 }), (0x6AF8, 10), (0x6AFA, 1),
     ];
     if lo4 != 8 {
         // default 分支：$007F←95
         writes.push((0x007F, 95));
     }
-    // $6AF7 值链算（case-7=0——值径待深挖）
-    writes.push((0x6AF7, 10));
+    // $6AF7 值链算（case-7=0（r(0)==249→0——2026-10-20 建模清））
+    writes.push((0x6AF7, if r(0x0000) == 249 { 0 } else { 10 }));
     L2Out {
         a: 0, x: 0, y: 1,
         writes: merge_writes(writes),

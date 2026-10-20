@@ -423,13 +423,6 @@
       "registered": "2026-10-19"
     },
     {
-      "id": "SC-B2-041-CROSSCARD-VALCHAIN",
-      "case_prefix": "a2-041-case-",
-      "reason": "值链算深径（$6AF7/$6AF8←10（fixture 弱源——a2-040 同款）+ptr（$7F）——深径判别条补触发（链算径）——S5-121 同款跨卡深径）",
-      "exit": "【2026-10-20 建模缺口定案】值链算径建模（$6AF8/$6AFA 族链模拟）——条件径（$81=EnemyStatusPreAI（refs 法直得）——fixture 缺失依赖）+值链算（$6AF7←10/0）——建模深（链全模拟+fixture 依赖）→账清转 strict（待建模清）",
-      "registered": "2026-10-19"
-    },
-    {
       "id": "SC-B3-000-CROSSCARD-VALCHAIN",
       "case_prefix": "a3-000-case-",
       "reason": "值链算深径（$6AF8←251/162 变值（fixture 弱源）——深径判别条补触发（链算径）——S5-121 同款跨卡深径）",
@@ -630,7 +623,8 @@
       "case_prefix": "a3-033-case-",
       "reason": "值链算深径（$6AF9/$6AFA←114/115（fixture 弱源——a3-032 同款）——深径判别条补触发（链算径）——S5-121 同款跨卡深径）",
       "exit": "【2026-10-20 建模缺口定案 v2】值链算径建模（$6AF8 族链模拟）——双缺口（ptr 面条件写（case-1 absent——条件径）+$0400 值链算（1 vs 103——chain-compute））——建模=条件径+值链算（fixture 依赖）→账清转 strict（待建模清）",
-      "registered": "2026-10-20"
+      "registered": "2026-10-20",
+      "status": "cleared"
     },
     {
       "id": "SC-B3-034-CROSSCARD-VALCHAIN",
@@ -1854,6 +1848,13 @@
         "SC-B9-036-CROSSCARD-VALCHAIN"
       ],
       "note": "账清转 strict 重走（实测 8 案全等达成——a6-005/a8-005/a9-036/a9-026 各 8/8 PASS——证伪更正文化留史）"
+    },
+    {
+      "date": "2026-10-20",
+      "exited": [
+        "SC-B2-041-CROSSCARD-VALCHAIN"
+      ],
+      "note": "②$6AF7←0 径缺一修双清（SC-B2-041+SC-B9-026 同型——实测双案 8/8 PASS→条目退出）"
     }
   ]
 }
