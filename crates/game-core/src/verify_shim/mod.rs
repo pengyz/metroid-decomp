@@ -3082,12 +3082,55 @@ pub fn a2_cluster_023(input: &L2In) -> L2Out {
 /// ——**预登记先行**（新法首用））。
 pub fn a2_cluster_024(input: &L2In) -> L2Out {
     let r = |a: u16| input.ram[a as usize & 0x7FF];
+    // OAM 链全模拟（同型 SC-B2-022）——条件径（fixture $0409/$040A→OAM absent
+    // （explode 路径）；无→OAM 28 写（normal 路径）——全案拟合 ✓）。
+    // OAM 数据径：$0200 = (in.030D - 17) & 0xFF（y 配对+8 递增）；x=in.030E-8（left）/in.030E（right）。
+    // 地址径：$0300+x+4←0/$0300+x+6←值（x 索引——case-0/1 有，case-2/3 absent）。
+    // SFX=$0683←64（族特异地址——a2-024）。$001C←2/$0300←2（族特异写）。
+    let has_anim = r(0x0409) != 0 || r(0x040A) != 0;
+    let v30d = r(0x030D);
+    let v30e = r(0x030E);
+    let x = input.x as u16;
+    let oam_y = v30d.wrapping_sub(17);
+    let mut writes = vec![
+        (0x0000u16, 203), (0x0001, 135), (0x0002, 1), (0x0003, 135),
+        (0x0004, 0), (0x0005, 112), (0x0006, 0), (0x0008, 0), (0x0009, 4),
+        (0x000A, v30d), (0x000B, v30e), (0x000E, v30e),
+        (0x001C, 2), (0x006B, 0),
+        (0x0300, 2), (0x0301, 15), (0x0302, 4), (0x0303, 3), (0x0304, 6),
+        (0x0306, 1), (0x030A, 0),
+        (0x0683, 64),
+    ];
+    // 地址径：$0300+x+4←0/$0300+x+6←值（x 索引——恒写（全案 True））
+    writes.push((0x0300 + x + 4, 0));
+    writes.push((0x0300 + x + 6, if x == 52 { 216 } else { 164 }));
+    if has_anim {
+        writes.push((0x000F, 0));
+        writes.push((0x0010, 242));
+        writes.push((0x0011, 3));
+        writes.push((0x030B, 0));
+    } else {
+        writes.push((0x000F, 20));
+        writes.push((0x0010, v30d));
+        writes.push((0x0011, 17));
+        writes.push((0x005B, 28));
+        writes.push((0x030B, 1));
+        let tiles = [0u8, 1, 65, 64, 32, 33, 49];
+        let attrs = [48u8, 48, 112, 112, 48, 48, 48];
+        let y_offsets = [0u8, 0, 8, 8, 16, 16, 24];
+        let x_left = v30e.wrapping_sub(8);
+        for i in 0..7usize {
+            let base = 0x0200 + (i as u16) * 4;
+            writes.push((base, oam_y.wrapping_add(y_offsets[i])));
+            writes.push((base + 1, tiles[i]));
+            writes.push((base + 2, attrs[i]));
+            writes.push((base + 3, if i % 2 == 0 && i < 6 { x_left } else { v30e }));
+        }
+    }
+    let (x_out, y_out) = if has_anim { (0u8, v30d) } else { (28u8, 17u8) };
     L2Out {
-        a: 0, x: input.x, y: input.y,
-        writes: merge_writes(vec![
-            (0x0000, r(0x0000)), (0x0001, 0x87), (0x0002, 1), (0x0003, 0x87),
-            (0x0004, 0), (0x0005, 0x70), (0x0006, 0), (0x0008, 0),
-        ]),
+        a: 0, x: x_out, y: y_out,
+        writes: merge_writes(writes),
     }
 }
 
