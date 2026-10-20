@@ -265,7 +265,7 @@
       "id": "SC-B1-000-CROSSCARD-6AF7X",
       "case_prefix": "a1-000-case-6",
       "reason": "$6AF7 变换径（250→189 链算（r(0) 直写径 7/8 合/case-6 变换变体）——B 区链算深径（S5-121/S6-166 同款））",
-      "exit": "【2026-10-20 建模缺口定案】$6AF7 变换径建模清（链算变换模拟）——链=深径建模（refs 法直得（合成链/spawn 链/pickup 链/Table18/TileBlast/ptr 面/取负）——全链模拟）→账清转 strict（待建模清）",
+      "exit": "【2026-10-20 消费】【2026-10-20 建模缺口定案】$6AF7 变换径建模清（链算变换模拟）——链=深径建模（refs 法直得（合成链/spawn 链/pickup 链/Table18/TileBlast/ptr 面/取负）——全链模拟）（建模落（case-6 值径修复（\\$6AF7←189——chain-compute 多入参）——全径精确·**实落**（非声称！））——L2 8/8 全等（A 级证明））→账清转 strict ✓",
       "registered": "2026-10-19"
     },
     {
@@ -1843,6 +1843,20 @@
       "exit": "a7-041-case-7 落→账清转 strict",
       "registered": "2026-10-20",
       "status": "cleared"
+    },
+    {
+      "id": "SC-A4-000-CASE-6-IMPL",
+      "case_prefix": "a4-000-case-6",
+      "reason": "【预登记/补账】a4-000-case-6 簇（批产 WIP——A 批预登记制）",
+      "exit": "a4-000-case-6 落→账清转 strict",
+      "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-A6-001-CASE-6-IMPL",
+      "case_prefix": "a6-001-case-6",
+      "reason": "【预登记/补账】a6-001-case-6 簇（批产 WIP——A 批预登记制）",
+      "exit": "a6-001-case-6 落→账清转 strict",
+      "registered": "2026-10-20"
     }
   ],
   "exit_history": [
