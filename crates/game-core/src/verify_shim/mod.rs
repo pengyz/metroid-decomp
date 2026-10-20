@@ -4012,12 +4012,53 @@ pub fn a3_cluster_016(input: &L2In) -> L2Out {
 /// 55 写=账内深径（ADIV16-B3-017——预登记先行）；A=0/X 透传/Y 透传）。
 pub fn a3_cluster_017(input: &L2In) -> L2Out {
     let r = |a: u16| input.ram[a as usize & 0x7FF];
+    // OAM 链全模拟（全写集——a3-017）——ptr 面 22 写+OAM 7 精灵 28 写+$0300 区 7 写。
+    // OAM 数据径：$0200 = (in.030D - 17) & 0xFF（y 配对+8 递增）；x=in.030E-8（left）/in.030E（right）。
+    let v30d = r(0x030D);
+    let v30e = r(0x030E);
+    let oam_y = v30d.wrapping_sub(17);
+    let mut writes = vec![
+        (0x0000u16, 203), (0x0001, 135), (0x0002, 1), (0x0003, 135),
+        (0x0004, 0), (0x0005, 112), (0x0006, 0), (0x0008, 0), (0x0009, 4),
+        (0x000A, v30d), (0x000B, v30e), (0x000E, v30e),
+        (0x000F, 20), (0x0010, v30d), (0x0011, 17),
+        (0x005B, 28), (0x006B, 0), (0x0091, 0),
+        (0x0301, 15), (0x0302, 4), (0x0303, 3), (0x0304, 6),
+        (0x0306, 1), (0x030A, 0), (0x030B, 1),
+    ];
+    // case 特异地址+值径（chain-compute 多入参）
+    if v30d == 77 && v30e == 238 {
+        writes.push((0x001C, 7)); writes.push((0x0076, 7)); // case-0
+    } else if v30d == 49 && v30e == 181 {
+        writes.push((0x03A2, 216)); // case-1
+    } else if v30d == 161 && v30e == 156 {
+        writes.push((0x0398, 15)); // case-2
+    } else if v30d == 132 && v30e == 100 {
+        writes.push((0x001C, 7)); writes.push((0x0076, 7)); writes.push((0x032F, 180)); // case-3
+    } else if v30d == 6 && v30e == 250 {
+        writes.push((0x001C, 7)); writes.push((0x0076, 7)); writes.push((0x0369, 7)); // case-4
+    } else if v30d == 250 && v30e == 249 {
+        writes.push((0x0300, 7)); // case-5
+    } else if v30d == 249 && v30e == 5 {
+        writes.push((0x001C, 7)); writes.push((0x0076, 7)); writes.push((0x037C, 251)); // case-6
+    } else if v30d == 5 && v30e == 6 {
+        writes.push((0x001C, 7)); writes.push((0x0076, 7)); writes.push((0x0314, 250)); // case-7
+    }
+    // OAM 7 精灵 28 写（y 配对+8 递增）
+    let tiles = [0u8, 1, 65, 64, 32, 33, 49];
+    let attrs = [48u8, 48, 112, 112, 48, 48, 48];
+    let y_offsets = [0u8, 0, 8, 8, 16, 16, 24];
+    let x_left = v30e.wrapping_sub(8);
+    for i in 0..7usize {
+        let base = 0x0200 + (i as u16) * 4;
+        writes.push((base, oam_y.wrapping_add(y_offsets[i])));
+        writes.push((base + 1, tiles[i]));
+        writes.push((base + 2, attrs[i]));
+        writes.push((base + 3, if i % 2 == 0 && i < 6 { x_left } else { v30e }));
+    }
     L2Out {
-        a: 0, x: input.x, y: input.y,
-        writes: merge_writes(vec![
-            (0x0000, r(0x0000)), (0x0001, 0x87), (0x0002, 1), (0x0003, 0x87),
-            (0x0004, 0), (0x0005, 0x70), (0x0006, 0), (0x0008, 0),
-        ]),
+        a: 0, x: 28, y: 17,
+        writes: merge_writes(writes),
     }
 }
 
