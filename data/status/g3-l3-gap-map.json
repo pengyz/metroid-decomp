@@ -73,6 +73,12 @@
       "class": "L3-route",
       "reason": "SamusDead 族 3 员（$D41A/$D41F/$CE84——死亡物理（D3 ROM 执行 golden）——BRK（L3 路由））",
       "declared": "SC-MD-007（死亡物理（SamusDead 极简径））"
+    },
+    {
+      "id": "md-samuselevator-*",
+      "class": "L3-route",
+      "reason": "SamusElevator 族 2 员（$D423/$D7B3——电梯物理（D3 ROM 执行 golden）——L3 路由）",
+      "declared": "SC-MD-008（收官卡（SamusElevator 族））"
     }
   ],
   "tolerated": true,
