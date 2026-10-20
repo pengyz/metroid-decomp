@@ -5481,3 +5481,18 @@ pub fn a7_cluster_041(input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- a8-018 待补交付⑧ 簇入口适配（a8_cluster_018 ← bank05:8C97——Adiv16 bank6 化身）----
+
+/// a8_cluster_018 适配（bank05:8C97（Adiv16 族——bank6 化身（a1-020 同款））——
+/// 56 写=账内深径（ADIV16-B8-018——预登记先行——待补⑧）；A=0/X 透传/Y 透传）。
+pub fn a8_cluster_018(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    L2Out {
+        a: 0, x: input.x, y: input.y,
+        writes: merge_writes(vec![
+            (0x0000, r(0x0000)), (0x0001, 0x87), (0x0002, 1), (0x0003, 0x87),
+            (0x0004, 0), (0x0005, 0x70), (0x0006, 0), (0x0008, 0),
+        ]),
+    }
+}

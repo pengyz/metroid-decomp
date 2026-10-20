@@ -13500,3 +13500,29 @@ mod a7_042_tests {
         assert_eq!(b5_9b3c_chain(), (0x9B3C, true)); // 同族面（hexdump 直得）
     }
 }
+
+// ---- a8-018 待补交付⑧（2 员——Adiv16 族（bank6 化身）；判别条触发）----
+
+/// bank05:8C97 Adiv16 族（root——簇共根形三百七八·**bank6 化身**（a1-020 同款
+/// ——refs 法：prg7_engine.asm:762（bank6 复现）——待补⑧））。
+/// 返回 (目标址, 桩面)。
+pub fn b6_8c97_adiv16() -> (u16, bool) {
+    (0xC2BF, true) // jmp Adiv16（bank6 化身（a1-020 直连））
+}
+
+/// $C2BF Adiv16（bank6 化身——a1-020 同款（prg7_engine.asm:762））。
+pub fn b6_c2bf_adiv16(a_in: u8) -> u8 {
+    a_in >> 4 // 高 4 位移低 4 位（refs 法直得）
+}
+
+#[cfg(test)]
+mod a8_018_tests {
+    use super::*;
+
+    /// 二员转写形（Adiv16 bank6 化身 root+位移面）——待补交付⑧。
+    #[test]
+    fn a8_018_units_two() {
+        assert_eq!(b6_8c97_adiv16(), (0xC2BF, true)); // a1-020 直连
+        assert_eq!(b6_c2bf_adiv16(0xD4), 0x0D); // 高 4 位移低 4 位
+    }
+}
