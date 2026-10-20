@@ -5280,6 +5280,18 @@ bank 特定）②**双预登记 ✓**（220 条目=VALCHAIN-B7-036（12 写触�
 ④双 8 案账内+员面双扫桩 0。测 492。findings（r10）：0 新。SC-B7-16（B 区余
 50 卡）预告随账。
 
+## SC-B7-16 卡审（94e1a6f）——MotherBrain 域续（命名正身·350 测）
+
+### verdict: pass
+
+四条核：①**MotherBrain 域续命名正身 ✓**（refs 法直得）：asm 域名谱（SpawnMotherBrain
+Routine/StatusHandler/MotherBrain_Idle/Hurt 等）+bank5 $9AD4=`a9 01 9d f4 6a 20
+f1 9a`（LDA #$01/**STA $6AF4,X** 态写+JSR 链合形）+$9B2F 同族面（LDA #$03/
+STA $87 常量写）——命名正身续（MotherBrain 域谱系）②**MOTHERBRAIN-B7-038
+预登记 ✓**（221 条目）：59 写>20 阈值判别条触发→预登记→L2 并案=严格顺序续
+③8 案账内 ④员面双扫桩 0（2 员真现）。测 493（族域述**350 测里程碑**）。
+findings（r10）：0 新。SC-B7-17（B 区余 49 卡）预告随账。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
