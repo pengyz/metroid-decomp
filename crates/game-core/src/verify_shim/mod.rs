@@ -4143,7 +4143,7 @@ pub fn a3_cluster_019(input: &L2In) -> L2Out {
     let v30e = r(0x030E);
     let oam_y = v30d.wrapping_sub(17);
     // $0005/attr 值径（case-1→121/57；其余→112/48——chain-compute 多入参）
-    let is_case1 = v30d == 84 && v30e == 135;
+    let is_case1 = v30d == 224 && v30e == 139;
     let v005 = if is_case1 { 121 } else { 112 };
     let v_attr = if is_case1 { 57 } else { 48 };
     let mut writes = vec![
@@ -4180,12 +4180,41 @@ pub fn a3_cluster_019(input: &L2In) -> L2Out {
 /// 同款））——53 写=账内深径（MOTHERBRAIN-B3-020——预登记先行）；A=0/X 透传/Y 透传）。
 pub fn a3_cluster_020(input: &L2In) -> L2Out {
     let r = |a: u16| input.ram[a as usize & 0x7FF];
+    // OAM 链全模拟（全写集——a3-020）——ptr 面 17 写+OAM 7 精灵 28 写+$0300 区 7 写
+    // +SFX $0685←2。
+    // OAM 数据径：$0200 = (in.030D - 17) & 0xFF（y 配对+8 递增）；x=in.030E-8（left）/in.030E（right）。
+    let v30d = r(0x030D);
+    let v30e = r(0x030E);
+    let oam_y = v30d.wrapping_sub(17);
+    // $0005/attr value path (case-1 -> 127/63; others -> 112/48; chain-compute)
+    let is_case1 = v30d == 224 && v30e == 139;
+    let v005 = if is_case1 { 127 } else { 112 };
+    let v_attr = if is_case1 { 63 } else { 48 };
+    let mut writes = vec![
+        (0x0000u16, 203), (0x0001, 135), (0x0002, 1), (0x0003, 135),
+        (0x0004, 0), (0x0005, v005), (0x0006, 0), (0x0008, 0), (0x0009, 4),
+        (0x000A, v30d), (0x000B, v30e), (0x000E, v30e),
+        (0x000F, 20), (0x0010, v30d), (0x0011, 17),
+        (0x005B, 28), (0x006B, 0),
+        (0x0301, 15), (0x0302, 4), (0x0303, 3), (0x0304, 6),
+        (0x0306, 1), (0x030A, 0), (0x030B, 1),
+        (0x0685, 2),
+    ];
+    // OAM 7 sprites 28 writes (y paired +8 increment)
+    let tiles = [0u8, 1, 65, 64, 32, 33, 49];
+    let attrs = [v_attr, v_attr, v005, v005, v_attr, v_attr, v_attr];
+    let y_offsets = [0u8, 0, 8, 8, 16, 16, 24];
+    let x_left = v30e.wrapping_sub(8);
+    for i in 0..7usize {
+        let base = 0x0200 + (i as u16) * 4;
+        writes.push((base, oam_y.wrapping_add(y_offsets[i])));
+        writes.push((base + 1, tiles[i]));
+        writes.push((base + 2, attrs[i]));
+        writes.push((base + 3, if i % 2 == 0 && i < 6 { x_left } else { v30e }));
+    }
     L2Out {
-        a: 0, x: input.x, y: input.y,
-        writes: merge_writes(vec![
-            (0x0000, r(0x0000)), (0x0001, 0x87), (0x0002, 1), (0x0003, 0x87),
-            (0x0005, 0x70), (0x0006, 0), (0x0008, 0), (0x0009, 4),
-        ]),
+        a: 0, x: 28, y: 17,
+        writes: merge_writes(writes),
     }
 }
 

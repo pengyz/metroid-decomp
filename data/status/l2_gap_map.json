@@ -552,7 +552,7 @@
       "id": "SC-B3-021-CROSSCARD-SETOBJANIM",
       "case_prefix": "a3-021-case-",
       "reason": "SetObjectXSlotAnimIndex OAM 深径链（57 写（>20 深径判别条触发）——a2-024 同款（bank2 化身）——预登记先行（严格顺序）——S5-121 同款跨卡深径）",
-      "exit": "【2026-10-20 建模缺口定案】SetObjAnim 链径建模清（全链模拟）——链=SetObjectXSlotAnimIndex anim 径（refs 法直得（prg7_engine.asm:3986）——anim 模拟）→账清转 strict（待建模清）",
+      "exit": "【2026-10-20 消费】【2026-10-20 建模缺口定案】SetObjAnim 链径建模清（全链模拟）——链=SetObjectXSlotAnimIndex anim 径（refs 法直得（prg7_engine.asm:3986）——anim 模拟）（建模落（OAM 链全模拟（全写集（ptr 面 17 写+OAM 7 精灵 28 写+\\$0300 区 7 写）+case-1 attr 值径（63/127——chain-compute 多入参）+条件径（224/139）——全径精确））——L2 8/8 全等（A 级））→账清转 strict ✓",
       "registered": "2026-10-19"
     },
     {
