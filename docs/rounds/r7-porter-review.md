@@ -5550,6 +5550,18 @@ d0 03 20 03 cc` **五 bank 全同**（=a2-022 同形（JSR $CC07 调用链）—
 >20 阈值判别条触发→预登记→L2 并案=严格顺序续 ④8 案账内+员面双扫桩 0（2 员
 真现）。测 515。findings（r10）：0 新。SC-B9-02（B 区收官批——余 29 卡）预告随账。
 
+## SC-B9-02 卡审（8f0c866）——MotherBrainMusic bank7 化身（SFX 十五现）
+
+### verdict: pass
+
+四条核：①**MotherBrainMusic 五 bank 全谱 ✓✓✓✓✓**：bank1/2/3/4/5 $8CC0=
+`20 03 cc 4c 71 8c a5 56` **五 bank 全同**（=a2-023 同形（JSR $CC03 调用链）——
+MotherBrainMusic 调用点五 bank 复现全谱）②**十五现声旗面 ✓**：bank7 $CC03=
+`a9 02 d0 02`（LDA #$02=music_MotherBrain——SFX 十五现）③**MOTHERBRAIN-B9-021
+预登记 ✓**（249 条目）：53 写>20 阈值判别条触发→预登记→L2 并案=严格顺序续
+④8 案账内+员面双扫桩 0（2 员真现）。测 516。findings（r10）：0 新。SC-B9-03
+（B 区收官批——余 28 卡）预告随账。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
