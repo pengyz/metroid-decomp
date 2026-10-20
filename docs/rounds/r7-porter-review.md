@@ -6552,6 +6552,29 @@ OAM 链全模拟实现））：OAM 链全模拟（y 时序辨+chain-compute 多�
 ⑤测 540 全绿+L2 3107/880（账目面全合）。findings（r10）：1 gap 显式（a3-028 base
 族 4 写值 transform 待辨（诚实标定））。
 
+## port2 门链 OAM+decomp base 族 transform 辨双审（落件即审·实测核——双 pass）
+
+### ① a2-037 OAM 链 verdict: pass | ② decomp base 族 transform 辨 verdict: pass（诚实标定）
+
+**实测 diff 输出原文（A 级——非声称核）**：
+```
+a2-037: [PASS]×8（0 FAIL）✓✓✓✓✓✓✓✓（SC-B8-014 OAM 链落（队列末二件））
+a3-028: 1/8 PASS+7 FAIL（base 族 transform 辨进度——考证进度态（诚实标定））
+```
+
+四条核：①**a2-037=8/8 全绿 ✓✓**（port2 1032c91（SC-B8-014 建模缺口定案 v2+
+DOORSUB 族特异实现））：OAM 链全模拟（y 时序辨+chain-compute 多入参+新址辨）实现落
+=全径精确+账清转 strict 落定 ✓（队列末二件）②**a3-028 base 族 transform 辨进度=
+诚实标定 ✓**（decomp ec8d78a）：**base 族 transform 辨进度**（JSR $802A 派发表
+内径（state-init 族（$8071/$80D0/$80F9））——base 族值（0/16/0/140）transform
+待辨（**state-init 写径 vs base 族（0x0405+x）mismatch**——$040B+x 读改写内部
+变换待））+值径待深挖——claim 与实测一致（1/8+7 FAIL 考证进度态（非声称修复
+（「0 败」纪律面 ✓）））③**派发表内径辨核 ✓**（state-init 族三员（$8071/$80D0/
+$80F9）=辨识精确（显式））④**base 族值径辨核 ✓**（0/16/0/140 transform 待辨
+（state-init 写径 vs base 族 mismatch（显式）））⑤测 540 全绿+L2 3107/879
+（账目面全合）。findings（r10）：1 gap 显式（a3-028 base 族 transform 待辨
+（state-init vs base 族 mismatch）（诚实标定））。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
