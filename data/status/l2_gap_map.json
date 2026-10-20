@@ -13,7 +13,7 @@
       "id": "SC-S1-17-TRANSCRIBE",
       "case_prefix": "s1-17-case",
       "reason": "S1-17 簇转写中（批产迭代态——3 案语义差随转写收敛）",
-      "exit": "S1-17 卡转写落→账清转 strict",
+      "exit": "【2026-10-20 消费】S1-17 卡转写落（转写已落——engine 员转写+tests 在）→账清转 strict ✓",
       "registered": "2026-10-19"
     },
     {
@@ -76,7 +76,7 @@
       "id": "SC-S2-048-TRANSCRIBE",
       "case_prefix": "s2-048-case",
       "reason": "S2-048 簇转写中（批产迭代态——8 案语义差随转写收敛）",
-      "exit": "S2-048 卡转写落→账清转 strict",
+      "exit": "【2026-10-20 消费】S2-048 卡转写落（转写已落——engine 员转写+tests 在）→账清转 strict ✓",
       "registered": "2026-10-19"
     },
     {
