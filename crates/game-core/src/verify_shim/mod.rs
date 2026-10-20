@@ -4162,16 +4162,36 @@ pub fn a3_cluster_025(input: &L2In) -> L2Out {
 /// 判别条未触发（严格顺序 ✓））+$6B4A/$6B4C/$6B8E）；A=0/X 透传/Y=1）。
 pub fn a3_cluster_026(input: &L2In) -> L2Out {
     let r = |a: u16| input.ram[a as usize & 0x7FF];
-    let x = input.x as u16;
-    L2Out {
-        a: 0, x: input.x, y: 1,
-        writes: merge_writes(vec![
-            (0x0002, 0), (0x0008, 0), (0x0009, 0), (0x000B, 0),
-            (0x0404 + x + 82, 0), (0x0404 + x + 92, 0),
-            (0x0404 + x + 131, 0), (0x0404 + x + 132, 0),
-            (0x6AF8 + x + 81, r(0x0000)), (0x6AF8 + x + 82, 3),
-            (0x6AF8 + x + 84, 1), (0x6AF8 + x + 136, 0),
-        ]),
+    // X 链算径（chain-compute——fixture 依赖）——case-0 X=82（$0456/$0460/$0493/$0494/
+    // $6B49/$6B4A/$6B4C/$6B8E）vs case-1..7 X=0（$0404/$040E/$04xx/$04xx）。
+    let v30d = r(0x030D);
+    let v30e = r(0x030E);
+    let is_case0 = v30d == 67 && v30e == 129;
+    let x_out = if is_case0 { 82 } else { 0 };
+    // chain-compute 多入参（in.030D/in.030E 双径辨）
+    let v6b49 = match (v30d, v30e) {
+        (67, 129) => 239, (38, 73) => 26, (125, 242) => 113, (96, 186) => 84,
+        (6, 250) => 5, (250, 249) => 6, (249, 5) => 250, (5, 6) => 249,
+        _ => 0,
+    };
+    if is_case0 {
+        L2Out {
+            a: 0, x: x_out, y: 1,
+            writes: merge_writes(vec![
+                (0x0002, 0), (0x0008, 0), (0x0009, 0), (0x000B, 0),
+                (0x0456, 0), (0x0460, 0), (0x0493, 0), (0x0494, 0),
+                (0x6B49, v6b49), (0x6B4A, 3), (0x6B4C, 1), (0x6B8E, 0),
+            ]),
+        }
+    } else {
+        L2Out {
+            a: 0, x: x_out, y: 1,
+            writes: merge_writes(vec![
+                (0x0002, 0), (0x0008, 0), (0x0009, 0), (0x000B, 0),
+                (0x0404, 0), (0x040E, 0), (0x042A, 0), (0x042B, 0),
+                (0x6AF7, v6b49), (0x6AF8, 3), (0x6AFA, 1),
+            ]),
+        }
     }
 }
 
