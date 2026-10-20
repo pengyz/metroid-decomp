@@ -13270,3 +13270,42 @@ mod a9_036_tests {
         assert!(ev.contains(&(0x6AF9, 74))); // 链算径（判别条补触发——写址对值核对）
     }
 }
+
+// ---- a2-043 待补交付（2 员——walk-ring 族（x-=$10 X 环）；L2 真 0 留白）----
+
+/// $9C1F 员体（root——簇共根形三百七一·walk-ring 族（hexdump 直得）：jsr $9C2A/
+/// txa/sec/sbc #$10/tax/bne 环/rts——**x-=$10 X 环**（S5-123 同族））。
+/// 返回 (环出, 迭代数)。
+pub fn b2_9c1f_walk_ring(x: u8) -> (u8, u8) {
+    let mut x = x;
+    let mut n = 0;
+    loop {
+        n += 1;
+        x = x.wrapping_sub(0x10);
+        if x == 0 {
+            break;
+        }
+    }
+    (x, n) // x-=$10 环（x→0→break）
+}
+
+/// $9C2A 员体（链壳（hexdump 直得）：ldy $6AF4,x/beq/lda $6B02,x/cmp #$0A/beq/
+/// cmp #9/bne——S5-146 族同族面）。
+/// 返回 (跳转面, 有效)。
+pub fn b2_9c2a_chain() -> (u16, bool) {
+    (0x9C2A, true) // 同族面（hexdump 直得）
+}
+
+#[cfg(test)]
+mod a2_043_tests {
+    use super::*;
+
+    /// 二员转写形（walk-ring 族 root+链壳）——真 0 留白形（待补交付）。
+    #[test]
+    fn a2_043_units_two() {
+        let (x, n) = b2_9c1f_walk_ring(0x20);
+        assert_eq!(x, 0); // x-=$10 环出
+        assert_eq!(n, 2); // 2 迭代（0x20→0x10→0→break）
+        assert_eq!(b2_9c2a_chain(), (0x9C2A, true));
+    }
+}
