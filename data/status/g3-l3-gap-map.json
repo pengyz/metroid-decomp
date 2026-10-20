@@ -79,6 +79,12 @@
       "class": "L3-route",
       "reason": "SamusElevator 族 2 员（$D423/$D7B3——电梯物理（D3 ROM 执行 golden）——L3 路由）",
       "declared": "SC-MD-008（收官卡（SamusElevator 族））"
+    },
+    {
+      "id": "g4-tourian-*",
+      "class": "L3-route",
+      "reason": "Tourian 域 4 例程（bank3 窗形（MotherBrain 碰撞族）——D3 ROM 执行 golden（19+5+0+0 写）——stops 面（L3 路由））",
+      "declared": "SC-G4-001（通关径面）"
     }
   ],
   "tolerated": true,
