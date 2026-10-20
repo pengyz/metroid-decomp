@@ -391,7 +391,7 @@
       "id": "SC-B2-040-CROSSCARD-VALCHAIN",
       "case_prefix": "a2-040-case-",
       "reason": "值链算深径（$6AF7/$6AF8←10（fixture 弱源）+ptr 对（$7E/$7F）——深径判别条补触发（链算径）——S5-121 同款跨卡深径）",
-      "exit": "值链算径建模清（$6AF8/$6AFA 族链模拟）→账清转 strict",
+      "exit": "【2026-10-20 消费】值链算径建模清（$6AF8/$6AFA 族链模拟——常量组（10/8/127/95/0/0/10/10/1））→账清转 strict ✓",
       "registered": "2026-10-19"
     },
     {
