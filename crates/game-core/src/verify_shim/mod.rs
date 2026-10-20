@@ -3011,7 +3011,7 @@ pub fn a2_cluster_022(input: &L2In) -> L2Out {
             writes.push((base, oam_y.wrapping_add(y_offsets[i]))); // y = oam_y + offset
             writes.push((base + 1, tiles[i])); // tile = anim tile 数据
             writes.push((base + 2, attrs[i])); // attr = attribute 数据
-            writes.push((base + 3, if i % 2 == 0 { x_left } else { v30e })); // x = left/right
+            writes.push((base + 3, if i % 2 == 0 && i < 6 { x_left } else { v30e })); // x = left(i<6)/right
         }
     }
     // X/Y 计算径：normal 路径 X=28/Y=17（常量）；explode 路径 X=0/Y=in.030D
