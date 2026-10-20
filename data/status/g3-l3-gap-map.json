@@ -67,6 +67,12 @@
       "class": "L3-route",
       "reason": "SamusRun 族跑动物理（$CCC2/$CCB7——41 写物理面（D3 ROM 执行 golden）——BRK/$22（L3 路由））",
       "declared": "SC-MD-006（跑动物理）"
+    },
+    {
+      "id": "md-samusdead-*",
+      "class": "L3-route",
+      "reason": "SamusDead 族 3 员（$D41A/$D41F/$CE84——死亡物理（D3 ROM 执行 golden）——BRK（L3 路由））",
+      "declared": "SC-MD-007（死亡物理（SamusDead 极简径））"
     }
   ],
   "tolerated": true,
