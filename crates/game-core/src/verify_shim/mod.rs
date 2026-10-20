@@ -5259,3 +5259,14 @@ pub fn a9_cluster_024(input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-B9-06 簇入口适配（a9_cluster_025 ← bank05:95C6——TwosComplement 同款）----
+
+/// a9_cluster_025 适配（bank05:95C6 TwosComplement（bank7 化身（a2-027 同款））——
+/// 案实核：A=取负（二补）/X/Y 透传；0 写（透传类（判别条未触发（严格顺序 ✓）））。
+pub fn a9_cluster_025(input: &L2In) -> L2Out {
+    L2Out {
+        a: input.a.wrapping_neg(), x: input.x, y: input.y,
+        writes: vec![],
+    }
+}

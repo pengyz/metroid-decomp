@@ -12899,3 +12899,29 @@ mod a9_024_tests {
         assert!(b7_cb73_select_pal().1); // 调色板选择面
     }
 }
+
+// ---- SC-B9-06（a9-025）员转写（2 员——TwosComplement 族（bank7 化身））----
+
+/// bank05:95C6 TwosComplement（root——簇共根形三百五九·**bank7 化身**（a2-027
+/// 同款——refs 法：areas_common.asm（取负（bank7 复现））））。
+/// 返回 (A 值, 取负面)。
+pub fn b7_95c6_twos_complement(a_in: u8) -> u8 {
+    a_in.wrapping_neg() // 二补取负（refs 法直得）
+}
+
+/// $9941 员体（bank7 同族面（取负调用面——2 员））。
+pub fn b7_9941_face(a_in: u8) -> u8 {
+    b7_95c6_twos_complement(a_in)
+}
+
+#[cfg(test)]
+mod a9_025_tests {
+    use super::*;
+
+    /// 二员转写形（TwosComplement bank7 化身 root+调用面）。
+    #[test]
+    fn a9_025_units_two() {
+        assert_eq!(b7_95c6_twos_complement(63), 193); // -63=0xC1（refs 法直得）
+        assert_eq!(b7_9941_face(63), 193); // 调用面（写址对值核对）
+    }
+}
