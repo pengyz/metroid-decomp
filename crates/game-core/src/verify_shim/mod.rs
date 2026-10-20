@@ -5059,3 +5059,20 @@ pub fn a8_cluster_010(input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-B8-11 簇入口适配（a8_cluster_011 ← bank05:8036——常量零组（a6-010 同款））----
+
+/// a8_cluster_011 适配（bank05:8036（bank6 窗）——案实核 4 写（$00←0+$04 族
+/// （x 索引（a6-010 公式（$0404+x-2/+2）））+$6B5E←0（$6AF8+x+4）
+/// （常量零组——判别条未触发（严格顺序 ✓）））；A=0/X 透传/Y=14）。
+pub fn a8_cluster_011(input: &L2In) -> L2Out {
+    let x = input.x as u16;
+    L2Out {
+        a: 0, x: input.x, y: 14,
+        writes: merge_writes(vec![
+            (0x0000, 0),
+            (0x0404 + x - 2, 0), (0x0404 + x + 2, 0), // x 索引（a6-010 公式）
+            (0x6AF8 + x + 4, 0),
+        ]),
+    }
+}

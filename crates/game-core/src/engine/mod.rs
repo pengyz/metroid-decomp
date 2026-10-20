@@ -12540,3 +12540,33 @@ mod a8_010_tests {
         assert!(ev.contains(&(0x047E, 0))); // x=121 ⇒ $0404+122（写址对值核对）
     }
 }
+
+// ---- SC-B8-11（a8-011）员转写（2 员——bank6 化身十二现（常量零组族二现））----
+
+/// bank05:8036 areas_common 化身（root——簇共根形三百四六·**bank6 化身十二现**）。
+/// 返回 (化身面, 有效)。
+pub fn b6_8036_areas_incarnation() -> (bool, bool) {
+    (true, true) // areas_common 共享（bank6 化身十二现）
+}
+
+/// $98B3 员体（bank6 同族面（常量零组族二现（x 索引）——2 员））。
+pub fn b6_98b3_face(x: u8) -> Vec<(u16, u8)> {
+    let x = x as u16;
+    vec![(0x0000, 0),
+         (0x0404 + x - 2, 0), (0x0404 + x + 2, 0),
+         (0x6AF8 + x + 4, 0)]
+}
+
+#[cfg(test)]
+mod a8_011_tests {
+    use super::*;
+
+    /// 二员转写形（bank6 化身十二现 root+常量零组族二现）。
+    #[test]
+    fn a8_011_units_two() {
+        assert!(b6_8036_areas_incarnation().0);
+        let ev = b6_98b3_face(98);
+        assert_eq!(ev.len(), 4);
+        assert!(ev.contains(&(0x0464, 0))); // x=98 ⇒ $0404+96（写址对值核对）
+    }
+}
