@@ -384,7 +384,7 @@
       "id": "SC-B2-036-CROSSCARD-VALCHAIN",
       "case_prefix": "a2-036-case-",
       "reason": "值链算深径（$6B2F-$6B31 族 3 写（53 值 fixture 弱源）——深径判别条补触发（链算径）——S5-121 同款跨卡深径）",
-      "exit": "值链算径建模清（$6AF8/$6AFA 族链模拟）→账清转 strict",
+      "exit": "【2026-10-20 消费】值链算径建模清（$6AF8/$6AFA 族链模拟——x 索引写址（$6AF8+x/x+1/x+2——全案拟合））→账清转 strict ✓",
       "registered": "2026-10-19"
     },
     {

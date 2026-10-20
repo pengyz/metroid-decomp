@@ -3169,10 +3169,13 @@ pub fn a2_cluster_035(_input: &L2In) -> L2Out {
 /// a2_cluster_036 适配（$9A8F（S5-146 族区）——案实核 3 写（$6B2F-$6B31 族
 /// （53 值 fixture 弱源）——值链算深径（判别条补触发→账目预登记（VALCHAIN）→
 /// L2 并案）；A=0/X=0/Y=0）。
-pub fn a2_cluster_036(_input: &L2In) -> L2Out {
+pub fn a2_cluster_036(input: &L2In) -> L2Out {
+    let x = input.x as u16;
     L2Out {
-        a: 0, x: 0, y: 0,
-        writes: merge_writes(vec![(0x6B2F, 0), (0x6B30, 53), (0x6B31, 53)]),
+        a: 0, x: input.x, y: 0,
+        writes: merge_writes(vec![
+            (0x6AF8 + x, 0), (0x6AF8 + x + 1, 53), (0x6AF8 + x + 2, 53), // x 索引（$6AF8+x/x+1/x+2——全案拟合）
+        ]),
     }
 }
 
@@ -4828,7 +4831,7 @@ pub fn a7_cluster_035(input: &L2In) -> L2Out {
     L2Out {
         a: 0, x: input.x, y: 0,
         writes: merge_writes(vec![
-            (0x6AF8 + x - 1, 0), (0x6AF8 + x, 53), (0x6AF8 + x + 1, 53), // x 索引（写址不掩）
+            (0x6AF8 + x, 0), (0x6AF8 + x + 1, 53), (0x6AF8 + x + 2, 53), // x 索引（$6AF8+x/x+1/x+2——全案拟合）
         ]),
     }
 }
