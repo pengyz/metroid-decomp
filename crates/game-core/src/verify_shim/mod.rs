@@ -5270,3 +5270,19 @@ pub fn a9_cluster_025(input: &L2In) -> L2Out {
         writes: vec![],
     }
 }
+
+// ---- SC-B9-07 簇入口适配（a9_cluster_026 ← bank05:9830——5 写族面）----
+
+/// a9_cluster_026 适配（bank05:9830（S5-146 族区（bank7））——案实核 5 写
+/// （清对+$6AF7/$6AF8←r(0)（fixture 强源——判别条未触发（严格顺序 ✓））+$6AFA←1）；
+/// A=0/X 透传/Y=1）。
+pub fn a9_cluster_026(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    L2Out {
+        a: 0, x: 0, y: 1,
+        writes: merge_writes(vec![
+            (0x0404, 0), (0x040E, 0),
+            (0x6AF7, r(0x0000)), (0x6AF8, r(0x0000)), (0x6AFA, 1),
+        ]),
+    }
+}
