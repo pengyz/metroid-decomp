@@ -4396,12 +4396,22 @@ pub fn a4_cluster_008(input: &L2In) -> L2Out {
 /// 同款））——23 写=账内深径（DOORSUB8C71-B4-009——预登记先行）；A=0/X 透传/Y 透传）。
 pub fn a4_cluster_009(input: &L2In) -> L2Out {
     let r = |a: u16| input.ram[a as usize & 0x7FF];
+    // OAM 链全模拟（explode 路径——a4-009 DOORSUB8C71）——OAM absent+ptr 面 15 写
+    // +$0300 区 7 写。regs X=0/Y=162（explode 路径）。
+    let v30d = r(0x030D);
+    let v30e = r(0x030E);
+    let mut writes = vec![
+        (0x0000u16, 203), (0x0001, 135), (0x0002, 1), (0x0003, 135),
+        (0x0004, 0), (0x0005, 112), (0x0006, 0), (0x0008, 0), (0x0009, 4),
+        (0x000A, v30d), (0x000B, v30e), (0x000E, v30e),
+        (0x000F, 0), (0x0010, 192), (0x0011, 3),
+        (0x006B, 0),
+        (0x0301, 15), (0x0302, 4), (0x0303, 3), (0x0304, 6),
+        (0x0306, 1), (0x030A, 0), (0x030B, 0),
+    ];
     L2Out {
-        a: 0, x: input.x, y: input.y,
-        writes: merge_writes(vec![
-            (0x0000, r(0x0000)), (0x0001, 0x87), (0x0002, 1), (0x0003, 0x87),
-            (0x0005, 0x70), (0x0006, 0), (0x0008, 0), (0x0009, 4),
-        ]),
+        a: 0, x: 0, y: 162,
+        writes: merge_writes(writes),
     }
 }
 
