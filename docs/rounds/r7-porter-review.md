@@ -6672,6 +6672,28 @@ OAM 值（514←48/515←242）vs core（4←64/5←96/514←96/515←250）—�
 ③测 540 全绿+L2 3107/846。findings（r10）：1（a3-014 case-4/7 chain-compute 多入参
 值 gap=needs_revision）+1 待落（decomp base 族写径辨（在产））。
 
+## port2 X 链算径+decomp base 族写径辨双审（落件即审·实测核——双 pass）
+
+### ① a3-014 X 链算径 verdict: pass | ② decomp base 族写径辨 verdict: pass（诚实标定）
+
+**实测 diff 输出原文（A 级——非声称核）**：
+```
+a3-014: [PASS]×8（0 FAIL）✓✓✓✓✓✓✓✓（chain-compute 多入参值修落）
+a3-028: 1/8 PASS+7 FAIL（base 族写径辨落——考证进度态（诚实标定））
+```
+
+四条核：①**a3-014=8/8 全绿 ✓✓**（port2 7cd252e（SC-B3-014 chain-compute 多入参值
+修））：case-4/7 多入参值修（y 时序值（0/112/48 vs 64/96/96）——in.030D/in.030E
+双径辨值径实现）落=全径精确+账清转 strict 落定 ✓②**a3-028 base 族写径辨落=诚实
+标定 ✓**（decomp 7af4911）：**base 族写径辨落**（bank02:99CB 域 hexdump：LDA
+$0405,X+LDA $040A,X（**enemy state 读**）+JSR $99F5/$9A13（**写径**）+LDA $99ED,Y
+（表）——**base 族写径=enemy state 读+$99F5/$9A13 写**）+**写径 routine 待辨**
+（$99F5/$9A13）——claim 与实测一致（1/8+7 FAIL 考证进度态（非声称修复（「0 败」
+纪律面 ✓）））③**base 族写径辨核 ✓**（enemy state 读+$99F5/$9A13 写=写径辨识
+（显式））④**写径 routine 待辨核 ✓**（$99F5/$9A13（显式待做））⑤测 540 全绿+
+L2 3107/844（账目面全合）。findings（r10）：1 gap 显式（a3-028 写径 routine 待辨
+（$99F5/$9A13）（诚实标定））。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
