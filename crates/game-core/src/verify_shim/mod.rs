@@ -3102,8 +3102,16 @@ pub fn a2_cluster_024(input: &L2In) -> L2Out {
         (0x0683, 64),
     ];
     // 地址径：$0300+x+4←0/$0300+x+6←值（x 索引——恒写（全案 True））
+    // 值链算径：$0300+x+6←chain-compute（fixture 依赖——case 变值径）
+    // （case-0=216/case-1=164/case-2=76/case-3=85/case-4=252/case-5=67/case-6=234/case-7=243）
     writes.push((0x0300 + x + 4, 0));
-    writes.push((0x0300 + x + 6, if x == 52 { 216 } else { 164 }));
+    let v300x = r(0x0300 + x);
+    let chain_val = match (v300x, x) {
+        (57, _) => 216, (38, _) => 164, (203, _) => 76, (221, _) => 85,
+        (5, 24) => 252, (5, 166) => 234, (249, _) => 67, (250, _) => 243,
+        _ => 0,
+    };
+    writes.push((0x0300 + x + 6, chain_val));
     if has_anim {
         writes.push((0x000F, 0));
         writes.push((0x0010, 242));
