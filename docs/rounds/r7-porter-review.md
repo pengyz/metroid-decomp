@@ -6602,6 +6602,30 @@ $C20E）/$80F9（STA $FF/$2C/$C1+INC $1F）——**内写径=zp/$0684/$69B2 族*
 findings（r10）：1（a3-013 X 链算径 gap=needs_revision）+1 gap 显式（a3-028 base
 族 sub-call 待辨（诚实标定））。
 
+## port2 a3-013 修复件+decomp sub-call 辨双审（落件即审·实测核）
+
+### ① a3-013 修复件 verdict: needs_revision | ② decomp sub-call 辨 verdict: 待落（在产）
+
+**实测 diff 输出原文（A 级——非声称核）**：
+```
+a3-013: [PASS]×4+[FAIL]×4（case-4/5/6/7——OAM 偏移+值差+多写）
+[FAIL] a3-013-case-4: golden=(..., (513, 253), (514, 108), ..., (761, 237), (762, 106), ...)
+                       core =(..., (516, 245), (517, 107), ...)（OAM 偏移 +3+y 面多写）
+[FAIL] a3-013-case-5: golden=(..., (92, 93), ..., (980, 1), ...)  core=(..., (92, 66), ...)
+（值差（92: 93 vs 66）+core 缺写 (980, 1)）
+（case-6/7 同型：值差（92）+多写（970/866, 1））
+```
+
+四条核：①**a3-013=4/8+case-4/5/6/7 gap（契约族）**：value +8 偏移修（case-0/1/2/3
+全等 ✓）但 **case-4 OAM 偏移 +3**（golden 513/514/515 vs core 516/517/518）+**y 面
+多写**（golden (761, 237)/(762, 106) vs core 无）+**case-5/6/7 值差**（golden (92, 93)
+vs core (92, 66)）+**多写缺**（golden (980/970/866, 1) vs core 无）——**修复要求**：
+case-4 OAM 偏移修+y 面写径实现+case-5/6/7 值径修+多写补→8 案全等→账清转 strict
+②**decomp base 族 sub-call 辨=待落**（在产——0d185b8（routine 逐员辨落）内声明
+「base 族（0x0405+x）待 sub-call 辨（$C439/$C158/$C20E 内径）」=待落件（review
+待落件（「落件即审」））③测 540 全绿+L2 3107/858。findings（r10）：1（a3-013
+case-4/5/6/7 gap=needs_revision）+1 待落（decomp sub-call 辨（在产））。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
