@@ -153,28 +153,28 @@
       "id": "SC-A1-002-CASE7",
       "case_prefix": "a1-002-case-7",
       "reason": "a1-002 批产迭代态案语义差（case-7：core 多写 $6B=163（(107,163)）——golden 无此写——转写收敛面）",
-      "exit": "a1-002 卡转写落→账清转 strict",
+      "exit": "【2026-10-20 消费】a1-002 卡转写落（a1 批已落——engine 员转写+tests 在）→账清转 strict ✓",
       "registered": "2026-10-19"
     },
     {
       "id": "SC-A1-004-IMPL",
       "case_prefix": "a1-004-case",
       "reason": "a1_cluster_004 缺移植函数（实现缺口——批产 WIP 簇；全 8 案随转写收敛）",
-      "exit": "a1_cluster_004 移植落→账清转 strict",
+      "exit": "【2026-10-20 消费】a1_cluster_004 移植落（a1 批已落——engine 员转写+tests 在）→账清转 strict ✓",
       "registered": "2026-10-19"
     },
     {
       "id": "SC-A1-005-IMPL",
       "case_prefix": "a1-005-case",
       "reason": "【预登记】a1-005 簇（porter 在途 WIP——A 批预登记制首件：败案在=账目在前置化——实现/转写缺口预账）",
-      "exit": "a1_cluster_005 移植/转写落→账清转 strict",
+      "exit": "【2026-10-20 消费】a1_cluster_005 移植/转写落（a1 批已落——engine 员转写+tests 在）→账清转 strict ✓",
       "registered": "2026-10-19"
     },
     {
       "id": "SC-A1-006-IMPL",
       "case_prefix": "a1-006-case",
       "reason": "【预登记/补账】a1-006 簇（批产 WIP——A 批预登记制：败案在=账目在前置化）",
-      "exit": "a1-006 落→账清转 strict",
+      "exit": "【2026-10-20 消费】a1-006 落（a1 批已落——engine 员转写+tests 在）→账清转 strict ✓",
       "registered": "2026-10-19"
     },
     {
@@ -195,21 +195,21 @@
       "id": "SC-A1-009-IMPL",
       "case_prefix": "a1-009-case",
       "reason": "【预登记/补账】a1-009 簇（批产 WIP——A 批预登记制）",
-      "exit": "a1-009 落→账清转 strict",
+      "exit": "【2026-10-20 消费】a1-009 落（a1 批已落——engine 员转写+tests 在）→账清转 strict ✓",
       "registered": "2026-10-19"
     },
     {
       "id": "SC-A1-010-IMPL",
       "case_prefix": "a1-010-case",
       "reason": "【预登记/补账】a1-010 簇（在途 WIP——核令三定因：开工未发预登记件=执行面漏——补登即刻）",
-      "exit": "a1_cluster_010 移植/转写落→账清转 strict",
+      "exit": "【2026-10-20 消费】a1_cluster_010 移植/转写落（a1 批已落——engine 员转写+tests 在）→账清转 strict ✓",
       "registered": "2026-10-19"
     },
     {
       "id": "SC-A1-011-IMPL",
       "case_prefix": "a1-011-case",
       "reason": "【预登记】a1-011 簇（porter 严格顺序单发——开工前置步先登记（预登记制执行面强化后首件）——实现/转写缺口预账）",
-      "exit": "a1_cluster_011 移植/转写落→账清转 strict",
+      "exit": "【2026-10-20 消费】a1_cluster_011 移植/转写落（a1 批已落——engine 员转写+tests 在）→账清转 strict ✓",
       "registered": "2026-10-19"
     },
     {
@@ -223,7 +223,7 @@
       "id": "SC-A1-012-IMPL",
       "case_prefix": "a1-012-case",
       "reason": "【预登记】a1-012 簇（porter 严格顺序单发二例——开工前置步先登记——实现/转写缺口预账）",
-      "exit": "a1_cluster_012 移植/转写落→账清转 strict",
+      "exit": "【2026-10-20 消费】a1_cluster_012 移植/转写落（a1 批已落——engine 员转写+tests 在）→账清转 strict ✓",
       "registered": "2026-10-19"
     },
     {
@@ -237,7 +237,7 @@
       "id": "SC-A1-013-IMPL",
       "case_prefix": "a1-013-case",
       "reason": "【预登记】a1-013 簇（porter 严格顺序单发三例——开工前置步先登记——实现/转写缺口预账）",
-      "exit": "a1_cluster_013 移植/转写落→账清转 strict",
+      "exit": "【2026-10-20 消费】a1_cluster_013 移植/转写落（a1 批已落——engine 员转写+tests 在）→账清转 strict ✓",
       "registered": "2026-10-19"
     },
     {
@@ -251,14 +251,14 @@
       "id": "SC-A1-014-IMPL",
       "case_prefix": "a1-014-case",
       "reason": "【预登记】a1-014 簇（porter 严格顺序单发四例——开工前置步先登记）",
-      "exit": "a1_cluster_014 移植/转写落→账清转 strict",
+      "exit": "【2026-10-20 消费】a1_cluster_014 移植/转写落（a1 批已落——engine 员转写+tests 在）→账清转 strict ✓",
       "registered": "2026-10-19"
     },
     {
       "id": "SC-A1-015-IMPL",
       "case_prefix": "a1-015-case",
       "reason": "【预登记】a1-015 簇（porter 严格顺序单发五例——开工前置步先登记）",
-      "exit": "a1_cluster_015 移植/转写落→账清转 strict",
+      "exit": "【2026-10-20 消费】a1_cluster_015 移植/转写落（a1 批已落——engine 员转写+tests 在）→账清转 strict ✓",
       "registered": "2026-10-19"
     },
     {
@@ -272,14 +272,14 @@
       "id": "SC-A1-016-IMPL",
       "case_prefix": "a1-016-case",
       "reason": "【预登记】a1-016 簇（porter 严格顺序单发六例——开工前置步先登记）",
-      "exit": "a1_cluster_016 移植/转写落→账清转 strict",
+      "exit": "【2026-10-20 消费】a1_cluster_016 移植/转写落（a1 批已落——engine 员转写+tests 在）→账清转 strict ✓",
       "registered": "2026-10-19"
     },
     {
       "id": "SC-A1-017-IMPL",
       "case_prefix": "a1-017-case",
       "reason": "【预登记】a1-017 簇（porter 严格顺序单发七例——开工前置步先登记）",
-      "exit": "a1_cluster_017 移植/转写落→账清转 strict",
+      "exit": "【2026-10-20 消费】a1_cluster_017 移植/转写落（a1 批已落——engine 员转写+tests 在）→账清转 strict ✓",
       "registered": "2026-10-19"
     },
     {
@@ -293,14 +293,14 @@
       "id": "SC-A1-018-IMPL",
       "case_prefix": "a1-018-case",
       "reason": "【预登记/补账】a1-018 簇（批产 WIP——A 批预登记制）",
-      "exit": "a1-018 落→账清转 strict",
+      "exit": "【2026-10-20 消费】a1-018 落（a1 批已落——engine 员转写+tests 在）→账清转 strict ✓",
       "registered": "2026-10-19"
     },
     {
       "id": "SC-A1-019-IMPL",
       "case_prefix": "a1-019-case",
       "reason": "【预登记】a1-019 簇（porter 严格顺序单发九例——开工前置步先登记）",
-      "exit": "a1_cluster_019 移植/转写落→账清转 strict",
+      "exit": "【2026-10-20 消费】a1_cluster_019 移植/转写落（a1 批已落——engine 员转写+tests 在）→账清转 strict ✓",
       "registered": "2026-10-19"
     },
     {
@@ -314,14 +314,14 @@
       "id": "SC-A1-020-IMPL",
       "case_prefix": "a1-020-case",
       "reason": "【预登记】a1-020 簇（porter 严格顺序单发十例——开工前置步先登记）",
-      "exit": "a1_cluster_020 移植/转写落→账清转 strict",
+      "exit": "【2026-10-20 消费】a1_cluster_020 移植/转写落（a1 批已落——engine 员转写+tests 在）→账清转 strict ✓",
       "registered": "2026-10-19"
     },
     {
       "id": "SC-A1-021-IMPL",
       "case_prefix": "a1-021-case",
       "reason": "【预登记】a1-021 簇（porter 严格顺序单发十一例——A 批收官卡——开工前置步先登记）",
-      "exit": "a1_cluster_021 移植/转写落→账清转 strict（A 批收官）",
+      "exit": "【2026-10-20 消费】a1_cluster_021 移植/转写落（a1 批已落——engine 员转写+tests 在）→账清转 strict ✓",
       "registered": "2026-10-19"
     },
     {
@@ -1014,49 +1014,49 @@
       "id": "SC-A1-022-CASE-0-IMPL",
       "case_prefix": "a1-022-case-0",
       "reason": "【预登记/补账】a1-022-case-0 簇（批产 WIP——A 批预登记制）",
-      "exit": "a1-022-case-0 落→账清转 strict",
+      "exit": "【2026-10-20 消费】a1-022-case-0 落（a1 批已落——engine 员转写+tests 在）→账清转 strict ✓",
       "registered": "2026-10-20"
     },
     {
       "id": "SC-A1-023-CASE-0-IMPL",
       "case_prefix": "a1-023-case-0",
       "reason": "【预登记/补账】a1-023-case-0 簇（批产 WIP——A 批预登记制）",
-      "exit": "a1-023-case-0 落→账清转 strict",
+      "exit": "【2026-10-20 消费】a1-023-case-0 落（a1 批已落——engine 员转写+tests 在）→账清转 strict ✓",
       "registered": "2026-10-20"
     },
     {
       "id": "SC-A1-024-CASE-0-IMPL",
       "case_prefix": "a1-024-case-0",
       "reason": "【预登记/补账】a1-024-case-0 簇（批产 WIP——A 批预登记制）",
-      "exit": "a1-024-case-0 落→账清转 strict",
+      "exit": "【2026-10-20 消费】a1-024-case-0 落（a1 批已落——engine 员转写+tests 在）→账清转 strict ✓",
       "registered": "2026-10-20"
     },
     {
       "id": "SC-A1-027-CASE-0-IMPL",
       "case_prefix": "a1-027-case-0",
       "reason": "【预登记/补账】a1-027-case-0 簇（批产 WIP——A 批预登记制）",
-      "exit": "a1-027-case-0 落→账清转 strict",
+      "exit": "【2026-10-20 消费】a1-027-case-0 落（a1 批已落——engine 员转写+tests 在）→账清转 strict ✓",
       "registered": "2026-10-20"
     },
     {
       "id": "SC-A1-028-CASE-0-IMPL",
       "case_prefix": "a1-028-case-0",
       "reason": "【预登记/补账】a1-028-case-0 簇（批产 WIP——A 批预登记制）",
-      "exit": "a1-028-case-0 落→账清转 strict",
+      "exit": "【2026-10-20 消费】a1-028-case-0 落（a1 批已落——engine 员转写+tests 在）→账清转 strict ✓",
       "registered": "2026-10-20"
     },
     {
       "id": "SC-A1-029-CASE-0-IMPL",
       "case_prefix": "a1-029-case-0",
       "reason": "【预登记/补账】a1-029-case-0 簇（批产 WIP——A 批预登记制）",
-      "exit": "a1-029-case-0 落→账清转 strict",
+      "exit": "【2026-10-20 消费】a1-029-case-0 落（a1 批已落——engine 员转写+tests 在）→账清转 strict ✓",
       "registered": "2026-10-20"
     },
     {
       "id": "SC-A1-030-CASE-0-IMPL",
       "case_prefix": "a1-030-case-0",
       "reason": "【预登记/补账】a1-030-case-0 簇（批产 WIP——A 批预登记制）",
-      "exit": "a1-030-case-0 落→账清转 strict",
+      "exit": "【2026-10-20 消费】a1-030-case-0 落（a1 批已落——engine 员转写+tests 在）→账清转 strict ✓",
       "registered": "2026-10-20"
     },
     {
