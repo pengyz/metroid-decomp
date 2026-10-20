@@ -5139,3 +5139,17 @@ pub fn a8_cluster_015(input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-B8-16 簇入口适配（a8_cluster_016 ← bank05:8C76——a1-018 同族）----
+
+/// a8_cluster_016 适配（bank05:8C76（DoorSubRoutine8C76——bank6 化身（a1-018
+/// 同款））——案实核 4 写（anim 态写（$0324/$0325/$0326←0/48/46）+SFX_Door
+/// （$0683←64）——判别条未触发（严格顺序 ✓））；A=64/X 透传/Y 透传）。
+pub fn a8_cluster_016(input: &L2In) -> L2Out {
+    L2Out {
+        a: 64, x: input.x, y: input.y,
+        writes: merge_writes(vec![
+            (0x0324, 0), (0x0325, 48), (0x0326, 46), (0x0683, 64),
+        ]),
+    }
+}
