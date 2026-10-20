@@ -6483,6 +6483,31 @@ instrumentation 核=诚实标定 ✓**（decomp 6b3aca1）：**probe_mem 写点�
 全绿+L2 账目面全合。findings（r10）：1 gap 显式（a3-028 probe instrumentation
 待核（6AF4-6B0F 写点捕获）（诚实标定））。
 
+## port2 门链 OAM+decomp fixture 扩再生成双审（落件即审·实测核）
+
+### ① a2-035 OAM 链 verdict: needs_revision | ② decomp fixture 扩再生成 verdict: pass（诚实标定）
+
+**实测 diff 输出原文（A 级——非声称核）**：
+```
+a2-035: [PASS]×7+[FAIL] case-5（寄存器值差：golden (9, 250) vs core (9, 0)）
+（OAM 写集全合——单寄存器值差（250 vs 0））
+a3-028: 1/8 PASS+7 FAIL（probe 核（清前态源值辨）——考证进度态（诚实标定））
+```
+
+四条核：①**a2-035=7/8+case-5 gap（契约族）**：golden (9, 250) vs core (9, 0)
+——**单寄存器值差**（250 vs 0）——OAM 链全模拟近全（y 时序辨+chain-compute 多入参
++新址辨合形（case-0/1/2/3/4/6/7 全等 ✓））但 **case-5 寄存器值差 gap 残**（链算径/
+源值（250）vs core（0）=值径 gap）——**修复要求**：case-5 值径实现（寄存器值差修）
+→8 案全等→账清转 strict ②**a3-028 probe instrumentation 核=诚实标定 ✓**（decomp
+42686b1）：**probe instrumentation 核**（probe.jsonl **28 写点/seed**（f=5 清径
+——全 0）——**源值=清前态**（$6AF4+x 族 state——**watch 缺 SRAM**（6000-7FFF 未
+watch）——probe 仅写点（清 0）））+**fixture 扩待**（watch_range+6AF4-6B0F→再生成）
+——claim 与实测一致（1/8+7 FAIL 考证进度态（非声称修复（「0 败」纪律面 ✓）））
+③**清前态源值辨核 ✓**（f=5 清径（全 0）=清前态源值辨识（watch 缺 SRAM 辨识（显式）））
+④**fixture 扩方案核 ✓**（watch_range+6AF4-6B0F→再生成=工具件方案（显式））⑤测
+540 全绿+L2 3107/882。findings（r10）：1（a2-035 case-5 寄存器值差=needs_revision）
++1 gap 显式（a3-028 fixture 扩待（watch_range+6AF4-6B0F）（诚实标定））。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
