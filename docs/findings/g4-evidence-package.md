@@ -10,7 +10,7 @@
 | G4-00 结局 | 1 | ChooseEnding($CAF5) |
 | G4-01 音乐 | 2 | TourianMusic($CC07)/MotherBrainMusic($CC03) |
 | G4-02 boss | 1 | SpawnMotherBrain($EEAE) |
-| G4-03 逃生 | 待勘 | EscapeTimer/EscapeMusic（refs 待查） |
+| G4-03 逃生 | 3 | EndTimer($010A dw——逃生计时器)/MotherBrainTimeBombCounter($99)/music_Escape（%00000100）|
 
 ## 1.5 ChooseEnding 推导深（A 级：prg7:CAF5-CB09）
 
@@ -24,4 +24,4 @@
 
 ## 2. 行数核自查条
 
-- 本包=骨架态（G4-03 待勘）——自查随簇清单落。
+- 本包=簇清单全（G4-00..03）——自查：4 簇/7 员 ✓。
