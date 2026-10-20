@@ -4918,3 +4918,19 @@ pub fn a7_cluster_040(input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-B8-00 簇入口适配（a8_cluster_000 ← bank05:8000——bank6 域开）----
+
+/// a8_cluster_000 适配（bank05:8000（bank6 窗（a8 批域开））——案实核 5 写
+/// （清对+$6AF7/$6AF8←r(0)（fixture 强源——判别条未触发（严格顺序 ✓））+$6AFA←1）；
+/// A=0/X 透传/Y=1）。
+pub fn a8_cluster_000(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    L2Out {
+        a: 0, x: 0, y: 1,
+        writes: merge_writes(vec![
+            (0x0404, 0), (0x040E, 0),
+            (0x6AF7, r(0x0000)), (0x6AF8, r(0x0000)), (0x6AFA, 1),
+        ]),
+    }
+}
