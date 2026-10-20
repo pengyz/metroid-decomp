@@ -1,0 +1,17 @@
+# sc-a3-028-regen —— a3-028 fixture 再生 plan（casegen 再生跑）
+# G4 值径深挖（fixture 扩——$6AF4+x 族 ram 键）
+# 状态：plan 建（再生跑待跑——Mesen2 capture（LCG→golden——8 案））
+
+# --- 烤案源（LCG 输入——簇首×4 LCG→ROM golden 同法）---
+# 8 案 fixture 再生成（case-0..7——LCG 种子）
+
+# --- 观察面（zp+iram+pw——三断言面）---
+watch zp 0000-00ff
+watch iram 0100-07ff
+watch pw 6988-698f
+
+# --- 值径源族（fixture 扩——$6AF4+x 族 ram）---
+probe_mem 6AF4-6B0F
+
+# --- 再生径注（transform 内径辨——$040B+x 读改写（派发表内部变换））---
+# 值径考证续（transform 内径——$040B+x 读改写内部写径（state-init 族））
