@@ -12816,3 +12816,30 @@ mod a9_021_tests {
         assert!(b7_cc03_mother_brain().0.len() == 1);
     }
 }
+
+// ---- SC-B9-03（a9-022）员转写（2 员——SetObjectXSlotAnimIndex 族（bank7 化身））----
+
+/// bank05:8CDD SetObjectXSlotAnimIndex 族（root——簇共根形三百五六·**bank7 化身**
+/// （a2-024 同款——refs 法：prg7_engine.asm:3986（bank7 复现）））。
+/// 返回 (目标址, 桩面)。
+pub fn b7_8cdd_set_obj_anim() -> (u16, bool) {
+    (0xD2FD, true) // jmp SetObjectXSlotAnimIndex（bank7 化身（a2-024 直连））
+}
+
+/// $D2FD SetObjectXSlotAnimIndex（bank7 化身——a2-024 同款（prg7_engine.asm:3986））。
+pub fn b7_d2fd_set_obj_anim(x: u8, v: u8) -> Vec<(u16, u8)> {
+    vec![(0x032E + x as u16 - 33, v)] // anim 索引写（写址不掩）
+}
+
+#[cfg(test)]
+mod a9_022_tests {
+    use super::*;
+
+    /// 二员转写形（SetObjectXSlotAnimIndex bank7 化身 root+anim 面）。
+    #[test]
+    fn a9_022_units_two() {
+        assert_eq!(b7_8cdd_set_obj_anim(), (0xD2FD, true)); // a2-024 直连
+        let ev = b7_d2fd_set_obj_anim(33, 0x55);
+        assert!(ev.contains(&(0x032E, 0x55))); // 写址对值核对
+    }
+}
