@@ -6626,6 +6626,29 @@ case-4 OAM 偏移修+y 面写径实现+case-5/6/7 值径修+多写补→8 案全
 待落件（「落件即审」））③测 540 全绿+L2 3107/858。findings（r10）：1（a3-013
 case-4/5/6/7 gap=needs_revision）+1 待落（decomp sub-call 辨（在产））。
 
+## port2 X 链算径+decomp base 族写径辨双审（落件即审·实测核——双 pass）
+
+### ① a3-013 X 链算径 verdict: pass | ② decomp base 族写径辨 verdict: pass（诚实标定）
+
+**实测 diff 输出原文（A 级——非声称核）**：
+```
+a3-013: [PASS]×8（0 FAIL）✓✓✓✓✓✓✓✓（四径修全落）
+a3-028: 1/8 PASS+7 FAIL（sub-call 辨落（PPU init 族）——考证进度态（诚实标定））
+```
+
+四条核：①**a3-013=8/8 全绿 ✓✓**（port2 65c5fca（SC-B3-013 四径修全落））：四径修
+全落（X 链算径（in.030D/in.030E 双径辨）+case-4 OAM 偏移修+y 面写径实现+
+case-5/6/7 值径修+多写补）=全径精确+账清转 strict 落定 ✓②**a3-028 base 族 sub-call
+辨落=诚实标定 ✓**（decomp e3482fa）：**base 族 sub-call 辨落**（$C439=ScreenOff/
+$C158=ClearNameTables/$C20E=PreparePPUProcess（**prg7:1123/366/551**——**PPU init
+族**））+**base 族（0x0405+x）径待辨**（sub-call=PPU init（**mismatch base 族
+（enemy state）**）——base 族写径=其他径待）——claim 与实测一致（1/8+7 FAIL 考证
+进度态（非声称修复（「0 败」纪律面 ✓）））③**sub-call 辨核 ✓**（ScreenOff/
+ClearNameTables/PreparePPUProcess（prg7 锚实录）=PPU init 族辨识（显式））④
+**base 族径待辨核 ✓**（sub-call=PPU init（mismatch base 族（enemy state））=base 族
+写径其他径待（显式））⑤测 540 全绿+L2 3107/854（账目面全合）。findings（r10）：
+1 gap 显式（a3-028 base 族写径待辨（诚实标定））。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
