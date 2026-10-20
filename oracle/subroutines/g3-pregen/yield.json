@@ -74,5 +74,6 @@
   "stage_a_convergence": "Stage A 收官随行（收敛族+TOLERATED 消费协同——L4 三步径/账内容忍 3 项在列）——Stage A 收官态保持",
   "stage_a_convergence_2": "Stage A 收官随行续（态差核过——收敛族/TOLERATED 协同稳）——Stage A 收官态保持",
   "l2_convergence": "L2 收敛最高优先（建模清类 86 条候选协同+TOLERATED 消费协同）——L2 收敛清零支撑态",
-  "modeling_support": "建模工单并行支援位（建模清类 86 候选协同建模+烤案随行）——L2 收敛清零支撑态"
+  "modeling_support": "建模工单并行支援位（建模清类 86 候选协同建模+烤案随行）——L2 收敛清零支撑态",
+  "modeling_incremental": "建模清类协同建模续（六族态差核过——VALCHAIN/ACHAIN/XCHAIN/AYCHAIN/AMUL16/ADIV16 族清点稳）——L2 收敛清零支撑态"
 }
