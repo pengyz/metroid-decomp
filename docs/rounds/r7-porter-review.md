@@ -6830,6 +6830,28 @@ claim 与实测一致（1/8+7 FAIL 考证进度态（非声称修复（「0 败�
 findings（r10）：1（a3-018 已知 pattern 转写未落=needs_revision）+1 gap 显式
 （a3-028 entry 帧待（f=5 敌例程写前态提取）（诚实标定））。
 
+## port2 已知 pattern+decomp entry 帧提取双审（落件即审·实测核——双 pass）
+
+### ① a3-018 已知 pattern verdict: pass | ② decomp entry 帧提取 verdict: pass（诚实标定）
+
+**实测 diff 输出原文（A 级——非声称核）**：
+```
+a3-018: [PASS]×8（0 FAIL）✓✓✓✓✓✓✓✓（OAM 链全模拟+\$0685 值链算落）
+a3-028: 1/8 PASS+7 FAIL（entry 帧提取（帧 4/5 全 0）——考证进度态（诚实标定））
+```
+
+四条核：①**a3-018=8/8 全绿 ✓✓**（port2 5ffd4b7（SC-B3-018 OAM 链全模拟+$0685
+值链算））：OAM 链全模拟（chain-compute 多入参（fixture 依赖））+$0685 值链算
+实现落=全径精确+账清转 strict 落定 ✓②**a3-028 entry 帧提取=诚实标定 ✓**（decomp
+abebf55）：**entry 帧提取**（帧 4/5（0400-04ff）——**全 0**（写前/写后——base 族
+写在后帧（**NMI 帧级捕获缺敌例程主循环写**）））+**写后帧待**（base 族写（0/16/
+0/140）捕获帧待（**probe 6AF4-6B0F vs base 族 0400-04ff 范围 mismatch**））——
+claim 与实测一致（1/8+7 FAIL 考证进度态（非声称修复（「0 败」纪律面 ✓）））③
+**entry 帧提取实录核 ✓**（帧 4/5 全 0（写前/写后）+NMI 帧级缺主循环写辨识（显式））
+④**范围 mismatch 辨识核 ✓**（probe 6AF4-6B0F vs base 族 0400-04ff（显式待做））
+⑤测 540 全绿+L2 3107/780（账目面全合）。findings（r10）：1 gap 显式（a3-028 写后帧
+待+范围 mismatch（诚实标定））。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
