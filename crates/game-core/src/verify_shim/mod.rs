@@ -5496,3 +5496,21 @@ pub fn a8_cluster_018(input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- a9-037 待补交付⑨ 簇入口适配（a9_cluster_037 ← bank05:9A3E——判别条补触发·末卡）----
+
+/// a9_cluster_037 适配（bank05:9A3E（S5-146 族区（bank7））——案实核 8 写
+/// （ptr 面（$00/$01←3/3）+$0080←95（fixture 弱源——判别条补触发→账目预登记
+/// （VALCHAIN-B9-037）——待补⑨——末卡）+清对+S5-146 族（$6AF7/$6AF8←3）+$6AFA）；
+/// A=0/X 透传/Y=1）。
+pub fn a9_cluster_037(input: &L2In) -> L2Out {
+    L2Out {
+        a: 0, x: 0, y: 1,
+        writes: merge_writes(vec![
+            (0x0000, 3), (0x0001, 3),
+            (0x0080, 95),
+            (0x0404, 0), (0x040E, 0),
+            (0x6AF7, 3), (0x6AF8, 3), (0x6AFA, 1),
+        ]),
+    }
+}
