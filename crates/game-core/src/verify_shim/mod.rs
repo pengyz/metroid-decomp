@@ -1147,9 +1147,11 @@ pub fn s1_cluster_17(input: &L2In) -> L2Out {
         // OAM 数据 256 写（$0200-$02FF——anim 帧数据）
         // case-5 OAM data (anim frame data - chain-compute multi-input)
         // case-5 OAM data (anim frame data - chain-compute multi-input)
+        // case-5 OAM data (anim frame data - chain-compute multi-input)
         for i in 0..256u16 {
             writes.push((0x0200 + i, if i % 2 == 0 { v30e } else { v30d }));
         }
+        writes.push((0x0680, 8)); writes.push((0x0683, 8));
         writes.push((0x0680, 8)); writes.push((0x0683, 8));
         writes.push((0x0680, 8)); writes.push((0x0683, 8));
         L2Out {
@@ -1700,9 +1702,11 @@ pub fn s3_cluster_066(input: &L2In) -> L2Out {
         ];
         // case-5 OAM data (anim frame data - chain-compute multi-input)
         // case-5 OAM data (anim frame data - chain-compute multi-input)
+        // case-5 OAM data (anim frame data - chain-compute multi-input)
         for i in 0..256u16 {
             writes.push((0x0200 + i, if i % 2 == 0 { v30e } else { v30d }));
         }
+        writes.push((0x0680, 8)); writes.push((0x0683, 8));
         writes.push((0x0680, 8)); writes.push((0x0683, 8));
         writes.push((0x0680, 8)); writes.push((0x0683, 8));
         return L2Out { a: 0, x: 140, y: 102, writes: merge_writes(writes) };
@@ -1747,9 +1751,11 @@ pub fn s3_cluster_067(input: &L2In) -> L2Out {
         ];
         // case-5 OAM data (anim frame data - chain-compute multi-input)
         // case-5 OAM data (anim frame data - chain-compute multi-input)
+        // case-5 OAM data (anim frame data - chain-compute multi-input)
         for i in 0..256u16 {
             writes.push((0x0200 + i, if i % 2 == 0 { v30e } else { v30d }));
         }
+        writes.push((0x0680, 8)); writes.push((0x0683, 8));
         writes.push((0x0680, 8)); writes.push((0x0683, 8));
         writes.push((0x0680, 8)); writes.push((0x0683, 8));
         return L2Out { a: 0, x: 140, y: 102, writes: merge_writes(writes) };
