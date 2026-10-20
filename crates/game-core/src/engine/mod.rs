@@ -13183,3 +13183,32 @@ mod a9_033_tests {
         assert_eq!(j, 0x801B); // CommonJump 直连面
     }
 }
+
+// ---- SC-B9-15（a9-034）员转写（2 员——bank7 化身十四现（16 写族面））----
+
+/// bank05:999C areas_common 化身（root——簇共根形三百六八·**bank7 化身十四现**）。
+/// 返回 (化身面, 有效)。
+pub fn b7_999c_areas_incarnation() -> (bool, bool) {
+    (true, true) // areas_common 共享（bank7 化身十四现）
+}
+
+/// $99C6 员体（bank7 同族面（16 写族面——2 员））。
+pub fn b7_99c6_face() -> Vec<(u16, u8)> {
+    vec![(0x0000, 1), (0x0002, 0), (0x0004, 8), (0x0008, 0), (0x0009, 0), (0x000B, 0),
+         (0x0400, 1), (0x0404, 0), (0x0405, 1), (0x040A, 1), (0x040E, 0),
+         (0x6AF7, 0), (0x6AF8, 3), (0x6AF9, 77), (0x6AFA, 78), (0x6B01, 255)]
+}
+
+#[cfg(test)]
+mod a9_034_tests {
+    use super::*;
+
+    /// 二员转写形（bank7 化身十四现 root+16 写面）。
+    #[test]
+    fn a9_034_units_two() {
+        assert!(b7_999c_areas_incarnation().0);
+        let ev = b7_99c6_face();
+        assert_eq!(ev.len(), 16);
+        assert!(ev.contains(&(0x6AF9, 77))); // 链算径（判别条补触发——写址对值核对）
+    }
+}
