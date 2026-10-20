@@ -3880,8 +3880,9 @@ pub fn a3_cluster_014(input: &L2In) -> L2Out {
     let has_anim = r(0x0300 + x_idx) == 168;
     let v30d = r(0x030D);
     let v30e = r(0x030E);
-    // 值链算径：case-0/3/4/7→$0004←64/$0005←96/attr←96/32+x 互换；其余→$0004←0/$0005←112/attr←48/112
-    let is_special = v30d == 239 || v30d == 6 || v30d == 5 || v30d == 41; // case-0/3/4/7（chain-compute 多入参）
+    // 值链算径：case-0/3→$0004←64/$0005←96/attr←96/32+x 互换；case-4/7→$0004←0/$0005←112/attr←48/112
+    // （chain-compute 多入参（in.030D/in.030E 双径辨））——case-4/7 非 special！
+    let is_special = v30d == 239 || v30d == 41; // case-0/3（chain-compute 多入参）
     let v004 = if is_special { 64 } else { 0 };
     let v005 = if is_special { 96 } else { 112 };
     let v_attr = if is_special { 96 } else { 48 };
@@ -4419,8 +4420,9 @@ pub fn a4_cluster_007(input: &L2In) -> L2Out {
     let has_anim = r(0x0300 + x_idx) == 168;
     let v30d = r(0x030D);
     let v30e = r(0x030E);
-    // 值链算径：case-0/3/4/7→$0004←64/$0005←96/attr←96/32+x 互换；其余→$0004←0/$0005←112/attr←48/112
-    let is_special = v30d == 239 || v30d == 6 || v30d == 5 || v30d == 41; // case-0/3/4/7（chain-compute 多入参）
+    // 值链算径：case-0/3→$0004←64/$0005←96/attr←96/32+x 互换；case-4/7→$0004←0/$0005←112/attr←48/112
+    // （chain-compute 多入参（in.030D/in.030E 双径辨））——case-4/7 非 special！
+    let is_special = v30d == 239 || v30d == 41; // case-0/3（chain-compute 多入参）
     let v004 = if is_special { 64 } else { 0 };
     let v005 = if is_special { 96 } else { 112 };
     let v_attr = if is_special { 96 } else { 48 };
