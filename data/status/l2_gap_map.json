@@ -342,7 +342,7 @@
       "id": "SC-B2-023-CROSSCARD-DOORCHAIN",
       "case_prefix": "a2-023-case-",
       "reason": "DoorSubRoutine→DrawDoor→OAM 深径链（MotherBrainMusic 同族面+OAM 全链效应——S5-121 同款跨卡深径）",
-      "exit": "【2026-10-20 建模缺口定案】门链 OAM 绘制径建模清（全链模拟）——链=DoorSubRoutine→DrawDoor→OAM 全链模拟（refs 法直得（DrawDoor=areas_common.asm:1450/DoorSubRoutine8C61=1579）——全链模拟）→账清转 strict（待建模清）",
+      "exit": "【2026-10-20 消费】【2026-10-20 建模缺口定案】门链 OAM 绘制径建模清（全链模拟）——链=DoorSubRoutine（建模落（OAM 链全模拟（同型 SC-B2-022——条件径+OAM 数据径+ptr 面径+X/Y 计算径——全径精确）+SFX=2（族特异常量））——L2 8/8 全等（A 级））→账清转 strict ✓",
       "registered": "2026-10-19"
     },
     {
