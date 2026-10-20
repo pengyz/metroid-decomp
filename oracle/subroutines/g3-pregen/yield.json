@@ -69,5 +69,6 @@
   "convergence_incremental_27": "收敛族协同续（态差核过——L4 三步径/WARN 候裁面稳）——Stage A 收官态保持",
   "convergence_incremental_28": "收敛族协同续（态差核过——L4 三步径/WARN 候裁面稳）——Stage A 收官态保持",
   "convergence_incremental_29": "收敛族协同续（态差核过——L4 三步径/WARN×2 候裁面稳（rust_test 583+knowledge 35））——Stage A 收官态保持",
-  "stage_a_support_2": "Stage A 收官支撑（B 区 206 全账收官确认 pass（15d1452）+收敛族协同——L4 三步径/WARN×2 候裁面稳）——Stage A 收官态"
+  "stage_a_support_2": "Stage A 收官支撑（B 区 206 全账收官确认 pass（15d1452）+收敛族协同——L4 三步径/WARN×2 候裁面稳）——Stage A 收官态",
+  "agents_gate_support": "AGENTS Gate 全过支撑（B 区 206 全账收 ✓✓+WARN×2 候裁面（rust_test/knowledge 批量上调候裁））——Stage A 收官序②支撑态"
 }
