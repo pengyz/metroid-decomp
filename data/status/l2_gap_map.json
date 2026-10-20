@@ -48,7 +48,7 @@
       "id": "SC-S2-031-CROSSCARD-5",
       "case_prefix": "s2-031-case-5",
       "reason": "深径多路（$0200 区写族 100-220 项——S1-17 同款跨卡效应链（S1-05 深径））——golden 含他卡效应=正常",
-      "exit": "【2026-10-20 建模缺口定案】源卡 S1-05 深径建模落——链=源卡深径建模（refs 法直得（S1-05 域/移动链/handler 集/VRAM 缓冲写族）——全链模拟）→账清转 strict（待建模清）",
+      "exit": "【2026-10-20 建模缺口定案 v2】已知 pattern 转写（refs/asm 优先参考）——转写 case 变值复杂（chain-compute 多入参（fixture 依赖（case 特异地址+值径辨（$0482←213+$04E5←0+$007E-$007F←181——case 特异））））→账清转 strict（待建模清）",
       "registered": "2026-10-19"
     },
     {
