@@ -146,7 +146,7 @@
       "id": "SC-S5-123-TRANSCRIBE",
       "case_prefix": "s5-123-case",
       "reason": "S5-123 簇转写中（批产迭代态——2 案语义差随转写收敛）",
-      "exit": "S5-123 卡转写落→账清转 strict",
+      "exit": "【2026-10-20 消费】S5-123 卡转写落（S5-123 转写已落——engine 员转写+tests 在）→账清转 strict ✓",
       "registered": "2026-10-19"
     },
     {
