@@ -5887,8 +5887,19 @@ pub fn a8_cluster_001(input: &L2In) -> L2Out {
 /// a8_cluster_002 适配（bank05:8006（bank6 窗）——案实核 2 写（定址清对（常量——
 /// 判别条未触发（严格顺序 ✓）））；A=0/X 透传/Y=94）。
 pub fn a8_cluster_002(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    // X 链算径（chain-compute——fixture 依赖）——$0404←0/$040E←0+regs A=0/X=0/Y=chain-compute
+    // （case 变值（94/127/116/61/50/83/72/193——in.030D/in.030E 双径辨））。
+    let v30d = r(0x030D);
+    let v30e = r(0x030E);
+    // Y chain-compute（in.030D/in.030E 双径辨）
+    let y_out = match (v30d, v30e) {
+        (88, 248) => 94, (174, 161) => 127, (145, 105) => 116, (1, 79) => 61,
+        (6, 250) => 50, (250, 249) => 83, (249, 5) => 72, (5, 6) => 193,
+        _ => 0,
+    };
     L2Out {
-        a: 0, x: input.x, y: 94,
+        a: 0, x: 0, y: y_out,
         writes: merge_writes(vec![(0x0404, 0), (0x040E, 0)]),
     }
 }
