@@ -777,7 +777,7 @@
       "id": "SC-B4-011-CROSSCARD-DOORSUB8C8A",
       "case_prefix": "a4-011-case-",
       "reason": "DoorSubRoutine8C8A OAM 深径链（60 写（>20 深径判别条触发）——$8C8A bank3 化身（a1-019 同款）——预登记先行（严格顺序）——S5-121 同款跨卡深径）",
-      "exit": "【2026-10-20 建模缺口定案】门链 OAM 绘制径建模清（全链模拟）——链=DoorSubRoutine→DrawDoor→OAM 全链模拟（refs 法直得（DrawDoor=areas_common.asm:1450/DoorSubRoutine8C61=1579）——全链模拟）→账清转 strict（待建模清）",
+      "exit": "【2026-10-20 建模缺口定案 v2】门链 OAM 绘制径建模（DoorSubRoutine→DrawDoor→OAM 全链模拟）——DOORSUB8C8A 族特异（新值径（$0091←0+$0300←84——case 变值复杂（chain-compute 多入参）））→账清转 strict（待建模清）",
       "registered": "2026-10-20"
     },
     {
