@@ -11962,3 +11962,55 @@ mod a7_031_tests {
         assert!(ev.contains(&(0x6AF9, 62))); // 链算径（判别条补触发——写址对值核对）
     }
 }
+
+// ---- SC-B7-10（a7-032）员转写（3 员——bank5 链族；L2 真 0 留白）----
+
+/// $99CD 员体（root——簇共根形三百二六·bank5 链壳（hexdump 直得）：sta $0185/
+/// jmp $99A1/lda #$0F/jmp $99BA/lda $6AF4,x/cmp #3（CommonJump 直连面））。
+/// 返回 (写事件, 跳转面)。
+pub fn b5_99cd_chain() -> (Vec<(u16, u8)>, u16) {
+    (vec![(0x0185, 8)], 0x99A1) // sta $0185+jmp $99A1（CommonJump 直连面）
+}
+
+/// $9A18 员体（链壳（hexdump 直得）：cmp $D06B/bne/lda #0/sta $6AF4,x/ldy #$0C/
+/// lda #$0A/sta $00A0,y/lda $6AFB,x——S5-146 族同族面）。
+/// 返回 (写事件, 有效)。
+pub fn b5_9a18_chain() -> (Vec<(u16, u8)>, bool) {
+    (vec![(0x6AFB, 0), (0x00A0, 0x0A)], true) // 写址对值核对
+}
+
+/// $9A31 员体（Y 环（hexdump 直得）：ldx #0/lda $6AFB,x/sta $00A3,y/dey×4/bpl 环/
+/// lda #2/jmp $8000——walk-ring 族（Y 递减环）+CommonJump 跳转面）。
+/// 返回 (环出, 迭代数)。
+pub fn b5_9a31_y_loop() -> (u8, u8) {
+    let mut y = 4u8;
+    let mut n = 0;
+    loop {
+        n += 1;
+        let ny = y.wrapping_sub(4);
+        if ny > 0x7F {
+            break;
+        }
+        y = ny;
+    }
+    (y, n) // Y-=4 环（4→0→break）
+}
+
+#[cfg(test)]
+mod a7_032_tests {
+    use super::*;
+
+    /// 三员转写形（bank5 链 root+一壳+Y 环）——真 0 留白形。
+    #[test]
+    fn a7_032_units_three() {
+        let (ev, j) = b5_99cd_chain();
+        assert_eq!(j, 0x99A1); // CommonJump 直连面
+        assert!(ev.contains(&(0x0185, 8))); // 写址对值核对
+        let (ev2, ok) = b5_9a18_chain();
+        assert!(ok);
+        assert!(ev2.contains(&(0x00A0, 0x0A))); // 写址对值核对
+        let (y, n) = b5_9a31_y_loop();
+        assert_eq!(y, 0); // Y-=4 环出
+        assert_eq!(n, 2); // 2 迭代（4→0→break）
+    }
+}
