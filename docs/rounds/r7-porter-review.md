@@ -6170,6 +6170,29 @@ a3-028: [PASS]×1+[FAIL]×7（径段全辨+transform 待辨——考证进度态
 （账目面全合）。findings（r10）：1 gap 显式（a3-028 transform 待辨+fixture 扩待做
 （诚实标定=非缺陷））。
 
+## port2 门链 OAM+decomp 值径考证双审（落件即审·实测核）
+
+### ① port2 OAM 队列件 verdict: needs_revision（case-1 单值差 gap 残） | ② decomp 值径考证 verdict: pass（诚实标定）
+
+**实测 diff 输出原文（A 级——非声称核）**：
+```
+a2-025: [PASS]×7+[FAIL] case-1（单值差：golden (16, 216) vs core (16, 242)）
+a3-028: 1/8 PASS+7 FAIL（transform 辨进度——考证进度态（诚实标定））
+```
+
+四条核：①**a2-025=7/8+case-1 gap（契约族）**：golden (16, 216) vs core (16, 242)
+——**同一写址（16）单值差**（216 vs 242）——OAM 链全模拟近全（条件径另源核+
+全径实现合形（case-0/2..7 全等 ✓））但 **case-1 值差 gap 残**（条件径另源值（216）
+vs core（242）=值径/源径 gap）——**修复要求**：case-1 值差修（条件径另源值实现）
+→8 案全等→账清转 strict ②**a3-028 transform 辨进度=诚实标定 ✓**（decomp
+70a9093）：transform 辨（派发表 $802A 域 hexdump（16 位指针表（$8071/$80D0/$80F9...）
++变换三员读（state-init 族径（$CC-$D1 状态 init/$F0+0684/$FF+$1F）））+**transform
+内径待辨**（$040B+x 读改写内部写径）+**fixture 扩待做**（$6AF4+x 族）——claim 与
+实测一致（1/8+7 FAIL 考证进度态（非声称修复（「0 败」纪律面 ✓）））③**值源辨+
+transform 辨核 ✓**（派发表 16 位指针表辨+变换三员读辨（state-init 族径）+内径待辨
+（显式））④测 540 全绿+L2 3107/918。findings（r10）：1（a2-025 case-1 值差 gap=
+needs_revision）+1 gap 显式（a3-028 transform 内径待辨（诚实标定））。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
