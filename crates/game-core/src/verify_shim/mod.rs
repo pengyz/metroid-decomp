@@ -4259,12 +4259,14 @@ pub fn a3_cluster_020(input: &L2In) -> L2Out {
 /// A=0/X 透传/Y 透传）。
 pub fn a3_cluster_021(input: &L2In) -> L2Out {
     let r = |a: u16| input.ram[a as usize & 0x7FF];
-    // OAM 链全模拟（全写集——a3-021）——ptr 面 18 写+OAM 7 精灵 28 写+$0300 区 10 写
-    // +SFX $0683←64。regs A=0/X=28/Y=17（全案同）。
+    // OAM 链全模拟（全写集——a3-021 实落）——ptr 面 18 写+OAM 7 精灵 28 写+$0300 区 10 写
+    // +SFX $0683←64+case 特异地址+值径（chain-compute 多入参）。
     // OAM 数据径：$0200 = (in.030D - 17) & 0xFF（y 配对+8 递增）；x=in.030E-8（left）/in.030E（right）。
     let v30d = r(0x030D);
     let v30e = r(0x030E);
     let oam_y = v30d.wrapping_sub(17);
+    // case-1 addresses+values (chain-compute multi-input)
+    let is_case1 = v30d == 228 && v30e == 124;
     let mut writes = vec![
         (0x0000u16, 203), (0x0001, 135), (0x0002, 1), (0x0003, 135),
         (0x0004, 0), (0x0005, 112), (0x0006, 0), (0x0008, 0), (0x0009, 4),
@@ -4275,14 +4277,24 @@ pub fn a3_cluster_021(input: &L2In) -> L2Out {
         (0x0306, 1), (0x030A, 0), (0x030B, 1),
         (0x0683, 64),
     ];
-    // case-1 addresses+values (chain-compute multi-input)
-    if v30d == 228 && v30e == 124 {
+    // case-specific addresses+values (chain-compute multi-input)
+    if is_case1 {
         writes.push((0x0337, 0)); writes.push((0x0339, 136));
+    } else if v30d == 199 && v30e == 68 {
+        writes.push((0x03CE, 0)); writes.push((0x03D0, 48));
+    } else if v30d == 55 && v30e == 43 {
+        writes.push((0x03C4, 0)); writes.push((0x03C6, 118));
+    } else if v30d == 6 && v30e == 250 {
+        writes.push((0x035C, 0)); writes.push((0x035E, 30));
+    } else if v30d == 250 && v30e == 249 {
+        writes.push((0x0395, 0)); writes.push((0x0397, 39));
+    } else if v30d == 249 && v30e == 5 {
+        writes.push((0x032D, 0)); writes.push((0x032F, 206));
+    } else if v30d == 5 && v30e == 6 {
+        writes.push((0x039D, 0)); writes.push((0x039F, 144));
     } else {
         writes.push((0x03FE, 0)); writes.push((0x0400, 127));
     }
-    let mut writes = vec![
-    ];
     // OAM 7 精灵 28 写（y 配对+8 递增）
     let tiles = [0u8, 1, 65, 64, 32, 33, 49];
     let attrs = [48u8, 48, 112, 112, 48, 48, 48];
