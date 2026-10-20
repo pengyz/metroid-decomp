@@ -5926,6 +5926,30 @@ a8-005/a9-036=8 案全等=**账清转 strict 重走条件达成**（条目退出
 教训注：「修复≠声称修复」——L2 0 败必须附实测 diff 输出原文（Evidence）=纪律面
 固化。findings（r10）：1 gap 显式（a9-026 case-4=建模续）。测 540 全绿。
 
+## SC-B2-041 修复件+SC-B3-033 账清核双审（实测核——A 级原文）
+
+### ① SC-B2-041 修复件 verdict: needs_revision 保持（修复未落（在产））
+
+**实测 diff 输出原文（A 级——非声称核）**：
+```
+[PASS] a2-041-case-0 ... [PASS] a2-041-case-6    # 7/8
+[FAIL] a2-041-case-7: golden=(..., (27383, 0), (27384, 10), ...)
+                       core =(..., (27383, 10), (27384, 10), ...)
+```
+case-7 **仍 FAIL**（golden (27383, 0)=$6AF7←0（r(0) fixture 值）vs core (27383, 10)
+=固定 10——**值链 $6AF7←0 径缺**（与 SC-B9-026 case-4 同型））——**修复未落**
+（port2 在产=review 待修复落件）；needs_revision 保持（case-7 gap 显式）。
+
+### ② SC-B3-033 账清转 strict 核 verdict: 退出条件达成 ✓（账清 commit 待落）
+
+①**退出条件核 ✓（8 案全等）**：实测 a3-033 8/8 PASS（0d08ba4 复核）——双缺口
+实现闭合（ptr 条件写+$0400 值链算）=**账清转 strict 退出条件达成**（条目退出
+条件=8 案全等 ✓）②**gap_map 条目态核**：SC-B3-033-CROSSCARD-VALCHAIN 在库
+（建模缺口定案 v2 注）——status=''（未标 cleared）=**账清 commit 待落**（条目
+退出（账清转 strict）=实现落→全等→条目退出的最后一步（账清 commit））。
+**动作要求**：账清 commit（gap_map 条目 status→cleared（或移除）=账清转 strict
+落定）。findings（r10）：1（账清 commit 待落（非缺陷=流程末步））。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
