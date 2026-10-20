@@ -42,3 +42,10 @@
 - **导出态**：+78 新格/654 保留——分母只登记 L0（分子由角色任务带证据升级）；
 - **D7 面核**：S/D 机械分母 ✓（B 行为空间=声明性覆盖/R 不可证=S4 起登记）——
   **分母账面终形稳**。
+
+### 4.1 Gate 面协同（2026-10-20）
+
+- **全闸态**：15 PASS/0 FAIL/0 SKIP——唯 WARN=rust_test 532（基线 365——批量上调候裁）；
+- **Gate 面核**：rom-integrity/seed/命名台账 182/知识 34/docs-links 174/rust 532/
+  L2 全绿/L3 22 案/L4 50 金面/completeness 57/tree-coherence/doc-sync/inode 锁 0
+  ——**Gate 面稳**（14 闸全绿+ratchet 七向 OK）。
