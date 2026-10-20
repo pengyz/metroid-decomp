@@ -76,5 +76,6 @@
   "l2_convergence": "L2 收敛最高优先（建模清类 86 条候选协同+TOLERATED 消费协同）——L2 收敛清零支撑态",
   "modeling_support": "建模工单并行支援位（建模清类 86 候选协同建模+烤案随行）——L2 收敛清零支撑态",
   "modeling_incremental": "建模清类协同建模续（六族态差核过——VALCHAIN/ACHAIN/XCHAIN/AYCHAIN/AMUL16/ADIV16 族清点稳）——L2 收敛清零支撑态",
-  "modeling_incremental_2": "建模清类协同建模续（六族态差核稳——86 候选清点）——L2 收敛清零支撑态保持"
+  "modeling_incremental_2": "建模清类协同建模续（六族态差核稳——86 候选清点）——L2 收敛清零支撑态保持",
+  "modeling_incremental_3": "建模清类协同建模续（六族态差核稳——86 候选清点）——L2 收敛清零支撑态保持"
 }
