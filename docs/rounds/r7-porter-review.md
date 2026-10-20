@@ -5135,6 +5135,18 @@ $8CDD=`20 fd d2 20 da cb 20 73` **四 bank 全同**（=a2-024 同形（JSR $D2FD
 55 写>20 阈值判别条触发→预登记→L2 并案=严格顺序续 ④8 案账内+员面双扫桩 0。
 测 480。findings（r10）：0 新。SC-B7-04（B 区余 62 卡）预告随账。
 
+## SC-B7-04 卡审（f36bd89）——SelectSamusPalette bank5 化身（调色板面）
+
+### verdict: pass
+
+四条核：①**SelectSamusPalette 镜像组四 bank 全谱 ✓✓✓✓**：bank1/2/4/5 $8CE3=
+`20 73 cb a6 4b a9 02 9d` **四 bank 全同**（=a2-026 同形（JSR $CB73 调用链）——
+bank5 化身=镜像组四 bank 复现五员）②**调色板选择面 ✓**：bank7 $CB73=`98 48 ad 78`
+（TYA/PHA/LDA $6878——SC-B2-04 refs 注直合面镜像组四 bank 复现）③**SELECTPAL-B7-026
+预登记 ✓**（212 条目）：54 写>20 阈值判别条触发→预登记→L2 并案=严格顺序续
+④8 案账内+员面双扫桩 0。测 481。findings（r10）：0 新。SC-B7-05（B 区余 61 卡）
+预告随账。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
