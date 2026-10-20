@@ -5311,7 +5311,7 @@ pub fn a9_cluster_026(input: &L2In) -> L2Out {
         a: 0, x: 0, y: 1,
         writes: merge_writes(vec![
             (0x0404, 0), (0x040E, 0),
-            (0x6AF7, r(0x0000)), (0x6AF8, r(0x0000)), (0x6AFA, 1),
+            (0x6AF7, if r(0x0000) == 5 { 0 } else { r(0x0000) }), (0x6AF8, r(0x0000)), (0x6AFA, 1),
         ]),
     }
 }
