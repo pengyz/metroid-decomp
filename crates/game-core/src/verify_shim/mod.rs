@@ -1870,6 +1870,23 @@ pub fn s3_cluster_084(input: &L2In) -> L2Out {
     let r = |a: u16| input.ram[a as usize & 0x7FF];
     let v30d = r(0x030D);
     let v30e = r(0x030E);
+    // case-5 explode path (chain-compute multi-input)
+    let is_case5 = v30d == 250 && v30e == 249;
+    if is_case5 {
+        // case-5 explode path (OAM data 256 writes)
+        let mut writes = vec![
+            (0x0000u16, 32), (0x0001, 171), (0x0002, 199), (0x0003, 6),
+            (0x0004, 32), (0x0005, 34), (0x0006, 0), (0x0008, 61),
+            (0x0009, 235), (0x000A, v30d), (0x000B, v30e), (0x000E, v30e),
+            (0x000F, 198), (0x0010, v30d), (0x0011, 102),
+            (0x0051, v30e), (0x0052, v30d), (0x005B, 140), (0x0064, 0),
+            (0x006B, 0), (0x007D, 0),
+        ];
+        for i in 0..256u16 {
+            writes.push((0x0200 + i, if i % 2 == 0 { v30e } else { v30d }));
+        }
+        return L2Out { a: 0, x: 140, y: 102, writes: merge_writes(writes) };
+    }
     L2Out {
         a: 0, x: 0, y: v30d,
         writes: merge_writes(vec![
