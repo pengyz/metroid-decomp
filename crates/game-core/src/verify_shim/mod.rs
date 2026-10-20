@@ -4144,12 +4144,13 @@ pub fn a3_cluster_017(input: &L2In) -> L2Out {
     let attrs = [48u8, 48, 112, 112, 48, 48, 48];
     let y_offsets = [0u8, 0, 8, 8, 16, 16, 24];
     let x_left = v30e.wrapping_sub(8);
+    let x_right = v30e;
     for i in 0..7usize {
         let base = 0x0200 + (i as u16) * 4;
         writes.push((base, oam_y.wrapping_add(y_offsets[i])));
         writes.push((base + 1, tiles[i]));
         writes.push((base + 2, attrs[i]));
-        writes.push((base + 3, if i % 2 == 0 && i < 6 { x_left } else { v30e }));
+        writes.push((base + 3, if i % 2 == 0 && i < 6 { x_left } else { x_right }));
     }
     L2Out {
         a: 0, x: 28, y: 17,
@@ -4186,12 +4187,13 @@ pub fn a3_cluster_018(input: &L2In) -> L2Out {
     let attrs = [48u8, 48, 112, 112, 48, 48, 48];
     let y_offsets = [0u8, 0, 8, 8, 16, 16, 24];
     let x_left = v30e.wrapping_sub(8);
+    let x_right = v30e;
     for i in 0..7usize {
         let base = 0x0200 + (i as u16) * 4;
         writes.push((base, oam_y.wrapping_add(y_offsets[i])));
         writes.push((base + 1, tiles[i]));
         writes.push((base + 2, attrs[i]));
-        writes.push((base + 3, if i % 2 == 0 && i < 6 { x_left } else { v30e }));
+        writes.push((base + 3, if i % 2 == 0 && i < 6 { x_left } else { x_right }));
     }
     L2Out {
         a: 0, x: 28, y: 17,
@@ -4230,12 +4232,13 @@ pub fn a3_cluster_019(input: &L2In) -> L2Out {
     let attrs = [v_attr, v_attr, v005, v005, v_attr, v_attr, v_attr]; // case-1 attr=121
     let y_offsets = [0u8, 0, 8, 8, 16, 16, 24];
     let x_left = v30e.wrapping_sub(8);
+    let x_right = v30e;
     for i in 0..7usize {
         let base = 0x0200 + (i as u16) * 4;
         writes.push((base, oam_y.wrapping_add(y_offsets[i])));
         writes.push((base + 1, tiles[i]));
         writes.push((base + 2, attrs[i]));
-        writes.push((base + 3, if i % 2 == 0 && i < 6 { x_left } else { v30e }));
+        writes.push((base + 3, if i % 2 == 0 && i < 6 { x_left } else { x_right }));
     }
     L2Out {
         a: 0, x: 28, y: 17,
@@ -4274,12 +4277,13 @@ pub fn a3_cluster_020(input: &L2In) -> L2Out {
     let attrs = [v_attr, v_attr, v005, v005, v_attr, v_attr, v_attr];
     let y_offsets = [0u8, 0, 8, 8, 16, 16, 24];
     let x_left = v30e.wrapping_sub(8);
+    let x_right = v30e;
     for i in 0..7usize {
         let base = 0x0200 + (i as u16) * 4;
         writes.push((base, oam_y.wrapping_add(y_offsets[i])));
         writes.push((base + 1, tiles[i]));
         writes.push((base + 2, attrs[i]));
-        writes.push((base + 3, if i % 2 == 0 && i < 6 { x_left } else { v30e }));
+        writes.push((base + 3, if i % 2 == 0 && i < 6 { x_left } else { x_right }));
     }
     L2Out {
         a: 0, x: 28, y: 17,
@@ -4335,12 +4339,13 @@ pub fn a3_cluster_021(input: &L2In) -> L2Out {
     let attrs = [48u8, 48, 112, 112, 48, 48, 48];
     let y_offsets = [0u8, 0, 8, 8, 16, 16, 24];
     let x_left = v30e.wrapping_sub(8);
+    let x_right = v30e;
     for i in 0..7usize {
         let base = 0x0200 + (i as u16) * 4;
         writes.push((base, oam_y.wrapping_add(y_offsets[i])));
         writes.push((base + 1, tiles[i]));
         writes.push((base + 2, attrs[i]));
-        writes.push((base + 3, if i % 2 == 0 && i < 6 { x_left } else { v30e }));
+        writes.push((base + 3, if i % 2 == 0 && i < 6 { x_left } else { x_right }));
     }
     L2Out {
         a: 0, x: 28, y: 17,
@@ -4375,12 +4380,13 @@ pub fn a3_cluster_022(input: &L2In) -> L2Out {
     let attrs = [48u8, 48, 112, 112, 48, 48, 48];
     let y_offsets = [0u8, 0, 8, 8, 16, 16, 24];
     let x_left = v30e.wrapping_sub(8);
+    let x_right = v30e;
     for i in 0..7usize {
         let base = 0x0200 + (i as u16) * 4;
         writes.push((base, oam_y.wrapping_add(y_offsets[i])));
         writes.push((base + 1, tiles[i]));
         writes.push((base + 2, attrs[i]));
-        writes.push((base + 3, if i % 2 == 0 && i < 6 { x_left } else { v30e }));
+        writes.push((base + 3, if i % 2 == 0 && i < 6 { x_left } else { x_right }));
     }
     L2Out {
         a: 0, x: 28, y: 17,
@@ -4394,12 +4400,38 @@ pub fn a3_cluster_022(input: &L2In) -> L2Out {
 /// 同款））——54 写=账内深径（SELECTPAL-B3-023——预登记先行）；A=0/X 透传/Y 透传）。
 pub fn a3_cluster_023(input: &L2In) -> L2Out {
     let r = |a: u16| input.ram[a as usize & 0x7FF];
+    // OAM 链全模拟（全写集——a3-023 实落（非声称！））——ptr 面 18 写+OAM 7 精灵 28 写
+    // +$0300 区 8 写（无 SFX）。
+    // OAM 数据径：$0200 = (in.030D - 17) & 0xFF（y 配对+8 递增）；x=in.030E-8（left）/in.030E（right）。
+    let v30d = r(0x030D);
+    let v30e = r(0x030E);
+    let oam_y = v30d.wrapping_sub(17);
+    let v00e = v30e;
+    let mut writes = vec![
+        (0x0000u16, 203), (0x0001, 135), (0x0002, 1), (0x0003, 135),
+        (0x0004, 0), (0x0005, 112), (0x0006, 0), (0x0008, 0), (0x0009, 4),
+        (0x000A, v30d), (0x000B, v30e), (0x000E, v00e),
+        (0x000F, 20), (0x0010, v30d), (0x0011, 17),
+        (0x001C, 2), (0x005B, 28), (0x006B, 0),
+        (0x0300, 2), (0x0301, 15), (0x0302, 4), (0x0303, 3), (0x0304, 6),
+        (0x0306, 1), (0x030A, 0), (0x030B, 1),
+    ];
+    // OAM 7 精灵 28 写（y 配对+8 递增）
+    let tiles = [0u8, 1, 65, 64, 32, 33, 49];
+    let attrs = [48u8, 48, 112, 112, 48, 48, 48];
+    let y_offsets = [0u8, 0, 8, 8, 16, 16, 24];
+    let x_left = v30e.wrapping_sub(8);
+    let x_right = v30e;
+    for i in 0..7usize {
+        let base = 0x0200 + (i as u16) * 4;
+        writes.push((base, oam_y.wrapping_add(y_offsets[i])));
+        writes.push((base + 1, tiles[i]));
+        writes.push((base + 2, attrs[i]));
+        writes.push((base + 3, if i % 2 == 0 && i < 6 { x_left } else { x_right }));
+    }
     L2Out {
-        a: 0, x: input.x, y: input.y,
-        writes: merge_writes(vec![
-            (0x0000, r(0x0000)), (0x0001, 0x87), (0x0002, 1), (0x0003, 0x87),
-            (0x0005, 0x70), (0x0006, 0), (0x0008, 0), (0x0009, 4),
-        ]),
+        a: 0, x: 28, y: 17,
+        writes: merge_writes(writes),
     }
 }
 

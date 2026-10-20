@@ -573,7 +573,7 @@
       "id": "SC-B3-023-CROSSCARD-SELECTPAL",
       "case_prefix": "a3-023-case-",
       "reason": "SelectSamusPalette OAM 深径链（54 写（>20 深径判别条触发）——a2-026 同款（bank2 化身）——预登记先行（严格顺序）——S5-121 同款跨卡深径）",
-      "exit": "【2026-10-20 建模缺口定案】SelectPal 链径建模清（全链模拟）——链=SelectSamusPalette 调色板径（refs 法直得（prg7_engine.asm:2535）——调色板模拟）→账清转 strict（待建模清）",
+      "exit": "【2026-10-20 建模缺口定案 v2】已知 pattern 转写（refs/asm 优先参考）——转写 case 变值复杂（chain-compute 多入参（fixture 依赖（case 特异 OAM x 值径（$0203←6/$0207←14 vs $0203←154/$0207←162——case 特异））））→账清转 strict（待建模清）",
       "registered": "2026-10-19"
     },
     {
