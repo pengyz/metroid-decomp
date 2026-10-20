@@ -33,5 +33,6 @@
   "card06_accompanying": "SC-G3-06 随行（SFX 族态核过——六案稳/g3-sfx 8 簇登记/注在）+烤案对照保持",
   "card06_incremental": "SC-G3-06 增量随行（态差核过——六案稳/注在）——就绪态保持",
   "g4_state": "G4 全态核过（逃生族/ChooseEnding/BUG 注/自查条/SC-G4-001）——G4 面就绪态",
-  "g4_001_coordination": "SC-G4-001 协同（G4 面态核过——簇清单/ChooseEnding/预登记）——就绪态"
+  "g4_001_coordination": "SC-G4-001 协同（G4 面态核过——簇清单/ChooseEnding/预登记）——就绪态",
+  "g4_001_incremental": "SC-G4-001 协同续（态差核过——G4 面态稳）——就绪态保持"
 }
