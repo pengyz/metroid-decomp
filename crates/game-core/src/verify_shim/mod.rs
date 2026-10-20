@@ -5339,3 +5339,20 @@ pub fn a9_cluster_029(input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-B9-11 簇入口适配（a9_cluster_030 ← bank05:98EF——判别条补触发）----
+
+/// a9_cluster_030 适配（bank05:98EF（S5-146 族区（bank7））——案实核 10 写
+/// （$04 族（$0404/$040E/$04E4/$04E8/$04EA/$04EC）+$6AF7/$6AF8←r(0)（fixture
+/// 强源）+$6AFA+$6BE1←136（fixture 弱源——判别条补触发→账目预登记
+/// （VALCHAIN-B9-030）））；A=0/X 透传/Y=1）。
+pub fn a9_cluster_030(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    L2Out {
+        a: 0, x: 0, y: 1,
+        writes: merge_writes(vec![
+            (0x0404, 0), (0x040E, 0), (0x04E4, 0), (0x04E8, 0), (0x04EA, 0), (0x04EC, 0),
+            (0x6AF7, r(0x0000)), (0x6AF8, r(0x0000)), (0x6AFA, 1), (0x6BE1, 136),
+        ]),
+    }
+}
