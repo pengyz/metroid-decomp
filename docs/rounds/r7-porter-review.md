@@ -5112,6 +5112,18 @@ bank5 化身=SFX 族镜像组四 bank 复现二员（Tourian/MotherBrain））�
 L2 并案=严格顺序续 ④8 案账内+员面双扫桩 0。测 479。findings（r10）：0 新。
 SC-B7-02（B 区余 64 卡）预告随账。
 
+## SC-B7-02 卡审（4f4e3d3）——SetObjectXSlotAnimIndex bank5 化身（anim 写址不掩）
+
+### verdict: pass
+
+四条核：①**SetObjectXSlotAnimIndex 镜像组四 bank 全谱 ✓✓✓✓**：bank1/2/4/5
+$8CDD=`20 fd d2 20 da cb 20 73` **四 bank 全同**（=a2-024 同形（JSR $D2FD 调用链）
+——bank5 化身=镜像组四 bank 复现三员（Tourian/MotherBrain/SetObjectXSlotAnimIndex））
+②**anim 写面 ✓**：bank7 $D2FD=`9d 06 03 a9 00 9d`（STA $0306,X/**abs,X 写址
+不掩**）③**SETOBJANIM-B7-024 预登记 ✓**（210 条目）：57 写>20 阈值判别条触发→
+预登记→L2 并案=严格顺序续 ④8 案账内+员面双扫桩 0。测 479。findings（r10）：
+0 新。SC-B7-03（B 区余 63 卡）预告随账。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
