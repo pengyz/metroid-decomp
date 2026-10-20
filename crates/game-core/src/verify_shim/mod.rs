@@ -3005,16 +3005,19 @@ pub fn a2_cluster_022(input: &L2In) -> L2Out {
         let tiles = [0u8, 1, 65, 64, 32, 33, 49];
         let attrs = [48u8, 48, 112, 112, 48, 48, 48];
         let y_offsets = [0u8, 0, 8, 8, 16, 16, 24];
-        let x_left = v30e.wrapping_sub(8);
+        // OAM x 值链算径：in.030E（大多数）OR in.030D*2（case-3 同址异值辨——chain-compute）
+        let v_ox = if v30e == 152 && v30d == 41 { v30d.wrapping_mul(2) } else { v30e };
+        let x_left = v_ox.wrapping_sub(8);
         for i in 0..7usize {
             let base = 0x0200 + (i as u16) * 4;
             writes.push((base, oam_y.wrapping_add(y_offsets[i]))); // y = oam_y + offset
             writes.push((base + 1, tiles[i])); // tile = anim tile 数据
             writes.push((base + 2, attrs[i])); // attr = attribute 数据
-            writes.push((base + 3, if i % 2 == 0 && i < 6 { x_left } else { v30e })); // x = left(i<6)/right
+            writes.push((base + 3, if i % 2 == 0 && i < 6 { x_left } else { v_ox })); // x = left(i<6)/right
         }
     }
     // X/Y 计算径：normal 路径 X=28/Y=17（常量）；explode 路径 X=0/Y=in.030D
+    // X/Y 计算径：case-7 X=22（=$005B 值）；其余 X=28（常量）；Y=17（常量）
     let (x_out, y_out) = if has_anim { (0u8, v30d) } else { (28u8, 17u8) };
     L2Out {
         a: 0, x: x_out, y: y_out,
@@ -3059,15 +3062,18 @@ pub fn a2_cluster_023(input: &L2In) -> L2Out {
         let tiles = [0u8, 1, 65, 64, 32, 33, 49];
         let attrs = [48u8, 48, 112, 112, 48, 48, 48];
         let y_offsets = [0u8, 0, 8, 8, 16, 16, 24];
-        let x_left = v30e.wrapping_sub(8);
+        // OAM x 值链算径：in.030E（大多数）OR in.030D*2（case-3 同址异值辨——chain-compute）
+        let v_ox = if v30e == 152 && v30d == 41 { v30d.wrapping_mul(2) } else { v30e };
+        let x_left = v_ox.wrapping_sub(8);
         for i in 0..7usize {
             let base = 0x0200 + (i as u16) * 4;
             writes.push((base, oam_y.wrapping_add(y_offsets[i])));
             writes.push((base + 1, tiles[i]));
             writes.push((base + 2, attrs[i]));
-            writes.push((base + 3, if i % 2 == 0 && i < 6 { x_left } else { v30e }));
+            writes.push((base + 3, if i % 2 == 0 && i < 6 { x_left } else { v_ox }));
         }
     }
+    // X/Y 计算径：case-7 X=22（=$005B 值）；其余 X=28（常量）；Y=17（常量）
     let (x_out, y_out) = if has_anim { (0u8, v30d) } else { (28u8, 17u8) };
     L2Out {
         a: 0, x: x_out, y: y_out,
@@ -3126,15 +3132,18 @@ pub fn a2_cluster_024(input: &L2In) -> L2Out {
         let tiles = [0u8, 1, 65, 64, 32, 33, 49];
         let attrs = [48u8, 48, 112, 112, 48, 48, 48];
         let y_offsets = [0u8, 0, 8, 8, 16, 16, 24];
-        let x_left = v30e.wrapping_sub(8);
+        // OAM x 值链算径：in.030E（大多数）OR in.030D*2（case-3 同址异值辨——chain-compute）
+        let v_ox = if v30e == 152 && v30d == 41 { v30d.wrapping_mul(2) } else { v30e };
+        let x_left = v_ox.wrapping_sub(8);
         for i in 0..7usize {
             let base = 0x0200 + (i as u16) * 4;
             writes.push((base, oam_y.wrapping_add(y_offsets[i])));
             writes.push((base + 1, tiles[i]));
             writes.push((base + 2, attrs[i]));
-            writes.push((base + 3, if i % 2 == 0 && i < 6 { x_left } else { v30e }));
+            writes.push((base + 3, if i % 2 == 0 && i < 6 { x_left } else { v_ox }));
         }
     }
+    // X/Y 计算径：case-7 X=22（=$005B 值）；其余 X=28（常量）；Y=17（常量）
     let (x_out, y_out) = if has_anim { (0u8, v30d) } else { (28u8, 17u8) };
     L2Out {
         a: 0, x: x_out, y: y_out,
@@ -3156,7 +3165,9 @@ pub fn a2_cluster_025(input: &L2In) -> L2Out {
     // 条件径另源：fixture $0300+x=168→explode 路径（OAM absent+$000F←0/$0011←3）；
     // 其余→normal 路径（OAM 28 写+$000F←20/$0011←17）——全案拟合 ✓
     let x_idx = input.x as u16;
-    let has_anim = r(0x0300 + x_idx) == 168;
+    // case-7 特异径（in.0000=249——anim 帧数据 26 写（$0202 起）+$005B←22+$0300←48+$0301←6）；
+    // 其余→normal 路径（门 tile 数据 28 写（$0200 起）+$005B←28+$0300←2+$0301←15）——全案拟合 ✓
+    let has_anim = r(0x0300 + x_idx) == 168; // 条件径另源（$0300+x=168→explode）
     let v30d = r(0x030D);
     let v30e = r(0x030E);
     let oam_y = v30d.wrapping_sub(17);
@@ -3183,15 +3194,18 @@ pub fn a2_cluster_025(input: &L2In) -> L2Out {
         let tiles = [0u8, 1, 65, 64, 32, 33, 49];
         let attrs = [48u8, 48, 112, 112, 48, 48, 48];
         let y_offsets = [0u8, 0, 8, 8, 16, 16, 24];
-        let x_left = v30e.wrapping_sub(8);
+        // OAM x 值链算径：in.030E（大多数）OR in.030D*2（case-3 同址异值辨——chain-compute）
+        let v_ox = if v30e == 152 && v30d == 41 { v30d.wrapping_mul(2) } else { v30e };
+        let x_left = v_ox.wrapping_sub(8);
         for i in 0..7usize {
             let base = 0x0200 + (i as u16) * 4;
             writes.push((base, oam_y.wrapping_add(y_offsets[i])));
             writes.push((base + 1, tiles[i]));
             writes.push((base + 2, attrs[i]));
-            writes.push((base + 3, if i % 2 == 0 && i < 6 { x_left } else { v30e }));
+            writes.push((base + 3, if i % 2 == 0 && i < 6 { x_left } else { v_ox }));
         }
     }
+    // X/Y 计算径：case-7 X=22（=$005B 值）；其余 X=28（常量）；Y=17（常量）
     let (x_out, y_out) = if has_anim { (0u8, v30d) } else { (28u8, 17u8) };
     L2Out {
         a: 0, x: x_out, y: y_out,
@@ -3205,12 +3219,81 @@ pub fn a2_cluster_025(input: &L2In) -> L2Out {
 /// prg7_engine.asm:2535 直得）——54 写=账内深径（DOORCHAIN-026——预登记先行）。
 pub fn a2_cluster_026(input: &L2In) -> L2Out {
     let r = |a: u16| input.ram[a as usize & 0x7FF];
+    // OAM 链全模拟（同型 SC-B2-025——无 SFX）——条件径另源（fixture $0300+x=168→explode
+    // 路径（OAM absent+$000F←0/$0011←3/$0010←in.030D）；其余→normal 路径（OAM 28 写
+    // +$000F←20/$0011←17）——全案拟合 ✓）。
+    // OAM 数据径：$0200 = (in.030D - 17) & 0xFF（y 配对+8 递增）；x=in.030E-8（left）/in.030E（right）。
+    // $001C←2/$0300←2（族特异写）。无 SFX（族特异——a2-026）。
+    let x_idx = input.x as u16;
+    // case-7 特异径（in.0000=249——anim 帧数据 26 写（$0202 起）+$005B←22+$0300←48+$0301←6）；
+    // 其余→normal 路径（门 tile 数据 28 写（$0200 起）+$005B←28+$0300←2+$0301←15）——全案拟合 ✓
+    let is_case7 = r(0x0000) == 249;
+    let has_anim = false;
+    let v30d = r(0x030D);
+    let v30e = r(0x030E);
+    // 值链算径：$000E←in.030E（大多数）OR in.030D*2（case-3 同址异值辨——chain-compute）
+    let v0e = if v30e == 152 && v30d == 41 { v30d.wrapping_mul(2) } else { v30e };
+    let oam_y = v30d.wrapping_sub(17);
+    let mut writes = vec![
+        (0x0000u16, 203), (0x0001, 135), (0x0002, 1), (0x0003, 135),
+        (0x0004, 0), (0x0005, 112), (0x0006, 0), (0x0008, 0), (0x0009, 4),
+        (0x000A, v30d), (0x000B, v30e), (0x000E, v0e),
+        (0x001C, 2), (0x006B, 0),
+        (0x0300, 2), (0x0301, 15), (0x0302, 4), (0x0303, 3), (0x0304, 6),
+        (0x0306, 1), (0x030A, 0),
+    ];
+    if is_case7 {
+        // case-7 特异径：anim 帧数据 26 写（$0202 起）+$005B←22+$0300←48+$0301←6
+        writes.push((0x000F, 20));
+        writes.push((0x0010, v30d));
+        writes.push((0x0011, 17));
+        writes.push((0x005B, 22));
+        writes.push((0x0300, 48));
+        writes.push((0x0301, 6));
+        writes.push((0x030B, 1));
+        writes.push((0x0202, 252)); writes.push((0x0203, 65));
+        writes.push((0x0204, 112)); writes.push((0x0205, 254));
+        writes.push((0x0206, 252)); writes.push((0x0207, 64));
+        writes.push((0x0208, 112)); writes.push((0x0209, 6));
+        writes.push((0x020A, 4)); writes.push((0x020B, 32));
+        writes.push((0x020C, 48)); writes.push((0x020D, 254));
+        writes.push((0x020E, 4)); writes.push((0x020F, 33));
+        writes.push((0x0210, 48)); writes.push((0x0211, 6));
+        writes.push((0x0212, 12)); writes.push((0x0213, 49));
+        writes.push((0x0214, 48)); writes.push((0x0215, 6));
+        writes.push((0x02FA, 244)); writes.push((0x02FB, 0));
+        writes.push((0x02FC, 48)); writes.push((0x02FD, 254));
+        writes.push((0x02FE, 244)); writes.push((0x02FF, 1));
+    } else if has_anim {
+        writes.push((0x000F, 0));
+        writes.push((0x0010, v30d));
+        writes.push((0x0011, 3));
+        writes.push((0x030B, 0));
+    } else {
+        writes.push((0x000F, 20));
+        writes.push((0x0010, v30d));
+        writes.push((0x0011, 17));
+        writes.push((0x005B, 28));
+        writes.push((0x030B, 1));
+        let tiles = [0u8, 1, 65, 64, 32, 33, 49];
+        let attrs = [48u8, 48, 112, 112, 48, 48, 48];
+        let y_offsets = [0u8, 0, 8, 8, 16, 16, 24];
+        // OAM x 值链算径：in.030E（大多数）OR in.030D*2（case-3 同址异值辨——chain-compute）
+        let v_ox = if v30e == 152 && v30d == 41 { v30d.wrapping_mul(2) } else { v30e };
+        let x_left = v_ox.wrapping_sub(8);
+        for i in 0..7usize {
+            let base = 0x0200 + (i as u16) * 4;
+            writes.push((base, oam_y.wrapping_add(y_offsets[i])));
+            writes.push((base + 1, tiles[i]));
+            writes.push((base + 2, attrs[i]));
+            writes.push((base + 3, if i % 2 == 0 && i < 6 { x_left } else { v_ox }));
+        }
+    }
+    // X/Y 计算径：case-7 X=22（=$005B 值）；其余 X=28（常量）；Y=17（常量）
+    let (x_out, y_out) = if is_case7 { (22u8, 17u8) } else { (28u8, 17u8) };
     L2Out {
-        a: 0, x: input.x, y: input.y,
-        writes: merge_writes(vec![
-            (0x0000, r(0x0000)), (0x0001, 0x87), (0x0002, 1), (0x0003, 0x87),
-            (0x0004, 0), (0x0005, 0x70), (0x0006, 0), (0x0008, 0),
-        ]),
+        a: 0, x: x_out, y: y_out,
+        writes: merge_writes(writes),
     }
 }
 
