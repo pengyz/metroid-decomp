@@ -6,7 +6,7 @@
       "id": "SC-A1-001-ENEMYMOVE",
       "case_prefix": "a1-001-case",
       "reason": "EnemyMove（F3xx 族）移效写面（$6AFF 族）转写余——golden 全路径含移效 vs 适配骨架面（SC-A1-001 卡工序）",
-      "exit": "EnemyMove 转写落→账清转 strict",
+      "exit": "【2026-10-20 消费】EnemyMove 转写落（s4_enemy_move_vert/horiz——engine:5074/5145）→账清转 strict ✓",
       "registered": "2026-10-19"
     },
     {
