@@ -6530,6 +6530,28 @@ golden 114/108 mismatch）——**transform 内径待辨**）——claim 与实�
 L2 3107/880（账目面全合）。findings（r10）：1 gap 显式（a3-028 transform 内径待辨
 （链非简单源（源 0→golden 114/108））（诚实标定））。
 
+## port2 门链 OAM+decomp transform 内径辨双审（落件即审·实测核——双 pass）
+
+### ① a2-036 OAM 链 verdict: pass | ② decomp transform 内径辨 verdict: pass（诚实标定）
+
+**实测 diff 输出原文（A 级——非声称核）**：
+```
+a2-036: [PASS]×8（0 FAIL）✓✓✓✓✓✓✓✓（SC-B8-013 OAM 链全模拟实现落）
+a3-028: 1/8 PASS+7 FAIL（transform 内径辨（y-1 导出三分支）——考证进度态（诚实标定））
+```
+
+四条核：①**a2-036=8/8 全绿 ✓✓**（port2 e7b5677（SC-B8-013 建模缺口定案 v2+
+OAM 链全模拟实现））：OAM 链全模拟（y 时序辨+chain-compute 多入参+新址辨）实现落
+=全径精确+账清转 strict 落定 ✓②**a3-028 transform 内径辨=诚实标定 ✓**（decomp
+793d2a4）：**transform 内径辨**（**0→114/108 变换径=y-1 导出**（r(0) 分支 y
+（{5,6,250}→109/else 115——**a3-032 同型三分支**）））+**base 族 4 写值 transform
+待辨**（JSR $802A 派发表内部变换（state-init 族））+值径待深挖——claim 与实测
+一致（1/8+7 FAIL 考证进度态（非声称修复（「0 败」纪律面 ✓）））③**transform 辨核 ✓**
+（0→114/108=y-1 导出（r(0) 分支三分支（a3-032 同型））=辨识精确（显式））④**base
+族 transform 待辨核 ✓**（JSR $802A 派发表内部变换（state-init 族）=待辨（显式））
+⑤测 540 全绿+L2 3107/880（账目面全合）。findings（r10）：1 gap 显式（a3-028 base
+族 4 写值 transform 待辨（诚实标定））。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
