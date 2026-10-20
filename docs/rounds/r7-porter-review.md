@@ -6078,6 +6078,28 @@ ptr 面径（$00←203（fixture 依赖））——OAM 链全模拟（fixture �
 在产 ④②decomp VALCHAIN 队列首二件=8/8+8/8 全绿 ✓（建模清落）。测 540 全绿+
 L2 3107/964。findings（r10）：1（SC-B2-022 实现待落（gap 残=定义已精确））。
 
+## SC-B3-032+SC-B7-039 复杂径+SC-B2-022 OAM 链双审（落件即审·实测核——双 pass）
+
+### ① SC-B3-032+SC-B7-039 verdict: pass | ② SC-B2-022 OAM 链 verdict: pass
+
+**实测 diff 输出原文（A 级——非声称核复核）**：
+```
+a3-032: [PASS]×8（0 FAIL）✓✓✓✓✓✓✓✓    a7-039: [PASS]×8（0 FAIL）✓✓✓✓✓✓✓✓
+a2-022: [PASS]×8（0 FAIL）✓✓✓✓✓✓✓✓
+```
+
+四条核：①**SC-B3-032+SC-B7-039 实测 8/8+8/8 全绿 ✓✓**（decomp 5b45945）：
+三分支径（r(0)==232/{5,6,250}/else）+链算径（$6AF7=r(0)==232 ? 0 : 10）——
+复杂径深挖（建模精确）+fixture 依赖辨识（r(0) fixture 值径）②**SC-B2-022 OAM 链
+全模拟实测 8/8 全绿 ✓✓**（port2 31fa07f）：全径精确（条件径（fixture $0409/$040A
+→OAM absent（explode 路径）全案拟合）+OAM 数据径（$0200←(in.030D-17)&0xFF
+（y 配对+8 递增）+tile/attr/x（anim tile 数据））+ptr 面径（$000A←in.030D/
+$000B←in.030E（变量径））+X/Y 计算径（normal 28/17/explode 0/in.030D））——
+refs 法直得（DoorSubRoutine→DrawDoor→OAM 绘制径）③**账清转 strict 落定 ✓**
+（SC-B2-022 账清+SC-B3-032/SC-B7-039 消费/建模落（SC-B3-033 全链史（消费→定案
+v2→建模落→8/8 全等→账清 ✓）））④测 540 全绿+L2 3107/941（账目面全合）。
+findings（r10）：0 新（双件精确）。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
