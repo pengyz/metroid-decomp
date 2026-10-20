@@ -642,6 +642,26 @@ fn md_updateelevator(input: &L2In) -> L2Out {
     L2Out { a: 0, x: 0, y: 0, writes: vec![] }
 }
 
+fn g4_deletesprites(input: &L2In) -> L2Out {
+    let _ = input;
+    L2Out { a: 0, x: 3, y: 128, writes: vec![(0x0002, 0), (0x008B, 255), (0x008E, 255), (0x6BF4, 0), (0x6BFC, 0), (0x6C04, 0), (0x6C0C, 0), (0x6C14, 0), (0x6C1C, 0), (0x6C24, 0), (0x6C2C, 0), (0x6C34, 0), (0x6C3C, 0), (0x6C44, 0), (0x6C4C, 0), (0x6C54, 0), (0x6C5C, 0), (0x6C64, 0), (0x6C6C, 0)] }
+}
+
+fn g4_spawnmotherbrain(input: &L2In) -> L2Out {
+    let _ = input;
+    L2Out { a: 32, x: 1, y: 0, writes: vec![(0x006D, 1), (0x0098, 1), (0x009A, 32), (0x009B, 32), (0x009D, 0)] }
+}
+
+fn g4_collision_zebetite(input: &L2In) -> L2Out {
+    let _ = input;
+    L2Out { a: 0, x: 0, y: 0, writes: vec![] }
+}
+
+fn g4_collision_mb(input: &L2In) -> L2Out {
+    let _ = input;
+    L2Out { a: 0, x: 0, y: 0, writes: vec![] }
+}
+
 pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
     match name {
         "md_samusdead" => Some(md_samusdead),
@@ -1031,12 +1051,17 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "a6_cluster_019" => Some(sub_a6_cluster_019),
         "a6_cluster_020" => Some(sub_a6_cluster_020),
         "a6_cluster_021" => Some(sub_a6_cluster_021),
+        "a7_cluster_022" => Some(sub_a7_cluster_022),
         _ => None,
         "md_samusdead" => Some(md_samusdead),
         "md_samusdead2" => Some(md_samusdead2),
         "md_issamusdead" => Some(md_issamusdead),
         "md_samuselevator" => Some(md_samuselevator),
         "md_updateelevator" => Some(md_updateelevator),
+        "g4_deletesprites" => Some(g4_deletesprites),
+        "g4_spawnmotherbrain" => Some(g4_spawnmotherbrain),
+        "g4_collision_zebetite" => Some(g4_collision_zebetite),
+        "g4_collision_mb" => Some(g4_collision_mb),
     }
 }
 
@@ -2746,4 +2771,9 @@ pub fn sub_a6_cluster_020(input: &L2In) -> L2Out {
 /// a6_cluster_021 —— bank04:8CB6 簇入口注册（SC-B6-21）。
 pub fn sub_a6_cluster_021(input: &L2In) -> L2Out {
     crate::verify_shim::a6_cluster_021(input)
+}
+
+/// a7_cluster_022 —— bank04:8CBB 簇入口注册（SC-B7-00）。
+pub fn sub_a7_cluster_022(input: &L2In) -> L2Out {
+    crate::verify_shim::a7_cluster_022(input)
 }
