@@ -7171,6 +7171,26 @@ STA 链外径辨**（$8003 hexdump（数据（15 b0 21）+$8006 径（STY $D1/$B
 未见（显式））④测 540 全绿+L2 3107/741（账目面全合）。findings（r10）：1 gap 显式
 （a3-028 +4/+8 STA 链外径待辨（诚实标定））。
 
+## port2 已知 pattern+decomp +4/+8 STA 位置辨双审（落件即审·实测核——双 pass）
+
+### ① a3-025 已知 pattern verdict: pass | ② decomp +4/+8 STA 位置辨 verdict: pass（诚实标定）
+
+**实测 diff 输出原文（A 级——非声称核）**：
+```
+a3-025: [PASS]×8（0 FAIL）✓✓✓✓✓✓✓✓（已知 pattern 转写落）
+a3-028: 1/8 PASS+7 FAIL（+4/+8 STA 位置辨（8 处 bank:addr 映射）——考证进度态（诚实标定））
+```
+
+四条核：①**a3-025=8/8 全绿 ✓✓**（port2 已知 pattern 转写落）：chain-compute 多入参
+（case 特异地址+值径辨（寄存器+多写径补全（实落（非声称！））））实现落=全径精确+
+账清转 strict 落定 ✓②**a3-028 +4/+8 STA 位置辨=诚实标定 ✓**（decomp 5a93ba1）：
+**+4/+8 STA 位置辨**（bank:addr 映射辨（**8 处**：bank1:8285/9D01/9D31+bank2:8285+
+bank3:98EC+bank7:9D27/B46E/B559）——**链外多 routine**（a3-028 链内未见（bank02:98EB））
+——**bank3:98EC（近邻 offset（98EC vs 98EB））**）+写径待辨——claim 与实测一致
+（1/8+7 FAIL 考证进度态（非声称修复（「0 败」纪律面 ✓）））③**bank:addr 映射辨核 ✓**
+（8 处实录+链外多 routine 实录+bank3:98EC 近邻辨识（显式））④测 540 全绿+L2 3107/742
+（账目面全合）。findings（r10）：1 gap 显式（a3-028 +4/+8 STA 链外径待辨（诚实标定））。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
