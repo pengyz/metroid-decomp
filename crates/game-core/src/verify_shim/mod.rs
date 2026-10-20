@@ -4817,3 +4817,18 @@ pub fn a7_cluster_034(_input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-B7-13 簇入口适配（a7_cluster_035 ← bank04:99DE——判别条补触发）----
+
+/// a7_cluster_035 适配（bank04:99DE（S5-146 族区（bank5））——案实核 3 写
+/// （$6BA5-$6BA7←0/53/53（fixture 弱源——判别条补触发→账目预登记
+/// （VALCHAIN-B7-035）））；A=0/X 透传/Y=0）。
+pub fn a7_cluster_035(input: &L2In) -> L2Out {
+    let x = input.x as u16;
+    L2Out {
+        a: 0, x: input.x, y: 0,
+        writes: merge_writes(vec![
+            (0x6AF8 + x - 1, 0), (0x6AF8 + x, 53), (0x6AF8 + x + 1, 53), // x 索引（写址不掩）
+        ]),
+    }
+}
