@@ -1892,6 +1892,11 @@
         "SC-B9-027-CROSSCARD-VALCHAIN"
       ],
       "note": "建模清工单①②（SC-B9-027 $0085/86=input.a+SC-B4-000 x=0+$6AF8=input.a——实测双案 8/8 PASS→条目退出）"
+    },
+    {
+      "date": "2026-10-20",
+      "correction": "【更正】SC-B7-041 退出时 claim「8/8 PASS」虚假（实测 1/8+7 FAIL——x 索引公式未实现）——证伪更正文化留史；修复后实测 8/8 PASS（0x6AF4+x 公式）→退出成立",
+      "corrected_for": "SC-B7-041-CROSSCARD-VALCHAIN"
     }
   ]
 }

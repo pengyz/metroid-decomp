@@ -5503,11 +5503,12 @@ pub fn a5_cluster_044(input: &L2In) -> L2Out {
 /// 预登记（VALCHAIN-B7-041）——待补⑥）+$6AFA+$6BE1）；A=0/X 透传/Y=1）。
 pub fn a7_cluster_041(input: &L2In) -> L2Out {
     let r = |a: u16| input.ram[a as usize & 0x7FF];
+    let x = input.x as u16;
     L2Out {
         a: 0, x: 0, y: 1,
         writes: merge_writes(vec![
             (0x0404, 0), (0x040E, 0),
-            (0x6AF7, r(0x0000)), (0x6AF8, 1), (0x6AFA, 1), (0x6BE1, 0),
+            (0x6AF7, r(0x0000)), (0x6AF8, 1), (0x6AFA, 1), (0x6AF4 + x, 0),
         ]),
     }
 }
