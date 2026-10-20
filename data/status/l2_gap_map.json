@@ -1366,6 +1366,27 @@
       "reason": "【预登记】臂深化卡序续（SC-MD-008 SamusElevator 族——开工前置步先登记）",
       "exit": "arm_cluster_008 移植/转写落→账清转 strict（臂深化收官卡）",
       "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-B6-017-CROSSCARD-DOORSUB8C71",
+      "case_prefix": "a6-017-case-",
+      "reason": "DoorSubRoutine8C71 OAM 深径链（52 写（>20 深径判别条触发）——$8C71 bank4 化身（a1-017 同款）——预登记先行（严格顺序）——S5-121 同款跨卡深径）",
+      "exit": "门链 OAM 绘制径建模清（全链模拟）→账清转 strict",
+      "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-MD_SAMUSELEVATOR-IMPL",
+      "case_prefix": "md_samuselevator",
+      "reason": "【预登记/补账】md_samuselevator 簇（批产 WIP——A 批预登记制）",
+      "exit": "md_samuselevator 落→账清转 strict",
+      "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-MD_UPDATEELEVATOR-IMPL",
+      "case_prefix": "md_updateelevator",
+      "reason": "【预登记/补账】md_updateelevator 簇（批产 WIP——A 批预登记制）",
+      "exit": "md_updateelevator 落→账清转 strict",
+      "registered": "2026-10-20"
     }
   ]
 }
