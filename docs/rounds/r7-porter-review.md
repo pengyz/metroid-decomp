@@ -5970,6 +5970,27 @@ golden (27383, 0)=$6AF7←0（r(0) 值）=core 实现合形——case 变值径�
 移除=账清转 strict 落定）——L2 收敛面（账清）全落。测 540 全绿+L2 3107/1001
 （账目面全合）。findings（r10）：0 新。
 
+## port2/decomp 在产建模件双审（在产待落注——实测核审预备）
+
+### ① port2 在产建模实现件 verdict: 待落（在产——review 待 commit） | ② decomp 在产建模清件 verdict: 待落（在产——review 待 commit）
+
+**在产态核（工作树 WIP 实录——A 级）**：
+```
+ M crates/game-core/src/frame/gfx.rs        # port2 在产（OAM 链族？）
+ M crates/game-oracle/src/l2.rs             # decomp 在产（VALCHAIN 族？）
+ M data/status/completeness_matrix.json     # 建模队列注（+715 行=225 条定案队列？）
+ M Cargo.lock / docs/findings/... / oracle/scenarios/jt-00.txt
+```
+双件=**在产（未 commit）**——工作树 WIP 可见（gfx.rs/l2.rs/completeness_matrix
+修改在途）但**实现未落 commit**（a47ea23 后无新交付件）——review 待落件（「实现落
+即审」=落件后实测 diff 核（A 级原文））。
+
+**实测 diff 现态**：L2 3107/1001（账目面全合=与上轮同）——双件落件后待核（实测
+diff 全绿核+建模正确性+账清转 strict 核）。
+
+**判据注**：双件 verdict=待落（在产）——落件即审（实测 diff 输出原文附（A 级）=
+交付判据不变）。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
