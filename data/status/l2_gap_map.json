@@ -1842,6 +1842,13 @@
       "reason": "值链算深径（$0098/$0099/$0685←5/128/4（fixture 弱源——多入参链算）——深径判别条补触发（链算径）——S5-121 同款跨卡深径（九待补④））",
       "exit": "值链算径建模清（$00 族链模拟）→账清转 strict",
       "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-B5-044-CROSSCARD-MOTHERBRAIN",
+      "case_prefix": "a5-044-case-",
+      "reason": "MotherBrain OAM 深径链（73 写（>20 深径判别条触发）——$9F49 MotherBrain_SetTimeBomb/$9F69 MotherBrain_SpawnDoor/$9FDA MotherBrain_SetTimeBomb_ScrollBackOnScreen（refs 法直得——命名正身）——预登记先行（严格顺序）——S5-121 同款跨卡深径（九待补⑤））",
+      "exit": "MotherBrain OAM 绘制径建模清（全链模拟）→账清转 strict",
+      "registered": "2026-10-20"
     }
   ]
 }

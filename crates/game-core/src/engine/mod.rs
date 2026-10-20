@@ -13411,3 +13411,35 @@ mod a5_043_tests {
         assert_eq!(b5_9ed6_mb_face().len(), 3);
     }
 }
+
+// ---- a5-044 待补交付⑤（3 员——MotherBrain 域族面（refs 法直得——命名正身））----
+
+/// bank03:9F49 MotherBrain_SetTimeBomb（root——簇共根形三百七五·**MotherBrain
+/// 域族面**（refs 法直得——$9F49 MotherBrain_SetTimeBomb 命名正身——待补⑤））。
+/// 返回 (目标址, 桩面)。
+pub fn b5_9f49_mb_set_time_bomb() -> (u16, bool) {
+    (0x9F49, true) // MotherBrain_SetTimeBomb（refs 法直得）
+}
+
+/// $9F69 MotherBrain_SpawnDoor（refs 法直得——命名正身）。
+pub fn b5_9f69_mb_spawn_door() -> (u16, bool) {
+    (0x9F69, true) // MotherBrain_SpawnDoor（refs 法直得）
+}
+
+/// $9FDA MotherBrain_SetTimeBomb_ScrollBackOnScreen（refs 法直得——命名正身）。
+pub fn b5_9fda_mb_scroll() -> (u16, bool) {
+    (0x9FDA, true) // MotherBrain_SetTimeBomb_ScrollBackOnScreen（refs 法直得）
+}
+
+#[cfg(test)]
+mod a5_044_tests {
+    use super::*;
+
+    /// 三员转写形（MotherBrain 域族面 root+二壳）——待补交付⑤（refs 法直得——命名正身）。
+    #[test]
+    fn a5_044_units_three() {
+        assert_eq!(b5_9f49_mb_set_time_bomb(), (0x9F49, true)); // 命名正身
+        assert_eq!(b5_9f69_mb_spawn_door(), (0x9F69, true)); // 命名正身
+        assert_eq!(b5_9fda_mb_scroll(), (0x9FDA, true)); // 命名正身
+    }
+}
