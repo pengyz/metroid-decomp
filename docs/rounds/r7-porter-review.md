@@ -6371,6 +6371,28 @@ delta 提取径（19/20 帧写集变化）到手（显式）+entry 检测/种子
 ④测 540 全绿+L2 3107/892（账目面全合）。findings（r10）：1 gap 显式（a3-028
 entry 检测+8 种子跑待（per-seed in/out）（诚实标定））。
 
+## port2 门链 OAM+decomp 8 种子跑方案双审（落件即审·实测核——双 pass）
+
+### ① a2-030 OAM 链 verdict: pass | ② decomp 8 种子跑方案 verdict: pass（诚实标定）
+
+**实测 diff 输出原文（A 级——非声称核）**：
+```
+a2-030: [PASS]×8（0 FAIL）✓✓✓✓✓✓✓✓（SC-B4-007 chain-compute 多入参落）
+a3-028: 1/8 PASS+7 FAIL（entry 检测+8 种子跑方案——考证进度态（诚实标定））
+```
+
+四条核：①**a2-030=8/8 全绿 ✓✓**（port2 0cfa385（SC-B4-007 建模缺口定案 v2+
+chain-compute 多入参实现（in.030D 四径辨）））：OAM 链全模拟（y 时序辨+chain-compute
+多入参）实现落=全径精确+账清转 strict 落定 ✓②**a3-028 entry 检测+8 种子跑方案=
+诚实标定 ✓**（decomp dab1124）：**entry 检测径辨**（entry 候选帧=1（f=2——首帧
+w 变化）——enemy 例程首帧）+**8 种子跑方案**（LCG 输入×8→Mesen2 capture×8
+（~45s each）→per-seed in/out 提取）+**种子跑待**——claim 与实测一致（1/8+7 FAIL
+考证进度态（非声称修复（「0 败」纪律面 ✓）））③**entry 检测径辨核 ✓**（entry 候选
+帧=1（f=2）=enemy 例程首帧辨识（显式））④**8 种子跑方案核 ✓**（LCG×8→capture×8
+（~45s each）→per-seed in/out 提取=工具件方案（显式））⑤测 540 全绿+L2 3107/894
+（账目面全合）。findings（r10）：1 gap 显式（a3-028 种子跑待（8 案 per-seed in/out）
+（诚实标定））。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
