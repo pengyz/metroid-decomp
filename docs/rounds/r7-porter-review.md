@@ -6807,6 +6807,29 @@ a3-028: 1/8 PASS+7 FAIL（变换径辨（源径待 fixture 扩）——考证进
 （「落件即审」）））③测 540 全绿+L2 账目面全合。findings（r10）：1 待落（decomp
 fixture 扩（在产））。
 
+## port2 已知 pattern+decomp entry 帧提取双审（落件即审·实测核）
+
+### ① a3-018 已知 pattern verdict: needs_revision | ② decomp entry 帧提取 verdict: pass（诚实标定）
+
+**实测 diff 输出原文（A 级——非声称核）**：
+```
+a3-018: [FAIL]×8（core 早终止——已知 pattern 转写未落）
+（golden 全写集（OAM 512-539+寄存器+case 变值）vs core 早终止（仅 8 写））
+a3-028: 1/8 PASS+7 FAIL（fixture 扩 DONE（entry 帧待）——考证进度态（诚实标定））
+```
+
+四条核：①**a3-018=8/8 FAIL（契约族）**：golden 全写集 vs core **早终止**（仅 8 写）
+——**已知 pattern 转写未落**（chain-compute 多入参（fixture 依赖）实现缺）——
+**修复要求**：已知 pattern 转写实现（chain-compute 多入参（fixture 依赖））→8 案
+全等→账清转 strict ②**a3-028 fixture 扩 DONE=诚实标定 ✓**（decomp d79d471）：
+**fixture 扩 DONE**（watch_range+0400-04ff——**8 案 capture 再生成**）+**源值帧核**
+（0400-04ff 帧 0（all 0/seed0 1A00）——**entry 帧待**（f=5 敌例程写前态提取））——
+claim 与实测一致（1/8+7 FAIL 考证进度态（非声称修复（「0 败」纪律面 ✓）））③
+**fixture 扩再生成实录核 ✓**（watch_range 0400-04ff+8 案 capture+源值帧核（帧 0））
+④**entry 帧待核 ✓**（f=5 敌例程写前态提取（显式待做））⑤测 540 全绿+L2 3107/786。
+findings（r10）：1（a3-018 已知 pattern 转写未落=needs_revision）+1 gap 显式
+（a3-028 entry 帧待（f=5 敌例程写前态提取）（诚实标定））。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
