@@ -12626,3 +12626,31 @@ mod a8_013_tests {
         assert_eq!(b6_8ced_goto2(), (0x8BB1, true));
     }
 }
+
+// ---- SC-B8-14（a8-014）员转写（2 员——DoorSubRoutine 族（bank6 化身））----
+
+/// bank05:8C61 DoorSubRoutine8C61（root——簇共根形三百四九·**bank6 化身**
+/// （a1-016 同款——refs 法：areas_common.asm:1579（bank6 复现）））。
+/// 返回 (写事件, 门态)。
+pub fn b6_8c61_door_sub(x: u8) -> Vec<(u16, u8)> {
+    vec![(0x0409 + x as u16, 1), (0x0405 + x as u16, 2)] // HitPoints←1+status←2
+}
+
+/// $8CF4 jmp DoorSubRoutine8C61（bank6 化身——a1-016 同款（asm:1692））。
+pub fn b6_8cf4_goto() -> (u16, bool) {
+    (0x8C61, true) // jmp DoorSubRoutine8C61（bank6 化身直连）
+}
+
+#[cfg(test)]
+mod a8_014_tests {
+    use super::*;
+
+    /// 二员转写形（DoorSubRoutine bank6 化身 root+跳转面）。
+    #[test]
+    fn a8_014_units_two() {
+        let ev = b6_8c61_door_sub(2);
+        assert!(ev.contains(&(0x040B, 1))); // HitPoints←1（写址对值核对）
+        assert!(ev.contains(&(0x0407, 2))); // status←2
+        assert_eq!(b6_8cf4_goto(), (0x8C61, true));
+    }
+}
