@@ -1359,6 +1359,13 @@
       "reason": "DoorSubRoutine OAM 深径链（60 写（>20 深径判别条触发）——$8C61 bank4 化身（a1-016 同款）——预登记先行（严格顺序）——S5-121 同款跨卡深径）",
       "exit": "门链 OAM 绘制径建模清（全链模拟）→账清转 strict",
       "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-MD-008-IMPL",
+      "case_prefix": "a1-030-case",
+      "reason": "【预登记】臂深化卡序续（SC-MD-008 SamusElevator 族——开工前置步先登记）",
+      "exit": "arm_cluster_008 移植/转写落→账清转 strict（臂深化收官卡）",
+      "registered": "2026-10-20"
     }
   ]
 }
