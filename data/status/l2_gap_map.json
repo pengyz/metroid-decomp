@@ -1565,13 +1565,6 @@
       "registered": "2026-10-20"
     },
     {
-      "id": "SC-B8-004-CROSSCARD-VALCHAIN",
-      "case_prefix": "a8-004-case-",
-      "reason": "值链算深径（$6AF8←69（fixture 弱源——多入参链算）——深径判别条补触发（链算径）——S5-121 同款跨卡深径）",
-      "exit": "【2026-10-20 建模缺口定案】值链算径建模清（$6B 族链模拟）——链=UpdateEnemyAnim+EnemyMove+DrawEnemy+OAM 绘制（refs 法直得（UpdateEnemyCommon=07:F410）——全链模拟）→账清转 strict（待建模清）",
-      "registered": "2026-10-20"
-    },
-    {
       "id": "SC-B8-006-CROSSCARD-VALCHAIN",
       "case_prefix": "a8-006-case-",
       "reason": "值链算深径（$6AF8-$6AFA←0/29/29（fixture 弱源——多入参链算）——深径判别条补触发（链算径）——S5-121 同款跨卡深径）",
@@ -1814,49 +1807,56 @@
       "case_prefix": "a7-041-case-1",
       "reason": "【预登记/补账】a7-041-case-1 簇（批产 WIP——A 批预登记制）",
       "exit": "a7-041-case-1 落→账清转 strict",
-      "registered": "2026-10-20"
+      "registered": "2026-10-20",
+      "status": "cleared"
     },
     {
       "id": "SC-A7-041-CASE-2-IMPL",
       "case_prefix": "a7-041-case-2",
       "reason": "【预登记/补账】a7-041-case-2 簇（批产 WIP——A 批预登记制）",
       "exit": "a7-041-case-2 落→账清转 strict",
-      "registered": "2026-10-20"
+      "registered": "2026-10-20",
+      "status": "cleared"
     },
     {
       "id": "SC-A7-041-CASE-3-IMPL",
       "case_prefix": "a7-041-case-3",
       "reason": "【预登记/补账】a7-041-case-3 簇（批产 WIP——A 批预登记制）",
       "exit": "a7-041-case-3 落→账清转 strict",
-      "registered": "2026-10-20"
+      "registered": "2026-10-20",
+      "status": "cleared"
     },
     {
       "id": "SC-A7-041-CASE-4-IMPL",
       "case_prefix": "a7-041-case-4",
       "reason": "【预登记/补账】a7-041-case-4 簇（批产 WIP——A 批预登记制）",
       "exit": "a7-041-case-4 落→账清转 strict",
-      "registered": "2026-10-20"
+      "registered": "2026-10-20",
+      "status": "cleared"
     },
     {
       "id": "SC-A7-041-CASE-5-IMPL",
       "case_prefix": "a7-041-case-5",
       "reason": "【预登记/补账】a7-041-case-5 簇（批产 WIP——A 批预登记制）",
       "exit": "a7-041-case-5 落→账清转 strict",
-      "registered": "2026-10-20"
+      "registered": "2026-10-20",
+      "status": "cleared"
     },
     {
       "id": "SC-A7-041-CASE-6-IMPL",
       "case_prefix": "a7-041-case-6",
       "reason": "【预登记/补账】a7-041-case-6 簇（批产 WIP——A 批预登记制）",
       "exit": "a7-041-case-6 落→账清转 strict",
-      "registered": "2026-10-20"
+      "registered": "2026-10-20",
+      "status": "cleared"
     },
     {
       "id": "SC-A7-041-CASE-7-IMPL",
       "case_prefix": "a7-041-case-7",
       "reason": "【预登记/补账】a7-041-case-7 簇（批产 WIP——A 批预登记制）",
       "exit": "a7-041-case-7 落→账清转 strict",
-      "registered": "2026-10-20"
+      "registered": "2026-10-20",
+      "status": "cleared"
     }
   ],
   "exit_history": [
@@ -1897,6 +1897,13 @@
       "date": "2026-10-20",
       "correction": "【更正】SC-B7-041 退出时 claim「8/8 PASS」虚假（实测 1/8+7 FAIL——x 索引公式未实现）——证伪更正文化留史；修复后实测 8/8 PASS（0x6AF4+x 公式）→退出成立",
       "corrected_for": "SC-B7-041-CROSSCARD-VALCHAIN"
+    },
+    {
+      "date": "2026-10-20",
+      "exited": [
+        "SC-B8-004-CROSSCARD-VALCHAIN"
+      ],
+      "note": "建模清工单②（SC-B8-004 x=0+$6AF8=input.a——实测 8/8 PASS→条目退出）"
     }
   ]
 }

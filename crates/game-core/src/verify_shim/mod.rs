@@ -5007,9 +5007,9 @@ pub fn a8_cluster_003(input: &L2In) -> L2Out {
 pub fn a8_cluster_004(input: &L2In) -> L2Out {
     let r = |a: u16| input.ram[a as usize & 0x7FF];
     L2Out {
-        a: 1, x: input.x, y: 1,
+        a: 1, x: 0, y: 1,
         writes: merge_writes(vec![
-            (0x6AF7, r(0x0000)), (0x6AF8, 69), (0x6AFA, 1),
+            (0x6AF7, r(0x0000)), (0x6AF8, input.a), (0x6AFA, 1),
         ]),
     }
 }
