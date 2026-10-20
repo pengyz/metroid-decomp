@@ -6649,6 +6649,29 @@ ClearNameTables/PreparePPUProcess（prg7 锚实录）=PPU init 族辨识（显�
 写径其他径待（显式））⑤测 540 全绿+L2 3107/854（账目面全合）。findings（r10）：
 1 gap 显式（a3-028 base 族写径待辨（诚实标定））。
 
+## port2 X 链算径+decomp base 族写径辨双审（落件即审·实测核）
+
+### ① a3-014 X 链算径 verdict: needs_revision | ② decomp base 族写径辨 verdict: 待落（在产）
+
+**实测 diff 输出原文（A 级——非声称核）**：
+```
+a3-014: [PASS]×6+[FAIL]×2（case-4/7——chain-compute 多入参值 gap）
+[FAIL] a3-014-case-4: golden=(..., (4, 0), (5, 112), (514, 48), (515, 242), ...)
+                       core =(..., (4, 64), (5, 96), (514, 96), (515, 250), ...)
+（寄存器值（4/5）+OAM 值（514/515）差（y 时序值（0/112/48）vs（64/96/96）））
+（case-7 同型）
+```
+
+四条核：①**a3-014=6/8+case-4/7 gap（契约族）**：golden 寄存器（4←0/5←112）+
+OAM 值（514←48/515←242）vs core（4←64/5←96/514←96/515←250）——**chain-compute
+多入参值 gap**（y 时序值（0/112/48 vs 64/96/96）——in.030D/in.030E 双径辨值径缺）
+——**修复要求**：chain-compute 多入参值实现（y 时序值（in.030D/in.030E 双径））→
+8 案全等→账清转 strict ②**decomp base 族写径辨=待落**（在产——e3482fa（sub-call
+辨落）内声明「base 族（0x0405+x）径待辨（sub-call=PPU init（mismatch base 族
+（enemy state））——base 族写径=其他径待）」=待落件（review 待落件（「落件即审」）））
+③测 540 全绿+L2 3107/846。findings（r10）：1（a3-014 case-4/7 chain-compute 多入参
+值 gap=needs_revision）+1 待落（decomp base 族写径辨（在产））。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
