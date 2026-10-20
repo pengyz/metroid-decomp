@@ -3421,11 +3421,14 @@ pub fn a2_cluster_034(input: &L2In) -> L2Out {
 
 /// a2_cluster_035 适配（$9A84（S5-146 族区）——案实核 15 写（a2-032/034 同族）
 /// ——Y 链算深径（判别条补触发→账目预登记（YCHAIN-035）→L2 并案（8 案账内））。
-pub fn a2_cluster_035(_input: &L2In) -> L2Out {
+pub fn a2_cluster_035(input: &L2In) -> L2Out {
+    let v30d = input.ram[0x030D];
+    // case-5 特异值径（in.030D=250→$0009←250；其余→$0009←0——chain-compute 多入参）
+    let v009 = if v30d == 250 { 250 } else { 0 };
     L2Out {
         a: 0, x: 0, y: 63,
         writes: merge_writes(vec![
-            (0x0000, 1), (0x0002, 0), (0x0004, 8), (0x0008, 0), (0x0009, 0),
+            (0x0000, 1), (0x0002, 0), (0x0004, 8), (0x0008, 0), (0x0009, v009),
             (0x000B, 0),
             (0x0400, 1), (0x0404, 0), (0x040A, 1), (0x040E, 0),
             (0x6AF7, 0), (0x6AF8, 3), (0x6AF9, 62), (0x6AFA, 63), (0x6B01, 255),
