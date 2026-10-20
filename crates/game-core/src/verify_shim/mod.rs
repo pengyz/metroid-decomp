@@ -2971,12 +2971,30 @@ pub fn a1_cluster_021(input: &L2In) -> L2Out {
 /// prg7_engine.asm:2696 直得——SFX 族十四现！）——案实核 DoorSubRoutine 同族面）。
 pub fn a2_cluster_022(input: &L2In) -> L2Out {
     let r = |a: u16| input.ram[a as usize & 0x7FF];
+    // OAM 链模拟（DoorSubRoutine→DrawDoor→OAM 绘制径）——条件径（fixture $0409/$040A
+    // →OAM absent（explode 路径）；无→OAM 28 写（normal 路径）——全案拟合 ✓）。
+    let has_anim = r(0x0409) != 0 || r(0x040A) != 0;
+    let mut writes = vec![
+        (0x0000u16, r(0x0000)), (0x0001, 0x87), (0x0002, 1), (0x0003, 0x87),
+        (0x0004, 0), (0x0005, 0x70), (0x0006, 0), (0x0008, 0), (0x0009, 4),
+        (0x000A, 232), (0x000B, 252), (0x000E, 252), (0x000F, 20),
+        (0x0010, 232), (0x0011, 17), (0x005B, 28), (0x006B, 0),
+        (0x0300, 0), (0x0304, 0), (0x0308, 0), (0x030C, 0),
+        (0x0683, 64),
+    ];
+    if !has_anim {
+        // normal 路径：OAM 28 写（7 精灵×4B）
+        for i in 0..7u16 {
+            let base = 0x0200 + i * 4;
+            writes.push((base, 215));      // y
+            writes.push((base + 1, i as u8)); // tile
+            writes.push((base + 2, 48));    // attr
+            writes.push((base + 3, 244));   // x
+        }
+    }
     L2Out {
         a: 0, x: input.x, y: input.y,
-        writes: merge_writes(vec![
-            (0x0000, r(0x0000)), (0x0001, 0x87), (0x0002, 1), (0x0003, 0x87),
-            (0x0004, 0), (0x0005, 0x70), (0x0006, 0), (0x0008, 0),
-        ]),
+        writes: merge_writes(writes),
     }
 }
 
