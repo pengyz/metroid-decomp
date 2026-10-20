@@ -1513,6 +1513,13 @@
       "reason": "【预登记】G5 Stage A 收官首卡（SC-G5-001 分母账面终形+AGENTS Gate 面——开工前置步先登记）",
       "exit": "g5_cluster_001 移植/转写落→账清转 strict（Stage A 收官）",
       "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-B7-034-CROSSCARD-VALCHAIN",
+      "case_prefix": "a7-034-case-",
+      "reason": "值链算深径（$04 族+ptr 面+多值（fixture 弱源——a7-031/033 同款）——深径判别条补触发（链算径）——S5-121 同款跨卡深径）",
+      "exit": "值链算径建模清（$04 族链模拟）→账清转 strict",
+      "registered": "2026-10-20"
     }
   ]
 }
