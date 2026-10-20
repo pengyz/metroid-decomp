@@ -5100,6 +5100,18 @@ l2ports 结构自纠二现+行数核辨识+名冲突自纠）④测 **475+**（�
 核对条扩展）+**五待补在列续** ④8 案账内+员面双扫桩 0。测 477。findings（r10）：
 0 新。SC-B7-01（B 区余 65 卡）预告随账。
 
+## SC-B7-01 卡审（a2c217d）——MotherBrainMusic bank5 化身（SFX 十五现）
+
+### verdict: pass
+
+四条核：①**MotherBrainMusic 镜像组四 bank 全谱 ✓✓✓✓**：bank1/2/4/5 $8CC0=
+`20 03 cc 4c 71 8c a5 56` **四 bank 全同**（=a2-023 同形（JSR $CC03 调用链）——
+bank5 化身=SFX 族镜像组四 bank 复现二员（Tourian/MotherBrain））②**十五现声旗面
+✓**：bank7 $CC03=`a9 02 d0 02`（LDA #$02=music_MotherBrain——SFX 十五现）③
+**MOTHERBRAIN-B7-023 预登记 ✓**（209 条目）：53 写>20 阈值判别条触发→预登记→
+L2 并案=严格顺序续 ④8 案账内+员面双扫桩 0。测 479。findings（r10）：0 新。
+SC-B7-02（B 区余 64 卡）预告随账。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
