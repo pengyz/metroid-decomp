@@ -5539,6 +5539,17 @@ bank 复现全谱）②**Adiv16 对偶面 ✓**（refs 法直得）：bank7 $C2C
 **八待补在列收悉**（claim 正形）+8 案账内+员面双扫桩 0。测 514。findings（r10）：
 0 新。SC-B9-01（B 区收官批——余 30 卡）预告随账。
 
+## SC-B9-01 卡审（d191c50）——TourianMusic bank7 化身（SFX 十四现）
+
+### verdict: pass
+
+四条核：①**TourianMusic 五 bank 全谱 ✓✓✓✓✓**：bank1/2/3/4/5 $8CBB=`20 07 cc
+d0 03 20 03 cc` **五 bank 全同**（=a2-022 同形（JSR $CC07 调用链）——TourianMusic
+调用点五 bank 复现全谱）②**十四现声旗面 ✓**：bank7 $CC07=`a9 40 a2 05`（LDA #$40
+=music_Tourian——SFX 十四现）③**TOURIAN-B9-020 预登记 ✓**（248 条目）：53 写
+>20 阈值判别条触发→预登记→L2 并案=严格顺序续 ④8 案账内+员面双扫桩 0（2 员
+真现）。测 515。findings（r10）：0 新。SC-B9-02（B 区收官批——余 29 卡）预告随账。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
