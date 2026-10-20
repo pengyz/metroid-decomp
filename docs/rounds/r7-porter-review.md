@@ -6393,6 +6393,28 @@ w 变化）——enemy 例程首帧）+**8 种子跑方案**（LCG 输入×8→M
 （账目面全合）。findings（r10）：1 gap 显式（a3-028 种子跑待（8 案 per-seed in/out）
 （诚实标定））。
 
+## port2 门链 OAM+decomp 8 种子跑径辨双审（落件即审·实测核——双 pass）
+
+### ① a2-031 OAM 链 verdict: pass | ② decomp 8 种子跑径辨 verdict: pass（诚实标定）
+
+**实测 diff 输出原文（A 级——非声称核）**：
+```
+a2-031: [PASS]×8（0 FAIL）✓✓✓✓✓✓✓✓（SC-B4-008 OAM 链落（y 时序辨+chain-compute 多入参+新址辨））
+a3-028: 1/8 PASS+7 FAIL（8 种子跑径辨（fixture 注入径到手）——考证进度态（诚实标定））
+```
+
+四条核：①**a2-031=8/8 全绿 ✓✓**（port2 42b4fe1（SC-B4-008 建模缺口定案 v2+
+DOORSUB 族特异实现））：OAM 链全模拟（y 时序辨+chain-compute 多入参+**新址辨**）
+实现落=全径精确+账清转 strict 落定 ✓②**a3-028 8 种子跑径辨=诚实标定 ✓**（decomp
+5e7089f）：**8 种子跑径辨**（**fixture 注入径到手**（PLAN.fixtures（frame/addr/
+value/persistence——F_a 注入）——per-seed 输入=fixture 注入））+**8 种子跑待**
+（8 fixture 注入→capture×8→per-seed in/out 提取）+值径待 fixture 扩——claim 与
+实测一致（1/8+7 FAIL 考证进度态（非声称修复（「0 败」纪律面 ✓）））③**fixture
+注入径辨核 ✓**（PLAN.fixtures DSL（frame/addr/value/persistence（F_a 注入））=
+per-seed 输入径（显式））④**8 种子跑径辨核 ✓**（8 fixture 注入→capture×8→
+per-seed in/out 提取=工具件方案（显式））⑤测 540 全绿+L2 3107/893（账目面全合）。
+findings（r10）：1 gap 显式（a3-028 8 种子跑待（诚实标定））。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
