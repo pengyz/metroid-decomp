@@ -6309,6 +6309,27 @@ fixture））+值径待 fixture 扩——claim 与实测一致（1/8+7 FAIL 考�
 6AF4-6B0F+族扩（三断言面））=工具件方案（显式））⑤测 540 全绿+L2 3107/901
 （账目面全合）。findings（r10）：1 gap 显式（a3-028 再生跑待跑（诚实标定））。
 
+## port2 门链 OAM+decomp fixture 提取双审（落件即审·实测核——双 pass）
+
+### ① a2-027 OAM 链 verdict: pass | ② decomp fixture 提取 verdict: pass（诚实标定）
+
+**实测 diff 输出原文（A 级——非声称核）**：
+```
+a2-027: [PASS]×8（0 FAIL）✓✓✓✓✓✓✓✓（OAM 链全模拟落（chain-compute 多入参））
+a3-028: 1/8 PASS+7 FAIL（再生跑 DONE——fixture 提取待（考证进度态（诚实标定）））
+```
+
+四条核：①**a2-027=8/8 全绿 ✓✓**（port2 4b5aa9d（SC-B3-013 建模缺口定案 v2+
+DOORSUB 族特异实现））：OAM 链全模拟（chain-compute 多入参）实现落=全径精确+
+账清转 strict 落定 ✓②**a3-028 再生跑 DONE=诚实标定 ✓**（decomp 8f84e3b）：
+**再生跑 DONE**（sc-a3-028-regen（Mesen2 capture **2000 帧/44.7s**——trace 捕获
+（analysis/traces/sc-a3-028-regen.frames.jsonl）））+**fixture 提取待**（trace→
+cases.jsonl（**8 案 in/out 提取**））+值径待 fixture 扩——claim 与实测一致（1/8+
+7 FAIL 考证进度态（非声称修复（「0 败」纪律面 ✓）））③**再生跑实录核 ✓**（2000 帧/
+44.7s/trace 捕获+plan 语法修（watch_range/probe_mem lo hi/frames））④测 540 全绿
++L2 3107/901（账目面全合）。findings（r10）：1 gap 显式（a3-028 fixture 提取待
+（8 案 in/out）（诚实标定））。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
