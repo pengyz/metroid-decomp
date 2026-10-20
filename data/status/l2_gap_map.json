@@ -20,7 +20,7 @@
       "id": "SC-S1-17-CROSSCARD-S105",
       "case_prefix": "s1-17-case-5",
       "reason": "深径多路（golden 含 $0200 精灵区写族 ~200 项+出口 regs 变）——$D055/$CF2E 跨卡调用（$D052∈S1-05 SetSamusData 族（已随移动链落））——golden 全路径含他卡效应=正常（lead 裁定②记账面）",
-      "exit": "【2026-10-20 建模缺口定案】源卡 S1-05 域深径建模落（或跨卡调用接线）——链=源卡深径建模（refs 法直得（S1-05 域/移动链/handler 集/VRAM 缓冲写族）——全链模拟）→账清转 strict（待建模清）",
+      "exit": "【2026-10-20 建模缺口定案 v2】已知 pattern 转写（refs/asm 优先参考）——explode 路径（case-5/6（in.030D=250/249）→298 写（OAM 数据 256 写——anim 帧数据）；其余→normal 路径（41 写）——全径复杂（chain-compute 多入参））→账清转 strict（待建模清）",
       "registered": "2026-10-19"
     },
     {
