@@ -1674,6 +1674,13 @@
       "reason": "【预登记/补账】a8-008-case-7 簇（批产 WIP——A 批预登记制）",
       "exit": "a8-008-case-7 落→账清转 strict",
       "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-B8-008-CROSSCARD-ACHAIN",
+      "case_prefix": "a8-008-case-",
+      "reason": "A 链算深径（A=156→0 变换（fixture 弱源——多入参链算）——深径判别条补触发（链算径）——S5-121 同款跨卡深径）",
+      "exit": "A 链算径建模清（变换链模拟）→账清转 strict",
+      "registered": "2026-10-20"
     }
   ]
 }

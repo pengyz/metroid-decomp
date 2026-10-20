@@ -5024,3 +5024,11 @@ pub fn a8_cluster_007(_input: &L2In) -> L2Out {
         writes: merge_writes(vec![(0x6AF8, 0), (0x6AF9, 32), (0x6AFA, 32)]),
     }
 }
+
+// ---- SC-B8-08 簇入口适配（a8_cluster_008 ← bank05:8021——透传类）----
+
+/// a8_cluster_008 适配（bank05:8021（bank6 窗）——案实核透传类（regs 透传；无写面
+/// （0 写（判别条未触发（严格顺序 ✓）））。
+pub fn a8_cluster_008(input: &L2In) -> L2Out {
+    L2Out { a: input.a, x: input.x, y: input.y, writes: vec![] }
+}

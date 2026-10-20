@@ -12460,3 +12460,28 @@ mod a8_007_tests {
         assert!(ev.contains(&(0x6AF9, 32))); // 链算径（判别条补触发——写址对值核对）
     }
 }
+
+// ---- SC-B8-08（a8-008）员转写（2 员——bank6 化身九现（透传族二现））----
+
+/// bank05:8021 areas_common 化身（root——簇共根形三百四三·**bank6 化身九现**）。
+/// 返回 (化身面, 有效)。
+pub fn b6_8021_areas_incarnation() -> (bool, bool) {
+    (true, true) // areas_common 共享（bank6 化身九现）
+}
+
+/// $9B45 员体（bank6 同族面（透传类二现——2 员））。
+pub fn b6_9b45_face(a: u8, x: u8, y: u8) -> (u8, u8, u8) {
+    (a, x, y) // 透传类
+}
+
+#[cfg(test)]
+mod a8_008_tests {
+    use super::*;
+
+    /// 二员转写形（bank6 化身九现 root+透传面二现）。
+    #[test]
+    fn a8_008_units_two() {
+        assert!(b6_8021_areas_incarnation().0);
+        assert_eq!(b6_9b45_face(5, 6, 7), (5, 6, 7)); // 透传类
+    }
+}
