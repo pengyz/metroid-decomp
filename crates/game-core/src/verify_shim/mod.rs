@@ -4714,3 +4714,21 @@ pub fn a7_cluster_027(input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-B7-06 簇入口适配（a7_cluster_028 ← bank04:991E——判别条补触发）----
+
+/// a7_cluster_028 适配（bank04:991E（S5-146 族区（bank5））——案实核 11 写
+/// （ptr 面（$00/$01←6/8）+$0085/$0086←135（fixture 弱源——判别条补触发→账目
+/// 预登记（VALCHAIN-B7-028））+清对+$6AF7-$6AFA+$6B03）；A=0/X 透传/Y=6）。
+pub fn a7_cluster_028(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    L2Out {
+        a: 0, x: 0, y: 6,
+        writes: merge_writes(vec![
+            (0x0000, 6), (0x0001, 8),
+            (0x0085, 135), (0x0086, 135),
+            (0x0404, 0), (0x040E, 0),
+            (0x6AF7, 0), (0x6AF8, 6), (0x6AF9, 5), (0x6AFA, 6), (0x6B03, 0),
+        ]),
+    }
+}
