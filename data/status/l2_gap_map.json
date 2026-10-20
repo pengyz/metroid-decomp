@@ -1457,6 +1457,13 @@
       "reason": "【预登记/补账】g4_spawnmotherbrain 簇（批产 WIP——A 批预登记制）",
       "exit": "g4_spawnmotherbrain 落→账清转 strict",
       "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-B7-023-CROSSCARD-MOTHERBRAIN",
+      "case_prefix": "a7-023-case-",
+      "reason": "MotherBrainMusic OAM 深径链（53 写（>20 深径判别条触发）——$8CC0/$CC03 bank5 化身（a2-023 同款）——预登记先行（严格顺序）——S5-121 同款跨卡深径）",
+      "exit": "MotherBrainMusic 链径建模清（全链模拟）→账清转 strict",
+      "registered": "2026-10-20"
     }
   ]
 }
