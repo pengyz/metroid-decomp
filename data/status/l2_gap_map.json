@@ -132,7 +132,7 @@
       "id": "SC-S5-121-TRANSCRIBE",
       "case_prefix": "s5-121-case",
       "reason": "S5-121 簇转写中（批产迭代态——7 案语义差随转写收敛）",
-      "exit": "S5-121 卡转写落→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】S5-121 卡转写落——链=深径建模（refs 法直得（合成链/spawn 链/pickup 链/Table18/TileBlast/ptr 面/取负）——全链模拟）→账清转 strict（待建模清）",
       "registered": "2026-10-19"
     },
     {
@@ -181,14 +181,14 @@
       "id": "SC-S6-165-CROSSCARD-PTRPAIR",
       "case_prefix": "s6-165-case-",
       "reason": "全族深径（$00/$01 指针对=跨卡链算值（$8206 取负→$C3D4（S2-42 正身）→$F7B3 AndEnData05（S2-30）→S1-17 ptr 面合成链）——golden 含多卡链效应=正常（S5-121/S2-048 同款判定形））",
-      "exit": "合成链径建模清（$C3D4 取负+AndEnData05+ptr 面全链模拟）→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】合成链径建模清（$C3D4 取负+AndEnData05+ptr 面全链模拟）——链=深径建模（refs 法直得（合成链/spawn 链/pickup 链/Table18/TileBlast/ptr 面/取负）——全链模拟）→账清转 strict（待建模清）",
       "registered": "2026-10-19"
     },
     {
       "id": "SC-S6-166-CROSSCARD-YFACE",
       "case_prefix": "s6-166-case-1",
       "reason": "Y 面+槽值=链深效（Y_out 变径（96/0）+槽值 209（无 fixture 源——链算值）——spawn 链后段效应（S5-121/S6-165 同款跨卡链形））",
-      "exit": "spawn 链后段径建模清（Y 面+槽值链算模拟）→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】spawn 链后段径建模清（Y 面+槽值链算模拟）——链=深径建模（refs 法直得（合成链/spawn 链/pickup 链/Table18/TileBlast/ptr 面/取负）——全链模拟）→账清转 strict（待建模清）",
       "registered": "2026-10-19"
     },
     {
@@ -216,7 +216,7 @@
       "id": "SC-S6-172-CROSSCARD-6AF7",
       "case_prefix": "s6-172-case-",
       "reason": "$6AF7 链算残差（232/217 等——fixture 无源（wram 域初值/链算写回）——pickup 链后段效应（S5-121/S6-165/166 同款跨卡链形））",
-      "exit": "pickup 链后段径建模清（$6AF7 写回源模拟——wram 初值/链算径）→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】pickup 链后段径建模清（$6AF7 写回源模拟——wram 初值/链算径）——链=深径建模（refs 法直得（合成链/spawn 链/pickup 链/Table18/TileBlast/ptr 面/取负）——全链模拟）→账清转 strict（待建模清）",
       "registered": "2026-10-19"
     },
     {
@@ -230,7 +230,7 @@
       "id": "SC-S7-178-CROSSCARD-TABLE18",
       "case_prefix": "s7-178-case-",
       "reason": "Table18 链算深径（4/1 对值族=fixture 无源（$B1[x]/$B2[x] 链算写回扇出（$04/$05/$08/$09/$40/$41/$04F0/$04F1 八对））——S5-121/S6-165/166/172 同款跨卡链形）",
-      "exit": "Table18 链径建模清（$B1[x]/$B2[x] 链算+扇出径模拟）→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】Table18 链径建模清（$B1[x]/$B2[x] 链算+扇出径模拟）——链=深径建模（refs 法直得（合成链/spawn 链/pickup 链/Table18/TileBlast/ptr 面/取负）——全链模拟）→账清转 strict（待建模清）",
       "registered": "2026-10-19"
     },
     {
@@ -244,7 +244,7 @@
       "id": "SC-S7-180-CROSSCARD-TILEBLAST",
       "case_prefix": "s7-180-case-",
       "reason": "TileBlast 位组链算深径（14 写（S1-17 变体+$00/$02/$06/$08/$09/$11 算族=多入参链算（fixture 弱源））——S5-121/S7-178 同款跨卡链形）",
-      "exit": "TileBlast 位组径建模清（$C2C6+表走+位组算径全链模拟）→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】TileBlast 位组径建模清（$C2C6+表走+位组算径全链模拟）——链=深径建模（refs 法直得（合成链/spawn 链/pickup 链/Table18/TileBlast/ptr 面/取负）——全链模拟）→账清转 strict（待建模清）",
       "registered": "2026-10-19"
     },
     {
@@ -265,7 +265,7 @@
       "id": "SC-B1-000-CROSSCARD-6AF7X",
       "case_prefix": "a1-000-case-6",
       "reason": "$6AF7 变换径（250→189 链算（r(0) 直写径 7/8 合/case-6 变换变体）——B 区链算深径（S5-121/S6-166 同款））",
-      "exit": "$6AF7 变换径建模清（链算变换模拟）→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】$6AF7 变换径建模清（链算变换模拟）——链=深径建模（refs 法直得（合成链/spawn 链/pickup 链/Table18/TileBlast/ptr 面/取负）——全链模拟）→账清转 strict（待建模清）",
       "registered": "2026-10-19"
     },
     {
@@ -335,7 +335,7 @@
       "id": "SC-G3-00-IMPL",
       "case_prefix": "g3-000-case",
       "reason": "【预登记】G3 首卡（SC-G3-00 引擎核簇——A 批 21 卡全等收官后 G3 批产开工——开工前置步先登记）",
-      "exit": "g3_cluster_000 移植/转写落→账清转 strict（G3 批产滚动）",
+      "exit": "【2026-10-20 建模缺口定案】g3_cluster_000 移植/转写落——转写落→账清转 strict（待转写清）",
       "registered": "2026-10-19"
     },
     {
@@ -370,14 +370,14 @@
       "id": "SC-B2-034-CROSSCARD-YCHAIN",
       "case_prefix": "a2-034-case-",
       "reason": "Y 链算深径（Y_out=57/63 变径（fixture 弱源）+$0405 条件写——深径判别条补触发（链算径（多入参））——S5-121 同款跨卡深径）",
-      "exit": "Y 链算径建模清（多入参链模拟）→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】Y 链算径建模清（多入参链模拟）——链=Y 变换链模拟（refs 法直得（Y 透传/变换链）——变换链模拟）→账清转 strict（待建模清）",
       "registered": "2026-10-19"
     },
     {
       "id": "SC-B2-035-CROSSCARD-YCHAIN",
       "case_prefix": "a2-035-case-",
       "reason": "Y 链算深径（Y_out=63 变径+fixture 弱源——深径判别条补触发（链算径）——S5-121 同款跨卡深径）",
-      "exit": "Y 链算径建模清（多入参链模拟）→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】Y 链算径建模清（多入参链模拟）——链=Y 变换链模拟（refs 法直得（Y 透传/变换链）——变换链模拟）→账清转 strict（待建模清）",
       "registered": "2026-10-19"
     },
     {
@@ -398,28 +398,28 @@
       "id": "SC-G3-002-IMPL",
       "case_prefix": "g3-002-case",
       "reason": "【预登记/补账】g3-002 簇（批产 WIP——A 批预登记制）",
-      "exit": "g3-002 落→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】g3-002 落——转写落→账清转 strict（待转写清）",
       "registered": "2026-10-19"
     },
     {
       "id": "SC-G3-003-IMPL",
       "case_prefix": "g3-003-case",
       "reason": "【预登记/补账】g3-003 簇（批产 WIP——A 批预登记制）",
-      "exit": "g3-003 落→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】g3-003 落——转写落→账清转 strict（待转写清）",
       "registered": "2026-10-19"
     },
     {
       "id": "SC-G3-004-IMPL",
       "case_prefix": "g3-004-case",
       "reason": "【预登记/补账】g3-004 簇（批产 WIP——A 批预登记制）",
-      "exit": "g3-004 落→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】g3-004 落——转写落→账清转 strict（待转写清）",
       "registered": "2026-10-19"
     },
     {
       "id": "SC-G3-005-IMPL",
       "case_prefix": "g3-005-case",
       "reason": "【预登记/补账】g3-005 簇（批产 WIP——A 批预登记制）",
-      "exit": "g3-005 落→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】g3-005 落——转写落→账清转 strict（待转写清）",
       "registered": "2026-10-19"
     },
     {
@@ -468,7 +468,7 @@
       "id": "SC-G3-01-IMPL",
       "case_prefix": "g3-001-case",
       "reason": "【预登记】G3 卡序二卡（SC-G3-01 RunSFXNoiseInit 簇——开工前置步先登记）",
-      "exit": "g3_cluster_001 移植/转写落→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】g3_cluster_001 移植/转写落——转写落→账清转 strict（待转写清）",
       "registered": "2026-10-19"
     },
     {
@@ -489,7 +489,7 @@
       "id": "SC-B3-010-CROSSCARD-YCHAIN",
       "case_prefix": "a3-010-case-",
       "reason": "Y 链算深径（Y=86→14 变换（fixture 弱源——多入参链算）——深径判别条补触发（链算径）——S5-121 同款跨卡深径）",
-      "exit": "Y 链算径建模清（变换链模拟）→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】Y 链算径建模清（变换链模拟）——链=Y 变换链模拟（refs 法直得（Y 透传/变换链）——变换链模拟）→账清转 strict（待建模清）",
       "registered": "2026-10-19"
     },
     {
@@ -573,7 +573,7 @@
       "id": "SC-G3-02-IMPL",
       "case_prefix": "g3-002-case",
       "reason": "【预登记】G3 卡序三卡（SC-G3-02 RunSoundRoutine 簇——开工前置步先登记）",
-      "exit": "g3_cluster_002 移植/转写落→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】g3_cluster_002 移植/转写落——转写落→账清转 strict（待转写清）",
       "registered": "2026-10-19"
     },
     {
@@ -601,7 +601,7 @@
       "id": "SC-G3-03-IMPL",
       "case_prefix": "g3-003-case",
       "reason": "【预登记】G3 卡序四卡（SC-G3-03 RunSFXMultiInit 簇——开工前置步先登记）",
-      "exit": "g3_cluster_003 移植/转写落→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】g3_cluster_003 移植/转写落——转写落→账清转 strict（待转写清）",
       "registered": "2026-10-20"
     },
     {
@@ -643,21 +643,21 @@
       "id": "SC-G3-04-IMPL",
       "case_prefix": "g3-004-case",
       "reason": "【预登记】G3 卡序（G3-——LoadSFXData 簇——开工前置步先登记）",
-      "exit": "g3-004 移植/转写落→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】g3-004 移植/转写落——转写落→账清转 strict（待转写清）",
       "registered": "2026-10-20"
     },
     {
       "id": "SC-G3-05-IMPL",
       "case_prefix": "g3-005-case",
       "reason": "【预登记】G3 卡序（G3-——EndOrLoopMusic 簇——开工前置步先登记）",
-      "exit": "g3-005 移植/转写落→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】g3-005 移植/转写落——转写落→账清转 strict（待转写清）",
       "registered": "2026-10-20"
     },
     {
       "id": "SC-G3-06-IMPL",
       "case_prefix": "g3-006-case",
       "reason": "【预登记】G3 卡序（G3-——SFX 例程族（12 员）——开工前置步先登记）",
-      "exit": "g3-006 移植/转写落→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】g3-006 移植/转写落——转写落→账清转 strict（待转写清）",
       "registered": "2026-10-20"
     },
     {
@@ -692,14 +692,14 @@
       "id": "SC-G3-MUSICINIT-IMPL",
       "case_prefix": "g3-musicinit-case",
       "reason": "【预登记/补账】g3-musicinit 簇（批产 WIP——A 批预登记制）",
-      "exit": "g3-musicinit 落→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】g3-musicinit 落——转写落→账清转 strict（待转写清）",
       "registered": "2026-10-20"
     },
     {
       "id": "SC-B4-005-CROSSCARD-DRAWTILEBLAST",
       "case_prefix": "a4-005-case-",
       "reason": "DrawTileBlast OAM 深径链（25 写（>20 深径判别条触发）——$803F bank3 化身（a1-015 同款）——预登记先行（严格顺序）——S5-121 同款跨卡深径）",
-      "exit": "DrawTileBlast OAM 绘制径建模清（全链模拟）→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】DrawTileBlast OAM 绘制径建模清（全链模拟）——链=深径建模（refs 法直得（合成链/spawn 链/pickup 链/Table18/TileBlast/ptr 面/取负）——全链模拟）→账清转 strict（待建模清）",
       "registered": "2026-10-20"
     },
     {
@@ -720,56 +720,56 @@
       "id": "SC-G3-SFX-BOMBEXPLODE-IMPL",
       "case_prefix": "g3-sfx-bombexplode",
       "reason": "【预登记/补账】g3-sfx-bombexplode 簇（批产 WIP——A 批预登记制）",
-      "exit": "g3-sfx-bombexplode 落→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】g3-sfx-bombexplode 落——转写落→账清转 strict（待转写清）",
       "registered": "2026-10-20"
     },
     {
       "id": "SC-G3-SFX-BOMBLAUNCH-IMPL",
       "case_prefix": "g3-sfx-bomblaunch",
       "reason": "【预登记/补账】g3-sfx-bomblaunch 簇（批产 WIP——A 批预登记制）",
-      "exit": "g3-sfx-bomblaunch 落→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】g3-sfx-bomblaunch 落——转写落→账清转 strict（待转写清）",
       "registered": "2026-10-20"
     },
     {
       "id": "SC-G3-SFX-ENEMYHIT-IMPL",
       "case_prefix": "g3-sfx-enemyhit",
       "reason": "【预登记/补账】g3-sfx-enemyhit 簇（批产 WIP——A 批预登记制）",
-      "exit": "g3-sfx-enemyhit 落→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】g3-sfx-enemyhit 落——转写落→账清转 strict（待转写清）",
       "registered": "2026-10-20"
     },
     {
       "id": "SC-G3-SFX-JUMP-IMPL",
       "case_prefix": "g3-sfx-jump",
       "reason": "【预登记/补账】g3-sfx-jump 簇（批产 WIP——A 批预登记制）",
-      "exit": "g3-sfx-jump 落→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】g3-sfx-jump 落——转写落→账清转 strict（待转写清）",
       "registered": "2026-10-20"
     },
     {
       "id": "SC-G3-SFX-MISSILE-IMPL",
       "case_prefix": "g3-sfx-missile",
       "reason": "【预登记/补账】g3-sfx-missile 簇（批产 WIP——A 批预登记制）",
-      "exit": "g3-sfx-missile 落→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】g3-sfx-missile 落——转写落→账清转 strict（待转写清）",
       "registered": "2026-10-20"
     },
     {
       "id": "SC-G3-SFX-NOISEINIT-IMPL",
       "case_prefix": "g3-sfx-noiseinit",
       "reason": "【预登记/补账】g3-sfx-noiseinit 簇（批产 WIP——A 批预登记制）",
-      "exit": "g3-sfx-noiseinit 落→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】g3-sfx-noiseinit 落——转写落→账清转 strict（待转写清）",
       "registered": "2026-10-20"
     },
     {
       "id": "SC-G3-SFX-OUTOFPIPE-IMPL",
       "case_prefix": "g3-sfx-outofpipe",
       "reason": "【预登记/补账】g3-sfx-outofpipe 簇（批产 WIP——A 批预登记制）",
-      "exit": "g3-sfx-outofpipe 落→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】g3-sfx-outofpipe 落——转写落→账清转 strict（待转写清）",
       "registered": "2026-10-20"
     },
     {
       "id": "SC-G3-SFX-WALK-IMPL",
       "case_prefix": "g3-sfx-walk",
       "reason": "【预登记/补账】g3-sfx-walk 簇（批产 WIP——A 批预登记制）",
-      "exit": "g3-sfx-walk 落→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】g3-sfx-walk 落——转写落→账清转 strict（待转写清）",
       "registered": "2026-10-20"
     },
     {
@@ -818,84 +818,84 @@
       "id": "SC-G3_SFX2_BIGENEMYHIT-IMPL",
       "case_prefix": "g3_sfx2_bigenemyhit",
       "reason": "【预登记/补账】g3_sfx2_bigenemyhit 簇（批产 WIP——A 批预登记制）",
-      "exit": "g3_sfx2_bigenemyhit 落→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】g3_sfx2_bigenemyhit 落——转写落→账清转 strict（待转写清）",
       "registered": "2026-10-20"
     },
     {
       "id": "SC-G3_SFX2_BOSSHIT-IMPL",
       "case_prefix": "g3_sfx2_bosshit",
       "reason": "【预登记/补账】g3_sfx2_bosshit 簇（批产 WIP——A 批预登记制）",
-      "exit": "g3_sfx2_bosshit 落→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】g3_sfx2_bosshit 落——转写落→账清转 strict（待转写清）",
       "registered": "2026-10-20"
     },
     {
       "id": "SC-G3_SFX2_BULLETFIRE-IMPL",
       "case_prefix": "g3_sfx2_bulletfire",
       "reason": "【预登记/补账】g3_sfx2_bulletfire 簇（批产 WIP——A 批预登记制）",
-      "exit": "g3_sfx2_bulletfire 落→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】g3_sfx2_bulletfire 落——转写落→账清转 strict（待转写清）",
       "registered": "2026-10-20"
     },
     {
       "id": "SC-G3_SFX2_DOOR-IMPL",
       "case_prefix": "g3_sfx2_door",
       "reason": "【预登记/补账】g3_sfx2_door 簇（批产 WIP——A 批预登记制）",
-      "exit": "g3_sfx2_door 落→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】g3_sfx2_door 落——转写落→账清转 strict（待转写清）",
       "registered": "2026-10-20"
     },
     {
       "id": "SC-G3_SFX2_ENERGYPICKUP-IMPL",
       "case_prefix": "g3_sfx2_energypickup",
       "reason": "【预登记/补账】g3_sfx2_energypickup 簇（批产 WIP——A 批预登记制）",
-      "exit": "g3_sfx2_energypickup 落→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】g3_sfx2_energypickup 落——转写落→账清转 strict（待转写清）",
       "registered": "2026-10-20"
     },
     {
       "id": "SC-G3_SFX2_METAL-IMPL",
       "case_prefix": "g3_sfx2_metal",
       "reason": "【预登记/补账】g3_sfx2_metal 簇（批产 WIP——A 批预登记制）",
-      "exit": "g3_sfx2_metal 落→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】g3_sfx2_metal 落——转写落→账清转 strict（待转写清）",
       "registered": "2026-10-20"
     },
     {
       "id": "SC-G3_SFX2_METROIDHIT-IMPL",
       "case_prefix": "g3_sfx2_metroidhit",
       "reason": "【预登记/补账】g3_sfx2_metroidhit 簇（批产 WIP——A 批预登记制）",
-      "exit": "g3_sfx2_metroidhit 落→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】g3_sfx2_metroidhit 落——转写落→账清转 strict（待转写清）",
       "registered": "2026-10-20"
     },
     {
       "id": "SC-G3_SFX2_MISSILEPICKUP-IMPL",
       "case_prefix": "g3_sfx2_missilepickup",
       "reason": "【预登记/补账】g3_sfx2_missilepickup 簇（批产 WIP——A 批预登记制）",
-      "exit": "g3_sfx2_missilepickup 落→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】g3_sfx2_missilepickup 落——转写落→账清转 strict（待转写清）",
       "registered": "2026-10-20"
     },
     {
       "id": "SC-G3_SFX2_SAMUSHIT-IMPL",
       "case_prefix": "g3_sfx2_samushit",
       "reason": "【预登记/补账】g3_sfx2_samushit 簇（批产 WIP——A 批预登记制）",
-      "exit": "g3_sfx2_samushit 落→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】g3_sfx2_samushit 落——转写落→账清转 strict（待转写清）",
       "registered": "2026-10-20"
     },
     {
       "id": "SC-G3_SFX2_SCREWATTACK-IMPL",
       "case_prefix": "g3_sfx2_screwattack",
       "reason": "【预登记/补账】g3_sfx2_screwattack 簇（批产 WIP——A 批预登记制）",
-      "exit": "g3_sfx2_screwattack 落→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】g3_sfx2_screwattack 落——转写落→账清转 strict（待转写清）",
       "registered": "2026-10-20"
     },
     {
       "id": "SC-G3_SFX2_SQ1INIT-IMPL",
       "case_prefix": "g3_sfx2_sq1init",
       "reason": "【预登记/补账】g3_sfx2_sq1init 簇（批产 WIP——A 批预登记制）",
-      "exit": "g3_sfx2_sq1init 落→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】g3_sfx2_sq1init 落——转写落→账清转 strict（待转写清）",
       "registered": "2026-10-20"
     },
     {
       "id": "SC-G3_SFX2_WAVEFIRE-IMPL",
       "case_prefix": "g3_sfx2_wavefire",
       "reason": "【预登记/补账】g3_sfx2_wavefire 簇（批产 WIP——A 批预登记制）",
-      "exit": "g3_sfx2_wavefire 落→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】g3_sfx2_wavefire 落——转写落→账清转 strict（待转写清）",
       "registered": "2026-10-20"
     },
     {
@@ -958,35 +958,35 @@
       "id": "SC-MD_CHECKFIRE-IMPL",
       "case_prefix": "md_checkfire",
       "reason": "【预登记/补账】md_checkfire 簇（批产 WIP——A 批预登记制）",
-      "exit": "md_checkfire 落→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】md_checkfire 落——转写落→账清转 strict（待转写清）",
       "registered": "2026-10-20"
     },
     {
       "id": "SC-MD_CHECKHORZ-IMPL",
       "case_prefix": "md_checkhorz",
       "reason": "【预登记/补账】md_checkhorz 簇（批产 WIP——A 批预登记制）",
-      "exit": "md_checkhorz 落→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】md_checkhorz 落——转写落→账清转 strict（待转写清）",
       "registered": "2026-10-20"
     },
     {
       "id": "SC-MD_JUMPENGINE-IMPL",
       "case_prefix": "md_jumpengine",
       "reason": "【预登记/补账】md_jumpengine 簇（批产 WIP——A 批预登记制）",
-      "exit": "md_jumpengine 落→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】md_jumpengine 落——转写落→账清转 strict（待转写清）",
       "registered": "2026-10-20"
     },
     {
       "id": "SC-MD_SAMUSJUMP-IMPL",
       "case_prefix": "md_samusjump",
       "reason": "【预登记/补账】md_samusjump 簇（批产 WIP——A 批预登记制）",
-      "exit": "md_samusjump 落→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】md_samusjump 落——转写落→账清转 strict（待转写清）",
       "registered": "2026-10-20"
     },
     {
       "id": "SC-MD_SETSAMUSJUMP-IMPL",
       "case_prefix": "md_setsamusjump",
       "reason": "【预登记/补账】md_setsamusjump 簇（批产 WIP——A 批预登记制）",
-      "exit": "md_setsamusjump 落→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】md_setsamusjump 落——转写落→账清转 strict（待转写清）",
       "registered": "2026-10-20"
     },
     {
@@ -1154,21 +1154,21 @@
       "id": "SC-B5-042-CROSSCARD-XYCHAIN",
       "case_prefix": "a5-042-case-",
       "reason": "X/Y 链算深径（X=160→64/Y=220→255 变换（fixture 弱源——多入参链算）——深径判别条补触发（链算径）——S5-121 同款跨卡深径（a5 批末卡））",
-      "exit": "X/Y 链算径建模清（变换链模拟）→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】X/Y 链算径建模清（变换链模拟）——链=Y 变换链模拟（refs 法直得（Y 透传/变换链）——变换链模拟）→账清转 strict（待建模清）",
       "registered": "2026-10-20"
     },
     {
       "id": "SC-MD_SAMUSPNTUP-IMPL",
       "case_prefix": "md_samuspntup",
       "reason": "【预登记/补账】md_samuspntup 簇（批产 WIP——A 批预登记制）",
-      "exit": "md_samuspntup 落→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】md_samuspntup 落——转写落→账清转 strict（待转写清）",
       "registered": "2026-10-20"
     },
     {
       "id": "SC-MD_SETSAMUSPNTUP-IMPL",
       "case_prefix": "md_setsamuspntup",
       "reason": "【预登记/补账】md_setsamuspntup 簇（批产 WIP——A 批预登记制）",
-      "exit": "md_setsamuspntup 落→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】md_setsamuspntup 落——转写落→账清转 strict（待转写清）",
       "registered": "2026-10-20"
     },
     {
@@ -1210,28 +1210,28 @@
       "id": "SC-MD_SETSAMUSEXPLODE-IMPL",
       "case_prefix": "md_setsamusexplode",
       "reason": "【预登记/补账】md_setsamusexplode 簇（批产 WIP——A 批预登记制）",
-      "exit": "md_setsamusexplode 落→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】md_setsamusexplode 落——转写落→账清转 strict（待转写清）",
       "registered": "2026-10-20"
     },
     {
       "id": "SC-MD_SETSAMUSRUN-IMPL",
       "case_prefix": "md_setsamusrun",
       "reason": "【预登记/补账】md_setsamusrun 簇（批产 WIP——A 批预登记制）",
-      "exit": "md_setsamusrun 落→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】md_setsamusrun 落——转写落→账清转 strict（待转写清）",
       "registered": "2026-10-20"
     },
     {
       "id": "SC-MD_SETSAMUSRUNACCEL-IMPL",
       "case_prefix": "md_setsamusrunaccel",
       "reason": "【预登记/补账】md_setsamusrunaccel 簇（批产 WIP——A 批预登记制）",
-      "exit": "md_setsamusrunaccel 落→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】md_setsamusrunaccel 落——转写落→账清转 strict（待转写清）",
       "registered": "2026-10-20"
     },
     {
       "id": "SC-MD_UPDATESAMUS-IMPL",
       "case_prefix": "md_updatesamus",
       "reason": "【预登记/补账】md_updatesamus 簇（批产 WIP——A 批预登记制）",
-      "exit": "md_updatesamus 落→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】md_updatesamus 落——转写落→账清转 strict（待转写清）",
       "registered": "2026-10-20"
     },
     {
@@ -1259,28 +1259,28 @@
       "id": "SC-MD_SAMUSRUN-IMPL",
       "case_prefix": "md_samusrun",
       "reason": "【预登记/补账】md_samusrun 簇（批产 WIP——A 批预登记制）",
-      "exit": "md_samusrun 落→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】md_samusrun 落——转写落→账清转 strict（待转写清）",
       "registered": "2026-10-20"
     },
     {
       "id": "SC-MD_SAMUSSTAND-IMPL",
       "case_prefix": "md_samusstand",
       "reason": "【预登记/补账】md_samusstand 簇（批产 WIP——A 批预登记制）",
-      "exit": "md_samusstand 落→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】md_samusstand 落——转写落→账清转 strict（待转写清）",
       "registered": "2026-10-20"
     },
     {
       "id": "SC-MD_SETDATA-IMPL",
       "case_prefix": "md_setdata",
       "reason": "【预登记/补账】md_setdata 簇（批产 WIP——A 批预登记制）",
-      "exit": "md_setdata 落→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】md_setdata 落——转写落→账清转 strict（待转写清）",
       "registered": "2026-10-20"
     },
     {
       "id": "SC-MD_SETDATA3FRAME-IMPL",
       "case_prefix": "md_setdata3frame",
       "reason": "【预登记/补账】md_setdata3frame 簇（批产 WIP——A 批预登记制）",
-      "exit": "md_setdata3frame 落→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】md_setdata3frame 落——转写落→账清转 strict（待转写清）",
       "registered": "2026-10-20"
     },
     {
@@ -1308,7 +1308,7 @@
       "id": "SC-MD_RUNACCEL_PHYSICS-IMPL",
       "case_prefix": "md_runaccel_physics",
       "reason": "【预登记/补账】md_runaccel_physics 簇（批产 WIP——A 批预登记制）",
-      "exit": "md_runaccel_physics 落→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】md_runaccel_physics 落——转写落→账清转 strict（待转写清）",
       "registered": "2026-10-20"
     },
     {
@@ -1322,21 +1322,21 @@
       "id": "SC-MD_ISSAMUSDEAD-IMPL",
       "case_prefix": "md_issamusdead",
       "reason": "【预登记/补账】md_issamusdead 簇（批产 WIP——A 批预登记制）",
-      "exit": "md_issamusdead 落→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】md_issamusdead 落——转写落→账清转 strict（待转写清）",
       "registered": "2026-10-20"
     },
     {
       "id": "SC-MD_SAMUSDEAD-IMPL",
       "case_prefix": "md_samusdead",
       "reason": "【预登记/补账】md_samusdead 簇（批产 WIP——A 批预登记制）",
-      "exit": "md_samusdead 落→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】md_samusdead 落——转写落→账清转 strict（待转写清）",
       "registered": "2026-10-20"
     },
     {
       "id": "SC-MD_SAMUSDEAD2-IMPL",
       "case_prefix": "md_samusdead2",
       "reason": "【预登记/补账】md_samusdead2 簇（批产 WIP——A 批预登记制）",
-      "exit": "md_samusdead2 落→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】md_samusdead2 落——转写落→账清转 strict（待转写清）",
       "registered": "2026-10-20"
     },
     {
@@ -1378,14 +1378,14 @@
       "id": "SC-MD_SAMUSELEVATOR-IMPL",
       "case_prefix": "md_samuselevator",
       "reason": "【预登记/补账】md_samuselevator 簇（批产 WIP——A 批预登记制）",
-      "exit": "md_samuselevator 落→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】md_samuselevator 落——转写落→账清转 strict（待转写清）",
       "registered": "2026-10-20"
     },
     {
       "id": "SC-MD_UPDATEELEVATOR-IMPL",
       "case_prefix": "md_updateelevator",
       "reason": "【预登记/补账】md_updateelevator 簇（批产 WIP——A 批预登记制）",
-      "exit": "md_updateelevator 落→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】md_updateelevator 落——转写落→账清转 strict（待转写清）",
       "registered": "2026-10-20"
     },
     {
