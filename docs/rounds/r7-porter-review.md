@@ -6147,6 +6147,29 @@ ptr 面径/X/Y 计算径=实现合形（case-0/1 全等 ✓）——**修复要�
 扩展辨识（待深挖=显式））④测 540 全绿+L2 3107/931。findings（r10）：1（SC-B2-024
 值链算径缺=needs_revision）+1 gap 显式（a3-028 值径待深挖（诚实标定））。
 
+## port2 门链 OAM+decomp 值径考证双审（落件即审·实测核——双 pass）
+
+### ① SC-B2-024 OAM 链 verdict: pass | ② decomp 值径考证 verdict: pass（诚实标定）
+
+**实测 diff 输出原文（A 级——非声称核）**：
+```
+a2-024: [PASS]×8（0 FAIL）✓✓✓✓✓✓✓✓（值链算径实现落）
+a3-028: [PASS]×1+[FAIL]×7（径段全辨+transform 待辨——考证进度态（诚实标定））
+```
+
+四条核：①**SC-B2-024 值链算径实现落=实测 8/8 全绿 ✓✓**（port2 cf65ab5）：值链算
+径（chain-compute）实现（case 变值（76/85/252/67/234/243）=core 合形）——
+条件径/OAM 数据径/地址径/ptr 面径/X/Y 计算径全径精确=账清转 strict 落定 ✓②
+**a3-028 径段全辨=诚实标定 ✓**（decomp 2763114）：①$6B02+x←A（STA $6B02,X）
+②$040B+x 读改写（LDA→JSR $802A（bank00 派发表（16 位指针表））→STA）③$6AF9+x
+条件写（LDA $6AF4,X→CMP #$02→LDA #$25/#$22→STA）——**径段全辨**（hexdump 字节
+实证（D5 考证））+**transform 待辨**（JSR $802A 派发表径）+**fixture 扩待做**
+（$6AF4+x 族 ram 不在 in 集）——claim 与实测一致（1/8+7 FAIL 考证进度态（非声称
+修复）（「0 败」纪律面 ✓））③**值源辨+transform 辨核 ✓**（径段三辨（写径/读改写径/
+条件写径）+transform 派发表径辨识（待辨=显式））④测 540 全绿+L2 3107/918
+（账目面全合）。findings（r10）：1 gap 显式（a3-028 transform 待辨+fixture 扩待做
+（诚实标定=非缺陷））。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
