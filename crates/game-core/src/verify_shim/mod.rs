@@ -4355,12 +4355,38 @@ pub fn a4_cluster_007(input: &L2In) -> L2Out {
 /// 同款））——60 写=账内深径（DOORSUB-B4-008——预登记先行）；A=0/X 透传/Y 透传）。
 pub fn a4_cluster_008(input: &L2In) -> L2Out {
     let r = |a: u16| input.ram[a as usize & 0x7FF];
+    // OAM 链全模拟（族特异——a4-008 DOORSUB）——OAM 6 精灵 24 写+ptr 面 21 写
+    // +$0300 区 10 写+SFX $0683←64+新址 $6142-$61E2 6 写。
+    let v30d = r(0x030D);
+    let v30e = r(0x030E);
+    let oam_y = v30d.wrapping_sub(25);
+    let mut writes = vec![
+        (0x0000u16, 72), (0x0001, 137), (0x0002, 81), (0x0003, 135),
+        (0x0004, 117), (0x0005, 176), (0x0006, 0), (0x0008, 8), (0x0009, 4),
+        (0x000A, v30d), (0x000B, v30e), (0x000E, v30e),
+        (0x000F, 12), (0x0010, v30d), (0x0011, 11),
+        (0x005B, 24), (0x005C, 66), (0x005D, 97), (0x006B, 0),
+        (0x0300, 2), (0x0301, 24), (0x0302, 4), (0x0303, 51),
+        (0x0304, 6), (0x0305, 48), (0x0306, 47), (0x030A, 0), (0x030B, 1),
+        (0x036C, 1), (0x0683, 64),
+        (0x6142, 78), (0x6162, 78), (0x6182, 78),
+        (0x61A2, 78), (0x61C2, 78), (0x61E2, 78),
+    ];
+    // OAM 6 精灵 24 写（y 时序 0/8/16/24/32/40）
+    let tiles = [106u8, 107, 108, 108, 107, 106];
+    let attrs = [112u8, 112, 112, 240, 240, 240];
+    let y_offsets = [0u8, 8, 16, 24, 32, 40];
+    let x_left = v30e.wrapping_sub(8);
+    for i in 0..6usize {
+        let base = 0x0200 + (i as u16) * 4;
+        writes.push((base, oam_y.wrapping_add(y_offsets[i])));
+        writes.push((base + 1, tiles[i]));
+        writes.push((base + 2, attrs[i]));
+        writes.push((base + 3, x_left));
+    }
     L2Out {
-        a: 0, x: input.x, y: input.y,
-        writes: merge_writes(vec![
-            (0x0000, r(0x0000)), (0x0001, 0x89), (0x0002, 0x51), (0x0003, 0x87),
-            (0x0004, 0x75), (0x0005, 0xB0), (0x0006, 0), (0x0008, 8),
-        ]),
+        a: 0, x: 24, y: 11,
+        writes: merge_writes(writes),
     }
 }
 
