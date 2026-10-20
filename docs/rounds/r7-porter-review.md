@@ -7105,6 +7105,29 @@ a3-028: 1/8 PASS+7 FAIL（STA 指令位待辨（+4/+8）——考证进度态（
 ④测 540 全绿+L2 3107/749（账目面全合）。findings（r10）：1（a3-023 已知 pattern
 转写未落=needs_revision）+1 gap 显式（a3-028 STA 指令位待辨（诚实标定））。
 
+## port2 已知 pattern+decomp STA 指令位辨双审（落件即审·实测核）
+
+### ① a3-023 已知 pattern verdict: needs_revision | ② decomp STA 指令位辨 verdict: pass（诚实标定）
+
+**实测 diff 输出原文（A 级——非声称核）**：
+```
+a3-023: [PASS]×7+[FAIL] case-0（值差：golden (14, 6, 14, 6, 14, 6, 14, 14) vs
+ core (162, 154, 162, 154, 162, 154, 162, 162)（写址全合——case-0 OAM x 值径 gap））
+a3-028: 1/8 PASS+7 FAIL（STA 指令位辨（+4/+8 链内未见）——考证进度态（诚实标定））
+```
+
+四条核：①**a3-023=7/8+case-0 gap（契约族）**：golden case-0 值（14/6/14/6/14/6/14/14）
+vs core（162/154/162/154/162/154/162/162）——**写址全合但值差**（case-0 特异 OAM x
+值径 gap（chain-compute 多入参））——**修复要求**：case-0 值径实现（chain-compute
+多入参（case-0 特异 OAM x 值））→8 案全等→账清转 strict ②**a3-028 STA 指令位辨=
+诚实标定 ✓**（decomp 1c0e2cf）：**STA 指令位辨**（链内（$99F5/$9A13/$99DC/$800F）
+STA：$99F5（STA $0405,X/$040A,X）+$9A13（STA $040A,X）+$800F（$FF/$1F）——**+4
+（STA $0409,X）+8（STA $040D,X）链内未见**（**其他 callee 待辨**））+写径待辨——
+claim 与实测一致（1/8+7 FAIL 考证进度态（非声称修复（「0 败」纪律面 ✓）））③
+**STA 指令位辨核 ✓**（链内 STA 实录（$99F5/$9A13/$800F）+0409/040D 未见（显式））
+④测 540 全绿+L2 3107/742（账目面全合）。findings（r10）：1（a3-023 case-0 值径 gap=
+needs_revision）+1 gap 显式（a3-028 +4/+8 其他 callee 待辨（诚实标定））。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
