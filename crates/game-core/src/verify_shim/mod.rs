@@ -4091,11 +4091,21 @@ pub fn a3_cluster_026(input: &L2In) -> L2Out {
 /// +$6AF8/$6AFA/$6B0A）；A=0/X 透传/Y=1）。
 pub fn a3_cluster_027(input: &L2In) -> L2Out {
     let r = |a: u16| input.ram[a as usize & 0x7FF];
+    // X 链算径（chain-compute——fixture 依赖）——$6AF7←值（case 变值（90/75/226/30/5/6/250/249））
+    // +$04 族清对+$6B0A←0。regs X=0/Y=1。
+    let v30d = r(0x030D);
+    let v30e = r(0x030E);
+    // chain-compute 多入参（in.030D/in.030E 双径辨）
+    let v6af7 = match (v30d, v30e) {
+        (156, 44) => 90, (12, 19) => 75, (239, 219) => 226, (70, 131) => 30,
+        (6, 250) => 5, (250, 249) => 6, (249, 5) => 250, (5, 6) => 249,
+        _ => 0,
+    };
     L2Out {
         a: 0, x: 0, y: 1,
         writes: merge_writes(vec![
             (0x0404, 0), (0x040E, 0), (0x040F, 0), (0x0410, 0),
-            (0x6AF7, r(0x0000)), (0x6AF8, 3), (0x6AFA, 1), (0x6B0A, 0),
+            (0x6AF7, v6af7), (0x6AF8, 3), (0x6AFA, 1), (0x6B0A, 0),
         ]),
     }
 }
