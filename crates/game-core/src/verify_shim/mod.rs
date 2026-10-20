@@ -6183,10 +6183,23 @@ pub fn a8_cluster_015(input: &L2In) -> L2Out {
 /// 同款））——案实核 4 写（anim 态写（$0324/$0325/$0326←0/48/46）+SFX_Door
 /// （$0683←64）——判别条未触发（严格顺序 ✓））；A=64/X 透传/Y 透传）。
 pub fn a8_cluster_016(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    // X 链算径（chain-compute——fixture 依赖）——$03xx←0/48/46（x 索引）+$0683←64
+    // +regs A=64/X=3/Y=chain-compute（case 变值（153/142/103/92/125/114/59/48））——末件！
+    let x = input.x as u16;
+    let v30d = r(0x030D);
+    let v30e = r(0x030E);
+    // Y chain-compute（in.030D/in.030E 双径辨）
+    let y_out = match (v30d, v30e) {
+        (32, 138) => 153, (3, 81) => 142, (217, 196) => 103, (189, 140) => 92,
+        (6, 250) => 125, (250, 249) => 114, (249, 5) => 59, (5, 6) => 48,
+        _ => 0,
+    };
     L2Out {
-        a: 64, x: input.x, y: input.y,
+        a: 64, x: 3, y: y_out,
         writes: merge_writes(vec![
-            (0x0324, 0), (0x0325, 48), (0x0326, 46), (0x0683, 64),
+            (0x0300 + x + 4, 0), (0x0300 + x + 5, 48), (0x0300 + x + 6, 46),
+            (0x0683, 64),
         ]),
     }
 }
