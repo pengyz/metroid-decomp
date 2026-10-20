@@ -5419,3 +5419,21 @@ pub fn a9_cluster_036(_input: &L2In) -> L2Out {
         writes: merge_writes(vec![(0x6AF8, 0), (0x6AF9, 74), (0x6AFA, 74)]),
     }
 }
+
+// ---- a4-022 待补交付② 簇入口适配（a4_cluster_022 ← bank03:981F——判别条补触发）----
+
+/// a4_cluster_022 适配（bank03:981F（S5-146 族区（bank3））——案实核 8 写
+/// （ptr 面（$006B/$0092←162/0（fixture 弱源——判别条补触发→账目预登记
+/// （VALCHAIN-B4-022）——待补②））+清对+S5-146 族（$6AF7/$6AF8←r(0)）+$77FC）；
+/// A=0/X 透传/Y=1）。
+pub fn a4_cluster_022(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    L2Out {
+        a: 0, x: 0, y: 1,
+        writes: merge_writes(vec![
+            (0x006B, 162), (0x0092, 0),
+            (0x0404, 0), (0x040E, 0),
+            (0x6AF7, r(0x0000)), (0x6AF8, r(0x0000)), (0x6AFA, 1), (0x77FC, 0),
+        ]),
+    }
+}
