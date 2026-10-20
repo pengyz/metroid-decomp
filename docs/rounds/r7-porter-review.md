@@ -5574,6 +5574,20 @@ SetObjectXSlotAnimIndex 调用点五 bank 复现全谱）②**anim 写面 ✓**�
 ④8 案账内+员面双扫桩 0（2 员真现）。测 517。findings（r10）：0 新。SC-B9-04
 （B 区收官批——余 27 卡）预告随账。
 
+## SC-B9-04/05 双卡审（SFX_Door/SelectSamusPalette bank7 双化身）
+
+### verdict: pass（双卡）
+
+四条核：①**双化身 ✓✓**：bank05:8CE0=`20 da cb 20 73 cb a6 4b`（SFX_Door=
+a2-025 同形（JSR $CBDA 调用链）五 bank 全同续）+bank05:8CE3=`20 73 cb a6 4b
+a9 02 9d`（SelectSamusPalette=a2-026 同形（JSR $CB73 调用链）五 bank 全同续）
+——调用点五 bank 复现全谱续 ②**双声旗面 ✓**：bank7 $CBDA=`a9 40 d0 17`（LDA #$40
+=sfxTri_Door **SFX 十六现正身**）+bank7 $CB73=`98 48 ad 78`（TYA/PHA/LDA $6878
+调色板选择面）③**双预登记 ✓**（252 条目=SFXDOOR-B9-023（55 写触发）+
+SELECTPAL-B9-024（54 写触发））：深径判别条双触发→预登记→L2 并案=严格顺序双续
+④双 8 案账内+员面双扫桩 0。测 519。findings（r10）：0 新。SC-B9-06（B 区收官批
+——余 25 卡）预告随账。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
