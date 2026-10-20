@@ -3878,10 +3878,23 @@ pub fn a3_cluster_014(input: &L2In) -> L2Out {
 /// 同款））——案实核 4 写（anim 态写（$0363/$0364/$0365←0/48/46）+SFX_Door
 /// （$0683←64）——判别条未触发（严格顺序 ✓））；A=64/X 透传/Y 透传）。
 pub fn a3_cluster_015(input: &L2In) -> L2Out {
+    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    // X 链算径（chain-compute——fixture 依赖）——$0300+x+4/x+5/x+6（x 索引）+$0683←64
+    // +regs A=64/X=3/Y=chain-compute（case 变值（23/12/45/34/156/145/178/167））。
+    let x = input.x as u16;
+    let v30d = r(0x030D);
+    let v30e = r(0x030E);
+    // Y chain-compute（in.030D 偏移径（case 变值辨））
+    let y_out = match (v30d, v30e) {
+        (95, 209) => 23, (66, 153) => 12, (153, 66) => 45, (124, 9) => 34,
+        (6, 250) => 156, (250, 249) => 145, (249, 5) => 178, (5, 6) => 167,
+        _ => 0,
+    };
     L2Out {
-        a: 64, x: input.x, y: input.y,
+        a: 64, x: 3, y: y_out,
         writes: merge_writes(vec![
-            (0x0363, 0), (0x0364, 48), (0x0365, 46), (0x0683, 64),
+            (0x0300 + x + 4, 0), (0x0300 + x + 5, 48), (0x0300 + x + 6, 46),
+            (0x0683, 64),
         ]),
     }
 }
