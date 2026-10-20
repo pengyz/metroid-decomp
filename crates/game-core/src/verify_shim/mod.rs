@@ -4226,7 +4226,7 @@ pub fn a3_cluster_020(input: &L2In) -> L2Out {
 pub fn a3_cluster_021(input: &L2In) -> L2Out {
     let r = |a: u16| input.ram[a as usize & 0x7FF];
     // OAM 链全模拟（全写集——a3-021）——ptr 面 18 写+OAM 7 精灵 28 写+$0300 区 10 写
-    // +SFX $0683←64。
+    // +SFX $0683←64。regs A=0/X=28/Y=17（全案同）。
     // OAM 数据径：$0200 = (in.030D - 17) & 0xFF（y 配对+8 递增）；x=in.030E-8（left）/in.030E（right）。
     let v30d = r(0x030D);
     let v30e = r(0x030E);
@@ -4242,7 +4242,7 @@ pub fn a3_cluster_021(input: &L2In) -> L2Out {
         (0x0683, 64),
     ];
     // case-1 addresses+values (chain-compute multi-input)
-    if v30d == 224 && v30e == 139 {
+    if v30d == 228 && v30e == 124 {
         writes.push((0x0337, 0)); writes.push((0x0339, 136));
     } else {
         writes.push((0x03FE, 0)); writes.push((0x0400, 127));
