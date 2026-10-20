@@ -6288,6 +6288,27 @@ vs core（522/526←112）——**值链算径 gap**（chain-compute 多入参�
 findings（r10）：1（a3-012 case-3/4/7 值链算径 gap=needs_revision）+1 gap 显式
 （a3-028 再生待 plan 建（诚实标定））。
 
+## port2 门链 OAM+decomp 再生跑双审（落件即审·实测核——双 pass）
+
+### ① a3-012 OAM 链 verdict: pass | ② decomp 再生跑 verdict: pass（诚实标定）
+
+**实测 diff 输出原文（A 级——非声称核）**：
+```
+a3-012: [PASS]×8（0 FAIL）✓✓✓✓✓✓✓✓（值链算径修复落（chain-compute 多入参））
+a3-028: 1/8 PASS+7 FAIL（plan 建——考证进度态（诚实标定））
+```
+
+四条核：①**a3-012=8/8 全绿 ✓✓**（port2 49c71be）：值链算径修复（chain-compute
+多入参（attr（522/526←32）/寄存器（case-4 (4,64)/(5,96)）case 变值实现））——
+OAM 链全模拟全径精确+账清转 strict 落定 ✓②**a3-028 plan 建=诚实标定 ✓**（decomp
+73cca44）：**plan 建**（sc-a3-028-regen.txt（probe_mem+$6AF4+x 族扩（fixture 扩
+——三断言面 zp/iram/pw）））+**再生跑待跑**（Mesen2 capture（LCG→golden——8 案
+fixture））+值径待 fixture 扩——claim 与实测一致（1/8+7 FAIL 考证进度态（非声称
+修复（「0 败」纪律面 ✓）））③**chain-compute 多入参辨核 ✓**（attr/寄存器 case 变值
+（多入参）=值链算径修复精确）④**plan 建方案核 ✓**（sc-a3-028-regen.txt（probe_mem
+6AF4-6B0F+族扩（三断言面））=工具件方案（显式））⑤测 540 全绿+L2 3107/901
+（账目面全合）。findings（r10）：1 gap 显式（a3-028 再生跑待跑（诚实标定））。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
