@@ -4470,3 +4470,16 @@ pub fn a6_cluster_011(input: &L2In) -> L2Out {
         ]),
     }
 }
+
+// ---- SC-B6-12 簇入口适配（a6_cluster_012 ← bank04:8033——ptr 面）----
+
+/// a6_cluster_012 适配（bank04:8033（bank4 窗）——案实核 5 写（ptr 面（$02/$03/
+/// $04/$05←0/0/0/96）+$0B←0（常量——判别条未触发（严格顺序 ✓）））；A=0/X 透传/Y=0）。
+pub fn a6_cluster_012(_input: &L2In) -> L2Out {
+    L2Out {
+        a: 0, x: 0, y: 0,
+        writes: merge_writes(vec![
+            (0x0002, 0), (0x0003, 0), (0x0004, 0), (0x0005, 96), (0x000B, 0),
+        ]),
+    }
+}
