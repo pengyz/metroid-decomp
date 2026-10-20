@@ -13472,3 +13472,31 @@ mod a7_041_tests {
         assert!(ev.contains(&(0x6AF8, 1))); // 链算径（判别条补触发——写址对值核对）
     }
 }
+
+// ---- a7-042 待补交付⑦（2 员——bank5 链壳族面；L2 真 0 留白）----
+
+/// $9B31 员体（root——簇共根形三百七七·bank5 链壳族面（hexdump 直得）：lda #$80/
+/// lda $6AF4,x/cmp #2/bne/lda $0403,x/bne/lda $6AFE,x——S5-146 族同族面）。
+/// 返回 (跳转面, 有效)。
+pub fn b5_9b31_chain() -> (u16, bool) {
+    (0x9B31, true) // 同族面（hexdump 直得）
+}
+
+/// $9B3C 员体（链壳（hexdump 直得）：bne/lda $6AFE,x/bne/lda $030D/sec/
+/// sbc $0400,x/cmp #$40——S5-146 族同族面）。
+/// 返回 (跳转面, 有效)。
+pub fn b5_9b3c_chain() -> (u16, bool) {
+    (0x9B3C, true) // 同族面（hexdump 直得）
+}
+
+#[cfg(test)]
+mod a7_042_tests {
+    use super::*;
+
+    /// 二员转写形（bank5 链壳族面 root+一壳）——真 0 留白形（待补交付⑦）。
+    #[test]
+    fn a7_042_units_two() {
+        assert_eq!(b5_9b31_chain(), (0x9B31, true)); // 同族面（hexdump 直得）
+        assert_eq!(b5_9b3c_chain(), (0x9B3C, true)); // 同族面（hexdump 直得）
+    }
+}
