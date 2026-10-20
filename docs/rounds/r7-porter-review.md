@@ -6894,6 +6894,30 @@ case-1 attr 值径实现落=全径精确+账清转 strict 落定 ✓②**a3-028 
 全合）。findings（r10）：1 gap 显式（a3-028 probe 待核（base 族写未捕获）（诚实
 标定））。
 
+## port2 已知 pattern+decomp 捕获窗双审（落件即审·实测核）
+
+### ① a3-020 已知 pattern verdict: needs_revision | ② decomp 捕获窗 verdict: pass（诚实标定）
+
+**实测 diff 输出原文（A 级——非声称核）**：
+```
+a3-020: [FAIL]×8（core 早终止——已知 pattern 转写未落）
+（golden 全写集（OAM 512-539+寄存器+case 变值）vs core 早终止（仅 8 写））
+a3-028: 1/8 PASS+7 FAIL（probe 待核（捕获窗待）——考证进度态（诚实标定））
+```
+
+四条核：①**a3-020=8/8 FAIL（契约族）**：golden 全写集 vs core **早终止**（仅 8 写）
+——**已知 pattern 转写未落**（chain-compute 多入参（case 特异地址+值径辨）实现缺）
+——**修复要求**：已知 pattern 转写实现（chain-compute 多入参（case 特异地址+值径辨））
+→8 案全等→账清转 strict ②**a3-028 probe 待核=诚实标定 ✓**（decomp be4064c）：
+**probe 待核**（instrumentation 配置核（callbackType.write armed+范围 0400-04ff
+——probe_mem DSL）——**写点 0**（base 族写未捕获（**捕获窗待**（2000 帧内敌例程
+未写 base 族/**写在窗外**））））+写后帧待——claim 与实测一致（1/8+7 FAIL 考证
+进度态（非声称修复（「0 败」纪律面 ✓）））③**probe instrumentation 配置核 ✓**
+（callbackType.write+范围（probe_mem DSL）（显式））④**捕获窗待辨识核 ✓**（敌例程
+写窗外（显式待做））⑤测 540 全绿+L2 3107/772。findings（r10）：1（a3-020 已知
+pattern 转写未落=needs_revision）+1 gap 显式（a3-028 捕获窗待（敌例程写窗外）
+（诚实标定））。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
