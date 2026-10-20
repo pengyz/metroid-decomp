@@ -49,3 +49,11 @@
 - **Gate 面核**：rom-integrity/seed/命名台账 182/知识 34/docs-links 174/rust 532/
   L2 全绿/L3 22 案/L4 50 金面/completeness 57/tree-coherence/doc-sync/inode 锁 0
   ——**Gate 面稳**（14 闸全绿+ratchet 七向 OK）。
+
+### 4.2 L4 3 项账清转 strict 路径（2026-10-20 收敛族协同）
+
+- **L4 3 项账内容忍**（sc-title-menu2_f00620 等——迭代态缺口 12759 像素族）：
+  TOLERATED 注「账清转 strict」——**转 strict 路径**：①迭代态缺口收敛（渲染面批产
+  完成）②白名单清（账内容忍→strict 裁定）③重跑 visual-diff 确认 0 像素差；
+- **收敛族协同注**：L4 3 项+WARN 1 项（rust_test 批量上调候裁）——**双收敛路径
+  显式**（账清转 strict/基线上调）。
