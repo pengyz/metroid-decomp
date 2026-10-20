@@ -1618,6 +1618,62 @@
       "reason": "值链算深径（$6AF8-$6AFA←0/32/32（fixture 弱源——多入参链算）——深径判别条补触发（链算径）——S5-121 同款跨卡深径）",
       "exit": "值链算径建模清（$6B 族链模拟）→账清转 strict",
       "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-A8-008-CASE-0-IMPL",
+      "case_prefix": "a8-008-case-0",
+      "reason": "【预登记/补账】a8-008-case-0 簇（批产 WIP——A 批预登记制）",
+      "exit": "a8-008-case-0 落→账清转 strict",
+      "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-A8-008-CASE-1-IMPL",
+      "case_prefix": "a8-008-case-1",
+      "reason": "【预登记/补账】a8-008-case-1 簇（批产 WIP——A 批预登记制）",
+      "exit": "a8-008-case-1 落→账清转 strict",
+      "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-A8-008-CASE-2-IMPL",
+      "case_prefix": "a8-008-case-2",
+      "reason": "【预登记/补账】a8-008-case-2 簇（批产 WIP——A 批预登记制）",
+      "exit": "a8-008-case-2 落→账清转 strict",
+      "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-A8-008-CASE-3-IMPL",
+      "case_prefix": "a8-008-case-3",
+      "reason": "【预登记/补账】a8-008-case-3 簇（批产 WIP——A 批预登记制）",
+      "exit": "a8-008-case-3 落→账清转 strict",
+      "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-A8-008-CASE-4-IMPL",
+      "case_prefix": "a8-008-case-4",
+      "reason": "【预登记/补账】a8-008-case-4 簇（批产 WIP——A 批预登记制）",
+      "exit": "a8-008-case-4 落→账清转 strict",
+      "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-A8-008-CASE-5-IMPL",
+      "case_prefix": "a8-008-case-5",
+      "reason": "【预登记/补账】a8-008-case-5 簇（批产 WIP——A 批预登记制）",
+      "exit": "a8-008-case-5 落→账清转 strict",
+      "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-A8-008-CASE-6-IMPL",
+      "case_prefix": "a8-008-case-6",
+      "reason": "【预登记/补账】a8-008-case-6 簇（批产 WIP——A 批预登记制）",
+      "exit": "a8-008-case-6 落→账清转 strict",
+      "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-A8-008-CASE-7-IMPL",
+      "case_prefix": "a8-008-case-7",
+      "reason": "【预登记/补账】a8-008-case-7 簇（批产 WIP——A 批预登记制）",
+      "exit": "a8-008-case-7 落→账清转 strict",
+      "registered": "2026-10-20"
     }
   ]
 }
