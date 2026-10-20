@@ -286,7 +286,7 @@
       "id": "SC-B1-015-CROSSCARD-DRAWDOOR",
       "case_prefix": "a1-015-case-",
       "reason": "DrawDoor OAM 精灵深径（52 写（$0200-$021B 精灵族+ptr 面+态写）——refs 法直得结构（DrawDoor: asm:1450）+OAM 绘制链算（S1-17-CROSSCARD-S105 同款跨卡深径））",
-      "exit": "DrawDoor OAM 绘制径建模清（AnimDrawObject+OAM 链全模拟）→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】DrawDoor OAM 绘制径建模清（AnimDrawObject+OAM 链全模拟）——链=DoorSubRoutine→DrawDoor→OAM 全链模拟（refs 法直得（DrawDoor=areas_common.asm:1450/DoorSubRoutine8C61=1579）——全链模拟）→账清转 strict（待建模清）",
       "registered": "2026-10-19"
     },
     {
@@ -307,7 +307,7 @@
       "id": "SC-B1-016-CROSSCARD-DOORSUB",
       "case_prefix": "a1-016-case-",
       "reason": "DoorSubRoutine8C61 OAM 深径（60 写（门重关链（DoorHitPoints←1+BG 瓦片+status←2+anim+DrawDoor OAM）——refs 法直得结构（asm:1579）+OAM 绘制链算（S1-17-CROSSCARD-S105 同款））",
-      "exit": "DoorSubRoutine OAM 绘制径建模清（WriteDoorBGTiles+DrawDoor 链全模拟）→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】DoorSubRoutine OAM 绘制径建模清（WriteDoorBGTiles+DrawDoor 链全模拟）——链=DoorSubRoutine→DrawDoor→OAM 全链模拟（refs 法直得（DrawDoor=areas_common.asm:1450/DoorSubRoutine8C61=1579）——全链模拟）→账清转 strict（待建模清）",
       "registered": "2026-10-19"
     },
     {
@@ -328,7 +328,7 @@
       "id": "SC-B2-022-CROSSCARD-DOORCHAIN",
       "case_prefix": "a2-022-case-",
       "reason": "DoorSubRoutine→DrawDoor→OAM 深径链（52+ 写（TourianMusic 同族面+OAM 全链效应）——S5-121/S1-17-CROSSCARD-S105 同款跨卡深径）",
-      "exit": "门链 OAM 绘制径建模清（DoorSubRoutine→DrawDoor→OAM 全链模拟）→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】门链 OAM 绘制径建模清（DoorSubRoutine——链=DoorSubRoutine→DrawDoor→OAM 全链模拟（refs 法直得（DrawDoor=areas_common.asm:1450/DoorSubRoutine8C61=1579）——全链模拟）→账清转 strict（待建模清）",
       "registered": "2026-10-19"
     },
     {
@@ -342,28 +342,28 @@
       "id": "SC-B2-023-CROSSCARD-DOORCHAIN",
       "case_prefix": "a2-023-case-",
       "reason": "DoorSubRoutine→DrawDoor→OAM 深径链（MotherBrainMusic 同族面+OAM 全链效应——S5-121 同款跨卡深径）",
-      "exit": "门链 OAM 绘制径建模清（全链模拟）→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】门链 OAM 绘制径建模清（全链模拟）——链=DoorSubRoutine→DrawDoor→OAM 全链模拟（refs 法直得（DrawDoor=areas_common.asm:1450/DoorSubRoutine8C61=1579）——全链模拟）→账清转 strict（待建模清）",
       "registered": "2026-10-19"
     },
     {
       "id": "SC-B2-024-CROSSCARD-DOORCHAIN",
       "case_prefix": "a2-024-case-",
       "reason": "DoorSubRoutine→DrawDoor→OAM 深径链（57 写（>20 深径判别条触发）——预登记先行（新法首用——严格顺序纪律修正执行）——S5-121 同款跨卡深径）",
-      "exit": "门链 OAM 绘制径建模清（全链模拟）→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】门链 OAM 绘制径建模清（全链模拟）——链=DoorSubRoutine→DrawDoor→OAM 全链模拟（refs 法直得（DrawDoor=areas_common.asm:1450/DoorSubRoutine8C61=1579）——全链模拟）→账清转 strict（待建模清）",
       "registered": "2026-10-19"
     },
     {
       "id": "SC-B2-025-CROSSCARD-DOORCHAIN",
       "case_prefix": "a2-025-case-",
       "reason": "DoorSubRoutine→DrawDoor→OAM 深径链（55 写（>20 深径判别条触发）——预登记先行（新法续——严格顺序纪律）——S5-121 同款跨卡深径）",
-      "exit": "门链 OAM 绘制径建模清（全链模拟）→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】门链 OAM 绘制径建模清（全链模拟）——链=DoorSubRoutine→DrawDoor→OAM 全链模拟（refs 法直得（DrawDoor=areas_common.asm:1450/DoorSubRoutine8C61=1579）——全链模拟）→账清转 strict（待建模清）",
       "registered": "2026-10-19"
     },
     {
       "id": "SC-B2-026-CROSSCARD-DOORCHAIN",
       "case_prefix": "a2-026-case-",
       "reason": "DoorSubRoutine→DrawDoor→OAM 深径链（54 写（>20 深径判别条触发）——预登记先行（新法续——严格顺序纪律）——S5-121 同款跨卡深径）",
-      "exit": "门链 OAM 绘制径建模清（全链模拟）→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】门链 OAM 绘制径建模清（全链模拟）——链=DoorSubRoutine→DrawDoor→OAM 全链模拟（refs 法直得（DrawDoor=areas_common.asm:1450/DoorSubRoutine8C61=1579）——全链模拟）→账清转 strict（待建模清）",
       "registered": "2026-10-19"
     },
     {
@@ -496,21 +496,21 @@
       "id": "SC-B3-012-CROSSCARD-DRAWDOOR",
       "case_prefix": "a3-012-case-",
       "reason": "DrawDoor OAM 深径链（52 写（>20 深径判别条触发）——a1-015 同款（bank2 化身）——预登记先行（严格顺序）——S5-121 同款跨卡深径）",
-      "exit": "DrawDoor OAM 绘制径建模清（全链模拟）→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】DrawDoor OAM 绘制径建模清（全链模拟）——链=DoorSubRoutine→DrawDoor→OAM 全链模拟（refs 法直得（DrawDoor=areas_common.asm:1450/DoorSubRoutine8C61=1579）——全链模拟）→账清转 strict（待建模清）",
       "registered": "2026-10-19"
     },
     {
       "id": "SC-B3-013-CROSSCARD-DOORSUB",
       "case_prefix": "a3-013-case-",
       "reason": "DoorSubRoutine OAM 深径链（60 写（>20 深径判别条触发）——a1-016 同款（bank2 化身）——预登记先行（严格顺序）——S5-121 同款跨卡深径）",
-      "exit": "DoorSubRoutine OAM 绘制径建模清（全链模拟）→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】DoorSubRoutine OAM 绘制径建模清（全链模拟）——链=DoorSubRoutine→DrawDoor→OAM 全链模拟（refs 法直得（DrawDoor=areas_common.asm:1450/DoorSubRoutine8C61=1579）——全链模拟）→账清转 strict（待建模清）",
       "registered": "2026-10-19"
     },
     {
       "id": "SC-B3-014-CROSSCARD-DOORSUB8C71",
       "case_prefix": "a3-014-case-",
       "reason": "DoorSubRoutine8C71 OAM 深径链（52 写（>20 深径判别条触发）——a1-017 同款（bank2 化身）——预登记先行（严格顺序）——S5-121 同款跨卡深径）",
-      "exit": "门链 OAM 绘制径建模清（全链模拟）→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】门链 OAM 绘制径建模清（全链模拟）——链=DoorSubRoutine→DrawDoor→OAM 全链模拟（refs 法直得（DrawDoor=areas_common.asm:1450/DoorSubRoutine8C61=1579）——全链模拟）→账清转 strict（待建模清）",
       "registered": "2026-10-19"
     },
     {
@@ -524,7 +524,7 @@
       "id": "SC-B3-016-CROSSCARD-DOORSUB8C8A",
       "case_prefix": "a3-016-case-",
       "reason": "DoorSubRoutine8C8A OAM 深径链（60 写（>20 深径判别条触发）——a1-019 同款（bank2 化身）——预登记先行（严格顺序）——S5-121 同款跨卡深径）",
-      "exit": "门链 OAM 绘制径建模清（全链模拟）→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】门链 OAM 绘制径建模清（全链模拟）——链=DoorSubRoutine→DrawDoor→OAM 全链模拟（refs 法直得（DrawDoor=areas_common.asm:1450/DoorSubRoutine8C61=1579）——全链模拟）→账清转 strict（待建模清）",
       "registered": "2026-10-19"
     },
     {
@@ -713,7 +713,7 @@
       "id": "SC-B4-007-CROSSCARD-DRAWDOOR",
       "case_prefix": "a4-007-case-",
       "reason": "DrawDoor OAM 深径链（52 写（>20 深径判别条触发）——$8BB1 bank3 化身（a1-015 同款）——预登记先行（严格顺序）——S5-121 同款跨卡深径）",
-      "exit": "DrawDoor OAM 绘制径建模清（全链模拟）→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】DrawDoor OAM 绘制径建模清（全链模拟）——链=DoorSubRoutine→DrawDoor→OAM 全链模拟（refs 法直得（DrawDoor=areas_common.asm:1450/DoorSubRoutine8C61=1579）——全链模拟）→账清转 strict（待建模清）",
       "registered": "2026-10-20"
     },
     {
@@ -776,14 +776,14 @@
       "id": "SC-B4-008-CROSSCARD-DOORSUB",
       "case_prefix": "a4-008-case-",
       "reason": "DoorSubRoutine OAM 深径链（60 写（>20 深径判别条触发）——$8C61 bank3 化身（a1-016 同款）——预登记先行（严格顺序）——S5-121 同款跨卡深径）",
-      "exit": "门链 OAM 绘制径建模清（全链模拟）→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】门链 OAM 绘制径建模清（全链模拟）——链=DoorSubRoutine→DrawDoor→OAM 全链模拟（refs 法直得（DrawDoor=areas_common.asm:1450/DoorSubRoutine8C61=1579）——全链模拟）→账清转 strict（待建模清）",
       "registered": "2026-10-20"
     },
     {
       "id": "SC-B4-009-CROSSCARD-DOORSUB8C71",
       "case_prefix": "a4-009-case-",
       "reason": "DoorSubRoutine8C71 OAM 深径链（23 写（>20 深径判别条触发）——$8C71 bank3 化身（a1-017 同款）——预登记先行（严格顺序）——S5-121 同款跨卡深径）",
-      "exit": "门链 OAM 绘制径建模清（全链模拟）→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】门链 OAM 绘制径建模清（全链模拟）——链=DoorSubRoutine→DrawDoor→OAM 全链模拟（refs 法直得（DrawDoor=areas_common.asm:1450/DoorSubRoutine8C61=1579）——全链模拟）→账清转 strict（待建模清）",
       "registered": "2026-10-20"
     },
     {
@@ -797,7 +797,7 @@
       "id": "SC-B4-011-CROSSCARD-DOORSUB8C8A",
       "case_prefix": "a4-011-case-",
       "reason": "DoorSubRoutine8C8A OAM 深径链（60 写（>20 深径判别条触发）——$8C8A bank3 化身（a1-019 同款）——预登记先行（严格顺序）——S5-121 同款跨卡深径）",
-      "exit": "门链 OAM 绘制径建模清（全链模拟）→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】门链 OAM 绘制径建模清（全链模拟）——链=DoorSubRoutine→DrawDoor→OAM 全链模拟（refs 法直得（DrawDoor=areas_common.asm:1450/DoorSubRoutine8C61=1579）——全链模拟）→账清转 strict（待建模清）",
       "registered": "2026-10-20"
     },
     {
@@ -1350,14 +1350,14 @@
       "id": "SC-B6-015-CROSSCARD-DRAWDOOR",
       "case_prefix": "a6-015-case-",
       "reason": "DrawDoor OAM 深径链（52 写（>20 深径判别条触发）——$8BB1 bank4 化身（a1-015 同款）——预登记先行（严格顺序）——S5-121 同款跨卡深径）",
-      "exit": "DrawDoor OAM 绘制径建模清（全链模拟）→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】DrawDoor OAM 绘制径建模清（全链模拟）——链=DoorSubRoutine→DrawDoor→OAM 全链模拟（refs 法直得（DrawDoor=areas_common.asm:1450/DoorSubRoutine8C61=1579）——全链模拟）→账清转 strict（待建模清）",
       "registered": "2026-10-20"
     },
     {
       "id": "SC-B6-016-CROSSCARD-DOORSUB",
       "case_prefix": "a6-016-case-",
       "reason": "DoorSubRoutine OAM 深径链（60 写（>20 深径判别条触发）——$8C61 bank4 化身（a1-016 同款）——预登记先行（严格顺序）——S5-121 同款跨卡深径）",
-      "exit": "门链 OAM 绘制径建模清（全链模拟）→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】门链 OAM 绘制径建模清（全链模拟）——链=DoorSubRoutine→DrawDoor→OAM 全链模拟（refs 法直得（DrawDoor=areas_common.asm:1450/DoorSubRoutine8C61=1579）——全链模拟）→账清转 strict（待建模清）",
       "registered": "2026-10-20"
     },
     {
@@ -1371,7 +1371,7 @@
       "id": "SC-B6-017-CROSSCARD-DOORSUB8C71",
       "case_prefix": "a6-017-case-",
       "reason": "DoorSubRoutine8C71 OAM 深径链（52 写（>20 深径判别条触发）——$8C71 bank4 化身（a1-017 同款）——预登记先行（严格顺序）——S5-121 同款跨卡深径）",
-      "exit": "门链 OAM 绘制径建模清（全链模拟）→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】门链 OAM 绘制径建模清（全链模拟）——链=DoorSubRoutine→DrawDoor→OAM 全链模拟（refs 法直得（DrawDoor=areas_common.asm:1450/DoorSubRoutine8C61=1579）——全链模拟）→账清转 strict（待建模清）",
       "registered": "2026-10-20"
     },
     {
@@ -1399,7 +1399,7 @@
       "id": "SC-B6-019-CROSSCARD-DOORSUB8C8A",
       "case_prefix": "a6-019-case-",
       "reason": "DoorSubRoutine8C8A OAM 深径链（60 写（>20 深径判别条触发）——$8C8A bank4 化身（a1-019 同款）——预登记先行（严格顺序）——S5-121 同款跨卡深径）",
-      "exit": "门链 OAM 绘制径建模清（全链模拟）→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】门链 OAM 绘制径建模清（全链模拟）——链=DoorSubRoutine→DrawDoor→OAM 全链模拟（refs 法直得（DrawDoor=areas_common.asm:1450/DoorSubRoutine8C61=1579）——全链模拟）→账清转 strict（待建模清）",
       "registered": "2026-10-20"
     },
     {
@@ -1693,21 +1693,21 @@
       "id": "SC-B8-013-CROSSCARD-DRAWDOOR",
       "case_prefix": "a8-013-case-",
       "reason": "DrawDoor OAM 深径链（52 写（>20 深径判别条触发）——$8BB1 bank6 化身（a1-015 同款）——预登记先行（严格顺序）——S5-121 同款跨卡深径）",
-      "exit": "DrawDoor OAM 绘制径建模清（全链模拟）→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】DrawDoor OAM 绘制径建模清（全链模拟）——链=DoorSubRoutine→DrawDoor→OAM 全链模拟（refs 法直得（DrawDoor=areas_common.asm:1450/DoorSubRoutine8C61=1579）——全链模拟）→账清转 strict（待建模清）",
       "registered": "2026-10-20"
     },
     {
       "id": "SC-B8-014-CROSSCARD-DOORSUB",
       "case_prefix": "a8-014-case-",
       "reason": "DoorSubRoutine OAM 深径链（60 写（>20 深径判别条触发）——$8C61 bank6 化身（a1-016 同款）——预登记先行（严格顺序）——S5-121 同款跨卡深径）",
-      "exit": "门链 OAM 绘制径建模清（全链模拟）→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】门链 OAM 绘制径建模清（全链模拟）——链=DoorSubRoutine→DrawDoor→OAM 全链模拟（refs 法直得（DrawDoor=areas_common.asm:1450/DoorSubRoutine8C61=1579）——全链模拟）→账清转 strict（待建模清）",
       "registered": "2026-10-20"
     },
     {
       "id": "SC-B8-015-CROSSCARD-DOORSUB8C71",
       "case_prefix": "a8-015-case-",
       "reason": "DoorSubRoutine8C71 OAM 深径链（52 写（>20 深径判别条触发）——$8C71 bank6 化身（a1-017 同款）——预登记先行（严格顺序）——S5-121 同款跨卡深径）",
-      "exit": "门链 OAM 绘制径建模清（全链模拟）→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】门链 OAM 绘制径建模清（全链模拟）——链=DoorSubRoutine→DrawDoor→OAM 全链模拟（refs 法直得（DrawDoor=areas_common.asm:1450/DoorSubRoutine8C61=1579）——全链模拟）→账清转 strict（待建模清）",
       "registered": "2026-10-20"
     },
     {
@@ -1721,7 +1721,7 @@
       "id": "SC-B8-017-CROSSCARD-DOORSUB8C8A",
       "case_prefix": "a8-017-case-",
       "reason": "DoorSubRoutine8C8A OAM 深径链（60 写（>20 深径判别条触发）——$8C8A bank6 化身（a1-019 同款）——预登记先行（严格顺序）——S5-121 同款跨卡深径）",
-      "exit": "门链 OAM 绘制径建模清（全链模拟）→账清转 strict",
+      "exit": "【2026-10-20 建模缺口定案】门链 OAM 绘制径建模清（全链模拟）——链=DoorSubRoutine→DrawDoor→OAM 全链模拟（refs 法直得（DrawDoor=areas_common.asm:1450/DoorSubRoutine8C61=1579）——全链模拟）→账清转 strict（待建模清）",
       "registered": "2026-10-20"
     },
     {
