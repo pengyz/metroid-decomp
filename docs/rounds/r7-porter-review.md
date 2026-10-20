@@ -6918,6 +6918,54 @@ a3-028: 1/8 PASS+7 FAIL（probe 待核（捕获窗待）——考证进度态（
 pattern 转写未落=needs_revision）+1 gap 显式（a3-028 捕获窗待（敌例程写窗外）
 （诚实标定））。
 
+## port2 已知 pattern+decomp 捕获窗辨双审（落件即审·实测核——双 pass）
+
+### ① a3-020 已知 pattern verdict: pass | ② decomp 捕获窗辨 verdict: pass（诚实标定）
+
+**实测 diff 输出原文（A 级——非声称核）**：
+```
+a3-020: [PASS]×8（0 FAIL）✓✓✓✓✓✓✓✓（OAM 链全模拟+case-1 值径+条件径落）
+a3-028: 1/8 PASS+7 FAIL（捕获窗辨（敌例程写窗辨）——考证进度态（诚实标定））
+```
+
+四条核：①**a3-020=8/8 全绿 ✓✓**（port2 8aa6f3d（SC-B3-020 OAM 链全模拟+case-1
+值径+条件径））：OAM 链全模拟（chain-compute 多入参（case 特异地址+值径辨））+
+case-1 值径+条件径实现落=全径精确+账清转 strict 落定 ✓②**a3-028 捕获窗辨=诚实
+标定 ✓**（decomp d765449）：**捕获窗辨**（扩窗 2000→6000 帧（seed 0-1 跑）——
+**probe 04 族写点仍 0**（敌例程未写 base 族（在捕获窗内）——**写点径待辨**（**敌例程
+写窗**（case golden 写=routine 单次执行写——捕获窗（NMI 帧级）缺主循环写））））+
+写后帧待——claim 与实测一致（1/8+7 FAIL 考证进度态（非声称修复（「0 败」纪律面
+✓）））③**捕获窗辨核 ✓**（扩窗 2000→6000 帧+seed 0-1 跑+probe 0 写点实录（显式））
+④**敌例程写窗辨核 ✓**（case golden 写=routine 单次执行写（NMI 帧级缺主循环写）=
+辨识精确（显式））⑤测 540 全绿+L2 3107/765（账目面全合）。findings（r10）：1 gap
+显式（a3-028 敌例程写窗（写点径待辨）（诚实标定））。
+
+## port2 已知 pattern+decomp 敌例程写窗辨双审（落件即审·实测核）
+
+### ① a3-021 已知 pattern verdict: needs_revision | ② decomp 敌例程写窗辨 verdict: pass（诚实标定）
+
+**实测 diff 输出原文（A 级——非声称核）**：
+```
+a3-021: [FAIL]×8（core 早终止——已知 pattern 转写未落）
+（golden 全写集（OAM 512-539+寄存器+case 变值+多写（1022/1024, 823/825...））vs
+ core 早终止（仅 8 写））
+a3-028: 1/8 PASS+7 FAIL（敌例程写窗辨落（mismatch）——考证进度态（诚实标定））
+```
+
+四条核：①**a3-021=8/8 FAIL（契约族）**：golden 全写集（OAM 512-539+寄存器+case
+变值+多写（1022/1024, 823/825, 974/976, 964/966, 860/862, 917/919））vs core
+**早终止**（仅 8 写）——**已知 pattern 转写未落**（chain-compute 多入参（case 特异
+地址+值径辨）实现缺）——**修复要求**：已知 pattern 转写实现→8 案全等→账清转
+strict ②**a3-028 敌例程写窗辨落=诚实标定 ✓**（decomp 4f68257）：**敌例程写窗辨落**
+（probe 全写点 30/seed（6A 族 12+6B 族 16+空 2）——**04 族 0**（敌例程未写 base 族
+（capture 内））——**case golden（04 族写）vs capture mismatch**（L2 fixture 单次
+执行写≠capture 帧级写））+**写窗径待辨**（fixture 写源径）——claim 与实测一致
+（1/8+7 FAIL 考证进度态（非声称修复（「0 败」纪律面 ✓）））③**敌例程写窗辨核 ✓**
+（probe 全写点 30/seed（6A/6B 族）+04 族 0+mismatch 实录（显式））④**fixture 写源
+径待辨核 ✓**（L2 fixture 单次执行写≠capture 帧级写（显式待做））⑤测 540 全绿+
+L2 账目面全合。findings（r10）：1（a3-021 已知 pattern 转写未落=needs_revision）
++1 gap 显式（a3-028 fixture 写源径待辨（诚实标定））。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
