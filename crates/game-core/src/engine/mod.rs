@@ -12788,3 +12788,31 @@ mod a9_020_tests {
         assert!(b7_cc07_tourian().0.len() == 1);
     }
 }
+
+// ---- SC-B9-02（a9-021）员转写（2 员——MotherBrainMusic 族（bank7 化身））----
+
+/// bank05:8CC0 MotherBrainMusic 族（root——簇共根形三百五五·**bank7 化身**
+/// （a2-023 同款——refs 法：prg7_engine.asm:2692（bank7 复现）））。
+/// 返回 (声旗写, SFX id)。
+pub fn b7_8cc0_mother_brain_music() -> (Vec<(u16, u8)>, u8) {
+    (vec![(0x0681, 0x20)], 0x20) // sfxNoise_MotherBrainMusic（SFX 族十五现）
+}
+
+/// $CC03 MotherBrainMusic（bank7 化身——a2-023 同款（prg7_engine.asm:2692））。
+pub fn b7_cc03_mother_brain() -> (Vec<(u16, u8)>, u8) {
+    b7_8cc0_mother_brain_music()
+}
+
+#[cfg(test)]
+mod a9_021_tests {
+    use super::*;
+
+    /// 二员转写形（MotherBrainMusic bank7 化身 root+声旗面）。
+    #[test]
+    fn a9_021_units_two() {
+        let (ev, id) = b7_8cc0_mother_brain_music();
+        assert_eq!(id, 0x20); // SFX 族十五现
+        assert!(ev.contains(&(0x0681, 0x20))); // 写址对值核对
+        assert!(b7_cc03_mother_brain().0.len() == 1);
+    }
+}
