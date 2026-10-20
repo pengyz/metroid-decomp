@@ -12734,3 +12734,29 @@ mod a8_017_tests {
         assert_eq!(b6_8cfb_write_door_bg(), (0x8CFB, true)); // a1-019 同款
     }
 }
+
+// ---- SC-B9-00（a9-019）员转写（2 员——Amul16 族（bank7 化身）·B 区收官批）----
+
+/// bank05:8CB6 Amul16 族（root——簇共根形三百五三·**bank7 化身**（a1-021 同款
+/// ——refs 法：prg7_engine.asm:776（bank7 复现）——B 区收官批））。
+/// 返回 (目标址, 桩面)。
+pub fn b7_8cb6_amul16() -> (u16, bool) {
+    (0xC2C5, true) // jmp Amul16（bank7 化身（a1-021 直连））
+}
+
+/// $C2C5 Amul16（bank7 化身——a1-021 同款（prg7_engine.asm:776））。
+pub fn b7_c2c5_amul16(a_in: u8) -> u8 {
+    a_in << 4 // 乘 16（Adiv16 对偶——refs 法直得）
+}
+
+#[cfg(test)]
+mod a9_019_tests {
+    use super::*;
+
+    /// 二员转写形（Amul16 bank7 化身 root+位移面）——B 区收官批。
+    #[test]
+    fn a9_019_units_two() {
+        assert_eq!(b7_8cb6_amul16(), (0xC2C5, true)); // a1-021 直连
+        assert_eq!(b7_c2c5_amul16(0x0D), 0xD0); // 乘 16（Adiv16 对偶）
+    }
+}
