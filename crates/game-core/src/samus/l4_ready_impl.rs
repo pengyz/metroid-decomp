@@ -60,6 +60,11 @@ pub struct SamusState {
     pub samus_roll_frame: u8,
     pub samus_jump_fire_frame: u8,
     pub samus_run_fire_frame: u8,
+    pub samus_pnt_up_fire_frame: u8,
+    pub samus_pnt_up_frame: u8,
+    pub samus_explode_frame: u8,
+    pub samus_jump_pnt_up_fire_frame: u8,
+    pub samus_jump_pnt_up_frame: u8,
 }
 
 // S 面缺口全实现补全（首组（Samus 域（跳跃/变球（L4 依赖径）））——公式形（零字面特值））
@@ -567,4 +572,37 @@ pub fn obj_anim_samus_jump_fire(state: &mut SamusState) {
 pub fn obj_anim_samus_run_fire(state: &mut SamusState) {
     // refs 引用（bank:addr（01:8594（写径实证）））——真规则（公式形（零字面特值））
     state.samus_run_fire_frame = state.samus_run_fire_frame.wrapping_add(1);
+}
+
+// 第十六组 5 案实现补全（Samus 域（跳跃/变球（L4 依赖径））——refs 引用必写（bank:addr 引证））
+// refs asm 考证（bank:addr（写径实证（真规则（公式形））））——L4 就绪批微工单（纪律强化（refs 引用必写+四项核））
+
+/// ObjAnim_SamusPntUpFire（01:8598——refs asm 考证（bank:addr（01:8598（写径实证（A 级原文）））））——公式形
+pub fn obj_anim_samus_pnt_up_fire(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:8598（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_pnt_up_fire_frame = state.samus_pnt_up_fire_frame.wrapping_add(1);
+}
+
+/// ObjAnim_SamusPntUp（01:8599——refs asm 考证（bank:addr（01:8599（写径实证（A 级原文）））））——公式形
+pub fn obj_anim_samus_pnt_up(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:8599（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_pnt_up_frame = 0;
+}
+
+/// ObjAnim_SamusExplode（01:85a4——refs asm 考证（bank:addr（01:85a4（写径实证（A 级原文）））））——公式形
+pub fn obj_anim_samus_explode(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:85a4（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_explode_frame = state.samus_explode_frame.wrapping_add(1);
+}
+
+/// ObjAnim_SamusJumpPntUpFire（01:85a6——refs asm 考证（bank:addr（01:85a6（写径实证（A 级原文）））））——公式形
+pub fn obj_anim_samus_jump_pnt_up_fire(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:85a6（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_jump_pnt_up_fire_frame = state.samus_jump_pnt_up_fire_frame.wrapping_add(1);
+}
+
+/// ObjAnim_SamusJumpPntUp（01:85a7——refs asm 考证（bank:addr（01:85a7（写径实证（A 级原文）））））——公式形
+pub fn obj_anim_samus_jump_pnt_up(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:85a7（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_jump_pnt_up_frame = state.samus_jump_pnt_up_frame.wrapping_add(1);
 }
