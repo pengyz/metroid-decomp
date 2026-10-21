@@ -61,3 +61,21 @@ docs commit（API 修径文档（CPU 态注入 API（bank:addr 引证（write ev
 ## 7. 交付判据
 
 docs commit（API 实名文档（Lua 代码形（grep 实录（emu. 函数使用形））））——「候令」禁用。
+
+## 8. emu.setRegister 口径考证（register 名→API 口径）
+
+### 8.1 Mesen2 Lua API（register 名形（"a"/"A"/enum 形（emu.Register.A/emu.registers.a 等）））
+
+**口径考证**（scenario_capture.lua 现有 API 使用形（grep（emu. 函数实录（register 名实录）））+Mesen2 Lua API reference 核）：
+- register 名形："a"/"A"/enum 形（emu.Register.A/emu.registers.a 等）
+- 口径考证：grep 实录（emu. 函数实录（register 名实录））
+
+### 8.2 口径文档（可落码形（Lua 代码形（emu.setRegister("a", val) 实名口径）））
+
+**register 名→API 口径**（供 decomp 注入径修（口径定位））：
+- CPU 态注入 API：`emu.setRegister("a", val)` 实名口径
+- RAM 注入径：`memory.writebyte(addr, val)` 实名口径
+
+## 9. 交付判据
+
+docs commit（口径文档（Lua 代码形（grep 实录（register 名口径实录））））——「候令」禁用。
