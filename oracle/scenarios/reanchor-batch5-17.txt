@@ -1,0 +1,21 @@
+# reanchor-batch5-17 —— 批 5（第 78 案（frame 150 注入正径））
+frames 2000
+watch_range 0000-00ff
+watch_range 0100-07ff
+watch_range 0400-04ff
+watch_range 6988-698f
+watch_range 6AF4-6B0F
+probe_mem 6AF4 6B0F
+probe_mem 0400 04ff
+fixture 150 0000 14 evolving
+fixture 150 005C F8 evolving
+fixture 150 00E7 03 evolving
+fixture 150 0300 56 evolving
+fixture 150 030D 25 evolving
+fixture 150 030E 1A evolving
+fixture 150 035C DC evolving
+fixture 150 0369 48 evolving
+fixture 150 036A 38 evolving
+fixture 150 03E7 6A evolving
+fixture 150 03F4 CC evolving
+fixture 150 03F5 8D evolving
