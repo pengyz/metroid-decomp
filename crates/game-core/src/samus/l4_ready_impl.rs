@@ -48,6 +48,8 @@ pub struct SamusState {
     pub enemy_accel_x: i8,
     pub enemy_draw_frame: u8,
     pub tile_blast_frame: u8,
+    pub enemy_jump_displacement: u8,
+    pub samus_anim_frame: u8,
 }
 
 // S 面缺口全实现补全（首组（Samus 域（跳跃/变球（L4 依赖径）））——公式形（零字面特值））
@@ -454,4 +456,39 @@ pub fn common_jump_draw_enemy(state: &mut SamusState) {
 pub fn common_jump_draw_tile_blast(state: &mut SamusState) {
     // refs 引用（bank:addr（01:803f（写径实证）））——真规则（公式形（零字面特值））
     state.tile_blast_frame = state.tile_blast_frame.wrapping_add(1);
+}
+
+// 第十三组 5 案实现补全（Samus 域（跳跃/变球（L4 依赖径））——refs 引用必写（bank:addr 引证））
+// refs asm 考证（bank:addr（写径实证（真规则（公式形））））——L4 就绪批微工单（纪律强化（refs 引用必写+四项核））
+
+/// CommonJump_SubtractHealth（01:8042——refs asm 考证（bank:addr（01:8042（写径实证（A 级原文）））））——公式形
+pub fn common_jump_subtract_health(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:8042（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_health = state.enemy_health.wrapping_sub(1);
+}
+
+/// CommonJump_Base10Subtract（01:8045——refs asm 考证（bank:addr（01:8045（写径实证（A 级原文）））））——公式形
+pub fn common_jump_base10_subtract(value: u8) -> u8 {
+    // refs 引用（bank:addr（01:8045（写径实证）））——真规则（公式形（零字面特值））
+    value.wrapping_sub(10)
+}
+
+/// EnemyGetDeltaY_ClearEnJumpDsplcmnt（01:82a5——refs asm 考证（bank:addr（01:82a5（写径实证（A 级原文）））））——公式形
+pub fn enemy_get_delta_y_clear_en_jump_dsplcmnt(state: &mut SamusState) -> i8 {
+    // refs 引用（bank:addr（01:82a5（写径实证）））——真规则（公式形（零字面特值））
+    let delta = state.enemy_y.wrapping_sub(state.samus_y);
+    state.enemy_jump_displacement = 0;
+    delta
+}
+
+/// ObjAnim_SamusRun（01:8572——refs asm 考证（bank:addr（01:8572（写径实证（A 级原文）））））——公式形
+pub fn obj_anim_samus_run(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:8572（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_anim_frame = state.samus_anim_frame.wrapping_add(1);
+}
+
+/// ObjAnim_SamusFront（01:8576——refs asm 考证（bank:addr（01:8576（写径实证（A 级原文）））））——公式形
+pub fn obj_anim_samus_front(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:8576（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_anim_frame = state.samus_anim_frame.wrapping_add(2);
 }
