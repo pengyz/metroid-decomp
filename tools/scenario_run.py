@@ -285,8 +285,10 @@ def parse_scenario(path: Path) -> dict:
             if not args[0].isdigit():
                 raise err(f"fixture 帧号须为非负整数: {args[0]!r}")
             for a in args[1:3]:
+                if a.lower() in ("a", "x", "y", "p"):
+                    continue  # CPU 态 register 名（注入径修（register set API））
                 if len(a) not in (2, 4) or any(c not in "0123456789abcdef" for c in a.lower()):
-                    raise err(f"fixture 地址/值须为 hex（2/4 位地址、2 位值）: {a!r}")
+                    raise err(f"fixture 地址/值须为 hex（2/4 位地址、2 位值）或 register 名（a/x/y/p）: {a!r}")
             pers = args[3].lower() if len(args) == 4 else "invariant"
             if pers not in ("invariant", "evolving"):
                 raise err(f"fixture persistence 须为 invariant|evolving: {args[3]!r}")

@@ -576,7 +576,15 @@ local function applyFixtures()
     if fx.frame == frame then
       -- task-32 实战修正：MEMTYPE=8 数值枚举（探针实证 emu.memType.cpu=nil/"cpu" 待验
       -- ——write 用 MEMTYPE 同 readByte 口径）
-      local okw, errw = pcall(emu.write, tonumber(fx.addr, 16), tonumber(fx.value, 16), MEMTYPE)
+      -- CPU 态 register 注入径（register set API（非 RAM 地址）——a/x/y/p→emu 寄存器设置）
+      local regMap = { a = "a", x = "x", y = "y", p = "p" }
+      local regName = regMap[fx.addr]
+      local okw, errw
+      if regName then
+        okw, errw = pcall(emu.setRegister, regName, tonumber(fx.value, 16))
+      else
+        okw, errw = pcall(emu.write, tonumber(fx.addr, 16), tonumber(fx.value, 16), MEMTYPE)
+      end
       log(string.format("fixture applied f=%d $%s=$%s (%s) ok=%s err=%s",
         frame, fx.addr, fx.value, fx.persistence, tostring(okw), tostring(errw)))
     end
