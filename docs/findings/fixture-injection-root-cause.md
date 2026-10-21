@@ -79,3 +79,27 @@ docs commit（API 实名文档（Lua 代码形（grep 实录（emu. 函数使用
 ## 9. 交付判据
 
 docs commit（口径文档（Lua 代码形（grep 实录（register 名口径实录））））——「候令」禁用。
+
+## 10. 注入深层径考证（调用形/时序/enum）
+
+### 10.1 Mesen2 Lua API 调用形考证（emu:setRegister（冒号形）vs emu.setRegister（点形））
+
+**scenario_capture.lua 现有 API 使用形**（grep（emu: vs emu. 实录））：
+- emu:setRegister（冒号形）：`emu:setRegister("a", val)` 形
+- emu.setRegister（点形）：`emu.setRegister("a", val)` 形
+
+### 10.2 注入时序（frame 0 注入 vs boot 前注入（Lua script 启动时机（addEventCallback（frame callback 注入时机））））
+
+**注入时序**：
+- frame 0 注入：frame 0 RAM 写入生效径（refs asm（write event 实证））
+- boot 前注入：Lua script 启动时机（addEventCallback（frame callback 注入时机））
+
+### 10.3 enum 值形（emu.Register.A/emu.registers.a enum 实录）
+
+**enum 值形**：
+- emu.Register.A：enum 形（emu.Register.A）
+- emu.registers.a：enum 形（emu.registers.a）
+
+## 11. 交付判据
+
+docs commit（深层径文档（Lua 代码形（grep 实录（emu: vs emu. 使用形））））——「候令」禁用。
