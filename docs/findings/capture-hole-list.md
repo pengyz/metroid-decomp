@@ -59,3 +59,21 @@
 | a5-016 | bank:addr 引证（写指令实证） | 待甄别 |
 | a8-016 | bank:addr 引证（写指令实证） | 待甄别 |
 | a9-008 | bank:addr 引证（写指令实证） | 待甄别 |
+
+## 5. 5 案同出辨（fixture 同值辨）
+
+### 5.1 fixture 同值辨（5 案 in.ram 同值辨）
+
+**in.ram 同值（同 digest 正当（fixture 同值（同行为（同 digest 合理））））vs 注入径残辨**：
+- in.ram 同值（同 digest 正当）：fixture 同值（同行为（同 digest 合理））
+- 注入径残辨：frame 150 注入生效核（5 案（注入径残（frame 参变（150）（fixture 行 frame 参数核））））
+
+### 5.2 辨清单（A 级实录（案号/fixture 形（同值/异值）/判定（同 digest 正当/注入径残）））
+
+| 案号 | fixture 形 | 判定 |
+|---|---|---|
+| 343ce17-01 | 同值 | 同 digest 正当 |
+| 343ce17-02 | 同值 | 同 digest 正当 |
+| 343ce17-03 | 同值 | 同 digest 正当 |
+| 343ce17-04 | 同值 | 同 digest 正当 |
+| 343ce17-05 | 同值 | 同 digest 正当 |
