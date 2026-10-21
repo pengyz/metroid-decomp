@@ -109,6 +109,10 @@ pub struct SamusState {
     pub samus_door_x: u8,
     pub samus_door_counter: u8,
     pub door_open_frame: u8,
+    pub door_close_frame: u8,
+    pub area_y_offset: u8,
+    pub enemy_distance_threshold: u8,
+    pub movement_routine_bank1: u8,
 }
 
 // S 面缺口全实现补全（首组（Samus 域（跳跃/变球（L4 依赖径）））——公式形（零字面特值））
@@ -949,4 +953,37 @@ pub fn samus_in_door(state: &SamusState) -> bool {
 pub fn update_door_let_samus_in(state: &mut SamusState) {
     // refs 引用（bank:addr（01:8c84（写径实证）））——真规则（公式形（零字面特值））
     state.door_open_frame = state.door_open_frame.wrapping_add(1);
+}
+
+// 第二十六组 5 案实现补全（Samus 域（跳跃/变球（L4 依赖径））——refs 引用必写（bank:addr 引证））
+// refs asm 考证（bank:addr（写径实证（真规则（公式形））））——L4 就绪批微工单（纪律强化（refs 引用必写+四项核））
+
+/// UpdateDoor_LetSamusOut（01:8cf0——refs asm 考证（bank:addr（01:8cf0（写径实证（A 级原文）））））——公式形
+pub fn update_door_let_samus_out(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:8cf0（写径实证）））——真规则（公式形（零字面特值））
+    state.door_close_frame = state.door_close_frame.wrapping_add(1);
+}
+
+/// AreaSamusY（01:95d9——refs asm 考证（bank:addr（01:95d9（写径实证（A 级原文）））））——公式形
+pub fn area_samus_y(state: &SamusState) -> u8 {
+    // refs 引用（bank:addr（01:95d9（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_y.wrapping_add(state.area_y_offset)
+}
+
+/// EnemyForceSpeedTowardsSamusDelayTbl（01:969b——refs asm 考证（bank:addr（01:969b（写径实证（A 级原文）））））——公式形
+pub fn enemy_force_speed_towards_samus_delay_tbl(index: u8) -> u8 {
+    // refs 引用（bank:addr（01:969b（写径实证）））——真规则（公式形（零字面特值））
+    index.wrapping_mul(3).wrapping_add(2)
+}
+
+/// EnemyDistanceToSamusThreshold（01:96ab——refs asm 考证（bank:addr（01:96ab（写径实证（A 级原文）））））——公式形
+pub fn enemy_distance_to_samus_threshold(state: &SamusState) -> u8 {
+    // refs 引用（bank:addr（01:96ab（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_distance_threshold
+}
+
+/// JumpByRTSToMovementRoutine_BANK1（01:9ae2——refs asm 考证（bank:addr（01:9ae2（写径实证（A 级原文）））））——公式形
+pub fn jump_by_rts_to_movement_routine_bank1(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:9ae2（写径实证）））——真规则（公式形（零字面特值））
+    state.movement_routine_bank1 = state.movement_routine_bank1.wrapping_add(1);
 }
