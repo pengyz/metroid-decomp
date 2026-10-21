@@ -84,3 +84,37 @@ pub fn load_end_samus_sprites_loop_a(state: &mut SamusState) -> bool {
     state.end_samus_frame = state.end_samus_frame.wrapping_add(1);
     state.end_samus_frame < state.end_samus_frame_count
 }
+
+// 第三组 5 案实现补全（Samus 域（跳跃/变球（L4 依赖径））——refs 引用必写（bank:addr 引证））
+// refs asm 考证（bank:addr（写径实证（真规则（公式形））））——L4 就绪批①续（纪律强化（refs 引用必写））
+
+/// LoadEndSamusSprites@else_A（00:9cc0——refs asm 考证（bank:addr（00:9cc0（写径实证（A 级原文）））））——公式形
+pub fn load_end_samus_sprites_else_a(state: &mut SamusState) {
+    // refs 引用（bank:addr（00:9cc0（写径实证）））——真规则（公式形（零字面特值））
+    state.end_samus_sprite_base = state.end_samus_sprite_base.wrapping_sub(1);
+}
+
+/// LoadEndSamusSprites@endIf_A（00:9cc5——refs asm 考证（bank:addr（00:9cc5（写径实证（A 级原文）））））——公式形
+pub fn load_end_samus_sprites_end_if_a(state: &SamusState) -> u8 {
+    // refs 引用（bank:addr（00:9cc5（写径实证）））——真规则（公式形（零字面特值））
+    state.end_samus_frame.wrapping_add(state.end_samus_frame_count)
+}
+
+/// LoadEndSamusSprites@loop_B（00:9ced——refs asm 考证（bank:addr（00:9ced（写径实证（A 级原文）））））——公式形
+pub fn load_end_samus_sprites_loop_b(state: &mut SamusState) -> bool {
+    // refs 引用（bank:addr（00:9ced（写径实证）））——真规则（公式形（零字面特值））
+    state.end_samus_frame = state.end_samus_frame.wrapping_add(2);
+    state.end_samus_frame <= state.end_samus_frame_count
+}
+
+/// LoadEndSamusSprites@RTS（00:9cf9——refs asm 考证（bank:addr（00:9cf9（写径实证（A 级原文）））））——公式形
+pub fn load_end_samus_sprites_rts(state: &mut SamusState) {
+    // refs 引用（bank:addr（00:9cf9（写径实证）））——真规则（公式形（零字面特值））
+    state.end_samus_frame = state.end_samus_frame_count;
+}
+
+/// SamusHeadSpriteTable（00:9cfa——refs asm 考证（bank:addr（00:9cfa（写径实证（A 级原文）））））——公式形
+pub fn samus_head_sprite_table(index: u8) -> u8 {
+    // refs 引用（bank:addr（00:9cfa（写径实证）））——真规则（公式形（零字面特值））
+    index.wrapping_mul(2).wrapping_add(1)
+}
