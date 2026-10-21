@@ -72,7 +72,11 @@ pub fn load_gfx(mem: &mut FrameMemory, id: u8) {
     let f = mem.read_ram(PPUCTRL_ZP) & !0x04;
     mem.write_ram(PPUCTRL_ZP, f);
     mem.write_io(0x2000, f);
-    // CopyGFXBlock：CHR 写（渲染面——write_io 族注，task-13）
+    // CopyGFXBlock：CHR 写（渲染面——write_io 族注，task-13）——**size 计数消耗**
+    // （asm：`dec Temp05_GFXSize/bne`×N——复制环逐字节减 $05/$06 至归零=终态 0/0；
+    // B 跑首分歧 $05=0x40 案=折未减计数——消耗语义补）。
+    mem.write_ram(0x0005, 0);
+    mem.write_ram(0x0006, 0);
     // 回切（CurrentBank）
     let cur = mem.read_ram(CURRENT_BANK);
     bank_switch(mem, cur);
@@ -101,7 +105,7 @@ mod tests {
         assert_eq!(m.read_ram(0x0000), 0); // 回切 CurrentBank=0
         assert_eq!(
             [m.read_ram(1), m.read_ram(2), m.read_ram(3), m.read_ram(4), m.read_ram(5), m.read_ram(6)],
-            [0x80, 0x99, 0xC0, 0x1F, 0x40, 0x00] // entry22 src/dest/size
+            [0x80, 0x99, 0xC0, 0x1F, 0x00, 0x00] // entry22 src/dest/**size 消耗归零**（B 案修）
         );
         assert_eq!(m.read_ram(PPUCTRL_ZP) & 0x04, 0); // 增量位清
     }
