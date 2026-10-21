@@ -96,3 +96,12 @@ l2=5   a8=40  a6=40  +md_*系（6）+vf152/vr/g3_sfx2_sq1init/g4_*（4）
 > （fixture 触发（碰撞条件满足（早退出径未走（写径应触发）））））——证伪更正文化（原地标注留史））
 > 注：5b43899 早退出径实证（beq NextEnemy（结构径））仍有效（结构存在早退出径）——但 fixture 值
 > 触发写径（碰撞条件满足（早退出未走））——**真洞证判定**（ROM 实证（写点非 0）为准）。
+
+> 【2026-10-21 gen-f2ed 族 ROM 实证重捕获（lead 后台 job（bash-c64aebc11f5b44c7）——**真洞证确认**（A 级实录））】
+> fixture 注入（frame 150（boot 后注入正径（343ce17 修径））→重捕获（iram 0400-04FF 写点核）：
+> - rom-empirical-gen_f2ed_0..4：非零址数=3（**5/5 案真洞证**（写径触发（写点非 0）））
+> ——gen-f2ed 族 5/5 案真洞证确认（fixture 触发写径（写点非 0）——原捕获空=捕获洞（a3-028 型））
+> ——**甄别累计**：gen-f2ca 族 5/5+gen-f2ed 族 5/5=**10/281 真洞证确认**（271 案甄别续）
+> ——⚠ 场景锁碰撞辨（analysis/.scenario.lock（Oct 19（stale））——他项目 Mesen 在跑
+> （GuardicGaidenRemake（tgl-redge2））——锁判活核（他项目进程≠本仓锁占（stale 处置（rm）→重跑））
+> ——锁纪律辨（per-repo 锁（他项目不占本仓锁）（analysis/.scenario.lock=本仓锁（stale 旧残留）））
