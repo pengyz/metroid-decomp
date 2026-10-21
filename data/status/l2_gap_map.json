@@ -587,7 +587,7 @@
       "id": "SC-B3-026-CROSSCARD-XCHAIN",
       "case_prefix": "a3-026-case-",
       "reason": "X 链算深径（X=147→82 变换（fixture 弱源）+12 写族——深径判别条补触发（链算径）——S5-121 同款跨卡深径）",
-      "exit": "【2026-10-20 建模缺口定案 v2】已知 pattern 转写（refs/asm 优先参考）——转写 case 变值复杂（chain-compute 多入参（fixture 依赖（case 特异地址+值径辨（$6AF7←133/194/88/5/6/189/249——case 特异））））→账清转 strict（待建模清）",
+      "exit": "【2026-10-20 建模缺口定案 v2】已知 pattern 转写（refs/asm 优先参考）——通用公式推导未果（$6AF7 写值链算径（case 变值=输入态函数非 case 表）——refs asm 考证缺（f1-f6 均不匹配））→账清转 strict（待建模清）",
       "registered": "2026-10-19"
     },
     {

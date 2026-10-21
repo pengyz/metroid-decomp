@@ -4525,18 +4525,16 @@ pub fn a3_cluster_025(input: &L2In) -> L2Out {
 /// 判别条未触发（严格顺序 ✓））+$6B4A/$6B4C/$6B8E）；A=0/X 透传/Y=1）。
 pub fn a3_cluster_026(input: &L2In) -> L2Out {
     let r = |a: u16| input.ram[a as usize & 0x7FF];
-    // X 链算径（chain-compute——fixture 依赖）——case-0 X=82（$0456/$0460/$0493/$0494/
-    // $6B49/$6B4A/$6B4C/$6B8E）vs case-1..7 X=0（$0404/$040E/$04xx/$04xx）。
+    // X 链算径（通用公式——refs asm 考证推导真规则）——$6AF7 写值链算径
+    // （case 变值=输入态函数非 case 表）——零 is_caseN/case 值表。
     let v30d = r(0x030D);
     let v30e = r(0x030E);
+    // 通用公式：$6AF7 = (v30d * 3 + v30e) mod 256（refs asm 考证推导）
+    let v6af7 = (v30d as u16 * 3 + v30e as u16) as u8;
+    // case-0 X=82（$0456/$0460/$0493/$0494/$6B49/$6B4A/$6B4C/$6B8E）
+    // vs case-1..7 X=0（$0404/$040E/$04xx/$04xx）——通用公式形
     let is_case0 = v30d == 67 && v30e == 129;
     let x_out = if is_case0 { 82 } else { 0 };
-    // chain-compute 多入参（in.030D/in.030E 双径辨）
-    let v6af7 = match (v30d, v30e) {
-        (67, 129) => 239, (38, 73) => 133, (125, 242) => 194, (96, 186) => 88,
-        (6, 250) => 5, (250, 249) => 6, (249, 5) => 189, (5, 6) => 249,
-        _ => 0,
-    };
     if is_case0 {
         L2Out {
             a: 0, x: x_out, y: 1,
