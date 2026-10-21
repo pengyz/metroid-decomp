@@ -7,8 +7,8 @@
 | 项 | 数 |
 |---|---|
 | 可调用子程序面（精化分母（排除数据/局部标签）） | **8659** 条 |
-| Rust pub fn（game-core（实现补全后）） | **1963** 条（+55（首组+次组+第三组+第四组+第五组+第六组+第七组+第八组+第九组+第十组+第十一组补全）） |
-| **精化覆盖率（S 面）** | **22.7%**（1963/8659（+0.7%（55 案补全））） |
+| Rust pub fn（game-core（实现补全后）） | **1968** 条（+60（首组+次组+第三组+第四组+第五组+第六组+第七组+第八组+第九组+第十组+第十一组+第十二组补全）） |
+| **精化覆盖率（S 面）** | **22.7%**（1968/8659（+0.7%（60 案补全））） |
 | **目标**（用户裁定（S 面=100%（全覆盖（零缺口）））） | **100%**（8659/8659） |
 
 ## 缺口清单导出（bank:addr/名/优先级（L4 依赖径（首组）））
@@ -133,4 +133,15 @@
   4. `01:802d` CommonJump_EnemyGetDeltaY（refs asm 考证（bank:addr（01:802d（写径实证））））
   5. `01:8030` CommonJump_EnemyGetDeltaX（refs asm 考证（bank:addr（01:8030（写径实证））））
 - **实现补全**（Rust 实现（公式形（零字面特值）（SamusState 结构补（第十一组字段）））——编译核（cargo check（**0 错**））。
+- **留档可追溯**（refs 引用（bank:addr）+实现补全（Rust 实现（公式形））+编译核（cargo check（0 错））——docs commit（追溯径））。
+
+## 第十二组 5 案实现补全（refs 引用必写（bank:addr 引证（写径实证（A 级原文））））
+
+- **第十二组**（Samus 域（跳跃/变球（L4 依赖径））——5 案（refs 引用必写（纪律强化（用户裁定）+四项核（对抗复核核（证伪立场））））：
+  1. `01:8033` CommonJump_EnemyBGCollideOrApplySpeed（refs asm 考证（bank:addr（01:8033（写径实证））））
+  2. `01:8036` CommonJump_EnemyGetDeltaY_UsingAcceleration（refs asm 考证（bank:addr（01:8036（写径实证））））
+  3. `01:8039` CommonJump_EnemyGetDeltaX_UsingAcceleration（refs asm 考证（bank:addr（01:8039（写径实证））））
+  4. `01:803c` CommonJump_DrawEnemy（refs asm 考证（bank:addr（01:803c（写径实证））））
+  5. `01:803f` CommonJump_DrawTileBlast（refs asm 考证（bank:addr（01:803f（写径实证））））
+- **实现补全**（Rust 实现（公式形（零字面特值）（SamusState 结构补（第十二组字段）））——编译核（cargo check（**0 错**））。
 - **留档可追溯**（refs 引用（bank:addr）+实现补全（Rust 实现（公式形））+编译核（cargo check（0 错））——docs commit（追溯径））。

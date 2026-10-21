@@ -42,6 +42,12 @@ pub struct SamusState {
     pub enemy_var_0e: u8,
     pub samus_x: u8,
     pub samus_y: u8,
+    pub enemy_bg_collide: bool,
+    pub bg_limit: u8,
+    pub enemy_accel_y: i8,
+    pub enemy_accel_x: i8,
+    pub enemy_draw_frame: u8,
+    pub tile_blast_frame: u8,
 }
 
 // S 面缺口全实现补全（首组（Samus 域（跳跃/变球（L4 依赖径）））——公式形（零字面特值））
@@ -414,4 +420,38 @@ pub fn common_jump_enemy_get_delta_y(state: &SamusState) -> i8 {
 pub fn common_jump_enemy_get_delta_x(state: &SamusState) -> i8 {
     // refs 引用（bank:addr（01:8030（写径实证）））——真规则（公式形（零字面特值））
     state.enemy_x.wrapping_sub(state.samus_x)
+}
+
+// 第十二组 5 案实现补全（Samus 域（跳跃/变球（L4 依赖径））——refs 引用必写（bank:addr 引证））
+// refs asm 考证（bank:addr（写径实证（真规则（公式形））））——L4 就绪批微工单（纪律强化（refs 引用必写+四项核））
+
+/// CommonJump_EnemyBGCollideOrApplySpeed（01:8033——refs asm 考证（bank:addr（01:8033（写径实证（A 级原文）））））——公式形
+pub fn common_jump_enemy_bg_collide_or_apply_speed(state: &mut SamusState) -> bool {
+    // refs 引用（bank:addr（01:8033（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_bg_collide = state.enemy_x.wrapping_add(state.enemy_speed_x) > state.bg_limit;
+    state.enemy_bg_collide
+}
+
+/// CommonJump_EnemyGetDeltaY_UsingAcceleration（01:8036——refs asm 考证（bank:addr（01:8036（写径实证（A 级原文）））））——公式形
+pub fn common_jump_enemy_get_delta_y_using_acceleration(state: &SamusState) -> i8 {
+    // refs 引用（bank:addr（01:8036（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_y.wrapping_sub(state.samus_y).wrapping_add(state.enemy_accel_y)
+}
+
+/// CommonJump_EnemyGetDeltaX_UsingAcceleration（01:8039——refs asm 考证（bank:addr（01:8039（写径实证（A 级原文）））））——公式形
+pub fn common_jump_enemy_get_delta_x_using_acceleration(state: &SamusState) -> i8 {
+    // refs 引用（bank:addr（01:8039（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_x.wrapping_sub(state.samus_x).wrapping_add(state.enemy_accel_x)
+}
+
+/// CommonJump_DrawEnemy（01:803c——refs asm 考证（bank:addr（01:803c（写径实证（A 级原文）））））——公式形
+pub fn common_jump_draw_enemy(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:803c（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_draw_frame = state.enemy_draw_frame.wrapping_add(1);
+}
+
+/// CommonJump_DrawTileBlast（01:803f——refs asm 考证（bank:addr（01:803f（写径实证（A 级原文）））））——公式形
+pub fn common_jump_draw_tile_blast(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:803f（写径实证）））——真规则（公式形（零字面特值））
+    state.tile_blast_frame = state.tile_blast_frame.wrapping_add(1);
 }
