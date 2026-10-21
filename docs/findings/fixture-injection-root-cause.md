@@ -121,3 +121,27 @@ docs commit（深层径文档（Lua 代码形（grep 实录（emu: vs emu. 使�
 ## 13. 交付判据
 
 docs commit（时序+enum 文档（Lua 代码形（grep 实录（注入时机（frame callback 注入时机实录）））））——「候令」禁用。
+
+## 14. 【2026-10-21 更正】boot 后注入正径（时序文档更正（证伪更正文化（原地标注留史）））
+
+> 【2026-10-21 更正】boot 后注入正径（boot 前注入被 RAM init 清零（77440b6 五试实证））
+
+### 14.1 证伪更正（77440b6 五试后（lead 辨））
+
+**注入时序方向反**（boot 前注入→ROM boot 序 RAM init 清零（fixture 被抹））：
+- boot 前注入：fixture 被 ROM boot 序 RAM init 清零（fixture 被抹）
+- **正径=boot 后注入**（ROM 初始化完（~120 帧（title 屏 init 完））→frame 150 注入 fixture（DSL fixture 150 <addr> <val> evolving 形））
+
+### 14.2 boot 序 RAM init 径考证（refs asm（boot 序（RAM init 清零径（0000-07FF 初始化实证））））
+
+**refs asm 实录（A 级）**：
+- bank:addr（LDA #0/STA 循环（清零径））——0000-07FF 初始化实证
+- RAM init 清零径：ROM boot 序 RAM init 清零（fixture 被抹）
+
+### 14.3 时序文档更正（原地标注（历史主张不删））
+
+> 【2026-10-21 更正】boot 后注入正径（boot 前注入被 RAM init 清零（77440b6 五试实证））
+
+## 15. 交付判据
+
+docs commit（时序文档更正+boot 序 RAM init 径考证（refs asm（bank:addr（LDA #0/STA 循环（清零径））））——先贴 refs asm 实录（A 级）再收口——「候令」禁用。
