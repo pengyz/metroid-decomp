@@ -1,0 +1,20 @@
+# reanchor-batch2-11 —— golden 重锚定批 2（vr-3367）
+# 溯源注入径（D1 落实（capture id/trace digest 注入））——fixture 注入径（DSL（F_a 注入））
+name reanchor-batch2-11
+frames 200
+watch_range 0000-00ff zp
+watch_range 0100-07ff iram
+
+# --- fixture 注入（case in.ram（F_a 注入（frame 0（evolving））））---
+fixture 0 0308 03 evolving
+fixture 0 0310 39 evolving
+fixture 0 0312 86 evolving
+fixture 0 0314 00 evolving
+
+# --- regs 注入（case in.regs（frame 0））---
+fixture 0 a f5 evolving
+fixture 0 p 05 evolving
+fixture 0 x 08 evolving
+fixture 0 y 6d evolving
+
+capture 199 golden
