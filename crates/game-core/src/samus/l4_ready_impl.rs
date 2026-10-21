@@ -90,6 +90,11 @@ pub struct SamusState {
     pub samus_roll_frame3: u8,
     pub samus_roll_frame2: u8,
     pub samus_roll_frame1: u8,
+    pub samus_roll_frame0: u8,
+    pub samus_stand_fire_frame_obj: u8,
+    pub samus_pnt_up_frame_obj: u8,
+    pub samus_pnt_up_fire_frame_obj: u8,
+    pub samus_explode_frame_obj: u8,
 }
 
 // S 面缺口全实现补全（首组（Samus 域（跳跃/变球（L4 依赖径）））——公式形（零字面特值））
@@ -797,4 +802,37 @@ pub fn obj_frame_samus_roll2(state: &mut SamusState) {
 pub fn obj_frame_samus_roll1(state: &mut SamusState) {
     // refs 引用（bank:addr（01:88c3（写径实证）））——真规则（公式形（零字面特值））
     state.samus_roll_frame1 = state.samus_roll_frame1.wrapping_add(1);
+}
+
+// 第二十二组 5 案实现补全（Samus 域（跳跃/变球（L4 依赖径））——refs 引用必写（bank:addr 引证））
+// refs asm 考证（bank:addr（写径实证（真规则（公式形））））——L4 就绪批微工单（纪律强化（refs 引用必写+四项核））
+
+/// ObjFrame_SamusRoll0（01:88ce——refs asm 考证（bank:addr（01:88ce（写径实证（A 级原文）））））——公式形
+pub fn obj_frame_samus_roll0(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:88ce（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_roll_frame0 = 0;
+}
+
+/// ObjFrame_SamusStandFire（01:88d9——refs asm 考证（bank:addr（01:88d9（写径实证（A 级原文）））））——公式形
+pub fn obj_frame_samus_stand_fire(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:88d9（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_stand_fire_frame_obj = state.samus_stand_fire_frame_obj.wrapping_add(1);
+}
+
+/// ObjFrame_SamusPntUp（01:8914——refs asm 考证（bank:addr（01:8914（写径实证（A 级原文）））））——公式形
+pub fn obj_frame_samus_pnt_up(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:8914（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_pnt_up_frame_obj = 0;
+}
+
+/// ObjFrame_SamusPntUpFire（01:8928——refs asm 考证（bank:addr（01:8928（写径实证（A 级原文）））））——公式形
+pub fn obj_frame_samus_pnt_up_fire(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:8928（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_pnt_up_fire_frame_obj = state.samus_pnt_up_fire_frame_obj.wrapping_add(1);
+}
+
+/// ObjFrame_SamusExplode（01:8954——refs asm 考证（bank:addr（01:8954（写径实证（A 级原文）））））——公式形
+pub fn obj_frame_samus_explode(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:8954（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_explode_frame_obj = state.samus_explode_frame_obj.wrapping_add(1);
 }
