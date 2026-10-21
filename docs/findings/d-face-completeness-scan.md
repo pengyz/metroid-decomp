@@ -72,3 +72,11 @@
 > 【2026-10-21 D 面数据表考证第七件（lead 直接落档（SamusToBallSFXCont（00:b84F（A 级实录））））】
 > SamusToBallSFXCont（00:b84F（sound_engine.asm（1308（SFX 持续（变球音效（SFXData@SamusBall（00:b26d）））））））：
 > ——表值/表用途/表功能考证：SamusToBallSFXCont（00:b84F）——SFX 持续径（变球音效（SFXData@SamusBall（00:b26d（表值（+2=0xDD/+3=0x3B（2 帧（base=$B200））））））——表用途：SFX 持续（变球音效（SFXData@SamusBall（00:b26d（表值（+2=0xDD/+3=0x3B（2 帧（base=$B200））））））——表功能：变球音效数据（SFX 持续（2 帧播放（base=$B200（SFXData（00:b200（表结构（SFX 数据基址）））））））——refs 引用必写（bank:addr 引证（表读径实证（A 级原文（refs asm（sound_engine.asm（1290-1308（grep 实录（SFX 初始化/持续（表读指令（ldy #<SFXData@SamusBall.b/lda SFXData@SamusBall+2（#$DD）/lda SFXData@SamusBall+3（#$3B）））））））））——留档可追溯（docs commit（追溯径（refs 引用（bank:addr）+考证成果（表名/表值/表用途/表功能）））
+
+> 【2026-10-21 D 面数据表考证第十件（lead 直接落档（ObjFramePtrTable（0x860B（A 级实录））））】
+> ObjFramePtrTable（0x860B（common_sprite_data.asm（282-370（表值（表内容（表用途（表功能考证）））））））：
+> ——表值/表内容：ObjFramePtrTable（0x860B）——单帧精灵帧指针表（PtrTableEntry（bank:addr（帧指针表（ObjFrame00/01/02（SamusRun0/1/2（跑步帧））+BombExplode2/Bomb0/Bomb1（炸弹帧）+item 帧（HighJumpItem/LongBeamItem/ScrewAttackItem/MaruMariItem/VariaSuitItem/WaveBeamItem/IceBeamItem（道具帧）））））
+> ——表用途：动画系统（ObjectAnimIndexTbl（动画组（帧组（动画））→ObjFramePtrTable（单帧精灵（帧指针（PtrTableEntry（bank:addr（帧指针（单帧精灵帧数据）））））））
+> ——表功能：单帧精灵帧指针表（ObjFramePtrTable（0x860B（PtrTableEntry（bank:addr（帧指针（单帧精灵帧数据（ObjFrame00/01/02（Samus 跑步帧（SamusRun0/1/2））+炸弹帧（BombExplode2/Bomb0/Bomb1）+道具帧（HighJumpItem/LongBeamItem/ScrewAttackItem/MaruMariItem/VariaSuitItem/WaveBeamItem/IceBeamItem）））））））
+> ——refs 引用必写（bank:addr 引证（表读径实证（A 级原文（refs asm（common_sprite_data.asm（282-370（grep 实录（PtrTableEntry（表读指令（ObjFramePtrTable（帧指针表（PtrTableEntry（bank:addr（帧指针（单帧精灵帧数据））））））））））
+> ——留档可追溯（docs commit（追溯径（refs 引用（bank:addr）+考证成果（表名/表值/表用途/表功能）））
