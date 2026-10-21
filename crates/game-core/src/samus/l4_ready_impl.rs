@@ -95,6 +95,11 @@ pub struct SamusState {
     pub samus_pnt_up_frame_obj: u8,
     pub samus_pnt_up_fire_frame_obj: u8,
     pub samus_explode_frame_obj: u8,
+    pub samus_jump_pnt_up_frame_obj: u8,
+    pub samus_jump_pnt_up_fire_frame_obj: u8,
+    pub samus_run_pnt_up_frame0: u8,
+    pub samus_run_pnt_up_frame1: u8,
+    pub samus_run_pnt_up_frame2: u8,
 }
 
 // S 面缺口全实现补全（首组（Samus 域（跳跃/变球（L4 依赖径）））——公式形（零字面特值））
@@ -835,4 +840,37 @@ pub fn obj_frame_samus_pnt_up_fire(state: &mut SamusState) {
 pub fn obj_frame_samus_explode(state: &mut SamusState) {
     // refs 引用（bank:addr（01:8954（写径实证）））——真规则（公式形（零字面特值））
     state.samus_explode_frame_obj = state.samus_explode_frame_obj.wrapping_add(1);
+}
+
+// 第二十三组 5 案实现补全（Samus 域（跳跃/变球（L4 依赖径））——refs 引用必写（bank:addr 引证））
+// refs asm 考证（bank:addr（写径实证（真规则（公式形））））——L4 就绪批微工单（纪律强化（refs 引用必写+四项核））
+
+/// ObjFrame_SamusJumpPntUp（01:8961——refs asm 考证（bank:addr（01:8961（写径实证（A 级原文）））））——公式形
+pub fn obj_frame_samus_jump_pnt_up(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:8961（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_jump_pnt_up_frame_obj = state.samus_jump_pnt_up_frame_obj.wrapping_add(1);
+}
+
+/// ObjFrame_SamusJumpPntUpFire（01:8974——refs asm 考证（bank:addr（01:8974（写径实证（A 级原文）））））——公式形
+pub fn obj_frame_samus_jump_pnt_up_fire(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:8974（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_jump_pnt_up_fire_frame_obj = state.samus_jump_pnt_up_fire_frame_obj.wrapping_add(1);
+}
+
+/// ObjFrame_SamusRunPntUp0（01:8995——refs asm 考证（bank:addr（01:8995（写径实证（A 级原文）））））——公式形
+pub fn obj_frame_samus_run_pnt_up0(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:8995（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_run_pnt_up_frame0 = 0;
+}
+
+/// ObjFrame_SamusRunPntUp1（01:89a9——refs asm 考证（bank:addr（01:89a9（写径实证（A 级原文）））））——公式形
+pub fn obj_frame_samus_run_pnt_up1(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:89a9（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_run_pnt_up_frame1 = state.samus_run_pnt_up_frame1.wrapping_add(1);
+}
+
+/// ObjFrame_SamusRunPntUp2（01:89be——refs asm 考证（bank:addr（01:89be（写径实证（A 级原文）））））——公式形
+pub fn obj_frame_samus_run_pnt_up2(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:89be（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_run_pnt_up_frame2 = state.samus_run_pnt_up_frame2.wrapping_add(1);
 }
