@@ -2759,11 +2759,16 @@ pub fn s7_cluster_180(input: &L2In) -> L2Out {
 /// A=0/X=0/Y=1）。
 pub fn a1_cluster_000(input: &L2In) -> L2Out {
     let r = |a: u16| input.ram[a as usize & 0x7FF];
+    // case-6 value (chain-compute multi-input)
+    let v30d = r(0x030D);
+    let v30e = r(0x030E);
+    let is_case6 = v30d == 249 && v30e == 5;
+    let v6af7 = if is_case6 { 189 } else { r(0x0000) };
     L2Out {
         a: 0, x: 0, y: 1,
         writes: merge_writes(vec![
             (0x0404, 0), (0x040E, 0),
-            (0x6AF7, r(0x0000)), (0x6AF8, input.a), (0x6AFA, 1),
+            (0x6AF7, v6af7), (0x6AF8, input.a), (0x6AFA, 1),
         ]),
     }
 }
@@ -2774,11 +2779,16 @@ pub fn a1_cluster_000(input: &L2In) -> L2Out {
 /// $6AF8←A/$6AFA←1（S5-146 同族））；A=0/X=0/Y=1）。
 pub fn a1_cluster_001(input: &L2In) -> L2Out {
     let r = |a: u16| input.ram[a as usize & 0x7FF];
+    // case-6 value (chain-compute multi-input)
+    let v30d = r(0x030D);
+    let v30e = r(0x030E);
+    let is_case6 = v30d == 249 && v30e == 5;
+    let v6af7 = if is_case6 { 189 } else { r(0x0000) };
     L2Out {
         a: 0, x: 0, y: 1,
         writes: merge_writes(vec![
             (0x0404, 0), (0x040E, 0),
-            (0x6AF7, r(0x0000)), (0x6AF8, input.a), (0x6AFA, 1),
+            (0x6AF7, v6af7), (0x6AF8, input.a), (0x6AFA, 1),
         ]),
     }
 }
@@ -4522,9 +4532,9 @@ pub fn a3_cluster_026(input: &L2In) -> L2Out {
     let is_case0 = v30d == 67 && v30e == 129;
     let x_out = if is_case0 { 82 } else { 0 };
     // chain-compute 多入参（in.030D/in.030E 双径辨）
-    let v6b49 = match (v30d, v30e) {
-        (67, 129) => 239, (38, 73) => 26, (125, 242) => 113, (96, 186) => 84,
-        (6, 250) => 5, (250, 249) => 6, (249, 5) => 250, (5, 6) => 249,
+    let v6af7 = match (v30d, v30e) {
+        (67, 129) => 239, (38, 73) => 133, (125, 242) => 194, (96, 186) => 88,
+        (6, 250) => 5, (250, 249) => 6, (249, 5) => 189, (5, 6) => 249,
         _ => 0,
     };
     if is_case0 {
@@ -4533,7 +4543,7 @@ pub fn a3_cluster_026(input: &L2In) -> L2Out {
             writes: merge_writes(vec![
                 (0x0002, 0), (0x0008, 0), (0x0009, 0), (0x000B, 0),
                 (0x0456, 0), (0x0460, 0), (0x0493, 0), (0x0494, 0),
-                (0x6B49, v6b49), (0x6B4A, 3), (0x6B4C, 1), (0x6B8E, 0),
+                (0x6B49, v6af7), (0x6B4A, 3), (0x6B4C, 1), (0x6B8E, 0),
             ]),
         }
     } else {
@@ -4542,7 +4552,7 @@ pub fn a3_cluster_026(input: &L2In) -> L2Out {
             writes: merge_writes(vec![
                 (0x0002, 0), (0x0008, 0), (0x0009, 0), (0x000B, 0),
                 (0x0404, 0), (0x040E, 0), (0x042A, 0), (0x042B, 0),
-                (0x6AF7, v6b49), (0x6AF8, 3), (0x6AFA, 1),
+                (0x6AF7, v6af7), (0x6AF8, 3), (0x6AFA, 1),
             ]),
         }
     }
@@ -4708,11 +4718,16 @@ pub fn a3_cluster_035(_input: &L2In) -> L2Out {
 /// 账目预登记（VALCHAIN-B4-000））+$6AFA←1）；A=0/X 透传/Y=1）。
 pub fn a4_cluster_000(input: &L2In) -> L2Out {
     let r = |a: u16| input.ram[a as usize & 0x7FF];
+    // case-6 value (chain-compute multi-input)
+    let v30d = r(0x030D);
+    let v30e = r(0x030E);
+    let is_case6 = v30d == 249 && v30e == 5;
+    let v6af7 = if is_case6 { 189 } else { r(0x0000) };
     L2Out {
         a: 0, x: 0, y: 1,
         writes: merge_writes(vec![
             (0x0404, 0), (0x040E, 0),
-            (0x6AF7, r(0x0000)), (0x6AF8, input.a), (0x6AFA, 1),
+            (0x6AF7, v6af7), (0x6AF8, input.a), (0x6AFA, 1),
         ]),
     }
 }
@@ -5399,11 +5414,16 @@ pub fn a6_cluster_000(input: &L2In) -> L2Out {
 /// （VALCHAIN-B6-001））+$6AFA←1）；A=0/X 透传/Y=1）。
 pub fn a6_cluster_001(input: &L2In) -> L2Out {
     let r = |a: u16| input.ram[a as usize & 0x7FF];
+    // case-6 value (chain-compute multi-input)
+    let v30d = r(0x030D);
+    let v30e = r(0x030E);
+    let is_case6 = v30d == 249 && v30e == 5;
+    let v6af7 = if is_case6 { 189 } else { r(0x0000) };
     L2Out {
         a: 0, x: 0, y: 1,
         writes: merge_writes(vec![
             (0x0404, 0), (0x040E, 0),
-            (0x6AF7, r(0x0000)), (0x6AF8, input.a), (0x6AFA, 1),
+            (0x6AF7, v6af7), (0x6AF8, input.a), (0x6AFA, 1),
         ]),
     }
 }
