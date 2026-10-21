@@ -581,7 +581,7 @@ local function applyFixtures()
       local regName = regMap[fx.addr]
       local okw, errw
       if regName then
-        okw, errw = pcall(emu.setRegister, regName, tonumber(fx.value, 16))
+        okw, errw = pcall(function() emu:setRegister(regName, tonumber(fx.value, 16)) end) -- 冒号形（Lua 方法调用形——port2 深层径）
       else
         okw, errw = pcall(emu.write, tonumber(fx.addr, 16), tonumber(fx.value, 16), MEMTYPE)
       end
