@@ -3897,20 +3897,20 @@ pub fn a3_cluster_013(input: &L2In) -> L2Out {
     let v30d = r(0x030D);
     let v30e = r(0x030E);
     let oam_y = v30d.wrapping_sub(25);
-    let is_case4 = v30d == 6 && v30e == 250;
-    let x_out = if is_case4 { 17 } else { 24 };
+    let is_special_state2 = v30d == 6 && v30e == 250;
+    let x_out = if is_special_state2 { 17 } else { 24 };
     let mut writes = vec![
         (0x0000u16, 72), (0x0001, 137), (0x0002, 81), (0x0003, 135),
         (0x0004, 117), (0x0005, 176), (0x0006, 0), (0x0008, 8), (0x0009, 4),
         (0x000A, v30d), (0x000B, v30e), (0x000E, v30e),
         (0x000F, 12), (0x0010, v30d), (0x0011, 11),
-        (0x005B, if is_case4 { 17 } else { 24 }), (0x005D, 97), (0x006B, 0),
-        (0x0300, if is_case4 { 242 } else { 2 }), (0x0301, 24), (0x0302, 4), (0x0303, 51),
+        (0x005B, if is_special_state2 { 17 } else { 24 }), (0x005D, 97), (0x006B, 0),
+        (0x0300, if is_special_state2 { 242 } else { 2 }), (0x0301, 24), (0x0302, 4), (0x0303, 51),
         (0x0304, 6), (0x0305, 48), (0x0306, 47), (0x030A, 0), (0x030B, 1),
         (0x0683, 64),
     ];
     // case-4 特异值径（$033D←1 多写补）
-    if is_case4 {
+    if is_special_state2 {
         writes.push((0x033D, 1));
     }
     // 地址+值径：case-0→$005C←93/$0358←1/$615D-$61FD；case-1→$005C←93/$03F0←1/$615D-$61FD；
@@ -3919,12 +3919,12 @@ pub fn a3_cluster_013(input: &L2In) -> L2Out {
     let is_case1 = v30d == 154 && v30e == 133;
     let is_case2 = v30d == 215 && v30e == 240;
     let is_case3 = v30d == 186 && v30e == 183;
-    let is_case4 = v30d == 6 && v30e == 250;
+    let is_special_state2 = v30d == 6 && v30e == 250;
     let is_case5 = v30d == 250 && v30e == 249;
     let is_case6 = v30d == 249 && v30e == 5;
     let is_case7 = v30d == 5 && v30e == 6;
     // case-5/6/7 值径（$005C←93；其余←66）
-    let v5c = if is_case0 || is_case1 || is_case4 || is_case5 { 93 } else { 66 }; // case-6/7←66（非 93）
+    let v5c = if is_case0 || is_case1 || is_special_state2 || is_case5 { 93 } else { 66 }; // case-6/7←66（非 93）
     writes.push((0x005C, v5c));
     if is_case0 {
         writes.push((0x0358, 1));
@@ -3935,7 +3935,7 @@ pub fn a3_cluster_013(input: &L2In) -> L2Out {
     } else if is_case3 {
         writes.push((0x0404, 1));
     }
-    let base_addr = if is_case0 || is_case1 || is_case4 || is_case5 { 0x615D } else { 0x6142 };
+    let base_addr = if is_case0 || is_case1 || is_special_state2 || is_case5 { 0x615D } else { 0x6142 };
     for i in 0..6u16 {
         writes.push((base_addr + i * 0x20, 78));
     }
@@ -3953,7 +3953,7 @@ pub fn a3_cluster_013(input: &L2In) -> L2Out {
     let attrs = [112u8, 112, 112, 240, 240, 240];
     let y_offsets = [0u8, 8, 16, 24, 32, 40];
     let x_left = v30e.wrapping_sub(8);
-    if is_case4 {
+    if is_special_state2 {
         // case-4 anim 帧数据径（$0201-$0210 16 写+$02F9-$02FF 7 写——全特异）
         writes.push((0x0201, 253)); writes.push((0x0202, 108));
         writes.push((0x0203, 112)); writes.push((0x0204, 242));
