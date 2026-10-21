@@ -7215,6 +7215,56 @@ a3-028: 1/8 PASS+7 FAIL（bank3:98EC 近邻辨待落——考证进度态（诚�
 1（a3-026 已知 pattern 转写未落=needs_revision）+1 待落（decomp bank3:98EC 近邻辨
 （在产））。
 
+## a3-026 修复件+decomp bank3:98EC 写径辨双审（落件即审·实测核——**过拟合检查首用**）
+
+### ① a3-026 修复件 verdict: needs_revision（**过拟合抓实**） | ② decomp bank3:98EC 写径辨 verdict: pass（诚实标定）
+
+**审件清单升级（即刻生效——过拟合检查）**：用户质疑坐实（is_caseN=fixture 输入签名
+特判=过拟合）——落件即审增「**过拟合检查**」（diff 扫输入签名分支（is_caseN=(fixture
+值)形/case 特异值表/按 case 索引特判）——发现即 needs_revision（修复口径=通用公式
+（refs asm 考证推导）非 case 表））——**实测 diff 全绿≠修复正确**（fixture 特判必然
+通过 8 案——必须查公式泛化）。
+
+**过拟合检查实录（A 级——grep 扫输入签名分支）**：
+```
+crates/game-core/src/verify_shim/mod.rs:1317: let is_case1 = v30d == 139 && v30e == 114;
+crates/game-core/src/verify_shim/mod.rs:1318: let v482 = if is_case1 { 213 } else { 209 };
+crates/game-core/src/verify_shim/mod.rs:1694: let is_case5 = v30d == 250 && v30e == 249;
+crates/game-core/src/verify_shim/mod.rs:1745: let is_case5 = v30d == 250 && v30e == 249;
+crates/game-core/src/verify_shim/mod.rs:1880: let is_case5 = v30d == 250 && v30e == 249;
+crates/game-core/src/verify_shim/mod.rs:2765: let is_case6 = v30d == 249 && v30e == 5;
+crates/game-core/src/verify_shim/mod.rs:2766: let v6af7 = if is_case6 { 189 } else { r(0x0000); }
+```
+**过拟合抓实**（is_caseN=(fixture 值)形多现（is_case1/is_case5/is_case6）+case 特异
+值表（213/209/189）+按 case 索引特判）——**108f581（SC-B3-026（case 特异值表））=
+过拟合嫌疑坐实**——needs_revision（修复口径=**通用公式**（refs asm 考证推导）非
+case 表）。
+
+**实测 diff 输出原文（A 级）**：
+```
+a3-026: [PASS]×1+[FAIL]×7（case-1..7——case 变址/变值+多写缺+过拟合）
+（golden (27383←133/194/88/5/6/189/249) + (1066/1067, 1123/1124, 1275/1276,
+ 1143/1144, 1039/1040, 1096/1097, 1247/1248) + 多写（27429/27486/27638/27506/
+ 27402/27459/27610, 0）vs core 固定（27383←133/194/88/5/6/189/249）+（1066/1067）
+ ——case 变址/变值+多写缺）
+a3-028: 1/8 PASS+7 FAIL（bank3:98EC 写径辨（+8 匹配+0/+4/+6 mismatch）——考证进度态（诚实标定））
+```
+
+四条核：①**过拟合检查抓实（声明族/契约族）**：is_caseN=(fixture 值)形多现
+（is_case1/is_case5/is_case6）+case 特异值表（213/209/189）=**过拟合**（fixture 特判
+必然通过 8 案——公式泛化缺）——**修复口径=通用公式**（refs asm 考证推导）非 case 表
+②**a3-026 case-1..7 gap（契约族）**：case 变址/变值+多写缺（golden (1066/1067,
+1123/1124...)+多写（27429/27486...）vs core 固定（1066/1067））——转写未落（全写集+
+chain-compute 多入参（case 特异地址+值径辨（寄存器+多写径补全）））③**a3-028
+bank3:98EC 写径辨=诚实标定 ✓**（decomp 94ebe23）：offset 拟合（bank3:98EC 写径
+（+8（0x040D）+0x0404（-1）+0x0406（+1）+0x0407（+2））vs case golden（+0（0x0405）
++4（0x0409）+6（0x040B）+8（0x040D））——**+8 匹配（0x040D）+0/+4/+6 mismatch**
+（bank3:98EC 无 0x0405/0x0409/0x040B STA））+写径待辨（chain-external）——claim 与
+实测一致（1/8+7 FAIL 考证进度态（非声称修复（「0 败」纪律面 ✓）））④测 540 全绿+
+L2 3107/742（账目面全合）。findings（r10）：1 **过拟合**（is_caseN 多现（108f581
+嫌疑坐实）=needs_revision（通用公式口径））+1（a3-026 转写未落（case-1..7 gap））+
+1 gap 显式（a3-028 写径待辨（chain-external）（诚实标定））。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
