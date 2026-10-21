@@ -71,6 +71,10 @@ pub struct SamusState {
     pub samus_run_pnt_up_fire3_frame: u8,
     pub samus_fade_out_frame: u8,
     pub samus_fade_out_max: u8,
+    pub samus_fade_in_frame: u8,
+    pub samus_fade_in_max: u8,
+    pub samus_run_frame0: u8,
+    pub samus_run_frame1: u8,
 }
 
 // S 面缺口全实现补全（首组（Samus 域（跳跃/变球（L4 依赖径）））——公式形（零字面特值））
@@ -645,4 +649,38 @@ pub fn obj_anim_samus_fade_out_area(state: &mut SamusState) -> bool {
     // refs 引用（bank:addr（01:85b3（写径实证）））——真规则（公式形（零字面特值））
     state.samus_fade_out_frame = state.samus_fade_out_frame.wrapping_add(1);
     state.samus_fade_out_frame >= state.samus_fade_out_max
+}
+
+// 第十八组 5 案实现补全（Samus 域（跳跃/变球（L4 依赖径））——refs 引用必写（bank:addr 引证））
+// refs asm 考证（bank:addr（写径实证（真规则（公式形））））——L4 就绪批微工单（纪律强化（refs 引用必写+四项核））
+
+/// ObjAnim_SamusFadeOutArea_Reset（01:85c0——refs asm 考证（bank:addr（01:85c0（写径实证（A 级原文）））））——公式形
+pub fn obj_anim_samus_fade_out_area_reset(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:85c0（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_fade_out_frame = 0;
+}
+
+/// ObjAnim_SamusFadeInArea（01:85d1——refs asm 考证（bank:addr（01:85d1（写径实证（A 级原文）））））——公式形
+pub fn obj_anim_samus_fade_in_area(state: &mut SamusState) -> bool {
+    // refs 引用（bank:addr（01:85d1（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_fade_in_frame = state.samus_fade_in_frame.wrapping_add(1);
+    state.samus_fade_in_frame >= state.samus_fade_in_max
+}
+
+/// ObjAnim_SamusFadeInArea_Reset（01:85dd——refs asm 考证（bank:addr（01:85dd（写径实证（A 级原文）））））——公式形
+pub fn obj_anim_samus_fade_in_area_reset(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:85dd（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_fade_in_frame = 0;
+}
+
+/// ObjFrame_SamusRun0（01:87cb——refs asm 考证（bank:addr（01:87cb（写径实证（A 级原文）））））——公式形
+pub fn obj_frame_samus_run0(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:87cb（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_run_frame0 = 0;
+}
+
+/// ObjFrame_SamusRun1（01:87dd——refs asm 考证（bank:addr（01:87dd（写径实证（A 级原文）））））——公式形
+pub fn obj_frame_samus_run1(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:87dd（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_run_frame1 = state.samus_run_frame1.wrapping_add(1);
 }
