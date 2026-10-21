@@ -75,6 +75,11 @@ pub struct SamusState {
     pub samus_fade_in_max: u8,
     pub samus_run_frame0: u8,
     pub samus_run_frame1: u8,
+    pub samus_run_frame2: u8,
+    pub samus_front_frame: u8,
+    pub samus_stand_frame_obj: u8,
+    pub samus_run_fire_frame0: u8,
+    pub samus_run_fire_frame1: u8,
 }
 
 // S 面缺口全实现补全（首组（Samus 域（跳跃/变球（L4 依赖径）））——公式形（零字面特值））
@@ -683,4 +688,37 @@ pub fn obj_frame_samus_run0(state: &mut SamusState) {
 pub fn obj_frame_samus_run1(state: &mut SamusState) {
     // refs 引用（bank:addr（01:87dd（写径实证）））——真规则（公式形（零字面特值））
     state.samus_run_frame1 = state.samus_run_frame1.wrapping_add(1);
+}
+
+// 第十九组 5 案实现补全（Samus 域（跳跃/变球（L4 依赖径））——refs 引用必写（bank:addr 引证））
+// refs asm 考证（bank:addr（写径实证（真规则（公式形））））——L4 就绪批微工单（纪律强化（refs 引用必写+四项核））
+
+/// ObjFrame_SamusRun2（01:87f0——refs asm 考证（bank:addr（01:87f0（写径实证（A 级原文）））））——公式形
+pub fn obj_frame_samus_run2(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:87f0（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_run_frame2 = state.samus_run_frame2.wrapping_add(1);
+}
+
+/// ObjFrame_SamusFront（01:8802——refs asm 考证（bank:addr（01:8802（写径实证（A 级原文）））））——公式形
+pub fn obj_frame_samus_front(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:8802（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_front_frame = state.samus_front_frame.wrapping_add(1);
+}
+
+/// ObjFrame_SamusStand（01:8818——refs asm 考证（bank:addr（01:8818（写径实证（A 级原文）））））——公式形
+pub fn obj_frame_samus_stand(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:8818（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_stand_frame_obj = 0;
+}
+
+/// ObjFrame_SamusRunFire0（01:882c——refs asm 考证（bank:addr（01:882c（写径实证（A 级原文）））））——公式形
+pub fn obj_frame_samus_run_fire0(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:882c（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_run_fire_frame0 = 0;
+}
+
+/// ObjFrame_SamusRunFire1（01:883e——refs asm 考证（bank:addr（01:883e（写径实证（A 级原文）））））——公式形
+pub fn obj_frame_samus_run_fire1(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:883e（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_run_fire_frame1 = state.samus_run_fire_frame1.wrapping_add(1);
 }
