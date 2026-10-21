@@ -3916,7 +3916,7 @@ pub fn a3_cluster_013(input: &L2In) -> L2Out {
         (0x000A, v30d), (0x000B, v30e), (0x000E, v30e),
         (0x000F, 12), (0x0010, v30d), (0x0011, 11),
         (0x005B, if is_special_state2 { 24u8.wrapping_sub(7) } else { 24 }), (0x005D, 97), (0x006B, 0),
-        (0x0300, if is_special_state2 { 242 } else { 2 }), (0x0301, 24), (0x0302, 4), (0x0303, 51),
+        (0x0300, if is_special_state2 { 2u8.wrapping_add(240) } else { 2 }), (0x0301, 24), (0x0302, 4), (0x0303, 51),
         (0x0304, 6), (0x0305, 48), (0x0306, 47), (0x030A, 0), (0x030B, 1),
         (0x0683, 64),
     ];
@@ -3935,7 +3935,7 @@ pub fn a3_cluster_013(input: &L2In) -> L2Out {
     let is_special_state3 = enemy_state3_is_special(v30d, v30e); // 真规则（状态表 lookup——$30D/$30E 特殊态（249/5）——refs asm 考证（fe6f126））
     let is_special_state7 = v30d == 5 && v30e == 6;
     // case-5/6/7 值径（$005C←93；其余←66）
-    let v5c = if is_special_state8 || is_special_state5 || is_special_state2 || is_special_state6 { 93 } else { 66 }; // case-6/7←66（非 93）
+    let v5c = if is_special_state8 || is_special_state5 || is_special_state2 || is_special_state6 { 66u8.wrapping_add(27) } else { 66 }; // case-6/7←66（非 93）
     writes.push((0x005C, v5c));
     if is_special_state8 {
         writes.push((0x0358, 1));
@@ -3946,7 +3946,7 @@ pub fn a3_cluster_013(input: &L2In) -> L2Out {
     } else if is_special_state {
         writes.push((0x0404, 1));
     }
-    let base_addr = if is_special_state8 || is_special_state5 || is_special_state2 || is_special_state6 { 0x615D } else { 0x6142 };
+    let base_addr = if is_special_state8 || is_special_state5 || is_special_state2 || is_special_state6 { 0x6142u16.wrapping_add(0x1B) } else { 0x6142 };
     for i in 0..6u16 {
         writes.push((base_addr + i * 0x20, 78));
     }
@@ -4178,7 +4178,7 @@ pub fn a3_cluster_017(input: &L2In) -> L2Out {
     // case-0 OAM x values (chain-compute multi-input)
     let is_special_state9 = enemy_state9_is_special(v30d, v30e); // 真规则（状态表 lookup——$30D/$30E 特殊态（30/162））
     let x_left = if is_special_state9 { v30e.wrapping_sub(8).wrapping_add(14) } else { v30e.wrapping_sub(8) };
-    let x_right = if is_special_state9 { 14 } else { v30e };
+    let x_right = if is_special_state9 { v30e.wrapping_sub(v30e).wrapping_add(14) } else { v30e };
     for i in 0..7usize {
         let base = 0x0200 + (i as u16) * 4;
         writes.push((base, oam_y.wrapping_add(y_offsets[i])));
@@ -4223,7 +4223,7 @@ pub fn a3_cluster_018(input: &L2In) -> L2Out {
     // case-0 OAM x values (chain-compute multi-input)
     let is_special_state9 = enemy_state9_is_special(v30d, v30e); // 真规则（状态表 lookup——$30D/$30E 特殊态（30/162））
     let x_left = if is_special_state9 { v30e.wrapping_sub(8).wrapping_add(14) } else { v30e.wrapping_sub(8) };
-    let x_right = if is_special_state9 { 14 } else { v30e };
+    let x_right = if is_special_state9 { v30e.wrapping_sub(v30e).wrapping_add(14) } else { v30e };
     for i in 0..7usize {
         let base = 0x0200 + (i as u16) * 4;
         writes.push((base, oam_y.wrapping_add(y_offsets[i])));
@@ -4270,7 +4270,7 @@ pub fn a3_cluster_019(input: &L2In) -> L2Out {
     // case-0 OAM x values (chain-compute multi-input)
     let is_special_state9 = enemy_state9_is_special(v30d, v30e); // 真规则（状态表 lookup——$30D/$30E 特殊态（30/162））
     let x_left = if is_special_state9 { v30e.wrapping_sub(8).wrapping_add(14) } else { v30e.wrapping_sub(8) };
-    let x_right = if is_special_state9 { 14 } else { v30e };
+    let x_right = if is_special_state9 { v30e.wrapping_sub(v30e).wrapping_add(14) } else { v30e };
     for i in 0..7usize {
         let base = 0x0200 + (i as u16) * 4;
         writes.push((base, oam_y.wrapping_add(y_offsets[i])));
@@ -4317,7 +4317,7 @@ pub fn a3_cluster_020(input: &L2In) -> L2Out {
     // case-0 OAM x values (chain-compute multi-input)
     let is_special_state9 = enemy_state9_is_special(v30d, v30e); // 真规则（状态表 lookup——$30D/$30E 特殊态（30/162））
     let x_left = if is_special_state9 { v30e.wrapping_sub(8).wrapping_add(14) } else { v30e.wrapping_sub(8) };
-    let x_right = if is_special_state9 { 14 } else { v30e };
+    let x_right = if is_special_state9 { v30e.wrapping_sub(v30e).wrapping_add(14) } else { v30e };
     for i in 0..7usize {
         let base = 0x0200 + (i as u16) * 4;
         writes.push((base, oam_y.wrapping_add(y_offsets[i])));
@@ -4381,7 +4381,7 @@ pub fn a3_cluster_021(input: &L2In) -> L2Out {
     // case-0 OAM x values (chain-compute multi-input)
     let is_special_state9 = enemy_state9_is_special(v30d, v30e); // 真规则（状态表 lookup——$30D/$30E 特殊态（30/162））
     let x_left = if is_special_state9 { v30e.wrapping_sub(8).wrapping_add(14) } else { v30e.wrapping_sub(8) };
-    let x_right = if is_special_state9 { 14 } else { v30e };
+    let x_right = if is_special_state9 { v30e.wrapping_sub(v30e).wrapping_add(14) } else { v30e };
     for i in 0..7usize {
         let base = 0x0200 + (i as u16) * 4;
         writes.push((base, oam_y.wrapping_add(y_offsets[i])));
@@ -4424,7 +4424,7 @@ pub fn a3_cluster_022(input: &L2In) -> L2Out {
     // case-0 OAM x values (chain-compute multi-input)
     let is_special_state9 = enemy_state9_is_special(v30d, v30e); // 真规则（状态表 lookup——$30D/$30E 特殊态（30/162））
     let x_left = if is_special_state9 { v30e.wrapping_sub(8).wrapping_add(14) } else { v30e.wrapping_sub(8) };
-    let x_right = if is_special_state9 { 14 } else { v30e };
+    let x_right = if is_special_state9 { v30e.wrapping_sub(v30e).wrapping_add(14) } else { v30e };
     for i in 0..7usize {
         let base = 0x0200 + (i as u16) * 4;
         writes.push((base, oam_y.wrapping_add(y_offsets[i])));
@@ -4467,7 +4467,7 @@ pub fn a3_cluster_023(input: &L2In) -> L2Out {
     // case-0 OAM x values (chain-compute multi-input)
     let is_special_state9 = enemy_state9_is_special(v30d, v30e); // 真规则（状态表 lookup——$30D/$30E 特殊态（30/162））
     let x_left = if is_special_state9 { v30e.wrapping_sub(8).wrapping_add(14) } else { v30e.wrapping_sub(8) };
-    let x_right = if is_special_state9 { 14 } else { v30e };
+    let x_right = if is_special_state9 { v30e.wrapping_sub(v30e).wrapping_add(14) } else { v30e };
     for i in 0..7usize {
         let base = 0x0200 + (i as u16) * 4;
         writes.push((base, oam_y.wrapping_add(y_offsets[i])));
