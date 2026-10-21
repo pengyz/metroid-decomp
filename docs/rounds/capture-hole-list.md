@@ -67,3 +67,13 @@ l2=5   a8=40  a6=40  +md_*系（6）+vf152/vr/g3_sfx2_sq1init/g4_*（4）
 > ——**甄别待深化**（写径条件核（refs asm（bank07:F2CA 写径实证（碰撞条件（fixture 触发核）））））
 > 判定：**待深化**（早退出候选（正零写形）/真洞证二辨（写径条件（fixture 触发核）后定））
 > 注：5 案样本（gen-f2ca-1/2/3/5/b-f2ca-c1-exit（in.ram=5~15 项（fixture 设定））——281 案首组样本）。
+
+> 【2026-10-21 gen-f2ca 族写径条件核（lead 直接落档（早退出径实证（A 级实录）））】
+> refs/m1disasm/SRC/prg7_engine.asm 写径实证（bank07:F2CA 域）：
+> CollisionDetectionEnemy_ReactToCollisionWithSamusProjectile = 被调径（dispatcher 内）
+> ——调用前置条件链：AreObjectsTouching→Yplus16/Xminus16（近距检）→IsSamusDead→**beq NextEnemy（早退出径）**
+> ——**早退出径实证**：fixture 未触发碰撞条件（AreObjectsTouching/近距检不满足）→beq NextEnemy（早退）
+>   →写径 routine 不调→空写集=正当（**正零写形（早退出）**）
+> ——gen-f2ca 族 5 案判定：**早退出候选证**（beq NextEnemy（早退出径（写径不触发（空写集正当））））
+>   vs 真洞证需 fixture 触发核（fixture in.ram（0300/0010 等）→碰撞条件触发核（待深化（逐案核）））
+> 注：beq NextEnemy=结构早退出实证（写径 routine 不可达径）——281 案甄别深化（逐案（fixture 触发核））待。
