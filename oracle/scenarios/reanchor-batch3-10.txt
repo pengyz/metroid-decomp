@@ -1,0 +1,5 @@
+# batch 3 plan (case 10/20)
+# case_id: vr-4
+# injection path: frame 150 injection correct path (post-boot injection (RAM init clear path after injection))
+# register name -> CPU state injection (emu.setRegister (enum form (368b44e caliber)))
+fixture 150 0000 00
