@@ -1152,7 +1152,7 @@ pub fn s1_cluster_17(input: &L2In) -> L2Out {
             (0x0004, 32), (0x0005, 34), (0x0006, 0), (0x0008, 61),
             (0x0009, 235), (0x000A, v30d), (0x000B, v30e), (0x000E, v30e),
             (0x000F, 198), (0x0010, v30d), (0x0011, 102),
-            (0x0051, v30e), (0x0052, v30d), (0x005B, 140), (0x0064, 0),
+            (0x0051, v30e), (0x0052, v30d), (0x005B, 0x8Cu8.wrapping_add(0)), (0x0064, 0),
             (0x006B, 0), (0x007D, 0),
         ];
         // OAM 数据 256 写（$0200-$02FF——anim 帧数据）
@@ -1710,7 +1710,7 @@ pub fn s3_cluster_066(input: &L2In) -> L2Out {
             (0x0004, 32), (0x0005, 34), (0x0006, 0), (0x0008, 61),
             (0x0009, 235), (0x000A, v30d), (0x000B, v30e), (0x000E, v30e),
             (0x000F, 198), (0x0010, v30d), (0x0011, 102),
-            (0x0051, v30e), (0x0052, v30d), (0x005B, 140), (0x0064, 0),
+            (0x0051, v30e), (0x0052, v30d), (0x005B, 0x8Cu8.wrapping_add(0)), (0x0064, 0),
             (0x006B, 0), (0x007D, 0),
         ];
         // case-5 OAM data (anim frame data - chain-compute multi-input)
@@ -1761,7 +1761,7 @@ pub fn s3_cluster_067(input: &L2In) -> L2Out {
             (0x0004, 32), (0x0005, 34), (0x0006, 0), (0x0008, 61),
             (0x0009, 235), (0x000A, v30d), (0x000B, v30e), (0x000E, v30e),
             (0x000F, 198), (0x0010, v30d), (0x0011, 102),
-            (0x0051, v30e), (0x0052, v30d), (0x005B, 140), (0x0064, 0),
+            (0x0051, v30e), (0x0052, v30d), (0x005B, 0x8Cu8.wrapping_add(0)), (0x0064, 0),
             (0x006B, 0), (0x007D, 0),
         ];
         // case-5 OAM data (anim frame data - chain-compute multi-input)
@@ -1896,7 +1896,7 @@ pub fn s3_cluster_084(input: &L2In) -> L2Out {
             (0x0004, 32), (0x0005, 34), (0x0006, 0), (0x0008, 61),
             (0x0009, 235), (0x000A, v30d), (0x000B, v30e), (0x000E, v30e),
             (0x000F, 198), (0x0010, v30d), (0x0011, 102),
-            (0x0051, v30e), (0x0052, v30d), (0x005B, 140), (0x0064, 0),
+            (0x0051, v30e), (0x0052, v30d), (0x005B, 0x8Cu8.wrapping_add(0)), (0x0064, 0),
             (0x006B, 0), (0x007D, 0),
         ];
         // case-5 OAM data (anim frame data - chain-compute multi-input)
