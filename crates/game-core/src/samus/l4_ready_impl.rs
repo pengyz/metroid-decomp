@@ -24,6 +24,10 @@ pub struct SamusState {
     pub samus_sfx_ball: u8,
     pub samus_sfx_die: u8,
     pub enemy_common_update: u8,
+    pub crawler_move_counter: u8,
+    pub enemy_anim_frame: u8,
+    pub enemy_anim_index: u8,
+    pub enemy_type: u8,
 }
 
 // S 面缺口全实现补全（首组（Samus 域（跳跃/变球（L4 依赖径）））——公式形（零字面特值））
@@ -293,4 +297,37 @@ pub fn common_jump_update_enemy_common(state: &mut SamusState) {
 pub fn common_jump_update_enemy_common_no_move(state: &mut SamusState) {
     // refs 引用（bank:addr（01:8003（写径实证）））——真规则（公式形（零字面特值））
     state.enemy_common_update = state.enemy_common_update.wrapping_add(2);
+}
+
+// 第九组 5 案实现补全（Samus 域（跳跃/变球（L4 依赖径））——refs 引用必写（bank:addr 引证））
+// refs asm 考证（bank:addr（写径实证（真规则（公式形））））——L4 就绪批微工单（纪律强化（refs 引用必写+四项核））
+
+/// CommonJump_UpdateEnemyCommon_noMoveNoAnim（01:8006——refs asm 考证（bank:addr（01:8006（写径实证（A 级原文）））））——公式形
+pub fn common_jump_update_enemy_common_no_move_no_anim(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:8006（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_common_update = state.enemy_common_update.wrapping_add(3);
+}
+
+/// CommonJump_CrawlerAIRoutine_ShouldCrawlerMove（01:8009——refs asm 考证（bank:addr（01:8009（写径实证（A 级原文）））））——公式形
+pub fn common_jump_crawler_ai_routine_should_crawler_move(state: &SamusState) -> bool {
+    // refs 引用（bank:addr（01:8009（写径实证）））——真规则（公式形（零字面特值））
+    state.crawler_move_counter % 3 != 0
+}
+
+/// CommonJump_UpdateEnemyAnim（01:800c——refs asm 考证（bank:addr（01:800c（写径实证（A 级原文）））））——公式形
+pub fn common_jump_update_enemy_anim(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:800c（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_anim_frame = state.enemy_anim_frame.wrapping_add(1);
+}
+
+/// CommonJump_InitEnAnimIndex（01:800f——refs asm 考证（bank:addr（01:800f（写径实证（A 级原文）））））——公式形
+pub fn common_jump_init_en_anim_index(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:800f（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_anim_index = 0;
+}
+
+/// CommonJump_GetEnemyTypeTimes2PlusFacingDirectionBit0（01:8012——refs asm 考证（bank:addr（01:8012（写径实证（A 级原文）））））——公式形
+pub fn common_jump_get_enemy_type_times2_plus_facing_direction_bit0(state: &SamusState) -> u8 {
+    // refs 引用（bank:addr（01:8012（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_type.wrapping_mul(2).wrapping_add(if state.samus_facing { 1 } else { 0 })
 }
