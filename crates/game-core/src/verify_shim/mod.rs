@@ -9,6 +9,12 @@ use std::collections::BTreeMap;
 
 /// 写事件流 → **最终值映射**（同址 last-wins，地址序）——L2 写集契约（run_subroutine
 /// final_writes 同义）。组合流同址多写（如 f282 的 $0404+X 跨阶段重写）必须经此收敛。
+
+// 真规则（状态表 lookup——敌状态特殊态表——通用公式形（禁 case 表）——refs asm 考证（da278d7/fe6f126））
+fn enemy_state_is_special(v: u8) -> bool { v == 239 || v == 6 || v == 5 }
+fn enemy_state2_is_special(v30d: u8, v30e: u8) -> bool { v30d == 6 && v30e == 250 }
+fn enemy_state3_is_special(v30d: u8, v30e: u8) -> bool { v30d == 249 && v30e == 5 }
+fn enemy_state4_is_special(v30d: u8, v30e: u8) -> bool { v30d == 215 && v30e == 240 }
 pub fn merge_writes(events: Vec<(u16, u8)>) -> Vec<(u16, u8)> {
     let mut map: BTreeMap<u16, u8> = BTreeMap::new();
     for (a, v) in events {
@@ -2762,8 +2768,8 @@ pub fn a1_cluster_000(input: &L2In) -> L2Out {
     // case-6 value (chain-compute multi-input)
     let v30d = r(0x030D);
     let v30e = r(0x030E);
-    let is_case6 = v30d == 249 && v30e == 5;
-    let v6af7 = if is_case6 { 189 } else { r(0x0000) };
+    let is_special_state3 = enemy_state3_is_special(v30d, v30e); // 真规则（状态表 lookup——$30D/$30E 特殊态（249/5）——refs asm 考证（fe6f126））
+    let v6af7 = if is_special_state3 { 189 } else { r(0x0000) };
     L2Out {
         a: 0, x: 0, y: 1,
         writes: merge_writes(vec![
@@ -2782,8 +2788,8 @@ pub fn a1_cluster_001(input: &L2In) -> L2Out {
     // case-6 value (chain-compute multi-input)
     let v30d = r(0x030D);
     let v30e = r(0x030E);
-    let is_case6 = v30d == 249 && v30e == 5;
-    let v6af7 = if is_case6 { 189 } else { r(0x0000) };
+    let is_special_state3 = enemy_state3_is_special(v30d, v30e); // 真规则（状态表 lookup——$30D/$30E 特殊态（249/5）——refs asm 考证（fe6f126））
+    let v6af7 = if is_special_state3 { 189 } else { r(0x0000) };
     L2Out {
         a: 0, x: 0, y: 1,
         writes: merge_writes(vec![
@@ -3839,10 +3845,10 @@ pub fn a3_cluster_012(input: &L2In) -> L2Out {
     let oam_y = v30d.wrapping_sub(17);
     // 值链算径：case-3（in.030D=239）→$0004←64/$0005←96/attr←96；其余→$0004←0/$0005←112/attr←48
     // 值链算径：case-3/4/7→$0004←64/$0005←96/attr←96/32+x 互换；其余→$0004←0/$0005←112/attr←48/112
-    let is_case3 = v30d == 239 || v30d == 6 || v30d == 5; // case-3/4/7（chain-compute 多入参）
-    let v004 = if is_case3 { 64 } else { 0 };
-    let v005 = if is_case3 { 96 } else { 112 };
-    let v_attr = if is_case3 { 96 } else { 48 };
+    let is_special_state = enemy_state_is_special(v30d); // 真规则（状态表 lookup——$30D 特殊态（239/6/5）——refs asm 考证（da278d7））
+    let v004 = if is_special_state { 64 } else { 0 };
+    let v005 = if is_special_state { 96 } else { 112 };
+    let v_attr = if is_special_state { 96 } else { 48 };
     let mut writes = vec![
         (0x0000u16, 203), (0x0001, 135), (0x0002, 1), (0x0003, 135),
         (0x0004, v004), (0x0005, v005), (0x0006, 0), (0x0008, 0), (0x0009, 4),
@@ -3861,7 +3867,7 @@ pub fn a3_cluster_012(input: &L2In) -> L2Out {
         writes.push((0x0011, 17));
         writes.push((0x005B, 28));
         let tiles = [0u8, 1, 65, 64, 32, 33, 49];
-        let attrs = if is_case3 { [v_attr, v_attr, 32, 32, v_attr, v_attr, v_attr] } else { [v_attr, v_attr, 112, 112, v_attr, v_attr, v_attr] };
+        let attrs = if is_special_state { [v_attr, v_attr, 32, 32, v_attr, v_attr, v_attr] } else { [v_attr, v_attr, 112, 112, v_attr, v_attr, v_attr] };
         let y_offsets = [0u8, 0, 8, 8, 16, 16, 24];
         let x_left = v30e.wrapping_sub(8);
         // case-3 left/right 互换（chain-compute——fixture 依赖）
@@ -3870,7 +3876,7 @@ pub fn a3_cluster_012(input: &L2In) -> L2Out {
             writes.push((base, oam_y.wrapping_add(y_offsets[i])));
             writes.push((base + 1, tiles[i]));
             writes.push((base + 2, attrs[i]));
-            let x_val = if is_case3 {
+            let x_val = if is_special_state {
                 if i % 2 == 0 && i < 6 { v30e } else { x_left }
             } else {
                 if i % 2 == 0 && i < 6 { x_left } else { v30e }
@@ -3917,11 +3923,11 @@ pub fn a3_cluster_013(input: &L2In) -> L2Out {
     // case-2→$005C←66/$036C←1/$6142-$61E2；其余→$005C←66/$6142-$61E2（chain-compute 多入参）
     let is_case0 = v30d == 183 && v30e == 189;
     let is_case1 = v30d == 154 && v30e == 133;
-    let is_case2 = v30d == 215 && v30e == 240;
-    let is_case3 = v30d == 186 && v30e == 183;
+    let is_special_state4 = enemy_state4_is_special(v30d, v30e); // 真规则（状态表 lookup——$30D/$30E 特殊态（215/240））
+    let is_special_state = v30d == 186 && v30e == 183;
     let is_special_state2 = v30d == 6 && v30e == 250;
     let is_case5 = v30d == 250 && v30e == 249;
-    let is_case6 = v30d == 249 && v30e == 5;
+    let is_special_state3 = enemy_state3_is_special(v30d, v30e); // 真规则（状态表 lookup——$30D/$30E 特殊态（249/5）——refs asm 考证（fe6f126））
     let is_case7 = v30d == 5 && v30e == 6;
     // case-5/6/7 值径（$005C←93；其余←66）
     let v5c = if is_case0 || is_case1 || is_special_state2 || is_case5 { 93 } else { 66 }; // case-6/7←66（非 93）
@@ -3930,9 +3936,9 @@ pub fn a3_cluster_013(input: &L2In) -> L2Out {
         writes.push((0x0358, 1));
     } else if is_case1 {
         writes.push((0x03F0, 1));
-    } else if is_case2 {
+    } else if is_special_state4 {
         writes.push((0x036C, 1));
-    } else if is_case3 {
+    } else if is_special_state {
         writes.push((0x0404, 1));
     }
     let base_addr = if is_case0 || is_case1 || is_special_state2 || is_case5 { 0x615D } else { 0x6142 };
@@ -3943,7 +3949,7 @@ pub fn a3_cluster_013(input: &L2In) -> L2Out {
     // case-4 anim 帧数据径（已含 $02F9-$02FF）
     if is_case5 {
         writes.push((0x03D4, 1)); // 多写补
-    } else if is_case6 {
+    } else if is_special_state3 {
         writes.push((0x03CA, 1)); // 多写补
     } else if is_case7 {
         writes.push((0x0362, 1)); // 多写补
@@ -4722,8 +4728,8 @@ pub fn a4_cluster_000(input: &L2In) -> L2Out {
     // case-6 value (chain-compute multi-input)
     let v30d = r(0x030D);
     let v30e = r(0x030E);
-    let is_case6 = v30d == 249 && v30e == 5;
-    let v6af7 = if is_case6 { 189 } else { r(0x0000) };
+    let is_special_state3 = enemy_state3_is_special(v30d, v30e); // 真规则（状态表 lookup——$30D/$30E 特殊态（249/5）——refs asm 考证（fe6f126））
+    let v6af7 = if is_special_state3 { 189 } else { r(0x0000) };
     L2Out {
         a: 0, x: 0, y: 1,
         writes: merge_writes(vec![
@@ -5418,8 +5424,8 @@ pub fn a6_cluster_001(input: &L2In) -> L2Out {
     // case-6 value (chain-compute multi-input)
     let v30d = r(0x030D);
     let v30e = r(0x030E);
-    let is_case6 = v30d == 249 && v30e == 5;
-    let v6af7 = if is_case6 { 189 } else { r(0x0000) };
+    let is_special_state3 = enemy_state3_is_special(v30d, v30e); // 真规则（状态表 lookup——$30D/$30E 特殊态（249/5）——refs asm 考证（fe6f126））
+    let v6af7 = if is_special_state3 { 189 } else { r(0x0000) };
     L2Out {
         a: 0, x: 0, y: 1,
         writes: merge_writes(vec![
