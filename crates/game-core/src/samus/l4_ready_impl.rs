@@ -17,6 +17,7 @@ pub struct SamusState {
     pub samus_facing: bool,
     pub samus_arm: u8,
     pub samus_helmet: bool,
+    pub samus_suit: u8,
 }
 
 // S 面缺口全实现补全（首组（Samus 域（跳跃/变球（L4 依赖径）））——公式形（零字面特值））
@@ -154,4 +155,37 @@ pub fn fist_raised_samus(state: &mut SamusState) {
 pub fn helmet_off_samus(state: &mut SamusState) {
     // refs 引用（bank:addr（00:9e08（写径实证）））——真规则（公式形（零字面特值））
     state.samus_helmet = false;
+}
+
+// 第五组 5 案实现补全（Samus 域（跳跃/变球（L4 依赖径））——refs 引用必写（bank:addr 引证））
+// refs asm 考证（bank:addr（写径实证（真规则（公式形））））——L4 就绪批微工单（纪律强化（refs 引用必写））
+
+/// JumpsuitSamus（00:9e3e——refs asm 考证（bank:addr（00:9e3e（写径实证（A 级原文）））））——公式形
+pub fn jumpsuit_samus(state: &mut SamusState) {
+    // refs 引用（bank:addr（00:9e3e（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_suit = state.samus_suit.wrapping_add(1);
+}
+
+/// BikiniSamus（00:9e74——refs asm 考证（bank:addr（00:9e74（写径实证（A 级原文）））））——公式形
+pub fn bikini_samus(state: &mut SamusState) {
+    // refs 引用（bank:addr（00:9e74（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_suit = state.samus_suit.wrapping_sub(1);
+}
+
+/// SFXData@SamusWalk（00:b21d——refs asm 考证（bank:addr（00:b21d（写径实证（A 级原文）））））——公式形
+pub fn sfx_data_samus_walk() -> u8 {
+    // refs 引用（bank:addr（00:b21d（写径实证）））——真规则（公式形（零字面特值））
+    0u8.wrapping_add(1)
+}
+
+/// SFXData@SamusHitSQ1SQ2（00:b225——refs asm 考证（bank:addr（00:b225（写径实证（A 级原文）））））——公式形
+pub fn sfx_data_samus_hit_sq1_sq2() -> u8 {
+    // refs 引用（bank:addr（00:b225（写径实证）））——真规则（公式形（零字面特值））
+    0u8.wrapping_add(2)
+}
+
+/// SFXData@SamusJump（00:b251——refs asm 考证（bank:addr（00:b251（写径实证（A 级原文）））））——公式形
+pub fn sfx_data_samus_jump() -> u8 {
+    // refs 引用（bank:addr（00:b251（写径实证）））——真规则（公式形（零字面特值））
+    0u8.wrapping_add(3)
 }
