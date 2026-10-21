@@ -577,7 +577,7 @@ local function applyFixtures()
       -- task-32 实战修正：MEMTYPE=8 数值枚举（探针实证 emu.memType.cpu=nil/"cpu" 待验
       -- ——write 用 MEMTYPE 同 readByte 口径）
       -- CPU 态 register 注入径（register set API（非 RAM 地址）——a/x/y/p→emu 寄存器设置）
-      local regMap = { a = "a", x = "x", y = "y", p = "p" }
+      local regMap = { a = "A", x = "X", y = "Y", p = "P" } -- Mesen2 register 名形（大写——port2 口径）
       local regName = regMap[fx.addr]
       local okw, errw
       if regName then
