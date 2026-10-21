@@ -27,6 +27,13 @@ RE_IS_CASE = re.compile(r"let\s+is_case(\d+)\s*=\s*[^;]*==[^;]*;")
 RE_CASE_TABLE = re.compile(r"if\s+is_case\d+\s*\{[^}]*\}\s*else\s*\{[^}]*\}")
 # 形 3：按 case 索引特判形
 RE_CASE_INDEX = re.compile(r"(match\s+case|case_index\s*==|CASE_TABLE|case_table)")
+# 形 4：字面 vs 公式分支形（新形 whack-a-mole 防——2026-10-21 扩检）
+# 字面特值 vs 公式表达式分支（含 rename 后敌状态谓词形（值域=cases.jsonl fixture 值提取比对））
+RE_LITERAL_VS_FORMULA = re.compile(
+    r"if\s+\w+\s*\{[^}]*\b\d+\b[^}]*\}\s*else\s*\{[^}]*\b\d+\b[^}]*\}"
+    r"|if\s+\w+\s*==\s*\d+.*?\{.*?\d+.*?\}\s*else\s*\{.*?\d+.*?\}"
+    r"|if\s+\w+_is_special\w*\s*\{[^}]*\b\d+\b[^}]*\}"
+)
 
 
 def scan(path: Path):
@@ -35,6 +42,7 @@ def scan(path: Path):
     is_case_hits = []
     table_hits = []
     index_hits = []
+    literal_hits = []
     for i, line in enumerate(text.splitlines(), 1):
         if RE_IS_CASE.search(line):
             is_case_hits.append((i, line.strip()))
@@ -42,7 +50,9 @@ def scan(path: Path):
             table_hits.append((i, line.strip()))
         if RE_CASE_INDEX.search(line):
             index_hits.append((i, line.strip()))
-    return is_case_hits, table_hits, index_hits
+        if RE_LITERAL_VS_FORMULA.search(line):
+            literal_hits.append((i, line.strip()))
+    return is_case_hits, table_hits, index_hits, literal_hits
 
 
 def main():
@@ -56,7 +66,7 @@ def main():
         print(f"FAIL —— 目标文件不存在: {path}")
         return 1
 
-    is_case_hits, table_hits, index_hits = scan(path)
+    is_case_hits, table_hits, index_hits, literal_hits = scan(path)
 
     if baseline:
         print(f"基线清单（存量——不判红）: {path.relative_to(REPO)}")
@@ -76,7 +86,7 @@ def main():
         return 0
 
     # 判红：任何 is_caseN/case 值表/case 索引特判 = FAIL
-    total = len(is_case_hits) + len(table_hits) + len(index_hits)
+    total = len(is_case_hits) + len(table_hits) + len(index_hits) + len(literal_hits)
     if total > 0:
         print(f"FAIL —— 过拟合形检出（is_caseN 形/case 特异值表形/按 case 索引特判形）")
         print(f"  is_caseN 形: {len(is_case_hits)} 处")
@@ -87,6 +97,9 @@ def main():
             print(f"    {ln}: {txt[:100]}")
         print(f"  case 索引形: {len(index_hits)} 处")
         for ln, txt in index_hits[:10]:
+            print(f"    {ln}: {txt[:100]}")
+        print(f"  字面 vs 公式分支形: {len(literal_hits)} 处")
+        for ln, txt in literal_hits[:10]:
             print(f"    {ln}: {txt[:100]}")
         print("修复口径=通用公式（refs asm 考证推导）非 case 表（fixture 特判必然通过 8 案——必须查公式泛化）")
         return 1
