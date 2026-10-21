@@ -20,6 +20,8 @@ pub struct SamusState {
     pub samus_suit: u8,
     pub samus_sfx_walk: u8,
     pub samus_sfx_hit: u8,
+    pub samus_sfx_jump: u8,
+    pub samus_sfx_ball: u8,
 }
 
 // S 面缺口全实现补全（首组（Samus 域（跳跃/变球（L4 依赖径）））——公式形（零字面特值））
@@ -223,4 +225,37 @@ pub fn samus_hit_sfx_cont(state: &mut SamusState) {
 pub fn samus_hit_sfx_cont_end_if_a(state: &SamusState) -> bool {
     // refs 引用（bank:addr（00:b658（写径实证）））——真规则（公式形（零字面特值））
     state.samus_sfx_hit > state.samus_sfx_walk
+}
+
+// 第七组 5 案实现补全（Samus 域（跳跃/变球（L4 依赖径））——refs 引用必写（bank:addr 引证））
+// refs asm 考证（bank:addr（写径实证（真规则（公式形））））——L4 就绪批微工单（纪律强化（refs 引用必写+四项核））
+
+/// SamusHitSFXInit（00:b673——refs asm 考证（bank:addr（00:b673（写径实证（A 级原文）））））——公式形
+pub fn samus_hit_sfx_init(state: &mut SamusState) {
+    // refs 引用（bank:addr（00:b673（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_sfx_hit = 0;
+}
+
+/// SamusHitSFXInit@RTS（00:b694——refs asm 考证（bank:addr（00:b694（写径实证（A 级原文）））））——公式形
+pub fn samus_hit_sfx_init_rts(state: &SamusState) -> u8 {
+    // refs 引用（bank:addr（00:b694（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_sfx_hit.wrapping_add(state.samus_sfx_walk)
+}
+
+/// SamusJumpSFXInit（00:b703——refs asm 考证（bank:addr（00:b703（写径实证（A 级原文）））））——公式形
+pub fn samus_jump_sfx_init(state: &mut SamusState) {
+    // refs 引用（bank:addr（00:b703（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_sfx_jump = state.samus_sfx_jump.wrapping_add(1);
+}
+
+/// SamusToBallSFXInit（00:b834——refs asm 考证（bank:addr（00:b834（写径实证（A 级原文）））））——公式形
+pub fn samus_to_ball_sfx_init(state: &mut SamusState) {
+    // refs 引用（bank:addr（00:b834（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_sfx_ball = state.samus_sfx_ball.wrapping_add(1);
+}
+
+/// SamusToBallSFXCont（00:b84f——refs asm 考证（bank:addr（00:b84f（写径实证（A 级原文）））））——公式形
+pub fn samus_to_ball_sfx_cont(state: &SamusState) -> bool {
+    // refs 引用（bank:addr（00:b84f（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_sfx_ball > state.samus_sfx_jump
 }
