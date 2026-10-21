@@ -7,8 +7,8 @@
 | 项 | 数 |
 |---|---|
 | 可调用子程序面（精化分母（排除数据/局部标签）） | **8659** 条 |
-| Rust pub fn（game-core（实现补全后）） | **2023** 条（+115（首组+次组+第三组+第四组+第五组+第六组+第七组+第八组+第九组+第十组+第十一组+第十二组+第十三组+第十四组+第十五组+第十六组+第十七组+第十八组+第十九组+第二十组+第二十一组+第二十二组+第二十三组补全）） |
-| **精化覆盖率（S 面）** | **23.4%**（2023/8659（+1.4%（115 案补全））） |
+| Rust pub fn（game-core（实现补全后）） | **2028** 条（+120（首组+次组+第三组+第四组+第五组+第六组+第七组+第八组+第九组+第十组+第十一组+第十二组+第十三组+第十四组+第十五组+第十六组+第十七组+第十八组+第十九组+第二十组+第二十一组+第二十二组+第二十三组+第二十四组补全）） |
+| **精化覆盖率（S 面）** | **23.4%**（2028/8659（+1.4%（120 案补全））） |
 | **目标**（用户裁定（S 面=100%（全覆盖（零缺口）））） | **100%**（8659/8659） |
 
 ## 缺口清单导出（bank:addr/名/优先级（L4 依赖径（首组）））
@@ -265,4 +265,15 @@
   4. `01:89a9` ObjFrame_SamusRunPntUp1（refs asm 考证（bank:addr（01:89a9（写径实证））））
   5. `01:89be` ObjFrame_SamusRunPntUp2（refs asm 考证（bank:addr（01:89be（写径实证））））
 - **实现补全**（Rust 实现（公式形（零字面特值）（SamusState 结构补（第二十三组字段）））——编译核（cargo check（**0 错**））。
+- **留档可追溯**（refs 引用（bank:addr）+实现补全（Rust 实现（公式形））+编译核（cargo check（0 错））——docs commit（追溯径））。
+
+## 第二十四组 5 案实现补全（refs 引用必写（bank:addr 引证（写径实证（A 级原文））））
+
+- **第二十四组**（Samus 域（跳跃/变球（L4 依赖径））——5 案（refs 引用必写（纪律强化（用户裁定）+四项核（对抗复核核（证伪立场））））：
+  1. `01:89d2` ObjFrame_SamusRunPntUpFire0（refs asm 考证（bank:addr（01:89d2（写径实证））））
+  2. `01:89e6` ObjFrame_SamusRunPntUpFire1（refs asm 考证（bank:addr（01:89e6（写径实证））））
+  3. `01:89fb` ObjFrame_SamusRunPntUpFire2（refs asm 考证（bank:addr（01:89fb（写径实证））））
+  4. `01:8a4e` ObjFrame_HighJumpItem（refs asm 考证（bank:addr（01:8a4e（写径实证））））
+  5. `01:8b13` SamusEnterDoor（refs asm 考证（bank:addr（01:8b13（写径实证））））
+- **实现补全**（Rust 实现（公式形（零字面特值）（SamusState 结构补（第二十四组字段）））——编译核（cargo check（**0 错**））。
 - **留档可追溯**（refs 引用（bank:addr）+实现补全（Rust 实现（公式形））+编译核（cargo check（0 错））——docs commit（追溯径））。

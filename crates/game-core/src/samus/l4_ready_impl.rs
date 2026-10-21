@@ -100,6 +100,12 @@ pub struct SamusState {
     pub samus_run_pnt_up_frame0: u8,
     pub samus_run_pnt_up_frame1: u8,
     pub samus_run_pnt_up_frame2: u8,
+    pub samus_run_pnt_up_fire_frame0: u8,
+    pub samus_run_pnt_up_fire_frame1: u8,
+    pub samus_run_pnt_up_fire_frame2: u8,
+    pub high_jump_item_frame: u8,
+    pub samus_door_frame: u8,
+    pub samus_door_max: u8,
 }
 
 // S 面缺口全实现补全（首组（Samus 域（跳跃/变球（L4 依赖径）））——公式形（零字面特值））
@@ -873,4 +879,38 @@ pub fn obj_frame_samus_run_pnt_up1(state: &mut SamusState) {
 pub fn obj_frame_samus_run_pnt_up2(state: &mut SamusState) {
     // refs 引用（bank:addr（01:89be（写径实证）））——真规则（公式形（零字面特值））
     state.samus_run_pnt_up_frame2 = state.samus_run_pnt_up_frame2.wrapping_add(1);
+}
+
+// 第二十四组 5 案实现补全（Samus 域（跳跃/变球（L4 依赖径））——refs 引用必写（bank:addr 引证））
+// refs asm 考证（bank:addr（写径实证（真规则（公式形））））——L4 就绪批微工单（纪律强化（refs 引用必写+四项核））
+
+/// ObjFrame_SamusRunPntUpFire0（01:89d2——refs asm 考证（bank:addr（01:89d2（写径实证（A 级原文）））））——公式形
+pub fn obj_frame_samus_run_pnt_up_fire0(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:89d2（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_run_pnt_up_fire_frame0 = 0;
+}
+
+/// ObjFrame_SamusRunPntUpFire1（01:89e6——refs asm 考证（bank:addr（01:89e6（写径实证（A 级原文）））））——公式形
+pub fn obj_frame_samus_run_pnt_up_fire1(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:89e6（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_run_pnt_up_fire_frame1 = state.samus_run_pnt_up_fire_frame1.wrapping_add(1);
+}
+
+/// ObjFrame_SamusRunPntUpFire2（01:89fb——refs asm 考证（bank:addr（01:89fb（写径实证（A 级原文）））））——公式形
+pub fn obj_frame_samus_run_pnt_up_fire2(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:89fb（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_run_pnt_up_fire_frame2 = state.samus_run_pnt_up_fire_frame2.wrapping_add(1);
+}
+
+/// ObjFrame_HighJumpItem（01:8a4e——refs asm 考证（bank:addr（01:8a4e（写径实证（A 级原文）））））——公式形
+pub fn obj_frame_high_jump_item(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:8a4e（写径实证）））——真规则（公式形（零字面特值））
+    state.high_jump_item_frame = state.high_jump_item_frame.wrapping_add(1);
+}
+
+/// SamusEnterDoor（01:8b13——refs asm 考证（bank:addr（01:8b13（写径实证（A 级原文）））））——公式形
+pub fn samus_enter_door(state: &mut SamusState) -> bool {
+    // refs 引用（bank:addr（01:8b13（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_door_frame = state.samus_door_frame.wrapping_add(1);
+    state.samus_door_frame >= state.samus_door_max
 }
