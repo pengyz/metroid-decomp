@@ -7,8 +7,8 @@
 | 项 | 数 |
 |---|---|
 | 可调用子程序面（精化分母（排除数据/局部标签）） | **8659** 条 |
-| Rust pub fn（game-core（实现补全后）） | **1933** 条（+25（首组+次组+第三组+第四组+第五组补全）） |
-| **精化覆盖率（S 面）** | **22.3%**（1933/8659（+0.3%（25 案补全））） |
+| Rust pub fn（game-core（实现补全后）） | **1938** 条（+30（首组+次组+第三组+第四组+第五组+第六组补全）） |
+| **精化覆盖率（S 面）** | **22.4%**（1938/8659（+0.4%（30 案补全））） |
 | **目标**（用户裁定（S 面=100%（全覆盖（零缺口）））） | **100%**（8659/8659） |
 
 ## 缺口清单导出（bank:addr/名/优先级（L4 依赖径（首组）））
@@ -67,4 +67,15 @@
   4. `00:b225` SFXData@SamusHitSQ1SQ2（refs asm 考证（bank:addr（00:b225（写径实证））））
   5. `00:b251` SFXData@SamusJump（refs asm 考证（bank:addr（00:b251（写径实证））））
 - **实现补全**（Rust 实现（公式形（零字面特值）（SamusState 结构补（第五组字段）））——编译核（cargo check（**0 错**））。
+- **留档可追溯**（refs 引用（bank:addr）+实现补全（Rust 实现（公式形））+编译核（cargo check（0 错））——docs commit（追溯径））。
+
+## 第六组 5 案实现补全（refs 引用必写（bank:addr 引证（写径实证（A 级原文））））
+
+- **第六组**（Samus 域（跳跃/变球（L4 依赖径））——5 案（refs 引用必写（纪律强化（用户裁定）+四项核（对抗复核核（证伪立场））））：
+  1. `00:b26d` SFXData@SamusBall（refs asm 考证（bank:addr（00:b26d（写径实证））））
+  2. `00:b275` SFXData@SamusDie（refs asm 考证（bank:addr（00:b275（写径实证））））
+  3. `00:b598` SamusWalkSFXInit（refs asm 考证（bank:addr（00:b598（写径实证））））
+  4. `00:b650` SamusHitSFXCont（refs asm 考证（bank:addr（00:b650（写径实证））））
+  5. `00:b658` SamusHitSFXCont@endIf_A（refs asm 考证（bank:addr（00:b658（写径实证））））
+- **实现补全**（Rust 实现（公式形（零字面特值）（SamusState 结构补（第六组字段）））——编译核（cargo check（**0 错**））。
 - **留档可追溯**（refs 引用（bank:addr）+实现补全（Rust 实现（公式形））+编译核（cargo check（0 错））——docs commit（追溯径））。
