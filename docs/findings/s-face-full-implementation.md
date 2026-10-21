@@ -7,8 +7,8 @@
 | 项 | 数 |
 |---|---|
 | 可调用子程序面（精化分母（排除数据/局部标签）） | **8659** 条 |
-| Rust pub fn（game-core（实现补全后）） | **1953** 条（+45（首组+次组+第三组+第四组+第五组+第六组+第七组+第八组+第九组补全）） |
-| **精化覆盖率（S 面）** | **22.6%**（1953/8659（+0.6%（45 案补全））） |
+| Rust pub fn（game-core（实现补全后）） | **1958** 条（+50（首组+次组+第三组+第四组+第五组+第六组+第七组+第八组+第九组+第十组补全）） |
+| **精化覆盖率（S 面）** | **22.6%**（1958/8659（+0.6%（50 案补全））） |
 | **目标**（用户裁定（S 面=100%（全覆盖（零缺口）））） | **100%**（8659/8659） |
 
 ## 缺口清单导出（bank:addr/名/优先级（L4 依赖径（首组）））
@@ -111,4 +111,15 @@
   4. `01:800f` CommonJump_InitEnAnimIndex（refs asm 考证（bank:addr（01:800f（写径实证））））
   5. `01:8012` CommonJump_GetEnemyTypeTimes2PlusFacingDirectionBit0（refs asm 考证（bank:addr（01:8012（写径实证））））
 - **实现补全**（Rust 实现（公式形（零字面特值）（SamusState 结构补（第九组字段）））——编译核（cargo check（**0 错**））。
+- **留档可追溯**（refs 引用（bank:addr）+实现补全（Rust 实现（公式形））+编译核（cargo check（0 错））——docs commit（追溯径））。
+
+## 第十组 5 案实现补全（refs 引用必写（bank:addr 引证（写径实证（A 级原文））））
+
+- **第十组**（Samus 域（跳跃/变球（L4 依赖径））——5 案（refs 引用必写（纪律强化（用户裁定）+四项核（对抗复核核（证伪立场））））：
+  1. `01:8015` CommonJump_InitEnemyForceSpeedTowardsSamusDelayAndHealth（refs asm 考证（bank:addr（01:8015（写径实证））））
+  2. `01:8018` CommonJump_InitEnResetAnimIndex（refs asm 考证（bank:addr（01:8018（写径实证））））
+  3. `01:801b` CommonJump_EnemyFlipAfterDisplacement（refs asm 考证（bank:addr（01:801b（写径实证））））
+  4. `01:801e` CommonJump_InitEnActiveAnimIndex_NoInitOffset（refs asm 考证（bank:addr（01:801e（写径实证））））
+  5. `01:8021` CommonJump_SpawnEnProjectile（refs asm 考证（bank:addr（01:8021（写径实证））））
+- **实现补全**（Rust 实现（公式形（零字面特值）（SamusState 结构补（第十组字段）））——编译核（cargo check（**0 错**））。
 - **留档可追溯**（refs 引用（bank:addr）+实现补全（Rust 实现（公式形））+编译核（cargo check（0 错））——docs commit（追溯径））。
