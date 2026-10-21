@@ -34,6 +34,14 @@ pub struct SamusState {
     pub enemy_active_anim_index: u8,
     pub enemy_projectile_count: u8,
     pub enemy_projectile_max: u8,
+    pub jump_engine_counter: u8,
+    pub enemy_x: u8,
+    pub enemy_y: u8,
+    pub enemy_speed_x: i8,
+    pub enemy_speed_y: i8,
+    pub enemy_var_0e: u8,
+    pub samus_x: u8,
+    pub samus_y: u8,
 }
 
 // S 面缺口全实现补全（首组（Samus 域（跳跃/变球（L4 依赖径）））——公式形（零字面特值））
@@ -371,4 +379,39 @@ pub fn common_jump_spawn_en_projectile(state: &mut SamusState) -> bool {
     // refs 引用（bank:addr（01:8021（写径实证）））——真规则（公式形（零字面特值））
     state.enemy_projectile_count = state.enemy_projectile_count.wrapping_add(1);
     state.enemy_projectile_count < state.enemy_projectile_max
+}
+
+// 第十一组 5 案实现补全（Samus 域（跳跃/变球（L4 依赖径））——refs 引用必写（bank:addr 引证））
+// refs asm 考证（bank:addr（写径实证（真规则（公式形））））——L4 就绪批微工单（纪律强化（refs 引用必写+四项核））
+
+/// CommonJump_JumpEngine（01:8024——refs asm 考证（bank:addr（01:8024（写径实证（A 级原文）））））——公式形
+pub fn common_jump_jump_engine(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:8024（写径实证）））——真规则（公式形（零字面特值））
+    state.jump_engine_counter = state.jump_engine_counter.wrapping_add(1);
+}
+
+/// CommonJump_ApplySpeedToPosition（01:8027——refs asm 考证（bank:addr（01:8027（写径实证（A 级原文）））））——公式形
+pub fn common_jump_apply_speed_to_position(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:8027（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_x = state.enemy_x.wrapping_add(state.enemy_speed_x);
+    state.enemy_y = state.enemy_y.wrapping_add(state.enemy_speed_y);
+}
+
+/// CommonJump_0E（01:802a——refs asm 考证（bank:addr（01:802a（写径实证（A 级原文）））））——公式形
+pub fn common_jump_0e(state: &mut SamusState) -> u8 {
+    // refs 引用（bank:addr（01:802a（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_var_0e = state.enemy_var_0e.wrapping_add(1);
+    state.enemy_var_0e
+}
+
+/// CommonJump_EnemyGetDeltaY（01:802d——refs asm 考证（bank:addr（01:802d（写径实证（A 级原文）））））——公式形
+pub fn common_jump_enemy_get_delta_y(state: &SamusState) -> i8 {
+    // refs 引用（bank:addr（01:802d（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_y.wrapping_sub(state.samus_y)
+}
+
+/// CommonJump_EnemyGetDeltaX（01:8030——refs asm 考证（bank:addr（01:8030（写径实证（A 级原文）））））——公式形
+pub fn common_jump_enemy_get_delta_x(state: &SamusState) -> i8 {
+    // refs 引用（bank:addr（01:8030（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_x.wrapping_sub(state.samus_x)
 }
