@@ -503,3 +503,5 @@ mod tests {
         assert_eq!(v[0], brinstar::ROOM00.1);
     }
 }
+
+pub mod rom_tables; // 分界线修（rom_tables（数据表）→game-data（资产解析））

@@ -165,7 +165,7 @@ fn f2ed_flow(input: &L2In, a_entry: u8) -> L2Out {
     let mut attrs = memmap::enemy_attrs::decode_attrs(&input.ram);
     let mask = memmap::enemy_collision_flags::mask10_transformed(&input.ram);
     let attr_v = attrs.or_attribute(input.x, mask);
-    let (vec_lo, vec_hi) = memmap::rom_tables::rom_vec(input.window_bank);
+    let (vec_lo, vec_hi) = game_data::rom_tables::rom_vec(input.window_bank);
     let writes = vec![
         memmap::enemy_collision_flags::write_event(input.y, a_df),
         memmap::flow_scratch::event_010f(memmap::flow_scratch::F2ED_SCRATCH_INIT),
@@ -243,7 +243,7 @@ pub fn f282(input: &L2In) -> L2Out {
     let f14 = memmap::enemy_slots::read_field0e(&input.wram, input.x);
     writes.push(memmap::flow_scratch::event_010f(f14));
     if f14 & 0x80 == 0 {
-        let t = memmap::rom_tables::table_968b(input.window_bank, f14);
+        let t = game_data::rom_tables::table_968b(input.window_bank, f14);
         if t & 0x10 != 0 {
             return L2Out { a: t & 0x10, x: input.x, y: f14, writes };
         }
@@ -252,7 +252,7 @@ pub fn f282(input: &L2In) -> L2Out {
     let mut attrs = memmap::enemy_attrs::decode_attrs(&input.ram);
     let attr_v = attrs.or_attribute(0, memmap::enemy_collision_flags::mask10_shl3(&input.ram));
     writes.push(memmap::enemy_attrs::write_event(0, attr_v));
-    let (vec_lo, vec_hi) = memmap::rom_tables::rom_vec(input.window_bank);
+    let (vec_lo, vec_hi) = game_data::rom_tables::rom_vec(input.window_bank);
     writes.push(memmap::flow_scratch::event_vec_lo(vec_lo));
     writes.push(memmap::flow_scratch::event_vec_hi(vec_hi));
     L2Out { a: vec_hi, x: input.x, y: 0, writes }

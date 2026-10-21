@@ -6,3 +6,6 @@ edition = "2021"
 [lib]
 name = "game_core"
 path = "src/lib.rs"
+
+[dependencies]
+game-data = { path = "../game-data" } # 分界线修（rom_tables→game-data（模块重组））
