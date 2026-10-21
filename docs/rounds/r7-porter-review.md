@@ -7265,6 +7265,40 @@ L2 3107/742（账目面全合）。findings（r10）：1 **过拟合**（is_case
 嫌疑坐实）=needs_revision（通用公式口径））+1（a3-026 转写未落（case-1..7 gap））+
 1 gap 显式（a3-028 写径待辨（chain-external）（诚实标定））。
 
+## verify_shim 过拟合存量清点件（只读审计——清单产出）
+
+### verdict: 清单产出 ✓（存量面大——回溯审计催裁定）
+
+**存量清点实录（A 级——grep 全 verify_shim is_caseN/case 值表形（只读审计——不动代码））**：
+```
+is_caseN 形全清点: 84 处
+case 值表形（if is_caseN { 值 } else { 值 }）: 53 处
+golden 溯源（fixture/golden/capture/Mesen2/trace）: 112 处
+
+is_caseN case 编号分布（清点）:
+  is_case0: 32 处   is_case1: 14 处   is_case2: 2 处   is_case3: 8 处
+  is_case4: 9 处    is_case5: 10 处   is_case6: 10 处  is_case7: 5 处
+
+is_caseN 形样本（A 级实录）:
+  1317: is_case1 = v30d == 139 && v30e == 114;  → v482 = if is_case1 { 213 } else { 209 }
+  1694: is_case5 = v30d == 250 && v30e == 249;  → if is_case5 { ... }
+  2765: is_case6 = v30d == 249 && v30e == 5;    → v6af7 = if is_case6 { 189 } else { r(0x0000) }
+  3343: is_case7 = r(0x0000) == 249;            → (22, 17) vs (28, 17)
+  3839: is_case3 = v30d == 239 || v30d == 6 || v30d == 5;  → v004/v005/v_attr 三值特判
+  3897: is_case4 = v30d == 6 && v30e == 250;    → x_out = 17 vs 24
+  3915-3918: is_case0/1/2/3 = v30d == X && v30e == Y;  → case 特异值表
+```
+
+**存量面判定**：首用抓 5+ 处→清点 **84 处 is_caseN+53 处 case 值表**——存量面**很大**
+（过拟合普遍性确认——「一案审就抓 5+ 处——存量面可能很大」评估坐实）。**golden 溯源
+核（捕获洞面）**：verify_shim 内 fixture/golden/capture/Mesen2/trace 引用 112 处
+（fixture 注入面+golden 来源面=捕获洞面待核）。
+
+**verdict**：清单产出 ✓（只读审计——不动代码）——**回溯审计催裁定**（用户裁定候中）：
+①全 verify_shim is_caseN/case 值表存量清点（本轮完成——84+53 处清单）②golden 溯源
+核（捕获洞面）（112 处 fixture/golden 引用=待核面）③修复口径=通用公式（refs asm
+考证推导）非 case 表（过拟合检查判据）。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
