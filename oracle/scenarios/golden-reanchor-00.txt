@@ -1,0 +1,21 @@
+# golden-reanchor-00 —— 重锚定微批（a3-028-case-0（LCG 扩展））
+frames 2000
+watch_range 0000-00ff
+watch_range 0100-07ff
+watch_range 0400-04ff
+watch_range 6988-698f
+watch_range 6AF4-6B0F
+probe_mem 6AF4 6B0F
+probe_mem 0400 04ff
+fixture 1 0000 7D invariant
+fixture 1 00C4 E9 invariant
+fixture 1 00F2 7C invariant
+fixture 1 0300 0B invariant
+fixture 1 030D 41 invariant
+fixture 1 030E 52 invariant
+fixture 1 03C4 37 invariant
+fixture 1 03D1 74 invariant
+fixture 1 03D2 8D invariant
+fixture 1 03F2 2B invariant
+fixture 1 03FF 88 invariant
+fixture 1 0400 1A invariant
