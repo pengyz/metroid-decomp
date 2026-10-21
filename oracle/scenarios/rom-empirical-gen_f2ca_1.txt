@@ -1,0 +1,29 @@
+# rom-empirical-gen-f2ca-1 —— 281 真洞证 ROM 实证重捕获（fixture 注入（frame 150（boot 后注入正径）））
+# 写点核（写点非 0=真洞证（写径应触发）/写点 0=早退出（正零写形（5b43899 早退出径实证）））
+name rom-empirical-gen_f2ca_1
+frames 200
+watch_range 0000-00ff zp
+watch_range 0100-07ff iram
+
+# --- fixture 注入（case in.ram（frame 150（boot 后注入正径（RAM init 清零径后注入））））---
+fixture 150 0010 69 evolving
+fixture 150 00b2 b7 evolving
+fixture 150 00ca 60 evolving
+fixture 150 0300 c7 evolving
+fixture 150 030a 0c evolving
+fixture 150 03a2 37 evolving
+fixture 150 03ac 69 evolving
+fixture 150 03ba ca evolving
+fixture 150 03c4 3d evolving
+fixture 150 0404 95 evolving
+fixture 150 040e aa evolving
+fixture 150 04a6 81 evolving
+fixture 150 04b0 d0 evolving
+fixture 150 04be 55 evolving
+fixture 150 04c8 b3 evolving
+
+# --- 捕获窗修（主循环写段捕获（a3-028 型洞修））---
+probe_mem 6A00 6BFF
+probe_mem 0400 04FF
+
+capture 199 golden
