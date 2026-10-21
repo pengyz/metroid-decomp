@@ -103,3 +103,21 @@ docs commit（口径文档（Lua 代码形（grep 实录（register 名口径实
 ## 11. 交付判据
 
 docs commit（深层径文档（Lua 代码形（grep 实录（emu: vs emu. 使用形））））——「候令」禁用。
+
+## 12. 注入时序+enum 值形考证
+
+### 12.1 注入时序（frame 0 注入 vs boot 前注入（Lua script 启动时机（addEventCallback（frame callback 注入时机（frame 0 前注入（boot 序（reset 后立即注入（scenario_capture.lua 注入时机实录）））））））
+
+**注入时序**：
+- frame 0 注入：frame 0 RAM 写入生效径（refs asm（write event 实证））
+- boot 前注入：Lua script 启动时机（addEventCallback（frame callback 注入时机（frame 0 前注入（boot 序（reset 后立即注入（scenario_capture.lua 注入时机实录））））））
+
+### 12.2 enum 值形（emu.Register.A/emu.registers.a enum 实录（Lua API reference（enum 值形（register 名→enum 映射））））
+
+**enum 值形**：
+- emu.Register.A：enum 形（emu.Register.A）
+- emu.registers.a：enum 形（emu.registers.a）
+
+## 13. 交付判据
+
+docs commit（时序+enum 文档（Lua 代码形（grep 实录（注入时机（frame callback 注入时机实录）））））——「候令」禁用。
