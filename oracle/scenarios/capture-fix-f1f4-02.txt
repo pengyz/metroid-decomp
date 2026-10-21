@@ -1,13 +1,14 @@
 # capture-fix-f1f4-02 —— 捕获洞修（gen-f1f4-2（a3-028 型洞（NMI 缺主循环写）））
-# 捕获窗修径：主循环写捕获径（probe 范围扩（6AF4-6B0F 扩→6A00-6BFF）+帧级捕获修（主循环写段捕获））
+# 捕获窗修径：主循环写捕获径（probe 范围扩+帧级捕获修）+fixture 注入（in.ram（RAM 注入径））
 name capture-fix-f1f4-02
 frames 200
 watch_range 0000-00ff zp
 watch_range 0100-07ff iram
 
-# --- 捕获窗修（主循环写段捕获（a3-028 型洞修（NMI 缺主循环写径（捕获窗扩））））---
+# --- fixture 注入（case in.ram（frame 0（evolving（RAM 注入径（memory.writebyte 形）））））---
+
+# --- 捕获窗修（主循环写段捕获（a3-028 型洞修））---
 probe_mem 6A00 6BFF
 probe_mem 0400 04FF
 
-# --- 捕获完整性 sanity（期望写数/写域核（写点非 0 判据））---
 capture 199 golden
