@@ -58,3 +58,13 @@
 > ——留档可追溯（docs commit（追溯径（refs 引用（bank:addr）+考证成果（表名/表值/表用途/表功能）））
 > ⚠ 数字差辨（verifier（22.2%（1923/8659））vs decomp（22.3%（1928/8659（第四组补全（767dd7a））））
 > ——实际审计数字为准（1928/8659=22.3%（A 级实录（decomp（第四组补全实录））））
+
+> 【2026-10-21 D 面数据表考证第三件（lead 直接落档（SamusJumpSFXInit（00:b703（A 级实录））））】
+> SamusJumpSFXInit（00:b703（sound_engine.asm（1024-1034（SFX 初始化（跳跃音效（SFXData@SamusJump（00:b251）））））））：
+> ——表值/表用途/表功能考证：SamusJumpSFXInit（00:b703）——SFX 初始化径：
+>   if escape music playing→exit（beq MissilePickupSFXCont@RTS（早退出（escape 音乐（跳过跳跃音效））））
+> ——SFX 参数：lda #$0C（12 帧（播放帧数））+ldy #<SFXData@SamusJump.b（音效数据地址（base=$B200
+>   （SFXData（00:b200（表结构（SFX 数据基址）））））→GotoInitSFXData2（SFX 初始化）
+> ——SFXData@SamusJump（00:b251）——表值/表内容/表用途：跳跃音效数据（SFX 初始化（12 帧播放（base=$B200）））
+> ——refs 引用必写（bank:addr 引证（表读径实证（A 级原文（refs asm（sound_engine.asm（1024-1034（grep 实录（SFX 初始化（表读指令（ldy #<SFXData@SamusJump.b）））））））
+> ——留档可追溯（docs commit（追溯径（refs 引用（bank:addr）+考证成果（表名/表值/表用途/表功能）））
