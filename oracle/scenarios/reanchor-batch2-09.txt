@@ -12,9 +12,9 @@ fixture 0 0312 a9 evolving
 fixture 0 0314 9d evolving
 
 # --- regs 注入（case in.regs（frame 0））---
-fixture 0 a ea evolving
-fixture 0 p b0 evolving
-fixture 0 x 86 evolving
-fixture 0 y 9c evolving
+fixture 0 000a ea evolving
+fixture 0 0002 b0 evolving
+fixture 0 0001 86 evolving
+fixture 0 0003 9c evolving
 
 capture 199 golden
