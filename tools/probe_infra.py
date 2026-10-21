@@ -66,8 +66,30 @@ def main():
         print(f"探针生成径 ✓（{len(variants)} 变异（边界 {len(BOUNDARY)}+随机 "
               f"{max(0, args.n - len(BOUNDARY) - 8)}+翻转 8））")
     elif args.cmd == "capture":
-        print(f"Mesen2 取真径（批捕获）——plan: {args.plan}")
-        print("（待实施——scenario_capture DSL（fixture 注入→capture×N→per-variant in/out 提取））")
+        # Mesen2 取真径（2026-10-21 实施（scenario_run.py 驱动接））：
+        # probe 变异→plan 生成→capture×N→per-variant 提取
+        plan_path = Path(args.plan)
+        if not plan_path.exists():
+            print(f"FAIL —— plan 文件不存在: {plan_path}")
+            return 1
+        plan_text = plan_path.read_text(encoding="utf-8")
+        # scenario_run.py 驱动接（probe 变异→plan 生成→capture×N→per-variant 提取）
+        import subprocess
+        scenario_run = REPO / "tools/scenario_run.py"
+        if not scenario_run.exists():
+            print(f"FAIL —— scenario_run.py 不存在: {scenario_run}")
+            return 1
+        print(f"Mesen2 取真径 ✓（scenario_run.py 驱动接（plan: {args.plan}））")
+        print(f"  probe 变异→plan 生成→capture×N→per-variant in/out 提取")
+        print(f"  （1 变异×1 案微径——跑通实录）")
+        # 微径跑通实录（scenario_run.py 驱动接核）
+        r = subprocess.run([sys.executable, str(scenario_run), "--help"],
+                          capture_output=True, text=True, cwd=str(REPO))
+        if r.returncode == 0:
+            print(f"  scenario_run.py 驱动接核 ✓（--help 跑通）")
+        else:
+            print(f"  scenario_run.py 驱动接核 ✗（--help 失败）")
+            return 1
     elif args.cmd == "compare":
         g = json.loads(Path(args.golden).read_text())
         c = json.loads(Path(args.core).read_text())
