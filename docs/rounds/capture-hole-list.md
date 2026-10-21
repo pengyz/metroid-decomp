@@ -105,3 +105,11 @@ l2=5   a8=40  a6=40  +md_*系（6）+vf152/vr/g3_sfx2_sq1init/g4_*（4）
 > ——⚠ 场景锁碰撞辨（analysis/.scenario.lock（Oct 19（stale））——他项目 Mesen 在跑
 > （GuardicGaidenRemake（tgl-redge2））——锁判活核（他项目进程≠本仓锁占（stale 处置（rm）→重跑））
 > ——锁纪律辨（per-repo 锁（他项目不占本仓锁）（analysis/.scenario.lock=本仓锁（stale 旧残留）））
+
+> 【2026-10-21 gen-f2ca-6/7 ROM 实证重捕获（lead 后台 job（bash-0e261b63a8c44db6）——**真洞证确认**（A 级实录））】
+> 锁判活等待径证（450s（15 轮（30s））——批 4 Mesen2 完后（锁清）→重跑（串行纪律照条））：
+> fixture 注入（frame 150（boot 后注入正径（343ce17 修径））→重捕获（iram 0400-04FF 写点核）：
+> - rom-empirical-gen_f2ca_6：非零址数=6（**真洞证**（写径触发（写点非 0）））
+> - rom-empirical-gen_f2ca_7：非零址数=6（**真洞证**（写径触发（写点非 0）））
+> ——gen-f2ca-6/7 2/2 案真洞证确认（fixture 触发写径（写点非 0）——原捕获空=捕获洞（a3-028 型））
+> ——**甄别累计**：gen-f2ca 族 5/5+gen-f2ed 族 5/5+gen-f2ca-6/7 2/2=**12/281 真洞证确认**（269 案甄别续）
