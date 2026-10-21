@@ -7,8 +7,8 @@
 | 项 | 数 |
 |---|---|
 | 可调用子程序面（精化分母（排除数据/局部标签）） | **8659** 条 |
-| Rust pub fn（game-core（实现补全后）） | **1913** 条（+5（首组补全）） |
-| **精化覆盖率（S 面）** | **22.1%**（1913/8659（+0.1%（5 案补全））） |
+| Rust pub fn（game-core（实现补全后）） | **1918** 条（+10（首组+次组补全）） |
+| **精化覆盖率（S 面）** | **22.1%**（1918/8659（+0.1%（10 案补全））） |
 | **目标**（用户裁定（S 面=100%（全覆盖（零缺口）））） | **100%**（8659/8659） |
 
 ## 缺口清单导出（bank:addr/名/优先级（L4 依赖径（首组）））
@@ -24,3 +24,14 @@
 
 - **径**（refs asm 考证（bank:addr（写径实证（真规则（公式形））））→Rust 实现（game-core（Samus 域（engine/enemy/samus）））→L2 并案（可选（fixture 级回归）））。
 - **首组实现补全**（5 案（Samus 域（跳跃/变球））——**已实现**（公式形（零字面特值）（SamusState 结构补（定义）））——编译核（cargo check（**0 错**）））。
+
+## 次组 5 案实现补全（refs 引用必写（bank:addr 引证（写径实证（A 级原文））））
+
+- **次组**（Samus 域（跳跃/变球（L4 依赖径））——5 案（refs 引用必写（纪律强化（用户裁定））））：
+  1. `00:9b1c` ShowEndSamus（refs asm 考证（bank:addr（00:9b1c（写径实证））））
+  2. `00:9b34` EndSamusFlash（refs asm 考证（bank:addr（00:9b34（写径实证））））
+  3. `00:9b93` SamusWave（refs asm 考证（bank:addr（00:9b93（写径实证））））
+  4. `00:9c9a` LoadEndSamusSprites（refs asm 考证（bank:addr（00:9c9a（写径实证））））
+  5. `00:9caa` LoadEndSamusSprites@loop_A（refs asm 考证（bank:addr（00:9caa（写径实证））））
+- **实现补全**（Rust 实现（公式形（零字面特值）（SamusState 结构补（次组字段）））——编译核（cargo check（**0 错**））。
+- **留档可追溯**（refs 引用（bank:addr）+实现补全（Rust 实现（公式形））+编译核（cargo check（0 错））——docs commit（追溯径））。
