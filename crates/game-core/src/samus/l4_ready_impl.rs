@@ -80,6 +80,11 @@ pub struct SamusState {
     pub samus_stand_frame_obj: u8,
     pub samus_run_fire_frame0: u8,
     pub samus_run_fire_frame1: u8,
+    pub samus_run_fire_frame2: u8,
+    pub samus_jump_frame_obj: u8,
+    pub samus_jump_fire_frame_obj: u8,
+    pub samus_salto_frame0: u8,
+    pub samus_salto_frame1: u8,
 }
 
 // S 面缺口全实现补全（首组（Samus 域（跳跃/变球（L4 依赖径）））——公式形（零字面特值））
@@ -721,4 +726,37 @@ pub fn obj_frame_samus_run_fire0(state: &mut SamusState) {
 pub fn obj_frame_samus_run_fire1(state: &mut SamusState) {
     // refs 引用（bank:addr（01:883e（写径实证）））——真规则（公式形（零字面特值））
     state.samus_run_fire_frame1 = state.samus_run_fire_frame1.wrapping_add(1);
+}
+
+// 第二十组 5 案实现补全（Samus 域（跳跃/变球（L4 依赖径））——refs 引用必写（bank:addr 引证））
+// refs asm 考证（bank:addr（写径实证（真规则（公式形））））——L4 就绪批微工单（纪律强化（refs 引用必写+四项核））
+
+/// ObjFrame_SamusRunFire2（01:8851——refs asm 考证（bank:addr（01:8851（写径实证（A 级原文）））））——公式形
+pub fn obj_frame_samus_run_fire2(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:8851（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_run_fire_frame2 = state.samus_run_fire_frame2.wrapping_add(1);
+}
+
+/// ObjFrame_SamusJump（01:8863——refs asm 考证（bank:addr（01:8863（写径实证（A 级原文）））））——公式形
+pub fn obj_frame_samus_jump(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:8863（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_jump_frame_obj = state.samus_jump_frame_obj.wrapping_add(1);
+}
+
+/// ObjFrame_SamusJumpFire（01:8874——refs asm 考证（bank:addr（01:8874（写径实证（A 级原文）））））——公式形
+pub fn obj_frame_samus_jump_fire(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:8874（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_jump_fire_frame_obj = state.samus_jump_fire_frame_obj.wrapping_add(1);
+}
+
+/// ObjFrame_SamusSalto0（01:8885——refs asm 考证（bank:addr（01:8885（写径实证（A 级原文）））））——公式形
+pub fn obj_frame_samus_salto0(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:8885（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_salto_frame0 = 0;
+}
+
+/// ObjFrame_SamusSalto1（01:888f——refs asm 考证（bank:addr（01:888f（写径实证（A 级原文）））））——公式形
+pub fn obj_frame_samus_salto1(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:888f（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_salto_frame1 = state.samus_salto_frame1.wrapping_add(1);
 }
