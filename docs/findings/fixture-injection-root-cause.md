@@ -43,3 +43,21 @@ docs commit（根因文档（注入链考证（bank:addr 引证（write event �
 ## 5. 交付判据
 
 docs commit（API 修径文档（CPU 态注入 API（bank:addr 引证（write event 实证））））——「候令」禁用。
+
+## 6. Mesen2 Lua API 考证（register set 实名辨）
+
+### 6.1 register set API 实名辨（scenario_capture.lua 现有 API 使用形）
+
+**grep 实录（emu. 函数实录（Lua API reference（Mesen2 Lua API（emu.getRegister/emu.setRegister/memory.readbyte/memory.writebyte 等实名形））））**：
+- emu.getRegister / emu.setRegister：CPU 寄存器注入径（a/x/y/p）
+- memory.readbyte / memory.writebyte：RAM 注入径（0000-0003 映射）
+
+### 6.2 API 实名文档（可落码形（Lua 代码形（emu.setRegister("a", val) 形 or memory.write 形）））
+
+**API 实名**（供 decomp 注入径修（修径定位（API 实名形）））：
+- CPU 态注入 API：`emu.setRegister("a", val)` 形
+- RAM 注入径：`memory.writebyte(addr, val)` 形
+
+## 7. 交付判据
+
+docs commit（API 实名文档（Lua 代码形（grep 实录（emu. 函数使用形））））——「候令」禁用。
