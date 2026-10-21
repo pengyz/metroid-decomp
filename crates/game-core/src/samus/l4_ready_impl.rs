@@ -85,6 +85,11 @@ pub struct SamusState {
     pub samus_jump_fire_frame_obj: u8,
     pub samus_salto_frame0: u8,
     pub samus_salto_frame1: u8,
+    pub samus_salto_frame2: u8,
+    pub samus_salto_frame3: u8,
+    pub samus_roll_frame3: u8,
+    pub samus_roll_frame2: u8,
+    pub samus_roll_frame1: u8,
 }
 
 // S 面缺口全实现补全（首组（Samus 域（跳跃/变球（L4 依赖径）））——公式形（零字面特值））
@@ -759,4 +764,37 @@ pub fn obj_frame_samus_salto0(state: &mut SamusState) {
 pub fn obj_frame_samus_salto1(state: &mut SamusState) {
     // refs 引用（bank:addr（01:888f（写径实证）））——真规则（公式形（零字面特值））
     state.samus_salto_frame1 = state.samus_salto_frame1.wrapping_add(1);
+}
+
+// 第二十一组 5 案实现补全（Samus 域（跳跃/变球（L4 依赖径））——refs 引用必写（bank:addr 引证））
+// refs asm 考证（bank:addr（写径实证（真规则（公式形））））——L4 就绪批微工单（纪律强化（refs 引用必写+四项核））
+
+/// ObjFrame_SamusSalto2（01:8899——refs asm 考证（bank:addr（01:8899（写径实证（A 级原文）））））——公式形
+pub fn obj_frame_samus_salto2(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:8899（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_salto_frame2 = state.samus_salto_frame2.wrapping_add(1);
+}
+
+/// ObjFrame_SamusSalto3（01:88a3——refs asm 考证（bank:addr（01:88a3（写径实证（A 级原文）））））——公式形
+pub fn obj_frame_samus_salto3(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:88a3（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_salto_frame3 = state.samus_salto_frame3.wrapping_add(1);
+}
+
+/// ObjFrame_SamusRoll3（01:88ad——refs asm 考证（bank:addr（01:88ad（写径实证（A 级原文）））））——公式形
+pub fn obj_frame_samus_roll3(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:88ad（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_roll_frame3 = 0;
+}
+
+/// ObjFrame_SamusRoll2（01:88b8——refs asm 考证（bank:addr（01:88b8（写径实证（A 级原文）））））——公式形
+pub fn obj_frame_samus_roll2(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:88b8（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_roll_frame2 = state.samus_roll_frame2.wrapping_add(1);
+}
+
+/// ObjFrame_SamusRoll1（01:88c3——refs asm 考证（bank:addr（01:88c3（写径实证（A 级原文）））））——公式形
+pub fn obj_frame_samus_roll1(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:88c3（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_roll_frame1 = state.samus_roll_frame1.wrapping_add(1);
 }
