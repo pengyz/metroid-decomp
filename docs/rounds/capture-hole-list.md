@@ -59,3 +59,11 @@ l2=5   a8=40  a6=40  +md_*系（6）+vf152/vr/g3_sfx2_sq1init/g4_*（4）
 > 判据链：判据 bug 修（hex 解析（w 字段=帧末状态 hex 串））→plan 缺 fixture 注入根因辨
 > （run.json fixtures:[]（空）（ROM 默认态跑（写径不触发）））→fixture 形核→分类修正。
 > **真洞数收窄**：307→281（fixture 空案 26 案排除）——281 案真洞证甄别（逐案（refs asm（写径实证））待。
+
+> 【2026-10-21 真洞证甄别首组（lead 直接落档（gen-f2ca 族 5 案样本（A 级实录）））】
+> gen-f2ca 族首组甄别（fixture 设定案（in.ram=15 项（非空））但 out.writes=0（空写集））：
+> - refs 符号：07:f2ca=CollisionDetectionEnemy_ReactToCollisionWithSamusProjectile（D5（第三方命名（不背书）））
+> - **甄别辨**：碰撞反应径（fixture 未触发碰撞条件（早退出（正零写候选））vs 真洞证（写径应触发但捕获空））
+> ——**甄别待深化**（写径条件核（refs asm（bank07:F2CA 写径实证（碰撞条件（fixture 触发核）））））
+> 判定：**待深化**（早退出候选（正零写形）/真洞证二辨（写径条件（fixture 触发核）后定））
+> 注：5 案样本（gen-f2ca-1/2/3/5/b-f2ca-c1-exit（in.ram=5~15 项（fixture 设定））——281 案首组样本）。
