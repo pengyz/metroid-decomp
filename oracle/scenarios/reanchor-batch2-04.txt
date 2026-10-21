@@ -8,8 +8,8 @@ watch_range 0100-07ff iram
 # --- fixture 注入（case in.ram（F_a 注入（frame 0（evolving））））---
 
 # --- regs 注入（case in.regs（frame 0））---
-fixture 0 a 00 evolving
-fixture 0 x 5f evolving
-fixture 0 y 00 evolving
+fixture 150 a 00 evolving
+fixture 150 x 5f evolving
+fixture 150 y 00 evolving
 
 capture 199 golden
