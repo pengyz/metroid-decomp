@@ -68,3 +68,7 @@
 > ——SFXData@SamusJump（00:b251）——表值/表内容/表用途：跳跃音效数据（SFX 初始化（12 帧播放（base=$B200）））
 > ——refs 引用必写（bank:addr 引证（表读径实证（A 级原文（refs asm（sound_engine.asm（1024-1034（grep 实录（SFX 初始化（表读指令（ldy #<SFXData@SamusJump.b）））））））
 > ——留档可追溯（docs commit（追溯径（refs 引用（bank:addr）+考证成果（表名/表值/表用途/表功能）））
+
+> 【2026-10-21 D 面数据表考证第七件（lead 直接落档（SamusToBallSFXCont（00:b84F（A 级实录））））】
+> SamusToBallSFXCont（00:b84F（sound_engine.asm（1308（SFX 持续（变球音效（SFXData@SamusBall（00:b26d）））））））：
+> ——表值/表用途/表功能考证：SamusToBallSFXCont（00:b84F）——SFX 持续径（变球音效（SFXData@SamusBall（00:b26d（表值（+2=0xDD/+3=0x3B（2 帧（base=$B200））））））——表用途：SFX 持续（变球音效（SFXData@SamusBall（00:b26d（表值（+2=0xDD/+3=0x3B（2 帧（base=$B200））））））——表功能：变球音效数据（SFX 持续（2 帧播放（base=$B200（SFXData（00:b200（表结构（SFX 数据基址）））））））——refs 引用必写（bank:addr 引证（表读径实证（A 级原文（refs asm（sound_engine.asm（1290-1308（grep 实录（SFX 初始化/持续（表读指令（ldy #<SFXData@SamusBall.b/lda SFXData@SamusBall+2（#$DD）/lda SFXData@SamusBall+3（#$3B）））））））））——留档可追溯（docs commit（追溯径（refs 引用（bank:addr）+考证成果（表名/表值/表用途/表功能）））
