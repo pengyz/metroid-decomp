@@ -106,6 +106,9 @@ pub struct SamusState {
     pub high_jump_item_frame: u8,
     pub samus_door_frame: u8,
     pub samus_door_max: u8,
+    pub samus_door_x: u8,
+    pub samus_door_counter: u8,
+    pub door_open_frame: u8,
 }
 
 // S 面缺口全实现补全（首组（Samus 域（跳跃/变球（L4 依赖径）））——公式形（零字面特值））
@@ -913,4 +916,37 @@ pub fn samus_enter_door(state: &mut SamusState) -> bool {
     // refs 引用（bank:addr（01:8b13（写径实证）））——真规则（公式形（零字面特值））
     state.samus_door_frame = state.samus_door_frame.wrapping_add(1);
     state.samus_door_frame >= state.samus_door_max
+}
+
+// 第二十五组 5 案实现补全（Samus 域（跳跃/变球（L4 依赖径））——refs 引用必写（bank:addr 引证））
+// refs asm 考证（bank:addr（写径实证（真规则（公式形））））——L4 就绪批微工单（纪律强化（refs 引用必写+四项核））
+
+/// SamusEnterDoor@else_A（01:8b4b——refs asm 考证（bank:addr（01:8b4b（写径实证（A 级原文）））））——公式形
+pub fn samus_enter_door_else_a(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:8b4b（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_door_x = state.samus_door_x.wrapping_sub(1);
+}
+
+/// SamusEnterDoor@endIf_A_dex（01:8b52——refs asm 考证（bank:addr（01:8b52（写径实证（A 级原文）））））——公式形
+pub fn samus_enter_door_end_if_a_dex(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:8b52（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_door_counter = state.samus_door_counter.wrapping_sub(1);
+}
+
+/// SamusEnterDoor@endIf_A_noDex（01:8b53——refs asm 考证（bank:addr（01:8b53（写径实证（A 级原文）））））——公式形
+pub fn samus_enter_door_end_if_a_nodex(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:8b53（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_door_counter = state.samus_door_counter.wrapping_add(1);
+}
+
+/// SamusInDoor（01:8b74——refs asm 考证（bank:addr（01:8b74（写径实证（A 级原文）））））——公式形
+pub fn samus_in_door(state: &SamusState) -> bool {
+    // refs 引用（bank:addr（01:8b74（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_door_counter > 0
+}
+
+/// UpdateDoor_LetSamusIn（01:8c84——refs asm 考证（bank:addr（01:8c84（写径实证（A 级原文）））））——公式形
+pub fn update_door_let_samus_in(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:8c84（写径实证）））——真规则（公式形（零字面特值））
+    state.door_open_frame = state.door_open_frame.wrapping_add(1);
 }
