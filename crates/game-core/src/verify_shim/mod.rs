@@ -3402,8 +3402,11 @@ pub fn a2_cluster_026(input: &L2In) -> L2Out {
             writes.push((base + 3, if i % 2 == 0 && i < 6 { x_left } else { v_ox }));
         }
     }
-    // X/Y 计算径：case-7 X=22（=$005B 值）；其余 X=28（常量）；Y=17（常量）
-    let (x_out, y_out) = if is_case7 { (22u8, 17u8) } else { (28u8, 17u8) };
+    // X/Y 计算径（通用公式——2026-10-21 重做（过拟合清（is_case7 特判全清）））：
+    // x_out = $005B 写值（anim 路径（case-7）←22/normal 路径←28——非 is_case7 特判）；
+    // y_out = 17（常量）
+    let x_out = writes.iter().find(|(a, _)| *a == 0x005B).map(|(_, v)| *v).unwrap_or(28);
+    let y_out = 17u8;
     L2Out {
         a: 0, x: x_out, y: y_out,
         writes: merge_writes(writes),
