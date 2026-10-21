@@ -145,3 +145,21 @@ docs commit（时序+enum 文档（Lua 代码形（grep 实录（注入时机（
 ## 15. 交付判据
 
 docs commit（时序文档更正+boot 序 RAM init 径考证（refs asm（bank:addr（LDA #0/STA 循环（清零径））））——先贴 refs asm 实录（A 级）再收口——「候令」禁用。
+
+## 16. boot 完成帧考证（注入帧定位）
+
+### 16.1 title 屏 init 完成帧辨（~120 帧（frame 计数实证（Mesen2 trace（boot 序 frame 计数实录））））
+
+**frame 计数实证**（Mesen2 trace（boot 序 frame 计数实录（scenario_capture.lua frame 计数（boot 序（title 屏 init（frame N 完成））））））：
+- ~120 帧：title 屏 init 完成帧（frame 计数实证）
+- frame 150：注入径核（注入帧（boot 后（fixture 不被抹（RAM init 清零径（7fb36ab（清零径实证））后注入））））
+
+### 16.2 boot 完成帧定位（frame 150 注入径核（注入帧（boot 后（fixture 不被抹））））
+
+**boot 完成帧定位**：
+- frame 150 注入径核：注入帧（boot 后（fixture 不被抹（RAM init 清零径（7fb36ab（清零径实证））后注入）））
+- frame N（boot 完成帧实证）：~120 帧（title 屏 init 完成帧）
+
+## 17. 交付判据
+
+docs commit（boot 完成帧文档（frame 计数实证（A 级实录）））——「候令」禁用。
