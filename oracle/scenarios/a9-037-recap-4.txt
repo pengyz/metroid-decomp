@@ -1,0 +1,21 @@
+# a9-037-recap-4 —— 模板形甄别（a9-037-case-4）
+frames 2000
+watch_range 0000-00ff
+watch_range 0100-07ff
+watch_range 0400-04ff
+watch_range 6988-698f
+watch_range 6AF4-6B0F
+probe_mem 6AF4 6B0F
+probe_mem 0400 04ff
+fixture 1 0000 05 invariant
+fixture 1 0002 FA invariant
+fixture 1 009C 05 invariant
+fixture 1 0300 05 invariant
+fixture 1 0302 FA invariant
+fixture 1 030D 06 invariant
+fixture 1 030E FA invariant
+fixture 1 030F F9 invariant
+fixture 1 0310 05 invariant
+fixture 1 039C 05 invariant
+fixture 1 03A9 06 invariant
+fixture 1 03AA FA invariant
