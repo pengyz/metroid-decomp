@@ -1857,6 +1857,20 @@
       "reason": "【预登记/补账】a6-001-case-6 簇（批产 WIP——A 批预登记制）",
       "exit": "a6-001-case-6 落→账清转 strict",
       "registered": "2026-10-20"
+    },
+    {
+      "id": "SC-MD-RUNACCEL-BRK-L3ROUTE",
+      "case_prefix": "md_runaccel_physics",
+      "reason": "md_runaccel_physics L2 面 BRK @ $0001（L2 不支持（走 L3 执行深径））——D7 缺口声明形（BRK/超步=L3 路由类）；建模缺口（非本 lane 改动（他方 WIP md_* 族实现面））",
+      "exit": "PENDING（路线图：L3 路由建模（BRK 执行深径）落→L2 重跑 diff 全等→账清转 strict）",
+      "registered": "2026-10-22"
+    },
+    {
+      "id": "SC-L2-454-REORG-UNIT-01",
+      "case_prefix": "l2-454-reorg-unit-01",
+      "reason": "l2-454-reorg-unit-01 L2 账外分歧（454 孤儿重索单元族（l4-readiness-batch.md:94 孤儿不参与编译（空洞断言教训））——建模缺口（非本 lane 改动））",
+      "exit": "PENDING（路线图：454 重索单元归宿落（port-map registry 双射（语义 fn/unported! 桩））→L2 重跑 diff 全等→账清转 strict）",
+      "registered": "2026-10-22"
     }
   ],
   "exit_history": [
