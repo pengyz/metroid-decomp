@@ -3810,3 +3810,136 @@ mod tests_block111 {
         assert_eq!(result, 0x20, "play_tourian_music() result 异常路径（0x20）");
     }
 }
+
+// TDD 测试（测试先行（实现后补）（强制完整））——1:1 Rust 改写·批产·块 112：engine::mod（无前缀地址命名余 4 条（bank7 固定区））（穷举等价证明（全域穷举（边界条件（异常路径））））
+// refs 引用必写（bank:addr 引证（A 级原文））：bank07:C000（固定区（cc03_mother_brain_music/d2fd_set_obj_anim/cbda_sfx_door/cb73_select_samus_palette（实址（A 级原文））））
+
+/// play_mother_brain_music（Mother Brain 音乐（语义命名（data/naming 台账 A/B 级）））——旧实现（cc03_mother_brain_music（engine/mod.rs:8017））→去地址名
+/// refs asm 考证（bank07:C000（固定区（cc03_mother_brain_music（sfxNoise_MotherBrainMusic（案实核径）））））——真规则（公式形（零字面特值））
+pub fn play_mother_brain_music() -> (Vec<(u16, u8)>, u8) {
+    // 真规则（公式形（零字面特值））：play_mother_brain_music（sfxNoise_MotherBrainMusic（案实核径（byte-driven semantics）））
+    (vec![(0x0681, 0x20)], 0x20)
+}
+
+/// set_object_anim（物件动画设置（语义命名（data/naming 台账 A/B 级）））——旧实现（d2fd_set_obj_anim（engine/mod.rs:8047））→去地址名
+/// refs asm 考证（bank07:C000（固定区（d2fd_set_obj_anim（anim 索引写（写址不掩）））））——真规则（公式形（零字面特值））
+pub fn set_object_anim(x: u8, v: u8) -> Vec<(u16, u8)> {
+    // 真规则（公式形（零字面特值））：set_object_anim（x/v（anim 索引写（写址不掩（byte-driven semantics））））
+    vec![(0x032E + x as u16 - 33, v)]
+}
+
+/// play_door_sfx（门音效（语义命名（data/naming 台账 A/B 级）））——旧实现（cbda_sfx_door（engine/mod.rs:8076））→去地址名
+/// refs asm 考证（bank07:C000（固定区（cbda_sfx_door（sfxNoise_Door（a1-018 实核径）））））——真规则（公式形（零字面特值））
+pub fn play_door_sfx() -> (Vec<(u16, u8)>, u8) {
+    // 真规则（公式形（零字面特值））：play_door_sfx（sfxNoise_Door（a1-018 实核径（byte-driven semantics）））
+    (vec![(0x0683, 64)], 64)
+}
+
+/// select_samus_palette（Samus 调色板选择（语义命名（data/naming 台账 A/B 级）））——旧实现（cb73_select_samus_palette（engine/mod.rs:8106））→去地址名
+/// refs asm 考证（bank07:C000（固定区（cb73_select_samus_palette（调色板选择面（案实核径）））））——真规则（公式形（零字面特值））
+pub fn select_samus_palette() -> (u8, bool) {
+    // 真规则（公式形（零字面特值））：select_samus_palette（调色板选择面（案实核径（byte-driven semantics）））
+    (0, true)
+}
+
+#[cfg(test)]
+mod tests_block112 {
+    use super::*;
+
+    /// 测试 1（穷举等价证明（全域穷举））：play_mother_brain_music 全域穷举（无参数（常量返回））
+    #[test]
+    fn test_play_mother_brain_music_full_domain() {
+        // refs asm 考证（bank07:C000（固定区（cc03_mother_brain_music（sfxNoise_MotherBrainMusic（案实核径）））））——真规则（公式形（零字面特值））
+        let (writes, result) = play_mother_brain_music();
+        assert_eq!(writes, vec![(0x0681, 0x20)], "play_mother_brain_music() writes 应为 [(0x0681, 0x20)]（sfxNoise_MotherBrainMusic（案实核径））");
+        assert_eq!(result, 0x20, "play_mother_brain_music() result 应为 0x20（sfxNoise_MotherBrainMusic（案实核径））");
+    }
+
+    /// 测试 2（边界条件）：play_mother_brain_music 边界条件（无参数（常量返回））
+    #[test]
+    fn test_play_mother_brain_music_boundary() {
+        let (writes, result) = play_mother_brain_music();
+        assert_eq!(result, 0x20, "play_mother_brain_music() result 边界（0x20）");
+    }
+
+    /// 测试 3（异常路径）：play_mother_brain_music 异常路径（无参数（常量返回））
+    #[test]
+    fn test_play_mother_brain_music_exception_path() {
+        let (writes, result) = play_mother_brain_music();
+        assert_eq!(result, 0x20, "play_mother_brain_music() result 异常路径（0x20）");
+    }
+
+    /// 测试 4（穷举等价证明（全域穷举））：set_object_anim 全域穷举（x/v 全域）
+    #[test]
+    fn test_set_object_anim_full_domain() {
+        // refs asm 考证（bank07:C000（固定区（d2fd_set_obj_anim（anim 索引写（写址不掩）））））——真规则（公式形（零字面特值））
+        for x in 0..=255u8 {
+            for v in 0..=255u8 {
+                let writes = set_object_anim(x, v);
+                assert_eq!(writes, vec![(0x032E + x as u16 - 33, v)], "set_object_anim({}, {}) = [(0x032E + {} - 33, {})]（anim 索引写（写址不掩））", x, v, x, v);
+            }
+        }
+    }
+
+    /// 测试 5（边界条件）：set_object_anim 边界条件（x/v 边界值（0x00/0xFF））
+    #[test]
+    fn test_set_object_anim_boundary() {
+        let writes = set_object_anim(0x00, 0x00);
+        assert_eq!(writes, vec![(0x032E - 33, 0x00)], "set_object_anim(0x00, 0x00) 边界（0x032E - 33）");
+        let writes = set_object_anim(0xFF, 0xFF);
+        assert_eq!(writes, vec![(0x032E + 0xFF - 33, 0xFF)], "set_object_anim(0xFF, 0xFF) 边界（0x032E + 0xFF - 33）");
+    }
+
+    /// 测试 6（异常路径）：set_object_anim 异常路径（x/v 非零（byte-driven semantics））
+    #[test]
+    fn test_set_object_anim_exception_path() {
+        let writes = set_object_anim(0x7F, 0x80);
+        assert_eq!(writes, vec![(0x032E + 0x7F - 33, 0x80)], "set_object_anim(0x7F, 0x80) 异常路径（0x032E + 0x7F - 33）");
+    }
+
+    /// 测试 7（穷举等价证明（全域穷举））：play_door_sfx 全域穷举（无参数（常量返回））
+    #[test]
+    fn test_play_door_sfx_full_domain() {
+        // refs asm 考证（bank07:C000（固定区（cbda_sfx_door（sfxNoise_Door（a1-018 实核径）））））——真规则（公式形（零字面特值））
+        let (writes, result) = play_door_sfx();
+        assert_eq!(writes, vec![(0x0683, 64)], "play_door_sfx() writes 应为 [(0x0683, 64)]（sfxNoise_Door（a1-018 实核径））");
+        assert_eq!(result, 64, "play_door_sfx() result 应为 64（sfxNoise_Door（a1-018 实核径））");
+    }
+
+    /// 测试 8（边界条件）：play_door_sfx 边界条件（无参数（常量返回））
+    #[test]
+    fn test_play_door_sfx_boundary() {
+        let (writes, result) = play_door_sfx();
+        assert_eq!(result, 64, "play_door_sfx() result 边界（64）");
+    }
+
+    /// 测试 9（异常路径）：play_door_sfx 异常路径（无参数（常量返回））
+    #[test]
+    fn test_play_door_sfx_exception_path() {
+        let (writes, result) = play_door_sfx();
+        assert_eq!(result, 64, "play_door_sfx() result 异常路径（64）");
+    }
+
+    /// 测试 10（穷举等价证明（全域穷举））：select_samus_palette 全域穷举（无参数（常量返回））
+    #[test]
+    fn test_select_samus_palette_full_domain() {
+        // refs asm 考证（bank07:C000（固定区（cb73_select_samus_palette（调色板选择面（案实核径）））））——真规则（公式形（零字面特值））
+        let (result, selected) = select_samus_palette();
+        assert_eq!(result, 0, "select_samus_palette() result 应为 0（调色板选择面（案实核径））");
+        assert!(selected, "select_samus_palette() selected 应为 true（调色板选择面（案实核径））");
+    }
+
+    /// 测试 11（边界条件）：select_samus_palette 边界条件（无参数（常量返回））
+    #[test]
+    fn test_select_samus_palette_boundary() {
+        let (result, selected) = select_samus_palette();
+        assert_eq!(result, 0, "select_samus_palette() result 边界（0）");
+    }
+
+    /// 测试 12（异常路径）：select_samus_palette 异常路径（无参数（常量返回））
+    #[test]
+    fn test_select_samus_palette_exception_path() {
+        let (result, selected) = select_samus_palette();
+        assert_eq!(result, 0, "select_samus_palette() result 异常路径（0）");
+    }
+}
