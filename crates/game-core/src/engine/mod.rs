@@ -16076,3 +16076,66 @@ pub fn choose_spawning_routine(a_in: u8, x_in: u8, lo: u8, hi: u8, op_byte: u8)
                   (0x0069, x_in), (0x006A, 0)];
     (ev, (target >> 8) as u8, x_in, 0)
 }
+
+// ===== 1:1 Rust 改写·批产·块 129（s1 余批 3 员去名（碰撞半径和族）（TDD 穷举等价））=====
+
+#[cfg(test)]
+mod tests_b129_engine_mod {
+    //! TDD step1（测试先行（强制完整））——穷举等价（新==旧（≤256³ 闸时限界（依赖分解）））。
+    //! refs 锚（bank:addr 注内）：$F1BF GetRadiusSums root（:1560）/$F140 CollisionCheck root
+    //! （:1569）/$F0C9（:1578）。
+
+    use super::*;
+
+    /// 【穷举·半径和】x×y×v6af5×v6af6 依赖分解（和分量独立）——compute_radius_sums
+    /// ==s1_radius_sums+$F140 壳==s1_collision_check（→$F1FA）。
+    #[test]
+    fn exhaustive_radius_sums_equivalence() {
+        for x in 0u8..=255 {
+            for y in [0u8, 1, 0xFF] {
+                for &(a, b) in &[(0u8, 0u8), (0xFF, 0xFF), (0x7F, 0x80), (0x10, 0x20)] {
+                    assert_eq!(s1_radius_sums(x, y, a, b), compute_radius_sums(x, y, a, b));
+                    assert_eq!(s1_collision_check(x, y, a, b), collision_check_with_y_slot(x, y, a, b));
+                }
+            }
+        }
+        for a in 0u8..=255 {
+            for b in 0u8..=255 {
+                assert_eq!(s1_radius_sums(1, 2, a, b), compute_radius_sums(1, 2, a, b));
+            }
+        }
+    }
+
+    /// 【穷举·条件调壳】v70 全域——collision_loop_cond_call==s1_f0c9_body（==0⇒$CE84）。
+    #[test]
+    fn exhaustive_cond_call_equivalence() {
+        for v in 0u8..=255 {
+            assert_eq!(s1_f0c9_body(v), collision_loop_cond_call(v));
+        }
+    }
+}
+
+// ===== 1:1 Rust 改写·批产·块 129：碰撞半径和族语义命名（去地址名（公式形））=====
+// refs 锚（bank:addr 注内）：$F1BF GetRadiusSums root（:1560）/$F140 CollisionCheck root
+// （:1569）/$F0C9（:1578）。
+
+/// 半径和（旧 s1_radius_sums（$F1BF GetRadiusSumsOfEnXSlotAndObjYSlot root）：
+/// $05←$6AF5[x]+$6AF6[x]（半径和（碰撞工作面）））。
+pub fn compute_radius_sums(x: u8, y: u8, v6af5_x: u8, v6af6_x: u8) -> (Vec<(u16, u8)>, u8) {
+    let _ = (x, y);
+    let sum = v6af5_x.wrapping_add(v6af6_x);
+    (vec![(0x0005, sum)], sum)
+}
+
+/// Y 槽碰撞检（旧 s1_collision_check（$F140 root）：$F1BF 半径和+$F186/$F1D2 判段
+/// →尾跳 $F1FA）。
+pub fn collision_check_with_y_slot(x: u8, y: u8, v6af5_x: u8, v6af6_x: u8)
+    -> (Vec<(u16, u8)>, u8, u16) {
+    let (ev, sum) = compute_radius_sums(x, y, v6af5_x, v6af6_x);
+    (ev, sum, 0xF1FA)
+}
+
+/// 碰撞环条件调（旧 s1_f0c9_body（$F0C9）：$70==0⇒jsr $CE84）。
+pub fn collision_loop_cond_call(v70: u8) -> (Vec<(u16, u8)>, Option<u16>) {
+    (vec![], if v70 == 0 { Some(0xCE84) } else { None })
+}
