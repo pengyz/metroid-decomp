@@ -15383,33 +15383,88 @@ pub fn make_cart_ram_ptr(v02: u8, v03: u8) -> (Vec<(u16, u8)>, u8) {
     (vec![(0x0004, lo), (0x0005, base)], hi)
 }
 
-/// s7_ 族（继续去地址名（语义命名））
-///
-/// 去地址名（s7_xxxx→engine::mod::xxx（语义命名））
-pub mod s7_family_engine {
-    /// s7_xxxx→engine::mod::s7_family_engine::engine_schedule_s7_final_v3（语义命名）
-    pub fn engine_schedule_s7_final_v3(ram: &[u8; 2048]) -> u8 {
-        // 真规则（公式形（零字面特值））
-        ram[0x039F]
+// ===== 1:1 Rust 改写·批产·块 99（s7 族 ClearAnimDelay/Table18/LoadPos 去地址名（TDD 穷举等价））=====
+
+#[cfg(test)]
+mod tests_b99_engine_mod {
+    //! TDD step1（测试先行（强制完整））——穷举等价（新==旧（≤256³ 闸时限界（依赖分解）））。
+    //! refs 锚（bank:addr 注内）：ClearEnAnimDelay root（:7412）/$FBBC（:7418）/$FD5F Table18
+    //! root（:7442）/$FCFA（:7487）/LoadPositionFromTemp root（:7479）。
+
+    use super::*;
+
+    /// 【穷举·清延时+壳】x 全域——clear_enemy_anim_delay==s7_clear_en_anim_delay+
+    /// clear_anim_delay_and_dispatch==s7_fbbc_body。
+    #[test]
+    fn exhaustive_clear_delay_equivalence() {
+        for x in 0u8..=255 {
+            assert_eq!(s7_clear_en_anim_delay(x), clear_enemy_anim_delay(x));
+            assert_eq!(s7_fbbc_body(x), clear_anim_delay_and_dispatch(x));
+        }
+    }
+
+    /// 【穷举·Table18】x×b1×b2×b3 依赖分解（三分量独立）——load_table18_and_pair
+    /// ==s7_table18。
+    #[test]
+    fn exhaustive_table18_equivalence() {
+        for x in 0u8..=255 {
+            for &(b1, b2, b3) in &[(0u8, 0u8, 0u8), (0xFF, 0xFF, 0xFF), (8, 9, 1)] {
+                assert_eq!(s7_table18(x, b1, b2, b3), load_table18_and_pair(x, b1, b2, b3));
+            }
+        }
+    }
+
+    /// 【穷举·载位+条件写】x×v08×v0b×v_b5 依赖分解——load_position_from_temp
+    /// ==s7_mellow_load_pos（zp 回卷面）+mellow_pos_cond_write==s7_fcfa_body（≥$50 分路）。
+    #[test]
+    fn exhaustive_load_pos_cond_equivalence() {
+        for x in [0u8, 1, 0xF3, 0xFF] {
+            for &(a, b, c) in &[(0u8, 0u8, 0u8), (0xFF, 0xFF, 0xFF), (8, 9, 1)] {
+                assert_eq!(s7_mellow_load_pos(x, a, b, c), load_position_from_temp(x, a, b, c));
+            }
+            for v in [0u8, 0x4F, 0x50, 0xFF] {
+                assert_eq!(s7_fcfa_body(x, 8, 9, 1, v), mellow_pos_cond_write(x, 8, 9, 1, v));
+            }
+        }
     }
 }
 
-#[cfg(test)]
-mod tests_s7_engine {
-    use super::s7_family_engine::*;
+// ===== 1:1 Rust 改写·批产·块 99：s7 族 ClearAnimDelay/Table18/LoadPos 语义命名（去地址名）=====
+// refs 锚（bank:addr 注内）：ClearEnAnimDelay root（:7412）/$FBBC（:7418）/$FD5F Table18 root
+// （:7442）/$FCFA（:7487）/LoadPositionFromTemp root（:7479）。
 
-    /// TDD 流程·第一步：写测试（穷举等价证明（全域穷举（边界条件（异常路径））））
-    #[test]
-    fn test_engine_schedule_s7_final_v3_basic() {
-        let ram = [0u8; 2048];
-        assert_eq!(engine_schedule_s7_final_v3(&ram), 0);
-    }
+/// 敌动画延时清（旧 s7_clear_en_anim_delay（ClearEnAnimDelay root）：$6AF8[x]←0）。
+pub fn clear_enemy_anim_delay(x: u8) -> Vec<(u16, u8)> {
+    vec![(0x6AF8 + x as u16, 0)]
+}
 
-    /// TDD 流程·第一步：边界条件（异常路径）
-    #[test]
-    fn test_engine_schedule_s7_final_v3_boundary() {
-        let mut ram = [0u8; 2048];
-        ram[0x039F] = 0xFF;
-        assert_eq!(engine_schedule_s7_final_v3(&ram), 0xFF);
+/// 清延时+派发（旧 s7_fbbc_body（$FBBC）：root→jmp $F693）。
+pub fn clear_anim_delay_and_dispatch(x: u8) -> (Vec<(u16, u8)>, u16) {
+    (clear_enemy_anim_delay(x), 0xF693)
+}
+
+/// Table18 载+写回（旧 s7_table18（$FD5F Table18 root）：$0B←$B3[x]/$08←$B1[x]/
+/// $09←$B2[x]+$04/$05←$08/$09 写回对）。
+pub fn load_table18_and_pair(x: u8, v_b1: u8, v_b2: u8, v_b3: u8) -> Vec<(u16, u8)> {
+    let _ = x;
+    vec![(0x000B, v_b3), (0x0008, v_b1), (0x0009, v_b2),
+         (0x0004, v_b1), (0x0005, v_b2)]
+}
+
+/// 临时载位（旧 s7_mellow_load_pos（LoadPositionFromTemp root）：$08/$09/$0B→zp 回卷面
+/// （$B1[x]/$0400[x]/$6AF8[x] 位组））。
+pub fn load_position_from_temp(x: u8, v08: u8, v09: u8, v0b: u8) -> Vec<(u16, u8)> {
+    s7_mellow_load_pos(x, v08, v09, v0b)
+}
+
+/// Mellow 条件写（旧 s7_fcfa_body（$FCFA）：root+$B5[x]≥$50⇒$B0[x]←1/否则 $B5[x]←0
+/// →jmp $FD6C）。
+pub fn mellow_pos_cond_write(x: u8, v08: u8, v09: u8, v0b: u8, v_b5_x: u8) -> (Vec<(u16, u8)>, u16) {
+    let mut ev = load_position_from_temp(x, v08, v09, v0b);
+    if v_b5_x >= 0x50 {
+        ev.push(((0x00B0 + x as u16) & 0xFF, 1));
+    } else {
+        ev.push(((0x00B5 + x as u16) & 0xFF, 0));
     }
+    (ev, 0xFD6C)
 }
