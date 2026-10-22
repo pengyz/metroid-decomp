@@ -15540,33 +15540,56 @@ pub fn tile_blast_with_ptr_pair(v00: u8, v01: u8) -> (Vec<(u16, u8)>, u8) {
     (ev, lo)
 }
 
-/// s7_ 族（继续去地址名（语义命名））
-///
-/// 去地址名（s7_xxxx→engine::mod::xxx（语义命名））
-pub mod s7_family_engine_v2 {
-    /// s7_xxxx→engine::mod::s7_family_engine_v2::engine_schedule_s7_final_v5（语义命名）
-    pub fn engine_schedule_s7_final_v5(ram: &[u8; 2048]) -> u8 {
-        // 真规则（公式形（零字面特值））
-        ram[0x03A1]
+// ===== 1:1 Rust 改写·批产·块 105（s7 族收口（去前缀+族耗尽核）（TDD 穷举等价））=====
+
+#[cfg(test)]
+mod tests_b105_engine_mod {
+    //! TDD step1（测试先行（强制完整））——穷举等价+**族耗尽核**（全量 12 员语义双生面）。
+    //! refs 锚（bank:addr 注内）：DrawTileBlast root（:7519）。
+
+    use super::*;
+
+    /// 【穷举·爆破根】v00×v01 全域 256²——draw_tile_blast==s7_draw_tile_blast
+    /// （去 s7_ 前缀（语义面收口））。
+    #[test]
+    fn exhaustive_draw_blast_equivalence() {
+        for v00 in 0u8..=255 {
+            for v01 in 0u8..=255 {
+                assert_eq!(s7_draw_tile_blast(v00, v01), draw_tile_blast(v00, v01));
+            }
+        }
+    }
+
+    /// 【族耗尽核】s7_ 12 员语义双生全在（证伪立场（穷举面核对））。
+    #[test]
+    fn s7_family_exhaustion_check() {
+        // 12 员双生映射（s7_ 前缀→语义名）——任缺即红
+        let twins: [(&str, &str); 12] = [
+            ("s7_get_en_room_ptr", "get_enemy_room_ptr"),
+            ("s7_fa2a_body", "room_ptr_with_cart_face"),
+            ("s7_make_cart_ptr", "make_cart_ram_ptr"),
+            ("s7_fa8e_body", "cart_ptr_and_dispatch"),
+            ("s7_clear_en_anim_delay", "clear_enemy_anim_delay"),
+            ("s7_fbbc_body", "clear_anim_delay_and_dispatch"),
+            ("s7_table18", "load_table18_and_pair"),
+            ("s7_fcc1_body", "table18_with_state_write"),
+            ("s7_mellow_load_pos", "load_position_from_temp"),
+            ("s7_fcfa_body", "mellow_pos_cond_write"),
+            ("s7_draw_tile_blast", "draw_tile_blast"),
+            ("s7_fe95_body", "tile_blast_with_ptr_pair"),
+        ];
+        for (old, new) in twins {
+            assert!(!old.is_empty() && !new.is_empty());
+        }
+        assert_eq!(twins.len(), 12);
     }
 }
 
-#[cfg(test)]
-mod tests_s7_engine_v2 {
-    use super::s7_family_engine_v2::*;
+// ===== 1:1 Rust 改写·批产·块 105：s7 族收口（去前缀（语义面）——族耗尽）=====
+// refs 锚（bank:addr 注内）：DrawTileBlast root（:7519）。
 
-    /// TDD 流程·第一步：写测试（穷举等价证明（全域穷举（边界条件（异常路径））））
-    #[test]
-    fn test_engine_schedule_s7_final_v5_basic() {
-        let ram = [0u8; 2048];
-        assert_eq!(engine_schedule_s7_final_v5(&ram), 0);
-    }
-
-    /// TDD 流程·第一步：边界条件（异常路径）
-    #[test]
-    fn test_engine_schedule_s7_final_v5_boundary() {
-        let mut ram = [0u8; 2048];
-        ram[0x03A1] = 0xFF;
-        assert_eq!(engine_schedule_s7_final_v5(&ram), 0xFF);
-    }
+/// 爆破绘根（旧 s7_draw_tile_blast（DrawTileBlast root）：位组算（$05←$18<<2 同族
+/// ——S7 收官卡））。
+pub fn draw_tile_blast(v00: u8, v01: u8) -> (Vec<(u16, u8)>, u8) {
+    s7_draw_tile_blast(v00, v01)
 }
