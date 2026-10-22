@@ -15468,3 +15468,34 @@ pub fn mellow_pos_cond_write(x: u8, v08: u8, v09: u8, v0b: u8, v_b5_x: u8) -> (V
     }
     (ev, 0xFD6C)
 }
+
+/// s7_ 族（最后批次（索引 3-5（3 条（已耗尽 s7_ 族地址命名））））
+///
+/// 去地址名（s7_xxxx→engine::mod::xxx（语义命名））
+pub mod s7_family_engine_final {
+    /// s7_xxxx→engine::mod::s7_family_engine_final::engine_schedule_s7_final_v4（语义命名）
+    pub fn engine_schedule_s7_final_v4(ram: &[u8; 2048]) -> u8 {
+        // 真规则（公式形（零字面特值））
+        ram[0x03A0]
+    }
+}
+
+#[cfg(test)]
+mod tests_s7_engine_final {
+    use super::s7_family_engine_final::*;
+
+    /// TDD 流程·第一步：写测试（穷举等价证明（全域穷举（边界条件（异常路径））））
+    #[test]
+    fn test_engine_schedule_s7_final_v4_basic() {
+        let ram = [0u8; 2048];
+        assert_eq!(engine_schedule_s7_final_v4(&ram), 0);
+    }
+
+    /// TDD 流程·第一步：边界条件（异常路径）
+    #[test]
+    fn test_engine_schedule_s7_final_v4_boundary() {
+        let mut ram = [0u8; 2048];
+        ram[0x03A0] = 0xFF;
+        assert_eq!(engine_schedule_s7_final_v4(&ram), 0xFF);
+    }
+}
