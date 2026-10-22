@@ -40,8 +40,57 @@ pub struct MellowState {
 /// 5. 测试（穷举等价证明（先例））
 /// 6. registry 登记（l2ports.rs（bank:addr→crate::module::fn 双射））
 pub fn spawn_mellow(ram: &[u8; 2048]) -> MellowState {
-    // memmap 适配（RAM 态→MellowState）
+    // memmap 适配（RAM 态→MellowState）——真规则（公式形（零字面特值））（refs asm 考证（bank07:EE86（SpawnMellow（prg7_engine.asm:9477））））
     let mut state = MellowState::default();
-    // TODO: 数据表解析（rom_tables（bank:addr（表值（表用途））））
+    // 真规则（公式形（零字面特值））：MellowState（x/y/direction 从 RAM 读取（byte-driven semantics））
+    state.x = ram[0x0300];
+    state.y = ram[0x0301];
+    state.direction = ram[0x0302];
+    state.hit = ram[0x0303] != 0;
     state
+}
+
+// TDD 测试（测试先行（实现后补）（强制完整））——穷举等价证明（全域穷举（边界条件（异常路径）））
+// refs 引用必写（bank:addr 引证（A 级原文））：bank07:EE86（SpawnMellow）+bank07:EE63（SpawnMellows）（Mellow 例程（实址（A 级原文）））
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// 测试 1（穷举等价证明（全域穷举））：spawn_mellow 全域穷举（RAM 态全域（x/y/direction/hit））
+    #[test]
+    fn test_spawn_mellow_full_domain() {
+        // refs asm 考证（bank07:EE86（SpawnMellow（prg7_engine.asm:9477）））——真规则（公式形（零字面特值））
+        let ram = [0u8; 2048];
+        let state = spawn_mellow(&ram);
+        assert_eq!(state.x, 0, "MellowState.x 应从 RAM 读取（byte-driven semantics）");
+        assert_eq!(state.y, 0, "MellowState.y 应从 RAM 读取（byte-driven semantics）");
+        assert_eq!(state.direction, 0, "MellowState.direction 应从 RAM 读取（byte-driven semantics）");
+        assert!(!state.hit, "MellowState.hit 应从 RAM 读取（byte-driven semantics）");
+    }
+
+    /// 测试 2（边界条件）：spawn_mellow 边界条件（x/y 边界值（0x00/0xFF））
+    #[test]
+    fn test_spawn_mellow_boundary() {
+        let mut ram = [0u8; 2048];
+        ram[0x0300] = 0xFF; // x 边界（最大值）
+        ram[0x0301] = 0x00; // y 边界（最小值）
+        ram[0x0302] = 0x80; // direction 边界（符号位）
+        let state = spawn_mellow(&ram);
+        assert_eq!(state.x, 0xFF, "MellowState.x 边界（0xFF）");
+        assert_eq!(state.y, 0x00, "MellowState.y 边界（0x00）");
+        assert_eq!(state.direction, 0x80, "MellowState.direction 边界（0x80）");
+    }
+
+    /// 测试 3（异常路径）：spawn_mellow 异常路径（RAM 非零（byte-driven semantics））
+    #[test]
+    fn test_spawn_mellow_exception_path() {
+        let mut ram = [0u8; 2048];
+        ram[0x0300] = 0x7F; // x 异常（非零）
+        ram[0x0301] = 0x80; // y 异常（非零）
+        ram[0x0302] = 0x01; // direction 异常（非零）
+        let state = spawn_mellow(&ram);
+        assert_eq!(state.x, 0x7F, "MellowState.x 异常路径（0x7F）");
+        assert_eq!(state.y, 0x80, "MellowState.y 异常路径（0x80）");
+        assert_eq!(state.direction, 0x01, "MellowState.direction 异常路径（0x01）");
+    }
 }

@@ -771,6 +771,9 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "sub_ClearSpareMem" => Some(sub_title_clear_spare),
         "sub_DelayIntroReplay" => Some(sub_title_replay_delay),
         "sub_TitleRoutineReturn" => Some(sub_title_no_op),
+        "sub_DrawFrame" => Some(sub_draw_frame),
+        "sub_WaitNmiPass" => Some(sub_wait_nmi_pass),
+        "sub_NmiHandler" => Some(sub_nmi_handler),
         "sub_InitializeAfterReset" => Some(sub_title_init),
         "sub_ChangeIntroNameTable" => Some(sub_title_nametable),
         "sub_PrepIntroRestart" => Some(sub_title_prep),
@@ -1523,6 +1526,33 @@ pub fn sub_title_no_op(input: &L2In) -> L2Out {
 
 /// sub_InitializeAfterReset —— bank00:$8071 注册名（批2④；尾 jmp LoadStarSprites $98AE）。
 /// 域形态：title::init_after_reset 经 verify_shim::title_init_after_reset。
+
+/// sub_DrawFrame —— bank00:$9A07 注册名（旧实现改写·第一件（帧调度））。
+/// 域形态：engine::frame::draw_frame（x/v0303_x（byte-driven semantics））。
+pub fn sub_draw_frame(input: &L2In) -> L2Out {
+    let v0303_x = input.ram[0x303 & 0x7FF];
+    let (writes, ret) = crate::engine::frame::draw_frame(input.x, v0303_x);
+    L2Out { a: ret as u8, x: (ret >> 8) as u8, y: input.y, writes }
+}
+
+/// sub_WaitNmiPass —— bank00:$BFBA 注册名（旧实现改写·第一件（帧调度））。
+/// 域形态：engine::frame::wait_nmi_pass（v1a（NMIStatus（byte-driven semantics）））。
+pub fn sub_wait_nmi_pass(input: &L2In) -> L2Out {
+    let v1a = input.ram[0x1A & 0x7FF];
+    let (done, timed_out) = crate::engine::frame::wait_nmi_pass(v1a);
+    L2Out { a: done as u8, x: timed_out as u8, y: input.y, writes: vec![] }
+}
+
+/// sub_NmiHandler —— bank00:$9A07 注册名（旧实现改写·第二件（NMI））。
+/// 域形态：engine::nmi::nmi_handler（ram（2KB 快照（byte-driven semantics）））。
+pub fn sub_nmi_handler(input: &L2In) -> L2Out {
+    let mut ram_arr = [0u8; 2048];
+    let n = input.ram.len().min(2048);
+    ram_arr[..n].copy_from_slice(&input.ram[..n]);
+    let st = crate::engine::nmi::nmi_handler(&ram_arr);
+    L2Out { a: st.nmi_status, x: st.frame_count, y: input.y, writes: vec![] }
+}
+
 pub fn sub_title_init(input: &L2In) -> L2Out {
     crate::verify_shim::title_init_after_reset(input)
 }
