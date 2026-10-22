@@ -14872,3 +14872,82 @@ pub fn en_hi_cond_write_double(x: u8, v6afb_x: u8, v030c: u8, v0400_x: u8) -> (V
     }
     (ev, y)
 }
+
+// ===== 1:1 Rust 改写·批产·块 71（s3 族 Pickup 转化+BG 碰撞去地址名（TDD 穷举等价））=====
+
+#[cfg(test)]
+mod tests_b71_engine_mod {
+    //! TDD step1（测试先行（强制完整））——穷举等价（新==旧（≤256³ 闸时限界））。
+    //! refs 锚（bank:addr 注内）：EnemyBecomePickupIfHit root（:3320）/$F96A（:3330）/$F991
+    //! （:3336）/$FA1E EnemyBGCollide root（:3367）。
+
+    use super::*;
+
+    /// 【穷举·Pickup 转化】x×v0404 全域——convert_to_pickup_if_hit==s3_become_pickup
+    /// （≠0⇒转化面（$0404[x]←0/$6AF4[x]←5））+二壳（退化+tbl 边角）。
+    #[test]
+    fn exhaustive_pickup_convert_equivalence() {
+        for x in 0u8..=255 {
+            for v in 0u8..=255 {
+                assert_eq!(s3_become_pickup(x, v), convert_to_pickup_if_hit(x, v));
+                assert_eq!(s3_f96a_body(x, v), pickup_convert_resting(x, v));
+                for &(lo, hi) in &[(0u8, 0u8), (0x55, 0x66), (0xFF, 0xFF)] {
+                    assert_eq!(s3_f991_body(x, v, lo, hi), pickup_convert_active_with_ptr(x, v, lo, hi));
+                }
+            }
+        }
+    }
+
+    /// 【穷举·BG 碰撞 root】x×v74×v6af4 依赖分解——enemy_bg_collide_check==
+    /// s3_enemy_bg_collide（$74==$11 且位0）。
+    #[test]
+    fn exhaustive_bg_collide_equivalence() {
+        for x in 0u8..=255 {
+            for v74 in 0u8..=255 {
+                for v4 in [0u8, 1, 2, 3, 0xFF] {
+                    assert_eq!(s3_enemy_bg_collide(x, v74, v4), enemy_bg_collide_check(x, v74, v4));
+                }
+            }
+        }
+        for v4 in 0u8..=255 {
+            assert_eq!(s3_enemy_bg_collide(1, 0x11, v4), enemy_bg_collide_check(1, 0x11, v4));
+        }
+    }
+}
+
+// ===== 1:1 Rust 改写·批产·块 71：s3 族 Pickup 转化+BG 碰撞语义命名（去地址名（公式形））=====
+// refs 锚（bank:addr 注内）：EnemyBecomePickupIfHit root（:3320）/$F96A（:3330）/$F991
+// （:3336）/$FA1E EnemyBGCollide root（:3367）。
+
+/// Pickup 转化（旧 s3_become_pickup（EnemyBecomePickupIfHit root）：$0404[x]≠0⇒
+/// $0404[x]←0+$6AF4[x]←5（转化面））。
+pub fn convert_to_pickup_if_hit(x: u8, v0404_x: u8) -> (Vec<(u16, u8)>, bool) {
+    if v0404_x != 0 {
+        (vec![(0x0404 + x as u16, 0), (0x6AF4 + x as u16, 5)], true)
+    } else {
+        (vec![], false)
+    }
+}
+
+/// 静息壳（旧 s3_f96a_body（$F96A UpdateEnProjectile_Resting）：root 直通）。
+pub fn pickup_convert_resting(x: u8, v0404_x: u8) -> (Vec<(u16, u8)>, bool) {
+    convert_to_pickup_if_hit(x, v0404_x)
+}
+
+/// 活跃壳+指针（旧 s3_f991_body（$F991 UpdateEnProjectile_Active）：root+$0A←tbl_lo/
+/// $0B←tbl_hi（$97A7[y] 表载面））。
+pub fn pickup_convert_active_with_ptr(x: u8, v0404_x: u8, tbl_lo: u8, tbl_hi: u8) -> Vec<(u16, u8)> {
+    let (mut ev, _) = convert_to_pickup_if_hit(x, v0404_x);
+    ev.push((0x000A, tbl_lo));
+    ev.push((0x000B, tbl_hi));
+    ev
+}
+
+/// BG 碰撞判（旧 s3_enemy_bg_collide（$FA1E EnemyBGCollideOrApplySpeed root）：
+/// $74==$11 且 $6AF4[x] 位0⇒(碰撞, 判段)）。
+pub fn enemy_bg_collide_check(x: u8, v74: u8, v6af4_x: u8) -> (bool, bool) {
+    let _ = x;
+    let in_area = v74 == 0x11;
+    let speed_bit = v6af4_x & 1 != 0;
+    (in_area && speed_bit, in_area)
+}
