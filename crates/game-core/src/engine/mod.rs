@@ -13702,3 +13702,114 @@ pub fn adjust_counter_with_compliment(x: u8, v6b01_x: u8) -> (Vec<(u16, u8)>, Op
     let call = if (v6b01_x as i8) < 0 { Some(0xC3D4) } else { None };
     (vec![(0x6B03 + x as u16, v6b01_x)], call)
 }
+
+// ===== 1:1 Rust 改写·批产·块 26（s1 族 D0xx 簇去地址名（TDD 穷举等价证明））=====
+
+#[cfg(test)]
+mod tests_b26_engine_mod {
+    //! TDD step1（测试先行（强制完整））——穷举等价（新==旧（≤256³ 闸时限界））。
+    //! refs 锚（bank:addr 注内）：$D0xx SetSamusAnim 根（:723）/$D07A（:728）/$D088（:735）/
+    //! $D12B（:744）/$D8B4（:750）/$FD8F root（:780）。
+
+    use super::*;
+
+    /// 【穷举·anim 根面】a 全域——set_samus_anim_face==s1_set_samus_anim。
+    #[test]
+    fn exhaustive_anim_root_equivalence() {
+        for a in 0u8..=255 {
+            assert_eq!(s1_set_samus_anim(a), set_samus_anim_face(a));
+        }
+    }
+
+    /// 【穷举·表比对同步】a×v0305×tbl 全域 256³——sync_samus_anim_by_table==s1_d07a_body
+    /// （相等⇒表值/不等⇒A）。
+    #[test]
+    fn exhaustive_sync_anim_equivalence() {
+        for a in 0u8..=255 {
+            for v in 0u8..=255 {
+                for t in 0u8..=255 {
+                    assert_eq!(s1_d07a_body(a, v, t), sync_samus_anim_by_table(a, v, t));
+                }
+            }
+        }
+    }
+
+    /// 【穷举·运动态 anim】a×x×y 全域 256³——set_anim_with_motion_state==s1_d088_body。
+    #[test]
+    fn exhaustive_motion_anim_equivalence() {
+        for a in 0u8..=255 {
+            for x in 0u8..=255 {
+                for y in 0u8..=255 {
+                    assert_eq!(s1_d088_body(a, x, y), set_anim_with_motion_state(a, x, y));
+                }
+            }
+        }
+    }
+
+    /// 【穷举·派发壳×2+三径算】a 全域+v49×v04×v08 全域 256³（依赖分解（$02 与值分量独立））。
+    #[test]
+    fn exhaustive_dispatch_clamp_equivalence() {
+        for a in 0u8..=255 {
+            assert_eq!(s1_d12b_body(a), set_anim_and_dispatch_chain(a));
+            assert_eq!(s1_d8b4_body(a), set_anim_and_return_dispatch(a));
+        }
+        for v49 in 0u8..=255 {
+            for v04 in 0u8..=255 {
+                for v08 in 0u8..=255 {
+                    assert_eq!(s1_root_fd8f(v49, v04, v08), compute_delta_with_clamp(v49, v04, v08));
+                }
+            }
+        }
+    }
+}
+
+// ===== 1:1 Rust 改写·批产·块 26：D0xx 簇语义命名（去地址名（公式形（零字面特值）））=====
+// refs 锚（bank:addr 注内）：$D0xx SetSamusAnim 根（:723）/$D07A（:728）/$D088（:735）/
+// $D12B（:744）/$D8B4（:750）/$FD8F root（:780）。
+
+/// anim 根面（旧 s1_set_samus_anim（$D0xx root）：$0305←A/$0306←A/$0304←0）。
+pub fn set_samus_anim_face(a_in: u8) -> (Vec<(u16, u8)>, u8) {
+    (vec![(0x0305, a_in), (0x0306, a_in), (0x0304, 0)], 0)
+}
+
+/// 表比对同步（旧 s1_d07a_body（$D07A）：$0305==$D096[y]⇒表值/不等⇒A→SetSamusAnim）。
+pub fn sync_samus_anim_by_table(a_in: u8, v0305: u8, tbl_entry: u8) -> (Vec<(u16, u8)>, u8) {
+    let v = if v0305 == tbl_entry { tbl_entry } else { a_in };
+    set_samus_anim_face(v)
+}
+
+/// 运动态 anim（旧 s1_d088_body（$D088）：SetSamusAnim+$0304←8+$4D←Y/$0309←X）。
+pub fn set_anim_with_motion_state(a_in: u8, x: u8, y: u8) -> Vec<(u16, u8)> {
+    let (mut ev, _) = set_samus_anim_face(a_in);
+    ev.push((0x0304, 8));
+    ev.push((0x004D, y));
+    ev.push((0x0309, x));
+    ev
+}
+
+/// 派发链壳（旧 s1_d12b_body（$D12B）：SetSamusAnim→$CCB7 子调链首）。
+pub fn set_anim_and_dispatch_chain(a_in: u8) -> (Vec<(u16, u8)>, u16) {
+    let (ev, _) = set_samus_anim_face(a_in);
+    (ev, 0xCCB7)
+}
+
+/// 回驱壳（旧 s1_d8b4_body（$D8B4）：SetSamusAnim→jmp $D806）。
+pub fn set_anim_and_return_dispatch(a_in: u8) -> (Vec<(u16, u8)>, u16) {
+    let (ev, _) = set_samus_anim_face(a_in);
+    (ev, 0xD806)
+}
+
+/// 三径算（旧 s1_root_fd8f（$FD8F）：$02←$49&2；$04 负⇒原值/beq⇒0/正⇒adc $08
+/// （进位⇒溢出无钳；无进位且 ≥$F0⇒+$0F 钳））。
+pub fn compute_delta_with_clamp(v49: u8, v04: u8, v08: u8) -> (Vec<(u16, u8)>, u8) {
+    let ev = vec![(0x0002, v49 & 0x02)];
+    let v = if (v04 as i8) < 0 {
+        v04
+    } else if v04 == 0 {
+        v04
+    } else {
+        let (s, carry) = v04.overflowing_add(v08);
+        if carry { s } else if s >= 0xF0 { s.wrapping_add(0x0F) } else { s }
+    };
+    (ev, v)
+}
