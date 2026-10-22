@@ -1,81 +1,50 @@
-# asm→rust 完备性文档（可度量工作量）
+# asm→Rust 精确映射（函数/数据结构级）——设计阶段映射表
 
-> 【2026-10-22 用户裁定】认可，继续推进——1:1 Rust 改写（完备性文档（可度量工作量））。
+> 2026-10-22 · 用户要求（实现前拿到精确映射（函数/数据结构级））·
+> 纪律强化（refs 引用必写+更新留档可追溯）· 四项核（对抗复核核（证伪立场（独立重导证据）））·
+> Evidence A 级（bank:addr 引证）Confidence 95
 
-## 核心主张
+## 0. 映射总则
 
-工作量可度量（asm 函数数→rust 函数数（提前探明））——**但 asm→rust 映射不是一对一**（允许一对多/多对一）。
+每行=**一 asm 数据表/结构 ↔ 一 game-data 精确归宿**（`tables::<snake_case>` const 数组
+（game-data/tables/（数据驱动（ROM 直读禁改写））））。函数级映射另列（§3）。
 
-## 一、当前 rust 现状（陈旧代码识别）
+## 1. asm 数据表→game-data（精确分类）
 
-| 维度 | 数量 | 状态 |
-|---|---|---|
-| rust 文件总数 | 43 | — |
-| rust 函数总数 | 2815 | — |
-| 地址命名函数（陈旧代码） | 337 | ❌ 需清理 |
-| engine/mod.rs（最大陈旧代码） | 13564 行（1305 fn（307 地址命名）） | ❌ 需拆分 |
-
-## 二、asm→rust 映射表（提前探明结构/函数数）
-
-**映射规则**（允许一对多/多对一（不是简单一对一））：
-- 一个 asm 函数→多个 rust 函数（拆分）
-- 多个 asm 函数→一个 rust 函数（聚合）
-- 一个 asm 函数→一个 rust 函数（一对一）
-
-| asm 模块 | rust 模块 | 行数 | fn 数 | 地址命名 | 状态 |
-|---|---|---|---|---|---|
-| engine/mod.rs | engine/{frame,nmi,boot} | 14689 | 1410 | 307 | ❌ 需拆分 |
-| world/* | world/{door,elevator,room} | 266 | 11 | 0 | ✅ 已清理 |
-| samus/* | samus/{handler,physics} | 1074 | 54 | 0 | ✅ 已清理 |
-| enemy/* | enemy/*（15 模块） | 1666 | 85 | 0 | ✅ 已清理 |
-| pickup/* | pickup/{items,powerup} | 146 | 7 | 0 | ✅ 已清理 |
-| ui/* | ui/password | 97 | 6 | 0 | ✅ 已清理 |
-| sound/* | sound/{mod,music,sfx} | 1430 | 78 | 0 | ✅ 已清理 |
-| title/* | title/{mod,sparkle} | 1822 | 42 | 0 | ✅ 已清理 |
-| ending/* | ending/sequence | 30 | 2 | 0 | ✅ 已清理 |
-| render/* | render/{mod,sprite} | 201 | 10 | 0 | ✅ 已清理 |
-| input/* | input/joy | 30 | 2 | 0 | ✅ 已清理 |
-| weapon/* | weapon/{missile,mod} | 137 | 6 | 0 | ✅ 已清理 |
-
-## 三、可并行块拆分（模块边界（标注依赖关系））
-
-| 块 | 模块 | 行数 | fn 数 | 依赖 | 写入冲突 |
-|---|---|---|---|---|---|
-| 块 1 | engine::frame（帧调度） | 145 | 16 | 块 2（顺序依赖） | 无（独立文件） |
-| 块 2 | engine::nmi（NMI） | 316 | 33 | 无 | 无（独立文件） |
-| 块 3 | engine::boot（启动） | 664 | 56 | 无 | 无（独立文件） |
-| **块 4** | **engine::mod**（陈旧代码） | **13564** | **1305** | 块 1/2/3 | **需拆分** |
-| 块 5 | world/{door,elevator,room} | 266 | 11 | 无 | 无（独立文件） |
-| 块 6 | samus/{handler,physics} | 1074 | 54 | 无 | 无（独立文件） |
-| 块 7 | enemy/*（15 模块） | 1666 | 85 | 无 | 无（独立文件） |
-| 块 8 | pickup/* | 146 | 7 | 无 | 无（独立文件） |
-| 块 9 | ui/* | 97 | 6 | 无 | 无（独立文件） |
-| 块 10 | sound/* | 1430 | 78 | 无 | 无（独立文件） |
-| 块 11 | title/* | 1822 | 42 | 无 | 无（独立文件） |
-| 块 12 | ending/* | 30 | 2 | 无 | 无（独立文件） |
-| 块 13 | render/* | 201 | 10 | 无 | 无（独立文件） |
-| 块 14 | input/* | 30 | 2 | 无 | 无（独立文件） |
-| 块 15 | weapon/* | 137 | 6 | 无 | 无（独立文件） |
-
-## 四、工作量度量（可量化）
-
-| 维度 | 数量 | 已完成 | 剩余 | 进度 |
+| asm 表/结构 | bank:addr（实证） | 内容（实读） | game-data 精确归宿 | 状态 |
 |---|---|---|---|---|
-| 地址命名函数（需清理） | 337 | 0 | 337 | **0%** |
-| engine/mod.rs（需拆分） | 1305 fn | 0 | 1305 | **0%** |
-| 全 crate 函数 | 2815 | 2815 | 0 | **100%**（已清理模块） |
+| **L968B**（敌型位旗表） | 01:968B（prg1_brinstar.asm:281-296） | 16 项 flag byte（每敌型 8 位（bit5=移动失败弹跳门（LoadBit5ofTableAt968B $81F6（areas_common.asm:507-509 `and #$20`）））） | `tables::enemy_type_flags_968b`（`const [u8; 16]`） | **A 级已证** |
+| **DoorHitPointTable** | $8BD1（areas_common.asm:1474-1478） | 4 项（red=$05/blue=$01/10-missile=$0A/blue-music=$01）——`lda DoorHitPointTable,y/sta DoorHitPoints,x`（:1448-1449） | `tables::door_hit_point_table`（`const [u8; 4] = [5,1,10,1]`） | **A 级已证** |
+| ObjectAnimIndexTbl | 01:8572（common_sprite_data.asm:12） | 动画索引表（0x99B 烘焙面） | `tables::sprite_data::object_anim_index_tbl`（已落） | A 级已证（先例） |
+| ObjFramePtrTable | 01:860B（common_sprite_data.asm:282） | 106 条目帧指针 | `tables::sprite_data::obj_frame_ptr_table`（已落） | A 级已证（先例） |
+| **DoorXTable** | bank01:8D3A（工单引） | —— | `tables::door_x_table`（待建） | **C 级待考**（证伪面：`DoorXTable` 名 refs 零命中；$8D3A 邻域无标签（最近=GFX_TheEndFont 01:8D60（prg1:32））——按 D5 不背书（禁 rename）待实证） |
 
-## 五、协调机制（轻量协调+冲突解决）
+## 2. 结构级映射（memmap 元数据→Rust 域结构）
 
-**主 agent 轻量协调**：
-- 跟踪进度（已完成函数数/总函数数）
-- 检查提交状态（git status（区分漏提交 vs 在产））
-- 派单（每 agent 一个块（独立文件（避免写入冲突）））
-- 冲突解决（写入冲突（合并冲突））→按 AGENTS.md §4 定位层
+| asm 结构 | bank:addr（实证） | Rust 归宿 | 状态 |
+|---|---|---|---|
+| PowerUp（8B×2） | constants_ram.asm:67-74/1158 | `enemy::projectile` 族外（pickup::powerup::PowerUpSlot（已落）） | A 级 |
+| Object（16B 实例 @$0340 等） | constants_ram.asm:217-241 | memmap 域（Object 面） | A 级 |
+| EnExtra（status/radiusY/radiusX/…） | constants_ram.asm:125-150 | `enemy::attrs`/`enemy_state` 域 | A 级 |
+| SignMagSpeed（2B（duration+符号量打包）） | macros.asm:7-29 | `enemy::projectile::decode_sign_mag_speed`（已落） | A 级 |
 
-## 六、持续迭代（直到收敛）
+## 3. 函数级映射（先例（续表随件））
 
-**迭代收敛**（直到 337 地址命名函数=0）：
-- 每轮迭代（清理一批地址命名函数）
-- 对抗复核（11 项（必跑验证））
-- 收敛判定（337 地址命名函数=0）
+| asm 例程 | bank:addr | Rust 归宿 | 状态 |
+|---|---|---|---|
+| Startup | 07:C01A（prg7_engine.asm:59） | `engine::boot::initialize`（已落） | A 级 |
+| UpdateAllPowerUps/UpdateOnePowerUp | 07:DB37/07:DB42 | `pickup::powerup::update_all/one_power_up`（已落） | A 级 |
+| CheckMissileLaunch 族 | 07:D315/D323/D340 | `weapon::missile::check_missile_launch`（已落） | A 级 |
+| SamusDoor/MoveOutDoor | 07:D3A8/D3F7 | `world::door::samus_door_tick`（已落） | A 级 |
+
+## 4. 实测输出原文（A 级）
+
+- `grep -rn "DoorHitPointTable\|DoorX" refs/` → DoorHitPointTable 命中（areas_common.asm:1448/1474/1486/1507/1540）；**DoorXTable 零命中**。
+- `grep -nE "^\w+: ; 01:8D" prg1_brinstar.asm` → 仅 `GFX_TheEndFont: ; 01:8D60`（$8D3A 邻域无标签）。
+- L968B 计数脚本 → **16 项**（flag byte×16 敌型）。
+- LoadBit5ofTableAt968B（$81F6）实文 → `jsr ReadTableAt968B/and #$20/rts`（bit5 门）。
+
+Evidence: prg1_brinstar.asm:281-296（L968B×16）+ areas_common.asm:507-509（bit5 消费径）
++ areas_common.asm:1448-1478（DoorHitPointTable 消费+表体）+ common_sprite_data.asm:12/282
++ constants_ram.asm:67-74/125-150/217-241 + macros.asm:7-29——bank:addr 引证齐（A 级原文）。
+Confidence: 95
