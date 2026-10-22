@@ -11924,6 +11924,15 @@ sub_NmiHandler（真实函数指针（双射（bank:addr→crate::module::fn）�
 （wrapping 溢出+阈值边界+终止边界（全验证））（实测输出原文（A 级））））——对抗复核核（证伪
 立场（独立重导证据（正确性核）））✓——修订实录+实测输出原文（A 级）（docs commit（追溯径））✓。
 
+
+> 【收口落档（追溯径）】needs_revision 闭环件（⑦registry+⑨⑪穷举等价证明）经**并发 commit 捕获**
+> 落库（afabc5d（staged 文件提交（gates PASS 后）））——registry（sub_DrawFrame/sub_WaitNmiPass/
+> sub_NmiHandler（l2ports.rs:774-776/1530/1538/1546（真实函数指针（双射）））+frame-nmi-proof.py
+> （65792 输入点全枚举（0 分歧）（边界（0x00/0x7F/0x80/0xFF（全命中））+异常路径（wrapping 溢出+
+> 阈值边界+终止边界（全验证））））——**实测输出原文（A 级）**（穷举等价证明成立（0 分歧））——
+> refs 引用必写 ✓（bank00:9A07（NMIScreenWrite（prg0_title.asm））+bank00:BFBA（WaitForVBlank
+> （prg0_title.asm）））+留档可追溯 ✓（docs commit（追溯径））。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
