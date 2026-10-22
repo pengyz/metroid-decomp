@@ -15600,33 +15600,84 @@ pub fn select_samus_palette() -> (u8, bool) {
     (0, true)
 }
 
-/// 307 地址命名（按子系统拆分去地址名（剩余））（语义命名）
-///
-/// 去地址名（307 地址命名→engine::mod::xxx（语义命名））
-pub mod subsystem_split_remaining {
-    /// 307 地址命名→engine::mod::subsystem_split_remaining::subsystem_schedule（语义命名）
-    pub fn subsystem_schedule(ram: &[u8; 2048]) -> u8 {
-        // 真规则（公式形（零字面特值））
-        ram[0x03A8]
+// ===== 1:1 Rust 改写·批产·块 117（a-addr 桩链+直连壳簇去名（TDD 穷举等价））=====
+
+#[cfg(test)]
+mod tests_b117_engine_mod {
+    //! TDD step1（测试先行（强制完整））——穷举等价（新==旧（≤256³ 闸时限界））。
+    //! refs 锚（bank:addr 注内）：$8000 桩链 root（:7357）/$99AD（:7363）/$8009 桩链 root
+    //! （:7443）/$9A4C（:7448）/$800C CommonJump root（:7469）/$800C dispatch（:7474）。
+
+    use super::*;
+
+    /// 【穷举·桩链×2】bank1_dispatch_four_stub==a8000_jmp_chain+bank1_dispatch_a3_stub
+    /// ==a8009_jmp_chain（退化域（桩面逐钉））。
+    #[test]
+    fn stub_chains_equivalence() {
+        assert_eq!(a8000_jmp_chain(), bank1_dispatch_four_stub());
+        assert_eq!(a8009_jmp_chain(), bank1_dispatch_a3_stub());
+    }
+
+    /// 【穷举·态写壳】v01 全域——stage_slot_state_write==a99ad_body（$85←9+透传）。
+    #[test]
+    fn exhaustive_stage_write_equivalence() {
+        for v in 0u8..=255 {
+            assert_eq!(a99ad_body(v), stage_slot_state_write(v));
+        }
+    }
+
+    /// 【穷举·透传壳】x×y 全域——passthrough_anim_state==a9a4c_body（(3,x,y)）。
+    #[test]
+    fn exhaustive_passthrough_equivalence() {
+        for x in 0u8..=255 {
+            for y in 0u8..=255 {
+                assert_eq!(a9a4c_body(x, y), passthrough_anim_state(x, y));
+            }
+        }
+    }
+
+    /// 【穷举·直连壳×2】common_jump_update_enemy_anim==a800c_common_jump+
+    /// update_enemy_anim_dispatch==a800c_dispatch（退化+x×y 边角）。
+    #[test]
+    fn common_jump_dispatch_equivalence() {
+        assert_eq!(a800c_common_jump(), common_jump_update_enemy_anim());
+        for &(a, b) in &[(0u8, 0u8), (3, 5), (0xFF, 0xFF)] {
+            assert_eq!(a800c_dispatch(a, b), update_enemy_anim_dispatch(a, b));
+        }
     }
 }
 
-#[cfg(test)]
-mod tests_subsystem_split_remaining {
-    use super::subsystem_split_remaining::*;
+// ===== 1:1 Rust 改写·批产·块 117：a-addr 桩链+直连壳簇语义命名（去地址名（公式形））=====
+// refs 锚（bank:addr 注内）：$8000 桩链 root（:7357）/$99AD（:7363）/$8009 桩链 root（:7443）/
+// $9A4C（:7448）/$800C CommonJump root（:7469）/$800C dispatch（:7474）。
 
-    /// TDD 流程·第一步：写测试（穷举等价证明（全域穷举（边界条件（异常路径））））
-    #[test]
-    fn test_subsystem_schedule_basic() {
-        let ram = [0u8; 2048];
-        assert_eq!(subsystem_schedule(&ram), 0);
-    }
+/// bank1 四桩链（旧 a8000_jmp_chain（$8000 jmp 桩链 root）：四 jmp 桩（bank1 dispatch））。
+pub fn bank1_dispatch_four_stub() -> (usize, bool) {
+    (4, true)
+}
 
-    /// TDD 流程·第一步：边界条件（异常路径）
-    #[test]
-    fn test_subsystem_schedule_boundary() {
-        let mut ram = [0u8; 2048];
-        ram[0x03A8] = 0xFF;
-        assert_eq!(subsystem_schedule(&ram), 0xFF);
-    }
+/// bank1 A=3 桩链（旧 a8009_jmp_chain（$8009 jmp 桩链 root）：A=3 载面）。
+pub fn bank1_dispatch_a3_stub() -> (u8, bool) {
+    (3, true)
+}
+
+/// 槽态写（旧 a99ad_body（$99AD）：$85←9（态写）+A←$01 透传）。
+pub fn stage_slot_state_write(v01: u8) -> (Vec<(u16, u8)>, u8) {
+    (vec![(0x0085, 9)], v01)
+}
+
+/// 透传态（旧 a9a4c_body（$9A4C）：(3,x,y) 透传类）。
+pub fn passthrough_anim_state(x: u8, y: u8) -> (u8, u8, u8) {
+    (3, x, y)
+}
+
+/// CommonJump 面（旧 a800c_common_jump（$800C root）：jmp UpdateEnemyAnim（$E094
+/// （areas_common.asm:33 refs 法）））。
+pub fn common_jump_update_enemy_anim() -> (u16, bool) {
+    (0xE094, true)
+}
+
+/// 直连壳（旧 a800c_dispatch（$800C dispatch）：$E094 UpdateEnemyAnim 直连（S5-146 复用））。
+pub fn update_enemy_anim_dispatch(v6af4_x: u8, v6af8_x: u8) -> (Vec<(u16, u8)>, u8) {
+    s5_update_enemy_anim(0, v6af4_x, v6af8_x)
 }
