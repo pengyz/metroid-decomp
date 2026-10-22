@@ -873,6 +873,9 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "s4_cluster_106" => Some(sub_s4_cluster_106),
         "s4_cluster_108" => Some(sub_s4_cluster_108),
         "s4_cluster_110" => Some(sub_s4_cluster_110),
+        // 【第十六簇 pickup::powerup registry 登记】bank:addr→fn 双射：
+        // 07:DB37 UpdateAllPowerUps / 07:DB42 UpdateOnePowerUp（prg7_engine.asm:5503/5513）
+        "s4_cluster_powerup" => Some(sub_s4_cluster_powerup),
         // 【第十七簇 ui::password registry 登记】bank:addr→fn 双射：
         // 07:C9C4 GoPassword（prg7_engine.asm:2170）/ 00:8BB5 UniqueItemFound（prg0_title.asm:1586）
         "s4_cluster_password" => Some(sub_s4_cluster_password),
@@ -3176,4 +3179,14 @@ pub fn sub_s4_cluster_samus_door(input: &crate::L2In) -> crate::L2Out {
 pub fn sub_s4_cluster_password(input: &crate::L2In) -> crate::L2Out {
     let h = crate::ui::password::go_password(input.a, input.x);
     crate::L2Out { a: h.title_routine, x: h.sfx_noise_init_flags, y: input.y, writes: crate::ui::password::go_password_writes(&h) }
+}
+
+
+/// s4_cluster_powerup —— 第十六簇 pickup::powerup 入口注册（bank:addr→fn 双射）。
+/// 适配径：a←type/x←room 字节/y←FrameCount→update_one_power_up→写集（$034x/$6B）。
+pub fn sub_s4_cluster_powerup(input: &crate::L2In) -> crate::L2Out {
+    let slot = crate::pickup::powerup::PowerUpSlot { type_: input.a, y: 0, x: 0, hi: 0 };
+    let w = crate::pickup::powerup::update_one_power_up(slot, input.x, input.y).unwrap_or_default();
+    let a = if w.is_empty() { 0xFF } else { w[3].1 };
+    crate::L2Out { a, x: input.x, y: input.y, writes: w }
 }
