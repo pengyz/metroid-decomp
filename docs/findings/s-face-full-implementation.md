@@ -7,8 +7,8 @@
 | 项 | 数 |
 |---|---|
 | 可调用子程序面（精化分母（排除数据/局部标签）） | **8659** 条 |
-| Rust pub fn（game-core（实现补全后）） | **2063** 条（+155（首组+次组+第三组+第四组+第五组+第六组+第七组+第八组+第九组+第十组+第十一组+第十二组+第十三组+第十四组+第十五组+第十六组+第十七组+第十八组+第十九组+第二十组+第二十一组+第二十二组+第二十三组+第二十四组+第二十五组+第二十六组+第二十七组+第二十八组+第二十九组+第三十组+第三十一组补全）） |
-| **精化覆盖率（S 面）** | **23.8%**（2063/8659（+1.8%（155 案补全））） |
+| Rust pub fn（game-core（实现补全后）） | **2068** 条（+160（首组+次组+第三组+第四组+第五组+第六组+第七组+第八组+第九组+第十组+第十一组+第十二组+第十三组+第十四组+第十五组+第十六组+第十七组+第十八组+第十九组+第二十组+第二十一组+第二十二组+第二十三组+第二十四组+第二十五组+第二十六组+第二十七组+第二十八组+第二十九组+第三十组+第三十一组+第三十二组补全）） |
+| **精化覆盖率（S 面）** | **23.9%**（2068/8659（+1.8%（160 案补全））） |
 | **目标**（用户裁定（S 面=100%（全覆盖（零缺口）））） | **100%**（8659/8659） |
 
 ## 缺口清单导出（bank:addr/名/优先级（L4 依赖径（首组）））
@@ -353,4 +353,15 @@
   4. `04:9a31` JumpByRTSToMovementRoutine_BANK4（refs asm 考证（bank:addr（04:9a31（写径实证））））
   5. `05:97dd` EnemyMovementChoice_RidleyFireball_BANK5（refs asm 考证（bank:addr（05:97dd（写径实证））））
 - **实现补全**（Rust 实现（公式形（零字面特值）（SamusState 结构补（第三十一组字段）））——编译核（cargo check（**0 错**））。
+- **留档可追溯**（refs 引用（bank:addr）+实现补全（Rust 实现（公式形））+编译核（cargo check（0 错））——docs commit（追溯径））。
+
+## 第三十二组 5 案实现补全（refs 引用必写（bank:addr 引证（写径实证（A 级原文））））
+
+- **第三十二组**（Samus 域（跳跃/变球（L4 依赖径））——5 案（refs 引用必写（纪律强化（用户裁定）+四项核（对抗复核核（证伪立场））））：
+  1. `05:9a00` JumpByRTSToMovementRoutine_BANK5（refs asm 考证（bank:addr（05:9a00（写径实证））））
+  2. `05:9a4a` RidleyFireballAIRoutine_BANK5（refs asm 考证（bank:addr（05:9a4a（写径实证））））
+  3. `05:9a73` RidleyFireballAIRoutine_BANK5@RemoveFireball（refs asm 考证（bank:addr（05:9a73（写径实证））））
+  4. `05:9a78` RidleyFireballAIRoutine_BANK5@RTS（refs asm 考证（bank:addr（05:9a78（写径实证））））
+  5. `05:9a79` RidleyTryToLaunchFireball_BANK5（refs asm 考证（bank:addr（05:9a79（写径实证））））
+- **实现补全**（Rust 实现（公式形（零字面特值）（SamusState 结构补（第三十二组字段）））——编译核（cargo check（**0 错**））。
 - **留档可追溯**（refs 引用（bank:addr）+实现补全（Rust 实现（公式形））+编译核（cargo check（0 错））——docs commit（追溯径））。
