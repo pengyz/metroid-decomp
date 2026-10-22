@@ -14951,3 +14951,84 @@ pub fn enemy_bg_collide_check(x: u8, v74: u8, v6af4_x: u8) -> (bool, bool) {
     let speed_bit = v6af4_x & 1 != 0;
     (in_area && speed_bit, in_area)
 }
+
+// ===== 1:1 Rust 改写·批产·块 84（s5 族指针面+CreateItemID+Cannon 去地址名（TDD 穷举等价））=====
+
+#[cfg(test)]
+mod tests_b84_engine_mod {
+    //! TDD step1（测试先行（强制完整））——穷举等价（新==旧（≤256³ 闸时限界（依赖分解）））。
+    //! refs 锚（bank:addr 注内）：LEE41 root（:5425）/$EBC8（:5431）/$DC67 CreateItemID root
+    //! （:5458）/$EE47（:5465）/$EEA6 CannonHandler（:5559）。
+
+    use super::*;
+
+    /// 【穷举·指针对面】a×v4f 全域——set_item_ptr_pair==s5_lee41+item_spawn_with_check
+    /// ==s5_ebc8_body（x×a×v4f 依赖分解）。
+    #[test]
+    fn exhaustive_ptr_pair_equivalence() {
+        for a in 0u8..=255 {
+            for v in 0u8..=255 {
+                assert_eq!(s5_lee41(a, v), set_item_ptr_pair(a, v));
+                for x in [0u8, 1, 0x80, 0xFF] {
+                    assert_eq!(s5_ebc8_body(x, a, v), item_spawn_with_check(x, a, v));
+                }
+            }
+        }
+    }
+
+    /// 【穷举·位打包】v07×v06×v09 全域 256³——pack_item_id==s5_create_item_id
+    /// （位场拼装（<<3|>>3 溢出面））+pack_item_id_and_dispatch==s5_ee47_body。
+    #[test]
+    fn exhaustive_bitpack_equivalence() {
+        for v07 in 0u8..=255 {
+            for v06 in 0u8..=255 {
+                for v09 in 0u8..=255 {
+                    assert_eq!(s5_create_item_id(v07, v06, v09), pack_item_id(v07, v06, v09));
+                    assert_eq!(s5_ee47_body(v07, v06, v09), pack_item_id_and_dispatch(v07, v06, v09));
+                }
+            }
+        }
+    }
+
+    /// 【穷举·Cannon 壳】cannon_handler_face==s5_eea6_body（退化域（指针面+$EDD6））。
+    #[test]
+    fn cannon_handler_equivalence() {
+        assert_eq!(s5_eea6_body(), cannon_handler_face());
+    }
+}
+
+// ===== 1:1 Rust 改写·批产·块 84：s5 族指针面+CreateItemID+Cannon 语义命名（去地址名）=====
+// refs 锚（bank:addr 注内）：LEE41 root（:5425）/$EBC8（:5431）/$DC67 CreateItemID root
+// （:5458）/$EE47（:5465）/$EEA6 CannonHandler（:5559）。
+
+/// 物指针对（旧 s5_lee41（LEE41 root）：$07←A/$06←$4F（指针面））。
+pub fn set_item_ptr_pair(a_in: u8, v4f: u8) -> Vec<(u16, u8)> {
+    vec![(0x0007, a_in), (0x0006, v4f)]
+}
+
+/// 物生成（旧 s5_ebc8_body（$EBC8）：LEE41+$0300[x]←1（cc 分段面）→$DC67）。
+pub fn item_spawn_with_check(x: u8, a_in: u8, v4f: u8) -> (Vec<(u16, u8)>, u16) {
+    let mut ev = set_item_ptr_pair(a_in, v4f);
+    ev.push((0x0300 + x as u16, 1));
+    (ev, 0xDC67)
+}
+
+/// 物 ID 位打包（旧 s5_create_item_id（$DC67 CreateItemID root）：$06←($07<<3)|$06/
+/// $07←($09<<2)|($07>>3)（位场拼装））。
+pub fn pack_item_id(v07: u8, v06: u8, v09: u8) -> (Vec<(u16, u8)>, u8) {
+    let n06 = (v07 << 3) | v06;
+    let n07 = (v09 << 2) | (v07 >> 3);
+    (vec![(0x0006, n06), (0x0007, n07)], n07)
+}
+
+/// 打包派发（旧 s5_ee47_body（$EE47）：CreateItemID→jmp $DC67）。
+pub fn pack_item_id_and_dispatch(v07: u8, v06: u8, v09: u8) -> (Vec<(u16, u8)>, u16) {
+    let (ev, _) = pack_item_id(v07, v06, v09);
+    (ev, 0xDC67)
+}
+
+/// Cannon 壳（旧 s5_eea6_body（$EEA6 CannonHandler）：$07←$38/$06←0（指针面）
+/// →jmp $EDD6（A=2 面））。
+pub fn cannon_handler_face() -> (Vec<(u16, u8)>, u16) {
+    (vec![(0x0007, 0x38), (0x0006, 0)], 0xEDD6)
+}
