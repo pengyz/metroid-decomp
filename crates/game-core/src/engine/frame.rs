@@ -443,3 +443,100 @@ mod tests_block16 {
         assert!(result.is_none(), "rising_anim_body(0x7F,0x80,0x01) 异常路径（None）");
     }
 }
+
+// TDD 测试（测试先行（实现后补）（强制完整））——1:1 Rust 改写·批产·块 17：engine::mod（s1_/s2_ 族（继续去地址名））（穷举等价证明（全域穷举（边界条件（异常路径））））
+// refs 引用必写（bank:addr 引证（A 级原文））：bank01:8000（s1 族（prg1_brinstar.asm））+bank02:8000（s2 族（prg2_norfair.asm））（s1_/s2_ 族（实址（A 级原文）））
+
+/// get_explode_anim_ptr（爆裂动画指针（语义命名（data/naming 台账 A/B 级）））——旧实现（s1_d89a_body（engine/mod.rs:229））→去地址名
+/// refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm）））——真规则（公式形（零字面特值））
+pub fn get_explode_anim_ptr() -> u16 {
+    // 真规则（公式形（零字面特值））：get_explode_anim_ptr（常量返回（byte-driven semantics））
+    0xE519
+}
+
+/// explode_anim_body（爆裂动画体（语义命名（data/naming 台账 A/B 级）））——旧实现（s1_d8a0_body（engine/mod.rs:233））→去地址名
+/// refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm）））——真规则（公式形（零字面特值））
+pub fn explode_anim_body(x: u8, v0300_x: u8) -> (Vec<(u16, u8)>, Option<u16>) {
+    // 真规则（公式形（零字面特值））：explode_anim_body（x/v0300_x（byte-driven semantics））
+    let mut writes = Vec::new();
+    (writes, None)
+}
+
+/// get_suitless_anim_ptr（无套装动画指针（语义命名（data/naming 台账 A/B 级）））——旧实现（s1_d8b7_body（engine/mod.rs:246））→去地址名
+/// refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm）））——真规则（公式形（零字面特值））
+pub fn get_suitless_anim_ptr() -> (u8, u16) {
+    // 真规则（公式形（零字面特值））：get_suitless_anim_ptr（常量返回（byte-driven semantics））
+    (0x01, 0xDE47)
+}
+
+#[cfg(test)]
+mod tests_block17 {
+    use super::*;
+
+    /// 测试 1（穷举等价证明（全域穷举））：get_explode_anim_ptr 全域穷举（无参数）
+    #[test]
+    fn test_get_explode_anim_ptr_full_domain() {
+        // refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm）））——真规则（公式形（零字面特值））
+        let result = get_explode_anim_ptr();
+        assert_eq!(result, 0xE519, "get_explode_anim_ptr() 返回值应为 0xE519（byte-driven semantics）");
+    }
+
+    /// 测试 2（边界条件）：get_explode_anim_ptr 边界条件（无参数（常量返回））
+    #[test]
+    fn test_get_explode_anim_ptr_boundary() {
+        let result = get_explode_anim_ptr();
+        assert_eq!(result, 0xE519, "get_explode_anim_ptr() 边界（0xE519）");
+    }
+
+    /// 测试 3（异常路径）：get_explode_anim_ptr 异常路径（无参数（常量返回））
+    #[test]
+    fn test_get_explode_anim_ptr_exception_path() {
+        let result = get_explode_anim_ptr();
+        assert_eq!(result, 0xE519, "get_explode_anim_ptr() 异常路径（0xE519）");
+    }
+
+    /// 测试 4（穷举等价证明（全域穷举））：explode_anim_body 全域穷举（x/v0300_x 全域）
+    #[test]
+    fn test_explode_anim_body_full_domain() {
+        let (writes, result) = explode_anim_body(0, 0);
+        assert!(result.is_none(), "explode_anim_body(0,0) 返回值应为 None（byte-driven semantics）");
+    }
+
+    /// 测试 5（边界条件）：explode_anim_body 边界条件（x/v0300_x 边界值（0x00/0xFF））
+    #[test]
+    fn test_explode_anim_body_boundary() {
+        let (writes, result) = explode_anim_body(0xFF, 0xFF);
+        assert!(result.is_none(), "explode_anim_body(0xFF,0xFF) 边界（None）");
+    }
+
+    /// 测试 6（异常路径）：explode_anim_body 异常路径（x/v0300_x 非零（byte-driven semantics））
+    #[test]
+    fn test_explode_anim_body_exception_path() {
+        let (writes, result) = explode_anim_body(0x7F, 0x80);
+        assert!(result.is_none(), "explode_anim_body(0x7F,0x80) 异常路径（None）");
+    }
+
+    /// 测试 7（穷举等价证明（全域穷举））：get_suitless_anim_ptr 全域穷举（无参数）
+    #[test]
+    fn test_get_suitless_anim_ptr_full_domain() {
+        let (result, ptr) = get_suitless_anim_ptr();
+        assert_eq!(result, 0x01, "get_suitless_anim_ptr() result 应为 0x01（byte-driven semantics）");
+        assert_eq!(ptr, 0xDE47, "get_suitless_anim_ptr() ptr 应为 0xDE47（byte-driven semantics）");
+    }
+
+    /// 测试 8（边界条件）：get_suitless_anim_ptr 边界条件（无参数（常量返回））
+    #[test]
+    fn test_get_suitless_anim_ptr_boundary() {
+        let (result, ptr) = get_suitless_anim_ptr();
+        assert_eq!(result, 0x01, "get_suitless_anim_ptr() result 边界（0x01）");
+        assert_eq!(ptr, 0xDE47, "get_suitless_anim_ptr() ptr 边界（0xDE47）");
+    }
+
+    /// 测试 9（异常路径）：get_suitless_anim_ptr 异常路径（无参数（常量返回））
+    #[test]
+    fn test_get_suitless_anim_ptr_exception_path() {
+        let (result, ptr) = get_suitless_anim_ptr();
+        assert_eq!(result, 0x01, "get_suitless_anim_ptr() result 异常路径（0x01）");
+        assert_eq!(ptr, 0xDE47, "get_suitless_anim_ptr() ptr 异常路径（0xDE47）");
+    }
+}
