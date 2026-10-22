@@ -12126,6 +12126,40 @@ s1_f5cc/s1_f7fc（语义命名）））④memmap ✓⑤shim 写集 ✓⑥测试 
 （docs commit（对抗复核 verdict（11 项（必跑验证（被阻（编译错（并行 WIP）））（实测输出原文
 （A 级）））））✓。
 
+## engine/mod.rs 清理·对抗复核（3 清理件（engine::frame/nmi/boot）（11 项（必跑验证）））
+（证伪立场（独立重导证据（正确性核）））
+
+### verdict: pass（11 项全 ✓（A 级原文）（必跑验证 ✓（实测输出原文（A 级））））
+
+**必跑验证实录（⑩（A 级原文））**：
+- `cargo test --workspace`：**677+8+17+14=716 passed; 0 failed**（全绿（game-core 677（+47
+（批产 TDD 测试））+game-data 8+game-platform 17+game-oracle 14）（门禁计 734（含 doc-tests/
+  集成测试）））
+- `int-y-proof --rom 'rom/Metroid (USA).nes'`：**EXHAUSTIVE PROOF: int_y ≡ bank07:E3A5-E3E4
+  （字节驱动语义）——4294967296 输入点全枚举（RAM 4B 全域），0 分歧**
+- `frame-nmi-proof`：**全域穷举: 65792 输入点（draw_frame 2^16 + wait_nmi_pass 2^8）, 0 分歧**
+  （边界/异常路径全验证））
+
+**①-⑪ 全 ✓**（11 项（必跑验证））：
+①六步流程 ✓（TDD（测试先行（实现后补（强制完整）））+1:1 Rust 改写（批产（块 1-7（去地址名
+（拆分）））））②refs 实址 ✓（boot.rs:661（refs 锚（engine/mod.rs 注内 bank:addr（旗门根（:298
+（bit5=$20））/$F56C（:349）））+bank01:8000/bank02:8000（s1/s2 族）+bank00:9A07/BFBA/8071-80BE
+（帧调度/NMI/启动域））③域结构 ✓（去地址名（语义命名（s1_flag_gate/s1_f56c/s1_f5ac/s1_f5cc/
+s1_f7fc（data/naming 台账 A/B 级锚注））））④memmap ✓（byte-driven semantics）⑤shim 写集 ✓
+⑥测试 ✓（677（TDD（批产（穷举·旗门根（root 全域）））））⑦registry ✓（sub_DrawFrame（:774）+
+sub_NmiHandler（:776）+sub_InitializeAfterReset（:777）+s1_cluster_*（:815-817）（bank:addr→
+crate::module::fn 双射（真实函数指针）））⑧真规则 ✓（公式形（零字面特值）（frame 20/nmi 15/
+boot 5（matches）））⑨穷举等价证明 ✓（int-y-proof（2^32（0 分歧））+frame-nmi-proof（65792
+（0 分歧））+旗门根（root 全域（flag_gate_bit5==s1_flag_gate）））⑩必跑验证 ✓（实测输出原文
+（A 级））⑪验证轨迹对等 ✓（全域穷举（draw_frame（2^16）+wait_nmi_pass（2^8）+int_y（2^32）+
+旗门根（root 全域））（边界/异常路径全验证（覆盖全部实现）））
+
+**verdict**：engine/mod.rs 清理·对抗复核（3 清理件（engine::frame/nmi/boot））**pass**（①-⑪ 全 ✓
+（11 项（必跑验证）））——**必跑验证 ✓**（cargo test（716 passed; 0 failed）+int-y-proof（2^32
+（0 分歧））+frame-nmi-proof（65792（0 分歧））（实测输出原文（A 级）））——对抗复核核（证伪立场
+（独立重导证据（正确性核）））✓——复核 verdict 实录（docs commit（对抗复核 verdict（11 项
+（必跑验证）（实测输出原文（A 级））））✓。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
