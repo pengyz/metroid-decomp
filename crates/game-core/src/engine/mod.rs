@@ -16250,3 +16250,54 @@ pub fn samus_dead_and_slot_check(v0300: u8) -> (Option<u16>, bool) {
     let (dead, _) = s1_is_samus_dead(v0300);
     (if dead { None } else { Some(0xF186) }, v0300 == 7 || v0300 == 0x0A)
 }
+
+// ===== 1:1 Rust 改写·批产·块 135（s1 余批 3 员去名（IsSamusDead 三判+双壳）（TDD 穷举等价））=====
+
+#[cfg(test)]
+mod tests_b135_engine_mod {
+    //! TDD step1（测试先行（强制完整））——穷举等价（新==旧（≤256³ 闸时限界））。
+    //! refs 锚（bank:addr 注内）：IsSamusDead root（:1644）/$F0DA（:1650）/$F101（:1656）。
+
+    use super::*;
+
+    /// 【穷举·死判 root】v0300 全域——check_samus_dead_state==s1_is_samus_dead
+    /// （==$07/==$08/==$FF 三判）。
+    #[test]
+    fn exhaustive_dead_root_equivalence() {
+        for v in 0u8..=255 {
+            assert_eq!(s1_is_samus_dead(v), check_samus_dead_state(v));
+        }
+    }
+
+    /// 【穷举·双壳】v0300 全域——samus_dead_dispatch_f1==s1_f0da_body+
+    /// samus_dead_dispatch_f1b==s1_f101_body（死⇒None/活⇒$F140/$F1B3）。
+    #[test]
+    fn exhaustive_dead_shells_equivalence() {
+        for v in 0u8..=255 {
+            assert_eq!(s1_f0da_body(v), samus_dead_dispatch_f1(v));
+            assert_eq!(s1_f101_body(v), samus_dead_dispatch_f1b(v));
+        }
+    }
+}
+
+// ===== 1:1 Rust 改写·批产·块 135：IsSamusDead 三判+双壳语义命名（去地址名（公式形））=====
+// refs 锚（bank:addr 注内）：IsSamusDead root（:1644）/$F0DA（:1650）/$F101（:1656）。
+
+/// Samus 死判 root（旧 s1_is_samus_dead（IsSamusDead root）：$0300==$07/==$08/==$FF
+/// 三判（死态集合））。
+pub fn check_samus_dead_state(v0300: u8) -> (bool, u8) {
+    let dead = v0300 == 7 || v0300 == 8 || v0300 == 0xFF;
+    (dead, v0300)
+}
+
+/// 死判派发 F1（旧 s1_f0da_body（$F0DA）：死⇒None/活⇒$F140（碰撞环链））。
+pub fn samus_dead_dispatch_f1(v0300: u8) -> Option<u16> {
+    let (dead, _) = check_samus_dead_state(v0300);
+    if dead { None } else { Some(0xF140) }
+}
+
+/// 死判派发 F1B（旧 s1_f101_body（$F101）：死⇒None/活⇒$F1B3（$F162/$F1FA/$F2ED 链））。
+pub fn samus_dead_dispatch_f1b(v0300: u8) -> Option<u16> {
+    let (dead, _) = check_samus_dead_state(v0300);
+    if dead { None } else { Some(0xF1B3) }
+}
