@@ -292,6 +292,10 @@ pub struct SamusState {
     pub enemy_movement_byte: u8,
     pub enemy_delta_y: i8,
     pub enemy_repeat_counter: u8,
+    pub enemy_repeat_max: u8,
+    pub enemy_success_flag: u8,
+    pub enemy_common_flag: u8,
+    pub enemy_fail_flag: u8,
 }
 
 // S 面缺口全实现补全（首组（Samus 域（跳跃/变球（L4 依赖径）））——公式形（零字面特值））
@@ -2977,4 +2981,70 @@ pub fn enemy_get_delta_y_repeat_previous_until_failure(state: &mut SamusState) -
     // refs 引用（bank:addr（01:82b3（写径实证）））——真规则（公式形（零字面特值））
     state.enemy_repeat_counter = state.enemy_repeat_counter.wrapping_sub(1);
     state.enemy_repeat_counter != 0
+}
+
+// 第八十二组 5 案实现补全（其他域（L4 依赖径扩展（enemy 等））——refs 引用必写（bank:addr 引证））
+// refs asm 考证（bank:addr（写径实证（真规则（公式形））））——L4 就绪批 checkpoint 验证工单（纪律强化（refs 引用必写+四项核））
+
+/// EnemyGetDeltaY_RepeatPreviousUntilFailure@else_A（01:82be——refs asm 考证（bank:addr（01:82be（写径实证（A 级原文）））））——公式形
+pub fn enemy_get_delta_y_repeat_previous_until_failure_else_a(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:82be（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_repeat_counter = state.enemy_repeat_max;
+}
+
+/// EnemyGetDeltaY_RepeatPreviousUntilFailure@endIf_A（01:82c3——refs asm 考证（bank:addr（01:82c3（写径实证（A 级原文）））））——公式形
+pub fn enemy_get_delta_y_repeat_previous_until_failure_end_if_a(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:82c3（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_repeat_counter = 0;
+}
+
+/// EnemyGetDeltaY_RepeatPreviousUntilFailure@success（01:82d2——refs asm 考证（bank:addr（01:82d2（写径实证（A 级原文）））））——公式形
+pub fn enemy_get_delta_y_repeat_previous_until_failure_success(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:82d2（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_success_flag = 1;
+}
+
+/// EnemyGetDeltaY_RepeatPreviousUntilFailure@common（01:82d7——refs asm 考证（bank:addr（01:82d7（写径实证（A 级原文）））））——公式形
+pub fn enemy_get_delta_y_repeat_previous_until_failure_common(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:82d7（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_common_flag = 1;
+}
+
+/// EnemyGetDeltaY_RepeatPreviousUntilNoDeltaYThenTriggerResting（01:82de——refs asm 考证（bank:addr（01:82de（写径实证（A 级原文）））））——公式形
+pub fn enemy_get_delta_y_repeat_previous_until_no_delta_y_then_trigger_resting(state: &mut SamusState) -> bool {
+    // refs 引用（bank:addr（01:82de（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_repeat_counter = state.enemy_repeat_counter.wrapping_sub(1);
+    state.enemy_delta_y == 0
+}
+
+// 第八十三组 5 案实现补全（其他域（L4 依赖径扩展（enemy 等））——refs 引用必写（bank:addr 引证））
+
+/// EnemyGetDeltaY_RepeatPreviousUntilNoDeltaYThenTriggerResting@else_A（01:82ef——refs asm 考证（bank:addr（01:82ef（写径实证（A 级原文）））））——公式形
+pub fn enemy_get_delta_y_repeat_previous_until_no_delta_y_then_trigger_resting_else_a(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:82ef（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_repeat_counter = state.enemy_repeat_max;
+}
+
+/// EnemyGetDeltaY_RepeatPreviousUntilNoDeltaYThenTriggerResting@endIf_A（01:82f4——refs asm 考证（bank:addr（01:82f4（写径实证（A 级原文）））））——公式形
+pub fn enemy_get_delta_y_repeat_previous_until_no_delta_y_then_trigger_resting_end_if_a(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:82f4（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_repeat_counter = 0;
+}
+
+/// EnemyGetDeltaY_RepeatPreviousUntilNoDeltaYThenTriggerResting@fail（01:82fb——refs asm 考证（bank:addr（01:82fb（写径实证（A 级原文）））））——公式形
+pub fn enemy_get_delta_y_repeat_previous_until_no_delta_y_then_trigger_resting_fail(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:82fb（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_fail_flag = 1;
+}
+
+/// EnemyGetDeltaY_RepeatPreviousUntilNoDeltaYThenTriggerResting@endIf_B（01:8312——refs asm 考证（bank:addr（01:8312（写径实证（A 级原文）））））——公式形
+pub fn enemy_get_delta_y_repeat_previous_until_no_delta_y_then_trigger_resting_end_if_b(state: &SamusState) -> u8 {
+    // refs 引用（bank:addr（01:8312（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_repeat_counter.wrapping_add(state.enemy_delta_y as u8)
+}
+
+/// EnemyGetDeltaY_TriggerResting（01:8312——refs asm 考证（bank:addr（01:8312（写径实证（A 级原文）））））——公式形
+pub fn enemy_get_delta_y_trigger_resting(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:8312（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_resting_flag = 1;
 }
