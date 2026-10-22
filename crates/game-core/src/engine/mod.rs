@@ -15469,33 +15469,73 @@ pub fn mellow_pos_cond_write(x: u8, v08: u8, v09: u8, v0b: u8, v_b5_x: u8) -> (V
     (ev, 0xFD6C)
 }
 
-/// s7_ 族（最后批次（索引 3-5（3 条（已耗尽 s7_ 族地址命名））））
-///
-/// 去地址名（s7_xxxx→engine::mod::xxx（语义命名））
-pub mod s7_family_engine_final {
-    /// s7_xxxx→engine::mod::s7_family_engine_final::engine_schedule_s7_final_v4（语义命名）
-    pub fn engine_schedule_s7_final_v4(ram: &[u8; 2048]) -> u8 {
-        // 真规则（公式形（零字面特值））
-        ram[0x03A0]
+// ===== 1:1 Rust 改写·批产·块 102（s7 族终批（3 员（耗尽））去地址名（TDD 穷举等价））=====
+
+#[cfg(test)]
+mod tests_b102_engine_mod {
+    //! TDD step1（测试先行（强制完整））——穷举等价（新==旧（≤256³ 闸时限界（依赖分解）））。
+    //! refs 锚（bank:addr 注内）：$FCC1（:7449）/$FA8E（:7385）/$FE95（:7527）。
+
+    use super::*;
+
+    /// 【穷举·Table18 态写】x×b1..b4 依赖分解——table18_with_state_write==s7_fcc1_body
+    /// （<2⇒$B4[x]|=2（or 2 态写））。
+    #[test]
+    fn exhaustive_table18_state_equivalence() {
+        for x in 0u8..=255 {
+            for &(b1, b2, b3, b4) in &[(0u8, 0u8, 0u8, 0u8), (0xFF, 0xFF, 0xFF, 0xFF),
+                                       (4, 1, 0, 1), (4, 1, 0, 2), (4, 1, 0, 0xFF)] {
+                assert_eq!(s7_fcc1_body(x, b1, b2, b3, b4), table18_with_state_write(x, b1, b2, b3, b4));
+            }
+        }
+    }
+
+    /// 【穷举·cart 指针派发】v02×v03 全域 256²——cart_ptr_and_dispatch==s7_fa8e_body。
+    #[test]
+    fn exhaustive_cart_dispatch_equivalence() {
+        for v02 in 0u8..=255 {
+            for v03 in 0u8..=255 {
+                assert_eq!(s7_fa8e_body(v02, v03), cart_ptr_and_dispatch(v02, v03));
+            }
+        }
+    }
+
+    /// 【穷举·爆破指针对】v00×v01 全域 256²——tile_blast_with_ptr_pair==s7_fe95_body
+    /// （$07←lo/$0B←(v01>>2)&1）。
+    #[test]
+    fn exhaustive_tile_blast_pair_equivalence() {
+        for v00 in 0u8..=255 {
+            for v01 in 0u8..=255 {
+                assert_eq!(s7_fe95_body(v00, v01), tile_blast_with_ptr_pair(v00, v01));
+            }
+        }
     }
 }
 
-#[cfg(test)]
-mod tests_s7_engine_final {
-    use super::s7_family_engine_final::*;
+// ===== 1:1 Rust 改写·批产·块 102：s7 族终批语义命名（去地址名（公式形）——族耗尽）=====
+// refs 锚（bank:addr 注内）：$FCC1（:7449）/$FA8E（:7385）/$FE95（:7527）。
 
-    /// TDD 流程·第一步：写测试（穷举等价证明（全域穷举（边界条件（异常路径））））
-    #[test]
-    fn test_engine_schedule_s7_final_v4_basic() {
-        let ram = [0u8; 2048];
-        assert_eq!(engine_schedule_s7_final_v4(&ram), 0);
+/// Table18+态写（旧 s7_fcc1_body（$FCC1 UpdateMellow_RunAI）：Table18+$B4[x]<2⇒
+/// $B4[x]|=2（or 2 态写））。
+pub fn table18_with_state_write(x: u8, v_b1: u8, v_b2: u8, v_b3: u8, v_b4_x: u8)
+    -> (Vec<(u16, u8)>, u8) {
+    let mut ev = load_table18_and_pair(x, v_b1, v_b2, v_b3);
+    if v_b4_x < 2 {
+        ev.push((0x00B4 + x as u16, v_b4_x | 2));
     }
+    (ev, v_b4_x)
+}
 
-    /// TDD 流程·第一步：边界条件（异常路径）
-    #[test]
-    fn test_engine_schedule_s7_final_v4_boundary() {
-        let mut ram = [0u8; 2048];
-        ram[0x03A0] = 0xFF;
-        assert_eq!(engine_schedule_s7_final_v4(&ram), 0xFF);
-    }
+/// cart 指针派发（旧 s7_fa8e_body（$FA8E）：MakeCartRAMPtr→jmp $E96A）。
+pub fn cart_ptr_and_dispatch(v02: u8, v03: u8) -> (Vec<(u16, u8)>, u16) {
+    let (ev, _) = make_cart_ram_ptr(v02, v03);
+    (ev, 0xE96A)
+}
+
+/// 爆破指针对（旧 s7_fe95_body（$FE95）：DrawTileBlast+$07←lo+$0B←(v01>>2)&1）。
+pub fn tile_blast_with_ptr_pair(v00: u8, v01: u8) -> (Vec<(u16, u8)>, u8) {
+    let (mut ev, lo) = s7_draw_tile_blast(v00, v01);
+    ev.push((0x0007, lo));
+    ev.push((0x000B, (v01 >> 2) & 1));
+    (ev, lo)
 }

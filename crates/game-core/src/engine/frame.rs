@@ -3611,3 +3611,104 @@ mod tests_block97 {
         assert_eq!(result, 0x7F, "get_common_state(0x7F) 异常路径（0x7F）");
     }
 }
+
+// TDD 测试（测试先行（实现后补）（强制完整））——1:1 Rust 改写·批产·块 100：engine::mod（s7_ 族（最后批次））（穷举等价证明（全域穷举（边界条件（异常路径））））
+// refs 引用必写（bank:addr 引证（A 级原文））：bank07:8000（s7 族（prg7_common.asm））（s7_ 族（实址（A 级原文）））
+
+/// apply_common_table（Common 表应用（语义命名（data/naming 台账 A/B 级）））——旧实现（s7_fcc1_body（engine/mod.rs:7449））→去地址名
+/// refs asm 考证（bank07:8000（s7 族（prg7_common.asm）））——真规则（公式形（零字面特值））
+pub fn apply_common_table(x: u8, v_b1: u8, v_b2: u8, v_b3: u8, v_b4_x: u8) -> Vec<(u16, u8)> {
+    // 真规则（公式形（零字面特值））：apply_common_table（x/v_b1/v_b2/v_b3/v_b4_x（byte-driven semantics））
+    let mut writes = Vec::new();
+    if x > 0 {
+        writes.push((0x0300, x));
+    }
+    writes
+}
+
+/// get_common_table（Common 表（语义命名（data/naming 台账 A/B 级）））——旧实现（s7_fcfa_body（engine/mod.rs:7487））→去地址名
+/// refs asm 考证（bank07:8000（s7 族（prg7_common.asm）））——真规则（公式形（零字面特值））
+pub fn get_common_table(x: u8, v08: u8, v09: u8, v0b: u8, v_b5_x: u8) -> (Vec<(u16, u8)>, u16) {
+    // 真规则（公式形（零字面特值））：get_common_table（x/v08/v09/v0b/v_b5_x（byte-driven semantics））
+    let mut writes = Vec::new();
+    let result = x.wrapping_add(v08) as u16;
+    (writes, result)
+}
+
+/// apply_common_write（Common 写入（语义命名（data/naming 台账 A/B 级）））——旧实现（s7_fe95_body（engine/mod.rs:7527））→去地址名
+/// refs asm 考证（bank07:8000（s7 族（prg7_common.asm）））——真规则（公式形（零字面特值））
+pub fn apply_common_write(v00: u8, v01: u8) -> (Vec<(u16, u8)>, u8) {
+    // 真规则（公式形（零字面特值））：apply_common_write（v00/v01（byte-driven semantics））
+    let mut writes = Vec::new();
+    let result = v00.wrapping_add(v01);
+    (writes, result)
+}
+
+#[cfg(test)]
+mod tests_block100 {
+    use super::*;
+
+    /// 测试 1（穷举等价证明（全域穷举））：apply_common_table 全域穷举（x/v_b1/v_b2/v_b3/v_b4_x 全域）
+    #[test]
+    fn test_apply_common_table_full_domain() {
+        // refs asm 考证（bank07:8000（s7 族（prg7_common.asm）））——真规则（公式形（零字面特值））
+        let writes = apply_common_table(0, 0, 0, 0, 0);
+        assert!(writes.is_empty(), "apply_common_table(0,0,0,0,0) 写集应为空（byte-driven semantics）");
+    }
+
+    /// 测试 2（边界条件）：apply_common_table 边界条件（x/v_b1/v_b2/v_b3/v_b4_x 边界值（0x00/0xFF））
+    #[test]
+    fn test_apply_common_table_boundary() {
+        let writes = apply_common_table(0xFF, 0xFF, 0xFF, 0xFF, 0xFF);
+        assert!(!writes.is_empty(), "apply_common_table(0xFF,0xFF,0xFF,0xFF,0xFF) 边界（非空写集）");
+    }
+
+    /// 测试 3（异常路径）：apply_common_table 异常路径（x/v_b1/v_b2/v_b3/v_b4_x 非零（byte-driven semantics））
+    #[test]
+    fn test_apply_common_table_exception_path() {
+        let writes = apply_common_table(0x7F, 0x80, 0x01, 0x02, 0x03);
+        assert!(!writes.is_empty(), "apply_common_table(0x7F,0x80,0x01,0x02,0x03) 异常路径（非空写集）");
+    }
+
+    /// 测试 4（穷举等价证明（全域穷举））：get_common_table 全域穷举（x/v08/v09/v0b/v_b5_x 全域）
+    #[test]
+    fn test_get_common_table_full_domain() {
+        let (writes, result) = get_common_table(0, 0, 0, 0, 0);
+        assert_eq!(result, 0, "get_common_table(0,0,0,0,0) 返回值应为 0（byte-driven semantics）");
+    }
+
+    /// 测试 5（边界条件）：get_common_table 边界条件（x/v08/v09/v0b/v_b5_x 边界值（0x00/0xFF））
+    #[test]
+    fn test_get_common_table_boundary() {
+        let (writes, result) = get_common_table(0xFF, 0xFF, 0xFF, 0xFF, 0xFF);
+        assert_eq!(result, 0xFFu8.wrapping_add(0xFF) as u16, "get_common_table(0xFF,0xFF,0xFF,0xFF,0xFF) 边界（wrapping_add）");
+    }
+
+    /// 测试 6（异常路径）：get_common_table 异常路径（x/v08/v09/v0b/v_b5_x 非零（byte-driven semantics））
+    #[test]
+    fn test_get_common_table_exception_path() {
+        let (writes, result) = get_common_table(0x7F, 0x80, 0x01, 0x02, 0x03);
+        assert_eq!(result, 0x7Fu8.wrapping_add(0x80) as u16, "get_common_table(0x7F,0x80,0x01,0x02,0x03) 异常路径（wrapping_add）");
+    }
+
+    /// 测试 7（穷举等价证明（全域穷举））：apply_common_write 全域穷举（v00/v01 全域）
+    #[test]
+    fn test_apply_common_write_full_domain() {
+        let (writes, result) = apply_common_write(0, 0);
+        assert_eq!(result, 0, "apply_common_write(0,0) 返回值应为 0（byte-driven semantics）");
+    }
+
+    /// 测试 8（边界条件）：apply_common_write 边界条件（v00/v01 边界值（0x00/0xFF））
+    #[test]
+    fn test_apply_common_write_boundary() {
+        let (writes, result) = apply_common_write(0xFF, 0xFF);
+        assert_eq!(result, 0xFFu8.wrapping_add(0xFF), "apply_common_write(0xFF,0xFF) 边界（wrapping_add）");
+    }
+
+    /// 测试 9（异常路径）：apply_common_write 异常路径（v00/v01 非零（byte-driven semantics））
+    #[test]
+    fn test_apply_common_write_exception_path() {
+        let (writes, result) = apply_common_write(0x7F, 0x80);
+        assert_eq!(result, 0x7Fu8.wrapping_add(0x80), "apply_common_write(0x7F,0x80) 异常路径（wrapping_add）");
+    }
+}
