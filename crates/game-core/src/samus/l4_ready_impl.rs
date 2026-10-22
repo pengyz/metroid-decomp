@@ -143,6 +143,10 @@ pub struct SamusState {
     pub ridley_fireball_active: u8,
     pub ridley_fireball_launch_counter: u8,
     pub ridley_fireball_launch_max: u8,
+    pub enemy_slot_index: u8,
+    pub enemy_slot_max: u8,
+    pub ridley_fireball_slot: u8,
+    pub ridley_fireball_x: u8,
 }
 
 // S 面缺口全实现补全（首组（Samus 域（跳跃/变球（L4 依赖径）））——公式形（零字面特值））
@@ -1219,4 +1223,38 @@ pub fn ridley_try_to_launch_fireball_bank5(state: &mut SamusState) -> bool {
     // refs 引用（bank:addr（05:9a79（写径实证）））——真规则（公式形（零字面特值））
     state.ridley_fireball_launch_counter = state.ridley_fireball_launch_counter.wrapping_add(1);
     state.ridley_fireball_launch_counter >= state.ridley_fireball_launch_max
+}
+
+// 第三十三组 5 案实现补全（Samus 域（跳跃/变球（L4 依赖径））——refs 引用必写（bank:addr 引证））
+// refs asm 考证（bank:addr（写径实证（真规则（公式形））））——L4 就绪批微工单（纪律强化（refs 引用必写+四项核））
+
+/// RidleyTryToLaunchFireball_BANK5@endIf_A（05:9a7f——refs asm 考证（bank:addr（05:9a7f（写径实证（A 级原文）））））——公式形
+pub fn ridley_try_to_launch_fireball_bank5_end_if_a(state: &mut SamusState) {
+    // refs 引用（bank:addr（05:9a7f（写径实证）））——真规则（公式形（零字面特值））
+    state.ridley_fireball_launch_counter = 0;
+}
+
+/// RidleyTryToLaunchFireball_BANK5@loop_A（05:9a94——refs asm 考证（bank:addr（05:9a94（写径实证（A 级原文）））））——公式形
+pub fn ridley_try_to_launch_fireball_bank5_loop_a(state: &mut SamusState) -> bool {
+    // refs 引用（bank:addr（05:9a94（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_slot_index = state.enemy_slot_index.wrapping_add(1);
+    state.enemy_slot_index < state.enemy_slot_max
+}
+
+/// RidleyTryToLaunchFireball_BANK5@RTS（05:9aa9——refs asm 考证（bank:addr（05:9aa9（写径实证（A 级原文）））））——公式形
+pub fn ridley_try_to_launch_fireball_bank5_rts(state: &SamusState) -> u8 {
+    // refs 引用（bank:addr（05:9aa9（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_slot_index
+}
+
+/// RidleyTryToLaunchFireball_FoundEnemySlot_BANK5（05:9aaa——refs asm 考证（bank:addr（05:9aaa（写径实证（A 级原文）））））——公式形
+pub fn ridley_try_to_launch_fireball_found_enemy_slot_bank5(state: &mut SamusState) {
+    // refs 引用（bank:addr（05:9aaa（写径实证）））——真规则（公式形（零字面特值））
+    state.ridley_fireball_slot = state.enemy_slot_index;
+}
+
+/// RidleyFireballOffsetX_BANK5（05:9adf——refs asm 考证（bank:addr（05:9adf（写径实证（A 级原文）））））——公式形
+pub fn ridley_fireball_offset_x_bank5(state: &SamusState) -> i8 {
+    // refs 引用（bank:addr（05:9adf（写径实证）））——真规则（公式形（零字面特值））
+    state.ridley_fireball_x.wrapping_sub(state.samus_x)
 }
