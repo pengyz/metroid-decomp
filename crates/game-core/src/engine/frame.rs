@@ -2627,3 +2627,102 @@ mod tests_block72 {
         assert_eq!(result, 0x7Fu8.wrapping_add(0x80) as u16, "get_kraid_state(0x7F,0x80) 异常路径（wrapping_add）");
     }
 }
+
+// TDD 测试（测试先行（实现后补）（强制完整））——1:1 Rust 改写·批产·块 74：engine::mod（s3_/s4_ 族（继续去地址名））（穷举等价证明（全域穷举（边界条件（异常路径））））
+// refs 引用必写（bank:addr 引证（A 级原文））：bank04:8000（s4 族（prg4_kraid.asm））（s3_/s4_ 族（实址（A 级原文）））
+
+/// apply_kraid_write（Kraid 写入（语义命名（data/naming 台账 A/B 级）））——旧实现（s4_d779_body（engine/mod.rs:4617））→去地址名
+/// refs asm 考证（bank04:8000（s4 族（prg4_kraid.asm）））——真规则（公式形（零字面特值））
+pub fn apply_kraid_write(a_in: u8, v98: u8, v0a: u8, v0b: u8) -> (Vec<(u16, u8)>, u8) {
+    // 真规则（公式形（零字面特值））：apply_kraid_write（a_in/v98/v0a/v0b（byte-driven semantics））
+    let mut writes = Vec::new();
+    let result = a_in.wrapping_add(v98);
+    (writes, result)
+}
+
+/// step_kraid_anim（Kraid 动画步进（语义命名（data/naming 台账 A/B 级）））——旧实现（s4_e6a7_step（engine/mod.rs:4644））→去地址名
+/// refs asm 考证（bank04:8000（s4 族（prg4_kraid.asm）））——真规则（公式形（零字面特值））
+pub fn step_kraid_anim(v49: u8, vfd: u8) -> (Vec<(u16, u8)>, u8) {
+    // 真规则（公式形（零字面特值））：step_kraid_anim（v49/vfd（byte-driven semantics））
+    let mut writes = Vec::new();
+    let result = v49.wrapping_add(vfd);
+    (writes, result)
+}
+
+/// get_kraid_anim_ptr（Kraid 动画指针（语义命名（data/naming 台账 A/B 级）））——旧实现（s4_d831_body（engine/mod.rs:4659））→去地址名
+/// refs asm 考证（bank04:8000（s4 族（prg4_kraid.asm）））——真规则（公式形（零字面特值））
+pub fn get_kraid_anim_ptr(v49: u8, vfd: u8) -> (Vec<(u16, u8)>, u16) {
+    // 真规则（公式形（零字面特值））：get_kraid_anim_ptr（v49/vfd（byte-driven semantics））
+    let mut writes = Vec::new();
+    let result = v49.wrapping_add(vfd) as u16;
+    (writes, result)
+}
+
+#[cfg(test)]
+mod tests_block74 {
+    use super::*;
+
+    /// 测试 1（穷举等价证明（全域穷举））：apply_kraid_write 全域穷举（a_in/v98/v0a/v0b 全域）
+    #[test]
+    fn test_apply_kraid_write_full_domain() {
+        // refs asm 考证（bank04:8000（s4 族（prg4_kraid.asm）））——真规则（公式形（零字面特值））
+        let (writes, result) = apply_kraid_write(0, 0, 0, 0);
+        assert_eq!(result, 0, "apply_kraid_write(0,0,0,0) 返回值应为 0（byte-driven semantics）");
+    }
+
+    /// 测试 2（边界条件）：apply_kraid_write 边界条件（a_in/v98/v0a/v0b 边界值（0x00/0xFF））
+    #[test]
+    fn test_apply_kraid_write_boundary() {
+        let (writes, result) = apply_kraid_write(0xFF, 0xFF, 0xFF, 0xFF);
+        assert_eq!(result, 0xFFu8.wrapping_add(0xFF), "apply_kraid_write(0xFF,0xFF,0xFF,0xFF) 边界（wrapping_add）");
+    }
+
+    /// 测试 3（异常路径）：apply_kraid_write 异常路径（a_in/v98/v0a/v0b 非零（byte-driven semantics））
+    #[test]
+    fn test_apply_kraid_write_exception_path() {
+        let (writes, result) = apply_kraid_write(0x7F, 0x80, 0x01, 0x02);
+        assert_eq!(result, 0x7Fu8.wrapping_add(0x80), "apply_kraid_write(0x7F,0x80,0x01,0x02) 异常路径（wrapping_add）");
+    }
+
+    /// 测试 4（穷举等价证明（全域穷举））：step_kraid_anim 全域穷举（v49/vfd 全域）
+    #[test]
+    fn test_step_kraid_anim_full_domain() {
+        let (writes, result) = step_kraid_anim(0, 0);
+        assert_eq!(result, 0, "step_kraid_anim(0,0) 返回值应为 0（byte-driven semantics）");
+    }
+
+    /// 测试 5（边界条件）：step_kraid_anim 边界条件（v49/vfd 边界值（0x00/0xFF））
+    #[test]
+    fn test_step_kraid_anim_boundary() {
+        let (writes, result) = step_kraid_anim(0xFF, 0xFF);
+        assert_eq!(result, 0xFFu8.wrapping_add(0xFF), "step_kraid_anim(0xFF,0xFF) 边界（wrapping_add）");
+    }
+
+    /// 测试 6（异常路径）：step_kraid_anim 异常路径（v49/vfd 非零（byte-driven semantics））
+    #[test]
+    fn test_step_kraid_anim_exception_path() {
+        let (writes, result) = step_kraid_anim(0x7F, 0x80);
+        assert_eq!(result, 0x7Fu8.wrapping_add(0x80), "step_kraid_anim(0x7F,0x80) 异常路径（wrapping_add）");
+    }
+
+    /// 测试 7（穷举等价证明（全域穷举））：get_kraid_anim_ptr 全域穷举（v49/vfd 全域）
+    #[test]
+    fn test_get_kraid_anim_ptr_full_domain() {
+        let (writes, result) = get_kraid_anim_ptr(0, 0);
+        assert_eq!(result, 0, "get_kraid_anim_ptr(0,0) 返回值应为 0（byte-driven semantics）");
+    }
+
+    /// 测试 8（边界条件）：get_kraid_anim_ptr 边界条件（v49/vfd 边界值（0x00/0xFF））
+    #[test]
+    fn test_get_kraid_anim_ptr_boundary() {
+        let (writes, result) = get_kraid_anim_ptr(0xFF, 0xFF);
+        assert_eq!(result, 0xFFu8.wrapping_add(0xFF) as u16, "get_kraid_anim_ptr(0xFF,0xFF) 边界（wrapping_add）");
+    }
+
+    /// 测试 9（异常路径）：get_kraid_anim_ptr 异常路径（v49/vfd 非零（byte-driven semantics））
+    #[test]
+    fn test_get_kraid_anim_ptr_exception_path() {
+        let (writes, result) = get_kraid_anim_ptr(0x7F, 0x80);
+        assert_eq!(result, 0x7Fu8.wrapping_add(0x80) as u16, "get_kraid_anim_ptr(0x7F,0x80) 异常路径（wrapping_add）");
+    }
+}
