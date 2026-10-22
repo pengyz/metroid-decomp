@@ -12160,6 +12160,66 @@ boot 5（matches）））⑨穷举等价证明 ✓（int-y-proof（2^32（0 分�
 （独立重导证据（正确性核）））✓——复核 verdict 实录（docs commit（对抗复核 verdict（11 项
 （必跑验证）（实测输出原文（A 级））））✓。
 
+## 1:1 Rust 改写·批产·对抗复核（3 件（engine::mod+refs 占位形强化修订（lead 直接修复）+
+weapon/{missile,mod}）（11 项（必跑验证）（worktree 隔离（verifier 分支）））（证伪立场（独立
+重导证据（正确性核）））
+
+### verdict: needs_revision（②refs（cluster-9（ending/sequence）占位仍在（lead 修复未及）））
+（余件 pass（cluster-12/13（lead 直接修复 ✓）+engine::mod+weapon/{missile,mod}））
+
+**必跑验证实录（⑩（A 级原文）（worktree（verifier 分支））**：
+- `cargo test --workspace`：**671+8+17+14=710 passed; 0 failed**（全绿）
+- `int-y-proof --rom 'rom/Metroid (USA).nes'`：**EXHAUSTIVE PROOF: int_y ≡ bank07:E3A5-E3E4
+  （字节驱动语义）——4294967296 输入点全枚举（RAM 4B 全域），0 分歧**
+
+**①六步流程 ✓**：3 件六步头全在（engine::mod（s1_/s2_ 族（继续去地址名））+refs 占位形强化修订
+（lead 直接修复）+weapon/{missile,mod}（第三十一簇（六步流程）））✓
+
+**②refs 引证实址——分件判定（lead 直接修复实效核（主 workspace（修订文档）））**：
+- **engine::mod ✓**：bank02:8000（areas_common 化身（root——簇共根形二百十七·bank2 化身））+
+  bank02:8003（二百十八·bank2 化身二现）+bank02:8006（二百十九·bank2 化身三现）——areas_common
+  化身域（bank02（s1_/s2_ 族（继续去地址名（正确））））
+- **refs 占位形强化修订（lead 直接修复）——分件判定**：
+  - **cluster-12（input/joy）✓**：bank07:C215（ReadJoyPads）+bank00:940B（DisplayInputCharacters）——
+    输入域（bank07 引擎（ReadJoyPads）+bank00 显示（DisplayInputCharacters）（正确））（lead
+    直接修复 ✓（bank:addr→实址（13 处注（实址已填））））
+  - **cluster-13（render/sprite）✓**：bank00:87CF-887A（UpdateSparkleSprites/DoSparkleSpriteCoord）+
+    bank00:988A-98AD（DecSpriteYCoord）——精灵渲染域（OAM/精灵（更正后实址（前轮域归属更正
+    （DrawIntroBackground/VRAMStruct=开场背景绘制（非 OAM/精灵（拒收注））））））（lead 直接
+    修复 ✓（domain 归属更正+重新取证实址（87CF-887A 族（OAM/精灵（正确域）））））
+  - **cluster-9（ending/sequence）✗ 拒收**：「bank:addr」字面 **6 处**（grep（bank:addr（6））+
+    实址**零命中**（grep（bank[0-9]+:|0[0-9]:）（零）））——**lead 直接修复未及 cluster-9**（修订
+    文档（cluster-9-rewrite.md）refs 仍占位（「bank:addr」字面（未填））——同病十犯（占位→实址
+    （lead 直接修复（cluster-9 未及））））
+- **weapon/missile ✓**：07:D315（:4003）+07:D323（:4013）——导弹发射域（bank07（正确））
+- **weapon/mod ✓**：武器域（missile——批量改写第三十一簇（六步流程））（refs 随 missile.rs（主件））
+
+**③域结构 ✓**：语义命名（engine::mod（s1_/s2_ 族（继续去地址名（areas_common 化身（bank02））））+
+ending::sequence+render::{mod,sprite}（OAM/精灵（更正后））+input::joy+weapon::{missile,mod}）✓
+
+**④memmap 适配 ✓**（byte-driven semantics）+**⑤shim 写集 ✓**（verify_shim 契约）✓
+
+**⑥测试充分 ✓**：710 tests（TDD（批产））✓
+
+**⑦registry 登记**：（设计态（登记随实现落）（前轮实录（g3_cluster_*（SFX_*（D3 实证面）））））✓
+
+**⑧真规则 ✓**（公式形（零字面特值））+**⑨穷举等价证明 ✓**（int-y-proof（2^32（0 分歧）））+
+**⑩必跑验证 ✓**（实测输出原文（A 级））+**⑪验证轨迹对等 ✓**（全域穷举（覆盖全部实现））
+
+**verdict**：1:1 Rust 改写·批产·对抗复核（3 件）**needs_revision**——**②refs（cluster-9（ending/
+sequence）占位仍在（lead 修复未及））拒收**（「bank:addr」字面 6 处（实址零命中（同病十犯
+（lead 直接修复（cluster-9 未及））））+**cluster-12/13（lead 直接修复 ✓）+engine::mod+weapon/
+{missile,mod} pass**——余项 ✓（①六步流程③域结构④memmap⑤shim 写集⑥测试（710）⑦registry（设计态）
+⑧真规则⑨穷举等价证明⑩必跑验证（实测输出原文（A 级））⑪验证轨迹对等）——对抗复核核（证伪立场
+（独立重导证据（正确性核）））✓——复核 verdict 实录（docs commit（对抗复核 verdict（11 项
+（必跑验证）（实测输出原文（A 级））））✓。
+
+> 【worktree 隔离注】worktree（verifier 分支（e43d875（worktree 隔离纪律）））落后主 workspace
+> （04a7197（块 26（D0xx 簇 6 员去地址名）））——refs 实址核以**主 workspace（修订文档）**为准
+> （lead 直接修复（cluster-12/13 ✓））+worktree 实现文件（ending/sequence.rs+render/sprite.rs+
+> input/joy.rs（「bank:addr」字面（5 处/件（旧态（待回迁））））——**协调者回迁**（git merge
+> （冲突解决））后 worktree 同步。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
