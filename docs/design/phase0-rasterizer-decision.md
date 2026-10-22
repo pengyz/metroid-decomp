@@ -47,3 +47,6 @@ constants_ram.asm:825-827（$0200-$02FF sprite 页）。
 
 Evidence: 上述 bank:addr 引证（m1disasm SRC 实测行号）。
 Confidence: 95
+
+> 【2026-10-22 用户裁定】**案 A**（单列软件 PPU 光栅器（8-sprite/scanline 丢弃（D4 保真）））——L4 像素 diff 保持最终判据（白名单外全等（容差=0））——8-sprite/scanline 丢弃差异由软件光栅器复现（D4 保真（原版 quirks 保留））——Mesen2 framebuffer 截图终检作为补充验证（非豁免（仅降频））。
+> Phase 0 架构设计 8/8 交付件收口 → 启动 2 试点簇（samus::physics::integrate_y+world::room 加载（跑通六步流程））。
