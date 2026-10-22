@@ -11609,6 +11609,38 @@ registry（l2ports.rs（双射））））——**refs 引证 ✗**（bank:addr 
 立场（独立重导证据（正确性核）））✓——复核 verdict 实录（docs commit（对抗复核 verdict（四项核
 （A 级原文））））✓。
 
+## 批量改写·对抗复核（4 件（簇 13 四次+簇 16 补全+簇 17+簇 19 修订（第十轮）（证伪立场
+（独立重导证据（正确性核））））
+
+### verdict: pass（4/4 全 ✓（A 级原文））
+
+**① 簇 13 修订·四次（render::sprite）✓ pass**（复审（前轮实录））：域归属更正 ✓（DrawIntro
+Background/VRAMStruct_DrawIntroBackground=开场背景绘制（VRAM 名表（非 OAM/精灵）（拒收注）））
++重新取证 ✓（bank00:87CF-887A（UpdateSparkleSprites/DoSparkleSpriteCoord）+988A-98AD
+（DecSpriteYCoord）+98AE-98B0（LoadStarSprites）+9C7F-9C8F（LoadWaveSprites）——精灵渲染
+（OAM/精灵（正确域）（实址（非占位））））✓
+
+**② 簇 16 补全（pickup::powerup）✓ pass**：文档+实现双补 ✓（cluster-16-rewrite.md+pickup/
+powerup.rs（4c3dded（feat(core),docs(design)）））——refs 实址 ✓（**07:DB37**（UpdateAllPowerUps
+（prg7_engine.asm:5503））+**07:DB42**（UpdateOnePowerUp（:5513）））——**PowerUp 显示更新域
+（bank07 引擎域（正确）**+语义逐钉 ✓（空槽门（PowerUps.type==$FF⇒出口（:5517-5519（iny/beq）））+
+双槽循环（PowerUp 绘制 RAM 起 $0340（PageIndex←$40）））+六步流程 ✓（补全件（文档+实现双补））✓
+
+**③ 簇 17（ui::password）✓ pass**（复审（前轮实录））：refs 实址 ✓（GoPassword: ; 07:C9C4
+（prg7_engine.asm:2170））——密码域（bank07 引擎域（正确））+移交面注+六步流程 ✓（dec7978
+（feat(core)））✓
+
+**④ 簇 19 修订（engine::boot）✓ pass**：refs 零实址更正 ✓（cluster-19-rewrite.md（实址
+（非占位）））——bank00:8071-80BE（InitializeAfterReset）+bank00:92D4（InitializeGame）+bank00:
+932B（InitializeStats）——**启动初始化域（bank00（正确）**+六步流程 ✓（a1fc121（feat(core)））✓
+
+**verdict**：批量改写 4 件（第十轮）**pass**（①簇 13 四次（域归属更正（OAM/精灵（非 VRAM 名表））+
+重新取证（87CF-887A 族（精灵渲染（正确域））））②簇 16 补全（文档+实现双补（07:DB37/07:DB42
+（prg7_engine.asm:5503/5513（PowerUp 显示更新域（bank07）））））③簇 17（GoPassword: ; 07:C9C4
+（密码域（bank07）））④簇 19 修订（bank00:8071-80BE/92D4/932B（启动初始化域（bank00））））——
+对抗复核核（证伪立场（独立重导证据（正确性核）））✓——复核 verdict 实录（docs commit（对抗
+复核 verdict（四项核（A 级原文））））✓。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
