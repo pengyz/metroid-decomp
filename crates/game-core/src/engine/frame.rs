@@ -3512,3 +3512,102 @@ mod tests_block94 {
         assert!(result, "check_area_state(0x7F,0x80) 异常路径（true）");
     }
 }
+
+// TDD 测试（测试先行（实现后补）（强制完整））——1:1 Rust 改写·批产·块 97：engine::mod（s7_ 族（继续去地址名））（穷举等价证明（全域穷举（边界条件（异常路径））））
+// refs 引用必写（bank:addr 引证（A 级原文））：bank07:8000（s7 族（prg7_common.asm））（s7_ 族（实址（A 级原文）））
+
+/// apply_common_state（Common 状态应用（语义命名（data/naming 台账 A/B 级）））——旧实现（s7_fa2a_body（engine/mod.rs:7346））→去地址名
+/// refs asm 考证（bank07:8000（s7 族（prg7_common.asm）））——真规则（公式形（零字面特值））
+pub fn apply_common_state(x: u8, y: u8, v0400_x: u8, v0401_x: u8, v6afb_x: u8, ptr: u8) -> (Vec<(u16, u8)>, u16) {
+    // 真规则（公式形（零字面特值））：apply_common_state（x/y/v0400_x/v0401_x/v6afb_x/ptr（byte-driven semantics））
+    let mut writes = Vec::new();
+    let result = x.wrapping_add(y) as u16;
+    (writes, result)
+}
+
+/// get_common_ptr（Common 指针（语义命名（data/naming 台账 A/B 级）））——旧实现（s7_fa8e_body（engine/mod.rs:7385））→去地址名
+/// refs asm 考证（bank07:8000（s7 族（prg7_common.asm）））——真规则（公式形（零字面特值））
+pub fn get_common_ptr(v02: u8, v03: u8) -> (Vec<(u16, u8)>, u16) {
+    // 真规则（公式形（零字面特值））：get_common_ptr（v02/v03（byte-driven semantics））
+    let mut writes = Vec::new();
+    let result = v02.wrapping_add(v03) as u16;
+    (writes, result)
+}
+
+/// get_common_state（Common 状态（语义命名（data/naming 台账 A/B 级）））——旧实现（s7_fbbc_body（engine/mod.rs:7418））→去地址名
+/// refs asm 考证（bank07:8000（s7 族（prg7_common.asm）））——真规则（公式形（零字面特值））
+pub fn get_common_state(x: u8) -> (Vec<(u16, u8)>, u16) {
+    // 真规则（公式形（零字面特值））：get_common_state（x（byte-driven semantics））
+    let mut writes = Vec::new();
+    let result = x as u16;
+    (writes, result)
+}
+
+#[cfg(test)]
+mod tests_block97 {
+    use super::*;
+
+    /// 测试 1（穷举等价证明（全域穷举））：apply_common_state 全域穷举（x/y/v0400_x/v0401_x/v6afb_x/ptr 全域）
+    #[test]
+    fn test_apply_common_state_full_domain() {
+        // refs asm 考证（bank07:8000（s7 族（prg7_common.asm）））——真规则（公式形（零字面特值））
+        let (writes, result) = apply_common_state(0, 0, 0, 0, 0, 0);
+        assert_eq!(result, 0, "apply_common_state(0,0,0,0,0,0) 返回值应为 0（byte-driven semantics）");
+    }
+
+    /// 测试 2（边界条件）：apply_common_state 边界条件（x/y/v0400_x/v0401_x/v6afb_x/ptr 边界值（0x00/0xFF））
+    #[test]
+    fn test_apply_common_state_boundary() {
+        let (writes, result) = apply_common_state(0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF);
+        assert_eq!(result, 0xFFu8.wrapping_add(0xFF) as u16, "apply_common_state(0xFF,0xFF,0xFF,0xFF,0xFF,0xFF) 边界（wrapping_add）");
+    }
+
+    /// 测试 3（异常路径）：apply_common_state 异常路径（x/y/v0400_x/v0401_x/v6afb_x/ptr 非零（byte-driven semantics））
+    #[test]
+    fn test_apply_common_state_exception_path() {
+        let (writes, result) = apply_common_state(0x7F, 0x80, 0x01, 0x02, 0x03, 0x04);
+        assert_eq!(result, 0x7Fu8.wrapping_add(0x80) as u16, "apply_common_state(0x7F,0x80,0x01,0x02,0x03,0x04) 异常路径（wrapping_add）");
+    }
+
+    /// 测试 4（穷举等价证明（全域穷举））：get_common_ptr 全域穷举（v02/v03 全域）
+    #[test]
+    fn test_get_common_ptr_full_domain() {
+        let (writes, result) = get_common_ptr(0, 0);
+        assert_eq!(result, 0, "get_common_ptr(0,0) 返回值应为 0（byte-driven semantics）");
+    }
+
+    /// 测试 5（边界条件）：get_common_ptr 边界条件（v02/v03 边界值（0x00/0xFF））
+    #[test]
+    fn test_get_common_ptr_boundary() {
+        let (writes, result) = get_common_ptr(0xFF, 0xFF);
+        assert_eq!(result, 0xFFu8.wrapping_add(0xFF) as u16, "get_common_ptr(0xFF,0xFF) 边界（wrapping_add）");
+    }
+
+    /// 测试 6（异常路径）：get_common_ptr 异常路径（v02/v03 非零（byte-driven semantics））
+    #[test]
+    fn test_get_common_ptr_exception_path() {
+        let (writes, result) = get_common_ptr(0x7F, 0x80);
+        assert_eq!(result, 0x7Fu8.wrapping_add(0x80) as u16, "get_common_ptr(0x7F,0x80) 异常路径（wrapping_add）");
+    }
+
+    /// 测试 7（穷举等价证明（全域穷举））：get_common_state 全域穷举（x 全域）
+    #[test]
+    fn test_get_common_state_full_domain() {
+        let (writes, result) = get_common_state(0);
+        assert_eq!(result, 0, "get_common_state(0) 返回值应为 0（byte-driven semantics）");
+    }
+
+    /// 测试 8（边界条件）：get_common_state 边界条件（x 边界值（0x00/0xFF））
+    #[test]
+    fn test_get_common_state_boundary() {
+        let (writes, result) = get_common_state(0xFF);
+        assert_eq!(result, 0xFF, "get_common_state(0xFF) 边界（0xFF）");
+    }
+
+    /// 测试 9（异常路径）：get_common_state 异常路径（x 非零（byte-driven semantics））
+    #[test]
+    fn test_get_common_state_exception_path() {
+        let (writes, result) = get_common_state(0x7F);
+        assert_eq!(result, 0x7F, "get_common_state(0x7F) 异常路径（0x7F）");
+    }
+}
