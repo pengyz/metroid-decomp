@@ -14484,3 +14484,86 @@ pub fn stop_vert_and_cond_state(v14: u8) -> Vec<(u16, u8)> {
 pub fn stop_vert_and_dispatch_d1() -> (Vec<(u16, u8)>, u8, u16) {
     (stop_vertical_movement(), 4, 0xD144)
 }
+
+// ===== 1:1 Rust 改写·批产·块 59（SetSamusStand 族+尾壳去地址名（TDD 穷举等价））=====
+
+#[cfg(test)]
+mod tests_b59_engine_mod {
+    //! TDD step1（测试先行（强制完整））——穷举等价（新==旧（≤256³ 闸时限界））。
+    //! refs 锚（bank:addr 注内）：$D3F4（:1233）/$CF55 SetSamusStand root（:1265）/$D04D
+    //! （:1271）/$D110（:1276）/$D957（:1288）。
+
+    use super::*;
+
+    /// 【穷举·条件步进壳】v4e×v030e 全域——stop_vert_and_step_x_cond==s1_d3f4_body
+    /// （$4E≠0 判（dec 回绕））。
+    #[test]
+    fn exhaustive_step_x_cond_equivalence() {
+        for v4e in 0u8..=255 {
+            for e in 0u8..=255 {
+                assert_eq!(s1_d3f4_body(v4e, e), stop_vert_and_step_x_cond(v4e, e));
+            }
+        }
+    }
+
+    /// 【穷举·Stand 根面】set_samus_stand_face==s1_set_samus_stand（8 写面逐钉）。
+    #[test]
+    fn stand_root_equivalence() {
+        assert_eq!(s1_set_samus_stand(), set_samus_stand_face());
+    }
+
+    /// 【穷举·Stand 三壳】退化域+v0306 全域+x×v030f 全域——stand_and_dispatch_cd/
+    /// stand_and_decrement_anim/stand_and_flip_slot_flag==旧体。
+    #[test]
+    fn exhaustive_stand_shell_equivalence() {
+        assert_eq!(s1_d04d_body(), stand_and_dispatch_cd());
+        for v in 0u8..=255 {
+            assert_eq!(s1_d110_body(v), stand_and_decrement_anim(v));
+        }
+        for x in 0u8..=255 {
+            for f in 0u8..=255 {
+                assert_eq!(s1_d957_body(x, f), stand_and_flip_slot_flag(x, f));
+            }
+        }
+    }
+}
+
+// ===== 1:1 Rust 改写·批产·块 59：SetSamusStand 族+尾壳语义命名（去地址名（公式形））=====
+// refs 锚（bank:addr 注内）：$D3F4（:1233）/$CF55 SetSamusStand root（:1265）/$D04D（:1271）/
+// $D110（:1276）/$D957（:1288）。
+
+/// 条件步进壳（旧 s1_d3f4_body（$D3F4）：StopVert+$4E≠0⇒$030E←dec→jmp $D411）。
+pub fn stop_vert_and_step_x_cond(v4e: u8, v030e: u8) -> (Vec<(u16, u8)>, u16) {
+    let mut ev = stop_vertical_movement();
+    if v4e != 0 {
+        ev.push((0x030E, v030e.wrapping_sub(1)));
+    }
+    (ev, 0xD411)
+}
+
+/// 站姿根面（旧 s1_set_samus_stand（$CF55 SetSamusStand root）：$0300/$0304←0/
+/// $0305/$0306←7/$0309/$0313/$0315←0/$0680←8（声旗））。
+pub fn set_samus_stand_face() -> Vec<(u16, u8)> {
+    vec![(0x0300, 0), (0x0304, 0), (0x0305, 7), (0x0306, 7),
+         (0x0309, 0), (0x0313, 0), (0x0315, 0), (0x0680, 8)]
+}
+
+/// Stand+CD 派发（旧 s1_d04d_body（$D04D）：SetSamusStand→jmp $CD6D（A=3 面））。
+pub fn stand_and_dispatch_cd() -> (Vec<(u16, u8)>, u8, u16) {
+    (set_samus_stand_face(), 3, 0xCD6D)
+}
+
+/// Stand+anim 递减（旧 s1_d110_body（$D110）：+$0306←dec→jmp $D144）。
+pub fn stand_and_decrement_anim(v0306: u8) -> (Vec<(u16, u8)>, u16) {
+    let mut ev = set_samus_stand_face();
+    ev.push((0x0306, v0306.wrapping_sub(1)));
+    (ev, 0xD144)
+}
+
+/// Stand+槽旗翻（旧 s1_d957_body（$D957）：+$0300[x]←1+$030F[x]^=$80）。
+pub fn stand_and_flip_slot_flag(x: u8, v030f_x: u8) -> Vec<(u16, u8)> {
+    let mut ev = set_samus_stand_face();
+    ev.push((0x0300 + x as u16, 1));
+    ev.push((0x030F + x as u16, v030f_x ^ 0x80));
+    ev
+}
