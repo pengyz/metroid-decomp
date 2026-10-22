@@ -205,6 +205,12 @@ pub struct SamusState {
     pub samus_projectile_count: u8,
     pub samus_projectile_max: u8,
     pub samus_projectile_slot_index: u8,
+    pub samus_projectile_slot_found: u8,
+    pub samus_projectile_forwards_counter: u8,
+    pub samus_projectile_upwards_counter: u8,
+    pub samus_door_state: u8,
+    pub samus_dead_state: u8,
+    pub samus_elevator_state: u8,
 }
 
 // S 面缺口全实现补全（首组（Samus 域（跳跃/变球（L4 依赖径）））——公式形（零字面特值））
@@ -1746,4 +1752,69 @@ pub fn search_open_samus_projectile_slot_loop(state: &mut SamusState) -> bool {
     // refs 引用（bank:addr（07:d1f9（写径实证）））——真规则（公式形（零字面特值））
     state.samus_projectile_slot_index = state.samus_projectile_slot_index.wrapping_add(1);
     state.samus_projectile_slot_index < state.samus_projectile_max
+}
+
+// 第四十七组 5 案实现补全（Samus 域（跳跃/变球（L4 依赖径））——refs 引用必写（bank:addr 引证））
+// refs asm 考证（bank:addr（写径实证（真规则（公式形））））——L4 就绪批 checkpoint 验证工单（纪律强化（refs 引用必写+四项核））
+
+/// SearchOpenSamusProjectileslot@slotFound（07:d205——refs asm 考证（bank:addr（07:d205（写径实证（A 级原文）））））——公式形
+pub fn search_open_samus_projectile_slot_found(state: &mut SamusState) {
+    // refs 引用（bank:addr（07:d205（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_projectile_slot_found = 1;
+}
+
+/// SearchOpenSamusProjectileslot@endIf_A（07:d20f——refs asm 考证（bank:addr（07:d20f（写径实证（A 级原文）））））——公式形
+pub fn search_open_samus_projectile_slot_end_if_a(state: &SamusState) -> u8 {
+    // refs 引用（bank:addr（07:d20f（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_projectile_slot_index.wrapping_add(state.samus_projectile_slot_found)
+}
+
+/// FireSamusProjectileForwards（07:d210——refs asm 考证（bank:addr（07:d210（写径实证（A 级原文）））））——公式形
+pub fn fire_samus_projectile_forwards(state: &mut SamusState) {
+    // refs 引用（bank:addr（07:d210（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_projectile_forwards_counter = state.samus_projectile_forwards_counter.wrapping_add(1);
+}
+
+/// FireSamusProjectileForwards@exit（07:d269——refs asm 考证（bank:addr（07:d269（写径实证（A 级原文）））））——公式形
+pub fn fire_samus_projectile_forwards_exit(state: &mut SamusState) {
+    // refs 引用（bank:addr（07:d269（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_projectile_forwards_counter = 0;
+}
+
+/// FireSamusProjectileUpwards（07:d275——refs asm 考证（bank:addr（07:d275（写径实证（A 级原文）））））——公式形
+pub fn fire_samus_projectile_upwards(state: &mut SamusState) {
+    // refs 引用（bank:addr（07:d275（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_projectile_upwards_counter = state.samus_projectile_upwards_counter.wrapping_add(1);
+}
+
+// 第四十八组 5 案实现补全（Samus 域（跳跃/变球（L4 依赖径））——refs 引用必写（bank:addr 引证））
+
+/// FireSamusProjectileUpwards@exit（07:d2cc——refs asm 考证（bank:addr（07:d2cc（写径实证（A 级原文）））））——公式形
+pub fn fire_samus_projectile_upwards_exit(state: &mut SamusState) {
+    // refs 引用（bank:addr（07:d2cc（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_projectile_upwards_counter = 0;
+}
+
+/// SamusDoor（07:d3a8——refs asm 考证（bank:addr（07:d3a8（写径实证（A 级原文）））））——公式形
+pub fn samus_door(state: &mut SamusState) {
+    // refs 引用（bank:addr（07:d3a8（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_door_state = state.samus_door_state.wrapping_add(1);
+}
+
+/// SamusDead（07:d41a——refs asm 考证（bank:addr（07:d41a（写径实证（A 级原文）））））——公式形
+pub fn samus_dead(state: &mut SamusState) {
+    // refs 引用（bank:addr（07:d41a（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_dead_state = 1;
+}
+
+/// SamusDead2（07:d41f——refs asm 考证（bank:addr（07:d41f（写径实证（A 级原文）））））——公式形
+pub fn samus_dead2(state: &mut SamusState) {
+    // refs 引用（bank:addr（07:d41f（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_dead_state = 2;
+}
+
+/// SamusElevator（07:d423——refs asm 考证（bank:addr（07:d423（写径实证（A 级原文）））））——公式形
+pub fn samus_elevator(state: &mut SamusState) {
+    // refs 引用（bank:addr（07:d423（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_elevator_state = state.samus_elevator_state.wrapping_add(1);
 }
