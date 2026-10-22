@@ -9,8 +9,10 @@ pub mod common;
 pub mod slot;
 pub mod enemy_collision_flags;
 pub mod enemy_state;
+pub mod movement;
 
 pub use attrs::EnemyAttrs;
 pub use slot::EnemySlot;
 pub use enemy_collision_flags::EnemyCollisionFlags;
 pub use enemy_state::EnemyState;
+pub use movement::{MoveCheckOutcome, MoveCheckStaging};

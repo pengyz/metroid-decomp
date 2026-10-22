@@ -873,6 +873,10 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "s4_cluster_106" => Some(sub_s4_cluster_106),
         "s4_cluster_108" => Some(sub_s4_cluster_108),
         "s4_cluster_110" => Some(sub_s4_cluster_110),
+        // 【第三簇 enemy::movement registry 登记】bank:addr→crate::module::fn 双射：
+        // 07:E770 EnemyCheckMoveUp / 07:E77B Down / 07:E783 Vertical / 07:E792 StoreEnemyPositionToTemp
+        // / 07:E7BD CheckMoveVertical（kernel 边界）/ 07:E8F1 Left / 07:E8FC Right / 07:E904 HorizontalBranch
+        "s4_cluster_movement_check" => Some(sub_s4_cluster_movement_check),
         "s4_cluster_112" => Some(sub_s4_cluster_112),
         "s4_cluster_119" => Some(sub_s4_cluster_119),
         "s5_cluster_121" => Some(sub_s5_cluster_121),
@@ -1939,6 +1943,16 @@ pub fn sub_s4_cluster_108(input: &L2In) -> L2Out {
 pub fn sub_s4_cluster_110(input: &L2In) -> L2Out {
     crate::verify_shim::s4_cluster_110(input)
 }
+
+/// s4_cluster_movement_check —— 第三簇 enemy::movement 入口注册（bank:addr→fn 双射）。
+/// 适配径：a←radiusY（上检入口面）／x,y←位置／hi=0——staging+写集（Temp 面）经 movement.rs。
+/// asm 锚：EnemyCheckMoveUp 07:E770（prg7_engine.asm:7991）——几何+staging 面（kernel=边界）。
+pub fn sub_s4_cluster_movement_check(input: &crate::L2In) -> crate::L2Out {
+    let s = crate::enemy::movement::enemy_check_move_up(input.a, input.a, input.x, input.y, 0);
+    let w = crate::enemy::movement::staging_writes(&s, false);
+    crate::L2Out { a: input.a, x: input.x, y: input.y, writes: w }
+}
+
 
 /// s4_cluster_112 —— bank07:E8F9 簇入口注册（SC-S4-22）。
 pub fn sub_s4_cluster_112(input: &L2In) -> L2Out {
