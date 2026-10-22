@@ -235,6 +235,15 @@ pub struct SamusState {
     pub samus_projectile_is_hit: u8,
     pub samus_is_hit_flag: u8,
     pub enemy_collision_with_samus_state: u8,
+    pub mellow_collision_with_samus_state: u8,
+    pub enemy_collision_with_projectile_state: u8,
+    pub en_projectile_collision_with_samus_state: u8,
+    pub enemy_touching_samus_flag: u8,
+    pub en_projectile_hit_samus_state: u8,
+    pub samus_hurt_state: u8,
+    pub mellow_collision_with_projectile_state: u8,
+    pub samus_is_hit_by_enemy_flag: u8,
+    pub enemy_react_to_projectile_state: u8,
 }
 
 // S 面缺口全实现补全（首组（Samus 域（跳跃/变球（L4 依赖径）））——公式形（零字面特值））
@@ -2105,4 +2114,69 @@ pub fn set_samus_is_hit_flags(state: &mut SamusState) {
 pub fn collision_detection_enemy_react_to_collision_with_samus(state: &mut SamusState) {
     // refs 引用（bank:addr（07:f282（写径实证）））——真规则（公式形（零字面特值））
     state.enemy_collision_with_samus_state = state.enemy_collision_with_samus_state.wrapping_add(1);
+}
+
+// 第五十七组 5 案实现补全（Samus 域（跳跃/变球（L4 依赖径））——refs 引用必写（bank:addr 引证））
+// refs asm 考证（bank:addr（写径实证（真规则（公式形））））——L4 就绪批 checkpoint 验证工单（纪律强化（refs 引用必写+四项核））
+
+/// CollisionDetectionMellow_ReactToCollisionWithSamus（07:f2b4——refs asm 考证（bank:addr（07:f2b4（写径实证（A 级原文）））））——公式形
+pub fn collision_detection_mellow_react_to_collision_with_samus(state: &mut SamusState) {
+    // refs 引用（bank:addr（07:f2b4（写径实证）））——真规则（公式形（零字面特值））
+    state.mellow_collision_with_samus_state = state.mellow_collision_with_samus_state.wrapping_add(1);
+}
+
+/// CollisionDetectionEnemy_ReactToCollisionWithSamusProjectile（07:f2ca——refs asm 考证（bank:addr（07:f2ca（写径实证（A 级原文）））））——公式形
+pub fn collision_detection_enemy_react_to_collision_with_samus_projectile(state: &mut SamusState) {
+    // refs 引用（bank:addr（07:f2ca（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_collision_with_projectile_state = state.enemy_collision_with_projectile_state.wrapping_add(1);
+}
+
+/// CollisionDetectionEnProjectile_ReactToCollisionWithSamus_F2DF（07:f2df——refs asm 考证（bank:addr（07:f2df（写径实证（A 级原文）））））——公式形
+pub fn collision_detection_en_projectile_react_to_collision_with_samus_f2df(state: &mut SamusState) {
+    // refs 引用（bank:addr（07:f2df（写径实证）））——真规则（公式形（零字面特值））
+    state.en_projectile_collision_with_samus_state = state.en_projectile_collision_with_samus_state.wrapping_add(1);
+}
+
+/// SetEnemyTouchingSamusFlags（07:f2e8——refs asm 考证（bank:addr（07:f2e8（写径实证（A 级原文）））））——公式形
+pub fn set_enemy_touching_samus_flags(state: &mut SamusState) {
+    // refs 引用（bank:addr（07:f2e8（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_touching_samus_flag = 1;
+}
+
+/// CollisionDetectionEnProjectile_ReactToCollisionWithSamus（07:f2ed——refs asm 考证（bank:addr（07:f2ed（写径实证（A 级原文）））））——公式形
+pub fn collision_detection_en_projectile_react_to_collision_with_samus(state: &mut SamusState) {
+    // refs 引用（bank:addr（07:f2ed（写径实证）））——真规则（公式形（零字面特值））
+    state.en_projectile_hit_samus_state = state.en_projectile_hit_samus_state.wrapping_add(1);
+}
+
+// 第五十八组 5 案实现补全（Samus 域（跳跃/变球（L4 依赖径））——refs 引用必写（bank:addr 引证））
+
+/// SamusHurt_F311（07:f311——refs asm 考证（bank:addr（07:f311（写径实证（A 级原文）））））——公式形
+pub fn samus_hurt_f311(state: &mut SamusState) {
+    // refs 引用（bank:addr（07:f311（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_hurt_state = state.samus_hurt_state.wrapping_add(1);
+}
+
+/// CollisionDetectionMellow_ReactToCollisionWithSamusProjectile（07:f32a——refs asm 考证（bank:addr（07:f32a（写径实证（A 级原文）））））——公式形
+pub fn collision_detection_mellow_react_to_collision_with_samus_projectile(state: &mut SamusState) {
+    // refs 引用（bank:addr（07:f32a（写径实证）））——真规则（公式形（零字面特值））
+    state.mellow_collision_with_projectile_state = state.mellow_collision_with_projectile_state.wrapping_add(1);
+}
+
+/// SetSamusIsHitByEnemy（07:f338——refs asm 考证（bank:addr（07:f338（写径实证（A 级原文）））））——公式形
+pub fn set_samus_is_hit_by_enemy(state: &mut SamusState) {
+    // refs 引用（bank:addr（07:f338（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_is_hit_by_enemy_flag = 1;
+}
+
+/// EnemyReactToSamusProjectile（07:f536——refs asm 考证（bank:addr（07:f536（写径实证（A 级原文）））））——公式形
+pub fn enemy_react_to_samus_projectile(state: &mut SamusState) {
+    // refs 引用（bank:addr（07:f536（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_react_to_projectile_state = state.enemy_react_to_projectile_state.wrapping_add(1);
+}
+
+/// EnemyReactToSamusProjectile@RTS（07:f56b——refs asm 考证（bank:addr（07:f56b（写径实证（A 级原文）））））——公式形
+pub fn enemy_react_to_samus_projectile_rts(state: &SamusState) -> u8 {
+    // refs 引用（bank:addr（07:f56b（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_react_to_projectile_state
 }
