@@ -1,0 +1,49 @@
+{
+  "version": "1.0",
+  "created_at": "2026-10-22T20:55:00+08:00",
+  "dependency_graph": {
+    "layer_1": {"engine::nmi": "completed", "engine::boot": "completed"},
+    "layer_2": {"engine::frame": "completed"},
+    "layer_3": {"engine::mod": "pending"},
+    "layer_4": {
+      "world/{door,elevator,room}": "partial",
+      "samus/{handler,physics}": "partial",
+      "enemy/*": "partial",
+      "pickup/{items,powerup}": "partial",
+      "ui/password": "partial",
+      "sound/{mod,music,sfx}": "partial",
+      "title/{mod,sparkle}": "partial",
+      "ending/sequence": "partial",
+      "render/{mod,sprite}": "partial",
+      "input/joy": "partial",
+      "weapon/{missile,mod}": "partial"
+    }
+  },
+  "review_status": {
+    "engine::nmi": {"correctness": "pass", "completeness": "pass", "test_coverage": "pass", "tests": "pass", "reviewed_at": "2026-10-22T20:45:00+08:00"},
+    "engine::boot": {"correctness": "pass", "completeness": "pass", "test_coverage": "pass", "tests": "pass", "reviewed_at": "2026-10-22T20:45:00+08:00"},
+    "engine::frame": {"correctness": "pass", "completeness": "pass", "test_coverage": "pass", "tests": "pass", "reviewed_at": "2026-10-22T20:45:00+08:00"},
+    "engine::mod": {"correctness": "pending", "completeness": "pending", "test_coverage": "pending", "tests": "pending"}
+  },
+  "progress": {
+    "address_named_functions": {"total": 337, "completed": 13, "remaining": 324, "percentage": 3.9},
+    "engine_mod_rs": {"total": 1305, "completed": 0, "remaining": 1305, "percentage": 0}
+  },
+  "discipline_compliance": {
+    "workspace_clean": "compliant",
+    "progress_measurable": "compliant",
+    "dependency_order": "compliant",
+    "adversarial_review": "compliant",
+    "continuous_iteration": "compliant"
+  },
+  "timer_checks": {
+    "list_agents": {"frequency": "300s", "last_checked": null, "violations": 0},
+    "git_log": {"frequency": "300s", "last_checked": null, "violations": 0},
+    "git_commit_status": {"frequency": "300s", "last_checked": null, "violations": 0},
+    "progress_check": {"frequency": "300s", "last_checked": null, "violations": 0},
+    "dependency_check": {"frequency": "300s", "last_checked": null, "violations": 0},
+    "review_check": {"frequency": "300s", "last_checked": null, "violations": 0},
+    "convergence_check": {"frequency": "300s", "last_checked": null, "violations": 0},
+    "pending_items": {"frequency": "300s", "last_checked": null, "violations": 0}
+  }
+}
