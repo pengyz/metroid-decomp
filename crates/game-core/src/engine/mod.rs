@@ -15870,3 +15870,72 @@ pub fn enemy_pos_and_dispatch_e7(x: u8, v0401_x: u8, v0400_x: u8, v6afb_x: u8) -
 pub fn enemy_pos_and_dispatch_e8(x: u8, v0401_x: u8, v0400_x: u8, v6afb_x: u8) -> (Vec<(u16, u8)>, u16) {
     (store_enemy_position_triple(x, v0401_x, v0400_x, v6afb_x), 0xE89B)
 }
+
+// ===== 1:1 Rust 改写·批产·块 126（s1/s2 余批 3 员去名（TDD 穷举等价））=====
+
+#[cfg(test)]
+mod tests_b126_engine_mod {
+    //! TDD step1（测试先行（强制完整））——穷举等价（新==旧（≤256³ 闸时限界（依赖分解）））。
+    //! refs 锚（bank:addr 注内）：$F91F（:1431）/$F711（:1853）/$D0xx AnimDrawObject root
+    //! （:1316）。
+
+    use super::*;
+
+    /// 【穷举·pos+FA 壳】x×三参依赖分解——enemy_pos_and_dispatch_fa==s1_f91f_body。
+    #[test]
+    fn exhaustive_fa_dispatch_equivalence() {
+        for x in 0u8..=255 {
+            for &(a, b, c) in &[(0u8, 0u8, 0u8), (0xFF, 0xFF, 0xFF), (8, 9, 1)] {
+                assert_eq!(s1_f91f_body(x, a, b, c), enemy_pos_and_dispatch_fa(x, a, b, c));
+            }
+        }
+    }
+
+    /// 【穷举·AND 反判壳】x×a×v 全域 256³——and_data05_reverse_dispatch==s2_f711_body。
+    #[test]
+    fn exhaustive_and_reverse_equivalence() {
+        for x in 0u8..=255 {
+            for a in 0u8..=255 {
+                for v in 0u8..=255 {
+                    assert_eq!(s2_f711_body(x, a, v), and_data05_reverse_dispatch(x, a, v));
+                }
+            }
+        }
+    }
+
+    /// 【穷举·anim 绘制 root】x×v0303 全域 256²——anim_draw_object_root==s1_anim_draw_object
+    /// （三分路（$F7⇒$DF2D/$07⇒$DE47+位清 $6B&$EF/其余⇒$DE47））。
+    #[test]
+    fn exhaustive_anim_draw_root_equivalence() {
+        for x in 0u8..=255 {
+            for v in 0u8..=255 {
+                assert_eq!(s1_anim_draw_object(x, v), anim_draw_object_root(x, v));
+            }
+        }
+    }
+}
+
+// ===== 1:1 Rust 改写·批产·块 126：s1/s2 余批 3 员语义命名（去地址名（公式形））=====
+// refs 锚（bank:addr 注内）：$F91F（:1431）/$F711（:1853）/$D0xx AnimDrawObject root（:1316）。
+
+/// pos+FA 壳（旧 s1_f91f_body（$F91F）：root→jmp $FA49（A→Y 暂存（$FD8F 姊妹形注）））。
+pub fn enemy_pos_and_dispatch_fa(x: u8, v0401_x: u8, v0400_x: u8, v6afb_x: u8) -> (Vec<(u16, u8)>, u16) {
+    (store_enemy_position_triple(x, v0401_x, v0400_x, v6afb_x), 0xFA49)
+}
+
+/// AND 反判壳（旧 s2_f711_body（$F711）：AndEnData05 根委托（$49 cmp 2 反判+$F752 段
+/// +$0400[x] cmp 段（深段注）））。
+pub fn and_data05_reverse_dispatch(x: u8, a_in: u8, v0405_x: u8) -> (Vec<(u16, u8)>, u8) {
+    s1_and_en_data05(x, a_in, v0405_x)
+}
+
+/// anim 绘制 root（旧 s1_anim_draw_object（$D0xx AnimDrawObject root）：$0303[x] 三分路
+/// ——$F7⇒$DF2D/$07⇒$DE47+$6B&$EF 位清/其余⇒$DE47）。
+pub fn anim_draw_object_root(x: u8, v0303_x: u8) -> (u16, Option<Vec<(u16, u8)>>) {
+    let _ = x;
+    match v0303_x {
+        0xF7 => (0xDF2D, None),
+        0x07 => (0xDE47, Some(vec![(0x006B, 0xEF)])),
+        _ => (0xDE47, None),
+    }
+}
