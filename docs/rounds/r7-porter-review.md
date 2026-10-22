@@ -11504,6 +11504,39 @@ sprite）拒收**（refs 引证=**占位形**（「bank:addr」字面（非实�
 立场（独立重导证据（正确性核）））✓——复核 verdict 实录（docs commit（对抗复核 verdict（四项核
 （A 级原文））））✓。
 
+## 批量改写·对抗复核（4 件（簇 12/13 二次修订+簇 14+簇 11（第七轮）（证伪立场（独立重导
+证据（正确性核））））
+
+### verdict: needs_revision（2/4 拒收（簇 13 二次修订（占位未填）+簇 14（文档缺）））（簇 12 二次
+修订+簇 11 pass）
+
+**① 簇 12 修订·二次（input::joy）✓ pass**：refs 占位形更正 ✓（实址（非占位））——bank07:C215
+（ReadJoyPads）+bank00:940B（DisplayInputCharacters）（实址（A 级原文（refs asm 实证）））+
+文档补全 ✓（cluster-12-rewrite.md（六步流程））——②refs 引用核 ✓（同病修正（占位→实址））✓
+
+**② 簇 13 修订·二次（render::sprite）✗ 拒收**：refs 占位形更正**未执行**（「实址：**bank:addr**
+引证（A 级原文（refs asm（**bank:addr**（表读径（grep 实录…））））））」——**字面占位仍在**
+（声称「实址（非占位）」但内容=占位形（更正未填））+文档补全段（「定域取证 spec（**bank:addr**
+（精灵渲染例程（实址（A 级原文））））」——**占位未填**）——②refs 引用核**缺**（同病四犯
+（簇 2/4/5/6 首修订（簇 12/13 首（现簇 13 二次修订（占位仍在）））））
+
+**③ 簇 14（world::door）✗ 拒收**：**设计文档缺**（docs/design/（cluster-14/door 无（ls exit 1
+（实录）））——实现落（7aff647（feat(core)（world::door（六步流程（域内行为簇））））但**六步
+流程无设计文档**（①六步（无文档（无法核））②refs 引证（无（无法核）））（与簇 9/13 首轮同病
+（实现先行（文档后补模式（应补））））
+
+**④ 簇 11（kernel::frame）✓ pass**：refs 实址 ✓（bank00:9A07（NMIScreenWrite）+bank00:B4A9-B4BC
+（IncrementSFXFrame）+bank00:BFBA-BFBF（WaitForVBlank）+bank01:860B（ObjFramePtrTable））+
+六步流程 ✓（cluster-11-rewrite.md（前轮 pass 实录））✓
+
+**verdict**：批量改写 4 件（第七轮）**needs_revision**——**簇 13 修订·二次拒收**（refs 占位形
+**更正未执行**（「bank:addr」字面仍在（声称「实址（非占位）」（内容矛盾）））+**簇 14 拒收**
+（设计文档缺（实现在（7aff647（feat(core)））（六步无文档（无法核）））+**簇 12 修订·二次 pass**
+（refs 实址（bank07:C215（ReadJoyPads）+bank00:940B（DisplayInputCharacters））+文档补全）+
+**簇 11 pass**（前轮实录（refs 实址（9A07/B4A9/BFBA/860B）））——对抗复核核（证伪立场（独立
+重导证据（正确性核）））✓——复核 verdict 实录（docs commit（对抗复核 verdict（四项核
+（A 级原文））））✓。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
