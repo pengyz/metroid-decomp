@@ -662,3 +662,120 @@ pub fn or_enemy_data05_with_shifts(x: u8, a_in: u8, v0405_x: u8) -> (Vec<(u16, u
 pub fn or_enemy_data05_with_table_walk(x: u8, a_in: u8, v0405_x: u8) -> (Vec<(u16, u8)>, u8) {
     or_enemy_data05(x, a_in, v0405_x)
 }
+
+// ===== 1:1 Rust 改写·块 3（s1 族 $F5xx/$F7FC 面去地址名（TDD 穷举等价证明））=====
+
+#[cfg(test)]
+mod tests_rewrite_b3 {
+    //! TDD step1（测试先行（强制完整））——穷举等价（新==旧（全域穷举（边界（异常路径））））。
+    //! refs 锚（engine/mod.rs 注内 bank:addr）：旗门根（:298（bit5=$20））/$F56C（:349）/
+    //! $F5AC（:358）/$F5CC（:369）/$F7FC（:380）。
+
+    use super::*;
+    use crate::engine::{s1_flag_gate, s1_f56c, s1_f5ac, s1_f5cc, s1_f7fc};
+
+    /// 【穷举·旗门根】root 全域——flag_gate_bit5==s1_flag_gate。
+    #[test]
+    fn exhaustive_flag_gate_equivalence() {
+        for r in 0u8..=255 {
+            assert_eq!(s1_flag_gate(r), flag_gate_bit5(r));
+        }
+    }
+
+    /// 【穷举·旗门反向派发】root×x 全域——dispatch_on_flag_miss==s1_f56c。
+    #[test]
+    fn exhaustive_dispatch_miss_equivalence() {
+        for r in 0u8..=255 {
+            for x in 0u8..=255 {
+                assert_eq!(s1_f56c(r, x), dispatch_on_flag_miss(r, x));
+            }
+        }
+    }
+
+    /// 【穷举·门判别】root×v040e×v6af4 全域（x 边角）——check_motion_state==s1_f5ac。
+    #[test]
+    fn exhaustive_gate_check_equivalence() {
+        for r in 0u8..=255 {
+            for a in 0u8..=255 {
+                for b in 0u8..=255 {
+                    for x in [0u8, 0xFF] {
+                        assert_eq!(s1_f5ac(r, x, a, b), check_motion_state_by_gate(r, x, a, b));
+                    }
+                }
+            }
+        }
+    }
+
+    /// 【穷举·反向双判别】root×x×v040e 全域——gate_reverse_double_check==s1_f5cc。
+    #[test]
+    fn exhaustive_reverse_double_check_equivalence() {
+        for r in 0u8..=255 {
+            for x in 0u8..=255 {
+                for a in 0u8..=255 {
+                    assert_eq!(s1_f5cc(r, x, a), gate_reverse_double_check(r, x, a));
+                }
+            }
+        }
+    }
+
+    /// 【穷举·bpl 跳过】root×x×tbl 全域——clear_motion_pair==s1_f7fc（bpl 空集（异常路径））。
+    #[test]
+    fn exhaustive_bpl_skip_equivalence() {
+        for r in 0u8..=255 {
+            for x in 0u8..=255 {
+                for t in 0u8..=255 {
+                    assert_eq!(s1_f7fc(r, x, t), clear_motion_pair_on_negative(r, x, t));
+                }
+            }
+        }
+    }
+}
+
+// ===== 1:1 Rust 改写·块 3：s1 族 $F5xx/$F7FC 语义命名（去地址名（公式形（零字面特值）））=====
+// refs 锚（engine/mod.rs 注内 bank:addr）：旗门根（:298（bit5=$20））/$F56C（:349）/
+// $F5AC（:358）/$F5CC（:369）/$F7FC（:380）。
+
+/// 旗门（旧 s1_flag_gate（bit5=$20 面）：root 位5 判）。
+pub fn flag_gate_bit5(root_val: u8) -> bool {
+    root_val & 0x20 != 0
+}
+
+/// 旗门反向派发（旧 s1_f56c（$F56C）：未命中⇒子调 $CBB8（尾跳 $F42D 注）；命中⇒None）。
+pub fn dispatch_on_flag_miss(root_val: u8, x: u8) -> Option<u16> {
+    let _ = x;
+    if !flag_gate_bit5(root_val) {
+        Some(0xCBB8)
+    } else {
+        None
+    }
+}
+
+/// 门判别（旧 s1_f5ac（$F5AC）：命中⇒$040E[x]==$0B；未命中⇒$6AF4[x]==$04）。
+pub fn check_motion_state_by_gate(root_val: u8, x: u8, v040e_x: u8, v6af4_x: u8) -> bool {
+    let _ = x;
+    if flag_gate_bit5(root_val) {
+        v040e_x == 0x0B
+    } else {
+        v6af4_x == 0x04
+    }
+}
+
+/// 反向双判别（旧 s1_f5cc（$F5CC）：命中⇒空；未命中⇒$040E[x]==$0B/$81 双判（真⇒空）；
+/// 否则 $6AF4[x]←6）。
+pub fn gate_reverse_double_check(root_val: u8, x: u8, v040e_x: u8) -> (Vec<(u16, u8)>, bool) {
+    if flag_gate_bit5(root_val) {
+        return (vec![], false);
+    }
+    if v040e_x == 0x0B || v040e_x == 0x81 {
+        return (vec![], true);
+    }
+    (vec![(0x6AF4 + x as u16, 6)], false)
+}
+
+/// bpl 跳过面（旧 s1_f7fc（$F7FC）：非负⇒空；负⇒$0406[x]←0/$0407[x]←0/$6AFE[x]←tbl）。
+pub fn clear_motion_pair_on_negative(root_val: u8, x: u8, tbl_entry: u8) -> Vec<(u16, u8)> {
+    if (root_val as i8) >= 0 {
+        return Vec::new();
+    }
+    vec![(0x0406 + x as u16, 0), (0x0407 + x as u16, 0), (0x6AFE + x as u16, tbl_entry)]
+}
