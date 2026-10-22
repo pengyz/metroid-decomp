@@ -36,7 +36,7 @@ def main() -> int:
 
     # task-38 ④：超时=FAIL 显式（防挂死——超限打回非悬挂；l2 引擎侧另有 MAX_STEPS 1M）
     try:
-        proc = subprocess.run(cmd, cwd=ROOT, timeout=600, capture_output=True, text=True,
+        proc = subprocess.run(cmd, cwd=ROOT, timeout=1200, capture_output=True, text=True,  # infra scaling：与 gate timeout 对齐（600s→1200s）
                               encoding="utf-8", errors="replace")
     except subprocess.TimeoutExpired:
         print(f"[FAIL] {cmd[1] if len(cmd) > 1 else cmd}: 超时 >600s（task-38 护栏——限时打回非挂死）")

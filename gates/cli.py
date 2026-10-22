@@ -747,7 +747,7 @@ def gate_rust_tests() -> tuple[str, str]:
             encoding="utf-8",
             errors="replace",
             env=_child_env(),
-            timeout=600,  # 事故②修复：有界（artifact 锁等待/挂死测不无限阻塞——超时=FAIL 显式）
+            timeout=1200,  # infra scaling：穷举测试迭代数增长（39 穷举循环+4 重嵌套（256^4=4.3e9 迭代））——warm cache 647s 已超 600s 预算——600s→1200s（基线影响：rust_test_count 587→1241（PENDING）+timeout 600s→1200s）
         )
     except subprocess.TimeoutExpired:
         return FAIL, "cargo test --workspace 超时（>600s）——事故②修复面：锁等待/挂死测不无限阻塞，超时=FAIL 显式"
@@ -781,7 +781,7 @@ def _gate_runner_dispatch(runner_name: str, prereq: Path, label: str) -> tuple[s
     try:
         proc = subprocess.run([sys.executable, str(runner)], cwd=ROOT, capture_output=True, text=True,
                               encoding="utf-8", errors="replace", env=_child_env(),
-                              timeout=900)  # 事故②修复：外层篱笆（>内部 600s——runner 自身挂死不无限阻塞）
+                              timeout=1800)  # infra scaling：外层篱笆（>内部 1200s——runner 自身挂死不无限阻塞）
     except subprocess.TimeoutExpired:
         return FAIL, f"{label} runner 超时（>900s）——事故②修复面：外层篱笆，超时=FAIL 显式"
     if proc.returncode != 0:
