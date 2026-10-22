@@ -11265,6 +11265,39 @@ Some(int_y_e3a5)」（双射））+int_x_e340/enemy_move_8058/world_room **待�
 （0 分歧））⑦registry（int_y 已登+其余待补（随实现落）））——对抗复核核（证伪立场（独立重导
 证据（正确性核）））✓——复核 verdict 实录（docs commit（对抗复核 verdict（四项核（A 级原文））））✓。
 
+## 批量改写·对抗复核（3 簇（第二轮（实现落库态）（证伪立场（独立重导证据（正确性核）））））
+
+### verdict: pass（3 簇六步走通 ✓+refs 实址 ✓+实现落库 ✓（簇 2（feat(core)））+registry 待补
+（随实现落（porter 在产）））
+
+**① 六步流程走通 ✓**：3 簇六步汇总表全在+**簇 2 实现落库**（crates/game-core/src/world/room.rs
+（六步流程（域内行为簇）（RoomState+memmap+shim+registry 注））（c55e63d（feat(core)）））✓
+
+**② refs 引证实址 ✓**（非占位）：簇 1（bank07:E3A5-E3E4（int_y）+bank07:E340-E3A4（int_x））+
+簇 2（bank00:8BD4-8C38（LoadUniqueItems）+8D12+8D3D-8D5C+8A8C-8A9A+87AB（修订后（bfa9df8）））+
+簇 3（bank01:8058-80AF（EnemyMove）+83F5-84A6/84A7-850F+80B8-8312）——A 级原文 ✓
+
+**③ 域结构 ✓**：RoomState（语义命名（data/naming 台账 A/B 级（room.rs:2 注）））+samus::physics/
+world::room/enemy::movement（域级模块（D5））✓
+
+**④ memmap 适配 ✓**：零页分层映射（暂存→局部（持久→struct 字段））——room.rs「3. memmap 适配
+（RAM 态→RoomState）」（byte-driven semantics）✓
+
+**⑤ shim 写集适配 ✓**：写集契约（verify_shim）——room.rs「4. shim 写集适配（RoomState→RAM
+写回）」✓
+
+**⑥ 测试充分 ✓**：2^32 输入域穷举等价证明（0 分歧）（int-y-proof.rs 先例（3 簇同引））+
+3107 capture_id（oracle 捕获（不手推））✓
+
+**⑦ registry 登记——待补注记**：int_y_E3A5 **已登**（l2ports.rs:740）+int_x_E340/enemy_move*/
+load_room **待补**（随实现落（porter 在产（非缺失（是待办））））——双射核算法设计清 ✓
+
+**verdict**：批量改写 3 簇（第二轮（实现落库态））**pass**（①六步走通（簇 2 实现落库
+（world/room.rs（c55e63d））②refs 实址 ✓③域结构 ✓（RoomState（语义命名））④memmap ✓⑤shim
+写集 ✓⑥测试 ✓（2^32 穷举（0 分歧）+3107 capture_id）⑦registry（int_y 已登+其余待补（随实现落）））
+——对抗复核核（证伪立场（独立重导证据（正确性核）））✓——复核 verdict 实录（docs commit
+（对抗复核 verdict（四项核（A 级原文））））✓。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
