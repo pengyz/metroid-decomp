@@ -16197,3 +16197,56 @@ pub fn y16_with_c0_check(y: u8) -> (u8, bool) {
     let (ny, _) = advance_y16_x_minus16(y, 0);
     (ny, ny >= 0xC0)
 }
+
+// ===== 1:1 Rust 改写·批产·块 134（s1 余批 3 员去名（TDD 穷举等价））=====
+
+#[cfg(test)]
+mod tests_b134_engine_mod {
+    //! TDD step1（测试先行（强制完整））——穷举等价（新==旧（≤256³ 闸时限界））。
+    //! refs 锚（bank:addr 注内）：$F8F0（:1623）/$F0DF（:1585）/$F11B（:1664）。
+
+    use super::*;
+
+    /// 【穷举·y16 变体面】y 全域——y16_advance_face==s1_f8f0_body（y+16 单出）。
+    #[test]
+    fn exhaustive_y16_face_equivalence() {
+        for y in 0u8..=255 {
+            assert_eq!(s1_f8f0_body(y), y16_advance_face(y));
+        }
+    }
+
+    /// 【穷举·碰撞尾】collision_variant_tail==s1_f0df_body（退化域（→$F09F））。
+    #[test]
+    fn collision_tail_equivalence() {
+        assert_eq!(s1_f0df_body(), collision_variant_tail());
+    }
+
+    /// 【穷举·死判壳】v0300 全域——samus_dead_and_slot_check==s1_f11b_body
+    /// （死⇒None/活⇒$F186+（==7 或 ==$0A）双判）。
+    #[test]
+    fn exhaustive_dead_check_equivalence() {
+        for v in 0u8..=255 {
+            assert_eq!(s1_f11b_body(v), samus_dead_and_slot_check(v));
+        }
+    }
+}
+
+// ===== 1:1 Rust 改写·批产·块 134：s1 余批 3 员语义命名（去地址名（公式形））=====
+// refs 锚（bank:addr 注内）：$F8F0（:1623）/$F0DF（:1585）/$F11B（:1664）。
+
+/// y16 变体面（旧 s1_f8f0_body（$F8F0）：Y+16 单出（$85/$4B/$0405 链段注））。
+pub fn y16_advance_face(y: u8) -> u8 {
+    y.wrapping_add(0x10)
+}
+
+/// 碰撞变体尾（旧 s1_f0df_body（$F0DF）：$F140 调+X=0 环（深段注）→尾跳 $F09F）。
+pub fn collision_variant_tail() -> (Vec<(u16, u8)>, u16) {
+    (vec![], 0xF09F)
+}
+
+/// Samus 死判+槽判（旧 s1_f11b_body（$F11B）：IsSamusDead——死⇒None/活⇒$F186
+/// +$0300==7 或 ==$0A 双判）。
+pub fn samus_dead_and_slot_check(v0300: u8) -> (Option<u16>, bool) {
+    let (dead, _) = s1_is_samus_dead(v0300);
+    (if dead { None } else { Some(0xF186) }, v0300 == 7 || v0300 == 0x0A)
+}
