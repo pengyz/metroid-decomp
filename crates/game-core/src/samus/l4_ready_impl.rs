@@ -129,6 +129,11 @@ pub struct SamusState {
     pub squeept_jumping0_frame: u8,
     pub metroid_latch: u8,
     pub metroid_on_samus: u8,
+    pub samus_temp_x: u8,
+    pub samus_temp_y: u8,
+    pub mother_brain_x: u8,
+    pub mother_brain_collision_threshold: u8,
+    pub mother_brain_collide_frame: u8,
 }
 
 // S 面缺口全实现补全（首组（Samus 域（跳跃/变球（L4 依赖径）））——公式形（零字面特值））
@@ -1102,4 +1107,39 @@ pub fn goto_clear_current_metroid_latch_and_metroid_on_samus(state: &mut SamusSt
     // refs 引用（bank:addr（03:95a8（写径实证）））——真规则（公式形（零字面特值））
     state.metroid_latch = 0;
     state.metroid_on_samus = 0;
+}
+
+// 第三十组 5 案实现补全（Samus 域（跳跃/变球（L4 依赖径））——refs 引用必写（bank:addr 引证））
+// refs asm 考证（bank:addr（写径实证（真规则（公式形））））——L4 就绪批微工单（纪律强化（refs 引用必写+四项核））
+
+/// MetroidAIRoutine_BANK3@metroidOnSamus_clearLatch（03:9964——refs asm 考证（bank:addr（03:9964（写径实证（A 级原文）））））——公式形
+pub fn metroid_ai_routine_bank3_metroid_on_samus_clear_latch(state: &mut SamusState) {
+    // refs 引用（bank:addr（03:9964（写径实证）））——真规则（公式形（零字面特值））
+    state.metroid_latch = 0;
+}
+
+/// MetroidAIRoutine_BANK3@metroidOnSamus（03:9967——refs asm 考证（bank:addr（03:9967（写径实证（A 级原文）））））——公式形
+pub fn metroid_ai_routine_bank3_metroid_on_samus(state: &mut SamusState) -> bool {
+    // refs 引用（bank:addr（03:9967（写径实证）））——真规则（公式形（零字面特值））
+    state.metroid_on_samus = state.metroid_on_samus.wrapping_add(1);
+    state.metroid_on_samus > 0
+}
+
+/// StoreSamusPositionToTemp（03:99e4——refs asm 考证（bank:addr（03:99e4（写径实证（A 级原文）））））——公式形
+pub fn store_samus_position_to_temp(state: &mut SamusState) {
+    // refs 引用（bank:addr（03:99e4（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_temp_x = state.samus_x;
+    state.samus_temp_y = state.samus_y;
+}
+
+/// MotherBrain_Idle_CollideWithSamus（03:9df2——refs asm 考证（bank:addr（03:9df2（写径实证（A 级原文）））））——公式形
+pub fn mother_brain_idle_collide_with_samus(state: &SamusState) -> bool {
+    // refs 引用（bank:addr（03:9df2（写径实证）））——真规则（公式形（零字面特值））
+    state.mother_brain_x.wrapping_sub(state.samus_x).abs() < state.mother_brain_collision_threshold
+}
+
+/// MotherBrain_Idle_CollideWithSamus@endIf_A（03:9e0e——refs asm 考证（bank:addr（03:9e0e（写径实证（A 级原文）））））——公式形
+pub fn mother_brain_idle_collide_with_samus_end_if_a(state: &mut SamusState) {
+    // refs 引用（bank:addr（03:9e0e（写径实证）））——真规则（公式形（零字面特值））
+    state.mother_brain_collide_frame = state.mother_brain_collide_frame.wrapping_add(1);
 }

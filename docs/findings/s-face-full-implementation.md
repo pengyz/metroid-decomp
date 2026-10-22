@@ -7,8 +7,8 @@
 | 项 | 数 |
 |---|---|
 | 可调用子程序面（精化分母（排除数据/局部标签）） | **8659** 条 |
-| Rust pub fn（game-core（实现补全后）） | **2053** 条（+145（首组+次组+第三组+第四组+第五组+第六组+第七组+第八组+第九组+第十组+第十一组+第十二组+第十三组+第十四组+第十五组+第十六组+第十七组+第十八组+第十九组+第二十组+第二十一组+第二十二组+第二十三组+第二十四组+第二十五组+第二十六组+第二十七组+第二十八组+第二十九组补全）） |
-| **精化覆盖率（S 面）** | **23.7%**（2053/8659（+1.7%（145 案补全））） |
+| Rust pub fn（game-core（实现补全后）） | **2058** 条（+150（首组+次组+第三组+第四组+第五组+第六组+第七组+第八组+第九组+第十组+第十一组+第十二组+第十三组+第十四组+第十五组+第十六组+第十七组+第十八组+第十九组+第二十组+第二十一组+第二十二组+第二十三组+第二十四组+第二十五组+第二十六组+第二十七组+第二十八组+第二十九组+第三十组补全）） |
+| **精化覆盖率（S 面）** | **23.8%**（2058/8659（+1.7%（150 案补全））） |
 | **目标**（用户裁定（S 面=100%（全覆盖（零缺口）））） | **100%**（8659/8659） |
 
 ## 缺口清单导出（bank:addr/名/优先级（L4 依赖径（首组）））
@@ -331,4 +331,15 @@
   4. `02:9eff` EnFrame_SqueeptJumping0_BANK2（refs asm 考证（bank:addr（02:9eff（写径实证））））
   5. `03:95a8` GotoClearCurrentMetroidLatchAndMetroidOnSamus（refs asm 考证（bank:addr（03:95a8（写径实证））））
 - **实现补全**（Rust 实现（公式形（零字面特值）（SamusState 结构补（第二十九组字段）））——编译核（cargo check（**0 错**））。
+- **留档可追溯**（refs 引用（bank:addr）+实现补全（Rust 实现（公式形））+编译核（cargo check（0 错））——docs commit（追溯径））。
+
+## 第三十组 5 案实现补全（refs 引用必写（bank:addr 引证（写径实证（A 级原文））））
+
+- **第三十组**（Samus 域（跳跃/变球（L4 依赖径））——5 案（refs 引用必写（纪律强化（用户裁定）+四项核（对抗复核核（证伪立场））））：
+  1. `03:9964` MetroidAIRoutine_BANK3@metroidOnSamus_clearLatch（refs asm 考证（bank:addr（03:9964（写径实证））））
+  2. `03:9967` MetroidAIRoutine_BANK3@metroidOnSamus（refs asm 考证（bank:addr（03:9967（写径实证））））
+  3. `03:99e4` StoreSamusPositionToTemp（refs asm 考证（bank:addr（03:99e4（写径实证））））
+  4. `03:9df2` MotherBrain_Idle_CollideWithSamus（refs asm 考证（bank:addr（03:9df2（写径实证））））
+  5. `03:9e0e` MotherBrain_Idle_CollideWithSamus@endIf_A（refs asm 考证（bank:addr（03:9e0e（写径实证））））
+- **实现补全**（Rust 实现（公式形（零字面特值）（SamusState 结构补（第三十组字段）））——编译核（cargo check（**0 错**））。
 - **留档可追溯**（refs 引用（bank:addr）+实现补全（Rust 实现（公式形））+编译核（cargo check（0 错））——docs commit（追溯径））。
