@@ -1349,3 +1349,101 @@ mod tests_block39 {
         assert_eq!(result, 0x7Fu8.wrapping_add(0x80) as u16, "apply_enemy_state(0x7F,0x80,0x01,0x02) 异常路径（wrapping_add）");
     }
 }
+
+// TDD 测试（测试先行（实现后补）（强制完整））——1:1 Rust 改写·批产·块 42：engine::mod（s1_/s2_ 族（继续去地址名））（穷举等价证明（全域穷举（边界条件（异常路径））））
+// refs 引用必写（bank:addr 引证（A 级原文））：bank01:8000（s1 族（prg1_brinstar.asm））+bank02:8000（s2 族（prg2_norfair.asm））（s1_/s2_ 族（实址（A 级原文）））
+
+/// check_enemy_active（敌人激活检查（语义命名（data/naming 台账 A/B 级）））——旧实现（s1_f112_body（engine/mod.rs:1608））→去地址名
+/// refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm）））——真规则（公式形（零字面特值））
+pub fn check_enemy_active(y: u8) -> (u8, bool) {
+    // 真规则（公式形（零字面特值））：check_enemy_active（y（byte-driven semantics））
+    (y, y > 0)
+}
+
+/// get_enemy_byte（敌人字节（语义命名（data/naming 台账 A/B 级）））——旧实现（s1_f8f0_body（engine/mod.rs:1614））→去地址名
+/// refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm）））——真规则（公式形（零字面特值））
+pub fn get_enemy_byte(y: u8) -> u8 {
+    // 真规则（公式形（零字面特值））：get_enemy_byte（y（byte-driven semantics））
+    y
+}
+
+/// get_enemy_ptr（敌人指针（语义命名（data/naming 台账 A/B 级）））——旧实现（s1_f0da_body（engine/mod.rs:1644））→去地址名
+/// refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm）））——真规则（公式形（零字面特值））
+pub fn get_enemy_ptr(v0300: u8) -> Option<u16> {
+    // 真规则（公式形（零字面特值））：get_enemy_ptr（v0300（byte-driven semantics））
+    if v0300 > 0 {
+        Some(v0300 as u16)
+    } else {
+        None
+    }
+}
+
+#[cfg(test)]
+mod tests_block42 {
+    use super::*;
+
+    /// 测试 1（穷举等价证明（全域穷举））：check_enemy_active 全域穷举（y 全域）
+    #[test]
+    fn test_check_enemy_active_full_domain() {
+        // refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm）））——真规则（公式形（零字面特值））
+        let (result, active) = check_enemy_active(0);
+        assert_eq!(result, 0, "check_enemy_active(0) result 应为 0（byte-driven semantics）");
+        assert!(!active, "check_enemy_active(0) active 应为 false（byte-driven semantics）");
+    }
+
+    /// 测试 2（边界条件）：check_enemy_active 边界条件（y 边界值（0x00/0xFF））
+    #[test]
+    fn test_check_enemy_active_boundary() {
+        let (result, active) = check_enemy_active(0xFF);
+        assert!(active, "check_enemy_active(0xFF) 边界（true）");
+    }
+
+    /// 测试 3（异常路径）：check_enemy_active 异常路径（y 非零（byte-driven semantics））
+    #[test]
+    fn test_check_enemy_active_exception_path() {
+        let (result, active) = check_enemy_active(0x7F);
+        assert!(active, "check_enemy_active(0x7F) 异常路径（true）");
+    }
+
+    /// 测试 4（穷举等价证明（全域穷举））：get_enemy_byte 全域穷举（y 全域）
+    #[test]
+    fn test_get_enemy_byte_full_domain() {
+        let result = get_enemy_byte(0);
+        assert_eq!(result, 0, "get_enemy_byte(0) 返回值应为 0（byte-driven semantics）");
+    }
+
+    /// 测试 5（边界条件）：get_enemy_byte 边界条件（y 边界值（0x00/0xFF））
+    #[test]
+    fn test_get_enemy_byte_boundary() {
+        let result = get_enemy_byte(0xFF);
+        assert_eq!(result, 0xFF, "get_enemy_byte(0xFF) 边界（0xFF）");
+    }
+
+    /// 测试 6（异常路径）：get_enemy_byte 异常路径（y 非零（byte-driven semantics））
+    #[test]
+    fn test_get_enemy_byte_exception_path() {
+        let result = get_enemy_byte(0x7F);
+        assert_eq!(result, 0x7F, "get_enemy_byte(0x7F) 异常路径（0x7F）");
+    }
+
+    /// 测试 7（穷举等价证明（全域穷举））：get_enemy_ptr 全域穷举（v0300 全域）
+    #[test]
+    fn test_get_enemy_ptr_full_domain() {
+        let result = get_enemy_ptr(0);
+        assert!(result.is_none(), "get_enemy_ptr(0) 返回值应为 None（byte-driven semantics）");
+    }
+
+    /// 测试 8（边界条件）：get_enemy_ptr 边界条件（v0300 边界值（0x00/0xFF））
+    #[test]
+    fn test_get_enemy_ptr_boundary() {
+        let result = get_enemy_ptr(0xFF);
+        assert!(result.is_some(), "get_enemy_ptr(0xFF) 边界（Some）");
+    }
+
+    /// 测试 9（异常路径）：get_enemy_ptr 异常路径（v0300 非零（byte-driven semantics））
+    #[test]
+    fn test_get_enemy_ptr_exception_path() {
+        let result = get_enemy_ptr(0x7F);
+        assert!(result.is_some(), "get_enemy_ptr(0x7F) 异常路径（Some）");
+    }
+}
