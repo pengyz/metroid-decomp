@@ -873,6 +873,9 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "s4_cluster_106" => Some(sub_s4_cluster_106),
         "s4_cluster_108" => Some(sub_s4_cluster_108),
         "s4_cluster_110" => Some(sub_s4_cluster_110),
+        // 【第十四簇 world::door registry 登记】bank:addr→fn 双射：
+        // 07:D3A8 SamusDoor / 07:D3F7 MoveOutDoor / 07:D411 尾面（prg7_engine.asm:4092/4138）
+        "s4_cluster_samus_door" => Some(sub_s4_cluster_samus_door),
         // 【第十簇 sound::music registry 登记】bank:addr→fn 双射：
         // $BC26 MusicRoutineTbl / $BC36 RunMusicLoopRoutine / $BC3D RunMusicInitRoutine
         // / $BC4B ContinueMusic / $BC53 FindMusicInitIndex（sound_engine.asm）
@@ -3144,4 +3147,22 @@ pub fn sub_a9_cluster_037(input: &L2In) -> L2Out {
 pub fn sub_s4_cluster_music_init_index(input: &crate::L2In) -> crate::L2Out {
     let idx = crate::sound::music::find_music_init_index(input.a);
     crate::L2Out { a: idx.unwrap_or(0xFF), x: input.x, y: input.y, writes: crate::sound::music::music_init_index_writes(idx) }
+}
+
+
+/// s4_cluster_samus_door —— 第十四簇 world::door 入口注册（bank:addr→fn 双射）。
+/// 适配径：a←DoorEntryStatus/x←DoorDelay/y←SamusDoorDir→tick→$56/$58/$59/$4E 写回。
+pub fn sub_s4_cluster_samus_door(input: &crate::L2In) -> crate::L2Out {
+    let s = crate::world::door::DoorState {
+        entry_status: input.a, delay: input.x, dir: input.y,
+        door_data: 0, samus_x: 0, samus_hi: 0,
+    };
+    let (out, eff) = crate::world::door::samus_door_tick(s);
+    let a = match eff {
+        crate::world::door::DoorEffect::Tail => 0,
+        crate::world::door::DoorEffect::MoveOut { .. } => 1,
+        crate::world::door::DoorEffect::Cleanup { restored_status } => 0x80 | restored_status,
+        crate::world::door::DoorEffect::RestoreStatus(v) => v,
+    };
+    crate::L2Out { a, x: out.delay, y: input.y, writes: crate::world::door::door_state_writes(&out) }
 }

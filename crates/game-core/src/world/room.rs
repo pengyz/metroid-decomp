@@ -4,7 +4,7 @@
 //! refs 引用必写（bank:addr 引证（A 级原文））
 
 /// RoomState（域结构（语义命名（data/naming 台账 A/B 级）））
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct RoomState {
     /// 房间 ID
     pub room_id: u8,
@@ -13,6 +13,13 @@ pub struct RoomState {
     /// 敌数据
     pub enemies: [u8; 64],
 }
+
+impl Default for RoomState {
+    fn default() -> Self {
+        Self { room_id: 0, terrain: [0; 256], enemies: [0; 64] }
+    }
+}
+
 
 /// 房间加载例程（bank:addr（实址（A 级原文）））
 ///
