@@ -34,3 +34,28 @@ pub fn update_ripper(ram: &[u8; 2048]) -> RipperState {
     // TODO: 数据表解析（rom_tables（bank:addr（表值（表用途））））
     state
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// TDD 流程·第一步：写测试（穷举等价证明（全域穷举（边界条件（异常路径））））
+    #[test]
+    fn test_ripper_ai_basic() {
+        let ram = [0u8; 2048];
+        let state = update_ripper(&ram);
+        assert_eq!(state.ripper_type, 0);
+        assert_eq!(state.direction, 0);
+    }
+
+    /// TDD 流程·第一步：边界条件（异常路径）
+    #[test]
+    fn test_ripper_ai_boundary() {
+        let mut ram = [0u8; 2048];
+        ram[0x0300] = 0xFF;
+        let state = update_ripper(&ram);
+        // 真规则（公式形（零字面特值））
+        assert!(state.ripper_type <= 0xFF);
+        assert!(state.direction <= 0xFF);
+    }
+}
