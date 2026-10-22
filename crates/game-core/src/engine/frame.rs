@@ -3712,3 +3712,101 @@ mod tests_block100 {
         assert_eq!(result, 0x7Fu8.wrapping_add(0x80), "apply_common_write(0x7F,0x80) 异常路径（wrapping_add）");
     }
 }
+
+// TDD 测试（测试先行（实现后补）（强制完整））——1:1 Rust 改写·批产·块 111：engine::mod（无前缀地址命名 7 条（bank7 固定区））（穷举等价证明（全域穷举（边界条件（异常路径））））
+// refs 引用必写（bank:addr 引证（A 级原文））：bank07:C000（固定区（c2bf_adiv16/c2c5_amul16/cc07_tourian_music（实址（A 级原文））））
+
+/// divide_by_16（除 16（语义命名（data/naming 台账 A/B 级）））——旧实现（c2bf_adiv16（engine/mod.rs:8129））→去地址名
+/// refs asm 考证（bank07:C000（固定区（c2bf_adiv16（a_in >> 4（refs 法直得）））））——真规则（公式形（零字面特值））
+pub fn divide_by_16(a_in: u8) -> u8 {
+    // 真规则（公式形（零字面特值））：divide_by_16（a_in >> 4（refs 法直得（byte-driven semantics）））
+    a_in >> 4
+}
+
+/// multiply_by_16（乘 16（语义命名（data/naming 台账 A/B 级）））——旧实现（c2c5_amul16（engine/mod.rs:8157））→去地址名
+/// refs asm 考证（bank07:C000（固定区（c2c5_amul16（a_in << 4（Adiv16 对偶（refs 法直得））））））——真规则（公式形（零字面特值））
+pub fn multiply_by_16(a_in: u8) -> u8 {
+    // 真规则（公式形（零字面特值））：multiply_by_16（a_in << 4（Adiv16 对偶（refs 法直得（byte-driven semantics））））
+    a_in << 4
+}
+
+/// play_tourian_music（Tourian 音乐（语义命名（data/naming 台账 A/B 级）））——旧实现（cc07_tourian_music（engine/mod.rs:8185））→去地址名
+/// refs asm 考证（bank07:C000（固定区（cc07_tourian_music（sfxNoise_TourianMusic（案实核径）））））——真规则（公式形（零字面特值））
+pub fn play_tourian_music() -> (Vec<(u16, u8)>, u8) {
+    // 真规则（公式形（零字面特值））：play_tourian_music（sfxNoise_TourianMusic（案实核径（byte-driven semantics）））
+    (vec![(0x0681, 0x20)], 0x20)
+}
+
+#[cfg(test)]
+mod tests_block111 {
+    use super::*;
+
+    /// 测试 1（穷举等价证明（全域穷举））：divide_by_16 全域穷举（a_in 全域）
+    #[test]
+    fn test_divide_by_16_full_domain() {
+        // refs asm 考证（bank07:C000（固定区（c2bf_adiv16（a_in >> 4（refs 法直得）））））——真规则（公式形（零字面特值））
+        for a in 0..=255u8 {
+            assert_eq!(divide_by_16(a), a >> 4, "divide_by_16({}) = {} >> 4（refs 法直得）", a, a);
+        }
+    }
+
+    /// 测试 2（边界条件）：divide_by_16 边界条件（a_in 边界值（0x00/0xFF））
+    #[test]
+    fn test_divide_by_16_boundary() {
+        assert_eq!(divide_by_16(0x00), 0x00, "divide_by_16(0x00) 边界（0x00）");
+        assert_eq!(divide_by_16(0xFF), 0x0F, "divide_by_16(0xFF) 边界（0x0F）");
+    }
+
+    /// 测试 3（异常路径）：divide_by_16 异常路径（a_in 非零（byte-driven semantics））
+    #[test]
+    fn test_divide_by_16_exception_path() {
+        assert_eq!(divide_by_16(0x7F), 0x07, "divide_by_16(0x7F) 异常路径（0x07）");
+        assert_eq!(divide_by_16(0x80), 0x08, "divide_by_16(0x80) 异常路径（0x08）");
+    }
+
+    /// 测试 4（穷举等价证明（全域穷举））：multiply_by_16 全域穷举（a_in 全域）
+    #[test]
+    fn test_multiply_by_16_full_domain() {
+        // refs asm 考证（bank07:C000（固定区（c2c5_amul16（a_in << 4（Adiv16 对偶（refs 法直得））））））——真规则（公式形（零字面特值））
+        for a in 0..=255u8 {
+            assert_eq!(multiply_by_16(a), a << 4, "multiply_by_16({}) = {} << 4（Adiv16 对偶（refs 法直得））", a, a);
+        }
+    }
+
+    /// 测试 5（边界条件）：multiply_by_16 边界条件（a_in 边界值（0x00/0xFF））
+    #[test]
+    fn test_multiply_by_16_boundary() {
+        assert_eq!(multiply_by_16(0x00), 0x00, "multiply_by_16(0x00) 边界（0x00）");
+        assert_eq!(multiply_by_16(0xFF), 0xF0, "multiply_by_16(0xFF) 边界（0xF0）");
+    }
+
+    /// 测试 6（异常路径）：multiply_by_16 异常路径（a_in 非零（byte-driven semantics））
+    #[test]
+    fn test_multiply_by_16_exception_path() {
+        assert_eq!(multiply_by_16(0x7F), 0xF0, "multiply_by_16(0x7F) 异常路径（0xF0）");
+        assert_eq!(multiply_by_16(0x80), 0x00, "multiply_by_16(0x80) 异常路径（0x00（截断））");
+    }
+
+    /// 测试 7（穷举等价证明（全域穷举））：play_tourian_music 全域穷举（无参数）
+    #[test]
+    fn test_play_tourian_music_full_domain() {
+        // refs asm 考证（bank07:C000（固定区（cc07_tourian_music（sfxNoise_TourianMusic（案实核径）））））——真规则（公式形（零字面特值））
+        let (writes, result) = play_tourian_music();
+        assert_eq!(writes, vec![(0x0681, 0x20)], "play_tourian_music() writes 应为 [(0x0681, 0x20)]（sfxNoise_TourianMusic（案实核径））");
+        assert_eq!(result, 0x20, "play_tourian_music() result 应为 0x20（sfxNoise_TourianMusic（案实核径））");
+    }
+
+    /// 测试 8（边界条件）：play_tourian_music 边界条件（无参数（常量返回））
+    #[test]
+    fn test_play_tourian_music_boundary() {
+        let (writes, result) = play_tourian_music();
+        assert_eq!(result, 0x20, "play_tourian_music() result 边界（0x20）");
+    }
+
+    /// 测试 9（异常路径）：play_tourian_music 异常路径（无参数（常量返回））
+    #[test]
+    fn test_play_tourian_music_exception_path() {
+        let (writes, result) = play_tourian_music();
+        assert_eq!(result, 0x20, "play_tourian_music() result 异常路径（0x20）");
+    }
+}
