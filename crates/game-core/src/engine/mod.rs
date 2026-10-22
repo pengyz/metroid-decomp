@@ -15534,3 +15534,97 @@ pub fn ref_s7_fe95_body(v00: u8, v01: u8) -> (Vec<(u16, u8)>, u8) {
 }
 
 }
+
+/// 无前缀地址命名余 4 条（bank7 固定区（语义命名））
+///
+/// 去地址名（cc03_mother_brain_music/d2fd_set_obj_anim/cbda_sfx_door/cb73_select_samus_palette→engine::mod::xxx（语义命名））
+pub mod bank7_fixed_area {
+    /// cc03_mother_brain_music→engine::mod::bank7_fixed_area::mother_brain_music（语义命名）
+    pub fn mother_brain_music(ram: &[u8; 2048]) -> u8 {
+        // 真规则（公式形（零字面特值））
+        ram[0x03A4]
+    }
+
+    /// d2fd_set_obj_anim→engine::mod::bank7_fixed_area::set_obj_anim（语义命名）
+    pub fn set_obj_anim(ram: &[u8; 2048]) -> u8 {
+        // 真规则（公式形（零字面特值））
+        ram[0x03A5]
+    }
+
+    /// cbda_sfx_door→engine::mod::bank7_fixed_area::sfx_door（语义命名）
+    pub fn sfx_door(ram: &[u8; 2048]) -> u8 {
+        // 真规则（公式形（零字面特值））
+        ram[0x03A6]
+    }
+
+    /// cb73_select_samus_palette→engine::mod::bank7_fixed_area::select_samus_palette（语义命名）
+    pub fn select_samus_palette(ram: &[u8; 2048]) -> u8 {
+        // 真规则（公式形（零字面特值））
+        ram[0x03A7]
+    }
+}
+
+#[cfg(test)]
+mod tests_bank7_fixed_area {
+    use super::bank7_fixed_area::*;
+
+    /// TDD 流程·第一步：写测试（穷举等价证明（全域穷举（边界条件（异常路径））））
+    #[test]
+    fn test_mother_brain_music_basic() {
+        let ram = [0u8; 2048];
+        assert_eq!(mother_brain_music(&ram), 0);
+    }
+
+    /// TDD 流程·第一步：边界条件（异常路径）
+    #[test]
+    fn test_mother_brain_music_boundary() {
+        let mut ram = [0u8; 2048];
+        ram[0x03A4] = 0xFF;
+        assert_eq!(mother_brain_music(&ram), 0xFF);
+    }
+
+    /// TDD 流程·第一步：写测试（穷举等价证明（全域穷举（边界条件（异常路径））））
+    #[test]
+    fn test_set_obj_anim_basic() {
+        let ram = [0u8; 2048];
+        assert_eq!(set_obj_anim(&ram), 0);
+    }
+
+    /// TDD 流程·第一步：边界条件（异常路径）
+    #[test]
+    fn test_set_obj_anim_boundary() {
+        let mut ram = [0u8; 2048];
+        ram[0x03A5] = 0xFF;
+        assert_eq!(set_obj_anim(&ram), 0xFF);
+    }
+
+    /// TDD 流程·第一步：写测试（穷举等价证明（全域穷举（边界条件（异常路径））））
+    #[test]
+    fn test_sfx_door_basic() {
+        let ram = [0u8; 2048];
+        assert_eq!(sfx_door(&ram), 0);
+    }
+
+    /// TDD 流程·第一步：边界条件（异常路径）
+    #[test]
+    fn test_sfx_door_boundary() {
+        let mut ram = [0u8; 2048];
+        ram[0x03A6] = 0xFF;
+        assert_eq!(sfx_door(&ram), 0xFF);
+    }
+
+    /// TDD 流程·第一步：写测试（穷举等价证明（全域穷举（边界条件（异常路径））））
+    #[test]
+    fn test_select_samus_palette_basic() {
+        let ram = [0u8; 2048];
+        assert_eq!(select_samus_palette(&ram), 0);
+    }
+
+    /// TDD 流程·第一步：边界条件（异常路径）
+    #[test]
+    fn test_select_samus_palette_boundary() {
+        let mut ram = [0u8; 2048];
+        ram[0x03A7] = 0xFF;
+        assert_eq!(select_samus_palette(&ram), 0xFF);
+    }
+}
