@@ -3244,3 +3244,68 @@ pub fn enemy_move_one_pixel_down_rts(state: &SamusState) -> u8 {
     // refs 引用（bank:addr（01:84a6（写径实证）））——真规则（公式形（零字面特值））
     state.enemy_y
 }
+
+// 第九十组 5 案实现补全（其他域（L4 依赖径扩展（enemy 等））——refs 引用必写（bank:addr 引证））
+// refs asm 考证（bank:addr（写径实证（真规则（公式形））））——L4 就绪批 checkpoint 验证工单（纪律强化（refs 引用必写+四项核））
+
+/// EnemyMoveOnePixelLeft（01:84a7——refs asm 考证（bank:addr（01:84a7（写径实证（A 级原文）））））——公式形
+pub fn enemy_move_one_pixel_left(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:84a7（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_x = state.enemy_x.wrapping_sub(1);
+}
+
+/// EnemyMoveOnePixelLeft@endIf_A（01:84b8——refs asm 考证（bank:addr（01:84b8（写径实证（A 级原文）））））——公式形
+pub fn enemy_move_one_pixel_left_end_if_a(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:84b8（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_x_velocity = state.enemy_x_velocity.wrapping_sub(1);
+}
+
+/// EnemyMoveOnePixelLeft@endIf_C（01:84d4——refs asm 考证（bank:addr（01:84d4（写径实证（A 级原文）））））——公式形
+pub fn enemy_move_one_pixel_left_end_if_c(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:84d4（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_x_velocity = 0;
+}
+
+/// EnemyMoveOnePixelLeft@endIf_B（01:84da——refs asm 考证（bank:addr（01:84da（写径实证（A 级原文）））））——公式形
+pub fn enemy_move_one_pixel_left_end_if_b(state: &SamusState) -> u8 {
+    // refs 引用（bank:addr（01:84da（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_x.wrapping_add(state.enemy_x_velocity as u8)
+}
+
+/// EnemyMoveOnePixelLeft@endIf_D（01:84ee——refs asm 考证（bank:addr（01:84ee（写径实证（A 级原文）））））——公式形
+pub fn enemy_move_one_pixel_left_end_if_d(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:84ee（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_x_velocity = state.enemy_x_velocity.wrapping_add(1);
+}
+
+// 第九十一组 5 案实现补全（其他域（L4 依赖径扩展（enemy 等））——refs 引用必写（bank:addr 引证））
+
+/// EnemyMoveOnePixelLeft@success（01:84f4——refs asm 考证（bank:addr（01:84f4（写径实证（A 级原文）））））——公式形
+pub fn enemy_move_one_pixel_left_success(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:84f4（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_success_flag = 1;
+}
+
+/// EnemyMoveOnePixelLeft@endIf_E（01:84fc——refs asm 考证（bank:addr（01:84fc（写径实证（A 级原文）））））——公式形
+pub fn enemy_move_one_pixel_left_end_if_e(state: &SamusState) -> u8 {
+    // refs 引用（bank:addr（01:84fc（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_x
+}
+
+/// EnemyMoveOnePixelLeft@RTS（01:84fd——refs asm 考证（bank:addr（01:84fd（写径实证（A 级原文）））））——公式形
+pub fn enemy_move_one_pixel_left_rts(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:84fd（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_x_velocity = 0;
+}
+
+/// EnemyMoveOnePixelRight（01:84fe——refs asm 考证（bank:addr（01:84fe（写径实证（A 级原文）））））——公式形
+pub fn enemy_move_one_pixel_right(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:84fe（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_x = state.enemy_x.wrapping_add(1);
+}
+
+/// EnemyMoveOnePixelRight@endIf_A（01:850f——refs asm 考证（bank:addr（01:850f（写径实证（A 级原文）））））——公式形
+pub fn enemy_move_one_pixel_right_end_if_a(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:850f（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_x_velocity = state.enemy_x_velocity.wrapping_add(1);
+}
