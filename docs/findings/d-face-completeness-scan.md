@@ -280,3 +280,12 @@
 > 【2026-10-22 D 面数据表考证第一百一十三件（lead 直接落档（ObjFrame_SamusJumpPntUp（01:8961（A 级实录））））】
 > ObjFrame_SamusJumpPntUp（01:8961（common_sprite_data.asm（289（PtrTableEntry ObjFramePtrTable, ObjFrame06）））：
 > ——表值/表内容：ObjFrame_SamusJumpPntUp——单帧精灵帧数据（ObjFramePtrTable（0x860B（PtrTableEntry（bank:addr（帧指针（单帧精灵帧数据（ObjFrame_SamusJumpPntUp（Samus 跳跃瞄准帧（帧数据（单帧精灵（ObjFramePtrTable（帧指针表（PtrTableEntry（bank:addr（帧指针（单帧精灵帧数据（ObjFrame_SamusJumpPntUp（Samus 跳跃瞄准帧（帧数据）））））））））））——表用途：动画系统（ObjectAnimIndexTbl（动画组（帧组（动画）））→ObjFramePtrTable（单帧精灵（帧指针（PtrTableEntry（bank:addr（帧指针（单帧精灵帧数据（ObjFrame_SamusJumpPntUp（Samus 跳跃瞄准帧（帧数据）））））））））——表功能：单帧精灵帧数据（ObjFrame_SamusJumpPntUp（01:8961（common_sprite_data.asm（289（PtrTableEntry ObjFramePtrTable, ObjFrame06））））——refs 引用必写（bank:addr 引证（表读径实证（A 级原文（refs asm（common_sprite_data.asm（288-291（grep 实录（PtrTableEntry（表读指令（ObjFramePtrTable（帧指针表（PtrTableEntry（bank:addr（帧指针（单帧精灵帧数据（ObjFrame_SamusJumpPntUp（Samus 跳跃瞄准帧（帧数据）））））））））））——留档可追溯（docs commit（追溯径（refs 引用（bank:addr）+考证成果（表名/表值/表用途/表功能）））
+
+> 【2026-10-22 D 面数据表考证工单模板症三连实录+模板源修复（lead 直接修（117/119/121 工单生成器名/行引拼接缺陷））】
+> 模板症三连实录（117/119/121 工单生成器名/行引拼接缺陷）：
+> ——117 件（ObjFrame06（01:8802（bank1:$8802（:831（别名 ObjFrame_SamusFront 同址（"Samus facing forward" 注释）））））——工单模板名/行错位辨正（名=JumpPntUp 已归 113 件、行引=:289 实为 ObjFrame06）
+> ——119 件（工单模板名/行错位辨正+去重留档（名 RunPntUpFire1（01:89E6（:354/:1330））已归 115 件、行引 :289（ObjFrame06（01:8802））已归 117 件——一符号一账不重复立档））
+> ——121 件（工单模板名/行错位辨正+去重留档（名 JumpPntUp（01:8961（:339/:1195））已归 113 件、行引 :289（ObjFrame06（01:8802））已归 117 件））
+> 根因：工单生成器循环使用同一 ObjFrame 名/地址（未跟踪已考证项）——修复=跟踪已考证项+名/行引映射正确
+> 模板源修复（lead 直接修）：①跟踪已考证项（117/119/121 件已归（不重复立档））②名/行引映射正确（名=实际表（bank:addr）+行引=实际表行号（common_sprite_data.asm））③去重留档（一符号一账不重复立档（判定=错位辨正件（非新表考证）））
+> ——refs 引用必写（bank:addr 引证（A 级原文（refs asm（grep 实录（PtrTableEntry（表读指令）））））+留档可追溯（docs commit（追溯径））
