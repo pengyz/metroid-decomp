@@ -11470,6 +11470,40 @@ GetSoundRoutine: ; $B4BD+SoundEngine: ; $B3B4（bank7 固定区（m1disasm 裸�
 对抗复核核（证伪立场（独立重导证据（正确性核）））✓——复核 verdict 实录（docs commit
 （对抗复核 verdict（四项核（A 级原文））））✓。
 
+## 批量改写·对抗复核（4 件（簇 7 补全+簇 11/12/13（第六轮）（证伪立场（独立重导证据
+（正确性核））））
+
+### verdict: needs_revision（2/4 拒收（簇 12/13（refs 占位形（同病三犯））））（簇 7/11 pass）
+
+**① 簇 7 文档补全（sound::sfx）✓ pass**：refs 实址 ✓（SFXData: ; $B200（sound_engine.asm:25）+
+@SFXNoiseInit/Cont $B289/$B28E（:107/111）+@SFXSQ1Init/Cont $B293/$B298（:115/119）+
+@SFXTriInit/Cont $B29D/$B2A2（:123/127）+@SFXMultiInit/Cont $B2A7/$B2AC（:131/135）+
+SFXNoiseInitRoutineTbl/ContRoutineTbl $B2BB/$B2CB（:151/162））——**bank7 声效引擎域**（正确）
++六步流程 ✓（cluster-7-rewrite.md（六步补全（step1 定域取证（18 项 SFX 面（实址）））））✓
+
+**② 簇 11（kernel::frame）✓ pass**：refs 实址 ✓（bank00:9A07（NMIScreenWrite）+bank00:B4A9-B4BC
+（IncrementSFXFrame）+bank00:BFBA-BFBF（ROMSWITCH_RESET@WaitForVBlank1/2）+bank01:860B
+（ObjFramePtrTable））——帧调度域（正确）+六步流程 ✓（cluster-11-rewrite.md）✓
+
+**③ 簇 12（input::joy）✗ 拒收**：实现头六步结构 ✓（input/joy.rs（「六步流程：定域取证 spec→
+域结构→memmap 适配→shim 写集适配→测试→registry 登记+独立复审」））——**refs 引证 ✗**（「输入
+例程（**bank:addr**（实址（A 级原文）））」——**字面占位（非实址**（input/joy.rs））+**设计文档缺**
+（docs/design/（cluster-12 无））——②refs 引用核**缺**（同病三犯（簇 2/4 首修订（簇 5/6 首
+修订（现簇 12））））
+
+**④ 簇 13（render::sprite）✗ 拒收**：实现头六步结构 ✓（render/sprite.rs（e420f2e（feat(core)
+（六步流程（域内行为簇））））——**refs 引证 ✗**（「精灵渲染例程（**bank:addr**（实址（A 级
+原文）））」——**字面占位（非实址**（render/sprite.rs））+**设计文档缺**（docs/design/（cluster-13
+无））——②refs 引用核**缺**（同病三犯））
+
+**verdict**：批量改写 4 件（第六轮）**needs_revision**——**簇 12（input::joy）+簇 13（render::
+sprite）拒收**（refs 引证=**占位形**（「bank:addr」字面（非实址））+设计文档缺（六步流程实现头
+在（但引证占位（同病三犯（簇 2/4/5/6 首修订模式（占位→实址（二次修订应补））））））+**簇 7
+（sound::sfx）pass**（文档补全（refs 实址（18 项 SFX 面（bank7 声效引擎域）））+**簇 11
+（kernel::frame）pass**（refs 实址（9A07/B4A9/BFBA/860B（帧调度域））））——对抗复核核（证伪
+立场（独立重导证据（正确性核）））✓——复核 verdict 实录（docs commit（对抗复核 verdict（四项核
+（A 级原文））））✓。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
