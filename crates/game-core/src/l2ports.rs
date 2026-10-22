@@ -873,6 +873,10 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "s4_cluster_106" => Some(sub_s4_cluster_106),
         "s4_cluster_108" => Some(sub_s4_cluster_108),
         "s4_cluster_110" => Some(sub_s4_cluster_110),
+        // 【第三十一簇 weapon::missile registry 登记】bank:addr→fn 双射：
+        // 07:D315 CheckHorizontalMissileLaunch / 07:D323 CheckMissileLaunchCommon
+        // / 07:D340 CheckVerticalMissileLaunch / 07:D34D SetBulletAnim（prg7_engine.asm）
+        "s4_cluster_missile" => Some(sub_s4_cluster_missile),
         // 【第二十六簇 enemy::crawler registry 登记】bank:addr→fn 双射：
         // CrawlerAIRoutine_{AREA}（enemies/crawler.asm:1）/CrawlerReorientSprite（:82）
         "s4_cluster_crawler" => Some(sub_s4_cluster_crawler),
@@ -3204,4 +3208,19 @@ pub fn sub_s4_cluster_crawler(input: &crate::L2In) -> crate::L2Out {
     let (new_ori, _flip) = lava_turnaround(ori, input.x, 0xE4);
     let idx = reorient_sprite_index(input.x & 1, new_ori);
     crate::L2Out { a: new_ori.bits(), x: idx, y: moved, writes: crawler_writes(new_ori, idx) }
+}
+
+
+/// s4_cluster_missile —— 第三十一簇 weapon::missile 入口注册（bank:addr→fn 双射）。
+/// 适配径：a←MissileToggle/x←槽位旗/y←MissileCount→check_missile_launch→写集。
+pub fn sub_s4_cluster_missile(input: &crate::L2In) -> crate::L2Out {
+    use crate::weapon::missile::*;
+    let anims = MissileAnims { right: 0x11, left: 0x22, up: 0x33 };
+    match check_missile_launch(input.a, input.x != 0, 0, false, input.y, &anims) {
+        None => crate::L2Out { a: 0, x: input.x, y: input.y, writes: vec![] },
+        Some(l) => {
+            let w = missile_launch_writes(&l, input.a);
+            crate::L2Out { a: l.anim, x: input.x, y: l.missile_count_after, writes: w }
+        }
+    }
 }
