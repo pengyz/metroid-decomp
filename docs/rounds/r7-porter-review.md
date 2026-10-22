@@ -11744,6 +11744,61 @@ Hopping/Explode_BANK1））——**Sidehopper AI/动画域（bank01（正确）*
 重导证据（正确性核）））✓——复核 verdict 实录（docs commit（对抗复核 verdict（四项核
 （A 级原文））））✓。
 
+## TDD+实现复核·对抗复核（3 空壳清理件（waver/zoomer/projectile（11 项（必跑验证）））
+（证伪立场（独立重导证据（正确性核）））
+
+### verdict: needs_revision（⑦registry 缺+⑨⑪穷举证明部分（⑩必跑验证 ✓（实测输出原文（A 级））））
+
+**必跑验证实录（⑩（A 级原文））**：
+- `cargo test --workspace`：**560+8+17+14=599 passed; 0 failed**（全绿（game-core 560+game-data 8+
+  game-platform 17+game-oracle 14））
+- `int-y-proof --rom 'rom/Metroid (USA).nes'`：**EXHAUSTIVE PROOF: int_y ≡ bank07:E3A5-E3E4
+  （字节驱动语义）——4294967296 输入点全枚举（RAM 4B 全域），0 分歧**（穷举等价证明（2^32））
+
+**① 六步流程 ✓**：3 件六步头全在（waver/zoomer/projectile.rs（「六步流程：定域取证 spec→域结构→
+memmap 适配→shim 写集适配→测试→registry 登记+独立复审」））✓
+
+**② refs 引证实址 ✓**：waver（bank01:97D7（EnemyMovementChoice_Waver_{AREA}（prg1_brinstar.asm:
+498）））+zoomer（bank01:97E1（EnemyMovementChoice_Zoomer_{AREA}（:513）））+projectile（bank01:8021
+（CommonJump_SpawnEnProjectile）+9965-9992（EnProjectileMovement0-3_BANK1））——敌人域（bank01
+（正确））✓
+
+**③ 域结构 ✓**：enemy::waver/zoomer/projectile（语义命名（data/naming 台账 A/B 级））✓
+
+**④ memmap 适配 ✓**：WaverState（direction/phase 从 RAM 读取（byte-driven semantics））（零页
+分层映射（暂存→局部（持久→struct 字段）））✓
+
+**⑤ shim 写集适配 ✓**：写集契约（verify_shim（state→RAM 写回））✓
+
+**⑥ 测试充分——部分**：24 test/assert（3 件（waver/zoomer/projectile））——单测在（但非穷举
+等价证明（见⑨））✓（单测级）
+
+**⑦ registry 登记 ✗**：l2ports.rs **零命中**（waver/zoomer/projectile/EnProjectile（grep 实录））
+——3 件未登 registry（六步第 6 步（registry 登记）pending（「registry 登记+独立复审」待落））
+
+**⑧ 实现真规则 ✓**：公式形（零字面特值）——waver（5 fn（WaverState（byte-driven（direction/
+phase（RAM 读取））））+zoomer（4 fn（真规则（公式形（零字面特值））））+projectile（9 fn（敌弹
+生成（CommonJump_SpawnEnProjectile（bank01:8021（写径实证（A 级原文））））——公式形（零字面
+特值））））✓
+
+**⑨ 穷举等价证明——部分**：int-y-proof=**2^32 穷举等价证明**（int_y 专用（bank07:E3A5-E3E4
+（0 分歧）））——3 件（waver/zoomer/projectile）**仅单测**（24 test/assert（非穷举等价证明
+（输入域未全枚举）））——⑨穷举等价证明（3 件）**未达**（单测≠穷举等价证明）
+
+**⑩ 复核实际运行验证 ✓**：cargo test（599 passed; 0 failed（实测输出原文（A 级）））+int-y-proof
+（2^32（0 分歧（实测输出原文（A 级））））——**必跑验证已跑**（实测输出原文（A 级））✓
+
+**⑪ 验证轨迹和实现对等——部分**：单测覆盖（24 test/assert（部分路径））——**非全实现覆盖**
+（穷举输入域未全枚举（3 件））——⑪对等（覆盖全部实现（非部分））**未达**
+
+**verdict**：TDD+实现复核·对抗复核（3 空壳清理件）**needs_revision**——⑦registry 登记缺（3 件
+未登 l2ports.rs（六步第 6 步 pending））+⑨⑪穷举等价证明/全实现覆盖**未达**（单测≠穷举等价证明
+（输入域未全枚举））——**⑩必跑验证 ✓**（cargo test（599 passed; 0 failed）+int-y-proof（2^32
+（0 分歧））（实测输出原文（A 级）））+①-⑤⑧✓（六步头+refs 实址（bank01:97D7/97E1/8021 族）+
+域结构+memmap+shim+真规则（公式形（零字面特值）））——对抗复核核（证伪立场（独立重导证据
+（正确性核）））✓——复核 verdict 实录（docs commit（对抗复核 verdict（11 项（必跑验证）（实测
+输出原文（A 级））））✓。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
