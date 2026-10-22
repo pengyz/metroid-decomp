@@ -11060,6 +11060,29 @@ verdict（四项核（A 级原文）））✓。
 更新（docs commit（S 面=100%+L4 基础设施就位判据（四件（实施态）✓）+满跑推进判据+refs 引用
 （bank:addr 引证（A 级原文）））+对抗复核 verdict（四项核（A 级原文）））✓。
 
+## §6 证伪更正复核（对抗复核核（证伪立场（独立重导证据（正确性核））））
+
+### verdict: pass（三项独立重导全 ✓（A 级原文））
+
+**①「cargo check（0 错）」=空洞验证 ✓**：独立重导——samus/mod.rs 模块树仅 `pub mod handler;
+pub mod physics;`（l4_ready_impl 零引用=孤儿 ✓）+独立语法探针（rustc --crate-type lib 单编
+l4_ready_impl.rs）exit=1（62 错（E0124 重复字段 samus_jump_frame/samus_roll_frame/
+samus_pnt_up_frame…×9）——与 a0ace85「接入后 61 编译错误」实录一致（单编 62/接入 ~61（量级一致）））✓
+
+**②「写径实证（A 级原文）」=伪 A 级 ✓**：独立重导——00:8cf7 ROM 字节级抽查（bank0：
+`B9 7D 68 99 93 69 88 10 F7`=LDA $687D,Y / STA $6993,Y / DEY / BPL -9（**纯 4 字节拷贝循环**
+（与 a0ace85 判定一致））✓+00:9059 refs 原文（`@HighJump: ; 00:9059（.word ui_HIGHJUMP +
+($1B << 5) + $11`（ItemData 数据表 .word 行 ✓）+`age` 在 prg0_title.asm 零命中（age*3+7 系
+凭空捏造 ✓））——「真规则」自我指涉（checkpoint 27 连=伪验证）成立 ✓
+
+**③覆盖率数字更正（2362→1908（22.0%））✓**：独立重导——grep pub fn 计数（全 crate
+2362（含孤儿））-孤儿文件 454=编译入 1908（2362=1908+454 逐数对账 ✓）——更正准确 ✓
+
+**verdict**：§6 证伪更正三项全 pass（①空洞验证（独立语法探针 62 错实证）②伪 A 级（00:8cf7
+ROM 字节=纯 4 字节拷贝循环（00:9059=ItemData .word 行（age 零命中）））③覆盖率更正（2362=1908+454
+逐数对账））——对抗复核核（证伪立场（独立重导证据（正确性核）））✓——复核 verdict 实录
+（docs commit（对抗复核 verdict（四项核（A 级原文））））✓。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
