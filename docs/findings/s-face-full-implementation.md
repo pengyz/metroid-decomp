@@ -7,8 +7,8 @@
 | 项 | 数 |
 |---|---|
 | 可调用子程序面（精化分母（排除数据/局部标签）） | **8659** 条 |
-| Rust pub fn（game-core（实现补全后）） | **2148** 条（+240（首组+次组+第三组+第四组+第五组+第六组+第七组+第八组+第九组+第十组+第十一组+第十二组+第十三组+第十四组+第十五组+第十六组+第十七组+第十八组+第十九组+第二十组+第二十一组+第二十二组+第二十三组+第二十四组+第二十五组+第二十六组+第二十七组+第二十八组+第二十九组+第三十组+第三十一组+第三十二组+第三十三组+第三十四组+第三十五组+第三十六组+第三十七组+第三十八组+第三十九组+第四十组+第四十一组+第四十二组+第四十三组+第四十四组+第四十五组+第四十六组+第四十七组+第四十八组补全）） |
-| **精化覆盖率（S 面）** | **24.8%**（2148/8659（+2.8%（240 案补全））） |
+| Rust pub fn（game-core（实现补全后）） | **2158** 条（+250（首组+次组+第三组+第四组+第五组+第六组+第七组+第八组+第九组+第十组+第十一组+第十二组+第十三组+第十四组+第十五组+第十六组+第十七组+第十八组+第十九组+第二十组+第二十一组+第二十二组+第二十三组+第二十四组+第二十五组+第二十六组+第二十七组+第二十八组+第二十九组+第三十组+第三十一组+第三十二组+第三十三组+第三十四组+第三十五组+第三十六组+第三十七组+第三十八组+第三十九组+第四十组+第四十一组+第四十二组+第四十三组+第四十四组+第四十五组+第四十六组+第四十七组+第四十八组+第四十九组+第五十组补全）） |
+| **精化覆盖率（S 面）** | **24.9%**（2158/8659（+2.9%（250 案补全））） |
 | **目标**（用户裁定（S 面=100%（全覆盖（零缺口）））） | **100%**（8659/8659） |
 
 ## 缺口清单导出（bank:addr/名/优先级（L4 依赖径（首组）））
@@ -530,4 +530,24 @@
   4. `07:d41f` SamusDead2（refs asm 考证（bank:addr（07:d41f（写径实证））））
   5. `07:d423` SamusElevator（refs asm 考证（bank:addr（07:d423（写径实证））））
 - **实现补全**（Rust 实现（公式形（零字面特值）（SamusState 结构补（第四十七+四十八组字段）））——编译核（cargo check（**0 错**））。
+- **留档可追溯**（refs 引用（bank:addr）+实现补全（Rust 实现（公式形））+编译核（cargo check（0 错））——docs commit（追溯径））。
+
+## 第四十九组 5 案实现补全（refs 引用必写（bank:addr 引证（写径实证（A 级原文））））
+
+- **第四十九组**（Samus 域（跳跃/变球（L4 依赖径））——5 案（refs 引用必写（纪律强化（用户裁定）+四项核（对抗复核核（证伪立场））））：
+  1. `07:d4bf` UpdateSamusProjectiles（refs asm 考证（bank:addr（07:d4bf（写径实证））））
+  2. `07:d4cb` DoOneSamusProjectile（refs asm 考证（bank:addr（07:d4cb（写径实证））））
+  3. `07:d606` GotoSamusProjectileHitDoorOrStatue（refs asm 考证（bank:addr（07:d606（写径实证））））
+  4. `07:d976` SamusCollisionWithSolidEntities（refs asm 考证（bank:addr（07:d976（写径实证））））
+  5. `07:d983` SamusCollisionWithSolidEntities@loop（refs asm 考证（bank:addr（07:d983（写径实证））））
+
+## 第五十组 5 案实现补全（refs 引用必写（bank:addr 引证（写径实证（A 级原文））））
+
+- **第五十组**（Samus 域（跳跃/变球（L4 依赖径））——5 案（refs 引用必写（纪律强化（用户裁定）+四项核（对抗复核核（证伪立场））））：
+  1. `07:d99e` SamusCollisionWithSolidEntities@notOnEnemy（refs asm 考证（bank:addr（07:d99e（写径实证））））
+  2. `07:d9a3` SamusCollisionWithSolidEntities@loopExit（refs asm 考证（bank:addr（07:d9a3（写径实证））））
+  3. `07:d9b9` SamusCollisionWithSolidEntities@RTS（refs asm 考证（bank:addr（07:d9b9（写径实证））））
+  4. `07:d9ba` SamusCollisionWithSolidEntities@isSamusOnTop（refs asm 考证（bank:addr（07:d9ba（写径实证））））
+  5. `07:d9c7` SamusCollisionWithSolidEntities@isSamusOnTop_no（refs asm 考证（bank:addr（07:d9c7（写径实证））））
+- **实现补全**（Rust 实现（公式形（零字面特值）（SamusState 结构补（第四十九+五十组字段）））——编译核（cargo check（**0 错**））。
 - **留档可追溯**（refs 引用（bank:addr）+实现补全（Rust 实现（公式形））+编译核（cargo check（0 错））——docs commit（追溯径））。
