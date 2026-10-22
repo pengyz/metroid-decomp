@@ -12,10 +12,10 @@ pub struct EndingState {
     pub playing: bool,
 }
 
-/// 结局动画例程（bank:addr（实址（A 级原文）））
+/// 结局动画例程（bank07:CAF5-CB14（ChooseEnding（prg7_engine.asm）））
 ///
 /// 六步流程：
-/// 1. 定域取证 spec（bank:addr（结局动画例程（实址（A 级原文））））
+/// 1. 定域取证 spec（bank07:CAF5-CB14（ChooseEnding（prg7_engine.asm）））
 /// 2. 域结构（语义命名（data/naming 台账 A/B 级））
 /// 3. memmap 适配（RAM 态→EndingState）
 /// 4. shim 写集适配（EndingState→RAM 写回）
