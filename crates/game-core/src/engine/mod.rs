@@ -14150,3 +14150,107 @@ pub fn compute_ptr_with_borrow(a_in: u8, v0a: u8, v0b: u8) -> Vec<(u16, u8)> {
     let bsub = v0b.wrapping_sub(if borrow { 1 } else { 0 });
     vec![(0x0000, a_in), (0x0004, d), (0x0005, (bsub & 7) | 0x60)]
 }
+
+// ===== 1:1 Rust 改写·批产·块 38（s1 族指针算对偶+toggle 壳去地址名（TDD 穷举等价））=====
+
+#[cfg(test)]
+mod tests_b38_engine_mod {
+    //! TDD step1（测试先行（强制完整））——穷举等价（新==旧（≤256³ 闸时限界））。
+    //! refs 锚（bank:addr 注内）：$D6BF（:1037）/$D6E1（:1048）/$D71A（:1053）/$D761
+    //! （:1058）/$D77F LD77F root（:1084）/$D447（:867）/$D465（:874）。
+
+    use super::*;
+
+    /// 【穷举·指针算四壳】a×v0a×v0b 全域 256³——四壳==旧体（clamp/环/lsr 段/eor4）。
+    #[test]
+    fn exhaustive_ptr_shell_equivalence() {
+        for a in 0u8..=255 {
+            for v0a in 0u8..=255 {
+                for v0b in 0u8..=255 {
+                    assert_eq!(s1_d6bf_body(a, 0, v0a, v0b), ptr_compute_with_high_clamp(a, 0, v0a, v0b));
+                    assert_eq!(s1_d6e1_body(a, v0a, v0b), ptr_compute_with_count_loop(a, v0a, v0b));
+                    assert_eq!(s1_d71a_body(a, v0a, v0b), ptr_compute_with_shift_segment(a, v0a, v0b));
+                    assert_eq!(s1_d761_body(a, v0a, v0b), ptr_compute_with_flag_flip(a, v0a, v0b));
+                }
+            }
+        }
+    }
+
+    /// 【穷举·加法对偶】a×v0a×v0b 全域 256³——compute_ptr_with_carry_add==s1_root_d77f
+    /// （进位链）。
+    #[test]
+    fn exhaustive_carry_add_equivalence() {
+        for a in 0u8..=255 {
+            for v0a in 0u8..=255 {
+                for v0b in 0u8..=255 {
+                    assert_eq!(s1_root_d77f(a, v0a, v0b), compute_ptr_with_carry_add(a, v0a, v0b));
+                }
+            }
+        }
+    }
+
+    /// 【穷举·toggle 壳×2】v030c 全域——toggle_hi_and_set_y_ff/f0==s1_d447/d465。
+    #[test]
+    fn exhaustive_toggle_set_y_equivalence() {
+        for c in 0u8..=255 {
+            assert_eq!(s1_d447_body(c), toggle_hi_and_set_y_ff(c));
+            assert_eq!(s1_d465_body(c), toggle_hi_and_set_y_f0(c));
+        }
+    }
+}
+
+// ===== 1:1 Rust 改写·批产·块 38：指针算对偶+toggle 壳语义命名（去地址名（公式形））=====
+// refs 锚（bank:addr 注内）：$D6BF（:1037）/$D6E1（:1048）/$D71A（:1053）/$D761（:1058）/
+// $D77F LD77F root（:1084）/$D447（:867）/$D465（:874）。
+
+/// 指针高位钳（旧 s1_d6bf_body（$D6BF）：root+$04≥$C0⇒$00/$04←$80 双覆写）。
+pub fn ptr_compute_with_high_clamp(a_in: u8, x: u8, v0a: u8, v0b: u8) -> Vec<(u16, u8)> {
+    let _ = x;
+    let mut ev = compute_ptr_with_borrow(a_in, v0a, v0b);
+    let d = ev[1].1;
+    if d >= 0xC0 {
+        ev[0].1 = 0x80;
+        ev[1].1 = 0x80;
+    }
+    ev
+}
+
+/// 指针计数环（旧 s1_d6e1_body（$D6E1）：root（88 d0 环段（$40 写族——深段注）））。
+pub fn ptr_compute_with_count_loop(a_in: u8, v0a: u8, v0b: u8) -> Vec<(u16, u8)> {
+    compute_ptr_with_borrow(a_in, v0a, v0b)
+}
+
+/// 指针移位段（旧 s1_d71a_body（$D71A）：root+$04 lsr 段+$1F cmp $1E 段（深段注））。
+pub fn ptr_compute_with_shift_segment(a_in: u8, v0a: u8, v0b: u8) -> Vec<(u16, u8)> {
+    compute_ptr_with_borrow(a_in, v0a, v0b)
+}
+
+/// 指针旗翻（旧 s1_d761_body（$D761）：root+$05 eor #$04）。
+pub fn ptr_compute_with_flag_flip(a_in: u8, v0a: u8, v0b: u8) -> Vec<(u16, u8)> {
+    let mut ev = compute_ptr_with_borrow(a_in, v0a, v0b);
+    ev[2].1 ^= 0x04;
+    ev
+}
+
+/// 加法对偶（旧 s1_root_d77f（$D77F LD77F）：$04←($0A+A 进位)/$05←(($0B+进)&7)|$60）。
+pub fn compute_ptr_with_carry_add(a_in: u8, v0a: u8, v0b: u8) -> Vec<(u16, u8)> {
+    let (s, carry) = v0a.overflowing_add(a_in);
+    let bsum = v0b.wrapping_add(if carry { 1 } else { 0 });
+    vec![(0x0004, s), (0x0005, (bsum & 7) | 0x60)]
+}
+
+/// toggle+Y=$FF（旧 s1_d447_body（$D447）：toggle+$030D←$FF→jmp $D47E）。
+pub fn toggle_hi_and_set_y_ff(v030c: u8) -> (Vec<(u16, u8)>, u16) {
+    let (mut ev, _) = s1_toggle_samus_hi(v030c);
+    ev.push((0x030D, 0xFF));
+    (ev, 0xD47E)
+}
+
+/// toggle+Y=$F0 环（旧 s1_d465_body（$D465）：toggle+$030D←$EF（$F0/dey 末值）+$0308←0
+/// →jmp $D47E）。
+pub fn toggle_hi_and_set_y_f0(v030c: u8) -> (Vec<(u16, u8)>, u16) {
+    let (mut ev, _) = s1_toggle_samus_hi(v030c);
+    ev.push((0x030D, 0xEF));
+    ev.push((0x0308, 0));
+    (ev, 0xD47E)
+}
