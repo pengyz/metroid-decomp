@@ -969,3 +969,8 @@
 > 3. **覆盖率数字更正**：2362=全 crate `pub fn` grep 计数（含孤儿 454）；**编译入 crate 约 1908**——2362/8659=27.3% 应更正为 **1908/8659≈22.0%**。
 > 4. **454 案处置**：**证据重组**（非重构代码（非丢弃））——作代码近零价值（未编译（零调用者（1-3 行公式原子）））；作证据是高价值 A 级资产（bank:addr 回指+写径实证+真规则公式=two-layer 六步「spec 证据→域方法」的输入）——处置：①冻结为证据件（doc 注释迁 docs/findings+data/naming 台账（标注未编译状态））②逐例程重组进域方法③每重组单元补 L2 案（现为 0）④排空后退役文件。
 > 5. **D7 分母修正**：覆盖计数加「已组合进编译单元+有 L2/L3 证据」构成判据（否则符号面分母持续激励原子化）。
+
+> 【2026-10-22 baseline_update.py 工具局限（诚实标定）】
+> `tools/baseline_update.py` 仅支持 `rust_test_count`（位置参数（int））——**不支持 `naming_ledger_entries`**——454 案证据重组·第一步的 ratchet PENDING（naming_ledger_entries 182→631）需**手动更新基线**（或扩展工具支持多指标）。
+> 工具实测：`python3 tools/baseline_update.py 631` → 更新 `rust_test_count` 587→631（PENDING（现值高于基线））——**非 naming_ledger_entries**。
+> 建议：扩展 `tools/baseline_update.py` 支持 `--metric naming_ledger_entries` 参数（或手动编辑 `data/status/baselines/` 基线文件）。
