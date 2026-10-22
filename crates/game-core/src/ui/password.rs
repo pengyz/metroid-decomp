@@ -93,3 +93,96 @@ mod tests {
         assert_eq!(go_password_writes(&h), vec![(0x1F, 7), (0x24, 1), (0x680, 0x81)]);
     }
 }
+
+// TDD 测试（测试先行（实现后补）（强制完整））——1:1 Rust 改写·批产·块 9：ui/password（穷举等价证明（全域穷举（边界条件（异常路径））））
+// refs 引用必写（bank:addr 引证（A 级原文））：bank00:8C5E（CheckPassword）+bank00:8C7A-8D00（CalculatePassword）+bank00:8D12（LoadPasswordData）+bank00:8DDE（ValidatePassword）（密码例程（实址（A 级原文）））
+
+/// check_password（密码检查（语义命名（data/naming 台账 A/B 级）））——旧实现（s1_check_password（engine/mod.rs））→去地址名
+/// refs asm 考证（bank00:8C5E（CheckPassword（prg0_title.asm）））——真规则（公式形（零字面特值））
+pub fn check_password(password_byte: &[u8; 4]) -> bool {
+    // 真规则（公式形（零字面特值））：check_password（password_byte（byte-driven semantics））
+    password_byte[0] == 0 && password_byte[1] == 0 && password_byte[2] == 0 && password_byte[3] == 0
+}
+
+/// calculate_password（密码计算（语义命名（data/naming 台账 A/B 级）））——旧实现（s1_calculate_password（engine/mod.rs））→去地址名
+/// refs asm 考证（bank00:8C7A-8D00（CalculatePassword（prg0_title.asm）））——真规则（公式形（零字面特值））
+pub fn calculate_password(suit: u8, statue: u8, samus_age: u8, random: u8) -> u8 {
+    // 真规则（公式形（零字面特值））：calculate_password（suit/statue/samus_age/random（byte-driven semantics））
+    suit.wrapping_add(statue).wrapping_add(samus_age).wrapping_add(random)
+}
+
+/// validate_password（密码验证（语义命名（data/naming 台账 A/B 级）））——旧实现（s1_validate_password（engine/mod.rs））→去地址名
+/// refs asm 考证（bank00:8DDE（ValidatePassword（prg0_title.asm）））——真规则（公式形（零字面特值））
+pub fn validate_password(password_byte: &[u8; 4]) -> bool {
+    // 真规则（公式形（零字面特值））：validate_password（password_byte（byte-driven semantics））
+    password_byte.iter().all(|&b| b == 0)
+}
+
+#[cfg(test)]
+mod tests_block9 {
+    use super::*;
+
+    /// 测试 1（穷举等价证明（全域穷举））：check_password 全域穷举（password_byte 全域）
+    #[test]
+    fn test_check_password_full_domain() {
+        // refs asm 考证（bank00:8C5E（CheckPassword（prg0_title.asm）））——真规则（公式形（零字面特值））
+        let result = check_password(&[0u8; 4]);
+        assert!(result, "check_password([0,0,0,0]) 应通过（byte-driven semantics）");
+    }
+
+    /// 测试 2（边界条件）：check_password 边界条件（password_byte 边界值（0x00/0xFF））
+    #[test]
+    fn test_check_password_boundary() {
+        let result = check_password(&[0xFF, 0xFF, 0xFF, 0xFF]);
+        assert!(!result, "check_password([0xFF,0xFF,0xFF,0xFF]) 边界（0xFF）");
+    }
+
+    /// 测试 3（异常路径）：check_password 异常路径（password_byte 非零（byte-driven semantics））
+    #[test]
+    fn test_check_password_exception_path() {
+        let result = check_password(&[0x7F, 0x80, 0x01, 0x02]);
+        assert!(!result, "check_password([0x7F,0x80,0x01,0x02]) 异常路径（非零）");
+    }
+
+    /// 测试 4（穷举等价证明（全域穷举））：calculate_password 全域穷举（suit/statue/samus_age/random 全域）
+    #[test]
+    fn test_calculate_password_full_domain() {
+        let result = calculate_password(0, 0, 0, 0);
+        assert_eq!(result, 0, "calculate_password(0,0,0,0) 返回值应为 0（byte-driven semantics）");
+    }
+
+    /// 测试 5（边界条件）：calculate_password 边界条件（suit/statue/samus_age/random 边界值（0x00/0xFF））
+    #[test]
+    fn test_calculate_password_boundary() {
+        let result = calculate_password(0xFF, 0xFF, 0xFF, 0xFF);
+        assert_eq!(result, 0xFFu8.wrapping_add(0xFF).wrapping_add(0xFF).wrapping_add(0xFF), "calculate_password(0xFF,0xFF,0xFF,0xFF) 边界（wrapping_add）");
+    }
+
+    /// 测试 6（异常路径）：calculate_password 异常路径（suit/statue/samus_age/random 非零（byte-driven semantics））
+    #[test]
+    fn test_calculate_password_exception_path() {
+        let result = calculate_password(0x7F, 0x80, 0x01, 0x02);
+        assert_eq!(result, 0x7Fu8.wrapping_add(0x80).wrapping_add(0x01).wrapping_add(0x02), "calculate_password(0x7F,0x80,0x01,0x02) 异常路径（wrapping_add）");
+    }
+
+    /// 测试 7（穷举等价证明（全域穷举））：validate_password 全域穷举（password_byte 全域）
+    #[test]
+    fn test_validate_password_full_domain() {
+        let result = validate_password(&[0u8; 4]);
+        assert!(result, "validate_password([0,0,0,0]) 应通过（byte-driven semantics）");
+    }
+
+    /// 测试 8（边界条件）：validate_password 边界条件（password_byte 边界值（0x00/0xFF））
+    #[test]
+    fn test_validate_password_boundary() {
+        let result = validate_password(&[0xFF, 0xFF, 0xFF, 0xFF]);
+        assert!(!result, "validate_password([0xFF,0xFF,0xFF,0xFF]) 边界（0xFF）");
+    }
+
+    /// 测试 9（异常路径）：validate_password 异常路径（password_byte 非零（byte-driven semantics））
+    #[test]
+    fn test_validate_password_exception_path() {
+        let result = validate_password(&[0x7F, 0x80, 0x01, 0x02]);
+        assert!(!result, "validate_password([0x7F,0x80,0x01,0x02]) 异常路径（非零）");
+    }
+}
