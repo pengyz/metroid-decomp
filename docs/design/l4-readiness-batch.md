@@ -27,7 +27,7 @@
 **refs 引用必写（用户裁定（纪律强化））**：
 ```
 refs 引用（bank:addr 引证（写径实证（A 级原文）））：
-  第四十五+四十六组续（refs asm 考证→Rust 实现）——refs 引用必写（bank:addr 引证（写径实证
+  第四十七+四十八组续（refs asm 考证→Rust 实现）——refs 引用必写（bank:addr 引证（写径实证
   （A 级原文）））——每案 refs asm 考证（bank:addr 引证）+Rust 实现（写径实证（A 级
   原文））——**更新留档可追溯**（docs commit（追溯径（refs 引用（bank:addr）+就绪批
   清单更新）））
