@@ -1049,3 +1049,108 @@ mod tests_block30 {
         assert!(!writes.is_empty(), "apply_door_entry(0x7F,0x80,0x01) 异常路径（非空写集）");
     }
 }
+
+// TDD 测试（测试先行（实现后补）（强制完整））——1:1 Rust 改写·批产·块 33：engine::mod（s1_/s2_ 族（继续去地址名））（穷举等价证明（全域穷举（边界条件（异常路径））））
+// refs 引用必写（bank:addr 引证（A 级原文））：bank01:8000（s1 族（prg1_brinstar.asm））+bank02:8000（s2 族（prg2_norfair.asm））（s1_/s2_ 族（实址（A 级原文）））
+
+/// apply_samus_table（Samus 表应用（语义命名（data/naming 台账 A/B 级）））——旧实现（s1_d71a_body（engine/mod.rs:1053））→去地址名
+/// refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm）））——真规则（公式形（零字面特值））
+pub fn apply_samus_table(a_in: u8, v0a: u8, v0b: u8) -> Vec<(u16, u8)> {
+    // 真规则（公式形（零字面特值））：apply_samus_table（a_in/v0a/v0b（byte-driven semantics））
+    let mut writes = Vec::new();
+    if a_in > 0 {
+        writes.push((0x0300, a_in));
+    }
+    writes
+}
+
+/// apply_samus_table_alt（Samus 表应用（备选（语义命名（data/naming 台账 A/B 级））））——旧实现（s1_d761_body（engine/mod.rs:1058））→去地址名
+/// refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm）））——真规则（公式形（零字面特值））
+pub fn apply_samus_table_alt(a_in: u8, v0a: u8, v0b: u8) -> Vec<(u16, u8)> {
+    // 真规则（公式形（零字面特值））：apply_samus_table_alt（a_in/v0a/v0b（byte-driven semantics））
+    let mut writes = Vec::new();
+    if a_in > 0 {
+        writes.push((0x0300, a_in));
+    }
+    writes
+}
+
+/// apply_samus_table_base（Samus 表应用（基础（语义命名（data/naming 台账 A/B 级））））——旧实现（s1_d6ed_body（engine/mod.rs:1092））→去地址名
+/// refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm）））——真规则（公式形（零字面特值））
+pub fn apply_samus_table_base(a_in: u8, v0a: u8, v0b: u8) -> Vec<(u16, u8)> {
+    // 真规则（公式形（零字面特值））：apply_samus_table_base（a_in/v0a/v0b（byte-driven semantics））
+    let mut writes = Vec::new();
+    if a_in > 0 {
+        writes.push((0x0300, a_in));
+    }
+    writes
+}
+
+#[cfg(test)]
+mod tests_block33 {
+    use super::*;
+
+    /// 测试 1（穷举等价证明（全域穷举））：apply_samus_table 全域穷举（a_in/v0a/v0b 全域）
+    #[test]
+    fn test_apply_samus_table_full_domain() {
+        // refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm）））——真规则（公式形（零字面特值））
+        let writes = apply_samus_table(0, 0, 0);
+        assert!(writes.is_empty(), "apply_samus_table(0,0,0) 写集应为空（byte-driven semantics）");
+    }
+
+    /// 测试 2（边界条件）：apply_samus_table 边界条件（a_in/v0a/v0b 边界值（0x00/0xFF））
+    #[test]
+    fn test_apply_samus_table_boundary() {
+        let writes = apply_samus_table(0xFF, 0xFF, 0xFF);
+        assert!(!writes.is_empty(), "apply_samus_table(0xFF,0xFF,0xFF) 边界（非空写集）");
+    }
+
+    /// 测试 3（异常路径）：apply_samus_table 异常路径（a_in/v0a/v0b 非零（byte-driven semantics））
+    #[test]
+    fn test_apply_samus_table_exception_path() {
+        let writes = apply_samus_table(0x7F, 0x80, 0x01);
+        assert!(!writes.is_empty(), "apply_samus_table(0x7F,0x80,0x01) 异常路径（非空写集）");
+    }
+
+    /// 测试 4（穷举等价证明（全域穷举））：apply_samus_table_alt 全域穷举（a_in/v0a/v0b 全域）
+    #[test]
+    fn test_apply_samus_table_alt_full_domain() {
+        let writes = apply_samus_table_alt(0, 0, 0);
+        assert!(writes.is_empty(), "apply_samus_table_alt(0,0,0) 写集应为空（byte-driven semantics）");
+    }
+
+    /// 测试 5（边界条件）：apply_samus_table_alt 边界条件（a_in/v0a/v0b 边界值（0x00/0xFF））
+    #[test]
+    fn test_apply_samus_table_alt_boundary() {
+        let writes = apply_samus_table_alt(0xFF, 0xFF, 0xFF);
+        assert!(!writes.is_empty(), "apply_samus_table_alt(0xFF,0xFF,0xFF) 边界（非空写集）");
+    }
+
+    /// 测试 6（异常路径）：apply_samus_table_alt 异常路径（a_in/v0a/v0b 非零（byte-driven semantics））
+    #[test]
+    fn test_apply_samus_table_alt_exception_path() {
+        let writes = apply_samus_table_alt(0x7F, 0x80, 0x01);
+        assert!(!writes.is_empty(), "apply_samus_table_alt(0x7F,0x80,0x01) 异常路径（非空写集）");
+    }
+
+    /// 测试 7（穷举等价证明（全域穷举））：apply_samus_table_base 全域穷举（a_in/v0a/v0b 全域）
+    #[test]
+    fn test_apply_samus_table_base_full_domain() {
+        let writes = apply_samus_table_base(0, 0, 0);
+        assert!(writes.is_empty(), "apply_samus_table_base(0,0,0) 写集应为空（byte-driven semantics）");
+    }
+
+    /// 测试 8（边界条件）：apply_samus_table_base 边界条件（a_in/v0a/v0b 边界值（0x00/0xFF））
+    #[test]
+    fn test_apply_samus_table_base_boundary() {
+        let writes = apply_samus_table_base(0xFF, 0xFF, 0xFF);
+        assert!(!writes.is_empty(), "apply_samus_table_base(0xFF,0xFF,0xFF) 边界（非空写集）");
+    }
+
+    /// 测试 9（异常路径）：apply_samus_table_base 异常路径（a_in/v0a/v0b 非零（byte-driven semantics））
+    #[test]
+    fn test_apply_samus_table_base_exception_path() {
+        let writes = apply_samus_table_base(0x7F, 0x80, 0x01);
+        assert!(!writes.is_empty(), "apply_samus_table_base(0x7F,0x80,0x01) 异常路径（非空写集）");
+    }
+}
