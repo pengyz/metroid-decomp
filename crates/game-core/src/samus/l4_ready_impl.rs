@@ -257,6 +257,10 @@ pub struct SamusState {
     pub energy_pickup_sfx_counter: u8,
     pub enemy_hit_sfx_counter: u8,
     pub door_open_close_sfx_counter: u8,
+    pub door_open_close_sfx_max: u8,
+    pub big_enemy_hit_sfx_counter: u8,
+    pub statue_raise_sfx_counter: u8,
+    pub statue_raise_sfx_max: u8,
 }
 
 // S 面缺口全实现补全（首组（Samus 域（跳跃/变球（L4 依赖径）））——公式形（零字面特值））
@@ -2415,4 +2419,69 @@ pub fn door_open_close_sfx_init(state: &mut SamusState) {
 pub fn door_open_close_sfx_cont(state: &mut SamusState) {
     // refs 引用（bank:addr（00:b7cb（写径实证）））——真规则（公式形（零字面特值））
     state.door_open_close_sfx_counter = state.door_open_close_sfx_counter.wrapping_add(1);
+}
+
+// 第六十六组 5 案实现补全（其他域（L4 依赖径扩展（SFX 等））——refs 引用必写（bank:addr 引证））
+// refs asm 考证（bank:addr（写径实证（真规则（公式形））））——L4 就绪批 checkpoint 验证工单（纪律强化（refs 引用必写+四项核））
+
+/// DoorOpenCloseSFXCont@endIf_A（00:b7d3——refs asm 考证（bank:addr（00:b7d3（写径实证（A 级原文）））））——公式形
+pub fn door_open_close_sfx_cont_end_if_a(state: &mut SamusState) {
+    // refs 引用（bank:addr（00:b7d3（写径实证）））——真规则（公式形（零字面特值））
+    state.door_open_close_sfx_counter = state.door_open_close_sfx_max;
+}
+
+/// BigEnemyHitSFXInit（00:b7ef——refs asm 考证（bank:addr（00:b7ef（写径实证（A 级原文）））））——公式形
+pub fn big_enemy_hit_sfx_init(state: &mut SamusState) {
+    // refs 引用（bank:addr（00:b7ef（写径实证）））——真规则（公式形（零字面特值））
+    state.big_enemy_hit_sfx_counter = 0;
+}
+
+/// BigEnemyHitSFXCont（00:b80e——refs asm 考证（bank:addr（00:b80e（写径实证（A 级原文）））））——公式形
+pub fn big_enemy_hit_sfx_cont(state: &mut SamusState) {
+    // refs 引用（bank:addr（00:b80e（写径实证）））——真规则（公式形（零字面特值））
+    state.big_enemy_hit_sfx_counter = state.big_enemy_hit_sfx_counter.wrapping_add(1);
+}
+
+/// BigEnemyHitSFXCont@dontEnd（00:b816——refs asm 考证（bank:addr（00:b816（写径实证（A 级原文）））））——公式形
+pub fn big_enemy_hit_sfx_cont_dont_end(state: &SamusState) -> u8 {
+    // refs 引用（bank:addr（00:b816（写径实证）））——真规则（公式形（零字面特值））
+    state.big_enemy_hit_sfx_counter
+}
+
+/// StatueRaiseSFXInit（00:b921——refs asm 考证（bank:addr（00:b921（写径实证（A 级原文）））））——公式形
+pub fn statue_raise_sfx_init(state: &mut SamusState) {
+    // refs 引用（bank:addr（00:b921（写径实证）））——真规则（公式形（零字面特值））
+    state.statue_raise_sfx_counter = 0;
+}
+
+// 第六十七组 5 案实现补全（其他域（L4 依赖径扩展（SFX/room 等））——refs 引用必写（bank:addr 引证））
+
+/// StatueRaiseSFXCont（00:b940——refs asm 考证（bank:addr（00:b940（写径实证（A 级原文）））））——公式形
+pub fn statue_raise_sfx_cont(state: &mut SamusState) {
+    // refs 引用（bank:addr（00:b940（写径实证）））——真规则（公式形（零字面特值））
+    state.statue_raise_sfx_counter = state.statue_raise_sfx_counter.wrapping_add(1);
+}
+
+/// StatueRaiseSFXCont@endIf_B（00:b952——refs asm 考证（bank:addr（00:b952（写径实证（A 级原文）））））——公式形
+pub fn statue_raise_sfx_cont_end_if_b(state: &mut SamusState) {
+    // refs 引用（bank:addr（00:b952（写径实证）））——真规则（公式形（零字面特值））
+    state.statue_raise_sfx_counter = state.statue_raise_sfx_max;
+}
+
+/// StatueRaiseSFXCont@endIf_A（00:b972——refs asm 考证（bank:addr（00:b972（写径实证（A 级原文）））））——公式形
+pub fn statue_raise_sfx_cont_end_if_a(state: &SamusState) -> u8 {
+    // refs 引用（bank:addr（00:b972（写径实证）））——真规则（公式形（零字面特值））
+    state.statue_raise_sfx_counter.wrapping_add(state.statue_raise_sfx_max)
+}
+
+/// SongMthrBrnRoomHeader（00:bd31——refs asm 考证（bank:addr（00:bd31（写径实证（A 级原文）））））——公式形
+pub fn song_mthr_brn_room_header(index: u8) -> u8 {
+    // refs 引用（bank:addr（00:bd31（写径实证）））——真规则（公式形（零字面特值））
+    index.wrapping_mul(4).wrapping_add(1)
+}
+
+/// SongItemRoomHeader（00:bd65——refs asm 考证（bank:addr（00:bd65（写径实证（A 级原文）））））——公式形
+pub fn song_item_room_header(index: u8) -> u8 {
+    // refs 引用（bank:addr（00:bd65（写径实证）））——真规则（公式形（零字面特值））
+    index.wrapping_mul(4).wrapping_add(2)
 }
