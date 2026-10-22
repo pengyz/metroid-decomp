@@ -1278,3 +1278,4 @@ mod w4_final_tests {
         assert_eq!(goto_music_init(6), None);
     }
 }
+pub mod music;

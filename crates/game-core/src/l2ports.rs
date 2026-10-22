@@ -873,6 +873,10 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "s4_cluster_106" => Some(sub_s4_cluster_106),
         "s4_cluster_108" => Some(sub_s4_cluster_108),
         "s4_cluster_110" => Some(sub_s4_cluster_110),
+        // 【第十簇 sound::music registry 登记】bank:addr→fn 双射：
+        // $BC26 MusicRoutineTbl / $BC36 RunMusicLoopRoutine / $BC3D RunMusicInitRoutine
+        // / $BC4B ContinueMusic / $BC53 FindMusicInitIndex（sound_engine.asm）
+        "s4_cluster_music_init_index" => Some(sub_s4_cluster_music_init_index),
         // 【第三簇 enemy::movement registry 登记】bank:addr→crate::module::fn 双射：
         // 07:E770 EnemyCheckMoveUp / 07:E77B Down / 07:E783 Vertical / 07:E792 StoreEnemyPositionToTemp
         // / 07:E7BD CheckMoveVertical（kernel 边界）/ 07:E8F1 Left / 07:E8FC Right / 07:E904 HorizontalBranch
@@ -3132,4 +3136,12 @@ pub fn sub_a8_cluster_018(input: &L2In) -> L2Out {
 /// a9_cluster_037 —— bank05:9A3E 簇入口注册（a9-037 待补交付⑨——末卡）。
 pub fn sub_a9_cluster_037(input: &L2In) -> L2Out {
     crate::verify_shim::a9_cluster_037(input)
+}
+
+
+/// s4_cluster_music_init_index —— 第十簇 sound::music 入口注册（bank:addr→fn 双射）。
+/// 适配径：a←CurrentSoundFlags（$064D）→FindMusicInitIndex（$BC53）→$065E 写回（None=$FF）。
+pub fn sub_s4_cluster_music_init_index(input: &crate::L2In) -> crate::L2Out {
+    let idx = crate::sound::music::find_music_init_index(input.a);
+    crate::L2Out { a: idx.unwrap_or(0xFF), x: input.x, y: input.y, writes: crate::sound::music::music_init_index_writes(idx) }
 }
