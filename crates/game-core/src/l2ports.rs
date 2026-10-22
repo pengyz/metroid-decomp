@@ -873,6 +873,9 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "s4_cluster_106" => Some(sub_s4_cluster_106),
         "s4_cluster_108" => Some(sub_s4_cluster_108),
         "s4_cluster_110" => Some(sub_s4_cluster_110),
+        // 【第十七簇 ui::password registry 登记】bank:addr→fn 双射：
+        // 07:C9C4 GoPassword（prg7_engine.asm:2170）/ 00:8BB5 UniqueItemFound（prg0_title.asm:1586）
+        "s4_cluster_password" => Some(sub_s4_cluster_password),
         // 【第十四簇 world::door registry 登记】bank:addr→fn 双射：
         // 07:D3A8 SamusDoor / 07:D3F7 MoveOutDoor / 07:D411 尾面（prg7_engine.asm:4092/4138）
         "s4_cluster_samus_door" => Some(sub_s4_cluster_samus_door),
@@ -3165,4 +3168,12 @@ pub fn sub_s4_cluster_samus_door(input: &crate::L2In) -> crate::L2Out {
         crate::world::door::DoorEffect::RestoreStatus(v) => v,
     };
     crate::L2Out { a, x: out.delay, y: input.y, writes: crate::world::door::door_state_writes(&out) }
+}
+
+
+/// s4_cluster_password —— 第十七簇 ui::password 入口注册（bank:addr→fn 双射）。
+/// 适配径：GoPassword 移交面（a←TitleRoutine 低位/x←SFXNoiseInitFlags）→$1F/$24/$0680 写回。
+pub fn sub_s4_cluster_password(input: &crate::L2In) -> crate::L2Out {
+    let h = crate::ui::password::go_password(input.a, input.x);
+    crate::L2Out { a: h.title_routine, x: h.sfx_noise_init_flags, y: input.y, writes: crate::ui::password::go_password_writes(&h) }
 }

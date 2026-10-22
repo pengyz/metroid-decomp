@@ -16,6 +16,7 @@ pub mod rng;
 pub mod tile_blast;
 pub mod engine;
 pub mod world;
+pub mod ui;
 pub mod render;
 pub mod sound;
 pub mod title;
