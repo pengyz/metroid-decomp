@@ -15032,3 +15032,90 @@ pub fn pack_item_id_and_dispatch(v07: u8, v06: u8, v09: u8) -> (Vec<(u16, u8)>, 
 pub fn cannon_handler_face() -> (Vec<(u16, u8)>, u16) {
     (vec![(0x0007, 0x38), (0x0006, 0)], 0xEDD6)
 }
+
+// ===== 1:1 Rust 改写·批产·块 87（s5 族 MB/Zeebetite/Rinka/GetX 去地址名（TDD 穷举等价））=====
+
+#[cfg(test)]
+mod tests_b87_engine_mod {
+    //! TDD step1（测试先行（强制完整））——穷举等价（新==旧（≤256³ 闸时限界））。
+    //! refs 锚（bank:addr 注内）：$EEAE MotherBrainHandler（:5606）/$EECA ZeebetiteHandler
+    //! （:5630）/$EEEE RinkaHandler（:5654）/$F152 GetEnemyXSlotPosition root（:5675）/
+    //! $F0A8（:5681）。
+
+    use super::*;
+
+    /// 【穷举·三 Handler 壳】退化域——mother_brain/zebetite/rinka_handler_face==旧体。
+    #[test]
+    fn handler_faces_equivalence() {
+        assert_eq!(s5_eeae_body(), mother_brain_handler_face());
+        assert_eq!(s5_eeee_body(), rinka_handler_face());
+        for x in 0u8..=255 {
+            assert_eq!(s5_eecla_body(x), zeebetite_handler_face(x));
+        }
+    }
+
+    /// 【穷举·GetX 位置面】x×v0400×v0400' 依赖分解——get_enemy_x_slot_position
+    /// ==s5_get_enemy_x_pos。
+    #[test]
+    fn exhaustive_get_x_pos_equivalence() {
+        for x in 0u8..=255 {
+            for a in 0u8..=255 {
+                for b in [0u8, 1, 0x7F, 0x80, 0xFF] {
+                    assert_eq!(s5_get_enemy_x_pos(x, a, b), get_enemy_x_slot_position(x, a, b));
+                }
+            }
+        }
+    }
+
+    /// 【穷举·条件清】x×v6f 全域——clear_ptr_and_set_y_cond==s5_f0a8_body（≠0 判）。
+    #[test]
+    fn exhaustive_cond_clear_equivalence() {
+        for x in 0u8..=255 {
+            for v in 0u8..=255 {
+                assert_eq!(s5_f0a8_body(x, v), clear_ptr_and_set_y_cond(x, v));
+            }
+        }
+    }
+}
+
+// ===== 1:1 Rust 改写·批产·块 87：s5 族 MB/Zeebetite/Rinka/GetX 语义命名（去地址名）=====
+// refs 锚（bank:addr 注内）：$EEAE MotherBrainHandler（:5606）/$EECA ZeebetiteHandler
+// （:5630）/$EEEE RinkaHandler（:5654）/$F152 GetEnemyXSlotPosition root（:5675）/$F0A8
+// （:5681）。
+
+/// MotherBrain 壳（旧 s5_eeae_body（$EEAE MotherBrainHandler）：$07←$38/$06←0
+/// +$98←8/$99←0（写对）→jmp $EE4A）。
+pub fn mother_brain_handler_face() -> (Vec<(u16, u8)>, u16) {
+    (vec![(0x0007, 0x38), (0x0006, 0), (0x0098, 8), (0x0099, 0)], 0xEE4A)
+}
+
+/// Zeebetite 壳（旧 s5_eecla_body（$EECA ZeebetiteHandler）：$07←(X>>1)+$3C/$06←0
+/// （ptr 算面））。
+pub fn zeebetite_handler_face(x: u8) -> Vec<(u16, u8)> {
+    let v07 = (x >> 1).wrapping_add(0x3C);
+    vec![(0x0007, v07), (0x0006, 0)]
+}
+
+/// Rinka 壳（旧 s5_eeee_body（$EEEE RinkaHandler）：$91←$49→jmp $EEC6）。
+pub fn rinka_handler_face() -> (Vec<(u16, u8)>, u16) {
+    (vec![(0x0091, 0x49)], 0xEEC6)
+}
+
+/// X 槽位面（旧 s5_get_enemy_x_pos（$F152 GetEnemyXSlotPosition root）：$07←$0400[x]/
+/// $09←$0401[x]）。
+pub fn get_enemy_x_slot_position(x: u8, v0400_x: u8, v0401_x: u8) -> Vec<(u16, u8)> {
+    let _ = x;
+    vec![(0x0007, v0400_x), (0x0009, v0401_x)]
+}
+
+/// 条件清（旧 s5_f0a8_body（$F0A8）：$6F≠0⇒$6E/$6F←0+Y=1）。
+pub fn clear_ptr_and_set_y_cond(x: u8, v6f: u8) -> (Vec<(u16, u8)>, u8) {
+    let _ = x;
+    let branch = v6f != 0;
+    let mut ev = Vec::new();
+    if branch {
+        ev.push((0x006E, 0));
+        ev.push((0x006F, 0));
+    }
+    (ev, if branch { 1 } else { 0 })
+}
