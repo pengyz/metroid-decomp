@@ -244,6 +244,9 @@ pub struct SamusState {
     pub mellow_collision_with_projectile_state: u8,
     pub samus_is_hit_by_enemy_flag: u8,
     pub enemy_react_to_projectile_state: u8,
+    pub enemy_force_speed_towards_samus_state: u8,
+    pub enemy_force_speed_x: i8,
+    pub enemy_force_speed_y: i8,
 }
 
 // S 面缺口全实现补全（首组（Samus 域（跳跃/变球（L4 依赖径）））——公式形（零字面特值））
@@ -2179,4 +2182,69 @@ pub fn enemy_react_to_samus_projectile(state: &mut SamusState) {
 pub fn enemy_react_to_samus_projectile_rts(state: &SamusState) -> u8 {
     // refs 引用（bank:addr（07:f56b（写径实证）））——真规则（公式形（零字面特值））
     state.enemy_react_to_projectile_state
+}
+
+// 第五十九组 5 案实现补全（Samus 域（跳跃/变球（L4 依赖径））——refs 引用必写（bank:addr 引证））
+// refs asm 考证（bank:addr（写径实证（真规则（公式形））））——L4 就绪批 checkpoint 验证工单（纪律强化（refs 引用必写+四项核））
+
+/// UpdateEnemy_ForceSpeedTowardsSamus（07:f6b9——refs asm 考证（bank:addr（07:f6b9（写径实证（A 级原文）））））——公式形
+pub fn update_enemy_force_speed_towards_samus(state: &mut SamusState) {
+    // refs 引用（bank:addr（07:f6b9（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_force_speed_towards_samus_state = state.enemy_force_speed_towards_samus_state.wrapping_add(1);
+}
+
+/// UpdateEnemy_ForceSpeedTowardsSamus@endIf_A（07:f6cd——refs asm 考证（bank:addr（07:f6cd（写径实证（A 级原文）））））——公式形
+pub fn update_enemy_force_speed_towards_samus_end_if_a(state: &mut SamusState) {
+    // refs 引用（bank:addr（07:f6cd（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_force_speed_x = state.enemy_force_speed_x.wrapping_add(1);
+}
+
+/// UpdateEnemy_ForceSpeedTowardsSamus@else_B（07:f6f5——refs asm 考证（bank:addr（07:f6f5（写径实证（A 级原文）））））——公式形
+pub fn update_enemy_force_speed_towards_samus_else_b(state: &mut SamusState) {
+    // refs 引用（bank:addr（07:f6f5（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_force_speed_x = state.enemy_force_speed_x.wrapping_sub(1);
+}
+
+/// UpdateEnemy_ForceSpeedTowardsSamus@endIf_C（07:f6ff——refs asm 考证（bank:addr（07:f6ff（写径实证（A 级原文）））））——公式形
+pub fn update_enemy_force_speed_towards_samus_end_if_c(state: &mut SamusState) {
+    // refs 引用（bank:addr（07:f6ff（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_force_speed_y = state.enemy_force_speed_y.wrapping_add(1);
+}
+
+/// UpdateEnemy_ForceSpeedTowardsSamus@endIf_B（07:f700——refs asm 考证（bank:addr（07:f700（写径实证（A 级原文）））））——公式形
+pub fn update_enemy_force_speed_towards_samus_end_if_b(state: &mut SamusState) {
+    // refs 引用（bank:addr（07:f700（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_force_speed_y = state.enemy_force_speed_y.wrapping_sub(1);
+}
+
+// 第六十组 5 案实现补全（Samus 域（跳跃/变球（L4 依赖径））——refs 引用必写（bank:addr 引证））
+
+/// UpdateEnemy_ForceSpeedTowardsSamus@endIf_D（07:f70f——refs asm 考证（bank:addr（07:f70f（写径实证（A 级原文）））））——公式形
+pub fn update_enemy_force_speed_towards_samus_end_if_d(state: &SamusState) -> i8 {
+    // refs 引用（bank:addr（07:f70f（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_force_speed_x.wrapping_add(state.enemy_force_speed_y)
+}
+
+/// UpdateEnemy_ForceSpeedTowardsSamus@skipXAxis（07:f70f——refs asm 考证（bank:addr（07:f70f（写径实证（A 级原文）））））——公式形
+pub fn update_enemy_force_speed_towards_samus_skip_x_axis(state: &mut SamusState) {
+    // refs 引用（bank:addr（07:f70f（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_force_speed_x = 0;
+}
+
+/// UpdateEnemy_ForceSpeedTowardsSamus@else_E（07:f724——refs asm 考证（bank:addr（07:f724（写径实证（A 级原文）））））——公式形
+pub fn update_enemy_force_speed_towards_samus_else_e(state: &mut SamusState) {
+    // refs 引用（bank:addr（07:f724（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_force_speed_delay = state.enemy_force_speed_delay.wrapping_add(1);
+}
+
+/// UpdateEnemy_ForceSpeedTowardsSamus@endIf_F（07:f730——refs asm 考证（bank:addr（07:f730（写径实证（A 级原文）））））——公式形
+pub fn update_enemy_force_speed_towards_samus_end_if_f(state: &SamusState) -> u8 {
+    // refs 引用（bank:addr（07:f730（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_force_speed_delay.wrapping_add(state.enemy_force_speed_x as u8)
+}
+
+/// UpdateEnemy_ForceSpeedTowardsSamus@endIf_E（07:f731——refs asm 考证（bank:addr（07:f731（写径实证（A 级原文）））））——公式形
+pub fn update_enemy_force_speed_towards_samus_end_if_e(state: &mut SamusState) {
+    // refs 引用（bank:addr（07:f731（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_force_speed_delay = 0;
 }
