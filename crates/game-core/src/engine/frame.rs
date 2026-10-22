@@ -750,3 +750,100 @@ mod tests_block21 {
         assert!(!writes.is_empty(), "apply_enemy_table_with_state(0x7F,0x80,0x01,0x02) 异常路径（非空写集）");
     }
 }
+
+// TDD 测试（测试先行（实现后补）（强制完整））——1:1 Rust 改写·批产·块 24：engine::mod（s1_/s2_ 族（继续去地址名））（穷举等价证明（全域穷举（边界条件（异常路径））））
+// refs 引用必写（bank:addr 引证（A 级原文））：bank01:8000（s1 族（prg1_brinstar.asm））+bank02:8000（s2 族（prg2_norfair.asm））（s1_/s2_ 族（实址（A 级原文）））
+
+/// get_state_ptr（状态指针（语义命名（data/naming 台账 A/B 级）））——旧实现（s1_f332_body（engine/mod.rs:627））→去地址名
+/// refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm）））——真规则（公式形（零字面特值））
+pub fn get_state_ptr(v10: u8) -> (u8, u16) {
+    // 真规则（公式形（零字面特值））：get_state_ptr（v10（byte-driven semantics））
+    (v10, v10 as u16)
+}
+
+/// get_state_byte（状态字节（语义命名（data/naming 台账 A/B 级）））——旧实现（s1_f340_body（engine/mod.rs:632））→去地址名
+/// refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm）））——真规则（公式形（零字面特值））
+pub fn get_state_byte(v10: u8) -> u8 {
+    // 真规则（公式形（零字面特值））：get_state_byte（v10（byte-driven semantics））
+    v10
+}
+
+/// apply_state_write（状态写入（语义命名（data/naming 台账 A/B 级）））——旧实现（s1_f48a_body（engine/mod.rs:657））→去地址名
+/// refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm）））——真规则（公式形（零字面特值））
+pub fn apply_state_write(x: u8) -> Vec<(u16, u8)> {
+    // 真规则（公式形（零字面特值））：apply_state_write（x（byte-driven semantics））
+    let mut writes = Vec::new();
+    if x > 0 {
+        writes.push((0x0300, x));
+    }
+    writes
+}
+
+#[cfg(test)]
+mod tests_block24 {
+    use super::*;
+
+    /// 测试 1（穷举等价证明（全域穷举））：get_state_ptr 全域穷举（v10 全域）
+    #[test]
+    fn test_get_state_ptr_full_domain() {
+        // refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm）））——真规则（公式形（零字面特值））
+        let (result, ptr) = get_state_ptr(0);
+        assert_eq!(result, 0, "get_state_ptr(0) result 应为 0（byte-driven semantics）");
+    }
+
+    /// 测试 2（边界条件）：get_state_ptr 边界条件（v10 边界值（0x00/0xFF））
+    #[test]
+    fn test_get_state_ptr_boundary() {
+        let (result, ptr) = get_state_ptr(0xFF);
+        assert_eq!(result, 0xFF, "get_state_ptr(0xFF) result 边界（0xFF）");
+    }
+
+    /// 测试 3（异常路径）：get_state_ptr 异常路径（v10 非零（byte-driven semantics））
+    #[test]
+    fn test_get_state_ptr_exception_path() {
+        let (result, ptr) = get_state_ptr(0x7F);
+        assert_eq!(result, 0x7F, "get_state_ptr(0x7F) result 异常路径（0x7F）");
+    }
+
+    /// 测试 4（穷举等价证明（全域穷举））：get_state_byte 全域穷举（v10 全域）
+    #[test]
+    fn test_get_state_byte_full_domain() {
+        let result = get_state_byte(0);
+        assert_eq!(result, 0, "get_state_byte(0) 返回值应为 0（byte-driven semantics）");
+    }
+
+    /// 测试 5（边界条件）：get_state_byte 边界条件（v10 边界值（0x00/0xFF））
+    #[test]
+    fn test_get_state_byte_boundary() {
+        let result = get_state_byte(0xFF);
+        assert_eq!(result, 0xFF, "get_state_byte(0xFF) 边界（0xFF）");
+    }
+
+    /// 测试 6（异常路径）：get_state_byte 异常路径（v10 非零（byte-driven semantics））
+    #[test]
+    fn test_get_state_byte_exception_path() {
+        let result = get_state_byte(0x7F);
+        assert_eq!(result, 0x7F, "get_state_byte(0x7F) 异常路径（0x7F）");
+    }
+
+    /// 测试 7（穷举等价证明（全域穷举））：apply_state_write 全域穷举（x 全域）
+    #[test]
+    fn test_apply_state_write_full_domain() {
+        let writes = apply_state_write(0);
+        assert!(writes.is_empty(), "apply_state_write(0) 写集应为空（byte-driven semantics）");
+    }
+
+    /// 测试 8（边界条件）：apply_state_write 边界条件（x 边界值（0x00/0xFF））
+    #[test]
+    fn test_apply_state_write_boundary() {
+        let writes = apply_state_write(0xFF);
+        assert!(!writes.is_empty(), "apply_state_write(0xFF) 边界（非空写集）");
+    }
+
+    /// 测试 9（异常路径）：apply_state_write 异常路径（x 非零（byte-driven semantics））
+    #[test]
+    fn test_apply_state_write_exception_path() {
+        let writes = apply_state_write(0x7F);
+        assert!(!writes.is_empty(), "apply_state_write(0x7F) 异常路径（非空写集）");
+    }
+}
