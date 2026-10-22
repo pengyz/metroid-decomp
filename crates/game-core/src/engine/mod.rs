@@ -15534,3 +15534,68 @@ pub fn ref_s7_fe95_body(v00: u8, v01: u8) -> (Vec<(u16, u8)>, u8) {
 }
 
 }
+
+// ===== 1:1 Rust 改写·批产·块 114（无前缀地址命名余 4 条去名（TDD 穷举等价））=====
+
+#[cfg(test)]
+mod tests_b114_engine_mod {
+    //! TDD step1（测试先行（强制完整））——穷举等价（新==旧（≤256³ 闸时限界））。
+    //! refs 锚（bank:addr 注内）：$CC03 MotherBrainMusic root（:8017）/$D2FD
+    //! SetObjectXSlotAnimIndex root（:8047）/$CBDA SFX_Door root（:8076）/$CB73
+    //! SelectSamusPalette root（:8106）。
+
+    use super::*;
+
+    /// 【穷举·声旗面×2】sfx_mother_brain_music==cc03_mother_brain_music+
+    /// sfx_door==cbda_sfx_door（退化域（声旗面逐钉））。
+    #[test]
+    fn sfx_faces_b114_equivalence() {
+        assert_eq!(cc03_mother_brain_music(), sfx_mother_brain_music());
+        assert_eq!(cbda_sfx_door(), sfx_door());
+    }
+
+    /// 【穷举·anim 索引写】x×v 全域 256²——set_object_xslot_anim_index==d2fd_set_obj_anim
+    /// （$032E+x-33 写址（回绕面））。
+    #[test]
+    fn exhaustive_anim_index_equivalence() {
+        for x in 0u8..=255 {
+            for v in 0u8..=255 {
+                assert_eq!(d2fd_set_obj_anim(x, v), set_object_xslot_anim_index(x, v));
+            }
+        }
+    }
+
+    /// 【穷举·调色板面】select_samus_palette==cb73_select_samus_palette（退化域）。
+    #[test]
+    fn palette_face_equivalence() {
+        assert_eq!(cb73_select_samus_palette(), select_samus_palette());
+    }
+}
+
+// ===== 1:1 Rust 改写·批产·块 114：无前缀地址命名 4 条语义命名（去地址名（公式形））=====
+// refs 锚（bank:addr 注内）：$CC03 MotherBrainMusic root（:8017）/$D2FD
+// SetObjectXSlotAnimIndex root（:8047）/$CBDA SFX_Door root（:8076）/$CB73
+// SelectSamusPalette root（:8106）。
+
+/// MotherBrain 音乐声旗面（旧 cc03_mother_brain_music（$CC03 root）：$0681←$20
+/// （sfxNoise_MotherBrainMusic））。
+pub fn sfx_mother_brain_music() -> (Vec<(u16, u8)>, u8) {
+    (vec![(0x0681, 0x20)], 0x20)
+}
+
+/// X 槽动画索引设（旧 d2fd_set_obj_anim（$D2FD SetObjectXSlotAnimIndex root）：
+/// $032E[x-33]←v（anim 索引写（写址不掩）））。
+pub fn set_object_xslot_anim_index(x: u8, v: u8) -> Vec<(u16, u8)> {
+    vec![(0x032E + x as u16 - 33, v)]
+}
+
+/// 门声旗面（旧 cbda_sfx_door（$CBDA SFX_Door root）：$0683←64（sfxNoise_Door））。
+pub fn sfx_door() -> (Vec<(u16, u8)>, u8) {
+    (vec![(0x0683, 64)], 64)
+}
+
+/// Samus 调色板选择面（旧 cb73_select_samus_palette（$CB73 SelectSamusPalette root）：
+/// 调色板面（案实核径））。
+pub fn select_samus_palette() -> (u8, bool) {
+    (0, true)
+}
