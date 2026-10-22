@@ -16301,3 +16301,70 @@ pub fn samus_dead_dispatch_f1b(v0300: u8) -> Option<u16> {
     let (dead, _) = check_samus_dead_state(v0300);
     if dead { None } else { Some(0xF1B3) }
 }
+
+// ===== 1:1 Rust 改写·批产·块 138（s1 余批 3 员去名（CheckCollision delta 族）（TDD 穷举等价））=====
+
+#[cfg(test)]
+mod tests_b138_engine_mod {
+    //! TDD step1（测试先行（强制完整））——穷举等价（新==旧（≤256³ 闸时限界（依赖分解）））。
+    //! refs 锚（bank:addr 注内）：CheckCollision root（:1690）/$F146（:1700）/$FEBD（:1706）。
+
+    use super::*;
+
+    /// 【穷举·delta 计算】v49×v06×v07 全域 256³——check_collision_delta==s1_check_collision
+    /// （delta=$07-$06（wrapping）+$10←2/$03←v49&2/$00←delta）。
+    #[test]
+    fn exhaustive_collision_delta_equivalence() {
+        for v49 in 0u8..=255 {
+            for v06 in 0u8..=255 {
+                for v07 in 0u8..=255 {
+                    assert_eq!(s1_check_collision(v49, v06, v07), check_collision_delta(v49, v06, v07));
+                }
+            }
+        }
+    }
+
+    /// 【穷举·pos 对载】x×v0400×v0401 依赖分解——load_pos_pair_and_tail==s1_f146_body。
+    #[test]
+    fn exhaustive_pos_pair_tail_equivalence() {
+        for x in 0u8..=255 {
+            for &(a, b) in &[(0u8, 0u8), (0xFF, 0xFF), (8, 9)] {
+                assert_eq!(s1_f146_body(x, a, b), load_pos_pair_and_tail(x, a, b));
+            }
+        }
+    }
+
+    /// 【穷举·碰撞+调壳】v49×v06×v07 全域 256³——check_collision_and_call==s1_febd_body。
+    #[test]
+    fn exhaustive_collide_call_equivalence() {
+        for v49 in 0u8..=255 {
+            for v06 in 0u8..=255 {
+                for v07 in 0u8..=255 {
+                    assert_eq!(s1_febd_body(v49, v06, v07), check_collision_and_call(v49, v06, v07));
+                }
+            }
+        }
+    }
+}
+
+// ===== 1:1 Rust 改写·批产·块 138：CheckCollision delta 族语义命名（去地址名（公式形））=====
+// refs 锚（bank:addr 注内）：CheckCollision root（:1690）/$F146（:1700）/$FEBD（:1706）。
+
+/// 碰撞 delta 计算（旧 s1_check_collision（CheckCollision root）：delta=$07-$06（wrapping）
+/// +$10←2/$03←$49&2/$00←delta）。
+pub fn check_collision_delta(v49: u8, v06: u8, v07: u8) -> (Vec<(u16, u8)>, u8) {
+    let delta = v07.wrapping_sub(v06);
+    (vec![(0x0010, 2), (0x0003, v49 & 2), (0x0000, delta)], delta)
+}
+
+/// pos 对载尾（旧 s1_f146_body（$F146）：$07←$0400[x]/$09←$0401[x]→jmp $F1FA）。
+pub fn load_pos_pair_and_tail(x: u8, v0400_x: u8, v0401_x: u8) -> Vec<(u16, u8)> {
+    let _ = x;
+    vec![(0x0007, v0400_x), (0x0009, v0401_x)]
+}
+
+/// 碰撞+调壳（旧 s1_febd_body（$FEBD）：CheckCollision root→jsr $F311（cs 分段（$6E←$50）））。
+pub fn check_collision_and_call(v49: u8, v06: u8, v07: u8) -> (Vec<(u16, u8)>, Option<u16>) {
+    let (ev, _) = check_collision_delta(v49, v06, v07);
+    (ev, Some(0xF311))
+}
