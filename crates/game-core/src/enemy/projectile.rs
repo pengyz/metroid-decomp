@@ -216,4 +216,53 @@ mod tests {
     }
 
     struct LocalScript([(u8, i8, i8); 3]);
+
+    /// 【⑨⑪穷举补全】en_projectile_movement 全覆盖（原恒速度面+脚本面合成——全域穷举）。
+    #[test]
+    fn exhaustive_en_projectile_movement_full_domain() {
+        for vx in 0u8..=255 {
+            for vy in 0u8..=255 {
+                let mut st = EnemyProjectileState {
+                    x: 10, y: 20,
+                    x_velocity: vx as i8, y_velocity: vy as i8,
+                    active: 1,
+                };
+                en_projectile_movement(&mut st);
+                // 参考径（证伪立场）：脚本 Movement0 首条 (0x04,3,-3) 施 1 帧 + 速度面合成
+                assert_eq!(st.x, 10u8.wrapping_add(3).wrapping_add(vx), "vx={}", vx);
+                assert_eq!(st.y, 20u8.wrapping_add((-3i8) as u8).wrapping_add(vy), "vy={}", vy);
+            }
+        }
+    }
+
+    /// 【⑨⑪穷举补全】enemy_projectile_state_query 全域（active 0..=255——直返语义）。
+    #[test]
+    fn exhaustive_state_query() {
+        for a in 0u8..=255 {
+            let st = EnemyProjectileState { active: a, ..Default::default() };
+            assert_eq!(enemy_projectile_state_query(&st), a);
+        }
+    }
+
+    /// 【⑨⑪穷举补全】movement_tick 异常路径（done 后不动/越界 step/全零脚本）。
+    #[test]
+    fn exception_paths_movement() {
+        // 全零脚本（异常）：三 tick 内 done（零帧条目全跳⇒终止）
+        let zero = [(0u8, 0i8, 0i8); 7];
+        let (mut st, mut cur) = (EnemyProjectileState::default(), ProjCursor::new(0));
+        for _ in 0..8 {
+            movement_tick_with(&mut st, &mut cur, &zero);
+        }
+        assert!(cur.done);
+        assert_eq!((st.x, st.y), (0, 0)); // 全零脚本不动
+        // done 后再 tick 不动（异常路径守卫）
+        st.x = 0xAA; st.y = 0xBB;
+        movement_tick_with(&mut st, &mut cur, &zero);
+        assert_eq!((st.x, st.y), (0xAA, 0xBB));
+        // 越界 script 索引（min(3) 钳位——异常路径）
+        let mut cur2 = ProjCursor::new(99);
+        let mut st2 = EnemyProjectileState::default();
+        movement_tick(&mut st2, &mut cur2);
+        assert_eq!((st2.x, st2.y), (2u8, 252u8)); // min(3) 钳至 Movement3（索引3）首条（(2,-4)（y=-4⇒252）——证伪更正（原误认 Movement0））
+    }
 }

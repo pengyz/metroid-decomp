@@ -873,6 +873,12 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "s4_cluster_106" => Some(sub_s4_cluster_106),
         "s4_cluster_108" => Some(sub_s4_cluster_108),
         "s4_cluster_110" => Some(sub_s4_cluster_110),
+        // 【needs_revision 闭环⑦】enemy::projectile 三件 registry 登记（真函数指针）：
+        // CommonJump_SpawnEnProjectile $8021（areas_common.asm:57）→SpawnEnProjectile 07:F870
+        // /EnProjectileMovement0-3 01:9965-9992（prg1_brinstar.asm:821-899）
+        "s4_cluster_en_projectile" => Some(sub_s4_cluster_en_projectile),
+        "s4_cluster_waver" => Some(sub_s4_cluster_waver),
+        "s4_cluster_sfx_play" => Some(sub_s4_cluster_sfx_play),
         // 【第三十一簇 weapon::missile registry 登记】bank:addr→fn 双射：
         // 07:D315 CheckHorizontalMissileLaunch / 07:D323 CheckMissileLaunchCommon
         // / 07:D340 CheckVerticalMissileLaunch / 07:D34D SetBulletAnim（prg7_engine.asm）
@@ -3223,4 +3229,38 @@ pub fn sub_s4_cluster_missile(input: &crate::L2In) -> crate::L2Out {
             crate::L2Out { a: l.anim, x: input.x, y: l.missile_count_after, writes: w }
         }
     }
+}
+
+
+/// needs_revision 闭环⑦——enemy::projectile 三件（spawn_en_projectile/en_projectile_movement/
+/// enemy_projectile_state_query）真函数指针登记（bank:addr→fn 双射）。
+pub fn sub_s4_cluster_en_projectile(input: &crate::L2In) -> crate::L2Out {
+    use crate::enemy::projectile::{spawn_en_projectile, en_projectile_movement, enemy_projectile_state_query, EnemyProjectileState};
+    let mut st = EnemyProjectileState {
+        x: input.a, y: input.x,
+        x_velocity: input.p as i8, y_velocity: input.y as i8,
+        active: 0,
+    };
+    let spawned = spawn_en_projectile(&mut st);
+    en_projectile_movement(&mut st);
+    let q = enemy_projectile_state_query(&st);
+    crate::L2Out { a: if spawned { st.x } else { 0 }, x: st.y, y: q, writes: vec![] }
+}
+
+/// needs_revision 闭环⑦——update_waver 真函数指针登记（enemy::waver（空壳清理系列））。
+pub fn sub_s4_cluster_waver(input: &crate::L2In) -> crate::L2Out {
+    let mut buf = [0u8; 2048];
+    let n = input.wram.len().min(2048);
+    buf[..n].copy_from_slice(&input.wram[..n]);
+    let st = crate::enemy::waver::update_waver(&buf);
+    crate::L2Out { a: st.direction, x: input.x, y: input.y, writes: vec![] }
+}
+
+/// needs_revision 闭环⑦——play_sfx 真函数指针登记（sound::sfx（第七簇））。
+pub fn sub_s4_cluster_sfx_play(input: &crate::L2In) -> crate::L2Out {
+    let mut buf = [0u8; 2048];
+    let n = input.ram.len().min(2048);
+    buf[..n].copy_from_slice(&input.ram[..n]);
+    let st = crate::sound::sfx::play_sfx(&buf, input.a);
+    crate::L2Out { a: st.sfx_id, x: st.frame_count, y: st.playing as u8, writes: vec![] }
 }
