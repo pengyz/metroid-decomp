@@ -12089,6 +12089,43 @@ wait_nmi_pass（2^8）+int_y（2^32）+flag_gate root（全全域））（边界
 立场（独立重导证据（正确性核）））✓——复核 verdict 实录（docs commit（对抗复核 verdict（11 项
 （必跑验证）（实测输出原文（A 级））））✓。
 
+## 1:1 Rust 改写·批产·对抗复核（3 件（engine::mod+world/{door,elevator,room}+samus/{handler,
+physics}）（11 项（必跑验证）））（证伪立场（独立重导证据（正确性核）））
+
+### verdict: hold（⑩必跑验证**被阻**（编译错（E0425（未解析名（并行 WIP（批产（在途）））））））
+（①-⑨⑪ 部分核（前轮实录（1:1 Rust 改写块 1/2/3（pass（11 项全 ✓）））））
+
+**⑩ 必跑验证——被阻 ✗**：`cargo test --workspace` **编译失败**（**E0425×9**（cannot find
+function（**load_area_graphics**/apply_area_graphics/update_room_state（未解析名（测试代码引用
+（未实现函数））））））——**并行 WIP（批产（在途）**（engine::mod（陈旧代码拆分）+world/
+{door,elevator,room}+samus/{handler,physics}（decomp+port2+porter 在产（未解析名（load_area_graphics/
+apply_area_graphics/update_room_state（world/room.rs 零命中（grep 实录（函数未实现（测试代码
+先行（TDD（测试先行（实现后补））））））））））——**实测输出原文（A 级）**：
+```
+error[E0425]: cannot find function `load_area_graphics` in this scope
+error[E0425]: cannot find function `apply_area_graphics` in this scope
+error[E0425]: cannot find function `update_room_state` in this scope
+error: could not compile `game-core` (lib test) due to 9 previous errors
+```
+——⑩必跑验证（cargo test（穷举等价证明））**无法运行**（编译错（E0425（未解析名（批产 WIP
+（TDD 测试先行（实现后补）））））——**hold**（待批产 WIP 收敛（未解析名实现补全（TDD 实现后补））
+后复跑）
+
+**①-⑨⑪ 部分核（前轮实录（1:1 Rust 改写块 1/2/3（pass（11 项全 ✓））））**：
+①六步流程 ✓（1:1 改写块 1/2/3（TDD 穷举等价证明））②refs 实址 ✓（boot.rs:661（refs 锚（engine/
+mod.rs 注内 bank:addr（旗门根（:298（bit5=$20））/$F56C（:349）））+bank01:8000/bank02:8000
+（s1/s2 族）+bank00:9A07/BFBA/8071-80BE）③域结构 ✓（去地址名（s1_flag_gate/s1_f56c/s1_f5ac/
+s1_f5cc/s1_f7fc（语义命名）））④memmap ✓⑤shim 写集 ✓⑥测试 ✓（630（TDD（穷举·旗门根（root 全域））））
+⑦registry ✓（:774-777/815-817（双射（真实函数指针）））⑧真规则 ✓（公式形（零字面特值））⑨穷举
+等价证明（前轮 ✓（65792+2^32+旗门根（0 分歧）））⑪验证轨迹对等（前轮 ✓（全域穷举（覆盖全部实现）））
+
+**verdict**：1:1 Rust 改写·批产·对抗复核（3 件）**hold**——**⑩必跑验证被阻**（cargo test 编译失败
+（E0425×9（未解析名（load_area_graphics/apply_area_graphics/update_room_state（**批产 WIP
+（TDD 测试先行（实现后补）（在途）**）））））——①-⑨⑪ 前轮实录（1:1 Rust 改写块 1/2/3（pass
+（11 项全 ✓）））——对抗复核核（证伪立场（独立重导证据（正确性核）））✓——复核 verdict 实录
+（docs commit（对抗复核 verdict（11 项（必跑验证（被阻（编译错（并行 WIP）））（实测输出原文
+（A 级）））））✓。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
