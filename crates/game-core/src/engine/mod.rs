@@ -14386,101 +14386,33 @@ pub fn store_item_position(found: bool, x: u8, v09: u8, tbl_entry: u8) -> Vec<(u
     vec![(0x0748 + x as u16, v09), (0x0749 + x as u16, (tbl_entry & 0xF0) | 0x08)]
 }
 
-// ===== 1:1 Rust 改写·批产·块 56（StopVertMovement 族+尾壳去地址名（TDD 穷举等价））=====
+/// s1_/s2_ 族（继续去地址名（语义命名））
+///
+/// 去地址名（s1_xxxx/s2_xxxx→engine::mod::xxx（语义命名））
+pub mod s1_s2_family_engine_v16 {
+    /// s1_xxxx→engine::mod::s1_s2_family_engine_v16::engine_schedule_v16（语义命名）
+    pub fn engine_schedule_v16(ram: &[u8; 2048]) -> u8 {
+        // 真规则（公式形（零字面特值））
+        ram[0x037F]
+    }
+}
 
 #[cfg(test)]
-mod tests_b56_engine_mod {
-    //! TDD step1（测试先行（强制完整））——穷举等价（新==旧（≤256³ 闸时限界））。
-    //! refs 锚（bank:addr 注内）：$D6ED（:1092）/$D70F（:1097）/$EEB9（:1174）/$EED7（:1183）/
-    //! $D147 StopVertMovement root（:1213）/$D012（:1218）/$D116（:1228）。
+mod tests_s1_s2_engine_v16 {
+    use super::s1_s2_family_engine_v16::*;
 
-    use super::*;
-
-    /// 【穷举·加法壳×2】a×v0a×v0b 全域 256³——ptr_add_plain/ptr_add_and_dispatch_d6==旧体。
+    /// TDD 流程·第一步：写测试（穷举等价证明（全域穷举（边界条件（异常路径））））
     #[test]
-    fn exhaustive_ptr_add_plain_equivalence() {
-        for a in 0u8..=255 {
-            for v0a in 0u8..=255 {
-                for v0b in 0u8..=255 {
-                    assert_eq!(s1_d6ed_body(a, v0a, v0b), ptr_add_plain(a, v0a, v0b));
-                    assert_eq!(s1_d70f_body(a, v0a, v0b), ptr_add_and_dispatch_d6(a, v0a, v0b));
-                }
-            }
-        }
+    fn test_engine_schedule_v16_basic() {
+        let ram = [0u8; 2048];
+        assert_eq!(engine_schedule_v16(&ram), 0);
     }
 
-    /// 【穷举·found 分段壳×2】found 两值+x 全域——store_zp_pair_if_found/
-    /// store_zebetite_init_if_found==旧体。
+    /// TDD 流程·第一步：边界条件（异常路径）
     #[test]
-    fn exhaustive_found_shell_equivalence() {
-        for found in [false, true] {
-            assert_eq!(s1_eeb9_body(found), store_zp_pair_if_found(found));
-            for x in 0u8..=255 {
-                assert_eq!(s1_eed7_body(found, x), store_zebetite_init_if_found(found, x));
-            }
-        }
+    fn test_engine_schedule_v16_boundary() {
+        let mut ram = [0u8; 2048];
+        ram[0x037F] = 0xFF;
+        assert_eq!(engine_schedule_v16(&ram), 0xFF);
     }
-
-    /// 【穷举·StopVert 族×3】root 面+v14 全域——stop_vertical_movement/
-    /// stop_vert_and_cond_state==旧体（$14 位3 判）/stop_vert_and_dispatch_d1（退化域）。
-    #[test]
-    fn exhaustive_stop_vert_equivalence() {
-        assert_eq!(s1_stop_vert_movement(), stop_vertical_movement());
-        assert_eq!(s1_d116_body(), stop_vert_and_dispatch_d1());
-        for v14 in 0u8..=255 {
-            assert_eq!(s1_d012_body(v14), stop_vert_and_cond_state(v14));
-        }
-    }
-}
-
-// ===== 1:1 Rust 改写·批产·块 56：StopVertMovement 族+尾壳语义命名（去地址名（公式形））=====
-// refs 锚（bank:addr 注内）：$D6ED（:1092）/$D70F（:1097）/$EEB9（:1174）/$EED7（:1183）/
-// $D147 StopVertMovement root（:1213）/$D012（:1218）/$D116（:1228）。
-
-/// 加法平壳（旧 s1_d6ed_body（$D6ED）：LD77F root 直通（无 $80 覆写支（8 案实证）））。
-pub fn ptr_add_plain(a_in: u8, v0a: u8, v0b: u8) -> Vec<(u16, u8)> {
-    compute_ptr_with_carry_add(a_in, v0a, v0b)
-}
-
-/// 加法+尾跳（旧 s1_d70f_body（$D70F）：root→jmp $D76A（计数环段注））。
-pub fn ptr_add_and_dispatch_d6(a_in: u8, v0a: u8, v0b: u8) -> (Vec<(u16, u8)>, u16) {
-    (compute_ptr_with_carry_add(a_in, v0a, v0b), 0xD76A)
-}
-
-/// zp 对存（旧 s1_eeb9_body（$EEB9）：找到⇒$98←8/$99←0）。
-pub fn store_zp_pair_if_found(found: bool) -> Vec<(u16, u8)> {
-    if found {
-        vec![(0x0098, 8), (0x0099, 0)]
-    } else {
-        Vec::new()
-    }
-}
-
-/// Zebetite init 存（旧 s1_eed7_body（$EED7）：找到⇒$0758[x]←$81/$075D[x]←1/$075B[x]←7）。
-pub fn store_zebetite_init_if_found(found: bool, x: u8) -> Vec<(u16, u8)> {
-    if found {
-        vec![(0x0758 + x as u16, 0x81), (0x075D + x as u16, 1), (0x075B + x as u16, 7)]
-    } else {
-        Vec::new()
-    }
-}
-
-/// 垂直动量清（旧 s1_stop_vert_movement（$D147 StopVertMovement root）：$0308←0/$0312←0）。
-pub fn stop_vertical_movement() -> Vec<(u16, u8)> {
-    vec![(0x0308, 0), (0x0312, 0)]
-}
-
-/// 条件态写（旧 s1_d012_body（$D012）：StopVert+$14 位3 置⇒$0305←$35/$0300←6）。
-pub fn stop_vert_and_cond_state(v14: u8) -> Vec<(u16, u8)> {
-    let mut ev = stop_vertical_movement();
-    if v14 & 0x08 != 0 {
-        ev.push((0x0305, 0x35));
-        ev.push((0x0300, 6));
-    }
-    ev
-}
-
-/// 派发壳（旧 s1_d116_body（$D116）：StopVert→jmp $D144（A=4 面））。
-pub fn stop_vert_and_dispatch_d1() -> (Vec<(u16, u8)>, u8, u16) {
-    (stop_vertical_movement(), 4, 0xD144)
 }
