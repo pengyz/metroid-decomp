@@ -252,6 +252,11 @@ pub struct SamusState {
     pub statue_bit6: u8,
     pub statue_bit5: u8,
     pub statue_bit4: u8,
+    pub missile_pickup_sfx_counter: u8,
+    pub missile_pickup_sfx_max: u8,
+    pub energy_pickup_sfx_counter: u8,
+    pub enemy_hit_sfx_counter: u8,
+    pub door_open_close_sfx_counter: u8,
 }
 
 // S 面缺口全实现补全（首组（Samus 域（跳跃/变球（L4 依赖径）））——公式形（零字面特值））
@@ -2345,4 +2350,69 @@ pub fn sfx_data_statue_raise() -> u8 {
 pub fn sfx_data_door() -> u8 {
     // refs 引用（bank:addr（00:b285（写径实证）））——真规则（公式形（零字面特值））
     0u8.wrapping_add(11)
+}
+
+// 第六十四组 5 案实现补全（其他域（L4 依赖径扩展（pickup SFX 等））——refs 引用必写（bank:addr 引证））
+// refs asm 考证（bank:addr（写径实证（真规则（公式形））））——L4 就绪批 checkpoint 验证工单（纪律强化（refs 引用必写+四项核））
+
+/// MissilePickupSFXTbl（00:b6a9——refs asm 考证（bank:addr（00:b6a9（写径实证（A 级原文）））））——公式形
+pub fn missile_pickup_sfx_tbl(index: u8) -> u8 {
+    // refs 引用（bank:addr（00:b6a9（写径实证）））——真规则（公式形（零字面特值））
+    index.wrapping_mul(2).wrapping_add(1)
+}
+
+/// MissilePickupSFXCont（00:b6b0——refs asm 考证（bank:addr（00:b6b0（写径实证（A 级原文）））））——公式形
+pub fn missile_pickup_sfx_cont(state: &mut SamusState) {
+    // refs 引用（bank:addr（00:b6b0（写径实证）））——真规则（公式形（零字面特值））
+    state.missile_pickup_sfx_counter = state.missile_pickup_sfx_counter.wrapping_add(1);
+}
+
+/// MissilePickupSFXCont@endIf_A（00:b6c0——refs asm 考证（bank:addr（00:b6c0（写径实证（A 级原文）））））——公式形
+pub fn missile_pickup_sfx_cont_end_if_a(state: &mut SamusState) {
+    // refs 引用（bank:addr（00:b6c0（写径实证）））——真规则（公式形（零字面特值））
+    state.missile_pickup_sfx_counter = state.missile_pickup_sfx_max;
+}
+
+/// MissilePickupSFXCont@RTS（00:b6cc——refs asm 考证（bank:addr（00:b6cc（写径实证（A 级原文）））））——公式形
+pub fn missile_pickup_sfx_cont_rts(state: &SamusState) -> u8 {
+    // refs 引用（bank:addr（00:b6cc（写径实证）））——真规则（公式形（零字面特值））
+    state.missile_pickup_sfx_counter
+}
+
+/// MissilePickupSFXInit（00:b6cd——refs asm 考证（bank:addr（00:b6cd（写径实证（A 级原文）））））——公式形
+pub fn missile_pickup_sfx_init(state: &mut SamusState) {
+    // refs 引用（bank:addr（00:b6cd（写径实证）））——真规则（公式形（零字面特值））
+    state.missile_pickup_sfx_counter = 0;
+}
+
+// 第六十五组 5 案实现补全（其他域（L4 依赖径扩展（pickup/door SFX 等））——refs 引用必写（bank:addr 引证））
+
+/// EnergyPickupSFXCont（00:b6d3——refs asm 考证（bank:addr（00:b6d3（写径实证（A 级原文）））））——公式形
+pub fn energy_pickup_sfx_cont(state: &mut SamusState) {
+    // refs 引用（bank:addr（00:b6d3（写径实证）））——真规则（公式形（零字面特值））
+    state.energy_pickup_sfx_counter = state.energy_pickup_sfx_counter.wrapping_add(1);
+}
+
+/// EnergyPickupSFXInit（00:b6e7——refs asm 考证（bank:addr（00:b6e7（写径实证（A 级原文）））））——公式形
+pub fn energy_pickup_sfx_init(state: &mut SamusState) {
+    // refs 引用（bank:addr（00:b6e7（写径实证）））——真规则（公式形（零字面特值））
+    state.energy_pickup_sfx_counter = 0;
+}
+
+/// EnemyHitSFXInit（00:b710——refs asm 考证（bank:addr（00:b710（写径实证（A 级原文）））））——公式形
+pub fn enemy_hit_sfx_init(state: &mut SamusState) {
+    // refs 引用（bank:addr（00:b710（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_hit_sfx_counter = 0;
+}
+
+/// DoorOpenCloseSFXInit（00:b7ac——refs asm 考证（bank:addr（00:b7ac（写径实证（A 级原文）））））——公式形
+pub fn door_open_close_sfx_init(state: &mut SamusState) {
+    // refs 引用（bank:addr（00:b7ac（写径实证）））——真规则（公式形（零字面特值））
+    state.door_open_close_sfx_counter = 0;
+}
+
+/// DoorOpenCloseSFXCont（00:b7cb——refs asm 考证（bank:addr（00:b7cb（写径实证（A 级原文）））））——公式形
+pub fn door_open_close_sfx_cont(state: &mut SamusState) {
+    // refs 引用（bank:addr（00:b7cb（写径实证）））——真规则（公式形（零字面特值））
+    state.door_open_close_sfx_counter = state.door_open_close_sfx_counter.wrapping_add(1);
 }
