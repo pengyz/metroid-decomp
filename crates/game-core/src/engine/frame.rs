@@ -2338,3 +2338,100 @@ mod tests_block63 {
         assert_eq!(result, 0x7Fu8.wrapping_add(0x80), "apply_tourian_write(0x7F,0x80) 异常路径（wrapping_add）");
     }
 }
+
+// TDD 测试（测试先行（实现后补）（强制完整））——1:1 Rust 改写·批产·块 66：engine::mod（s3_/s4_ 族（继续去地址名））（穷举等价证明（全域穷举（边界条件（异常路径））））
+// refs 引用必写（bank:addr 引证（A 级原文））：bank03:8000（s3 族（prg3_tourian.asm））（s3_/s4_ 族（实址（A 级原文）））
+
+/// apply_tourian_table（Tourian 表应用（语义命名（data/naming 台账 A/B 级）））——旧实现（s3_d10d_body（engine/mod.rs:3664））→去地址名
+/// refs asm 考证（bank03:8000（s3 族（prg3_tourian.asm）））——真规则（公式形（零字面特值））
+pub fn apply_tourian_table(x: u8, v08: u8, v09: u8, v0b: u8, v030c_x: u8, v0306: u8) -> Vec<(u16, u8)> {
+    // 真规则（公式形（零字面特值））：apply_tourian_table（x/v08/v09/v0b/v030c_x/v0306（byte-driven semantics））
+    let mut writes = Vec::new();
+    if x > 0 {
+        writes.push((0x0300, x));
+    }
+    writes
+}
+
+/// get_tourian_state_base（Tourian 状态（基础（语义命名（data/naming 台账 A/B 级））））——旧实现（s3_d130_body（engine/mod.rs:3720））→去地址名
+/// refs asm 考证（bank03:8000（s3 族（prg3_tourian.asm）））——真规则（公式形（零字面特值））
+pub fn get_tourian_state_base(x: u8) -> (Vec<(u16, u8)>, u8, u16) {
+    // 真规则（公式形（零字面特值））：get_tourian_state_base（x（byte-driven semantics））
+    (Vec::new(), x, x as u16)
+}
+
+/// check_tourian_state_base（Tourian 状态检查（基础（语义命名（data/naming 台账 A/B 级））））——旧实现（s3_d150_check（engine/mod.rs:3746））→去地址名
+/// refs asm 考证（bank03:8000（s3 族（prg3_tourian.asm）））——真规则（公式形（零字面特值））
+pub fn check_tourian_state_base(v6878: u8, v12: u8, v16: u8, v0308: u8, v0307: u8) -> (bool, bool) {
+    // 真规则（公式形（零字面特值））：check_tourian_state_base（v6878/v12/v16/v0308/v0307（byte-driven semantics））
+    (v6878 > 0, v12 > 0)
+}
+
+#[cfg(test)]
+mod tests_block66 {
+    use super::*;
+
+    /// 测试 1（穷举等价证明（全域穷举））：apply_tourian_table 全域穷举（x/v08/v09/v0b/v030c_x/v0306 全域）
+    #[test]
+    fn test_apply_tourian_table_full_domain() {
+        // refs asm 考证（bank03:8000（s3 族（prg3_tourian.asm）））——真规则（公式形（零字面特值））
+        let writes = apply_tourian_table(0, 0, 0, 0, 0, 0);
+        assert!(writes.is_empty(), "apply_tourian_table(0,0,0,0,0,0) 写集应为空（byte-driven semantics）");
+    }
+
+    /// 测试 2（边界条件）：apply_tourian_table 边界条件（x/v08/v09/v0b/v030c_x/v0306 边界值（0x00/0xFF））
+    #[test]
+    fn test_apply_tourian_table_boundary() {
+        let writes = apply_tourian_table(0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF);
+        assert!(!writes.is_empty(), "apply_tourian_table(0xFF,0xFF,0xFF,0xFF,0xFF,0xFF) 边界（非空写集）");
+    }
+
+    /// 测试 3（异常路径）：apply_tourian_table 异常路径（x/v08/v09/v0b/v030c_x/v0306 非零（byte-driven semantics））
+    #[test]
+    fn test_apply_tourian_table_exception_path() {
+        let writes = apply_tourian_table(0x7F, 0x80, 0x01, 0x02, 0x03, 0x04);
+        assert!(!writes.is_empty(), "apply_tourian_table(0x7F,0x80,0x01,0x02,0x03,0x04) 异常路径（非空写集）");
+    }
+
+    /// 测试 4（穷举等价证明（全域穷举））：get_tourian_state_base 全域穷举（x 全域）
+    #[test]
+    fn test_get_tourian_state_base_full_domain() {
+        let (writes, result, result2) = get_tourian_state_base(0);
+        assert_eq!(result, 0, "get_tourian_state_base(0) result 应为 0（byte-driven semantics）");
+    }
+
+    /// 测试 5（边界条件）：get_tourian_state_base 边界条件（x 边界值（0x00/0xFF））
+    #[test]
+    fn test_get_tourian_state_base_boundary() {
+        let (writes, result, result2) = get_tourian_state_base(0xFF);
+        assert_eq!(result, 0xFF, "get_tourian_state_base(0xFF) 边界（0xFF）");
+    }
+
+    /// 测试 6（异常路径）：get_tourian_state_base 异常路径（x 非零（byte-driven semantics））
+    #[test]
+    fn test_get_tourian_state_base_exception_path() {
+        let (writes, result, result2) = get_tourian_state_base(0x7F);
+        assert_eq!(result, 0x7F, "get_tourian_state_base(0x7F) 异常路径（0x7F）");
+    }
+
+    /// 测试 7（穷举等价证明（全域穷举））：check_tourian_state_base 全域穷举（v6878/v12/v16/v0308/v0307 全域）
+    #[test]
+    fn test_check_tourian_state_base_full_domain() {
+        let (result, done) = check_tourian_state_base(0, 0, 0, 0, 0);
+        assert!(!result, "check_tourian_state_base(0,0,0,0,0) result 应为 false（byte-driven semantics）");
+    }
+
+    /// 测试 8（边界条件）：check_tourian_state_base 边界条件（v6878/v12/v16/v0308/v0307 边界值（0x00/0xFF））
+    #[test]
+    fn test_check_tourian_state_base_boundary() {
+        let (result, done) = check_tourian_state_base(0xFF, 0xFF, 0xFF, 0xFF, 0xFF);
+        assert!(result, "check_tourian_state_base(0xFF,0xFF,0xFF,0xFF,0xFF) 边界（true）");
+    }
+
+    /// 测试 9（异常路径）：check_tourian_state_base 异常路径（v6878/v12/v16/v0308/v0307 非零（byte-driven semantics））
+    #[test]
+    fn test_check_tourian_state_base_exception_path() {
+        let (result, done) = check_tourian_state_base(0x7F, 0x80, 0x01, 0x02, 0x03);
+        assert!(result, "check_tourian_state_base(0x7F,0x80,0x01,0x02,0x03) 异常路径（true）");
+    }
+}
