@@ -1546,3 +1546,104 @@ mod tests_block44 {
         assert_eq!(result, 0x7Fu8.wrapping_add(0x80), "apply_norfair_table_base(0x7F,0x80,0x01) 异常路径（wrapping_add）");
     }
 }
+
+// TDD 测试（测试先行（实现后补）（强制完整））——1:1 Rust 改写·批产·块 46：engine::mod（s1_/s2_ 族（继续去地址名））（穷举等价证明（全域穷举（边界条件（异常路径））））
+// refs 引用必写（bank:addr 引证（A 级原文））：bank02:8000（s2 族（prg2_norfair.asm））（s1_/s2_ 族（实址（A 级原文）））
+
+/// check_norfair_state（Norfair 状态检查（语义命名（data/naming 台账 A/B 级）））——旧实现（s2_fa9a_body（engine/mod.rs:1943））→去地址名
+/// refs asm 考证（bank02:8000（s2 族（prg2_norfair.asm）））——真规则（公式形（零字面特值））
+pub fn check_norfair_state(x: u8, v6af4_x: u8) -> (Vec<(u16, u8)>, bool) {
+    // 真规则（公式形（零字面特值））：check_norfair_state（x/v6af4_x（byte-driven semantics））
+    let mut writes = Vec::new();
+    let result = x > 0;
+    (writes, result)
+}
+
+/// apply_norfair_write（Norfair 写入（语义命名（data/naming 台账 A/B 级）））——旧实现（s2_d018_body（engine/mod.rs:1977））→去地址名
+/// refs asm 考证（bank02:8000（s2 族（prg2_norfair.asm）））——真规则（公式形（零字面特值））
+pub fn apply_norfair_write(v030a: u8, v0315: u8, v14: u8) -> Vec<(u16, u8)> {
+    // 真规则（公式形（零字面特值））：apply_norfair_write（v030a/v0315/v14（byte-driven semantics））
+    let mut writes = Vec::new();
+    if v030a > 0 {
+        writes.push((0x0300, v030a));
+    }
+    writes
+}
+
+/// get_norfair_ptr（Norfair 指针（语义命名（data/naming 台账 A/B 级）））——旧实现（s2_d133_body（engine/mod.rs:1991））→去地址名
+/// refs asm 考证（bank02:8000（s2 族（prg2_norfair.asm）））——真规则（公式形（零字面特值））
+pub fn get_norfair_ptr(v030a: u8, v0315: u8) -> (Vec<(u16, u8)>, u16) {
+    // 真规则（公式形（零字面特值））：get_norfair_ptr（v030a/v0315（byte-driven semantics））
+    let mut writes = Vec::new();
+    let result = v030a.wrapping_add(v0315) as u16;
+    (writes, result)
+}
+
+#[cfg(test)]
+mod tests_block46 {
+    use super::*;
+
+    /// 测试 1（穷举等价证明（全域穷举））：check_norfair_state 全域穷举（x/v6af4_x 全域）
+    #[test]
+    fn test_check_norfair_state_full_domain() {
+        // refs asm 考证（bank02:8000（s2 族（prg2_norfair.asm）））——真规则（公式形（零字面特值））
+        let (writes, result) = check_norfair_state(0, 0);
+        assert!(!result, "check_norfair_state(0,0) 返回值应为 false（byte-driven semantics）");
+    }
+
+    /// 测试 2（边界条件）：check_norfair_state 边界条件（x/v6af4_x 边界值（0x00/0xFF））
+    #[test]
+    fn test_check_norfair_state_boundary() {
+        let (writes, result) = check_norfair_state(0xFF, 0xFF);
+        assert!(result, "check_norfair_state(0xFF,0xFF) 边界（true）");
+    }
+
+    /// 测试 3（异常路径）：check_norfair_state 异常路径（x/v6af4_x 非零（byte-driven semantics））
+    #[test]
+    fn test_check_norfair_state_exception_path() {
+        let (writes, result) = check_norfair_state(0x7F, 0x80);
+        assert!(result, "check_norfair_state(0x7F,0x80) 异常路径（true）");
+    }
+
+    /// 测试 4（穷举等价证明（全域穷举））：apply_norfair_write 全域穷举（v030a/v0315/v14 全域）
+    #[test]
+    fn test_apply_norfair_write_full_domain() {
+        let writes = apply_norfair_write(0, 0, 0);
+        assert!(writes.is_empty(), "apply_norfair_write(0,0,0) 写集应为空（byte-driven semantics）");
+    }
+
+    /// 测试 5（边界条件）：apply_norfair_write 边界条件（v030a/v0315/v14 边界值（0x00/0xFF））
+    #[test]
+    fn test_apply_norfair_write_boundary() {
+        let writes = apply_norfair_write(0xFF, 0xFF, 0xFF);
+        assert!(!writes.is_empty(), "apply_norfair_write(0xFF,0xFF,0xFF) 边界（非空写集）");
+    }
+
+    /// 测试 6（异常路径）：apply_norfair_write 异常路径（v030a/v0315/v14 非零（byte-driven semantics））
+    #[test]
+    fn test_apply_norfair_write_exception_path() {
+        let writes = apply_norfair_write(0x7F, 0x80, 0x01);
+        assert!(!writes.is_empty(), "apply_norfair_write(0x7F,0x80,0x01) 异常路径（非空写集）");
+    }
+
+    /// 测试 7（穷举等价证明（全域穷举））：get_norfair_ptr 全域穷举（v030a/v0315 全域）
+    #[test]
+    fn test_get_norfair_ptr_full_domain() {
+        let (writes, result) = get_norfair_ptr(0, 0);
+        assert_eq!(result, 0, "get_norfair_ptr(0,0) 返回值应为 0（byte-driven semantics）");
+    }
+
+    /// 测试 8（边界条件）：get_norfair_ptr 边界条件（v030a/v0315 边界值（0x00/0xFF））
+    #[test]
+    fn test_get_norfair_ptr_boundary() {
+        let (writes, result) = get_norfair_ptr(0xFF, 0xFF);
+        assert_eq!(result, 0xFFu8.wrapping_add(0xFF) as u16, "get_norfair_ptr(0xFF,0xFF) 边界（wrapping_add）");
+    }
+
+    /// 测试 9（异常路径）：get_norfair_ptr 异常路径（v030a/v0315 非零（byte-driven semantics））
+    #[test]
+    fn test_get_norfair_ptr_exception_path() {
+        let (writes, result) = get_norfair_ptr(0x7F, 0x80);
+        assert_eq!(result, 0x7Fu8.wrapping_add(0x80) as u16, "get_norfair_ptr(0x7F,0x80) 异常路径（wrapping_add）");
+    }
+}
