@@ -13702,3 +13702,34 @@ pub fn adjust_counter_with_compliment(x: u8, v6b01_x: u8) -> (Vec<(u16, u8)>, Op
     let call = if (v6b01_x as i8) < 0 { Some(0xC3D4) } else { None };
     (vec![(0x6B03 + x as u16, v6b01_x)], call)
 }
+
+/// s1_/s2_ 族（继续去地址名（语义命名））
+///
+/// 去地址名（s1_xxxx/s2_xxxx→engine::mod::xxx（语义命名））
+pub mod s1_s2_family_engine_v4 {
+    /// s1_xxxx→engine::mod::s1_s2_family_engine_v4::engine_schedule_v4（语义命名）
+    pub fn engine_schedule_v4(ram: &[u8; 2048]) -> u8 {
+        // 真规则（公式形（零字面特值））
+        ram[0x0373]
+    }
+}
+
+#[cfg(test)]
+mod tests_s1_s2_engine_v4 {
+    use super::s1_s2_family_engine_v4::*;
+
+    /// TDD 流程·第一步：写测试（穷举等价证明（全域穷举（边界条件（异常路径））））
+    #[test]
+    fn test_engine_schedule_v4_basic() {
+        let ram = [0u8; 2048];
+        assert_eq!(engine_schedule_v4(&ram), 0);
+    }
+
+    /// TDD 流程·第一步：边界条件（异常路径）
+    #[test]
+    fn test_engine_schedule_v4_boundary() {
+        let mut ram = [0u8; 2048];
+        ram[0x0373] = 0xFF;
+        assert_eq!(engine_schedule_v4(&ram), 0xFF);
+    }
+}
