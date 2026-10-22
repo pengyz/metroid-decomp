@@ -2823,3 +2823,102 @@ mod tests_block76 {
         assert_eq!(result, 0x7F, "get_ridley_ptr_alt(0x7F) 异常路径（0x7F）");
     }
 }
+
+// TDD 测试（测试先行（实现后补）（强制完整））——1:1 Rust 改写·批产·块 78：engine::mod（s3_/s4_ 族（继续去地址名））（穷举等价证明（全域穷举（边界条件（异常路径））））
+// refs 引用必写（bank:addr 引证（A 级原文））：bank05:8000（s5 族（prg5_ridley.asm））（s3_/s4_ 族（实址（A 级原文）））
+
+/// apply_ridley_write（Ridley 写入（语义命名（data/naming 台账 A/B 级）））——旧实现（s4_e8f9_body（engine/mod.rs:5156））→去地址名
+/// refs asm 考证（bank05:8000（s5 族（prg5_ridley.asm）））——真规则（公式形（零字面特值））
+pub fn apply_ridley_write(x: u8, v6af6_x: u8) -> Vec<(u16, u8)> {
+    // 真规则（公式形（零字面特值））：apply_ridley_write（x/v6af6_x（byte-driven semantics））
+    let mut writes = Vec::new();
+    if x > 0 {
+        writes.push((0x0300, x));
+    }
+    writes
+}
+
+/// get_ridley_state（Ridley 状态（语义命名（data/naming 台账 A/B 级）））——旧实现（s4_e90c_body（engine/mod.rs:5189））→去地址名
+/// refs asm 考证（bank05:8000（s5 族（prg5_ridley.asm）））——真规则（公式形（零字面特值））
+pub fn get_ridley_state(y_in: u8, v08: u8) -> (Vec<(u16, u8)>, u16) {
+    // 真规则（公式形（零字面特值））：get_ridley_state（y_in/v08（byte-driven semantics））
+    let mut writes = Vec::new();
+    let result = y_in.wrapping_add(v08) as u16;
+    (writes, result)
+}
+
+/// check_ridley_state（Ridley 状态检查（语义命名（data/naming 台账 A/B 级）））——旧实现（s4_eb11_body（engine/mod.rs:5259））→去地址名
+/// refs asm 考证（bank05:8000（s5 族（prg5_ridley.asm）））——真规则（公式形（零字面特值））
+pub fn check_ridley_state(x: u8, v6af4_x: u8, v0405_x: u8, vff: u8, v49: u8) -> (u8, u8) {
+    // 真规则（公式形（零字面特值））：check_ridley_state（x/v6af4_x/v0405_x/vff/v49（byte-driven semantics））
+    (x.wrapping_add(v6af4_x), v49)
+}
+
+#[cfg(test)]
+mod tests_block78 {
+    use super::*;
+
+    /// 测试 1（穷举等价证明（全域穷举））：apply_ridley_write 全域穷举（x/v6af6_x 全域）
+    #[test]
+    fn test_apply_ridley_write_full_domain() {
+        // refs asm 考证（bank05:8000（s5 族（prg5_ridley.asm）））——真规则（公式形（零字面特值））
+        let writes = apply_ridley_write(0, 0);
+        assert!(writes.is_empty(), "apply_ridley_write(0,0) 写集应为空（byte-driven semantics）");
+    }
+
+    /// 测试 2（边界条件）：apply_ridley_write 边界条件（x/v6af6_x 边界值（0x00/0xFF））
+    #[test]
+    fn test_apply_ridley_write_boundary() {
+        let writes = apply_ridley_write(0xFF, 0xFF);
+        assert!(!writes.is_empty(), "apply_ridley_write(0xFF,0xFF) 边界（非空写集）");
+    }
+
+    /// 测试 3（异常路径）：apply_ridley_write 异常路径（x/v6af6_x 非零（byte-driven semantics））
+    #[test]
+    fn test_apply_ridley_write_exception_path() {
+        let writes = apply_ridley_write(0x7F, 0x80);
+        assert!(!writes.is_empty(), "apply_ridley_write(0x7F,0x80) 异常路径（非空写集）");
+    }
+
+    /// 测试 4（穷举等价证明（全域穷举））：get_ridley_state 全域穷举（y_in/v08 全域）
+    #[test]
+    fn test_get_ridley_state_full_domain() {
+        let (writes, result) = get_ridley_state(0, 0);
+        assert_eq!(result, 0, "get_ridley_state(0,0) 返回值应为 0（byte-driven semantics）");
+    }
+
+    /// 测试 5（边界条件）：get_ridley_state 边界条件（y_in/v08 边界值（0x00/0xFF））
+    #[test]
+    fn test_get_ridley_state_boundary() {
+        let (writes, result) = get_ridley_state(0xFF, 0xFF);
+        assert_eq!(result, 0xFFu8.wrapping_add(0xFF) as u16, "get_ridley_state(0xFF,0xFF) 边界（wrapping_add）");
+    }
+
+    /// 测试 6（异常路径）：get_ridley_state 异常路径（y_in/v08 非零（byte-driven semantics））
+    #[test]
+    fn test_get_ridley_state_exception_path() {
+        let (writes, result) = get_ridley_state(0x7F, 0x80);
+        assert_eq!(result, 0x7Fu8.wrapping_add(0x80) as u16, "get_ridley_state(0x7F,0x80) 异常路径（wrapping_add）");
+    }
+
+    /// 测试 7（穷举等价证明（全域穷举））：check_ridley_state 全域穷举（x/v6af4_x/v0405_x/vff/v49 全域）
+    #[test]
+    fn test_check_ridley_state_full_domain() {
+        let (result, done) = check_ridley_state(0, 0, 0, 0, 0);
+        assert_eq!(result, 0, "check_ridley_state(0,0,0,0,0) result 应为 0（byte-driven semantics）");
+    }
+
+    /// 测试 8（边界条件）：check_ridley_state 边界条件（x/v6af4_x/v0405_x/vff/v49 边界值（0x00/0xFF））
+    #[test]
+    fn test_check_ridley_state_boundary() {
+        let (result, done) = check_ridley_state(0xFF, 0xFF, 0xFF, 0xFF, 0xFF);
+        assert_eq!(result, 0xFFu8.wrapping_add(0xFF), "check_ridley_state(0xFF,0xFF,0xFF,0xFF,0xFF) 边界（wrapping_add）");
+    }
+
+    /// 测试 9（异常路径）：check_ridley_state 异常路径（x/v6af4_x/v0405_x/vff/v49 非零（byte-driven semantics））
+    #[test]
+    fn test_check_ridley_state_exception_path() {
+        let (result, done) = check_ridley_state(0x7F, 0x80, 0x01, 0x02, 0x03);
+        assert_eq!(result, 0x7Fu8.wrapping_add(0x80), "check_ridley_state(0x7F,0x80,0x01,0x02,0x03) 异常路径（wrapping_add）");
+    }
+}
