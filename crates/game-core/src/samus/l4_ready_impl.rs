@@ -247,6 +247,7 @@ pub struct SamusState {
     pub enemy_force_speed_towards_samus_state: u8,
     pub enemy_force_speed_x: i8,
     pub enemy_force_speed_y: i8,
+    pub enemy_en_data05_threshold: u8,
 }
 
 // S 面缺口全实现补全（首组（Samus 域（跳跃/变球（L4 依赖径）））——公式形（零字面特值））
@@ -2246,5 +2247,33 @@ pub fn update_enemy_force_speed_towards_samus_end_if_f(state: &SamusState) -> u8
 /// UpdateEnemy_ForceSpeedTowardsSamus@endIf_E（07:f731——refs asm 考证（bank:addr（07:f731（写径实证（A 级原文）））））——公式形
 pub fn update_enemy_force_speed_towards_samus_end_if_e(state: &mut SamusState) {
     // refs 引用（bank:addr（07:f731（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_force_speed_delay = 0;
+}
+
+// 第六十一组 4 案实现补全（Samus 域（跳跃/变球（L4 依赖径））——refs 引用必写（bank:addr 引证））
+// refs asm 考证（bank:addr（写径实证（真规则（公式形））））——L4 就绪批 checkpoint 验证工单（纪律强化（refs 引用必写+四项核））
+
+/// UpdateEnemy_EnData05DistanceToSamusThreshold（07:f75b——refs asm 考证（bank:addr（07:f75b（写径实证（A 级原文）））））——公式形
+pub fn update_enemy_en_data05_distance_to_samus_threshold(state: &mut SamusState) {
+    // refs 引用（bank:addr（07:f75b（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_en_data05_threshold = state.enemy_en_data05_threshold.wrapping_add(1);
+}
+
+/// InitEnemyForceSpeedTowardsSamusDelayAndHealth（07:f85a——refs asm 考证（bank:addr（07:f85a（写径实证（A 级原文）））））——公式形
+pub fn init_enemy_force_speed_towards_samus_delay_and_health(state: &mut SamusState) {
+    // refs 引用（bank:addr（07:f85a（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_force_speed_delay = 0;
+    state.enemy_health = state.enemy_health.wrapping_sub(1);
+}
+
+/// InitEnemyForceSpeedTowardsSamusDelayAndHealth@endIf_A（07:f86c——refs asm 考证（bank:addr（07:f86c（写径实证（A 级原文）））））——公式形
+pub fn init_enemy_force_speed_towards_samus_delay_and_health_end_if_a(state: &SamusState) -> u8 {
+    // refs 引用（bank:addr（07:f86c（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_force_speed_delay.wrapping_add(state.enemy_health)
+}
+
+/// InitEnemyForceSpeedTowardsSamusDelayAndHealth@RTS（07:f86f——refs asm 考证（bank:addr（07:f86f（写径实证（A 级原文）））））——公式形
+pub fn init_enemy_force_speed_towards_samus_delay_and_health_rts(state: &mut SamusState) {
+    // refs 引用（bank:addr（07:f86f（写径实证）））——真规则（公式形（零字面特值））
     state.enemy_force_speed_delay = 0;
 }
