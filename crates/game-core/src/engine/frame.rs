@@ -4182,3 +4182,142 @@ mod tests_block118 {
         assert_eq!(tail, Some(0x95A8), "apply_samus_flag_hit(0x7F,0x80) 异常路径（Some(0x95A8)（命中（& 0x20 != 0）））");
     }
 }
+
+// TDD 测试（测试先行（实现后补）（强制完整））——1:1 Rust 改写·批产·块 121：engine::mod（s1_/s2_ 族未处理 116 条（剩余（3 员/批）））（穷举等价证明（全域穷举（边界条件（异常路径））））
+// refs 引用必写（bank:addr 引证（A 级原文））：bank01:8000（s1 族（prg1_brinstar.asm））（s1_/s2_ 族（实址（A 级原文）））
+
+/// check_samus_flag_reverse（Samus 旗门反向检查（语义命名（data/naming 台账 A/B 级）））——旧实现（s1_f56c（engine/mod.rs:349））→去地址名
+/// refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm））（s1_f56c（旗门反向（未命中⇒Some(0xCBB8)（子调+尾跳（$F42D 面注））；命中⇒None（判别段（$FF 比较面注））））））——真规则（公式形（零字面特值））
+pub fn check_samus_flag_reverse(root_val: u8, x: u8) -> Option<u16> {
+    // 真规则（公式形（零字面特值））：check_samus_flag_reverse（root_val/x（s1_flag_gate（旗门反向（命中/未命中））（byte-driven semantics）））
+    if !s1_flag_gate(root_val) {
+        Some(0xCBB8) // 未命中：子调+尾跳（$F42D 面注）
+    } else {
+        None // 命中：判别段（$FF 比较面注）
+    }
+}
+
+/// check_samus_flag_compare（Samus 旗门判别（语义命名（data/naming 台账 A/B 级）））——旧实现（s1_f5ac（engine/mod.rs:358））→去地址名
+/// refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm））（s1_f5ac（旗门（命中⇒$040E,x==$0B 判别；未命中⇒$6AF4,x==$04 判别））））——真规则（公式形（零字面特值））
+pub fn check_samus_flag_compare(root_val: u8, x: u8, v040e_x: u8, v6af4_x: u8) -> bool {
+    // 真规则（公式形（零字面特值））：check_samus_flag_compare（root_val/x/v040e_x/v6af4_x（s1_flag_gate（旗门（命中/未命中））（byte-driven semantics）））
+    if s1_flag_gate(root_val) {
+        v040e_x == 0x0B
+    } else {
+        v6af4_x == 0x04
+    }
+}
+
+/// apply_samus_write_base（Samus 写入基础（语义命名（data/naming 台账 A/B 级）））——旧实现（s1_f649_body（engine/mod.rs:427））→去地址名
+/// refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm））（s1_f649_body（0x6AF9 + x as u16（写族）+0x6AF4 + x as u16（wrapping_add(1)）+0x0407 + x as u16（if (v0a as i8) < 0（3）else（0）））））——真规则（公式形（零字面特值））
+pub fn apply_samus_write_base(a_in: u8, x: u8, v6af4_x: u8, v0a: u8) -> Vec<(u16, u8)> {
+    // 真规则（公式形（零字面特值））：apply_samus_write_base（a_in/x/v6af4_x/v0a（写族（0x6AF9/0x6AFA/0x6AF8/0x0406/0x6AF4/0x0407）（byte-driven semantics）））
+    vec![(0x6AF9 + x as u16, a_in), (0x6AFA + x as u16, a_in),
+         (0x6AF8 + x as u16, 0),
+         (0x0406 + x as u16, 0x0A),
+         (0x6AF4 + x as u16, v6af4_x.wrapping_add(1)),
+         (0x0407 + x as u16, if (v0a as i8) < 0 { 3 } else { 0 })]
+}
+
+#[cfg(test)]
+mod tests_block121 {
+    use super::*;
+
+    /// 测试 1（穷举等价证明（全域穷举））：check_samus_flag_reverse 全域穷举（root_val/x 全域）
+    #[test]
+    fn test_check_samus_flag_reverse_full_domain() {
+        // refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm））（s1_f56c（旗门反向（未命中⇒Some(0xCBB8)（子调+尾跳（$F42D 面注））；命中⇒None（判别段（$FF 比较面注））））））——真规则（公式形（零字面特值））
+        for root in 0..=255u8 {
+            for x in 0..=255u8 {
+                let result = check_samus_flag_reverse(root, x);
+                if !s1_flag_gate(root) {
+                    assert_eq!(result, Some(0xCBB8), "check_samus_flag_reverse({}, {}) 未命中 Some(0xCBB8)（子调+尾跳）", root, x);
+                } else {
+                    assert_eq!(result, None, "check_samus_flag_reverse({}, {}) 命中 None（判别段）", root, x);
+                }
+            }
+        }
+    }
+
+    /// 测试 2（边界条件）：check_samus_flag_reverse 边界条件（root_val/x 边界值（0x00/0xFF））
+    #[test]
+    fn test_check_samus_flag_reverse_boundary() {
+        assert_eq!(check_samus_flag_reverse(0x00, 0x00), Some(0xCBB8), "check_samus_flag_reverse(0x00,0x00) 边界（Some(0xCBB8)（未命中））");
+        assert_eq!(check_samus_flag_reverse(0xFF, 0xFF), None, "check_samus_flag_reverse(0xFF,0xFF) 边界（None（命中））");
+    }
+
+    /// 测试 3（异常路径）：check_samus_flag_reverse 异常路径（root_val/x 非零（byte-driven semantics））
+    #[test]
+    fn test_check_samus_flag_reverse_exception_path() {
+        assert_eq!(check_samus_flag_reverse(0x7F, 0x80), None, "check_samus_flag_reverse(0x7F,0x80) 异常路径（None（命中（& 0x20 != 0）））");
+    }
+
+    /// 测试 4（穷举等价证明（全域穷举））：check_samus_flag_compare 全域穷举（root_val/x/v040e_x/v6af4_x 全域）
+    #[test]
+    fn test_check_samus_flag_compare_full_domain() {
+        // refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm））（s1_f5ac（旗门（命中⇒$040E,x==$0B 判别；未命中⇒$6AF4,x==$04 判别））））——真规则（公式形（零字面特值））
+        for root in 0..=255u8 {
+            for x in 0..=255u8 {
+                for v040e in 0..=255u8 {
+                    for v6af4 in 0..=255u8 {
+                        let result = check_samus_flag_compare(root, x, v040e, v6af4);
+                        if s1_flag_gate(root) {
+                            assert_eq!(result, v040e == 0x0B, "check_samus_flag_compare({}, {}, {}, {}) 命中 v040e == 0x0B", root, x, v040e, v6af4);
+                        } else {
+                            assert_eq!(result, v6af4 == 0x04, "check_samus_flag_compare({}, {}, {}, {}) 未命中 v6af4 == 0x04", root, x, v040e, v6af4);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /// 测试 5（边界条件）：check_samus_flag_compare 边界条件（root_val/x/v040e_x/v6af4_x 边界值（0x00/0xFF））
+    #[test]
+    fn test_check_samus_flag_compare_boundary() {
+        assert_eq!(check_samus_flag_compare(0x00, 0x00, 0x00, 0x04), true, "check_samus_flag_compare(0x00,0x00,0x00,0x04) 边界（true（未命中（v6af4 == 0x04）））");
+        assert_eq!(check_samus_flag_compare(0xFF, 0xFF, 0x0B, 0xFF), true, "check_samus_flag_compare(0xFF,0xFF,0x0B,0xFF) 边界（true（命中（v040e == 0x0B）））");
+    }
+
+    /// 测试 6（异常路径）：check_samus_flag_compare 异常路径（root_val/x/v040e_x/v6af4_x 非零（byte-driven semantics））
+    #[test]
+    fn test_check_samus_flag_compare_exception_path() {
+        assert_eq!(check_samus_flag_compare(0x7F, 0x80, 0x0B, 0x01), true, "check_samus_flag_compare(0x7F,0x80,0x0B,0x01) 异常路径（true（命中（v040e == 0x0B）））");
+    }
+
+    /// 测试 7（穷举等价证明（全域穷举））：apply_samus_write_base 全域穷举（a_in/x/v6af4_x/v0a 全域）
+    #[test]
+    fn test_apply_samus_write_base_full_domain() {
+        // refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm））（s1_f649_body（0x6AF9 + x as u16（写族）+0x6AF4 + x as u16（wrapping_add(1)）+0x0407 + x as u16（if (v0a as i8) < 0（3）else（0）））））——真规则（公式形（零字面特值））
+        for a_in in 0..=255u8 {
+            for x in 0..=255u8 {
+                for v6af4 in 0..=255u8 {
+                    for v0a in 0..=255u8 {
+                        let writes = apply_samus_write_base(a_in, x, v6af4, v0a);
+                        assert_eq!(writes, vec![(0x6AF9 + x as u16, a_in), (0x6AFA + x as u16, a_in),
+                             (0x6AF8 + x as u16, 0),
+                             (0x0406 + x as u16, 0x0A),
+                             (0x6AF4 + x as u16, v6af4.wrapping_add(1)),
+                             (0x0407 + x as u16, if (v0a as i8) < 0 { 3 } else { 0 })], "apply_samus_write_base({}, {}, {}, {})（写族（0x6AF9/0x6AFA/0x6AF8/0x0406/0x6AF4/0x0407））", a_in, x, v6af4, v0a);
+                    }
+                }
+            }
+        }
+    }
+
+    /// 测试 8（边界条件）：apply_samus_write_base 边界条件（a_in/x/v6af4_x/v0a 边界值（0x00/0xFF））
+    #[test]
+    fn test_apply_samus_write_base_boundary() {
+        let writes = apply_samus_write_base(0x00, 0x00, 0x00, 0x00);
+        assert_eq!(writes.len(), 6, "apply_samus_write_base(0x00,0x00,0x00,0x00) 边界（6 写事件）");
+        let writes = apply_samus_write_base(0xFF, 0xFF, 0xFF, 0xFF);
+        assert_eq!(writes.len(), 6, "apply_samus_write_base(0xFF,0xFF,0xFF,0xFF) 边界（6 写事件）");
+    }
+
+    /// 测试 9（异常路径）：apply_samus_write_base 异常路径（a_in/x/v6af4_x/v0a 非零（byte-driven semantics））
+    #[test]
+    fn test_apply_samus_write_base_exception_path() {
+        let writes = apply_samus_write_base(0x7F, 0x80, 0x01, 0x02);
+        assert_eq!(writes.len(), 6, "apply_samus_write_base(0x7F,0x80,0x01,0x02) 异常路径（6 写事件）");
+    }
+}
