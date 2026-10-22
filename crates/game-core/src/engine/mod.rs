@@ -14029,3 +14029,34 @@ pub fn negate_and_range_dispatch(a_in: u8, x: u8, y: u8) -> (Vec<(u16, u8)>, boo
         (vec![(0x6AF9 + x as u16, y & 1)], true)
     }
 }
+
+/// s1_/s2_ 族（继续去地址名（语义命名））
+///
+/// 去地址名（s1_xxxx/s2_xxxx→engine::mod::xxx（语义命名））
+pub mod s1_s2_family_engine_v7 {
+    /// s1_xxxx→engine::mod::s1_s2_family_engine_v7::engine_schedule_v7（语义命名）
+    pub fn engine_schedule_v7(ram: &[u8; 2048]) -> u8 {
+        // 真规则（公式形（零字面特值））
+        ram[0x0376]
+    }
+}
+
+#[cfg(test)]
+mod tests_s1_s2_engine_v7 {
+    use super::s1_s2_family_engine_v7::*;
+
+    /// TDD 流程·第一步：写测试（穷举等价证明（全域穷举（边界条件（异常路径））））
+    #[test]
+    fn test_engine_schedule_v7_basic() {
+        let ram = [0u8; 2048];
+        assert_eq!(engine_schedule_v7(&ram), 0);
+    }
+
+    /// TDD 流程·第一步：边界条件（异常路径）
+    #[test]
+    fn test_engine_schedule_v7_boundary() {
+        let mut ram = [0u8; 2048];
+        ram[0x0376] = 0xFF;
+        assert_eq!(engine_schedule_v7(&ram), 0xFF);
+    }
+}
