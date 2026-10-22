@@ -11641,6 +11641,40 @@ powerup.rs（4c3dded（feat(core),docs(design)）））——refs 实址 ✓（*
 对抗复核核（证伪立场（独立重导证据（正确性核）））✓——复核 verdict 实录（docs commit（对抗
 复核 verdict（四项核（A 级原文））））✓。
 
+## 批量改写·对抗复核（4 件（簇 16 补全+簇 18/20+簇 19 修订（第十一轮）（证伪立场（独立
+重导证据（正确性核））））
+
+### verdict: pass（4/4 全 ✓（A 级原文））
+
+**① 簇 16 补全（pickup::powerup）✓ pass**（复审（前轮实录））：文档+实现双补 ✓（cluster-16-
+rewrite.md+pickup/powerup.rs（4c3dded））+refs 实址 ✓（07:DB37（UpdateAllPowerUps
+（prg7_engine.asm:5503））+07:DB42（UpdateOnePowerUp（:5513））+07:DC1C/DC54/DC67（附加例程））
++registry 双射 ✓（07:DB37/07:DB42→crate::pickup::powerup）——PowerUp 显示更新域（bank07（正确））✓
+
+**② 簇 18（engine::nmi）✓ pass**：refs 实址 ✓（bank00:9A07（NMIScreenWrite）+bank00:BFBA-BFBF
+（ROMSWITCH_RESET@WaitForVBlank1/2（WaitForVBlank）））——**NMI 域（bank00（正确）**+实现 ✓
+（crates/game-core/src/frame/nmi.rs（feat(core)））+六步流程 ✓（cluster-18-rewrite.md）✓
+
+**③ 簇 20（world::elevator）✓ pass**：refs 实址 ✓（bank07:D423（SamusElevator
+（prg7_engine.asm:4168））+D7B3（UpdateElevator（:4805））+D7D1（ElevatorIdle（:4821））+
+D806（DrawElevator（:4853））+D80E（ElevatorScrollXToCenter（:4861））+D83D（ElevatorMove
+（:4890））+D870（ElevatorScrollY（:4927））+bank01:85C2（ObjAnim_ElevatorFadeOutArea
+（common_sprite_data.asm:171））+85E0（ObjAnim_ElevatorFadeInArea（:211））+88EE（ObjFrame_
+Elevator（:1070）））——**电梯域（bank07 引擎+bank01 精灵数据（正确）**+实现 ✓（world/
+elevator.rs（5c66345（feat(core)））+六步流程 ✓）✓
+
+**④ 簇 19 修订（engine::boot）✓ pass**（复审（前轮实录））：refs 零实址更正 ✓（bank00:8071-80BE
+（InitializeAfterReset）+92D4（InitializeGame）+932B（InitializeStats））——启动初始化域
+（bank00（正确））+六步流程 ✓（cluster-19-rewrite.md（9e4ba2c））✓
+
+**verdict**：批量改写 4 件（第十一轮）**pass**（①簇 16 补全（文档+实现双补（07:DB37/DB42/DC1C/
+DC54/DC67（prg7_engine.asm:5503/5513（PowerUp 域（bank07）））+registry 双射））②簇 18（bank00:9A07
+（NMIScreenWrite）+BFBA-BFBF（WaitForVBlank（NMI 域）））③簇 20（bank07:D423 族（SamusElevator/
+UpdateElevator/ElevatorIdle/DrawElevator/ElevatorMove/ElevatorScrollY（电梯域（bank07））+bank01:
+85C2/85E0/88EE（ObjAnim/ObjFrame_Elevator（精灵数据（bank01）））））④簇 19 修订（bank00:8071-80BE/
+92D4/932B（Initialize*（启动域（bank00）））））——对抗复核核（证伪立场（独立重导证据（正确性
+核）））✓——复核 verdict 实录（docs commit（对抗复核 verdict（四项核（A 级原文））））✓。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
