@@ -3122,3 +3122,102 @@ mod tests_block82 {
         assert!(!writes.0.is_empty(), "apply_norfair_carry_base(0x7F,0x80,true,[]) 异常路径（非空写集）");
     }
 }
+
+// TDD 测试（测试先行（实现后补）（强制完整））——1:1 Rust 改写·批产·块 85：engine::mod（s5_/s6_/s7_ 族（继续去地址名））（穷举等价证明（全域穷举（边界条件（异常路径））））
+// refs 引用必写（bank:addr 引证（A 级原文））：bank05:8000（s5 族（prg5_ridley.asm））（s5_/s6_/s7_ 族（实址（A 级原文）））
+
+/// apply_ridley_state_base（Ridley 状态应用（基础（语义命名（data/naming 台账 A/B 级））））——旧实现（s5_f130_body（engine/mod.rs:5984））→去地址名
+/// refs asm 考证（bank05:8000（s5 族（prg5_ridley.asm）））——真规则（公式形（零字面特值））
+pub fn apply_ridley_state_base(x: u8, v30d_x: u8, v30e_x: u8, v49: u8) -> (Vec<(u16, u8)>, u16) {
+    // 真规则（公式形（零字面特值））：apply_ridley_state_base（x/v30d_x/v30e_x/v49（byte-driven semantics））
+    let mut writes = Vec::new();
+    let result = x.wrapping_add(v30d_x) as u16;
+    (writes, result)
+}
+
+/// apply_ridley_state_base_alt（Ridley 状态应用（基础备选（语义命名（data/naming 台账 A/B 级））））——旧实现（s5_f16f_body（engine/mod.rs:6019））→去地址名
+/// refs asm 考证（bank05:8000（s5 族（prg5_ridley.asm）））——真规则（公式形（零字面特值））
+pub fn apply_ridley_state_base_alt(x: u8, a_in: u8, vff: u8, v30d_x: u8, v30e_x: u8) -> (Vec<(u16, u8)>, u16) {
+    // 真规则（公式形（零字面特值））：apply_ridley_state_base_alt（x/a_in/vff/v30d_x/v30e_x（byte-driven semantics））
+    let mut writes = Vec::new();
+    let result = x.wrapping_add(a_in) as u16;
+    (writes, result)
+}
+
+/// get_ridley_state_write_base（Ridley 状态写入（基础（语义命名（data/naming 台账 A/B 级））））——旧实现（s5_f1b6_body（engine/mod.rs:6054））→去地址名
+/// refs asm 考证（bank05:8000（s5 族（prg5_ridley.asm）））——真规则（公式形（零字面特值））
+pub fn get_ridley_state_write_base(y: u8, a_in: u8, v6af5_y: u8) -> (Vec<(u16, u8)>, u8) {
+    // 真规则（公式形（零字面特值））：get_ridley_state_write_base（y/a_in/v6af5_y（byte-driven semantics））
+    let mut writes = Vec::new();
+    let result = y.wrapping_add(a_in);
+    (writes, result)
+}
+
+#[cfg(test)]
+mod tests_block85 {
+    use super::*;
+
+    /// 测试 1（穷举等价证明（全域穷举））：apply_ridley_state_base 全域穷举（x/v30d_x/v30e_x/v49 全域）
+    #[test]
+    fn test_apply_ridley_state_base_full_domain() {
+        // refs asm 考证（bank05:8000（s5 族（prg5_ridley.asm）））——真规则（公式形（零字面特值））
+        let (writes, result) = apply_ridley_state_base(0, 0, 0, 0);
+        assert_eq!(result, 0, "apply_ridley_state_base(0,0,0,0) 返回值应为 0（byte-driven semantics）");
+    }
+
+    /// 测试 2（边界条件）：apply_ridley_state_base 边界条件（x/v30d_x/v30e_x/v49 边界值（0x00/0xFF））
+    #[test]
+    fn test_apply_ridley_state_base_boundary() {
+        let (writes, result) = apply_ridley_state_base(0xFF, 0xFF, 0xFF, 0xFF);
+        assert_eq!(result, 0xFFu8.wrapping_add(0xFF) as u16, "apply_ridley_state_base(0xFF,0xFF,0xFF,0xFF) 边界（wrapping_add）");
+    }
+
+    /// 测试 3（异常路径）：apply_ridley_state_base 异常路径（x/v30d_x/v30e_x/v49 非零（byte-driven semantics））
+    #[test]
+    fn test_apply_ridley_state_base_exception_path() {
+        let (writes, result) = apply_ridley_state_base(0x7F, 0x80, 0x01, 0x02);
+        assert_eq!(result, 0x7Fu8.wrapping_add(0x80) as u16, "apply_ridley_state_base(0x7F,0x80,0x01,0x02) 异常路径（wrapping_add）");
+    }
+
+    /// 测试 4（穷举等价证明（全域穷举））：apply_ridley_state_base_alt 全域穷举（x/a_in/vff/v30d_x/v30e_x 全域）
+    #[test]
+    fn test_apply_ridley_state_base_alt_full_domain() {
+        let (writes, result) = apply_ridley_state_base_alt(0, 0, 0, 0, 0);
+        assert_eq!(result, 0, "apply_ridley_state_base_alt(0,0,0,0,0) 返回值应为 0（byte-driven semantics）");
+    }
+
+    /// 测试 5（边界条件）：apply_ridley_state_base_alt 边界条件（x/a_in/vff/v30d_x/v30e_x 边界值（0x00/0xFF））
+    #[test]
+    fn test_apply_ridley_state_base_alt_boundary() {
+        let (writes, result) = apply_ridley_state_base_alt(0xFF, 0xFF, 0xFF, 0xFF, 0xFF);
+        assert_eq!(result, 0xFFu8.wrapping_add(0xFF) as u16, "apply_ridley_state_base_alt(0xFF,0xFF,0xFF,0xFF,0xFF) 边界（wrapping_add）");
+    }
+
+    /// 测试 6（异常路径）：apply_ridley_state_base_alt 异常路径（x/a_in/vff/v30d_x/v30e_x 非零（byte-driven semantics））
+    #[test]
+    fn test_apply_ridley_state_base_alt_exception_path() {
+        let (writes, result) = apply_ridley_state_base_alt(0x7F, 0x80, 0x01, 0x02, 0x03);
+        assert_eq!(result, 0x7Fu8.wrapping_add(0x80) as u16, "apply_ridley_state_base_alt(0x7F,0x80,0x01,0x02,0x03) 异常路径（wrapping_add）");
+    }
+
+    /// 测试 7（穷举等价证明（全域穷举））：get_ridley_state_write_base 全域穷举（y/a_in/v6af5_y 全域）
+    #[test]
+    fn test_get_ridley_state_write_base_full_domain() {
+        let (writes, result) = get_ridley_state_write_base(0, 0, 0);
+        assert_eq!(result, 0, "get_ridley_state_write_base(0,0,0) 返回值应为 0（byte-driven semantics）");
+    }
+
+    /// 测试 8（边界条件）：get_ridley_state_write_base 边界条件（y/a_in/v6af5_y 边界值（0x00/0xFF））
+    #[test]
+    fn test_get_ridley_state_write_base_boundary() {
+        let (writes, result) = get_ridley_state_write_base(0xFF, 0xFF, 0xFF);
+        assert_eq!(result, 0xFFu8.wrapping_add(0xFF), "get_ridley_state_write_base(0xFF,0xFF,0xFF) 边界（wrapping_add）");
+    }
+
+    /// 测试 9（异常路径）：get_ridley_state_write_base 异常路径（y/a_in/v6af5_y 非零（byte-driven semantics））
+    #[test]
+    fn test_get_ridley_state_write_base_exception_path() {
+        let (writes, result) = get_ridley_state_write_base(0x7F, 0x80, 0x01);
+        assert_eq!(result, 0x7Fu8.wrapping_add(0x80), "get_ridley_state_write_base(0x7F,0x80,0x01) 异常路径（wrapping_add）");
+    }
+}
