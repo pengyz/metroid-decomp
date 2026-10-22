@@ -174,3 +174,122 @@ mod tests {
         assert_eq!(seq[5], BootStep::Mmc1CtrlInit);
     }
 }
+
+// ===== 旧实现改写·第六件（s1_/s2_ 族去地址名（TDD 穷举等价证明））=====
+
+#[cfg(test)]
+mod tests_rewrite6 {
+    //! TDD step1（测试先行（强制完整））——穷举等价证明（新语义 fn==旧 s1_/s2_ 地址名 fn
+    //! （全域穷举（边界（异常路径））））。refs 锚：$EC1E 门/房初始化（mod.rs:27 注）+
+    //! $EE95 短件（mod.rs:35 注）+$F744 OrEnData05（mod.rs:1886 注）。
+
+    use super::*;
+    use crate::engine::{s1_bit_set_helper, s1_door_room_init, s1_short_b3_b0,
+                        s2_or_en_data05, s2_f702_body, s2_f83b_body};
+
+    /// 【穷举·位或累积】root×y×源值 全域 256³——accumulate_bit_flag==s1_bit_set_helper。
+    #[test]
+    fn exhaustive_bit_accumulate_equivalence() {
+        for root in 0u8..=255 {
+            for y in 0u8..=255 {
+                for src in 0u8..=255 {
+                    let mut w_old = vec![0u8; 0x2000];
+                    let mut w_new = vec![0u8; 0x2000];
+                    w_old[0xC15 + (root ^ 1) as usize] = src;
+                    w_new[0xC15 + (root ^ 1) as usize] = src;
+                    let o = s1_bit_set_helper(root, y, &mut w_old);
+                    let n = accumulate_bit_flag(root, y, &mut w_new);
+                    assert_eq!(o, n, "root={} y={} src={}", root, y, src);
+                    assert_eq!(w_old, w_new);
+                }
+            }
+        }
+    }
+
+    /// 【穷举·门/房初始化】root×sec20 全域——init_door_room==s1_door_room_init（含环绕边界）。
+    #[test]
+    fn exhaustive_door_room_equivalence() {
+        for root in 0u8..=255 {
+            for s20 in 0u8..=255 {
+                assert_eq!(s1_door_room_init(root, s20), init_door_room(root, s20));
+            }
+        }
+    }
+
+    /// 【穷举·槽写+轮转】root×y×zp8a 全域 256³——write_slot_and_rotate==s1_short_b3_b0。
+    #[test]
+    fn exhaustive_slot_rotate_equivalence() {
+        for root in 0u8..=255 {
+            for y in 0u8..=255 {
+                for zp in 0u8..=255 {
+                    assert_eq!(s1_short_b3_b0(root, y, zp), write_slot_and_rotate_flags(root, y, zp));
+                }
+            }
+        }
+    }
+
+    /// 【穷举·Or/掩码/移位族】x×a×v 全域 256³——s2 三员等价。
+    #[test]
+    fn exhaustive_s2_or_family_equivalence() {
+        for x in 0u8..=255 {
+            for a in 0u8..=255 {
+                for v in 0u8..=255 {
+                    assert_eq!(s2_or_en_data05(x, a, v), or_enemy_data05(x, a, v));
+                    assert_eq!(s2_f702_body(x, a, v), or_enemy_data05_masked(x, a, v));
+                    assert_eq!(s2_f83b_body(x, a, v), and_enemy_data05_shift(x, a, v));
+                }
+            }
+        }
+    }
+}
+
+// ===== 旧实现改写·第六件：s1_/s2_ 族语义命名面（去地址名（公式形（零字面特值）））=====
+// refs 锚（mod.rs 注内 bank:addr 引证）：$EC1E 门/房初始化（engine/mod.rs:27）+
+// $EE95 短件（:35）+$F744 OrEnData05（:1886）+AndEnData05 根（:1842）。
+
+/// 位或累积（旧 s1_bit_set_helper（$EC15 面）——x=root^1 索引源，y 索引目标：
+/// wram[$EC15+y] ← y | wram[$EC15+(root^1)]）。
+pub fn accumulate_bit_flag(root_val: u8, y: u8, wram: &mut [u8]) -> (Vec<(u16, u8)>, u8) {
+    let x = root_val ^ 1;
+    let or_v = y | wram.get(0xC15 + x as usize).copied().unwrap_or(0);
+    let idx = 0xC15 + y as usize;
+    if idx < wram.len() {
+        wram[idx] = or_v;
+    }
+    (vec![(0x6C15 + y as u16, or_v)], 2)
+}
+
+/// 门/房初始化（旧 s1_door_room_init（$EC1E）：$032C←根/$0323←$23/$0320←sec20+1）。
+pub fn init_door_room(root_val: u8, sec20: u8) -> (Vec<(u16, u8)>, u8) {
+    let mut ev = vec![(0x032C, root_val), (0x0323, 0x23)];
+    ev.push((0x0320, sec20.wrapping_add(1)));
+    (ev, 2)
+}
+
+/// 槽写+进位轮转（旧 s1_short_b3_b0（$EE95）：$B3[y]←根/$B0[y]←1/$8A←rol(zp8a)）。
+pub fn write_slot_and_rotate_flags(root_val: u8, y: u8, zp8a: u8) -> (Vec<(u16, u8)>, u8, bool) {
+    let (hi, carry) = ((zp8a >> 7) & 1, (zp8a & 0x80) != 0);
+    let rolled = (zp8a << 1) | hi;
+    (vec![(0x00B3 + y as u16, root_val), (0x00B0 + y as u16, 1), (0x008A, rolled)], 1, carry)
+}
+
+/// OR 面（旧 s2_or_en_data05（$F744 And 对偶）：$0405[x] ← v|a）。
+pub fn or_enemy_data05(x: u8, a_in: u8, v0405_x: u8) -> (Vec<(u16, u8)>, u8) {
+    let v = v0405_x | a_in;
+    (vec![(0x0405 + x as u16, v)], v)
+}
+
+/// OR+掩码链（旧 s2_f702_body（$F702）：$0405[x] ← (v|a)&$FB）。
+pub fn or_enemy_data05_masked(x: u8, a_in: u8, v0405_x: u8) -> (Vec<(u16, u8)>, u8) {
+    let v = (v0405_x | a_in) & 0xFB;
+    (vec![(0x0405 + x as u16, v)], v)
+}
+
+/// AND+条件移位（旧 s2_f83b_body（$F83B）：AND 根+v0405≥0 ⇒ $0405[x] ← v>>3（三 lsr 形））。
+pub fn and_enemy_data05_shift(x: u8, a_in: u8, v0405_x: u8) -> (Vec<(u16, u8)>, u8) {
+    let mut ev = vec![(0x0405 + x as u16, v0405_x & a_in)];
+    if (v0405_x as i8) >= 0 {
+        ev.push((0x0405 + x as u16, v0405_x >> 3));
+    }
+    (ev, 0)
+}
