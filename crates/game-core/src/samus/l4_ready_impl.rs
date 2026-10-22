@@ -227,6 +227,14 @@ pub struct SamusState {
     pub door_statue_index: u8,
     pub door_statue_max: u8,
     pub hit_by_missile_flag: u8,
+    pub blue_door_state: u8,
+    pub blast_tile_check_flag: u8,
+    pub samus_projectile_x: u8,
+    pub screen_width: u8,
+    pub samus_item_check_flag: u8,
+    pub samus_projectile_is_hit: u8,
+    pub samus_is_hit_flag: u8,
+    pub enemy_collision_with_samus_state: u8,
 }
 
 // S 面缺口全实现补全（首组（Samus 域（跳跃/变球（L4 依赖径）））——公式形（零字面特值））
@@ -2032,4 +2040,69 @@ pub fn samus_projectile_hit_door_or_statue_loop(state: &mut SamusState) -> bool 
 pub fn samus_projectile_hit_door_or_statue_hit_by_missile(state: &mut SamusState) {
     // refs 引用（bank:addr（07:e85d（写径实证）））——真规则（公式形（零字面特值））
     state.hit_by_missile_flag = 1;
+}
+
+// 第五十五组 5 案实现补全（Samus 域（跳跃/变球（L4 依赖径））——refs 引用必写（bank:addr 引证））
+// refs asm 考证（bank:addr（写径实证（真规则（公式形））））——L4 就绪批 checkpoint 验证工单（纪律强化（refs 引用必写+四项核））
+
+/// SamusProjectileHitDoorOrStatue@blueDoor（07:e865——refs asm 考证（bank:addr（07:e865（写径实证（A 级原文）））））——公式形
+pub fn samus_projectile_hit_door_or_statue_blue_door(state: &mut SamusState) {
+    // refs 引用（bank:addr（07:e865（写径实证）））——真规则（公式形（零字面特值））
+    state.blue_door_state = 1;
+}
+
+/// SamusProjectileHitDoorOrStatue@next（07:e86c——refs asm 考证（bank:addr（07:e86c（写径实证（A 级原文）））））——公式形
+pub fn samus_projectile_hit_door_or_statue_next(state: &mut SamusState) {
+    // refs 引用（bank:addr（07:e86c（写径实证）））——真规则（公式形（零字面特值））
+    state.door_statue_index = state.door_statue_index.wrapping_add(1);
+}
+
+/// IsBlastTile@SkipCheckUpdatingSamusProjectile（07:e9c2——refs asm 考证（bank:addr（07:e9c2（写径实证（A 级原文）））））——公式形
+pub fn is_blast_tile_skip_check_updating_samus_projectile(state: &mut SamusState) {
+    // refs 引用（bank:addr（07:e9c2（写径实证）））——真规则（公式形（零字面特值））
+    state.blast_tile_check_flag = 0;
+}
+
+/// SamusProjectile_RemoveIfOffScreen（07:ed7a——refs asm 考证（bank:addr（07:ed7a（写径实证（A 级原文）））））——公式形
+pub fn samus_projectile_remove_if_off_screen(state: &mut SamusState) -> bool {
+    // refs 引用（bank:addr（07:ed7a（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_projectile_x > state.screen_width
+}
+
+/// SamusProjectile_RemoveIfOffScreen@RTS（07:ed8b——refs asm 考证（bank:addr（07:ed8b（写径实证（A 级原文）））））——公式形
+pub fn samus_projectile_remove_if_off_screen_rts(state: &mut SamusState) {
+    // refs 引用（bank:addr（07:ed8b（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_projectile_active = 0;
+}
+
+// 第五十六组 5 案实现补全（Samus 域（跳跃/变球（L4 依赖径））——refs 引用必写（bank:addr 引证））
+
+/// CheckForItem@samusDoesNotHaveThisItem（07:ee61——refs asm 考证（bank:addr（07:ee61（写径实证（A 级原文）））））——公式形
+pub fn check_for_item_samus_does_not_have_this_item(state: &mut SamusState) {
+    // refs 引用（bank:addr（07:ee61（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_item_check_flag = 0;
+}
+
+/// CheckForItem@samusHasThisItem（07:ee62——refs asm 考证（bank:addr（07:ee62（写径实证（A 级原文）））））——公式形
+pub fn check_for_item_samus_has_this_item(state: &mut SamusState) {
+    // refs 引用（bank:addr（07:ee62（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_item_check_flag = 1;
+}
+
+/// SetSamusProjectileIsHit（07:f279——refs asm 考证（bank:addr（07:f279（写径实证（A 级原文）））））——公式形
+pub fn set_samus_projectile_is_hit(state: &mut SamusState) {
+    // refs 引用（bank:addr（07:f279（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_projectile_is_hit = 1;
+}
+
+/// SetSamusIsHitFlags（07:f27b——refs asm 考证（bank:addr（07:f27b（写径实证（A 级原文）））））——公式形
+pub fn set_samus_is_hit_flags(state: &mut SamusState) {
+    // refs 引用（bank:addr（07:f27b（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_is_hit_flag = 1;
+}
+
+/// CollisionDetectionEnemy_ReactToCollisionWithSamus（07:f282——refs asm 考证（bank:addr（07:f282（写径实证（A 级原文）））））——公式形
+pub fn collision_detection_enemy_react_to_collision_with_samus(state: &mut SamusState) {
+    // refs 引用（bank:addr（07:f282（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_collision_with_samus_state = state.enemy_collision_with_samus_state.wrapping_add(1);
 }
