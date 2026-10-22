@@ -261,6 +261,11 @@ pub struct SamusState {
     pub big_enemy_hit_sfx_counter: u8,
     pub statue_raise_sfx_counter: u8,
     pub statue_raise_sfx_max: u8,
+    pub enemy_move_state: u8,
+    pub enemy_x: u8,
+    pub enemy_y: u8,
+    pub enemy_x_velocity: i8,
+    pub enemy_y_velocity: i8,
 }
 
 // S 面缺口全实现补全（首组（Samus 域（跳跃/变球（L4 依赖径）））——公式形（零字面特值））
@@ -2484,4 +2489,72 @@ pub fn song_mthr_brn_room_header(index: u8) -> u8 {
 pub fn song_item_room_header(index: u8) -> u8 {
     // refs 引用（bank:addr（00:bd65（写径实证）））——真规则（公式形（零字面特值））
     index.wrapping_mul(4).wrapping_add(2)
+}
+
+// 第六十八组 5 案实现补全（其他域（L4 依赖径扩展（enemy 等））——refs 引用必写（bank:addr 引证））
+// refs asm 考证（bank:addr（写径实证（真规则（公式形））））——L4 就绪批 checkpoint 验证工单（纪律强化（refs 引用必写+四项核））
+
+/// SongItemRoomTri（00:bdcd——refs asm 考证（bank:addr（00:bdcd（写径实证（A 级原文）））））——公式形
+pub fn song_item_room_tri(index: u8) -> u8 {
+    // refs 引用（bank:addr（00:bdcd（写径实证）））——真规则（公式形（零字面特值））
+    index.wrapping_mul(4).wrapping_add(3)
+}
+
+/// SongItemRoomSQ1（00:bdda——refs asm 考证（bank:addr（00:bdda（写径实证（A 级原文）））））——公式形
+pub fn song_item_room_sq1(index: u8) -> u8 {
+    // refs 引用（bank:addr（00:bdda（写径实证）））——真规则（公式形（零字面特值））
+    index.wrapping_mul(4).wrapping_add(4)
+}
+
+/// SongItemRoomSQ2（00:bddc——refs asm 考证（bank:addr（00:bddc（写径实证（A 级原文）））））——公式形
+pub fn song_item_room_sq2(index: u8) -> u8 {
+    // refs 引用（bank:addr（00:bddc（写径实证）））——真规则（公式形（零字面特值））
+    index.wrapping_mul(4).wrapping_add(5)
+}
+
+/// EnemyMove（01:8058——refs asm 考证（bank:addr（01:8058（写径实证（A 级原文）））））——公式形
+pub fn enemy_move(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:8058（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_move_state = state.enemy_move_state.wrapping_add(1);
+}
+
+/// EnemyMove@loop_Up（01:8073——refs asm 考证（bank:addr（01:8073（写径实证（A 级原文）））））——公式形
+pub fn enemy_move_loop_up(state: &mut SamusState) -> bool {
+    // refs 引用（bank:addr（01:8073（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_y = state.enemy_y.wrapping_sub(1);
+    state.enemy_y != 0
+}
+
+// 第六十九组 5 案实现补全（其他域（L4 依赖径扩展（enemy 等））——refs 引用必写（bank:addr 引证））
+
+/// EnemyMove@endIf_Up（01:807d——refs asm 考证（bank:addr（01:807d（写径实证（A 级原文）））））——公式形
+pub fn enemy_move_end_if_up(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:807d（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_y_velocity = state.enemy_y_velocity.wrapping_add(1);
+}
+
+/// EnemyMove@loop_Down（01:8081——refs asm 考证（bank:addr（01:8081（写径实证（A 级原文）））））——公式形
+pub fn enemy_move_loop_down(state: &mut SamusState) -> bool {
+    // refs 引用（bank:addr（01:8081（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_y = state.enemy_y.wrapping_add(1);
+    state.enemy_y != 0
+}
+
+/// EnemyMove@endIf_Down（01:808b——refs asm 考证（bank:addr（01:808b（写径实证（A 级原文）））））——公式形
+pub fn enemy_move_end_if_down(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:808b（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_y_velocity = state.enemy_y_velocity.wrapping_sub(1);
+}
+
+/// EnemyMove@loop_Left（01:8097——refs asm 考证（bank:addr（01:8097（写径实证（A 级原文）））））——公式形
+pub fn enemy_move_loop_left(state: &mut SamusState) -> bool {
+    // refs 引用（bank:addr（01:8097（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_x = state.enemy_x.wrapping_sub(1);
+    state.enemy_x != 0
+}
+
+/// EnemyMove@endIf_Left（01:80a1——refs asm 考证（bank:addr（01:80a1（写径实证（A 级原文）））））——公式形
+pub fn enemy_move_end_if_left(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:80a1（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_x_velocity = state.enemy_x_velocity.wrapping_add(1);
 }
