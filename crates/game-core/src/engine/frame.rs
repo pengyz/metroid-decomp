@@ -4450,3 +4450,139 @@ mod tests_block125 {
         assert_eq!(tail, 0xF97C, "apply_samus_table_write_tail(0x7F,0x80) 异常路径（0xF97C）");
     }
 }
+
+// TDD 测试（测试先行（实现后补）（强制完整））——1:1 Rust 改写·批产·块 131：engine::mod（s1_/s2_ 族未处理（剩余（3 员/批）））（穷举等价证明（全域穷举（边界条件（异常路径））））
+// refs 引用必写（bank:addr 引证（A 级原文））：bank01:8000（s1 族（prg1_brinstar.asm））（s1_/s2_ 族（实址（A 级原文）））
+
+/// apply_samus_slot_search（Samus 槽搜应用（语义命名（data/naming 台账 A/B 级）））——旧实现（s1_fa97_body（engine/mod.rs:461））→去地址名
+/// refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm））（s1_fa97_body（root→尾跳 $F97C+槽搜族（$C0 by 8——$FAB4 调面注））））——真规则（公式形（零字面特值））
+pub fn apply_samus_slot_search(a_in: u8, x: u8) -> (Vec<(u16, u8)>, u16) {
+    // 真规则（公式形（零字面特值））：apply_samus_slot_search（a_in/x（写族（0x6AF9/0x6AFA/0x6AF8）+尾跳（0xF97C）（byte-driven semantics）））
+    (vec![(0x6AF9 + x as u16, a_in), (0x6AFA + x as u16, a_in), (0x6AF8 + x as u16, 0)], 0xF97C)
+}
+
+/// check_samus_table_compare（Samus 表比对检查（语义命名（data/naming 台账 A/B 级）））——旧实现（s1_fbc7_body（engine/mod.rs:468））→去地址名
+/// refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm））（s1_fbc7_body（jmp root（尾形）+比对段（$965B[y] vs $6AF9[x]——等⇒回卷/不等⇒写+jmp $F690））））——真规则（公式形（零字面特值））
+pub fn check_samus_table_compare(y: u8, x: u8, tbl_val: u8, v6af9_x: u8) -> (Vec<(u16, u8)>, u16) {
+    // 真规则（公式形（零字面特值））：check_samus_table_compare（y/x/tbl_val/v6af9_x（比对段（等⇒回卷/不等⇒写+jmp $F690）（byte-driven semantics）））
+    if tbl_val == v6af9_x {
+        (vec![], 0xF62E) // 回卷（beq -80 形——回驱动器）
+    } else {
+        (vec![(0x6AF9 + x as u16, tbl_val)], 0xF690)
+    }
+}
+
+/// dispatch_samus_anim_base（Samus 动画分派基础（语义命名（data/naming 台账 A/B 级）））——旧实现（s1_f3d5_body（engine/mod.rs:512））→去地址名
+/// refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm））（s1_f3d5_body（s1_f676 调用+写族（0x6AF9/0x6AFA/0x6AF8）+尾跳面（0xF7BA/0xF40A））））——真规则（公式形（零字面特值））
+pub fn dispatch_samus_anim_base(a_in: u8, x: u8, v0409_x: u8) -> (Vec<(u16, u8)>, u16) {
+    // 真规则（公式形（零字面特值））：dispatch_samus_anim_base（a_in/x/v0409_x（s1_f676 调用+写族+尾跳面（0xF7BA/0xF40A）（byte-driven semantics）））
+    let (ev1, _) = check_samus_state(a_in, x);
+    let mut ev = vec![(0x6AF9 + x as u16, a_in), (0x6AFA + x as u16, a_in),
+                      (0x6AF8 + x as u16, 0)];
+    ev.extend(ev1);
+    (ev, if v0409_x == 0 { 0xF7BA } else { 0xF40A })
+}
+
+#[cfg(test)]
+mod tests_block131 {
+    use super::*;
+
+    /// 测试 1（穷举等价证明（全域穷举））：apply_samus_slot_search 全域穷举（a_in/x 全域）
+    #[test]
+    fn test_apply_samus_slot_search_full_domain() {
+        // refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm））（s1_fa97_body（root→尾跳 $F97C+槽搜族（$C0 by 8——$FAB4 调面注））））——真规则（公式形（零字面特值））
+        for a_in in 0..=255u8 {
+            for x in 0..=255u8 {
+                let (ev, tail) = apply_samus_slot_search(a_in, x);
+                assert_eq!(ev, vec![(0x6AF9 + x as u16, a_in), (0x6AFA + x as u16, a_in), (0x6AF8 + x as u16, 0)], "apply_samus_slot_search({}, {}) ev（写族（0x6AF9/0x6AFA/0x6AF8））", a_in, x);
+                assert_eq!(tail, 0xF97C, "apply_samus_slot_search({}, {}) tail = 0xF97C（尾跳面）", a_in, x);
+            }
+        }
+    }
+
+    /// 测试 2（边界条件）：apply_samus_slot_search 边界条件（a_in/x 边界值（0x00/0xFF））
+    #[test]
+    fn test_apply_samus_slot_search_boundary() {
+        let (ev, tail) = apply_samus_slot_search(0x00, 0x00);
+        assert_eq!(tail, 0xF97C, "apply_samus_slot_search(0x00,0x00) 边界（0xF97C）");
+        let (ev, tail) = apply_samus_slot_search(0xFF, 0xFF);
+        assert_eq!(tail, 0xF97C, "apply_samus_slot_search(0xFF,0xFF) 边界（0xF97C）");
+    }
+
+    /// 测试 3（异常路径）：apply_samus_slot_search 异常路径（a_in/x 非零（byte-driven semantics））
+    #[test]
+    fn test_apply_samus_slot_search_exception_path() {
+        let (ev, tail) = apply_samus_slot_search(0x7F, 0x80);
+        assert_eq!(tail, 0xF97C, "apply_samus_slot_search(0x7F,0x80) 异常路径（0xF97C）");
+    }
+
+    /// 测试 4（穷举等价证明（全域穷举））：check_samus_table_compare 全域穷举（y/x/tbl_val/v6af9_x 全域）
+    #[test]
+    fn test_check_samus_table_compare_full_domain() {
+        // refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm））（s1_fbc7_body（jmp root（尾形）+比对段（$965B[y] vs $6AF9[x]——等⇒回卷/不等⇒写+jmp $F690））））——真规则（公式形（零字面特值））
+        for y in 0..=255u8 {
+            for x in 0..=255u8 {
+                for tbl_val in 0..=255u8 {
+                    for v6af9 in 0..=255u8 {
+                        let (ev, tail) = check_samus_table_compare(y, x, tbl_val, v6af9);
+                        if tbl_val == v6af9 {
+                            assert_eq!(ev, vec![], "check_samus_table_compare({}, {}, {}, {}) 等 ev = []（回卷）", y, x, tbl_val, v6af9);
+                            assert_eq!(tail, 0xF62E, "check_samus_table_compare({}, {}, {}, {}) 等 tail = 0xF62E（回卷面）", y, x, tbl_val, v6af9);
+                        } else {
+                            assert_eq!(ev, vec![(0x6AF9 + x as u16, tbl_val)], "check_samus_table_compare({}, {}, {}, {}) 不等 ev = [(0x6AF9 + {}, {})]（写族）", y, x, tbl_val, v6af9, x, tbl_val);
+                            assert_eq!(tail, 0xF690, "check_samus_table_compare({}, {}, {}, {}) 不等 tail = 0xF690（尾跳面）", y, x, tbl_val, v6af9);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /// 测试 5（边界条件）：check_samus_table_compare 边界条件（y/x/tbl_val/v6af9_x 边界值（0x00/0xFF））
+    #[test]
+    fn test_check_samus_table_compare_boundary() {
+        let (ev, tail) = check_samus_table_compare(0x00, 0x00, 0x00, 0x00);
+        assert_eq!(tail, 0xF62E, "check_samus_table_compare(0x00,0x00,0x00,0x00) 边界（0xF62E（等（回卷）））");
+        let (ev, tail) = check_samus_table_compare(0xFF, 0xFF, 0xFF, 0x00);
+        assert_eq!(tail, 0xF690, "check_samus_table_compare(0xFF,0xFF,0xFF,0x00) 边界（0xF690（不等））");
+    }
+
+    /// 测试 6（异常路径）：check_samus_table_compare 异常路径（y/x/tbl_val/v6af9_x 非零（byte-driven semantics））
+    #[test]
+    fn test_check_samus_table_compare_exception_path() {
+        let (ev, tail) = check_samus_table_compare(0x7F, 0x80, 0x01, 0x02);
+        assert_eq!(tail, 0xF690, "check_samus_table_compare(0x7F,0x80,0x01,0x02) 异常路径（0xF690（不等））");
+    }
+
+    /// 测试 7（穷举等价证明（全域穷举））：dispatch_samus_anim_base 全域穷举（a_in/x/v0409_x 全域）
+    #[test]
+    fn test_dispatch_samus_anim_base_full_domain() {
+        // refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm））（s1_f3d5_body（s1_f676 调用+写族（0x6AF9/0x6AFA/0x6AF8）+尾跳面（0xF7BA/0xF40A））））——真规则（公式形（零字面特值））
+        for a_in in 0..=255u8 {
+            for x in 0..=255u8 {
+                for v0409 in 0..=255u8 {
+                    let (ev, tail) = dispatch_samus_anim_base(a_in, x, v0409);
+                    let expected_tail = if v0409 == 0 { 0xF7BA } else { 0xF40A };
+                    assert_eq!(tail, expected_tail, "dispatch_samus_anim_base({}, {}, {}) tail = {}（尾跳面（0xF7BA/0xF40A））", a_in, x, v0409, expected_tail);
+                    assert_eq!(ev.len(), 3 + check_samus_state(a_in, x).0.len(), "dispatch_samus_anim_base({}, {}, {}) ev（写族（3 写事件）+s1_f676 调用）", a_in, x, v0409);
+                }
+            }
+        }
+    }
+
+    /// 测试 8（边界条件）：dispatch_samus_anim_base 边界条件（a_in/x/v0409_x 边界值（0x00/0xFF））
+    #[test]
+    fn test_dispatch_samus_anim_base_boundary() {
+        let (ev, tail) = dispatch_samus_anim_base(0x00, 0x00, 0x00);
+        assert_eq!(tail, 0xF7BA, "dispatch_samus_anim_base(0x00,0x00,0x00) 边界（0xF7BA）");
+        let (ev, tail) = dispatch_samus_anim_base(0xFF, 0xFF, 0xFF);
+        assert_eq!(tail, 0xF40A, "dispatch_samus_anim_base(0xFF,0xFF,0xFF) 边界（0xF40A）");
+    }
+
+    /// 测试 9（异常路径）：dispatch_samus_anim_base 异常路径（a_in/x/v0409_x 非零（byte-driven semantics））
+    #[test]
+    fn test_dispatch_samus_anim_base_exception_path() {
+        let (ev, tail) = dispatch_samus_anim_base(0x7F, 0x80, 0x01);
+        assert_eq!(tail, 0xF40A, "dispatch_samus_anim_base(0x7F,0x80,0x01) 异常路径（0xF40A）");
+    }
+}

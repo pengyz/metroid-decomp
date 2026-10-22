@@ -15829,76 +15829,114 @@ pub fn and_data05_cmp_dispatch(x: u8, a_in: u8, v0405_x: u8) -> (Vec<(u16, u8)>,
     s1_and_en_data05(x, a_in, v0405_x)
 }
 
-/// s1_/s2_ 族未处理 116 条（剩余（3 员/批（继续去地址名）））（语义命名）
-///
-/// 去地址名（s1_/s2_ 族未处理 116 条→engine::mod::xxx（语义命名））
-pub mod s1_s2_remaining_batch_v2 {
-    /// s1_/s2_ 族未处理 116 条→engine::mod::s1_s2_remaining_batch_v2::remaining_schedule_v4（语义命名）
-    pub fn remaining_schedule_v4(ram: &[u8; 2048]) -> u8 {
-        // 真规则（公式形（零字面特值））
-        ram[0x03AC]
-    }
+// ===== 1:1 Rust 改写·批产·块 123（s1 余批 3 员去名（pos 三写 root+双壳）（TDD 穷举等价））=====
 
-    /// s1_/s2_ 族未处理 116 条→engine::mod::s1_s2_remaining_batch_v2::remaining_schedule_v5（语义命名）
-    pub fn remaining_schedule_v5(ram: &[u8; 2048]) -> u8 {
-        // 真规则（公式形（零字面特值））
-        ram[0x03AD]
-    }
+#[cfg(test)]
+mod tests_b123_engine_mod {
+    //! TDD step1（测试先行（强制完整））——穷举等价（新==旧（≤256³ 闸时限界（依赖分解）））。
+    //! refs 锚（bank:addr 注内）：store_enemy_pos root（:1416）/$E789（:1421）/$E906（:1426）。
 
-    /// s1_/s2_ 族未处理 116 条→engine::mod::s1_s2_remaining_batch_v2::remaining_schedule_v6（语义命名）
-    pub fn remaining_schedule_v6(ram: &[u8; 2048]) -> u8 {
-        // 真规则（公式形（零字面特值））
-        ram[0x03AE]
+    use super::*;
+
+    /// 【穷举·pos 三写】x×v0401×v0400×v6afb 依赖分解——store_enemy_position_triple
+    /// ==s1_store_enemy_pos+$E789/$E906 双壳（尾跳 $E7BD/$E89B）。
+    #[test]
+    fn exhaustive_pos_triple_equivalence() {
+        for x in 0u8..=255 {
+            for &(a, b, c) in &[(0u8, 0u8, 0u8), (0xFF, 0xFF, 0xFF), (8, 9, 1)] {
+                assert_eq!(s1_store_enemy_pos(x, a, b, c), store_enemy_position_triple(x, a, b, c));
+                assert_eq!(s1_e789_body(x, a, b, c), enemy_pos_and_dispatch_e7(x, a, b, c));
+                assert_eq!(s1_e906_body(x, a, b, c), enemy_pos_and_dispatch_e8(x, a, b, c));
+            }
+        }
     }
 }
 
+// ===== 1:1 Rust 改写·批产·块 123：pos 三写 root+双壳语义命名（去地址名（公式形））=====
+// refs 锚（bank:addr 注内）：store_enemy_pos root（:1416）/$E789（:1421）/$E906（:1426）。
+
+/// 敌位三写（旧 s1_store_enemy_pos root：$09←$0401[x]/$08←$0400[x]/$0B←$6AFB[x]）。
+pub fn store_enemy_position_triple(x: u8, v0401_x: u8, v0400_x: u8, v6afb_x: u8) -> Vec<(u16, u8)> {
+    let _ = x;
+    vec![(0x0009, v0401_x), (0x0008, v0400_x), (0x000B, v6afb_x)]
+}
+
+/// pos+E7 壳（旧 s1_e789_body（$E789）：root→jmp $E7BD（$6AF6[x] 读段注））。
+pub fn enemy_pos_and_dispatch_e7(x: u8, v0401_x: u8, v0400_x: u8, v6afb_x: u8) -> (Vec<(u16, u8)>, u16) {
+    (store_enemy_position_triple(x, v0401_x, v0400_x, v6afb_x), 0xE7BD)
+}
+
+/// pos+E8 壳（旧 s1_e906_body（$E906）：root→jmp $E89B（$02 符号段注））。
+pub fn enemy_pos_and_dispatch_e8(x: u8, v0401_x: u8, v0400_x: u8, v6afb_x: u8) -> (Vec<(u16, u8)>, u16) {
+    (store_enemy_position_triple(x, v0401_x, v0400_x, v6afb_x), 0xE89B)
+}
+
+// ===== 1:1 Rust 改写·批产·块 126（s1/s2 余批 3 员去名（TDD 穷举等价））=====
+
 #[cfg(test)]
-mod tests_s1_s2_remaining_batch_v2 {
-    use super::s1_s2_remaining_batch_v2::*;
+mod tests_b126_engine_mod {
+    //! TDD step1（测试先行（强制完整））——穷举等价（新==旧（≤256³ 闸时限界（依赖分解）））。
+    //! refs 锚（bank:addr 注内）：$F91F（:1431）/$F711（:1853）/$D0xx AnimDrawObject root
+    //! （:1316）。
 
-    /// TDD 流程·第一步：写测试（穷举等价证明（全域穷举（边界条件（异常路径））））
+    use super::*;
+
+    /// 【穷举·pos+FA 壳】x×三参依赖分解——enemy_pos_and_dispatch_fa==s1_f91f_body。
     #[test]
-    fn test_remaining_schedule_v4_basic() {
-        let ram = [0u8; 2048];
-        assert_eq!(remaining_schedule_v4(&ram), 0);
+    fn exhaustive_fa_dispatch_equivalence() {
+        for x in 0u8..=255 {
+            for &(a, b, c) in &[(0u8, 0u8, 0u8), (0xFF, 0xFF, 0xFF), (8, 9, 1)] {
+                assert_eq!(s1_f91f_body(x, a, b, c), enemy_pos_and_dispatch_fa(x, a, b, c));
+            }
+        }
     }
 
-    /// TDD 流程·第一步：边界条件（异常路径）
+    /// 【穷举·AND 反判壳】x×a×v 全域 256³——and_data05_reverse_dispatch==s2_f711_body。
     #[test]
-    fn test_remaining_schedule_v4_boundary() {
-        let mut ram = [0u8; 2048];
-        ram[0x03AC] = 0xFF;
-        assert_eq!(remaining_schedule_v4(&ram), 0xFF);
+    fn exhaustive_and_reverse_equivalence() {
+        for x in 0u8..=255 {
+            for a in 0u8..=255 {
+                for v in 0u8..=255 {
+                    assert_eq!(s2_f711_body(x, a, v), and_data05_reverse_dispatch(x, a, v));
+                }
+            }
+        }
     }
 
-    /// TDD 流程·第一步：写测试（穷举等价证明（全域穷举（边界条件（异常路径））））
+    /// 【穷举·anim 绘制 root】x×v0303 全域 256²——anim_draw_object_root==s1_anim_draw_object
+    /// （三分路（$F7⇒$DF2D/$07⇒$DE47+位清 $6B&$EF/其余⇒$DE47））。
     #[test]
-    fn test_remaining_schedule_v5_basic() {
-        let ram = [0u8; 2048];
-        assert_eq!(remaining_schedule_v5(&ram), 0);
+    fn exhaustive_anim_draw_root_equivalence() {
+        for x in 0u8..=255 {
+            for v in 0u8..=255 {
+                assert_eq!(s1_anim_draw_object(x, v), anim_draw_object_root(x, v));
+            }
+        }
     }
+}
 
-    /// TDD 流程·第一步：边界条件（异常路径）
-    #[test]
-    fn test_remaining_schedule_v5_boundary() {
-        let mut ram = [0u8; 2048];
-        ram[0x03AD] = 0xFF;
-        assert_eq!(remaining_schedule_v5(&ram), 0xFF);
-    }
+// ===== 1:1 Rust 改写·批产·块 126：s1/s2 余批 3 员语义命名（去地址名（公式形））=====
+// refs 锚（bank:addr 注内）：$F91F（:1431）/$F711（:1853）/$D0xx AnimDrawObject root（:1316）。
 
-    /// TDD 流程·第一步：写测试（穷举等价证明（全域穷举（边界条件（异常路径））））
-    #[test]
-    fn test_remaining_schedule_v6_basic() {
-        let ram = [0u8; 2048];
-        assert_eq!(remaining_schedule_v6(&ram), 0);
-    }
+/// pos+FA 壳（旧 s1_f91f_body（$F91F）：root→jmp $FA49（A→Y 暂存（$FD8F 姊妹形注）））。
+pub fn enemy_pos_and_dispatch_fa(x: u8, v0401_x: u8, v0400_x: u8, v6afb_x: u8) -> (Vec<(u16, u8)>, u16) {
+    (store_enemy_position_triple(x, v0401_x, v0400_x, v6afb_x), 0xFA49)
+}
 
-    /// TDD 流程·第一步：边界条件（异常路径）
-    #[test]
-    fn test_remaining_schedule_v6_boundary() {
-        let mut ram = [0u8; 2048];
-        ram[0x03AE] = 0xFF;
-        assert_eq!(remaining_schedule_v6(&ram), 0xFF);
+/// AND 反判壳（旧 s2_f711_body（$F711）：AndEnData05 根委托（$49 cmp 2 反判+$F752 段
+/// +$0400[x] cmp 段（深段注）））。
+pub fn and_data05_reverse_dispatch(x: u8, a_in: u8, v0405_x: u8) -> (Vec<(u16, u8)>, u8) {
+    s1_and_en_data05(x, a_in, v0405_x)
+}
+
+/// anim 绘制 root（旧 s1_anim_draw_object（$D0xx AnimDrawObject root）：$0303[x] 三分路
+/// ——$F7⇒$DF2D/$07⇒$DE47+$6B&$EF 位清/其余⇒$DE47）。
+pub fn anim_draw_object_root(x: u8, v0303_x: u8) -> (u16, Option<Vec<(u16, u8)>>) {
+    let _ = x;
+    match v0303_x {
+        0xF7 => (0xDF2D, None),
+        0x07 => (0xDE47, Some(vec![(0x006B, 0xEF)])),
+        _ => (0xDE47, None),
     }
 }
 
@@ -16039,75 +16077,123 @@ pub fn choose_spawning_routine(a_in: u8, x_in: u8, lo: u8, hi: u8, op_byte: u8)
     (ev, (target >> 8) as u8, x_in, 0)
 }
 
-/// s1_/s2_ 族未处理 116 条（剩余（3 员/批（继续去地址名）））（语义命名）
-///
-/// 去地址名（s1_/s2_ 族未处理 116 条→engine::mod::xxx（语义命名））
-pub mod s1_s2_remaining_batch_v3 {
-    /// s1_/s2_ 族未处理 116 条→engine::mod::s1_s2_remaining_batch_v3::remaining_schedule_v7（语义命名）
-    pub fn remaining_schedule_v7(ram: &[u8; 2048]) -> u8 {
-        // 真规则（公式形（零字面特值））
-        ram[0x03AF]
+// ===== 1:1 Rust 改写·批产·块 129（s1 余批 3 员去名（碰撞半径和族）（TDD 穷举等价））=====
+
+#[cfg(test)]
+mod tests_b129_engine_mod {
+    //! TDD step1（测试先行（强制完整））——穷举等价（新==旧（≤256³ 闸时限界（依赖分解）））。
+    //! refs 锚（bank:addr 注内）：$F1BF GetRadiusSums root（:1560）/$F140 CollisionCheck root
+    //! （:1569）/$F0C9（:1578）。
+
+    use super::*;
+
+    /// 【穷举·半径和】x×y×v6af5×v6af6 依赖分解（和分量独立）——compute_radius_sums
+    /// ==s1_radius_sums+$F140 壳==s1_collision_check（→$F1FA）。
+    #[test]
+    fn exhaustive_radius_sums_equivalence() {
+        for x in 0u8..=255 {
+            for y in [0u8, 1, 0xFF] {
+                for &(a, b) in &[(0u8, 0u8), (0xFF, 0xFF), (0x7F, 0x80), (0x10, 0x20)] {
+                    assert_eq!(s1_radius_sums(x, y, a, b), compute_radius_sums(x, y, a, b));
+                    assert_eq!(s1_collision_check(x, y, a, b), collision_check_with_y_slot(x, y, a, b));
+                }
+            }
+        }
+        for a in 0u8..=255 {
+            for b in 0u8..=255 {
+                assert_eq!(s1_radius_sums(1, 2, a, b), compute_radius_sums(1, 2, a, b));
+            }
+        }
     }
 
-    /// s1_/s2_ 族未处理 116 条→engine::mod::s1_s2_remaining_batch_v3::remaining_schedule_v8（语义命名）
-    pub fn remaining_schedule_v8(ram: &[u8; 2048]) -> u8 {
-        // 真规则（公式形（零字面特值））
-        ram[0x03B0]
-    }
-
-    /// s1_/s2_ 族未处理 116 条→engine::mod::s1_s2_remaining_batch_v3::remaining_schedule_v9（语义命名）
-    pub fn remaining_schedule_v9(ram: &[u8; 2048]) -> u8 {
-        // 真规则（公式形（零字面特值））
-        ram[0x03B1]
+    /// 【穷举·条件调壳】v70 全域——collision_loop_cond_call==s1_f0c9_body（==0⇒$CE84）。
+    #[test]
+    fn exhaustive_cond_call_equivalence() {
+        for v in 0u8..=255 {
+            assert_eq!(s1_f0c9_body(v), collision_loop_cond_call(v));
+        }
     }
 }
 
+// ===== 1:1 Rust 改写·批产·块 129：碰撞半径和族语义命名（去地址名（公式形））=====
+// refs 锚（bank:addr 注内）：$F1BF GetRadiusSums root（:1560）/$F140 CollisionCheck root
+// （:1569）/$F0C9（:1578）。
+
+/// 半径和（旧 s1_radius_sums（$F1BF GetRadiusSumsOfEnXSlotAndObjYSlot root）：
+/// $05←$6AF5[x]+$6AF6[x]（半径和（碰撞工作面）））。
+pub fn compute_radius_sums(x: u8, y: u8, v6af5_x: u8, v6af6_x: u8) -> (Vec<(u16, u8)>, u8) {
+    let _ = (x, y);
+    let sum = v6af5_x.wrapping_add(v6af6_x);
+    (vec![(0x0005, sum)], sum)
+}
+
+/// Y 槽碰撞检（旧 s1_collision_check（$F140 root）：$F1BF 半径和+$F186/$F1D2 判段
+/// →尾跳 $F1FA）。
+pub fn collision_check_with_y_slot(x: u8, y: u8, v6af5_x: u8, v6af6_x: u8)
+    -> (Vec<(u16, u8)>, u8, u16) {
+    let (ev, sum) = compute_radius_sums(x, y, v6af5_x, v6af6_x);
+    (ev, sum, 0xF1FA)
+}
+
+/// 碰撞环条件调（旧 s1_f0c9_body（$F0C9）：$70==0⇒jsr $CE84）。
+pub fn collision_loop_cond_call(v70: u8) -> (Vec<(u16, u8)>, Option<u16>) {
+    (vec![], if v70 == 0 { Some(0xCE84) } else { None })
+}
+
+// ===== 1:1 Rust 改写·批产·块 132（s1 余批 3 员去名（Yplus16 对偶微体族）（TDD 穷举等价））=====
+
 #[cfg(test)]
-mod tests_s1_s2_remaining_batch_v3 {
-    use super::s1_s2_remaining_batch_v3::*;
+mod tests_b132_engine_mod {
+    //! TDD step1（测试先行（强制完整））——穷举等价（新==旧（≤256³ 闸时限界））。
+    //! refs 锚（bank:addr 注内）：$F1EE Yplus16 root（:1601）/$F0CF（:1608）/$F112（:1615）。
 
-    /// TDD 流程·第一步：写测试（穷举等价证明（全域穷举（边界条件（异常路径））））
+    use super::*;
+
+    /// 【穷举·对偶微体】y×x 全域 256²——advance_y16_x_minus16==s1_yplus16_xminus16
+    /// （Y+16/X-16（wrapping））。
     #[test]
-    fn test_remaining_schedule_v7_basic() {
-        let ram = [0u8; 2048];
-        assert_eq!(remaining_schedule_v7(&ram), 0);
+    fn exhaustive_y16_pair_equivalence() {
+        for y in 0u8..=255 {
+            for x in 0u8..=255 {
+                assert_eq!(s1_yplus16_xminus16(y, x), advance_y16_x_minus16(y, x));
+            }
+        }
     }
 
-    /// TDD 流程·第一步：边界条件（异常路径）
+    /// 【穷举·条件调壳】y 全域——y16_with_cond_call==s1_f0cf_body（y+16→$CE84）。
     #[test]
-    fn test_remaining_schedule_v7_boundary() {
-        let mut ram = [0u8; 2048];
-        ram[0x03AF] = 0xFF;
-        assert_eq!(remaining_schedule_v7(&ram), 0xFF);
+    fn exhaustive_y16_cond_equivalence() {
+        for y in 0u8..=255 {
+            assert_eq!(s1_f0cf_body(y), y16_with_cond_call(y));
+        }
     }
 
-    /// TDD 流程·第一步：写测试（穷举等价证明（全域穷举（边界条件（异常路径））））
+    /// 【穷举·$C0 判壳】y 全域——y16_with_c0_check==s1_f112_body（y+16 cmp $C0）。
     #[test]
-    fn test_remaining_schedule_v8_basic() {
-        let ram = [0u8; 2048];
-        assert_eq!(remaining_schedule_v8(&ram), 0);
+    fn exhaustive_y16_c0_equivalence() {
+        for y in 0u8..=255 {
+            assert_eq!(s1_f112_body(y), y16_with_c0_check(y));
+        }
     }
+}
 
-    /// TDD 流程·第一步：边界条件（异常路径）
-    #[test]
-    fn test_remaining_schedule_v8_boundary() {
-        let mut ram = [0u8; 2048];
-        ram[0x03B0] = 0xFF;
-        assert_eq!(remaining_schedule_v8(&ram), 0xFF);
-    }
+// ===== 1:1 Rust 改写·批产·块 132：Yplus16 对偶微体族语义命名（去地址名（公式形））=====
+// refs 锚（bank:addr 注内）：$F1EE Yplus16 root（:1601）/$F0CF（:1608）/$F112（:1615）。
 
-    /// TDD 流程·第一步：写测试（穷举等价证明（全域穷举（边界条件（异常路径））））
-    #[test]
-    fn test_remaining_schedule_v9_basic() {
-        let ram = [0u8; 2048];
-        assert_eq!(remaining_schedule_v9(&ram), 0);
-    }
+/// 对偶微体（旧 s1_yplus16_xminus16（$F1EE Yplus16 root）：Y←Y+16/X←X-16
+/// （clc/adc #$10/tay+txa/sec/sbc #$10/tax））。
+pub fn advance_y16_x_minus16(y: u8, x: u8) -> (u8, u8) {
+    (y.wrapping_add(0x10), x.wrapping_sub(0x10))
+}
 
-    /// TDD 流程·第一步：边界条件（异常路径）
-    #[test]
-    fn test_remaining_schedule_v9_boundary() {
-        let mut ram = [0u8; 2048];
-        ram[0x03B1] = 0xFF;
-        assert_eq!(remaining_schedule_v9(&ram), 0xFF);
-    }
+/// 条件调壳（旧 s1_f0cf_body（$F0CF）：Y+16+bne 环+$70 判⇒$CE84）。
+pub fn y16_with_cond_call(y: u8) -> (u8, Option<u16>) {
+    let (ny, _) = advance_y16_x_minus16(y, 0);
+    (ny, Some(0xCE84))
+}
+
+/// $C0 判壳（旧 s1_f112_body（$F112）：Y+16 cmp $C0 判段（≥$C0⇒真））。
+pub fn y16_with_c0_check(y: u8) -> (u8, bool) {
+    let (ny, _) = advance_y16_x_minus16(y, 0);
+    (ny, ny >= 0xC0)
 }
