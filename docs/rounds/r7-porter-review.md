@@ -11435,6 +11435,41 @@ respawn_nametable_addr（地址计算（数据决定行为））（tile_blasts.r
 立场（独立重导证据（正确性核）））✓——复核 verdict 实录（docs commit（对抗复核 verdict（四项核
 （A 级原文））））✓。
 
+## 批量改写·对抗复核（4 件（簇 6 修订+簇 8/9/10（第五轮）（证伪立场（独立重导证据（正确性核））））
+
+### verdict: needs_revision（2/4 拒收（簇 6 修订（占位形）+簇 9（文档缺）））（簇 8/10 pass）
+
+**① 簇 6 修订（ui::hud）✗ 拒收**：域归属更正注 ✓（InitCrossMissiles/UpdateCrossMissile=
+标题画面准星精灵例程（非 HUD 例程（拒收注（前轮实录））））——**重新取证 ✗**（「状态栏（HUD）例程：
+**bank:addr**（实址（A 级原文））」——**字面占位（非实址**（cluster-6-rewrite.md §1.3））——
+②refs 引用核（存在性（bank:addr 引证（A 级原文）））**缺**（与簇 5 首修订同病（二次修订
+模式（占位→实址）应补））
+
+**② 簇 8（title::menu）✓ pass**：refs 实址 ✓（bank00:8000（MainTitleRoutine）+802A
+（TitleRoutinePtrTable）+806E（IncTitleRoutine0A/0B）+8182-81D0（Crosshairs）+81D1-81EE
+（MoreCrosshairs）（实址（非占位）））+**域归属正确**（标题准星例程（8182-81D0（Crosshairs））
+=**title::menu 域**（正确（跨域定谳后（标题准星归标题域（非 HUD（非弹丸（非拾取））））））+
+六步流程 ✓（cluster-8-rewrite.md（六步（定域取证（8000 族（实址））→域结构→memmap（byte-
+driven semantics）→shim 写集→测试→registry）））✓
+
+**③ 簇 9（ending::sequence）✗ 拒收**：**设计文档缺**（docs/design/（cluster-9 无（ls 实录）））
+——实现存在（crates/game-core/src/ending/sequence.rs（grep 实录））但**六步流程无文档**
+（①六步（无文档（无法核））②refs 引证（无（无法核）））——设计文档应补（六步流程实录）
+
+**④ 簇 10（sound::music）✓ pass**：实现 ✓（crates/game-core/src/sound/mod.rs（task-30 首件
+（B31B 族分派层）））+refs 实址 ✓（sound_engine.asm（RunSFXNoiseInitRoutine: ; $B31B+
+GetSoundRoutine: ; $B4BD+SoundEngine: ; $B3B4（bank7 固定区（m1disasm 裸址域注））））+结构
+互核注 ✓（八 cycle 薄装载器（chain 19 折叠面）+位扫描（MSB 优先（位7=最高优先）））——六步流程
+走通 ✓（feat(core) 实现落（1da5e52））✓
+
+**verdict**：批量改写 4 件（第五轮）**needs_revision**——**簇 6 修订拒收**（重新取证=占位形
+（「bank:addr」字面（非实址）））+**簇 9 拒收**（设计文档缺（实现在（ending/sequence.rs）（六步
+无文档（无法核）））+**簇 8 pass**（title::menu（refs 实址（8000 族（Crosshairs（8182-81D0
+（title::menu 域（正确）））））+六步流程））+**簇 10 pass**（sound::music（实现（sound/mod.rs
+（task-30（B31B 族分派）））+refs 实址（$B31B/$B4BD/$B3B4（bank7 固定区））+结构互核））——
+对抗复核核（证伪立场（独立重导证据（正确性核）））✓——复核 verdict 实录（docs commit
+（对抗复核 verdict（四项核（A 级原文））））✓。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
