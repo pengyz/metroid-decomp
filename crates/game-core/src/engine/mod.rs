@@ -16139,3 +16139,61 @@ pub fn collision_check_with_y_slot(x: u8, y: u8, v6af5_x: u8, v6af6_x: u8)
 pub fn collision_loop_cond_call(v70: u8) -> (Vec<(u16, u8)>, Option<u16>) {
     (vec![], if v70 == 0 { Some(0xCE84) } else { None })
 }
+
+// ===== 1:1 Rust 改写·批产·块 132（s1 余批 3 员去名（Yplus16 对偶微体族）（TDD 穷举等价））=====
+
+#[cfg(test)]
+mod tests_b132_engine_mod {
+    //! TDD step1（测试先行（强制完整））——穷举等价（新==旧（≤256³ 闸时限界））。
+    //! refs 锚（bank:addr 注内）：$F1EE Yplus16 root（:1601）/$F0CF（:1608）/$F112（:1615）。
+
+    use super::*;
+
+    /// 【穷举·对偶微体】y×x 全域 256²——advance_y16_x_minus16==s1_yplus16_xminus16
+    /// （Y+16/X-16（wrapping））。
+    #[test]
+    fn exhaustive_y16_pair_equivalence() {
+        for y in 0u8..=255 {
+            for x in 0u8..=255 {
+                assert_eq!(s1_yplus16_xminus16(y, x), advance_y16_x_minus16(y, x));
+            }
+        }
+    }
+
+    /// 【穷举·条件调壳】y 全域——y16_with_cond_call==s1_f0cf_body（y+16→$CE84）。
+    #[test]
+    fn exhaustive_y16_cond_equivalence() {
+        for y in 0u8..=255 {
+            assert_eq!(s1_f0cf_body(y), y16_with_cond_call(y));
+        }
+    }
+
+    /// 【穷举·$C0 判壳】y 全域——y16_with_c0_check==s1_f112_body（y+16 cmp $C0）。
+    #[test]
+    fn exhaustive_y16_c0_equivalence() {
+        for y in 0u8..=255 {
+            assert_eq!(s1_f112_body(y), y16_with_c0_check(y));
+        }
+    }
+}
+
+// ===== 1:1 Rust 改写·批产·块 132：Yplus16 对偶微体族语义命名（去地址名（公式形））=====
+// refs 锚（bank:addr 注内）：$F1EE Yplus16 root（:1601）/$F0CF（:1608）/$F112（:1615）。
+
+/// 对偶微体（旧 s1_yplus16_xminus16（$F1EE Yplus16 root）：Y←Y+16/X←X-16
+/// （clc/adc #$10/tay+txa/sec/sbc #$10/tax））。
+pub fn advance_y16_x_minus16(y: u8, x: u8) -> (u8, u8) {
+    (y.wrapping_add(0x10), x.wrapping_sub(0x10))
+}
+
+/// 条件调壳（旧 s1_f0cf_body（$F0CF）：Y+16+bne 环+$70 判⇒$CE84）。
+pub fn y16_with_cond_call(y: u8) -> (u8, Option<u16>) {
+    let (ny, _) = advance_y16_x_minus16(y, 0);
+    (ny, Some(0xCE84))
+}
+
+/// $C0 判壳（旧 s1_f112_body（$F112）：Y+16 cmp $C0 判段（≥$C0⇒真））。
+pub fn y16_with_c0_check(y: u8) -> (u8, bool) {
+    let (ny, _) = advance_y16_x_minus16(y, 0);
+    (ny, ny >= 0xC0)
+}
