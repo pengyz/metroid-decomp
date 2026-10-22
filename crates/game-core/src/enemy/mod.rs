@@ -16,3 +16,4 @@ pub use slot::EnemySlot;
 pub use enemy_collision_flags::EnemyCollisionFlags;
 pub use enemy_state::EnemyState;
 pub use movement::{MoveCheckOutcome, MoveCheckStaging};
+pub mod crawler;

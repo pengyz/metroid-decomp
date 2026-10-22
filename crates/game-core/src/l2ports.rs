@@ -873,6 +873,9 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "s4_cluster_106" => Some(sub_s4_cluster_106),
         "s4_cluster_108" => Some(sub_s4_cluster_108),
         "s4_cluster_110" => Some(sub_s4_cluster_110),
+        // 【第二十六簇 enemy::crawler registry 登记】bank:addr→fn 双射：
+        // CrawlerAIRoutine_{AREA}（enemies/crawler.asm:1）/CrawlerReorientSprite（:82）
+        "s4_cluster_crawler" => Some(sub_s4_cluster_crawler),
         // 【第十六簇 pickup::powerup registry 登记】bank:addr→fn 双射：
         // 07:DB37 UpdateAllPowerUps / 07:DB42 UpdateOnePowerUp（prg7_engine.asm:5503/5513）
         "s4_cluster_powerup" => Some(sub_s4_cluster_powerup),
@@ -3189,4 +3192,16 @@ pub fn sub_s4_cluster_powerup(input: &crate::L2In) -> crate::L2Out {
     let w = crate::pickup::powerup::update_one_power_up(slot, input.x, input.y).unwrap_or_default();
     let a = if w.is_empty() { 0xFF } else { w[3].1 };
     crate::L2Out { a, x: input.x, y: input.y, writes: w }
+}
+
+
+/// s4_cluster_crawler —— 第二十六簇 enemy::crawler 入口注册（bank:addr→fn 双射）。
+/// 适配径：a←data0A（朝向位）/x←方向位/y←帧计数→门+转向+reorient 索引→写集。
+pub fn sub_s4_cluster_crawler(input: &crate::L2In) -> crate::L2Out {
+    use crate::enemy::crawler::*;
+    let ori = CrawlerOrientation::from_bits(input.a);
+    let moved = should_crawler_move(input.y) as u8;
+    let (new_ori, _flip) = lava_turnaround(ori, input.x, 0xE4);
+    let idx = reorient_sprite_index(input.x & 1, new_ori);
+    crate::L2Out { a: new_ori.bits(), x: idx, y: moved, writes: crawler_writes(new_ori, idx) }
 }
