@@ -15755,3 +15755,76 @@ pub fn type_match_dispatch(y: u8, x: u8, tbl_val: u8, v6af9_x: u8) -> (Vec<(u16,
         (vec![(0x6AF9 + x as u16, tbl_val)], 0xF690)
     }
 }
+
+// ===== 1:1 Rust 改写·批产·块 122（s1/s2 余批 3 员去名（TDD 穷举等价））=====
+
+#[cfg(test)]
+mod tests_b122_engine_mod {
+    //! TDD step1（测试先行（强制完整））——穷举等价（新==旧（≤256³ 闸时限界））。
+    //! refs 锚（bank:addr 注内）：$F503（:331）/$F55C（:341）/$F6E2（:1847）。
+
+    use super::*;
+
+    /// 【穷举·旗门栈派发】root×x 全域——flag_hit_stack_dispatch==s1_f503
+    /// （命中⇒($A0,$F423)/未命中⇒$040C[x] 写（$04,$F400））。
+    #[test]
+    fn exhaustive_flag_stack_equivalence() {
+        for r in 0u8..=255 {
+            for x in 0u8..=255 {
+                assert_eq!(s1_f503(r, x), flag_hit_stack_dispatch(r, x));
+            }
+        }
+    }
+
+    /// 【穷举·旗门设值跳】root×x 全域——flag_hit_set_and_jump==s1_f55c
+    /// （命中⇒$040B[x]←5+$95A8/未命中⇒空）。
+    #[test]
+    fn exhaustive_flag_set_jump_equivalence() {
+        for r in 0u8..=255 {
+            for x in 0u8..=255 {
+                assert_eq!(s1_f55c(r, x), flag_hit_set_and_jump(r, x));
+            }
+        }
+    }
+
+    /// 【穷举·AND 壳】x×a×v 全域 256³——and_data05_cmp_dispatch==s2_f6e2_body
+    /// （AndEnData05 根委托（$49 cmp 2 判段注））。
+    #[test]
+    fn exhaustive_and_dispatch_equivalence() {
+        for x in 0u8..=255 {
+            for a in 0u8..=255 {
+                for v in 0u8..=255 {
+                    assert_eq!(s2_f6e2_body(x, a, v), and_data05_cmp_dispatch(x, a, v));
+                }
+            }
+        }
+    }
+}
+
+// ===== 1:1 Rust 改写·批产·块 122：s1/s2 余批 3 员语义命名（去地址名（公式形））=====
+// refs 锚（bank:addr 注内）：$F503（:331）/$F55C（:341）/$F6E2（:1847）。
+
+/// 旗门栈派发（旧 s1_f503（$F503）：命中⇒栈族（$F515 子调注）+尾跳 $F423（A=$A0）；
+/// 未命中⇒$040C[x]←root+续流 $F400（A=$04））。
+pub fn flag_hit_stack_dispatch(root_val: u8, x: u8) -> (Vec<(u16, u8)>, u8, u16) {
+    if crate::engine::boot::flag_gate_bit5(root_val) {
+        (vec![], 0xA0, 0xF423)
+    } else {
+        (vec![(0x040C + x as u16, root_val)], 0x04, 0xF400)
+    }
+}
+
+/// 旗门设值跳（旧 s1_f55c（$F55C）：命中⇒$040B[x]←5+尾跳 $95A8；未命中⇒rts（空））。
+pub fn flag_hit_set_and_jump(root_val: u8, x: u8) -> (Vec<(u16, u8)>, Option<u16>) {
+    if crate::engine::boot::flag_gate_bit5(root_val) {
+        (vec![(0x040B + x as u16, 5)], Some(0x95A8))
+    } else {
+        (vec![], None)
+    }
+}
+
+/// AND 壳（旧 s2_f6e2_body（$F6E2）：AndEnData05 根委托（$49 cmp 2 判+$F752/$FF eor 段
+/// +$0401[x] cmp 段（深段注）））。
+pub fn and_data05_cmp_dispatch(x: u8, a_in: u8, v0405_x: u8) -> (Vec<(u16, u8)>, u8) {
+    s1_and_en_data05(x, a_in, v0405_x)
+}
