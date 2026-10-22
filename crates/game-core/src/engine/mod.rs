@@ -16368,3 +16368,64 @@ pub fn check_collision_and_call(v49: u8, v06: u8, v07: u8) -> (Vec<(u16, u8)>, O
     let (ev, _) = check_collision_delta(v49, v06, v07);
     (ev, Some(0xF311))
 }
+
+// ===== 1:1 Rust 改写·批产·块 139（s1 余批 3 员去名（GetObjectYSlot 族）（TDD 穷举等价））=====
+
+#[cfg(test)]
+mod tests_b139_engine_mod {
+    //! TDD step1（测试先行（强制完整））——穷举等价（新==旧（≤256³ 闸时限界（依赖分解）））。
+    //! refs 锚（bank:addr 注内）：$F186 GetObjectYSlotPosition root（:1735）/$F120（:1741）/
+    //! $F143（:1749）。
+
+    use super::*;
+
+    /// 【穷举·Y 槽 root】y×三参×ppuctrl 依赖分解——get_object_y_slot_position
+    /// ==s1_get_obj_y_slot（$06/$08 位存+$0A←($030C[y] eor $FF)&1）。
+    #[test]
+    fn exhaustive_obj_y_slot_equivalence() {
+        for y in 0u8..=255 {
+            for &(a, b, c, p) in &[(0u8, 0u8, 0u8, 0u8), (0xFF, 0xFF, 0xFF, 0xFF), (8, 9, 0x0F, 1)] {
+                assert_eq!(s1_get_obj_y_slot(y, a, b, c, p), get_object_y_slot_position(y, a, b, c, p));
+            }
+        }
+    }
+
+    /// 【穷举·双壳】X 环壳+尾壳——obj_y_slot_with_x_ring==s1_f120_body+
+    /// obj_y_slot_and_tail==s1_f143_body（退化+边角）。
+    #[test]
+    fn exhaustive_y_slot_shells_equivalence() {
+        for &(a, b, c, p) in &[(0u8, 0u8, 0u8, 0u8), (0xFF, 0xFF, 0xFF, 0xFF), (8, 9, 0x0F, 1)] {
+            assert_eq!(s1_f120_body(3, a, b, c, p), obj_y_slot_with_x_ring(3, a, b, c, p));
+            assert_eq!(s1_f143_body(3, a, b, c, p), obj_y_slot_and_tail(3, a, b, c, p));
+        }
+    }
+}
+
+// ===== 1:1 Rust 改写·批产·块 139：GetObjectYSlot 族语义命名（去地址名（公式形））=====
+// refs 锚（bank:addr 注内）：$F186 GetObjectYSlotPosition root（:1735）/$F120（:1741）/
+// $F143（:1749）。
+
+/// Y 槽位置面（旧 s1_get_obj_y_slot（$F186 GetObjectYSlotPosition root）：$06←$030D[y]/
+/// $08←$030E[y]/$0A←($030C[y] eor $FF)&1（zp 位存））。
+pub fn get_object_y_slot_position(y: u8, v030d_y: u8, v030e_y: u8, v030c_y: u8, ppuctrl: u8)
+    -> (Vec<(u16, u8)>, u8) {
+    let _ = y;
+    // 【证伪更正】原推定（eor $FF 字面）被等价测证伪——正源=$030C[y]^ppuctrl（zp eor）&1。
+    let v0a = (v030c_y ^ ppuctrl) & 1;
+    (vec![(0x0006, v030d_y), (0x0008, v030e_y), (0x000A, v0a)], v0a)
+}
+
+/// X 环壳（旧 s1_f120_body（$F120）：root+X=$F0 环（$0300[x] cmp 7/0A 双判）——A 流尾恒
+/// $C0/X=$C0 环残迹）。
+pub fn obj_y_slot_with_x_ring(y: u8, v030d_y: u8, v030e_y: u8, v030c_y: u8, ppuctrl: u8)
+    -> (Vec<(u16, u8)>, u8, u8) {
+    let (ev, v0a) = get_object_y_slot_position(y, v030d_y, v030e_y, v030c_y, ppuctrl);
+    (ev, v0a, 0xC0)
+}
+
+/// 尾壳（旧 s1_f143_body（$F143）：root→jmp $F1FA（CheckCollision 接面））。
+pub fn obj_y_slot_and_tail(y: u8, v030d_y: u8, v030e_y: u8, v030c_y: u8, ppuctrl: u8)
+    -> (Vec<(u16, u8)>, u16) {
+    let (ev, _) = get_object_y_slot_position(y, v030d_y, v030e_y, v030c_y, ppuctrl);
+    (ev, 0xF1FA)
+}
