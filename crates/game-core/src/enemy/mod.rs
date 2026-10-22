@@ -24,3 +24,4 @@ pub mod projectile;
 
 /// mellow 模块（TDD 流程（测试先行（实现后补）））——refs asm 考证：bank07:EE86（SpawnMellow）+bank07:EE63（SpawnMellows）（Mellow 例程（实址（A 级原文）））
 pub mod mellow;
+pub mod spawn_control;
