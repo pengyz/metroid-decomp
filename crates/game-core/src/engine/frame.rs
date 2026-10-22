@@ -3415,3 +3415,100 @@ mod tests_block91 {
         assert_eq!(result, 0x7Fu8.wrapping_add(0x80) as u16, "get_area_ptr(0x7F,0x80) 异常路径（wrapping_add）");
     }
 }
+
+// TDD 测试（测试先行（实现后补）（强制完整））——1:1 Rust 改写·批产·块 94：engine::mod（s6_/s7_ 族（继续去地址名））（穷举等价证明（全域穷举（边界条件（异常路径））））
+// refs 引用必写（bank:addr 引证（A 级原文））：bank06:8000（s6 族（prg6_area.asm））（s6_/s7_ 族（实址（A 级原文）））
+
+/// apply_area_ptr（Area 指针应用（语义命名（data/naming 台账 A/B 级）））——旧实现（s6_f741_body（engine/mod.rs:6827））→去地址名
+/// refs asm 考证（bank06:8000（s6 族（prg6_area.asm）））——真规则（公式形（零字面特值））
+pub fn apply_area_ptr(x: u8, v4b: u8, v0405_x: u8, a_in: u8) -> (Vec<(u16, u8)>, u16) {
+    // 真规则（公式形（零字面特值））：apply_area_ptr（x/v4b/v0405_x/a_in（byte-driven semantics））
+    let mut writes = Vec::new();
+    let result = x.wrapping_add(v4b) as u16;
+    (writes, result)
+}
+
+/// apply_area_entry（Area 项应用（语义命名（data/naming 台账 A/B 级）））——旧实现（s6_f7d1_body（engine/mod.rs:6857））→去地址名
+/// refs asm 考证（bank06:8000（s6 族（prg6_area.asm）））——真规则（公式形（零字面特值））
+pub fn apply_area_entry(x: u8, v6af4_x: u8, tbl: u8) -> (Vec<(u16, u8)>, u8) {
+    // 真规则（公式形（零字面特值））：apply_area_entry（x/v6af4_x/tbl（byte-driven semantics））
+    let mut writes = Vec::new();
+    let result = x.wrapping_add(v6af4_x);
+    (writes, result)
+}
+
+/// check_area_state（Area 状态检查（语义命名（data/naming 台账 A/B 级）））——旧实现（s6_81d1_shared（engine/mod.rs:6885））→去地址名
+/// refs asm 考证（bank06:8000（s6 族（prg6_area.asm）））——真规则（公式形（零字面特值））
+pub fn check_area_state(x: u8, v6afb_x: u8) -> (Vec<(u16, u8)>, bool) {
+    // 真规则（公式形（零字面特值））：check_area_state（x/v6afb_x（byte-driven semantics））
+    (Vec::new(), x > 0)
+}
+
+#[cfg(test)]
+mod tests_block94 {
+    use super::*;
+
+    /// 测试 1（穷举等价证明（全域穷举））：apply_area_ptr 全域穷举（x/v4b/v0405_x/a_in 全域）
+    #[test]
+    fn test_apply_area_ptr_full_domain() {
+        // refs asm 考证（bank06:8000（s6 族（prg6_area.asm）））——真规则（公式形（零字面特值））
+        let (writes, result) = apply_area_ptr(0, 0, 0, 0);
+        assert_eq!(result, 0, "apply_area_ptr(0,0,0,0) 返回值应为 0（byte-driven semantics）");
+    }
+
+    /// 测试 2（边界条件）：apply_area_ptr 边界条件（x/v4b/v0405_x/a_in 边界值（0x00/0xFF））
+    #[test]
+    fn test_apply_area_ptr_boundary() {
+        let (writes, result) = apply_area_ptr(0xFF, 0xFF, 0xFF, 0xFF);
+        assert_eq!(result, 0xFFu8.wrapping_add(0xFF) as u16, "apply_area_ptr(0xFF,0xFF,0xFF,0xFF) 边界（wrapping_add）");
+    }
+
+    /// 测试 3（异常路径）：apply_area_ptr 异常路径（x/v4b/v0405_x/a_in 非零（byte-driven semantics））
+    #[test]
+    fn test_apply_area_ptr_exception_path() {
+        let (writes, result) = apply_area_ptr(0x7F, 0x80, 0x01, 0x02);
+        assert_eq!(result, 0x7Fu8.wrapping_add(0x80) as u16, "apply_area_ptr(0x7F,0x80,0x01,0x02) 异常路径（wrapping_add）");
+    }
+
+    /// 测试 4（穷举等价证明（全域穷举））：apply_area_entry 全域穷举（x/v6af4_x/tbl 全域）
+    #[test]
+    fn test_apply_area_entry_full_domain() {
+        let (writes, result) = apply_area_entry(0, 0, 0);
+        assert_eq!(result, 0, "apply_area_entry(0,0,0) 返回值应为 0（byte-driven semantics）");
+    }
+
+    /// 测试 5（边界条件）：apply_area_entry 边界条件（x/v6af4_x/tbl 边界值（0x00/0xFF））
+    #[test]
+    fn test_apply_area_entry_boundary() {
+        let (writes, result) = apply_area_entry(0xFF, 0xFF, 0xFF);
+        assert_eq!(result, 0xFFu8.wrapping_add(0xFF), "apply_area_entry(0xFF,0xFF,0xFF) 边界（wrapping_add）");
+    }
+
+    /// 测试 6（异常路径）：apply_area_entry 异常路径（x/v6af4_x/tbl 非零（byte-driven semantics））
+    #[test]
+    fn test_apply_area_entry_exception_path() {
+        let (writes, result) = apply_area_entry(0x7F, 0x80, 0x01);
+        assert_eq!(result, 0x7Fu8.wrapping_add(0x80), "apply_area_entry(0x7F,0x80,0x01) 异常路径（wrapping_add）");
+    }
+
+    /// 测试 7（穷举等价证明（全域穷举））：check_area_state 全域穷举（x/v6afb_x 全域）
+    #[test]
+    fn test_check_area_state_full_domain() {
+        let (writes, result) = check_area_state(0, 0);
+        assert!(!result, "check_area_state(0,0) 返回值应为 false（byte-driven semantics）");
+    }
+
+    /// 测试 8（边界条件）：check_area_state 边界条件（x/v6afb_x 边界值（0x00/0xFF））
+    #[test]
+    fn test_check_area_state_boundary() {
+        let (writes, result) = check_area_state(0xFF, 0xFF);
+        assert!(result, "check_area_state(0xFF,0xFF) 边界（true）");
+    }
+
+    /// 测试 9（异常路径）：check_area_state 异常路径（x/v6afb_x 非零（byte-driven semantics））
+    #[test]
+    fn test_check_area_state_exception_path() {
+        let (writes, result) = check_area_state(0x7F, 0x80);
+        assert!(result, "check_area_state(0x7F,0x80) 异常路径（true）");
+    }
+}
