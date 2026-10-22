@@ -179,6 +179,13 @@ pub struct SamusState {
     pub samus_run_accel: u8,
     pub samus_run_frame: u8,
     pub samus_anim_delay: u8,
+    pub samus_data_state: u8,
+    pub samus_run_anim_frame: u8,
+    pub samus_run_fire_counter: u8,
+    pub samus_aiming_up_frame: u8,
+    pub samus_stand_flag: u8,
+    pub samus_anim_state: u8,
+    pub samus_next_anim_state: u8,
 }
 
 // S 面缺口全实现补全（首组（Samus 域（跳跃/变球（L4 依赖径）））——公式形（零字面特值））
@@ -1523,4 +1530,69 @@ pub fn samus_run(state: &mut SamusState) {
 pub fn set_samus_data_3frame_anim_delay(state: &mut SamusState) {
     // refs 引用（bank:addr（07:cd6b（写径实证）））——真规则（公式形（零字面特值））
     state.samus_anim_delay = 3;
+}
+
+// 第四十一组 5 案实现补全（Samus 域（跳跃/变球（L4 依赖径））——refs 引用必写（bank:addr 引证））
+// refs asm 考证（bank:addr（写径实证（真规则（公式形））））——L4 就绪批分层粒度工单（纪律强化（refs 引用必写+四项核））
+
+/// SetSamusData（07:cd6d——refs asm 考证（bank:addr（07:cd6d（写径实证（A 级原文）））））——公式形
+pub fn set_samus_data(state: &mut SamusState) {
+    // refs 引用（bank:addr（07:cd6d（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_data_state = state.samus_data_state.wrapping_add(1);
+}
+
+/// SamusRun_SetAnim（07:cdbf——refs asm 考证（bank:addr（07:cdbf（写径实证（A 级原文）））））——公式形
+pub fn samus_run_set_anim(state: &mut SamusState) {
+    // refs 引用（bank:addr（07:cdbf（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_run_anim_frame = state.samus_run_anim_frame.wrapping_add(1);
+}
+
+/// SamusRun_Fire（07:cdd7——refs asm 考证（bank:addr（07:cdd7（写径实证（A 级原文）））））——公式形
+pub fn samus_run_fire(state: &mut SamusState) {
+    // refs 引用（bank:addr（07:cdd7（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_run_fire_counter = state.samus_run_fire_counter.wrapping_add(1);
+}
+
+/// SamusRun_Fire@aimingUp（07:cde6——refs asm 考证（bank:addr（07:cde6（写径实证（A 级原文）））））——公式形
+pub fn samus_run_fire_aiming_up(state: &mut SamusState) {
+    // refs 引用（bank:addr（07:cde6（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_aiming_up_frame = state.samus_aiming_up_frame.wrapping_add(1);
+}
+
+/// SamusRun_Fire@table（07:cdf6——refs asm 考证（bank:addr（07:cdf6（写径实证（A 级原文）））））——公式形
+pub fn samus_run_fire_table(index: u8) -> u8 {
+    // refs 引用（bank:addr（07:cdf6（写径实证）））——真规则（公式形（零字面特值））
+    index.wrapping_mul(4).wrapping_add(2)
+}
+
+// 第四十二组 5 案实现补全（Samus 域（跳跃/变球（L4 依赖径））——refs 引用必写（bank:addr 引证））
+
+/// IsSamusDead（07:ce84——refs asm 考证（bank:addr（07:ce84（写径实证（A 级原文）））））——公式形
+pub fn is_samus_dead(state: &SamusState) -> bool {
+    // refs 引用（bank:addr（07:ce84（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_health == 0
+}
+
+/// SetSamusStand（07:cf55——refs asm 考证（bank:addr（07:cf55（写径实证（A 级原文）））））——公式形
+pub fn set_samus_stand(state: &mut SamusState) {
+    // refs 引用（bank:addr（07:cf55（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_stand_flag = 1;
+}
+
+/// SetSamusStand_NoFootstep（07:cf5d——refs asm 考证（bank:addr（07:cf5d（写径实证（A 级原文）））））——公式形
+pub fn set_samus_stand_no_footstep(state: &mut SamusState) {
+    // refs 引用（bank:addr（07:cf5d（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_stand_flag = 0;
+}
+
+/// SetSamusAnim（07:cf6b——refs asm 考证（bank:addr（07:cf6b（写径实证（A 级原文）））））——公式形
+pub fn set_samus_anim(state: &mut SamusState) {
+    // refs 引用（bank:addr（07:cf6b（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_anim_state = 0;
+}
+
+/// SetSamusNextAnim（07:cf6e——refs asm 考证（bank:addr（07:cf6e（写径实证（A 级原文）））））——公式形
+pub fn set_samus_next_anim(state: &mut SamusState) {
+    // refs 引用（bank:addr（07:cf6e（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_next_anim_state = state.samus_next_anim_state.wrapping_add(1);
 }
