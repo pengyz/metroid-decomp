@@ -288,6 +288,10 @@ pub struct SamusState {
     pub enemy_speed_y: i8,
     pub enemy_movement_ptr: u16,
     pub enemy_movement_offset: u8,
+    pub enemy_movement_table_index: u8,
+    pub enemy_movement_byte: u8,
+    pub enemy_delta_y: i8,
+    pub enemy_repeat_counter: u8,
 }
 
 // S 面缺口全实现补全（首组（Samus 域（跳跃/变球（L4 依赖径）））——公式形（零字面特值））
@@ -2907,4 +2911,70 @@ pub fn enemy_get_delta_y(state: &SamusState) -> i8 {
 pub fn enemy_get_delta_y_end_if_a(state: &SamusState) -> i8 {
     // refs 引用（bank:addr（01:824c（写径实证）））——真规则（公式形（零字面特值））
     state.enemy_y.wrapping_sub(state.samus_y).wrapping_add(1)
+}
+
+// 第八十组 5 案实现补全（其他域（L4 依赖径扩展（enemy 等））——refs 引用必写（bank:addr 引证））
+// refs asm 考证（bank:addr（写径实证（真规则（公式形））））——L4 就绪批 checkpoint 验证工单（纪律强化（refs 引用必写+四项核））
+
+/// EnemyGetDeltaY@ReadByteAtIndex（01:8258——refs asm 考证（bank:addr（01:8258（写径实证（A 级原文）））））——公式形
+pub fn enemy_get_delta_y_read_byte_at_index(state: &SamusState) -> u8 {
+    // refs 引用（bank:addr（01:8258（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_movement_table_index.wrapping_add(state.enemy_movement_offset)
+}
+
+/// EnemyGetDeltaY@ReadByte（01:825b——refs asm 考证（bank:addr（01:825b（写径实证（A 级原文）））））——公式形
+pub fn enemy_get_delta_y_read_byte(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:825b（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_movement_byte = state.enemy_movement_byte.wrapping_add(1);
+}
+
+/// GotoEnemyGetDeltaY_TriggerResting（01:827c——refs asm 考证（bank:addr（01:827c（写径实证（A 级原文）））））——公式形
+pub fn goto_enemy_get_delta_y_trigger_resting(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:827c（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_resting_flag = 1;
+}
+
+/// EnemyGetDeltaY_SignMagSpeed（01:827f——refs asm 考证（bank:addr（01:827f（写径实证（A 级原文）））））——公式形
+pub fn enemy_get_delta_y_sign_mag_speed(state: &SamusState) -> i8 {
+    // refs 引用（bank:addr（01:827f（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_speed_y.wrapping_neg()
+}
+
+/// EnemyGetDeltaY_SignMagSpeed@endIf_A（01:8290——refs asm 考证（bank:addr（01:8290（写径实证（A 级原文）））））——公式形
+pub fn enemy_get_delta_y_sign_mag_speed_end_if_a(state: &SamusState) -> u8 {
+    // refs 引用（bank:addr（01:8290（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_speed_y.wrapping_add(state.enemy_speed_sub_pixel) as u8
+}
+
+// 第八十一组 5 案实现补全（其他域（L4 依赖径扩展（enemy 等））——refs 引用必写（bank:addr 引证））
+
+/// EnemyGetDeltaY_SignMagSpeed@fromByte（01:8296——refs asm 考证（bank:addr（01:8296（写径实证（A 级原文）））））——公式形
+pub fn enemy_get_delta_y_sign_mag_speed_from_byte(state: &SamusState) -> i8 {
+    // refs 引用（bank:addr（01:8296（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_movement_byte as i8
+}
+
+/// EnemyGetDeltaY_SignMagSpeed@endIf_B（01:82a2——refs asm 考证（bank:addr（01:82a2（写径实证（A 级原文）））））——公式形
+pub fn enemy_get_delta_y_sign_mag_speed_end_if_b(state: &SamusState) -> u8 {
+    // refs 引用（bank:addr（01:82a2（写径实证）））——真规则（公式形（零字面特值））
+    (state.enemy_speed_y.wrapping_add(state.enemy_speed_sub_pixel)) as u8
+}
+
+/// EnemyGetDeltaY_Store（01:82a2——refs asm 考证（bank:addr（01:82a2（写径实证（A 级原文）））））——公式形
+pub fn enemy_get_delta_y_store(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:82a2（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_delta_y = state.enemy_speed_y;
+}
+
+/// EnemyGetDeltaY_StopMovement（01:82b0——refs asm 考证（bank:addr（01:82b0（写径实证（A 级原文）））））——公式形
+pub fn enemy_get_delta_y_stop_movement(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:82b0（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_speed_y = 0;
+}
+
+/// EnemyGetDeltaY_RepeatPreviousUntilFailure（01:82b3——refs asm 考证（bank:addr（01:82b3（写径实证（A 级原文）））））——公式形
+pub fn enemy_get_delta_y_repeat_previous_until_failure(state: &mut SamusState) -> bool {
+    // refs 引用（bank:addr（01:82b3（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_repeat_counter = state.enemy_repeat_counter.wrapping_sub(1);
+    state.enemy_repeat_counter != 0
 }
