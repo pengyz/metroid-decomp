@@ -11573,6 +11573,42 @@ game-core/src+docs/design））零命中（实录））——①六步（无（�
 （证伪立场（独立重导证据（正确性核）））✓——复核 verdict 实录（docs commit（对抗复核 verdict
 （四项核（A 级原文））））✓。
 
+## 批量改写·对抗复核（4 件（簇 13 四次修订+簇 14 修订+簇 17/19（第九轮）（证伪立场（独立
+重导证据（正确性核））））
+
+### verdict: needs_revision（1/4 拒收（簇 19（refs 引证零实址）））（簇 13 四次修订+簇 14 修订+
+簇 17 pass）
+
+**① 簇 13 修订·四次（render::sprite）✓ pass**：域归属更正 ✓（DrawIntroBackground（00:80D0）+
+VRAMStruct_DrawIntroBackground（00:82F4-83C9）=**开场背景绘制（VRAM 名表）**（非精灵渲染
+（OAM/精灵）（拒收注（前轮实录））））+**重新取证 ✓**（bank00:87CF-887A（UpdateSparkleSprites/
+DoSparkleSpriteCoord）+bank00:988A-98AD（DecSpriteYCoord）+bank00:98AE-98B0（LoadStarSprites）+
+bank00:9C7F-9C8F（LoadWaveSprites）——**精灵渲染（OAM/精灵（正确域）**（实址（非占位
+（OAM/精灵（非 VRAM 名表）））））——②refs 引用核 ✓（域归属+实址（四次修订（占位→实址→
+域错位→域更正+重新取证（OAM/精灵））））✓
+
+**② 簇 14 修订（world::door）✓ pass**：refs 实址 ✓（bank01:8C61（DoorSubRoutine8C61
+（areas_common.asm:1579））+bank01:8C71（DoorSubRoutine8C71（:1591））+bank01:8C76（:1596）+
+bank01:8C7E（:1601）+bank01:8BD1（DoorHitPointTable（:1474）））——**门例程域（bank01
+areas_common（正确）**+refs 原文行引（A 级原文））✓
+
+**③ 簇 17（ui::password）✓ pass**：refs 实址 ✓（GoPassword: ; 07:C9C4（prg7_engine.asm:2170））
+——**密码域（bank07 引擎域（正确）**+移交面注（TitleRoutine←_id_DisplayPassword（BankSwitch
+Pending←1（页#=值−1⇒intro 页 0）））+六步流程 ✓（ui/password.rs（feat(core)（dec7978）））✓
+
+**④ 簇 19（engine::boot）✗ 拒收**：六步流程头 ✓（engine/boot.rs（「六步流程：定域取证 spec→
+域结构→memmap 适配→shim 写集适配→测试→registry 登记+独立复审」+测试（穷举等价证明（先例））+
+registry（l2ports.rs（双射））））——**refs 引证 ✗**（bank:addr 实址**零命中**（grep 实录
+（bank[0-9]+:[0-9A-F]{4}（零）））——②refs 引用核**缺**（六步头在（但引证未填（占位/缺）））
+
+**verdict**：批量改写 4 件（第九轮）**needs_revision**——**簇 19 拒收**（refs 引证零实址（六步头
+在（引证未填））+**簇 13 四次修订 pass**（域归属更正（OAM/精灵（非 VRAM 名表））+重新取证
+（87CF-887A/988A-98AD/98AE-98B0/9C7F-9C8F（精灵渲染（正确域））））+**簇 14 修订 pass**（refs
+实址（bank01:8C61 族（DoorSubRoutine*（areas_common.asm:1579 族））+8BD1（DoorHitPointTable）））+
+**簇 17 pass**（refs 实址（GoPassword: ; 07:C9C4（prg7_engine.asm:2170）））——对抗复核核（证伪
+立场（独立重导证据（正确性核）））✓——复核 verdict 实录（docs commit（对抗复核 verdict（四项核
+（A 级原文））））✓。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
