@@ -456,3 +456,209 @@ pub fn set_item_slot_pointer(root_val: u8, x: u8, zp4f: u8, zp50: u8) -> (Vec<(u
                   (0x0007, zp50), (0x0006, zp4f)];
     (ev, 0xDC67)
 }
+
+// ===== 旧实现改写·第十二件（s1 族 handler 面去地址名（TDD 穷举等价证明））=====
+
+#[cfg(test)]
+mod tests_rewrite12 {
+    //! TDD step1（测试先行（强制完整））——穷举等价（新==旧（全域穷举（边界（异常路径））））。
+    //! refs 锚（engine/mod.rs 注内 bank:addr）：$D824（:172）/$D834·$D837（:180）/
+    //! $D88F·$D892（:183）/$D83D·$D83A（:203）/$D870·$D86D（:219）。
+
+    use super::*;
+    use crate::engine::{s1_d824, s1_d837, s1_d892, s1_d83a_body, s1_d86d_body};
+
+    /// 【穷举·水平 handler 分路】x×v030e×vfd 全域 256³——select_horizontal==s1_d824。
+    #[test]
+    fn exhaustive_horizontal_handler_equivalence() {
+        for x in 0u8..=255 {
+            for a in 0u8..=255 {
+                for b in 0u8..=255 {
+                    assert_eq!(s1_d824(x, a, b), select_horizontal_motion_handler(x, a, b));
+                }
+            }
+        }
+    }
+
+    /// 【穷举·极简恒返】constant_fall_handler==s1_d837（全域（退化域 1 点））。
+    #[test]
+    fn exhaustive_constant_handler_equivalence() {
+        assert_eq!(s1_d837(), constant_fall_handler());
+    }
+
+    /// 【穷举·垂直 handler 分路】v030f 全域——select_vertical==s1_d892（符号面逐钉）。
+    #[test]
+    fn exhaustive_vertical_handler_equivalence() {
+        for v in 0u8..=255 {
+            assert_eq!(s1_d892(v), select_vertical_motion_handler(v));
+        }
+    }
+
+    /// 【穷举·垂直步进】x×v030f×v030d 全域 256³——step_vertical==s1_d83a_body
+    /// （符号分路（负⇒$EF 归位+条件子调（v030d==0⇒$D648）））。
+    #[test]
+    fn exhaustive_step_vertical_equivalence() {
+        for x in 0u8..=255 {
+            for f in 0u8..=255 {
+                for d in 0u8..=255 {
+                    assert_eq!(s1_d83a_body(x, f, d), step_vertical_position(x, f, d));
+                }
+            }
+        }
+    }
+
+    /// 【穷举·门写】x×vfc 全域——write_motion_defaults==s1_d86d_body（$FC==0 门（异常路径
+    /// vfc≠0 空集））。
+    #[test]
+    fn exhaustive_gate_writes_equivalence() {
+        for x in 0u8..=255 {
+            for fc in 0u8..=255 {
+                assert_eq!(s1_d86d_body(x, fc), write_motion_defaults_if_idle(x, fc));
+            }
+        }
+    }
+}
+
+// ===== 旧实现改写·第十二件：s1 族 handler 面语义命名（去地址名（公式形（零字面特值）））=====
+// refs 锚（engine/mod.rs 注内 bank:addr）：$D824（:172）/$D837（:180）/$D892（:183）/
+// $D83A（:203）/$D86D（:219）。
+
+/// 水平 handler 分路（旧 s1_d824（$D824）：$030E←$80+diff=v030e−vfd 符号分路
+/// （非负⇒$E6A7/负⇒$E6D2））。
+pub fn select_horizontal_motion_handler(x: u8, v030e_x: u8, vfd: u8) -> (Vec<(u16, u8)>, u16) {
+    let ev = vec![(0x030E, 0x80)];
+    let diff = v030e_x.wrapping_sub(vfd);
+    let sub = if (diff as i8) >= 0 { 0xE6A7 } else { 0xE6D2 };
+    (ev, sub)
+}
+
+/// 极简恒返 handler（旧 s1_d837（$D834 员体）：恒 $E6D2）。
+pub fn constant_fall_handler() -> u16 {
+    0xE6D2
+}
+
+/// 垂直 handler 分路（旧 s1_d892（$D88F）：$030F 符号分路（非负⇒$E519/负⇒$E4F1））。
+pub fn select_vertical_motion_handler(v030f_x: u8) -> u16 {
+    if (v030f_x as i8) >= 0 { 0xE519 } else { 0xE4F1 }
+}
+
+/// 垂直步进（旧 s1_d83a_body（$D83D）：非负⇒inc $030D[x]；负⇒$030D[x]←$EF
+/// +条件子调（$030D[x]==0⇒$D648）+尾跳 $D866）。
+pub fn step_vertical_position(x: u8, v030f_x: u8, v030d_x: u8) -> (Vec<(u16, u8)>, Option<u16>) {
+    if (v030f_x as i8) >= 0 {
+        (vec![(0x030D + x as u16, v030d_x.wrapping_add(1))], None)
+    } else {
+        let mut ev = Vec::new();
+        let call = if v030d_x == 0 { Some(0xD648) } else { None };
+        ev.push((0x030D + x as u16, 0xEF));
+        (ev, call.or(Some(0xD866)))
+    }
+}
+
+/// 门写（旧 s1_d86d_body（$D870）：$FC==0⇒四写（$0305←$4E/$0306←$41/$0305[x]←$5D/
+/// $0306[x]←$50）；≠0⇒空（bne 跳））。
+pub fn write_motion_defaults_if_idle(x: u8, vfc: u8) -> Vec<(u16, u8)> {
+    if vfc != 0 {
+        return Vec::new();
+    }
+    vec![(0x0305, 0x4E), (0x0306, 0x41),
+         (0x0305 + x as u16, 0x5D), (0x0306 + x as u16, 0x50)]
+}
+
+// ===== 旧实现改写·第二十一件（s1/s2 族续去地址名（TDD 穷举等价证明））=====
+
+#[cfg(test)]
+mod tests_rewrite21 {
+    //! TDD step1（测试先行（强制完整））——穷举等价（新==旧（全域穷举（边界（异常路径））））。
+    //! refs 锚（engine/mod.rs 注内 bank:addr）：$D89A（:229）/$D8A0（:233）/$D8B7（:248）/
+    //! $D970（:253）/$F735（:1899）/$F761（:1904）。
+
+    use super::*;
+    use crate::engine::{s1_d89a_body, s1_d8a0_body, s1_d8b7_body, s1_d970_body,
+                        s2_f735_body, s2_f761_body};
+
+    /// 【穷举·恒返二】constant_motion_handler==s1_d89a_body（退化域）。
+    #[test]
+    fn constant_motion_handler_equivalence() {
+        assert_eq!(s1_d89a_body(), constant_motion_handler());
+    }
+
+    /// 【穷举·槽状态推进】x×v0300 全域——advance_slot_status==s1_d8a0_body
+    /// （inc+==8 命中⇒$0303[x]←$23+子调 $CF6B（边界：0x07→0x08 命中/0xFF→0 回绕不命中））。
+    #[test]
+    fn exhaustive_advance_status_equivalence() {
+        for x in 0u8..=255 {
+            for v in 0u8..=255 {
+                assert_eq!(s1_d8a0_body(x, v), advance_slot_status_with_reset(x, v));
+            }
+        }
+    }
+
+    /// 【穷举·尾跳面】flag_dispatch==s1_d8b7_body（退化域）。
+    #[test]
+    fn tail_dispatch_equivalence() {
+        assert_eq!(s1_d8b7_body(), set_motion_flag_dispatch());
+    }
+
+    /// 【穷举·槽复位+init】reset_slot_and_init==s1_d970_body（退化域）。
+    #[test]
+    fn reset_init_equivalence() {
+        assert_eq!(s1_d970_body(), reset_slot_and_init());
+    }
+
+    /// 【穷举·OR 变体族】x×a×v 全域——or_enemy_data05_with_shifts==s2_f735_body、
+    /// or_enemy_data05_with_table_walk==s2_f761_body。
+    #[test]
+    fn exhaustive_or_variants_equivalence() {
+        for x in 0u8..=255 {
+            for a in 0u8..=255 {
+                for v in 0u8..=255 {
+                    assert_eq!(s2_f735_body(x, a, v), or_enemy_data05_with_shifts(x, a, v));
+                    assert_eq!(s2_f761_body(x, a, v), or_enemy_data05_with_table_walk(x, a, v));
+                }
+            }
+        }
+    }
+}
+
+// ===== 旧实现改写·第二十一件：s1/s2 族续语义命名（去地址名（公式形（零字面特值）））=====
+// refs 锚（engine/mod.rs 注内 bank:addr）：$D89A（:229）/$D8A0（:233）/$D8B7（:248）/
+// $D970（:253）/$F735（:1899）/$F761（:1904）。
+
+/// 恒返 motion handler（旧 s1_d89a_body（$D89A）：恒 $E519）。
+pub fn constant_motion_handler() -> u16 {
+    0xE519
+}
+
+/// 槽状态推进+复位（旧 s1_d8a0_body（$D8A0）：inc $0300[x]；==8⇒$0303[x]←$23
+/// +子调 $CF6B；否则无子调）。
+pub fn advance_slot_status_with_reset(x: u8, v0300_x: u8) -> (Vec<(u16, u8)>, Option<u16>) {
+    let nv = v0300_x.wrapping_add(1);
+    let mut ev = vec![(0x0300 + x as u16, nv)];
+    if nv == 0x08 {
+        ev.push((0x0303 + x as u16, 0x23));
+        (ev, Some(0xCF6B))
+    } else {
+        (ev, None)
+    }
+}
+
+/// 尾跳 flag 派发（旧 s1_d8b7_body（$D8BA）：lda #$01→jmp $DE47）。
+pub fn set_motion_flag_dispatch() -> (u8, u16) {
+    (0x01, 0xDE47)
+}
+
+/// 槽复位+init（旧 s1_d970_body（$D973）：$0307←0/$7D←0→jsr $F186）。
+pub fn reset_slot_and_init() -> (Vec<(u16, u8)>, u16) {
+    (vec![(0x0307, 0), (0x007D, 0)], 0xF186)
+}
+
+/// OR 变体（旧 s2_f735_body（$F735）：OrEnData05 根委托（三 lsr/ror 段注记））。
+pub fn or_enemy_data05_with_shifts(x: u8, a_in: u8, v0405_x: u8) -> (Vec<(u16, u8)>, u8) {
+    or_enemy_data05(x, a_in, v0405_x)
+}
+
+/// OR 变体（旧 s2_f761_body（$F761）：OrEnData05 根委托（$6B02 表走注记））。
+pub fn or_enemy_data05_with_table_walk(x: u8, a_in: u8, v0405_x: u8) -> (Vec<(u16, u8)>, u8) {
+    or_enemy_data05(x, a_in, v0405_x)
+}
