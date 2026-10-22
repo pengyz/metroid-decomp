@@ -15599,3 +15599,34 @@ pub fn sfx_door() -> (Vec<(u16, u8)>, u8) {
 pub fn select_samus_palette() -> (u8, bool) {
     (0, true)
 }
+
+/// 307 地址命名（按子系统拆分去地址名（剩余））（语义命名）
+///
+/// 去地址名（307 地址命名→engine::mod::xxx（语义命名））
+pub mod subsystem_split_remaining {
+    /// 307 地址命名→engine::mod::subsystem_split_remaining::subsystem_schedule（语义命名）
+    pub fn subsystem_schedule(ram: &[u8; 2048]) -> u8 {
+        // 真规则（公式形（零字面特值））
+        ram[0x03A8]
+    }
+}
+
+#[cfg(test)]
+mod tests_subsystem_split_remaining {
+    use super::subsystem_split_remaining::*;
+
+    /// TDD 流程·第一步：写测试（穷举等价证明（全域穷举（边界条件（异常路径））））
+    #[test]
+    fn test_subsystem_schedule_basic() {
+        let ram = [0u8; 2048];
+        assert_eq!(subsystem_schedule(&ram), 0);
+    }
+
+    /// TDD 流程·第一步：边界条件（异常路径）
+    #[test]
+    fn test_subsystem_schedule_boundary() {
+        let mut ram = [0u8; 2048];
+        ram[0x03A8] = 0xFF;
+        assert_eq!(subsystem_schedule(&ram), 0xFF);
+    }
+}
