@@ -293,3 +293,166 @@ pub fn and_enemy_data05_shift(x: u8, a_in: u8, v0405_x: u8) -> (Vec<(u16, u8)>, 
     }
     (ev, 0)
 }
+
+// ===== 旧实现改写·第十件（s1 族续去地址名（TDD 穷举等价证明））=====
+
+#[cfg(test)]
+mod tests_rewrite10 {
+    //! TDD step1（测试先行（强制完整））——穷举等价（新语义 fn==旧 s1 地址名 fn
+    //! （全维穷举（边界（异常路径））））。refs 锚（engine/mod.rs 注内 bank:addr）：
+    //! $D498 尾共享形（:77）/$EB68（:88）/$EBD9 对象槽初始化（:97）/$EC2F LoadStatues
+    //! （:111）/$EC89（:124）/$EE33（:129）。
+
+    use super::*;
+    use crate::engine::{s1_d498, s1_eb68, s1_ebd9, s1_load_statues, s1_ec89, s1_ee33};
+
+    /// 【穷举·槽标记】root×每槽值 全维（每槽 256² 对拍+四槽角组合）——mark_matching==s1_d498。
+    #[test]
+    fn exhaustive_slot_mark_equivalence() {
+        for root in 0u8..=255 {
+            for v in 0u8..=255 {
+                for &sx in &[0x18u16, 0x10, 0x08, 0x00] {
+                    let mut iram = vec![0u8; 0x800];
+                    iram[0x72C + sx as usize] = v;
+                    assert_eq!(s1_d498(root, &iram), mark_matching_enemy_slots(root, &iram),
+                               "root={} v={} slot={:#x}", root, v, sx);
+                }
+            }
+        }
+        // 四槽同值角组合
+        for root in [0u8, 1, 0x7F, 0x80, 0xFF] {
+            let mut iram = vec![0u8; 0x800];
+            for sx in [0x18u16, 0x10, 0x08, 0x00] { iram[0x72C + sx as usize] = root; }
+            assert_eq!(s1_d498(root, &iram), mark_matching_enemy_slots(root, &iram));
+        }
+    }
+
+    /// 【异常路径】d498 短缓冲（iram len < 0x72C+x）——unwrap_or(0) 面等价。
+    #[test]
+    fn exception_d498_short_iram() {
+        for root in 0u8..=255 {
+            for len in 0..0x730usize {
+                let iram = vec![0u8; len];
+                assert_eq!(s1_d498(root, &iram), mark_matching_enemy_slots(root, &iram));
+            }
+        }
+    }
+
+    /// 【穷举·敌数据写+跳】root×x 全域——store_enemy_data_fb==s1_eb68。
+    #[test]
+    fn exhaustive_eb68_equivalence() {
+        for root in 0u8..=255 {
+            for x in 0u8..=255 {
+                assert_eq!(s1_eb68(root, x), store_enemy_data_fb(root, x));
+            }
+        }
+    }
+
+    /// 【穷举·对象槽初始化】root×y 全域（wram 面）+x/tbl_hi 边角——init_object_slot==s1_ebd9。
+    #[test]
+    fn exhaustive_object_slot_equivalence() {
+        for root in 0u8..=255 {
+            for y in 0u8..=255 {
+                for &(x, tbl_hi) in &[(0u8, 0u8), (0xFF, 0xFF), (1, 0x80), (0x7F, 0x01)] {
+                    let mut w_old = vec![0u8; 0x2000];
+                    let mut w_new = vec![0u8; 0x2000];
+                    let o = s1_ebd9(root, x, y, 0x33, tbl_hi, &mut w_old);
+                    let n = init_object_slot(root, x, y, 0x33, tbl_hi, &mut w_new);
+                    assert_eq!(o, n);
+                    assert_eq!(w_old, w_new);
+                }
+            }
+        }
+    }
+
+    /// 【穷举·雕像装载】root×y×w687b×w687c 全域抽样边界（符号面 0/0x7F/0x80/0xFF 四值全组合
+    /// ×root×y 全域）——load_statues==s1_load_statues（符号判别逐钉）。
+    #[test]
+    fn exhaustive_statues_equivalence() {
+        for root in 0u8..=255 {
+            for y in 0u8..=255 {
+                for &b in &[0u8, 0x7F, 0x80, 0xFF] {
+                    for &c in &[0u8, 0x7F, 0x80, 0xFF] {
+                        assert_eq!(s1_load_statues(root, y, b, c), load_statues(root, y, b, c));
+                    }
+                }
+            }
+        }
+    }
+
+    /// 【穷举·房槽写+物槽指针】root×x×zp4f×zp50 边角全组合+root×x 全域——ec89/ee33 等价。
+    #[test]
+    fn exhaustive_room_item_slot_equivalence() {
+        for root in 0u8..=255 {
+            for x in 0u8..=255 {
+                assert_eq!(s1_ec89(root, x), set_room_sec_slot(root, x));
+                for &(f, g) in &[(0u8, 0u8), (0xFF, 0xFF), (0x50, 0x4F)] {
+                    assert_eq!(s1_ee33(root, x, f, g), set_item_slot_pointer(root, x, f, g));
+                }
+            }
+        }
+    }
+}
+
+// ===== 旧实现改写·第十件：s1 族续语义命名面（去地址名（公式形（零字面特值）））=====
+// refs 锚（engine/mod.rs 注内 bank:addr 引证）：$D498 尾共享形（:77）/$EB68（:88）/
+// $EBD9 对象槽初始化（:97）/$EC2F LoadStatues（:111）/$EC89（:124）/$EE33（:129）。
+
+/// 槽标记（旧 s1_d498（$D498 尾共享形）：四槽 $072C[x]==根 ⇒ $0728[x]←$FF
+/// （X 序 $18/$10/$08/0））。
+pub fn mark_matching_enemy_slots(root_val: u8, iram: &[u8]) -> Vec<(u16, u8)> {
+    let mut ev = Vec::new();
+    for x in [0x18u16, 0x10, 0x08, 0x00] {
+        let cmp_v = iram.get(0x72C + x as usize).copied().unwrap_or(0);
+        if root_val == cmp_v {
+            ev.push((0x0728 + x, 0xFF));
+        }
+    }
+    ev
+}
+
+/// 敌数据写+跳（旧 s1_eb68（$EB68）：$6AFB[x]←根→jmp $F85A）。
+pub fn store_enemy_data_fb(root_val: u8, x: u8) -> (Vec<(u16, u8)>, u16) {
+    (vec![(0x6AFB + x as u16, root_val)], 0xF85A)
+}
+
+/// 对象槽初始化（旧 s1_ebd9（$EBD9）：$030C[x]←根/$030E[x]←tbl_hi/$030D[x]←$68
+/// +位或累积内联（$6C15[y] ← y|$6C15[根^1]）→A=2）。
+pub fn init_object_slot(root_val: u8, x: u8, y: u8, tbl_lo: u8, tbl_hi: u8, wram: &mut [u8])
+    -> (Vec<(u16, u8)>, u8) {
+    let _ = tbl_lo;
+    let mut ev = vec![(0x030C + x as u16, root_val), (0x030E + x as u16, tbl_hi),
+                      (0x030D + x as u16, 0x68)];
+    let xs = root_val ^ 1;
+    let or_v = y | wram.get(0xC15 + xs as usize).copied().unwrap_or(0);
+    let idx = 0xC15 + y as usize;
+    if idx < wram.len() { wram[idx] = or_v; }
+    ev.push((0x6C15 + y as u16, or_v));
+    (ev, 2)
+}
+
+/// 雕像装载（旧 s1_load_statues（$EC2F）：$036C←根/$0370←符号判（$687C）/$036F←符号判
+/// （$687B）/$54←Y/$0360←1→jmp $EAD4）。
+pub fn load_statues(root_val: u8, y: u8, w687b: u8, w687c: u8)
+    -> (Vec<(u16, u8)>, u16) {
+    let ev = vec![
+        (0x036C, root_val),
+        (0x0370, if (w687c as i8) >= 0 { 0x40 } else { 0x30 }),
+        (0x036F, if (w687b as i8) >= 0 { 0x60 } else { 0x50 }),
+        (0x0054, y),
+        (0x0360, 1),
+    ];
+    (ev, 0xEAD4)
+}
+
+/// 房槽写+共享尾跳（旧 s1_ec89（$EC89）：$072C[x]←根→jmp $EC54）。
+pub fn set_room_sec_slot(root_val: u8, x: u8) -> (Vec<(u16, u8)>, u16) {
+    (vec![(0x072C + x as u16, root_val)], 0xEC54)
+}
+
+/// 物槽指针写+跳（旧 s1_ee33（$EE33）：$074B[x]←根/$09←3/$07←$50/$06←$4F→jmp $DC67）。
+pub fn set_item_slot_pointer(root_val: u8, x: u8, zp4f: u8, zp50: u8) -> (Vec<(u16, u8)>, u16) {
+    let ev = vec![(0x074B + x as u16, root_val), (0x0009, 3),
+                  (0x0007, zp50), (0x0006, zp4f)];
+    (ev, 0xDC67)
+}
