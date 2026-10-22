@@ -14767,54 +14767,108 @@ pub fn flags_cond_write_counter(x: u8, y: u8, tbl_entry: u8, v6af4_x: u8) -> Vec
     ev
 }
 
-/// s3_/s4_ 族（继续去地址名（语义命名））
-///
-/// 去地址名（s3_xxxx/s4_xxxx→engine::mod::xxx（语义命名））
-pub mod s3_s4_family_engine_v2 {
-    /// s3_xxxx→engine::mod::s3_s4_family_engine_v2::engine_schedule_s3_v2（语义命名）
-    pub fn engine_schedule_s3_v2(ram: &[u8; 2048]) -> u8 {
-        // 真规则（公式形（零字面特值））
-        ram[0x0384]
+// ===== 1:1 Rust 改写·批产·块 68（s3 族对偶+LoadEnHi 族去地址名（TDD 穷举等价））=====
+
+#[cfg(test)]
+mod tests_b68_engine_mod {
+    //! TDD step1（测试先行（强制完整））——穷举等价（新==旧（≤256³ 闸时限界））。
+    //! refs 锚（bank:addr 注内）：SFX_EnemyHit root（:3236）/$F59D（:3241）/$F5A2（:3247）/
+    //! $F752 LoadEnHi root（:3271）/$F6EB（:3278）/$F71A（:3288）。
+
+    use super::*;
+
+    /// 【穷举·对偶 SFX】sfx_enemy_hit_face==s3_sfx_enemy_hit+x×v040e 全域——
+    /// enemy_hit_and_check_state(_alt)==旧体（==$0B 判）。
+    #[test]
+    fn exhaustive_enemy_hit_pair_equivalence() {
+        assert_eq!(s3_sfx_enemy_hit(), sfx_enemy_hit_face());
+        for x in 0u8..=255 {
+            for v in 0u8..=255 {
+                assert_eq!(s3_f59d_body(x, v), enemy_hit_and_check_state(x, v));
+                assert_eq!(s3_f5a2_body(x, v), enemy_hit_and_check_state_alt(x, v));
+            }
+        }
     }
 
-    /// s4_xxxx→engine::mod::s3_s4_family_engine_v2::engine_schedule_s4_v2（语义命名）
-    pub fn engine_schedule_s4_v2(ram: &[u8; 2048]) -> u8 {
-        // 真规则（公式形（零字面特值））
-        ram[0x0385]
+    /// 【穷举·LoadEnHi root】x×v6afb×v030c 依赖分解——load_en_hi_and_eor_carry
+    /// ==s3_load_en_hi（eor 进位=bit0）。
+    #[test]
+    fn exhaustive_load_en_hi_equivalence() {
+        for x in 0u8..=255 {
+            for a in 0u8..=255 {
+                for b in [0u8, 1, 0x7F, 0x80, 0xFF] {
+                    assert_eq!(s3_load_en_hi(x, a, b), load_en_hi_and_eor_carry(x, a, b));
+                }
+            }
+        }
+        for b in 0u8..=255 {
+            assert_eq!(s3_load_en_hi(1, 2, b), load_en_hi_and_eor_carry(1, 2, b));
+        }
+    }
+
+    /// 【穷举·单/双 inc 壳】x×v6afb×v030c×v0401/v0400 依赖分解——en_hi_cond_write_
+    /// single/double==旧体（cmp 等段（$82 单/双 inc））。
+    #[test]
+    fn exhaustive_cond_write_inc_equivalence() {
+        for x in 0u8..=255 {
+            for t in [0u8, 0x0B, 0xFF] {
+                for c in [0u8, 0x0B, 0x80] {
+                    for v in [0u8, 0x0B, 0x80, 0xFF] {
+                        assert_eq!(s3_f6eb_body(x, t, c, v), en_hi_cond_write_single(x, t, c, v));
+                        assert_eq!(s3_f71a_body(x, t, c, v), en_hi_cond_write_double(x, t, c, v));
+                    }
+                }
+            }
+        }
     }
 }
 
-#[cfg(test)]
-mod tests_s3_s4_engine_v2 {
-    use super::s3_s4_family_engine_v2::*;
+// ===== 1:1 Rust 改写·批产·块 68：s3 族对偶+LoadEnHi 族语义命名（去地址名（公式形））=====
+// refs 锚（bank:addr 注内）：SFX_EnemyHit root（:3236）/$F59D（:3241）/$F5A2（:3247）/
+// $F752 LoadEnHi root（:3271）/$F6EB（:3278）/$F71A（:3288）。
 
-    /// TDD 流程·第一步：写测试（穷举等价证明（全域穷举（边界条件（异常路径））））
-    #[test]
-    fn test_engine_schedule_s3_v2_basic() {
-        let ram = [0u8; 2048];
-        assert_eq!(engine_schedule_s3_v2(&ram), 0);
-    }
+/// SFX 敌击声旗面（旧 s3_sfx_enemy_hit（SFX_EnemyHit root）：$0681←$04（sfxSQ1_ 面））。
+pub fn sfx_enemy_hit_face() -> (Vec<(u16, u8)>, u8) {
+    (vec![(0x0681, 0x04)], 0x04)
+}
 
-    /// TDD 流程·第一步：边界条件（异常路径）
-    #[test]
-    fn test_engine_schedule_s3_v2_boundary() {
-        let mut ram = [0u8; 2048];
-        ram[0x0384] = 0xFF;
-        assert_eq!(engine_schedule_s3_v2(&ram), 0xFF);
-    }
+/// 敌击+状态判（旧 s3_f59d_body（$F59D）：SFX_EnemyHit+$040E[x]==$0B 判）。
+pub fn enemy_hit_and_check_state(x: u8, v040e_x: u8) -> (Vec<(u16, u8)>, bool) {
+    let _ = x;
+    let (ev, _) = sfx_enemy_hit_face();
+    (ev, v040e_x == 0x0B)
+}
 
-    /// TDD 流程·第一步：写测试（穷举等价证明（全域穷举（边界条件（异常路径））））
-    #[test]
-    fn test_engine_schedule_s4_v2_basic() {
-        let ram = [0u8; 2048];
-        assert_eq!(engine_schedule_s4_v2(&ram), 0);
-    }
+/// 敌击+状态判（旧 s3_f5a2_body（$F5A2）：$F59D 同构面（$CBCE/$80B0 位5 段注））。
+pub fn enemy_hit_and_check_state_alt(x: u8, v040e_x: u8) -> (Vec<(u16, u8)>, bool) {
+    enemy_hit_and_check_state(x, v040e_x)
+}
 
-    /// TDD 流程·第一步：边界条件（异常路径）
-    #[test]
-    fn test_engine_schedule_s4_v2_boundary() {
-        let mut ram = [0u8; 2048];
-        ram[0x0385] = 0xFF;
-        assert_eq!(engine_schedule_s4_v2(&ram), 0xFF);
+/// EnHi 载+异或进位（旧 s3_load_en_hi（$F752 LoadEnHiToYAndLoadEorHiToCarry）：
+/// Y←$6AFB[x]；carry=（Y^$030C）bit0（eor+lsr））。
+pub fn load_en_hi_and_eor_carry(x: u8, v6afb_x: u8, v030c: u8) -> (u8, bool) {
+    let _ = x;
+    let y = v6afb_x;
+    let e = y ^ v030c;
+    (y, e & 1 != 0)
+}
+
+/// 单 inc 壳（旧 s3_f6eb_body（$F6EB）：LoadEnHi+$0405[x]←0+$0401[x]==$030C⇒$82←1）。
+pub fn en_hi_cond_write_single(x: u8, v6afb_x: u8, v030c: u8, v0401_x: u8) -> (Vec<(u16, u8)>, u8) {
+    let (y, _carry) = load_en_hi_and_eor_carry(x, v6afb_x, v030c);
+    let mut ev = vec![(0x0405 + x as u16, 0)];
+    if v0401_x == v030c {
+        ev.push((0x0082, 1));
     }
+    (ev, y)
+}
+
+/// 双 inc 壳（旧 s3_f71a_body（$F71A）：LoadEnHi+$0405[x]←0+$0400[x]==$030C⇒$82←2）。
+pub fn en_hi_cond_write_double(x: u8, v6afb_x: u8, v030c: u8, v0400_x: u8) -> (Vec<(u16, u8)>, u8) {
+    let (y, _) = load_en_hi_and_eor_carry(x, v6afb_x, v030c);
+    let mut ev = vec![(0x0405 + x as u16, 0)];
+    if v0400_x == v030c {
+        ev.push((0x0082, 2));
+    }
+    (ev, y)
 }
