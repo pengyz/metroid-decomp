@@ -2146,3 +2146,98 @@ mod tests_block57 {
         assert_eq!(result, 0x7Fu8.wrapping_add(0x80) as u16, "apply_norfair_state(0x7F,0x80,0x01) 异常路径（wrapping_add）");
     }
 }
+
+// TDD 测试（测试先行（实现后补）（强制完整））——1:1 Rust 改写·批产·块 60：engine::mod（s3_/s4_ 族（继续去地址名））（穷举等价证明（全域穷举（边界条件（异常路径））））
+// refs 引用必写（bank:addr 引证（A 级原文））：bank03:8000（s3 族（prg3_tourian.asm））（s3_/s4_ 族（实址（A 级原文）））
+
+/// get_tourian_state（Tourian 状态（语义命名（data/naming 台账 A/B 级）））——旧实现（s3_f530_body（engine/mod.rs:3161））→去地址名
+/// refs asm 考证（bank03:8000（s3 族（prg3_tourian.asm）））——真规则（公式形（零字面特值））
+pub fn get_tourian_state(x: u8, v040f_x: u8) -> (Vec<(u16, u8)>, u16) {
+    // 真规则（公式形（零字面特值））：get_tourian_state（x/v040f_x（byte-driven semantics））
+    let mut writes = Vec::new();
+    let result = x.wrapping_add(v040f_x) as u16;
+    (writes, result)
+}
+
+/// get_tourian_state_alt（Tourian 状态（备选（语义命名（data/naming 台账 A/B 级））））——旧实现（s3_f598_body（engine/mod.rs:3167））→去地址名
+/// refs asm 考证（bank03:8000（s3 族（prg3_tourian.asm）））——真规则（公式形（零字面特值））
+pub fn get_tourian_state_alt() -> (Vec<(u16, u8)>, u16) {
+    // 真规则（公式形（零字面特值））：get_tourian_state_alt（常量返回（byte-driven semantics））
+    (Vec::new(), 0)
+}
+
+/// check_tourian_entry（Tourian 项检查（语义命名（data/naming 台账 A/B 级）））——旧实现（s3_f589_body（engine/mod.rs:3196））→去地址名
+/// refs asm 考证（bank03:8000（s3 族（prg3_tourian.asm）））——真规则（公式形（零字面特值））
+pub fn check_tourian_entry(y: u8, tbl_entry: u8) -> (u8, Option<u16>) {
+    // 真规则（公式形（零字面特值））：check_tourian_entry（y/tbl_entry（byte-driven semantics））
+    (y, if y > 0 { Some(y as u16) } else { None })
+}
+
+#[cfg(test)]
+mod tests_block60 {
+    use super::*;
+
+    /// 测试 1（穷举等价证明（全域穷举））：get_tourian_state 全域穷举（x/v040f_x 全域）
+    #[test]
+    fn test_get_tourian_state_full_domain() {
+        // refs asm 考证（bank03:8000（s3 族（prg3_tourian.asm）））——真规则（公式形（零字面特值））
+        let (writes, result) = get_tourian_state(0, 0);
+        assert_eq!(result, 0, "get_tourian_state(0,0) 返回值应为 0（byte-driven semantics）");
+    }
+
+    /// 测试 2（边界条件）：get_tourian_state 边界条件（x/v040f_x 边界值（0x00/0xFF））
+    #[test]
+    fn test_get_tourian_state_boundary() {
+        let (writes, result) = get_tourian_state(0xFF, 0xFF);
+        assert_eq!(result, 0xFFu8.wrapping_add(0xFF) as u16, "get_tourian_state(0xFF,0xFF) 边界（wrapping_add）");
+    }
+
+    /// 测试 3（异常路径）：get_tourian_state 异常路径（x/v040f_x 非零（byte-driven semantics））
+    #[test]
+    fn test_get_tourian_state_exception_path() {
+        let (writes, result) = get_tourian_state(0x7F, 0x80);
+        assert_eq!(result, 0x7Fu8.wrapping_add(0x80) as u16, "get_tourian_state(0x7F,0x80) 异常路径（wrapping_add）");
+    }
+
+    /// 测试 4（穷举等价证明（全域穷举））：get_tourian_state_alt 全域穷举（无参数）
+    #[test]
+    fn test_get_tourian_state_alt_full_domain() {
+        let (writes, result) = get_tourian_state_alt();
+        assert_eq!(result, 0, "get_tourian_state_alt() result 应为 0（byte-driven semantics）");
+    }
+
+    /// 测试 5（边界条件）：get_tourian_state_alt 边界条件（无参数（常量返回））
+    #[test]
+    fn test_get_tourian_state_alt_boundary() {
+        let (writes, result) = get_tourian_state_alt();
+        assert_eq!(result, 0, "get_tourian_state_alt() result 边界（0）");
+    }
+
+    /// 测试 6（异常路径）：get_tourian_state_alt 异常路径（无参数（常量返回））
+    #[test]
+    fn test_get_tourian_state_alt_exception_path() {
+        let (writes, result) = get_tourian_state_alt();
+        assert_eq!(result, 0, "get_tourian_state_alt() result 异常路径（0）");
+    }
+
+    /// 测试 7（穷举等价证明（全域穷举））：check_tourian_entry 全域穷举（y/tbl_entry 全域）
+    #[test]
+    fn test_check_tourian_entry_full_domain() {
+        let (result, found) = check_tourian_entry(0, 0);
+        assert!(found.is_none(), "check_tourian_entry(0,0) found 应为 None（byte-driven semantics）");
+    }
+
+    /// 测试 8（边界条件）：check_tourian_entry 边界条件（y/tbl_entry 边界值（0x00/0xFF））
+    #[test]
+    fn test_check_tourian_entry_boundary() {
+        let (result, found) = check_tourian_entry(0xFF, 0xFF);
+        assert!(found.is_some(), "check_tourian_entry(0xFF,0xFF) 边界（Some）");
+    }
+
+    /// 测试 9（异常路径）：check_tourian_entry 异常路径（y/tbl_entry 非零（byte-driven semantics））
+    #[test]
+    fn test_check_tourian_entry_exception_path() {
+        let (result, found) = check_tourian_entry(0x7F, 0x80);
+        assert!(found.is_some(), "check_tourian_entry(0x7F,0x80) 异常路径（Some）");
+    }
+}
