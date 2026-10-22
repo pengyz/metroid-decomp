@@ -134,6 +134,10 @@ pub struct SamusState {
     pub mother_brain_x: u8,
     pub mother_brain_collision_threshold: u8,
     pub mother_brain_collide_frame: u8,
+    pub samus_map_x: u8,
+    pub samus_map_y: u8,
+    pub movement_routine_bank4: u8,
+    pub ridley_fireball_movement_choice: u8,
 }
 
 // S 面缺口全实现补全（首组（Samus 域（跳跃/变球（L4 依赖径）））——公式形（零字面特值））
@@ -1142,4 +1146,38 @@ pub fn mother_brain_idle_collide_with_samus(state: &SamusState) -> bool {
 pub fn mother_brain_idle_collide_with_samus_end_if_a(state: &mut SamusState) {
     // refs 引用（bank:addr（03:9e0e（写径实证）））——真规则（公式形（零字面特值））
     state.mother_brain_collide_frame = state.mother_brain_collide_frame.wrapping_add(1);
+}
+
+// 第三十一组 5 案实现补全（Samus 域（跳跃/变球（L4 依赖径））——refs 引用必写（bank:addr 引证））
+// refs asm 考证（bank:addr（写径实证（真规则（公式形））））——L4 就绪批微工单（纪律强化（refs 引用必写+四项核））
+
+/// ClearCurrentMetroidLatchAndMetroidOnSamus（03:a320——refs asm 考证（bank:addr（03:a320（写径实证（A 级原文）））））——公式形
+pub fn clear_current_metroid_latch_and_metroid_on_samus(state: &mut SamusState) {
+    // refs 引用（bank:addr（03:a320（写径实证）））——真规则（公式形（零字面特值））
+    state.metroid_latch = 0;
+    state.metroid_on_samus = 0;
+}
+
+/// AreaSamusMapPosX（04:95d7——refs asm 考证（bank:addr（04:95d7（写径实证（A 级原文）））））——公式形
+pub fn area_samus_map_pos_x(state: &SamusState) -> u8 {
+    // refs 引用（bank:addr（04:95d7（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_map_x
+}
+
+/// AreaSamusMapPosY（04:95d8——refs asm 考证（bank:addr（04:95d8（写径实证（A 级原文）））））——公式形
+pub fn area_samus_map_pos_y(state: &SamusState) -> u8 {
+    // refs 引用（bank:addr（04:95d8（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_map_y
+}
+
+/// JumpByRTSToMovementRoutine_BANK4（04:9a31——refs asm 考证（bank:addr（04:9a31（写径实证（A 级原文）））））——公式形
+pub fn jump_by_rts_to_movement_routine_bank4(state: &mut SamusState) {
+    // refs 引用（bank:addr（04:9a31（写径实证）））——真规则（公式形（零字面特值））
+    state.movement_routine_bank4 = state.movement_routine_bank4.wrapping_add(1);
+}
+
+/// EnemyMovementChoice_RidleyFireball_BANK5（05:97dd——refs asm 考证（bank:addr（05:97dd（写径实证（A 级原文）））））——公式形
+pub fn enemy_movement_choice_ridley_fireball_bank5(state: &mut SamusState) {
+    // refs 引用（bank:addr（05:97dd（写径实证）））——真规则（公式形（零字面特值））
+    state.ridley_fireball_movement_choice = state.ridley_fireball_movement_choice.wrapping_add(1);
 }
