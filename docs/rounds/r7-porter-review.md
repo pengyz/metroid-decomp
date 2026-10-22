@@ -11675,6 +11675,42 @@ UpdateElevator/ElevatorIdle/DrawElevator/ElevatorMove/ElevatorScrollY（电梯�
 92D4/932B（Initialize*（启动域（bank00）））））——对抗复核核（证伪立场（独立重导证据（正确性
 核）））✓——复核 verdict 实录（docs commit（对抗复核 verdict（四项核（A 级原文））））✓。
 
+## 批量改写·对抗复核（4 件（簇 18 复审+簇 21/22/23（第十二轮）（证伪立场（独立重导证据
+（正确性核））））
+
+### verdict: needs_revision（2/4 拒收（簇 21（实现未落（六步未走通））+簇 23（模块/文档缺）））
+（簇 18/22 pass）
+
+**① 簇 18（engine::nmi）✓ pass**（复审（前轮实录））：refs 实址 ✓（bank00:9A07（NMIScreenWrite）
++bank00:BFBA-BFBF（WaitForVBlank））——NMI 域（bank00（正确））+实现 ✓（frame/nmi.rs）+六步 ✓
+
+**② 簇 21（enemy::projectile）✗ 拒收**：文档 ✓（cluster-21-rewrite.md（refs 实址（bank01:8021
+（CommonJump_SpawnEnProjectile）+95DC-95E2（AreaEnProjectile*AnimIndex）+9965-9992（EnProjectile
+Movement0-3_BANK1）+978B（EnProjectileRisingAnimIndexTable）+979B-97A7（EnProjectilePosOffsetX/Y/
+MovementPtrTable）（敌弹域（bank01（正确）））））——**实现未落 ✗**（enemy/projectile.rs 无
+（grep（EnProjectile|SpawnEnProjectile（crates/game-core/src））仅调用点（frame/mainloop.rs+
+verify_shim/mod.rs+engine/mod.rs）（无专用模块））——①六步流程**未走通**（测试/registry 步
+（实现依赖）pending（文档在（实现缺）））
+
+**③ 簇 22（enemy::explosion）✓ pass**：实现 ✓（enemy/explosion.rs（748bec9（feat(core)）））+
+refs 实址 ✓（bank01:85A4（ObjAnim_SamusExplode（common_sprite_data.asm:118））+85F4（ObjAnim_
+BombExplode（:241））+8603（ObjAnim_MissileExplode（:268））+8954（ObjFrame_SamusExplode（:1183））
++8987/8A0F/8A1D/8A26（ObjFrame_BombExplode0/1/Blank/2（:1235/1369/1381/1393））+8AE9（ObjFrame_
+MissileExplode0（:1600）））——**爆炸动画/帧数据域（bank01（正确）**+六步流程 ✓（实现头（实址
+引证（bank:addr（A 级原文））））✓
+
+**④ 簇 23（enemy::mellow）✗ 拒收**：**模块/文档缺**（enemy/mellow.rs 无（cluster-23 文档无
+（ls+find 实录）））——仅 L2 端口注册 ✓（l2ports.rs:1993（「s5_cluster_123 —— bank07:EE6B 簇
+入口注册（SC-S5-03 SpawnMellow）」））——①六步流程（无模块（无法核））②refs（注册在（bank07:
+EE6B（SpawnMellow））但**无六步文档/实现模块**）
+
+**verdict**：批量改写 4 件（第十二轮）**needs_revision**——**簇 21 拒收**（文档 ✓（refs 实址
+（bank01:8021 族（敌弹域）））但**实现未落**（无专用 enemy/projectile.rs（六步未走通（测试/
+registry 步 pending）））+**簇 23 拒收**（模块/文档缺（仅 L2 端口注册（bank07:EE6B（SpawnMellow
+（SC-S5-03）））））+**簇 18 pass**（复审（bank00:9A07/BFBA（NMI 域）））+**簇 22 pass**（bank01:85A4
+族（爆炸动画/帧数据域（bank01（正确））））——对抗复核核（证伪立场（独立重导证据（正确性
+核）））✓——复核 verdict 实录（docs commit（对抗复核 verdict（四项核（A 级原文））））✓。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
