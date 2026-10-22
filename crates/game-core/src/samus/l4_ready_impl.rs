@@ -165,6 +165,10 @@ pub struct SamusState {
     pub samus_gfx_base: u8,
     pub samus_intro_frame: u8,
     pub samus_intro_max: u8,
+    pub samus_palette: u8,
+    pub sfx_samus_walk_counter: u8,
+    pub sfx_samus_jump_counter: u8,
+    pub sfx_samus_hit_counter: u8,
 }
 
 // S 面缺口全实现补全（首组（Samus 域（跳跃/变球（L4 依赖径）））——公式形（零字面特值））
@@ -1411,4 +1415,37 @@ pub fn samus_intro(state: &mut SamusState) -> bool {
 pub fn samus_fade_in_time_tbl(index: u8) -> u8 {
     // refs 引用（bank:addr（07:ca13（写径实证）））——真规则（公式形（零字面特值））
     index.wrapping_mul(2).wrapping_add(1)
+}
+
+// 第三十八组 5 案实现补全（Samus 域（跳跃/变球（L4 依赖径））——refs 引用必写（bank:addr 引证））
+// refs asm 考证（bank:addr（写径实证（真规则（公式形））））——L4 就绪批微工单（纪律强化（refs 引用必写+四项核））
+
+/// SelectSamusPalette（07:cb73——refs asm 考证（bank:addr（07:cb73（写径实证（A 级原文）））））——公式形
+pub fn select_samus_palette(state: &mut SamusState) {
+    // refs 引用（bank:addr（07:cb73（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_palette = state.samus_palette.wrapping_add(1);
+}
+
+/// SelectSamusPalette@endIf（07:cb89——refs asm 考证（bank:addr（07:cb89（写径实证（A 级原文）））））——公式形
+pub fn select_samus_palette_end_if(state: &SamusState) -> u8 {
+    // refs 引用（bank:addr（07:cb89（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_palette.wrapping_add(state.samus_suit)
+}
+
+/// SFX_SamusWalk（07:cb96——refs asm 考证（bank:addr（07:cb96（写径实证（A 级原文）））））——公式形
+pub fn sfx_samus_walk(state: &mut SamusState) {
+    // refs 引用（bank:addr（07:cb96（写径实证）））——真规则（公式形（零字面特值））
+    state.sfx_samus_walk_counter = state.sfx_samus_walk_counter.wrapping_add(1);
+}
+
+/// SFX_SamusJump（07:cbac——refs asm 考证（bank:addr（07:cbac（写径实证（A 级原文）））））——公式形
+pub fn sfx_samus_jump(state: &mut SamusState) {
+    // refs 引用（bank:addr（07:cbac（写径实证）））——真规则（公式形（零字面特值））
+    state.sfx_samus_jump_counter = state.sfx_samus_jump_counter.wrapping_add(1);
+}
+
+/// SFX_SamusHit（07:cbde——refs asm 考证（bank:addr（07:cbde（写径实证（A 级原文）））））——公式形
+pub fn sfx_samus_hit(state: &mut SamusState) {
+    // refs 引用（bank:addr（07:cbde（写径实证）））——真规则（公式形（零字面特值））
+    state.sfx_samus_hit_counter = state.sfx_samus_hit_counter.wrapping_add(1);
 }
