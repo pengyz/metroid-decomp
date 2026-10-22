@@ -14567,3 +14567,98 @@ pub fn stand_and_flip_slot_flag(x: u8, v030f_x: u8) -> Vec<(u16, u8)> {
     ev.push((0x030F + x as u16, v030f_x ^ 0x80));
     ev
 }
+
+// ===== 1:1 Rust 改写·批产·块 62（AnimDraw 壳+表走族去地址名（TDD 穷举等价））=====
+
+#[cfg(test)]
+mod tests_b62_engine_mod {
+    //! TDD step1（测试先行（强制完整））——穷举等价（新==旧（≤256³ 闸时限界））。
+    //! refs 锚（bank:addr 注内）：$D488（:1325）/$D66D（:1329）/$D8BC（:1341）/$D76A root
+    //! （:1373）/$D6E4（:1380）。
+
+    use super::*;
+
+    /// 【穷举·恒返壳】dispatch_de47==s1_d488_body（退化域）。
+    #[test]
+    fn dispatch_de47_equivalence() {
+        assert_eq!(s1_d488_body(), dispatch_de47());
+    }
+
+    /// 【穷举·计数选择】x×v2d×v030f 全域 256³——anim_draw_with_counter_select
+    /// ==s1_d66d_body（dec 回绕+==0⇒表选（$2D 位0））。
+    #[test]
+    fn exhaustive_counter_select_equivalence() {
+        for x in 0u8..=255 {
+            for v2d in 0u8..=255 {
+                for v0f in 0u8..=255 {
+                    assert_eq!(s1_d66d_body(x, v2d, v0f), anim_draw_with_counter_select(x, v2d, v0f));
+                }
+            }
+        }
+    }
+
+    /// 【穷举·条件写】x×v030f 全域——anim_draw_cond_write==s1_d8bc_body（==$8F 判）。
+    #[test]
+    fn exhaustive_cond_write_equivalence() {
+        for x in 0u8..=255 {
+            for v in 0u8..=255 {
+                assert_eq!(s1_d8bc_body(x, v), anim_draw_cond_write(x, v));
+            }
+        }
+    }
+
+    /// 【穷举·表走族×2】x×tbl 全域——table_walk_root/table_walk_call==旧体。
+    #[test]
+    fn exhaustive_table_walk_equivalence() {
+        for x in 0u8..=255 {
+            for t in 0u8..=255 {
+                assert_eq!(s1_root_d76a(x, t), table_walk_root(x, t));
+                assert_eq!(s1_d6e4_body(x, t), table_walk_call(x, t));
+            }
+        }
+    }
+}
+
+// ===== 1:1 Rust 改写·批产·块 62：AnimDraw 壳+表走族语义命名（去地址名（公式形））=====
+// refs 锚（bank:addr 注内）：$D488（:1325）/$D66D（:1329）/$D8BC（:1341）/$D76A root（:1373）/
+// $D6E4（:1380）。
+
+/// 恒返壳（旧 s1_d488_body（$D488）：恒 $DE47（AnimDrawObject 尾跳面））。
+pub fn dispatch_de47() -> u16 {
+    0xDE47
+}
+
+/// 计数选择（旧 s1_d66d_body（$D66D）：$030F[x]←dec；==0⇒$0400[x]←（$2D 位0?$82:$37）
+/// →jmp $DE47）。
+pub fn anim_draw_with_counter_select(x: u8, v2d: u8, v030f_x: u8) -> (Vec<(u16, u8)>, u16) {
+    let mut ev = Vec::new();
+    let d = v030f_x.wrapping_sub(1);
+    ev.push((0x030F + x as u16, d));
+    if d == 0 {
+        let v = if v2d & 1 != 0 { 0x82 } else { 0x37 };
+        ev.push((0x0400 + x as u16, v));
+    }
+    (ev, 0xDE47)
+}
+
+/// 条件写（旧 s1_d8bc_body（$D8BC）：$030F[x]==$8F⇒$1E←7（$6883 inc 等深面注））。
+pub fn anim_draw_cond_write(x: u8, v030f_x: u8) -> Vec<(u16, u8)> {
+    let _ = x;
+    if v030f_x == 0x8F {
+        vec![(0x001E, 7)]
+    } else {
+        Vec::new()
+    }
+}
+
+/// 表走 root（旧 s1_root_d76a（$D76A）：计算面（表走+条件调——A 出=X/Y=0））。
+pub fn table_walk_root(x: u8, tbl_entry: u8) -> (Vec<(u16, u8)>, u8, u8) {
+    let _ = tbl_entry;
+    (vec![], x, 0)
+}
+
+/// 表走壳（旧 s1_d6e4_body（$D6E4）：jsr $D76A/rts（极简））。
+pub fn table_walk_call(x: u8, tbl_entry: u8) -> (u8, u8) {
+    let (_, a, y) = table_walk_root(x, tbl_entry);
+    (a, y)
+}
