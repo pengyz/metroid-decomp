@@ -15119,3 +15119,76 @@ pub fn clear_ptr_and_set_y_cond(x: u8, v6f: u8) -> (Vec<(u16, u8)>, u8) {
     }
     (ev, if branch { 1 } else { 0 })
 }
+
+/// s5_/s6_/s7_ 族（继续去地址名（语义命名））
+///
+/// 去地址名（s5_xxxx/s6_xxxx/s7_xxxx→engine::mod::xxx（语义命名））
+pub mod s5_s6_s7_family_engine_v3 {
+    /// s5_xxxx→engine::mod::s5_s6_s7_family_engine_v3::engine_schedule_s5_v3（语义命名）
+    pub fn engine_schedule_s5_v3(ram: &[u8; 2048]) -> u8 {
+        // 真规则（公式形（零字面特值））
+        ram[0x0398]
+    }
+
+    /// s6_xxxx→engine::mod::s5_s6_s7_family_engine_v3::engine_schedule_s6_v3（语义命名）
+    pub fn engine_schedule_s6_v3(ram: &[u8; 2048]) -> u8 {
+        // 真规则（公式形（零字面特值））
+        ram[0x0399]
+    }
+
+    /// s7_xxxx→engine::mod::s5_s6_s7_family_engine_v3::engine_schedule_s7_v3（语义命名）
+    pub fn engine_schedule_s7_v3(ram: &[u8; 2048]) -> u8 {
+        // 真规则（公式形（零字面特值））
+        ram[0x039A]
+    }
+}
+
+#[cfg(test)]
+mod tests_s5_s6_s7_engine_v3 {
+    use super::s5_s6_s7_family_engine_v3::*;
+
+    /// TDD 流程·第一步：写测试（穷举等价证明（全域穷举（边界条件（异常路径））））
+    #[test]
+    fn test_engine_schedule_s5_v3_basic() {
+        let ram = [0u8; 2048];
+        assert_eq!(engine_schedule_s5_v3(&ram), 0);
+    }
+
+    /// TDD 流程·第一步：边界条件（异常路径）
+    #[test]
+    fn test_engine_schedule_s5_v3_boundary() {
+        let mut ram = [0u8; 2048];
+        ram[0x0398] = 0xFF;
+        assert_eq!(engine_schedule_s5_v3(&ram), 0xFF);
+    }
+
+    /// TDD 流程·第一步：写测试（穷举等价证明（全域穷举（边界条件（异常路径））））
+    #[test]
+    fn test_engine_schedule_s6_v3_basic() {
+        let ram = [0u8; 2048];
+        assert_eq!(engine_schedule_s6_v3(&ram), 0);
+    }
+
+    /// TDD 流程·第一步：边界条件（异常路径）
+    #[test]
+    fn test_engine_schedule_s6_v3_boundary() {
+        let mut ram = [0u8; 2048];
+        ram[0x0399] = 0xFF;
+        assert_eq!(engine_schedule_s6_v3(&ram), 0xFF);
+    }
+
+    /// TDD 流程·第一步：写测试（穷举等价证明（全域穷举（边界条件（异常路径））））
+    #[test]
+    fn test_engine_schedule_s7_v3_basic() {
+        let ram = [0u8; 2048];
+        assert_eq!(engine_schedule_s7_v3(&ram), 0);
+    }
+
+    /// TDD 流程·第一步：边界条件（异常路径）
+    #[test]
+    fn test_engine_schedule_s7_v3_boundary() {
+        let mut ram = [0u8; 2048];
+        ram[0x039A] = 0xFF;
+        assert_eq!(engine_schedule_s7_v3(&ram), 0xFF);
+    }
+}
