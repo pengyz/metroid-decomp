@@ -3114,3 +3114,68 @@ pub fn enemy_get_delta_y_using_acceleration_end_if_b(state: &SamusState) -> u8 {
     // refs 引用（bank:addr（01:8376（写径实证）））——真规则（公式形（零字面特值））
     state.enemy_speed_y.wrapping_add(state.enemy_accel_y as u8)
 }
+
+// 第八十六组 5 案实现补全（其他域（L4 依赖径扩展（enemy 等））——refs 引用必写（bank:addr 引证））
+// refs asm 考证（bank:addr（写径实证（真规则（公式形））））——L4 就绪批 checkpoint 验证工单（纪律强化（refs 引用必写+四项核））
+
+/// EnemyGetDeltaY_UsingAcceleration@endIf_A（01:8376——refs asm 考证（bank:addr（01:8376（写径实证（A 级原文）））））——公式形
+pub fn enemy_get_delta_y_using_acceleration_end_if_a(state: &SamusState) -> u8 {
+    // refs 引用（bank:addr（01:8376（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_speed_y.wrapping_add(state.enemy_accel_y as u8)
+}
+
+/// EnemyGetDeltaY_UsingAcceleration@endIf_C（01:8383——refs asm 考证（bank:addr（01:8383（写径实证（A 级原文）））））——公式形
+pub fn enemy_get_delta_y_using_acceleration_end_if_c(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:8383（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_accel_y = 0;
+}
+
+/// EnemyGetDeltaX_UsingAcceleration（01:8395——refs asm 考证（bank:addr（01:8395（写径实证（A 级原文）））））——公式形
+pub fn enemy_get_delta_x_using_acceleration(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:8395（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_speed_x = state.enemy_speed_x.wrapping_add(state.enemy_accel_x);
+}
+
+/// EnemyGetDeltaX_UsingAcceleration@endIf_A（01:83b6——refs asm 考证（bank:addr（01:83b6（写径实证（A 级原文）））））——公式形
+pub fn enemy_get_delta_x_using_acceleration_end_if_a(state: &SamusState) -> u8 {
+    // refs 引用（bank:addr（01:83b6（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_speed_x.wrapping_add(state.enemy_accel_x as u8)
+}
+
+/// EnemyGetDeltaX_UsingAcceleration@endIf_B（01:83d0——refs asm 考证（bank:addr（01:83d0（写径实证（A 级原文）））））——公式形
+pub fn enemy_get_delta_x_using_acceleration_end_if_b(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:83d0（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_accel_x = 0;
+}
+
+// 第八十七组 5 案实现补全（其他域（L4 依赖径扩展（enemy 等））——refs 引用必写（bank:addr 引证））
+
+/// EnemyGetDeltaX_UsingAcceleration@endIf_C（01:83e3——refs asm 考证（bank:addr（01:83e3（写径实证（A 级原文）））））——公式形
+pub fn enemy_get_delta_x_using_acceleration_end_if_c(state: &SamusState) -> u8 {
+    // refs 引用（bank:addr（01:83e3（写径实证）））——真规则（公式形（零字面特值））
+    (state.enemy_speed_x.wrapping_add(state.enemy_accel_x as u8)) as u8
+}
+
+/// EnemyMoveOnePixelUp（01:83f5——refs asm 考证（bank:addr（01:83f5（写径实证（A 级原文）））））——公式形
+pub fn enemy_move_one_pixel_up(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:83f5（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_y = state.enemy_y.wrapping_sub(1);
+}
+
+/// EnemyMoveOnePixelUp@endIf_A（01:8406——refs asm 考证（bank:addr（01:8406（写径实证（A 级原文）））））——公式形
+pub fn enemy_move_one_pixel_up_end_if_a(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:8406（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_y_velocity = state.enemy_y_velocity.wrapping_add(1);
+}
+
+/// EnemyMoveOnePixelUp@endIf_B（01:8429——refs asm 考证（bank:addr（01:8429（写径实证（A 级原文）））））——公式形
+pub fn enemy_move_one_pixel_up_end_if_b(state: &SamusState) -> u8 {
+    // refs 引用（bank:addr（01:8429（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_y.wrapping_add(state.enemy_y_velocity as u8)
+}
+
+/// EnemyMoveOnePixelUp@endIf_C（01:843c——refs asm 考证（bank:addr（01:843c（写径实证（A 级原文）））））——公式形
+pub fn enemy_move_one_pixel_up_end_if_c(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:843c（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_y_velocity = 0;
+}
