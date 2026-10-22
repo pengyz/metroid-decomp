@@ -13927,3 +13927,105 @@ pub fn toggle_hi_and_dispatch_de(v030c: u8) -> (Vec<(u16, u8)>, u16) {
     let (ev, _) = s1_toggle_samus_hi(v030c);
     (ev, 0xDE4A)
 }
+
+// ===== 1:1 Rust 改写·批产·块 32（s1 族取负 root 族去地址名（TDD 穷举等价证明））=====
+
+#[cfg(test)]
+mod tests_b32_engine_mod {
+    //! TDD step1（测试先行（强制完整））——穷举等价（新==旧（≤256³ 闸时限界））。
+    //! refs 锚（bank:addr 注内）：$C3D4 TwosCompliment root（:905）/$D57A（:910）/$F7A7
+    //! （:915）/$F9D9（:925）/$FB9C（:931）。
+
+    use super::*;
+
+    /// 【穷举·取负根】a 全域——negate_u8==s1_twos_compliment（wrapping_neg 全域）。
+    #[test]
+    fn exhaustive_negate_equivalence() {
+        for a in 0u8..=255 {
+            assert_eq!(s1_twos_compliment(a), negate_u8(a));
+        }
+    }
+
+    /// 【穷举·负写派发】a×x 全域——negate_and_dispatch_d4==s1_d57a_body。
+    #[test]
+    fn exhaustive_neg_dispatch_equivalence() {
+        for a in 0u8..=255 {
+            for x in 0u8..=255 {
+                assert_eq!(s1_d57a_body(a, x), negate_and_dispatch_d4(a, x));
+            }
+        }
+    }
+
+    /// 【穷举·负移位条件写】a×x×v06×v0405 依赖分解（写分量独立）——
+    /// negate_shift_and_mask_cond==s1_f7a7_body（neg>>3≥2 判）。
+    #[test]
+    fn exhaustive_neg_shift_mask_equivalence() {
+        for a in 0u8..=255 {
+            for x in 0u8..=255 {
+                for v06 in [0u8, 1, 0x0F, 0xF0, 0xFF] {
+                    for v05 in [0u8, 0x33, 0xFF] {
+                        assert_eq!(s1_f7a7_body(a, x, v06, v05), negate_shift_and_mask_cond(a, x, v06, v05));
+                    }
+                }
+            }
+        }
+    }
+
+    /// 【穷举·负 anim 载+范围分段】a×x×tbl 256³+a×x×y 全域。
+    #[test]
+    fn exhaustive_neg_anim_range_equivalence() {
+        for a in 0u8..=255 {
+            for x in 0u8..=255 {
+                for t in 0u8..=255 {
+                    assert_eq!(s1_f9d9_body(a, x, t), negate_anim_and_load_type(a, x, t));
+                }
+                for y in 0u8..=255 {
+                    assert_eq!(s1_fb9c_body(a, x, y), negate_and_range_dispatch(a, x, y));
+                }
+            }
+        }
+    }
+}
+
+// ===== 1:1 Rust 改写·批产·块 32：取负 root 族语义命名（去地址名（公式形（零字面特值）））=====
+// refs 锚（bank:addr 注内）：$C3D4 TwosCompliment root（:905）/$D57A（:910）/$F7A7（:915）/
+// $F9D9（:925）/$FB9C（:931）。
+
+/// 取负根（旧 s1_twos_compliment（$C3D4 TwosCompliment）：A←-A（wrapping））。
+pub fn negate_u8(a_in: u8) -> u8 {
+    a_in.wrapping_neg()
+}
+
+/// 负写派发（旧 s1_d57a_body（$D57A）：$0309[x]←-A→jmp $D4F8）。
+pub fn negate_and_dispatch_d4(a_in: u8, x: u8) -> (Vec<(u16, u8)>, u16) {
+    (vec![(0x0309 + x as u16, negate_u8(a_in))], 0xD4F8)
+}
+
+/// 负移位条件写（旧 s1_f7a7_body（$F7A7）：(-A)>>3≥$02⇒$0405[x]←$0405[x]&$06）。
+pub fn negate_shift_and_mask_cond(a_in: u8, x: u8, v06: u8, v0405_x: u8) -> Vec<(u16, u8)> {
+    let v = negate_u8(a_in) >> 3;
+    let mut ev = Vec::new();
+    if v >= 0x02 {
+        ev.push((0x0405 + x as u16, v0405_x & v06));
+    }
+    ev
+}
+
+/// 负 anim 载（旧 s1_f9d9_body（$F9D9）：$0403[x]←-A+$6AF9[x]←tbl）。
+pub fn negate_anim_and_load_type(a_in: u8, x: u8, tbl_entry: u8) -> Vec<(u16, u8)> {
+    let v = negate_u8(a_in);
+    vec![(0x0403 + x as u16, v), (0x6AF9 + x as u16, tbl_entry)]
+}
+
+/// 负范围分段（旧 s1_fb9c_body（$FB9C）：-A<8⇒空/-A≥$10⇒空（bcs 回卷）；
+/// 中段⇒$6AF9[x]←y&1（真））。
+pub fn negate_and_range_dispatch(a_in: u8, x: u8, y: u8) -> (Vec<(u16, u8)>, bool) {
+    let v = negate_u8(a_in);
+    if v < 8 {
+        (vec![], false)
+    } else if v >= 0x10 {
+        (vec![], false)
+    } else {
+        (vec![(0x6AF9 + x as u16, y & 1)], true)
+    }
+}
