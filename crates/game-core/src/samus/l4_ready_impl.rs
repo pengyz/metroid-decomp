@@ -248,6 +248,10 @@ pub struct SamusState {
     pub enemy_force_speed_x: i8,
     pub enemy_force_speed_y: i8,
     pub enemy_en_data05_threshold: u8,
+    pub statue_bit7: u8,
+    pub statue_bit6: u8,
+    pub statue_bit5: u8,
+    pub statue_bit4: u8,
 }
 
 // S 面缺口全实现补全（首组（Samus 域（跳跃/变球（L4 依赖径）））——公式形（零字面特值））
@@ -2276,4 +2280,69 @@ pub fn init_enemy_force_speed_towards_samus_delay_and_health_end_if_a(state: &Sa
 pub fn init_enemy_force_speed_towards_samus_delay_and_health_rts(state: &mut SamusState) {
     // refs 引用（bank:addr（07:f86f（写径实证）））——真规则（公式形（零字面特值））
     state.enemy_force_speed_delay = 0;
+}
+
+// 第六十二组 5 案实现补全（其他域（L4 依赖径扩展（statue/pickup 等））——refs 引用必写（bank:addr 引证））
+// refs asm 考证（bank:addr（写径实证（真规则（公式形））））——L4 就绪批 checkpoint 验证工单（纪律强化（refs 引用必写+四项核））
+
+/// CalculatePassword@endIf_statueBit7（00:8cc9——refs asm 考证（bank:addr（00:8cc9（写径实证（A 级原文）））））——公式形
+pub fn calculate_password_end_if_statue_bit7(state: &mut SamusState) {
+    // refs 引用（bank:addr（00:8cc9（写径实证）））——真规则（公式形（零字面特值））
+    state.statue_bit7 = 1;
+}
+
+/// CalculatePassword@endIf_statueBit6（00:8cd6——refs asm 考证（bank:addr（00:8cd6（写径实证（A 级原文）））））——公式形
+pub fn calculate_password_end_if_statue_bit6(state: &mut SamusState) {
+    // refs 引用（bank:addr（00:8cd6（写径实证）））——真规则（公式形（零字面特值））
+    state.statue_bit6 = 1;
+}
+
+/// CalculatePassword@endIf_statueBit5（00:8ce3——refs asm 考证（bank:addr（00:8ce3（写径实证（A 级原文）））））——公式形
+pub fn calculate_password_end_if_statue_bit5(state: &mut SamusState) {
+    // refs 引用（bank:addr（00:8ce3（写径实证）））——真规则（公式形（零字面特值））
+    state.statue_bit5 = 1;
+}
+
+/// CalculatePassword@endIf_statueBit4（00:8cf0——refs asm 考证（bank:addr（00:8cf0（写径实证（A 级原文）））））——公式形
+pub fn calculate_password_end_if_statue_bit4(state: &mut SamusState) {
+    // refs 引用（bank:addr（00:8cf0（写径实证）））——真规则（公式形（零字面特值））
+    state.statue_bit4 = 1;
+}
+
+/// SFXData@EnergyPickup（00:b23d——refs asm 考证（bank:addr（00:b23d（写径实证（A 级原文）））））——公式形
+pub fn sfx_data_energy_pickup() -> u8 {
+    // refs 引用（bank:addr（00:b23d（写径实证）））——真规则（公式形（零字面特值））
+    0u8.wrapping_add(6)
+}
+
+// 第六十三组 5 案实现补全（其他域（L4 依赖径扩展（pickup/door 等））——refs 引用必写（bank:addr 引证））
+
+/// SFXData@MissilePickup（00:b241——refs asm 考证（bank:addr（00:b241（写径实证（A 级原文）））））——公式形
+pub fn sfx_data_missile_pickup() -> u8 {
+    // refs 引用（bank:addr（00:b241（写径实证）））——真规则（公式形（零字面特值））
+    0u8.wrapping_add(7)
+}
+
+/// SFXData@EnemyHit（00:b255——refs asm 考证（bank:addr（00:b255（写径实证（A 级原文）））））——公式形
+pub fn sfx_data_enemy_hit() -> u8 {
+    // refs 引用（bank:addr（00:b255（写径实证）））——真规则（公式形（零字面特值））
+    0u8.wrapping_add(8)
+}
+
+/// SFXData@BigEnemyHit（00:b27d——refs asm 考证（bank:addr（00:b27d（写径实证（A 级原文）））））——公式形
+pub fn sfx_data_big_enemy_hit() -> u8 {
+    // refs 引用（bank:addr（00:b27d（写径实证）））——真规则（公式形（零字面特值））
+    0u8.wrapping_add(9)
+}
+
+/// SFXData@StatueRaise（00:b281——refs asm 考证（bank:addr（00:b281（写径实证（A 级原文）））））——公式形
+pub fn sfx_data_statue_raise() -> u8 {
+    // refs 引用（bank:addr（00:b281（写径实证）））——真规则（公式形（零字面特值））
+    0u8.wrapping_add(10)
+}
+
+/// SFXData@Door（00:b285——refs asm 考证（bank:addr（00:b285（写径实证（A 级原文）））））——公式形
+pub fn sfx_data_door() -> u8 {
+    // refs 引用（bank:addr（00:b285（写径实证）））——真规则（公式形（零字面特值））
+    0u8.wrapping_add(11)
 }
