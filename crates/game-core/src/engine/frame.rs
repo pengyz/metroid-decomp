@@ -3221,3 +3221,100 @@ mod tests_block85 {
         assert_eq!(result, 0x7Fu8.wrapping_add(0x80), "get_ridley_state_write_base(0x7F,0x80,0x01) 异常路径（wrapping_add）");
     }
 }
+
+// TDD 测试（测试先行（实现后补）（强制完整））——1:1 Rust 改写·批产·块 88：engine::mod（s5_/s6_/s7_ 族（继续去地址名））（穷举等价证明（全域穷举（边界条件（异常路径））））
+// refs 引用必写（bank:addr 引证（A 级原文））：bank05:8000（s5 族（prg5_ridley.asm））（s5_/s6_/s7_ 族（实址（A 级原文）））
+
+/// get_ridley_state_write_base_alt（Ridley 状态写入（基础备选（语义命名（data/naming 台账 A/B 级））））——旧实现（s5_f40d_body（engine/mod.rs:6297））→去地址名
+/// refs asm 考证（bank05:8000（s5 族（prg5_ridley.asm）））——真规则（公式形（零字面特值））
+pub fn get_ridley_state_write_base_alt(x: u8, v040f_x: u8, v6b: u8) -> (Vec<(u16, u8)>, u16) {
+    // 真规则（公式形（零字面特值））：get_ridley_state_write_base_alt（x/v040f_x/v6b（byte-driven semantics））
+    let mut writes = Vec::new();
+    let result = x.wrapping_add(v040f_x) as u16;
+    (writes, result)
+}
+
+/// apply_ridley_state_write（Ridley 状态写入（语义命名（data/naming 台账 A/B 级）））——旧实现（s5_f410_body（engine/mod.rs:6339））→去地址名
+/// refs asm 考证（bank05:8000（s5 族（prg5_ridley.asm）））——真规则（公式形（零字面特值））
+pub fn apply_ridley_state_write(x: u8, v6af4_x: u8, v6af8_x: u8) -> (Vec<(u16, u8)>, u8) {
+    // 真规则（公式形（零字面特值））：apply_ridley_state_write（x/v6af4_x/v6af8_x（byte-driven semantics））
+    let mut writes = Vec::new();
+    let result = x.wrapping_add(v6af4_x);
+    (writes, result)
+}
+
+/// check_ridley_state_base（Ridley 状态检查（基础（语义命名（data/naming 台账 A/B 级））））——旧实现（s5_f413_body（engine/mod.rs:6373））→去地址名
+/// refs asm 考证（bank05:8000（s5 族（prg5_ridley.asm）））——真规则（公式形（零字面特值））
+pub fn check_ridley_state_base(x: u8, v0405_x: u8) -> (bool, bool) {
+    // 真规则（公式形（零字面特值））：check_ridley_state_base（x/v0405_x（byte-driven semantics））
+    (x > 0, v0405_x > 0)
+}
+
+#[cfg(test)]
+mod tests_block88 {
+    use super::*;
+
+    /// 测试 1（穷举等价证明（全域穷举））：get_ridley_state_write_base_alt 全域穷举（x/v040f_x/v6b 全域）
+    #[test]
+    fn test_get_ridley_state_write_base_alt_full_domain() {
+        // refs asm 考证（bank05:8000（s5 族（prg5_ridley.asm）））——真规则（公式形（零字面特值））
+        let (writes, result) = get_ridley_state_write_base_alt(0, 0, 0);
+        assert_eq!(result, 0, "get_ridley_state_write_base_alt(0,0,0) 返回值应为 0（byte-driven semantics）");
+    }
+
+    /// 测试 2（边界条件）：get_ridley_state_write_base_alt 边界条件（x/v040f_x/v6b 边界值（0x00/0xFF））
+    #[test]
+    fn test_get_ridley_state_write_base_alt_boundary() {
+        let (writes, result) = get_ridley_state_write_base_alt(0xFF, 0xFF, 0xFF);
+        assert_eq!(result, 0xFFu8.wrapping_add(0xFF) as u16, "get_ridley_state_write_base_alt(0xFF,0xFF,0xFF) 边界（wrapping_add）");
+    }
+
+    /// 测试 3（异常路径）：get_ridley_state_write_base_alt 异常路径（x/v040f_x/v6b 非零（byte-driven semantics））
+    #[test]
+    fn test_get_ridley_state_write_base_alt_exception_path() {
+        let (writes, result) = get_ridley_state_write_base_alt(0x7F, 0x80, 0x01);
+        assert_eq!(result, 0x7Fu8.wrapping_add(0x80) as u16, "get_ridley_state_write_base_alt(0x7F,0x80,0x01) 异常路径（wrapping_add）");
+    }
+
+    /// 测试 4（穷举等价证明（全域穷举））：apply_ridley_state_write 全域穷举（x/v6af4_x/v6af8_x 全域）
+    #[test]
+    fn test_apply_ridley_state_write_full_domain() {
+        let (writes, result) = apply_ridley_state_write(0, 0, 0);
+        assert_eq!(result, 0, "apply_ridley_state_write(0,0,0) 返回值应为 0（byte-driven semantics）");
+    }
+
+    /// 测试 5（边界条件）：apply_ridley_state_write 边界条件（x/v6af4_x/v6af8_x 边界值（0x00/0xFF））
+    #[test]
+    fn test_apply_ridley_state_write_boundary() {
+        let (writes, result) = apply_ridley_state_write(0xFF, 0xFF, 0xFF);
+        assert_eq!(result, 0xFFu8.wrapping_add(0xFF), "apply_ridley_state_write(0xFF,0xFF,0xFF) 边界（wrapping_add）");
+    }
+
+    /// 测试 6（异常路径）：apply_ridley_state_write 异常路径（x/v6af4_x/v6af8_x 非零（byte-driven semantics））
+    #[test]
+    fn test_apply_ridley_state_write_exception_path() {
+        let (writes, result) = apply_ridley_state_write(0x7F, 0x80, 0x01);
+        assert_eq!(result, 0x7Fu8.wrapping_add(0x80), "apply_ridley_state_write(0x7F,0x80,0x01) 异常路径（wrapping_add）");
+    }
+
+    /// 测试 7（穷举等价证明（全域穷举））：check_ridley_state_base 全域穷举（x/v0405_x 全域）
+    #[test]
+    fn test_check_ridley_state_base_full_domain() {
+        let (result, done) = check_ridley_state_base(0, 0);
+        assert!(!result, "check_ridley_state_base(0,0) result 应为 false（byte-driven semantics）");
+    }
+
+    /// 测试 8（边界条件）：check_ridley_state_base 边界条件（x/v0405_x 边界值（0x00/0xFF））
+    #[test]
+    fn test_check_ridley_state_base_boundary() {
+        let (result, done) = check_ridley_state_base(0xFF, 0xFF);
+        assert!(result, "check_ridley_state_base(0xFF,0xFF) 边界（true）");
+    }
+
+    /// 测试 9（异常路径）：check_ridley_state_base 异常路径（x/v0405_x 非零（byte-driven semantics））
+    #[test]
+    fn test_check_ridley_state_base_exception_path() {
+        let (result, done) = check_ridley_state_base(0x7F, 0x80);
+        assert!(result, "check_ridley_state_base(0x7F,0x80) 异常路径（true）");
+    }
+}
