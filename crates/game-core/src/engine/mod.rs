@@ -16505,3 +16505,89 @@ pub fn update_enemy_frozen_check(x: u8, v040f_x: u8, v0404_x: u8, v040e_x: u8,
     }
     (ev, frozen)
 }
+
+// ===== 1:1 Rust 改写·批产·块 144（s1 余批 3 员去名（TDD 穷举等价（域压缩（timer））））=====
+
+#[cfg(test)]
+mod tests_b144_engine_mod {
+    //! TDD step1（测试先行（强制完整））——穷举等价（新==旧（依赖分解（256² 级域
+    //! （timer 纪律（141 注记））））。
+    //! refs 锚（bank:addr 注内）：$F536 EnemyReactToSamusProjectile root（:1785）/$FEAA
+    //! （:1757）/$F3E3（:1794）。
+
+    use super::*;
+
+    /// 【穷举·弹反 root】x×三参依赖分解——enemy_react_to_projectile==s1_enemy_react_projectile
+    /// （$0A←$040F[x]+hit=（位5 且 ==$03））。
+    #[test]
+    fn exhaustive_react_projectile_equivalence() {
+        for x in 0u8..=255 {
+            for &(a, b, c) in &[(0u8, 0u8, 0u8), (0xFF, 0xFF, 0xFF), (5, 0x20, 3), (5, 0x20, 2), (5, 0x10, 3)] {
+                assert_eq!(s1_enemy_react_projectile(x, a, b, c), enemy_react_to_projectile(x, a, b, c));
+            }
+        }
+        for b in 0u8..=255 {
+            assert_eq!(s1_enemy_react_projectile(1, 2, b, 3), enemy_react_to_projectile(1, 2, b, 3));
+        }
+    }
+
+    /// 【穷举·pos 对加】y×五参依赖分解——obj_y_slot_with_pos_pair==s1_feaa_body
+    /// （root+$04←$0301+4/$05←$0302+4）。
+    #[test]
+    fn exhaustive_feaa_equivalence() {
+        for &(a, b, c, p, d, e) in &[(0u8, 0u8, 0u8, 0u8, 0u8, 0u8),
+                                     (0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF),
+                                     (8, 9, 0x0F, 1, 1, 2)] {
+            assert_eq!(s1_feaa_body(3, a, b, c, p, d, e), obj_y_slot_with_pos_pair(3, a, b, c, p, d, e));
+        }
+    }
+
+    /// 【穷举·条件表写】x×v0405 依赖分解+tbl 边角——cond_table_write_on_flag==s1_f3e3_body
+    /// （bmi 段（负⇒空）/位5⇒$0409[x]←tbl）。
+    #[test]
+    fn exhaustive_cond_table_write_equivalence() {
+        for x in 0u8..=255 {
+            for v in 0u8..=255 {
+                for t in [0u8, 0x55, 0xFF] {
+                    assert_eq!(s1_f3e3_body(x, v, 0, t), cond_table_write_on_flag(x, v, 0, t));
+                }
+            }
+        }
+    }
+}
+
+// ===== 1:1 Rust 改写·批产·块 144：s1 余批 3 员语义命名（去地址名（公式形））=====
+// refs 锚（bank:addr 注内）：$F536 EnemyReactToSamusProjectile root（:1785）/$FEAA（:1757）/
+// $F3E3（:1794）。
+
+/// 弹反 root（旧 s1_enemy_react_projectile（$F536 EnemyReactToSamusProjectile root）：
+/// $0A←$040F[x]+hit=（$0404[x] 位5 且 $040E[x]==$03））。
+pub fn enemy_react_to_projectile(x: u8, v040f_x: u8, v0404_x: u8, v040e_x: u8)
+    -> (Vec<(u16, u8)>, bool) {
+    let _ = x;
+    let ev = vec![(0x000A, v040f_x)];
+    let hit = (v0404_x & 0x20 != 0) && v040e_x == 3;
+    (ev, hit)
+}
+
+/// pos 对加壳（旧 s1_feaa_body（$FEAA）：root+$04←$0301+4/$05←$0302+4（cs 分段（$F1FA 调）））。
+pub fn obj_y_slot_with_pos_pair(y: u8, v030d_y: u8, v030e_y: u8, v030c_y: u8, ppuctrl: u8,
+                                v0301: u8, v0302: u8) -> Vec<(u16, u8)> {
+    let (mut ev, _) = get_object_y_slot_position(y, v030d_y, v030e_y, v030c_y, ppuctrl);
+    ev.push((0x0004, v0301.wrapping_add(4)));
+    ev.push((0x0005, v0302.wrapping_add(4)));
+    ev
+}
+
+/// 条件表写（旧 s1_f3e3_body（$F3E3）：$0405[x] 负⇒空（bmi 段）/位5⇒$0409[x]←tbl）。
+pub fn cond_table_write_on_flag(x: u8, v0405_x: u8, v6b02_x: u8, tbl_entry: u8) -> Vec<(u16, u8)> {
+    let _ = v6b02_x;
+    let mut ev = Vec::new();
+    if (v0405_x as i8) < 0 {
+        return ev;
+    }
+    if v0405_x & 0x20 != 0 {
+        ev.push((0x0409 + x as u16, tbl_entry));
+    }
+    ev
+}
