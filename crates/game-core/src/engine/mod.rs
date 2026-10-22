@@ -15182,3 +15182,93 @@ pub fn object_control_and_dispatch(x: u8, a_in: u8) -> (Vec<(u16, u8)>, u16) {
 pub fn load_x_from_4b_stub(v4b: u8) -> (u8, bool) {
     (v4b, true)
 }
+
+// ===== 1:1 Rust 改写·批产·块 93（s6 族 SFX 壳族去地址名（TDD 穷举等价））=====
+
+#[cfg(test)]
+mod tests_b93_engine_mod {
+    //! TDD step1（测试先行（强制完整））——穷举等价（新==旧（≤256³ 闸时限界（依赖分解）））。
+    //! refs 锚（bank:addr 注内）：$F533（:6575）/$CBB8 SFX_Metal root（:6602）/$CBCE
+    //! SFX_BigEnemyHit root（:6710）/$F584（:6684）/$F5A7（:6716）。
+
+    use super::*;
+
+    /// 【穷举·旗暂存】x×v040f×v0404 依赖分解——stage_motion_flag_with_dup==s6_f533_body
+    /// （$0A←$040F[x]（位5 未置⇒重复写））。
+    #[test]
+    fn exhaustive_flag_stage_equivalence() {
+        for x in 0u8..=255 {
+            for v in 0u8..=255 {
+                for w in [0u8, 0x20, 0x21, 0xFF] {
+                    assert_eq!(s6_f533_body(x, v, w), stage_motion_flag_with_dup(x, v, w));
+                }
+            }
+        }
+    }
+
+    /// 【穷举·SFX 面×2】sfx_metal_face==s6_sfx_metal+sfx_boss_hit_face==s6_sfx_boss_hit
+    /// （声旗面逐钉）+boss_hit_passthrough==s6_f584_body（x×v0c 全域）。
+    #[test]
+    fn exhaustive_sfx_faces_equivalence() {
+        assert_eq!(s6_sfx_metal(), sfx_metal_face());
+        assert_eq!(s6_sfx_boss_hit(), sfx_boss_hit_face());
+        for x in 0u8..=255 {
+            for v in 0u8..=255 {
+                assert_eq!(s6_f584_body(x, v), boss_hit_passthrough(x, v));
+            }
+        }
+    }
+
+    /// 【穷举·条件写】x×v040e×v80b0 依赖分解——big_enemy_hit_cond_write==s6_f5a7_body
+    /// （$80B0 位5 未置且 $040E==$0B）。
+    #[test]
+    fn exhaustive_big_hit_cond_equivalence() {
+        for x in 0u8..=255 {
+            for v in 0u8..=255 {
+                for w in [0u8, 0x20, 0x21, 0xFF] {
+                    assert_eq!(s6_f5a7_body(x, v, w), big_enemy_hit_cond_write(x, v, w));
+                }
+            }
+        }
+    }
+}
+
+// ===== 1:1 Rust 改写·批产·块 93：s6 族 SFX 壳族语义命名（去地址名（公式形））=====
+// refs 锚（bank:addr 注内）：$F533（:6575）/$CBB8 SFX_Metal root（:6602）/$CBCE
+// SFX_BigEnemyHit root（:6710）/$F584（:6684）/$F5A7（:6716）。
+
+/// 旗暂存（旧 s6_f533_body（$F533）：$0A←$040F[x]；$0404[x] 位5 未置⇒重复写（beq 段面））。
+pub fn stage_motion_flag_with_dup(x: u8, v040f_x: u8, v0404_x: u8) -> (Vec<(u16, u8)>, u8) {
+    let (mut ev, _) = (vec![(0x000A, v040f_x)], 0u8);
+    if v0404_x & 0x20 == 0 {
+        ev.push((0x000A, v040f_x));
+    }
+    (ev, v040f_x)
+}
+
+/// 金属声旗面（旧 s6_sfx_metal（$CBB8 SFX_Metal root）：$0681←$20（sfxNoise_Metal））。
+pub fn sfx_metal_face() -> (Vec<(u16, u8)>, u8) {
+    (vec![(0x0681, 0x20)], 0x20)
+}
+
+/// Boss 击声旗面（旧 s6_sfx_boss_hit（SFX_BossHit root）：$0684←$02）。
+pub fn sfx_boss_hit_face() -> (Vec<(u16, u8)>, u8) {
+    (vec![(0x0684, 0x02)], 0x02)
+}
+
+/// Boss 击直通（旧 s6_f584_body（$F584）：SFX_BossHit 直通壳）。
+pub fn boss_hit_passthrough(x: u8, v0c: u8) -> (Vec<(u16, u8)>, u8) {
+    let _ = (x, v0c);
+    let (ev, id) = sfx_boss_hit_face();
+    (ev, id)
+}
+
+/// 大敌击条件写（旧 s6_f5a7_body（$F5A7）：$80B0 位5 未置且 $040E[x]==$0B⇒$040E[x] 写）。
+pub fn big_enemy_hit_cond_write(x: u8, v040e_x: u8, v80b0: u8) -> (Vec<(u16, u8)>, u8) {
+    let (mut ev, id) = (vec![(0x0683, 0x04)], 0x04u8);
+    let _ = id;
+    if v80b0 & 0x20 == 0 && v040e_x == 0x0B {
+        ev.push((0x040E + x as u16, v040e_x));
+    }
+    (ev, 0x04)
+}
