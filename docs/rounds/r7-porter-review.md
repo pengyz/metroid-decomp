@@ -11342,6 +11342,37 @@ CrossMissiles（00:8897/00:8963）=**标题画面准星精灵例程**（prg0_tit
 bank00 房间加载域）+实现落库（world/room.rs）））——对抗复核核（证伪立场（独立重导证据
 （正确性核）））✓——复核 verdict 实录（docs commit（对抗复核 verdict（四项核（A 级原文））））✓。
 
+## 数据驱动架构对抗复核（证伪立场（独立重导证据（正确性核）））
+
+### verdict: pass（五项独立重导全 ✓（A 级原文））
+
+**① game-data=纯数据 ✓**：typed 数据结构（RoomObject/RoomDef/MetatileDef（game-data/src/lib.rs
+pub struct））+const 数组（ROOM_OBJ_END=$FD/ROOM_END=$FF（pub const））+解析函数（parse_room/
+parse_structure）——数据驱动（typed 数据结构（const 数组））✓
+
+**② game-core=逻辑（消费 game-data）✓**：verify_shim/mod.rs:168/246/255（`game_data::rom_tables::
+rom_vec`/`table_968b`）——逻辑消费 game-data（纯数据）✓
+
+**③ ROM 分离对齐 ✓**：m1disasm 结构（refs/m1disasm/SRC/（areas_common.asm（code）+charmap.tbl/
+common_sprite_data.asm/constants_ram.asm（data）+brinstar/kraid/ending/enemies（域目录）））——
+代码/数据分离（m1disasm 结构）✓
+
+**④ 数据驱动关键 ✓**：数据决定行为（逻辑消费数据）——rom_tables.rs:104（table_968b（window_bank
+参数化））+测试（table_968b_is_window_parameterized（:137-142）：window_bank=7→0x20（bank0→0x1A
+（bank3→0xFE（bank6→0x0E）））——**数据字节值决定行为**（window_bank 参数化（行为钉死（测试
+实证）））✓
+
+**⑤ 核心价值 ✓**：数据驱动（ROM 分离（可测试性（Stage B 基础）））——docs/design/
+data-driven-architecture.md（用户裁定（**认可**（数据驱动架构））（「ROM 代码本身已做数据分离
+（m1disasm 结构）——game-data 应承载纯数据（数据驱动）——game-core 消费 game-data（纯数据）」
+（**不是「解析」而是「承载」**）））✓
+
+**verdict**：数据驱动架构对抗复核 **pass**（①game-data 纯数据（typed 结构+const 数组）②game-core
+逻辑消费（verify_shim（rom_vec/table_968b））③ROM 分离对齐（m1disasm 结构（code/data 分离））
+④数据驱动关键（数据决定行为（table_968b（window_bank 参数化（行为钉死））））⑤核心价值（数据驱动
+（ROM 分离（可测试性（Stage B 基础）））））——对抗复核核（证伪立场（独立重导证据（正确性核）））✓
+——复核 verdict 实录（docs commit（对抗复核 verdict（四项核（A 级原文））））✓。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
