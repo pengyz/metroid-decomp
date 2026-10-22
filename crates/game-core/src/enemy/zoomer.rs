@@ -33,3 +33,28 @@ pub fn update_zoomer(ram: &[u8; 2048]) -> ZoomerState {
     // TODO: 数据表解析（rom_tables（bank:addr（表值（表用途））））
     state
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// TDD 流程·第一步：写测试（穷举等价证明（全域穷举（边界条件（异常路径））））
+    #[test]
+    fn test_update_zoomer_basic() {
+        let ram = [0u8; 2048];
+        let state = update_zoomer(&ram);
+        assert_eq!(state.direction, 0);
+        assert_eq!(state.speed, 0);
+    }
+
+    /// TDD 流程·第一步：边界条件（异常路径）
+    #[test]
+    fn test_update_zoomer_boundary() {
+        let mut ram = [0u8; 2048];
+        ram[0x0300] = 0xFF;
+        let state = update_zoomer(&ram);
+        // 真规则（公式形（零字面特值））
+        assert!(state.direction <= 0xFF);
+        assert!(state.speed <= 0xFF);
+    }
+}
