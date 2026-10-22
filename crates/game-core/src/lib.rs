@@ -17,6 +17,7 @@ pub mod tile_blast;
 pub mod engine;
 pub mod world;
 pub mod pickup;
+pub mod input;
 pub mod weapon;
 pub mod ui;
 pub mod render;

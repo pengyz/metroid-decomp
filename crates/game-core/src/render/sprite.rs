@@ -28,7 +28,7 @@ pub struct SpriteState {
 pub fn render_sprites(ram: &[u8; 2048]) -> Vec<SpriteState> {
     // memmap 适配（RAM 态→SpriteState）
     let mut sprites = Vec::new();
-    // TODO: 数据表解析（rom_tables（bank:addr（表值（表用途））））
+    // TODO: 数据表解析（rom_tables（bank00:87CF（SparkleUpdate（prg0_title.asm:789-807））））
     sprites
 }
 

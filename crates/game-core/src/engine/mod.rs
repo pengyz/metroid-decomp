@@ -13563,95 +13563,142 @@ pub mod frame;
 pub mod boot;
 pub mod nmi;
 
-/// s1_/s2_ 族（继续去地址名（语义命名））
-///
-/// 去地址名（s1_xxxx/s2_xxxx→engine::mod::xxx（语义命名））
-pub mod s1_s2_family_engine {
-    /// s1_xxxx→engine::mod::s1_s2_family_engine::engine_schedule（语义命名）
-    pub fn engine_schedule(ram: &[u8; 2048]) -> u8 {
-        // 真规则（公式形（零字面特值））
-        ram[0x0370]
-    }
-}
+// ===== 1:1 Rust 改写·批产·块 23（s1 族续去地址名（TDD 穷举等价证明））=====
 
 #[cfg(test)]
-mod tests_s1_s2_engine {
-    use super::s1_s2_family_engine::*;
+mod tests_b23_engine_mod {
+    //! TDD step1（测试先行（强制完整））——穷举等价（新==旧（≤256³ 闸时限界））。
+    //! refs 锚（bank:addr 注内）：$F3D5（:512）/$F628（:521）/$F682 InitEnRestingAnimIndex
+    //! （:534）/$F699 InitEnActiveAnimIndex（:542）/$F7D9（:550）/$F844（:558）/$FB8A（:569）。
 
-    /// TDD 流程·第一步：写测试（穷举等价证明（全域穷举（边界条件（异常路径））））
+    use super::*;
+
+    /// 【穷举·分路】a×x×v0409 全域 256³——dispatch_by_delay_flag==s1_f3d5_body。
     #[test]
-    fn test_engine_schedule_basic() {
-        let ram = [0u8; 2048];
-        assert_eq!(engine_schedule(&ram), 0);
+    fn exhaustive_dispatch_delay_equivalence() {
+        for a in 0u8..=255 {
+            for x in 0u8..=255 {
+                for v in 0u8..=255 {
+                    assert_eq!(s1_f3d5_body(a, x, v), dispatch_by_delay_flag(a, x, v));
+                }
+            }
+        }
     }
 
-    /// TDD 流程·第一步：边界条件（异常路径）
+    /// 【穷举·表载生成】a×x×tbl+槽位 16 组合——spawn_with_anim_and_slot_search==s1_f628_body。
     #[test]
-    fn test_engine_schedule_boundary() {
-        let mut ram = [0u8; 2048];
-        ram[0x0370] = 0xFF;
-        assert_eq!(engine_schedule(&ram), 0xFF);
+    fn exhaustive_anim_spawn_equivalence() {
+        for a in 0u8..=255 {
+            for x in [0u8, 0x80, 0xFF] {
+                for t in [0u8, 1, 0x7F, 0x80, 0xFF] {
+                    for mask in 0u8..16 {
+                        let mut wram = vec![0u8; 0x2000];
+                        for (i, slot) in [0xC0u16, 0xC8, 0xD0, 0xD8].iter().enumerate() {
+                            if mask & (1 << i) != 0 { wram[0xAF4 + *slot as usize] = 1; }
+                        }
+                        assert_eq!(s1_f628_body(a, x, t, &wram), spawn_with_anim_and_slot_search(a, x, t, &wram));
+                    }
+                }
+            }
+        }
+    }
+
+    /// 【穷举·动画同步】x×tbl×v6af9 全域 256³——resting/active 同步==旧体。
+    #[test]
+    fn exhaustive_anim_sync_equivalence() {
+        for x in 0u8..=255 {
+            for t in 0u8..=255 {
+                for v in 0u8..=255 {
+                    assert_eq!(s1_f682_body(x, t, v), sync_resting_anim_if_changed(x, t, v));
+                    assert_eq!(s1_f699_body(5, x, t, v), sync_active_anim_if_changed(5, x, t, v));
+                }
+            }
+        }
+    }
+
+    /// 【穷举·指针构+类型计算+计数互抵】y/tbl 全域+x×v0405×v6b02 边角+x×v6b01 全域。
+    #[test]
+    fn exhaustive_pointer_type_counter_equivalence() {
+        for y in 0u8..=255 {
+            for t in 0u8..=255 {
+                assert_eq!(s1_f7d9_body(y, t), build_anim_pointer(y, t));
+            }
+        }
+        for x in 0u8..=255 {
+            for v in 0u8..=255 {
+                for w in [0u8, 1, 0x7F, 0x80, 0xFF] {
+                    assert_eq!(s1_f844_body(x, v, w), enemy_type_times2_plus_facing(x, v, w));
+                }
+                assert_eq!(s1_fb8a_body(x, v), adjust_counter_with_compliment(x, v));
+            }
+        }
     }
 }
 
-/// s1_/s2_ 族（继续去地址名（语义命名））
-///
-/// 去地址名（s1_xxxx/s2_xxxx→engine::mod::xxx（语义命名））
-pub mod s1_s2_family_engine_v2 {
-    /// s1_xxxx→engine::mod::s1_s2_family_engine_v2::engine_schedule_v2（语义命名）
-    pub fn engine_schedule_v2(ram: &[u8; 2048]) -> u8 {
-        // 真规则（公式形（零字面特值））
-        ram[0x0371]
-    }
+// ===== 1:1 Rust 改写·批产·块 23：s1 族续语义命名（去地址名（公式形（零字面特值）））=====
+// refs 锚（bank:addr 注内）：$F3D5（:512）/$F628（:521）/$F682（:534）/$F699（:542）/
+// $F7D9（:550）/$F844（:558）/$FB8A（:569）。
+
+/// 分路（旧 s1_f3d5_body（$F3D5）：root+s1_f676 扩展+$0409[x]==0?（$F7BA）:$F40A）。
+pub fn dispatch_by_delay_flag(a_in: u8, x: u8, v0409_x: u8) -> (Vec<(u16, u8)>, u16) {
+    let (ev1, _) = s1_f676(a_in, x);
+    let mut ev = vec![(0x6AF9 + x as u16, a_in), (0x6AFA + x as u16, a_in),
+                      (0x6AF8 + x as u16, 0)];
+    ev.extend(ev1);
+    (ev, if v0409_x == 0 { 0xF7BA } else { 0xF40A })
 }
 
-#[cfg(test)]
-mod tests_s1_s2_engine_v2 {
-    use super::s1_s2_family_engine_v2::*;
-
-    /// TDD 流程·第一步：写测试（穷举等价证明（全域穷举（边界条件（异常路径））））
-    #[test]
-    fn test_engine_schedule_v2_basic() {
-        let ram = [0u8; 2048];
-        assert_eq!(engine_schedule_v2(&ram), 0);
+/// 表载生成（旧 s1_f628_body（$F628）：root+$0406[x]←tbl+槽搜（$C0 by 8 首空））。
+pub fn spawn_with_anim_and_slot_search(a_in: u8, x: u8, tbl_entry: u8, wram: &[u8]) -> (Vec<(u16, u8)>, u16) {
+    let mut ev = vec![(0x6AF9 + x as u16, a_in), (0x6AFA + x as u16, a_in),
+                      (0x6AF8 + x as u16, 0), (0x0406 + x as u16, tbl_entry)];
+    let mut slot: u16 = 0xC0;
+    while slot < 0xE0 {
+        if wram.get(0xAF4 + slot as usize).copied().unwrap_or(0) == 0 { break; }
+        slot += 8;
     }
-
-    /// TDD 流程·第一步：边界条件（异常路径）
-    #[test]
-    fn test_engine_schedule_v2_boundary() {
-        let mut ram = [0u8; 2048];
-        ram[0x0371] = 0xFF;
-        assert_eq!(engine_schedule_v2(&ram), 0xFF);
-    }
+    (ev, slot)
 }
 
-/// s1_/s2_ 族（继续去地址名（语义命名））
-///
-/// 去地址名（s1_xxxx/s2_xxxx→engine::mod::xxx（语义命名））
-pub mod s1_s2_family_engine_v3 {
-    /// s1_xxxx→engine::mod::s1_s2_family_engine_v3::engine_schedule_v3（语义命名）
-    pub fn engine_schedule_v3(ram: &[u8; 2048]) -> u8 {
-        // 真规则（公式形（零字面特值））
-        ram[0x0372]
+/// 静息动画同步（旧 s1_f682_body（$F682 InitEnRestingAnimIndex）：表值==$6AF9[x]⇒空；
+/// 不等⇒三写（$6AF9/$6AFA←表值/$6AF8←0））。
+pub fn sync_resting_anim_if_changed(x: u8, tbl_entry: u8, v6af9_x: u8) -> Vec<(u16, u8)> {
+    if tbl_entry == v6af9_x {
+        return Vec::new();
     }
+    vec![(0x6AF9 + x as u16, tbl_entry), (0x6AFA + x as u16, tbl_entry), (0x6AF8 + x as u16, 0)]
 }
 
-#[cfg(test)]
-mod tests_s1_s2_engine_v3 {
-    use super::s1_s2_family_engine_v3::*;
-
-    /// TDD 流程·第一步：写测试（穷举等价证明（全域穷举（边界条件（异常路径））））
-    #[test]
-    fn test_engine_schedule_v3_basic() {
-        let ram = [0u8; 2048];
-        assert_eq!(engine_schedule_v3(&ram), 0);
+/// 活跃动画同步（旧 s1_f699_body（$F699 InitEnActiveAnimIndex）：相等⇒空；不等⇒root 三写）。
+pub fn sync_active_anim_if_changed(a_in: u8, x: u8, tbl_entry: u8, v6af9_x: u8) -> Vec<(u16, u8)> {
+    if tbl_entry == v6af9_x {
+        return Vec::new();
     }
+    vec![(0x6AF9 + x as u16, a_in), (0x6AFA + x as u16, a_in), (0x6AF8 + x as u16, 0)]
+}
 
-    /// TDD 流程·第一步：边界条件（异常路径）
-    #[test]
-    fn test_engine_schedule_v3_boundary() {
-        let mut ram = [0u8; 2048];
-        ram[0x0372] = 0xFF;
-        assert_eq!(engine_schedule_v3(&ram), 0xFF);
-    }
+/// 动画指针构（旧 s1_f7d9_body（$F7D9）：$00/$01←$97D1+tbl（zp 指针对））。
+pub fn build_anim_pointer(y: u8, tbl_entry: u8) -> Vec<(u16, u8)> {
+    let _ = y;
+    let ptr = 0x97D1u16.wrapping_add(tbl_entry as u16);
+    vec![(0x0000, (ptr & 0xFF) as u8), (0x0001, (ptr >> 8) as u8)]
+}
+
+/// 类型×2+朝向（旧 s1_f844_body（$F844）：$0405[x] 符号（bpl 不移/bmi 三 lsr（末移出位=
+/// 原 bit2））+`lda $6B02[x]`（替换 A）+rol→Y）。
+pub fn enemy_type_times2_plus_facing(x: u8, v0405_x: u8, v6b02_x: u8) -> u8 {
+    let _ = x;
+    let carry = if (v0405_x as i8) >= 0 {
+        0
+    } else {
+        (v0405_x >> 2) & 1
+    };
+    (v6b02_x << 1) | carry
+}
+
+/// 计数互抵（旧 s1_fb8a_body（$FB8A）：$6B03[x]←$6B01[x]（inc/dec 互抵净写）+
+/// 负值⇒$C3D4（TwosCompliment）调）。
+pub fn adjust_counter_with_compliment(x: u8, v6b01_x: u8) -> (Vec<(u16, u8)>, Option<u16>) {
+    let call = if (v6b01_x as i8) < 0 { Some(0xC3D4) } else { None };
+    (vec![(0x6B03 + x as u16, v6b01_x)], call)
 }
