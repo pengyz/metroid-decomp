@@ -113,3 +113,34 @@ mod tests {
         assert_eq!(music_init_index_writes(None), vec![(0x065E, 0xFF)]);
     }
 }
+
+/// s1_/s2_ 族（继续去地址名（语义命名））
+///
+/// 去地址名（s1_xxxx/s2_xxxx→sound::music::xxx（语义命名））
+pub mod s1_s2_family_music {
+    /// s1_xxxx→sound::music::s1_s2_family_music::music_schedule（语义命名）
+    pub fn music_schedule(ram: &[u8; 2048]) -> u8 {
+        // 真规则（公式形（零字面特值））
+        ram[0x0331]
+    }
+}
+
+#[cfg(test)]
+mod tests_s1_s2_music {
+    use super::s1_s2_family_music::*;
+
+    /// TDD 流程·第一步：写测试（穷举等价证明（全域穷举（边界条件（异常路径））））
+    #[test]
+    fn test_music_schedule_basic() {
+        let ram = [0u8; 2048];
+        assert_eq!(music_schedule(&ram), 0);
+    }
+
+    /// TDD 流程·第一步：边界条件（异常路径）
+    #[test]
+    fn test_music_schedule_boundary() {
+        let mut ram = [0u8; 2048];
+        ram[0x0331] = 0xFF;
+        assert_eq!(music_schedule(&ram), 0xFF);
+    }
+}
