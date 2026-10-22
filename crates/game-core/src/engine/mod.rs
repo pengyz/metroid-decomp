@@ -15120,127 +15120,155 @@ pub fn clear_ptr_and_set_y_cond(x: u8, v6f: u8) -> (Vec<(u16, u8)>, u8) {
     (ev, if branch { 1 } else { 0 })
 }
 
-/// s5_/s6_/s7_ 族（继续去地址名（语义命名））
-///
-/// 去地址名（s5_xxxx/s6_xxxx/s7_xxxx→engine::mod::xxx（语义命名））
-pub mod s5_s6_s7_family_engine_v3 {
-    /// s5_xxxx→engine::mod::s5_s6_s7_family_engine_v3::engine_schedule_s5_v3（语义命名）
-    pub fn engine_schedule_s5_v3(ram: &[u8; 2048]) -> u8 {
-        // 真规则（公式形（零字面特值））
-        ram[0x0398]
-    }
-
-    /// s6_xxxx→engine::mod::s5_s6_s7_family_engine_v3::engine_schedule_s6_v3（语义命名）
-    pub fn engine_schedule_s6_v3(ram: &[u8; 2048]) -> u8 {
-        // 真规则（公式形（零字面特值））
-        ram[0x0399]
-    }
-
-    /// s7_xxxx→engine::mod::s5_s6_s7_family_engine_v3::engine_schedule_s7_v3（语义命名）
-    pub fn engine_schedule_s7_v3(ram: &[u8; 2048]) -> u8 {
-        // 真规则（公式形（零字面特值））
-        ram[0x039A]
-    }
-}
+// ===== 1:1 Rust 改写·批产·块 90（s6 族 SFX 起物+ObjectCntrl+桩面去地址名（TDD 穷举等价））=====
 
 #[cfg(test)]
-mod tests_s5_s6_s7_engine_v3 {
-    use super::s5_s6_s7_family_engine_v3::*;
+mod tests_b90_engine_mod {
+    //! TDD step1（测试先行（强制完整））——穷举等价（新==旧（≤256³ 闸时限界（依赖分解）））。
+    //! refs 锚（bank:addr 注内）：$F4B4（:6466）/$CBC0 SFX_MissilePickup root（:6492）/
+    //! $F512（:6540）/$F673 stub root（:6569）。
 
-    /// TDD 流程·第一步：写测试（穷举等价证明（全域穷举（边界条件（异常路径））））
+    use super::*;
+
+    /// 【穷举·SFX 拾取壳】energy_pickup_and_dispatch==s6_f4b4_body（退化域）+
+    /// sfx_missile_pickup_face==s6_sfx_missile_pickup（声旗面逐钉）。
     #[test]
-    fn test_engine_schedule_s5_v3_basic() {
-        let ram = [0u8; 2048];
-        assert_eq!(engine_schedule_s5_v3(&ram), 0);
+    fn sfx_pickup_equivalence() {
+        assert_eq!(s6_f4b4_body(), energy_pickup_and_dispatch());
+        assert_eq!(s6_sfx_missile_pickup(), sfx_missile_pickup_face());
     }
 
-    /// TDD 流程·第一步：边界条件（异常路径）
+    /// 【穷举·ObjectCntrl 壳】x×a 全域——object_control_and_dispatch==s6_f512_body
+    /// （$040C[x]←A/$6AF4[x]←4→$F423）。
     #[test]
-    fn test_engine_schedule_s5_v3_boundary() {
-        let mut ram = [0u8; 2048];
-        ram[0x0398] = 0xFF;
-        assert_eq!(engine_schedule_s5_v3(&ram), 0xFF);
+    fn exhaustive_object_ctrl_equivalence() {
+        for x in 0u8..=255 {
+            for a in 0u8..=255 {
+                assert_eq!(s6_f512_body(x, a), object_control_and_dispatch(x, a));
+            }
+        }
     }
 
-    /// TDD 流程·第一步：写测试（穷举等价证明（全域穷举（边界条件（异常路径））））
+    /// 【穷举·桩面】v4b 全域——load_x_from_4b_stub==s6_f673_stub（ldx $4B/rts 面）。
     #[test]
-    fn test_engine_schedule_s6_v3_basic() {
-        let ram = [0u8; 2048];
-        assert_eq!(engine_schedule_s6_v3(&ram), 0);
-    }
-
-    /// TDD 流程·第一步：边界条件（异常路径）
-    #[test]
-    fn test_engine_schedule_s6_v3_boundary() {
-        let mut ram = [0u8; 2048];
-        ram[0x0399] = 0xFF;
-        assert_eq!(engine_schedule_s6_v3(&ram), 0xFF);
-    }
-
-    /// TDD 流程·第一步：写测试（穷举等价证明（全域穷举（边界条件（异常路径））））
-    #[test]
-    fn test_engine_schedule_s7_v3_basic() {
-        let ram = [0u8; 2048];
-        assert_eq!(engine_schedule_s7_v3(&ram), 0);
-    }
-
-    /// TDD 流程·第一步：边界条件（异常路径）
-    #[test]
-    fn test_engine_schedule_s7_v3_boundary() {
-        let mut ram = [0u8; 2048];
-        ram[0x039A] = 0xFF;
-        assert_eq!(engine_schedule_s7_v3(&ram), 0xFF);
+    fn exhaustive_stub_equivalence() {
+        for v in 0u8..=255 {
+            assert_eq!(s6_f673_stub(v), load_x_from_4b_stub(v));
+        }
     }
 }
 
-/// s6_/s7_ 族（继续去地址名（语义命名））
-///
-/// 去地址名（s6_xxxx/s7_xxxx→engine::mod::xxx（语义命名））
-pub mod s6_s7_family_engine {
-    /// s6_xxxx→engine::mod::s6_s7_family_engine::engine_schedule_s6_final（语义命名）
-    pub fn engine_schedule_s6_final(ram: &[u8; 2048]) -> u8 {
-        // 真规则（公式形（零字面特值））
-        ram[0x039B]
-    }
+// ===== 1:1 Rust 改写·批产·块 90：s6 族 SFX 起物+ObjectCntrl+桩面语义命名（去地址名）=====
+// refs 锚（bank:addr 注内）：$F4B4（:6466）/$CBC0 SFX_MissilePickup root（:6492）/$F512
+// （:6540）/$F673 stub root（:6569）。
 
-    /// s7_xxxx→engine::mod::s6_s7_family_engine::engine_schedule_s7_final（语义命名）
-    pub fn engine_schedule_s7_final(ram: &[u8; 2048]) -> u8 {
-        // 真规则（公式形（零字面特值））
-        ram[0x039C]
-    }
+/// 能量拾取壳（旧 s6_f4b4_body（$F4B4）：SFX_EnergyPickup→jmp $CBBC）。
+pub fn energy_pickup_and_dispatch() -> (Vec<(u16, u8)>, u16) {
+    (vec![(0x0681, 0x40)], 0xCBBC)
 }
+
+/// 导弹拾取声旗面（旧 s6_sfx_missile_pickup（$CBC0 SFX_MissilePickup root）：
+/// $0681←$80（sfxNoise_MissilePickup））。
+pub fn sfx_missile_pickup_face() -> (Vec<(u16, u8)>, u8) {
+    (vec![(0x0681, 0x80)], 0x80)
+}
+
+/// ObjectCntrl 壳（旧 s6_f512_body（$F512）：$040C[x]←A/$6AF4[x]←4→jmp $F423）。
+pub fn object_control_and_dispatch(x: u8, a_in: u8) -> (Vec<(u16, u8)>, u16) {
+    (vec![(0x040C + x as u16, a_in), (0x6AF4 + x as u16, 4)], 0xF423)
+}
+
+/// 桩面（旧 s6_f673_stub（$F673 root）：ldx $4B/rts（X 载即返））。
+pub fn load_x_from_4b_stub(v4b: u8) -> (u8, bool) {
+    (v4b, true)
+}
+
+// ===== 1:1 Rust 改写·批产·块 93（s6 族 SFX 壳族去地址名（TDD 穷举等价））=====
 
 #[cfg(test)]
-mod tests_s6_s7_engine {
-    use super::s6_s7_family_engine::*;
+mod tests_b93_engine_mod {
+    //! TDD step1（测试先行（强制完整））——穷举等价（新==旧（≤256³ 闸时限界（依赖分解）））。
+    //! refs 锚（bank:addr 注内）：$F533（:6575）/$CBB8 SFX_Metal root（:6602）/$CBCE
+    //! SFX_BigEnemyHit root（:6710）/$F584（:6684）/$F5A7（:6716）。
 
-    /// TDD 流程·第一步：写测试（穷举等价证明（全域穷举（边界条件（异常路径））））
+    use super::*;
+
+    /// 【穷举·旗暂存】x×v040f×v0404 依赖分解——stage_motion_flag_with_dup==s6_f533_body
+    /// （$0A←$040F[x]（位5 未置⇒重复写））。
     #[test]
-    fn test_engine_schedule_s6_final_basic() {
-        let ram = [0u8; 2048];
-        assert_eq!(engine_schedule_s6_final(&ram), 0);
+    fn exhaustive_flag_stage_equivalence() {
+        for x in 0u8..=255 {
+            for v in 0u8..=255 {
+                for w in [0u8, 0x20, 0x21, 0xFF] {
+                    assert_eq!(s6_f533_body(x, v, w), stage_motion_flag_with_dup(x, v, w));
+                }
+            }
+        }
     }
 
-    /// TDD 流程·第一步：边界条件（异常路径）
+    /// 【穷举·SFX 面×2】sfx_metal_face==s6_sfx_metal+sfx_boss_hit_face==s6_sfx_boss_hit
+    /// （声旗面逐钉）+boss_hit_passthrough==s6_f584_body（x×v0c 全域）。
     #[test]
-    fn test_engine_schedule_s6_final_boundary() {
-        let mut ram = [0u8; 2048];
-        ram[0x039B] = 0xFF;
-        assert_eq!(engine_schedule_s6_final(&ram), 0xFF);
+    fn exhaustive_sfx_faces_equivalence() {
+        assert_eq!(s6_sfx_metal(), sfx_metal_face());
+        assert_eq!(s6_sfx_boss_hit(), sfx_boss_hit_face());
+        for x in 0u8..=255 {
+            for v in 0u8..=255 {
+                assert_eq!(s6_f584_body(x, v), boss_hit_passthrough(x, v));
+            }
+        }
     }
 
-    /// TDD 流程·第一步：写测试（穷举等价证明（全域穷举（边界条件（异常路径））））
+    /// 【穷举·条件写】x×v040e×v80b0 依赖分解——big_enemy_hit_cond_write==s6_f5a7_body
+    /// （$80B0 位5 未置且 $040E==$0B）。
     #[test]
-    fn test_engine_schedule_s7_final_basic() {
-        let ram = [0u8; 2048];
-        assert_eq!(engine_schedule_s7_final(&ram), 0);
+    fn exhaustive_big_hit_cond_equivalence() {
+        for x in 0u8..=255 {
+            for v in 0u8..=255 {
+                for w in [0u8, 0x20, 0x21, 0xFF] {
+                    assert_eq!(s6_f5a7_body(x, v, w), big_enemy_hit_cond_write(x, v, w));
+                }
+            }
+        }
     }
+}
 
-    /// TDD 流程·第一步：边界条件（异常路径）
-    #[test]
-    fn test_engine_schedule_s7_final_boundary() {
-        let mut ram = [0u8; 2048];
-        ram[0x039C] = 0xFF;
-        assert_eq!(engine_schedule_s7_final(&ram), 0xFF);
+// ===== 1:1 Rust 改写·批产·块 93：s6 族 SFX 壳族语义命名（去地址名（公式形））=====
+// refs 锚（bank:addr 注内）：$F533（:6575）/$CBB8 SFX_Metal root（:6602）/$CBCE
+// SFX_BigEnemyHit root（:6710）/$F584（:6684）/$F5A7（:6716）。
+
+/// 旗暂存（旧 s6_f533_body（$F533）：$0A←$040F[x]；$0404[x] 位5 未置⇒重复写（beq 段面））。
+pub fn stage_motion_flag_with_dup(x: u8, v040f_x: u8, v0404_x: u8) -> (Vec<(u16, u8)>, u8) {
+    let (mut ev, _) = (vec![(0x000A, v040f_x)], 0u8);
+    if v0404_x & 0x20 == 0 {
+        ev.push((0x000A, v040f_x));
     }
+    (ev, v040f_x)
+}
+
+/// 金属声旗面（旧 s6_sfx_metal（$CBB8 SFX_Metal root）：$0681←$20（sfxNoise_Metal））。
+pub fn sfx_metal_face() -> (Vec<(u16, u8)>, u8) {
+    (vec![(0x0681, 0x20)], 0x20)
+}
+
+/// Boss 击声旗面（旧 s6_sfx_boss_hit（SFX_BossHit root）：$0684←$02）。
+pub fn sfx_boss_hit_face() -> (Vec<(u16, u8)>, u8) {
+    (vec![(0x0684, 0x02)], 0x02)
+}
+
+/// Boss 击直通（旧 s6_f584_body（$F584）：SFX_BossHit 直通壳）。
+pub fn boss_hit_passthrough(x: u8, v0c: u8) -> (Vec<(u16, u8)>, u8) {
+    let _ = (x, v0c);
+    let (ev, id) = sfx_boss_hit_face();
+    (ev, id)
+}
+
+/// 大敌击条件写（旧 s6_f5a7_body（$F5A7）：$80B0 位5 未置且 $040E[x]==$0B⇒$040E[x] 写）。
+pub fn big_enemy_hit_cond_write(x: u8, v040e_x: u8, v80b0: u8) -> (Vec<(u16, u8)>, u8) {
+    let (mut ev, id) = (vec![(0x0683, 0x04)], 0x04u8);
+    let _ = id;
+    if v80b0 & 0x20 == 0 && v040e_x == 0x0B {
+        ev.push((0x040E + x as u16, v040e_x));
+    }
+    (ev, 0x04)
 }
