@@ -15682,75 +15682,76 @@ pub fn update_enemy_anim_dispatch(v6af4_x: u8, v6af8_x: u8) -> (Vec<(u16, u8)>, 
     s5_update_enemy_anim(0, v6af4_x, v6af8_x)
 }
 
-/// s1_/s2_ 族未处理 116 条（剩余（3 员/批（继续去地址名）））（语义命名）
-///
-/// 去地址名（s1_/s2_ 族未处理 116 条→engine::mod::xxx（语义命名））
-pub mod s1_s2_remaining_batch {
-    /// s1_/s2_ 族未处理 116 条→engine::mod::s1_s2_remaining_batch::remaining_schedule（语义命名）
-    pub fn remaining_schedule(ram: &[u8; 2048]) -> u8 {
-        // 真规则（公式形（零字面特值））
-        ram[0x03A9]
+// ===== 1:1 Rust 改写·批产·块 120（s1 余批 3 员去名（TDD 穷举等价））=====
+
+#[cfg(test)]
+mod tests_b120_engine_mod {
+    //! TDD step1（测试先行（强制完整））——穷举等价（新==旧（≤256³ 闸时限界））。
+    //! refs 锚（bank:addr 注内）：$F676（:291）/$F3D8（:322）/$FBC7（:468）。
+
+    use super::*;
+
+    /// 【穷举·位组写】root×x 全域——store_packed_face_byte==s1_f676（(root<<3)&$C0）。
+    #[test]
+    fn exhaustive_packed_face_equivalence() {
+        for r in 0u8..=255 {
+            for x in 0u8..=255 {
+                assert_eq!(s1_f676(r, x), store_packed_face_byte(r, x));
+            }
+        }
     }
 
-    /// s1_/s2_ 族未处理 116 条→engine::mod::s1_s2_remaining_batch::remaining_schedule_v2（语义命名）
-    pub fn remaining_schedule_v2(ram: &[u8; 2048]) -> u8 {
-        // 真规则（公式形（零字面特值））
-        ram[0x03AA]
+    /// 【穷举·分路壳】root×x×v0409 全域 256³——pack_face_and_dispatch==s1_f3d8
+    /// （==$F7BA/$F40A 分路）。
+    #[test]
+    fn exhaustive_face_dispatch_equivalence() {
+        for r in 0u8..=255 {
+            for x in 0u8..=255 {
+                for v in 0u8..=255 {
+                    assert_eq!(s1_f3d8(r, x, v), pack_face_and_dispatch(r, x, v));
+                }
+            }
+        }
     }
 
-    /// s1_/s2_ 族未处理 116 条→engine::mod::s1_s2_remaining_batch::remaining_schedule_v3（语义命名）
-    pub fn remaining_schedule_v3(ram: &[u8; 2048]) -> u8 {
-        // 真规则（公式形（零字面特值））
-        ram[0x03AB]
+    /// 【穷举·比对分路】y×x×tbl×v6af9 依赖分解——type_match_dispatch==s1_fbc7_body
+    /// （相等⇒$F62E 回卷/不等⇒$6AF9[x]←tbl→$F690）。
+    #[test]
+    fn exhaustive_type_match_equivalence() {
+        for x in 0u8..=255 {
+            for &(y, t, v) in &[(0u8, 0u8, 0u8), (0xFF, 0xFF, 0xFF), (3, 5, 5), (3, 5, 6)] {
+                assert_eq!(s1_fbc7_body(y, x, t, v), type_match_dispatch(y, x, t, v));
+            }
+        }
+        for v in 0u8..=255 {
+            assert_eq!(s1_fbc7_body(1, 2, 0x55, v), type_match_dispatch(1, 2, 0x55, v));
+        }
     }
 }
 
-#[cfg(test)]
-mod tests_s1_s2_remaining_batch {
-    use super::s1_s2_remaining_batch::*;
+// ===== 1:1 Rust 改写·批产·块 120：s1 余批 3 员语义命名（去地址名（公式形））=====
+// refs 锚（bank:addr 注内）：$F676（:291）/$F3D8（:322）/$FBC7（:468）。
 
-    /// TDD 流程·第一步：写测试（穷举等价证明（全域穷举（边界条件（异常路径））））
-    #[test]
-    fn test_remaining_schedule_basic() {
-        let ram = [0u8; 2048];
-        assert_eq!(remaining_schedule(&ram), 0);
-    }
+/// 位组写（旧 s1_f676（$F676）：$6B03[x]←(root<<3)&$C0（位组截取））。
+pub fn store_packed_face_byte(root_val: u8, x: u8) -> (Vec<(u16, u8)>, u8) {
+    let v = ((root_val << 3) & 0xC0) as u8;
+    (vec![(0x6B03 + x as u16, v)], v)
+}
 
-    /// TDD 流程·第一步：边界条件（异常路径）
-    #[test]
-    fn test_remaining_schedule_boundary() {
-        let mut ram = [0u8; 2048];
-        ram[0x03A9] = 0xFF;
-        assert_eq!(remaining_schedule(&ram), 0xFF);
-    }
+/// 位组分路（旧 s1_f3d8（$F3D8）：$F676 位组写+$0409[x]==0⇒$F7BA/否则 $F40A）。
+pub fn pack_face_and_dispatch(root_val: u8, x: u8, v0409_x: u8) -> (Vec<(u16, u8)>, u16) {
+    let (ev, _) = store_packed_face_byte(root_val, x);
+    let next = if v0409_x == 0 { 0xF7BA } else { 0xF40A };
+    (ev, next)
+}
 
-    /// TDD 流程·第一步：写测试（穷举等价证明（全域穷举（边界条件（异常路径））））
-    #[test]
-    fn test_remaining_schedule_v2_basic() {
-        let ram = [0u8; 2048];
-        assert_eq!(remaining_schedule_v2(&ram), 0);
-    }
-
-    /// TDD 流程·第一步：边界条件（异常路径）
-    #[test]
-    fn test_remaining_schedule_v2_boundary() {
-        let mut ram = [0u8; 2048];
-        ram[0x03AA] = 0xFF;
-        assert_eq!(remaining_schedule_v2(&ram), 0xFF);
-    }
-
-    /// TDD 流程·第一步：写测试（穷举等价证明（全域穷举（边界条件（异常路径））））
-    #[test]
-    fn test_remaining_schedule_v3_basic() {
-        let ram = [0u8; 2048];
-        assert_eq!(remaining_schedule_v3(&ram), 0);
-    }
-
-    /// TDD 流程·第一步：边界条件（异常路径）
-    #[test]
-    fn test_remaining_schedule_v3_boundary() {
-        let mut ram = [0u8; 2048];
-        ram[0x03AB] = 0xFF;
-        assert_eq!(remaining_schedule_v3(&ram), 0xFF);
+/// 型比对分路（旧 s1_fbc7_body（$FBC7）：tbl==$6AF9[x]⇒$F62E 回卷（beq 形）；
+/// 否则 $6AF9[x]←tbl→$F690）。
+pub fn type_match_dispatch(y: u8, x: u8, tbl_val: u8, v6af9_x: u8) -> (Vec<(u16, u8)>, u16) {
+    let _ = y;
+    if tbl_val == v6af9_x {
+        (vec![], 0xF62E)
+    } else {
+        (vec![(0x6AF9 + x as u16, tbl_val)], 0xF690)
     }
 }
