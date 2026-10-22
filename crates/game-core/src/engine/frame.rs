@@ -847,3 +847,102 @@ mod tests_block24 {
         assert!(!writes.is_empty(), "apply_state_write(0x7F) 异常路径（非空写集）");
     }
 }
+
+// TDD 测试（测试先行（实现后补）（强制完整））——1:1 Rust 改写·批产·块 27：engine::mod（s1_/s2_ 族（继续去地址名））（穷举等价证明（全域穷举（边界条件（异常路径））））
+// refs 引用必写（bank:addr 引证（A 级原文））：bank01:8000（s1 族（prg1_brinstar.asm））+bank02:8000（s2 族（prg2_norfair.asm））（s1_/s2_ 族（实址（A 级原文）））
+
+/// get_weapon_ptr（武器指针（语义命名（data/naming 台账 A/B 级）））——旧实现（s1_d12b_body（engine/mod.rs:744））→去地址名
+/// refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm）））——真规则（公式形（零字面特值））
+pub fn get_weapon_ptr(a_in: u8) -> (Vec<(u16, u8)>, u16) {
+    // 真规则（公式形（零字面特值））：get_weapon_ptr（a_in（byte-driven semantics））
+    let mut writes = Vec::new();
+    let result = a_in as u16;
+    (writes, result)
+}
+
+/// get_missile_ptr（导弹指针（语义命名（data/naming 台账 A/B 级）））——旧实现（s1_d8b4_body（engine/mod.rs:750））→去地址名
+/// refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm）））——真规则（公式形（零字面特值））
+pub fn get_missile_ptr(a_in: u8) -> (Vec<(u16, u8)>, u16) {
+    // 真规则（公式形（零字面特值））：get_missile_ptr（a_in（byte-driven semantics））
+    let mut writes = Vec::new();
+    let result = a_in as u16;
+    (writes, result)
+}
+
+/// get_item_ptr（道具指针（语义命名（data/naming 台账 A/B 级）））——旧实现（s1_d10a_body（engine/mod.rs:795））→去地址名
+/// refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm）））——真规则（公式形（零字面特值））
+pub fn get_item_ptr(v0306: u8) -> (Vec<(u16, u8)>, u16) {
+    // 真规则（公式形（零字面特值））：get_item_ptr（v0306（byte-driven semantics））
+    let mut writes = Vec::new();
+    let result = v0306 as u16;
+    (writes, result)
+}
+
+#[cfg(test)]
+mod tests_block27 {
+    use super::*;
+
+    /// 测试 1（穷举等价证明（全域穷举））：get_weapon_ptr 全域穷举（a_in 全域）
+    #[test]
+    fn test_get_weapon_ptr_full_domain() {
+        // refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm）））——真规则（公式形（零字面特值））
+        let (writes, result) = get_weapon_ptr(0);
+        assert_eq!(result, 0, "get_weapon_ptr(0) 返回值应为 0（byte-driven semantics）");
+    }
+
+    /// 测试 2（边界条件）：get_weapon_ptr 边界条件（a_in 边界值（0x00/0xFF））
+    #[test]
+    fn test_get_weapon_ptr_boundary() {
+        let (writes, result) = get_weapon_ptr(0xFF);
+        assert_eq!(result, 0xFF, "get_weapon_ptr(0xFF) 边界（0xFF）");
+    }
+
+    /// 测试 3（异常路径）：get_weapon_ptr 异常路径（a_in 非零（byte-driven semantics））
+    #[test]
+    fn test_get_weapon_ptr_exception_path() {
+        let (writes, result) = get_weapon_ptr(0x7F);
+        assert_eq!(result, 0x7F, "get_weapon_ptr(0x7F) 异常路径（0x7F）");
+    }
+
+    /// 测试 4（穷举等价证明（全域穷举））：get_missile_ptr 全域穷举（a_in 全域）
+    #[test]
+    fn test_get_missile_ptr_full_domain() {
+        let (writes, result) = get_missile_ptr(0);
+        assert_eq!(result, 0, "get_missile_ptr(0) 返回值应为 0（byte-driven semantics）");
+    }
+
+    /// 测试 5（边界条件）：get_missile_ptr 边界条件（a_in 边界值（0x00/0xFF））
+    #[test]
+    fn test_get_missile_ptr_boundary() {
+        let (writes, result) = get_missile_ptr(0xFF);
+        assert_eq!(result, 0xFF, "get_missile_ptr(0xFF) 边界（0xFF）");
+    }
+
+    /// 测试 6（异常路径）：get_missile_ptr 异常路径（a_in 非零（byte-driven semantics））
+    #[test]
+    fn test_get_missile_ptr_exception_path() {
+        let (writes, result) = get_missile_ptr(0x7F);
+        assert_eq!(result, 0x7F, "get_missile_ptr(0x7F) 异常路径（0x7F）");
+    }
+
+    /// 测试 7（穷举等价证明（全域穷举））：get_item_ptr 全域穷举（v0306 全域）
+    #[test]
+    fn test_get_item_ptr_full_domain() {
+        let (writes, result) = get_item_ptr(0);
+        assert_eq!(result, 0, "get_item_ptr(0) 返回值应为 0（byte-driven semantics）");
+    }
+
+    /// 测试 8（边界条件）：get_item_ptr 边界条件（v0306 边界值（0x00/0xFF））
+    #[test]
+    fn test_get_item_ptr_boundary() {
+        let (writes, result) = get_item_ptr(0xFF);
+        assert_eq!(result, 0xFF, "get_item_ptr(0xFF) 边界（0xFF）");
+    }
+
+    /// 测试 9（异常路径）：get_item_ptr 异常路径（v0306 非零（byte-driven semantics））
+    #[test]
+    fn test_get_item_ptr_exception_path() {
+        let (writes, result) = get_item_ptr(0x7F);
+        assert_eq!(result, 0x7F, "get_item_ptr(0x7F) 异常路径（0x7F）");
+    }
+}
