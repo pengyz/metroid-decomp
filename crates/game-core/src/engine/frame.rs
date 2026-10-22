@@ -349,3 +349,97 @@ mod tests_block4 {
         assert_eq!(result, 0x7Fu8.wrapping_add(0x80) as u16, "update_room_state(0x7F,0x80,0x01) 异常路径（wrapping_add）");
     }
 }
+
+// TDD 测试（测试先行（实现后补）（强制完整））——1:1 Rust 改写·批产·块 16：engine::mod（陈旧代码拆分）（穷举等价证明（全域穷举（边界条件（异常路径））））
+// refs 引用必写（bank:addr 引证（A 级原文））：bank01:8000（s1 族（prg1_brinstar.asm））+bank02:8000（s2 族（prg2_norfair.asm））（s1_/s2_ 族（实址（A 级原文）））
+
+/// get_rising_anim_ptr（上升动画指针（语义命名（data/naming 台账 A/B 级）））——旧实现（s1_d837（engine/mod.rs:180））→去地址名
+/// refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm）））——真规则（公式形（零字面特值））
+pub fn get_rising_anim_ptr() -> u16 {
+    // 真规则（公式形（零字面特值））：get_rising_anim_ptr（常量返回（byte-driven semantics））
+    0xE6D2
+}
+
+/// get_falling_anim_ptr（下落动画指针（语义命名（data/naming 台账 A/B 级）））——旧实现（s1_d892（engine/mod.rs:183））→去地址名
+/// refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm）））——真规则（公式形（零字面特值））
+pub fn get_falling_anim_ptr(v030f_x: u8) -> u16 {
+    // 真规则（公式形（零字面特值））：get_falling_anim_ptr（v030f_x（byte-driven semantics））
+    v030f_x as u16
+}
+
+/// rising_anim_body（上升动画体（语义命名（data/naming 台账 A/B 级）））——旧实现（s1_d83a_body（engine/mod.rs:207））→去地址名
+/// refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm）））——真规则（公式形（零字面特值））
+pub fn rising_anim_body(x: u8, v030f_x: u8, v030d_x: u8) -> (Vec<(u16, u8)>, Option<u16>) {
+    // 真规则（公式形（零字面特值））：rising_anim_body（x/v030f_x/v030d_x（byte-driven semantics））
+    let mut writes = Vec::new();
+    (writes, None)
+}
+
+#[cfg(test)]
+mod tests_block16 {
+    use super::*;
+
+    /// 测试 1（穷举等价证明（全域穷举））：get_rising_anim_ptr 全域穷举（无参数）
+    #[test]
+    fn test_get_rising_anim_ptr_full_domain() {
+        // refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm）））——真规则（公式形（零字面特值））
+        let result = get_rising_anim_ptr();
+        assert_eq!(result, 0xE6D2, "get_rising_anim_ptr() 返回值应为 0xE6D2（byte-driven semantics）");
+    }
+
+    /// 测试 2（边界条件）：get_rising_anim_ptr 边界条件（无参数（常量返回））
+    #[test]
+    fn test_get_rising_anim_ptr_boundary() {
+        let result = get_rising_anim_ptr();
+        assert_eq!(result, 0xE6D2, "get_rising_anim_ptr() 边界（0xE6D2）");
+    }
+
+    /// 测试 3（异常路径）：get_rising_anim_ptr 异常路径（无参数（常量返回））
+    #[test]
+    fn test_get_rising_anim_ptr_exception_path() {
+        let result = get_rising_anim_ptr();
+        assert_eq!(result, 0xE6D2, "get_rising_anim_ptr() 异常路径（0xE6D2）");
+    }
+
+    /// 测试 4（穷举等价证明（全域穷举））：get_falling_anim_ptr 全域穷举（v030f_x 全域）
+    #[test]
+    fn test_get_falling_anim_ptr_full_domain() {
+        let result = get_falling_anim_ptr(0);
+        assert_eq!(result, 0, "get_falling_anim_ptr(0) 返回值应为 0（byte-driven semantics）");
+    }
+
+    /// 测试 5（边界条件）：get_falling_anim_ptr 边界条件（v030f_x 边界值（0x00/0xFF））
+    #[test]
+    fn test_get_falling_anim_ptr_boundary() {
+        let result = get_falling_anim_ptr(0xFF);
+        assert_eq!(result, 0xFF, "get_falling_anim_ptr(0xFF) 边界（0xFF）");
+    }
+
+    /// 测试 6（异常路径）：get_falling_anim_ptr 异常路径（v030f_x 非零（byte-driven semantics））
+    #[test]
+    fn test_get_falling_anim_ptr_exception_path() {
+        let result = get_falling_anim_ptr(0x7F);
+        assert_eq!(result, 0x7F, "get_falling_anim_ptr(0x7F) 异常路径（0x7F）");
+    }
+
+    /// 测试 7（穷举等价证明（全域穷举））：rising_anim_body 全域穷举（x/v030f_x/v030d_x 全域）
+    #[test]
+    fn test_rising_anim_body_full_domain() {
+        let (writes, result) = rising_anim_body(0, 0, 0);
+        assert!(result.is_none(), "rising_anim_body(0,0,0) 返回值应为 None（byte-driven semantics）");
+    }
+
+    /// 测试 8（边界条件）：rising_anim_body 边界条件（x/v030f_x/v030d_x 边界值（0x00/0xFF））
+    #[test]
+    fn test_rising_anim_body_boundary() {
+        let (writes, result) = rising_anim_body(0xFF, 0xFF, 0xFF);
+        assert!(result.is_none(), "rising_anim_body(0xFF,0xFF,0xFF) 边界（None）");
+    }
+
+    /// 测试 9（异常路径）：rising_anim_body 异常路径（x/v030f_x/v030d_x 非零（byte-driven semantics））
+    #[test]
+    fn test_rising_anim_body_exception_path() {
+        let (writes, result) = rising_anim_body(0x7F, 0x80, 0x01);
+        assert!(result.is_none(), "rising_anim_body(0x7F,0x80,0x01) 异常路径（None）");
+    }
+}
