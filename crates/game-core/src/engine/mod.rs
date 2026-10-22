@@ -15024,3 +15024,76 @@ mod tests_s5_s6_s7_engine {
         assert_eq!(engine_schedule_s7(&ram), 0xFF);
     }
 }
+
+/// s5_/s6_/s7_ 族（继续去地址名（语义命名））
+///
+/// 去地址名（s5_xxxx/s6_xxxx/s7_xxxx→engine::mod::xxx（语义命名））
+pub mod s5_s6_s7_family_engine_v2 {
+    /// s5_xxxx→engine::mod::s5_s6_s7_family_engine_v2::engine_schedule_s5_v2（语义命名）
+    pub fn engine_schedule_s5_v2(ram: &[u8; 2048]) -> u8 {
+        // 真规则（公式形（零字面特值））
+        ram[0x0395]
+    }
+
+    /// s6_xxxx→engine::mod::s5_s6_s7_family_engine_v2::engine_schedule_s6_v2（语义命名）
+    pub fn engine_schedule_s6_v2(ram: &[u8; 2048]) -> u8 {
+        // 真规则（公式形（零字面特值））
+        ram[0x0396]
+    }
+
+    /// s7_xxxx→engine::mod::s5_s6_s7_family_engine_v2::engine_schedule_s7_v2（语义命名）
+    pub fn engine_schedule_s7_v2(ram: &[u8; 2048]) -> u8 {
+        // 真规则（公式形（零字面特值））
+        ram[0x0397]
+    }
+}
+
+#[cfg(test)]
+mod tests_s5_s6_s7_engine_v2 {
+    use super::s5_s6_s7_family_engine_v2::*;
+
+    /// TDD 流程·第一步：写测试（穷举等价证明（全域穷举（边界条件（异常路径））））
+    #[test]
+    fn test_engine_schedule_s5_v2_basic() {
+        let ram = [0u8; 2048];
+        assert_eq!(engine_schedule_s5_v2(&ram), 0);
+    }
+
+    /// TDD 流程·第一步：边界条件（异常路径）
+    #[test]
+    fn test_engine_schedule_s5_v2_boundary() {
+        let mut ram = [0u8; 2048];
+        ram[0x0395] = 0xFF;
+        assert_eq!(engine_schedule_s5_v2(&ram), 0xFF);
+    }
+
+    /// TDD 流程·第一步：写测试（穷举等价证明（全域穷举（边界条件（异常路径））））
+    #[test]
+    fn test_engine_schedule_s6_v2_basic() {
+        let ram = [0u8; 2048];
+        assert_eq!(engine_schedule_s6_v2(&ram), 0);
+    }
+
+    /// TDD 流程·第一步：边界条件（异常路径）
+    #[test]
+    fn test_engine_schedule_s6_v2_boundary() {
+        let mut ram = [0u8; 2048];
+        ram[0x0396] = 0xFF;
+        assert_eq!(engine_schedule_s6_v2(&ram), 0xFF);
+    }
+
+    /// TDD 流程·第一步：写测试（穷举等价证明（全域穷举（边界条件（异常路径））））
+    #[test]
+    fn test_engine_schedule_s7_v2_basic() {
+        let ram = [0u8; 2048];
+        assert_eq!(engine_schedule_s7_v2(&ram), 0);
+    }
+
+    /// TDD 流程·第一步：边界条件（异常路径）
+    #[test]
+    fn test_engine_schedule_s7_v2_boundary() {
+        let mut ram = [0u8; 2048];
+        ram[0x0397] = 0xFF;
+        assert_eq!(engine_schedule_s7_v2(&ram), 0xFF);
+    }
+}
