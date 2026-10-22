@@ -15119,3 +15119,66 @@ pub fn clear_ptr_and_set_y_cond(x: u8, v6f: u8) -> (Vec<(u16, u8)>, u8) {
     }
     (ev, if branch { 1 } else { 0 })
 }
+
+// ===== 1:1 Rust 改写·批产·块 90（s6 族 SFX 起物+ObjectCntrl+桩面去地址名（TDD 穷举等价））=====
+
+#[cfg(test)]
+mod tests_b90_engine_mod {
+    //! TDD step1（测试先行（强制完整））——穷举等价（新==旧（≤256³ 闸时限界（依赖分解）））。
+    //! refs 锚（bank:addr 注内）：$F4B4（:6466）/$CBC0 SFX_MissilePickup root（:6492）/
+    //! $F512（:6540）/$F673 stub root（:6569）。
+
+    use super::*;
+
+    /// 【穷举·SFX 拾取壳】energy_pickup_and_dispatch==s6_f4b4_body（退化域）+
+    /// sfx_missile_pickup_face==s6_sfx_missile_pickup（声旗面逐钉）。
+    #[test]
+    fn sfx_pickup_equivalence() {
+        assert_eq!(s6_f4b4_body(), energy_pickup_and_dispatch());
+        assert_eq!(s6_sfx_missile_pickup(), sfx_missile_pickup_face());
+    }
+
+    /// 【穷举·ObjectCntrl 壳】x×a 全域——object_control_and_dispatch==s6_f512_body
+    /// （$040C[x]←A/$6AF4[x]←4→$F423）。
+    #[test]
+    fn exhaustive_object_ctrl_equivalence() {
+        for x in 0u8..=255 {
+            for a in 0u8..=255 {
+                assert_eq!(s6_f512_body(x, a), object_control_and_dispatch(x, a));
+            }
+        }
+    }
+
+    /// 【穷举·桩面】v4b 全域——load_x_from_4b_stub==s6_f673_stub（ldx $4B/rts 面）。
+    #[test]
+    fn exhaustive_stub_equivalence() {
+        for v in 0u8..=255 {
+            assert_eq!(s6_f673_stub(v), load_x_from_4b_stub(v));
+        }
+    }
+}
+
+// ===== 1:1 Rust 改写·批产·块 90：s6 族 SFX 起物+ObjectCntrl+桩面语义命名（去地址名）=====
+// refs 锚（bank:addr 注内）：$F4B4（:6466）/$CBC0 SFX_MissilePickup root（:6492）/$F512
+// （:6540）/$F673 stub root（:6569）。
+
+/// 能量拾取壳（旧 s6_f4b4_body（$F4B4）：SFX_EnergyPickup→jmp $CBBC）。
+pub fn energy_pickup_and_dispatch() -> (Vec<(u16, u8)>, u16) {
+    (vec![(0x0681, 0x40)], 0xCBBC)
+}
+
+/// 导弹拾取声旗面（旧 s6_sfx_missile_pickup（$CBC0 SFX_MissilePickup root）：
+/// $0681←$80（sfxNoise_MissilePickup））。
+pub fn sfx_missile_pickup_face() -> (Vec<(u16, u8)>, u8) {
+    (vec![(0x0681, 0x80)], 0x80)
+}
+
+/// ObjectCntrl 壳（旧 s6_f512_body（$F512）：$040C[x]←A/$6AF4[x]←4→jmp $F423）。
+pub fn object_control_and_dispatch(x: u8, a_in: u8) -> (Vec<(u16, u8)>, u16) {
+    (vec![(0x040C + x as u16, a_in), (0x6AF4 + x as u16, 4)], 0xF423)
+}
+
+/// 桩面（旧 s6_f673_stub（$F673 root）：ldx $4B/rts（X 载即返））。
+pub fn load_x_from_4b_stub(v4b: u8) -> (u8, bool) {
+    (v4b, true)
+}
