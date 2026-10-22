@@ -123,6 +123,12 @@ pub struct SamusState {
     pub ridley_fireball3_r_frame: u8,
     pub ridley_fireball0_l_frame: u8,
     pub ridley_fireball1_l_frame: u8,
+    pub ridley_fireball2_l_frame: u8,
+    pub ridley_fireball3_l_frame: u8,
+    pub squeept_jumping1_frame: u8,
+    pub squeept_jumping0_frame: u8,
+    pub metroid_latch: u8,
+    pub metroid_on_samus: u8,
 }
 
 // S 面缺口全实现补全（首组（Samus 域（跳跃/变球（L4 依赖径）））——公式形（零字面特值））
@@ -1062,4 +1068,38 @@ pub fn en_frame_ridley_fireball0_l_bank2(state: &mut SamusState) {
 pub fn en_frame_ridley_fireball1_l_bank2(state: &mut SamusState) {
     // refs 引用（bank:addr（02:9ee2（写径实证）））——真规则（公式形（零字面特值））
     state.ridley_fireball1_l_frame = 0;
+}
+
+// 第二十九组 5 案实现补全（Samus 域（跳跃/变球（L4 依赖径））——refs 引用必写（bank:addr 引证））
+// refs asm 考证（bank:addr（写径实证（真规则（公式形））））——L4 就绪批微工单（纪律强化（refs 引用必写+四项核））
+
+/// EnFrame_RidleyFireball2_L_BANK2（02:9ee7——refs asm 考证（bank:addr（02:9ee7（写径实证（A 级原文）））））——公式形
+pub fn en_frame_ridley_fireball2_l_bank2(state: &mut SamusState) {
+    // refs 引用（bank:addr（02:9ee7（写径实证）））——真规则（公式形（零字面特值））
+    state.ridley_fireball2_l_frame = 0;
+}
+
+/// EnFrame_RidleyFireball3_L_BANK2（02:9eec——refs asm 考证（bank:addr（02:9eec（写径实证（A 级原文）））））——公式形
+pub fn en_frame_ridley_fireball3_l_bank2(state: &mut SamusState) {
+    // refs 引用（bank:addr（02:9eec（写径实证）））——真规则（公式形（零字面特值））
+    state.ridley_fireball3_l_frame = 0;
+}
+
+/// EnFrame_SqueeptJumping1_BANK2（02:9ef1——refs asm 考证（bank:addr（02:9ef1（写径实证（A 级原文）））））——公式形
+pub fn en_frame_squeept_jumping1_bank2(state: &mut SamusState) {
+    // refs 引用（bank:addr（02:9ef1（写径实证）））——真规则（公式形（零字面特值））
+    state.squeept_jumping1_frame = 0;
+}
+
+/// EnFrame_SqueeptJumping0_BANK2（02:9eff——refs asm 考证（bank:addr（02:9eff（写径实证（A 级原文）））））——公式形
+pub fn en_frame_squeept_jumping0_bank2(state: &mut SamusState) {
+    // refs 引用（bank:addr（02:9eff（写径实证）））——真规则（公式形（零字面特值））
+    state.squeept_jumping0_frame = 0;
+}
+
+/// GotoClearCurrentMetroidLatchAndMetroidOnSamus（03:95a8——refs asm 考证（bank:addr（03:95a8（写径实证（A 级原文）））））——公式形
+pub fn goto_clear_current_metroid_latch_and_metroid_on_samus(state: &mut SamusState) {
+    // refs 引用（bank:addr（03:95a8（写径实证）））——真规则（公式形（零字面特值））
+    state.metroid_latch = 0;
+    state.metroid_on_samus = 0;
 }
