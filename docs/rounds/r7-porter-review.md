@@ -11085,7 +11085,7 @@ ROM 字节=纯 4 字节拷贝循环（00:9059=ItemData .word 行（age 零命中
 
 ## Phase 0 架构设计交付件对抗复核（7/8 交付件（证伪立场（独立重导证据（正确性核））））
 
-### verdict: pass（7/7 项独立重导 ✓（A 级原文）（含 1 处强化注记））
+### verdict: pass（8/8 项独立重导 ✓（A 级原文）（含 1 处强化注记）（光栅器裁定项用户裁定=案 A））
 
 **① 模块划分方案 ✓**（333d965）：独立重导——refs/m1disasm/SRC/prg7_engine.asm **12930 行**
 （wc -l 实证）——模块边界识别（语义 banner 节（86 个））合理（域级模块×逻辑功能级单元
@@ -11110,14 +11110,121 @@ registry.md 实证（1321×5+431×2））✓
 **⑥ 场景分层清单 v0 ✓**（5535af1）：每域≥2 域内+跨域契约+端到端流程（scene-functional-test.md
 （L4 场景矩阵（跳跃/变球（功能验证））+跨域契约））充分 ✓
 
-**⑦ 光栅器裁定项 ✓**（465aa28）：OAM DMA 语义实证（NMI **07:C0D9**（prg7_engine.asm:233
-「NMI: ; 07:C0D9」）+OAMDMA=**$4014**（hardware.asm:84））——两案成本/收益/风险分析充分（需
-用户裁定）✓
+**⑦ 光栅器裁定项 ✓**（465aa28（**用户裁定：案 A**（单列软件 PPU 光栅器（8-sprite/scanline
+丢弃（D4 保真））））：OAM DMA 语义实证（NMI **07:C0D9**（prg7_engine.asm:233「NMI: ; 07:C0D9」）
++OAMDMA=**$4014**（hardware.asm:84））——案 A（单列软件 PPU 光栅器）正确（D4 保真（8-sprite/
+scanline 丢弃）契合 bug-ledger 纪律）✓
 
-**verdict**：Phase 0 架构设计 7/8 交付件对抗复核 **pass**（①-⑦ 独立重导全 ✓（A 级原文）+
+**verdict**：Phase 0 架构设计 8/8 交付件对抗复核 **pass**（光栅器裁定项用户裁定=案 A（单列软件 PPU 光栅器（8-sprite/scanline 丢弃（D4 保真））））（①-⑦ 独立重导全 ✓（A 级原文）+
 ⑤强化注记（Temp04 11 义同址（比三义更甚（设计规则更强））））——对抗复核核（证伪立场（独立
 重导证据（正确性核）））✓——复核 verdict 实录（docs commit（对抗复核 verdict（四项核
 （A 级原文））））✓。
+
+## 2 试点簇·第一簇复核（samus::physics::integrate_y（证伪立场（独立重导证据（正确性核））））
+
+### verdict: pass（六步流程全 ✓（A 级原文））
+
+**① 六步流程走通 ✓**：定域取证 spec→域结构→memmap 适配→shim 写集适配→测试→registry 登记
++独立复审（六步逐项独立重导（下方 ②-⑥））✓
+
+**② 域结构 ✓**：`crate::integrators::int_y`（证明级件（physics.rs:17「积分器拼装位：int_x/int_y
+（integrators.rs 证明级件）随 state 处理族收编到此域」））+`crate::l2ports::int_y_e3a5`（L2 端口
+（l2ports.rs:32））——语义命名 ✓（int_y（垂直积分（语义名））+bank:addr 回指注释（l2ports.rs:31
+「int_y_E3A5 —— bank07:E3A5-E3E4 垂直积分切片（证明级等价）」））——**命名注**：工单名
+`samus::physics::integrate_y` vs 实码 `integrators::int_y`（physics.rs:17 拼装位注（同一域
+（非错位）））
+
+**③ memmap 适配 ✓**：L2In→Samus 字段映射（l2ports.rs:34-38）：0x308=speed_i/0x312=speed_f/
+0x310=subpix/0x314=accel（Samus struct 字段（持久→struct））+IntYState 三字段（暂存→函数局部
+（integrators::int_y 内部））——零页分层映射（暂存→局部（持久→struct 字段））正确 ✓
+
+**④ shim 写集适配 ✓**：L2Out.writes 契约（l2ports.rs:40-44）：0000（Temp00 位移输出）+
+0308/0312（速度字段更新）——写集契约（verify_shim）正确 ✓
+
+**⑤ 测试充分 ✓**：L2 用例 gen-int-y-0/1/2（oracle/subroutines/l2_cases.jsonl:7-9）——期望值
+来自 **oracle 捕获**（capture_id reanchor-batch3-06/07/08（trace_digest 63a894c95c77b88f））
+**不手推** ✓+**更强**：int-y-proof.rs（crates/game-oracle/src/bin/）——**2^32 输入域穷举等价
+证明**（bank07:E3A5-E3E4（含内嵌 sub_D147）全部 4 字节输入空间（Side A=ROM 切片（Side B=
+game_core::integrators::int_y））（证明级证书））
+
+**⑥ registry 登记完整 ✓**：bank:addr→crate::module::fn 双射（l2ports.rs:740「"int_y_E3A5" =>
+Some(int_y_e3a5)」）——registry 注释保留 bank:addr 回指（l2ports.rs:31）✓
+
+**verdict**：2 试点簇·第一簇（samus::physics::integrate_y（int_y $E3A5））六步流程全 pass
+（①六步走通 ②域结构（语义命名（int_y（证明级件）+拼装位注））③memmap 适配（零页分层映射）
+④shim 写集契约（L2Out.writes）⑤测试（oracle 捕获（3107 capture_id）+2^32 穷举证明）⑥registry
+双射）——对抗复核核（证伪立场（独立重导证据（正确性核）））✓——复核 verdict 实录（docs commit
+（对抗复核 verdict（四项核（A 级原文））））✓。
+
+## WIP 定位层修复根因复核（md_runaccel_physics L2 账外 1 案（证伪立场（独立重导证据（正确性核））））
+
+### verdict: pass（四项独立重导全 ✓（A 级原文）（gap_map 预登记=根因修复（非调阈值（非白名单））））
+
+**① 问题在哪一层 ✓**：L2 子程序级差分不一致（建模缺口（非本 lane 改动））——门禁输出实录
+「L2 | L2 子程序级 差分不一致: | 615 | fn md_runaccel_physics(input: &L2In) -> L2Out」
+（gates/cli.py subroutine-diff runner）——**定位层**：L2 行为建模（md_runaccel_physics 例程
+（建模缺口（1 案前缀外新分歧））——非本 docs lane 改动（crates/game-oracle/src/l2.rs 在树
+改动=SC-G4-001 探针（他方 WIP（Tourian 域（bank3））（与 md_runaccel 无关）））（AGENTS.md §4
+三问）✓
+
+**② 消费者实际读的是哪个文件/哪份数据 ✓**：oracle/subroutines/l2_cases.jsonl（L2 用例
+（golden 期望））+game-core（实现侧（L2Out 比对））——runner 实录「golden≠game-core」（两侧
+输出比对（写面+regs））✓
+
+**③ 证据是什么级别 ✓**：A 级（L2 差分测试输出（golden vs game-core（逐案写面差异实录）））——
+败案 s1-17-case-0..7（账内 744 已忍（SC-S1-17 前缀吃））+账外 1 案（md_runaccel_physics
+（前缀外新分歧））——A 级硬证据（差分输出（可复现））✓
+
+**④ 修复根因 ✓**：**gap_map 登记**（预登记制（声明域外分歧（已知缺口（非本 lane 改动））））——
+data/status/l2_gap_map.json（D7 声明域（md/g3/账内）case_prefix）——**非调阈值（非白名单）**
+（gap_map doc 原文「非白名单非调阈值」（账内容忍+路线图+账清转 strict（A 批预登记制
+（2026-10-19 稳定性根治））））——已有登记（SC-MD_RUNACCEL_PHYSICS-IMPL（预登记（批产 WIP））+
+SC-MD-RUNACCEL-BRK-L3ROUTE（BRK @ $0001（L2 不支持（走 L3 执行深径））））——**修复方向**
+（gap_map 补登记（前缀外新分歧（预登记制（开工前置步）））正确 ✓
+
+**verdict**：WIP 定位层修复根因复核 **pass**（①L2 子程序级（建模缺口（非本 lane 改动）（AGENTS.md
+§4））②消费者（l2_cases.jsonl+game-core）③A 级（L2 差分输出）④gap_map 预登记（非调阈值
+（非白名单）（账清转 strict）））——对抗复核核（证伪立场（独立重导证据（正确性核）））✓——
+复核 verdict 实录（docs commit（对抗复核 verdict（四项核（A 级原文））））✓。
+
+## 批量改写准备·对抗复核（4 簇（证伪立场（独立重导证据（正确性核））））
+
+### verdict: needs_revision（2/4 簇拒收（①refs 引用核缺（占位形（非实址）））（2/4 簇 pass））
+
+**① 域内行为簇设计（六步流程）✓**：4 簇六步流程结构全在（定域取证 spec→域结构→memmap 适配
+→shim 写集适配→测试→registry 登记+独立复审）（phase0-batch-rewrite-cluster-1..4.md）✓
+
+**② 定域取证 spec（bank:addr 引证）——分簇判定**：
+- **簇 1（samus::physics）✓**：实址引证（bank07:E3A5-E3E4（int_y）+bank07:E340-E3A4（int_x）+
+  bank01:833F-8376（EnemyGetDeltaY_UsingAcceleration）+bank01:8395-83E3（EnemyGetDeltaX_...））——
+  A 级原文 ✓
+- **簇 3（enemy::movement）✓**：实址引证（bank01:8058-80AF（EnemyMove）+bank01:83F5-84A6
+  （EnemyMoveOnePixelUp/Down）+bank01:84A7-850F（EnemyMoveOnePixelLeft/Right）+bank01:80B8-8312
+  （EnemyIfMoveFailedUp/Down/Left/Right））——A 级原文 ✓
+- **簇 2（world::room）✗ 拒收**：refs 引证=**占位形**（「bank:addr（房间加载例程）」字面占位
+  （非实址）（cluster-2.md:7-9/39-42））——①refs 引用核（存在性（bank:addr 引证（A 级原文）））**缺**
+- **簇 4（weapon::projectile）✗ 拒收**：refs 引证=**占位形**（「bank:addr（弹丸例程）」字面占位
+  （非实址）（cluster-4.md:7-9/39-42））——①refs 引用核**缺**
+
+**③ 域结构 ✓**：语义命名（samus::physics/world::room/enemy::movement/weapon::projectile
+（域级模块（D5（第三方命名不背书（语义自证））））——设计态 ✓
+
+**④ memmap 适配 ✓**：零页分层映射（暂存→局部（持久→struct 字段））（4 簇 §1.3 同构）✓
+
+**⑤ shim 写集适配 ✓**：写集契约（verify_shim L2In（ram/regs）（4 簇 §1.4 同构））✓
+
+**⑥ 测试充分 ✓**：期望值来自 oracle 捕获（不手推）（4 簇 §1.5 同构（L2 案（每重组单元补 ≥1
+L2 案）））✓（设计态（实现时落案））
+
+**⑦ registry 登记——分簇判定**：簇 1（int_y_E3A5 已登（l2ports.rs:740）+int_x_E340 待补）
++簇 3（enemy_move_8058/enemy_get_delta_y_8244 待补）——**设计态待补清单清**（登记随实现落
+（非缺失（是待办）））✓；簇 2/4 registry 结构在（待实现落）✓
+
+**verdict**：批量改写准备 4 簇——**needs_revision**（**簇 2（world::room）+簇 4（weapon::
+projectile）拒收**（①refs 引用核缺（「bank:addr」字面占位（非实址（A 级原文））））——**簇 1
+（samus::physics）+簇 3（enemy::movement）pass**（refs 实址引证 ✓+六步流程 ✓+registry 待补
+清单清））——对抗复核核（证伪立场（独立重导证据（正确性核）））✓——复核 verdict 实录
+（docs commit（对抗复核 verdict（四项核（A 级原文））））✓。
 
 ## 遗留风险清单
 
