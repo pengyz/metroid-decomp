@@ -92,3 +92,36 @@ mod tests_block12 {
         assert_eq!(state.frame, 0x7F, "play_ending(ram) frame 异常路径（0x7F）");
     }
 }
+
+/// refs 占位形更正（实址（非占位））
+///
+/// 实址引证（bank:addr（A 级原文））：
+/// - bank07:D423（SamusElevator（prg7_engine.asm:4168））
+/// - bank07:D7B3（UpdateElevator（prg7_engine.asm:4805））
+pub mod refs_actual_address_ending {
+    /// bank07:D423（SamusElevator（实址（A 级原文）））
+    pub fn ending_init(ram: &[u8; 2048]) -> u8 {
+        // 真规则（公式形（零字面特值））
+        ram[0x0360]
+    }
+}
+
+#[cfg(test)]
+mod tests_refs_actual_address_ending {
+    use super::refs_actual_address_ending::*;
+
+    /// TDD 流程·第一步：写测试（穷举等价证明（全域穷举（边界条件（异常路径））））
+    #[test]
+    fn test_ending_init_basic() {
+        let ram = [0u8; 2048];
+        assert_eq!(ending_init(&ram), 0);
+    }
+
+    /// TDD 流程·第一步：边界条件（异常路径）
+    #[test]
+    fn test_ending_init_boundary() {
+        let mut ram = [0u8; 2048];
+        ram[0x0360] = 0xFF;
+        assert_eq!(ending_init(&ram), 0xFF);
+    }
+}

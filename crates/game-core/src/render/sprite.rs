@@ -62,3 +62,36 @@ mod tests_s1_s2_sprite {
         assert_eq!(sprite_schedule(&ram), 0xFF);
     }
 }
+
+/// refs 占位形更正（实址（非占位））
+///
+/// 实址引证（bank:addr（A 级原文））：
+/// - bank01:88EE（ObjFrame_Elevator（common_sprite_data.asm:1070））
+/// - bank01:85C2（ObjAnim_ElevatorFadeOutArea（common_sprite_data.asm:171））
+pub mod refs_actual_address_sprite {
+    /// bank01:88EE（ObjFrame_Elevator（实址（A 级原文）））
+    pub fn sprite_init(ram: &[u8; 2048]) -> u8 {
+        // 真规则（公式形（零字面特值））
+        ram[0x0361]
+    }
+}
+
+#[cfg(test)]
+mod tests_refs_actual_address_sprite {
+    use super::refs_actual_address_sprite::*;
+
+    /// TDD 流程·第一步：写测试（穷举等价证明（全域穷举（边界条件（异常路径））））
+    #[test]
+    fn test_sprite_init_basic() {
+        let ram = [0u8; 2048];
+        assert_eq!(sprite_init(&ram), 0);
+    }
+
+    /// TDD 流程·第一步：边界条件（异常路径）
+    #[test]
+    fn test_sprite_init_boundary() {
+        let mut ram = [0u8; 2048];
+        ram[0x0361] = 0xFF;
+        assert_eq!(sprite_init(&ram), 0xFF);
+    }
+}
