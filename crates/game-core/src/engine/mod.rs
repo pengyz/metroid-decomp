@@ -15901,3 +15901,140 @@ mod tests_s1_s2_remaining_batch_v2 {
         assert_eq!(remaining_schedule_v6(&ram), 0xFF);
     }
 }
+
+// ===== 1:1 Rust 改写·批产·块 127（s1 余批 3 员去名（VM 走带+指令分派）（TDD 穷举等价））=====
+
+#[cfg(test)]
+mod tests_b127_engine_mod {
+    //! TDD step1（测试先行（强制完整））——穷举等价（新==旧（≤256³ 闸时限界（依赖分解）））。
+    //! refs 锚（bank:addr 注内）：vm_advance（:1454）/$EAD4 EnemyLoop root（:1461）/
+    //! $EB09（:1473）。
+
+    use super::*;
+
+    /// 【穷举·VM 走带】lo×hi×addend 全域 256³——advance_vector_motion==s1_vm_advance
+    /// （进位链（lo 溢出⇒hi+1））。
+    #[test]
+    fn exhaustive_vm_advance_equivalence() {
+        for lo in 0u8..=255 {
+            for hi in 0u8..=255 {
+                for add in 0u8..=255 {
+                    assert_eq!(s1_vm_advance(lo, hi, add), advance_vector_motion(lo, hi, add));
+                }
+            }
+        }
+    }
+
+    /// 【穷举·指令分派】a×x×lo×hi×op 依赖分解（走带分量/表项分量独立）——
+    /// enemy_object_vm_dispatch==s1_enemy_loop（8 表项 nibble 分派）。
+    #[test]
+    fn exhaustive_vm_dispatch_equivalence() {
+        for a in [0u8, 1, 0x80, 0xFF] {
+            for x in [0u8, 1, 0xFF] {
+                for lo in [0u8, 0xFF, 0x80] {
+                    for hi in [0u8, 0xFF] {
+                        for op in 0u8..=255 {
+                            assert_eq!(s1_enemy_loop(a, x, lo, hi, op), enemy_object_vm_dispatch(a, x, lo, hi, op));
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /// 【穷举·记录长】enemy_record_length==s1_eb09_rec_len（退化域（lda #3/rts））。
+    #[test]
+    fn rec_len_equivalence() {
+        assert_eq!(s1_eb09_rec_len(), enemy_record_length());
+    }
+}
+
+// ===== 1:1 Rust 改写·批产·块 127：VM 走带+指令分派语义命名（去地址名（公式形））=====
+// refs 锚（bank:addr 注内）：vm_advance（:1454）/$EAD4 EnemyLoop root（:1461）/$EB09（:1473）。
+
+/// VM 走带（旧 s1_vm_advance：lo←lo+addend（进位⇒hi+1）——对象指令 VM 走带面）。
+pub fn advance_vector_motion(lo: u8, hi: u8, addend: u8) -> (u8, u8) {
+    let (l, c) = lo.overflowing_add(addend);
+    (l, hi.wrapping_add(if c { 1 } else { 0 }))
+}
+
+/// 指令分派（旧 s1_enemy_loop（$EAD4 EnemyLoop root）：走带+op_byte&7 nibble 分派
+/// （8 表项（$C45C/$EB06/$EB8C/$C45C/$EC04/$C45C/$EC2F/$EC57））+JumpEngine 面
+/// （RoutinePtr=$0C/$0D/TempX=$69/TempY=$6A））。
+pub fn enemy_object_vm_dispatch(a_in: u8, x_in: u8, lo: u8, hi: u8, op_byte: u8)
+    -> (Vec<(u16, u8)>, u8, u8, u8) {
+    const TABLE: [u16; 8] = [0xC45C, 0xEB06, 0xEB8C, 0xC45C, 0xEC04, 0xC45C, 0xEC2F, 0xEC57];
+    let (nlo, nhi) = advance_vector_motion(lo, hi, a_in);
+    let target = TABLE[(op_byte & 7) as usize];
+    let ev = vec![(0x0000, nlo), (0x0001, nhi),
+                  (0x000C, (target & 0xFF) as u8), (0x000D, (target >> 8) as u8),
+                  (0x0069, x_in), (0x006A, 0)];
+    (ev, (target >> 8) as u8, x_in, 0)
+}
+
+/// 记录长（旧 s1_eb09_rec_len（$EB09 op1 族）：lda #3/rts（3B 记录））。
+pub fn enemy_record_length() -> u8 {
+    3
+}
+
+// ===== 1:1 Rust 改写·批产·块 128（s1 余批 3 员去名（回驱尾+spawn VM）（TDD 穷举等价））=====
+
+#[cfg(test)]
+mod tests_b128_engine_mod {
+    //! TDD step1（测试先行（强制完整））——穷举等价（新==旧（≤256³ 闸时限界（依赖分解）））。
+    //! refs 锚（bank:addr 注内）：$EB8F Lx230（:1475）/$EC54 Lx237（:1479）/$EDD6
+    //! ChooseSpawningRoutine root（:1512）。
+
+    use super::*;
+
+    /// 【穷举·回驱尾×2】vm_return_tail_a/b==s1_lx230/lx237_stub（退化域（恒 $EAD4））。
+    #[test]
+    fn vm_tails_equivalence() {
+        assert_eq!(s1_lx230_stub(), vm_return_tail_a());
+        assert_eq!(s1_lx237_stub(), vm_return_tail_b());
+    }
+
+    /// 【穷举·spawn VM】a×x×lo×hi×op 依赖分解——choose_spawning_routine==s1_choose_spawning
+    /// （8 表项 spawn 分派）。
+    #[test]
+    fn exhaustive_spawn_vm_equivalence() {
+        for a in [0u8, 1, 0x80, 0xFF] {
+            for x in [0u8, 1, 0xFF] {
+                for lo in [0u8, 0xFF, 0x80] {
+                    for hi in [0u8, 0xFF] {
+                        for op in 0u8..=255 {
+                            assert_eq!(s1_choose_spawning(a, x, lo, hi, op), choose_spawning_routine(a, x, lo, hi, op));
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ===== 1:1 Rust 改写·批产·块 128：回驱尾+spawn VM 语义命名（去地址名（公式形））=====
+// refs 锚（bank:addr 注内）：$EB8F Lx230（:1475）/$EC54 Lx237（:1479）/$EDD6
+// ChooseSpawningRoutine root（:1512）。
+
+/// 回驱尾 A（旧 s1_lx230_stub（$EB8F Lx230）：jmp 回驱尾形（iny 链走面）——恒 $EAD4）。
+pub fn vm_return_tail_a() -> u16 {
+    0xEAD4
+}
+
+/// 回驱尾 B（旧 s1_lx237_stub（$EC54 Lx237）：jmp 回驱尾形+槽走面（$0728[x] 环）——恒 $EAD4）。
+pub fn vm_return_tail_b() -> u16 {
+    0xEAD4
+}
+
+/// spawn VM 分派（旧 s1_choose_spawning（$EDD6 ChooseSpawningRoutine root）：走带+spawn
+/// 分派表（8 表项（$C45C/$EDF8/$EDFE/$EE63/$EEA1/$EEA6/$C45C/$C45C））+JumpEngine 面）。
+pub fn choose_spawning_routine(a_in: u8, x_in: u8, lo: u8, hi: u8, op_byte: u8)
+    -> (Vec<(u16, u8)>, u8, u8, u8) {
+    const TABLE: [u16; 8] = [0xC45C, 0xEDF8, 0xEDFE, 0xEE63, 0xEEA1, 0xEEA6, 0xC45C, 0xC45C];
+    let (nlo, nhi) = advance_vector_motion(lo, hi, a_in);
+    let target = TABLE[(op_byte & 7) as usize];
+    let ev = vec![(0x0000, nlo), (0x0001, nhi),
+                  (0x000C, (target & 0xFF) as u8), (0x000D, (target >> 8) as u8),
+                  (0x0069, x_in), (0x006A, 0)];
+    (ev, (target >> 8) as u8, x_in, 0)
+}
