@@ -16429,3 +16429,79 @@ pub fn obj_y_slot_and_tail(y: u8, v030d_y: u8, v030e_y: u8, v030c_y: u8, ppuctrl
     let (ev, _) = get_object_y_slot_position(y, v030d_y, v030e_y, v030c_y, ppuctrl);
     (ev, 0xF1FA)
 }
+
+// ===== 1:1 Rust 改写·批产·块 141（s1 余批 3 员去名（UpdateEnemy 分支族）（TDD 穷举等价））=====
+
+#[cfg(test)]
+mod tests_b141_engine_mod {
+    //! TDD step1（测试先行（强制完整））——穷举等价（新==旧（≤256³ 闸时限界（依赖分解）））。
+    //! refs 锚（bank:addr 注内）：$F10C（:1696）/$F40A（:1805）/$F43E（:1813）。
+
+    use super::*;
+
+    /// 【穷举·碰撞链面】v49×v06×v07 全域 256³——collision_chain_face==s1_f10c_body
+    /// （CheckCollision 直通）。
+    #[test]
+    fn exhaustive_collision_chain_equivalence() {
+        for v49 in 0u8..=255 {
+            for v06 in 0u8..=255 {
+                for v07 in 0u8..=255 {
+                    assert_eq!(s1_f10c_body(v49, v06, v07), collision_chain_face(v49, v06, v07));
+                }
+            }
+        }
+    }
+
+    /// 【穷举·活跃分支 B】x×三参依赖分解——update_enemy_active_branch_b==s1_update_active_b
+    /// （root→$95E5）。
+    #[test]
+    fn exhaustive_active_b_equivalence() {
+        for x in 0u8..=255 {
+            for &(a, b, c) in &[(0u8, 0u8, 0u8), (0xFF, 0xFF, 0xFF), (5, 6, 7)] {
+                assert_eq!(s1_update_active_b(x, a, b, c), update_enemy_active_branch_b(x, a, b, c));
+            }
+        }
+    }
+
+    /// 【穷举·冻结检】x×v6af4×v6b 依赖分解——update_enemy_frozen_check==s1_update_frozen
+    /// （冻结判（==$03）+非冻且 $6B 位7 未置⇒$6B←$A1）。
+    #[test]
+    fn exhaustive_frozen_check_equivalence() {
+        for x in 0u8..=255 {
+            for f in [0u8, 2, 3, 4, 0xFF] {
+                for b in [0u8, 0x80, 0x81, 0xFF] {
+                    assert_eq!(s1_update_frozen(x, 1, 2, 3, f, b), update_enemy_frozen_check(x, 1, 2, 3, f, b));
+                }
+            }
+        }
+    }
+}
+
+// ===== 1:1 Rust 改写·批产·块 141：UpdateEnemy 分支族语义命名（去地址名（公式形））=====
+// refs 锚（bank:addr 注内）：$F10C（:1696）/$F40A（:1805）/$F43E（:1813）。
+
+/// 碰撞链面（旧 s1_f10c_body（$F10C）：CheckCollision root 直通（$F2ED/Yplus16/
+/// IsSamusDead 链段注））。
+pub fn collision_chain_face(v49: u8, v06: u8, v07: u8) -> (Vec<(u16, u8)>, u8) {
+    check_collision_delta(v49, v06, v07)
+}
+
+/// 活跃分支 B（旧 s1_update_active_b（$F40A UpdateEnemy_Active_BranchB）：root（弹反）
+/// →jmp $95E5）。
+pub fn update_enemy_active_branch_b(x: u8, v040f_x: u8, v0404_x: u8, v040e_x: u8)
+    -> (Vec<(u16, u8)>, u16) {
+    let (ev, _) = s1_enemy_react_projectile(x, v040f_x, v0404_x, v040e_x);
+    (ev, 0x95E5)
+}
+
+/// 冻结检（旧 s1_update_frozen（$F43E UpdateEnemy_Frozen）：root+$6AF4[x]==$03 冻结判
+/// +非冻且 $6B 位7 未置⇒$6B←$A1（$2D 位段注））。
+pub fn update_enemy_frozen_check(x: u8, v040f_x: u8, v0404_x: u8, v040e_x: u8,
+                                 v6af4_x: u8, v6b: u8) -> (Vec<(u16, u8)>, bool) {
+    let (mut ev, _hit) = s1_enemy_react_projectile(x, v040f_x, v0404_x, v040e_x);
+    let frozen = v6af4_x == 3;
+    if !frozen && (v6b & 0x80) == 0 {
+        ev.push((0x006B, 0xA1));
+    }
+    (ev, frozen)
+}
