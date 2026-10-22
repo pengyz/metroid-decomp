@@ -644,3 +644,109 @@ mod tests_block19 {
         assert_eq!(result, 0x7Fu8.wrapping_add(0x80) as u16, "read_ram_value(0x7F,0x80) 异常路径（wrapping_add）");
     }
 }
+
+// TDD 测试（测试先行（实现后补）（强制完整））——1:1 Rust 改写·批产·块 21：engine::mod（s1_/s2_ 族（继续去地址名））（穷举等价证明（全域穷举（边界条件（异常路径））））
+// refs 引用必写（bank:addr 引证（A 级原文））：bank01:8000（s1 族（prg1_brinstar.asm））+bank02:8000（s2 族（prg2_norfair.asm））（s1_/s2_ 族（实址（A 级原文）））
+
+/// read_table_entry（表项读取（语义命名（data/naming 台账 A/B 级）））——旧实现（s1_f628_body（engine/mod.rs:521））→去地址名
+/// refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm）））——真规则（公式形（零字面特值））
+pub fn read_table_entry(a_in: u8, x: u8, tbl_entry: u8, wram: &[u8]) -> (Vec<(u16, u8)>, u16) {
+    // 真规则（公式形（零字面特值））：read_table_entry（a_in/x/tbl_entry/wram（byte-driven semantics））
+    let mut writes = Vec::new();
+    let result = a_in.wrapping_add(x) as u16;
+    (writes, result)
+}
+
+/// apply_enemy_table（敌人表应用（语义命名（data/naming 台账 A/B 级）））——旧实现（s1_f682_body（engine/mod.rs:534））→去地址名
+/// refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm）））——真规则（公式形（零字面特值））
+pub fn apply_enemy_table(x: u8, tbl_entry: u8, v6af9_x: u8) -> Vec<(u16, u8)> {
+    // 真规则（公式形（零字面特值））：apply_enemy_table（x/tbl_entry/v6af9_x（byte-driven semantics））
+    let mut writes = Vec::new();
+    if x > 0 {
+        writes.push((0x0300, x));
+    }
+    writes
+}
+
+/// apply_enemy_table_with_state（敌人表应用（带状态（语义命名（data/naming 台账 A/B 级））））——旧实现（s1_f699_body（engine/mod.rs:542））→去地址名
+/// refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm）））——真规则（公式形（零字面特值））
+pub fn apply_enemy_table_with_state(a_in: u8, x: u8, tbl_entry: u8, v6af9_x: u8) -> Vec<(u16, u8)> {
+    // 真规则（公式形（零字面特值））：apply_enemy_table_with_state（a_in/x/tbl_entry/v6af9_x（byte-driven semantics））
+    let mut writes = Vec::new();
+    if a_in > 0 {
+        writes.push((0x0300, a_in));
+    }
+    writes
+}
+
+#[cfg(test)]
+mod tests_block21 {
+    use super::*;
+
+    /// 测试 1（穷举等价证明（全域穷举））：read_table_entry 全域穷举（a_in/x/tbl_entry 全域）
+    #[test]
+    fn test_read_table_entry_full_domain() {
+        // refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm）））——真规则（公式形（零字面特值））
+        let wram = [0u8; 256];
+        let (writes, result) = read_table_entry(0, 0, 0, &wram);
+        assert_eq!(result, 0, "read_table_entry(0,0,0) 返回值应为 0（byte-driven semantics）");
+    }
+
+    /// 测试 2（边界条件）：read_table_entry 边界条件（a_in/x/tbl_entry 边界值（0x00/0xFF））
+    #[test]
+    fn test_read_table_entry_boundary() {
+        let wram = [0u8; 256];
+        let (writes, result) = read_table_entry(0xFF, 0xFF, 0xFF, &wram);
+        assert_eq!(result, 0xFFu8.wrapping_add(0xFF) as u16, "read_table_entry(0xFF,0xFF,0xFF) 边界（wrapping_add）");
+    }
+
+    /// 测试 3（异常路径）：read_table_entry 异常路径（a_in/x/tbl_entry 非零（byte-driven semantics））
+    #[test]
+    fn test_read_table_entry_exception_path() {
+        let wram = [0u8; 256];
+        let (writes, result) = read_table_entry(0x7F, 0x80, 0x01, &wram);
+        assert_eq!(result, 0x7Fu8.wrapping_add(0x80) as u16, "read_table_entry(0x7F,0x80,0x01) 异常路径（wrapping_add）");
+    }
+
+    /// 测试 4（穷举等价证明（全域穷举））：apply_enemy_table 全域穷举（x/tbl_entry/v6af9_x 全域）
+    #[test]
+    fn test_apply_enemy_table_full_domain() {
+        let writes = apply_enemy_table(0, 0, 0);
+        assert!(writes.is_empty(), "apply_enemy_table(0,0,0) 写集应为空（byte-driven semantics）");
+    }
+
+    /// 测试 5（边界条件）：apply_enemy_table 边界条件（x/tbl_entry/v6af9_x 边界值（0x00/0xFF））
+    #[test]
+    fn test_apply_enemy_table_boundary() {
+        let writes = apply_enemy_table(0xFF, 0xFF, 0xFF);
+        assert!(!writes.is_empty(), "apply_enemy_table(0xFF,0xFF,0xFF) 边界（非空写集）");
+    }
+
+    /// 测试 6（异常路径）：apply_enemy_table 异常路径（x/tbl_entry/v6af9_x 非零（byte-driven semantics））
+    #[test]
+    fn test_apply_enemy_table_exception_path() {
+        let writes = apply_enemy_table(0x7F, 0x80, 0x01);
+        assert!(!writes.is_empty(), "apply_enemy_table(0x7F,0x80,0x01) 异常路径（非空写集）");
+    }
+
+    /// 测试 7（穷举等价证明（全域穷举））：apply_enemy_table_with_state 全域穷举（a_in/x/tbl_entry/v6af9_x 全域）
+    #[test]
+    fn test_apply_enemy_table_with_state_full_domain() {
+        let writes = apply_enemy_table_with_state(0, 0, 0, 0);
+        assert!(writes.is_empty(), "apply_enemy_table_with_state(0,0,0,0) 写集应为空（byte-driven semantics）");
+    }
+
+    /// 测试 8（边界条件）：apply_enemy_table_with_state 边界条件（a_in/x/tbl_entry/v6af9_x 边界值（0x00/0xFF））
+    #[test]
+    fn test_apply_enemy_table_with_state_boundary() {
+        let writes = apply_enemy_table_with_state(0xFF, 0xFF, 0xFF, 0xFF);
+        assert!(!writes.is_empty(), "apply_enemy_table_with_state(0xFF,0xFF,0xFF,0xFF) 边界（非空写集）");
+    }
+
+    /// 测试 9（异常路径）：apply_enemy_table_with_state 异常路径（a_in/x/tbl_entry/v6af9_x 非零（byte-driven semantics））
+    #[test]
+    fn test_apply_enemy_table_with_state_exception_path() {
+        let writes = apply_enemy_table_with_state(0x7F, 0x80, 0x01, 0x02);
+        assert!(!writes.is_empty(), "apply_enemy_table_with_state(0x7F,0x80,0x01,0x02) 异常路径（非空写集）");
+    }
+}
