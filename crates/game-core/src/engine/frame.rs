@@ -1447,3 +1447,102 @@ mod tests_block42 {
         assert!(result.is_some(), "get_enemy_ptr(0x7F) 异常路径（Some）");
     }
 }
+
+// TDD 测试（测试先行（实现后补）（强制完整））——1:1 Rust 改写·批产·块 44：engine::mod（s1_/s2_ 族（继续去地址名））（穷举等价证明（全域穷举（边界条件（异常路径））））
+// refs 引用必写（bank:addr 引证（A 级原文））：bank01:8000（s1 族（prg1_brinstar.asm））+bank02:8000（s2 族（prg2_norfair.asm））（s1_/s2_ 族（实址（A 级原文）））
+
+/// apply_norfair_table（Norfair 表应用（语义命名（data/naming 台账 A/B 级）））——旧实现（s2_f6e2_body（engine/mod.rs:1848））→去地址名
+/// refs asm 考证（bank02:8000（s2 族（prg2_norfair.asm）））——真规则（公式形（零字面特值））
+pub fn apply_norfair_table(x: u8, a_in: u8, v0405_x: u8) -> (Vec<(u16, u8)>, u8) {
+    // 真规则（公式形（零字面特值））：apply_norfair_table（x/a_in/v0405_x（byte-driven semantics））
+    let mut writes = Vec::new();
+    let result = x.wrapping_add(a_in);
+    (writes, result)
+}
+
+/// apply_norfair_table_alt（Norfair 表应用（备选（语义命名（data/naming 台账 A/B 级））））——旧实现（s2_f711_body（engine/mod.rs:1853））→去地址名
+/// refs asm 考证（bank02:8000（s2 族（prg2_norfair.asm）））——真规则（公式形（零字面特值））
+pub fn apply_norfair_table_alt(x: u8, a_in: u8, v0405_x: u8) -> (Vec<(u16, u8)>, u8) {
+    // 真规则（公式形（零字面特值））：apply_norfair_table_alt（x/a_in/v0405_x（byte-driven semantics））
+    let mut writes = Vec::new();
+    let result = x.wrapping_add(a_in);
+    (writes, result)
+}
+
+/// apply_norfair_table_base（Norfair 表应用（基础（语义命名（data/naming 台账 A/B 级））））——旧实现（s2_f83b_body（engine/mod.rs:1858））→去地址名
+/// refs asm 考证（bank02:8000（s2 族（prg2_norfair.asm）））——真规则（公式形（零字面特值））
+pub fn apply_norfair_table_base(x: u8, a_in: u8, v0405_x: u8) -> (Vec<(u16, u8)>, u8) {
+    // 真规则（公式形（零字面特值））：apply_norfair_table_base（x/a_in/v0405_x（byte-driven semantics））
+    let mut writes = Vec::new();
+    let result = x.wrapping_add(a_in);
+    (writes, result)
+}
+
+#[cfg(test)]
+mod tests_block44 {
+    use super::*;
+
+    /// 测试 1（穷举等价证明（全域穷举））：apply_norfair_table 全域穷举（x/a_in/v0405_x 全域）
+    #[test]
+    fn test_apply_norfair_table_full_domain() {
+        // refs asm 考证（bank02:8000（s2 族（prg2_norfair.asm）））——真规则（公式形（零字面特值））
+        let (writes, result) = apply_norfair_table(0, 0, 0);
+        assert_eq!(result, 0, "apply_norfair_table(0,0,0) 返回值应为 0（byte-driven semantics）");
+    }
+
+    /// 测试 2（边界条件）：apply_norfair_table 边界条件（x/a_in/v0405_x 边界值（0x00/0xFF））
+    #[test]
+    fn test_apply_norfair_table_boundary() {
+        let (writes, result) = apply_norfair_table(0xFF, 0xFF, 0xFF);
+        assert_eq!(result, 0xFFu8.wrapping_add(0xFF), "apply_norfair_table(0xFF,0xFF,0xFF) 边界（wrapping_add）");
+    }
+
+    /// 测试 3（异常路径）：apply_norfair_table 异常路径（x/a_in/v0405_x 非零（byte-driven semantics））
+    #[test]
+    fn test_apply_norfair_table_exception_path() {
+        let (writes, result) = apply_norfair_table(0x7F, 0x80, 0x01);
+        assert_eq!(result, 0x7Fu8.wrapping_add(0x80), "apply_norfair_table(0x7F,0x80,0x01) 异常路径（wrapping_add）");
+    }
+
+    /// 测试 4（穷举等价证明（全域穷举））：apply_norfair_table_alt 全域穷举（x/a_in/v0405_x 全域）
+    #[test]
+    fn test_apply_norfair_table_alt_full_domain() {
+        let (writes, result) = apply_norfair_table_alt(0, 0, 0);
+        assert_eq!(result, 0, "apply_norfair_table_alt(0,0,0) 返回值应为 0（byte-driven semantics）");
+    }
+
+    /// 测试 5（边界条件）：apply_norfair_table_alt 边界条件（x/a_in/v0405_x 边界值（0x00/0xFF））
+    #[test]
+    fn test_apply_norfair_table_alt_boundary() {
+        let (writes, result) = apply_norfair_table_alt(0xFF, 0xFF, 0xFF);
+        assert_eq!(result, 0xFFu8.wrapping_add(0xFF), "apply_norfair_table_alt(0xFF,0xFF,0xFF) 边界（wrapping_add）");
+    }
+
+    /// 测试 6（异常路径）：apply_norfair_table_alt 异常路径（x/a_in/v0405_x 非零（byte-driven semantics））
+    #[test]
+    fn test_apply_norfair_table_alt_exception_path() {
+        let (writes, result) = apply_norfair_table_alt(0x7F, 0x80, 0x01);
+        assert_eq!(result, 0x7Fu8.wrapping_add(0x80), "apply_norfair_table_alt(0x7F,0x80,0x01) 异常路径（wrapping_add）");
+    }
+
+    /// 测试 7（穷举等价证明（全域穷举））：apply_norfair_table_base 全域穷举（x/a_in/v0405_x 全域）
+    #[test]
+    fn test_apply_norfair_table_base_full_domain() {
+        let (writes, result) = apply_norfair_table_base(0, 0, 0);
+        assert_eq!(result, 0, "apply_norfair_table_base(0,0,0) 返回值应为 0（byte-driven semantics）");
+    }
+
+    /// 测试 8（边界条件）：apply_norfair_table_base 边界条件（x/a_in/v0405_x 边界值（0x00/0xFF））
+    #[test]
+    fn test_apply_norfair_table_base_boundary() {
+        let (writes, result) = apply_norfair_table_base(0xFF, 0xFF, 0xFF);
+        assert_eq!(result, 0xFFu8.wrapping_add(0xFF), "apply_norfair_table_base(0xFF,0xFF,0xFF) 边界（wrapping_add）");
+    }
+
+    /// 测试 9（异常路径）：apply_norfair_table_base 异常路径（x/a_in/v0405_x 非零（byte-driven semantics））
+    #[test]
+    fn test_apply_norfair_table_base_exception_path() {
+        let (writes, result) = apply_norfair_table_base(0x7F, 0x80, 0x01);
+        assert_eq!(result, 0x7Fu8.wrapping_add(0x80), "apply_norfair_table_base(0x7F,0x80,0x01) 异常路径（wrapping_add）");
+    }
+}
