@@ -15272,3 +15272,113 @@ pub fn big_enemy_hit_cond_write(x: u8, v040e_x: u8, v80b0: u8) -> (Vec<(u16, u8)
     }
     (ev, 0x04)
 }
+
+// ===== 1:1 Rust 改写·批产·块 96（s6/s7 族去地址名（TDD 穷举等价））=====
+
+#[cfg(test)]
+mod tests_b96_engine_mod {
+    //! TDD step1（测试先行（强制完整））——穷举等价（新==旧（≤256³ 闸时限界（依赖分解）））。
+    //! refs 锚（bank:addr 注内）：$F573（:6608）/$F623（:6756）/$FA2A（:7346）/
+    //! GetEnemyRoomRAMPtr root（:7340）/$E96A MakeCartRAMPtr root（:7376）。
+
+    use super::*;
+
+    /// 【穷举·金属击条件】x×v040b×v0a 依赖分解——metal_hit_cond_stage==s6_f573_body
+    /// （==$FF 回卷+位6⇒$0300[x]←0）。
+    #[test]
+    fn exhaustive_metal_cond_equivalence() {
+        for x in 0u8..=255 {
+            for b in [0u8, 0xFE, 0xFF] {
+                for a in [0u8, 0x40, 0x41, 0xFF] {
+                    assert_eq!(s6_f573_body(x, b, a), metal_hit_cond_stage(x, b, a));
+                }
+            }
+        }
+    }
+
+    /// 【穷举·InArea 条件写】x×v74×v6b02×v040c×tbl 依赖分解——area_hit_cond_write
+    /// ==s6_f623_body。
+    #[test]
+    fn exhaustive_area_cond_equivalence() {
+        for x in 0u8..=255 {
+            for &(v74, b, c, t) in &[(0x11u8, 1u8, 1u8, 0x55u8), (0x11, 1, 0, 0), (0, 1, 1, 0xFF), (0x11, 0, 1, 0x80)] {
+                assert_eq!(s6_f623_body(x, v74, b, c, t), area_hit_cond_write(x, v74, b, c, t));
+            }
+        }
+    }
+
+    /// 【穷举·房间指针面】x×v0400×v6afb 依赖分解+ptr 边角——room_ptr_with_cart_face
+    /// ==s7_fa2a_body+get_enemy_room_ptr==s7_get_en_room_ptr+make_cart_ram_ptr
+    /// ==s7_make_cart_ptr（256²（位组算））。
+    #[test]
+    fn exhaustive_room_ptr_equivalence() {
+        for x in 0u8..=255 {
+            for a in 0u8..=255 {
+                for b in [0u8, 5, 0xFF] {
+                    assert_eq!(s7_get_en_room_ptr(x, a, b, 5), get_enemy_room_ptr(x, a, b, 5));
+                    for ptr in [0u8, 0x60, 0xFF] {
+                        assert_eq!(s7_fa2a_body(x, 3, a, b, 5, ptr), room_ptr_with_cart_face(x, 3, a, b, 5, ptr));
+                    }
+                }
+            }
+        }
+        for v02 in 0u8..=255 {
+            for v03 in 0u8..=255 {
+                assert_eq!(s7_make_cart_ptr(v02, v03), make_cart_ram_ptr(v02, v03));
+            }
+        }
+    }
+}
+
+// ===== 1:1 Rust 改写·批产·块 96：s6/s7 族语义命名（去地址名（公式形（零字面特值）））=====
+// refs 锚（bank:addr 注内）：$F573（:6608）/$F623（:6756）/$FA2A（:7346）/
+// GetEnemyRoomRAMPtr root（:7340）/$E96A MakeCartRAMPtr root（:7376）。
+
+/// 金属击条件（旧 s6_f573_body（$F573）：SFX_Metal+$040B[x]==$FF⇒回卷（仅声旗）；
+/// $0A 位6⇒$0300[x]←0（bvs 段面）→$F42D）。
+pub fn metal_hit_cond_stage(x: u8, v040b_x: u8, v0a: u8) -> (Vec<(u16, u8)>, u16) {
+    let (mut ev, _id) = sfx_metal_face();
+    if v040b_x == 0xFF {
+        return (ev, 0xF42D);
+    }
+    if v0a & 0x40 != 0 {
+        ev.push((0x0300 + x as u16, 0));
+    }
+    (ev, 0xF42D)
+}
+
+/// InArea 条件写（旧 s6_f623_body（$F623）：$DCFC InArea 命中⇒$0406[x]←tbl）。
+pub fn area_hit_cond_write(x: u8, v74: u8, v6b02_x: u8, v040c_x: u8, tbl: u8) -> (Vec<(u16, u8)>, u8) {
+    let (hit, v) = s6_dcfc_area(v74, v6b02_x, v040c_x);
+    let mut ev = Vec::new();
+    if hit {
+        ev.push((0x0406 + x as u16, tbl));
+    }
+    (ev, v)
+}
+
+/// 敌房间指针面（旧 s7_get_en_room_ptr（GetEnemyRoomRAMPtr root）：$02←$0400[x]/
+/// $03←$0401[x]/$0B←$6AFB[x] 位置对）。
+pub fn get_enemy_room_ptr(x: u8, v0400_x: u8, v0401_x: u8, v6afb_x: u8) -> Vec<(u16, u8)> {
+    let _ = x;
+    vec![(0x0002, v0400_x), (0x0003, v0401_x), (0x000B, v6afb_x)]
+}
+
+/// 房间指针+cart 面（旧 s7_fa2a_body（$FA2A）：root+$04←0/$05←ptr）。
+pub fn room_ptr_with_cart_face(x: u8, y: u8, v0400_x: u8, v0401_x: u8, v6afb_x: u8, ptr: u8)
+    -> (Vec<(u16, u8)>, u8) {
+    let _ = y;
+    let mut ev = get_enemy_room_ptr(x, v0400_x, v0401_x, v6afb_x);
+    ev.push((0x0004, 0));
+    ev.push((0x0005, ptr));
+    (ev, ptr)
+}
+
+/// cart RAM 指针算（旧 s7_make_cart_ptr（$E96A MakeCartRAMPtr root）：$05←$18<<2（0x60）
+/// +$04←($02&$F8)<<1/高←($03>>3)|$04（位组））。
+pub fn make_cart_ram_ptr(v02: u8, v03: u8) -> (Vec<(u16, u8)>, u8) {
+    let base: u8 = 0x18 << 2;
+    let lo = (v02 & 0xF8) << 1;
+    let hi = (v03 >> 3) | lo;
+    (vec![(0x0004, lo), (0x0005, base)], hi)
+}
