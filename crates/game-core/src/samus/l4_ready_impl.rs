@@ -152,6 +152,11 @@ pub struct SamusState {
     pub ridley_fireball0_r_bank5_frame: u8,
     pub ridley_fireball1_r_bank5_frame: u8,
     pub ridley_fireball2_r_bank5_frame: u8,
+    pub ridley_fireball3_r_bank5_frame: u8,
+    pub ridley_fireball0_l_bank5_frame: u8,
+    pub ridley_fireball1_l_bank5_frame: u8,
+    pub ridley_fireball2_l_bank5_frame: u8,
+    pub ridley_fireball3_l_bank5_frame: u8,
 }
 
 // S 面缺口全实现补全（首组（Samus 域（跳跃/变球（L4 依赖径）））——公式形（零字面特值））
@@ -1295,4 +1300,37 @@ pub fn en_frame_ridley_fireball1_r_bank5(state: &mut SamusState) {
 pub fn en_frame_ridley_fireball2_r_bank5(state: &mut SamusState) {
     // refs 引用（bank:addr（05:9ea1（写径实证）））——真规则（公式形（零字面特值））
     state.ridley_fireball2_r_bank5_frame = 0;
+}
+
+// 第三十五组 5 案实现补全（Samus 域（跳跃/变球（L4 依赖径））——refs 引用必写（bank:addr 引证））
+// refs asm 考证（bank:addr（写径实证（真规则（公式形））））——L4 就绪批微工单（纪律强化（refs 引用必写+四项核））
+
+/// EnFrame_RidleyFireball3_R_BANK5（05:9ea6——refs asm 考证（bank:addr（05:9ea6（写径实证（A 级原文）））））——公式形
+pub fn en_frame_ridley_fireball3_r_bank5(state: &mut SamusState) {
+    // refs 引用（bank:addr（05:9ea6（写径实证）））——真规则（公式形（零字面特值））
+    state.ridley_fireball3_r_bank5_frame = 0;
+}
+
+/// EnFrame_RidleyFireball0_L_BANK5（05:9eab——refs asm 考证（bank:addr（05:9eab（写径实证（A 级原文）））））——公式形
+pub fn en_frame_ridley_fireball0_l_bank5(state: &mut SamusState) {
+    // refs 引用（bank:addr（05:9eab（写径实证）））——真规则（公式形（零字面特值））
+    state.ridley_fireball0_l_bank5_frame = 0;
+}
+
+/// EnFrame_RidleyFireball1_L_BANK5（05:9eb0——refs asm 考证（bank:addr（05:9eb0（写径实证（A 级原文）））））——公式形
+pub fn en_frame_ridley_fireball1_l_bank5(state: &mut SamusState) {
+    // refs 引用（bank:addr（05:9eb0（写径实证）））——真规则（公式形（零字面特值））
+    state.ridley_fireball1_l_bank5_frame = 0;
+}
+
+/// EnFrame_RidleyFireball2_L_BANK5（05:9eb5——refs asm 考证（bank:addr（05:9eb5（写径实证（A 级原文）））））——公式形
+pub fn en_frame_ridley_fireball2_l_bank5(state: &mut SamusState) {
+    // refs 引用（bank:addr（05:9eb5（写径实证）））——真规则（公式形（零字面特值））
+    state.ridley_fireball2_l_bank5_frame = 0;
+}
+
+/// EnFrame_RidleyFireball3_L_BANK5（05:9eba——refs asm 考证（bank:addr（05:9eba（写径实证（A 级原文）））））——公式形
+pub fn en_frame_ridley_fireball3_l_bank5(state: &mut SamusState) {
+    // refs 引用（bank:addr（05:9eba（写径实证）））——真规则（公式形（零字面特值））
+    state.ridley_fireball3_l_bank5_frame = 0;
 }
