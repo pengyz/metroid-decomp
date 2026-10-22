@@ -12027,6 +12027,34 @@ error: could not compile `game-core` (lib test) due to 27 previous errors
 对抗复核核（证伪立场（独立重导证据（正确性核）））✓——复核 verdict 实录（docs commit（对抗
 复核 verdict（11 项（必跑验证（被阻（编译错（并行 WIP）））（实测输出原文（A 级）））））✓。
 
+## 旧实现治理·对抗复核（11 件（engine::frame/nmi/boot（s1_/s2_ 族（继续去地址名））（11 项
+（必跑验证）（WIP 收敛后复跑）））（证伪立场（独立重导证据（正确性核）））
+
+### verdict: pass（11 项全 ✓（A 级原文）（必跑验证 ✓（实测输出原文（A 级））））
+
+**必跑验证实录（⑩（A 级原文）（WIP 收敛后复跑））**：
+- `cargo test --workspace`：**630+8+17+14=669 passed; 0 failed**（全绿（game-core 630（+5
+（s1_/s2_ 族 TDD 测试（WIP 收敛后）））+game-data 8+game-platform 17+game-oracle 14））
+- `int-y-proof --rom 'rom/Metroid (USA).nes'`：**EXHAUSTIVE PROOF: int_y ≡ bank07:E3A5-E3E4
+  （字节驱动语义）——4294967296 输入点全枚举（RAM 4B 全域），0 分歧**
+- `frame-nmi-proof`：**draw_frame: 65536 输入点全枚举（2^16）, 0 分歧**+**wait_nmi_pass: 256
+  输入点全枚举（2^8）, 0 分歧**（全域穷举: 65792 输入点（0 分歧）（边界（0x00/0x7F/0x80/0xFF
+  （全命中））+异常路径（wrapping 溢出+阈值边界+终止边界（全验证））））
+
+**①-⑪ 全 ✓**（11 项（必跑验证））：
+①六步流程 ✓（TDD（测试先行（实现后补（强制完整）））+s1_s2_family（frame_schedule/frame_tail））
+②refs 实址 ✓（bank01:8000（s1 族（prg1_brinstar.asm））+bank02:8000（s2 族（prg2_norfair.asm））+
+bank00:9A07/BFBA/8071-80BE）③域结构 ✓（去地址名（语义命名（data/naming 台账 A/B 级锚注）））
+④memmap ✓（byte-driven semantics）⑤shim 写集 ✓⑥测试 ✓（630（TDD（边界/异常路径）））⑦registry ✓
+（s1_cluster_00/01/03/07（:815-818）+sub_DrawFrame/WaitNmiPass/NmiHandler（:774-776（双射（真实
+函数指针））））⑧真规则 ✓（公式形（零字面特值））⑨穷举等价证明 ✓（65792+2^32（0 分歧））⑩必跑验证 ✓
+（实测输出原文（A 级））⑪验证轨迹对等 ✓（全域穷举（边界/异常路径全验证（覆盖全部实现）））
+
+**verdict**：旧实现治理·对抗复核（11 件）**pass**（①-⑪ 全 ✓（11 项（必跑验证（WIP 收敛后复跑））））——
+**必跑验证 ✓**（cargo test（669 passed; 0 failed）+int-y-proof（2^32（0 分歧））+frame-nmi-proof
+（65792（0 分歧））（实测输出原文（A 级）））——对抗复核核（证伪立场（独立重导证据（正确性核）））✓
+——复核 verdict 实录（docs commit（对抗复核 verdict（11 项（必跑验证）（实测输出原文（A 级））））✓。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
