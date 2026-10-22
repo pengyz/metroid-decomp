@@ -7525,7 +7525,7 @@ pub fn s7_draw_tile_blast(v00: u8, v01: u8) -> (Vec<(u16, u8)>, u8) {
 /// $FE95 员体：DrawTileBlast+$02/$03→$07/$09（指面对）+$01 lsr×2/and 1→$0B
 /// （S5-132 同构）+$F186 调（S3-20 接面）。
 pub fn s7_fe95_body(v00: u8, v01: u8) -> (Vec<(u16, u8)>, u8) {
-    let (mut ev, lo) = s7_draw_tile_blast(v00, v01);
+    let (mut ev, lo) = draw_tile_blast(v00, v01);
     ev.push((0x0007, lo));
     ev.push((0x000B, (v01 >> 2) & 1));
     (ev, lo)
@@ -15454,7 +15454,11 @@ pub fn load_table18_and_pair(x: u8, v_b1: u8, v_b2: u8, v_b3: u8) -> Vec<(u16, u
 /// 临时载位（旧 s7_mellow_load_pos（LoadPositionFromTemp root）：$08/$09/$0B→zp 回卷面
 /// （$B1[x]/$0400[x]/$6AF8[x] 位组））。
 pub fn load_position_from_temp(x: u8, v08: u8, v09: u8, v0b: u8) -> Vec<(u16, u8)> {
-    s7_mellow_load_pos(x, v08, v09, v0b)
+    // 语义面转正（块 107）：自体公式（zp 回卷面（xw=$B1[x] 回卷三连+$04F0/$04F1/$6BEB 固定））。
+    // 【证伪更正】原推定公式被等价测证伪——按实体正源（S5-03 教训面）。
+    let xw = (0x00B1 + x as u16) & 0xFF;
+    vec![(xw, v08), ((xw + 1) & 0xFF, v09), ((xw + 2) & 0xFF, v0b & 1),
+         (0x04F0, v08), (0x04F1, v09), (0x6BEB, v0b & 1)]
 }
 
 /// Mellow 条件写（旧 s7_fcfa_body（$FCFA）：root+$B5[x]≥$50⇒$B0[x]←1/否则 $B5[x]←0
@@ -15534,7 +15538,7 @@ pub fn cart_ptr_and_dispatch(v02: u8, v03: u8) -> (Vec<(u16, u8)>, u16) {
 
 /// 爆破指针对（旧 s7_fe95_body（$FE95）：DrawTileBlast+$07←lo+$0B←(v01>>2)&1）。
 pub fn tile_blast_with_ptr_pair(v00: u8, v01: u8) -> (Vec<(u16, u8)>, u8) {
-    let (mut ev, lo) = s7_draw_tile_blast(v00, v01);
+    let (mut ev, lo) = draw_tile_blast(v00, v01);
     ev.push((0x0007, lo));
     ev.push((0x000B, (v01 >> 2) & 1));
     (ev, lo)
@@ -15591,5 +15595,9 @@ mod tests_b105_engine_mod {
 /// 爆破绘根（旧 s7_draw_tile_blast（DrawTileBlast root）：位组算（$05←$18<<2 同族
 /// ——S7 收官卡））。
 pub fn draw_tile_blast(v00: u8, v01: u8) -> (Vec<(u16, u8)>, u8) {
-    s7_draw_tile_blast(v00, v01)
+    // 语义面转正（块 107）：自体公式（旧 s7_draw_tile_blast 转薄别名——单源=语义）。
+    // 【证伪更正】原推定公式被等价测证伪——按实体正源（$FF3C 位组（ror×2 面））。
+    let hi = v00 & 0xE0;
+    let lo = (hi >> 2) | ((v01 & 3) << 6);
+    (vec![(0x0002, lo), (0x0003, 0)], lo)
 }
