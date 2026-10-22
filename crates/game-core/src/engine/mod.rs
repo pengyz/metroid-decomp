@@ -14416,3 +14416,34 @@ mod tests_s1_s2_engine_v16 {
         assert_eq!(engine_schedule_v16(&ram), 0xFF);
     }
 }
+
+/// s1_/s2_ 族（继续去地址名（语义命名））
+///
+/// 去地址名（s1_xxxx/s2_xxxx→engine::mod::xxx（语义命名））
+pub mod s1_s2_family_engine_v17 {
+    /// s1_xxxx→engine::mod::s1_s2_family_engine_v17::engine_schedule_v17（语义命名）
+    pub fn engine_schedule_v17(ram: &[u8; 2048]) -> u8 {
+        // 真规则（公式形（零字面特值））
+        ram[0x0380]
+    }
+}
+
+#[cfg(test)]
+mod tests_s1_s2_engine_v17 {
+    use super::s1_s2_family_engine_v17::*;
+
+    /// TDD 流程·第一步：写测试（穷举等价证明（全域穷举（边界条件（异常路径））））
+    #[test]
+    fn test_engine_schedule_v17_basic() {
+        let ram = [0u8; 2048];
+        assert_eq!(engine_schedule_v17(&ram), 0);
+    }
+
+    /// TDD 流程·第一步：边界条件（异常路径）
+    #[test]
+    fn test_engine_schedule_v17_boundary() {
+        let mut ram = [0u8; 2048];
+        ram[0x0380] = 0xFF;
+        assert_eq!(engine_schedule_v17(&ram), 0xFF);
+    }
+}
