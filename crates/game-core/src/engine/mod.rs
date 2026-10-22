@@ -15828,3 +15828,45 @@ pub fn flag_hit_set_and_jump(root_val: u8, x: u8) -> (Vec<(u16, u8)>, Option<u16
 pub fn and_data05_cmp_dispatch(x: u8, a_in: u8, v0405_x: u8) -> (Vec<(u16, u8)>, u8) {
     s1_and_en_data05(x, a_in, v0405_x)
 }
+
+// ===== 1:1 Rust 改写·批产·块 123（s1 余批 3 员去名（pos 三写 root+双壳）（TDD 穷举等价））=====
+
+#[cfg(test)]
+mod tests_b123_engine_mod {
+    //! TDD step1（测试先行（强制完整））——穷举等价（新==旧（≤256³ 闸时限界（依赖分解）））。
+    //! refs 锚（bank:addr 注内）：store_enemy_pos root（:1416）/$E789（:1421）/$E906（:1426）。
+
+    use super::*;
+
+    /// 【穷举·pos 三写】x×v0401×v0400×v6afb 依赖分解——store_enemy_position_triple
+    /// ==s1_store_enemy_pos+$E789/$E906 双壳（尾跳 $E7BD/$E89B）。
+    #[test]
+    fn exhaustive_pos_triple_equivalence() {
+        for x in 0u8..=255 {
+            for &(a, b, c) in &[(0u8, 0u8, 0u8), (0xFF, 0xFF, 0xFF), (8, 9, 1)] {
+                assert_eq!(s1_store_enemy_pos(x, a, b, c), store_enemy_position_triple(x, a, b, c));
+                assert_eq!(s1_e789_body(x, a, b, c), enemy_pos_and_dispatch_e7(x, a, b, c));
+                assert_eq!(s1_e906_body(x, a, b, c), enemy_pos_and_dispatch_e8(x, a, b, c));
+            }
+        }
+    }
+}
+
+// ===== 1:1 Rust 改写·批产·块 123：pos 三写 root+双壳语义命名（去地址名（公式形））=====
+// refs 锚（bank:addr 注内）：store_enemy_pos root（:1416）/$E789（:1421）/$E906（:1426）。
+
+/// 敌位三写（旧 s1_store_enemy_pos root：$09←$0401[x]/$08←$0400[x]/$0B←$6AFB[x]）。
+pub fn store_enemy_position_triple(x: u8, v0401_x: u8, v0400_x: u8, v6afb_x: u8) -> Vec<(u16, u8)> {
+    let _ = x;
+    vec![(0x0009, v0401_x), (0x0008, v0400_x), (0x000B, v6afb_x)]
+}
+
+/// pos+E7 壳（旧 s1_e789_body（$E789）：root→jmp $E7BD（$6AF6[x] 读段注））。
+pub fn enemy_pos_and_dispatch_e7(x: u8, v0401_x: u8, v0400_x: u8, v6afb_x: u8) -> (Vec<(u16, u8)>, u16) {
+    (store_enemy_position_triple(x, v0401_x, v0400_x, v6afb_x), 0xE7BD)
+}
+
+/// pos+E8 壳（旧 s1_e906_body（$E906）：root→jmp $E89B（$02 符号段注））。
+pub fn enemy_pos_and_dispatch_e8(x: u8, v0401_x: u8, v0400_x: u8, v6afb_x: u8) -> (Vec<(u16, u8)>, u16) {
+    (store_enemy_position_triple(x, v0401_x, v0400_x, v6afb_x), 0xE89B)
+}
