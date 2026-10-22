@@ -64,3 +64,6 @@ pub struct L2Out {
     pub y: u8,
     pub writes: Vec<(u16, u8)>,
 }
+
+/// ending 模块（1:1 Rust 改写·批产·块 12（s1_/s2_ 族（继续去地址名）））——refs asm 考证：bank07:CAF5-CB14（ChooseEnding）（结局例程（实址（A 级原文）））
+pub mod ending;
