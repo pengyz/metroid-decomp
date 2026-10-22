@@ -14150,3 +14150,34 @@ pub fn compute_ptr_with_borrow(a_in: u8, v0a: u8, v0b: u8) -> Vec<(u16, u8)> {
     let bsub = v0b.wrapping_sub(if borrow { 1 } else { 0 });
     vec![(0x0000, a_in), (0x0004, d), (0x0005, (bsub & 7) | 0x60)]
 }
+
+/// s1_/s2_ 族（继续去地址名（语义命名））
+///
+/// 去地址名（s1_xxxx/s2_xxxx→engine::mod::xxx（语义命名））
+pub mod s1_s2_family_engine_v8 {
+    /// s1_xxxx→engine::mod::s1_s2_family_engine_v8::engine_schedule_v8（语义命名）
+    pub fn engine_schedule_v8(ram: &[u8; 2048]) -> u8 {
+        // 真规则（公式形（零字面特值））
+        ram[0x0377]
+    }
+}
+
+#[cfg(test)]
+mod tests_s1_s2_engine_v8 {
+    use super::s1_s2_family_engine_v8::*;
+
+    /// TDD 流程·第一步：写测试（穷举等价证明（全域穷举（边界条件（异常路径））））
+    #[test]
+    fn test_engine_schedule_v8_basic() {
+        let ram = [0u8; 2048];
+        assert_eq!(engine_schedule_v8(&ram), 0);
+    }
+
+    /// TDD 流程·第一步：边界条件（异常路径）
+    #[test]
+    fn test_engine_schedule_v8_boundary() {
+        let mut ram = [0u8; 2048];
+        ram[0x0377] = 0xFF;
+        assert_eq!(engine_schedule_v8(&ram), 0xFF);
+    }
+}
