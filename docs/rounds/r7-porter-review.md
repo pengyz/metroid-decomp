@@ -11401,6 +11401,40 @@ respawn_nametable_addr（地址计算（数据决定行为））（tile_blasts.r
 关键（数据决定行为（respawn_nametable_addr（行为钉死））））——对抗复核核（证伪立场（独立重导
 证据（正确性核）））✓——复核 verdict 实录（docs commit（对抗复核 verdict（四项核（A 级原文））））✓。
 
+## 批量改写·对抗复核（4 项（簇 6/7+簇 4/5 修订（第四轮（域错位续查））（证伪立场（独立重导证据
+（正确性核））））
+
+### verdict: needs_revision（3/4 拒收（簇 5 修订（占位形）+簇 6（域错位）+簇 7（文档不存在）））
+（簇 4 修订 pass）
+
+**① 簇 4 修订（weapon::projectile）✓ pass**：域归属更正 ✓（InitCrossMissiles/UpdateCrossMissile
+=标题画面准星精灵例程（非游戏内弹丸例程（拒收注）））+端址一致 ✓（8963-8975 统一）+**重新取证 ✓**
+（bank07:D1EE-D210（FireSamusProjectile/SearchOpenSamusProjectileslot）+bank07:D210-D2CC
+（FireSamusProjectileForwards/Upwards）+bank07:D4BF（UpdateSamusProjectiles）——**游戏内弹丸
+例程（bank07 引擎域（正确）**（实址（A 级原文）））——六步流程走通 ✓
+
+**② 簇 5 修订（pickup::items）✗ 拒收**：域归属更正注 ✓（标题画面准星例程（非游戏内拾取例程））
++端址一致注 ✓——**重新取证 ✗**（「游戏内拾取例程：**bank:addr**（实址（A 级原文））」——
+**字面占位（非实址**（cluster-5-rewrite.md §1.3））——②refs 引用核（存在性（bank:addr 引证
+（A 级原文）））**缺**（重新取证未完成（占位未填））
+
+**③ 簇 6（ui::hud）✗ 拒收**：refs 引证=bank00:8D3D-8D7B（LoadTanksAndMissiles）+**bank00:8897-
+88FE（InitCrossMissiles）+bank00:8963-8975（UpdateCrossMissile）**——**域错位**（与簇 4/5 刚拒收
+**同一错**（标题画面准星精灵例程（prg0_title.asm:973-1000（IntroSprs（开场精灵（准星汇聚动画））））
+**误作状态栏（HUD）例程**）——①定域取证 spec 步错（LoadTanksAndMissiles（8D3D-8D7B）域归属
+可议（HUD 加载（可能正确））但 InitCrossMissiles/UpdateCrossMissile **铁证域错**（前轮拒收实录））
+
+**④ 簇 7（sound::sfx）✗ 拒收**：**文档不存在**（docs/design/（cluster-1/2/3/4/5/6/8（缺 7）））
+——①六步流程（无文档（无法核））②refs 引证（无（无法核））——工单引「第七簇（sound::sfx
+（音效））」但文档未落（sound::sfx 域无设计文档）
+
+**verdict**：批量改写 4 项（第四轮（域错位续查））**needs_revision**——**簇 5 修订拒收**（重新
+取证=占位形（「bank:addr」字面（非实址）））+**簇 6 拒收**（域错位（标题画面准星例程误作 HUD
+例程（与簇 4/5 同错）））+**簇 7 拒收**（文档不存在（sound::sfx 无设计文档））+**簇 4 修订 pass**
+（域归属更正+重新取证（bank07:D1EE/D210/D4BF（游戏内弹丸（引擎域））））——对抗复核核（证伪
+立场（独立重导证据（正确性核）））✓——复核 verdict 实录（docs commit（对抗复核 verdict（四项核
+（A 级原文））））✓。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
