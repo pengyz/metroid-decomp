@@ -11298,6 +11298,50 @@ load_room **待补**（随实现落（porter 在产（非缺失（是待办）�
 ——对抗复核核（证伪立场（独立重导证据（正确性核）））✓——复核 verdict 实录（docs commit
 （对抗复核 verdict（四项核（A 级原文））））✓。
 
+## 批量改写·对抗复核（4 簇（1+2+4+5（第三轮（域归属定谳））（证伪立场（独立重导证据（正确性核））））
+
+### verdict: needs_revision（簇 4/5 拒收（②refs 引证**域错位**（标题画面例程误作游戏内例程）））
+（簇 1/2 pass）
+
+**① 六步流程走通——分簇判定**：簇 1/2 ✓（六步汇总+实现落库（world/room.rs（c55e63d）））+
+簇 4/5 ✗（六步结构在（但①定域取证 spec 步**错**（域归属错位（见②）））
+
+**② refs 引证——分簇判定**（存在性（bank:addr 引证（A 级原文））+**域归属核**）：
+- **簇 1 ✓**：bank07:E3A5-E3E4（int_y）+bank07:E340-E3A4（int_x）——bank07（物理引擎域
+  （正确））
+- **簇 2 ✓**：bank00:8BD4-8C38（LoadUniqueItems）+8D12+8D3D-8D5C+8A8C-8A9A+87AB（房间/
+  道具加载域（正确））
+- **簇 4 ✗ 拒收**：bank00:8897-88FE（InitCrossMissiles）+8963-8975（UpdateCrossMissile）
+  ——**域错位**：refs 原文（prg0_title.asm:973-1000）实证 InitCrossMissiles=**标题画面准星
+  精灵初始化例程**（IntroSprs.0.y/4.y（开场精灵（准星汇聚动画）（prg0_title.asm:314「Load
+  initial sprite values for crosshair routine」+387「Draw sprites that converge in center
+  of screen」+390「Draw cross sprites in middle of the screen」））——**非游戏内弹丸例程**
+  （定域取证 spec 步错（①步））+端址差（8963-8975（簇 4）vs 8963-8972（簇 5）（同例程
+  引证不一致））
+- **簇 5 ✗ 拒收**：bank00:8897-88FE（InitCrossMissiles）+8963-8972（UpdateCrossMissile）
+  ——**域错位**（同簇 4（标题画面准星例程误作道具拾取例程））+bank00:B6A9-B7CB
+  （MissilePickupSFX/EnergyPickupSFX/DoorOpenCloseSFX）（音效域（引证本身在（但主例程
+  域错位（定域取证 spec 步错）））
+
+**③ 域结构**：簇 1/2 ✓（samus::physics/world::room（语义命名））+簇 4/5 ✗（weapon::projectile/
+pickup::items 域结构在（但取证例程域错位（标题画面（非游戏内））））
+
+**④ memmap 适配 ✓**（零页分层映射（同构））+**⑤ shim 写集 ✓**（verify_shim 契约（同构））——
+设计态 ✓（域错位修正后可复用）
+
+**⑥ 测试**：2^32 穷举等价证明（0 分歧）（int-y-proof.rs 先例（簇 1 实证））+3107 capture_id
+（oracle 捕获）——簇 1/2 ✓；簇 4/5（测试先例同引（但取证例程域错位（测试对象错）））
+
+**⑦ registry 登记**：int_y_E3A5 已登（l2ports.rs:740）+其余待补（随实现落）——设计态 ✓
+
+**verdict**：批量改写 4 簇（第三轮（域归属定谳））**needs_revision**——**簇 4（weapon::
+projectile）+簇 5（pickup::items）拒收**（②refs 引证**域错位**（InitCrossMissiles/Update
+CrossMissiles（00:8897/00:8963）=**标题画面准星精灵例程**（prg0_title.asm:973-1000（IntroSprs
+（开场精灵）））**误作游戏内弹丸/拾取例程**（定域取证 spec 步错）+端址差（8963-8975 vs 8963-8972）
++**簇 1（samus::physics）+簇 2（world::room）pass**（refs 实址+域归属正确（bank07 物理引擎域/
+bank00 房间加载域）+实现落库（world/room.rs）））——对抗复核核（证伪立场（独立重导证据
+（正确性核）））✓——复核 verdict 实录（docs commit（对抗复核 verdict（四项核（A 级原文））））✓。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
