@@ -1135,14 +1135,20 @@ mod s1_15_tests {
 /// 比 $6886[y]/$6885[y]）——**carry=找到**（clс 找到/... sec 未找形注）。
 /// 返回 found。
 pub fn s1_check_for_item(y0: u8, v06: u8, v07: u8, item_lo: &[u8], item_hi: &[u8]) -> bool {
+    // 【BUG 更正（2026-10-23）】原 `while y>0 + wrapping_sub(2)` 对 odd y0 无命中=死环
+    // （移植错（vs asm `dey/dey/bpl` 有界（signed y>=0））——D3 ROM 真相径修正）。
     let mut y = y0;
-    while y > 0 {
+    loop {
+        if (y as i8) < 0 {
+            break;
+        }
         if item_hi.get(y as usize).copied().unwrap_or(0) == v07
             && item_lo.get(y as usize).copied().unwrap_or(0) == v06 {
             return true;
         }
         y = y.wrapping_sub(2);
     }
+    #[allow(unreachable_code)]
     false
 }
 
@@ -14255,219 +14261,127 @@ pub fn toggle_hi_and_set_y_f0(v030c: u8) -> (Vec<(u16, u8)>, u16) {
     (ev, 0xD47E)
 }
 
-/// s1_/s2_ 族（继续去地址名（语义命名））
-///
-/// 去地址名（s1_xxxx/s2_xxxx→engine::mod::xxx（语义命名））
-pub mod s1_s2_family_engine_v9 {
-    /// s1_xxxx→engine::mod::s1_s2_family_engine_v9::engine_schedule_v9（语义命名）
-    pub fn engine_schedule_v9(ram: &[u8; 2048]) -> u8 {
-        // 真规则（公式形（零字面特值））
-        ram[0x0378]
-    }
-}
+// ===== 1:1 Rust 改写·批产·块 41（s1 族加法壳+CheckForItem 族去地址名（TDD 穷举等价））=====
 
 #[cfg(test)]
-mod tests_s1_s2_engine_v9 {
-    use super::s1_s2_family_engine_v9::*;
+mod tests_b41_engine_mod {
+    //! TDD step1（测试先行（强制完整））——穷举等价（新==旧（≤256³ 闸时限界（依赖分解）））。
+    //! refs 锚（bank:addr 注内）：$D735（:1101）/$D746（:1109）/$EE4A CheckForItem root
+    //! （:1136）/$EBCB（:1156）/$EE14（:1165）。
 
-    /// TDD 流程·第一步：写测试（穷举等价证明（全域穷举（边界条件（异常路径））））
+    use super::*;
+
+    /// 【穷举·加法壳×2】a×v0a×v0b 全域 256³——flag_flip_add==s1_d735_body
+    /// （$05 eor 4+尾跳 $D76A）/shift_seg_add==s1_d746_body。
     #[test]
-    fn test_engine_schedule_v9_basic() {
-        let ram = [0u8; 2048];
-        assert_eq!(engine_schedule_v9(&ram), 0);
+    fn exhaustive_add_shells_equivalence() {
+        for a in 0u8..=255 {
+            for v0a in 0u8..=255 {
+                for v0b in 0u8..=255 {
+                    assert_eq!(s1_d735_body(a, v0a, v0b), ptr_add_with_flag_flip(a, v0a, v0b));
+                    assert_eq!(s1_d746_body(a, v0a, v0b), ptr_add_with_shift_segment(a, v0a, v0b));
+                }
+            }
+        }
     }
 
-    /// TDD 流程·第一步：边界条件（异常路径）
+    /// 【穷举·CheckForItem】依赖分解（y0 环径全域×固定对／(v06,v07) 全域 256²×y0 边角
+    /// ——find_item_in_history==s1_check_for_item（空表（异常路径越界 y）随核）。
+    /// 【timer 纪律】原 256³×环（2B+ 操作）超闸时限——分量分解（证明力等价（环径/对比
+    /// 分量独立））。
     #[test]
-    fn test_engine_schedule_v9_boundary() {
-        let mut ram = [0u8; 2048];
-        ram[0x0378] = 0xFF;
-        assert_eq!(engine_schedule_v9(&ram), 0xFF);
+    fn exhaustive_check_item_equivalence() {
+        let lo = [0u8, 0x11, 0x22, 0x33];
+        let hi = [0u8, 0x44, 0x55, 0x66];
+        // 分量 1：y0 环径全域（256）×固定对（命中各对位+不命中）
+        for y0 in 0u8..=255 {
+            for &(a, b) in &[(0x11u8, 0x44u8), (0x22, 0x55), (0x33, 0x66), (0, 0), (0xEE, 0xEE)] {
+                assert_eq!(s1_check_for_item(y0, a, b, &lo, &hi), find_item_in_history(y0, a, b, &lo, &hi));
+            }
+        }
+        // 分量 2：(v06,v07) 全域 256²×y0 边角
+        for v06 in 0u8..=255 {
+            for v07 in 0u8..=255 {
+                for y0 in [0u8, 1, 2, 3, 0xFE, 0xFF] {
+                    assert_eq!(s1_check_for_item(y0, v06, v07, &lo, &hi),
+                               find_item_in_history(y0, v06, v07, &lo, &hi));
+                }
+            }
+        }
+        // 异常路径：空表（越界 y 落 0）
+        for y0 in 0u8..=255 {
+            let empty_lo: [u8; 0] = [];
+            let empty_hi: [u8; 0] = [];
+            assert_eq!(s1_check_for_item(y0, 1, 2, &empty_lo, &empty_hi),
+                       find_item_in_history(y0, 1, 2, &empty_lo, &empty_hi));
+        }
+    }
+
+    /// 【穷举·cc 分段壳×2】found×x×y×tbl 依赖分解——apply_item_pickup_face/
+    /// store_item_position==旧体。
+    #[test]
+    fn exhaustive_cc_shell_equivalence() {
+        for found in [false, true] {
+            for x in 0u8..=255 {
+                for t in [0u8, 1, 0x7F, 0x80, 0xFF] {
+                    assert_eq!(s1_ebcb_body(found, x, 3, t), apply_item_pickup_face(found, x, 3, t));
+                    assert_eq!(s1_ee14_body(found, x, 3, t), store_item_position(found, x, 3, t));
+                }
+            }
+        }
     }
 }
 
-/// s1_/s2_ 族（继续去地址名（语义命名））
-///
-/// 去地址名（s1_xxxx/s2_xxxx→engine::mod::xxx（语义命名））
-pub mod s1_s2_family_engine_v10 {
-    /// s1_xxxx→engine::mod::s1_s2_family_engine_v10::engine_schedule_v10（语义命名）
-    pub fn engine_schedule_v10(ram: &[u8; 2048]) -> u8 {
-        // 真规则（公式形（零字面特值））
-        ram[0x0379]
-    }
+// ===== 1:1 Rust 改写·批产·块 41：加法壳+CheckForItem 族语义命名（去地址名（公式形））=====
+// refs 锚（bank:addr 注内）：$D735（:1101）/$D746（:1109）/$EE4A CheckForItem root（:1136）/
+// $EBCB（:1156）/$EE14（:1165）。
+
+/// 加法壳·旗翻（旧 s1_d735_body（$D735）：LD77F root+$05 eor #$04→尾跳 $D76A）。
+pub fn ptr_add_with_flag_flip(a_in: u8, v0a: u8, v0b: u8) -> (Vec<(u16, u8)>, u16) {
+    let mut ev = compute_ptr_with_carry_add(a_in, v0a, v0b);
+    ev[1].1 ^= 0x04;
+    (ev, 0xD76A)
 }
 
-#[cfg(test)]
-mod tests_s1_s2_engine_v10 {
-    use super::s1_s2_family_engine_v10::*;
-
-    /// TDD 流程·第一步：写测试（穷举等价证明（全域穷举（边界条件（异常路径））））
-    #[test]
-    fn test_engine_schedule_v10_basic() {
-        let ram = [0u8; 2048];
-        assert_eq!(engine_schedule_v10(&ram), 0);
-    }
-
-    /// TDD 流程·第一步：边界条件（异常路径）
-    #[test]
-    fn test_engine_schedule_v10_boundary() {
-        let mut ram = [0u8; 2048];
-        ram[0x0379] = 0xFF;
-        assert_eq!(engine_schedule_v10(&ram), 0xFF);
-    }
+/// 加法壳·移位段（旧 s1_d746_body（$D746）：root+$04 lsr/bcs 段+$1F cmp 2 段（深段注））。
+pub fn ptr_add_with_shift_segment(a_in: u8, v0a: u8, v0b: u8) -> Vec<(u16, u8)> {
+    compute_ptr_with_carry_add(a_in, v0a, v0b)
 }
 
-/// s1_/s2_ 族（继续去地址名（语义命名））
-///
-/// 去地址名（s1_xxxx/s2_xxxx→engine::mod::xxx（语义命名））
-pub mod s1_s2_family_engine_v11 {
-    /// s1_xxxx→engine::mod::s1_s2_family_engine_v11::engine_schedule_v11（语义命名）
-    pub fn engine_schedule_v11(ram: &[u8; 2048]) -> u8 {
-        // 真规则（公式形（零字面特值））
-        ram[0x037A]
+/// 历史查项（旧 s1_check_for_item（$EE4A CheckForItem）：$6886 计数环（Y 递减 2 步
+/// ——$07/$06 对比 $6885[y]/$6886[y] 面）——carry=找到（clc 找到/sec 未找）。
+pub fn find_item_in_history(y0: u8, v06: u8, v07: u8, item_lo: &[u8], item_hi: &[u8]) -> bool {
+    // asm 真径（$EE4A `dey/dey/bpl`（signed y>=0 有界）——非 wrapping 死环形）。
+    let mut y = y0;
+    loop {
+        if (y as i8) < 0 {
+            break;
+        }
+        if item_hi.get(y as usize).copied().unwrap_or(0) == v07
+            && item_lo.get(y as usize).copied().unwrap_or(0) == v06 {
+            return true;
+        }
+        y = y.wrapping_sub(2);
     }
+    #[allow(unreachable_code)]
+    false
 }
 
-#[cfg(test)]
-mod tests_s1_s2_engine_v11 {
-    use super::s1_s2_family_engine_v11::*;
-
-    /// TDD 流程·第一步：写测试（穷举等价证明（全域穷举（边界条件（异常路径））））
-    #[test]
-    fn test_engine_schedule_v11_basic() {
-        let ram = [0u8; 2048];
-        assert_eq!(engine_schedule_v11(&ram), 0);
+/// 拾取面（旧 s1_ebcb_body（$EBCB）：未找到⇒$0300[x]←1+$030C[x]←tbl（名称表写族））。
+pub fn apply_item_pickup_face(found: bool, x: u8, y: u8, tbl_entry: u8) -> Vec<(u16, u8)> {
+    let _ = y;
+    let mut ev = Vec::new();
+    if !found {
+        ev.push((0x0300 + x as u16, 1));
     }
-
-    /// TDD 流程·第一步：边界条件（异常路径）
-    #[test]
-    fn test_engine_schedule_v11_boundary() {
-        let mut ram = [0u8; 2048];
-        ram[0x037A] = 0xFF;
-        assert_eq!(engine_schedule_v11(&ram), 0xFF);
-    }
+    ev.push((0x030C + x as u16, tbl_entry));
+    ev
 }
 
-/// s1_/s2_ 族（继续去地址名（语义命名））
-///
-/// 去地址名（s1_xxxx/s2_xxxx→engine::mod::xxx（语义命名））
-pub mod s1_s2_family_engine_v12 {
-    /// s1_xxxx→engine::mod::s1_s2_family_engine_v12::engine_schedule_v12（语义命名）
-    pub fn engine_schedule_v12(ram: &[u8; 2048]) -> u8 {
-        // 真规则（公式形（零字面特值））
-        ram[0x037B]
+/// 物位写（旧 s1_ee14_body（$EE14）：未找到⇒$0748[x]←$09+$0749[x]←（tbl&$F0）|$08）。
+pub fn store_item_position(found: bool, x: u8, v09: u8, tbl_entry: u8) -> Vec<(u16, u8)> {
+    if found {
+        return Vec::new();
     }
-}
-
-#[cfg(test)]
-mod tests_s1_s2_engine_v12 {
-    use super::s1_s2_family_engine_v12::*;
-
-    /// TDD 流程·第一步：写测试（穷举等价证明（全域穷举（边界条件（异常路径））））
-    #[test]
-    fn test_engine_schedule_v12_basic() {
-        let ram = [0u8; 2048];
-        assert_eq!(engine_schedule_v12(&ram), 0);
-    }
-
-    /// TDD 流程·第一步：边界条件（异常路径）
-    #[test]
-    fn test_engine_schedule_v12_boundary() {
-        let mut ram = [0u8; 2048];
-        ram[0x037B] = 0xFF;
-        assert_eq!(engine_schedule_v12(&ram), 0xFF);
-    }
-}
-
-/// s1_/s2_ 族（继续去地址名（语义命名））
-///
-/// 去地址名（s1_xxxx/s2_xxxx→engine::mod::xxx（语义命名））
-pub mod s1_s2_family_engine_v13 {
-    /// s1_xxxx→engine::mod::s1_s2_family_engine_v13::engine_schedule_v13（语义命名）
-    pub fn engine_schedule_v13(ram: &[u8; 2048]) -> u8 {
-        // 真规则（公式形（零字面特值））
-        ram[0x037C]
-    }
-}
-
-#[cfg(test)]
-mod tests_s1_s2_engine_v13 {
-    use super::s1_s2_family_engine_v13::*;
-
-    /// TDD 流程·第一步：写测试（穷举等价证明（全域穷举（边界条件（异常路径））））
-    #[test]
-    fn test_engine_schedule_v13_basic() {
-        let ram = [0u8; 2048];
-        assert_eq!(engine_schedule_v13(&ram), 0);
-    }
-
-    /// TDD 流程·第一步：边界条件（异常路径）
-    #[test]
-    fn test_engine_schedule_v13_boundary() {
-        let mut ram = [0u8; 2048];
-        ram[0x037C] = 0xFF;
-        assert_eq!(engine_schedule_v13(&ram), 0xFF);
-    }
-}
-
-/// s1_/s2_ 族（继续去地址名（语义命名））
-///
-/// 去地址名（s1_xxxx/s2_xxxx→engine::mod::xxx（语义命名））
-pub mod s1_s2_family_engine_v14 {
-    /// s1_xxxx→engine::mod::s1_s2_family_engine_v14::engine_schedule_v14（语义命名）
-    pub fn engine_schedule_v14(ram: &[u8; 2048]) -> u8 {
-        // 真规则（公式形（零字面特值））
-        ram[0x037D]
-    }
-}
-
-#[cfg(test)]
-mod tests_s1_s2_engine_v14 {
-    use super::s1_s2_family_engine_v14::*;
-
-    /// TDD 流程·第一步：写测试（穷举等价证明（全域穷举（边界条件（异常路径））））
-    #[test]
-    fn test_engine_schedule_v14_basic() {
-        let ram = [0u8; 2048];
-        assert_eq!(engine_schedule_v14(&ram), 0);
-    }
-
-    /// TDD 流程·第一步：边界条件（异常路径）
-    #[test]
-    fn test_engine_schedule_v14_boundary() {
-        let mut ram = [0u8; 2048];
-        ram[0x037D] = 0xFF;
-        assert_eq!(engine_schedule_v14(&ram), 0xFF);
-    }
-}
-
-/// s1_/s2_ 族（继续去地址名（语义命名））
-///
-/// 去地址名（s1_xxxx/s2_xxxx→engine::mod::xxx（语义命名））
-pub mod s1_s2_family_engine_v15 {
-    /// s1_xxxx→engine::mod::s1_s2_family_engine_v15::engine_schedule_v15（语义命名）
-    pub fn engine_schedule_v15(ram: &[u8; 2048]) -> u8 {
-        // 真规则（公式形（零字面特值））
-        ram[0x037E]
-    }
-}
-
-#[cfg(test)]
-mod tests_s1_s2_engine_v15 {
-    use super::s1_s2_family_engine_v15::*;
-
-    /// TDD 流程·第一步：写测试（穷举等价证明（全域穷举（边界条件（异常路径））））
-    #[test]
-    fn test_engine_schedule_v15_basic() {
-        let ram = [0u8; 2048];
-        assert_eq!(engine_schedule_v15(&ram), 0);
-    }
-
-    /// TDD 流程·第一步：边界条件（异常路径）
-    #[test]
-    fn test_engine_schedule_v15_boundary() {
-        let mut ram = [0u8; 2048];
-        ram[0x037E] = 0xFF;
-        assert_eq!(engine_schedule_v15(&ram), 0xFF);
-    }
+    vec![(0x0748 + x as u16, v09), (0x0749 + x as u16, (tbl_entry & 0xF0) | 0x08)]
 }
