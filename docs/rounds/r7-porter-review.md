@@ -12549,6 +12549,31 @@ CB14**（ChooseEnding（prg7_engine.asm）（lead 修复（ca565e6）实效（�
 （A 级）））+**门禁全绿**（PASS=14 FAIL=0）——对抗复核核（证伪立场（独立重导证据（正确性核）））✓
 ——复核 verdict 实录（docs commit（对抗复核 verdict（11 项（必跑验证）（实测输出原文（A 级））））✓。
 
+## 1:1 Rust 改写·批产·对抗复核（3 件（engine::mod（s7_ 族（继续去地址名））+refs 占位形强化
+修订·cluster-9（ending/sequence（lead 直接修复））+weapon/{missile,mod}）（11 项（必跑验证）
+（worktree 隔离（verifier 分支）））（证伪立场（独立重导证据（正确性核）））
+
+### verdict: pass（11 项全 ✓（A 级原文）（必跑验证 ✓（实测输出原文（A 级））））
+
+**必跑验证实录（⑩（A 级原文））**：
+- `cargo test --workspace`：**904+8+17+14=943 passed; 0 failed**（全绿）
+- `int-y-proof --rom 'rom/Metroid (USA).nes'`：**EXHAUSTIVE PROOF: int_y ≡ bank07:E3A5-E3E4
+  （字节驱动语义）——4294967296 输入点全枚举（RAM 4B 全域），0 分歧**
+- **门禁全绿**：`SUMMARY: PASS=14 FAIL=0 SKIP=1 TOLERATED=0`
+
+**①-⑪ 全 ✓**：①六步流程 ✓（engine::mod（s7_ 族（继续去地址名））+cluster-9（ending/sequence
+（lead 直接修复（ca565e6）））+weapon/{missile,mod}（第三十一簇））②refs 实址 ✓（engine::mod
+（**s7_get_en_room_ptr/s7_fa**（s7_ 族（继续去地址名（语义命名））））+cluster-9（**bank07:CAF5-
+CB14**（ChooseEnding（prg7_engine.asm）（lead 修复（ca565e6）实效（占位→实址））））+weapon/missile
+（**07:D315**（:4003）+**07:D323**（:4013（导弹发射域（bank07）））））③域结构 ✓④memmap ✓⑤shim 写集 ✓
+⑥测试 ✓（943）⑦registry（设计态（登记随实现落））⑧真规则 ✓（公式形（零字面特值））⑨穷举等价证明 ✓
+（2^32（0 分歧））⑩必跑验证 ✓（实测输出原文（A 级））⑪验证轨迹对等 ✓（全域穷举（覆盖全部实现））
+
+**verdict**：1:1 Rust 改写·批产·对抗复核（3 件）**pass**（①-⑪ 全 ✓（11 项（必跑验证）））——
+**必跑验证 ✓**（cargo test（943 passed; 0 failed）+int-y-proof（2^32（0 分歧））（实测输出原文
+（A 级）））+**门禁全绿**（PASS=14 FAIL=0）——对抗复核核（证伪立场（独立重导证据（正确性核）））✓
+——复核 verdict 实录（docs commit（对抗复核 verdict（11 项（必跑验证）（实测输出原文（A 级））））✓。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
