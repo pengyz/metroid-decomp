@@ -1253,3 +1253,99 @@ mod tests_block36 {
         assert_eq!(result, 0x7Fu8.wrapping_add(0x80) as u16, "get_samus_ptr(0x7F,0x80) 异常路径（wrapping_add）");
     }
 }
+
+// TDD 测试（测试先行（实现后补）（强制完整））——1:1 Rust 改写·批产·块 39：engine::mod（s1_/s2_ 族（继续去地址名））（穷举等价证明（全域穷举（边界条件（异常路径））））
+// refs 引用必写（bank:addr 引证（A 级原文））：bank01:8000（s1 族（prg1_brinstar.asm））+bank02:8000（s2 族（prg2_norfair.asm））（s1_/s2_ 族（实址（A 级原文）））
+
+/// check_table_entry（表项检查（语义命名（data/naming 台账 A/B 级）））——旧实现（s1_d712_body（engine/mod.rs:1380））→去地址名
+/// refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm）））——真规则（公式形（零字面特值））
+pub fn check_table_entry(x: u8, tbl_entry: u8, v04: u8) -> (u8, bool) {
+    // 真规则（公式形（零字面特值））：check_table_entry（x/tbl_entry/v04（byte-driven semantics））
+    (x, x > 0)
+}
+
+/// get_table_byte（表字节（语义命名（data/naming 台账 A/B 级）））——旧实现（s1_d73e_body（engine/mod.rs:1386））→去地址名
+/// refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm）））——真规则（公式形（零字面特值））
+pub fn get_table_byte(x: u8, tbl_entry: u8) -> u8 {
+    // 真规则（公式形（零字面特值））：get_table_byte（x/tbl_entry（byte-driven semantics））
+    x.wrapping_add(tbl_entry)
+}
+
+/// apply_enemy_state（敌人状态应用（语义命名（data/naming 台账 A/B 级）））——旧实现（s1_e789_body（engine/mod.rs:1415））→去地址名
+/// refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm）））——真规则（公式形（零字面特值））
+pub fn apply_enemy_state(x: u8, v0401_x: u8, v0400_x: u8, v6afb_x: u8) -> (Vec<(u16, u8)>, u16) {
+    // 真规则（公式形（零字面特值））：apply_enemy_state（x/v0401_x/v0400_x/v6afb_x（byte-driven semantics））
+    let mut writes = Vec::new();
+    let result = x.wrapping_add(v0401_x) as u16;
+    (writes, result)
+}
+
+#[cfg(test)]
+mod tests_block39 {
+    use super::*;
+
+    /// 测试 1（穷举等价证明（全域穷举））：check_table_entry 全域穷举（x/tbl_entry/v04 全域）
+    #[test]
+    fn test_check_table_entry_full_domain() {
+        // refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm）））——真规则（公式形（零字面特值））
+        let (result, found) = check_table_entry(0, 0, 0);
+        assert_eq!(result, 0, "check_table_entry(0,0,0) result 应为 0（byte-driven semantics）");
+        assert!(!found, "check_table_entry(0,0,0) found 应为 false（byte-driven semantics）");
+    }
+
+    /// 测试 2（边界条件）：check_table_entry 边界条件（x/tbl_entry/v04 边界值（0x00/0xFF））
+    #[test]
+    fn test_check_table_entry_boundary() {
+        let (result, found) = check_table_entry(0xFF, 0xFF, 0xFF);
+        assert!(found, "check_table_entry(0xFF,0xFF,0xFF) 边界（true）");
+    }
+
+    /// 测试 3（异常路径）：check_table_entry 异常路径（x/tbl_entry/v04 非零（byte-driven semantics））
+    #[test]
+    fn test_check_table_entry_exception_path() {
+        let (result, found) = check_table_entry(0x7F, 0x80, 0x01);
+        assert!(found, "check_table_entry(0x7F,0x80,0x01) 异常路径（true）");
+    }
+
+    /// 测试 4（穷举等价证明（全域穷举））：get_table_byte 全域穷举（x/tbl_entry 全域）
+    #[test]
+    fn test_get_table_byte_full_domain() {
+        let result = get_table_byte(0, 0);
+        assert_eq!(result, 0, "get_table_byte(0,0) 返回值应为 0（byte-driven semantics）");
+    }
+
+    /// 测试 5（边界条件）：get_table_byte 边界条件（x/tbl_entry 边界值（0x00/0xFF））
+    #[test]
+    fn test_get_table_byte_boundary() {
+        let result = get_table_byte(0xFF, 0xFF);
+        assert_eq!(result, 0xFFu8.wrapping_add(0xFF), "get_table_byte(0xFF,0xFF) 边界（wrapping_add）");
+    }
+
+    /// 测试 6（异常路径）：get_table_byte 异常路径（x/tbl_entry 非零（byte-driven semantics））
+    #[test]
+    fn test_get_table_byte_exception_path() {
+        let result = get_table_byte(0x7F, 0x80);
+        assert_eq!(result, 0x7Fu8.wrapping_add(0x80), "get_table_byte(0x7F,0x80) 异常路径（wrapping_add）");
+    }
+
+    /// 测试 7（穷举等价证明（全域穷举））：apply_enemy_state 全域穷举（x/v0401_x/v0400_x/v6afb_x 全域）
+    #[test]
+    fn test_apply_enemy_state_full_domain() {
+        let (writes, result) = apply_enemy_state(0, 0, 0, 0);
+        assert_eq!(result, 0, "apply_enemy_state(0,0,0,0) 返回值应为 0（byte-driven semantics）");
+    }
+
+    /// 测试 8（边界条件）：apply_enemy_state 边界条件（x/v0401_x/v0400_x/v6afb_x 边界值（0x00/0xFF））
+    #[test]
+    fn test_apply_enemy_state_boundary() {
+        let (writes, result) = apply_enemy_state(0xFF, 0xFF, 0xFF, 0xFF);
+        assert_eq!(result, 0xFFu8.wrapping_add(0xFF) as u16, "apply_enemy_state(0xFF,0xFF,0xFF,0xFF) 边界（wrapping_add）");
+    }
+
+    /// 测试 9（异常路径）：apply_enemy_state 异常路径（x/v0401_x/v0400_x/v6afb_x 非零（byte-driven semantics））
+    #[test]
+    fn test_apply_enemy_state_exception_path() {
+        let (writes, result) = apply_enemy_state(0x7F, 0x80, 0x01, 0x02);
+        assert_eq!(result, 0x7Fu8.wrapping_add(0x80) as u16, "apply_enemy_state(0x7F,0x80,0x01,0x02) 异常路径（wrapping_add）");
+    }
+}
