@@ -14952,148 +14952,170 @@ pub fn enemy_bg_collide_check(x: u8, v74: u8, v6af4_x: u8) -> (bool, bool) {
     (in_area && speed_bit, in_area)
 }
 
-/// s5_/s6_/s7_ 族（继续去地址名（语义命名））
-///
-/// 去地址名（s5_xxxx/s6_xxxx/s7_xxxx→engine::mod::xxx（语义命名））
-pub mod s5_s6_s7_family_engine {
-    /// s5_xxxx→engine::mod::s5_s6_s7_family_engine::engine_schedule_s5（语义命名）
-    pub fn engine_schedule_s5(ram: &[u8; 2048]) -> u8 {
-        // 真规则（公式形（零字面特值））
-        ram[0x0392]
-    }
-
-    /// s6_xxxx→engine::mod::s5_s6_s7_family_engine::engine_schedule_s6（语义命名）
-    pub fn engine_schedule_s6(ram: &[u8; 2048]) -> u8 {
-        // 真规则（公式形（零字面特值））
-        ram[0x0393]
-    }
-
-    /// s7_xxxx→engine::mod::s5_s6_s7_family_engine::engine_schedule_s7（语义命名）
-    pub fn engine_schedule_s7(ram: &[u8; 2048]) -> u8 {
-        // 真规则（公式形（零字面特值））
-        ram[0x0394]
-    }
-}
+// ===== 1:1 Rust 改写·批产·块 84（s5 族指针面+CreateItemID+Cannon 去地址名（TDD 穷举等价））=====
 
 #[cfg(test)]
-mod tests_s5_s6_s7_engine {
-    use super::s5_s6_s7_family_engine::*;
+mod tests_b84_engine_mod {
+    //! TDD step1（测试先行（强制完整））——穷举等价（新==旧（≤256³ 闸时限界（依赖分解）））。
+    //! refs 锚（bank:addr 注内）：LEE41 root（:5425）/$EBC8（:5431）/$DC67 CreateItemID root
+    //! （:5458）/$EE47（:5465）/$EEA6 CannonHandler（:5559）。
 
-    /// TDD 流程·第一步：写测试（穷举等价证明（全域穷举（边界条件（异常路径））））
+    use super::*;
+
+    /// 【穷举·指针对面】a×v4f 全域——set_item_ptr_pair==s5_lee41+item_spawn_with_check
+    /// ==s5_ebc8_body（x×a×v4f 依赖分解）。
     #[test]
-    fn test_engine_schedule_s5_basic() {
-        let ram = [0u8; 2048];
-        assert_eq!(engine_schedule_s5(&ram), 0);
+    fn exhaustive_ptr_pair_equivalence() {
+        for a in 0u8..=255 {
+            for v in 0u8..=255 {
+                assert_eq!(s5_lee41(a, v), set_item_ptr_pair(a, v));
+                for x in [0u8, 1, 0x80, 0xFF] {
+                    assert_eq!(s5_ebc8_body(x, a, v), item_spawn_with_check(x, a, v));
+                }
+            }
+        }
     }
 
-    /// TDD 流程·第一步：边界条件（异常路径）
+    /// 【穷举·位打包】v07×v06×v09 全域 256³——pack_item_id==s5_create_item_id
+    /// （位场拼装（<<3|>>3 溢出面））+pack_item_id_and_dispatch==s5_ee47_body。
     #[test]
-    fn test_engine_schedule_s5_boundary() {
-        let mut ram = [0u8; 2048];
-        ram[0x0392] = 0xFF;
-        assert_eq!(engine_schedule_s5(&ram), 0xFF);
+    fn exhaustive_bitpack_equivalence() {
+        for v07 in 0u8..=255 {
+            for v06 in 0u8..=255 {
+                for v09 in 0u8..=255 {
+                    assert_eq!(s5_create_item_id(v07, v06, v09), pack_item_id(v07, v06, v09));
+                    assert_eq!(s5_ee47_body(v07, v06, v09), pack_item_id_and_dispatch(v07, v06, v09));
+                }
+            }
+        }
     }
 
-    /// TDD 流程·第一步：写测试（穷举等价证明（全域穷举（边界条件（异常路径））））
+    /// 【穷举·Cannon 壳】cannon_handler_face==s5_eea6_body（退化域（指针面+$EDD6））。
     #[test]
-    fn test_engine_schedule_s6_basic() {
-        let ram = [0u8; 2048];
-        assert_eq!(engine_schedule_s6(&ram), 0);
-    }
-
-    /// TDD 流程·第一步：边界条件（异常路径）
-    #[test]
-    fn test_engine_schedule_s6_boundary() {
-        let mut ram = [0u8; 2048];
-        ram[0x0393] = 0xFF;
-        assert_eq!(engine_schedule_s6(&ram), 0xFF);
-    }
-
-    /// TDD 流程·第一步：写测试（穷举等价证明（全域穷举（边界条件（异常路径））））
-    #[test]
-    fn test_engine_schedule_s7_basic() {
-        let ram = [0u8; 2048];
-        assert_eq!(engine_schedule_s7(&ram), 0);
-    }
-
-    /// TDD 流程·第一步：边界条件（异常路径）
-    #[test]
-    fn test_engine_schedule_s7_boundary() {
-        let mut ram = [0u8; 2048];
-        ram[0x0394] = 0xFF;
-        assert_eq!(engine_schedule_s7(&ram), 0xFF);
+    fn cannon_handler_equivalence() {
+        assert_eq!(s5_eea6_body(), cannon_handler_face());
     }
 }
 
-/// s5_/s6_/s7_ 族（继续去地址名（语义命名））
-///
-/// 去地址名（s5_xxxx/s6_xxxx/s7_xxxx→engine::mod::xxx（语义命名））
-pub mod s5_s6_s7_family_engine_v2 {
-    /// s5_xxxx→engine::mod::s5_s6_s7_family_engine_v2::engine_schedule_s5_v2（语义命名）
-    pub fn engine_schedule_s5_v2(ram: &[u8; 2048]) -> u8 {
-        // 真规则（公式形（零字面特值））
-        ram[0x0395]
-    }
+// ===== 1:1 Rust 改写·批产·块 84：s5 族指针面+CreateItemID+Cannon 语义命名（去地址名）=====
+// refs 锚（bank:addr 注内）：LEE41 root（:5425）/$EBC8（:5431）/$DC67 CreateItemID root
+// （:5458）/$EE47（:5465）/$EEA6 CannonHandler（:5559）。
 
-    /// s6_xxxx→engine::mod::s5_s6_s7_family_engine_v2::engine_schedule_s6_v2（语义命名）
-    pub fn engine_schedule_s6_v2(ram: &[u8; 2048]) -> u8 {
-        // 真规则（公式形（零字面特值））
-        ram[0x0396]
-    }
-
-    /// s7_xxxx→engine::mod::s5_s6_s7_family_engine_v2::engine_schedule_s7_v2（语义命名）
-    pub fn engine_schedule_s7_v2(ram: &[u8; 2048]) -> u8 {
-        // 真规则（公式形（零字面特值））
-        ram[0x0397]
-    }
+/// 物指针对（旧 s5_lee41（LEE41 root）：$07←A/$06←$4F（指针面））。
+pub fn set_item_ptr_pair(a_in: u8, v4f: u8) -> Vec<(u16, u8)> {
+    vec![(0x0007, a_in), (0x0006, v4f)]
 }
+
+/// 物生成（旧 s5_ebc8_body（$EBC8）：LEE41+$0300[x]←1（cc 分段面）→$DC67）。
+pub fn item_spawn_with_check(x: u8, a_in: u8, v4f: u8) -> (Vec<(u16, u8)>, u16) {
+    let mut ev = set_item_ptr_pair(a_in, v4f);
+    ev.push((0x0300 + x as u16, 1));
+    (ev, 0xDC67)
+}
+
+/// 物 ID 位打包（旧 s5_create_item_id（$DC67 CreateItemID root）：$06←($07<<3)|$06/
+/// $07←($09<<2)|($07>>3)（位场拼装））。
+pub fn pack_item_id(v07: u8, v06: u8, v09: u8) -> (Vec<(u16, u8)>, u8) {
+    let n06 = (v07 << 3) | v06;
+    let n07 = (v09 << 2) | (v07 >> 3);
+    (vec![(0x0006, n06), (0x0007, n07)], n07)
+}
+
+/// 打包派发（旧 s5_ee47_body（$EE47）：CreateItemID→jmp $DC67）。
+pub fn pack_item_id_and_dispatch(v07: u8, v06: u8, v09: u8) -> (Vec<(u16, u8)>, u16) {
+    let (ev, _) = pack_item_id(v07, v06, v09);
+    (ev, 0xDC67)
+}
+
+/// Cannon 壳（旧 s5_eea6_body（$EEA6 CannonHandler）：$07←$38/$06←0（指针面）
+/// →jmp $EDD6（A=2 面））。
+pub fn cannon_handler_face() -> (Vec<(u16, u8)>, u16) {
+    (vec![(0x0007, 0x38), (0x0006, 0)], 0xEDD6)
+}
+
+// ===== 1:1 Rust 改写·批产·块 87（s5 族 MB/Zeebetite/Rinka/GetX 去地址名（TDD 穷举等价））=====
 
 #[cfg(test)]
-mod tests_s5_s6_s7_engine_v2 {
-    use super::s5_s6_s7_family_engine_v2::*;
+mod tests_b87_engine_mod {
+    //! TDD step1（测试先行（强制完整））——穷举等价（新==旧（≤256³ 闸时限界））。
+    //! refs 锚（bank:addr 注内）：$EEAE MotherBrainHandler（:5606）/$EECA ZeebetiteHandler
+    //! （:5630）/$EEEE RinkaHandler（:5654）/$F152 GetEnemyXSlotPosition root（:5675）/
+    //! $F0A8（:5681）。
 
-    /// TDD 流程·第一步：写测试（穷举等价证明（全域穷举（边界条件（异常路径））））
+    use super::*;
+
+    /// 【穷举·三 Handler 壳】退化域——mother_brain/zebetite/rinka_handler_face==旧体。
     #[test]
-    fn test_engine_schedule_s5_v2_basic() {
-        let ram = [0u8; 2048];
-        assert_eq!(engine_schedule_s5_v2(&ram), 0);
+    fn handler_faces_equivalence() {
+        assert_eq!(s5_eeae_body(), mother_brain_handler_face());
+        assert_eq!(s5_eeee_body(), rinka_handler_face());
+        for x in 0u8..=255 {
+            assert_eq!(s5_eecla_body(x), zeebetite_handler_face(x));
+        }
     }
 
-    /// TDD 流程·第一步：边界条件（异常路径）
+    /// 【穷举·GetX 位置面】x×v0400×v0400' 依赖分解——get_enemy_x_slot_position
+    /// ==s5_get_enemy_x_pos。
     #[test]
-    fn test_engine_schedule_s5_v2_boundary() {
-        let mut ram = [0u8; 2048];
-        ram[0x0395] = 0xFF;
-        assert_eq!(engine_schedule_s5_v2(&ram), 0xFF);
+    fn exhaustive_get_x_pos_equivalence() {
+        for x in 0u8..=255 {
+            for a in 0u8..=255 {
+                for b in [0u8, 1, 0x7F, 0x80, 0xFF] {
+                    assert_eq!(s5_get_enemy_x_pos(x, a, b), get_enemy_x_slot_position(x, a, b));
+                }
+            }
+        }
     }
 
-    /// TDD 流程·第一步：写测试（穷举等价证明（全域穷举（边界条件（异常路径））））
+    /// 【穷举·条件清】x×v6f 全域——clear_ptr_and_set_y_cond==s5_f0a8_body（≠0 判）。
     #[test]
-    fn test_engine_schedule_s6_v2_basic() {
-        let ram = [0u8; 2048];
-        assert_eq!(engine_schedule_s6_v2(&ram), 0);
+    fn exhaustive_cond_clear_equivalence() {
+        for x in 0u8..=255 {
+            for v in 0u8..=255 {
+                assert_eq!(s5_f0a8_body(x, v), clear_ptr_and_set_y_cond(x, v));
+            }
+        }
     }
+}
 
-    /// TDD 流程·第一步：边界条件（异常路径）
-    #[test]
-    fn test_engine_schedule_s6_v2_boundary() {
-        let mut ram = [0u8; 2048];
-        ram[0x0396] = 0xFF;
-        assert_eq!(engine_schedule_s6_v2(&ram), 0xFF);
-    }
+// ===== 1:1 Rust 改写·批产·块 87：s5 族 MB/Zeebetite/Rinka/GetX 语义命名（去地址名）=====
+// refs 锚（bank:addr 注内）：$EEAE MotherBrainHandler（:5606）/$EECA ZeebetiteHandler
+// （:5630）/$EEEE RinkaHandler（:5654）/$F152 GetEnemyXSlotPosition root（:5675）/$F0A8
+// （:5681）。
 
-    /// TDD 流程·第一步：写测试（穷举等价证明（全域穷举（边界条件（异常路径））））
-    #[test]
-    fn test_engine_schedule_s7_v2_basic() {
-        let ram = [0u8; 2048];
-        assert_eq!(engine_schedule_s7_v2(&ram), 0);
-    }
+/// MotherBrain 壳（旧 s5_eeae_body（$EEAE MotherBrainHandler）：$07←$38/$06←0
+/// +$98←8/$99←0（写对）→jmp $EE4A）。
+pub fn mother_brain_handler_face() -> (Vec<(u16, u8)>, u16) {
+    (vec![(0x0007, 0x38), (0x0006, 0), (0x0098, 8), (0x0099, 0)], 0xEE4A)
+}
 
-    /// TDD 流程·第一步：边界条件（异常路径）
-    #[test]
-    fn test_engine_schedule_s7_v2_boundary() {
-        let mut ram = [0u8; 2048];
-        ram[0x0397] = 0xFF;
-        assert_eq!(engine_schedule_s7_v2(&ram), 0xFF);
+/// Zeebetite 壳（旧 s5_eecla_body（$EECA ZeebetiteHandler）：$07←(X>>1)+$3C/$06←0
+/// （ptr 算面））。
+pub fn zeebetite_handler_face(x: u8) -> Vec<(u16, u8)> {
+    let v07 = (x >> 1).wrapping_add(0x3C);
+    vec![(0x0007, v07), (0x0006, 0)]
+}
+
+/// Rinka 壳（旧 s5_eeee_body（$EEEE RinkaHandler）：$91←$49→jmp $EEC6）。
+pub fn rinka_handler_face() -> (Vec<(u16, u8)>, u16) {
+    (vec![(0x0091, 0x49)], 0xEEC6)
+}
+
+/// X 槽位面（旧 s5_get_enemy_x_pos（$F152 GetEnemyXSlotPosition root）：$07←$0400[x]/
+/// $09←$0401[x]）。
+pub fn get_enemy_x_slot_position(x: u8, v0400_x: u8, v0401_x: u8) -> Vec<(u16, u8)> {
+    let _ = x;
+    vec![(0x0007, v0400_x), (0x0009, v0401_x)]
+}
+
+/// 条件清（旧 s5_f0a8_body（$F0A8）：$6F≠0⇒$6E/$6F←0+Y=1）。
+pub fn clear_ptr_and_set_y_cond(x: u8, v6f: u8) -> (Vec<(u16, u8)>, u8) {
+    let _ = x;
+    let branch = v6f != 0;
+    let mut ev = Vec::new();
+    if branch {
+        ev.push((0x006E, 0));
+        ev.push((0x006F, 0));
     }
+    (ev, if branch { 1 } else { 0 })
 }
