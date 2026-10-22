@@ -11711,6 +11711,39 @@ registry 步 pending）））+**簇 23 拒收**（模块/文档缺（仅 L2 端�
 族（爆炸动画/帧数据域（bank01（正确））））——对抗复核核（证伪立场（独立重导证据（正确性
 核）））✓——复核 verdict 实录（docs commit（对抗复核 verdict（四项核（A 级原文））））✓。
 
+## 批量改写·对抗复核（4 件（簇 21 实现补全+簇 23 双补+簇 27/28（第十三轮）（证伪立场（独立
+重导证据（正确性核））））
+
+### verdict: pass（4/4 全 ✓（A 级原文））
+
+**① 簇 21 实现补全（enemy::projectile）✓ pass**：实现 ✓（enemy/projectile.rs（45311f3
+（feat(core)（六步流程（实现补全）））））+refs 实址 ✓（bank01:8021（CommonJump_SpawnEnProjectile）+
+bank01:9965-9992（EnProjectileMovement0-3_BANK1））——**敌弹域（bank01（正确）**+六步流程 ✓
+（实现补全（前轮「实现未落」修正））✓
+
+**② 簇 23 双补（enemy::mellow）✓ pass**：文档+实现双补 ✓（enemy/mellow.rs+cluster-23-
+rewrite.md（7d613ee（feat(core),docs(design)）））+refs 实址 ✓（bank07:EE63（SpawnMellows
+（prg7_engine.asm:9452））+EE83（SpawnMellows_exit（:9474））+EE86（SpawnMellow（:9477））+
+F149（CollisionDetectionMellow_CheckWithObjectYSlot（:10082））+F19A（GetMellowXSlotPosition
+（:10127）））——**Mellow 域（bank07 引擎域（正确）**+六步流程 ✓（双补（前轮「模块/文档缺」
+修正））✓
+
+**③ 簇 27（enemy::sidehopper）✓ pass**：文档 ✓（cluster-27-rewrite.md（67ece7c（docs）））+
+refs 实址 ✓（bank01:99B8-99D3（SidehopperFloorAIRoutine_BANK1）+99BA（Sidehopper_Common_BANK1）+
+99D3（SidehopperCeilingAIRoutine_BANK1）+9D6F-9D93（EnAnim_SidehopperFloor/CeilingIdle/StartHopping/
+Hopping/Explode_BANK1））——**Sidehopper AI/动画域（bank01（正确）**+六步流程 ✓✓
+
+**④ 簇 28（enemy::waver）✓ pass**：实现 ✓（enemy/waver.rs（458332f（feat(core)）））+refs
+实址 ✓（bank01:97D7（EnemyMovementChoice_Waver_{AREA}（prg1_brinstar.asm:498）））——**Waver
+移动域（bank01（正确）**（{AREA}=区域参数化例程名（bank:addr 实址（bank01:97D7）））+六步流程 ✓✓
+
+**verdict**：批量改写 4 件（第十三轮）**pass**（①簇 21 实现补全（bank01:8021/9965-9992（敌弹域
+（bank01）））②簇 23 双补（bank07:EE63/EE83/EE86/F149/F19A（prg7_engine.asm:9452 族（Mellow 域
+（bank07））））③簇 27（bank01:99B8-99D3/99BA/9D6F-9D93（Sidehopper AI/动画域（bank01）））④簇 28
+（bank01:97D7（prg1_brinstar.asm:498（Waver 移动域（bank01）））））——对抗复核核（证伪立场（独立
+重导证据（正确性核）））✓——复核 verdict 实录（docs commit（对抗复核 verdict（四项核
+（A 级原文））））✓。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
