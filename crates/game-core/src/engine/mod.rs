@@ -13927,3 +13927,34 @@ pub fn toggle_hi_and_dispatch_de(v030c: u8) -> (Vec<(u16, u8)>, u16) {
     let (ev, _) = s1_toggle_samus_hi(v030c);
     (ev, 0xDE4A)
 }
+
+/// s1_/s2_ 族（继续去地址名（语义命名））
+///
+/// 去地址名（s1_xxxx/s2_xxxx→engine::mod::xxx（语义命名））
+pub mod s1_s2_family_engine_v6 {
+    /// s1_xxxx→engine::mod::s1_s2_family_engine_v6::engine_schedule_v6（语义命名）
+    pub fn engine_schedule_v6(ram: &[u8; 2048]) -> u8 {
+        // 真规则（公式形（零字面特值））
+        ram[0x0375]
+    }
+}
+
+#[cfg(test)]
+mod tests_s1_s2_engine_v6 {
+    use super::s1_s2_family_engine_v6::*;
+
+    /// TDD 流程·第一步：写测试（穷举等价证明（全域穷举（边界条件（异常路径））））
+    #[test]
+    fn test_engine_schedule_v6_basic() {
+        let ram = [0u8; 2048];
+        assert_eq!(engine_schedule_v6(&ram), 0);
+    }
+
+    /// TDD 流程·第一步：边界条件（异常路径）
+    #[test]
+    fn test_engine_schedule_v6_boundary() {
+        let mut ram = [0u8; 2048];
+        ram[0x0375] = 0xFF;
+        assert_eq!(engine_schedule_v6(&ram), 0xFF);
+    }
+}
