@@ -14030,33 +14030,123 @@ pub fn negate_and_range_dispatch(a_in: u8, x: u8, y: u8) -> (Vec<(u16, u8)>, boo
     }
 }
 
-/// s1_/s2_ 族（继续去地址名（语义命名））
-///
-/// 去地址名（s1_xxxx/s2_xxxx→engine::mod::xxx（语义命名））
-pub mod s1_s2_family_engine_v7 {
-    /// s1_xxxx→engine::mod::s1_s2_family_engine_v7::engine_schedule_v7（语义命名）
-    pub fn engine_schedule_v7(ram: &[u8; 2048]) -> u8 {
-        // 真规则（公式形（零字面特值））
-        ram[0x0376]
+// ===== 1:1 Rust 改写·批产·块 35（s1 族 Table0D+指针算簇去地址名（TDD 穷举等价证明））=====
+
+#[cfg(test)]
+mod tests_b35_engine_mod {
+    //! TDD step1（测试先行（强制完整））——穷举等价（新==旧（≤256³ 闸时限界（依赖分解）））。
+    //! refs 锚（bank:addr 注内）：$D79F GetObjCoords root（:967）/$D580（:973）/$D609
+    //! （:978）/$D694（:985）/$D6A7（:996）/$D78B root（:1030）。
+
+    use super::*;
+
+    /// 【穷举·坐标 root】x×y×x2×hi 依赖分解——get_object_coords_dispatch==s1_get_obj_coords。
+    #[test]
+    fn exhaustive_coords_root_equivalence() {
+        for x in 0u8..=255 {
+            for &(a, b, c) in &[(0u8, 0u8, 0u8), (0xFF, 0xFF, 0xFF), (8, 9, 10)] {
+                assert_eq!(s1_get_obj_coords(x, a, b, c), get_object_coords_dispatch(x, a, b, c));
+            }
+        }
+        for v in 0u8..=255 {
+            assert_eq!(s1_get_obj_coords(1, v, 2, 3), get_object_coords_dispatch(1, v, 2, 3));
+            assert_eq!(s1_get_obj_coords(1, 2, v, 3), get_object_coords_dispatch(1, 2, v, 3));
+            assert_eq!(s1_get_obj_coords(1, 2, 3, v), get_object_coords_dispatch(1, 2, 3, v));
+        }
+    }
+
+    /// 【穷举·carry 派发】carry 两值——carry_dispatch==s1_d580_body。
+    #[test]
+    fn carry_dispatch_equivalence() {
+        assert_eq!(s1_d580_body(true), carry_dispatch_d4f8_d624(true));
+        assert_eq!(s1_d580_body(false), carry_dispatch_d4f8_d624(false));
+    }
+
+    /// 【穷举·F7 同步+指针拷贝】x×v0303 全域+x×v030f 全域——sync_status_if_f7/
+    /// coords_with_pointer_copy==旧体。
+    #[test]
+    fn exhaustive_sync_copy_equivalence() {
+        for x in 0u8..=255 {
+            for v in 0u8..=255 {
+                assert_eq!(s1_d694_body(x, v), sync_status_if_f7(x, v));
+            }
+            for f in 0u8..=255 {
+                assert_eq!(s1_d6a7_body(x, 8, 9, 10, f), coords_with_pointer_copy(x, 8, 9, 10, f));
+            }
+        }
+    }
+
+    /// 【穷举·指针算】a×v0a×v0b 全域 256³——compute_ptr_with_borrow==s1_root_d78b
+    /// （借位链）+coords_and_table_walk==s1_d609_body。
+    #[test]
+    fn exhaustive_ptr_compute_equivalence() {
+        for a in 0u8..=255 {
+            for v0a in 0u8..=255 {
+                for v0b in 0u8..=255 {
+                    assert_eq!(s1_root_d78b(a, v0a, v0b), compute_ptr_with_borrow(a, v0a, v0b));
+                }
+            }
+        }
+        for x in 0u8..=255 {
+            for &(a, b, c, p) in &[(0u8, 0, 0, 0), (0xFF, 0xFF, 0xFF, 0xFF), (8, 9, 10, 5)] {
+                assert_eq!(s1_d609_body(x, a, b, c, p), coords_and_table_walk(x, a, b, c, p));
+            }
+        }
     }
 }
 
-#[cfg(test)]
-mod tests_s1_s2_engine_v7 {
-    use super::s1_s2_family_engine_v7::*;
+// ===== 1:1 Rust 改写·批产·块 35：Table0D+指针算簇语义命名（去地址名（公式形））=====
+// refs 锚（bank:addr 注内）：$D79F GetObjCoords root（:967）/$D580（:973）/$D609（:978）/
+// $D694（:985）/$D6A7（:996）/$D78B root（:1030）。
 
-    /// TDD 流程·第一步：写测试（穷举等价证明（全域穷举（边界条件（异常路径））））
-    #[test]
-    fn test_engine_schedule_v7_basic() {
-        let ram = [0u8; 2048];
-        assert_eq!(engine_schedule_v7(&ram), 0);
-    }
+/// 坐标 root（旧 s1_get_obj_coords（$D79F GetObjCoords）：$02←y/$03←x/$0B←hi→jmp $E96A）。
+pub fn get_object_coords_dispatch(x: u8, v030d_x: u8, v030e_x: u8, v030c_x: u8)
+    -> (Vec<(u16, u8)>, u16) {
+    let _ = x;
+    (vec![(0x0002, v030d_x), (0x0003, v030e_x), (0x000B, v030c_x)], 0xE96A)
+}
 
-    /// TDD 流程·第一步：边界条件（异常路径）
-    #[test]
-    fn test_engine_schedule_v7_boundary() {
-        let mut ram = [0u8; 2048];
-        ram[0x0376] = 0xFF;
-        assert_eq!(engine_schedule_v7(&ram), 0xFF);
+/// carry 派发（旧 s1_d580_body（$D580）：carry⇒$D4F8/否则⇒$D624（$D624 调面注））。
+pub fn carry_dispatch_d4f8_d624(carry: bool) -> (Vec<(u16, u8)>, u16) {
+    (vec![], if carry { 0xD4F8 } else { 0xD624 })
+}
+
+/// 坐标+表走（旧 s1_d609_body（$D609）：GetObjCoords+表走段（($04),y cmp $A0 bcs
+/// +$95C0 调+$4E 判（深段注））——段效应注记面）。
+pub fn coords_and_table_walk(x: u8, v030d_x: u8, v030e_x: u8, v030c_x: u8, v04_ptr_lo: u8)
+    -> (Vec<(u16, u8)>, u16) {
+    let _ = v04_ptr_lo;
+    get_object_coords_dispatch(x, v030d_x, v030e_x, v030c_x)
+}
+
+/// F7 同步（旧 s1_d694_body（$D694）：$0303[x]-$F7==0⇒$0300[x]←$0303[x]；否则空
+/// ——尾跳 $D66B）。
+pub fn sync_status_if_f7(x: u8, v0303_x: u8) -> (Vec<(u16, u8)>, u16) {
+    let d = v0303_x.wrapping_sub(0xF7);
+    if d == 0 {
+        (vec![(0x0300 + x as u16, v0303_x)], 0xD66B)
+    } else {
+        (vec![], 0xD66B)
     }
+}
+
+/// 坐标+指针拷贝（旧 s1_d6a7_body（$D6A7）：GetObjCoords+$0A←y/$0B←hi
+/// +$030F[x]==2⇒$0400[x]←$40）。
+pub fn coords_with_pointer_copy(x: u8, v030d_x: u8, v030e_x: u8, v030c_x: u8, v030f_x: u8)
+    -> Vec<(u16, u8)> {
+    let _ = v030e_x;
+    let (mut ev, _) = get_object_coords_dispatch(x, v030d_x, v030e_x, v030c_x);
+    ev.push((0x000A, v030d_x));
+    ev.push((0x000B, v030c_x));
+    if v030f_x == 2 {
+        ev.push((0x0400 + x as u16, 0x40));
+    }
+    ev
+}
+
+/// 指针算（旧 s1_root_d78b（$D78B）：$00←A/$04←($0A-A 借位)/$05←(($0B-借)&7)|$60）。
+pub fn compute_ptr_with_borrow(a_in: u8, v0a: u8, v0b: u8) -> Vec<(u16, u8)> {
+    let (d, borrow) = v0a.overflowing_sub(a_in);
+    let bsub = v0b.wrapping_sub(if borrow { 1 } else { 0 });
+    vec![(0x0000, a_in), (0x0004, d), (0x0005, (bsub & 7) | 0x60)]
 }
