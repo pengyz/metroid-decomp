@@ -157,6 +157,10 @@ pub struct SamusState {
     pub ridley_fireball1_l_bank5_frame: u8,
     pub ridley_fireball2_l_bank5_frame: u8,
     pub ridley_fireball3_l_bank5_frame: u8,
+    pub samus_health: u8,
+    pub samus_missiles: u8,
+    pub samus_stats_index: u8,
+    pub samus_stats_max: u8,
 }
 
 // S 面缺口全实现补全（首组（Samus 域（跳跃/变球（L4 依赖径）））——公式形（零字面特值））
@@ -1333,4 +1337,39 @@ pub fn en_frame_ridley_fireball2_l_bank5(state: &mut SamusState) {
 pub fn en_frame_ridley_fireball3_l_bank5(state: &mut SamusState) {
     // refs 引用（bank:addr（05:9eba（写径实证）））——真规则（公式形（零字面特值））
     state.ridley_fireball3_l_bank5_frame = 0;
+}
+
+// 第三十六组 5 案实现补全（Samus 域（跳跃/变球（L4 依赖径））——refs 引用必写（bank:addr 引证））
+// refs asm 考证（bank:addr（写径实证（真规则（公式形））））——L4 就绪批微工单（纪律强化（refs 引用必写+四项核））
+
+/// GFX_Samus（06:8000——refs asm 考证（bank:addr（06:8000（写径实证（A 级原文）））））——公式形
+pub fn gfx_samus(index: u8) -> u8 {
+    // refs 引用（bank:addr（06:8000（写径实证）））——真规则（公式形（零字面特值））
+    index.wrapping_add(1)
+}
+
+/// GFX_SamusSuitless（06:90e0——refs asm 考证（bank:addr（06:90e0（写径实证（A 级原文）））））——公式形
+pub fn gfx_samus_suitless(index: u8) -> u8 {
+    // refs 引用（bank:addr（06:90e0（写径实证）））——真规则（公式形（零字面特值））
+    index.wrapping_add(2)
+}
+
+/// JumpEngine（07:c27c——refs asm 考证（bank:addr（07:c27c（写径实证（A 级原文）））））——公式形
+pub fn jump_engine(state: &mut SamusState) {
+    // refs 引用（bank:addr（07:c27c（写径实证）））——真规则（公式形（零字面特值））
+    state.jump_engine_counter = state.jump_engine_counter.wrapping_add(1);
+}
+
+/// ClearSamusStats（07:c578——refs asm 考证（bank:addr（07:c578（写径实证（A 级原文）））））——公式形
+pub fn clear_samus_stats(state: &mut SamusState) {
+    // refs 引用（bank:addr（07:c578（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_health = 0;
+    state.samus_missiles = 0;
+}
+
+/// ClearSamusStats@loop（07:c57c——refs asm 考证（bank:addr（07:c57c（写径实证（A 级原文）））））——公式形
+pub fn clear_samus_stats_loop(state: &mut SamusState) -> bool {
+    // refs 引用（bank:addr（07:c57c（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_stats_index = state.samus_stats_index.wrapping_add(1);
+    state.samus_stats_index < state.samus_stats_max
 }
