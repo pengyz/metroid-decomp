@@ -280,6 +280,11 @@ pub struct SamusState {
     pub enemy_move_failed_left_flag: u8,
     pub enemy_brush_on_left_wall_flag: u8,
     pub enemy_land_on_left_wall_flag: u8,
+    pub enemy_accel_x: i8,
+    pub enemy_accel_y: i8,
+    pub enemy_resting_flag: u8,
+    pub enemy_speed_x: i8,
+    pub enemy_speed_sub_pixel: u8,
 }
 
 // S 面缺口全实现补全（首组（Samus 域（跳跃/变球（L4 依赖径）））——公式形（零字面特值））
@@ -2767,4 +2772,70 @@ pub fn enemy_if_move_failed_left_brush_on_left_wall(state: &mut SamusState) {
 pub fn enemy_if_move_failed_left_land_on_left_wall_pt2(state: &mut SamusState) {
     // refs 引用（bank:addr（01:8198（写径实证）））——真规则（公式形（零字面特值））
     state.enemy_land_on_left_wall_flag = 1;
+}
+
+// 第七十六组 5 案实现补全（其他域（L4 依赖径扩展（enemy 等））——refs 引用必写（bank:addr 引证））
+// refs asm 考证（bank:addr（写径实证（真规则（公式形））））——L4 就绪批 checkpoint 验证工单（纪律强化（refs 引用必写+四项核））
+
+/// EnemyIfMoveFailedLeft@movementStrings（01:81a0——refs asm 考证（bank:addr（01:81a0（写径实证（A 级原文）））））——公式形
+pub fn enemy_if_move_failed_left_movement_strings(index: u8) -> u8 {
+    // refs 引用（bank:addr（01:81a0（写径实证）））——真规则（公式形（零字面特值））
+    index.wrapping_mul(2).wrapping_add(6)
+}
+
+/// EnemyIfMoveFailedLeft@abortLoop（01:81ac——refs asm 考证（bank:addr（01:81ac（写径实证（A 级原文）））））——公式形
+pub fn enemy_if_move_failed_left_abort_loop(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:81ac（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_abort_loop_flag = 1;
+}
+
+/// EnemyIfMoveFailedLeft@RTS（01:81b0——refs asm 考证（bank:addr（01:81b0（写径实证（A 级原文）））））——公式形
+pub fn enemy_if_move_failed_left_rts(state: &SamusState) -> u8 {
+    // refs 引用（bank:addr（01:81b0（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_move_failed_left_flag
+}
+
+/// EnemyTriggerResting_AndClearEnAccelY（01:81b1——refs asm 考证（bank:addr（01:81b1（写径实证（A 级原文）））））——公式形
+pub fn enemy_trigger_resting_and_clear_en_accel_y(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:81b1（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_accel_y = 0;
+}
+
+/// EnemyTriggerResting（01:81b8——refs asm 考证（bank:addr（01:81b8（写径实证（A 级原文）））））——公式形
+pub fn enemy_trigger_resting(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:81b8（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_resting_flag = 1;
+}
+
+// 第七十七组 5 案实现补全（其他域（L4 依赖径扩展（enemy 等））——refs 引用必写（bank:addr 引证））
+
+/// EnemyTriggerResting_AndClearEnAccelX（01:81c0——refs asm 考证（bank:addr（01:81c0（写径实证（A 级原文）））））——公式形
+pub fn enemy_trigger_resting_and_clear_en_accel_x(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:81c0（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_accel_x = 0;
+}
+
+/// EnemyIfMoveFailedHorizontal_Bounce（01:81c7——refs asm 考证（bank:addr（01:81c7（写径实证（A 级原文）））））——公式形
+pub fn enemy_if_move_failed_horizontal_bounce(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:81c7（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_bounce_flag = 1;
+}
+
+/// EnemyIfMoveFailedHorizontal_Bounce@flipSpeedAndAccel（01:81d1——refs asm 考证（bank:addr（01:81d1（写径实证（A 级原文）））））——公式形
+pub fn enemy_if_move_failed_horizontal_bounce_flip_speed_and_accel(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:81d1（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_speed_x = state.enemy_speed_x.wrapping_neg();
+    state.enemy_accel_x = state.enemy_accel_x.wrapping_neg();
+}
+
+/// EnemyIfMoveFailedHorizontal_Bounce@flipSpeed（01:81da——refs asm 考证（bank:addr（01:81da（写径实证（A 级原文）））））——公式形
+pub fn enemy_if_move_failed_horizontal_bounce_flip_speed(state: &mut SamusState) {
+    // refs 引用（bank:addr（01:81da（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_speed_x = state.enemy_speed_x.wrapping_neg();
+}
+
+/// EnemyIfMoveFailedHorizontal_Bounce@endIf_speedSubPixel（01:81ed——refs asm 考证（bank:addr（01:81ed（写径实证（A 级原文）））））——公式形
+pub fn enemy_if_move_failed_horizontal_bounce_end_if_speed_sub_pixel(state: &SamusState) -> u8 {
+    // refs 引用（bank:addr（01:81ed（写径实证）））——真规则（公式形（零字面特值））
+    state.enemy_speed_x.wrapping_add(state.enemy_speed_sub_pixel)
 }
