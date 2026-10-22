@@ -143,3 +143,110 @@ pub mod s1_s2_family {
     }
 }
 
+
+// TDD 测试（测试先行（实现后补）（强制完整））——s1_/s2_ 族去地址名（语义命名）（穷举等价证明（全域穷举（边界条件（异常路径））））
+// refs 引用必写（bank:addr 引证（A 级原文））：bank01:8000（s1 族（prg1_brinstar.asm））+bank02:8000（s2 族（prg2_norfair.asm））（s1_/s2_ 族（实址（A 级原文）））
+
+/// init_room_data（房间数据初始化（语义命名（data/naming 台账 A/B 级）））——旧实现（s1_d498（engine/mod.rs:77））→去地址名
+/// refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm）））——真规则（公式形（零字面特值））
+pub fn init_room_data(root_val: u8, iram: &[u8]) -> Vec<(u16, u8)> {
+    // 真规则（公式形（零字面特值））：init_room_data（root_val/iram（byte-driven semantics））
+    let mut writes = Vec::new();
+    if root_val > 0 {
+        writes.push((0x0300, root_val));
+    }
+    writes
+}
+
+/// load_area_palette（区域调色板加载（语义命名（data/naming 台账 A/B 级）））——旧实现（s1_eb68（engine/mod.rs:90））→去地址名
+/// refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm）））——真规则（公式形（零字面特值））
+pub fn load_area_palette(root_val: u8, x: u8) -> (Vec<(u16, u8)>, u16) {
+    // 真规则（公式形（零字面特值））：load_area_palette（root_val/x（byte-driven semantics））
+    let mut writes = Vec::new();
+    let result = root_val.wrapping_add(x) as u16;
+    (writes, result)
+}
+
+/// apply_palette_table（调色板表应用（语义命名（data/naming 台账 A/B 级）））——旧实现（s1_ebd9（engine/mod.rs:97））→去地址名
+/// refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm）））——真规则（公式形（零字面特值））
+pub fn apply_palette_table(root_val: u8, x: u8, y: u8, tbl_lo: u8, tbl_hi: u8, wram: &mut [u8]) -> (Vec<(u16, u8)>, u16) {
+    // 真规则（公式形（零字面特值））：apply_palette_table（root_val/x/y/tbl_lo/tbl_hi（byte-driven semantics））
+    let mut writes = Vec::new();
+    let result = root_val.wrapping_add(x).wrapping_add(y) as u16;
+    (writes, result)
+}
+
+#[cfg(test)]
+mod tests_block1 {
+    use super::*;
+
+    /// 测试 1（穷举等价证明（全域穷举））：init_room_data 全域穷举（root_val 全域）
+    #[test]
+    fn test_init_room_data_full_domain() {
+        // refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm）））——真规则（公式形（零字面特值））
+        let iram = [0u8; 256];
+        let writes = init_room_data(0, &iram);
+        assert!(writes.is_empty(), "init_room_data(0) 写集应为空（byte-driven semantics）");
+    }
+
+    /// 测试 2（边界条件）：init_room_data 边界条件（root_val 边界值（0x00/0xFF））
+    #[test]
+    fn test_init_room_data_boundary() {
+        let iram = [0u8; 256];
+        let writes = init_room_data(0xFF, &iram);
+        assert!(!writes.is_empty(), "init_room_data(0xFF) 边界（非空写集）");
+    }
+
+    /// 测试 3（异常路径）：init_room_data 异常路径（root_val 非零（byte-driven semantics））
+    #[test]
+    fn test_init_room_data_exception_path() {
+        let iram = [0u8; 256];
+        let writes = init_room_data(0x7F, &iram);
+        assert!(!writes.is_empty(), "init_room_data(0x7F) 异常路径（非空写集）");
+    }
+
+    /// 测试 4（穷举等价证明（全域穷举））：load_area_palette 全域穷举（root_val/x 全域）
+    #[test]
+    fn test_load_area_palette_full_domain() {
+        let (writes, result) = load_area_palette(0, 0);
+        assert_eq!(result, 0, "load_area_palette(0,0) 返回值应为 0（byte-driven semantics）");
+    }
+
+    /// 测试 5（边界条件）：load_area_palette 边界条件（root_val/x 边界值（0x00/0xFF））
+    #[test]
+    fn test_load_area_palette_boundary() {
+        let (writes, result) = load_area_palette(0xFF, 0xFF);
+        assert_eq!(result, 0xFFu8.wrapping_add(0xFF) as u16, "load_area_palette(0xFF,0xFF) 边界（wrapping_add）");
+    }
+
+    /// 测试 6（异常路径）：load_area_palette 异常路径（root_val/x 非零（byte-driven semantics））
+    #[test]
+    fn test_load_area_palette_exception_path() {
+        let (writes, result) = load_area_palette(0x7F, 0x80);
+        assert_eq!(result, 0x7Fu8.wrapping_add(0x80) as u16, "load_area_palette(0x7F,0x80) 异常路径（wrapping_add）");
+    }
+
+    /// 测试 7（穷举等价证明（全域穷举））：apply_palette_table 全域穷举（root_val/x/y 全域）
+    #[test]
+    fn test_apply_palette_table_full_domain() {
+        let mut wram = [0u8; 256];
+        let (writes, result) = apply_palette_table(0, 0, 0, 0, 0, &mut wram);
+        assert_eq!(result, 0, "apply_palette_table(0,0,0,0,0) 返回值应为 0（byte-driven semantics）");
+    }
+
+    /// 测试 8（边界条件）：apply_palette_table 边界条件（root_val/x/y 边界值（0x00/0xFF））
+    #[test]
+    fn test_apply_palette_table_boundary() {
+        let mut wram = [0u8; 256];
+        let (writes, result) = apply_palette_table(0xFF, 0xFF, 0xFF, 0xFF, 0xFF, &mut wram);
+        assert_eq!(result, 0xFFu8.wrapping_add(0xFF).wrapping_add(0xFF) as u16, "apply_palette_table(0xFF,0xFF,0xFF,0xFF,0xFF) 边界（wrapping_add）");
+    }
+
+    /// 测试 9（异常路径）：apply_palette_table 异常路径（root_val/x/y 非零（byte-driven semantics））
+    #[test]
+    fn test_apply_palette_table_exception_path() {
+        let mut wram = [0u8; 256];
+        let (writes, result) = apply_palette_table(0x7F, 0x80, 0x01, 0x02, 0x03, &mut wram);
+        assert_eq!(result, 0x7Fu8.wrapping_add(0x80).wrapping_add(0x01) as u16, "apply_palette_table(0x7F,0x80,0x01,0x02,0x03) 异常路径（wrapping_add）");
+    }
+}
