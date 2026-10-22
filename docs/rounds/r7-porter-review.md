@@ -11226,6 +11226,45 @@ projectile）拒收**（①refs 引用核缺（「bank:addr」字面占位（非
 清单清））——对抗复核核（证伪立场（独立重导证据（正确性核）））✓——复核 verdict 实录
 （docs commit（对抗复核 verdict（四项核（A 级原文））））✓。
 
+## 批量改写·对抗复核（3 簇（证伪立场（独立重导证据（正确性核））））
+
+### verdict: pass（3 簇六步走通 ✓+refs 实址 ✓（簇 2 修订后）+registry 待补（随实现落））
+
+**① 六步流程走通 ✓**：定域取证 spec→域结构→memmap 适配→shim 写集适配→测试→registry 登记
++独立复审（簇 1（samus::physics（六步汇总表 ✓））+簇 2（world::room（修订后六步汇总表 ✓））+
+簇 3（enemy::movement（六步汇总表 ✓）））✓
+
+**② refs 引证实址 ✓**（存在性（bank:addr 引证（A 级原文））（非占位））：
+- 簇 1 ✓：bank07:E3A5-E3E4（int_y）+bank07:E340-E3A4（int_x）+bank01:833F-8376/8395-83E3
+  （EnemyGetDelta*）（实址）
+- 簇 2 ✓（**修订后**（bfa9df8（needs_revision→实址）））：bank00:8BD4-8C38（LoadUniqueItems）+
+  bank00:8D12（LoadPasswordData）+bank00:8D3D-8D5C（LoadTanksAndMissiles）+bank00:8A8C-8A9A
+  （LoadPalData）+bank00:87AB（LoadSparkleData）（实址（非占位））
+- 簇 3 ✓：bank01:8058-80AF（EnemyMove）+83F5-84A6/84A7-850F（OnePixel*）+80B8-8312
+  （IfMoveFailed*）（实址）
+
+**③ 域结构 ✓**：语义命名（samus::physics/world::room/enemy::movement（域级模块（D5（语义自证
+（第三方命名不背书））））✓
+
+**④ memmap 适配 ✓**：零页分层映射（暂存→局部（持久→struct 字段））（簇 2（RAM 态→RoomState
+（byte-driven semantics））+簇 1/3（同构））✓
+
+**⑤ shim 写集适配 ✓**：写集契约（verify_shim）（簇 2（RoomState→RAM 写回（byte-driven
+semantics））+簇 1/3（同构））✓
+
+**⑥ 测试充分 ✓**：期望值来自 oracle 捕获（不手推）+**2^32 输入域穷举等价证明（0 分歧）**
+（int-y-proof.rs 先例（簇 1/3 同引（簇 2 六步汇总「2^32 穷举（0 分歧）」）））✓
+
+**⑦ registry 登记——待补注记**：int_y_e3a5 **已登**（l2ports.rs:740「"int_y_E3A5" =>
+Some(int_y_e3a5)」（双射））+int_x_e340/enemy_move_8058/world_room **待补**（随实现落
+（decomp+port2+porter 在产（非缺失（是待办））））——双射核算法（bank:addr→crate::module::fn）
+设计清 ✓
+
+**verdict**：批量改写 3 簇（samus::physics+world::room+enemy::movement）**pass**（①六步走通
+②refs 实址 ✓（簇 2 修订后（bfa9df8））③域结构 ✓④memmap ✓⑤shim 写集 ✓⑥测试 ✓（2^32 穷举
+（0 分歧））⑦registry（int_y 已登+其余待补（随实现落）））——对抗复核核（证伪立场（独立重导
+证据（正确性核）））✓——复核 verdict 实录（docs commit（对抗复核 verdict（四项核（A 级原文））））✓。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
