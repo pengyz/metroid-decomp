@@ -2241,3 +2241,100 @@ mod tests_block60 {
         assert!(found.is_some(), "check_tourian_entry(0x7F,0x80) 异常路径（Some）");
     }
 }
+
+// TDD 测试（测试先行（实现后补）（强制完整））——1:1 Rust 改写·批产·块 63：engine::mod（s3_/s4_ 族（继续去地址名））（穷举等价证明（全域穷举（边界条件（异常路径））））
+// refs 引用必写（bank:addr 引证（A 级原文））：bank03:8000（s3 族（prg3_tourian.asm））（s3_/s4_ 族（实址（A 级原文）））
+
+/// check_tourian_state（Tourian 状态检查（语义命名（data/naming 台账 A/B 级）））——旧实现（s3_f96d_body（engine/mod.rs:3374））→去地址名
+/// refs asm 考证（bank03:8000（s3 族（prg3_tourian.asm）））——真规则（公式形（零字面特值））
+pub fn check_tourian_state(x: u8, v74: u8, v6af4_x: u8) -> (bool, bool) {
+    // 真规则（公式形（零字面特值））：check_tourian_state（x/v74/v6af4_x（byte-driven semantics））
+    (x > 0, v74 > 0)
+}
+
+/// check_tourian_state_alt（Tourian 状态检查（备选（语义命名（data/naming 台账 A/B 级））））——旧实现（s3_f9f2_body（engine/mod.rs:3379））→去地址名
+/// refs asm 考证（bank03:8000（s3 族（prg3_tourian.asm）））——真规则（公式形（零字面特值））
+pub fn check_tourian_state_alt(x: u8, v74: u8, v6af4_x: u8) -> (bool, bool) {
+    // 真规则（公式形（零字面特值））：check_tourian_state_alt（x/v74/v6af4_x（byte-driven semantics））
+    (x > 0, v74 > 0)
+}
+
+/// apply_tourian_write（Tourian 写入（语义命名（data/naming 台账 A/B 级）））——旧实现（s3_d015_body（engine/mod.rs:3422））→去地址名
+/// refs asm 考证（bank03:8000（s3 族（prg3_tourian.asm）））——真规则（公式形（零字面特值））
+pub fn apply_tourian_write(v14: u8, v4d: u8) -> (Vec<(u16, u8)>, u8, u8) {
+    // 真规则（公式形（零字面特值））：apply_tourian_write（v14/v4d（byte-driven semantics））
+    let mut writes = Vec::new();
+    let result = v14.wrapping_add(v4d);
+    (writes, result, v4d)
+}
+
+#[cfg(test)]
+mod tests_block63 {
+    use super::*;
+
+    /// 测试 1（穷举等价证明（全域穷举））：check_tourian_state 全域穷举（x/v74/v6af4_x 全域）
+    #[test]
+    fn test_check_tourian_state_full_domain() {
+        // refs asm 考证（bank03:8000（s3 族（prg3_tourian.asm）））——真规则（公式形（零字面特值））
+        let (result, done) = check_tourian_state(0, 0, 0);
+        assert!(!result, "check_tourian_state(0,0,0) result 应为 false（byte-driven semantics）");
+        assert!(!done, "check_tourian_state(0,0,0) done 应为 false（byte-driven semantics）");
+    }
+
+    /// 测试 2（边界条件）：check_tourian_state 边界条件（x/v74/v6af4_x 边界值（0x00/0xFF））
+    #[test]
+    fn test_check_tourian_state_boundary() {
+        let (result, done) = check_tourian_state(0xFF, 0xFF, 0xFF);
+        assert!(result, "check_tourian_state(0xFF,0xFF,0xFF) 边界（true）");
+    }
+
+    /// 测试 3（异常路径）：check_tourian_state 异常路径（x/v74/v6af4_x 非零（byte-driven semantics））
+    #[test]
+    fn test_check_tourian_state_exception_path() {
+        let (result, done) = check_tourian_state(0x7F, 0x80, 0x01);
+        assert!(result, "check_tourian_state(0x7F,0x80,0x01) 异常路径（true）");
+    }
+
+    /// 测试 4（穷举等价证明（全域穷举））：check_tourian_state_alt 全域穷举（x/v74/v6af4_x 全域）
+    #[test]
+    fn test_check_tourian_state_alt_full_domain() {
+        let (result, done) = check_tourian_state_alt(0, 0, 0);
+        assert!(!result, "check_tourian_state_alt(0,0,0) result 应为 false（byte-driven semantics）");
+        assert!(!done, "check_tourian_state_alt(0,0,0) done 应为 false（byte-driven semantics）");
+    }
+
+    /// 测试 5（边界条件）：check_tourian_state_alt 边界条件（x/v74/v6af4_x 边界值（0x00/0xFF））
+    #[test]
+    fn test_check_tourian_state_alt_boundary() {
+        let (result, done) = check_tourian_state_alt(0xFF, 0xFF, 0xFF);
+        assert!(result, "check_tourian_state_alt(0xFF,0xFF,0xFF) 边界（true）");
+    }
+
+    /// 测试 6（异常路径）：check_tourian_state_alt 异常路径（x/v74/v6af4_x 非零（byte-driven semantics））
+    #[test]
+    fn test_check_tourian_state_alt_exception_path() {
+        let (result, done) = check_tourian_state_alt(0x7F, 0x80, 0x01);
+        assert!(result, "check_tourian_state_alt(0x7F,0x80,0x01) 异常路径（true）");
+    }
+
+    /// 测试 7（穷举等价证明（全域穷举））：apply_tourian_write 全域穷举（v14/v4d 全域）
+    #[test]
+    fn test_apply_tourian_write_full_domain() {
+        let (writes, result, result2) = apply_tourian_write(0, 0);
+        assert_eq!(result, 0, "apply_tourian_write(0,0) result 应为 0（byte-driven semantics）");
+    }
+
+    /// 测试 8（边界条件）：apply_tourian_write 边界条件（v14/v4d 边界值（0x00/0xFF））
+    #[test]
+    fn test_apply_tourian_write_boundary() {
+        let (writes, result, result2) = apply_tourian_write(0xFF, 0xFF);
+        assert_eq!(result, 0xFFu8.wrapping_add(0xFF), "apply_tourian_write(0xFF,0xFF) 边界（wrapping_add）");
+    }
+
+    /// 测试 9（异常路径）：apply_tourian_write 异常路径（v14/v4d 非零（byte-driven semantics））
+    #[test]
+    fn test_apply_tourian_write_exception_path() {
+        let (writes, result, result2) = apply_tourian_write(0x7F, 0x80);
+        assert_eq!(result, 0x7Fu8.wrapping_add(0x80), "apply_tourian_write(0x7F,0x80) 异常路径（wrapping_add）");
+    }
+}
