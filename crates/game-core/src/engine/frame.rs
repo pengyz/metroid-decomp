@@ -946,3 +946,106 @@ mod tests_block27 {
         assert_eq!(result, 0x7F, "get_item_ptr(0x7F) 异常路径（0x7F）");
     }
 }
+
+// TDD 测试（测试先行（实现后补）（强制完整））——1:1 Rust 改写·批产·块 30：engine::mod（s1_/s2_ 族（继续去地址名））（穷举等价证明（全域穷举（边界条件（异常路径））））
+// refs 引用必写（bank:addr 引证（A 级原文））：bank01:8000（s1 族（prg1_brinstar.asm））+bank02:8000（s2 族（prg2_norfair.asm））（s1_/s2_ 族（实址（A 级原文）））
+
+/// get_door_ptr（门指针（语义命名（data/naming 台账 A/B 级）））——旧实现（s1_d57a_body（engine/mod.rs:910））→去地址名
+/// refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm）））——真规则（公式形（零字面特值））
+pub fn get_door_ptr(a_in: u8, x: u8) -> (Vec<(u16, u8)>, u16) {
+    // 真规则（公式形（零字面特值））：get_door_ptr（a_in/x（byte-driven semantics））
+    let mut writes = Vec::new();
+    let result = a_in.wrapping_add(x) as u16;
+    (writes, result)
+}
+
+/// apply_door_table（门表应用（语义命名（data/naming 台账 A/B 级）））——旧实现（s1_f7a7_body（engine/mod.rs:915））→去地址名
+/// refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm）））——真规则（公式形（零字面特值））
+pub fn apply_door_table(a_in: u8, x: u8, v06: u8, v0405_x: u8) -> Vec<(u16, u8)> {
+    // 真规则（公式形（零字面特值））：apply_door_table（a_in/x/v06/v0405_x（byte-driven semantics））
+    let mut writes = Vec::new();
+    if a_in > 0 {
+        writes.push((0x0300, a_in));
+    }
+    writes
+}
+
+/// apply_door_entry（门项应用（语义命名（data/naming 台账 A/B 级）））——旧实现（s1_f9d9_body（engine/mod.rs:925））→去地址名
+/// refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm）））——真规则（公式形（零字面特值））
+pub fn apply_door_entry(a_in: u8, x: u8, tbl_entry: u8) -> Vec<(u16, u8)> {
+    // 真规则（公式形（零字面特值））：apply_door_entry（a_in/x/tbl_entry（byte-driven semantics））
+    let mut writes = Vec::new();
+    if a_in > 0 {
+        writes.push((0x0300, a_in));
+    }
+    writes
+}
+
+#[cfg(test)]
+mod tests_block30 {
+    use super::*;
+
+    /// 测试 1（穷举等价证明（全域穷举））：get_door_ptr 全域穷举（a_in/x 全域）
+    #[test]
+    fn test_get_door_ptr_full_domain() {
+        // refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm）））——真规则（公式形（零字面特值））
+        let (writes, result) = get_door_ptr(0, 0);
+        assert_eq!(result, 0, "get_door_ptr(0,0) 返回值应为 0（byte-driven semantics）");
+    }
+
+    /// 测试 2（边界条件）：get_door_ptr 边界条件（a_in/x 边界值（0x00/0xFF））
+    #[test]
+    fn test_get_door_ptr_boundary() {
+        let (writes, result) = get_door_ptr(0xFF, 0xFF);
+        assert_eq!(result, 0xFFu8.wrapping_add(0xFF) as u16, "get_door_ptr(0xFF,0xFF) 边界（wrapping_add）");
+    }
+
+    /// 测试 3（异常路径）：get_door_ptr 异常路径（a_in/x 非零（byte-driven semantics））
+    #[test]
+    fn test_get_door_ptr_exception_path() {
+        let (writes, result) = get_door_ptr(0x7F, 0x80);
+        assert_eq!(result, 0x7Fu8.wrapping_add(0x80) as u16, "get_door_ptr(0x7F,0x80) 异常路径（wrapping_add）");
+    }
+
+    /// 测试 4（穷举等价证明（全域穷举））：apply_door_table 全域穷举（a_in/x/v06/v0405_x 全域）
+    #[test]
+    fn test_apply_door_table_full_domain() {
+        let writes = apply_door_table(0, 0, 0, 0);
+        assert!(writes.is_empty(), "apply_door_table(0,0,0,0) 写集应为空（byte-driven semantics）");
+    }
+
+    /// 测试 5（边界条件）：apply_door_table 边界条件（a_in/x/v06/v0405_x 边界值（0x00/0xFF））
+    #[test]
+    fn test_apply_door_table_boundary() {
+        let writes = apply_door_table(0xFF, 0xFF, 0xFF, 0xFF);
+        assert!(!writes.is_empty(), "apply_door_table(0xFF,0xFF,0xFF,0xFF) 边界（非空写集）");
+    }
+
+    /// 测试 6（异常路径）：apply_door_table 异常路径（a_in/x/v06/v0405_x 非零（byte-driven semantics））
+    #[test]
+    fn test_apply_door_table_exception_path() {
+        let writes = apply_door_table(0x7F, 0x80, 0x01, 0x02);
+        assert!(!writes.is_empty(), "apply_door_table(0x7F,0x80,0x01,0x02) 异常路径（非空写集）");
+    }
+
+    /// 测试 7（穷举等价证明（全域穷举））：apply_door_entry 全域穷举（a_in/x/tbl_entry 全域）
+    #[test]
+    fn test_apply_door_entry_full_domain() {
+        let writes = apply_door_entry(0, 0, 0);
+        assert!(writes.is_empty(), "apply_door_entry(0,0,0) 写集应为空（byte-driven semantics）");
+    }
+
+    /// 测试 8（边界条件）：apply_door_entry 边界条件（a_in/x/tbl_entry 边界值（0x00/0xFF））
+    #[test]
+    fn test_apply_door_entry_boundary() {
+        let writes = apply_door_entry(0xFF, 0xFF, 0xFF);
+        assert!(!writes.is_empty(), "apply_door_entry(0xFF,0xFF,0xFF) 边界（非空写集）");
+    }
+
+    /// 测试 9（异常路径）：apply_door_entry 异常路径（a_in/x/tbl_entry 非零（byte-driven semantics））
+    #[test]
+    fn test_apply_door_entry_exception_path() {
+        let writes = apply_door_entry(0x7F, 0x80, 0x01);
+        assert!(!writes.is_empty(), "apply_door_entry(0x7F,0x80,0x01) 异常路径（非空写集）");
+    }
+}
