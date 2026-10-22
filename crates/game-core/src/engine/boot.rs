@@ -779,3 +779,111 @@ pub fn clear_motion_pair_on_negative(root_val: u8, x: u8, tbl_entry: u8) -> Vec<
     }
     vec![(0x0406 + x as u16, 0), (0x0407 + x as u16, 0), (0x6AFE + x as u16, tbl_entry)]
 }
+
+// ===== engine/mod.rs 清理·块 3（KillObject 族去地址名（TDD 穷举等价证明））=====
+
+#[cfg(test)]
+mod tests_cleanup3 {
+    //! TDD step1（测试先行（强制完整））——穷举等价（新==旧（全域穷举（≤256³ 闸时限界
+    //! （块 6 256⁴ 教训（闸时回归））））。refs 锚（engine/mod.rs 注内 bank:addr）：
+    //! $F48A（:657）/$F4DF（:663）/$F52D（:673）/$FA18（:685）/$FA77（:691）/$FA91（:698）。
+
+    use super::*;
+    use crate::engine::{s1_f48a_body, s1_f4df_body, s1_f52d_body, s1_fa18_kill,
+                        s1_fa77_body, s1_fa91_body};
+
+    /// 【穷举·击杀写】x 全域——kill_enemy_slot==s1_f48a_body。
+    #[test]
+    fn exhaustive_kill_slot_equivalence() {
+        for x in 0u8..=255 {
+            assert_eq!(s1_f48a_body(x), kill_enemy_slot(x));
+        }
+    }
+
+    /// 【穷举·计数击杀】x×v2d×v040f 全域 256³——kill_with_hit_counter==s1_f4df_body
+    /// （$2D 位1 判（$6B←$A1/$A0）+$040F[x] dec 回绕）。
+    #[test]
+    fn exhaustive_counter_kill_equivalence() {
+        for x in 0u8..=255 {
+            for v2d in 0u8..=255 {
+                for v0f in 0u8..=255 {
+                    assert_eq!(s1_f4df_body(x, v2d, v0f), kill_with_hit_counter(x, v2d, v0f));
+                }
+            }
+        }
+    }
+
+    /// 【穷举·状态暂存击杀】x×v040f×v0404 全域 256³——kill_and_stage==s1_f52d_body
+    /// （$0404 位5 判段（未置⇒$040E 写））。
+    #[test]
+    fn exhaustive_stage_kill_equivalence() {
+        for x in 0u8..=255 {
+            for v0f in 0u8..=255 {
+                for v04 in 0u8..=255 {
+                    assert_eq!(s1_f52d_body(x, v0f, v04), kill_and_stage_motion_state(x, v0f, v04));
+                }
+            }
+        }
+    }
+
+    /// 【穷举·指针击杀×2】x×tbl 全域+四参边角——kill_and_load_*==旧体。
+    #[test]
+    fn exhaustive_pointer_kill_equivalence() {
+        for x in 0u8..=255 {
+            assert_eq!(s1_fa18_kill(x), clear_enemy_slot(x));
+            for &(a, b, c) in &[(0u8, 0u8, 0u8), (0xFF, 0xFF, 0xFF), (0x7F, 0x80, 1)] {
+                assert_eq!(s1_fa77_body(x, a, b, c), kill_and_load_pointer(x, a, b, c));
+            }
+            for t in 0u8..=255 {
+                assert_eq!(s1_fa91_body(x, t), kill_and_load_spawn_table(x, t));
+            }
+        }
+    }
+}
+
+// ===== engine/mod.rs 清理·块 3：KillObject 族语义命名（去地址名（公式形（零字面特值）））=====
+// refs 锚（engine/mod.rs 注内 bank:addr）：$F48A（:657）/$F4DF（:663）/$F52D（:673）/
+// $FA18（:685）/$FA77（:691）/$FA91（:698）。
+
+/// 击杀写（旧 s1_f48a_body（$F48A）：$6AF4[x]←0（KillObject 共写））。
+pub fn kill_enemy_slot(x: u8) -> Vec<(u16, u8)> {
+    vec![(0x6AF4 + x as u16, 0)]
+}
+
+/// 计数击杀（旧 s1_f4df_body（$F4DF）：$6AF4[x]←0+$6B←（$2D 位1?$A1:$A0）+
+/// $040F[x]←dec（回绕）→jmp $F416）。
+pub fn kill_with_hit_counter(x: u8, v2d: u8, v040f_x: u8) -> (Vec<(u16, u8)>, u16) {
+    let hi = if v2d & 0x02 != 0 { 0xA1 } else { 0xA0 };
+    (vec![(0x6AF4 + x as u16, 0), (0x006B, hi),
+          (0x040F + x as u16, v040f_x.wrapping_sub(1))], 0xF416)
+}
+
+/// 状态暂存击杀（旧 s1_f52d_body（$F52D）：$6AF4[x]←0+$0A←$040F[x]
+/// +$0404 位5 未置⇒$040E[x]←$0404[x]）。
+pub fn kill_and_stage_motion_state(x: u8, v040f_x: u8, v0404_x: u8) -> Vec<(u16, u8)> {
+    let mut ev = vec![(0x6AF4 + x as u16, 0), (0x000A, v040f_x)];
+    if v0404_x & 0x20 == 0 {
+        ev.push((0x040E + x as u16, v0404_x));
+    }
+    ev
+}
+
+/// 敌槽清（旧 s1_fa18_kill（$FA18 KillObject）：$6AF4[x]←0）。
+pub fn clear_enemy_slot(x: u8) -> (Vec<(u16, u8)>, u8) {
+    (vec![(0x6AF4 + x as u16, 0)], 0)
+}
+
+/// 指针击杀（旧 s1_fa77_body（$FA77）：$6AF4[x]←0+$02←$0400[x]/$03←$0401[x]/
+/// $0B←$6AFB[x]→jmp $F97C）。
+pub fn kill_and_load_pointer(x: u8, v0400_x: u8, v0401_x: u8, v6afb_x: u8) -> (Vec<(u16, u8)>, u16) {
+    (vec![(0x6AF4 + x as u16, 0), (0x0002, v0400_x), (0x0003, v0401_x),
+          (0x000B, v6afb_x)], 0xF97C)
+}
+
+/// 表载击杀（旧 s1_fa91_body（$FA91）：$6AF4[x]←0+$6AF9/$6AFA[x]←tbl+$6AF8[x]←0
+/// →jmp $F97C）。
+pub fn kill_and_load_spawn_table(x: u8, tbl_entry: u8) -> (Vec<(u16, u8)>, u16) {
+    (vec![(0x6AF4 + x as u16, 0),
+          (0x6AF9 + x as u16, tbl_entry), (0x6AFA + x as u16, tbl_entry),
+          (0x6AF8 + x as u16, 0)], 0xF97C)
+}
