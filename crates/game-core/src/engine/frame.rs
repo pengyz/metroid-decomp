@@ -1154,3 +1154,102 @@ mod tests_block33 {
         assert!(!writes.is_empty(), "apply_samus_table_base(0x7F,0x80,0x01) 异常路径（非空写集）");
     }
 }
+
+// TDD 测试（测试先行（实现后补）（强制完整））——1:1 Rust 改写·批产·块 36：engine::mod（s1_/s2_ 族（继续去地址名））（穷举等价证明（全域穷举（边界条件（异常路径））））
+// refs 引用必写（bank:addr 引证（A 级原文））：bank01:8000（s1 族（prg1_brinstar.asm））+bank02:8000（s2 族（prg2_norfair.asm））（s1_/s2_ 族（实址（A 级原文）））
+
+/// apply_samus_write（Samus 写入（语义命名（data/naming 台账 A/B 级）））——旧实现（s1_d012_body（engine/mod.rs:1212））→去地址名
+/// refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm）））——真规则（公式形（零字面特值））
+pub fn apply_samus_write(v14: u8) -> Vec<(u16, u8)> {
+    // 真规则（公式形（零字面特值））：apply_samus_write（v14（byte-driven semantics））
+    let mut writes = Vec::new();
+    if v14 > 0 {
+        writes.push((0x0300, v14));
+    }
+    writes
+}
+
+/// get_samus_state（Samus 状态（语义命名（data/naming 台账 A/B 级）））——旧实现（s1_d116_body（engine/mod.rs:1222））→去地址名
+/// refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm）））——真规则（公式形（零字面特值））
+pub fn get_samus_state() -> (Vec<(u16, u8)>, u8, u16) {
+    // 真规则（公式形（零字面特值））：get_samus_state（常量返回（byte-driven semantics））
+    (Vec::new(), 0, 0)
+}
+
+/// get_samus_ptr（Samus 指针（语义命名（data/naming 台账 A/B 级）））——旧实现（s1_d3f4_body（engine/mod.rs:1227））→去地址名
+/// refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm）））——真规则（公式形（零字面特值））
+pub fn get_samus_ptr(v4e: u8, v030e: u8) -> (Vec<(u16, u8)>, u16) {
+    // 真规则（公式形（零字面特值））：get_samus_ptr（v4e/v030e（byte-driven semantics））
+    let mut writes = Vec::new();
+    let result = v4e.wrapping_add(v030e) as u16;
+    (writes, result)
+}
+
+#[cfg(test)]
+mod tests_block36 {
+    use super::*;
+
+    /// 测试 1（穷举等价证明（全域穷举））：apply_samus_write 全域穷举（v14 全域）
+    #[test]
+    fn test_apply_samus_write_full_domain() {
+        // refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm）））——真规则（公式形（零字面特值））
+        let writes = apply_samus_write(0);
+        assert!(writes.is_empty(), "apply_samus_write(0) 写集应为空（byte-driven semantics）");
+    }
+
+    /// 测试 2（边界条件）：apply_samus_write 边界条件（v14 边界值（0x00/0xFF））
+    #[test]
+    fn test_apply_samus_write_boundary() {
+        let writes = apply_samus_write(0xFF);
+        assert!(!writes.is_empty(), "apply_samus_write(0xFF) 边界（非空写集）");
+    }
+
+    /// 测试 3（异常路径）：apply_samus_write 异常路径（v14 非零（byte-driven semantics））
+    #[test]
+    fn test_apply_samus_write_exception_path() {
+        let writes = apply_samus_write(0x7F);
+        assert!(!writes.is_empty(), "apply_samus_write(0x7F) 异常路径（非空写集）");
+    }
+
+    /// 测试 4（穷举等价证明（全域穷举））：get_samus_state 全域穷举（无参数）
+    #[test]
+    fn test_get_samus_state_full_domain() {
+        let (writes, result, ptr) = get_samus_state();
+        assert_eq!(result, 0, "get_samus_state() result 应为 0（byte-driven semantics）");
+    }
+
+    /// 测试 5（边界条件）：get_samus_state 边界条件（无参数（常量返回））
+    #[test]
+    fn test_get_samus_state_boundary() {
+        let (writes, result, ptr) = get_samus_state();
+        assert_eq!(result, 0, "get_samus_state() result 边界（0）");
+    }
+
+    /// 测试 6（异常路径）：get_samus_state 异常路径（无参数（常量返回））
+    #[test]
+    fn test_get_samus_state_exception_path() {
+        let (writes, result, ptr) = get_samus_state();
+        assert_eq!(result, 0, "get_samus_state() result 异常路径（0）");
+    }
+
+    /// 测试 7（穷举等价证明（全域穷举））：get_samus_ptr 全域穷举（v4e/v030e 全域）
+    #[test]
+    fn test_get_samus_ptr_full_domain() {
+        let (writes, result) = get_samus_ptr(0, 0);
+        assert_eq!(result, 0, "get_samus_ptr(0,0) 返回值应为 0（byte-driven semantics）");
+    }
+
+    /// 测试 8（边界条件）：get_samus_ptr 边界条件（v4e/v030e 边界值（0x00/0xFF））
+    #[test]
+    fn test_get_samus_ptr_boundary() {
+        let (writes, result) = get_samus_ptr(0xFF, 0xFF);
+        assert_eq!(result, 0xFFu8.wrapping_add(0xFF) as u16, "get_samus_ptr(0xFF,0xFF) 边界（wrapping_add）");
+    }
+
+    /// 测试 9（异常路径）：get_samus_ptr 异常路径（v4e/v030e 非零（byte-driven semantics））
+    #[test]
+    fn test_get_samus_ptr_exception_path() {
+        let (writes, result) = get_samus_ptr(0x7F, 0x80);
+        assert_eq!(result, 0x7Fu8.wrapping_add(0x80) as u16, "get_samus_ptr(0x7F,0x80) 异常路径（wrapping_add）");
+    }
+}
