@@ -14662,3 +14662,107 @@ pub fn table_walk_call(x: u8, tbl_entry: u8) -> (u8, u8) {
     let (_, a, y) = table_walk_root(x, tbl_entry);
     (a, y)
 }
+
+// ===== 1:1 Rust 改写·批产·块 65（s3 族去地址名（TDD 穷举等价证明））=====
+
+#[cfg(test)]
+mod tests_b65_engine_mod {
+    //! TDD step1（测试先行（强制完整））——穷举等价（新==旧（≤256³ 闸时限界））。
+    //! refs 锚（bank:addr 注内）：SFX_MetroidHit root（:3156）/$F530（:3161）/$F598（:3167）/
+    //! $F74B ReadTableAt968B root（:3191）/$F589（:3196）/$F6BD（:3206）。
+
+    use super::*;
+
+    /// 【穷举·SFX 面】sfx_metroid_hit_face==s3_sfx_metroid_hit+二壳（退化域）。
+    #[test]
+    fn sfx_face_equivalence() {
+        assert_eq!(s3_sfx_metroid_hit(), sfx_metroid_hit_face());
+        assert_eq!(s3_f530_body(2, 5), metroid_hit_and_dispatch_f6(2, 5));
+        assert_eq!(s3_f598_body(), metroid_hit_and_dispatch_cb());
+    }
+
+    /// 【穷举·表读】y×tbl 全域——read_enemy_type_flags==s3_read_table_968b。
+    #[test]
+    fn exhaustive_table_read_equivalence() {
+        for y in 0u8..=255 {
+            for t in 0u8..=255 {
+                assert_eq!(s3_read_table_968b(y, t), read_enemy_type_flags(y, t));
+            }
+        }
+    }
+
+    /// 【穷举·掩码派发】y×tbl 全域——flags_mask_and_sfx_dispatch==s3_f589_body
+    /// （&$0C 三分段（0x0C⇒$CBD2））。
+    #[test]
+    fn exhaustive_mask_dispatch_equivalence() {
+        for y in 0u8..=255 {
+            for t in 0u8..=255 {
+                assert_eq!(s3_f589_body(y, t), flags_mask_and_sfx_dispatch(y, t));
+            }
+        }
+    }
+
+    /// 【穷举·条件写】x×y×tbl×v6af4 依赖分解——flags_cond_write_counter==s3_f6bd_body
+    /// （$6AF4[x]!=2 或位1 判）。
+    #[test]
+    fn exhaustive_cond_write_counter_equivalence() {
+        for x in 0u8..=255 {
+            for t in 0u8..=255 {
+                for v in [0u8, 1, 2, 3, 0xFF] {
+                    assert_eq!(s3_f6bd_body(x, 3, t, v), flags_cond_write_counter(x, 3, t, v));
+                }
+            }
+        }
+        for y in 0u8..=255 {
+            assert_eq!(s3_f6bd_body(2, y, 0x02, 5), flags_cond_write_counter(2, y, 0x02, 5));
+        }
+    }
+}
+
+// ===== 1:1 Rust 改写·批产·块 65：s3 族语义命名（去地址名（公式形（零字面特值）））=====
+// refs 锚（bank:addr 注内）：SFX_MetroidHit root（:3156）/$F530（:3161）/$F598（:3167）/
+// $F74B ReadTableAt968B root（:3191）/$F589（:3196）/$F6BD（:3206）。
+
+/// SFX 声旗面（旧 s3_sfx_metroid_hit（SFX_MetroidHit root）：$0683←$20（sfxTri_MetroidHit））。
+pub fn sfx_metroid_hit_face() -> (Vec<(u16, u8)>, u8) {
+    (vec![(0x0683, 0x20)], 0x20)
+}
+
+/// 声旗+F6 派发（旧 s3_f530_body（$F530）：SFX_MetroidHit→jmp $F673）。
+pub fn metroid_hit_and_dispatch_f6(x: u8, v040f_x: u8) -> (Vec<(u16, u8)>, u16) {
+    let _ = (x, v040f_x);
+    let (ev, _) = sfx_metroid_hit_face();
+    (ev, 0xF673)
+}
+
+/// 声旗+CB 派发（旧 s3_f598_body（$F598）：SFX 链→$CBB0（SFX_EnemyHit 面））。
+pub fn metroid_hit_and_dispatch_cb() -> (Vec<(u16, u8)>, u16) {
+    let (ev, _) = sfx_metroid_hit_face();
+    (ev, 0xCBB0)
+}
+
+/// 敌型旗表读（旧 s3_read_table_968b（$F74B ReadTableAt968B）：$968B[y]（烘焙面））。
+pub fn read_enemy_type_flags(y: u8, tbl_entry: u8) -> u8 {
+    let _ = y;
+    tbl_entry
+}
+
+/// 掩码派发（旧 s3_f589_body（$F589）：表值&$0C；==$0C⇒$CBD2（SFX_MetroidHit））。
+pub fn flags_mask_and_sfx_dispatch(y: u8, tbl_entry: u8) -> (u8, Option<u16>) {
+    let v = read_enemy_type_flags(y, tbl_entry) & 0x0C;
+    let call = match v {
+        0x0C => Some(0xCBD2),
+        _ => None,
+    };
+    (v, call)
+}
+
+/// 条件写计数（旧 s3_f6bd_body（$F6BD）：$6AF4[x]!=2 或位1⇒$040D[x]←表值（dec 净效面））。
+pub fn flags_cond_write_counter(x: u8, y: u8, tbl_entry: u8, v6af4_x: u8) -> Vec<(u16, u8)> {
+    let v = read_enemy_type_flags(y, tbl_entry);
+    let mut ev = Vec::new();
+    if v6af4_x != 2 || (v & 2) != 0 {
+        ev.push((0x040D + x as u16, v));
+    }
+    ev
+}
