@@ -1,0 +1,30 @@
+# 探跑 2：f3050 深门续探+下键踩台（电梯径锁定候选①）
+name sc-elev-probe2
+frames 3600
+watch_range 0000-00ff zp
+watch_range 0100-07ff iram
+
+press 360 start
+press 420 a
+press 540 start
+hold 850-1200 right
+hold 1250-1600 right
+hold 1650-2000 right
+hold 2050-2400 right
+hold 2450-2900 right
+hold 2950-3100 right
+press 3120 down
+hold 3140-3200 right
+press 3220 down
+hold 3240-3300 right
+press 3320 down
+hold 3340-3450 right
+press 3470 down
+hold 3490-3580 right
+
+capture 2900 deep-door
+capture 3150 post-deep
+capture 3400 deep2
+capture 3580 probe-end
+
+sample_point spin-exit

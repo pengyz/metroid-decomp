@@ -1,0 +1,59 @@
+# 场景：sc-elevator-ride —— 穿门终形（净序列——无输入重叠）
+# 径：(3,14)→(22,11) 31 房 BFS；卡点=房 19 东门（行 5-7 s3——高跳 112px 可达）
+# 事件核：$D7B3 状态机+MapPos 到 (22,11)+站台 DOWN 激活
+name sc-sweep-3650
+frames 8800
+watch_range 0000-00ff zp
+watch_range 0100-07ff iram
+watch_range 6878-6878 gear
+
+press 360 start
+press 420 a
+press 540 start
+hold 850-1900 right
+fixture 900 6878 13 invariant
+press 950 b
+press 1050 b
+press 1150 b
+hold 1340-1500 a
+press 1420 b
+press 1480 b
+hold 1900-2060 a
+hold 1950-2320 right
+press 1980 b
+hold 2500-2660 a
+hold 2550-2920 right
+press 2580 b
+hold 3100-3260 a
+hold 3150-3520 right
+press 3180 b
+hold 3650-3810 a
+hold 3690-4050 right
+press 3770 b
+hold 4300-4460 a
+hold 4340-4700 right
+press 4420 b
+hold 4900-5060 a
+hold 4940-5300 right
+press 5020 b
+hold 5500-5660 a
+hold 5540-5900 right
+press 5620 b
+hold 6100-6260 a
+hold 6140-6500 right
+press 6220 b
+hold 6700-6860 a
+hold 6740-7100 right
+press 6820 b
+hold 7300-7460 a
+hold 7340-7700 right
+press 7420 b
+hold 7900-8060 a
+hold 7940-8300 right
+press 8020 b
+
+capture 1700 door-jump
+capture 2400 post-door
+
+sample_point spin-exit
+bundle_capture 2400 analysis/bundles/sc-elevator-ride

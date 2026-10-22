@@ -1,0 +1,14 @@
+name jt-13
+frames 1600
+watch_range 0000-00ff zp
+watch_range 6878-6878 gear
+
+press 360 start
+press 420 a
+press 540 start
+fixture 900 6878 13 invariant
+hold 1100-1400 right
+hold 1250-1340 a
+
+capture 1300 jump
+sample_point spin-exit

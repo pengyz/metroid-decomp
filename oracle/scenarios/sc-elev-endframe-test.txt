@@ -1,0 +1,13 @@
+# 测件：bundle_load×endFrame 采样（trace 面验）
+name sc-elev-endframe-test
+frames 2000
+watch_range 0000-00ff zp
+watch_range 0100-07ff iram
+
+bundle_load analysis/bundles/sc-elevator-ride
+sample_point endFrame
+hold 100-1500 right
+press 200 b
+press 500 b
+hold 600-760 a
+press 800 b

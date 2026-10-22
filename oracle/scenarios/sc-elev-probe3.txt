@@ -1,0 +1,29 @@
+# 探跑 3：坑区垂直下降（roll-nav 坑区径——电梯井=垂直支路假说实证）
+name sc-elev-probe3
+frames 3000
+watch_range 0000-00ff zp
+watch_range 0100-07ff iram
+
+press 360 start
+press 420 a
+press 540 start
+hold 850-1050 right
+hold 1060-1250 right
+press 1260 down
+hold 1280-1500 left
+press 1510 down
+hold 1530-1750 left
+hold 1800-2100 right
+press 2110 down
+hold 2130-2400 right
+hold 2450-2750 right
+press 2780 down
+hold 2800-2950 right
+
+capture 1250 pit-top
+capture 1550 pit-mid
+capture 1850 pit-bottom
+capture 2400 lower-rooms
+capture 2950 probe-end
+
+sample_point spin-exit

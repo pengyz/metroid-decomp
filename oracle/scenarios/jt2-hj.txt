@@ -1,0 +1,13 @@
+name jt2-hj
+frames 1500
+watch_range 0300-03ff slot
+
+press 360 start
+press 420 a
+press 540 start
+fixture 900 6878 02 invariant
+
+hold 1100-1350 right
+hold 1180-1280 a
+
+sample_point spin-exit

@@ -1,3 +1,4 @@
+frames 2000
 # batch 3 plan (case 4/20)
 # case_id: vr-3575
 # injection path: frame 150 injection correct path (post-boot injection (RAM init clear path after injection))

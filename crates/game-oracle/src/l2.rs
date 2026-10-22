@@ -436,4 +436,25 @@ mod g3_probe {
         }
     }
 
+
+    /// SC-G4-001 探针（Tourian 域（bank3 窗形——MotherBrain 碰撞族）×D3 抓取）。
+    #[test]
+    fn g4_tourian_capture() {
+        let rom = std::fs::read(concat!(env!("CARGO_MANIFEST_DIR"), "/../../rom/Metroid (USA).nes")).expect("ROM");
+        let prg = &rom[0x10..0x20010];
+        let entries: [(u16, &str); 4] = [
+            (0x95AE, "DeleteOffscreenSprites"), (0x95B4, "SpawnMotherBrain"),
+            (0x95BD, "CollisionZebetiteGlass"), (0x95C0, "CollisionMotherBrain"),
+        ];
+        for (entry, name) in entries {
+            let input = L2In {
+                wram: vec![0; 0x2000], a: 0, x: 0, y: 0, p: 0,
+                ram: vec![0; 0x800], window_bank: 3, // bank3 窗形（Tourian 域！）
+            };
+            let (r, _t) = run_subroutine_traced(prg, entry, 3, &input, &[], 64)
+                .unwrap_or((L2RunResult { a: 0, x: 0, y: 0, writes: vec![] }, vec![]));
+            println!("{name}(${entry:04X}): 写面对={:?} 出=({},{},{})", r.writes, r.a, r.x, r.y);
+        }
+    }
+
     }

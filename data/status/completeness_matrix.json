@@ -15,10 +15,10 @@
   ],
   "faces": {
     "behavior": {
-      "denominator": 11
+      "denominator": 231
     },
     "symbol": {
-      "denominator": 491
+      "denominator": 492
     },
     "data": {
       "denominator": 193
@@ -6282,6 +6282,1995 @@
       "covered": true,
       "evidence": "b-end-1d-* 三方全等（星装载 156B+调色板循环+JumpEngine 停点分发）",
       "note": "denoms 补录格（task-23 批6a）"
+    },
+    "S-FUNC-banks06-8C84-FAMILY": {
+      "id": "S-FUNC-banks06-8C84-FAMILY",
+      "face": "symbol",
+      "module": "decode-gap 补录",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "00-06:$8C84-$8CF6（5 bank 同构代码岛，A 级 decode-sweep×ref_atlas 双工具 code 1.00）",
+      "note": "decode-gap 补录格（denoms v2 纠偏清单）；证据=docs/findings/decode-sweep-r4-banks0-6.md（5×$8C84-$8CF6 定谳）"
+    },
+    "B-SCN-bundle-capture": {
+      "id": "B-SCN-bundle-capture",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/bundle-capture.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-bundle-ff": {
+      "id": "B-SCN-bundle-ff",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/bundle-ff.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-fixture-test": {
+      "id": "B-SCN-fixture-test",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/fixture-test.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-jt-00": {
+      "id": "B-SCN-jt-00",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/jt-00.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-jt-02": {
+      "id": "B-SCN-jt-02",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/jt-02.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-jt-13": {
+      "id": "B-SCN-jt-13",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/jt-13.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-jt2-force12": {
+      "id": "B-SCN-jt2-force12",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/jt2-force12.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-jt2-hj": {
+      "id": "B-SCN-jt2-hj",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/jt2-hj.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-jt2-none": {
+      "id": "B-SCN-jt2-none",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/jt2-none.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-jt3-stand": {
+      "id": "B-SCN-jt3-stand",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/jt3-stand.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-sc-bomb-blast": {
+      "id": "B-SCN-sc-bomb-blast",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/sc-bomb-blast.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-sc-boss-combat": {
+      "id": "B-SCN-sc-boss-combat",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/sc-boss-combat.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-sc-combat-beam": {
+      "id": "B-SCN-sc-combat-beam",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/sc-combat-beam.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-sc-combat-variant": {
+      "id": "B-SCN-sc-combat-variant",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/sc-combat-variant.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-sc-death-chain": {
+      "id": "B-SCN-sc-death-chain",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/sc-death-chain.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-sc-death-chain2": {
+      "id": "B-SCN-sc-death-chain2",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/sc-death-chain2.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-sc-death-chain3": {
+      "id": "B-SCN-sc-death-chain3",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/sc-death-chain3.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-sc-death-chain4": {
+      "id": "B-SCN-sc-death-chain4",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/sc-death-chain4.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-sc-door-deep": {
+      "id": "B-SCN-sc-door-deep",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/sc-door-deep.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-sc-door-transition": {
+      "id": "B-SCN-sc-door-transition",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/sc-door-transition.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-sc-elev-endframe-test": {
+      "id": "B-SCN-sc-elev-endframe-test",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/sc-elev-endframe-test.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-sc-elev-probe": {
+      "id": "B-SCN-sc-elev-probe",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/sc-elev-probe.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-sc-elev-probe2": {
+      "id": "B-SCN-sc-elev-probe2",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/sc-elev-probe2.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-sc-elev-probe3": {
+      "id": "B-SCN-sc-elev-probe3",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/sc-elev-probe3.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-sc-elevator-family": {
+      "id": "B-SCN-sc-elevator-family",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/sc-elevator-family.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-sc-elevator-ride": {
+      "id": "B-SCN-sc-elevator-ride",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/sc-elevator-ride.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-sc-enemy-encounter": {
+      "id": "B-SCN-sc-enemy-encounter",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/sc-enemy-encounter.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-sc-game-over": {
+      "id": "B-SCN-sc-game-over",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/sc-game-over.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-sc-hit": {
+      "id": "B-SCN-sc-hit",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/sc-hit.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-sc-hit2": {
+      "id": "B-SCN-sc-hit2",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/sc-hit2.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-sc-item-pickup": {
+      "id": "B-SCN-sc-item-pickup",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/sc-item-pickup.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-sc-item-pickup10": {
+      "id": "B-SCN-sc-item-pickup10",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/sc-item-pickup10.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-sc-item-pickup11": {
+      "id": "B-SCN-sc-item-pickup11",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/sc-item-pickup11.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-sc-item-pickup12": {
+      "id": "B-SCN-sc-item-pickup12",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/sc-item-pickup12.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-sc-item-pickup13": {
+      "id": "B-SCN-sc-item-pickup13",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/sc-item-pickup13.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-sc-item-pickup14": {
+      "id": "B-SCN-sc-item-pickup14",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/sc-item-pickup14.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-sc-item-pickup15": {
+      "id": "B-SCN-sc-item-pickup15",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/sc-item-pickup15.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-sc-item-pickup16": {
+      "id": "B-SCN-sc-item-pickup16",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/sc-item-pickup16.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-sc-item-pickup2": {
+      "id": "B-SCN-sc-item-pickup2",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/sc-item-pickup2.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-sc-item-pickup3": {
+      "id": "B-SCN-sc-item-pickup3",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/sc-item-pickup3.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-sc-item-pickup4": {
+      "id": "B-SCN-sc-item-pickup4",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/sc-item-pickup4.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-sc-item-pickup5": {
+      "id": "B-SCN-sc-item-pickup5",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/sc-item-pickup5.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-sc-item-pickup6": {
+      "id": "B-SCN-sc-item-pickup6",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/sc-item-pickup6.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-sc-item-pickup7": {
+      "id": "B-SCN-sc-item-pickup7",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/sc-item-pickup7.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-sc-item-pickup8": {
+      "id": "B-SCN-sc-item-pickup8",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/sc-item-pickup8.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-sc-item-pickup9": {
+      "id": "B-SCN-sc-item-pickup9",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/sc-item-pickup9.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-sc-mappos-probe": {
+      "id": "B-SCN-sc-mappos-probe",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/sc-mappos-probe.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-sc-morph-tunnel": {
+      "id": "B-SCN-sc-morph-tunnel",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/sc-morph-tunnel.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-sc-nav-probe5": {
+      "id": "B-SCN-sc-nav-probe5",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/sc-nav-probe5.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-sc-password-entry": {
+      "id": "B-SCN-sc-password-entry",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/sc-password-entry.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-sc-password-entry2": {
+      "id": "B-SCN-sc-password-entry2",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/sc-password-entry2.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-sc-password-entry3": {
+      "id": "B-SCN-sc-password-entry3",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/sc-password-entry3.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-sc-pickup-deep": {
+      "id": "B-SCN-sc-pickup-deep",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/sc-pickup-deep.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-sc-pickup-final": {
+      "id": "B-SCN-sc-pickup-final",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/sc-pickup-final.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-sc-pickup-final2": {
+      "id": "B-SCN-sc-pickup-final2",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/sc-pickup-final2.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-sc-pickup-final3": {
+      "id": "B-SCN-sc-pickup-final3",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/sc-pickup-final3.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-sc-pickup-final4": {
+      "id": "B-SCN-sc-pickup-final4",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/sc-pickup-final4.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-sc-pickup-final5": {
+      "id": "B-SCN-sc-pickup-final5",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/sc-pickup-final5.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-sc-pickup-final6": {
+      "id": "B-SCN-sc-pickup-final6",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/sc-pickup-final6.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-sc-pickup-real": {
+      "id": "B-SCN-sc-pickup-real",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/sc-pickup-real.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-sc-pickup-touch": {
+      "id": "B-SCN-sc-pickup-touch",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/sc-pickup-touch.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-sc-roll-nav": {
+      "id": "B-SCN-sc-roll-nav",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/sc-roll-nav.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-sc-room-scroll": {
+      "id": "B-SCN-sc-room-scroll",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/sc-room-scroll.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-sc-statue-gate": {
+      "id": "B-SCN-sc-statue-gate",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/sc-statue-gate.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-sc-sweep-3550": {
+      "id": "B-SCN-sc-sweep-3550",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/sc-sweep-3550.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-sc-sweep-3650": {
+      "id": "B-SCN-sc-sweep-3650",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/sc-sweep-3650.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-sc-sweep-3750": {
+      "id": "B-SCN-sc-sweep-3750",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/sc-sweep-3750.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-sc-sweep-3850": {
+      "id": "B-SCN-sc-sweep-3850",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/sc-sweep-3850.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-sc-sweep-3950": {
+      "id": "B-SCN-sc-sweep-3950",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/sc-sweep-3950.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-sc-t45-3": {
+      "id": "B-SCN-sc-t45-3",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/sc-t45-3.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-sc-t45-5": {
+      "id": "B-SCN-sc-t45-5",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/sc-t45-5.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-sc-t45-6": {
+      "id": "B-SCN-sc-t45-6",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/sc-t45-6.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-sc-title-menu": {
+      "id": "B-SCN-sc-title-menu",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/sc-title-menu.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-sc-title-menu2": {
+      "id": "B-SCN-sc-title-menu2",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/sc-title-menu2.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-sc-title-menu3": {
+      "id": "B-SCN-sc-title-menu3",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/sc-title-menu3.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-sc-touch-gate": {
+      "id": "B-SCN-sc-touch-gate",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/sc-touch-gate.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-sc-touch-gate2": {
+      "id": "B-SCN-sc-touch-gate2",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/sc-touch-gate2.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-title-recon": {
+      "id": "B-SCN-title-recon",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/title-recon.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-a9-037-recap-0": {
+      "id": "B-SCN-a9-037-recap-0",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/a9-037-recap-0.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-a9-037-recap-1": {
+      "id": "B-SCN-a9-037-recap-1",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/a9-037-recap-1.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-a9-037-recap-2": {
+      "id": "B-SCN-a9-037-recap-2",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/a9-037-recap-2.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-a9-037-recap-3": {
+      "id": "B-SCN-a9-037-recap-3",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/a9-037-recap-3.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-a9-037-recap-4": {
+      "id": "B-SCN-a9-037-recap-4",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/a9-037-recap-4.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-a9-037-recap-5": {
+      "id": "B-SCN-a9-037-recap-5",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/a9-037-recap-5.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-a9-037-recap-6": {
+      "id": "B-SCN-a9-037-recap-6",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/a9-037-recap-6.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-a9-037-recap-7": {
+      "id": "B-SCN-a9-037-recap-7",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/a9-037-recap-7.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-capture-fix-f1f4-00": {
+      "id": "B-SCN-capture-fix-f1f4-00",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/capture-fix-f1f4-00.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-capture-fix-f1f4-01": {
+      "id": "B-SCN-capture-fix-f1f4-01",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/capture-fix-f1f4-01.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-capture-fix-f1f4-02": {
+      "id": "B-SCN-capture-fix-f1f4-02",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/capture-fix-f1f4-02.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-capture-fix-f1f4-03": {
+      "id": "B-SCN-capture-fix-f1f4-03",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/capture-fix-f1f4-03.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-capture-fix-f1f4-04": {
+      "id": "B-SCN-capture-fix-f1f4-04",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/capture-fix-f1f4-04.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-capture-fix-f1f4-05": {
+      "id": "B-SCN-capture-fix-f1f4-05",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/capture-fix-f1f4-05.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-capture-fix-f1f4-06": {
+      "id": "B-SCN-capture-fix-f1f4-06",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/capture-fix-f1f4-06.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-capture-fix-f1f4-07": {
+      "id": "B-SCN-capture-fix-f1f4-07",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/capture-fix-f1f4-07.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-capture-fix-f1f4-08": {
+      "id": "B-SCN-capture-fix-f1f4-08",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/capture-fix-f1f4-08.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-capture-fix-f1f4-09": {
+      "id": "B-SCN-capture-fix-f1f4-09",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/capture-fix-f1f4-09.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-golden-reanchor-00": {
+      "id": "B-SCN-golden-reanchor-00",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/golden-reanchor-00.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-golden-reanchor-01": {
+      "id": "B-SCN-golden-reanchor-01",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/golden-reanchor-01.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-golden-reanchor-02": {
+      "id": "B-SCN-golden-reanchor-02",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/golden-reanchor-02.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-golden-reanchor-03": {
+      "id": "B-SCN-golden-reanchor-03",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/golden-reanchor-03.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-golden-reanchor-04": {
+      "id": "B-SCN-golden-reanchor-04",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/golden-reanchor-04.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-golden-reanchor-05": {
+      "id": "B-SCN-golden-reanchor-05",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/golden-reanchor-05.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-golden-reanchor-06": {
+      "id": "B-SCN-golden-reanchor-06",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/golden-reanchor-06.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-golden-reanchor-07": {
+      "id": "B-SCN-golden-reanchor-07",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/golden-reanchor-07.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-golden-reanchor-08": {
+      "id": "B-SCN-golden-reanchor-08",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/golden-reanchor-08.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-golden-reanchor-09": {
+      "id": "B-SCN-golden-reanchor-09",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/golden-reanchor-09.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-golden-reanchor-10": {
+      "id": "B-SCN-golden-reanchor-10",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/golden-reanchor-10.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-golden-reanchor-11": {
+      "id": "B-SCN-golden-reanchor-11",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/golden-reanchor-11.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-golden-reanchor-12": {
+      "id": "B-SCN-golden-reanchor-12",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/golden-reanchor-12.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-golden-reanchor-13": {
+      "id": "B-SCN-golden-reanchor-13",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/golden-reanchor-13.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-golden-reanchor-14": {
+      "id": "B-SCN-golden-reanchor-14",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/golden-reanchor-14.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-golden-reanchor-15": {
+      "id": "B-SCN-golden-reanchor-15",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/golden-reanchor-15.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-golden-reanchor-16": {
+      "id": "B-SCN-golden-reanchor-16",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/golden-reanchor-16.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-golden-reanchor-17": {
+      "id": "B-SCN-golden-reanchor-17",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/golden-reanchor-17.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-golden-reanchor-18": {
+      "id": "B-SCN-golden-reanchor-18",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/golden-reanchor-18.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-golden-reanchor-19": {
+      "id": "B-SCN-golden-reanchor-19",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/golden-reanchor-19.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-reanchor-batch2-00": {
+      "id": "B-SCN-reanchor-batch2-00",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/reanchor-batch2-00.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-reanchor-batch2-01": {
+      "id": "B-SCN-reanchor-batch2-01",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/reanchor-batch2-01.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-reanchor-batch2-02": {
+      "id": "B-SCN-reanchor-batch2-02",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/reanchor-batch2-02.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-reanchor-batch2-03": {
+      "id": "B-SCN-reanchor-batch2-03",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/reanchor-batch2-03.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-reanchor-batch2-04": {
+      "id": "B-SCN-reanchor-batch2-04",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/reanchor-batch2-04.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-reanchor-batch2-05": {
+      "id": "B-SCN-reanchor-batch2-05",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/reanchor-batch2-05.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-reanchor-batch2-06": {
+      "id": "B-SCN-reanchor-batch2-06",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/reanchor-batch2-06.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-reanchor-batch2-07": {
+      "id": "B-SCN-reanchor-batch2-07",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/reanchor-batch2-07.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-reanchor-batch2-08": {
+      "id": "B-SCN-reanchor-batch2-08",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/reanchor-batch2-08.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-reanchor-batch2-09": {
+      "id": "B-SCN-reanchor-batch2-09",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/reanchor-batch2-09.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-reanchor-batch2-10": {
+      "id": "B-SCN-reanchor-batch2-10",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/reanchor-batch2-10.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-reanchor-batch2-11": {
+      "id": "B-SCN-reanchor-batch2-11",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/reanchor-batch2-11.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-reanchor-batch2-12": {
+      "id": "B-SCN-reanchor-batch2-12",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/reanchor-batch2-12.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-reanchor-batch2-13": {
+      "id": "B-SCN-reanchor-batch2-13",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/reanchor-batch2-13.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-reanchor-batch2-14": {
+      "id": "B-SCN-reanchor-batch2-14",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/reanchor-batch2-14.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-reanchor-batch2-15": {
+      "id": "B-SCN-reanchor-batch2-15",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/reanchor-batch2-15.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-reanchor-batch2-16": {
+      "id": "B-SCN-reanchor-batch2-16",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/reanchor-batch2-16.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-reanchor-batch2-17": {
+      "id": "B-SCN-reanchor-batch2-17",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/reanchor-batch2-17.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-reanchor-batch2-18": {
+      "id": "B-SCN-reanchor-batch2-18",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/reanchor-batch2-18.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-reanchor-batch2-19": {
+      "id": "B-SCN-reanchor-batch2-19",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/reanchor-batch2-19.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-reanchor-batch3-00": {
+      "id": "B-SCN-reanchor-batch3-00",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/reanchor-batch3-00.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-reanchor-batch3-01": {
+      "id": "B-SCN-reanchor-batch3-01",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/reanchor-batch3-01.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-reanchor-batch3-02": {
+      "id": "B-SCN-reanchor-batch3-02",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/reanchor-batch3-02.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-reanchor-batch3-03": {
+      "id": "B-SCN-reanchor-batch3-03",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/reanchor-batch3-03.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-reanchor-batch3-04": {
+      "id": "B-SCN-reanchor-batch3-04",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/reanchor-batch3-04.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-reanchor-batch3-05": {
+      "id": "B-SCN-reanchor-batch3-05",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/reanchor-batch3-05.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-reanchor-batch3-06": {
+      "id": "B-SCN-reanchor-batch3-06",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/reanchor-batch3-06.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-reanchor-batch3-07": {
+      "id": "B-SCN-reanchor-batch3-07",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/reanchor-batch3-07.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-reanchor-batch3-08": {
+      "id": "B-SCN-reanchor-batch3-08",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/reanchor-batch3-08.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-reanchor-batch3-09": {
+      "id": "B-SCN-reanchor-batch3-09",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/reanchor-batch3-09.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-reanchor-batch3-10": {
+      "id": "B-SCN-reanchor-batch3-10",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/reanchor-batch3-10.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-reanchor-batch3-11": {
+      "id": "B-SCN-reanchor-batch3-11",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/reanchor-batch3-11.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-reanchor-batch3-12": {
+      "id": "B-SCN-reanchor-batch3-12",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/reanchor-batch3-12.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-reanchor-batch3-13": {
+      "id": "B-SCN-reanchor-batch3-13",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/reanchor-batch3-13.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-reanchor-batch3-14": {
+      "id": "B-SCN-reanchor-batch3-14",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/reanchor-batch3-14.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-reanchor-batch3-15": {
+      "id": "B-SCN-reanchor-batch3-15",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/reanchor-batch3-15.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-reanchor-batch3-16": {
+      "id": "B-SCN-reanchor-batch3-16",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/reanchor-batch3-16.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-reanchor-batch3-17": {
+      "id": "B-SCN-reanchor-batch3-17",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/reanchor-batch3-17.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-reanchor-batch3-18": {
+      "id": "B-SCN-reanchor-batch3-18",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/reanchor-batch3-18.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-reanchor-batch3-19": {
+      "id": "B-SCN-reanchor-batch3-19",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/reanchor-batch3-19.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-reanchor-batch3-20": {
+      "id": "B-SCN-reanchor-batch3-20",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/reanchor-batch3-20.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-reanchor-batch4-00": {
+      "id": "B-SCN-reanchor-batch4-00",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/reanchor-batch4-00.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-reanchor-batch4-01": {
+      "id": "B-SCN-reanchor-batch4-01",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/reanchor-batch4-01.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-reanchor-batch4-02": {
+      "id": "B-SCN-reanchor-batch4-02",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/reanchor-batch4-02.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-reanchor-batch4-03": {
+      "id": "B-SCN-reanchor-batch4-03",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/reanchor-batch4-03.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-reanchor-batch4-04": {
+      "id": "B-SCN-reanchor-batch4-04",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/reanchor-batch4-04.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-reanchor-batch4-05": {
+      "id": "B-SCN-reanchor-batch4-05",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/reanchor-batch4-05.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-reanchor-batch4-06": {
+      "id": "B-SCN-reanchor-batch4-06",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/reanchor-batch4-06.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-reanchor-batch4-07": {
+      "id": "B-SCN-reanchor-batch4-07",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/reanchor-batch4-07.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-reanchor-batch4-08": {
+      "id": "B-SCN-reanchor-batch4-08",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/reanchor-batch4-08.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-reanchor-batch4-09": {
+      "id": "B-SCN-reanchor-batch4-09",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/reanchor-batch4-09.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-reanchor-batch4-10": {
+      "id": "B-SCN-reanchor-batch4-10",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/reanchor-batch4-10.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-reanchor-batch4-11": {
+      "id": "B-SCN-reanchor-batch4-11",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/reanchor-batch4-11.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-reanchor-batch4-12": {
+      "id": "B-SCN-reanchor-batch4-12",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/reanchor-batch4-12.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-reanchor-batch4-13": {
+      "id": "B-SCN-reanchor-batch4-13",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/reanchor-batch4-13.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-reanchor-batch4-14": {
+      "id": "B-SCN-reanchor-batch4-14",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/reanchor-batch4-14.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-reanchor-batch4-15": {
+      "id": "B-SCN-reanchor-batch4-15",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/reanchor-batch4-15.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-reanchor-batch4-16": {
+      "id": "B-SCN-reanchor-batch4-16",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/reanchor-batch4-16.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-reanchor-batch4-17": {
+      "id": "B-SCN-reanchor-batch4-17",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/reanchor-batch4-17.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-reanchor-batch4-18": {
+      "id": "B-SCN-reanchor-batch4-18",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/reanchor-batch4-18.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-reanchor-batch4-19": {
+      "id": "B-SCN-reanchor-batch4-19",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/reanchor-batch4-19.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-reanchor-batch5-00": {
+      "id": "B-SCN-reanchor-batch5-00",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/reanchor-batch5-00.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-reanchor-batch5-01": {
+      "id": "B-SCN-reanchor-batch5-01",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/reanchor-batch5-01.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-reanchor-batch5-02": {
+      "id": "B-SCN-reanchor-batch5-02",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/reanchor-batch5-02.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-reanchor-batch5-03": {
+      "id": "B-SCN-reanchor-batch5-03",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/reanchor-batch5-03.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-reanchor-batch5-04": {
+      "id": "B-SCN-reanchor-batch5-04",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/reanchor-batch5-04.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-reanchor-batch5-05": {
+      "id": "B-SCN-reanchor-batch5-05",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/reanchor-batch5-05.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-reanchor-batch5-06": {
+      "id": "B-SCN-reanchor-batch5-06",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/reanchor-batch5-06.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-reanchor-batch5-07": {
+      "id": "B-SCN-reanchor-batch5-07",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/reanchor-batch5-07.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-reanchor-batch5-08": {
+      "id": "B-SCN-reanchor-batch5-08",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/reanchor-batch5-08.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-reanchor-batch5-09": {
+      "id": "B-SCN-reanchor-batch5-09",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/reanchor-batch5-09.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-reanchor-batch5-10": {
+      "id": "B-SCN-reanchor-batch5-10",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/reanchor-batch5-10.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-reanchor-batch5-11": {
+      "id": "B-SCN-reanchor-batch5-11",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/reanchor-batch5-11.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-reanchor-batch5-12": {
+      "id": "B-SCN-reanchor-batch5-12",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/reanchor-batch5-12.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-reanchor-batch5-13": {
+      "id": "B-SCN-reanchor-batch5-13",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/reanchor-batch5-13.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-reanchor-batch5-14": {
+      "id": "B-SCN-reanchor-batch5-14",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/reanchor-batch5-14.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-reanchor-batch5-15": {
+      "id": "B-SCN-reanchor-batch5-15",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/reanchor-batch5-15.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-reanchor-batch5-16": {
+      "id": "B-SCN-reanchor-batch5-16",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/reanchor-batch5-16.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-reanchor-batch5-17": {
+      "id": "B-SCN-reanchor-batch5-17",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/reanchor-batch5-17.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-reanchor-batch5-18": {
+      "id": "B-SCN-reanchor-batch5-18",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/reanchor-batch5-18.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-reanchor-batch5-19": {
+      "id": "B-SCN-reanchor-batch5-19",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/reanchor-batch5-19.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-rom-empirical-b_f2ca_c1_exit": {
+      "id": "B-SCN-rom-empirical-b_f2ca_c1_exit",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/rom-empirical-b_f2ca_c1_exit.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-rom-empirical-b_f2ca_mask0_noop": {
+      "id": "B-SCN-rom-empirical-b_f2ca_mask0_noop",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/rom-empirical-b_f2ca_mask0_noop.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-rom-empirical-b_f2ca_xyff": {
+      "id": "B-SCN-rom-empirical-b_f2ca_xyff",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/rom-empirical-b_f2ca_xyff.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-rom-empirical-gen_f2ca_1": {
+      "id": "B-SCN-rom-empirical-gen_f2ca_1",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/rom-empirical-gen_f2ca_1.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-rom-empirical-gen_f2ca_2": {
+      "id": "B-SCN-rom-empirical-gen_f2ca_2",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/rom-empirical-gen_f2ca_2.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-rom-empirical-gen_f2ca_3": {
+      "id": "B-SCN-rom-empirical-gen_f2ca_3",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/rom-empirical-gen_f2ca_3.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-rom-empirical-gen_f2ca_5": {
+      "id": "B-SCN-rom-empirical-gen_f2ca_5",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/rom-empirical-gen_f2ca_5.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-rom-empirical-gen_f2ca_6": {
+      "id": "B-SCN-rom-empirical-gen_f2ca_6",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/rom-empirical-gen_f2ca_6.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-rom-empirical-gen_f2ca_7": {
+      "id": "B-SCN-rom-empirical-gen_f2ca_7",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/rom-empirical-gen_f2ca_7.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-rom-empirical-gen_f2ed_0": {
+      "id": "B-SCN-rom-empirical-gen_f2ed_0",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/rom-empirical-gen_f2ed_0.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-rom-empirical-gen_f2ed_1": {
+      "id": "B-SCN-rom-empirical-gen_f2ed_1",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/rom-empirical-gen_f2ed_1.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-rom-empirical-gen_f2ed_2": {
+      "id": "B-SCN-rom-empirical-gen_f2ed_2",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/rom-empirical-gen_f2ed_2.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-rom-empirical-gen_f2ed_3": {
+      "id": "B-SCN-rom-empirical-gen_f2ed_3",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/rom-empirical-gen_f2ed_3.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-rom-empirical-gen_f2ed_4": {
+      "id": "B-SCN-rom-empirical-gen_f2ed_4",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/rom-empirical-gen_f2ed_4.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-sc-a3-028-regen": {
+      "id": "B-SCN-sc-a3-028-regen",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/sc-a3-028-regen.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-sc-a3-028-seed0": {
+      "id": "B-SCN-sc-a3-028-seed0",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/sc-a3-028-seed0.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-sc-a3-028-seed1": {
+      "id": "B-SCN-sc-a3-028-seed1",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/sc-a3-028-seed1.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-sc-a3-028-seed2": {
+      "id": "B-SCN-sc-a3-028-seed2",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/sc-a3-028-seed2.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-sc-a3-028-seed3": {
+      "id": "B-SCN-sc-a3-028-seed3",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/sc-a3-028-seed3.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-sc-a3-028-seed4": {
+      "id": "B-SCN-sc-a3-028-seed4",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/sc-a3-028-seed4.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-sc-a3-028-seed5": {
+      "id": "B-SCN-sc-a3-028-seed5",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/sc-a3-028-seed5.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-sc-a3-028-seed6": {
+      "id": "B-SCN-sc-a3-028-seed6",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/sc-a3-028-seed6.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-sc-a3-028-seed7": {
+      "id": "B-SCN-sc-a3-028-seed7",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/sc-a3-028-seed7.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
     }
   }
 }

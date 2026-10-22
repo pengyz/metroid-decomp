@@ -1,0 +1,14 @@
+name jt3-stand
+frames 1500
+watch_range 0000-00ff zp
+watch_range 0300-03ff slot
+
+press 360 start
+press 420 a
+press 540 start
+fixture 900 6878 02 invariant
+hold 1100-1250 right
+hold 1280-1380 a
+
+capture 1350 apex
+sample_point spin-exit

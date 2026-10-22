@@ -1,0 +1,926 @@
+# 454 案证据重组件（证据重组·第二步）
+
+> 【状态】重组为可用证据——编译状态标注+可调用面重组（每条公式标注所属域+可调用面）
+
+> 【refs 引用必写】bank:addr 引证（A 级原文）——纪律强化（用户裁定）+四项核（对抗复核核（证伪立场））
+
+> 【生成】bash 重组证据件（bank:addr 引证（写径实证（A 级原文）））→证据件实录（编译状态标注+可调用面重组）
+
+
+- **ShowEndSamus**（`00:9b1c`——refs asm 考证（bank:addr（`00:9b1c`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EndSamusFlash**（`00:9b34`——refs asm 考证（bank:addr（`00:9b34`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SamusWave**（`00:9b93`——refs asm 考证（bank:addr（`00:9b93`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **LoadEndSamusSprites**（`00:9c9a`——refs asm 考证（bank:addr（`00:9c9a`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **LoadEndSamusSprites@loop_A**（`00:9caa`——refs asm 考证（bank:addr（`00:9caa`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **LoadEndSamusSprites@else_A**（`00:9cc0`——refs asm 考证（bank:addr（`00:9cc0`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **LoadEndSamusSprites@endIf_A**（`00:9cc5`——refs asm 考证（bank:addr（`00:9cc5`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **LoadEndSamusSprites@loop_B**（`00:9ced`——refs asm 考证（bank:addr（`00:9ced`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **LoadEndSamusSprites@RTS**（`00:9cf9`——refs asm 考证（bank:addr（`00:9cf9`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SamusHeadSpriteTable**（`00:9cfa`——refs asm 考证（bank:addr（`00:9cfa`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EndSamusAddrTbl**（`00:9d5a`——refs asm 考证（bank:addr（`00:9d5a`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **NormalSamus**（`00:9d66`——refs asm 考证（bank:addr（`00:9d66`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **BackTurnedSamus**（`00:9d9c`——refs asm 考证（bank:addr（`00:9d9c`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **FistRaisedSamus**（`00:9dd2`——refs asm 考证（bank:addr（`00:9dd2`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **HelmetOffSamus**（`00:9e08`——refs asm 考证（bank:addr（`00:9e08`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **JumpsuitSamus**（`00:9e3e`——refs asm 考证（bank:addr（`00:9e3e`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **BikiniSamus**（`00:9e74`——refs asm 考证（bank:addr（`00:9e74`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SFXData@SamusWalk**（`00:b21d`——refs asm 考证（bank:addr（`00:b21d`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SFXData@SamusHitSQ1SQ2**（`00:b225`——refs asm 考证（bank:addr（`00:b225`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SFXData@SamusJump**（`00:b251`——refs asm 考证（bank:addr（`00:b251`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SFXData@SamusBall**（`00:b26d`——refs asm 考证（bank:addr（`00:b26d`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SFXData@SamusDie**（`00:b275`——refs asm 考证（bank:addr（`00:b275`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SamusWalkSFXInit**（`00:b598`——refs asm 考证（bank:addr（`00:b598`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SamusHitSFXCont**（`00:b650`——refs asm 考证（bank:addr（`00:b650`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SamusHitSFXCont@endIf_A**（`00:b658`——refs asm 考证（bank:addr（`00:b658`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SamusHitSFXInit**（`00:b673`——refs asm 考证（bank:addr（`00:b673`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SamusHitSFXInit@RTS**（`00:b694`——refs asm 考证（bank:addr（`00:b694`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SamusJumpSFXInit**（`00:b703`——refs asm 考证（bank:addr（`00:b703`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SamusToBallSFXInit**（`00:b834`——refs asm 考证（bank:addr（`00:b834`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SamusToBallSFXCont**（`00:b84f`——refs asm 考证（bank:addr（`00:b84f`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SamusDieSFXInit**（`00:b8d2`——refs asm 考证（bank:addr（`00:b8d2`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SamusDieSFXInit@RTS**（`00:b8ec`——refs asm 考证（bank:addr（`00:b8ec`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SamusDieSFXCont**（`00:b8ed`——refs asm 考证（bank:addr（`00:b8ed`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **CommonJump_UpdateEnemyCommon**（`01:8000`——refs asm 考证（bank:addr（`01:8000`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **CommonJump_UpdateEnemyCommon_noMove**（`01:8003`——refs asm 考证（bank:addr（`01:8003`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **CommonJump_UpdateEnemyCommon_noMoveNoAnim**（`01:8006`——refs asm 考证（bank:addr（`01:8006`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **CommonJump_CrawlerAIRoutine_ShouldCrawlerMove**（`01:8009`——refs asm 考证（bank:addr（`01:8009`（写径实证（A 级原文）））））——域：**other**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **CommonJump_UpdateEnemyAnim**（`01:800c`——refs asm 考证（bank:addr（`01:800c`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **CommonJump_InitEnAnimIndex**（`01:800f`——refs asm 考证（bank:addr（`01:800f`（写径实证（A 级原文）））））——域：**other**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **CommonJump_GetEnemyTypeTimes2PlusFacingDirectionBit0**（`01:8012`——refs asm 考证（bank:addr（`01:8012`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **CommonJump_InitEnemyForceSpeedTowardsSamusDelayAndHealth**（`01:8015`——refs asm 考证（bank:addr（`01:8015`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **CommonJump_InitEnResetAnimIndex**（`01:8018`——refs asm 考证（bank:addr（`01:8018`（写径实证（A 级原文）））））——域：**other**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **CommonJump_EnemyFlipAfterDisplacement**（`01:801b`——refs asm 考证（bank:addr（`01:801b`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **CommonJump_InitEnActiveAnimIndex_NoInitOffset**（`01:801e`——refs asm 考证（bank:addr（`01:801e`（写径实证（A 级原文）））））——域：**other**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **CommonJump_SpawnEnProjectile**（`01:8021`——refs asm 考证（bank:addr（`01:8021`（写径实证（A 级原文）））））——域：**projectile**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **CommonJump_JumpEngine**（`01:8024`——refs asm 考证（bank:addr（`01:8024`（写径实证（A 级原文）））））——域：**other**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **CommonJump_ApplySpeedToPosition**（`01:8027`——refs asm 考证（bank:addr（`01:8027`（写径实证（A 级原文）））））——域：**other**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **CommonJump_0E**（`01:802a`——refs asm 考证（bank:addr（`01:802a`（写径实证（A 级原文）））））——域：**other**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **CommonJump_EnemyGetDeltaY**（`01:802d`——refs asm 考证（bank:addr（`01:802d`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **CommonJump_EnemyGetDeltaX**（`01:8030`——refs asm 考证（bank:addr（`01:8030`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **CommonJump_EnemyBGCollideOrApplySpeed**（`01:8033`——refs asm 考证（bank:addr（`01:8033`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **CommonJump_EnemyGetDeltaY_UsingAcceleration**（`01:8036`——refs asm 考证（bank:addr（`01:8036`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **CommonJump_EnemyGetDeltaX_UsingAcceleration**（`01:8039`——refs asm 考证（bank:addr（`01:8039`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **CommonJump_DrawEnemy**（`01:803c`——refs asm 考证（bank:addr（`01:803c`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **CommonJump_DrawTileBlast**（`01:803f`——refs asm 考证（bank:addr（`01:803f`（写径实证（A 级原文）））））——域：**other**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **CommonJump_SubtractHealth**（`01:8042`——refs asm 考证（bank:addr（`01:8042`（写径实证（A 级原文）））））——域：**other**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **CommonJump_Base10Subtract**（`01:8045`——refs asm 考证（bank:addr（`01:8045`（写径实证（A 级原文）））））——域：**other**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyGetDeltaY_ClearEnJumpDsplcmnt**（`01:82a5`——refs asm 考证（bank:addr（`01:82a5`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **ObjAnim_SamusRun**（`01:8572`——refs asm 考证（bank:addr（`01:8572`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **ObjAnim_SamusFront**（`01:8576`——refs asm 考证（bank:addr（`01:8576`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **ObjAnim_SamusUnroll**（`01:8578`——refs asm 考证（bank:addr（`01:8578`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **ObjAnim_SamusStand**（`01:8579`——refs asm 考证（bank:addr（`01:8579`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **ObjAnim_SamusStandFire**（`01:857b`——refs asm 考证（bank:addr（`01:857b`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **ObjAnim_SamusJumpTransition**（`01:857d`——refs asm 考证（bank:addr（`01:857d`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **ObjAnim_SamusJump**（`01:857e`——refs asm 考证（bank:addr（`01:857e`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **ObjAnim_SamusSalto**（`01:8580`——refs asm 考证（bank:addr（`01:8580`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **ObjAnim_SamusRunJump**（`01:8585`——refs asm 考证（bank:addr（`01:8585`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **ObjAnim_SamusRoll**（`01:8588`——refs asm 考证（bank:addr（`01:8588`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **ObjAnim_SamusJumpFire**（`01:8592`——refs asm 考证（bank:addr（`01:8592`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **ObjAnim_SamusRunFire**（`01:8594`——refs asm 考证（bank:addr（`01:8594`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **ObjAnim_SamusPntUpFire**（`01:8598`——refs asm 考证（bank:addr（`01:8598`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **ObjAnim_SamusPntUp**（`01:8599`——refs asm 考证（bank:addr（`01:8599`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **ObjAnim_SamusExplode**（`01:85a4`——refs asm 考证（bank:addr（`01:85a4`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **ObjAnim_SamusJumpPntUpFire**（`01:85a6`——refs asm 考证（bank:addr（`01:85a6`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **ObjAnim_SamusJumpPntUp**（`01:85a7`——refs asm 考证（bank:addr（`01:85a7`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **ObjAnim_SamusRunPntUp**（`01:85a9`——refs asm 考证（bank:addr（`01:85a9`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **ObjAnim_SamusRunPntUpFire1**（`01:85ad`——refs asm 考证（bank:addr（`01:85ad`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **ObjAnim_SamusRunPntUpFire2**（`01:85af`——refs asm 考证（bank:addr（`01:85af`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **ObjAnim_SamusRunPntUpFire3**（`01:85b1`——refs asm 考证（bank:addr（`01:85b1`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **ObjAnim_SamusFadeOutArea**（`01:85b3`——refs asm 考证（bank:addr（`01:85b3`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **ObjAnim_SamusFadeOutArea_Reset**（`01:85c0`——refs asm 考证（bank:addr（`01:85c0`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **ObjAnim_SamusFadeInArea**（`01:85d1`——refs asm 考证（bank:addr（`01:85d1`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **ObjAnim_SamusFadeInArea_Reset**（`01:85dd`——refs asm 考证（bank:addr（`01:85dd`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **ObjFrame_SamusRun0**（`01:87cb`——refs asm 考证（bank:addr（`01:87cb`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **ObjFrame_SamusRun1**（`01:87dd`——refs asm 考证（bank:addr（`01:87dd`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **ObjFrame_SamusRun2**（`01:87f0`——refs asm 考证（bank:addr（`01:87f0`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **ObjFrame_SamusFront**（`01:8802`——refs asm 考证（bank:addr（`01:8802`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **ObjFrame_SamusStand**（`01:8818`——refs asm 考证（bank:addr（`01:8818`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **ObjFrame_SamusRunFire0**（`01:882c`——refs asm 考证（bank:addr（`01:882c`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **ObjFrame_SamusRunFire1**（`01:883e`——refs asm 考证（bank:addr（`01:883e`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **ObjFrame_SamusRunFire2**（`01:8851`——refs asm 考证（bank:addr（`01:8851`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **ObjFrame_SamusJump**（`01:8863`——refs asm 考证（bank:addr（`01:8863`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **ObjFrame_SamusJumpFire**（`01:8874`——refs asm 考证（bank:addr（`01:8874`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **ObjFrame_SamusSalto0**（`01:8885`——refs asm 考证（bank:addr（`01:8885`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **ObjFrame_SamusSalto1**（`01:888f`——refs asm 考证（bank:addr（`01:888f`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **ObjFrame_SamusSalto2**（`01:8899`——refs asm 考证（bank:addr（`01:8899`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **ObjFrame_SamusSalto3**（`01:88a3`——refs asm 考证（bank:addr（`01:88a3`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **ObjFrame_SamusRoll3**（`01:88ad`——refs asm 考证（bank:addr（`01:88ad`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **ObjFrame_SamusRoll2**（`01:88b8`——refs asm 考证（bank:addr（`01:88b8`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **ObjFrame_SamusRoll1**（`01:88c3`——refs asm 考证（bank:addr（`01:88c3`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **ObjFrame_SamusRoll0**（`01:88ce`——refs asm 考证（bank:addr（`01:88ce`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **ObjFrame_SamusStandFire**（`01:88d9`——refs asm 考证（bank:addr（`01:88d9`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **ObjFrame_SamusPntUp**（`01:8914`——refs asm 考证（bank:addr（`01:8914`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **ObjFrame_SamusPntUpFire**（`01:8928`——refs asm 考证（bank:addr（`01:8928`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **ObjFrame_SamusExplode**（`01:8954`——refs asm 考证（bank:addr（`01:8954`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **ObjFrame_SamusJumpPntUp**（`01:8961`——refs asm 考证（bank:addr（`01:8961`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **ObjFrame_SamusJumpPntUpFire**（`01:8974`——refs asm 考证（bank:addr（`01:8974`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **ObjFrame_SamusRunPntUp0**（`01:8995`——refs asm 考证（bank:addr（`01:8995`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **ObjFrame_SamusRunPntUp1**（`01:89a9`——refs asm 考证（bank:addr（`01:89a9`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **ObjFrame_SamusRunPntUp2**（`01:89be`——refs asm 考证（bank:addr（`01:89be`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **ObjFrame_SamusRunPntUpFire0**（`01:89d2`——refs asm 考证（bank:addr（`01:89d2`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **ObjFrame_SamusRunPntUpFire1**（`01:89e6`——refs asm 考证（bank:addr（`01:89e6`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **ObjFrame_SamusRunPntUpFire2**（`01:89fb`——refs asm 考证（bank:addr（`01:89fb`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **ObjFrame_HighJumpItem**（`01:8a4e`——refs asm 考证（bank:addr（`01:8a4e`（写径实证（A 级原文）））））——域：**other**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SamusEnterDoor**（`01:8b13`——refs asm 考证（bank:addr（`01:8b13`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SamusEnterDoor@else_A**（`01:8b4b`——refs asm 考证（bank:addr（`01:8b4b`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SamusEnterDoor@endIf_A_dex**（`01:8b52`——refs asm 考证（bank:addr（`01:8b52`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SamusEnterDoor@endIf_A_noDex**（`01:8b53`——refs asm 考证（bank:addr（`01:8b53`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SamusInDoor**（`01:8b74`——refs asm 考证（bank:addr（`01:8b74`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **UpdateDoor_LetSamusIn**（`01:8c84`——refs asm 考证（bank:addr（`01:8c84`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **UpdateDoor_LetSamusOut**（`01:8cf0`——refs asm 考证（bank:addr（`01:8cf0`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **AreaSamusY**（`01:95d9`——refs asm 考证（bank:addr（`01:95d9`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyForceSpeedTowardsSamusDelayTbl**（`01:969b`——refs asm 考证（bank:addr（`01:969b`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyDistanceToSamusThreshold**（`01:96ab`——refs asm 考证（bank:addr（`01:96ab`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **JumpByRTSToMovementRoutine_BANK1**（`01:9ae2`——refs asm 考证（bank:addr（`01:9ae2`（写径实证（A 级原文）））））——域：**other**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **JumpByRTSToMovementRoutine_BANK2**（`02:9a2f`——refs asm 考证（bank:addr（`02:9a2f`（写径实证（A 级原文）））））——域：**other**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnAnim_RidleyFireball_R_BANK2**（`02:9bed`——refs asm 考证（bank:addr（`02:9bed`（写径实证（A 级原文）））））——域：**projectile**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnAnim_RidleyFireball_L_BANK2**（`02:9bf2`——refs asm 考证（bank:addr（`02:9bf2`（写径实证（A 级原文）））））——域：**projectile**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnAnim_SqueeptJumping_BANK2**（`02:9bf7`——refs asm 考证（bank:addr（`02:9bf7`（写径实证（A 级原文）））））——域：**other**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnFrame_RidleyFireball0_R_BANK2**（`02:9ec9`——refs asm 考证（bank:addr（`02:9ec9`（写径实证（A 级原文）））））——域：**projectile**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnFrame_RidleyFireball1_R_BANK2**（`02:9ece`——refs asm 考证（bank:addr（`02:9ece`（写径实证（A 级原文）））））——域：**projectile**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnFrame_RidleyFireball2_R_BANK2**（`02:9ed3`——refs asm 考证（bank:addr（`02:9ed3`（写径实证（A 级原文）））））——域：**projectile**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnFrame_RidleyFireball3_R_BANK2**（`02:9ed8`——refs asm 考证（bank:addr（`02:9ed8`（写径实证（A 级原文）））））——域：**projectile**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnFrame_RidleyFireball0_L_BANK2**（`02:9edd`——refs asm 考证（bank:addr（`02:9edd`（写径实证（A 级原文）））））——域：**projectile**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnFrame_RidleyFireball1_L_BANK2**（`02:9ee2`——refs asm 考证（bank:addr（`02:9ee2`（写径实证（A 级原文）））））——域：**projectile**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnFrame_RidleyFireball2_L_BANK2**（`02:9ee7`——refs asm 考证（bank:addr（`02:9ee7`（写径实证（A 级原文）））））——域：**projectile**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnFrame_RidleyFireball3_L_BANK2**（`02:9eec`——refs asm 考证（bank:addr（`02:9eec`（写径实证（A 级原文）））））——域：**projectile**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnFrame_SqueeptJumping1_BANK2**（`02:9ef1`——refs asm 考证（bank:addr（`02:9ef1`（写径实证（A 级原文）））））——域：**other**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnFrame_SqueeptJumping0_BANK2**（`02:9eff`——refs asm 考证（bank:addr（`02:9eff`（写径实证（A 级原文）））））——域：**other**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **GotoClearCurrentMetroidLatchAndMetroidOnSamus**（`03:95a8`——refs asm 考证（bank:addr（`03:95a8`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **MetroidAIRoutine_BANK3@metroidOnSamus_clearLatch**（`03:9964`——refs asm 考证（bank:addr（`03:9964`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **MetroidAIRoutine_BANK3@metroidOnSamus**（`03:9967`——refs asm 考证（bank:addr（`03:9967`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **StoreSamusPositionToTemp**（`03:99e4`——refs asm 考证（bank:addr（`03:99e4`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **MotherBrain_Idle_CollideWithSamus**（`03:9df2`——refs asm 考证（bank:addr（`03:9df2`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **MotherBrain_Idle_CollideWithSamus@endIf_A**（`03:9e0e`——refs asm 考证（bank:addr（`03:9e0e`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **ClearCurrentMetroidLatchAndMetroidOnSamus**（`03:a320`——refs asm 考证（bank:addr（`03:a320`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **AreaSamusMapPosX**（`04:95d7`——refs asm 考证（bank:addr（`04:95d7`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **AreaSamusMapPosY**（`04:95d8`——refs asm 考证（bank:addr（`04:95d8`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **JumpByRTSToMovementRoutine_BANK4**（`04:9a31`——refs asm 考证（bank:addr（`04:9a31`（写径实证（A 级原文）））））——域：**other**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyMovementChoice_RidleyFireball_BANK5**（`05:97dd`——refs asm 考证（bank:addr（`05:97dd`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **JumpByRTSToMovementRoutine_BANK5**（`05:9a00`——refs asm 考证（bank:addr（`05:9a00`（写径实证（A 级原文）））））——域：**other**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **RidleyFireballAIRoutine_BANK5**（`05:9a4a`——refs asm 考证（bank:addr（`05:9a4a`（写径实证（A 级原文）））））——域：**projectile**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **RidleyFireballAIRoutine_BANK5@RemoveFireball**（`05:9a73`——refs asm 考证（bank:addr（`05:9a73`（写径实证（A 级原文）））））——域：**projectile**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **RidleyFireballAIRoutine_BANK5@RTS**（`05:9a78`——refs asm 考证（bank:addr（`05:9a78`（写径实证（A 级原文）））））——域：**projectile**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **RidleyTryToLaunchFireball_BANK5**（`05:9a79`——refs asm 考证（bank:addr（`05:9a79`（写径实证（A 级原文）））））——域：**projectile**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **RidleyTryToLaunchFireball_BANK5@endIf_A**（`05:9a7f`——refs asm 考证（bank:addr（`05:9a7f`（写径实证（A 级原文）））））——域：**projectile**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **RidleyTryToLaunchFireball_BANK5@loop_A**（`05:9a94`——refs asm 考证（bank:addr（`05:9a94`（写径实证（A 级原文）））））——域：**projectile**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **RidleyTryToLaunchFireball_BANK5@RTS**（`05:9aa9`——refs asm 考证（bank:addr（`05:9aa9`（写径实证（A 级原文）））））——域：**projectile**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **RidleyTryToLaunchFireball_FoundEnemySlot_BANK5**（`05:9aaa`——refs asm 考证（bank:addr（`05:9aaa`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **RidleyFireballOffsetX_BANK5**（`05:9adf`——refs asm 考证（bank:addr（`05:9adf`（写径实证（A 级原文）））））——域：**projectile**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnAnim_RidleyFireball_R_BANK5**（`05:9b98`——refs asm 考证（bank:addr（`05:9b98`（写径实证（A 级原文）））））——域：**projectile**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnAnim_RidleyFireball_L_BANK5**（`05:9b9d`——refs asm 考证（bank:addr（`05:9b9d`（写径实证（A 级原文）））））——域：**projectile**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnFrame_RidleyFireball0_R_BANK5**（`05:9e97`——refs asm 考证（bank:addr（`05:9e97`（写径实证（A 级原文）））））——域：**projectile**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnFrame_RidleyFireball1_R_BANK5**（`05:9e9c`——refs asm 考证（bank:addr（`05:9e9c`（写径实证（A 级原文）））））——域：**projectile**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnFrame_RidleyFireball2_R_BANK5**（`05:9ea1`——refs asm 考证（bank:addr（`05:9ea1`（写径实证（A 级原文）））））——域：**projectile**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnFrame_RidleyFireball3_R_BANK5**（`05:9ea6`——refs asm 考证（bank:addr（`05:9ea6`（写径实证（A 级原文）））））——域：**projectile**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnFrame_RidleyFireball0_L_BANK5**（`05:9eab`——refs asm 考证（bank:addr（`05:9eab`（写径实证（A 级原文）））））——域：**projectile**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnFrame_RidleyFireball1_L_BANK5**（`05:9eb0`——refs asm 考证（bank:addr（`05:9eb0`（写径实证（A 级原文）））））——域：**projectile**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnFrame_RidleyFireball2_L_BANK5**（`05:9eb5`——refs asm 考证（bank:addr（`05:9eb5`（写径实证（A 级原文）））））——域：**projectile**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnFrame_RidleyFireball3_L_BANK5**（`05:9eba`——refs asm 考证（bank:addr（`05:9eba`（写径实证（A 级原文）））））——域：**projectile**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **GFX_Samus**（`06:8000`——refs asm 考证（bank:addr（`06:8000`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **GFX_SamusSuitless**（`06:90e0`——refs asm 考证（bank:addr（`06:90e0`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **JumpEngine**（`07:c27c`——refs asm 考证（bank:addr（`07:c27c`（写径实证（A 级原文）））））——域：**other**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **ClearSamusStats**（`07:c578`——refs asm 考证（bank:addr（`07:c578`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **ClearSamusStats@loop**（`07:c57c`——refs asm 考证（bank:addr（`07:c57c`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **LoadSamusGFX**（`07:c5dc`——refs asm 考证（bank:addr（`07:c5dc`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **LoadSamusGFX@endIf_A**（`07:c5eb`——refs asm 考证（bank:addr（`07:c5eb`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SamusInit**（`07:c8d1`——refs asm 考证（bank:addr（`07:c8d1`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SamusIntro**（`07:c9d7`——refs asm 考证（bank:addr（`07:c9d7`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SamusFadeInTimeTbl**（`07:ca13`——refs asm 考证（bank:addr（`07:ca13`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SelectSamusPalette**（`07:cb73`——refs asm 考证（bank:addr（`07:cb73`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SelectSamusPalette@endIf**（`07:cb89`——refs asm 考证（bank:addr（`07:cb89`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SFX_SamusWalk**（`07:cb96`——refs asm 考证（bank:addr（`07:cb96`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SFX_SamusJump**（`07:cbac`——refs asm 考证（bank:addr（`07:cbac`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SFX_SamusHit**（`07:cbde`——refs asm 考证（bank:addr（`07:cbde`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SFX_SamusDie**（`07:cbe2`——refs asm 考证（bank:addr（`07:cbe2`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SFX_SamusBall**（`07:cbef`——refs asm 考证（bank:addr（`07:cbef`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **UpdateSamus**（`07:cc0d`——refs asm 考证（bank:addr（`07:cc0d`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **GoSamusHandler**（`07:cc1a`——refs asm 考证（bank:addr（`07:cc1a`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SamusStand**（`07:cc36`——refs asm 考证（bank:addr（`07:cc36`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SetSamusExplode**（`07:cc8b`——refs asm 考证（bank:addr（`07:cc8b`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SetSamusRun**（`07:cc98`——refs asm 考证（bank:addr（`07:cc98`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SetSamusRunAccel**（`07:ccb7`——refs asm 考证（bank:addr（`07:ccb7`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SamusRun**（`07:ccc2`——refs asm 考证（bank:addr（`07:ccc2`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SetSamusData_3FrameAnimDelay**（`07:cd6b`——refs asm 考证（bank:addr（`07:cd6b`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SetSamusData**（`07:cd6d`——refs asm 考证（bank:addr（`07:cd6d`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SamusRun_SetAnim**（`07:cdbf`——refs asm 考证（bank:addr（`07:cdbf`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SamusRun_Fire**（`07:cdd7`——refs asm 考证（bank:addr（`07:cdd7`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SamusRun_Fire@aimingUp**（`07:cde6`——refs asm 考证（bank:addr（`07:cde6`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SamusRun_Fire@table**（`07:cdf6`——refs asm 考证（bank:addr（`07:cdf6`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **IsSamusDead**（`07:ce84`——refs asm 考证（bank:addr（`07:ce84`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SetSamusStand**（`07:cf55`——refs asm 考证（bank:addr（`07:cf55`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SetSamusStand_NoFootstep**（`07:cf5d`——refs asm 考证（bank:addr（`07:cf5d`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SetSamusAnim**（`07:cf6b`——refs asm 考证（bank:addr（`07:cf6b`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SetSamusNextAnim**（`07:cf6e`——refs asm 考证（bank:addr（`07:cf6e`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SetSamusPntUp**（`07:cf77`——refs asm 考证（bank:addr（`07:cf77`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SamusRun_CheckHorzMovementMidair**（`07:cf88`——refs asm 考证（bank:addr（`07:cf88`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SetSamusJumpPntUp**（`07:cfbe`——refs asm 考证（bank:addr（`07:cfbe`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SetSamusJump**（`07:cfc3`——refs asm 考证（bank:addr（`07:cfc3`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SamusJump**（`07:d002`——refs asm 考证（bank:addr（`07:d002`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SamusJump_CheckHorzMovement**（`07:d055`——refs asm 考证（bank:addr（`07:d055`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SamusJump_CheckFire**（`07:d09c`——refs asm 考证（bank:addr（`07:d09c`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SamusJump_CheckFire@notAimingUp**（`07:d0ad`——refs asm 考证（bank:addr（`07:d0ad`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SetSamusRoll**（`07:d0b5`——refs asm 考证（bank:addr（`07:d0b5`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SamusRoll**（`07:d0e1`——refs asm 考证（bank:addr（`07:d0e1`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SamusPntUp**（`07:d198`——refs asm 考证（bank:addr（`07:d198`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SamusPntUp@endIf_A**（`07:d1a3`——refs asm 考证（bank:addr（`07:d1a3`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SamusPntUp@endIf_C**（`07:d1b2`——refs asm 考证（bank:addr（`07:d1b2`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SamusPntUp@endIf_B**（`07:d1b9`——refs asm 考证（bank:addr（`07:d1b9`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SamusPntUp@endIf_D**（`07:d1c3`——refs asm 考证（bank:addr（`07:d1c3`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SamusPntUp@endIf_E**（`07:d1cc`——refs asm 考证（bank:addr（`07:d1cc`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SamusPntUp@statusTable**（`07:d1eb`——refs asm 考证（bank:addr（`07:d1eb`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **FireSamusProjectile**（`07:d1ee`——refs asm 考证（bank:addr（`07:d1ee`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SearchOpenSamusProjectileslot**（`07:d1f7`——refs asm 考证（bank:addr（`07:d1f7`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SearchOpenSamusProjectileslot@loop**（`07:d1f9`——refs asm 考证（bank:addr（`07:d1f9`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SearchOpenSamusProjectileslot@slotFound**（`07:d205`——refs asm 考证（bank:addr（`07:d205`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SearchOpenSamusProjectileslot@endIf_A**（`07:d20f`——refs asm 考证（bank:addr（`07:d20f`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **FireSamusProjectileForwards**（`07:d210`——refs asm 考证（bank:addr（`07:d210`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **FireSamusProjectileForwards@exit**（`07:d269`——refs asm 考证（bank:addr（`07:d269`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **FireSamusProjectileUpwards**（`07:d275`——refs asm 考证（bank:addr（`07:d275`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **FireSamusProjectileUpwards@exit**（`07:d2cc`——refs asm 考证（bank:addr（`07:d2cc`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SamusDoor**（`07:d3a8`——refs asm 考证（bank:addr（`07:d3a8`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SamusDead**（`07:d41a`——refs asm 考证（bank:addr（`07:d41a`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SamusDead2**（`07:d41f`——refs asm 考证（bank:addr（`07:d41f`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SamusElevator**（`07:d423`——refs asm 考证（bank:addr（`07:d423`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **UpdateSamusProjectiles**（`07:d4bf`——refs asm 考证（bank:addr（`07:d4bf`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **DoOneSamusProjectile**（`07:d4cb`——refs asm 考证（bank:addr（`07:d4cb`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **GotoSamusProjectileHitDoorOrStatue**（`07:d606`——refs asm 考证（bank:addr（`07:d606`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SamusCollisionWithSolidEntities**（`07:d976`——refs asm 考证（bank:addr（`07:d976`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SamusCollisionWithSolidEntities@loop**（`07:d983`——refs asm 考证（bank:addr（`07:d983`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SamusCollisionWithSolidEntities@notOnEnemy**（`07:d99e`——refs asm 考证（bank:addr（`07:d99e`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SamusCollisionWithSolidEntities@loopExit**（`07:d9a3`——refs asm 考证（bank:addr（`07:d9a3`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SamusCollisionWithSolidEntities@RTS**（`07:d9b9`——refs asm 考证（bank:addr（`07:d9b9`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SamusCollisionWithSolidEntities@isSamusOnTop**（`07:d9ba`——refs asm 考证（bank:addr（`07:d9ba`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SamusCollisionWithSolidEntities@isSamusOnTop_no**（`07:d9c7`——refs asm 考证（bank:addr（`07:d9c7`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **ToggleSamusHi**（`07:e249`——refs asm 考证（bank:addr（`07:e249`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **IsSamusInLava**（`07:e25d`——refs asm 考证（bank:addr（`07:e25d`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SamusMoveVertically**（`07:e2a9`——refs asm 考证（bank:addr（`07:e2a9`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SamusMoveVertically@endIf_A**（`07:e2c2`——refs asm 考证（bank:addr（`07:e2c2`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SamusMoveVertically@loop_up**（`07:e2c4`——refs asm 考证（bank:addr（`07:e2c4`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SamusMoveVertically@endIf_B**（`07:e2d3`——refs asm 考证（bank:addr（`07:e2d3`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SamusMoveVertically@downwards**（`07:e2d7`——refs asm 考证（bank:addr（`07:e2d7`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SamusMoveVertically@endIf_C**（`07:e2e1`——refs asm 考证（bank:addr（`07:e2e1`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SamusMoveVertically@loop_down**（`07:e2e3`——refs asm 考证（bank:addr（`07:e2e3`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SamusMoveVertically@landingNoBall**（`07:e30b`——refs asm 考证（bank:addr（`07:e30b`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SamusMoveVertically@landingNoBounce**（`07:e30e`——refs asm 考证（bank:addr（`07:e30e`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SamusMoveVertically@endIf_D**（`07:e316`——refs asm 考证（bank:addr（`07:e316`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SamusMoveHorizontally**（`07:e31a`——refs asm 考证（bank:addr（`07:e31a`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **MoveSamusUp**（`07:e457`——refs asm 考证（bank:addr（`07:e457`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **MoveSamusDown**（`07:e4a3`——refs asm 考证（bank:addr（`07:e4a3`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **MoveSamusLeft**（`07:e626`——refs asm 考证（bank:addr（`07:e626`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **MoveSamusRight**（`07:e668`——refs asm 考证（bank:addr（`07:e668`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SamusProjectileHitDoorOrStatue**（`07:e81e`——refs asm 考证（bank:addr（`07:e81e`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SamusProjectileHitDoorOrStatue@loop**（`07:e824`——refs asm 考证（bank:addr（`07:e824`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SamusProjectileHitDoorOrStatue@hitByMissile**（`07:e85d`——refs asm 考证（bank:addr（`07:e85d`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SamusProjectileHitDoorOrStatue@blueDoor**（`07:e865`——refs asm 考证（bank:addr（`07:e865`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SamusProjectileHitDoorOrStatue@next**（`07:e86c`——refs asm 考证（bank:addr（`07:e86c`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **IsBlastTile@SkipCheckUpdatingSamusProjectile**（`07:e9c2`——refs asm 考证（bank:addr（`07:e9c2`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SamusProjectile_RemoveIfOffScreen**（`07:ed7a`——refs asm 考证（bank:addr（`07:ed7a`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SamusProjectile_RemoveIfOffScreen@RTS**（`07:ed8b`——refs asm 考证（bank:addr（`07:ed8b`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **CheckForItem@samusDoesNotHaveThisItem**（`07:ee61`——refs asm 考证（bank:addr（`07:ee61`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **CheckForItem@samusHasThisItem**（`07:ee62`——refs asm 考证（bank:addr（`07:ee62`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SetSamusProjectileIsHit**（`07:f279`——refs asm 考证（bank:addr（`07:f279`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SetSamusIsHitFlags**（`07:f27b`——refs asm 考证（bank:addr（`07:f27b`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **CollisionDetectionEnemy_ReactToCollisionWithSamus**（`07:f282`——refs asm 考证（bank:addr（`07:f282`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **CollisionDetectionMellow_ReactToCollisionWithSamus**（`07:f2b4`——refs asm 考证（bank:addr（`07:f2b4`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **CollisionDetectionEnemy_ReactToCollisionWithSamusProjectile**（`07:f2ca`——refs asm 考证（bank:addr（`07:f2ca`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **CollisionDetectionEnProjectile_ReactToCollisionWithSamus_F2DF**（`07:f2df`——refs asm 考证（bank:addr（`07:f2df`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SetEnemyTouchingSamusFlags**（`07:f2e8`——refs asm 考证（bank:addr（`07:f2e8`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **CollisionDetectionEnProjectile_ReactToCollisionWithSamus**（`07:f2ed`——refs asm 考证（bank:addr（`07:f2ed`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SamusHurt_F311**（`07:f311`——refs asm 考证（bank:addr（`07:f311`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **CollisionDetectionMellow_ReactToCollisionWithSamusProjectile**（`07:f32a`——refs asm 考证（bank:addr（`07:f32a`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SetSamusIsHitByEnemy**（`07:f338`——refs asm 考证（bank:addr（`07:f338`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyReactToSamusProjectile**（`07:f536`——refs asm 考证（bank:addr（`07:f536`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyReactToSamusProjectile@RTS**（`07:f56b`——refs asm 考证（bank:addr（`07:f56b`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **UpdateEnemy_ForceSpeedTowardsSamus**（`07:f6b9`——refs asm 考证（bank:addr（`07:f6b9`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **UpdateEnemy_ForceSpeedTowardsSamus@endIf_A**（`07:f6cd`——refs asm 考证（bank:addr（`07:f6cd`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **UpdateEnemy_ForceSpeedTowardsSamus@else_B**（`07:f6f5`——refs asm 考证（bank:addr（`07:f6f5`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **UpdateEnemy_ForceSpeedTowardsSamus@endIf_C**（`07:f6ff`——refs asm 考证（bank:addr（`07:f6ff`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **UpdateEnemy_ForceSpeedTowardsSamus@endIf_B**（`07:f700`——refs asm 考证（bank:addr（`07:f700`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **UpdateEnemy_ForceSpeedTowardsSamus@endIf_D**（`07:f70f`——refs asm 考证（bank:addr（`07:f70f`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **UpdateEnemy_ForceSpeedTowardsSamus@skipXAxis**（`07:f70f`——refs asm 考证（bank:addr（`07:f70f`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **UpdateEnemy_ForceSpeedTowardsSamus@else_E**（`07:f724`——refs asm 考证（bank:addr（`07:f724`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **UpdateEnemy_ForceSpeedTowardsSamus@endIf_F**（`07:f730`——refs asm 考证（bank:addr（`07:f730`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **UpdateEnemy_ForceSpeedTowardsSamus@endIf_E**（`07:f731`——refs asm 考证（bank:addr（`07:f731`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **UpdateEnemy_EnData05DistanceToSamusThreshold**（`07:f75b`——refs asm 考证（bank:addr（`07:f75b`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **InitEnemyForceSpeedTowardsSamusDelayAndHealth**（`07:f85a`——refs asm 考证（bank:addr（`07:f85a`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **InitEnemyForceSpeedTowardsSamusDelayAndHealth@endIf_A**（`07:f86c`——refs asm 考证（bank:addr（`07:f86c`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **InitEnemyForceSpeedTowardsSamusDelayAndHealth@RTS**（`07:f86f`——refs asm 考证（bank:addr（`07:f86f`（写径实证（A 级原文）））））——域：**samus**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **CalculatePassword@endIf_statueBit7**（`00:8cc9`——refs asm 考证（bank:addr（`00:8cc9`（写径实证（A 级原文）））））——域：**room**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **CalculatePassword@endIf_statueBit6**（`00:8cd6`——refs asm 考证（bank:addr（`00:8cd6`（写径实证（A 级原文）））））——域：**room**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **CalculatePassword@endIf_statueBit5**（`00:8ce3`——refs asm 考证（bank:addr（`00:8ce3`（写径实证（A 级原文）））））——域：**room**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **CalculatePassword@endIf_statueBit4**（`00:8cf0`——refs asm 考证（bank:addr（`00:8cf0`（写径实证（A 级原文）））））——域：**room**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SFXData@EnergyPickup**（`00:b23d`——refs asm 考证（bank:addr（`00:b23d`（写径实证（A 级原文）））））——域：**pickup**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SFXData@MissilePickup**（`00:b241`——refs asm 考证（bank:addr（`00:b241`（写径实证（A 级原文）））））——域：**pickup**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SFXData@EnemyHit**（`00:b255`——refs asm 考证（bank:addr（`00:b255`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SFXData@BigEnemyHit**（`00:b27d`——refs asm 考证（bank:addr（`00:b27d`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SFXData@StatueRaise**（`00:b281`——refs asm 考证（bank:addr（`00:b281`（写径实证（A 级原文）））））——域：**room**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SFXData@Door**（`00:b285`——refs asm 考证（bank:addr（`00:b285`（写径实证（A 级原文）））））——域：**room**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **MissilePickupSFXTbl**（`00:b6a9`——refs asm 考证（bank:addr（`00:b6a9`（写径实证（A 级原文）））））——域：**pickup**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **MissilePickupSFXCont**（`00:b6b0`——refs asm 考证（bank:addr（`00:b6b0`（写径实证（A 级原文）））））——域：**pickup**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **MissilePickupSFXCont@endIf_A**（`00:b6c0`——refs asm 考证（bank:addr（`00:b6c0`（写径实证（A 级原文）））））——域：**pickup**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **MissilePickupSFXCont@RTS**（`00:b6cc`——refs asm 考证（bank:addr（`00:b6cc`（写径实证（A 级原文）））））——域：**pickup**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **MissilePickupSFXInit**（`00:b6cd`——refs asm 考证（bank:addr（`00:b6cd`（写径实证（A 级原文）））））——域：**pickup**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnergyPickupSFXCont**（`00:b6d3`——refs asm 考证（bank:addr（`00:b6d3`（写径实证（A 级原文）））））——域：**pickup**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnergyPickupSFXInit**（`00:b6e7`——refs asm 考证（bank:addr（`00:b6e7`（写径实证（A 级原文）））））——域：**pickup**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyHitSFXInit**（`00:b710`——refs asm 考证（bank:addr（`00:b710`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **DoorOpenCloseSFXInit**（`00:b7ac`——refs asm 考证（bank:addr（`00:b7ac`（写径实证（A 级原文）））））——域：**room**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **DoorOpenCloseSFXCont**（`00:b7cb`——refs asm 考证（bank:addr（`00:b7cb`（写径实证（A 级原文）））））——域：**room**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **DoorOpenCloseSFXCont@endIf_A**（`00:b7d3`——refs asm 考证（bank:addr（`00:b7d3`（写径实证（A 级原文）））））——域：**room**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **BigEnemyHitSFXInit**（`00:b7ef`——refs asm 考证（bank:addr（`00:b7ef`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **BigEnemyHitSFXCont**（`00:b80e`——refs asm 考证（bank:addr（`00:b80e`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **BigEnemyHitSFXCont@dontEnd**（`00:b816`——refs asm 考证（bank:addr（`00:b816`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **StatueRaiseSFXInit**（`00:b921`——refs asm 考证（bank:addr（`00:b921`（写径实证（A 级原文）））））——域：**room**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **StatueRaiseSFXCont**（`00:b940`——refs asm 考证（bank:addr（`00:b940`（写径实证（A 级原文）））））——域：**room**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **StatueRaiseSFXCont@endIf_B**（`00:b952`——refs asm 考证（bank:addr（`00:b952`（写径实证（A 级原文）））））——域：**room**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **StatueRaiseSFXCont@endIf_A**（`00:b972`——refs asm 考证（bank:addr（`00:b972`（写径实证（A 级原文）））））——域：**room**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SongMthrBrnRoomHeader**（`00:bd31`——refs asm 考证（bank:addr（`00:bd31`（写径实证（A 级原文）））））——域：**room**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SongItemRoomHeader**（`00:bd65`——refs asm 考证（bank:addr（`00:bd65`（写径实证（A 级原文）））））——域：**room**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SongItemRoomTri**（`00:bdcd`——refs asm 考证（bank:addr（`00:bdcd`（写径实证（A 级原文）））））——域：**room**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SongItemRoomSQ1**（`00:bdda`——refs asm 考证（bank:addr（`00:bdda`（写径实证（A 级原文）））））——域：**room**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **SongItemRoomSQ2**（`00:bddc`——refs asm 考证（bank:addr（`00:bddc`（写径实证（A 级原文）））））——域：**room**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyMove**（`01:8058`——refs asm 考证（bank:addr（`01:8058`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyMove@loop_Up**（`01:8073`——refs asm 考证（bank:addr（`01:8073`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyMove@endIf_Up**（`01:807d`——refs asm 考证（bank:addr（`01:807d`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyMove@loop_Down**（`01:8081`——refs asm 考证（bank:addr（`01:8081`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyMove@endIf_Down**（`01:808b`——refs asm 考证（bank:addr（`01:808b`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyMove@loop_Left**（`01:8097`——refs asm 考证（bank:addr（`01:8097`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyMove@endIf_Left**（`01:80a1`——refs asm 考证（bank:addr（`01:80a1`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyMove@loop_Right**（`01:80a5`——refs asm 考证（bank:addr（`01:80a5`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyMove@endIf_Right**（`01:80af`——refs asm 考证（bank:addr（`01:80af`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyMove@RTS**（`01:80af`——refs asm 考证（bank:addr（`01:80af`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyIfMoveFailedUp**（`01:80b8`——refs asm 考证（bank:addr（`01:80b8`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyIfMoveFailedUp@bounce**（`01:80c1`——refs asm 考证（bank:addr（`01:80c1`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyIfMoveFailedUp@facingHorizontal**（`01:80c7`——refs asm 考证（bank:addr（`01:80c7`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyIfMoveFailedUp@brushOnCeiling**（`01:80d8`——refs asm 考证（bank:addr（`01:80d8`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyIfMoveFailedUp@landOnCeilingPt2**（`01:80e2`——refs asm 考证（bank:addr（`01:80e2`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyIfMoveFailedUp@movementStrings**（`01:80ea`——refs asm 考证（bank:addr（`01:80ea`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyIfMoveFailedUp@abortLoop**（`01:80f6`——refs asm 考证（bank:addr（`01:80f6`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyIfMoveFailedUp@RTS**（`01:80fa`——refs asm 考证（bank:addr（`01:80fa`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyIfMoveFailedDown**（`01:80fb`——refs asm 考证（bank:addr（`01:80fb`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyIfMoveFailedDown@bounce**（`01:8104`——refs asm 考证（bank:addr（`01:8104`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyIfMoveFailedDown@facingHorizontal**（`01:810a`——refs asm 考证（bank:addr（`01:810a`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyIfMoveFailedDown@landOnFloor**（`01:8120`——refs asm 考证（bank:addr（`01:8120`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyIfMoveFailedDown@movementStrings**（`01:8123`——refs asm 考证（bank:addr（`01:8123`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyIfMoveFailedDown@abortLoop**（`01:812f`——refs asm 考证（bank:addr（`01:812f`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyIfMoveFailedDown@RTS**（`01:8133`——refs asm 考证（bank:addr（`01:8133`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyIfMoveFailedRight**（`01:8134`——refs asm 考证（bank:addr（`01:8134`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyIfMoveFailedRight@bounce**（`01:8142`——refs asm 考证（bank:addr（`01:8142`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyIfMoveFailedRight@facingVertical**（`01:8148`——refs asm 考证（bank:addr（`01:8148`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyIfMoveFailedRight@landOnRightWall**（`01:8159`——refs asm 考证（bank:addr（`01:8159`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyIfMoveFailedRight@movementStrings**（`01:815e`——refs asm 考证（bank:addr（`01:815e`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyIfMoveFailedRight@abortLoop**（`01:8169`——refs asm 考证（bank:addr（`01:8169`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyIfMoveFailedRight@RTS**（`01:816d`——refs asm 考证（bank:addr（`01:816d`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyIfMoveFailedLeft**（`01:816e`——refs asm 考证（bank:addr（`01:816e`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyIfMoveFailedLeft@bounce**（`01:817c`——refs asm 考证（bank:addr（`01:817c`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyIfMoveFailedLeft@facingVertical**（`01:8182`——refs asm 考证（bank:addr（`01:8182`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyIfMoveFailedLeft@brushOnLeftWall**（`01:818e`——refs asm 考证（bank:addr（`01:818e`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyIfMoveFailedLeft@landOnLeftWallPt2**（`01:8198`——refs asm 考证（bank:addr（`01:8198`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyIfMoveFailedLeft@movementStrings**（`01:81a0`——refs asm 考证（bank:addr（`01:81a0`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyIfMoveFailedLeft@abortLoop**（`01:81ac`——refs asm 考证（bank:addr（`01:81ac`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyIfMoveFailedLeft@RTS**（`01:81b0`——refs asm 考证（bank:addr（`01:81b0`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyTriggerResting_AndClearEnAccelY**（`01:81b1`——refs asm 考证（bank:addr（`01:81b1`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyTriggerResting**（`01:81b8`——refs asm 考证（bank:addr（`01:81b8`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyTriggerResting_AndClearEnAccelX**（`01:81c0`——refs asm 考证（bank:addr（`01:81c0`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyIfMoveFailedHorizontal_Bounce**（`01:81c7`——refs asm 考证（bank:addr（`01:81c7`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyIfMoveFailedHorizontal_Bounce@flipSpeedAndAccel**（`01:81d1`——refs asm 考证（bank:addr（`01:81d1`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyIfMoveFailedHorizontal_Bounce@flipSpeed**（`01:81da`——refs asm 考证（bank:addr（`01:81da`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyIfMoveFailedHorizontal_Bounce@endIf_speedSubPixel**（`01:81ed`——refs asm 考证（bank:addr（`01:81ed`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyIfMoveFailedHorizontal_Bounce@RTS**（`01:81f5`——refs asm 考证（bank:addr（`01:81f5`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyIfMoveFailedVertical_Bounce**（`01:81fc`——refs asm 考证（bank:addr（`01:81fc`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyIfMoveFailedVertical_Bounce@flipSpeedAndAccel**（`01:8206`——refs asm 考证（bank:addr（`01:8206`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyIfMoveFailedVertical_Bounce@flipSpeed**（`01:820f`——refs asm 考证（bank:addr（`01:820f`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyIfMoveFailedVertical_Bounce@endIf_speedSubPixel**（`01:8222`——refs asm 考证（bank:addr（`01:8222`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyIfMoveFailedVertical_Bounce@RTS**（`01:822a`——refs asm 考证（bank:addr（`01:822a`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **LoadEnemyMovementPtr**（`01:822b`——refs asm 考证（bank:addr（`01:822b`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **LoadEnemyMovementPtr@endIf_A**（`01:8232`——refs asm 考证（bank:addr（`01:8232`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyGetDeltaY**（`01:8244`——refs asm 考证（bank:addr（`01:8244`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyGetDeltaY@endIf_A**（`01:824c`——refs asm 考证（bank:addr（`01:824c`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyGetDeltaY@ReadByteAtIndex**（`01:8258`——refs asm 考证（bank:addr（`01:8258`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyGetDeltaY@ReadByte**（`01:825b`——refs asm 考证（bank:addr（`01:825b`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **GotoEnemyGetDeltaY_TriggerResting**（`01:827c`——refs asm 考证（bank:addr（`01:827c`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyGetDeltaY_SignMagSpeed**（`01:827f`——refs asm 考证（bank:addr（`01:827f`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyGetDeltaY_SignMagSpeed@endIf_A**（`01:8290`——refs asm 考证（bank:addr（`01:8290`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyGetDeltaY_SignMagSpeed@fromByte**（`01:8296`——refs asm 考证（bank:addr（`01:8296`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyGetDeltaY_SignMagSpeed@endIf_B**（`01:82a2`——refs asm 考证（bank:addr（`01:82a2`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyGetDeltaY_Store**（`01:82a2`——refs asm 考证（bank:addr（`01:82a2`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyGetDeltaY_StopMovement**（`01:82b0`——refs asm 考证（bank:addr（`01:82b0`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyGetDeltaY_RepeatPreviousUntilFailure**（`01:82b3`——refs asm 考证（bank:addr（`01:82b3`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyGetDeltaY_RepeatPreviousUntilFailure@else_A**（`01:82be`——refs asm 考证（bank:addr（`01:82be`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyGetDeltaY_RepeatPreviousUntilFailure@endIf_A**（`01:82c3`——refs asm 考证（bank:addr（`01:82c3`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyGetDeltaY_RepeatPreviousUntilFailure@success**（`01:82d2`——refs asm 考证（bank:addr（`01:82d2`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyGetDeltaY_RepeatPreviousUntilFailure@common**（`01:82d7`——refs asm 考证（bank:addr（`01:82d7`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyGetDeltaY_RepeatPreviousUntilNoDeltaYThenTriggerResting**（`01:82de`——refs asm 考证（bank:addr（`01:82de`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyGetDeltaY_RepeatPreviousUntilNoDeltaYThenTriggerResting@else_A**（`01:82ef`——refs asm 考证（bank:addr（`01:82ef`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyGetDeltaY_RepeatPreviousUntilNoDeltaYThenTriggerResting@endIf_A**（`01:82f4`——refs asm 考证（bank:addr（`01:82f4`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyGetDeltaY_RepeatPreviousUntilNoDeltaYThenTriggerResting@fail**（`01:82fb`——refs asm 考证（bank:addr（`01:82fb`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyGetDeltaY_RepeatPreviousUntilNoDeltaYThenTriggerResting@endIf_B**（`01:8312`——refs asm 考证（bank:addr（`01:8312`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyGetDeltaY_TriggerResting**（`01:8312`——refs asm 考证（bank:addr（`01:8312`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyGetDeltaX**（`01:8318`——refs asm 考证（bank:addr（`01:8318`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyGetDeltaX@endIf_A**（`01:8320`——refs asm 考证（bank:addr（`01:8320`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyGetDeltaX_SignMagSpeed**（`01:8320`——refs asm 考证（bank:addr（`01:8320`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyGetDeltaX_SignMagSpeed@fromByte**（`01:832f`——refs asm 考证（bank:addr（`01:832f`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyGetDeltaX_SignMagSpeed@endIf_A**（`01:833c`——refs asm 考证（bank:addr（`01:833c`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyGetDeltaX_Store**（`01:833c`——refs asm 考证（bank:addr（`01:833c`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyGetDeltaY_UsingAcceleration**（`01:833f`——refs asm 考证（bank:addr（`01:833f`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyGetDeltaY_UsingAcceleration@if_B**（`01:8357`——refs asm 考证（bank:addr（`01:8357`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyGetDeltaY_UsingAcceleration@else_A**（`01:835e`——refs asm 考证（bank:addr（`01:835e`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyGetDeltaY_UsingAcceleration@endIf_B**（`01:8376`——refs asm 考证（bank:addr（`01:8376`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyGetDeltaY_UsingAcceleration@endIf_A**（`01:8376`——refs asm 考证（bank:addr（`01:8376`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyGetDeltaY_UsingAcceleration@endIf_C**（`01:8383`——refs asm 考证（bank:addr（`01:8383`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyGetDeltaX_UsingAcceleration**（`01:8395`——refs asm 考证（bank:addr（`01:8395`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyGetDeltaX_UsingAcceleration@endIf_A**（`01:83b6`——refs asm 考证（bank:addr（`01:83b6`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyGetDeltaX_UsingAcceleration@endIf_B**（`01:83d0`——refs asm 考证（bank:addr（`01:83d0`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyGetDeltaX_UsingAcceleration@endIf_C**（`01:83e3`——refs asm 考证（bank:addr（`01:83e3`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyMoveOnePixelUp**（`01:83f5`——refs asm 考证（bank:addr（`01:83f5`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyMoveOnePixelUp@endIf_A**（`01:8406`——refs asm 考证（bank:addr（`01:8406`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyMoveOnePixelUp@endIf_B**（`01:8429`——refs asm 考证（bank:addr（`01:8429`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyMoveOnePixelUp@endIf_C**（`01:843c`——refs asm 考证（bank:addr（`01:843c`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyMoveOnePixelUp@success**（`01:8441`——refs asm 考证（bank:addr（`01:8441`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyMoveOnePixelUp@endIf_D**（`01:8449`——refs asm 考证（bank:addr（`01:8449`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyMoveOnePixelUp@RTS**（`01:844a`——refs asm 考证（bank:addr（`01:844a`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyMoveOnePixelDown**（`01:844b`——refs asm 考证（bank:addr（`01:844b`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyMoveOnePixelDown@endIf_A**（`01:845c`——refs asm 考证（bank:addr（`01:845c`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyMoveOnePixelDown@endIf_B**（`01:8481`——refs asm 考证（bank:addr（`01:8481`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyMoveOnePixelDown@endIf_C**（`01:8497`——refs asm 考证（bank:addr（`01:8497`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyMoveOnePixelDown@success**（`01:849d`——refs asm 考证（bank:addr（`01:849d`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyMoveOnePixelDown@endIf_D**（`01:84a5`——refs asm 考证（bank:addr（`01:84a5`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyMoveOnePixelDown@RTS**（`01:84a6`——refs asm 考证（bank:addr（`01:84a6`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyMoveOnePixelLeft**（`01:84a7`——refs asm 考证（bank:addr（`01:84a7`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyMoveOnePixelLeft@endIf_A**（`01:84b8`——refs asm 考证（bank:addr（`01:84b8`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyMoveOnePixelLeft@endIf_C**（`01:84d4`——refs asm 考证（bank:addr（`01:84d4`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyMoveOnePixelLeft@endIf_B**（`01:84da`——refs asm 考证（bank:addr（`01:84da`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyMoveOnePixelLeft@endIf_D**（`01:84ee`——refs asm 考证（bank:addr（`01:84ee`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyMoveOnePixelLeft@success**（`01:84f4`——refs asm 考证（bank:addr（`01:84f4`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyMoveOnePixelLeft@endIf_E**（`01:84fc`——refs asm 考证（bank:addr（`01:84fc`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyMoveOnePixelLeft@RTS**（`01:84fd`——refs asm 考证（bank:addr（`01:84fd`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyMoveOnePixelRight**（`01:84fe`——refs asm 考证（bank:addr（`01:84fe`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+- **EnemyMoveOnePixelRight@endIf_A**（`01:850f`——refs asm 考证（bank:addr（`01:850f`（写径实证（A 级原文）））））——域：**enemy**——可调用面：**callable-domain-method**——编译状态：**未编译（待重组）**
+
+## 编译状态标注
+- **未编译（待重组）**：449 条 bank:addr 引证（doc 注释（公式形（零字面特值））——待重组为可编译代码
+- **已重组（可编译）**：0 条（第二步重组后待第三步编译验证）
+
+## 可调用面重组（域分类）
+- **enemy**：138 条（可归入域方法（callable-domain-method））
+- **other**：19 条（可归入域方法（callable-domain-method））
+- **pickup**：9 条（可归入域方法（callable-domain-method））
+- **projectile**：29 条（可归入域方法（callable-domain-method））
+- **room**：18 条（可归入域方法（callable-domain-method））
+- **samus**：236 条（可归入域方法（callable-domain-method））
+
+## 真规则公式（pub fn 签名——公式形（零字面特值））
+- `pub fn samus_has_item(state: &SamusState, item: u8) -> bool `
+- `pub fn calculate_password_loop_samus_age(age: u8) -> u8 `
+- `pub fn item_data_high_jump(state: &SamusState) -> u8 `
+- `pub fn restart_end_if_high_jump(state: &mut SamusState) `
+- `pub fn end_game_jump_engine(state: &mut SamusState) -> bool `
+- `pub fn show_end_samus(state: &mut SamusState) `
+- `pub fn end_samus_flash(state: &mut SamusState) -> bool `
+- `pub fn samus_wave(state: &mut SamusState) `
+- `pub fn load_end_samus_sprites(state: &SamusState) -> u8 `
+- `pub fn load_end_samus_sprites_loop_a(state: &mut SamusState) -> bool `
+- `pub fn load_end_samus_sprites_else_a(state: &mut SamusState) `
+- `pub fn load_end_samus_sprites_end_if_a(state: &SamusState) -> u8 `
+- `pub fn load_end_samus_sprites_loop_b(state: &mut SamusState) -> bool `
+- `pub fn load_end_samus_sprites_rts(state: &mut SamusState) `
+- `pub fn samus_head_sprite_table(index: u8) -> u8 `
+- `pub fn end_samus_addr_tbl(index: u8) -> u8 `
+- `pub fn normal_samus(state: &mut SamusState) `
+- `pub fn back_turned_samus(state: &mut SamusState) `
+- `pub fn fist_raised_samus(state: &mut SamusState) `
+- `pub fn helmet_off_samus(state: &mut SamusState) `
+- `pub fn jumpsuit_samus(state: &mut SamusState) `
+- `pub fn bikini_samus(state: &mut SamusState) `
+- `pub fn sfx_data_samus_walk() -> u8 `
+- `pub fn sfx_data_samus_hit_sq1_sq2() -> u8 `
+- `pub fn sfx_data_samus_jump() -> u8 `
+- `pub fn sfx_data_samus_ball() -> u8 `
+- `pub fn sfx_data_samus_die() -> u8 `
+- `pub fn samus_walk_sfx_init(state: &mut SamusState) `
+- `pub fn samus_hit_sfx_cont(state: &mut SamusState) `
+- `pub fn samus_hit_sfx_cont_end_if_a(state: &SamusState) -> bool `
+- `pub fn samus_hit_sfx_init(state: &mut SamusState) `
+- `pub fn samus_hit_sfx_init_rts(state: &SamusState) -> u8 `
+- `pub fn samus_jump_sfx_init(state: &mut SamusState) `
+- `pub fn samus_to_ball_sfx_init(state: &mut SamusState) `
+- `pub fn samus_to_ball_sfx_cont(state: &SamusState) -> bool `
+- `pub fn samus_die_sfx_init(state: &mut SamusState) `
+- `pub fn samus_die_sfx_init_rts(state: &SamusState) -> u8 `
+- `pub fn samus_die_sfx_cont(state: &SamusState) -> bool `
+- `pub fn common_jump_update_enemy_common(state: &mut SamusState) `
+- `pub fn common_jump_update_enemy_common_no_move(state: &mut SamusState) `
+- `pub fn common_jump_update_enemy_common_no_move_no_anim(state: &mut SamusState) `
+- `pub fn common_jump_crawler_ai_routine_should_crawler_move(state: &SamusState) -> bool `
+- `pub fn common_jump_update_enemy_anim(state: &mut SamusState) `
+- `pub fn common_jump_init_en_anim_index(state: &mut SamusState) `
+- `pub fn common_jump_get_enemy_type_times2_plus_facing_direction_bit0(state: &SamusState) -> u8 `
+- `pub fn common_jump_init_enemy_force_speed_towards_samus_delay_and_health(state: &mut SamusState) `
+- `pub fn common_jump_init_en_reset_anim_index(state: &mut SamusState) `
+- `pub fn common_jump_enemy_flip_after_displacement(state: &mut SamusState) `
+- `pub fn common_jump_init_en_active_anim_index_no_init_offset(state: &mut SamusState) `
+- `pub fn common_jump_spawn_en_projectile(state: &mut SamusState) -> bool `
+- `pub fn common_jump_jump_engine(state: &mut SamusState) `
+- `pub fn common_jump_apply_speed_to_position(state: &mut SamusState) `
+- `pub fn common_jump_0e(state: &mut SamusState) -> u8 `
+- `pub fn common_jump_enemy_get_delta_y(state: &SamusState) -> i8 `
+- `pub fn common_jump_enemy_get_delta_x(state: &SamusState) -> i8 `
+- `pub fn common_jump_enemy_bg_collide_or_apply_speed(state: &mut SamusState) -> bool `
+- `pub fn common_jump_enemy_get_delta_y_using_acceleration(state: &SamusState) -> i8 `
+- `pub fn common_jump_enemy_get_delta_x_using_acceleration(state: &SamusState) -> i8 `
+- `pub fn common_jump_draw_enemy(state: &mut SamusState) `
+- `pub fn common_jump_draw_tile_blast(state: &mut SamusState) `
+- `pub fn common_jump_subtract_health(state: &mut SamusState) `
+- `pub fn common_jump_base10_subtract(value: u8) -> u8 `
+- `pub fn enemy_get_delta_y_clear_en_jump_dsplcmnt(state: &mut SamusState) -> i8 `
+- `pub fn obj_anim_samus_run(state: &mut SamusState) `
+- `pub fn obj_anim_samus_front(state: &mut SamusState) `
+- `pub fn obj_anim_samus_unroll(state: &mut SamusState) `
+- `pub fn obj_anim_samus_stand(state: &mut SamusState) `
+- `pub fn obj_anim_samus_stand_fire(state: &mut SamusState) `
+- `pub fn obj_anim_samus_jump_transition(state: &mut SamusState) `
+- `pub fn obj_anim_samus_jump(state: &mut SamusState) `
+- `pub fn obj_anim_samus_salto(state: &mut SamusState) `
+- `pub fn obj_anim_samus_run_jump(state: &mut SamusState) `
+- `pub fn obj_anim_samus_roll(state: &mut SamusState) `
+- `pub fn obj_anim_samus_jump_fire(state: &mut SamusState) `
+- `pub fn obj_anim_samus_run_fire(state: &mut SamusState) `
+- `pub fn obj_anim_samus_pnt_up_fire(state: &mut SamusState) `
+- `pub fn obj_anim_samus_pnt_up(state: &mut SamusState) `
+- `pub fn obj_anim_samus_explode(state: &mut SamusState) `
+- `pub fn obj_anim_samus_jump_pnt_up_fire(state: &mut SamusState) `
+- `pub fn obj_anim_samus_jump_pnt_up(state: &mut SamusState) `
+- `pub fn obj_anim_samus_run_pnt_up(state: &mut SamusState) `
+- `pub fn obj_anim_samus_run_pnt_up_fire1(state: &mut SamusState) `
+- `pub fn obj_anim_samus_run_pnt_up_fire2(state: &mut SamusState) `
+- `pub fn obj_anim_samus_run_pnt_up_fire3(state: &mut SamusState) `
+- `pub fn obj_anim_samus_fade_out_area(state: &mut SamusState) -> bool `
+- `pub fn obj_anim_samus_fade_out_area_reset(state: &mut SamusState) `
+- `pub fn obj_anim_samus_fade_in_area(state: &mut SamusState) -> bool `
+- `pub fn obj_anim_samus_fade_in_area_reset(state: &mut SamusState) `
+- `pub fn obj_frame_samus_run0(state: &mut SamusState) `
+- `pub fn obj_frame_samus_run1(state: &mut SamusState) `
+- `pub fn obj_frame_samus_run2(state: &mut SamusState) `
+- `pub fn obj_frame_samus_front(state: &mut SamusState) `
+- `pub fn obj_frame_samus_stand(state: &mut SamusState) `
+- `pub fn obj_frame_samus_run_fire0(state: &mut SamusState) `
+- `pub fn obj_frame_samus_run_fire1(state: &mut SamusState) `
+- `pub fn obj_frame_samus_run_fire2(state: &mut SamusState) `
+- `pub fn obj_frame_samus_jump(state: &mut SamusState) `
+- `pub fn obj_frame_samus_jump_fire(state: &mut SamusState) `
+- `pub fn obj_frame_samus_salto0(state: &mut SamusState) `
+- `pub fn obj_frame_samus_salto1(state: &mut SamusState) `
+- `pub fn obj_frame_samus_salto2(state: &mut SamusState) `
+- `pub fn obj_frame_samus_salto3(state: &mut SamusState) `
+- `pub fn obj_frame_samus_roll3(state: &mut SamusState) `
+- `pub fn obj_frame_samus_roll2(state: &mut SamusState) `
+- `pub fn obj_frame_samus_roll1(state: &mut SamusState) `
+- `pub fn obj_frame_samus_roll0(state: &mut SamusState) `
+- `pub fn obj_frame_samus_stand_fire(state: &mut SamusState) `
+- `pub fn obj_frame_samus_pnt_up(state: &mut SamusState) `
+- `pub fn obj_frame_samus_pnt_up_fire(state: &mut SamusState) `
+- `pub fn obj_frame_samus_explode(state: &mut SamusState) `
+- `pub fn obj_frame_samus_jump_pnt_up(state: &mut SamusState) `
+- `pub fn obj_frame_samus_jump_pnt_up_fire(state: &mut SamusState) `
+- `pub fn obj_frame_samus_run_pnt_up0(state: &mut SamusState) `
+- `pub fn obj_frame_samus_run_pnt_up1(state: &mut SamusState) `
+- `pub fn obj_frame_samus_run_pnt_up2(state: &mut SamusState) `
+- `pub fn obj_frame_samus_run_pnt_up_fire0(state: &mut SamusState) `
+- `pub fn obj_frame_samus_run_pnt_up_fire1(state: &mut SamusState) `
+- `pub fn obj_frame_samus_run_pnt_up_fire2(state: &mut SamusState) `
+- `pub fn obj_frame_high_jump_item(state: &mut SamusState) `
+- `pub fn samus_enter_door(state: &mut SamusState) -> bool `
+- `pub fn samus_enter_door_else_a(state: &mut SamusState) `
+- `pub fn samus_enter_door_end_if_a_dex(state: &mut SamusState) `
+- `pub fn samus_enter_door_end_if_a_nodex(state: &mut SamusState) `
+- `pub fn samus_in_door(state: &SamusState) -> bool `
+- `pub fn update_door_let_samus_in(state: &mut SamusState) `
+- `pub fn update_door_let_samus_out(state: &mut SamusState) `
+- `pub fn area_samus_y(state: &SamusState) -> u8 `
+- `pub fn enemy_force_speed_towards_samus_delay_tbl(index: u8) -> u8 `
+- `pub fn enemy_distance_to_samus_threshold(state: &SamusState) -> u8 `
+- `pub fn jump_by_rts_to_movement_routine_bank1(state: &mut SamusState) `
+- `pub fn jump_by_rts_to_movement_routine_bank2(state: &mut SamusState) `
+- `pub fn en_anim_ridley_fireball_r_bank2(state: &mut SamusState) `
+- `pub fn en_anim_ridley_fireball_l_bank2(state: &mut SamusState) `
+- `pub fn en_anim_squeept_jumping_bank2(state: &mut SamusState) `
+- `pub fn en_frame_ridley_fireball0_r_bank2(state: &mut SamusState) `
+- `pub fn en_frame_ridley_fireball1_r_bank2(state: &mut SamusState) `
+- `pub fn en_frame_ridley_fireball2_r_bank2(state: &mut SamusState) `
+- `pub fn en_frame_ridley_fireball3_r_bank2(state: &mut SamusState) `
+- `pub fn en_frame_ridley_fireball0_l_bank2(state: &mut SamusState) `
+- `pub fn en_frame_ridley_fireball1_l_bank2(state: &mut SamusState) `
+- `pub fn en_frame_ridley_fireball2_l_bank2(state: &mut SamusState) `
+- `pub fn en_frame_ridley_fireball3_l_bank2(state: &mut SamusState) `
+- `pub fn en_frame_squeept_jumping1_bank2(state: &mut SamusState) `
+- `pub fn en_frame_squeept_jumping0_bank2(state: &mut SamusState) `
+- `pub fn goto_clear_current_metroid_latch_and_metroid_on_samus(state: &mut SamusState) `
+- `pub fn metroid_ai_routine_bank3_metroid_on_samus_clear_latch(state: &mut SamusState) `
+- `pub fn metroid_ai_routine_bank3_metroid_on_samus(state: &mut SamusState) -> bool `
+- `pub fn store_samus_position_to_temp(state: &mut SamusState) `
+- `pub fn mother_brain_idle_collide_with_samus(state: &SamusState) -> bool `
+- `pub fn mother_brain_idle_collide_with_samus_end_if_a(state: &mut SamusState) `
+- `pub fn clear_current_metroid_latch_and_metroid_on_samus(state: &mut SamusState) `
+- `pub fn area_samus_map_pos_x(state: &SamusState) -> u8 `
+- `pub fn area_samus_map_pos_y(state: &SamusState) -> u8 `
+- `pub fn jump_by_rts_to_movement_routine_bank4(state: &mut SamusState) `
+- `pub fn enemy_movement_choice_ridley_fireball_bank5(state: &mut SamusState) `
+- `pub fn jump_by_rts_to_movement_routine_bank5(state: &mut SamusState) `
+- `pub fn ridley_fireball_ai_routine_bank5(state: &mut SamusState) `
+- `pub fn ridley_fireball_ai_routine_bank5_remove_fireball(state: &mut SamusState) `
+- `pub fn ridley_fireball_ai_routine_bank5_rts(state: &SamusState) -> u8 `
+- `pub fn ridley_try_to_launch_fireball_bank5(state: &mut SamusState) -> bool `
+- `pub fn ridley_try_to_launch_fireball_bank5_end_if_a(state: &mut SamusState) `
+- `pub fn ridley_try_to_launch_fireball_bank5_loop_a(state: &mut SamusState) -> bool `
+- `pub fn ridley_try_to_launch_fireball_bank5_rts(state: &SamusState) -> u8 `
+- `pub fn ridley_try_to_launch_fireball_found_enemy_slot_bank5(state: &mut SamusState) `
+- `pub fn ridley_fireball_offset_x_bank5(state: &SamusState) -> i8 `
+- `pub fn en_anim_ridley_fireball_r_bank5(state: &mut SamusState) `
+- `pub fn en_anim_ridley_fireball_l_bank5(state: &mut SamusState) `
+- `pub fn en_frame_ridley_fireball0_r_bank5(state: &mut SamusState) `
+- `pub fn en_frame_ridley_fireball1_r_bank5(state: &mut SamusState) `
+- `pub fn en_frame_ridley_fireball2_r_bank5(state: &mut SamusState) `
+- `pub fn en_frame_ridley_fireball3_r_bank5(state: &mut SamusState) `
+- `pub fn en_frame_ridley_fireball0_l_bank5(state: &mut SamusState) `
+- `pub fn en_frame_ridley_fireball1_l_bank5(state: &mut SamusState) `
+- `pub fn en_frame_ridley_fireball2_l_bank5(state: &mut SamusState) `
+- `pub fn en_frame_ridley_fireball3_l_bank5(state: &mut SamusState) `
+- `pub fn gfx_samus(index: u8) -> u8 `
+- `pub fn gfx_samus_suitless(index: u8) -> u8 `
+- `pub fn jump_engine(state: &mut SamusState) `
+- `pub fn clear_samus_stats(state: &mut SamusState) `
+- `pub fn clear_samus_stats_loop(state: &mut SamusState) -> bool `
+- `pub fn load_samus_gfx(state: &mut SamusState) `
+- `pub fn load_samus_gfx_end_if_a(state: &SamusState) -> u8 `
+- `pub fn samus_init(state: &mut SamusState) `
+- `pub fn samus_intro(state: &mut SamusState) -> bool `
+- `pub fn samus_fade_in_time_tbl(index: u8) -> u8 `
+- `pub fn select_samus_palette(state: &mut SamusState) `
+- `pub fn select_samus_palette_end_if(state: &SamusState) -> u8 `
+- `pub fn sfx_samus_walk(state: &mut SamusState) `
+- `pub fn sfx_samus_jump(state: &mut SamusState) `
+- `pub fn sfx_samus_hit(state: &mut SamusState) `
+- `pub fn sfx_samus_die(state: &mut SamusState) `
+- `pub fn sfx_samus_ball(state: &mut SamusState) `
+- `pub fn update_samus(state: &mut SamusState) `
+- `pub fn go_samus_handler(state: &mut SamusState) `
+- `pub fn samus_stand(state: &mut SamusState) `
+- `pub fn set_samus_explode(state: &mut SamusState) `
+- `pub fn set_samus_run(state: &mut SamusState) `
+- `pub fn set_samus_run_accel(state: &mut SamusState) `
+- `pub fn samus_run(state: &mut SamusState) `
+- `pub fn set_samus_data_3frame_anim_delay(state: &mut SamusState) `
+- `pub fn set_samus_data(state: &mut SamusState) `
+- `pub fn samus_run_set_anim(state: &mut SamusState) `
+- `pub fn samus_run_fire(state: &mut SamusState) `
+- `pub fn samus_run_fire_aiming_up(state: &mut SamusState) `
+- `pub fn samus_run_fire_table(index: u8) -> u8 `
+- `pub fn is_samus_dead(state: &SamusState) -> bool `
+- `pub fn set_samus_stand(state: &mut SamusState) `
+- `pub fn set_samus_stand_no_footstep(state: &mut SamusState) `
+- `pub fn set_samus_anim(state: &mut SamusState) `
+- `pub fn set_samus_next_anim(state: &mut SamusState) `
+- `pub fn set_samus_pnt_up(state: &mut SamusState) `
+- `pub fn samus_run_check_horz_movement_midair(state: &SamusState) -> bool `
+- `pub fn set_samus_jump_pnt_up(state: &mut SamusState) `
+- `pub fn set_samus_jump(state: &mut SamusState) `
+- `pub fn samus_jump(state: &mut SamusState) `
+- `pub fn samus_jump_check_horz_movement(state: &SamusState) -> bool `
+- `pub fn samus_jump_check_fire(state: &SamusState) -> bool `
+- `pub fn samus_jump_check_fire_not_aiming_up(state: &mut SamusState) `
+- `pub fn set_samus_roll(state: &mut SamusState) `
+- `pub fn samus_roll(state: &mut SamusState) `
+- `pub fn samus_pnt_up(state: &mut SamusState) `
+- `pub fn samus_pnt_up_end_if_a(state: &mut SamusState) `
+- `pub fn samus_pnt_up_end_if_c(state: &mut SamusState) `
+- `pub fn samus_pnt_up_end_if_b(state: &mut SamusState) `
+- `pub fn samus_pnt_up_end_if_d(state: &mut SamusState) `
+- `pub fn samus_pnt_up_end_if_e(state: &mut SamusState) `
+- `pub fn samus_pnt_up_status_table(index: u8) -> u8 `
+- `pub fn fire_samus_projectile(state: &mut SamusState) -> bool `
+- `pub fn search_open_samus_projectile_slot(state: &SamusState) -> u8 `
+- `pub fn search_open_samus_projectile_slot_loop(state: &mut SamusState) -> bool `
+- `pub fn search_open_samus_projectile_slot_found(state: &mut SamusState) `
+- `pub fn search_open_samus_projectile_slot_end_if_a(state: &SamusState) -> u8 `
+- `pub fn fire_samus_projectile_forwards(state: &mut SamusState) `
+- `pub fn fire_samus_projectile_forwards_exit(state: &mut SamusState) `
+- `pub fn fire_samus_projectile_upwards(state: &mut SamusState) `
+- `pub fn fire_samus_projectile_upwards_exit(state: &mut SamusState) `
+- `pub fn samus_door(state: &mut SamusState) `
+- `pub fn samus_dead(state: &mut SamusState) `
+- `pub fn samus_dead2(state: &mut SamusState) `
+- `pub fn samus_elevator(state: &mut SamusState) `
+- `pub fn update_samus_projectiles(state: &mut SamusState) `
+- `pub fn do_one_samus_projectile(state: &mut SamusState) `
+- `pub fn goto_samus_projectile_hit_door_or_statue(state: &mut SamusState) `
+- `pub fn samus_collision_with_solid_entities(state: &mut SamusState) `
+- `pub fn samus_collision_with_solid_entities_loop(state: &mut SamusState) -> bool `
+- `pub fn samus_collision_with_solid_entities_not_on_enemy(state: &mut SamusState) `
+- `pub fn samus_collision_with_solid_entities_loop_exit(state: &mut SamusState) `
+- `pub fn samus_collision_with_solid_entities_rts(state: &SamusState) -> u8 `
+- `pub fn samus_collision_with_solid_entities_is_samus_on_top(state: &mut SamusState) `
+- `pub fn samus_collision_with_solid_entities_is_samus_on_top_no(state: &mut SamusState) `
+- `pub fn toggle_samus_hi(state: &mut SamusState) `
+- `pub fn is_samus_in_lava(state: &SamusState) -> bool `
+- `pub fn samus_move_vertically(state: &mut SamusState) `
+- `pub fn samus_move_vertically_end_if_a(state: &mut SamusState) `
+- `pub fn samus_move_vertically_loop_up(state: &mut SamusState) -> bool `
+- `pub fn samus_move_vertically_end_if_b(state: &mut SamusState) `
+- `pub fn samus_move_vertically_downwards(state: &mut SamusState) `
+- `pub fn samus_move_vertically_end_if_c(state: &SamusState) -> u8 `
+- `pub fn samus_move_vertically_loop_down(state: &mut SamusState) -> bool `
+- `pub fn samus_move_vertically_landing_no_ball(state: &mut SamusState) `
+- `pub fn samus_move_vertically_landing_no_bounce(state: &mut SamusState) `
+- `pub fn samus_move_vertically_end_if_d(state: &mut SamusState) `
+- `pub fn samus_move_horizontally(state: &mut SamusState) `
+- `pub fn move_samus_up(state: &mut SamusState) `
+- `pub fn move_samus_down(state: &mut SamusState) `
+- `pub fn move_samus_left(state: &mut SamusState) `
+- `pub fn move_samus_right(state: &mut SamusState) `
+- `pub fn samus_projectile_hit_door_or_statue(state: &mut SamusState) `
+- `pub fn samus_projectile_hit_door_or_statue_loop(state: &mut SamusState) -> bool `
+- `pub fn samus_projectile_hit_door_or_statue_hit_by_missile(state: &mut SamusState) `
+- `pub fn samus_projectile_hit_door_or_statue_blue_door(state: &mut SamusState) `
+- `pub fn samus_projectile_hit_door_or_statue_next(state: &mut SamusState) `
+- `pub fn is_blast_tile_skip_check_updating_samus_projectile(state: &mut SamusState) `
+- `pub fn samus_projectile_remove_if_off_screen(state: &mut SamusState) -> bool `
+- `pub fn samus_projectile_remove_if_off_screen_rts(state: &mut SamusState) `
+- `pub fn check_for_item_samus_does_not_have_this_item(state: &mut SamusState) `
+- `pub fn check_for_item_samus_has_this_item(state: &mut SamusState) `
+- `pub fn set_samus_projectile_is_hit(state: &mut SamusState) `
+- `pub fn set_samus_is_hit_flags(state: &mut SamusState) `
+- `pub fn collision_detection_enemy_react_to_collision_with_samus(state: &mut SamusState) `
+- `pub fn collision_detection_mellow_react_to_collision_with_samus(state: &mut SamusState) `
+- `pub fn collision_detection_enemy_react_to_collision_with_samus_projectile(state: &mut SamusState) `
+- `pub fn collision_detection_en_projectile_react_to_collision_with_samus_f2df(state: &mut SamusState) `
+- `pub fn set_enemy_touching_samus_flags(state: &mut SamusState) `
+- `pub fn collision_detection_en_projectile_react_to_collision_with_samus(state: &mut SamusState) `
+- `pub fn samus_hurt_f311(state: &mut SamusState) `
+- `pub fn collision_detection_mellow_react_to_collision_with_samus_projectile(state: &mut SamusState) `
+- `pub fn set_samus_is_hit_by_enemy(state: &mut SamusState) `
+- `pub fn enemy_react_to_samus_projectile(state: &mut SamusState) `
+- `pub fn enemy_react_to_samus_projectile_rts(state: &SamusState) -> u8 `
+- `pub fn update_enemy_force_speed_towards_samus(state: &mut SamusState) `
+- `pub fn update_enemy_force_speed_towards_samus_end_if_a(state: &mut SamusState) `
+- `pub fn update_enemy_force_speed_towards_samus_else_b(state: &mut SamusState) `
+- `pub fn update_enemy_force_speed_towards_samus_end_if_c(state: &mut SamusState) `
+- `pub fn update_enemy_force_speed_towards_samus_end_if_b(state: &mut SamusState) `
+- `pub fn update_enemy_force_speed_towards_samus_end_if_d(state: &SamusState) -> i8 `
+- `pub fn update_enemy_force_speed_towards_samus_skip_x_axis(state: &mut SamusState) `
+- `pub fn update_enemy_force_speed_towards_samus_else_e(state: &mut SamusState) `
+- `pub fn update_enemy_force_speed_towards_samus_end_if_f(state: &SamusState) -> u8 `
+- `pub fn update_enemy_force_speed_towards_samus_end_if_e(state: &mut SamusState) `
+- `pub fn update_enemy_en_data05_distance_to_samus_threshold(state: &mut SamusState) `
+- `pub fn init_enemy_force_speed_towards_samus_delay_and_health(state: &mut SamusState) `
+- `pub fn init_enemy_force_speed_towards_samus_delay_and_health_end_if_a(state: &SamusState) -> u8 `
+- `pub fn init_enemy_force_speed_towards_samus_delay_and_health_rts(state: &mut SamusState) `
+- `pub fn calculate_password_end_if_statue_bit7(state: &mut SamusState) `
+- `pub fn calculate_password_end_if_statue_bit6(state: &mut SamusState) `
+- `pub fn calculate_password_end_if_statue_bit5(state: &mut SamusState) `
+- `pub fn calculate_password_end_if_statue_bit4(state: &mut SamusState) `
+- `pub fn sfx_data_energy_pickup() -> u8 `
+- `pub fn sfx_data_missile_pickup() -> u8 `
+- `pub fn sfx_data_enemy_hit() -> u8 `
+- `pub fn sfx_data_big_enemy_hit() -> u8 `
+- `pub fn sfx_data_statue_raise() -> u8 `
+- `pub fn sfx_data_door() -> u8 `
+- `pub fn missile_pickup_sfx_tbl(index: u8) -> u8 `
+- `pub fn missile_pickup_sfx_cont(state: &mut SamusState) `
+- `pub fn missile_pickup_sfx_cont_end_if_a(state: &mut SamusState) `
+- `pub fn missile_pickup_sfx_cont_rts(state: &SamusState) -> u8 `
+- `pub fn missile_pickup_sfx_init(state: &mut SamusState) `
+- `pub fn energy_pickup_sfx_cont(state: &mut SamusState) `
+- `pub fn energy_pickup_sfx_init(state: &mut SamusState) `
+- `pub fn enemy_hit_sfx_init(state: &mut SamusState) `
+- `pub fn door_open_close_sfx_init(state: &mut SamusState) `
+- `pub fn door_open_close_sfx_cont(state: &mut SamusState) `
+- `pub fn door_open_close_sfx_cont_end_if_a(state: &mut SamusState) `
+- `pub fn big_enemy_hit_sfx_init(state: &mut SamusState) `
+- `pub fn big_enemy_hit_sfx_cont(state: &mut SamusState) `
+- `pub fn big_enemy_hit_sfx_cont_dont_end(state: &SamusState) -> u8 `
+- `pub fn statue_raise_sfx_init(state: &mut SamusState) `
+- `pub fn statue_raise_sfx_cont(state: &mut SamusState) `
+- `pub fn statue_raise_sfx_cont_end_if_b(state: &mut SamusState) `
+- `pub fn statue_raise_sfx_cont_end_if_a(state: &SamusState) -> u8 `
+- `pub fn song_mthr_brn_room_header(index: u8) -> u8 `
+- `pub fn song_item_room_header(index: u8) -> u8 `
+- `pub fn song_item_room_tri(index: u8) -> u8 `
+- `pub fn song_item_room_sq1(index: u8) -> u8 `
+- `pub fn song_item_room_sq2(index: u8) -> u8 `
+- `pub fn enemy_move(state: &mut SamusState) `
+- `pub fn enemy_move_loop_up(state: &mut SamusState) -> bool `
+- `pub fn enemy_move_end_if_up(state: &mut SamusState) `
+- `pub fn enemy_move_loop_down(state: &mut SamusState) -> bool `
+- `pub fn enemy_move_end_if_down(state: &mut SamusState) `
+- `pub fn enemy_move_loop_left(state: &mut SamusState) -> bool `
+- `pub fn enemy_move_end_if_left(state: &mut SamusState) `
+- `pub fn enemy_move_loop_right(state: &mut SamusState) -> bool `
+- `pub fn enemy_move_end_if_right(state: &mut SamusState) `
+- `pub fn enemy_move_rts(state: &SamusState) -> u8 `
+- `pub fn enemy_if_move_failed_up(state: &mut SamusState) `
+- `pub fn enemy_if_move_failed_up_bounce(state: &mut SamusState) `
+- `pub fn enemy_if_move_failed_up_facing_horizontal(state: &mut SamusState) `
+- `pub fn enemy_if_move_failed_up_brush_on_ceiling(state: &mut SamusState) `
+- `pub fn enemy_if_move_failed_up_land_on_ceiling_pt2(state: &mut SamusState) `
+- `pub fn enemy_if_move_failed_up_movement_strings(index: u8) -> u8 `
+- `pub fn enemy_if_move_failed_up_abort_loop(state: &mut SamusState) `
+- `pub fn enemy_if_move_failed_up_rts(state: &SamusState) -> u8 `
+- `pub fn enemy_if_move_failed_down(state: &mut SamusState) `
+- `pub fn enemy_if_move_failed_down_bounce(state: &mut SamusState) `
+- `pub fn enemy_if_move_failed_down_facing_horizontal(state: &mut SamusState) `
+- `pub fn enemy_if_move_failed_down_land_on_floor(state: &mut SamusState) `
+- `pub fn enemy_if_move_failed_down_movement_strings(index: u8) -> u8 `
+- `pub fn enemy_if_move_failed_down_abort_loop(state: &mut SamusState) `
+- `pub fn enemy_if_move_failed_down_rts(state: &SamusState) -> u8 `
+- `pub fn enemy_if_move_failed_right(state: &mut SamusState) `
+- `pub fn enemy_if_move_failed_right_bounce(state: &mut SamusState) `
+- `pub fn enemy_if_move_failed_right_facing_vertical(state: &mut SamusState) `
+- `pub fn enemy_if_move_failed_right_land_on_right_wall(state: &mut SamusState) `
+- `pub fn enemy_if_move_failed_right_movement_strings(index: u8) -> u8 `
+- `pub fn enemy_if_move_failed_right_abort_loop(state: &mut SamusState) `
+- `pub fn enemy_if_move_failed_right_rts(state: &SamusState) -> u8 `
+- `pub fn enemy_if_move_failed_left(state: &mut SamusState) `
+- `pub fn enemy_if_move_failed_left_bounce(state: &mut SamusState) `
+- `pub fn enemy_if_move_failed_left_facing_vertical(state: &mut SamusState) `
+- `pub fn enemy_if_move_failed_left_brush_on_left_wall(state: &mut SamusState) `
+- `pub fn enemy_if_move_failed_left_land_on_left_wall_pt2(state: &mut SamusState) `
+- `pub fn enemy_if_move_failed_left_movement_strings(index: u8) -> u8 `
+- `pub fn enemy_if_move_failed_left_abort_loop(state: &mut SamusState) `
+- `pub fn enemy_if_move_failed_left_rts(state: &SamusState) -> u8 `
+- `pub fn enemy_trigger_resting_and_clear_en_accel_y(state: &mut SamusState) `
+- `pub fn enemy_trigger_resting(state: &mut SamusState) `
+- `pub fn enemy_trigger_resting_and_clear_en_accel_x(state: &mut SamusState) `
+- `pub fn enemy_if_move_failed_horizontal_bounce(state: &mut SamusState) `
+- `pub fn enemy_if_move_failed_horizontal_bounce_flip_speed_and_accel(state: &mut SamusState) `
+- `pub fn enemy_if_move_failed_horizontal_bounce_flip_speed(state: &mut SamusState) `
+- `pub fn enemy_if_move_failed_horizontal_bounce_end_if_speed_sub_pixel(state: &SamusState) -> u8 `
+- `pub fn enemy_if_move_failed_horizontal_bounce_rts(state: &SamusState) -> u8 `
+- `pub fn enemy_if_move_failed_vertical_bounce(state: &mut SamusState) `
+- `pub fn enemy_if_move_failed_vertical_bounce_flip_speed_and_accel(state: &mut SamusState) `
+- `pub fn enemy_if_move_failed_vertical_bounce_flip_speed(state: &mut SamusState) `
+- `pub fn enemy_if_move_failed_vertical_bounce_end_if_speed_sub_pixel(state: &SamusState) -> u8 `
+- `pub fn enemy_if_move_failed_vertical_bounce_rts(state: &SamusState) -> u8 `
+- `pub fn load_enemy_movement_ptr(state: &mut SamusState) `
+- `pub fn load_enemy_movement_ptr_end_if_a(state: &SamusState) -> u16 `
+- `pub fn enemy_get_delta_y(state: &SamusState) -> i8 `
+- `pub fn enemy_get_delta_y_end_if_a(state: &SamusState) -> i8 `
+- `pub fn enemy_get_delta_y_read_byte_at_index(state: &SamusState) -> u8 `
+- `pub fn enemy_get_delta_y_read_byte(state: &mut SamusState) `
+- `pub fn goto_enemy_get_delta_y_trigger_resting(state: &mut SamusState) `
+- `pub fn enemy_get_delta_y_sign_mag_speed(state: &SamusState) -> i8 `
+- `pub fn enemy_get_delta_y_sign_mag_speed_end_if_a(state: &SamusState) -> u8 `
+- `pub fn enemy_get_delta_y_sign_mag_speed_from_byte(state: &SamusState) -> i8 `
+- `pub fn enemy_get_delta_y_sign_mag_speed_end_if_b(state: &SamusState) -> u8 `
+- `pub fn enemy_get_delta_y_store(state: &mut SamusState) `
+- `pub fn enemy_get_delta_y_stop_movement(state: &mut SamusState) `
+- `pub fn enemy_get_delta_y_repeat_previous_until_failure(state: &mut SamusState) -> bool `
+- `pub fn enemy_get_delta_y_repeat_previous_until_failure_else_a(state: &mut SamusState) `
+- `pub fn enemy_get_delta_y_repeat_previous_until_failure_end_if_a(state: &mut SamusState) `
+- `pub fn enemy_get_delta_y_repeat_previous_until_failure_success(state: &mut SamusState) `
+- `pub fn enemy_get_delta_y_repeat_previous_until_failure_common(state: &mut SamusState) `
+- `pub fn enemy_get_delta_y_repeat_previous_until_no_delta_y_then_trigger_resting(state: &mut SamusState) -> bool `
+- `pub fn enemy_get_delta_y_repeat_previous_until_no_delta_y_then_trigger_resting_else_a(state: &mut SamusState) `
+- `pub fn enemy_get_delta_y_repeat_previous_until_no_delta_y_then_trigger_resting_end_if_a(state: &mut SamusState) `
+- `pub fn enemy_get_delta_y_repeat_previous_until_no_delta_y_then_trigger_resting_fail(state: &mut SamusState) `
+- `pub fn enemy_get_delta_y_repeat_previous_until_no_delta_y_then_trigger_resting_end_if_b(state: &SamusState) -> u8 `
+- `pub fn enemy_get_delta_y_trigger_resting(state: &mut SamusState) `
+- `pub fn enemy_get_delta_x(state: &SamusState) -> i8 `
+- `pub fn enemy_get_delta_x_end_if_a(state: &SamusState) -> i8 `
+- `pub fn enemy_get_delta_x_sign_mag_speed(state: &SamusState) -> i8 `
+- `pub fn enemy_get_delta_x_sign_mag_speed_from_byte(state: &SamusState) -> i8 `
+- `pub fn enemy_get_delta_x_sign_mag_speed_end_if_a(state: &SamusState) -> u8 `
+- `pub fn enemy_get_delta_x_store(state: &mut SamusState) `
+- `pub fn enemy_get_delta_y_using_acceleration(state: &mut SamusState) `
+- `pub fn enemy_get_delta_y_using_acceleration_if_b(state: &mut SamusState) -> bool `
+- `pub fn enemy_get_delta_y_using_acceleration_else_a(state: &mut SamusState) `
+- `pub fn enemy_get_delta_y_using_acceleration_end_if_b(state: &SamusState) -> u8 `
+- `pub fn enemy_get_delta_y_using_acceleration_end_if_a(state: &SamusState) -> u8 `
+- `pub fn enemy_get_delta_y_using_acceleration_end_if_c(state: &mut SamusState) `
+- `pub fn enemy_get_delta_x_using_acceleration(state: &mut SamusState) `
+- `pub fn enemy_get_delta_x_using_acceleration_end_if_a(state: &SamusState) -> u8 `
+- `pub fn enemy_get_delta_x_using_acceleration_end_if_b(state: &mut SamusState) `
+- `pub fn enemy_get_delta_x_using_acceleration_end_if_c(state: &SamusState) -> u8 `
+- `pub fn enemy_move_one_pixel_up(state: &mut SamusState) `
+- `pub fn enemy_move_one_pixel_up_end_if_a(state: &mut SamusState) `
+- `pub fn enemy_move_one_pixel_up_end_if_b(state: &SamusState) -> u8 `
+- `pub fn enemy_move_one_pixel_up_end_if_c(state: &mut SamusState) `
+- `pub fn enemy_move_one_pixel_up_success(state: &mut SamusState) `
+- `pub fn enemy_move_one_pixel_up_end_if_d(state: &mut SamusState) `
+- `pub fn enemy_move_one_pixel_up_rts(state: &SamusState) -> u8 `
+- `pub fn enemy_move_one_pixel_down(state: &mut SamusState) `
+- `pub fn enemy_move_one_pixel_down_end_if_a(state: &mut SamusState) `
+- `pub fn enemy_move_one_pixel_down_end_if_b(state: &SamusState) -> u8 `
+- `pub fn enemy_move_one_pixel_down_end_if_c(state: &mut SamusState) `
+- `pub fn enemy_move_one_pixel_down_success(state: &mut SamusState) `
+- `pub fn enemy_move_one_pixel_down_end_if_d(state: &mut SamusState) `
+- `pub fn enemy_move_one_pixel_down_rts(state: &SamusState) -> u8 `
+- `pub fn enemy_move_one_pixel_left(state: &mut SamusState) `
+- `pub fn enemy_move_one_pixel_left_end_if_a(state: &mut SamusState) `
+- `pub fn enemy_move_one_pixel_left_end_if_c(state: &mut SamusState) `
+- `pub fn enemy_move_one_pixel_left_end_if_b(state: &SamusState) -> u8 `
+- `pub fn enemy_move_one_pixel_left_end_if_d(state: &mut SamusState) `
+- `pub fn enemy_move_one_pixel_left_success(state: &mut SamusState) `
+- `pub fn enemy_move_one_pixel_left_end_if_e(state: &SamusState) -> u8 `
+- `pub fn enemy_move_one_pixel_left_rts(state: &mut SamusState) `
+- `pub fn enemy_move_one_pixel_right(state: &mut SamusState) `
+- `pub fn enemy_move_one_pixel_right_end_if_a(state: &mut SamusState) `
