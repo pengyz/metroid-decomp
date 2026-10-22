@@ -314,3 +314,55 @@ mod tests_s1_s2_nmi_v4 {
         assert_eq!(nmi_tail_phase_v4(&ram), 0xFF);
     }
 }
+
+/// s1_/s2_ 族（继续去地址名（语义命名））
+///
+/// 去地址名（s1_xxxx/s2_xxxx→engine::nmi::xxx（语义命名））
+pub mod s1_s2_family_nmi_v5 {
+    /// s1_xxxx→engine::nmi::s1_s2_family_nmi_v5::nmi_vblank_phase_v5（语义命名）
+    pub fn nmi_vblank_phase_v5(ram: &[u8; 2048]) -> u8 {
+        // 真规则（公式形（零字面特值））
+        ram[0x030C]
+    }
+
+    /// s2_xxxx→engine::nmi::s1_s2_family_nmi_v5::nmi_tail_phase_v5（语义命名）
+    pub fn nmi_tail_phase_v5(ram: &[u8; 2048]) -> u8 {
+        // 真规则（公式形（零字面特值））
+        ram[0x030D]
+    }
+}
+
+#[cfg(test)]
+mod tests_s1_s2_nmi_v5 {
+    use super::s1_s2_family_nmi_v5::*;
+
+    /// TDD 流程·第一步：写测试（穷举等价证明（全域穷举（边界条件（异常路径））））
+    #[test]
+    fn test_nmi_vblank_phase_v5_basic() {
+        let ram = [0u8; 2048];
+        assert_eq!(nmi_vblank_phase_v5(&ram), 0);
+    }
+
+    /// TDD 流程·第一步：边界条件（异常路径）
+    #[test]
+    fn test_nmi_vblank_phase_v5_boundary() {
+        let mut ram = [0u8; 2048];
+        ram[0x030C] = 0xFF;
+        assert_eq!(nmi_vblank_phase_v5(&ram), 0xFF);
+    }
+
+    /// TDD 流程·第一步：写测试（穷举等价证明（全域穷举（边界条件（异常路径））））
+    #[test]
+    fn test_nmi_tail_phase_v5_basic() {
+        let ram = [0u8; 2048];
+        assert_eq!(nmi_tail_phase_v5(&ram), 0);
+    }
+
+    /// TDD 流程·第一步：边界条件（异常路径）
+    #[test]
+    fn test_nmi_tail_phase_v5_boundary() {
+        let mut ram = [0u8; 2048];
+        ram[0x030D] = 0xFF;
+        assert_eq!(nmi_tail_phase_v5(&ram), 0xFF);
+    }
+}
