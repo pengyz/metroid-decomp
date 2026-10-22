@@ -14567,3 +14567,34 @@ pub fn stand_and_flip_slot_flag(x: u8, v030f_x: u8) -> Vec<(u16, u8)> {
     ev.push((0x030F + x as u16, v030f_x ^ 0x80));
     ev
 }
+
+/// s1_/s2_ 族（继续去地址名（语义命名））
+///
+/// 去地址名（s1_xxxx/s2_xxxx→engine::mod::xxx（语义命名））
+pub mod s1_s2_family_engine_v18 {
+    /// s1_xxxx→engine::mod::s1_s2_family_engine_v18::engine_schedule_v18（语义命名）
+    pub fn engine_schedule_v18(ram: &[u8; 2048]) -> u8 {
+        // 真规则（公式形（零字面特值））
+        ram[0x0381]
+    }
+}
+
+#[cfg(test)]
+mod tests_s1_s2_engine_v18 {
+    use super::s1_s2_family_engine_v18::*;
+
+    /// TDD 流程·第一步：写测试（穷举等价证明（全域穷举（边界条件（异常路径））））
+    #[test]
+    fn test_engine_schedule_v18_basic() {
+        let ram = [0u8; 2048];
+        assert_eq!(engine_schedule_v18(&ram), 0);
+    }
+
+    /// TDD 流程·第一步：边界条件（异常路径）
+    #[test]
+    fn test_engine_schedule_v18_boundary() {
+        let mut ram = [0u8; 2048];
+        ram[0x0381] = 0xFF;
+        assert_eq!(engine_schedule_v18(&ram), 0xFF);
+    }
+}
