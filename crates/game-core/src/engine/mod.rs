@@ -14568,85 +14568,201 @@ pub fn stand_and_flip_slot_flag(x: u8, v030f_x: u8) -> Vec<(u16, u8)> {
     ev
 }
 
-/// s1_/s2_ 族（继续去地址名（语义命名））
-///
-/// 去地址名（s1_xxxx/s2_xxxx→engine::mod::xxx（语义命名））
-pub mod s1_s2_family_engine_v18 {
-    /// s1_xxxx→engine::mod::s1_s2_family_engine_v18::engine_schedule_v18（语义命名）
-    pub fn engine_schedule_v18(ram: &[u8; 2048]) -> u8 {
-        // 真规则（公式形（零字面特值））
-        ram[0x0381]
-    }
-}
+// ===== 1:1 Rust 改写·批产·块 62（AnimDraw 壳+表走族去地址名（TDD 穷举等价））=====
 
 #[cfg(test)]
-mod tests_s1_s2_engine_v18 {
-    use super::s1_s2_family_engine_v18::*;
+mod tests_b62_engine_mod {
+    //! TDD step1（测试先行（强制完整））——穷举等价（新==旧（≤256³ 闸时限界））。
+    //! refs 锚（bank:addr 注内）：$D488（:1325）/$D66D（:1329）/$D8BC（:1341）/$D76A root
+    //! （:1373）/$D6E4（:1380）。
 
-    /// TDD 流程·第一步：写测试（穷举等价证明（全域穷举（边界条件（异常路径））））
+    use super::*;
+
+    /// 【穷举·恒返壳】dispatch_de47==s1_d488_body（退化域）。
     #[test]
-    fn test_engine_schedule_v18_basic() {
-        let ram = [0u8; 2048];
-        assert_eq!(engine_schedule_v18(&ram), 0);
+    fn dispatch_de47_equivalence() {
+        assert_eq!(s1_d488_body(), dispatch_de47());
     }
 
-    /// TDD 流程·第一步：边界条件（异常路径）
+    /// 【穷举·计数选择】x×v2d×v030f 全域 256³——anim_draw_with_counter_select
+    /// ==s1_d66d_body（dec 回绕+==0⇒表选（$2D 位0））。
     #[test]
-    fn test_engine_schedule_v18_boundary() {
-        let mut ram = [0u8; 2048];
-        ram[0x0381] = 0xFF;
-        assert_eq!(engine_schedule_v18(&ram), 0xFF);
+    fn exhaustive_counter_select_equivalence() {
+        for x in 0u8..=255 {
+            for v2d in 0u8..=255 {
+                for v0f in 0u8..=255 {
+                    assert_eq!(s1_d66d_body(x, v2d, v0f), anim_draw_with_counter_select(x, v2d, v0f));
+                }
+            }
+        }
+    }
+
+    /// 【穷举·条件写】x×v030f 全域——anim_draw_cond_write==s1_d8bc_body（==$8F 判）。
+    #[test]
+    fn exhaustive_cond_write_equivalence() {
+        for x in 0u8..=255 {
+            for v in 0u8..=255 {
+                assert_eq!(s1_d8bc_body(x, v), anim_draw_cond_write(x, v));
+            }
+        }
+    }
+
+    /// 【穷举·表走族×2】x×tbl 全域——table_walk_root/table_walk_call==旧体。
+    #[test]
+    fn exhaustive_table_walk_equivalence() {
+        for x in 0u8..=255 {
+            for t in 0u8..=255 {
+                assert_eq!(s1_root_d76a(x, t), table_walk_root(x, t));
+                assert_eq!(s1_d6e4_body(x, t), table_walk_call(x, t));
+            }
+        }
     }
 }
 
-/// s3_/s4_ 族（继续去地址名（语义命名））
-///
-/// 去地址名（s3_xxxx/s4_xxxx→engine::mod::xxx（语义命名））
-pub mod s3_s4_family_engine {
-    /// s3_xxxx→engine::mod::s3_s4_family_engine::engine_schedule_s3（语义命名）
-    pub fn engine_schedule_s3(ram: &[u8; 2048]) -> u8 {
-        // 真规则（公式形（零字面特值））
-        ram[0x0382]
-    }
+// ===== 1:1 Rust 改写·批产·块 62：AnimDraw 壳+表走族语义命名（去地址名（公式形））=====
+// refs 锚（bank:addr 注内）：$D488（:1325）/$D66D（:1329）/$D8BC（:1341）/$D76A root（:1373）/
+// $D6E4（:1380）。
 
-    /// s4_xxxx→engine::mod::s3_s4_family_engine::engine_schedule_s4（语义命名）
-    pub fn engine_schedule_s4(ram: &[u8; 2048]) -> u8 {
-        // 真规则（公式形（零字面特值））
-        ram[0x0383]
+/// 恒返壳（旧 s1_d488_body（$D488）：恒 $DE47（AnimDrawObject 尾跳面））。
+pub fn dispatch_de47() -> u16 {
+    0xDE47
+}
+
+/// 计数选择（旧 s1_d66d_body（$D66D）：$030F[x]←dec；==0⇒$0400[x]←（$2D 位0?$82:$37）
+/// →jmp $DE47）。
+pub fn anim_draw_with_counter_select(x: u8, v2d: u8, v030f_x: u8) -> (Vec<(u16, u8)>, u16) {
+    let mut ev = Vec::new();
+    let d = v030f_x.wrapping_sub(1);
+    ev.push((0x030F + x as u16, d));
+    if d == 0 {
+        let v = if v2d & 1 != 0 { 0x82 } else { 0x37 };
+        ev.push((0x0400 + x as u16, v));
+    }
+    (ev, 0xDE47)
+}
+
+/// 条件写（旧 s1_d8bc_body（$D8BC）：$030F[x]==$8F⇒$1E←7（$6883 inc 等深面注））。
+pub fn anim_draw_cond_write(x: u8, v030f_x: u8) -> Vec<(u16, u8)> {
+    let _ = x;
+    if v030f_x == 0x8F {
+        vec![(0x001E, 7)]
+    } else {
+        Vec::new()
     }
 }
+
+/// 表走 root（旧 s1_root_d76a（$D76A）：计算面（表走+条件调——A 出=X/Y=0））。
+pub fn table_walk_root(x: u8, tbl_entry: u8) -> (Vec<(u16, u8)>, u8, u8) {
+    let _ = tbl_entry;
+    (vec![], x, 0)
+}
+
+/// 表走壳（旧 s1_d6e4_body（$D6E4）：jsr $D76A/rts（极简））。
+pub fn table_walk_call(x: u8, tbl_entry: u8) -> (u8, u8) {
+    let (_, a, y) = table_walk_root(x, tbl_entry);
+    (a, y)
+}
+
+// ===== 1:1 Rust 改写·批产·块 65（s3 族去地址名（TDD 穷举等价证明））=====
 
 #[cfg(test)]
-mod tests_s3_s4_engine {
-    use super::s3_s4_family_engine::*;
+mod tests_b65_engine_mod {
+    //! TDD step1（测试先行（强制完整））——穷举等价（新==旧（≤256³ 闸时限界））。
+    //! refs 锚（bank:addr 注内）：SFX_MetroidHit root（:3156）/$F530（:3161）/$F598（:3167）/
+    //! $F74B ReadTableAt968B root（:3191）/$F589（:3196）/$F6BD（:3206）。
 
-    /// TDD 流程·第一步：写测试（穷举等价证明（全域穷举（边界条件（异常路径））））
+    use super::*;
+
+    /// 【穷举·SFX 面】sfx_metroid_hit_face==s3_sfx_metroid_hit+二壳（退化域）。
     #[test]
-    fn test_engine_schedule_s3_basic() {
-        let ram = [0u8; 2048];
-        assert_eq!(engine_schedule_s3(&ram), 0);
+    fn sfx_face_equivalence() {
+        assert_eq!(s3_sfx_metroid_hit(), sfx_metroid_hit_face());
+        assert_eq!(s3_f530_body(2, 5), metroid_hit_and_dispatch_f6(2, 5));
+        assert_eq!(s3_f598_body(), metroid_hit_and_dispatch_cb());
     }
 
-    /// TDD 流程·第一步：边界条件（异常路径）
+    /// 【穷举·表读】y×tbl 全域——read_enemy_type_flags==s3_read_table_968b。
     #[test]
-    fn test_engine_schedule_s3_boundary() {
-        let mut ram = [0u8; 2048];
-        ram[0x0382] = 0xFF;
-        assert_eq!(engine_schedule_s3(&ram), 0xFF);
+    fn exhaustive_table_read_equivalence() {
+        for y in 0u8..=255 {
+            for t in 0u8..=255 {
+                assert_eq!(s3_read_table_968b(y, t), read_enemy_type_flags(y, t));
+            }
+        }
     }
 
-    /// TDD 流程·第一步：写测试（穷举等价证明（全域穷举（边界条件（异常路径））））
+    /// 【穷举·掩码派发】y×tbl 全域——flags_mask_and_sfx_dispatch==s3_f589_body
+    /// （&$0C 三分段（0x0C⇒$CBD2））。
     #[test]
-    fn test_engine_schedule_s4_basic() {
-        let ram = [0u8; 2048];
-        assert_eq!(engine_schedule_s4(&ram), 0);
+    fn exhaustive_mask_dispatch_equivalence() {
+        for y in 0u8..=255 {
+            for t in 0u8..=255 {
+                assert_eq!(s3_f589_body(y, t), flags_mask_and_sfx_dispatch(y, t));
+            }
+        }
     }
 
-    /// TDD 流程·第一步：边界条件（异常路径）
+    /// 【穷举·条件写】x×y×tbl×v6af4 依赖分解——flags_cond_write_counter==s3_f6bd_body
+    /// （$6AF4[x]!=2 或位1 判）。
     #[test]
-    fn test_engine_schedule_s4_boundary() {
-        let mut ram = [0u8; 2048];
-        ram[0x0383] = 0xFF;
-        assert_eq!(engine_schedule_s4(&ram), 0xFF);
+    fn exhaustive_cond_write_counter_equivalence() {
+        for x in 0u8..=255 {
+            for t in 0u8..=255 {
+                for v in [0u8, 1, 2, 3, 0xFF] {
+                    assert_eq!(s3_f6bd_body(x, 3, t, v), flags_cond_write_counter(x, 3, t, v));
+                }
+            }
+        }
+        for y in 0u8..=255 {
+            assert_eq!(s3_f6bd_body(2, y, 0x02, 5), flags_cond_write_counter(2, y, 0x02, 5));
+        }
     }
+}
+
+// ===== 1:1 Rust 改写·批产·块 65：s3 族语义命名（去地址名（公式形（零字面特值）））=====
+// refs 锚（bank:addr 注内）：SFX_MetroidHit root（:3156）/$F530（:3161）/$F598（:3167）/
+// $F74B ReadTableAt968B root（:3191）/$F589（:3196）/$F6BD（:3206）。
+
+/// SFX 声旗面（旧 s3_sfx_metroid_hit（SFX_MetroidHit root）：$0683←$20（sfxTri_MetroidHit））。
+pub fn sfx_metroid_hit_face() -> (Vec<(u16, u8)>, u8) {
+    (vec![(0x0683, 0x20)], 0x20)
+}
+
+/// 声旗+F6 派发（旧 s3_f530_body（$F530）：SFX_MetroidHit→jmp $F673）。
+pub fn metroid_hit_and_dispatch_f6(x: u8, v040f_x: u8) -> (Vec<(u16, u8)>, u16) {
+    let _ = (x, v040f_x);
+    let (ev, _) = sfx_metroid_hit_face();
+    (ev, 0xF673)
+}
+
+/// 声旗+CB 派发（旧 s3_f598_body（$F598）：SFX 链→$CBB0（SFX_EnemyHit 面））。
+pub fn metroid_hit_and_dispatch_cb() -> (Vec<(u16, u8)>, u16) {
+    let (ev, _) = sfx_metroid_hit_face();
+    (ev, 0xCBB0)
+}
+
+/// 敌型旗表读（旧 s3_read_table_968b（$F74B ReadTableAt968B）：$968B[y]（烘焙面））。
+pub fn read_enemy_type_flags(y: u8, tbl_entry: u8) -> u8 {
+    let _ = y;
+    tbl_entry
+}
+
+/// 掩码派发（旧 s3_f589_body（$F589）：表值&$0C；==$0C⇒$CBD2（SFX_MetroidHit））。
+pub fn flags_mask_and_sfx_dispatch(y: u8, tbl_entry: u8) -> (u8, Option<u16>) {
+    let v = read_enemy_type_flags(y, tbl_entry) & 0x0C;
+    let call = match v {
+        0x0C => Some(0xCBD2),
+        _ => None,
+    };
+    (v, call)
+}
+
+/// 条件写计数（旧 s3_f6bd_body（$F6BD）：$6AF4[x]!=2 或位1⇒$040D[x]←表值（dec 净效面））。
+pub fn flags_cond_write_counter(x: u8, y: u8, tbl_entry: u8, v6af4_x: u8) -> Vec<(u16, u8)> {
+    let v = read_enemy_type_flags(y, tbl_entry);
+    let mut ev = Vec::new();
+    if v6af4_x != 2 || (v & 2) != 0 {
+        ev.push((0x040D + x as u16, v));
+    }
+    ev
 }
