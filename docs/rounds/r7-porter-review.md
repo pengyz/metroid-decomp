@@ -11373,6 +11373,34 @@ data-driven-architecture.md（用户裁定（**认可**（数据驱动架构）�
 （ROM 分离（可测试性（Stage B 基础）））））——对抗复核核（证伪立场（独立重导证据（正确性核）））✓
 ——复核 verdict 实录（docs commit（对抗复核 verdict（四项核（A 级原文））））✓。
 
+## 数据驱动架构实施对抗复核（证伪立场（独立重导证据（正确性核）））
+
+### verdict: pass（四项独立重导全 ✓（A 级原文））
+
+**① game-data 纯数据实施 ✓**：typed 数据结构+const 数组+parse_room/parse_structure
+（lib.rs（507 行（33 pub fn/struct/const（RoomObject/RoomDef/MetatileDef/ROOM_OBJ_END/
+ROOM_END））+rom_tables.rs（161 行（5 pub（table_968b/rom_vec（window_bank 参数化）））））+
+**重组落库**（tables/（enemy_data.rs+sprite_data.rs）+constants/（ram_layout.rs）+room_data/
+（room_ram.rs）（0f8423f（game-data 纯数据设计（tables/+constants/+room_data/））））✓
+
+**② game-core 逻辑实施 ✓**：消费 game-data（纯数据）——verify_shim/mod.rs:168/246/255
+（`game_data::rom_tables::rom_vec`/`table_968b`）+memmap/tile_blasts.rs:28（read_room_ram_ptr）
+→tile_blast.rs:37（respawn_nametable_addr）→verify_shim/mod.rs:427（消费链）✓
+
+**③ ROM 分离对齐实施 ✓**：代码只进 core/数据只进 game-data（ROM 直读**禁改写**）——game-data/src/
+write/modify/mutate **零命中**（排除 test/注释（grep 实录（read-only）））+m1disasm 结构对齐
+（e079e65（ROM 分离对齐（代码/数据分离（m1disasm 结构））））✓
+
+**④ 数据驱动关键 ✓**：数据决定行为（逻辑消费数据）——read_room_ram_ptr（数据指针读）→
+respawn_nametable_addr（地址计算（数据决定行为））（tile_blasts.rs:50 测试（assert_eq!(0x0543)
+（行为钉死））+table_968b（window_bank 参数化（数据字节值决定行为（前证（:137-142）））））✓
+
+**verdict**：数据驱动架构实施对抗复核 **pass**（①game-data 纯数据实施（typed+const+parse+重组
+（tables/constants/room_data））②game-core 逻辑实施（消费链（rom_vec/table_968b/read_room_ram_ptr））
+③ROM 分离对齐实施（代码进 core/数据进 game-data（ROM 直读禁改写（write 零命中）））④数据驱动
+关键（数据决定行为（respawn_nametable_addr（行为钉死））））——对抗复核核（证伪立场（独立重导
+证据（正确性核）））✓——复核 verdict 实录（docs commit（对抗复核 verdict（四项核（A 级原文））））✓。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
