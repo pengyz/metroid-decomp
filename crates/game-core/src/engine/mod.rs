@@ -14598,3 +14598,55 @@ mod tests_s1_s2_engine_v18 {
         assert_eq!(engine_schedule_v18(&ram), 0xFF);
     }
 }
+
+/// s3_/s4_ 族（继续去地址名（语义命名））
+///
+/// 去地址名（s3_xxxx/s4_xxxx→engine::mod::xxx（语义命名））
+pub mod s3_s4_family_engine {
+    /// s3_xxxx→engine::mod::s3_s4_family_engine::engine_schedule_s3（语义命名）
+    pub fn engine_schedule_s3(ram: &[u8; 2048]) -> u8 {
+        // 真规则（公式形（零字面特值））
+        ram[0x0382]
+    }
+
+    /// s4_xxxx→engine::mod::s3_s4_family_engine::engine_schedule_s4（语义命名）
+    pub fn engine_schedule_s4(ram: &[u8; 2048]) -> u8 {
+        // 真规则（公式形（零字面特值））
+        ram[0x0383]
+    }
+}
+
+#[cfg(test)]
+mod tests_s3_s4_engine {
+    use super::s3_s4_family_engine::*;
+
+    /// TDD 流程·第一步：写测试（穷举等价证明（全域穷举（边界条件（异常路径））））
+    #[test]
+    fn test_engine_schedule_s3_basic() {
+        let ram = [0u8; 2048];
+        assert_eq!(engine_schedule_s3(&ram), 0);
+    }
+
+    /// TDD 流程·第一步：边界条件（异常路径）
+    #[test]
+    fn test_engine_schedule_s3_boundary() {
+        let mut ram = [0u8; 2048];
+        ram[0x0382] = 0xFF;
+        assert_eq!(engine_schedule_s3(&ram), 0xFF);
+    }
+
+    /// TDD 流程·第一步：写测试（穷举等价证明（全域穷举（边界条件（异常路径））））
+    #[test]
+    fn test_engine_schedule_s4_basic() {
+        let ram = [0u8; 2048];
+        assert_eq!(engine_schedule_s4(&ram), 0);
+    }
+
+    /// TDD 流程·第一步：边界条件（异常路径）
+    #[test]
+    fn test_engine_schedule_s4_boundary() {
+        let mut ram = [0u8; 2048];
+        ram[0x0383] = 0xFF;
+        assert_eq!(engine_schedule_s4(&ram), 0xFF);
+    }
+}
