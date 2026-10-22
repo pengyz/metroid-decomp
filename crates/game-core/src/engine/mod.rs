@@ -7333,219 +7333,21 @@ mod s6_154_tests {
 
 // ---- SC-S7-00（S7-175）员转写（2 员——GetEnemyRoomRAMPtr 族）----
 
-/// $FA7D GetEnemyRoomRAMPtr（root——簇共根形百六八·**S4-090/S6-171 同族**）：
-/// $0400/$0401[x]→$02/$03（位置对载）+$6AFB[x]→$0B（面载）+尾跳 $E96A
-/// （S2-30 接面）。
-/// 返回 (写事件, 指针面)。
-pub fn s7_get_en_room_ptr(x: u8, v0400_x: u8, v0401_x: u8, v6afb_x: u8) -> Vec<(u16, u8)> {
-    vec![(0x0002, v0400_x), (0x0003, v0401_x), (0x000B, v6afb_x)]
-}
-
-/// $FA2A 员体：GetEnemyRoomRAMPtr+($04),y 表走+cmp $A0 段（bcc 37）+
-/// $0402/$0403[x]→$04/$05 指面对（S1-17 同族面）。
-pub fn s7_fa2a_body(x: u8, y: u8, v0400_x: u8, v0401_x: u8, v6afb_x: u8, ptr: u8)
-    -> (Vec<(u16, u8)>, u8) {
-    let mut ev = s7_get_en_room_ptr(x, v0400_x, v0401_x, v6afb_x);
-    ev.push((0x0004, 0));
-    ev.push((0x0005, ptr));
-    (ev, ptr)
-}
-
-#[cfg(test)]
-mod s7_175_tests {
-    use super::*;
-
-    /// 二员转写形（GetEnemyRoomRAMPtr root+一壳）。
-    #[test]
-    fn s7_175_units_two() {
-        let ev = s7_get_en_room_ptr(2, 8, 9, 5);
-        assert!(ev.contains(&(0x0002, 8)));
-        assert!(ev.contains(&(0x000B, 5)));
-        let (ev2, v) = s7_fa2a_body(2, 3, 8, 9, 5, 0x60);
-        assert_eq!(v, 0x60);
-        assert!(ev2.contains(&(0x0005, 0x60))); // 指面对（写址对值核对）
-    }
-}
 
 // ---- SC-S7-01（S7-176）员转写（2 员——MakeCartRAMPtr 族）----
 
-/// $E96A MakeCartRAMPtr（root——簇共根形百六九·**S1-27 位组同族**）：
-/// $05←$18<<2（恒定基）+r($02) and $F8 asl/rol $05 位组→$04+r($03) lsr×3 or $04
-/// （cart RAM 指针算）。
-/// 返回 (写事件, 指针值)。
-pub fn s7_make_cart_ptr(v02: u8, v03: u8) -> (Vec<(u16, u8)>, u8) {
-    let base: u8 = 0x18 << 2; // 0x60
-    let lo = (v02 & 0xF8) << 1; // asl 面（位组径——rol $05 高位面略）
-    let hi = (v03 >> 3) | lo;
-    (vec![(0x0004, lo), (0x0005, base)], hi)
-}
-
-/// $FA8E 员体：MakeCartRAMPtr 尾形（jmp $E96A）+$FA18 调+$95DC 表载+
-/// $F68D 调+尾跳 $F97C（S6-173 接面）。
-pub fn s7_fa8e_body(v02: u8, v03: u8) -> (Vec<(u16, u8)>, u16) {
-    let (ev, _) = s7_make_cart_ptr(v02, v03);
-    (ev, 0xE96A)
-}
-
-#[cfg(test)]
-mod s7_176_tests {
-    use super::*;
-
-    /// 二员转写形（MakeCartRAMPtr root+一壳）。
-    #[test]
-    fn s7_176_units_two() {
-        let (ev, v) = s7_make_cart_ptr(0, 0);
-        assert_eq!(v, 0); // 零径
-        assert!(ev.contains(&(0x0005, 0x60))); // 恒定基（写址对值核对）
-        assert!(ev.contains(&(0x0004, 0)));
-        let (ev2, j) = s7_fa8e_body(0, 0);
-        assert_eq!(j, 0xE96A);
-        assert_eq!(ev2.len(), 2);
-    }
-}
 
 // ---- SC-S7-02（S7-177）员转写（2 员——ClearEnAnimDelay 族）----
 
-/// $F693 ClearEnAnimDelay（root——簇共根形百七十·**S5-146 同族清面**）：
-/// $6AF8[x]←0（动画延迟清）。
-/// 返回 (写事件, 清面)。
-pub fn s7_clear_en_anim_delay(x: u8) -> Vec<(u16, u8)> {
-    vec![(0x6AF8 + x as u16, 0)]
-}
-
-/// $FBBC 员体：jmp ClearEnAnimDelay（尾形）+$963B[y] 表走+cmp $6AF9[x] 判
-/// （beq 回卷——S6-173 同族）+尾跳 $F68D（S5-128 同族面）。
-pub fn s7_fbbc_body(x: u8) -> (Vec<(u16, u8)>, u16) {
-    (s7_clear_en_anim_delay(x), 0xF693)
-}
-
-#[cfg(test)]
-mod s7_177_tests {
-    use super::*;
-
-    /// 二员转写形（ClearEnAnimDelay root+一壳）。
-    #[test]
-    fn s7_177_units_two() {
-        let ev = s7_clear_en_anim_delay(2);
-        assert!(ev.contains(&(0x6AFA, 0))); // x=2 ⇒ $6AF8+2（写址对值核对）
-        let (ev2, j) = s7_fbbc_body(2);
-        assert_eq!(j, 0xF693);
-        assert_eq!(ev2.len(), 1);
-    }
-}
 
 // ---- SC-S7-03（S7-178）员转写（2 员——UpdateMellow_RunAI 族）----
 
-/// $FD5F Table18（root——簇共根形百七一·**S5-123 spawn 族同构**）：
-/// $B3[x]→$0B/$B1[x]→$08/$B2[x]→$09（三表载）+写回对（$08/$09→$04/$05）。
-/// 返回 (写事件, 表值)。
-pub fn s7_table18(x: u8, v_b1: u8, v_b2: u8, v_b3: u8) -> Vec<(u16, u8)> {
-    vec![(0x000B, v_b3), (0x0008, v_b1), (0x0009, v_b2),
-         (0x0004, v_b1), (0x0005, v_b2)]
-}
-
-/// $FCC1 UpdateMellow_RunAI：Table18+$B4[x] cmp 2 判（bcs 段）+$08 cmp $030D
-/// （cpx 面）+$B4[x] or 2（态写——S5-123 同族）。
-pub fn s7_fcc1_body(x: u8, v_b1: u8, v_b2: u8, v_b3: u8, v_b4_x: u8)
-    -> (Vec<(u16, u8)>, u8) {
-    let mut ev = s7_table18(x, v_b1, v_b2, v_b3);
-    if v_b4_x < 2 {
-        ev.push((0x00B4 + x as u16, v_b4_x | 2)); // bcs 段外（or 2 态写）
-    }
-    (ev, v_b4_x)
-}
-
-#[cfg(test)]
-mod s7_178_tests {
-    use super::*;
-
-    /// 二员转写形（Table18 root+一壳）。
-    #[test]
-    fn s7_178_units_two() {
-        let ev = s7_table18(2, 4, 1, 0);
-        assert!(ev.contains(&(0x0008, 4)));
-        assert!(ev.contains(&(0x0004, 4))); // 写回对（写址对值核对）
-        assert!(ev.contains(&(0x000B, 0)));
-        let (ev2, _) = s7_fcc1_body(2, 4, 1, 0, 1);
-        assert!(ev2.contains(&(0x00B6, 3))); // x=2 ⇒ $B4+2（x 索引强制步）
-    }
-}
 
 // ---- SC-S7-04（S7-179）员转写（2 员——UpdateMellow_LoadPositionFromTemp 族）----
 
-/// $FD6C UpdateMellow_LoadPositionFromTemp（root——簇共根形百七二·**S7-178 双写面**）：
-/// $08/$09→$B1/$B2[x]（zp 回卷）+$04F0/$04F1（定写对）+$0B and 1→$B3[x]+$6BEB。
-/// 返回 (写事件, 位置面)。
-pub fn s7_mellow_load_pos(x: u8, v08: u8, v09: u8, v0b: u8) -> Vec<(u16, u8)> {
-    let xw = (0x00B1 + x as u16) & 0xFF; // zp 回卷（S5-03 教训）
-    vec![(xw, v08), ((xw + 1) & 0xFF, v09), ((xw + 2) & 0xFF, v0b & 1),
-         (0x04F0, v08), (0x04F1, v09), (0x6BEB, v0b & 1)]
-}
-
-/// $FCFA 员体：LoadPositionFromTemp+$B5[x] cmp $50 判（bcc 段）+$B0[x]←1/$B5[x]←0
-/// （S5-123 同族面）+$030E sec/sbc $B1[x]（delta 面（S2-21 同构））。
-pub fn s7_fcfa_body(x: u8, v08: u8, v09: u8, v0b: u8, v_b5_x: u8) -> (Vec<(u16, u8)>, u16) {
-    let mut ev = s7_mellow_load_pos(x, v08, v09, v0b);
-    if v_b5_x >= 0x50 {
-        ev.push(((0x00B0 + x as u16) & 0xFF, 1));
-    } else {
-        ev.push(((0x00B5 + x as u16) & 0xFF, 0));
-    }
-    (ev, 0xFD6C)
-}
-
-#[cfg(test)]
-mod s7_179_tests {
-    use super::*;
-
-    /// 二员转写形（LoadPositionFromTemp root+一壳）。
-    #[test]
-    fn s7_179_units_two() {
-        let ev = s7_mellow_load_pos(0xF3, 8, 9, 1);
-        assert!(ev.contains(&(0x00A4, 8))); // zp 回卷（0xB1+0xF3=0x1A4→0xA4）
-        assert!(ev.contains(&(0x04F0, 8)));
-        assert!(ev.contains(&(0x6BEB, 1)));
-        let (ev2, j) = s7_fcfa_body(0xF3, 8, 9, 1, 0x60);
-        assert_eq!(j, 0xFD6C);
-        assert!(ev2.contains(&(0x00A3, 1))); // $B0+0xF3 回卷
-    }
-}
 
 // ---- SC-S7-05（S7-180）员转写（2 员——DrawTileBlast 族·S7 收官卡）----
 
-/// $FF3C DrawTileBlast（root——簇共根形百七三·**S1-27/S7-176 位组同族**）：
-/// $00 tay/and $E0→$02+$01 lsr/rol $02 位组+tya and $1F→$C2C6→$03（tile 位组算）。
-/// 返回 (写事件, 位组值)。
-pub fn s7_draw_tile_blast(v00: u8, v01: u8) -> (Vec<(u16, u8)>, u8) {
-    let hi = v00 & 0xE0;
-    let lo = (hi >> 2) | ((v01 & 3) << 6); // ror×2 面（$FF3C 位组径——0xA0>>2=0x28）
-    (vec![(0x0002, lo), (0x0003, 0)], lo)
-}
-
-/// $FE95 员体：DrawTileBlast+$02/$03→$07/$09（指面对）+$01 lsr×2/and 1→$0B
-/// （S5-132 同构）+$F186 调（S3-20 接面）。
-pub fn s7_fe95_body(v00: u8, v01: u8) -> (Vec<(u16, u8)>, u8) {
-    let (mut ev, lo) = draw_tile_blast(v00, v01);
-    ev.push((0x0007, lo));
-    ev.push((0x000B, (v01 >> 2) & 1));
-    (ev, lo)
-}
-
-#[cfg(test)]
-mod s7_180_tests {
-    use super::*;
-
-    /// 二员转写形（DrawTileBlast root+一壳）——S7 收官。
-    #[test]
-    fn s7_180_units_two() {
-        let (ev, v) = s7_draw_tile_blast(0xA0, 0);
-        assert_eq!(v, 40); // ror×2 位组径（0xA0>>2=0x28=40——case 实核）
-        assert!(ev.contains(&(0x0002, 40)));
-        assert!(ev.contains(&(0x0003, 0)));
-        let (ev2, _) = s7_fe95_body(0xA0, 0);
-        assert!(ev2.contains(&(0x0007, 40))); // 指面对（写址对值核对）
-    }
-}
 
 // ---- SC-B1-00（a1-000）员转写（2 员——$8000 jmp 桩链族·B 区批产首卡）----
 
@@ -15282,6 +15084,7 @@ mod tests_b96_engine_mod {
     //! GetEnemyRoomRAMPtr root（:7340）/$E96A MakeCartRAMPtr root（:7376）。
 
     use super::*;
+    use super::tests_b110_s7_archive::*;
 
     /// 【穷举·金属击条件】x×v040b×v0a 依赖分解——metal_hit_cond_stage==s6_f573_body
     /// （==$FF 回卷+位6⇒$0300[x]←0）。
@@ -15315,16 +15118,16 @@ mod tests_b96_engine_mod {
         for x in 0u8..=255 {
             for a in 0u8..=255 {
                 for b in [0u8, 5, 0xFF] {
-                    assert_eq!(s7_get_en_room_ptr(x, a, b, 5), get_enemy_room_ptr(x, a, b, 5));
+                    assert_eq!(ref_s7_get_en_room_ptr(x, a, b, 5), get_enemy_room_ptr(x, a, b, 5));
                     for ptr in [0u8, 0x60, 0xFF] {
-                        assert_eq!(s7_fa2a_body(x, 3, a, b, 5, ptr), room_ptr_with_cart_face(x, 3, a, b, 5, ptr));
+                        assert_eq!(ref_s7_fa2a_body(x, 3, a, b, 5, ptr), room_ptr_with_cart_face(x, 3, a, b, 5, ptr));
                     }
                 }
             }
         }
         for v02 in 0u8..=255 {
             for v03 in 0u8..=255 {
-                assert_eq!(s7_make_cart_ptr(v02, v03), make_cart_ram_ptr(v02, v03));
+                assert_eq!(ref_s7_make_cart_ptr(v02, v03), make_cart_ram_ptr(v02, v03));
             }
         }
     }
@@ -15392,14 +15195,15 @@ mod tests_b99_engine_mod {
     //! root（:7442）/$FCFA（:7487）/LoadPositionFromTemp root（:7479）。
 
     use super::*;
+    use super::tests_b110_s7_archive::*;
 
     /// 【穷举·清延时+壳】x 全域——clear_enemy_anim_delay==s7_clear_en_anim_delay+
     /// clear_anim_delay_and_dispatch==s7_fbbc_body。
     #[test]
     fn exhaustive_clear_delay_equivalence() {
         for x in 0u8..=255 {
-            assert_eq!(s7_clear_en_anim_delay(x), clear_enemy_anim_delay(x));
-            assert_eq!(s7_fbbc_body(x), clear_anim_delay_and_dispatch(x));
+            assert_eq!(ref_s7_clear_en_anim_delay(x), clear_enemy_anim_delay(x));
+            assert_eq!(ref_s7_fbbc_body(x), clear_anim_delay_and_dispatch(x));
         }
     }
 
@@ -15409,7 +15213,7 @@ mod tests_b99_engine_mod {
     fn exhaustive_table18_equivalence() {
         for x in 0u8..=255 {
             for &(b1, b2, b3) in &[(0u8, 0u8, 0u8), (0xFF, 0xFF, 0xFF), (8, 9, 1)] {
-                assert_eq!(s7_table18(x, b1, b2, b3), load_table18_and_pair(x, b1, b2, b3));
+                assert_eq!(ref_s7_table18(x, b1, b2, b3), load_table18_and_pair(x, b1, b2, b3));
             }
         }
     }
@@ -15420,10 +15224,10 @@ mod tests_b99_engine_mod {
     fn exhaustive_load_pos_cond_equivalence() {
         for x in [0u8, 1, 0xF3, 0xFF] {
             for &(a, b, c) in &[(0u8, 0u8, 0u8), (0xFF, 0xFF, 0xFF), (8, 9, 1)] {
-                assert_eq!(s7_mellow_load_pos(x, a, b, c), load_position_from_temp(x, a, b, c));
+                assert_eq!(ref_s7_mellow_load_pos(x, a, b, c), load_position_from_temp(x, a, b, c));
             }
             for v in [0u8, 0x4F, 0x50, 0xFF] {
-                assert_eq!(s7_fcfa_body(x, 8, 9, 1, v), mellow_pos_cond_write(x, 8, 9, 1, v));
+                assert_eq!(ref_s7_fcfa_body(x, 8, 9, 1, v), mellow_pos_cond_write(x, 8, 9, 1, v));
             }
         }
     }
@@ -15481,6 +15285,7 @@ mod tests_b102_engine_mod {
     //! refs 锚（bank:addr 注内）：$FCC1（:7449）/$FA8E（:7385）/$FE95（:7527）。
 
     use super::*;
+    use super::tests_b110_s7_archive::*;
 
     /// 【穷举·Table18 态写】x×b1..b4 依赖分解——table18_with_state_write==s7_fcc1_body
     /// （<2⇒$B4[x]|=2（or 2 态写））。
@@ -15489,7 +15294,7 @@ mod tests_b102_engine_mod {
         for x in 0u8..=255 {
             for &(b1, b2, b3, b4) in &[(0u8, 0u8, 0u8, 0u8), (0xFF, 0xFF, 0xFF, 0xFF),
                                        (4, 1, 0, 1), (4, 1, 0, 2), (4, 1, 0, 0xFF)] {
-                assert_eq!(s7_fcc1_body(x, b1, b2, b3, b4), table18_with_state_write(x, b1, b2, b3, b4));
+                assert_eq!(ref_s7_fcc1_body(x, b1, b2, b3, b4), table18_with_state_write(x, b1, b2, b3, b4));
             }
         }
     }
@@ -15499,7 +15304,7 @@ mod tests_b102_engine_mod {
     fn exhaustive_cart_dispatch_equivalence() {
         for v02 in 0u8..=255 {
             for v03 in 0u8..=255 {
-                assert_eq!(s7_fa8e_body(v02, v03), cart_ptr_and_dispatch(v02, v03));
+                assert_eq!(ref_s7_fa8e_body(v02, v03), cart_ptr_and_dispatch(v02, v03));
             }
         }
     }
@@ -15510,7 +15315,7 @@ mod tests_b102_engine_mod {
     fn exhaustive_tile_blast_pair_equivalence() {
         for v00 in 0u8..=255 {
             for v01 in 0u8..=255 {
-                assert_eq!(s7_fe95_body(v00, v01), tile_blast_with_ptr_pair(v00, v01));
+                assert_eq!(ref_s7_fe95_body(v00, v01), tile_blast_with_ptr_pair(v00, v01));
             }
         }
     }
@@ -15552,6 +15357,7 @@ mod tests_b105_engine_mod {
     //! refs 锚（bank:addr 注内）：DrawTileBlast root（:7519）。
 
     use super::*;
+    use super::tests_b110_s7_archive::*;
 
     /// 【穷举·爆破根】v00×v01 全域 256²——draw_tile_blast==s7_draw_tile_blast
     /// （去 s7_ 前缀（语义面收口））。
@@ -15559,7 +15365,7 @@ mod tests_b105_engine_mod {
     fn exhaustive_draw_blast_equivalence() {
         for v00 in 0u8..=255 {
             for v01 in 0u8..=255 {
-                assert_eq!(s7_draw_tile_blast(v00, v01), draw_tile_blast(v00, v01));
+                assert_eq!(ref_s7_draw_tile_blast(v00, v01), draw_tile_blast(v00, v01));
             }
         }
     }
@@ -15602,64 +15408,129 @@ pub fn draw_tile_blast(v00: u8, v01: u8) -> (Vec<(u16, u8)>, u8) {
     (vec![(0x0002, lo), (0x0003, 0)], lo)
 }
 
-/// s7_ 族（继续去地址名（语义命名））
-///
-/// 去地址名（s7_xxxx→engine::mod::xxx（语义命名））
-pub mod s7_family_engine_v3 {
-    /// s7_xxxx→engine::mod::s7_family_engine_v3::engine_schedule_s7_final_v6（语义命名）
-    pub fn engine_schedule_s7_final_v6(ram: &[u8; 2048]) -> u8 {
-        // 真规则（公式形（零字面特值））
-        ram[0x03A2]
-    }
-}
+// ===== 块 110：s7 旧体归档（ref_*（等价证存续面（API 去地址名后对拍源）））=====
 
 #[cfg(test)]
-mod tests_s7_engine_v3 {
-    use super::s7_family_engine_v3::*;
-
-    /// TDD 流程·第一步：写测试（穷举等价证明（全域穷举（边界条件（异常路径））））
-    #[test]
-    fn test_engine_schedule_s7_final_v6_basic() {
-        let ram = [0u8; 2048];
-        assert_eq!(engine_schedule_s7_final_v6(&ram), 0);
-    }
-
-    /// TDD 流程·第一步：边界条件（异常路径）
-    #[test]
-    fn test_engine_schedule_s7_final_v6_boundary() {
-        let mut ram = [0u8; 2048];
-        ram[0x03A2] = 0xFF;
-        assert_eq!(engine_schedule_s7_final_v6(&ram), 0xFF);
-    }
+mod tests_b110_s7_archive {
+    use super::*;
+    
+/// $FA7D GetEnemyRoomRAMPtr（root——簇共根形百六八·**S4-090/S6-171 同族**）：
+/// $0400/$0401[x]→$02/$03（位置对载）+$6AFB[x]→$0B（面载）+尾跳 $E96A
+/// （S2-30 接面）。
+/// 返回 (写事件, 指针面)。
+pub fn ref_s7_get_en_room_ptr(x: u8, v0400_x: u8, v0401_x: u8, v6afb_x: u8) -> Vec<(u16, u8)> {
+    vec![(0x0002, v0400_x), (0x0003, v0401_x), (0x000B, v6afb_x)]
 }
 
-/// s7_ 族（继续去地址名（语义命名））
-///
-/// 去地址名（s7_xxxx→engine::mod::xxx（语义命名））
-pub mod s7_family_engine_v4 {
-    /// s7_xxxx→engine::mod::s7_family_engine_v4::engine_schedule_s7_final_v7（语义命名）
-    pub fn engine_schedule_s7_final_v7(ram: &[u8; 2048]) -> u8 {
-        // 真规则（公式形（零字面特值））
-        ram[0x03A3]
-    }
+
+
+/// $FA2A 员体：GetEnemyRoomRAMPtr+($04),y 表走+cmp $A0 段（bcc 37）+
+/// $0402/$0403[x]→$04/$05 指面对（S1-17 同族面）。
+pub fn ref_s7_fa2a_body(x: u8, y: u8, v0400_x: u8, v0401_x: u8, v6afb_x: u8, ptr: u8)
+    -> (Vec<(u16, u8)>, u8) {
+    let mut ev = ref_s7_get_en_room_ptr(x, v0400_x, v0401_x, v6afb_x);
+    ev.push((0x0004, 0));
+    ev.push((0x0005, ptr));
+    (ev, ptr)
 }
 
-#[cfg(test)]
-mod tests_s7_engine_v4 {
-    use super::s7_family_engine_v4::*;
+/// $E96A MakeCartRAMPtr（root——簇共根形百六九·**S1-27 位组同族**）：
+/// $05←$18<<2（恒定基）+r($02) and $F8 asl/rol $05 位组→$04+r($03) lsr×3 or $04
+/// （cart RAM 指针算）。
+/// 返回 (写事件, 指针值)。
+pub fn ref_s7_make_cart_ptr(v02: u8, v03: u8) -> (Vec<(u16, u8)>, u8) {
+    let base: u8 = 0x18 << 2; // 0x60
+    let lo = (v02 & 0xF8) << 1; // asl 面（位组径——rol $05 高位面略）
+    let hi = (v03 >> 3) | lo;
+    (vec![(0x0004, lo), (0x0005, base)], hi)
+}
 
-    /// TDD 流程·第一步：写测试（穷举等价证明（全域穷举（边界条件（异常路径））））
-    #[test]
-    fn test_engine_schedule_s7_final_v7_basic() {
-        let ram = [0u8; 2048];
-        assert_eq!(engine_schedule_s7_final_v7(&ram), 0);
-    }
 
-    /// TDD 流程·第一步：边界条件（异常路径）
-    #[test]
-    fn test_engine_schedule_s7_final_v7_boundary() {
-        let mut ram = [0u8; 2048];
-        ram[0x03A3] = 0xFF;
-        assert_eq!(engine_schedule_s7_final_v7(&ram), 0xFF);
+
+/// $FA8E 员体：MakeCartRAMPtr 尾形（jmp $E96A）+$FA18 调+$95DC 表载+
+/// $F68D 调+尾跳 $F97C（S6-173 接面）。
+pub fn ref_s7_fa8e_body(v02: u8, v03: u8) -> (Vec<(u16, u8)>, u16) {
+    let (ev, _) = ref_s7_make_cart_ptr(v02, v03);
+    (ev, 0xE96A)
+}
+
+/// $F693 ClearEnAnimDelay（root——簇共根形百七十·**S5-146 同族清面**）：
+/// $6AF8[x]←0（动画延迟清）。
+/// 返回 (写事件, 清面)。
+pub fn ref_s7_clear_en_anim_delay(x: u8) -> Vec<(u16, u8)> {
+    vec![(0x6AF8 + x as u16, 0)]
+}
+
+
+
+/// $FBBC 员体：jmp ClearEnAnimDelay（尾形）+$963B[y] 表走+cmp $6AF9[x] 判
+/// （beq 回卷——S6-173 同族）+尾跳 $F68D（S5-128 同族面）。
+pub fn ref_s7_fbbc_body(x: u8) -> (Vec<(u16, u8)>, u16) {
+    (ref_s7_clear_en_anim_delay(x), 0xF693)
+}
+
+/// $FD5F Table18（root——簇共根形百七一·**S5-123 spawn 族同构**）：
+/// $B3[x]→$0B/$B1[x]→$08/$B2[x]→$09（三表载）+写回对（$08/$09→$04/$05）。
+/// 返回 (写事件, 表值)。
+pub fn ref_s7_table18(x: u8, v_b1: u8, v_b2: u8, v_b3: u8) -> Vec<(u16, u8)> {
+    vec![(0x000B, v_b3), (0x0008, v_b1), (0x0009, v_b2),
+         (0x0004, v_b1), (0x0005, v_b2)]
+}
+
+
+
+/// $FCC1 UpdateMellow_RunAI：Table18+$B4[x] cmp 2 判（bcs 段）+$08 cmp $030D
+/// （cpx 面）+$B4[x] or 2（态写——S5-123 同族）。
+pub fn ref_s7_fcc1_body(x: u8, v_b1: u8, v_b2: u8, v_b3: u8, v_b4_x: u8)
+    -> (Vec<(u16, u8)>, u8) {
+    let mut ev = ref_s7_table18(x, v_b1, v_b2, v_b3);
+    if v_b4_x < 2 {
+        ev.push((0x00B4 + x as u16, v_b4_x | 2)); // bcs 段外（or 2 态写）
     }
+    (ev, v_b4_x)
+}
+
+/// $FD6C UpdateMellow_LoadPositionFromTemp（root——簇共根形百七二·**S7-178 双写面**）：
+/// $08/$09→$B1/$B2[x]（zp 回卷）+$04F0/$04F1（定写对）+$0B and 1→$B3[x]+$6BEB。
+/// 返回 (写事件, 位置面)。
+pub fn ref_s7_mellow_load_pos(x: u8, v08: u8, v09: u8, v0b: u8) -> Vec<(u16, u8)> {
+    let xw = (0x00B1 + x as u16) & 0xFF; // zp 回卷（S5-03 教训）
+    vec![(xw, v08), ((xw + 1) & 0xFF, v09), ((xw + 2) & 0xFF, v0b & 1),
+         (0x04F0, v08), (0x04F1, v09), (0x6BEB, v0b & 1)]
+}
+
+
+
+/// $FCFA 员体：LoadPositionFromTemp+$B5[x] cmp $50 判（bcc 段）+$B0[x]←1/$B5[x]←0
+/// （S5-123 同族面）+$030E sec/sbc $B1[x]（delta 面（S2-21 同构））。
+pub fn ref_s7_fcfa_body(x: u8, v08: u8, v09: u8, v0b: u8, v_b5_x: u8) -> (Vec<(u16, u8)>, u16) {
+    let mut ev = ref_s7_mellow_load_pos(x, v08, v09, v0b);
+    if v_b5_x >= 0x50 {
+        ev.push(((0x00B0 + x as u16) & 0xFF, 1));
+    } else {
+        ev.push(((0x00B5 + x as u16) & 0xFF, 0));
+    }
+    (ev, 0xFD6C)
+}
+
+/// $FF3C DrawTileBlast（root——簇共根形百七三·**S1-27/S7-176 位组同族**）：
+/// $00 tay/and $E0→$02+$01 lsr/rol $02 位组+tya and $1F→$C2C6→$03（tile 位组算）。
+/// 返回 (写事件, 位组值)。
+pub fn ref_s7_draw_tile_blast(v00: u8, v01: u8) -> (Vec<(u16, u8)>, u8) {
+    let hi = v00 & 0xE0;
+    let lo = (hi >> 2) | ((v01 & 3) << 6); // ror×2 面（$FF3C 位组径——0xA0>>2=0x28）
+    (vec![(0x0002, lo), (0x0003, 0)], lo)
+}
+
+
+
+/// $FE95 员体：DrawTileBlast+$02/$03→$07/$09（指面对）+$01 lsr×2/and 1→$0B
+/// （S5-132 同构）+$F186 调（S3-20 接面）。
+pub fn ref_s7_fe95_body(v00: u8, v01: u8) -> (Vec<(u16, u8)>, u8) {
+    let (mut ev, lo) = draw_tile_blast(v00, v01);
+    ev.push((0x0007, lo));
+    ev.push((0x000B, (v01 >> 2) & 1));
+    (ev, lo)
+}
+
 }
