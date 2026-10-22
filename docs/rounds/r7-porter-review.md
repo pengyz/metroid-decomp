@@ -11537,6 +11537,42 @@ sprite）拒收**（refs 引证=**占位形**（「bank:addr」字面（非实�
 重导证据（正确性核）））✓——复核 verdict 实录（docs commit（对抗复核 verdict（四项核
 （A 级原文））））✓。
 
+## 批量改写·对抗复核（4 件（簇 13 三次修订+簇 14 补全+簇 15/16（第八轮）（证伪立场（独立
+重导证据（正确性核））））
+
+### verdict: needs_revision（3/4 拒收（簇 13（域错位再犯）+簇 14（占位形）+簇 16（全缺）））
+（簇 15 pass）
+
+**① 簇 13 修订·三次（render::sprite）✗ 拒收**：refs 占位形已填 ✓（bank00:80D0（DrawIntro
+Background）+bank00:82F4-83C9（VRAMStruct_DrawIntroBackground）（实址（非占位）））——
+**域错位再犯 ✗**：refs 原文（prg0_title.asm:182-190）实证 DrawIntroBackground=**开场音乐+
+关屏+清名表例程**（lda #sfxMulti_IntroMusic（sta SFXMultiInitFlags（jsr ScreenOff（jsr
+ClearNameTables）））+VRAMStruct_DrawIntroBackground=:617-618「The following data fills
+name table 0 with the **intro screen background graphics**」（**开场背景图形数据**））——
+**非精灵渲染例程**（render::sprite 域（OAM/精灵）vs 开场背景绘制（背景图形（VRAM 名表）））
+——②refs 引用核（域归属）**错**（占位已填但选错域（二次修订后三次修订（占位→实址（域又错））））
+
+**② 簇 14 文档补全（world::door）✗ 拒收**：六步流程文档补全 ✓（cluster-14-rewrite.md（六步
+（定域取证→域结构（DoorState）→memmap（RAM→DoorState）→shim（写回）→测试→registry）））——
+**refs 引证 ✗**（「定域取证 spec（**bank:addr**（门例程（实址（A 级原文）））」+「门例程：
+**bank:addr**（实址（A 级原文））」——**字面占位（非实址**））——②refs 引用核**缺**（补全
+文档但引证占位（同病五犯（簇 2/4/5/6/12/13 首修订模式）））
+
+**③ 簇 15（enemy::ai）✓ pass**：refs 实址 ✓（bank01:95E5（ChooseEnemyAIRoutine）+bank01:99B8-
+99D3（SidehopperFloor/CeilingAIRoutine）+bank01:99D8-99E5（RipperAIRoutine）+bank01:99E5-99FA
+（WaverAIRoutine）+bank01:99FA-9A4C（SkreeAIRoutine））——**敌人 AI 域（bank01（正确）**+
+六步流程 ✓（cluster-15-rewrite.md）✓
+
+**④ 簇 16（pickup::powerup）✗ 拒收**：**文档+实现全缺**（find（*powerup*/*PowerUp*（crates/
+game-core/src+docs/design））零命中（实录））——①六步（无（无法核））②refs（无（无法核））
+
+**verdict**：批量改写 4 件（第八轮）**needs_revision**——**簇 13 拒收**（占位已填但**域错位再犯**
+（DrawIntroBackground/VRAMStruct_DrawIntroBackground=开场背景绘制（非精灵渲染）））+**簇 14
+拒收**（refs 占位形（「bank:addr」字面（补全文档但引证未填）））+**簇 16 拒收**（文档+实现全缺）+
+**簇 15 pass**（enemy::ai（refs 实址（bank01:95E5 族（敌人 AI 域（正确）））））——对抗复核核
+（证伪立场（独立重导证据（正确性核）））✓——复核 verdict 实录（docs commit（对抗复核 verdict
+（四项核（A 级原文））））✓。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
