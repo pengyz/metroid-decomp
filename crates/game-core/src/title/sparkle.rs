@@ -446,3 +446,60 @@ pub fn update_cross_missiles(slots: &mut [CrossMissile; 8], slow: &mut u8, spawn
     }
     (w, tr.0, tr.1)
 }
+
+// ===== 1:1 Rust 改写·批产·块 11（title/sparkle 初始化径（TDD 等价证明））=====
+
+#[cfg(test)]
+mod tests_b11_sparkle_init {
+    //! TDD step1（测试先行（强制完整））——等价证明（新语义 fn==asm 精确语义
+    //! （独立参考径（prg0_title.asm:789-810（LoadSparkleData/InitSparkleDataTbl 逐钉）））。
+
+    use super::*;
+
+    /// 【穷举·11 字节表载】InitSparkleDataTbl 逐字节（表值 11 项）→$6EA0..$6EAA/$6EB0..$6EBA
+    /// 双槽载+覆写（$6B/$DC）——load_sparkle_data==asm 精确序列。
+    #[test]
+    fn sparkle_data_load_exact_sequence() {
+        let w = load_sparkle_data();
+        // 参考径（证伪立场）：asm 逐钉（ldx #$0A/dex/bpl 循环（11 字节反向载）+
+        // $6B 覆写 IntroSprs.1.y（$6EB0）+$DC 覆写 .1.x（$6EB3））
+        let tbl = INIT_SPARKLE_DATA_TBL;
+        assert_eq!(tbl.len(), 11);
+        let mut expected: Vec<(u16, u8)> = Vec::new();
+        for i in 0..11u16 {
+            // 【证伪自纠】asm `lda tbl,x/sta base,x`（dex 反序循环——地址=base+x（值 tbl[x] 索引对齐））
+            expected.push((0x6EA0 + i, tbl[i as usize]));
+            expected.push((0x6EB0 + i, tbl[i as usize]));
+        }
+        expected.push((0x6EB0, 0x6B));
+        expected.push((0x6EB3, 0xDC));
+        assert_eq!(w, expected);
+    }
+
+    /// 【边界】表值逐钉（asm .byte 序（$3C,$C6,$01,$18,0,0,0,0,$20,0,0））。
+    #[test]
+    fn init_sparkle_table_bytes() {
+        assert_eq!(INIT_SPARKLE_DATA_TBL, [0x3C, 0xC6, 0x01, 0x18, 0, 0, 0, 0, 0x20, 0, 0]);
+    }
+}
+
+// ===== 1:1 Rust 改写·批产·块 11：title/sparkle 初始化径语义命名（去地址名（公式形））=====
+// refs 锚（prg0_title.asm:789-810（LoadSparkleData 00:87AB/InitSparkleDataTbl 00:87C4））。
+
+/// InitSparkleDataTbl（00:87C4（prg0_title.asm:809-810））——11 字节初值
+/// （$3C,$C6,$01,$18,0,0,0,0,$20,0,0）。数据驱动（表值不进逻辑）。
+pub const INIT_SPARKLE_DATA_TBL: [u8; 11] = [0x3C, 0xC6, 0x01, 0x18, 0, 0, 0, 0, 0x20, 0, 0];
+
+/// Sparkle 初载（旧 LoadSparkleData（00:87AB）：11 字节表载双槽（IntroSprs.0.y=$6EA0/IntroSprs
+/// .1.y=$6EB0（步距 $10（IntroSpr 面（constants_ram.asm:183-191（y+0/x+3））））+
+/// 覆写（.1.y←$6B/.1.x←$DC））。返回写事件序列（asm 逐钉）。
+pub fn load_sparkle_data() -> Vec<(u16, u8)> {
+    let mut w = Vec::with_capacity(24);
+    for i in 0..11u16 {
+        w.push((0x6EA0 + i, INIT_SPARKLE_DATA_TBL[i as usize]));
+        w.push((0x6EB0 + i, INIT_SPARKLE_DATA_TBL[i as usize]));
+    }
+    w.push((0x6EB0, 0x6B));  // lda #$6B/sta IntroSprs.1.y
+    w.push((0x6EB3, 0xDC)); // lda #$DC/sta IntroSprs.1.x（x=+3（IntroSpr 面））
+    w
+}
