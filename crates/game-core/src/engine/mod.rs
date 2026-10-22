@@ -13557,3 +13557,6 @@ mod a9_037_tests {
         assert!(ev.contains(&(0x0080, 95))); // 链算径（判别条补触发——写址对值核对）
     }
 }
+
+/// frame 模块（旧实现改写·第一件（按子系统拆分去地址名））——refs asm 考证：bank00:9A07（NMIScreenWrite）+bank00:B4A9（IncrementSFXFrame）+bank00:BFBA（WaitForVBlank）（帧调度例程（实址（A 级原文）））
+pub mod frame;
