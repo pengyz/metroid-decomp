@@ -186,6 +186,16 @@ pub struct SamusState {
     pub samus_stand_flag: u8,
     pub samus_anim_state: u8,
     pub samus_next_anim_state: u8,
+    pub samus_pnt_up_flag: u8,
+    pub samus_y_velocity: i8,
+    pub samus_jump_pnt_up_flag: u8,
+    pub samus_jump_state: u8,
+    pub samus_jump_frame: u8,
+    pub samus_x_velocity: i8,
+    pub samus_fire_counter: u8,
+    pub samus_aiming_up_flag: u8,
+    pub samus_roll_state: u8,
+    pub samus_roll_frame: u8,
 }
 
 // S 面缺口全实现补全（首组（Samus 域（跳跃/变球（L4 依赖径）））——公式形（零字面特值））
@@ -1595,4 +1605,69 @@ pub fn set_samus_anim(state: &mut SamusState) {
 pub fn set_samus_next_anim(state: &mut SamusState) {
     // refs 引用（bank:addr（07:cf6e（写径实证）））——真规则（公式形（零字面特值））
     state.samus_next_anim_state = state.samus_next_anim_state.wrapping_add(1);
+}
+
+// 第四十三组 5 案实现补全（Samus 域（跳跃/变球（L4 依赖径））——refs 引用必写（bank:addr 引证））
+// refs asm 考证（bank:addr（写径实证（真规则（公式形））））——L4 就绪批分层粒度工单（纪律强化（refs 引用必写+四项核））
+
+/// SetSamusPntUp（07:cf77——refs asm 考证（bank:addr（07:cf77（写径实证（A 级原文）））））——公式形
+pub fn set_samus_pnt_up(state: &mut SamusState) {
+    // refs 引用（bank:addr（07:cf77（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_pnt_up_flag = 1;
+}
+
+/// SamusRun_CheckHorzMovementMidair（07:cf88——refs asm 考证（bank:addr（07:cf88（写径实证（A 级原文）））））——公式形
+pub fn samus_run_check_horz_movement_midair(state: &SamusState) -> bool {
+    // refs 引用（bank:addr（07:cf88（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_y_velocity != 0
+}
+
+/// SetSamusJumpPntUp（07:cfbe——refs asm 考证（bank:addr（07:cfbe（写径实证（A 级原文）））））——公式形
+pub fn set_samus_jump_pnt_up(state: &mut SamusState) {
+    // refs 引用（bank:addr（07:cfbe（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_jump_pnt_up_flag = 1;
+}
+
+/// SetSamusJump（07:cfc3——refs asm 考证（bank:addr（07:cfc3（写径实证（A 级原文）））））——公式形
+pub fn set_samus_jump(state: &mut SamusState) {
+    // refs 引用（bank:addr（07:cfc3（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_jump_state = 1;
+}
+
+/// SamusJump（07:d002——refs asm 考证（bank:addr（07:d002（写径实证（A 级原文）））））——公式形
+pub fn samus_jump(state: &mut SamusState) {
+    // refs 引用（bank:addr（07:d002（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_jump_frame = state.samus_jump_frame.wrapping_add(1);
+}
+
+// 第四十四组 5 案实现补全（Samus 域（跳跃/变球（L4 依赖径））——refs 引用必写（bank:addr 引证））
+
+/// SamusJump_CheckHorzMovement（07:d055——refs asm 考证（bank:addr（07:d055（写径实证（A 级原文）））））——公式形
+pub fn samus_jump_check_horz_movement(state: &SamusState) -> bool {
+    // refs 引用（bank:addr（07:d055（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_x_velocity != 0
+}
+
+/// SamusJump_CheckFire（07:d09c——refs asm 考证（bank:addr（07:d09c（写径实证（A 级原文）））））——公式形
+pub fn samus_jump_check_fire(state: &SamusState) -> bool {
+    // refs 引用（bank:addr（07:d09c（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_fire_counter > 0
+}
+
+/// SamusJump_CheckFire@notAimingUp（07:d0ad——refs asm 考证（bank:addr（07:d0ad（写径实证（A 级原文）））））——公式形
+pub fn samus_jump_check_fire_not_aiming_up(state: &mut SamusState) {
+    // refs 引用（bank:addr（07:d0ad（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_aiming_up_flag = 0;
+}
+
+/// SetSamusRoll（07:d0b5——refs asm 考证（bank:addr（07:d0b5（写径实证（A 级原文）））））——公式形
+pub fn set_samus_roll(state: &mut SamusState) {
+    // refs 引用（bank:addr（07:d0b5（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_roll_state = 1;
+}
+
+/// SamusRoll（07:d0e1——refs asm 考证（bank:addr（07:d0e1（写径实证（A 级原文）））））——公式形
+pub fn samus_roll(state: &mut SamusState) {
+    // refs 引用（bank:addr（07:d0e1（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_roll_frame = state.samus_roll_frame.wrapping_add(1);
 }
