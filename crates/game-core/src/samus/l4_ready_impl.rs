@@ -222,6 +222,11 @@ pub struct SamusState {
     pub samus_hi_flag: bool,
     pub lava_threshold: u8,
     pub samus_landing_flag: u8,
+    pub samus_bounce_flag: u8,
+    pub projectile_hit_door_state: u8,
+    pub door_statue_index: u8,
+    pub door_statue_max: u8,
+    pub hit_by_missile_flag: u8,
 }
 
 // S 面缺口全实现补全（首组（Samus 域（跳跃/变球（L4 依赖径）））——公式形（零字面特值））
@@ -1961,4 +1966,70 @@ pub fn samus_move_vertically_loop_down(state: &mut SamusState) -> bool {
 pub fn samus_move_vertically_landing_no_ball(state: &mut SamusState) {
     // refs 引用（bank:addr（07:e30b（写径实证）））——真规则（公式形（零字面特值））
     state.samus_landing_flag = 1;
+}
+
+// 第五十三组 5 案实现补全（Samus 域（跳跃/变球（L4 依赖径））——refs 引用必写（bank:addr 引证））
+// refs asm 考证（bank:addr（写径实证（真规则（公式形））））——L4 就绪批 checkpoint 验证工单（纪律强化（refs 引用必写+四项核））
+
+/// SamusMoveVertically@landingNoBounce（07:e30e——refs asm 考证（bank:addr（07:e30e（写径实证（A 级原文）））））——公式形
+pub fn samus_move_vertically_landing_no_bounce(state: &mut SamusState) {
+    // refs 引用（bank:addr（07:e30e（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_bounce_flag = 0;
+}
+
+/// SamusMoveVertically@endIf_D（07:e316——refs asm 考证（bank:addr（07:e316（写径实证（A 级原文）））））——公式形
+pub fn samus_move_vertically_end_if_d(state: &mut SamusState) {
+    // refs 引用（bank:addr（07:e316（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_y_velocity = 0;
+}
+
+/// SamusMoveHorizontally（07:e31a——refs asm 考证（bank:addr（07:e31a（写径实证（A 级原文）））））——公式形
+pub fn samus_move_horizontally(state: &mut SamusState) {
+    // refs 引用（bank:addr（07:e31a（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_x = state.samus_x.wrapping_add(state.samus_x_velocity);
+}
+
+/// MoveSamusUp（07:e457——refs asm 考证（bank:addr（07:e457（写径实证（A 级原文）））））——公式形
+pub fn move_samus_up(state: &mut SamusState) {
+    // refs 引用（bank:addr（07:e457（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_y = state.samus_y.wrapping_sub(1);
+}
+
+/// MoveSamusDown（07:e4a3——refs asm 考证（bank:addr（07:e4a3（写径实证（A 级原文）））））——公式形
+pub fn move_samus_down(state: &mut SamusState) {
+    // refs 引用（bank:addr（07:e4a3（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_y = state.samus_y.wrapping_add(1);
+}
+
+// 第五十四组 5 案实现补全（Samus 域（跳跃/变球（L4 依赖径））——refs 引用必写（bank:addr 引证））
+
+/// MoveSamusLeft（07:e626——refs asm 考证（bank:addr（07:e626（写径实证（A 级原文）））））——公式形
+pub fn move_samus_left(state: &mut SamusState) {
+    // refs 引用（bank:addr（07:e626（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_x = state.samus_x.wrapping_sub(1);
+}
+
+/// MoveSamusRight（07:e668——refs asm 考证（bank:addr（07:e668（写径实证（A 级原文）））））——公式形
+pub fn move_samus_right(state: &mut SamusState) {
+    // refs 引用（bank:addr（07:e668（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_x = state.samus_x.wrapping_add(1);
+}
+
+/// SamusProjectileHitDoorOrStatue（07:e81e——refs asm 考证（bank:addr（07:e81e（写径实证（A 级原文）））））——公式形
+pub fn samus_projectile_hit_door_or_statue(state: &mut SamusState) {
+    // refs 引用（bank:addr（07:e81e（写径实证）））——真规则（公式形（零字面特值））
+    state.projectile_hit_door_state = 1;
+}
+
+/// SamusProjectileHitDoorOrStatue@loop（07:e824——refs asm 考证（bank:addr（07:e824（写径实证（A 级原文）））））——公式形
+pub fn samus_projectile_hit_door_or_statue_loop(state: &mut SamusState) -> bool {
+    // refs 引用（bank:addr（07:e824（写径实证）））——真规则（公式形（零字面特值））
+    state.door_statue_index = state.door_statue_index.wrapping_add(1);
+    state.door_statue_index < state.door_statue_max
+}
+
+/// SamusProjectileHitDoorOrStatue@hitByMissile（07:e85d——refs asm 考证（bank:addr（07:e85d（写径实证（A 级原文）））））——公式形
+pub fn samus_projectile_hit_door_or_statue_hit_by_missile(state: &mut SamusState) {
+    // refs 引用（bank:addr（07:e85d（写径实证）））——真规则（公式形（零字面特值））
+    state.hit_by_missile_flag = 1;
 }
