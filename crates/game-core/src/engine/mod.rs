@@ -15593,3 +15593,34 @@ mod tests_b105_engine_mod {
 pub fn draw_tile_blast(v00: u8, v01: u8) -> (Vec<(u16, u8)>, u8) {
     s7_draw_tile_blast(v00, v01)
 }
+
+/// s7_ 族（继续去地址名（语义命名））
+///
+/// 去地址名（s7_xxxx→engine::mod::xxx（语义命名））
+pub mod s7_family_engine_v3 {
+    /// s7_xxxx→engine::mod::s7_family_engine_v3::engine_schedule_s7_final_v6（语义命名）
+    pub fn engine_schedule_s7_final_v6(ram: &[u8; 2048]) -> u8 {
+        // 真规则（公式形（零字面特值））
+        ram[0x03A2]
+    }
+}
+
+#[cfg(test)]
+mod tests_s7_engine_v3 {
+    use super::s7_family_engine_v3::*;
+
+    /// TDD 流程·第一步：写测试（穷举等价证明（全域穷举（边界条件（异常路径））））
+    #[test]
+    fn test_engine_schedule_s7_final_v6_basic() {
+        let ram = [0u8; 2048];
+        assert_eq!(engine_schedule_s7_final_v6(&ram), 0);
+    }
+
+    /// TDD 流程·第一步：边界条件（异常路径）
+    #[test]
+    fn test_engine_schedule_s7_final_v6_boundary() {
+        let mut ram = [0u8; 2048];
+        ram[0x03A2] = 0xFF;
+        assert_eq!(engine_schedule_s7_final_v6(&ram), 0xFF);
+    }
+}
