@@ -13814,33 +13814,116 @@ pub fn compute_delta_with_clamp(v49: u8, v04: u8, v08: u8) -> (Vec<(u16, u8)>, u
     (ev, v)
 }
 
-/// s1_/s2_ 族（继续去地址名（语义命名））
-///
-/// 去地址名（s1_xxxx/s2_xxxx→engine::mod::xxx（语义命名））
-pub mod s1_s2_family_engine_v5 {
-    /// s1_xxxx→engine::mod::s1_s2_family_engine_v5::engine_schedule_v5（语义命名）
-    pub fn engine_schedule_v5(ram: &[u8; 2048]) -> u8 {
-        // 真规则（公式形（零字面特值））
-        ram[0x0374]
+// ===== 1:1 Rust 改写·批产·块 29（s1 族续去地址名（TDD 穷举等价证明））=====
+
+#[cfg(test)]
+mod tests_b29_engine_mod {
+    //! TDD step1（测试先行（强制完整））——穷举等价（新==旧（≤256³ 闸时限界（依赖分解）））。
+    //! refs 锚（bank:addr 注内）：$D10A（:795）/$D633（:800）/$F924（:809）/$FCED（:815）/
+    //! $D400（:854）/$D40E（:861）。
+
+    use super::*;
+
+    /// 【穷举·anim 递减】v0306 全域——decrement_anim_and_return==s1_d10a_body（dec 回绕）。
+    #[test]
+    fn exhaustive_anim_dec_equivalence() {
+        for v in 0u8..=255 {
+            assert_eq!(s1_d10a_body(v), decrement_anim_and_return(v));
+        }
+    }
+
+    /// 【穷举·位判写】x×v08×v09 256³+v0b 全域（依赖分解（$030C 分量独立））——
+    /// set_position_with_flag_cond==s1_d633_body。
+    #[test]
+    fn exhaustive_pos_flag_equivalence() {
+        for x in 0u8..=255 {
+            for v08 in 0u8..=255 {
+                for v09 in 0u8..=255 {
+                    assert_eq!(s1_d633_body(x, v08, v09, 0x00), set_position_with_flag_cond(x, v08, v09, 0x00));
+                    assert_eq!(s1_d633_body(x, v08, v09, 0x01), set_position_with_flag_cond(x, v08, v09, 0x01));
+                }
+            }
+        }
+        for v0b in 0u8..=255 {
+            assert_eq!(s1_d633_body(3, 4, 5, v0b), set_position_with_flag_cond(3, 4, 5, v0b));
+        }
+    }
+
+    /// 【穷举·敌对写+旗或】y×v0405 全域——set_enemy_pair_and_flag==s1_f924_body。
+    #[test]
+    fn exhaustive_enemy_pair_equivalence() {
+        for y in 0u8..=255 {
+            for v in 0u8..=255 {
+                assert_eq!(s1_f924_body(y, v), set_enemy_pair_and_flag(y, v));
+            }
+        }
+    }
+
+    /// 【穷举·旗或+条件调】x×b4×b5 全域 256³——or_flag_and_conditional_call==s1_fced_body
+    /// （$B5≥$50 判）。
+    #[test]
+    fn exhaustive_flag_cond_call_equivalence() {
+        for x in 0u8..=255 {
+            for b4 in 0u8..=255 {
+                for b5 in 0u8..=255 {
+                    assert_eq!(s1_fced_body(x, b4, b5), or_flag_and_conditional_call(x, b4, b5));
+                }
+            }
+        }
+    }
+
+    /// 【穷举·toggle 壳×2】v030c×v030e 全域+v030c 全域——toggle_hi 系==旧体。
+    #[test]
+    fn exhaustive_toggle_shells_equivalence() {
+        for c in 0u8..=255 {
+            for e in 0u8..=255 {
+                assert_eq!(s1_d400_body(c, e), toggle_hi_and_step_x(c, e));
+            }
+            assert_eq!(s1_d40e_body(c), toggle_hi_and_dispatch_de(c));
+        }
     }
 }
 
-#[cfg(test)]
-mod tests_s1_s2_engine_v5 {
-    use super::s1_s2_family_engine_v5::*;
+// ===== 1:1 Rust 改写·批产·块 29：s1 族续语义命名（去地址名（公式形（零字面特值）））=====
+// refs 锚（bank:addr 注内）：$D10A（:795）/$D633（:800）/$F924（:809）/$FCED（:815）/
+// $D400（:854）/$D40E（:861）。
 
-    /// TDD 流程·第一步：写测试（穷举等价证明（全域穷举（边界条件（异常路径））））
-    #[test]
-    fn test_engine_schedule_v5_basic() {
-        let ram = [0u8; 2048];
-        assert_eq!(engine_schedule_v5(&ram), 0);
-    }
+/// anim 递减回驱（旧 s1_d10a_body（$D10A）：$0306←dec（回绕）→jmp $D144）。
+pub fn decrement_anim_and_return(v0306: u8) -> (Vec<(u16, u8)>, u16) {
+    (vec![(0x0306, v0306.wrapping_sub(1))], 0xD144)
+}
 
-    /// TDD 流程·第一步：边界条件（异常路径）
-    #[test]
-    fn test_engine_schedule_v5_boundary() {
-        let mut ram = [0u8; 2048];
-        ram[0x0374] = 0xFF;
-        assert_eq!(engine_schedule_v5(&ram), 0xFF);
+/// 位判写（旧 s1_d633_body（$D633）：$030D[x]←$08/$030E[x]←$09+$0B 位0 未置⇒$030C[x]←$0B）。
+pub fn set_position_with_flag_cond(x: u8, v08: u8, v09: u8, v0b: u8) -> Vec<(u16, u8)> {
+    let mut ev = vec![(0x030D + x as u16, v08), (0x030E + x as u16, v09)];
+    if v0b & 0x01 == 0 {
+        ev.push((0x030C + x as u16, v0b));
     }
+    ev
+}
+
+/// 敌对写+旗或（旧 s1_f924_body（$F924）：$6AF5/$6AF6[y]←2+$0405[y]|=2→jmp $FA49）。
+pub fn set_enemy_pair_and_flag(y: u8, v0405_y: u8) -> (Vec<(u16, u8)>, u16) {
+    (vec![(0x6AF5 + y as u16, 2), (0x6AF6 + y as u16, 2),
+          (0x0405 + y as u16, v0405_y | 2)], 0xFA49)
+}
+
+/// 旗或+条件调（旧 s1_fced_body（$FCED）：$B4[x]|=2+$B5[x]≥$50⇒jsr $FD6C）。
+pub fn or_flag_and_conditional_call(x: u8, v_b4x: u8, v_b5x: u8) -> (Vec<(u16, u8)>, Option<u16>) {
+    let ev = vec![(0x00B4 + x as u16, v_b4x | 0x02)];
+    let call = if v_b5x >= 0x50 { Some(0xFD6C) } else { None };
+    (ev, call)
+}
+
+/// toggle+X 步进（旧 s1_d400_body（$D400）：toggle+$030E←dec→jmp $D411）。
+pub fn toggle_hi_and_step_x(v030c: u8, v030e: u8) -> (Vec<(u16, u8)>, u16) {
+    let (mut ev, _) = s1_toggle_samus_hi(v030c);
+    ev.push((0x030E, v030e.wrapping_sub(1)));
+    (ev, 0xD411)
+}
+
+/// toggle+DE 派发（旧 s1_d40e_body（$D40E）：toggle→jmp $DE4A）。
+pub fn toggle_hi_and_dispatch_de(v030c: u8) -> (Vec<(u16, u8)>, u16) {
+    let (ev, _) = s1_toggle_samus_hi(v030c);
+    (ev, 0xDE4A)
 }
