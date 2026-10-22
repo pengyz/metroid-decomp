@@ -17,3 +17,7 @@ pub use enemy_collision_flags::EnemyCollisionFlags;
 pub use enemy_state::EnemyState;
 pub use movement::{MoveCheckOutcome, MoveCheckStaging};
 pub mod crawler;
+
+/// waver 模块（TDD 流程（测试先行（实现后补）））——refs asm 考证：bank01:97D7（EnemyMovementChoice_Waver_BANK1（prg1_brinstar.asm:498））（Waver 例程（实址（A 级原文）））
+pub mod waver;
+pub mod projectile;
