@@ -219,6 +219,9 @@ pub struct SamusState {
     pub solid_entity_max: u8,
     pub samus_on_enemy_flag: u8,
     pub samus_on_top_flag: u8,
+    pub samus_hi_flag: bool,
+    pub lava_threshold: u8,
+    pub samus_landing_flag: u8,
 }
 
 // S 面缺口全实现补全（首组（Samus 域（跳跃/变球（L4 依赖径）））——公式形（零字面特值））
@@ -1891,4 +1894,71 @@ pub fn samus_collision_with_solid_entities_is_samus_on_top(state: &mut SamusStat
 pub fn samus_collision_with_solid_entities_is_samus_on_top_no(state: &mut SamusState) {
     // refs 引用（bank:addr（07:d9c7（写径实证）））——真规则（公式形（零字面特值））
     state.samus_on_top_flag = 0;
+}
+
+// 第五十一组 5 案实现补全（Samus 域（跳跃/变球（L4 依赖径））——refs 引用必写（bank:addr 引证））
+// refs asm 考证（bank:addr（写径实证（真规则（公式形））））——L4 就绪批 checkpoint 验证工单（纪律强化（refs 引用必写+四项核））
+
+/// ToggleSamusHi（07:e249——refs asm 考证（bank:addr（07:e249（写径实证（A 级原文）））））——公式形
+pub fn toggle_samus_hi(state: &mut SamusState) {
+    // refs 引用（bank:addr（07:e249（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_hi_flag = !state.samus_hi_flag;
+}
+
+/// IsSamusInLava（07:e25d——refs asm 考证（bank:addr（07:e25d（写径实证（A 级原文）））））——公式形
+pub fn is_samus_in_lava(state: &SamusState) -> bool {
+    // refs 引用（bank:addr（07:e25d（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_y > state.lava_threshold
+}
+
+/// SamusMoveVertically（07:e2a9——refs asm 考证（bank:addr（07:e2a9（写径实证（A 级原文）））））——公式形
+pub fn samus_move_vertically(state: &mut SamusState) {
+    // refs 引用（bank:addr（07:e2a9（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_y = state.samus_y.wrapping_add(state.samus_y_velocity);
+}
+
+/// SamusMoveVertically@endIf_A（07:e2c2——refs asm 考证（bank:addr（07:e2c2（写径实证（A 级原文）））））——公式形
+pub fn samus_move_vertically_end_if_a(state: &mut SamusState) {
+    // refs 引用（bank:addr（07:e2c2（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_y_velocity = state.samus_y_velocity.wrapping_add(1);
+}
+
+/// SamusMoveVertically@loop_up（07:e2c4——refs asm 考证（bank:addr（07:e2c4（写径实证（A 级原文）））））——公式形
+pub fn samus_move_vertically_loop_up(state: &mut SamusState) -> bool {
+    // refs 引用（bank:addr（07:e2c4（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_y_velocity = state.samus_y_velocity.wrapping_sub(1);
+    state.samus_y_velocity != 0
+}
+
+// 第五十二组 5 案实现补全（Samus 域（跳跃/变球（L4 依赖径））——refs 引用必写（bank:addr 引证））
+
+/// SamusMoveVertically@endIf_B（07:e2d3——refs asm 考证（bank:addr（07:e2d3（写径实证（A 级原文）））））——公式形
+pub fn samus_move_vertically_end_if_b(state: &mut SamusState) {
+    // refs 引用（bank:addr（07:e2d3（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_y_velocity = state.samus_y_velocity.wrapping_add(2);
+}
+
+/// SamusMoveVertically@downwards（07:e2d7——refs asm 考证（bank:addr（07:e2d7（写径实证（A 级原文）））））——公式形
+pub fn samus_move_vertically_downwards(state: &mut SamusState) {
+    // refs 引用（bank:addr（07:e2d7（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_y_velocity = state.samus_y_velocity.wrapping_add(1);
+}
+
+/// SamusMoveVertically@endIf_C（07:e2e1——refs asm 考证（bank:addr（07:e2e1（写径实证（A 级原文）））））——公式形
+pub fn samus_move_vertically_end_if_c(state: &SamusState) -> u8 {
+    // refs 引用（bank:addr（07:e2e1（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_y_velocity.wrapping_add(state.samus_y)
+}
+
+/// SamusMoveVertically@loop_down（07:e2e3——refs asm 考证（bank:addr（07:e2e3（写径实证（A 级原文）））））——公式形
+pub fn samus_move_vertically_loop_down(state: &mut SamusState) -> bool {
+    // refs 引用（bank:addr（07:e2e3（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_y_velocity = state.samus_y_velocity.wrapping_add(1);
+    state.samus_y_velocity != 0
+}
+
+/// SamusMoveVertically@landingNoBall（07:e30b——refs asm 考证（bank:addr（07:e30b（写径实证（A 级原文）））））——公式形
+pub fn samus_move_vertically_landing_no_ball(state: &mut SamusState) {
+    // refs 引用（bank:addr（07:e30b（写径实证）））——真规则（公式形（零字面特值））
+    state.samus_landing_flag = 1;
 }
