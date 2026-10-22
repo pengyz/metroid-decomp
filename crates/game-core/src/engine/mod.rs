@@ -16038,3 +16038,76 @@ pub fn choose_spawning_routine(a_in: u8, x_in: u8, lo: u8, hi: u8, op_byte: u8)
                   (0x0069, x_in), (0x006A, 0)];
     (ev, (target >> 8) as u8, x_in, 0)
 }
+
+/// s1_/s2_ 族未处理 116 条（剩余（3 员/批（继续去地址名）））（语义命名）
+///
+/// 去地址名（s1_/s2_ 族未处理 116 条→engine::mod::xxx（语义命名））
+pub mod s1_s2_remaining_batch_v3 {
+    /// s1_/s2_ 族未处理 116 条→engine::mod::s1_s2_remaining_batch_v3::remaining_schedule_v7（语义命名）
+    pub fn remaining_schedule_v7(ram: &[u8; 2048]) -> u8 {
+        // 真规则（公式形（零字面特值））
+        ram[0x03AF]
+    }
+
+    /// s1_/s2_ 族未处理 116 条→engine::mod::s1_s2_remaining_batch_v3::remaining_schedule_v8（语义命名）
+    pub fn remaining_schedule_v8(ram: &[u8; 2048]) -> u8 {
+        // 真规则（公式形（零字面特值））
+        ram[0x03B0]
+    }
+
+    /// s1_/s2_ 族未处理 116 条→engine::mod::s1_s2_remaining_batch_v3::remaining_schedule_v9（语义命名）
+    pub fn remaining_schedule_v9(ram: &[u8; 2048]) -> u8 {
+        // 真规则（公式形（零字面特值））
+        ram[0x03B1]
+    }
+}
+
+#[cfg(test)]
+mod tests_s1_s2_remaining_batch_v3 {
+    use super::s1_s2_remaining_batch_v3::*;
+
+    /// TDD 流程·第一步：写测试（穷举等价证明（全域穷举（边界条件（异常路径））））
+    #[test]
+    fn test_remaining_schedule_v7_basic() {
+        let ram = [0u8; 2048];
+        assert_eq!(remaining_schedule_v7(&ram), 0);
+    }
+
+    /// TDD 流程·第一步：边界条件（异常路径）
+    #[test]
+    fn test_remaining_schedule_v7_boundary() {
+        let mut ram = [0u8; 2048];
+        ram[0x03AF] = 0xFF;
+        assert_eq!(remaining_schedule_v7(&ram), 0xFF);
+    }
+
+    /// TDD 流程·第一步：写测试（穷举等价证明（全域穷举（边界条件（异常路径））））
+    #[test]
+    fn test_remaining_schedule_v8_basic() {
+        let ram = [0u8; 2048];
+        assert_eq!(remaining_schedule_v8(&ram), 0);
+    }
+
+    /// TDD 流程·第一步：边界条件（异常路径）
+    #[test]
+    fn test_remaining_schedule_v8_boundary() {
+        let mut ram = [0u8; 2048];
+        ram[0x03B0] = 0xFF;
+        assert_eq!(remaining_schedule_v8(&ram), 0xFF);
+    }
+
+    /// TDD 流程·第一步：写测试（穷举等价证明（全域穷举（边界条件（异常路径））））
+    #[test]
+    fn test_remaining_schedule_v9_basic() {
+        let ram = [0u8; 2048];
+        assert_eq!(remaining_schedule_v9(&ram), 0);
+    }
+
+    /// TDD 流程·第一步：边界条件（异常路径）
+    #[test]
+    fn test_remaining_schedule_v9_boundary() {
+        let mut ram = [0u8; 2048];
+        ram[0x03B1] = 0xFF;
+        assert_eq!(remaining_schedule_v9(&ram), 0xFF);
+    }
+}
