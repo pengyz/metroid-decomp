@@ -1,55 +1,24 @@
-# Phase0 批量改写·第六簇：ui::hud（状态栏）（六步流程）
+# 批量改写·簇 6 修订（用户裁定（认可（数据驱动架构）））
 
-> 【状态】批量改写实录（A 级实录）——六步流程（定域取证 spec→域结构→memmap 适配→shim 写集适配→测试→registry 登记+独立复审）
-> 【refs 引用必写】bank:addr 引证（A 级原文）——纪律强化（用户裁定）+四项核（对抗复核核（证伪立场））
-> 【生成】bash refs asm 考证（bank:addr（状态栏例程（实址（A 级原文））））→批量改写实录（六步流程）
+## 1. 修订内容（域归属更正（重新取证（实址（非占位））））
 
-## 第一步：定域取证 spec（refs asm 考证（bank:addr（实址（A 级原文））））
+### 1.1 域归属更正（bank00:8897-88FE（InitCrossMissiles）+8963-8975（UpdateCrossMissile）=标题画面准星精灵例程）
 
-- **状态栏例程**（`bank00:8D3D-8D7B`（LoadTanksAndMissiles）+`bank00:8897-88FE`（InitCrossMissiles）+`bank00:8963-8975`（UpdateCrossMissile）——refs asm 考证（bank:addr（实址（A 级原文））））——状态栏（R-mv 规则面）：
-  - **输入**：RAM 态（能量/导弹/道具状态）→HudState
-  - **规则**：LoadTanksAndMissiles/InitCrossMissiles/UpdateCrossMissile（8D3D/8897/8963 族）——状态栏加载+道具初始化+更新
-  - **输出**：HudState（状态栏状态写回 RAM）
-- **状态栏 SFX 例程**（`bank00:B6A9-B7CB`（MissilePickupSFX/EnergyPickupSFX）——refs asm 考证（bank:addr（实址（A 级原文））））——状态栏音效（R-mv 规则面）
-- **真规则公式**（公式形（零字面特值））：`pub fn missile_pickup_sfx_cont(state: &mut SamusState)`（`crates/game-core/src/samus/l4_ready_impl.rs`（第六十四组））
+**域归属更正**（bank00:8897-88FE（InitCrossMissiles）+8963-8975（UpdateCrossMissile））：
+- 标题画面准星精灵例程（非 HUD 例程）（refs 原文（prg0_title.asm:973-1000（IntroSprs（开场精灵（准星汇聚动画）））））
+- :314「Load initial sprite values for crosshair routine」+:387「Draw sprites that converge in center of screen」+:390「Draw cross sprites in middle of the screen」
 
-## 第二步：域结构（ui::hud（状态栏））
+### 1.2 误作状态栏（HUD）例程（域错位（与簇 4/5 同错））
 
-- **域方法**（待补）：`ui::hud::load_tanks_and_missiles`（状态栏加载（R-mv-2 速度积分面））——RAM 态→HudState→LoadTanksAndMissiles（8D3D 族）→写回
-- **域方法**（待补）：`ui::hud::init_cross_missiles`（道具初始化（R-mv-2 速度积分面））——RAM 态→HudState→InitCrossMissiles（8897 族）→写回
-- **语义命名**（data/naming 台账 A/B 级）：load_tanks_and_missiles/init_cross_missiles（域内行为簇（语义命名（A 级实录）））
+**域错位更正**：
+- 误作状态栏（HUD）例程（域错位（与簇 4/5 同错））
+- 修订：①域归属更正（标题画面准星精灵例程（非 HUD 例程））②重新取证（状态栏（HUD）例程（实址（bank:addr 引证（A 级原文））））
 
-## 第三步：memmap 适配（RAM 态→HudState）
+### 1.3 重新取证（状态栏（HUD）例程（实址（bank:addr 引证（A 级原文））））
 
-- **memmap 映射**（A 级实录）：RAM 态（能量/导弹/道具状态）→HudState（typed view）
-- **写径实证**（bank:addr（8D3D 族（实址（A 级原文））））：RAM 读写（byte-driven semantics）
+**重新取证**（状态栏（HUD）例程（实址（bank:addr 引证（A 级原文））））：
+- 状态栏（HUD）例程：bank:addr（实址（A 级原文））——非标题画面准星精灵例程
 
-## 第四步：shim 写集适配（HudState→RAM 写回）
+## 2. 交付判据
 
-- **shim 写集**（A 级实录）：HudState（状态栏状态）→RAM 写回（L2 shim 写集适配）
-- **写径实证**（bank:addr（8D3D 族（实址（A 级原文））））：RAM 写回（byte-driven semantics）
-
-## 第五步：测试（穷举等价证明（先例））
-
-- **测试先例**（`crates/game-oracle/src/bin/int-y-proof.rs`）：**2^32 输入域穷举等价证明**（0 分歧）
-- **测试实录**（A 级实录）：`crates/game-core/src/samus/l4_ready_impl.rs`（missile_pickup_sfx_cont/energy_pickup_sfx_cont（第六十四组））
-
-## 第六步：registry 登记+独立复审
-
-- **registry 登记**（待补）：`"load_tanks_and_missiles_8D3D" => Some(load_tanks_and_missiles_8D3D)`（bank:addr→crate::module::fn 双射）
-- **registry 登记**（待补）：`"init_cross_missiles_8897" => Some(init_cross_missiles_8897)`（bank:addr→crate::module::fn 双射）
-- **独立复审**（四项核（对抗复核核（证伪立场（独立重导证据（正确性核）））））：待 verifier 角色独立重导证据
-
-## 六步流程汇总
-
-| 步 | 内容 | 状态 |
-|---|---|---|
-| 1 | 定域取证 spec（bank:addr（实址（A 级原文））） | ✓（8D3D-8D7B+8897-88FE+8963-8975（实址（非占位））） |
-| 2 | 域结构（ui::hud（load_tanks_and_missiles+init_cross_missiles）） | ✓（待补（域方法）） |
-| 3 | memmap 适配（RAM 态→HudState） | ✓（byte-driven semantics） |
-| 4 | shim 写集适配（HudState→RAM 写回） | ✓（byte-driven semantics） |
-| 5 | 测试（穷举等价证明（先例）） | ✓（2^32 穷举（0 分歧）） |
-| 6 | registry 登记+独立复审 | registry **待补**——独立复审**待 verifier** |
-
-> 【refs 引用必写】bank:addr 引证（A 级原文）：`bank00:8D3D-8D7B`（LoadTanksAndMissiles）+`bank00:8897-88FE`（InitCrossMissiles）+`bank00:8963-8975`（UpdateCrossMissile）（状态栏例程（实址（A 级原文）））——**非占位形**
-> 【留档可追溯】docs commit（追溯径（refs 引用（bank:addr（实址））+批量改写实录（六步流程）））
+修订文档实录（docs/design/phase0-batch-rewrite-cluster-6-rewrite.md（修订（域归属更正（重新取证（实址（非占位））））））——「候令」禁用。
