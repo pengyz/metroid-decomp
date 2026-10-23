@@ -46,6 +46,12 @@ impl RenderState {
         self.write_ppuaddr(v, is_hi);
     }
 
+    /// $2002 读复位地址锁存（asm：`ldx PPUSTATUS` 语义——VRAMStructWrite/ClearNameTable
+    /// 入口均先复位 flip-flop，防双写相位错位）。
+    pub fn reset_addr_latch(&mut self) {
+        self.latch_hi = true;
+    }
+
     /// $2007 写（按 PPUADDR 分域：$0000-$1FFF=CHR/$2000-$2FFF=名表）+地址步进。
     pub fn write_ppudata(&mut self, v: u8, increment: u16) {
         match self.ppuaddr {

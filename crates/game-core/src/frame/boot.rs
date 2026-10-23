@@ -125,8 +125,15 @@ pub fn c158_unit(mem: &mut FrameMemory) {
     // $FF 清 bit2（AND #$FB/STA $FF/STA $2000——PPU ctrl NMI 位清）
     let f = mem.read_ram(0x00FF) & 0xFB;
     mem.write_ram(0x00FF, f);
-    // PPU 面（非 RAM watch）：LDX $2002（status 读）、表读 $C19F[$01-1]→$2006、$FF 填 ×1280
-    // 结束态：LDA $00 尾次 A=FF；循环计数 X/Y 归零
+    // PPU 面（S6-10 渲染腿首件——asm 引证主体 `ClearNameTable: ; 07:C175`）：
+    // `ldx PPUSTATUS`（锁存复位）/`PPUCTRL_ZP&=~INCR_DOWN/sta PPUCTRL`/`HiPPUTable[nt]→$2006`
+    // /`#$00→$2006`/`ldx #$04/ldy #$00` 环 `sta PPUDATA`——NT+属性 1024B=$FF 填充
+    // （asm :385「It also clears the associated attribute table」自证；HiPPUTable $C19F=20/24/28/2C）。
+    // 首遍 NT0、次遍 NT($01-1)（与 RAM 面同分派）。
+    for nt_plus1 in [1u8, hi] {
+        super::vram::clear_name_table_ppu(mem, nt_plus1 - 1, 0xFF);
+    }
+    // 结束态（RAM 面）：$00=FF、$01=2|3、$FF&=!4、A=FF/X=0/Y=0（PPU 面见上——S6-10）。
     mem.regs.a = 0xFF;
     mem.regs.x = 0;
     mem.regs.y = 0;

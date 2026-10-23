@@ -29,6 +29,7 @@ pub mod sound_hook;
 pub mod render;
 pub mod statue;
 pub mod title_bridge;
+pub mod vram;
 
 pub use clock::{VirtualClock, TARGET_FPS};
 pub use engine::FrameEngine;

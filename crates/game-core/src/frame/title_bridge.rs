@@ -65,23 +65,12 @@ pub fn main_title_routine(mem: &mut FrameMemory) {
     }
     let step = crate::title::dispatch_step(&face);
     mem.title_cursor = step.next_cursor; // 跨帧游标存回（>0=spin 续点/0=完成复位）
+    // shell 组合点执行（**全臂**——两层边界：title 域声明/本侧执行；
+    // S6-10 渲染腿接线：PrepareVram/ClearNameTables PPU 面随批兑现）。
+    for sc in &step.shell {
+        exec_shell_call(mem, sc);
+    }
     if let Some(addr) = step.unported {
-        // shell 组合点执行（S6-4 精灵面迭代件——F4/F0 填充约定面）
-        for sc in &step.shell {
-            use crate::title::ShellCall::*;
-            match sc {
-                EraseAllSprites => crate::frame::boot::c1a3_unit(mem), // $F0 填充
-                ClearNameTables => crate::frame::boot::c158_unit(mem),
-                RemoveIntroSprites => {
-                    // **F4 离屏惯例**（C1BC：「sprite values with #$F4——bottom right+
-                    // blank graphic」——S6-4 精灵面迭代件；port2 fcda70b 变体就绪）
-                    for i in 0..0x100u16 {
-                        mem.write_ram(0x0200 + i, 0xF4);
-                    }
-                }
-                _ => {} // 其余壳（ScreenOff/NMIOn 等——NmiYield 判定下）
-            }
-        }
         if step.shell.contains(&crate::title::ShellCall::NmiYield) {
             // **占位臂**（表址供首分歧记账+NmiYield 帧界让出——B 跑分类面，非引爆）
             super::DIVERGENCES.with(|d| d.borrow_mut().push(addr));
@@ -121,6 +110,37 @@ pub fn main_title_routine(mem: &mut FrameMemory) {
             let loc = format!("bank00:{addr:04X}-jump");
             crate::unported!(&loc); // 其余跳转出口（CheckPassword 转接面——随接）
         }
+    }
+}
+
+/// shell 组合点执行体（全臂——S6-4 精灵面 + S6-10 PPU 面）。
+fn exec_shell_call(mem: &mut FrameMemory, sc: &crate::title::ShellCall) {
+    use crate::title::ShellCall::*;
+    match sc {
+        EraseAllSprites => crate::frame::boot::c1a3_unit(mem), // $F0 填充（C1A3）
+        ClearNameTables => crate::frame::boot::c158_unit(mem), // RAM 面+PPU 面（C158——S6-10）
+        RemoveIntroSprites => {
+            // **F4 离屏惯例**（C1BC：「sprite values with #$F4——bottom right+
+            // blank graphic」——S6-4 精灵面迭代件；port2 fcda70b 变体就绪）
+            for i in 0..0x100u16 {
+                mem.write_ram(0x0200 + i, 0xF4);
+            }
+        }
+        PrepareVram(addr) => prepare_vram(mem, *addr),
+        // ScreenOff/ScreenOn/NMIOn/VBOffAndHorzWrite/WaitNMIPass：$FE/$FF/$1A 镜像面
+        // =臂事件承载（two-layer——事件即 RAM 面权威）；InitPasswordFontGfx/
+        // DisplayInputCharacters 深件随批（未烘焙面随件爆）。
+        _ => {}
+    }
+}
+
+/// PreparePPUProcess 组合点（asm 引证主体 `PreparePPUProcess: ; 07:C20E`——ptr→VRAMStructWrite）。
+/// blob 面=game-data 烘焙（tools/bake_vram_structs.py）；未烘焙址 fail-loud（随件补）。
+fn prepare_vram(mem: &mut FrameMemory, addr: u16) {
+    match addr {
+        0x82F4 => super::vram::vram_struct_write(
+            mem, &game_data::title::vram_structs::INTRO_BG_VRAM_STRUCT),
+        other => crate::unported!(&format!("bank00:{other:04X}-PrepareVram")),
     }
 }
 
