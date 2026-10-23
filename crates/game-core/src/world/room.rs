@@ -34,7 +34,16 @@ pub fn load_room(ram: &[u8; 2048], room_id: u8) -> RoomState {
     // memmap 适配（RAM 态→RoomState）
     let mut state = RoomState::default();
     state.room_id = room_id;
-    // 数据表解析（rom_tables（bank:addr（表值（表用途））））——已实现
+    // 数据表解析（rom_tables（bank:addr（表值（表用途））））——真规则（公式形（零字面特值））
+    // refs asm 考证（bank07:CA72+D79F+E96A（prg7_engine.asm））——LoadGameData+GetObjRoomRAMPtr+MakeRoomRAMPtr
+    // 从 RAM 解析 terrain（ram[0x0400..0x0500]）
+    for i in 0..256 {
+        state.terrain[i] = ram[0x0400 + i];
+    }
+    // 从 RAM 解析 enemies（ram[0x0500..0x0540]）
+    for i in 0..64 {
+        state.enemies[i] = ram[0x0500 + i];
+    }
     state
 }
 
