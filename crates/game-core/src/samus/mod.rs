@@ -9,3 +9,4 @@ pub mod physics;
 
 pub use handler::{update_samus, SamusHandler};
 pub use physics::{vert_accelerate, x_minus_16, x_plus_4};
+pub mod animation;
