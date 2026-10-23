@@ -206,3 +206,73 @@ mod tests_s1_s2_door {
         assert_eq!(door_schedule(&ram), 0xFF);
     }
 }
+
+// ===== door_interaction 门交互（TDD 流程（测试先行（实现后补）））=====
+
+#[cfg(test)]
+mod tests_door_interaction {
+    //! TDD step1（穷举等价证明（全域穷举（边界条件（异常路径））））。
+    //! refs 考证（bank:addr（A 级原文））：Door_DeleteOffscreenEnemies（bank07:D4B4
+    //! （门/敌人删除））+SamusCollisionWithSolidEntities（bank07:D99E（萨姆斯与实体碰撞））
+    //! +MakeRoomRAMPtr（bank07:E96A（房间 RAM 指针计算））。
+    //! 判径（任务规约面）：dx=|samus_x-door_x|、dy=|samus_y-door_y|——命中=dx<16 且 dy<16。
+
+    use super::*;
+
+    /// 独立参考径（证伪立场）：u8 abs_diff 邻域判。
+    fn reference_hit(sx: u8, sy: u8, dx_: u8, dy_: u8) -> bool {
+        sx.abs_diff(dx_) < 16 && sy.abs_diff(dy_) < 16
+    }
+
+    /// 【穷举·X 对】sx×dx 全域 256²（y 同位）——逐位对拍。
+    #[test]
+    fn exhaustive_x_axis() {
+        for sx in 0u8..=255 {
+            for dx in 0u8..=255 {
+                assert_eq!(door_interaction(0, sx, 100, dx, 100), reference_hit(sx, 100, dx, 100));
+            }
+        }
+    }
+
+    /// 【穷举·Y 对】sy×dy 全域 256²（x 同位）——逐位对拍。
+    #[test]
+    fn exhaustive_y_axis() {
+        for sy in 0u8..=255 {
+            for dy in 0u8..=255 {
+                assert_eq!(door_interaction(0, 100, sy, 100, dy), reference_hit(100, sy, 100, dy));
+            }
+        }
+    }
+
+    /// 【边界】dx/dy=15（命中）/16（不命中）四象限+回绕面（0↔255 距 255）。
+    #[test]
+    fn boundary_and_wrap() {
+        assert!(door_interaction(0, 0, 0, 15, 15));   // 双 15 命中
+        assert!(!door_interaction(0, 0, 0, 16, 15));  // x=16 不命中
+        assert!(!door_interaction(0, 0, 0, 15, 16));  // y=16 不命中
+        assert!(!door_interaction(0, 0, 0, 16, 16));  // 双 16 不命中
+        assert!(!door_interaction(0, 0, 0, 255, 0));  // 回绕面（|0-255|=255）
+    }
+
+    /// 【异常路径】极端位域+door_state 全域不干预判径（参数保留（判径面注））。
+    #[test]
+    fn exception_paths() {
+        for st in [0u8, 1, 0x7F, 0x80, 0xFF] {
+            assert!(door_interaction(st, 0x80, 0x80, 0x80, 0x80));  // 重合命中
+            assert!(!door_interaction(st, 0, 0, 255, 255));          // 对角远端
+        }
+    }
+}
+
+// ===== door_interaction 门交互（实现（真规则（公式形（零字面特值））））=====
+// refs 考证（bank:addr（A 级原文））：Door_DeleteOffscreenEnemies（bank07:D4B4）+
+// SamusCollisionWithSolidEntities（bank07:D99E（碰撞邻域面））+MakeRoomRAMPtr（bank07:E96A）。
+
+/// 门交互（检测+判断）——dx=|samus_x-door_x|、dy=|samus_y-door_y|；命中=dx<16 且 dy<16。
+/// door_state：判径保留参数（门态门控留扩展缝（任务规约面（当前判径不含门态）））。
+pub fn door_interaction(door_state: u8, samus_x: u8, samus_y: u8, door_x: u8, door_y: u8) -> bool {
+    let _ = door_state;
+    let dx = samus_x.abs_diff(door_x);
+    let dy = samus_y.abs_diff(door_y);
+    dx < 16 && dy < 16
+}
