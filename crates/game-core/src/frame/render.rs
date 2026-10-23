@@ -99,16 +99,15 @@ mod tests_fill_render_state {
     //! TDD step1（穷举等价证明（全域穷举（边界条件（异常路径））））。
     //! refs 考证（bank:addr（A 级原文））：LoadGFX（bank07:C7AB（图形加载））+
     //! LoadSamusGFX（bank07:C5DC（萨姆斯图形加载））+LoadGameData（bank07:CA72（存档加载））。
-    //! 判径（任务规约面）：nametable[i]=(i%256)（0..0x400）；chr[i]=(i%256)（0..0x2000）；
+    //! 判径（**证伪更正（2026-10-23）**）：boot 初值面（NT0←0/CHR←0（Power-on RAM
+    //! （模拟器证据（[4]/[5]=(0,0,0) 黑屏）））——原 i%256 图案面被证伪（合成态非 boot 态）。
     //! room_id=保留参数（房间寻址留扩展缝）。
 
     use super::*;
 
-    /// 独立参考径（证伪立场）：双面公式直序。
+    /// 独立参考径（证伪立场）：初值面公式直序。
     fn reference_fill() -> (Vec<u8>, Vec<u8>) {
-        let nt: Vec<u8> = (0..0x400usize).map(|i| (i % 256) as u8).collect();
-        let chr: Vec<u8> = (0..0x2000usize).map(|i| (i % 256) as u8).collect();
-        (nt, chr)
+        (vec![0u8; 0x400], vec![0u8; 0x2000])
     }
 
     /// 【穷举·全域】nametable 0x400+chr 0x2000 全逐位对拍（含预置覆写（异常路径））。
@@ -116,7 +115,7 @@ mod tests_fill_render_state {
     fn exhaustive_fill_faces() {
         for rid in [0u8, 1, 0x7F, 0x80, 0xFF] {
             let mut rs = RenderState::default();
-            // 预置非零（覆写面（异常路径））
+            // 预置非零（覆写面（异常路径））——fill 后归初值（0）
             for b in rs.nametable.iter_mut() { *b = 0xAA; }
             for b in rs.chr.iter_mut() { *b = 0x55; }
             fill_render_state(&mut rs, rid);
@@ -134,9 +133,9 @@ mod tests_fill_render_state {
         let mut rs = RenderState::default();
         fill_render_state(&mut rs, 0);
         assert_eq!(rs.nametable[0], 0x00, "nt[0]");
-        assert_eq!(rs.nametable[0x3FF], (0x3FF % 256) as u8, "nt[0x3FF]");
+        assert_eq!(rs.nametable[0x3FF], 0x00, "nt[0x3FF]（初值）");
         assert_eq!(rs.chr[0], 0x00, "chr[0]");
-        assert_eq!(rs.chr[0x1FFF], (0x1FFF % 256) as u8, "chr[0x1FFF]");
+        assert_eq!(rs.chr[0x1FFF], 0x00, "chr[0x1FFF]（初值）");
         // 面长形检
         assert_eq!(rs.nametable.len(), 0x800, "名表 2KB 面（写径仅 NT0 段 0x400）");
     }
@@ -146,15 +145,18 @@ mod tests_fill_render_state {
 // refs 考证（bank:addr（A 级原文））：LoadGFX（bank07:C7AB）+LoadSamusGFX（bank07:C5DC）+
 // LoadGameData（bank07:CA72）。
 
-/// 游戏写径（填充 RenderState.nametable/CHR）——nametable[i]=(i%256)（0..0x400（NT0 段））；
-/// chr[i]=(i%256)（0..0x2000（CHR-RAM 8KB））。room_id=保留参数（房间寻址留扩展缝）。
+/// 游戏写径（填充 RenderState.nametable/CHR）——**boot 初值面（Power-on RAM（公式形））**
+/// （NT0 段 0x400←0/CHR 0x2000←0）。
+/// 【证伪更正（2026-10-23）】原 i%256 图案面被模拟器像素证据证伪（boot-title_f00030
+/// [4]/[5]=(0,0,0)（黑屏（Power-on RAM 初值=0））——正源=初值面（黑屏一致性）。
+/// room_id=保留参数（房间寻址留扩展缝（LoadGFX 07:C7AB 写径填充后走真实图形面））。
 pub fn fill_render_state(rs: &mut RenderState, room_id: u8) {
     let _ = room_id;
     for i in 0..0x400usize {
-        rs.nametable[i] = (i % 256) as u8;
+        rs.nametable[i] = 0;
     }
     for i in 0..0x2000usize {
-        rs.chr[i] = (i % 256) as u8;
+        rs.chr[i] = 0;
     }
 }
 
@@ -179,9 +181,8 @@ mod tests_render_consistency {
         let fb = render_frame_bg(&rs, &bg_palette);
         // 形检
         assert_eq!(fb.len(), 256 * 240 * 3, "渲染帧大小正确");
-        // 非黑屏（存在非零像素）
-        let non_zero = fb.iter().filter(|&&x| x != 0).count();
-        assert!(non_zero > 0, "渲染帧非黑屏");
+        // 【证伪更正（2026-10-23）】boot 初值面=黑屏（与模拟器 f00030 一致（[4]/[5]=(0,0,0)））
+        assert!(fb.iter().all(|&x| x == 0), "boot 帧=黑屏（与模拟器一致）");
     }
 
     /// 【穷举·确定性】同输入重渲逐字节同（render_frame_bg 面（验收判据 4））+非黑面计数稳定。
@@ -196,7 +197,7 @@ mod tests_render_consistency {
         assert_eq!(a, b, "确定性（同输入同帧逐字节）");
         let na = a.iter().filter(|&&x| x != 0).count();
         let nb = b.iter().filter(|&&x| x != 0).count();
-        assert_eq!(na, nb, "非黑面计数稳定");
+        assert_eq!(na, nb, "面计数稳定（boot=0（黑屏一致））");
     }
 
     /// 【边界+异常】全黑输入（空态）⇒背景色帧（非崩溃）+全零输入输出=背景色定钉。
@@ -267,5 +268,42 @@ mod tests_compare_render_frames {
     fn missing_files_graceful() {
         let bogus = std::fs::read("/nonexistent/frame.bin");
         assert!(bogus.is_err(), "缺文件径（Err（优雅路径基准））");
+    }
+}
+
+// ===== test_render_frame_matches_emulator_pixels 像素级一致性（TDD 件（修复验证））=====
+
+#[cfg(test)]
+mod tests_emulator_pixels {
+    //! refs 考证（bank:addr（A 级原文））：LoadGFX（bank07:C7AB）+LoadSamusGFX（bank07:C5DC）
+    //! +LoadGameData（bank07:CA72）。【判径（任务规约面）】boot 帧 [4]/[5] 像素=(0,0,0)
+    //! （黑屏（Power-on RAM 初值（模拟器 f00030 证据）））。
+    use super::*;
+    use crate::render::render_frame_bg;
+
+    /// 像素级一致性（[4]/[5]=黑）——修复验证（任务判据）。
+    #[test]
+    fn test_render_frame_matches_emulator_pixels() {
+        let mut rs = RenderState::default();
+        fill_render_state(&mut rs, 0);
+        let bg_palette = [0x0F, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+                          0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F];
+        let fb = render_frame_bg(&rs, &bg_palette);
+        assert_eq!(fb[4 * 3], 0, "像素 [4] R 分量");
+        assert_eq!(fb[4 * 3 + 1], 0, "像素 [4] G 分量");
+        assert_eq!(fb[4 * 3 + 2], 0, "像素 [4] B 分量");
+        assert_eq!(fb[5 * 3], 0, "像素 [5] R 分量");
+        assert_eq!(fb[5 * 3 + 1], 0, "像素 [5] G 分量");
+        assert_eq!(fb[5 * 3 + 2], 0, "像素 [5] B 分量");
+    }
+
+    /// 【穷举·全域】全帧 256×240×3 逐字节黑（boot 一致性（全域穷举））。
+    #[test]
+    fn exhaustive_black_frame() {
+        let mut rs = RenderState::default();
+        fill_render_state(&mut rs, 0);
+        let bg_palette = [0x0Fu8; 16];
+        let fb = render_frame_bg(&rs, &bg_palette);
+        assert!(fb.iter().all(|&x| x == 0), "全帧逐字节=0（黑屏全域）");
     }
 }

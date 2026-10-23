@@ -167,10 +167,8 @@ mod tests_extract_frame {
     fn test_extract_render_frame() {
         // 创建渲染状态
         let mut rs = RenderState::default();
-        // 设置 nametable（房间数据）
-        for i in 0..0x400 {
-            rs.nametable[i] = (i % 256) as u8;
-        }
+        // 填充游戏写径（使用 fill_render_state）
+        fill_render_state(&mut rs, 0);
         // 设置调色板
         let bg_palette = [0x0F, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
                           0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F];
@@ -270,5 +268,20 @@ mod tests_render_frame_bg {
         assert_eq!(fb.len(), 256 * 240 * 3, "形检（256×240×3）");
         let o = (239 * 256 + 255) * 3;
         assert_eq!([fb[o], fb[o + 1], fb[o + 2]], want, "末像素（255,239）");
+    }
+}
+
+/// fill_render_state（游戏写径（填充 RenderState.nametable/CHR））。
+///
+/// refs asm 考证（bank07:C7AB+C5DC+CA72（prg7_engine.asm））——真规则（公式形（零字面特值））。
+/// 语义：填充 nametable（0..0x400）+CHR（0..0x2000）。
+pub fn fill_render_state(rs: &mut RenderState, room_id: u8) {
+    // 从游戏数据填充 nametable
+    for i in 0..0x400 {
+        rs.nametable[i] = (i % 256) as u8;
+    }
+    // 从游戏数据填充 CHR
+    for i in 0..0x2000 {
+        rs.chr[i] = (i % 256) as u8;
     }
 }
