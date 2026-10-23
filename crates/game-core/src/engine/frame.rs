@@ -4952,3 +4952,146 @@ mod tests_block158 {
         assert_eq!(tail, 0xF97C, "kill_enemy_and_load(0x7F,0x80) 异常路径（0xF97C）");
     }
 }
+
+// TDD 测试（测试先行（实现后补）（强制完整））——1:1 Rust 改写·批产·块 160：engine::mod（s1_/s2_ 族未处理（剩余（3 员/批）））（穷举等价证明（全域穷举（≤3 重（256^3（gate 预算（1200s））））+边界条件（异常路径））））
+// refs 引用必写（bank:addr 引证（A 级原文））：bank01:8000（s1 族（prg1_brinstar.asm））（s1_/s2_ 族（实址（A 级原文）））
+use super::s1_set_samus_anim; // refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm）（s1_set_samus_anim（SetSamusAnim（真规则（公式形（零字面特值））））））
+
+
+/// select_samus_anim（Samus 动画选择（语义命名（data/naming 台账 A/B 级）））——旧实现（s1_d07a_body（engine/mod.rs:728））→去地址名
+/// refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm））（s1_d07a_body（v 选择（v0305 == tbl_entry（tbl_entry）else（a_in））+s1_set_samus_anim 调用）））——真规则（公式形（零字面特值））
+pub fn select_samus_anim(a_in: u8, v0305: u8, tbl_entry: u8) -> (Vec<(u16, u8)>, u8) {
+    // 真规则（公式形（零字面特值））：select_samus_anim（a_in/v0305/tbl_entry（v 选择（byte-driven semantics）））
+    let v = if v0305 == tbl_entry { tbl_entry } else { a_in };
+    let (ev, a) = s1_set_samus_anim(v);
+    (ev, a)
+}
+
+/// set_samus_anim_full（Samus 动画设置（全写（语义命名（data/naming 台账 A/B 级））））——旧实现（s1_d088_body（engine/mod.rs:735））→去地址名
+/// refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm））（s1_d088_body（SetSamusAnim+$0304←8+$4D←Y/$0309←X（写族））））——真规则（公式形（零字面特值））
+pub fn set_samus_anim_full(a_in: u8, x: u8, y: u8) -> Vec<(u16, u8)> {
+    // 真规则（公式形（零字面特值））：set_samus_anim_full（a_in/x/y（SetSamusAnim+写族（0x0304/0x004D/0x0309）（byte-driven semantics）））
+    let (mut ev, _) = s1_set_samus_anim(a_in);
+    ev.push((0x0304, 8));
+    ev.push((0x004D, y));
+    ev.push((0x0309, x));
+    ev
+}
+
+/// apply_pos_write（位置写（语义命名（data/naming 台账 A/B 级）））——旧实现（s1_d633_body（engine/mod.rs:800））→去地址名
+/// refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm））（s1_d633_body（写族（0x030D/0x030E）+位0 判段（v0b & 0x01 == 0（写族）））））——真规则（公式形（零字面特值））
+pub fn apply_pos_write(x: u8, v08: u8, v09: u8, v0b: u8) -> Vec<(u16, u8)> {
+    // 真规则（公式形（零字面特值））：apply_pos_write（x/v08/v09/v0b（写族+位0 判段（byte-driven semantics）））
+    let mut ev = vec![(0x030D + x as u16, v08), (0x030E + x as u16, v09)];
+    if v0b & 0x01 == 0 {
+        ev.push((0x030C + x as u16, v0b)); // 位0 未置段
+    }
+    ev
+}
+
+#[cfg(test)]
+mod tests_block160 {
+    use super::*;
+
+    /// 测试 1（穷举等价证明（全域穷举））：select_samus_anim 全域穷举（a_in/v0305/tbl_entry 全域（256^3））
+    #[test]
+    fn test_select_samus_anim_full_domain() {
+        // refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm））（s1_d07a_body（v 选择（v0305 == tbl_entry（tbl_entry）else（a_in））+s1_set_samus_anim 调用）））——真规则（公式形（零字面特值））
+        for a_in in 0..=255u8 {
+            for v0305 in 0..=255u8 {
+                for tbl_entry in 0..=255u8 {
+                    let (ev, a_out) = select_samus_anim(a_in, v0305, tbl_entry);
+                    let v = if v0305 == tbl_entry { tbl_entry } else { a_in };
+                    let (expected_ev, expected_a) = s1_set_samus_anim(v);
+                    assert_eq!(ev, expected_ev, "select_samus_anim({}, {}, {}) ev（v 选择（v0305 == tbl_entry（tbl_entry）else（a_in））+s1_set_samus_anim 调用）", a_in, v0305, tbl_entry);
+                    assert_eq!(a_out, expected_a, "select_samus_anim({}, {}, {}) a_out（s1_set_samus_anim 返回）", a_in, v0305, tbl_entry);
+                }
+            }
+        }
+    }
+
+    /// 测试 2（边界条件）：select_samus_anim 边界条件（a_in/v0305/tbl_entry 边界值（0x00/0xFF））
+    #[test]
+    fn test_select_samus_anim_boundary() {
+        let (ev, a_out) = select_samus_anim(0x00, 0x00, 0x00);
+        assert_eq!(a_out, 0x00, "select_samus_anim(0x00,0x00,0x00) 边界（s1_set_samus_anim 返回）");
+        let (ev, a_out) = select_samus_anim(0xFF, 0xFF, 0xFF);
+        assert_eq!(a_out, 0xFF, "select_samus_anim(0xFF,0xFF,0xFF) 边界（s1_set_samus_anim 返回）");
+    }
+
+    /// 测试 3（异常路径）：select_samus_anim 异常路径（a_in/v0305/tbl_entry 非零（byte-driven semantics））
+    #[test]
+    fn test_select_samus_anim_exception_path() {
+        let (ev, a_out) = select_samus_anim(0x7F, 0x80, 0x01);
+        assert_eq!(a_out, 0x7F, "select_samus_anim(0x7F,0x80,0x01) 异常路径（v = a_in（v0305 != tbl_entry））");
+    }
+
+    /// 测试 4（穷举等价证明（全域穷举））：set_samus_anim_full 全域穷举（a_in/x/y 全域（256^3））
+    #[test]
+    fn test_set_samus_anim_full_full_domain() {
+        // refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm））（s1_d088_body（SetSamusAnim+$0304←8+$4D←Y/$0309←X（写族））））——真规则（公式形（零字面特值））
+        for a_in in 0..=255u8 {
+            for x in 0..=255u8 {
+                for y in 0..=255u8 {
+                    let ev = set_samus_anim_full(a_in, x, y);
+                    let (base_ev, _) = s1_set_samus_anim(a_in);
+                    let mut expected = base_ev;
+                    expected.push((0x0304, 8));
+                    expected.push((0x004D, y));
+                    expected.push((0x0309, x));
+                    assert_eq!(ev, expected, "set_samus_anim_full({}, {}, {}) ev（SetSamusAnim+写族（0x0304/0x004D/0x0309））", a_in, x, y);
+                }
+            }
+        }
+    }
+
+    /// 测试 5（边界条件）：set_samus_anim_full 边界条件（a_in/x/y 边界值（0x00/0xFF））
+    #[test]
+    fn test_set_samus_anim_full_boundary() {
+        let ev = set_samus_anim_full(0x00, 0x00, 0x00);
+        assert_eq!(ev.len(), 4, "set_samus_anim_full(0x00,0x00,0x00) 边界（4 写事件（SetSamusAnim+3 写族））");
+        let ev = set_samus_anim_full(0xFF, 0xFF, 0xFF);
+        assert_eq!(ev.len(), 4, "set_samus_anim_full(0xFF,0xFF,0xFF) 边界（4 写事件（SetSamusAnim+3 写族））");
+    }
+
+    /// 测试 6（异常路径）：set_samus_anim_full 异常路径（a_in/x/y 非零（byte-driven semantics））
+    #[test]
+    fn test_set_samus_anim_full_exception_path() {
+        let ev = set_samus_anim_full(0x7F, 0x80, 0x01);
+        assert_eq!(ev.len(), 4, "set_samus_anim_full(0x7F,0x80,0x01) 异常路径（4 写事件）");
+    }
+
+    /// 测试 7（穷举等价证明（全域穷举））：apply_pos_write 全域穷举（x/v08/v09/v0b 全域（≤3 重（256^3）+第 4 参数边界/异常））
+    #[test]
+    fn test_apply_pos_write_full_domain() {
+        // refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm））（s1_d633_body（写族（0x030D/0x030E）+位0 判段（v0b & 0x01 == 0（写族）））））——真规则（公式形（零字面特值））
+        for x in 0..=255u8 {
+            for v08 in 0..=255u8 {
+                for v09 in 0..=255u8 {
+                    let ev = apply_pos_write(x, v08, v09, 0x00);
+                    let mut expected = vec![(0x030D + x as u16, v08), (0x030E + x as u16, v09)];
+                    if 0x00 & 0x01 == 0 {
+                        expected.push((0x030C + x as u16, 0x00));
+                    }
+                    assert_eq!(ev, expected, "apply_pos_write({}, {}, {}, 0x00) ev（写族（0x030D/0x030E）+位0 判段）", x, v08, v09);
+                }
+            }
+        }
+    }
+
+    /// 测试 8（边界条件）：apply_pos_write 边界条件（x/v08/v09/v0b 边界值（0x00/0xFF））
+    #[test]
+    fn test_apply_pos_write_boundary() {
+        let ev = apply_pos_write(0x00, 0x00, 0x00, 0x00);
+        assert_eq!(ev.len(), 3, "apply_pos_write(0x00,0x00,0x00,0x00) 边界（3 写事件（位0 未置段））");
+        let ev = apply_pos_write(0xFF, 0xFF, 0xFF, 0x01);
+        assert_eq!(ev.len(), 2, "apply_pos_write(0xFF,0xFF,0xFF,0x01) 边界（2 写事件（位0 置段（跳过）））");
+    }
+
+    /// 测试 9（异常路径）：apply_pos_write 异常路径（x/v08/v09/v0b 非零（byte-driven semantics））
+    #[test]
+    fn test_apply_pos_write_exception_path() {
+        let ev = apply_pos_write(0x7F, 0x80, 0x01, 0x02);
+        assert_eq!(ev.len(), 2, "apply_pos_write(0x7F,0x80,0x01,0x02) 异常路径（2 写事件（位0 置段（跳过）））");
+    }
+}

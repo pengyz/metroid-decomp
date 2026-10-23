@@ -768,9 +768,12 @@ def _child_env() -> dict:
     CARGO_TARGET_DIR 每窗隔离（选项③（避免共享锁））：多窗并行 gates check（commit-msg hook（cargo test --workspace（共享 build 目录锁（串行化））））——每窗独立 build 目录（避免共享锁）。
     基线影响：CARGO_TARGET_DIR 每窗独立（避免共享锁（串行化））——infra scaling（非调阈值/加白名单掩盖）。"""
     env = dict(os.environ, PYTHONUTF8="1")
-    # CARGO_TARGET_DIR 每窗隔离（选项③（避免共享锁））——每窗独立 build 目录（避免共享锁）
+    # CARGO_TARGET_DIR 每 worktree 隔离（选项③（避免共享锁））——per-worktree（保留增量编译缓存（避免跨 worktree 锁争））
+    # 非 per-PID（per-PID 每次全量重建（增量编译缓存被摧毁））——锁堆根因修复（§4（门禁/并发锁层（非代码层）））
     if "CARGO_TARGET_DIR" not in env:
-        env["CARGO_TARGET_DIR"] = f"/tmp/tgt-gates-{os.getpid()}"
+        import hashlib
+        wt_key = hashlib.sha256(str(ROOT).encode()).hexdigest()[:8]
+        env["CARGO_TARGET_DIR"] = f"/tmp/tgt-gates-{wt_key}"
     return env
 
 
