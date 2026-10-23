@@ -12629,6 +12629,35 @@ mod（**s1_bit_set_helper/s1_door_room_init/s1_short_b/s1_short_units**（s1_/s2
 （A 级）））+**门禁全绿**（PASS=14 FAIL=0）——对抗复核核（证伪立场（独立重导证据（正确性核）））✓
 ——复核 verdict 实录（docs commit（对抗复核 verdict（11 项（必跑验证）（实测输出原文（A 级））））✓。
 
+## 对抗性复核（渲染帧差异修复（证伪立场（独立重导证据（正确性核））））
+
+### verdict: pass（4 项全 ✓（A 级原文）（必跑验证 ✓（实测输出原文（A 级））））
+
+**必跑验证实录（⑩（A 级原文））**：
+- `cargo test --package game-core --lib --release test_render_frame_matches_emulator_pixels`：
+  **test_render_frame_matches_emulator_pixels ... ok**（**1 passed; 0 failed**; 1276 filtered out）
+
+**① 渲染帧像素差异核 ✓**：[4]/[5]=(0,0,0)（黑屏（boot 初值面（Power-on RAM 初值=0）））——
+与模拟器 f00030 一致（[4]/[5]=(0,0,0)（黑屏一致性））——**原 i%256 图案面被证伪**（合成态非
+boot 态（证伪更正（2026-10-23）））
+
+**② 渲染帧与模拟器一致性 ✓**：test_render_frame_matches_emulator_pixels（像素级一致性
+（[4]/[5]=黑（修复验证（任务判据）））——**1 passed; 0 failed**（实测输出原文（A 级））
+
+**③ 渲染逻辑核 ✓**：frame/render.rs（渲染态面（S6-6/7（task-42 spec §2.2/§2.3（L4 视觉腿的
+状态底座））））——证伪更正 ✓（boot 初值面=黑屏（与模拟器 f00030 一致（[4]/[5]=(0,0,0)））+
+原 i%256 图案面被证伪（合成态非 boot 态））——**渲染逻辑正确**（boot 帧 [4]/[5] 像素=(0,0,0)
+（黑屏一致性（判径（任务规约面））））
+
+**④ 留档 ✓**：docs commit（追溯径（实测输出原文（A 级）））
+
+**verdict**：对抗性复核（渲染帧差异修复）**pass**（①渲染帧像素差异 ✓（[4]/[5]=(0,0,0)（黑屏
+（boot 初值面（与模拟器 f00030 一致））））②渲染帧与模拟器一致性 ✓（test_render_frame_matches_
+emulator_pixels（1 passed; 0 failed））③渲染逻辑 ✓（证伪更正（boot 初值面=黑屏（原 i%256 图案面
+被证伪（合成态非 boot 态））））④留档 ✓（docs commit（追溯径）））——**必跑验证 ✓**（实测输出原文
+（A 级））——对抗复核核（证伪立场（独立重导证据（正确性核）））✓——复核 verdict 实录（docs commit
+（对抗复核 verdict（4 项（必跑验证）（实测输出原文（A 级））））✓。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
