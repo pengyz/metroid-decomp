@@ -157,3 +157,118 @@ mod s69_tests {
         assert_eq!(&fb[o..o + 3], &rgb);
     }
 }
+
+#[cfg(test)]
+mod tests_extract_frame {
+    use super::*;
+
+    /// 提取渲染帧（运行游戏（渲染帧展示））。
+    #[test]
+    fn test_extract_render_frame() {
+        // 创建渲染状态
+        let mut rs = RenderState::default();
+        // 设置 nametable（房间数据）
+        for i in 0..0x400 {
+            rs.nametable[i] = (i % 256) as u8;
+        }
+        // 设置调色板
+        let bg_palette = [0x0F, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+                          0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F];
+        
+        // 渲染帧
+        let fb = render_frame_bg(&rs, &bg_palette);
+        
+        // 保存渲染帧（PPM 格式）
+        let mut ppm = format!("P6\n{} {}\n255\n", 256, 240);
+        ppm.push_str(&String::from_utf8_lossy(&fb));
+        std::fs::write("/tmp/render_frame.ppm", ppm).unwrap();
+        
+        println!("渲染帧已保存到 /tmp/render_frame.ppm");
+        assert_eq!(fb.len(), 256 * 240 * 3, "渲染帧大小正确");
+    }
+}
+
+// ===== render_frame_bg 穷举等价证明（TDD 补强（全域穷举（边界条件（异常路径））））=====
+
+#[cfg(test)]
+mod tests_render_frame_bg {
+    //! 判径（结构互核注 BG 像素管）：tile=nt[ty*32+tx]；(lo,hi)=chr[tile*16+fy(+8)]；
+    //! pix=(lo>>bit&1)|((hi>>bit&1)<<1)（bit=7-(x&7)）；属性象限（ax=tx/4/ay=ty/4/
+    //! q=((ty&2)>>1)|((tx&2)>>0)）；pal_group=attr>>(q*2)&3；色索引=（pix==0?bg_palette[0]
+    //! :bg_palette[group*4+pix]）；RGB=NES_PALETTE[idx&0x3F]。
+    use super::*;
+
+    /// 独立参考径（证伪立场）：逐像素公式直序（单点函数）。
+    fn ref_pixel(rs: &RenderState, bg: &[u8; 16], x: usize, y: usize) -> [u8; 3] {
+        let nt = &rs.nametable[0..0x400];
+        let (tile_x, tile_y) = (x / 8, y / 8);
+        let tile = nt[tile_y * 32 + tile_x] as usize;
+        let fine_y = y & 7;
+        let lo = rs.chr.get(tile * 16 + fine_y).copied().unwrap_or(0);
+        let hi = rs.chr.get(tile * 16 + fine_y + 8).copied().unwrap_or(0);
+        let bit = 7 - (x & 7);
+        let pix = ((lo >> bit) & 1) | (((hi >> bit) & 1) << 1);
+        let (ax, ay) = (tile_x / 4, tile_y / 4);
+        let attr = nt[0x3C0 + ay * 8 + ax];
+        let q = ((tile_y & 2) >> 1) | ((tile_x & 2) >> 0);
+        let group = (attr >> (q * 2)) & 0x03;
+        let pal = if pix == 0 { bg[0] } else { bg[(group as usize) * 4 + pix as usize] };
+        NES_PALETTE[(pal & 0x3F) as usize]
+    }
+
+    /// 【穷举·色面】四色索引×64 调色板——逐像素公式对拍（定点扫描线）。
+    #[test]
+    fn exhaustive_pixel_formula() {
+        for pix_pat in 0u8..4 {
+            for pal in 0u8..64u8 {
+                let mut rs = RenderState::default();
+                rs.nametable[0] = 1; // tile 1 @ (0,0)
+                // 双位面构造 pix（位7）
+                rs.chr[16] = (pix_pat & 1) << 7;
+                rs.chr[24] = ((pix_pat >> 1) & 1) << 7;
+                let bg = [pal; 16];
+                let fb = render_frame_bg(&rs, &bg);
+                let want = ref_pixel(&rs, &bg, 0, 0);
+                assert_eq!([fb[0], fb[1], fb[2]], want, "pix={} pal={}", pix_pat, pal);
+            }
+        }
+    }
+
+    /// 【穷举·属性象限】4 象限×4 组全组合——组选逐钉（pix=3）。
+    #[test]
+    fn exhaustive_attr_quadrants() {
+        for q_sel in 0u8..4 {
+            for group in 0u8..4 {
+                let mut rs = RenderState::default();
+                rs.nametable[0] = 1;
+                rs.chr[16] = 0x80; rs.chr[24] = 0x80; // pix=3
+                // 象限 q_sel 填 group（tile(0,0) 在象限 0；tile(2,0) 象限 1；(0,2) 象限 2；(2,2) 象限 3）
+                let (tx, ty) = (if q_sel & 1 != 0 { 2 } else { 0 }, if q_sel & 2 != 0 { 2 } else { 0 });
+                rs.nametable[ty * 32 + tx] = 1;
+                let attr_i = 0x3C0 + (ty / 4) * 8 + (tx / 4);
+                rs.nametable[attr_i] = group << (q_sel * 2);
+                let bg = [0u8, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150];
+                let fb = render_frame_bg(&rs, &bg);
+                let (px, py) = (tx * 8 + 4, ty * 8 + 4);
+                let want = ref_pixel(&rs, &bg, px, py);
+                let o = (py * 256 + px) * 3;
+                assert_eq!([fb[o], fb[o + 1], fb[o + 2]], want, "q={} group={}", q_sel, group);
+            }
+        }
+    }
+
+    /// 【边界】首/末像素（(0,0)/(255,239)）定钉+【异常路径】CHR 越界（tile 大表（空 CHR））
+    /// ⇒unwrap_or(0)（背景色面）。
+    #[test]
+    fn boundary_and_exception() {
+        let bg = [7u8; 16];
+        let mut rs = RenderState::default();
+        rs.nametable[0] = 0xFF; // 越界 tile（CHR 空）
+        let fb = render_frame_bg(&rs, &bg);
+        let want = NES_PALETTE[(7 & 0x3F) as usize]; // pix=0⇒bg[0]
+        assert_eq!([fb[0], fb[1], fb[2]], want, "异常路径（CHR 越界（空表）⇒背景色）");
+        assert_eq!(fb.len(), 256 * 240 * 3, "形检（256×240×3）");
+        let o = (239 * 256 + 255) * 3;
+        assert_eq!([fb[o], fb[o + 1], fb[o + 2]], want, "末像素（255,239）");
+    }
+}
