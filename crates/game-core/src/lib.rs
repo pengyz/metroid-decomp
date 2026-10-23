@@ -18,6 +18,7 @@ pub mod engine;
 pub mod world;
 pub mod pickup;
 pub mod input;
+pub mod game_logic;
 pub mod kernel;
 pub mod weapon;
 pub mod ui;
