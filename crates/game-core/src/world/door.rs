@@ -276,3 +276,50 @@ pub fn door_interaction(door_state: u8, samus_x: u8, samus_y: u8, door_x: u8, do
     let dy = samus_y.abs_diff(door_y);
     dx < 16 && dy < 16
 }
+
+// ===== door_animation 门动画（TDD 流程（测试先行（实现后补）））=====
+
+#[cfg(test)]
+mod tests_door_animation {
+    //! TDD step1（穷举等价证明（全域穷举（边界条件（异常路径））））。
+    //! refs 考证（bank:addr（A 级原文））：Door_DeleteOffscreenEnemies（bank07:D4B4
+    //! （门/敌人删除（门状态更新面）））+SamusCollisionWithSolidEntities（bank07:D99E
+    //! （萨姆斯与实体碰撞（动画帧切换面）））+MakeRoomRAMPtr（bank07:E96A）。
+    //! 判径（任务规约面）：new_state=(timer>0 ? door_state+1 : 0)（wrapping）。
+
+    use super::*;
+
+    /// 独立参考径（证伪立场）：分量公式直序。
+    fn reference_door_anim(door_state: u8, timer: u8) -> u8 {
+        if timer > 0 { door_state.wrapping_add(1) } else { 0 }
+    }
+
+    /// 【穷举·全域】door_state×timer 全域 256² 逐位对拍。
+    #[test]
+    fn exhaustive_door_anim() {
+        for s in 0u8..=255 {
+            for timer in 0u8..=255 {
+                assert_eq!(door_animation(s, timer), reference_door_anim(s, timer),
+                           "state={} timer={}", s, timer);
+            }
+        }
+    }
+
+    /// 【边界】回绕面（0xFF+1=0）+异常路径（timer==0⇒清零（任意 state））。
+    #[test]
+    fn boundary_and_exception() {
+        assert_eq!(door_animation(0xFF, 1), 0, "回绕面（0xFF+1=0）");
+        for s in [0u8, 1, 0x7F, 0x80, 0xFF] {
+            assert_eq!(door_animation(s, 0), 0, "timer==0⇒清零（state={}）", s);
+        }
+    }
+}
+
+// ===== door_animation 门动画（实现（真规则（公式形（零字面特值））））=====
+// refs 考证（bank:addr（A 级原文））：Door_DeleteOffscreenEnemies（bank07:D4B4）+
+// SamusCollisionWithSolidEntities（bank07:D99E（动画帧切换面））+MakeRoomRAMPtr（bank07:E96A）。
+
+/// 门动画（门状态更新+动画帧切换）——new_state=(timer>0 ? door_state+1 : 0)（wrapping）。
+pub fn door_animation(door_state: u8, timer: u8) -> u8 {
+    if timer > 0 { door_state.wrapping_add(1) } else { 0 }
+}
