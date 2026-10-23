@@ -8,6 +8,7 @@
 pub mod main_loop;
 pub mod nmi;
 pub mod scheduler;
+pub mod startup;
 
 #[cfg(test)]
 mod tests_kernel_scheduler {
