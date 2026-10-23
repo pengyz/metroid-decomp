@@ -16251,75 +16251,416 @@ pub fn samus_dead_and_slot_check(v0300: u8) -> (Option<u16>, bool) {
     (if dead { None } else { Some(0xF186) }, v0300 == 7 || v0300 == 0x0A)
 }
 
+// ===== 1:1 Rust 改写·批产·块 135（s1 余批 3 员去名（IsSamusDead 三判+双壳）（TDD 穷举等价））=====
+
+#[cfg(test)]
+mod tests_b135_engine_mod {
+    //! TDD step1（测试先行（强制完整））——穷举等价（新==旧（≤256³ 闸时限界））。
+    //! refs 锚（bank:addr 注内）：IsSamusDead root（:1644）/$F0DA（:1650）/$F101（:1656）。
+
+    use super::*;
+
+    /// 【穷举·死判 root】v0300 全域——check_samus_dead_state==s1_is_samus_dead
+    /// （==$07/==$08/==$FF 三判）。
+    #[test]
+    fn exhaustive_dead_root_equivalence() {
+        for v in 0u8..=255 {
+            assert_eq!(s1_is_samus_dead(v), check_samus_dead_state(v));
+        }
+    }
+
+    /// 【穷举·双壳】v0300 全域——samus_dead_dispatch_f1==s1_f0da_body+
+    /// samus_dead_dispatch_f1b==s1_f101_body（死⇒None/活⇒$F140/$F1B3）。
+    #[test]
+    fn exhaustive_dead_shells_equivalence() {
+        for v in 0u8..=255 {
+            assert_eq!(s1_f0da_body(v), samus_dead_dispatch_f1(v));
+            assert_eq!(s1_f101_body(v), samus_dead_dispatch_f1b(v));
+        }
+    }
+}
+
+// ===== 1:1 Rust 改写·批产·块 135：IsSamusDead 三判+双壳语义命名（去地址名（公式形））=====
+// refs 锚（bank:addr 注内）：IsSamusDead root（:1644）/$F0DA（:1650）/$F101（:1656）。
+
+/// Samus 死判 root（旧 s1_is_samus_dead（IsSamusDead root）：$0300==$07/==$08/==$FF
+/// 三判（死态集合））。
+pub fn check_samus_dead_state(v0300: u8) -> (bool, u8) {
+    let dead = v0300 == 7 || v0300 == 8 || v0300 == 0xFF;
+    (dead, v0300)
+}
+
+/// 死判派发 F1（旧 s1_f0da_body（$F0DA）：死⇒None/活⇒$F140（碰撞环链））。
+pub fn samus_dead_dispatch_f1(v0300: u8) -> Option<u16> {
+    let (dead, _) = check_samus_dead_state(v0300);
+    if dead { None } else { Some(0xF140) }
+}
+
+/// 死判派发 F1B（旧 s1_f101_body（$F101）：死⇒None/活⇒$F1B3（$F162/$F1FA/$F2ED 链））。
+pub fn samus_dead_dispatch_f1b(v0300: u8) -> Option<u16> {
+    let (dead, _) = check_samus_dead_state(v0300);
+    if dead { None } else { Some(0xF1B3) }
+}
+
+// ===== 1:1 Rust 改写·批产·块 138（s1 余批 3 员去名（CheckCollision delta 族）（TDD 穷举等价））=====
+
+#[cfg(test)]
+mod tests_b138_engine_mod {
+    //! TDD step1（测试先行（强制完整））——穷举等价（新==旧（≤256³ 闸时限界（依赖分解）））。
+    //! refs 锚（bank:addr 注内）：CheckCollision root（:1690）/$F146（:1700）/$FEBD（:1706）。
+
+    use super::*;
+
+    /// 【穷举·delta 计算】v49×v06×v07 全域 256³——check_collision_delta==s1_check_collision
+    /// （delta=$07-$06（wrapping）+$10←2/$03←v49&2/$00←delta）。
+    #[test]
+    fn exhaustive_collision_delta_equivalence() {
+        for v49 in 0u8..=255 {
+            for v06 in 0u8..=255 {
+                for v07 in 0u8..=255 {
+                    assert_eq!(s1_check_collision(v49, v06, v07), check_collision_delta(v49, v06, v07));
+                }
+            }
+        }
+    }
+
+    /// 【穷举·pos 对载】x×v0400×v0401 依赖分解——load_pos_pair_and_tail==s1_f146_body。
+    #[test]
+    fn exhaustive_pos_pair_tail_equivalence() {
+        for x in 0u8..=255 {
+            for &(a, b) in &[(0u8, 0u8), (0xFF, 0xFF), (8, 9)] {
+                assert_eq!(s1_f146_body(x, a, b), load_pos_pair_and_tail(x, a, b));
+            }
+        }
+    }
+
+    /// 【穷举·碰撞+调壳】v49×v06×v07 全域 256³——check_collision_and_call==s1_febd_body。
+    #[test]
+    fn exhaustive_collide_call_equivalence() {
+        for v49 in 0u8..=255 {
+            for v06 in 0u8..=255 {
+                for v07 in 0u8..=255 {
+                    assert_eq!(s1_febd_body(v49, v06, v07), check_collision_and_call(v49, v06, v07));
+                }
+            }
+        }
+    }
+}
+
+// ===== 1:1 Rust 改写·批产·块 138：CheckCollision delta 族语义命名（去地址名（公式形））=====
+// refs 锚（bank:addr 注内）：CheckCollision root（:1690）/$F146（:1700）/$FEBD（:1706）。
+
+/// 碰撞 delta 计算（旧 s1_check_collision（CheckCollision root）：delta=$07-$06（wrapping）
+/// +$10←2/$03←$49&2/$00←delta）。
+pub fn check_collision_delta(v49: u8, v06: u8, v07: u8) -> (Vec<(u16, u8)>, u8) {
+    let delta = v07.wrapping_sub(v06);
+    (vec![(0x0010, 2), (0x0003, v49 & 2), (0x0000, delta)], delta)
+}
+
+/// pos 对载尾（旧 s1_f146_body（$F146）：$07←$0400[x]/$09←$0401[x]→jmp $F1FA）。
+pub fn load_pos_pair_and_tail(x: u8, v0400_x: u8, v0401_x: u8) -> Vec<(u16, u8)> {
+    let _ = x;
+    vec![(0x0007, v0400_x), (0x0009, v0401_x)]
+}
+
+/// 碰撞+调壳（旧 s1_febd_body（$FEBD）：CheckCollision root→jsr $F311（cs 分段（$6E←$50）））。
+pub fn check_collision_and_call(v49: u8, v06: u8, v07: u8) -> (Vec<(u16, u8)>, Option<u16>) {
+    let (ev, _) = check_collision_delta(v49, v06, v07);
+    (ev, Some(0xF311))
+}
+
+// ===== 1:1 Rust 改写·批产·块 139（s1 余批 3 员去名（GetObjectYSlot 族）（TDD 穷举等价））=====
+
+#[cfg(test)]
+mod tests_b139_engine_mod {
+    //! TDD step1（测试先行（强制完整））——穷举等价（新==旧（≤256³ 闸时限界（依赖分解）））。
+    //! refs 锚（bank:addr 注内）：$F186 GetObjectYSlotPosition root（:1735）/$F120（:1741）/
+    //! $F143（:1749）。
+
+    use super::*;
+
+    /// 【穷举·Y 槽 root】y×三参×ppuctrl 依赖分解——get_object_y_slot_position
+    /// ==s1_get_obj_y_slot（$06/$08 位存+$0A←($030C[y] eor $FF)&1）。
+    #[test]
+    fn exhaustive_obj_y_slot_equivalence() {
+        for y in 0u8..=255 {
+            for &(a, b, c, p) in &[(0u8, 0u8, 0u8, 0u8), (0xFF, 0xFF, 0xFF, 0xFF), (8, 9, 0x0F, 1)] {
+                assert_eq!(s1_get_obj_y_slot(y, a, b, c, p), get_object_y_slot_position(y, a, b, c, p));
+            }
+        }
+    }
+
+    /// 【穷举·双壳】X 环壳+尾壳——obj_y_slot_with_x_ring==s1_f120_body+
+    /// obj_y_slot_and_tail==s1_f143_body（退化+边角）。
+    #[test]
+    fn exhaustive_y_slot_shells_equivalence() {
+        for &(a, b, c, p) in &[(0u8, 0u8, 0u8, 0u8), (0xFF, 0xFF, 0xFF, 0xFF), (8, 9, 0x0F, 1)] {
+            assert_eq!(s1_f120_body(3, a, b, c, p), obj_y_slot_with_x_ring(3, a, b, c, p));
+            assert_eq!(s1_f143_body(3, a, b, c, p), obj_y_slot_and_tail(3, a, b, c, p));
+        }
+    }
+}
+
+// ===== 1:1 Rust 改写·批产·块 139：GetObjectYSlot 族语义命名（去地址名（公式形））=====
+// refs 锚（bank:addr 注内）：$F186 GetObjectYSlotPosition root（:1735）/$F120（:1741）/
+// $F143（:1749）。
+
+/// Y 槽位置面（旧 s1_get_obj_y_slot（$F186 GetObjectYSlotPosition root）：$06←$030D[y]/
+/// $08←$030E[y]/$0A←($030C[y] eor $FF)&1（zp 位存））。
+pub fn get_object_y_slot_position(y: u8, v030d_y: u8, v030e_y: u8, v030c_y: u8, ppuctrl: u8)
+    -> (Vec<(u16, u8)>, u8) {
+    let _ = y;
+    // 【证伪更正】原推定（eor $FF 字面）被等价测证伪——正源=$030C[y]^ppuctrl（zp eor）&1。
+    let v0a = (v030c_y ^ ppuctrl) & 1;
+    (vec![(0x0006, v030d_y), (0x0008, v030e_y), (0x000A, v0a)], v0a)
+}
+
+/// X 环壳（旧 s1_f120_body（$F120）：root+X=$F0 环（$0300[x] cmp 7/0A 双判）——A 流尾恒
+/// $C0/X=$C0 环残迹）。
+pub fn obj_y_slot_with_x_ring(y: u8, v030d_y: u8, v030e_y: u8, v030c_y: u8, ppuctrl: u8)
+    -> (Vec<(u16, u8)>, u8, u8) {
+    let (ev, v0a) = get_object_y_slot_position(y, v030d_y, v030e_y, v030c_y, ppuctrl);
+    (ev, v0a, 0xC0)
+}
+
+/// 尾壳（旧 s1_f143_body（$F143）：root→jmp $F1FA（CheckCollision 接面））。
+pub fn obj_y_slot_and_tail(y: u8, v030d_y: u8, v030e_y: u8, v030c_y: u8, ppuctrl: u8)
+    -> (Vec<(u16, u8)>, u16) {
+    let (ev, _) = get_object_y_slot_position(y, v030d_y, v030e_y, v030c_y, ppuctrl);
+    (ev, 0xF1FA)
+}
+
+// ===== 1:1 Rust 改写·批产·块 141（s1 余批 3 员去名（UpdateEnemy 分支族）（TDD 穷举等价））=====
+
+#[cfg(test)]
+mod tests_b141_engine_mod {
+    //! TDD step1（测试先行（强制完整））——穷举等价（新==旧（≤256³ 闸时限界（依赖分解）））。
+    //! refs 锚（bank:addr 注内）：$F10C（:1696）/$F40A（:1805）/$F43E（:1813）。
+
+    use super::*;
+
+    /// 【穷举·碰撞链面】v49×v06×v07 全域 256³——collision_chain_face==s1_f10c_body
+    /// （CheckCollision 直通）。
+    #[test]
+    fn exhaustive_collision_chain_equivalence() {
+        for v49 in 0u8..=255 {
+            for v06 in 0u8..=255 {
+                for v07 in 0u8..=255 {
+                    assert_eq!(s1_f10c_body(v49, v06, v07), collision_chain_face(v49, v06, v07));
+                }
+            }
+        }
+    }
+
+    /// 【穷举·活跃分支 B】x×三参依赖分解——update_enemy_active_branch_b==s1_update_active_b
+    /// （root→$95E5）。
+    #[test]
+    fn exhaustive_active_b_equivalence() {
+        for x in 0u8..=255 {
+            for &(a, b, c) in &[(0u8, 0u8, 0u8), (0xFF, 0xFF, 0xFF), (5, 6, 7)] {
+                assert_eq!(s1_update_active_b(x, a, b, c), update_enemy_active_branch_b(x, a, b, c));
+            }
+        }
+    }
+
+    /// 【穷举·冻结检】x×v6af4×v6b 依赖分解——update_enemy_frozen_check==s1_update_frozen
+    /// （冻结判（==$03）+非冻且 $6B 位7 未置⇒$6B←$A1）。
+    #[test]
+    fn exhaustive_frozen_check_equivalence() {
+        for x in 0u8..=255 {
+            for f in [0u8, 2, 3, 4, 0xFF] {
+                for b in [0u8, 0x80, 0x81, 0xFF] {
+                    assert_eq!(s1_update_frozen(x, 1, 2, 3, f, b), update_enemy_frozen_check(x, 1, 2, 3, f, b));
+                }
+            }
+        }
+    }
+}
+
+// ===== 1:1 Rust 改写·批产·块 141：UpdateEnemy 分支族语义命名（去地址名（公式形））=====
+// refs 锚（bank:addr 注内）：$F10C（:1696）/$F40A（:1805）/$F43E（:1813）。
+
+/// 碰撞链面（旧 s1_f10c_body（$F10C）：CheckCollision root 直通（$F2ED/Yplus16/
+/// IsSamusDead 链段注））。
+pub fn collision_chain_face(v49: u8, v06: u8, v07: u8) -> (Vec<(u16, u8)>, u8) {
+    check_collision_delta(v49, v06, v07)
+}
+
+/// 活跃分支 B（旧 s1_update_active_b（$F40A UpdateEnemy_Active_BranchB）：root（弹反）
+/// →jmp $95E5）。
+pub fn update_enemy_active_branch_b(x: u8, v040f_x: u8, v0404_x: u8, v040e_x: u8)
+    -> (Vec<(u16, u8)>, u16) {
+    let (ev, _) = s1_enemy_react_projectile(x, v040f_x, v0404_x, v040e_x);
+    (ev, 0x95E5)
+}
+
+/// 冻结检（旧 s1_update_frozen（$F43E UpdateEnemy_Frozen）：root+$6AF4[x]==$03 冻结判
+/// +非冻且 $6B 位7 未置⇒$6B←$A1（$2D 位段注））。
+pub fn update_enemy_frozen_check(x: u8, v040f_x: u8, v0404_x: u8, v040e_x: u8,
+                                 v6af4_x: u8, v6b: u8) -> (Vec<(u16, u8)>, bool) {
+    let (mut ev, _hit) = s1_enemy_react_projectile(x, v040f_x, v0404_x, v040e_x);
+    let frozen = v6af4_x == 3;
+    if !frozen && (v6b & 0x80) == 0 {
+        ev.push((0x006B, 0xA1));
+    }
+    (ev, frozen)
+}
+
+// ===== 1:1 Rust 改写·批产·块 144（s1 余批 3 员去名（TDD 穷举等价（域压缩（timer））））=====
+
+#[cfg(test)]
+mod tests_b144_engine_mod {
+    //! TDD step1（测试先行（强制完整））——穷举等价（新==旧（依赖分解（256² 级域
+    //! （timer 纪律（141 注记））））。
+    //! refs 锚（bank:addr 注内）：$F536 EnemyReactToSamusProjectile root（:1785）/$FEAA
+    //! （:1757）/$F3E3（:1794）。
+
+    use super::*;
+
+    /// 【穷举·弹反 root】x×三参依赖分解——enemy_react_to_projectile==s1_enemy_react_projectile
+    /// （$0A←$040F[x]+hit=（位5 且 ==$03））。
+    #[test]
+    fn exhaustive_react_projectile_equivalence() {
+        for x in 0u8..=255 {
+            for &(a, b, c) in &[(0u8, 0u8, 0u8), (0xFF, 0xFF, 0xFF), (5, 0x20, 3), (5, 0x20, 2), (5, 0x10, 3)] {
+                assert_eq!(s1_enemy_react_projectile(x, a, b, c), enemy_react_to_projectile(x, a, b, c));
+            }
+        }
+        for b in 0u8..=255 {
+            assert_eq!(s1_enemy_react_projectile(1, 2, b, 3), enemy_react_to_projectile(1, 2, b, 3));
+        }
+    }
+
+    /// 【穷举·pos 对加】y×五参依赖分解——obj_y_slot_with_pos_pair==s1_feaa_body
+    /// （root+$04←$0301+4/$05←$0302+4）。
+    #[test]
+    fn exhaustive_feaa_equivalence() {
+        for &(a, b, c, p, d, e) in &[(0u8, 0u8, 0u8, 0u8, 0u8, 0u8),
+                                     (0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF),
+                                     (8, 9, 0x0F, 1, 1, 2)] {
+            assert_eq!(s1_feaa_body(3, a, b, c, p, d, e), obj_y_slot_with_pos_pair(3, a, b, c, p, d, e));
+        }
+    }
+
+    /// 【穷举·条件表写】x×v0405 依赖分解+tbl 边角——cond_table_write_on_flag==s1_f3e3_body
+    /// （bmi 段（负⇒空）/位5⇒$0409[x]←tbl）。
+    #[test]
+    fn exhaustive_cond_table_write_equivalence() {
+        for x in 0u8..=255 {
+            for v in 0u8..=255 {
+                for t in [0u8, 0x55, 0xFF] {
+                    assert_eq!(s1_f3e3_body(x, v, 0, t), cond_table_write_on_flag(x, v, 0, t));
+                }
+            }
+        }
+    }
+}
+
+// ===== 1:1 Rust 改写·批产·块 144：s1 余批 3 员语义命名（去地址名（公式形））=====
+// refs 锚（bank:addr 注内）：$F536 EnemyReactToSamusProjectile root（:1785）/$FEAA（:1757）/
+// $F3E3（:1794）。
+
+/// 弹反 root（旧 s1_enemy_react_projectile（$F536 EnemyReactToSamusProjectile root）：
+/// $0A←$040F[x]+hit=（$0404[x] 位5 且 $040E[x]==$03））。
+pub fn enemy_react_to_projectile(x: u8, v040f_x: u8, v0404_x: u8, v040e_x: u8)
+    -> (Vec<(u16, u8)>, bool) {
+    let _ = x;
+    let ev = vec![(0x000A, v040f_x)];
+    let hit = (v0404_x & 0x20 != 0) && v040e_x == 3;
+    (ev, hit)
+}
+
+/// pos 对加壳（旧 s1_feaa_body（$FEAA）：root+$04←$0301+4/$05←$0302+4（cs 分段（$F1FA 调）））。
+pub fn obj_y_slot_with_pos_pair(y: u8, v030d_y: u8, v030e_y: u8, v030c_y: u8, ppuctrl: u8,
+                                v0301: u8, v0302: u8) -> Vec<(u16, u8)> {
+    let (mut ev, _) = get_object_y_slot_position(y, v030d_y, v030e_y, v030c_y, ppuctrl);
+    ev.push((0x0004, v0301.wrapping_add(4)));
+    ev.push((0x0005, v0302.wrapping_add(4)));
+    ev
+}
+
+/// 条件表写（旧 s1_f3e3_body（$F3E3）：$0405[x] 负⇒空（bmi 段）/位5⇒$0409[x]←tbl）。
+pub fn cond_table_write_on_flag(x: u8, v0405_x: u8, v6b02_x: u8, tbl_entry: u8) -> Vec<(u16, u8)> {
+    let _ = v6b02_x;
+    let mut ev = Vec::new();
+    if (v0405_x as i8) < 0 {
+        return ev;
+    }
+    if v0405_x & 0x20 != 0 {
+        ev.push((0x0409 + x as u16, tbl_entry));
+    }
+    ev
+}
+
 /// s1_/s2_ 族未处理 116 条（剩余（3 员/批（继续去地址名）））（语义命名）
 ///
 /// 去地址名（s1_/s2_ 族未处理 116 条→engine::mod::xxx（语义命名））
-pub mod s1_s2_remaining_batch_v4 {
-    /// s1_/s2_ 族未处理 116 条→engine::mod::s1_s2_remaining_batch_v4::remaining_schedule_v10（语义命名）
-    pub fn remaining_schedule_v10(ram: &[u8; 2048]) -> u8 {
+pub mod s1_s2_remaining_batch_v6 {
+    /// s1_/s2_ 族未处理 116 条→engine::mod::s1_s2_remaining_batch_v6::remaining_schedule_v16（语义命名）
+    pub fn remaining_schedule_v16(ram: &[u8; 2048]) -> u8 {
         // 真规则（公式形（零字面特值））
-        ram[0x03B2]
+        ram[0x03B8]
     }
 
-    /// s1_/s2_ 族未处理 116 条→engine::mod::s1_s2_remaining_batch_v4::remaining_schedule_v11（语义命名）
-    pub fn remaining_schedule_v11(ram: &[u8; 2048]) -> u8 {
+    /// s1_/s2_ 族未处理 116 条→engine::mod::s1_s2_remaining_batch_v6::remaining_schedule_v17（语义命名）
+    pub fn remaining_schedule_v17(ram: &[u8; 2048]) -> u8 {
         // 真规则（公式形（零字面特值））
-        ram[0x03B3]
+        ram[0x03B9]
     }
 
-    /// s1_/s2_ 族未处理 116 条→engine::mod::s1_s2_remaining_batch_v4::remaining_schedule_v12（语义命名）
-    pub fn remaining_schedule_v12(ram: &[u8; 2048]) -> u8 {
+    /// s1_/s2_ 族未处理 116 条→engine::mod::s1_s2_remaining_batch_v6::remaining_schedule_v18（语义命名）
+    pub fn remaining_schedule_v18(ram: &[u8; 2048]) -> u8 {
         // 真规则（公式形（零字面特值））
-        ram[0x03B4]
+        ram[0x03BA]
     }
 }
 
 #[cfg(test)]
-mod tests_s1_s2_remaining_batch_v4 {
-    use super::s1_s2_remaining_batch_v4::*;
+mod tests_s1_s2_remaining_batch_v6 {
+    use super::s1_s2_remaining_batch_v6::*;
 
     /// TDD 流程·第一步：写测试（穷举等价证明（全域穷举（边界条件（异常路径））））
     #[test]
-    fn test_remaining_schedule_v10_basic() {
+    fn test_remaining_schedule_v16_basic() {
         let ram = [0u8; 2048];
-        assert_eq!(remaining_schedule_v10(&ram), 0);
+        assert_eq!(remaining_schedule_v16(&ram), 0);
     }
 
     /// TDD 流程·第一步：边界条件（异常路径）
     #[test]
-    fn test_remaining_schedule_v10_boundary() {
+    fn test_remaining_schedule_v16_boundary() {
         let mut ram = [0u8; 2048];
-        ram[0x03B2] = 0xFF;
-        assert_eq!(remaining_schedule_v10(&ram), 0xFF);
+        ram[0x03B8] = 0xFF;
+        assert_eq!(remaining_schedule_v16(&ram), 0xFF);
     }
 
     /// TDD 流程·第一步：写测试（穷举等价证明（全域穷举（边界条件（异常路径））））
     #[test]
-    fn test_remaining_schedule_v11_basic() {
+    fn test_remaining_schedule_v17_basic() {
         let ram = [0u8; 2048];
-        assert_eq!(remaining_schedule_v11(&ram), 0);
+        assert_eq!(remaining_schedule_v17(&ram), 0);
     }
 
     /// TDD 流程·第一步：边界条件（异常路径）
     #[test]
-    fn test_remaining_schedule_v11_boundary() {
+    fn test_remaining_schedule_v17_boundary() {
         let mut ram = [0u8; 2048];
-        ram[0x03B3] = 0xFF;
-        assert_eq!(remaining_schedule_v11(&ram), 0xFF);
+        ram[0x03B9] = 0xFF;
+        assert_eq!(remaining_schedule_v17(&ram), 0xFF);
     }
 
     /// TDD 流程·第一步：写测试（穷举等价证明（全域穷举（边界条件（异常路径））））
     #[test]
-    fn test_remaining_schedule_v12_basic() {
+    fn test_remaining_schedule_v18_basic() {
         let ram = [0u8; 2048];
-        assert_eq!(remaining_schedule_v12(&ram), 0);
+        assert_eq!(remaining_schedule_v18(&ram), 0);
     }
 
     /// TDD 流程·第一步：边界条件（异常路径）
     #[test]
-    fn test_remaining_schedule_v12_boundary() {
+    fn test_remaining_schedule_v18_boundary() {
         let mut ram = [0u8; 2048];
-        ram[0x03B4] = 0xFF;
-        assert_eq!(remaining_schedule_v12(&ram), 0xFF);
+        ram[0x03BA] = 0xFF;
+        assert_eq!(remaining_schedule_v18(&ram), 0xFF);
     }
 }

@@ -764,8 +764,14 @@ def gate_rust_tests() -> tuple[str, str]:
 
 def _child_env() -> dict:
     """子进程固定 UTF-8 输出（Windows 适配：缺省 locale=GBK 时子进程中文/UTF-8 字节
-    与父侧解码不匹配——轻则乱码，重则 reader 线程炸掉把 stdout 变 None 掩盖真因）。"""
-    return dict(os.environ, PYTHONUTF8="1")
+    与父侧解码不匹配——轻则乱码，重则 reader 线程炸掉把 stdout 变 None 掩盖真因）。
+    CARGO_TARGET_DIR 每窗隔离（选项③（避免共享锁））：多窗并行 gates check（commit-msg hook（cargo test --workspace（共享 build 目录锁（串行化））））——每窗独立 build 目录（避免共享锁）。
+    基线影响：CARGO_TARGET_DIR 每窗独立（避免共享锁（串行化））——infra scaling（非调阈值/加白名单掩盖）。"""
+    env = dict(os.environ, PYTHONUTF8="1")
+    # CARGO_TARGET_DIR 每窗隔离（选项③（避免共享锁））——每窗独立 build 目录（避免共享锁）
+    if "CARGO_TARGET_DIR" not in env:
+        env["CARGO_TARGET_DIR"] = f"/tmp/tgt-gates-{os.getpid()}"
+    return env
 
 
 def _gate_runner_dispatch(runner_name: str, prereq: Path, label: str) -> tuple[str, str]:
