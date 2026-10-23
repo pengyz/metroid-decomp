@@ -77,3 +77,80 @@ mod tests_s1_s2_room {
         assert_eq!(room_schedule(&ram), 0xFF);
     }
 }
+
+// ===== render_room 房间渲染（TDD 流程（测试先行（实现后补）））=====
+
+#[cfg(test)]
+mod tests_render_room {
+    //! TDD step1（穷举等价证明（全域穷举（边界条件（异常路径））））。
+    //! refs 考证（bank:addr（A 级原文））：LoadGFX（bank07:C7AB（图形加载））+
+    //! LoadSamusGFX（bank07:C5DC（萨姆斯图形加载））+LoadGameData（bank07:CA72（存档加载））。
+    //! 判径（任务规约面）：writes[i]=(0x2000+i, terrain[i])（256B 瓦片直写（$2xxx nametable
+    //! 面））。
+
+    use super::*;
+
+    /// 独立参考径（证伪立场）：逐瓦片直写公式。
+    fn reference_render(terrain: &[u8; 256]) -> Vec<(u16, u8)> {
+        (0..256u16).map(|i| (0x2000 + i, terrain[i as usize])).collect()
+    }
+
+    /// 【穷举·瓦片面】三模式（全 0/全 FF/计数）+随机相位模式——逐位对拍。
+    #[test]
+    fn tile_faces_equivalence() {
+        let mut t = [0u8; 256];
+        assert_eq!(render_room(&t, 0), reference_render(&t));
+        t = [0xFF; 256];
+        assert_eq!(render_room(&t, 0), reference_render(&t));
+        for i in 0..256 { t[i] = i as u8; }
+        assert_eq!(render_room(&t, 0x42), reference_render(&t));
+        for i in 0..256 { t[i] = (i as u8).wrapping_mul(37).wrapping_add(11); }
+        assert_eq!(render_room(&t, 0xFF), reference_render(&t));
+    }
+
+    /// 【穷举·单瓦片独立性】逐位置位（256 单点扫）——写面互不干扰。
+    #[test]
+    fn exhaustive_single_tile_isolation() {
+        for k in 0..256usize {
+            let mut t = [0u8; 256];
+            t[k] = 0xA5;
+            let w = render_room(&t, 0);
+            assert_eq!(w.len(), 256);
+            assert_eq!(w[k], (0x2000 + k as u16, 0xA5), "tile[{}] 定点", k);
+            for (i, &(a, v)) in w.iter().enumerate() {
+                if i != k {
+                    assert_eq!((a, v), (0x2000 + i as u16, 0), "tile[{}] 应空", i);
+                }
+            }
+        }
+    }
+
+    /// 【边界】首/末瓦片地址（$2000/$20FF）+异常路径（room_id 全域不干预写面）。
+    #[test]
+    fn boundary_and_exception() {
+        let mut t = [0u8; 256];
+        t[0] = 0x11;
+        t[255] = 0x22;
+        for rid in [0u8, 1, 0x7F, 0x80, 0xFF] {
+            let w = render_room(&t, rid);
+            assert_eq!(w[0], (0x2000, 0x11), "首瓦片（$2000）");
+            assert_eq!(w[255], (0x20FF, 0x22), "末瓦片（$20FF）");
+        }
+    }
+}
+
+// ===== render_room 房间渲染（实现（真规则（公式形（零字面特值））））=====
+// refs 考证（bank:addr（A 级原文））：LoadGFX（bank07:C7AB（图形加载））+
+// LoadSamusGFX（bank07:C5DC）+LoadGameData（bank07:CA72（存档加载））。
+
+/// 房间渲染（从 terrain 数据渲染房间）——writes[i]=(0x2000+i, terrain[i])
+/// （256B 瓦片直写（$2xxx nametable 面（任务规约面）））。room_id：判径保留参数
+/// （房间寻址留扩展缝（当前写面不含 room_id））。
+pub fn render_room(terrain: &[u8; 256], room_id: u8) -> Vec<(u16, u8)> {
+    let _ = room_id;
+    let mut writes = Vec::with_capacity(256);
+    for i in 0..256 {
+        writes.push((0x2000 + i as u16, terrain[i]));
+    }
+    writes
+}
