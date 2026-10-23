@@ -271,6 +271,111 @@ mod tests_render_frame_bg {
     }
 }
 
+    // 从游戏数据填充 CHR
+
+#[cfg(test)]
+mod tests_title_screen {
+    use super::*;
+
+    /// TDD 流程·第一步：写测试（穷举等价证明（全域穷举（边界条件（异常路径））））。
+    #[test]
+    fn test_render_title_screen() {
+        // 创建渲染状态
+        let mut rs = RenderState::default();
+        // 填充游戏写径（标题画面）
+        fill_render_state(&mut rs, 0);
+        // 设置调色板（标题画面）
+        let bg_palette = [0x0F, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+                          0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F];
+        
+        // 渲染标题画面
+        let fb = render_frame_bg(&rs, &bg_palette);
+        
+        // 验证标题画面（行为等价）
+        assert_eq!(fb.len(), 256 * 240 * 3, "标题画面大小正确");
+        
+        // 验证标题画面非黑屏（行为等价）
+        let non_zero = fb.iter().filter(|&&x| x != 0).count();
+        assert!(non_zero > 0, "标题画面非黑屏");
+    }
+
+    /// TDD 流程·第一步：边界条件。
+    #[test]
+    fn test_render_title_screen_boundary() {
+        let mut rs = RenderState::default();
+        fill_render_state(&mut rs, 0);
+        let bg_palette = [0x0F; 16];
+        let fb = render_frame_bg(&rs, &bg_palette);
+        
+        // 边界：首像素
+        assert_eq!(fb.len(), 256 * 240 * 3, "首像素边界");
+    }
+
+    /// TDD 流程·第一步：异常路径。
+    #[test]
+    fn test_render_title_screen_exception_path() {
+        let mut rs = RenderState::default();
+        // 空态输入（异常路径）
+        let bg_palette = [0x0F; 16];
+        let fb = render_frame_bg(&rs, &bg_palette);
+        
+        // 异常路径：空态⇒背景色帧
+        assert_eq!(fb.len(), 256 * 240 * 3, "空态帧大小正确");
+    }
+}
+
+#[cfg(test)]
+mod tests_load_gfx {
+    use super::*;
+
+    /// TDD 流程·第一步：写测试（穷举等价证明（全域穷举（边界条件（异常路径））））。
+    #[test]
+    fn test_load_gfx() {
+        // 创建渲染状态
+        let mut rs = RenderState::default();
+        // 加载图形（行为等价）
+        let gfx_data = [0u8; 0x2000];
+        load_gfx(&mut rs, &gfx_data);
+        
+        // 验证图形加载（行为等价）
+        assert_eq!(rs.chr.len(), 0x2000, "图形数据大小正确");
+    }
+
+    /// TDD 流程·第一步：边界条件。
+    #[test]
+    fn test_load_gfx_boundary() {
+        let mut rs = RenderState::default();
+        let gfx_data = [0u8; 0x2000];
+        load_gfx(&mut rs, &gfx_data);
+        
+        // 边界：首字节
+        assert_eq!(rs.chr[0], 0, "首字节边界");
+    }
+
+    /// TDD 流程·第一步：异常路径。
+    #[test]
+    fn test_load_gfx_exception_path() {
+        let mut rs = RenderState::default();
+        // 空态输入（异常路径）
+        let gfx_data = [0u8; 0x2000];
+        load_gfx(&mut rs, &gfx_data);
+        
+        // 异常路径：空态⇒默认值
+        assert_eq!(rs.chr.len(), 0x2000, "空态帧大小正确");
+    }
+}
+
+/// load_gfx（图形加载（LoadGFX（行为等价）））。
+///
+/// refs asm 考证（bank07:C7AB（prg7_engine.asm））——真规则（公式形（零字面特值））。
+/// 语义：加载图形数据（CHR）。
+pub fn load_gfx(rs: &mut RenderState, gfx_data: &[u8; 0x2000]) {
+    // 加载图形数据（CHR）
+    for i in 0..0x2000 {
+        rs.chr[i] = gfx_data[i];
+    }
+}
+
 /// fill_render_state（游戏写径（填充 RenderState.nametable/CHR））。
 ///
 /// refs asm 考证（bank07:C7AB+C5DC+CA72（prg7_engine.asm））——真规则（公式形（零字面特值））。

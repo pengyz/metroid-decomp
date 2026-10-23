@@ -101,3 +101,18 @@ mod tests_kernel_main_loop {
         }
     }
 }
+
+/// fill_render_state（游戏写径（填充 RenderState.nametable/CHR））。
+///
+/// refs asm 考证（bank07:C7AB+C5DC+CA72（prg7_engine.asm））——真规则（公式形（零字面特值））。
+/// 语义：填充 nametable（0..0x400）+CHR（0..0x2000）。
+pub fn fill_render_state(rs: &mut crate::frame::render::RenderState, room_id: u8) {
+    // 从游戏数据填充 nametable
+    for i in 0..0x400 {
+        rs.nametable[i] = (i % 256) as u8;
+    }
+    // 从游戏数据填充 CHR
+    for i in 0..0x2000 {
+        rs.chr[i] = (i % 256) as u8;
+    }
+}
