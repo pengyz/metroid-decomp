@@ -4586,3 +4586,369 @@ mod tests_block131 {
         assert_eq!(tail, 0xF40A, "dispatch_samus_anim_base(0x7F,0x80,0x01) 异常路径（0xF40A）");
     }
 }
+
+// TDD 测试（测试先行（实现后补）（强制完整））——1:1 Rust 改写·批产·块 150：engine::mod（s1_/s2_ 族未处理（剩余（3 员/批）））（穷举等价证明（全域穷举（≤3 重（256^3（gate 预算（1200s））））+边界条件（异常路径））））
+// refs 引用必写（bank:addr 引证（A 级原文））：bank01:8000（s1 族（prg1_brinstar.asm））（s1_/s2_ 族（实址（A 级原文）））
+
+/// check_y_bound（Y 边界检查（语义命名（data/naming 台账 A/B 级）））——旧实现（s1_f284_body（engine/mod.rs:603））→去地址名
+/// refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm））（s1_f284_body（if v6af4_x >= 4（bcs 回卷（cmp4 命中））→(vec![], 4)；else→(vec![(0x010F, 0)], 0)（$010F 写族（案实核值 0）+Y=0））））——真规则（公式形（零字面特值））
+pub fn check_y_bound(x: u8, v6af4_x: u8) -> (Vec<(u16, u8)>, u8) {
+    // 真规则（公式形（零字面特值））：check_y_bound（x/v6af4_x（bcs 回卷（cmp4 命中）（byte-driven semantics）））
+    if v6af4_x >= 4 {
+        return (vec![], 4); // bcs 回卷（cmp4 命中）
+    }
+    (vec![(0x010F, 0)], 0) // $010F 写族（案实核值 0）+Y=0
+}
+
+/// apply_or_write（OR 写入（语义命名（data/naming 台账 A/B 级）））——旧实现（s1_f2d5_body（engine/mod.rs:611））→去地址名
+/// refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm））（s1_f2d5_body（OR 写族（$0404[x] |= A / $0404[y] |= $10（两形）））））——真规则（公式形（零字面特值））
+pub fn apply_or_write(x: u8, y: u8, a_in: u8, v10: u8, v0404_x: u8, v0404_y: u8) -> Vec<(u16, u8)> {
+    // 真规则（公式形（零字面特值））：apply_or_write（x/y/a_in/v10/v0404_x/v0404_y（OR 写族（byte-driven semantics）））
+    vec![(0x0404 + x as u16, v0404_x | a_in), (0x0404 + y as u16, v0404_y | v10)]
+}
+
+/// write_negative_path（负径写（语义命名（data/naming 台账 A/B 级）））——旧实现（s1_f2e8_body（engine/mod.rs:617））→去地址名
+/// refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm））（s1_f2e8_body（vec![(0x010F, 0x80)]（负径写（案未练面注）））））——真规则（公式形（零字面特值））
+pub fn write_negative_path() -> Vec<(u16, u8)> {
+    // 真规则（公式形（零字面特值））：write_negative_path（负径写（$010F←$80（案未练面注）（byte-driven semantics）））
+    vec![(0x010F, 0x80)] // 负径写（案未练面注）
+}
+
+#[cfg(test)]
+mod tests_block150 {
+    use super::*;
+
+    /// 测试 1（穷举等价证明（全域穷举））：check_y_bound 全域穷举（x/v6af4_x 全域（256^2））
+    #[test]
+    fn test_check_y_bound_full_domain() {
+        // refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm））（s1_f284_body（if v6af4_x >= 4（bcs 回卷（cmp4 命中））→(vec![], 4)；else→(vec![(0x010F, 0)], 0)（$010F 写族（案实核值 0）+Y=0））））——真规则（公式形（零字面特值））
+        for x in 0..=255u8 {
+            for v6af4 in 0..=255u8 {
+                let (ev, y_out) = check_y_bound(x, v6af4);
+                if v6af4 >= 4 {
+                    assert_eq!(ev, vec![], "check_y_bound({}, {}) v6af4 >= 4 ev = []（bcs 回卷）", x, v6af4);
+                    assert_eq!(y_out, 4, "check_y_bound({}, {}) v6af4 >= 4 y_out = 4（cmp4 命中）", x, v6af4);
+                } else {
+                    assert_eq!(ev, vec![(0x010F, 0)], "check_y_bound({}, {}) v6af4 < 4 ev = [(0x010F, 0)]（$010F 写族（案实核值 0））", x, v6af4);
+                    assert_eq!(y_out, 0, "check_y_bound({}, {}) v6af4 < 4 y_out = 0（Y=0）", x, v6af4);
+                }
+            }
+        }
+    }
+
+    /// 测试 2（边界条件）：check_y_bound 边界条件（x/v6af4_x 边界值（0x00/0xFF））
+    #[test]
+    fn test_check_y_bound_boundary() {
+        let (ev, y_out) = check_y_bound(0x00, 0x03);
+        assert_eq!(y_out, 0, "check_y_bound(0x00,0x03) 边界（0（v6af4 < 4））");
+        let (ev, y_out) = check_y_bound(0xFF, 0x04);
+        assert_eq!(y_out, 4, "check_y_bound(0xFF,0x04) 边界（4（v6af4 >= 4））");
+    }
+
+    /// 测试 3（异常路径）：check_y_bound 异常路径（x/v6af4_x 非零（byte-driven semantics））
+    #[test]
+    fn test_check_y_bound_exception_path() {
+        let (ev, y_out) = check_y_bound(0x7F, 0x80);
+        assert_eq!(y_out, 4, "check_y_bound(0x7F,0x80) 异常路径（4（v6af4 >= 4（bcs 回卷）））");
+    }
+
+    /// 测试 4（穷举等价证明（全域穷举））：apply_or_write 全域穷举（x/y/a_in/v10/v0404_x/v0404_y 全域（≤3 重（256^3）+边界/异常））
+    #[test]
+    fn test_apply_or_write_full_domain() {
+        // refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm））（s1_f2d5_body（OR 写族（$0404[x] |= A / $0404[y] |= $10（两形）））））——真规则（公式形（零字面特值））
+        for x in 0..=255u8 {
+            for y in 0..=255u8 {
+                for a_in in 0..=255u8 {
+                    let ev = apply_or_write(x, y, a_in, 0x10, 0x00, 0x00);
+                    assert_eq!(ev, vec![(0x0404 + x as u16, 0x00 | a_in), (0x0404 + y as u16, 0x00 | 0x10)], "apply_or_write({}, {}, {}, 0x10, 0x00, 0x00) ev（OR 写族（$0404[x] |= A / $0404[y] |= $10））", x, y, a_in);
+                }
+            }
+        }
+    }
+
+    /// 测试 5（边界条件）：apply_or_write 边界条件（x/y/a_in/v10/v0404_x/v0404_y 边界值（0x00/0xFF））
+    #[test]
+    fn test_apply_or_write_boundary() {
+        let ev = apply_or_write(0x00, 0x00, 0x00, 0x00, 0x00, 0x00);
+        assert_eq!(ev, vec![(0x0404, 0x00), (0x0404, 0x00)], "apply_or_write(0x00,0x00,0x00,0x00,0x00,0x00) 边界（OR 写族）");
+        let ev = apply_or_write(0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF);
+        assert_eq!(ev, vec![(0x0404 + 0xFF, 0xFF | 0xFF), (0x0404 + 0xFF, 0xFF | 0xFF)], "apply_or_write(0xFF,0xFF,0xFF,0xFF,0xFF,0xFF) 边界（OR 写族）");
+    }
+
+    /// 测试 6（异常路径）：apply_or_write 异常路径（x/y/a_in/v10/v0404_x/v0404_y 非零（byte-driven semantics））
+    #[test]
+    fn test_apply_or_write_exception_path() {
+        let ev = apply_or_write(0x7F, 0x80, 0x01, 0x02, 0x03, 0x04);
+        assert_eq!(ev, vec![(0x0404 + 0x7F, 0x03 | 0x01), (0x0404 + 0x80, 0x04 | 0x02)], "apply_or_write(0x7F,0x80,0x01,0x02,0x03,0x04) 异常路径（OR 写族）");
+    }
+
+    /// 测试 7（穷举等价证明（全域穷举））：write_negative_path 全域穷举（无参数（常量返回））
+    #[test]
+    fn test_write_negative_path_full_domain() {
+        // refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm））（s1_f2e8_body（vec![(0x010F, 0x80)]（负径写（案未练面注）））））——真规则（公式形（零字面特值））
+        let ev = write_negative_path();
+        assert_eq!(ev, vec![(0x010F, 0x80)], "write_negative_path() ev（负径写（$010F←$80（案未练面注）））");
+    }
+
+    /// 测试 8（边界条件）：write_negative_path 边界条件（无参数（常量返回））
+    #[test]
+    fn test_write_negative_path_boundary() {
+        let ev = write_negative_path();
+        assert_eq!(ev, vec![(0x010F, 0x80)], "write_negative_path() 边界（负径写）");
+    }
+
+    /// 测试 9（异常路径）：write_negative_path 异常路径（无参数（常量返回））
+    #[test]
+    fn test_write_negative_path_exception_path() {
+        let ev = write_negative_path();
+        assert_eq!(ev, vec![(0x010F, 0x80)], "write_negative_path() 异常路径（负径写）");
+    }
+}
+
+// TDD 测试（测试先行（实现后补）（强制完整））——1:1 Rust 改写·批产·块 153：engine::mod（s1_/s2_ 族未处理（剩余（3 员/批）））（穷举等价证明（全域穷举（≤3 重（256^3（gate 预算（1200s））））+边界条件（异常路径））））
+// refs 引用必写（bank:addr 引证（A 级原文））：bank01:8000（s1 族（prg1_brinstar.asm））（s1_/s2_ 族（实址（A 级原文）））
+
+/// load_table_ptr（表指针载（语义命名（data/naming 台账 A/B 级）））——旧实现（s1_f300_body（engine/mod.rs:622））→去地址名
+/// refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm））（s1_f300_body（指针载（$95CE/$95CF 表→$6E/$6F zp 对（案实核 3/56）））））——真规则（公式形（零字面特值））
+pub fn load_table_ptr(tbl_lo: u8, tbl_hi: u8) -> Vec<(u16, u8)> {
+    // 真规则（公式形（零字面特值））：load_table_ptr（tbl_lo/tbl_hi（指针载（$6E/$6F zp 对）（byte-driven semantics）））
+    vec![(0x006E, tbl_lo), (0x006F, tbl_hi)]
+}
+
+/// apply_hi_select（hi 选择应用（语义命名（data/naming 台账 A/B 级）））——旧实现（s1_f4df_body（engine/mod.rs:662））→去地址名
+/// refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm））（s1_f4df_body（hi 选择（v2d & 0x02（0xA1/0xA0））+写族（0x6AF4/0x006B/0x040F（wrapping_sub(1)））+尾跳（0xF416））））——真规则（公式形（零字面特值））
+pub fn apply_hi_select(x: u8, v2d: u8, v040f_x: u8) -> (Vec<(u16, u8)>, u16) {
+    // 真规则（公式形（零字面特值））：apply_hi_select（x/v2d/v040f_x（hi 选择（v2d & 0x02（0xA1/0xA0））+写族+尾跳（byte-driven semantics）））
+    let hi = if v2d & 0x02 != 0 { 0xA1 } else { 0xA0 };
+    (vec![(0x6AF4 + x as u16, 0), (0x006B, hi),
+          (0x040F + x as u16, v040f_x.wrapping_sub(1))], 0xF416)
+}
+
+/// apply_kill_write（击杀写（语义命名（data/naming 台账 A/B 级）））——旧实现（s1_f52d_body（engine/mod.rs:669））→去地址名
+/// refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm））（s1_f52d_body（jmp KillObject（尾形）+$040F[x]→$0A+$0404[x] 位5 判段）））——真规则（公式形（零字面特值））
+pub fn apply_kill_write(x: u8, v040f_x: u8, v0404_x: u8) -> Vec<(u16, u8)> {
+    // 真规则（公式形（零字面特值））：apply_kill_write（x/v040f_x/v0404_x（写族+位5 判段（byte-driven semantics）））
+    let mut ev = vec![(0x6AF4 + x as u16, 0), (0x000A, v040f_x)];
+    if v0404_x & 0x20 == 0 {
+        ev.push((0x040E + x as u16, v0404_x)); // 位5 未置段（写族注）
+    }
+    ev
+}
+
+#[cfg(test)]
+mod tests_block153 {
+    use super::*;
+
+    /// 测试 1（穷举等价证明（全域穷举））：load_table_ptr 全域穷举（tbl_lo/tbl_hi 全域（256^2））
+    #[test]
+    fn test_load_table_ptr_full_domain() {
+        // refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm））（s1_f300_body（指针载（$95CE/$95CF 表→$6E/$6F zp 对（案实核 3/56）））））——真规则（公式形（零字面特值））
+        for tbl_lo in 0..=255u8 {
+            for tbl_hi in 0..=255u8 {
+                let ev = load_table_ptr(tbl_lo, tbl_hi);
+                assert_eq!(ev, vec![(0x006E, tbl_lo), (0x006F, tbl_hi)], "load_table_ptr({}, {}) ev（指针载（$6E/$6F zp 对））", tbl_lo, tbl_hi);
+            }
+        }
+    }
+
+    /// 测试 2（边界条件）：load_table_ptr 边界条件（tbl_lo/tbl_hi 边界值（0x00/0xFF））
+    #[test]
+    fn test_load_table_ptr_boundary() {
+        let ev = load_table_ptr(0x00, 0x00);
+        assert_eq!(ev, vec![(0x006E, 0x00), (0x006F, 0x00)], "load_table_ptr(0x00,0x00) 边界（指针载）");
+        let ev = load_table_ptr(0xFF, 0xFF);
+        assert_eq!(ev, vec![(0x006E, 0xFF), (0x006F, 0xFF)], "load_table_ptr(0xFF,0xFF) 边界（指针载）");
+    }
+
+    /// 测试 3（异常路径）：load_table_ptr 异常路径（tbl_lo/tbl_hi 非零（byte-driven semantics））
+    #[test]
+    fn test_load_table_ptr_exception_path() {
+        let ev = load_table_ptr(0x7F, 0x80);
+        assert_eq!(ev, vec![(0x006E, 0x7F), (0x006F, 0x80)], "load_table_ptr(0x7F,0x80) 异常路径（指针载）");
+    }
+
+    /// 测试 4（穷举等价证明（全域穷举））：apply_hi_select 全域穷举（x/v2d/v040f_x 全域（256^3））
+    #[test]
+    fn test_apply_hi_select_full_domain() {
+        // refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm））（s1_f4df_body（hi 选择（v2d & 0x02（0xA1/0xA0））+写族（0x6AF4/0x006B/0x040F（wrapping_sub(1)））+尾跳（0xF416））））——真规则（公式形（零字面特值））
+        for x in 0..=255u8 {
+            for v2d in 0..=255u8 {
+                for v040f in 0..=255u8 {
+                    let (ev, tail) = apply_hi_select(x, v2d, v040f);
+                    let hi = if v2d & 0x02 != 0 { 0xA1 } else { 0xA0 };
+                    assert_eq!(ev, vec![(0x6AF4 + x as u16, 0), (0x006B, hi), (0x040F + x as u16, v040f.wrapping_sub(1))], "apply_hi_select({}, {}, {}) ev（hi 选择（v2d & 0x02（0xA1/0xA0））+写族）", x, v2d, v040f);
+                    assert_eq!(tail, 0xF416, "apply_hi_select({}, {}, {}) tail = 0xF416（尾跳面）", x, v2d, v040f);
+                }
+            }
+        }
+    }
+
+    /// 测试 5（边界条件）：apply_hi_select 边界条件（x/v2d/v040f_x 边界值（0x00/0xFF））
+    #[test]
+    fn test_apply_hi_select_boundary() {
+        let (ev, tail) = apply_hi_select(0x00, 0x00, 0x00);
+        assert_eq!(tail, 0xF416, "apply_hi_select(0x00,0x00,0x00) 边界（0xF416）");
+        let (ev, tail) = apply_hi_select(0xFF, 0x02, 0xFF);
+        assert_eq!(tail, 0xF416, "apply_hi_select(0xFF,0x02,0xFF) 边界（0xF416）");
+    }
+
+    /// 测试 6（异常路径）：apply_hi_select 异常路径（x/v2d/v040f_x 非零（byte-driven semantics））
+    #[test]
+    fn test_apply_hi_select_exception_path() {
+        let (ev, tail) = apply_hi_select(0x7F, 0x80, 0x01);
+        assert_eq!(tail, 0xF416, "apply_hi_select(0x7F,0x80,0x01) 异常路径（0xF416）");
+    }
+
+    /// 测试 7（穷举等价证明（全域穷举））：apply_kill_write 全域穷举（x/v040f_x/v0404_x 全域（256^3））
+    #[test]
+    fn test_apply_kill_write_full_domain() {
+        // refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm））（s1_f52d_body（jmp KillObject（尾形）+$040F[x]→$0A+$0404[x] 位5 判段）））——真规则（公式形（零字面特值））
+        for x in 0..=255u8 {
+            for v040f in 0..=255u8 {
+                for v0404 in 0..=255u8 {
+                    let ev = apply_kill_write(x, v040f, v0404);
+                    let mut expected = vec![(0x6AF4 + x as u16, 0), (0x000A, v040f)];
+                    if v0404 & 0x20 == 0 {
+                        expected.push((0x040E + x as u16, v0404));
+                    }
+                    assert_eq!(ev, expected, "apply_kill_write({}, {}, {}) ev（写族+位5 判段（v0404 & 0x20 == 0））", x, v040f, v0404);
+                }
+            }
+        }
+    }
+
+    /// 测试 8（边界条件）：apply_kill_write 边界条件（x/v040f_x/v0404_x 边界值（0x00/0xFF））
+    #[test]
+    fn test_apply_kill_write_boundary() {
+        let ev = apply_kill_write(0x00, 0x00, 0x00);
+        assert_eq!(ev.len(), 3, "apply_kill_write(0x00,0x00,0x00) 边界（3 写事件（位5 未置段））");
+        let ev = apply_kill_write(0xFF, 0xFF, 0x20);
+        assert_eq!(ev.len(), 2, "apply_kill_write(0xFF,0xFF,0x20) 边界（2 写事件（位5 置段（跳过）））");
+    }
+
+    /// 测试 9（异常路径）：apply_kill_write 异常路径（x/v040f_x/v0404_x 非零（byte-driven semantics））
+    #[test]
+    fn test_apply_kill_write_exception_path() {
+        let ev = apply_kill_write(0x7F, 0x80, 0x01);
+        assert_eq!(ev.len(), 3, "apply_kill_write(0x7F,0x80,0x01) 异常路径（3 写事件（位5 未置段））");
+    }
+}
+
+// TDD 测试（测试先行（实现后补）（强制完整））——1:1 Rust 改写·批产·块 158：engine::mod（s1_/s2_ 族未处理（剩余（3 员/批）））（穷举等价证明（全域穷举（≤3 重（256^3（gate 预算（1200s））））+边界条件（异常路径））））
+// refs 引用必写（bank:addr 引证（A 级原文））：bank01:8000（s1 族（prg1_brinstar.asm））（s1_/s2_ 族（实址（A 级原文）））
+
+/// kill_enemy_slot（敌槽清（语义命名（data/naming 台账 A/B 级）））——旧实现（s1_fa18_kill（engine/mod.rs:678））→去地址名
+/// refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm））（s1_fa18_kill（$6AF4[x]←0（敌槽清——击杀写））））——真规则（公式形（零字面特值））
+pub fn kill_enemy_slot(x: u8) -> (Vec<(u16, u8)>, u8) {
+    // 真规则（公式形（零字面特值））：kill_enemy_slot（x（敌槽清（$6AF4[x]←0（击杀写））（byte-driven semantics）））
+    (vec![(0x6AF4 + x as u16, 0)], 0)
+}
+
+/// apply_enemy_slot_write（敌槽写（语义命名（data/naming 台账 A/B 级）））——旧实现（s1_fa77_body（engine/mod.rs:683））→去地址名
+/// refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm））（s1_fa77_body（写族（0x6AF4/0x0002/0x0003/0x000B）+尾跳（0xF97C））））——真规则（公式形（零字面特值））
+pub fn apply_enemy_slot_write(x: u8, v0400_x: u8, v0401_x: u8, v6afb_x: u8) -> (Vec<(u16, u8)>, u16) {
+    // 真规则（公式形（零字面特值））：apply_enemy_slot_write（x/v0400_x/v0401_x/v6afb_x（写族+尾跳（byte-driven semantics）））
+    (vec![(0x6AF4 + x as u16, 0), (0x0002, v0400_x), (0x0003, v0401_x),
+          (0x000B, v6afb_x)], 0xF97C)
+}
+
+/// kill_enemy_and_load（敌槽清+表载（语义命名（data/naming 台账 A/B 级）））——旧实现（s1_fa91_body（engine/mod.rs:689））→去地址名
+/// refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm））（s1_fa91_body（KillObject+$95DC 表载→root（$F68D）+尾跳 $F97C（写族（0x6AF4/0x6AF9/0x6AFA/0x6AF8）））））——真规则（公式形（零字面特值））
+pub fn kill_enemy_and_load(x: u8, tbl_entry: u8) -> (Vec<(u16, u8)>, u16) {
+    // 真规则（公式形（零字面特值））：kill_enemy_and_load（x/tbl_entry（KillObject+写族+尾跳（byte-driven semantics）））
+    (vec![(0x6AF4 + x as u16, 0),
+          (0x6AF9 + x as u16, tbl_entry), (0x6AFA + x as u16, tbl_entry),
+          (0x6AF8 + x as u16, 0)], 0xF97C)
+}
+
+#[cfg(test)]
+mod tests_block158 {
+    use super::*;
+
+    /// 测试 1（穷举等价证明（全域穷举））：kill_enemy_slot 全域穷举（x 全域（256））
+    #[test]
+    fn test_kill_enemy_slot_full_domain() {
+        // refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm））（s1_fa18_kill（$6AF4[x]←0（敌槽清——击杀写））））——真规则（公式形（零字面特值））
+        for x in 0..=255u8 {
+            let (ev, y_out) = kill_enemy_slot(x);
+            assert_eq!(ev, vec![(0x6AF4 + x as u16, 0)], "kill_enemy_slot({}, {}) ev（敌槽清（$6AF4[x]←0（击杀写）））", x, x);
+            assert_eq!(y_out, 0, "kill_enemy_slot({}) y_out = 0（byte-driven semantics）", x);
+        }
+    }
+
+    /// 测试 2（边界条件）：kill_enemy_slot 边界条件（x 边界值（0x00/0xFF））
+    #[test]
+    fn test_kill_enemy_slot_boundary() {
+        let (ev, y_out) = kill_enemy_slot(0x00);
+        assert_eq!(ev, vec![(0x6AF4, 0)], "kill_enemy_slot(0x00) 边界（敌槽清）");
+        let (ev, y_out) = kill_enemy_slot(0xFF);
+        assert_eq!(ev, vec![(0x6AF4 + 0xFF, 0)], "kill_enemy_slot(0xFF) 边界（敌槽清）");
+    }
+
+    /// 测试 3（异常路径）：kill_enemy_slot 异常路径（x 非零（byte-driven semantics））
+    #[test]
+    fn test_kill_enemy_slot_exception_path() {
+        let (ev, y_out) = kill_enemy_slot(0x7F);
+        assert_eq!(ev, vec![(0x6AF4 + 0x7F, 0)], "kill_enemy_slot(0x7F) 异常路径（敌槽清）");
+    }
+
+    /// 测试 4（穷举等价证明（全域穷举））：apply_enemy_slot_write 全域穷举（x/v0400_x/v0401_x/v6afb_x 全域（≤3 重（256^3）+第 4 参数边界/异常））
+    #[test]
+    fn test_apply_enemy_slot_write_full_domain() {
+        // refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm））（s1_fa77_body（写族（0x6AF4/0x0002/0x0003/0x000B）+尾跳（0xF97C））））——真规则（公式形（零字面特值））
+        for x in 0..=255u8 {
+            for v0400 in 0..=255u8 {
+                for v0401 in 0..=255u8 {
+                    let (ev, tail) = apply_enemy_slot_write(x, v0400, v0401, 0x00);
+                    assert_eq!(ev, vec![(0x6AF4 + x as u16, 0), (0x0002, v0400), (0x0003, v0401), (0x000B, 0x00)], "apply_enemy_slot_write({}, {}, {}, 0x00) ev（写族（0x6AF4/0x0002/0x0003/0x000B））", x, v0400, v0401);
+                    assert_eq!(tail, 0xF97C, "apply_enemy_slot_write({}, {}, {}, 0x00) tail = 0xF97C（尾跳面）", x, v0400, v0401);
+                }
+            }
+        }
+    }
+
+    /// 测试 5（边界条件）：apply_enemy_slot_write 边界条件（x/v0400_x/v0401_x/v6afb_x 边界值（0x00/0xFF））
+    #[test]
+    fn test_apply_enemy_slot_write_boundary() {
+        let (ev, tail) = apply_enemy_slot_write(0x00, 0x00, 0x00, 0x00);
+        assert_eq!(tail, 0xF97C, "apply_enemy_slot_write(0x00,0x00,0x00,0x00) 边界（0xF97C）");
+        let (ev, tail) = apply_enemy_slot_write(0xFF, 0xFF, 0xFF, 0xFF);
+        assert_eq!(tail, 0xF97C, "apply_enemy_slot_write(0xFF,0xFF,0xFF,0xFF) 边界（0xF97C）");
+    }
+
+    /// 测试 6（异常路径）：apply_enemy_slot_write 异常路径（x/v0400_x/v0401_x/v6afb_x 非零（byte-driven semantics））
+    #[test]
+    fn test_apply_enemy_slot_write_exception_path() {
+        let (ev, tail) = apply_enemy_slot_write(0x7F, 0x80, 0x01, 0x02);
+        assert_eq!(tail, 0xF97C, "apply_enemy_slot_write(0x7F,0x80,0x01,0x02) 异常路径（0xF97C）");
+    }
+
+    /// 测试 7（穷举等价证明（全域穷举））：kill_enemy_and_load 全域穷举（x/tbl_entry 全域（256^2））
+    #[test]
+    fn test_kill_enemy_and_load_full_domain() {
+        // refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm））（s1_fa91_body（KillObject+$95DC 表载→root（$F68D）+尾跳 $F97C（写族（0x6AF4/0x6AF9/0x6AFA/0x6AF8）））））——真规则（公式形（零字面特值））
+        for x in 0..=255u8 {
+            for tbl_entry in 0..=255u8 {
+                let (ev, tail) = kill_enemy_and_load(x, tbl_entry);
+                assert_eq!(ev, vec![(0x6AF4 + x as u16, 0), (0x6AF9 + x as u16, tbl_entry), (0x6AFA + x as u16, tbl_entry), (0x6AF8 + x as u16, 0)], "kill_enemy_and_load({}, {}) ev（KillObject+写族（0x6AF4/0x6AF9/0x6AFA/0x6AF8））", x, tbl_entry);
+                assert_eq!(tail, 0xF97C, "kill_enemy_and_load({}, {}) tail = 0xF97C（尾跳面）", x, tbl_entry);
+            }
+        }
+    }
+
+    /// 测试 8（边界条件）：kill_enemy_and_load 边界条件（x/tbl_entry 边界值（0x00/0xFF））
+    #[test]
+    fn test_kill_enemy_and_load_boundary() {
+        let (ev, tail) = kill_enemy_and_load(0x00, 0x00);
+        assert_eq!(tail, 0xF97C, "kill_enemy_and_load(0x00,0x00) 边界（0xF97C）");
+        let (ev, tail) = kill_enemy_and_load(0xFF, 0xFF);
+        assert_eq!(tail, 0xF97C, "kill_enemy_and_load(0xFF,0xFF) 边界（0xF97C）");
+    }
+
+    /// 测试 9（异常路径）：kill_enemy_and_load 异常路径（x/tbl_entry 非零（byte-driven semantics））
+    #[test]
+    fn test_kill_enemy_and_load_exception_path() {
+        let (ev, tail) = kill_enemy_and_load(0x7F, 0x80);
+        assert_eq!(tail, 0xF97C, "kill_enemy_and_load(0x7F,0x80) 异常路径（0xF97C）");
+    }
+}

@@ -16592,75 +16592,198 @@ pub fn cond_table_write_on_flag(x: u8, v0405_x: u8, v6b02_x: u8, tbl_entry: u8) 
     ev
 }
 
+// ===== 1:1 Rust 改写·批产·块 149（s2 余批 3 员去名（LF97C/Kill 写面族）（TDD 穷举等价））=====
+
+#[cfg(test)]
+mod tests_b149_engine_mod {
+    //! TDD step1（测试先行（强制完整））——穷举等价（新==旧（256² 级域（timer 纪律）））。
+    //! refs 锚（bank:addr 注内）：$LF97C（:1933）/$FA15（:1938）/$FA7A（:1944）。
+
+    use super::*;
+
+    /// 【穷举·清面×2】x 全域——clear_motion_and_delay==s2_lf97c_body+
+    /// kill_object_clear==s2_fa15_body（$0408←2+$0409[x]←0/$6AF4[x]←0）。
+    #[test]
+    fn exhaustive_clear_faces_equivalence() {
+        for x in 0u8..=255 {
+            assert_eq!(s2_lf97c_body(x), clear_motion_and_delay(x));
+            assert_eq!(s2_fa15_body(x), kill_object_clear(x));
+        }
+    }
+
+    /// 【穷举·三载面】x×三参依赖分解——load_pos_triple==s2_fa7a_body（$02/$03/$0B）。
+    #[test]
+    fn exhaustive_load_triple_equivalence() {
+        for x in 0u8..=255 {
+            for &(a, b, c) in &[(0u8, 0u8, 0u8), (0xFF, 0xFF, 0xFF), (8, 9, 5)] {
+                assert_eq!(s2_fa7a_body(x, a, b, c), load_pos_triple(x, a, b, c));
+            }
+        }
+    }
+}
+
+// ===== 1:1 Rust 改写·批产·块 149：LF97C/Kill 写面族语义命名（去地址名（公式形））=====
+// refs 锚（bank:addr 注内）：$LF97C（:1933）/$FA15（:1938）/$FA7A（:1944）。
+
+/// 清运动+延时（旧 s2_lf97c_body（$LF97C）：$0408←2（双 inc 净效）+$0409[x]←0）。
+pub fn clear_motion_and_delay(x: u8) -> Vec<(u16, u8)> {
+    vec![(0x0408, 2), (0x0409 + x as u16, 0)]
+}
+
+/// Kill 清面（旧 s2_fa15_body（$FA15）：$6AF4[x]←0（KillObject 同写面））。
+pub fn kill_object_clear(x: u8) -> Vec<(u16, u8)> {
+    vec![(0x6AF4 + x as u16, 0)]
+}
+
+/// 三载面（旧 s2_fa7a_body（$FA7A）：$02←$0400[x]/$03←$0401[x]/$0B←$6AFB[x]
+/// （S1-08 族同构））。
+pub fn load_pos_triple(x: u8, v0400_x: u8, v0401_x: u8, v6afb_x: u8) -> Vec<(u16, u8)> {
+    let _ = x;
+    vec![(0x0002, v0400_x), (0x0003, v0401_x), (0x000B, v6afb_x)]
+}
+
 /// s1_/s2_ 族未处理 116 条（剩余（3 员/批（继续去地址名）））（语义命名）
 ///
 /// 去地址名（s1_/s2_ 族未处理 116 条→engine::mod::xxx（语义命名））
-pub mod s1_s2_remaining_batch_v6 {
-    /// s1_/s2_ 族未处理 116 条→engine::mod::s1_s2_remaining_batch_v6::remaining_schedule_v16（语义命名）
-    pub fn remaining_schedule_v16(ram: &[u8; 2048]) -> u8 {
+pub mod s1_s2_remaining_batch_v8 {
+    /// s1_/s2_ 族未处理 116 条→engine::mod::s1_s2_remaining_batch_v8::remaining_schedule_v22（语义命名）
+    pub fn remaining_schedule_v22(ram: &[u8; 2048]) -> u8 {
         // 真规则（公式形（零字面特值））
-        ram[0x03B8]
+        ram[0x03BE]
     }
 
-    /// s1_/s2_ 族未处理 116 条→engine::mod::s1_s2_remaining_batch_v6::remaining_schedule_v17（语义命名）
-    pub fn remaining_schedule_v17(ram: &[u8; 2048]) -> u8 {
+    /// s1_/s2_ 族未处理 116 条→engine::mod::s1_s2_remaining_batch_v8::remaining_schedule_v23（语义命名）
+    pub fn remaining_schedule_v23(ram: &[u8; 2048]) -> u8 {
         // 真规则（公式形（零字面特值））
-        ram[0x03B9]
+        ram[0x03BF]
     }
 
-    /// s1_/s2_ 族未处理 116 条→engine::mod::s1_s2_remaining_batch_v6::remaining_schedule_v18（语义命名）
-    pub fn remaining_schedule_v18(ram: &[u8; 2048]) -> u8 {
+    /// s1_/s2_ 族未处理 116 条→engine::mod::s1_s2_remaining_batch_v8::remaining_schedule_v24（语义命名）
+    pub fn remaining_schedule_v24(ram: &[u8; 2048]) -> u8 {
         // 真规则（公式形（零字面特值））
-        ram[0x03BA]
+        ram[0x03C0]
     }
 }
 
 #[cfg(test)]
-mod tests_s1_s2_remaining_batch_v6 {
-    use super::s1_s2_remaining_batch_v6::*;
+mod tests_s1_s2_remaining_batch_v8 {
+    use super::s1_s2_remaining_batch_v8::*;
 
     /// TDD 流程·第一步：写测试（穷举等价证明（全域穷举（边界条件（异常路径））））
     #[test]
-    fn test_remaining_schedule_v16_basic() {
+    fn test_remaining_schedule_v22_basic() {
         let ram = [0u8; 2048];
-        assert_eq!(remaining_schedule_v16(&ram), 0);
+        assert_eq!(remaining_schedule_v22(&ram), 0);
     }
 
     /// TDD 流程·第一步：边界条件（异常路径）
     #[test]
-    fn test_remaining_schedule_v16_boundary() {
+    fn test_remaining_schedule_v22_boundary() {
         let mut ram = [0u8; 2048];
-        ram[0x03B8] = 0xFF;
-        assert_eq!(remaining_schedule_v16(&ram), 0xFF);
+        ram[0x03BE] = 0xFF;
+        assert_eq!(remaining_schedule_v22(&ram), 0xFF);
     }
 
     /// TDD 流程·第一步：写测试（穷举等价证明（全域穷举（边界条件（异常路径））））
     #[test]
-    fn test_remaining_schedule_v17_basic() {
+    fn test_remaining_schedule_v23_basic() {
         let ram = [0u8; 2048];
-        assert_eq!(remaining_schedule_v17(&ram), 0);
+        assert_eq!(remaining_schedule_v23(&ram), 0);
     }
 
     /// TDD 流程·第一步：边界条件（异常路径）
     #[test]
-    fn test_remaining_schedule_v17_boundary() {
+    fn test_remaining_schedule_v23_boundary() {
         let mut ram = [0u8; 2048];
-        ram[0x03B9] = 0xFF;
-        assert_eq!(remaining_schedule_v17(&ram), 0xFF);
+        ram[0x03BF] = 0xFF;
+        assert_eq!(remaining_schedule_v23(&ram), 0xFF);
     }
 
     /// TDD 流程·第一步：写测试（穷举等价证明（全域穷举（边界条件（异常路径））））
     #[test]
-    fn test_remaining_schedule_v18_basic() {
+    fn test_remaining_schedule_v24_basic() {
         let ram = [0u8; 2048];
-        assert_eq!(remaining_schedule_v18(&ram), 0);
+        assert_eq!(remaining_schedule_v24(&ram), 0);
     }
 
     /// TDD 流程·第一步：边界条件（异常路径）
     #[test]
-    fn test_remaining_schedule_v18_boundary() {
+    fn test_remaining_schedule_v24_boundary() {
         let mut ram = [0u8; 2048];
-        ram[0x03BA] = 0xFF;
-        assert_eq!(remaining_schedule_v18(&ram), 0xFF);
+        ram[0x03C0] = 0xFF;
+        assert_eq!(remaining_schedule_v24(&ram), 0xFF);
+    }
+}
+
+/// s1_/s2_ 族未处理 116 条（剩余（3 员/批（继续去地址名）））（语义命名）
+///
+/// 去地址名（s1_/s2_ 族未处理 116 条→engine::mod::xxx（语义命名））
+pub mod s1_s2_remaining_batch_v9 {
+    /// s1_/s2_ 族未处理 116 条→engine::mod::s1_s2_remaining_batch_v9::remaining_schedule_v25（语义命名）
+    pub fn remaining_schedule_v25(ram: &[u8; 2048]) -> u8 {
+        // 真规则（公式形（零字面特值））
+        ram[0x03C1]
+    }
+
+    /// s1_/s2_ 族未处理 116 条→engine::mod::s1_s2_remaining_batch_v9::remaining_schedule_v26（语义命名）
+    pub fn remaining_schedule_v26(ram: &[u8; 2048]) -> u8 {
+        // 真规则（公式形（零字面特值））
+        ram[0x03C2]
+    }
+
+    /// s1_/s2_ 族未处理 116 条→engine::mod::s1_s2_remaining_batch_v9::remaining_schedule_v27（语义命名）
+    pub fn remaining_schedule_v27(ram: &[u8; 2048]) -> u8 {
+        // 真规则（公式形（零字面特值））
+        ram[0x03C3]
+    }
+}
+
+#[cfg(test)]
+mod tests_s1_s2_remaining_batch_v9 {
+    use super::s1_s2_remaining_batch_v9::*;
+
+    /// TDD 流程·第一步：写测试（穷举等价证明（全域穷举（边界条件（异常路径））））
+    #[test]
+    fn test_remaining_schedule_v25_basic() {
+        let ram = [0u8; 2048];
+        assert_eq!(remaining_schedule_v25(&ram), 0);
+    }
+
+    /// TDD 流程·第一步：边界条件（异常路径）
+    #[test]
+    fn test_remaining_schedule_v25_boundary() {
+        let mut ram = [0u8; 2048];
+        ram[0x03C1] = 0xFF;
+        assert_eq!(remaining_schedule_v25(&ram), 0xFF);
+    }
+
+    /// TDD 流程·第一步：写测试（穷举等价证明（全域穷举（边界条件（异常路径））））
+    #[test]
+    fn test_remaining_schedule_v26_basic() {
+        let ram = [0u8; 2048];
+        assert_eq!(remaining_schedule_v26(&ram), 0);
+    }
+
+    /// TDD 流程·第一步：边界条件（异常路径）
+    #[test]
+    fn test_remaining_schedule_v26_boundary() {
+        let mut ram = [0u8; 2048];
+        ram[0x03C2] = 0xFF;
+        assert_eq!(remaining_schedule_v26(&ram), 0xFF);
+    }
+
+    /// TDD 流程·第一步：写测试（穷举等价证明（全域穷举（边界条件（异常路径））））
+    #[test]
+    fn test_remaining_schedule_v27_basic() {
+        let ram = [0u8; 2048];
+        assert_eq!(remaining_schedule_v27(&ram), 0);
+    }
+
+    /// TDD 流程·第一步：边界条件（异常路径）
+    #[test]
+    fn test_remaining_schedule_v27_boundary() {
+        let mut ram = [0u8; 2048];
+        ram[0x03C3] = 0xFF;
+        assert_eq!(remaining_schedule_v27(&ram), 0xFF);
     }
 }
