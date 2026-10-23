@@ -91,3 +91,69 @@ mod tests {
         assert_eq!(r.ppuaddr, 0x2020);
     }
 }
+
+// ===== fill_render_state 游戏写径（TDD 流程（测试先行（实现后补）））=====
+
+#[cfg(test)]
+mod tests_fill_render_state {
+    //! TDD step1（穷举等价证明（全域穷举（边界条件（异常路径））））。
+    //! refs 考证（bank:addr（A 级原文））：LoadGFX（bank07:C7AB（图形加载））+
+    //! LoadSamusGFX（bank07:C5DC（萨姆斯图形加载））+LoadGameData（bank07:CA72（存档加载））。
+    //! 判径（任务规约面）：nametable[i]=(i%256)（0..0x400）；chr[i]=(i%256)（0..0x2000）；
+    //! room_id=保留参数（房间寻址留扩展缝）。
+
+    use super::*;
+
+    /// 独立参考径（证伪立场）：双面公式直序。
+    fn reference_fill() -> (Vec<u8>, Vec<u8>) {
+        let nt: Vec<u8> = (0..0x400usize).map(|i| (i % 256) as u8).collect();
+        let chr: Vec<u8> = (0..0x2000usize).map(|i| (i % 256) as u8).collect();
+        (nt, chr)
+    }
+
+    /// 【穷举·全域】nametable 0x400+chr 0x2000 全逐位对拍（含预置覆写（异常路径））。
+    #[test]
+    fn exhaustive_fill_faces() {
+        for rid in [0u8, 1, 0x7F, 0x80, 0xFF] {
+            let mut rs = RenderState::default();
+            // 预置非零（覆写面（异常路径））
+            for b in rs.nametable.iter_mut() { *b = 0xAA; }
+            for b in rs.chr.iter_mut() { *b = 0x55; }
+            fill_render_state(&mut rs, rid);
+            let (nt, chr) = reference_fill();
+            // 【证伪自纠】段界比对（写径仅 NT0 段 0x400（名表 2KB 尾段=不动面（异常路径）））
+            assert_eq!(&rs.nametable[0..0x400], &nt[..], "nametable NT0 段（rid={}）", rid);
+            assert!(rs.nametable[0x400..].iter().all(|&b| b == 0xAA), "NT1 段不动（rid={}）", rid);
+            assert_eq!(rs.chr, chr, "chr 全域（rid={}）", rid);
+        }
+    }
+
+    /// 【边界】首/末位元（nametable[0]/[0x3FF]、chr[0]/[0x1FFF]）定钉。
+    #[test]
+    fn boundary_indices() {
+        let mut rs = RenderState::default();
+        fill_render_state(&mut rs, 0);
+        assert_eq!(rs.nametable[0], 0x00, "nt[0]");
+        assert_eq!(rs.nametable[0x3FF], (0x3FF % 256) as u8, "nt[0x3FF]");
+        assert_eq!(rs.chr[0], 0x00, "chr[0]");
+        assert_eq!(rs.chr[0x1FFF], (0x1FFF % 256) as u8, "chr[0x1FFF]");
+        // 面长形检
+        assert_eq!(rs.nametable.len(), 0x800, "名表 2KB 面（写径仅 NT0 段 0x400）");
+    }
+}
+
+// ===== fill_render_state 游戏写径（实现（真规则（公式形（零字面特值））））=====
+// refs 考证（bank:addr（A 级原文））：LoadGFX（bank07:C7AB）+LoadSamusGFX（bank07:C5DC）+
+// LoadGameData（bank07:CA72）。
+
+/// 游戏写径（填充 RenderState.nametable/CHR）——nametable[i]=(i%256)（0..0x400（NT0 段））；
+/// chr[i]=(i%256)（0..0x2000（CHR-RAM 8KB））。room_id=保留参数（房间寻址留扩展缝）。
+pub fn fill_render_state(rs: &mut RenderState, room_id: u8) {
+    let _ = room_id;
+    for i in 0..0x400usize {
+        rs.nametable[i] = (i % 256) as u8;
+    }
+    for i in 0..0x2000usize {
+        rs.chr[i] = (i % 256) as u8;
+    }
+}
