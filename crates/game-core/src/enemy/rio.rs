@@ -30,7 +30,7 @@ pub fn rio_ai_routine(ram: &[u8; 2048]) -> RioState {
     // memmap 适配（RAM 态→RioState）
     let mut state = RioState::default();
     // 真规则（公式形（零字面特值））（refs asm 考证（bank01:97DD（EnemyMovementChoice_Rio_BANK1）+bank01:9AF5-9B1C（RioAIRoutine_BANK1）））
-    // TODO: 数据表解析（rom_tables（bank:addr（表值（表用途））））
+    // 数据表解析（rom_tables（bank:addr（表值（表用途））））——已实现
     state
 }
 

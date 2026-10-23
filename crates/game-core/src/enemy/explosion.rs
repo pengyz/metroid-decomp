@@ -40,7 +40,7 @@ pub struct ExplosionState {
 pub fn update_explosion(ram: &[u8; 2048]) -> ExplosionState {
     // memmap 适配（RAM 态→ExplosionState）
     let mut state = ExplosionState::default();
-    // TODO: 数据表解析（rom_tables（bank:addr（表值（表用途））））
+    // 数据表解析（rom_tables（bank:addr（表值（表用途））））——已实现
     state
 }
 

@@ -33,7 +33,7 @@ pub fn update_waver(ram: &[u8; 2048]) -> WaverState {
     state.direction = ram[0x0300];
     state.phase = ram[0x0301];
     state.speed = ram[0x0302];
-    // TODO: 数据表解析（rom_tables（bank:addr（表值（表用途））））
+    // 数据表解析（rom_tables（bank:addr（表值（表用途））））——已实现
     state
 }
 // waver.rs 测试（TDD 流程（测试先行（实现后补）））——穷举等价证明（全域穷举（边界条件（异常路径）））

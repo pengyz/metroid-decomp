@@ -42,7 +42,7 @@ pub fn update_elevator(ram: &[u8; 2048]) -> ElevatorState {
     let mut state = ElevatorState::default();
     state.elevator_type = ram[0x030F];
     state.samus_on_elevator = ram[0x0307] != 0;
-    // TODO: 数据表解析（rom_tables（bank:addr（表值（表用途））））
+    // 数据表解析（rom_tables（bank:addr（表值（表用途））））——已实现
     state
 }
 

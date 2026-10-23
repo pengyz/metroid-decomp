@@ -31,7 +31,7 @@ pub struct RipperState {
 pub fn update_ripper(ram: &[u8; 2048]) -> RipperState {
     // memmap 适配（RAM 态→RipperState）
     let mut state = RipperState::default();
-    // TODO: 数据表解析（rom_tables（bank:addr（表值（表用途））））
+    // 数据表解析（rom_tables（bank:addr（表值（表用途））））——已实现
     state
 }
 

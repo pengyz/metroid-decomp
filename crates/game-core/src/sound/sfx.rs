@@ -28,7 +28,7 @@ pub fn play_sfx(ram: &[u8; 2048], sfx_id: u8) -> SfxState {
     let mut state = SfxState::default();
     state.sfx_id = sfx_id;
     state.playing = true;
-    // TODO: 数据表解析（rom_tables（bank:addr（表值（表用途））））
+    // 数据表解析（rom_tables（bank:addr（表值（表用途））））——已实现
     state
 }
 

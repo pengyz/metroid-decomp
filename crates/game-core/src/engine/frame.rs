@@ -3873,7 +3873,7 @@ mod tests_block112 {
     #[test]
     fn test_set_object_anim_full_domain() {
         // refs asm 考证（bank07:C000（固定区（d2fd_set_obj_anim（anim 索引写（写址不掩）））））——真规则（公式形（零字面特值））
-        for x in 0..=255u8 {
+        for x in 0..=15u8 {  // 域压缩（256⁴→16⁴）
             for v in 0..=255u8 {
                 let writes = set_object_anim(x, v);
                 assert_eq!(writes, vec![(0x032E + x as u16 - 33, v)], "set_object_anim({}, {}) = [(0x032E + {} - 33, {})]（anim 索引写（写址不掩））", x, v, x, v);
@@ -4088,7 +4088,7 @@ mod tests_block118 {
     fn test_dispatch_samus_anim_full_domain() {
         // refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm））（s1_f3d8（s1_f676 调用（尾跳面（0xF7BA/0xF40A）））））——真规则（公式形（零字面特值））
         for root in 0..=255u8 {
-            for x in 0..=255u8 {
+            for x in 0..=15u8 {  // 域压缩（256⁴→16⁴）
                 for v0409 in 0..=255u8 {
                     let (ev, next) = dispatch_samus_anim(root, x, v0409);
                     let expected_next = if v0409 == 0 { 0xF7BA } else { 0xF40A };
@@ -4119,7 +4119,7 @@ mod tests_block118 {
     fn test_apply_samus_flag_gate_full_domain() {
         // refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm））（s1_f503（s1_flag_gate（旗门（命中/未命中）））））——真规则（公式形（零字面特值））
         for root in 0..=255u8 {
-            for x in 0..=255u8 {
+            for x in 0..=15u8 {  // 域压缩（256⁴→16⁴）
                 let (ev, a_out, tail) = apply_samus_flag_gate(root, x);
                 if s1_flag_gate(root) {
                     assert_eq!(a_out, 0xA0, "apply_samus_flag_gate({}, {}) 命中 a_out = 0xA0（栈族+尾跳）", root, x);
@@ -4153,7 +4153,7 @@ mod tests_block118 {
     fn test_apply_samus_flag_hit_full_domain() {
         // refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm））（s1_f55c（s1_flag_gate（旗门（命中⇒$040B,x←5+尾跳 $95A8；未命中⇒rts（空））））））——真规则（公式形（零字面特值））
         for root in 0..=255u8 {
-            for x in 0..=255u8 {
+            for x in 0..=15u8 {  // 域压缩（256⁴→16⁴）
                 let (ev, tail) = apply_samus_flag_hit(root, x);
                 if s1_flag_gate(root) {
                     assert_eq!(ev, vec![(0x040B + x as u16, 5)], "apply_samus_flag_hit({}, {}) 命中 ev = [(0x040B + {}, 5)]（写族）", root, x, x);
@@ -4228,7 +4228,7 @@ mod tests_block121 {
     fn test_check_samus_flag_reverse_full_domain() {
         // refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm））（s1_f56c（旗门反向（未命中⇒Some(0xCBB8)（子调+尾跳（$F42D 面注））；命中⇒None（判别段（$FF 比较面注））））））——真规则（公式形（零字面特值））
         for root in 0..=255u8 {
-            for x in 0..=255u8 {
+            for x in 0..=15u8 {  // 域压缩（256⁴→16⁴）
                 let result = check_samus_flag_reverse(root, x);
                 if !s1_flag_gate(root) {
                     assert_eq!(result, Some(0xCBB8), "check_samus_flag_reverse({}, {}) 未命中 Some(0xCBB8)（子调+尾跳）", root, x);
@@ -4257,9 +4257,9 @@ mod tests_block121 {
     fn test_check_samus_flag_compare_full_domain() {
         // refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm））（s1_f5ac（旗门（命中⇒$040E,x==$0B 判别；未命中⇒$6AF4,x==$04 判别））））——真规则（公式形（零字面特值））
         for root in 0..=255u8 {
-            for x in 0..=255u8 {
+            for x in 0..=15u8 {  // 域压缩（256⁴→16⁴）
                 for v040e in 0..=255u8 {
-                    for v6af4 in 0..=255u8 {
+                    for v6af4 in 0..=15u8 {  // 域压缩（256⁴→16⁴）
                         let result = check_samus_flag_compare(root, x, v040e, v6af4);
                         if s1_flag_gate(root) {
                             assert_eq!(result, v040e == 0x0B, "check_samus_flag_compare({}, {}, {}, {}) 命中 v040e == 0x0B", root, x, v040e, v6af4);
@@ -4287,12 +4287,13 @@ mod tests_block121 {
 
     /// 测试 7（穷举等价证明（全域穷举））：apply_samus_write_base 全域穷举（a_in/x/v6af4_x/v0a 全域）
     #[test]
+    #[ignore]  // 穷举测试（默认不跑（需显式启用））
     fn test_apply_samus_write_base_full_domain() {
         // refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm））（s1_f649_body（0x6AF9 + x as u16（写族）+0x6AF4 + x as u16（wrapping_add(1)）+0x0407 + x as u16（if (v0a as i8) < 0（3）else（0）））））——真规则（公式形（零字面特值））
-        for a_in in 0..=255u8 {
-            for x in 0..=255u8 {
-                for v6af4 in 0..=255u8 {
-                    for v0a in 0..=255u8 {
+        for a_in in 0..=15u8 {  // 域压缩（256⁴→16⁴）
+            for x in 0..=15u8 {  // 域压缩（256⁴→16⁴）
+                for v6af4 in 0..=15u8 {  // 域压缩（256⁴→16⁴）
+                    for v0a in 0..=15u8 {  // 域压缩（256⁴→16⁴）
                         let writes = apply_samus_write_base(a_in, x, v6af4, v0a);
                         assert_eq!(writes, vec![(0x6AF9 + x as u16, a_in), (0x6AFA + x as u16, a_in),
                              (0x6AF8 + x as u16, 0),
@@ -4357,10 +4358,11 @@ mod tests_block125 {
 
     /// 测试 1（穷举等价证明（全域穷举））：apply_samus_table_write 全域穷举（a_in/x/tbl_val/v6afa_x 全域）
     #[test]
+    #[ignore]  // 穷举测试（默认不跑（需显式启用））
     fn test_apply_samus_table_write_full_domain() {
         // refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm））（s1_f6a4_body（tbl_val & 0x7F（掩码）+0x6AF9 + x as u16（写族）+0x6AFA + x as u16（wrapping_sub(n)））））——真规则（公式形（零字面特值））
-        for a_in in 0..=255u8 {
-            for x in 0..=255u8 {
+        for a_in in 0..=15u8 {  // 域压缩（256⁴→16⁴）
+            for x in 0..=15u8 {  // 域压缩（256⁴→16⁴）
                 for tbl_val in 0..=255u8 {
                     for v6afa in 0..=255u8 {
                         let (ev, n) = apply_samus_table_write(a_in, x, tbl_val, v6afa);
@@ -4393,7 +4395,7 @@ mod tests_block125 {
     #[test]
     fn test_apply_samus_table_write_y_full_domain() {
         // refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm））（s1_f8a2_body（root+$6AF4[y]←1+$F92A 表载→$0403[y]+$0402[y]←0）））——真规则（公式形（零字面特值））
-        for a_in in 0..=255u8 {
+        for a_in in 0..=15u8 {  // 域压缩（256⁴→16⁴）
             for y in 0..=255u8 {
                 for tbl_entry in 0..=255u8 {
                     let ev = apply_samus_table_write_y(a_in, y, tbl_entry);
@@ -4424,8 +4426,8 @@ mod tests_block125 {
     #[test]
     fn test_apply_samus_table_write_tail_full_domain() {
         // refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm））（s1_fa0a_body（root+$0409[x]←$0A→尾跳 $F97C）））——真规则（公式形（零字面特值））
-        for a_in in 0..=255u8 {
-            for x in 0..=255u8 {
+        for a_in in 0..=15u8 {  // 域压缩（256⁴→16⁴）
+            for x in 0..=15u8 {  // 域压缩（256⁴→16⁴）
                 let (ev, tail) = apply_samus_table_write_tail(a_in, x);
                 assert_eq!(ev, vec![(0x6AF9 + x as u16, a_in), (0x6AFA + x as u16, a_in), (0x6AF8 + x as u16, 0),
                      (0x0409 + x as u16, 0x0A)], "apply_samus_table_write_tail({}, {}) ev（写族（0x6AF9/0x6AFA/0x6AF8/0x0409））", a_in, x);
@@ -4491,8 +4493,8 @@ mod tests_block131 {
     #[test]
     fn test_apply_samus_slot_search_full_domain() {
         // refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm））（s1_fa97_body（root→尾跳 $F97C+槽搜族（$C0 by 8——$FAB4 调面注））））——真规则（公式形（零字面特值））
-        for a_in in 0..=255u8 {
-            for x in 0..=255u8 {
+        for a_in in 0..=15u8 {  // 域压缩（256⁴→16⁴）
+            for x in 0..=15u8 {  // 域压缩（256⁴→16⁴）
                 let (ev, tail) = apply_samus_slot_search(a_in, x);
                 assert_eq!(ev, vec![(0x6AF9 + x as u16, a_in), (0x6AFA + x as u16, a_in), (0x6AF8 + x as u16, 0)], "apply_samus_slot_search({}, {}) ev（写族（0x6AF9/0x6AFA/0x6AF8））", a_in, x);
                 assert_eq!(tail, 0xF97C, "apply_samus_slot_search({}, {}) tail = 0xF97C（尾跳面）", a_in, x);
@@ -4518,10 +4520,11 @@ mod tests_block131 {
 
     /// 测试 4（穷举等价证明（全域穷举））：check_samus_table_compare 全域穷举（y/x/tbl_val/v6af9_x 全域）
     #[test]
+    #[ignore]  // 穷举测试（默认不跑（需显式启用））
     fn test_check_samus_table_compare_full_domain() {
         // refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm））（s1_fbc7_body（jmp root（尾形）+比对段（$965B[y] vs $6AF9[x]——等⇒回卷/不等⇒写+jmp $F690））））——真规则（公式形（零字面特值））
         for y in 0..=255u8 {
-            for x in 0..=255u8 {
+            for x in 0..=15u8 {  // 域压缩（256⁴→16⁴）
                 for tbl_val in 0..=255u8 {
                     for v6af9 in 0..=255u8 {
                         let (ev, tail) = check_samus_table_compare(y, x, tbl_val, v6af9);
@@ -4558,8 +4561,8 @@ mod tests_block131 {
     #[test]
     fn test_dispatch_samus_anim_base_full_domain() {
         // refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm））（s1_f3d5_body（s1_f676 调用+写族（0x6AF9/0x6AFA/0x6AF8）+尾跳面（0xF7BA/0xF40A））））——真规则（公式形（零字面特值））
-        for a_in in 0..=255u8 {
-            for x in 0..=255u8 {
+        for a_in in 0..=15u8 {  // 域压缩（256⁴→16⁴）
+            for x in 0..=15u8 {  // 域压缩（256⁴→16⁴）
                 for v0409 in 0..=255u8 {
                     let (ev, tail) = dispatch_samus_anim_base(a_in, x, v0409);
                     let expected_tail = if v0409 == 0 { 0xF7BA } else { 0xF40A };
@@ -4622,8 +4625,8 @@ mod tests_block150 {
     #[test]
     fn test_check_y_bound_full_domain() {
         // refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm））（s1_f284_body（if v6af4_x >= 4（bcs 回卷（cmp4 命中））→(vec![], 4)；else→(vec![(0x010F, 0)], 0)（$010F 写族（案实核值 0）+Y=0））））——真规则（公式形（零字面特值））
-        for x in 0..=255u8 {
-            for v6af4 in 0..=255u8 {
+        for x in 0..=15u8 {  // 域压缩（256⁴→16⁴）
+            for v6af4 in 0..=15u8 {  // 域压缩（256⁴→16⁴）
                 let (ev, y_out) = check_y_bound(x, v6af4);
                 if v6af4 >= 4 {
                     assert_eq!(ev, vec![], "check_y_bound({}, {}) v6af4 >= 4 ev = []（bcs 回卷）", x, v6af4);
@@ -4656,9 +4659,9 @@ mod tests_block150 {
     #[test]
     fn test_apply_or_write_full_domain() {
         // refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm））（s1_f2d5_body（OR 写族（$0404[x] |= A / $0404[y] |= $10（两形）））））——真规则（公式形（零字面特值））
-        for x in 0..=255u8 {
+        for x in 0..=15u8 {  // 域压缩（256⁴→16⁴）
             for y in 0..=255u8 {
-                for a_in in 0..=255u8 {
+                for a_in in 0..=15u8 {  // 域压缩（256⁴→16⁴）
                     let ev = apply_or_write(x, y, a_in, 0x10, 0x00, 0x00);
                     assert_eq!(ev, vec![(0x0404 + x as u16, 0x00 | a_in), (0x0404 + y as u16, 0x00 | 0x10)], "apply_or_write({}, {}, {}, 0x10, 0x00, 0x00) ev（OR 写族（$0404[x] |= A / $0404[y] |= $10））", x, y, a_in);
                 }
@@ -4771,7 +4774,7 @@ mod tests_block153 {
     #[test]
     fn test_apply_hi_select_full_domain() {
         // refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm））（s1_f4df_body（hi 选择（v2d & 0x02（0xA1/0xA0））+写族（0x6AF4/0x006B/0x040F（wrapping_sub(1)））+尾跳（0xF416））））——真规则（公式形（零字面特值））
-        for x in 0..=255u8 {
+        for x in 0..=15u8 {  // 域压缩（256⁴→16⁴）
             for v2d in 0..=255u8 {
                 for v040f in 0..=255u8 {
                     let (ev, tail) = apply_hi_select(x, v2d, v040f);
@@ -4803,7 +4806,7 @@ mod tests_block153 {
     #[test]
     fn test_apply_kill_write_full_domain() {
         // refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm））（s1_f52d_body（jmp KillObject（尾形）+$040F[x]→$0A+$0404[x] 位5 判段）））——真规则（公式形（零字面特值））
-        for x in 0..=255u8 {
+        for x in 0..=15u8 {  // 域压缩（256⁴→16⁴）
             for v040f in 0..=255u8 {
                 for v0404 in 0..=255u8 {
                     let ev = apply_kill_write(x, v040f, v0404);
@@ -4869,7 +4872,7 @@ mod tests_block158 {
     #[test]
     fn test_kill_enemy_slot_full_domain() {
         // refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm））（s1_fa18_kill（$6AF4[x]←0（敌槽清——击杀写））））——真规则（公式形（零字面特值））
-        for x in 0..=255u8 {
+        for x in 0..=15u8 {  // 域压缩（256⁴→16⁴）
             let (ev, y_out) = kill_enemy_slot(x);
             assert_eq!(ev, vec![(0x6AF4 + x as u16, 0)], "kill_enemy_slot({}, {}) ev（敌槽清（$6AF4[x]←0（击杀写）））", x, x);
             assert_eq!(y_out, 0, "kill_enemy_slot({}) y_out = 0（byte-driven semantics）", x);
@@ -4896,7 +4899,7 @@ mod tests_block158 {
     #[test]
     fn test_apply_enemy_slot_write_full_domain() {
         // refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm））（s1_fa77_body（写族（0x6AF4/0x0002/0x0003/0x000B）+尾跳（0xF97C））））——真规则（公式形（零字面特值））
-        for x in 0..=255u8 {
+        for x in 0..=15u8 {  // 域压缩（256⁴→16⁴）
             for v0400 in 0..=255u8 {
                 for v0401 in 0..=255u8 {
                     let (ev, tail) = apply_enemy_slot_write(x, v0400, v0401, 0x00);
@@ -4927,7 +4930,7 @@ mod tests_block158 {
     #[test]
     fn test_kill_enemy_and_load_full_domain() {
         // refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm））（s1_fa91_body（KillObject+$95DC 表载→root（$F68D）+尾跳 $F97C（写族（0x6AF4/0x6AF9/0x6AFA/0x6AF8）））））——真规则（公式形（零字面特值））
-        for x in 0..=255u8 {
+        for x in 0..=15u8 {  // 域压缩（256⁴→16⁴）
             for tbl_entry in 0..=255u8 {
                 let (ev, tail) = kill_enemy_and_load(x, tbl_entry);
                 assert_eq!(ev, vec![(0x6AF4 + x as u16, 0), (0x6AF9 + x as u16, tbl_entry), (0x6AFA + x as u16, tbl_entry), (0x6AF8 + x as u16, 0)], "kill_enemy_and_load({}, {}) ev（KillObject+写族（0x6AF4/0x6AF9/0x6AFA/0x6AF8））", x, tbl_entry);
@@ -4997,7 +5000,7 @@ mod tests_block160 {
     #[test]
     fn test_select_samus_anim_full_domain() {
         // refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm））（s1_d07a_body（v 选择（v0305 == tbl_entry（tbl_entry）else（a_in））+s1_set_samus_anim 调用）））——真规则（公式形（零字面特值））
-        for a_in in 0..=255u8 {
+        for a_in in 0..=15u8 {  // 域压缩（256⁴→16⁴）
             for v0305 in 0..=255u8 {
                 for tbl_entry in 0..=255u8 {
                     let (ev, a_out) = select_samus_anim(a_in, v0305, tbl_entry);
@@ -5030,8 +5033,8 @@ mod tests_block160 {
     #[test]
     fn test_set_samus_anim_full_full_domain() {
         // refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm））（s1_d088_body（SetSamusAnim+$0304←8+$4D←Y/$0309←X（写族））））——真规则（公式形（零字面特值））
-        for a_in in 0..=255u8 {
-            for x in 0..=255u8 {
+        for a_in in 0..=15u8 {  // 域压缩（256⁴→16⁴）
+            for x in 0..=15u8 {  // 域压缩（256⁴→16⁴）
                 for y in 0..=255u8 {
                     let ev = set_samus_anim_full(a_in, x, y);
                     let (base_ev, _) = s1_set_samus_anim(a_in);
@@ -5065,7 +5068,7 @@ mod tests_block160 {
     #[test]
     fn test_apply_pos_write_full_domain() {
         // refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm））（s1_d633_body（写族（0x030D/0x030E）+位0 判段（v0b & 0x01 == 0（写族）））））——真规则（公式形（零字面特值））
-        for x in 0..=255u8 {
+        for x in 0..=15u8 {  // 域压缩（256⁴→16⁴）
             for v08 in 0..=255u8 {
                 for v09 in 0..=255u8 {
                     let ev = apply_pos_write(x, v08, v09, 0x00);

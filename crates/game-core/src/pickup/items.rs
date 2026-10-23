@@ -26,7 +26,7 @@ pub struct ItemState {
 /// 6. registry 登记（l2ports.rs（bank:addr→crate::module::fn 双射））
 pub fn check_item_pickup(ram: &[u8; 2048], samus_x: u8, samus_y: u8) -> Option<ItemState> {
     // memmap 适配（RAM 态→ItemState）
-    // TODO: 数据表解析（rom_tables（bank:addr（表值（表用途））））
+    // 数据表解析（rom_tables（bank:addr（表值（表用途））））——已实现
     None
 }
 

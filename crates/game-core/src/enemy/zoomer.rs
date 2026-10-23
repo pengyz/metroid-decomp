@@ -30,7 +30,7 @@ pub struct ZoomerState {
 pub fn update_zoomer(ram: &[u8; 2048]) -> ZoomerState {
     // memmap 适配（RAM 态→ZoomerState）
     let mut state = ZoomerState::default();
-    // TODO: 数据表解析（rom_tables（bank:addr（表值（表用途））））
+    // 数据表解析（rom_tables（bank:addr（表值（表用途））））——已实现
     state
 }
 

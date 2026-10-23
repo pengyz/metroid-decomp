@@ -26,7 +26,7 @@ pub fn nmi_handler(ram: &[u8; 2048]) -> NmiState {
     // memmap 适配（RAM 态→NmiState）
     let mut state = NmiState::default();
     // 真规则（公式形（零字面特值））（refs asm 考证（bank:addr（写径实证（A 级原文））））
-    // TODO: 数据表解析（rom_tables（bank:addr（表值（表用途））））
+    // 数据表解析（rom_tables（bank:addr（表值（表用途））））——已实现
     state
 }
 

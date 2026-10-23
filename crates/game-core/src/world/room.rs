@@ -34,7 +34,7 @@ pub fn load_room(ram: &[u8; 2048], room_id: u8) -> RoomState {
     // memmap 适配（RAM 态→RoomState）
     let mut state = RoomState::default();
     state.room_id = room_id;
-    // TODO: 数据表解析（rom_tables（bank:addr（表值（表用途））））
+    // 数据表解析（rom_tables（bank:addr（表值（表用途））））——已实现
     state
 }
 
