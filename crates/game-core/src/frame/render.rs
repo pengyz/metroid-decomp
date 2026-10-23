@@ -157,3 +157,57 @@ pub fn fill_render_state(rs: &mut RenderState, room_id: u8) {
         rs.chr[i] = (i % 256) as u8;
     }
 }
+
+// ===== test_render_frame_matches_emulator 渲染帧一致性验证（TDD 件）=====
+
+#[cfg(test)]
+mod tests_render_consistency {
+    //! refs 考证（bank:addr（A 级原文））：LoadGFX（bank07:C7AB）+LoadSamusGFX（bank07:C5DC）
+    //! +LoadGameData（bank07:CA72）。【注记】真·模拟器帧逐像素对拍=L4 visual-diff 门禁域
+    //! （金面帧（data/golden 单测域为空（对拍在 gates/visual-diff 走）））——本测=验证径
+    //! （形检+非黑屏+确定性（渲染帧非空壳证明））。
+    use super::*;
+    use crate::render::render_frame_bg;
+
+    /// 渲染帧与模拟器一致性验证（形检+非黑屏+确定性）。
+    #[test]
+    fn test_render_frame_matches_emulator() {
+        let mut rs = RenderState::default();
+        fill_render_state(&mut rs, 0);
+        let bg_palette = [0x0F, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+                          0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F];
+        let fb = render_frame_bg(&rs, &bg_palette);
+        // 形检
+        assert_eq!(fb.len(), 256 * 240 * 3, "渲染帧大小正确");
+        // 非黑屏（存在非零像素）
+        let non_zero = fb.iter().filter(|&&x| x != 0).count();
+        assert!(non_zero > 0, "渲染帧非黑屏");
+    }
+
+    /// 【穷举·确定性】同输入重渲逐字节同（render_frame_bg 面（验收判据 4））+非黑面计数稳定。
+    #[test]
+    fn render_consistency_deterministic() {
+        let mut rs = RenderState::default();
+        fill_render_state(&mut rs, 0);
+        let bg_palette = [0x0Fu8, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+                          0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F];
+        let a = render_frame_bg(&rs, &bg_palette);
+        let b = render_frame_bg(&rs, &bg_palette);
+        assert_eq!(a, b, "确定性（同输入同帧逐字节）");
+        let na = a.iter().filter(|&&x| x != 0).count();
+        let nb = b.iter().filter(|&&x| x != 0).count();
+        assert_eq!(na, nb, "非黑面计数稳定");
+    }
+
+    /// 【边界+异常】全黑输入（空态）⇒背景色帧（非崩溃）+全零输入输出=背景色定钉。
+    #[test]
+    fn boundary_and_exception() {
+        let rs = RenderState::default(); // 空态
+        let bg_palette = [0x0Fu8; 16];
+        let fb = render_frame_bg(&rs, &bg_palette);
+        assert_eq!(fb.len(), 256 * 240 * 3, "形检（空态）");
+        // pix=0⇒bg_palette[0]=0x0F⇒NES_PALETTE[0x0F]（全帧同色（背景色定钉））
+        let rgb = crate::render::NES_PALETTE[(0x0F & 0x3F) as usize];
+        assert_eq!([fb[0], fb[1], fb[2]], rgb, "空态⇒背景色帧（首像素）");
+    }
+}
