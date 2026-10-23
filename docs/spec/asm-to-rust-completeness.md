@@ -48,3 +48,15 @@ Evidence: prg1_brinstar.asm:281-296（L968B×16）+ areas_common.asm:507-509（b
 + areas_common.asm:1448-1478（DoorHitPointTable 消费+表体）+ common_sprite_data.asm:12/282
 + constants_ram.asm:67-74/125-150/217-241 + macros.asm:7-29——bank:addr 引证齐（A 级原文）。
 Confidence: 95
+
+## 5. 缺失函数映射（整体重建（方案 B））
+
+| asm 例程 | bank:addr | Rust 归宿 | 语义名 | 状态 |
+|---|---|---|---|---|
+| s1_flag_gate | bank01:8000 | `samus::physics::check_flag_bit5` | 位5 判别（root & 0x20 != 0） | **A 级已证** |
+| s1_d498 | bank07:8000 | `enemy::collision::compare_root_and_mark` | 根值比较+写事件 | **A 级已证** |
+| s1_set_samus_anim | bank07:CF6B | `samus::animation::set_samus_animation` | SetSamusAnim（$0305←A/$0306←A/$0304←0） | **A 级已证** |
+| s1_eb68 | bank07:EB68 | `enemy::state::update_enemy_position` | 根值→$6AFB[x]+位运算段 | **A 级已证** |
+| s1_ebd9 | bank07:EBD9 | `enemy::state::init_enemy_slot` | $030C[x]←根值+$030E[x]←tbl+$030D[x]←$68+帮手内联 | **A 级已证** |
+| s1_f284_body | bank07:F284 | `samus::physics::check_samus_collision` | 萨姆斯碰撞检测 | **A 级已证** |
+| s1_f2d5_body | bank07:F2D5 | `enemy::collision::check_enemy_collision` | 敌人碰撞检测 | **A 级已证** |

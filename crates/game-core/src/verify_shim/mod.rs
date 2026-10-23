@@ -39,7 +39,7 @@ pub fn f270(input: &L2In) -> L2Out {
     let a_out = attrs.or_attribute(input.x, input.a);
     // 写集=语义变更点经 memmap 映射（**同值写也是事件**——b-f270-a0 案曾打回纯值 diff 推导）；
     // diff_writes 留作值变化面互检（单测断言 write_event ⊇ diff_writes）。
-    let writes = vec![memmap::enemy_attrs::write_event(input.x, a_out)];
+    let mut writes = vec![memmap::enemy_attrs::write_event(input.x, a_out)];
     L2Out {
         a: a_out,
         x: input.x,
@@ -55,7 +55,7 @@ pub fn f270(input: &L2In) -> L2Out {
 pub fn f2d8(input: &L2In) -> L2Out {
     let mut v0404 = memmap::enemy_collision_flags::decode_enemy_collision_flags(&input.ram);
     let a_out = v0404.or_writeback(input.x, input.a);
-    let writes = vec![memmap::enemy_collision_flags::write_event(input.x, a_out)];
+    let mut writes = vec![memmap::enemy_collision_flags::write_event(input.x, a_out)];
     L2Out { a: a_out, x: input.x, y: input.y, writes }
 }
 
@@ -67,7 +67,7 @@ pub fn f2df(input: &L2In) -> L2Out {
     let mut v0404 = memmap::enemy_collision_flags::decode_enemy_collision_flags(&input.ram);
     let mask = memmap::enemy_collision_flags::mask10(&input.ram);
     let a_out = v0404.or_writeback(input.y, mask);
-    let writes = vec![memmap::enemy_collision_flags::write_event(input.y, a_out)];
+    let mut writes = vec![memmap::enemy_collision_flags::write_event(input.y, a_out)];
     L2Out { a: a_out, x: input.x, y: input.y, writes }
 }
 
@@ -80,7 +80,7 @@ pub fn f2d5(input: &L2In) -> L2Out {
     let mut v0404 = memmap::enemy_collision_flags::decode_enemy_collision_flags(&input.ram);
     let mask = memmap::enemy_collision_flags::mask10_transformed(&input.ram);
     let a_out = v0404.or_writeback(input.x, mask);
-    let writes = vec![memmap::enemy_collision_flags::write_event(input.x, a_out)];
+    let mut writes = vec![memmap::enemy_collision_flags::write_event(input.x, a_out)];
     L2Out { a: a_out, x: input.x, y: input.y, writes }
 }
 
@@ -95,7 +95,7 @@ pub fn f2ad(input: &L2In) -> L2Out {
     let state_v = e040e.set_entry(input.x, memmap::enemy_state::F2AD_STATE_INIT);
     let mask = memmap::enemy_collision_flags::mask10_transformed(&input.ram);
     let a_out = v0404.or_writeback(input.x, mask);
-    let writes = vec![
+    let mut writes = vec![
         memmap::enemy_state::write_event(input.x, state_v),
         memmap::enemy_collision_flags::write_event(input.x, a_out),
     ];
@@ -122,7 +122,7 @@ pub fn f2ca(input: &L2In) -> L2Out {
     let attr_v = attrs.or_attribute(input.y, memmap::enemy_collision_flags::mask10(&input.ram));
     let mask = memmap::enemy_collision_flags::mask10_transformed(&input.ram);
     let a_out = v0404.or_writeback(input.x, mask);
-    let writes = vec![
+    let mut writes = vec![
         memmap::enemy_state::write_event(input.x, state_v),
         memmap::enemy_attrs::write_event(input.y, attr_v),
         memmap::enemy_collision_flags::write_event(input.x, a_out),
@@ -166,7 +166,7 @@ fn f2ed_flow(input: &L2In, a_entry: u8) -> L2Out {
     let mask = memmap::enemy_collision_flags::mask10_transformed(&input.ram);
     let attr_v = attrs.or_attribute(input.x, mask);
     let (vec_lo, vec_hi) = game_data::rom_tables::rom_vec(input.window_bank);
-    let writes = vec![
+    let mut writes = vec![
         memmap::enemy_collision_flags::write_event(input.y, a_df),
         memmap::flow_scratch::event_010f(memmap::flow_scratch::F2ED_SCRATCH_INIT),
         memmap::enemy_attrs::write_event(input.x, attr_v),
@@ -5988,7 +5988,7 @@ pub fn a7_cluster_027(input: &L2In) -> L2Out {
 /// （ptr 面（$00/$01←6/8）+$0085/$0086←135（fixture 弱源——判别条补触发→账目
 /// 预登记（VALCHAIN-B7-028））+清对+$6AF7-$6AFA+$6B03）；A=0/X 透传/Y=6）。
 pub fn a7_cluster_028(input: &L2In) -> L2Out {
-    let r = |a: u16| input.ram[a as usize & 0x7FF];
+    let _r = |a: u16| input.ram[a as usize & 0x7FF];
     L2Out {
         a: 0, x: 0, y: 6,
         writes: merge_writes(vec![
@@ -6918,7 +6918,7 @@ pub fn a8_cluster_018(input: &L2In) -> L2Out {
 /// （ptr 面（$00/$01←3/3）+$0080←95（fixture 弱源——判别条补触发→账目预登记
 /// （VALCHAIN-B9-037）——待补⑨——末卡）+清对+S5-146 族（$6AF7/$6AF8←3）+$6AFA）；
 /// A=0/X 透传/Y=1）。
-pub fn a9_cluster_037(input: &L2In) -> L2Out {
+pub fn a9_cluster_037(_input: &L2In) -> L2Out {
     L2Out {
         a: 0, x: 0, y: 1,
         writes: merge_writes(vec![

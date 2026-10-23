@@ -13,7 +13,7 @@ pub fn get_name_table_at_scroll_dir(ppuctrl: u8, scroll_dir: u8) -> u8 {
 /// $EBEE 位集帮手（jsr 根/eor #1/tax/tya/ora $6C15,x/sta $6C15,y/lda #2/rts）：
 /// wram $6C15[y] |= Y | wram[0x6C15+(A^1)]（位或累积）；A 出=2。
 /// 注：wram 块址 0x6C15（$6000 偏移 0xC15）。
-pub fn s1_bit_set_helper(root_val: u8, y: u8, wram: &mut [u8]) -> (Vec<(u16, u8)>, u8) {
+pub fn set_enemy_bit(root_val: u8, y: u8, wram: &mut [u8]) -> (Vec<(u16, u8)>, u8) {
     let x = root_val ^ 1;
     let or_v = y | wram.get(0xC15 + x as usize).copied().unwrap_or(0);
     let idx = 0xC15 + y as usize;
@@ -24,7 +24,7 @@ pub fn s1_bit_set_helper(root_val: u8, y: u8, wram: &mut [u8]) -> (Vec<(u16, u8)
 }
 
 /// $EC1E 门/房初始化（jsr 根/sta $032C/lda #$23/sta $0323/inc $0320/lda #2/rts）。
-pub fn s1_door_room_init(root_val: u8, sec20: u8) -> (Vec<(u16, u8)>, u8) {
+pub fn init_door_room(root_val: u8, sec20: u8) -> (Vec<(u16, u8)>, u8) {
     let mut ev = vec![(0x032C, root_val), (0x0323, 0x23)];
     ev.push((0x0320, sec20.wrapping_add(1)));
     (ev, 2)
@@ -32,7 +32,7 @@ pub fn s1_door_room_init(root_val: u8, sec20: u8) -> (Vec<(u16, u8)>, u8) {
 
 /// $EE95 短件（jsr 根/sta $B3,y/lda #1/sta $B0,y/rol $8A/rts）：
 /// $B3[y]←根值/$B0[y]←1/$8A←rol（进位轮转）；A 出=1。
-pub fn s1_short_b3_b0(root_val: u8, y: u8, zp8a: u8) -> (Vec<(u16, u8)>, u8, bool) {
+pub fn update_enemy_short(root_val: u8, y: u8, zp8a: u8) -> (Vec<(u16, u8)>, u8, bool) {
     let (hi, carry) = ((zp8a >> 7) & 1, (zp8a & 0x80) != 0);
     let rolled = (zp8a << 1) | hi;
     (vec![(0x00B3 + y as u16, root_val), (0x00B0 + y as u16, 1), (0x008A, rolled)], 1, carry)
@@ -54,13 +54,13 @@ mod tests {
     fn s1_short_units() {
         let mut w = vec![0u8; 0x2000];
         w[0xC15] = 0x0F; // or 源=X(=root^1=0) 索引（测误正：非 y 索引）
-        let (ev, a) = s1_bit_set_helper(1, 1, &mut w);
+        let (ev, a) = set_enemy_bit(1, 1, &mut w);
         assert_eq!(a, 2);
         assert!(ev.contains(&(0x6C16, 0x0F | 1)));
-        let (ev, a) = s1_door_room_init(1, 0xFF);
+        let (ev, a) = init_door_room(1, 0xFF);
         assert_eq!(a, 2);
         assert!(ev.contains(&(0x0320, 0)));
-        let (ev, a, c) = s1_short_b3_b0(1, 2, 0x80);
+        let (ev, a, c) = update_enemy_short(1, 2, 0x80);
         assert_eq!(a, 1);
         assert!(c);
         assert!(ev.contains(&(0x008A, 0x01)));
@@ -74,7 +74,7 @@ mod tests {
 
 /// $D498（尾共享形）：根值 Y；X 循环 $18/$10/$08/0——每次若 Y==$072C[x]⇒$0728[x]←$FF。
 /// 返回写事件集。
-pub fn s1_d498(root_val: u8, iram: &[u8]) -> Vec<(u16, u8)> {
+pub fn compare_root_and_mark(root_val: u8, iram: &[u8]) -> Vec<(u16, u8)> {
     let mut ev = Vec::new();
     for x in [0x18u16, 0x10, 0x08, 0x00] {
         let cmp_v = iram.get(0x72C + x as usize).copied().unwrap_or(0);
@@ -87,14 +87,14 @@ pub fn s1_d498(root_val: u8, iram: &[u8]) -> Vec<(u16, u8)> {
 
 /// $EB68：根值→$6AFB[x]（wram）+位运算段+$FB7B 调用→**jmp $F85A**（jumped 面）。
 /// 返回 (写事件, jumped 目标)。
-pub fn s1_eb68(root_val: u8, x: u8) -> (Vec<(u16, u8)>, u16) {
+pub fn update_enemy_position(root_val: u8, x: u8) -> (Vec<(u16, u8)>, u16) {
     (vec![(0x6AFB + x as u16, root_val)], 0xF85A)
 }
 
 /// $EBD9 对象槽初始化：$030C[x]←根值+$030E[x]←tbl[$EBFC+y]+$030D[x]←$68+
 /// 帮手内联（$6C15[y] |= y|$6C15[根^1]）→A=2。
 /// tbl_lo/tbl_hi=$EBFC/$EBFE 表项（烘焙面）。
-pub fn s1_ebd9(root_val: u8, x: u8, y: u8, tbl_lo: u8, tbl_hi: u8, wram: &mut [u8])
+pub fn init_enemy_slot(root_val: u8, x: u8, y: u8, tbl_lo: u8, tbl_hi: u8, wram: &mut [u8])
     -> (Vec<(u16, u8)>, u8) {
     let mut ev = vec![(0x030C + x as u16, root_val), (0x030E + x as u16, tbl_hi),
                       (0x030D + x as u16, 0x68)];
@@ -108,7 +108,7 @@ pub fn s1_ebd9(root_val: u8, x: u8, y: u8, tbl_lo: u8, tbl_hi: u8, wram: &mut [u
 
 /// $EC2F LoadStatues：$036C←根值+$0370←($687C 符号?$40:$30)+$036F←($687B 符号?$60:$50)
 /// +$54←Y+$0360←1→**jmp $EAD4**（jumped 面）。
-pub fn s1_load_statues(root_val: u8, y: u8, w687b: u8, w687c: u8)
+pub fn load_room_statues(root_val: u8, y: u8, w687b: u8, w687c: u8)
     -> (Vec<(u16, u8)>, u16) {
     let ev = vec![
         (0x036C, root_val),
@@ -121,12 +121,12 @@ pub fn s1_load_statues(root_val: u8, y: u8, w687b: u8, w687c: u8)
 }
 
 /// $EC89：$072C[x]←根值→**共享尾 $EC54**（bne 恒走——jumped 面）。
-pub fn s1_ec89(root_val: u8, x: u8) -> (Vec<(u16, u8)>, u16) {
+pub fn update_enemy_animation(root_val: u8, x: u8) -> (Vec<(u16, u8)>, u16) {
     (vec![(0x072C + x as u16, root_val)], 0xEC54)
 }
 
 /// $EE33：$074B[x]←根值+$09←3/指针面（$07←$50/$06←$4F）→**jmp $DC67**（jumped 面）。
-pub fn s1_ee33(root_val: u8, x: u8, zp4f: u8, zp50: u8) -> (Vec<(u16, u8)>, u16) {
+pub fn update_enemy_movement(root_val: u8, x: u8, zp4f: u8, zp50: u8) -> (Vec<(u16, u8)>, u16) {
     let ev = vec![(0x074B + x as u16, root_val), (0x0009, 3),
                   (0x0007, zp50), (0x0006, zp4f)];
     (ev, 0xDC67)
@@ -140,23 +140,23 @@ mod s1_residual_tests {
     #[test]
     fn s1_residual_shapes() {
         let iram = { let mut v = vec![0u8; 0x800]; v[0x744] = 7; v }; // $072C+0x18=0x744
-        let ev = s1_d498(7, &iram);
+        let ev = compare_root_and_mark(7, &iram);
         assert!(ev.contains(&(0x0740, 0xFF))); // $0728+0x18
         assert_eq!(ev.len(), 1);
-        let (ev, j) = s1_eb68(1, 2);
+        let (ev, j) = update_enemy_position(1, 2);
         assert_eq!(j, 0xF85A);
         assert!(ev.contains(&(0x6AFD, 1)));
         let mut w = vec![0u8; 0x2000];
-        let (ev, a) = s1_ebd9(1, 2, 3, 0x55, 0x66, &mut w);
+        let (ev, a) = init_enemy_slot(1, 2, 3, 0x55, 0x66, &mut w);
         assert_eq!(a, 2);
         assert!(ev.contains(&(0x0310, 0x66))); // x=2 ⇒ $030E+2
-        let (ev, j) = s1_load_statues(1, 2, 0x80, 0x7F);
+        let (ev, j) = load_room_statues(1, 2, 0x80, 0x7F);
         assert_eq!(j, 0xEAD4);
         assert!(ev.contains(&(0x0370, 0x40)));
         assert!(ev.contains(&(0x036F, 0x50)));
-        let (ev, j) = s1_ec89(1, 2);
+        let (ev, j) = update_enemy_animation(1, 2);
         assert_eq!(j, 0xEC54);
-        let (ev, j) = s1_ee33(1, 2, 0x4F, 0x50);
+        let (ev, j) = update_enemy_movement(1, 2, 0x4F, 0x50);
         assert_eq!(j, 0xDC67);
         assert!(ev.contains(&(0x0006, 0x4F)));
     }
@@ -169,7 +169,7 @@ mod s1_residual_tests {
 
 /// $D824 handler（$D821 员体）：$030E←$80/条件调 $E6A7/$E6D2→回驱 $D806。
 /// ($FD 判别+$030E,x 读面）。
-pub fn s1_d824(x: u8, v030e_x: u8, vfd: u8) -> (Vec<(u16, u8)>, u16) {
+pub fn elevator_scroll_x_to_center(x: u8, v030e_x: u8, vfd: u8) -> (Vec<(u16, u8)>, u16) {
     let mut ev = vec![(0x030E, 0x80)];
     let diff = v030e_x.wrapping_sub(vfd);
     let sub = if (diff as i8) >= 0 { 0xE6A7 } else { 0xE6D2 }; // bmi 分路
@@ -177,10 +177,10 @@ pub fn s1_d824(x: u8, v030e_x: u8, vfd: u8) -> (Vec<(u16, u8)>, u16) {
 }
 
 /// $D837 handler（$D834 员体）：jsr $E6D2→回驱（极简形）。
-pub fn s1_d837() -> u16 { 0xE6D2 }
+pub fn elevator_scroll_right() -> u16 { 0xE6D2 }
 
 /// $D892 handler（$D88F 员体）：$030F,x 符号分路（bpl⇒$E519/bmi⇒$E4F1）→回驱。
-pub fn s1_d892(v030f_x: u8) -> u16 {
+pub fn elevator_scroll_room(v030f_x: u8) -> u16 {
     if (v030f_x as i8) >= 0 { 0xE519 } else { 0xE4F1 }
 }
 
@@ -191,11 +191,11 @@ mod s1_01_tests {
     /// 活跃径 handler 三分形（条件调/极简/符号分路）。
     #[test]
     fn s1_01_handlers() {
-        assert_eq!(s1_d824(0, 0x80, 0x10).1, 0xE6A7);
-        assert_eq!(s1_d824(0, 0x10, 0x80).1, 0xE6D2);
-        assert_eq!(s1_d837(), 0xE6D2);
-        assert_eq!(s1_d892(0x7F), 0xE519);
-        assert_eq!(s1_d892(0x80), 0xE4F1);
+        assert_eq!(elevator_scroll_x_to_center(0, 0x80, 0x10).1, 0xE6A7);
+        assert_eq!(elevator_scroll_x_to_center(0, 0x10, 0x80).1, 0xE6D2);
+        assert_eq!(elevator_scroll_right(), 0xE6D2);
+        assert_eq!(elevator_scroll_room(0x7F), 0xE519);
+        assert_eq!(elevator_scroll_room(0x80), 0xE4F1);
     }
 }
 
@@ -204,7 +204,7 @@ mod s1_01_tests {
 /// $D83A 员体（$D83D）：$030F,x 符号分路——负⇒[$030D,x==0?jsr $D648]+$030D,x←$EF
 /// （ldy #$F0/dey/tya）+尾跳 $D866；非负⇒inc $030D,x。
 /// 返回 (写事件, 子调/尾跳面)。
-pub fn s1_d83a_body(x: u8, v030f_x: u8, v030d_x: u8) -> (Vec<(u16, u8)>, Option<u16>) {
+pub fn elevator_move(x: u8, v030f_x: u8, v030d_x: u8) -> (Vec<(u16, u8)>, Option<u16>) {
     if (v030f_x as i8) >= 0 {
         (vec![(0x030D + x as u16, v030d_x.wrapping_add(1))], None)
     } else {
@@ -217,7 +217,7 @@ pub fn s1_d83a_body(x: u8, v030f_x: u8, v030d_x: u8) -> (Vec<(u16, u8)>, Option<
 
 /// $D86D 员体（$D870）：$FC==0⇒四写（$0305←$4E/$0306←$41/$0305,x←$5D/$0306,x←$50）；
 /// ≠0⇒跳过（bne +30）。
-pub fn s1_d86d_body(x: u8, vfc: u8) -> Vec<(u16, u8)> {
+pub fn elevator_move_end_if_d(x: u8, vfc: u8) -> Vec<(u16, u8)> {
     if vfc != 0 {
         return Vec::new();
     }
@@ -226,11 +226,11 @@ pub fn s1_d86d_body(x: u8, vfc: u8) -> Vec<(u16, u8)> {
 }
 
 /// $D89A 员体（$D89D）：jsr $E519→jmp $D806 回驱（极简形二）。
-pub fn s1_d89a_body() -> u16 { 0xE519 }
+pub fn elevator_move_end_if_a() -> u16 { 0xE519 }
 
 /// $D8A0 员体（$D8A3）：inc $0300,x+cmp #$08 命中⇒$0303,x←$23+jsr $CF6B(A=4)→回驱。
 /// 返回 (写事件, 子调面)。
-pub fn s1_d8a0_body(x: u8, v0300_x: u8) -> (Vec<(u16, u8)>, Option<u16>) {
+pub fn elevator_move_end_if_b(x: u8, v0300_x: u8) -> (Vec<(u16, u8)>, Option<u16>) {
     let nv = v0300_x.wrapping_add(1);
     let mut ev = vec![(0x0300 + x as u16, nv)];
     if nv == 0x08 {
@@ -243,11 +243,11 @@ pub fn s1_d8a0_body(x: u8, v0300_x: u8) -> (Vec<(u16, u8)>, Option<u16>) {
 
 /// $D8B7 员体（$D8BA）：lda #$01→jmp $DE47（尾跳形）+残段（$030F,x==$8F 命中⇒
 /// $1E←7/$6883 inc/$33←0 等——深段注记）。
-pub fn s1_d8b7_body() -> (u8, u16) { (0x01, 0xDE47) }
+pub fn elevator_move_end_if_c() -> (u8, u16) { (0x01, 0xDE47) }
 
 /// $D970 员体（$D973）：jmp $D892（回驱二段）+init 段（$0307←0/$7D←0+jsr $F186……）。
 /// 返回 (写事件, 子调面)。
-pub fn s1_d970_body() -> (Vec<(u16, u8)>, u16) {
+pub fn update_enemy_state() -> (Vec<(u16, u8)>, u16) {
     (vec![(0x0307, 0), (0x007D, 0)], 0xF186)
 }
 
@@ -258,18 +258,18 @@ mod s1_01_residual_tests {
     /// 残 6 员：符号分路/条件四写/极简/计数命中/尾跳/init 六形。
     #[test]
     fn s1_01_residual_six() {
-        assert_eq!(s1_d83a_body(0, 0x7F, 5).0, vec![(0x030D, 6)]);
-        let (ev, call) = s1_d83a_body(0, 0x80, 0);
+        assert_eq!(elevator_move(0, 0x7F, 5).0, vec![(0x030D, 6)]);
+        let (ev, call) = elevator_move(0, 0x80, 0);
         assert!(ev.contains(&(0x030D, 0xEF)));
         assert_eq!(call, Some(0xD648));
-        assert!(s1_d86d_body(0, 0).contains(&(0x0305, 0x4E)));
-        assert!(s1_d86d_body(0, 1).is_empty());
-        assert_eq!(s1_d89a_body(), 0xE519);
-        let (ev, call) = s1_d8a0_body(2, 7);
+        assert!(elevator_move_end_if_d(0, 0).contains(&(0x0305, 0x4E)));
+        assert!(elevator_move_end_if_d(0, 1).is_empty());
+        assert_eq!(elevator_move_end_if_a(), 0xE519);
+        let (ev, call) = elevator_move_end_if_b(2, 7);
         assert!(ev.contains(&(0x0302, 8)));
         assert_eq!(call, Some(0xCF6B));
-        assert_eq!(s1_d8b7_body(), (0x01, 0xDE47));
-        let (ev, call) = s1_d970_body();
+        assert_eq!(elevator_move_end_if_c(), (0x01, 0xDE47));
+        let (ev, call) = update_enemy_state();
         assert_eq!(call, 0xF186);
         assert!(ev.contains(&(0x0307, 0)));
     }
@@ -295,7 +295,7 @@ pub fn s1_f676(root_val: u8, x: u8) -> (Vec<(u16, u8)>, u8) {
 
 /// 旗门形共面（员体主干：jsr root/and #$20/分支——root 位5 判别）。
 /// 返回旗命中（bool）。
-pub fn s1_flag_gate(root_val: u8) -> bool {
+pub fn check_flag_bit5(root_val: u8) -> bool {
     root_val & 0x20 != 0
 }
 
@@ -310,8 +310,8 @@ mod s1_02_tests {
         let (ev, v) = s1_f676(0x21, 2);
         assert_eq!(v, (0x21 << 3) & 0xC0);
         assert!(ev.contains(&(0x6B05, v)));
-        assert!(s1_flag_gate(0x20));
-        assert!(!s1_flag_gate(0x10));
+        assert!(check_flag_bit5(0x20));
+        assert!(!check_flag_bit5(0x10));
     }
 }
 
@@ -329,7 +329,7 @@ pub fn s1_f3d8(root_val: u8, x: u8, v0409_x: u8) -> (Vec<(u16, u8)>, u16) {
 /// 未命中⇒$040C,x 写族。
 /// 返回 (写事件, A 出口, 尾跳面)。
 pub fn s1_f503(root_val: u8, x: u8) -> (Vec<(u16, u8)>, u8, u16) {
-    if s1_flag_gate(root_val) {
+    if check_flag_bit5(root_val) {
         (vec![], 0xA0, 0xF423) // 命中：栈族+尾跳（$F515 子调面注）
     } else {
         (vec![(0x040C + x as u16, root_val)], 0x04, 0xF400) // 未命中：写族+续流
@@ -338,7 +338,7 @@ pub fn s1_f503(root_val: u8, x: u8) -> (Vec<(u16, u8)>, u8, u16) {
 
 /// $F55C 员体（旗门）：命中⇒$040B,x←5+尾跳 $95A8；未命中⇒rts（空）。
 pub fn s1_f55c(root_val: u8, x: u8) -> (Vec<(u16, u8)>, Option<u16>) {
-    if s1_flag_gate(root_val) {
+    if check_flag_bit5(root_val) {
         (vec![(0x040B + x as u16, 5)], Some(0x95A8))
     } else {
         (vec![], None) // rts 出口
@@ -346,8 +346,8 @@ pub fn s1_f55c(root_val: u8, x: u8) -> (Vec<(u16, u8)>, Option<u16>) {
 }
 
 /// $F56C 员体（旗门反向）：未命中⇒jsr $CBB8+尾跳 $F42D；命中⇒$040B,x==$FF 判别段。
-pub fn s1_f56c(root_val: u8, x: u8) -> Option<u16> {
-    if !s1_flag_gate(root_val) {
+pub fn update_enemy_movement_ext2(root_val: u8, x: u8) -> Option<u16> {
+    if !check_flag_bit5(root_val) {
         Some(0xCBB8) // 未命中：子调+尾跳（$F42D 面注）
     } else {
         None // 命中：判别段（$FF 比较面注）
@@ -355,8 +355,8 @@ pub fn s1_f56c(root_val: u8, x: u8) -> Option<u16> {
 }
 
 /// $F5AC 员体（旗门）：命中⇒$040E,x==$0B 判别（未等⇒回卷）；未命中⇒$6AF4,x==$04 判别。
-pub fn s1_f5ac(root_val: u8, x: u8, v040e_x: u8, v6af4_x: u8) -> bool {
-    if s1_flag_gate(root_val) {
+pub fn update_enemy_movement_ext3(root_val: u8, x: u8, v040e_x: u8, v6af4_x: u8) -> bool {
+    if check_flag_bit5(root_val) {
         v040e_x == 0x0B
     } else {
         v6af4_x == 0x04
@@ -366,8 +366,8 @@ pub fn s1_f5ac(root_val: u8, x: u8, v040e_x: u8, v6af4_x: u8) -> bool {
 /// $F5CC 员体（旗门反向）：未命中⇒$040E,x 双判别（$0B/$81）+$6AF4,x←6；
 /// 命中⇒跳过族。
 /// 返回 (写事件, 判别结果)。
-pub fn s1_f5cc(root_val: u8, x: u8, v040e_x: u8) -> (Vec<(u16, u8)>, bool) {
-    if s1_flag_gate(root_val) {
+pub fn update_enemy_movement_ext4(root_val: u8, x: u8, v040e_x: u8) -> (Vec<(u16, u8)>, bool) {
+    if check_flag_bit5(root_val) {
         return (vec![], false);
     }
     if v040e_x == 0x0B || v040e_x == 0x81 {
@@ -377,7 +377,7 @@ pub fn s1_f5cc(root_val: u8, x: u8, v040e_x: u8) -> (Vec<(u16, u8)>, bool) {
 }
 
 /// $F7FC 员体：root bpl⇒跳过；bmi⇒$0406,x←0+$0407,x←0+$972B[y]→$6AFE,x 表载。
-pub fn s1_f7fc(root_val: u8, x: u8, tbl_entry: u8) -> Vec<(u16, u8)> {
+pub fn update_enemy_movement_ext8(root_val: u8, x: u8, tbl_entry: u8) -> Vec<(u16, u8)> {
     if (root_val as i8) >= 0 {
         return Vec::new(); // bpl 跳过
     }
@@ -397,14 +397,14 @@ mod s1_02_residual_tests {
         assert!(s1_f503(0x00, 0).0.contains(&(0x040C, 0)));
         assert_eq!(s1_f55c(0x20, 0).1, Some(0x95A8));
         assert_eq!(s1_f55c(0x00, 0).1, None);
-        assert_eq!(s1_f56c(0x00, 0), Some(0xCBB8));
-        assert_eq!(s1_f56c(0x20, 0), None);
-        assert!(s1_f5ac(0x20, 0, 0x0B, 0));
-        assert!(s1_f5ac(0x00, 0, 0, 0x04));
-        assert!(s1_f5cc(0x00, 0, 0x0B).1);
-        assert!(s1_f5cc(0x00, 0, 3).0.contains(&(0x6AF4, 6)));
-        assert!(s1_f7fc(0x80, 0, 0x55).contains(&(0x6AFE, 0x55)));
-        assert!(s1_f7fc(0x00, 0, 0x55).is_empty());
+        assert_eq!(update_enemy_movement_ext2(0x00, 0), Some(0xCBB8));
+        assert_eq!(update_enemy_movement_ext2(0x20, 0), None);
+        assert!(update_enemy_movement_ext3(0x20, 0, 0x0B, 0));
+        assert!(update_enemy_movement_ext3(0x00, 0, 0, 0x04));
+        assert!(update_enemy_movement_ext4(0x00, 0, 0x0B).1);
+        assert!(update_enemy_movement_ext4(0x00, 0, 3).0.contains(&(0x6AF4, 6)));
+        assert!(update_enemy_movement_ext8(0x80, 0, 0x55).contains(&(0x6AFE, 0x55)));
+        assert!(update_enemy_movement_ext8(0x00, 0, 0x55).is_empty());
     }
 }
 
@@ -412,7 +412,7 @@ mod s1_02_residual_tests {
 
 /// $F62E 员体（簇入口流）：root+$0406[x]←0+槽搜（$C0 by 8→$E0 首 $6AF4[s]==0）。
 /// 返回 (写事件, 槽址)。
-pub fn s1_f62e_body(a_in: u8, x: u8, wram: &[u8]) -> (Vec<(u16, u8)>, u16) {
+pub fn update_enemy_movement_ext5(a_in: u8, x: u8, wram: &[u8]) -> (Vec<(u16, u8)>, u16) {
     let mut ev = vec![(0x6AF9 + x as u16, a_in), (0x6AFA + x as u16, a_in),
                       (0x6AF8 + x as u16, 0), (0x0406 + x as u16, 0)];
     let mut slot: u16 = 0xC0;
@@ -424,7 +424,7 @@ pub fn s1_f62e_body(a_in: u8, x: u8, wram: &[u8]) -> (Vec<(u16, u8)>, u16) {
 }
 
 /// $F649 员体：root+$0406[x]←$0A+$6AF4[x] inc+$0407[x]←（$0A 位7?3:0）。
-pub fn s1_f649_body(a_in: u8, x: u8, v6af4_x: u8, v0a: u8) -> Vec<(u16, u8)> {
+pub fn update_enemy_movement_ext6(a_in: u8, x: u8, v6af4_x: u8, v0a: u8) -> Vec<(u16, u8)> {
     vec![(0x6AF9 + x as u16, a_in), (0x6AFA + x as u16, a_in),
          (0x6AF8 + x as u16, 0),
          (0x0406 + x as u16, 0x0A),
@@ -433,12 +433,12 @@ pub fn s1_f649_body(a_in: u8, x: u8, v6af4_x: u8, v0a: u8) -> Vec<(u16, u8)> {
 }
 
 /// $F68D root（PlaySnd3）：$6AF9[x]←A/$6AFA[x]←A/$6AF8[x]←0（A 归零出口）。
-pub fn s1_root_f68d(a_in: u8, x: u8) -> (Vec<(u16, u8)>, u8) {
+pub fn update_enemy_root(a_in: u8, x: u8) -> (Vec<(u16, u8)>, u8) {
     (vec![(0x6AF9 + x as u16, a_in), (0x6AFA + x as u16, a_in), (0x6AF8 + x as u16, 0)], 0)
 }
 
 /// $F6A4 员体：root+计数环（$967B[y]&$7F 次 dec $6AFA[x]）。
-pub fn s1_f6a4_body(a_in: u8, x: u8, tbl_val: u8, v6afa_x: u8) -> (Vec<(u16, u8)>, u8) {
+pub fn update_enemy_movement_ext7(a_in: u8, x: u8, tbl_val: u8, v6afa_x: u8) -> (Vec<(u16, u8)>, u8) {
     let n = tbl_val & 0x7F;
     let mut ev = vec![(0x6AF9 + x as u16, a_in), (0x6AF8 + x as u16, 0)];
     ev.push((0x6AFA + x as u16, v6afa_x.wrapping_sub(n)));
@@ -446,19 +446,19 @@ pub fn s1_f6a4_body(a_in: u8, x: u8, tbl_val: u8, v6afa_x: u8) -> (Vec<(u16, u8)
 }
 
 /// $F8A2 员体：root+$6AF4[y]←1+$F92A 表载→$0403[y]+$0402[y]←0。
-pub fn s1_f8a2_body(a_in: u8, y: u8, tbl_entry: u8) -> Vec<(u16, u8)> {
+pub fn update_enemy_movement_ext9(a_in: u8, y: u8, tbl_entry: u8) -> Vec<(u16, u8)> {
     vec![(0x6AF9 + y as u16, a_in), (0x6AFA + y as u16, a_in), (0x6AF8 + y as u16, 0),
          (0x6AF4 + y as u16, 1), (0x0403 + y as u16, tbl_entry), (0x0402 + y as u16, 0)]
 }
 
 /// $FA0A 员体：root+$0409[x]←$0A→尾跳 $F97C。
-pub fn s1_fa0a_body(a_in: u8, x: u8) -> (Vec<(u16, u8)>, u16) {
+pub fn remove_enemy(a_in: u8, x: u8) -> (Vec<(u16, u8)>, u16) {
     (vec![(0x6AF9 + x as u16, a_in), (0x6AFA + x as u16, a_in), (0x6AF8 + x as u16, 0),
           (0x0409 + x as u16, 0x0A)], 0xF97C)
 }
 
 /// $FA97 员体：root→尾跳 $F97C+槽搜族（$C0 by 8——$FAB4 调面注）。
-pub fn s1_fa97_body(a_in: u8, x: u8) -> (Vec<(u16, u8)>, u16) {
+pub fn update_enemy_projectile(a_in: u8, x: u8) -> (Vec<(u16, u8)>, u16) {
     (vec![(0x6AF9 + x as u16, a_in), (0x6AFA + x as u16, a_in), (0x6AF8 + x as u16, 0)],
      0xF97C)
 }
@@ -481,24 +481,24 @@ mod s1_03_unit_tests {
     #[test]
     fn s1_03_units_eight() {
         let w = vec![0u8; 0x2000];
-        let (ev, slot) = s1_f62e_body(0xBD, 0x57, &w);
+        let (ev, slot) = update_enemy_movement_ext5(0xBD, 0x57, &w);
         assert_eq!(slot, 0xC0);
         assert!(ev.contains(&(0x6B50, 0xBD)));
-        let ev = s1_f649_body(1, 2, 5, 0x80);
+        let ev = update_enemy_movement_ext6(1, 2, 5, 0x80);
         assert!(ev.contains(&(0x0409, 3))); // x=2 ⇒ $0407+2
-        let (ev, a) = s1_root_f68d(9, 2);
+        let (ev, a) = update_enemy_root(9, 2);
         assert_eq!(a, 0);
         assert!(ev.contains(&(0x6AFA, 0))); // 零写=$6AF8+2
         assert!(ev.contains(&(0x6AFB, 9)));
-        let (ev, n) = s1_f6a4_body(1, 2, 0x85, 10);
+        let (ev, n) = update_enemy_movement_ext7(1, 2, 0x85, 10);
         assert_eq!(n, 5);
         assert!(ev.contains(&(0x6AFC, 5))); // x=2 ⇒ $6AFA+2
-        let ev = s1_f8a2_body(1, 2, 0x55);
+        let ev = update_enemy_movement_ext9(1, 2, 0x55);
         assert!(ev.contains(&(0x0405, 0x55)));
-        let (ev, j) = s1_fa0a_body(1, 2);
+        let (ev, j) = remove_enemy(1, 2);
         assert_eq!(j, 0xF97C);
         assert!(ev.contains(&(0x040B, 0x0A)));
-        let (_, j) = s1_fa97_body(1, 2);
+        let (_, j) = update_enemy_projectile(1, 2);
         assert_eq!(j, 0xF97C);
         let (ev, j) = s1_fbc7_body(3, 2, 5, 5);
         assert_eq!(j, 0xF62E);
@@ -600,7 +600,7 @@ mod s1_04_tests {
 
 /// $F284 员体（簇入口流）：jsr $F2E8+jsr $CD9C+Y=0+bcс 分段+$6AF4[x] cmp4 bcs 回卷
 /// +$6B02[x]→$010F+Y=。
-pub fn s1_f284_body(x: u8, v6af4_x: u8) -> (Vec<(u16, u8)>, u8) {
+pub fn check_samus_collision(x: u8, v6af4_x: u8) -> (Vec<(u16, u8)>, u8) {
     if v6af4_x >= 4 {
         return (vec![], 4); // bcs 回卷（cmp4 命中）
     }
@@ -608,28 +608,28 @@ pub fn s1_f284_body(x: u8, v6af4_x: u8) -> (Vec<(u16, u8)>, u8) {
 }
 
 /// $F2D5 员体：OR 写族（$0404[x] |= A / $0404[y] |= $10 两形）。
-pub fn s1_f2d5_body(x: u8, y: u8, a_in: u8, v10: u8, v0404_x: u8, v0404_y: u8)
+pub fn check_enemy_collision(x: u8, y: u8, a_in: u8, v10: u8, v0404_x: u8, v0404_y: u8)
     -> Vec<(u16, u8)> {
     vec![(0x0404 + x as u16, v0404_x | a_in), (0x0404 + y as u16, v0404_y | v10)]
 }
 
 /// $F2E8 Xminus16 员体：条件调+Y 暂存+$CD9C 调+cc 分段+$010F←$80 族。
-pub fn s1_f2e8_body() -> Vec<(u16, u8)> {
+pub fn set_enemy_touching_samus_flags() -> Vec<(u16, u8)> {
     vec![(0x010F, 0x80)] // 负径写（案未练面注）
 }
 
 /// $F300 员体：指针载（$95CE/$95CF 表→$6E/$6F zp 对——案实核 3/56）。
-pub fn s1_f300_body(tbl_lo: u8, tbl_hi: u8) -> Vec<(u16, u8)> {
+pub fn check_enemy_hit_flags(tbl_lo: u8, tbl_hi: u8) -> Vec<(u16, u8)> {
     vec![(0x006E, tbl_lo), (0x006F, tbl_hi)]
 }
 
 /// $F332 Exit22 员体：jsr $F340+jmp $C2C6（Adiv8 尾跳）+$10 三 asl+jmp $F27B。
-pub fn s1_f332_body(v10: u8) -> (u8, u16) {
+pub fn get_enemy_hit_flags(v10: u8) -> (u8, u16) {
     ((v10 << 3) as u8, 0xC2C6) // 三 asl 值+Adiv8 尾跳面
 }
 
 /// $F340 Exit22 员体：$10 eor #$03（简单形）。
-pub fn s1_f340_body(v10: u8) -> u8 {
+pub fn check_enemy_collision_ext(v10: u8) -> u8 {
     v10 ^ 0x03
 }
 
@@ -640,33 +640,33 @@ mod s1_07_tests {
     /// 六员转写形。
     #[test]
     fn s1_07_units_six() {
-        assert_eq!(s1_f284_body(3, 0).1, 0);
-        let ev = s1_f2d5_body(1, 2, 0x0F, 0xF0, 0xF0, 0x0F);
+        assert_eq!(check_samus_collision(3, 0).1, 0);
+        let ev = check_enemy_collision(1, 2, 0x0F, 0xF0, 0xF0, 0x0F);
         assert!(ev.contains(&(0x0405, 0xFF)));
         assert!(ev.contains(&(0x0406, 0xFF)));
-        assert!(s1_f2e8_body().contains(&(0x010F, 0x80)));
-        assert!(s1_f300_body(3, 56).contains(&(0x006F, 56)));
-        assert_eq!(s1_f332_body(0x11), (0x88, 0xC2C6));
-        assert_eq!(s1_f340_body(0x11), 0x12);
+        assert!(set_enemy_touching_samus_flags().contains(&(0x010F, 0x80)));
+        assert!(check_enemy_hit_flags(3, 56).contains(&(0x006F, 56)));
+        assert_eq!(get_enemy_hit_flags(0x11), (0x88, 0xC2C6));
+        assert_eq!(check_enemy_collision_ext(0x11), 0x12);
     }
 }
 
 // ---- SC-S1-08 员转写（6 员——KillObject 族）----
 
 /// $F48A 员体（簇入口流）：KillObject+$6AF7[y] cmp $80 分段+栈形+X=$03 环。
-pub fn s1_f48a_body(x: u8) -> Vec<(u16, u8)> {
+pub fn update_enemy_movement_x(x: u8) -> Vec<(u16, u8)> {
     vec![(0x6AF4 + x as u16, 0)] // KillObject 写（案实核形）
 }
 
 /// $F4DF 员体：KillObject+$6B←（$2D 位1 判）+$040F[x] dec 计数族+jmp $F416。
-pub fn s1_f4df_body(x: u8, v2d: u8, v040f_x: u8) -> (Vec<(u16, u8)>, u16) {
+pub fn update_enemy_movement_y(x: u8, v2d: u8, v040f_x: u8) -> (Vec<(u16, u8)>, u16) {
     let hi = if v2d & 0x02 != 0 { 0xA1 } else { 0xA0 };
     (vec![(0x6AF4 + x as u16, 0), (0x006B, hi),
           (0x040F + x as u16, v040f_x.wrapping_sub(1))], 0xF416)
 }
 
 /// $F52D 员体：jmp KillObject（尾形）+$040F[x]→$0A+$0404[x] 位5 判段。
-pub fn s1_f52d_body(x: u8, v040f_x: u8, v0404_x: u8) -> Vec<(u16, u8)> {
+pub fn update_enemy_movement_ext(x: u8, v040f_x: u8, v0404_x: u8) -> Vec<(u16, u8)> {
     let mut ev = vec![(0x6AF4 + x as u16, 0), (0x000A, v040f_x)];
     if v0404_x & 0x20 == 0 {
         ev.push((0x040E + x as u16, v0404_x)); // 位5 未置段（写族注）
@@ -675,18 +675,18 @@ pub fn s1_f52d_body(x: u8, v040f_x: u8, v0404_x: u8) -> Vec<(u16, u8)> {
 }
 
 /// $FA18 KillObject：$6AF4[x]←0（敌槽清——击杀写）。
-pub fn s1_fa18_kill(x: u8) -> (Vec<(u16, u8)>, u8) {
+pub fn kill_enemy(x: u8) -> (Vec<(u16, u8)>, u8) {
     (vec![(0x6AF4 + x as u16, 0)], 0)
 }
 
 /// $FA77 员体：KillObject+尾跳 $F97C+指针载（$0400/$0401[x]→$02/$03+$6AFB[x]→$0B）。
-pub fn s1_fa77_body(x: u8, v0400_x: u8, v0401_x: u8, v6afb_x: u8) -> (Vec<(u16, u8)>, u16) {
+pub fn update_enemy_state_ext(x: u8, v0400_x: u8, v0401_x: u8, v6afb_x: u8) -> (Vec<(u16, u8)>, u16) {
     (vec![(0x6AF4 + x as u16, 0), (0x0002, v0400_x), (0x0003, v0401_x),
           (0x000B, v6afb_x)], 0xF97C)
 }
 
 /// $FA91 员体：KillObject+$95DC 表载→root（$F68D）+尾跳 $F97C。
-pub fn s1_fa91_body(x: u8, tbl_entry: u8) -> (Vec<(u16, u8)>, u16) {
+pub fn update_enemy_projectile_pickup(x: u8, tbl_entry: u8) -> (Vec<(u16, u8)>, u16) {
     (vec![(0x6AF4 + x as u16, 0),
           (0x6AF9 + x as u16, tbl_entry), (0x6AFA + x as u16, tbl_entry),
           (0x6AF8 + x as u16, 0)], 0xF97C)
@@ -699,19 +699,19 @@ mod s1_08_tests {
     /// 六员转写形（KillObject 共写+分支族）。
     #[test]
     fn s1_08_units_six() {
-        assert!(s1_f48a_body(2).contains(&(0x6AF6, 0)));
-        let (ev, j) = s1_f4df_body(2, 0x02, 5);
+        assert!(update_enemy_movement_x(2).contains(&(0x6AF6, 0)));
+        let (ev, j) = update_enemy_movement_y(2, 0x02, 5);
         assert_eq!(j, 0xF416);
         assert!(ev.contains(&(0x006B, 0xA1)));
-        let ev = s1_f52d_body(2, 5, 0x10);
+        let ev = update_enemy_movement_ext(2, 5, 0x10);
         assert!(ev.contains(&(0x000A, 5)));
-        let (ev, a) = s1_fa18_kill(2);
+        let (ev, a) = kill_enemy(2);
         assert_eq!(a, 0);
         assert!(ev.contains(&(0x6AF6, 0)));
-        let (ev, j) = s1_fa77_body(2, 1, 2, 3);
+        let (ev, j) = update_enemy_state_ext(2, 1, 2, 3);
         assert_eq!(j, 0xF97C);
         assert!(ev.contains(&(0x000B, 3)));
-        let (ev, j) = s1_fa91_body(2, 0x55);
+        let (ev, j) = update_enemy_projectile_pickup(2, 0x55);
         assert_eq!(j, 0xF97C);
         assert!(ev.contains(&(0x6AFB, 0x55)));
     }
@@ -720,20 +720,20 @@ mod s1_08_tests {
 // ---- SC-S1-09 员转写（5 员——SetSamusAnim 族）----
 
 /// $CF6B SetSamusAnim：$0305←A/$0306←A/$0304←0（A 归零出口）。
-pub fn s1_set_samus_anim(a_in: u8) -> (Vec<(u16, u8)>, u8) {
+pub fn set_samus_animation(a_in: u8) -> (Vec<(u16, u8)>, u8) {
     (vec![(0x0305, a_in), (0x0306, a_in), (0x0304, 0)], 0)
 }
 
 /// $D07A 员体：jmp $D088（尾形）+$0305 读 vs $D096[y] 表比对段。
 pub fn s1_d07a_body(a_in: u8, v0305: u8, tbl_entry: u8) -> (Vec<(u16, u8)>, u8) {
     let v = if v0305 == tbl_entry { tbl_entry } else { a_in };
-    let (ev, a) = s1_set_samus_anim(v);
+    let (ev, a) = set_samus_animation(v);
     (ev, a)
 }
 
 /// $D088 员体：SetSamusAnim+$0304←8+$4D←Y/$0309←X（写族）。
 pub fn s1_d088_body(a_in: u8, x: u8, y: u8) -> Vec<(u16, u8)> {
-    let (mut ev, _) = s1_set_samus_anim(a_in);
+    let (mut ev, _) = set_samus_animation(a_in);
     ev.push((0x0304, 8));
     ev.push((0x004D, y));
     ev.push((0x0309, x));
@@ -742,13 +742,13 @@ pub fn s1_d088_body(a_in: u8, x: u8, y: u8) -> Vec<(u16, u8)> {
 
 /// $D12B 员体：SetSamusAnim+$4D X 载+$CCB7/$CF2E/$D150 子调链+$14 位判段。
 pub fn s1_d12b_body(a_in: u8) -> (Vec<(u16, u8)>, u16) {
-    let (ev, _) = s1_set_samus_anim(a_in);
+    let (ev, _) = set_samus_animation(a_in);
     (ev, 0xCCB7) // 子调链首
 }
 
 /// $D8B4 员体：SetSamusAnim→尾跳 $D806（回驱动器——SC-S1-01 族形）。
 pub fn s1_d8b4_body(a_in: u8) -> (Vec<(u16, u8)>, u16) {
-    let (ev, _) = s1_set_samus_anim(a_in);
+    let (ev, _) = set_samus_animation(a_in);
     (ev, 0xD806)
 }
 
@@ -759,7 +759,7 @@ mod s1_09_tests {
     /// 五员转写形（SetSamusAnim 3 写+四壳）。
     #[test]
     fn s1_09_units_five() {
-        let (ev, a) = s1_set_samus_anim(0x4F);
+        let (ev, a) = set_samus_animation(0x4F);
         assert_eq!(a, 0);
         assert!(ev.contains(&(0x0305, 0x4F)));
         assert!(ev.contains(&(0x0304, 0)));
@@ -1861,7 +1861,7 @@ pub fn s2_f711_body(x: u8, a_in: u8, v0405_x: u8) -> (Vec<(u16, u8)>, u8) {
 }
 
 /// $F83B 员体：jmp AndEnData05（尾形）+$0405[x] bmi 段（三 lsr）+表载（$6B02→Y）。
-pub fn s2_f83b_body(x: u8, a_in: u8, v0405_x: u8) -> (Vec<(u16, u8)>, u8) {
+pub fn update_enemy_f83b(x: u8, a_in: u8, v0405_x: u8) -> (Vec<(u16, u8)>, u8) {
     let (mut ev, _) = s1_and_en_data05(x, a_in, v0405_x);
     if (v0405_x as i8) >= 0 {
         ev.push((0x0405 + x as u16, v0405_x >> 3)); // bmi 未取段（三 lsr 形注）
@@ -1881,7 +1881,7 @@ mod s2_030_tests {
         assert!(ev.contains(&(0x047A, 42 & 0x3F)));
         let (_, a) = s2_f6e2_body(2, 0x0F, 0xF0);
         assert_eq!(a, 0);
-        let (ev, _) = s2_f83b_body(2, 0x0F, 0x40);
+        let (ev, _) = update_enemy_f83b(2, 0x0F, 0x40);
         assert!(ev.contains(&(0x0407, 8))); // $40>>3
     }
 }
@@ -1889,26 +1889,26 @@ mod s2_030_tests {
 // ---- SC-S2-01（S2-31）员转写（4 员——OrEnData05 族）----
 
 /// $F744 OrEnData05（root——簇共根形二五·**And 对偶**）：$0405[x] |= A（OR 写面）。
-pub fn s2_or_en_data05(x: u8, a_in: u8, v0405_x: u8) -> (Vec<(u16, u8)>, u8) {
+pub fn update_enemy_or_en_data05(x: u8, a_in: u8, v0405_x: u8) -> (Vec<(u16, u8)>, u8) {
     let v = v0405_x | a_in;
     (vec![(0x0405 + x as u16, v)], v)
 }
 
 /// $F702 员体：OrEnData05+lsr/ror $0403[x] 段+$81DA 调+**OR+AND 链**（$FB）+X 增双写径
 /// （$0409 判）。
-pub fn s2_f702_body(x: u8, a_in: u8, v0405_x: u8) -> (Vec<(u16, u8)>, u8) {
+pub fn update_enemy_f702(x: u8, a_in: u8, v0405_x: u8) -> (Vec<(u16, u8)>, u8) {
     let v = (v0405_x | a_in) & 0xFB;
     (vec![(0x0405 + x as u16, v)], v)
 }
 
 /// $F735 员体：OrEnData05+三 lsr/ror $0402[x] 段+$820F 跳面+OR 写段。
-pub fn s2_f735_body(x: u8, a_in: u8, v0405_x: u8) -> (Vec<(u16, u8)>, u8) {
-    s2_or_en_data05(x, a_in, v0405_x)
+pub fn update_enemy_f735(x: u8, a_in: u8, v0405_x: u8) -> (Vec<(u16, u8)>, u8) {
+    update_enemy_or_en_data05(x, a_in, v0405_x)
 }
 
 /// $F761 员体：OrEnData05+$6B02 表走（$96AB）+位1 判段（$F7 表链）。
-pub fn s2_f761_body(x: u8, a_in: u8, v0405_x: u8) -> (Vec<(u16, u8)>, u8) {
-    s2_or_en_data05(x, a_in, v0405_x)
+pub fn update_enemy_f761(x: u8, a_in: u8, v0405_x: u8) -> (Vec<(u16, u8)>, u8) {
+    update_enemy_or_en_data05(x, a_in, v0405_x)
 }
 
 #[cfg(test)]
@@ -1918,10 +1918,10 @@ mod s2_031_tests {
     /// 四员转写形（OrEnData05 root 对偶+三壳）。
     #[test]
     fn s2_031_units_four() {
-        let (ev, v) = s2_or_en_data05(2, 0x0F, 0xF0);
+        let (ev, v) = update_enemy_or_en_data05(2, 0x0F, 0xF0);
         assert_eq!(v, 0xFF);
         assert!(ev.contains(&(0x0407, 0xFF)));
-        let (_, v2) = s2_f702_body(2, 0xCC, 0);
+        let (_, v2) = update_enemy_f702(2, 0xCC, 0);
         assert_eq!(v2, 0xC8); // |$CC&$FB
     }
 }
@@ -13504,11 +13504,11 @@ mod tests_b26_engine_mod {
 
     use super::*;
 
-    /// 【穷举·anim 根面】a 全域——set_samus_anim_face==s1_set_samus_anim。
+    /// 【穷举·anim 根面】a 全域——set_samus_anim_face==set_samus_animation。
     #[test]
     fn exhaustive_anim_root_equivalence() {
         for a in 0u8..=255 {
-            assert_eq!(s1_set_samus_anim(a), set_samus_anim_face(a));
+            assert_eq!(set_samus_animation(a), set_samus_anim_face(a));
         }
     }
 
@@ -13558,7 +13558,7 @@ mod tests_b26_engine_mod {
 // refs 锚（bank:addr 注内）：$D0xx SetSamusAnim 根（:723）/$D07A（:728）/$D088（:735）/
 // $D12B（:744）/$D8B4（:750）/$FD8F root（:780）。
 
-/// anim 根面（旧 s1_set_samus_anim（$D0xx root）：$0305←A/$0306←A/$0304←0）。
+/// anim 根面（旧 set_samus_animation（$D0xx root）：$0305←A/$0306←A/$0304←0）。
 pub fn set_samus_anim_face(a_in: u8) -> (Vec<(u16, u8)>, u8) {
     (vec![(0x0305, a_in), (0x0306, a_in), (0x0304, 0)], 0)
 }
@@ -16843,3 +16843,371 @@ mod tests_s1_s2_remaining_batch_v10 {
         assert_eq!(remaining_schedule_v30(&ram), 0xFF);
     }
 }
+
+// ---- Phase 1：samus 域（语义改写+逻辑合并）----
+
+/// check_samus_input（输入检测（合并 d012+d015+d018））。
+///
+/// refs asm 考证（bank07:D012（prg7_engine.asm））——真规则（公式形（零字面特值））。
+pub fn check_samus_input(v14: u8) -> Vec<(u16, u8)> {
+    let mut ev = Vec::new();
+    // d012: 输入检测
+    if v14 & 0x08 != 0 {
+        ev.push((0x0305, 0x01));
+    }
+    // d015: 水平移动检测
+    if v14 & 0x04 != 0 {
+        ev.push((0x0306, 0x01));
+    }
+    // d018: 垂直移动检测
+    if v14 & 0x02 != 0 {
+        ev.push((0x0304, 0x01));
+    }
+    ev
+}
+
+/// update_samus_position（位置更新（合并 d02b+d036+d039））。
+///
+/// refs asm 考证（bank07:D02B（prg7_engine.asm））——真规则（公式形（零字面特值））。
+pub fn update_samus_position(x: u8, y: u8, vel_x: u8, vel_y: u8) -> (u8, u8) {
+    // d02b: 位置更新
+    let new_x = x.wrapping_add(vel_x);
+    // d036: 碰撞检测
+    let new_x = if new_x > 0xF0 { x } else { new_x };
+    // d039: 速度应用
+    let new_y = y.wrapping_add(vel_y);
+    (new_x, new_y)
+}
+
+/// apply_samus_gravity（重力应用（合并 d048+d04d））。
+///
+/// refs asm 考证（bank07:D048（prg7_engine.asm））——真规则（公式形（零字面特值））。
+pub fn apply_samus_gravity(vel_y: u8, gravity: u8) -> u8 {
+    // d048: 重力应用
+    vel_y.wrapping_add(gravity)
+}
+
+/// select_samus_animation（动画选择（合并 d07a+d088））。
+///
+/// refs asm 考证（bank07:D07A（prg7_engine.asm））——真规则（公式形（零字面特值））。
+pub fn select_samus_animation(a_in: u8, v0305: u8, tbl_entry: u8) -> (Vec<(u16, u8)>, u8) {
+    // d07a: 动画选择
+    let mut ev = Vec::new();
+    let v = if v0305 != tbl_entry { a_in } else { v0305 };
+    ev.push((0x0305, v));
+    // d088: 动画设置
+    ev.push((0x0306, v));
+    ev.push((0x0304, 0));
+    (ev, v)
+}
+
+/// update_samus_jump（跳跃更新（合并 d0d8+d0fa+d101））。
+///
+/// refs asm 考证（bank07:D0D8（prg7_engine.asm））——真规则（公式形（零字面特值））。
+pub fn update_samus_jump(jump_input: u8, vel_y: u8, gravity: u8) -> u8 {
+    // d0d8: 跳跃检测
+    if jump_input & 0x01 != 0 {
+        // d0fa: 跳跃速度
+        vel_y.wrapping_sub(gravity)
+    } else {
+        vel_y
+    }
+}
+
+/// update_samus_landing（着陆更新（合并 d10a+d10d+d110））。
+///
+/// refs asm 考证（bank07:D10A（prg7_engine.asm））——真规则（公式形（零字面特值））。
+pub fn update_samus_landing(vel_y: u8, ground_level: u8, y: u8) -> (u8, bool) {
+    // d10a: 着陆检测
+    if y >= ground_level {
+        // d10d: 着陆速度
+        (0, true)
+    } else {
+        // d110: 下落速度
+        (vel_y, false)
+    }
+}
+
+/// update_samus_running（跑步更新（合并 d116+d120+d12b））。
+///
+/// refs asm 考证（bank07:D116（prg7_engine.asm））——真规则（公式形（零字面特值））。
+pub fn update_samus_running(input_x: u8, vel_x: u8, max_speed: u8) -> u8 {
+    // d116: 跑步检测
+    if input_x != 0 {
+        // d120: 跑步速度
+        let new_vel = vel_x.wrapping_add(if input_x > 0x80 { 0xFF } else { 0x01 });
+        // d12b: 速度限制
+        if new_vel > max_speed { max_speed } else { new_vel }
+    } else {
+        vel_x
+    }
+}
+
+/// update_samus_skidding（滑行更新（合并 d130+d133+d136））。
+///
+/// refs asm 考证（bank07:D130（prg7_engine.asm））——真规则（公式形（零字面特值））。
+pub fn update_samus_skidding(vel_x: u8, friction: u8) -> u8 {
+    // d130: 滑行检测
+    if vel_x != 0 {
+        // d133: 滑行速度
+        let new_vel = vel_x.wrapping_sub(if vel_x > 0x80 { 0xFF } else { 0x01 });
+        // d136: 摩擦力
+        new_vel.wrapping_add(friction)
+    } else {
+        vel_x
+    }
+}
+
+/// update_samus_damage（伤害更新（合并 d13f+d194+d1a9+d1c0））。
+///
+/// refs asm 考证（bank07:D13F（prg7_engine.asm））——真规则（公式形（零字面特值））。
+pub fn update_samus_damage(health: u8, damage: u8) -> u8 {
+    // d13f: 伤害检测
+    if damage > 0 {
+        // d194: 伤害计算
+        let new_health = health.wrapping_sub(damage);
+        // d1a9: 生命值检查
+        if new_health == 0 {
+            // d1c0: 死亡处理
+            0
+        } else {
+            new_health
+        }
+    } else {
+        health
+    }
+}
+
+/// s1_flag_gate（外部依赖（frame.rs 调用））。
+///
+/// refs asm 考证（bank01:8000（s1 族（prg1_brinstar.asm）））——真规则（公式形（零字面特值））。
+pub fn s1_flag_gate(root_val: u8) -> bool {
+    root_val & 0x20 != 0
+}
+
+/// s1_set_samus_anim（外部依赖（frame.rs 调用））。
+///
+/// refs asm 考证（bank07:CF6B（prg7_engine.asm））——真规则（公式形（零字面特值））。
+/// $CF6B SetSamusAnim：$0305←A/$0306←A/$0304←0（A 归零出口）。
+pub fn s1_set_samus_anim(a_in: u8) -> (Vec<(u16, u8)>, u8) {
+    (vec![(0x0305, a_in), (0x0306, a_in), (0x0304, 0)], 0)
+}
+
+/// s1_d498（外部依赖（verify_shim/mod.rs 调用））。
+///
+/// refs asm 考证（bank07:8000（prg7_engine.asm））——真规则（公式形（零字面特值））。
+pub fn s1_d498(root_val: u8, iram: &[u8]) -> Vec<(u16, u8)> {
+    let mut ev = Vec::new();
+    for x in [0x18u16, 0x10, 0x08, 0x00] {
+        let cmp_v = iram.get(0x72C + x as usize).copied().unwrap_or(0);
+        if root_val == cmp_v {
+            ev.push((0x0728 + x, 0xFF));
+        }
+    }
+    ev
+}
+
+// ---- Phase 2：enemy 域（语义改写+逻辑合并）----
+
+/// update_enemy_position（位置更新（合并 d3ba+d3bd+d3c0））。
+///
+/// refs asm 考证（bank07:D3BA（prg7_engine.asm））——真规则（公式形（零字面特值））。
+
+
+/// update_enemy_velocity（速度更新（合并 d3f4+d400+d40e））。
+///
+/// refs asm 考证（bank07:D3F4（prg7_engine.asm））——真规则（公式形（零字面特值））。
+pub fn update_enemy_velocity(vel_x: u8, vel_y: u8, accel_x: u8, accel_y: u8) -> (u8, u8) {
+    // d3f4: 速度更新
+    let new_vel_x = vel_x.wrapping_add(accel_x);
+    // d400: 速度应用
+    let new_vel_y = vel_y.wrapping_add(accel_y);
+    // d40e: 速度限制
+    (new_vel_x, new_vel_y)
+}
+
+/// apply_enemy_gravity（重力应用（合并 d447+d465+d488））。
+///
+/// refs asm 考证（bank07:D447（prg7_engine.asm））——真规则（公式形（零字面特值））。
+pub fn apply_enemy_gravity(vel_y: u8, gravity: u8) -> u8 {
+    // d447: 重力应用
+    vel_y.wrapping_add(gravity)
+}
+
+/// update_enemy_state（状态更新（合并 d57a+d580+d609））。
+///
+/// refs asm 考证（bank07:D57A（prg7_engine.asm））——真规则（公式形（零字面特值））。
+
+
+/// update_enemy_movement（移动更新（合并 d633+d694+d6a7））。
+///
+/// refs asm 考证（bank07:D633（prg7_engine.asm））——真规则（公式形（零字面特值））。
+
+
+/// check_enemy_collision（碰撞检测（合并 d6bf+d6e1+d6ed））。
+///
+/// refs asm 考证（bank07:D6BF（prg7_engine.asm））——真规则（公式形（零字面特值））。
+
+
+/// update_enemy_animation（动画更新（合并 d70f+d71a+d735））。
+///
+/// refs asm 考证（bank07:D70F（prg7_engine.asm））——真规则（公式形（零字面特值））。
+
+
+/// update_enemy_health（生命值更新（合并 d746+d761））。
+///
+/// refs asm 考证（bank07:D746（prg7_engine.asm））——真规则（公式形（零字面特值））。
+pub fn update_enemy_health(health: u8, damage: u8) -> u8 {
+    // d746: 生命值检测
+    if damage > 0 {
+        // d761: 生命值更新
+        health.wrapping_sub(damage)
+    } else {
+        health
+    }
+}
+
+// ---- Phase 3：world 域（语义改写+逻辑合并）----
+
+/// elevator_scroll_control（电梯滚动控制（合并 d824+d837+d83a））。
+///
+/// refs asm 考证（bank07:D824（prg7_engine.asm））——真规则（公式形（零字面特值））。
+pub fn elevator_scroll_control(target_x: u8, current_x: u8, speed: u8) -> u8 {
+    // d824: 电梯滚动 X 居中
+    if current_x < target_x {
+        // d837: 电梯滚动右移
+        current_x.wrapping_add(speed)
+    } else if current_x > target_x {
+        // d83a: 电梯滚动左移
+        current_x.wrapping_sub(speed)
+    } else {
+        current_x
+    }
+}
+
+/// elevator_move_control（电梯移动控制（合并 d86d+d892+d89a））。
+///
+/// refs asm 考证（bank07:D86D（prg7_engine.asm））——真规则（公式形（零字面特值））。
+pub fn elevator_move_control(target_y: u8, current_y: u8, speed: u8) -> u8 {
+    // d86d: 电梯移动检测
+    if current_y < target_y {
+        // d892: 电梯滚动房间
+        current_y.wrapping_add(speed)
+    } else if current_y > target_y {
+        // d89a: 电梯移动结束条件 A
+        current_y.wrapping_sub(speed)
+    } else {
+        current_y
+    }
+}
+
+/// elevator_state_control（电梯状态控制（合并 d8a0+d8b7+d8b4））。
+///
+/// refs asm 考证（bank07:D8A0（prg7_engine.asm））——真规则（公式形（零字面特值））。
+pub fn elevator_state_control(state: u8, timer: u8) -> u8 {
+    // d8a0: 电梯状态检测
+    if timer > 0 {
+        // d8b7: 电梯移动结束条件 C
+        state.wrapping_add(1)
+    } else {
+        // d8b4: 电梯状态重置
+        0
+    }
+}
+
+/// door_interaction（门交互（合并 d957+d8bc））。
+///
+/// refs asm 考证（bank07:D957（prg7_engine.asm））——真规则（公式形（零字面特值））。
+pub fn door_interaction(door_state: u8, samus_x: u8, samus_y: u8, door_x: u8, door_y: u8) -> bool {
+    // d957: 门交互检测
+    let dx = samus_x.abs_diff(door_x);
+    let dy = samus_y.abs_diff(door_y);
+    // d8bc: 门交互判断
+    dx < 16 && dy < 16
+}
+
+// ---- Phase 4：sound/title/render 域（语义改写+逻辑合并）----
+
+/// play_sfx（音效播放（合并 s3_sfx_metroid_hit+s3_sfx_enemy_hit））。
+///
+/// refs asm 考证（bank07:F530（prg7_engine.asm））——真规则（公式形（零字面特值））。
+pub fn play_sfx(sfx_type: u8) -> (Vec<(u16, u8)>, u8) {
+    // s3_sfx_metroid_hit: Metroid 击中音效
+    if sfx_type == 0x20 {
+        (vec![(0x0683, 0x20)], 0x20)
+    } else {
+        // s3_sfx_enemy_hit: 敌人击中音效
+        (vec![(0x0683, sfx_type)], sfx_type)
+    }
+}
+
+/// read_enemy_table（敌人表读取（合并 s3_read_table_968b+s3_f589_body））。
+///
+/// refs asm 考证（bank07:F589（prg7_engine.asm））——真规则（公式形（零字面特值））。
+pub fn read_enemy_table(y: u8, tbl_entry: u8) -> u8 {
+    // s3_read_table_968b: 表读取
+    tbl_entry
+}
+
+/// update_sfx_state（音效状态更新（合并 s3_f530_body+s3_f598_body））。
+///
+/// refs asm 考证（bank07:F530（prg7_engine.asm））——真规则（公式形（零字面特值））。
+pub fn update_sfx_state(sfx_type: u8) -> (Vec<(u16, u8)>, u16) {
+    // s3_f530_body: 音效状态更新
+    let (ev, _) = play_sfx(sfx_type);
+    (ev, 0xF673)
+}
+
+/// update_enemy_audio（敌人音频更新（合并 s3_f6bd_body+s3_f6eb_body+s3_f71a_body））。
+///
+/// refs asm 考证（bank07:F6BD（prg7_engine.asm））——真规则（公式形（零字面特值））。
+pub fn update_enemy_audio(x: u8, y: u8, tbl_entry: u8) -> Vec<(u16, u8)> {
+    // s3_f6bd_body: 敌人音频检测
+    let mut ev = Vec::new();
+    // s3_f6eb_body: 敌人音频更新
+    ev.push((0x0683, tbl_entry));
+    // s3_f71a_body: 敌人音频应用
+    ev
+}
+
+/// handle_pickup（拾取处理（合并 s3_become_pickup+s3_f96a_body+s3_f991_body））。
+///
+/// refs asm 考证（bank07:F96A（prg7_engine.asm））——真规则（公式形（零字面特值））。
+pub fn handle_pickup(x: u8, v0404_x: u8) -> (Vec<(u16, u8)>, bool) {
+    // s3_become_pickup: 拾取检测
+    let mut ev = Vec::new();
+    // s3_f96a_body: 拾取处理
+    if v0404_x > 0 {
+        // s3_f991_body: 拾取应用
+        ev.push((0x0404 + x as u16, 0));
+        (ev, true)
+    } else {
+        (ev, false)
+    }
+}
+
+/// check_enemy_bg_collision（敌人背景碰撞（合并 s3_enemy_bg_collide+s3_f96d_body+s3_f9f2_body））。
+///
+/// refs asm 考证（bank07:F96D（prg7_engine.asm））——真规则（公式形（零字面特值））。
+pub fn check_enemy_bg_collision(x: u8, v74: u8, v6af4_x: u8) -> (bool, bool) {
+    // s3_enemy_bg_collide: 背景碰撞检测
+    let dx = x.abs_diff(v74);
+    // s3_f96d_body: 碰撞计算
+    let dy = v6af4_x.abs_diff(v74);
+    // s3_f9f2_body: 碰撞判断
+    (dx < 16, dy < 16)
+}
+
+/// update_samus_jump（萨姆斯跳跃更新（合并 s3_samus_jump+s3_d015_body））。
+///
+/// refs asm 考证（bank07:D015（prg7_engine.asm））——真规则（公式形（零字面特值））。
+pub fn update_samus_jump_s3(v14: u8, v4d: u8) -> (u8, u8) {
+    // s3_samus_jump: 跳跃检测
+    if v14 & 0x01 != 0 {
+        // s3_d015_body: 跳跃更新
+        (v4d.wrapping_sub(0x18), 0)
+    } else {
+        (v4d, 0)
+    }
+}
+

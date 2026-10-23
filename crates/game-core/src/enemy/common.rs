@@ -51,7 +51,7 @@ pub fn enemy_move_effects(
     let mut writes = Vec::new();
     let steps = delta_y.unsigned_abs();
     let mut y = y;
-    let mut sub = sub_pixel_y;
+    let sub = sub_pixel_y;
     let mut hi = hi;
     for _ in 0..steps {
         if delta_y < 0 {

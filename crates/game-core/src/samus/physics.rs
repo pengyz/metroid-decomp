@@ -559,7 +559,7 @@ mod tests_rewrite_b6_physics {
     //! $F332（:630（三 asl+Adiv8 尾跳））/$F340（:636（$10 eor #$03））。
 
     use super::*;
-    use crate::engine::{s1_f2d5_body, s1_f332_body, s1_f340_body};
+    use crate::engine::{check_enemy_collision, get_enemy_hit_flags, check_enemy_collision_ext};
 
     /// 【穷举·OR 对写】依赖分解穷举（函数=两独立 2 维分量（out[0]=(a,vx)｜out[1]=(v10,vy)）
     /// ⇒逐分量 256² 全域穷举=完备（积空间 256⁴ 由分量独立性覆盖）+x/y 边角组合。
@@ -571,7 +571,7 @@ mod tests_rewrite_b6_physics {
         for a in 0u8..=255 {
             for vx in 0u8..=255 {
                 for &(x, y) in &[(0u8, 1u8), (0xFF, 0xFE)] {
-                    assert_eq!(s1_f2d5_body(x, y, a, 0x5A, vx, 0xA5),
+                    assert_eq!(check_enemy_collision(x, y, a, 0x5A, vx, 0xA5),
                                or_motion_flags_pair(x, y, a, 0x5A, vx, 0xA5));
                 }
             }
@@ -580,31 +580,31 @@ mod tests_rewrite_b6_physics {
         for v10 in 0u8..=255 {
             for vy in 0u8..=255 {
                 for &(x, y) in &[(0x7F, 0x80), (0x01, 0x02)] {
-                    assert_eq!(s1_f2d5_body(x, y, 0x3C, v10, 0xC3, vy),
+                    assert_eq!(check_enemy_collision(x, y, 0x3C, v10, 0xC3, vy),
                                or_motion_flags_pair(x, y, 0x3C, v10, 0xC3, vy));
                 }
             }
         }
         // 边角组合（积空间抽样核）
         for &(a, v10, vx, vy) in &[(0u8, 0, 0, 0), (0xFF, 0xFF, 0xFF, 0xFF), (0x01, 0x80, 0x80, 0x01)] {
-            assert_eq!(s1_f2d5_body(0, 1, a, v10, vx, vy),
+            assert_eq!(check_enemy_collision(0, 1, a, v10, vx, vy),
                        or_motion_flags_pair(0, 1, a, v10, vx, vy));
         }
     }
 
-    /// 【穷举·三 asl】v10 全域——shift3_and_dispatch==s1_f332_body（<<3 回绕边界）。
+    /// 【穷举·三 asl】v10 全域——shift3_and_dispatch==get_enemy_hit_flags（<<3 回绕边界）。
     #[test]
     fn exhaustive_shift3_equivalence() {
         for v in 0u8..=255 {
-            assert_eq!(s1_f332_body(v), shift3_and_dispatch(v));
+            assert_eq!(get_enemy_hit_flags(v), shift3_and_dispatch(v));
         }
     }
 
-    /// 【穷举·eor 低 2 位】v10 全域——flip_low2_bits==s1_f340_body。
+    /// 【穷举·eor 低 2 位】v10 全域——flip_low2_bits==check_enemy_collision_ext。
     #[test]
     fn exhaustive_flip_low2_equivalence() {
         for v in 0u8..=255 {
-            assert_eq!(s1_f340_body(v), flip_low2_bits(v));
+            assert_eq!(check_enemy_collision_ext(v), flip_low2_bits(v));
         }
     }
 }
@@ -612,18 +612,18 @@ mod tests_rewrite_b6_physics {
 // ===== 1:1 Rust 改写·批产·块 6：physics 面语义命名（去地址名（公式形（零字面特值）））=====
 // refs 锚（engine/mod.rs 注内 bank:addr）：$F2D5（:611）/$F332（:630）/$F340（:636）。
 
-/// OR 对写（旧 s1_f2d5_body（$F2D5）：$0404[x] |= A ／ $0404[y] |= $10）。
+/// OR 对写（旧 check_enemy_collision（$F2D5）：$0404[x] |= A ／ $0404[y] |= $10）。
 pub fn or_motion_flags_pair(x: u8, y: u8, a_in: u8, v10: u8, v0404_x: u8, v0404_y: u8)
     -> Vec<(u16, u8)> {
     vec![(0x0404 + x as u16, v0404_x | a_in), (0x0404 + y as u16, v0404_y | v10)]
 }
 
-/// 三 asl+尾跳（旧 s1_f332_body（$F332）：A←$10<<3（三 asl 回绕）→jmp $C2C6（Adiv8））。
+/// 三 asl+尾跳（旧 get_enemy_hit_flags（$F332）：A←$10<<3（三 asl 回绕）→jmp $C2C6（Adiv8））。
 pub fn shift3_and_dispatch(v10: u8) -> (u8, u16) {
     ((v10 << 3) as u8, 0xC2C6)
 }
 
-/// 低 2 位翻转（旧 s1_f340_body（$F340）：$10 eor #$03）。
+/// 低 2 位翻转（旧 check_enemy_collision_ext（$F340）：$10 eor #$03）。
 pub fn flip_low2_bits(v10: u8) -> u8 {
     v10 ^ 0x03
 }

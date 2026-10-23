@@ -520,30 +520,30 @@ mod tests_rewrite_b6_handler {
     //! $F300（:627（指针载 $6E/$6F））。
 
     use super::*;
-    use crate::engine::{s1_f284_body, s1_f2e8_body, s1_f300_body};
+    use crate::engine::{check_samus_collision, set_enemy_touching_samus_flags, check_enemy_hit_flags};
 
-    /// 【穷举·门写】x×v6af4 全域——gate_motion_state_write==s1_f284_body（cmp4 回卷边界）。
+    /// 【穷举·门写】x×v6af4 全域——gate_motion_state_write==check_samus_collision（cmp4 回卷边界）。
     #[test]
     fn exhaustive_gate_write_equivalence() {
         for x in 0u8..=255 {
             for v in 0u8..=255 {
-                assert_eq!(s1_f284_body(x, v), gate_motion_state_write(x, v));
+                assert_eq!(check_samus_collision(x, v), gate_motion_state_write(x, v));
             }
         }
     }
 
-    /// 【穷举·负径写】set_negative_motion_flag==s1_f2e8_body（退化域）。
+    /// 【穷举·负径写】set_negative_motion_flag==set_enemy_touching_samus_flags（退化域）。
     #[test]
     fn negative_flag_equivalence() {
-        assert_eq!(s1_f2e8_body(), set_negative_motion_flag());
+        assert_eq!(set_enemy_touching_samus_flags(), set_negative_motion_flag());
     }
 
-    /// 【穷举·指针载】tbl_lo×tbl_hi 全域——load_motion_pointer==s1_f300_body。
+    /// 【穷举·指针载】tbl_lo×tbl_hi 全域——load_motion_pointer==check_enemy_hit_flags。
     #[test]
     fn exhaustive_pointer_load_equivalence() {
         for lo in 0u8..=255 {
             for hi in 0u8..=255 {
-                assert_eq!(s1_f300_body(lo, hi), load_motion_pointer(lo, hi));
+                assert_eq!(check_enemy_hit_flags(lo, hi), load_motion_pointer(lo, hi));
             }
         }
     }
@@ -552,7 +552,7 @@ mod tests_rewrite_b6_handler {
 // ===== 1:1 Rust 改写·批产·块 6：handler 面语义命名（去地址名（公式形（零字面特值）））=====
 // refs 锚（engine/mod.rs 注内 bank:addr）：$F284（:603）/$F2E8（:622）/$F300（:627）。
 
-/// 门写（旧 s1_f284_body（$F284）：$6AF4[x]>=4⇒回卷（空,4）；否则 $010F←0（Y=0））。
+/// 门写（旧 check_samus_collision（$F284）：$6AF4[x]>=4⇒回卷（空,4）；否则 $010F←0（Y=0））。
 pub fn gate_motion_state_write(x: u8, v6af4_x: u8) -> (Vec<(u16, u8)>, u8) {
     let _ = x;
     if v6af4_x >= 4 {
@@ -561,12 +561,12 @@ pub fn gate_motion_state_write(x: u8, v6af4_x: u8) -> (Vec<(u16, u8)>, u8) {
     (vec![(0x010F, 0)], 0)
 }
 
-/// 负径写（旧 s1_f2e8_body（$F2E8）：$010F←$80（负径（案未练面注）））。
+/// 负径写（旧 set_enemy_touching_samus_flags（$F2E8）：$010F←$80（负径（案未练面注）））。
 pub fn set_negative_motion_flag() -> Vec<(u16, u8)> {
     vec![(0x010F, 0x80)]
 }
 
-/// 指针载（旧 s1_f300_body（$F300）：$6E←tbl_lo/$6F←tbl_hi（zp 对））。
+/// 指针载（旧 check_enemy_hit_flags（$F300）：$6E←tbl_lo/$6F←tbl_hi（zp 对））。
 pub fn load_motion_pointer(tbl_lo: u8, tbl_hi: u8) -> Vec<(u16, u8)> {
     vec![(0x006E, tbl_lo), (0x006F, tbl_hi)]
 }

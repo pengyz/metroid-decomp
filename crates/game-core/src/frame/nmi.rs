@@ -147,7 +147,7 @@ pub fn vram_struct_write(mem: &mut FrameMemory) {
         // 数据段（RLE=bit6；计数=低 6 位）
         let count = (ctrl & 0x3F) as usize;
         let rle = ctrl & 0x40 != 0;
-        let mut di = 3usize;
+        let di = 3usize;
         for k in 0..count {
             let v = if rle { mem.read_ram(base + off as u16 + 4) } else {
                 mem.read_ram(base + off as u16 + 3 + k as u16)

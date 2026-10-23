@@ -605,7 +605,7 @@ pub fn bomb_explode_sfx_init(ct: u8, flags: u8) -> HandlerOutcome {
 
 /// BossHitSFXInit（$B5EC）：双通道族（SQ1 装载+MultiSFXInit——A=SQ1 数据[3] 末字节）。
 pub fn boss_hit_sfx_init(ct: u8, flags: u8) -> HandlerOutcome {
-    let mut o = sfx_data_init(0, &W3_DATA[4], 0xB22D, ct, flags); // SQ1 装载面（无 length 写——LoadSFXData 非 InitSFXData）
+    let o = sfx_data_init(0, &W3_DATA[4], 0xB22D, ct, flags); // SQ1 装载面（无 length 写——LoadSFXData 非 InitSFXData）
     // 修正形：LoadSFXData@SQ1=指针+4B（无 length/清表）——此处重写
     let mut ram = vec![
         (0x00E0, 0x00), (0x00E1, 0x40), (0x00E2, 0x2D), (0x00E3, 0xB2),
