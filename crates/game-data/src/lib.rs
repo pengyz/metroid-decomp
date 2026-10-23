@@ -14,7 +14,6 @@
 //!   print(hex(w))  # 期望 0xa441
 //!   EOF
 
-/// 房间结构段：yyyyxxxx 位置 + StructPtrTbl 索引 + 属性字节（m1disasm 注释源）。
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RoomObject {
     pub pos: u8,        // yyyyxxxx（tile 坐标，C 级拆分待自证）
@@ -22,7 +21,6 @@ pub struct RoomObject {
     pub attr: u8,       // 属性表字节
 }
 
-/// L2 房间定义（敌/门段变长语义 C 级——原样保留 tail）。
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RoomDef {
     pub base_attr: u8,
@@ -89,7 +87,6 @@ pub fn parse_structure(data: &[u8]) -> Option<(Vec<Vec<u8>>, usize)> {
     Some((rows, i))
 }
 
-/// L4 元块：4B（LR,LL,UR,UL 图块索引）。
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct MetatileDef {
     pub lr: u8,
@@ -116,7 +113,6 @@ pub fn parse_ptr_table(data: &[u8], n: usize) -> Option<(Vec<u16>, usize)> {
 /// VRAMStruct 记录族（m1disasm macros.asm 锚证，A 级）：
 /// - `VRAMStructData`（macros.asm:32-56）：`[hi][lo]` PPU 大端址 + `[len]`(1..=256) + data[len]；
 /// - `VRAMStructDataRepeat`（macros.asm:58-70）：`[hi][lo]` + `[reps|$40]` + 1B 值；
-/// - 结构=记录序列 + `$00`（VRAMStructEnd，macros.asm:71-73）。
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum VramRecord {
     Data { ppu_addr: u16, data: Vec<u8> },
@@ -295,7 +291,6 @@ mod palette_tests {
 /// 与字节不符，以互核为准——结构互核注）；off1=$FF=章终；下章址=$FFFF=表终。
 /// type 语义表（items.asm:45-54 注释，C 级候选名）：$01=Squeept $02=Power up
 /// $03=Mellows/Memus/Melias $04=Elevator $05=MB cannon $06=Mother brain
-/// $07=Zeebetite $08=Rinka $09=Door $0A=Palette change room。
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SpecialItem {
     pub addr: u16, // 条目首址（asm 标签互核坐标）
@@ -359,7 +354,6 @@ pub fn parse_spec_items(data: &[u8], base: u16) -> Option<(Vec<SpecialItem>, usi
 ///   EnAnim_11@$9D7B 流入 EnAnim_Waver0_L@$9D7D）——非断链序列，逐标签入口验证为准；
 ///   frame_id=EnFramePtrTable1 表索引（PtrTableEntry 自动编号，macros.asm:75-86）；
 /// - EnFramePtrTable1=148 词（asm 计数）；帧体（EnFrame）线格式=`[place|pal][?][?]
-///   [tile..]` 含 EnPlace 子表引用——**体语义 C 级 _todo_**（v1 只做链+表层）。
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct EnemyAnim {
     pub addr: u16,        // 链首址（asm 标签互核坐标）
@@ -399,7 +393,6 @@ pub fn parse_enemy_anim_seq(data: &[u8], addr: u16, count: usize) -> Option<(Vec
 /// 7B/项=`[bank][src 16le][dest 16le][len 16le]`——src=PRG 内 gfx 起址（bank:src），
 /// dest=PPU 目标（$0000=精灵面/$1000+=背景面），len=字节数。语义名（Samus/Brinstar
 /// rooms 等注释）C 级不入字段。L4→CHR 面：元块图块索引（0-255）×16B=NES 2bpp
-/// 图样偏移（tile_chr_offset），落在 gfx 块（哪一块=dest 语义，C 级待自证）。
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct GfxInfo {
     pub bank: u8,
@@ -505,3 +498,9 @@ mod tests {
 }
 
 pub mod rom_tables; // 分界线修（rom_tables（数据表）→game-data（资产解析））
+pub mod world; // 数据内容在 game-data（架构约束）——世界数据（world_map+room_data）
+pub mod samus; // 数据内容在 game-data（架构约束）——Samus 数据
+pub mod enemy; // 数据内容在 game-data（架构约束）——敌人数据
+pub mod sound; // 数据内容在 game-data（架构约束）——音频数据
+pub mod title; // 数据内容在 game-data（架构约束）——标题数据
+pub mod render; // 数据内容在 game-data（架构约束）——渲染数据

@@ -2011,7 +2011,7 @@ pub fn s4_cluster_104(input: &L2In) -> L2Out {
 // ---- SC-S4-16 簇入口适配（s4_cluster_106 ← bank07:C8B0 表拷贝）----
 
 /// $959A 表（ROM 烘焙——14 项）。
-pub const SFX_REG_INIT_TBL: [u8; 14] = [115, 1, 115, 1, 83, 1, 19, 1, 147, 1, 211, 1, 243, 255];
+pub use game_data::sound::sound_data::SFX_REG_INIT_TBL;
 
 /// s4_cluster_106 适配（$C8B0 表拷贝——$959A[x]→$3B+x（x=$0D→0 bpl 环）；
 /// A=表末值/X=$FF/Y 透传）。
@@ -2069,9 +2069,9 @@ pub fn s4_cluster_112(input: &L2In) -> L2Out {
 // ---- SC-S4-29 簇入口适配（s4_cluster_119 ← bank07:EB77——bank7 双表烘焙）----
 
 /// $969B 延迟表（bank7 固定区烘焙——256 项首段）。
-pub const EN_DELAY_TBL_B7: [u8; 8] = [3, 56, 233, 247, 208, 3, 157, 0];
+pub use game_data::sound::sound_data::EN_DELAY_TBL_B7;
 /// $962B 体力表（bank7 固定区烘焙）。
-pub const EN_HEALTH_TBL_B7: [u8; 8] = [189, 8, 3, 133, 4, 32, 190, 232];
+pub use game_data::sound::sound_data::EN_HEALTH_TBL_B7;
 
 /// s4_cluster_119 适配（$F85A InitEnemyForceSpeedDelayAndHealth——**bank7 双表**
 /// （y=ram[\$6B02] 索引——默认 0 径）：\$969B[y]→\$040D[x]/\$962B[y]→\$040B[x]

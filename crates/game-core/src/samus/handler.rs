@@ -308,7 +308,7 @@ pub mod button {
 /// ActionTable（asm :2804 内容锚 `ActionTable: ; 07:CC87`——ROM 自证 `01 01 03 04`）：
 /// 索引=BitScan 位号（0=右/1=左/2=下/3=上）→ 转移目标态（sa_Run/sa_Run/sa_Roll/
 /// sa_PntUp）。
-pub const ACTION_TABLE: [u8; 4] = [1, 1, 3, 4];
+pub use game_data::samus::samus_data::ACTION_TABLE;
 
 /// SetSamusStand_NoFootstep 折叠（**字节自证**——asm :CF5D/`NoHorzMoveNoDelay: ;
 /// 07:CF81`；名址映射以 ROM 字节为准：`20 81 cf 8c 00 03 a5 14 29 08 d0 0e a9 07 8d 05 03
@@ -440,7 +440,7 @@ pub fn samus_roll(mem: &mut FrameMemory) {
 
 /// PntUp 状态表（字节自证 D1EB 3B `01 01 03`——x=BitScan(0..2)=右/左/下→Run/Run/Roll；
 /// 第 4 字节 `a5`=FireSamusProjectile 首码（表界互核：表长 3=D1EE 处 jsr 目标））。
-pub const PNT_UP_STATUS_TABLE: [u8; 3] = [1, 1, 3];
+pub use game_data::samus::samus_data::PNT_UP_STATUS_TABLE;
 
 /// SamusPntUp 处理件（字节自证 D198 区）：UP 保持/松开→sa_Stand(0)；DOWN|LEFT|RIGHT
 /// →BitScan→SamusDir（x<2）+表转移；FIRE→FireSamusProjectile 桩；JUMP→sa_PntJump(6)

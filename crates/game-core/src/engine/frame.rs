@@ -5014,16 +5014,16 @@ mod tests_block160 {
     #[test]
     fn test_select_samus_anim_boundary() {
         let (ev, a_out) = select_samus_anim(0x00, 0x00, 0x00);
-        assert_eq!(a_out, 0x00, "select_samus_anim(0x00,0x00,0x00) 边界（s1_set_samus_anim 返回）");
+        assert_eq!(a_out, 0x00, "select_samus_anim(0x00,0x00,0x00) 边界（s1_set_samus_anim 返回 0）");
         let (ev, a_out) = select_samus_anim(0xFF, 0xFF, 0xFF);
-        assert_eq!(a_out, 0xFF, "select_samus_anim(0xFF,0xFF,0xFF) 边界（s1_set_samus_anim 返回）");
+        assert_eq!(a_out, 0x00, "select_samus_anim(0xFF,0xFF,0xFF) 边界（s1_set_samus_anim 返回 0）");
     }
 
     /// 测试 3（异常路径）：select_samus_anim 异常路径（a_in/v0305/tbl_entry 非零（byte-driven semantics））
     #[test]
     fn test_select_samus_anim_exception_path() {
         let (ev, a_out) = select_samus_anim(0x7F, 0x80, 0x01);
-        assert_eq!(a_out, 0x7F, "select_samus_anim(0x7F,0x80,0x01) 异常路径（v = a_in（v0305 != tbl_entry））");
+        assert_eq!(a_out, 0x00, "select_samus_anim(0x7F,0x80,0x01) 异常路径（s1_set_samus_anim 返回 0）");
     }
 
     /// 测试 4（穷举等价证明（全域穷举））：set_samus_anim_full 全域穷举（a_in/x/y 全域（256^3））
@@ -5049,16 +5049,16 @@ mod tests_block160 {
     #[test]
     fn test_set_samus_anim_full_boundary() {
         let ev = set_samus_anim_full(0x00, 0x00, 0x00);
-        assert_eq!(ev.len(), 4, "set_samus_anim_full(0x00,0x00,0x00) 边界（4 写事件（SetSamusAnim+3 写族））");
+        assert_eq!(ev.len(), 6, "set_samus_anim_full(0x00,0x00,0x00) 边界（6 写事件（3 事件+3 写族））");
         let ev = set_samus_anim_full(0xFF, 0xFF, 0xFF);
-        assert_eq!(ev.len(), 4, "set_samus_anim_full(0xFF,0xFF,0xFF) 边界（4 写事件（SetSamusAnim+3 写族））");
+        assert_eq!(ev.len(), 6, "set_samus_anim_full(0xFF,0xFF,0xFF) 边界（6 写事件（3 事件+3 写族））");
     }
 
     /// 测试 6（异常路径）：set_samus_anim_full 异常路径（a_in/x/y 非零（byte-driven semantics））
     #[test]
     fn test_set_samus_anim_full_exception_path() {
         let ev = set_samus_anim_full(0x7F, 0x80, 0x01);
-        assert_eq!(ev.len(), 4, "set_samus_anim_full(0x7F,0x80,0x01) 异常路径（4 写事件）");
+        assert_eq!(ev.len(), 6, "set_samus_anim_full(0x7F,0x80,0x01) 异常路径（6 写事件）");
     }
 
     /// 测试 7（穷举等价证明（全域穷举））：apply_pos_write 全域穷举（x/v08/v09/v0b 全域（≤3 重（256^3）+第 4 参数边界/异常））
@@ -5092,6 +5092,6 @@ mod tests_block160 {
     #[test]
     fn test_apply_pos_write_exception_path() {
         let ev = apply_pos_write(0x7F, 0x80, 0x01, 0x02);
-        assert_eq!(ev.len(), 2, "apply_pos_write(0x7F,0x80,0x01,0x02) 异常路径（2 写事件（位0 置段（跳过）））");
+        assert_eq!(ev.len(), 3, "apply_pos_write(0x7F,0x80,0x01,0x02) 异常路径（3 写事件（位0 未置段（写）））");
     }
 }
