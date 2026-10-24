@@ -37,20 +37,21 @@ pub fn nmi_handler(mem: &mut FrameMemory) {
 /// `lda PPUSTATUS` 翻转复位先于 $2005 双写（spec §3.5））→g.ReadJoyPads→声/龄面。
 /// ScrollDir（Temp02/03=$02/$03——$00=纵房/$02=横房）=scratch 面（非持久影子）。
 fn nmi_body(mem: &mut FrameMemory) {
-    if mem.read_ram(NMI_STATUS) != 0 {
-        return; // 超帧跳过（【r18 U3 真注】E4 表=SoundEngine/UpdateAge 在 NMIStatus 门外
-        // **无条件**——本早退吞掉两者=已知缺口（G2/M6：声域波次内修）；非"移至独立段"）
+    // 超帧门（E4 表：NMIStatus==0 才做 b-g 相——超时帧跳过 vblank 后半=掉帧语义）
+    if mem.read_ram(NMI_STATUS) == 0 {
+        // GameMode 分派（GameMode=$1D（N-00xx asm 名）：≠0 → NMIScreenWrite）
+        if mem.read_ram(GAME_MODE) != 0 {
+            nmi_screen_write(mem); // NMIScreenWrite（asm :3590——已端口）
+        }
+        check_palette_write(mem); // CheckPaletteWrite（asm :507——已端口）
+        check_vram_struct_write(mem); // CheckVRAMStructBufferWrite（asm :790——已端口）
+        // 执行序补全（前版漏桩自查）：WritePPUCtrl/WriteScroll/ReadJoyPads（asm 调用序列）
+        write_ppu_ctrl(mem); // WritePPUCtrl（asm :1150 族——已端口）
+        write_scroll(mem); // WriteScroll（asm :717——已端口）
+        read_joy_pads(mem); // ReadJoyPads（asm :1215 族——已端口）
     }
-    // GameMode 分派（GameMode=$1D（N-00xx asm 名）：≠0 → NMIScreenWrite）
-    if mem.read_ram(GAME_MODE) != 0 {
-        nmi_screen_write(mem); // NMIScreenWrite（asm :3590——已端口）
-    }
-    check_palette_write(mem); // CheckPaletteWrite（asm :507——已端口）
-    check_vram_struct_write(mem); // CheckVRAMStructBufferWrite（asm :790——已端口）
-    // 执行序补全（前版漏桩自查）：WritePPUCtrl/WriteScroll/ReadJoyPads（asm 调用序列）
-    write_ppu_ctrl(mem); // WritePPUCtrl（asm :1150 族——已端口）
-    write_scroll(mem); // WriteScroll（asm :717——已端口）
-    read_joy_pads(mem); // ReadJoyPads（asm :1215 族——已端口）
+    // 【G2/M6 修复（r19）】E4 表：SoundEngine/UpdateAge 在 NMIStatus 门外**无条件**跑
+    // （prg7_engine.asm:225-294 NMI 序实证）——原早退吞掉两者=超帧声路缺席。
     sound_engine(mem); // SoundEngine（sound_engine.asm :384 族——已端口）
     update_age(mem); // UpdateAge（asm :2088 族——已端口；NMI 体末件）
 }
@@ -527,6 +528,26 @@ mod tests {
         let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| sound_engine(&mut m2)));
         let msg = panic_message(&r.unwrap_err());
         assert!(msg.contains("unported @ bank07:B539"), "handler 记账点失准: {msg}");
+    }
+
+    /// 【G2/M6 钉死】超帧（NMIStatus≠0）：声/龄面**无条件跑**（E4 门外）而屏面 b-g 相挡。
+    #[test]
+    fn superframe_runs_sound_but_skips_screen_phase() {
+        use crate::ram_map::{JOY1_STATUS, NMI_STATUS, SFX_PAUSED};
+        let mut m = crate::frame::FrameMemory::default();
+        m.write_ram(NMI_STATUS, 1); // 超帧态（帧未完成旗）
+        m.write_ram(SFX_PAUSED, 5); // 判别位（声面跑⇒被清）
+        m.joy1 = 0x20; // 判别位（读手柄挡⇒$14 不落）
+        nmi_body(&mut m);
+        assert_eq!(m.read_ram(SFX_PAUSED), 0, "SoundEngine 无条件（E4 门外）");
+        assert_eq!(m.read_ram(JOY1_STATUS), 0, "ReadJoyPads 属门内 b-g 相（超帧挡）");
+        // 对照：非超帧两面全跑
+        let mut m2 = crate::frame::FrameMemory::default();
+        m2.write_ram(SFX_PAUSED, 5);
+        m2.joy1 = 0x20;
+        nmi_body(&mut m2);
+        assert_eq!(m2.read_ram(SFX_PAUSED), 0);
+        assert_eq!(m2.read_ram(JOY1_STATUS), 0x20, "非超帧 ReadJoyPads 跑");
     }
 
     /// ReadJoyPads boot 面（无输入：$14/$15=0 落态+变更路径不触发）+输入变更引爆。
