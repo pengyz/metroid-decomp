@@ -35,26 +35,30 @@ PALETTE_BLOBS（nmi.rs）解码模拟对表（`python analysis/_paltrace.py`）�
 `PaletteDataIndex&3 → PAL_SELECT_TABLE[0..3] → ptr[1..4]` 族，终落 ptr[4] ✓）。
 f180 golden=0x02（ptr[7] 族）⇒ golden 渐显比我方**晚相位**，随后闪光链在 f180-240 间覆写至 ptr[4]。
 
-## 4. 矛盾点=精确工作单（asm 边界）
+## 4. 【2026-10-24 二轮更正】矛盾收窄到单事件
 
-asm 真值（prg0_title.asm:252-276）：
-- `METROIDFadeIn`：Timer3≠0 门（80 帧）→ `&0F` 闸（16 帧）→ `jsr LoadPalData`（**Z=耗尽**）→
-  完成⇒ `Timer3←$20`（注释明言"Delays flash by 320 frames"）→ inc → `LoadFlashTimer`；
-- `LoadFlashTimer`：Timer3≠0 门（320 帧）→ `Timer3←$08`（80 帧）→ inc → `FlashEffect`。
+> 【2026-10-24 更正】一轮"Timer3 单位复核/渐显表序"两个假设**均被证伪**：
+> PalSelectTbl ROM 直读（`rom/Metroid (USA).nes` prg[0x0A9A] = `02..0C,0C FF`）与烘焙
+> **逐字节一致**；调用记账（`analysis/_diag_palidx.txt` 实录）`idx=5,6,7,8,9,10,11,11`
+> =8 次调用忠实于 asm（表内 `0C 0C` 重复项=末两次同写 ptr[11] 自证）；`$C1` 轨迹双侧对齐
+> （4→0C=8 步）⇒ **双方渐显写序完全相同**。
 
-**矛盾**：按 asm，闪光链最早 f≈500 才跑（boot-title 窗口=300 帧内不应出现）；但 golden
-f240 已现 ptr[4]（闪光族）值。⇒ 考证靶点（按优先序）：
-1. **LoadPalData（asm 本体）**：表序/起始索引（PaletteDataIndex=4 起 vs 表首起）、
-   Z 语义（何时判"耗尽"）、写面（写哪些槽）——我方渐显写 ptr[6..11] 起点=4；golden 起点
-   疑为 0（渐显表序错位）；
-2. **"320 帧"延迟的真值核**：$20 的单位（10 帧/单位 vs 1 帧）——若单位=1 帧，
-   f180+32=f212 闪光开跑 ✓ 与 golden f240 现 ptr[4] 相容！（constants_ram:496
-   「Decremented every 10 frames after set」是 Timer3 通则，但本路径注释/单位需复核）
-3. 我方 0x04/0x05 臂（title/mod.rs EffectDriver）与 asm FlashEffect（:226）逐步对表。
+**残差=单一缺失事件**：golden 在 f180-240 间（TR∈{3,4} 窗）有一笔 **Palette0C 族写**
+（`$3F0E←0x31`——文本行 536px 双侧轨迹：f120=02/f180=11/f240=31（golden）vs 我方 11 后停止；
+金面逐帧反推=`analysis/_slotprobe.py`）。写者身份未定——已穷举候选：
 
-**主假设（待证）**：golden 时间线=渐显（f80-180）→ 32 单位延迟（若=32 帧 ⇒ f212）→
-闪光 ptr[1..4] 循环（f212-299，`&3`+LoadPalData）→ 终值 ptr[4] ✓✓ 与全部观测相容；
-我方 0x04 的 Timer3 门按 320 帧实现（Timer3 单位=10 帧通则）⇒ 闪光永不开跑。
+| 候选 | 排除依据 |
+|---|---|
+| METROIDFadeIn/LoadPalData | 双侧调用序相同（对账闭合）✓排除 |
+| FlashEffect(0x05)/MessageFadeIn(0x0D)/StartContinue(0x15/1B) | TR=4 未达（行对齐 $1F 双侧=4）|
+| FlashIntroScreen（$8AA7） | 表=[0x11/0x01]=Palette10/00 族，非 Palette0C ✓排除 |
+| StarPaletteSwitch | 写 $3F19/$3F1D 精灵槽 ✓排除 |
+
+⇒ **定位判据**：写者=某条 **RAM 状态全对齐却产生 PPU 写差异**的路径（丢写径/未端口/
+解码错位）。下一步（精确工作单）：Mesen Lua 对 golden 侧 **$1C(PaletteDataPending) 写点
++ $3F0E 写值**做 NMI 级 watch（把写者当场抓获）；或逐臂核 `PENDING_PAL` 事件到
+`palette_write_pending` 的消费链（重点：shim 的 tag→addr 映射有无 `0x0D` 丢写、
+`merge_writes` 同址覆写）。
 
 ## 5. 已收口件（本战役前几轮，均有独立证据）
 
