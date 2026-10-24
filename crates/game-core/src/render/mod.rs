@@ -1,4 +1,4 @@
-//! game-core::render —— S6-8 名表清屏（收编于 frame/render.rs RenderState——单一型纪律）。
+﻿//! game-core::render —— S6-8 名表清屏（收编于 frame/render.rs RenderState——单一型纪律）。
 //!
 //! spec 主文档：docs/spec/rendering-chain.md §2.3（task-42）。
 //! 【结构互核注】①名表清屏=ClearNameTables $C158 语义：NT0 恒清+模式分路
@@ -7,7 +7,7 @@
 //! ③镜像映射：NT2/NT3 垂直镜像→NT0/NT1 区（frame/render.rs 2KB 面覆盖 $2000-$27FF）。
 //! 【2026-10-18 收编】先版自建 RenderState=与 840ad00 重复（卡图澄清后收编——单一型）。
 
-use crate::frame::render::RenderState;
+use crate::state::RenderState;
 
 /// 名表区映射（NT 号→frame/render.rs nametable vec 偏移——垂直镜像 NT2→0/NT3→1）。
 fn nt_offset(nt_plus1: u8) -> usize {

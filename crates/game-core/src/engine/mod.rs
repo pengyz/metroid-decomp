@@ -13349,8 +13349,10 @@ mod a9_037_tests {
     }
 }
 
-/// frame 模块（旧实现改写·第一件（按子系统拆分去地址名））——refs asm 考证：bank00:9A07（NMIScreenWrite）+bank00:B4A9（IncrementSFXFrame）+bank00:BFBA（WaitForVBlank）（帧调度例程（实址（A 级原文）））
-pub mod frame;
+/// frame_slices 模块（旧实现改写·第一件（按子系统拆分去地址名）——【G7 消歧（r19）】
+/// 原名 frame 与 frame/engine.rs（FrameEngine）同名互指；本件=转写底座帧件 L2 切片）——
+/// refs asm 考证：bank00:9A07（NMIScreenWrite）+bank00:B4A9（IncrementSFXFrame）+bank00:BFBA（WaitForVBlank）（帧调度例程（实址（A 级原文）））
+pub mod frame_slices;
 pub mod boot;
 pub mod nmi;
 

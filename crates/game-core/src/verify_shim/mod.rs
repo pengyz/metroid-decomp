@@ -1,4 +1,4 @@
-//! game-core::verify_shim —— 验证适配层（two-layer-architecture.md §1）：
+﻿//! game-core::verify_shim —— 验证适配层（two-layer-architecture.md §1）：
 //! 域方法 → L2In/L2Out 写集契约。**写集由状态变更经 memmap diff 推导**，不手写地址。
 //!
 //! 机械名（sub_F2xx）只存在于本层注册注释（回指 bank:addr，§4）；产品层零机械名零地址。
@@ -424,11 +424,11 @@ pub fn fe83(input: &L2In) -> L2Out {
     let (a_del, v_del) = memmap::tile_blasts::write_event_routine(x, 0);
     fe83_apply(&mut ram, &mut events, a_del, v_del);
     // FE86-FE95：房间 RAM 指针 +0x21（进位丢弃 quirk——tile_blast 域折叠）
-    let ptr = crate::tile_blast::respawn_nametable_addr(memmap::tile_blasts::read_room_ram_ptr(&ram, x));
+    let ptr = crate::weapon::tile_blast::respawn_nametable_addr(memmap::tile_blasts::read_room_ram_ptr(&ram, x));
     fe83_apply(&mut ram, &mut events, memmap::flow_scratch::PTR_LO, ptr as u8);
     fe83_apply(&mut ram, &mut events, memmap::flow_scratch::PTR_HI, (ptr >> 8) as u8);
     // FE96-FE98：元块中心（FF3C 语义——tile_blast 域）
-    let (cy, cx) = crate::tile_blast::metatile_center(ptr);
+    let (cy, cx) = crate::weapon::tile_blast::metatile_center(ptr);
     fe83_apply(&mut ram, &mut events, memmap::flow_scratch::CENTER_Y, cy);
     fe83_apply(&mut ram, &mut events, memmap::flow_scratch::CENTER_X, cx);
     // FE99-FEA2：X 槽位（元块）装配
@@ -441,8 +441,8 @@ pub fn fe83(input: &L2In) -> L2Out {
         fe83_apply(&mut ram, &mut events, a, v);
     }
     // FEB1-FEBC：8×8 判定盒（4+Samus.radius）
-    let ry = crate::tile_blast::HITBOX_BASE.wrapping_add(memmap::object::read_radius_y(&ram));
-    let rx = crate::tile_blast::HITBOX_BASE.wrapping_add(memmap::object::read_radius_x(&ram));
+    let ry = crate::weapon::tile_blast::HITBOX_BASE.wrapping_add(memmap::object::read_radius_y(&ram));
+    let rx = crate::weapon::tile_blast::HITBOX_BASE.wrapping_add(memmap::object::read_radius_x(&ram));
     fe83_apply(&mut ram, &mut events, memmap::flow_scratch::RAD_Y, ry);
     fe83_apply(&mut ram, &mut events, memmap::flow_scratch::RAD_X, rx);
     // FEBD-FEBF：碰撞判定（f1fa 核，状态链化）——**carry 极性**：C=1 无碰撞 / C=0 重叠
@@ -457,7 +457,7 @@ pub fn fe83(input: &L2In) -> L2Out {
     }
     // FEC2-FEC4：伤害链（F311→F338→F27B→F323——tile_blast 域折叠；Y=0 槽=Samus）
     let is_hit_old = memmap::enemy_attrs::decode_attrs(&ram).entries()[0];
-    let h = crate::tile_blast::hurt_sequence(&crate::tile_blast::HurtParams {
+    let h = crate::weapon::tile_blast::hurt_sequence(&crate::weapon::tile_blast::HurtParams {
         dist_hi: ram[memmap::flow_scratch::DIST_HI as usize & 0x7FF],
         dist_x: ram[memmap::flow_scratch::DIST_X as usize & 0x7FF],
         is_hit_old,

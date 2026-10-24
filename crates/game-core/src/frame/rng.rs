@@ -17,9 +17,10 @@ impl GameRng {
         Self
     }
 
-    /// 算法步进（纯函数面）：(n1+$19, n2+$5F)——asm 合成值自证。
+    /// 算法步进（纯函数面）：(n1+RN1_STEP, n2+RN2_STEP)——【G9 归一（r19）】步进常量
+    /// 单源=crate::rng（RngState 同值面）；本件只留句柄形（D1 接口占位）。
     pub fn step(n1: u8, n2: u8) -> (u8, u8) {
-        (n1.wrapping_add(0x19), n2.wrapping_add(0x5F))
+        (n1.wrapping_add(crate::rng::RN1_STEP), n2.wrapping_add(crate::rng::RN2_STEP))
     }
 }
 
@@ -27,9 +28,12 @@ impl GameRng {
 mod tests {
     use super::*;
 
-    /// 算法合成值（注×5 互证面）。
+    /// 算法合成值（注×5 互证面）——与 crate::rng::RngState 单源一致（G9 归一钉死）。
     #[test]
     fn game_rng_step_resolved() {
         assert_eq!(GameRng::step(0x11, 0xFF), (0x2A, 0x5E));
+        let mut s = crate::rng::RngState { rn1: 0x11, rn2: 0xFF };
+        s.step();
+        assert_eq!((s.rn1, s.rn2), GameRng::step(0x11, 0xFF), "双面同源（步进常量单源）");
     }
 }

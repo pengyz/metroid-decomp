@@ -8,31 +8,9 @@
 //! **asm 内容锚**：`CopyGFXBlock: ; 07:C7D5`（PPUADDR=dest→PPUDATA 循环——CHR 上传）/
 //! `SetupRoom`（`$00=RoomRAMPtr→PPUADDR=$2000→4 页×256B 直拷 PPUDATA`——spec §2.3）。
 
-/// 渲染态（PPU 地址空间视图）。
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct RenderState {
-    /// CHR-RAM 8KB（图案表）。
-    pub chr: Vec<u8>,
-    /// 名表 2KB（$2000-$2FFF）。
-    pub nametable: Vec<u8>,
-    /// PPUADDR 当前地址（$2006 双写累积）。
-    pub ppuaddr: u16,
-    /// $2006 flip-flop（true=下一写为 hi）。
-    pub latch_hi: bool,
-    /// PPU 调色板 RAM（$3F00-$3F1F 32B——S6-10 渲染腿供面；「随件」兑现）。
-    pub palette: [u8; 32],
-    /// PPUCTRL（$2000）寄存器面——bit4=BG 图案表选（$0000/$1000）、bit3=精灵图案表选、
-    /// bit5=精灵尺寸（8/16）。asm 锚：boot `$FF=0x90`（`STA $2000`）⇒ bit4=1（标题期
-    /// BG 图案表=$1000——tile $8C 读 $18C0 标题块实证）。
-    pub ppuctrl: u8,
-}
-
-impl Default for RenderState {
-    fn default() -> Self {
-        Self { chr: vec![0; 0x2000], nametable: vec![0; 0x800], ppuaddr: 0, latch_hi: true,
-               palette: [0x0F; 32], ppuctrl: 0 }
-    }
-}
+/// G11 类型下沉（r19）：RenderState 定义归 `crate::state`——本件保留 re-export（兼容径）
+/// +方法实现（write_ppuaddr/write_reg_2006/write_ppudata——同 crate 跨模块 impl）。
+pub use crate::state::RenderState;
 
 impl RenderState {
     /// $2006 双写（hi/lo flip-flop——先 hi 后 lo）。

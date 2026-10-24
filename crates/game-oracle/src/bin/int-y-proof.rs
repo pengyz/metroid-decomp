@@ -1,10 +1,10 @@
-//! int-y-proof —— int_y 移植件的 **2^32 输入域穷举等价证明**（证明级证书）。
+﻿//! int-y-proof —— int_y 移植件的 **2^32 输入域穷举等价证明**（证明级证书）。
 //!
 //! 证法：对 bank07:E3A5-E3E4（含内嵌 sub_D147）的**全部 4 字节输入空间**
 //! （speed_i:$308 × speed_f:$312 × accel:$314 × subpix:$310 = 2^32）逐点比对：
 //!   Side A = ROM **字节驱动**微解释器（只实现切片出现的 17 个操作码，语义表逐条对应
 //!            6502 手册——不是对反汇编的转述，执行的是 ROM 原字节）
-//!   Side B = game_core::integrators::int_y（待证移植件）
+//!   Side B = game_core::samus::integrators::int_y（待证移植件）
 //! 零分歧 ⇒ 在声明域（该切片仅读 4 字节，指令清单可数）内 **数学穷尽证明**。
 //! 桥接状态（如实声明，r5 复审 E1）：本机不含对已审计 6502 核的抽样桥接；
 //! Side A 的可信度依据 = ①字节驱动（执行 ROM 原字节非转述）②审核员独立反汇编模型
@@ -12,7 +12,7 @@
 //!
 //! 用法: int-y-proof --rom <rom.nes>
 
-use game_core::integrators::{int_y, IntYState};
+use game_core::samus::integrators::{int_y, IntYState};
 use std::process::ExitCode;
 
 /// ROM 切片：bank07:E3A5..E3E4（64 字节窗口足够）+ sub_D147（bank07:D147..D14F）。

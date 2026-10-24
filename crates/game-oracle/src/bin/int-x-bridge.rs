@@ -1,6 +1,6 @@
-//! int-x-bridge —— SMT 证明的公式↔Rust 桥接探针。
+﻿//! int-x-bridge —— SMT 证明的公式↔Rust 桥接探针。
 //! stdin 每行 "si sf acc py m"（hex 2 位），stdout 每行 "i f p disp x y lim1"。
-use game_core::integrators::{int_x, IntXState};
+use game_core::samus::integrators::{int_x, IntXState};
 use std::io::{BufRead, Write};
 
 fn main() {

@@ -1,4 +1,4 @@
-//! Samus 状态机脊柱（bank07:CC0D 族；task-25 首件——先立脊柱后填肉范式③）。
+﻿//! Samus 状态机脊柱（bank07:CC0D 族；task-25 首件——先立脊柱后填肉范式③）。
 //!
 //! **asm 内容锚+结构互核注**（施工令②精化版）——
 //! refs/m1disasm/SRC/prg7_engine.asm `UpdateSamus: ; 07:CC0D`（`ldx #$00/stx PageIndex`/
@@ -16,7 +16,7 @@
 //! 地址面：PageIndex=$4B/IsSamus=$55（constants_ram 内容锚）；Samus.status=$0300
 //! （Object 结构首字段——constants_ram `.struct Object` 内容锚）。
 
-use crate::frame::FrameMemory;
+use crate::state::FrameMemory; // G11 破环：类型层直取（原经 frame/）
 use crate::ram_map::{IS_SAMUS, PAGE_INDEX, SAMUS_STATUS};
 
 /// Samus 处理态（GoSamusHandler 表序自证——asm `.word` 10 项）。

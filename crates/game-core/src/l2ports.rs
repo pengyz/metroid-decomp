@@ -1,4 +1,4 @@
-//! l2ports —— L2 子程序级移植面（与 oracle/subroutines/l2_cases.jsonl 一一对应）。
+﻿//! l2ports —— L2 子程序级移植面（与 oracle/subroutines/l2_cases.jsonl 一一对应）。
 //!
 //! 每个函数 = 一条 L2 用例的 game-core 侧实现；语义 golden 手推自 A 级反汇编（reference/seed）。
 //! 未实现的例程不在此登记（缺口走矩阵 L0 + unported! 桩），**禁止发明规格未覆盖的行为**。
@@ -30,13 +30,13 @@ pub fn sub_c376(input: &L2In) -> L2Out {
 
 /// int_y_E3A5 —— bank07:E3A5-E3E4 垂直积分切片（证明级等价，见 integrators）。
 pub fn int_y_e3a5(input: &L2In) -> L2Out {
-    let mut st = crate::integrators::IntYState {
+    let mut st = crate::samus::integrators::IntYState {
         speed_i: input.ram[0x308 & 0x7FF],
         speed_f: input.ram[0x312 & 0x7FF],
         subpix: input.ram[0x310 & 0x7FF],
     };
     let accel = input.ram[0x314 & 0x7FF];
-    let out = crate::integrators::int_y(&mut st, accel);
+    let out = crate::samus::integrators::int_y(&mut st, accel);
     L2Out {
         a: out.disp,
         x: out.reg_x,
@@ -52,14 +52,14 @@ pub fn int_y_e3a5(input: &L2In) -> L2Out {
 
 /// int_x_E3E5 —— bank07:E3E5-E448 水平积分切片（SMT 证明级，见 integrators）。
 pub fn int_x_e3e5(input: &L2In) -> L2Out {
-    let mut st = crate::integrators::IntXState {
+    let mut st = crate::samus::integrators::IntXState {
         speed_i: input.ram[0x309 & 0x7FF],
         speed_f: input.ram[0x313 & 0x7FF],
         subpix: input.ram[0x311 & 0x7FF],
     };
     let accel = input.ram[0x315 & 0x7FF];
     let max_src = input.ram[0x316 & 0x7FF];
-    let out = crate::integrators::int_x(&mut st, accel, max_src);
+    let out = crate::samus::integrators::int_x(&mut st, accel, max_src);
     L2Out {
         a: out.disp,
         x: out.reg_x,
@@ -1508,7 +1508,7 @@ pub fn sub_title_no_op(input: &L2In) -> L2Out {
 /// 域形态：engine::frame::draw_frame（x/v0303_x（byte-driven semantics））。
 pub fn sub_draw_frame(input: &L2In) -> L2Out {
     let v0303_x = input.ram[0x303 & 0x7FF];
-    let (writes, ret) = crate::engine::frame::draw_frame(input.x, v0303_x);
+    let (writes, ret) = crate::engine::frame_slices::draw_frame(input.x, v0303_x);
     L2Out { a: ret as u8, x: (ret >> 8) as u8, y: input.y, writes }
 }
 
@@ -1516,7 +1516,7 @@ pub fn sub_draw_frame(input: &L2In) -> L2Out {
 /// 域形态：engine::frame::wait_nmi_pass（v1a（NMIStatus（byte-driven semantics）））。
 pub fn sub_wait_nmi_pass(input: &L2In) -> L2Out {
     let v1a = input.ram[0x1A & 0x7FF];
-    let (done, timed_out) = crate::engine::frame::wait_nmi_pass(v1a);
+    let (done, timed_out) = crate::engine::frame_slices::wait_nmi_pass(v1a);
     L2Out { a: done as u8, x: timed_out as u8, y: input.y, writes: vec![] }
 }
 

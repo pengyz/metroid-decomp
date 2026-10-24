@@ -1,4 +1,4 @@
-//! Samus 物理域（task-25 次件+task-4 移植半；链规 19 业务结构——积分器/坐标件/R-mv 面）。
+﻿//! Samus 物理域（task-25 次件+task-4 移植半；链规 19 业务结构——积分器/坐标件/R-mv 面）。
 //!
 //! **asm 内容锚+结构互核注**（施工令②精化版）——
 //! · 坐标热件（move 相 17k+ hits）：`Xminus16: ; 07:F1F4`（`txa/sec/sbc #$10/tax`）/
@@ -16,7 +16,7 @@
 //!
 //! 积分器拼装位：int_x/int_y（integrators.rs 证明级件）随 state 处理族收编到此域。
 
-use crate::frame::FrameMemory;
+use crate::state::FrameMemory; // G11 破环：类型层直取（原经 frame/）
 use crate::ram_map::{
     ON_FROZEN_ENEMY, SAMUS_ACCEL_Y, SAMUS_HORZ_SPEED_MAX, SAMUS_ON_ELEVATOR, SAMUS_RADIUS_Y,
     SAMUS_Y,
@@ -338,13 +338,13 @@ pub const SAMUS_SUBPIX_X: u16 = 0x0311;
 /// 垂直积分拼装（R-mv-2 速度积分面）：RAM 三态→IntYState→int_y（E3A5 族）→写回。
 /// 返回本帧整像素位移（补码）。
 pub fn vert_integrate(mem: &mut FrameMemory) -> u8 {
-    let mut st = crate::integrators::IntYState {
+    let mut st = crate::samus::integrators::IntYState {
         speed_i: mem.read_ram(SAMUS_SPEED_Y_I),
         speed_f: mem.read_ram(SAMUS_SPEED_Y_F),
         subpix: mem.read_ram(SAMUS_SUBPIX_Y),
     };
     let accel = mem.read_ram(SAMUS_ACCEL_Y);
-    let out = crate::integrators::int_y(&mut st, accel);
+    let out = crate::samus::integrators::int_y(&mut st, accel);
     mem.write_ram(SAMUS_SPEED_Y_I, st.speed_i);
     mem.write_ram(SAMUS_SPEED_Y_F, st.speed_f);
     mem.write_ram(SAMUS_SUBPIX_Y, st.subpix);
@@ -356,14 +356,14 @@ pub fn vert_integrate(mem: &mut FrameMemory) -> u8 {
 
 /// 水平积分拼装（R-mv-3 速度积分面）：RAM 三态→IntXState→int_x（max_src=HorzSpeedMax）。
 pub fn horz_integrate(mem: &mut FrameMemory) -> u8 {
-    let mut st = crate::integrators::IntXState {
+    let mut st = crate::samus::integrators::IntXState {
         speed_i: mem.read_ram(SAMUS_SPEED_X_I),
         speed_f: mem.read_ram(SAMUS_SPEED_X_F),
         subpix: mem.read_ram(SAMUS_SUBPIX_X),
     };
     let accel = mem.read_ram(crate::ram_map::SAMUS_ACCEL_X); // 待名址随考证
     let max_src = mem.read_ram(crate::ram_map::SAMUS_HORZ_SPEED_MAX);
-    let out = crate::integrators::int_x(&mut st, accel, max_src);
+    let out = crate::samus::integrators::int_x(&mut st, accel, max_src);
     mem.write_ram(SAMUS_SPEED_X_I, st.speed_i);
     mem.write_ram(SAMUS_SPEED_X_F, st.speed_f);
     mem.write_ram(SAMUS_SUBPIX_X, st.subpix);

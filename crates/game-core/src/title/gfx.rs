@@ -1,4 +1,4 @@
-//! `game-core::title::gfx` —— 标题图形初始化（InitTitleGFX（行为等价））。
+﻿//! `game-core::title::gfx` —— 标题图形初始化（InitTitleGFX（行为等价））。
 //!
 //! refs 考证（bank:addr（A 级原文））：InitTitleGFX（bank07:C5D7（标题图形初始化））+
 //! LoadGFX（bank07:C7AB（图形加载））+LoadSamusGFX（bank07:C5DC（萨姆斯图形加载））。
@@ -11,7 +11,7 @@ mod tests_init_title_gfx {
     //! →rs.chr=终载面（sketch 双零阵⇒chr=0）+writes=空面。
 
     use super::*;
-    use crate::frame::render::RenderState;
+    use crate::state::RenderState;
 
     /// 【穷举·load_gfx 全域】gfx 全逐位对拍（0x2000 全域（独立参考径））。
     #[test]
@@ -55,7 +55,7 @@ mod tests_init_title_gfx {
 // refs 考证（bank:addr（A 级原文））：InitTitleGFX（bank07:C5D7）+LoadGFX（bank07:C7AB）
 // +LoadSamusGFX（bank07:C5DC）。
 
-use crate::frame::render::RenderState;
+use crate::state::RenderState;
 
 /// 图形加载（旧 LoadGFX（07:C7AB）行为等价面）——gfx→rs.chr[0..0x2000]（CHR-RAM 8KB 载面）。
 pub fn load_gfx(rs: &mut RenderState, gfx: &[u8; 0x2000]) {
@@ -85,7 +85,7 @@ mod tests_load_gfx {
     //! InitTitleGFX（bank07:C5D7）+LoadSamusGFX（bank07:C5DC）。
 
     use super::*;
-    use crate::frame::render::RenderState;
+    use crate::state::RenderState;
 
     /// 独立参考径（证伪立场）：逐位直序。
     fn reference_load(rs: &mut RenderState, gfx: &[u8; 0x2000]) {
