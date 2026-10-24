@@ -82,6 +82,13 @@ impl FrameEngine {
                 if self.mem.read_ram(crate::ram_map::NMI_STATUS) != 0 {
                     super::boot::boot_post_spin(&mut self.mem);
                     self.phase = BootPhase::PostSpin;
+                    // 【唤醒 tick 合并首迭代】（r14 $C3 根因件）：真机 f1=NMI#1+boot_post+
+                    // 首工作**同一帧**（NMI-1 即 boot 唤醒 NMI）——分帧会多出一个 NMI 周期
+                    // （星调色板 switch 在 boot NMI 多自增一次且首个迭代的队列门错相）。
+                    // 采样缝=boot_post 后/首工作前（oracle f=1 语义锚）。
+                    on_spin_exit(&self.mem);
+                    super::mainloop::main_loop_iter(&mut self.mem);
+                    self.phase = BootPhase::MainLoop;
                 }
             }
             BootPhase::PostSpin | BootPhase::MainLoop => {
@@ -137,6 +144,20 @@ mod tests {
         crate::frame::title_bridge::main_title_routine(&mut m);
         let recorded = crate::frame::DIVERGENCES.with(|d| d.borrow().clone());
         assert!(!recorded.contains(&0x9147), "0x18 专件未清: {recorded:?}");
+    }
+
+    /// 【诊断】boot 早窗逐 tick 状态（r14 $C3 根因定位）。
+    #[test]
+    fn diag_boot_window_state() {
+        let mut e = FrameEngine::new();
+        for t in 1..=8 {
+            e.tick_frame();
+            println!(
+                "t{t}: $C3={:02X} GameMode={:02X} FC={:02X} phase={:?}",
+                e.mem.read_ram(0x00C3), e.mem.read_ram(crate::ram_map::GAME_MODE),
+                e.mem.read_ram(crate::ram_map::FRAME_COUNT), e.phase
+            );
+        }
     }
 
     /// tick_frame 执行序（契约断言②：**f=1 帧界锚**——首 tick 后 clock=1）+ pre 链态。

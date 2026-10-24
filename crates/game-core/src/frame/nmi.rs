@@ -84,6 +84,10 @@ pub fn check_palette_write(mem: &mut FrameMemory) {
     }
     if mem.read_ram(PALETTE_PENDING) != 0 {
         palette_write_pending(mem); // C1FF（S6-3——已端口）
+        // 【互斥修正（r14 残差件）】asm ②③=jmp 链互斥分支——Pending≠0 入写段后 RTS，
+        // **不落 ③**；串行执行会先 flush 清空 $7A0 队列门、再误入 StarPaletteSwitch
+        // 多自增 IntroStarOffset（$C3 恒差 1 根因——星调色板集错相）。
+        return;
     }
     if mem.read_ram(GAME_MODE) != 0 && mem.read_ram(TITLE_ROUTINE) < 0x15 {
         super::intro::star_palette_switch(mem); // StarPaletteSwitch（asm 内容锚——已端口）
@@ -443,6 +447,22 @@ mod tests {
 
     /// CheckPaletteWrite 三路分派（boot→8AC7；ending→9F54；pending→C1FF）+ 静默路。
     #[test]
+    /// 【互斥钉死（r14）】Pending≠0 ⇒ 只 flush 不 switch（asm jmp 链②③互斥）——
+    /// 串行会清队列门后误自增 IntroStarOffset（$C3 恒差 1 根因）。
+    #[test]
+    fn palette_pending_excludes_star_switch() {
+        let mut m = crate::frame::FrameMemory::default();
+        m.write_ram(GAME_MODE, 1);
+        m.write_ram(crate::ram_map::TITLE_ROUTINE, 0x03); // <0x15（③条件本应命中）
+        m.write_ram(crate::ram_map::FRAME_COUNT, 0); // 16 帧门开
+        m.write_ram(crate::ram_map::PPU_DATA_PENDING, 1);
+        m.write_ram(crate::ram_map::PALETTE_PENDING, 1); // ② 命中
+        m.write_ram(0x00C3, 0x00);
+        check_palette_write(&mut m);
+        assert_eq!(m.read_ram(0x00C3), 0, "② 分支独占——IntroStarOffset 不得自增");
+        assert_eq!(m.read_ram(crate::ram_map::PALETTE_PENDING), 0, "写段已消费");
+    }
+
     fn check_palette_write_routes_three_paths() {
         use crate::ram_map::{GAME_MODE, PALETTE_PENDING, TITLE_ROUTINE};
         let boom = |m: &mut FrameMemory| {

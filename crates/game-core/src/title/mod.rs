@@ -846,6 +846,9 @@ pub fn dispatch_step(face: &TitleFace) -> TitleStep {
     };
     use crate::verify_shim as sh;
     match face.phase {
+        // 0x00 InitializeAfterReset：**单迭代**（r14 二修——f2 空号属 0x01 步 spin①，
+        // 非本步等待；2 段拆分会把 FC=0 窗口拉长一帧 ⇒ StarPaletteSwitch 第二自增
+        // （$C3 恒差 1 根因））。相位推进即本步完成（无孤儿）。
         0x00 => step_from_l2(sh::title_init_after_reset(&l2in)),
         0x0A | 0x0B => step_from_l2(sh::title_inc(&l2in)),
         0x0C => step_from_l2(sh::title_change_nametable(&l2in)),

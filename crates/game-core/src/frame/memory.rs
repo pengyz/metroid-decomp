@@ -28,6 +28,9 @@ pub struct FrameMemory {
     pub nmi_enabled: bool,
     /// title 子步游标（跨帧件段索引——port2 契约面：next_cursor>0=spin 续点/0=完成复位）。
     pub title_cursor: u8,
+    /// 续段归属相位（**同相位续段判定**（r14 复核 F4）：cursor 由该相位的段序列发出——
+    /// 相位推进后残留的 cursor=孤儿段，下 tick=新相位首个真迭代（禁误门为续段））。
+    pub title_cursor_phase: u8,
     /// 手柄 1 输入面（场景驱动；boot-title=无输入 0）。
     pub joy1: u8,
     /// 手柄 2 输入面。
@@ -38,7 +41,9 @@ pub struct FrameMemory {
 
 impl Default for FrameMemory {
     fn default() -> Self {
-        Self { ram: [0; 0x800], wram: [0; 0x2000], regs: Registers::default(), nmi_enabled: false, title_cursor: 0, joy1: 0, joy2: 0, render: crate::frame::render::RenderState::default() }
+        Self { ram: [0; 0x800], wram: [0; 0x2000], regs: Registers::default(), nmi_enabled: false,
+               title_cursor: 0, title_cursor_phase: 0, joy1: 0, joy2: 0,
+               render: crate::frame::render::RenderState::default() }
     }
 }
 

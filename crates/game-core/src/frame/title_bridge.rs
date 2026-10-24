@@ -65,6 +65,7 @@ pub fn main_title_routine(mem: &mut FrameMemory) {
     }
     let step = crate::title::dispatch_step(&face);
     mem.title_cursor = step.next_cursor; // 跨帧游标存回（>0=spin 续点/0=完成复位）
+    mem.title_cursor_phase = phase; // 续段归属相位（同相位续段判定——r14 复核 F4）
     // shell 组合点执行（**全臂**——两层边界：title 域声明/本侧执行；
     // S6-10 渲染腿接线：PrepareVram/ClearNameTables PPU 面随批兑现）。
     for sc in &step.shell {
@@ -121,8 +122,13 @@ fn exec_shell_call(mem: &mut FrameMemory, sc: &crate::title::ShellCall) {
         ClearNameTables => crate::frame::boot::c158_unit(mem), // RAM 面+PPU 面（C158——S6-10）
         RemoveIntroSprites => {
             // **F4 离屏惯例**（C1BC：「sprite values with #$F4——bottom right+
-            // blank graphic」——S6-4 精灵面迭代件；port2 fcda70b 变体就绪）
-            for i in 0..0x100u16 {
+            // blank graphic」——S6-4 精灵面迭代件；port2 fcda70b 变体就绪）。
+            // 【范围修正（r14 复核 F2——asm 内容锚）】`RemoveIntroSprites: ; 07:C1BC`：
+            // `ldy #$5F/lda #$F4/@loop: sta ($00),y/dey/bpl`——**只填 $0200-$025F（精灵 0-23）**；
+            // 星槽 $0260-$02FF（LoadStarSprites 载面）不得抹——旧 0x100 全页填会每帧
+            // 抹掉 40 星条目（f212 起星像素消失实证）。尾 `jmp DecSpriteYCoord`（$988A）在
+            // title 窗被 SpriteLoadPending=0 门掉（无操作），运动面随件核。
+            for i in 0..0x60u16 {
                 mem.write_ram(0x0200 + i, 0xF4);
             }
         }
@@ -148,12 +154,13 @@ fn prepare_vram(mem: &mut FrameMemory, addr: u16) {
 mod tests {
     use super::*;
 
-    /// 统一入口穿越（phase 0 臂推进——dispatch_step 面）。
+    /// 统一入口穿越（phase 0 臂单迭代推进——r14 二修：0x00 单迭代（f2 空号属 0x01 spin①））。
     #[test]
     fn bridge_crosses_via_unified_entry() {
         let mut m = FrameMemory::default();
         main_title_routine(&mut m); // phase 0（InitializeAfterReset）
         assert_eq!(m.read_ram(TITLE_ROUTINE), 1); // 相位推进
+        assert_eq!(m.title_cursor, 0, "单迭代完成复位");
     }
 
     /// OBJECTS_CLEAR 复合标签展开（「标签展开在 shim」契约点——$0300-$031F 32 事件）。
@@ -163,6 +170,31 @@ mod tests {
         assert_eq!(events.len(), 32);
         assert_eq!(events[0], (0x0300, 0));
         assert_eq!(events[31], (0x031F, 0));
+    }
+
+    /// RemoveIntroSprites 范围修正（r14 复核 F2——C1BC `ldy #$5F` 只填 $0200-$025F）：
+    /// 星槽 $0260-$02FF（LoadStarSprites 载面）不得抹。
+    #[test]
+    fn remove_intro_sprites_preserves_star_slots() {
+        let mut m = FrameMemory::default();
+        m.write_ram(0x0260, 0x73); // 星槽首字节（IntroStarsData[0]）
+        m.write_ram(0x02FF, 0x85); // 星槽末字节
+        m.write_ram(0x0210, 0x00);
+        exec_shell_call(&mut m, &crate::title::ShellCall::RemoveIntroSprites);
+        assert_eq!(m.read_ram(0x0200), 0xF4, "精灵 0 填 F4");
+        assert_eq!(m.read_ram(0x025F), 0xF4, "精灵 23 尾位填 F4");
+        assert_eq!(m.read_ram(0x0260), 0x73, "星槽 24 保留（范围修正）");
+        assert_eq!(m.read_ram(0x02FF), 0x85, "星槽 63 保留");
+    }
+
+    /// 00 臂 IntroStarOffset 复位钉死（asm `prg0_title.asm:124 sty IntroStarOffset`——
+    /// r14 残差件：$C3 恒差根）。
+    #[test]
+    fn init_after_reset_resets_star_offset() {
+        let mut m = FrameMemory::default();
+        m.write_ram(0x00C3, 0x05); // 预置非零（复位必须落地）
+        main_title_routine(&mut m); // 00 臂段0（工作）
+        assert_eq!(m.read_ram(0x00C3), 0, "IntroStarOffset 复位（:124 sty）");
     }
 
     /// 未武装臂表址爆（per-entry 形——**域外相位=契约违例面 fail-loud 样本**

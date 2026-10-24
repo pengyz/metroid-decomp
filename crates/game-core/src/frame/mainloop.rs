@@ -18,14 +18,32 @@ use crate::ram_map::{
 };
 
 /// 主循环一迭代（C0BC 体；spin 唤醒已由本 tick NMI 完成）。
+///
+/// **迭代序门**（r14 复核 F3/F4 修订版——asm 内容锚）：主循环体四件
+/// （RandomNumbers C000/CheckBankSwitch/UpdateTimer C266/inc FrameCount）=**每迭代恰好
+/// 一次**；spin/等待段 CPU 自旋在 GoMainRoutine 内部 ⇒ 迭代未完成、四件全冻结
+/// （O f3→f7 四帧窗口仅 1 次 UpdateTimer dec 实证）。
+/// · 续段判定=入口 title_cursor>0 且**归属相位==当前相位**（F4：相位推进后残留的
+///   孤儿 cursor=新相位首个真迭代——禁误门为续段）。
+/// · 迭代收尾（inc FrameCount）在**步骤完成点**执行：游标归零 或 分发推进了相位
+///   （孤儿游标=步骤边界）。
+/// · regs.a 连续性：续段不跑 random_numbers（其写 regs.a）——分发臂继承段间 A 态（F3）。
 pub fn main_loop_iter(mem: &mut FrameMemory) {
-    random_numbers(mem); // C000（唤醒后首件）
-    super::boot::c4de_unit(mem); // CheckBankSwitch（已端口复用）
-    update_timer(mem); // C266
-    go_main_routine(mem); // C114（分发壳——会师点）
-    mem.write_ram(FRAME_COUNT, mem.read_ram(FRAME_COUNT).wrapping_add(1)); // `inc FrameCount`
+    let phase_now = mem.read_ram(crate::ram_map::TITLE_ROUTINE);
+    let continuation = mem.title_cursor > 0 && mem.title_cursor_phase == phase_now;
+    if !continuation {
+        random_numbers(mem); // C000（唤醒后首件）
+        super::boot::c4de_unit(mem); // CheckBankSwitch（已端口复用）
+        update_timer(mem); // C266
+    }
+    go_main_routine(mem); // C114（分发壳——会师点；续段=GoMainRoutine 内部续跑）
+    let phase_after = mem.read_ram(crate::ram_map::TITLE_ROUTINE);
+    let step_done = mem.title_cursor == 0 || mem.title_cursor_phase != phase_after;
+    if step_done {
+        // `inc FrameCount`（GoMainRoutine 返回点——等待段不达此处）
+        mem.write_ram(FRAME_COUNT, mem.read_ram(FRAME_COUNT).wrapping_add(1));
+    }
     mem.write_ram(NMI_STATUS, 0); // 清 0（spin 入口）
-    // spin yield（跨帧——引擎相位机）
 }
 
 /// RandomNumbers 单元（**asm 内容锚+结构互核注**）——
@@ -307,6 +325,36 @@ mod tests {
         assert_eq!(m.regs.a, 0x2A);
     }
 
+    /// 迭代序门（r14 复核 F3/F4）：续段 tick 冻结 RandomNumbers/CheckBankSwitch/UpdateTimer
+    /// （等待段自旋于 GoMainRoutine 内部——循环体四件每迭代一次）。
+    #[test]
+    fn continuation_tick_freezes_iteration_items() {
+        let mut m = crate::frame::FrameMemory::default();
+        m.write_ram(crate::ram_map::TITLE_ROUTINE, 1);
+        m.title_cursor = 1;
+        m.title_cursor_phase = 1; // 同相位续段（真续段）
+        m.write_ram(crate::ram_map::RANDOM1, 0x10);
+        m.write_ram(crate::ram_map::RANDOM2, 0x20);
+        m.write_ram(TIMER_DELAY, 5);
+        m.write_ram(FRAME_COUNT, 7);
+        main_loop_iter(&mut m);
+        assert_eq!(m.read_ram(crate::ram_map::RANDOM1), 0x10, "RandomNumbers 冻结");
+        assert_eq!(m.read_ram(crate::ram_map::RANDOM2), 0x20, "RandomNumbers 冻结");
+        assert_eq!(m.read_ram(TIMER_DELAY), 5, "UpdateTimer 冻结");
+    }
+
+    /// F4 孤儿游标=新相位首个真迭代（相位推进后残留 cursor——禁误门）：循环体跑。
+    #[test]
+    fn orphan_cursor_after_phase_advance_is_fresh_iteration() {
+        let mut m = crate::frame::FrameMemory::default();
+        m.write_ram(crate::ram_map::TITLE_ROUTINE, 2);
+        m.title_cursor = 2;
+        m.title_cursor_phase = 1; // 归属相位≠当前（孤儿）
+        m.write_ram(TIMER_DELAY, 5);
+        main_loop_iter(&mut m);
+        assert_eq!(m.read_ram(TIMER_DELAY), 4, "UpdateTimer 跑（真迭代——禁误门）");
+    }
+
     /// UpdateTimer 预分频+三计时器递减。
     #[test]
     fn update_timer_prescaler_and_decrement() {
@@ -325,7 +373,7 @@ mod tests {
         assert_eq!(m.read_ram(TIMER3), 1);
     }
 
-    /// GoMainRoutine 标题路**会师穿越**（bank00:8000 已通——phase 0 臂推进效应）。
+    /// GoMainRoutine 标题路**会师穿越**（bank00:8000 已通——phase 0 臂单迭代推进）。
     #[test]
     fn go_main_routine_title_crosses_meeting_point() {
         let mut m = FrameMemory::default();
