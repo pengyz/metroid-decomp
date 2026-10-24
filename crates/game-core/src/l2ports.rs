@@ -1504,23 +1504,31 @@ pub fn sub_title_no_op(input: &L2In) -> L2Out {
 /// sub_InitializeAfterReset —— bank00:$8071 注册名（批2④；尾 jmp LoadStarSprites $98AE）。
 /// 域形态：title::init_after_reset 经 verify_shim::title_init_after_reset。
 
-/// sub_DrawFrame —— bank00:$9A07 注册名（旧实现改写·第一件（帧调度））。
-/// 域形态：engine::frame::draw_frame（x/v0303_x（byte-driven semantics））。
+/// sub_DrawFrame —— bank00:$9A07 注册名（NMIScreenWrite）。
+/// 【G4 裁定标注（r20）】**占位公式·非行为源**（engine::region_slices::draw_frame=
+/// byte-driven 桩体，非 NMIScreenWrite 语义）——忠实件=frame::nmi::nmi_screen_write
+/// （L3/L4 路径）；本件**零 L2 案**（静默区三锚之一），补案钉忠实件=G4 余账。
+/// 域形态：engine::region_slices::draw_frame（x/v0303_x（byte-driven semantics））。
 pub fn sub_draw_frame(input: &L2In) -> L2Out {
     let v0303_x = input.ram[0x303 & 0x7FF];
-    let (writes, ret) = crate::engine::frame_slices::draw_frame(input.x, v0303_x);
+    let (writes, ret) = crate::engine::region_slices::draw_frame(input.x, v0303_x);
     L2Out { a: ret as u8, x: (ret >> 8) as u8, y: input.y, writes }
 }
 
-/// sub_WaitNmiPass —— bank00:$BFBA 注册名（旧实现改写·第一件（帧调度））。
-/// 域形态：engine::frame::wait_nmi_pass（v1a（NMIStatus（byte-driven semantics）））。
+/// sub_WaitNmiPass —— bank00:$BFBA 注册名（WaitForVBlank）。
+/// 【G4 裁定标注（r20）】**占位公式·非行为源**（谓词桩）——忠实件=frame::engine.rs
+/// AwaitNmi spin 模型；零 L2 案（静默区三锚之一）。
+/// 域形态：engine::region_slices::wait_nmi_pass（v1a（NMIStatus（byte-driven semantics）））。
 pub fn sub_wait_nmi_pass(input: &L2In) -> L2Out {
     let v1a = input.ram[0x1A & 0x7FF];
-    let (done, timed_out) = crate::engine::frame_slices::wait_nmi_pass(v1a);
+    let (done, timed_out) = crate::engine::region_slices::wait_nmi_pass(v1a);
     L2Out { a: done as u8, x: timed_out as u8, y: input.y, writes: vec![] }
 }
 
-/// sub_NmiHandler —— bank00:$9A07 注册名（旧实现改写·第二件（NMI））。
+/// sub_NmiHandler —— **bank07:$C0D9** 注册名（NMI——【r20 锚注勘误】原误注 $9A07
+/// （与 sub_DrawFrame 撞车）；台账 N-0022 明载 nmi_handler=bank07:C0D9）。
+/// 【G4 裁定标注（r20）】**占位公式·非行为源**（byte-driven 桩）——忠实件=
+/// frame::nmi::nmi_handler（544 行全链）；零 L2 案（静默区三锚之一）。
 /// 域形态：engine::nmi::nmi_handler（ram（2KB 快照（byte-driven semantics）））。
 pub fn sub_nmi_handler(input: &L2In) -> L2Out {
     let mut ram_arr = [0u8; 2048];
