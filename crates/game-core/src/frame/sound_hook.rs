@@ -312,6 +312,50 @@ pub fn sound_dispatch_chain(mem: &mut FrameMemory, flag_addr: u16, block_win: u1
                 sound::initialize_sound_addresses();
                 Some(sound::samus_die_sfx_init(ct, flags))
             }
+            // ===== 音乐 init 组合臂（BC77-BC86 GotoMusicNNInit 族——f16 发射序实证；
+            // r17 复核后首件）=====
+            0xBC77 | 0xBC7A | 0xBC7D | 0xBC80 | 0xBC83 | 0xBC86 => {
+                // duty 双形（asm BC89-BCAB 逐字）：形A 同值（lda→tax/tay）/形B 分值
+                let (dx, dy) = match ptr {
+                    0xBC77 => (0x92, 0x96), // Music00Init（BCAA `ldx #$92/ldy #$96`）
+                    0xBC7A => (0xB6, 0xF6), // Music01Init（BCA4）——boot-title Intro（0x0B）路
+                    0xBC7D => (0xF4, 0xF4), // Music02Init（BC9A `lda #$F4`→XYMusicInit 同值）
+                    0xBC80 => (0x34, 0x34), // Music03Init（BC96 `lda #$34`）
+                    0xBC83 => (0xB3, 0xB3), // Music04Init（BC89 `lda #$B3`）
+                    _ => (0xF5, 0xF6),      // Music05Init（BC9E 分值）
+                };
+                let mut ram: Vec<(u16, u8)> = Vec::new();
+                let mut apu: Vec<(u16, u8)> = Vec::new();
+                // CheckMusicFlags（$B3FC）：MusicContFlags==CurrentSoundFlags⇒同曲重开；
+                // 异曲⇒InitializeSoundAddresses（$B404）全清（f16 $068D←00(B404)+
+                // $065D←00(B40A) 双写实证——同值写也是事件）
+                if !sound::check_music_flags(mem.read_ram(0x068D), mem.read_ram(0x064D)) {
+                    let (r, a) = sound::initialize_sound_addresses();
+                    ram.extend(r);
+                    apu.extend(a);
+                }
+                // LBC8D 组合（asm `jsr SetVolumeAndDisableSweep / jsr InitializeMusic /
+                // jmp UpdateAllMusicChannels`）：
+                ram.push((0x0648, 0x7F)); // SetVolumeAndDisableSweep（$B9E4）
+                ram.push((0x0649, 0x7F));
+                ram.push((0x0628, dx)); // MusicSQ1Duty（形参 X）
+                ram.push((0x0629, dy)); // MusicSQ2Duty（形参 Y）
+                let cur = mem.read_ram(0x064D);
+                // InitializeMusic（$BF19）：MusicContFlags←CurrentSoundFlags + 13B 曲头
+                // （SongHeaderOffsetTable[MusicInitIndex]——$065E=曲号，0x0B=Intro）
+                let idx = mem.read_ram(0x065E) as usize;
+                let off = *sound::SONG_HEADER_OFFSET_TBL.get(idx).unwrap_or(&0) as usize;
+                let mut header = [0u8; 13];
+                if off + 13 <= sound::SONG_HEADERS.len() {
+                    header.copy_from_slice(&sound::SONG_HEADERS[off..off + 13]);
+                }
+                ram.extend(sound::initialize_music(cur, &header));
+                // UpdateAllMusicChannels（$BAA5）入口面（深径音符载=残面注记——M5）
+                ram.extend(sound::update_all_music_channels_entry(
+                    mem.read_ram(0x0640), mem.read_ram(0x0641)));
+                Some(sound::HandlerOutcome { ram_events: ram, apu_events: apu,
+                                             a_out: 0, x_out: dx, y_out: dy })
+            }
             _ => None,
         };
         if let Some(out) = out {

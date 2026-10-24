@@ -503,7 +503,8 @@ mod tests {
         assert!(msg.contains("unported @ bank07:C97E-age"), "引爆点失准: {msg}");
     }
 
-    /// SoundEngine boot 面（全短路+6 旗同值写事件）+非零旗引爆。
+    /// SoundEngine boot 面（全短路+6 旗同值写事件）+音乐 init 正面（r17 组合臂接线）+
+    /// 未接 handler 引爆（B57B——NoiseCont 表[2] 未接件）。
     #[test]
     fn sound_engine_boot_face_and_flag_detonates() {
         use crate::ram_map::{MUSIC_INIT, SFX_NOISE_INIT, SFX_PAUSED, SFX_SQ1_INIT};
@@ -512,10 +513,19 @@ mod tests {
         assert_eq!(m.read_ram(SFX_PAUSED), 0);
         assert_eq!(m.read_ram(SFX_NOISE_INIT), 0); // 6 旗清（同值写事件）
         assert_eq!(m.read_ram(SFX_SQ1_INIT), 0);
-        m.write_ram(MUSIC_INIT, 0x80); // 音乐请求（位 7——6 位扫面：位 0/1 不扫）
-        let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| sound_engine(&mut m)));
+        // 音乐 init 正面：MUSIC_INIT=0x80（位7→MusicRoutineTbl[0]=GotoMusic04Init BC83）
+        // ⇒ 组合臂：异曲全清→InitializeMusic $068D←CurrentSoundFlags
+        m.write_ram(MUSIC_INIT, 0x80);
+        m.write_ram(0x064D, 0x80); // GetSoundRoutine 旗副本面（实跑由链写入）
+        sound_engine(&mut m);
+        assert_eq!(m.read_ram(0x068D), 0x80, "MusicContFlags←CurrentSoundFlags（BC90 面）");
+        assert_eq!(m.read_ram(0x0628), 0xB3, "Music04Init duty 同值（BC89）");
+        // 未接 handler 引爆：NoiseCont 链（$0688=0x40 位6→字节偏移 y=2=表目1=B539 未接件）
+        let mut m2 = FrameMemory::default();
+        m2.write_ram(0x0688, 0x40);
+        let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| sound_engine(&mut m2)));
         let msg = panic_message(&r.unwrap_err());
-        assert!(msg.contains("unported @ bank07:"), "handler 记账点失准: {msg}");
+        assert!(msg.contains("unported @ bank07:B539"), "handler 记账点失准: {msg}");
     }
 
     /// ReadJoyPads boot 面（无输入：$14/$15=0 落态+变更路径不触发）+输入变更引爆。
