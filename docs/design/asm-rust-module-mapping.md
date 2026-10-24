@@ -76,17 +76,17 @@ game-core
 | # | 缺口/待办 | 义务 |
 |---|---|---|
 | G1 | **帧预算记账未建**（M1——phase0-zero-page-frame-budget.md 设计在档、代码零实现） | 掉帧语义进 frame/ 前，重负载 L4 场景分叉风险显式登记 |
-| G2 | **M6 超帧声路缺席**（nmi_body:40-42 早退吞 SoundEngine/UpdateAge；E4 表=门外无条件） | 声域波次内修（已入声域缺口表） |
-| G3 | **port-map registry 未建**（phase0 交付物③：data/naming/port-map.toml+tools/port_coverage.py） | S 面分母×registry 双射门禁 |
-| G4 | **R1 双帧引擎**（engine/frame.rs L2 切片 vs frame/ 集成体——本轮迭代序门修复只落 frame/，两实现已分叉） | 归并或显式声明"L2 切片独立保真、分叉面登记"——须独立复核轮+L2 案全绿 |
-| G5 | engine/nmi.rs s1_s2_family **六模块并存**（:61/:113/:165/:217/:269/:321——r18 勘误：原记"五代"） | 裁剪须先证覆盖含属（各代独有断言清单）——测试面零回退义务 |
-| G6 | 散件归位（integrators/tile_blast/rng/gap） | move-only commit+测试随迁零 delta |
-| G7 | 同名互指更名（§1 消歧登记） | Stage B |
-| G8 | **警告债 342 条**（U7——234×unused writes 等；engine/ 转写件主源） | 清偿计划分批（勿一次性 churn）；dead_code 面=收编进度的反向指标 |
-| G9 | **双 PRNG**（U5：frame/rng.rs vs rng.rs——语义归属待裁） | 归并或双家声明（帧内 GameRng 契约 vs 全局 RNG 面） |
-| G10 | **探针场景登记**（U6：pal1c-boot/sndchain-boot=取证场景非玩法场景） | 已入 scenario-library-matrix（r18 补）；勿删（证据锚） |
-| G11 | **frame↔域件环**（F2：FrameMemory/RenderState 类型被域件反向借用（samus/handler:19、physics:19、title/gfx:14）——状态类型应下沉独立态层） | Stage B 类型下沉（Stage A 只登记不重构——复核裁定） |
-| G12 | **Stage A/B 闸门无 gate 强制**（F2：现仅文档约定+cli.py 单点） | 声明=文档+复核守护（Stage A）；Stage B 起 gate 化（gates 加结构哨） |
+| ~~G2~~ | ✅ **r19 清**（超帧声路修复：SoundEngine/UpdateAge 移出 NMIStatus 门——E4 序；TDD 双判别钉死） | — |
+| ~~G3~~ | ✅ **r19 清 v0**（port-map.toml 17 条+port_coverage.py 校验器——锚形/归宿/双射三面；增量补齐承诺=D7 承担） | 随域改写逐簇追加 |
+| G4 | **R1 双帧引擎**（engine/frame_slices.rs L2 切片 vs frame/ 集成体——已分叉） | 归并或显式声明"L2 切片独立保真、分叉面登记"——须独立复核轮+L2 案全绿 |
+| G5 | engine/nmi.rs s1_s2_family **六模块并存**（:61/:113/:165/:217/:269/:321） | 裁剪须先证覆盖含属（各代独有断言清单）——测试面零回退义务 |
+| ~~G6~~ | ✅ **r19 清**（integrators→samus/、tile_blast→weapon/；move-only 零 delta；S_intx 锚面随迁——前置对象消失守卫实录） | — |
+| ~~G7~~ | ✅ **r19 清**（engine/frame→frame_slices 消歧更名） | — |
+| G8 | **警告债 342 条**（234×unused writes 等；engine/ 转写件主源） | 清偿计划分批（勿一次性 churn） |
+| ~~G9~~ | ✅ **r19 清**（GameRng::step 步进常量单源=rng::RN1/2_STEP+同源钉死测） | — |
+| ~~G10~~ | ✅ 探针场景已入 scenario-library-matrix | — |
+| ~~G11~~ | ✅ **r19 清**（crate::state 态层下沉——FrameMemory/RenderState/Registers 定义归位；域件改向态层；frame↔域件环消除；re-export 兼容径） | — |
+| ~~G12~~ | ✅ **r19 清**（arch-contract 门禁机检：依赖方向+analysis 红线双哨；selftest 67/67） | — |
 
 ## 5. Stage A/B 重排闸门
 

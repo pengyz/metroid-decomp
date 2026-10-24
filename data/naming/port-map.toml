@@ -1,0 +1,95 @@
+# port-map registry v0（phase0 交付物③——G3 清偿，r19）
+#
+# 语义：asm 子程序 → Rust 归宿的**双射登记**（bank:addr → crate::module::fn）。
+# 【范围声明（D7）】v0=帧管线核+声引擎分派核+本会话已验端口件；**增量补齐随域改写
+# 六步流程**（每簇 port 时追加）——S 面分母×registry 双射在 v1 达成前不可机械证，
+# 残余风险已由 asm-rust-module-mapping.md §4 头声明承担。
+# 校验：python tools/port_coverage.py（rust 归宿存在性+双射性）
+
+version = 0
+scope = "frame 核+sound 分派核+已验件（增量补齐随域改写）"
+
+[[map]]
+asm = "bank07:C000"
+sym = "RandomNumbers"
+rust = "game_core::frame::mainloop::random_numbers"
+
+[[map]]
+asm = "bank07:C0BC"
+sym = "MainLoop"
+rust = "game_core::frame::mainloop::main_loop_iter"
+
+[[map]]
+asm = "bank07:C266"
+sym = "UpdateTimer"
+rust = "game_core::frame::mainloop::update_timer"
+
+[[map]]
+asm = "bank07:C114"
+sym = "GoMainRoutine"
+rust = "game_core::frame::mainloop::go_main_routine"
+
+[[map]]
+asm = "bank07:C1E0"
+sym = "CheckPaletteWrite"
+rust = "game_core::frame::nmi::check_palette_write"
+
+[[map]]
+asm = "bank07:C2CA"
+sym = "CheckVRAMStructBufferWrite"
+rust = "game_core::frame::nmi::check_vram_struct_write"
+
+[[map]]
+asm = "bank07:C215"
+sym = "ReadJoyPads"
+rust = "game_core::frame::nmi::read_joy_pads"
+
+[[map]]
+asm = "bank07:B3B4"
+sym = "SoundEngine"
+rust = "game_core::frame::nmi::sound_engine"
+
+[[map]]
+asm = "bank07:B4BD"
+sym = "GetSoundRoutine"
+rust = "game_core::sound::get_sound_routine_writes"
+
+[[map]]
+asm = "bank07:BC53"
+sym = "FindMusicInitIndex"
+rust = "game_core::sound::music::find_music_init_index"
+
+[[map]]
+asm = "bank07:BC64"
+sym = "MusicInitIndexAdd8"
+rust = "game_core::sound::music_init_index_add8"
+
+[[map]]
+asm = "bank07:C37E"
+sym = "PrepPPUPaletteString"
+rust = "game_core::frame::intro::prep_ppu_palette_string"
+
+[[map]]
+asm = "bank00:8AC7"
+sym = "StarPaletteSwitch"
+rust = "game_core::frame::intro::star_palette_switch"
+
+[[map]]
+asm = "bank00:8A8C"
+sym = "LoadPalData"
+rust = "game_core::frame::nmi::palette_write_pending"
+
+[[map]]
+asm = "bank07:C7D5"
+sym = "CopyGFXBlock"
+rust = "game_core::frame::gfx::load_gfx" # CopyGFXBlock 体=load_gfx 内联段（asm :93 注锚）
+
+[[map]]
+asm = "bank07:FFB0"
+sym = "Reset"
+rust = "game_core::frame::boot::boot_pre_spin"
+
+[[map]]
+asm = "bank07:C5D7"
+sym = "InitTitleGFX"
+rust = "game_core::frame::boot::boot_post_spin"
