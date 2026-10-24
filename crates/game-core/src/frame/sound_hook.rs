@@ -347,9 +347,25 @@ pub fn sound_dispatch_chain(mem: &mut FrameMemory, flag_addr: u16, block_win: u1
                     header.copy_from_slice(&sound::SONG_HEADERS[off..off + 13]);
                 }
                 ram.extend(sound::initialize_music(cur, &header));
-                // UpdateAllMusicChannels（$BAA5）入口面（深径音符载=残面注记——M5）
-                ram.extend(sound::update_all_music_channels_entry(
-                    mem.read_ram(0x0640), mem.read_ram(0x0641)));
+                // 【LBC8D 尾（r21 终审）】`jmp UpdateAllMusicChannels`——**全更新**
+                // （原仅 entry 面=起相位差根）。先落已积事件（快照一致：头载基址/延迟
+                // 尚未入 mem——bridge 终会再落（同值幂等））再跑环：
+                for &(a, v) in ram.iter() {
+                    mem.write_ram(a, v);
+                }
+                let st_tail = read_music_frame_state(mem);
+                let mut bases_tail = [0u16; 4];
+                let streams_tail: [Option<&[u8]>; 4] = core::array::from_fn(|ch| {
+                    let b = mem.read_ram(0x0630 + ch as u16 * 2) as u16
+                        | ((mem.read_ram(0x0631 + ch as u16 * 2) as u16) << 8);
+                    bases_tail[ch] = b;
+                    if b == 0 { None } else { game_data::sound::music_streams::stream_by_base(b) }
+                });
+                let out_tail = sound::music::update_all_music_channels(
+                    streams_tail, bases_tail,
+                    &game_data::sound::music_streams::SFX_DATA, &st_tail);
+                ram.extend(out_tail.events);
+                apu.extend(out_tail.apu);
                 Some(sound::HandlerOutcome { ram_events: ram, apu_events: apu,
                                              a_out: 0, x_out: dx, y_out: dy })
             }

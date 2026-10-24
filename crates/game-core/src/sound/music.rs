@@ -565,6 +565,14 @@ pub fn update_volume_envelope_frame(
         cntrl0 = Some(0x10);
         ev.push((0x00EA, 0x10));
     } else {
+        // 【$EB 乘二环（r21 终审）】`dec $EB/beq/iny iny/bne`——**$EB=工作变量消耗至 0**
+        // （行尾恒 0——原单存 env_idx 形证伪；休止路不经环⇒$EB 留 env_idx 面随件）。
+        // Y=（env_idx-1）×2（=环步数×2——指针表偏移）。
+        let mut cnt = face.env_index;
+        while cnt > 0 {
+            cnt = cnt.wrapping_sub(1);
+            ev.push((0x00EB, cnt)); // dec 环（RMW 写面）
+        }
         ev.push((0x00EC, ptr as u8)); // $EC/$ED←VolumeEnvelopePtrTable 项
         ev.push((0x00ED, (ptr >> 8) as u8));
         let byte = env.get(vol_index as usize).copied().unwrap_or(0xFF);

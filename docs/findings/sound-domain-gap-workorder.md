@@ -110,3 +110,13 @@ $0664+ 族）——余 **6B**：
 | $EA | 01/02、05/08（**G=O+1 步**）、f299 对齐 | 包络索引步进面差一步（休止推进 quirk 或 ResetVolumeIndex 相位） |
 
 附：$18/$19（RetrigDelay 恒差 1）与栈页=登记非声件；七金面 0/0/0 复验 ✓；gates 13/2 无恶化。
+
+## 7. 【r21 收口实录】$EB 乘二环+LBC8D 尾 + **相位劈裂定性**
+
+- **$EB 归零**（@loop_multiply `dec $EB` 消耗至 0——工作变量非单存；写序=sta→dec 链）
+- **LBC8D 尾全更新**（asm `jmp UpdateAllMusicChannels`——原仅 entry 面=起相位差根之一）
+- 移位扫描（_legcmp v2）定谳：**声域面 shift=0 全对齐**（恒差集=Retrig+计时面+栈页）；
+  shift=2 计时面全对齐、声面 4B 差 ⇒ **真残差=声面/计时面 2 帧内部相位劈裂**
+  （我方声引擎于 boot 双 tick 的 NMI 早跑 2 帧——tick≡帧+2 契约在声面的投影）。
+  **下轮抓手**：引擎相位修（boot 唤醒 tick 的声引擎时点对齐 asm：SoundEngine 在 E4 序的
+  首帧点）或 L3 行契约登记该劈裂（分面 shift 声明）。
