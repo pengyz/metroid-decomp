@@ -17,7 +17,7 @@ mod music_tables_anchors {
         assert_eq!((MUSIC_NOTES_TBL[0x7E], MUSIC_NOTES_TBL[0x7F]), (0x00, 0x27), "F7 idx $7E");
     }
 
-    /// 长度表三组（@4 11B/@6 12B/@7 12B——组号=曲头 Byte0：0/0x0B/0x17）。
+    /// 长度表三组（@4 11B/@6 12B/@7 12B——组首全表下标=曲头 Byte0：0/0x0B/0x17）。
     #[test]
     fn note_length_groups() {
         assert_eq!(NOTE_LENGTHS_4.len(), 11);
@@ -26,8 +26,11 @@ mod music_tables_anchors {
         assert_eq!(NOTE_LENGTHS_4[0], 0x04, "@4 首=About 1/16s");
         assert_eq!(NOTE_LENGTHS_6[0], 0x06, "@6 首=About 3/32s");
         assert_eq!(NOTE_LENGTHS_7[0], 0x07, "@7 首=About 7/64s（intro/end）");
-        assert_eq!(note_length_table(0), &NOTE_LENGTHS_4[..], "组 0→@4");
-        assert_eq!(note_length_table(0x0B), &NOTE_LENGTHS_6[..], "组 0x0B→@6");
-        assert_eq!(note_length_table(0x17), &NOTE_LENGTHS_7[..], "组 0x17→@7");
+        // 全表下标语义（asm `adc NoteLengthTblOffset` 直索全表）
+        assert_eq!(note_length_at(0), 0x04);
+        assert_eq!(note_length_at(0x0B), 0x06, "组首 11=@6 首");
+        assert_eq!(note_length_at(0x17), 0x07, "组首 23=@7 首");
+        assert_eq!(note_length_at(0x0D), 0x18, "idx 13=@6[2]（长度字节 0xB2+offset 0x0B）");
+        assert_eq!(note_length_at(0xFF), 0x00, "越界=0（fail-safe 面）");
     }
 }

@@ -68,13 +68,13 @@ pub const NOTE_LENGTHS_7: [u8; 12] = [
 {hexrow(l7)}
 ];
 
-/// 按组号（曲头 Byte0 面：0/0x0B/0x17）取长度表。
-pub fn note_length_table(group: u8) -> &'static [u8] {{
-    match group {{
-        0x0B => &NOTE_LENGTHS_6,
-        0x17 => &NOTE_LENGTHS_7,
-        _ => &NOTE_LENGTHS_4,
-    }}
+/// 按**全表下标**取长度帧数（asm 语义：`Y=(A&$0F)+NoteLengthTblOffset` 直接索引全表
+/// ——组偏移 0/0x0B/0x17 即组首下标（0/11/23），非分组切片）。
+pub fn note_length_at(index: u8) -> u8 {{
+    const ALL: [u8; {len(l4) + len(l6) + len(l7)}] = [
+{hexrow(l4 + l6 + l7)}
+    ];
+    ALL.get(index as usize).copied().unwrap_or(0)
 }}
 """
 
