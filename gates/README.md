@@ -44,7 +44,8 @@
 | `proof-checks` | int_x SMT 证明+公式↔Rust 桥接复跑（证书防腐） | 启用（按变更面触发；SMT+桥接内联；int_y 穷举留 CI/里程碑） |
 | `tree-coherence` | Rust mod 引用⊆提交树（未跟踪件掩盖破树侦测） | 启用 |
 | `doc-sync` | 双写片段逐字同文（pipeline↔design，F3 类漂移拦截） | 启用 |
-| `shared-inode-locks` | CARGO_HOME 锁文件跨家共享 inode 机检（事故③护栏——硬链快照忘删锁复发面拦截） | 启用 |
+| `shared-inode-locks` | CARGO_HOME 锁文件跨家共享 inode 机检（事故③护栏——硬链快照忘删锁复发面拦截） | 启用（事故③护栏） |
+| `arch-contract` | 依赖方向（域件禁 frame 类型=G11 破环契约）+analysis 不入库红线双哨（G12 结构哨） | 启用（r19） |
 
 ### proof-checks（证书防腐 v2，2026-10-15）
 

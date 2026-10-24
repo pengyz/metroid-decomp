@@ -882,7 +882,7 @@ PROOF_INTY_TIMEOUT_S = 900                 # 穷举实测 ~4 分钟，留余量
 PROOF_ROM_REL = Path("rom") / "Metroid (USA).nes"
 # S_intx 触发集：可影响证书三面（Side A 公式 / Rust 实现 / 桥接·穷举探针）的文件全入面。
 PROOF_SURFACE = (
-    "crates/game-core/src/integrators.rs",
+    "crates/game-core/src/samus/integrators.rs",
     "crates/game-core/src/l2ports.rs",
     "tools/int_x_smt_proof.py",
     "crates/game-oracle/src/bin/int-x-bridge.rs",
@@ -1266,6 +1266,37 @@ def gate_shared_inode_locks() -> tuple[str, str]:
     return PASS, f"共享 inode 锁 0（{checked} 锁文件/{len(homes)} 家 inode 全唯一）"
 
 
+def gate_arch_contract() -> tuple[str, str]:
+    """G12 结构哨（r19）：①依赖方向——域件禁 `use crate::frame::`（G11 破环契约：
+    FrameMemory/RenderState/Registers 经 crate::state 取型）②analysis/ 不入库红线
+    （AGENTS §2 红线表——可再生工作区）。
+    """
+    problems: list[str] = []
+    domain_dirs = ["samus", "enemy", "world", "weapon", "pickup", "ui",
+                   "title", "ending", "input", "sound"]
+    root = Path("crates/game-core/src")
+    for d in domain_dirs:
+        base = root / d
+        if not base.is_dir():
+            continue
+        for p in sorted(base.rglob("*.rs")):
+            text = p.read_text(encoding="utf-8", errors="replace")
+            for i, line in enumerate(text.splitlines(), 1):
+                if "use crate::frame::" in line:
+                    problems.append(f"{rel(p)}:{i} 域件引用 frame（G11 破环契约违例——经 crate::state 取型）")
+    try:
+        out = subprocess.run(["git", "ls-files", "analysis/"], capture_output=True,
+                             text=True, check=False).stdout.strip()
+        if out:
+            problems.append("analysis/ 入库违线（红线）：" + out.splitlines()[0]
+                            + ("…" if len(out.splitlines()) > 1 else ""))
+    except OSError as exc:
+        problems.append(f"git ls-files 失败: {exc}")
+    if problems:
+        return ("FAIL", "；".join(problems[:6]))
+    return ("PASS", f"依赖方向（{len(domain_dirs)} 域→state 层）+analysis 不入库 双契约在位")
+
+
 # ---------------------------------------------------------------- 门禁注册表
 # readme_state 必须与 gates/README.md「门禁清单」表的"状态"列逐字一致（selftest 自动比对）。
 
@@ -1290,6 +1321,8 @@ GATES: list[tuple[str, str, str, str, object]] = [
      "双写片段逐字同文（pipeline↔design，F3 类漂移拦截）", gate_doc_sync),
     ("shared-inode-locks", "启用（事故③护栏）", "check",
      "CARGO_HOME 锁文件跨家共享 inode 机检（硬链快照忘删锁=挂死复发面拦截）", gate_shared_inode_locks),
+    ("arch-contract", "启用（r19）", "check",
+     "依赖方向（域件禁 frame 类型=G11 破环契约）+analysis 不入库红线双哨", gate_arch_contract),
 ]
 
 
@@ -1814,7 +1847,7 @@ def cmd_selftest(_args) -> int:
     # 9) proof-checks v2：触发判定（不确定绝不导向跳过）+ DEFERRED 欠账 + ProofDeferred 字段
     act, why = proof_trigger(False, ["docs/rounds/x.md"])
     check("v2 触发：docs-only ⇒ skip（显式带 delta 摘要）", act == "skip" and "delta=" in why, why)
-    act, why = proof_trigger(False, ["crates/game-core/src/integrators.rs", "docs/a.md"])
+    act, why = proof_trigger(False, ["crates/game-core/src/samus/integrators.rs", "docs/a.md"])
     check("v2 触发：S_intx 命中 ⇒ run", act == "run", why)
     act, why = proof_trigger(False, None)
     check("v2 触发：git 不可判 ⇒ run（不确定绝不导向跳过）", act == "run", why)
@@ -1832,12 +1865,12 @@ def cmd_selftest(_args) -> int:
               n == 1 and proof_deferred_open(dp) == 0
               and "PASS 输出原文" in json.dumps(proof_deferred_records(dp), ensure_ascii=False),
               f"settled={n}")
-    ok, _ = commit_msg_check("feat(core): x", ["crates/game-core/src/integrators.rs"],
+    ok, _ = commit_msg_check("feat(core): x", ["crates/game-core/src/samus/integrators.rs"],
                              proof_deferred_open=1)
     check("v2 commit-msg：欠账期触 S_intx 缺 ProofDeferred ⇒ 拒", not ok,
           "欠账未销 + 触 S_intx ⇒ 必须带 ProofDeferred 字段")
     ok, _ = commit_msg_check("feat(core): x\n\nProofDeferred: abc123",
-                             ["crates/game-core/src/integrators.rs"], proof_deferred_open=1)
+                             ["crates/game-core/src/samus/integrators.rs"], proof_deferred_open=1)
     check("v2 commit-msg：ProofDeferred 字段齐备 ⇒ 接受", ok, "字段在位 ⇒ 接受")
     ok, _ = commit_msg_check("docs: x", ["docs/rounds/x.md"], proof_deferred_open=1)
     check("v2 commit-msg：欠账期但未触 S_intx ⇒ 免字段", ok, "非 S_intx 触面不涉欠账")
