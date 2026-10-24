@@ -36,6 +36,11 @@ game-core
 └── 烘焙面      game-data crate（ROM 直读解析——禁手抄）
 ```
 
+**类型归属声明**（F2 补）：`FrameMemory`/`RenderState` 等周期态载体归 `frame/`
+（忠实引擎层）；域件反向借用其类型（samus/handler、physics、title/gfx）构成
+**frame↔域件环**——Stage A 只登记（G11），Stage B 经类型下沉（独立态层）或
+依赖倒置消环。依赖方向正典：**域件←frame 会师调用、engine/ 零上行（真底层）**。
+
 ## 3. 映射轴与归宿表
 
 **三轴**（沿 phase0:28-29 逐字）：①帧管线权威序（E3 UpdateWorld 19 子系统/E4 NMI 相）
@@ -51,8 +56,22 @@ game-core
 | 区域数据目录/common_sprite_data/songs/CHR | game-data（烘焙面） | ROM 直读 |
 | constants_ram.asm | `memmap/`+`ram_map.rs` | 零页二分铁律（暂存→局部/持久→字段） |
 | PPU 硬件行为（无 asm 对应物） | `render/` | 新构件声明 |
+| 【F3 补】areas_common.asm（47KB 跨区共享例程：door/scroll/room 共用） | `world/`（door/room）+`enemy/common.rs` 散叶 | 散布型——按调用图拆归各域（phase0:29 「door 散在 areas_common+prg7」实证） |
+| 【F3 补】prg1_brinstar/prg2_norfair/prg3_tourian/prg4_kraid/prg5_ridley（区域 bank 代码） | `world/` 区域策略+`enemy/` 区域变体 | rom-alignment 旧行「prg0-6→world/rooms」保留真义：区域规则代码归 world、数据归 game-data |
+| 【F3 补】prg6_graphics.asm（图形例程） | `title/gfx.rs`+`render/` 分归 | 现实已落件（title::gfx 6 测在册） |
+| 【F3 补】reset.asm（复位向量序） | `frame/boot.rs`（boot_pre_spin 首拍锚 $FFB0） | 已落 |
+| 【F3 补】macros.asm/constants.asm/hardware.asm/memory_layout.asm（元数据） | `memmap/`+`ram_map.rs`+game-data constants | 元数据非行为件——不产生端口 |
+| 【F3 补】songs/ntsc/*（曲数据） | game-data `sound_data.rs`（SONG_HEADERS 等烘焙） | 已落 |
+| 【F3 补】songs/pal/* | **不采**（D6：保真期只做 NES_NTSC） | 单列 findings，不进保真面 |
+
+**D6 声明**：保真期范围=NES_NTSC only（AGENTS D6）——`pal/` 目录与一切 PAL 变体
+不采、不烘焙、不对拍；其差异单列 findings。
 
 ## 4. 缺口登记（M1+清理待办——每条带义务）
+
+> 【F3 补注】**双射不可证风险**：G3 registry 缺位期间，「每个 asm 子程序恰有一个 Rust
+> 归宿」**不可机械证明**——对拍只裁对不对、不证全不全（D7）；全不全仅靠本表登记+
+> unported! fail-loud 桩（53 桩=资产）+复核轮。残余风险显式承担。
 
 | # | 缺口/待办 | 义务 |
 |---|---|---|
@@ -60,9 +79,14 @@ game-core
 | G2 | **M6 超帧声路缺席**（nmi_body:40-42 早退吞 SoundEngine/UpdateAge；E4 表=门外无条件） | 声域波次内修（已入声域缺口表） |
 | G3 | **port-map registry 未建**（phase0 交付物③：data/naming/port-map.toml+tools/port_coverage.py） | S 面分母×registry 双射门禁 |
 | G4 | **R1 双帧引擎**（engine/frame.rs L2 切片 vs frame/ 集成体——本轮迭代序门修复只落 frame/，两实现已分叉） | 归并或显式声明"L2 切片独立保真、分叉面登记"——须独立复核轮+L2 案全绿 |
-| G5 | engine/nmi.rs s1_s2_family v1-v5 五代并存 | 裁剪须先证覆盖含属（各代独有断言清单）——测试面零回退义务 |
+| G5 | engine/nmi.rs s1_s2_family **六模块并存**（:61/:113/:165/:217/:269/:321——r18 勘误：原记"五代"） | 裁剪须先证覆盖含属（各代独有断言清单）——测试面零回退义务 |
 | G6 | 散件归位（integrators/tile_blast/rng/gap） | move-only commit+测试随迁零 delta |
 | G7 | 同名互指更名（§1 消歧登记） | Stage B |
+| G8 | **警告债 342 条**（U7——234×unused writes 等；engine/ 转写件主源） | 清偿计划分批（勿一次性 churn）；dead_code 面=收编进度的反向指标 |
+| G9 | **双 PRNG**（U5：frame/rng.rs vs rng.rs——语义归属待裁） | 归并或双家声明（帧内 GameRng 契约 vs 全局 RNG 面） |
+| G10 | **探针场景登记**（U6：pal1c-boot/sndchain-boot=取证场景非玩法场景） | 已入 scenario-library-matrix（r18 补）；勿删（证据锚） |
+| G11 | **frame↔域件环**（F2：FrameMemory/RenderState 类型被域件反向借用（samus/handler:19、physics:19、title/gfx:14）——状态类型应下沉独立态层） | Stage B 类型下沉（Stage A 只登记不重构——复核裁定） |
+| G12 | **Stage A/B 闸门无 gate 强制**（F2：现仅文档约定+cli.py 单点） | 声明=文档+复核守护（Stage A）；Stage B 起 gate 化（gates 加结构哨） |
 
 ## 5. Stage A/B 重排闸门
 
@@ -77,3 +101,18 @@ game-core
 | 删 kernel/+game_logic.rs | **F2 正名**：被取代的早期折叠件（非"自造件"——两件均有 A 级锚声称）；逐锚归宿已核：F10C/F1FA/F284→enemy/ai.rs（同三锚更强家）+engine/mod.rs 员体+verify_shim::f1fa_with_carry；C01A→frame/boot.rs:47+engine/boot.rs:40（双重更强家） | -13 例（kernel 8+game_logic 5——随删清单：exhaustive_startup_writes/boundary_indices/…）；清 RAM 语义由 frame/boot.rs clear_ram_lo_zero_fills_pages 已覆盖（M3） |
 | NeedsBgKernel→NeedsBgCollision | M4：一词二义消歧（瓦片环碰撞核 vs 帧内核）；且该词系我方造词（asm=CheckMoveVertical 无 kernel 词） | 0（测试随型改名） |
 | 文档词汇校正 | F3：phase0/data-driven 系 kernel 词汇 dated-correction 注 | 0 |
+
+### r18 三轴复核处置（needs_revision 3F/6M——补登记+清残留轮）
+
+| 残留 | 处置 | 测试面 |
+|---|---|---|
+| U1 diag_boot_window_state 临时测试 | ✅ 删（r15 定位毕） | -1 |
+| U2 render-dump 诊断块（_diag_pal30+fi==320 eprintln） | ✅ 删 | 0 |
+| U3 nmi.rs 伪注「移至尾前独立段」 | ✅ 改真注（G2 引证） | 0 |
+| U4 find_music_init_index 三实现 | ✅ 归并：正典=sound/music.rs（Option）；mod.rs u8 件删、测试改指正典（断言保持）；写序面=find_music_init_index_writes 独立（全序语义） | 0（断言平移） |
+| U5 双 PRNG | 📋 G9 登记 | — |
+| U6 探针场景未登记 | ✅ scenario-library-matrix 补登（G10） | 0 |
+| U7 警告 342 条 | 📋 G8 登记（清偿计划待立） | — |
+| U8 l4_ready_impl.rs 入库违线 | ✅ 解除入库（git rm --cached——盘留+史可溯；E8 反例引证以 git 历史为锚） | 0 |
+| F2 类型环/闸门 | 📋 §2 声明+G11/G12 登记（Stage A 不重构） | — |
+| F3 归宿表漏 12 模块 | ✅ §3 补 12 行+D6 声明（pal/ 不采）+§4 双射不可证风险注 | 0 |
