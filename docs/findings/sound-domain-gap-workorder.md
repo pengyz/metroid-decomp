@@ -52,6 +52,24 @@
 
 （TRI/Noise 两块本窗双零=天然对拍基线，波次中作回归哨兵。）
 
+## 3.5 W3 实施方案（r20——考证毕，四步走）
+
+> 考证产出（A 级：sound_engine.asm 逐字）：UpdateAllMusicChannels($BAA5)→
+> UpdateMusicChannel($BAC2)→LoadNextMusicChannelInstr($BADC)→_Continued($BB1C)→
+> SetMusicInstrDelayToLength($BBA8) 全径语义+两数据表定位（MusicNotesTbl $BE77 64×2B /
+> NoteLengthsTbl $BEF7 三组）。**语义要点**：①RepeatID 存 **inc 后** InstrID（BB04——
+> 现端口件注「inc 前」疑 off-by-one，W3-2 TDD 钉）②音符字节=MusicNotesTbl 索引（低字节
+> 0=休止）③长度字节（A&$B0==$B0）：(A&$0F)+NoteLengthTblOffset→NoteLengthsTbl ④Tri 通道
+> 特例=UpdateMusicTriLinearCount ⑤Noise 通道特例=鼓点 SFXData ⑥包络索引≠0 ⇒ 跳直接音量写
+> （包络机接管=$EA 动态面）。
+
+| 步 | 内容 | 验收 |
+|---|---|---|
+| W3-1 | **表烘焙**：MusicNotesTbl/NoteLengthsTbl ROM 直读→game-data（tools/bake_music_tables.py --check） | 烘焙校验器绿+值锚 ROM |
+| W3-2 | **单通道 UpdateMusicChannel 闭环**：VM 步进（RepeatID 修）+_Continued 音符载+period/sweep/音量写面 | 单通道 TDD 全绿（对照 asm 六要点） |
+| W3-3 | **四通道环编排**（$BAA5 入口+IncrementToNextMusicChannel） | 4 通道步进序 TDD |
+| W3-4 | **$EA 包络动态**（包络机接管面+L3 对拍） | _soundgap 51B→0（声域）；恒差集余 21B |
+
 ## 4. 验收判据
 
 1. `cargo test --workspace` 全绿 + 新件 TDD（每件 asm 锚注）；
