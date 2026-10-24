@@ -853,6 +853,9 @@ pub fn dispatch_step(face: &TitleFace) -> TitleStep {
             if face.cursor == 0 {
                 let mut s = step_from_l2(sh::title_init_after_reset(&l2in));
                 s.next_cursor = 1;
+                // 【r22 余件 1】InitializeAfterReset :124 `sty IntroStarOffset`（Y=0）
+                // ——L2 口径漏写补（$C3←0 重置：星火（首 NMI）后清——O f1=01→f3=00 形）
+                s.events.push((0x00C3, 0));
                 // 相位推进移至尾段（r22 补帧——否则等待段因相位已移不可达）
                 let advance = crate::memmap::title_state::write_event_phase(face.phase.wrapping_add(1));
                 s.events.retain(|&e| e != advance);

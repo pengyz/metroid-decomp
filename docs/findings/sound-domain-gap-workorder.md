@@ -153,3 +153,14 @@ asm 队列门语义修）。
 2. **声面 +1**：music init 触发（0x01 段 0 写 $0684）随臂延 1 tick——触发相位待对齐
    （O f7 / G f5 \$068D 实测——oracle f4-6 行缺号窗内）。
 3. **$02** 1B（NMITemp 族）。
+
+## 11. 【r22 余件 1 深化】$C3 三态定根（重置缺+FC=0 窗宽）
+
+星门三条件实测（stargate 探针+行级）：①`$C1` 误盯（真队列门=`$07A0` VRAMStructBufferIndex
+——constants_ram:1168）②GameMode=**$1D**（非常量误忆 $37=MainRoutine）③`PaletteDataPending=$1C`。
+双侧形：golden **NMI-1 星火（$C3 0→1）→ f1 工作=InitializeAfterReset :124 `sty $C3←0`
+重置 → NMI-2 被自火队列（$07A0）阻、NMI-3 被 FC=1 阻** ⇒ 行值 00 恒；我方：0x00 臂
+**缺 :124 重置**（L2 口径漏——已补 `(0xC3,0)` 事件）+**NMI-3 复燃**（我方 FC=0 窗宽 2
+NMI——首迭代置位较 golden 迟 1 tick）⇒ 行值 01 恒。
+**下轮抓手**：首迭代落点（t2 合并拍的迭代门——FC 应于 t2 工作递增使 NMI-3 见 FC=1）
+——改后 $C3 应双侧 00 归零。
