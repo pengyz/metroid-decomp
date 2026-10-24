@@ -141,3 +141,15 @@ L4 采样点 F-2 必须**同轮随动为 F**（否则七金面破——渲染像
 处置序：①本登记 ②0x00/0x01 臂各补 1 continuation（boot 窗）③渲染捕点随动+全回归
 （七金面+双腿 shift=0+$C3 星轨迹盯防——r17 已知 0x00 双段曾致 switch 双增，若复发按
 asm 队列门语义修）。
+
+## 10. 【r22 补帧后余件三件】$C3 单发差/声面 +1/$02
+
+补帧实施（f1042668）后工作面（$29/$2D/$2E/$2F）shift=0 全对齐 ✓。余三件：
+1. **$C3 星开关单发差**：我方 boot 窗 1 发（$C3=01 恒）vs golden 首发 f16（FC=0x10
+   节拍）=**00 恒**。门三条件（prg0_title.asm:1438 `FC&0F==0`+`VRAMStructBufferIndex($C1)
+   队列空`+CheckPaletteWrite `$2F 无挂起`）——golden boot 窗三条件有阻（队列/$2F 挂起
+   至 f16 排空），我方 check 时点通过。**抓手**：boot 窗 NMI 内 check 时点的 $C1/$2F
+   双侧对照（探针 sndtail 换址即可）——修=check 时点状态对齐（非门逻辑改动）。
+2. **声面 +1**：music init 触发（0x01 段 0 写 $0684）随臂延 1 tick——触发相位待对齐
+   （O f7 / G f5 \$068D 实测——oracle f4-6 行缺号窗内）。
+3. **$02** 1B（NMITemp 族）。
