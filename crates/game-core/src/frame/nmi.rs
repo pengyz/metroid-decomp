@@ -38,7 +38,8 @@ pub fn nmi_handler(mem: &mut FrameMemory) {
 /// ScrollDir（Temp02/03=$02/$03——$00=纵房/$02=横房）=scratch 面（非持久影子）。
 fn nmi_body(mem: &mut FrameMemory) {
     if mem.read_ram(NMI_STATUS) != 0 {
-        return; // 超帧跳过（SoundEngine/UpdateAge 桩移至尾前独立段——见下）
+        return; // 超帧跳过（【r18 U3 真注】E4 表=SoundEngine/UpdateAge 在 NMIStatus 门外
+        // **无条件**——本早退吞掉两者=已知缺口（G2/M6：声域波次内修）；非"移至独立段"）
     }
     // GameMode 分派（GameMode=$1D（N-00xx asm 名）：≠0 → NMIScreenWrite）
     if mem.read_ram(GAME_MODE) != 0 {

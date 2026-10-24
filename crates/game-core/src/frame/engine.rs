@@ -146,20 +146,6 @@ mod tests {
         assert!(!recorded.contains(&0x9147), "0x18 专件未清: {recorded:?}");
     }
 
-    /// 【诊断】boot 早窗逐 tick 状态（r14 $C3 根因定位）。
-    #[test]
-    fn diag_boot_window_state() {
-        let mut e = FrameEngine::new();
-        for t in 1..=8 {
-            e.tick_frame();
-            println!(
-                "t{t}: $C3={:02X} GameMode={:02X} FC={:02X} phase={:?}",
-                e.mem.read_ram(0x00C3), e.mem.read_ram(crate::ram_map::GAME_MODE),
-                e.mem.read_ram(crate::ram_map::FRAME_COUNT), e.phase
-            );
-        }
-    }
-
     /// tick_frame 执行序（契约断言②：**f=1 帧界锚**——首 tick 后 clock=1）+ pre 链态。
     #[test]
     fn tick_frame_runs_boot_unit_before_detonation() {

@@ -370,9 +370,6 @@ pub fn sound_dispatch_chain(mem: &mut FrameMemory, flag_addr: u16, block_win: u1
             mem.regs.y = out.y_out;
             return;
         }
-        if ptr != 0 {
-            // 已知 handler 域但函数未在 sound::（编译期核）——记账点兜底
-        }
     }
     // handler 记账点（未接域件=新记账——缺口演化面）
     let loc = format!("bank07:{ptr:04X}");

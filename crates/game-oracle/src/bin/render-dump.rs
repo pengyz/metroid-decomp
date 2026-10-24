@@ -90,20 +90,8 @@ fn main() {
             // L3 对齐窗 shift=2 + 邻域五点实证）⇒ 金面帧 F 捕于 tick F-2。
             if *gf == fi + 2 {
                 let pal = &engine.mem.render.palette;
-                if fi == 30 {
-                    std::fs::write("analysis/_diag_pal30.json",
-                        serde_json::json!({"palette": pal, "ppuctrl": engine.mem.render.ppuctrl}).to_string()).ok();
-                }
                 let fb = game_core::render::render_frame(
                     &engine.mem.render, &bg16(pal), &spr16(pal), &engine.mem.ram[0x200..0x300]);
-                if fi == 320 {
-                    let nt = &engine.mem.render.nametable;
-                    eprintln!("[diag] NT0[384..400]={:02X?}", &nt[384..400]);
-                    eprintln!("[diag] NT1[384..400]={:02X?}", &nt[0x400+384..0x400+400]);
-                    let t = nt[12 * 32 + 12];
-                    eprintln!("[diag] f{fi} tile(12,12)={t} chr[t*16..+16]={:02X?}", &engine.mem.render.chr[(t as usize)*16..(t as usize)*16+16]);
-                    eprintln!("[diag] attr[0x3C0+..]={:02X?}", &nt[0x3C0..0x3C8]);
-                }
                 let png = encode_rgb(256, 240, &fb);
                 std::fs::write(std::path::Path::new("analysis/render-shots").join(gname), &png).expect("写 PNG");
                 written += 1;

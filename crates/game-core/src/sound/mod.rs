@@ -400,28 +400,14 @@ mod cont_tests {
 // **块名（SFXNoiseLength $0660=ct0=Noise…）是对的**，ChannelType 注（0=SQ1…）=误注。
 // 公式 base+ct 不变；清表尾面（$0607/frame/Var0-2）随案补。
 
-/// FindMusicInitIndex（$BC53）语义折叠：无旗⇒$FF；MSB 优先位序（inc/asl/bcc 环）。
-/// MusicInitIndex 位序=曲号（注表：0x0B=Intro——boot-title 触发面）。
-pub fn find_music_init_index(flags: u8) -> u8 {
-    if flags == 0 {
-        return 0xFF;
-    }
-    let mut idx = 0xFFu8;
-    let mut a = flags;
-    loop {
-        idx = idx.wrapping_add(1);
-        let carry = a & 0x80 != 0;
-        a = a.wrapping_shl(1);
-        if carry {
-            return idx;
-        }
-    }
-}
-
 /// MusicInitIndexAdd8（$BC64）：+8（Multi 表偏移面）。
 pub fn music_init_index_add8(index: u8) -> u8 {
     index.wrapping_add(8)
 }
+
+/// 【r18 U4 归并】原 `find_music_init_index(flags)->u8`（本文件）已删——正典=
+/// `sound::music::find_music_init_index`（Option 形——穷举参照测在册）；
+/// 写序面=`find_music_init_index_writes`（FF→逐位inc→Add8 全序）。
 
 /// SFXData@Beep（bank 窗 $B279 4B——`09 7f 30 48`）。
 pub use game_data::sound::sound_data::BEEP_SFX_DATA;
@@ -459,12 +445,14 @@ mod w1_tests {
     use super::*;
 
     /// 音乐索引核（无旗 $FF/MSB 优先位序——0x0B=Intro 注表锚）。
+    /// 【r18 U4】改指正典 sound::music::find_music_init_index（Option 形）——断言保持。
     #[test]
     fn music_index_scan_msb_first() {
-        assert_eq!(find_music_init_index(0), 0xFF);
-        assert_eq!(find_music_init_index(0x80), 0);
-        assert_eq!(find_music_init_index(0x08), 4);
-        assert_eq!(find_music_init_index(0x08).wrapping_add(8), 0x0C); // Add8 面
+        let idx = |f: u8| crate::sound::music::find_music_init_index(f).unwrap_or(0xFF);
+        assert_eq!(idx(0), 0xFF);
+        assert_eq!(idx(0x80), 0);
+        assert_eq!(idx(0x08), 4);
+        assert_eq!(idx(0x08).wrapping_add(8), 0x0C); // Add8 面
         assert_eq!(music_init_index_add8(0x03), 0x0B);
     }
 
