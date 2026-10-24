@@ -78,10 +78,10 @@ game-core
 | G1 | **帧预算记账未建**（M1——phase0-zero-page-frame-budget.md 设计在档、代码零实现） | 掉帧语义进 frame/ 前，重负载 L4 场景分叉风险显式登记 |
 | ~~G2~~ | ✅ **r19 清**（超帧声路修复：SoundEngine/UpdateAge 移出 NMIStatus 门——E4 序；TDD 双判别钉死） | — |
 | ~~G3~~ | ✅ **r19 清 v0**（port-map.toml 17 条+port_coverage.py 校验器——锚形/归宿/双射三面；增量补齐承诺=D7 承担） | 随域改写逐簇追加 |
-| G4 | **R1 双帧引擎**（engine/frame_slices.rs L2 切片 vs frame/ 集成体——已分叉） | 归并或显式声明"L2 切片独立保真、分叉面登记"——须独立复核轮+L2 案全绿 |
-| G5 | engine/nmi.rs s1_s2_family **六模块并存**（:61/:113/:165/:217/:269/:321） | 裁剪须先证覆盖含属（各代独有断言清单）——测试面零回退义务 |
+| G4 | **R1 双帧引擎**（r20 复核裁定：分叉**精确限 NMI 三件**——9A07/BFBA/C0D9 侧为占位公式桩、frame/ 侧为忠实件；L2 零案=静默区实锤。已处置：三桩标注"非行为源"+l2ports 锚注勘误（sub_NmiHandler $9A07→$C0D9）+9AA7 转置疑点排除（=EndGame 真锚）） | **余账=补三锚 L2 案钉 frame/ 忠实件**（静默区正解——预计 0.5-1 天）；s1-s4 切片维持独立保真（1420 案真覆盖） |
+| ~~G5~~ | ✅ **r20 清**（六代裁剪 -24 测精确枚举：零调用者+同形自指断言 grep 定案；nmi_handler 本体真测保留） | — |
 | ~~G6~~ | ✅ **r19 清**（integrators→samus/、tile_blast→weapon/；move-only 零 delta；S_intx 锚面随迁——前置对象消失守卫实录） | — |
-| ~~G7~~ | ✅ **r19 清**（engine/frame→frame_slices 消歧更名） | — |
+| ~~G7~~ | ✅ **r20 勘误修正**：engine/frame→frame_slices（r19）→**region_slices**（r20——复核勘误：95%=s1-s4 区域 bank 切片非帧件，名实相符） | — |
 | G8 | **警告债 342 条**（234×unused writes 等；engine/ 转写件主源） | 清偿计划分批（勿一次性 churn） |
 | ~~G9~~ | ✅ **r19 清**（GameRng::step 步进常量单源=rng::RN1/2_STEP+同源钉死测） | — |
 | ~~G10~~ | ✅ 探针场景已入 scenario-library-matrix | — |
