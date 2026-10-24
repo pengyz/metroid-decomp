@@ -1,8 +1,8 @@
 # findings：声引擎分派链 golden 蓝图（W2 接线规范——探针 A 级实证）
 
-> 状态：**接线规范完成**（2026-10-24，`oracle/scenarios/sndchain-boot.txt` 探针实录）。
-> 本文=声音域 W2 的实施规范：golden 侧分派链逐帧 walk 全貌 + 我方接线缺口 + 精确修法。
-> 缺口画像见 [sound-domain-gap-workorder.md](sound-domain-gap-workorder.md)。
+> 【2026-10-24 复核更正】verifier 对抗复核 verdict=needs_revision（F1-F4 阻断）——
+> 以下 §1/§2/§3 含四处更正（原地标注）；原文主张证伪不删（证伪更正文化 §3.6）。
+> 状态：**接线规范 v2**（复核修订后）。
 
 ## 1. golden 逐帧 walk 全貌（探针实证）
 
@@ -30,33 +30,56 @@
 ③ ContinueMusic(BC4B)：MusicContFlags($068D)==0⇒出；≠0⇒jmp UpdateAllMusicChannels($BAA5)
 ```
 
-**音乐 init 发射窗（f16 实录——8 帧延迟后 MusicInitFlags 就绪）**：
+**音乐 init 发射窗（f16 实录——8 帧延迟后旗就绪）**：
+
+> 【F2 更正】原注「经 BC06 表 MusicInitIndex 索引」**证伪**：探针 f16 全序
+> `E2/E3←BC7A` **先于** B353 扫描——真机制=**GetSoundRoutine 旗扫 `$0684`→BC06 表[旗位]**
+> （MusicInitIndex 扫描在其后，供曲头选取）。§1② MusicRoutineTbl[旗位] 路径 boot-title
+> **零演练**（cycle10 恒走默认 BC4B）=asm 推断 **B 级**，非探针 A 级。
 
 ```
-MultiInit 特例链 → resolve BC7A(GotoMusic01Init)（经 BC06 表 MusicInitIndex 索引）
-→ FindMusicInitIndex 扫描（$065E: FF,00,01,02,03 逐位）→ B356: MusicInitIndexAdd8→0x0B(Intro)
+MultiInit 特例链 → GetSoundRoutine 旗扫 $0684→**BC06 表[旗位]**⇒BC7A(GotoMusic01Init)
+→ FindMusicInitIndex 扫**$064D**（本周期旗副本）：$065E: FF→逐位 inc(00,01,02,03)
+→ MusicInitIndexAdd8→0x0B(Intro)
 → CheckMusicFlags(B404: $068D←00) → $065D←00(B40A)
 → XYMusicInit(BC90: $068D←**0x10**) ← MusicContFlags 就位！
 → 其后每帧 ③ 进 UpdateAllMusicChannels（音乐块/包络逐帧更新）
 ```
 
-## 2. 我方接线缺口（对照）
+> 【F3 更正】walk **非固定序**：f16 仅 7 次 GetSoundRoutine（B2AC/B293/B298 被跳过）——
+> **解析即 `jmp(SoundRoutinePtr)`：旗命中 ⇒ 表[旗位]替换链续默认，handler 执行后
+> 直接 RTS 回 SoundEngine（本链余下 loader 不再走）**；f16 复走从 TriInit 链恢复
+> =下一 cycle。11-cycle=8 薄 loader（共用 B337 尾 `jsr GetSoundRoutine/jmp(ptr)`）
+> +MusicLoop(9th)+MusicInit(10th)+ContinueMusic(11th——无 GetSoundRoutine）
+> 【M1 更正：原「9 SFX+2 音乐」错拆】。SoundEngine=cycle 入口 jsr 族+链默认串联。
+
+## 2. 我方接线缺口（对照——复核 v2 增补）
 
 | 缺口 | 现状 | 修法 |
 |---|---|---|
-| SoundEngine 分派=4 链简化形 | nmi.rs sound_engine 4 flag 环 | 改 **11-cycle 编排**（9 SFX loader + 2 音乐 cycle——①②序照抄蓝图） |
-| BC3D→BC4B 链续 | `_=>None→unported`（实际未达） | ptr==BC3D ⇒ 续走 MusicInit block B2B1 链（解析 BC4B） |
-| Multi 特例音乐发射 | 只做 FindMusicInitIndex+Add8 | MusicInitIndex∈表 ⇒ resolve **BC06 表项**（0x0B→BC7A）→ MusicNNInit 组合臂 |
-| MusicNNInit 组合臂 | CheckMusicFlags/InitializeMusic/XYMusicInit **纯函数已端口** | 接线组合：B404 面+$065D 清+XYMusicInit 写面 |
-| UpdateAllMusicChannels(BAA5) | `unported!` 爆 | entry 面+四通道环**已端口**；VM 步进（MusicVmStep）已端口；**音符载残面**=_Continued 待端口（最后一块） |
+| **GetSoundRoutine 全语义**（F1/F2/F3 公共根） | 折叠为 get_sound_routine(ptr,hit)——`sta $064D` 旗副本/pha-pla 恢复/表[y]替换默认全缺 | ①`$064D←A`（本周期旗副本——**FindMusicInitIndex 的真实扫描源**）②4B 拷+$065C ③MSB 扫描 y=2×位号→`$E2/$E3=表[y]`替换默认 ④恢复 $064D |
+| **$064D 写者缺席**（F1） | sound_hook.rs:281 只读 | 随 GetSoundRoutine 入口写 |
+| **FindMusicInitIndex 写序**（F1） | multi_music_index_step=「语义粗形」（max(base)+8——f16 点错：粗形 0x07 vs asm 0x0B）**虚标已端口** | 实现 `$065E←FF→逐位inc（每中间值写）→Add8` 写序；**降格粗形函数**（留档对照）；扫 `$064D` 非 `$0685` |
+| **链续=解析驱动**（F3） | LOADER_MAP 固定序递归 | `jmp(SoundRoutinePtr)` 语义：旗命中⇒表[旗位]替换链续默认；handler 执行后**本链终止**（RTS 回 SoundEngine——f16 跳过 B2AC/B293/B298 实证） |
+| SoundEngine cycle 编排 | 4 链简化形（结构对——4 cycle 入口族 ✓） | 补 MusicLoop cycle（BC36/B2B6→BC3D）——现缺第 9 cycle；cycle10=B2B1→BC4B 默认 |
+| Multi 特例音乐发射 | 只做粗形索引 | 旗扫 $0684→BC06 表[旗位]⇒GotoMusicNNInit→MusicNNInit 组合臂 |
+| MusicNNInit 组合臂 | check_music_flags/initialize_music/xy_music_init_w1（**W1 子面**——M3 虚标更正）纯函数在位 | 接线组合（B404 面+$065D 清+XYMusicInit 写面）；duty 形参按曲族双形 |
+| UpdateAllMusicChannels(BAA5) | `unported!` 爆 | entry 面+四通道环已端口；**音符载残面被低估**（M5：$0620-$0643 34B+四通道环+tempo+APU 写面）=W3 主体 |
+| **超帧路径声引擎缺席**（M6 新漏） | nmi_body:40-42 早退吞掉 SoundEngine/UpdateAge（「移至尾前独立段」=陈旧注） | asm prg7_engine @endIf_A 后**无条件** jsr SoundEngine/UpdateAge——超帧（NMIStatus≠0）也须跑；实施=早退仅跳屏幕/输入面，声/龄面无条件 |
+| find_music_init_index 双实现（M4） | mod.rs:322(u8) vs music.rs:49(Option) | 定正典（music.rs 版）+另一件转调或删 |
 
-## 3. 已端口件索引（sound/mod.rs——纯函数+TDD 在位）
+## 3. 已端口件索引（sound/mod.rs——**复核 v2 校准**：W1 子面≠全件）
 
 `music_channel_vm_step`（VM 三分派+重复机）/`initialize_music`（13B 头载）/
-`xy_music_init`（W1 禁扫双写+duty 对称+Cont 旗）/`update_volume_envelope`+
-`update_all_volume_envelopes`（包络机——$EC/$ED 指针面）/`update_all_music_channels_entry`
-（ResetVolumeIndex+ThisSoundChannel）/`check_music_flags`/`find_music_init_index`/
-`multi_music_index_step`。
+**`xy_music_init_w1`（W1 子面——禁扫双写+duty 对称+Cont 旗；XYMusicInit 全件未端口（M3））**/
+`update_volume_envelope`+`update_all_volume_envelopes`（包络机）/
+`update_all_music_channels_entry`（entry 面）/`check_music_flags`/`music_nn_init`（曲族双形
+组合缝——头载参数化待接）/`goto_music_init`（6 跳板映射）/`SONG_HEADERS` 156B 烘焙。
+~~`multi_music_index_step`~~（**降格**：语义粗形非 asm 等价——F1）。
+`find_music_init_index` 双实现待归正典（M4）。
+
+> 【M2 帧号口径】探针 frameCount≈oracle trace+9（$068D 探针 f16↔trace f7）——
+> 本文 §1 用探针口径、验收用 trace 口径，对照时注意换算；实施验收以 **trace 口径**为准。
 
 ## 4. 验收判据（W2 完成定义）
 
