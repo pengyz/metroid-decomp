@@ -164,3 +164,16 @@ asm 队列门语义修）。
 NMI——首迭代置位较 golden 迟 1 tick）⇒ 行值 01 恒。
 **下轮抓手**：首迭代落点（t2 合并拍的迭代门——FC 应于 t2 工作递增使 NMI-3 见 FC=1）
 ——改后 $C3 应双侧 00 归零。
+
+## 12. 【r22 余件 1 收窄】$C3 根=FC 递增点（步完成判定位置）
+
+排除队列门假说（golden NMI-2 阻断=**FC=1**（f1 工作递增）非自火队列——NMI-1 drain 后
+队列已空）。双侧形精确对照：golden=[NMI-1 火($C3→1)→f1 工作(重置+FC=1)→NMI-2/3 FC
+门阻]⇒00 恒；我方=[NMI-2 火→t2 段0(重置但 **step_done=false 无 FC**)→NMI-3 FC=0 复
+燃]⇒01 恒。**根=mainloop.rs:41 step_done 判定在尾段**（cursor 归零/相位推进）而补帧
+把工作段拆前段⇒FC 落尾段（晚 1 NMI）。
+**修法二选一**（下轮实验定）：
+(a) 0x00/0x01 臂改**[wait, work] 序**（工作段置尾⇒step_done/FC 落工作段=golden 形）——
+    prologue 落点移 1 tick（RNG 面盯防）；
+(b) step_done 判据增"工作段显式完成"面（FC 于工作段、尾段不重复）——动 mainloop 通用规
+    （FC 面已对齐=风险面，TDD 随迁）。
