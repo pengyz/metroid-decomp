@@ -82,22 +82,41 @@ pub type FrameBuffer = Vec<u8>; // 256*240*3
 /// NES 64 色调色板（RGB 三元组烘焙——白名单面参照 spec §3）。
 pub use game_data::render::render_data::NES_PALETTE;
 
-/// BG 帧渲染（s6-9 §1 BG-only 面）：名表（nt0 视图 $2000-$23FF+属性 $3C0-$3FF）+
-/// CHR 双位面→256×240 RGB。
-/// bg_palette=16B（4 组×4 色——组 0 色 0=背景色）；rs.nametable[0..0x400]=NT0。
-pub fn render_frame_bg(rs: &RenderState, bg_palette: &[u8; 16]) -> FrameBuffer {
-    let mut fb = vec![0u8; 256 * 240 * 3];
+/// BG 像素值网格（0=背景/透明面——**精灵优先级硬件真值**：BG pix≠0 即遮挡精灵，
+/// 与调色板渲染出的颜色无关（pix≠0 可渲染成黑——logo 暗瓦实证））。
+fn bg_pix_grid(rs: &RenderState) -> Vec<u8> {
     let nt = &rs.nametable[0..0x400];
+    let pat_base = if rs.ppuctrl & 0x10 != 0 { 0x1000usize } else { 0 };
+    let mut grid = vec![0u8; 256 * 240];
     for y in 0..240usize {
         for x in 0..256usize {
             let tile_x = x / 8;
             let tile_y = y / 8;
             let tile = nt[tile_y * 32 + tile_x] as usize;
             let fine_y = y & 7;
-            let lo = rs.chr.get(tile * 16 + fine_y).copied().unwrap_or(0);
-            let hi = rs.chr.get(tile * 16 + fine_y + 8).copied().unwrap_or(0);
+            let lo = rs.chr.get(pat_base + tile * 16 + fine_y).copied().unwrap_or(0);
+            let hi = rs.chr.get(pat_base + tile * 16 + fine_y + 8).copied().unwrap_or(0);
             let bit = 7 - (x & 7);
-            let pix = ((lo >> bit) & 1) | (((hi >> bit) & 1) << 1);
+            grid[y * 256 + x] = ((lo >> bit) & 1) | (((hi >> bit) & 1) << 1);
+        }
+    }
+    grid
+}
+
+/// BG 帧渲染（s6-9 §1 BG-only 面）：名表（nt0 视图 $2000-$23FF+属性 $3C0-$3FF）+
+/// CHR 双位面→256×240 RGB。
+/// bg_palette=16B（4 组×4 色——组 0 色 0=背景色）；rs.nametable[0..0x400]=NT0。
+/// 【2026-10-24 补】BG 图案表选=PPUCTRL bit4（`$0000/$1000`——boot $FF=0x90 ⇒ $1000；
+/// 漏此前 tile $8C 误读 SAMUS 块 $08C0，golden 为 TITLE 块 $18C0 尖刺——f30 对拍根因）。
+pub fn render_frame_bg(rs: &RenderState, bg_palette: &[u8; 16]) -> FrameBuffer {
+    let mut fb = vec![0u8; 256 * 240 * 3];
+    let nt = &rs.nametable[0..0x400];
+    let grid = bg_pix_grid(rs);
+    for y in 0..240usize {
+        for x in 0..256usize {
+            let tile_x = x / 8;
+            let tile_y = y / 8;
+            let pix = grid[y * 256 + x];
             // 属性表象限（32×32——$3C0 段）
             let ax = tile_x / 4;
             let ay = tile_y / 4;
@@ -112,6 +131,67 @@ pub fn render_frame_bg(rs: &RenderState, bg_palette: &[u8; 16]) -> FrameBuffer {
             let rgb = NES_PALETTE[(pal_index & 0x3F) as usize];
             let o = (y * 256 + x) * 3;
             fb[o] = rgb[0]; fb[o + 1] = rgb[1]; fb[o + 2] = rgb[2];
+        }
+    }
+    fb
+}
+
+/// 全帧渲染（BG+精灵——S6-10 视觉腿完整面）。
+/// oam=$0200-$02FF 影子（64×[y,tile,attr,x]）；sprite_palette=16B（$3F10-$3F1F 面，
+/// 组 0 色 0 透明——$3F10/$3F14/$3F18/$3F1C 为透明位）。
+/// 精灵语义（hardware 面——D4 保真含 8/行限额 quirk）：
+/// · Y 精灵坐标=顶-1（`sprite top = y+1`——硬件行偏置）
+/// · 精灵图案表=PPUCTRL bit3（8×8 面；bit5=8/16 尺寸未建模随件）
+/// · attr bit6/7=水平/垂直翻转；bit5=1 精灵在 BG 后（BG 像素非 0 时 BG 胜）
+/// · **每扫描线前 8 个精灵参与**（OAM 序——第 9+ 丢弃；溢出旗标面随件）
+pub fn render_frame(rs: &RenderState, bg_palette: &[u8; 16], sprite_palette: &[u8; 16],
+                    oam: &[u8]) -> FrameBuffer {
+    let mut fb = render_frame_bg(rs, bg_palette);
+    let grid = bg_pix_grid(rs); // 优先级真值面（pix≠0 遮挡——非 RGB 近似）
+    let pat_base = if rs.ppuctrl & 0x08 != 0 { 0x1000usize } else { 0 };
+    for y in 0..240usize {
+        // 8/行限额（OAM 序取前 8 个命中者）——命中判定=硬件 (line-(Y+1)) mod 256 < 8
+        // （Y=0xFF ⇒ 顶行 0 环绕可见——mod 语义保真）。
+        let mut line: Vec<usize> = Vec::new();
+        for s in 0..64usize {
+            let sy = (oam[s * 4] as usize + 1) & 0xFF;
+            if (y + 256 - sy) % 256 < 8 {
+                line.push(s);
+                if line.len() == 8 {
+                    break;
+                }
+            }
+        }
+        for x in 0..256usize {
+            for &s in &line {
+                let sy = (oam[s * 4] as usize + 1) & 0xFF;
+                let tile = oam[s * 4 + 1] as usize;
+                let attr = oam[s * 4 + 2];
+                let sx = oam[s * 4 + 3] as usize;
+                if x < sx || x >= sx + 8 {
+                    continue;
+                }
+                let mut fx = x - sx;
+                let mut fy = (y + 256 - sy) % 256;
+                if attr & 0x40 != 0 { fx = 7 - fx; } // 水平翻转
+                if attr & 0x80 != 0 { fy = 7 - fy; } // 垂直翻转
+                let lo = rs.chr.get(pat_base + tile * 16 + fy).copied().unwrap_or(0);
+                let hi = rs.chr.get(pat_base + tile * 16 + fy + 8).copied().unwrap_or(0);
+                let bit = 7 - fx;
+                let pix = ((lo >> bit) & 1) | (((hi >> bit) & 1) << 1);
+                if pix == 0 {
+                    continue; // 透明
+                }
+                let o = (y * 256 + x) * 3;
+                if attr & 0x20 != 0 && grid[y * 256 + x] != 0 {
+                    continue; // 精灵在 BG 后且 BG pix≠0 ⇒ BG 胜（硬件真值——pix≠0 可为黑）
+                }
+                let group = (attr & 0x03) as usize;
+                let pal_index = sprite_palette[group * 4 + pix as usize];
+                let rgb = NES_PALETTE[(pal_index & 0x3F) as usize];
+                fb[o] = rgb[0]; fb[o + 1] = rgb[1]; fb[o + 2] = rgb[2];
+                break; // OAM 序首非透明胜（低索引高优先）
+            }
         }
     }
     fb
@@ -388,5 +468,99 @@ pub fn fill_render_state(rs: &mut RenderState, room_id: u8) {
     // 从游戏数据填充 CHR
     for i in 0..0x2000 {
         rs.chr[i] = (i % 256) as u8;
+    }
+}
+
+// ===== S6-10 精灵面（render_frame——BG+OAM）TDD =====
+
+#[cfg(test)]
+mod sprite_tests {
+    use super::*;
+
+    /// 构造：tile1 全像素 1（plane0 全 FF）+ OAM 单精灵 + BG 全背景。
+    fn setup() -> (RenderState, [u8; 16], [u8; 16], Vec<u8>) {
+        let mut rs = RenderState::default();
+        rs.chr[16..24].copy_from_slice(&[0xFF; 8]); // tile1 lo 平面全 1（8×8 pix=1）
+        let bg = [0x0Fu8; 16]; // 全背景（$0F=黑）
+        let mut spr = [0x0Fu8; 16];
+        spr[1] = 0x20; // 组0 色1=$20（亮红系）
+        let mut oam = vec![0xF0u8; 256]; // 全离屏
+        (rs, bg, spr, oam)
+    }
+
+    fn px(fb: &[u8], x: usize, y: usize) -> [u8; 3] {
+        let o = (y * 256 + x) * 3;
+        [fb[o], fb[o + 1], fb[o + 2]]
+    }
+
+    /// 【Y+1 偏置】OAM y=10 ⇒ 顶行=11（硬件行偏置——D4 保真面）。
+    #[test]
+    fn sprite_y_offset_plus_one() {
+        let (rs, bg, spr, mut oam) = setup();
+        oam[0..4].copy_from_slice(&[10, 1, 0, 20]); // y=10 tile1 attr0 x=20
+        let fb = render_frame(&rs, &bg, &spr, &oam);
+        assert_eq!(px(&fb, 20, 10), NES_PALETTE[0x0F], "y=10 不画（偏置）");
+        assert_eq!(px(&fb, 20, 11), NES_PALETTE[0x20], "y=11 顶行=精灵色");
+        assert_eq!(px(&fb, 20, 18), NES_PALETTE[0x20], "y=18 底行");
+        assert_eq!(px(&fb, 20, 19), NES_PALETTE[0x0F], "y=19 外");
+    }
+
+    /// 【8/行限额】同线 9 精灵：第 9 个（OAM 序）不渲染（quirk 保真）。
+    #[test]
+    fn sprite_eight_per_line_limit() {
+        let (rs, bg, mut spr, mut oam) = setup();
+        spr[5] = 0x21; // 组1 色1=$21（区分第 9 个）
+        for s in 0..9usize {
+            let pal = if s < 8 { 0u8 } else { 1u8 };
+            oam[s * 4..s * 4 + 4].copy_from_slice(&[50, 1, pal, (s as u8) * 8]);
+        }
+        let fb = render_frame(&rs, &bg, &spr, &oam);
+        assert_eq!(px(&fb, 0, 51), NES_PALETTE[0x20], "首精灵渲染");
+        assert_eq!(px(&fb, 56, 51), NES_PALETTE[0x20], "第 8 个渲染（限额内）");
+        assert_eq!(px(&fb, 64, 51), NES_PALETTE[0x0F], "第 9 个丢弃（8/行 quirk）");
+    }
+
+    /// 【BG 后优先级】attr bit5=1 且 BG 非背景 ⇒ BG 胜；BG 背景 ⇒ 精灵现。
+    #[test]
+    fn sprite_behind_bg_priority() {
+        let (mut rs, mut bg, spr, mut oam) = setup();
+        bg[1] = 0x30; // BG pix=1 ⇒ $30（白）——非背景色
+        rs.nametable[0] = 2; // tile2 @ (0,0)
+        rs.chr[32..40].copy_from_slice(&[0xFF; 8]); // tile2 全 1（BG 非背景）
+        oam[0..4].copy_from_slice(&[0xFF, 1, 0x20, 0]); // Y=0xFF⇒顶=0（mod 环绕）attr=bit5
+        let fb = render_frame(&rs, &bg, &spr, &oam);
+        assert_eq!(px(&fb, 0, 0), NES_PALETTE[0x30], "BG 非背景且精灵在后 ⇒ BG 胜");
+        // 同精灵去 bit5 ⇒ 精灵胜
+        oam[2] = 0x00;
+        let fb2 = render_frame(&rs, &bg, &spr, &oam);
+        assert_eq!(px(&fb2, 0, 0), NES_PALETTE[0x20], "精灵在前 ⇒ 精灵胜");
+        // 【硬件真值】pix≠0 渲染成黑（bg[1]=0x0F）——RGB 与背景同黑但**仍遮挡**（logo 暗瓦实证）
+        bg[1] = 0x0F;
+        oam[2] = 0x20;
+        let fb3 = render_frame(&rs, &bg, &spr, &oam);
+        assert_eq!(px(&fb3, 0, 0), NES_PALETTE[0x0F], "pix≠0 黑色像素仍遮挡精灵（真值面）");
+    }
+
+    /// 【翻转】attr bit6 水平翻转——左缘像素色来自 tile 右缘位。
+    #[test]
+    fn sprite_hflip() {
+        let (mut rs, bg, spr, mut oam) = setup();
+        rs.chr[16] = 0x80; // tile1 行0 仅左像素（bit7）
+        oam[0..4].copy_from_slice(&[10, 1, 0x40, 20]); // hflip
+        let fb = render_frame(&rs, &bg, &spr, &oam);
+        assert_eq!(px(&fb, 27, 11), NES_PALETTE[0x20], "翻转后右缘=原左缘位");
+        assert_eq!(px(&fb, 20, 11), NES_PALETTE[0x0F], "左缘空");
+    }
+
+    /// 【图案表选】PPUCTRL bit3=1 ⇒ 精灵取 $1000 区。
+    #[test]
+    fn sprite_pattern_table_select() {
+        let (mut rs, bg, spr, mut oam) = setup();
+        rs.chr[16..24].copy_from_slice(&[0u8; 8]); // $0000 tile1 清空
+        rs.chr[0x1000 + 16..0x1000 + 24].copy_from_slice(&[0xFF; 8]); // $1000 tile1 全 1
+        rs.ppuctrl = 0x08;
+        oam[0..4].copy_from_slice(&[10, 1, 0, 20]);
+        let fb = render_frame(&rs, &bg, &spr, &oam);
+        assert_eq!(px(&fb, 20, 11), NES_PALETTE[0x20], "bit3=1 取 $1000 面");
     }
 }

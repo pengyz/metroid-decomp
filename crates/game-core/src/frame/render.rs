@@ -21,11 +21,16 @@ pub struct RenderState {
     pub latch_hi: bool,
     /// PPU 调色板 RAM（$3F00-$3F1F 32B——S6-10 渲染腿供面；「随件」兑现）。
     pub palette: [u8; 32],
+    /// PPUCTRL（$2000）寄存器面——bit4=BG 图案表选（$0000/$1000）、bit3=精灵图案表选、
+    /// bit5=精灵尺寸（8/16）。asm 锚：boot `$FF=0x90`（`STA $2000`）⇒ bit4=1（标题期
+    /// BG 图案表=$1000——tile $8C 读 $18C0 标题块实证）。
+    pub ppuctrl: u8,
 }
 
 impl Default for RenderState {
     fn default() -> Self {
-        Self { chr: vec![0; 0x2000], nametable: vec![0; 0x800], ppuaddr: 0, latch_hi: true, palette: [0x0F; 32] }
+        Self { chr: vec![0; 0x2000], nametable: vec![0; 0x800], ppuaddr: 0, latch_hi: true,
+               palette: [0x0F; 32], ppuctrl: 0 }
     }
 }
 

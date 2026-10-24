@@ -87,7 +87,13 @@ fn main() {
         engine.tick_frame();
         for (gf, gname) in &gold_points {
             if *gf == fi {
-                let fb = game_core::render::render_frame_bg(&engine.mem.render, &bg16(&engine.mem.render.palette));
+                let pal = &engine.mem.render.palette;
+                if fi == 30 {
+                    std::fs::write("analysis/_diag_pal30.json",
+                        serde_json::json!({"palette": pal, "ppuctrl": engine.mem.render.ppuctrl}).to_string()).ok();
+                }
+                let fb = game_core::render::render_frame(
+                    &engine.mem.render, &bg16(pal), &spr16(pal), &engine.mem.ram[0x200..0x300]);
                 if fi == 320 {
                     let nt = &engine.mem.render.nametable;
                     eprintln!("[diag] NT0[384..400]={:02X?}", &nt[384..400]);
@@ -109,5 +115,12 @@ fn main() {
 fn bg16(pal: &[u8; 32]) -> [u8; 16] {
     let mut out = [0u8; 16];
     out.copy_from_slice(&pal[0..16]);
+    out
+}
+
+/// 32B 调色板→16B 精灵面（$3F10-$3F1F——组 0 色 0 透明位）。
+fn spr16(pal: &[u8; 32]) -> [u8; 16] {
+    let mut out = [0u8; 16];
+    out.copy_from_slice(&pal[16..32]);
     out
 }
