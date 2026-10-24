@@ -94,3 +94,19 @@
 - 画像脚本：`analysis/_soundgap.py`；asm：`refs/m1disasm/SRC/sound_engine.asm`
   （`SoundEngine: $B3B4` 起）+ `constants_ram.asm`（$E6-$ED/$0600-$068D 命名锚）；
 - 现桩：`crates/game-core/src/frame/nmi.rs::sound_engine`（四 init 子件短路面）。
+
+## 6. 【r20 W3 收口实录】声域 56B→6B + 余差三件定性
+
+W3-2.5/2/3/4+接线全落（bake_music_streams 41 流+5 包络+SFXData 鼓点表；四通道环；
+包络动态；BC4B→BAA5 装配；GetSoundRoutine 全语义链内落地（$064D 旗副本=init 发射前提）；
+基址反查取流（$065E 曲号会被音乐 cycle 重置——不可作键）；$E6/$E7 基址指针逐通道写）。
+**恒差集收敛**：声域块大面积归零（$E6/$E7、$EC/$ED、$0600-$0609、$0620-$0631、$0644+、
+$0664+ 族）——余 **6B**：
+
+| 余差 | O/G 实测（f30/f120/f299） | 定性假设 |
+|---|---|---|
+| $0640-$0643 InstrDelay×4 | 39/3C、55/58、0C/0F…——**G=O+3 恒定** | 长度 +3 或 dec 次数差（恒定跨点跨通道=系统性非漂移）——下轮核：note_length_at 实际调用值/SetDelay 写点/golden 或双 dec |
+| $EB VolumeEnvelopeIndex | 00/05 恒定 | golden 行值恒 0 而包络在跑（$EC/$ED 对齐）⇒ $EB 有回零写者或行相位差——sndchain-boot 换址探针抓写点 |
+| $EA | 01/02、05/08（**G=O+1 步**）、f299 对齐 | 包络索引步进面差一步（休止推进 quirk 或 ResetVolumeIndex 相位） |
+
+附：$18/$19（RetrigDelay 恒差 1）与栈页=登记非声件；七金面 0/0/0 复验 ✓；gates 13/2 无恶化。

@@ -233,44 +233,41 @@ pub fn sound_dispatch_chain(mem: &mut FrameMemory, flag_addr: u16, block_win: u1
     }
     let flags = mem.read_ram(flag_addr);
     let block = load_block(block_win);
-    // GetSoundRoutine 指针面（B4BD 字节：`stx $E4/sty $E5`（块址）→4B 拷→$E2-$E5
-    // （TablePtr/DefaultRoutine）→`sta $065C`（ChannelType）——B 案 $E0-$E5 残迹面）。
-    mem.write_ram(0x00E4, block_win as u8);
-    mem.write_ram(0x00E5, (block_win >> 8) as u8);
-    let (ptr, hit) = sound::get_sound_routine(&block, table_slice(block.table_ptr), flags);
+    // GetSoundRoutine 全语义（$B4BD——r20 接线补齐）：**事件集全应用**（$064D 旗副本/
+    // $E4/$E5 窗址/4B 拷含默认/$065C/表[y]覆盖——F1 公共根的链内落地）
+    let (ptr, hit, ev) = sound::get_sound_routine_writes(block_win, &block, table_slice(block.table_ptr), flags);
+    for (a, v) in ev {
+        mem.write_ram(a, v);
+    }
+    // 【r20 忠实扫描】FindMusicInitIndex 写序（$BC53：FF→逐位 inc）——Multi 特例加
+    // Add8（$BC64）；音乐 cycle 不加。原"粗形 multi_music_index_step+裸 FF 写"退役。
+    if block_win == 0xB2A7 || block_win == 0xB2B1 || block_win == 0xB2B6 {
+        let (_idx, scan_ev) = sound::find_music_init_index_writes(flags, block_win == 0xB2A7);
+        for (a, v) in scan_ev {
+            mem.write_ram(a, v);
+        }
+    }
     // 指针位序（B4CA 面）：MusicLoop 步（flag=$065D）写 $E0/$E1（中间 ptr）；
     // 终步写 $E2/$E3（B337 面）。oracle 实证：$E0=$BC26（RunMusicInit）/$E2=$BC4B（终）。
     if block_win == 0xB2B1 || block_win == 0xB2B6 {
-        // 音乐族（BC36/B4CA 4B 拷形）——**FindMusicInitIndex init**（BC53：`lda #$FF/
-        // sta MusicInitIndex($065E)`——B 案 $065E=FF 面；scan 后 Add8 随件）
-        mem.write_ram(0x065E, 0xFF);
         // $E0/$E1=**TablePtr**（block[0/1]——B4CA 4B 拷形；oracle 实证 $BC26=MusicRoutineTbl）
         mem.write_ram(0x00E0, block.table_ptr as u8);
         mem.write_ram(0x00E1, (block.table_ptr >> 8) as u8);
     }
-    mem.write_ram(0x00E2, ptr as u8);
-    mem.write_ram(0x00E3, (ptr >> 8) as u8);
-    mem.write_ram(0x065C, block.channel_type);
     let _ = hit;
     if ptr == RTS_TERMINAL {
         return; // 无音/终端（GetSoundRoutine@RTS）
     }
     // 链续（默认=下一装载器）
     if let Some(&(_, f, b)) = LOADER_MAP.iter().find(|(l, _, _)| *l == ptr) {
-        if ptr == 0xB34B {
-            // Multi 特例双步（port2 注④）：MusicInitIndex 面
-            let idx = mem.read_ram(0x065E);
-            let next = sound::multi_music_index_step(mem.read_ram(0x0685), idx);
-            mem.write_ram(0x065E, next);
-        }
+        // 【r20】Multi 特例双步已上移至 B2A7 入口（忠实 scan——原粗形步退役）
         sound_dispatch_chain(mem, f, b, depth + 1);
         return;
     }
     // ContinueMusic 微折（BC4B：无音路即出——`lda MusicContFlags($068D)/beq RTS`）
     if ptr == 0xBC4B {
-        if mem.read_ram(0x068D) != 0 {
-            crate::unported!("bank07:BAA5"); // UpdateAllMusicChannels（音乐更新面）
-        }
+        // 【W3-3/4 接线（r20）】$068D≠0 ⇒ BAA5 全径（四通道环+包络尾）——原 unported 退役
+        continue_music_face(mem);
         return;
     }
     // ===== handler 接点（22 件批量接——port2 清单；B673 同形）=====
@@ -374,4 +371,119 @@ pub fn sound_dispatch_chain(mem: &mut FrameMemory, flag_addr: u16, block_win: u1
     // handler 记账点（未接域件=新记账——缺口演化面）
     let loc = format!("bank07:{ptr:04X}");
     crate::unported!(&loc);
+}
+
+/// BAA5 读态 glue（RAM→MusicFrameState——五块+全局面；r20 W3-3 接线）。
+fn read_music_frame_state(mem: &crate::frame::FrameMemory) -> sound::music::MusicFrameState {
+    let r = |a: u16| mem.read_ram(a);
+    let mut st = sound::music::MusicFrameState::default();
+    for ch in 0..4u16 {
+        let i = ch as usize;
+        st.blocks[i] = sound::music::ChannelBlock {
+            instr_length: r(0x0620 + ch),
+            repeat_counter: r(0x0624 + ch),
+            instr_id: r(0x0638 + ch),
+            repeat_id: r(0x063C + ch),
+            instr_delay: r(0x0640 + ch),
+        };
+        st.duty[i] = r(0x0628 + ch);
+        st.env_index[i] = r(0x062E + ch);
+        st.sweep[i] = r(0x0648 + ch);
+        st.used_by_sfx[i] = r(0x0653 + ch);
+        st.period_lo[i] = r(0x0600 + ch * 4);
+        st.period_hi[i] = r(0x0601 + ch * 4);
+    }
+    st.note_len_offset = r(0x062B);
+    st.tri_counter_cntrl = r(0x062D);
+    st.volume_index = [r(0x066A), r(0x066B)];
+    st.volume_data = [r(0x066C), r(0x066D)];
+    st.load_periods_flag = r(0x0607);
+    st.sq = sound::music::SqPeriods {
+        sq1_sweep: st.sweep[0], sq1_lo: st.period_lo[0], sq1_hi: st.period_hi[0],
+        sq2_sweep: st.sweep[1], sq2_lo: st.period_lo[1], sq2_hi: st.period_hi[1],
+    };
+    st
+}
+
+/// ContinueMusic（BC4B）装配面——$068D≠0 ⇒ BAA5 全径（W3-3/4）；SongEnd⇒EndOrLoopMusic
+/// 最小面（$062C 无重复⇒$068D←0；有重复⇒unported fail-loud——曲重启面随件）。
+pub(crate) fn continue_music_face(mem: &mut crate::frame::FrameMemory) {
+    if mem.read_ram(0x068D) == 0 {
+        return; // beq 出（无音路）
+    }
+    let st = read_music_frame_state(mem);
+    // 【基址反查（r20）】乐循环按 $0630+2X 基址字取流——$065E 曲号会被音乐 cycle 的
+    // FindMusicInitIndex 重置（FF），不可作键（实测 $065E=FF 而流仍走=asm 形）。
+    let mut bases_arr = [0u16; 4];
+    let streams: [Option<&[u8]>; 4] = core::array::from_fn(|ch| {
+        let base = mem.read_ram(0x0630 + ch as u16 * 2) as u16
+            | ((mem.read_ram(0x0631 + ch as u16 * 2) as u16) << 8);
+        bases_arr[ch] = base;
+        if base == 0 {
+            None // 基址 0（MusicChannelBaseEmpty）
+        } else {
+            game_data::sound::music_streams::stream_by_base(base)
+        }
+    });
+    let out = sound::music::update_all_music_channels(
+        streams, bases_arr, &game_data::sound::music_streams::SFX_DATA, &st);
+    for (a, v) in out.events {
+        mem.write_ram(a, v); // 有序回写（$EA 末值语义自动成立）
+    }
+    for (a, v) in out.apu {
+        mem.write_io(a, v);
+    }
+    if out.song_end {
+        // EndOrLoopMusic（$B3F0）最小面：$062C=Repeat music byte（0=无重复）
+        if mem.read_ram(0x062C) == 0 {
+            mem.write_ram(0x068D, 0); // MusicContFlags←0（曲终收）
+        } else {
+            crate::unported!("bank07:B3F0-repeat"); // 有重复⇒曲重启面（随件）
+        }
+    }
+}
+
+#[cfg(test)]
+mod w3_wiring_tests {
+    use super::*;
+
+    /// 接线-1：BC4B 门——$068D=0⇒零写；≠0⇒装配跑（$EA/块写落 mem）。
+    /// 流取径=**基址反查**（Intro 真基址 B0B9/B000/B076/B115——r20）。
+    #[test]
+    fn continue_music_gate_and_assembly() {
+        let mut m = crate::frame::FrameMemory::default();
+        continue_music_face(&mut m);
+        assert_eq!(m.read_ram(0x068D), 0, "无音路零写");
+        m.write_ram(0x068D, 0x10);
+        for (ch, (lo, hi)) in [(0xB9u8, 0xB0u8), (0x00, 0xB0), (0x76, 0xB0), (0x15, 0xB1)]
+            .into_iter().enumerate()
+        {
+            m.write_ram(0x0630 + ch as u16 * 2, lo); // Intro 四通道真基址
+            m.write_ram(0x0631 + ch as u16 * 2, hi);
+            m.write_ram(0x0640 + ch as u16, 1); // delay=1（到点）
+        }
+        m.write_ram(0x062B, 0x0B);
+        continue_music_face(&mut m);
+        assert_ne!(m.read_ram(0x0638), 0, "InstrID 推进（流首字节已消费）");
+    }
+
+    /// 接线-2：$EA 有序回写（末值=事件流末写）。
+    #[test]
+    fn continue_music_ea_final_value() {
+        let mut m = crate::frame::FrameMemory::default();
+        m.write_ram(0x068D, 0x10);
+        for (ch, (lo, hi)) in [(0xB9u8, 0xB0u8), (0x00, 0xB0), (0x76, 0xB0), (0x15, 0xB1)]
+            .into_iter().enumerate()
+        {
+            m.write_ram(0x0630 + ch as u16 * 2, lo);
+            m.write_ram(0x0631 + ch as u16 * 2, hi);
+            m.write_ram(0x0640 + ch as u16, 1);
+        }
+        m.write_ram(0x062B, 0x0B);
+        m.write_ram(0x0628, 0xB6); // duty SQ1
+        continue_music_face(&mut m);
+        // $EA 终值=末通道事件流末写（噪无 $EA⇒Tri 面）——mem 态=0/10/B6 族之一
+        let ea = m.read_ram(0x00EA);
+        assert!(ea == 0xB6 || ea == 0x10 || ea == 0x00, "$EA 落值={ea:02X}");
+    }
 }

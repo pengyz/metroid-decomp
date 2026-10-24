@@ -477,3 +477,385 @@ mod w3_update_music_channel_tests {
         assert!(out2.apu.iter().any(|(a, _)| *a == 0x4002), "周期写回仍在");
     }
 }
+
+// ==== W3-4 包络动态（UpdateVolumeEnvelope $BA41 全序——r20 方案 W3-4）====
+// asm 锚：sound_engine.asm `UpdateVolumeEnvelope: ; $BA41`（env 门/LoadMusicSQ1SQ2Periods
+// 恢复面/$FF keepPrev/$F0 killVolume/休止推进 quirk/占奏让位/SQ_VOL 双址）。
+
+/// 包络面（单通道 $062E/$066C/$066A/$0628/$0653+X 五件+$0607 旗）。
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct EnvelopeFace {
+    /// $062E+X VolumeEnvelopeIndex（0=无包络⇒RTS）。
+    pub env_index: u8,
+    /// $066C+X VolumeData（==$10⇒休止推进路）。
+    pub volume_data: u8,
+    /// $066A+X VolumeIndex（包络表步进游标）。
+    pub volume_index: u8,
+    /// $0628+X DutyEnvelope。
+    pub duty: u8,
+    /// $0653+X UsedBySFX（≠0⇒占奏让位——$EA 写在、SQ_VOL 跳）。
+    pub used_by_sfx: u8,
+    /// $0607 LoadMusicSQ1SQ2PeriodsFlag（≠0⇒SFX 刚结束才走恢复面并清旗——
+    /// asm $BA08 `beq @RTS` 门）。
+    pub load_periods_flag: u8,
+}
+
+/// LoadMusicSQ1SQ2Periods 恢复面（双 SQ 三对：SWEEP/LO/HI——$0648/$0600/$0601 与
+/// $0649/$0604/$0605）。
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct SqPeriods {
+    pub sq1_sweep: u8,
+    pub sq1_lo: u8,
+    pub sq1_hi: u8,
+    pub sq2_sweep: u8,
+    pub sq2_lo: u8,
+    pub sq2_hi: u8,
+}
+
+/// 包络步进结果。
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct EnvelopeStepOut {
+    pub events: Vec<(u16, u8)>,
+    pub apu: Vec<(u16, u8)>,
+    /// $EA（Cntrl0Data）写值（包络字节原值）。
+    pub cntrl0: Option<u8>,
+    pub volume_index: u8,
+}
+
+/// UpdateVolumeEnvelope 单通道（X=0/1）：
+/// ①env_index==0⇒空 ②$EB←env_index ③恢复面（6 APU 写）④休止路（vol_data==$10⇒
+/// Y=$10+**仍推进索引**）⑤ptr=PTRS[env-1]（$EC/$ED 写）+字节分派（$FF keep/noInc、
+/// $F0 kill/noInc、else Y=(Duty&$F0)|字节+inc）⑥占奏让位⑦SQ_VOL（X=0→$4000/1→$4004）。
+pub fn update_volume_envelope_frame(
+    x: u8,
+    face: &EnvelopeFace,
+    periods: &SqPeriods,
+) -> EnvelopeStepOut {
+    let mut ev = Vec::new();
+    let mut apu = Vec::new();
+    let mut vol_index = face.volume_index;
+    if face.env_index == 0 {
+        return EnvelopeStepOut { events: ev, apu, cntrl0: None, volume_index: vol_index };
+    }
+    ev.push((0x00EB, face.env_index)); // VolumeEnvelopeIndex
+    // LoadMusicSQ1SQ2Periods 恢复面（$BA08——**$0607 旗门**：SFX 刚结束才恢复+清旗）
+    if face.load_periods_flag != 0 {
+        ev.push((0x0607, 0)); // 清旗（`lda #0/sta`）
+        apu.push((0x4001, periods.sq1_sweep));
+        apu.push((0x4002, periods.sq1_lo));
+        apu.push((0x4003, periods.sq1_hi));
+        apu.push((0x4005, periods.sq2_sweep));
+        apu.push((0x4006, periods.sq2_lo));
+        apu.push((0x4007, periods.sq2_hi));
+    }
+    let env = game_data::sound::music_streams::VOLUME_ENVELOPES
+        .get(face.env_index.wrapping_sub(1) as usize)
+        .copied()
+        .unwrap_or(&[]);
+    let ptr = *game_data::sound::music_streams::VOLUME_ENVELOPE_PTRS
+        .get(face.env_index.wrapping_sub(1) as usize)
+        .unwrap_or(&0);
+    let mut cntrl0 = None;
+    let y: u8;
+    if face.volume_data == 0x10 {
+        // 休止推进路（quirk 钉死）：Y=$10+索引仍推进
+        y = 0x10;
+        vol_index = vol_index.wrapping_add(1);
+        ev.push((0x066A + x as u16, vol_index));
+        cntrl0 = Some(0x10);
+        ev.push((0x00EA, 0x10));
+    } else {
+        ev.push((0x00EC, ptr as u8)); // $EC/$ED←VolumeEnvelopePtrTable 项
+        ev.push((0x00ED, (ptr >> 8) as u8));
+        let byte = env.get(vol_index as usize).copied().unwrap_or(0xFF);
+        cntrl0 = Some(byte);
+        ev.push((0x00EA, byte));
+        y = match byte {
+            0xFF => face.duty,           // keepPrevVolume（noInc）
+            0xF0 => 0x10,                // killVolume（noInc）
+            _ => {
+                vol_index = vol_index.wrapping_add(1); // @updateRegister_inc
+                ev.push((0x066A + x as u16, vol_index));
+                (face.duty & 0xF0) | byte
+            }
+        };
+    }
+    // 占奏让位（$EA 已写、SQ_VOL 跳）
+    if face.used_by_sfx != 0 {
+        return EnvelopeStepOut { events: ev, apu, cntrl0, volume_index: vol_index };
+    }
+    apu.push((if x == 0 { 0x4000 } else { 0x4004 }, y));
+    EnvelopeStepOut { events: ev, apu, cntrl0, volume_index: vol_index }
+}
+
+#[cfg(test)]
+mod w3_envelope_tests {
+    use super::*;
+
+    fn face0() -> EnvelopeFace {
+        EnvelopeFace { env_index: 1, volume_data: 0x34, volume_index: 0,
+                       duty: 0xB6, used_by_sfx: 0, load_periods_flag: 1 }
+    }
+
+    /// W3-4-1 无包络短路。
+    #[test]
+    fn no_envelope_no_writes() {
+        let f = EnvelopeFace::default();
+        let out = update_volume_envelope_frame(0, &f, &SqPeriods::default());
+        assert!(out.events.is_empty() && out.apu.is_empty() && out.cntrl0.is_none());
+    }
+
+    /// W3-4-2 步进+组合音量+inc；W3-4-7 恢复面六写在流首；W3-4-8 X=1→$4004。
+    #[test]
+    fn envelope_step_and_restore() {
+        let out = update_volume_envelope_frame(0, &face0(), &SqPeriods {
+            sq1_sweep: 0x7F, sq1_lo: 0xAB, sq1_hi: 0x09,
+            sq2_sweep: 0x77, sq2_lo: 0xCD, sq2_hi: 0x05 });
+        // env1 首字节=0x01 ⇒ $EA←01、Y=(B6&F0)|01=B1、索引 0→1
+        assert_eq!(out.cntrl0, Some(0x01));
+        assert_eq!(out.volume_index, 1);
+        assert!(out.apu.contains(&(0x4000, 0xB1)), "Y=(Duty&$F0)|字节");
+        assert_eq!(&out.apu[..6], &[(0x4001, 0x7F), (0x4002, 0xAB), (0x4003, 0x09),
+                                    (0x4005, 0x77), (0x4006, 0xCD), (0x4007, 0x05)][..],
+                   "恢复面六写在流首");
+        assert!(out.events.contains(&(0x00EB, 1)) && out.events.contains(&(0x00EC, 0xBA))
+                && out.events.contains(&(0x00ED, 0xBC)), "$EB/$EC/$ED 面（ptr=$BCBA）");
+        let out2 = update_volume_envelope_frame(1, &face0(), &SqPeriods::default());
+        assert!(out2.apu.iter().any(|(a, _)| *a == 0x4004), "X=1→$4004");
+    }
+
+    /// W3-4-3 $FF 保持（Y=Duty 全值/noInc）；W3-4-4 $F0 静音（Y=$10/noInc）。
+    #[test]
+    fn terminal_bytes() {
+        // env5 尾=$F0@idx45（45 音量步后停驻）
+        let f = EnvelopeFace { env_index: 5, volume_index: 45, volume_data: 0x34,
+                               duty: 0xB6, used_by_sfx: 0, load_periods_flag: 0 };
+        let out = update_volume_envelope_frame(0, &f, &SqPeriods::default());
+        assert_eq!(out.cntrl0, Some(0xF0));
+        assert!(out.apu.contains(&(0x4000, 0x10)), "killVolume=Y=$10");
+        assert_eq!(out.volume_index, 45, "noInc");
+    }
+
+    /// W3-4-5 休止推进（vol_data==$10⇒Y=$10+索引仍走）；W3-4-6 占奏让位。
+    #[test]
+    fn rest_advance_and_sfx_yield() {
+        let f = EnvelopeFace { env_index: 1, volume_data: 0x10, volume_index: 2,
+                               duty: 0xB6, used_by_sfx: 0, load_periods_flag: 0 };
+        let out = update_volume_envelope_frame(0, &f, &SqPeriods::default());
+        assert_eq!(out.cntrl0, Some(0x10));
+        assert_eq!(out.volume_index, 3, "休止期索引仍推进（quirk）");
+        assert!(out.apu.contains(&(0x4000, 0x10)));
+        let f2 = EnvelopeFace { used_by_sfx: 1, ..f };
+        let out2 = update_volume_envelope_frame(0, &f2, &SqPeriods::default());
+        assert!(!out2.apu.iter().any(|(a, _)| *a == 0x4000 || *a == 0x4004),
+                "占奏让位——SQ_VOL 跳（恢复面六写仍走：asm 序=恢复先于占奏检）");
+        assert!(out2.cntrl0.is_some(), "$EA 已写");
+    }
+}
+
+// ==== W3-3 四通道环（UpdateAllMusicChannels $BAA5 装配——r20 方案 W3-3）====
+// asm 序：ResetVolumeIndex($B9F3)→ThisSoundChannel($064B)←0→通道体（空基址跳/
+// update_music_channel）→X+=1→$064B+=4→…→X==4⇒GotoUpdateAllVolumeEnvelopes($BAA1
+// 包络尾)⇒rts；SongEnd⇒jmp GotoEndOrLoopMusic（短路全环）。
+
+/// 帧态聚合（四通道块+全局曲头面+包络面+周期旧值——mem 读写映射件）。
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct MusicFrameState {
+    pub blocks: [ChannelBlock; 4],
+    /// $062B NoteLengthTblOffset。
+    pub note_len_offset: u8,
+    /// $062D TriCounterCntrl。
+    pub tri_counter_cntrl: u8,
+    /// $0628+ch DutyEnvelope。
+    pub duty: [u8; 4],
+    /// $062E+ch VolumeEnvelopeIndex（ch2/3 恒 0）。
+    pub env_index: [u8; 4],
+    /// $0648+ch Sweep。
+    pub sweep: [u8; 4],
+    /// $0653+ch UsedBySFX。
+    pub used_by_sfx: [u8; 4],
+    /// $066A/$066B VolumeIndex（SQ1/SQ2）。
+    pub volume_index: [u8; 2],
+    /// $066C/$066D VolumeData（SQ1/SQ2）。
+    pub volume_data: [u8; 2],
+    /// $0607 LoadMusicSQ1SQ2PeriodsFlag。
+    pub load_periods_flag: u8,
+    /// 双 SQ 周期恢复面。
+    pub sq: SqPeriods,
+    /// $0600+apu 周期低/高 RAM 旧值（休止回写）。
+    pub period_lo: [u8; 4],
+    pub period_hi: [u8; 4],
+}
+
+/// 帧级输出（有序事件流+$EA 末值语义自动成立）。
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct MusicFrameOut {
+    pub events: Vec<(u16, u8)>,
+    pub apu: Vec<(u16, u8)>,
+    pub state: MusicFrameState,
+    pub song_end: bool,
+}
+
+/// 四通道环装配（streams=None=基址空⇒跳过该通道）。
+/// bases=各通道乐基址（$0630+2X——**逐通道写 $E6/$E7 MusicChannelBase**：
+/// asm `UpdateMusicChannel` 入口装载先于空基址检——终值=末通道基址）。
+pub fn update_all_music_channels(
+    streams: [Option<&[u8]>; 4],
+    bases: [u16; 4],
+    sfx_data: &[u8],
+    st: &MusicFrameState,
+) -> MusicFrameOut {
+    let mut events: Vec<(u16, u8)> = Vec::new();
+    let mut apu: Vec<(u16, u8)> = Vec::new();
+    let mut s = *st;
+    let mut song_end = false;
+
+    // ResetVolumeIndex（$B9F3）：InstrDelay==1 对 ⇒ VolumeIndex←1（**$066A/$066B**——
+    // r20 asm 终审：sta MusicSQ2VolumeIndex 绝对址形）
+    if s.blocks[0].instr_delay == 1 {
+        events.push((0x066A, 1));
+        s.volume_index[0] = 1;
+    }
+    if s.blocks[1].instr_delay == 1 {
+        events.push((0x066B, 1));
+        s.volume_index[1] = 1;
+    }
+    // ThisSoundChannel 入口面
+    events.push((0x064B, 0));
+
+    for ch in 0..4u8 {
+        let idx = ch as usize;
+        // MusicChannelBase 装载（$E6/$E7——先于空基址检；r20：恒差修）
+        events.push((0x00E6, bases[idx] as u8));
+        events.push((0x00E7, (bases[idx] >> 8) as u8));
+        match streams[idx] {
+            None => {
+                // MusicChannelBaseEmpty（空基址——X*2 撤销直下一通道；仍步进 $064B）
+                if ch < 3 {
+                    events.push((0x064B, (ch as u8 + 1) * 4));
+                }
+                continue;
+            }
+            Some(stream) => {
+                let ctx = ChannelCtx {
+                    note_len_offset: s.note_len_offset,
+                    duty_envelope: s.duty[idx],
+                    volume_env_index: s.env_index[idx],
+                    sweep: s.sweep[idx],
+                    tri_counter_cntrl: s.tri_counter_cntrl,
+                    used_by_sfx: s.used_by_sfx[idx],
+                    period_low: s.period_lo[idx],
+                    period_high: s.period_hi[idx],
+                };
+                let out = update_music_channel(ch, stream, sfx_data, &s.blocks[idx], &ctx);
+                s.blocks[idx] = out.block;
+                // 事件面状态回推（VolumeData/周期——包络尾与休止回写读旧值）
+                for &(a, v) in &out.events {
+                    match a {
+                        0x066C => s.volume_data[0] = v,
+                        0x066D => s.volume_data[1] = v,
+                        0x0600 | 0x0604 | 0x0608 | 0x060C => {
+                            s.period_lo[((a - 0x0600) / 4) as usize] = v;
+                        }
+                        0x0601 | 0x0605 | 0x0609 | 0x060D => {
+                            s.period_hi[((a - 0x0601) / 4) as usize] = v;
+                        }
+                        _ => {}
+                    }
+                }
+                events.extend(out.events);
+                apu.extend(out.apu);
+                if out.flow == ChannelFlow::SongEnd {
+                    // GotoEndOrLoopMusic：短路全环（后续通道+包络尾本帧不走）
+                    song_end = true;
+                    return MusicFrameOut { events, apu, state: s, song_end };
+                }
+                if ch < 3 {
+                    events.push((0x064B, (ch as u8 + 1) * 4));
+                }
+            }
+        }
+    }
+
+    // 包络尾（GotoUpdateAllVolumeEnvelopes——SQ1/SQ2 两拍；$0607 旗=首拍清）
+    for x in 0..2u8 {
+        let face = EnvelopeFace {
+            env_index: s.env_index[x as usize],
+            volume_data: s.volume_data[x as usize],
+            volume_index: s.volume_index[x as usize],
+            duty: s.duty[x as usize],
+            used_by_sfx: s.used_by_sfx[x as usize],
+            load_periods_flag: s.load_periods_flag,
+        };
+        let out = update_volume_envelope_frame(x, &face, &s.sq);
+        s.volume_index[x as usize] = out.volume_index;
+        s.load_periods_flag = 0; // $BA08 清旗（首拍执行恢复后即清）
+        events.extend(out.events);
+        apu.extend(out.apu);
+    }
+    MusicFrameOut { events, apu, state: s, song_end }
+}
+
+#[cfg(test)]
+mod w3_loop_tests {
+    use super::*;
+
+    fn st0() -> MusicFrameState {
+        let mut s = MusicFrameState::default();
+        for b in s.blocks.iter_mut() {
+            b.instr_delay = 1;
+        }
+        s.note_len_offset = 0x0B;
+        s.duty = [0xB6, 0xF6, 0, 0];
+        s
+    }
+
+    /// W3-3-1 空基址跳过+ThisSoundChannel 序（0→4→8→C）。
+    #[test]
+    fn empty_base_skips() {
+        let s = st0();
+        let out = update_all_music_channels([None, None, None, None], [0xB0B9, 0xB000, 0xB076, 0xB115], &[], &s);
+        assert!(out.events.iter().filter(|(a, _)| *a == 0x064B).map(|(_, v)| *v)
+                    .eq([0x00, 0x04, 0x08, 0x0C].into_iter()), "$064B 步进序");
+        assert!(!out.events.iter().any(|(a, _)| *a == 0x0638), "空通道零块写");
+    }
+
+    /// W3-3-2/3 四通道顺序+$EA 末值语义（含包络尾）。
+    #[test]
+    fn channel_order_and_ea_tail() {
+        let mut s = st0();
+        s.blocks[0].instr_length = 3;
+        s.blocks[1].instr_length = 3;
+        s.blocks[2].instr_length = 3;
+        s.blocks[3].instr_length = 3;
+        let out = update_all_music_channels(
+            [Some(&[0x30]), Some(&[0x30]), Some(&[0x30]), Some(&[0x30])], [0xB0B9, 0xB000, 0xB076, 0xB115], &[], &s);
+        let ea: Vec<u8> = out.events.iter().filter(|(a, _)| *a == 0xEA).map(|(_, v)| *v).collect();
+        // 噪通道（ch3）走 SongNoteNoise 不写 $EA（asm $BBDE 前分支）⇒ 三值有序
+        assert_eq!(ea, vec![0xB6, 0xF6, 0x00], "$EA 有序（duty/duty/Tri duty0——噪无 $EA）");
+        // $EA 末值语义=事件流末写
+        assert_eq!(*out.events.iter().rev().find(|(a, _)| *a == 0xEA).unwrap(), (0xEA, 0x00));
+    }
+
+    /// W3-3-4 SongEnd 短路（ch1 曲终⇒ch2/3 零事件+song_end）。
+    #[test]
+    fn song_end_short_circuits() {
+        let s = st0();
+        let out = update_all_music_channels(
+            [Some(&[0x30]), Some(&[0x00]), Some(&[0x30]), Some(&[0x30])], [0xB0B9, 0xB000, 0xB076, 0xB115], &[], &s);
+        assert!(out.song_end);
+        assert!(!out.events.iter().any(|(a, _)| *a == 0x0638 + 2), "ch2 块零写");
+        assert!(!out.events.iter().any(|(a, _)| *a == 0x0638 + 3), "ch3 块零写");
+    }
+
+    /// W3-3-5 ResetVolumeIndex 入口（delay==1 对⇒$066A/$066B←1 在流首）。
+    #[test]
+    fn reset_volume_index_entry() {
+        let mut s = st0();
+        s.blocks[0].instr_delay = 1;
+        s.blocks[1].instr_delay = 1;
+        let out = update_all_music_channels([None, None, None, None], [0xB0B9, 0xB000, 0xB076, 0xB115], &[], &s);
+        assert_eq!(out.events[0], (0x066A, 1), "流首=ResetVolumeIndex SQ1");
+        assert!(out.events.contains(&(0x066B, 1)), "SQ2 面=$066B（r20 终审）");
+    }
+}

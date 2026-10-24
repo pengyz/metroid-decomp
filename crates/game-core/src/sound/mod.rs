@@ -90,12 +90,13 @@ pub struct SoundDataBlock {
 /// ①`sta $064D`（A=本周期旗副本——FindMusicInitIndex 的真实扫描源）②4B 拷
 /// （TablePtr/DefaultRoutine→$E0-$E3——**默认先入 $E2/$E3**，探针 f16 双写实证）
 /// +块[4]→$065C ③8 位 MSB 扫描：命中⇒表[y]双字**覆盖** $E2/$E3 ④pha/pla 恢复 $064D。
+/// （block_win=块窗址——`stx $E4`（X=窗址 lo）/`$E5←$B2`（高字节恒量））。
 /// 返回=（解析 routine=$E2/$E3 终值, 命中表目 Y, 写事件集）。
-pub fn get_sound_routine_writes(block: &SoundDataBlock, handler_table: &[u8], flags: u8)
+pub fn get_sound_routine_writes(block_win: u16, block: &SoundDataBlock, handler_table: &[u8], flags: u8)
     -> (u16, Option<u8>, Vec<(u16, u8)>) {
     let mut ev = Vec::new();
     ev.push((0x064D, flags)); // sta CurrentSoundFlags（旗副本——F1 根）
-    ev.push((0x00E4, block.table_ptr as u8)); // stx $E4（块址 lo——调用方 X 形）
+    ev.push((0x00E4, block_win as u8)); // stx $E4（块窗址 lo）
     ev.push((0x00E5, 0xB2)); // ldy #>GetSoundRoutineData / sty $E5（高字节恒 $B2）
     ev.push((0x00E0, block.table_ptr as u8));
     ev.push((0x00E1, (block.table_ptr >> 8) as u8));
@@ -120,7 +121,7 @@ pub fn get_sound_routine_writes(block: &SoundDataBlock, handler_table: &[u8], fl
 /// 不出写事件。返回 (SoundRoutinePtr, 命中表目 Y)。
 pub fn get_sound_routine(block: &SoundDataBlock, handler_table: &[u8], flags: u8)
     -> (u16, Option<u8>) {
-    let (ptr, y, _) = get_sound_routine_writes(block, handler_table, flags);
+    let (ptr, y, _) = get_sound_routine_writes(0, block, handler_table, flags);
     (ptr, y)
 }
 
@@ -203,18 +204,20 @@ mod tests {
         assert_eq!(get_sound_routine(&b, &tbl, 0x04).1, Some(10));
     }
 
-    /// GetSoundRoutine 写事件面（$064D 旗副本/4B 拷含默认/覆盖序——F1 公共根）。
+    /// GetSoundRoutine 写事件面（$064D 旗副本/4B 拷含默认/覆盖序——F1 公共根；
+    /// $E4=块窗址 lo（r20 修））。
     #[test]
     fn get_sound_routine_write_face() {
         let b = SoundDataBlock { table_ptr: 0xBC06, default_routine: 0xB35C, channel_type: 2 };
         let tbl = [0x7A, 0xBC];
-        let (ptr, hit, ev) = get_sound_routine_writes(&b, &tbl, 0x10);
+        let (ptr, hit, ev) = get_sound_routine_writes(0xB2A7, &b, &tbl, 0x10);
         assert!(ev.contains(&(0x064D, 0x10)), "sta CurrentSoundFlags 旗副本");
+        assert!(ev.contains(&(0x00E4, 0xA7)), "stx $E4=块窗址 lo（$B2A7→$A7）");
         assert!(ev.contains(&(0x00E2, 0x5C)), "默认先入 $E2");
         assert_eq!(hit, Some(6)); // 位4→y=6（短表外 0）
         assert_eq!(ptr, 0);
         // 位7 命中（y=0→BC7A）：覆盖序=事件尾两条
-        let (ptr2, _, ev2) = get_sound_routine_writes(&b, &tbl, 0x80);
+        let (ptr2, _, ev2) = get_sound_routine_writes(0xB2A7, &b, &tbl, 0x80);
         assert_eq!(ptr2, 0xBC7A);
         assert_eq!(&ev2[ev2.len() - 2..], &[(0x00E2, 0x7A), (0x00E3, 0xBC)][..]);
     }
@@ -775,13 +778,15 @@ pub fn initialize_music(current_flags: u8, header: &[u8; 13]) -> Vec<(u16, u8)> 
 }
 
 /// ResetVolumeIndex（$B9F3）：新音符始（InstrDelay==1）⇒VolumeIndex←1（SQ1/SQ2 对）。
+/// 【r20 asm 终审修正】SQ2 面坐标=**$066B**（MusicSQ2VolumeIndex——旧注「$066A+2 块形」
+/// 证伪：constants_ram:1099 逐字+`sta MusicSQ2VolumeIndex` 绝对址形（无 ,x））。
 pub fn reset_volume_index(sq1_delay: u8, sq2_delay: u8) -> Vec<(u16, u8)> {
     let mut ram = Vec::new();
     if sq1_delay == 1 {
         ram.push((0x066A, 1)); // MusicSQ1VolumeIndex
     }
     if sq2_delay == 1 {
-        ram.push((0x066C, 1)); // MusicSQ2VolumeIndex（$066A+2 块形——随证）
+        ram.push((0x066B, 1)); // MusicSQ2VolumeIndex（$066B——r20 终审）
     }
     ram
 }
