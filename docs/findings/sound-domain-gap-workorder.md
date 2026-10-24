@@ -65,10 +65,18 @@
 
 | 步 | 内容 | 验收 |
 |---|---|---|
-| W3-1 | **表烘焙**：MusicNotesTbl/NoteLengthsTbl ROM 直读→game-data（tools/bake_music_tables.py --check） | 烘焙校验器绿+值锚 ROM |
+| W3-1 | ✅ **表烘焙**（fe3560a7）：MusicNotesTbl/NoteLengthsTbl ROM 直读+--check+锚测试 | 19 测绿 |
 | W3-2 | **单通道 UpdateMusicChannel 闭环**：VM 步进（RepeatID 修）+_Continued 音符载+period/sweep/音量写面 | 单通道 TDD 全绿（对照 asm 六要点） |
 | W3-3 | **四通道环编排**（$BAA5 入口+IncrementToNextMusicChannel） | 4 通道步进序 TDD |
 | W3-4 | **$EA 包络动态**（包络机接管面+L3 对拍） | _soundgap 51B→0（声域）；恒差集余 21B |
+
+**W3-2 地址规格**（constants_ram 逐行审计——X=乐通道 0..3 / Y=ThisSoundChannel 0/4/8/C）：
+`$0620+X` InstrLength｜`$0640+X` InstrDelay｜`$0624+X` RepeatCounter｜`$063C+X` RepeatID｜
+`$0638+X` InstrID｜`$0630+2X` Base（$E6/$E7 载入源）｜`$0628+X` DutyEnvelope（X=2 时=TriLinearCount
+位——ragged 面随证）｜`$0648+X` Sweep（X≤2）｜`$062E+X` VolumeEnvelopeIndex｜`$066C+X` VolumeData｜
+`$0653+X` UsedBySFX｜`$062B` NoteLengthTblOffset｜`$062D` TriCounterCntrl｜`$062A` TriLinearCount｜
+`$064B` ThisSoundChannel｜`$EA` Cntrl0Data｜APU 面 `SQ1_VOL/LO/HI/SWEEP + Y`。
+坑注：$066E 被 `sta MusicSQ1VolumeData,x` 无知写及（asm 注自证）——D4 保真随件。
 
 ## 4. 验收判据
 
