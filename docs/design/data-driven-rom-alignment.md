@@ -19,7 +19,7 @@
 
 | m1disasm | game-core | 说明 |
 |---|---|---|
-| prg7_engine.asm（引擎：NMI/MainLoop/UpdateWorld/Samus 族） | kernel/input/world/samus/weapon/enemy/pickup/ui 域方法 | 纯逻辑（无 I/O/确定性（虚拟时钟+GameRng）） |
+| prg7_engine.asm（引擎：NMI/MainLoop/UpdateWorld/Samus 族） | kernel/input/world/samus/weapon/enemy/pickup/ui 域方法 | 纯逻辑（无 I/O/确定性（虚拟时钟+GameRng））。【2026-10-24 更正】kernel→frame（词汇归一：asm-rust-module-mapping.md §1）；引擎帧管线核→frame/，域例程→域件 |
 | prg0-6 + areas_common.asm | world/rooms 逻辑（区域规则）+ enemy（EnemyMove $8058 族——common.rs 已折） | 逻辑归 core |
 | enemies/*.asm（AI 例程） | enemy/ai 域方法（F2CA 族九入口素材） | AI=代码→core |
 | sound_engine.asm | sound 域（7 簇 sound::sfx 已落） | 引擎逻辑→core |

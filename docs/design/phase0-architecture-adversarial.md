@@ -31,6 +31,8 @@ bank:addr 只保留在 memmap/registry（供 L2 定位与 S 面缺口核查）�
 ```
 crates/game-core/src/
 ├── kernel/    帧调度（tick 两相）·NMIStatus 帧同步·Timer*/SetTimer·JumpEngine→enum 分派·bank 窗口抽象·RNG
+│              > 【2026-10-24 更正】词汇归一至 docs/design/asm-rust-module-mapping.md §1：
+│              > 帧管线核正典名=**frame/**（本行 kernel/=同义历史词）；kernel/ 脚手架已退役。
 ├── input/     手柄读取/连发（Joy1/2 Status/Change/Retrig/RetrigDelay）
 ├── render/    SpriteAllocator（SpritePagePos 游标契约）·OAM 影子(64 sprites)·VRAMStruct 写队列(RLE)·
 │              palette 队列·scroll/镜像·**软件 PPU 光栅器**（平台无关 VideoSink）

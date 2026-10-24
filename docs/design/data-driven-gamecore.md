@@ -12,6 +12,9 @@
 
 **game-core 逻辑设计**（消费 game-data（纯数据））：
 - kernel/：帧管线核心（tick/SpriteAllocator/EnemyAi/World/ApuFrame）
+  > 【2026-10-24 更正】词汇归一（asm-rust-module-mapping.md §1 三形裁决）：帧管线核正典名=
+  > **frame/**；kernel/ 与 engine/{frame,nmi,boot} 双称"帧管线核心"矛盾已裁——engine/=1:1
+  > 转写底座（L2 安全网）、frame/=忠实引擎（L3/L4 路径）、kernel/ 脚手架退役。
 - input/：控制器状态（NES 手柄（按键序列））
 - render/：渲染抽象（PPU 寄存器→渲染输出（256×240 像素））
 - world/{areas,rooms,structures,items}/：地图状态（房间/地形）

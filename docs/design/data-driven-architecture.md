@@ -36,6 +36,7 @@ game-data/src/：
 ```
 game-core/src/：
   kernel/（帧调度 tick 两相/NMIStatus/Timer/enum 分派/bank 窗口/RNG）
+  > 【2026-10-24 更正】kernel→frame（词汇归一：asm-rust-module-mapping.md §1）
   input/（Joy*（$12-$17））
   render/（SpriteAllocator/OAM 影子/软件 PPU 光栅器+palette+scroll）
   world/{areas,rooms,structures,items}（消费 game-data/room_data/）
