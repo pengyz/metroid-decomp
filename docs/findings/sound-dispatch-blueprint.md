@@ -14,10 +14,19 @@
    B350(MultiInit 特例)→B35C + FindMusicInitIndex（$065E：FF→扫描）
    B2AC(MultiCont)→B364 | B293(SQ1Init)→B330 | B298(SQ1Cont)→B4EE
    B29D(TriInit)→B344 | B2A2(TriCont)→B4EE
-② 音乐 2 cycle（caller=BC42——RunMusicInitRoutine@Common 自身的 GetSoundRoutine）：
-   BC36(MusicLoop,flag=$065D,block B2B6)→resolve BC3D(RunMusicInitRoutine)
-   BC3D(,flag=$0685,block B2B1)→resolve BC4B(ContinueMusic)
-   每次 @Common 尾：jsr FindMusicInitIndex（$065E←FF 面——BC45 写点）
+② 音乐 2 cycle（**asm 终审定型**——RunMusicLoopRoutine $BC36/RunMusicInitRoutine $BC3D）：
+   cycle9  BC36：`lda MusicLoopFlags($065D)/ldx #GetSoundRoutineData@MusicLoop(B2B6)`
+           → @Common：jsr GetSoundRoutine→jsr FindMusicInitIndex→`jmp (SoundRoutinePtr)`
+           （B2B6 块 DefaultRoutine=BC3D ⇒ 链入 cycle10）
+   cycle10 BC3D：`lda MusicInitFlags($0685)/ldx #@MusicInit(B2B1)`→@Common
+           （B2B1 块 TablePtr=**MusicRoutineTbl($BC26 8 项）**、DefaultRoutine=BC4B）
+           ⇒ 旗位 i 命中 ⇒ SoundRoutinePtr=MusicRoutineTbl[i]（GotoMusicNNInit 族）；
+           未命中 ⇒ BC4B（ContinueMusic 默认）。
+           FindMusicInitIndex（扫 CurrentSoundFlags $064D）⇒ MusicInitIndex($065E)=**曲号**
+           （0x0B=Intro——GotoMusicNNInit 经 SongHeaderOffsetTable[曲号] 取曲头）。
+   MusicRoutineTbl 8 项：00=GotoMusic04Init(Ridley) 01/02/03/06=GotoMusic00Init
+   （Tourian/Item/Kraid/MotherBrain）04=GotoMusic03Init(Norfair) 05=GotoMusic02Init(Escape)
+   07=GotoMusic03Init(Brinstar)。
 ③ ContinueMusic(BC4B)：MusicContFlags($068D)==0⇒出；≠0⇒jmp UpdateAllMusicChannels($BAA5)
 ```
 
