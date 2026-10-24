@@ -846,10 +846,25 @@ pub fn dispatch_step(face: &TitleFace) -> TitleStep {
     };
     use crate::verify_shim as sh;
     match face.phase {
-        // 0x00 InitializeAfterReset：**单迭代**（r14 二修——f2 空号属 0x01 步 spin①，
-        // 非本步等待；2 段拆分会把 FC=0 窗口拉长一帧 ⇒ StarPaletteSwitch 第二自增
-        // （$C3 恒差 1 根因））。相位推进即本步完成（无孤儿）。
-        0x00 => step_from_l2(sh::title_init_after_reset(&l2in)),
+        // 0x00 InitializeAfterReset：**work+1 spin 等待**（r22——r21 裁定补帧：oracle
+        // f1(work)+f2(wait) 形；r17 单迭代还原系 $C3 双增误修（缺帧镜像），本轮随同
+        // L4 捕点 F 随动重落——$C3 星轨迹盯防）。段 0=全仪式；段 1=spin 空等待。
+        0x00 => {
+            if face.cursor == 0 {
+                let mut s = step_from_l2(sh::title_init_after_reset(&l2in));
+                s.next_cursor = 1;
+                // 相位推进移至尾段（r22 补帧——否则等待段因相位已移不可达）
+                let advance = crate::memmap::title_state::write_event_phase(face.phase.wrapping_add(1));
+                s.events.retain(|&e| e != advance);
+                s
+            } else {
+                TitleStep {
+                    events: vec![crate::memmap::title_state::write_event_phase(face.phase.wrapping_add(1))],
+                    shell: vec![], a_out: None, x_out: None, y_out: None,
+                    jumped: None, unported: None, next_cursor: 0,
+                }
+            }
+        }
         0x0A | 0x0B => step_from_l2(sh::title_inc(&l2in)),
         0x0C => step_from_l2(sh::title_change_nametable(&l2in)),
         0x0D | 0x0E | 0x02 | 0x03 | 0x07 => step_from_l2(match face.phase {
@@ -936,15 +951,23 @@ pub fn dispatch_step(face: &TitleFace) -> TitleStep {
                         // 体写
                         (crate::ram_map::PALETTE_PENDING, 0x01), (0x00C5, 0x01),
                         (0x00FF, (ff & 0xFB) & 0xFC),
-                        crate::memmap::title_state::write_event_phase(face.phase.wrapping_add(1)),
                         (0x00D7, 0),
-                        // ScreenOn 面（$FE|=$1E）
+                        // ScreenOn 面（$FE|=$1E）——**相位推进移至尾段**（r22 补帧）
                         (0x00FE, pm | 0x1E), (0x001A, 0),
                     ],
                     shell: vec![ShellCall::ClearNameTables, ShellCall::PrepareVram(0x82F4),
                                 ShellCall::ScreenOn],
                     a_out: None, x_out: None, y_out: None,
                     jumped: None, unported: None, next_cursor: 2,
+                },
+                2 => TitleStep {
+                    // 尾段：相位推进=步完成（r22 定数：0x01=3 tick（seg0+seg1+尾）——
+                    // 处方"各补 1"=0x00+1/0x01+1；FC 计数实测调平）
+                    events: vec![
+                        crate::memmap::title_state::write_event_phase(face.phase.wrapping_add(1)),
+                    ],
+                    shell: vec![], a_out: None, x_out: None, y_out: None,
+                    jumped: None, unported: None, next_cursor: 0,
                 },
                 _ => TitleStep {
                     events: vec![], shell: vec![], a_out: None, x_out: None, y_out: None,

@@ -86,9 +86,9 @@ fn main() {
         engine.mem.joy1 = inputs.get(&fi).copied().unwrap_or(0);
         engine.tick_frame();
         for (gf, gname) in &gold_points {
-            // 采样相位契约（r16 实证）：引擎 tick≡oracle 帧+2（启动段 2 tick 不占帧号——
-            // L3 对齐窗 shift=2 + 邻域五点实证）⇒ 金面帧 F 捕于 tick F-2。
-            if *gf == fi + 2 {
+            // 采样相位契约（**r22 更正**：tick≡帧——r21 裁定补 2 spin 等待帧后，
+            // 原 F-2 系缺帧镜像（eae3212b 复核）；金面帧 F 捕于 tick F）。
+            if *gf == fi {
                 let pal = &engine.mem.render.palette;
                 let fb = game_core::render::render_frame(
                     &engine.mem.render, &bg16(pal), &spr16(pal), &engine.mem.ram[0x200..0x300]);

@@ -154,13 +154,16 @@ fn prepare_vram(mem: &mut FrameMemory, addr: u16) {
 mod tests {
     use super::*;
 
-    /// 统一入口穿越（phase 0 臂单迭代推进——r14 二修：0x00 单迭代（f2 空号属 0x01 spin①））。
+    /// 统一入口穿越（phase 0 臂**work+1 spin 等待**（r22 补帧——r21 裁定缺 2 等待帧）：
+    /// 段 0=全仪式（相位暂存）；段 1=等待+相位推进=完成）。
     #[test]
     fn bridge_crosses_via_unified_entry() {
         let mut m = FrameMemory::default();
-        main_title_routine(&mut m); // phase 0（InitializeAfterReset）
+        main_title_routine(&mut m); // 段 0（仪式——相位未推）
+        assert_eq!(m.title_cursor, 1, "spin 等待段挂起");
+        main_title_routine(&mut m); // 段 1（等待+推进）
         assert_eq!(m.read_ram(TITLE_ROUTINE), 1); // 相位推进
-        assert_eq!(m.title_cursor, 0, "单迭代完成复位");
+        assert_eq!(m.title_cursor, 0, "2 tick 完成复位");
     }
 
     /// OBJECTS_CLEAR 复合标签展开（「标签展开在 shim」契约点——$0300-$031F 32 事件）。

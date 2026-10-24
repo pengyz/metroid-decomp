@@ -373,12 +373,15 @@ mod tests {
         assert_eq!(m.read_ram(TIMER3), 1);
     }
 
-    /// GoMainRoutine 标题路**会师穿越**（bank00:8000 已通——phase 0 臂单迭代推进）。
+    /// GoMainRoutine 标题路**会师穿越**（bank00:8000 已通——phase 0 臂 **work+1 spin 等待**
+    /// 两 tick（r22 补帧——r21 裁定缺 2 等待帧））。
     #[test]
     fn go_main_routine_title_crosses_meeting_point() {
         let mut m = FrameMemory::default();
         m.write_ram(GAME_MODE, 1); // TitleRoutine=0=InitializeAfterReset
-        go_main_routine(&mut m); // 桥穿越（phase 0 臂执行）
+        go_main_routine(&mut m); // 段 0（仪式——相位暂存）
+        assert_eq!(m.read_ram(crate::ram_map::TITLE_ROUTINE), 0, "等待段内相位未推");
+        go_main_routine(&mut m); // 段 1（等待+推进）
         assert_eq!(m.read_ram(crate::ram_map::TITLE_ROUTINE), 1); // 相位推进（inc $1F）
     }
 }
