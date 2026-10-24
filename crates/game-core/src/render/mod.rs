@@ -121,7 +121,7 @@ pub fn render_frame_bg(rs: &RenderState, bg_palette: &[u8; 16]) -> FrameBuffer {
             let ax = tile_x / 4;
             let ay = tile_y / 4;
             let attr = nt[0x3C0 + ay * 8 + ax];
-            let q = ((tile_y & 2) >> 1) | ((tile_x & 2) >> 0); // 象限位
+            let q = ((tile_y & 2) >> 0) | ((tile_x & 2) >> 1); // 象限位（r16 修：标准序=低位 x、高位 y——位序互换曾致非对称 attr 选错组）
             let pal_group = (attr >> (q * 2)) & 0x03;
             let pal_index = if pix == 0 {
                 bg_palette[0] // 背景色（组 0 色 0）
@@ -288,7 +288,7 @@ mod tests_render_frame_bg {
         let pix = ((lo >> bit) & 1) | (((hi >> bit) & 1) << 1);
         let (ax, ay) = (tile_x / 4, tile_y / 4);
         let attr = nt[0x3C0 + ay * 8 + ax];
-        let q = ((tile_y & 2) >> 1) | ((tile_x & 2) >> 0);
+        let q = ((tile_y & 2) >> 0) | ((tile_x & 2) >> 1); // 象限位（r16 修：低位 x、高位 y）
         let group = (attr >> (q * 2)) & 0x03;
         let pal = if pix == 0 { bg[0] } else { bg[(group as usize) * 4 + pix as usize] };
         NES_PALETTE[(pal & 0x3F) as usize]
@@ -354,6 +354,38 @@ mod tests_render_frame_bg {
     // 从游戏数据填充 CHR
 
 #[cfg(test)]
+    /// 【r16 钉死】属性表象限位序=标准（低位=x、高位=y：q0 左上/q1 右上/q2 左下/q3 右下）。
+    /// 非对称 attr=0b11_10_01_00 四象限各映组 0/1/2/3——位序互换曾致 (0,2) 块错取组 3
+    /// （boot-title 文本行 58px 残差根因）。
+    #[test]
+    fn attr_quadrant_bit_order_standard() {
+        let mut rs = RenderState::default();
+        rs.nametable[0] = 1;     // tile(0,0) 左上
+        rs.nametable[2] = 1;     // tile(2,0) 右上
+        rs.nametable[2 * 32] = 1; // tile(0,2) 左下
+        rs.nametable[2 * 32 + 2] = 1; // tile(2,2) 右下
+        rs.nametable[0x3C0] = 0b11_10_01_00; // q0=0 q1=1 q2=2 q3=3
+        for i in 16..24usize {
+            rs.chr[i] = 0xFF; // tile1 低平面（pix=1）
+        }
+        let mut pal = [0u8; 16];
+        pal[1] = 0x01; // 组0色1
+        pal[5] = 0x02; // 组1色1
+        pal[9] = 0x03; // 组2色1
+        pal[13] = 0x04; // 组3色1
+        let fb = render_frame_bg(&rs, &pal);
+        let idx = |x: usize, y: usize| (y * 256 + x) * 3;
+        let expect = |x: usize, y: usize, pal_i: u8| {
+            let rgb = NES_PALETTE[(pal_i & 0x3F) as usize];
+            let o = idx(x, y);
+            assert_eq!([fb[o], fb[o + 1], fb[o + 2]], rgb, "像素({x},{y}) 组映射");
+        };
+        expect(0, 0, 0x01);   // 左上象限→组0
+        expect(16, 0, 0x02);  // 右上象限→组1
+        expect(0, 16, 0x03);  // 左下象限→组2（位序修复锚点）
+        expect(16, 16, 0x04); // 右下象限→组3
+    }
+
 mod tests_title_screen {
     use super::*;
 

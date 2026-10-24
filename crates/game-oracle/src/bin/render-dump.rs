@@ -86,7 +86,9 @@ fn main() {
         engine.mem.joy1 = inputs.get(&fi).copied().unwrap_or(0);
         engine.tick_frame();
         for (gf, gname) in &gold_points {
-            if *gf == fi {
+            // 采样相位契约（r16 实证）：引擎 tick≡oracle 帧+2（启动段 2 tick 不占帧号——
+            // L3 对齐窗 shift=2 + 邻域五点实证）⇒ 金面帧 F 捕于 tick F-2。
+            if *gf == fi + 2 {
                 let pal = &engine.mem.render.palette;
                 if fi == 30 {
                     std::fs::write("analysis/_diag_pal30.json",

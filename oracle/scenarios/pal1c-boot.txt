@@ -1,0 +1,10 @@
+# 场景：pal1c-boot —— boot-title 派生（同输入计划：无输入开机 300 帧）
+# 用途：r15 渲染残差终审探针——$1C(PaletteDataPending) 写点 + caller 栈反推
+# （palette-chain-f180-residual.md §4 工作单：抓 golden 侧 ptr[12]/Palette0C 族写者）。
+# 只增插桩不改行为（probe_mem=观察性写点回调）。
+name pal1c-boot
+frames 300
+probe_mem 001C 001C
+sample_point spin-exit
+watch_range 0000-00ff zp
+watch_range 0100-07ff iram
