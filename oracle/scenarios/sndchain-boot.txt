@@ -1,0 +1,11 @@
+# 场景：sndchain-boot —— boot-title 派生（同输入计划）
+# 用途：声音分派链探针——$E0-$E5（GetSoundRoutine 指针面）+$068D（MusicContFlags）写点
+# +caller（栈反推）——声音域 W2 断点定位（sound-domain-gap-workorder.md）。
+name sndchain-boot
+frames 300
+probe_mem 00E0 00E5
+probe_mem 068D 068D
+probe_mem 065D 065E
+sample_point spin-exit
+watch_range 0000-00ff zp
+watch_range 0100-07ff iram
