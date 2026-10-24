@@ -41,13 +41,15 @@ pub struct MoveCheckStaging {
     pub radius_y: u8,
 }
 
-/// CheckMoveVertical/Horizontal 边界面（07:E7BD——radius==0 ⇒ 无碰撞；else 瓦片环 kernel）。
+/// CheckMoveVertical/Horizontal 边界面（07:E7BD——radius==0 ⇒ 无碰撞；else 瓦片环碰撞查询）。
+/// 【r17 消歧更名（M4 复核裁定）】NeedsBgKernel→NeedsBgCollision：旧词与帧内核
+/// （frame/=kernel 义）一词二义；asm 本名=CheckMoveVertical（refs 无 kernel 词）。
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum MoveCheckOutcome {
     /// radius==0 快路径（07:E7BE `bne` 不转⇒`sec/rts`——无碰撞，carry set）
     NoCollision,
-    /// 需瓦片环 kernel（CheckMoveVertical/Horizontal——kernel 归 collision 簇，边界交出）
-    NeedsBgKernel(MoveCheckStaging),
+    /// 需瓦片环碰撞查询（CheckMoveVertical/Horizontal——collision 簇，边界交出）
+    NeedsBgCollision(MoveCheckStaging),
 }
 
 /// 上检（07:E770）：distY←radiusY+8，staging→垂直面（radiusX=E783 入参）。
@@ -108,7 +110,7 @@ pub fn check_move_boundary(staging: MoveCheckStaging, horizontal: bool) -> MoveC
     if radius == 0 {
         MoveCheckOutcome::NoCollision
     } else {
-        MoveCheckOutcome::NeedsBgKernel(staging)
+        MoveCheckOutcome::NeedsBgCollision(staging)
     }
 }
 
@@ -161,7 +163,7 @@ mod tests {
             let s = enemy_check_move_up(r, 7, 1, 2, 3);
             match check_move_boundary(s, false) {
                 MoveCheckOutcome::NoCollision => assert_eq!(r, 0),
-                MoveCheckOutcome::NeedsBgKernel(t) => {
+                MoveCheckOutcome::NeedsBgCollision(t) => {
                     assert_ne!(r, 0);
                     assert_eq!(t, s);
                 }
@@ -169,7 +171,7 @@ mod tests {
             let s = enemy_check_move_left(7, r, 1, 2, 3);
             match check_move_boundary(s, true) {
                 MoveCheckOutcome::NoCollision => assert_eq!(r, 0),
-                MoveCheckOutcome::NeedsBgKernel(t) => assert_eq!(t, s),
+                MoveCheckOutcome::NeedsBgCollision(t) => assert_eq!(t, s),
             }
         }
     }
