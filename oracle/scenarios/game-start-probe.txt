@@ -1,0 +1,26 @@
+# 场景：game-start-probe —— 转移时序取证（写事件帧记录——无锚副本）
+# 用途：A-pre 定谳（对抗复核修正增量①）——$24/$28/$12/$200/$6876 写事件帧序（双钟）
+# 与 game-start 行面 f350/351/359 事实对表。**无 sha 锚**（l3_manifest 不收录——取证专用）。
+name game-start-probe
+frames 700
+coverage
+sample_point spin-exit
+watch_range 0000-00ff zp
+watch_range 0100-07ff iram
+watch_range 6000-63ff wram
+watch_range 6870-6884 wram
+watch_range 6af4-6b24 wram
+
+capture 300 title
+
+press 310 start
+capture 330 menu
+press 350 start
+capture 420 game-in
+capture 520 game
+
+probe_mem 0024 0024
+probe_mem 0028 0028
+probe_mem 0012 0012
+probe_mem 0200 0200
+probe_mem 6876 6876
