@@ -8,8 +8,9 @@
 
 use game_data::area::graphics as gfx;
 
-/// TilePosTable（$EF9A——元 tile 4 tile 偏移：右下/左下/右上/左上）。
-const TILE_POS: [u16; 4] = [0x21, 0x20, 0x01, 0x00];
+/// 元 tile 4 tile 落位偏移（**r25 勘误修**：asm TilePosTable x=3→0 取序=data[0]→$00
+/// （左上）/data[1]→$01/data[2]→$20/data[3]→$21——旧表反序致四 tile 镜像错位）。
+const TILE_POS: [u16; 4] = [0x00, 0x01, 0x20, 0x21];
 
 /// 属性位掩码（公式形：清 x 位对——asm AttribMaskTable 语义）。
 fn attrib_mask(x: u8) -> u8 {
@@ -297,5 +298,22 @@ mod tests {
         assert_eq!(attrib_mask(1), 0xF3);
         assert_eq!(attrib_mask(2), 0xCF);
         assert_eq!(attrib_mask(3), 0x3F);
+    }
+}
+
+#[cfg(test)]
+mod r25_attr_probe {
+    use super::*;
+
+    /// 属性表落面（房 9 绘制后 $63C0 区——地面带组选核）。
+    #[test]
+    fn room9_attrib_table() {
+        let mut m = crate::frame::FrameMemory::default();
+        select_room_ram(&mut m);
+        m.write_ram(0x0068, 0x03); // RoomPalette=3（房 9 首字节）
+        init_tables(&mut m);
+        let _ = draw_room(&mut m, 9);
+        let attrs: Vec<u8> = (0..0x40u16).map(|i| m.read_wram(0x63C0 + i)).collect();
+        println!("[attr-probe] 属性表: {:02X?}", attrs);
     }
 }
