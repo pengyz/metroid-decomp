@@ -287,19 +287,14 @@ mod tests {
         assert_eq!(m.read_ram(DOOR_DELAY), 2); // 倒数先行
     }
 
-    /// UpdateSamus 面：PageIndex/IsSamus 落态+位 7 站立直入引爆。
+    /// UpdateSamus 面：PageIndex/IsSamus 落态+**站立径零爆全通**（r26 链贯通！）。
     #[test]
     fn update_samus_spine_face() {
         let mut m = FrameMemory::default();
         m.write_ram(SAMUS_STATUS, 0x80); // 站立旗
-        let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| update_samus(&mut m)));
-        let err = r.unwrap_err();
-        let msg = err.downcast_ref::<String>().cloned()
-            .or_else(|| err.downcast_ref::<&'static str>().map(|s| (*s).to_string()))
-            .unwrap_or_default();
-        assert!(msg.contains("unported @ bank07:CE7x"), "站立直入失准: {msg}"); // r26 接线后=stand 内件
-        assert_eq!(m.read_ram(PAGE_INDEX), 0);
-        assert_eq!(m.read_ram(IS_SAMUS), 1); // dec 前态（引爆先于收尾）
+        update_samus(&mut m); // 全链（stand→physics→显示会师→蜂鸣）——零爆完成！
+        assert_eq!(m.read_ram(crate::ram_map::PAGE_INDEX), 0, "PageIndex 归零");
+        assert_eq!(m.read_ram(crate::ram_map::IS_SAMUS), 0, "IsSamus 复位");
     }
 }
 

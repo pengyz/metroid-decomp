@@ -395,6 +395,29 @@ pub fn set_mirror_cntrl_bit(mem: &mut FrameMemory) {
 /// `$80|PRIORITY`→$6B）/CheckHealthStatus（CDFA）/LavaAndMoveCheck（E269）/
 /// MetroidOnSamus（$92）蓝化（`$81|PRIORITY`→$6B）/SetMirrorCntrlBit（CD92 已折）/
 /// jmp ObjDrawFrame（DE4A）。深链件=桩（m2 后续批）。
+
+/// CheckHealthBeep（**asm 内容锚** `CheckHealthBeep: ; 07:CE66`——r26）：
+/// 血量判（Health+1(\$0107)==0⇒蜂鸣径；==1 且 Health(\$0106)<\$70⇒蜂鸣径）→
+/// 16 帧节拍（FC&0x0F==0⇒SFX_Beep）→**SFXTriInitFlags(\$0683)|=sfxTri_Beep(\$08)**
+/// →SamusIsHit←0。
+fn check_health_beep(mem: &mut FrameMemory) {
+    let hi = mem.read_ram(0x0107); // Health+1
+    let low = mem.read_ram(0x0106); // Health
+    let beep = if hi.wrapping_sub(1) == 0xFF {
+        true // hi==0（血极低！）
+    } else if hi.wrapping_sub(1) == 0 {
+        low < 0x70 // hi==1 且低字节 < $70（血 < $170！）
+    } else {
+        false
+    };
+    if beep && mem.read_ram(crate::ram_map::FRAME_COUNT) & 0x0F == 0 {
+        // SFX_Beep（$CBF3）→SetSFXTriInitFlag：SFXTriInitFlags|=sfxTri_Beep
+        let f = mem.read_ram(0x0683) | 0x08;
+        mem.write_ram(0x0683, f);
+    }
+    mem.write_ram(0x0308, 0); // SamusIsHit←0（Object.isHit 域）
+}
+
 pub fn set_samus_data(mem: &mut FrameMemory) {
     update_obj_anim(mem, mem.regs.a); // DC8F（已端口——A=延迟初值面）
     if is_screw_attack_active(mem) {
@@ -409,7 +432,7 @@ pub fn set_samus_data(mem: &mut FrameMemory) {
         mem.write_ram(0x006B, 0x81);
     }
     set_mirror_cntrl_bit(mem); // CD92（已折——朝向镜像位）
-    crate::unported!("bank07:DE4A"); // ObjDrawFrame（显示面——S6 渲染卡随接）
+    crate::frame::sprite::anim_draw_object(mem, 0); // ObjDrawFrame（DE4A——sprite 管线会师！）
     // 链余件（随件）：LavaAndMoveCheck（E269）/MetroidOnSamus($92) 蓝化/
     // set_mirror_cntrl_bit（CD92 已折——随接）/ObjDrawFrame（DE4A 显示面）
 }
@@ -525,7 +548,7 @@ pub fn check_health_status(mem: &mut FrameMemory) {
             crate::unported!("bank07:CE52"); // 击退 X 速衰减面（Adiv16 族——随件）
         }
     }
-    crate::unported!("bank07:CE7x"); // CheckHealthBeep（低血蜂鸣——随件）
+    check_health_beep(mem); // CE66（低血蜂鸣——r26 端口）
 }
 
 /// LavaAndMoveCheck（**asm 内容锚**——CD6D 链四件）：状态门（Elevator 续/Dead 出）→
