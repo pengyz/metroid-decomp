@@ -134,8 +134,8 @@ mod tests {
         let mut m = FrameMemory::default();
         m.write_ram(SAMUS_STATUS, 7); // Dead→短路
         lava_and_move_check(&mut m); // 无炸
-        m.write_ram(SAMUS_STATUS, 1); // run→非岩浆径全通（r26 零爆！）
-        lava_and_move_check(&mut m);
+        m.write_ram(SAMUS_STATUS, 1); // run→全链（r26 移动物理 fallthrough）
+        lava_and_move_check(&mut m); // 零爆完成！
     }
 
     /// CheckHealthStatus 受击面（$70/$72/$77/speedY/AccelY 写面）+无敌倒数。
@@ -205,20 +205,13 @@ mod tests {
         assert!(!is_samus_on_top(0x00, 0x08, 0x10)); // 侧面（>1px 重合）
     }
 
-    /// D976 双旗清（同值写事件——清零先行面）。
+    /// D976 双旗清+冻敌环空径全通（r26——同值写事件清零先行面）。
     #[test]
     fn solid_entities_clears_flags_then_walk() {
         let mut m = FrameMemory::default();
         m.write_ram(SAMUS_ON_ELEVATOR, 1);
         m.write_ram(ON_FROZEN_ENEMY, 1);
-        let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            samus_collision_with_solid_entities(&mut m)
-        }));
-        let err = r.unwrap_err();
-        let msg = err.downcast_ref::<String>().cloned()
-            .or_else(|| err.downcast_ref::<&'static str>().map(|s| (*s).to_string()))
-            .unwrap_or_default();
-        assert!(msg.contains("unported @ bank07:D983"), "冻敌环失准: {msg}");
+        samus_collision_with_solid_entities(&mut m); // 空径环全通（零爆！）
         assert_eq!(m.read_ram(SAMUS_ON_ELEVATOR), 0); // 双旗清先行
         assert_eq!(m.read_ram(ON_FROZEN_ENEMY), 0);
     }
@@ -236,18 +229,11 @@ mod tests {
         assert_eq!(tile_class(0xA2), TileClass::Walkable);
     }
 
-    /// ObjectCheckMoveDown 壳引爆（嵌套件 E7B5）。
+    /// ObjectCheckMoveDown 壳（collision 已端口——r26 成功态）。
     #[test]
     fn object_check_move_down_detonates_at_nested() {
         let mut m = FrameMemory::default();
-        let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            object_check_move_down(&mut m)
-        }));
-        let err = r.unwrap_err();
-        let msg = err.downcast_ref::<String>().cloned()
-            .or_else(|| err.downcast_ref::<&'static str>().map(|s| (*s).to_string()))
-            .unwrap_or_default();
-        assert!(msg.contains("unported @ bank07:E7B5"), "嵌套件失准: {msg}");
+        let _ = object_check_move_down(&mut m); // 零爆（collision_point_ok 全径）
     }
 
     /// VertAccelerate 头：空中跳过+地面 maxspeed 初始化+对齐检测引爆。
@@ -260,12 +246,7 @@ mod tests {
         m.write_ram(SAMUS_ACCEL_Y, 0); // 地面
         m.write_ram(SAMUS_Y, 0x40);
         m.write_ram(SAMUS_RADIUS_Y, 0x10); // y+ry=0x50 → &7=0 → 对齐
-        let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| vert_accelerate(&mut m)));
-        let err = r.unwrap_err();
-        let msg = err.downcast_ref::<String>().cloned()
-            .or_else(|| err.downcast_ref::<&'static str>().map(|s| (*s).to_string()))
-            .unwrap_or_default();
-        assert!(msg.contains("unported @ bank07:E7B5"), "对齐卫件失准: {msg}"); // E7AD 壳已通→嵌套件
+        vert_accelerate(&mut m); // r26 collision 已端口（零爆！）
         assert_eq!(m.read_ram(SAMUS_HORZ_SPEED_MAX), 0x18); // maxspeed 已初始化
     }
 }
@@ -332,7 +313,18 @@ pub fn samus_collision_with_solid_entities(mem: &mut FrameMemory) {
     // 双旗清（注「Default to … not being on an elevator or on a frozen enemy」）
     mem.write_ram(SAMUS_ON_ELEVATOR, 0);
     mem.write_ram(ON_FROZEN_ENEMY, 0);
-    crate::unported!("bank07:D983"); // 冻敌环（嵌套几何件族——F1FA 族随拼装）
+    // 冻敌环（D983——r26 空径环端口：仅冻结敌（status==4!）进几何碰撞族）
+    let mut x: u8 = 0x50;
+    loop {
+        let status = mem.read_wram(0x6AF4 + x as u16);
+        if status == 4 {
+            crate::unported!("bank07:D983"); // 冻结敌几何族（F1FA 族随拼装——空径不达）
+        }
+        if x == 0 {
+            break;
+        }
+        x -= 0x10;
+    }
 }
 
 /// @isSamusOnTop 顶部判定（asm :D9BA 内容锚——冻结敌/电梯共用）：
