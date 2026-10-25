@@ -30,7 +30,10 @@ use crate::ram_map::{
 /// · regs.a 连续性：续段不跑 random_numbers（其写 regs.a）——分发臂继承段间 A 态（F3）。
 pub fn main_loop_iter(mem: &mut FrameMemory) {
     let phase_now = mem.read_ram(crate::ram_map::TITLE_ROUTINE);
-    let continuation = mem.title_cursor > 0 && mem.title_cursor_phase == phase_now;
+    // 【r23】续段=同相位续段（F4 孤儿语义不动）**或 spin 等待段**（title_spin>0——臂的
+    // 跨帧等待段正交机构）。
+    let continuation = (mem.title_cursor > 0 && mem.title_cursor_phase == phase_now)
+        || mem.title_spin > 0;
     if !continuation {
         random_numbers(mem); // C000（唤醒后首件）
         super::boot::c4de_unit(mem); // CheckBankSwitch（已端口复用）
@@ -373,16 +376,15 @@ mod tests {
         assert_eq!(m.read_ram(TIMER3), 1);
     }
 
-    /// GoMainRoutine 标题路**会师穿越**（bank00:8000 已通——phase 0 臂 **work+1 spin 等待**
-    /// 两 tick（r22 补帧——r21 裁定缺 2 等待帧））。
+    /// GoMainRoutine 标题路**会师穿越**（bank00:8000 已通——phase 0 臂单工作段+SpinWait
+    /// （r23 机构改形）：相位推进/FC 同拍落工作段）。
     #[test]
     fn go_main_routine_title_crosses_meeting_point() {
         let mut m = FrameMemory::default();
         m.write_ram(GAME_MODE, 1); // TitleRoutine=0=InitializeAfterReset
-        go_main_routine(&mut m); // 段 0（仪式——相位暂存）
-        assert_eq!(m.read_ram(crate::ram_map::TITLE_ROUTINE), 0, "等待段内相位未推");
-        go_main_routine(&mut m); // 段 1（等待+推进）
+        go_main_routine(&mut m); // 工作段（仪式+推进同拍）
         assert_eq!(m.read_ram(crate::ram_map::TITLE_ROUTINE), 1); // 相位推进（inc $1F）
+        assert_eq!(m.title_spin, 1, "spin 等待段挂起");
     }
 }
 

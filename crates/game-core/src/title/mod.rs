@@ -789,6 +789,8 @@ pub enum ShellCall {
     EraseAllSprites,
     /// NMI 等待点（§8.1：帧界让出，下帧续）。
     NmiYield,
+    /// spin 等待段（r23：下一 tick 工作零动（跨相续段正交机构）——0x00 臂尾等待用）。
+    SpinWait,
     /// WaitNMIPass（$1A←0+spin——1 spin）。
     WaitNMIPass,
     /// VBOffAndHorzWrite（$FF&=~$84+PPUCTRL 真写——0 spin）。
@@ -850,23 +852,14 @@ pub fn dispatch_step(face: &TitleFace) -> TitleStep {
         // f1(work)+f2(wait) 形；r17 单迭代还原系 $C3 双增误修（缺帧镜像），本轮随同
         // L4 捕点 F 随动重落——$C3 星轨迹盯防）。段 0=全仪式；段 1=spin 空等待。
         0x00 => {
-            if face.cursor == 0 {
-                let mut s = step_from_l2(sh::title_init_after_reset(&l2in));
-                s.next_cursor = 1;
-                // 【r22 余件 1】InitializeAfterReset :124 `sty IntroStarOffset`（Y=0）
-                // ——L2 口径漏写补（$C3←0 重置：星火（首 NMI）后清——O f1=01→f3=00 形）
-                s.events.push((0x00C3, 0));
-                // 相位推进移至尾段（r22 补帧——否则等待段因相位已移不可达）
-                let advance = crate::memmap::title_state::write_event_phase(face.phase.wrapping_add(1));
-                s.events.retain(|&e| e != advance);
-                s
-            } else {
-                TitleStep {
-                    events: vec![crate::memmap::title_state::write_event_phase(face.phase.wrapping_add(1))],
-                    shell: vec![], a_out: None, x_out: None, y_out: None,
-                    jumped: None, unported: None, next_cursor: 0,
-                }
-            }
+            // 【r23 机构改形】单工作段+SpinWait 等待段（正交机构）：相位推进/FC 同拍落
+            // 工作段（golden f1 形——O $1F=01@f3 对齐根）；等待=SpinWait 计数（下一 tick
+            // 工作零动——oracle f2 空号形）。
+            let mut s = step_from_l2(sh::title_init_after_reset(&l2in));
+            // InitializeAfterReset :124 `sty IntroStarOffset`（Y=0）
+            s.events.push((0x00C3, 0));
+            s.shell.push(crate::title::ShellCall::SpinWait);
+            s
         }
         0x0A | 0x0B => step_from_l2(sh::title_inc(&l2in)),
         0x0C => step_from_l2(sh::title_change_nametable(&l2in)),

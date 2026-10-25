@@ -18,6 +18,11 @@ const TITLE_ROUTINE_PTR_TABLE: [u16; 31] = [
 
 /// MainTitleRoutine 分发一步（asm 内容锚 `MainTitleRoutine: ; 00:8000`）。
 pub fn main_title_routine(mem: &mut FrameMemory) {
+    // 【r23 spin 等待段】>0=本 tick 工作零动（跨相续段正交机构——臂的等待段语义）。
+    if mem.title_spin > 0 {
+        mem.title_spin -= 1;
+        return;
+    }
     let phase = mem.read_ram(TITLE_ROUTINE);
     let mut star_src = [0u8; 0xA0];
     for (i, b) in star_src.iter_mut().enumerate() {
@@ -133,6 +138,8 @@ fn exec_shell_call(mem: &mut FrameMemory, sc: &crate::title::ShellCall) {
             }
         }
         PrepareVram(addr) => prepare_vram(mem, *addr),
+        // spin 等待段（r23：计数面——main_title_routine 入口消费）
+        SpinWait => mem.title_spin = 1,
         // ScreenOff/ScreenOn/NMIOn/VBOffAndHorzWrite/WaitNMIPass：$FE/$FF/$1A 镜像面
         // =臂事件承载（two-layer——事件即 RAM 面权威）；InitPasswordFontGfx/
         // DisplayInputCharacters 深件随批（未烘焙面随件爆）。
@@ -154,16 +161,17 @@ fn prepare_vram(mem: &mut FrameMemory, addr: u16) {
 mod tests {
     use super::*;
 
-    /// 统一入口穿越（phase 0 臂**work+1 spin 等待**（r22 补帧——r21 裁定缺 2 等待帧）：
-    /// 段 0=全仪式（相位暂存）；段 1=等待+相位推进=完成）。
+    /// 统一入口穿越（phase 0 臂**单工作段+SpinWait**（r23 机构改形）：工作段=全仪式+
+    /// 相位推进+FC 同拍；SpinWait=下一 tick 工作零动）。
     #[test]
     fn bridge_crosses_via_unified_entry() {
         let mut m = FrameMemory::default();
-        main_title_routine(&mut m); // 段 0（仪式——相位未推）
-        assert_eq!(m.title_cursor, 1, "spin 等待段挂起");
-        main_title_routine(&mut m); // 段 1（等待+推进）
-        assert_eq!(m.read_ram(TITLE_ROUTINE), 1); // 相位推进
-        assert_eq!(m.title_cursor, 0, "2 tick 完成复位");
+        main_title_routine(&mut m); // 工作段（仪式+推进）
+        assert_eq!(m.read_ram(TITLE_ROUTINE), 1); // 相位推进同拍
+        assert_eq!(m.title_spin, 1, "spin 等待段挂起");
+        main_title_routine(&mut m); // spin tick（零动）
+        assert_eq!(m.title_spin, 0, "spin 消费");
+        assert_eq!(m.read_ram(TITLE_ROUTINE), 1, "spin 不扰相位");
     }
 
     /// OBJECTS_CLEAR 复合标签展开（「标签展开在 shim」契约点——$0300-$031F 32 事件）。
