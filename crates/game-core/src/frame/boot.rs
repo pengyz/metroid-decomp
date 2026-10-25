@@ -223,6 +223,25 @@ pub(crate) fn set_ppu_mirror(mem: &mut FrameMemory, a_in: u8) {
 /// → `BankSwitch: ; 07:C4EF`（「tya sta Temp00_Bank / lda SwitchUpperBits and #$18」）→
 /// :1318 族 `MMCWritePrgBank: ; 07:C4FA`（「Write bit 0..4 of ROM bank #」×5 串行）
 /// → :1351 `GoBankInit: ; 07:C510`（「asl tay / jmp (Temp0A_BankInitPtr)」）+ 表 :1363
+/// LoadGFX（**asm 内容锚** `LoadGFX: ; 07:C7AB`/CopyGFXBlock $C7D5——r25 端口）：
+/// GFXInfo 7B 条目（bank/src/dest/size）→PPUDATA 走带（rs.chr 面）；PPU 增量=1 先行。
+pub fn load_gfx(mem: &mut FrameMemory, id: usize) {
+    use game_data::title::gfx_data as gd;
+    let e = |i: usize| gd::GFX_INFO[id * 7 + i];
+    let (off, size) = gd::GFX_OFFS[id];
+    let dest = e(3) as u16 | ((e(4) as u16) << 8);
+    // PPU 增量=1（asm `and #~PPUCTRL_INCR_DOWN`——$FF bit2 清）
+    let ff = mem.read_ram(0x00FF) & !0x04;
+    mem.write_ram(0x00FF, ff);
+    mem.write_io(0x2000, ff);
+    // CopyGFXBlock：$2006 dest→$2007 走带
+    mem.write_io(0x2006, (dest >> 8) as u8);
+    mem.write_io(0x2006, dest as u8);
+    for k in 0..size as usize {
+        mem.write_io(0x2007, gd::GFX_DATA[off as usize + k]);
+    }
+}
+
 /// `BankInitTable: ; 07:C51F`（.word InitBank0..5/ExitSub×3）。
 /// ROM 抽查佐证：`C4DE: A4 24 F0 2D 20 E8 C4 4C 10 C5`。
 /// boot 态 $24=1（C0B4 置）→ 索引 0 → 表项 InitBank0（$C531）。其他表项未端口——fail-loud。
@@ -238,10 +257,16 @@ pub fn c4de_unit(mem: &mut FrameMemory) {
         mem.write_ram(crate::ram_map::BANK_SWITCH_PENDING, 0); // CheckBankSwitch_OK 清
         mem.write_ram(0x0028 + 1, pending.wrapping_sub(1)); // CurrentBank（$29）
         if pending == 2 {
-            // InitBank2（asm `InitBank2: ; 07:C583`：`lda #$00/sta GameMode`（Play！）/
-            // `jsr ScreenNmiOff`/`jsr InitNorfairGFX`/`jmp NMIOn`）
+            // InitBank1（**r25 注名勘误**：BankTable[0]=$01+1=2=Brinstar bank1→
+            // InitBank1（$C552——旧注 InitBank2 误）：`lda #$00/sta GameMode`（Play！）/
+            // `jsr ScreenNmiOff`/`jsr InitBrinstarGFX`/`jmp NMIOn`）。
             mem.write_ram(crate::ram_map::GAME_MODE, 0);
             mem.write_ram(crate::ram_map::NMI_STATUS, 1); // ScreenNmiOff 域形
+            // InitBrinstarGFX（$C604）：BrinBG1/CREBG1/CREBG2/BrinstarSprites/Solid_0FC0/
+            // Solid_1FC0（GFXInfo 项 3/4/5/6/25/22——bake_gfx 29 项自描述）
+            for id in [3usize, 4, 5, 6, 25, 22] {
+                load_gfx(mem, id);
+            }
         } else {
             crate::unported!("bank07:C552-init"); // 其余 bank init（随件）
         }
