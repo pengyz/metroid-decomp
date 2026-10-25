@@ -1,0 +1,10 @@
+# 场景：sndtail-boot —— boot-title 派生（同输入计划）
+# 用途：声尾三件写点探针——$0640-$0643（InstrDelay 四通道恒差+3）/$EB
+# （VolumeEnvelopeIndex 回零写者）/$EA（包络步进相位）——workorder §6 余差定谳。
+name sndtail-boot
+frames 300
+probe_mem 0640 0643
+probe_mem 00EA 00EB
+sample_point spin-exit
+watch_range 0000-00ff zp
+watch_range 0100-07ff iram

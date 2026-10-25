@@ -1,0 +1,11 @@
+# 场景：stargate-boot —— boot-title 派生
+# 用途：$C3 星开关单发差定根——boot 窗 $C1（VRAMStructBufferIndex 队列门）/
+# $2F（PaletteDataPending 挂起门）写点+caller——三条件中哪条在 golden boot 窗阻断
+# StarPaletteSwitch（workorder §10 余件 1）。
+name stargate-boot
+frames 40
+probe_mem 00C1 00C1
+probe_mem 002F 002F
+sample_point spin-exit
+watch_range 0000-00ff zp
+watch_range 0100-07ff iram
