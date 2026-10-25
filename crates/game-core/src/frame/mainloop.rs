@@ -496,6 +496,69 @@ fn enemy_type_times2_plus_facing(mem: &mut crate::frame::FrameMemory, x: u8) -> 
     (t * 2 + facing as u16) & 0x1F
 }
 
+
+/// LoadTableAt977B（**asm 内容锚** `areas_common.asm:184 $80B0`——L977B[type]×2）。
+fn load_table_at_977b(mem: &mut crate::frame::FrameMemory, x: u8) -> u8 {
+    let t = mem.read_wram(0x6AF4 + x as u16 + 13) as usize;
+    let e = game_data::area::graphics::ENEMY_FACING[t & 0x3F];
+    e.wrapping_shl(1)
+}
+
+/// UpdateEnemy_Resting_UpdateEnData1F（**asm 内容锚** `: 07:F676`——r26）：
+/// L977B 条目×2→再 asl×3→and #$C0→data1F（**bit2-3→bit6-7**）。
+fn update_en_data1f(mem: &mut crate::frame::FrameMemory, x: u8) {
+    let v = load_table_at_977b(mem, x);
+    let v = v.wrapping_shl(3); // asl×3（含载器 ×2=条目×16）
+    mem.write_wram(0x6AF4 + x as u16 + 0x1F, v & 0xC0); // EnsExtra.data1F
+}
+
+/// UpdateEnemy_Resting_TryBecomingActive（**asm 内容锚** `: 07:F7BA`——r26）：
+/// dec delay 非零⇒RTS；归零：data05 bit3=0⇒inc 退回；=1⇒(PipeBug type7⇒SFX)+
+/// status inc→Active+InitEnActiveAnimIndex。
+fn try_becoming_active(mem: &mut crate::frame::FrameMemory, x: u8) {
+    let e = 0x0400 + x as u16 + 7; // Ens.delay
+    let d = mem.read_ram(e);
+    if d.wrapping_sub(1) != 0 {
+        mem.write_ram(e, d.wrapping_sub(1));
+        return;
+    }
+    let d5 = mem.read_ram(0x0400 + x as u16 + 5);
+    if d5 & 0x08 == 0 {
+        mem.write_ram(e, d); // inc 退回（undo）
+        return;
+    }
+    // @becomeActive
+    let t = mem.read_wram(0x6AF4 + x as u16 + 13);
+    if t == 7 {
+        crate::unported!("bank07:CBA4"); // SFX_OutOfPipe（声事件——出声面）
+    }
+    #[allow(unreachable_code)]
+    {
+        let st = mem.read_wram(0x6AF4 + x as u16);
+        mem.write_wram(0x6AF4 + x as u16, st.wrapping_add(1)); // status→Active
+        init_en_active_anim_index(mem, x); // F699（Active 动画初始化）
+    }
+}
+
+/// InitEnActiveAnimIndex（**asm 内容锚** `: 07:F699`——r26）：ENEMY_ACTIVE_ANIM[y]
+/// →resetAnimIndex/animIndex；InitOffset 非零⇒animIndex 递减该值。
+fn init_en_active_anim_index(mem: &mut crate::frame::FrameMemory, x: u8) {
+    let y = enemy_type_times2_plus_facing(mem, x);
+    let idx = game_data::area::graphics::ENEMY_ACTIVE_ANIM[y as usize & 0x1F];
+    if idx != mem.read_wram(0x6AF4 + x as u16 + 1) {
+        mem.write_wram(0x6AF4 + x as u16 + 1, idx);
+        mem.write_wram(0x6AF4 + x as u16 + 4, idx);
+        mem.write_wram(0x6AF4 + x as u16 + 5, 0);
+        let t = mem.read_wram(0x6AF4 + x as u16 + 13) as usize & 0x0F;
+        let off = game_data::area::graphics::ENEMY_ACTIVE_ANIM_INIT_OFFSET[t] & 0x7F;
+        let mut ai = idx;
+        for _ in 0..off {
+            ai = ai.wrapping_sub(1);
+        }
+        mem.write_wram(0x6AF4 + x as u16 + 4, ai);
+    }
+}
+
 /// UpdateEnemy_Resting（**asm 内容锚** `: 07:F3BE`——r26 壳：30fps 门/件序 fail-loud）。
 fn enemy_resting(mem: &mut crate::frame::FrameMemory, x: u8) {
     let d = mem.read_ram(0x0400 + x as u16 + 5);
@@ -506,6 +569,12 @@ fn enemy_resting(mem: &mut crate::frame::FrameMemory, x: u8) {
         mem.write_ram(0x0400 + x as u16 + 10, 0); // data0A←0
         enemy_force_speed(mem, x); // F6B9（件序首——速向萨姆斯力）
         enemy_distance_threshold(mem, x); // F75B（件序 2——阈距判）
+        init_en_resting_anim_index(mem, x); // F682（件序 3）
+        update_en_data1f(mem, x); // F676（件序 4）
+        let delay = mem.read_ram(0x0400 + x as u16 + 7);
+        if delay != 0 {
+            try_becoming_active(mem, x); // F7BA（件序 5——延迟归零⇒激活）
+        }
     }
     crate::unported!("bank07:F40A"); // Active_BranchB（EnemyReactToSamusProjectile→AI）
 }
