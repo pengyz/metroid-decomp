@@ -76,6 +76,9 @@ const MAIN_ROUTINE_PTR_TABLE: [u16; 10] = [
 /// 10 项分派。未武装臂=per-entry 爆（移动臂迭代分类面）。
 pub fn game_main_routine(mem: &mut FrameMemory) {
     let mr = mem.read_ram(crate::ram_map::MAIN_ROUTINE);
+    if std::env::var("DSH_MR_TRACE").is_ok() {
+        eprintln!("[mr-trace] FC={} mr={:02X} status={:02X} t3={:02X}", mem.read_ram(crate::ram_map::FRAME_COUNT), mr, mem.read_ram(0x0300), mem.read_ram(0x002C));
+    }
     if (mr as usize) < 10 {
         let target = MAIN_ROUTINE_PTR_TABLE[mr as usize];
         // JumpEngine 指针写（$0C/$0D——同标题面）
@@ -92,6 +95,9 @@ pub fn game_main_routine(mem: &mut FrameMemory) {
             let loc = format!("bank07:{:04X}", MAIN_ROUTINE_PTR_TABLE.get(mr as usize).copied().unwrap_or(0));
             crate::unported!(&loc); // 其余态（MoreInit 起——迭代分类）
         }
+    }
+    if std::env::var("DSH_MR_TRACE").is_ok() {
+        eprintln!("[mr-post] FC={} status={:02X} oam0={:02X}", mem.read_ram(crate::ram_map::FRAME_COUNT), mem.read_ram(0x0300), mem.read_ram(0x0200));
     }
 }
 

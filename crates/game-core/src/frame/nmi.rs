@@ -19,6 +19,9 @@ use crate::ram_map::{GAME_MODE, NMI_STATUS, PALETTE_PENDING, PPU_DATA_PENDING, T
 
 /// NMI 处理器（60Hz VBlank 调用）。
 pub fn nmi_handler(mem: &mut FrameMemory) {
+    if std::env::var("DSH_MR_TRACE").is_ok() {
+        eprintln!("[nmi-in] status={:02X}", mem.read_ram(0x0300));
+    }
     // ①头：OAM 面（寄存器面 write_io）
     mem.write_io(io::OAMADDR, 0x00);
     mem.write_io(io::OAMDMA, 0x02); // $200-$2FF → OAM
@@ -54,6 +57,9 @@ fn nmi_body(mem: &mut FrameMemory) {
     // （prg7_engine.asm:225-294 NMI 序实证）——原早退吞掉两者=超帧声路缺席。
     sound_engine(mem); // SoundEngine（sound_engine.asm :384 族——已端口）
     update_age(mem); // UpdateAge（asm :2088 族——已端口；NMI 体末件）
+    if std::env::var("DSH_MR_TRACE").is_ok() {
+        eprintln!("[nmi-out] status={:02X}", mem.read_ram(0x0300));
+    }
 }
 
 /// NMIScreenWrite 单元（**asm 引证主体**，链规 17）——

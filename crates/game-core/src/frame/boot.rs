@@ -574,3 +574,17 @@ mod tests {
         assert_eq!(m.read_wram(0x6000), 0x00);
     }
 }
+
+#[cfg(test)]
+mod r25_gfx_probe {
+    use super::*;
+
+    /// load_gfx(5=CREBG2) 写面锚（PPU $1F00（tile $FF）←数据体 offset 0x700）。
+    #[test]
+    fn crebg2_covers_1f00() {
+        let mut m = crate::frame::FrameMemory::default();
+        load_gfx(&mut m, 5);
+        let expect = game_data::title::gfx_data::GFX_DATA[game_data::title::gfx_data::GFX_OFFS[5].0 as usize + 0x700];
+        assert_eq!(m.render.chr[0x1F00], expect, "CREBG2 tile $FF 面");
+    }
+}
