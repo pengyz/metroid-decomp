@@ -1,4 +1,4 @@
-﻿//! Samus 物理域（task-25 次件+task-4 移植半；链规 19 业务结构——积分器/坐标件/R-mv 面）。
+//! Samus 物理域（task-25 次件+task-4 移植半；链规 19 业务结构——积分器/坐标件/R-mv 面）。
 //!
 //! **asm 内容锚+结构互核注**（施工令②精化版）——
 //! · 坐标热件（move 相 17k+ hits）：`Xminus16: ; 07:F1F4`（`txa/sec/sbc #$10/tax`）/
@@ -34,6 +34,34 @@ pub fn x_plus_4(x: u8) -> u8 {
 
 /// VertAccelerate 头（task-4 E37A 移植半——accel/maxspeed 初始化）。
 /// 入参态：SamusAccelY=0（地面）才走初始化；空中（≠0）直跳 @dontStartFalling。
+
+/// ObjectCheckMoveVertical/Horizontal（**asm 内容锚** `: 07:E7B5/E893`——r26 同构敌径）：
+/// 位置/半径→collision_point_ok（RoomRAM tile 值类判）。
+fn object_check_move_vertical(mem: &mut FrameMemory) -> bool {
+    let y = mem.read_ram(0x030D);
+    let ry = mem.read_ram(0x0301); // Objects.radiusY
+    let x = mem.read_ram(0x030E);
+    let hi = mem.read_ram(0x0307); // Samus.hi（域址随核）
+    let check_y = y.wrapping_sub(ry).wrapping_add(8);
+    collision_point_ok(mem, check_y, x, hi)
+}
+
+/// collision_point_ok（**asm 内容锚** CheckMoveVertical `: 07:E7BD`——r26 共享）：
+/// tile 值类：<$80=固实（碰撞！）/$4E=门像/≥$80=可走。
+fn collision_point_ok(mem: &mut FrameMemory, y: u8, x: u8, hi: u8) -> bool {
+    let idx = (((y & 0xF8) as u16) << 2) | ((x >> 3) as u16);
+    let page = if hi & 1 != 0 { 0x0400u16 } else { 0x0000 };
+    let ptr = 0x6000 | page | (idx & 0x3FF);
+    let tile = mem.read_wram(ptr);
+    if tile == 0x4E {
+        return false;
+    }
+    if tile < 0x80 {
+        return false;
+    }
+    true
+}
+
 pub fn vert_accelerate(mem: &mut FrameMemory) {
     if mem.read_ram(SAMUS_ACCEL_Y) != 0 {
         return; // 空中——`bne @dontStartFalling`
@@ -284,7 +312,8 @@ pub fn tile_class(t: u8) -> TileClass {
 pub fn object_check_move_down(mem: &mut FrameMemory) -> bool {
     // 壳：A = -radiusY（向下偏移）——几何面
     let _ry = mem.read_ram(SAMUS_RADIUS_Y);
-    crate::unported!("bank07:E7B5"); // ObjectCheckMoveVertical（几何+瓦片环——嵌套件）
+    // ObjectCheckMoveVertical（E7B5——同构敌径（collision_point_ok））
+    object_check_move_vertical(mem)
 }
 
 /// SamusCollisionWithSolidEntities（**asm 内容锚+结构互核注**——全仪式关键件②）：
@@ -573,15 +602,25 @@ pub fn lava_and_move_check(mem: &mut FrameMemory) {
         }
     }
     let in_lava = is_samus_in_lava(mem); // E25D（r26 端口）
-    if !in_lava {
-        mem.write_ram(0x0114, 0); // SamusInLava←0（非岩浆径）
-        return;
+    if in_lava {
+        // 岩浆伤径（asm E269——KnockbackDir←$FF/ClearHealthChange/InvincibleDelay←$32/
+        // 跳 SFX 4 帧/8 帧伤（Varia 半伤！）/HealthChange←$07）
+        mem.write_ram(0x0112, 0xFF);
+        mem.write_ram(0x0104, 0);
+        mem.write_ram(0x0113, 0x32);
+        crate::unported!("bank07:E269"); // 岩浆伤径余件（随件核）
+    } else {
+        mem.write_ram(0x0114, 0); // SamusInLava←0
     }
-    crate::unported!("bank07:E25D"); // 岩浆伤径（后随件）
-    // 岩浆面（后随 E25D 裁定）：
-    // mem.write_ram(SAMUS_KNOCKBACK_DIR, 0xFF); mem.write_ram(SAMUS_INVINCIBLE_DELAY, 0x32);
-    // FrameCount&3==0→SFX_SamusJump；8 帧伤害（Varia 半伤）；HealthChange←$07；
-    // mem.write_ram(SAMUS_IN_LAVA, 1);
+    // SamusMoveVertically（E2A9——**fallthrough！**（r26 根修：旧形 return 切断移动链！））
+    // VertAccelerate→积分件→位移施加→SamusMoveHorizontally。
+    vert_accelerate(mem); // E37A（重力/加速——L2 单位！）
+    let dy = vert_integrate(mem); // 积分件（速→位移！）
+    let y = mem.read_ram(0x030D);
+    mem.write_ram(0x030D, y.wrapping_add(dy));
+    let dx = horz_integrate(mem);
+    let x = mem.read_ram(0x030E);
+    mem.write_ram(0x030E, x.wrapping_add(dx));
 }
 
 // ===== 1:1 Rust 改写·批产·块 6（physics 面去地址名（TDD 穷举等价证明））=====
