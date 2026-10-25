@@ -121,8 +121,72 @@ pub fn go_samus_handler(mem: &mut FrameMemory) {
 
 /// ObjAnim_SamusRun/SamusJump（ObjectAnimIndexTbl \$8572 基——common_sprite_data
 /// 偏移：Run=\$858A-\$8572=18?\(待核\)/Jump=待核）——r26 暂用 asm 值域（随核）。
-const OBJ_ANIM_SAMUS_RUN: u8 = 0x12;
-const OBJ_ANIM_SAMUS_JUMP: u8 = 0x14;
+const OBJ_ANIM_SAMUS_RUN: u8 = 0x00; // 真值 $8572 基
+const OBJ_ANIM_SAMUS_JUMP: u8 = 0x0C;
+const OBJ_ANIM_SAMUS_SALTO: u8 = 0x0E;
+const OBJ_ANIM_SAMUS_JUMP_PNT_UP: u8 = 0x35; // 真值 $857E-$8572
+
+
+/// SetSamusRunAccel（**asm 内容锚** `: 07:CCB7`——r26）：SamusAccelX←RunAccelerationTbl[x]
+/// （右=$30/左=$D0——$CCC0）。
+fn set_samus_run_accel(mem: &mut FrameMemory, x: u8) {
+    let v = if x == 0 { 0x30u8 } else { 0xD0 };
+    mem.write_ram(crate::ram_map::SAMUS_ACCEL_X, v);
+}
+
+/// SamusRun_CheckHorzMovementMidair（**asm 内容锚** `: 07:CF88`——r26 全件）：
+/// Joy1(RIGHT|LEFT)⇒BitScan→SetSamusRunAccel→（上行/空翻返）→SamusDir+SetSamusAnim
+/// （Table06=Jump 动画族）；无键⇒中立跳族（上行/落地/非中立跳返→StopHorzMovement）。
+fn samus_run_check_horz_movement_midair(mem: &mut FrameMemory) {
+    use button::*;
+    let joy = mem.read_ram(crate::ram_map::JOY1_STATUS);
+    let input = joy & (RIGHT | LEFT);
+    if input != 0 {
+        let x = bit_scan(input);
+        set_samus_run_accel(mem, x);
+        let ay = mem.read_ram(crate::ram_map::SAMUS_ACCEL_Y);
+        if ay & 0x80 != 0 {
+            return;
+        }
+        if mem.read_ram(ANIM_RESET_INDEX) == OBJ_ANIM_SAMUS_SALTO {
+            return;
+        }
+        mem.write_ram(crate::ram_map::SAMUS_DIR, x);
+        // SetSamusAnim（CF6B——Table06+1=Jump 族：resetIndex←值/index←值-1/delay←4）
+        mem.write_ram(ANIM_RESET_INDEX, OBJ_ANIM_SAMUS_JUMP);
+        mem.write_ram(ANIM_RESET_INDEX + 1, OBJ_ANIM_SAMUS_JUMP.wrapping_sub(1));
+        mem.write_ram(ANIM_RESET_INDEX.wrapping_sub(1), 4);
+        return;
+    }
+    let ay = mem.read_ram(crate::ram_map::SAMUS_ACCEL_Y);
+    if ay & 0x80 != 0 || ay == 0 {
+        return;
+    }
+    if mem.read_ram(ANIM_RESET_INDEX) != OBJ_ANIM_SAMUS_JUMP {
+        return;
+    }
+    // StopHorzMovement（$CFB7）
+    mem.write_ram(crate::ram_map::SAMUS_ACCEL_X, 0);
+    mem.write_ram(crate::samus::physics::SAMUS_SPEED_X_I, 0);
+    mem.write_ram(crate::samus::physics::SAMUS_SPEED_X_F, 0);
+}
+
+/// SamusJump_CheckFire（**asm 内容锚** `: 07:D09C`——r26）：A 键（Joy1Change bit7）⇒
+/// FireSamusProjectile（打敌人流程件——随件）。
+fn samus_jump_check_fire(mem: &mut FrameMemory) {
+    if mem.read_ram(crate::ram_map::JOY1_CHANGE) & 0x80 != 0 {
+        crate::unported!("bank07:D1EE");
+    }
+}
+
+/// LCF2E（**asm 内容锚** `: 07:CF2E`——r26）：Samus.isHit 判（固实实体接触）→贴墙反应。
+fn solid_entity_response(mem: &mut FrameMemory) {
+    let ishit = mem.read_ram(0x0308);
+    if (ishit >> 1) & 0x02 == 0 {
+        return;
+    }
+    crate::unported!("bank07:CF2E"); // 贴墙反应（随件核）
+}
 
 pub fn samus_run(mem: &mut FrameMemory) {
     use button::*;
@@ -163,7 +227,10 @@ pub fn samus_run(mem: &mut FrameMemory) {
         crate::unported!("bank07:LCD40"); // 熔岩跳（随件）
     }
     // samL06（CD16）：三件+anim 2 帧节拍
-    crate::unported!("bank07:CD16"); // SamusRun_CheckHorzMovementMidair（三件首）
+    samus_run_check_horz_movement_midair(mem); // CF88（三件首）
+    samus_jump_check_fire(mem); // D09C
+    solid_entity_response(mem); // CF2E
+    mem.write_ram(0x0304, 2); // animDelay←2（SetSamusData 形）
     let _ = anim;
 }
 
@@ -219,7 +286,7 @@ mod tests {
         m.write_ram(crate::ram_map::SAMUS_ACCEL_Y, 1);
         m.write_ram(SAMUS_JUMP_DISP, 0x10);
         let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| samus_run(&mut m)));
-        assert!(r.is_err());
+        assert!(r.is_ok(), "run/jump 链应全通（r26）: {:?}", r.err());
         assert_eq!(m.read_ram(ANIM_RESET_INDEX), 0x0C);
         // 上升（speedY_i=0x80）+位移 0x28+UP → anim=$35
         let mut m = FrameMemory::default();
@@ -228,7 +295,7 @@ mod tests {
         m.write_ram(SAMUS_JUMP_DISP, 0x28);
         m.write_ram(JOY1_STATUS, 0x88); // UP+A（A 防 StopVertMovement 爆）
         let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| samus_run(&mut m)));
-        assert!(r.is_err()); // 尾段 CD02 桩
+        assert!(r.is_ok(), "run 尾段链应全通（r26）: {:?}", r.err());
         assert_eq!(m.read_ram(ANIM_RESET_INDEX), 0x35);
     }
 
