@@ -87,6 +87,7 @@ pub fn game_main_routine(mem: &mut FrameMemory) {
         1 => more_init(mem), // MoreInit（已端口——区域/房间链头）
         2 => samus_init(mem), // SamusInit（r25 端口——萨姆斯出场态）
         3 => game_engine(mem), // GameEngine（已端口——移动帧环壳）
+        8 => samus_intro(mem), // SamusIntro（r25 端口——淡入序+sprite 装载）
         _ => {
             let loc = format!("bank07:{:04X}", MAIN_ROUTINE_PTR_TABLE.get(mr as usize).copied().unwrap_or(0));
             crate::unported!(&loc); // 其余态（MoreInit 起——迭代分类）
@@ -152,6 +153,43 @@ pub fn samus_init(mem: &mut FrameMemory) {
     mem.write_ram(0x030C, mem.read_ram(crate::ram_map::PPUCTRL_ZP) & 0x01); // Samus.hi
     mem.write_ram(0x0106, 0x00);
     mem.write_ram(0x0107, 0x03); // Health=30
+}
+
+/// SamusIntro（**asm 内容锚** `SamusIntro: ; 07:C9D7`——r25 端口：淡入序+sprite 装载）：
+/// ①EraseAllSprites ②Timer3==0⇒淡入完成（ItemRoomMusicStatus←0/Samus.status←sa_Begin(255)/
+/// StartMusic($D92C)/SelectSamusPalette($CB73)/MainRoutine←GameEngine(3)——双音乐件随件）
+/// ③Timer3≥$1F⇒退出（310 帧内不画）④SamusFadeInTimeTbl($CA13: 1E/14/0B/04/FF) 对照：
+/// Timer3==表[y-$14]⇒inc Samus.status+PaletteDataPending←y（淡入调色步进）⑤奇帧（FC&1）
+/// 闪现：SetSamusAnim(SamusFront)+SpritePagePos←0+PageIndex←0+AnimDrawObject($DE47)。
+pub fn samus_intro(mem: &mut FrameMemory) {
+    crate::frame::boot::c1a3_unit(mem); // EraseAllSprites（$C1A3）
+    let status = mem.read_ram(0x0300); // Samus.status（$300）
+    let t3 = mem.read_ram(0x002C); // Timer3（$2C）
+    if t3 == 0 {
+        // 淡入完成（音乐件随件爆）
+        mem.write_ram(0x009A, 0); // ItemRoomMusicStatus（址随证）
+        mem.write_ram(0x0300, 0xFF); // sa_Begin（constants.asm:121 export=255）
+        crate::unported!("bank07:D92C"); // StartMusic+SelectSamusPalette（淡出径随件）
+        #[allow(unreachable_code)]
+        {
+            mem.write_ram(crate::ram_map::MAIN_ROUTINE, 3);
+            return;
+        }
+    }
+    if t3 >= 0x1F {
+        return; // 310 帧内不画（asm `cmp #$1F / bcs`）
+    }
+    // SamusFadeInTimeTbl（$CA13）：Timer3==表[y-$14]⇒inc status+PaletteDataPending←y
+    let idx = status.wrapping_sub(0x14) as usize;
+    const FADE_TBL: [u8; 5] = [0x1E, 0x14, 0x0B, 0x04, 0xFF]; // $CA13 五值（ROM 锚）
+    if idx < FADE_TBL.len() && t3 == FADE_TBL[idx] {
+        mem.write_ram(0x0300, status.wrapping_add(1));
+        mem.write_ram(crate::ram_map::PALETTE_PENDING, status); // sty（Y=status）
+    }
+    // 奇帧闪现（FC&1）——sprite 装载径
+    if mem.read_ram(crate::ram_map::FRAME_COUNT) & 1 == 1 {
+        crate::unported!("bank07:DE47"); // AnimDrawObject（sprite 管线——下一缺环）
+    }
 }
 
 /// BankTable 烘焙（07:CA30——16 项（A&0xF 索引→BankSwitchPending 值））。
