@@ -936,7 +936,7 @@ pub fn dispatch_step(face: &TitleFace) -> TitleStep {
                 0 => TitleStep {
                     events: vec![(0x00F0, 0x10), (0x0684, 0x10),
                                  (0x00FE, pm & !0x18), (0x001A, 0)],
-                    shell: vec![ShellCall::ScreenOff], a_out: None, x_out: None, y_out: None,
+                    shell: vec![ShellCall::ScreenOff, ShellCall::SpinWait], a_out: None, x_out: None, y_out: None,
                     jumped: None, unported: None, next_cursor: 1,
                 },
                 1 => TitleStep {
@@ -1024,7 +1024,7 @@ pub fn dispatch_step(face: &TitleFace) -> TitleStep {
             let ff = face.ram[0x00FF & 0x7FF];
             match face.cursor {
                 0 => TitleStep {
-                    events: clear_all_seg0_events(pm), shell: vec![ShellCall::ScreenOff],
+                    events: clear_all_seg0_events(pm), shell: vec![ShellCall::ScreenOff, ShellCall::SpinWait],
                     a_out: None, x_out: None, y_out: None,
                     jumped: None, unported: None, next_cursor: 1,
                 },
@@ -1068,7 +1068,7 @@ pub fn dispatch_step(face: &TitleFace) -> TitleStep {
             let ff = face.ram[0x00FF & 0x7FF];
             match face.cursor {
                 0 => TitleStep {
-                    events: clear_all_seg0_events(pm), shell: vec![ShellCall::ScreenOff],
+                    events: clear_all_seg0_events(pm), shell: vec![ShellCall::ScreenOff, ShellCall::SpinWait],
                     a_out: None, x_out: None, y_out: None,
                     jumped: None, unported: None, next_cursor: 1,
                 },
