@@ -790,7 +790,7 @@ pub enum ShellCall {
     /// NMI 等待点（§8.1：帧界让出，下帧续）。
     NmiYield,
     /// spin 等待段（r23：下一 tick 工作零动（跨相续段正交机构）——0x00 臂尾等待用）。
-    SpinWait,
+    SpinWait(u8),
     /// WaitNMIPass（$1A←0+spin——1 spin）。
     WaitNMIPass,
     /// VBOffAndHorzWrite（$FF&=~$84+PPUCTRL 真写——0 spin）。
@@ -858,7 +858,7 @@ pub fn dispatch_step(face: &TitleFace) -> TitleStep {
             let mut s = step_from_l2(sh::title_init_after_reset(&l2in));
             // InitializeAfterReset :124 `sty IntroStarOffset`（Y=0）
             s.events.push((0x00C3, 0));
-            s.shell.push(crate::title::ShellCall::SpinWait);
+            s.shell.push(crate::title::ShellCall::SpinWait(1));
             s
         }
         0x0A | 0x0B => step_from_l2(sh::title_inc(&l2in)),
@@ -936,7 +936,7 @@ pub fn dispatch_step(face: &TitleFace) -> TitleStep {
                 0 => TitleStep {
                     events: vec![(0x00F0, 0x10), (0x0684, 0x10),
                                  (0x00FE, pm & !0x18), (0x001A, 0)],
-                    shell: vec![ShellCall::ScreenOff, ShellCall::SpinWait], a_out: None, x_out: None, y_out: None,
+                    shell: vec![ShellCall::ScreenOff, ShellCall::SpinWait(1)], a_out: None, x_out: None, y_out: None,
                     jumped: None, unported: None, next_cursor: 1,
                 },
                 1 => TitleStep {
@@ -978,7 +978,7 @@ pub fn dispatch_step(face: &TitleFace) -> TitleStep {
             let ff = face.ram[0x00FF & 0x7FF];
             match face.cursor {
                 0 => TitleStep {
-                    events: clear_all_seg0_events(pm), shell: vec![ShellCall::ScreenOff, ShellCall::SpinWait],
+                    events: clear_all_seg0_events(pm), shell: vec![ShellCall::ScreenOff, ShellCall::SpinWait(1)],
                     a_out: None, x_out: None, y_out: None,
                     jumped: None, unported: None, next_cursor: 1,
                 },
@@ -986,7 +986,7 @@ pub fn dispatch_step(face: &TitleFace) -> TitleStep {
                     events: clear_all_seg1_events(&face.ram, &face.wram, face.frame_count,
                                                   face.phase, ff),
                     shell: vec![ShellCall::ClearNameTables, ShellCall::EraseAllSprites,
-                                ShellCall::WaitNMIPass, ShellCall::SpinWait],
+                                ShellCall::WaitNMIPass, ShellCall::SpinWait(1)],
                     a_out: None, x_out: None, y_out: None,
                     jumped: None, unported: None, next_cursor: 2,
                 },
@@ -1006,7 +1006,7 @@ pub fn dispatch_step(face: &TitleFace) -> TitleStep {
                         events, shell: vec![ShellCall::VBOffAndHorzWrite,
                                             ShellCall::PrepareVram(0x9984),
                                             ShellCall::NMIOn, ShellCall::ScreenOn,
-                                            ShellCall::SpinWait],
+                                            ShellCall::SpinWait(1)],
                         a_out: None, x_out: None, y_out: None,
                         jumped: None, unported: None, next_cursor: 3,
                     }
@@ -1024,7 +1024,7 @@ pub fn dispatch_step(face: &TitleFace) -> TitleStep {
             let ff = face.ram[0x00FF & 0x7FF];
             match face.cursor {
                 0 => TitleStep {
-                    events: clear_all_seg0_events(pm), shell: vec![ShellCall::ScreenOff, ShellCall::SpinWait],
+                    events: clear_all_seg0_events(pm), shell: vec![ShellCall::ScreenOff, ShellCall::SpinWait(1)],
                     a_out: None, x_out: None, y_out: None,
                     jumped: None, unported: None, next_cursor: 1,
                 },
@@ -1068,7 +1068,7 @@ pub fn dispatch_step(face: &TitleFace) -> TitleStep {
             let ff = face.ram[0x00FF & 0x7FF];
             match face.cursor {
                 0 => TitleStep {
-                    events: clear_all_seg0_events(pm), shell: vec![ShellCall::ScreenOff, ShellCall::SpinWait],
+                    events: clear_all_seg0_events(pm), shell: vec![ShellCall::ScreenOff, ShellCall::SpinWait(1)],
                     a_out: None, x_out: None, y_out: None,
                     jumped: None, unported: None, next_cursor: 1,
                 },

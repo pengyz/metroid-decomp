@@ -139,7 +139,7 @@ fn exec_shell_call(mem: &mut FrameMemory, sc: &crate::title::ShellCall) {
         }
         PrepareVram(addr) => prepare_vram(mem, *addr),
         // spin 等待段（r23：计数面——main_title_routine 入口消费）
-        SpinWait => mem.title_spin = 1,
+        SpinWait(n) => mem.title_spin = *n,
         // ScreenOff/ScreenOn/NMIOn/VBOffAndHorzWrite/WaitNMIPass：$FE/$FF/$1A 镜像面
         // =臂事件承载（two-layer——事件即 RAM 面权威）；InitPasswordFontGfx/
         // DisplayInputCharacters 深件随批（未烘焙面随件爆）。
