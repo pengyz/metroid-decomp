@@ -245,6 +245,9 @@ pub fn read_joy_pads(mem: &mut FrameMemory) {
             mem.write_ram(crate::memmap::title_state::JOY1_RETRIG + idx, changed);
             mem.write_ram(0x0018 + idx, 0x20); // 变更重置率 $20
         } else {
+            // 【r26 根修】同键路径清 Joy1Change/Retrig（**1 帧边沿**！——旧形未清致边沿存活 2 帧）
+            mem.write_ram(crate::memmap::title_state::JOY1_CHANGE + idx, 0);
+            mem.write_ram(crate::memmap::title_state::JOY1_RETRIG + idx, 0);
             // 同键路径（asm C24D+：`lda Joy1Status/x/cmp $00/bne` 同→`dec RetrigDelay1,x`
             // ——**B 案 $18 机理**：清零后每 NMI dec（0→FF→FE…）；归零→重触发 sty $20
             // 路径（变更件桩））。
