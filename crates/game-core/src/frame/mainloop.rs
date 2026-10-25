@@ -172,15 +172,14 @@ pub fn samus_intro(mem: &mut FrameMemory) {
     let status = mem.read_ram(0x0300); // Samus.status（$300）
     let t3 = mem.read_ram(0x002C); // Timer3（$2C）
     if t3 == 0 {
-        // 淡入完成（音乐件随件爆）
-        mem.write_ram(0x009A, 0); // ItemRoomMusicStatus（址随证）
+        // 淡入完成（r26 端口——asm 逐字）：ItemRoomMusicStatus($79)←0/Samus.status←
+        // sa_Begin(255)/StartMusic($D92C)/SelectSamusPalette($CB73)/MainRoutine←3
+        mem.write_ram(0x0079, 0); // ItemRoomMusicStatus（constants:614）
         mem.write_ram(0x0300, 0xFF); // sa_Begin（constants.asm:121 export=255）
-        crate::unported!("bank07:D92C"); // StartMusic+SelectSamusPalette（淡出径随件）
-        #[allow(unreachable_code)]
-        {
-            mem.write_ram(crate::ram_map::MAIN_ROUTINE, 3);
-            return;
-        }
+        start_music(mem); // $D92C
+        select_samus_palette(mem); // $CB73
+        mem.write_ram(crate::ram_map::MAIN_ROUTINE, 3);
+        return;
     }
     if t3 >= 0x1F {
         return; // 310 帧内不画（asm `cmp #$1F / bcs`）
@@ -204,6 +203,177 @@ pub fn samus_intro(mem: &mut FrameMemory) {
         mem.write_ram(0x005B, 0);
         mem.write_ram(0x004B, 0);
         crate::frame::sprite::anim_draw_object(mem, 0); // AnimDrawObject（$DE47——Samus 槽 0）
+    }
+}
+
+/// StartMusic（**asm 内容锚** `StartMusic: ; 07:D92C`——r26 端口）：
+/// ①电梯检（Elevator.status($0320)==6 且 ElevatorType($032F) MSB=1（上行）⇒item 径）
+/// ②正常径：AreaMusicFlag（ROM 区 bank $95CD）+ItemRoomMusicStatus($79) 判
+/// （bmi/beq⇒Lx114）③item 径：ItemRoomMusicStatus←$81/A←music_ItemRoom($20)
+/// ④Lx114：`ora MusicInitFlags($0685) / sta MusicInitFlags`（**音乐起**——声链消费面）。
+pub fn start_music(mem: &mut FrameMemory) {
+    let area = (mem.read_ram(crate::ram_map::IN_AREA) & 0x0F) as usize % 5;
+    let mut a = game_data::title::area_tables::AREA_MUSIC_FLAG[area];
+    let elevator_up = mem.read_ram(0x0320) == 0x06 && mem.read_ram(0x032F) & 0x80 != 0;
+    let item_room = mem.read_ram(0x0079);
+    if elevator_up || (item_room != 0 && item_room & 0x80 == 0) {
+        mem.write_ram(0x0079, 0x81); // ItemRoomMusicStatus←$81（item room music 标）
+        a = 0x20; // music_ItemRoom（constants.asm export=%00100000）
+    }
+    let f = mem.read_ram(0x0685) | a; // ora MusicInitFlags / sta MusicInitFlags
+    mem.write_ram(0x0685, f);
+}
+
+/// SelectSamusPalette（**asm 内容锚** `SelectSamusPalette: ; 07:CB73`——r26 端口）：
+/// SamusGear($6878) bit5（Varia）→carry；MissileToggle($010E) rol⇒A=(m<<1)|v；
+/// adc #_id_Palette01+1(=2)；JustInBailey($69B3)≠0⇒adc #$17（no-suit 族）；
+/// sta PaletteDataPending($1C)（下一 NMI 写调色板）。
+pub fn select_samus_palette(mem: &mut FrameMemory) {
+    let gear = mem.read_ram(0x6878);
+    let varia = (gear >> 5) & 1; // asl×3 出 carry=bit5
+    let missile = mem.read_ram(0x010E) & 0x01;
+    let mut id = 2u8.wrapping_add((missile << 1) | varia); // _id_Palette01+1=2
+    if mem.read_ram(0x69B3) != 0 {
+        id = id.wrapping_add(0x17); // _id_Palette18-_id_Palette01=$17（no-suit 族）
+    }
+    mem.write_ram(crate::ram_map::PALETTE_PENDING, id);
+}
+
+/// GameEngine 移动帧环壳（**asm 内容锚** `GameEngine: ; 07:C92B`——r26 端口）：
+/// ScrollDoor×2（E1F1 双调=双速滚门）/NARPASSWORD quirk（**D4 保真**）/UpdateWorld
+/// （CB29——19 件环：敌人/弹/萨姆斯/区域/梯/像/爆/虫/门/瓦碰/状态栏/能力件）/
+/// 延时旗（MiniBossKill/PowerUp→SetTimer 240 帧）/死亡链（SilenceMusic→GameOver）。
+pub fn game_engine(mem: &mut FrameMemory) {
+    scroll_door(mem); // E1F1×2（双速滚门——2 调=2 px/帧）
+    scroll_door(mem);
+    if mem.read_ram(0x69B2) != 0 {
+        // NARPASSWORD quirk（D4 保真）：每帧满血/满装/满弹（$69B2——constants:1263）
+        mem.write_ram(0x0107, 0x03); // Health+1=3（血 30）
+        mem.write_ram(0x6878, 0xFF); // SamusGear（全能力！）
+        mem.write_ram(0x6879, 0x05); // MissileCount（$6879——constants:1210）
+    }
+    update_world(mem); // CB29（19 件环——渐进端口面）
+    // 延时旗（MiniBossKill/PowerUp→SetTimer 240 帧→routine 3）
+    if mem.read_ram(0x0083) != 0 || mem.read_ram(0x0084) != 0 {
+        mem.write_ram(0x0083, 0);
+        mem.write_ram(0x0084, 0);
+        // SetTimer（$C4AA——Timer3←240 帧/routine←3）址随证
+        mem.write_ram(0x002C, 0x18);
+        mem.write_ram(crate::ram_map::MAIN_ROUTINE, 3);
+    }
+    // 死亡链（Samus.status==sa_Dead2(=$FD?) 且 animDelay==0⇒SilenceMusic+GameOver）
+    let status = mem.read_ram(0x0300);
+    if status == 0xFD && mem.read_ram(0x0304) == 0 {
+        // SilenceMusic（$B283 族——SFXNoiseInitFlags|=sfxNoise_SilenceMusic）
+        let f = mem.read_ram(0x0684) | 0x01;
+        mem.write_ram(0x0684, f);
+        if mem.read_ram(0x687B) == 0x0A {
+            // MotherBrainStatus==0x0A⇒inc MainRoutine（→GameOver）
+            let mr = mem.read_ram(crate::ram_map::MAIN_ROUTINE);
+            mem.write_ram(crate::ram_map::MAIN_ROUTINE, mr.wrapping_add(1));
+        } else {
+            mem.write_ram(0x002C, 0x04); // SetTimer 40 帧→routine 4（GameOver）
+            mem.write_ram(crate::ram_map::MAIN_ROUTINE, 4);
+        }
+    }
+}
+
+/// ScrollDoor（**asm 内容锚** `ScrollDoor: ; 07:E1F1`——r26 端口）：
+/// DoorEntryStatus($56)：0=非门出/1=右滚(ScrollRight $E6D2)/2=左滚(ScrollLeft $E6A7)/
+/// 3=下滚(ScrollDown $E519)/4=上滚(ScrollUp $E4F1)；滚至 ScrollX/Y 归中⇒DoorEntryStatus←5
+/// （出门）。滚件=1px/调（双调=双速）。
+pub fn scroll_door(mem: &mut FrameMemory) {
+    let d = mem.read_ram(0x0056);
+    if d == 0 {
+        return;
+    }
+    match d {
+        1 => {
+            // ScrollRight（$E6D2）：ScrollX+1（越 255⇒名表换）
+            scroll_by(mem, 0x0026, true);
+            if mem.read_ram(0x0026) == 0 {
+                mem.write_ram(0x0056, 0x05); // DoOneDoorScroll 出门面
+            }
+        }
+        2 => {
+            scroll_by(mem, 0x0026, false);
+            if mem.read_ram(0x0026) == 0 {
+                mem.write_ram(0x0056, 0x05);
+            }
+        }
+        3 => {
+            scroll_by(mem, 0x0025, true);
+            if mem.read_ram(0x0025) == 0 {
+                mem.write_ram(0x0056, 0x05); // VerticalRoomCentered 形
+            }
+        }
+        4 => {
+            scroll_by(mem, 0x0025, false);
+            if mem.read_ram(0x0025) == 0 {
+                mem.write_ram(0x0056, 0x05);
+            }
+        }
+        _ => {} // 5+（出门序——SamusEnterDoor 面随件）
+    }
+}
+
+/// 滚 1px（ScrollRight/Left/Up/Down 簇共径——名表换/换页件随证）。
+fn scroll_by(mem: &mut crate::frame::FrameMemory, addr: u16, up: bool) {
+    let v = mem.read_ram(addr);
+    let nv = if up { v.wrapping_add(1) } else { v.wrapping_sub(1) };
+    mem.write_ram(addr, nv);
+}
+
+/// UpdateWorld（**asm 内容锚** `UpdateWorld: ; 07:CB29`——r26 环壳：19 件渐进端口）。
+/// 件序：SpritePagePos←0/UpdateAllEnemies($F345)/UpdateSamusProjectiles($D4BF)/
+/// UpdateSamus($CC0D)/AreaRoutine($95C3)/UpdateElevator($D7B3)/UpdateAllStatues($D9D4)/
+/// 爆/虫/弹/瓦碰/SamusEnterDoor($8B13)/UpdateAllDoors/TileBlasts/CollisionDetection/
+/// DisplayBar($E0C1)/PipeBugHoles/CheckMissileToggle/UpdateAllPowerUps($DB37)/
+/// UpdateTourianItems($FDE3)/尾清 sprite RAM（$F4 填）。
+pub fn update_world(mem: &mut crate::frame::FrameMemory) {
+    mem.write_ram(0x005B, 0); // SpritePagePos←0
+    update_all_enemies(mem); // F345（敌环——槽×6+状态 dispatch）
+    // UpdateSamusProjectiles（D4BF——随件）
+    crate::unported!("bank07:D4BF");
+    #[allow(unreachable_code)]
+    {
+        crate::samus::update_samus(mem); // UpdateSamus（CC0D——samus 域件会师）
+        crate::frame::statue::update_all_statues(mem); // UpdateAllStatues（D9D4 会师）
+        // 尾清 sprite RAM（$F4 填——asm CB6A 环）
+        let mut x = mem.read_ram(0x005B);
+        while x != 0 {
+            mem.write_ram(0x0200 + x as u16, 0xF4);
+            x = x.wrapping_add(4);
+        }
+    }
+}
+
+/// UpdateAllEnemies+UpdateEnemy（**asm 内容锚** `UpdateAllEnemies: ; 07:F345`/
+/// `UpdateEnemy: ; 07:F351`——r26 端口：槽环 $50→$00×16B+状态 dispatch（7 态））：
+/// ①PageIndex←x ②EnsExtra.status：Resting/Active⇒CheckIfVisible ③UpdateEnData05Bit6
+/// ④JumpEngine：0=ExitSub/1=Resting/2=Active/3=Explode/4=Frozen/5=Pickup/6=Hurt/
+/// ≥7⇒RemoveEnemy。件径=敌域 L2 单位（engine::update_enemy_*）会师面。
+pub fn update_all_enemies(mem: &mut crate::frame::FrameMemory) {
+    let mut x: u8 = 0x50; // _sizeof_Ens-_sizeof_Ens.0（5 槽×16）
+    loop {
+        mem.write_ram(0x004B, x); // PageIndex
+        let status = mem.read_wram(0x6AF4 + x as u16); // EnsExtra.0.status
+        // 静止/活动径：CheckIfVisible（$F37F——Ens.data05 bit1 判+屏幕判）
+        // UpdateEnData05Bit6（$F480 族——随件核）
+        match status {
+            0 => {} // ExitSub（rts）
+            1 => crate::unported!("bank07:F3A4"), // UpdateEnemy_Resting
+            2 => crate::unported!("bank07:F3E8"), // UpdateEnemy_Active
+            3 => crate::unported!("bank07:F50D"), // UpdateEnemy_Explode
+            4 => crate::unported!("bank07:F54D"), // UpdateEnemy_Frozen
+            5 => crate::unported!("bank07:F57D"), // UpdateEnemy_Pickup
+            6 => crate::unported!("bank07:F59D"), // UpdateEnemy_Hurt
+            _ => crate::unported!("bank07:FA18"), // RemoveEnemy（状态≥7）
+        }
+        if x == 0 {
+            break;
+        }
+        x -= 0x10;
     }
 }
 
@@ -399,43 +569,9 @@ const ROOM_PTR_TABLE: [u8; 94] = [
 ];
 
 
-/// GameEngine 移动帧环壳（**asm 内容锚** `GameEngine: ; 07:C92B`）：
-/// ScrollDoor×2（E1F1 双调=双速滚门）/NARPASSWORD quirk（**D4 保真**——每帧全能力
-/// /血/弹）/UpdateWorld（CB29——**m2 深链核心**：Samus/敌人/房间瓦更新——嵌套桩）/
-/// 延时旗（MiniBossKill/PowerUp→SetTimer 240 帧）/死亡链（animDelay 爆炸等待→
-/// SilenceMusic→MotherBrain 检→GameOver）。
-pub fn game_engine(mem: &mut FrameMemory) {
-    crate::unported!("bank07:E1F1"); // ScrollDoor×2（门滚——随件）
-    // NARPASSWORD quirk（D4 保真：每帧全能力）
-    if mem.read_ram(0x0686) != 0 {
-        // NARPASSWORD 面（址随考——$686 族）
-        mem.write_ram(crate::ram_map::HEALTH_CHANGE + 1, 0x03); // Health+1
-        mem.write_ram(crate::ram_map::SAMUS_GEAR, 0xFF);
-        mem.write_ram(crate::ram_map::MISSILE_COUNT, 0x05);
-    }
-    update_world(mem); // CB29（m2 深链核心——已端口壳）
-}
+// （旧 game_engine/update_world 桩已并入上方 r26 端口形——原块删除）
 
-/// UpdateWorld 壳（**asm 内容锚** `UpdateWorld: ; 07:CB29`——m2 深链 19 例程面）：
-/// SpritePagePos←0→UpdateAllEnemies/UpdateSamusProjectiles/**UpdateSamus（CC0D
-/// ——samus 域件已折会师）**/AreaRoutine/UpdateElevator/**UpdateAllStatues（D9D4
-/// ——T45-1 已折）**/…/CollisionDetection（D976/F1FA 族）/…→精灵清尾（$F4 残槽填充）。
-pub fn update_world(mem: &mut FrameMemory) {
-    mem.write_ram(0x0006, 0); // SpritePagePos←0（:256 族）
-    // UpdateAllEnemies（F345——port2 敌面域；随件）
-    crate::unported!("bank07:F345");
-    // UpdateSamusProjectiles（D4BF——随件）
-    crate::unported!("bank07:D4BF");
-    crate::samus::update_samus(mem); // UpdateSamus（CC0D——**samus 域件会师**！）
-    crate::frame::statue::update_all_statues(mem); // UpdateAllStatues（D9D4——T45-1 会师）
-    // 例程序（随件逐个）：UpdateSamusProjectiles(D4BF)/UpdateSamus(CC0D——samus 域
-    // 会师)/AreaRoutine(95C3)/UpdateElevator(D7B3)/UpdateAllStatues(D9D4 已折)/
-    // UpdateAllEnemyExplosions/UpdateAllMellows/UpdateAllEnProjectiles/
-    // UpdateAllSkreeProjectiles/SamusEnterDoor(8B13)/UpdateAllDoors(门链已考)/
-    // UpdateAllTileBlasts/CollisionDetection(D976/F1FA)/DisplayBar(E0C1)/
-    // UpdateAllPipeBugHoles/CheckMissileToggle/UpdateAllPowerUps(DB37)/
-    // UpdateTourianItems(FDE3)→精灵清尾（$F4 残槽）。
-}
+// （UpdateWorld 旧壳已并入上方 r26 dispatch——原块删除）
 /// UpdateTimer 单元（**asm 内容锚**）——`UpdateTimer: ; 07:C266`：TimerDelay 预分频
 /// （dec/bpl——10 帧节拍，归零重置 9 并含 Timer3）→ Timer1/2/3 非零递减。
 pub fn update_timer(mem: &mut FrameMemory) {

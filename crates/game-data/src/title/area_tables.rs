@@ -7,6 +7,9 @@
 /// AreaSamusY（区域序=InArea&$0F：0=Brinstar/1=Norfair/2=Kraid/3=Tourian/4=Ridley）。
 pub const AREA_SAMUS_Y: [u8; 5] = [0xB0, 0x6E, 0x6E, 0x6E, 0x6E];
 
+/// AreaMusicFlag（区 bank $95CD——prg1_brinstar.asm:122 族；StartMusic $D92C 面）。
+pub const AREA_MUSIC_FLAG: [u8; 5] = [0x01, 0x08, 0x40, 0x10, 0x80];
+
 #[cfg(test)]
 mod tests {
     use super::*;
