@@ -52,6 +52,12 @@ pub const SCROLL_X: u16 = 0x00FD;
 /// ScrollY=$FC（constants_ram 内容锚「Y value loaded into scroll register」）。
 pub const SCROLL_Y: u16 = 0x00FC;
 
+/// ScrollDir=**$49**（constants_ram:530 内容锚「0=Up, 1=Down, 2=Left, 3=Right」）。
+/// 【勘误群】旧 frame//samus 域误用 $03（=Temp03_ScrollDir 临时名——L2 单元写面
+/// `2 & r($49)`（engine/mod.rs:5961）自证）；$25=MMC1CTRL_ZP/$26=Temp 族同案。
+/// 金腿实证（samus-move3 f1100：$49 02→03、$FD 00→0x92——摄像机滚动）。
+pub const SCROLL_DIR: u16 = 0x0049;
+
 /// MirrorCntrl=$FA（constants_ram 内容锚「If bit 3 is set, PPU set to horizontal
 /// mirroring」；boot 初始化 `sta MirrorCntrl`（$47）自证）。
 pub const MIRROR_CNTRL: u16 = 0x00FA;
@@ -204,6 +210,23 @@ pub const ON_FROZEN_ENEMY: u16 = 0x007D;
 
 /// Samus.radiusY=$0301（`.struct Object` radiusY——N-0032 同构族）。
 pub const SAMUS_RADIUS_Y: u16 = 0x0301;
+/// Samus.radiusX=$0302（`.struct Object` radiusX）。
+pub const SAMUS_RADIUS_X: u16 = 0x0302;
+/// Samus.hi=$030C（`.struct Object` hi（constants_ram:236）——x 第 9 位/名表位；字节锚
+/// bank07:F186 `BD 0C 03`。**勘误**：旧 physics.rs 误 $307（「域址随核」未决）。
+pub const SAMUS_HI: u16 = 0x030C;
+/// Samus.isHit=$030A（constants_ram:228「Samus hit by enemy」——MoveSamus± 碰撞判位
+/// `and #$41/cmp #$40|#$41`）。
+pub const SAMUS_IS_HIT: u16 = 0x030A;
+/// SamusScrX=$51（「Samus x position on screen」——滚动跟随阈值面（右 $8F/左 $71））。
+/// （SAMUS_SCR_X 已有——见下。）
+pub const SAMUS_DOOR_DIR: u16 = 0x004E;
+pub const MAP_POS_X: u16 = 0x0050;
+pub const MAP_POS_Y: u16 = 0x004F;
+pub const SAMUS_DOOR_DATA: u16 = 0x0058;
+pub const OBJECT_COUNTER: u16 = 0x0065;
+pub const SCROLL_BLOCK_NT3: u16 = 0x006C;
+pub const ITEM_ROOM_MUSIC_STATUS: u16 = 0x0079;
 
 /// Samus.y=$030D（`.struct Object` y——「Object y position in room」）。
 pub const SAMUS_Y: u16 = 0x030D;

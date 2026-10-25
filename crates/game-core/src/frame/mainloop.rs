@@ -418,8 +418,8 @@ fn enemy_check_if_visible(mem: &mut crate::frame::FrameMemory, x: u8) -> bool {
     }
     let y = mem.read_ram(0x0400 + x as u16 + 0); // Ens.y
     let hi = mem.read_wram(0x6AF4 + x as u16 + 7); // EnsExtra.hi
-    let scroll_y = mem.read_ram(0x0025);
-    let horz = mem.read_ram(0x0003) & 0x02 != 0;
+    let scroll_y = mem.read_ram(crate::ram_map::SCROLL_Y);
+    let horz = mem.read_ram(crate::ram_map::SCROLL_DIR) & 0x02 != 0;
     let sy = if horz { y } else { y.wrapping_sub(scroll_y) };
     // IsObjectVisible（$DFDF——$F0 范围+hi 位 vs PPUCTRL 名表）
     let ok = sy.wrapping_sub(scroll_y) < 0xF0
@@ -465,7 +465,7 @@ fn enemy_force_speed(mem: &mut crate::frame::FrameMemory, x: u8) {
     let e = 0x0400 + x as u16 + 5;
     let d = mem.read_ram(e);
     mem.write_ram(e, d & !0x04); // AndEnData05(~$04)
-    let dir = mem.read_ram(0x0003);
+    let dir = mem.read_ram(crate::ram_map::SCROLL_DIR);
     let mut en_under = false;
     if dir < 0x02 {
         // 竖房：同名表判（简化径：y 比较）
@@ -713,8 +713,8 @@ fn draw_enemy(mem: &mut crate::frame::FrameMemory, x: u8) {
     };
     let y = mem.read_ram(0x0400 + x as u16 + 0); // y=+0
     let xpos = mem.read_ram(0x0400 + x as u16 + 1); // x=+1
-    let scroll_y = mem.read_ram(0x0025);
-    let horz = mem.read_ram(0x0003) & 0x02 != 0;
+    let scroll_y = mem.read_ram(crate::ram_map::SCROLL_Y);
+    let horz = mem.read_ram(crate::ram_map::SCROLL_DIR) & 0x02 != 0;
     let sy = (if horz { y } else { y.wrapping_sub(scroll_y) }) as i16;
     let sx = xpos.wrapping_sub(mem.read_ram(0x0026)) as i16;
     let mut cntrl05 = ((ctrl >> 4) & 0x03) | (ctrl & 0xC0) | 0x20;
@@ -1069,7 +1069,7 @@ pub fn more_init(mem: &mut FrameMemory) {
     mem.write_ram(0x005A, 0); // ScrollBlockOnNameTable3
     mem.write_ram(0x0053, 0); // ScrollBlockOnNameTable0
     mem.write_ram(0x0030, 1); // SpareMem30
-    mem.write_ram(0x0003, 2); // ScrollDir=2（横房）
+    mem.write_ram(crate::ram_map::SCROLL_DIR, 2); // ScrollDir=2（横房）——【勘误修】$49！
     let map_x = game_data::title::world_map::AREA_MAP_POS
         [area_idx(mem.read_ram(crate::ram_map::IN_AREA))].0; // ROM $95D7（r25 正源）
     mem.write_ram(0x0050, map_x); // MapPosX（constants_ram:543）
@@ -1147,16 +1147,21 @@ pub fn copy_area_pointers(mem: &mut FrameMemory) {
     }
 }
 
-/// GetRoomNum 壳（**asm 内容锚** `GetRoomNum: ; 07:E720`）：ScrollDir 横/纵分流门+
-/// ScrollBlock 门（横滚门挡）+MapPos 数学（MapPosY*16+MapPosX）→RoomPtrTable 查表
-/// →RoomNumber($5A)。表查=数据面（game-data 房间模型协同——S6-7）。
-pub fn get_room_num(mem: &mut FrameMemory) {
-    let dir = mem.read_ram(0x0003); // ScrollDir
-    if dir & 1 != 0 {
-        // 横滚面：ScrollBlock 门（门挡=停滚语义）
-        let _a = dir.wrapping_add(0xFF).wrapping_add(1); // A=1（左）/2（右）
-        // OnNameTable0（EC93）/ScrollBlock 门——门挡时 RTS（不载房）
-        crate::unported!("bank07:EC93"); // OnNameTable0+横滚门面
+/// GetRoomNum（**asm 内容锚** `GetRoomNum: ; 07:E720`）：ScrollDir 横/纵分流+
+/// ScrollBlock 门（横滚门挡：方向位 1=左/2=右 与 ScrollBlockOnNameTable3,y（$6C/$6D）
+/// 按位与——挡⇒不载房）+MapPos 数学（MapY*32+MapX+$7000）→WorldMapRAM 查表
+/// →RoomNumber($5A)+特别房音乐（$79——AreaItemRoomNumbers 7 项）。
+/// 返回 **true=取得房间号（可滚）**（asm carry 反形：CF=1=失败）。
+pub fn get_room_num(mem: &mut FrameMemory) -> bool {
+    let dir = mem.read_ram(crate::ram_map::SCROLL_DIR); // ScrollDir
+    if dir >= 2 {
+        // 横滚面（asm `lsr/beq` 分流：2/3=横）：ScrollBlock 门（门挡=停滚语义）
+        let a: u8 = if dir == 2 { 1 } else { 2 }; // asm `rol/adc #$FF`：1（左）/2（右）
+        // OnNameTable0（EC93）：PPUCTRL_ZP($FF)&3==0⇒Y=1（名表 0）/Y=0（名表 3）
+        let y = if mem.read_ram(0x00FF) & 0x03 == 0 { 1u16 } else { 0 };
+        if mem.read_ram(0x006C + y) & a != 0 {
+            return false; // 门挡（asm `sec/bne RTS_E76F`——不滚不载房）
+        }
     }
     // 纵面（LE733）：$00=(MapY*32)+MapX+$7000（WorldMapRAM 索引）→`lda ($00),y`→
     // $FF=未用（RTS carry 置）→`sta RoomNumber($5A)`。
@@ -1165,9 +1170,10 @@ pub fn get_room_num(mem: &mut FrameMemory) {
     let idx = (map_y << 5).wrapping_add(map_x); // MapY*32+MapX（asm rol×2 域形）
     let room = mem.read_wram(0x7000 + idx); // WorldMapRAM=$7000（全址形）
     if room == 0xFF {
-        return; // 未用房间（carry 置——RTS）
+        return false; // 未用房间（CF=1——不能滚/不载房）
     }
     mem.write_ram(0x005A, room); // RoomNumber
+    true
 }
 
 /// SetupRoom 壳（**asm 内容锚** `SetupRoom: ; 07:EA2B`）：RoomNumber 分支（$FF=RTS/

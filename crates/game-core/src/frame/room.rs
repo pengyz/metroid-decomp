@@ -179,7 +179,7 @@ fn load_enemy(mem: &mut crate::frame::FrameMemory, b0: u8, etype: u8, pos: u8) -
     mem.write_wram(ex, 0x01); // EnsExtra.status←enemyStatus_Resting（constants.asm:121）
     mem.write_ram(en + 4, 0x00); // Ens.isHit
     // GetNameTableAtScrollDir（$EB85）：(PPUCTRL_ZP^ScrollDir)&1
-    let hi = mem.read_ram(crate::ram_map::PPUCTRL_ZP) ^ mem.read_ram(0x0003);
+    let hi = mem.read_ram(crate::ram_map::PPUCTRL_ZP) ^ mem.read_ram(crate::ram_map::SCROLL_DIR);
     mem.write_wram(ex + 0x07, hi & 0x01); // EnsExtra.hi
     // LEB6E：data05←shl（facing 位旋入 bit7）；InitEnemyFacing（$FB7B）：ror（L977B 位7）
     // +delay←InitDelayTbl；InitForce（$F85A）：data0D←ForceTbl；health←HealthTbl（tough×2）
@@ -201,7 +201,7 @@ fn load_enemy(mem: &mut crate::frame::FrameMemory, b0: u8, etype: u8, pos: u8) -
 
 /// SelectRoomRAM（$EA05）：名表 0→$6000/名表 3→$6400（RoomRAMPtr 高字节）。
 pub fn select_room_ram(mem: &mut crate::frame::FrameMemory) {
-    let hi = 0x60u8 | ((mem.read_ram(crate::ram_map::PPUCTRL_ZP) ^ mem.read_ram(0x0003)) & 1) << 2;
+    let hi = 0x60u8 | ((mem.read_ram(crate::ram_map::PPUCTRL_ZP) ^ mem.read_ram(crate::ram_map::SCROLL_DIR)) & 1) << 2;
     mem.write_ram(0x0037, 0x00); // RoomRAMPtr lo
     mem.write_ram(0x0038, hi);
 }

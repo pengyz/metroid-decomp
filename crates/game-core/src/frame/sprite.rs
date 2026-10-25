@@ -77,13 +77,15 @@ pub fn anim_draw_object(mem: &mut crate::frame::FrameMemory, page_index: u8) {
     let y_pos = mem.read_ram(0x030D + px);
     let x_pos = mem.read_ram(0x030E + px);
     let hi = mem.read_ram(0x030C + px);
-    let scroll_y = mem.read_ram(0x0025);
-    let scroll_x = mem.read_ram(0x0026);
+    // 【勘误修】ScrollY/ScrollX=**$FC/$FD**（constants_ram:795-796）——旧形误读
+    // $25/$26（$25=MMC1CTRL_ZP！）。摄像机滚动径（ScrollX 进）后 sprite 屏位必减 $FD。
+    let scroll_y = mem.read_ram(crate::ram_map::SCROLL_Y);
+    let scroll_x = mem.read_ram(crate::ram_map::SCROLL_X);
     let screen_y = y_pos.wrapping_sub(scroll_y);
     let screen_x = x_pos.wrapping_sub(scroll_x);
     // 【r25 根修】IsObjectVisible（\）ScrollDir 分支：横房（bit1）**不减 ScrollY**
     // （横滚不动 y——HorzScrollCheck 径）；旧形无条件减致 sprite 高 14px。
-    let horz = mem.read_ram(0x0003) & 0x02 != 0;
+    let horz = mem.read_ram(crate::ram_map::SCROLL_DIR) & 0x02 != 0;
     let screen_y = if horz { y_pos } else { screen_y };
     // 可见性门（简核：屏界内——全边界径随件）
     let visible = screen_y.wrapping_sub(scroll_y) < 0xF0 && hi & 1 == mem.read_ram(0x00FF) & 1;

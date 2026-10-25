@@ -18,8 +18,8 @@
 
 use crate::state::FrameMemory; // G11 破环：类型层直取（原经 frame/）
 use crate::ram_map::{
-    ON_FROZEN_ENEMY, SAMUS_ACCEL_Y, SAMUS_HORZ_SPEED_MAX, SAMUS_ON_ELEVATOR, SAMUS_RADIUS_Y,
-    SAMUS_Y,
+    ON_FROZEN_ENEMY, SAMUS_ACCEL_Y, SAMUS_HI, SAMUS_HORZ_SPEED_MAX, SAMUS_ON_ELEVATOR,
+    SAMUS_RADIUS_Y, SAMUS_Y,
 };
 
 /// Xminus16（asm :10191 内容锚）：X-16（wrap）。
@@ -41,7 +41,7 @@ fn object_check_move_vertical(mem: &mut FrameMemory) -> bool {
     let y = mem.read_ram(0x030D);
     let ry = mem.read_ram(0x0301); // Objects.radiusY
     let x = mem.read_ram(0x030E);
-    let hi = mem.read_ram(0x0307); // Samus.hi（域址随核）
+    let hi = mem.read_ram(SAMUS_HI); // Samus.hi（$30C——Object 结构字节锚 F186 `BD 0C 03`）
     let check_y = y.wrapping_sub(ry).wrapping_add(8);
     collision_point_ok(mem, check_y, x, hi)
 }
@@ -591,7 +591,7 @@ pub fn check_health_status(mem: &mut FrameMemory) {
 /// IsSamusInLava（**asm 内容锚** `: 07:E25D`——r26）：ScrollDir≤1（竖滚）⇒非
 /// 熔岩；横滚且 Samus.y≥$D8（底 24px）⇒熔岩中。返回 true=熔岩中。
 fn is_samus_in_lava(mem: &mut FrameMemory) -> bool {
-    let dir = mem.read_ram(0x0003);
+    let dir = mem.read_ram(crate::ram_map::SCROLL_DIR);
     if 0x01u8 >= dir {
         return false;
     }
@@ -615,7 +615,8 @@ pub fn lava_and_move_check(mem: &mut FrameMemory) {
         mem.write_ram(0x0113, 0x32);
         crate::unported!("bank07:E269"); // 岩浆伤径余件（随件核）
     } else {
-        mem.write_ram(0x0114, 0); // SamusInLava←0
+        // 【勘误】SamusInLava=**$64**（constants_ram:574）——旧形误写 $0114。
+        mem.write_ram(crate::ram_map::SAMUS_IN_LAVA, 0); // SamusInLava←0
     }
     // SamusMoveVertically（E2A9——**fallthrough！**（r26 根修：旧形 return 切断移动链！））
     // VertAccelerate→积分件→位移施加→SamusMoveHorizontally。
@@ -623,9 +624,342 @@ pub fn lava_and_move_check(mem: &mut FrameMemory) {
     let dy = vert_integrate(mem); // 积分件（速→位移！）
     let y = mem.read_ram(0x030D);
     mem.write_ram(0x030D, y.wrapping_add(dy));
+    // SamusMoveHorizontally（E31A——**fallthrough 尾链**（摄像机跟随根件——playability P0））
     let dx = horz_integrate(mem);
+    samus_move_horizontally(mem, dx);
+}
+
+// ==== SamusMoveHorizontally 链（asm E31A——**摄像机跟随根件**）====
+//
+// 【playability P0 定谳】（2026-10-25 渲染目检：金腿摄像机随行/我方画面静止+x 绕回）：
+// E31A 链=HorzAccelerate→`SamusScrX←x−ScrollX`→|Δ| 逐像素 MoveSamusLeft/Right 环
+// （**每像素滚动跟随**：SamusScrX 过界（右 $8F/左 $71）⇒ScrollRight/Left 滚屏
+// （ScrollX±1+MapPosX±1+名表换）而非屏内 x 移）→CheckStopHorzMvmt→门向。
+
+/// ToggleSamusHi（**asm 内容锚** `ToggleSamusHi: ; 07:E249`）：Samus.hi($30C)^=1
+/// （x 第 9 位——名表位；x 环绕 00 且横滚向时翻）。
+pub fn toggle_samus_hi(mem: &mut FrameMemory) {
+    let hi = mem.read_ram(crate::ram_map::SAMUS_HI) ^ 0x01;
+    mem.write_ram(crate::ram_map::SAMUS_HI, hi);
+}
+
+/// ObjectCheckMoveLeft（**asm 内容锚** `: 07:E880`）：`lda radiusX/clc/adc #$08`→核判点
+/// =x−(radiusX+8)（左块——核 `PositionX−DistToCenterX` 形）。carry=true 可走。
+fn object_check_move_left(mem: &mut FrameMemory) -> bool {
+    let y = mem.read_ram(0x030D);
+    let ry = mem.read_ram(0x0301);
     let x = mem.read_ram(0x030E);
-    mem.write_ram(0x030E, x.wrapping_add(dx));
+    let rx = mem.read_ram(crate::ram_map::SAMUS_RADIUS_X);
+    let hi = mem.read_ram(crate::ram_map::SAMUS_HI);
+    // 判点=（y−radiusY, x−(radiusX+8)）（E90F：`PositionY−DistToCenterY`（横检
+    // DistY=radiusY——顶界）/`PositionX−DistToCenterX`（DistX=radiusX+8））。
+    collision_point_ok(mem, y.wrapping_sub(ry), x.wrapping_sub(rx).wrapping_sub(8), hi)
+}
+
+/// ObjectCheckMoveRight（**asm 内容锚** `: 07:E88B`）：`lda #$00/sec/sbc radiusX`→核判点
+/// =x−(0−radiusX)=x+radiusX（右块）。carry=true 可走。
+fn object_check_move_right(mem: &mut FrameMemory) -> bool {
+    let y = mem.read_ram(0x030D);
+    let x = mem.read_ram(0x030E);
+    let rx = mem.read_ram(crate::ram_map::SAMUS_RADIUS_X);
+    let hi = mem.read_ram(crate::ram_map::SAMUS_HI);
+    let cx = x.wrapping_add(rx);
+    let cy = y.wrapping_sub(mem.read_ram(0x0301));
+    if std::env::var("DSH_COLL_TRACE").is_ok() {
+        let idx = (((cy & 0xF8) as u16) << 2) | ((cx >> 3) as u16);
+        let page = if hi & 1 != 0 { 0x0400u16 } else { 0x0000 };
+        let ptr = 0x6000 | page | (idx & 0x3FF);
+        eprintln!("[coll-R] x={:02X} y={:02X} hi={} pt=({:02X},{:02X}) ptr={:04X} tile={:02X}",
+                  x, y, hi & 1, cx, cy, ptr, mem.read_wram(ptr));
+    }
+    collision_point_ok(mem, cy, cx, hi)
+}
+
+/// CheckUpdateNameTable（**asm 内容锚** `: 07:E701/E70C`）：横滚列流送门——
+/// `ScrollX&7==阈值`（右 0/左 7）⇒EndOfRoomHorizontal（`ScrollDir==TempScrollDir($4A)`
+/// 防重流）→UpdateNameTable（跨房列写 VRAM）。**空壳登记**：payload=跨房流送件
+/// （房内滚双名表已载不触发视觉差——move-drift/playability 施工令余件随件）。
+fn check_update_name_table(mem: &mut FrameMemory) {
+    let dir = mem.read_ram(crate::ram_map::SCROLL_DIR);
+    let threshold: u8 = if dir == 3 { 0 } else { 7 };
+    if mem.read_ram(crate::ram_map::SCROLL_X) & 0x07 == threshold
+        && dir == mem.read_ram(0x004A)
+    {
+        // EndOfRoomHorizontal→UpdateNameTable payload：跨房列流送（随件——空壳）。
+    }
+}
+
+/// GetRoomNum 横滚门（asm E720——门检+图格查房已并入 get_room_num 单径）。返回
+/// true=可滚（asm carry 反形）。
+fn scroll_block_gate(mem: &mut FrameMemory) -> bool {
+    crate::frame::mainloop::get_room_num(mem)
+}
+
+/// ScrollLeft（**asm 内容锚** `ScrollLeft: ; 07:E6A7`）：滚屏 1px。返回 carry
+/// （true=滚动成功——屏内 x 不动；false=不能滚）。
+fn scroll_left(mem: &mut FrameMemory) -> bool {
+    let dir = mem.read_ram(crate::ram_map::SCROLL_DIR);
+    if dir != 2 {
+        if dir != 3 {
+            return false; // 竖滚不能横滚（@cantScroll sec）
+        }
+        mem.write_ram(crate::ram_map::SCROLL_DIR, 2); // dec ScrollDir（3→2=左）
+        if mem.read_ram(crate::ram_map::SCROLL_X) != 0 {
+            mem.write_ram(crate::ram_map::MAP_POS_X,
+                          mem.read_ram(crate::ram_map::MAP_POS_X).wrapping_sub(1));
+        }
+    }
+    if mem.read_ram(crate::ram_map::SCROLL_X) == 0 {
+        mem.write_ram(crate::ram_map::MAP_POS_X,
+                      mem.read_ram(crate::ram_map::MAP_POS_X).wrapping_sub(1));
+        if !scroll_block_gate(mem) {
+            // @atLeftBound：MapPosX 复位（inc）——CF=1 不能滚
+            mem.write_ram(crate::ram_map::MAP_POS_X,
+                          mem.read_ram(crate::ram_map::MAP_POS_X).wrapping_add(1));
+            return false;
+        }
+        toggle_name_table(mem);
+    }
+    let sx = mem.read_ram(crate::ram_map::SCROLL_X).wrapping_sub(1);
+    mem.write_ram(crate::ram_map::SCROLL_X, sx);
+    check_update_name_table(mem);
+    true
+}
+
+/// ScrollRight（**asm 内容锚** `ScrollRight: ; 07:E6D2`）：滚屏 1px。返回 carry。
+fn scroll_right(mem: &mut FrameMemory) -> bool {
+    let dir = mem.read_ram(crate::ram_map::SCROLL_DIR);
+    if dir != 3 {
+        if dir != 2 {
+            return false; // 竖滚不能横滚
+        }
+        mem.write_ram(crate::ram_map::SCROLL_DIR, 3); // inc ScrollDir（2→3=右）
+        if mem.read_ram(crate::ram_map::SCROLL_X) != 0 {
+            mem.write_ram(crate::ram_map::MAP_POS_X,
+                          mem.read_ram(crate::ram_map::MAP_POS_X).wrapping_add(1));
+        }
+    }
+    if mem.read_ram(crate::ram_map::SCROLL_X) == 0 {
+        mem.write_ram(crate::ram_map::MAP_POS_X,
+                      mem.read_ram(crate::ram_map::MAP_POS_X).wrapping_add(1));
+        if !scroll_block_gate(mem) {
+            // @atRightBound：MapPosX 复位（dec）——CF=1 不能滚
+            mem.write_ram(crate::ram_map::MAP_POS_X,
+                          mem.read_ram(crate::ram_map::MAP_POS_X).wrapping_sub(1));
+            return false;
+        }
+    }
+    let sx = mem.read_ram(crate::ram_map::SCROLL_X).wrapping_add(1);
+    mem.write_ram(crate::ram_map::SCROLL_X, sx);
+    if sx == 0 {
+        toggle_name_table(mem); // inc 溢出（FF→00）⇒名表换
+    }
+    check_update_name_table(mem);
+    true
+}
+
+/// ToggleNameTable（**asm 内容锚** `ToggleNameTable: ; 07:E9B7`）：PPUCTRL_ZP^=3。
+fn toggle_name_table(mem: &mut FrameMemory) {
+    let ff = mem.read_ram(0x00FF) ^ 0x03;
+    mem.write_ram(0x00FF, ff);
+}
+
+/// CheckStopHorzMvmt（**asm 内容锚** `: 07:E365`）：成功（carry）⇒出；失败⇒
+/// ObjectCounter=1 断环+（非空中/非球）⇒SetSamusStand（CF55——停速/走 SFX）。返回 true=断环。
+fn check_stop_horz_mvmt(mem: &mut FrameMemory, moved: bool) -> bool {
+    if moved {
+        return false; // bcs Exit10
+    }
+    mem.write_ram(crate::ram_map::OBJECT_COUNTER, 1); // 断环
+    if mem.read_ram(crate::ram_map::SAMUS_ACCEL_Y) != 0 {
+        return true; // 空中出
+    }
+    if mem.read_ram(crate::ram_map::SAMUS_STATUS) == 4 {
+        return true; // sa_Roll（球形）出
+    }
+    // SetSamusStand（CF55——「Stop horizontal movement or play walk SFX if stopped」）：
+    // 停速面（横速清零——R-mv 停速族）。嵌套件（走 SFX）随件。
+    mem.write_ram(0x0309, 0); // speedX_I←0
+    mem.write_ram(0x0313, 0); // speedX_F←0
+    true
+}
+
+/// MoveSamusLeft（**asm 内容锚** `MoveSamusLeft: ; 07:E626`）：逐像素左移
+/// （8px 对齐门检+实体碰撞+**滚动跟随**（SamusScrX<$71⇒ScrollLeft 滚屏）+x dec
+/// （x==0 先判⇒ToggleSamusHi））。返回 carry（true=移动成功）。
+fn move_samus_left(mem: &mut FrameMemory) -> bool {
+    let x = mem.read_ram(0x030E);
+    let rx = mem.read_ram(crate::ram_map::SAMUS_RADIUS_X);
+    if x.wrapping_sub(rx) & 0x07 == 0 && !object_check_move_left(mem) {
+        mem.write_ram(crate::ram_map::SAMUS_DOOR_DATA, 0); // Lx181（撞挡）
+        return false;
+    }
+    samus_collision_with_solid_entities(mem); // D976
+    let is_hit = mem.read_ram(crate::ram_map::SAMUS_IS_HIT);
+    if is_hit & 0x41 == 0x41 {
+        mem.write_ram(crate::ram_map::SAMUS_DOOR_DATA, 0);
+        return false; // 撞实体右缘
+    }
+    if mem.read_ram(crate::ram_map::SAMUS_SCR_X) < 0x71 {
+        if !scroll_left(mem) {
+            mem.write_ram(crate::ram_map::SAMUS_SCR_X,
+                          mem.read_ram(crate::ram_map::SAMUS_SCR_X).wrapping_sub(1));
+        }
+    } else {
+        mem.write_ram(crate::ram_map::SAMUS_SCR_X,
+                      mem.read_ram(crate::ram_map::SAMUS_SCR_X).wrapping_sub(1));
+    }
+    if x == 0 && mem.read_ram(crate::ram_map::SCROLL_DIR) & 0x02 != 0 {
+        toggle_samus_hi(mem); // 环绕 00（dec 前判——E650）
+    }
+    mem.write_ram(0x030E, x.wrapping_sub(1));
+    true
+}
+
+/// MoveSamusRight（**asm 内容锚** `MoveSamusRight: ; 07:E668`）：逐像素右移
+/// （8px 对齐门检+实体碰撞+**滚动跟随**（SamusScrX≥$8F⇒ScrollRight 滚屏）+x inc
+/// （环绕 00⇒ToggleSamusHi））。返回 carry（true=移动成功）。
+fn move_samus_right(mem: &mut FrameMemory) -> bool {
+    let x = mem.read_ram(0x030E);
+    let rx = mem.read_ram(crate::ram_map::SAMUS_RADIUS_X);
+    if x.wrapping_add(rx) & 0x07 == 0 && !object_check_move_right(mem) {
+        mem.write_ram(crate::ram_map::SAMUS_DOOR_DATA, 0); // Lx186（撞挡）
+        return false;
+    }
+    samus_collision_with_solid_entities(mem); // D976
+    let is_hit = mem.read_ram(crate::ram_map::SAMUS_IS_HIT);
+    if is_hit & 0x41 == 0x40 {
+        mem.write_ram(crate::ram_map::SAMUS_DOOR_DATA, 0);
+        return false; // 撞实体左缘
+    }
+    if mem.read_ram(crate::ram_map::SAMUS_SCR_X) >= 0x8F {
+        if !scroll_right(mem) {
+            mem.write_ram(crate::ram_map::SAMUS_SCR_X,
+                          mem.read_ram(crate::ram_map::SAMUS_SCR_X).wrapping_add(1));
+        }
+    } else {
+        mem.write_ram(crate::ram_map::SAMUS_SCR_X,
+                      mem.read_ram(crate::ram_map::SAMUS_SCR_X).wrapping_add(1));
+    }
+    let nx = x.wrapping_add(1);
+    mem.write_ram(0x030E, nx);
+    if nx == 0 && mem.read_ram(crate::ram_map::SCROLL_DIR) & 0x02 != 0 {
+        toggle_samus_hi(mem); // 环绕 00（inc 后判——E692）
+    }
+    true
+}
+
+/// SamusMoveHorizontally（**asm 内容锚** `SamusMoveHorizontally: ; 07:E31A`）：
+/// `SamusScrX←x−ScrollX`→|Δ|（TwosComplement $95C6）逐像素 MoveSamus± 环+
+/// CheckStopHorzMvmt→门向（SamusDoorData≠0⇒SamusDoorDir（右 0/左 1））。
+pub fn samus_move_horizontally(mem: &mut FrameMemory, delta: u8) {
+    let x = mem.read_ram(0x030E);
+    let sx = mem.read_ram(crate::ram_map::SCROLL_X);
+    mem.write_ram(crate::ram_map::SAMUS_SCR_X, x.wrapping_sub(sx)); // E31D
+    if delta == 0 {
+        return; // beq Exit10
+    }
+    let right = delta & 0x80 == 0; // bpl → 右移
+    let mut n = if right { delta } else { 0u8.wrapping_sub(delta) }; // TwosComplement
+    if mem.read_ram(crate::ram_map::SAMUS_IN_LAVA) != 0 {
+        n >>= 1; // 岩浆减半（lsr）
+        if n == 0 {
+            return;
+        }
+    }
+    mem.write_ram(crate::ram_map::OBJECT_COUNTER, n);
+    loop {
+        let moved = if right { move_samus_right(mem) } else { move_samus_left(mem) };
+        let stop = check_stop_horz_mvmt(mem, moved);
+        let c = mem.read_ram(crate::ram_map::OBJECT_COUNTER).wrapping_sub(1);
+        mem.write_ram(crate::ram_map::OBJECT_COUNTER, c);
+        if stop || c == 0 {
+            break;
+        }
+    }
+    if mem.read_ram(crate::ram_map::SAMUS_DOOR_DATA) != 0 {
+        // 门向（E32C-）：左移过门=1/右移过门=0
+        mem.write_ram(crate::ram_map::SAMUS_DOOR_DIR, if right { 0 } else { 1 });
+    }
+}
+
+#[cfg(test)]
+mod tests_camera_follow {
+    //! 【playability P0】摄像机跟随根件 TDD（asm E668/E626/E6D2/E6A7——渲染目检定谳：
+    //! 金腿摄像机随行/我方画面静止+x 绕回）。RoomRAM 0xFF=可走预置（collision_point_ok
+    //！ tile 类判：≥$80 可走）。
+
+    use super::*;
+
+    fn walkable_room() -> FrameMemory {
+        let mut m = FrameMemory::default();
+        for a in 0x6000u16..0x6400 {
+            m.write_wram(a, 0xFF);
+        }
+        m.write_ram(crate::ram_map::SCROLL_DIR, 2); // ScrollDir=2（横房——$49！勘误修）
+        m.write_ram(crate::ram_map::SAMUS_RADIUS_X, 8);
+        m.write_ram(0x030D, 0x50); // y
+        m
+    }
+
+    /// MoveSamusRight 滚动跟随：SamusScrX≥$8F⇒ScrollRight（ScrollX+1/MapPosX+1）而非
+    /// inc 屏内 x（asm E689- `lda SamusScrX/cmp #$8F/bcc Lx183/jsr ScrollRight`）。
+    #[test]
+    fn move_samus_right_scrolls_camera_at_threshold() {
+        let mut m = walkable_room();
+        m.write_ram(0x030E, 0x80); // x（x+rx=0x88 &7=0⇒门检（RoomRAM FF 可走））
+        m.write_ram(crate::ram_map::SAMUS_SCR_X, 0x8F); // 右滚界
+        assert!(move_samus_right(&mut m));
+        assert_eq!(m.read_ram(crate::ram_map::SCROLL_X), 1, "ScrollX+1（摄像机跟随）");
+        assert_eq!(m.read_ram(crate::ram_map::MAP_POS_X), 1, "MapPosX+1（ScrollX=0 新图格）");
+        assert_eq!(m.read_ram(crate::ram_map::SAMUS_SCR_X), 0x8F, "屏内 x 不动（滚动代替）");
+        assert_eq!(m.read_ram(0x030E), 0x81, "房间 x+1");
+    }
+
+    /// MoveSamusLeft 滚动跟随：SamusScrX<$71⇒ScrollLeft（ScrollX−1/MapPosX−1）。
+    #[test]
+    fn move_samus_left_scrolls_camera_at_threshold() {
+        let mut m = walkable_room();
+        m.write_ram(0x030E, 0x80); // x−rx=0x78 &7=0⇒门检
+        m.write_ram(crate::ram_map::SAMUS_SCR_X, 0x70); // 左滚界（<$71）
+        assert!(move_samus_left(&mut m));
+        assert_eq!(m.read_ram(crate::ram_map::SCROLL_X), 0xFF, "ScrollX−1（wrapping）");
+        assert_eq!(m.read_ram(crate::ram_map::SAMUS_SCR_X), 0x70, "屏内 x 不动（滚动代替）");
+        assert_eq!(m.read_ram(0x030E), 0x7F, "房间 x−1");
+    }
+
+    /// 界内（ScrX<$8F）：屏内 x+1 不滚（asm `bcc Lx183/inc SamusScrX`）。
+    #[test]
+    fn move_samus_right_inside_threshold_moves_screen_x() {
+        let mut m = walkable_room();
+        m.write_ram(0x030E, 0x80);
+        m.write_ram(crate::ram_map::SAMUS_SCR_X, 0x8E); // 界内
+        assert!(move_samus_right(&mut m));
+        assert_eq!(m.read_ram(crate::ram_map::SCROLL_X), 0, "不滚");
+        assert_eq!(m.read_ram(crate::ram_map::SAMUS_SCR_X), 0x8F, "屏内 x+1");
+    }
+
+    /// SamusMoveHorizontally：Δ=2 右移=两像素环（x+2/ScrX+2）+SamusScrX 初赋（E31D）。
+    #[test]
+    fn samus_move_horizontally_two_pixel_loop() {
+        let mut m = walkable_room();
+        m.write_ram(0x030E, 0x80);
+        m.write_ram(crate::ram_map::SCROLL_X, 0x10);
+        samus_move_horizontally(&mut m, 2);
+        assert_eq!(m.read_ram(0x030E), 0x82, "x+2（逐像素环）");
+        assert_eq!(m.read_ram(crate::ram_map::SAMUS_SCR_X), 0x72, "ScrX=x−ScrollX+2");
+    }
+
+    /// SamusMoveHorizontally：Δ=负（补码）左移+x 环绕 00⇒ToggleSamusHi（9 位翻）。
+    #[test]
+    fn samus_move_horizontally_left_wraps_hi_bit() {
+        let mut m = walkable_room();
+        m.write_ram(0x030E, 0x00); // x=0（dec 前判——E650）
+        m.write_ram(crate::ram_map::SAMUS_SCR_X, 0x90); // 界内（≥$71 不滚）
+        samus_move_horizontally(&mut m, 0xFE); // Δ=−2
+        assert_eq!(m.read_ram(0x030E), 0xFE, "x−2（环绕）");
+        assert_eq!(m.read_ram(crate::ram_map::SAMUS_HI), 1, "ToggleSamusHi（环绕翻名表位）");
+    }
 }
 
 // ===== 1:1 Rust 改写·批产·块 6（physics 面去地址名（TDD 穷举等价证明））=====
