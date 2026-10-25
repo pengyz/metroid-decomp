@@ -453,7 +453,9 @@ pub(crate) fn continue_music_face(mem: &mut crate::frame::FrameMemory) {
         if mem.read_ram(0x062C) == 0 {
             mem.write_ram(0x068D, 0); // MusicContFlags←0（曲终收）
         } else {
-            crate::unported!("bank07:B3F0-repeat"); // 有重复⇒曲重启面（随件）
+            // 【r26 端口】repeat 径（asm $B3F0）：MusicLoopFlags($065D)←MusicContFlags($068D)
+            let cont = mem.read_ram(0x068D);
+            mem.write_ram(0x065D, cont);
         }
     }
 }

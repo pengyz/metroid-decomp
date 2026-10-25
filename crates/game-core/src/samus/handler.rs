@@ -118,6 +118,12 @@ pub fn go_samus_handler(mem: &mut FrameMemory) {
 /// 若现 anim≠$20 JumpFire）→≥$20 时 UP 按→JumpPntUp（$35）+A 未按→StopVertMovement。
 /// 字节自证（CCC2 区逐字）：anim 常量 $0C=Jump/$20=JumpFire/$0E=Salto/$35=JumpPntUp。
 /// 尾段（CD02+run 动画/movement）+StopVertMovement（D147）=桩（随队列填）。
+
+/// ObjAnim_SamusRun/SamusJump（ObjectAnimIndexTbl \$8572 基——common_sprite_data
+/// 偏移：Run=\$858A-\$8572=18?\(待核\)/Jump=待核）——r26 暂用 asm 值域（随核）。
+const OBJ_ANIM_SAMUS_RUN: u8 = 0x12;
+const OBJ_ANIM_SAMUS_JUMP: u8 = 0x14;
+
 pub fn samus_run(mem: &mut FrameMemory) {
     use button::*;
     let disp = mem.read_ram(crate::ram_map::SAMUS_JUMP_DISP);
@@ -145,7 +151,20 @@ pub fn samus_run(mem: &mut FrameMemory) {
             }
         }
     }
-    crate::unported!("bank07:CD02"); // 尾段（run 动画/movement 面）
+    // samL04（CD02）：run 动画⇒jump 动画切（ObjAnim_SamusRun→ObjAnim_SamusJump）
+    let anim = mem.read_ram(0x0303 + 2); // Samus.animResetIndex（+5 位）
+    // animResetIndex 域址（Samus 结构+5）核：$305
+    let a = mem.read_ram(0x0305);
+    if a == OBJ_ANIM_SAMUS_RUN {
+        mem.write_ram(0x0305, OBJ_ANIM_SAMUS_JUMP);
+    }
+    // samL05（CD0E）：熔岩跳判（Joy1Change bit7=JUMP！）
+    if mem.read_ram(0x0114) != 0 && mem.read_ram(crate::ram_map::JOY1_CHANGE) & 0x80 != 0 {
+        crate::unported!("bank07:LCD40"); // 熔岩跳（随件）
+    }
+    // samL06（CD16）：三件+anim 2 帧节拍
+    crate::unported!("bank07:CD16"); // SamusRun_CheckHorzMovementMidair（三件首）
+    let _ = anim;
 }
 
 /// 动画面址（字节自证：$0305=animResetIndex（CF5D/CCC2 同址一致））。
