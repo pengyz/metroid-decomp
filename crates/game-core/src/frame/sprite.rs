@@ -81,6 +81,10 @@ pub fn anim_draw_object(mem: &mut crate::frame::FrameMemory, page_index: u8) {
     let scroll_x = mem.read_ram(0x0026);
     let screen_y = y_pos.wrapping_sub(scroll_y);
     let screen_x = x_pos.wrapping_sub(scroll_x);
+    // 【r25 根修】IsObjectVisible（\）ScrollDir 分支：横房（bit1）**不减 ScrollY**
+    // （横滚不动 y——HorzScrollCheck 径）；旧形无条件减致 sprite 高 14px。
+    let horz = mem.read_ram(0x0003) & 0x02 != 0;
+    let screen_y = if horz { y_pos } else { screen_y };
     // 可见性门（简核：屏界内——全边界径随件）
     let visible = screen_y.wrapping_sub(scroll_y) < 0xF0 && hi & 1 == mem.read_ram(0x00FF) & 1;
     mem.write_ram(0x030B + px, visible as u8); // onScreen
@@ -143,7 +147,7 @@ fn place_disp(b: u8, flip_flags: u8, is_y: bool) -> i8 {
     let mut v = b as i8;
     let flip_bit = if is_y { 0x80 } else { 0x40 };
     if flip_flags & flip_bit != 0 {
-        v = (!v).wrapping_add(0xF8u8 as i8) as i8; // eor #$FF + adc #$F8（含进位 1）
+        v = (!v).wrapping_add(0xF9u8 as i8) as i8; // eor #$FF + adc #$F8（含进位 1）
     }
     v
 }
@@ -166,5 +170,28 @@ mod tests {
         anim_draw_object(&mut m, 0);
         let oam: Vec<u8> = (0..0x20).map(|i| m.read_ram(0x0200 + i)).collect();
         assert!(oam.iter().any(|&b| b != 0), "OAM 有 sprite 落");
+    }
+}
+
+#[cfg(test)]
+mod r25_oam_probe {
+    use super::*;
+
+    /// Samus sprite OAM 面（8 精灵 y/tile/attr/x——头部可见面核）。
+    #[test]
+    fn samus_oam_dump() {
+        let mut m = crate::frame::FrameMemory::default();
+        m.write_ram(0x0055, 1); // IsSamus
+        m.write_ram(0x0303, 0); // animFrame=0
+        m.write_ram(0x030C, 0); // hi
+        m.write_ram(0x00FF, 0x90); // PPUCTRL（bit4=1 面）
+        m.write_ram(0x030D, 0x80); // y=128
+        m.write_ram(0x030E, 0x80); // x=128
+        anim_draw_object(&mut m, 0);
+        for i in 0..8u16 {
+            let b = 0x0200 + i * 4;
+            println!("[oam] sprite{i}: y={:02X} tile={:02X} attr={:02X} x={:02X}",
+                m.read_ram(b), m.read_ram(b+1), m.read_ram(b+2), m.read_ram(b+3));
+        }
     }
 }
