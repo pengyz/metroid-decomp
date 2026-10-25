@@ -588,3 +588,17 @@ mod r25_gfx_probe {
         assert_eq!(m.render.chr[0x1F00], expect, "CREBG2 tile $FF 面");
     }
 }
+
+#[cfg(test)]
+mod r25_spritegfx_probe {
+    use super::*;
+
+    /// SamusGFX（entry 0→PPU $0000）写面锚：tile $09（Samus sprite 件）落值。
+    #[test]
+    fn samus_gfx_tile09() {
+        let mut m = crate::frame::FrameMemory::default();
+        load_gfx(&mut m, 0);
+        let expect = game_data::title::gfx_data::GFX_DATA[game_data::title::gfx_data::GFX_OFFS[0].0 as usize + 0x90];
+        assert_eq!(m.render.chr[0x090], expect, "SamusGFX tile 09 首字节");
+    }
+}

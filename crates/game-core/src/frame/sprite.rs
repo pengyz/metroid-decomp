@@ -119,11 +119,11 @@ pub fn anim_draw_object(mem: &mut crate::frame::FrameMemory, page_index: u8) {
             sx = sx.wrapping_add(blob(fptr + frame_i + 2) as i16);
             frame_i += 3;
         } else if b == 0xFD {
-            // GetNewControlByte（$DF3B）
+            // GetNewControlByte（$DF3B）：新控制字节=**原值直用**（asm `sta Temp05_Cntrl`
+            // ——AABB 已在 OAM attr 位形（r25 勘误修：旧形 >>4 再解致组位错（组 2 误）））
             frame_i += 1;
             let c = blob(fptr + frame_i);
-            cntrl05 = (c >> 4) & 0x03;
-            cntrl05 |= (c & 0xC0) | 0x20;
+            cntrl05 = c;
             frame_i += 1;
         } else if b == 0xFE {
             // SkipPlacementData（$DF32）
