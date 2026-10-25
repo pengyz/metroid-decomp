@@ -559,6 +559,121 @@ fn init_en_active_anim_index(mem: &mut crate::frame::FrameMemory, x: u8) {
     }
 }
 
+
+/// EnemyReactToSamusProjectile（**asm 内容锚** `: 07:F536`——r26）：isHit(+4) bit5=0⇒
+/// RTS（未中弹径——移动对拍主径）；中弹径=冰冻/伤害族（打敌人流程件——随件）。
+fn enemy_react_to_projectile(mem: &mut crate::frame::FrameMemory, x: u8) {
+    if mem.read_ram(0x0400 + x as u16 + 4) & 0x20 == 0 {
+        return;
+    }
+    crate::unported!("bank07:F536");
+}
+
+/// ChooseEnemyAIRoutine（**asm 内容锚** 区 bank `$95E5`（prg1:156——type 0-0F dispatch）：
+/// **05=Zoomer(Crawler——起始房敌！)**。
+fn choose_enemy_ai(mem: &mut crate::frame::FrameMemory, x: u8) {
+    let t = mem.read_wram(0x6AF4 + x as u16 + 14); // type=+14
+    match t {
+        5 => crawler_ai(mem, x),
+        _ => crate::unported!("bank01:95E5"),
+    }
+}
+
+/// CrawlerAIRoutine（**asm 内容锚** `enemies/crawler.asm`——r26）：ShouldCrawlerMove
+/// （F852——((x>>3+FC))>>1&3=6/8 帧步门）；不动帧⇒@exit（anim+显示）；动帧⇒@move（随件）。
+fn crawler_ai(mem: &mut crate::frame::FrameMemory, x: u8) {
+    let gate = ((x >> 3).wrapping_add(mem.read_ram(crate::ram_map::FRAME_COUNT)) >> 1) & 0x03;
+    if gate == 0 {
+        update_enemy_common_no_move_no_anim(mem, x);
+        return;
+    }
+    crate::unported!("bank07:F852"); // @move 径（移动件+角检——随件）
+}
+
+/// UpdateEnemyCommon@noMoveNoAnim（**asm 内容锚** `: 07:F416`——r26）：tough 调色→
+/// status≠0⇒DrawEnemy→isHit/weaponAction 清。
+fn update_enemy_common_no_move_no_anim(mem: &mut crate::frame::FrameMemory, x: u8) {
+    let special = mem.read_ram(0x0400 + x as u16 + 15); // specialAttribs=+15
+    if special & 0x80 != 0 {
+        let oc = mem.read_ram(0x006B);
+        if oc & 0x80 == 0 {
+            mem.write_ram(0x006B, 0x80 | 0x03 | 0x20);
+        }
+    }
+    if mem.read_wram(0x6AF4 + x as u16) != 0 {
+        draw_enemy(mem, x);
+    }
+    mem.write_ram(0x0400 + x as u16 + 4, 0); // isHit=+4
+    mem.write_ram(0x0400 + x as u16 + 14, 0); // weaponAction=+14
+}
+
+/// DrawEnemy（**asm 内容锚** `DrawEnemy: ; 07:DD8B`——r26 端口）：animFrame==FrameNone⇒
+/// ClearObjectCntrl；帧指针（EnFramePtrTable1/2——animFrame bit7 carry 选表！）→
+/// GetSpriteCntrlData→位指针（EnPlacePtrTable）→sprite 管线写（place_disp/四元组）。
+fn draw_enemy(mem: &mut crate::frame::FrameMemory, x: u8) {
+    use game_data::area::enemy_gfx as eg;
+    let frame = mem.read_wram(0x6AF4 + x as u16 + 3); // animFrame=+3
+    if frame == 0xFF {
+        mem.write_ram(0x006B, 0);
+        return;
+    }
+    let table2 = frame & 0x80 != 0;
+    let fi = ((frame & 0x7F) as usize) + if table2 { 128 } else { 0 };
+    let (fo, fl) = eg::EN_FRAME_OFFS[fi];
+    let blob = |i: usize| -> u8 {
+        if fl == 0 || i >= fl as usize { 0 } else { eg::EN_FRAMES[fo as usize + i] }
+    };
+    let ctrl = blob(0);
+    mem.write_ram(0x006B, ctrl);
+    let place_idx = ((ctrl & 0x0F) as usize).min(127);
+    let (po, pl) = eg::EN_PLACE_OFFS[place_idx];
+    let pblob = |i: usize| -> u8 {
+        if pl == 0 || i >= pl as usize { 0 } else { eg::EN_PLACES[po as usize + i] }
+    };
+    let y = mem.read_ram(0x0400 + x as u16 + 0); // y=+0
+    let xpos = mem.read_ram(0x0400 + x as u16 + 1); // x=+1
+    let scroll_y = mem.read_ram(0x0025);
+    let horz = mem.read_ram(0x0003) & 0x02 != 0;
+    let sy = (if horz { y } else { y.wrapping_sub(scroll_y) }) as i16;
+    let sx = xpos.wrapping_sub(mem.read_ram(0x0026)) as i16;
+    let mut cntrl05 = ((ctrl >> 4) & 0x03) | (ctrl & 0xC0) | 0x20;
+    let mut place_i = 0usize;
+    let mut frame_i = 3usize;
+    let mut x_sprite = mem.read_ram(0x005B) as u16;
+    loop {
+        let b = blob(frame_i);
+        if b < 0xFC {
+            let dy = crate::frame::sprite::place_disp(pblob(place_i), ctrl, true);
+            let dx = crate::frame::sprite::place_disp(pblob(place_i + 1), ctrl, false);
+            let flip = mem.read_ram(0x006B) & 0xC0;
+            let attr = cntrl05
+                ^ (if flip & 0x40 != 0 { 0x80 } else { 0 })
+                ^ (if flip & 0x80 != 0 { 0x40 } else { 0 });
+            let oy = (sy + dy as i16 - 1) as u8;
+            let ox = (sx + dx as i16) as u8;
+            mem.write_ram(0x0200 + x_sprite, oy);
+            mem.write_ram(0x0201 + x_sprite, b);
+            mem.write_ram(0x0202 + x_sprite, attr);
+            mem.write_ram(0x0203 + x_sprite, ox);
+            x_sprite = x_sprite.wrapping_add(4);
+            place_i += 2;
+            frame_i += 1;
+        } else if b == 0xFC {
+            frame_i += 3;
+        } else if b == 0xFD {
+            frame_i += 1;
+            cntrl05 = blob(frame_i);
+            frame_i += 1;
+        } else if b == 0xFE {
+            place_i += 2;
+            frame_i += 1;
+        } else {
+            break;
+        }
+    }
+    mem.write_ram(0x005B, x_sprite as u8);
+}
+
 /// UpdateEnemy_Resting（**asm 内容锚** `: 07:F3BE`——r26 壳：30fps 门/件序 fail-loud）。
 fn enemy_resting(mem: &mut crate::frame::FrameMemory, x: u8) {
     let d = mem.read_ram(0x0400 + x as u16 + 5);
@@ -576,7 +691,8 @@ fn enemy_resting(mem: &mut crate::frame::FrameMemory, x: u8) {
             try_becoming_active(mem, x); // F7BA（件序 5——延迟归零⇒激活）
         }
     }
-    crate::unported!("bank07:F40A"); // Active_BranchB（EnemyReactToSamusProjectile→AI）
+    enemy_react_to_projectile(mem, x);
+    choose_enemy_ai(mem, x);
 }
 
 /// UpdateEnemy_Active（**asm 内容锚** `: 07:F3E6`——r26 壳）。
