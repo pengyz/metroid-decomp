@@ -43,8 +43,15 @@ pub fn main_loop_iter(mem: &mut FrameMemory) {
     // 【r23 修（$C3 根收窄实验）】`inc FrameCount`（GoMainRoutine 返回点）=**非续段逐迭代**
     // （asm 形：每迭代收尾一 inc——等待帧非迭代不达）；原 step_done（尾段）判据把补帧
     // 步的 FC 拖到尾段 ⇒ NMI 间 FC=0 窗宽 2（$C3 星门复燃根）。续段（cursor>0 同相）不计。
+    // 【move-drift R2】迭代声明跨帧（iter_gates 非空）时 FC **延至 span 尾**（迭代真正
+    // 完成点——asm prg7:207 `inc FrameCount` 在 GoMainRoutine 含等待全链返回后）：
+    // iter_span_fc 旗交引擎 end_of_tick_gate 收尾（UpdateAge FC==0 相位保真）。
     if !continuation {
-        mem.write_ram(FRAME_COUNT, mem.read_ram(FRAME_COUNT).wrapping_add(1));
+        if mem.iter_gates.is_empty() {
+            mem.write_ram(FRAME_COUNT, mem.read_ram(FRAME_COUNT).wrapping_add(1));
+        } else {
+            mem.iter_span_fc = true;
+        }
     }
     mem.write_ram(NMI_STATUS, 0); // 清 0（spin 入口）
 }
@@ -86,8 +93,14 @@ pub fn game_main_routine(mem: &mut FrameMemory) {
         mem.write_ram(0x000D, (target >> 8) as u8);
     }
     match mr {
-        0 => area_init(mem), // AreaInit（已端口——移动臂迭代驱动首件）
-        1 => more_init(mem), // MoreInit（已端口——区域/房间链头）
+        0 => {
+            // 【move-drift R1 链合一】asm AreaInit（C801）**无 RTS fallthrough 进 MoreInit**
+            // （prg7:1826-1843——:1839 `jsr IsEngineRunning` 后直落 C81D）：一迭代双步
+            // （mr 00→02——金腿窗3 状态差实证）。原拆两迭代=同迭代链断裂（定谳 R1）。
+            area_init(mem);
+            more_init(mem);
+        }
+        1 => more_init(mem), // MoreInit 独派（mr=01 直设路径——asm 分派表项 1）
         2 => samus_init(mem), // SamusInit（r25 端口——萨姆斯出场态）
         3 => game_engine(mem), // GameEngine（已端口——移动帧环壳）
         8 => samus_intro(mem), // SamusIntro（r25 端口——淡入序+sprite 装载）
@@ -1048,6 +1061,9 @@ pub fn more_init(mem: &mut FrameMemory) {
         mem.write_ram(a, 0);
     }
     mem.write_ram(crate::ram_map::NMI_STATUS, 0); // ScreenOff 域形（屏/可见性关）
+    // 【move-drift R2】ScreenOff（$C439→WriteAndWait→WaitNMIPass_ prg7:1129-1140）=
+    // **帧等待**（1 tick+NMI 内块全跑）——门队列声明（窗3 等待 1/3）。
+    mem.iter_wait();
     crate::frame::boot::c158_unit(mem); // ClearNameTables（已折）
     crate::frame::boot::c1a3_unit(mem); // EraseAllSprites（已折）
     mem.write_ram(0x005A, 0); // ScrollBlockOnNameTable3
@@ -1075,6 +1091,9 @@ pub fn more_init(mem: &mut FrameMemory) {
     }
     // RoomRAM($6000+)→PPU 名表 #0($2000) 4 页拷贝（asm Lx001 `lda ($00),y/sta PPUDATA`
     // ——**黑屏根件**：名表从 RoomRAM 落 RenderState）。
+    // 【move-drift R3】SetupRoom 环+名表拷贝=重活（房间解压——原版掉帧窗 bogged 2 帧；
+    // C 级拆分（总 4=A 级三源互证——窗3 行集×FC×$18/$19 计数））。
+    mem.iter_bogged(2);
     mem.write_ram(0x0000, mem.read_ram(0x0037)); // RoomRAMPtr→$00/$01（asm $37/$38 面）
     mem.write_ram(0x0001, mem.read_ram(0x0038));
     mem.write_io(0x2006, 0x20);
@@ -1097,6 +1116,9 @@ pub fn more_init(mem: &mut FrameMemory) {
     // jmp ScreenOn（$FE|=$1E 面——shell 组合点随件；先事件形）
     let fe = mem.read_ram(0x00FE);
     mem.write_ram(0x00FE, fe | 0x1E);
+    // 【move-drift R2】ScreenOn（$C447→WriteAndWait——prg7:1142-1146 fallthrough）=
+    // **帧等待**（窗3 等待 3/3）。
+    mem.iter_wait();
 }
 
 /// 区序索引（InArea&$0F 越界稳——AREA_MAP_POS 五项）。
@@ -1254,6 +1276,7 @@ mod tests {
     #[test]
     fn continuation_tick_freezes_iteration_items() {
         let mut m = crate::frame::FrameMemory::default();
+        m.write_ram(GAME_MODE, 1); // 标题路（continuation 语义面——GameMode=1 免游戏派发）
         m.write_ram(crate::ram_map::TITLE_ROUTINE, 1);
         m.title_cursor = 1;
         m.title_cursor_phase = 1; // 同相位续段（真续段）
@@ -1271,6 +1294,7 @@ mod tests {
     #[test]
     fn orphan_cursor_after_phase_advance_is_fresh_iteration() {
         let mut m = crate::frame::FrameMemory::default();
+        m.write_ram(GAME_MODE, 1); // 标题路（continuation 语义面）
         m.write_ram(crate::ram_map::TITLE_ROUTINE, 2);
         m.title_cursor = 2;
         m.title_cursor_phase = 1; // 归属相位≠当前（孤儿）
@@ -1306,6 +1330,31 @@ mod tests {
         go_main_routine(&mut m); // 工作段（仪式+推进同拍）
         assert_eq!(m.read_ram(crate::ram_map::TITLE_ROUTINE), 1); // 相位推进（inc $1F）
         assert_eq!(m.title_spin, 1, "spin 等待段挂起");
+    }
+
+    /// 【move-drift R1 链合一】AreaInit→MoreInit fallthrough（asm prg7:1826-1843 无 RTS
+    /// 直落 C81D）：**一迭代双步 mr 00→02**（金腿窗3 状态差实证——同迭代链断裂修复锚）。
+    #[test]
+    fn game_dispatch_area_init_falls_into_more_init_same_iter() {
+        let mut m = FrameMemory::default();
+        copy_map(&mut m);
+        m.write_ram(GAME_MODE, 0);
+        m.write_ram(crate::ram_map::MAIN_ROUTINE, 0);
+        m.write_ram(crate::ram_map::IN_AREA, 0);
+        game_main_routine(&mut m); // 一迭代（dispatch 0）
+        assert_eq!(m.read_ram(crate::ram_map::MAIN_ROUTINE), 2, "一迭代 mr 00→02（fallthrough）");
+    }
+
+    /// 【move-drift R2】more_init 门件组装（asm 序：ScreenOff($C439→WriteAndWait) 等待→
+    /// SetupRoom 环+名表拷贝重活 bogged×2→尾 `jmp ScreenOn` 等待）——窗3 门序后段。
+    #[test]
+    fn more_init_declares_frame_gates() {
+        let mut m = FrameMemory::default();
+        copy_map(&mut m);
+        m.write_ram(crate::ram_map::MAIN_ROUTINE, 1);
+        m.write_ram(crate::ram_map::IN_AREA, 0);
+        more_init(&mut m);
+        assert_eq!(m.iter_gates, vec![1, 0, 0, 1], "ScreenOff(W)+bogged(2)+ScreenOn(W)");
     }
 }
 

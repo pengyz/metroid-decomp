@@ -36,6 +36,15 @@ pub struct FrameMemory {
     /// spin 等待计数（r23：臂的跨帧 spin 等待段——>0=等待 tick（工作零动）；与 cursor
     /// 机构正交（孤儿游标 F4 语义不动））。
     pub title_spin: u8,
+    /// 迭代内帧门队列（move-drift 定谳 R2/R3——findings/move-drift-iteration-scheduling.md）：
+    /// 1=帧等待（WaitNMIPass/WriteAndWait 族——下一 tick NMI 内块全跑含 ReadJoyPads）/
+    /// 0=bogged 重活帧（NMIStatus 跳过门（asm prg7:251）——内块跳过=掉帧窗，D4 保真）。
+    pub iter_gates: Vec<u8>,
+    /// span 剩余 tick 数（>0=迭代跨帧中——采样缝/MainLoop 四件/臂全冻结）。
+    pub iter_span_left: u8,
+    /// span 尾 FC 收尾旗（`inc FrameCount`（asm prg7:207 每迭代一次）延至迭代真正完成点
+    /// ——UpdateAge FC==0 相位保真）。
+    pub iter_span_fc: bool,
     /// APU 寄存器写捕获（$4000-$4017——壳层音频面消费源；驱动每帧 drain 后清）。
     pub apu_log: Vec<(u16, u8)>,
     /// 手柄 1 输入面（场景驱动；boot-title=无输入 0）。
@@ -49,7 +58,9 @@ pub struct FrameMemory {
 impl Default for FrameMemory {
     fn default() -> Self {
         Self { ram: [0; 0x800], wram: [0; 0x2000], regs: Registers::default(), nmi_enabled: false,
-               title_cursor: 0, title_cursor_phase: 0, title_spin: 0, apu_log: Vec::new(),
+               title_cursor: 0, title_cursor_phase: 0, title_spin: 0,
+               iter_gates: Vec::new(), iter_span_left: 0, iter_span_fc: false,
+               apu_log: Vec::new(),
                joy1: 0, joy2: 0,
                render: RenderState::default() }
     }

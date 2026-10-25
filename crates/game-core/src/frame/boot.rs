@@ -250,52 +250,54 @@ pub fn c4de_unit(mem: &mut FrameMemory) {
     // B 案 $0A/$0B=$C531 对形；InitBank0=$C531）
     mem.write_ram(0x000A, 0x31);
     mem.write_ram(0x000B, 0xC5);
-    // **$28 运行时派发**（C4DE：`ldy BankSwitchPending/beq RTS/jsr CheckBankSwitch_OK
-    // /jmp GoBankInit`——**GameMode←0=InitBank2（$C583）写点**（移动臂游戏启动链））。
-    let pending = mem.read_ram(crate::ram_map::BANK_SWITCH_PENDING);
-    if pending != 0 {
-        mem.write_ram(crate::ram_map::BANK_SWITCH_PENDING, 0); // CheckBankSwitch_OK 清
-        mem.write_ram(0x0028 + 1, pending.wrapping_sub(1)); // CurrentBank（$29）
-        if pending == 2 {
-            // InitBank1（**r25 注名勘误**：BankTable[0]=$01+1=2=Brinstar bank1→
-            // InitBank1（$C552——旧注 InitBank2 误）：`lda #$00/sta GameMode`（Play！）/
-            // `jsr ScreenNmiOff`/`jsr InitBrinstarGFX`/`jmp NMIOn`）。
-            mem.write_ram(crate::ram_map::GAME_MODE, 0);
-            mem.write_ram(crate::ram_map::NMI_STATUS, 1); // ScreenNmiOff 域形
-            // InitBrinstarGFX（$C604）：BrinBG1/CREBG1/CREBG2/BrinstarSprites/Solid_0FC0/
-            // Solid_1FC0（GFXInfo 项 3/4/5/6/25/22——bake_gfx 29 项自描述）
-            for id in [3usize, 4, 5, 6, 25, 22] {
-                load_gfx(mem, id);
-            }
-        } else {
-            crate::unported!("bank07:C552-init"); // 其余 bank init（随件）
-        }
-    }
     // InitBank0 星拷（asm：IntroStarsData（$98C0 ROM）→WRAM $6E00-$6E9F——B 案
     // 精灵页 $0260 源面；`LoadStarSprites: ; 00:98AE` 注「loaded into RAM $6E00 thru
-    // $6E9F in InitBank0 routine」自证）。
+    // $6E9F in InitBank0 routine」自证）。既有形=每调（boot 期幂等）。
     for (i, b) in INTRO_STARS_DATA.iter().enumerate() {
         mem.write_wram(0x6E00 + i as u16, *b);
     }
-    let y_in = mem.read_ram(0x0024);
-    if y_in == 0 {
+    // 【$24/$28 erratum 修正】BankSwitchPending=**$24**（InitializeStats 尾 `a9 02 85 24 60`
+    // A 级；$28=SwitchUpperBits（BankSwitch :1319-1324 独立常量））——旧 ram_map 误 $28
+    // 致写读双方同错位（win3seq 实证：金 $24=02/我 $28=02）。单径重排=C4DE 原形：
+    // `ldy BankSwitchPending($24)/beq RTS/jsr CheckBankSwitch_OK/jmp GoBankInit`。
+    let pending = mem.read_ram(crate::ram_map::BANK_SWITCH_PENDING);
+    if pending == 0 {
         return; // 早出（A 不动——C4E0 BEQ $C50F）
     }
-    // C4E8 体（含 C4FA 共享段 PRG 串行写——与 C01A 折叠同源）
-    mem.write_ram(0x0024, 0);
-    let idx = y_in.wrapping_sub(1);
-    mem.write_ram(0x0023, idx);
-    mem.write_ram(0x0000, idx);
+    // CheckBankSwitch_OK（C4E8）：清 $24→CurrentBank($23)←idx→$00←idx→
+    // $28←(SwitchUpperBits&$18)|idx→MMC1 串行写（C4FA 共享段——与 C01A 折叠同源）。
+    mem.write_ram(crate::ram_map::BANK_SWITCH_PENDING, 0);
+    let idx = pending.wrapping_sub(1);
+    mem.write_ram(0x0023, idx); // CurrentBank（constants_ram:484）
+    mem.write_ram(0x0000, idx); // Temp00_Bank
     let v = (mem.read_ram(0x0028) & 0x18) | idx;
     mem.write_ram(0x0028, v);
     mem.regs.a = v;
     mmc1_serial_write(mem, io::MMC1_PRG);
     mem.regs.a = mem.read_ram(0x0000); // C50D LDA $00（分派索引）
-    // C510 分派（表 bank0:C51F `31 C5 52 C5 …`）
-    match mem.regs.a {
-        0 => c531_unit_pre(mem),
-        _ => crate::unported!("bank00:C51F"), // 非 boot 表项未端口
+    // GoBankInit（C510）：BankInitTable（bank0:C51F `31 C5 52 C5 …`）分派。
+    match idx {
+        0 => c531_unit_pre(mem), // InitBank0（$C531——boot 链 pre 段）
+        1 => init_bank1(mem),    // InitBank1（$C552——游戏入场链）
+        _ => crate::unported!("bank00:C51F"), // 非 boot/入场表项未端口
     }
+}
+
+/// InitBank1（**asm 内容锚** `InitBank1: ; 07:C552`——「Brinstar memory page」）：
+/// `lda #$00/sta GameMode`（Play）/`jsr ScreenNmiOff`/（mr≠GameEngine 时清态族）/
+/// `ldy #$00/jsr BankSwitch`/`jsr InitBrinstarGFX`/`jmp NMIOn`。
+/// 【move-drift R2/R3】ScreenNmiOff=帧等待（窗3 等待 1/3）；InitBrinstarGFX=重活
+/// bogged×2（C 级拆分——总 4=A 级三源互证）。
+fn init_bank1(mem: &mut FrameMemory) {
+    mem.write_ram(crate::ram_map::GAME_MODE, 0);
+    mem.write_ram(crate::ram_map::NMI_STATUS, 1); // ScreenNmiOff 域形
+    mem.iter_wait();
+    // InitBrinstarGFX（$C604）：BrinBG1/CREBG1/CREBG2/BrinstarSprites/Solid_0FC0/
+    // Solid_1FC0（GFXInfo 项 3/4/5/6/25/22——bake_gfx 29 项自描述）
+    for id in [3usize, 4, 5, 6, 25, 22] {
+        load_gfx(mem, id);
+    }
+    mem.iter_bogged(2);
 }
 
 /// C531 单元（boot 分派目标；**asm 引证主体**，链规 17）——
@@ -509,6 +511,17 @@ mod tests {
         assert_eq!(m.read_ram(0x0024), 0); // C4E8 已跑
         assert_eq!(m.read_ram(0x0023), 0);
         assert_eq!(m.read_ram(0x0028), 0); // ($28&0x18)|0
+    }
+
+    /// 【move-drift R2/R3】InitBank1 链门件组装（asm 序：ScreenNmiOff($C45D→WriteAndWait)
+    /// 等待→InitBrinstarGFX 重活 bogged×2）——窗3 门序 [W,B,B,W,B,B,W] 前段。
+    #[test]
+    fn c4de_initbank1_declares_frame_gates() {
+        let mut m = FrameMemory::default();
+        m.write_ram(0x0024, 2); // BankSwitchPending=2→InitBank1（BankTable[0]=$01+1）
+        c4de_unit(&mut m);
+        assert_eq!(m.iter_gates, vec![1, 0, 0], "ScreenNmiOff(W)+InitBrinstarGFX bogged(2)");
+        assert_eq!(m.read_ram(crate::ram_map::GAME_MODE), 0, "InitBank1 GameMode←0（Play）");
     }
 
     /// ScreenNmiOff pre 段（$FE 遮蔽+$1A=0 spin 入口）+ post 段（$FF 清 bit7/NMI 关）。

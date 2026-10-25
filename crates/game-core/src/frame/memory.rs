@@ -54,6 +54,21 @@ impl FrameMemory {
         // 其余寄存器面 S5 骨架暂不建模（RAM watch 不可见）；渲染面挂 task-13
     }
 
+    /// 迭代内帧等待（**WaitNMIPass/WriteAndWait 族**（asm prg7:1108-1140 `ClearNMIStat`
+    /// +spin 等下一 NMI）——1 tick 等待+NMI 内块全跑（含 ReadJoyPads）。定谳件
+    /// findings/move-drift-iteration-scheduling.md R2）。
+    pub fn iter_wait(&mut self) {
+        self.iter_gates.push(1);
+    }
+
+    /// 迭代重活 **bogged 帧**（NMIStatus 跳过门（asm prg7:251 `lda NMIStatus/bne`）
+    /// ——内块跳过（无 ReadJoyPads/palette/VRAM）=原版掉帧窗（D4 保真项）。R3 件。
+    pub fn iter_bogged(&mut self, n: u8) {
+        for _ in 0..n {
+            self.iter_gates.push(0);
+        }
+    }
+
     /// watch 状态向量（zp/iram/wram，大写 hex——与 oracle 帧 trace 同形）。
     /// **编码唯一源=memmap::frame_face**（严重-6 对账闭合：废本层手写切片第二源）。
     /// 委托化=task-22 slot①（lead 例外授权：只动委托结构不动语义）；wram 全 8KB 钉死（严重-5）。

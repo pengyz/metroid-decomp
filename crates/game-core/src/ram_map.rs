@@ -100,7 +100,11 @@ pub const ENERGY_TANK_COUNT: u16 = 0x6874;
 pub const MISSILE_COUNT: u16 = 0x6876;
 pub const MAX_MISSILES: u16 = 0x6877;
 pub const AT_ENDING: u16 = 0x69B2;
-pub const BANK_SWITCH_PENDING: u16 = 0x0028;
+/// BankSwitchPending=**$24**（【$24/$28 erratum 修正】InitializeStats 尾 `a9 02 85 24 60`
+/// （`lda #$02/sta $24/rts`）A 级铁证；$28=SwitchUpperBits（prg7:1319-1324 独立常量）。
+/// 旧 0x0028 误形致写读双方同错位（win3seq 双腿实证：金 $24=02/我 $28=02）——
+/// docs/findings/move-drift-iteration-scheduling.md 随件。
+pub const BANK_SWITCH_PENDING: u16 = 0x0024;
 
 /// InArea=$74（constants_ram 内容锚「Samus is in the following area」）。
 pub const IN_AREA: u16 = 0x0074;

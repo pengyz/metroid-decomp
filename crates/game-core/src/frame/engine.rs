@@ -61,6 +61,12 @@ impl FrameEngine {
 
     /// 推进一帧+**spin 出口采样缝**（task-24 对齐：oracle $C0D3 同点——NMI 尾写 1 后/
     /// 帧工作前；$1A=1 恒量面+FrameCount 未增=缝位语义锚）。
+    ///
+    /// **迭代跨帧 span**（move-drift 定谳 R2/R3——findings/move-drift-iteration-scheduling.md）：
+    /// 工作可声明帧门队列（WaitNMIPass 等待帧/bogged 重活帧）；span 内 tick 不跑 MainLoop
+    /// 四件/臂/采样缝（金腿窗内无行同形），tick 尾按门置 NMIStatus（等待帧=0→下一 NMI 内块
+    /// 全跑；bogged=1→内块跳过（asm prg7:251 掉帧门）），队列排空 tick 尾=迭代完成点
+    /// （`inc FrameCount`（asm prg7:207）延至此+唤醒门）。
     pub fn tick_frame_with<F: FnMut(&FrameMemory)>(&mut self, mut on_spin_exit: F) {
         self.clock.tick();
         if self.mem.nmi_enabled {
@@ -69,8 +75,14 @@ impl FrameEngine {
         // === spin 出口采样缝（$C0D3 对齐）——**仅主循环 spin 出口**（boot 链无主循环
         // spin——oracle 295 行=主循环 spin 出口数自证；boot tick 不采样）。
         // 缝位=**首个主循环界唤醒**（PostSpin+MainLoop——oracle f=1 语义（工作前）；
-        // PreSpin/AwaitNmi=boot 内部等待不采）。
-        if self.phase == BootPhase::PostSpin || self.phase == BootPhase::MainLoop {
+        // PreSpin/AwaitNmi=boot 内部等待不采）。span tick 不采（迭代未完成无 spin 出口）。
+        let in_span = self.mem.iter_span_left > 0;
+        if std::env::var("DSH_SPAN_TRACE").is_ok() {
+            eprintln!("[span] tick={} in_span={} left={} gates={} fc={}", self.clock.ticks(),
+                      in_span, self.mem.iter_span_left, self.mem.iter_gates.len(),
+                      self.mem.read_ram(crate::ram_map::FRAME_COUNT));
+        }
+        if !in_span && (self.phase == BootPhase::PostSpin || self.phase == BootPhase::MainLoop) {
             on_spin_exit(&self.mem);
         }
         match self.phase {
@@ -88,14 +100,48 @@ impl FrameEngine {
                     // 采样缝=boot_post 后/首工作前（oracle f=1 语义锚）。
                     on_spin_exit(&self.mem);
                     super::mainloop::main_loop_iter(&mut self.mem);
+                    self.end_of_tick_gate();
                     self.phase = BootPhase::MainLoop;
                 }
             }
             BootPhase::PostSpin | BootPhase::MainLoop => {
-                super::mainloop::main_loop_iter(&mut self.mem); // 主循环一迭代（C0BC 体）
+                if in_span {
+                    // span tick：迭代工作中（四件/臂冻结——等待帧/bogged 帧见门队列语义）
+                    self.mem.iter_span_left -= 1;
+                } else {
+                    super::mainloop::main_loop_iter(&mut self.mem); // 主循环一迭代（C0BC 体）
+                    if !self.mem.iter_gates.is_empty() {
+                        // 迭代声明跨帧：span=门队列长（门描述 T+1..T+n 的 NMI 内块跑/跳）
+                        self.mem.iter_span_left = self.mem.iter_gates.len() as u8;
+                    }
+                }
+                self.end_of_tick_gate();
                 self.phase = BootPhase::MainLoop;
             }
         }
+    }
+
+    /// tick 尾 NMI 门（描述**下一 tick** NMI 内块是否跑——asm prg7:251 `lda NMIStatus/
+    /// bne @endIf_A` 门的预置）：门队列非空=按门项（1 等待帧→0 全跑 / 0 bogged→1 跳过）；
+    /// 排空=迭代完成点（唤醒门 NMIStatus←0（asm :210-211）+`inc FrameCount` 延迟收尾）。
+    fn end_of_tick_gate(&mut self) {
+        if self.mem.iter_gates.is_empty() {
+            self.mem.write_ram(crate::ram_map::NMI_STATUS, 0);
+            if self.mem.iter_span_fc {
+                self.mem.iter_span_fc = false;
+                let fc = self.mem.read_ram(crate::ram_map::FRAME_COUNT).wrapping_add(1);
+                self.mem.write_ram(crate::ram_map::FRAME_COUNT, fc);
+            }
+        } else {
+            let g = self.mem.iter_gates.remove(0); // 队列 ≤8 项（窗长界）——O(n) 无碍
+            self.mem
+                .write_ram(crate::ram_map::NMI_STATUS, if g != 0 { 0 } else { 1 });
+        }
+    }
+
+    /// span 进行中（迭代跨帧——采样/行导出抑制面；l3-dump 行集同金腿缺行窗）。
+    pub fn in_span(&self) -> bool {
+        self.mem.iter_span_left > 0 || !self.mem.iter_gates.is_empty()
     }
 
     /// watch 状态向量（每帧导出面）。
@@ -158,6 +204,33 @@ mod tests {
         assert_eq!(e.mem.read_ram(0x0001), 2); // C1A3 ptr 高位
         assert!(e.mem.nmi_enabled); // C08A $2000=$90
         assert_eq!(e.mem.read_ram(crate::ram_map::NMI_STATUS), 0); // spin 入口（ClearNMIStat）
+    }
+
+    /// 【move-drift R2/R3】span 机制：迭代声明帧门后——span tick 无采样缝（金腿窗内无行
+    /// 同形）/FC 延至 span 尾（`inc FrameCount` 在迭代真正完成点）/tick 尾按门置 NMIStatus。
+    #[test]
+    fn span_gates_suppress_seam_and_defer_fc() {
+        let mut e = FrameEngine::new();
+        for _ in 0..4 {
+            e.tick_frame(); // boot→MainLoop（tick4=首主循环采样）
+        }
+        let fc0 = e.mem.read_ram(crate::ram_map::FRAME_COUNT);
+        // 手工注入声明径结果（门件生产=more_init/c4de_unit iter_wait/iter_bogged——另测）；
+        // 形态=工作 tick 尾已弹首门后（不变量 span_left=gates.len()+1）。
+        e.mem.iter_gates = vec![1, 0];
+        e.mem.iter_span_left = 3;
+        e.mem.iter_span_fc = true;
+        let mut samples = 0;
+        for _ in 0..3 {
+            e.tick_frame_with(|_| samples += 1);
+        }
+        assert_eq!(samples, 0, "span tick 无采样缝（迭代跨帧无 spin 出口）");
+        assert_eq!(e.mem.iter_span_left, 0);
+        assert_eq!(e.mem.read_ram(crate::ram_map::FRAME_COUNT), fc0.wrapping_add(1),
+                   "FC 延至 span 尾收尾（一迭代恰一次 inc）");
+        assert_eq!(e.mem.read_ram(crate::ram_map::NMI_STATUS), 0, "排空 tick 尾=唤醒门");
+        e.tick_frame_with(|_| samples += 1);
+        assert_eq!(samples, 1, "span 后采样缝恢复（新迭代界）");
     }
 
 }

@@ -173,6 +173,9 @@ fn main() -> ExitCode {
         let fi = f as u64; // lead 最小修（E0425 变量名漂移——port2 WIP 中段态破点）
         engine.mem.joy1 = inputs.get(&fi).copied().unwrap_or(0);
         let mut row_fired = false;
+        // span 判定取 **tick 首**状态（末 span tick 尾队列已排空——in_span() 尾判会误落
+        // fallback 行；move-drift 行集同金腿缺行窗）。
+        let was_span = engine.in_span();
         engine.tick_frame_with(|mem| {
             row_fired = true;
             let snap = mem.watch_snapshot();
@@ -186,10 +189,15 @@ fn main() -> ExitCode {
             row = format!("{{\"f\":{f},\"w\":{{{}}}}}\n", w.join(","));
         });
         if !row_fired {
-            // **bundle 载入态回退**（spin 缝不触发——帧末逐 tick 采样（帧数制终止面））
-            let snap = engine.mem.watch_snapshot();
-            let w: Vec<String> = snap.iter().map(|(k, v)| format!("\"{k}\":\"{v}\"")).collect();
-            out.push_str(&format!("{{\"f\":{f},\"w\":{{{}}}}}\n", w.join(",")));
+            if was_span {
+                // 【move-drift 定谳】span tick=迭代跨帧（等待/bogged 门帧）——**无行**
+                // （金腿 missing f 缺行窗同形；行集=迭代 spin 出口，与 oracle 腿同构）。
+            } else {
+                // **bundle 载入态回退**（spin 缝不触发——帧末逐 tick 采样（帧数制终止面））
+                let snap = engine.mem.watch_snapshot();
+                let w: Vec<String> = snap.iter().map(|(k, v)| format!("\"{k}\":\"{v}\"")).collect();
+                out.push_str(&format!("{{\"f\":{f},\"w\":{{{}}}}}\n", w.join(",")));
+            }
         } else {
             out.push_str(&row);
         }
