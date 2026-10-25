@@ -458,7 +458,9 @@ fn enemy_force_speed(mem: &mut crate::frame::FrameMemory, x: u8) {
     let delay = game_data::area::graphics::ENEMY_FORCE_SPEED_DELAY.get(t).copied().unwrap_or(1);
     mem.write_ram(0x0400 + x as u16 + 13, delay);
     if attribs & 0x80 != 0 {
-        crate::unported!("bank07:F6DF"); // x 轴力（bit7=1 型）
+        // 【占位臂记账】x 轴力（bit7=1 型）F6DF 深件（敌移动力族——sc-enemy-encounter
+        // 包随件）：记账+跳过（x 力不施）——可玩性优先（占位臂模式）。
+        crate::frame::DIVERGENCES.with(|d| d.borrow_mut().push(0xF6DF));
         return;
     }
     // @skipXAxis（F70F）y 轴力：data05 bit2 清+名表/位比较→bit2 置+速向力
@@ -634,12 +636,17 @@ fn enemy_react_to_projectile(mem: &mut crate::frame::FrameMemory, x: u8) {
 }
 
 /// ChooseEnemyAIRoutine（**asm 内容锚** 区 bank `$95E5`（prg1:156——type 0-0F dispatch）：
-/// **05=Zoomer(Crawler——起始房敌！)**。
+/// **05=Zoomer(Crawler——起始房敌！)**。未端口型=【占位臂记账】（DIVERGENCES 非 panic——
+/// title_bridge 同款模式）：静态显示径（update_enemy_common_no_move_no_anim）保可玩，
+/// AI 深件随 sc-enemy-encounter 包收敛（goal 流程③）。
 fn choose_enemy_ai(mem: &mut crate::frame::FrameMemory, x: u8) {
     let t = mem.read_wram(0x6AF4 + x as u16 + 14); // type=+14
     match t {
         5 => crawler_ai(mem, x),
-        _ => crate::unported!("bank01:95E5"),
+        _ => {
+            crate::frame::DIVERGENCES.with(|d| d.borrow_mut().push(0x95E5));
+            update_enemy_common_no_move_no_anim(mem, x);
+        }
     }
 }
 

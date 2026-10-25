@@ -35,6 +35,18 @@ impl RenderState {
         self.latch_hi = true;
     }
 
+    /// $2005 写（PPUSCROLL——flip-flop 与 $2006 共锁存：首写 X/次写 Y；asm
+    /// `WriteScroll: ; 07:C29A`（`lda ScrollX/sta PPUSCROLL/lda ScrollY/sta PPUSCROLL`）。
+    pub fn write_reg_2005(&mut self, v: u8) {
+        let is_hi = self.latch_hi;
+        self.latch_hi = !self.latch_hi;
+        if is_hi {
+            self.scroll_x = v;
+        } else {
+            self.scroll_y = v;
+        }
+    }
+
     /// $2007 写（按 PPUADDR 分域：$0000-$1FFF=CHR/$2000-$2FFF=名表）+地址步进。
     pub fn write_ppudata(&mut self, v: u8, increment: u16) {
         match self.ppuaddr {
@@ -45,7 +57,9 @@ impl RenderState {
                 }
             }
             0x2000..=0x2FFF => {
-                let i = (self.ppuaddr - 0x2000) as usize;
+                // 【V1 摄像机】名表镜像映射（竖镜=$2000/$2800 同 A、$2400/$2C00 同 B——
+                // &0x7FF 归一：$2C00→0x400（第二屏）——ToggleNameTable^=3 双屏径）。
+                let i = (self.ppuaddr - 0x2000) as usize & 0x7FF;
                 if i < self.nametable.len() {
                     self.nametable[i] = v;
                 }

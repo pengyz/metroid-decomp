@@ -1,4 +1,4 @@
-﻿//! game-core::render —— S6-8 名表清屏（收编于 frame/render.rs RenderState——单一型纪律）。
+//! game-core::render —— S6-8 名表清屏（收编于 frame/render.rs RenderState——单一型纪律）。
 //!
 //! spec 主文档：docs/spec/rendering-chain.md §2.3（task-42）。
 //! 【结构互核注】①名表清屏=ClearNameTables $C158 语义：NT0 恒清+模式分路
@@ -82,21 +82,33 @@ pub type FrameBuffer = Vec<u8>; // 256*240*3
 /// NES 64 色调色板（RGB 三元组烘焙——白名单面参照 spec §3）。
 pub use game_data::render::render_data::NES_PALETTE;
 
+/// 【V1 摄像机】屏像素→名表环查点（asm 硬件形）：wx=x+PPUSCROLL_X、wy=y+PPUSCROLL_Y；
+/// 双屏环（竖镜 $2000/$2C00——ToggleNameTable^=3；名表选位=PPUCTRL bit0）：
+/// ring_x=wx mod 512⇒(nt_off=(nt0+wx/256)&1)*0x400+列；wy mod 240⇒行。
+/// 返回 (名表偏移, tile 索引位置, fine x/y)。
+fn bg_lookup(rs: &RenderState, x: usize, y: usize) -> (usize, usize, (usize, usize)) {
+    let wx = x + rs.scroll_x as usize;
+    let wy = (y + rs.scroll_y as usize) % 240;
+    let nt0 = (rs.ppuctrl & 1) as usize * 0x400;
+    let nt = (nt0 + (wx / 256) * 0x400) & 0x7FF;
+    let col = (wx % 256) / 8;
+    let row = wy / 8;
+    let idx = nt + row * 32 + col;
+    (nt, idx, ((wx & 7), (wy & 7)))
+}
+
 /// BG 像素值网格（0=背景/透明面——**精灵优先级硬件真值**：BG pix≠0 即遮挡精灵，
 /// 与调色板渲染出的颜色无关（pix≠0 可渲染成黑——logo 暗瓦实证））。
 fn bg_pix_grid(rs: &RenderState) -> Vec<u8> {
-    let nt = &rs.nametable[0..0x400];
     let pat_base = if rs.ppuctrl & 0x10 != 0 { 0x1000usize } else { 0 };
     let mut grid = vec![0u8; 256 * 240];
     for y in 0..240usize {
         for x in 0..256usize {
-            let tile_x = x / 8;
-            let tile_y = y / 8;
-            let tile = nt[tile_y * 32 + tile_x] as usize;
-            let fine_y = y & 7;
+            let (_nt, idx, (fine_x, fine_y)) = bg_lookup(rs, x, y);
+            let tile = rs.nametable.get(idx).copied().unwrap_or(0) as usize;
             let lo = rs.chr.get(pat_base + tile * 16 + fine_y).copied().unwrap_or(0);
             let hi = rs.chr.get(pat_base + tile * 16 + fine_y + 8).copied().unwrap_or(0);
-            let bit = 7 - (x & 7);
+            let bit = 7 - fine_x;
             grid[y * 256 + x] = ((lo >> bit) & 1) | (((hi >> bit) & 1) << 1);
         }
     }
@@ -110,17 +122,17 @@ fn bg_pix_grid(rs: &RenderState) -> Vec<u8> {
 /// 漏此前 tile $8C 误读 SAMUS 块 $08C0，golden 为 TITLE 块 $18C0 尖刺——f30 对拍根因）。
 pub fn render_frame_bg(rs: &RenderState, bg_palette: &[u8; 16]) -> FrameBuffer {
     let mut fb = vec![0u8; 256 * 240 * 3];
-    let nt = &rs.nametable[0..0x400];
     let grid = bg_pix_grid(rs);
     for y in 0..240usize {
         for x in 0..256usize {
-            let tile_x = x / 8;
-            let tile_y = y / 8;
+            let (nt, idx, _f) = bg_lookup(rs, x, y);
+            let tile_y = (idx - nt) / 32;
+            let tile_x = (idx - nt) % 32;
             let pix = grid[y * 256 + x];
-            // 属性表象限（32×32——$3C0 段）
+            // 属性表象限（32×32——$3C0 段——名表环同径）
             let ax = tile_x / 4;
             let ay = tile_y / 4;
-            let attr = nt[0x3C0 + ay * 8 + ax];
+            let attr = rs.nametable.get(nt + 0x3C0 + ay * 8 + ax).copied().unwrap_or(0);
             let q = ((tile_y & 2) >> 0) | ((tile_x & 2) >> 1); // 象限位（r16 修：标准序=低位 x、高位 y——位序互换曾致非对称 attr 选错组）
             let pal_group = (attr >> (q * 2)) & 0x03;
             let pal_index = if pix == 0 {

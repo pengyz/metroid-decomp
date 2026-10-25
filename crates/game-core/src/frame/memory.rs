@@ -37,6 +37,7 @@ impl FrameMemory {
                 self.nmi_enabled = v & 0x80 != 0; // PPUCTRL bit7=NMI（hardware.asm:28）
                 self.render.ppuctrl = v;          // 全寄存器面（图案表选 bit3/4——渲染腿）
             }
+            0x2005 => self.render.write_reg_2005(v),   // PPUSCROLL（V1 摄像机——双写锁存）
             0x2006 => self.render.write_reg_2006(v),   // PPUADDR flip-flop（S6-10 接线）
             0x2007 => {
                 // PPUDATA→RenderState 喂入（S6-10 ①——840ad00 建模件运行时喂入面）

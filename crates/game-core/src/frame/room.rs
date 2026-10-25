@@ -23,9 +23,16 @@ pub fn draw_room(mem: &mut crate::frame::FrameMemory, room: u8) -> bool {
     let Some(stream) = gfx::ROOM_STREAMS.get(room as usize) else {
         return false;
     };
-    let base = 0x6000u16; // RoomRAMA（SelectRoomRAM 随件——起始房缓冲 A）
-    mem.write_ram(0x0037, 0x00); // RoomRAMPtr
-    mem.write_ram(0x0038, 0x60);
+    // 【V2-lite】SelectRoomRAM（$EA05）：缓冲按名表位（EB85：PPUCTRL^ScrollDir）&1
+    // ——名表 0→RoomRAMA($6000)/名表 3→RoomRAMB($6400)（双屏邻房径）。旧形硬编码 $6000
+    // 致邻房装载落错缓冲（碰撞读 $6400 空=tile 00 固实——移动冻结根）。
+    let base = if (mem.read_ram(crate::ram_map::PPUCTRL_ZP) ^ mem.read_ram(crate::ram_map::SCROLL_DIR)) & 1 != 0 {
+        0x6400u16
+    } else {
+        0x6000u16
+    };
+    mem.write_ram(0x0037, (base & 0xFF) as u8); // RoomRAMPtr
+    mem.write_ram(0x0038, (base >> 8) as u8);
     let room_palette = stream.first().copied().unwrap_or(0); // RoomPalette（首字节——SetupRoom 读）
     let mut i = 1usize; // 对象环起点=首字节后（RoomPalette 已消费——asm 形）
     loop {
@@ -148,7 +155,21 @@ fn enemy_loop(
                 }
                 i += 3;
             }
-            _ => return false, // LoadDoor($EB8C)/Elevator($EC04)/Statues($EC2F)/PipeBugHole($EC57)
+            // 【占位臂记账】LoadDoor($EB8C)/LoadElevator($EC04)/LoadStatues($EC2F)/
+            // LoadPipeBugHole($EC57)——门/梯/像/虫装载深件（sc-door-transition 包随件）。
+            // 既有占位臂模式（DIVERGENCES 记账非 panic——title_bridge 同款）：状态写
+            // 随件收敛；空径推进不炸（房间装载/滚动流送径保持可跑——playability 底座）。
+            2 | 4 | 6 | 7 => {
+                let addr = match ty {
+                    2 => 0xEB8C, // LoadDoor（门对象+ScrollBlock 位——随件）
+                    4 => 0xEC04, // LoadElevator
+                    6 => 0xEC2F, // LoadStatues
+                    _ => 0xEC57, // LoadPipeBugHole
+                };
+                crate::frame::DIVERGENCES.with(|d| d.borrow_mut().push(addr));
+                i += 3; // 条目 3B 推进（asm AddToPtr00 形）
+            }
+            _ => return false,
         }
     }
 }

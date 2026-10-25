@@ -675,17 +675,42 @@ fn object_check_move_right(mem: &mut FrameMemory) -> bool {
     collision_point_ok(mem, cy, cx, hi)
 }
 
-/// CheckUpdateNameTable（**asm 内容锚** `: 07:E701/E70C`）：横滚列流送门——
-/// `ScrollX&7==阈值`（右 0/左 7）⇒EndOfRoomHorizontal（`ScrollDir==TempScrollDir($4A)`
-/// 防重流）→UpdateNameTable（跨房列写 VRAM）。**空壳登记**：payload=跨房流送件
-/// （房内滚双名表已载不触发视觉差——move-drift/playability 施工令余件随件）。
+/// CheckUpdateNameTable（**asm 内容锚** `CheckUpdateNameTable: ; 07:E54A`）：
+/// ①`jsr SetupRoom`（**邻房装载**——RoomNumber≠FF（任务未竟）⇒出；多帧装载径）②横滚
+/// 列流送门（`ScrollX&7==阈值`（右 0/左 7））③EndOfRoomHorizontal（`ScrollDir==
+/// TempScrollDir($4A)` 防重流）④UpdateNameTable（E590）：列流送——tile index=
+/// (ScrollX&0xF8)/8；源=RoomRAM 缓冲（$6000/$6400 按名表位（EB85：PPUCTRL^ScrollDir））/
+/// 目标=PPU 名表（$2000/$2C00——PPUAddrs 表 E560）；30 块竖写（控制位 $1E|$80）。
+/// 【V2-lite】流送直写 PPU 面（金径=VRAMStructBuffer+NMI 刷（WritePPUByte $C36B）——
+/// 行级等价；缓冲面 $07A0+ 的 L3 对拍差异随 V2 收敛）。
 fn check_update_name_table(mem: &mut FrameMemory) {
+    // ①邻房装载（E54A 首件——ScrollRight/Left 每像素调；多帧（RoomNumber 任务机））
+    crate::frame::mainloop::setup_room(mem);
+    if mem.read_ram(0x005A).wrapping_add(1) != 0 {
+        return; // RoomNumber≠FF：装载任务未竟
+    }
     let dir = mem.read_ram(crate::ram_map::SCROLL_DIR);
+    if dir & 2 == 0 {
+        return; // 竖滚径（CheckUpdateNameTableVertical——随件）
+    }
     let threshold: u8 = if dir == 3 { 0 } else { 7 };
-    if mem.read_ram(crate::ram_map::SCROLL_X) & 0x07 == threshold
-        && dir == mem.read_ram(0x004A)
-    {
-        // EndOfRoomHorizontal→UpdateNameTable payload：跨房列流送（随件——空壳）。
+    if mem.read_ram(crate::ram_map::SCROLL_X) & 0x07 != threshold {
+        return;
+    }
+    if dir != mem.read_ram(0x004A) {
+        return; // TempScrollDir 防重流
+    }
+    // ④列流送（E590——30 块竖写：PPU inc=32）
+    let idx = (mem.read_ram(crate::ram_map::SCROLL_X) & 0xF8) >> 3;
+    let y = (mem.read_ram(0x00FF) ^ dir) & 1; // GetNameTableAtScrollDir（EB85）
+    let src = 0x6000u16 + (y as u16) * 0x400; // RoomRAMAddrs（E562）
+    let dst = if y == 0 { 0x2000u16 } else { 0x2C00 }; // PPUAddrs（E560）
+    for row in 0..30u16 {
+        let addr = dst + idx as u16 + row * 32;
+        let v = mem.read_wram(src + idx as u16 + row * 32);
+        mem.write_io(0x2006, (addr >> 8) as u8);
+        mem.write_io(0x2006, (addr & 0xFF) as u8);
+        mem.write_io(0x2007, v);
     }
 }
 
@@ -893,6 +918,9 @@ mod tests_camera_follow {
 
     fn walkable_room() -> FrameMemory {
         let mut m = FrameMemory::default();
+        crate::frame::mainloop::copy_map(&mut m); // 真 WorldMap（图格→真房间号——装载径）
+        m.write_ram(crate::ram_map::MAP_POS_X, 0x03); // 实出生图格（金腿 $50=03/$4F=0E）
+        m.write_ram(crate::ram_map::MAP_POS_Y, 0x0E);
         for a in 0x6000u16..0x6400 {
             m.write_wram(a, 0xFF);
         }
@@ -911,7 +939,7 @@ mod tests_camera_follow {
         m.write_ram(crate::ram_map::SAMUS_SCR_X, 0x8F); // 右滚界
         assert!(move_samus_right(&mut m));
         assert_eq!(m.read_ram(crate::ram_map::SCROLL_X), 1, "ScrollX+1（摄像机跟随）");
-        assert_eq!(m.read_ram(crate::ram_map::MAP_POS_X), 1, "MapPosX+1（ScrollX=0 新图格）");
+        assert_eq!(m.read_ram(crate::ram_map::MAP_POS_X), 4, "MapPosX+1（3→4 新图格）");
         assert_eq!(m.read_ram(crate::ram_map::SAMUS_SCR_X), 0x8F, "屏内 x 不动（滚动代替）");
         assert_eq!(m.read_ram(0x030E), 0x81, "房间 x+1");
     }

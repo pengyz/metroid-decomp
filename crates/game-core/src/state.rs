@@ -81,11 +81,16 @@ pub struct RenderState {
     pub palette: [u8; 32],
     /// PPUCTRL（$2000）寄存器面——bit4=BG 图案表选、bit3=精灵图案表选、bit5=精灵尺寸。
     pub ppuctrl: u8,
+    /// PPUSCROLL X（$2005 首写——V1 摄像机面）。
+    pub scroll_x: u8,
+    /// PPUSCROLL Y（$2005 次写）。
+    pub scroll_y: u8,
 }
 
 impl Default for RenderState {
     fn default() -> Self {
         Self { chr: vec![0; 0x2000], nametable: vec![0; 0x800], ppuaddr: 0, latch_hi: true,
+               scroll_x: 0, scroll_y: 0,
                palette: [0x0F; 32], ppuctrl: 0 }
     }
 }
