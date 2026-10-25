@@ -358,16 +358,20 @@ pub fn update_all_enemies(mem: &mut crate::frame::FrameMemory) {
     loop {
         mem.write_ram(0x004B, x); // PageIndex
         let status = mem.read_wram(0x6AF4 + x as u16); // EnsExtra.0.status
-        // 静止/活动径：CheckIfVisible（$F37F——Ens.data05 bit1 判+屏幕判）
-        // UpdateEnData05Bit6（$F480 族——随件核）
+        // CheckIfVisible（$F37F——不可见⇒双返跳过该敌）
+        if status != 0 && status < 2 && !enemy_check_if_visible(mem, x) {
+            x = if x == 0 { break } else { x - 0x10 };
+            continue;
+        }
+        update_en_data05_bit6(mem, x); // $F3AA（30fps 标位翻转）
         match status {
             0 => {} // ExitSub（rts）
-            1 => crate::unported!("bank07:F3A4"), // UpdateEnemy_Resting
-            2 => crate::unported!("bank07:F3E8"), // UpdateEnemy_Active
-            3 => crate::unported!("bank07:F50D"), // UpdateEnemy_Explode
-            4 => crate::unported!("bank07:F54D"), // UpdateEnemy_Frozen
-            5 => crate::unported!("bank07:F57D"), // UpdateEnemy_Pickup
-            6 => crate::unported!("bank07:F59D"), // UpdateEnemy_Hurt
+            1 => enemy_resting(mem, x), // F3BE
+            2 => enemy_active(mem, x),  // F3E6
+            3 => crate::unported!("bank07:F40D"), // UpdateEnemy_Explode（ChooseEnemyAIRoutine 径）
+            4 => crate::unported!("bank07:F54D"), // Frozen
+            5 => crate::unported!("bank07:F57D"), // Pickup
+            6 => crate::unported!("bank07:F59D"), // Hurt
             _ => crate::unported!("bank07:FA18"), // RemoveEnemy（状态≥7）
         }
         if x == 0 {
@@ -375,6 +379,67 @@ pub fn update_all_enemies(mem: &mut crate::frame::FrameMemory) {
         }
         x -= 0x10;
     }
+}
+
+/// UpdateEnemy_CheckIfVisible（**asm 内容锚** `: 07:F37F`——r26）：
+/// data05 bit1≠0⇒退出；否则位置/半径→IsObjectVisible⇒**不可见双返**（跳过该敌）。
+fn enemy_check_if_visible(mem: &mut crate::frame::FrameMemory, x: u8) -> bool {
+    if mem.read_ram(0x0400 + x as u16 + 5) & 0x02 != 0 {
+        return true; // bit1=1⇒跳过检查（视为可见）
+    }
+    let y = mem.read_ram(0x0400 + x as u16 + 2); // Ens.y
+    let hi = mem.read_wram(0x6AF4 + x as u16 + 2); // EnsExtra.hi
+    let scroll_y = mem.read_ram(0x0025);
+    let horz = mem.read_ram(0x0003) & 0x02 != 0;
+    let sy = if horz { y } else { y.wrapping_sub(scroll_y) };
+    // IsObjectVisible（$DFDF——$F0 范围+hi 位 vs PPUCTRL 名表）
+    let ok = sy.wrapping_sub(scroll_y) < 0xF0
+        || (hi & 1 == mem.read_ram(0x00FF) & 1 && sy < 0xF0);
+    ok || sy < 0xF0 && hi & 1 == mem.read_ram(0x00FF) & 1
+}
+
+/// UpdateEnemy_UpdateEnData05Bit6（**asm 内容锚** `: 07:F3AA`——r26）：
+/// data05 bit6←(slot÷16 xor FrameCount) bit0（**30fps 动画标**——D4 保真）。
+fn update_en_data05_bit6(mem: &mut crate::frame::FrameMemory, x: u8) {
+    let d = mem.read_ram(0x0400 + x as u16 + 5);
+    let bit6 = (d >> 6) & 1;
+    let parity = ((x >> 4) ^ mem.read_ram(crate::ram_map::FRAME_COUNT)) & 1;
+    let nd = (d & 0xBF) | (parity << 6);
+    let _ = bit6;
+    mem.write_ram(0x0400 + x as u16 + 5, nd);
+}
+
+/// UpdateEnemy_Resting（**asm 内容锚** `: 07:F3BE`——r26 壳：30fps 门/件序 fail-loud）。
+fn enemy_resting(mem: &mut crate::frame::FrameMemory, x: u8) {
+    let d = mem.read_ram(0x0400 + x as u16 + 5);
+    if d & 0x40 == 0 {
+        // 30fps 标 clear⇒全件（bit6 set 时跳过=30fps 节拍）
+        mem.write_wram(0x6AF4 + x as u16 + 6, 0); // jumpDsplcmnt←0
+        mem.write_ram(0x0400 + x as u16 + 9, 0); // movementInstrIndex←0
+        mem.write_ram(0x0400 + x as u16 + 10, 0); // data0A←0
+        crate::unported!("bank07:F67B"); // UpdateEnemy_ForceSpeedTowardsSamus（件序首）
+    }
+    crate::unported!("bank07:F40A"); // Active_BranchB（EnemyReactToSamusProjectile→AI）
+}
+
+/// UpdateEnemy_Active（**asm 内容锚** `: 07:F3E6`——r26 壳）。
+fn enemy_active(mem: &mut crate::frame::FrameMemory, x: u8) {
+    let d = mem.read_ram(0x0400 + x as u16 + 5);
+    if d & 0x40 != 0 {
+        crate::unported!("bank07:F40A"); // 30fps 跳径
+        return;
+    }
+    if d & 0x20 != 0 {
+        // bit5 set⇒delay←EnemyInitDelayTbl[type]；status Active→Resting
+        let t = mem.read_wram(0x6AF4 + x as u16 + 13); // EnsExtra.type
+        let delay = game_data::area::graphics::ENEMY_INIT_DELAY.get(t as usize).copied().unwrap_or(0);
+        mem.write_ram(0x0400 + x as u16 + 7, delay); // Ens.delay
+        let st = mem.read_wram(0x6AF4 + x as u16);
+        mem.write_wram(0x6AF4 + x as u16, st.wrapping_sub(1));
+        crate::unported!("bank07:F40A"); // →Active_BranchB
+        return;
+    }
+    crate::unported!("bank07:F401"); // Active_BranchA（ForceSpeed/Threshold/Lava）
 }
 
 /// BankTable 烘焙（07:CA30——16 项（A&0xF 索引→BankSwitchPending 值））。
