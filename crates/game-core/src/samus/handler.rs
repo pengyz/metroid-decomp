@@ -1,4 +1,4 @@
-﻿//! Samus 状态机脊柱（bank07:CC0D 族；task-25 首件——先立脊柱后填肉范式③）。
+//! Samus 状态机脊柱（bank07:CC0D 族；task-25 首件——先立脊柱后填肉范式③）。
 //!
 //! **asm 内容锚+结构互核注**（施工令②精化版）——
 //! refs/m1disasm/SRC/prg7_engine.asm `UpdateSamus: ; 07:CC0D`（`ldx #$00/stx PageIndex`/
@@ -97,7 +97,19 @@ pub fn go_samus_handler(mem: &mut FrameMemory) {
             None => crate::unported!("bank07:CC1A-index"), // 表外索引（0x0A-0x0F）
         }
     };
-    crate::unported!(handler.handler_addr());
+    // 【r26 接线】dispatch→处理器族（9 件已在——旧恒爆桩清）
+    match handler {
+        SamusHandler::Stand => samus_stand(mem),
+        SamusHandler::Run => samus_run(mem),
+        SamusHandler::Jump => samus_jump(mem),
+        SamusHandler::JumpPntUp => samus_jump(mem), // asm 表 6=SamusJump 同件（上指跳！）
+        SamusHandler::Roll => samus_roll(mem),
+        SamusHandler::PntUp => samus_pnt_up(mem),
+        SamusHandler::Door => samus_door(mem),
+        SamusHandler::Dead => samus_dead(mem),
+        SamusHandler::Dead2 => samus_dead2(mem),
+        SamusHandler::Elevator => samus_elevator(mem),
+    }
 }
 
 /// SamusRun 处理件（**字节自证**——10 态肉批2；asm :CCC2）：
@@ -285,7 +297,7 @@ mod tests {
         let msg = err.downcast_ref::<String>().cloned()
             .or_else(|| err.downcast_ref::<&'static str>().map(|s| (*s).to_string()))
             .unwrap_or_default();
-        assert!(msg.contains("unported @ bank07:CC36"), "站立直入失准: {msg}");
+        assert!(msg.contains("unported @ bank07:CE7x"), "站立直入失准: {msg}"); // r26 接线后=stand 内件
         assert_eq!(m.read_ram(PAGE_INDEX), 0);
         assert_eq!(m.read_ram(IS_SAMUS), 1); // dec 前态（引爆先于收尾）
     }

@@ -334,7 +334,7 @@ pub fn update_world(mem: &mut crate::frame::FrameMemory) {
     mem.write_ram(0x005B, 0); // SpritePagePos←0
     update_all_enemies(mem); // F345（敌环——槽×6+状态 dispatch）
     // UpdateSamusProjectiles（D4BF——随件）
-    crate::unported!("bank07:D4BF");
+    update_samus_projectiles(mem); // D4BF（弹件环——3 槽状态机）
     #[allow(unreachable_code)]
     {
         crate::samus::update_samus(mem); // UpdateSamus（CC0D——samus 域件会师）
@@ -700,7 +700,9 @@ fn enemy_move_one_pixel_up(mem: &mut crate::frame::FrameMemory, x: u8) -> bool {
     let ry = mem.read_wram(0x6AF4 + x as u16 + 1); // radiusY=+1
     if y.wrapping_sub(ry) & 0x07 == 0 {
         // 块界⇒碰撞判（EnemyCheckMoveUp——随件 fail-loud）
-        crate::unported!("bank07:E770");
+        if !enemy_check_move_up(mem, x) {
+            return false;
+        }
     }
     let ny = y.wrapping_sub(1);
     mem.write_ram(0x0400 + x as u16 + 0, ny);
@@ -721,7 +723,9 @@ fn enemy_move_one_pixel_down(mem: &mut crate::frame::FrameMemory, x: u8) -> bool
     let y = mem.read_ram(0x0400 + x as u16 + 0);
     let ry = mem.read_wram(0x6AF4 + x as u16 + 1);
     if y.wrapping_add(ry) & 0x07 == 0 {
-        crate::unported!("bank07:E77B");
+        if !enemy_check_move_down(mem, x) {
+            return false;
+        }
     }
     let ny = y.wrapping_add(1);
     mem.write_ram(0x0400 + x as u16 + 0, ny);
@@ -736,7 +740,9 @@ fn enemy_move_one_pixel_left(mem: &mut crate::frame::FrameMemory, x: u8) -> bool
     let xpos = mem.read_ram(0x0400 + x as u16 + 1); // x=+1
     let rx = mem.read_wram(0x6AF4 + x as u16 + 2); // radiusX=+2
     if xpos.wrapping_sub(rx) & 0x07 == 0 {
-        crate::unported!("bank07:E8F1");
+        if !enemy_check_move_left(mem, x) {
+            return false;
+        }
     }
     let nx = xpos.wrapping_sub(1);
     mem.write_ram(0x0400 + x as u16 + 1, nx);
@@ -751,7 +757,9 @@ fn enemy_move_one_pixel_right(mem: &mut crate::frame::FrameMemory, x: u8) -> boo
     let xpos = mem.read_ram(0x0400 + x as u16 + 1);
     let rx = mem.read_wram(0x6AF4 + x as u16 + 2);
     if xpos.wrapping_add(rx) & 0x07 == 0 {
-        crate::unported!("bank07:E8FC");
+        if !enemy_check_move_right(mem, x) {
+            return false;
+        }
     }
     let nx = xpos.wrapping_add(1);
     mem.write_ram(0x0400 + x as u16 + 1, nx);
@@ -759,6 +767,86 @@ fn enemy_move_one_pixel_right(mem: &mut crate::frame::FrameMemory, x: u8) -> boo
         return false;
     }
     true
+}
+
+
+/// MakeRoomRAMPtr（**asm 内容锚** `: 07:E96A`——r26）：位置→RoomRAM 瓦址——
+/// ptr=0x6000|名表页(hi<<10)|((y&0xF8)<<2)|(x>>3)（y/8×32+x/8 形！）。
+fn make_room_ram_ptr(mem: &mut crate::frame::FrameMemory, y: u8, x: u8, hi: u8) -> u16 {
+    let idx = (((y & 0xF8) as u16) << 2) | ((x >> 3) as u16);
+    let page = if hi & 1 != 0 { 0x0400u16 } else { 0x0000 };
+    0x6000 | page | (idx & 0x3FF)
+}
+
+/// 碰撞核（**asm 内容锚** `CheckMoveVertical: ; 07:E7BD`/Horizontal $E89B——r26）：
+/// 逐点（块界）→MakeRoomRAMPtr→tile 值类：**<$80=固实（碰撞！）**/$4E=固实空（门/像）/
+/// $80-$9F=可炸/≥$A0=可走。返回 carry（可走=true）。
+fn collision_point_ok(mem: &mut crate::frame::FrameMemory, y: u8, x: u8, hi: u8) -> bool {
+    let ptr = make_room_ram_ptr(mem, y, x, hi);
+    let tile = mem.read_wram(ptr);
+    if tile == 0x4E {
+        return false; // 固实空（门/像——碰撞！）
+    }
+    if tile < 0x80 {
+        return false; // 固实 tile（< $80）——碰撞！
+    }
+    // $80-$9F=可炸（可走性=IsBlastTile 判——简化径：视为可走）
+    // ≥$A0=可走（$A0/$A1=门 tile（Samus 专用判——随件））
+    true
+}
+
+/// EnemyCheckMoveUp（**asm 内容锚** `: 07:E770`——r26）：radiusY+8 判点（顶块）。
+fn enemy_check_move_up(mem: &mut crate::frame::FrameMemory, x: u8) -> bool {
+    let y = mem.read_ram(0x0400 + x as u16 + 0);
+    let ry = mem.read_wram(0x6AF4 + x as u16 + 1);
+    let xpos = mem.read_ram(0x0400 + x as u16 + 1);
+    let hi = mem.read_wram(0x6AF4 + x as u16 + 7); // hi=+7
+    let check_y = y.wrapping_sub(ry).wrapping_add(8);
+    collision_point_ok(mem, check_y, xpos, hi)
+}
+
+/// EnemyCheckMoveDown（**asm 内容锚** `: 07:E77B`——r26）：底块判。
+fn enemy_check_move_down(mem: &mut crate::frame::FrameMemory, x: u8) -> bool {
+    let y = mem.read_ram(0x0400 + x as u16 + 0);
+    let ry = mem.read_wram(0x6AF4 + x as u16 + 1);
+    let xpos = mem.read_ram(0x0400 + x as u16 + 1);
+    let hi = mem.read_wram(0x6AF4 + x as u16 + 7);
+    let check_y = y.wrapping_add(ry).wrapping_add(8);
+    collision_point_ok(mem, check_y, xpos, hi)
+}
+
+/// EnemyCheckMoveLeft（**asm 内容锚** `: 07:E8F1`——r26）：左块判。
+fn enemy_check_move_left(mem: &mut crate::frame::FrameMemory, x: u8) -> bool {
+    let y = mem.read_ram(0x0400 + x as u16 + 0);
+    let xpos = mem.read_ram(0x0400 + x as u16 + 1);
+    let rx = mem.read_wram(0x6AF4 + x as u16 + 2); // radiusX=+2
+    let hi = mem.read_wram(0x6AF4 + x as u16 + 7);
+    let check_x = xpos.wrapping_sub(rx).wrapping_add(8);
+    collision_point_ok(mem, y, check_x, hi)
+}
+
+/// EnemyCheckMoveRight（**asm 内容锚** `: 07:E8FC`——r26）：右块判。
+fn enemy_check_move_right(mem: &mut crate::frame::FrameMemory, x: u8) -> bool {
+    let y = mem.read_ram(0x0400 + x as u16 + 0);
+    let xpos = mem.read_ram(0x0400 + x as u16 + 1);
+    let rx = mem.read_wram(0x6AF4 + x as u16 + 2);
+    let hi = mem.read_wram(0x6AF4 + x as u16 + 7);
+    let check_x = xpos.wrapping_add(rx).wrapping_add(8);
+    collision_point_ok(mem, y, check_x, hi)
+}
+
+
+/// UpdateSamusProjectiles+DoOneSamusProjectile（**asm 内容锚** `: 07:D4BF/D4CB`——r26）：
+/// 3 槽（Objects 13-15=$D0/$E0/$F0）状态 dispatch：0=ExitSub（空径——移动对拍主径！）/
+/// 1=Bullet/2=Wave/3=Ice/4=Explode/5-10=Bomb 族/11=Missile（打敌人流程件——随件）。
+fn update_samus_projectiles(mem: &mut crate::frame::FrameMemory) {
+    for slot in [0xD0u8, 0xE0, 0xF0] {
+        let status = mem.read_ram(0x0300 + slot as u16); // Objects.status
+        match status {
+            0 => {} // ExitSub（rts）
+            _ => crate::unported!("bank07:D4EB"), // UpdateBullet 族（打敌人流程件）
+        }
+    }
 }
 
 /// UpdateEnemy_Resting（**asm 内容锚** `: 07:F3BE`——r26 壳：30fps 门/件序 fail-loud）。
