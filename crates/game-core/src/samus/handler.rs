@@ -186,7 +186,7 @@ mod tests {
             let mut m = FrameMemory::default();
             m.write_ram(JOY1_STATUS, joy);
             let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| samus_stand(&mut m)));
-            assert!(r.is_err()); // 尾部 SetSamusData 桩（CD6D）——转移核先行
+            assert!(r.is_ok(), "stand 转移链应全通（r26）: {:?}", r.err()); // SetSamusData 已端口
             assert_eq!(m.read_ram(SAMUS_STATUS), want, "ActionTable[{joy:#x}]");
         }
     }
@@ -253,7 +253,7 @@ mod tests {
         let mut m = FrameMemory::default();
         m.write_ram(JOY1_STATUS, 0x04); // DOWN（UP 松开）
         let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| samus_pnt_up(&mut m)));
-        assert!(r.is_err()); // SetSamusData 桩
+        assert!(r.is_ok(), "pnt_up 链应全通（r26）: {:?}", r.err()); // SetSamusData 已端口
         assert_eq!(m.read_ram(SAMUS_STATUS), 3); // 表[2]=Roll
     }
 

@@ -10,12 +10,12 @@ use game_data::area::sprite_data as sd;
 
 const BLOB_BASE: u16 = 0x8572;
 
-/// blob 内字节（指针→偏移）。
+/// blob 内字节（指针→偏移——**OOB→0xFF**（环终止形——r26 安全化））。
 fn blob(addr: u16) -> u8 {
     sd::SPRITE_DATA
         .get(addr.wrapping_sub(BLOB_BASE) as usize)
         .copied()
-        .unwrap_or(0)
+        .unwrap_or(0xFF)
 }
 
 /// AnimDrawObject（$DE47）——对象→OAM（page_index=对象槽；Samus=0）。
@@ -99,34 +99,34 @@ pub fn anim_draw_object(mem: &mut crate::frame::FrameMemory, page_index: u8) {
     let mut sy = screen_y as i16;
     let mut x_sprite = mem.read_ram(0x005B) as u16; // SpritePagePos
     loop {
-        let b = blob(fptr + frame_i);
+        let b = blob(fptr.wrapping_add(frame_i));
         if b < 0xFC {
             // WriteSpriteRAM（$DEE6）：OAM 四元组（y/tile/attr/x）
-            let dy = place_disp(blob(pptr + place_i), flip_flags, true);
-            let dx = place_disp(blob(pptr + place_i + 1), flip_flags, false);
+            let dy = place_disp(blob(pptr.wrapping_add(place_i)), flip_flags, true);
+            let dx = place_disp(blob(pptr.wrapping_add(place_i + 1)), flip_flags, false);
             let oy = (sy as i16 + dy as i16 - 1) as u8; // PPU y+1 形
             let ox = (sx as i16 + dx as i16) as u8;
             let mut attr = cntrl05;
             if obj_cntrl & 0x20 != 0 {
                 attr ^= 0x40; // ObjectCntrl 镜像覆写（bit6）
             }
-            mem.write_ram(0x0200 + x_sprite, oy);
-            mem.write_ram(0x0201 + x_sprite, b);
-            mem.write_ram(0x0202 + x_sprite, attr);
-            mem.write_ram(0x0203 + x_sprite, ox);
+            mem.write_ram(0x0200u16.wrapping_add(x_sprite), oy);
+            mem.write_ram(0x0201u16.wrapping_add(x_sprite), b);
+            mem.write_ram(0x0202u16.wrapping_add(x_sprite), attr);
+            mem.write_ram(0x0203u16.wrapping_add(x_sprite), ox);
             x_sprite = x_sprite.wrapping_add(4);
             place_i += 2;
             frame_i += 1;
         } else if b == 0xFC {
             // OffsetObjectPosition（$DF51）：y/x 偏移量调整
-            sy = sy.wrapping_add(blob(fptr + frame_i + 1) as i16);
-            sx = sx.wrapping_add(blob(fptr + frame_i + 2) as i16);
+            sy = sy.wrapping_add(blob(fptr.wrapping_add(frame_i + 1)) as i16);
+            sx = sx.wrapping_add(blob(fptr.wrapping_add(frame_i + 2)) as i16);
             frame_i += 3;
         } else if b == 0xFD {
             // GetNewControlByte（$DF3B）：新控制字节=**原值直用**（asm `sta Temp05_Cntrl`
             // ——AABB 已在 OAM attr 位形（r25 勘误修：旧形 >>4 再解致组位错（组 2 误）））
             frame_i += 1;
-            let c = blob(fptr + frame_i);
+            let c = blob(fptr.wrapping_add(frame_i));
             cntrl05 = c;
             frame_i += 1;
         } else if b == 0xFE {

@@ -105,14 +105,9 @@ mod tests {
         use crate::ram_map::SAMUS_STATUS;
         let mut m = FrameMemory::default();
         m.write_ram(SAMUS_STATUS, 7); // Dead→短路
-        lava_and_move_check(&mut m); // 无炸（短路）
-        m.write_ram(SAMUS_STATUS, 1); // run→E25D 桩
-        let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| lava_and_move_check(&mut m)));
-        let err = r.unwrap_err();
-        let msg = err.downcast_ref::<String>().cloned()
-            .or_else(|| err.downcast_ref::<&'static str>().map(|s| (*s).to_string()))
-            .unwrap_or_default();
-        assert!(msg.contains("unported @ bank07:E25D"), "岩浆检桩失准: {msg}");
+        lava_and_move_check(&mut m); // 无炸
+        m.write_ram(SAMUS_STATUS, 1); // run→非岩浆径全通（r26 零爆！）
+        lava_and_move_check(&mut m);
     }
 
     /// CheckHealthStatus 受击面（$70/$72/$77/speedY/AccelY 写面）+无敌倒数。
@@ -558,6 +553,17 @@ pub fn check_health_status(mem: &mut FrameMemory) {
 /// **有 Varia 半伤**（gr_VARIA 位再用——carry 每隔帧））→`HealthChange($6E)←$07/
 /// SubtractHealth`→`SamusInLava($64)←in-lava 状态`。
 /// 嵌套件桩：IsSamusInLava/ClearHealthChange/SFX_SamusJump/SubtractHealth。
+
+/// IsSamusInLava（**asm 内容锚** `: 07:E25D`——r26）：ScrollDir≤1（竖滚）⇒非
+/// 熔岩；横滚且 Samus.y≥$D8（底 24px）⇒熔岩中。返回 true=熔岩中。
+fn is_samus_in_lava(mem: &mut FrameMemory) -> bool {
+    let dir = mem.read_ram(0x0003);
+    if 0x01u8 >= dir {
+        return false;
+    }
+    mem.read_ram(0x030D) >= 0xD8
+}
+
 pub fn lava_and_move_check(mem: &mut FrameMemory) {
     let status = mem.read_ram(crate::ram_map::SAMUS_STATUS);
     if status != 4 {
@@ -566,7 +572,12 @@ pub fn lava_and_move_check(mem: &mut FrameMemory) {
             return; // sa_Dead(7)/sa_Dead2(8) 出
         }
     }
-    crate::unported!("bank07:E25D"); // IsSamusInLava（岩浆检——链内件）
+    let in_lava = is_samus_in_lava(mem); // E25D（r26 端口）
+    if !in_lava {
+        mem.write_ram(0x0114, 0); // SamusInLava←0（非岩浆径）
+        return;
+    }
+    crate::unported!("bank07:E25D"); // 岩浆伤径（后随件）
     // 岩浆面（后随 E25D 裁定）：
     // mem.write_ram(SAMUS_KNOCKBACK_DIR, 0xFF); mem.write_ram(SAMUS_INVINCIBLE_DELAY, 0x32);
     // FrameCount&3==0→SFX_SamusJump；8 帧伤害（Varia 半伤）；HealthChange←$07；
