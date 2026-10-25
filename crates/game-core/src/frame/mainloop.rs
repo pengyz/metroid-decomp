@@ -310,7 +310,9 @@ pub fn setup_room(mem: &mut FrameMemory) {
         crate::unported!("bank07:EA5D"); // 占位字节路
     }
     if room >= 0xF0 {
-        crate::unported!("bank07:EA9x"); // AttribTableWrite（属性表数据路）
+        // AttribTableWrite（$EA13——r25 端口：$F0-$F4 命令链）
+        crate::frame::room::attrib_table_write(mem);
+        return;
     }
     // RoomPtrTable 查表（AreaPointers_RAM.RoomPtrTable=$3B/$3C 间接——基址拷自 $959A
     // = $A314（Brinstar）——表 47 项烘焙（prg1 提取自证：A441/A454/A45C…））。
@@ -319,9 +321,17 @@ pub fn setup_room(mem: &mut FrameMemory) {
     let hi = ROOM_PTR_TABLE[y + 1] as u16;
     mem.write_ram(0x0033, lo as u8); // RoomPtr（constants_ram:508）
     mem.write_ram(0x0034, hi as u8);
-    // 首字节读（房间数据——RoomPalette）+DrawRoom 链（S6-7 绘制面——r25 端口）
+    // 首字节读（房间数据——RoomPalette=$36 址随证）+SelectRoomRAM($EA05)/InitTables($EFF8)
+    // +DrawRoom 链（S6-7 绘制面——r25 端口）。
+    let sidx = y / 2;
+    let _ = sidx;
+    crate::frame::room::select_room_ram(mem);
+    let room_stream = game_data::area::graphics::ROOM_STREAMS.get(room as usize);
+    let palette = room_stream.and_then(|s| s.first().copied()).unwrap_or(0);
+    mem.write_ram(0x0036, palette); // RoomPalette（$36 址随证——InitTables 索引源）
+    crate::frame::room::init_tables(mem);
     if !crate::frame::room::draw_room(mem, room) {
-        crate::unported!("bank07:EAD4"); // 敌门环/属性表尾（未端口面）
+        crate::unported!("bank07:EAD4"); // 敌门环未竟件（type 2/4/6/7 族）
     }
 }
 

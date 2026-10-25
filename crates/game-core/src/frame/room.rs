@@ -25,8 +25,8 @@ pub fn draw_room(mem: &mut crate::frame::FrameMemory, room: u8) -> bool {
     let base = 0x6000u16; // RoomRAMA（SelectRoomRAM 随件——起始房缓冲 A）
     mem.write_ram(0x0037, 0x00); // RoomRAMPtr
     mem.write_ram(0x0038, 0x60);
-    let room_palette = stream.first().copied().unwrap_or(0); // RoomPalette（首字节随考证）
-    let mut i = 0usize;
+    let room_palette = stream.first().copied().unwrap_or(0); // RoomPalette（首字节——SetupRoom 读）
+    let mut i = 1usize; // 对象环起点=首字节后（RoomPalette 已消费——asm 形）
     loop {
         let Some(&b) = stream.get(i) else { return false };
         match b {
@@ -39,7 +39,10 @@ pub fn draw_room(mem: &mut crate::frame::FrameMemory, room: u8) -> bool {
                 mem.write_ram(0x005A, 0xFE); // 空对象占位（LEABC）
                 i += 1;
             }
-            0xFD => return false, // EndOfObjs→敌门环（$EAD4——未端口）
+            0xFD => {
+                // EndOfObjs→敌门环（$EAD4——3B 条目：slot|type/敌型/位；type=低半字节）
+                return enemy_loop(mem, stream, i + 1, room_palette);
+            }
             _ => {
                 // DrawObject：pos/struct 索引/属性 3B
                 let pos = b;
@@ -114,7 +117,135 @@ fn draw_struct(
     }
 }
 
-/// UpdateAttrib（$EF9E）——属性位对写（x=quadrant 0..3；属性字节=RoomRAM $63C0 面）。
+/// EnemyLoop（$EAD4）——敌/门条目环（3B：slot&$F0|type/敌型/位%yyyyxxxx；$FF=EndOfRoom）。
+/// type：0/3/5=ExitSub（no-op——A=type（asm 形））；1=LoadEnemy；2/4/6/7=门/梯/像/虫（未端口）。
+fn enemy_loop(
+    mem: &mut crate::frame::FrameMemory,
+    stream: &[u8],
+    start: usize,
+    room_palette: u8,
+) -> bool {
+    let mut i = start;
+    let mut guard = 0usize;
+    loop {
+        guard += 1;
+        if guard > 256 {
+            return false; // 环护栏（asm 形数据不环——防死环）
+        }
+        let Some(&b) = stream.get(i) else { return false };
+        if b == 0xFF {
+            end_of_room(mem);
+            return true;
+        }
+        let ty = b & 0x0F;
+        match ty {
+            0 | 3 | 5 => i += ty as usize, // ExitSub（asm：A=type——推进形）
+            1 => {
+                if !load_enemy(mem, b, stream.get(i + 1).copied().unwrap_or(0),
+                               stream.get(i + 2).copied().unwrap_or(0)) {
+                    return false;
+                }
+                i += 3;
+            }
+            _ => return false, // LoadDoor($EB8C)/Elevator($EC04)/Statues($EC2F)/PipeBugHole($EC57)
+        }
+    }
+}
+
+/// EndOfRoom（$EAF4）——RoomNumber←$F0（属性表尾命令——SetupRoom 环续面）。
+fn end_of_room(mem: &mut crate::frame::FrameMemory) {
+    mem.write_ram(0x005A, 0xF0);
+}
+
+/// LoadEnemy（$EB06——GetEnemyData/GetEnemyType/LEB4D/LEB6E 全径）。
+/// 结构址：Ens=$0400+slot（16B 步）/EnsExtra=$6AF4+slot（En/EnExtra 布局——constants:85/125）。
+fn load_enemy(mem: &mut crate::frame::FrameMemory, b0: u8, etype: u8, pos: u8) -> bool {
+    let x = (b0 & 0xF0) as u16; // 对象槽（×16 步）
+    let en = 0x0400u16 + x; // Ens=2KB RAM 面（write_ram）
+    let ex = 0x6AF4u16 + x; // EnsExtra=WRAM 面（write_wram）
+    // IsSlotTaken（$EB7A）：status≠0 且 data05 bit1=0 ⇒ 槽已占用（跳过条目）
+    if mem.read_wram(ex) != 0 && mem.read_ram(en + 5) & 0x02 == 0 {
+        return true;
+    }
+    // GetEnemyType（$EB28）：specialAttribs←etype&$C0；type←etype&$3F（Boss 检=bit6——
+    // Zoomer 型 bit6=0 不入（asm asl/bpl 形））
+    mem.write_ram(en + 0x11, etype & 0xC0); // specialAttribs（D4 结构重叠面随证）
+    mem.write_wram(ex + 0x0E, etype & 0x3F); // EnsExtra.type
+    // LEB4D（$EB4D）：y←(pos&$F0)|8；x←(pos<<4)|$0C；status←Resting(1)；isHit←0；hi←名表
+    let ty = mem.read_wram(ex + 0x0E);
+    mem.write_ram(en, (pos & 0xF0) | 0x08); // Ens.y
+    mem.write_ram(en + 1, pos.wrapping_shl(4) | 0x0C); // Ens.x
+    mem.write_wram(ex, 0x01); // EnsExtra.status←enemyStatus_Resting（constants.asm:121）
+    mem.write_ram(en + 4, 0x00); // Ens.isHit
+    // GetNameTableAtScrollDir（$EB85）：(PPUCTRL_ZP^ScrollDir)&1
+    let hi = mem.read_ram(crate::ram_map::PPUCTRL_ZP) ^ mem.read_ram(0x0003);
+    mem.write_wram(ex + 0x07, hi & 0x01); // EnsExtra.hi
+    // LEB6E：data05←shl（facing 位旋入 bit7）；InitEnemyFacing（$FB7B）：ror（L977B 位7）
+    // +delay←InitDelayTbl；InitForce（$F85A）：data0D←ForceTbl；health←HealthTbl（tough×2）
+    let t = ty as usize & 0x3F;
+    let d5 = mem.read_ram(en + 5);
+    let rotated = d5 << 1; // asl Ens.data05
+    let facing = (game_data::area::graphics::ENEMY_FACING[t] & 0x80) != 0;
+    let d5 = if facing { rotated | 0x80 } else { rotated & 0x7F }; // ror 形（carry→bit7）
+    mem.write_ram(en + 5, d5);
+    mem.write_ram(en + 0x0B, game_data::area::graphics::ENEMY_INIT_DELAY[t]); // delay
+    mem.write_ram(en + 0x0F, game_data::area::graphics::ENEMY_FORCE_SPEED_DELAY[t]); // data0D
+    let mut hp = game_data::area::graphics::ENEMY_HEALTH[t];
+    if mem.read_ram(en + 0x11) & 0x80 != 0 {
+        hp = hp.wrapping_shl(1); // tough 版双血（asm asl 形）
+    }
+    mem.write_ram(en + 0x0D, hp); // health
+    true
+}
+
+/// SelectRoomRAM（$EA05）：名表 0→$6000/名表 3→$6400（RoomRAMPtr 高字节）。
+pub fn select_room_ram(mem: &mut crate::frame::FrameMemory) {
+    let hi = 0x60u8 | ((mem.read_ram(crate::ram_map::PPUCTRL_ZP) ^ mem.read_ram(0x0003)) & 1) << 2;
+    mem.write_ram(0x0037, 0x00); // RoomRAMPtr lo
+    mem.write_ram(0x0038, hi);
+}
+
+/// InitTables（$EFF8）：RoomRAM 全填 $FF（空 tile）+属性表（$3C0 面）填 ATDataTable[RoomPalette&3]。
+pub fn init_tables(mem: &mut crate::frame::FrameMemory) {
+    let hi = mem.read_ram(0x0038); // RoomRAMPtr hi（$60/$64）
+    // FillRoomRAM（$F01C）：$FF 填 3 页半（tile 区 $000-$3BF）
+    for i in 0..0x3C0u16 {
+        mem.write_wram(((hi as u16) << 8) | i, 0xFF);
+    }
+    // 属性表填（ATDataTable[$F018——00/55/AA/FF]——RoomPalette 低 2 位）
+    let fill = [0x00u8, 0x55, 0xAA, 0xFF][mem.read_ram(0x0036) as usize & 0x03]; // RoomPalette=$36
+    for i in 0..0x40u16 {
+        mem.write_wram(((hi as u16 + 3) << 8) | (0xC0 + i), fill);
+    }
+}
+
+/// AttribTableWrite（$EA13）——$F0-$F4 命令链（RoomNumber 低半字节=行索引；inc 自进）：
+/// 0/2=no-op、1/3=WritePPUAttribTbl（属性行→PPU）、4=RoomFinished（$FF）。
+pub fn attrib_table_write(mem: &mut crate::frame::FrameMemory) -> bool {
+    let room = mem.read_ram(0x005A);
+    let row = (room & 0x0F) as u16;
+    mem.write_ram(0x005A, room.wrapping_add(1)); // inc RoomNumber
+    match row {
+        1 | 3 => {
+            // WritePPUAttribTbl（$E5E2）：RoomRAM 属性行→PPU 属性表（MoreInit 拷贝冗余面）
+            let hi = mem.read_ram(0x0038);
+            let src = ((hi as u16 + 3) << 8) | 0xC0;
+            let dst = 0x23C0u16 + (row - 1) * 0x20; // 属性行面（4 行 8B 组形随证）
+            for k in 0..0x08u16 {
+                let b = mem.read_wram(src + (row - 1) * 0x20 + k);
+                mem.write_io(0x2006, (dst >> 8) as u8);
+                mem.write_io(0x2006, dst as u8 | k as u8);
+                mem.write_io(0x2007, b);
+            }
+            true
+        }
+        4 => {
+            mem.write_ram(0x005A, 0xFF); // RoomFinished
+            true
+        }
+        _ => true, // 0/2=ExitSub
+    }
+}
 fn update_attrib(
     mem: &mut crate::frame::FrameMemory,
     ptr: u16,
@@ -149,14 +280,14 @@ mod tests {
     use super::*;
     use crate::frame::FrameMemory;
 
-    /// 起始房（房 9）绘制形：RoomRAM 有 tile 落（金侧 f520 房景对形的底座）；
-    /// 敌门环=下一缺环（$EAD4——返回 false 面）。
+    /// 起始房（房 9）绘制形：RoomRAM 有 tile 落+敌门环通（双 Zoomer 条目——type=1）。
     #[test]
     fn draw_start_room_writes_tiles() {
         let mut m = FrameMemory::default();
-        assert!(!draw_room(&mut m, 9), "房 9 达敌门环（$EAD4——未端口面）");
+        assert!(draw_room(&mut m, 9), "房 9 全径通（对象环+敌门环+EndOfRoom）");
         let tiles: Vec<u8> = (0..0x3C0u16).map(|i| m.read_wram(0x6000 + i)).collect();
         assert!(tiles.iter().any(|&t| t != 0), "RoomRAM 有 tile 落");
+        assert_eq!(m.read_ram(0x0450 + 0x0D), gfx::ENEMY_HEALTH[5], "Zoomer 血量（槽 5——条目 51 形）");
     }
 
     /// 属性位公式形（掩码对——x 位对清+置）。

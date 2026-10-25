@@ -92,6 +92,15 @@ def gen():
     for s in structs:
         parts.append(f"    &[\n{hexrow(s)}\n    ],\n")
     parts.append("];\n")
+    # 敌数据四表（64B——type 6 位索引；prg1:962B/969B/96BB/977B）
+    tabs = [("ENEMY_HEALTH", 0x562B, "EnemyHealthTbl $962B"),
+            ("ENEMY_FORCE_SPEED_DELAY", 0x569B, "EnemyForceSpeedTowardsSamusDelayTbl $969B"),
+            ("ENEMY_INIT_DELAY", 0x56BB, "EnemyInitDelayTbl $96BB"),
+            ("ENEMY_FACING", 0x577B, "L977B $977B（bit7=facing——LoadTableAt977B）")]
+    for name, off, doc in tabs:
+        parts.append(f"\n/// {doc}（64B——type 0..63 索引）。\n")
+        parts.append(f"pub const {name}: [u8; 64] = [\n")
+        parts.append(hexrow(prg[off:off + 64]) + "\n];\n")
     parts.append("""
 #[cfg(test)]
 mod tests {
