@@ -193,6 +193,10 @@ pub fn samus_intro(mem: &mut FrameMemory) {
         mem.write_ram(0x0305, 4);
         mem.write_ram(0x0306, 4);
         mem.write_ram(0x0304, 0);
+        // 【r25 修】SpritePagePos($5B)/PageIndex($4B)←0（asm `lda #$00/sta`——每帧重置！
+        // 漏写致 sprite 指针跨帧累加溢写 $300+（Samus.status 擦除根））
+        mem.write_ram(0x005B, 0);
+        mem.write_ram(0x004B, 0);
         crate::frame::sprite::anim_draw_object(mem, 0); // AnimDrawObject（$DE47——Samus 槽 0）
     }
 }
@@ -534,3 +538,19 @@ mod tests {
     }
 }
 
+
+#[cfg(test)]
+mod r25_chain_probe {
+    use super::*;
+
+    /// more_init 递进面（r25 诊断锚：mr 1→2——CopyMap 前置（单测态补地图面））。
+    #[test]
+    fn more_init_advances_mr() {
+        let mut m = crate::frame::FrameMemory::default();
+        copy_map(&mut m); // WorldMap（boot 链件）
+        m.write_ram(crate::ram_map::MAIN_ROUTINE, 1);
+        m.write_ram(crate::ram_map::IN_AREA, 0);
+        more_init(&mut m);
+        assert_eq!(m.read_ram(crate::ram_map::MAIN_ROUTINE), 2, "mr 递进 1→2");
+    }
+}
