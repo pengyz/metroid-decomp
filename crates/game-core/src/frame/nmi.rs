@@ -313,7 +313,24 @@ pub fn update_age(mem: &mut FrameMemory) {
     if mem.read_ram(crate::ram_map::FRAME_COUNT) != 0 {
         return; // 节拍门（每 256 帧一更）
     }
-    crate::unported!("bank07:C97E-age"); // Samus 年龄域件（$D0 进位族——task-11 面）
+    // SamusAge（$687D——4B 计数器：minor+$D0 进位链！）
+    let mut x = 0usize;
+    let v = mem.read_wram(0x687D).wrapping_add(1);
+    mem.write_wram(0x687D, v);
+    if v >= 0xD0 {
+        mem.write_wram(0x687D, 0);
+        loop {
+            if x >= 3 {
+                break;
+            }
+            x += 1;
+            let c = mem.read_wram(0x687D + x as u16).wrapping_add(1);
+            mem.write_wram(0x687D + x as u16, c);
+            if c != 0 {
+                break;
+            }
+        }
+    }
 }
 
 /// 尾段（**恒量 1 写**——:279-280 `ldy #$01 / sty NMIStatus`）。
@@ -502,13 +519,12 @@ mod tests {
         m.write_ram(GAME_MODE, 1); // title 态
         update_age(&mut m); // 短路（零写）
         assert_eq!(m.read_wram(SAMUS_AGE), 0); // WRAM 面（$687D）
-        // 游戏路径（GameMode=0/主例程=3/帧计数=0）
+        // 游戏路径（GameMode=0/主例程=3/帧计数=0）——r26 年龄件已端口（零爆！）
         m.write_ram(GAME_MODE, 0);
         m.write_ram(MAIN_ROUTINE, 3);
         m.write_ram(FRAME_COUNT, 0);
-        let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| update_age(&mut m)));
-        let msg = panic_message(&r.unwrap_err());
-        assert!(msg.contains("unported @ bank07:C97E-age"), "引爆点失准: {msg}");
+        update_age(&mut m);
+        assert_eq!(m.read_wram(SAMUS_AGE), 1); // minor age+1（$687D）
     }
 
     /// SoundEngine boot 面（全短路+6 旗同值写事件）+音乐 init 正面（r17 组合臂接线）+

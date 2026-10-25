@@ -432,7 +432,42 @@ fn enemy_force_speed(mem: &mut crate::frame::FrameMemory, x: u8) {
         crate::unported!("bank07:F6DF"); // x 轴力（bit7=1 型）
         return;
     }
-    crate::unported!("bank07:F71F"); // skipXAxis 尾（Zoomer 径续）
+    // @skipXAxis（F70F）y 轴力：data05 bit2 清+名表/位比较→bit2 置+速向力
+    let e = 0x0400 + x as u16 + 5;
+    let d = mem.read_ram(e);
+    mem.write_ram(e, d & !0x04); // AndEnData05(~$04)
+    let dir = mem.read_ram(0x0003);
+    let mut en_under = false;
+    if dir < 0x02 {
+        // 竖房：同名表判（简化径：y 比较）
+        let en_y = mem.read_ram(0x0400 + x as u16 + 0);
+        let sam_y = mem.read_ram(0x030D);
+        if en_y != sam_y {
+            en_under = en_y > sam_y; // carry=敌在萨姆斯下
+        } else {
+            mem.write_ram(0x0082, mem.read_ram(0x0082).wrapping_add(2)); // Enemy82 bit1
+        }
+    } else {
+        let en_y = mem.read_ram(0x0400 + x as u16 + 0);
+        let sam_y = mem.read_ram(0x030D);
+        if en_y != sam_y {
+            en_under = en_y > sam_y;
+        } else {
+            mem.write_ram(0x0082, mem.read_ram(0x0082).wrapping_add(2));
+        }
+    }
+    if en_under {
+        mem.write_ram(e, mem.read_ram(e) | 0x04); // OrEnData05 bit2
+    }
+    // 速向力（speedY 符号 vs bit2——异向⇒翻）
+    let d = mem.read_ram(e);
+    let want_up = d & 0x04 == 0;
+    let sy = mem.read_ram(0x0400 + x as u16 + 2); // speedY
+    if (sy & 0x80 != 0) != want_up {
+        // flipSpeed（$F70F 族）：speedY 符号翻+speedSubPixelY 归零
+        mem.write_ram(0x0400 + x as u16 + 2, sy ^ 0x80); // speedY 符号翻
+        mem.write_ram(0x0400 + x as u16 + 8, 0); // speedSubPixelY←0
+    }
 }
 
 
