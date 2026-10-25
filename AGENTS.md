@@ -58,7 +58,7 @@ PRG 128KB（8×16KB bank）+ CHR-RAM 8KB）重制：**以社区匹配反汇编�
 | `docs/knowledge/` | 跨会话共享知识库 | 写入规则见其 README；引用前必须验证仍存在 |
 | `data/naming/` | 命名台账（rename 证据账本，两层：机械 remap + 语义 ledger） | 每条 rename 必须有 evidence 字段（可复现指针） |
 | `data/golden/`、`data/status/baselines/` | golden 与门禁基线（ratchet） | 基线只升不降，更新必须写 commit 说明 |
-| `crates/` | game-data（资产解析）/ game-core（纯逻辑）/ game-platform（trait）/ game-oracle（差分宿主） | game-core 无 I/O、确定性（虚拟时钟 + GameRng）；禁止平台依赖 |
+| `crates/` | game-data（资产解析）/ game-core（纯逻辑）/ game-platform（trait+泛型壳运行环）/ game-oracle（差分宿主）/ game-shell/（平台壳目录——每平台独立 crate：game-shell-pc/…） | game-core 无 I/O、确定性（虚拟时钟 + GameRng）；禁止平台依赖；平台实现=独立 crate（依赖/产物形态隔离——r24 裁定） |
 | `gates/` | 门禁工具与 git hooks | 不得绕过/弱化/删除门禁；改门禁必须单独 commit 并写明基线影响 |
 | `prompts/` | 角色提示词 | 新任务必须先选角色 prompt（见 §7） |
 | `tools/` | 可再生工具链（WLA-DX、seed 归一化、diff 裁定器、Mesen harness） | 工具自身不持有判定权；判定逻辑只在 `gates/` |
