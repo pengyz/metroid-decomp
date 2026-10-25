@@ -123,7 +123,25 @@ prg7_engine.asm:233-292 NMI：OAM DMA 恒跑→**`lda NMIStatus/bne @endIf_A`** 
 5. **验收**：samus-move3 4 金面（f800/1000/1150/1330）px 收零 + L3 逐帧 watch 零
    （FC 迭代序口径+行集声明）+ game-start 5 面/boot-title 7 面保持零 + 全测 + gates 不恶化。
 
-## 7. 留档
+## 7.5 视觉摄像机包（2026-10-25 渲染目检定谳——用户反馈「摄像机不跟随/移动帧不对」）
+
+**已修**（commit 7ccefb0e）：asm E31A 移动链全端口（逐像素 MoveSamus±/ScrollRight·Left/
+SamusScrX/CheckStopHorzMvmt）+勘误群（ScrollDir=$49/ScrollX,Y=$FD,$FC/SamusInLava=$64/
+Samus.hi=$30C）——**状态级摄像机已跟随**（samus-move3：$FD 00→0x75 金 00→0xDD 同构）。
+
+**余根（渲染腿包——视觉摄像机收口）**：
+
+| # | 缺口 | 证据 | 施工 |
+|---|---|---|---|
+| V1 | render_frame_bg **只绘 NT0 且不应用 scroll**（render/mod.rs:87-137；write_io $2005 未捕获——memory.rs write_io match 缺臂） | 渲染目检：ScrollX 已滚而画面静止 | RenderState 捕获 PPUSCROLL（首写 X/次写 Y latch）+BG 查点加 (scrollX,scrollY)+名表选位（PPUCTRL bit0/1）+镜像映射（横镜=$2000/$2C00 双屏） |
+| V2 | 跨房列流送 **UpdateNameTable 未端口**（E70C→流送 payload——现空壳） | 金腿第二屏内容=滚动流送（EndOfRoomHorizontal 每 8px 一列） | 房间双缓冲（RoomRAMA $6000/RoomRAMB $6400——「load room before PPU」）+列流送+属性流送 |
+| V3 | HUD「EN」能量条缺失（uw_display_bar 空壳臂） | 渲染目检：金腿左上「EN 30/22」全程在 | DisplayBar 端口（名表写面） |
+| V4 | 敌显链缺（DrawEnemy $DD8B+AreaPointers_RAM） | 金腿 2 敌机在屏/我方无 | 敌显工作单（enemy-display 既有工单） |
+
+**移动帧/姿态面**：MoveSamus 逐像素环+SetSamusStand 停速已端口；姿态动画差=SetSamusData
+链深件（UpdateObjAnim）随 V 包收口对拍再判。
+
+## 8. 留档
 
 - 工具：`analysis/firstdiv.py`（三口径首分歧）、`analysis/fcalign.py`（FC 行序对照）、
   `analysis/eventfc.py`（里程碑迭代对表）、`analysis/driftjudge2.py`（同迭代判别）、
