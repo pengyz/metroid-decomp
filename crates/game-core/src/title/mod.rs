@@ -978,7 +978,7 @@ pub fn dispatch_step(face: &TitleFace) -> TitleStep {
             let ff = face.ram[0x00FF & 0x7FF];
             match face.cursor {
                 0 => TitleStep {
-                    events: clear_all_seg0_events(pm), shell: vec![ShellCall::ScreenOff],
+                    events: clear_all_seg0_events(pm), shell: vec![ShellCall::ScreenOff, ShellCall::SpinWait],
                     a_out: None, x_out: None, y_out: None,
                     jumped: None, unported: None, next_cursor: 1,
                 },
@@ -986,7 +986,7 @@ pub fn dispatch_step(face: &TitleFace) -> TitleStep {
                     events: clear_all_seg1_events(&face.ram, &face.wram, face.frame_count,
                                                   face.phase, ff),
                     shell: vec![ShellCall::ClearNameTables, ShellCall::EraseAllSprites,
-                                ShellCall::WaitNMIPass],
+                                ShellCall::WaitNMIPass, ShellCall::SpinWait],
                     a_out: None, x_out: None, y_out: None,
                     jumped: None, unported: None, next_cursor: 2,
                 },
@@ -1005,7 +1005,8 @@ pub fn dispatch_step(face: &TitleFace) -> TitleStep {
                     TitleStep {
                         events, shell: vec![ShellCall::VBOffAndHorzWrite,
                                             ShellCall::PrepareVram(0x9984),
-                                            ShellCall::NMIOn, ShellCall::ScreenOn],
+                                            ShellCall::NMIOn, ShellCall::ScreenOn,
+                                            ShellCall::SpinWait],
                         a_out: None, x_out: None, y_out: None,
                         jumped: None, unported: None, next_cursor: 3,
                     }
