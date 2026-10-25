@@ -435,6 +435,67 @@ fn enemy_force_speed(mem: &mut crate::frame::FrameMemory, x: u8) {
     crate::unported!("bank07:F71F"); // skipXAxis 尾（Zoomer 径续）
 }
 
+
+/// UpdateEnemy_EnData05DistanceToSamusThreshold（**asm 内容锚** `: 07:F75B`——r26 全径）：
+/// ①data05 bits3/4 置+掩码默认 ②阈表（ENEMY_DISTANCE_THRESHOLD[type]）为 0⇒早出
+/// （**Zoomer 径！**）③bit1（不可见）⇒清 bits3/4 ④bit7 轴选→掩 bit3/4 ⑤|敌-萨|>>4
+/// vs 阈&$7F：距大⇒清对应位。Or/AndEnData05=bits3/4 掩写件。
+fn enemy_distance_threshold(mem: &mut crate::frame::FrameMemory, x: u8) {
+    let e = 0x0400 + x as u16 + 5; // Ens.data05
+    let d = mem.read_ram(e);
+    mem.write_ram(e, d | 0x18); // OrEnData05($18)
+    let t = mem.read_wram(0x6AF4 + x as u16 + 13) as usize & 0x0F;
+    let thr = game_data::area::graphics::ENEMY_DISTANCE_THRESHOLD[t];
+    if thr == 0 {
+        return; // 阈 0⇒早出（Zoomer 径！）
+    }
+    let d = mem.read_ram(e);
+    if d & 0x02 == 0 {
+        // 不可见⇒清 bits3/4（Lx345）
+        mem.write_ram(e, d & !0x18);
+        return;
+    }
+    let (axis_bit, mut mask) = if thr & 0x80 != 0 { (0x08u8, !0x08u8) } else { (0x10, !0x10) };
+    let _ = axis_bit;
+    let thr_v = (thr & 0x7F) as u16;
+    // 位置比较（hi 位旋入 bit7 形）
+    let d = mem.read_ram(e);
+    let (sam_pos, en_pos) = if d & 0x80 != 0 {
+        (mem.read_ram(0x030D), mem.read_ram(0x0400 + x as u16 + 2)) // y 轴
+    } else {
+        (mem.read_ram(0x030E), mem.read_ram(0x0400 + x as u16 + 3)) // x 轴
+    };
+    let sam_hi = mem.read_wram(0x6AF4) & 1; // Samus.hi
+    let en_hi = mem.read_wram(0x6AF4 + x as u16 + 2) & 1; // EnsExtra.hi
+    let sam = ((sam_hi as u16) << 7) | sam_pos as u16; // ror 形（hi→bit7）
+    let en = ((en_hi as u16) << 7) | en_pos as u16;
+    let dist = (en as i16 - sam as i16).unsigned_abs() >> 4; // 二补+>>4（/16）
+    if dist >= thr_v {
+        mem.write_ram(e, d & mask); // 距大⇒清对应位
+    }
+}
+
+
+/// InitEnRestingAnimIndex（**asm 内容锚** `: 07:F682`——r26）：type×2+facing 索引→
+/// ENEMY_RESTING_ANIM[y]；≠resetAnimIndex⇒写 resetAnimIndex/animIndex+animDelay←0。
+fn init_en_resting_anim_index(mem: &mut crate::frame::FrameMemory, x: u8) {
+    let y = enemy_type_times2_plus_facing(mem, x);
+    let idx = game_data::area::graphics::ENEMY_RESTING_ANIM[y as usize & 0x1F];
+    if idx == mem.read_wram(0x6AF4 + x as u16 + 1) {
+        return; // 已同⇒RTS（animDelay 不清）
+    }
+    mem.write_wram(0x6AF4 + x as u16 + 1, idx); // resetAnimIndex
+    mem.write_wram(0x6AF4 + x as u16 + 4, idx); // animIndex
+    mem.write_wram(0x6AF4 + x as u16 + 5, 0); // animDelay←0
+}
+
+/// GetEnemyTypeTimes2PlusFacingDirection（**asm 内容锚**——索引=type×2+facing（data05 bit0?））。
+fn enemy_type_times2_plus_facing(mem: &mut crate::frame::FrameMemory, x: u8) -> u16 {
+    let t = mem.read_wram(0x6AF4 + x as u16 + 13) as u16; // EnsExtra.type
+    let facing = (mem.read_ram(0x0400 + x as u16 + 5) >> 0) & 1; // data05 bit0（facing 位）
+    (t * 2 + facing as u16) & 0x1F
+}
+
 /// UpdateEnemy_Resting（**asm 内容锚** `: 07:F3BE`——r26 壳：30fps 门/件序 fail-loud）。
 fn enemy_resting(mem: &mut crate::frame::FrameMemory, x: u8) {
     let d = mem.read_ram(0x0400 + x as u16 + 5);
@@ -444,7 +505,7 @@ fn enemy_resting(mem: &mut crate::frame::FrameMemory, x: u8) {
         mem.write_ram(0x0400 + x as u16 + 9, 0); // movementInstrIndex←0
         mem.write_ram(0x0400 + x as u16 + 10, 0); // data0A←0
         enemy_force_speed(mem, x); // F6B9（件序首——速向萨姆斯力）
-        crate::unported!("bank07:F75B"); // EnData05DistanceToSamusThreshold（件序 2）
+        enemy_distance_threshold(mem, x); // F75B（件序 2——阈距判）
     }
     crate::unported!("bank07:F40A"); // Active_BranchB（EnemyReactToSamusProjectile→AI）
 }
