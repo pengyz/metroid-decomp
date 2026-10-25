@@ -409,6 +409,32 @@ fn update_en_data05_bit6(mem: &mut crate::frame::FrameMemory, x: u8) {
     mem.write_ram(0x0400 + x as u16 + 5, nd);
 }
 
+
+/// UpdateEnemy_ForceSpeedTowardsSamus（**asm 内容锚** `: 07:F6B9`——r26 主径）：
+/// Enemy82($82)←0→L968B[type]（ENEMY_FORCE_ATTRIBS）→Y→Active 且 bit1=0⇒RTS→
+/// dec Ens.data0D 非零⇒RTS→归零：delay 重载+bit7=1⇒x 轴力/0⇒skipXAxis（Zoomer 径）。
+fn enemy_force_speed(mem: &mut crate::frame::FrameMemory, x: u8) {
+    mem.write_ram(0x0082, 0);
+    let t = mem.read_wram(0x6AF4 + x as u16 + 13) as usize & 0x0F;
+    let attribs = game_data::area::graphics::ENEMY_FORCE_ATTRIBS[t];
+    let status = mem.read_wram(0x6AF4 + x as u16);
+    if status == 2 && attribs & 0x02 == 0 {
+        return;
+    }
+    let d0d = mem.read_ram(0x0400 + x as u16 + 0x0D);
+    if d0d.wrapping_sub(1) != 0 {
+        mem.write_ram(0x0400 + x as u16 + 0x0D, d0d.wrapping_sub(1));
+        return;
+    }
+    let delay = game_data::area::graphics::ENEMY_FORCE_SPEED_DELAY.get(t).copied().unwrap_or(1);
+    mem.write_ram(0x0400 + x as u16 + 0x0D, delay);
+    if attribs & 0x80 != 0 {
+        crate::unported!("bank07:F6DF"); // x 轴力（bit7=1 型）
+        return;
+    }
+    crate::unported!("bank07:F71F"); // skipXAxis 尾（Zoomer 径续）
+}
+
 /// UpdateEnemy_Resting（**asm 内容锚** `: 07:F3BE`——r26 壳：30fps 门/件序 fail-loud）。
 fn enemy_resting(mem: &mut crate::frame::FrameMemory, x: u8) {
     let d = mem.read_ram(0x0400 + x as u16 + 5);
@@ -417,7 +443,8 @@ fn enemy_resting(mem: &mut crate::frame::FrameMemory, x: u8) {
         mem.write_wram(0x6AF4 + x as u16 + 6, 0); // jumpDsplcmnt←0
         mem.write_ram(0x0400 + x as u16 + 9, 0); // movementInstrIndex←0
         mem.write_ram(0x0400 + x as u16 + 10, 0); // data0A←0
-        crate::unported!("bank07:F67B"); // UpdateEnemy_ForceSpeedTowardsSamus（件序首）
+        enemy_force_speed(mem, x); // F6B9（件序首——速向萨姆斯力）
+        crate::unported!("bank07:F75B"); // EnData05DistanceToSamusThreshold（件序 2）
     }
     crate::unported!("bank07:F40A"); // Active_BranchB（EnemyReactToSamusProjectile→AI）
 }
