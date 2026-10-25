@@ -230,7 +230,9 @@ pub fn samus_run(mem: &mut FrameMemory) {
     samus_run_check_horz_movement_midair(mem); // CF88（三件首）
     samus_jump_check_fire(mem); // D09C
     solid_entity_response(mem); // CF2E
-    mem.write_ram(0x0304, 2); // animDelay←2（SetSamusData 形）
+    // SetSamusData（CD6D——**物理链会师**！（r26 根修：积分件在此链！））
+    super::physics::set_samus_data(mem); // CD6D（含 lava_and_move_check→积分→位移）
+    mem.write_ram(0x0304, 2); // animDelay←2
     let _ = anim;
 }
 
@@ -371,6 +373,22 @@ mod tests {
             .unwrap_or_default();
         assert!(msg.contains("unported @ bank07:D3AE"), "MoveOutDoor 爆点失准: {msg}");
         assert_eq!(m.read_ram(DOOR_DELAY), 2); // 倒数先行
+    }
+
+    /// run 全径输出探针（r26 诊断锚：Joy1=RIGHT→speedX 非零！）。
+    #[test]
+    fn run_chain_output_probe() {
+        use crate::ram_map::{JOY1_STATUS, SAMUS_STATUS};
+        let mut m = FrameMemory::default();
+        m.write_ram(SAMUS_STATUS, 1);
+        m.write_ram(JOY1_STATUS, 0x01);
+        samus_run(&mut m);
+        let ax = m.read_ram(crate::ram_map::SAMUS_ACCEL_X);
+        let si = m.read_ram(crate::samus::physics::SAMUS_SPEED_X_I);
+        let sf = m.read_ram(crate::samus::physics::SAMUS_SPEED_X_F);
+        let x = m.read_ram(0x030E);
+        assert_eq!(ax, 0x30, "accelX 落");
+        assert_eq!(sf, 0x30, "speedF=加速入分数（积分输出落！）");
     }
 
     /// UpdateSamus 面：PageIndex/IsSamus 落态+**站立径零爆全通**（r26 链贯通！）。

@@ -205,6 +205,19 @@ mod tests {
         assert!(!is_samus_on_top(0x00, 0x08, 0x10)); // 侧面（>1px 重合）
     }
 
+    /// horz_integrate 输出探针（r26 诊断锚：accelX=0x30→speedX 非零！）。
+    #[test]
+    fn horz_integrate_output_probe() {
+        let mut m = FrameMemory::default();
+        m.write_ram(crate::ram_map::SAMUS_ACCEL_X, 0x30); // 右加速
+        m.write_ram(crate::ram_map::SAMUS_HORZ_SPEED_MAX, 0x18); // max 1.5px
+        let d = horz_integrate(&mut m);
+        let si = m.read_ram(SAMUS_SPEED_X_I);
+        let sf = m.read_ram(SAMUS_SPEED_X_F);
+        assert_eq!(sf, 0x30, "speedF=加速入分数");
+        let _ = d;
+    }
+
     /// D976 双旗清+冻敌环空径全通（r26——同值写事件清零先行面）。
     #[test]
     fn solid_entities_clears_flags_then_walk() {
