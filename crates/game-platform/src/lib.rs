@@ -16,21 +16,22 @@
 pub mod runtime;
 pub use runtime::{run_frame, run_game, GameDriver};
 
-/// NES 手柄位形（$4016 串行位序：bit0=A … bit7=Right）。
+/// NES 手柄位形（**hardware.asm:89-96 内容锚**：bit0=Right … bit7=A——与引擎 joy1/
+/// Joy1Change 字节同形；r25 勘误：旧位序反（Enter 被读成 UP））。
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct PadState {
     pub bits: u8,
 }
 
 impl PadState {
-    pub const A: u8 = 0x01;
-    pub const B: u8 = 0x02;
-    pub const SELECT: u8 = 0x04;
-    pub const START: u8 = 0x08;
-    pub const UP: u8 = 0x10;
-    pub const DOWN: u8 = 0x20;
-    pub const LEFT: u8 = 0x40;
-    pub const RIGHT: u8 = 0x80;
+    pub const RIGHT: u8 = 0x01;
+    pub const LEFT: u8 = 0x02;
+    pub const DOWN: u8 = 0x04;
+    pub const UP: u8 = 0x08;
+    pub const START: u8 = 0x10;
+    pub const SELECT: u8 = 0x20;
+    pub const B: u8 = 0x40;
+    pub const A: u8 = 0x80;
 
     /// 按键置位。
     pub fn with(mut self, button: u8, pressed: bool) -> Self {
@@ -90,13 +91,15 @@ pub trait PlatformShell {
 mod tests {
     use super::*;
 
-    /// PadState 位形语义（$4016 位序——A=bit0/Right=bit7）。
+    /// PadState 位形语义（hardware.asm:89-96 位序——A=bit7/Start=bit4/Right=bit0）。
     #[test]
     fn pad_state_bit_order() {
         let p = PadState::default().with(PadState::A, true).with(PadState::RIGHT, true);
-        assert_eq!(p.bits, 0x81);
+        assert_eq!(p.bits, 0x81, "A(0x80)|Right(0x01)");
+        let start = PadState::default().with(PadState::START, true);
+        assert_eq!(start.bits, 0x10, "Start=bit4（head 检 `and #$10` 面）");
         let p2 = p.with(PadState::A, false);
-        assert_eq!(p2.bits, 0x80);
+        assert_eq!(p2.bits, 0x01);
     }
 
     /// 帧缓冲常量锚（256×240 RGB888——render_frame 出口形自证）。

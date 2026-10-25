@@ -33,6 +33,9 @@ OUT = ROOT / "crates" / "game-data" / "src" / "title" / "vram_structs.rs"
 # (符号名, CPU 地址, bank) —— bank0: $8000 窗 = prg[0x0000..]（boot 态 PRG reg=0 自证）
 BLOBS = [
     ("INTRO_BG_VRAM_STRUCT", 0x82F4, 0),
+    # L9984（prg0_title.asm:3534——StartContinueScreen15/1B :2333 `ldx #<L9984` 装载件：
+    # START/Continue 选单屏 tilemap）。r25 补（title→游戏链首抓手）。
+    ("START_CONTINUE_VRAM_STRUCT", 0x9984, 0),
 ]
 
 

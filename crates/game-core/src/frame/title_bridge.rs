@@ -153,6 +153,9 @@ fn prepare_vram(mem: &mut FrameMemory, addr: u16) {
     match addr {
         0x82F4 => super::vram::vram_struct_write(
             mem, &game_data::title::vram_structs::INTRO_BG_VRAM_STRUCT),
+        // L9984（prg0_title.asm:3534——StartContinueScreen :2333 装载件；r25 补）
+        0x9984 => super::vram::vram_struct_write(
+            mem, &game_data::title::vram_structs::START_CONTINUE_VRAM_STRUCT),
         other => crate::unported!(&format!("bank00:{other:04X}-PrepareVram")),
     }
 }

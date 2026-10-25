@@ -85,6 +85,7 @@ pub fn game_main_routine(mem: &mut FrameMemory) {
     match mr {
         0 => area_init(mem), // AreaInit（已端口——移动臂迭代驱动首件）
         1 => more_init(mem), // MoreInit（已端口——区域/房间链头）
+        2 => samus_init(mem), // SamusInit（r25 端口——萨姆斯出场态）
         3 => game_engine(mem), // GameEngine（已端口——移动帧环壳）
         _ => {
             let loc = format!("bank07:{:04X}", MAIN_ROUTINE_PTR_TABLE.get(mr as usize).copied().unwrap_or(0));
@@ -107,6 +108,50 @@ pub fn area_init(mem: &mut FrameMemory) {
     mem.write_ram(0x0027, ab); // ABStatus（:254 族）
     crate::frame::boot::c1a3_unit(mem); // EraseAllSprites（已折）
     is_engine_running(mem, 0x10); // CA18（已端口——A=$10 Brinstar 页备）
+}
+
+/// SamusInit（**asm 内容锚** `SamusInit: ; 07:C8D1`——r25 端口：萨姆斯出场态）：
+/// ①MainRoutine←SamusIntro(9) ②Timer3←$2C（440 帧淡入）③IntroMusic（$CBFD——
+/// SFXMultiInitFlags($0684)←$10 音乐起）④Samus.status←_id_Palette13+1=**$14**（淡入态）
+/// ⑤InvincibleDelay←0 ⑥敌槽清（X=$FF：PipeBugHoles .0/.1.status+.1.y（**BUG 保留**（D4）
+/// asm 注「should be .2/.3」）+.2.status=$728/$730/$732/$738、EndTimer($010A/$010B)、
+/// RinkaSpawners .0/.1=$8B/$8E）⑦InArea&$0F：0=Brinstar（Y=$27）/else=$2F+ScrollDir lsr
+/// （址未定谳——fail-loud（不猜写））⑧MirrorCntrl($FA)/MissilePickupQtyMax($93)/
+/// EnergyPickupQtyMax($94)←Y ⑨Samus.y←AreaSamusY[area]（$95D9 五值烘焙）/x←$80/
+/// hi←PPUCTRL_ZP&1 ⑩Health($0106)←30（$00/$03）。
+pub fn samus_init(mem: &mut FrameMemory) {
+    use crate::ram_map::{IN_AREA, MIRROR_CNTRL, MAIN_ROUTINE, SAMUS_STATUS, SAMUS_Y};
+    mem.write_ram(MAIN_ROUTINE, 9); // SamusIntro（下一帧）
+    mem.write_ram(0x002C, 0x2C); // Timer3（440 帧淡入）
+    mem.write_ram(crate::ram_map::SFX_MULTI_INIT, 0x10); // IntroMusic（$CBFD）
+    mem.write_ram(SAMUS_STATUS, 0x14); // _id_Palette13+1（淡入态）
+    mem.write_ram(0x0070, 0); // SamusInvincibleDelay
+    for a in [0x0728u16, 0x0730, 0x0732, 0x0738] {
+        mem.write_ram(a, 0xFF); // PipeBugHoles（含 .1.y BUG 位——D4 保留）
+    }
+    mem.write_ram(0x010A, 0xFF);
+    mem.write_ram(0x010B, 0xFF); // EndTimer（escape 未活）
+    mem.write_ram(0x008B, 0xFF);
+    mem.write_ram(0x008E, 0xFF); // RinkaSpawners.0/.1
+    let y = if mem.read_ram(IN_AREA) & 0x0F == 0 {
+        0x27u8 // Brinstar
+    } else {
+        // 非 Brinstar：`lsr ScrollDir`+Y=$2F（ScrollAddr 未定谳——fail-loud 不猜写）
+        crate::unported!("bank07:C902-ScrollDir");
+        0x2F
+    };
+    mem.write_ram(MIRROR_CNTRL, y);
+    mem.write_ram(0x0093, y); // MissilePickupQtyMax
+    mem.write_ram(0x0094, y); // EnergyPickupQtyMax
+    let area = (mem.read_ram(IN_AREA) & 0x0F) as usize;
+    let y_pos = *game_data::title::area_tables::AREA_SAMUS_Y
+        .get(area)
+        .unwrap_or(&game_data::title::area_tables::AREA_SAMUS_Y[0]);
+    mem.write_ram(SAMUS_Y, y_pos);
+    mem.write_ram(0x030E, 0x80); // Samus.x
+    mem.write_ram(0x030C, mem.read_ram(crate::ram_map::PPUCTRL_ZP) & 0x01); // Samus.hi
+    mem.write_ram(0x0106, 0x00);
+    mem.write_ram(0x0107, 0x03); // Health=30
 }
 
 /// BankTable 烘焙（07:CA30——16 项（A&0xF 索引→BankSwitchPending 值））。
