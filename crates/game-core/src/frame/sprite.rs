@@ -143,7 +143,7 @@ pub fn anim_draw_object(mem: &mut crate::frame::FrameMemory, page_index: u8) {
 }
 
 /// 位移符号形（Y/XDisplacement 正常径——翻转=二补-8（$DFB1 `eor #$FF/adc #$F8`））。
-fn place_disp(b: u8, flip_flags: u8, is_y: bool) -> i8 {
+pub fn place_disp(b: u8, flip_flags: u8, is_y: bool) -> i8 {
     let mut v = b as i8;
     let flip_bit = if is_y { 0x80 } else { 0x40 };
     if flip_flags & flip_bit != 0 {

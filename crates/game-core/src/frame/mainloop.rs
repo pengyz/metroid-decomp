@@ -387,8 +387,8 @@ fn enemy_check_if_visible(mem: &mut crate::frame::FrameMemory, x: u8) -> bool {
     if mem.read_ram(0x0400 + x as u16 + 5) & 0x02 != 0 {
         return true; // bit1=1⇒跳过检查（视为可见）
     }
-    let y = mem.read_ram(0x0400 + x as u16 + 2); // Ens.y
-    let hi = mem.read_wram(0x6AF4 + x as u16 + 2); // EnsExtra.hi
+    let y = mem.read_ram(0x0400 + x as u16 + 0); // Ens.y
+    let hi = mem.read_wram(0x6AF4 + x as u16 + 7); // EnsExtra.hi
     let scroll_y = mem.read_ram(0x0025);
     let horz = mem.read_ram(0x0003) & 0x02 != 0;
     let sy = if horz { y } else { y.wrapping_sub(scroll_y) };
@@ -415,19 +415,19 @@ fn update_en_data05_bit6(mem: &mut crate::frame::FrameMemory, x: u8) {
 /// dec Ens.data0D 非零⇒RTS→归零：delay 重载+bit7=1⇒x 轴力/0⇒skipXAxis（Zoomer 径）。
 fn enemy_force_speed(mem: &mut crate::frame::FrameMemory, x: u8) {
     mem.write_ram(0x0082, 0);
-    let t = mem.read_wram(0x6AF4 + x as u16 + 13) as usize & 0x0F;
+    let t = mem.read_wram(0x6AF4 + x as u16 + 14) as usize & 0x0F;
     let attribs = game_data::area::graphics::ENEMY_FORCE_ATTRIBS[t];
     let status = mem.read_wram(0x6AF4 + x as u16);
     if status == 2 && attribs & 0x02 == 0 {
         return;
     }
-    let d0d = mem.read_ram(0x0400 + x as u16 + 0x0D);
+    let d0d = mem.read_ram(0x0400 + x as u16 + 13);
     if d0d.wrapping_sub(1) != 0 {
-        mem.write_ram(0x0400 + x as u16 + 0x0D, d0d.wrapping_sub(1));
+        mem.write_ram(0x0400 + x as u16 + 13, d0d.wrapping_sub(1));
         return;
     }
     let delay = game_data::area::graphics::ENEMY_FORCE_SPEED_DELAY.get(t).copied().unwrap_or(1);
-    mem.write_ram(0x0400 + x as u16 + 0x0D, delay);
+    mem.write_ram(0x0400 + x as u16 + 13, delay);
     if attribs & 0x80 != 0 {
         crate::unported!("bank07:F6DF"); // x 轴力（bit7=1 型）
         return;
@@ -444,7 +444,7 @@ fn enemy_distance_threshold(mem: &mut crate::frame::FrameMemory, x: u8) {
     let e = 0x0400 + x as u16 + 5; // Ens.data05
     let d = mem.read_ram(e);
     mem.write_ram(e, d | 0x18); // OrEnData05($18)
-    let t = mem.read_wram(0x6AF4 + x as u16 + 13) as usize & 0x0F;
+    let t = mem.read_wram(0x6AF4 + x as u16 + 14) as usize & 0x0F;
     let thr = game_data::area::graphics::ENEMY_DISTANCE_THRESHOLD[t];
     if thr == 0 {
         return; // 阈 0⇒早出（Zoomer 径！）
@@ -461,12 +461,12 @@ fn enemy_distance_threshold(mem: &mut crate::frame::FrameMemory, x: u8) {
     // 位置比较（hi 位旋入 bit7 形）
     let d = mem.read_ram(e);
     let (sam_pos, en_pos) = if d & 0x80 != 0 {
-        (mem.read_ram(0x030D), mem.read_ram(0x0400 + x as u16 + 2)) // y 轴
+        (mem.read_ram(0x030D), mem.read_ram(0x0400 + x as u16 + 0)) // y 轴
     } else {
-        (mem.read_ram(0x030E), mem.read_ram(0x0400 + x as u16 + 3)) // x 轴
+        (mem.read_ram(0x030E), mem.read_ram(0x0400 + x as u16 + 1)) // x 轴
     };
     let sam_hi = mem.read_wram(0x6AF4) & 1; // Samus.hi
-    let en_hi = mem.read_wram(0x6AF4 + x as u16 + 2) & 1; // EnsExtra.hi
+    let en_hi = mem.read_wram(0x6AF4 + x as u16 + 7) & 1; // EnsExtra.hi
     let sam = ((sam_hi as u16) << 7) | sam_pos as u16; // ror 形（hi→bit7）
     let en = ((en_hi as u16) << 7) | en_pos as u16;
     let dist = (en as i16 - sam as i16).unsigned_abs() >> 4; // 二补+>>4（/16）
@@ -481,17 +481,17 @@ fn enemy_distance_threshold(mem: &mut crate::frame::FrameMemory, x: u8) {
 fn init_en_resting_anim_index(mem: &mut crate::frame::FrameMemory, x: u8) {
     let y = enemy_type_times2_plus_facing(mem, x);
     let idx = game_data::area::graphics::ENEMY_RESTING_ANIM[y as usize & 0x1F];
-    if idx == mem.read_wram(0x6AF4 + x as u16 + 1) {
+    if idx == mem.read_wram(0x6AF4 + x as u16 + 5) {
         return; // 已同⇒RTS（animDelay 不清）
     }
-    mem.write_wram(0x6AF4 + x as u16 + 1, idx); // resetAnimIndex
-    mem.write_wram(0x6AF4 + x as u16 + 4, idx); // animIndex
-    mem.write_wram(0x6AF4 + x as u16 + 5, 0); // animDelay←0
+    mem.write_wram(0x6AF4 + x as u16 + 5, idx); // resetAnimIndex
+    mem.write_wram(0x6AF4 + x as u16 + 6, idx); // animIndex
+    mem.write_wram(0x6AF4 + x as u16 + 4, 0); // animDelay←0
 }
 
 /// GetEnemyTypeTimes2PlusFacingDirection（**asm 内容锚**——索引=type×2+facing（data05 bit0?））。
 fn enemy_type_times2_plus_facing(mem: &mut crate::frame::FrameMemory, x: u8) -> u16 {
-    let t = mem.read_wram(0x6AF4 + x as u16 + 13) as u16; // EnsExtra.type
+    let t = mem.read_wram(0x6AF4 + x as u16 + 14) as u16; // EnsExtra.type
     let facing = (mem.read_ram(0x0400 + x as u16 + 5) >> 0) & 1; // data05 bit0（facing 位）
     (t * 2 + facing as u16) & 0x1F
 }
@@ -499,7 +499,7 @@ fn enemy_type_times2_plus_facing(mem: &mut crate::frame::FrameMemory, x: u8) -> 
 
 /// LoadTableAt977B（**asm 内容锚** `areas_common.asm:184 $80B0`——L977B[type]×2）。
 fn load_table_at_977b(mem: &mut crate::frame::FrameMemory, x: u8) -> u8 {
-    let t = mem.read_wram(0x6AF4 + x as u16 + 13) as usize;
+    let t = mem.read_wram(0x6AF4 + x as u16 + 14) as usize;
     let e = game_data::area::graphics::ENEMY_FACING[t & 0x3F];
     e.wrapping_shl(1)
 }
@@ -509,7 +509,7 @@ fn load_table_at_977b(mem: &mut crate::frame::FrameMemory, x: u8) -> u8 {
 fn update_en_data1f(mem: &mut crate::frame::FrameMemory, x: u8) {
     let v = load_table_at_977b(mem, x);
     let v = v.wrapping_shl(3); // asl×3（含载器 ×2=条目×16）
-    mem.write_wram(0x6AF4 + x as u16 + 0x1F, v & 0xC0); // EnsExtra.data1F
+    mem.write_wram(0x6AF4 + x as u16 + 15, v & 0xC0); // EnsExtra.data1F
 }
 
 /// UpdateEnemy_Resting_TryBecomingActive（**asm 内容锚** `: 07:F7BA`——r26）：
@@ -528,7 +528,7 @@ fn try_becoming_active(mem: &mut crate::frame::FrameMemory, x: u8) {
         return;
     }
     // @becomeActive
-    let t = mem.read_wram(0x6AF4 + x as u16 + 13);
+    let t = mem.read_wram(0x6AF4 + x as u16 + 14);
     if t == 7 {
         crate::unported!("bank07:CBA4"); // SFX_OutOfPipe（声事件——出声面）
     }
@@ -545,17 +545,17 @@ fn try_becoming_active(mem: &mut crate::frame::FrameMemory, x: u8) {
 fn init_en_active_anim_index(mem: &mut crate::frame::FrameMemory, x: u8) {
     let y = enemy_type_times2_plus_facing(mem, x);
     let idx = game_data::area::graphics::ENEMY_ACTIVE_ANIM[y as usize & 0x1F];
-    if idx != mem.read_wram(0x6AF4 + x as u16 + 1) {
-        mem.write_wram(0x6AF4 + x as u16 + 1, idx);
-        mem.write_wram(0x6AF4 + x as u16 + 4, idx);
-        mem.write_wram(0x6AF4 + x as u16 + 5, 0);
-        let t = mem.read_wram(0x6AF4 + x as u16 + 13) as usize & 0x0F;
+    if idx != mem.read_wram(0x6AF4 + x as u16 + 5) {
+        mem.write_wram(0x6AF4 + x as u16 + 5, idx);
+        mem.write_wram(0x6AF4 + x as u16 + 6, idx);
+        mem.write_wram(0x6AF4 + x as u16 + 4, 0);
+        let t = mem.read_wram(0x6AF4 + x as u16 + 14) as usize & 0x0F;
         let off = game_data::area::graphics::ENEMY_ACTIVE_ANIM_INIT_OFFSET[t] & 0x7F;
         let mut ai = idx;
         for _ in 0..off {
             ai = ai.wrapping_sub(1);
         }
-        mem.write_wram(0x6AF4 + x as u16 + 4, ai);
+        mem.write_wram(0x6AF4 + x as u16 + 6, ai);
     }
 }
 
@@ -564,14 +564,14 @@ fn enemy_resting(mem: &mut crate::frame::FrameMemory, x: u8) {
     let d = mem.read_ram(0x0400 + x as u16 + 5);
     if d & 0x40 == 0 {
         // 30fps 标 clear⇒全件（bit6 set 时跳过=30fps 节拍）
-        mem.write_wram(0x6AF4 + x as u16 + 6, 0); // jumpDsplcmnt←0
-        mem.write_ram(0x0400 + x as u16 + 9, 0); // movementInstrIndex←0
+        mem.write_wram(0x6AF4 + x as u16 + 13, 0); // jumpDsplcmnt←0
+        mem.write_ram(0x0400 + x as u16 + 7, 0); // movementInstrIndex←0
         mem.write_ram(0x0400 + x as u16 + 10, 0); // data0A←0
         enemy_force_speed(mem, x); // F6B9（件序首——速向萨姆斯力）
         enemy_distance_threshold(mem, x); // F75B（件序 2——阈距判）
         init_en_resting_anim_index(mem, x); // F682（件序 3）
         update_en_data1f(mem, x); // F676（件序 4）
-        let delay = mem.read_ram(0x0400 + x as u16 + 7);
+        let delay = mem.read_ram(0x0400 + x as u16 + 9);
         if delay != 0 {
             try_becoming_active(mem, x); // F7BA（件序 5——延迟归零⇒激活）
         }
@@ -588,9 +588,9 @@ fn enemy_active(mem: &mut crate::frame::FrameMemory, x: u8) {
     }
     if d & 0x20 != 0 {
         // bit5 set⇒delay←EnemyInitDelayTbl[type]；status Active→Resting
-        let t = mem.read_wram(0x6AF4 + x as u16 + 13); // EnsExtra.type
+        let t = mem.read_wram(0x6AF4 + x as u16 + 14); // EnsExtra.type
         let delay = game_data::area::graphics::ENEMY_INIT_DELAY.get(t as usize).copied().unwrap_or(0);
-        mem.write_ram(0x0400 + x as u16 + 7, delay); // Ens.delay
+        mem.write_ram(0x0400 + x as u16 + 9, delay); // Ens.delay
         let st = mem.read_wram(0x6AF4 + x as u16);
         mem.write_wram(0x6AF4 + x as u16, st.wrapping_sub(1));
         crate::unported!("bank07:F40A"); // →Active_BranchB
