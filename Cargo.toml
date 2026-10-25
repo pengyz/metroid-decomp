@@ -2,3 +2,5 @@
 resolver = "2"
 members = ["crates/game-core", "crates/game-data", "crates/game-oracle",
            "crates/game-platform", "crates/game-shell/game-shell-pc"]
+# cargo run 直启 PC 游戏壳（用户入口——验证轨用 cargo run -p game-oracle --bin …）
+default-members = ["crates/game-shell/game-shell-pc"]
