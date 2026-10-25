@@ -1,3 +1,4 @@
 [workspace]
 resolver = "2"
-members = ["crates/game-core", "crates/game-data", "crates/game-oracle"]
+members = ["crates/game-core", "crates/game-data", "crates/game-oracle",
+           "crates/game-platform", "crates/game-shell/game-shell-pc"]

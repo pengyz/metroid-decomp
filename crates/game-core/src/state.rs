@@ -36,6 +36,8 @@ pub struct FrameMemory {
     /// spin 等待计数（r23：臂的跨帧 spin 等待段——>0=等待 tick（工作零动）；与 cursor
     /// 机构正交（孤儿游标 F4 语义不动））。
     pub title_spin: u8,
+    /// APU 寄存器写捕获（$4000-$4017——壳层音频面消费源；驱动每帧 drain 后清）。
+    pub apu_log: Vec<(u16, u8)>,
     /// 手柄 1 输入面（场景驱动；boot-title=无输入 0）。
     pub joy1: u8,
     /// 手柄 2 输入面。
@@ -47,7 +49,8 @@ pub struct FrameMemory {
 impl Default for FrameMemory {
     fn default() -> Self {
         Self { ram: [0; 0x800], wram: [0; 0x2000], regs: Registers::default(), nmi_enabled: false,
-               title_cursor: 0, title_cursor_phase: 0, title_spin: 0, joy1: 0, joy2: 0,
+               title_cursor: 0, title_cursor_phase: 0, title_spin: 0, apu_log: Vec::new(),
+               joy1: 0, joy2: 0,
                render: RenderState::default() }
     }
 }

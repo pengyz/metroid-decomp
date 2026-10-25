@@ -1,0 +1,18 @@
+[package]
+name = "game-shell-pc"
+version = "0.1.0"
+edition = "2021"
+description = "PC 平台壳（win/linux/mac——minifb 窗口/键盘/时钟；PlatformShell 实现）"
+
+[lib]
+name = "game_shell_pc"
+path = "src/lib.rs"
+
+[[bin]]
+name = "game-shell-pc"
+path = "src/main.rs"
+
+[dependencies]
+game-platform = { path = "../../game-platform" }
+game-core = { path = "../../game-core" }
+minifb = "0.27"

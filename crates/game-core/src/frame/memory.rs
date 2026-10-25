@@ -44,7 +44,12 @@ impl FrameMemory {
                 let inc = if self.ram[0x00FF] & 0x04 != 0 { 32u16 } else { 1u16 };
                 self.render.write_ppudata(v, inc);
             }
-            _ => {} // 其余寄存器面 S5 骨架暂不建模
+            _ => {
+                // APU 面（$4000-$4017）：壳层音频消费源（apu_log 捕获——驱动逐帧 drain）
+                if (0x4000..=0x4017).contains(&addr) {
+                    self.apu_log.push((addr, v));
+                }
+            } // 其余寄存器面 S5 骨架暂不建模
         }
         // 其余寄存器面 S5 骨架暂不建模（RAM watch 不可见）；渲染面挂 task-13
     }

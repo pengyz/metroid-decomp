@@ -1,0 +1,9 @@
+[package]
+name = "game-platform"
+version = "0.1.0"
+edition = "2021"
+description = "平台壳 trait 层（video/audio/input/clock——壳实现=game-shell）"
+
+[lib]
+name = "game_platform"
+path = "src/lib.rs"
