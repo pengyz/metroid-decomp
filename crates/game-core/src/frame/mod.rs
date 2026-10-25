@@ -30,7 +30,8 @@ pub mod render;
 pub mod statue;
 pub mod title_bridge;
 pub mod vram;
-pub mod room; // r25 房间绘制引擎（DrawRoom \ 族）
+pub mod room;
+pub mod sprite; // r25 sprite 管线（AnimDrawObject \ 族） // r25 房间绘制引擎（DrawRoom \ 族）
 
 pub use clock::{VirtualClock, TARGET_FPS};
 pub use engine::FrameEngine;

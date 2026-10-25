@@ -186,9 +186,10 @@ pub fn samus_intro(mem: &mut FrameMemory) {
         mem.write_ram(0x0300, status.wrapping_add(1));
         mem.write_ram(crate::ram_map::PALETTE_PENDING, status); // sty（Y=status）
     }
-    // 奇帧闪现（FC&1）——sprite 装载径
+    // 奇帧闪现（FC&1）——sprite 装载径（r25 端口：AnimDrawObject 全径）
     if mem.read_ram(crate::ram_map::FRAME_COUNT) & 1 == 1 {
-        crate::unported!("bank07:DE47"); // AnimDrawObject（sprite 管线——下一缺环）
+        // SetSamusAnim(SamusFront)（$CF6B——animResetIndex/animIndex←表偏）随件核
+        crate::frame::sprite::anim_draw_object(mem, 0); // AnimDrawObject（$DE47——Samus 槽 0）
     }
 }
 
