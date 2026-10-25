@@ -202,9 +202,11 @@ pub fn more_init(mem: &mut FrameMemory) {
     mem.write_ram(0x0053, 0); // ScrollBlockOnNameTable0
     mem.write_ram(0x0030, 1); // SpareMem30
     mem.write_ram(0x0003, 2); // ScrollDir=2（横房）
-    let map_x = mem.read_ram(0x6884); // AreaMapPosX（WRAM 源——随考证）
+    let map_x = game_data::title::world_map::AREA_MAP_POS
+        [area_idx(mem.read_ram(crate::ram_map::IN_AREA))].0; // ROM $95D7（r25 正源）
     mem.write_ram(0x0050, map_x); // MapPosX（constants_ram:543）
-    let map_y = mem.read_ram(0x6883); // AreaMapPosY
+    let map_y = game_data::title::world_map::AREA_MAP_POS
+        [area_idx(mem.read_ram(crate::ram_map::IN_AREA))].1; // ROM $95D8
     mem.write_ram(0x004F, map_y); // MapPosY（constants_ram:542）
     let pt = mem.read_ram(0x6885); // AreaPaletteToggle
     mem.write_ram(0x0076, pt); // PaletteToggle（constants_ram:609）
@@ -243,6 +245,19 @@ pub fn more_init(mem: &mut FrameMemory) {
     // jmp ScreenOn（$FE|=$1E 面——shell 组合点随件；先事件形）
     let fe = mem.read_ram(0x00FE);
     mem.write_ram(0x00FE, fe | 0x1E);
+}
+
+/// 区序索引（InArea&$0F 越界稳——AREA_MAP_POS 五项）。
+pub fn area_idx(in_area: u8) -> usize {
+    (in_area & 0x0F) as usize % 5
+}
+
+/// CopyMap（**asm 内容锚** `CopyMap: ; 00:A93E`——WorldMap→WRAM $7000-$73FF 1KB）。
+/// 调用点=InitBank0（prg7_engine.asm:1382——**复位链件**：boot 期一次）。
+pub fn copy_map(mem: &mut FrameMemory) {
+    for (i, b) in game_data::title::world_map::WORLD_MAP.iter().enumerate() {
+        mem.write_wram(0x7000 + i as u16, *b);
+    }
 }
 
 /// AreaPointers_ROM 烘焙（prg1 Brinstar——`14 a3 72 a3 f0 ae e0 9d e0 9e 0e 9f 6a 9d`

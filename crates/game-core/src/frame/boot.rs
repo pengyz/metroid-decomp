@@ -46,6 +46,9 @@ const PTR_HI: u16 = 0x0001;
 
 /// bank07:$C01A 主初始化（执行序一步一单元；未端口步=unported! 引爆）。
 pub fn boot_pre_spin(mem: &mut FrameMemory) {
+    // 【r25】CopyMap（InitBank0 件（prg7:1382）——WorldMap→WRAM $7000 1KB；游戏起点房
+    // 查表源（GetRoomNum））。
+    crate::frame::mainloop::copy_map(mem);
     // ① MMC1 复位写（A=0：CHR0/CHR1 串行清零）
     mem.regs.a = 0x00;
     mmc1_serial_write(mem, io::MMC1_CHR0);
