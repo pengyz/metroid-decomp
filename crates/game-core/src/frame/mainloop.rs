@@ -121,7 +121,7 @@ pub fn area_init(mem: &mut FrameMemory) {
 /// hi←PPUCTRL_ZP&1 ⑩Health($0106)←30（$00/$03）。
 pub fn samus_init(mem: &mut FrameMemory) {
     use crate::ram_map::{IN_AREA, MIRROR_CNTRL, MAIN_ROUTINE, SAMUS_STATUS, SAMUS_Y};
-    mem.write_ram(MAIN_ROUTINE, 9); // SamusIntro（下一帧）
+    mem.write_ram(MAIN_ROUTINE, 8); // SamusIntro（下一帧——表序 _id_SamusIntro=8（r25 正））
     mem.write_ram(0x002C, 0x2C); // Timer3（440 帧淡入）
     mem.write_ram(crate::ram_map::SFX_MULTI_INIT, 0x10); // IntroMusic（$CBFD）
     mem.write_ram(SAMUS_STATUS, 0x14); // _id_Palette13+1（淡入态）
@@ -211,7 +211,38 @@ pub fn more_init(mem: &mut FrameMemory) {
     mem.write_ram(0x005A, 0xFF); // RoomNumber=$FF（constants_ram:567——undefined room）
     copy_area_pointers(mem); // C8B0（已端口）
     get_room_num(mem); // E720（已端口——壳）
-    setup_room(mem); // EA2B（已端口——壳）
+    // 【r25 对拍根】asm LC86F 房间环：`jsr SetupRoom/ldy RoomNumber/iny/bne LC86F`
+    // ——循环至 RoomNumber==FF（多房装载序）。
+    loop {
+        setup_room(mem); // EA2B（DrawRoom 未端口面=fail-loud 随爆）
+        if mem.read_ram(0x005A).wrapping_add(1) == 0 {
+            break;
+        }
+    }
+    // RoomRAM($6000+)→PPU 名表 #0($2000) 4 页拷贝（asm Lx001 `lda ($00),y/sta PPUDATA`
+    // ——**黑屏根件**：名表从 RoomRAM 落 RenderState）。
+    mem.write_ram(0x0000, mem.read_ram(0x0037)); // RoomRAMPtr→$00/$01（asm $37/$38 面）
+    mem.write_ram(0x0001, mem.read_ram(0x0038));
+    mem.write_io(0x2006, 0x20);
+    mem.write_io(0x2006, 0x00);
+    let mut hi = mem.read_ram(0x0001);
+    for _page in 0..4u16 {
+        for i in 0..256u16 {
+            // 源址=(hi<<8)|i 的 WRAM 视（$6000 起——全址形（read_wram 契约））
+            let addr = ((hi as u16) << 8) | i;
+            let b = mem.read_wram(0x6000 | (addr & 0x1FFF));
+            mem.write_io(0x2007, b);
+        }
+        hi = hi.wrapping_add(1);
+    }
+    mem.write_ram(0x002B, 0); // DoorPaletteChangeDir
+    mem.write_ram(crate::ram_map::PALETTE_PENDING, 1);
+    mem.write_ram(0x0030, 1); // SpareMem30
+    mem.write_ram(crate::ram_map::MAIN_ROUTINE,
+                  mem.read_ram(crate::ram_map::MAIN_ROUTINE).wrapping_add(1)); // inc→SamusInit
+    // jmp ScreenOn（$FE|=$1E 面——shell 组合点随件；先事件形）
+    let fe = mem.read_ram(0x00FE);
+    mem.write_ram(0x00FE, fe | 0x1E);
 }
 
 /// AreaPointers_ROM 烘焙（prg1 Brinstar——`14 a3 72 a3 f0 ae e0 9d e0 9e 0e 9f 6a 9d`

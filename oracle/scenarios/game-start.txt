@@ -1,0 +1,20 @@
+# 场景：game-start —— 标题→进入游戏（自动输入对拍）
+# 用途：title→START/CONTINUE 选单→START GAME→游戏画面（萨姆斯出现）——r25 链路
+# 对拍（黑屏诊断）。输入按 inputPolled 帧计；金面点=游戏画面关键帧。
+name game-start
+frames 700
+coverage
+sample_point spin-exit
+watch_range 0000-00ff zp
+watch_range 0100-07ff iram
+
+# 标题稳（boot-title 同段）
+capture 300 title
+
+# 输入：标题按 Start→选单；选单按 Start（选 START）→游戏启动链
+press 310 start
+capture 330 menu
+press 350 start
+capture 420 game-in
+capture 520 game
+capture 699 game-late

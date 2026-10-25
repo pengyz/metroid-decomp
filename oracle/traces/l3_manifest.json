@@ -1038,6 +1038,39 @@
       "determinism_evidence": "战役 22 迭代单跑序列（sc-pickup-touch.txt 全档案——工具注：Mesen 静默崩瞬态×5 重跑即全形）",
       "watch_note": "zp+iram+pw（拾取三断言面：pw 位图/PowerUps type/同表活）",
       "campaign_note": "v1-v22 全解沉淀：hi XOR PPUCTRL 碰撞/x wrap 翻转/ToggleSamusHi/屏奇偶律/存活窗西行解/房23 几何全解"
+    },
+    {
+      "id": "l3-game-start-title-to-game",
+      "scenario": "game-start",
+      "frames": 700,
+      "watch": [
+        {
+          "label": "zp",
+          "base": "0000",
+          "range": "0000-00ff"
+        },
+        {
+          "label": "iram",
+          "base": "0100",
+          "range": "0100-07ff"
+        }
+      ],
+      "watch_note": "同 boot-title watch 面（zp+iram 全页——含栈页）",
+      "game_core_leg": "S5（analysis/dump/game-start.frames.jsonl）",
+      "legs": {
+        "oracle": {
+          "sample_point": "spin-exit",
+          "rows": null,
+          "missing": []
+        },
+        "game_core": {
+          "sample_point": "spin-exit",
+          "rows": null,
+          "missing": []
+        }
+      },
+      "frame_keys": [],
+      "determinism_evidence": "r25 对拍用（title→游戏链——黑屏诊断）"
     }
   ]
 }
