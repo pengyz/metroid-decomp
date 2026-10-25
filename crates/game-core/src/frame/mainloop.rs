@@ -97,7 +97,7 @@ pub fn game_main_routine(mem: &mut FrameMemory) {
         }
     }
     if std::env::var("DSH_MR_TRACE").is_ok() {
-        eprintln!("[mr-post] FC={} status={:02X} oam0={:02X}", mem.read_ram(crate::ram_map::FRAME_COUNT), mem.read_ram(0x0300), mem.read_ram(0x0200));
+        eprintln!("[mr-post] FC={} status={:02X} oam0={:02X} pal={:02X?}", mem.read_ram(crate::ram_map::FRAME_COUNT), mem.read_ram(0x0300), mem.read_ram(0x0200), &mem.render.palette[..16]);
     }
 }
 
@@ -381,7 +381,7 @@ pub fn setup_room(mem: &mut FrameMemory) {
     crate::frame::room::select_room_ram(mem);
     let room_stream = game_data::area::graphics::ROOM_STREAMS.get(room as usize);
     let palette = room_stream.and_then(|s| s.first().copied()).unwrap_or(0);
-    mem.write_ram(0x0036, palette); // RoomPalette（$36 址随证——InitTables 索引源）
+    mem.write_ram(0x0068, palette); // RoomPalette（**$68**——r25 址勘误修（旧 $36 随证形误））
     crate::frame::room::init_tables(mem);
     if !crate::frame::room::draw_room(mem, room) {
         crate::unported!("bank07:EAD4"); // 敌门环未竟件（type 2/4/6/7 族）

@@ -212,8 +212,8 @@ pub fn init_tables(mem: &mut crate::frame::FrameMemory) {
     for i in 0..0x3C0u16 {
         mem.write_wram(((hi as u16) << 8) | i, 0xFF);
     }
-    // 属性表填（ATDataTable[$F018——00/55/AA/FF]——RoomPalette 低 2 位）
-    let fill = [0x00u8, 0x55, 0xAA, 0xFF][mem.read_ram(0x0036) as usize & 0x03]; // RoomPalette=$36
+    // 属性表填（ATDataTable[$F018——00/55/AA/FF]——RoomPalette($68) 低 2 位）
+    let fill = [0x00u8, 0x55, 0xAA, 0xFF][mem.read_ram(0x0068) as usize & 0x03];
     for i in 0..0x40u16 {
         mem.write_wram(((hi as u16 + 3) << 8) | (0xC0 + i), fill);
     }

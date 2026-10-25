@@ -712,3 +712,29 @@ pub fn scanline_sprite_limit(sprites: &[Sprite]) -> [u8; 240] {
     }
     counts
 }
+
+#[cfg(test)]
+mod r25_pal_probe {
+    use super::*;
+
+    /// 调色板解码径（entry 0 房调色+entry 19 淡入 sprite 色叠载——f520 期望形）。
+    #[test]
+    fn palette_entry19_decodes() {
+        let mut m = crate::frame::FrameMemory::default();
+        m.write_ram(crate::ram_map::GAME_MODE, 0);
+        m.write_ram(crate::ram_map::IN_AREA, 0);
+        // entry 0（房调色——MoreInit `PaletteDataPending←1`）
+        m.write_ram(crate::ram_map::PALETTE_PENDING, 1);
+        palette_write_pending(&mut m);
+        // entry 19（淡入 sprite 色——SamusIntro 步进 `sty` 旧 status=0x14→idx 19）
+        m.write_ram(crate::ram_map::PALETTE_PENDING, 20);
+        palette_write_pending(&mut m);
+        let p = &m.render.palette;
+        println!("[pal-probe] BG : {:02X?}", &p[..16]);
+        println!("[pal-probe] SPR: {:02X?}", &p[16..]);
+        assert_eq!(&p[..16], &[0x0F, 0x22, 0x12, 0x1C, 0x0F, 0x22, 0x12, 0x1C,
+                               0x0F, 0x27, 0x11, 0x07, 0x0F, 0x22, 0x12, 0x1C], "BG 期望形");
+        assert_eq!(&p[16..], &[0x0F, 0x04, 0x09, 0x07, 0x0F, 0x12, 0x30, 0x21,
+                               0x0F, 0x27, 0x2A, 0x3C, 0x0F, 0x15, 0x21, 0x38], "SPR 期望形");
+    }
+}
