@@ -188,7 +188,11 @@ pub fn samus_intro(mem: &mut FrameMemory) {
     }
     // 奇帧闪现（FC&1）——sprite 装载径（r25 端口：AnimDrawObject 全径）
     if mem.read_ram(crate::ram_map::FRAME_COUNT) & 1 == 1 {
-        // SetSamusAnim(SamusFront)（$CF6B——animResetIndex/animIndex←表偏）随件核
+        // SetSamusAnim(SamusFront)（$CF6B）：animResetIndex/animIndex←表偏 **4**
+        // （ObjAnim_SamusFront $8576-$8572——common_sprite_data 1c）+animDelay←0
+        mem.write_ram(0x0305, 4);
+        mem.write_ram(0x0306, 4);
+        mem.write_ram(0x0304, 0);
         crate::frame::sprite::anim_draw_object(mem, 0); // AnimDrawObject（$DE47——Samus 槽 0）
     }
 }
