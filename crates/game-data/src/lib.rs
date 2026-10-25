@@ -502,5 +502,6 @@ pub mod world; // 数据内容在 game-data（架构约束）——世界数据�
 pub mod samus; // 数据内容在 game-data（架构约束）——Samus 数据
 pub mod enemy; // 数据内容在 game-data（架构约束）——敌人数据
 pub mod sound; // 数据内容在 game-data（架构约束）——音频数据
-pub mod title; // 数据内容在 game-data（架构约束）——标题数据
+pub mod title;
+pub mod area; // r25 区域图形（三件套烘焙） // 数据内容在 game-data（架构约束）——标题数据
 pub mod render; // 数据内容在 game-data（架构约束）——渲染数据

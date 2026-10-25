@@ -319,8 +319,10 @@ pub fn setup_room(mem: &mut FrameMemory) {
     let hi = ROOM_PTR_TABLE[y + 1] as u16;
     mem.write_ram(0x0033, lo as u8); // RoomPtr（constants_ram:508）
     mem.write_ram(0x0034, hi as u8);
-    // 首字节读（房间数据——RoomPalette）+DrawRoom 链（S6-7 绘制面）
-    crate::unported!("bank07:EAAA"); // DrawRoom（S6-7 房间绘制链——嵌套桩）
+    // 首字节读（房间数据——RoomPalette）+DrawRoom 链（S6-7 绘制面——r25 端口）
+    if !crate::frame::room::draw_room(mem, room) {
+        crate::unported!("bank07:EAD4"); // 敌门环/属性表尾（未端口面）
+    }
 }
 
 /// RoomPtrTable 烘焙（prg1 Brinstar $A314——47 项；提取自证：A441/A454/A45C…AC6A）。

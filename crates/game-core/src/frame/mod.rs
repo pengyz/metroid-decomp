@@ -1,4 +1,4 @@
-//! game-core::frame —— S5 帧引擎骨架（task-10；two-layer-architecture.md 形态）。
+﻿//! game-core::frame —— S5 帧引擎骨架（task-10；two-layer-architecture.md 形态）。
 //!
 //! ① 60Hz tick / 虚拟时钟 / GameRng（确定性；AGENTS D1）；
 //! ② 全内存模型（RAM 2KB 含栈页 + WRAM 8KB + 寄存器面）；
@@ -30,6 +30,7 @@ pub mod render;
 pub mod statue;
 pub mod title_bridge;
 pub mod vram;
+pub mod room; // r25 房间绘制引擎（DrawRoom \ 族）
 
 pub use clock::{VirtualClock, TARGET_FPS};
 pub use engine::FrameEngine;
