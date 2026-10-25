@@ -347,9 +347,8 @@ pub fn sound_dispatch_chain(mem: &mut FrameMemory, flag_addr: u16, block_win: u1
                     header.copy_from_slice(&sound::SONG_HEADERS[off..off + 13]);
                 }
                 ram.extend(sound::initialize_music(cur, &header));
-                // 【LBC8D 尾（r21 终审）】`jmp UpdateAllMusicChannels`——**全更新**
-                // （原仅 entry 面=起相位差根）。先落已积事件（快照一致：头载基址/延迟
-                // 尚未入 mem——bridge 终会再落（同值幂等））再跑环：
+                // 【LBC8D 尾（r21 终审——r23 实验确认供 1 更新：撤后声面 +1→+2）】
+                // `jmp UpdateAllMusicChannels` 全更新。先落已积事件（快照一致）再跑环：
                 for &(a, v) in ram.iter() {
                     mem.write_ram(a, v);
                 }

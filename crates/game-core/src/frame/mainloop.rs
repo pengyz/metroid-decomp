@@ -37,10 +37,10 @@ pub fn main_loop_iter(mem: &mut FrameMemory) {
         update_timer(mem); // C266
     }
     go_main_routine(mem); // C114（分发壳——会师点；续段=GoMainRoutine 内部续跑）
-    let phase_after = mem.read_ram(crate::ram_map::TITLE_ROUTINE);
-    let step_done = mem.title_cursor == 0 || mem.title_cursor_phase != phase_after;
-    if step_done {
-        // `inc FrameCount`（GoMainRoutine 返回点——等待段不达此处）
+    // 【r23 修（$C3 根收窄实验）】`inc FrameCount`（GoMainRoutine 返回点）=**非续段逐迭代**
+    // （asm 形：每迭代收尾一 inc——等待帧非迭代不达）；原 step_done（尾段）判据把补帧
+    // 步的 FC 拖到尾段 ⇒ NMI 间 FC=0 窗宽 2（$C3 星门复燃根）。续段（cursor>0 同相）不计。
+    if !continuation {
         mem.write_ram(FRAME_COUNT, mem.read_ram(FRAME_COUNT).wrapping_add(1));
     }
     mem.write_ram(NMI_STATUS, 0); // 清 0（spin 入口）
