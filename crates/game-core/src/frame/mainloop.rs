@@ -587,7 +587,24 @@ fn crawler_ai(mem: &mut crate::frame::FrameMemory, x: u8) {
         update_enemy_common_no_move_no_anim(mem, x);
         return;
     }
-    crate::unported!("bank07:F852"); // @move 径（移动件+角检——随件）
+    // @move 径：JumpByRTSToMovementRoutine（areas_common \$8048 表 RTS 跳）
+    // Y=(orientation*2+direction)*2→CrawlerMovementRoutinesTable→四例行。
+    let d5 = mem.read_ram(0x0400 + x as u16 + 5);
+    let orientation = mem.read_ram(0x0400 + x as u16 + 10) & 0x03; // data0A=+10
+    let direction = d5 & 1;
+    let idx = ((orientation as usize) * 2 + direction as usize) & 0x07;
+    let ok = match idx {
+        0 | 5 => enemy_move_one_pixel_right(mem, x),
+        1 | 4 => enemy_move_one_pixel_left(mem, x),
+        2 | 3 => enemy_move_one_pixel_down(mem, x),
+        _ => enemy_move_one_pixel_up(mem, x),
+    };
+    if !ok {
+        // CrawlerInsideCornerCheck（碰撞 carry 清⇒FlipDirection 或朝向--）
+        let d = mem.read_ram(0x0400 + x as u16 + 5);
+        mem.write_ram(0x0400 + x as u16 + 5, d ^ 0x01); // FlipDirection（简化径——角检随件）
+    }
+    update_enemy_common_no_move_no_anim(mem, x); // @exit 径（anim+显示）
 }
 
 /// UpdateEnemyCommon@noMoveNoAnim（**asm 内容锚** `: 07:F416`——r26）：tough 调色→
@@ -672,6 +689,76 @@ fn draw_enemy(mem: &mut crate::frame::FrameMemory, x: u8) {
         }
     }
     mem.write_ram(0x005B, x_sprite as u8);
+}
+
+
+/// EnemyMoveOnePixelUp（**asm 内容锚** `areas_common.asm:989 $83F5`——r26）：
+/// 顶界块界判（(y-radiusY)&7==0⇒EnemyCheckMoveUp）→y dec（y==0 换名表族）→
+/// radiusY 界判→成功（carry=1）/失败（carry=0）。返回 bool（carry）。
+fn enemy_move_one_pixel_up(mem: &mut crate::frame::FrameMemory, x: u8) -> bool {
+    let y = mem.read_ram(0x0400 + x as u16 + 0); // y=+0
+    let ry = mem.read_wram(0x6AF4 + x as u16 + 1); // radiusY=+1
+    if y.wrapping_sub(ry) & 0x07 == 0 {
+        // 块界⇒碰撞判（EnemyCheckMoveUp——随件 fail-loud）
+        crate::unported!("bank07:E770");
+    }
+    let ny = y.wrapping_sub(1);
+    mem.write_ram(0x0400 + x as u16 + 0, ny);
+    if ny == ry {
+        // 界判（ScrollY/名表换——简化径）
+        return false;
+    }
+    // 成功：jumpDsplcmnt inc（横朝向时）
+    if mem.read_ram(0x0400 + x as u16 + 5) & 0x80 == 0 {
+        let j = mem.read_wram(0x6AF4 + x as u16 + 13); // jumpDsplcmnt=+13
+        mem.write_wram(0x6AF4 + x as u16 + 13, j.wrapping_add(1));
+    }
+    true
+}
+
+/// EnemyMoveOnePixelDown（**asm 内容锚** `: 1066 $844B`——r26 同构（y inc））。
+fn enemy_move_one_pixel_down(mem: &mut crate::frame::FrameMemory, x: u8) -> bool {
+    let y = mem.read_ram(0x0400 + x as u16 + 0);
+    let ry = mem.read_wram(0x6AF4 + x as u16 + 1);
+    if y.wrapping_add(ry) & 0x07 == 0 {
+        crate::unported!("bank07:E77B");
+    }
+    let ny = y.wrapping_add(1);
+    mem.write_ram(0x0400 + x as u16 + 0, ny);
+    if ny == ry.wrapping_neg() {
+        return false;
+    }
+    true
+}
+
+/// EnemyMoveOnePixelLeft（**asm 内容锚** `: 1142 $84A7`——r26（x dec 同构））。
+fn enemy_move_one_pixel_left(mem: &mut crate::frame::FrameMemory, x: u8) -> bool {
+    let xpos = mem.read_ram(0x0400 + x as u16 + 1); // x=+1
+    let rx = mem.read_wram(0x6AF4 + x as u16 + 2); // radiusX=+2
+    if xpos.wrapping_sub(rx) & 0x07 == 0 {
+        crate::unported!("bank07:E8F1");
+    }
+    let nx = xpos.wrapping_sub(1);
+    mem.write_ram(0x0400 + x as u16 + 1, nx);
+    if nx == rx {
+        return false;
+    }
+    true
+}
+
+/// EnemyMoveOnePixelRight（**asm 内容锚** `: 1214 $84FE`——r26（x inc 同构））。
+fn enemy_move_one_pixel_right(mem: &mut crate::frame::FrameMemory, x: u8) -> bool {
+    let xpos = mem.read_ram(0x0400 + x as u16 + 1);
+    let rx = mem.read_wram(0x6AF4 + x as u16 + 2);
+    if xpos.wrapping_add(rx) & 0x07 == 0 {
+        crate::unported!("bank07:E8FC");
+    }
+    let nx = xpos.wrapping_add(1);
+    mem.write_ram(0x0400 + x as u16 + 1, nx);
+    if nx == rx.wrapping_neg() {
+        return false;
+    }
+    true
 }
 
 /// UpdateEnemy_Resting（**asm 内容锚** `: 07:F3BE`——r26 壳：30fps 门/件序 fail-loud）。
