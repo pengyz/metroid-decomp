@@ -111,6 +111,7 @@ PRG 128KB（8×16KB bank）+ CHR-RAM 8KB）重制：**以社区匹配反汇编�
 | 改参考投影/轨道后 | 投影回归 | `python3 gates/cli.py seed` | seed sha 不变；src 轨道 trace 不变 |
 | 改 game-data/game-core 后 | 差分（L1–L3） | `python3 gates/cli.py trace` | 任何回退 ⇒ 停止，先定位层（§4） |
 | 改渲染后 | 视觉（L4） | `python3 gates/cli.py visual` | 白名单外像素必须一致 |
+| 里程碑/对拍收尾 | L4 对拍矩阵 | `python3 gates/cli.py l4` | 逐采集点 ratchet 回退 ⇒ 停止 |
 | 里程碑收尾 | 全量 | `python3 gates/cli.py all` | 对照管线文档阶段 Gate |
 
 - **门禁失败不是"多跑几次"能解决的**：按 §4 定位层，修复根因，不许调阈值/加白名单掩盖。
