@@ -180,7 +180,7 @@ fn samus_run_check_horz_movement_midair(mem: &mut FrameMemory) {
 /// FireSamusProjectile（打敌人流程件——随件）。
 fn samus_jump_check_fire(mem: &mut FrameMemory) {
     if mem.read_ram(crate::ram_map::JOY1_CHANGE) & 0x80 != 0 {
-        crate::unported!("bank07:D1EE");
+        fire_samus_projectile(mem); // D1EE（射弹——goal-r10 端口）
     }
 }
 
@@ -322,6 +322,36 @@ fn samus_run_set_anim(mem: &mut FrameMemory) -> bool {
 /// SetSamusJump（**asm 内容锚** `SetSamusJump: ; 07:CFC3`（LCFC5 共体））：
 /// $0305←anim/$0306←anim−1/$0304←4/JumpDsplcmnt←0/speedY←$FC（起跳上升速）。
 /// （螺旋转件 Lx017 随件——gear 判。）
+/// FireSamusProjectile（**asm 内容锚** `FireSamusProjectile: ; 07:D1EE`——goal-r10 端口）：
+/// SearchOpenSlot（D1F7）→InitBullet（D2EB）→speedX（BulletSpeedXTable）→speedY=0/onScreen=1。
+/// 射弹槽=0xD0/0xE0/0xF0（Objects.status 0x03D0/03E0/03F0）。
+fn fire_samus_projectile(mem: &mut FrameMemory) {
+    // SearchOpenSamusProjectileslot（D1F7）：找 status==0 槽
+    let mut slot: Option<u8> = None;
+    for s in [0xD0u8, 0xE0, 0xF0] {
+        if mem.read_ram(0x0300 + s as u16) == 0 {
+            slot = Some(s);
+            break;
+        }
+    }
+    let Some(slot) = slot else { return; }; // 无空槽（bne @exit）
+    let base = 0x0300u16 + slot as u16;
+    // InitBullet（D2EB）：status+=1/radiusY=2/radiusX=2/anim=RegularBullet
+    mem.write_ram(base, mem.read_ram(base).wrapping_add(1));
+    mem.write_ram(base + 1, 2); // radiusY
+    mem.write_ram(base + 2, 2); // radiusX
+    mem.write_ram(base + 5, 0x00); // animResetIndex（RegularBullet 表序）
+    mem.write_ram(base + 6, 0x00); // animIndex
+    mem.write_ram(base + 4, 0); // animDelay
+    // DieDelay=0x0C
+    mem.write_ram(base + 0x15, 0x0C);
+    // speedX=BulletSpeedXTable[SamusDir]（±4）
+    let dir = mem.read_ram(crate::ram_map::SAMUS_DIR);
+    mem.write_ram(base + 9, if dir & 1 == 0 { 4 } else { 0xFC }); // speedX
+    mem.write_ram(base + 8, 0); // speedY=0
+    mem.write_ram(base + 0x0B, 1); // onScreen=1
+}
+
 fn set_samus_jump(mem: &mut FrameMemory) {
     let anim = OBJ_ANIM_SAMUS_JUMP;
     mem.write_ram(ANIM_RESET_INDEX, anim);
@@ -329,6 +359,8 @@ fn set_samus_jump(mem: &mut FrameMemory) {
     mem.write_ram(ANIM_RESET_INDEX.wrapping_sub(1), 4);
     mem.write_ram(crate::ram_map::SAMUS_JUMP_DISP, 0);
     mem.write_ram(super::physics::SAMUS_SPEED_Y_I, 0xFC);
+    // 【goal-r10】asm CFC3 Lx017 `ldy #$18/sty SamusAccelY`——跳跃重力
+    mem.write_ram(crate::ram_map::SAMUS_ACCEL_Y, 0x18);
 }
 
 /// SetSamusRun（**asm 内容锚** `SetSamusRun: ; 07:CC98`）：WalkSoundDelay←9/转身动画
@@ -610,8 +642,8 @@ pub fn samus_stand(mem: &mut FrameMemory) {
     }
     // FIRE（Joy1Change|Joy1Retrig 高位）→ FireSamusProjectile
     let fire = mem.read_ram(crate::ram_map::JOY1_CHANGE) | mem.read_ram(crate::memmap::title_state::JOY1_RETRIG);
-    if fire & A != 0 {
-        crate::unported!("bank07:D1EE"); // FireSamusProjectile
+    if fire & B != 0 {
+        fire_samus_projectile(mem); // D1EE（射弹——goal-r10 端口） // FireSamusProjectile
     }
     // JUMP（Joy1Change bit7）→ sa_Jump
     if mem.read_ram(crate::ram_map::JOY1_CHANGE) & A != 0 {
@@ -688,8 +720,8 @@ pub fn samus_pnt_up(mem: &mut FrameMemory) {
         }
     }
     let fire = mem.read_ram(crate::ram_map::JOY1_CHANGE) | mem.read_ram(crate::memmap::title_state::JOY1_RETRIG);
-    if fire & A != 0 {
-        crate::unported!("bank07:D1EE"); // FireSamusProjectile（上射）
+    if fire & B != 0 {
+        fire_samus_projectile(mem); // D1EE（射弹——goal-r10 端口） // FireSamusProjectile（上射）
     }
     if mem.read_ram(crate::ram_map::JOY1_CHANGE) & A != 0 {
         mem.write_ram(crate::ram_map::SAMUS_STATUS, 6); // sa_PntJump

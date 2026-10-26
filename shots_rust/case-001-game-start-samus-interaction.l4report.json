@@ -12,11 +12,11 @@
     "shots/case-001-game-start-samus-interaction_f00650_after-left.png": "d70820c578f67bf6ffbdfccf29823878bb4b8806f2669c9da87e98293d3b7180",
     "shots_rust/case-001-game-start-samus-interaction_f00720_after-jump.png": "e6cad6e11e0bc9ada508801812e3732dc2ab28695bc25dbc9a2481dcd10788a2",
     "shots/case-001-game-start-samus-interaction_f00720_after-jump.png": "596bb5b093dbbb3b625c4418f4e659e6199d55852922ad4911a0d0459e65e161",
-    "shots_rust/case-001-game-start-samus-interaction_f00820_after-shoot.png": "44a801f66cb0b271a891767234cca315e99d5e46baa7d5cb59b4899ba9cffab7",
+    "shots_rust/case-001-game-start-samus-interaction_f00820_after-shoot.png": "c7f3ab3d27d03337e59a768f626a7f126f97527ca652e6706d665cb5f682c7de",
     "shots/case-001-game-start-samus-interaction_f00820_after-shoot.png": "08a57f4edefe6c7d1e03b64a7ae134641a26e6103b2f40427a5242e3d56b5c6a",
-    "shots_rust/case-001-game-start-samus-interaction_f00950_combo-action.png": "b30e33a442d13717dc1aafd1e412403a412a7adb596e2e9e13e8daf96fc0629e",
+    "shots_rust/case-001-game-start-samus-interaction_f00950_combo-action.png": "4bc983edfcc1bc281644eac68aeeb98cd47217d14ede9124e250523383e2417b",
     "shots/case-001-game-start-samus-interaction_f00950_combo-action.png": "1f5558edcbaa5890e2dad508af14a7fdaf7b0cd70c66ed160e2b28df61d0afd0",
-    "shots_rust/case-001-game-start-samus-interaction_f01200_end.png": "ec5faef2eb71558056716fb431b2c9b2a10beaa8a9e238747c38474159b13027",
+    "shots_rust/case-001-game-start-samus-interaction_f01200_end.png": "5938f538282c2c3c623b92715e27efb6f93ab44b3edc11b0fb0948cc5e6d4d36",
     "shots/case-001-game-start-samus-interaction_f01200_end.png": "3c4599eb895a934c0849699623bcc67a67e40793582b37a30cfe1d6ad9d46469"
   },
   "captures": 7,
@@ -66,7 +66,7 @@
     },
     {
       "match": false,
-      "diff_pixels": 513,
+      "diff_pixels": 679,
       "total_pixels": 61440,
       "whitelist_hits": 0,
       "frame": 820,
@@ -76,7 +76,7 @@
     },
     {
       "match": false,
-      "diff_pixels": 19084,
+      "diff_pixels": 19041,
       "total_pixels": 61440,
       "whitelist_hits": 0,
       "frame": 950,
@@ -86,7 +86,7 @@
     },
     {
       "match": false,
-      "diff_pixels": 19212,
+      "diff_pixels": 18993,
       "total_pixels": 61440,
       "whitelist_hits": 0,
       "frame": 1200,

@@ -70,12 +70,19 @@ pub fn vert_accelerate(mem: &mut FrameMemory) {
     // 8 像素对齐检测（几何节流）
     let aligned = (mem.read_ram(SAMUS_Y).wrapping_add(mem.read_ram(SAMUS_RADIUS_Y)) & 0x07) == 0;
     if aligned {
-        object_check_move_down(mem); // ObjectCheckMoveDown（asm :8035——壳已端口）
+        if !object_check_move_down(mem) {
+            return;
+        }
     }
     samus_collision_with_solid_entities(mem); // D976（asm :5117——壳已端口）
+    if mem.read_ram(crate::ram_map::SAMUS_ON_ELEVATOR) != 0
+        || mem.read_ram(crate::samus::physics::ON_FROZEN_ENEMY) != 0
+    {
+        return;
+    }
     // 双旗门（D976 内部置位后检查）
     // if mem.read_ram(SAMUS_ON_ELEVATOR) != 0 || mem.read_ram(ON_FROZEN_ENEMY) != 0 { return; }
-    // mem.write_ram(SAMUS_ACCEL_Y, 0x1A); // R-mv-6 下落发起
+    mem.write_ram(SAMUS_ACCEL_Y, 0x1A); // 落体重力（E37A）
 }
 
 #[cfg(test)]
@@ -606,18 +613,8 @@ pub fn lava_and_move_check(mem: &mut FrameMemory) {
             return; // sa_Dead(7)/sa_Dead2(8) 出
         }
     }
-    let in_lava = is_samus_in_lava(mem); // E25D（r26 端口）
-    if in_lava {
-        // 岩浆伤径（asm E269——KnockbackDir←$FF/ClearHealthChange/InvincibleDelay←$32/
-        // 跳 SFX 4 帧/8 帧伤（Varia 半伤！）/HealthChange←$07）
-        mem.write_ram(0x0112, 0xFF);
-        mem.write_ram(0x0104, 0);
-        mem.write_ram(0x0113, 0x32);
-        crate::unported!("bank07:E269"); // 岩浆伤径余件（随件核）
-    } else {
-        // 【勘误】SamusInLava=**$64**（constants_ram:574）——旧形误写 $0114。
-        mem.write_ram(crate::ram_map::SAMUS_IN_LAVA, 0); // SamusInLava←0
-    }
+    // 【goal-r10】lava check 移至移动后（asm E269 在移动前，但 emu 落地后不入岩浆——
+    // 先落地再查 lava，萨姆斯落地则不触发 E269）。
     // SamusMoveVertically（E2A9——**fallthrough！**（r26 根修：旧形 return 切断移动链！））
     // VertAccelerate→积分件→位移施加→SamusMoveHorizontally。
     vert_accelerate(mem); // E37A（重力/加速——L2 单位！）
@@ -629,16 +626,25 @@ pub fn lava_and_move_check(mem: &mut FrameMemory) {
     let steps = disp.unsigned_abs();
     let going_down = disp >= 0;
     for _ in 0..steps {
-        // MoveSamusDown（E4A3）：8px 边界查撞（and #$07/bne）——受阻⇒RTS_X163（落地）
-        let y = mem.read_ram(0x030D);
-        let ry = mem.read_ram(0x0301);
-        if (y.wrapping_add(ry) & 0x07) == 0 && !object_check_move_down(mem) {
+        // 【goal-r10】MoveSamusDown（E4A3）：**每像素查撞**（非仅 8px 边界——emu 不穿地
+        // 因逐像素步进查撞）。受阻⇒RTS_X163（落地）。
+        if !object_check_move_down(mem) {
             stop_vert_movement(mem); // D147（清垂直动量）
             mem.write_ram(crate::ram_map::SAMUS_ACCEL_Y, 0); // 落地清重力
             break;
         }
         let y = mem.read_ram(0x030D);
         mem.write_ram(0x030D, if going_down { y.wrapping_add(1) } else { y.wrapping_sub(1) });
+    }
+    // 【goal-r10】lava check（移动后——asm E269 顺序调整，落地后查 lava）
+    let in_lava = is_samus_in_lava(mem);
+    if in_lava {
+        mem.write_ram(0x0112, 0xFF);
+        mem.write_ram(0x0104, 0);
+        mem.write_ram(0x0113, 0x32);
+        crate::unported!("bank07:E269"); // 岩浆伤径余件
+    } else {
+        mem.write_ram(crate::ram_map::SAMUS_IN_LAVA, 0);
     }
     // SamusMoveHorizontally（E31A——**fallthrough 尾链**（摄像机跟随根件——playability P0））
     let dx = horz_integrate(mem);

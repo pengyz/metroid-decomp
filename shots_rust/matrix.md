@@ -20,7 +20,7 @@
 | case-001-game-start-samus-interaction | 550 | after-right | ✅match | fresh/fresh | 0/61440 |  |
 | case-001-game-start-samus-interaction | 650 | after-left | ✅match | fresh/fresh | 0/61440 |  |
 | case-001-game-start-samus-interaction | 720 | after-jump | ✅match | fresh/fresh | 0/61440 |  |
-| case-001-game-start-samus-interaction | 820 | after-shoot | ❌diff | fresh/fresh | 513/61440 |  |
-| case-001-game-start-samus-interaction | 950 | combo-action | ❌diff | fresh/fresh | 19084/61440 |  |
-| case-001-game-start-samus-interaction | 1200 | end | ❌diff | fresh/fresh | 19212/61440 |  |
+| case-001-game-start-samus-interaction | 820 | after-shoot | ❌diff | fresh/fresh | 679/61440 |  |
+| case-001-game-start-samus-interaction | 950 | combo-action | ❌diff | fresh/fresh | 19041/61440 |  |
+| case-001-game-start-samus-interaction | 1200 | end | ❌diff | fresh/fresh | 18993/61440 |  |
 

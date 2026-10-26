@@ -907,7 +907,18 @@ fn update_samus_projectiles(mem: &mut crate::frame::FrameMemory) {
         let status = mem.read_ram(0x0300 + slot as u16); // Objects.status
         match status {
             0 => {} // ExitSub（rts）
-            _ => crate::unported!("bank07:D4EB"), // UpdateBullet 族（打敌人流程件）
+            _ => {
+                // 【goal-r10】UpdateBullet（D4EB）最简端口：DieDelay 计时→清弹。
+                // （DeleteIfOffScreen/Explode/CollisionWithBG/DrawBullet 随件。）
+                let base = 0x0300u16 + slot as u16;
+                let die = mem.read_ram(base + 0x15); // SamusProjectileDieDelay
+                if die > 0 {
+                    mem.write_ram(base + 0x15, die - 1);
+                }
+                if mem.read_ram(base + 0x15) == 0 {
+                    mem.write_ram(base, 0); // 计时到 0→清弹（status=0）
+                }
+            }
         }
     }
 }
