@@ -134,7 +134,7 @@ PRG 128KB（8×16KB bank）+ CHR-RAM 8KB）重制：**以社区匹配反汇编�
 
 ## 8. 知识库
 
-`docs/knowledge/`：跨会话共享知识（6 类：architecture/gotcha/pattern/debug/decision/reference）。
+`docs/knowledge/`：跨会话共享知识（7 类：architecture/gotcha/pattern/debug/decision/reference/gap）。
 遇到平台坑（Mesen2/IDA/WLA-DX/6502 banking/MMC1 写序）、门禁失效、被纠正的方法、确认有效的取舍时写入；
 **引用前必须验证**文件/命令仍存在。
 
