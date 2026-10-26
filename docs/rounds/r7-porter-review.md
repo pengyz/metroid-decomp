@@ -12666,6 +12666,15 @@ emulator_pixels（1 passed; 0 failed））③渲染逻辑 ✓（证伪更正（b
 - `python3 tools/l4_auto_diff.py game-start --timeout 30`：**对拍结果：PASS（5/5 通过）**
   （hash 对比（截图对比））+result.json+diff_report.txt——**[✓] L4 对拍通过（5/5）**
 
+> 【2026-10-26 更正】上一行"PASS（5/5 通过）"为**假绿**，本节 verdict（pass，5 项全 ✓）作废：
+> `tools/l4_auto_diff.py` 的"对拍"是**模拟器×模拟器**（golden=模拟器产物 × shots=模拟器产物
+> hash 对比），全程未跑 Rust 实现——"5/5 全过"只证明模拟器与自己一致，非 Rust↔模拟器一致。
+> 该假对拍工具连同 `tools/l4_rust_vs_emulator.py` 等共 10 件假对拍/断径/stray 件已于 2026-10-26
+> 安全清理删除（逐件 grep 活死证据：docs/findings/l4-cleanup-inventory.md）；真实对拍面=
+> `tools/l4_diff_run.py`（Rust 真渲染帧 vs 模拟器，像素零容差，报告锚 scenario/rom/产物三 sha，
+> 复用旧产物前校验调度 hash 不符拒跑）。历史主张原文保留不删（证伪更正文化）；本节①—⑤各"✓"
+> 与 verdict 一律以本更正为准。
+
 **① 统一输入格式 ✓**：scenario DSL（两边消费）——「统一输入：一套输入格式（模拟器格式
 （scenario DSL））」（tools/l4_auto_diff.py:6）——模拟器+Rust 实现两边消费同一 scenario DSL ✓
 
