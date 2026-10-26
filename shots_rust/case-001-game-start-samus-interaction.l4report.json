@@ -1,0 +1,73 @@
+{
+  "name": "case-001-game-start-samus-interaction",
+  "captures": 8,
+  "pass": 1,
+  "fail": 7,
+  "gap": true,
+  "results": [
+    {
+      "match": true,
+      "diff_pixels": 0,
+      "total_pixels": 61440,
+      "frame": 420,
+      "tag": "game-in",
+      "file": "case-001-game-start-samus-interaction_f00420_game-in.png",
+      "status": "match"
+    },
+    {
+      "match": false,
+      "diff_pixels": 282,
+      "total_pixels": 61440,
+      "frame": 720,
+      "tag": "samus-ready",
+      "file": "case-001-game-start-samus-interaction_f00720_samus-ready.png",
+      "status": "diff"
+    },
+    {
+      "match": false,
+      "diff_pixels": 2385,
+      "total_pixels": 61440,
+      "frame": 850,
+      "tag": "after-right",
+      "file": "case-001-game-start-samus-interaction_f00850_after-right.png",
+      "status": "diff"
+    },
+    {
+      "match": false,
+      "diff_pixels": 17800,
+      "total_pixels": 61440,
+      "frame": 1000,
+      "tag": "after-left",
+      "file": "case-001-game-start-samus-interaction_f01000_after-left.png",
+      "status": "diff"
+    },
+    {
+      "frame": 1120,
+      "tag": "after-jump",
+      "match": false,
+      "status": "blocked",
+      "reason": "unported gap @ f1100: unported @ bank07:D1EE"
+    },
+    {
+      "frame": 1220,
+      "tag": "after-shoot",
+      "match": false,
+      "status": "blocked",
+      "reason": "unported gap @ f1100: unported @ bank07:D1EE"
+    },
+    {
+      "frame": 1400,
+      "tag": "combo-action",
+      "match": false,
+      "status": "blocked",
+      "reason": "unported gap @ f1100: unported @ bank07:D1EE"
+    },
+    {
+      "frame": 1800,
+      "tag": "end-state",
+      "match": false,
+      "status": "blocked",
+      "reason": "unported gap @ f1100: unported @ bank07:D1EE"
+    }
+  ]
+}

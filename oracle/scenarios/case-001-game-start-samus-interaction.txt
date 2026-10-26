@@ -1,0 +1,39 @@
+# 对拍用例 001：进入游戏+角色交互（左右移动+跳跃+射击）
+# 用途：验证进入游戏后角色在第一个场景中左右移动，跳跃，射击
+# 对拍：模拟器 vs Rust 实现（hash 对比（像素对比））
+# 定义：对拍用例 = ① 输入脚本 + ② 待加载存档 + ③ 对拍时长
+
+name case-001-game-start-samus-interaction
+frames 1800
+
+# ① 进入游戏（标题→游戏开始）
+press 310 start     # 标题按 Start
+press 350 start     # 选单按 Start（START GAME）
+capture 420 game-in  # 游戏画面（萨姆斯出现）
+
+# ② 等待萨姆斯停止闪烁（游戏逻辑（角色停止闪烁后才能移动））
+# 等待 5s（300 帧）后开始移动
+capture 720 samus-ready  # 萨姆斯就绪（停止闪烁）
+
+# ③ 角色左右移动（萨姆斯停止闪烁后（开始移动））
+hold 750-850 right  # 向右移动（帧 750-850）
+capture 850 after-right  # 向右移动后
+hold 900-1000 left   # 向左移动（帧 900-1000）
+capture 1000 after-left   # 向左移动后
+
+# ④ 角色跳跃
+press 1100 a         # 跳跃（帧 1100）
+capture 1120 after-jump   # 跳跃后
+
+# ⑤ 角色射击
+press 1200 b         # 射击（帧 1200）
+capture 1220 after-shoot  # 射击后
+
+# ⑥ 组合动作（移动+跳跃+射击）
+hold 1300-1400 right  # 向右移动（帧 1300-1400）
+press 1320 a         # 跳跃（帧 1320）
+press 1340 b         # 射击（帧 1340）
+capture 1400 combo-action  # 组合动作后
+
+# ⑦ 对拍结束
+capture 1800 end-state  # 结束状态
