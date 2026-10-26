@@ -1,6 +1,6 @@
 {
   "schema": "l4-status-quo-baseline/v1",
-  "doc": "L4 现状基线账（Task 1 门禁解封登记——**账内容忍/l2_gap_map 同构**：显式 reason+exit+count+observed 实录签名；TOLERATED 显式打印、不阻塞≠绿；**非白名单/非调阈/非静默判 pass**）。消费面=gates/cli.py gate_trace_diff/gate_visual_diff 的 l4 现状基线读取点：runner 全量输出的 `[FAIL]`/`[R-FAIL]` 失败裁定行逐条对账（id 命中登记 ∧ rest 与 observed 实录签名精确等值（失败形态变更/增生=签名漂移照常 FAIL） ∧ 匹配数≤count（现状膨胀照常 FAIL））⇒ verdict=TOLERATED（逐条回显 reason/exit/count）；任一账外照常 FAIL；runner 汇总失败计数（failed+rfailed）与账内命中数交叉核对，不一致即 fail-closed（fix round 1 假绿路径封堵）。账清转 strict：失败消失即自然转 PASS，收口时删登记条目。count=登记时覆盖的失败裁定行数（==len(observed)，载入强校验）。实录备注①trace：l3-samus-move3-oracle-determinism 当前败因=oracle 缓存载体缺损——analysis/traces/samus-move3.frames.jsonl 为 0 字节空文件（2026-10-26 10:30 重采 trace_lines=0）vs manifest oracle_sha256=06bf0d35…；run1/run2 两路重采 sha 均=06bf0d35…（与 manifest 一致，oracle 确定性实锚未破）——属缓存载体缺损非游戏状态分歧。reason/exit 已按真实败因登记（fix round 1 更正：原『游戏未 L3/L4 一致（现状）』不实）；fix round 1 实测「从 run1 恢复缓存即愈」（l3 帧级裁定 23 用例 0 失败、runner exit 0）——删条目+恢复缓存的账清动作留待采集侧 trace_lines=0 根因查明后执行（防复现再拦提交）。实录备注②visual：13 帧=case-001 金面已立、复采面（shots/）缺 5 帧、渲染腿面（analysis/render-shots/）缺 13 帧的采集面覆盖缺口（18 条失败裁定行）。登记日 2026-10-26；trace reason 更正日 2026-10-26（fix round 1）。",
+  "doc": "L4 现状基线账（Task 1 门禁解封登记——**账内容忍/l2_gap_map 同构**：显式 reason+exit+count+observed 实录签名；TOLERATED 显式打印、不阻塞≠绿；**非白名单/非调阈/非静默判 pass**）。消费面=gates/cli.py gate_trace_diff/gate_visual_diff 的 l4 现状基线读取点：runner 全量输出的 `[FAIL]`/`[R-FAIL]` 失败裁定行逐条对账（id 命中登记 ∧ rest 与 observed 实录签名精确等值（失败形态变更/增生=签名漂移照常 FAIL） ∧ 匹配数≤count（现状膨胀照常 FAIL））⇒ verdict=TOLERATED（逐条回显 reason/exit/count）；任一账外照常 FAIL；runner 汇总失败计数（failed+rfailed）与账内命中数交叉核对，不一致即 fail-closed（fix round 1 假绿路径封堵）。账清转 strict：失败消失即自然转 PASS，收口时删登记条目。count=登记时覆盖的失败裁定行数（==len(observed)，载入强校验）。实录备注①trace：l3-samus-move3-oracle-determinism 当前败因=oracle 缓存载体缺损——analysis/traces/samus-move3.frames.jsonl 为 0 字节空文件（2026-10-26 10:30 重采 trace_lines=0）vs manifest oracle_sha256=06bf0d35…；run1/run2 两路重采 sha 均=06bf0d35…（与 manifest 一致，oracle 确定性实锚未破）——属缓存载体缺损非游戏状态分歧。reason/exit 已按真实败因登记（fix round 1 更正：原『游戏未 L3/L4 一致（现状）』不实）；fix round 1 实测「从 run1 恢复缓存即愈」（l3 帧级裁定 23 用例 0 失败、runner exit 0）——删条目+恢复缓存的账清动作留待采集侧 trace_lines=0 根因查明后执行（防复现再拦提交）。实录备注②visual：13 帧=case-001 金面已立、复采面（shots/）缺 5 帧、渲染腿面（analysis/render-shots/）缺 13 帧的采集面覆盖缺口（18 条失败裁定行）。登记日 2026-10-26；trace reason 更正日 2026-10-26（fix round 1）。实录备注③visual 重登记（2026-10-26 Task 3）：cases/ 权威定义 emu 重采（l4_diff_run 真跑 bootstrap 三 sha 锚存证）致 case-001 旧定义 7 金面（f00720_samus-ready/f00850_after-right/f01000_after-left/f01120_after-jump/f01220_after-shoot/f01400_combo-action/f01800_end-state）复采面缺失新形态（旧形态=渲染腿面缺失单行）——签名漂移按门禁处方『失败形态变更须重登记』重登记（observed 双行/count=2）；同刻 5 新定义金面（f00550/f00650/f00720_after-jump/f00820/f00950）复采面已立且全同（oracle 确定性），其『复采面缺失』行自然账清（留渲染腿面缺失待 render-dump）。根因=同名双源场景（cases/ 权威 vs oracle/scenarios 旧定义）共享 shots/ 命名空间；金面对齐/清退旧金面留后续任务（金面变更需用户确认）。",
   "trace": {
     "l3-samus-move3-oracle-determinism": {
       "reason": "oracle 缓存载体缺损：samus-move3.frames.jsonl 0 字节（非游戏分歧）",
@@ -66,58 +66,65 @@
       ]
     },
     "case-001-game-start-samus-interaction_f00720_samus-ready.png": {
-      "reason": "游戏未 L3/L4 一致（现状）",
-      "exit": "L4 移植推进账清转 strict",
-      "count": 1,
+      "reason": "采集面覆盖缺口：cases/ 权威化后旧定义采集点不再复采（复采面缺失）且渲染腿面缺失（2026-10-26 Task 3 emu 重采签名漂移——按门禁处方『失败形态变更须重登记』重登记）",
+      "exit": "金面对齐 cases/ 权威采集点（重立/清退旧定义金面，需用户确认）后账清转 strict",
+      "count": 2,
       "observed": [
+        "复采面缺失（shots/case-001-game-start-samus-interaction_f00720_samus-ready.png——跑 scenario_run 采样后复验）",
         "渲染腿面缺失（analysis/render-shots/case-001-game-start-samus-interaction_f00720_samus-ready.png——跑 render-dump 后复验）"
       ]
     },
     "case-001-game-start-samus-interaction_f00850_after-right.png": {
-      "reason": "游戏未 L3/L4 一致（现状）",
-      "exit": "L4 移植推进账清转 strict",
-      "count": 1,
+      "reason": "采集面覆盖缺口：cases/ 权威化后旧定义采集点不再复采（复采面缺失）且渲染腿面缺失（2026-10-26 Task 3 emu 重采签名漂移——按门禁处方『失败形态变更须重登记』重登记）",
+      "exit": "金面对齐 cases/ 权威采集点（重立/清退旧定义金面，需用户确认）后账清转 strict",
+      "count": 2,
       "observed": [
+        "复采面缺失（shots/case-001-game-start-samus-interaction_f00850_after-right.png——跑 scenario_run 采样后复验）",
         "渲染腿面缺失（analysis/render-shots/case-001-game-start-samus-interaction_f00850_after-right.png——跑 render-dump 后复验）"
       ]
     },
     "case-001-game-start-samus-interaction_f01000_after-left.png": {
-      "reason": "游戏未 L3/L4 一致（现状）",
-      "exit": "L4 移植推进账清转 strict",
-      "count": 1,
+      "reason": "采集面覆盖缺口：cases/ 权威化后旧定义采集点不再复采（复采面缺失）且渲染腿面缺失（2026-10-26 Task 3 emu 重采签名漂移——按门禁处方『失败形态变更须重登记』重登记）",
+      "exit": "金面对齐 cases/ 权威采集点（重立/清退旧定义金面，需用户确认）后账清转 strict",
+      "count": 2,
       "observed": [
+        "复采面缺失（shots/case-001-game-start-samus-interaction_f01000_after-left.png——跑 scenario_run 采样后复验）",
         "渲染腿面缺失（analysis/render-shots/case-001-game-start-samus-interaction_f01000_after-left.png——跑 render-dump 后复验）"
       ]
     },
     "case-001-game-start-samus-interaction_f01120_after-jump.png": {
-      "reason": "游戏未 L3/L4 一致（现状）",
-      "exit": "L4 移植推进账清转 strict",
-      "count": 1,
+      "reason": "采集面覆盖缺口：cases/ 权威化后旧定义采集点不再复采（复采面缺失）且渲染腿面缺失（2026-10-26 Task 3 emu 重采签名漂移——按门禁处方『失败形态变更须重登记』重登记）",
+      "exit": "金面对齐 cases/ 权威采集点（重立/清退旧定义金面，需用户确认）后账清转 strict",
+      "count": 2,
       "observed": [
+        "复采面缺失（shots/case-001-game-start-samus-interaction_f01120_after-jump.png——跑 scenario_run 采样后复验）",
         "渲染腿面缺失（analysis/render-shots/case-001-game-start-samus-interaction_f01120_after-jump.png——跑 render-dump 后复验）"
       ]
     },
     "case-001-game-start-samus-interaction_f01220_after-shoot.png": {
-      "reason": "游戏未 L3/L4 一致（现状）",
-      "exit": "L4 移植推进账清转 strict",
-      "count": 1,
+      "reason": "采集面覆盖缺口：cases/ 权威化后旧定义采集点不再复采（复采面缺失）且渲染腿面缺失（2026-10-26 Task 3 emu 重采签名漂移——按门禁处方『失败形态变更须重登记』重登记）",
+      "exit": "金面对齐 cases/ 权威采集点（重立/清退旧定义金面，需用户确认）后账清转 strict",
+      "count": 2,
       "observed": [
+        "复采面缺失（shots/case-001-game-start-samus-interaction_f01220_after-shoot.png——跑 scenario_run 采样后复验）",
         "渲染腿面缺失（analysis/render-shots/case-001-game-start-samus-interaction_f01220_after-shoot.png——跑 render-dump 后复验）"
       ]
     },
     "case-001-game-start-samus-interaction_f01400_combo-action.png": {
-      "reason": "游戏未 L3/L4 一致（现状）",
-      "exit": "L4 移植推进账清转 strict",
-      "count": 1,
+      "reason": "采集面覆盖缺口：cases/ 权威化后旧定义采集点不再复采（复采面缺失）且渲染腿面缺失（2026-10-26 Task 3 emu 重采签名漂移——按门禁处方『失败形态变更须重登记』重登记）",
+      "exit": "金面对齐 cases/ 权威采集点（重立/清退旧定义金面，需用户确认）后账清转 strict",
+      "count": 2,
       "observed": [
+        "复采面缺失（shots/case-001-game-start-samus-interaction_f01400_combo-action.png——跑 scenario_run 采样后复验）",
         "渲染腿面缺失（analysis/render-shots/case-001-game-start-samus-interaction_f01400_combo-action.png——跑 render-dump 后复验）"
       ]
     },
     "case-001-game-start-samus-interaction_f01800_end-state.png": {
-      "reason": "游戏未 L3/L4 一致（现状）",
-      "exit": "L4 移植推进账清转 strict",
-      "count": 1,
+      "reason": "采集面覆盖缺口：cases/ 权威化后旧定义采集点不再复采（复采面缺失）且渲染腿面缺失（2026-10-26 Task 3 emu 重采签名漂移——按门禁处方『失败形态变更须重登记』重登记）",
+      "exit": "金面对齐 cases/ 权威采集点（重立/清退旧定义金面，需用户确认）后账清转 strict",
+      "count": 2,
       "observed": [
+        "复采面缺失（shots/case-001-game-start-samus-interaction_f01800_end-state.png——跑 scenario_run 采样后复验）",
         "渲染腿面缺失（analysis/render-shots/case-001-game-start-samus-interaction_f01800_end-state.png——跑 render-dump 后复验）"
       ]
     }
