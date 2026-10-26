@@ -20,14 +20,22 @@
     python3 tools/l4_diff_run.py run case-001 [--timeout N] [--skip-emu]
     python3 tools/l4_diff_run.py diff case-001   # 只对拍已有截图
 
+三 sha 锚定（H4 防假绿——报告必须可证"对的是哪次输入/哪个 ROM/哪些产物"）：
+    l4report.json 落 `scenario_sha256`（场景 DSL 文件 sha）+ `rom_sha256`
+    （rom/Metroid (USA).nes 实测 sha）+ `artifacts`（各截图 sha，键=shots_rust/<f> | shots/<f>）。
+    复用旧产物（--skip-rust/--skip-emu/腿失败回落/diff）前**校验锚**（sched_sha256 调度 hash
+    为主锚 + scenario/rom 锚）：不符或无锚 → **拒跑 exit 2**（不静默复用旧截图出假绿）。
+    每条腿成功生成产物后落 <side 产物目录>/<name>.l4prov.json（复用校验的锚存证）。
+
 输出：
     shots_rust/<name>_f<NNNNN>_<tag>.png       Rust 真实渲染帧
-    shots_rust/<name>.l4report.json           对拍结果（结构化）
+    shots_rust/<name>.l4report.json           对拍结果（结构化，含三 sha 锚）
     shots_rust/<name>_f<NNNNN>_<tag>.diff.png 失配帧可视化（Rust|Emu|Diff）
 """
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import subprocess
 import sys
@@ -41,6 +49,10 @@ sys.path.insert(0, str(ROOT / "tools"))
 CASES_DIR = ROOT / "cases"
 SHOTS_EMU = ROOT / "shots"
 SHOTS_RUST = ROOT / "shots_rust"
+ROM = ROOT / "rom" / "Metroid (USA).nes"  # ROM 身份锚（D3；sha 见 AGENTS.md）
+
+# 三 sha 锚键名（task-3 产 / task-5 matrix 消——键名契约勿改）
+ANCHOR_KEYS = ("scenario_sha256", "rom_sha256", "sched_sha256")
 
 
 def case_path_of(name: str) -> Path:
@@ -69,14 +81,76 @@ def load_pil():
     return Image, np
 
 
-def write_schedule(name: str, frames: int, joy: dict, caps: list, path: Path):
-    """展开结果落 .sched（Rust 侧消费）——joy=scenario_run.expand_schedule 产物（同源）。"""
+def schedule_text(name: str, frames: int, joy: dict, caps: list) -> str:
+    """调度表文本（**唯一**序列化面）——.sched 落盘与调度 hash 同源同 bytes。"""
     lines = [f"name {name}", f"frames {frames}"]
     for f in sorted(joy):
         lines.append(f"joy {f} {joy[f]:02X}")
     for f, tag in caps:
         lines.append(f"capture {f} {tag}")
-    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return "\n".join(lines) + "\n"
+
+
+def write_schedule(name: str, frames: int, joy: dict, caps: list, path: Path):
+    """展开结果落 .sched（Rust 侧消费）——joy=scenario_run.expand_schedule 产物（同源）。"""
+    path.write_text(schedule_text(name, frames, joy, caps),
+                    encoding="utf-8", newline="\n")  # 禁 CRLF 翻译：sched hash 按 LF 计
+
+
+def sha256_file(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def compute_anchors(scen_path: Path, sched_text: str) -> dict:
+    """三 sha 锚 + 调度 hash（H4）：scenario（DSL 文件）/rom（实测 ROM）/sched（展开调度）。
+
+    ROM 缺失=fail-loud（l4report 必须锚 ROM sha256，D3 ROM=最终真相，不容无锚报告）。
+    """
+    if not ROM.is_file():
+        raise FileNotFoundError(f"缺 ROM 锚文件 {ROM}——l4report 须锚 rom_sha256，拒跑")
+    return {
+        "scenario_sha256": sha256_file(scen_path),
+        "rom_sha256": sha256_file(ROM),
+        "sched_sha256": hashlib.sha256(sched_text.encode("utf-8")).hexdigest(),
+    }
+
+
+def prov_path(side: str, name: str) -> Path:
+    """复用产物锚存证路径：rust 腿在 shots_rust/，emu 腿在 shots/（随产物走）。"""
+    base = SHOTS_RUST if side == "rust" else SHOTS_EMU
+    return base / f"{name}.l4prov.json"
+
+
+def write_prov(side: str, name: str, anchors: dict) -> None:
+    """腿成功生成产物后落锚存证（复用校验的对账依据）。"""
+    doc = {"side": side, "name": name, **{k: anchors[k] for k in ANCHOR_KEYS}}
+    p = prov_path(side, name)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(json.dumps(doc, ensure_ascii=False, indent=2) + "\n",
+                 encoding="utf-8", newline="\n")
+
+
+def check_reuse(side: str, name: str, anchors: dict) -> str | None:
+    """复用旧产物前锚校验（H4）：返回错误描述（拒跑理由）或 None（放行）。
+
+    调度 hash（sched_sha256）为主锚——不符=输入调度已变，旧截图不可再代表当前用例；
+    scenario/rom 锚同检（快照语义/ROM 变更同样使旧产物失效）。无锚存证=无锚可对 → 拒跑。
+    """
+    p = prov_path(side, name)
+    if not p.is_file():
+        return (f"{side} 侧产物无锚（缺 {p.name}）——无锚可对，无法验证调度 hash；"
+                f"拒跑（先完整跑一次该用例生成带锚产物）")
+    try:
+        prov = json.loads(p.read_text(encoding="utf-8"))
+    except Exception as exc:  # 损坏锚=不可信
+        return f"{side} 侧锚存证损坏（{p.name}: {exc}）——拒跑"
+    for k in ANCHOR_KEYS:
+        got = prov.get(k)
+        want = anchors[k]
+        if not isinstance(got, str) or got.lower() != want.lower():
+            return (f"{side} 侧复用校验失败：{k} 不符（产物 {str(got)[:16]}… vs 当前 "
+                    f"{want[:16]}…）——输入已变，旧产物拒复用（防假绿）")
+    return None
 
 
 def run_rust(name: str, sched: Path, out_dir: Path) -> bool:
@@ -148,7 +222,7 @@ def diff_pair(rust_png: Path, emu_png: Path, diff_png: Path | None, np, Image):
     return {"match": diff_pixels == 0, "diff_pixels": diff_pixels, "total_pixels": total}
 
 
-def do_diff(name: str) -> dict:
+def do_diff(name: str, anchors: dict) -> dict:
     Image, np = load_pil()
     SHOTS_RUST.mkdir(parents=True, exist_ok=True)
     rust_caps = SHOTS_RUST / f"{name}.rust.captures.json"
@@ -157,6 +231,7 @@ def do_diff(name: str) -> dict:
         sys.exit(1)
     man = json.loads(rust_caps.read_text(encoding="utf-8"))
     results = []
+    artifacts = {}  # 三 sha 锚之三：各截图 sha（键=仓库逻辑相对路径）
     npass = 0
     for c in man["captures"]:
         fname = c["file"]
@@ -164,6 +239,10 @@ def do_diff(name: str) -> dict:
         emu_png = SHOTS_EMU / fname
         tag = c["tag"]
         frame = c["frame"]
+        if rust_png.is_file():
+            artifacts[f"shots_rust/{fname}"] = sha256_file(rust_png)
+        if emu_png.is_file():
+            artifacts[f"shots/{fname}"] = sha256_file(emu_png)
         if not rust_png.is_file():
             results.append({"frame": frame, "tag": tag, "match": False, "status": "error",
                             "reason": "缺 Rust 截图"})
@@ -184,7 +263,9 @@ def do_diff(name: str) -> dict:
         results.append({"frame": c["frame"], "tag": c["tag"], "match": False,
                         "status": "blocked", "reason": c.get("reason", "unported gap")})
     results.sort(key=lambda r: r["frame"])
-    report = {"name": name, "captures": len(results), "pass": npass,
+    report = {"name": name, **{k: anchors[k] for k in ANCHOR_KEYS},
+              "artifacts": artifacts,
+              "captures": len(results), "pass": npass,
               "fail": len(results) - npass, "gap": man.get("gap", False),
               "results": results}
     (SHOTS_RUST / f"{name}.l4report.json").write_text(
@@ -196,6 +277,10 @@ def print_report(rep: dict):
     print("\n" + "=" * 78)
     print(f"L4 对拍结果（**Rust vs 模拟器**，像素零容差）：{rep['name']}")
     print("=" * 78)
+    print(f"锚：scenario={rep.get('scenario_sha256', '?')[:16]}… "
+          f"rom={rep.get('rom_sha256', '?')[:16]}… "
+          f"sched={rep.get('sched_sha256', '?')[:16]}… "
+          f"产物 {len(rep.get('artifacts', {}))} 件")
     print(f"{'帧':>6} {'tag':<16} {'状态':<10} {'差异像素':>12} {'/总像素':>10}")
     print("-" * 78)
     for r in rep["results"]:
@@ -226,8 +311,10 @@ def main():
     ap.add_argument("action", choices=["run", "diff"])
     ap.add_argument("name")
     ap.add_argument("--timeout", type=float, default=240.0)
-    ap.add_argument("--skip-emu", action="store_true", help="跳过模拟器运行（用已有 shots/）")
-    ap.add_argument("--skip-rust", action="store_true", help="跳过 Rust 运行（用已有 shots_rust/）")
+    ap.add_argument("--skip-emu", action="store_true",
+                    help="跳过模拟器运行（复用已有 shots/——复用前校验锚，不符/无锚 exit 2）")
+    ap.add_argument("--skip-rust", action="store_true",
+                    help="跳过 Rust 运行（复用已有 shots_rust/——复用前校验锚，不符/无锚 exit 2）")
     args = ap.parse_args()
 
     import importlib
@@ -244,7 +331,27 @@ def main():
     caps = sorted((int(c["frame"]), c["tag"]) for c in plan.get("captures", []))
     print(f"[plan] {name}: frames={frames} 非零输入帧={len(joy)} 采集点={len(caps)}")
 
+    # 三 sha 锚（H4）：scenario/rom/sched——报告与复用校验同源
+    try:
+        anchors = compute_anchors(scen_path, schedule_text(name, frames, joy, caps))
+    except FileNotFoundError as exc:
+        print(f"[!] {exc}", file=sys.stderr)
+        sys.exit(2)
+    print(f"[anchor] scenario={anchors['scenario_sha256'][:16]}… "
+          f"rom={anchors['rom_sha256'][:16]}… sched={anchors['sched_sha256'][:16]}…")
+
     if args.action == "run":
+        # fail-fast：所有复用腿先过锚校验再动手（不静默复用旧产物出假绿）
+        if args.skip_rust:
+            err = check_reuse("rust", name, anchors)
+            if err:
+                print(f"[!] --skip-rust {err}", file=sys.stderr)
+                sys.exit(2)
+        if args.skip_emu:
+            err = check_reuse("emu", name, anchors)
+            if err:
+                print(f"[!] --skip-emu {err}", file=sys.stderr)
+                sys.exit(2)
         sched = SHOTS_RUST / f"{name}.sched"
         SHOTS_RUST.mkdir(parents=True, exist_ok=True)
         write_schedule(name, frames, joy, caps, sched)
@@ -252,11 +359,26 @@ def main():
         if not args.skip_rust:
             if not run_rust(name, sched, SHOTS_RUST):
                 sys.exit(1)
+            write_prov("rust", name, anchors)  # 腿成功 → 落锚存证
         if not args.skip_emu:
-            if not run_emu(name, args.timeout, scen_path):
-                print("[!] 模拟器运行失败——改用已有 shots/ 对拍", file=sys.stderr)
+            if run_emu(name, args.timeout, scen_path):
+                write_prov("emu", name, anchors)
+            else:
+                # 腿失败回落复用=同属复用路径 → 同样过锚校验（不静默）
+                err = check_reuse("emu", name, anchors)
+                if err:
+                    print(f"[!] 模拟器运行失败，且回落复用未过锚校验——{err}", file=sys.stderr)
+                    sys.exit(2)
+                print("[!] 模拟器运行失败——回落复用已有 shots/"
+                      "（锚校验通过：三 sha 与当前一致；产物未更新，prov 不重写）")
+    else:  # diff：纯复用双侧产物 → 双侧过锚校验
+        for side in ("rust", "emu"):
+            err = check_reuse(side, name, anchors)
+            if err:
+                print(f"[!] diff {err}", file=sys.stderr)
+                sys.exit(2)
 
-    rep = do_diff(name)
+    rep = do_diff(name, anchors)
     print_report(rep)
     sys.exit(0 if rep["fail"] == 0 else 1)
 
