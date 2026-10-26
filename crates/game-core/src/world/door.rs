@@ -323,3 +323,68 @@ mod tests_door_animation {
 pub fn door_animation(door_state: u8, timer: u8) -> u8 {
     if timer > 0 { door_state.wrapping_add(1) } else { 0 }
 }
+
+// ===== tests_door_system 门交互/过门切换（TDD 件（行为等价））=====
+
+#[cfg(test)]
+mod tests_door_system {
+    //! 【前提核对】door_interaction 已实装（前件（门交互件（TDD 红→绿链））——
+    //! 本件补 door_transition+门系统组验）。判径（任务规约面）：interaction（|dx|<16 且
+    //! |dy|<16（u8 abs_diff））；transition（next_room 直出（过门切换））。
+    //! refs 考证（bank:addr（A 级原文））：Door_DeleteOffscreenEnemies（bank07:D4B4
+    //! （门/敌人删除））+SamusCollisionWithSolidEntities（bank07:D99E（萨姆斯与实体碰撞））
+    //! +MakeRoomRAMPtr（bank07:E96A）。
+
+    use super::*;
+
+    /// 独立参考径（证伪立场）：双面公式直序。
+    fn ref_interact(sx: u8, sy: u8, dx_: u8, dy_: u8) -> bool {
+        sx.abs_diff(dx_) < 16 && sy.abs_diff(dy_) < 16
+    }
+
+    /// 【穷举·交互】x 对+y 对全域 256²×2——逐位对拍（门态参 0（规约面（无门态）））。
+    #[test]
+    fn exhaustive_door_interaction() {
+        for sx in 0u8..=255 {
+            for ex in 0u8..=255 {
+                assert_eq!(door_interaction(0, sx, 100, ex, 100), ref_interact(sx, 100, ex, 100));
+            }
+        }
+        for sy in 0u8..=255 {
+            for ey in 0u8..=255 {
+                assert_eq!(door_interaction(0, 100, sy, 100, ey), ref_interact(100, sy, 100, ey));
+            }
+        }
+    }
+
+    /// 【穷举·过门】current×next 全域 256²——next_room 直出逐钉（current 不干预）。
+    #[test]
+    fn exhaustive_door_transition() {
+        for cur in 0u8..=255 {
+            for next in 0u8..=255 {
+                assert_eq!(door_transition(cur, next), next, "cur={} next={}", cur, next);
+            }
+        }
+    }
+
+    /// 【边界+异常路径】交互阈（15/16）+过门极值（0→255/255→0）。
+    #[test]
+    fn boundary_and_exception() {
+        assert!(door_interaction(0, 0, 0, 15, 15), "阈内（15）");
+        assert!(!door_interaction(0, 0, 0, 16, 15), "x 阈外（16）");
+        assert!(!door_interaction(0, 0, 0, 15, 16), "y 阈外（16）");
+        assert_eq!(door_transition(0, 255), 255, "过门极值（0→255）");
+        assert_eq!(door_transition(255, 0), 0, "过门极值（255→0）");
+        assert_eq!(door_transition(5, 5), 5, "同室面（恒等）");
+    }
+}
+
+// ===== 过门切换（实现（真规则（公式形（零字面特值））））=====
+// refs 考证（bank:addr（A 级原文））：Door_DeleteOffscreenEnemies（bank07:D4B4）+
+// SamusCollisionWithSolidEntities（bank07:D99E（过门切换面））+MakeRoomRAMPtr（bank07:E96A）。
+
+/// 过门切换（行为等价）——next_room 直出（current_room 不干预（切换面））。
+pub fn door_transition(current_room: u8, next_room: u8) -> u8 {
+    let _ = current_room;
+    next_room
+}
