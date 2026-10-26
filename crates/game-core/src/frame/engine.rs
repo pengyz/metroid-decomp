@@ -294,3 +294,17 @@ mod tests {
     }
 }
 
+// TDD: FC 应每 tick(帧)递增（asm inc FrameCount=GoMainRoutine 返回+wait-NMI=60Hz）
+#[cfg(test)]
+mod tests_fc_per_tick {
+    use super::*;
+    #[test]
+    fn fc_increments_per_tick_not_delayed_by_span() {
+        let mut e = FrameEngine::new();
+        // 跑 30 tick（boot 后 FC 应 ≈ tick 数（每帧递增））
+        for _ in 0..30 { e.tick_frame(); }
+        let fc = e.mem.read_ram(crate::ram_map::FRAME_COUNT);
+        // 修复后：FC 每 tick 递增（跨度不延迟）——FC 应接近 30（boot 期少量偏移）
+        assert!(fc >= 25, "FC 应每帧递增（asm 60Hz），实际 FC={}（延迟于 span）", fc);
+    }
+}

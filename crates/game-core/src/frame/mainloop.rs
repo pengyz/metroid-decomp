@@ -40,19 +40,11 @@ pub fn main_loop_iter(mem: &mut FrameMemory) {
         update_timer(mem); // C266
     }
     go_main_routine(mem); // C114（分发壳——会师点；续段=GoMainRoutine 内部续跑）
-    // 【r23 修（$C3 根收窄实验）】`inc FrameCount`（GoMainRoutine 返回点）=**非续段逐迭代**
-    // （asm 形：每迭代收尾一 inc——等待帧非迭代不达）；原 step_done（尾段）判据把补帧
-    // 步的 FC 拖到尾段 ⇒ NMI 间 FC=0 窗宽 2（$C3 星门复燃根）。续段（cursor>0 同相）不计。
-    // 【move-drift R2】迭代声明跨帧（iter_gates 非空）时 FC **延至 span 尾**（迭代真正
-    // 完成点——asm prg7:207 `inc FrameCount` 在 GoMainRoutine 含等待全链返回后）：
-    // iter_span_fc 旗交引擎 end_of_tick_gate 收尾（UpdateAge FC==0 相位保真）。
-    if !continuation {
-        if mem.iter_gates.is_empty() {
-            mem.write_ram(FRAME_COUNT, mem.read_ram(FRAME_COUNT).wrapping_add(1));
-        } else {
-            mem.iter_span_fc = true;
-        }
-    }
+    // 【goal-r4 修】`inc FrameCount`（GoMainRoutine 返回点+wait-NMI）=**每帧递增**（asm
+    // prg7:207 `inc FrameCount`→`sta NMIStatus`→wait-NMI=60Hz 帧节律）。旧形把 FC 延至
+    // span 尾/续段不计 ⇒ FC 滞后（goal-r4 实测 f550 lag 17）⇒ fade 闪烁 `FC&1` 相位反相
+    // ⇒ 萨姆斯渲染发散。修=每 tick 无条件递增（对齐 asm 帧节律）。
+    mem.write_ram(FRAME_COUNT, mem.read_ram(FRAME_COUNT).wrapping_add(1));
     mem.write_ram(NMI_STATUS, 0); // 清 0（spin 入口）
 }
 

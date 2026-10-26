@@ -6,11 +6,11 @@
   "artifacts": {
     "shots_rust/case-001-game-start-samus-interaction_f00420_game-in.png": "48c2da4b93e1301b1075b7c9d9681f211214ef08ed18e970434bc521dace34d7",
     "shots/case-001-game-start-samus-interaction_f00420_game-in.png": "8cbf4a35ef742679841290063a3fc930149ca4da125ff42c7107ef69cacb693c",
-    "shots_rust/case-001-game-start-samus-interaction_f00550_after-right.png": "48c2da4b93e1301b1075b7c9d9681f211214ef08ed18e970434bc521dace34d7",
+    "shots_rust/case-001-game-start-samus-interaction_f00550_after-right.png": "8582517d044db2be0910e49eac2c14601bd38e973bae7b37403cad651dc727fb",
     "shots/case-001-game-start-samus-interaction_f00550_after-right.png": "69dedfbfedcd63811672df51b9cf154bcc4731cb26949e76f4bb306e9a3dca62",
-    "shots_rust/case-001-game-start-samus-interaction_f00650_after-left.png": "48c2da4b93e1301b1075b7c9d9681f211214ef08ed18e970434bc521dace34d7",
+    "shots_rust/case-001-game-start-samus-interaction_f00650_after-left.png": "d006cc71c86aa00b517aa2cdf9a992ed3e5b775356825e06e2e3783137e0f7a8",
     "shots/case-001-game-start-samus-interaction_f00650_after-left.png": "d70820c578f67bf6ffbdfccf29823878bb4b8806f2669c9da87e98293d3b7180",
-    "shots_rust/case-001-game-start-samus-interaction_f00720_after-jump.png": "48c2da4b93e1301b1075b7c9d9681f211214ef08ed18e970434bc521dace34d7",
+    "shots_rust/case-001-game-start-samus-interaction_f00720_after-jump.png": "e6cad6e11e0bc9ada508801812e3732dc2ab28695bc25dbc9a2481dcd10788a2",
     "shots/case-001-game-start-samus-interaction_f00720_after-jump.png": "596bb5b093dbbb3b625c4418f4e659e6199d55852922ad4911a0d0459e65e161",
     "shots_rust/case-001-game-start-samus-interaction_f00820_after-shoot.png": "44a801f66cb0b271a891767234cca315e99d5e46baa7d5cb59b4899ba9cffab7",
     "shots/case-001-game-start-samus-interaction_f00820_after-shoot.png": "08a57f4edefe6c7d1e03b64a7ae134641a26e6103b2f40427a5242e3d56b5c6a",
@@ -20,8 +20,8 @@
     "shots/case-001-game-start-samus-interaction_f01200_end.png": "3c4599eb895a934c0849699623bcc67a67e40793582b37a30cfe1d6ad9d46469"
   },
   "captures": 7,
-  "pass": 1,
-  "fail": 6,
+  "pass": 4,
+  "fail": 3,
   "gap": false,
   "results": [
     {
@@ -35,34 +35,34 @@
       "status": "match"
     },
     {
-      "match": false,
-      "diff_pixels": 282,
+      "match": true,
+      "diff_pixels": 0,
       "total_pixels": 61440,
       "whitelist_hits": 0,
       "frame": 550,
       "tag": "after-right",
       "file": "case-001-game-start-samus-interaction_f00550_after-right.png",
-      "status": "diff"
+      "status": "match"
     },
     {
-      "match": false,
-      "diff_pixels": 282,
+      "match": true,
+      "diff_pixels": 0,
       "total_pixels": 61440,
       "whitelist_hits": 0,
       "frame": 650,
       "tag": "after-left",
       "file": "case-001-game-start-samus-interaction_f00650_after-left.png",
-      "status": "diff"
+      "status": "match"
     },
     {
-      "match": false,
-      "diff_pixels": 282,
+      "match": true,
+      "diff_pixels": 0,
       "total_pixels": 61440,
       "whitelist_hits": 0,
       "frame": 720,
       "tag": "after-jump",
       "file": "case-001-game-start-samus-interaction_f00720_after-jump.png",
-      "status": "diff"
+      "status": "match"
     },
     {
       "match": false,
