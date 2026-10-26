@@ -89,6 +89,11 @@ impl FrameEngine {
             self.skip_next_nmi = false; // restore 续跑：装载点=post-NMI——首 tick 不再 NMI
         } else if self.mem.nmi_enabled {
             super::nmi::nmi_handler(&mut self.mem);
+            if std::env::var("DSH_SPRITE_TRACE").is_ok() {
+                eprintln!("[nmi] joy1_field={:02X} JOY1_STATUS={:02X} JOY1_CHANGE={:02X}",
+                    self.mem.joy1, self.mem.read_ram(crate::ram_map::JOY1_STATUS),
+                    self.mem.read_ram(crate::memmap::title_state::JOY1_CHANGE));
+            }
         }
         // === spin 出口采样缝（$C0D3 对齐）——**仅主循环 spin 出口**（boot 链无主循环
         // spin——oracle 295 行=主循环 spin 出口数自证；boot tick 不采样）。

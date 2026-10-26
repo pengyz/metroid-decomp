@@ -367,6 +367,10 @@ fn main() {
     let mut gap: Option<(usize, String)> = None; // (帧, unported bank:addr)
     for frame in 1..=plan.frames {
         engine.mem.joy1 = plan.joy.get(&frame).copied().unwrap_or(0);
+        if std::env::var("DSH_SPRITE_TRACE").is_ok() && frame >= 918 && frame <= 924 {
+            eprintln!("[joy] f{} nmi_en={} ppuctrl={:02X}", frame, engine.mem.nmi_enabled, engine.mem.ram[0x00FF]);
+            eprintln!("[joy] f{} joy1_field={:02X} sched={:02X}", frame, engine.mem.joy1, plan.joy.get(&frame).copied().unwrap_or(0));
+        }
         engine.mem.joy2 = 0;
         // catch_unwind：`unported!` fail-loud 缺口在**对拍工具层**不整程崩——
         // 引擎/测试仍确定性引爆（fail-loud 语义不变）；对拍记录缺口帧+原因，

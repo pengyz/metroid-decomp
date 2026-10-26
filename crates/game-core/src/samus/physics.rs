@@ -453,7 +453,8 @@ fn check_health_beep(mem: &mut FrameMemory) {
         let f = mem.read_ram(0x0683) | 0x08;
         mem.write_ram(0x0683, f);
     }
-    mem.write_ram(0x0308, 0); // SamusIsHit←0（Object.isHit 域）
+    mem.write_ram(0x030A, 0); // 【goal-r12 修】SamusIsHit←0（$030A——constants_ram:228）
+    // 旧形误写 $0308（=SAMUS_SPEED_Y_I 跳跃初速！）→清跳跃初速→跳不起来。
 }
 
 pub fn set_samus_data(mem: &mut FrameMemory) {
@@ -619,6 +620,14 @@ pub fn lava_and_move_check(mem: &mut FrameMemory) {
     // 先落地再查 lava，萨姆斯落地则不触发 E269）。
     // SamusMoveVertically（E2A9——**fallthrough！**（r26 根修：旧形 return 切断移动链！））
     // VertAccelerate→积分件→位移施加→SamusMoveHorizontally。
+    if std::env::var("DSH_SPRITE_TRACE").is_ok() {
+        let dy_pre = vert_integrate(mem);
+        eprintln!("[inty] FC={} spdI={:02X} spdF={:02X} subY={:02X} accelY={:02X} dy={:02X} y={:02X}",
+            mem.read_ram(crate::ram_map::FRAME_COUNT), mem.read_ram(0x0308), mem.read_ram(0x0312),
+            mem.read_ram(0x0310), mem.read_ram(crate::ram_map::SAMUS_ACCEL_Y), dy_pre, mem.read_ram(0x030D));
+        // 回滚（不重复积分）——仅诊断
+        mem.write_ram(0x0308, mem.read_ram(0x0308).wrapping_sub(0)); // no-op 保持
+    }
     vert_accelerate(mem); // E37A（重力/加速——L2 单位！）
     let dy = vert_integrate(mem); // 积分件（速→位移！）
     // 【goal-r8/r11】asm E2E3 @loop_down `jsr MoveSamusDown/bcs @endIf_D`——逐像素步进
