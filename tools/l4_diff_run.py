@@ -58,6 +58,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "tools"))
 
+import diff_visual  # noqa: E402 —— 白名单唯一例外消费面单源（load_whitelist/in_rect；Task 6）
+
 # 按钮位映射唯一定义=scenario_run.BUTTON_BITS（task-2 输入单源——本文件不再复制位表）
 
 CASES_DIR = ROOT / "cases"
@@ -213,27 +215,46 @@ def run_emu(name: str, timeout: float, scen_path: Path) -> bool:
     return True
 
 
-def diff_pair(rust_png: Path, emu_png: Path, diff_png: Path | None, np, Image):
-    """逐像素对拍（白名单外零容差）。返回 dict。"""
+def diff_pair(rust_png: Path, emu_png: Path, diff_png: Path | None, np, Image,
+              wl: list[dict] | None = None):
+    """逐像素对拍（白名单外零容差）。返回 dict。
+
+    白名单=gates/visual_whitelist.json（**唯一**例外清单——AGENTS §5；条目
+    {file: glob, rect:[x,y,w,h], reason, approved_by}）：glob 命中本帧 ∧ 像素落在
+    rect 内 ⇒ 排除（记 whitelist_hits，状态可判 match）；**白名单外 1 像素差异即 diff**。
+    wl=None ⇒ 读 gates/visual_whitelist.json（load_whitelist 单源=tools/diff_visual.py）。
+    **不得**另立 gap_map/账内容忍类排除面（防容忍面增殖——Task 6 裁定，白名单=唯一例外）。"""
+    if wl is None:
+        wl = diff_visual.load_whitelist()
+    rules = [r for r in wl if Path(rust_png.name).match(r.get("file", ""))]
     r = np.asarray(Image.open(rust_png).convert("RGB"), dtype=np.int16)
     e = np.asarray(Image.open(emu_png).convert("RGB"), dtype=np.int16)
     if r.shape != e.shape:
         return {"match": False, "reason": f"尺寸不同 rust{r.shape} vs emu{e.shape}",
-                "diff_pixels": -1, "total_pixels": int(r.shape[0] * r.shape[1])}
+                "diff_pixels": -1, "total_pixels": int(r.shape[0] * r.shape[1]),
+                "whitelist_hits": 0}
     d = np.abs(r - e).sum(2)
-    mask = d > 0
+    raw_mask = d > 0
+    total = int(raw_mask.size)
+    excl = np.zeros(raw_mask.shape, dtype=bool)
+    for rule in rules:
+        rx, ry, rw, rh = (int(v) for v in rule["rect"])
+        excl[max(ry, 0):max(ry + rh, 0), max(rx, 0):max(rx + rw, 0)] = True
+    whitelist_hits = int((raw_mask & excl).sum())
+    mask = raw_mask & ~excl
     diff_pixels = int(mask.sum())
-    total = int(mask.size)
-    if diff_pixels and diff_png is not None:
+    if mask.any() and diff_png is not None:
         # 可视化：左=Rust、中=Emu（**自然游戏色**），右=差异诊断掩码（绿=差异，**非游戏色**）。
         # 顶栏标注各片用途，避免把诊断掩码误读为调色板偏差。
         h, w = mask.shape
         gap, hdr = 4, 20
         r_img = np.asarray(Image.open(rust_png).convert("RGB"))
         e_img = np.asarray(Image.open(emu_png).convert("RGB"))
-        # 差异片：非差异=暗灰(保留场景语境)，差异=亮绿(诊断色，游戏里不会有纯绿)
+        # 差异片：非差异=暗灰(保留场景语境)，差异=亮绿(诊断色，游戏里不会有纯绿)，
+        # 白名单内已排除=橙（例外显形，不参与 diff 计数）
         diag = np.full((h, w, 3), 32, dtype=np.uint8)
         diag[mask] = (0, 255, 0)
+        diag[raw_mask & excl] = (255, 165, 0)
         vis = np.zeros((h + hdr, w * 3 + gap * 2, 3), dtype=np.uint8)
         vis[:] = (24, 24, 24)
         vis[hdr:, :w] = r_img
@@ -245,9 +266,11 @@ def diff_pair(rust_png: Path, emu_png: Path, diff_png: Path | None, np, Image):
         dr.text((4, 5), "RUST (game-core, 自然色)", fill=(255, 255, 255))
         dr.text((w + gap + 4, 5), "EMU (Mesen2, 自然色)", fill=(255, 255, 255))
         dr.text((2 * w + 2 * gap + 4, 5),
-                f"DIFF 掩码(绿=差异,非游戏色) {diff_pixels}px", fill=(0, 255, 0))
+                f"DIFF 掩码(绿=差异,橙=白名单内已排除) 账外{diff_pixels}px/白名单{whitelist_hits}px",
+                fill=(0, 255, 0))
         im.save(diff_png)
-    return {"match": diff_pixels == 0, "diff_pixels": diff_pixels, "total_pixels": total}
+    return {"match": diff_pixels == 0, "diff_pixels": diff_pixels, "total_pixels": total,
+            "whitelist_hits": whitelist_hits}
 
 
 # ---------------- 对齐验收（Task 4 · H1：加载成功≠对齐成功防线） ----------------
