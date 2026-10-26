@@ -25,6 +25,11 @@
 - hold <a-b> <btn> = 帧 a..b（含）按住，帧 b+1 释放；
 - endFrame（帧 N 渲染完成后）写 trace 行 / 截图 / RAM dump；frame == frames 时写 DONE 并停机。
 
+输入单源（task-2 anti-drift 纪律）：press/hold/press_len/对向键的**逐帧 joy1 展开只有
+expand_schedule() 一处实现**（frame→joy1，1-based，非零帧才入表）。Rust 侧（.sched）
+与 Lua 侧（PLAN.schedule 预展开嵌入）同消费同一产物；scenario_capture.lua 不得再展开。
+对向键（left/right、up/down）同帧双真=**后写覆盖**（holds 先于 presses、按钮列序后者胜）。
+
 输出（均可用 --out/--shots 覆盖，默认 analysis/ 与 shots/）：
     analysis/traces/<name>.frames.jsonl    逐帧状态向量（w=watch 字节/range hex，可选 ram 全量）
     analysis/traces/<name>.captures.jsonl  采集点索引（截图路径 + RAM hex 文件 + cpu 寄存器）
@@ -88,6 +93,12 @@ SCENARIO_DIR = ROOT / "oracle" / "scenarios"
 GEN_DIR = ROOT / "analysis" / "_gen"
 
 BUTTONS = {"a", "b", "start", "select", "up", "down", "left", "right"}
+# 按钮位映射（game-platform PadState / hardware.asm:89-96——A=bit7 … Right=bit0）。
+# 唯一定义处（task-2）：expand_schedule 用它合成 joy1；Lua 侧经 PLAN.btn_bits 下发同表。
+BUTTON_BITS = {
+    "right": 0x01, "left": 0x02, "down": 0x04, "up": 0x08,
+    "start": 0x10, "select": 0x20, "b": 0x40, "a": 0x80,
+}
 PRESS_LEN_DEFAULT = 2
 
 
@@ -142,6 +153,7 @@ def parse_scenario(path: Path) -> dict:
     menu_ok = False
     bundle_ok = False
     path = Path(path)
+    endframes: list[int] = []  # task-2 语义决议：endFrame → 终端采集点（解析后统一消解去重）
     plan: dict = {
         "name": path.stem,
         "frames": None,
@@ -300,11 +312,19 @@ def parse_scenario(path: Path) -> dict:
             if len(args) != 2 or not args[0].isdigit():
                 raise err("bundle_capture 用法: bundle_capture <帧> <输出前缀>")
             plan["bundle_capture"] = {"frame": int(args[0]), "out": args[1]}
-        elif op == "bundle_load":
-            # task-32 收官：任意起点装载——bundle_load <前缀>（首 spin 出口装载）
+        elif op in ("snapshot", "bundle_load"):
+            # task-2 语义决议：snapshot <前缀> 为规范名，≡ bundle_load（别名保留防破坏
+            # 既有 scenario）——三要素②「待加载存档」声明（首 spin 出口 loadSavestate）。
+            # `snapshot none`=显式无存档（从上电起跑，cases/case-001 实用形态）。
             if len(args) != 1:
-                raise err("bundle_load 用法: bundle_load <前缀>")
-            plan["bundle_load"] = {"path": args[0]}
+                raise err(f"{op} 用法: {op} <前缀|none>")
+            plan["bundle_load"] = None if args[0].lower() == "none" else {"path": args[0]}
+        elif op == "endFrame":
+            # task-2 语义决议：endFrame <帧> 定死=终端采集点（≡ capture <帧> end；
+            # 同帧已有 capture 则去重不重复采集）——解析后统一消解（与行序无关）
+            if len(args) != 1 or not args[0].isdigit():
+                raise err("endFrame 用法: endFrame <帧号>")
+            endframes.append(int(args[0]))
         elif op == "sample_point":
             # task-24 3b：L3 采样点声明——spin-exit=$C0D3 @exitLoop_waitNMIEnd
             # （m1disasm prg7_engine.asm:218）；缺省=endFrame（legacy/混态期）。
@@ -381,6 +401,12 @@ def parse_scenario(path: Path) -> dict:
     if plan["frames"] is None:
         raise ScenarioError(f"{path}: 缺 frames 指令")
     frames = plan["frames"]
+    # endFrame → 终端采集点消解（≡ capture <帧> end，同帧已有 capture 去重——与行序无关）
+    cap_frames = {c["frame"] for c in plan["captures"]}
+    for ef in endframes:
+        if ef not in cap_frames:
+            plan["captures"].append({"frame": ef, "tag": "end"})
+            cap_frames.add(ef)
     seen = set()
     for e in plan["presses"]:
         if not 1 <= e["frame"] <= frames:
@@ -405,6 +431,56 @@ def parse_scenario(path: Path) -> dict:
     return plan
 
 
+# ---------------------------------------------------------------- 输入展开（唯一源）
+
+def expand_schedule(plan: dict) -> dict[int, int]:
+    """逐帧输入展开**唯一实现**（task-2 输入单源——anti-drift 硬判据的根）。
+
+    展开 DSL 静态输入段 → {frame: joy1}（1-based，非零帧才入表，返回按帧号升序）：
+      · hold <a-b> <btn>：帧 a..b（含）按住；
+      · press <f> <btn>：帧 f..f+press_len-1 按住（press_len 默认 PRESS_LEN_DEFAULT）；
+      · 同帧多按钮 OR 成 joy1（位映射 BUTTON_BITS）；
+      · 对向键（left/right、up/down）同帧双真=**后写覆盖**：holds 先于 presses 依序登记，
+        同段内按按钮列序，后登记者胜（确定性——spec 冲突消解规则 ①）。
+
+    Rust 侧（tools/l4_diff_run.py 写 .sched）与 Lua 侧（generate_lua 嵌入 PLAN.schedule）
+    同消费本函数产物——**禁止第二处展开**（两处实现漂移=两侧跑不同输入=假对拍）。
+    trigger/nav 为运行时条件输入（依赖 RAM 读），不在静态展开面（scenario_capture.lua 运行时叠加）。
+    """
+    press_len = int(plan.get("press_len") or PRESS_LEN_DEFAULT)
+    # 每帧记录 (frame -> {btn: 登记序}) 以复现「后写覆盖」冲突消解
+    per_frame: dict[int, dict[str, int]] = {}
+    seq = 0
+
+    def add(a: int, b: int, btns: list[str]) -> None:
+        nonlocal seq
+        for f in range(a, b + 1):
+            d = per_frame.setdefault(f, {})
+            for btn in btns:
+                seq += 1
+                d[btn] = seq
+
+    for e in plan.get("holds", []):
+        add(int(e["from"]), int(e["to"]), e["buttons"])
+    for e in plan.get("presses", []):
+        add(int(e["frame"]), int(e["frame"]) + press_len - 1, e["buttons"])
+
+    joy: dict[int, int] = {}
+    for f in sorted(per_frame):
+        d = per_frame[f]
+        # 对向键后写覆盖（登记序小者剔除）
+        if d.get("left") and d.get("right"):
+            d.pop("left" if d["left"] < d["right"] else "right")
+        if d.get("up") and d.get("down"):
+            d.pop("up" if d["up"] < d["down"] else "down")
+        bits = 0
+        for btn in d:
+            bits |= BUTTON_BITS[btn]
+        if bits:
+            joy[f] = bits
+    return joy
+
+
 # ---------------------------------------------------------------- Lua 生成
 
 def lua_str(s: str) -> str:
@@ -422,7 +498,10 @@ def to_lua(v) -> str:
     if isinstance(v, list):
         return "{" + ",".join(to_lua(x) for x in v) + "}"
     if isinstance(v, dict):
-        return "{" + ",".join(f"[{lua_str(k)}]={to_lua(val)}" for k, val in v.items()) + "}"
+        # int 键（如 schedule 的帧号）直接作 Lua 数字键；str 键走字符串键形
+        return "{" + ",".join(
+            f"[{k if isinstance(k, int) else lua_str(k)}]={to_lua(val)}" for k, val in v.items()
+        ) + "}"
     raise TypeError(f"不可序列化为 Lua: {v!r}")
 
 
@@ -435,9 +514,19 @@ def _lint_lua_text(text: str, label: str) -> None:
 
 
 def generate_lua(plan: dict, scenario_path: Path) -> tuple[str, str]:
-    """返回 (lua 源码, lua sha256)。PLAN 前置 + 执行器整拼（无 dofile 依赖）。"""
+    """返回 (lua 源码, lua sha256)。PLAN 前置 + 执行器整拼（无 dofile 依赖）。
+
+    task-2 输入单源：逐帧 joy1 由 **expand_schedule 唯一展开**后以 PLAN.schedule 嵌入
+    （Rust 侧 .sched 同源同产物）；PLAN.btn_bits=按钮位表（同源下发，Lua 不复制第二份）。
+    raw presses/holds **不进 Lua**——Lua 物理上不可二次展开（anti-drift 结构保证）。
+    """
     # None 字段（缺省 DSL 项如 capture_every）不进 Lua 表（r4 工程卫生：缺省场景必须可跑）
     plan_lua = {k: v for k, v in plan.items() if v is not None}
+    # raw 输入段不进 Lua（唯一展开源=expand_schedule——防二次展开漂移假对拍）
+    plan_lua.pop("presses", None)
+    plan_lua.pop("holds", None)
+    plan_lua["schedule"] = expand_schedule(plan)
+    plan_lua["btn_bits"] = BUTTON_BITS
     plan_lua["out_dir"] = str((TRACES_DIR).resolve())
     plan_lua["shots_dir"] = str((SHOTS_DIR).resolve())
     # task-32：bundle 输出前缀解析绝对路径（Mesen CWD≠仓库根——相对路径 io.open

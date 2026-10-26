@@ -1,6 +1,7 @@
 -- tools/scenario_capture.lua —— S2 oracle 场景采集执行器（通用）
 -- 由 tools/scenario_run.py 把 PLAN 表字面量前置后整拼为 analysis/_gen/<name>.lua 喂给 Mesen2 2.1.1。
--- DSL 语义只在 tools/scenario_run.py 解析（无第二套解析逻辑）；本文件只执行 PLAN。
+-- DSL 语义只在 tools/scenario_run.py 解析（无第二套解析逻辑）；输入逐帧展开亦只在
+-- scenario_run.expand_schedule（本文件只消费 PLAN.schedule，无第二展开源）；本文件只执行 PLAN。
 --
 
 -- 【2026-10-25 随行验证】冲突消解逻辑核三全过（互斥段 1 处/序记点全覆盖/互斥在
@@ -71,17 +72,13 @@ local frame = 0
 local inputWarned = false
 local nTrace, nCap, nShot = 0, 0, 0
 
--- ---------------- 输入计划展开为逐帧按键表
-local schedule = {}
-local function addRange(a, b, btns)
-  for f = a, b do
-    local t = schedule[f]
-    if not t then t = {} schedule[f] = t end
-    for _, btn in ipairs(btns) do t[btn] = true end
-  end
-end
-for _, e in ipairs(PLAN.holds) do addRange(e.from, e.to, e.buttons) end
-for _, e in ipairs(PLAN.presses) do addRange(e.frame, e.frame + pressLen - 1, e.buttons) end
+-- ---------------- 逐帧输入调度（task-2 输入单源：Python 预展开，本文件只消费）
+-- frame→joy1 由 tools/scenario_run.py::expand_schedule **唯一展开**后嵌入 PLAN.schedule
+-- （Rust 侧 .sched 同源同产物）；按钮位表亦由 Python 下发（PLAN.btn_bits），不复制第二份。
+-- 【anti-drift 纪律】禁止在 Lua 侧再展开 press/hold/press_len/对向键（两处展开=漂移假对拍）。
+-- trigger/nav 为运行时条件输入（RAM 读驱动），在 inputPolled 回调叠加于本表之上。
+local schedule = PLAN.schedule or {}
+local btnBits = PLAN.btn_bits or {}
 
 -- sc-loop 导航速度估计表（navPrev[key]={x}）
 local navPrev = {}
@@ -385,7 +382,13 @@ end
 
 emu.addEventCallback(function()
   frame = frame + 1
-  local btn = schedule[frame] or {}
+  -- 消费预展开 joy1（位解码为按钮表——算术式取位，勿引入 Lua 版本位运算依赖）。
+  -- 静态对向键已在 expand_schedule 消解（后写覆盖）；btn 内仅条件输入可再现冲突。
+  local joy = schedule[frame] or 0
+  local btn = {}
+  for b, bit in pairs(btnBits) do
+    if math.floor(joy / bit) % 2 == 1 then btn[b] = true end
+  end
   -- sc-loop 反馈制导航（G 系共用底）：实时读 RAM→条件按键（nav 命令驱动）
   -- 种类：x=ScrX($51) 左右舵/mapx=MapX($50) 房向舵/jump=ScrY($52) 低则跳
   -- sc-loop v3 触发式（条件触发按键——复现确定性）：RAM 检测→触发

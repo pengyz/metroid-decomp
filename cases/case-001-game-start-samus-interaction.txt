@@ -5,7 +5,7 @@
 
 name case-001-game-start-samus-interaction
 frames 1200
-snapshot none  # load_snapshot 缺口（记账（后续增加））
+snapshot none  # ②待加载存档：none=无存档（上电起跑）；有档写 snapshot <前缀>（≡bundle_load；load_snapshot 消费面缺口记账（后续增加））
 
 # ① 进入游戏（标题→游戏开始）
 press 310 start     # 标题按 Start
@@ -33,4 +33,4 @@ press 940 b         # 射击（帧 940）
 capture 950 combo-action  # 组合动作后
 
 # ⑥ 对拍结束
-endFrame 1200       # 结束帧（对拍点）
+endFrame 1200       # 结束帧（对拍点）——≡ capture 1200 end（终端采集点，同帧已有 capture 则去重）

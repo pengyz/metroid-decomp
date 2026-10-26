@@ -5,16 +5,20 @@
 这是「真正的对拍」：一边是 Rust 实现（game-core FrameEngine→render_frame 真实渲染帧），
 另一边是 Mesen2 模拟器执行同一 ROM 同一输入脚本的截图。**非模拟器 vs 模拟器**。
 
-流程（工具优先——单一 DSL 解析器纪律）：
-1. 用 scenario_run.parse_scenario（**唯一 DSL 解析器**）解析 oracle/scenarios/<name>.txt；
-2. 依 scenario_capture.lua 语义展开成逐帧 joy1 调度（press/hold + press_len + 按钮位映射）；
-3. 写调度表 → 跑 Rust bin rust_screenshot（FrameEngine→render_frame）→ shots_rust/ 真实截图；
-4. 跑模拟器（tools/scenario_run.py run <name>，headless Xvfb+Mesen）→ shots/ 截图；
+流程（工具优先——单一 DSL 解析器 + 输入单源纪律）：
+1. cases/ 为 L4 对拍用例**权威源**（三要素格式：①输入脚本+②待加载存档+③对拍时长，
+   含 snapshot/endFrame 语义）——只读 cases/<name>.txt（唯一前缀名可缩写），不读
+   oracle/scenarios/（同名旧定义=双源假对拍）；
+2. 用 scenario_run.parse_scenario（**唯一 DSL 解析器**）解析 → scenario_run.expand_schedule
+   （**唯一逐帧 joy1 展开**，press/hold/press_len/对向键后写覆盖）；
+3. 写调度表（与 Lua 侧 PLAN.schedule 同源同产物）→ 跑 Rust bin rust_screenshot
+   （FrameEngine→render_frame）→ shots_rust/ 真实截图；
+4. 跑模拟器（tools/scenario_run.py run <cases 路径>，headless Xvfb+Mesen）→ shots/ 截图；
 5. 逐 capture 像素对拍（PIL，白名单外零容差）→ 报告 + 失配帧 diff 图。
 
 用法：
-    python3 tools/l4_diff_run.py run case-001-game-start-samus-interaction [--timeout N] [--skip-emu]
-    python3 tools/l4_diff_run.py diff case-001-game-start-samus-interaction   # 只对拍已有截图
+    python3 tools/l4_diff_run.py run case-001 [--timeout N] [--skip-emu]
+    python3 tools/l4_diff_run.py diff case-001   # 只对拍已有截图
 
 输出：
     shots_rust/<name>_f<NNNNN>_<tag>.png       Rust 真实渲染帧
@@ -32,14 +36,31 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "tools"))
 
-# 按钮位映射（game-platform PadState / hardware.asm:89-96——A=bit7 … Right=bit0）
-BUTTON_BITS = {
-    "right": 0x01, "left": 0x02, "down": 0x04, "up": 0x08,
-    "start": 0x10, "select": 0x20, "b": 0x40, "a": 0x80,
-}
+# 按钮位映射唯一定义=scenario_run.BUTTON_BITS（task-2 输入单源——本文件不再复制位表）
 
+CASES_DIR = ROOT / "cases"
 SHOTS_EMU = ROOT / "shots"
 SHOTS_RUST = ROOT / "shots_rust"
+
+
+def case_path_of(name: str) -> Path:
+    """对拍用例解析（task-2 cases/ 权威）：cases/<name>.txt 或唯一前缀 cases/<name>-*.txt。
+
+    只读 cases/（L4 对拍用例权威源=三要素格式）；**不回落 oracle/scenarios/**——同名
+    1800 帧旧定义与 cases/ 1200 帧权威定义并存，回落即两侧跑不同用例=假对拍。
+    """
+    p = Path(name)
+    if p.is_file():
+        return p
+    direct = CASES_DIR / f"{name}.txt"
+    if direct.is_file():
+        return direct
+    matches = sorted(set(CASES_DIR.glob(f"{name}-*.txt")) | set(CASES_DIR.glob(f"{name}_*.txt")))
+    if len(matches) == 1:
+        return matches[0]
+    if not matches:
+        raise FileNotFoundError(f"找不到对拍用例 {name!r}（试过 {direct} 与 cases/{name}-*.txt）")
+    raise FileNotFoundError(f"对拍用例 {name!r} 前缀不唯一: {[m.name for m in matches]}")
 
 
 def load_pil():
@@ -48,58 +69,8 @@ def load_pil():
     return Image, np
 
 
-def build_schedule(plan: dict) -> tuple[int, dict, list]:
-    """展开 DSL plan → (frames, {frame: joy1}, [(frame, tag)])。
-
-    语义严格对齐 scenario_capture.lua：
-      · hold <a-b> <btn>：帧 a..b（含）按住
-      · press <f> <btn>：帧 f..f+press_len-1 按住（press_len 默认 2）
-      · 同帧多按钮 OR 成 joy1；对向键冲突（left/right、up/down）后写覆盖（btnOrder 序）
-    """
-    frames = int(plan["frames"])
-    press_len = int(plan.get("press_len") or 2)
-    # 每帧记录 (frame -> {btn: order}) 以复现 btnOrder 冲突消解
-    per_frame: dict[int, dict[str, int]] = {}
-    seq = 0
-
-    def add(a: int, b: int, btns: list[str]):
-        nonlocal seq
-        for f in range(a, b + 1):
-            d = per_frame.setdefault(f, {})
-            for btn in btns:
-                seq += 1
-                d[btn] = seq
-
-    for e in plan.get("holds", []):
-        add(int(e["from"]), int(e["to"]), e["buttons"])
-    for e in plan.get("presses", []):
-        add(int(e["frame"]), int(e["frame"]) + press_len - 1, e["buttons"])
-
-    joy: dict[int, int] = {}
-    for f, d in per_frame.items():
-        # 冲突消解（对向键后写覆盖——btnOrder 小者被剔）
-        if d.get("left") and d.get("right"):
-            if d["left"] < d["right"]:
-                d.pop("left")
-            else:
-                d.pop("right")
-        if d.get("up") and d.get("down"):
-            if d["up"] < d["down"]:
-                d.pop("up")
-            else:
-                d.pop("down")
-        bits = 0
-        for btn in d:
-            bits |= BUTTON_BITS[btn]
-        if bits:
-            joy[f] = bits
-
-    caps = [(int(c["frame"]), c["tag"]) for c in plan.get("captures", [])]
-    caps.sort()
-    return frames, joy, caps
-
-
 def write_schedule(name: str, frames: int, joy: dict, caps: list, path: Path):
+    """展开结果落 .sched（Rust 侧消费）——joy=scenario_run.expand_schedule 产物（同源）。"""
     lines = [f"name {name}", f"frames {frames}"]
     for f in sorted(joy):
         lines.append(f"joy {f} {joy[f]:02X}")
@@ -126,8 +97,9 @@ def run_rust(name: str, sched: Path, out_dir: Path) -> bool:
     return True
 
 
-def run_emu(name: str, timeout: float) -> bool:
-    cmd = [sys.executable, str(ROOT / "tools" / "scenario_run.py"), "run", name,
+def run_emu(name: str, timeout: float, scen_path: Path) -> bool:
+    # cases/ 权威定义**直传路径**（禁止按名回落 oracle/scenarios——同名旧定义=双源假对拍）
+    cmd = [sys.executable, str(ROOT / "tools" / "scenario_run.py"), "run", str(scen_path),
            "--timeout", str(timeout)]
     print(f"[emu] {' '.join(cmd)}")
     r = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True)
@@ -260,13 +232,16 @@ def main():
 
     import importlib
     sr = importlib.import_module("scenario_run")
-    scen_path = sr.scenario_path_of(args.name)
-    if not scen_path.is_file():
-        print(f"[!] 场景不存在: {scen_path}", file=sys.stderr)
+    try:
+        scen_path = case_path_of(args.name)
+    except FileNotFoundError as exc:
+        print(f"[!] {exc}", file=sys.stderr)
         sys.exit(1)
     plan = sr.parse_scenario(scen_path)
     name = plan.get("name") or args.name
-    frames, joy, caps = build_schedule(plan)
+    frames = int(plan["frames"])
+    joy = sr.expand_schedule(plan)  # 唯一展开源（task-2 输入单源——Rust/Lua 同产物）
+    caps = sorted((int(c["frame"]), c["tag"]) for c in plan.get("captures", []))
     print(f"[plan] {name}: frames={frames} 非零输入帧={len(joy)} 采集点={len(caps)}")
 
     if args.action == "run":
@@ -278,7 +253,7 @@ def main():
             if not run_rust(name, sched, SHOTS_RUST):
                 sys.exit(1)
         if not args.skip_emu:
-            if not run_emu(name, args.timeout):
+            if not run_emu(name, args.timeout, scen_path):
                 print("[!] 模拟器运行失败——改用已有 shots/ 对拍", file=sys.stderr)
 
     rep = do_diff(name)
