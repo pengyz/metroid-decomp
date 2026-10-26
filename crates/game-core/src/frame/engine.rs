@@ -8,7 +8,7 @@
 //! NMI 向量 $C0D9（bank7 同证）。
 
 use super::clock::VirtualClock;
-use super::memory::FrameMemory;
+use super::memory::{FrameMemory, Registers};
 use super::rng::GameRng;
 
 /// boot 相位（spin=跨帧 yield 构造物——契约 §8.1①；tick 序=NMI(尾写 1)→唤醒→帧工作→清 0→spin）。
@@ -34,6 +34,9 @@ pub struct FrameEngine {
     pub rng: GameRng,
     /// boot 相位（spin 跨帧状态机）。
     pub phase: BootPhase,
+    /// 【Task 4 snapshot 续跑面】restore 装载点=spin 出口（post-NMI 相位 P，$1A=1）——
+    /// 该帧 NMI 已发生，**首 tick 跳过 NMI** 续跑从帧工作起（emu bundle-ff f=1 行语义锚）。
+    skip_next_nmi: bool,
 }
 
 impl Default for FrameEngine {
@@ -50,7 +53,20 @@ impl FrameEngine {
             clock: VirtualClock::new(),
             rng: GameRng::new(),
             phase: BootPhase::PreSpin,
+            skip_next_nmi: false,
         }
+    }
+
+    /// 【Task 4 snapshot 消费面】bundle 恢复=**从快照态起跑**（非重跑 boot——
+    /// boot_pre_spin 清 RAM 低页/清 WRAM 会把装载态抹掉，"加载成功"≠从快照态起跑）：
+    /// · `mem`←`FrameMemory::restore_mss`（三直映灌入，spec §4 接缝表）；
+    /// · `phase`←MainLoop（快照采样点=spin 出口=游戏主循环中段）；
+    /// · 首 tick 跳过 NMI（装载点=post-NMI 相位 P——emu bundle-ff f=1 行==bundle 三直映
+    ///   实证同锚）；首缝=装载态逐字节（对齐验收首帧锚）。
+    pub fn restore_mss(&mut self, ram: &[u8], wram: &[u8], regs: Registers) {
+        self.mem = FrameMemory::restore_mss(ram, wram, regs);
+        self.phase = BootPhase::MainLoop;
+        self.skip_next_nmi = true;
     }
 
     /// 推进一帧（60Hz tick）——**tick 序**（契约 §8.1①）：NMI（尾写 $1A=1）→ spin 唤醒
@@ -69,7 +85,9 @@ impl FrameEngine {
     /// （`inc FrameCount`（asm prg7:207）延至此+唤醒门）。
     pub fn tick_frame_with<F: FnMut(&FrameMemory)>(&mut self, mut on_spin_exit: F) {
         self.clock.tick();
-        if self.mem.nmi_enabled {
+        if self.skip_next_nmi {
+            self.skip_next_nmi = false; // restore 续跑：装载点=post-NMI——首 tick 不再 NMI
+        } else if self.mem.nmi_enabled {
             super::nmi::nmi_handler(&mut self.mem);
         }
         // === spin 出口采样缝（$C0D3 对齐）——**仅主循环 spin 出口**（boot 链无主循环
@@ -233,5 +251,46 @@ mod tests {
         assert_eq!(samples, 1, "span 后采样缝恢复（新迭代界）");
     }
 
+    /// 【Task 4 snapshot 消费面】restore_mss=**从快照态起跑**（非重跑 boot）：
+    /// ① phase 直入 MainLoop——boot_pre_spin（清 RAM 低页+清 WRAM $6000-$7FFF）不得跑，
+    ///   否则装载态被抹掉（"加载成功"≠从快照态起跑）；
+    /// ② 首 tick **skip NMI**——bundle 采集点=spin 出口（post-NMI 相位 P，$1A=1 实证
+    ///   analysis/bundles/mid-move.json），NMI 已发生，续跑从帧工作起；
+    /// ③ 首缝（tick1 采样缝）=装载态逐字节（emu bundle-ff f=1 行语义同锚：
+    ///   emu f=1 行 == bundle 三直映（2026-10-26 实测））。
+    #[test]
+    fn restore_mss_starts_from_snapshot_state_not_boot() {
+        let mut ram = vec![0u8; 0x800];
+        ram[0x0300] = 0xAB; // boot 清页区（$0200-$07FF）标志值——boot 重跑会抹
+        ram[0x00FF] = 0x90; // NMI 开（bit7）——skip 首 NMI 语义的测试面
+        ram[0x001A] = 0x01; // spin 出口相位 P 常量 1（$1A=NMIStatus）
+        let wram = vec![0x5Au8; 0x2000]; // boot 清 WRAM 区标志值
+        let regs = Registers { a: 1, x: 2, y: 3, sp: 4, pc: 0xC0D3, p: 0x24 };
+        let expect = FrameMemory::restore_mss(&ram, &wram, regs).watch_snapshot();
+
+        let mut e = FrameEngine::new();
+        e.restore_mss(&ram, &wram, regs);
+        assert!(matches!(e.phase, BootPhase::MainLoop),
+                "restore 须直入 MainLoop（快照=游戏主循环中段——boot 重跑会抹装载态）");
+
+        // 首缝==装载态（skip 首 NMI：若 nmi 先跑，缝位=后 NMI 态≠装载态）
+        let mut first: Option<Vec<(String, String)>> = None;
+        let tick = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            e.tick_frame_with(|m| {
+                first = Some(m.watch_snapshot().into_iter()
+                    .map(|(k, v)| (k.to_string(), v)).collect());
+            });
+        }));
+        let first = first.expect("首 tick 必出采样缝（MainLoop 相位——boot 相位不采样即缺陷）");
+        let expect_named: Vec<(String, String)> = expect.into_iter()
+            .map(|(k, v)| (k.to_string(), v)).collect();
+        assert_eq!(first, expect_named,
+                   "首缝须=装载态逐字节（三面 zp/iram/wram）——加载成功≠对齐成功的首帧锚");
+        // boot 重跑判别：boot_pre_spin 后 phase=AwaitNmi；帧工作 panic 时无法看尾相位
+        if tick.is_ok() {
+            assert!(matches!(e.phase, BootPhase::MainLoop),
+                    "tick 尾 phase 仍须 MainLoop（boot 臂会把 phase 推去 AwaitNmi）");
+        }
+    }
 }
 
