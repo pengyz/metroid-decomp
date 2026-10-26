@@ -1070,7 +1070,9 @@
         }
       },
       "frame_keys": [],
-      "determinism_evidence": "r25 对拍用（title→游戏链——黑屏诊断）"
+      "determinism_evidence": "r25 对拍用（title→游戏链——黑屏诊断）",
+      "oracle_sha256": "f94bc98c5f635a82408fd14b6b3c87043ccf42d905e8b5bcc7610439d604b52a",
+      "scenario_sha256": "1a307c964dfc7271b5cd9a68a99fb860bbd343e6326fefeddc4d1d7eba805eae"
     }
   ]
 }
