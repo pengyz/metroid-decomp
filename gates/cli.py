@@ -71,7 +71,8 @@ METRIC_KEYS = (
     "completeness_cells",
 )
 
-KNOWLEDGE_TYPES = {"architecture", "gotcha", "pattern", "debug", "decision", "reference"}
+# gap=已知缺口/deficiency（显式声明的缺失面/未实现能力——gap-load-snapshot.md 立类实录，Task 1 裁定）
+KNOWLEDGE_TYPES = {"architecture", "gotcha", "pattern", "debug", "decision", "reference", "gap"}
 
 # metric > 0 即视为对应门禁的前置对象已建立（established）；此后前置对象消失不得静默回
 # SKIP/PASS，必须 FAIL（t10 R4②『前置对象存在后不得静默消失』守卫）。
@@ -777,8 +778,11 @@ def _child_env() -> dict:
     return env
 
 
-def _gate_runner_dispatch(runner_name: str, prereq: Path, label: str) -> tuple[str, str]:
-    """差分三兄弟（L2/L3/L4）的共用骨架：单一 runner（tools/<name>.py），无第二套扫描逻辑。"""
+def _gate_runner_dispatch(runner_name: str, prereq: Path, label: str) -> tuple[str, str, str]:
+    """差分三兄弟（L2/L3/L4）的共用骨架：单一 runner（tools/<name>.py），无第二套扫描逻辑。
+
+    返回 (verdict, detail, full_output)——full=runner 全量输出（stdout+stderr）：
+    l4 现状基线账读取点需**逐条**解析 [FAIL] 行（tail-5 detail 仅回显尾部，不足以逐条对账）。"""
     runner = ROOT / "tools" / runner_name
     if not prereq.exists() or not runner.is_file():
         missing = []
@@ -786,24 +790,121 @@ def _gate_runner_dispatch(runner_name: str, prereq: Path, label: str) -> tuple[s
             missing.append(f"{rel(prereq)} 未建立")
         if not runner.is_file():
             missing.append(f"tools/{runner_name} 未建立")
-        return SKIP, f"{label}：{'；'.join(missing)}（启用前置齐备后自动启用，显式 SKIP）"
+        return SKIP, f"{label}：{'；'.join(missing)}（启用前置齐备后自动启用，显式 SKIP）", ""
     try:
         proc = subprocess.run([sys.executable, str(runner)], cwd=ROOT, capture_output=True, text=True,
                               encoding="utf-8", errors="replace", env=_child_env(),
                               timeout=1800)  # infra scaling：外层篱笆（>内部 1200s——runner 自身挂死不无限阻塞）
     except subprocess.TimeoutExpired:
-        return FAIL, f"{label} runner 超时（>900s）——事故②修复面：外层篱笆，超时=FAIL 显式"
+        return FAIL, f"{label} runner 超时（>900s）——事故②修复面：外层篱笆，超时=FAIL 显式", ""
+    full = (proc.stdout or "") + (proc.stderr or "")
     if proc.returncode != 0:
-        tail = ((proc.stdout or "") + (proc.stderr or "")).strip().splitlines()[-5:]
-        return FAIL, f"{label} 差分不一致: " + " | ".join(tail)
+        tail = full.strip().splitlines()[-5:]
+        return FAIL, f"{label} 差分不一致: " + " | ".join(tail), full
     # G5 复审 F6：runner 摘要（腿状态等）回显进门禁 detail——工具层显式，门禁层不许静默吞
     outs = [l for l in (proc.stdout or "").strip().splitlines() if l.strip()]
     echo = ("；runner: " + " | ".join(l[:110] for l in outs[-2:])) if outs else ""
-    return PASS, f"{label} 全绿（tools/{runner_name}）{echo}"
+    return PASS, f"{label} 全绿（tools/{runner_name}）{echo}", full
+
+
+# ---------------------------------------------------------------- l4 现状基线账（账内容忍消费面）
+# Task 1 门禁解封（2026-10-26 立）：trace/visual 现状失败**逐条**登记
+# data/status/l4_status_quo_baseline.json（trace:{<case>} / visual:{<frame>}，条目=reason/exit/
+# count + observed 实录签名）——**账内容忍/l2_gap_map 同构**：TOLERATED 显式打印（逐条回显
+# reason/exit/count），不阻塞≠绿；**非白名单/非调阈/非静默判 pass**。判定逻辑只在 gates/
+# （AGENTS：工具自身不持有判定权）。防静默底线三条（fail-closed，任一命中=账外照常 FAIL）：
+#   ① id 未登记（新分歧照常红）；② rest 不命中 observed 实录签名（失败形态变更=现状变了，
+#    须重登记——防新像素差/新分歧被旧账吞）；③ 命中数>count（现状膨胀须重登记；
+#    count==len(observed) 载入强校验）。账清转 strict：失败消失自然转 PASS，收口删登记条目。
+STATUS_QUO_REL = Path("data") / "status" / "l4_status_quo_baseline.json"
+FAIL_LINE_RE = re.compile(r"\[FAIL\] ([^:]+): (.*)")
+
+
+def load_status_quo_baseline(path: Path | None = None) -> tuple[dict | None, str]:
+    """载入 l4 现状基线账（schema 强校验 fail-closed）。返回 (sections, err)；err 非空=不容忍。"""
+    p = path or (ROOT / STATUS_QUO_REL)
+    if not p.is_file():
+        return None, f"{rel(p)} 缺失（fail-closed：无登记不容忍）"
+    try:
+        doc = json.loads(p.read_text(encoding="utf-8"))
+    except Exception as e:  # noqa: BLE001 —— 解析失败一律 fail-closed 转裁定行，禁裸 traceback
+        return None, f"{rel(p)} 解析失败（fail-closed）: {e}"
+    sections: dict = {}
+    for key in ("trace", "visual"):
+        sec = doc.get(key) if isinstance(doc, dict) else None
+        if not isinstance(sec, dict):
+            return None, f"{rel(p)}: 缺 {key} 段（fail-closed）"
+        for fid, e in sec.items():
+            if not isinstance(e, dict):
+                return None, f"{rel(p)}: {key}/{fid} 条目非对象（fail-closed）"
+            reason, exit_, count, observed = e.get("reason"), e.get("exit"), e.get("count"), e.get("observed")
+            if not isinstance(reason, str) or not reason.strip():
+                return None, f"{rel(p)}: {key}/{fid} reason 缺（显式记 reason——fail-closed）"
+            if not isinstance(exit_, str) or not exit_.strip():
+                return None, f"{rel(p)}: {key}/{fid} exit 缺（显式记 exit——fail-closed）"
+            if not isinstance(count, int) or isinstance(count, bool) or count < 1:
+                return None, f"{rel(p)}: {key}/{fid} count 非正整数（显式记 count——fail-closed）"
+            if (not isinstance(observed, list) or not observed
+                    or not all(isinstance(s, str) and s.strip() for s in observed)):
+                return None, f"{rel(p)}: {key}/{fid} observed 实录签名缺/非串列表（fail-closed）"
+            if count != len(observed):
+                return None, (f"{rel(p)}: {key}/{fid} count={count}≠len(observed)={len(observed)}"
+                              f"（强校验 fail-closed）")
+        sections[key] = sec
+    return sections, ""
+
+
+def status_quo_tolerate(section: dict, fail_items: list[tuple[str, str]]) -> tuple[bool, str]:
+    """l4 现状基线账判定（纯函数，自检可注入）：fail_items=[(id, rest)]（[FAIL] 行逐条）。
+
+    全命中登记（①id 在账 ②rest 命中 observed 签名 ③命中数≤count）⇒ (True, 显式账目回显
+    reason/exit/count，不阻塞≠绿）；任一账外 ⇒ (False, 账外清单——照常 FAIL，绝不静默吞）。"""
+    unmatched: list[str] = []
+    hits: dict[str, int] = {}
+    for fid, rest in fail_items:
+        e = section.get(fid)
+        if e is None:
+            unmatched.append(f"{fid}（未登记 id——新分歧照常 FAIL）")
+            continue
+        if not any(sig in rest for sig in e["observed"]):
+            unmatched.append(f"{fid}（实录签名漂移——失败形态变更须重登记）")
+            continue
+        hits[fid] = hits.get(fid, 0) + 1
+        if hits[fid] > e["count"]:
+            unmatched.append(f"{fid}（count 超界 {hits[fid]}>登记 {e['count']}——现状膨胀须重登记）")
+    if unmatched:
+        return False, (f"l4 现状基线账外 {len(unmatched)}/{len(fail_items)} 项"
+                       f"（新分歧/签名漂移/膨胀照常 FAIL，绝不静默吞）: " + "；".join(unmatched[:8]))
+    groups: dict[tuple[str, str], list[str]] = {}
+    for fid, n in hits.items():
+        e = section[fid]
+        groups.setdefault((e["reason"], e["exit"]), []).append(f"{fid}(count={n}/{e['count']})")
+    parts = [f"[reason={r}｜exit={x}] " + "、".join(ids) for (r, x), ids in groups.items()]
+    stale = [fid for fid in section if fid not in hits]
+    stale_note = (f"；登记未复现（改善，待账清删条目）: {', '.join(stale[:8])}" if stale else "")
+    return True, (f"l4 现状基线账内容忍（{len(fail_items)} 失败项×{len(hits)} 登记全命中——"
+                  f"显式 reason/exit/count，不阻塞≠绿，账清转 strict）: " + " | ".join(parts) + stale_note)
+
+
+def status_quo_consume(section_key: str, full_output: str) -> tuple[bool, str]:
+    """l4 现状基线账读取点（gate_subroutine_diff 的 l2_gap_map 消费面同构）。
+
+    从 runner 全量输出提取 `[FAIL] <id>: <rest>` 逐条对账；载入失败/无明细行一律 fail-closed。"""
+    sections, err = load_status_quo_baseline()
+    if sections is None:
+        return False, err
+    fail_items = []
+    for line in (full_output or "").splitlines():
+        m = FAIL_LINE_RE.match(line)
+        if m:
+            fail_items.append((m.group(1), m.group(2).strip()))
+    if not fail_items:
+        return False, "runner FAIL 但无 [FAIL] 明细行（fail-closed：形态不可对账，照常 FAIL）"
+    return status_quo_tolerate(sections[section_key], fail_items)
 
 
 def gate_subroutine_diff() -> tuple[str, str]:
-    verdict, detail = _gate_runner_dispatch("diff_subroutines.py", ROOT / "oracle" / "subroutines", "L2 子程序级")
+    verdict, detail, _full = _gate_runner_dispatch("diff_subroutines.py", ROOT / "oracle" / "subroutines", "L2 子程序级")
     # gap_map TOLERATED 消费面（SC-MD-003 解阻件（gates 域）2026-10-20 立）：
     # subroutine-diff 读 data/status/l2_gap_map.json（D7 声明域（md/g3/账内）case_prefix）
     # ——FAIL 全部失败案 id 若全部命中已登记前缀 ⇒ verdict=TOLERATED（显式计数+前缀表）
@@ -832,7 +933,7 @@ def gate_subroutine_diff() -> tuple[str, str]:
 
 
 def gate_trace_diff() -> tuple[str, str]:
-    verdict, detail = _gate_runner_dispatch("diff_traces.py", ROOT / "oracle" / "traces", "L3 帧级 trace")
+    verdict, detail, full = _gate_runner_dispatch("diff_traces.py", ROOT / "oracle" / "traces", "L3 帧级 trace")
     # 已知偏差签名级降级（AGENTS §6 TOLERATED 消费面，2026-10-15 立）：FAIL 且失败
     # 细节含某条 tolerated 登记的 item 串（精确签名子串匹配）⇒ verdict=TOLERATED
     # ——不阻塞 ≠ 绿（SUMMARY 显式 TOLERATED 计数；收尾行绝不打裸 PASS）；签名外
@@ -843,13 +944,27 @@ def gate_trace_diff() -> tuple[str, str]:
             if item.get("gate") == "trace-diff" and item.get("item") and item["item"] in detail:
                 return TOLERATED, (f"已登记已知偏差（签名命中）: {item['bug']}: {item['reason']}"
                                    f"——原明细: {detail}")
+        # l4 现状基线账读取点（Task 1 门禁解封：账内容忍/l2_gap_map 同构——逐条显式 reason/exit/count；
+        # 账外/签名漂移/膨胀照常 FAIL 绝不静默吞）。既有 baseline.tolerated 消费面在前（语义不动）。
+        ok, report = status_quo_consume("trace", full)
+        if ok:
+            return TOLERATED, f"{report}——原明细: {detail}"
+        if report:
+            detail = f"{detail}｜{report}"
     return verdict, detail
 
 
 def gate_visual_diff() -> tuple[str, str]:
-    verdict, detail = _gate_runner_dispatch("diff_visual.py", ROOT / "oracle" / "screens", "L4 视觉")
+    verdict, detail, full = _gate_runner_dispatch("diff_visual.py", ROOT / "oracle" / "screens", "L4 视觉")
     if verdict == SKIP:
         detail += "；visual 白名单 gates/visual_whitelist.json 于 S6 建立（唯一允许的白名单，变更需用户确认）"
+    if verdict == FAIL:
+        # l4 现状基线账读取点（同 gate_trace_diff：账内容忍/l2_gap_map 同构，非白名单非静默）
+        ok, report = status_quo_consume("visual", full)
+        if ok:
+            return TOLERATED, f"{report}——原明细: {detail}"
+        if report:
+            detail = f"{detail}｜{report}"
     return verdict, detail
 
 
@@ -1370,7 +1485,10 @@ def summarize(results: list[dict], baseline: dict) -> str:
     counts = {PASS: 0, FAIL: 0, SKIP: 0, TOLERATED: 0}
     for r in results:
         counts[r["verdict"]] = counts.get(r["verdict"], 0) + 1
-    counts[TOLERATED] = len(baseline.get("tolerated", []))
+    # TOLERATED=门禁级 TOLERATED 裁定数 + baseline.tolerated 登记项数（各自显式打印）。
+    # 修显式性缺口：原 counts[TOLERATED] 被登记项数覆盖⇒门禁级 TOLERATED（l2_gap_map/现状账
+    # 降级面）不进 SUMMARY=「不阻塞≠绿」注释失真。两面相加=显式打印的容忍对象总数。
+    counts[TOLERATED] = counts.get(TOLERATED, 0) + len(baseline.get("tolerated", []))
     extra = f" DEFERRED={counts.get(DEFERRED, 0)}" if counts.get(DEFERRED) else ""
     return (
         f"SUMMARY: PASS={counts[PASS]} FAIL={counts[FAIL]} "
@@ -1919,6 +2037,55 @@ def cmd_selftest(_args) -> int:
     check("台账 ID 唯一单调 ⇒ 0 错", errs == [], f"errs={errs}")
     v, d = gate_naming_ledger()
     check("naming-ledger 门禁实跑（本仓 69 条含 ID 校验）", v == PASS, d)
+
+    # 13) knowledge 类型面（Task 1：gap 缺口/deficiency 类——gap-load-snapshot.md 立类实录）
+    check("KNOWLEDGE_TYPES 含 gap（缺口/deficiency 类）", "gap" in KNOWLEDGE_TYPES,
+          f"KNOWLEDGE_TYPES={sorted(KNOWLEDGE_TYPES)}")
+    v, d = gate_knowledge_format()
+    check("gap-load-snapshot.md（type:gap）过 gate_knowledge_format 实跑", v == PASS, d)
+
+    # 14) l4 现状基线账判定器（Task 1 门禁解封——账内容忍/l2_gap_map 同构：显式 reason/exit/count）
+    sq = globals().get("status_quo_tolerate")
+    check("l4 现状基线账判定器已实现（status_quo_tolerate）", callable(sq),
+          "status_quo_tolerate 未实现——账内容忍读取点缺失")
+    if callable(sq):
+        sec = {"c1": {"reason": "游戏未 L3/L4 一致（现状）", "exit": "L4 移植推进账清转 strict",
+                      "count": 2, "observed": ["复采面缺失（x）", "渲染腿面缺失（y）"]}}
+        ok, rep = sq(sec, [("c1", "复采面缺失（x）"), ("c1", "渲染腿面缺失（y）")])
+        check("现状账：全命中登记 ⇒ 账内容忍（逐条显式 reason/exit/count 回显）",
+              ok and "reason=游戏未 L3/L4 一致（现状）" in rep
+              and "exit=L4 移植推进账清转 strict" in rep and "count=2/2" in rep, rep)
+        ok, rep = sq(sec, [("c2", "复采面缺失（x）")])
+        check("现状账：未登记 id ⇒ 账外照常 FAIL（新分歧不静默）", not ok and "未登记" in rep, rep)
+        ok, rep = sq(sec, [("c1", "账外 398 像素分歧（首 @1,2 …）")])
+        check("现状账：实录签名漂移 ⇒ 账外照常 FAIL（防新像素差/新分歧被旧账吞）",
+              not ok and "签名漂移" in rep, rep)
+        ok, rep = sq(sec, [("c1", "复采面缺失（x）"), ("c1", "渲染腿面缺失（y）"), ("c1", "复采面缺失（x）")])
+        check("现状账：count 超界（现状膨胀）⇒ 账外照常 FAIL", not ok and "超界" in rep, rep)
+        with tempfile.TemporaryDirectory() as td:
+            p = Path(td) / "bad.json"
+            p.write_text(json.dumps({"schema": "x", "trace": {"c": {"reason": "r", "exit": "e",
+                                                                   "count": 2, "observed": ["only-one"]}},
+                                     "visual": {}}), encoding="utf-8")
+            sections, err = load_status_quo_baseline(p)
+            check("现状账载入强校验 count==len(observed)（fail-closed 不容忍）",
+                  sections is None and "count=" in err, err)
+        sections, err = load_status_quo_baseline()
+        check("l4 现状基线账本体载入合法（实仓登记 reason/exit/count/observed 齐备）",
+              sections is not None and bool(sections.get("trace")) and bool(sections.get("visual")),
+              err or f"trace={len(sections.get('trace', {}))} visual={len(sections.get('visual', {}))}")
+        for r in results:  # 实跑（复用 5) 的 run_all_gates 结果，不二次跑 runner）
+            if r["name"] in ("trace-diff", "visual-diff"):
+                check(f"{r['name']} 实跑不 FAIL（PASS 或账内容忍 TOLERATED）",
+                      r["verdict"] in (PASS, TOLERATED), f"verdict={r['verdict']} {r['detail'][:160]}")
+                if r["verdict"] == TOLERATED:
+                    check(f"{r['name']} TOLERATED 显式回显 reason/exit/count（不阻塞≠静默）",
+                          all(k in r["detail"] for k in ("reason=", "exit=", "count=")),
+                          r["detail"][:200])
+
+    # 15) SUMMARY TOLERATED 显式计数（门禁级 TOLERATED 裁定不许被登记项计数覆盖——不阻塞≠静默）
+    line = summarize([{"verdict": TOLERATED}], {"tolerated": []})
+    check("SUMMARY 计入门禁级 TOLERATED 裁定（显式≠静默）", "TOLERATED=1" in line, line)
 
     failed = [c for c in cases if not c[1]]
     for name, ok, detail in cases:
