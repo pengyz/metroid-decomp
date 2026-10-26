@@ -119,12 +119,17 @@ pub fn go_samus_handler(mem: &mut FrameMemory) {
 /// 字节自证（CCC2 区逐字）：anim 常量 $0C=Jump/$20=JumpFire/$0E=Salto/$35=JumpPntUp。
 /// 尾段（CD02+run 动画/movement）+StopVertMovement（D147）=桩（随队列填）。
 
-/// ObjAnim_SamusRun/SamusJump（ObjectAnimIndexTbl \$8572 基——common_sprite_data
-/// 偏移：Run=\$858A-\$8572=18?\(待核\)/Jump=待核）——r26 暂用 asm 值域（随核）。
-const OBJ_ANIM_SAMUS_RUN: u8 = 0x00; // 真值 $8572 基
+/// ObjAnim_SamusRun/SamusJump（ObjectAnimIndexTbl $8572 基——common_sprite_data
+/// 表址实证（A 级）：Run=$8572→**0x00**/Front=$8576→0x04/Stand=$8579→0x07/Jump=$857E→
+/// **0x0C**/Salto=$8580→0x0E/JumpPntUp=$85A7→0x35/**RunPntUp=$85A9→0x37**）。
+const OBJ_ANIM_SAMUS_RUN: u8 = 0x00;
+const OBJ_ANIM_SAMUS_FRONT: u8 = 0x04;
+const OBJ_ANIM_SAMUS_STAND: u8 = 0x07;
 const OBJ_ANIM_SAMUS_JUMP: u8 = 0x0C;
 const OBJ_ANIM_SAMUS_SALTO: u8 = 0x0E;
-const OBJ_ANIM_SAMUS_JUMP_PNT_UP: u8 = 0x35; // 真值 $857E-$8572
+const OBJ_ANIM_SAMUS_JUMP_PNT_UP: u8 = 0x35;
+const OBJ_ANIM_SAMUS_PNT_UP: u8 = 0x27;
+const OBJ_ANIM_SAMUS_RUN_PNT_UP: u8 = 0x37;
 
 
 /// SetSamusRunAccel（**asm 内容锚** `: 07:CCB7`——r26）：SamusAccelX←RunAccelerationTbl[x]
@@ -188,25 +193,36 @@ fn solid_entity_response(mem: &mut FrameMemory) {
     crate::unported!("bank07:CF2E"); // 贴墙反应（随件核）
 }
 
+/// SamusRun（**asm 内容锚** `SamusRun: ; 07:CCC2`）——**地面/空中双径**
+/// （`lda SamusAccelY/beq samL07`）：
+/// · 空中径（samL01-06）：跳/落动画切（Jump/Salto/JumpPntUp）+samL04 run→jump 动画切
+///   （**仅空中**）→三件（CF88/D09C/CF2E）→animDelay←2。
+/// · 地面径（samL07-12）：SetSamusRunAccel+**SamusRun_SetAnim（CDBF——run 动画置位）**
+///   +走 SFX 节拍+LCF2E+JUMP 起跳（LCD40）/FIRE（CDD7）/无键停跑（CF55）/转身（CC98）
+///   →animDelay←3。
+/// 【贴图根修】（2026-10-26 渲染目检：金腿跑动 run 动画/我方错播 jump）——旧形无条件跑
+/// 空中径（samL04 run→jump 切）致地面跑动贴图错。asm 表址定谳（common_sprite_data）。
 pub fn samus_run(mem: &mut FrameMemory) {
     use button::*;
-    let disp = mem.read_ram(crate::ram_map::SAMUS_JUMP_DISP);
-    let speed_y_i = mem.read_ram(super::physics::SAMUS_SPEED_Y_I);
-    if mem.read_ram(crate::ram_map::SAMUS_ACCEL_Y) != 0 {
+    let accel_y = mem.read_ram(crate::ram_map::SAMUS_ACCEL_Y);
+    if accel_y != 0 {
+        // ==== 空中径（samL01-06）====
+        let disp = mem.read_ram(crate::ram_map::SAMUS_JUMP_DISP);
+        let speed_y_i = mem.read_ram(super::physics::SAMUS_SPEED_Y_I);
         if speed_y_i & 0x80 == 0 {
-            // 下落：位移<$18→unspin
+            // 下落：位移<$18→unspin（Jump 动画）
             if disp < 0x18 {
-                mem.write_ram(ANIM_RESET_INDEX, 0x0C);
+                mem.write_ram(ANIM_RESET_INDEX, OBJ_ANIM_SAMUS_JUMP);
             }
         } else {
             // 上升：≥$18→salto（若现≠JumpFire）
             if disp >= 0x18 {
                 if mem.read_ram(ANIM_RESET_INDEX) != 0x20 {
-                    mem.write_ram(ANIM_RESET_INDEX, 0x0E);
+                    mem.write_ram(ANIM_RESET_INDEX, OBJ_ANIM_SAMUS_SALTO);
                 }
                 if disp >= 0x20 {
                     if mem.read_ram(crate::ram_map::JOY1_STATUS) & UP != 0 {
-                        mem.write_ram(ANIM_RESET_INDEX, 0x35);
+                        mem.write_ram(ANIM_RESET_INDEX, OBJ_ANIM_SAMUS_JUMP_PNT_UP);
                     }
                     if mem.read_ram(crate::ram_map::JOY1_STATUS) & A == 0 {
                         super::physics::stop_vert_movement(mem); // D147（已全折）
@@ -214,26 +230,125 @@ pub fn samus_run(mem: &mut FrameMemory) {
                 }
             }
         }
+        // samL04（CD02）：run 动画⇒jump 动画切（**仅空中径**——地面径不过此件！）
+        if mem.read_ram(ANIM_RESET_INDEX) == OBJ_ANIM_SAMUS_RUN {
+            mem.write_ram(ANIM_RESET_INDEX, OBJ_ANIM_SAMUS_JUMP);
+        }
+        // samL05（CD0E）：熔岩跳判
+        if mem.read_ram(crate::ram_map::SAMUS_IN_LAVA) != 0
+            && mem.read_ram(crate::ram_map::JOY1_CHANGE) & 0x80 != 0
+        {
+            crate::unported!("bank07:LCD40"); // 熔岩跳（随件）
+        }
+        // samL06（CD16）：三件+animDelay 初值 A=2（`lda #$02/bne SetSamusData`——
+        // UpdateObjAnim 经 A 取初值（DC8F `sta animDelay`）！禁事后覆写 $304（掐死递减）。
+        samus_run_check_horz_movement_midair(mem); // CF88
+        samus_jump_check_fire(mem); // D09C
+        solid_entity_response(mem); // CF2E
+        mem.regs.a = 2;
+        super::physics::set_samus_data(mem); // CD6D（物理链会师）
+        return;
     }
-    // samL04（CD02）：run 动画⇒jump 动画切（ObjAnim_SamusRun→ObjAnim_SamusJump）
-    let anim = mem.read_ram(0x0303 + 2); // Samus.animResetIndex（+5 位）
-    // animResetIndex 域址（Samus 结构+5）核：$305
-    let a = mem.read_ram(0x0305);
-    if a == OBJ_ANIM_SAMUS_RUN {
-        mem.write_ram(0x0305, OBJ_ANIM_SAMUS_JUMP);
+    // ==== 地面径（samL07-12）====
+    if mem.read_ram(crate::ram_map::SAMUS_ON_ELEVATOR) == 0 {
+        set_samus_run_accel(mem, mem.read_ram(crate::ram_map::SAMUS_DIR)); // CCB7
     }
-    // samL05（CD0E）：熔岩跳判（Joy1Change bit7=JUMP！）
-    if mem.read_ram(0x0114) != 0 && mem.read_ram(crate::ram_map::JOY1_CHANGE) & 0x80 != 0 {
-        crate::unported!("bank07:LCD40"); // 熔岩跳（随件）
+    // samL08：SamusRun_SetAnim（CDBF——run 动画置位；aim 变⇒尾跳 3 帧延迟径）
+    if samus_run_set_anim(mem) {
+        mem.regs.a = 3;
+        super::physics::set_samus_data(mem);
+        return;
     }
-    // samL06（CD16）：三件+anim 2 帧节拍
-    samus_run_check_horz_movement_midair(mem); // CF88（三件首）
-    samus_jump_check_fire(mem); // D09C
-    solid_entity_response(mem); // CF2E
-    // SetSamusData（CD6D——**物理链会师**！（r26 根修：积分件在此链！））
-    super::physics::set_samus_data(mem); // CD6D（含 lava_and_move_check→积分→位移）
-    mem.write_ram(0x0304, 2); // animDelay←2
-    let _ = anim;
+    // 走 SFX 节拍（CD2B——WalkSoundDelay dec→归零重载 9+SFX_SamusWalk）。
+    // 【占位臂记账】SFX 件（B 声音包随件）：计数面保留。
+    let wd_addr = 0x010F; // WalkSoundDelay（constants 随核）
+    let wd = mem.read_ram(wd_addr);
+    if wd.wrapping_sub(1) == 0 {
+        mem.write_ram(wd_addr, 0x09);
+        crate::frame::DIVERGENCES.with(|d| d.borrow_mut().push(0xCBAC));
+    } else {
+        mem.write_ram(wd_addr, wd.wrapping_sub(1));
+    }
+    // samL09：LCF2E（固实实体反应）
+    solid_entity_response(mem);
+    // JUMP 判（CD39：`lda Joy1Change/bpl samL10`）⇒LCD40 起跳
+    if mem.read_ram(crate::ram_map::JOY1_CHANGE) & 0x80 != 0 {
+        set_samus_jump(mem); // CFC3（动画+位移/速面）
+        mem.write_ram(crate::ram_map::SAMUS_HORZ_SPEED_MAX, 0x12);
+        mem.regs.a = 3;
+        super::physics::set_samus_data(mem);
+        return;
+    }
+    // FIRE 判（CD4B：`ora Joy1Retrig/asl/bpl`——bit6（B 键族））⇒SamusRun_Fire
+    if (mem.read_ram(crate::ram_map::JOY1_CHANGE) | mem.read_ram(crate::memmap::title_state::JOY1_RETRIG)) & 0x40 != 0 {
+        crate::frame::DIVERGENCES.with(|d| d.borrow_mut().push(0xCDD7)); // SamusRun_Fire（打敌人包随件）
+    }
+    // samL11：无方向键⇒SetSamusStand（CF55——停跑站姿；无脚步件 CF5D 折叠（SFX 随件））
+    let input = mem.read_ram(crate::ram_map::JOY1_STATUS) & (RIGHT | LEFT);
+    if input == 0 {
+        set_samus_stand_no_footstep(mem);
+        mem.regs.a = 3;
+        super::physics::set_samus_data(mem);
+        return;
+    }
+    // samL12：BitScan→方向判⇒转身（SetSamusRun——CC98）
+    let x = bit_scan(input);
+    if x != mem.read_ram(crate::ram_map::SAMUS_DIR) {
+        mem.write_ram(crate::ram_map::SAMUS_DIR, x);
+        set_samus_run(mem); // CC98（转身：Front 动画过渡+Run 动画+加速）
+    }
+    mem.regs.a = 3;
+    super::physics::set_samus_data(mem); // CD6D（A=3——CD6B 尾）
+}
+
+/// SamusRun_SetAnim（**asm 内容锚** `SamusRun_SetAnim: ; 07:CDBF`）：
+/// X=(Joy1Status&UP)>>3⇒anim=RunAnimationTbl[X]（Run=0x00/RunPntUp=0x37）≠animResetIndex
+/// ⇒SetSamusAnim+**尾跳** SetSamusData_3FrameAnimDelay（pla/pla——跳过 samus_run 余段）。
+/// 返回 true=尾跳（调用方即收链）。
+fn samus_run_set_anim(mem: &mut FrameMemory) -> bool {
+    use button::*;
+    let x = if mem.read_ram(crate::ram_map::JOY1_STATUS) & UP != 0 { 1usize } else { 0 };
+    let anim = [OBJ_ANIM_SAMUS_RUN, OBJ_ANIM_SAMUS_RUN_PNT_UP][x];
+    if anim == mem.read_ram(ANIM_RESET_INDEX) {
+        return false;
+    }
+    // SetSamusAnim（CF6B：$0305←A/$0306←A/$0304←0）
+    mem.write_ram(ANIM_RESET_INDEX, anim);
+    mem.write_ram(ANIM_RESET_INDEX + 1, anim);
+    mem.write_ram(ANIM_RESET_INDEX.wrapping_sub(1), 0);
+    true
+}
+
+/// SetSamusJump（**asm 内容锚** `SetSamusJump: ; 07:CFC3`（LCFC5 共体））：
+/// $0305←anim/$0306←anim−1/$0304←4/JumpDsplcmnt←0/speedY←$FC（起跳上升速）。
+/// （螺旋转件 Lx017 随件——gear 判。）
+fn set_samus_jump(mem: &mut FrameMemory) {
+    let anim = OBJ_ANIM_SAMUS_JUMP;
+    mem.write_ram(ANIM_RESET_INDEX, anim);
+    mem.write_ram(ANIM_RESET_INDEX + 1, anim.wrapping_sub(1));
+    mem.write_ram(ANIM_RESET_INDEX.wrapping_sub(1), 4);
+    mem.write_ram(crate::ram_map::SAMUS_JUMP_DISP, 0);
+    mem.write_ram(super::physics::SAMUS_SPEED_Y_I, 0xFC);
+}
+
+/// SetSamusRun（**asm 内容锚** `SetSamusRun: ; 07:CC98`）：WalkSoundDelay←9/转身动画
+/// （Stand⇒Run、PntUp⇒RunPntUp、其余（原跑动）⇒Front 过渡）/Run 动画置位+加速。
+fn set_samus_run(mem: &mut FrameMemory) {
+    mem.write_ram(0x010F, 0x09); // WalkSoundDelay（constants 随核）
+    let cur = mem.read_ram(ANIM_RESET_INDEX);
+    let x = if cur == OBJ_ANIM_SAMUS_STAND {
+        0usize
+    } else if cur == OBJ_ANIM_SAMUS_PNT_UP {
+        1
+    } else {
+        // 原跑动⇒转身过渡（SetSamusNextAnim(Front)）
+        mem.write_ram(ANIM_RESET_INDEX + 1, OBJ_ANIM_SAMUS_FRONT);
+        0
+    };
+    let anim = [OBJ_ANIM_SAMUS_RUN, OBJ_ANIM_SAMUS_RUN_PNT_UP][x];
+    mem.write_ram(ANIM_RESET_INDEX, anim);
+    let dir = mem.read_ram(crate::ram_map::SAMUS_DIR);
+    set_samus_run_accel(mem, dir);
 }
 
 /// 动画面址（字节自证：$0305=animResetIndex（CF5D/CCC2 同址一致））。
