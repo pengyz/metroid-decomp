@@ -19,6 +19,13 @@
 用法：
     python3 tools/l4_diff_run.py run case-001 [--timeout N] [--skip-emu]
     python3 tools/l4_diff_run.py diff case-001   # 只对拍已有截图
+    python3 tools/l4_diff_run.py run-all [--timeout N] [--skip-emu] [--skip-rust]
+        # 批量矩阵（Task 5·H4）：遍历 cases/*.txt **全用例** → 用例×采集点矩阵；
+        # 产物 shots_rust/matrix.json（结构化）+ shots_rust/matrix.md（人读表）；
+        # 矩阵三态 match|diff|blocked，**blocked 计入分母、永不计 pass**
+        # （分母=用例×采集点总数）——防假绿硬约束；每格标 provenance
+        # （fresh|reused——复用/新跑诚实标注）；snapshot 用例从快照起跑
+        # （snapshot none=上电）。exit 0=全 match；1=有 diff/blocked；2=fail-loud。
     python3 tools/l4_diff_run.py align <name> [--frames N] [--bundle <前缀>] \
             [--emu-trace <path>] [--residual-class <标签>]
         # 对齐验收（Task 4·H1）：snapshot 装载后前 N 帧 Rust↔emu 快进**逐字节** diff；
@@ -31,11 +38,13 @@
     复用旧产物（--skip-rust/--skip-emu/腿失败回落/diff）前**校验锚**（sched_sha256 调度 hash
     为主锚 + scenario/rom 锚）：不符或无锚 → **拒跑 exit 2**（不静默复用旧截图出假绿）。
     每条腿成功生成产物后落 <side 产物目录>/<name>.l4prov.json（复用校验的锚存证）。
+    run-all 矩阵**每行**同锚（scenario_sha256 + rom_sha256 + 产物 sha——键名契约同 l4report）。
 
 输出：
     shots_rust/<name>_f<NNNNN>_<tag>.png       Rust 真实渲染帧
     shots_rust/<name>.l4report.json           对拍结果（结构化，含三 sha 锚）
     shots_rust/<name>_f<NNNNN>_<tag>.diff.png 失配帧可视化（Rust|Emu|Diff）
+    shots_rust/matrix.json + shots_rust/matrix.md   run-all 矩阵（结构化+人读表）
 """
 from __future__ import annotations
 
@@ -495,10 +504,306 @@ def print_report(rep: dict):
     print("=" * 78)
 
 
+# ---------------- 批量对拍矩阵（Task 5 · H4：run-all 用例×采集点） ----------------
+
+# 矩阵三态硬约束：每格 match|diff|blocked——**blocked 计入分母、永不计 pass**（防假绿）。
+# l4report 的 error（缺截图）/未知第四态一并归 blocked 并保留原因（三态外不许漏网）。
+CELL_STATE_OF = {"match": "match", "diff": "diff", "blocked": "blocked", "error": "blocked"}
+
+
+def matrix_row(name: str, case_file: str, caps: list, *,
+               anchors: dict, legs: dict, report: dict | None = None,
+               snapshot: str | None = None, error: str | None = None) -> dict:
+    """用例×采集点 → 矩阵行（cells 以 **DSL 采集点为分母基准**——产物缺/跑失败也占格）。
+
+    - 三态映射：l4report status match|diff|blocked 原样；error/未知 → blocked（原因保留）；
+      DSL 采集点无对拍结果 → blocked（"无对拍结果"）——**分母不因产物缺而缩水**；
+    - 每格标 `provenance`（腿来源 fresh|reused|none——复用/新跑诚实标注，不静默混用）；
+    - 每行锚三 sha（键名=l4report 契约，Task 3 键名勿改）：`scenario_sha256` +
+      `rom_sha256` + 产物 sha（`artifacts`，键=shots_rust/<f> | shots/<f>）。
+    error≠None（腿失败/复用拒跑）→ 全格 blocked 记原因（绝不静默跳过、不缩分母）。
+    """
+    results, extra = {}, []
+    for r in (report or {}).get("results", []):
+        key = (int(r.get("frame", -1)), r.get("tag"))
+        if key in results:
+            extra.append(dict(r))
+        else:
+            results[key] = r
+    cells = []
+    for f, tag in caps:
+        r = results.pop((f, tag), None)
+        if error is not None or r is None:
+            reason = (f"用例未跑成：{error}" if error is not None
+                      else "无对拍结果（产物/结果缺——分母不缩水，不计 pass）")
+            cells.append({"frame": f, "tag": tag, "state": "blocked",
+                          "provenance": dict(legs), "file": None,
+                          "diff_pixels": None, "total_pixels": None, "reason": reason})
+            continue
+        status = r.get("status")
+        reason = r.get("reason")
+        if status not in CELL_STATE_OF:
+            reason = f"未知结果态 {status!r} → 归 blocked（三态硬约束，不计 pass）"
+        cells.append({"frame": f, "tag": tag, "state": CELL_STATE_OF.get(status, "blocked"),
+                      "provenance": dict(legs), "file": r.get("file"),
+                      "diff_pixels": r.get("diff_pixels"),
+                      "total_pixels": r.get("total_pixels"), "reason": reason})
+    for r in list(results.values()) + extra:
+        # DSL 外/重复结果（锚校验下不应出现）——显式占格防漏 diff
+        r = dict(r)
+        status = r.get("status")
+        cells.append({"frame": r.get("frame"), "tag": r.get("tag"),
+                      "state": CELL_STATE_OF.get(status, "blocked"),
+                      "provenance": dict(legs), "file": r.get("file"),
+                      "diff_pixels": r.get("diff_pixels"),
+                      "total_pixels": r.get("total_pixels"),
+                      "reason": (r.get("reason") or "") +
+                                "（锚外结果：DSL 无此采集点——显式占格防漏 diff）" or None})
+    cells.sort(key=lambda c: (c["frame"] if isinstance(c["frame"], int) else 1 << 30,
+                              str(c["tag"])))
+    return {
+        "case": name,
+        "case_file": str(case_file),
+        "scenario_sha256": anchors["scenario_sha256"],
+        "rom_sha256": anchors["rom_sha256"],
+        "sched_sha256": anchors["sched_sha256"],
+        "artifacts": dict((report or {}).get("artifacts") or {}),
+        "snapshot": snapshot,
+        "report": f"shots_rust/{name}.l4report.json" if report else None,
+        "legs": dict(legs),
+        "error": error,
+        "cells": cells,
+    }
+
+
+def build_matrix(rows: list) -> dict:
+    """汇总矩阵——**分母=用例×采集点总数（含 blocked）**；pass=match 数：
+    blocked 计入分母、**永不计 pass**（防假绿硬约束）。
+    verdict="pass" 当且仅当 cells_total>0 且 pass==cells_total（空矩阵兜底不假绿）。
+    """
+    match = diff = blocked = 0
+    roms = set()
+    for row in rows:
+        roms.add(row["rom_sha256"])
+        for c in row["cells"]:
+            if c["state"] == "match":
+                match += 1
+            elif c["state"] == "diff":
+                diff += 1
+            else:
+                blocked += 1
+    if len(roms) > 1:
+        raise ValueError(f"rows rom_sha256 锚不一致 {sorted(roms)}——矩阵须锚同一 ROM")
+    total = match + diff + blocked
+    return {
+        "generated_by": "tools/l4_diff_run.py run-all",
+        "rom_sha256": next(iter(roms)) if roms else None,
+        "cases_total": len(rows),
+        "cells_total": total,
+        "denominator": total,
+        "denominator_note": ("分母=用例×采集点总数（含 blocked；blocked 计入分母、"
+                             "永不计 pass——防假绿硬约束）"),
+        "match": match, "diff": diff, "blocked": blocked,
+        "pass": match,
+        "pass_rate": f"{match}/{total}",
+        "verdict": "pass" if total > 0 and match == total else "not-pass",
+        "rows": rows,
+    }
+
+
+def matrix_md(m: dict) -> str:
+    """人读表（matrix.md）：分母规则置顶 + 用例行（三 sha 锚）+ 采集点格明细（三态+来源）。"""
+    lines = ["# L4 对拍矩阵（用例×采集点）", ""]
+    lines.append("- 生成：`python3 tools/l4_diff_run.py run-all`（tools/l4_diff_run.py）")
+    lines.append("- 三 sha 锚（每行）：`scenario_sha256` + `rom_sha256` + 产物 sha"
+                 "（`artifacts`，逐件 sha 见 matrix.json `rows[].artifacts`）；"
+                 f"rom_sha256=`{m['rom_sha256']}`")
+    lines.append(f"- **分母 = 用例×采集点 = {m['denominator']}**（含 blocked {m['blocked']}）"
+                 "——**blocked 计入分母、永不计 pass**（防假绿硬约束）")
+    lines.append(f"- 汇总：match {m['match']} · diff {m['diff']} · blocked {m['blocked']}"
+                 f" ｜ **pass {m['pass_rate']}**（pass=match 数）")
+    lines.append(f"- 总评：{'✅ 全 match（verdict=pass）' if m['verdict'] == 'pass' else '❌ verdict=not-pass（blocked/diff 均在分母内且不计 pass）'}")
+    lines.append("")
+    lines.append("## 用例行（三 sha 锚定）")
+    lines.append("")
+    lines.append("| 用例 | scenario_sha256 | rom_sha256 | sched_sha256 | 产物sha | "
+                 "snapshot | 腿来源 rust/emu | match/diff/blocked |")
+    lines.append("|---|---|---|---|---|---|---|---|")
+    for r in m["rows"]:
+        nm = sum(1 for c in r["cells"] if c["state"] == "match")
+        nd = sum(1 for c in r["cells"] if c["state"] == "diff")
+        nb = sum(1 for c in r["cells"] if c["state"] == "blocked")
+        legs = f"{r['legs']['rust']}/{r['legs']['emu']}"
+        snap = r["snapshot"] or "none(上电起跑)"
+        lines.append(f"| {r['case']} | `{r['scenario_sha256']}` | `{r['rom_sha256']}` | "
+                     f"`{r['sched_sha256']}` | {len(r['artifacts'])} 件 | {snap} | "
+                     f"{legs} | {nm}/{nd}/{nb} |")
+    lines.append("")
+    lines.append("## 采集点格（三态：match | diff | blocked；来源=腿 provenance）")
+    lines.append("")
+    lines.append("| 用例 | frame | tag | 状态 | 来源 rust/emu | 差异像素/总 | 说明 |")
+    lines.append("|---|---|---|---|---|---|---|")
+    for r in m["rows"]:
+        for c in r["cells"]:
+            icon = {"match": "✅match", "diff": "❌diff", "blocked": "⛔blocked"}[c["state"]]
+            prov = f"{c['provenance']['rust']}/{c['provenance']['emu']}"
+            dp = "" if c["diff_pixels"] is None else f"{c['diff_pixels']}/{c['total_pixels']}"
+            reason = (c["reason"] or "").replace("|", "\\|")
+            lines.append(f"| {r['case']} | {c['frame']} | {c['tag']} | {icon} | {prov} | "
+                         f"{dp} | {reason} |")
+    lines.append("")
+    return "\n".join(lines) + "\n"
+
+
+def execute_case(*, name: str, scen_path: Path, frames: int, joy: dict, caps: list,
+                 snap: str | None, anchors: dict, skip_rust: bool, skip_emu: bool,
+                 timeout: float) -> dict:
+    """跑双腿+对拍（`run` / `run-all` 共用核心）——**不 exit**，返回记账 dict：
+    {"legs": {"rust": "fresh|reused|none", "emu": …}, "report": l4report|None,
+     "error": str|None, "exit_code": int|None}。
+
+    复用路径（--skip-* / emu 腿失败回落）一律先过 check_reuse 锚校验——**不静默复用**；
+    error≠None 时 exit_code 沿袭 run 语义（2=拒跑/锚不可信、1=腿运行失败）：
+    run 动作直接 exit（行为不变），run-all 记 blocked 格继续扫（分母不缩水）。
+    """
+    legs = {"rust": "none", "emu": "none"}
+    # fail-fast：所有复用腿先过锚校验再动手（不静默复用旧产物出假绿）
+    if skip_rust:
+        err = check_reuse("rust", name, anchors)
+        if err:
+            return {"legs": legs, "report": None, "error": f"--skip-rust {err}",
+                    "exit_code": 2}
+    if skip_emu:
+        err = check_reuse("emu", name, anchors)
+        if err:
+            return {"legs": legs, "report": None, "error": f"--skip-emu {err}",
+                    "exit_code": 2}
+    sched = SHOTS_RUST / f"{name}.sched"
+    SHOTS_RUST.mkdir(parents=True, exist_ok=True)
+    write_schedule(name, frames, joy, caps, sched, snapshot=snap)  # 与锚同源字节
+    print(f"[sched] → {sched}")
+    if skip_rust:
+        legs["rust"] = "reused"
+    else:
+        if not run_rust(name, sched, SHOTS_RUST):
+            return {"legs": legs, "report": None, "error": "Rust 腿运行失败",
+                    "exit_code": 1}
+        write_prov("rust", name, anchors)  # 腿成功 → 落锚存证
+        legs["rust"] = "fresh"
+    if skip_emu:
+        legs["emu"] = "reused"
+    else:
+        if run_emu(name, timeout, scen_path):
+            write_prov("emu", name, anchors)
+            legs["emu"] = "fresh"
+        else:
+            # 腿失败回落复用=同属复用路径 → 同样过锚校验（不静默）
+            err = check_reuse("emu", name, anchors)
+            if err:
+                return {"legs": legs, "report": None,
+                        "error": f"模拟器运行失败，且回落复用未过锚校验——{err}",
+                        "exit_code": 2}
+            print("[!] 模拟器运行失败——回落复用已有 shots/"
+                  "（锚校验通过：三 sha 与当前一致；产物未更新，prov 不重写）")
+            legs["emu"] = "reused"
+    if not (SHOTS_RUST / f"{name}.rust.captures.json").is_file():
+        return {"legs": legs, "report": None,
+                "error": f"缺 Rust manifest（{name}.rust.captures.json）——产物不全",
+                "exit_code": 1}
+    rep = do_diff(name, anchors)
+    return {"legs": legs, "report": rep, "error": None, "exit_code": None}
+
+
+def do_run_all(args) -> int:
+    """批量矩阵：遍历 cases/*.txt **全用例** → 用例×采集点矩阵（三态）。
+
+    分母=用例×采集点总数（含 blocked）——blocked **永不计 pass**（防假绿硬约束）。
+    用例级失败（腿失败/复用拒跑）不中断扫掠：该用例全格 blocked 记原因（分母不缩水），
+    继续下例；exit 0 当且仅当全格 match（verdict=pass）。fail-loud（exit 2）：cases/ 空/
+    用例解析失败/同名冲突/无采集点/ROM 缺——分母完整性受损一律拒跑（不静默缩分母）。
+    """
+    import importlib
+    sr = importlib.import_module("scenario_run")
+    case_files = sorted(CASES_DIR.glob("*.txt"))
+    if not case_files:
+        print(f"[!] cases/ 无对拍用例（{CASES_DIR}）——空矩阵不得绿，拒跑", file=sys.stderr)
+        return 2
+    rows, seen = [], {}
+    for cf in case_files:
+        try:
+            plan = sr.parse_scenario(cf)
+        except Exception as exc:
+            print(f"[!] 用例解析失败 {cf}——采集点不可知（分母完整性受损），fail-loud 拒跑: "
+                  f"{exc}", file=sys.stderr)
+            return 2
+        name = plan.get("name") or cf.stem
+        if name in seen:
+            print(f"[!] 用例名重复 {name!r}（{seen[name].name} 与 {cf.name}）——"
+                  f"产物/报告互相覆盖=矩阵失真，拒跑", file=sys.stderr)
+            return 2
+        seen[name] = cf
+        frames = int(plan["frames"])
+        joy = sr.expand_schedule(plan)  # 唯一展开源（task-2 输入单源）
+        caps = sorted((int(c["frame"]), c["tag"]) for c in plan.get("captures", []))
+        if not caps:
+            print(f"[!] 用例 {name} 无采集点（capture/endFrame 全缺）——分母会静默缩水，"
+                  f"拒跑", file=sys.stderr)
+            return 2
+        snap = (plan.get("bundle_load") or {}).get("path")
+        sched_text = schedule_text(name, frames, joy, caps, snap)
+        try:
+            anchors = compute_anchors(cf, sched_text)
+        except FileNotFoundError as exc:
+            print(f"[!] {exc}", file=sys.stderr)
+            return 2
+        out = execute_case(name=name, scen_path=cf, frames=frames, joy=joy, caps=caps,
+                           snap=snap, anchors=anchors, skip_rust=args.skip_rust,
+                           skip_emu=args.skip_emu, timeout=args.timeout)
+        try:
+            case_file = str(cf.relative_to(ROOT))
+        except ValueError:
+            case_file = str(cf)
+        row = matrix_row(name, case_file, caps, anchors=anchors, legs=out["legs"],
+                         report=out["report"], snapshot=snap, error=out["error"])
+        rows.append(row)
+        if out["error"] is not None:
+            print(f"[case] {name}: 未跑成（{out['error']}）——全格 blocked 记账（不缩分母）",
+                  file=sys.stderr)
+        else:
+            n = {"match": 0, "diff": 0, "blocked": 0}
+            for c in row["cells"]:
+                n[c["state"]] += 1
+            print(f"[case] {name}: rust={out['legs']['rust']} emu={out['legs']['emu']} "
+                  f"snapshot={snap or 'none(上电起跑)'} → match {n['match']} diff {n['diff']} "
+                  f"blocked {n['blocked']}")
+    m = build_matrix(rows)
+    SHOTS_RUST.mkdir(parents=True, exist_ok=True)
+    out_json = SHOTS_RUST / "matrix.json"
+    out_md = SHOTS_RUST / "matrix.md"
+    out_json.write_text(json.dumps(m, ensure_ascii=False, indent=2) + "\n",
+                        encoding="utf-8", newline="\n")
+    out_md.write_text(matrix_md(m), encoding="utf-8", newline="\n")
+    print("\n" + "=" * 78)
+    print("L4 对拍矩阵（用例×采集点）—— run-all（遍历 cases/）")
+    print("=" * 78)
+    print(f"用例 {m['cases_total']} · 采集点格 {m['cells_total']}"
+          f"（**分母=用例×采集点总数，含 blocked {m['blocked']}**——blocked 永不计 pass）")
+    print(f"match {m['match']} · diff {m['diff']} · blocked {m['blocked']} ｜ "
+          f"pass {m['pass_rate']}")
+    if m["verdict"] == "pass":
+        print("总评：✅ 全部 match（L4 批量对拍通过）")
+    else:
+        print("总评：❌ 未全 match（diff/blocked 计入分母且不计 pass——防假绿）")
+    print(f"矩阵 → {out_json} / {out_md}")
+    print("=" * 78)
+    return 0 if m["verdict"] == "pass" else 1
+
+
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("action", choices=["run", "diff", "align"])
-    ap.add_argument("name")
+    ap.add_argument("action", choices=["run", "diff", "align", "run-all"])
+    ap.add_argument("name", nargs="?", default=None,
+                    help="用例名/路径（run-all 不接——全量遍历 cases/）")
     ap.add_argument("--timeout", type=float, default=240.0)
     ap.add_argument("--skip-emu", action="store_true",
                     help="跳过模拟器运行（复用已有 shots/——复用前校验锚，不符/无锚 exit 2）")
@@ -513,6 +818,16 @@ def main():
     ap.add_argument("--residual-class", default=None,
                     help="[align] 残差登记类标签（如 'restore-phase/savestate-replay-class'）")
     args = ap.parse_args()
+
+    if args.action == "run-all":
+        # 批量矩阵（Task 5）：不接 name——遍历 cases/*.txt 全用例
+        if args.name:
+            print("[!] run-all 不接 name（全量遍历 cases/）", file=sys.stderr)
+            sys.exit(2)
+        sys.exit(do_run_all(args))
+    if not args.name:
+        print(f"[!] {args.action} 需要 name（用例名/路径）", file=sys.stderr)
+        sys.exit(2)
 
     import importlib
     sr = importlib.import_module("scenario_run")
@@ -588,44 +903,23 @@ def main():
         sys.exit(0 if rep["verdict"] == "aligned" else 1)
 
     if args.action == "run":
-        # fail-fast：所有复用腿先过锚校验再动手（不静默复用旧产物出假绿）
-        if args.skip_rust:
-            err = check_reuse("rust", name, anchors)
-            if err:
-                print(f"[!] --skip-rust {err}", file=sys.stderr)
-                sys.exit(2)
-        if args.skip_emu:
-            err = check_reuse("emu", name, anchors)
-            if err:
-                print(f"[!] --skip-emu {err}", file=sys.stderr)
-                sys.exit(2)
-        sched = SHOTS_RUST / f"{name}.sched"
-        SHOTS_RUST.mkdir(parents=True, exist_ok=True)
-        write_schedule(name, frames, joy, caps, sched, snapshot=snap)  # 与锚同源字节
-        print(f"[sched] → {sched}")
-        if not args.skip_rust:
-            if not run_rust(name, sched, SHOTS_RUST):
-                sys.exit(1)
-            write_prov("rust", name, anchors)  # 腿成功 → 落锚存证
-        if not args.skip_emu:
-            if run_emu(name, args.timeout, scen_path):
-                write_prov("emu", name, anchors)
-            else:
-                # 腿失败回落复用=同属复用路径 → 同样过锚校验（不静默）
-                err = check_reuse("emu", name, anchors)
-                if err:
-                    print(f"[!] 模拟器运行失败，且回落复用未过锚校验——{err}", file=sys.stderr)
-                    sys.exit(2)
-                print("[!] 模拟器运行失败——回落复用已有 shots/"
-                      "（锚校验通过：三 sha 与当前一致；产物未更新，prov 不重写）")
+        # 双腿+对拍（与 run-all 共用 execute_case——复用腿先过锚校验，不静默复用）
+        out = execute_case(name=name, scen_path=scen_path, frames=frames, joy=joy,
+                           caps=caps, snap=snap, anchors=anchors,
+                           skip_rust=args.skip_rust, skip_emu=args.skip_emu,
+                           timeout=args.timeout)
+        if out["error"] is not None:
+            print(f"[!] {out['error']}", file=sys.stderr)
+            sys.exit(out["exit_code"] or 1)
+        rep = out["report"]
     else:  # diff：纯复用双侧产物 → 双侧过锚校验
         for side in ("rust", "emu"):
             err = check_reuse(side, name, anchors)
             if err:
                 print(f"[!] diff {err}", file=sys.stderr)
                 sys.exit(2)
+        rep = do_diff(name, anchors)
 
-    rep = do_diff(name, anchors)
     print_report(rep)
     sys.exit(0 if rep["fail"] == 0 else 1)
 
