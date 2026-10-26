@@ -19,6 +19,11 @@
 用法：
     python3 tools/l4_diff_run.py run case-001 [--timeout N] [--skip-emu]
     python3 tools/l4_diff_run.py diff case-001   # 只对拍已有截图
+    python3 tools/l4_diff_run.py align <name> [--frames N] [--bundle <前缀>] \
+            [--emu-trace <path>] [--residual-class <标签>]
+        # 对齐验收（Task 4·H1）：snapshot 装载后前 N 帧 Rust↔emu 快进**逐字节** diff；
+        # 「加载成功≠对齐成功」防线——残差=0 或**显式登记**（exit 0/1/2=对齐/登记/拒裁）；
+        # --bundle=构造不对齐 case 实验面（验收③：换快照探验收有效性）。
 
 三 sha 锚定（H4 防假绿——报告必须可证"对的是哪次输入/哪个 ROM/哪些产物"）：
     l4report.json 落 `scenario_sha256`（场景 DSL 文件 sha）+ `rom_sha256`
@@ -81,9 +86,17 @@ def load_pil():
     return Image, np
 
 
-def schedule_text(name: str, frames: int, joy: dict, caps: list) -> str:
-    """调度表文本（**唯一**序列化面）——.sched 落盘与调度 hash 同源同 bytes。"""
+def schedule_text(name: str, frames: int, joy: dict, caps: list,
+                  snapshot: str | None = None) -> str:
+    """调度表文本（**唯一**序列化面）——.sched 落盘与调度 hash 同源同 bytes。
+
+    snapshot=<prefix>（Task 4）：有快照才落行（非快照用例字节不变——锚不漂移）；
+    `snapshot none`=显式无存档由 cases/ 语义消解（parse_scenario→bundle_load=None），
+    调度表不落行（上电起跑同语义）。
+    """
     lines = [f"name {name}", f"frames {frames}"]
+    if snapshot:
+        lines.append(f"snapshot {snapshot}")
     for f in sorted(joy):
         lines.append(f"joy {f} {joy[f]:02X}")
     for f, tag in caps:
@@ -91,9 +104,10 @@ def schedule_text(name: str, frames: int, joy: dict, caps: list) -> str:
     return "\n".join(lines) + "\n"
 
 
-def write_schedule(name: str, frames: int, joy: dict, caps: list, path: Path):
+def write_schedule(name: str, frames: int, joy: dict, caps: list, path: Path,
+                   snapshot: str | None = None):
     """展开结果落 .sched（Rust 侧消费）——joy=scenario_run.expand_schedule 产物（同源）。"""
-    path.write_text(schedule_text(name, frames, joy, caps),
+    path.write_text(schedule_text(name, frames, joy, caps, snapshot),
                     encoding="utf-8", newline="\n")  # 禁 CRLF 翻译：sched hash 按 LF 计
 
 
@@ -153,10 +167,15 @@ def check_reuse(side: str, name: str, anchors: dict) -> str | None:
     return None
 
 
-def run_rust(name: str, sched: Path, out_dir: Path) -> bool:
+def run_rust(name: str, sched: Path, out_dir: Path,
+             state_out: Path | None = None, bundle: str | None = None) -> bool:
     out_dir.mkdir(parents=True, exist_ok=True)
     cmd = ["cargo", "run", "-q", "-p", "game-core", "--bin", "rust_screenshot",
            "--", "--schedule", str(sched), "--out", str(out_dir)]
+    if bundle:  # 【Task 4】显式 --bundle（CLI 面（验收①）——覆盖调度表 snapshot 行）
+        cmd += ["--bundle", bundle]
+    if state_out:  # 【Task 4】状态行输出（对齐验收输入）
+        cmd += ["--state-out", str(state_out)]
     print(f"[rust] {' '.join(cmd)}")
     r = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True)
     # cargo 的 warning 走 stderr；只在真正失败时报错
@@ -166,7 +185,7 @@ def run_rust(name: str, sched: Path, out_dir: Path) -> bool:
         print(f"[rust] 失败 rc={r.returncode}", file=sys.stderr)
         return False
     for line in r.stderr.splitlines():
-        if line.startswith("[rust]"):
+        if line.startswith("[rust]") or line.startswith("[bundle]"):
             print(line)
     return True
 
@@ -220,6 +239,176 @@ def diff_pair(rust_png: Path, emu_png: Path, diff_png: Path | None, np, Image):
                 f"DIFF 掩码(绿=差异,非游戏色) {diff_pixels}px", fill=(0, 255, 0))
         im.save(diff_png)
     return {"match": diff_pixels == 0, "diff_pixels": diff_pixels, "total_pixels": total}
+
+
+# ---------------- 对齐验收（Task 4 · H1：加载成功≠对齐成功防线） ----------------
+
+# 状态面规范序（frame_face 唯一编码三面——zp/iram/wram）；额外面按名序接尾
+FACE_ORDER = ("zp", "iram", "wram")
+
+
+def load_state_rows(path) -> dict:
+    """帧状态行装载（`{"f":N,"w":{face:hex,…}}` JSONL——oracle/l3-dump 帧 trace 同形
+    **单一格式**）。空/无行=fail-loud（空跑不得绿）。返回 {frame: {face: 大写hex}}。"""
+    path = Path(path)
+    rows: dict = {}
+    for ln, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            d = json.loads(line)
+        except json.JSONDecodeError as exc:
+            raise ValueError(f"{path}:{ln} 行 JSON 解析失败: {exc}") from exc
+        f = d.get("f")
+        w = d.get("w")
+        if not isinstance(f, int) or not isinstance(w, dict):
+            raise ValueError(f"{path}:{ln} 行缺 f/w 面（帧状态行契约）")
+        if f in rows:
+            raise ValueError(f"{path}:{ln} 帧 {f} 重复行（行集唯一契约）")
+        rows[f] = {str(k): str(v).upper() for k, v in w.items()}
+    if not rows:
+        raise ValueError(f"{path} 无状态行（空跑不得绿——对齐验收无输入）")
+    return rows
+
+
+def align_states(rust_rows: dict, emu_rows: dict, n: int,
+                 name: str = "", residual_class: str | None = None) -> dict:
+    """对齐验收：restore 后**前 N 帧逐字节**（各面 hex 逐字节）Rust↔emu 快进对齐。
+
+    「加载成功≠对齐成功」防线：装载成功不等于对齐——逐帧逐字节裁，分歧**绝不**裁
+    aligned；残差=0（residual.status="none"）或**显式登记**（residual.status=
+    "registered"，首分歧逐字节定位+分歧帧集；`residual_class`=登记残差类标签，
+    如 savestate 重放经典残差类（恢复相位面）——bundle-first §1 实证类）。
+
+    缺行（采样窗缺失）显式登记（missing_*），不冒充对齐；单侧面（如 emu 腿无 wram）
+    记入 faces 覆盖（比较面=交集）。无可比面=拒（ValueError，空跑不得绿）。
+    """
+    def face_order(keys):
+        known = [f for f in FACE_ORDER if f in keys]
+        return known + sorted(k for k in keys if k not in FACE_ORDER)
+
+    r_faces = set().union(*(w.keys() for w in rust_rows.values())) if rust_rows else set()
+    e_faces = set().union(*(w.keys() for w in emu_rows.values())) if emu_rows else set()
+    common = face_order(r_faces & e_faces)
+    if not common:
+        raise ValueError(f"无可比状态面（rust={sorted(r_faces)} emu={sorted(e_faces)}）"
+                         f"——对齐验收无输入，拒裁（空跑不得绿）")
+
+    per_frame = []
+    first_div = None
+    missing_rust, missing_emu = [], []
+    aligned = diverged = 0
+    residual_frames = []
+    for f in range(1, n + 1):
+        if f not in rust_rows:
+            per_frame.append({"f": f, "status": "missing_rust",
+                              "reason": "Rust 侧无此帧状态行（采样窗/缺口）"})
+            missing_rust.append(f)
+            residual_frames.append(f)
+            continue
+        if f not in emu_rows:
+            per_frame.append({"f": f, "status": "missing_emu",
+                              "reason": "emu 侧无此帧状态行（采样窗缺失）"})
+            missing_emu.append(f)
+            residual_frames.append(f)
+            continue
+        entry = {"f": f, "status": "aligned", "diff_bytes": 0}
+        r, e = rust_rows[f], emu_rows[f]
+        for face in common:
+            a, b = r.get(face, ""), e.get(face, "")
+            if len(a) != len(b):
+                entry.update({"status": "diverged",
+                              "reason": f"length mismatch face={face} rust={len(a)//2}B "
+                                        f"emu={len(b)//2}B"})
+                if first_div is None:
+                    first_div = {"f": f, "face": face, "off": None,
+                                 "rust": f"{len(a)//2}B", "emu": f"{len(b)//2}B"}
+                break
+            ndiff = 0
+            for i in range(0, len(a), 2):
+                if a[i:i + 2] == b[i:i + 2]:
+                    continue
+                ndiff += 1
+                if first_div is None or first_div["f"] > f:
+                    first_div = {"f": f, "face": face, "off": i // 2,
+                                 "rust": a[i:i + 2], "emu": b[i:i + 2]}
+                if entry["status"] == "aligned":
+                    entry.update({"status": "diverged",
+                                  "first": {"face": face, "off": i // 2,
+                                            "rust": a[i:i + 2], "emu": b[i:i + 2]}})
+            entry["diff_bytes"] = entry.get("diff_bytes", 0) + ndiff
+        if entry["status"] == "aligned":
+            aligned += 1
+        else:
+            diverged += 1
+            residual_frames.append(f)
+        per_frame.append(entry)
+
+    registered = bool(residual_frames)
+    residual = {
+        "status": "registered" if registered else "none",
+        "class": residual_class,
+        "frames": residual_frames,
+        "first": first_div,
+        "note": ("残差显式登记（不静默容忍）——加载成功≠对齐成功" if registered
+                 else "残差=0（前 N 帧逐字节对齐）"),
+    }
+    return {
+        "name": name,
+        "n": n,
+        "faces": {"common": common,
+                  "rust_only": face_order(r_faces - e_faces),
+                  "emu_only": face_order(e_faces - r_faces)},
+        "frames_compared": aligned + diverged,
+        "aligned": aligned,
+        "diverged": diverged,
+        "missing_rust": missing_rust,
+        "missing_emu": missing_emu,
+        "per_frame": per_frame,
+        "first_divergence": first_div,
+        "residual": residual,
+        "verdict": "residual-registered" if registered else "aligned",
+    }
+
+
+def print_align_report(rep: dict) -> None:
+    """对齐验收输出（逐帧 diff——残差显式）。"""
+    print("\n" + "=" * 78)
+    print(f"对齐验收（加载成功≠对齐成功防线）：{rep['name']}（前 N={rep['n']} 帧）")
+    print("=" * 78)
+    print(f"比较面：common={rep['faces']['common']} "
+          f"rust_only={rep['faces']['rust_only']} emu_only={rep['faces']['emu_only']}"
+          f"（单侧面=覆盖登记，不参与逐字节比对）")
+    print(f"{'帧':>6} {'状态':<16} {'逐字节 diff':<44}")
+    print("-" * 78)
+    for fr in rep["per_frame"]:
+        st = fr["status"]
+        icon = {"aligned": "✅对齐", "diverged": "❌分歧",
+                "missing_rust": "⛔Rust缺行", "missing_emu": "⛔emu缺行"}.get(st, st)
+        if st == "diverged" and "first" in fr:
+            x = fr["first"]
+            detail = (f"{x['face']}+0x{x['off']:03X} rust={x['rust']} emu={x['emu']}"
+                      f"（共 {fr.get('diff_bytes', '?')}B）")
+        else:
+            detail = fr.get("reason", "")
+        print(f"{fr['f']:>6} {icon:<16} {detail:<44}")
+    print("-" * 78)
+    print(f"汇总：对齐 {rep['aligned']} · 分歧 {rep['diverged']} · "
+          f"Rust 缺行 {len(rep['missing_rust'])}{rep['missing_rust'][:8]} · "
+          f"emu 缺行 {len(rep['missing_emu'])}{rep['missing_emu'][:8]}")
+    res = rep["residual"]
+    if res["status"] == "none":
+        print("残差：0（前 N 帧逐字节对齐——加载成功且对齐成功）")
+    else:
+        fd = res.get("first")
+        fd_s = (f"首分歧 f={fd['f']} {fd['face']}+0x{fd['off']:03X} "
+                f"rust={fd['rust']} emu={fd['emu']}" if fd and fd.get("off") is not None
+                else f"首分歧 {fd}")
+        print(f"残差：**显式登记**（class={res.get('class') or '未标注'}）{fd_s}；"
+              f"分歧/缺行帧集 {res['frames'][:16]}")
+        print("      ——加载成功≠对齐成功（残差登记不等于容忍；账清路径=残差类定位）")
+    print("=" * 78)
 
 
 def do_diff(name: str, anchors: dict) -> dict:
@@ -308,13 +497,21 @@ def print_report(rep: dict):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("action", choices=["run", "diff"])
+    ap.add_argument("action", choices=["run", "diff", "align"])
     ap.add_argument("name")
     ap.add_argument("--timeout", type=float, default=240.0)
     ap.add_argument("--skip-emu", action="store_true",
                     help="跳过模拟器运行（复用已有 shots/——复用前校验锚，不符/无锚 exit 2）")
     ap.add_argument("--skip-rust", action="store_true",
                     help="跳过 Rust 运行（复用已有 shots_rust/——复用前校验锚，不符/无锚 exit 2）")
+    ap.add_argument("--bundle", default=None,
+                    help="[align] 显式快照前缀（覆盖用例 snapshot——造不对齐 case 实验面（验收③））")
+    ap.add_argument("--emu-trace", default=None,
+                    help="[align] 用既有 emu 帧 trace（跳过模拟器重跑）")
+    ap.add_argument("--frames", type=int, default=0,
+                    help="[align] 对齐前 N 帧（缺省=用例 frames）")
+    ap.add_argument("--residual-class", default=None,
+                    help="[align] 残差登记类标签（如 'restore-phase/savestate-replay-class'）")
     args = ap.parse_args()
 
     import importlib
@@ -329,16 +526,66 @@ def main():
     frames = int(plan["frames"])
     joy = sr.expand_schedule(plan)  # 唯一展开源（task-2 输入单源——Rust/Lua 同产物）
     caps = sorted((int(c["frame"]), c["tag"]) for c in plan.get("captures", []))
-    print(f"[plan] {name}: frames={frames} 非零输入帧={len(joy)} 采集点={len(caps)}")
+    # snapshot（Task 4）：用例 snapshot <prefix> 为单源；--bundle 显式覆盖（align 实验面）。
+    case_snap = (plan.get("bundle_load") or {}).get("path")
+    snap = case_snap
+    if args.bundle:
+        snap = args.bundle
+        if args.action != "align":
+            print("[!] --bundle 仅 align 实验面（run 用例 snapshot 为单源——双腿不得异快照）",
+                  file=sys.stderr)
+            sys.exit(2)
+        if case_snap and case_snap != snap:
+            print(f"[!] --bundle 覆盖用例 snapshot（{case_snap} → {snap}）——"
+                  f"emu 腿仍跑用例快照：**人为不对齐 case**（验收③实验面）")
+    print(f"[plan] {name}: frames={frames} 非零输入帧={len(joy)} 采集点={len(caps)} "
+          f"snapshot={snap or 'none(上电起跑)'}")
 
-    # 三 sha 锚（H4）：scenario/rom/sched——报告与复用校验同源
+    # 三 sha 锚（H4）：scenario/rom/sched——报告与复用校验同源（sched 文本含 snapshot 行）
+    sched_text = schedule_text(name, frames, joy, caps, snap)
     try:
-        anchors = compute_anchors(scen_path, schedule_text(name, frames, joy, caps))
+        anchors = compute_anchors(scen_path, sched_text)
     except FileNotFoundError as exc:
         print(f"[!] {exc}", file=sys.stderr)
         sys.exit(2)
     print(f"[anchor] scenario={anchors['scenario_sha256'][:16]}… "
           f"rom={anchors['rom_sha256'][:16]}… sched={anchors['sched_sha256'][:16]}…")
+
+    if args.action == "align":
+        # 【Task 4】snapshot 用例对齐验收：restore 后前 N 帧 Rust↔emu 快进**逐字节**对齐；
+        # 「加载成功≠对齐成功」防线——残差=0 或**显式登记**（exit 1=残差已登记，非假绿）。
+        n = args.frames or frames
+        sched = SHOTS_RUST / f"{name}.sched"
+        SHOTS_RUST.mkdir(parents=True, exist_ok=True)
+        write_schedule(name, frames, joy, caps, sched, snapshot=snap)
+        print(f"[sched] → {sched}")
+        state_path = SHOTS_RUST / f"{name}.state.jsonl"
+        if not run_rust(name, sched, SHOTS_RUST, state_out=state_path, bundle=snap):
+            sys.exit(1)
+        if args.emu_trace:
+            emu_trace = Path(args.emu_trace)
+            print(f"[align] emu 状态行=既有 trace {emu_trace}")
+        else:
+            if not run_emu(name, args.timeout, scen_path):
+                print("[!] 模拟器腿失败——对齐验收无 emu 输入（无迹不裁，fail-loud）",
+                      file=sys.stderr)
+                sys.exit(2)
+            emu_trace = Path(sr.TRACES_DIR) / f"{name}.frames.jsonl"
+        try:
+            rust_rows = load_state_rows(state_path)
+            emu_rows = load_state_rows(emu_trace)
+            rep = align_states(rust_rows, emu_rows, n, name=name,
+                               residual_class=args.residual_class)
+        except (OSError, ValueError) as exc:
+            print(f"[!] 对齐验收输入失败（fail-loud）: {exc}", file=sys.stderr)
+            sys.exit(2)
+        rep.update({k: anchors[k] for k in ANCHOR_KEYS})
+        out_json = SHOTS_RUST / f"{name}.align.json"
+        out_json.write_text(json.dumps(rep, ensure_ascii=False, indent=2) + "\n",
+                            encoding="utf-8")
+        print_align_report(rep)
+        print(f"[align] 报告 → {out_json}")
+        sys.exit(0 if rep["verdict"] == "aligned" else 1)
 
     if args.action == "run":
         # fail-fast：所有复用腿先过锚校验再动手（不静默复用旧产物出假绿）
@@ -354,7 +601,7 @@ def main():
                 sys.exit(2)
         sched = SHOTS_RUST / f"{name}.sched"
         SHOTS_RUST.mkdir(parents=True, exist_ok=True)
-        write_schedule(name, frames, joy, caps, sched)
+        write_schedule(name, frames, joy, caps, sched, snapshot=snap)  # 与锚同源字节
         print(f"[sched] → {sched}")
         if not args.skip_rust:
             if not run_rust(name, sched, SHOTS_RUST):
