@@ -1,0 +1,2905 @@
+{
+  "name": "bundle-ff",
+  "n": 240,
+  "faces": {
+    "common": [
+      "zp",
+      "iram"
+    ],
+    "rust_only": [
+      "wram"
+    ],
+    "emu_only": []
+  },
+  "frames_compared": 237,
+  "aligned": 1,
+  "diverged": 236,
+  "missing_rust": [],
+  "missing_emu": [
+    103,
+    104,
+    240
+  ],
+  "per_frame": [
+    {
+      "f": 1,
+      "status": "aligned",
+      "diff_bytes": 0
+    },
+    {
+      "f": 2,
+      "status": "diverged",
+      "diff_bytes": 6,
+      "first": {
+        "face": "zp",
+        "off": 10,
+        "rust": "31",
+        "emu": "B0"
+      }
+    },
+    {
+      "f": 3,
+      "status": "diverged",
+      "diff_bytes": 2,
+      "first": {
+        "face": "zp",
+        "off": 10,
+        "rust": "31",
+        "emu": "B0"
+      }
+    },
+    {
+      "f": 4,
+      "status": "diverged",
+      "diff_bytes": 6,
+      "first": {
+        "face": "zp",
+        "off": 10,
+        "rust": "31",
+        "emu": "B0"
+      }
+    },
+    {
+      "f": 5,
+      "status": "diverged",
+      "diff_bytes": 3,
+      "first": {
+        "face": "zp",
+        "off": 10,
+        "rust": "31",
+        "emu": "B0"
+      }
+    },
+    {
+      "f": 6,
+      "status": "diverged",
+      "diff_bytes": 6,
+      "first": {
+        "face": "zp",
+        "off": 10,
+        "rust": "31",
+        "emu": "B0"
+      }
+    },
+    {
+      "f": 7,
+      "status": "diverged",
+      "diff_bytes": 3,
+      "first": {
+        "face": "zp",
+        "off": 10,
+        "rust": "31",
+        "emu": "B0"
+      }
+    },
+    {
+      "f": 8,
+      "status": "diverged",
+      "diff_bytes": 6,
+      "first": {
+        "face": "zp",
+        "off": 10,
+        "rust": "31",
+        "emu": "B0"
+      }
+    },
+    {
+      "f": 9,
+      "status": "diverged",
+      "diff_bytes": 3,
+      "first": {
+        "face": "zp",
+        "off": 10,
+        "rust": "31",
+        "emu": "B0"
+      }
+    },
+    {
+      "f": 10,
+      "status": "diverged",
+      "diff_bytes": 6,
+      "first": {
+        "face": "zp",
+        "off": 10,
+        "rust": "31",
+        "emu": "B0"
+      }
+    },
+    {
+      "f": 11,
+      "status": "diverged",
+      "diff_bytes": 2,
+      "first": {
+        "face": "zp",
+        "off": 10,
+        "rust": "31",
+        "emu": "B0"
+      }
+    },
+    {
+      "f": 12,
+      "status": "diverged",
+      "diff_bytes": 6,
+      "first": {
+        "face": "zp",
+        "off": 10,
+        "rust": "31",
+        "emu": "B0"
+      }
+    },
+    {
+      "f": 13,
+      "status": "diverged",
+      "diff_bytes": 2,
+      "first": {
+        "face": "zp",
+        "off": 10,
+        "rust": "31",
+        "emu": "B0"
+      }
+    },
+    {
+      "f": 14,
+      "status": "diverged",
+      "diff_bytes": 6,
+      "first": {
+        "face": "zp",
+        "off": 10,
+        "rust": "31",
+        "emu": "B0"
+      }
+    },
+    {
+      "f": 15,
+      "status": "diverged",
+      "diff_bytes": 2,
+      "first": {
+        "face": "zp",
+        "off": 10,
+        "rust": "31",
+        "emu": "B0"
+      }
+    },
+    {
+      "f": 16,
+      "status": "diverged",
+      "diff_bytes": 6,
+      "first": {
+        "face": "zp",
+        "off": 10,
+        "rust": "31",
+        "emu": "B0"
+      }
+    },
+    {
+      "f": 17,
+      "status": "diverged",
+      "diff_bytes": 3,
+      "first": {
+        "face": "zp",
+        "off": 10,
+        "rust": "31",
+        "emu": "B0"
+      }
+    },
+    {
+      "f": 18,
+      "status": "diverged",
+      "diff_bytes": 6,
+      "first": {
+        "face": "zp",
+        "off": 10,
+        "rust": "31",
+        "emu": "B0"
+      }
+    },
+    {
+      "f": 19,
+      "status": "diverged",
+      "diff_bytes": 3,
+      "first": {
+        "face": "zp",
+        "off": 10,
+        "rust": "31",
+        "emu": "B0"
+      }
+    },
+    {
+      "f": 20,
+      "status": "diverged",
+      "diff_bytes": 6,
+      "first": {
+        "face": "zp",
+        "off": 10,
+        "rust": "31",
+        "emu": "B0"
+      }
+    },
+    {
+      "f": 21,
+      "status": "diverged",
+      "diff_bytes": 3,
+      "first": {
+        "face": "zp",
+        "off": 10,
+        "rust": "31",
+        "emu": "B0"
+      }
+    },
+    {
+      "f": 22,
+      "status": "diverged",
+      "diff_bytes": 6,
+      "first": {
+        "face": "zp",
+        "off": 10,
+        "rust": "31",
+        "emu": "B0"
+      }
+    },
+    {
+      "f": 23,
+      "status": "diverged",
+      "diff_bytes": 2,
+      "first": {
+        "face": "zp",
+        "off": 10,
+        "rust": "31",
+        "emu": "B0"
+      }
+    },
+    {
+      "f": 24,
+      "status": "diverged",
+      "diff_bytes": 6,
+      "first": {
+        "face": "zp",
+        "off": 10,
+        "rust": "31",
+        "emu": "B0"
+      }
+    },
+    {
+      "f": 25,
+      "status": "diverged",
+      "diff_bytes": 2,
+      "first": {
+        "face": "zp",
+        "off": 10,
+        "rust": "31",
+        "emu": "B0"
+      }
+    },
+    {
+      "f": 26,
+      "status": "diverged",
+      "diff_bytes": 6,
+      "first": {
+        "face": "zp",
+        "off": 10,
+        "rust": "31",
+        "emu": "B0"
+      }
+    },
+    {
+      "f": 27,
+      "status": "diverged",
+      "diff_bytes": 3,
+      "first": {
+        "face": "zp",
+        "off": 10,
+        "rust": "31",
+        "emu": "B0"
+      }
+    },
+    {
+      "f": 28,
+      "status": "diverged",
+      "diff_bytes": 6,
+      "first": {
+        "face": "zp",
+        "off": 10,
+        "rust": "31",
+        "emu": "B0"
+      }
+    },
+    {
+      "f": 29,
+      "status": "diverged",
+      "diff_bytes": 3,
+      "first": {
+        "face": "zp",
+        "off": 10,
+        "rust": "31",
+        "emu": "B0"
+      }
+    },
+    {
+      "f": 30,
+      "status": "diverged",
+      "diff_bytes": 5,
+      "first": {
+        "face": "zp",
+        "off": 10,
+        "rust": "31",
+        "emu": "B0"
+      }
+    },
+    {
+      "f": 31,
+      "status": "diverged",
+      "diff_bytes": 5,
+      "first": {
+        "face": "zp",
+        "off": 10,
+        "rust": "31",
+        "emu": "B0"
+      }
+    },
+    {
+      "f": 32,
+      "status": "diverged",
+      "diff_bytes": 5,
+      "first": {
+        "face": "zp",
+        "off": 10,
+        "rust": "31",
+        "emu": "B0"
+      }
+    },
+    {
+      "f": 33,
+      "status": "diverged",
+      "diff_bytes": 2,
+      "first": {
+        "face": "zp",
+        "off": 10,
+        "rust": "31",
+        "emu": "B0"
+      }
+    },
+    {
+      "f": 34,
+      "status": "diverged",
+      "diff_bytes": 11,
+      "first": {
+        "face": "zp",
+        "off": 10,
+        "rust": "31",
+        "emu": "B0"
+      }
+    },
+    {
+      "f": 35,
+      "status": "diverged",
+      "diff_bytes": 8,
+      "first": {
+        "face": "zp",
+        "off": 10,
+        "rust": "31",
+        "emu": "B0"
+      }
+    },
+    {
+      "f": 36,
+      "status": "diverged",
+      "diff_bytes": 11,
+      "first": {
+        "face": "zp",
+        "off": 10,
+        "rust": "31",
+        "emu": "B0"
+      }
+    },
+    {
+      "f": 37,
+      "status": "diverged",
+      "diff_bytes": 8,
+      "first": {
+        "face": "zp",
+        "off": 10,
+        "rust": "31",
+        "emu": "B0"
+      }
+    },
+    {
+      "f": 38,
+      "status": "diverged",
+      "diff_bytes": 12,
+      "first": {
+        "face": "zp",
+        "off": 10,
+        "rust": "31",
+        "emu": "B0"
+      }
+    },
+    {
+      "f": 39,
+      "status": "diverged",
+      "diff_bytes": 11,
+      "first": {
+        "face": "zp",
+        "off": 10,
+        "rust": "31",
+        "emu": "B0"
+      }
+    },
+    {
+      "f": 40,
+      "status": "diverged",
+      "diff_bytes": 11,
+      "first": {
+        "face": "zp",
+        "off": 10,
+        "rust": "31",
+        "emu": "B0"
+      }
+    },
+    {
+      "f": 41,
+      "status": "diverged",
+      "diff_bytes": 9,
+      "first": {
+        "face": "zp",
+        "off": 10,
+        "rust": "31",
+        "emu": "B0"
+      }
+    },
+    {
+      "f": 42,
+      "status": "diverged",
+      "diff_bytes": 11,
+      "first": {
+        "face": "zp",
+        "off": 10,
+        "rust": "31",
+        "emu": "B0"
+      }
+    },
+    {
+      "f": 43,
+      "status": "diverged",
+      "diff_bytes": 9,
+      "first": {
+        "face": "zp",
+        "off": 10,
+        "rust": "31",
+        "emu": "B0"
+      }
+    },
+    {
+      "f": 44,
+      "status": "diverged",
+      "diff_bytes": 12,
+      "first": {
+        "face": "zp",
+        "off": 10,
+        "rust": "31",
+        "emu": "B0"
+      }
+    },
+    {
+      "f": 45,
+      "status": "diverged",
+      "diff_bytes": 9,
+      "first": {
+        "face": "zp",
+        "off": 10,
+        "rust": "31",
+        "emu": "B0"
+      }
+    },
+    {
+      "f": 46,
+      "status": "diverged",
+      "diff_bytes": 12,
+      "first": {
+        "face": "zp",
+        "off": 10,
+        "rust": "31",
+        "emu": "B0"
+      }
+    },
+    {
+      "f": 47,
+      "status": "diverged",
+      "diff_bytes": 9,
+      "first": {
+        "face": "zp",
+        "off": 10,
+        "rust": "31",
+        "emu": "B0"
+      }
+    },
+    {
+      "f": 48,
+      "status": "diverged",
+      "diff_bytes": 12,
+      "first": {
+        "face": "zp",
+        "off": 10,
+        "rust": "31",
+        "emu": "B0"
+      }
+    },
+    {
+      "f": 49,
+      "status": "diverged",
+      "diff_bytes": 9,
+      "first": {
+        "face": "zp",
+        "off": 10,
+        "rust": "31",
+        "emu": "B0"
+      }
+    },
+    {
+      "f": 50,
+      "status": "diverged",
+      "diff_bytes": 12,
+      "first": {
+        "face": "zp",
+        "off": 10,
+        "rust": "31",
+        "emu": "B0"
+      }
+    },
+    {
+      "f": 51,
+      "status": "diverged",
+      "diff_bytes": 9,
+      "first": {
+        "face": "zp",
+        "off": 10,
+        "rust": "31",
+        "emu": "B0"
+      }
+    },
+    {
+      "f": 52,
+      "status": "diverged",
+      "diff_bytes": 12,
+      "first": {
+        "face": "zp",
+        "off": 10,
+        "rust": "31",
+        "emu": "B0"
+      }
+    },
+    {
+      "f": 53,
+      "status": "diverged",
+      "diff_bytes": 8,
+      "first": {
+        "face": "zp",
+        "off": 10,
+        "rust": "31",
+        "emu": "B0"
+      }
+    },
+    {
+      "f": 54,
+      "status": "diverged",
+      "diff_bytes": 12,
+      "first": {
+        "face": "zp",
+        "off": 10,
+        "rust": "31",
+        "emu": "B0"
+      }
+    },
+    {
+      "f": 55,
+      "status": "diverged",
+      "diff_bytes": 9,
+      "first": {
+        "face": "zp",
+        "off": 10,
+        "rust": "31",
+        "emu": "B0"
+      }
+    },
+    {
+      "f": 56,
+      "status": "diverged",
+      "diff_bytes": 11,
+      "first": {
+        "face": "zp",
+        "off": 10,
+        "rust": "31",
+        "emu": "B0"
+      }
+    },
+    {
+      "f": 57,
+      "status": "diverged",
+      "diff_bytes": 8,
+      "first": {
+        "face": "zp",
+        "off": 10,
+        "rust": "31",
+        "emu": "B0"
+      }
+    },
+    {
+      "f": 58,
+      "status": "diverged",
+      "diff_bytes": 12,
+      "first": {
+        "face": "zp",
+        "off": 10,
+        "rust": "31",
+        "emu": "B0"
+      }
+    },
+    {
+      "f": 59,
+      "status": "diverged",
+      "diff_bytes": 9,
+      "first": {
+        "face": "zp",
+        "off": 10,
+        "rust": "31",
+        "emu": "B0"
+      }
+    },
+    {
+      "f": 60,
+      "status": "diverged",
+      "diff_bytes": 11,
+      "first": {
+        "face": "zp",
+        "off": 10,
+        "rust": "31",
+        "emu": "B0"
+      }
+    },
+    {
+      "f": 61,
+      "status": "diverged",
+      "diff_bytes": 9,
+      "first": {
+        "face": "zp",
+        "off": 10,
+        "rust": "31",
+        "emu": "B0"
+      }
+    },
+    {
+      "f": 62,
+      "status": "diverged",
+      "diff_bytes": 11,
+      "first": {
+        "face": "zp",
+        "off": 10,
+        "rust": "31",
+        "emu": "B0"
+      }
+    },
+    {
+      "f": 63,
+      "status": "diverged",
+      "diff_bytes": 9,
+      "first": {
+        "face": "zp",
+        "off": 10,
+        "rust": "31",
+        "emu": "B0"
+      }
+    },
+    {
+      "f": 64,
+      "status": "diverged",
+      "diff_bytes": 12,
+      "first": {
+        "face": "zp",
+        "off": 10,
+        "rust": "31",
+        "emu": "B0"
+      }
+    },
+    {
+      "f": 65,
+      "status": "diverged",
+      "diff_bytes": 9,
+      "first": {
+        "face": "zp",
+        "off": 10,
+        "rust": "31",
+        "emu": "B0"
+      }
+    },
+    {
+      "f": 66,
+      "status": "diverged",
+      "diff_bytes": 12,
+      "first": {
+        "face": "zp",
+        "off": 10,
+        "rust": "31",
+        "emu": "B0"
+      }
+    },
+    {
+      "f": 67,
+      "status": "diverged",
+      "diff_bytes": 9,
+      "first": {
+        "face": "zp",
+        "off": 10,
+        "rust": "31",
+        "emu": "B0"
+      }
+    },
+    {
+      "f": 68,
+      "status": "diverged",
+      "diff_bytes": 12,
+      "first": {
+        "face": "zp",
+        "off": 10,
+        "rust": "31",
+        "emu": "B0"
+      }
+    },
+    {
+      "f": 69,
+      "status": "diverged",
+      "diff_bytes": 9,
+      "first": {
+        "face": "zp",
+        "off": 10,
+        "rust": "31",
+        "emu": "B0"
+      }
+    },
+    {
+      "f": 70,
+      "status": "diverged",
+      "diff_bytes": 12,
+      "first": {
+        "face": "zp",
+        "off": 10,
+        "rust": "31",
+        "emu": "B0"
+      }
+    },
+    {
+      "f": 71,
+      "status": "diverged",
+      "diff_bytes": 9,
+      "first": {
+        "face": "zp",
+        "off": 10,
+        "rust": "31",
+        "emu": "B0"
+      }
+    },
+    {
+      "f": 72,
+      "status": "diverged",
+      "diff_bytes": 12,
+      "first": {
+        "face": "zp",
+        "off": 10,
+        "rust": "31",
+        "emu": "B0"
+      }
+    },
+    {
+      "f": 73,
+      "status": "diverged",
+      "diff_bytes": 8,
+      "first": {
+        "face": "zp",
+        "off": 10,
+        "rust": "31",
+        "emu": "B0"
+      }
+    },
+    {
+      "f": 74,
+      "status": "diverged",
+      "diff_bytes": 12,
+      "first": {
+        "face": "zp",
+        "off": 10,
+        "rust": "31",
+        "emu": "B0"
+      }
+    },
+    {
+      "f": 75,
+      "status": "diverged",
+      "diff_bytes": 8,
+      "first": {
+        "face": "zp",
+        "off": 10,
+        "rust": "31",
+        "emu": "B0"
+      }
+    },
+    {
+      "f": 76,
+      "status": "diverged",
+      "diff_bytes": 12,
+      "first": {
+        "face": "zp",
+        "off": 10,
+        "rust": "31",
+        "emu": "B0"
+      }
+    },
+    {
+      "f": 77,
+      "status": "diverged",
+      "diff_bytes": 9,
+      "first": {
+        "face": "zp",
+        "off": 10,
+        "rust": "31",
+        "emu": "B0"
+      }
+    },
+    {
+      "f": 78,
+      "status": "diverged",
+      "diff_bytes": 12,
+      "first": {
+        "face": "zp",
+        "off": 10,
+        "rust": "31",
+        "emu": "B0"
+      }
+    },
+    {
+      "f": 79,
+      "status": "diverged",
+      "diff_bytes": 9,
+      "first": {
+        "face": "zp",
+        "off": 10,
+        "rust": "31",
+        "emu": "B0"
+      }
+    },
+    {
+      "f": 80,
+      "status": "diverged",
+      "diff_bytes": 12,
+      "first": {
+        "face": "zp",
+        "off": 10,
+        "rust": "31",
+        "emu": "B0"
+      }
+    },
+    {
+      "f": 81,
+      "status": "diverged",
+      "diff_bytes": 8,
+      "first": {
+        "face": "zp",
+        "off": 10,
+        "rust": "31",
+        "emu": "B0"
+      }
+    },
+    {
+      "f": 82,
+      "status": "diverged",
+      "diff_bytes": 12,
+      "first": {
+        "face": "zp",
+        "off": 10,
+        "rust": "31",
+        "emu": "B0"
+      }
+    },
+    {
+      "f": 83,
+      "status": "diverged",
+      "diff_bytes": 9,
+      "first": {
+        "face": "zp",
+        "off": 10,
+        "rust": "31",
+        "emu": "B0"
+      }
+    },
+    {
+      "f": 84,
+      "status": "diverged",
+      "diff_bytes": 11,
+      "first": {
+        "face": "zp",
+        "off": 10,
+        "rust": "31",
+        "emu": "B0"
+      }
+    },
+    {
+      "f": 85,
+      "status": "diverged",
+      "diff_bytes": 9,
+      "first": {
+        "face": "zp",
+        "off": 10,
+        "rust": "31",
+        "emu": "B0"
+      }
+    },
+    {
+      "f": 86,
+      "status": "diverged",
+      "diff_bytes": 11,
+      "first": {
+        "face": "zp",
+        "off": 10,
+        "rust": "31",
+        "emu": "B0"
+      }
+    },
+    {
+      "f": 87,
+      "status": "diverged",
+      "diff_bytes": 37,
+      "first": {
+        "face": "zp",
+        "off": 10,
+        "rust": "31",
+        "emu": "B0"
+      }
+    },
+    {
+      "f": 88,
+      "status": "diverged",
+      "diff_bytes": 165,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 89,
+      "status": "diverged",
+      "diff_bytes": 175,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 90,
+      "status": "diverged",
+      "diff_bytes": 174,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 91,
+      "status": "diverged",
+      "diff_bytes": 179,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 92,
+      "status": "diverged",
+      "diff_bytes": 180,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 93,
+      "status": "diverged",
+      "diff_bytes": 176,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 94,
+      "status": "diverged",
+      "diff_bytes": 177,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 95,
+      "status": "diverged",
+      "diff_bytes": 175,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 96,
+      "status": "diverged",
+      "diff_bytes": 172,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 97,
+      "status": "diverged",
+      "diff_bytes": 181,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 98,
+      "status": "diverged",
+      "diff_bytes": 180,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 99,
+      "status": "diverged",
+      "diff_bytes": 176,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 100,
+      "status": "diverged",
+      "diff_bytes": 177,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 101,
+      "status": "diverged",
+      "diff_bytes": 178,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 102,
+      "status": "diverged",
+      "diff_bytes": 176,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 103,
+      "status": "missing_emu",
+      "reason": "emu 侧无此帧状态行（采样窗缺失）"
+    },
+    {
+      "f": 104,
+      "status": "missing_emu",
+      "reason": "emu 侧无此帧状态行（采样窗缺失）"
+    },
+    {
+      "f": 105,
+      "status": "diverged",
+      "diff_bytes": 214,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 106,
+      "status": "diverged",
+      "diff_bytes": 246,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 107,
+      "status": "diverged",
+      "diff_bytes": 245,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 108,
+      "status": "diverged",
+      "diff_bytes": 250,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 109,
+      "status": "diverged",
+      "diff_bytes": 229,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 110,
+      "status": "diverged",
+      "diff_bytes": 230,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 111,
+      "status": "diverged",
+      "diff_bytes": 233,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 112,
+      "status": "diverged",
+      "diff_bytes": 229,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 113,
+      "status": "diverged",
+      "diff_bytes": 230,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 114,
+      "status": "diverged",
+      "diff_bytes": 232,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 115,
+      "status": "diverged",
+      "diff_bytes": 227,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 116,
+      "status": "diverged",
+      "diff_bytes": 225,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 117,
+      "status": "diverged",
+      "diff_bytes": 228,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 118,
+      "status": "diverged",
+      "diff_bytes": 229,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 119,
+      "status": "diverged",
+      "diff_bytes": 228,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 120,
+      "status": "diverged",
+      "diff_bytes": 234,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 121,
+      "status": "diverged",
+      "diff_bytes": 229,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 122,
+      "status": "diverged",
+      "diff_bytes": 230,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 123,
+      "status": "diverged",
+      "diff_bytes": 232,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 124,
+      "status": "diverged",
+      "diff_bytes": 232,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 125,
+      "status": "diverged",
+      "diff_bytes": 227,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 126,
+      "status": "diverged",
+      "diff_bytes": 232,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 127,
+      "status": "diverged",
+      "diff_bytes": 231,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 128,
+      "status": "diverged",
+      "diff_bytes": 230,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 129,
+      "status": "diverged",
+      "diff_bytes": 232,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 130,
+      "status": "diverged",
+      "diff_bytes": 229,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 131,
+      "status": "diverged",
+      "diff_bytes": 229,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 132,
+      "status": "diverged",
+      "diff_bytes": 231,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 133,
+      "status": "diverged",
+      "diff_bytes": 229,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 134,
+      "status": "diverged",
+      "diff_bytes": 227,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 135,
+      "status": "diverged",
+      "diff_bytes": 231,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 136,
+      "status": "diverged",
+      "diff_bytes": 231,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 137,
+      "status": "diverged",
+      "diff_bytes": 230,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 138,
+      "status": "diverged",
+      "diff_bytes": 233,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 139,
+      "status": "diverged",
+      "diff_bytes": 227,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 140,
+      "status": "diverged",
+      "diff_bytes": 231,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 141,
+      "status": "diverged",
+      "diff_bytes": 234,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 142,
+      "status": "diverged",
+      "diff_bytes": 235,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 143,
+      "status": "diverged",
+      "diff_bytes": 231,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 144,
+      "status": "diverged",
+      "diff_bytes": 235,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 145,
+      "status": "diverged",
+      "diff_bytes": 231,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 146,
+      "status": "diverged",
+      "diff_bytes": 232,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 147,
+      "status": "diverged",
+      "diff_bytes": 230,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 148,
+      "status": "diverged",
+      "diff_bytes": 227,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 149,
+      "status": "diverged",
+      "diff_bytes": 226,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 150,
+      "status": "diverged",
+      "diff_bytes": 232,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 151,
+      "status": "diverged",
+      "diff_bytes": 229,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 152,
+      "status": "diverged",
+      "diff_bytes": 231,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 153,
+      "status": "diverged",
+      "diff_bytes": 234,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 154,
+      "status": "diverged",
+      "diff_bytes": 233,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 155,
+      "status": "diverged",
+      "diff_bytes": 229,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 156,
+      "status": "diverged",
+      "diff_bytes": 232,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 157,
+      "status": "diverged",
+      "diff_bytes": 225,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 158,
+      "status": "diverged",
+      "diff_bytes": 222,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 159,
+      "status": "diverged",
+      "diff_bytes": 227,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 160,
+      "status": "diverged",
+      "diff_bytes": 227,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 161,
+      "status": "diverged",
+      "diff_bytes": 229,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 162,
+      "status": "diverged",
+      "diff_bytes": 228,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 163,
+      "status": "diverged",
+      "diff_bytes": 230,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 164,
+      "status": "diverged",
+      "diff_bytes": 229,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 165,
+      "status": "diverged",
+      "diff_bytes": 231,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 166,
+      "status": "diverged",
+      "diff_bytes": 229,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 167,
+      "status": "diverged",
+      "diff_bytes": 225,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 168,
+      "status": "diverged",
+      "diff_bytes": 229,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 169,
+      "status": "diverged",
+      "diff_bytes": 228,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 170,
+      "status": "diverged",
+      "diff_bytes": 229,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 171,
+      "status": "diverged",
+      "diff_bytes": 227,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 172,
+      "status": "diverged",
+      "diff_bytes": 229,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 173,
+      "status": "diverged",
+      "diff_bytes": 229,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 174,
+      "status": "diverged",
+      "diff_bytes": 233,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 175,
+      "status": "diverged",
+      "diff_bytes": 229,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 176,
+      "status": "diverged",
+      "diff_bytes": 226,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 177,
+      "status": "diverged",
+      "diff_bytes": 230,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 178,
+      "status": "diverged",
+      "diff_bytes": 232,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 179,
+      "status": "diverged",
+      "diff_bytes": 224,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 180,
+      "status": "diverged",
+      "diff_bytes": 214,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 181,
+      "status": "diverged",
+      "diff_bytes": 215,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 182,
+      "status": "diverged",
+      "diff_bytes": 217,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 183,
+      "status": "diverged",
+      "diff_bytes": 215,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 184,
+      "status": "diverged",
+      "diff_bytes": 221,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 185,
+      "status": "diverged",
+      "diff_bytes": 220,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 186,
+      "status": "diverged",
+      "diff_bytes": 222,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 187,
+      "status": "diverged",
+      "diff_bytes": 223,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 188,
+      "status": "diverged",
+      "diff_bytes": 224,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 189,
+      "status": "diverged",
+      "diff_bytes": 207,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 190,
+      "status": "diverged",
+      "diff_bytes": 212,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 191,
+      "status": "diverged",
+      "diff_bytes": 212,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 192,
+      "status": "diverged",
+      "diff_bytes": 211,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 193,
+      "status": "diverged",
+      "diff_bytes": 209,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 194,
+      "status": "diverged",
+      "diff_bytes": 207,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 195,
+      "status": "diverged",
+      "diff_bytes": 219,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 196,
+      "status": "diverged",
+      "diff_bytes": 222,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 197,
+      "status": "diverged",
+      "diff_bytes": 221,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 198,
+      "status": "diverged",
+      "diff_bytes": 218,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 199,
+      "status": "diverged",
+      "diff_bytes": 221,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 200,
+      "status": "diverged",
+      "diff_bytes": 218,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 201,
+      "status": "diverged",
+      "diff_bytes": 217,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 202,
+      "status": "diverged",
+      "diff_bytes": 215,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 203,
+      "status": "diverged",
+      "diff_bytes": 215,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 204,
+      "status": "diverged",
+      "diff_bytes": 227,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 205,
+      "status": "diverged",
+      "diff_bytes": 231,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 206,
+      "status": "diverged",
+      "diff_bytes": 237,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 207,
+      "status": "diverged",
+      "diff_bytes": 235,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 208,
+      "status": "diverged",
+      "diff_bytes": 237,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 209,
+      "status": "diverged",
+      "diff_bytes": 236,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 210,
+      "status": "diverged",
+      "diff_bytes": 236,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 211,
+      "status": "diverged",
+      "diff_bytes": 227,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 212,
+      "status": "diverged",
+      "diff_bytes": 226,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 213,
+      "status": "diverged",
+      "diff_bytes": 228,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 214,
+      "status": "diverged",
+      "diff_bytes": 230,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 215,
+      "status": "diverged",
+      "diff_bytes": 233,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 216,
+      "status": "diverged",
+      "diff_bytes": 228,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 217,
+      "status": "diverged",
+      "diff_bytes": 232,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 218,
+      "status": "diverged",
+      "diff_bytes": 230,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 219,
+      "status": "diverged",
+      "diff_bytes": 228,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 220,
+      "status": "diverged",
+      "diff_bytes": 228,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 221,
+      "status": "diverged",
+      "diff_bytes": 226,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 222,
+      "status": "diverged",
+      "diff_bytes": 228,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 223,
+      "status": "diverged",
+      "diff_bytes": 230,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 224,
+      "status": "diverged",
+      "diff_bytes": 233,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 225,
+      "status": "diverged",
+      "diff_bytes": 229,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 226,
+      "status": "diverged",
+      "diff_bytes": 231,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 227,
+      "status": "diverged",
+      "diff_bytes": 235,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 228,
+      "status": "diverged",
+      "diff_bytes": 236,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 229,
+      "status": "diverged",
+      "diff_bytes": 234,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 230,
+      "status": "diverged",
+      "diff_bytes": 232,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 231,
+      "status": "diverged",
+      "diff_bytes": 234,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 232,
+      "status": "diverged",
+      "diff_bytes": 232,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 233,
+      "status": "diverged",
+      "diff_bytes": 226,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 234,
+      "status": "diverged",
+      "diff_bytes": 223,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 235,
+      "status": "diverged",
+      "diff_bytes": 213,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 236,
+      "status": "diverged",
+      "diff_bytes": 209,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 237,
+      "status": "diverged",
+      "diff_bytes": 212,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 238,
+      "status": "diverged",
+      "diff_bytes": 211,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 239,
+      "status": "diverged",
+      "diff_bytes": 205,
+      "first": {
+        "face": "zp",
+        "off": 3,
+        "rust": "87",
+        "emu": "02"
+      }
+    },
+    {
+      "f": 240,
+      "status": "missing_emu",
+      "reason": "emu 侧无此帧状态行（采样窗缺失）"
+    }
+  ],
+  "first_divergence": {
+    "f": 2,
+    "face": "zp",
+    "off": 10,
+    "rust": "31",
+    "emu": "B0"
+  },
+  "residual": {
+    "status": "registered",
+    "class": "game-logic-divergence(L3未一致现状): c4de_unit 早出路径写 $0A/$0B（asm C4E0 BEQ 早出不落）",
+    "frames": [
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      80,
+      81,
+      82,
+      83,
+      84,
+      85,
+      86,
+      87,
+      88,
+      89,
+      90,
+      91,
+      92,
+      93,
+      94,
+      95,
+      96,
+      97,
+      98,
+      99,
+      100,
+      101,
+      102,
+      103,
+      104,
+      105,
+      106,
+      107,
+      108,
+      109,
+      110,
+      111,
+      112,
+      113,
+      114,
+      115,
+      116,
+      117,
+      118,
+      119,
+      120,
+      121,
+      122,
+      123,
+      124,
+      125,
+      126,
+      127,
+      128,
+      129,
+      130,
+      131,
+      132,
+      133,
+      134,
+      135,
+      136,
+      137,
+      138,
+      139,
+      140,
+      141,
+      142,
+      143,
+      144,
+      145,
+      146,
+      147,
+      148,
+      149,
+      150,
+      151,
+      152,
+      153,
+      154,
+      155,
+      156,
+      157,
+      158,
+      159,
+      160,
+      161,
+      162,
+      163,
+      164,
+      165,
+      166,
+      167,
+      168,
+      169,
+      170,
+      171,
+      172,
+      173,
+      174,
+      175,
+      176,
+      177,
+      178,
+      179,
+      180,
+      181,
+      182,
+      183,
+      184,
+      185,
+      186,
+      187,
+      188,
+      189,
+      190,
+      191,
+      192,
+      193,
+      194,
+      195,
+      196,
+      197,
+      198,
+      199,
+      200,
+      201,
+      202,
+      203,
+      204,
+      205,
+      206,
+      207,
+      208,
+      209,
+      210,
+      211,
+      212,
+      213,
+      214,
+      215,
+      216,
+      217,
+      218,
+      219,
+      220,
+      221,
+      222,
+      223,
+      224,
+      225,
+      226,
+      227,
+      228,
+      229,
+      230,
+      231,
+      232,
+      233,
+      234,
+      235,
+      236,
+      237,
+      238,
+      239,
+      240
+    ],
+    "first": {
+      "f": 2,
+      "face": "zp",
+      "off": 10,
+      "rust": "31",
+      "emu": "B0"
+    },
+    "note": "残差显式登记（不静默容忍）——加载成功≠对齐成功"
+  },
+  "verdict": "residual-registered",
+  "scenario_sha256": "b536de884e69c83190f08b9afcade862e766611e2ec1700bd1a4f783452d9403",
+  "rom_sha256": "e6e6b7014685adae447ebb3833242815747bc1e5df83ade79f693fb67cf565b6",
+  "sched_sha256": "3c3553672c9284481536d8201ac6e413e4ab068373befe15ecef446cfa8b09e9"
+}
