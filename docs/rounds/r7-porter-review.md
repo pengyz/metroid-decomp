@@ -12701,6 +12701,14 @@ pass/fail 判定（hash_match（清晰结论））✓
 
 ### verdict: pass（4 项全 ✓（A 级原文）（必跑验证 ✓（实测输出原文（A 级））））
 
+> 【2026-10-26 更正】本节 verdict（pass，4 项全 ✓）与"PASS（3/3 通过）"为**假绿**，作废：
+> `tools/l4_rust_vs_emulator.py` 的 Rust 截图是**模拟数据（非真实渲染帧）**，"Rust vs 模拟器（真正的对拍）"
+> 名不符实——Rust 侧非真渲染，3/3 只证明「模拟数据 vs 模拟器」，非 Rust 真渲染 vs 模拟器。该断径/假对拍
+> 工具已于 2026-10-26 安全清理删除（见 docs/findings/l4-cleanup-inventory.md）。真实对拍面=
+> `tools/l4_diff_run.py`（Rust 真渲染帧（FrameEngine→render_frame）vs 模拟器，像素零容差，报告锚
+> scenario/rom/产物三 sha）。历史主张原文保留不删（证伪更正文化）；本节①—④各"✓"与 verdict 一律以本更正为准。
+> （与上一节 l4_auto_diff 假绿同源——两处假对拍"成果"均系模拟侧自比/模拟数据冒充，非真实 Rust 对拍。）
+
 **必跑验证实录（⑩（A 级原文））**：
 - `python3 tools/l4_rust_vs_emulator.py case-001-game-start-samus-interaction --timeout 60`：
   **对拍结果：PASS（3/3 通过）**（Rust vs 模拟器（hash 对比（截图对比）））+result.json
