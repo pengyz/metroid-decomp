@@ -622,8 +622,24 @@ pub fn lava_and_move_check(mem: &mut FrameMemory) {
     // VertAccelerate→积分件→位移施加→SamusMoveHorizontally。
     vert_accelerate(mem); // E37A（重力/加速——L2 单位！）
     let dy = vert_integrate(mem); // 积分件（速→位移！）
-    let y = mem.read_ram(0x030D);
-    mem.write_ram(0x030D, y.wrapping_add(dy));
+    // 【goal-r8 修】asm E2E3 @loop_down `jsr MoveSamusDown/bcs @endIf_D`——**逐像素步进
+    // 查撞环**（每像素 MoveSamusDown，受阻=落地 @landingNoBounce StopVertMovement+accelY=0）。
+    // 旧形一步 y+=dy 跳过逐像素查撞→落穿地入岩浆（E269）。
+    let disp = dy as i8;
+    let steps = disp.unsigned_abs();
+    let going_down = disp >= 0;
+    for _ in 0..steps {
+        // MoveSamusDown（E4A3）：8px 边界查撞（and #$07/bne）——受阻⇒RTS_X163（落地）
+        let y = mem.read_ram(0x030D);
+        let ry = mem.read_ram(0x0301);
+        if (y.wrapping_add(ry) & 0x07) == 0 && !object_check_move_down(mem) {
+            stop_vert_movement(mem); // D147（清垂直动量）
+            mem.write_ram(crate::ram_map::SAMUS_ACCEL_Y, 0); // 落地清重力
+            break;
+        }
+        let y = mem.read_ram(0x030D);
+        mem.write_ram(0x030D, if going_down { y.wrapping_add(1) } else { y.wrapping_sub(1) });
+    }
     // SamusMoveHorizontally（E31A——**fallthrough 尾链**（摄像机跟随根件——playability P0））
     let dx = horz_integrate(mem);
     samus_move_horizontally(mem, dx);
