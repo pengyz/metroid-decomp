@@ -812,12 +812,24 @@ def _gate_runner_dispatch(runner_name: str, prereq: Path, label: str) -> tuple[s
 # data/status/l4_status_quo_baseline.json（trace:{<case>} / visual:{<frame>}，条目=reason/exit/
 # count + observed 实录签名）——**账内容忍/l2_gap_map 同构**：TOLERATED 显式打印（逐条回显
 # reason/exit/count），不阻塞≠绿；**非白名单/非调阈/非静默判 pass**。判定逻辑只在 gates/
-# （AGENTS：工具自身不持有判定权）。防静默底线三条（fail-closed，任一命中=账外照常 FAIL）：
-#   ① id 未登记（新分歧照常红）；② rest 不命中 observed 实录签名（失败形态变更=现状变了，
-#    须重登记——防新像素差/新分歧被旧账吞）；③ 命中数>count（现状膨胀须重登记；
-#    count==len(observed) 载入强校验）。账清转 strict：失败消失自然转 PASS，收口删登记条目。
+# （AGENTS：工具自身不持有判定权）。防静默底线五条（fail-closed，任一命中=账外照常 FAIL）：
+#   ① id 未登记（新分歧照常红）；② rest 与 observed 实录签名**精确等值**不成立（失败形态
+#    变更/增生=签名漂移，须重登记——防新像素差/新分歧被旧账吞；fix round 1：原 `sig in rest`
+#    子串匹配会被「旧签名+追加文本」增生绕过）；③ 命中数>count（现状膨胀须重登记；
+#    count==len(observed) 载入强校验）；④ 失败裁定行解析面必须覆盖 `[FAIL]`/`[R-FAIL]` 双前缀
+#    （tools/diff_visual.py 渲染腿失败打 `[R-FAIL] `，只认行首 `[FAIL]` 时真渲染腿分歧不入账
+#    ⇒ 报「全命中」假绿——fix round 1 封堵），且含 "FAIL]" 的不可解析行 ⇒ fail-closed；
+#   ⑤ runner 汇总失败计数（L3=failed；L4=复采腿 failed+渲染腿 rfailed）与逐条解析/账内命中数
+#    交叉核对，不一致即 fail-closed（有失败形态绕过对账时不容忍）。账清转 strict：失败消失
+#    自然转 PASS，收口删登记条目。
 STATUS_QUO_REL = Path("data") / "status" / "l4_status_quo_baseline.json"
-FAIL_LINE_RE = re.compile(r"\[FAIL\] ([^:]+): (.*)")
+FAIL_LINE_RE = re.compile(r"\[(?:R-)?FAIL\] ([^:]+): (.*)")
+# runner 汇总行失败计数正则（fix round 1 交叉核对面⑤）：键=账段（trace/visual）。
+SUMMARY_FAIL_RE: dict[str, tuple] = {
+    "trace": (re.compile(r"^L3 帧级裁定: \d+ 条用例, (\d+) 失败"),),
+    "visual": (re.compile(r"^L4 视觉裁定: \d+ 金面帧, (\d+) 失败"),
+               re.compile(r"^L4 渲染腿裁定: \d+ 金面帧, (\d+) 失败")),
+}
 
 
 def load_status_quo_baseline(path: Path | None = None) -> tuple[dict | None, str]:
@@ -855,10 +867,10 @@ def load_status_quo_baseline(path: Path | None = None) -> tuple[dict | None, str
 
 
 def status_quo_tolerate(section: dict, fail_items: list[tuple[str, str]]) -> tuple[bool, str]:
-    """l4 现状基线账判定（纯函数，自检可注入）：fail_items=[(id, rest)]（[FAIL] 行逐条）。
+    """l4 现状基线账判定（纯函数，自检可注入）：fail_items=[(id, rest)]（[FAIL]/[R-FAIL] 行逐条）。
 
-    全命中登记（①id 在账 ②rest 命中 observed 签名 ③命中数≤count）⇒ (True, 显式账目回显
-    reason/exit/count，不阻塞≠绿）；任一账外 ⇒ (False, 账外清单——照常 FAIL，绝不静默吞）。"""
+    全命中登记（①id 在账 ②rest 与 observed 签名**精确等值** ③命中数≤count）⇒ (True, 显式账目
+    回显 reason/exit/count，不阻塞≠绿）；任一账外 ⇒ (False, 账外清单——照常 FAIL，绝不静默吞）。"""
     unmatched: list[str] = []
     hits: dict[str, int] = {}
     for fid, rest in fail_items:
@@ -866,7 +878,9 @@ def status_quo_tolerate(section: dict, fail_items: list[tuple[str, str]]) -> tup
         if e is None:
             unmatched.append(f"{fid}（未登记 id——新分歧照常 FAIL）")
             continue
-        if not any(sig in rest for sig in e["observed"]):
+        # 精确等值（fix round 1）：原 `sig in rest` 子串匹配会被「旧签名+追加差异文本」增生
+        # 绕过（失败形态变了仍命中旧账=假绿）；等值不成立一律签名漂移照常 FAIL。
+        if not any(sig == rest for sig in e["observed"]):
             unmatched.append(f"{fid}（实录签名漂移——失败形态变更须重登记）")
             continue
         hits[fid] = hits.get(fid, 0) + 1
@@ -889,17 +903,43 @@ def status_quo_tolerate(section: dict, fail_items: list[tuple[str, str]]) -> tup
 def status_quo_consume(section_key: str, full_output: str) -> tuple[bool, str]:
     """l4 现状基线账读取点（gate_subroutine_diff 的 l2_gap_map 消费面同构）。
 
-    从 runner 全量输出提取 `[FAIL] <id>: <rest>` 逐条对账；载入失败/无明细行一律 fail-closed。"""
+    从 runner 全量输出提取 `[FAIL]`/`[R-FAIL]` 失败裁定行**双前缀**逐条对账（fix round 1：
+    渲染腿失败行打 `[R-FAIL] `，只认 `[FAIL] ` 时真渲染腿分歧不入账 ⇒ 报「全命中」假绿）；
+    并交叉核对 runner 汇总失败计数（failed+rfailed）与逐条解析/账内命中数。载入失败/无明细行/
+    含 "FAIL]" 不可解析行/汇总计数不一致一律 fail-closed。"""
     sections, err = load_status_quo_baseline()
     if sections is None:
         return False, err
-    fail_items = []
+    fail_items: list[tuple[str, str]] = []
+    unparseable: list[str] = []
     for line in (full_output or "").splitlines():
         m = FAIL_LINE_RE.match(line)
         if m:
             fail_items.append((m.group(1), m.group(2).strip()))
+        elif "FAIL]" in line:
+            unparseable.append(line.strip())  # 形态不可对账的失败行（fail-closed 证据）
+    if unparseable:
+        return False, (f"runner 含 FAIL] 但不可解析失败行 {len(unparseable)} 条"
+                       f"（fail-closed：形态不可对账，照常 FAIL）: " + "；".join(unparseable[:3]))
     if not fail_items:
-        return False, "runner FAIL 但无 [FAIL] 明细行（fail-closed：形态不可对账，照常 FAIL）"
+        return False, ("runner FAIL 但无 [FAIL]/[R-FAIL] 明细行"
+                       "（fail-closed：形态不可对账，照常 FAIL）")
+    # 交叉核对（fix round 1 防静默底线⑤）：runner 汇总失败计数 vs 逐条解析明细行数。
+    # 全命中时账内命中数==明细行数（status_quo_tolerate 逐条记 hits 且任一未命中即 FAIL），
+    # 故此核对即「汇总（failed+rfailed）↔ 账内命中数」交叉核对；不一致=有失败绕过对账。
+    total, seen = 0, 0
+    for line in (full_output or "").splitlines():
+        for pat in SUMMARY_FAIL_RE[section_key]:
+            m = pat.match(line)
+            if m:
+                total += int(m.group(1))
+                seen += 1
+    if not seen:
+        return False, ("runner 汇总失败计数行不可解析"
+                       "（fail-closed：failed+rfailed 与账内命中数不可交叉核对，照常 FAIL）")
+    if total != len(fail_items):
+        return False, (f"runner 汇总失败计数 {total} ≠ 失败明细行 {len(fail_items)}"
+                       f"（fail-closed：有失败形态绕过对账——汇总与账内命中数须一致，照常 FAIL）")
     return status_quo_tolerate(sections[section_key], fail_items)
 
 
@@ -2086,6 +2126,55 @@ def cmd_selftest(_args) -> int:
     # 15) SUMMARY TOLERATED 显式计数（门禁级 TOLERATED 裁定不许被登记项计数覆盖——不阻塞≠静默）
     line = summarize([{"verdict": TOLERATED}], {"tolerated": []})
     check("SUMMARY 计入门禁级 TOLERATED 裁定（显式≠静默）", "TOLERATED=1" in line, line)
+
+    # 16) 假绿路径修复探针（fix round 1，reviewer 证伪实证三面）：
+    #     ① [R-FAIL] 真渲染腿分歧绕过对账（FAIL_LINE_RE 只认行首 [FAIL]）⇒ 报全命中假绿；
+    #     ② `sig in rest` 子串签名吞失败形态增生（rest=旧签名+追加文本仍命中）；
+    #     ③ runner 汇总（failed+rfailed）与账内命中数无交叉核对（解析漏行仍可全命中）。
+    #     探针用实仓 visual 登记条目做载体（双腿条目 observed[0]/[1] 做实录签名）——
+    #     账清后载体消失时**显式红**（禁静默跳过），提示同步更新本组探针。
+    sections16, sqerr16 = load_status_quo_baseline()
+    sec_vis16 = (sections16 or {}).get("visual") or {}
+    two_leg16 = sorted(k for k, v in sec_vis16.items() if len(v.get("observed", [])) >= 2)
+    if not two_leg16:
+        check("fix-round-1 探针载体在位（实仓 visual 双腿登记条目）", False,
+              f"账清/载入异常后请同步更新 §16 探针（禁静默跳过）: {sqerr16 or 'visual 无 count≥2 条目'}")
+    else:
+        fid16 = two_leg16[0]
+        sig0_16, sig1_16 = sec_vis16[fid16]["observed"][0], sec_vis16[fid16]["observed"][1]
+        div16 = (f"{fid16}: 账外 12000 像素分歧（首 @3,4 金=000000ff 采=ffffffff"
+                 f"；白名单内 0/账内 0 处已排除）")  # [R-FAIL] 真分歧形态（reviewer 实证：12000px）
+        sums2 = ("L4 视觉裁定: 1 金面帧, 1 失败, 白名单条目 0, 账内容忍 0\n"
+                 "L4 渲染腿裁定: 1 金面帧, 1 失败, 白名单条目 0, 账内容忍 0\n")
+        sums1 = "L4 视觉裁定: 1 金面帧, 1 失败, 白名单条目 0, 账内容忍 0\n"
+        # (a) [R-FAIL] 真分歧 + 已登记 [FAIL] 并存 ⇒ 不得报全命中（照常 FAIL）
+        ok, rep = status_quo_consume("visual", sums2 + f"[FAIL] {fid16}: {sig0_16}\n"
+                                                      f"[R-FAIL] {fid16}: {div16}\n")
+        check("[R-FAIL] 真渲染腿分歧不被账吞（照常 FAIL，不得报全命中）",
+              not ok and "签名漂移" in rep, rep)
+        # (b) 双前缀解析计数：[R-FAIL] 行命中登记实录签名 ⇒ 照常入账（count=2/2 回显证解析覆盖）
+        ok, rep = status_quo_consume("visual", sums2 + f"[FAIL] {fid16}: {sig0_16}\n"
+                                                      f"[R-FAIL] {fid16}: {sig1_16}\n")
+        check("[R-FAIL] 登记形态照常入账（双前缀解析——count=2/2 回显）",
+              ok and "count=2/2" in rep, rep)
+        # (c) 汇总计数交叉核对：runner 汇总 0 失败 vs 明细 1 行 ⇒ fail-closed
+        ok, rep = status_quo_consume(
+            "visual", "L4 视觉裁定: 1 金面帧, 0 失败, 白名单条目 0, 账内容忍 0\n"
+                      "L4 渲染腿裁定: 1 金面帧, 0 失败, 白名单条目 0, 账内容忍 0\n"
+                      f"[FAIL] {fid16}: {sig0_16}\n")
+        check("runner 汇总失败计数≠明细行数 ⇒ fail-closed（汇总/账内命中数交叉核对）",
+              not ok and "汇总" in rep, rep)
+        # (d) 含 "FAIL]" 但不可解析的失败行 ⇒ fail-closed（形态不可对账不容忍）
+        ok, rep = status_quo_consume("visual", sums1 + f"[FAIL] {fid16}: {sig0_16}\n"
+                                                      f"[X-FAIL] {fid16}: 奇形态失败行\n")
+        check("含 FAIL] 不可解析失败行 ⇒ fail-closed（形态不可对账不容忍）",
+              not ok and "不可解析" in rep, rep)
+        # (e) 子串增生漂移：rest=旧签名+追加文本 ⇒ 必须触发漂移（精确等值语义）
+        ok, rep = status_quo_tolerate(
+            {fid16: {"reason": "r", "exit": "e", "count": 1, "observed": [sig0_16]}},
+            [(fid16, sig0_16 + "——追加差异文本")])
+        check("实录签名子串增生 ⇒ 漂移照常 FAIL（精确等值，不再容忍）",
+              not ok and "签名漂移" in rep, rep)
 
     failed = [c for c in cases if not c[1]]
     for name, ok, detail in cases:
