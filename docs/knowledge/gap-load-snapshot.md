@@ -1,8 +1,31 @@
 ---
 type: gap
+status: superseded
 ---
 
 # gap-load-snapshot（load_snapshot 缺口（存档格式定义（加载方式）））
+
+> 【2026-10-26 更正】下文「①—④均待定义」「缺口：机制缺失」「状态：缺口（未实现）」
+> 已被**证伪**，本条目 `status: superseded`（历史主张原样保留不删——证伪更正文化）：
+>
+> - **① 存档格式**：已定谳——**混合路线**（否决中立 JSON 主格式）：MSS（`emu.createSavestate()`
+>   真源 `<out>.mss`）+ 三直映 JSON（`{mss_bytes, ram, wram, regs{a,x,y,sp,pc,ps}, frame}`
+>   ——`tools/scenario_capture.lua::bundle_capture` 产物）；schema 接缝表见
+>   [../spec/state-bundle-schema.md](../spec/state-bundle-schema.md) §4。
+> - **② 模拟器加载**：已实战——`emu.loadSavestate`（exec 回调上下文约束实录）+
+>   `bundle_load`/`snapshot` DSL；见 [../findings/bundle-first-arbitrary-start.md](../findings/bundle-first-arbitrary-start.md)（2026-10-16）。
+> - **③ Rust 加载**：已落——`FrameMemory::restore_mss(ram, wram, regs)`
+>   （crates/game-core/src/frame/memory.rs）+ `FrameEngine::restore_mss` 续跑面
+>   （phase=MainLoop+skip 首 NMI——从快照态起跑，非重跑 boot）；消费面
+>   `rust_screenshot --bundle <prefix>`（2026-10-26）。
+> - **④ 两边对齐**：已立验收——restore 后**前 N 帧逐字节** Rust↔emu 快进 diff
+>   （`tools/l4_diff_run.py align`，逐帧结果+残差**显式登记**）；「加载成功≠对齐成功」
+>   实测捕获（mid-move bundle：f=1 装载态逐字节对齐 ✓，f=2 起残差登记）。
+>
+> **残留**（非本条目辖）：对齐残差=游戏逻辑分歧（L3 未一致现状，如 c4de_unit 早出路径
+> 写 $0A/$0B——账清随 L3 移植推进）；渲染面快照扩展（chr/nametable/palette/ppuctrl/scroll）
+> 仅当残差定位为渲染态缺失才启用（spec l4-autodiff-completion §4-D 决策规则，默认不扩）；
+> snapshot 用例像素对拍/matrix 消费=L4 后续（run-all/门禁）。
 
 ## 缺口描述
 
