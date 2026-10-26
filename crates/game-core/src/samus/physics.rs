@@ -68,11 +68,10 @@ pub fn vert_accelerate(mem: &mut FrameMemory) {
     }
     mem.write_ram(SAMUS_HORZ_SPEED_MAX, 0x18); // 最大跑速 1.5px（R-mv 跑速面）
     // 8 像素对齐检测（几何节流）
-    let aligned = (mem.read_ram(SAMUS_Y).wrapping_add(mem.read_ram(SAMUS_RADIUS_Y)) & 0x07) == 0;
-    if aligned {
-        if !object_check_move_down(mem) {
-            return;
-        }
+    // 【goal-r11】asm E37A `jsr ObjectCheckMoveDown/bcc @dontStartFalling`——受阻不设重力。
+    // 旧形仅 aligned(8px 边界)查撞→非边界帧不查→设重力→弹跳。修=**每像素查撞**。
+    if !object_check_move_down(mem) {
+        return; // 受阻（地上）——@dontStartFalling 不设重力
     }
     samus_collision_with_solid_entities(mem); // D976（asm :5117——壳已端口）
     if mem.read_ram(crate::ram_map::SAMUS_ON_ELEVATOR) != 0
@@ -82,6 +81,9 @@ pub fn vert_accelerate(mem: &mut FrameMemory) {
     }
     // 双旗门（D976 内部置位后检查）
     // if mem.read_ram(SAMUS_ON_ELEVATOR) != 0 || mem.read_ram(ON_FROZEN_ENEMY) != 0 { return; }
+    // 【goal-r11】asm E37A：受阻（地上）⇒@dontStartFalling **不设重力**。旧形落地清
+    // accelY=0→下帧 accelY==0→再设重力→弹跳（accelY 交替 1A/00）。修=受阻不设重力
+    // （object_check_move_down false=固实=受阻⇒return 已有），此处仅"不阻"时设。
     mem.write_ram(SAMUS_ACCEL_Y, 0x1A); // 落体重力（E37A）
 }
 
@@ -619,18 +621,16 @@ pub fn lava_and_move_check(mem: &mut FrameMemory) {
     // VertAccelerate→积分件→位移施加→SamusMoveHorizontally。
     vert_accelerate(mem); // E37A（重力/加速——L2 单位！）
     let dy = vert_integrate(mem); // 积分件（速→位移！）
-    // 【goal-r8 修】asm E2E3 @loop_down `jsr MoveSamusDown/bcs @endIf_D`——**逐像素步进
-    // 查撞环**（每像素 MoveSamusDown，受阻=落地 @landingNoBounce StopVertMovement+accelY=0）。
-    // 旧形一步 y+=dy 跳过逐像素查撞→落穿地入岩浆（E269）。
+    // 【goal-r8/r11】asm E2E3 @loop_down `jsr MoveSamusDown/bcs @endIf_D`——逐像素步进
+    // 查撞环（每像素 MoveSamusDown，受阻=落地 @landingNoBounce StopVertMovement+accelY=0）。
     let disp = dy as i8;
     let steps = disp.unsigned_abs();
     let going_down = disp >= 0;
     for _ in 0..steps {
-        // 【goal-r10】MoveSamusDown（E4A3）：**每像素查撞**（非仅 8px 边界——emu 不穿地
-        // 因逐像素步进查撞）。受阻⇒RTS_X163（落地）。
+        // MoveSamusDown（E4A3）：每像素查撞。受阻⇒RTS_X163（落地）。
         if !object_check_move_down(mem) {
             stop_vert_movement(mem); // D147（清垂直动量）
-            mem.write_ram(crate::ram_map::SAMUS_ACCEL_Y, 0); // 落地清重力
+            mem.write_ram(crate::ram_map::SAMUS_ACCEL_Y, 0); // 落地清重力（@landingNoBounce）
             break;
         }
         let y = mem.read_ram(0x030D);
