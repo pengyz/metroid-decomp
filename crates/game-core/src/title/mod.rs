@@ -1375,3 +1375,4 @@ pub fn vram_struct_buffer_events(idx: u8, blob: &[u8]) -> Vec<(u16, u8)> {
     ev
 }
 pub mod gfx;
+pub mod interaction;
