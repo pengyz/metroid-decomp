@@ -1,0 +1,7 @@
+{
+  "side": "rust",
+  "name": "case-001-game-start-samus-interaction",
+  "scenario_sha256": "23b52bdc841e702020ad97ddf202822cc56e9b0c4669daa27a1cc7c9dadf970f",
+  "rom_sha256": "e6e6b7014685adae447ebb3833242815747bc1e5df83ade79f693fb67cf565b6",
+  "sched_sha256": "e1e42d2ff8d43dfb6f87bffc3345abac1a064ce941e9e117f2ad904a4a1eae6e"
+}
