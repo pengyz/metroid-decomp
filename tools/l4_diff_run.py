@@ -45,12 +45,21 @@
     shots_rust/<name>.l4report.json           对拍结果（结构化，含三 sha 锚）
     shots_rust/<name>_f<NNNNN>_<tag>.diff.png 失配帧可视化（Rust|Emu|Diff）
     shots_rust/matrix.json + shots_rust/matrix.md   run-all 矩阵（结构化+人读表）
+
+拒跑面（fail-loud，绝不空跑出绿/假对拍/崩溃假绿——2026-10-26 终审 findings 封堵）：
+    · I1 采集点分母对账：0 采集点（run/diff）或产物采集点（captures∪blocked）与 DSL
+      capture 数缺/多不对账 ⇒ exit 2——results=[] 会 fail=0 exit 0『✅ 全部一致』=空跑出绿；
+    · I2 输入对称性：plan 含 trigger/nav（运行时条件输入仅模拟器侧叠加执行，Rust 无对应面）
+      ⇒ 全 action exit 2——两侧跑不同输入=假对拍，绝不静默；
+    · C1 崩溃语义：run-all 任何未捕获异常 ⇒ exit 2 拒跑（与拒跑同码——exit 1 会被 gate 读作
+      "跑完"去判矩阵，崩溃残留旧 matrix 被判过=假绿后门）；矩阵落盘走 temp+rename 原子写。
 """
 from __future__ import annotations
 
 import argparse
 import hashlib
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -443,7 +452,60 @@ def print_align_report(rep: dict) -> None:
     print("=" * 78)
 
 
-def do_diff(name: str, anchors: dict) -> dict:
+# ---------------- 拒跑守卫（I1 分母对账 / I2 输入对称性 / C1 原子落盘） ----------------
+
+def atomic_write_text(path: Path, text: str) -> None:
+    """原子落盘（temp + rename）：崩溃绝不留半成品顶名产物（C1——gate 矩阵新鲜度配套）。
+
+    matrix.json 是 gate_l4 的裁定输入：半成品/截断 JSON 不得顶名旧产物（旧产物宁可留着
+    被 gate 新鲜度拒裁，也不可以"半个新产物"冒充本轮落盘）。
+    """
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_text(text, encoding="utf-8", newline="\n")
+    os.replace(tmp, path)
+
+
+def reconcile_denominator(man: dict, caps: list) -> None:
+    """run 产物采集点对账 DSL 分母（I1）：产物点集（captures∪blocked）须与 DSL 采集点集逐一相等。
+
+    分母唯一基准=DSL capture 数（capture 三要素之③）：缺（DSL 有产物无——含空产物=空跑
+    results=[] → fail=0 exit 0『✅ 全部一致』出绿）/多（产物有 DSL 无=锚外结果漏 diff）一律
+    ValueError 拒跑——缺/多即 fail，绝不静默缩分母/漏 diff。
+    """
+    prod = {(int(c.get("frame", -1)), c.get("tag")) for c in (man.get("captures") or [])}
+    prod |= {(int(c.get("frame", -1)), c.get("tag")) for c in (man.get("blocked") or [])}
+    dsl = {(int(f), t) for f, t in caps}
+    missing, extra = sorted(dsl - prod), sorted(prod - dsl)
+    if missing or extra:
+        raise ValueError(
+            f"产物采集点与 DSL 采集点不对账（缺 {missing} 多 {extra}）——run 产物采集点数须=DSL "
+            f"capture 数，缺/多即 fail（防空跑出绿/缩分母/锚外结果）")
+
+
+def check_symmetric_inputs(plan: dict, name: str) -> None:
+    """两侧输入对称性守卫（I2 防漂移假对拍）：plan 含 trigger/nav ⇒ ValueError 拒跑。
+
+    trigger/nav 是**运行时条件输入**（scenario_capture.lua 依 RAM 条件叠加按键；scenario_run
+    parse 语义），Rust 侧 Plan 无对应执行面（expand_schedule 只展开静态 press/hold）——含
+    trigger/nav 的用例两侧跑**不同输入**=假对拍（2026-10-26 终审 I2 漂移陷阱）。fail-loud
+    拒跑（全 action：run/diff/align/run-all），绝不静默两侧跑不同输入。
+    """
+    n_trig = len(plan.get("triggers") or [])
+    n_nav = len(plan.get("navs") or [])
+    if n_trig or n_nav:
+        raise ValueError(
+            f"用例 {name} 含 trigger×{n_trig}/nav×{n_nav}——trigger/nav 两侧输入不对称"
+            f"（运行时条件输入仅模拟器侧叠加执行，Rust 无对应面）不支持对拍，fail-loud 拒跑"
+            f"（绝不静默两侧跑不同输入出假对拍）")
+
+
+def do_diff(name: str, anchors: dict, caps: list) -> dict:
+    """逐采集点对拍出 l4report（分母基准=DSL caps——I1 拒空跑/对账在前，绝不 exit 0 出绿）。
+
+    ValueError（fail-loud 拒跑）：① caps 空（0 采集点——results=[] 会 fail=0『✅ 全部一致』
+    空跑出绿）；② 产物采集点与 DSL 采集点缺/多不对账（reconcile_denominator）。"""
+    if not caps:
+        raise ValueError(f"用例 {name} 无采集点（DSL capture 全缺）——0 采集点空跑不得绿，拒跑（I1）")
     Image, np = load_pil()
     SHOTS_RUST.mkdir(parents=True, exist_ok=True)
     rust_caps = SHOTS_RUST / f"{name}.rust.captures.json"
@@ -451,6 +513,7 @@ def do_diff(name: str, anchors: dict) -> dict:
         print(f"[diff] 缺 Rust manifest {rust_caps}", file=sys.stderr)
         sys.exit(1)
     man = json.loads(rust_caps.read_text(encoding="utf-8"))
+    reconcile_denominator(man, caps)  # I1：产物采集点==DSL 采集点（缺/多即拒）
     results = []
     artifacts = {}  # 三 sha 锚之三：各截图 sha（键=仓库逻辑相对路径）
     npass = 0
@@ -733,17 +796,37 @@ def execute_case(*, name: str, scen_path: Path, frames: int, joy: dict, caps: li
         return {"legs": legs, "report": None,
                 "error": f"缺 Rust manifest（{name}.rust.captures.json）——产物不全",
                 "exit_code": 1}
-    rep = do_diff(name, anchors)
+    try:
+        rep = do_diff(name, anchors, caps)
+    except ValueError as exc:  # I1 拒空跑/分母对账失败——fail-loud exit 2（不空跑出绿）
+        return {"legs": legs, "report": None,
+                "error": f"对拍分母对账拒跑——{exc}", "exit_code": 2}
     return {"legs": legs, "report": rep, "error": None, "exit_code": None}
 
 
 def do_run_all(args) -> int:
+    """批量矩阵入口（C1 崩溃语义封堵）：任何未捕获异常 ⇒ **exit 2 拒跑**。
+
+    崩溃必须与拒跑同码（exit 2）——exit 1 会被 gate_l4 读作『跑完』去判 matrix.json，
+    崩溃残留的旧/committed 矩阵被判过=假绿后门（2026-10-26 终审 C1）。矩阵落盘走
+    temp+rename 原子写（半成品不顶名），gate 侧再以新鲜度校验确保崩溃绝不判旧矩阵。
+    """
+    try:
+        return _do_run_all(args)
+    except Exception as exc:  # noqa: BLE001 —— 全量兜底（含 OSError/JSON/断言类）
+        print(f"[!] run-all 内部异常（fail-loud 拒跑 exit 2——不留半成品/旧矩阵当裁定输入）: "
+              f"{type(exc).__name__}: {exc}", file=sys.stderr)
+        return 2
+
+
+def _do_run_all(args) -> int:
     """批量矩阵：遍历 cases/*.txt **全用例** → 用例×采集点矩阵（三态）。
 
     分母=用例×采集点总数（含 blocked）——blocked **永不计 pass**（防假绿硬约束）。
     用例级失败（腿失败/复用拒跑）不中断扫掠：该用例全格 blocked 记原因（分母不缩水），
     继续下例；exit 0 当且仅当全格 match（verdict=pass）。fail-loud（exit 2）：cases/ 空/
-    用例解析失败/同名冲突/无采集点/ROM 缺——分母完整性受损一律拒跑（不静默缩分母）。
+    用例解析失败/同名冲突/无采集点/trigger-nav 输入不对称/ROM 缺——分母完整性受损或
+    两侧输入不对称一律拒跑（不静默缩分母、不静默两侧跑不同输入）。
     """
     import importlib
     sr = importlib.import_module("scenario_run")
@@ -765,6 +848,11 @@ def do_run_all(args) -> int:
                   f"产物/报告互相覆盖=矩阵失真，拒跑", file=sys.stderr)
             return 2
         seen[name] = cf
+        try:
+            check_symmetric_inputs(plan, name)  # I2：trigger/nav 两侧输入不对称 ⇒ 拒跑
+        except ValueError as exc:
+            print(f"[!] {exc}", file=sys.stderr)
+            return 2
         frames = int(plan["frames"])
         joy = sr.expand_schedule(plan)  # 唯一展开源（task-2 输入单源）
         caps = sorted((int(c["frame"]), c["tag"]) for c in plan.get("captures", []))
@@ -803,9 +891,9 @@ def do_run_all(args) -> int:
     SHOTS_RUST.mkdir(parents=True, exist_ok=True)
     out_json = SHOTS_RUST / "matrix.json"
     out_md = SHOTS_RUST / "matrix.md"
-    out_json.write_text(json.dumps(m, ensure_ascii=False, indent=2) + "\n",
-                        encoding="utf-8", newline="\n")
-    out_md.write_text(matrix_md(m), encoding="utf-8", newline="\n")
+    # C1：temp+rename 原子落盘——崩溃绝不留半成品顶名矩阵（gate 新鲜度配套）
+    atomic_write_text(out_json, json.dumps(m, ensure_ascii=False, indent=2) + "\n")
+    atomic_write_text(out_md, matrix_md(m))
     print("\n" + "=" * 78)
     print("L4 对拍矩阵（用例×采集点）—— run-all（遍历 cases/）")
     print("=" * 78)
@@ -864,6 +952,17 @@ def main():
     frames = int(plan["frames"])
     joy = sr.expand_schedule(plan)  # 唯一展开源（task-2 输入单源——Rust/Lua 同产物）
     caps = sorted((int(c["frame"]), c["tag"]) for c in plan.get("captures", []))
+    # I1：run/diff 拒空采集点（0 采集点 → results=[] 会 fail=0 exit 0『✅ 全部一致』=空跑出绿）
+    if args.action in ("run", "diff") and not caps:
+        print(f"[!] 用例 {name} 无采集点（capture/endFrame 全缺）——0 采集点空跑不得绿，拒跑（I1）",
+              file=sys.stderr)
+        sys.exit(2)
+    # I2：trigger/nav 两侧输入不对称（Rust 无对应面）⇒ 全 action 拒跑（绝不静默两侧跑不同输入）
+    try:
+        check_symmetric_inputs(plan, name)
+    except ValueError as exc:
+        print(f"[!] {exc}", file=sys.stderr)
+        sys.exit(2)
     # snapshot（Task 4）：用例 snapshot <prefix> 为单源；--bundle 显式覆盖（align 实验面）。
     case_snap = (plan.get("bundle_load") or {}).get("path")
     snap = case_snap
@@ -941,7 +1040,11 @@ def main():
             if err:
                 print(f"[!] diff {err}", file=sys.stderr)
                 sys.exit(2)
-        rep = do_diff(name, anchors)
+        try:
+            rep = do_diff(name, anchors, caps)
+        except ValueError as exc:  # I1 拒空跑/分母对账失败——fail-loud exit 2
+            print(f"[!] {exc}", file=sys.stderr)
+            sys.exit(2)
 
     print_report(rep)
     sys.exit(0 if rep["fail"] == 0 else 1)
