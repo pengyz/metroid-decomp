@@ -199,7 +199,8 @@ class TestRatchetBaselineFailClosed:
 class TestGateL4Verdict:
     @pytest.fixture()
     def gate_env(self, tmp_path, monkeypatch):
-        """假 ROOT：tools/l4_diff_run.py + cases/ + 矩阵 + 基线；subprocess.run 记录命令。"""
+        """假 ROOT：tools/l4_diff_run.py + cases/ + 矩阵 + 基线；subprocess.run 记录命令并
+        **于调用时落盘矩阵**（模拟 run-all 本轮真落盘——gate 矩阵新鲜度校验（C1）的前提）。"""
         (tmp_path / "tools").mkdir()
         (tmp_path / "tools" / "l4_diff_run.py").write_text("# runner", encoding="utf-8")
         (tmp_path / "cases").mkdir()
@@ -207,19 +208,28 @@ class TestGateL4Verdict:
         (tmp_path / "shots_rust").mkdir()
         (tmp_path / "data" / "status").mkdir(parents=True)
         calls: list[list[str]] = []
+        env: dict = {"root": tmp_path, "calls": calls, "matrix_payload": None}
 
         def fake_run(cmd, **kw):
             calls.append([str(c) for c in cmd])
+            if env["matrix_payload"] is not None:  # run-all 本轮落盘同名新产物
+                # temp+rename 原子落盘（与 l4_diff_run.atomic_write_text 同契约——指纹
+                # inode 变化=本轮真落盘；ext4 mtime 粒度 ~1ms，裸重写同内容可能指纹不变）
+                l4.atomic_write_text(tmp_path / "shots_rust" / "matrix.json",
+                                     json.dumps(env["matrix_payload"], ensure_ascii=False))
             return types.SimpleNamespace(returncode=1, stdout="L4 对拍矩阵 …\n", stderr="")
 
         monkeypatch.setattr(gates, "ROOT", tmp_path)
         monkeypatch.setattr(gates.subprocess, "run", fake_run)
-        return {"root": tmp_path, "calls": calls}
+        return env
 
-    def write_matrix(self, env, states, rom_sha="r" * 64):
-        p = env["root"] / "shots_rust" / "matrix.json"
-        p.write_text(json.dumps(make_matrix(states, rom_sha), ensure_ascii=False),
-                     encoding="utf-8")
+    def write_matrix(self, env, states, rom_sha="r" * 64, rewrite_on_run=True):
+        """落 matrix.json：rewrite_on_run=True=run-all 本轮真落盘（fresh）；False=崩溃不落盘
+        （旧/committed 残留——C1 新鲜度必须拒裁）。"""
+        payload = make_matrix(states, rom_sha)
+        (env["root"] / "shots_rust" / "matrix.json").write_text(
+            json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+        env["matrix_payload"] = payload if rewrite_on_run else None
 
     def write_baseline(self, env, states, rom_sha="r" * 64):
         p = env["root"] / "data" / "status" / "l4_ratchet_baseline.json"
@@ -271,6 +281,27 @@ class TestGateL4Verdict:
         monkeypatch.setattr(gates.subprocess, "run", fake_run)
         verdict, detail = gates.gate_l4()
         assert verdict == gates.FAIL and "拒跑" in detail, detail
+
+    def test_gate_l4_fail_on_stale_committed_matrix_after_crash(self, gate_env):
+        """C1 锁①：run-all 崩溃（exit 1）+旧/committed 矩阵残留（mtime 早于本轮）⇒ FAIL
+        ——绝不判旧矩阵出绿（2026-10-26 终审假绿后门封堵）。"""
+        self.write_matrix(gate_env, {"c": {"1:a": "match"}}, rewrite_on_run=False)
+        self.write_baseline(gate_env, {"c": {"1:a": "match"}})
+        import os
+        import time
+        p = gate_env["root"] / "shots_rust" / "matrix.json"
+        old = time.time() - 3600
+        os.utime(p, (old, old))
+        verdict, detail = gates.gate_l4()
+        assert verdict == gates.FAIL and "绝不判旧矩阵" in detail, detail
+        assert "ratchet 守住" not in detail, "崩溃+旧矩阵判 [PASS]=假绿后门（C1）"
+
+    def test_gate_l4_fail_on_matrix_not_rewritten_this_run(self, gate_env):
+        """C1 锁②：本轮未落盘（指纹未变——run-all 崩溃残留旧产物）⇒ FAIL。"""
+        self.write_matrix(gate_env, {"c": {"1:a": "match"}}, rewrite_on_run=False)
+        self.write_baseline(gate_env, {"c": {"1:a": "match"}})
+        verdict, detail = gates.gate_l4()
+        assert verdict == gates.FAIL and "绝不判旧矩阵" in detail, detail
 
     def test_gate_l4_fail_on_missing_baseline(self, gate_env):
         """基线缺失 ⇒ FAIL（禁 vacuous——删基线不得静默绿）。"""

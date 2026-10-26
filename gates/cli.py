@@ -28,6 +28,7 @@ import re
 import subprocess
 import sys
 import tempfile
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -1122,10 +1123,45 @@ def l4_ratchet_notes(baseline: dict, matrix: dict) -> list[str]:
     return notes
 
 
+def l4_matrix_fingerprint(path: Path) -> tuple | None:
+    """matrix.json 产物指纹 (inode, mtime_ns, size)——本轮是否真落盘的机械判据（None=缺）。"""
+    try:
+        st = path.stat()
+    except OSError:
+        return None
+    return (st.st_ino, st.st_mtime_ns, st.st_size)
+
+
+L4_FRESH_SLACK_S = 2.0  # 落盘时刻对本轮起点的容差（同机时钟/文件系统粒度；容差内=新鲜）
+
+
+def l4_matrix_fresh_error(run_started: float, pre_fp: tuple | None,
+                          post_fp: tuple | None) -> str | None:
+    """matrix.json 本轮新鲜度校验（C1 崩溃判旧矩阵假绿后门封堵）→ 陈旧原因 or None（新鲜）。
+
+    双锁（独立成立即拒裁——绝不判旧矩阵）：① 落盘时刻在本轮起点窗口内（mtime ≥
+    run_started−容差）——旧/committed 矩阵绝不冒充本轮产物；② 本轮指纹（inode+mtime_ns
+    +size）真变化——run-all 崩溃未落盘（旧产物残留）绝不过。配 runner 侧 temp+rename
+    原子落盘（半成品不顶名）。freshness 不过 ⇒ FAIL（不是 SKIP、不是读旧账）——崩溃语义
+    绝不落成「判旧矩阵出绿」（2026-10-26 终审 C1：run-all 写 matrix.json 前崩溃时，exit 0/1
+    被当『跑完』判旧/committed matrix ⇒ [PASS] 假绿）。"""
+    if post_fp is None:
+        return ("matrix.json 本轮未落盘（产物指纹缺）——绝不判旧矩阵（C1 崩溃残留拒裁）")
+    if post_fp[1] / 1e9 < run_started - L4_FRESH_SLACK_S:
+        return (f"matrix.json 落盘时刻早于本轮起点（mtime={post_fp[1] / 1e9:.3f} < 本轮起点 "
+                f"{run_started:.3f}−容差 {L4_FRESH_SLACK_S}s）——旧/committed 矩阵残留，"
+                f"绝不判旧矩阵（C1 崩溃残留拒裁）")
+    if pre_fp is not None and post_fp == pre_fp:
+        return ("matrix.json 本轮未更新（指纹 inode+mtime_ns+size 未变——run-all 崩溃未落盘）"
+                "——绝不判旧矩阵（C1 崩溃残留拒裁）")
+    return None
+
+
 def gate_l4() -> tuple[str, str]:
     """L4 自动对拍门禁（Task 6）：run-all 实跑出矩阵 → 逐采集点 ratchet 裁定。
 
-    裁定链（fail-closed，绝不静默绿）：run-all fail-loud（exit 2）⇒ FAIL；矩阵/基线
+    裁定链（fail-closed，绝不静默绿）：run-all fail-loud（exit 2）⇒ FAIL；矩阵**新鲜度**
+    不过（本轮未落盘/落盘早于本轮=崩溃残留旧矩阵）⇒ FAIL（C1：绝不判旧矩阵）；矩阵/基线
     不可解析 ⇒ FAIL（禁 vacuous）；ratchet 违规（match 缩水/新增 blocked）⇒ FAIL；
     守住 ⇒ PASS（diff 现状持平不阻塞——判据是逐采集点 ratchet，非「全 match」）。"""
     runner = ROOT / L4_RUNNER_REL
@@ -1138,6 +1174,9 @@ def gate_l4() -> tuple[str, str]:
                           f"（{rel(runner)} 或 cases/ 用例）不在——不得静默消失")
         return SKIP, ("L4 自动对拍未建立（tools/l4_diff_run.py 或 cases/ 用例缺）"
                       "——建立后自动启用（显式 SKIP）")
+    matrix_path = ROOT / L4_MATRIX_REL
+    pre_fp = l4_matrix_fingerprint(matrix_path)  # 本轮起点产物指纹（C1 新鲜度锁②）
+    run_started = time.time()                    # 本轮起点（C1 新鲜度锁①）
     try:
         proc = subprocess.run([sys.executable, str(runner), "run-all"], cwd=ROOT,
                               capture_output=True, text=True, encoding="utf-8",
@@ -1148,10 +1187,9 @@ def gate_l4() -> tuple[str, str]:
     full = (proc.stdout or "") + (proc.stderr or "")
     tail = " | ".join(full.strip().splitlines()[-4:])
     if proc.returncode == 2:
-        return FAIL, f"L4 run-all 拒跑（fail-loud exit 2——分母完整性受损/锚不可信）: {tail}"
+        return FAIL, f"L4 run-all 拒跑（fail-loud exit 2——分母完整性受损/锚不可信/输入不对称）: {tail}"
     if proc.returncode not in (0, 1):
         return FAIL, f"L4 run-all 未知 exit {proc.returncode}（fail-closed）: {tail}"
-    matrix_path = ROOT / L4_MATRIX_REL
     if not matrix_path.is_file():
         return FAIL, f"run-all 未产出 {rel(matrix_path)}（fail-closed：矩阵=裁定输入）"
     try:
@@ -1161,6 +1199,9 @@ def gate_l4() -> tuple[str, str]:
     if (not isinstance(matrix, dict)
             or matrix.get("generated_by") != "tools/l4_diff_run.py run-all"):
         return FAIL, f"{rel(matrix_path)} 非 run-all 矩阵产物（generated_by 不符，fail-closed）"
+    stale = l4_matrix_fresh_error(run_started, pre_fp, l4_matrix_fingerprint(matrix_path))
+    if stale:
+        return FAIL, f"L4 矩阵新鲜度校验失败: {stale}｜runner: {tail[:160]}"
     try:
         baseline = load_l4_ratchet_baseline()
     except BaselineFormatError as exc:
@@ -2396,6 +2437,268 @@ def cmd_selftest(_args) -> int:
             check("l4 门禁实跑裁定 PASS/TOLERATED（逐采集点 ratchet 守住，验收④）",
                   r17["verdict"] in (PASS, TOLERATED),
                   f"verdict={r17['verdict']} {r17['detail'][:200]}")
+
+    # 18) fix wave 假绿/漂移封堵探针（2026-10-26 最终复核 findings——C1 崩溃判旧矩阵后门 /
+    #     I1 空采集点空跑出绿 / I2 trigger-nav 两侧输入不对称漂移陷阱）：每探针先红后绿实测。
+    #     载体=tmp 隔离工作区 + 假双腿（不真跑 cargo/Mesen——裁的是拒跑判定面本身）；
+    #     探针按**原因**断言（防 exit 2 巧合假红/假绿，test_l4_matrix 同纪律）。
+    import time as _time18
+    import types as _types18
+    try:
+        sys.path.insert(0, str(ROOT / "tools"))
+        import importlib as _il18
+        l4m18 = _il18.import_module("l4_diff_run")
+        srm18 = _il18.import_module("scenario_run")
+        err18 = ""
+    except Exception as exc:  # noqa: BLE001 —— 载入失败显式红（禁静默跳过）
+        l4m18 = srm18 = None
+        err18 = f"l4_diff_run/scenario_run 载入失败: {exc!r}"
+
+    def _png18(p):
+        from PIL import Image
+        Image.new("RGB", (8, 8), (10, 20, 30)).save(p)
+
+    def _fake_legs18(products, blocked=()):
+        """假双腿（记录调用）：rust 腿按 products 产 manifest+截图，emu 腿产同名截图（同色=match）。"""
+        calls = {"rust": 0, "emu": 0}
+
+        def fake_rust(name, sched, out_dir, state_out=None, bundle=None):
+            calls["rust"] += 1
+            man = {"name": name, "frames": 10, "gap": bool(blocked),
+                   "captures": [{"frame": f, "tag": t,
+                                 "file": f"{name}_f{f:05}_{t}.png", "status": "produced"}
+                                for f, t in products],
+                   "blocked": [{"frame": f, "tag": t, "reason": r} for f, t, r in blocked]}
+            out = Path(out_dir)
+            out.mkdir(parents=True, exist_ok=True)
+            (out / f"{name}.rust.captures.json").write_text(
+                json.dumps(man, ensure_ascii=False), encoding="utf-8")
+            for f, t in products:
+                _png18(out / f"{name}_f{f:05}_{t}.png")
+            return True
+
+        def fake_emu(name, timeout, scen_path):
+            calls["emu"] += 1
+            for f, t in products:
+                _png18(l4m18.SHOTS_EMU / f"{name}_f{f:05}_{t}.png")
+            return True
+        return calls, fake_rust, fake_emu
+
+    def _run_cli18(argv):
+        """进程内跑 l4_diff_run.main() → (rc, stdout, stderr)（假腿面不真跑 cargo/Mesen）。"""
+        import io
+        old = (sys.argv, sys.stdout, sys.stderr)
+        out, err = io.StringIO(), io.StringIO()
+        sys.argv, sys.stdout, sys.stderr = ["l4_diff_run.py", *argv], out, err
+        try:
+            l4m18.main()
+            rc = 0
+        except SystemExit as exc:  # main 以 SystemExit 传出 exit code
+            rc = int(getattr(exc, "code", 0) or 0)
+        except Exception as exc:  # noqa: BLE001 —— 探针壳不崩自检（意外异常显式记）
+            rc = -1
+            err.write(f"[probe] main() 意外异常: {exc!r}\n")
+        finally:
+            sys.argv, sys.stdout, sys.stderr = old
+        return rc, out.getvalue(), err.getvalue()
+
+    if l4m18 is None:
+        for tag18 in ("C1①", "C1②", "I1①", "I1②", "I1③", "I1④", "I1⑤", "I2①", "I2②"):
+            check(f"fix wave 探针 {tag18} 载体在位（l4_diff_run 可导入）", False, err18)
+    else:
+        # ---- I1：空采集点/分母不对账 ⇒ 拒跑（不空跑出绿『✅ 全部一致』） ----
+        with tempfile.TemporaryDirectory() as td:
+            tmp = Path(td)
+            sr_dir, se_dir = tmp / "shots_rust", tmp / "shots"
+            sr_dir.mkdir()
+            se_dir.mkdir()
+            rom = tmp / "rom.nes"
+            rom.write_bytes(b"FAKE-ROM")
+            case_empty = tmp / "case-empty.txt"
+            case_empty.write_text("name case-empty\nframes 10\nsnapshot none\n", encoding="utf-8")
+            case_two = tmp / "case-two.txt"
+            case_two.write_text("name case-two\nframes 10\nsnapshot none\n"
+                                "capture 5 mid\ncapture 10 end\n", encoding="utf-8")
+            old_g = (l4m18.SHOTS_RUST, l4m18.SHOTS_EMU, l4m18.ROM,
+                     l4m18.run_rust, l4m18.run_emu)
+            l4m18.SHOTS_RUST, l4m18.SHOTS_EMU, l4m18.ROM = sr_dir, se_dir, rom
+
+            def _swap_legs18(products):
+                calls, fr, fe = _fake_legs18(products)
+                l4m18.run_rust, l4m18.run_emu = fr, fe
+                return calls
+
+            try:
+                calls = _swap_legs18([])
+                rc, out, err = _run_cli18(["run", str(case_empty)])
+                check("I1① run 空采集点 ⇒ fail-loud exit≠0（0 采集点不空跑出绿『✅ 全部一致』）",
+                      rc != 0 and "全部一致" not in out and "采集点" in (err + out),
+                      f"rc={rc} 腿调用={calls} out尾={out.strip()[-100:]!r} "
+                      f"err尾={err.strip()[-160:]!r}")
+                calls = _swap_legs18([])
+                rc, out, err = _run_cli18(["diff", str(case_empty)])
+                check("I1② diff 空采集点同拒（复用径不得空跑出绿）",
+                      rc != 0 and "全部一致" not in out and "采集点" in (err + out),
+                      f"rc={rc} 腿调用={calls} out尾={out.strip()[-100:]!r} "
+                      f"err尾={err.strip()[-160:]!r}")
+                calls = _swap_legs18([(5, "mid")])  # 缺 10:end（产物 < DSL 采集点）
+                rc, out, err = _run_cli18(["run", str(case_two)])
+                check("I1③ run 分母对账（缺采集点：产物 < DSL capture）⇒ fail-loud 拒跑（不缩分母出绿）",
+                      rc != 0 and "全部一致" not in out and "对账" in (err + out),
+                      f"rc={rc} 腿调用={calls} out尾={out.strip()[-100:]!r} "
+                      f"err尾={err.strip()[-160:]!r}")
+                calls = _swap_legs18([(5, "mid"), (7, "phantom")])  # 多 DSL 外采集点
+                rc, out, err = _run_cli18(["run", str(case_two)])
+                check("I1④ run 分母对账（多采集点：产物 > DSL capture）⇒ fail-loud 拒跑（锚外结果不漏 diff）",
+                      rc != 0 and "全部一致" not in out and "对账" in (err + out),
+                      f"rc={rc} 腿调用={calls} out尾={out.strip()[-100:]!r} "
+                      f"err尾={err.strip()[-160:]!r}")
+                calls = _swap_legs18([(5, "mid"), (10, "end")])  # 正对照：逐一相等
+                rc, out, err = _run_cli18(["run", str(case_two)])
+                check("I1⑤ 对账正对照：产物==DSL 采集点 ⇒ 正常裁 match（封堵不误伤合法用例）",
+                      rc == 0 and "全部一致" in out,
+                      f"rc={rc} 腿调用={calls} out尾={out.strip()[-100:]!r}")
+            finally:
+                l4m18.SHOTS_RUST, l4m18.SHOTS_EMU, l4m18.ROM, \
+                    l4m18.run_rust, l4m18.run_emu = old_g
+
+        # ---- I2：trigger/nav 运行时条件输入 Rust 侧无对应面 ⇒ 拒跑（不静默两侧跑不同输入） ----
+        with tempfile.TemporaryDirectory() as td:
+            tmp = Path(td)
+            sr_dir, se_dir = tmp / "shots_rust", tmp / "shots"
+            sr_dir.mkdir()
+            se_dir.mkdir()
+            rom = tmp / "rom.nes"
+            rom.write_bytes(b"FAKE-ROM")
+            cdir = tmp / "cases"
+            cdir.mkdir()
+            (cdir / "case-trig.txt").write_text(
+                "name case-trig\nframes 10\nsnapshot none\n"
+                "trigger 1-10 51 == 0 hold right\n"
+                "capture 5 mid\n", encoding="utf-8")
+            (cdir / "case-nav.txt").write_text(
+                "name case-nav\nframes 10\nsnapshot none\n"
+                "nav 1-10 x 100\n"
+                "capture 5 mid\n", encoding="utf-8")
+            calls, fr, fe = _fake_legs18([(5, "mid")])
+            old_g = (l4m18.CASES_DIR, l4m18.SHOTS_RUST, l4m18.SHOTS_EMU, l4m18.ROM,
+                     l4m18.run_rust, l4m18.run_emu)
+            l4m18.CASES_DIR, l4m18.SHOTS_RUST, l4m18.SHOTS_EMU, l4m18.ROM = \
+                cdir, sr_dir, se_dir, rom
+            l4m18.run_rust, l4m18.run_emu = fr, fe
+            try:
+                rc, out, err = _run_cli18(["run", str(cdir / "case-trig.txt")])
+                check("I2① 含 trigger 用例 ⇒ fail-loud 拒跑（两侧输入不对称——绝不静默两侧跑不同输入）",
+                      rc != 0 and ("不对称" in (err + out) or "trigger" in (err + out))
+                      and "全部一致" not in out and calls["rust"] == 0 and calls["emu"] == 0,
+                      f"rc={rc} 腿调用={calls} out尾={out.strip()[-100:]!r} "
+                      f"err尾={err.strip()[-160:]!r}")
+                calls["rust"] = calls["emu"] = 0
+                rc, out, err = _run_cli18(["run-all"])
+                check("I2② run-all 含 nav 用例 ⇒ fail-loud 拒跑 exit 2（不静默两侧跑不同输入出假对拍矩阵）",
+                      rc == 2 and ("nav" in (err + out) or "不对称" in (err + out))
+                      and calls["rust"] == 0,
+                      f"rc={rc} 腿调用={calls} out尾={out.strip()[-100:]!r} "
+                      f"err尾={err.strip()[-160:]!r}")
+            finally:
+                l4m18.CASES_DIR, l4m18.SHOTS_RUST, l4m18.SHOTS_EMU, l4m18.ROM, \
+                    l4m18.run_rust, l4m18.run_emu = old_g
+
+        # ---- C1：run-all 崩溃语义=拒跑 exit 2（②）+ gate 绝不判旧矩阵（①） ----
+        with tempfile.TemporaryDirectory() as td:
+            tmp = Path(td)
+            cdir = tmp / "cases"
+            cdir.mkdir()
+            (cdir / "case-x.txt").write_text("name case-x\nframes 10\ncapture 5 mid\n",
+                                             encoding="utf-8")
+            old_g = (l4m18.CASES_DIR, l4m18.SHOTS_RUST, srm18.expand_schedule)
+            l4m18.CASES_DIR = cdir
+            l4m18.SHOTS_RUST = tmp / "shots_rust"
+
+            def _boom18(plan):
+                raise RuntimeError("simulated do_run_all crash")
+
+            srm18.expand_schedule = _boom18
+            try:
+                rc18 = l4m18.do_run_all(
+                    argparse.Namespace(skip_rust=True, skip_emu=True, timeout=1.0))
+                check("C1② do_run_all 全量兜底：中途未捕获异常 ⇒ exit 2 拒跑（非 exit 1 裸 traceback 当『跑完』）",
+                      rc18 == 2, f"rc={rc18}")
+            except Exception as exc:  # noqa: BLE001 —— 异常逃逸=未兜底（修复前红形态）
+                check("C1② do_run_all 全量兜底：中途未捕获异常 ⇒ exit 2 拒跑（非 exit 1 裸 traceback 当『跑完』）",
+                      False, f"异常逃逸 do_run_all（未兜底——gate 会把 exit 1 当『跑完』判旧矩阵）: {exc!r}")
+            finally:
+                l4m18.CASES_DIR, l4m18.SHOTS_RUST, srm18.expand_schedule = old_g
+
+        with tempfile.TemporaryDirectory() as td:
+            tmp = Path(td)
+            (tmp / "tools").mkdir()
+            (tmp / "tools" / "l4_diff_run.py").write_text("# stub runner\n", encoding="utf-8")
+            (tmp / "cases").mkdir()
+            (tmp / "cases" / "case-x.txt").write_text("name case-x\nframes 10\n", encoding="utf-8")
+            (tmp / "shots_rust").mkdir()
+            (tmp / "data" / "status").mkdir(parents=True)
+            (tmp / "data" / "status" / "l4_ratchet_baseline.json").write_text(
+                json.dumps({"schema": "l4-ratchet/v1", "rom_sha256": "r" * 64,
+                            "cases": {"c": {"states": {"1:a": "match"}}}}, ensure_ascii=False),
+                encoding="utf-8")
+
+            def _matrix18():
+                return {"generated_by": "tools/l4_diff_run.py run-all",
+                        "rom_sha256": "r" * 64, "cases_total": 1, "cells_total": 1,
+                        "denominator": 1, "match": 1, "diff": 0, "blocked": 0,
+                        "pass": 1, "pass_rate": "1/1", "verdict": "pass",
+                        "rows": [{"case": "c", "case_file": "cases/c.txt",
+                                  "scenario_sha256": "s" * 64, "rom_sha256": "r" * 64,
+                                  "sched_sha256": "h" * 64, "artifacts": {}, "snapshot": None,
+                                  "report": None, "legs": {"rust": "fresh", "emu": "fresh"},
+                                  "error": None,
+                                  "cells": [{"frame": 1, "tag": "a", "state": "match",
+                                             "provenance": {"rust": "fresh", "emu": "fresh"},
+                                             "file": "x", "diff_pixels": 0,
+                                             "total_pixels": 64, "reason": None}]}]}
+
+            mpath = tmp / "shots_rust" / "matrix.json"
+            mpath.write_text(json.dumps(_matrix18(), ensure_ascii=False), encoding="utf-8")
+            old_t = _time18.time() - 3600  # 旧/committed 矩阵（1 小时前落盘=上一轮产物）
+            os.utime(mpath, (old_t, old_t))
+            g18 = globals()
+            old_root, old_run = g18["ROOT"], subprocess.run
+            g18["ROOT"] = tmp
+
+            def crash_run18(cmd, **kw):  # do_run_all 崩溃（exit 1 未捕获异常）且本轮未落盘新矩阵
+                return _types18.SimpleNamespace(
+                    returncode=1, stdout="",
+                    stderr="Traceback (most recent call last):\nRuntimeError: simulated crash\n")
+
+            subprocess.run = crash_run18
+            try:
+                v18, d18 = gate_l4()
+            finally:
+                g18["ROOT"] = old_root
+                subprocess.run = old_run
+            check("C1① 崩溃判旧矩阵后门封堵：run-all 崩溃（exit 1）+陈旧 matrix ⇒ FAIL 拒裁"
+                  "（绝不 [PASS] 判旧/committed 矩阵）",
+                  v18 == FAIL and "ratchet 守住" not in d18 and "绝不判旧矩阵" in d18,
+                  f"verdict={v18} detail={d18[:240]}")
+
+            # 正对照：run-all 本轮真落盘同名新矩阵（temp+rename 原子落盘语义）⇒ 照常裁 PASS
+            def fresh_run18(cmd, **kw):
+                mpath.write_text(json.dumps(_matrix18(), ensure_ascii=False), encoding="utf-8")
+                return _types18.SimpleNamespace(returncode=0,
+                                                stdout="L4 对拍矩阵 …\n", stderr="")
+
+            g18 = globals()
+            g18["ROOT"] = tmp
+            subprocess.run = fresh_run18
+            try:
+                v18, d18 = gate_l4()
+            finally:
+                g18["ROOT"] = old_root
+                subprocess.run = old_run
+            check("C1③ 新鲜度正对照：本轮真落盘新矩阵 ⇒ 照常裁 PASS（封堵不误伤正常 run-all）",
+                  v18 == PASS and "ratchet 守住" in d18,
+                  f"verdict={v18} detail={d18[:240]}")
 
     failed = [c for c in cases if not c[1]]
     for name, ok, detail in cases:
