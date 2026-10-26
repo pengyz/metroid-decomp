@@ -1,5 +1,5 @@
 {
   "schema": 1,
   "whitelist": [],
-  "note": "视觉白名单=唯一允许的例外清单（AGENTS §5：字体/调色板映射等）；变更需用户确认并记录。初始为空（像素级零容差起步）——条目格式 {file: glob, rect:[x,y,w,h], reason, approved_by}。task-31 建立（lead 派发+用户裁定的验证体系收官层）。"
+  "note": "视觉白名单=唯一允许的例外清单（AGENTS §5：字体/调色板映射等）；变更需用户确认并记录。初始为空（像素级零容差起步）——条目格式 {file: glob, rect:[x,y,w,h], reason, approved_by}。task-31 建立（lead 派发+用户裁定的验证体系收官层）。Task 6 起双消费面（唯一例外面不增殖）：① tools/diff_visual.py（visual-diff 金面×复采）② tools/l4_diff_run.py diff_pair（run-all 矩阵/l4 门禁——白名单内像素排除后判 match）。L4 门禁**不得**另立 visual_gap_map 之类账内容忍（防容忍面增殖）；游戏逻辑分歧非白名单素材（由 data/status/l4_ratchet_baseline.json 逐采集点 ratchet 锚定现状）。"
 }

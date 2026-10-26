@@ -1,0 +1,29 @@
+{
+  "schema": "l4-ratchet/v1",
+  "doc": "L4 逐采集点 ratchet 锚（Task 6）——match 集合只增不减 + blocked 只减不增（**非**一致率百分比：9/10→9/10 逐采集点换坏必触发）。消费面=gates/cli.py gate_l4（run-all 矩阵 vs 本锚逐采集点对账）；唯一写入口=tools/baseline_update.py l4（只升不降 + 强制 --reason）；diff=现状参考（改善 diff→match 欢迎，→blocked 由『新增 blocked』规则拦截）；白名单例外=gates/visual_whitelist.json。",
+  "rom_sha256": "e6e6b7014685adae447ebb3833242815747bc1e5df83ade79f693fb67cf565b6",
+  "cases": {
+    "case-001-game-start-samus-interaction": {
+      "scenario_sha256": "23b52bdc841e702020ad97ddf202822cc56e9b0c4669daa27a1cc7c9dadf970f",
+      "states": {
+        "420:game-in": "match",
+        "550:after-right": "diff",
+        "650:after-left": "diff",
+        "720:after-jump": "diff",
+        "820:after-shoot": "diff",
+        "950:combo-action": "diff",
+        "1200:end": "diff"
+      }
+    }
+  },
+  "history": [
+    {
+      "ts": "2026-10-26T13:08:55+00:00",
+      "reason": "Task 6 引导（genesis）：锚定 2026-10-26 run-all 真跑矩阵逐采集点现状——case-001 match 1（420:game-in）/diff 6（游戏逻辑未 L3 一致现状，与 Task 5 矩阵同态）/blocked 0；三 sha 锚 rom=e6e6b701 scenario=23b52bdc 与 Task 5 真跑同值。确认无回退：match 集合从零起锚（只增不减），blocked 空集（只减不增）",
+      "match": 1,
+      "diff": 6,
+      "blocked": 0,
+      "cells_total": 7
+    }
+  ]
+}

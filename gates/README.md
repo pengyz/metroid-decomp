@@ -15,8 +15,9 @@
 | `python3 gates/cli.py naming` | 命名台账证据完整性 | 改 `data/naming/` 后 |
 | `python3 gates/cli.py trace` | 差分 L1–L3（含子程序级 L2） | 改 game-data/game-core 后 |
 | `python3 gates/cli.py visual` | 视觉 L4 | 改渲染后 |
+| `python3 gates/cli.py l4` | L4 自动对拍：run-all 矩阵（用例×采集点三态）+ 逐采集点 ratchet（match 集合只增/blocked 只减，非聚合率） | 改 game-core/渲染后、里程碑收尾 |
 | `python3 gates/cli.py all` | 全量（所有门禁 + selftest） | 里程碑收尾 |
-| `python3 gates/cli.py selftest` | 工具链自证：ratchet 只升不降 / 基线↔历史完整性（历史下界·快照覆盖·sha 链·状态锚点）/ commit-msg 证据门禁（含 ProofDeferred）/ SKIP·TOLERATED 显式打印 / 注册表↔本文件清单 + 命令面双向相等 / proof 证书标记校验 + 触发判定 + DEFERRED 欠账（突变打回用例） | 改门禁后；`all` 内含 |
+| `python3 gates/cli.py selftest` | 工具链自证：ratchet 只升不降 / 基线↔历史完整性（历史下界·快照覆盖·sha 链·状态锚点）/ commit-msg 证据门禁（含 ProofDeferred）/ SKIP·TOLERATED 显式打印 / 注册表↔本文件清单 + 命令面双向相等 / proof 证书标记校验 + 触发判定 + DEFERRED 欠账（突变打回用例）/ L4 逐采集点 ratchet 反向打回（match 缩水·新增 blocked·9/10 换坏） | 改门禁后；`all` 内含 |
 | `python3 gates/cli.py baseline show\|update\|tolerate` | 基线管理：show=基线+历史；update=只升不降+强制 `--reason` 留痕；tolerate=登记显式 TOLERATED（强制 `--bug` BUG-xxx） | 基线/tolerance 变更 |
 | `python3 gates/cli.py commit-msg <msgfile>` | commit-msg 钩子入口（证据门禁本体） | 钩子自动调用 |
 
@@ -25,6 +26,10 @@
 > 更新留痕 = `data/status/baselines/baseline_history.jsonl`（每条必须带 reason，且携带全量
 > `metrics` 快照 + `baseline_sha256` 链）。**历史文件是下界锚，禁止删除/清空**；新仓库 bootstrap
 > 需先落 genesis 记录（带 reason + metrics 快照），否则 baseline-integrity 按『历史缺失』FAIL。
+>
+> L4 逐采集点 ratchet 锚 = `data/status/l4_ratchet_baseline.json`（`l4` 门禁消费；match 集合
+> 只增不减 + blocked 只减不增——**非**一致率百分比），唯一写入口 = `tools/baseline_update.py l4`
+> （只升不降 + 强制 `--reason` 留痕，判定单源=gates/cli.py `l4_ratchet_violations`）。
 
 ## 门禁清单（随阶段启用，SKIP 显式打印）
 
@@ -40,6 +45,7 @@
 | `subroutine-diff` | L2：ROM 原字节执行 vs Rust 函数出入参比对 | oracle/subroutines 建立后启用 |
 | `trace-diff` | L3：帧级状态向量逐 tick 比对（oracle vs Rust） | 启用（oracle 腿；game-core 腿 S5 自动启用） |
 | `visual-diff` | L4：截图逐像素（白名单外） | S6 启用 |
+| `l4` | L4 自动对拍：run-all 矩阵（用例×采集点三态）+ 逐采集点 ratchet（match 集合只增/blocked 只减，非聚合率） | 启用（Task 6） |
 | `completeness-ratchet` | 完备性矩阵覆盖只增不降 | 矩阵建立后启用 |
 | `proof-checks` | int_x SMT 证明+公式↔Rust 桥接复跑（证书防腐） | 启用（按变更面触发；SMT+桥接内联；int_y 穷举留 CI/里程碑） |
 | `tree-coherence` | Rust mod 引用⊆提交树（未跟踪件掩盖破树侦测） | 启用 |

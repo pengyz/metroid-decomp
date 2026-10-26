@@ -1008,6 +1008,184 @@ def gate_visual_diff() -> tuple[str, str]:
     return verdict, detail
 
 
+# ---------------------------------------------------------------- L4 自动对拍门禁（Task 6）
+# gate_l4：调 tools/l4_diff_run.py run-all（用例×采集点三态矩阵）出裁定，按**逐采集点
+# ratchet**判 PASS/FAIL（决策逐字）：① match 集合只增不减——基线锚 match 的采集点现态
+# ≠match（含采集点消失）⇒ 换坏回退 FAIL；② blocked 只减不增——新增 blocked ⇒ 回退 FAIL。
+# **不是**「一致率百分比只升」：9/10→9/10 逐采集点换坏必触发（反向测试钉死）；diff=现状
+# 参考（改善 diff→match 欢迎，→blocked 由②拦截）。blocked 计分母不计 pass（与矩阵一致）。
+# 白名单唯一例外=gates/visual_whitelist.json（tools/l4_diff_run.py diff_pair 消费）；本门禁
+# **不得**另立 visual_gap_map 之类「账内容忍」（防容忍面增殖——容忍面只减不增，Task 6 裁定）。
+# 判定逻辑只在 gates/（AGENTS）：l4_ratchet_violations 为纯函数单源（tools/baseline_update.py
+# 的基线写入守卫 importlib 引用同一函数，无第二份实现）。
+
+L4_RUNNER_REL = Path("tools") / "l4_diff_run.py"
+L4_MATRIX_REL = Path("shots_rust") / "matrix.json"
+L4_RATCHET_REL = Path("data") / "status" / "l4_ratchet_baseline.json"
+L4_WHITELIST_REL = Path("gates") / "visual_whitelist.json"
+L4_RUN_TIMEOUT_S = 1800  # run-all 实测 ~32s（2026-10-26 双腿 fresh）——外层篱笆防挂死（事故②面）
+L4_CELL_STATES = ("match", "diff", "blocked")  # 矩阵三态硬约束（error/未知归 blocked）
+
+
+def load_l4_ratchet_baseline(path: Path | None = None) -> dict:
+    """载入 L4 逐采集点 ratchet 基线（schema 强校验 fail-closed——禁 vacuous 通过）。
+
+    缺失/解析坏/状态值出三态 ⇒ BaselineFormatError（删基线/降基线不得静默绿）。"""
+    p = path or (ROOT / L4_RATCHET_REL)
+    if not p.is_file():
+        raise BaselineFormatError(
+            f"{rel(p)} 缺失（fail-closed：禁 vacuous 通过——先 tools/baseline_update.py l4 引导）")
+    try:
+        doc = json.loads(p.read_text(encoding="utf-8"))
+    except Exception as exc:  # noqa: BLE001 —— 解析失败一律转显式裁定，禁裸 traceback
+        raise BaselineFormatError(f"{rel(p)} 解析失败（fail-closed）: {exc}") from exc
+    if not isinstance(doc, dict) or doc.get("schema") != "l4-ratchet/v1":
+        raise BaselineFormatError(f"{rel(p)}: schema ≠ l4-ratchet/v1（fail-closed）")
+    if not isinstance(doc.get("rom_sha256"), str) or not doc.get("rom_sha256"):
+        raise BaselineFormatError(f"{rel(p)}: rom_sha256 缺（锚不可信，fail-closed）")
+    cases = doc.get("cases")
+    if not isinstance(cases, dict):
+        raise BaselineFormatError(f"{rel(p)}: cases 缺/非对象（fail-closed）")
+    for case, entry in cases.items():
+        if not isinstance(entry, dict) or not isinstance(entry.get("states"), dict):
+            raise BaselineFormatError(f"{rel(p)}: {case} states 缺/非对象（fail-closed）")
+        for key, state in entry["states"].items():
+            if state not in L4_CELL_STATES:
+                raise BaselineFormatError(
+                    f"{rel(p)}: {case}/{key} 状态 {state!r} ∉ 三态 {L4_CELL_STATES}（fail-closed）")
+    return doc
+
+
+def l4_matrix_states(matrix: dict) -> dict[str, dict[str, str]]:
+    """矩阵 rows/cells → {case: {"<frame>:<tag>": state}}（judge 与基线写入共用单源）。"""
+    out: dict[str, dict[str, str]] = {}
+    for row in matrix.get("rows", []) or []:
+        states = out.setdefault(str(row.get("case")), {})
+        for cell in row.get("cells", []) or []:
+            states[f"{cell.get('frame')}:{cell.get('tag')}"] = cell.get("state")
+    return out
+
+
+def l4_ratchet_violations(baseline: dict, matrix: dict) -> list[str]:
+    """逐采集点 ratchet 判定（纯函数，自检/pytest 可注入）→ 回退违规清单（空=守住）。
+
+    规则（决策逐字）：① match 集合只增不减——基线锚 match 的采集点现态≠match ⇒ 换坏回退；
+    ② blocked 只减不增——现态 blocked 而基线未锚 blocked ⇒ 新增回退。另 rom 锚漂移 ⇒
+    fail-closed 违规（对的不是同一只 ROM=对拍对象失真）。diff 持平/改善不违规（现状参考）。"""
+    viol: list[str] = []
+    if baseline.get("rom_sha256") != matrix.get("rom_sha256"):
+        viol.append(
+            f"rom 锚漂移（基线 {str(baseline.get('rom_sha256'))[:12]}… vs 矩阵 "
+            f"{str(matrix.get('rom_sha256'))[:12]}…）——fail-closed 对拍对象失真")
+    base_cases = baseline.get("cases", {}) or {}
+    cur = l4_matrix_states(matrix)
+    for case in sorted(base_cases):  # ① match 集合只增不减
+        bstates = (base_cases.get(case) or {}).get("states", {}) or {}
+        for key in sorted(bstates):
+            if bstates[key] == "match" and cur.get(case, {}).get(key) != "match":
+                viol.append(
+                    f"{case}/{key}: match 集合缩水（基线 match → 现态 "
+                    f"{cur.get(case, {}).get(key, '采集点消失')}）——回退 FAIL")
+    for case in sorted(cur):  # ② blocked 只减不增
+        for key in sorted(cur[case]):
+            if (cur[case][key] == "blocked"
+                    and (base_cases.get(case) or {}).get("states", {}).get(key) != "blocked"):
+                viol.append(
+                    f"{case}/{key}: 新增 blocked（基线 "
+                    f"{(base_cases.get(case) or {}).get('states', {}).get(key, '未锚定')}"
+                    f" → 现态 blocked）——回退 FAIL（blocked 只减不增）")
+    return viol
+
+
+def l4_ratchet_notes(baseline: dict, matrix: dict) -> list[str]:
+    """非违规但必须显式可见的面（防静默）：未锚定采集点（新增 match/diff——须
+    tools/baseline_update.py l4 锁定，否则其后续回退对 ratchet 不可见）+ 用例定义变更
+    （scenario_sha256 漂移=采集点语义变，人工确认无回退后重锚）。"""
+    notes: list[str] = []
+    base_cases = baseline.get("cases", {}) or {}
+    cur = l4_matrix_states(matrix)
+    unanchored = [f"{case}/{key}={cur[case][key]}"
+                  for case in sorted(cur) for key in sorted(cur[case])
+                  if key not in ((base_cases.get(case) or {}).get("states", {}) or {})]
+    if unanchored:
+        notes.append(
+            f"未锚定采集点 {len(unanchored)} 个（新增——请 tools/baseline_update.py l4 锁定，"
+            f"否则其回退不可见）: " + "、".join(unanchored[:8]))
+    row_scen = {str(r.get("case")): r.get("scenario_sha256")
+                for r in (matrix.get("rows") or [])}
+    drift = [case for case in sorted(cur)
+             if case in base_cases
+             and (base_cases.get(case) or {}).get("scenario_sha256") != row_scen.get(case)]
+    if drift:
+        notes.append(f"用例定义变更（scenario_sha256 漂移）: {', '.join(drift[:6])}"
+                     f"——确认无回退后 baseline_update l4 重锚")
+    return notes
+
+
+def gate_l4() -> tuple[str, str]:
+    """L4 自动对拍门禁（Task 6）：run-all 实跑出矩阵 → 逐采集点 ratchet 裁定。
+
+    裁定链（fail-closed，绝不静默绿）：run-all fail-loud（exit 2）⇒ FAIL；矩阵/基线
+    不可解析 ⇒ FAIL（禁 vacuous）；ratchet 违规（match 缩水/新增 blocked）⇒ FAIL；
+    守住 ⇒ PASS（diff 现状持平不阻塞——判据是逐采集点 ratchet，非「全 match」）。"""
+    runner = ROOT / L4_RUNNER_REL
+    cases_dir = ROOT / "cases"
+    baseline_path = ROOT / L4_RATCHET_REL
+    case_files = sorted(cases_dir.glob("*.txt")) if cases_dir.is_dir() else []
+    if not runner.is_file() or not case_files:
+        if baseline_path.is_file():
+            return FAIL, ("『前置对象消失』：L4 ratchet 基线已立但 run-all 前置"
+                          f"（{rel(runner)} 或 cases/ 用例）不在——不得静默消失")
+        return SKIP, ("L4 自动对拍未建立（tools/l4_diff_run.py 或 cases/ 用例缺）"
+                      "——建立后自动启用（显式 SKIP）")
+    try:
+        proc = subprocess.run([sys.executable, str(runner), "run-all"], cwd=ROOT,
+                              capture_output=True, text=True, encoding="utf-8",
+                              errors="replace", env=_child_env(), timeout=L4_RUN_TIMEOUT_S)
+    except subprocess.TimeoutExpired:
+        return FAIL, (f"L4 run-all 超时（>{L4_RUN_TIMEOUT_S}s）——外层篱笆，"
+                      f"超时=FAIL 显式（事故②面）")
+    full = (proc.stdout or "") + (proc.stderr or "")
+    tail = " | ".join(full.strip().splitlines()[-4:])
+    if proc.returncode == 2:
+        return FAIL, f"L4 run-all 拒跑（fail-loud exit 2——分母完整性受损/锚不可信）: {tail}"
+    if proc.returncode not in (0, 1):
+        return FAIL, f"L4 run-all 未知 exit {proc.returncode}（fail-closed）: {tail}"
+    matrix_path = ROOT / L4_MATRIX_REL
+    if not matrix_path.is_file():
+        return FAIL, f"run-all 未产出 {rel(matrix_path)}（fail-closed：矩阵=裁定输入）"
+    try:
+        matrix = json.loads(matrix_path.read_text(encoding="utf-8"))
+    except Exception as exc:  # noqa: BLE001
+        return FAIL, f"{rel(matrix_path)} 解析失败（fail-closed）: {exc}"
+    if (not isinstance(matrix, dict)
+            or matrix.get("generated_by") != "tools/l4_diff_run.py run-all"):
+        return FAIL, f"{rel(matrix_path)} 非 run-all 矩阵产物（generated_by 不符，fail-closed）"
+    try:
+        baseline = load_l4_ratchet_baseline()
+    except BaselineFormatError as exc:
+        return FAIL, f"L4 ratchet 基线不可用（{exc}）"
+    summary = (f"用例 {matrix.get('cases_total')} · 分母 {matrix.get('cells_total')}"
+               f"（blocked {matrix.get('blocked')} 计分母不计 pass）"
+               f"｜match {matrix.get('match')} diff {matrix.get('diff')}"
+               f" blocked {matrix.get('blocked')}")
+    viol = l4_ratchet_violations(baseline, matrix)
+    if viol:
+        return FAIL, (f"L4 逐采集点 ratchet 回退 {len(viol)} 处"
+                      f"（match 集合只增不减 + blocked 只减不增，非聚合率）: "
+                      + "；".join(viol[:6]) + f"｜{summary}")
+    try:
+        wl_doc = json.loads((ROOT / L4_WHITELIST_REL).read_text(encoding="utf-8"))
+        wl_count: object = len(wl_doc.get("whitelist") or [])
+    except Exception:  # noqa: BLE001 —— 白名单计数仅显式回显，读取失败标注未知（不静默）
+        wl_count = "未知（visual_whitelist.json 读取失败）"
+    notes = l4_ratchet_notes(baseline, matrix)
+    note_s = ("；" + "；".join(notes)) if notes else ""
+    return PASS, (f"L4 逐采集点 ratchet 守住（match 集合只增不减 + blocked 只减不增，"
+                  f"非聚合率）｜{summary}｜白名单条目 {wl_count}"
+                  f"（visual_whitelist.json 唯一例外）{note_s}｜runner: {tail[:160]}")
+
+
 def gate_completeness_ratchet() -> tuple[str, str]:
     matrix_path = ROOT / "data" / "status" / "completeness_matrix.json"
     if not matrix_path.is_file():
@@ -1467,6 +1645,8 @@ GATES: list[tuple[str, str, str, str, object]] = [
     ("subroutine-diff", "oracle/subroutines 建立后启用", "all", "L2：ROM 原字节执行 vs Rust 函数出入参比对", gate_subroutine_diff),
     ("trace-diff", "启用（oracle 腿；game-core 腿 S5 自动启用）", "trace", "L3：帧级状态向量逐 tick 比对（oracle vs Rust）", gate_trace_diff),
     ("visual-diff", "S6 启用", "visual", "L4：截图逐像素（白名单外）", gate_visual_diff),
+    ("l4", "启用（Task 6）", "l4",
+     "L4 自动对拍：run-all 矩阵（用例×采集点三态）+ 逐采集点 ratchet（match 集合只增/blocked 只减）", gate_l4),
     ("completeness-ratchet", "矩阵建立后启用", "all", "完备性矩阵覆盖只增不降", gate_completeness_ratchet),
     ("proof-checks", "启用（按变更面触发；SMT+桥接内联；int_y 穷举留 CI/里程碑）", "check",
      "int_x SMT 证明+公式↔Rust 桥接复跑（证书防腐，int-y 穷举 GATES_PROOF_FULL=1）", gate_proof_checks),
@@ -1963,7 +2143,8 @@ def cmd_selftest(_args) -> int:
     reg_pairs = [(e[0], e[1]) for e in GATES]
     check("注册表与 README 门禁清单一致", readme_pairs == reg_pairs,
           f"README={readme_pairs}" if readme_pairs != reg_pairs else f"{len(reg_pairs)} 项逐字一致")
-    cmds = set(re.findall(r"gates/cli\.py ([a-z-]+)", readme))
+    # 命令名提取面含数字（Task 6：`l4` 命令名带数字——原 `[a-z-]+` 只抽到 `l` 假不一致）
+    cmds = set(re.findall(r"gates/cli\.py ([a-z0-9-]+)", readme))
     actual_cmds = parser_command_names()
     check("CLI 子命令面 ↔ README 命令表双向相等", cmds == actual_cmds,
           f"README={sorted(cmds)} CLI={sorted(actual_cmds)}")
@@ -2176,6 +2357,46 @@ def cmd_selftest(_args) -> int:
         check("实录签名子串增生 ⇒ 漂移照常 FAIL（精确等值，不再容忍）",
               not ok and "签名漂移" in rep, rep)
 
+    # 17) L4 逐采集点 ratchet（Task 6——非聚合率反向测试：match 缩水/新增 blocked 必须回退）
+    def _m6(states: dict) -> dict:
+        rows = [{"case": c, "cells": [{"frame": int(k.split(":")[0]), "tag": k.split(":", 1)[1],
+                                       "state": s} for k, s in st.items()]}
+                for c, st in states.items()]
+        return {"generated_by": "tools/l4_diff_run.py run-all", "rom_sha256": "r" * 64,
+                "rows": rows}
+
+    def _b6(states: dict) -> dict:
+        return {"schema": "l4-ratchet/v1", "rom_sha256": "r" * 64,
+                "cases": {c: {"states": dict(st)} for c, st in states.items()}}
+
+    v17 = l4_ratchet_violations(_b6({"c": {"1:a": "match", "2:b": "match"}}),
+                                _m6({"c": {"1:a": "diff", "2:b": "match"}}))
+    check("ratchet 反向①：match 集合缩水（换坏一采集点）⇒ 回退违规",
+          any("1:a" in x for x in v17), f"violations={v17}")
+    v17 = l4_ratchet_violations(_b6({"c": {"1:a": "diff", "2:b": "diff"}}),
+                                _m6({"c": {"1:a": "diff", "2:b": "blocked"}}))
+    check("ratchet 反向②：新增 blocked（blocked 只减不增）⇒ 回退违规",
+          any("2:b" in x for x in v17), f"violations={v17}")
+    st17 = {f"{i}:p": ("match" if i <= 9 else "diff") for i in range(1, 11)}
+    sw17 = dict(st17)
+    sw17["1:p"], sw17["10:p"] = "diff", "match"
+    v17 = l4_ratchet_violations(_b6({"c": st17}), _m6({"c": sw17}))
+    check("ratchet 防聚合率假绿：9/10→9/10 逐采集点换坏 ⇒ 仍回退违规",
+          any("1:p" in x for x in v17), f"violations={v17}")
+    v17 = l4_ratchet_violations(_b6({"c": {"1:a": "match", "2:b": "diff", "3:c": "blocked"}}),
+                                _m6({"c": {"1:a": "match", "2:b": "match", "3:c": "diff"}}))
+    check("ratchet 改善不误报（match 增/blocked 减/diff→match）⇒ 0 违规",
+          v17 == [], f"violations={v17}")
+    v17 = l4_ratchet_violations(_b6({"c": {"1:a": "match", "2:b": "match"}}),
+                                _m6({"c": {"2:b": "match"}}))
+    check("ratchet 防删点逃逸：基线 match 采集点消失 ⇒ 回退违规",
+          any("1:a" in x for x in v17), f"violations={v17}")
+    for r17 in results:  # 实跑（复用 5) run_all_gates 结果，不二次跑 runner）
+        if r17["name"] == "l4":
+            check("l4 门禁实跑裁定 PASS/TOLERATED（逐采集点 ratchet 守住，验收④）",
+                  r17["verdict"] in (PASS, TOLERATED),
+                  f"verdict={r17['verdict']} {r17['detail'][:200]}")
+
     failed = [c for c in cases if not c[1]]
     for name, ok, detail in cases:
         print(f"  [{'ok' if ok else 'FAIL'}] {name}" + (f" —— {detail}" if detail else ""))
@@ -2191,10 +2412,11 @@ def build_parser() -> argparse.ArgumentParser:
 
     sub.add_parser("status", help="只读预检：门禁清单 + 启用/SKIP 状态 + 基线对照").set_defaults(func=cmd_status)
     sub.add_parser("check", help="总闸（pre-commit 调用）").set_defaults(func=cmd_check)
-    # 单门禁命令只有 README 命令表所列的 5 个（t10 R2：CLI 子命令面与 README 双向一致，
-    # 不再注册门禁名别名）。
+    # 单门禁命令只有 README 命令表所列的 6 个（t10 R2：CLI 子命令面与 README 双向一致，
+    # 不再注册门禁名别名；l4=Task 6 自动对拍门禁）。
     for cmd_name, gate_name in (("rom", "rom-integrity"), ("seed", "seed-integrity"),
-                                ("naming", "naming-ledger"), ("trace", "trace-diff"), ("visual", "visual-diff")):
+                                ("naming", "naming-ledger"), ("trace", "trace-diff"),
+                                ("visual", "visual-diff"), ("l4", "l4")):
         p = sub.add_parser(cmd_name, help=f"单门禁 {gate_name}")
         p.set_defaults(func=cmd_single(cmd_name, gate_name))
     sub.add_parser("all", help="全量：所有门禁 + selftest").set_defaults(func=cmd_all)
