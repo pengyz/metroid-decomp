@@ -678,7 +678,7 @@ fn crawler_ai(mem: &mut crate::frame::FrameMemory, x: u8) {
         } else {
             let o = mem.read_ram(0x0400 + x as u16 + 10); // data0A
             mem.write_ram(0x0400 + x as u16 + 10, o.wrapping_sub(1) & 0x03); // 朝向--
-            // CrawlerReorientSprite($9A8F) anim 面随件（占位）
+            crawler_reorient_sprite(mem, x); // $9A8F（ InsideCorner 碰撞径 `4C 8F 9A`）
         }
     }
     // CrawlerOutsideCornerCheck（bank1:$9AC6——**goal-r16 G3'**）：恒跑，向 (data0A+1) 探移
@@ -696,10 +696,11 @@ fn crawler_ai(mem: &mut crate::frame::FrameMemory, x: u8) {
         };
         if probe_ok {
             mem.write_ram(0x0400 + x as u16 + 10, next_o); // data0A+1（asm `9D 0A 04`）
-            // CrawlerReorientSprite($9A8F) anim 面随件（占位）
+            crawler_reorient_sprite(mem, x); // $9A8F（OutsideCorner 径 `20 8F 9A`）
         }
     }
-    update_enemy_common_no_move_no_anim(mem, x); // @exit 径（anim+显示）
+    update_enemy_anim(mem, x, 3); // @exit `A9 03/20 0C 80`（cadence=3）
+    update_enemy_common_no_move_no_anim(mem, x); // @exit 径 `4C 06 80`（anim+显示）
 }
 
 /// UpdateEnemyCommon@noMoveNoAnim（**asm 内容锚** `: 07:F416`——r26）：tough 调色→
@@ -717,6 +718,58 @@ fn update_enemy_common_no_move_no_anim(mem: &mut crate::frame::FrameMemory, x: u
     }
     mem.write_ram(0x0400 + x as u16 + 4, 0); // isHit=+4
     mem.write_ram(0x0400 + x as u16 + 14, 0); // weaponAction=+14
+}
+
+/// CrawlerReorientSprite（**ROM 字节锚** bank1:$9A8F——m1disasm 未标注区（D5 四方交叉：
+/// ROM 直读 + 三层闭环：$9AA0→EnAnimTable→EnFramePtrTable1→emu OAM 实测一致））：
+/// `lda data05/lsr`（flip=bit0 进 carry）`lda data0A/and #3/rol A`（idx=orient*2+flip）
+/// `lda $9AA0,y / jmp InitEnAnimIndex`（F68D：reset/index←A、animDelay←0）。
+/// 旧形「随件占位」⇒ 敌 animFrame 恒 0 ⇒ 画错帧（emu tile CA/CB/DA/DB vs rust 14）。
+fn crawler_reorient_sprite(mem: &mut crate::frame::FrameMemory, x: u8) {
+    const CRAWLER_SPRITE_ANIM_TBL: [u8; 8] =
+        [0x35, 0x35, 0x3E, 0x38, 0x3B, 0x3B, 0x38, 0x3E]; // ROM $9AA0（orient*2+flip）
+    let d05 = mem.read_ram(0x0400 + x as u16 + 5);
+    let flip = d05 & 0x01; // lsr→carry=bit0
+    let orient = (mem.read_ram(0x0400 + x as u16 + 10) & 0x03) as usize;
+    let idx = ((orient << 1) | flip as usize) & 0x07;
+    let v = CRAWLER_SPRITE_ANIM_TBL[idx];
+    // InitEnAnimIndex(F68D)
+    mem.write_wram(0x6AF4 + x as u16 + 5, v); // resetAnimIndex
+    mem.write_wram(0x6AF4 + x as u16 + 6, v); // animIndex
+    mem.write_wram(0x6AF4 + x as u16 + 4, 0); // animDelay←0
+}
+
+/// UpdateEnemyAnim（**asm 内容锚** `UpdateEnemyAnim: ; 07:E094`——敌人动画走表全径）：
+/// status==Pickup(5)⇒RTS；delay 门（≠0 递减未归零⇒RTS）→`sta animDelay←A`→走
+/// EN_ANIM_TABLE[animIndex]（区表——Brinstar $9D6A）：FF⇒animIndex←reset 续走；
+/// 否则 animFrame(+3)←表值、animIndex+1。调用形：CrawlerAI @exit `lda #3/jsr $800C`。
+fn update_enemy_anim(mem: &mut crate::frame::FrameMemory, x: u8, a: u8) {
+    let base = 0x6AF4u16 + x as u16;
+    if mem.read_wram(base) == 5 {
+        return; // Pickup 态不更
+    }
+    let delay = mem.read_wram(base + 4);
+    if delay != 0 {
+        let d = delay - 1;
+        mem.write_wram(base + 4, d);
+        if d != 0 {
+            return;
+        }
+    }
+    mem.write_wram(base + 4, a); // sta animDelay←A
+    let reset = mem.read_wram(base + 5);
+    let mut y = mem.read_wram(base + 6) as usize;
+    for _ in 0..16u32 {
+        let v = *game_data::area::enemy_gfx::EN_ANIM_TABLE.get(y).unwrap_or(&0xFF);
+        if v == 0xFF {
+            y = reset as usize; // 回绕续走
+            continue;
+        }
+        mem.write_wram(base + 3, v); // animFrame←表值
+        mem.write_wram(base + 6, y.wrapping_add(1) as u8);
+        return;
+    }
+    crate::unported!("bank07:E0BC-wrap"); // 表不变量破裂——fail-loud（update_obj_anim 同式）
 }
 
 /// DrawEnemy（**asm 内容锚** `DrawEnemy: ; 07:DD8B`——r26 端口）：animFrame==FrameNone⇒
@@ -1822,6 +1875,48 @@ mod r30_enemy_spawn_delay_tdd {
         // status 应为 2（Active）
         assert_eq!(m.read_wram(0x6AF4 + 4), 2, "status 应为 2（Active）");
     }
+}
+
+/// CrawlerReorientSprite（**ROM 字节锚** bank1:$9A8F——m1disasm 未标注区，ROM 直读+三层
+/// 闭环自证：$9AA0[orient*2+flip] → InitEnAnimIndex(F68D：reset/index←A、delay←0)）：
+/// `lda data05/lsr`（flip→carry）`lda data0A/and #3/rol A`（A=orient*2+flip）`lda $9AA0,y`
+/// `jmp InitEnAnimIndex`。旧形「随件占位」⇒ 敌 animFrame 恒 0 ⇒ 画错帧。
+#[test]
+fn crawler_reorient_sets_anim_index_from_orientation() {
+    let mut m = crate::frame::FrameMemory::default();
+    // slot4：data05=0x18（flip=bit0=0）、data0A(orientation)=1（沿壁向下）
+    m.write_ram(0x0445, 0x18); // slot4 data05（flip=bit0=0）
+    m.write_ram(0x044A, 0x01); // slot4 data0A（orient=1 沿壁向下）
+    crawler_reorient_sprite(&mut m, 0x40);
+    // $9AA0[1*2+0]=$3E ⇒ reset/animIndex←$3E、delay←0
+    assert_eq!(m.read_wram(0x6AF4 + 0x40 + 5), 0x3E, "resetAnimIndex←$3E");
+    assert_eq!(m.read_wram(0x6AF4 + 0x40 + 6), 0x3E, "animIndex←$3E");
+    assert_eq!(m.read_wram(0x6AF4 + 0x40 + 4), 0x00, "animDelay←0");
+}
+
+/// UpdateEnemyAnim（**asm 内容锚** `UpdateEnemyAnim: ; 07:E094`——敌人动画走表全径）：
+/// status==Pickup(5)⇒RTS；delay 门（≠0 递减未归零⇒RTS）→`sta animDelay←A`→走
+/// EN_ANIM_TABLE[animIndex]：FF⇒animIndex←reset 续走；否则 animFrame←表值、animIndex+1。
+#[test]
+fn update_enemy_anim_walks_frame_ids() {
+    let mut m = crate::frame::FrameMemory::default();
+    // Zoomer 沿壁：reset=$3E、animIndex=$3E（EnAnimTable[62]=$5E、[63]=$5F、[64]=FF?）
+    m.write_wram(0x6AF4 + 0x40 + 5, 0x3E);
+    m.write_wram(0x6AF4 + 0x40 + 6, 0x3E);
+    m.write_wram(0x6AF4 + 0x40 + 4, 0x00);
+    m.write_wram(0x6AF4 + 0x40, 2); // Active（非 Pickup）
+    update_enemy_anim(&mut m, 0x40, 3); // A=3（CrawlerAI @exit cadence）
+    assert_eq!(m.read_wram(0x6AF4 + 0x40 + 3), 0x5E, "animFrame←EnAnimTable[$3E]=$5E");
+    assert_eq!(m.read_wram(0x6AF4 + 0x40 + 6), 0x3F, "animIndex→$3F");
+    assert_eq!(m.read_wram(0x6AF4 + 0x40 + 4), 3, "animDelay←A=3");
+    // delay 门：asm ——递减到 0 那次即落穿走表。故 2 次不更新：
+    update_enemy_anim(&mut m, 0x40, 3);
+    update_enemy_anim(&mut m, 0x40, 3);
+    assert_eq!(m.read_wram(0x6AF4 + 0x40 + 3), 0x5E, "delay 未归零不更新");
+    assert_eq!(m.read_wram(0x6AF4 + 0x40 + 6), 0x3F, "index 未动");
+    // 第 3 次：dec 1→0 落穿 ⇒ 走下一步 $5F
+    update_enemy_anim(&mut m, 0x40, 3);
+    assert_eq!(m.read_wram(0x6AF4 + 0x40 + 3), 0x5F, "animFrame←$5F");
 }
 
 #[cfg(test)]
