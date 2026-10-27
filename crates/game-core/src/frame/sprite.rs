@@ -197,3 +197,80 @@ mod r25_oam_probe {
         }
     }
 }
+
+/// DrawEnemy（$DD8B）端口：敌人槽→OAM 四元组（精灵生成面）
+///
+/// 保真边界：只做渲染面（精灵生成），敌人 AI/移动/碰撞/消灭留后续（deferred）。
+/// refs asm 锚：bank7:DD8B（DrawEnemy）/bank7:DDB0（DrawEnemy_NotBlank）/
+/// bank7:DCC3（GetSpriteCntrlData）/bank7:DF19（DrawSpriteObject）/bank7:DEE6（WriteSpriteRAM）
+pub fn draw_enemy(mem: &mut crate::frame::FrameMemory, page_index: u8) {
+    let px = (page_index as u16) << 4; // 槽×16B
+    let blob = |a: u16| -> u8 { mem.read_ram(a) };
+    // DrawEnemy（$DD8B）：animFrame==FrameNone→ClearObjectCntrl
+    let anim_frame = blob(0x6AF4 + page_index as u16); // EnsExtra.0.animFrame
+    if anim_frame == 0xFF {
+        // _id_FrameNone——ClearObjectCntrl（$DF2D）
+        mem.write_ram(0x006B, 0);
+        return;
+    }
+    // DrawEnemy_NotBlank（$DDB0）：y/x/hi
+    let y = blob(0x0400 + px); // Ens.0.y
+    let x = blob(0x0401 + px); // Ens.0.x
+    let hi = blob(0x6AF4 + page_index as u16 + 6); // EnsExtra.0.hi（偏移需考证——先用邻位）
+    // 帧指针：animFrame*2→EnFramePtrTable1/2（bank 指针表——暂用近邻模式）
+    // TODO: 完整 EnFramePtrTable1/2 表结构（bank:addr 考证）
+    // GetSpriteCntrlData（$DCC3）：控制字节→place index + cntrl05
+    // TODO: 完整 GetSpriteCntrlData（控制字节 AABBXXXX 解）
+    // DrawSpriteObject（$DF19）帧流环（与 anim_draw_object 同构）
+    // TODO: 帧数据+place 数据（待表结构考证完）
+    // 保真边界：本 turn 先落骨架（animFrame 非 None 时写 OAM 占位——红→绿门径）
+    let screen_y = y.wrapping_sub(blob(0x00FF)); // ScrollY
+    let screen_x = x.wrapping_sub(blob(0x00FE)); // ScrollX
+    let visible = screen_y < 0xF0;
+    // 写 OAM 四元组（占位形——待帧数据接完改真）
+    let xs = mem.read_ram(0x005B) as u16; // SpritePagePos
+    if visible && xs + 4 <= 0x100 {
+        mem.write_ram(0x0200 + xs, screen_y.wrapping_sub(1)); // y
+        mem.write_ram(0x0201 + xs, 0x01); // tile（占位）
+        mem.write_ram(0x0202 + xs, 0x00); // attr（占位）
+        mem.write_ram(0x0203 + xs, screen_x); // x
+        mem.write_ram(0x005B, (xs + 4) as u8); // SpritePagePos 推进
+    }
+}
+
+#[cfg(test)]
+mod r26_draw_enemy_tdd {
+    use super::*;
+    use crate::frame::FrameMemory;
+
+    /// TDD 红→绿：敌人槽 animFrame 非 None 时生成 OAM 精灵
+    #[test]
+    fn draw_enemy_generates_oam_when_animframe_set() {
+        let mut m = FrameMemory::default();
+        // 敌人槽 4（$0440）：y=45 x=200（emu f820 实测形）
+        m.write_ram(0x0440, 45); // y
+        m.write_ram(0x0441, 200); // x
+        // EnsExtra.0.animFrame（$6AF4+4）= 非 None
+        m.write_ram(0x6AF4 + 4, 0x01);
+        // ScrollY/ScrollX
+        m.write_ram(0x00FF, 0);
+        m.write_ram(0x00FE, 0);
+        // SpritePagePos=0
+        m.write_ram(0x005B, 0);
+        draw_enemy(&mut m, 4);
+        // OAM spr0 应有内容
+        let oam_y = m.read_ram(0x0200);
+        let oam_x = m.read_ram(0x0203);
+        assert!(oam_y != 0 || oam_x != 0, "敌人 OAM 应有 sprite 落（y={:02X} x={:02X}）", oam_y, oam_x);
+    }
+
+    /// TDD 红→绿：animFrame==None 时 ClearObjectCntrl（不写 OAM）
+    #[test]
+    fn draw_enemy_clears_cntrl_when_blank() {
+        let mut m = FrameMemory::default();
+        m.write_ram(0x6AF4 + 4, 0xFF); // animFrame=None
+        m.write_ram(0x006B, 0x80); // ObjectCntrl 有值
+        draw_enemy(&mut m, 4);
+        assert_eq!(m.read_ram(0x006B), 0, "animFrame=None 应 ClearObjectCntrl");
+    }
+}
