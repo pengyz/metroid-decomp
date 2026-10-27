@@ -20,6 +20,7 @@ analysis/
 
 # 运行截图/录屏：ROM 衍生数据，不入库
 shots/
+shots_rust/
 analysis/
 tools/mesen2/
 
