@@ -289,6 +289,28 @@ mod tests {
         assert!(object_check_move_down(&mut m), "y=176（y+ry=191 未及地板）应可走");
     }
 
+    /// ObjectCheckMoveUp 查撞点=**y−radiusY−8**（上方——asm E7A2 `adc #$08`→
+    /// 查撞点 Y=y−(radiusY+8)）。钉死天花板检：固实瓦在 y−ry−8 行=阻挡；下方行=可走。
+    #[test]
+    fn object_check_move_up_checks_ceiling_at_y_minus_radiusy_minus_8() {
+        use crate::ram_map::{SAMUS_HI, SAMUS_RADIUS_Y, SAMUS_Y};
+        // 上方查撞点 y−ry−8=77 行（tile row 72）→ idx=((72)<<2)|(128>>3)=288|16=304
+        let ceil_idx = 0x6000u16 | 304;
+        let mut m = FrameMemory::default();
+        for i in 0..1024u16 {
+            m.write_wram(0x6000 | i, 0xFF);
+        }
+        m.write_wram(ceil_idx, 0x5C); // 固实天花板（<0x80=阻挡）
+        m.write_ram(SAMUS_Y, 100); // y=100 → y−ry−8=77 → 撞天花板行
+        m.write_ram(SAMUS_RADIUS_Y, 15);
+        m.write_ram(0x030E, 128);
+        m.write_ram(SAMUS_HI, 0);
+        assert!(!object_check_move_up(&mut m), "y=100（y−ry−8=77 撞天花板）应阻挡");
+        // y=110 → y−ry−8=87（80 行=空）→ 可走（未及天花板）
+        m.write_ram(SAMUS_Y, 110);
+        assert!(object_check_move_up(&mut m), "y=110（y−ry−8=87 未及天花板）应可走");
+    }
+
     /// VertAccelerate 头：空中跳过+地面 maxspeed 初始化+对齐检测引爆。
     #[test]
     fn vert_accelerate_head_face() {
@@ -348,6 +370,20 @@ pub fn object_check_move_down(mem: &mut FrameMemory) -> bool {
     let _ry = mem.read_ram(SAMUS_RADIUS_Y);
     // ObjectCheckMoveVertical（E7B5——同构敌径（collision_point_ok））
     object_check_move_vertical(mem)
+}
+
+/// ObjectCheckMoveUp（**asm 内容锚** `ObjectCheckMoveUp: ; 07:E7A2`→`ObjectCheckMoveVertical:
+/// 07:E7B5`——向上阻挡检测（天花板））：`ldx PageIndex/lda Objects.0.radiusY,x/clc/adc #$08`
+/// （=radiusY+8）→ ObjectCheckMoveVertical（查撞点 Y=y−(radiusY+8)=y−ry−8——上方）。
+/// 与 object_check_move_down（下方 y+ry）相对。【goal-r15 复核 R1 闭合】旧形误删向上查撞
+/// →天花板穿透；正解=独立 up 点 y−ry−8（非删除——旧「起跳即落地」病根是共享点落在体内）。
+pub fn object_check_move_up(mem: &mut FrameMemory) -> bool {
+    let y = mem.read_ram(0x030D);
+    let ry = mem.read_ram(SAMUS_RADIUS_Y);
+    let x = mem.read_ram(0x030E);
+    let hi = mem.read_ram(SAMUS_HI);
+    let check_y = y.wrapping_sub(ry).wrapping_sub(8); // 向上查撞点=y−radiusY−8（asm E7A2）
+    collision_point_ok(mem, check_y, x, hi)
 }
 
 /// SamusCollisionWithSolidEntities（**asm 内容锚+结构互核注**——全仪式关键件②）：
@@ -669,13 +705,23 @@ pub fn lava_and_move_check(mem: &mut FrameMemory) {
     let steps = disp.unsigned_abs();
     let going_down = disp >= 0;
     for _ in 0..steps {
-        // MoveSamusDown（E4A3）：每像素查撞。受阻⇒RTS_X163（落地）。
-        // 【goal-r13】asm E2E3 @loop_down MoveSamusDown 仅**向下**查撞（向上=跳不查）。
-        // 旧形向上也查撞→起跳即落地（跳跃 1 帧）。
-        if going_down && !object_check_move_down(mem) {
-            stop_vert_movement(mem); // D147（清垂直动量）
-            mem.write_ram(crate::ram_map::SAMUS_ACCEL_Y, 0); // 落地清重力（@landingNoBounce）
-            break;
+        // 【goal-r15 复核 R1 更正】asm 双向查撞：MoveSamusDown（E4A3 向下，点 y+ry）/
+        // MoveSamusUp（E457 `(y−ry)&7==0 → jsr ObjectCheckMoveUp(E7A2)` 向上，点 y−ry−8）。
+        // > 【2026-10-27 更正】旧注「仅向下查撞（向上=跳不查）」被 ROM 证伪（E457 确查向上）；
+        // > 旧「起跳即落地」病根=共享点 y−ry+8 落体内，正解=独立 up 点 y−ry−8（非删向上查撞）。
+        if going_down {
+            if !object_check_move_down(mem) {
+                stop_vert_movement(mem); // D147（清垂直动量）
+                mem.write_ram(crate::ram_map::SAMUS_ACCEL_Y, 0); // 落地清重力（@landingNoBounce）
+                break;
+            }
+        } else {
+            // 向上：天花板查撞（点 y−ry−8）。受阻⇒停（E2CA 受阻上行 ror speedY/speedF
+            // 半速反向弹跳=**deferred 子缺口**（goal-r15 R1 登记））。
+            if !object_check_move_up(mem) {
+                stop_vert_movement(mem); // D147（受阻上行动量清）
+                break;
+            }
         }
         let y = mem.read_ram(0x030D);
         // 【goal-r15】asm MoveSamusUp（Lx155 `dec Samus.y/inc SamusJumpDsplcmnt`）/
