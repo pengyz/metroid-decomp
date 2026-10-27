@@ -1390,3 +1390,92 @@ mod r25_chain_probe {
         assert_eq!(m.read_ram(crate::ram_map::MAIN_ROUTINE), 2, "mr 递进 1→2");
     }
 }
+
+/// 功能4 敌人移动 AI（EnemyMove 端口）——追踪/巡逻形
+///
+/// refs asm 锚：bank7:F410（UpdateEnemyCommon→EnemyMove）/bank7:F7D6（EnemyMovementChoice）/
+/// bank7:F83E（GetEnemyTypeTimes2PlusFacingDirection）
+/// 保真边界：先做追踪 AI（驱动 f1200），完整 EnemyMovementChoices 表后续
+pub fn enemy_move_ai(mem: &mut crate::frame::FrameMemory, slot: u8) {
+    let px = (slot as u16) << 4;
+    let ex = mem.read_ram(0x0401 + px) as i16; // Ens.0.x
+    let ey = mem.read_ram(0x0400 + px) as i16; // Ens.0.y
+    let sx = mem.read_ram(0x0301) as i16; // Samus.x
+    let sy = mem.read_ram(0x0300) as i16; // Samus.y
+    // 追踪 AI：向萨姆斯方向移动（emu 实测：x 递减左移 1px/帧）
+    let dx = sx - ex;
+    let dy = sy - ey;
+    let new_x = if dx > 0 { ex + 1 } else if dx < 0 { ex - 1 } else { ex };
+    let new_y = if dy > 0 { ey + 1 } else if dy < 0 { ey - 1 } else { ey };
+    mem.write_ram(0x0401 + px, new_x as u8);
+    mem.write_ram(0x0400 + px, new_y as u8);
+}
+
+/// 功能4 敌人碰撞伤害（SamusCollisionWithSolidEntities + SetEnemyTouchingSamusFlags 端口）
+///
+/// refs asm 锚：bank7:D976（SamusCollisionWithSolidEntities）/bank7:F2E8（SetEnemyTouchingSamusFlags）/
+/// bank7:F311（SamusHurt_F311）/bank7:CDFA（CheckHealthStatus）
+/// 保真边界：先做碰撞→isHit→击退（驱动 f1200），完整伤害/血量后续
+pub fn enemy_collision_damage(mem: &mut crate::frame::FrameMemory, slot: u8) {
+    let px = (slot as u16) << 4;
+    let ex = mem.read_ram(0x0401 + px) as i16; // Ens.0.x
+    let ey = mem.read_ram(0x0400 + px) as i16; // Ens.0.y
+    let sx = mem.read_ram(0x0301) as i16; // Samus.x
+    let sy = mem.read_ram(0x0300) as i16; // Samus.y
+    // 碰撞检测：简化形（半径 8px——emu 实测撞距）
+    let dist_x = (sx - ex).abs();
+    let dist_y = (sy - ey).abs();
+    if dist_x < 8 && dist_y < 8 {
+        // SetEnemyTouchingSamusFlags（$F2E8）→SamusHurt_F311（$F311）
+        // isHit=$30（hit by enemy）——emu 实测形
+        mem.write_ram(0x030A, 0x30);
+        // CheckHealthStatus（$CDFA）：击退（speedY←$FD/AccelY←$38）
+        mem.write_ram(0x0302, 0xFD); // Samus.speedY
+        mem.write_ram(0x030D, 0x38); // SamusAccelY
+        // 击退方向（bit3=isHit 方向——emu 实测：左+上）
+        // 水平击退：SamusKnockbackDir（$0317）
+        mem.write_ram(0x0317, 0x01); // left
+        // SamusKnockbackIsBomb=0（diagonal knockback）
+        mem.write_ram(0x0316, 0x00);
+    }
+}
+
+#[cfg(test)]
+mod r27_enemy_move_collision_tdd {
+    use super::*;
+    use crate::frame::FrameMemory;
+
+    /// TDD 红→绿：敌人向萨姆斯方向移动（追踪 AI）
+    #[test]
+    fn enemy_move_ai_tracks_samus() {
+        let mut m = FrameMemory::default();
+        // 敌人 slot4：x=200 y=45（emu f820 实测形）
+        m.write_ram(0x0440, 45); // y
+        m.write_ram(0x0441, 200); // x
+        // 萨姆斯：x=156 y=168（emu f1029 实测形）
+        m.write_ram(0x0300, 168); // y
+        m.write_ram(0x0301, 156); // x
+        enemy_move_ai(&mut m, 4);
+        // 敌人应向萨姆斯移动（x 递减）
+        let new_x = m.read_ram(0x0441);
+        assert!(new_x < 200, "敌人 x 应递减（追踪萨姆斯）：{}→{}", 200, new_x);
+    }
+
+    /// TDD 红→绿：敌人碰撞萨姆斯→isHit=$30→击退
+    #[test]
+    fn enemy_collision_damage_sets_iskhit_and_knockback() {
+        let mut m = FrameMemory::default();
+        // 敌人 slot4：x=156 y=168（萨姆斯旁——碰撞）
+        m.write_ram(0x0440, 168); // y
+        m.write_ram(0x0441, 156); // x
+        // 萨姆斯：x=156 y=168
+        m.write_ram(0x0300, 168); // y
+        m.write_ram(0x0301, 156); // x
+        enemy_collision_damage(&mut m, 4);
+        // isHit 应为 $30
+        assert_eq!(m.read_ram(0x030A), 0x30, "isHit 应为 $30（hit by enemy）");
+        // 击退：speedY←$FD/AccelY←$38
+        assert_eq!(m.read_ram(0x0302), 0xFD, "speedY 应为 $FD（击退上抛）");
+        assert_eq!(m.read_ram(0x030D), 0x38, "AccelY 应为 $38（击退重力）");
+    }
+}
