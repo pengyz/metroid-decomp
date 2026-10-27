@@ -66,8 +66,26 @@ pub fn anim_draw_object(mem: &mut crate::frame::FrameMemory, page_index: u8) {
     // （横滚不动 y——HorzScrollCheck 径）；旧形无条件减致 sprite 高 14px。
     let horz = mem.read_ram(crate::ram_map::SCROLL_DIR) & 0x02 != 0;
     let screen_y = if horz { y_pos } else { screen_y };
-    // 可见性门（简核：屏界内——全边界径随件）
-    let visible = screen_y.wrapping_sub(scroll_y) < 0xF0 && hi & 1 == mem.read_ram(0x00FF) & 1;
+    // 可见性门——**IsObjectVisible(DFDF)→HorzScrollCheck(E01C)** 按 asm 全径（非简化核）：
+    // ① 名表判 `lda Temp06_PositionHi/eor PPUCTRL_ZP/and #$01`：同名表⇒LE02E，异⇒异径。
+    // ② `sec/sbc ScrollX`⇒carry=(pos≥scrollX)、screenX。
+    // ③ 同名表(LE02E)：`bcc LE036`（carry 清⇒不可见）+`lda radiusX/cmp screenX/bcc RTS`（radiusX<screenX⇒可见）。
+    // ④ 异名表：`bcs LE036`（carry 置⇒不可见）+`lda radiusX/clc/adc screenX/bcc RTS`（radiusX+screenX<256⇒可见）。
+    // 旧形简核（screenY<0xF0 && 名表同）缺 X 界+radiusX⇒f815 起 onScreen=0（左走角色消失根因）。
+    let (screen_x_v, borrow) = x_pos.overflowing_sub(scroll_x); // borrow=(x_pos<scroll_x)
+    let carry = !borrow; // asm carry=(x_pos≥scroll_x)——overflowing_sub 返回 borrow 非 carry！
+    let same_nt = (hi ^ mem.read_ram(0x00FF)) & 1 == 0;
+    let visible = if same_nt {
+        // LE02E：carry(pos≥scrollX) 且 radiusX<screenX
+        carry && radius_x < screen_x_v
+    } else {
+        // 异名表：carry 清(pos<scrollX) 且 radiusX+screenX<256
+        if !carry {
+            (radius_x as u16 + screen_x_v as u16) < 0x100
+        } else {
+            false // bcs LE036（不可见）
+        }
+    };
     mem.write_ram(0x030B + px, visible as u8); // onScreen
     if !visible {
         mem.write_ram(0x006B, 0); // ClearObjectCntrl（$DF2D）
