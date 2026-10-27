@@ -119,6 +119,25 @@ rust 的 blink/Timer3 相位经**其他补偿机制**（intro Timer3 窗长/相�
 **已回退**：标题门（未提交即弃）。前置段对齐降级为「整体调度审计」任务卡，挂 D7 缺口
 （时序边界类）。
 
+
+## 全帧探针定谳（2026-10-27 r24）：快照捷径吸收房载停帧——余差 6=boot4+title3−起点1
+
+rust_screenshot 新增 DSH_FC_TRACE 逐帧探针（env 门控，DSH_SPRITE_TRACE 同式）后全帧
+实测：**rust 0 停帧**（此前"0 停帧"结论系稀疏采集点误测——本轮更正）。序列唯一缺口
+=f352-358：**rust 场景在 f352 快照恢复、整段跳过房间加载**——恰好吸收 emu 的 7 帧房载
+停帧（等价抵消）。
+
+**FC 对账（f799）**：emu=16（798 tick−14 停）、rust=22（797 tick−7 跳帧）⇒ 差 6
+= boot（f2+f4-6=4）+ title（f311-313=3）共 7 − rust 起点超前 1（emu f1 首帧 vs rust f2）。
+
+**parity 约束**（r23 发现）：blink=2 帧周期 ⇒ 累计插入必须偶数。boot(4)偶 ✓、
+title(3)奇 ✗、boot+title=7 奇 ✗、boot+title−1 起点修正=6 偶 ✓——**须与起点语义一并
+处理**（起点对齐=boot 首帧语义，非独立旋钮）。
+
+**下轮路径**：boot 链 asm 审计（emu f2/f4-6 停帧的 asm 来源——boot.rs 门结构 vs
+InitializeAfterReset 链 NMI 等待）+ 标题门（已实现过 [1,0,1]，asm 依据充分，$90BA/
+$909F）——两者合计与起点修正对齐后 FC 全帧一致。blink parity 每步用 f550=0px 验证。
+
 ## 关联
 - 前置：docs/findings/anim-state-machine-model.md（decomp eefc9c3d）
 - 下游：f820(359)/f950(1270)/f1200(15929) 全由本轨迹差主导
