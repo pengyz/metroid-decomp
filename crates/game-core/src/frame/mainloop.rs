@@ -1072,9 +1072,117 @@ fn uw_collision_detection(_mem: &mut crate::frame::FrameMemory) {
     // 碰撞主体已在 lava_and_move_check 链（samus_collision_with_solid_entities D976！）
 }
 
-/// DisplayBar（$E0C1——HUD 动态面：血量/导弹数/计时器数字！）。
-fn uw_display_bar(_mem: &mut crate::frame::FrameMemory) {
-    // HUD 静态面（"HG HE" 文本=房间名表！）已由房间链渲；动态数字随件
+/// DisplayBar（**asm 内容锚** `DisplayBar: ; 07:E0C1`——HUD 精灵动态面，全径端口）：
+/// ① 拷 DataDisplayTbl(E1B9, 40B=10 精灵)→OAM[$5B..]（ROM 字节核实 40 字节）
+/// ② 健康 2 位：($0107&0xF)|$A0、($0106>>4)|$A0（SPRWriteDigit E173 `ora #$A0`）
+/// ③ $010B≠$FF⇒逃生计时 3 位+TI/ME($58/$59 attrib++）；否则 MaxMissiles($687A)≠0⇒
+///    HexToDec(E198) 3 位；=0⇒LE10A 擦图标 tile（$0200+X+$0D/$11←$FF，X=原页+8，
+///    恰为表槽 5/6 图标 tileID）；LE14A 能量罐（full=$0107>>4，tile $6F/空 $6E，
+///    AddOneTank E17B：y=$17/attr=$01/x=$40 递减 $0A）。
+const DATA_DISPLAY_TBL: [u8; 40] = [
+    0x21, 0xA0, 0x01, 0x30, 0x21, 0xA0, 0x01, 0x38,
+    0x2B, 0xFF, 0x01, 0x28, 0x2B, 0xFF, 0x01, 0x30,
+    0x2B, 0xFF, 0x01, 0x38, 0x2B, 0x5E, 0x00, 0x18,
+    0x2B, 0x5F, 0x00, 0x20, 0x21, 0x76, 0x01, 0x18,
+    0x21, 0x7F, 0x01, 0x20, 0x21, 0x3A, 0x00, 0x28,
+];
+
+/// SPRWriteDigit（E173）：tile=A|$A0（数字图案区），X+4（Xplus4 E193）。
+fn spr_write_digit(mem: &mut crate::frame::FrameMemory, x: u8, a: u8) {
+    mem.write_ram(0x0200u16 + x as u16 + 1, a | 0xA0);
+}
+
+/// HexToDec（E198+DivideByRepeatedSubtraction E1AD）：百/十/个位。
+fn hex_to_dec(n: u8) -> (u8, u8, u8) {
+    let hundreds = n / 100;
+    let rem = n % 100;
+    let tens = rem / 10;
+    (hundreds as u8, tens as u8, rem % 10)
+}
+
+fn uw_display_bar(mem: &mut crate::frame::FrameMemory) {
+    // ① 拷表（E0C7 循环：40B→OAM[X..X+40)，$5B←X+40，pla 恢复原 X）
+    let x0 = mem.read_ram(0x005B);
+    let mut x = x0;
+    for i in 0..40usize {
+        mem.write_ram(0x0200u16 + x as u16, DATA_DISPLAY_TBL[i]);
+        x = x.wrapping_add(1);
+    }
+    mem.write_ram(0x005B, x);
+    x = x0;
+    // ② 健康 2 位（E0E0 区：lda Health+1/and #$0F → SPRWriteDigit；lda Health/Adiv16 → ）
+    spr_write_digit(mem, x, mem.read_ram(0x0107) & 0x0F);
+    x = x.wrapping_add(4);
+    spr_write_digit(mem, x, mem.read_ram(0x0106) >> 4);
+    x = x.wrapping_add(4);
+    // ③ 分派（E0EA：ldy $010B/iny/bne LE11C——≠$FF ⇒ 逃生）
+    if mem.read_ram(0x010B) != 0xFF {
+        // LE11C：逃生计时 3 位 + TI/ME
+        spr_write_digit(mem, x, mem.read_ram(0x010B) >> 4);
+        x = x.wrapping_add(4);
+        spr_write_digit(mem, x, mem.read_ram(0x010B) & 0x0F);
+        x = x.wrapping_add(4);
+        spr_write_digit(mem, x, mem.read_ram(0x010A) >> 4);
+        x = x.wrapping_add(4);
+        let ti = 0x0200u16 + x as u16;
+        mem.write_ram(ti, 0x58); // "TI"
+        mem.write_ram(ti + 2, mem.read_ram(ti + 2).wrapping_add(1));
+        if x < 0xFC {
+            let me = 0x0200u16 + x.wrapping_add(4) as u16;
+            mem.write_ram(me, 0x59); // "ME"
+            mem.write_ram(me + 2, mem.read_ram(me + 2).wrapping_add(1));
+        }
+    } else if mem.read_ram(0x687A) != 0 {
+        // 导弹 3 位（HexToDec E198）
+        let (h, t, o) = hex_to_dec(mem.read_ram(0x6879));
+        spr_write_digit(mem, x, h);
+        x = x.wrapping_add(4);
+        spr_write_digit(mem, x, t);
+        x = x.wrapping_add(4);
+        spr_write_digit(mem, x, o);
+        x = x.wrapping_add(4);
+    } else {
+        // LE10A：无导弹 ⇒ 擦图标两半 tileID（X=原页+8 恰指表槽 5/6）
+        if x < 0xF4 {
+            mem.write_ram(0x0200u16 + x as u16 + 0x0D, 0xFF);
+        }
+        if x < 0xF0 {
+            mem.write_ram(0x0200u16 + x as u16 + 0x11, 0xFF);
+        }
+        // bne LE14A
+    }
+    // ④ LE14A 能量罐
+    let mut x = mem.read_ram(0x005B); // 重读 $5B（追加后位置）
+    let tanks = mem.read_ram(0x6877);
+    if tanks == 0 {
+        return; // RTS_E172
+    }
+    mem.write_ram(0x0003, tanks);
+    mem.write_ram(0x0000, 0x40); // 最右罐 X 坐标
+    let mut tile: u8 = 0x6F; // 满罐
+    let full = mem.read_ram(0x0107) >> 4;
+    mem.write_ram(0x0001, full);
+    if full == 0 {
+        tile = tile.wrapping_sub(1); // dey ⇒ 空罐 $6E
+    }
+    loop {
+        // AddOneTank(E17B)
+        mem.write_ram(0x0200u16 + x as u16, 0x17); // y
+        mem.write_ram(0x0200u16 + x as u16 + 1, tile); // tile
+        mem.write_ram(0x0200u16 + x as u16 + 2, 0x01); // attr
+        mem.write_ram(0x0200u16 + x as u16 + 3, mem.read_ram(0x0000)); // x 坐标
+        mem.write_ram(0x0000, mem.read_ram(0x0000).wrapping_sub(0x0A));
+        x = x.wrapping_add(4); // Xplus4
+        mem.write_ram(0x0001, mem.read_ram(0x0001).wrapping_sub(1));
+        if mem.read_ram(0x0001) == 0 {
+            tile = tile.wrapping_sub(1); // 满罐尽⇒切空罐
+        }
+        mem.write_ram(0x0003, mem.read_ram(0x0003).wrapping_sub(1));
+        if mem.read_ram(0x0003) == 0 {
+            break;
+        }
+    }
+    mem.write_ram(0x005B, x);
 }
 
 /// UpdateAllPipeBugHoles（虫洞族——空态跳过）。
@@ -1713,5 +1821,48 @@ mod r30_enemy_spawn_delay_tdd {
         enemy_activate_resting_to_active(&mut m, 4);
         // status 应为 2（Active）
         assert_eq!(m.read_wram(0x6AF4 + 4), 2, "status 应为 2（Active）");
+    }
+}
+
+#[cfg(test)]
+mod r31_hud_display_bar_tdd {
+    use super::*;
+    use crate::frame::FrameMemory;
+
+    /// 【goal-r17 HUD·红测】DisplayBar(E0C1) 游戏开局态：
+    /// 拷 DataDisplayTbl(E1B9, 40B)→OAM；健康 2 位=($0107&0xF)|$A0、($0106>>4)|$A0
+    /// （SPRWriteDigit E173）；无导弹 ⇒ LE10A 擦图标 tile（$020D+X/$0211+X←$FF，X=原页+8）；
+    /// 无罐 ⇒ LE14A RTS。$5B←40。
+    #[test]
+    fn display_bar_game_start_en30_no_missiles() {
+        let mut m = FrameMemory::default();
+        for i in 0..0x100u16 {
+            m.write_ram(0x0200 + i, 0x11); // 垃圾底——验证拷贝
+        }
+        m.write_ram(0x005B, 0);
+        m.write_ram(0x0106, 0x00); // Health low（低 4 位=个位区）
+        m.write_ram(0x0107, 0x03); // Health high → "30"
+        m.write_ram(0x010B, 0xFF); // 非逃生（EndTimer+1=$FF）
+        m.write_ram(0x687A, 0x00); // MaxMissiles=0
+        m.write_ram(0x6877, 0x00); // 无能量罐
+        uw_display_bar(&mut m);
+        const T: [u8; 40] = [
+            0x21, 0xA0, 0x01, 0x30, 0x21, 0xA0, 0x01, 0x38,
+            0x2B, 0xFF, 0x01, 0x28, 0x2B, 0xFF, 0x01, 0x30,
+            0x2B, 0xFF, 0x01, 0x38, 0x2B, 0x5E, 0x00, 0x18,
+            0x2B, 0x5F, 0x00, 0x20, 0x21, 0x76, 0x01, 0x18,
+            0x21, 0x7F, 0x01, 0x20, 0x21, 0x3A, 0x00, 0x28,
+        ];
+        // 表拷后覆写：slot0 tile←健康十位|$A0、slot5/6 tile←$FF（LE10A 擦图标）
+        let mut expect = T;
+        expect[1] = 0xA3; // ($0107&0xF)|$A0 = 3|$A0
+        expect[5] = 0xA0; // ($0106>>4)|$A0 = 0|$A0（与表同值）
+        expect[0x15] = 0xFF; // 图标左擦除（原 $5E）
+        expect[0x19] = 0xFF; // 图标右擦除（原 $5F）
+        for i in 0..40usize {
+            assert_eq!(m.read_ram(0x0200 + i as u16), expect[i], "slot {i}");
+        }
+        assert_eq!(m.read_ram(0x005B), 40, "SpritePagePos 前移 40");
+        assert_eq!(m.read_ram(0x005B), 40, "SpritePagePos 前移 40");
     }
 }
