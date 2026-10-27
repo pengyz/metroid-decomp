@@ -665,9 +665,44 @@ fn crawler_ai(mem: &mut crate::frame::FrameMemory, x: u8) {
         _ => enemy_move_one_pixel_up(mem, x),
     };
     if !ok {
-        // CrawlerInsideCornerCheck（碰撞 carry 清⇒FlipDirection 或朝向--）
-        let d = mem.read_ram(0x0400 + x as u16 + 5);
-        mem.write_ram(0x0400 + x as u16 + 5, d ^ 0x01); // FlipDirection（简化径——角检随件）
+        // CrawlerInsideCornerCheck（bank1:$9AA8——**goal-r16 G3'**）：$00 契约判据。
+        // $00=1(离屏/wrap)⇒FlipDirection(data05 eor #1)；$00=0(块界碰撞)⇒data0A=(data0A−1)&3
+        // +CrawlerReorientSprite($9A8F anim 面随件)。旧形「失败一律 eor #01」与 asm 反。
+        let zero = mem.read_ram(0x00);
+        if zero != 0 {
+            let d = mem.read_ram(0x0400 + x as u16 + 5);
+            mem.write_ram(0x0400 + x as u16 + 5, d ^ 0x01); // FlipDirection（离屏径）
+        } else {
+            let o = mem.read_ram(0x0400 + x as u16 + 10); // data0A
+            mem.write_ram(0x0400 + x as u16 + 10, o.wrapping_sub(1) & 0x03); // 朝向--
+            // CrawlerReorientSprite($9A8F) anim 面随件（占位）
+        }
+    } else {
+        // CrawlerOutsideCornerCheck（bank1:$9AC6——**goal-r16 G3'**）：向 (data0A+1) 探移成功
+        // （前方悬空/平台边缘）⇒data0A+1+reorient（GetNextOrientation $9ADA=iny）。简化径：
+        // 探 (data0A+1) 向块检通过（可移）⇒回退该探移+data0A+1。
+        let o = mem.read_ram(0x0400 + x as u16 + 10) & 0x03;
+        let next_o = (o + 1) & 0x03;
+        // 探移：按 (next_o*2+direction) 向移 1px，成功则回退+改朝向
+        let dir = mem.read_ram(0x0400 + x as u16 + 5) & 1;
+        let nidx = ((next_o as usize) * 2 + dir as usize) & 0x07;
+        let probe_ok = match nidx {
+            0 | 5 => enemy_move_one_pixel_right(mem, x),
+            1 | 4 => enemy_move_one_pixel_left(mem, x),
+            2 | 3 => enemy_move_one_pixel_down(mem, x),
+            _ => enemy_move_one_pixel_up(mem, x),
+        };
+        if probe_ok {
+            // 探移成功⇒回退（反向 1px）+data0A←next_o+reorient
+            match nidx {
+                0 | 5 => { let nx = mem.read_ram(0x0400 + x as u16 + 1); mem.write_ram(0x0400 + x as u16 + 1, nx.wrapping_sub(1)); }
+                1 | 4 => { let nx = mem.read_ram(0x0400 + x as u16 + 1); mem.write_ram(0x0400 + x as u16 + 1, nx.wrapping_add(1)); }
+                2 | 3 => { let ny = mem.read_ram(0x0400 + x as u16 + 0); mem.write_ram(0x0400 + x as u16 + 0, ny.wrapping_sub(1)); }
+                _ => { let ny = mem.read_ram(0x0400 + x as u16 + 0); mem.write_ram(0x0400 + x as u16 + 0, ny.wrapping_add(1)); }
+            }
+            mem.write_ram(0x0400 + x as u16 + 10, next_o); // data0A+1
+            // CrawlerReorientSprite anim 面随件（占位）
+        }
     }
     update_enemy_common_no_move_no_anim(mem, x); // @exit 径（anim+显示）
 }
@@ -818,17 +853,20 @@ fn enemy_move_one_pixel_left(mem: &mut crate::frame::FrameMemory, x: u8) -> bool
 }
 
 /// EnemyMoveOnePixelRight（**asm 内容锚** `: 1214 $84FE`——r26（x inc 同构））。
+/// 【goal-r16 G3'】失败时写 $00 契约：块界碰撞⇒$00=0；离屏/名表 wrap⇒$00=1（corner check 判据）。
 fn enemy_move_one_pixel_right(mem: &mut crate::frame::FrameMemory, x: u8) -> bool {
     let xpos = mem.read_ram(0x0400 + x as u16 + 1);
     let rx = mem.read_wram(0x6AF4 + x as u16 + 2);
     if xpos.wrapping_add(rx) & 0x07 == 0 {
         if !enemy_check_move_right(mem, x) {
+            mem.write_ram(0x00, 0); // $00=0（碰撞）
             return false;
         }
     }
     let nx = xpos.wrapping_add(1);
     mem.write_ram(0x0400 + x as u16 + 1, nx);
     if nx == rx.wrapping_neg() {
+        mem.write_ram(0x00, 1); // $00=1（离屏/wrap）
         return false;
     }
     true
@@ -946,24 +984,45 @@ fn enemy_resting(mem: &mut crate::frame::FrameMemory, x: u8) {
     choose_enemy_ai(mem, x);
 }
 
-/// UpdateEnemy_Active（**asm 内容锚** `: 07:F3E6`——r26 壳）。
+/// UpdateEnemy_Active（**asm 内容锚** `: 07:F3E6`→Active_BranchA(F401)→BranchB(F40A)→F40D）。
+/// 【goal-r16 复核修正 G2'】F401 三件=ForceSpeed+Threshold+RemoveIfInLava（ROM
+/// `20 B9 F6 20 5B F7 20 1E F5`）；AI 分派在 BranchB→F40D（Resting/Active 共用）。
+/// 旧形三径皆 `unported!` ⇒ 敌人激活即 panic。
 fn enemy_active(mem: &mut crate::frame::FrameMemory, x: u8) {
     let d = mem.read_ram(0x0400 + x as u16 + 5);
-    if d & 0x40 != 0 {
-        crate::unported!("bank07:F40A"); // 30fps 跳径
-        return;
+    if d & 0x40 == 0 {
+        // bit6 clear ⇒ 走 BranchA/bit5 径（bit6 set⇒30fps 直跳 BranchB）
+        if d & 0x20 != 0 {
+            // bit5 set⇒delay←EnemyInitDelayTbl[type]；status Active→Resting
+            let t = mem.read_wram(0x6AF4 + x as u16 + 14); // EnsExtra.type
+            let delay = game_data::area::graphics::ENEMY_INIT_DELAY.get(t as usize).copied().unwrap_or(0);
+            mem.write_ram(0x0400 + x as u16 + 9, delay); // Ens.delay(+9)
+            let st = mem.read_wram(0x6AF4 + x as u16);
+            mem.write_wram(0x6AF4 + x as u16, st.wrapping_sub(1));
+        } else {
+            // Active_BranchA（F401）：ForceSpeed(F6B9)+Threshold(F75B)+RemoveIfInLava(F51E)
+            enemy_force_speed(mem, x);
+            enemy_distance_threshold(mem, x);
+            enemy_remove_if_in_lava(mem, x);
+        }
     }
-    if d & 0x20 != 0 {
-        // bit5 set⇒delay←EnemyInitDelayTbl[type]；status Active→Resting
-        let t = mem.read_wram(0x6AF4 + x as u16 + 14); // EnsExtra.type
-        let delay = game_data::area::graphics::ENEMY_INIT_DELAY.get(t as usize).copied().unwrap_or(0);
-        mem.write_ram(0x0400 + x as u16 + 9, delay); // Ens.delay
-        let st = mem.read_wram(0x6AF4 + x as u16);
-        mem.write_wram(0x6AF4 + x as u16, st.wrapping_sub(1));
-        crate::unported!("bank07:F40A"); // →Active_BranchB
-        return;
+    // BranchB（F40A→F40D）：enemy_react_to_projectile + choose_enemy_ai（AI 分派）
+    enemy_react_to_projectile(mem, x);
+    choose_enemy_ai(mem, x);
+}
+
+/// RemoveEnemyIfItIsInLava（**asm 内容锚** `: 07:F51E`）：横滚房+敌 y≥$EC（熔岩）⇒清槽。
+fn enemy_remove_if_in_lava(mem: &mut crate::frame::FrameMemory, x: u8) {
+    let scroll_dir = mem.read_ram(crate::ram_map::SCROLL_DIR);
+    if scroll_dir < 2 {
+        return; // 竖滚房⇒exit（asm cmp #$02/bcc）
     }
-    crate::unported!("bank07:F401"); // Active_BranchA（ForceSpeed/Threshold/Lava）
+    let y = mem.read_ram(0x0400 + x as u16); // Ens.y
+    if y < 0xEC {
+        return; // 熔岩上方⇒exit
+    }
+    // 熔岩中⇒RemoveEnemy（清槽）
+    mem.write_wram(0x6AF4 + x as u16, 0); // EnsExtra.status←0（槽空）
 }
 
 

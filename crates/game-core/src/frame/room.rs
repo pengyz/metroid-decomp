@@ -191,7 +191,7 @@ fn load_enemy(mem: &mut crate::frame::FrameMemory, b0: u8, etype: u8, pos: u8) -
     }
     // GetEnemyType（$EB28）：specialAttribs←etype&$C0；type←etype&$3F（Boss 检=bit6——
     // Zoomer 型 bit6=0 不入（asm asl/bpl 形））
-    mem.write_ram(en + 0x11, etype & 0xC0); // specialAttribs（D4 结构重叠面随证）
+    mem.write_ram(en + 0x0F, etype & 0xC0); // specialAttribs(+0xF)（ROM 真值——旧 +0x11 越界）
     mem.write_wram(ex + 0x0E, etype & 0x3F); // EnsExtra.type
     // LEB4D（$EB4D）：y←(pos&$F0)|8；x←(pos<<4)|$0C；status←Resting(1)；isHit←0；hi←名表
     let ty = mem.read_wram(ex + 0x0E);
@@ -210,13 +210,16 @@ fn load_enemy(mem: &mut crate::frame::FrameMemory, b0: u8, etype: u8, pos: u8) -
     let facing = (game_data::area::graphics::ENEMY_FACING[t] & 0x80) != 0;
     let d5 = if facing { rotated | 0x80 } else { rotated & 0x7F }; // ror 形（carry→bit7）
     mem.write_ram(en + 5, d5);
-    mem.write_ram(en + 0x0B, game_data::area::graphics::ENEMY_INIT_DELAY[t]); // delay
-    mem.write_ram(en + 0x0F, game_data::area::graphics::ENEMY_FORCE_SPEED_DELAY[t]); // data0D
+    // 【goal-r16 复核修正 G1'】字段偏移 +2 错位修正（ROM 真值：FB7B `sta $0409`=delay+9，
+    // F85A `sta $040D`=data0D+0xD / `sta $040B`=health+0xB）。旧形 delay→+0x0B（写进 health
+    // 槽）⇒delay(+9) 恒 0⇒F3BE beq 跳过 TryBecomingActive⇒敌人恒 Resting 不激活。
+    mem.write_ram(en + 0x09, game_data::area::graphics::ENEMY_INIT_DELAY[t]); // Ens.delay(+9)
+    mem.write_ram(en + 0x0D, game_data::area::graphics::ENEMY_FORCE_SPEED_DELAY[t]); // data0D(+0xD)
     let mut hp = game_data::area::graphics::ENEMY_HEALTH[t];
-    if mem.read_ram(en + 0x11) & 0x80 != 0 {
-        hp = hp.wrapping_shl(1); // tough 版双血（asm asl 形）
+    if mem.read_ram(en + 0x0F) & 0x80 != 0 {
+        hp = hp.wrapping_shl(1); // tough 版双血（specialAttribs bit7——asm asl 形）
     }
-    mem.write_ram(en + 0x0D, hp); // health
+    mem.write_ram(en + 0x0B, hp); // health(+0xB)
     true
 }
 
@@ -309,7 +312,7 @@ mod tests {
         assert!(draw_room(&mut m, 9), "房 9 全径通（对象环+敌门环+EndOfRoom）");
         let tiles: Vec<u8> = (0..0x3C0u16).map(|i| m.read_wram(0x6000 + i)).collect();
         assert!(tiles.iter().any(|&t| t != 0), "RoomRAM 有 tile 落");
-        assert_eq!(m.read_ram(0x0450 + 0x0D), gfx::ENEMY_HEALTH[5], "Zoomer 血量（槽 5——条目 51 形）");
+        assert_eq!(m.read_ram(0x0450 + 0x0B), gfx::ENEMY_HEALTH[5], "Zoomer 血量（槽 5——条目 51 形；health=+0xB ROM F85A）");
     }
 
     /// 属性位公式形（掩码对——x 位对清+置）。
