@@ -77,6 +77,31 @@ f799 起 1px 漂移 ⇒ 柱角碰撞/拐角序列级联（or3 vs or1）。
 件工作区）与 emu 对齐；或验证 6 差的构成（title 段 rust 多跑迭代？）后精确修。修后敌轨迹
 应全帧对齐 → f820/f950/f1200 连锁收敛。
 
+
+## 停帧全表定谳（2026-10-27 r21）：emu 18 停帧 vs rust 0 停帧——A 级实测
+
+逐帧 FC 序列（case-001 watch $2D，两侧全程对比）：
+
+| emu 停帧段 | 帧数 | 对应事件（asm 推断） |
+|---|---|---|
+| f2 | 1 | boot 链 |
+| f4-6 | 3 | boot 链续（PostSpin/AwaitNmi 窗） |
+| f311-313 | 3 | 标题 Start→菜单过渡（press 310） |
+| f352-358 | 7 | **游戏启动+房间加载**（press 350→LoadArea/DrawRoom VRAM 重活） |
+| f916-917 | 2 | 游戏中首次横滚（ScrollRight VRAM） |
+| f1064-1065 | 2 | 左向横滚（ScrollLeft VRAM） |
+
+**rust：0 停帧**（$2D 每帧 +1）。f799 时 emu 已停 14 帧 ⇒ emu FC=16、rust=22（差 6 ✓ 实测吻合）。
+
+**机理（asm）**：MainLoop(C0BC) 每迭代末等 NMI 握手（C0CB `lda NMIStatus/beq wait`）；
+长 PPU 重活（房间加载/滚屏 VRAM）期间迭代跨帧 ⇒ FC 不递增 =「停帧」。rust 的
+iter_gates 门队列机制即为此建模（`1 等待帧→0 全跑/0 bogged→1 跳过`）但**未在这些
+事件点生成门项**。
+
+**修法（下轮，r14 机制域）**：① 游戏启动/房间加载径（GoMainRoutine 初次 LoadArea/
+DrawRoom）补 3+7 帧 bogged 门；② ScrollRight/ScrollLeft VRAM 径各补 2 帧；③ boot 链
+1+3 帧。全部对齐后 FC 全帧一致 ⇒ 爬行门相位对齐 ⇒ 敌轨迹对齐 ⇒ f820/f950/f1200 收敛。
+
 ## 关联
 - 前置：docs/findings/anim-state-machine-model.md（decomp eefc9c3d）
 - 下游：f820(359)/f950(1270)/f1200(15929) 全由本轨迹差主导
