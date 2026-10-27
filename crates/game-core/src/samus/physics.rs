@@ -46,7 +46,7 @@ fn object_check_move_vertical(mem: &mut FrameMemory) -> bool {
     let x = mem.read_ram(0x030E);
     let hi = mem.read_ram(SAMUS_HI); // Samus.hi（$30C——Object 结构字节锚 F186 `BD 0C 03`）
     let check_y = y.wrapping_add(ry); // 向下查撞点=y+radiusY（asm E7AD/E90F）
-    collision_point_ok(mem, check_y, x, hi)
+    collision_point_samus(mem, check_y, x, hi) // E7FB 门数据副作用（LE7E6 全向共享）
 }
 
 /// collision_point_ok（**asm 内容锚** CheckMoveVertical `: 07:E7BD`——r26 共享）：
@@ -350,6 +350,34 @@ mod tests {
         assert!(!object_check_move_right(&mut m), "右向应读当前名表（固实⇒阻挡）");
     }
 
+    /// 【goal-r28 红测】碰撞循环门数据副作用（asm IsWalkableTile E7FB——LE7E6 对 Samus
+    /// 的写点）：碰可走瓦时写 SamusDoorData($58)——$A0(竖滚门)→1、$A1(横滚门)→2、
+    /// 其余可走→0。旧形无写点 ⇒ 门系统无法触发（SamusEnterDoor $8B13 判 $58!=0）。
+    #[test]
+    fn collision_walkable_tile_writes_door_data() {
+        use crate::ram_map::{SAMUS_DOOR_DATA, SAMUS_HI, SAMUS_RADIUS_X, SAMUS_RADIUS_Y, SAMUS_Y};
+        // 判点列=17（x=0x80+rx=8 → 0x88）、行 160/168（y=0xB0,ry=0x10 顶界 160）
+        let col = 17u16;
+        let idx = |yrow: u16| 0x6000u16 | (((yrow & 0xF8) << 2) | col);
+        for (tile, want) in [(0xA1u8, 2u8), (0xA0, 1), (0xA5, 0)] {
+            let mut m = FrameMemory::default();
+            for i in 0..1024u16 {
+                m.write_wram(0x6000 | i, 0x5C); // 全固实
+            }
+            m.write_wram(idx(160), tile); // 顶行=门/可走瓦
+            m.write_wram(idx(168), tile);
+            m.write_ram(SAMUS_Y, 0xB0);
+            m.write_ram(SAMUS_RADIUS_Y, 0x10);
+            m.write_ram(0x030E, 0x80);
+            m.write_ram(SAMUS_RADIUS_X, 8);
+            m.write_ram(SAMUS_HI, 0);
+            m.write_ram(crate::ram_map::SCROLL_DIR, 2);
+            m.write_ram(SAMUS_DOOR_DATA, 0x77); // 脏底——验证覆写
+            let _ = object_check_move_right(&mut m);
+            assert_eq!(m.read_ram(SAMUS_DOOR_DATA), want, "tile={tile:#X} → $58={want}");
+        }
+    }
+
     /// 【goal-r16 碰撞修·红测】判点 X 环绕（x<DistToCenterX，借位）⇒ asm E946：
     /// `lda PositionX/sec/sbc DistToCenterX` 后 `txa/adc #$00/beq RTS`——环绕时
     /// `inc Temp0B_PositionHi`（横滚）⇒ 查撞点读**另一张名表**。旧形仍读当前表⇒
@@ -494,7 +522,7 @@ pub fn object_check_move_up(mem: &mut FrameMemory) -> bool {
     let x = mem.read_ram(0x030E);
     let hi = mem.read_ram(SAMUS_HI);
     let check_y = y.wrapping_sub(ry).wrapping_sub(8); // 向上查撞点=y−radiusY−8（asm E7A2）
-    collision_point_ok(mem, check_y, x, hi)
+    collision_point_samus(mem, check_y, x, hi) // E7FB 门数据副作用
 }
 
 /// SamusCollisionWithSolidEntities（**asm 内容锚+结构互核注**——全仪式关键件②）：
@@ -901,6 +929,29 @@ fn horizontal_span_rows(y: u8, ry: u8) -> (u8, u32) {
 /// 【goal-r16 修】判点 X 环绕（x<dist 借位）⇒ asm E946 `txa/adc #$00/bne →
 /// inc Temp0B_PositionHi`（横滚限定）——查撞点落**另一张名表**。旧形仍读当前表⇒
 /// 左走到底判点绕 0xF8 读错表 ⇒ 穿墙（emu 在 x=4 被挡、rust 穿到 252 实录）。
+/// 碰撞点 Samus 门数据副作用（**asm 内容锚** `IsWalkableTile: ; 07:E7FB`——LE7E6 循环
+/// 对 Samus（IsSamus≠0）的写点）：可走瓦（≥$A0）时写 SamusDoorData($58)——
+/// $A0(竖滚门)→1、$A1(横滚门)→2、其余→0。$4E/<$80 固实不写（blocked）。
+fn collision_point_samus(mem: &mut FrameMemory, y: u8, x: u8, hi: u8) -> bool {
+    let idx = (((y & 0xF8) as u16) << 2) | ((x >> 3) as u16);
+    let page = if hi & 1 != 0 { 0x0400u16 } else { 0x0000 };
+    let tile = mem.read_wram(0x6000 | page | (idx & 0x3FF));
+    let ok = tile != 0x4E && tile >= 0x80;
+    if ok {
+        // asm E7FB：`dey/sty SamusDoorData`（清 0）→ $A0 beq Lx200(inc 1 次=1)；
+        // $A1 inc（=1）落入 Lx200 再 inc（=2）
+        let v = if tile == 0xA0 {
+            1
+        } else if tile == 0xA1 {
+            2
+        } else {
+            0
+        };
+        mem.write_ram(crate::ram_map::SAMUS_DOOR_DATA, v);
+    }
+    ok
+}
+
 fn object_check_move_horizontal(mem: &mut FrameMemory, x: u8, dist: u8) -> bool {
     let y = mem.read_ram(0x030D);
     let ry = mem.read_ram(0x0301);
@@ -918,7 +969,7 @@ fn object_check_move_horizontal(mem: &mut FrameMemory, x: u8, dist: u8) -> bool 
     let (top, n) = horizontal_span_rows(y, ry);
     for i in 0..n {
         let row = top.wrapping_add((i as u8).wrapping_mul(8));
-        if !collision_point_ok(mem, row, check_x, hi) {
+        if !collision_point_samus(mem, row, check_x, hi) {
             return false;
         }
     }
