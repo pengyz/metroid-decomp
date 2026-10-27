@@ -102,6 +102,23 @@ iter_gates 门队列机制即为此建模（`1 等待帧→0 全跑/0 bogged→1
 DrawRoom）补 3+7 帧 bogged 门；② ScrollRight/ScrollLeft VRAM 径各补 2 帧；③ boot 链
 1+3 帧。全部对齐后 FC 全帧一致 ⇒ 爬行门相位对齐 ⇒ 敌轨迹对齐 ⇒ f820/f950/f1200 收敛。
 
+
+## 补偿机制发现（2026-10-27 r23）：局部停帧插入门会打破全局 blink 相位对齐
+
+实验：按 asm $90BA/ClearAll 帧结构（ScreenOff 等+清表 bogged+WaitNMIPass 等=[1,0,1]）在
+rust 标题 Start→菜单过渡插入门 → **L4 f550/650/720 回退 0→282px**（blink 相位错 3 帧）。
+
+**判明**：rust 旧时间线（0 停帧）在 f550 的 blink 相位与 emu（14 停帧）**一致**——说明
+rust 的 blink/Timer3 相位经**其他补偿机制**（intro Timer3 窗长/相位机）与 emu 对齐，
+并非经 FC。局部插门（不动补偿机制）⇒ 相位错位 ⇒ 回退。
+
+**结论**：停帧对齐**不可局部做**——必须整体调度审计（r14 域）：枚举全部帧相位敏感面
+（blink/Timer3/爬行门/滚动门/动画 cadence），一次性重排。滚动门（2bd601dc）保留：
+实测 L4 无回退（滚动点在敌轨迹已分歧区，且 asm 忠实）。
+
+**已回退**：标题门（未提交即弃）。前置段对齐降级为「整体调度审计」任务卡，挂 D7 缺口
+（时序边界类）。
+
 ## 关联
 - 前置：docs/findings/anim-state-machine-model.md（decomp eefc9c3d）
 - 下游：f820(359)/f950(1270)/f1200(15929) 全由本轨迹差主导
