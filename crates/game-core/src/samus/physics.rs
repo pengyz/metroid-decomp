@@ -289,6 +289,88 @@ mod tests {
         assert!(object_check_move_down(&mut m), "y=176（y+ry=191 未及地板）应可走");
     }
 
+    /// 【goal-r16 碰撞修·红测】水平查撞必须扫 **Y 跨度覆盖的每一行块**
+    /// （asm CheckMoveHorizontal E89B：NextPointYOffset=8，自顶界 (y−ry) 起逐 +8 行、
+    /// 共 GetNumBlocksToCheck 行——LE7E6 循环逐行查 tile）。旧形只查顶行一点⇒
+    /// 顶行可走、下行固实时漏判 ⇒ 角色走进地形。
+    #[test]
+    fn object_check_move_left_blocked_by_lower_solid_row() {
+        use crate::ram_map::{SAMUS_HI, SAMUS_RADIUS_Y, SAMUS_Y};
+        let mut m = FrameMemory::default();
+        for i in 0..1024u16 {
+            m.write_wram(0x6000 | i, 0xFF); // 全可走
+        }
+        // y=0xB0(176)、ry=0x10 → 顶界=0xA0(160)，跨度 32px ⇒ 块行 160/168/176/184 共 4 行
+        // 判点 X=x−(rx+8)。x=0x80(128)、rx=8 ⇒ 判点 X=112(0x70) → 列 14
+        // 顶行(160)可走、下行(168)固实 ⇒ 应阻挡（旧形只读顶行 ⇒ 放行=bug）
+        let col = 14u16;
+        let idx = |yrow: u16| 0x6000u16 | (((yrow & 0xF8) << 2) | col);
+        m.write_wram(idx(160), 0xA5); // 顶行可走
+        m.write_wram(idx(168), 0x5C); // 下行固实
+        m.write_wram(idx(176), 0x5C); // 再下行固实
+        m.write_ram(SAMUS_Y, 0xB0);
+        m.write_ram(SAMUS_RADIUS_Y, 0x10);
+        m.write_ram(0x030E, 0x80);
+        m.write_ram(crate::ram_map::SAMUS_RADIUS_X, 8);
+        m.write_ram(SAMUS_HI, 0);
+        assert!(!object_check_move_left(&mut m), "下行固实应阻挡（多行扫）");
+        // 全部行可走 ⇒ 可走
+        m.write_wram(idx(168), 0xA5);
+        m.write_wram(idx(176), 0xA5);
+        m.write_wram(idx(184), 0xA5);
+        assert!(object_check_move_left(&mut m), "全部行可走应放行");
+    }
+
+    /// 【goal-r16 碰撞修·红测】判点 X 环绕（x<DistToCenterX，借位）⇒ asm E946：
+    /// `lda PositionX/sec/sbc DistToCenterX` 后 `txa/adc #$00/beq RTS`——环绕时
+    /// `inc Temp0B_PositionHi`（横滚）⇒ 查撞点读**另一张名表**。旧形仍读当前表⇒
+    /// x=8 时判点绕 0xF8 读错表 ⇒ 误判可走 ⇒ 穿墙（左走到底穿出房间）。
+    #[test]
+    fn object_check_move_left_wrapped_point_reads_other_nametable() {
+        use crate::ram_map::{SAMUS_HI, SAMUS_RADIUS_X, SAMUS_RADIUS_Y, SAMUS_Y};
+        let mut m = FrameMemory::default();
+        for i in 0..2048u16 {
+            m.write_wram(0x6000u16.wrapping_add(i), 0xFF); // 两表全可走
+        }
+        // x=8、rx=8 ⇒ 判点 X=8−16=0xF8（环绕）⇒ 名表 hi 应翻转
+        // 行取顶界对齐（y=176、ry=8 ⇒ top=168，行 168/176 两行）
+        // 当前表(hi=0) 0xF8 列(31) 可走；另一表(0x6400) 同列固实 ⇒ 应阻挡
+        let col = 31u16;
+        let idx = |page: u16, yrow: u16| 0x6000u16 | (page << 10) | (((yrow & 0xF8) << 2) | col);
+        m.write_wram(idx(0, 168), 0xA5);
+        m.write_wram(idx(0, 176), 0xA5);
+        m.write_wram(idx(1, 168), 0x5C); // 另一名表固实
+        m.write_wram(idx(1, 176), 0x5C);
+        m.write_ram(SAMUS_Y, 176);
+        m.write_ram(SAMUS_RADIUS_Y, 8);
+        m.write_ram(0x030E, 8);
+        m.write_ram(SAMUS_RADIUS_X, 8);
+        m.write_ram(SAMUS_HI, 0);
+        m.write_ram(crate::ram_map::SCROLL_DIR, 0x02); // 横滚（asm 调整条件）
+        assert!(!object_check_move_left(&mut m), "判点环绕应读另一名表（固实⇒阻挡）");
+    }
+
+    /// 【goal-r16 碰撞修·红测】右向同径（判点 X=x+rx，逐行扫）。
+    #[test]
+    fn object_check_move_right_blocked_by_lower_solid_row() {
+        use crate::ram_map::{SAMUS_HI, SAMUS_RADIUS_Y, SAMUS_Y};
+        let mut m = FrameMemory::default();
+        for i in 0..1024u16 {
+            m.write_wram(0x6000 | i, 0xFF);
+        }
+        // x=0x80(128)、rx=8 ⇒ 判点 X=136(0x88) → 列 17
+        let col = 17u16;
+        let idx = |yrow: u16| 0x6000u16 | (((yrow & 0xF8) << 2) | col);
+        m.write_wram(idx(160), 0xA5);
+        m.write_wram(idx(168), 0x5C); // 下行固实
+        m.write_ram(SAMUS_Y, 0xB0);
+        m.write_ram(SAMUS_RADIUS_Y, 0x10);
+        m.write_ram(0x030E, 0x80);
+        m.write_ram(crate::ram_map::SAMUS_RADIUS_X, 8);
+        m.write_ram(SAMUS_HI, 0);
+        assert!(!object_check_move_right(&mut m), "右向下行固实应阻挡");
+    }
+
     /// ObjectCheckMoveUp 查撞点=**y−radiusY−8**（上方——asm E7A2 `adc #$08`→
     /// 查撞点 Y=y−(radiusY+8)）。钉死天花板检：固实瓦在 y−ry−8 行=阻挡；下方行=可走。
     #[test]
@@ -766,36 +848,66 @@ pub fn toggle_samus_hi(mem: &mut FrameMemory) {
     mem.write_ram(crate::ram_map::SAMUS_HI, hi);
 }
 
-/// ObjectCheckMoveLeft（**asm 内容锚** `: 07:E880`）：`lda radiusX/clc/adc #$08`→核判点
-/// =x−(radiusX+8)（左块——核 `PositionX−DistToCenterX` 形）。carry=true 可走。
-fn object_check_move_left(mem: &mut FrameMemory) -> bool {
+/// 【goal-r16 碰撞修】GetNumBlocksToCheck(E8CE)+CheckMoveHorizontal(E89B)——
+/// 对象 Y 跨度覆盖的块行枚举：顶界 top=y−ry；行数 N=top余数?1 + 中段(span>>3) + 底余数?1，
+/// 其中 bottomRem=(−(top&7))&7、span=2*ry−bottomRem（借位⇒+8）。返回 (top,N)，
+/// 行= top+8*i（i∈[0,N)）——LE7E6 循环逐行查 tile（NextPointYOffset=8）。
+fn horizontal_span_rows(y: u8, ry: u8) -> (u8, u32) {
+    let top = y.wrapping_sub(ry);
+    let top_rem = top & 0x07;
+    let mut n: u32 = if top_rem != 0 { 1 } else { 0 };
+    let bottom_rem = 0u8.wrapping_sub(top_rem) & 0x07; // (−(top&7))&7
+    let diameter = (ry as u16) << 1; // 2*ry
+    let (span0, borrow) = diameter.overflowing_sub(bottom_rem as u16);
+    let span = if borrow { span0.wrapping_add(8) } else { span0 };
+    n += (span >> 3) as u32;
+    if span & 0x07 != 0 {
+        n += 1;
+    }
+    (top, n)
+}
+
+/// 水平查撞（asm CheckMoveHorizontal→LE7E6 全径）：判点 X 固定，Y 自顶界逐 +8 行扫
+/// N 行（对象 Y 跨度覆盖的每一行块）。任一行固实(<$80)⇒阻挡。
+/// 【goal-r16 修】判点 X 环绕（x<dist 借位）⇒ asm E946 `txa/adc #$00/bne →
+/// inc Temp0B_PositionHi`（横滚限定）——查撞点落**另一张名表**。旧形仍读当前表⇒
+/// 左走到底判点绕 0xF8 读错表 ⇒ 穿墙（emu 在 x=4 被挡、rust 穿到 252 实录）。
+fn object_check_move_horizontal(mem: &mut FrameMemory, x: u8, dist: u8) -> bool {
     let y = mem.read_ram(0x030D);
     let ry = mem.read_ram(0x0301);
+    let mut hi = mem.read_ram(crate::ram_map::SAMUS_HI);
+    let (check_x, borrow) = x.overflowing_sub(dist);
+    if borrow && mem.read_ram(crate::ram_map::SCROLL_DIR) & 0x02 != 0 {
+        hi ^= 0x01; // asm `inc Temp0B_PositionHi`（两表模 2，inc≡翻转）
+    }
+    let (top, n) = horizontal_span_rows(y, ry);
+    for i in 0..n {
+        let row = top.wrapping_add((i as u8).wrapping_mul(8));
+        if !collision_point_ok(mem, row, check_x, hi) {
+            return false;
+        }
+    }
+    true
+}
+
+/// ObjectCheckMoveLeft（**asm 内容锚** `: 07:E880`）：`lda radiusX/clc/adc #$08`→核判点
+/// =x−(radiusX+8)（左块——核 `PositionX−DistToCenterX` 形）。carry=true 可走。
+/// 【goal-r16 修】逐行扫（旧形只查顶行一点⇒顶行可走下行固实漏判⇒走进地形）。
+fn object_check_move_left(mem: &mut FrameMemory) -> bool {
     let x = mem.read_ram(0x030E);
     let rx = mem.read_ram(crate::ram_map::SAMUS_RADIUS_X);
-    let hi = mem.read_ram(crate::ram_map::SAMUS_HI);
-    // 判点=（y−radiusY, x−(radiusX+8)）（E90F：`PositionY−DistToCenterY`（横检
-    // DistY=radiusY——顶界）/`PositionX−DistToCenterX`（DistX=radiusX+8））。
-    collision_point_ok(mem, y.wrapping_sub(ry), x.wrapping_sub(rx).wrapping_sub(8), hi)
+    object_check_move_horizontal(mem, x, rx.wrapping_add(8))
 }
 
 /// ObjectCheckMoveRight（**asm 内容锚** `: 07:E88B`）：`lda #$00/sec/sbc radiusX`→核判点
 /// =x−(0−radiusX)=x+radiusX（右块）。carry=true 可走。
+/// ObjectCheckMoveRight（**asm 内容锚** `: 07:E88B`）：`lda #$00/sec/sbc radiusX`→核判点
+/// =x−(0−radiusX)=x+radiusX（右块）。carry=true 可走。
+/// 【goal-r16 修】逐行扫（同左向——LE7E6 全径）。
 fn object_check_move_right(mem: &mut FrameMemory) -> bool {
-    let y = mem.read_ram(0x030D);
     let x = mem.read_ram(0x030E);
     let rx = mem.read_ram(crate::ram_map::SAMUS_RADIUS_X);
-    let hi = mem.read_ram(crate::ram_map::SAMUS_HI);
-    let cx = x.wrapping_add(rx);
-    let cy = y.wrapping_sub(mem.read_ram(0x0301));
-    if std::env::var("DSH_COLL_TRACE").is_ok() {
-        let idx = (((cy & 0xF8) as u16) << 2) | ((cx >> 3) as u16);
-        let page = if hi & 1 != 0 { 0x0400u16 } else { 0x0000 };
-        let ptr = 0x6000 | page | (idx & 0x3FF);
-        eprintln!("[coll-R] x={:02X} y={:02X} hi={} pt=({:02X},{:02X}) ptr={:04X} tile={:02X}",
-                  x, y, hi & 1, cx, cy, ptr, mem.read_wram(ptr));
-    }
-    collision_point_ok(mem, cy, cx, hi)
+    object_check_move_horizontal(mem, x, 0u8.wrapping_sub(rx)) // dist=−rx（asm E88B）
 }
 
 /// CheckUpdateNameTable（**asm 内容锚** `CheckUpdateNameTable: ; 07:E54A`）：
