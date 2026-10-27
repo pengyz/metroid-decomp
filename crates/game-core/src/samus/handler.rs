@@ -366,6 +366,20 @@ fn fire_samus_projectile(mem: &mut FrameMemory) {
     mem.write_ram(base + 9, if dir & 1 == 0 { 4 } else { 0xFC }); // speedX
     mem.write_ram(base + 8, 0); // speedY=0
     mem.write_ram(base + 0x0B, 1); // onScreen=1
+    // PlaceBulletAtArmCannon（**asm 内容锚** `PlaceBulletAtArmCannon: ; 07:D306`）：
+    // 子弹置 arm cannon 处=Samus 位置+偏移（ApplySpeedToPosition）。偏移 index=
+    // (bullet.status*2|SamusDir)&3→BulletForwardsOffsetXTable[$0C,−$0C,$08,−$08]
+    // （wave=±$0C/power-ice-missile=±$08）；Y=−$06（Temp04_SpeedY）。
+    // 【goal-r16 修】旧漏此径→子弹滞 (0,0)（emu 置 arm cannon 处移动）。
+    let sy = mem.read_ram(crate::ram_map::SAMUS_Y);
+    let sx = mem.read_ram(0x030E); // Samus.x（Object 结构 $030E）
+    let shi = mem.read_ram(crate::ram_map::SAMUS_HI);
+    let status = mem.read_ram(base); // 子弹 status（status+=1 后——1=常规光束）
+    let idx = (((status << 1) | (dir & 1)) & 3) as usize; // D210 asl/ora SamusDir/and #3
+    let offset_x = [0x0Cu8, 0xF4, 0x08, 0xF8][idx]; // BulletForwardsOffsetXTable（有符号）
+    mem.write_ram(base + 0x0D, sy.wrapping_sub(6)); // bullet.y = Samus.y − 6
+    mem.write_ram(base + 0x0E, sx.wrapping_add(offset_x)); // bullet.x = Samus.x + offset
+    mem.write_ram(base + 0x0C, shi); // bullet.hi = Samus.hi
 }
 
 fn set_samus_jump(mem: &mut FrameMemory) {
@@ -417,6 +431,31 @@ mod tests {
             assert_eq!(SamusHandler::from_index(i).unwrap().handler_addr(), addr);
         }
         assert!(SamusHandler::from_index(10).is_none());
+    }
+
+    /// PlaceBulletAtArmCannon（D306）：子弹置 arm cannon 处（Samus 位置+偏移）。
+    /// 常规光束（status=1）右射（dir=0）：bullet.x=Samus.x+8，bullet.y=Samus.y−6，hi=Samus.hi。
+    /// 旧漏此径→子弹滞 (0,0)（emu 置 arm cannon 处移动）。
+    #[test]
+    fn fire_samus_projectile_places_bullet_at_arm_cannon() {
+        use crate::ram_map::{SAMUS_DIR, SAMUS_HI, SAMUS_Y};
+        let mut m = FrameMemory::default();
+        m.write_ram(SAMUS_Y, 100);
+        m.write_ram(0x030E, 50); // Samus.x
+        m.write_ram(SAMUS_HI, 1);
+        m.write_ram(SAMUS_DIR, 0); // 右
+        fire_samus_projectile(&mut m);
+        let base = 0x03D0u16; // Proj0 槽
+        assert_eq!(m.read_ram(base + 0x0D), 100u8.wrapping_sub(6), "bullet.y=Samus.y−6");
+        assert_eq!(m.read_ram(base + 0x0E), 50 + 8, "bullet.x=Samus.x+8（右，常规光束 status=1→idx2）");
+        assert_eq!(m.read_ram(base + 0x0C), 1, "bullet.hi=Samus.hi");
+        // 左射（dir=1）：offset=−8
+        let mut m = FrameMemory::default();
+        m.write_ram(SAMUS_Y, 100);
+        m.write_ram(0x030E, 50); // Samus.x
+        m.write_ram(SAMUS_DIR, 1); // 左
+        fire_samus_projectile(&mut m);
+        assert_eq!(m.read_ram(base + 0x0E), 50u8.wrapping_add(0xF8), "bullet.x=Samus.x−8（左）");
     }
 
     /// BitScan 首位扫描（bit 号语义）。
