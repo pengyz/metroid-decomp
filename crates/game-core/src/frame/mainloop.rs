@@ -1533,3 +1533,74 @@ mod r28_crawler_direction_tdd {
         assert!(new_y >= 45, "敌人 y 应递增或不变（向下爬）：{}→{}", 45, new_y);
     }
 }
+
+/// 功能4 敌人激活径（Resting→Active）——修 f1200 根因
+///
+/// refs asm 锚：bank7:F7BA（TryBecomingActive）/bank7:F75B（DistanceToSamusThreshold）/
+/// bank7:F3BE（UpdateEnemy_Resting——data0A←0 每帧）
+/// 根因：rust 敌人恒 Resting（status=1）⇒data0A 恒=0⇒向右爬；emu 敌人 Active（status=2）
+/// ⇒data0A 保留（初始朝向=向下爬 data0A=1）⇒爬向萨姆斯⇒撞→击退→相机滚
+/// 修正：敌人 delay 归零+data05 bit3 set⇒status→Active（data0A 不被清）
+pub fn enemy_activate_resting_to_active(mem: &mut crate::frame::FrameMemory, slot: u8) {
+    let px = (slot as u16) << 4;
+    let status = mem.read_wram(0x6AF4 + slot as u16); // EnsExtra.status
+    if status != 1 {
+        return; // 非 Resting 态
+    }
+    let delay_addr = 0x0400 + px + 9; // Ens.delay
+    let delay = mem.read_ram(delay_addr);
+    if delay == 0 {
+        return; // delay 已 0——不重复激活
+    }
+    let new_delay = delay.wrapping_sub(1);
+    mem.write_ram(delay_addr, new_delay);
+    if new_delay != 0 {
+        return; // delay 未归零
+    }
+    // delay 归零——检查 data05 bit3（TryBecomingActive @becomeActive）
+    let d5 = mem.read_ram(0x0400 + px + 5);
+    if d5 & 0x08 == 0 {
+        // bit3 not set——inc 退回
+        mem.write_ram(delay_addr, delay);
+        return;
+    }
+    // @becomeActive：status→Active（data0A 不被清——保留初始朝向）
+    mem.write_wram(0x6AF4 + slot as u16, status.wrapping_add(1)); // status→2 (Active)
+}
+
+#[cfg(test)]
+mod r29_enemy_activation_tdd {
+    use super::*;
+    use crate::frame::FrameMemory;
+
+    /// TDD 红→绿：敌人 delay 归零+bit3 set⇒status→Active（data0A 保留）
+    #[test]
+    fn enemy_activate_resting_to_active_when_delay_zero() {
+        let mut m = FrameMemory::default();
+        // 敌人 slot4：status=1（Resting）delay=1（下一帧归零）
+        m.write_wram(0x6AF4 + 4, 1); // status=Resting
+        m.write_ram(0x0440 + 9, 1); // delay=1
+        m.write_ram(0x0440 + 5, 0x08); // data05 bit3 set
+        m.write_ram(0x0440 + 10, 1); // data0A=1（初始朝向=向下爬）
+        enemy_activate_resting_to_active(&mut m, 4);
+        // status 应为 2（Active）
+        assert_eq!(m.read_wram(0x6AF4 + 4), 2, "status 应为 2（Active）");
+        // data0A 应保留（不被清）
+        assert_eq!(m.read_ram(0x0440 + 10), 1, "data0A 应保留（初始朝向）");
+    }
+
+    /// TDD 红→绿：敌人 delay 未归零⇒status 不变
+    #[test]
+    fn enemy_activate_resting_to_active_delay_not_zero() {
+        let mut m = FrameMemory::default();
+        // 敌人 slot4：status=1（Resting）delay=2（未归零）
+        m.write_wram(0x6AF4 + 4, 1); // status=Resting
+        m.write_ram(0x0440 + 9, 2); // delay=2
+        m.write_ram(0x0440 + 5, 0x08); // data05 bit3 set
+        enemy_activate_resting_to_active(&mut m, 4);
+        // status 应仍为 1（Resting）
+        assert_eq!(m.read_wram(0x6AF4 + 4), 1, "status 应仍为 1（Resting）");
+        // delay 应减为 1
+        assert_eq!(m.read_ram(0x0440 + 9), 1, "delay 应减为 1");
+    }
+}
