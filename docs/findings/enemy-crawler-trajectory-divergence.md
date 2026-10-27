@@ -63,6 +63,20 @@ GameEngine 未跑），**不是位置**。可信窗口：敌实际移动段（f7
 单调）。下轮重分析须先定位敌 spawn/首更新帧（$0441 值稳定的起点），只取该窗口做
 x++/gate 分布表。
 
+
+## 定谳推进（2026-10-27 r20）：FC 相位差 6——A 级实测
+
+**emu FrameCount 只在 MainLoop(C0BC) 尾递增**（asm prg7:207 `jsr GoMainRoutine / inc FrameCount /
+lda #0 sta NMIStatus / 等待 NMI 结束`）。emu f795 FC=$0C=12 ⇒ emu MainLoop 自 **f783** 起才
+跑（12 次迭代）。**rust $2D 自 f2 起每帧递增**（f795=$12=18）⇒ rust 主循环相位早 6 迭代。
+
+**后果**：ShouldCrawlerMove(F852) 门=((slot/8+FC)>>1)&3——FC 错相 6 ⇒ 6/8 移动窗错相 ⇒
+f799 起 1px 漂移 ⇒ 柱角碰撞/拐角序列级联（or3 vs or1）。
+
+**待修（下轮）**：rust 主循环启动相位（BootPhase::MainLoop 进入点/首迭代语义——r14 唤醒
+件工作区）与 emu 对齐；或验证 6 差的构成（title 段 rust 多跑迭代？）后精确修。修后敌轨迹
+应全帧对齐 → f820/f950/f1200 连锁收敛。
+
 ## 关联
 - 前置：docs/findings/anim-state-machine-model.md（decomp eefc9c3d）
 - 下游：f820(359)/f950(1270)/f1200(15929) 全由本轨迹差主导
