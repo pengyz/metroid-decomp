@@ -138,6 +138,22 @@ title(3)奇 ✗、boot+title=7 奇 ✗、boot+title−1 起点修正=6 偶 ✓�
 InitializeAfterReset 链 NMI 等待）+ 标题门（已实现过 [1,0,1]，asm 依据充分，$90BA/
 $909F）——两者合计与起点修正对齐后 FC 全帧一致。blink parity 每步用 f550=0px 验证。
 
+
+## boot 全貌补定（2026-10-27 r24 续）：rust 场景跳过整个 boot 链
+
+`init_bank1`（boot.rs，窗3 门 1+2+1 在此）存在但 case-001 **没跑**——rust 场景 f352
+快照恢复 = 跳过 boot 链+房间加载整段（f2-f352 的 boot/title 由 rust 自身状态机以
+每帧 1 迭代推进，无任何停帧）。故 rust 停帧 0 是结构性的，非门缺失。
+
+**FC 全帧对齐的条件**（asm boot 时间表考证后）：
+1. rust boot 相位须占 f1-f6 窗（6 tick，内含 f2/f4-6 四个门）——当前 f2 即完成；
+2. 标题过渡门 [1,0,1]（已实现过，asm $90BA/$909F 依据充分，f311-313）；
+3. f352-358 快照恢复点的 7 帧——快照恢复语义本身等价吸收 ✓（无需动作）；
+4. 起点：emu f1 首迭代 vs rust f2——boot 重排后自然对齐。
+
+此为 **boot 调度重排**（r14 域），需 InitializeAfterReset→DrawIntroBackground→…全链
+NMI 等待点考证（prg0:8071 起）。非局部旋钮，专属任务卡。
+
 ## 关联
 - 前置：docs/findings/anim-state-machine-model.md（decomp eefc9c3d）
 - 下游：f820(359)/f950(1270)/f1200(15929) 全由本轨迹差主导
