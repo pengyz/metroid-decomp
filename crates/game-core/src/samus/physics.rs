@@ -971,6 +971,9 @@ fn check_update_name_table(mem: &mut FrameMemory) {
         return; // TempScrollDir 防重流
     }
     // ④列流送（E590——30 块竖写：PPU inc=32）
+    // 【goal-r22 修】列写=PPU 重活 ⇒ NMI bogged 2 帧（emu 实测 f916-917/f1064-1065 各停
+    // 2 帧）。旧形无门 ⇒ FC 相位漂移 ⇒ 爬行 6/8 移动窗错相 ⇒ 敌轨迹级联。
+    mem.iter_bogged(2);
     let idx = (mem.read_ram(crate::ram_map::SCROLL_X) & 0xF8) >> 3;
     let y = (mem.read_ram(0x00FF) ^ dir) & 1; // GetNameTableAtScrollDir（EB85）
     let src = 0x6000u16 + (y as u16) * 0x400; // RoomRAMAddrs（E562）
@@ -1179,6 +1182,27 @@ pub fn samus_move_horizontally(mem: &mut FrameMemory, delta: u8) {
 }
 
 #[cfg(test)]
+/// 【goal-r22 红测】滚屏列写 = NMI bogged 2 帧（emu 实测 f916-917/f1064-1065 各停 2 帧
+/// ——CheckUpdateNameTable(E54A) ④列流送 30 块 PPU 竖写=重活）。旧形无门 ⇒ FC 相位漂移
+/// ⇒ 爬行 6/8 移动窗错相 ⇒ 敌轨迹级联（docs/findings/enemy-crawler-trajectory-divergence.md）。
+#[test]
+fn scroll_right_column_draw_bogs_two_frames() {
+    let mut m = crate::frame::FrameMemory::default();
+    // 场景：右向滚（ScrollDir=3）、RoomNumber 已装载完（$5A=FF）、TempScrollDir 同向、
+    // SCROLL_X 到 8px 阈（dir==3 ⇒ &7==0）、名表位就绪
+    m.write_ram(crate::ram_map::SCROLL_DIR, 3);
+    m.write_ram(0x004A, 3);
+    m.write_ram(0x005A, 0xFF);
+    m.write_ram(crate::ram_map::SCROLL_X, 0x07); // scroll_right 先 +1 ⇒ 0x08（&7=0=阈值 ✓）
+    m.write_ram(0x00FF, 0x03); // 名表位（^dir&1=0 → 表0）
+    m.write_ram(crate::ram_map::MAP_POS_X, 1);
+    m.write_ram(0x005A, 0xFF); // RoomNumber=FF ⇒ setup_room 立即 RTS（无房任务）
+    let gates_before = m.iter_gates.len();
+    let _ = scroll_right(&mut m);
+    assert_eq!(m.iter_gates.len() - gates_before, 2, "列写应发 2 帧 bogged 门");
+    assert_eq!(m.iter_gates, vec![0, 0], "bogged 门=0（NMI 跳过帧）");
+}
+
 mod tests_camera_follow {
     //! 【playability P0】摄像机跟随根件 TDD（asm E668/E626/E6D2/E6A7——渲染目检定谳：
     //! 金腿摄像机随行/我方画面静止+x 绕回）。RoomRAM 0xFF=可走预置（collision_point_ok
