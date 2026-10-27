@@ -704,7 +704,10 @@ pub fn samus_stand(mem: &mut FrameMemory) {
     if mem.read_ram(crate::ram_map::JOY1_CHANGE) & A != 0 {
         mem.write_ram(crate::ram_map::SAMUS_STATUS, 2); // sa_Jump
     }
-    super::physics::set_samus_data(mem); // CD6D（壳已端口）
+    // 【goal-r16 修】asm SamusStand(CC36)→LCC6E `lda #$04/jsr SetSamusData`——A=4（站立动画
+    // delay）。旧形漏设 regs.a⇒update_obj_anim 的 `sta animDelay←A` 重置为垃圾⇒动画错乱/过快。
+    mem.regs.a = 4;
+    super::physics::set_samus_data(mem); // CD6D（A=4——LCC6E）
 }
 
 // ==== 10 态肉·批3（SamusJump/SamusRoll——同形轻仪式）====
@@ -781,7 +784,9 @@ pub fn samus_pnt_up(mem: &mut FrameMemory) {
     if mem.read_ram(crate::ram_map::JOY1_CHANGE) & A != 0 {
         mem.write_ram(crate::ram_map::SAMUS_STATUS, 6); // sa_PntJump
     }
-    super::physics::set_samus_data(mem); // CD6D（壳已端口）
+    // 【goal-r16 修】asm SamusPntUp(D198) `lda #$04/jsr SetSamusData`——A=4。旧形漏设 regs.a。
+    mem.regs.a = 4;
+    super::physics::set_samus_data(mem); // CD6D（A=4）
 }
 
 /// SamusDead 处理件（字节自证 D41A `a9 01 4c 6d cd`——lda #$01/jmp SetSamusData）：

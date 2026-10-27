@@ -207,6 +207,9 @@ pub fn samus_intro(mem: &mut FrameMemory) {
         // 漏写致 sprite 指针跨帧累加溢写 $300+（Samus.status 擦除根））
         mem.write_ram(0x005B, 0);
         mem.write_ram(0x004B, 0);
+        // 【goal-r16 修】asm DE47(AnimDrawObject)=`jsr UpdateObjAnim`(A=0)+DE4A——首句走表。
+        // 旧形（拆分后）漏走表⇒animFrame 停留 0(Stand 帧 id)⇒渲染 Stand（emu 渲 Front 帧——L4 f550 差 210px）。
+        crate::samus::physics::update_obj_anim(mem, 0); // UpdateObjAnim（DC8F——A=0 `lda #$00`）
         crate::frame::sprite::anim_draw_object(mem, 0); // AnimDrawObject（$DE47——Samus 槽 0）
     }
 }
@@ -666,8 +669,8 @@ fn crawler_ai(mem: &mut crate::frame::FrameMemory, x: u8) {
     };
     if !ok {
         // CrawlerInsideCornerCheck（bank1:$9AA8——**goal-r16 G3'**）：$00 契约判据。
-        // $00=1(离屏/wrap)⇒FlipDirection(data05 eor #1)；$00=0(块界碰撞)⇒data0A=(data0A−1)&3
-        // +CrawlerReorientSprite($9A8F anim 面随件)。旧形「失败一律 eor #01」与 asm 反。
+        // $00=1(离屏/wrap)⇒FlipDirection(data05 eor #1)；$00=0(块界碰撞)⇒data0A=(data0A−1)&3。
+        // asm：move($9AE2)后 **InsideCorner($9AA8 失败径)+OutsideCorner($9AC6 探径)都跑**（非互斥）。
         let zero = mem.read_ram(0x00);
         if zero != 0 {
             let d = mem.read_ram(0x0400 + x as u16 + 5);
@@ -677,13 +680,12 @@ fn crawler_ai(mem: &mut crate::frame::FrameMemory, x: u8) {
             mem.write_ram(0x0400 + x as u16 + 10, o.wrapping_sub(1) & 0x03); // 朝向--
             // CrawlerReorientSprite($9A8F) anim 面随件（占位）
         }
-    } else {
-        // CrawlerOutsideCornerCheck（bank1:$9AC6——**goal-r16 G3'**）：向 (data0A+1) 探移成功
-        // （前方悬空/平台边缘）⇒data0A+1+reorient（GetNextOrientation $9ADA=iny）。简化径：
-        // 探 (data0A+1) 向块检通过（可移）⇒回退该探移+data0A+1。
+    }
+    // CrawlerOutsideCornerCheck（bank1:$9AC6——**goal-r16 G3'**）：恒跑，向 (data0A+1) 探移
+    // （GetNextOrientation $9ADA=iny）成功⇒data0A+1+reorient（asm `jsr $9AE2` 探移**提交**无回退）。
+    {
         let o = mem.read_ram(0x0400 + x as u16 + 10) & 0x03;
         let next_o = (o + 1) & 0x03;
-        // 探移：按 (next_o*2+direction) 向移 1px，成功则回退+改朝向
         let dir = mem.read_ram(0x0400 + x as u16 + 5) & 1;
         let nidx = ((next_o as usize) * 2 + dir as usize) & 0x07;
         let probe_ok = match nidx {
@@ -693,15 +695,8 @@ fn crawler_ai(mem: &mut crate::frame::FrameMemory, x: u8) {
             _ => enemy_move_one_pixel_up(mem, x),
         };
         if probe_ok {
-            // 探移成功⇒回退（反向 1px）+data0A←next_o+reorient
-            match nidx {
-                0 | 5 => { let nx = mem.read_ram(0x0400 + x as u16 + 1); mem.write_ram(0x0400 + x as u16 + 1, nx.wrapping_sub(1)); }
-                1 | 4 => { let nx = mem.read_ram(0x0400 + x as u16 + 1); mem.write_ram(0x0400 + x as u16 + 1, nx.wrapping_add(1)); }
-                2 | 3 => { let ny = mem.read_ram(0x0400 + x as u16 + 0); mem.write_ram(0x0400 + x as u16 + 0, ny.wrapping_sub(1)); }
-                _ => { let ny = mem.read_ram(0x0400 + x as u16 + 0); mem.write_ram(0x0400 + x as u16 + 0, ny.wrapping_add(1)); }
-            }
-            mem.write_ram(0x0400 + x as u16 + 10, next_o); // data0A+1
-            // CrawlerReorientSprite anim 面随件（占位）
+            mem.write_ram(0x0400 + x as u16 + 10, next_o); // data0A+1（asm `9D 0A 04`）
+            // CrawlerReorientSprite($9A8F) anim 面随件（占位）
         }
     }
     update_enemy_common_no_move_no_anim(mem, x); // @exit 径（anim+显示）
@@ -801,6 +796,7 @@ fn enemy_move_one_pixel_up(mem: &mut crate::frame::FrameMemory, x: u8) -> bool {
     if y.wrapping_sub(ry) & 0x07 == 0 {
         // 块界⇒碰撞判（EnemyCheckMoveUp——随件 fail-loud）
         if !enemy_check_move_up(mem, x) {
+            mem.write_ram(0x00, 0); // $00=0（碰撞）
             return false;
         }
     }
@@ -808,6 +804,7 @@ fn enemy_move_one_pixel_up(mem: &mut crate::frame::FrameMemory, x: u8) -> bool {
     mem.write_ram(0x0400 + x as u16 + 0, ny);
     if ny == ry {
         // 界判（ScrollY/名表换——简化径）
+        mem.write_ram(0x00, 1); // $00=1（离屏/wrap）
         return false;
     }
     // 成功：jumpDsplcmnt inc（横朝向时）
@@ -824,12 +821,14 @@ fn enemy_move_one_pixel_down(mem: &mut crate::frame::FrameMemory, x: u8) -> bool
     let ry = mem.read_wram(0x6AF4 + x as u16 + 1);
     if y.wrapping_add(ry) & 0x07 == 0 {
         if !enemy_check_move_down(mem, x) {
+            mem.write_ram(0x00, 0); // $00=0（碰撞）
             return false;
         }
     }
     let ny = y.wrapping_add(1);
     mem.write_ram(0x0400 + x as u16 + 0, ny);
     if ny == ry.wrapping_neg() {
+        mem.write_ram(0x00, 1); // $00=1（离屏/wrap）
         return false;
     }
     true
@@ -841,12 +840,14 @@ fn enemy_move_one_pixel_left(mem: &mut crate::frame::FrameMemory, x: u8) -> bool
     let rx = mem.read_wram(0x6AF4 + x as u16 + 2); // radiusX=+2
     if xpos.wrapping_sub(rx) & 0x07 == 0 {
         if !enemy_check_move_left(mem, x) {
+            mem.write_ram(0x00, 0); // $00=0（碰撞）
             return false;
         }
     }
     let nx = xpos.wrapping_sub(1);
     mem.write_ram(0x0400 + x as u16 + 1, nx);
     if nx == rx {
+        mem.write_ram(0x00, 1); // $00=1（离屏/wrap）
         return false;
     }
     true

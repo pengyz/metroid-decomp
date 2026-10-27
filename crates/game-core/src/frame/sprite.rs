@@ -19,35 +19,14 @@ fn blob(addr: u16) -> u8 {
 }
 
 /// AnimDrawObject（$DE47）——对象→OAM（page_index=对象槽；Samus=0）。
+/// 【goal-r16 修】ObjDrawFrame（$DE4A）**不更新动画**——asm SetSamusData 链：`jsr UpdateObjAnim`
+/// (DC8F) 与 `jmp ObjDrawFrame`(DE4A) 分离。动画由 `update_obj_anim`（physics.rs CD6D 链首件，
+/// 含 `sta animDelay`←A 初值重置）负责。旧形在此内联 UpdateObjAnim 且漏 `sta animDelay` 重置⇒
+/// animDelay 恒 0⇒每帧换帧（动画过快）+与 update_obj_anim 双写冲突。
 pub fn anim_draw_object(mem: &mut crate::frame::FrameMemory, page_index: u8) {
     let px = page_index as u16;
-    // ---- UpdateObjAnim（$DC8F）：animDelay 递减→animIndex 走 ObjectAnimIndexTbl ----
-    let mut anim_delay = mem.read_ram(0x0304 + px);
-    let mut anim_index = mem.read_ram(0x0306 + px);
-    let anim_reset = mem.read_ram(0x0305 + px);
-    let mut anim_frame = mem.read_ram(0x0303 + px);
-    if anim_delay == 0 || {
-        anim_delay = anim_delay.wrapping_sub(1);
-        anim_delay == 0
-    } {
-        // 走表（$8572 起）：$FF=回卷
-        loop {
-            let b = sd::SPRITE_DATA
-                .get(sd::OBJECT_ANIM_INDEX_TBL as usize + anim_index as usize)
-                .copied()
-                .unwrap_or(0xFF);
-            if b == 0xFF {
-                anim_index = anim_reset;
-                continue;
-            }
-            anim_frame = b;
-            anim_index = anim_index.wrapping_add(1);
-            break;
-        }
-    }
-    mem.write_ram(0x0304 + px, anim_delay);
-    mem.write_ram(0x0306 + px, anim_index);
-    mem.write_ram(0x0303 + px, anim_frame);
+    // 只读 animFrame（动画更新在 update_obj_anim——此处不写 $0303/$0304/$0306）
+    let anim_frame = mem.read_ram(0x0303 + px);
     // ---- ObjDrawFrame（$DE4A）----
     let frame_idx = anim_frame as u16 * 2;
     let fptr = (sd::SPRITE_DATA[sd::OBJ_FRAME_PTR_TABLE as usize + frame_idx as usize] as u16)
@@ -109,8 +88,10 @@ pub fn anim_draw_object(mem: &mut crate::frame::FrameMemory, page_index: u8) {
             let oy = (sy as i16 + dy as i16 - 1) as u8; // PPU y+1 形
             let ox = (sx as i16 + dx as i16) as u8;
             let mut attr = cntrl05;
-            if obj_cntrl & 0x20 != 0 {
-                attr ^= 0x40; // ObjectCntrl 镜像覆写（bit6）
+            if obj_cntrl & 0x10 != 0 {
+                attr ^= 0x40; // ObjectCntrl **bit4**=水平镜像（$6B——constants_ram「Bit 4 controls
+                              // object horizontal mirroring」；CD92 SamusDir bit0→bit4）。旧形误用
+                              // bit5(0x20=priority 位)⇒左朝 sprite 不翻转（贴图错）。
             }
             mem.write_ram(0x0200u16.wrapping_add(x_sprite), oy);
             mem.write_ram(0x0201u16.wrapping_add(x_sprite), b);
