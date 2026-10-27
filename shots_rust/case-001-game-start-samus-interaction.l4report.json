@@ -14,9 +14,9 @@
     "shots/case-001-game-start-samus-interaction_f00720_after-jump.png": "596bb5b093dbbb3b625c4418f4e659e6199d55852922ad4911a0d0459e65e161",
     "shots_rust/case-001-game-start-samus-interaction_f00820_after-shoot.png": "049ba8e43c694d84ed98ca5fa7a7dde7f86bb38322b1cda531ab0f324f61462e",
     "shots/case-001-game-start-samus-interaction_f00820_after-shoot.png": "08a57f4edefe6c7d1e03b64a7ae134641a26e6103b2f40427a5242e3d56b5c6a",
-    "shots_rust/case-001-game-start-samus-interaction_f00950_combo-action.png": "00fa04325513725f8c8b914da6b4f3f28164e14ede7a2369b82f63508859caec",
+    "shots_rust/case-001-game-start-samus-interaction_f00950_combo-action.png": "c9cb164c8b7d5d15ebea9bd57b04f7099ab6fc6aec33b1c68489a4075e8700a0",
     "shots/case-001-game-start-samus-interaction_f00950_combo-action.png": "1f5558edcbaa5890e2dad508af14a7fdaf7b0cd70c66ed160e2b28df61d0afd0",
-    "shots_rust/case-001-game-start-samus-interaction_f01200_end.png": "5938f538282c2c3c623b92715e27efb6f93ab44b3edc11b0fb0948cc5e6d4d36",
+    "shots_rust/case-001-game-start-samus-interaction_f01200_end.png": "8bb3a452b358f678fab3cd64e8127fde3e6947724c2e6a890f2917b84a2c6e89",
     "shots/case-001-game-start-samus-interaction_f01200_end.png": "3c4599eb895a934c0849699623bcc67a67e40793582b37a30cfe1d6ad9d46469"
   },
   "captures": 7,
@@ -76,7 +76,7 @@
     },
     {
       "match": false,
-      "diff_pixels": 19038,
+      "diff_pixels": 15978,
       "total_pixels": 61440,
       "whitelist_hits": 0,
       "frame": 950,
@@ -86,7 +86,7 @@
     },
     {
       "match": false,
-      "diff_pixels": 18993,
+      "diff_pixels": 18022,
       "total_pixels": 61440,
       "whitelist_hits": 0,
       "frame": 1200,

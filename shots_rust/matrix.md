@@ -21,6 +21,6 @@
 | case-001-game-start-samus-interaction | 650 | after-left | ✅match | fresh/fresh | 0/61440 |  |
 | case-001-game-start-samus-interaction | 720 | after-jump | ✅match | fresh/fresh | 0/61440 |  |
 | case-001-game-start-samus-interaction | 820 | after-shoot | ❌diff | fresh/fresh | 691/61440 |  |
-| case-001-game-start-samus-interaction | 950 | combo-action | ❌diff | fresh/fresh | 19038/61440 |  |
-| case-001-game-start-samus-interaction | 1200 | end | ❌diff | fresh/fresh | 18993/61440 |  |
+| case-001-game-start-samus-interaction | 950 | combo-action | ❌diff | fresh/fresh | 15978/61440 |  |
+| case-001-game-start-samus-interaction | 1200 | end | ❌diff | fresh/fresh | 18022/61440 |  |
 

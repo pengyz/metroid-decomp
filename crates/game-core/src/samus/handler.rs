@@ -186,11 +186,27 @@ fn samus_jump_check_fire(mem: &mut FrameMemory) {
 
 /// LCF2E（**asm 内容锚** `: 07:CF2E`——r26）：Samus.isHit 判（固实实体接触）→贴墙反应。
 fn solid_entity_response(mem: &mut FrameMemory) {
-    let ishit = mem.read_ram(0x0308);
+    // 【goal-r13】SamusIsHit=$030A（constants_ram:228）——旧形误读 $0308（=speedY_I）。
+    let ishit = mem.read_ram(0x030A);
     if (ishit >> 1) & 0x02 == 0 {
-        return;
+        return; // 未触固实实体——RTS_X014
     }
-    crate::unported!("bank07:CF2E"); // 贴墙反应（随件核）
+    // 贴墙反应（asm CF2E）：触左（bit0=0）且 accelX>=0⇒StopHorzMovement；触右且 accelX<0⇒同。
+    let accel_x = mem.read_ram(crate::ram_map::SAMUS_ACCEL_X);
+    let touched_right = ishit & 0x01 != 0;
+    if touched_right {
+        if accel_x & 0x80 == 0 {
+            return; // 触右且加速右——RTS_X014
+        }
+    } else {
+        if accel_x & 0x80 != 0 {
+            return; // 触左且加速左——RTS_X014
+        }
+    }
+    // StopHorzMovement（CF55 族）：清水平动量
+    mem.write_ram(crate::ram_map::SAMUS_ACCEL_X, 0);
+    mem.write_ram(crate::samus::physics::SAMUS_SPEED_X_I, 0);
+    mem.write_ram(crate::samus::physics::SAMUS_SPEED_X_F, 0);
 }
 
 /// SamusRun（**asm 内容锚** `SamusRun: ; 07:CCC2`）——**地面/空中双径**

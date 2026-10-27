@@ -637,7 +637,9 @@ pub fn lava_and_move_check(mem: &mut FrameMemory) {
     let going_down = disp >= 0;
     for _ in 0..steps {
         // MoveSamusDown（E4A3）：每像素查撞。受阻⇒RTS_X163（落地）。
-        if !object_check_move_down(mem) {
+        // 【goal-r13】asm E2E3 @loop_down MoveSamusDown 仅**向下**查撞（向上=跳不查）。
+        // 旧形向上也查撞→起跳即落地（跳跃 1 帧）。
+        if going_down && !object_check_move_down(mem) {
             stop_vert_movement(mem); // D147（清垂直动量）
             mem.write_ram(crate::ram_map::SAMUS_ACCEL_Y, 0); // 落地清重力（@landingNoBounce）
             break;
