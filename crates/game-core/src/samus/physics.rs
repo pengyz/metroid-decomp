@@ -35,14 +35,17 @@ pub fn x_plus_4(x: u8) -> u8 {
 /// VertAccelerate 头（task-4 E37A 移植半——accel/maxspeed 初始化）。
 /// 入参态：SamusAccelY=0（地面）才走初始化；空中（≠0）直跳 @dontStartFalling。
 
-/// ObjectCheckMoveVertical/Horizontal（**asm 内容锚** `: 07:E7B5/E893`——r26 同构敌径）：
-/// 位置/半径→collision_point_ok（RoomRAM tile 值类判）。
+/// ObjectCheckMoveDown（**asm 内容锚** `ObjectCheckMoveDown: ; 07:E7AD`→`ObjectCheckMoveVertical:
+/// 07:E7B5`→`CalculateFirstBGCollisionPoint: ; 07:E90F`（LE95F `y - DistToCenterY`）——r26 同构敌径）：
+/// 向下查撞点=**y+radiusY**（asm `lda #$00/sec/sbc radiusY`→DistToCenterY=−radiusY→
+/// 查撞点 Y=y−(−radiusY)=y+radiusY（下方））。旧形误用 `y−ry+8`（上方）→地板在下方读到
+/// 空瓦→穿地（L4 f820 发散根因）。仅向下查撞用（@loop_down）；上/横各有独立点。
 fn object_check_move_vertical(mem: &mut FrameMemory) -> bool {
     let y = mem.read_ram(0x030D);
     let ry = mem.read_ram(0x0301); // Objects.radiusY
     let x = mem.read_ram(0x030E);
     let hi = mem.read_ram(SAMUS_HI); // Samus.hi（$30C——Object 结构字节锚 F186 `BD 0C 03`）
-    let check_y = y.wrapping_sub(ry).wrapping_add(8);
+    let check_y = y.wrapping_add(ry); // 向下查撞点=y+radiusY（asm E7AD/E90F）
     collision_point_ok(mem, check_y, x, hi)
 }
 
@@ -115,15 +118,19 @@ mod tests {
         assert_eq!(m.regs.a, disp);
     }
 
-    /// D147 双写微件（speedY/subpixY 清零全端口）。
+    /// D147 双写微件（speedY + SamusSpeedSubPixelY（速 frac $0312）清零——asm D147
+    /// `sty Samus.speedY($0308)/sty SamusSpeedSubPixelY($0312)`；**不**清 SamusSubPixelY
+    /// （$0310 位移 subpix——旧形误清它→落地下速 frac 残留 0x9C→f820 相位发散）。
     #[test]
     fn stop_vert_movement_clears_two_faces() {
         let mut m = FrameMemory::default();
         m.write_ram(SAMUS_SPEED_Y_I, 0x80);
+        m.write_ram(SAMUS_SPEED_Y_F, 0x9C);
         m.write_ram(SAMUS_SUBPIX_Y, 0x55);
         stop_vert_movement(&mut m);
-        assert_eq!(m.read_ram(SAMUS_SPEED_Y_I), 0);
-        assert_eq!(m.read_ram(SAMUS_SUBPIX_Y), 0);
+        assert_eq!(m.read_ram(SAMUS_SPEED_Y_I), 0); // speedY int 清
+        assert_eq!(m.read_ram(SAMUS_SPEED_Y_F), 0); // 速 frac 清（$0312）
+        assert_eq!(m.read_ram(SAMUS_SUBPIX_Y), 0x55); // 位移 subpix 保留（asm 不清）
     }
 
     /// CD92 镜像位（SamusDir bit0→bit4 OR 入 $6B）。
@@ -256,6 +263,30 @@ mod tests {
     fn object_check_move_down_detonates_at_nested() {
         let mut m = FrameMemory::default();
         let _ = object_check_move_down(&mut m); // 零爆（collision_point_ok 全径）
+    }
+
+    /// ObjectCheckMoveDown 查撞点=**y+radiusY**（下方——asm E7AD `sbc radiusY`→
+    /// CheckMoveVertical `y - DistToCenterY = y + radiusY`）。旧形误用 `y-ry+8`（上方）
+    /// →地板在下方读到空瓦→穿地。本测钉死：地板瓦在 y+ry 行=阻挡；上方行=可走。
+    #[test]
+    fn object_check_move_down_checks_below_at_y_plus_radiusy() {
+        use crate::ram_map::{SAMUS_HI, SAMUS_RADIUS_Y, SAMUS_Y};
+        // 下方查撞点 y+ry=192 行（tile row 192）→ idx=((192&0xF8)<<2)|(128>>3)=768|16=784
+        let floor_idx = 0x6000u16 | 784;
+        let mut m = FrameMemory::default();
+        // 填满可走（≥$80），再在 y+ry=192 行置固实地板（<$80）
+        for i in 0..1024u16 {
+            m.write_wram(0x6000 | i, 0xFF);
+        }
+        m.write_wram(floor_idx, 0x5C); // 固实地板（<0x80=阻挡）
+        m.write_ram(SAMUS_Y, 177); // y=177 → y+ry=192 → 撞地板行
+        m.write_ram(SAMUS_RADIUS_Y, 15);
+        m.write_ram(0x030E, 128); // x=128 → 列 16
+        m.write_ram(SAMUS_HI, 0);
+        assert!(!object_check_move_down(&mut m), "y=177（y+ry=192 撞地板）应阻挡");
+        // y=176 → y+ry=191（184 行=空）→ 可走（未及地板）
+        m.write_ram(SAMUS_Y, 176);
+        assert!(object_check_move_down(&mut m), "y=176（y+ry=191 未及地板）应可走");
     }
 
     /// VertAccelerate 头：空中跳过+地面 maxspeed 初始化+对齐检测引爆。
@@ -412,11 +443,13 @@ pub fn horz_integrate(mem: &mut FrameMemory) -> u8 {
 
 // ==== m2 预拼装·批1（移动深路径嵌套件——D147/CD92 全折+CD6D 壳）====
 
-/// StopVertMovement（**字节自证** D147 `a0 00 8c 08 03 8c 10 03 60`——ldy #$00/
-/// sty $0308（speedY）/sty $0310（subpixY）/rts）：**双写微件全端口**。
+/// StopVertMovement（**字节自证** D147 `a0 00 8c 08 03 8c 12 03 60`——ldy #$00/
+/// sty $0308（Samus.speedY）/sty $0312（SamusSpeedSubPixelY 速 frac）/rts）：**双写微件全端口**。
+/// > 【2026-10-27 更正】旧注误记 `8c 10 03`（sty $0310 subpixY）——ROM 实测 `8c 12 03`
+/// > （sty $0312 速 frac）；旧形据此误清 $0310→落地下速 frac 残留→相位发散。已正。
 pub fn stop_vert_movement(mem: &mut FrameMemory) {
-    mem.write_ram(SAMUS_SPEED_Y_I, 0);
-    mem.write_ram(SAMUS_SUBPIX_Y, 0);
+    mem.write_ram(SAMUS_SPEED_Y_I, 0); // Samus.speedY（$0308）
+    mem.write_ram(SAMUS_SPEED_Y_F, 0); // SamusSpeedSubPixelY（$0312 速 frac——D147）
 }
 
 /// SetMirrorCntrlBit（**字节自证** CD92 `a5 4d 20 ?? ?? 0d 6b 00 8d 6b 00 60`——
@@ -645,7 +678,18 @@ pub fn lava_and_move_check(mem: &mut FrameMemory) {
             break;
         }
         let y = mem.read_ram(0x030D);
-        mem.write_ram(0x030D, if going_down { y.wrapping_add(1) } else { y.wrapping_sub(1) });
+        // 【goal-r15】asm MoveSamusUp（Lx155 `dec Samus.y/inc SamusJumpDsplcmnt`）/
+        // MoveSamusDown（E4A3 Lx162 `inc Samus.y/dec SamusJumpDsplcmnt`）——**逐像素位移
+        // 计数**（JumpDsplcmnt 净上移）。旧形漏 inc/dec→JumpDsplcmnt 恒 0→SamusJump
+        // 位移门（≥$20 松开→StopVertMovement）永不触发→跳跃无界（L4 f950 发散根因）。
+        let disp_cnt = mem.read_ram(crate::ram_map::SAMUS_JUMP_DISP);
+        if going_down {
+            mem.write_ram(0x030D, y.wrapping_add(1));
+            mem.write_ram(crate::ram_map::SAMUS_JUMP_DISP, disp_cnt.wrapping_sub(1)); // MoveSamusDown `dec`
+        } else {
+            mem.write_ram(0x030D, y.wrapping_sub(1));
+            mem.write_ram(crate::ram_map::SAMUS_JUMP_DISP, disp_cnt.wrapping_add(1)); // MoveSamusUp `inc`
+        }
     }
     // 【goal-r10】lava check（移动后——asm E269 顺序调整，落地后查 lava）
     let in_lava = is_samus_in_lava(mem);
