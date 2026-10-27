@@ -154,6 +154,24 @@ $909F）——两者合计与起点修正对齐后 FC 全帧一致。blink parit
 此为 **boot 调度重排**（r14 域），需 InitializeAfterReset→DrawIntroBackground→…全链
 NMI 等待点考证（prg0:8071 起）。非局部旋钮，专属任务卡。
 
+
+## 相位归因定谳（2026-10-27 r25）：emu TitleRoutine($1F) 逐帧实测
+
+- **f3-5 = phase 1（DrawIntroBackground $80D0）**：单迭代跨 4 帧（`jsr ScreenOff` 等 1 +
+  `ClearNameTables` 4KB 重活 + `PreparePPUProcess` 背景 VRAM 写 bogged 2）⇒ FC 停 f4-6。
+  rust 现仅 title_spin=1（差 3 帧）。
+- **f311-312 = phase 0x1B（StartContinueScreen1B $90BA→ClearAll $909F）**：单迭代跨 3 帧
+  （ScreenOff 等+清表 bogged+WaitNMIPass 等=[1,0,1]）⇒ FC 停 f311-313。rust 无门。
+- f6-7=phase 2（METROIDFadeIn）、f8+=phase 3（FlashEffect，Timer3=80 帧长相）。
+
+**完整修复方案**（parity 闭合）：① phase1 spin 1→3（或等价门 [1,0,0]+work）；② 标题
+0x1B 门 [1,0,1]（重施，asm $909F 依据）。合计 +6（偶）⇒ blink(FC&1) parity 保持 ⇒
+f550 不破；FC(f799)=22−6=16=emu ✓；FC(420) 校验：rust 405 mod 256=149=emu ✓ 全帧一致。
+
+**实现要点**：phase1 的 spin 语义与门语义需先核 shim（title_spin 由 dispatch_step 的
+NmiYield/shell 语义产生——改值须与 r14 契约对齐，禁硬旋钮）。验证序：单测（相位门形）
+→ f420/550/650/720=0px（parity 不破）→ f799 FC 探针=16 → 敌轨迹对拍 → f820/f950/f1200。
+
 ## 关联
 - 前置：docs/findings/anim-state-machine-model.md（decomp eefc9c3d）
 - 下游：f820(359)/f950(1270)/f1200(15929) 全由本轨迹差主导
