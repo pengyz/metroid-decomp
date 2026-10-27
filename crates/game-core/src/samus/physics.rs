@@ -321,6 +321,35 @@ mod tests {
         assert!(object_check_move_left(&mut m), "全部行可走应放行");
     }
 
+    /// 【goal-r17 红测】右向**正常**查撞必须读**当前名表**（asm E946：dist 负 ⇒ X=0，
+    /// `txa/adc #$00` 仅当 x≥dist（真出右界）才 ≠0⇒翻表；正常 x<dist ⇒ 不翻）。
+    /// 旧形用 borrow 判 ⇒ 右向 dist=$F8 恒借位 ⇒ 每查必翻表 ⇒ 右走全程读错表被卡
+    /// （对拍实录：case-001 f950 1253→16367 恶化）。
+    #[test]
+    fn object_check_move_right_reads_current_nametable() {
+        use crate::ram_map::{SAMUS_HI, SAMUS_RADIUS_X, SAMUS_RADIUS_Y, SAMUS_Y};
+        let mut m = FrameMemory::default();
+        for i in 0..1024u16 {
+            m.write_wram(0x6000u16 | i, 0xFF); // 表 0 全可走
+        }
+        // 表 1（0x6400）全可走——bug 形态下右查翻到它 ⇒ 误判可走放行（红）
+        for i in 0..1024u16 {
+            m.write_wram(0x6400u16 | i, 0xFF);
+        }
+        // x=0x50(80)、rx=8 ⇒ 判点 X=88(0x58) 列 11；y=176、ry=8 ⇒ 行 168/176
+        let col = 11u16;
+        let idx = |page: u16, yrow: u16| 0x6000u16 | (page << 10) | (((yrow & 0xF8) << 2) | col);
+        m.write_wram(idx(0, 168), 0x5C); // 表 0 固实 ⇒ 应阻挡
+        m.write_wram(idx(0, 176), 0x5C);
+        m.write_ram(SAMUS_Y, 176);
+        m.write_ram(SAMUS_RADIUS_Y, 8);
+        m.write_ram(0x030E, 0x50);
+        m.write_ram(SAMUS_RADIUS_X, 8);
+        m.write_ram(SAMUS_HI, 0);
+        m.write_ram(crate::ram_map::SCROLL_DIR, 0x02);
+        assert!(!object_check_move_right(&mut m), "右向应读当前名表（固实⇒阻挡）");
+    }
+
     /// 【goal-r16 碰撞修·红测】判点 X 环绕（x<DistToCenterX，借位）⇒ asm E946：
     /// `lda PositionX/sec/sbc DistToCenterX` 后 `txa/adc #$00/beq RTS`——环绕时
     /// `inc Temp0B_PositionHi`（横滚）⇒ 查撞点读**另一张名表**。旧形仍读当前表⇒
@@ -877,7 +906,13 @@ fn object_check_move_horizontal(mem: &mut FrameMemory, x: u8, dist: u8) -> bool 
     let ry = mem.read_ram(0x0301);
     let mut hi = mem.read_ram(crate::ram_map::SAMUS_HI);
     let (check_x, borrow) = x.overflowing_sub(dist);
-    if borrow && mem.read_ram(crate::ram_map::SCROLL_DIR) & 0x02 != 0 {
+    // asm E946 环绕判定（精确移植）：`ldx #$00/lda dist/bmi Lx215/dex` ⇒
+    // X=0xFF（dist 正=左查）/0x00（dist 负=右查）；`sec/sbc` 后 `txa/adc #$00/beq RTS`
+    // ⇒ A=X+carry（carry=无借位）≠0 ⇔ 环绕。右向：x≥dist（真出右界）才环绕。
+    let carry = (!borrow) as u8;
+    let x_reg: u8 = if dist & 0x80 == 0 { 0xFF } else { 0x00 };
+    let wrapped = x_reg.wrapping_add(carry) != 0;
+    if wrapped && mem.read_ram(crate::ram_map::SCROLL_DIR) & 0x02 != 0 {
         hi ^= 0x01; // asm `inc Temp0B_PositionHi`（两表模 2，inc≡翻转）
     }
     let (top, n) = horizontal_span_rows(y, ry);
