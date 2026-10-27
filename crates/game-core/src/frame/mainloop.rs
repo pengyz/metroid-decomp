@@ -574,7 +574,9 @@ fn update_en_data1f(mem: &mut crate::frame::FrameMemory, x: u8) {
 /// dec delay 非零⇒RTS；归零：data05 bit3=0⇒inc 退回；=1⇒(PipeBug type7⇒SFX)+
 /// status inc→Active+InitEnActiveAnimIndex。
 fn try_becoming_active(mem: &mut crate::frame::FrameMemory, x: u8) {
-    let e = 0x0400 + x as u16 + 7; // Ens.delay
+    // 【goal-r16 修】delay 偏移 +7→+9（ROM F7BA `DE 09 04`=dec $0409——Ens.delay=+9；
+    // 旧 +7=movementInstrIndex⇒delay 永不归零⇒敌人恒 Resting 不激活）。data0A(+10)=朝向。
+    let e = 0x0400 + x as u16 + 9; // Ens.delay（ROM F7BA 实测 $0409）
     let d = mem.read_ram(e);
     if d.wrapping_sub(1) != 0 {
         mem.write_ram(e, d.wrapping_sub(1));
@@ -1602,5 +1604,54 @@ mod r29_enemy_activation_tdd {
         assert_eq!(m.read_wram(0x6AF4 + 4), 1, "status 应仍为 1（Resting）");
         // delay 应减为 1
         assert_eq!(m.read_ram(0x0440 + 9), 1, "delay 应减为 1");
+    }
+}
+
+/// 功能4 敌人 spawn delay 初始化（InitEnemyFacingDirectionAxisAndDelay 端口）
+///
+/// refs asm 锚：bank1:96BB（EnemyInitDelayTbl——type=5 Zoomer→delay=$01）/
+/// bank7:F3BE（UpdateEnemy_Resting——delay=0⇒跳过 TryBecomingActive）/
+/// bank7:F7BA（TryBecomingActive——delay 归零⇒Active）
+/// 根因：rust 敌人 slot4 Ens.delay(+9)=0 恒 0⇒F3BE 跳过 TryBecomingActive⇒永不激活
+/// 修正：spawn 时 Ens.delay(+9)←EnemyInitDelayTbl[type]（type=5→$01）
+pub fn enemy_spawn_delay_init(mem: &mut crate::frame::FrameMemory, slot: u8) {
+    let px = (slot as u16) << 4;
+    let t = mem.read_wram(0x6AF4 + slot as u16 + 14) as usize & 0x0F; // EnsExtra.type
+    let delay = game_data::area::graphics::ENEMY_INIT_DELAY.get(t).copied().unwrap_or(0x01);
+    mem.write_ram(0x0400 + px + 9, delay); // Ens.delay←EnemyInitDelayTbl[type]
+}
+
+#[cfg(test)]
+mod r30_enemy_spawn_delay_tdd {
+    use super::*;
+    use crate::frame::FrameMemory;
+
+    /// TDD 红→绿：敌人 spawn 时 delay 应初始化为 EnemyInitDelayTbl[type]（type=5→$01）
+    #[test]
+    fn enemy_spawn_delay_init_sets_nonzero_for_type5() {
+        let mut m = FrameMemory::default();
+        // 敌人 slot4：type=5（Zoomer/Crawler）
+        m.write_wram(0x6AF4 + 4 + 14, 5); // EnsExtra.type=5
+        enemy_spawn_delay_init(&mut m, 4);
+        // delay 应为 $01（EnemyInitDelayTbl[type=5]）
+        assert_eq!(m.read_ram(0x0440 + 9), 0x01, "delay 应为 $01（EnemyInitDelayTbl[type=5]）");
+    }
+
+    /// TDD 红→绿：敌人 spawn 后 delay 归零→TryBecomingActive→status→Active
+    #[test]
+    fn enemy_spawn_delay_init_enables_activation() {
+        let mut m = FrameMemory::default();
+        // 敌人 slot4：type=5（Zoomer/Crawler）status=1（Resting）delay=0（未初始化）
+        m.write_wram(0x6AF4 + 4, 1); // status=Resting
+        m.write_wram(0x6AF4 + 4 + 14, 5); // EnsExtra.type=5
+        m.write_ram(0x0440 + 5, 0x08); // data05 bit3 set
+        // spawn delay init
+        enemy_spawn_delay_init(&mut m, 4);
+        // delay 应为 $01
+        assert_eq!(m.read_ram(0x0440 + 9), 0x01, "delay 应为 $01");
+        // 激活径（delay 归零→Active）
+        enemy_activate_resting_to_active(&mut m, 4);
+        // status 应为 2（Active）
+        assert_eq!(m.read_wram(0x6AF4 + 4), 2, "status 应为 2（Active）");
     }
 }
