@@ -671,6 +671,70 @@ class ScenarioLock:
             self.f = None
 
 
+
+def mesen_home() -> Path:
+    """Mesen2 用户配置目录（【2026-10-27 并发安全件·隔离根治（照 Guardic 模式移植）】
+    GUNNAC_MESEN_HOME > ~/.config/Mesen2-metroid（**独立 HOME**——配置零共享：
+    单实例劫持=共享配置域互扰根因（mesen.lock 隔离（不同配置域（不同锁）））
+    + RecentGames/<rom>.rgd resume 状态跨 run/跨项目污染源。
+    首用迁移：隔离目录 settings.json 缺→共享域 ~/.config/Mesen2 拷入（确定性键随迁）。
+
+    POSIX 下 Mesen 配置解析=$HOME/.config/Mesen2（XDG）；隔离域=sibling（Mesen2-metroid），
+    由 mesen_isolated_home() fake HOME 注入子进程 env 使 Mesen 用隔离配置域。
+    参考：/home/peng/workspace/GuardicGaidenRemake/tools/scenario_run.py（mesen_home（563-582 行））
+    """
+    isolated = Path.home() / ".config" / "Mesen2-metroid"
+    shared = Path.home() / ".config" / "Mesen2"
+    # 首用迁移（dated）：隔离域 settings 缺→共享域拷入（确定性键随迁）
+    if not isolated.exists() and shared.exists():
+        try:
+            isolated.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copytree(shared, isolated)
+        except OSError:
+            pass
+    return Path(os.environ.get("GUNNAC_MESEN_HOME", str(isolated)))
+
+
+def clear_mesen_resume_state(rom: Path) -> list:
+    """清除 Mesen2 的 recent-game resume 状态（跨 run/跨项目污染源）。
+
+    Mesen2 GUI 退出时把 resume state 内嵌写进 `RecentGames/<rom>.rgd`（内含 Savestate.mss），
+    下次启动同一 ROM 可能自动恢复该状态 ⇒ trace 第二跑/跨模式 sha 分歧（Guardic task-133
+    实测：title-menu run1≠run2；删除 .rgd 后恢复一致）。采集前显式删除，不碰 settings.json；
+    返回被删除文件（报告留痕）。删除失败 fail-closed 抛错（不许静默放过污染源）。
+    参考：GuardicGaidenRemake/tools/scenario_run.py（clear_mesen_resume_state（585-600 行））
+    """
+    home = mesen_home()
+    removed = []
+    for pat in (home / "RecentGames" / f"{rom.stem}.rgd",):
+        if pat.is_file():
+            try:
+                pat.unlink()
+            except OSError as exc:
+                raise ScenarioError(
+                    f"resume 状态清理失败（fail-closed，防 auto-resume 跨 run 污染）：{pat}：{exc}")
+            removed.append(str(pat))
+    return removed
+
+
+def mesen_isolated_home() -> Path:
+    """fake HOME（【2026-10-27 隔离根治】把隔离配置域注入 Mesen 子进程 env 的机制）。
+
+    Mesen2 POSIX 配置解析=$HOME/.config/Mesen2（XDG）——共享域 ~/.config/Mesen2=跨项目
+    污染源（mesen.lock 单实例劫持+RecentGames resume 污染）。隔离机制=设 HOME=<fake>，
+    使 <fake>/.config/Mesen2→symlink→mesen_home()（隔离域 Mesen2-metroid）——Mesen 的
+    $HOME/.config/Mesen2 解析落到隔离域（配置零共享（与 Guardic Mesen2-ggr/其他项目互不干扰））。
+    """
+    fake = Path.home() / ".config" / "Mesen2-metroid-home"
+    link = fake / ".config" / "Mesen2"
+    isolated = mesen_home()
+    fake.mkdir(parents=True, exist_ok=True)
+    (fake / ".config").mkdir(parents=True, exist_ok=True)
+    if not link.is_symlink() and not link.exists():
+        link.symlink_to(isolated)
+    return fake
+
+
 def kill_orphan_mesen(mesen: Path) -> int:
     """t54 F3 根因防护：清扫驱动锁罩不到的孤儿 Mesen（驱动崩溃/被强杀后残留，
     与后续运行争写同一批产物）。返回清除数。
@@ -759,6 +823,12 @@ def run_scenario(name_or_path: str, timeout_s: float = 1800.0, keep_gen: bool = 
     if done_path.exists():
         done_path.unlink()
 
+    # 【2026-10-27 隔离根治】跨 run/跨项目 resume 污染防护：删 Mesen2 recent-game
+    # resume 状态（RecentGames/<rom>.rgd（内含 Savestate.mss（auto-resume 污染源）））。
+    removed_states = clear_mesen_resume_state(ROM)
+    if removed_states:
+        print(f"  [清场] 删除 Mesen2 resume 状态: {', '.join(Path(p).name for p in removed_states)}")
+
     t0 = time.time()
     mesen_log = open(TRACES_DIR / f"{name}.mesen.log", "w", encoding="utf-8")
     # 自管 Xvfb（t24 实测：xvfb-run 包装层偶发提前退出 → Xvfb 随之死 → Mesen 冻在中途帧、
@@ -777,6 +847,10 @@ def run_scenario(name_or_path: str, timeout_s: float = 1800.0, keep_gen: bool = 
         #   （默认沙箱禁写）；Mesen 启动后把 CWD 切到 HomeFolder ⇒ Lua 产物必须绝对路径（PLAN 已是）。
         #   /DoNotSaveSettings、Xvfb/DISPLAY 仅 GUI 模式需要（Unix 侧沿用已验证路径）。
         env = dict(os.environ)
+        # 【2026-10-27 隔离根治】把隔离 HOME 注入子进程 env（Mesen 用隔离配置域
+        # Mesen2-metroid（配置零共享（单实例劫持+resume 污染根治）））——照 Guardic 模式。
+        env["HOME"] = str(mesen_isolated_home())
+        env["GUNNAC_MESEN_HOME"] = str(mesen_home())
         if IS_WINDOWS:
             proc = subprocess.Popen(
                 [str(mesen), "--testRunner", str(lua_path), str(ROM),
