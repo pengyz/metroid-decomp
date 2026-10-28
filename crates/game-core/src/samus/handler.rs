@@ -382,6 +382,10 @@ fn fire_samus_projectile(mem: &mut FrameMemory) {
     mem.write_ram(base + 0x0D, sy.wrapping_sub(6)); // bullet.y = Samus.y − 6
     mem.write_ram(base + 0x0E, sx.wrapping_add(offset_x)); // bullet.x = Samus.x + offset
     mem.write_ram(base + 0x0C, shi); // bullet.hi = Samus.hi
+    // Forwards @exit（$D269）：animIndex←ObjAnim_SamusStandFire(0x09（$857B-$8572）)
+    // （SetSamusNextAnim（Index+delay0）——弹形态 ②（f810/820 射姿残差根因））
+    mem.write_ram(ANIM_RESET_INDEX + 1, 0x09);
+    mem.write_ram(ANIM_RESET_INDEX.wrapping_sub(1), 0);
 }
 
 /// FireSamusProjectileUpwards（**asm 内容锚** `: 07:D275`（audit §7））：同 Forwards
@@ -419,6 +423,8 @@ fn fire_samus_projectile_upwards(mem: &mut FrameMemory) {
     mem.write_ram(base + 0x0D, sy.wrapping_add(off_y));
     mem.write_ram(base + 0x0E, sx.wrapping_add(off_x));
     mem.write_ram(base + 0x0C, shi);
+    mem.write_ram(ANIM_RESET_INDEX + 1, 0x09); // StandFire（@exit 同径）
+    mem.write_ram(ANIM_RESET_INDEX.wrapping_sub(1), 0);
 }
 
 fn set_samus_jump(mem: &mut FrameMemory) {
@@ -839,9 +845,10 @@ pub fn samus_jump_check_fire(mem: &mut FrameMemory) {
     if mem.read_ram(ANIM_RESET_INDEX) == OBJ_ANIM_SAMUS_JUMP_PNT_UP {
         fire_samus_projectile_upwards(mem);
     } else {
-        fire_samus_projectile(mem); // Forwards（D1EE 分派（UP 面除外（本径 B 无 UP）））
-        // animIndex←JumpFire（SetSamusNextAnim（audit §6））
-        mem.write_ram(ANIM_RESET_INDEX + 1, 0x20); // JumpFire（$8592-$8572=0x20（弹形态 ① 修））
+        fire_samus_projectile(mem); // Forwards（D1EE 分派）——exit 写 StandFire(0x09)
+        // SetSamusAnim(JumpFire)（audit §6（全形（Reset+Index 双写 0x20（$8592-$8572）））
+        mem.write_ram(ANIM_RESET_INDEX, 0x20);
+        mem.write_ram(ANIM_RESET_INDEX + 1, 0x20);
         mem.write_ram(ANIM_RESET_INDEX.wrapping_sub(1), 0);
     }
 }
