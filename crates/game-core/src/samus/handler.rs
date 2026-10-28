@@ -246,7 +246,11 @@ pub fn samus_run(mem: &mut FrameMemory) {
         if mem.read_ram(crate::ram_map::SAMUS_IN_LAVA) != 0
             && mem.read_ram(crate::ram_map::JOY1_CHANGE) & 0x80 != 0
         {
-            crate::unported!("bank07:LCD40"); // 熔岩跳（随件）
+            // LCD40（:3110（audit（D002 族）））：SetSamusJump+SamusHorzSpeedMax←$12
+            // +SetSamusData_3FrameAnimDelay（熔岩跳（三件全在（2026-10-28 端口）））
+            set_samus_jump(mem);
+            mem.write_ram(crate::ram_map::SAMUS_HORZ_SPEED_MAX, 0x12);
+            mem.write_ram(ANIM_RESET_INDEX.wrapping_sub(1), 3);
         }
         // samL06（CD16）：三件+animDelay 初值 A=2（`lda #$02/bne SetSamusData`——
         // UpdateObjAnim 经 A 取初值（DC8F `sta animDelay`）！禁事后覆写 $304（掐死递减）。
