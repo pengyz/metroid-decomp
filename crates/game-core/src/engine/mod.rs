@@ -91,6 +91,9 @@ pub fn compare_root_and_mark(root_val: u8, iram: &[u8]) -> Vec<(u16, u8)> {
     ev
 }
 
+/// 【P2 孤注合并（2026-10-28（证伪注））】旧 Phase-2 语义 doc（update_enemy_position
+/// （位置更新（合并 d3ba+d3bd+d3c0））——refs asm 考证（bank07:D3BA（prg7_engine.asm）））
+/// 并入本体（孤注删除（doc 与 fn 同体迁移））。
 /// $EB68：根值→$6AFB[x]（wram）+位运算段+$FB7B 调用→**jmp $F85A**（jumped 面）。
 /// 返回 (写事件, jumped 目标)。
 pub fn update_enemy_position(root_val: u8, x: u8) -> (Vec<(u16, u8)>, u16) {
@@ -126,11 +129,15 @@ pub fn load_room_statues(root_val: u8, y: u8, w687b: u8, w687c: u8)
     (ev, 0xEAD4)
 }
 
+/// 【P2 孤注合并（2026-10-28）】旧语义 doc（update_enemy_animation（动画更新
+/// （合并 d70f+d71a+d735））——refs asm 考证（bank07:D70F（prg7_engine.asm）））并入本体。
 /// $EC89：$072C[x]←根值→**共享尾 $EC54**（bne 恒走——jumped 面）。
 pub fn update_enemy_animation(root_val: u8, x: u8) -> (Vec<(u16, u8)>, u16) {
     (vec![(0x072C + x as u16, root_val)], 0xEC54)
 }
 
+/// 【P2 孤注合并（2026-10-28）】旧语义 doc（update_enemy_movement（移动更新
+/// （合并 d633+d694+d6a7））——refs asm 考证（bank07:D633（prg7_engine.asm）））并入本体。
 /// $EE33：$074B[x]←根值+$09←3/指针面（$07←$50/$06←$4F）→**jmp $DC67**（jumped 面）。
 pub fn update_enemy_movement(root_val: u8, x: u8, zp4f: u8, zp50: u8) -> (Vec<(u16, u8)>, u16) {
     let ev = vec![(0x074B + x as u16, root_val), (0x0009, 3),
@@ -251,6 +258,9 @@ pub fn elevator_move_end_if_b(x: u8, v0300_x: u8) -> (Vec<(u16, u8)>, Option<u16
 /// $1E←7/$6883 inc/$33←0 等——深段注记）。
 pub fn elevator_move_end_if_c() -> (u8, u16) { (0x01, 0xDE47) }
 
+/// 【P2 孤注合并（2026-10-28（证伪注））】旧 Phase-4 语义 doc（update_enemy_state
+/// （状态更新（合并 d57a+d580+d609））——refs asm 考证（bank07:D57A（prg7_engine.asm）））
+/// 并入本体（孤注删除（doc 与 fn 同体迁移规则））。
 /// $D970 员体（$D973）：jmp $D892（回驱二段）+init 段（$0307←0/$7D←0+jsr $F186……）。
 /// 返回 (写事件, 子调面)。
 pub fn update_enemy_state() -> (Vec<(u16, u8)>, u16) {
@@ -613,6 +623,8 @@ pub fn check_samus_collision(x: u8, v6af4_x: u8) -> (Vec<(u16, u8)>, u8) {
     (vec![(0x010F, 0)], 0) // $010F 写族（案实核值 0）+Y=0
 }
 
+/// 【P2 孤注合并（2026-10-28）】旧语义 doc（check_enemy_collision（碰撞检测
+/// （合并 d6bf+d6e1+d6ed））——refs asm 考证（bank07:D6BF（prg7_engine.asm）））并入本体。
 /// $F2D5 员体：OR 写族（$0404[x] |= A / $0404[y] |= $10 两形）。
 pub fn check_enemy_collision(x: u8, y: u8, a_in: u8, v10: u8, v0404_x: u8, v0404_y: u8)
     -> Vec<(u16, u8)> {
@@ -14872,11 +14884,6 @@ pub fn s1_d498(root_val: u8, iram: &[u8]) -> Vec<(u16, u8)> {
 
 // ---- Phase 2：enemy 域（语义改写+逻辑合并）----
 
-/// update_enemy_position（位置更新（合并 d3ba+d3bd+d3c0））。
-///
-/// refs asm 考证（bank07:D3BA（prg7_engine.asm））——真规则（公式形（零字面特值））。
-
-
 /// update_enemy_velocity（速度更新（合并 d3f4+d400+d40e））。
 ///
 /// refs asm 考证（bank07:D3F4（prg7_engine.asm））——真规则（公式形（零字面特值））。
@@ -14897,24 +14904,8 @@ pub fn apply_enemy_gravity(vel_y: u8, gravity: u8) -> u8 {
     vel_y.wrapping_add(gravity)
 }
 
-/// update_enemy_state（状态更新（合并 d57a+d580+d609））。
-///
-/// refs asm 考证（bank07:D57A（prg7_engine.asm））——真规则（公式形（零字面特值））。
 
 
-/// update_enemy_movement（移动更新（合并 d633+d694+d6a7））。
-///
-/// refs asm 考证（bank07:D633（prg7_engine.asm））——真规则（公式形（零字面特值））。
-
-
-/// check_enemy_collision（碰撞检测（合并 d6bf+d6e1+d6ed））。
-///
-/// refs asm 考证（bank07:D6BF（prg7_engine.asm））——真规则（公式形（零字面特值））。
-
-
-/// update_enemy_animation（动画更新（合并 d70f+d71a+d735））。
-///
-/// refs asm 考证（bank07:D70F（prg7_engine.asm））——真规则（公式形（零字面特值））。
 
 
 /// update_enemy_health（生命值更新（合并 d746+d761））。
