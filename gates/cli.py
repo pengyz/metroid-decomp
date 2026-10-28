@@ -330,11 +330,14 @@ def history_lower_bounds(records: list[dict]) -> tuple[dict[str, int], set[str]]
     bounds: dict[str, int] = {}
     covered: set[str] = set()
     for rec in records:
-        if rec.get("kind", "metric") == "metric" and rec.get("metric") in METRIC_KEYS:
+        if rec.get("metric") in METRIC_KEYS and rec.get("kind", "metric") in ("metric", "retire"):
             new = rec.get("new")
             if isinstance(new, int) and not isinstance(new, bool):
                 covered.add(rec["metric"])
-                bounds[rec["metric"]] = max(bounds.get(rec["metric"], 0), new)
+                if rec["kind"] == "retire":
+                    bounds[rec["metric"]] = new  # 退役下调：下界重置（sanctioned）
+                else:
+                    bounds[rec["metric"]] = max(bounds.get(rec["metric"], 0), new)
         snap = rec.get("metrics")
         if isinstance(snap, dict):
             for key, val in snap.items():
@@ -369,9 +372,11 @@ def verify_baseline_integrity(baseline: dict, records: list[dict] | None = None,
     if not records:
         return ["历史缺失：基线单调性下界不可验证（history 为空）"]
     for i, rec in enumerate(records, 1):
+        # kind=retire（退役下调）豁免自身回退检查（sanctioned 下调——下界重置语义）
         if rec.get("kind", "metric") == "metric" and rec.get("metric") in METRIC_KEYS:
             old, new = rec.get("old"), rec.get("new")
-            if (isinstance(old, int) and not isinstance(old, bool)
+            if (rec.get("kind") != "retire"
+                    and isinstance(old, int) and not isinstance(old, bool)
                     and isinstance(new, int) and not isinstance(new, bool) and new < old):
                 problems.append(f"历史第 {i} 条记录自身回退：{rec['metric']} {old}→{new}")
     bounds, covered = history_lower_bounds(records)
@@ -431,6 +436,36 @@ def baseline_update(data: dict, metric: str, value: int, reason: str,
         "new": value,
         "reason": reason,
         "metrics": dict(data["metrics"]),  # 全量快照：任一 metric 的历史下界都可验证（t14 F1）
+    }
+    return data, record
+
+
+def baseline_retire(data: dict, metric: str, value: int, reason: str, evidence: str) -> tuple[dict, dict]:
+    """退役下调唯一写入口（kind=retire）：架构级删除（如 L2 投影层退役）sanctioned 下调。
+
+    约束：reason（裁定说明）+ evidence（A 级证据指针）双留痕；kind=retire 记录在完整性
+    校验中重置该 metric 历史下界为 new（豁免仅限本 kind；手工 json 改写依旧被 sha 链+
+    下调检查拦截——AGENTS §5：改门禁须单独 commit 写明基线影响）。
+    """
+    if metric not in METRIC_KEYS:
+        raise BaselineFormatError(f"未知指标 {metric!r}（固定键集：{METRIC_KEYS}）")
+    if not isinstance(value, int) or isinstance(value, bool) or value < 0:
+        raise ValueError(f"value 必须是非负整数，实际 {value!r}")
+    reason = (reason or "").strip()
+    evidence = (evidence or "").strip()
+    if not reason or not evidence:
+        raise ValueError("retire 必须 --reason（裁定）与 --evidence（A 级证据）双留痕")
+    old = int(data["metrics"].get(metric, 0))
+    data["metrics"][metric] = value
+    record = {
+        "ts": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "kind": "retire",
+        "metric": metric,
+        "old": old,
+        "new": value,
+        "reason": reason,
+        "evidence": evidence,
+        "metrics": dict(data["metrics"]),
     }
     return data, record
 
@@ -811,7 +846,7 @@ def _gate_runner_dispatch(runner_name: str, prereq: Path, label: str) -> tuple[s
 # ---------------------------------------------------------------- l4 现状基线账（账内容忍消费面）
 # Task 1 门禁解封（2026-10-26 立）：trace/visual 现状失败**逐条**登记
 # data/status/l4_status_quo_baseline.json（trace:{<case>} / visual:{<frame>}，条目=reason/exit/
-# count + observed 实录签名）——**账内容忍/l2_gap_map 同构**：TOLERATED 显式打印（逐条回显
+# count + observed 实录签名）——**账内容忍判定（历史：l2_gap_map 同构已随 L2 退役）**：TOLERATED 显式打印（逐条回显
 # reason/exit/count），不阻塞≠绿；**非白名单/非调阈/非静默判 pass**。判定逻辑只在 gates/
 # （AGENTS：工具自身不持有判定权）。防静默底线五条（fail-closed，任一命中=账外照常 FAIL）：
 #   ① id 未登记（新分歧照常红）；② rest 与 observed 实录签名**精确等值**不成立（失败形态
@@ -902,7 +937,7 @@ def status_quo_tolerate(section: dict, fail_items: list[tuple[str, str]]) -> tup
 
 
 def status_quo_consume(section_key: str, full_output: str) -> tuple[bool, str]:
-    """l4 现状基线账读取点（gate_subroutine_diff 的 l2_gap_map 消费面同构）。
+    """l4 现状基线账读取点（历史命名（l2_gap_map 已随 L2 退役））。
 
     从 runner 全量输出提取 `[FAIL]`/`[R-FAIL]` 失败裁定行**双前缀**逐条对账（fix round 1：
     渲染腿失败行打 `[R-FAIL] `，只认 `[FAIL] ` 时真渲染腿分歧不入账 ⇒ 报「全命中」假绿）；
@@ -944,35 +979,6 @@ def status_quo_consume(section_key: str, full_output: str) -> tuple[bool, str]:
     return status_quo_tolerate(sections[section_key], fail_items)
 
 
-def gate_subroutine_diff() -> tuple[str, str]:
-    verdict, detail, _full = _gate_runner_dispatch("diff_subroutines.py", ROOT / "oracle" / "subroutines", "L2 子程序级")
-    # gap_map TOLERATED 消费面（SC-MD-003 解阻件（gates 域）2026-10-20 立）：
-    # subroutine-diff 读 data/status/l2_gap_map.json（D7 声明域（md/g3/账内）case_prefix）
-    # ——FAIL 全部失败案 id 若全部命中已登记前缀 ⇒ verdict=TOLERATED（显式计数+前缀表）
-    # ——未命中前缀的新分歧照常 FAIL（绝不静默吞）；不阻塞 ≠ 绿（SUMMARY 显式 TOLERATED）。
-    if verdict == FAIL:
-        gap_map_path = ROOT / "data" / "status" / "l2_gap_map.json"
-        if gap_map_path.is_file():
-            try:
-                entries = json.loads(gap_map_path.read_text(encoding="utf-8")).get("entries", [])
-            except Exception:
-                entries = []
-            prefixes = [str(e.get("case_prefix")) for e in entries if e.get("case_prefix")]
-            # 从 detail 提取失败案 id（[FAIL] <id> 或差分不一致尾行内 id token）
-            fail_ids = []
-            for tok in re.findall(r"\[FAIL\]\s+([^\s:]+)", detail):
-                fail_ids.append(tok)
-            if fail_ids and prefixes:
-                unmatched = [fid for fid in fail_ids
-                             if not any(fid.startswith(p.rstrip("-")) or p.rstrip("-") in fid for p in prefixes)]
-                if not unmatched:
-                    return TOLERATED, (f"gap_map 声明域全命中（{len(fail_ids)} 败案×{len(prefixes)} 已登记前缀）"
-                                       f"——D7 声明形 TOLERATED（显式计数，不阻塞≠绿）: {detail}")
-                return FAIL, (f"gap_map 声明域外分歧 {len(unmatched)} 案（新分歧照常 FAIL）: "
-                              f"{', '.join(unmatched[:8])} | {detail}")
-    return verdict, detail
-
-
 def gate_trace_diff() -> tuple[str, str]:
     verdict, detail, full = _gate_runner_dispatch("diff_traces.py", ROOT / "oracle" / "traces", "L3 帧级 trace")
     # 已知偏差签名级降级（AGENTS §6 TOLERATED 消费面，2026-10-15 立）：FAIL 且失败
@@ -985,7 +991,7 @@ def gate_trace_diff() -> tuple[str, str]:
             if item.get("gate") == "trace-diff" and item.get("item") and item["item"] in detail:
                 return TOLERATED, (f"已登记已知偏差（签名命中）: {item['bug']}: {item['reason']}"
                                    f"——原明细: {detail}")
-        # l4 现状基线账读取点（Task 1 门禁解封：账内容忍/l2_gap_map 同构——逐条显式 reason/exit/count；
+        # l4 现状基线账读取点（Task 1 门禁解封：账内容忍判定（历史：l2_gap_map 同构已随 L2 退役）——逐条显式 reason/exit/count；
         # 账外/签名漂移/膨胀照常 FAIL 绝不静默吞）。既有 baseline.tolerated 消费面在前（语义不动）。
         ok, report = status_quo_consume("trace", full)
         if ok:
@@ -1000,7 +1006,7 @@ def gate_visual_diff() -> tuple[str, str]:
     if verdict == SKIP:
         detail += "；visual 白名单 gates/visual_whitelist.json 于 S6 建立（唯一允许的白名单，变更需用户确认）"
     if verdict == FAIL:
-        # l4 现状基线账读取点（同 gate_trace_diff：账内容忍/l2_gap_map 同构，非白名单非静默）
+        # l4 现状基线账读取点（同 gate_trace_diff：账内容忍判定（历史：l2_gap_map 同构已随 L2 退役），非白名单非静默）
         ok, report = status_quo_consume("visual", full)
         if ok:
             return TOLERATED, f"{report}——原明细: {detail}"
@@ -1257,7 +1263,6 @@ PROOF_ROM_REL = Path("rom") / "Metroid (USA).nes"
 # S_intx 触发集：可影响证书三面（Side A 公式 / Rust 实现 / 桥接·穷举探针）的文件全入面。
 PROOF_SURFACE = (
     "crates/game-core/src/samus/integrators.rs",
-    "crates/game-core/src/l2ports.rs",
     "tools/int_x_smt_proof.py",
     "crates/game-oracle/src/bin/int-x-bridge.rs",
     "crates/game-oracle/src/bin/int-y-proof.rs",
@@ -1683,7 +1688,6 @@ GATES: list[tuple[str, str, str, str, object]] = [
     ("knowledge-format", "启用", "check", "知识库 frontmatter/type/文件名前缀", gate_knowledge_format),
     ("docs-links", "启用", "check", "文档相对链接有效性", gate_docs_links),
     ("rust-tests", "crates/ 创建后自动启用", "check", "cargo test --workspace + 测试数 ratchet", gate_rust_tests),
-    ("subroutine-diff", "oracle/subroutines 建立后启用", "all", "L2：ROM 原字节执行 vs Rust 函数出入参比对", gate_subroutine_diff),
     ("trace-diff", "启用（oracle 腿；game-core 腿 S5 自动启用）", "trace", "L3：帧级状态向量逐 tick 比对（oracle vs Rust）", gate_trace_diff),
     ("visual-diff", "S6 启用", "visual", "L4：截图逐像素（白名单外）", gate_visual_diff),
     ("l4", "启用（Task 6）", "l4",
@@ -1946,6 +1950,18 @@ def cmd_baseline(args) -> int:
             for p in prior_problems:
                 print(f"  - {p}")
         print(f"说明已留痕 {rel(HISTORY_PATH)}；commit message 必须写明『确认无回退』的证据（AGENTS.md §2）")
+        return 0
+    if args.baseline_action == "retire":
+        try:
+            baseline, record = baseline_retire(baseline, args.metric, args.value,
+                                               args.reason, args.evidence)
+        except (RatchetError, BaselineFormatError, ValueError) as exc:
+            print(f"BASELINE RETIRE 拒绝: {exc}")
+            return 1
+        record["baseline_sha256"] = save_baseline(baseline)
+        append_history(record)
+        print(f"BASELINE RETIRE: {record['metric']} {record['old']} -> {record['new']}（退役下调）")
+        print(f"说明已留痕；commit message 必须写明架构裁定与 A 级证据（AGENTS.md §2/§5）")
         return 0
     if args.baseline_action == "tolerate":
         try:
@@ -2306,7 +2322,7 @@ def cmd_selftest(_args) -> int:
     v, d = gate_knowledge_format()
     check("gap-load-snapshot.md（type:gap）过 gate_knowledge_format 实跑", v == PASS, d)
 
-    # 14) l4 现状基线账判定器（Task 1 门禁解封——账内容忍/l2_gap_map 同构：显式 reason/exit/count）
+    # 14) l4 现状基线账判定器（Task 1 门禁解封——账内容忍判定（历史：l2_gap_map 同构已随 L2 退役）：显式 reason/exit/count）
     sq = globals().get("status_quo_tolerate")
     check("l4 现状基线账判定器已实现（status_quo_tolerate）", callable(sq),
           "status_quo_tolerate 未实现——账内容忍读取点缺失")
@@ -2732,6 +2748,11 @@ def build_parser() -> argparse.ArgumentParser:
     p_up.add_argument("--metric", required=True, choices=METRIC_KEYS)
     p_up.add_argument("--value", required=True, type=int)
     p_up.add_argument("--reason", required=True, help="必须写明『确认无回退』的证据")
+    p_ret = base_sub.add_parser("retire", help="退役下调（架构级删除 sanctioned；双留痕强制）")
+    p_ret.add_argument("metric", choices=sorted(METRIC_KEYS))
+    p_ret.add_argument("value", type=int)
+    p_ret.add_argument("--reason", required=True)
+    p_ret.add_argument("--evidence", required=True)
     p_tol = base_sub.add_parser("tolerate", help="登记显式 TOLERATED 已知偏差（需 BUG 编号）")
     p_tol.add_argument("--gate", required=True)
     p_tol.add_argument("--item", required=True)
