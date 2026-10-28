@@ -12788,6 +12788,58 @@ DoorHitPointTable [5,1,10,1]+MakeRoomRAMPtr 位面公式+PaletteToggle eor 7+配
 立场（独立重导证据（正确性核）））✓——复核 verdict 实录（docs commit（对抗复核 verdict（5 重点
 （必跑验证）（实测输出原文（A 级））））✓。
 
+## shell 可玩性补齐 3 commit 对抗复核（7519c820+39ee3152+8c776d24（证伪立场（独立重导
+证据（5 重点（asm 抽查+红线核+基线上调合规+必跑验证+D4））））
+
+### verdict: needs_revision（③基线口径差（1464 vs 实测 1435（差 29（口径不一致））））（余项 ✓）
+
+**必跑验证实录（⑩（A 级原文））**：
+- `cargo test --package game-core --lib`：**1383 passed; 0 failed; 3 ignored**（全绿）
+- `cargo test --workspace`：**1383+3+8+27+14=1435 passed; 0 failed**（全绿）
+- `python3 gates/cli.py l4`：**match 20 diff 15 blocked 0**（分母 35（门链五点全 match））
+
+**① asm 证据抽查 ✓（≥1 断言/件（refs/m1disasm 验行号与逻辑））**：
+- **SamusJump D002/Lx019 分支序** ✓（prg7_engine.asm:2724（.word SamusJump ;($D002)Jumping.）
+  （dispatch table（分支序）））
+- **CheckHorzMovement D055 方向位** ✓（prg7_engine.asm:3391（SamusRun_CheckHorzMovementMidair
+  （lda Joy1Status（and #BUTTON_RIGHT | BUTTON_LEFT）））——方向位（BUTTON_RIGHT|BUTTON_LEFT））
+- **CheckFire D09C（B=bit6（旧 A=bit7 桩删除（证伪注）））** ✓（prg7_engine.asm:2912/3491
+  （SamusJump_CheckFire（dispatch（分支序）））——B=bit6（旧 A=bit7 桩删除（证伪注）））
+- **弹生命期 D4BF 分派值** ✓（prg7_engine.asm:2500（jsr UpdateSamusProjectiles ;($D4BF)Display
+  of bullets/missiles/bombs.）+:4272（UpdateSamusProjectiles: ; 07:D4BF））——D4BF 分派值（弹生命期））
+- **撞墙爆 status←4/anim 0x1D** ✓（prg7_engine.asm:4288/4449（UpdateBulletExplode（bullet/
+  missile explode））——撞墙爆（status←4/anim 0x1D））
+- **门瓦 $4E 复用径** ✓（prg7_engine.asm:4516-4517（cmp #$4E（beq GotoSamusProjectileHitDoorOr
+  Statue））——门瓦 $4E 复用径（bullet hit solid blank tile（$4E（门瓦（复用径）））））
+
+**② 红线核 ✓**：门链 6 件（09b446ed..ddc1e356）**语义零改**（git diff（physics.rs（**0 行
+diff**（零改动）））——共享件复用未重写语义 ✓
+
+**③ 基线上调合规 ✗ 拒收（口径差）**：39ee3152（1441→1464）——「确认无回退证据（AGENTS §2）」
+✓（Evidence 字段 ✓（baseline_history.jsonl（--reason 留痕）+全套件 1383 过 0 败（上调前实测））
++Confidence: 95）——**口径差发现**：基线记 **1464** vs 全 workspace 实测 **1435**（1383+3+8+27+14）
+（**差 29**（口径不一致（基线 1464（实测 1435））））——为何基线记 1464？（+23 测（1441→1464）vs
+净增 9 测（commit message）（**+23 vs +9（差 14**））——**口径不一致**（基线 1464 vs 实测 1435
+（差 29）vs 净增 9 测（+23 vs +9（差 14）））——③基线上调合规**拒收**（口径差（1464 vs 1435
+（差 29）））
+
+**④ D4 纪律 ✓**：BUG-/证伪更正/记账×2（docs/findings/samus-jump-fire-chain.md（落档））✓
+
+**⑤ L4 声明核验 ✓**：7519c820（"L4 复验（另件实测）：**20/35 无回退+门链五点全 match 保持+
+f720 after-jump=0px**"）+gates l4（**match 20 diff 15 blocked 0**（分母 35（门链五点（420:game-in
+（620:at-door（650:bullet-out（700:door-open（790:door-enter（全 match））））））））——L4 声明
+可复现（采点数/match 数（20/35（门链五点（f720=0px））））+无阈值调松（L4 逐采集点 ratchet 守住
+（match 集合只增不减 + blocked 只减不增（非聚合率）））✓
+
+**verdict**：shell 可玩性补齐 3 commit 对抗复核 **needs_revision**——③基线口径差拒收（1464 vs
+实测 1435（差 29（口径不一致（+23 vs +9（差 14））））——①asm 证据抽查 ✓（SamusJump D002/Lx019+
+CheckHorzMovement D055+CheckFire D09C（B=bit6（旧 A=bit7 桩删除（证伪注）））+弹生命期 D4BF+
+撞墙爆 status←4/anim 0x1D+门瓦 $4E（refs/m1disasm 验行号与逻辑））②红线核 ✓（physics.rs 零改动
+（门链 6 件语义零改））④D4 纪律 ✓（BUG-/证伪更正/记账×2（落档））⑤L4 声明核验 ✓（20/35（门链
+五点（f720=0px）（gates l4（match 20 diff 15 blocked 0））））——**必跑验证 ✓**（实测输出原文
+（A 级））——对抗复核核（证伪立场（独立重导证据（正确性核）））✓——复核 verdict 实录（docs commit
+（对抗复核 verdict（5 重点（必跑验证）（实测输出原文（A 级））））✓。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
