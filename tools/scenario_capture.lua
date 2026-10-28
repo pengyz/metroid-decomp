@@ -126,6 +126,38 @@ local function dumpRam(tag)
   return nil
 end
 
+-- PPU 真值 dump（终结判卡（2026-10-28））：mt=9=PPU 总线（t12/ppu_probe3 实证
+-- （$2000=FF 名表/$0100=7B CHR（frame 120 实测）））——$0000-$2FFF 全 12KB
+-- （CHR 8KB+名表 4KB（竖镜含））。hex 串（与 dumpRam 同格式）。
+local function dumpPpu(tag)
+  local p = string.format("%s/%s_f%05d_%s.ppu.hex", PLAN.out_dir, name, frame, tag)
+  local f = io.open(p, "wb")
+  if not f then return nil end
+  local parts = {}
+  for a = 0x0000, 0x2FFF do
+    local ok, v = pcall(emu.read, a, 9)
+    parts[#parts + 1] = hex2(ok and (v or 0) or 0)
+  end
+  -- palette RAM（$3F00-$3F1F（32B（终结判色面）））
+  for a = 0x3F00, 0x3F1F do
+    local ok, v = pcall(emu.read, a, 9)
+    parts[#parts + 1] = hex2(ok and (v or 0) or 0)
+  end
+  -- 滚动/控制（getState ppu 面（字段名容错（scrollX/scroll_x 双形）））
+  do
+    local st = emu.getState()
+    local sx = st["ppu.scrollX"] or st["ppu.scroll_x"] or 0
+    local sy = st["ppu.scrollY"] or st["ppu.scroll_y"] or 0
+    local ctrl = st["ppu.ctrl"] or st["ppu.ppuCtrl"] or 0
+    parts[#parts + 1] = hex2(sx)
+    parts[#parts + 1] = hex2(sy)
+    parts[#parts + 1] = hex2(ctrl)
+  end
+  f:write(table.concat(parts) .. "\n")
+  f:close()
+  return p
+end
+
 -- ---------------- 覆盖采集（PLAN.coverage；缺口左移机制③）
 -- ⚠ rounds/r2 F1（实测证伪）：字符串 "execute" 回调集合 ≠ 已执行地址集（近似总线读周期：
 -- 漏记 NMI/reset 入口首指令、混入操作数字节）；Mesen2 2.1.1 无 memCallbackType 枚举表。
@@ -612,6 +644,7 @@ emu.addEventCallback(function()
   if tag then
     local shot = saveShot(tag)
     local ram = dumpRam(tag)
+    local ppu = dumpPpu(tag)
     capF:write(string.format('{"f":%d,"tag":%s,"shot":%s,"ram":%s,"cpu":%s}\n',
       frame, jstr(tag), shot and jstr(shot) or "null", ram and jstr(ram) or "null", cpuJson()))
     nCap = nCap + 1
