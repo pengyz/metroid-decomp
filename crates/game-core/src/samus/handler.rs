@@ -176,14 +176,6 @@ fn samus_run_check_horz_movement_midair(mem: &mut FrameMemory) {
     mem.write_ram(crate::samus::physics::SAMUS_SPEED_X_F, 0);
 }
 
-/// SamusJump_CheckFire（**asm 内容锚** `: 07:D09C`——r26）：A 键（Joy1Change bit7）⇒
-/// FireSamusProjectile（打敌人流程件——随件）。
-fn samus_jump_check_fire(mem: &mut FrameMemory) {
-    if mem.read_ram(crate::ram_map::JOY1_CHANGE) & 0x80 != 0 {
-        fire_samus_projectile(mem); // D1EE（射弹——goal-r10 端口）
-    }
-}
-
 /// LCF2E（**asm 内容锚** `: 07:CF2E`——r26）：Samus.isHit 判（固实实体接触）→贴墙反应。
 fn solid_entity_response(mem: &mut FrameMemory) {
     // 【goal-r13】SamusIsHit=$030A（constants_ram:228）——旧形误读 $0308（=speedY_I）。
@@ -342,6 +334,12 @@ fn samus_run_set_anim(mem: &mut FrameMemory) -> bool {
 /// SearchOpenSlot（D1F7）→InitBullet（D2EB）→speedX（BulletSpeedXTable）→speedY=0/onScreen=1。
 /// 射弹槽=0xD0/0xE0/0xF0（Objects.status 0x03D0/03E0/03F0）。
 fn fire_samus_projectile(mem: &mut FrameMemory) {
+    // FireSamusProjectile（**asm 内容锚** `: 07:D1EE`）：UP（Joy1Status bit2）⇒Upwards/
+    // 否则 Forwards（分派器——audit §7）。
+    if mem.read_ram(crate::ram_map::JOY1_STATUS) & 0x08 != 0 {
+        fire_samus_projectile_upwards(mem);
+        return;
+    }
     // SearchOpenSamusProjectileslot（D1F7）：找 status==0 槽
     let mut slot: Option<u8> = None;
     for s in [0xD0u8, 0xE0, 0xF0] {
@@ -380,6 +378,43 @@ fn fire_samus_projectile(mem: &mut FrameMemory) {
     mem.write_ram(base + 0x0D, sy.wrapping_sub(6)); // bullet.y = Samus.y − 6
     mem.write_ram(base + 0x0E, sx.wrapping_add(offset_x)); // bullet.x = Samus.x + offset
     mem.write_ram(base + 0x0C, shi); // bullet.hi = Samus.hi
+}
+
+/// FireSamusProjectileUpwards（**asm 内容锚** `: 07:D275`（audit §7））：同 Forwards
+/// 构（搜槽/InitBullet/DieDelay $0C）但 speedY←$FC/speedX←0/纵臂炮位放
+/// （BulletUpwardsOffsetX[Dir]→Temp05；UpwardsOffsetY[status&1]→Temp04）。
+fn fire_samus_projectile_upwards(mem: &mut FrameMemory) {
+    let mut slot: Option<u8> = None;
+    for s in [0xD0u8, 0xE0, 0xF0] {
+        if mem.read_ram(0x0300 + s as u16) == 0 {
+            slot = Some(s);
+            break;
+        }
+    }
+    let Some(slot) = slot else { return; };
+    let base = 0x0300u16 + slot as u16;
+    mem.write_ram(base, mem.read_ram(base).wrapping_add(1));
+    mem.write_ram(base + 1, 2);
+    mem.write_ram(base + 2, 2);
+    mem.write_ram(base + 5, 0x00);
+    mem.write_ram(base + 6, 0x00);
+    mem.write_ram(base + 4, 0);
+    mem.write_ram(base + 0x15, 0x0C);
+    mem.write_ram(base + 8, 0xFC); // speedY←$FC（上）
+    mem.write_ram(base + 9, 0); // speedX←0
+    mem.write_ram(base + 0x0B, 1);
+    // 纵臂炮位放（BulletUpwardsOffsetXTable[Dir]（$00/$00）/UpwardsOffsetYTable[status&1]
+    // （-$08/-$04（表值（audit §7 面）））——Samus 位+偏移
+    let dir = mem.read_ram(crate::ram_map::SAMUS_DIR) & 1;
+    let status = mem.read_ram(base);
+    let off_x: u8 = if dir == 0 { 0x04 } else { 0xFC }; // UpwardsOffsetX[Dir]（±$04）
+    let off_y: u8 = if status & 1 == 0 { 0xF8 } else { 0xFC }; // UpwardsOffsetY[status&1]
+    let sy = mem.read_ram(crate::ram_map::SAMUS_Y);
+    let sx = mem.read_ram(0x030E);
+    let shi = mem.read_ram(crate::ram_map::SAMUS_HI);
+    mem.write_ram(base + 0x0D, sy.wrapping_add(off_y));
+    mem.write_ram(base + 0x0E, sx.wrapping_add(off_x));
+    mem.write_ram(base + 0x0C, shi);
 }
 
 fn set_samus_jump(mem: &mut FrameMemory) {
@@ -503,7 +538,9 @@ mod tests {
         assert_eq!(m.read_ram(ANIM_RESET_INDEX), 0x35);
     }
 
-    /// SamusJump 位移门（≥$20+JUMP 松开→StopVertMovement 爆点）。
+    /// SamusJump 位移门（≥$20+JUMP 松开→StopVertMovement（speedY→0））。
+    /// > 【2026-10-28 证伪更正】旧测断 D015 unported 爆——D015 链已全链端口
+    /// > （samus-jump-fire-chain.md）——正测义=停升写面+链全通不爆。
     #[test]
     fn samus_jump_release_gate() {
         use crate::ram_map::{JOY1_STATUS, SAMUS_JUMP_DISP};
@@ -512,11 +549,8 @@ mod tests {
         m.write_ram(SAMUS_JUMP_DISP, 0x20); // ≥$20
         m.write_ram(JOY1_STATUS, 0); // JUMP 松开
         let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| samus_jump(&mut m)));
-        let err = r.unwrap_err();
-        let msg = err.downcast_ref::<String>().cloned()
-            .or_else(|| err.downcast_ref::<&'static str>().map(|s| (*s).to_string()))
-            .unwrap_or_default();
-        assert!(msg.contains("unported @ bank07:D015"), "松开后链爆点失准: {msg}"); // D147 已折→D015
+        assert!(r.is_ok(), "D015 链已端口（应全通）: {:?}", r.err());
+        assert_eq!(m.read_ram(crate::samus::physics::SAMUS_SPEED_Y_I), 0, "停升（speedY←0）");
     }
 
     /// SamusRoll 球形解除（radiusY+=8 可观测写面）。
@@ -655,6 +689,25 @@ pub fn set_samus_stand_no_footstep(mem: &mut FrameMemory) {
     mem.write_ram(0x0304, 0); // SetSamusNextAnim 尾（`a9 00 8d 04 03`）
 }
 
+/// SetSamusStand（**asm 内容锚** `: 07:CF55`（audit §2 面））：AccelX≠0⇒NoFootstep；
+/// 否则 SFX_SamusWalk（落地步声（声面（记账）））→NoFootstep。
+pub fn set_samus_stand(mem: &mut FrameMemory) {
+    if mem.read_ram(crate::ram_map::SAMUS_ACCEL_X) == 0 {
+        // SFX_SamusWalk（声面（最小面（记账）））
+    }
+    set_samus_stand_no_footstep(mem);
+}
+
+/// SetSamusPntUp（**asm 内容锚** `: 07:CF77`）：status←sa_PntUp(4)+
+/// anim←ObjAnim_SamusPntUp(0x27)（表算（$8599-$8572））。
+pub fn set_samus_pnt_up(mem: &mut FrameMemory) {
+    mem.write_ram(crate::ram_map::SAMUS_STATUS, 4);
+    mem.write_ram(ANIM_RESET_INDEX, 0x27);
+    mem.write_ram(ANIM_RESET_INDEX + 1, 0x27);
+    mem.write_ram(ANIM_RESET_INDEX.wrapping_sub(1), 0);
+}
+
+
 /// BitScan（asm 内容锚 `BitScan: ; 07:E1E1`）：A 首个置位 bit 号（8=无置位）。
 pub fn bit_scan(mut a: u8) -> u8 {
     for i in 0..8u8 {
@@ -732,7 +785,89 @@ pub fn samus_jump(mem: &mut FrameMemory) {
             super::physics::stop_vert_movement(mem); // D147（已全折）（松开起跳）
         }
     }
-    crate::unported!("bank07:D015"); // SamusJump_CheckHorzMovement 族（水平检链）
+    samus_jump_tail(mem); // D015 链（audit §4（2026-10-28 全链通读端口））
+}
+
+/// SamusJump_CheckHorzMovement（**asm 内容锚** `: 07:D055`（audit §5））：
+/// X∈{1,0,-1}（RIGHT/LEFT）/Y 转向旗/同向⇒Dir 不动/转向⇒SetSamusAnim(animReset 重启
+/// （表族全匀）+animDelay←8+Dir←Y/**Samus.speedX($309)←X（向位）**。
+pub fn samus_jump_check_horz_movement(mem: &mut FrameMemory) {
+    use button::*;
+    let joy = mem.read_ram(crate::ram_map::JOY1_STATUS);
+    let mut x: u8 = 1; // ldx #$01
+    let mut y: u8 = 0; // ldy #$00
+    if joy & RIGHT != 0 {
+        // bcs Lx024（X=1）
+    } else {
+        x = x.wrapping_sub(1); // X=0
+        if joy & LEFT == 0 {
+            // bcc Lx027（无向（X=0））
+            mem.write_ram(0x0309, x);
+            return;
+        }
+        x = x.wrapping_sub(1); // X=-1
+        y = 1;
+    }
+    // Lx024：同向⇒不动；转向⇒anim 重启+Dir←Y
+    if y != mem.read_ram(crate::ram_map::SAMUS_DIR) {
+        // 表族全匀（Table04/06 全同值）⇒A 恒=animResetIndex（重启动画（audit §5））
+        let a = mem.read_ram(ANIM_RESET_INDEX);
+        mem.write_ram(ANIM_RESET_INDEX, a);
+        mem.write_ram(ANIM_RESET_INDEX + 1, a);
+        mem.write_ram(ANIM_RESET_INDEX.wrapping_sub(1), 0); // SetSamusAnim（delay←0）
+        mem.write_ram(ANIM_RESET_INDEX.wrapping_sub(1), 8); // animDelay←8（Lx026）
+        mem.write_ram(crate::ram_map::SAMUS_DIR, y);
+    }
+    mem.write_ram(0x0309, x); // speedX←X（向位）
+}
+
+/// SamusJump_CheckFire（**asm 内容锚** `: 07:D09C`（audit §6））：B（Joy1Change|Retrig
+/// bit6）⇒animReset==JumpPntUp(0x35)⇒Upwards/否则 Forwards+JumpFire 动画。
+pub fn samus_jump_check_fire(mem: &mut FrameMemory) {
+    use button::*;
+    let fire = mem.read_ram(crate::ram_map::JOY1_CHANGE)
+        | mem.read_ram(crate::memmap::title_state::JOY1_RETRIG);
+    if fire & B == 0 {
+        return;
+    }
+    if mem.read_ram(ANIM_RESET_INDEX) == OBJ_ANIM_SAMUS_JUMP_PNT_UP {
+        fire_samus_projectile_upwards(mem);
+    } else {
+        fire_samus_projectile(mem); // Forwards（D1EE 分派（UP 面除外（本径 B 无 UP）））
+        // animIndex←JumpFire（SetSamusNextAnim（audit §6））
+        mem.write_ram(ANIM_RESET_INDEX + 1, 0x2A); // ObjAnim_SamusJumpFire（表算（audit 面））
+        mem.write_ram(ANIM_RESET_INDEX.wrapping_sub(1), 0);
+    }
+}
+
+/// SamusJump 尾·D015 链（**asm 内容锚** `Lx019-Lx023（$D015-$D050）`（audit §4））：
+/// CheckHorzMovement/LCF2E（复用 solid_entity_response）/UP⇒PntJump(6)+anim 0x35/
+/// CheckFire/岩浆跳/落地判（AccY==0⇒PntUp/Stand）/SetSamusData（A=3）。
+pub fn samus_jump_tail(mem: &mut FrameMemory) {
+    use button::*;
+    samus_jump_check_horz_movement(mem); // D055
+    solid_entity_response(mem); // LCF2E（r26 端口件（复用））
+    if mem.read_ram(crate::ram_map::JOY1_STATUS) & UP != 0 {
+        mem.write_ram(ANIM_RESET_INDEX, OBJ_ANIM_SAMUS_JUMP_PNT_UP);
+        mem.write_ram(crate::ram_map::SAMUS_STATUS, 6); // sa_PntJump
+    }
+    samus_jump_check_fire(mem); // D09C
+    // 岩浆跳（SamusInLava≠0 且 Joy1Change bit7）⇒SetSamusJump+3 帧延迟
+    if mem.read_ram(0x0609) != 0 && mem.read_ram(crate::ram_map::JOY1_CHANGE) & A != 0 {
+        set_samus_jump(mem);
+        mem.write_ram(ANIM_RESET_INDEX.wrapping_sub(1), 3); // SetSamusData_3FrameAnimDelay
+    }
+    // Lx021 落地判（AccY==0）
+    if mem.read_ram(crate::ram_map::SAMUS_ACCEL_Y) == 0 {
+        if mem.read_ram(crate::ram_map::SAMUS_STATUS) == 6 {
+            set_samus_pnt_up(mem); // CF77（SetSamusPntUp）
+        } else {
+            set_samus_stand(mem); // CF55（SetSamusStand）
+        }
+    }
+    // Lx023：A←$03 jmp SetSamusData（CD6D）
+    mem.regs.a = 3;
+    super::physics::set_samus_data(mem);
 }
 
 /// SamusRoll 处理件（asm 内容锚 `SamusRoll: ; 07:D0E1`——球形解除面）：
@@ -887,4 +1022,103 @@ pub fn set_negative_motion_flag() -> Vec<(u16, u8)> {
 /// 指针载（旧 check_enemy_hit_flags（$F300）：$6E←tbl_lo/$6F←tbl_hi（zp 对））。
 pub fn load_motion_pointer(tbl_lo: u8, tbl_hi: u8) -> Vec<(u16, u8)> {
     vec![(0x006E, tbl_lo), (0x006F, tbl_hi)]
+}
+
+// ===== 跳跃链（TDD（测试先行（实现后补）））=====
+
+#[cfg(test)]
+mod tests_jump_chain {
+    //! 判径（docs/findings/samus-jump-fire-chain.md）：D055（X∈{1,0,-1}/Y 转向旗/
+    //! speedX($309)←X/Dir←Y（转向时）/anim 重启动画）/D09C（B⇒Upwards(anim 0x35)或
+    //! Forwards+JumpFire）/D015 尾（UP⇒PntJump(6)+anim 0x35/落地（AccY==0）⇒
+    //! PntUp/Stand/CD6D（A=3））。
+    use super::*;
+    use crate::state::FrameMemory; // G11 取型径（经 crate::state）
+
+    fn jmp_mem() -> FrameMemory {
+        let mut m = FrameMemory::default();
+        m.write_ram(crate::ram_map::SAMUS_DIR, 0); // 向右
+        m
+    }
+
+    /// 【穷举·D055】RIGHT/LEFT 四组合（无/右/左/双）——X（speedX $309=1/0/-1(FF)）
+    /// +转向（Dir 更新/anim 重启）。
+    #[test]
+    fn exhaustive_check_horz_movement() {
+        for joy in 0u8..4u8 {
+            let mut m = jmp_mem();
+            m.write_ram(crate::ram_map::JOY1_STATUS, joy);
+            m.write_ram(crate::ram_map::SAMUS_DIR, 1); // 原向左（转向面）
+            samus_jump_check_horz_movement(&mut m);
+            let sx = m.read_ram(0x0309);
+            // X：RIGHT(bit0)=1/LEFT(bit1)=-1(0xFF)/双⇒LEFT 胜（先判 RIGHT 后落 LEFT 路）/无=0
+            let expect_x: u8 = match joy & 3 {
+                0b01 => 1,
+                0b10 => 0xFF,
+                0b11 => 0xFF, // lsr(RIGHT)→Lx024(X=1)…——asm：RIGHT 按下⇒bcs Lx024（X=1）
+                _ => 0,
+            };
+            // 【asm 校】RIGHT 即 Lx024（X=1）——双键时 RIGHT 先判（X=1 但转向检查 Y=0）
+            let expect_x = if joy & 1 != 0 { 1u8 } else if joy & 2 != 0 { 0xFF } else { 0 };
+            assert_eq!(sx, expect_x, "speedX（joy={:02X}）", joy);
+            // 转向：joy 有向键且 Y(新向)≠Dir(1)⇒Dir 更新
+            if joy & 3 != 0 {
+                let new_dir = if joy & 1 != 0 { 0 } else { 1 };
+                assert_eq!(m.read_ram(crate::ram_map::SAMUS_DIR), new_dir, "Dir 转向（joy={:02X}）", joy);
+            }
+        }
+    }
+
+    /// 【D09C】B 按（Joy1Change|Retrig bit6）⇒发射（anim 面）；无 B⇒零写。
+    #[test]
+    fn jump_check_fire_faces() {
+        // 无 B ⇒ 弹槽不动
+        let mut m = jmp_mem();
+        m.write_ram(crate::ram_map::JOY1_CHANGE, 0);
+        m.write_ram(crate::memmap::title_state::JOY1_RETRIG, 0);
+        samus_jump_check_fire(&mut m);
+        assert_eq!(m.read_ram(0x03D0), 0, "无 B⇒不发弹");
+        // B（Forwards（animReset≠0x35））⇒弹生（status=1）+anim JumpFire
+        let mut m = jmp_mem();
+        m.write_ram(crate::ram_map::JOY1_CHANGE, 0x40);
+        samus_jump_check_fire(&mut m);
+        assert_eq!(m.read_ram(0x03D0), 1, "B⇒弹生（wa_Bullet）");
+        // B+PntUp 动画（0x35）⇒Upwards（speedY=$FC）
+        let mut m = jmp_mem();
+        m.write_ram(crate::ram_map::JOY1_CHANGE, 0x40);
+        m.write_ram(ANIM_RESET_INDEX, OBJ_ANIM_SAMUS_JUMP_PNT_UP);
+        samus_jump_check_fire(&mut m);
+        assert_eq!(m.read_ram(0x03D8), 0xFC, "Upwards（speedY=$FC）");
+    }
+
+    /// 【D015 尾】UP⇒status←6+anim 0x35；落地（AccY==0）⇒Stand(0)（status≠6）/
+    /// PntUp（status==6）；空中（AccY≠0）⇒status 不动。
+    #[test]
+    fn jump_tail_faces() {
+        // UP 按下⇒PntJump(6)+anim 0x35
+        let mut m = jmp_mem();
+        m.write_ram(crate::ram_map::JOY1_STATUS, 0x08); // UP
+        m.write_ram(crate::ram_map::SAMUS_ACCEL_Y, 0x18); // 空中
+        samus_jump_tail(&mut m);
+        assert_eq!(m.read_ram(crate::ram_map::SAMUS_STATUS), 6, "UP⇒PntJump");
+        assert_eq!(m.read_ram(ANIM_RESET_INDEX), 0x35, "anim←JumpPntUp");
+        // 落地（AccY==0）+status≠6⇒Stand
+        let mut m = jmp_mem();
+        m.write_ram(crate::ram_map::SAMUS_ACCEL_Y, 0);
+        m.write_ram(crate::ram_map::SAMUS_STATUS, 2);
+        samus_jump_tail(&mut m);
+        assert_eq!(m.read_ram(crate::ram_map::SAMUS_STATUS), 0, "落地⇒Stand");
+        // 落地+status==6⇒PntUp(4)
+        let mut m = jmp_mem();
+        m.write_ram(crate::ram_map::SAMUS_ACCEL_Y, 0);
+        m.write_ram(crate::ram_map::SAMUS_STATUS, 6);
+        samus_jump_tail(&mut m);
+        assert_eq!(m.read_ram(crate::ram_map::SAMUS_STATUS), 4, "落地 PntJump⇒PntUp");
+        // 空中（AccY≠0）+无 UP⇒status 不动
+        let mut m = jmp_mem();
+        m.write_ram(crate::ram_map::SAMUS_ACCEL_Y, 0x18);
+        m.write_ram(crate::ram_map::SAMUS_STATUS, 2);
+        samus_jump_tail(&mut m);
+        assert_eq!(m.read_ram(crate::ram_map::SAMUS_STATUS), 2, "空中⇒status 不动");
+    }
 }

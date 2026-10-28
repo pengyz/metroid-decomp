@@ -1057,23 +1057,117 @@ fn enemy_check_move_right(mem: &mut crate::frame::FrameMemory, x: u8) -> bool {
 /// 1=Bullet/2=Wave/3=Ice/4=Explode/5-10=Bomb 族/11=Missile（打敌人流程件——随件）。
 fn update_samus_projectiles(mem: &mut crate::frame::FrameMemory) {
     for slot in [0xD0u8, 0xE0, 0xF0] {
-        let status = mem.read_ram(0x0300 + slot as u16); // Objects.status
+        mem.write_ram(0x004B, slot); // PageIndex（DoOneSamusProjectile（$D4CB））
+        let status = mem.read_ram(0x0300 + slot as u16);
         match status {
-            0 => {} // ExitSub（rts）
+            0 => {} // ExitSub
+            1 | 11 => update_bullet(mem), // UpdateBullet（常规/导弹共壳（:4288））
+            4 => update_bullet_explode(mem), // UpdateBulletExplode（$D5C8）
+            2 | 3 => {
+                // Wave/Ice（gear 门径（无波/冰齿轮不触发）——最小面共 UpdateBullet 壳
+                crate::frame::DIVERGENCES.with(|d| d.borrow_mut().push(0xD522)); // 轨迹面（记账）
+                update_bullet(mem);
+            }
             _ => {
-                // 【goal-r10】UpdateBullet（D4EB）最简端口：DieDelay 计时→清弹。
-                // （DeleteIfOffScreen/Explode/CollisionWithBG/DrawBullet 随件。）
-                let base = 0x0300u16 + slot as u16;
-                let die = mem.read_ram(base + 0x15); // SamusProjectileDieDelay
-                if die > 0 {
-                    mem.write_ram(base + 0x15, die - 1);
-                }
-                if mem.read_ram(base + 0x15) == 0 {
-                    mem.write_ram(base, 0); // 计时到 0→清弹（status=0）
-                }
+                // Bomb 族（5-10（埋弹触发面（不在本卡判据））——记账 no-op（防爆）
+                crate::frame::DIVERGENCES.with(|d| d.borrow_mut().push(0xD4CB));
             }
         }
     }
+}
+
+/// 弹爆径（UpdateBullet_Explode（$D5E4（audit §8）））：anim←BulletHit(0x1D)
+/// （导弹⇒MissileExplode(0x91)）+status←wa_BulletExplode(4)。
+fn bullet_explode(mem: &mut crate::frame::FrameMemory) {
+    let x = mem.read_ram(0x004B) as u16;
+    let base = 0x0300u16 + x;
+    let st = mem.read_ram(base);
+    if st == 4 {
+        return; // 已爆（asm beq @RTS）
+    }
+    let anim = if st == 0x0B { 0x91 } else { 0x1D };
+    mem.write_ram(base + 5, anim);
+    mem.write_ram(base + 6, anim);
+    mem.write_ram(base + 4, 0);
+    mem.write_ram(base, 4);
+}
+
+/// 弹移动（UpdateBullet_Move（$D624（audit §8）））：speedX/Y→位移（wrapping）。
+fn bullet_move(mem: &mut crate::frame::FrameMemory) {
+    let x = mem.read_ram(0x004B) as u16;
+    let base = 0x0300u16 + x;
+    let sx = mem.read_ram(base + 9);
+    let sy = mem.read_ram(base + 8);
+    mem.write_ram(base + 0x0E, mem.read_ram(base + 0x0E).wrapping_add(sx));
+    mem.write_ram(base + 0x0D, mem.read_ram(base + 0x0D).wrapping_add(sy));
+}
+
+/// UpdateBullet（$D4EB（audit §8——Z 射真缺口面（2026-10-28 全链通读端口）））：
+/// UpdatingSamusProjectile($71)←1/删除（onScreen 清）/精灵撞（isHit）/BG 撞
+/// （空气（≥$A0）⇒移+免撞；实心⇒爆（$4E 门瓦⇒任务卡 2 径复用））/时寿 dec（长束免）/
+/// DrawBullet（AnimDrawObject(A=1)）。
+fn update_bullet(mem: &mut crate::frame::FrameMemory) {
+    let x = mem.read_ram(0x004B) as u16;
+    let base = 0x0300u16 + x;
+    mem.write_ram(0x0071, 1);
+    // DeleteIfOffScreen（$D5FC）：onScreen bit0 清⇒删
+    if mem.read_ram(base + 0x0B) & 1 == 0 {
+        mem.write_ram(base, 0);
+        mem.write_ram(0x0071, 0);
+        return;
+    }
+    // ExplodeIfHitSprite（$D5DA）：isHit,x≠0⇒清+爆
+    let mut collided = false;
+    if mem.read_ram(base + 0x0A) != 0 {
+        mem.write_ram(base + 0x0A, 0);
+        bullet_explode(mem);
+        collided = true;
+    }
+    if !collided {
+        // CollisionWithBG（$D609）：瓦判（GetObjRoomRAMPtr 同核（make_room_ram_ptr））
+        let (lo, hi) = crate::frame::room::make_room_ram_ptr(
+            mem.read_ram(base + 0x0D), mem.read_ram(base + 0x0E), mem.read_ram(base + 0x0C));
+        let tile = mem.read_wram(((hi as u16) << 8) | lo as u16);
+        if tile >= 0xA0 {
+            bullet_move(mem); // 空气⇒移（carry=1（免撞））
+        } else {
+            if tile == 0x4E {
+                // 门瓦⇒任务卡 2 弹击径（复用（isHit&4 写））+爆（carry=0）
+                samus_projectile_hit_door_or_statue(mem, lo, hi); // 同模块（任务卡 2 件）
+            } else if tile >= 0x80 {
+                crate::frame::DIVERGENCES.with(|d| d.borrow_mut().push(0x8D2F)); // 瓦爆面（记账）
+            }
+            collided = true;
+        }
+    }
+    // CheckBulletStat（$D4F8）
+    if !collided {
+        let d = mem.read_ram(base + 0x15).wrapping_sub(1);
+        mem.write_ram(base + 0x15, d);
+        if d == 0 {
+            mem.write_ram(base, 0); // 时寿耗尽⇒清
+        }
+    } else if mem.read_ram(base) != 0 {
+        bullet_explode(mem); // 撞⇒爆（status≠0 时）
+    }
+    // DrawBullet（$D517）：AnimDrawObject(A=1)（动画推进面 A=1）
+    crate::samus::physics::update_obj_anim(mem, 1);
+    crate::frame::sprite::anim_draw_object(mem, mem.read_ram(0x004B));
+    mem.write_ram(0x0071, 0);
+}
+
+/// UpdateBulletExplode（$D5C8）：animFrame==_id_FrameNone($F7)（动画尽）⇒清；
+/// DrawBullet。
+fn update_bullet_explode(mem: &mut crate::frame::FrameMemory) {
+    let x = mem.read_ram(0x004B) as u16;
+    let base = 0x0300u16 + x;
+    mem.write_ram(0x0071, 1);
+    if mem.read_ram(base + 3) == 0xF7 {
+        mem.write_ram(base, 0);
+    }
+    crate::samus::physics::update_obj_anim(mem, 1);
+    crate::frame::sprite::anim_draw_object(mem, mem.read_ram(0x004B));
+    mem.write_ram(0x0071, 0);
 }
 
 /// UpdateEnemy_Resting（**asm 内容锚** `: 07:F3BE`——r26 壳：30fps 门/件序 fail-loud）。
@@ -2107,5 +2201,85 @@ mod tests_projectile_hit_door {
         let mut m = mem_doors(0, 0x0B, 0);
         samus_projectile_hit_door_or_statue(&mut m, 0x23, 0x04);
         assert_eq!(m.read_ram(0x0683) & 0x02, 0x02, "SFXTri|=$02（导弹命中）");
+    }
+}
+
+// ===== 弹生命期（TDD（测试先行（实现后补）））=====
+
+#[cfg(test)]
+mod tests_bullet_lifetime {
+    //! 判径（docs/findings/samus-jump-fire-chain.md §8）：空气瓦（≥$A0）⇒移（speed
+    //! 积分）+时寿 dec；实心（<$A0）⇒爆（status←4+anim 0x1D）；$4E 门瓦⇒任务卡 2 径
+    //! （isHit 写）+爆；DieDelay 耗尽⇒清；爆态（4）animFrame==$F7⇒清；onScreen 清⇒删。
+    use super::*;
+    use crate::frame::FrameMemory;
+
+    fn bullet_mem(tile: u8) -> FrameMemory {
+        let mut m = FrameMemory::default();
+        m.write_ram(0x004B, 0xD0); // PageIndex
+        m.write_ram(0x03D0, 1); // wa_Bullet
+        m.write_ram(0x03D0 + 0x0B, 1); // onScreen
+        m.write_ram(0x03D0 + 0x15, 3); // DieDelay=3
+        m.write_ram(0x03D0 + 8, 0); // speedY=0
+        m.write_ram(0x03D0 + 9, 4); // speedX=4
+        m.write_ram(0x03D0 + 0x0C, 0); // hi
+        m.write_ram(0x03D0 + 0x0D, 0x50); // y
+        m.write_ram(0x03D0 + 0x0E, 0x00); // x
+        // 瓦写入（RoomRAM（make_room_ram_ptr(0x50, 0x00, 0)））
+        let (lo, hi) = crate::frame::room::make_room_ram_ptr(0x50, 0x00, 0);
+        m.write_wram(((hi as u16) << 8) | lo as u16, tile);
+        m
+    }
+
+    /// 【空气径】瓦=$A0⇒移位（x+=4）+DieDelay dec（3→2）+status 保持。
+    #[test]
+    fn air_tile_moves_and_ticks() {
+        let mut m = bullet_mem(0xA0);
+        update_samus_projectiles(&mut m);
+        assert_eq!(m.read_ram(0x03D0), 1, "status 保持");
+        assert_eq!(m.read_ram(0x03D0 + 0x0E), 4, "x+=speedX（0→4）");
+        assert_eq!(m.read_ram(0x03D0 + 0x15), 2, "DieDelay dec");
+    }
+
+    /// 【撞墙爆】瓦=$50（实心）⇒status←4+anim 0x1D（BulletHit）；$4E 门瓦⇒isHit 写
+    /// （任务卡 2 径）+爆。
+    #[test]
+    fn solid_and_door_explode() {
+        let mut m = bullet_mem(0x50);
+        update_samus_projectiles(&mut m);
+        assert_eq!(m.read_ram(0x03D0), 4, "爆（wa_BulletExplode）");
+        assert_eq!(m.read_ram(0x03D5), 0x1D, "anim←BulletHit");
+        // 门瓦（$4E）：列对齐（DoorRoomRAMPtr 预置（任务卡 2 复用面））
+        let mut m = bullet_mem(0x4E);
+        m.write_ram(0x0071, 1);
+        m.write_ram(0x005C, 0x00); // DoorRoomRAMPtr lo（列对齐）
+        m.write_ram(0x005D, 0x60); // hi（bit2=0 对齐）
+        m.write_ram(0x0380, 1); // 门存在
+        m.write_ram(0x0387, 1); // DoorType=蓝
+        let mut m2 = bullet_mem(0x4E);
+        // 无门列对齐⇒雕像兜底径（不崩即可）——主断言=爆
+        update_samus_projectiles(&mut m2);
+        assert_eq!(m2.read_ram(0x03D0), 4, "门瓦撞⇒爆");
+    }
+
+    /// 【时寿/删/爆尽】DieDelay 0⇒清；onScreen 清⇒删；爆态 animFrame==$F7⇒清。
+    #[test]
+    fn lifetime_and_cleanup() {
+        // 时寿耗尽
+        let mut m = bullet_mem(0xA0);
+        m.write_ram(0x03D0 + 0x15, 1);
+        update_samus_projectiles(&mut m);
+        assert_eq!(m.read_ram(0x03D0), 0, "时寿耗尽⇒清");
+        // onScreen 清⇒删
+        let mut m = bullet_mem(0xA0);
+        m.write_ram(0x03D0 + 0x0B, 0);
+        update_samus_projectiles(&mut m);
+        assert_eq!(m.read_ram(0x03D0), 0, "off-screen⇒删");
+        // 爆态动画尽（animFrame=$F7）⇒清
+        let mut m = bullet_mem(0xA0);
+        m.write_ram(0x03D0, 4); // wa_BulletExplode
+        m.write_ram(0x03D3, 0xF7); // animFrame==FrameNone
+        update_samus_projectiles(&mut m);
+        assert_eq!(m.read_ram(0x03D0), 0, "爆尽⇒清");
     }
 }
