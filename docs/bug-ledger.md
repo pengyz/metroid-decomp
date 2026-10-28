@@ -67,3 +67,16 @@
 - 影响：Stage A 像素级验收面（记账容忍（D4））；真值链=语义代码↔Mesen2 RAM/trace
   机器对拍（四面同已证内容一致）。
 - trace id：analysis/traces/case-002-door-blue-interaction_f01000_neighbor-room.ppu.hex。
+
+## BUG-090：全程无音乐/音效——shell 音频输出=v1 桩（架构缺口头（待用户裁））
+
+- 现象：用户实测④全程无音乐/音效。
+- 定性（终结判（2026-10-28））：声音链全通至 **PcAudio v1 桩**——sound 域产出
+  apu_events（sound/mod.rs（域测钉））→sound_hook::sound_dispatch_chain（nmi.rs:203
+  （生产径））→mem.write_io($4000-17)→**apu_log 捕获**（memory.rs:49-51（壳层消费源））
+  →drain_apu（game-shell-pc/lib.rs:191）→**PcAudio=写流记数不合成**（lib.rs:3/:69
+  「音频=v1 桩（cpal 合成随件登记）」）——**无音频设备输出**（架构缺口头（预告类））。
+- 处置（lead 裁定）：**不修**——Stage A 视频对拍即可（音频=扩展缝）——待用户裁音频
+  方案（cpal 合成随件）。
+- 影响：听觉面（非像素验收面）。
+- trace id：（apu_log（FrameMemory 内（.ppu.dump 同步面随件））。
