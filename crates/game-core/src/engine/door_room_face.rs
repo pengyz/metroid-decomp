@@ -85,22 +85,22 @@ mod s1_16_tests {
 
 /// $E8BE StoreObjectPositionToTemp（root——簇共根形二八·**S1-21 对偶**）：
 /// $030C[x]→$0B/$030D[x]→$08/$030E[x]→$09（对象位置暂存三写）。
-pub fn s2_store_obj_pos(x: u8, v030c_x: u8, v030d_x: u8, v030e_x: u8) -> Vec<(u16, u8)> {
+pub fn store_object_position_to_temp(x: u8, v030c_x: u8, v030d_x: u8, v030e_x: u8) -> Vec<(u16, u8)> {
     vec![(0x000B, v030c_x), (0x0008, v030d_x), (0x0009, v030e_x)]
 }
 
 /// $D101 员体：root+$05←X/$04←$F5（指针构）+$FD8F/$D638/$CF55/$D147 链（S1-10 同
 /// 构面注）。
-pub fn s2_d101_body(x: u8, v030c_x: u8, v030d_x: u8, v030e_x: u8) -> Vec<(u16, u8)> {
-    let mut ev = s2_store_obj_pos(x, v030c_x, v030d_x, v030e_x);
+pub fn obj_pos_temp_setup_chain(x: u8, v030c_x: u8, v030d_x: u8, v030e_x: u8) -> Vec<(u16, u8)> {
+    let mut ev = store_object_position_to_temp(x, v030c_x, v030d_x, v030e_x);
     ev.push((0x0005, x));
     ev.push((0x0004, 0xF5));
     ev
 }
 
 /// $D630 员体：root+$FD8F 走带+cc 分段（$030D[x]←$08/$030E[x]←$09）——S1-10 同构面。
-pub fn s2_d630_body(x: u8, v030c_x: u8, v030d_x: u8, v030e_x: u8) -> Vec<(u16, u8)> {
-    let mut ev = s2_store_obj_pos(x, v030c_x, v030d_x, v030e_x);
+pub fn obj_pos_temp_writeback(x: u8, v030c_x: u8, v030d_x: u8, v030e_x: u8) -> Vec<(u16, u8)> {
+    let mut ev = store_object_position_to_temp(x, v030c_x, v030d_x, v030e_x);
     ev.push((0x030D + x as u16, v030d_x));
     ev.push((0x030E + x as u16, v030e_x));
     ev
@@ -113,13 +113,13 @@ mod s2_034_tests {
     /// 三员转写形（root 三读位存+二壳）。
     #[test]
     fn s2_034_units_three() {
-        let ev = s2_store_obj_pos(2, 8, 9, 10);
+        let ev = store_object_position_to_temp(2, 8, 9, 10);
         assert!(ev.contains(&(0x000B, 8)));
         assert!(ev.contains(&(0x0009, 10)));
-        let ev = s2_d101_body(2, 8, 9, 10);
+        let ev = obj_pos_temp_setup_chain(2, 8, 9, 10);
         assert!(ev.contains(&(0x0005, 2)));
         assert!(ev.contains(&(0x0004, 0xF5)));
-        let ev = s2_d630_body(2, 8, 9, 10);
+        let ev = obj_pos_temp_writeback(2, 8, 9, 10);
         assert!(ev.contains(&(0x030F, 9)));
     }
 }
@@ -128,7 +128,7 @@ mod s2_034_tests {
 
 /// $D651 CheckBlastTile（root——簇共根形三八）：Y=$74/cmp $10 判（beq 段）+
 /// cmp $70/$80 双判（砖块可破判）。返回 (可破, A 透传（cmp 不改 A）)。
-pub fn s2_check_blast_tile(a_in: u8, v74: u8) -> (bool, u8) {
+pub fn check_blast_tile(a_in: u8, v74: u8) -> (bool, u8) {
     let y = v74;
     if y == 0x10 {
         return (false, a_in); // beq 段
@@ -138,16 +138,16 @@ pub fn s2_check_blast_tile(a_in: u8, v74: u8) -> (bool, u8) {
 
 /// $D61B 员体：CheckBlastTile+cc 分段（jmp $E9BE（TwosCompliment 接面））+
 /// 指针载（$0309/$0308[x]→$05/$04）。
-pub fn s2_d61b_body(x: u8, a_in: u8, v74: u8, v0309_x: u8, v0308_x: u8)
+pub fn blast_tile_load_obj_ptrs(x: u8, a_in: u8, v74: u8, v0309_x: u8, v0308_x: u8)
     -> (Vec<(u16, u8)>, u16) {
-    let (blast, _) = s2_check_blast_tile(a_in, v74);
+    let (blast, _) = check_blast_tile(a_in, v74);
     let ev = vec![(0x0005, v0309_x), (0x0004, v0308_x)];
     (ev, if blast { 0xE9BE } else { 0xE9BE })
 }
 
 /// $D770 员体：CheckBlastTile+cc 分段（cmp $A0 bcs 段+$E9C2 调）+指针构（$04←$0A+A）。
-pub fn s2_d770_body(a_in: u8, v74: u8, v0a: u8) -> (Vec<(u16, u8)>, u8) {
-    let (_, a) = s2_check_blast_tile(a_in, v74);
+pub fn blast_tile_build_ptr(a_in: u8, v74: u8, v0a: u8) -> (Vec<(u16, u8)>, u8) {
+    let (_, a) = check_blast_tile(a_in, v74);
     (vec![(0x0004, v0a.wrapping_add(a_in))], a)
 }
 
@@ -158,12 +158,12 @@ mod s2_044_tests {
     /// 三员转写形（CheckBlastTile 双判 root+二壳）。
     #[test]
     fn s2_044_units_three() {
-        assert_eq!(s2_check_blast_tile(0x75, 0), (true, 0x75));
-        assert_eq!(s2_check_blast_tile(0x65, 0), (false, 0x65));
-        assert_eq!(s2_check_blast_tile(0x75, 0x10), (false, 0x75)); // beq 段
-        let (ev, _) = s2_d61b_body(2, 0x75, 0, 8, 9);
+        assert_eq!(check_blast_tile(0x75, 0), (true, 0x75));
+        assert_eq!(check_blast_tile(0x65, 0), (false, 0x65));
+        assert_eq!(check_blast_tile(0x75, 0x10), (false, 0x75)); // beq 段
+        let (ev, _) = blast_tile_load_obj_ptrs(2, 0x75, 0, 8, 9);
         assert!(ev.contains(&(0x0005, 8)));
-        let (ev, _) = s2_d770_body(0x75, 0, 0x10);
+        let (ev, _) = blast_tile_build_ptr(0x75, 0, 0x10);
         assert!(ev.contains(&(0x0004, 0x85)));
     }
 }
@@ -174,21 +174,21 @@ mod s2_044_tests {
 /// Amul16/门向计算（$50+$4F rol）+$EC00[y] 表选+$0307[x]←(A&3)+分支链
 /// （cmp 1/3 双判→$09 写族）+**记录长 2**（$EBF9 lda #2/rts）。
 /// 返回 (写事件, 记录长)。
-pub fn s2_spawn_door(x: u8, tbl_val: u8, a_in: u8) -> (Vec<(u16, u8)>, u8) {
+pub fn spawn_door_routine(x: u8, tbl_val: u8, a_in: u8) -> (Vec<(u16, u8)>, u8) {
     let v0307 = a_in & 3;
     (vec![(0x0307 + x as u16, v0307)], 2) // 记录长 2（trace 实证）
 }
 
 /// $EB8C 员体：SpawnDoorRoutine+jmp EnemyLoop（$EAD4——S1-22 walk 回驱）。
-pub fn s2_eb8c_body(x: u8, tbl_val: u8, a_in: u8) -> (Vec<(u16, u8)>, u16) {
-    let (ev, _) = s2_spawn_door(x, tbl_val, a_in);
+pub fn spawn_door_enemyloop_return(x: u8, tbl_val: u8, a_in: u8) -> (Vec<(u16, u8)>, u16) {
+    let (ev, _) = spawn_door_routine(x, tbl_val, a_in);
     (ev, 0xEAD4)
 }
 
 /// $EEF4 DoorHandler：SpawnDoorRoutine+jmp $EDD6（S2-23 spawn VM 接面）+$FF 终止判
 /// （双 PLA 退——S1-23 同构）。
-pub fn s2_eef4_body(x: u8, tbl_val: u8, a_in: u8) -> (Vec<(u16, u8)>, u16) {
-    let (ev, _) = s2_spawn_door(x, tbl_val, a_in);
+pub fn door_handler(x: u8, tbl_val: u8, a_in: u8) -> (Vec<(u16, u8)>, u16) {
+    let (ev, _) = spawn_door_routine(x, tbl_val, a_in);
     (ev, 0xEDD6)
 }
 
@@ -199,11 +199,11 @@ mod s2_048_tests {
     /// 三员转写形（SpawnDoorRoutine VM handler root+二壳）。
     #[test]
     fn s2_048_units_three() {
-        let (ev, len) = s2_spawn_door(2, 0x55, 5);
+        let (ev, len) = spawn_door_routine(2, 0x55, 5);
         assert_eq!(len, 2);
         assert!(ev.contains(&(0x0309, 1)));
-        assert_eq!(s2_eb8c_body(2, 0, 5).1, 0xEAD4);
-        assert_eq!(s2_eef4_body(2, 0, 5).1, 0xEDD6);
+        assert_eq!(spawn_door_enemyloop_return(2, 0, 5).1, 0xEAD4);
+        assert_eq!(door_handler(2, 0, 5).1, 0xEDD6);
     }
 }
 
@@ -212,19 +212,19 @@ mod s2_048_tests {
 /// $EEC6 员体（root——簇共根形四四·**入口长 1**（lda #1 面））：CheckForItem 调+
 /// 指针面（$07←X>>1+$3C/$06←0）+cs 分段（$81 写族）。
 /// 返回 (写事件, 记录长)。
-pub fn s2_eec6_body(x: u8) -> (Vec<(u16, u8)>, u8) {
+pub fn item_check_entry(x: u8) -> (Vec<(u16, u8)>, u8) {
     let v07 = (x >> 1).wrapping_add(0x3C);
     (vec![(0x0007, v07), (0x0006, 0)], 1) // 记录长 1（lda #1）
 }
 
 /// $EEEB 员体：jmp $EEC6（尾形）+$95BA 调+二回驱。
-pub fn s2_eeeb_body(x: u8) -> (Vec<(u16, u8)>, u8) {
-    s2_eec6_body(x)
+pub fn item_check_record_tail(x: u8) -> (Vec<(u16, u8)>, u8) {
+    item_check_entry(x)
 }
 
 /// $EEF1 员体：jmp $EEC6+$EB92 调+jmp $EDD6（S2-23 接面——S2-18 同构）。
-pub fn s2_eef1_body(x: u8) -> (Vec<(u16, u8)>, u16) {
-    let (ev, _) = s2_eec6_body(x);
+pub fn item_check_spawn_tail(x: u8) -> (Vec<(u16, u8)>, u16) {
+    let (ev, _) = item_check_entry(x);
     (ev, 0xEDD6)
 }
 
@@ -235,12 +235,12 @@ mod s2_050_tests {
     /// 三员转写形（入口长 1 root+二壳）。
     #[test]
     fn s2_050_units_three() {
-        let (ev, len) = s2_eec6_body(0x7F);
+        let (ev, len) = item_check_entry(0x7F);
         assert_eq!(len, 1);
         assert!(ev.contains(&(0x0007, (0x7Fu8 >> 1).wrapping_add(0x3C))));
         assert!(ev.contains(&(0x0006, 0)));
-        assert_eq!(s2_eeeb_body(0x7F).1, 1);
-        assert_eq!(s2_eef1_body(0x7F).1, 0xEDD6);
+        assert_eq!(item_check_record_tail(0x7F).1, 1);
+        assert_eq!(item_check_spawn_tail(0x7F).1, 0xEDD6);
     }
 }
 

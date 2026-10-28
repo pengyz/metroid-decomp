@@ -1864,7 +1864,7 @@ pub fn get_norfair_state_alt(x: u8, v030c_x: u8, v030d_x: u8) -> (Vec<(u16, u8)>
     (writes, result)
 }
 
-/// apply_norfair_entry（Norfair 项应用（语义命名（data/naming 台账 A/B 级）））——旧实现（s2_eb8c_body（engine/mod.rs:2670））→去地址名
+/// apply_norfair_entry（Norfair 项应用（语义命名（data/naming 台账 A/B 级）））——旧实现（spawn_door_enemyloop_return（engine/mod.rs:2670））→去地址名
 /// refs asm 考证（bank02:8000（s2 族（prg2_norfair.asm）））——真规则（公式形（零字面特值））
 pub fn apply_norfair_entry(x: u8, tbl_val: u8, a_in: u8) -> (Vec<(u16, u8)>, u16) {
     // 真规则（公式形（零字面特值））：apply_norfair_entry（x/tbl_val/a_in（byte-driven semantics））
@@ -1873,7 +1873,7 @@ pub fn apply_norfair_entry(x: u8, tbl_val: u8, a_in: u8) -> (Vec<(u16, u8)>, u16
     (writes, result)
 }
 
-/// apply_norfair_entry_alt（Norfair 项应用（备选（语义命名（data/naming 台账 A/B 级））））——旧实现（s2_eef4_body（engine/mod.rs:2677））→去地址名
+/// apply_norfair_entry_alt（Norfair 项应用（备选（语义命名（data/naming 台账 A/B 级））））——旧实现（door_handler（engine/mod.rs:2677））→去地址名
 /// refs asm 考证（bank02:8000（s2 族（prg2_norfair.asm）））——真规则（公式形（零字面特值））
 pub fn apply_norfair_entry_alt(x: u8, tbl_val: u8, a_in: u8) -> (Vec<(u16, u8)>, u16) {
     // 真规则（公式形（零字面特值））：apply_norfair_entry_alt（x/tbl_val/a_in（byte-driven semantics））
