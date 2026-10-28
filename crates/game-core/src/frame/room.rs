@@ -1058,17 +1058,17 @@ mod tests_stream_content_mapping {
     use super::*;
     use crate::state::FrameMemory;
 
-    /// 【径汇修正】0xFF 直终径⇒$5A=$F0+$4A=ScrollDir（双写面（asm EndOfRoom））。
+    /// 【径汇修正】0xFF 直终径⇒$5A=$F0+$4A=ScrollDir（双写面（asm EndOfRoom :8727-8732））。
+    /// 【复核处方强测】真驱动 draw_room 0xFF 臂（ROOM_STREAMS[1] 尾 0xFF=现成直终流）——
+    /// 旧形直调 end_of_room 无回归保护（回退修复仍绿）。
     #[test]
     fn draw_room_ff_path_writes_temp_scroll_dir() {
         let mut m = FrameMemory::default();
         m.write_ram(crate::ram_map::SCROLL_DIR, 3);
         m.write_ram(crate::ram_map::PPUCTRL_ZP, 0);
-        // 最小房流（palette+0xFF（直终径））
-        // 用 ROOM_STREAMS 中的最小房（index 0 若含 0xFF 直终——改用直接构造不可行（表静态））——
-        // 以 end_of_room 共享面等价断言（径汇后 draw_room 0xFF 走 end_of_room）
-        crate::frame::room::end_of_room(&mut m);
-        assert_eq!(m.read_ram(0x005A), 0xF0);
-        assert_eq!(m.read_ram(0x004A), 3, "TempScrollDir←ScrollDir（径汇面）");
+        // ROOM_STREAMS[1]=[02 07 02 02 87 02 02 FF]——palette+对象环+0xFF 直终（被修径）
+        assert!(super::draw_room(&mut m, 1), "0xFF 直终房应走 EndOfRoom 返回");
+        assert_eq!(m.read_ram(0x005A), 0xF0, "RoomNumber←$F0（asm :8728-8730）");
+        assert_eq!(m.read_ram(0x004A), 3, "TempScrollDir←ScrollDir（径汇面（asm :8731-8732））");
     }
 }

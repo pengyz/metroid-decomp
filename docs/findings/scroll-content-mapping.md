@@ -20,7 +20,7 @@
 | DrawStruct | $EF8C（:9715） | 首字节 $FF⇒出；⇒DrawStructRow |
 | DrawStructRow | $EF13（:9590） | 行头：低 nibble=元块计（**0⇒16**）/高 nibble=x 偏移（×2 瓦）；行满（ptr&$1F==0）⇒提前 AdvanceRow |
 | DrawMetatile | $EF2B（:9625） | 元块 idx×4→**MetatileDefs[base+k]→TilePosTable[x]（$21/$20/$01/$00（x=3..0 逆）⇒写序=UL,UR,LL,LR（自然序）**）；UpdateAttrib；ptr+=2 |
-| EndOfRoom | $EAF4（:8725） | **RoomNumber←$F0+TempScrollDir($4A)←ScrollDir**（双写）+滚向尾径 kick |
+| EndOfRoom | $EAF4（:8727；commit 锚 :8725 偏 2 行更正（复核 r9）） | **RoomNumber←$F0+TempScrollDir($4A)←ScrollDir**（双写）+滚向尾径 kick |
 | AttribTableWrite/RoomFinished | $EA13/$EA26（:8556/:8572） | $F0-$F3 渐写→$FF |
 
 ## 2. rust 对照（映射差异）
