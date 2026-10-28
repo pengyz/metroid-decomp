@@ -73,3 +73,20 @@
 Evidence: prg7_engine.asm :8666/:8670/:8713/:8727-8732；room.rs :62-68/:442-444/:480-495/:1063-1073；
 graphics.rs :46-48（ROOM_STREAMS[1]）；shots_rust/matrix.md（2026-10-28 run-all 实测）；
 gates/cli.py check 复跑输出（PASS=13 FAIL=0）。
+
+## 复审（返工 commit f2117b15）——终判 verdict = **pass**
+
+- 强测有效性核实（2026-10-28）：新测 `draw_room_ff_path_writes_temp_scroll_dir`
+  （room.rs:1066-1076）真驱动 `draw_room(&mut m, 1)`——ROOM_STREAMS[1]
+  （graphics.rs:46-48，`[02 07 02 02 87 02 02 FF]`）对象环后命中 0xFF 直终臂，
+  `assert!(draw_room(...))` 锚可达性 + `$5A=$F0` + `$4A==3` 双断言。
+  **回退即红论证**：被测径内 `$4A` 唯一写点=end_of_room（room.rs:487）；
+  FrameMemory::default ram 全零（state.rs:58-64）——0xFF 臂若回退旧内联
+  `write_ram(0x5A,0xF0)`，`$4A` 读 0≠3 ⇒ 测红。mutation 有效性成立。
+- 实测：`cargo test -p game-core` 403 passed/0 failed（强测绿）；`gates/cli.py check`
+  PASS=13 FAIL=0。
+- findings 行号锚 :8725/:8672→:8727/:8670 更正核实（commit f2117b15 diff 在案）。
+- r9 needs_revision 唯一项（测试有效性）闭环。全四点 pass。
+
+Evidence: room.rs:1066-1076（强测）/state.rs:58-64（零初始化）/graphics.rs:46-48；
+cargo test -p game-core（403/0）；gates/cli.py check（PASS=13 FAIL=0）。
