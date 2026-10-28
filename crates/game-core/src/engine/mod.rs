@@ -720,8 +720,10 @@ mod s1_08_tests {
 // ---- SC-S1-09 员转写（5 员——SetSamusAnim 族）----
 
 /// $CF6B SetSamusAnim：$0305←A/$0306←A/$0304←0（A 归零出口）。
+/// 【P1 重复消除（2026-10-28）】唯一真相源=crate::samus::animation::set_samus_animation
+/// （域产品层）——本件改**薄转发**（s1_* 消费方随迁（签名同（Vec 写面形）））。
 pub fn set_samus_animation(a_in: u8) -> (Vec<(u16, u8)>, u8) {
-    (vec![(0x0305, a_in), (0x0306, a_in), (0x0304, 0)], 0)
+    crate::samus::animation::set_samus_animation(a_in)
 }
 
 /// $D07A 员体：jmp $D088（尾形）+$0305 读 vs $D096[y] 表比对段。
@@ -17118,14 +17120,10 @@ pub fn elevator_state_control(state: u8, timer: u8) -> u8 {
 }
 
 /// door_interaction（门交互（合并 d957+d8bc））。
-///
-/// refs asm 考证（bank07:D957（prg7_engine.asm））——真规则（公式形（零字面特值））。
+/// 【P1 重复消除（2026-10-28）】唯一真相源=crate::world::door::door_interaction
+/// （域产品层）——本件改**薄转发**（消费方随迁（签名同））。
 pub fn door_interaction(door_state: u8, samus_x: u8, samus_y: u8, door_x: u8, door_y: u8) -> bool {
-    // d957: 门交互检测
-    let dx = samus_x.abs_diff(door_x);
-    let dy = samus_y.abs_diff(door_y);
-    // d8bc: 门交互判断
-    dx < 16 && dy < 16
+    crate::world::door::door_interaction(door_state, samus_x, samus_y, door_x, door_y)
 }
 
 // ---- Phase 4：sound/title/render 域（语义改写+逻辑合并）----
