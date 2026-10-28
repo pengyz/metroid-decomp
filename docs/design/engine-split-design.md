@@ -1,5 +1,10 @@
 # engine 巨石拆分设计（P2（lead 聚合裁定落形——待确认稿））
 
+> 【覆写链留档（2026-10-28（证伪文化正面案例））】lead 初裁「一族一文件」→porter 第一性
+> 反驳（**分类轴≠模块边界**（模块=内聚责任单元（以「是什么」命名（非函数名容器））））
+> →**lead 覆写采纳**：文件粒度=**功能域 ~8 模块**；asm 例程族=分类轴（归节注+naming
+> 台账（不归文件名））。本稿 §2 为修正后正文（原 §2「一族一文件」判**废止**）。
+
 > 2026-10-28 · 设计先行（本稿经 lead 确认后开批 1（现存批 1-3=应急拆分（下述再组织面））。
 > 裁定理由（lead 再强调）：**第二维=asm 例程族**（机器码是真相（Rust 自创语义分类随
 > 理解漂移（禁））；**活代码/投影资产分离**（门禁约束不同（混居使「哪些逻辑在跑」不可
@@ -20,14 +25,26 @@
 | **B 投影资产** | 写事件投影层（等价对拍/verify_shim 消费（不入运行链）） | 其余 ~1090 fn（SC-S1..S7 簇+Phase-2/4 语义件（写面 (Vec<(u16,u8)>,u8) 形）） | **留 engine**（一族一文件（文件名=首例程语义名（asm 例程族同构））） |
 | **C 已取代** | 域真源存在（本件=转发/双写残留） | 2 件实证：set_samus_animation/door_interaction（P1 薄转发（域真源=samus/animation.rs+world/door.rs）） | 转发保留或随 P1 后续清理批 |
 
-## 2. 两级维度
+## 2. 两级维度（修正后（2026-10-28 覆写））
 
 1. **第一维（消费性质）**：A 活代码→域模块（samus/enemy/world/frame 域（按调用方归域））；
    B 投影资产→engine（等价层内聚）；C→转发面。
-2. **第二维（asm 例程族）**：**一族=一文件**；文件名=**首例程语义名**（m1disasm 标签
-   （snake 化）（如 SetSamusAnim 族→set_samus_anim.rs）；无标签（纯 addr 例程）→
-   addr 形名（sub_d806.rs）（asm 真相形（禁 Rust 自创分类））。
-   **组合**：目标文件=维度 1 去向 × 维度 2 族名（A 内亦一族一文件（域内）；B=engine/<族名>.rs）。
+2. **第二维（asm 例程族）=分类轴（非文件边界）**：族=naming 台账组织单位+模块内**节注
+   边界**（族头节注保留（考证锚不丢））。**文件边界=功能域模块**（~8 件（模块名=域语义
+   （「是什么」）（非函数名）））：
+
+| 域模块 | 责任（是什么） | 含族（例） |
+|---|---|---|
+| engine/samus_face.rs | 萨姆斯姿态/动画/运动/受击投影 | SetSamusAnim/Stand/Jump/PntUp、StopVert/HorzMovement、SamusJump_CheckHorz、SetSamusRunAccel、LCF2E 判链、CheckHealthStatus、SamusHurt、IsScrewAttackActive、SamusElevator、SetSamusData 态链、CheckBombLaunch |
+| engine/enemy_face.rs | 敌方对象/生成/损伤/朝向投影 | EnemyLoop VM、Spawn VM、KillObject、CollisionDetection、EnemyReact、AndEn/OrEnData05、LF97C、$E519/$E4F1 状态件、SubtractHealth、LoadEnHiToY、EnProjectile、EnemyBGCollide、UpdateEnemy_EnData05DistanceToSamusThreshold、UpdateEnemy_ForceSpeedTowardsSamus |
+| engine/door_room_face.rs | 门/房/物品/爆破瓦投影 | CheckForItem、DoorHandler VM、ItemCheck VM、CheckBlastTile、Store/LoadObjectPosition、CheckMoveUp |
+| engine/sound_face.rs | 声/乐投影 | SFX_* 族、PlaySnd3 族、StartMusic |
+| engine/table_face.rs | 表驱动件 | Table0D 族二、Table18、Table04、$D76A 表走、ReadTableAt968B、RunAccelerationTbl |
+| engine/util_face.rs | 算术/位扫描/派发微件 | Amul8/Amul16、Adiv 系、Xminus16 族、TwosCompliment、LD77F 加法、BitScan、$8296 取负、$832F 符号扩展、PageIndex、ChooseRoutine(JumpEngine) |
+| engine/nmi_scroll_face.rs | NMI/滚屏/名表投影 | region_slices、wait_nmi/nmi、UpdateNameTable 族 |
+| engine/mod.rs | 共享根+re-export（外部路径 engine::xxx 不破） | GetNameTableAtScrollDir 等共根 |
+
+**组合**：目标文件=第一维去向 × 第二维域归属（A 内亦按域归模块；B=engine/<域>.rs）。
 
 ## 3. 1102 fn→目标文件完整映射表
 
