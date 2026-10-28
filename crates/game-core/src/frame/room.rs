@@ -336,9 +336,53 @@ pub fn update_door(mem: &mut crate::frame::FrameMemory, x_off: u8) {
                 draw_door(mem, x_off);
             }
         }
-        4 | 5 => {
-            // LetSamusIn/Scroll（任务卡 5（滚动过渡链）——fail-loud 桩（lead 裁定面））
-            crate::unported!("areas_common:$8C84/$8CC6（LetSamusIn/Scroll（任务卡 5））");
+        4 => {
+            // LetSamusIn（$8C84（audit 任务卡 5 实录））：DoorEntryStatus<5（滚动未始）
+            // ⇒回封（Solid）+闭动画（$30+$2E）+调色（同壁判（eor 7））+status←5+dir 清
+            // +音乐蓝换曲（右 Tourian/左 MB（声面（最小面（记账））））；≥5⇒仅 Draw。
+            if mem.read_ram(0x0056) < 5 {
+                write_door_bg_tiles(mem, x_off, 0x4E); // 回封（:1612 Solid）
+                mem.write_ram(0x0305 + x, 0x30); // DoorSubRoutine8C76（闭动画）
+                mem.write_ram(0x0306 + x, 0x2E);
+                mem.write_ram(0x0304 + x, 0);
+                let dir = mem.read_ram(0x0091); // DoorPaletteChangeDir
+                if dir != 0 && (((x_off >> 4) & 1) ^ (dir & 1)) == 1 {
+                    // 同壁换调色：PaletteToggle($76) eor 7（sym 取值 1^6（toggle 双验））
+                    let v = mem.read_ram(0x0076) ^ 7;
+                    mem.write_ram(0x0076, v);
+                    mem.write_ram(0x001C, v); // PaletteDataPending 同写
+                }
+                mem.write_ram(0x0300 + x, 5); // →Scroll
+                mem.write_ram(0x0091, 0); // DoorPaletteChangeDir 清
+                if mem.read_ram(0x0307 + x) == 3 {
+                    // 音乐蓝：Amul16（CF=slot bit4）——右⇒Tourian/左⇒MotherBrain
+                    crate::frame::DIVERGENCES
+                        .with(|d| d.borrow_mut().push(if x_off & 0x10 == 0 { 0x8C9E } else { 0x8CC0 }));
+                }
+            }
+            draw_door(mem, x_off); // L8CC3
+        }
+        5 => {
+            // Scroll（$8CC6（audit 任务卡 5））：DoorEntryStatus≠5⇒仅 Draw；
+            // ==5（滚动尽）⇒配对门=slot^$10（status←6+anim Open（$2C+$29）+SFX/调色
+            // （最小面（记账）））+本门 status←2→Draw。
+            if mem.read_ram(0x0056) != 5 {
+                draw_door(mem, x_off);
+            } else {
+                let pair = x_off ^ 0x10;
+                let px = pair as u16;
+                mem.write_ram(0x0300 + px, 6); // 配对←LetSamusOut
+                mem.write_ram(0x0305 + px, 0x2C); // DoorOpen_Reset
+                mem.write_ram(0x0306 + px, 0x29); // SetObjectXSlotAnimIndex（base）
+                mem.write_ram(0x0304 + px, 0);
+                // SFX_Door + SelectSamusPalette（声/调色面（最小面（记账）））
+                crate::frame::DIVERGENCES.with(|d| {
+                    d.borrow_mut().push(0x8CD2); // SFX_Door
+                    d.borrow_mut().push(0x8CD5); // SelectSamusPalette
+                });
+                mem.write_ram(0x0300 + x, 2); // 本门←Closed
+                draw_door(mem, x_off); // Goto2DrawDoor
+            }
         }
         _ => {}
     }
@@ -866,5 +910,107 @@ mod tests_door_bg_tiles {
         update_door(&mut m, 0x80);
         assert_eq!(m.read_wram(base), 0x4E, "重关⇒Solid");
         assert_eq!(m.read_ram(0x0300 + 0x80), 2, "status←2（Closed）");
+    }
+}
+
+// ===== 任务卡 5：滚动过渡链（TDD（测试先行（实现后补）））=====
+
+#[cfg(test)]
+mod tests_door_transition_chain {
+    //! 判径（audit 任务卡 5 实录）：LetSamusIn（<5⇒回封+闭动画+调色（同壁判（eor 7））
+    //! +→5+dir 清+音乐蓝换曲（右 Tourian/左 MB）/≥5⇒仅 Draw）/Scroll（==5⇒配对 X^$10
+    //! status←6+anim Open/本门←2；≠5⇒仅 Draw）/LetSamusOut（==0⇒8C61 重关/≠0⇒Draw）。
+    use super::*;
+    use crate::frame::FrameMemory;
+
+    fn chain_mem(status: u8, door_type: u8, entry: u8) -> FrameMemory {
+        let mut m = FrameMemory::default();
+        let x = 0x80u16;
+        m.write_ram(0x0300 + x, status);
+        m.write_ram(0x0307 + x, door_type);
+        m.write_ram(0x030C + x, 0);
+        m.write_ram(0x030E + x, 0xE8);
+        m.write_ram(0x0056, entry); // DoorEntryStatus
+        m
+    }
+
+    /// 【穷举·LetSamusIn】entry 0..4 全径（回封 $4E/闭动画 $30/$2E/status←5/dir 清
+    /// +isHit 清（Draw））+entry 5..8（≥5⇒仅 Draw（status 不动））。
+    #[test]
+    fn let_samus_in_faces() {
+        for entry in 0u8..9 {
+            let mut m = chain_mem(4, 1, entry);
+            m.write_ram(0x0091, 2); // DoorPaletteChangeDir（预置）
+            update_door(&mut m, 0x80);
+            if entry < 5 {
+                assert_eq!(m.read_ram(0x0300 + 0x80), 5, "→Scroll（e={}）", entry);
+                assert_eq!(m.read_ram(0x0091), 0, "dir 清（e={}）", entry);
+                assert_eq!(m.read_ram(0x0305 + 0x80), 0x30, "闭 anim Reset（e={}）", entry);
+                assert_eq!(m.read_ram(0x0306 + 0x80), 0x2E, "闭 anim base（e={}）", entry);
+                let (lo, hi) = make_room_ram_ptr(0x50, 0xE8, 0);
+                let base = ((hi as u16) << 8) | lo as u16;
+                assert_eq!(m.read_wram(base), 0x4E, "回封 Solid（e={}）", entry);
+            } else {
+                assert_eq!(m.read_ram(0x0300 + 0x80), 4, "仅 Draw（status 不动（e={}））", entry);
+                assert_eq!(m.read_ram(0x0091), 2, "dir 不动（e={}）", entry);
+            }
+            assert_eq!(m.read_ram(0x030A + 0x80), 0, "isHit 清（Draw（e={}））", entry);
+        }
+    }
+
+    /// 【调色面】同壁判（(slot>>4)&1^dir bit0==1⇒PaletteToggle($76) eor 7+Pending($1C)
+    /// 同写；==0⇒不动）。
+    #[test]
+    fn palette_toggle_face() {
+        // slot 0x80（右（bit4=0））dir=1（bit0=1）⇒0^1=1⇒换
+        let mut m = chain_mem(4, 1, 3);
+        m.write_ram(0x0091, 1);
+        m.write_ram(0x0076, 1);
+        update_door(&mut m, 0x80);
+        assert_eq!(m.read_ram(0x0076), 6, "PaletteToggle eor 7（1→6）");
+        assert_eq!(m.read_ram(0x001C), 6, "PaletteDataPending 同写");
+        // slot 0x80 dir=0（0^0=0）⇒不动
+        let mut m = chain_mem(4, 1, 3);
+        m.write_ram(0x0091, 0x20); // bit0=0
+        m.write_ram(0x0076, 1);
+        update_door(&mut m, 0x80);
+        assert_eq!(m.read_ram(0x0076), 1, "非同壁⇒不动");
+    }
+
+    /// 【Scroll】entry==5⇒配对 X^$10 status←6+anim Open（$2C/$29）+本门←2；≠5⇒仅 Draw。
+    #[test]
+    fn scroll_pair_handoff() {
+        for entry in [4u8, 5, 6] {
+            let mut m = chain_mem(5, 1, entry);
+            update_door(&mut m, 0x80);
+            if entry == 5 {
+                assert_eq!(m.read_ram(0x0300 + 0x90), 6, "配对←LetSamusOut");
+                assert_eq!(m.read_ram(0x0305 + 0x90), 0x2C, "配对 anim Reset（Open）");
+                assert_eq!(m.read_ram(0x0306 + 0x90), 0x29, "配对 anim base");
+                assert_eq!(m.read_ram(0x0300 + 0x80), 2, "本门←Closed");
+            } else {
+                assert_eq!(m.read_ram(0x0300 + 0x80), 5, "仅 Draw（e={}）", entry);
+                assert_eq!(m.read_ram(0x0300 + 0x90), 0, "配对不动（e={}）", entry);
+            }
+        }
+    }
+
+    /// 【LetSamusOut】entry==0⇒8C61 重关（status←2/HP←1/实瓦/闭 anim）；≠0⇒仅 Draw。
+    #[test]
+    fn let_samus_out_faces() {
+        for entry in [0u8, 1, 5] {
+            let mut m = chain_mem(6, 1, entry);
+            m.write_ram(0x038F, 0x30);
+            update_door(&mut m, 0x80);
+            if entry == 0 {
+                assert_eq!(m.read_ram(0x0300 + 0x80), 2, "8C61 重关（e={}）", entry);
+                assert_eq!(m.read_ram(0x038F), 1, "HP←1（e={}）", entry);
+                let (lo, hi) = make_room_ram_ptr(0x50, 0xE8, 0);
+                let base = ((hi as u16) << 8) | lo as u16;
+                assert_eq!(m.read_wram(base), 0x4E, "实瓦回封（e={}）", entry);
+            } else {
+                assert_eq!(m.read_ram(0x0300 + 0x80), 6, "仅 Draw（e={}）", entry);
+            }
+        }
     }
 }

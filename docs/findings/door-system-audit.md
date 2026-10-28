@@ -255,3 +255,52 @@ tile 参数（$4E↔$FF）；指针算（MakeRoomRAMPtr）/6 瓦纵写（y 步 $
 
 Evidence: areas_common.asm:1445/1545/1585/1612/1694-1699（标签+调用点全文）——A 级原文。
 Confidence: 95
+
+## 任务卡 5 实录：滚动过渡链（LetSamusIn→Scroll→LetSamusOut——A 级全文）
+
+### 常量消费面（constants_ram——A 级）
+
+DoorEntryStatus=$56（0=未在门/1=右门/2=左门/3=竖滚…（SamusEnterDoor 面写（b7eba84e
+端口件））/DoorScrollStatus=**$57**（判向（进右门=1（横区）））/DoorDelay=**$59**
+（进出门延迟帧（SamusEnterDoor SetDoorEntryInfo←**$12（18 帧）**））/PaletteToggle=**$76**
+/PaletteDataPending=**$1C**/DoorPaletteChangeDir=**$91**（进调色房存 ScrollDir）。
+> 【注记（下批核）】mainloop.rs:1283 旧注「SamusDoorData=$57」与 constants（$57=
+> DoorScrollStatus）不符——疑误注（不在本卡改动）。
+
+### LetSamusIn（$8C84，areas_common:1608-1653——A 级）
+
+- `DoorEntryStatus($56) >= 5`⇒L8CC3（仅 DrawDoor）。
+- `<5`（滚动未始）：①WriteDoorBGTiles_**Solid**（:1612（**回封**（Samus 已进）））；
+  ②DoorSubRoutine8C76（闭动画（Reset=$30+base=$2E））；③调色面：
+  DoorPaletteChangeDir($91)≠0 且 **(slot Adiv16)&1 ^ dir bit0 == 1**（同壁判）
+  ⇒`PaletteToggle($76) eor #mask / sta PaletteToggle / sta PaletteDataPending($1C)`
+  （mask=(_id_Palette00+1)~(_id_Palette05+1)=1^6=**7**（WLA `~`=XOR（sym 取值
+  _id_Palette00=0/_id_Palette05=5（out/M1_NES_CNS.sym）+toggle 双验（1^7=6/6^7=1））））；
+  ④**status←5（Scroll）**+DoorPaletteChangeDir←0；⑤音乐蓝门（type==3）：
+  `txa/Amul16`（CF=slot bit4）：**右门⇒TourianMusic/左门（CF）⇒MotherBrainMusic**
+  （声面（最小面（记账）））；⇒L8CC3→DrawDoor。
+
+### Scroll（$8CC6，:1655-1680——A 级）
+
+- DoorEntryStatus≠5（滚动未尽）⇒DrawDoor。
+- ==5（滚动尽）：**配对门=slot^$10**（槽 bit4 翻转）：配对 status←**6（LetSamusOut）**
+  +animResetIndex←$2C（DoorOpen_Reset）+SetObjectXSlotAnimIndex($29)+**SFX_Door**
+  （声面（最小面））+**SelectSamusPalette**（Samus 调色更新（asm 注（metroid 贴头
+  留蓝校正））（最小面（记账）））；本门（PageIndex）status←**2（Closed）**→DrawDoor。
+
+### LetSamusOut（$8CF0，:1681-1692——A 级）
+
+- DoorEntryStatus≠0⇒DrawDoor；==0（Samus 出门完）⇒jmp **DoorSubRoutine8C61**
+  （重关径（HP←1/实瓦/status←2/闭动画（$30+$2E））（任务卡 3 已实装））。
+
+### 消费面映射（SamusEnterDoor 侧（b7eba84e 端口件——本卡核对不改））
+
+DoorScrollStatus($57)=判向（ScrollDir&2 横（X=2（Samus.x bit7⇒1））/竖（X=3/4））；
+DoorDelay($59)=$12（18 帧进出门序）；Samus 隐身/出入动画帧=SamusEnterDoor 面
+（DoorEntryStatus←|$80/anim 帧径（其件内））；邻房装载触发=滚动序尾（Scroll 状态
+DoorEntryStatus==5 断面（配对门交接）——MapScrollRoutine 消费面**接口边界**：
+仅导弹门 item 记录（任务卡 3 桩（$8C4C（记账）））本链不经。
+
+Evidence: areas_common.asm:1608-1692（三态全文）+constants_ram.asm:549/554/566/476
+/609/669（六址）+out/M1_NES_CNS.sym（_id_Palette 值）——A 级原文。
+Confidence: 95
