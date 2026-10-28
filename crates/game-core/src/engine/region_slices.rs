@@ -1651,7 +1651,7 @@ mod tests_block46 {
 // TDD 测试（测试先行（实现后补）（强制完整））——1:1 Rust 改写·批产·块 48：engine::mod（s1_/s2_ 族（继续去地址名））（穷举等价证明（全域穷举（边界条件（异常路径））））
 // refs 引用必写（bank:addr 引证（A 级原文））：bank02:8000（s2 族（prg2_norfair.asm））（s1_/s2_ 族（实址（A 级原文）））
 
-/// get_norfair_state（Norfair 状态（语义命名（data/naming 台账 A/B 级）））——旧实现（s2_d411_body（engine/mod.rs:2172））→去地址名
+/// get_norfair_state（Norfair 状态（语义命名（data/naming 台账 A/B 级）））——旧实现（health_check_dispatch（engine/mod.rs:2172））→去地址名
 /// refs asm 考证（bank02:8000（s2 族（prg2_norfair.asm）））——真规则（公式形（零字面特值））
 pub fn get_norfair_state(v030a: u8) -> (Vec<(u16, u8)>, u16) {
     // 真规则（公式形（零字面特值））：get_norfair_state（v030a（byte-driven semantics））
@@ -1954,7 +1954,7 @@ mod tests_block52 {
 // TDD 测试（测试先行（实现后补）（强制完整））——1:1 Rust 改写·批产·块 54：engine::mod（s1_/s2_ 族（继续去地址名））（穷举等价证明（全域穷举（边界条件（异常路径））））
 // refs 引用必写（bank:addr 引证（A 级原文））：bank02:8000（s2 族（prg2_norfair.asm））（s1_/s2_ 族（实址（A 级原文）））
 
-/// apply_norfair_carry（Norfair 进位应用（语义命名（data/naming 台账 A/B 级）））——旧实现（s2_f133_body（engine/mod.rs:2840））→去地址名
+/// apply_norfair_carry（Norfair 进位应用（语义命名（data/naming 台账 A/B 级）））——旧实现（samus_hurt_move_segment（engine/mod.rs:2840））→去地址名
 /// refs asm 考证（bank02:8000（s2 族（prg2_norfair.asm）））——真规则（公式形（零字面特值））
 pub fn apply_norfair_carry(carry: bool, v0f: u8, x: u8) -> (Vec<(u16, u8)>, u8) {
     // 真规则（公式形（零字面特值））：apply_norfair_carry（carry/v0f/x（byte-driven semantics））
@@ -1963,7 +1963,7 @@ pub fn apply_norfair_carry(carry: bool, v0f: u8, x: u8) -> (Vec<(u16, u8)>, u8) 
     (writes, result)
 }
 
-/// apply_norfair_carry_alt（Norfair 进位应用（备选（语义命名（data/naming 台账 A/B 级））））——旧实现（s2_fec2_body（engine/mod.rs:2847））→去地址名
+/// apply_norfair_carry_alt（Norfair 进位应用（备选（语义命名（data/naming 台账 A/B 级））））——旧实现（samus_hurt_table_load（engine/mod.rs:2847））→去地址名
 /// refs asm 考证（bank02:8000（s2 族（prg2_norfair.asm）））——真规则（公式形（零字面特值））
 pub fn apply_norfair_carry_alt(carry: bool, v0f: u8) -> (Vec<(u16, u8)>, u16) {
     // 真规则（公式形（零字面特值））：apply_norfair_carry_alt（carry/v0f（byte-driven semantics））

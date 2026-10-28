@@ -7,7 +7,7 @@ use super::*;
 /// $F311 SamusHurt（root——簇共根形四六）：cs 分段（$010F←$E0）+$F338 调+$0F 判
 /// （$73←1）+$6E/$6F←0（指针清）。
 /// 返回 (写事件, cs 与否)。
-pub fn s2_samus_hurt(carry: bool, v0f: u8) -> (Vec<(u16, u8)>, bool) {
+pub fn samus_hurt_apply(carry: bool, v0f: u8) -> (Vec<(u16, u8)>, bool) {
     if carry {
         return (vec![], true); // bcs Exit22 段
     }
@@ -21,15 +21,15 @@ pub fn s2_samus_hurt(carry: bool, v0f: u8) -> (Vec<(u16, u8)>, bool) {
 }
 
 /// $F133 员体：SamusHurt+Xminus16+cmp $C0 段+尾跳 $CE92（S1-26 接面）。
-pub fn s2_f133_body(carry: bool, v0f: u8, x: u8) -> (Vec<(u16, u8)>, u8) {
-    let (mut ev, _) = s2_samus_hurt(carry, v0f);
+pub fn samus_hurt_move_segment(carry: bool, v0f: u8, x: u8) -> (Vec<(u16, u8)>, u8) {
+    let (mut ev, _) = samus_hurt_apply(carry, v0f);
     ev.push((0x0002, x.wrapping_sub(0x10))); // Xminus16 面
     (ev, x.wrapping_sub(0x10))
 }
 
 /// $FEC2 员体：SamusHurt+$6E←$50+尾跳 $CE92（S2-27 同构面——表载段）。
-pub fn s2_fec2_body(carry: bool, v0f: u8) -> (Vec<(u16, u8)>, u16) {
-    let (mut ev, _) = s2_samus_hurt(carry, v0f);
+pub fn samus_hurt_table_load(carry: bool, v0f: u8) -> (Vec<(u16, u8)>, u16) {
+    let (mut ev, _) = samus_hurt_apply(carry, v0f);
     ev.push((0x006E, 0x50));
     (ev, 0xCE92)
 }
@@ -41,14 +41,14 @@ mod s2_052_tests {
     /// 三员转写形（SamusHurt root+二壳）。
     #[test]
     fn s2_052_units_three() {
-        assert_eq!(s2_samus_hurt(true, 0).1, true); // bcs 段
-        let (ev, _) = s2_samus_hurt(false, 5);
+        assert_eq!(samus_hurt_apply(true, 0).1, true); // bcs 段
+        let (ev, _) = samus_hurt_apply(false, 5);
         assert!(ev.contains(&(0x010F, 0xE0)));
         assert!(ev.contains(&(0x0073, 1)));
         assert!(ev.contains(&(0x006E, 0)));
-        let (ev, nx) = s2_f133_body(false, 5, 0x70);
+        let (ev, nx) = samus_hurt_move_segment(false, 5, 0x70);
         assert_eq!(nx, 0x60);
-        assert_eq!(s2_fec2_body(false, 5).1, 0xCE92);
+        assert_eq!(samus_hurt_table_load(false, 5).1, 0xCE92);
     }
 }
 
