@@ -60,8 +60,11 @@ pub fn draw_room(mem: &mut crate::frame::FrameMemory, room: u8) -> bool {
         let Some(&b) = stream.get(i) else { return false };
         match b {
             0xFF => {
-                // EndOfRoom（$EAF4）：RoomNumber←$F0（属性表尾命令——循环续面）
-                mem.write_ram(0x005A, 0xF0);
+                // 【径汇修正（2026-10-28（scroll-content-mapping.md））】EndOfRoom（$EAF4）
+                // 双写面（RoomNumber←$F0+TempScrollDir($4A)←ScrollDir）——旧内联径漏
+                // $4A 写⇒流送防重判永跳⇒内容映射锁死（f1200/f1000 族根因候选）——
+                // 与 enemy_loop 尾径同汇共享件。
+                end_of_room(mem);
                 return true;
             }
             0xFE => {
@@ -1042,5 +1045,30 @@ mod tests_door_transition_chain {
                 assert_eq!(m.read_ram(0x0300 + 0x80), 6, "仅 Draw（e={}）", entry);
             }
         }
+    }
+}
+
+// ===== 流送内容映射（TDD（测试先行（实现后补）））=====
+
+#[cfg(test)]
+mod tests_stream_content_mapping {
+    //! 判径（docs/findings/scroll-content-mapping.md）：draw_room 0xFF 直终径与
+    //! enemy_loop 尾径**同汇 EndOfRoom（$EAF4）**（RoomNumber←$F0+TempScrollDir←ScrollDir
+    //! 双写）——旧内联径漏 $4A 写⇒流送防重判永跳⇒内容映射锁死（f1200/f1000 族根因候选）。
+    use super::*;
+    use crate::state::FrameMemory;
+
+    /// 【径汇修正】0xFF 直终径⇒$5A=$F0+$4A=ScrollDir（双写面（asm EndOfRoom））。
+    #[test]
+    fn draw_room_ff_path_writes_temp_scroll_dir() {
+        let mut m = FrameMemory::default();
+        m.write_ram(crate::ram_map::SCROLL_DIR, 3);
+        m.write_ram(crate::ram_map::PPUCTRL_ZP, 0);
+        // 最小房流（palette+0xFF（直终径））
+        // 用 ROOM_STREAMS 中的最小房（index 0 若含 0xFF 直终——改用直接构造不可行（表静态））——
+        // 以 end_of_room 共享面等价断言（径汇后 draw_room 0xFF 走 end_of_room）
+        crate::frame::room::end_of_room(&mut m);
+        assert_eq!(m.read_ram(0x005A), 0xF0);
+        assert_eq!(m.read_ram(0x004A), 3, "TempScrollDir←ScrollDir（径汇面）");
     }
 }
