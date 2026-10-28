@@ -12916,6 +12916,55 @@ CFC3 Lx017-18/common_sprite_data:70/81（表算））））③归因报告抽验
 重导证据（正确性核）））✓——复核 verdict 实录（docs commit（对抗复核 verdict（4 重点（必跑验证）
 （实测输出原文（A 级））））✓。
 
+## L2 投影层整体退役 4 commit 对抗复核（d8ac458a+635c9616+82bdf7ce+28e0315c（证伪立场
+（独立重导证据（5 重点（删除完整性+语义迁移等价性+门禁改动合规+行为零回归+过度删除检查））））
+
+### verdict: needs_revision（④测试数差（432 vs 任务规约 436（差 4（口径不一致））））（余项 ✓）
+
+**必跑验证实录（⑩（A 级原文））**：
+- `cargo test --workspace`：**402+3+27=432 passed; 0 failed**（全绿）——**测试数差**（432 vs
+  任务规约 436（**差 4**（口径不一致）））
+- `python3 gates/cli.py check`：**SUMMARY: PASS=13 FAIL=0 SKIP=1 TOLERATED=2**
+  （CHECK: PASS（含 0 个静默跳过））✓
+- `gates l4`：**match 23 diff 16 blocked 0**（分母 39（**23/39 逐格=清理前**））✓
+
+**① 删除完整性 ✓**：grep 全树残留引用（engine::（2）+verify_shim（7）+l2ports（18）+L2In（2）+
+L2Out（2）+l2_cases（4）+l2_gap_map（6）+subroutine-diff（1）（共 42 处））——**全注释**（历史引用/
+迁移注（verify_shim/l2ports/L2In/L2Out/l2_cases/l2_gap_map/subroutine-diff（comments（非产品代码）））+
+`pub use engine::FrameEngine`（frame/mod.rs:37（**运行时仍需**（FrameEngine（未误删））））——
+**产品代码/测试/门禁/tools 零悬挂** ✓
+
+**② 语义迁移等价性抽查 ✓**：
+- **step_glue.rs 3 fn** ✓（title_inc（:47）+title_metroid_fade_out（:272）+title_crosshairs_step
+  （:326）——域调用与写事件映射零改动（逐语句等价迁移（L2In→&TitleFace（L2Out→GlueOut
+  （writes+a/x/y）））））
+- **room.rs $EE4A/$EB85 与 asm 对读** ✓（prg7_engine.asm:8854（GetNameTableAtScrollDir: ; 07:EB85
+  （Store #$01（name table 3）/Store #$00（name table 0）（lda PPUCTRL_ZP）））+:9423（CheckForItem:
+  ; 07:EE4A（if Samus has no unique items（ldy NumberOfUniqueItems）））））
+- **boot C16D 写序** ✓（$01=1 先/$00=FF 后/A=FF（写序（C16D（asm 实证））））
+
+**③ 门禁改动合规 ✓**：retire 路径（gates/cli.py:337-338（`if rec.get("kind") == "retire":
+bounds[rec["metric"]] = new  # 退役下调：下界重置（sanctioned）`））——**只给 sanctioned 下调
+开口** ✓+verify_baseline_integrity（:355-357（baseline.json↔baseline_history.jsonl 完整性校验
+（**手工改 json 依旧被拦**）））+**39ee3152 前科（叙事错）不重演** ✓
+
+**④ 行为零回归实证复跑 ✗ 拒收（测试数差）**：gates check（**PASS=13**（0 静默跳过））✓+L4 run-all
+（**23/39 逐格=清理前**（match 23 diff 16 blocked 0（分母 39）））✓——cargo test --workspace
+（**432 passed; 0 failed**）——**测试数差**（432 vs 任务规约 **436**（**差 4**（口径不一致
+（应 436/0（实测 432/0））））——④行为零回归**拒收**（测试数差（432 vs 436（差 4）））
+
+**⑤ 过度删除检查 ✓**：FrameEngine（frame/engine.rs（**未误删**））+l3-dump.rs+render-dump.rs
+（**链完好**）+rust_screenshot 链 ✓
+
+**verdict**：L2 投影层整体退役 4 commit 对抗复核 **needs_revision**——④测试数差拒收（432 vs
+任务规约 436（差 4（口径不一致）））——①删除完整性 ✓（残留 42 处=全注释（历史引用/迁移注）+
+FrameEngine 未误删（产品代码/测试/门禁/tools 零悬挂））②语义迁移等价性 ✓（step_glue.rs 3 fn
+（逐语句等价迁移）+room.rs $EE4A/$EB85（asm 对读）+boot C16D 写序）③门禁改动合规 ✓（retire 路径
+（sanctioned 下调开口（手工改 json 依旧被拦））+39ee3152 前科不重演）⑤过度删除检查 ✓（FrameEngine
+（未误删）+l3-dump/render-dump/rust_screenshot 链完好））——**必跑验证 ✓**（实测输出原文（A 级））
+——对抗复核核（证伪立场（独立重导证据（正确性核）））✓——复核 verdict 实录（docs commit（对抗
+复核 verdict（5 重点（必跑验证）（实测输出原文（A 级））））✓。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
