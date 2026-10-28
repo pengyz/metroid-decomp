@@ -12965,6 +12965,29 @@ FrameEngine 未误删（产品代码/测试/门禁/tools 零悬挂））②语�
 ——对抗复核核（证伪立场（独立重导证据（正确性核）））✓——复核 verdict 实录（docs commit（对抗
 复核 verdict（5 重点（必跑验证）（实测输出原文（A 级））））✓。
 
+## ④ 终判（L2 投影层整体退役（行为零回归（测试数差更正））（证伪立场（独立重导证据）））
+
+### verdict: pass（④行为零回归 ✓（436/0（runtime 口径（双口径辨清）））（A 级原文）（必跑验证 ✓
+（实测输出原文（A 级））））
+
+**必跑验证实录（⑩（A 级原文）（复跑（全套件行核 436））**：
+- `cargo test --workspace 2>&1 | grep "test result"`：**402+3+27+4=436 passed; 0 failed**（全绿）
+  ——game_core lib=402+rust_screenshot bin=3+game_data=27+**game_platform=4**（前次漏加（差 4=
+  漏因）））——**436=runtime 口径**（与 retire 记录 evidence 一致）✓
+- **双口径辨清**：440=静态 #[test] 计数（gates rust-tests（含集成/bin））+436=runtime passed 数
+  （cargo test --workspace）——**两者各自成立**（retire 记录 440 指静态口径（evidence 436 指
+  runtime 口径））✓
+
+**④ 行为零回归实证复跑 ✓**：cargo test --workspace（**436 passed; 0 failed**（runtime 口径
+（与 retire 记录 evidence 一致）））+gates check（**PASS=13 FAIL=0**（0 静默跳过））+L4 run-all
+（**match 23 diff 16 blocked 0**（分母 39（**23/39 逐格=清理前**）））——**行为零回归** ✓
+
+**verdict**：④ 终判（L2 投影层整体退役（行为零回归（测试数差更正）））**pass**（④行为零回归 ✓
+（436/0（runtime 口径（双口径辨清（440=静态#[test] 口径（436=runtime 口径（各自成立））））））+
+gates check（PASS=13）+L4 run-all（23/39 逐格=清理前））——**必跑验证 ✓**（实测输出原文（A 级））
+——对抗复核核（证伪立场（独立重导证据（正确性核）））✓——复核 verdict 实录（docs commit（对抗
+复核 verdict（④终判（必跑验证）（实测输出原文（A 级））））✓。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
