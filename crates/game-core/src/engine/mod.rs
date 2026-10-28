@@ -67,8 +67,42 @@ mod tests {
     }
 }
 
-pub mod samus_common;
-pub use samus_common::*;
+pub mod set_samus_anim;
+pub mod toggle_samus_hi;
+pub mod stop_vert_movement;
+pub mod set_samus_stand;
+pub mod lcf2e;
+pub mod check_health_status;
+pub mod ld47e;
+pub mod samus_hurt_f311;
+pub mod is_screw_attack_active;
+pub mod update_enemy_force_speed_towards_samus;
+pub mod update_enemy_en_data05_distance_to_samus_threshold;
+pub mod samus_jump_check_horz_movement;
+pub mod set_samus_jump;
+pub mod set_samus_data_3_frame_anim_delay;
+pub mod set_samus_pnt_up;
+pub mod run_acceleration_tbl;
+pub mod check_bomb_launch;
+pub mod stop_horz_movement;
+pub use set_samus_anim::*;
+pub use toggle_samus_hi::*;
+pub use stop_vert_movement::*;
+pub use set_samus_stand::*;
+pub use lcf2e::*;
+pub use check_health_status::*;
+pub use ld47e::*;
+pub use samus_hurt_f311::*;
+pub use is_screw_attack_active::*;
+pub use update_enemy_force_speed_towards_samus::*;
+pub use update_enemy_en_data05_distance_to_samus_threshold::*;
+pub use samus_jump_check_horz_movement::*;
+pub use set_samus_jump::*;
+pub use set_samus_data_3_frame_anim_delay::*;
+pub use set_samus_pnt_up::*;
+pub use run_acceleration_tbl::*;
+pub use check_bomb_launch::*;
+pub use stop_horz_movement::*;
 pub mod enemy_common;
 pub use enemy_common::*;
 pub mod door_room;
