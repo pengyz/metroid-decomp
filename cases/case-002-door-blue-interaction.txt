@@ -1,0 +1,37 @@
+# 对拍用例 002：门系统链（走右→射击蓝门→开门动画→入门→邻房采集）
+# 用途：验证门对象槽/弹击 isHit&4/UpdateDoor 状态机/过渡链全链（功能5 六件链）
+# 对拍：模拟器 vs Rust 实现（像素对比（L4 对拍矩阵））
+# 定义：对拍用例 = ① 输入脚本 + ② 待加载存档 + ③ 对拍时长
+
+name case-002-door-blue-interaction
+frames 1200
+snapshot none  # 上电起跑（同 case-001）
+
+# ① 进入游戏（标题→游戏开始（同 case-001 序））
+press 310 start
+press 350 start
+capture 420 game-in
+
+# ② 走右至蓝门（起始房右行（SamusRun 序））
+hold 450-620 right
+capture 620 at-door
+
+# ③ 射击蓝门（B 弹（wa_Bullet→isHit&4→HP--（蓝 1 击开）））
+press 630 b
+press 640 b
+capture 650 bullet-out
+
+# ④ 开门动画（DoorOpen 帧序（~30 帧））
+capture 700 door-open
+
+# ⑤ 入门（走入门框（SamusEnterDoor 触发（DoorDelay 18 帧序）））
+hold 720-780 right
+capture 790 door-enter
+
+# ⑥ 滚动过渡（LetSamusIn→Scroll→LetSamusOut（配对门 X^$10））
+capture 850 scrolling
+
+# ⑦ 邻房采集（出门右行入邻房）
+hold 880-980 right
+capture 1000 neighbor-room
+capture 1150 end

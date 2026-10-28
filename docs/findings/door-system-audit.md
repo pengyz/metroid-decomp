@@ -304,3 +304,41 @@ DoorEntryStatus==5 断面（配对门交接）——MapScrollRoutine 消费面**
 Evidence: areas_common.asm:1608-1692（三态全文）+constants_ram.asm:549/554/566/476
 /609/669（六址）+out/M1_NES_CNS.sym（_id_Palette 值）——A 级原文。
 Confidence: 95
+
+## 任务卡 6 实录：L4 验证场景（case-002-door-blue-interaction——对拍证据）
+
+### 场景（cases/case-002-door-blue-interaction.txt（8 采集点））
+
+走右（450-620）→射击蓝门（630/640 B）→开门动画（700）→入门（720-780）→
+滚动过渡（850）→邻房（880-980）→采集 420/620/650/700/790/850/1000/1150。
+
+### 对拍结果（`tools/l4_diff_run.py run-all`（A 级实测））
+
+**基线**（case-002 入前（4 用例（含 3 探针））：**match 15/27**（无回退基准）。
+**本件后**（5 用例×35 格）：**match 20·diff 15**（pass 20/35）——旧 27 格 **15 不回退**
+（无回退 ✓）+case-002 新 8 格 **5 match/3 diff**：
+
+| 采集点 | 结果 | 差异像素 |
+|---|---|---|
+| f420 game-in | ✅match | 0/61440 |
+| f620 at-door | ✅match | 0/61440 |
+| f650 bullet-out | ✅match | 0/61440 |
+| f700 door-open | ✅match | 0/61440 |
+| f790 door-enter | ✅match | 0/61440 |
+| f850 scrolling | ❌diff | 400/61440（0.65%） |
+| f1000 neighbor-room | ❌diff | 11059/61440（18%） |
+| f1150 end | ❌diff | 11048/61440（18%） |
+
+### 首分歧点分类（diff 图实证（shots_rust/..._f00850_scrolling.diff.png））
+
+- **门链本体（任务卡 1-5）=全 match**（f420-790 五点 0px——门槽 init/弹击 isHit&4/
+  状态机（HP--→开（DoorOpen 动画））/VRAM 瓦面/入门触发逐帧与 emu 对齐）。
+- **首分歧=f850（400px）**：diff 图=**稀疏顶面对象位差**（悬挂对象/物件帧位散点
+  （背景/地板/萨姆斯全同——**非滚动相位偏移**））——分类：对象绘制/滚动期对象保持面
+  残差（**移植缺口候选（对象帧面）**+**调度域相位候选（r14 移交卡）**——需态面对比
+  定谳（下批（不许调阈值（diff 现值如实）））。
+- **f1000/f1150（18%）**=传播分歧（滚动末位移残差→邻房面放大（非门链本体））。
+
+Evidence: shots_rust/matrix.md（5 用例×35 格实测）+case-002 场景定义+diff 图
+（f850（400px 稀疏顶面对象位差））——A 级原文。
+Confidence: 95
