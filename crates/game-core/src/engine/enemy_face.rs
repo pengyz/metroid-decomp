@@ -329,12 +329,12 @@ pub fn s1_and_en_data05(x: u8, a_in: u8, v0405_x: u8) -> (Vec<(u16, u8)>, u8) {
 }
 
 /// $F6E2 员体：AndEnData05+$49 cmp 2 判+$F752/$FF eor 段+$0401[x] cmp 段。
-pub fn s2_f6e2_body(x: u8, a_in: u8, v0405_x: u8) -> (Vec<(u16, u8)>, u8) {
+pub fn en_data05_mask_test(x: u8, a_in: u8, v0405_x: u8) -> (Vec<(u16, u8)>, u8) {
     s1_and_en_data05(x, a_in, v0405_x)
 }
 
 /// $F711 员体：AndEnData05+$49 cmp 2 反判+$F752 段+$0400[x] cmp 段。
-pub fn s2_f711_body(x: u8, a_in: u8, v0405_x: u8) -> (Vec<(u16, u8)>, u8) {
+pub fn en_data05_mask_test_inverted(x: u8, a_in: u8, v0405_x: u8) -> (Vec<(u16, u8)>, u8) {
     s1_and_en_data05(x, a_in, v0405_x)
 }
 
@@ -357,7 +357,7 @@ mod s2_030_tests {
         let (ev, v) = s1_and_en_data05(0x75, 42, 0x3F);
         assert_eq!(v, 42 & 0x3F);
         assert!(ev.contains(&(0x047A, 42 & 0x3F)));
-        let (_, a) = s2_f6e2_body(2, 0x0F, 0xF0);
+        let (_, a) = en_data05_mask_test(2, 0x0F, 0xF0);
         assert_eq!(a, 0);
         let (ev, _) = update_enemy_f83b(2, 0x0F, 0x40);
         assert!(ev.contains(&(0x0407, 8))); // $40>>3
@@ -408,23 +408,23 @@ mod s2_031_tests {
 
 /// $F97C LF97C（root——簇共根形二六）：lda #1/jsr $E094/jmp $DD8B（深链入口形）+
 /// $0408 双 inc+$0409[x]←0 段。
-pub fn s2_lf97c_body(x: u8) -> Vec<(u16, u8)> {
+pub fn object_spawn_reset_chain(x: u8) -> Vec<(u16, u8)> {
     vec![(0x0408, 2), (0x0409 + x as u16, 0)] // 双 inc 面（净效注）+$0409[x] 清
 }
 
 /// $FA15 员体：jmp LF97C（尾形）+$6AF4[x]←0（KillObject 同写面）。
-pub fn s2_fa15_body(x: u8) -> Vec<(u16, u8)> {
+pub fn kill_object_extra_clear(x: u8) -> Vec<(u16, u8)> {
     vec![(0x6AF4 + x as u16, 0)]
 }
 
 /// $FA7A 员体：jmp LF97C+指针载（$0400/$0401[x]→$02/$03+$6AFB[x]→$0B）——S1-08 族
 /// 同构面注。
-pub fn s2_fa7a_body(x: u8, v0400_x: u8, v0401_x: u8, v6afb_x: u8) -> Vec<(u16, u8)> {
+pub fn object_load_pos_ptrs(x: u8, v0400_x: u8, v0401_x: u8, v6afb_x: u8) -> Vec<(u16, u8)> {
     vec![(0x0002, v0400_x), (0x0003, v0401_x), (0x000B, v6afb_x)]
 }
 
 /// $FA9A 员体：jmp LF97C+X=$C0 环（$6AF4[x] 判+$FAB4 调）+计数（$4B+8）。
-pub fn s2_fa9a_body(x: u8, v6af4_x: u8) -> (Vec<(u16, u8)>, bool) {
+pub fn object_enextra_scan_ring(x: u8, v6af4_x: u8) -> (Vec<(u16, u8)>, bool) {
     (vec![], v6af4_x == 0) // 判段（$FAB4 条件调面注）
 }
 
@@ -435,13 +435,13 @@ mod s2_032_tests {
     /// 四员转写形（LF97C root 深链入口+三壳）。
     #[test]
     fn s2_032_units_four() {
-        let ev = s2_lf97c_body(2);
+        let ev = object_spawn_reset_chain(2);
         assert!(ev.contains(&(0x0408, 2)));
         assert!(ev.contains(&(0x040B, 0)));
-        assert!(s2_fa15_body(2).contains(&(0x6AF6, 0)));
-        let ev = s2_fa7a_body(2, 8, 9, 10);
+        assert!(kill_object_extra_clear(2).contains(&(0x6AF6, 0)));
+        let ev = object_load_pos_ptrs(2, 8, 9, 10);
         assert!(ev.contains(&(0x000B, 10)));
-        assert!(s2_fa9a_body(2, 0).1);
+        assert!(object_enextra_scan_ring(2, 0).1);
     }
 }
 
@@ -450,7 +450,7 @@ mod s2_032_tests {
 /// $E519 状态步进（root——簇共根形三三）：$49 dex 判段（beq/bpl/常态三分）+
 /// $4F inc 族（$FC 二判）。
 /// 返回 (写事件, 步进结果)。
-pub fn s2_state_step(v49: u8, vfc: u8) -> (Vec<(u16, u8)>, u8) {
+pub fn object_state_step(v49: u8, vfc: u8) -> (Vec<(u16, u8)>, u8) {
     let d = v49.wrapping_sub(1);
     if d == 0 {
         return (vec![], 0); // beq 段
@@ -466,8 +466,8 @@ pub fn s2_state_step(v49: u8, vfc: u8) -> (Vec<(u16, u8)>, u8) {
 }
 
 /// $D43D 员体：$E519+$030D Y 载（cmp $EF 判）+ToggleSamusHi+$030D←$FF 环（S1-11 同构面）。
-pub fn s2_d43d_body(v49: u8, vfc: u8, v030d: u8) -> (Vec<(u16, u8)>, u16) {
-    let (mut ev, _) = s2_state_step(v49, vfc);
+pub fn samus_y_slot_step(v49: u8, vfc: u8, v030d: u8) -> (Vec<(u16, u8)>, u16) {
+    let (mut ev, _) = object_state_step(v49, vfc);
     if v030d == 0xEF {
         ev.push((0x030D, 0xFF));
     }
@@ -475,8 +475,8 @@ pub fn s2_d43d_body(v49: u8, vfc: u8, v030d: u8) -> (Vec<(u16, u8)>, u16) {
 }
 
 /// $D89D 员体：$E519+尾跳 $D806（回驱动器——S1-01 族）+$0300[x] inc 计数段。
-pub fn s2_d89d_body(v49: u8, vfc: u8, x: u8, v0300_x: u8) -> (Vec<(u16, u8)>, u16) {
-    let (mut ev, _) = s2_state_step(v49, vfc);
+pub fn object_slot_count_step(v49: u8, vfc: u8, x: u8, v0300_x: u8) -> (Vec<(u16, u8)>, u16) {
+    let (mut ev, _) = object_state_step(v49, vfc);
     ev.push((0x0300 + x as u16, v0300_x.wrapping_add(1)));
     (ev, 0xD806)
 }
@@ -488,15 +488,15 @@ mod s2_039_tests {
     /// 三员转写形（$E519 状态步进 root+二壳）。
     #[test]
     fn s2_039_units_three() {
-        assert_eq!(s2_state_step(1, 0).1, 0); // beq 段
-        assert_eq!(s2_state_step(0x70, 0).1, 0x6F); // bpl 段
-        let (ev, _) = s2_state_step(0, 0); // $49=0⇒dex 负⇒inc 径
+        assert_eq!(object_state_step(1, 0).1, 0); // beq 段
+        assert_eq!(object_state_step(0x70, 0).1, 0x6F); // bpl 段
+        let (ev, _) = object_state_step(0, 0); // $49=0⇒dex 负⇒inc 径
         assert!(ev.contains(&(0x0049, 1)));
         assert!(ev.contains(&(0x004F, 1)));
-        let (ev, j) = s2_d43d_body(0, 0, 0xEF);
+        let (ev, j) = samus_y_slot_step(0, 0, 0xEF);
         assert_eq!(j, 0xD47E);
         assert!(ev.contains(&(0x030D, 0xFF)));
-        let (ev, j) = s2_d89d_body(0, 0, 2, 5);
+        let (ev, j) = object_slot_count_step(0, 0, 2, 5);
         assert_eq!(j, 0xD806);
         assert!(ev.contains(&(0x0302, 6)));
     }
@@ -507,7 +507,7 @@ mod s2_039_tests {
 /// $E4F1 状态回退（root——簇共根形三五·**$E519 对偶**）：$49 beq/cmp1 二判+
 /// $49 dec+$4F dec 族（$FC 二判）。
 /// 返回 (写事件, 状态值)。
-pub fn s2_state_stepback(v49: u8, vfc: u8) -> (Vec<(u16, u8)>, u8) {
+pub fn object_state_stepback(v49: u8, vfc: u8) -> (Vec<(u16, u8)>, u8) {
     if v49 == 0 {
         return (vec![], 0); // beq 段
     }
@@ -522,8 +522,8 @@ pub fn s2_state_stepback(v49: u8, vfc: u8) -> (Vec<(u16, u8)>, u8) {
 }
 
 /// $D45D 员体：$E4F1+$030D 判（ToggleSamusHi+$030D←$F0 环）+尾跳 $D47E。
-pub fn s2_d45d_body(v49: u8, vfc: u8, v030d: u8) -> (Vec<(u16, u8)>, u16) {
-    let (mut ev, _) = s2_state_stepback(v49, vfc);
+pub fn samus_y_slot_stepback(v49: u8, vfc: u8, v030d: u8) -> (Vec<(u16, u8)>, u16) {
+    let (mut ev, _) = object_state_stepback(v49, vfc);
     if v030d == 0 {
         ev.push((0x030D, 0xEF)); // $F0 环（dey 形——S1-11 同构面）
     }
@@ -531,8 +531,8 @@ pub fn s2_d45d_body(v49: u8, vfc: u8, v030d: u8) -> (Vec<(u16, u8)>, u16) {
 }
 
 /// $D897 员体：$E4F1+尾跳 $D806（回驱——S1-01 族）。
-pub fn s2_d897_body(v49: u8, vfc: u8) -> (Vec<(u16, u8)>, u16) {
-    let (ev, _) = s2_state_stepback(v49, vfc);
+pub fn object_driver_return_stepback(v49: u8, vfc: u8) -> (Vec<(u16, u8)>, u16) {
+    let (ev, _) = object_state_stepback(v49, vfc);
     (ev, 0xD806)
 }
 
@@ -543,15 +543,15 @@ mod s2_041_tests {
     /// 三员转写形（$E4F1 状态回退 root 对偶+二壳）。
     #[test]
     fn s2_041_units_three() {
-        assert_eq!(s2_state_stepback(0, 0).1, 0); // beq 段
-        assert_eq!(s2_state_stepback(5, 0).1, 5); // cmp1 非等段
-        let (ev, _) = s2_state_stepback(1, 0);
+        assert_eq!(object_state_stepback(0, 0).1, 0); // beq 段
+        assert_eq!(object_state_stepback(5, 0).1, 5); // cmp1 非等段
+        let (ev, _) = object_state_stepback(1, 0);
         assert!(ev.contains(&(0x0049, 0)));
         assert!(ev.contains(&(0x004F, 0xFF)));
-        let (ev, j) = s2_d45d_body(1, 0, 0);
+        let (ev, j) = samus_y_slot_stepback(1, 0, 0);
         assert_eq!(j, 0xD47E);
         assert!(ev.contains(&(0x030D, 0xEF)));
-        assert_eq!(s2_d897_body(0, 0).1, 0xD806);
+        assert_eq!(object_driver_return_stepback(0, 0).1, 0xD806);
     }
 }
 
@@ -560,18 +560,18 @@ mod s2_041_tests {
 /// $CE92 SubtractHealth（root——簇共根形四七）：$6E/$6F 指针判（beq 自旋面）+
 /// IsSamusDead 调+$010B Y 载（iny/beq 段）+尾跳 $F323+$98 cmp 3 段。
 /// 返回 (指针空, A 出)。
-pub fn s2_subtract_health(v6e: u8, v6f: u8) -> (bool, u8) {
+pub fn subtract_health_apply(v6e: u8, v6f: u8) -> (bool, u8) {
     (v6e == 0 && v6f == 0, 0) // 指针空⇒自旋停止面（8 案径）
 }
 
 /// $F13D 员体：SubtractHealth 尾形（jmp $CE92——S2-21 族同构尾跳）。
-pub fn s2_f13d_body(v6e: u8, v6f: u8) -> (bool, u8) {
-    s2_subtract_health(v6e, v6f)
+pub fn subtract_health_tail(v6e: u8, v6f: u8) -> (bool, u8) {
+    subtract_health_apply(v6e, v6f)
 }
 
 /// $FEC9 员体：SubtractHealth 尾形+表载段（$0503[x]→$97AF/$97B0 表对→$02/$03）。
-pub fn s2_fec9_body(v6e: u8, v6f: u8) -> (bool, u8) {
-    s2_subtract_health(v6e, v6f)
+pub fn subtract_health_table_load(v6e: u8, v6f: u8) -> (bool, u8) {
+    subtract_health_apply(v6e, v6f)
 }
 
 #[cfg(test)]
@@ -581,10 +581,10 @@ mod s2_053_tests {
     /// 三员转写形（SubtractHealth 指针判 root+二壳）。
     #[test]
     fn s2_053_units_three() {
-        assert_eq!(s2_subtract_health(0, 0), (true, 0));
-        assert_eq!(s2_subtract_health(5, 0), (false, 0));
-        assert_eq!(s2_f13d_body(0, 0).0, true);
-        assert_eq!(s2_fec9_body(5, 5).0, false);
+        assert_eq!(subtract_health_apply(0, 0), (true, 0));
+        assert_eq!(subtract_health_apply(5, 0), (false, 0));
+        assert_eq!(subtract_health_tail(0, 0).0, true);
+        assert_eq!(subtract_health_table_load(5, 5).0, false);
     }
 }
 

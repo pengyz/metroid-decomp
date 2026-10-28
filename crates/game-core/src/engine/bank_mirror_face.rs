@@ -6476,14 +6476,14 @@ mod tests_b122_engine_mod {
         }
     }
 
-    /// 【穷举·AND 壳】x×a×v 全域 256³——and_data05_cmp_dispatch==s2_f6e2_body
+    /// 【穷举·AND 壳】x×a×v 全域 256³——and_data05_cmp_dispatch==en_data05_mask_test
     /// （AndEnData05 根委托（$49 cmp 2 判段注））。
     #[test]
     fn exhaustive_and_dispatch_equivalence() {
         for x in 0u8..=255 {
             for a in 0u8..=255 {
                 for v in 0u8..=255 {
-                    assert_eq!(s2_f6e2_body(x, a, v), and_data05_cmp_dispatch(x, a, v));
+                    assert_eq!(en_data05_mask_test(x, a, v), and_data05_cmp_dispatch(x, a, v));
                 }
             }
         }
@@ -6512,7 +6512,7 @@ pub fn flag_hit_set_and_jump(root_val: u8, x: u8) -> (Vec<(u16, u8)>, Option<u16
     }
 }
 
-/// AND 壳（旧 s2_f6e2_body（$F6E2）：AndEnData05 根委托（$49 cmp 2 判+$F752/$FF eor 段
+/// AND 壳（旧 en_data05_mask_test（$F6E2）：AndEnData05 根委托（$49 cmp 2 判+$F752/$FF eor 段
 /// +$0401[x] cmp 段（深段注）））。
 pub fn and_data05_cmp_dispatch(x: u8, a_in: u8, v0405_x: u8) -> (Vec<(u16, u8)>, u8) {
     s1_and_en_data05(x, a_in, v0405_x)
@@ -6580,13 +6580,13 @@ mod tests_b126_engine_mod {
         }
     }
 
-    /// 【穷举·AND 反判壳】x×a×v 全域 256³——and_data05_reverse_dispatch==s2_f711_body。
+    /// 【穷举·AND 反判壳】x×a×v 全域 256³——and_data05_reverse_dispatch==en_data05_mask_test_inverted。
     #[test]
     fn exhaustive_and_reverse_equivalence() {
         for x in 0u8..=255 {
             for a in 0u8..=255 {
                 for v in 0u8..=255 {
-                    assert_eq!(s2_f711_body(x, a, v), and_data05_reverse_dispatch(x, a, v));
+                    assert_eq!(en_data05_mask_test_inverted(x, a, v), and_data05_reverse_dispatch(x, a, v));
                 }
             }
         }
@@ -6612,7 +6612,7 @@ pub fn enemy_pos_and_dispatch_fa(x: u8, v0401_x: u8, v0400_x: u8, v6afb_x: u8) -
     (store_enemy_position_triple(x, v0401_x, v0400_x, v6afb_x), 0xFA49)
 }
 
-/// AND 反判壳（旧 s2_f711_body（$F711）：AndEnData05 根委托（$49 cmp 2 反判+$F752 段
+/// AND 反判壳（旧 en_data05_mask_test_inverted（$F711）：AndEnData05 根委托（$49 cmp 2 反判+$F752 段
 /// +$0400[x] cmp 段（深段注）））。
 pub fn and_data05_reverse_dispatch(x: u8, a_in: u8, v0405_x: u8) -> (Vec<(u16, u8)>, u8) {
     s1_and_en_data05(x, a_in, v0405_x)
@@ -7290,22 +7290,22 @@ mod tests_b149_engine_mod {
 
     use super::*;
 
-    /// 【穷举·清面×2】x 全域——clear_motion_and_delay==s2_lf97c_body+
-    /// kill_object_clear==s2_fa15_body（$0408←2+$0409[x]←0/$6AF4[x]←0）。
+    /// 【穷举·清面×2】x 全域——clear_motion_and_delay==object_spawn_reset_chain+
+    /// kill_object_clear==kill_object_extra_clear（$0408←2+$0409[x]←0/$6AF4[x]←0）。
     #[test]
     fn exhaustive_clear_faces_equivalence() {
         for x in 0u8..=255 {
-            assert_eq!(s2_lf97c_body(x), clear_motion_and_delay(x));
-            assert_eq!(s2_fa15_body(x), kill_object_clear(x));
+            assert_eq!(object_spawn_reset_chain(x), clear_motion_and_delay(x));
+            assert_eq!(kill_object_extra_clear(x), kill_object_clear(x));
         }
     }
 
-    /// 【穷举·三载面】x×三参依赖分解——load_pos_triple==s2_fa7a_body（$02/$03/$0B）。
+    /// 【穷举·三载面】x×三参依赖分解——load_pos_triple==object_load_pos_ptrs（$02/$03/$0B）。
     #[test]
     fn exhaustive_load_triple_equivalence() {
         for x in 0u8..=255 {
             for &(a, b, c) in &[(0u8, 0u8, 0u8), (0xFF, 0xFF, 0xFF), (8, 9, 5)] {
-                assert_eq!(s2_fa7a_body(x, a, b, c), load_pos_triple(x, a, b, c));
+                assert_eq!(object_load_pos_ptrs(x, a, b, c), load_pos_triple(x, a, b, c));
             }
         }
     }
@@ -7314,17 +7314,17 @@ mod tests_b149_engine_mod {
 // ===== 1:1 Rust 改写·批产·块 149：LF97C/Kill 写面族语义命名（去地址名（公式形））=====
 // refs 锚（bank:addr 注内）：$LF97C（:1933）/$FA15（:1938）/$FA7A（:1944）。
 
-/// 清运动+延时（旧 s2_lf97c_body（$LF97C）：$0408←2（双 inc 净效）+$0409[x]←0）。
+/// 清运动+延时（旧 object_spawn_reset_chain（$LF97C）：$0408←2（双 inc 净效）+$0409[x]←0）。
 pub fn clear_motion_and_delay(x: u8) -> Vec<(u16, u8)> {
     vec![(0x0408, 2), (0x0409 + x as u16, 0)]
 }
 
-/// Kill 清面（旧 s2_fa15_body（$FA15）：$6AF4[x]←0（KillObject 同写面））。
+/// Kill 清面（旧 kill_object_extra_clear（$FA15）：$6AF4[x]←0（KillObject 同写面））。
 pub fn kill_object_clear(x: u8) -> Vec<(u16, u8)> {
     vec![(0x6AF4 + x as u16, 0)]
 }
 
-/// 三载面（旧 s2_fa7a_body（$FA7A）：$02←$0400[x]/$03←$0401[x]/$0B←$6AFB[x]
+/// 三载面（旧 object_load_pos_ptrs（$FA7A）：$02←$0400[x]/$03←$0401[x]/$0B←$6AFB[x]
 /// （S1-08 族同构））。
 pub fn load_pos_triple(x: u8, v0400_x: u8, v0401_x: u8, v6afb_x: u8) -> Vec<(u16, u8)> {
     let _ = x;

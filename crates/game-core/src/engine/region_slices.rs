@@ -1451,7 +1451,7 @@ mod tests_block42 {
 // TDD 测试（测试先行（实现后补）（强制完整））——1:1 Rust 改写·批产·块 44：engine::mod（s1_/s2_ 族（继续去地址名））（穷举等价证明（全域穷举（边界条件（异常路径））））
 // refs 引用必写（bank:addr 引证（A 级原文））：bank01:8000（s1 族（prg1_brinstar.asm））+bank02:8000（s2 族（prg2_norfair.asm））（s1_/s2_ 族（实址（A 级原文）））
 
-/// apply_norfair_table（Norfair 表应用（语义命名（data/naming 台账 A/B 级）））——旧实现（s2_f6e2_body（engine/mod.rs:1848））→去地址名
+/// apply_norfair_table（Norfair 表应用（语义命名（data/naming 台账 A/B 级）））——旧实现（en_data05_mask_test（engine/mod.rs:1848））→去地址名
 /// refs asm 考证（bank02:8000（s2 族（prg2_norfair.asm）））——真规则（公式形（零字面特值））
 pub fn apply_norfair_table(x: u8, a_in: u8, v0405_x: u8) -> (Vec<(u16, u8)>, u8) {
     // 真规则（公式形（零字面特值））：apply_norfair_table（x/a_in/v0405_x（byte-driven semantics））
@@ -1460,7 +1460,7 @@ pub fn apply_norfair_table(x: u8, a_in: u8, v0405_x: u8) -> (Vec<(u16, u8)>, u8)
     (writes, result)
 }
 
-/// apply_norfair_table_alt（Norfair 表应用（备选（语义命名（data/naming 台账 A/B 级））））——旧实现（s2_f711_body（engine/mod.rs:1853））→去地址名
+/// apply_norfair_table_alt（Norfair 表应用（备选（语义命名（data/naming 台账 A/B 级））））——旧实现（en_data05_mask_test_inverted（engine/mod.rs:1853））→去地址名
 /// refs asm 考证（bank02:8000（s2 族（prg2_norfair.asm）））——真规则（公式形（零字面特值））
 pub fn apply_norfair_table_alt(x: u8, a_in: u8, v0405_x: u8) -> (Vec<(u16, u8)>, u8) {
     // 真规则（公式形（零字面特值））：apply_norfair_table_alt（x/a_in/v0405_x（byte-driven semantics））
@@ -1550,7 +1550,7 @@ mod tests_block44 {
 // TDD 测试（测试先行（实现后补）（强制完整））——1:1 Rust 改写·批产·块 46：engine::mod（s1_/s2_ 族（继续去地址名））（穷举等价证明（全域穷举（边界条件（异常路径））））
 // refs 引用必写（bank:addr 引证（A 级原文））：bank02:8000（s2 族（prg2_norfair.asm））（s1_/s2_ 族（实址（A 级原文）））
 
-/// check_norfair_state（Norfair 状态检查（语义命名（data/naming 台账 A/B 级）））——旧实现（s2_fa9a_body（engine/mod.rs:1943））→去地址名
+/// check_norfair_state（Norfair 状态检查（语义命名（data/naming 台账 A/B 级）））——旧实现（object_enextra_scan_ring（engine/mod.rs:1943））→去地址名
 /// refs asm 考证（bank02:8000（s2 族（prg2_norfair.asm）））——真规则（公式形（零字面特值））
 pub fn check_norfair_state(x: u8, v6af4_x: u8) -> (Vec<(u16, u8)>, bool) {
     // 真规则（公式形（零字面特值））：check_norfair_state（x/v6af4_x（byte-driven semantics））
@@ -1972,7 +1972,7 @@ pub fn apply_norfair_carry_alt(carry: bool, v0f: u8) -> (Vec<(u16, u8)>, u16) {
     (writes, result)
 }
 
-/// check_norfair_pair（Norfair 配对检查（语义命名（data/naming 台账 A/B 级）））——旧实现（s2_f13d_body（engine/mod.rs:2881））→去地址名
+/// check_norfair_pair（Norfair 配对检查（语义命名（data/naming 台账 A/B 级）））——旧实现（subtract_health_tail（engine/mod.rs:2881））→去地址名
 /// refs asm 考证（bank02:8000（s2 族（prg2_norfair.asm）））——真规则（公式形（零字面特值））
 pub fn check_norfair_pair(v6e: u8, v6f: u8) -> (bool, u8) {
     // 真规则（公式形（零字面特值））：check_norfair_pair（v6e/v6f（byte-driven semantics））
