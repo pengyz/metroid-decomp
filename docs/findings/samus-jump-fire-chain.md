@@ -111,3 +111,22 @@ Evidence: prg7_engine.asm:2718-2825（派发/站姿/ActionTable）/3430-3465（S
 3467-3590（SamusJump/CheckHorz/CheckFire）/3807-3975（发射族）/4272-4545（弹生命期
 六件）——A 级原文。
 Confidence: 95
+
+## 附录：基线口径考证（2026-10-28 复核 needs_revision（③项）证伪更正）
+
+> 【证伪更正（对 39ee3152 原地标注）】39ee3152 的 --reason「净增 9 测（1441→1450 量级）」
+> **叙事错**——真实口径与账目如下（值 1464 本身=门禁断言口径实测（正））：
+
+| 口径 | 源 | 值 |
+|---|---|---|
+| **gates 断言口径（正源）** | gates/cli.py:498-500（crates/**/*.rs **静态 #[test] 字面计数**） | **1464**（现测=基线值（合断言）） |
+| runtime workspace | `cargo test --workspace`（运行态测试数） | 1447（本 agent 计）/1435（verifier 计（解析差））——**非门禁断言口径** |
+| 精确 delta | `git grep -F -c "#[test]" fda240b5..HEAD` | fda240b5（1441 时点）=**1441**→HEAD=**1464**（**+23**（门链 19+跳跃/射击 6-2 结构面）） |
+
+→ 修正：基线值**维持 1464**（=gates 静态口径实测（以 gates 实际断言口径为准（verifier 裁定
+面）））；**--reason 叙事更正**（+9→+23（全量重计））——经 baseline update 同值重写
+（正叙事留痕）。39ee3152 原主张「9 测净增」=口径混叙事（值对叙事错（已正））。
+
+Evidence: gates/cli.py:498-500（断言源）+git grep -F 精确账（1441/1464/+23）+
+cargo test --workspace 实测（1447（本计））——A 级原文。
+Confidence: 95
