@@ -358,8 +358,8 @@ fn fire_samus_projectile(mem: &mut FrameMemory) {
     mem.write_ram(base, mem.read_ram(base).wrapping_add(1));
     mem.write_ram(base + 1, 2); // radiusY
     mem.write_ram(base + 2, 2); // radiusX
-    mem.write_ram(base + 5, 0x00); // animResetIndex（RegularBullet 表序）
-    mem.write_ram(base + 6, 0x00); // animIndex
+    mem.write_ram(base + 5, 0x1B); // RegularBullet（$858D-$8572（弹形态 ① 修））
+    mem.write_ram(base + 6, 0x1B); // animIndex
     mem.write_ram(base + 4, 0); // animDelay
     // DieDelay=0x0C
     mem.write_ram(base + 0x15, 0x0C);
@@ -400,8 +400,8 @@ fn fire_samus_projectile_upwards(mem: &mut FrameMemory) {
     mem.write_ram(base, mem.read_ram(base).wrapping_add(1));
     mem.write_ram(base + 1, 2);
     mem.write_ram(base + 2, 2);
-    mem.write_ram(base + 5, 0x00);
-    mem.write_ram(base + 6, 0x00);
+    mem.write_ram(base + 5, 0x1B); // RegularBullet（$858D-$8572（弹形态 ① 修））
+    mem.write_ram(base + 6, 0x1B);
     mem.write_ram(base + 4, 0);
     mem.write_ram(base + 0x15, 0x0C);
     mem.write_ram(base + 8, 0xFC); // speedY←$FC（上）
@@ -428,8 +428,11 @@ fn set_samus_jump(mem: &mut FrameMemory) {
     mem.write_ram(ANIM_RESET_INDEX.wrapping_sub(1), 4);
     mem.write_ram(crate::ram_map::SAMUS_JUMP_DISP, 0);
     mem.write_ram(super::physics::SAMUS_SPEED_Y_I, 0xFC);
-    // 【goal-r10】asm CFC3 Lx017 `ldy #$18/sty SamusAccelY`——跳跃重力
-    mem.write_ram(crate::ram_map::SAMUS_ACCEL_Y, 0x18);
+    // 【goal-r10+CFC3 Lx017/18（audit §3）】重力常数：$18=普通/$12=高跳齿轮
+    // （低重力=高跳）——入口一次性。
+    let gear = mem.read_ram(crate::ram_map::SAMUS_GEAR);
+    mem.write_ram(crate::ram_map::SAMUS_ACCEL_Y,
+                  if gear & crate::ram_map::gear::HIGHJUMP != 0 { 0x12 } else { 0x18 });
 }
 
 /// SetSamusRun（**asm 内容锚** `SetSamusRun: ; 07:CC98`）：WalkSoundDelay←9/转身动画
@@ -777,10 +780,9 @@ pub fn samus_stand(mem: &mut FrameMemory) {
 pub fn samus_jump(mem: &mut FrameMemory) {
     // **高跳语义**（asm Lx017-Lx018：`ldy #$18/lda SamusGear/and #gr_HIGHJUMP/beq/ldy #$12`
     // →`sty SamusAccelY`——**重力常数**：$18=普通/$12=高跳（低重力=高跳！decomp 疑②证实）。
-    let gear = mem.read_ram(crate::ram_map::SAMUS_GEAR);
-    let gravity = if gear & crate::ram_map::gear::HIGHJUMP != 0 { 0x12 } else { 0x18 };
-    mem.write_ram(crate::ram_map::SAMUS_ACCEL_Y, gravity);
-
+    // 【根因 ① 修（2026-10-28）】asm D002 handler **不写重力**（Lx017/18=SetSamusJump
+    // 入口件一次性（CFC3））——旧 r26 误并入 handler⇒每帧覆写 AccelY⇒`AccelY==0`
+    // 落地判永假⇒姿态永滞跳/指（f820 实锤）——已移出（入口件=set_samus_jump）。
     use button::*;
     let disp = mem.read_ram(crate::ram_map::SAMUS_JUMP_DISP);
     let speed_y_i = mem.read_ram(crate::samus::physics::SAMUS_SPEED_Y_I);
@@ -839,7 +841,7 @@ pub fn samus_jump_check_fire(mem: &mut FrameMemory) {
     } else {
         fire_samus_projectile(mem); // Forwards（D1EE 分派（UP 面除外（本径 B 无 UP）））
         // animIndex←JumpFire（SetSamusNextAnim（audit §6））
-        mem.write_ram(ANIM_RESET_INDEX + 1, 0x2A); // ObjAnim_SamusJumpFire（表算（audit 面））
+        mem.write_ram(ANIM_RESET_INDEX + 1, 0x20); // JumpFire（$8592-$8572=0x20（弹形态 ① 修））
         mem.write_ram(ANIM_RESET_INDEX.wrapping_sub(1), 0);
     }
 }
@@ -1124,5 +1126,47 @@ mod tests_jump_chain {
         m.write_ram(crate::ram_map::SAMUS_STATUS, 2);
         samus_jump_tail(&mut m);
         assert_eq!(m.read_ram(crate::ram_map::SAMUS_STATUS), 2, "空中⇒status 不动");
+    }
+}
+
+// ===== 落地姿态+弹形态（TDD（测试先行（实现后补）））=====
+
+#[cfg(test)]
+mod tests_landing_pose {
+    //! 判径（asm $D002 Lx021（audit）+CFC3 Lx017/18）：AccelY==0（ground）⇒
+    //! set_samus_stand（status←0+anim 0x07）；samus_jump **不每帧写重力**（入口一次性
+    //! （set_samus_jump（高跳齿轮 0x12 分支）））；弹 anim=RegularBullet(0x1B)。
+    use super::*;
+    use crate::state::FrameMemory;
+
+    /// 【根因 ①】grounded（AccY=0）+Jump 姿态⇒落地切站（status 0+anim 0x07）。
+    #[test]
+    fn landing_switches_to_stand() {
+        let mut m = FrameMemory::default();
+        m.write_ram(crate::ram_map::SAMUS_ACCEL_Y, 0); // ground（phys 面置 0）
+        m.write_ram(crate::ram_map::SAMUS_STATUS, 2);
+        m.write_ram(ANIM_RESET_INDEX, OBJ_ANIM_SAMUS_JUMP);
+        samus_jump(&mut m);
+        assert_eq!(m.read_ram(crate::ram_map::SAMUS_STATUS), 0, "status→Stand");
+        assert_eq!(m.read_ram(ANIM_RESET_INDEX), 0x07, "anim→Stand（0x07）");
+    }
+
+    /// 【入口一次性】samus_jump 不覆写 AccelY（重力=set_samus_jump 入口件（高跳 0x12））。
+    #[test]
+    fn jump_handler_preserves_accel_y() {
+        let mut m = FrameMemory::default();
+        m.write_ram(crate::ram_map::SAMUS_ACCEL_Y, 0x1A); // fall 态（phys 写）
+        m.write_ram(crate::ram_map::SAMUS_STATUS, 2);
+        samus_jump(&mut m);
+        assert_eq!(m.read_ram(crate::ram_map::SAMUS_ACCEL_Y), 0x1A, "handler 不触 AccelY");
+    }
+
+    /// 【弹形态 ①】发弹⇒animReset=RegularBullet(0x1B)（非 0x00）。
+    #[test]
+    fn bullet_anim_regular() {
+        let mut m = FrameMemory::default();
+        m.write_ram(crate::ram_map::JOY1_CHANGE, 0x40); // B
+        samus_jump_check_fire(&mut m);
+        assert_eq!(m.read_ram(0x03D5), 0x1B, "弹 anim=RegularBullet");
     }
 }

@@ -34,3 +34,10 @@ capture 950 combo-action  # 组合动作后
 
 # ⑥ 对拍结束
 endFrame 1200       # 结束帧（对拍点）——≡ capture 1200 end（终端采集点，同帧已有 capture 则去重）
+
+# ③+ 定向采集（2026-10-28 复核整改（diff 归因制））：落地窗/jump-shoot/弹中段
+press 710 b        # 跳跃中射击（jump 落地窗前（弹形态定向采集））
+capture 715 jump-shoot   # 跳跃中射击帧（弹初段+跳姿）
+capture 725 landing-early  # 落地窗（jump 后 25 帧（姿态切换观察））
+capture 735 landing-settled # 落地窗（jump 后 35 帧（站姿定型））
+capture 810 bullet-midflight # 弹飞行中段（f800 射击后 10 帧）
