@@ -228,3 +228,30 @@ prg7_engine.asm:3984-3992（动画微件）/8401-8437（MakeRoomRAMPtr）+common
 :101-113（门 anim 常量（表算 $29/$2C/$2E/$30））+constants_ram.asm:549/812/1190（$56/$10B
 /RoomRAMA）——A 级原文。
 Confidence: 95
+
+## 任务卡 4 实录：WriteDoorBGTiles 双变体（A 级定谳——含证伪更正）
+
+> 【2026-10-28 证伪更正】任务书称「_Open 变体（门开时瓦面从 $4E 实瓦换空气/通行瓦
+> ——找写入站/表）」——**定谳：`WriteDoorBGTiles_Open` 不存在**。全库标签仅二：
+> **WriteDoorBGTiles_Air（$8CF7（:1694））**（实名（通行/空气面））与
+> **WriteDoorBGTiles_Solid（$8CFB（:1697））**——两者**共径 WriteDoorBGTiles_Common
+> （$8CFD）**，差异面**仅瓦字节**（Air=$FF（空气空白瓦）/Solid=$4E（门实瓦））
+> （`lda #$FF / bne Common`（恒跳）vs `lda #$4E / fall穿 Common`）。无独立表/独立写站。
+
+### 调用点全列（areas_common.asm 全库（4 处——A 级））
+
+| 行 | 调用者 | 变体 | 语义 |
+|---|---|---|---|
+| :1445 | UpdateDoor_Init（$8B9D） | **Solid** | 门 init 实瓦（可触碰） |
+| :1545 | Open L8C1D 首全开帧（$8C1D 段） | **Air** | 开门放行（通行瓦） |
+| :1585 | DoorSubRoutine8C61（重关径） | **Solid** | 重关回封 |
+| :1612 | UpdateDoor_LetSamusIn（$8C84） | **Solid** | 进门后回封（滚动始） |
+
+### 差异面（唯一）
+
+tile 参数（$4E↔$FF）；指针算（MakeRoomRAMPtr）/6 瓦纵写（y 步 $20）/DoorRoomRAMPtr
+写站（y=(slot Adiv8)&6）**全共享**（Common 单径）。任务卡 3 的 `write_door_bg_tiles
+(mem, x_off, tile)` 参数化形=**与 asm 双标签形等价**（tile 入参即 `lda #imm` 面）。
+
+Evidence: areas_common.asm:1445/1545/1585/1612/1694-1699（标签+调用点全文）——A 级原文。
+Confidence: 95

@@ -793,3 +793,78 @@ mod tests_update_door {
         }
     }
 }
+
+// ===== 任务卡 4：WriteDoorBGTiles 双变体（TDD（变体等价+状态环瓦面））=====
+
+#[cfg(test)]
+mod tests_door_bg_tiles {
+    //! 判径（audit 任务卡 4 实录）：双变体共径 Common（仅瓦字节 $4E↔$FF）；4 调用点
+    //! 状态环（Init Solid/首开帧 Air/重关 Solid/LetSamusIn Solid（4/5 桩面除外））。
+    use super::*;
+    use crate::frame::FrameMemory;
+
+    fn door_mem(status: u8, door_type: u8) -> FrameMemory {
+        let mut m = FrameMemory::default();
+        let x = 0x80u16;
+        m.write_ram(0x0300 + x, status);
+        m.write_ram(0x0307 + x, door_type);
+        m.write_ram(0x030C + x, 0);
+        m.write_ram(0x030E + x, 0xE8);
+        m
+    }
+
+    /// 【穷举·变体等价】Solid→Air→Solid 同门环（6 瓦逐钉翻转面+指针/DoorRoomRAMPtr
+    /// 恒同（共径证明））+双侧门（slot&$10（右/左（DoorXTable $E8/$10）））。
+    #[test]
+    fn exhaustive_variant_equivalence() {
+        for &x_off in &[0x80u8, 0x90] {
+            let mut m = door_mem(1, 1);
+            write_door_bg_tiles(&mut m, x_off, 0x4E);
+            let x_pos = if x_off == 0x80 { 0xE8 } else { 0x10 };
+            let (lo, hi) = make_room_ram_ptr(0x50, x_pos, 0);
+            let base = ((hi as u16) << 8) | lo as u16;
+            // Solid 面（6 瓦全 $4E）+DoorRoomRAMPtr（共径（指针恒同））
+            for k in 0..6u16 {
+                assert_eq!(m.read_wram(base.wrapping_add(k * 0x20)), 0x4E, "Solid[{}]（x={:02X}）", k, x_off);
+            }
+            let yi = ((x_off >> 3) & 6) as u16;
+            assert_eq!((m.read_ram(0x005C + yi), m.read_ram(0x005D + yi)), (lo, hi), "ptr 恒同");
+            // Air 面（翻转 $FF（仅瓦字节差））
+            write_door_bg_tiles(&mut m, x_off, 0xFF);
+            for k in 0..6u16 {
+                assert_eq!(m.read_wram(base.wrapping_add(k * 0x20)), 0xFF, "Air[{}]（x={:02X}）", k, x_off);
+            }
+            assert_eq!((m.read_ram(0x005C + yi), m.read_ram(0x005D + yi)), (lo, hi), "ptr 恒同（Air）");
+            // 回封（Solid 复写）
+            write_door_bg_tiles(&mut m, x_off, 0x4E);
+            for k in 0..6u16 {
+                assert_eq!(m.read_wram(base.wrapping_add(k * 0x20)), 0x4E, "回封[{}]", k);
+            }
+        }
+    }
+
+    /// 【状态环瓦面】Init(Solid)→Open 首开帧(Air)→蓝门重关(8C61 Solid)——逐态瓦字节钉。
+    #[test]
+    fn state_cycle_tile_faces() {
+        let x_pos = 0xE8u8;
+        let (lo, hi) = make_room_ram_ptr(0x50, x_pos, 0);
+        let base = ((hi as u16) << 8) | lo as u16;
+        // Init⇒Solid
+        let mut m = door_mem(1, 1);
+        update_door(&mut m, 0x80);
+        assert_eq!(m.read_wram(base), 0x4E, "Init⇒Solid");
+        // Open 首开帧⇒Air（hp=$50）
+        m.write_ram(0x038F, 0x50);
+        m.write_ram(0x0305 + 0x80, 0x2C); // anim 已完（Index==Reset（>= 判过））
+        m.write_ram(0x0306 + 0x80, 0x2C);
+        m.write_ram(0x0300 + 0x80, 3);
+        update_door(&mut m, 0x80);
+        assert_eq!(m.read_wram(base), 0xFF, "首开帧⇒Air");
+        // 蓝门重关径（8C61（HP→0（偶帧））⇒Solid）
+        m.write_ram(0x038F, 1);
+        m.write_ram(0x002D, 0); // 偶帧
+        update_door(&mut m, 0x80);
+        assert_eq!(m.read_wram(base), 0x4E, "重关⇒Solid");
+        assert_eq!(m.read_ram(0x0300 + 0x80), 2, "status←2（Closed）");
+    }
+}
