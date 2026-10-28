@@ -29,6 +29,35 @@
 - 写非零：**触碰写源未定位**（疑在瓦片碰撞/CheckMove 族 door-tile 分支——下步）
 - 读：房间过渡 prg7:4130（GameMode 面）/6937（ScrollY toggle 判）/7198/7228
 
+
+## UpdateAllDoors 全状态机（2026-10-28 r30——A 级全文 areas_common:1415-1520）
+
+门对象驻 Objects 槽（X 自 `Doors.3-Objects` 起、按 sizeof_Objects 步进）。状态机
+（Objects.0.status 经 JumpEngine $8B87 分派）：
+
+| 值 | 态 | 行为 |
+|---|---|---|
+| 0 | none | 跳过 |
+| 1 | Init | status++→Closed；anim=DoorClose_Reset；WriteDoorBGTiles_Solid（实瓦）；DoorHitPoints←DoorHitPointTable[DoorType]；DrawDoor（ObjectCntrl←DoorType(3→1)\|$80\|PRI，槽位&$10^$10=h-flip；AnimDrawObject 每 6 帧） |
+| 2 | Closed | isHit&4 ⇒ DoorHitPoints--；0⇒Open（status←3、HP←$50 重关延迟、DoorOpen 动画；音乐蓝门受 EndTimer 门控）；每帧 DrawDoor |
+| 3 | Open | DoorEntryStatus 分派 → LetSamusIn/Scroll |
+| 4/5/6 | LetSamusIn/Scroll/LetSamusOut | 过门滚动序（未逐行，下批） |
+
+DoorHitPointTable($8BD1)：红=5、蓝=1、导弹门=10、音乐蓝=1。
+被击判定：弹撞 $4E 瓦（关门瓦）→ SamusProjectileHitDoorOrStatue（E7F3，LE7E6 弹径）→
+isHit&4 置位路径（未逐行）。
+
+## 移交任务卡（功能5 完整链）
+
+1. 门对象槽系统（Objects 门槽 init——setup_room 敌门环 EAD4 unported 臂即此处）
+2. 弹击路径（SamusProjectileHitDoorOrStatue→isHit&4）
+3. UpdateDoor 状态机 7 态（本档表）
+4. WriteDoorBGTiles_Solid/Open VRAM 写
+5. LetSamusIn→Scroll→LetSamusOut（滚动过渡+邻房）
+6. 验证场景：走右→射击蓝门→开门动画→入门→邻房采集（L4 阶梯）
+
+依赖前置：弹系（UpdateSamusProjectiles 端口度待查）。
+
 ## 依赖与验证规划
 
 - 依赖链：门瓦片射击（tile blast→DoorHitPoints）→ 开门动画 → 触碰 → 18 帧进门 →
