@@ -41,3 +41,20 @@
 
 Evidence: prg7_engine.asm 行号锚全列+room.rs/render 对照——A 级原文。
 Confidence: 92
+
+
+## 4. CHR 瓦内容径卡（2026-10-28（续（证伪更正·二）））
+
+【自我推翻前证（D4 证伪文化）】前节「UpdateAttrib hi=$63 固定 quirk」=**截读误判**
+——asm 写尾 `lda Temp00_RoomRAMPtr+1 / and #$04 / ora Temp02+1 / sta Temp02+1`
+（$EF9E 内（跳段漏读））⇒终 hi=**$63|(ptr_hi&4)**（原 rust 形即正）——2563b02b
+「quirk 修」=误改回归（已撤正）。
+【链全验（A 级）】提取面三件套逐字节对拍全过（MetatileDefs/STRUCTURES/ROOM_STREAMS
+（bank1 基））+GFX 面双表对拍全过（GFX_INFO 203B/GFX_DATA 29/29 块）+draw_struct
+决定性实验（struct 8（顶壁垂石）rust 输出 vs 独立 asm 语义解释器期望格=**逐格全同**）
++bg fetch 基正（PPUCTRL bit4→$1000（boot $FF=0x90））+载序正（[3,4,5,6,25,22] 同 asm）
++覆盖图（BrinBG1 $00-15/CREBG1 $20-65/CREBG2 $80-FF/Title 残留 $66-7F/零 $16-1F）
+——结构瓦集全落三块验证区（缺口/残留假说死）。
+【残差定性】f1000/f1150=顶壁/柱纹差（336/363 瓦=邻域无同形（同形异色/异内容））
+——静态链全验仍散⇒候选=**emu 侧 PPU 时序**（上传/滚动中途采样（lead 预告分类））或
+渲染色彩链（attr 组选（r16 修后（已核））——停待裁定（不强修）。

@@ -596,12 +596,11 @@ fn update_attrib(
     let rel = ptr.wrapping_sub(0x6000) & 0x0FFF; // RoomRAM 相对
     let a0 = rel >> 2;
     let off = (a0 & 0x07) | ((a0 >> 2) & 0x38) | 0xC0;
-    // 【证伪更正（2026-10-28（scroll-content-mapping.md））】asm `lda #$63/sta
-    // Temp02+1`（$EF9E（:9723））——高字节**固定 $63**（$63C0-FF=A 半区属性区——
-    // B 半区房属性写落 A 区=**D4 quirk**（emu 同行为（保真保留）））。旧形「修」为
-    // $63|(ptr>>8)&4（B 半写 $67（偏离 ROM））⇒邻房（B 半）特殊调色 diverge
-    // （f1000 族根因（start 房同调早退免疫））。
-    let hi = 0x63u16;
+    // 【证伪更正·二（2026-10-28（自我推翻前证））】前次「$63 固定 quirk」=**截读误判**
+    // ——asm 写尾 `lda Temp00_RoomRAMPtr+1 / and #$04 / ora Temp02+1 / sta Temp02+1`
+    // （$EF9E 内（跳段漏读））⇒终 hi=**$63|(ptr_hi&4)**（B 半 $67（原 rust 形即正））。
+    // 2563b02b 的「quirk 修」=误改回归（本 commit 撤正（D4 证伪文化（原地标注）））。
+    let hi = 0x63u16 | ((ptr >> 8) & 0x04);
     let addr = (hi << 8) | off;
     // 位对（x）：bit6/2 判定（asm bit/and 形）
     let mut x = 0u8;
@@ -1096,11 +1095,10 @@ mod tests_update_attrib_quirk {
         // ptr=$6440（B 半区元块位）/obj_palette=2/room_palette=0（异调⇒写径）
         update_attrib(&mut m, 0x6440, 2, 0);
         // quirk：写落 $63xx——任一 $63C0-FF 内（f(r) 公式）非 $67xx
-        let b = m.read_wram(0x67C0);
-        assert_eq!(b, 0, "B 区属性不被写（quirk（旧形误写 $67））");
-        // $63xx 内应有写（f(0x40) 公式位）
         let lo = ((0x40u16 >> 4) & 0x38) | ((0x40 >> 2) & 7) | 0xC0;
-        let w = m.read_wram(0x6300 | lo);
-        assert_eq!((w >> 4) & 0x03, 2, "写落 A 区 $63C0 quadrant x=2（色位 4-5）");
+        let b = m.read_wram(0x6700 | lo);
+        assert_ne!(b, 0, "B 半区属性写落 $67xx（asm 终形（hi|=ptr_hi&4））");
+        // $63xx 内应有写（f(0x40) 公式位）
+        assert_eq!((b >> 4) & 0x03, 2, "quadrant x=2（色位 4-5）");
     }
 }
