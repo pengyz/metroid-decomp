@@ -1660,7 +1660,7 @@ pub fn get_norfair_state(v030a: u8) -> (Vec<(u16, u8)>, u16) {
     (writes, result)
 }
 
-/// get_norfair_ptr_alt（Norfair 指针（备选（语义命名（data/naming 台账 A/B 级））））——旧实现（s2_d414_body（engine/mod.rs:2206））→去地址名
+/// get_norfair_ptr_alt（Norfair 指针（备选（语义命名（data/naming 台账 A/B 级））））——旧实现（mirror_cntrl_tail_dispatch（engine/mod.rs:2206））→去地址名
 /// refs asm 考证（bank02:8000（s2 族（prg2_norfair.asm）））——真规则（公式形（零字面特值））
 pub fn get_norfair_ptr_alt(v4d: u8, v6b: u8) -> (Vec<(u16, u8)>, u16) {
     // 真规则（公式形（零字面特值））：get_norfair_ptr_alt（v4d/v6b（byte-driven semantics））
@@ -1669,7 +1669,7 @@ pub fn get_norfair_ptr_alt(v4d: u8, v6b: u8) -> (Vec<(u16, u8)>, u16) {
     (writes, result)
 }
 
-/// get_norfair_ptr_base（Norfair 指针（基础（语义命名（data/naming 台账 A/B 级））））——旧实现（s2_d483_body（engine/mod.rs:2212））→去地址名
+/// get_norfair_ptr_base（Norfair 指针（基础（语义命名（data/naming 台账 A/B 级））））——旧实现（mirror_cntrl_anim_draw（engine/mod.rs:2212））→去地址名
 /// refs asm 考证（bank02:8000（s2 族（prg2_norfair.asm）））——真规则（公式形（零字面特值））
 pub fn get_norfair_ptr_base(v4d: u8, v6b: u8) -> (Vec<(u16, u8)>, u16) {
     // 真规则（公式形（零字面特值））：get_norfair_ptr_base（v4d/v6b（byte-driven semantics））
@@ -2051,7 +2051,7 @@ mod tests_block54 {
 // TDD 测试（测试先行（实现后补）（强制完整））——1:1 Rust 改写·批产·块 57：engine::mod（s1_/s2_ 族（继续去地址名））（穷举等价证明（全域穷举（边界条件（异常路径））））
 // refs 引用必写（bank:addr 引证（A 级原文））：bank02:8000（s2 族（prg2_norfair.asm））（s1_/s2_ 族（实址（A 级原文）））
 
-/// get_norfair_entry（Norfair 项（语义命名（data/naming 台账 A/B 级）））——旧实现（s2_f3d2_body（engine/mod.rs:3037））→去地址名
+/// get_norfair_entry（Norfair 项（语义命名（data/naming 台账 A/B 级）））——旧实现（dist_threshold_enemy_chain（engine/mod.rs:3037））→去地址名
 /// refs asm 考证（bank02:8000（s2 族（prg2_norfair.asm）））——真规则（公式形（零字面特值））
 pub fn get_norfair_entry(x: u8, tbl_val: u8) -> (Vec<(u16, u8)>, u16) {
     // 真规则（公式形（零字面特值））：get_norfair_entry（x/tbl_val（byte-driven semantics））
@@ -2060,7 +2060,7 @@ pub fn get_norfair_entry(x: u8, tbl_val: u8) -> (Vec<(u16, u8)>, u16) {
     (writes, result)
 }
 
-/// get_norfair_entry_alt（Norfair 项（备选（语义命名（data/naming 台账 A/B 级））））——旧实现（s2_f404_body（engine/mod.rs:3043））→去地址名
+/// get_norfair_entry_alt（Norfair 项（备选（语义命名（data/naming 台账 A/B 级））））——旧实现（dist_threshold_pos_chain（engine/mod.rs:3043））→去地址名
 /// refs asm 考证（bank02:8000（s2 族（prg2_norfair.asm）））——真规则（公式形（零字面特值））
 pub fn get_norfair_entry_alt(x: u8, tbl_val: u8) -> (Vec<(u16, u8)>, u16) {
     // 真规则（公式形（零字面特值））：get_norfair_entry_alt（x/tbl_val（byte-driven semantics））
