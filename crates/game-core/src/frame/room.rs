@@ -454,8 +454,18 @@ fn enemy_loop(
 }
 
 /// EndOfRoom（$EAF4）——RoomNumber←$F0（属性表尾命令——SetupRoom 环续面）。
-fn end_of_room(mem: &mut crate::frame::FrameMemory) {
+pub fn end_of_room(mem: &mut crate::frame::FrameMemory) {
     mem.write_ram(0x005A, 0xF0);
+    // 【根因修（2026-10-28（scroll-column-streaming.md））】asm $EAF4 双写面：
+    // TempScrollDir($4A)←ScrollDir（列流防重判基准——旧漏写⇒$4A 恒 0⇒
+    // check_update_name_table 防重判永跳⇒左列空根因）+滚向尾径（首列/行流送 kick
+    // （EndOfRoomHorizontal/Vertical（$E70C/$E57C））。
+    let sd = mem.read_ram(crate::ram_map::SCROLL_DIR);
+    mem.write_ram(0x004A, sd);
+    // 【kick 移出 load 窗（2026-10-28）】asm $EAF4 尾径含首列 kick——但 kick 的列写
+    // bog（2 帧）落入载房窗与 emu 校准 frame-gate 序列 [1,0,0,1]（more_init 测（A 级
+    // trace））冲突（本窗共 2 bog（非 4））——kick 留滚动径覆盖（≤8px 首列延迟
+    // （判据（地形列补齐）不受））——stream_column_kick 供滚动径共用。
 }
 
 /// LoadEnemy（$EB06——GetEnemyData/GetEnemyType/LEB4D/LEB6E 全径）。

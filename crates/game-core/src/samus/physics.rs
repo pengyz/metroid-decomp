@@ -1118,10 +1118,21 @@ fn check_update_name_table(mem: &mut FrameMemory) {
     if dir != mem.read_ram(0x004A) {
         return; // TempScrollDir 防重流
     }
-    // ④列流送（E590——30 块竖写：PPU inc=32）
-    // 【goal-r22 修】列写=PPU 重活 ⇒ NMI bogged 2 帧（emu 实测 f916-917/f1064-1065 各停
-    // 2 帧）。旧形无门 ⇒ FC 相位漂移 ⇒ 爬行 6/8 移动窗错相 ⇒ 敌轨迹级联。
+    // ④列流送（E590——30 块竖写：PPU inc=32）——共用核（stream_column_kick）
+    stream_column_kick(mem);
+}
+
+/// 列写核（EndOfRoomHorizontal（$E70C）/CheckUpdateNameTableHorizontal 共用径
+/// （audit（scroll-column-streaming.md §1）））：Temp00=(ScrollX&0xF8)/8（列 idx）；
+/// GetNameAddrs（GetNT=(PPUCTRL^ScrollDir)&1→PPU $20/$2C+RoomRAM $60/$64）；
+/// 30 行竖写（dst+idx+row*32（PPU inc=32 形））。
+pub fn stream_column_kick(mem: &mut FrameMemory) {
+    // 【goal-r22 修】列写=PPU 重活 ⇒ NMI bogged 2 帧（emu 实测）。
     mem.iter_bogged(2);
+    // 【asm 正源】VRAMStructWrite 入口复位地址锁存（$2002 读（render.rs reset_addr_latch
+    // 注））——防 2006 对相位错位（列写落错址根因面）。
+    mem.render.reset_addr_latch();
+    let dir = mem.read_ram(crate::ram_map::SCROLL_DIR);
     let idx = (mem.read_ram(crate::ram_map::SCROLL_X) & 0xF8) >> 3;
     let y = (mem.read_ram(0x00FF) ^ dir) & 1; // GetNameTableAtScrollDir（EB85）
     let src = 0x6000u16 + (y as u16) * 0x400; // RoomRAMAddrs（E562）
@@ -1508,4 +1519,55 @@ pub fn shift3_and_dispatch(v10: u8) -> (u8, u16) {
 /// 低 2 位翻转（旧 check_enemy_collision_ext（$F340）：$10 eor #$03）。
 pub fn flip_low2_bits(v10: u8) -> u8 {
     v10 ^ 0x03
+}
+
+// ===== 横向列流（TDD（测试先行（实现后补）））=====
+
+#[cfg(test)]
+mod tests_column_streaming {
+    //! 判径（docs/findings/scroll-column-streaming.md）：end_of_room 补 $4A←ScrollDir
+    //! （根因修）；列流（30 行（dst=NT($20/$2C)+idx+row*32））左行实文可检；
+    //! 防重判（dir≠$4A⇒跳）。
+    use super::*;
+    use crate::state::FrameMemory; // G11 取型径（经 crate::state）
+
+    fn walk_mem() -> FrameMemory {
+        let mut m = FrameMemory::default();
+        m.write_ram(crate::ram_map::SCROLL_DIR, 2); // 左滚
+        m.write_ram(0x00FF, 0); // PPUCTRL（GetNT=(0^2)&1=0⇒NT0）
+        m.write_ram(crate::ram_map::SCROLL_X, 0x07); // 左阈（&7==7）
+        m.write_ram(0x005A, 0xFF); // RoomNumber=idle（真实左行态（非载房任务））
+        // RoomRAM 面（NT0 源=$6000+idx+row*32——预置可检图案）
+        for row in 0..30u16 {
+            m.write_wram(0x6000 + (0x07 >> 3) + row * 32, 0xA0 + row as u8);
+        }
+        m
+    }
+
+    /// 【根因修】end_of_room⇒$4A←ScrollDir+$5A←$F0（asm $EAF4 双写面）。
+    #[test]
+    fn end_of_room_sets_temp_scroll_dir() {
+        let mut m = FrameMemory::default();
+        m.write_ram(crate::ram_map::SCROLL_DIR, 2);
+        crate::frame::room::end_of_room(&mut m);
+        assert_eq!(m.read_ram(0x005A), 0xF0, "RoomNumber←$F0");
+        assert_eq!(m.read_ram(0x004A), 2, "TempScrollDir←ScrollDir（根因修）");
+    }
+
+    /// 【列流实文】左阈（ScrollX&7==7）⇒30 行列写（render.nametable（NT0 列 idx=0）
+    /// 实文可检（0xA0+row））；防重判（$4A≠dir⇒跳（列不动））。
+    #[test]
+    fn left_walk_column_streams() {
+        let mut m = walk_mem();
+        m.write_ram(0x004A, 2); // TempScrollDir=ScrollDir（防重判过）
+        check_update_name_table(&mut m);
+        // render 面断言（write_io→RenderState.nametable（列 idx=0（NT0）））
+        assert_eq!(m.render.nametable[0], 0xA0, "首行列实文（row0）");
+        assert_eq!(m.render.nametable[29 * 32], 0xA0 + 29, "末行列实文（row29）");
+        // 防重判：$4A=3（≠dir）⇒跳（列不动）
+        let mut m2 = walk_mem();
+        m2.write_ram(0x004A, 3);
+        check_update_name_table(&mut m2);
+        assert_eq!(m2.render.nametable[0], 0, "防重判跳（列不动）");
+    }
 }
