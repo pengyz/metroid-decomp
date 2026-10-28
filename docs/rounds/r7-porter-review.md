@@ -12734,6 +12734,60 @@ screens/）vs shots/（Rust 截图）（非模拟器 vs 模拟器））））③
 （A 级））——对抗复核核（证伪立场（独立重导证据（正确性核）））✓——复核 verdict 实录（docs commit
 （对抗复核 verdict（4 项（必跑验证）（实测输出原文（A 级））））✓。
 
+## 门系统链 6 件 commit 对抗复核（09b446ed→768ff9c7→764d4d0b→9626ee64→b9d0d653→ddc1e356
+（证伪立场（独立重导证据（5 重点（asm 抽查+语义一致性+测试真实性+D4 纪律+L4 声明核验））））
+
+### verdict: pass（5 重点全 ✓（A 级原文）（必跑验证 ✓（实测输出原文（A 级））））
+
+**必跑验证实录（⑩（A 级原文））**：
+- `cargo test --package game-core --lib`：**1377 passed; 0 failed; 3 ignored**（全绿）
+- `python3 gates/cli.py check`：**SUMMARY: PASS=14 FAIL=0 SKIP=1 TOLERATED=2**
+  （CHECK: PASS（含 0 个静默跳过：所有 SKIP 均已显式打印））
+
+**① asm 证据抽查 ✓（≥1 关键断言/件（refs/m1disasm 验行号与逻辑））**：
+- **EAD4 分派 stride=2** ✓（prg7_engine.asm:8705（EnemyLoop: ; 07:EAD4）+:8707（jsr AddToPtr00）
+  +:8743（jmp EnemyLoop（Do next room object））——stride=2（AddToPtr00（指针递增）））
+- **$E81E isHit←$04 位写** ✓（areas_common.asm:1463（sta Objects.0.isHit,x）+1482-1484
+  （lda Objects.0.isHit,x（and #$04（beq DrawDoor）））——isHit←$04（bit2（弹击检测）））
+- **DoorHitPointTable [5,1,10,1] 字节** ✓（areas_common.asm:1474-1475（DoorHitPointTable: ;
+  $8BD1（.byte $05 ; red door））——[5,1,10,1]（门命中点值（红门（$05（5）））））
+- **MakeRoomRAMPtr 位面公式** ✓（areas_common.asm:1716（jsr MakeRoomRAMPtr）+1719（cart ram
+  pointer of door is now in $04-$05）+constants_ram.asm:277-279（Temp02_PositionY=$02（Temp03_
+  PositionX=$03））——位面公式（cart RAM 指针（$04-$05）））
+- **PaletteToggle eor 7** ✓（areas_common.asm:1626-1628（lda PaletteToggle（eor #(_id_Palette00+1)~
+  (_id_Palette05+1).b（sta PaletteToggle））——PaletteToggle eor 7（调色板切换（eor（调色板 ID））））
+- **配对门 X^$10** ✓（areas_common.asm:1466-1469（and #$10（eor #$10（ora ObjectCntrl（sta
+  ObjectCntrl））））+1664（eor #$10）——配对门 X^$10（门槽号（h-flip（配对门））））
+
+**② Rust 实现与 asm 语义一致性 ✓**：physics.rs **零改动**（diff 仅 mainloop.rs 新增（samus_
+projectile_hit_door_or_statue（任务卡 2（弹径门（$71）→门环（X=6,-2（DoorRoomRAMPtr $5C-$63
+列匹配（&$04 且 &$1F）））→槽选 Y=X*8|$80→类型门（偶（红/导弹）=仅 wa_Missile($0B) 或（wa_
+BulletExplode($04) 且 animReset==$91）/奇（蓝/音乐蓝）=任意）→isHit[$30A+y]←$04（bit2）+
+导弹命中 SFXTriInitFlags($0683)|=2；环尽⇒雕像兜底（KraidStatueIsHit[$366+(Temp04_lo>>3&1)]
+inc（8 位环绕））））——**无擅改共享路径**（physics.rs collision_point_samus（零改动）+
+mainloop.rs 既有件（仅新增（任务卡 2）））✓
+
+**③ 测试真实性 ✓**：**14 #[test]**（room.rs diff（TDD（测试先行（实现后补）））——tests 钉行为
+（非恒真/镜像实现复读）（门对象槽系统（UpdateDoor 7 态状态机（WriteDoorBGTiles 双变体（滚动
+过渡链））））+cargo test（**1377 passed; 0 failed**（全绿））+gates check（**PASS=14 FAIL=0**）✓
+
+**④ D4 纪律 ✓**：BUG-×9（docs/bug-ledger.md（新登记 BUG 合规落档））+证伪更正原地标注 ✓
+（9626ee64（WriteDoorBGTiles 双变体定谳（证伪更正收口）））✓
+
+**⑤ L4 声明核验 ✓**：ddc1e356（case-002-door-blue-interaction.txt（对拍用例 002（门系统链
+（走右→射击蓝门→开门动画→入门→邻房采集））（frames 1200（snapshot none（上电起跑（同 case-001）））））
+——对拍证据可复现（采点数/match 数（case-002（1200 帧（snapshot none））））+**无阈值调松**（L4
+对拍矩阵（逐采集点 ratchet 回退⇒停止））✓
+
+**verdict**：门系统链 6 件 commit 对抗复核 **pass**（①asm 证据抽查 ✓（EAD4 stride=2+$E81E isHit←$04+
+DoorHitPointTable [5,1,10,1]+MakeRoomRAMPtr 位面公式+PaletteToggle eor 7+配对门 X^$10（refs/m1disasm
+验行号与逻辑））②语义一致性 ✓（physics.rs 零改动（无擅改共享路径））③测试真实性 ✓（14 #[test]
+（TDD（测试先行））+cargo test（1377 passed; 0 failed）+gates check（PASS=14 FAIL=0））④D4 纪律 ✓
+（BUG-×9（合规落档）+证伪更正原地标注）⑤L4 声明核验 ✓（case-002（1200 帧（snapshot none））
+（对拍证据可复现（无阈值调松））））——**必跑验证 ✓**（实测输出原文（A 级））——对抗复核核（证伪
+立场（独立重导证据（正确性核）））✓——复核 verdict 实录（docs commit（对抗复核 verdict（5 重点
+（必跑验证）（实测输出原文（A 级））））✓。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
