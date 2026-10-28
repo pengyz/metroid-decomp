@@ -187,6 +187,175 @@ fn load_door(mem: &mut crate::frame::FrameMemory, info: u8) {
     mem.write_ram(SCROLL_BLOCK_NT3 + other, cur | block);
 }
 
+
+// ==== 任务卡 3：UpdateDoor 7 态状态机（$8B79/areas_common:1415-1750（audit 实录））====
+
+const DOOR_X_TABLE: [u8; 2] = [0xE8, 0x10]; // $8D3A（右/左 bg 瓦列像素）
+const DOOR_HP_TABLE: [u8; 4] = [5, 1, 10, 1]; // $8BD1（红/蓝/导弹/音乐蓝）
+
+/// MakeRoomRAMPtr（07:E96A）——ptr=01100HYY YYYXXXXX
+/// （hi=$18|Ybit7|Ybit6<<1|(NT&4)；lo=(Y&$38)<<2|X>>3（RoomRAMA=$6000>>10=$18））。
+pub fn make_room_ram_ptr(y_pos: u8, x_pos: u8, nt_hi: u8) -> (u8, u8) {
+    // 【证伪自纠】hi=01100HYY——rol 双移（$18<<2=$60 基）：hi=$60|Ybit7<<1|Ybit6|(NT&4)
+    // （asm `lda #RoomRAMA>>10/sta $05`（$18）后 asl/rol 双对（Y 高两位入 $05 低两位））
+    let mut hi = 0x60u8;
+    hi |= ((y_pos >> 7) & 1) << 1;
+    hi |= (y_pos >> 6) & 1;
+    let lo = ((y_pos & 0x38) << 2) | (x_pos >> 3);
+    hi |= nt_hi & 0x04;
+    (lo, hi)
+}
+
+/// WriteDoorBGTiles（$8CF7-8D33）——6 瓦纵写（y 步 $20）+DoorRoomRAMPtr 写站
+/// （y=(slot Adiv8)&6（$80..$B0→0/2/4/6））。
+fn write_door_bg_tiles(mem: &mut crate::frame::FrameMemory, x_off: u8, tile: u8) {
+    let x_pos = DOOR_X_TABLE[((x_off >> 4) & 1) as usize];
+    let nt = mem.read_ram(0x030C + x_off as u16);
+    let (lo, hi) = make_room_ram_ptr(0x50, x_pos, nt);
+    let base = ((hi as u16) << 8) | lo as u16;
+    for k in 0..6u16 {
+        mem.write_wram(base.wrapping_add(k * 0x20), tile);
+    }
+    let y = ((x_off >> 3) & 6) as u16;
+    mem.write_ram(0x005C + y, lo);
+    mem.write_ram(0x005D + y, hi);
+}
+
+/// DrawDoor（$8BB1）——ObjectCntrl($6B)（type（3→1）|$80|$20|flip）/isHit←0/动画面
+/// （A=6 周期（拆分面：update_obj_anim(6)+anim_draw_object（goal-r16 修）））。
+fn draw_door(mem: &mut crate::frame::FrameMemory, x_off: u8) {
+    let mut ty = mem.read_ram(0x0307 + x_off as u16);
+    if ty == 3 {
+        ty = 1; // 音乐蓝画同蓝
+    }
+    let mut cntrl = ty | 0x80 | 0x20;
+    cntrl |= (x_off & 0x10) ^ 0x10; // 槽位 flip（$80/$A0 镜像）
+    mem.write_ram(0x006B, cntrl);
+    mem.write_ram(0x030A + x_off as u16, 0); // isHit←0
+    crate::samus::physics::update_obj_anim(mem, 6); // AnimDrawObject 拆分面（A=6）
+    crate::frame::sprite::anim_draw_object(mem, x_off);
+}
+
+/// UpdateAllDoors（$8B79）——4 门环（$B0/$A0/$90/$80（X-=0x10；bmi 环））。
+pub fn update_all_doors(mem: &mut crate::frame::FrameMemory) {
+    for x in [0xB0u8, 0xA0, 0x90, 0x80] {
+        update_door(mem, x);
+    }
+}
+
+/// UpdateDoor（$8B87）——7 态 JumpEngine 分派（0=ExitSub/1=Init/2=Closed/3=Open/
+/// 4-6=过门态（任务卡 5 桩（unported fail-loud（lead 裁定面）））。
+pub fn update_door(mem: &mut crate::frame::FrameMemory, x_off: u8) {
+    let x = x_off as u16;
+    let status = mem.read_ram(0x0300 + x);
+    match status {
+        0 => {} // ExitSub（无门）
+        1 => {
+            // Init（$8B9D）：status++/anim（$30 双写+Delay0）/实瓦/HP←表→DrawDoor
+            mem.write_ram(0x0300 + x, status.wrapping_add(1));
+            mem.write_ram(0x0305 + x, 0x30); // InitObjectXSlotAnimIndex（D2FA：Reset+Index）
+            mem.write_ram(0x0306 + x, 0x30);
+            mem.write_ram(0x0304 + x, 0);
+            write_door_bg_tiles(mem, x_off, 0x4E); // Solid
+            let dt = mem.read_ram(0x0307 + x) as usize;
+            mem.write_ram(0x038F + x - 0x80, DOOR_HP_TABLE[dt & 3]); // DoorHitPoints,x
+            draw_door(mem, x_off);
+        }
+        2 => {
+            // Closed（$8BD5）：isHit&4→HP--→0 开门（音乐蓝 EndTimer 门控）
+            if mem.read_ram(0x030A + x) & 0x04 == 0 {
+                draw_door(mem, x_off);
+                return;
+            }
+            let hp = mem.read_ram(0x038F + x - 0x80).wrapping_sub(1);
+            mem.write_ram(0x038F + x - 0x80, hp);
+            if hp != 0 {
+                draw_door(mem, x_off);
+                return;
+            }
+            if mem.read_ram(0x0307 + x) == 3 && mem.read_ram(0x010B) != 0xFF {
+                // 音乐蓝门控（escape timer 活（EndTimer+1≠$FF）⇒不开）
+                draw_door(mem, x_off);
+                return;
+            }
+            mem.write_ram(0x0300 + x, 3);
+            mem.write_ram(0x038F + x - 0x80, 0x50); // 重关延迟
+            mem.write_ram(0x0305 + x, 0x2C); // DoorOpen_Reset
+            mem.write_ram(0x0306 + x, 0x29); // SetObjectXSlotAnimIndex（8C7E：base）
+            mem.write_ram(0x0304 + x, 0);
+            // 【D4 保真 BUG（登记）】开门帧不 DrawDoor（asm 注（Stage A 保留））
+        }
+        3 => {
+            // Open（$8C01）：进门判/首开帧（Air）/导弹门永久开/蓝门偶帧重关
+            let door_hi = mem.read_ram(0x030C + x);
+            let door_x = mem.read_ram(0x030E + x);
+            let samus_hi = mem.read_ram(0x030C); // Samus.hi（$30C）
+            let samus_x = mem.read_ram(0x030E); // Samus.x（$30E）
+            if mem.read_ram(0x0056) != 0 // DoorEntryStatus
+                && (samus_hi ^ door_hi) & 1 == 0
+                && (samus_x ^ door_x) & 0x80 == 0
+            {
+                mem.write_ram(0x0300 + x, 4); // LetSamusIn
+                draw_door(mem, x_off);
+                return;
+            }
+            // L8C1D：动画未完⇒DrawDoor
+            if mem.read_ram(0x0306 + x) < mem.read_ram(0x0305 + x) {
+                draw_door(mem, x_off);
+                return;
+            }
+            let hp = mem.read_ram(0x038F + x - 0x80);
+            if hp == 0x50 {
+                write_door_bg_tiles(mem, x_off, 0xFF); // Air（首全开帧）
+                let dt = mem.read_ram(0x0307 + x);
+                if dt != 1 && dt != 3 {
+                    // 导弹门永久开：item 记录（MapScrollRoutine（桩（随件（记账）））
+                    crate::frame::DIVERGENCES.with(|d| d.borrow_mut().push(0x8C4C));
+                    mem.write_ram(0x0300 + x, 0); // 不可再关
+                    draw_door(mem, x_off);
+                    return;
+                }
+            }
+            // L8C57：蓝门重关（偶帧 dec HP；0⇒8C61 重关径）
+            if mem.read_ram(0x002D) & 1 == 0 {
+                // FrameCount($2D) 偶帧
+                let hp2 = hp.wrapping_sub(1);
+                mem.write_ram(0x038F + x - 0x80, hp2);
+                if hp2 == 0 {
+                    door_sub_8c61(mem, x_off);
+                    return;
+                }
+            }
+            draw_door(mem, x_off);
+        }
+        6 => {
+            // LetSamusOut（$8CF0）：DoorEntryStatus==0⇒8C61 重关径；否则 DrawDoor
+            if mem.read_ram(0x0056) == 0 {
+                door_sub_8c61(mem, x_off);
+            } else {
+                draw_door(mem, x_off);
+            }
+        }
+        4 | 5 => {
+            // LetSamusIn/Scroll（任务卡 5（滚动过渡链）——fail-loud 桩（lead 裁定面））
+            crate::unported!("areas_common:$8C84/$8CC6（LetSamusIn/Scroll（任务卡 5））");
+        }
+        _ => {}
+    }
+}
+
+/// DoorSubRoutine8C61（重关径）：HP←1/实瓦/status←2/闭动画（$30+$2E）。
+fn door_sub_8c61(mem: &mut crate::frame::FrameMemory, x_off: u8) {
+    let x = x_off as u16;
+    mem.write_ram(0x038F + x - 0x80, 1);
+    write_door_bg_tiles(mem, x_off, 0x4E);
+    mem.write_ram(0x0300 + x, 2);
+    mem.write_ram(0x0305 + x, 0x30); // DoorClose_Reset（8C76）
+    mem.write_ram(0x0306 + x, 0x2E); // DoorClose base
+    mem.write_ram(0x0304 + x, 0);
+    // SFX_Door（8C7E（声面（随件（记账）））
+}
+
 /// EnemyLoop（$EAD4）——敌/门条目环（3B：slot&$F0|type/敌型/位%yyyyxxxx；$FF=EndOfRoom）。
 /// type：0/3/5=ExitSub（no-op——A=type（asm 形））；1=LoadEnemy；2/4/6/7=门/梯/像/虫（未端口）。
 fn enemy_loop(
@@ -493,5 +662,134 @@ mod tests_load_door {
         let mut m = mem_with(0, 0);
         load_door(&mut m, 0x00);
         assert_eq!(m.read_ram(0x0009), 0x0A, "item id 写（$09←$0A）");
+    }
+}
+
+// ===== 任务卡 3：UpdateDoor 7 态状态机（TDD（测试先行（实现后补）））=====
+
+#[cfg(test)]
+mod tests_update_door {
+    //! 判径（findings/door-system-audit.md 任务卡 3 实录）：Init（status++/anim $30 双写
+    //! /实瓦 $4E×6/HP←[5,1,10,1]）/Closed（isHit&4→HP--→0 开（音乐蓝 EndTimer+1≠$FF 门控）
+    //! （status←3/HP←$50/anim Open（$2C+$29）））/Open（进门判→4/首开帧 Air+$FF/导弹门
+    //! 永久开（status←0）/蓝门偶帧重关（HP 0→8C61（1/实瓦/2/闭）））/DoorRoomRAMPtr 写站
+    //! +make_room_ram_ptr（01100HYY YYYXXXXX）。
+    use super::*;
+    use crate::frame::FrameMemory;
+
+    fn door_mem(status: u8, door_type: u8) -> FrameMemory {
+        let mut m = FrameMemory::default();
+        let x = 0x80u16;
+        m.write_ram(0x0300 + x, status);
+        m.write_ram(0x0307 + x, door_type);
+        m.write_ram(0x030C + x, 0); // hi（名表 0）
+        m.write_ram(0x030E + x, 0xE8); // x（右门）
+        m
+    }
+
+    /// 【穷举·Init】四型——status++/HP←表[5,1,10,1]/anim 双写（$30/$30）/Delay0/
+    /// isHit 清/实瓦 6 瓦纵写/DoorRoomRAMPtr 落。
+    #[test]
+    fn exhaustive_init() {
+        for dtype in 0u8..4 {
+            let mut m = door_mem(1, dtype);
+            update_door(&mut m, 0x80);
+            assert_eq!(m.read_ram(0x0300 + 0x80), 2, "status→2（t={}）", dtype);
+            assert_eq!(m.read_ram(0x038F), [5u8, 1, 10, 1][dtype as usize], "HP←表（t={}）", dtype);
+            assert_eq!(m.read_ram(0x0305 + 0x80), 0x30, "animReset←DoorClose_Reset");
+            assert_eq!(m.read_ram(0x0306 + 0x80), 0x30, "animIndex（D2FA 落穿）");
+            assert_eq!(m.read_ram(0x0304 + 0x80), 0, "animDelay←0");
+            assert_eq!(m.read_ram(0x030A + 0x80), 0, "isHit←0（DrawDoor）");
+            // 实瓦（$4E×6 纵写（ptr=make_room_ram_ptr($50,$E8,0)））+DoorRoomRAMPtr
+            let (lo, hi) = make_room_ram_ptr(0x50, 0xE8, 0);
+            let base = ((hi as u16) << 8) | lo as u16;
+            for k in 0..6u16 {
+                assert_eq!(m.read_wram(base.wrapping_add(k * 0x20)), 0x4E, "实瓦[{}]（t={}）", k, dtype);
+            }
+            assert_eq!(m.read_ram(0x005C), lo, "DoorRoomRAMPtr lo");
+            assert_eq!(m.read_ram(0x005D), hi, "DoorRoomRAMPtr hi");
+        }
+    }
+
+    /// 【穷举·Closed】isHit&4 判+HP 递减→0 开门（普通门）+重关延迟 $50+anim Open。
+    #[test]
+    fn closed_hit_to_open() {
+        // 无击⇒HP 不动
+        let mut m = door_mem(2, 0);
+        m.write_ram(0x038F, 5);
+        update_door(&mut m, 0x80);
+        assert_eq!(m.read_ram(0x038F), 5, "无击 HP 不动");
+        assert_eq!(m.read_ram(0x0300 + 0x80), 2, "仍 Closed");
+        // 一击⇒HP 4（红门 5→4）
+        let mut m = door_mem(2, 0);
+        m.write_ram(0x038F, 5);
+        m.write_ram(0x030A + 0x80, 0x04);
+        update_door(&mut m, 0x80);
+        assert_eq!(m.read_ram(0x038F), 4, "HP--");
+        // HP 1→0⇒开门（status←3/HP←$50/anim Open）
+        let mut m = door_mem(2, 2);
+        m.write_ram(0x038F, 1);
+        m.write_ram(0x030A + 0x80, 0x04);
+        update_door(&mut m, 0x80);
+        assert_eq!(m.read_ram(0x0300 + 0x80), 3, "status←3（Open）");
+        assert_eq!(m.read_ram(0x038F), 0x50, "HP←$50（重关延迟）");
+        assert_eq!(m.read_ram(0x0305 + 0x80), 0x2C, "animReset←DoorOpen_Reset");
+        assert_eq!(m.read_ram(0x0306 + 0x80), 0x29, "animIndex←DoorOpen base（8C7E）");
+    }
+
+    /// 【音乐蓝门控】type=3：EndTimer+1≠$FF（escape 活）⇒不开；==$FF⇒开。
+    #[test]
+    fn music_blue_endtimer_gate() {
+        for (et, expect_open) in [(0x00u8, false), (0xFFu8, true)] {
+            let mut m = door_mem(2, 3);
+            m.write_ram(0x038F, 1);
+            m.write_ram(0x030A + 0x80, 0x04);
+            m.write_ram(0x010B, et); // EndTimer+1
+            update_door(&mut m, 0x80);
+            assert_eq!(m.read_ram(0x0300 + 0x80), if expect_open { 3 } else { 2 },
+                       "EndTimer+1={:02X}（开={}）", et, expect_open);
+        }
+    }
+
+    /// 【Open】进门判→4；导弹门首开帧→Air+status←0（永久）；蓝门首开帧→Air+偶帧重关径。
+    #[test]
+    fn open_state_faces() {
+        // 进门判（DoorEntryStatus≠0+同名表+同半区）⇒4
+        let mut m = door_mem(3, 1);
+        m.write_ram(0x038F, 0x50);
+        m.write_ram(0x0056, 1); // DoorEntryStatus
+        m.write_ram(0x030C, 0); // Samus.hi=door.hi
+        m.write_ram(0x030E, 0xF0); // Samus.x（同半区（bit7=1（与门  同）））
+        update_door(&mut m, 0x80);
+        assert_eq!(m.read_ram(0x0300 + 0x80), 4, "进门⇒status←4");
+        // 导弹门首开帧（hp=$50）⇒Air+永久开（status←0）
+        let mut m = door_mem(3, 2);
+        m.write_ram(0x038F, 0x50);
+        update_door(&mut m, 0x80);
+        assert_eq!(m.read_ram(0x0300 + 0x80), 0, "导弹门永久开（status←0）");
+        let (lo, hi) = make_room_ram_ptr(0x50, 0xE8, 0);
+        let base = ((hi as u16) << 8) | lo as u16;
+        assert_eq!(m.read_wram(base), 0xFF, "Air 瓦（首开帧）");
+        // 蓝门首开帧⇒Air+HP 递减径（偶帧 dec）
+        let mut m = door_mem(3, 1);
+        m.write_ram(0x038F, 0x50);
+        m.write_ram(0x002D, 0); // FrameCount 偶
+        update_door(&mut m, 0x80);
+        assert_eq!(m.read_ram(0x0300 + 0x80), 3, "蓝门仍 Open");
+        assert_eq!(m.read_ram(0x038F), 0x4F, "偶帧 dec HP（$50→$4F）");
+    }
+
+    /// 【MakeRoomRAMPtr】01100HYY YYYXXXXX 公式（Y 带×X×名表抽样）。
+    #[test]
+    fn make_room_ram_ptr_formula() {
+        for &(y, x, nt, el, eh) in &[
+            (0x50u8, 0xE8u8, 0u8, ((0x50 & 0x38) << 2) | (0xE8 >> 3), 0x60u8 | 1),
+            (0x50, 0x10, 0, ((0x50 & 0x38) << 2) | (0x10 >> 3), 0x60 | 1),
+            (0x00, 0x00, 4, 0x00, 0x60 | 4),
+            (0xFF, 0xF8, 4, ((0xFF & 0x38) << 2) | (0xF8 >> 3), 0x60 | 2 | 1 | 4),
+        ] {
+            let (lo, hi) = make_room_ram_ptr(y, x, nt);
+            assert_eq!((lo, hi), (el, eh), "y={:02X} x={:02X} nt={}", y, x, nt);
+        }
     }
 }

@@ -170,3 +170,61 @@ $4B）/571（DoorRoomRAMPtr $5C）/600（UpdatingSamusProjectile $71）/903（Kr
 1126（SFXTriInitFlags $0683）+constants.asm:105/111/154（wa_BulletExplode=4/wa_Missile=
 $0B/sfxTri_SamusBall=2）+common_sprite_data.asm:12/268（表算 0x91）——A 级原文。
 Confidence: 95
+
+## 任务卡 3 实录：UpdateDoor 7 态状态机（A 级全文）
+
+### UpdateAllDoors/UpdateDoor（areas_common.asm:1415-1520（$8B79/$8B87）——A 级）
+
+UpdateAllDoors：X=Doors.3-Objects（$B0）环（UpdateDoor；X-=sizeof_Objects($10)；bmi 环）
+——4 门（$B0/$A0/$90/$80）。UpdateDoor：stx PageIndex→JumpEngine(status 0-6)：
+0=ExitSub/1=Init/2=Closed/3=Open/4=LetSamusIn/5=Scroll/6=LetSamusOut。
+
+### 逐态（:1428-1692——A 级）
+
+- **Init（$8B9D）**：status++（→2）；animResetIndex←ObjAnim_DoorClose_Reset=**$30**
+  （表算（$85A2-$8572））经 InitObjectXSlotAnimIndex（$D2FA：**Reset+Index 双写+Delay←0**
+  （D2FA=sta Reset 落穿 D2FD=sta Index/lda#0/sta Delay））；WriteDoorBGTiles_Solid
+  （实瓦 $4E×6）；DoorHitPoints,x←DoorHitPointTable[DoorType,x]（$8BD1=[5,1,10,1]
+  （红/蓝/导弹/音乐蓝））。**落穿 DrawDoor**。
+- **DrawDoor（$8BB1）**：A=DoorType（==3⇒1（音乐蓝画同蓝））；ora #$80|OAMDATA_PRIORITY
+  (=$20)→**ObjectCntrl($6B)**；**isHit,x←0**；flip：(slot&$10)^$10|→$6B（$80/$A0 槽镜像）；
+  `lda #$06 / jmp AnimDrawObject`（**A=6 动画周期**——rust 拆分面：update_obj_anim(mem,6)
+  +anim_draw_object(mem,slot)（goal-r16 修（ObjDrawFrame 不更动画）））。
+- **Closed（$8BD5）**：isHit&4==0⇒DrawDoor；dec HP；≠0⇒DrawDoor；HP 0：**音乐蓝门控**
+  （type==3 且 EndTimer+1($10B)≠$FF（escape timer 活）⇒DrawDoor（不开））⇒
+  **status←3/HP←$50（重关延迟）/animResetIndex←$2C（DoorOpen_Reset=859E-8572）
+  +SetObjectXSlotAnimIndex（$D2FD=Index←A+Delay←0；A=DoorOpen base=**$29**（8C7E 的
+  sec/sbc#(Reset-Base) 差 3））→SFX_Door。**D4 保真 BUG（登记）**：开门帧不 DrawDoor
+  （asm 注「BUG! there is no call to DrawDoor」——Stage A 保留）。
+- **Open（$8C01）**：进门判（DoorEntryStatus($56)≠0 且 (Samus.hi($30C)^Door.hi)&1==0 且
+  (Samus.x($30E)^Door.x)&$80==0）⇒**status←4**→DrawDoor；否则 L8C1D：
+  animIndex<animResetIndex（开门动画未完）⇒DrawDoor；**HP==$50（首全开帧）**：
+  WriteDoorBGTiles_Air（$FF×6）；非蓝门（0/2）⇒导弹门永久开（$09←$0A/hi/MapPosX
+  （Amul16（左槽 dey））→MapScrollRoutine（**桩（随件（记账））**）→**status←0（不可再关）**）；
+  蓝门⇒L8C57：偶帧（FrameCount($2D) bit0=0）dec HP；0⇒**DoorSubRoutine8C61**
+  （HP←1/实瓦/status←2/闭动画（8C76（Reset=$30+base=$2E（差 2））+SFX））。
+- **LetSamusIn（$8C84）**：DoorEntryStatus<5（滚动未始）⇒实瓦回封+闭动画（8C76）+
+  调色面（DoorPaletteChangeDir/PaletteToggle（**桩（任务卡 5 面）**））+status←5+
+  DoorPaletteChangeDir←0+音乐蓝换曲（MotherBrainMusic（**桩**））；⇒L8CC3→DrawDoor。
+- **Scroll（$8CC6）**：DoorEntryStatus≠5⇒DrawDoor；==5（滚动尽）⇒**配对门=X^$10**
+  （槽位 bit4 翻转）：配对 status←6+animResetIndex←$2C+SetObjectXSlotAnimIndex($29)
+  +SFX_Door+SelectSamusPalette（**桩**）；本门 status←2→DrawDoor。
+- **LetSamusOut（$8CF0）**：DoorEntryStatus≠0⇒DrawDoor；==0⇒jmp 8C61（重关径）。
+
+### 依赖件（同卡面）
+
+- **WriteDoorBGTiles（$8CF7-8D33）**：Air=$FF/Solid=$4E→Common：Temp02_PositionY←$50；
+  Temp03_PositionX←**DoorXTable[slot Adiv16 &1]**（$8D3A=[$E8,$10]（右/左 bg 瓦列像素））；
+  Temp0B_PositionHi←Objects.hi,x；MakeRoomRAMPtr→$04/$05；**6 瓦纵写**
+  （`sta (ptr),y`（y=0..$A0 步 $20））；**DoorRoomRAMPtr 写站**（任务卡 2 依赖闭环）：
+  y=(slot Adiv8)&6（$80/$90/$A0/$B0→0/2/4/6）→[$5C+y]←ptr lo/hi。
+- **MakeRoomRAMPtr（$E96A）**：ptr=**01100HYY YYYXXXXX**（hi=$18|Ybit7<<0|Ybit6<<1|
+  (NT&4)；lo=(Y&$38)<<2|X>>3（RoomRAMA=$6000（constants:1190）））。
+- **动画微件**：InitObjectXSlotAnimIndex($D2FA)=Reset 双写+Delay0；SetObjectXSlot-
+  AnimIndex($D2FD)=Index+Delay0。
+
+Evidence: areas_common.asm:1415-1750（七态+WriteDoorBGTiles+DoorXTable 全文）+
+prg7_engine.asm:3984-3992（动画微件）/8401-8437（MakeRoomRAMPtr）+common_sprite_data.asm
+:101-113（门 anim 常量（表算 $29/$2C/$2E/$30））+constants_ram.asm:549/812/1190（$56/$10B
+/RoomRAMA）——A 级原文。
+Confidence: 95
