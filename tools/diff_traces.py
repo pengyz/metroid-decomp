@@ -34,6 +34,14 @@ import subprocess
 import sys
 from pathlib import Path
 
+# 【Windows GBK 兜底】控制台 GBK 编码下 `⇒` 等 Unicode 抛 UnicodeEncodeError（对拍收尾
+# 打印实证）——stdout/stderr 重配 UTF-8 + replace（无损降级不炸，报告不截断）。
+try:
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+except Exception:
+    pass
+
 ROOT = Path(__file__).resolve().parent.parent
 MANIFEST = ROOT / "oracle" / "traces" / "l3_manifest.json"
 TRACES = ROOT / "analysis" / "traces"

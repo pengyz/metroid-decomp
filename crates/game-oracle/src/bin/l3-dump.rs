@@ -193,9 +193,17 @@ fn main() -> ExitCode {
                 // 【move-drift 定谳】span tick=迭代跨帧（等待/bogged 门帧）——**无行**
                 // （金腿 missing f 缺行窗同形；行集=迭代 spin 出口，与 oracle 腿同构）。
             } else {
-                // **bundle 载入态回退**（spin 缝不触发——帧末逐 tick 采样（帧数制终止面））
+                // **bundle 载入态回退**（spin 缝不触发——帧末逐 tick 采样（帧数制终止面））。
+                // 【严重-7 修】行 schema=**声明标签**（与缝行同构）——旧形全量快照混入
+                // 未声明 wram 标签被 diff_traces 字段拒入（对拍首跑实证）。
                 let snap = engine.mem.watch_snapshot();
-                let w: Vec<String> = snap.iter().map(|(k, v)| format!("\"{k}\":\"{v}\"")).collect();
+                let w: Vec<String> = watch_labels
+                    .iter()
+                    .map(|label| {
+                        let (_, hex) = snap.iter().find(|(l, _)| l == label).expect("标签已预检");
+                        format!("\"{label}\":\"{hex}\"")
+                    })
+                    .collect();
                 out.push_str(&format!("{{\"f\":{f},\"w\":{{{}}}}}\n", w.join(",")));
             }
         } else {
