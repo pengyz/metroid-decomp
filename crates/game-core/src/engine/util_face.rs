@@ -7,7 +7,7 @@ use super::*;
 
 /// $E1E1 BitScan（root——簇共根形二九·**位扫描微体**）：stx $0E/X=0/lsr 环（找首置位）
 /// ——A 出=位索引（0-7；8=无置位）/X 透传（$0E 暂存）。
-pub fn s2_bit_scan(a_in: u8, x_in: u8) -> (u8, u8) {
+pub fn bit_scan_first_set(a_in: u8, x_in: u8) -> (u8, u8) {
     for i in 0..8u8 {
         if (a_in >> i) & 1 != 0 {
             return (i, x_in);
@@ -17,8 +17,8 @@ pub fn s2_bit_scan(a_in: u8, x_in: u8) -> (u8, u8) {
 }
 
 /// $D120 员体：BitScan+cmp 2 判（<$2⇒$4D←+SetSamusAnim($16)+$CCB7/$CF2E/$D150 链）。
-pub fn s2_d120_body(a_in: u8, x_in: u8) -> (Vec<(u16, u8)>, u8) {
-    let (idx, _) = s2_bit_scan(a_in, x_in);
+pub fn bit_scan_samus_anim_chain(a_in: u8, x_in: u8) -> (Vec<(u16, u8)>, u8) {
+    let (idx, _) = bit_scan_first_set(a_in, x_in);
     if idx < 2 {
         (vec![(0x004D, idx)], 0x16) // SetSamusAnim($16) 面
     } else {
@@ -27,8 +27,8 @@ pub fn s2_d120_body(a_in: u8, x_in: u8) -> (Vec<(u16, u8)>, u8) {
 }
 
 /// $D1A9 员体：BitScan+cmp 2 判+X 载（$4D→A）+$D1EB 表载→$0300（三写族）。
-pub fn s2_d1a9_body(a_in: u8, x_in: u8, tbl_entry: u8) -> (Vec<(u16, u8)>, u8) {
-    let (idx, _) = s2_bit_scan(a_in, x_in);
+pub fn bit_scan_table_write(a_in: u8, x_in: u8, tbl_entry: u8) -> (Vec<(u16, u8)>, u8) {
+    let (idx, _) = bit_scan_first_set(a_in, x_in);
     let mut ev = Vec::new();
     if idx < 2 {
         ev.push((0x004D, idx));
@@ -44,13 +44,13 @@ mod s2_035_tests {
     /// 三员转写形（BitScan 位扫描 root+二壳）。
     #[test]
     fn s2_035_units_three() {
-        assert_eq!(s2_bit_scan(0x01, 5), (0, 5));
-        assert_eq!(s2_bit_scan(0x08, 5), (3, 5));
-        assert_eq!(s2_bit_scan(0, 5), (8, 5));
-        let (ev, a) = s2_d120_body(0x01, 0);
+        assert_eq!(bit_scan_first_set(0x01, 5), (0, 5));
+        assert_eq!(bit_scan_first_set(0x08, 5), (3, 5));
+        assert_eq!(bit_scan_first_set(0, 5), (8, 5));
+        let (ev, a) = bit_scan_samus_anim_chain(0x01, 0);
         assert_eq!(a, 0x16);
         assert!(ev.contains(&(0x004D, 0)));
-        let (ev, _) = s2_d1a9_body(0x08, 0, 0x55);
+        let (ev, _) = bit_scan_table_write(0x08, 0, 0x55);
         assert!(ev.contains(&(0x0300, 0x55)));
     }
 }
@@ -60,7 +60,7 @@ mod s2_035_tests {
 /// $8296 条件取负帮手（root——簇共根形三六·**banks1-5 镜面共享**（areas_common 形三））：
 /// asl/php/jsr $C2BE（半径换算）/plp/bcc+4/**eor #$FF/adc #$00**（条件取负）。
 /// 返回 (计算值, 取负与否)。
-pub fn s2_cond_negate(a_in: u8, carry: bool) -> (u8, bool) {
+pub fn conditional_negate(a_in: u8, carry: bool) -> (u8, bool) {
     let shifted = a_in << 1;
     // $C2BE 半径换算段（值面注——烘焙面）；条件取负（carry⇒negate）
     if carry {
@@ -71,14 +71,14 @@ pub fn s2_cond_negate(a_in: u8, carry: bool) -> (u8, bool) {
 }
 
 /// $D560 员体：$8296+$4B X 载+$0308[x]←（$0A),y 表读+$832F 调+$0309[x]←+表载段。
-pub fn s2_d560_body(x: u8, a_in: u8, carry: bool, tbl_val: u8) -> Vec<(u16, u8)> {
-    let (v, _) = s2_cond_negate(a_in, carry);
+pub fn cond_negate_obj_write(x: u8, a_in: u8, carry: bool, tbl_val: u8) -> Vec<(u16, u8)> {
+    let (v, _) = conditional_negate(a_in, carry);
     vec![(0x0308 + x as u16, tbl_val), (0x0309 + x as u16, v)]
 }
 
 /// $F9BE 员体：$8296+$4B X 载+$0402[x]←+$832F 调+$0403[x]←+位段。
-pub fn s2_f9be_body(x: u8, a_in: u8, carry: bool, tbl_val: u8) -> Vec<(u16, u8)> {
-    let (v, _) = s2_cond_negate(a_in, carry);
+pub fn cond_negate_enemy_write(x: u8, a_in: u8, carry: bool, tbl_val: u8) -> Vec<(u16, u8)> {
+    let (v, _) = conditional_negate(a_in, carry);
     vec![(0x0402 + x as u16, tbl_val), (0x0403 + x as u16, v)]
 }
 
@@ -89,12 +89,12 @@ mod s2_042_tests {
     /// 三员转写形（$8296 条件取负 root 镜面共享+二壳）。
     #[test]
     fn s2_042_units_three() {
-        assert_eq!(s2_cond_negate(0x10, false), (0x20, false));
-        assert_eq!(s2_cond_negate(0x10, true), (0xE0, true)); // ~0x20+1
-        let ev = s2_d560_body(2, 0x10, false, 0x55);
+        assert_eq!(conditional_negate(0x10, false), (0x20, false));
+        assert_eq!(conditional_negate(0x10, true), (0xE0, true)); // ~0x20+1
+        let ev = cond_negate_obj_write(2, 0x10, false, 0x55);
         assert!(ev.contains(&(0x030A, 0x55)));
         assert!(ev.contains(&(0x030B, 0x20)));
-        let ev = s2_f9be_body(2, 0x10, false, 0x55);
+        let ev = cond_negate_enemy_write(2, 0x10, false, 0x55);
         assert!(ev.contains(&(0x0404, 0x55)));
     }
 }
@@ -104,7 +104,7 @@ mod s2_042_tests {
 /// $832F 符号扩展帮手（root——簇共根形三七）：tax/and $08（符号位 php）/and $07
 /// （值 3 位）/plp/beq+3/**jsr TwosCompliment**（负⇒取负）/sta $00。
 /// 返回 (写事件, 值)。
-pub fn s2_sign_extend(a_in: u8) -> (Vec<(u16, u8)>, u8) {
+pub fn sign_extend_three_bit(a_in: u8) -> (Vec<(u16, u8)>, u8) {
     let sign = a_in & 0x08 != 0;
     let v3 = a_in & 0x07;
     let v = if sign { v3.wrapping_neg() } else { v3 };
@@ -112,15 +112,15 @@ pub fn s2_sign_extend(a_in: u8) -> (Vec<(u16, u8)>, u8) {
 }
 
 /// $D56A 员体：$832F+$4B X 载+$0309[x]←+Y=A+$0502[x] lsr/bcs 段（取负条件调）。
-pub fn s2_d56a_body(x: u8, a_in: u8, v0502_x: u8) -> Vec<(u16, u8)> {
-    let (mut ev, v) = s2_sign_extend(a_in);
+pub fn sign_extend_obj_write(x: u8, a_in: u8, v0502_x: u8) -> Vec<(u16, u8)> {
+    let (mut ev, v) = sign_extend_three_bit(a_in);
     ev.push((0x0309 + x as u16, if v0502_x & 1 != 0 { v.wrapping_neg() } else { v }));
     ev
 }
 
 /// $F9C8 员体：$832F+$4B X 载+$0403[x]←+$040A[x] lsr/php 段（取负条件形）。
-pub fn s2_f9c8_body(x: u8, a_in: u8, v040a_x: u8) -> Vec<(u16, u8)> {
-    let (mut ev, v) = s2_sign_extend(a_in);
+pub fn sign_extend_enemy_write(x: u8, a_in: u8, v040a_x: u8) -> Vec<(u16, u8)> {
+    let (mut ev, v) = sign_extend_three_bit(a_in);
     ev.push((0x0403 + x as u16, if v040a_x & 1 != 0 { v.wrapping_neg() } else { v }));
     ev
 }
@@ -132,14 +132,14 @@ mod s2_043_tests {
     /// 三员转写形（$832F 符号扩展 root+二壳）——本卡自身效应独立盖。
     #[test]
     fn s2_043_units_three() {
-        let (ev, v) = s2_sign_extend(0x05);
+        let (ev, v) = sign_extend_three_bit(0x05);
         assert_eq!(v, 5);
         assert!(ev.contains(&(0x0000, 5)));
-        let (_, v2) = s2_sign_extend(0x0D); // 符号位⇒取负
+        let (_, v2) = sign_extend_three_bit(0x0D); // 符号位⇒取负
         assert_eq!(v2, 0xFB); // -5
-        let ev = s2_d56a_body(2, 5, 1);
+        let ev = sign_extend_obj_write(2, 5, 1);
         assert!(ev.contains(&(0x030B, 0xFB))); // 取负条件
-        let ev = s2_f9c8_body(2, 5, 0);
+        let ev = sign_extend_enemy_write(2, 5, 0);
         assert!(ev.contains(&(0x0405, 5)));
     }
 }
@@ -148,22 +148,22 @@ mod s2_043_tests {
 
 /// $F1F4 Xminus16（root——簇共根形四五·**S1-07 对偶**）：X-16（txa/sec/sbc #$10/tax）
 /// +CheckCollision 尾段（S1-27 同构面）。
-pub fn s2_xminus16(x: u8) -> (u8, u8) {
+pub fn xminus16_check_collision(x: u8) -> (u8, u8) {
     (x.wrapping_sub(0x10), 2) // X-16 + $10←2（尾段面）
 }
 
 /// $F0E5 员体：Xminus16+位置对写族（$030D→$06/$07、$030E→$08/$09、0→$0A/$0B
 /// ——案实核）+$6AF4[y] 判段（cmp 5/…）。
-pub fn s2_f0e5_body(x: u8, v30d: u8, v30e: u8) -> (Vec<(u16, u8)>, u8) {
-    let (nx, _) = s2_xminus16(x);
+pub fn xminus16_pos_pair_write(x: u8, v30d: u8, v30e: u8) -> (Vec<(u16, u8)>, u8) {
+    let (nx, _) = xminus16_check_collision(x);
     (vec![(0x0006, v30d), (0x0007, v30d),
           (0x0008, v30e), (0x0009, v30e),
           (0x000A, 0), (0x000B, 0)], nx)
 }
 
 /// $F136 员体：Xminus16+cmp $C0 判+尾跳 $CE92（S1-26 接面——IsSamusDead 族）。
-pub fn s2_f136_body(x: u8) -> (Vec<(u16, u8)>, u16) {
-    let (nx, _) = s2_xminus16(x);
+pub fn xminus16_dead_check_tail(x: u8) -> (Vec<(u16, u8)>, u16) {
+    let (nx, _) = xminus16_check_collision(x);
     let _ = nx;
     (vec![], 0xCE92)
 }
@@ -175,31 +175,31 @@ mod s2_051_tests {
     /// 三员转写形（Xminus16 对偶 root+二壳）。
     #[test]
     fn s2_051_units_three() {
-        assert_eq!(s2_xminus16(0x70), (0x60, 2));
-        let (ev, nx) = s2_f0e5_body(0xC3, 155, 143);
+        assert_eq!(xminus16_check_collision(0x70), (0x60, 2));
+        let (ev, nx) = xminus16_pos_pair_write(0xC3, 155, 143);
         assert_eq!(nx, 0xB3);
         assert!(ev.contains(&(0x0006, 155)));
         assert!(ev.contains(&(0x0009, 143)));
         assert!(ev.contains(&(0x000B, 0)));
-        assert_eq!(s2_f136_body(0xC3).1, 0xCE92);
+        assert_eq!(xminus16_dead_check_tail(0xC3).1, 0xCE92);
     }
 }
 
 // ---- SC-S2-25（S2-55）员转写（3 员——Amul8 族）----
 
 /// $C2C6 Amul8（root——簇共根形四九·**Adiv8 对偶**）：asl×3（A×8 回卷）。
-pub fn s2_amul8(a_in: u8) -> u8 {
+pub fn amul8(a_in: u8) -> u8 {
     a_in << 3
 }
 
 /// $F335 员体：jmp Amul8（尾形）+$10×8+$F27B 跳面（S1-07 同构面）。
-pub fn s2_f335_body(v10: u8) -> (u8, u16) {
-    (s2_amul8(v10), 0xF27B)
+pub fn amul8_shift_tail(v10: u8) -> (u8, u16) {
+    (amul8(v10), 0xF27B)
 }
 
 /// $FF4E 员体：Amul8+sta $03（返回面）+$0504[x] dec 计数段。
-pub fn s2_ff4e_body(a_in: u8, x: u8, v0504_x: u8) -> (Vec<(u16, u8)>, u8) {
-    let v = s2_amul8(a_in);
+pub fn amul8_counter_dec(a_in: u8, x: u8, v0504_x: u8) -> (Vec<(u16, u8)>, u8) {
+    let v = amul8(a_in);
     let d = v0504_x.wrapping_sub(1);
     (vec![(0x0003, v), (0x0504 + x as u16, d)], v)
 }
@@ -211,10 +211,10 @@ mod s2_055_tests {
     /// 三员转写形（Amul8 ×8 root 对偶+二壳）。
     #[test]
     fn s2_055_units_three() {
-        assert_eq!(s2_amul8(133), 40); // 133×8&0xFF
-        assert_eq!(s2_amul8(1), 8);
-        assert_eq!(s2_f335_body(0x10).0, 0x80);
-        let (ev, v) = s2_ff4e_body(1, 2, 5);
+        assert_eq!(amul8(133), 40); // 133×8&0xFF
+        assert_eq!(amul8(1), 8);
+        assert_eq!(amul8_shift_tail(0x10).0, 0x80);
+        let (ev, v) = amul8_counter_dec(1, 2, 5);
         assert_eq!(v, 8);
         assert!(ev.contains(&(0x0003, 8)));
         assert!(ev.contains(&(0x0506, 4)));
@@ -225,7 +225,7 @@ mod s2_055_tests {
 
 /// $F416 员体（root——簇共根形五二）：$4B X 载+$040F[x] 符号段（$6B←$A3）+
 /// $6AF4[x] 判（$DDB8 调）。返回 (写事件, 判段)。
-pub fn s2_page_index(x: u8, v040f_x: u8, v6af4_x: u8) -> (Vec<(u16, u8)>, bool) {
+pub fn page_index_check(x: u8, v040f_x: u8, v6af4_x: u8) -> (Vec<(u16, u8)>, bool) {
     let mut ev = Vec::new();
     if (v040f_x as i8) < 0 {
         ev.push((0x006B, 0xA3)); // 符号段（$6B 写）
@@ -235,13 +235,13 @@ pub fn s2_page_index(x: u8, v040f_x: u8, v6af4_x: u8) -> (Vec<(u16, u8)>, bool) 
 }
 
 /// $F480 员体：jmp $F416（尾形）+$0404[x] and $24 判段（$FA18 调——S1-08 接面）。
-pub fn s2_f480_body(x: u8, v040f_x: u8, v6af4_x: u8) -> (Vec<(u16, u8)>, u16) {
-    let (ev, _) = s2_page_index(x, v040f_x, v6af4_x);
+pub fn page_index_mask_tail(x: u8, v040f_x: u8, v6af4_x: u8) -> (Vec<(u16, u8)>, u16) {
+    let (ev, _) = page_index_check(x, v040f_x, v6af4_x);
     (ev, 0xF416)
 }
 
 /// $F4EB 员体：jmp $F416+$040F[x] dec 计数段（$040C[x] 面）。
-pub fn s2_f4eb_body(x: u8, v040f_x: u8, v040c_x: u8) -> Vec<(u16, u8)> {
+pub fn page_index_counter_dec(x: u8, v040f_x: u8, v040c_x: u8) -> Vec<(u16, u8)> {
     let d = v040f_x.wrapping_sub(1);
     vec![(0x040F + x as u16, d), (0x6AF4 + x as u16, v040c_x & 0x3F)]
 }
@@ -253,14 +253,14 @@ mod s2_058_tests {
     /// 三员转写形（PageIndex root+二壳）。
     #[test]
     fn s2_058_units_three() {
-        let (ev, c) = s2_page_index(2, 0x80, 5);
+        let (ev, c) = page_index_check(2, 0x80, 5);
         assert!(c);
         assert!(ev.contains(&(0x006B, 0xA3)));
-        let (ev2, c2) = s2_page_index(2, 0x10, 0);
+        let (ev2, c2) = page_index_check(2, 0x10, 0);
         assert!(!c2);
         assert!(ev2.is_empty());
-        assert_eq!(s2_f480_body(2, 0, 0).1, 0xF416);
-        let ev = s2_f4eb_body(2, 5, 0x7F);
+        assert_eq!(page_index_mask_tail(2, 0, 0).1, 0xF416);
+        let ev = page_index_counter_dec(2, 5, 0x7F);
         assert!(ev.contains(&(0x0411, 4)));
         assert!(ev.contains(&(0x6AF6, 0x3F)));
     }
@@ -693,21 +693,21 @@ mod s1_25_tests {
 // ---- SC-S2-17（S2-47）员转写（3 员——索引 toggle 族）----
 
 /// $D648 索引 toggle（root——簇共根形四一·**ToggleSamusHi 索引版**）：$030C[x] eor 1。
-pub fn s2_index_toggle(x: u8, v030c_x: u8) -> (Vec<(u16, u8)>, u8) {
+pub fn index_slot_toggle(x: u8, v030c_x: u8) -> (Vec<(u16, u8)>, u8) {
     let v = v030c_x ^ 1;
     (vec![(0x030C + x as u16, v)], v)
 }
 
 /// $D847 员体：索引 toggle+$030D[x]←$EF 环（Y=$F0/dey——S1-11 同构面）+尾跳 $D866。
-pub fn s2_d847_body(x: u8, v030c_x: u8) -> (Vec<(u16, u8)>, u16) {
-    let (mut ev, _) = s2_index_toggle(x, v030c_x);
+pub fn index_toggle_y_slot_ring(x: u8, v030c_x: u8) -> (Vec<(u16, u8)>, u16) {
+    let (mut ev, _) = index_slot_toggle(x, v030c_x);
     ev.push((0x030D + x as u16, 0xEF));
     (ev, 0xD866)
 }
 
 /// $D85E 员体：索引 toggle+$030D[x]←0+cmp $83 判（inc $0300 段）+尾跳 $D806。
-pub fn s2_d85e_body(x: u8, v030c_x: u8, v030d_x: u8) -> (Vec<(u16, u8)>, u16) {
-    let (mut ev, _) = s2_index_toggle(x, v030c_x);
+pub fn index_toggle_counter_seg(x: u8, v030c_x: u8, v030d_x: u8) -> (Vec<(u16, u8)>, u16) {
+    let (mut ev, _) = index_slot_toggle(x, v030c_x);
     ev.push((0x030D + x as u16, 0));
     if v030d_x == 0x83 {
         ev.push((0x0300 + x as u16, 1)); // cmp $83 命中段（inc 面注）
@@ -722,13 +722,13 @@ mod s2_047_tests {
     /// 三员转写形（索引 toggle root+二壳）。
     #[test]
     fn s2_047_units_three() {
-        let (ev, v) = s2_index_toggle(0x95, 0);
+        let (ev, v) = index_slot_toggle(0x95, 0);
         assert_eq!(v, 1);
         assert!(ev.contains(&(0x03A1, 1)));
-        let (ev, j) = s2_d847_body(2, 0);
+        let (ev, j) = index_toggle_y_slot_ring(2, 0);
         assert_eq!(j, 0xD866);
         assert!(ev.contains(&(0x030F, 0xEF)));
-        let (ev, j) = s2_d85e_body(2, 0, 0x83);
+        let (ev, j) = index_toggle_counter_seg(2, 0, 0x83);
         assert_eq!(j, 0xD806);
         assert!(ev.contains(&(0x030F, 0)));
     }

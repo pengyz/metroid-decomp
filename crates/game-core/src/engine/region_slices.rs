@@ -1750,7 +1750,7 @@ mod tests_block48 {
 // TDD 测试（测试先行（实现后补）（强制完整））——1:1 Rust 改写·批产·块 50：engine::mod（s1_/s2_ 族（继续去地址名））（穷举等价证明（全域穷举（边界条件（异常路径））））
 // refs 引用必写（bank:addr 引证（A 级原文））：bank02:8000（s2 族（prg2_norfair.asm））（s1_/s2_ 族（实址（A 级原文）））
 
-/// apply_enemy_carry（敌人进位应用（语义命名（data/naming 台账 A/B 级）））——旧实现（s2_f9be_body（engine/mod.rs:2403））→去地址名
+/// apply_enemy_carry（敌人进位应用（语义命名（data/naming 台账 A/B 级）））——旧实现（cond_negate_enemy_write（engine/mod.rs:2403））→去地址名
 /// refs asm 考证（bank02:8000（s2 族（prg2_norfair.asm）））——真规则（公式形（零字面特值））
 pub fn apply_enemy_carry(x: u8, a_in: u8, carry: bool, tbl_val: u8) -> Vec<(u16, u8)> {
     // 真规则（公式形（零字面特值））：apply_enemy_carry（x/a_in/carry/tbl_val（byte-driven semantics））
@@ -1761,7 +1761,7 @@ pub fn apply_enemy_carry(x: u8, a_in: u8, carry: bool, tbl_val: u8) -> Vec<(u16,
     writes
 }
 
-/// apply_enemy_v0502（敌人 v0502 应用（语义命名（data/naming 台账 A/B 级）））——旧实现（s2_d56a_body（engine/mod.rs:2438））→去地址名
+/// apply_enemy_v0502（敌人 v0502 应用（语义命名（data/naming 台账 A/B 级）））——旧实现（sign_extend_obj_write（engine/mod.rs:2438））→去地址名
 /// refs asm 考证（bank02:8000（s2 族（prg2_norfair.asm）））——真规则（公式形（零字面特值））
 pub fn apply_enemy_v0502(x: u8, a_in: u8, v0502_x: u8) -> Vec<(u16, u8)> {
     // 真规则（公式形（零字面特值））：apply_enemy_v0502（x/a_in/v0502_x（byte-driven semantics））
@@ -1772,7 +1772,7 @@ pub fn apply_enemy_v0502(x: u8, a_in: u8, v0502_x: u8) -> Vec<(u16, u8)> {
     writes
 }
 
-/// apply_enemy_v040a（敌人 v040a 应用（语义命名（data/naming 台账 A/B 级）））——旧实现（s2_f9c8_body（engine/mod.rs:2445））→去地址名
+/// apply_enemy_v040a（敌人 v040a 应用（语义命名（data/naming 台账 A/B 级）））——旧实现（sign_extend_enemy_write（engine/mod.rs:2445））→去地址名
 /// refs asm 考证（bank02:8000（s2 族（prg2_norfair.asm）））——真规则（公式形（零字面特值））
 pub fn apply_enemy_v040a(x: u8, a_in: u8, v040a_x: u8) -> Vec<(u16, u8)> {
     // 真规则（公式形（零字面特值））：apply_enemy_v040a（x/a_in/v040a_x（byte-driven semantics））
@@ -1855,7 +1855,7 @@ mod tests_block50 {
 // TDD 测试（测试先行（实现后补）（强制完整））——1:1 Rust 改写·批产·块 52：engine::mod（s1_/s2_ 族（继续去地址名））（穷举等价证明（全域穷举（边界条件（异常路径））））
 // refs 引用必写（bank:addr 引证（A 级原文））：bank02:8000（s2 族（prg2_norfair.asm））（s1_/s2_ 族（实址（A 级原文）））
 
-/// get_norfair_state_alt（Norfair 状态（备选（语义命名（data/naming 台账 A/B 级））））——旧实现（s2_d85e_body（engine/mod.rs:2630））→去地址名
+/// get_norfair_state_alt（Norfair 状态（备选（语义命名（data/naming 台账 A/B 级））））——旧实现（index_toggle_counter_seg（engine/mod.rs:2630））→去地址名
 /// refs asm 考证（bank02:8000（s2 族（prg2_norfair.asm）））——真规则（公式形（零字面特值））
 pub fn get_norfair_state_alt(x: u8, v030c_x: u8, v030d_x: u8) -> (Vec<(u16, u8)>, u16) {
     // 真规则（公式形（零字面特值））：get_norfair_state_alt（x/v030c_x/v030d_x（byte-driven semantics））
@@ -2069,7 +2069,7 @@ pub fn get_norfair_entry_alt(x: u8, tbl_val: u8) -> (Vec<(u16, u8)>, u16) {
     (writes, result)
 }
 
-/// apply_norfair_state（Norfair 状态应用（语义命名（data/naming 台账 A/B 级）））——旧实现（s2_f480_body（engine/mod.rs:3078））→去地址名
+/// apply_norfair_state（Norfair 状态应用（语义命名（data/naming 台账 A/B 级）））——旧实现（page_index_mask_tail（engine/mod.rs:3078））→去地址名
 /// refs asm 考证（bank02:8000（s2 族（prg2_norfair.asm）））——真规则（公式形（零字面特值））
 pub fn apply_norfair_state(x: u8, v040f_x: u8, v6af4_x: u8) -> (Vec<(u16, u8)>, u16) {
     // 真规则（公式形（零字面特值））：apply_norfair_state（x/v040f_x/v6af4_x（byte-driven semantics））
