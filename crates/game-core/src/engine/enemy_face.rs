@@ -591,19 +591,19 @@ mod s2_053_tests {
 // ---- SC-S2-29（S2-59）员转写（3 员——LF515 族）----
 
 /// $F515 LF515（root——簇共根形五三）：$040C[x]←A/$6AF4[x]←4（状态写对）。
-pub fn s2_lf515(x: u8, a_in: u8) -> (Vec<(u16, u8)>, u8) {
+pub fn object_status_pair_write(x: u8, a_in: u8) -> (Vec<(u16, u8)>, u8) {
     (vec![(0x040C + x as u16, a_in), (0x6AF4 + x as u16, 4)], 4)
 }
 
 /// $F50B 员体：LF515+栈操作族（pha/pla）+尾跳 $F423（A=$A0 面——S1-11 同构）。
-pub fn s2_f50b_body(x: u8, a_in: u8) -> (Vec<(u16, u8)>, u16) {
-    let (ev, _) = s2_lf515(x, a_in);
+pub fn object_status_stack_tail(x: u8, a_in: u8) -> (Vec<(u16, u8)>, u16) {
+    let (ev, _) = object_status_pair_write(x, a_in);
     (ev, 0xF423)
 }
 
 /// $F554 员体：LF515+$040D[x]←$40+$80B0 调（S1-02 接面）+位5 判段（$040B[x]←5）。
-pub fn s2_f554_body(x: u8, a_in: u8, v80b0: u8) -> (Vec<(u16, u8)>, u16) {
-    let (mut ev, _) = s2_lf515(x, a_in);
+pub fn object_status_bit5_segment(x: u8, a_in: u8, v80b0: u8) -> (Vec<(u16, u8)>, u16) {
+    let (mut ev, _) = object_status_pair_write(x, a_in);
     ev.push((0x040D + x as u16, 0x40));
     if v80b0 & 0x20 != 0 {
         ev.push((0x040B + x as u16, 5));
@@ -618,12 +618,12 @@ mod s2_059_tests {
     /// 三员转写形（LF515 root 写对+二壳）。
     #[test]
     fn s2_059_units_three() {
-        let (ev, v) = s2_lf515(2, 45);
+        let (ev, v) = object_status_pair_write(2, 45);
         assert_eq!(v, 4);
         assert!(ev.contains(&(0x040E, 45)));
         assert!(ev.contains(&(0x6AF6, 4)));
-        assert_eq!(s2_f50b_body(2, 45).1, 0xF423);
-        let (ev, j) = s2_f554_body(2, 45, 0x20);
+        assert_eq!(object_status_stack_tail(2, 45).1, 0xF423);
+        let (ev, j) = object_status_bit5_segment(2, 45, 0x20);
         assert_eq!(j, 0x95A8);
         assert!(ev.contains(&(0x040F, 0x40)));
         assert!(ev.contains(&(0x040D, 5)));
@@ -862,20 +862,20 @@ mod s1_28_tests {
 /// ($00),y 表读→$032F+$032D←$83/$032E←$80+root $EB85 调+写族全集（$0320/$0323/
 /// $032C-$032F——案实核恒效面）。
 /// 返回 (写事件, 记录长)。
-pub fn s2_spawn_elevator(y: u8, tbl_val: u8) -> (Vec<(u16, u8)>, u8) {
+pub fn spawn_elevator_routine(y: u8, tbl_val: u8) -> (Vec<(u16, u8)>, u8) {
     (vec![(0x0320, 1), (0x0323, 35), (0x032C, 0),
           (0x032D, 131), (0x032E, 128), (0x032F, tbl_val)], 2) // 记录长 2（同族形）
 }
 
 /// $EC04 员体：SpawnElevatorRoutine+bne 回卷+jmp walk（$EAD4 回驱——S2-18 同构）。
-pub fn s2_ec04_body(y: u8, tbl_val: u8) -> (Vec<(u16, u8)>, u16) {
-    let (ev, _) = s2_spawn_elevator(y, tbl_val);
+pub fn spawn_elevator_walk_return(y: u8, tbl_val: u8) -> (Vec<(u16, u8)>, u16) {
+    let (ev, _) = spawn_elevator_routine(y, tbl_val);
     (ev, 0xEAD4)
 }
 
 /// $EEA1 ElevatorHandler：SpawnElevatorRoutine+bne 段+$95B1 调+尾跳 $EDD6（S2-23 接面）。
-pub fn s2_eea1_body(y: u8, tbl_val: u8) -> (Vec<(u16, u8)>, u16) {
-    let (ev, _) = s2_spawn_elevator(y, tbl_val);
+pub fn elevator_handler(y: u8, tbl_val: u8) -> (Vec<(u16, u8)>, u16) {
+    let (ev, _) = spawn_elevator_routine(y, tbl_val);
     (ev, 0xEDD6)
 }
 
@@ -886,13 +886,13 @@ mod s2_049_tests {
     /// 三员转写形（SpawnElevator VM handler root+二壳）。
     #[test]
     fn s2_049_units_three() {
-        let (ev, len) = s2_spawn_elevator(3, 0x55);
+        let (ev, len) = spawn_elevator_routine(3, 0x55);
         assert_eq!(len, 2);
         assert!(ev.contains(&(0x0320, 1)));
         assert!(ev.contains(&(0x032E, 128)));
         assert!(ev.contains(&(0x032F, 0x55)));
-        assert_eq!(s2_ec04_body(3, 0).1, 0xEAD4);
-        assert_eq!(s2_eea1_body(3, 0).1, 0xEDD6);
+        assert_eq!(spawn_elevator_walk_return(3, 0).1, 0xEAD4);
+        assert_eq!(elevator_handler(3, 0).1, 0xEDD6);
     }
 }
 

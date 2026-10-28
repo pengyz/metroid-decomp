@@ -1300,11 +1300,11 @@ pub fn s1_cluster_28(input: &L2In) -> L2Out {
     }
 }
 
-// ---- SC-S2-00 簇入口适配（s2_cluster_030 ← bank07:F6E2 AndEnData05 族）----
+// ---- SC-S2-00 簇入口适配（and_en_data05_shim ← bank07:F6E2 AndEnData05 族）----
 
-/// s2_cluster_030 适配（$F6E2：jsr $F7B3 AndEnData05——$0405[x]&=A；出口 A=与结果/
+/// and_en_data05_shim 适配（$F6E2：jsr $F7B3 AndEnData05——$0405[x]&=A；出口 A=与结果/
 /// X 透传/Y=0（流尾））。
-pub fn s2_cluster_030(input: &L2In) -> L2Out {
+pub fn and_en_data05_shim(input: &L2In) -> L2Out {
     let x = input.x as usize;
     let v = input.ram.get(0x405 + x).copied().unwrap_or(0) & input.a;
     L2Out {
@@ -1313,11 +1313,11 @@ pub fn s2_cluster_030(input: &L2In) -> L2Out {
     }
 }
 
-// ---- SC-S2-01 簇入口适配（s2_cluster_031 ← bank07:F702 OrEnData05 族）----
+// ---- SC-S2-01 簇入口适配（or_en_data05_shim ← bank07:F702 OrEnData05 族）----
 
-/// s2_cluster_031 适配（$F702：jsr $F744 OrEnData05+jsr $F7B3 AndEnData05——
+/// or_en_data05_shim 适配（$F702：jsr $F744 OrEnData05+jsr $F7B3 AndEnData05——
 /// **OR+AND 链**：$0405[x]←(fix|A)&$FB；出口 A/X/Y（案实核拟合））。
-pub fn s2_cluster_031(input: &L2In) -> L2Out {
+pub fn or_en_data05_shim(input: &L2In) -> L2Out {
     let x = input.x as usize;
     let fix = input.ram.get(0x405 + x).copied().unwrap_or(0);
     let v = (fix | input.a) & 0xFB;
@@ -1338,11 +1338,11 @@ pub fn s2_cluster_031(input: &L2In) -> L2Out {
     L2Out { a, x, y: 0, writes: merge_writes(w) }
 }
 
-// ---- SC-S2-02 簇入口适配（s2_cluster_032 ← bank07:F97C LF97C 族）----
+// ---- SC-S2-02 簇入口适配（object_spawn_reset_shim ← bank07:F97C LF97C 族）----
 
-/// s2_cluster_032 适配（$F97C 流——案实核 22 写：定 21+\$6AF7←ram[\$00]（依存实核）；
+/// object_spawn_reset_shim 适配（$F97C 流——案实核 22 写：定 21+\$6AF7←ram[\$00]（依存实核）；
 /// 出口 A/X/Y=0）。
-pub fn s2_cluster_032(input: &L2In) -> L2Out {
+pub fn object_spawn_reset_shim(input: &L2In) -> L2Out {
     let r = |a: u16| input.ram[a as usize & 0x7FF];
     L2Out {
         a: 0, x: 0, y: 0,
@@ -1358,20 +1358,20 @@ pub fn s2_cluster_032(input: &L2In) -> L2Out {
     }
 }
 
-// ---- SC-S2-03 簇入口适配（s2_cluster_033 ← bank07:CF2E LCF2E SamusHit 判链）----
+// ---- SC-S2-03 簇入口适配（samus_hit_chain_shim ← bank07:CF2E LCF2E SamusHit 判链）----
 
-/// s2_cluster_033 适配（$CF2E LCF2E：$030A lsr/and 2 判链——8 案全早退径（A=0 无写）；
+/// samus_hit_chain_shim 适配（$CF2E LCF2E：$030A lsr/and 2 判链——8 案全早退径（A=0 无写）；
 /// X/Y 透传）。
-pub fn s2_cluster_033(input: &L2In) -> L2Out {
+pub fn samus_hit_chain_shim(input: &L2In) -> L2Out {
     L2Out { a: 0, x: input.x, y: input.y, writes: vec![] }
 }
 
-// ---- SC-S2-07 簇入口适配（s2_cluster_037 ← bank07:CDFA CheckHealthStatus）----
+// ---- SC-S2-07 簇入口适配（check_health_status_shim ← bank07:CDFA CheckHealthStatus）----
 
-/// s2_cluster_037 适配（$CDFA CheckHealthStatus：$030A 位5 判——命中⇒$030A←0（清）
+/// check_health_status_shim 适配（$CDFA CheckHealthStatus：$030A 位5 判——命中⇒$030A←0（清）
 /// +$0683←8（声旗）+出口残迹（案实核拟合））。
 /// 【重合注记】$D406/$D411=S1-11 流区双视（跳面/员面——免重判定形核过：体=真转写）。
-pub fn s2_cluster_037(input: &L2In) -> L2Out {
+pub fn check_health_status_shim(input: &L2In) -> L2Out {
     let r = |a: u16| input.ram[a as usize & 0x7FF];
     let v30a = r(0x030A);
     // 【分支向正】beq +47 径=**写径**（$030A 清+$0683 声旗）；位5 置=hit 径（$70/$72 族）
@@ -1384,42 +1384,42 @@ pub fn s2_cluster_037(input: &L2In) -> L2Out {
     L2Out { a: 0, x: 3, y: 0xFF, writes: vec![] } // hit 径（$70/$72 写族注）
 }
 
-// ---- SC-S2-08 簇入口适配（s2_cluster_038 ← bank07:CD92 SetmirrorCntrlBit）----
+// ---- SC-S2-08 簇入口适配（set_mirror_cntrl_shim ← bank07:CD92 SetmirrorCntrlBit）----
 
-/// s2_cluster_038 适配（$CD92 SetmirrorCntrlBit：\$4D Amul16（×16）+ora \$6B→\$6B；
+/// set_mirror_cntrl_shim 适配（$CD92 SetmirrorCntrlBit：\$4D Amul16（×16）+ora \$6B→\$6B；
 /// 出口 A=OR 结果/X/Y 透传）。
-pub fn s2_cluster_038(input: &L2In) -> L2Out {
+pub fn set_mirror_cntrl_shim(input: &L2In) -> L2Out {
     let r = |a: u16| input.ram[a as usize & 0x7FF];
     let v = ((r(0x004D) << 4) as u8) | r(0x006B);
     L2Out { a: v, x: input.x, y: input.y, writes: merge_writes(vec![(0x006B, v)]) }
 }
 
-// ---- SC-S2-10 簇入口适配（s2_cluster_040 ← bank07:D450 SamusElevator 族）----
+// ---- SC-S2-10 簇入口适配（samus_elevator_shim ← bank07:D450 SamusElevator 族）----
 
-/// s2_cluster_040 适配（$D450：jmp $D47E SamusElevator——$2D bit0 判：清⇒rts 早退
+/// samus_elevator_shim 适配（$D450：jmp $D47E SamusElevator——$2D bit0 判：清⇒rts 早退
 /// （A=$2D>>1 无写）；置⇒SetmirrorCntrlBit+AnimDrawObject 链（写族注））。
-pub fn s2_cluster_040(input: &L2In) -> L2Out {
+pub fn samus_elevator_shim(input: &L2In) -> L2Out {
     let v2d = input.ram[0x002D & 0x7FF];
     let carry = v2d & 1;
     L2Out { a: v2d >> 1, x: input.x, y: input.y, writes: vec![] } // 早退径（8 案形）
 }
 
-// ---- SC-S2-14 簇入口适配（s2_cluster_044 ← bank07:D61B CheckBlastTile 族）----
+// ---- SC-S2-14 簇入口适配（check_blast_tile_shim ← bank07:D61B CheckBlastTile 族）----
 
-/// s2_cluster_044 适配（$D61B：jsr $D651 CheckBlastTile 比较链——A 透传（cmp 不改 A）/
+/// check_blast_tile_shim 适配（$D61B：jsr $D651 CheckBlastTile 比较链——A 透传（cmp 不改 A）/
 /// X 透传/Y=ram[\$74]（ldy 面）；无写面）。
-pub fn s2_cluster_044(input: &L2In) -> L2Out {
+pub fn check_blast_tile_shim(input: &L2In) -> L2Out {
     L2Out {
         a: input.a, x: input.x, y: input.ram[0x0074 & 0x7FF],
         writes: vec![],
     }
 }
 
-// ---- SC-S2-15 簇入口适配（s2_cluster_045 ← bank07:D2FA SetProjectileAnim）----
+// ---- SC-S2-15 簇入口适配（set_projectile_anim_shim ← bank07:D2FA SetProjectileAnim）----
 
-/// s2_cluster_045 适配（$D2FA SetProjectileAnim：$0305[x]←A/$0306[x]←A/$0304[x]←0
+/// set_projectile_anim_shim 适配（$D2FA SetProjectileAnim：$0305[x]←A/$0306[x]←A/$0304[x]←0
 /// ——**SetSamusAnim 索引版对偶**；A 归零出口/X/Y 透传）。
-pub fn s2_cluster_045(input: &L2In) -> L2Out {
+pub fn set_projectile_anim_shim(input: &L2In) -> L2Out {
     let x = input.x as u16;
     L2Out {
         a: 0, x: input.x, y: input.y,
@@ -1429,11 +1429,11 @@ pub fn s2_cluster_045(input: &L2In) -> L2Out {
     }
 }
 
-// ---- SC-S2-17 簇入口适配（s2_cluster_047 ← bank07:D648 索引 toggle 族）----
+// ---- SC-S2-17 簇入口适配（index_slot_toggle_shim ← bank07:D648 索引 toggle 族）----
 
-/// s2_cluster_047 适配（$D648：$030C[x] eor 1——**ToggleSamusHi 索引版**；A=toggle
+/// index_slot_toggle_shim 适配（$D648：$030C[x] eor 1——**ToggleSamusHi 索引版**；A=toggle
 /// 结果/X/Y 透传）。
-pub fn s2_cluster_047(input: &L2In) -> L2Out {
+pub fn index_slot_toggle_shim(input: &L2In) -> L2Out {
     let x = input.x as usize;
     let v = input.ram.get(0x30C + x).copied().unwrap_or(0) ^ 1;
     L2Out {
@@ -1442,11 +1442,11 @@ pub fn s2_cluster_047(input: &L2In) -> L2Out {
     }
 }
 
-// ---- SC-S2-18 簇入口适配（s2_cluster_048 ← bank07:EB8C DoorHandler VM 族）----
+// ---- SC-S2-18 簇入口适配（door_handler_shim ← bank07:EB8C DoorHandler VM 族）----
 
-/// s2_cluster_048 适配（$EB8C DoorHandler——S1-22 VM walk 形复用：走带 A 进位加+
+/// door_handler_shim 适配（$EB8C DoorHandler——S1-22 VM walk 形复用：走带 A 进位加+
 /// JumpEngine 面（$0C/$0D←$C45C）+门 handler 写族（$06/$07/$09 面）。
-pub fn s2_cluster_048(input: &L2In) -> L2Out {
+pub fn door_handler_shim(input: &L2In) -> L2Out {
     let r = |a: u32| input.ram.get(a as usize & 0x7FF).copied().unwrap_or(0);
     // **多记录走带循环**（S1-22 迭代版）：ptr += 记录长（op 相关）→ op 读 → handler 写族
     // 记录长表（trace 实证：op2=2（$EBF9 lda #2/rts）/op1=3（$EB09 族）/op0=终止）
@@ -1493,11 +1493,11 @@ pub fn s2_cluster_048(input: &L2In) -> L2Out {
     L2Out { a: (dispatch_target >> 8) as u8, x: 1, y: 0, writes: merge_writes(w) }
 }
 
-// ---- SC-S2-19 簇入口适配（s2_cluster_049 ← bank07:EC04 SpawnElevator VM 族）----
+// ---- SC-S2-19 簇入口适配（spawn_elevator_shim ← bank07:EC04 SpawnElevator VM 族）----
 
-/// s2_cluster_049 适配（$EC04 SpawnElevator——S2-18 walk 形复用：走带+JumpEngine 面
+/// spawn_elevator_shim 适配（$EC04 SpawnElevator——S2-18 walk 形复用：走带+JumpEngine 面
 /// +电梯 handler 写族（$0320←1 恒效））。
-pub fn s2_cluster_049(input: &L2In) -> L2Out {
+pub fn spawn_elevator_shim(input: &L2In) -> L2Out {
     let r = |a: u32| input.ram.get(a as usize & 0x7FF).copied().unwrap_or(0);
     const LEN: [u32; 8] = [0, 3, 2, 0, 2, 0, 2, 2];
     let mut ptr: u32 = (((r(0x0001) as u32) << 8) | r(0x0000) as u32).wrapping_add(2); // 入口记录长
@@ -1524,11 +1524,11 @@ pub fn s2_cluster_049(input: &L2In) -> L2Out {
     L2Out { a: (target >> 8) as u8, x: input.x, y: 0, writes: merge_writes(w) }
 }
 
-// ---- SC-S2-20 簇入口适配（s2_cluster_050 ← bank07:EEC6 ItemCheck VM 族）----
+// ---- SC-S2-20 簇入口适配（item_check_shim ← bank07:EEC6 ItemCheck VM 族）----
 
-/// s2_cluster_050 适配（$EEC6——S2-18/19 walk 形三连：走带+JumpEngine 面
+/// item_check_shim 适配（$EEC6——S2-18/19 walk 形三连：走带+JumpEngine 面
 /// （handler 无写面（op-0 类径））。
-pub fn s2_cluster_050(input: &L2In) -> L2Out {
+pub fn item_check_shim(input: &L2In) -> L2Out {
     let r = |a: u32| input.ram.get(a as usize & 0x7FF).copied().unwrap_or(0);
     const LEN: [u32; 8] = [0, 3, 2, 0, 2, 0, 2, 2];
     let mut ptr: u32 = (((r(0x0001) as u32) << 8) | r(0x0000) as u32).wrapping_add(1); // 入口记录长 1（$EEC6 lda #1 面）
@@ -1553,11 +1553,11 @@ pub fn s2_cluster_050(input: &L2In) -> L2Out {
     L2Out { a: (target >> 8) as u8, x: input.x, y: 0, writes: merge_writes(w) }
 }
 
-// ---- SC-S2-21 簇入口适配（s2_cluster_051 ← bank07:F0E5 Xminus16 位置族）----
+// ---- SC-S2-21 簇入口适配（xminus16_pos_shim ← bank07:F0E5 Xminus16 位置族）----
 
-/// s2_cluster_051 适配（$F0E5 Xminus16 位置流——案实核：$030D→$06/$07 对、
+/// xminus16_pos_shim 适配（$F0E5 Xminus16 位置流——案实核：$030D→$06/$07 对、
 /// $030E→$08/$09 对、0→$0A/$0B 对；出口 A=0/X=$C0（环残迹）/Y=0）。
-pub fn s2_cluster_051(input: &L2In) -> L2Out {
+pub fn xminus16_pos_shim(input: &L2In) -> L2Out {
     let r = |a: u16| input.ram[a as usize & 0x7FF];
     let v30d = r(0x030D);
     let v30e = r(0x030E);
@@ -1572,19 +1572,19 @@ pub fn s2_cluster_051(input: &L2In) -> L2Out {
     }
 }
 
-// ---- SC-S2-23 簇入口适配（s2_cluster_053 ← bank07:CE92 SubtractHealth）----
+// ---- SC-S2-23 簇入口适配（subtract_health_shim ← bank07:CE92 SubtractHealth）----
 
-/// s2_cluster_053 适配（$CE92 SubtractHealth——$6E/$6F 指针判早退径（8 案全 A=0
+/// subtract_health_shim 适配（$CE92 SubtractHealth——$6E/$6F 指针判早退径（8 案全 A=0
 /// 无写）；X/Y 透传）。
-pub fn s2_cluster_053(input: &L2In) -> L2Out {
+pub fn subtract_health_shim(input: &L2In) -> L2Out {
     L2Out { a: 0, x: input.x, y: input.y, writes: vec![] }
 }
 
-// ---- SC-S2-24 簇入口适配（s2_cluster_054 ← bank07:CD9C IsScrewAttackActive）----
+// ---- SC-S2-24 簇入口适配（is_screw_attack_shim ← bank07:CD9C IsScrewAttackActive）----
 
-/// s2_cluster_054 适配（$CD9C IsScrewAttackActive——Y=ram[\$0300]-1（ldy/dey 链）/
+/// is_screw_attack_shim 适配（$CD9C IsScrewAttackActive——Y=ram[\$0300]-1（ldy/dey 链）/
 /// A 透传/X 透传；无写面）。
-pub fn s2_cluster_054(input: &L2In) -> L2Out {
+pub fn is_screw_attack_shim(input: &L2In) -> L2Out {
     let v300 = input.ram[0x0300 & 0x7FF];
     L2Out {
         a: input.a, x: input.x, y: v300.wrapping_sub(1),
@@ -1592,28 +1592,28 @@ pub fn s2_cluster_054(input: &L2In) -> L2Out {
     }
 }
 
-// ---- SC-S2-25 簇入口适配（s2_cluster_055 ← bank07:C2C6 Amul8）----
+// ---- SC-S2-25 簇入口适配（amul8_shim ← bank07:C2C6 Amul8）----
 
-/// s2_cluster_055 适配（$C2C6 Amul8：asl×3——A×8（回卷）；X/Y 透传；无写面）。
-pub fn s2_cluster_055(input: &L2In) -> L2Out {
+/// amul8_shim 适配（$C2C6 Amul8：asl×3——A×8（回卷）；X/Y 透传；无写面）。
+pub fn amul8_shim(input: &L2In) -> L2Out {
     L2Out { a: input.a << 3, x: input.x, y: input.y, writes: vec![] }
 }
 
-// ---- SC-S2-28 簇入口适配（s2_cluster_058 ← bank07:F416 PageIndex 族）----
+// ---- SC-S2-28 簇入口适配（page_index_shim ← bank07:F416 PageIndex 族）----
 
-/// s2_cluster_058 适配（$F416——案实核恒定：$0404←0/$040E←0；A=0/X=0/Y 透传）。
-pub fn s2_cluster_058(input: &L2In) -> L2Out {
+/// page_index_shim 适配（$F416——案实核恒定：$0404←0/$040E←0；A=0/X=0/Y 透传）。
+pub fn page_index_shim(input: &L2In) -> L2Out {
     L2Out {
         a: 0, x: 0, y: input.y,
         writes: merge_writes(vec![(0x0404, 0), (0x040E, 0)]),
     }
 }
 
-// ---- SC-S2-29 簇入口适配（s2_cluster_059 ← bank07:F50B LF515 族）----
+// ---- SC-S2-29 簇入口适配（lf515_state_shim ← bank07:F50B LF515 族）----
 
-/// s2_cluster_059 适配（$F50B LF515 链——root 写（$040C[x]←A/$6AF4[x]←4）+
+/// lf515_state_shim 适配（$F50B LF515 链——root 写（$040C[x]←A/$6AF4[x]←4）+
 /// S2-032 同族链常量组+$00/$02←ram[\$00] 依存；A/X/Y=0）。
-pub fn s2_cluster_059(input: &L2In) -> L2Out {
+pub fn lf515_state_shim(input: &L2In) -> L2Out {
     let r = |a: u16| input.ram[a as usize & 0x7FF];
     let x = input.x as u16;
     L2Out {

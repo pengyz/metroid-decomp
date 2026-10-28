@@ -830,25 +830,25 @@ pub fn lookup(name: &str) -> Option<fn(&L2In) -> L2Out> {
         "s1_cluster_23" => Some(sub_s1_cluster_23),
         "s1_cluster_26" => Some(sub_s1_cluster_26),
         "s1_cluster_28" => Some(sub_s1_cluster_28),
-        "s2_cluster_030" => Some(sub_s2_cluster_030),
-        "s2_cluster_031" => Some(sub_s2_cluster_031),
-        "s2_cluster_032" => Some(sub_s2_cluster_032),
-        "s2_cluster_033" => Some(sub_s2_cluster_033),
-        "s2_cluster_037" => Some(sub_s2_cluster_037),
-        "s2_cluster_038" => Some(sub_s2_cluster_038),
-        "s2_cluster_040" => Some(sub_s2_cluster_040),
-        "s2_cluster_044" => Some(sub_s2_cluster_044),
-        "s2_cluster_045" => Some(sub_s2_cluster_045),
-        "s2_cluster_047" => Some(sub_s2_cluster_047),
-        "s2_cluster_048" => Some(sub_s2_cluster_048),
-        "s2_cluster_049" => Some(sub_s2_cluster_049),
-        "s2_cluster_050" => Some(sub_s2_cluster_050),
-        "s2_cluster_051" => Some(sub_s2_cluster_051),
-        "s2_cluster_053" => Some(sub_s2_cluster_053),
-        "s2_cluster_054" => Some(sub_s2_cluster_054),
-        "s2_cluster_055" => Some(sub_s2_cluster_055),
-        "s2_cluster_058" => Some(sub_s2_cluster_058),
-        "s2_cluster_059" => Some(sub_s2_cluster_059),
+        "s2_cluster_030" => Some(sub_and_en_data05_shim),
+        "s2_cluster_031" => Some(sub_or_en_data05_shim),
+        "s2_cluster_032" => Some(sub_object_spawn_reset_shim),
+        "s2_cluster_033" => Some(sub_samus_hit_chain_shim),
+        "s2_cluster_037" => Some(sub_check_health_status_shim),
+        "s2_cluster_038" => Some(sub_set_mirror_cntrl_shim),
+        "s2_cluster_040" => Some(sub_samus_elevator_shim),
+        "s2_cluster_044" => Some(sub_check_blast_tile_shim),
+        "s2_cluster_045" => Some(sub_set_projectile_anim_shim),
+        "s2_cluster_047" => Some(sub_index_slot_toggle_shim),
+        "s2_cluster_048" => Some(sub_door_handler_shim),
+        "s2_cluster_049" => Some(sub_spawn_elevator_shim),
+        "s2_cluster_050" => Some(sub_item_check_shim),
+        "s2_cluster_051" => Some(sub_xminus16_pos_shim),
+        "s2_cluster_053" => Some(sub_subtract_health_shim),
+        "s2_cluster_054" => Some(sub_is_screw_attack_shim),
+        "s2_cluster_055" => Some(sub_amul8_shim),
+        "s2_cluster_058" => Some(sub_page_index_shim),
+        "s2_cluster_059" => Some(sub_lf515_state_shim),
         "s3_cluster_060" => Some(sub_s3_cluster_060),
         "s3_cluster_062" => Some(sub_s3_cluster_062),
         "s3_cluster_063" => Some(sub_s3_cluster_063),
@@ -1755,99 +1755,99 @@ pub fn sub_s1_cluster_28(input: &L2In) -> L2Out {
     crate::verify_shim::s1_cluster_28(input)
 }
 
-/// s2_cluster_030 —— bank07:F6E2 簇入口注册（SC-S2-00）。
-pub fn sub_s2_cluster_030(input: &L2In) -> L2Out {
-    crate::verify_shim::s2_cluster_030(input)
+/// and_en_data05_shim —— bank07:F6E2 簇入口注册（SC-S2-00）。
+pub fn sub_and_en_data05_shim(input: &L2In) -> L2Out {
+    crate::verify_shim::and_en_data05_shim(input)
 }
 
-/// s2_cluster_031 —— bank07:F702 簇入口注册（SC-S2-01）。
-pub fn sub_s2_cluster_031(input: &L2In) -> L2Out {
-    crate::verify_shim::s2_cluster_031(input)
+/// or_en_data05_shim —— bank07:F702 簇入口注册（SC-S2-01）。
+pub fn sub_or_en_data05_shim(input: &L2In) -> L2Out {
+    crate::verify_shim::or_en_data05_shim(input)
 }
 
-/// s2_cluster_032 —— bank07:F97C 簇入口注册（SC-S2-02）。
-pub fn sub_s2_cluster_032(input: &L2In) -> L2Out {
-    crate::verify_shim::s2_cluster_032(input)
+/// object_spawn_reset_shim —— bank07:F97C 簇入口注册（SC-S2-02）。
+pub fn sub_object_spawn_reset_shim(input: &L2In) -> L2Out {
+    crate::verify_shim::object_spawn_reset_shim(input)
 }
 
-/// s2_cluster_033 —— bank07:CF2E 簇入口注册（SC-S2-03）。
-pub fn sub_s2_cluster_033(input: &L2In) -> L2Out {
-    crate::verify_shim::s2_cluster_033(input)
+/// samus_hit_chain_shim —— bank07:CF2E 簇入口注册（SC-S2-03）。
+pub fn sub_samus_hit_chain_shim(input: &L2In) -> L2Out {
+    crate::verify_shim::samus_hit_chain_shim(input)
 }
 
-/// s2_cluster_037 —— bank07:CDFA 簇入口注册（SC-S2-07）。
-pub fn sub_s2_cluster_037(input: &L2In) -> L2Out {
-    crate::verify_shim::s2_cluster_037(input)
+/// check_health_status_shim —— bank07:CDFA 簇入口注册（SC-S2-07）。
+pub fn sub_check_health_status_shim(input: &L2In) -> L2Out {
+    crate::verify_shim::check_health_status_shim(input)
 }
 
-/// s2_cluster_038 —— bank07:CD92 簇入口注册（SC-S2-08）。
-pub fn sub_s2_cluster_038(input: &L2In) -> L2Out {
-    crate::verify_shim::s2_cluster_038(input)
+/// set_mirror_cntrl_shim —— bank07:CD92 簇入口注册（SC-S2-08）。
+pub fn sub_set_mirror_cntrl_shim(input: &L2In) -> L2Out {
+    crate::verify_shim::set_mirror_cntrl_shim(input)
 }
 
-/// s2_cluster_040 —— bank07:D450 簇入口注册（SC-S2-10）。
-pub fn sub_s2_cluster_040(input: &L2In) -> L2Out {
-    crate::verify_shim::s2_cluster_040(input)
+/// samus_elevator_shim —— bank07:D450 簇入口注册（SC-S2-10）。
+pub fn sub_samus_elevator_shim(input: &L2In) -> L2Out {
+    crate::verify_shim::samus_elevator_shim(input)
 }
 
-/// s2_cluster_044 —— bank07:D61B 簇入口注册（SC-S2-14）。
-pub fn sub_s2_cluster_044(input: &L2In) -> L2Out {
-    crate::verify_shim::s2_cluster_044(input)
+/// check_blast_tile_shim —— bank07:D61B 簇入口注册（SC-S2-14）。
+pub fn sub_check_blast_tile_shim(input: &L2In) -> L2Out {
+    crate::verify_shim::check_blast_tile_shim(input)
 }
 
-/// s2_cluster_045 —— bank07:D2FA 簇入口注册（SC-S2-15）。
-pub fn sub_s2_cluster_045(input: &L2In) -> L2Out {
-    crate::verify_shim::s2_cluster_045(input)
+/// set_projectile_anim_shim —— bank07:D2FA 簇入口注册（SC-S2-15）。
+pub fn sub_set_projectile_anim_shim(input: &L2In) -> L2Out {
+    crate::verify_shim::set_projectile_anim_shim(input)
 }
 
-/// s2_cluster_047 —— bank07:D648 簇入口注册（SC-S2-17）。
-pub fn sub_s2_cluster_047(input: &L2In) -> L2Out {
-    crate::verify_shim::s2_cluster_047(input)
+/// index_slot_toggle_shim —— bank07:D648 簇入口注册（SC-S2-17）。
+pub fn sub_index_slot_toggle_shim(input: &L2In) -> L2Out {
+    crate::verify_shim::index_slot_toggle_shim(input)
 }
 
-/// s2_cluster_048 —— bank07:EB8C 簇入口注册（SC-S2-18 DoorHandler VM 族）。
-pub fn sub_s2_cluster_048(input: &L2In) -> L2Out {
-    crate::verify_shim::s2_cluster_048(input)
+/// door_handler_shim —— bank07:EB8C 簇入口注册（SC-S2-18 DoorHandler VM 族）。
+pub fn sub_door_handler_shim(input: &L2In) -> L2Out {
+    crate::verify_shim::door_handler_shim(input)
 }
 
-/// s2_cluster_049 —— bank07:EC04 簇入口注册（SC-S2-19 SpawnElevator VM）。
-pub fn sub_s2_cluster_049(input: &L2In) -> L2Out {
-    crate::verify_shim::s2_cluster_049(input)
+/// spawn_elevator_shim —— bank07:EC04 簇入口注册（SC-S2-19 SpawnElevator VM）。
+pub fn sub_spawn_elevator_shim(input: &L2In) -> L2Out {
+    crate::verify_shim::spawn_elevator_shim(input)
 }
 
-/// s2_cluster_050 —— bank07:EEC6 簇入口注册（SC-S2-20 ItemCheck VM）。
-pub fn sub_s2_cluster_050(input: &L2In) -> L2Out {
-    crate::verify_shim::s2_cluster_050(input)
+/// item_check_shim —— bank07:EEC6 簇入口注册（SC-S2-20 ItemCheck VM）。
+pub fn sub_item_check_shim(input: &L2In) -> L2Out {
+    crate::verify_shim::item_check_shim(input)
 }
 
-/// s2_cluster_051 —— bank07:F0E5 簇入口注册（SC-S2-21）。
-pub fn sub_s2_cluster_051(input: &L2In) -> L2Out {
-    crate::verify_shim::s2_cluster_051(input)
+/// xminus16_pos_shim —— bank07:F0E5 簇入口注册（SC-S2-21）。
+pub fn sub_xminus16_pos_shim(input: &L2In) -> L2Out {
+    crate::verify_shim::xminus16_pos_shim(input)
 }
 
-/// s2_cluster_053 —— bank07:CE92 簇入口注册（SC-S2-23 SubtractHealth）。
-pub fn sub_s2_cluster_053(input: &L2In) -> L2Out {
-    crate::verify_shim::s2_cluster_053(input)
+/// subtract_health_shim —— bank07:CE92 簇入口注册（SC-S2-23 SubtractHealth）。
+pub fn sub_subtract_health_shim(input: &L2In) -> L2Out {
+    crate::verify_shim::subtract_health_shim(input)
 }
 
-/// s2_cluster_054 —— bank07:CD9C 簇入口注册（SC-S2-24）。
-pub fn sub_s2_cluster_054(input: &L2In) -> L2Out {
-    crate::verify_shim::s2_cluster_054(input)
+/// is_screw_attack_shim —— bank07:CD9C 簇入口注册（SC-S2-24）。
+pub fn sub_is_screw_attack_shim(input: &L2In) -> L2Out {
+    crate::verify_shim::is_screw_attack_shim(input)
 }
 
-/// s2_cluster_055 —— bank07:C2C6 簇入口注册（SC-S2-25 Amul8）。
-pub fn sub_s2_cluster_055(input: &L2In) -> L2Out {
-    crate::verify_shim::s2_cluster_055(input)
+/// amul8_shim —— bank07:C2C6 簇入口注册（SC-S2-25 Amul8）。
+pub fn sub_amul8_shim(input: &L2In) -> L2Out {
+    crate::verify_shim::amul8_shim(input)
 }
 
-/// s2_cluster_058 —— bank07:F416 簇入口注册（SC-S2-28）。
-pub fn sub_s2_cluster_058(input: &L2In) -> L2Out {
-    crate::verify_shim::s2_cluster_058(input)
+/// page_index_shim —— bank07:F416 簇入口注册（SC-S2-28）。
+pub fn sub_page_index_shim(input: &L2In) -> L2Out {
+    crate::verify_shim::page_index_shim(input)
 }
 
-/// s2_cluster_059 —— bank07:F50B 簇入口注册（SC-S2-29）。
-pub fn sub_s2_cluster_059(input: &L2In) -> L2Out {
-    crate::verify_shim::s2_cluster_059(input)
+/// lf515_state_shim —— bank07:F50B 簇入口注册（SC-S2-29）。
+pub fn sub_lf515_state_shim(input: &L2In) -> L2Out {
+    crate::verify_shim::lf515_state_shim(input)
 }
 
 /// s3_cluster_060 —— bank07:CBD2 簇入口注册（SC-S3-00 SFX_MetroidHit）。

@@ -242,13 +242,13 @@ mod s4_105_tests {
 /// $E252 ToggleScroll（root——簇共根形百二·**ToggleSamusHi 对偶**（XOR 切换族））：
 /// $49←$49^3（ScrollDir 双位翻）+$FA←$FA^8（面翻）。
 /// 返回 (写事件, 切换面)。
-pub fn s2_toggle_scroll(v49: u8, vfa: u8) -> (Vec<(u16, u8)>, u8) {
+pub fn toggle_scroll_direction(v49: u8, vfa: u8) -> (Vec<(u16, u8)>, u8) {
     (vec![(0x0049, v49 ^ 3), (0x00FA, vfa ^ 8)], v49 ^ 3)
 }
 
 /// $D96B 员体：ToggleScroll+$FA 面+尾跳 $D806（S1-01 回驱——六现注）。
 pub fn s4_d96b_body(v49: u8, vfa: u8) -> (Vec<(u16, u8)>, u16) {
-    let (ev, _) = s2_toggle_scroll(v49, vfa);
+    let (ev, _) = toggle_scroll_direction(v49, vfa);
     (ev, 0xD806)
 }
 
@@ -259,7 +259,7 @@ mod s4_108_tests {
     /// 二员转写形（ToggleScroll XOR 切换 root+一壳）。
     #[test]
     fn s4_108_units_two() {
-        let (ev, v) = s2_toggle_scroll(0, 0);
+        let (ev, v) = toggle_scroll_direction(0, 0);
         assert_eq!(v, 3);
         assert!(ev.contains(&(0x0049, 3)));
         assert!(ev.contains(&(0x00FA, 8)));
