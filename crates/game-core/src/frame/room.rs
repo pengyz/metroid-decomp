@@ -125,6 +125,68 @@ fn draw_struct(
     }
 }
 
+
+/// 门对象槽系统·任务卡 1——LoadDoor/SpawnDoorRoutine（$EB8C/$EB92
+/// （findings/door-system-audit.md 任务卡 1 实录（A 级全文）））：
+/// 棋盘槽选（y=((MapPosX+MapPosY)&1)<<1|side（side=info bit4（Amul16 CF=bit4））；
+/// DoorSlots=[0x00,0x30,0x20,0x10]（$EC00））→DoorType[$387+x]←info&3；
+/// 1|3（蓝/音乐蓝）⇒status[$380+x]←1；0|2（红/导弹）⇒$09←$0A/Y=MapPosX（左槽⇒-1）
+/// →LEE41（$07←ItemX/$06←MapPosY）→CheckForItem（$EE4A（Y=$6886 计数/对表 $6885/$6886
+/// 直索））→**已收（carry）⇒跳 init（status 保持 0）**/未收⇒status←1；
+/// 位域写（hi[$38C+x]←NT/x[$38E+x]←DoorXs[side]/y[$38D+x]←$68/ScrollBlockOnNameTable3
+/// [1^NT]|=DoorScrollBlocks[side]）。
+fn load_door(mem: &mut crate::frame::FrameMemory, info: u8) {
+    use crate::ram_map::*;
+    const OBJECTS_BASE: u16 = 0x0380;
+    const DOOR_SLOTS: [u8; 4] = [0x00, 0x30, 0x20, 0x10]; // $EC00（白右/白左/黑右/黑左）
+    const DOOR_XS: [u8; 2] = [0xF0, 0x10]; // $EBFC（右/左）
+    const DOOR_SCROLL_BLOCKS: [u8; 2] = [0x02, 0x01]; // $EBFE（右/左）
+    let side = (info >> 4) & 1; // Amul16 CF=bit4（audit 实录（双径互证））
+    let sum = mem.read_ram(MAP_POS_X).wrapping_add(mem.read_ram(MAP_POS_Y));
+    let y_idx = (((sum & 1) << 1) | side) as usize;
+    let x_off = DOOR_SLOTS[y_idx] as u16;
+    let door_type = info & 3;
+    mem.write_ram(OBJECTS_BASE + 7 + x_off, door_type); // DoorType（data07）
+    let init = match door_type {
+        1 | 3 => true, // 蓝/音乐蓝（@if_B 直入）
+        _ => {
+            // 红/导弹径：$09←$0A + LEE41 + CheckForItem（已收⇒跳 init）
+            mem.write_ram(0x0009, 0x0A);
+            let map_x = mem.read_ram(MAP_POS_X);
+            let item_x = if x_off >= 0x10 { map_x.wrapping_sub(1) } else { map_x };
+            let item_y = mem.read_ram(MAP_POS_Y); // LEE41（$06←MapPosY）
+            let y0 = mem.read_wram(0x6886); // NumberOfUniqueItems（计数（含红门））
+            let mut lo = [0u8; 0x100];
+            let mut hi = [0u8; 0x100];
+            for k in 0..0x100usize {
+                lo[k] = mem.read_wram(0x6885 + k as u16);
+                hi[k] = mem.read_wram(0x6886 + k as u16);
+            }
+            // 【A 级补钉】CheckForItem 进口 `ldy NumberOfUniqueItems / beq @notHave`
+            // （:9425）——y0=0⇒即未收（不进环）；guard 落 call site（find_item_in_history
+            // 共享面不动（其环契约=y∈{y0,…,0}（旧对拍对象等价域）））。
+            let found = if y0 == 0 {
+                false
+            } else {
+                crate::engine::find_item_in_history(y0, item_y, item_x, &lo, &hi)
+            };
+            !found // carry=已收⇒跳（status 保持 0）/未收⇒init
+        }
+    };
+    if init {
+        mem.write_ram(OBJECTS_BASE + x_off, 1); // status←1（Init 态）
+    }
+    let nt = crate::engine::get_name_table_at_scroll_dir(
+        mem.read_ram(PPUCTRL_ZP), mem.read_ram(SCROLL_DIR));
+    mem.write_ram(OBJECTS_BASE + 0x0C + x_off, nt); // hi
+    mem.write_ram(OBJECTS_BASE + 0x0E + x_off, DOOR_XS[side as usize]); // x
+    mem.write_ram(OBJECTS_BASE + 0x0D + x_off, 0x68); // y（恒 $68）
+    let block = DOOR_SCROLL_BLOCKS[side as usize];
+    let other = (nt ^ 1) as u16;
+    let cur = mem.read_ram(SCROLL_BLOCK_NT3 + other);
+    mem.write_ram(SCROLL_BLOCK_NT3 + other, cur | block);
+}
+
 /// EnemyLoop（$EAD4）——敌/门条目环（3B：slot&$F0|type/敌型/位%yyyyxxxx；$FF=EndOfRoom）。
 /// type：0/3/5=ExitSub（no-op——A=type（asm 形））；1=LoadEnemy；2/4/6/7=门/梯/像/虫（未端口）。
 fn enemy_loop(
@@ -155,19 +217,23 @@ fn enemy_loop(
                 }
                 i += 3;
             }
-            // 【占位臂记账】LoadDoor($EB8C)/LoadElevator($EC04)/LoadStatues($EC2F)/
-            // LoadPipeBugHole($EC57)——门/梯/像/虫装载深件（sc-door-transition 包随件）。
-            // 既有占位臂模式（DIVERGENCES 记账非 panic——title_bridge 同款）：状态写
-            // 随件收敛；空径推进不炸（房间装载/滚动流送径保持可跑——playability 底座）。
-            2 | 4 | 6 | 7 => {
+            // 【占位臂记账】LoadElevator($EC04)/LoadStatues($EC2F)/LoadPipeBugHole($EC57)
+            // ——梯/像/虫装载深件（随件）。既有占位臂模式（DIVERGENCES 记账非 panic）。
+            // 【任务卡 1】type 2=LoadDoor（$EB8C→SpawnDoorRoutine（A 级（audit 实录）））
+            // ——门对象槽 init 已端口（stride 2（`lda #$02/rts`（:8853）））。
+            // 【stride 校】门/梯=2（EBE5/E962 `lda #$02/rts`）；像/虫=3（待考（下批 A 级核））。
+            2 => {
+                load_door(mem, stream.get(i + 1).copied().unwrap_or(0));
+                i += 2;
+            }
+            4 | 6 | 7 => {
                 let addr = match ty {
-                    2 => 0xEB8C, // LoadDoor（门对象+ScrollBlock 位——随件）
                     4 => 0xEC04, // LoadElevator
                     6 => 0xEC2F, // LoadStatues
                     _ => 0xEC57, // LoadPipeBugHole
                 };
                 crate::frame::DIVERGENCES.with(|d| d.borrow_mut().push(addr));
-                i += 3; // 条目 3B 推进（asm AddToPtr00 形）
+                i += if ty == 4 { 2 } else { 3 }; // 梯=2（A 级）/像虫=3（待考）
             }
             _ => return false,
         }
@@ -339,5 +405,93 @@ mod r25_attr_probe {
         let _ = draw_room(&mut m, 9);
         let attrs: Vec<u8> = (0..0x40u16).map(|i| m.read_wram(0x63C0 + i)).collect();
         println!("[attr-probe] 属性表: {:02X?}", attrs);
+    }
+}
+
+// ===== 任务卡 1：门对象槽系统（TDD（测试先行（实现后补）））=====
+
+#[cfg(test)]
+mod tests_load_door {
+    //! 判径（findings/door-system-audit.md 任务卡 1 实录）：棋盘槽选
+    //! y=((MapPosX+MapPosY)&1)<<1|side；DoorSlots=[0x00,0x30,0x20,0x10]；
+    //! DoorType[$387+x]←info&3；1|3⇒status[$380+x]←1；0|2⇒CheckForItem（史空=未收⇒1
+    //! （已收⇒跳））；hi/x/y 位域+$09←$0A+ScrollBlock OR。
+    use super::*;
+    use crate::frame::FrameMemory;
+    use crate::ram_map::{MAP_POS_X, MAP_POS_Y};
+
+    fn mem_with(map_x: u8, map_y: u8) -> FrameMemory {
+        let mut m = FrameMemory::default();
+        m.write_ram(MAP_POS_X, map_x);
+        m.write_ram(MAP_POS_Y, map_y);
+        m
+    }
+
+    /// 【穷举·棋盘槽选】MapPosX奇偶×MapPosY奇偶×side×四型——DoorType 落址/落值逐钉
+    /// +status 路径（1|3⇒1；0|2 空史⇒1）。
+    #[test]
+    fn exhaustive_checkerboard_slots() {
+        for mx in [0u8, 1] {
+            for my in [0u8, 1] {
+                for side in [0u8, 1] {
+                    for dtype in 0u8..4 {
+                        let mut m = mem_with(mx, my);
+                        load_door(&mut m, (side << 4) | dtype);
+                        let y_idx = ((((mx.wrapping_add(my)) & 1) << 1) | side) as usize;
+                        let x_off = [0x00u16, 0x30, 0x20, 0x10][y_idx];
+                        assert_eq!(m.read_ram(0x0387 + x_off), dtype,
+                                   "DoorType@{:03X}（mx={} my={} side={} t={})",
+                                   0x0387 + x_off, mx, my, side, dtype);
+                        // 1|3⇒status←1；0|2 空史（未收）⇒status←1
+                        assert_eq!(m.read_ram(0x0380 + x_off), 1,
+                                   "status init（t={}）", dtype);
+                    }
+                }
+            }
+        }
+    }
+
+    /// 【穷举·已开门径】item 历史含（MapPosX±1,MapPosY）⇒status 保持 0（红/导弹门）。
+    #[test]
+    fn opened_door_skips_init() {
+        for side in [0u8, 1] {
+            for dtype in [0u8, 2] {
+                let mut m = mem_with(5, 7);
+                // 史写入：count=2；(hi=$6886+2, lo=$6885+2)=（ItemX,ItemY）
+                m.write_wram(0x6886, 2); // count（y0=2）
+                let item_x = if side == 1 { 4 } else { 5 }; // 左门=MapPosX-1
+                m.write_wram(0x6886 + 2, item_x); // hi[y=2]
+                m.write_wram(0x6885 + 2, 7);      // lo[y=2]=MapPosY
+                load_door(&mut m, (side << 4) | dtype);
+                let y_idx = ((((5u8.wrapping_add(7)) & 1) << 1) | side) as usize;
+                let x_off = [0x00u16, 0x30, 0x20, 0x10][y_idx];
+                assert_eq!(m.read_ram(0x0380 + x_off), 0,
+                           "已开（史含）⇒status 保持 0（side={} t={}）", side, dtype);
+            }
+        }
+    }
+
+    /// 【边界+异常路径】位域写（hi/x/y（$F0右/$10左/$68））+ScrollBlock OR（另一名表）
+    /// +$09←$0A（红/导弹径）。
+    #[test]
+    fn field_writes_and_scroll_block() {
+        for side in [0u8, 1] {
+            let mut m = mem_with(0, 0);
+            load_door(&mut m, (side << 4) | 1); // 蓝门（免 item 检）
+            let x_off = if side == 1 { 0x30u16 } else { 0x00 }; // 白格（mx+my=0）
+            let nt = crate::engine::get_name_table_at_scroll_dir(
+                m.read_ram(crate::ram_map::PPUCTRL_ZP), m.read_ram(crate::ram_map::SCROLL_DIR));
+            assert_eq!(m.read_ram(0x038C + x_off), nt, "hi（名表）");
+            assert_eq!(m.read_ram(0x038E + x_off), if side == 1 { 0x10 } else { 0xF0 }, "x（DoorXs）");
+            assert_eq!(m.read_ram(0x038D + x_off), 0x68, "y（恒 $68）");
+            let other = (nt ^ 1) as u16;
+            let want = if side == 1 { 0x01 } else { 0x02 };
+            assert_eq!(m.read_ram(crate::ram_map::SCROLL_BLOCK_NT3 + other) & want, want,
+                       "ScrollBlock OR（另一名表）");
+        }
+        // 红门径 $09←$0A
+        let mut m = mem_with(0, 0);
+        load_door(&mut m, 0x00);
+        assert_eq!(m.read_ram(0x0009), 0x0A, "item id 写（$09←$0A）");
     }
 }

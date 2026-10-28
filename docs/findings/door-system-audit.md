@@ -64,3 +64,58 @@ isHit&4 置位路径（未逐行）。
   滚动过渡 → 邻房装载
 - 验证：新对拍场景（走近门+射击+进门+邻房采集点）——待链路端口后立
 - 不依赖 FC 相位（输入驱动事件）——调度重推导（另卡）之外的可行主线
+
+## 任务卡 1 实录：门对象槽系统（EAD4→LoadDoor→SpawnDoorRoutine——A 级全文）
+
+### EnemyLoop（$EAD4，prg7_engine.asm:8705-8745——A 级）
+
+房间对象条目流（Temp00_RoomPtr）：首字节低半字节=type→JumpEngine 八臂分派
+（0/3/5=ExitSub（A=type 推进）/1=LoadEnemy（$EB06（3B：slot|type/敌型/位%yyyyxxxx））/
+**2=LoadDoor（$EB8C）**/4=LoadElevator（$EC04）/6=LoadStatues（$EC2F）/
+7=LoadPipeBugHole（$EC57））；$FF=EndOfRoom（$EAF4：RoomNumber←$F0+滚向尾径）。
+**stride=A=臂返回值**：敌=3（GetEnemyData `lda #$03`）；**门=2**（SpawnDoorRoutine 尾
+`lda #$02/rts`（:8853））；梯=2（SpawnElevatorRoutine `lda #$02/rts`（:8962））；
+像/虫=待考（占位臂暂 3（非 A 级（下批核）））。
+
+### SpawnDoorRoutine（$EB92，:8871-8853——A 级全文）
+
+门条目=2B：[slot|type(=2), doorInfo]。
+1. **side=doorInfo bit4**（`jsr Amul16`（A<<4/CF=bit4——SetMirrorCntrlBit 同 helper
+   「bit0→bit4」注（字节面）+本处 CF 面（DoorSlots 几何（0x10/0x30=左）与
+   `bcc @endIf_A/dey`（左门-1）双径互证（carry=bit4（非 bit3——`asl×4` 形不符几何）））。
+2. **棋盘槽选**：`MapPosX+MapPosY`（adc 后 plp 传 CF=side）`rol/and#$03/tay`——
+   y=((MapPosX+MapPosY)&1)<<1|side；X=**DoorSlots[y]**（$EC00：[Doors.0-Objects=$00,
+   Doors.3-Objects=$30, Doors.2-Objects=$20, Doors.1-Objects=$10]（白右/白左/黑右/黑左））。
+3. **DoorType[x]←doorInfo&3**（DoorType=Objects.0.data07（constants_ram:917））。
+   0=红/1=蓝/2=导弹/3=音乐蓝。
+4. **status init 分派**：type 1|3（蓝/音乐蓝）⇒ `@if_B: status[x]←1`（$EBD0）；
+   type 0|2（红/导弹）⇒ `$09←$0A`（item id=10）/Y=MapPosX/`txa/Amul16`（CF=X bit4
+   （左槽（$10/$30）⇒`dey`（Y=MapPosX-1（相邻门同开）））→`tya/jsr LEE41`（$EE41：
+   **$07←A（ItemX）/$06←MapPosY（ItemY）**）→`jsr CheckForItem`（$EE4A：Y=**$6886**
+   （NumberOfUniqueItems（wram 计数（含红门）））/对表 **$6885+$6886 直索 y**（UniqueItem-
+   History=$6887-$68FC（2B/条））/dey/dey/bpl 环（y∈{n,…,0}）/**carry=已收**）
+   →`bcs @endIf_B`（**已开（item 在史）⇒跳过 init（status 保持 0（通行））**）
+   /未收⇒`@if_B: status[x]←1`（闭门（Init 态））。
+5. **位域写**（@endIf_B 后）：y=side；`Objects.0.hi,x←GetNameTableAtScrollDir()`（$EB85：
+   (PPUCTRL_ZP^ScrollDir)&1）；`Objects.0.x,x←DoorXs[y]`（$EBFC：右=$F0/左=$10）；
+   `Objects.0.y,x←$68`（恒定）；`DoorScrollBlocks[y]`（$EBFE：右=$02/左=$01）→
+   `ScrollBlockOnNameTable3[1^GetNT()] |= block`（另一名表挡滚位 OR）。
+6. 返回 A=2（stride 2）。
+
+### 字段布局（constants_ram:217-237+844-856——A 级）
+
+Object=16B：status+0/radiusY+1/radiusX+2/animFrame+3/animDelay+4/animResetIndex+5/
+animIndex+6/data07+7（**DoorType**）/speedY+8/speedX+9/isHit+$0A（**Door.isHit bit2=被弹击**
+（:919））/onScreen+$0B/hi+$0C/y+$0D/x+$0E/data0F+$0F（**DoorHitPoints**（:920））。
+**Objects 数组基=$0380**（`Objects .instanceof Object $10`（:844）（Samus..Object0370
+占 $0300-$037F 后））；Doors=Objects.0-3（$0380/$0390/$03A0/$03B0（槽偏移 $00/$10/$20/$30））。
+⇒ Door 写址：status=$0380+x/DoorType=$0387+x/isHit=$038A+x/hi=$038C+x/y=$030D+x/
+x=$030E+x/DoorHitPoints=$038F+x。
+
+> 【端口差异记账】旧占位臂 type 2/4/6/7 统一 `i+=3`——**门/梯 stride 实为 2**
+> （`lda #$02/rts`（EBE5/E962））——本卡修正 2/4 臂（像/虫待考（下批 A 级核））。
+
+Evidence: prg7_engine.asm:8705-8745/8867-8853（LoadDoor/SpawnDoorRoutine 全文）+
+constants_ram.asm:217-237/844-856/917-920（Object 布局/Objects 基/DoorType/DoorHitPoints）+
+9409-9470（LEE41/CheckForItem）+1228-1232（$6886 计数/$6887 历史）——A 级原文。
+Confidence: 95
