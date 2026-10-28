@@ -12840,6 +12840,34 @@ CheckHorzMovement D055+CheckFire D09C（B=bit6（旧 A=bit7 桩删除（证伪�
 （A 级））——对抗复核核（证伪立场（独立重导证据（正确性核）））✓——复核 verdict 实录（docs commit
 （对抗复核 verdict（5 重点（必跑验证）（实测输出原文（A 级））））✓。
 
+## 复审 ③（shell 可玩性补齐（基线口径差修正（856f8c9d））（证伪立场（独立重导证据）））
+
+### verdict: pass（③全绿复验 ✓（A 级原文）（必跑验证 ✓（实测输出原文（A 级））））
+
+**必跑验证实录（⑩（A 级原文））**：
+- `cargo test --workspace`：**1383+3+8+27+14=1435 passed; 0 failed**（全绿）
+- `python3 gates/cli.py check`：**SUMMARY: PASS=14 FAIL=0 SKIP=1 TOLERATED=2**
+  （CHECK: PASS（含 0 个静默跳过：所有 SKIP 均已显式打印））
+
+**① 口径考证真实性 ✓**：gates/cli.py:498-500（`count += p.read_text(encoding="utf-8",
+errors="replace").count("#[test]")`）——**静态 #[test] 字面计数**（crates/**/*.rs）——全 crates
+#[test] 实测=**1464**（=基线值（gates 断言口径实测（1464=当前 git grep 实测）））✓
+
+**② 更正标注合规 ✓**：856f8c9d（基线口径证伪更正（rust_test_count（对 39ee3152 原地标注）））
+——原地标注 ✓（证伪更正（对 39ee3152 原地标注））+历史留痕 ✓（baseline_history.jsonl（--reason
+同值重写正叙事（+9→+23（全量重计））（单侧改写可检出）））+findings 口径考证表落档 ✓
+（samus-jump-fire-chain.md（基线口径考证表））✓
+
+**③ 全绿复验 ✓**：cargo test --workspace（**1435 passed; 0 failed**）+gates check（**PASS=14
+FAIL=0**（CHECK: PASS（0 静默跳过）））——**全绿** ✓
+
+**verdict**：复审 ③（shell 可玩性补齐（基线口径差修正（856f8c9d）））**pass**（①口径考证真实性 ✓
+（gates/cli.py:498-500（静态 #[test] 字面计数）+全 crates #[test] 实测=1464（=基线值））②更正
+标注合规 ✓（原地标注（对 39ee3152）+历史留痕（--reason 重写正叙事））③全绿复验 ✓（cargo test
+--workspace（1435 passed; 0 failed）+gates check（PASS=14 FAIL=0）））——**必跑验证 ✓**（实测输出
+原文（A 级））——对抗复核核（证伪立场（独立重导证据（正确性核）））✓——复核 verdict 实录（docs
+commit（对抗复核 verdict（③全绿复验（必跑验证）（实测输出原文（A 级））））✓。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
