@@ -1127,8 +1127,10 @@ fn check_update_name_table(mem: &mut FrameMemory) {
 /// GetNameAddrs（GetNT=(PPUCTRL^ScrollDir)&1→PPU $20/$2C+RoomRAM $60/$64）；
 /// 30 行竖写（dst+idx+row*32（PPU inc=32 形））。
 pub fn stream_column_kick(mem: &mut FrameMemory) {
-    // 【goal-r22 修】列写=PPU 重活 ⇒ NMI bogged 2 帧（emu 实测）。
-    mem.iter_bogged(2);
+    // 【证伪更正（2026-10-28）】goal-r22「列写=PPU 重活⇒NMI bogged 2 帧」=**误归因**
+    // ——emu 实测 f916-917/f1064-1065 各停 2 帧=**载房窗 bog**（GetRoomNum 越界载房
+    // （more_init 序列 [1,0,0,1] 已模））非逐列写 bog。逐列写 bog⇒移动相移：
+    // L4 实证（摘除前后）：f950 18574→1134px（回基线）/l380 8645→1105px。**已永久移除**。
     // 【asm 正源】VRAMStructWrite 入口复位地址锁存（$2002 读（render.rs reset_addr_latch
     // 注））——防 2006 对相位错位（列写落错址根因面）。
     mem.render.reset_addr_latch();
@@ -1358,8 +1360,10 @@ fn scroll_right_column_draw_bogs_two_frames() {
     m.write_ram(0x005A, 0xFF); // RoomNumber=FF ⇒ setup_room 立即 RTS（无房任务）
     let gates_before = m.iter_gates.len();
     let _ = scroll_right(&mut m);
-    assert_eq!(m.iter_gates.len() - gates_before, 2, "列写应发 2 帧 bogged 门");
-    assert_eq!(m.iter_gates, vec![0, 0], "bogged 门=0（NMI 跳过帧）");
+    // 【证伪更正（2026-10-28）】goal-r22 逐列写 bog=误归因（f916-917/f1064-1065=载房窗
+    // bog（more_init 序列已模））——L4 实证（摘除前后）：f950 18574→1134px/l380
+    // 8645→1105px。正测义=列写**无逐写 bog**（0 门）。
+    assert_eq!(m.iter_gates.len() - gates_before, 0, "列写无逐写 bog（证伪更正）");
 }
 
 mod tests_camera_follow {
