@@ -774,6 +774,22 @@ pub fn samus_stand(mem: &mut FrameMemory) {
     // delay）。旧形漏设 regs.a⇒update_obj_anim 的 `sta animDelay←A` 重置为垃圾⇒动画错乱/过快。
     mem.regs.a = 4;
     super::physics::set_samus_data(mem); // CD6D（A=4——LCC6E）
+    // 【实锤②修（2026-10-28）】asm LCC77+（JumpEngine 5 入口派发（status<sa_Door(5)）：
+    // 表=[ExitSub, SetSamusRun($CC98), **SetSamusJump($CFC3)**, SetSamusRoll($D0B5),
+    // SetSamusPntUp($CF77)]——JUMP⇒status2 后派发 SetSamusJump（入口件（speedY←$FC/
+    // JumpDisp/anim））——旧形漏派发⇒**静止跳无冲量**（用户实测②（移动跳经 LCD40 直调
+    // 故活））。门态（sa_Door+）⇒RTS（cmp bcs 形）。
+    let st = mem.read_ram(crate::ram_map::SAMUS_STATUS);
+    if st < 5 {
+        match st {
+            0 => {} // ExitSub（站立保持）
+            1 => set_samus_run(mem),               // CC98（本域件）
+            2 => set_samus_jump(mem),                 // CFC3（入口件（实锤②根因面））
+            3 => { crate::frame::DIVERGENCES.with(|d| d.borrow_mut().push(0xD0B5)); } // D0B5 SetSamusRoll 未端口（记账（滚动现活（防爆回退）））
+            4 => set_samus_pnt_up(mem),               // CF77
+            _ => {}
+        }
+    }
 }
 
 // ==== 10 态肉·批3（SamusJump/SamusRoll——同形轻仪式）====
@@ -1118,6 +1134,30 @@ mod tests_landing_pose {
     }
 }
 
+// ===== 静止跳（TDD（测试先行（实现后补）））=====
+
+#[cfg(test)]
+mod tests_stand_jump {
+    //! 判径（asm SamusStand（$CC36（:CC6E 段）））：JUMP⇒status←sa_Jump(2)+SetSamusData
+    //! (A=4) 后 **JumpEngine 派发**（status 0-4 表：ExitSub/Run/Jump/Roll/PntUp）——
+    //! sa_Jump⇒**SetSamusJump（$CFC3（入口件（speedY←$FC/JumpDisp/anim）））**——
+    //! 旧形漏派发⇒静止跳无冲量（用户实测②）。
+    use super::*;
+    use crate::state::FrameMemory;
+
+    /// 【实锤②】静止（status0）+A 按⇒status2+speedY=$FC（set_samus_jump 入口件生效）。
+    #[test]
+    fn standing_jump_triggers_entry() {
+        let mut m = FrameMemory::default();
+        m.write_ram(crate::ram_map::SAMUS_STATUS, 0);
+        m.write_ram(crate::ram_map::JOY1_STATUS, 0x80); // A（无方向）
+        m.write_ram(crate::ram_map::JOY1_CHANGE, 0x80);
+        samus_stand(&mut m);
+        assert_eq!(m.read_ram(crate::ram_map::SAMUS_STATUS), 2, "status→sa_Jump");
+        assert_eq!(m.read_ram(super::super::physics::SAMUS_SPEED_Y_I), 0xFC,
+            "speedY←$FC（SetSamusJump 入口件（派发生效实锤））");
+    }
+}
 
 // ===== 弹 onScreen（TDD（测试先行（实现后补）））=====
 
