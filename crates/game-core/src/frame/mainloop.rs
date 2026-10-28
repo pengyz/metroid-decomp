@@ -565,6 +565,65 @@ fn load_table_at_977b(mem: &mut crate::frame::FrameMemory, x: u8) -> u8 {
     e.wrapping_shl(1)
 }
 
+
+/// 任务卡 2：SamusProjectileHitDoorOrStatue（**asm 内容锚** `: 07:E81E`（LE7E6 弹径
+/// （$E7E6（:8086））——findings/door-system-audit.md 任务卡 2 实录（A 级全文）））：
+/// 弹径门（$71）→门环（X=6,-2（DoorRoomRAMPtr $5C-$63 列匹配（&$04 且 &$1F））→
+/// 槽选 Y=X*8|$80→类型门（偶（红/导弹）=仅 wa_Missile($0B) 或（wa_BulletExplode($04)
+/// 且 animReset==$91（表算径））（否则 GotoSFX_Metal 弹开（不写））/奇（蓝/音乐蓝）=任意）
+/// →isHit[$30A+y]←$04（bit2）+导弹命中 SFXTriInitFlags($0683)|=2；环尽⇒雕像兜底
+/// （KraidStatueIsHit[$366+(Temp04_lo>>3&1)] inc（8 位环绕））。
+pub fn samus_projectile_hit_door_or_statue(
+    mem: &mut crate::frame::FrameMemory,
+    temp04_lo: u8,
+    temp04_hi: u8,
+) {
+    // 弹径门（UpdatingSamusProjectile（$71（constants:600））——非弹更新径⇒即退）
+    if mem.read_ram(0x0071) == 0 {
+        return; // ClcExit
+    }
+    let mut x: i16 = 6;
+    while x >= 0 {
+        let xb = x as u8;
+        let ptr_hi = mem.read_ram(0x005D + xb as u16);
+        let ptr_lo = mem.read_ram(0x005C + xb as u16);
+        if ((temp04_hi ^ ptr_hi) & 0x04) == 0 && ((temp04_lo ^ ptr_lo) & 0x1F) == 0 {
+            let y = (xb.wrapping_mul(8)) | 0x80; // Amul8|80（槽偏移（$0300 基））
+            if mem.read_ram(0x0300 + y as u16) != 0 {
+                // 门存在——类型门（DoorType=$307+y（lsr/奇=蓝））
+                let door_type = mem.read_ram(0x0307 + y as u16);
+                let pi = mem.read_ram(0x004B) as u16; // PageIndex（弹槽偏移）
+                let pstat = mem.read_ram(0x0300 + pi);
+                let hit = if door_type & 1 != 0 {
+                    true // 蓝/音乐蓝：任意弹伤
+                } else {
+                    // 红/导弹：仅 wa_Missile($0B) 或（wa_BulletExplode($04) 且
+                    // animResetIndex==$91（ObjAnim_MissileExplode（$8603-$8572（表算））））
+                    pstat == 0x0B
+                        || (pstat == 0x04 && mem.read_ram(0x0305 + pi) == 0x91)
+                };
+                if hit {
+                    if door_type & 1 == 0 {
+                        // @hitByMissile：SFXTriInitFlags($0683)|=sfxTri_SamusBall(2)
+                        // 【写径面校】SFXTriInitFlags($0683)=2KB RAM 镜像（非 wram）
+                        let f = mem.read_ram(0x0683);
+                        mem.write_ram(0x0683, f | 0x02);
+                    }
+                    // @blueDoor：isHit[$30A+y]←$04（bit2=被弹击（constants:919））
+                    mem.write_ram(0x030A + y as u16, 0x04);
+                    return; // bne ClcExit
+                }
+                return; // GotoSFX_Metal（弹开（SFX 面（随件（记账）））——不写 isHit
+            }
+        }
+        x -= 2; // @next：dex/dex/bpl @loop
+    }
+    // 雕像兜底（环尽无门）：KraidStatueIsHit[$366+idx] inc（idx=Temp04_lo Adiv8 &1）
+    let idx = ((temp04_lo >> 3) & 1) as u16;
+    let v = mem.read_ram(0x0366 + idx);
+    mem.write_ram(0x0366 + idx, v.wrapping_add(1));
+}
+
 /// UpdateEnemy_Resting_UpdateEnData1F（**asm 内容锚** `: 07:F676`——r26）：
 /// L977B 条目×2→再 asl×3→and #$C0→data1F（**bit2-3→bit6-7**）。
 fn update_en_data1f(mem: &mut crate::frame::FrameMemory, x: u8) {
@@ -1955,5 +2014,98 @@ mod r31_hud_display_bar_tdd {
         }
         assert_eq!(m.read_ram(0x005B), 40, "SpritePagePos 前移 40");
         assert_eq!(m.read_ram(0x005B), 40, "SpritePagePos 前移 40");
+    }
+}
+
+// ===== 任务卡 2：弹击路径（TDD（测试先行（实现后补）））=====
+
+#[cfg(test)]
+mod tests_projectile_hit_door {
+    //! 判径（findings/door-system-audit.md 任务卡 2 实录）：$71 弹径门/门环（X=6,-2）
+    //! 列匹配（&$04 且 &$1F）/槽选 Y=X*8|$80/类型门（偶=仅导弹或爆（0x04+anim 0x91）
+    //! （否则弹开（不写））/奇=任意）/isHit[$30A+y]←$04/SFXTri|=$0683|=2/雕像兜底 inc。
+    use super::*;
+    use crate::frame::FrameMemory;
+
+    /// 状态构造：4 门全布（DoorRoomRAMPtr=$5C-$63（列=Temp04 对齐）+门 status/类型）。
+    fn mem_doors(door_type: u8, projectile_status: u8, anim: u8) -> FrameMemory {
+        let mut m = FrameMemory::default();
+        m.write_ram(0x0071, 1); // UpdatingSamusProjectile
+        m.write_ram(0x004B, 0xD0); // PageIndex（弹槽偏移）
+        m.write_ram(0x0300 + 0xD0, projectile_status);
+        m.write_ram(0x0305 + 0xD0, anim);
+        for x in [0u8, 2, 4, 6] {
+            m.write_ram(0x005C + x as u16, 0x23); // DoorRoomRAMPtr lo（列对齐（&$1F==0））
+            m.write_ram(0x005D + x as u16, 0x04); // hi（bit2 对齐 Temp04_hi=0x04）
+            let y = (x * 8) | 0x80;
+            m.write_ram(0x0300 + y as u16, 1); // 门存在（status）
+            m.write_ram(0x0307 + y as u16, door_type);
+        }
+        m
+    }
+
+    /// 【穷举·门环×四型×弹种】4 门（X=6/4/2/0（Y=0x80..0xB0））×四型×弹种——isHit 落点
+    /// （Y 槽位逐一命中）+类型门（偶=仅导弹/爆；奇=任意）。
+    #[test]
+    fn exhaustive_door_loop_hit() {
+        for x in [0u8, 2, 4, 6] {
+            for dtype in 0u8..4 {
+                for pstat in [1u8, 0x04, 0x0B] {
+                    let mut m = mem_doors(dtype, pstat, 0);
+                    // 单门布列（其余门列错开（&$04 错位））
+                    for x2 in [0u8, 2, 4, 6] {
+                        if x2 != x { m.write_ram(0x005D + x2 as u16, 0x00); }
+                    }
+                    samus_projectile_hit_door_or_statue(&mut m, 0x23, 0x04);
+                    let y = (x * 8) | 0x80;
+                    let hit = pstat == 0x0B || dtype & 1 == 1;
+                    if hit {
+                        assert_eq!(m.read_ram(0x030A + y as u16), 0x04,
+                                   "isHit@Y={:02X}（t={} p={}）", y, dtype, pstat);
+                    } else {
+                        assert_eq!(m.read_ram(0x030A + y as u16), 0,
+                                   "弹开不写（t={} p={}）", dtype, pstat);
+                    }
+                }
+            }
+        }
+    }
+
+    /// 【导弹爆径】wa_BulletExplode(0x04)+anim=0x91⇒命中（仅导弹门）；anim≠0x91⇒弹开。
+    #[test]
+    fn missile_explode_gate() {
+        for (anim, expect) in [(0x91u8, true), (0x90u8, false)] {
+            let mut m = mem_doors(2, 0x04, anim);
+            samus_projectile_hit_door_or_statue(&mut m, 0x23, 0x04);
+            // 环序（X=6 首匹配（槽 Y=0xB0）——asm dex/dex 序）
+            assert_eq!(m.read_ram(0x030A + 0xB0), if expect { 0x04 } else { 0 },
+                       "爆径（anim={:02X}）", anim);
+        }
+    }
+
+    /// 【异常路径】$71=0⇒零写（全 RAM 不动）；无门命中⇒雕像兜底（$0366/$0367 inc
+    /// （Temp04_lo bit3 选））；导弹命中⇒SFXTriInitFlags($0683)|=2。
+    #[test]
+    fn exception_and_statue_fallback() {
+        // $71=0⇒零写
+        let mut m = mem_doors(1, 1, 0);
+        m.write_ram(0x0071, 0);
+        samus_projectile_hit_door_or_statue(&mut m, 0x23, 0x04);
+        assert_eq!(m.read_ram(0x030A + 0x80), 0, "$71=0⇒零写");
+        // 无门（列全错）⇒雕像兜底
+        for x in [0u8, 2, 4, 6] {
+            m.write_ram(0x005D + x as u16, 0x00); // 列错位（bit2）
+        }
+        m.write_ram(0x0071, 1);
+        let before = m.read_ram(0x0366);
+        samus_projectile_hit_door_or_statue(&mut m, 0x03, 0x04); // lo bit3=0⇒Kraid(0)
+        assert_eq!(m.read_ram(0x0366), before.wrapping_add(1), "雕像兜底 inc（idx0）");
+        let b2 = m.read_ram(0x0367);
+        samus_projectile_hit_door_or_statue(&mut m, 0x0B, 0x04); // lo bit3=1⇒idx1
+        assert_eq!(m.read_ram(0x0367), b2.wrapping_add(1), "雕像兜底 inc（idx1）");
+        // 导弹命中⇒SFX 位
+        let mut m = mem_doors(0, 0x0B, 0);
+        samus_projectile_hit_door_or_statue(&mut m, 0x23, 0x04);
+        assert_eq!(m.read_ram(0x0683) & 0x02, 0x02, "SFXTri|=$02（导弹命中）");
     }
 }

@@ -119,3 +119,54 @@ Evidence: prg7_engine.asm:8705-8745/8867-8853（LoadDoor/SpawnDoorRoutine 全文
 constants_ram.asm:217-237/844-856/917-920（Object 布局/Objects 基/DoorType/DoorHitPoints）+
 9409-9470（LEE41/CheckForItem）+1228-1232（$6886 计数/$6887 历史）——A 级原文。
 Confidence: 95
+
+## 任务卡 2 实录：弹击路径（LE7E6→SamusProjectileHitDoorOrStatue——A 级全文）
+
+> 【2026-10-28 证伪更正（三处）】①lead 报址 E7F3——实址 **$E81E**（LE7E6=$E7E6
+> （入口碰撞环（:8086））（E7F3 为误记/旧符号位））；②任务卡 1 注「Objects 基=$0380」——
+> **正源 Objects 基=$0300**（`Objects .instanceof Object $10`（constants_ram:844）
+> （Samus..Object0370=例 0-7（$0300-$037F）/Doors=例 8-11（$0380-$03BF）/Object03C0=
+> 例 12/SamusProjectiles=例 13-15（$03D0-$03FF））；任务卡 1 硬码 OBJECTS_BASE=$0380
+> +相对槽（0x00/0x30/0x20/0x10）与正源 $0300+槽（0x80/0x90/0xA0/0xB0）**同物理址**
+> （算术等价（行为不变（注释面更正）））；③UpdatingSamusProjectile 正源=**$71**
+> （constants_ram:600）——现 mainloop.rs:1283 注「$55」疑误（下批核（不在本卡改动））。
+
+### 入口（LE7E6，:8086-8120——A 级）
+
+MakeRoomRAMPtr→(Temp04_RoomRAMPtr) 取瓦：`cmp #$4E`（$4E=门/像实心空瓦）⇒beq 弹击径；
+否则 MotherBrain 碰撞+CheckBlastTile（<$80 实心 Exit16（rts）/≥$A0 可走瓦（Samus 的
+$A0/$A1 滚门写 SamusDoorData）/$80-$9F 爆破瓦）；Lx201：`dex/beq`（检查点计数）
+→CalculateNextBGCollisionPoint→环。
+
+### SamusProjectileHitDoorOrStatue（$E81E，:8122-8185——A 级全文）
+
+1. **弹径门**：`ldx UpdatingSamusProjectile($71) / beq ClcExit`——非弹更新径⇒即退。
+2. **门环**：X=6→dex/dex/bpl（4 门（word idx 6/4/2/0）——DoorRoomRAMPtr dsw4（$5C-$63））：
+   列匹配（`Temp04_hi eor DoorRoomRAMPtr+1,x / and #$04`==0 **且**
+   `Temp04_lo eor DoorRoomRAMPtr,x / and #$1F`==0）。
+3. **槽选**：`txa/jsr Amul8（*8）/ora #$80/tay`——Y=X*8|$80（$80/$90/$A0/$B0（Doors 例
+   8-11 偏移（$0300 基）））；`Objects.0.status,y==0`⇒@next（门不存在）。
+4. **类型门**（`lda DoorType,y($307+y) / lsr / bcs @blueDoor`）：
+   - **偶型（红=0/导弹=2）=仅导弹伤**：弹 status（Objects.0.status,PageIndex($4B)）
+     ==wa_Missile($0B)⇒@hitByMissile；或（==wa_BulletExplode($04) 且
+     animResetIndex==$091（ObjAnim_MissileExplode（$8603-$8572=0x91（表算径
+     （SamusJump $857E-$8572=0x0C 互证））））⇒@hitByMissile；否则⇒**GotoSFX_Metal**
+     （弹开（SFX 面（随件（记账）））——**不写 isHit**）。
+   - **@hitByMissile**（$E85D）：SFXTriInitFlags($0683)|=sfxTri_SamusBall(2)。
+   - **奇型（蓝=1/音乐蓝=3）**：任意弹⇒直落 @blueDoor。
+   - **@blueDoor**（$E865）：`lda #$04 / sta Objects.0.isHit,y`（**isHit[$30A+y]←$04
+     （bit2=被弹击（constants:919）**）→bne ClcExit（即退）。
+5. **雕像兜底**（环尽无门）：`Temp04_lo Adiv8 &1 / tax / inc KraidStatueIsHit,x`
+   （KraidStatueIsHit=Statue.animIndex（$0366/2 条（inc 环绕（8 位））））。
+6. ClcExit：clc/rts（carry=0（已处理面））。
+
+### 依赖面
+
+DoorRoomRAMPtr 写站=areas_common.asm:1737/1739（UpdateDoor Init 域（任务卡 3/4 面——
+本卡只读消费（$5C-$63）））；Temp04_RoomRAMPtr=MakeRoomRAMPtr 产出（调用方（LE7E6 入口））。
+
+Evidence: prg7_engine.asm:8086-8185（LE7E6/E81E 全文）+constants_ram.asm:534（PageIndex
+$4B）/571（DoorRoomRAMPtr $5C）/600（UpdatingSamusProjectile $71）/903（KraidStatueIsHit）/
+1126（SFXTriInitFlags $0683）+constants.asm:105/111/154（wa_BulletExplode=4/wa_Missile=
+$0B/sfxTri_SamusBall=2）+common_sprite_data.asm:12/268（表算 0x91）——A 级原文。
+Confidence: 95
