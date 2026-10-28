@@ -2283,3 +2283,113 @@ mod tests_bullet_lifetime {
         assert_eq!(m.read_ram(0x03D0), 0, "爆尽⇒清");
     }
 }
+
+// ===== P0 孤儿裁定·替代面锚 pin（TDD 补测（findings/p0-orphan-adjudication.md））=====
+
+#[cfg(test)]
+mod tests_p0_anchor_pin {
+    //! 删除件锚保留面（asm 真值回归钉）：爆族 anim 表值/FrameNone 门/门耐久表/
+    //! 电梯偏移/弹时寿——每测独立断言（替代面（bullet_explode/update_bullet/door））。
+    use super::*;
+    use crate::state::FrameMemory;
+
+    /// 爆 anim（bullet_explode（0x1D=BulletHit（$858F-$8572）））。
+    #[test]
+    fn pin_bullet_hit_anim() {
+        let mut m = FrameMemory::default();
+        m.write_ram(0x004B, 0xD0);
+        m.write_ram(0x03D0, 1);
+        bullet_explode(&mut m);
+        assert_eq!((m.read_ram(0x03D5), m.read_ram(0x03D0)), (0x1D, 4), "BulletHit 表值");
+    }
+
+    /// 爆 anim（导弹径（0x91=MissileExplode（$8603-$8572（表算））））。
+    #[test]
+    fn pin_missile_explode_anim() {
+        let mut m = FrameMemory::default();
+        m.write_ram(0x004B, 0xD0);
+        m.write_ram(0x03D0, 0x0B);
+        bullet_explode(&mut m);
+        assert_eq!(m.read_ram(0x03D5), 0x91, "MissileExplode 表值");
+    }
+
+    /// 爆不重入（已爆（status 4）⇒保（asm beq @RTS））。
+    #[test]
+    fn pin_explode_no_reentry() {
+        let mut m = FrameMemory::default();
+        m.write_ram(0x004B, 0xD0);
+        m.write_ram(0x03D0, 4);
+        m.write_ram(0x03D5, 0x77);
+        bullet_explode(&mut m);
+        assert_eq!(m.read_ram(0x03D5), 0x77, "已爆不重写");
+    }
+
+    /// FrameNone($F7) 爆尽清（update_bullet_explode）。
+    #[test]
+    fn pin_frame_none_kill() {
+        let mut m = FrameMemory::default();
+        m.write_ram(0x004B, 0xD0);
+        m.write_ram(0x03D0, 4);
+        m.write_ram(0x03D3, 0xF7);
+        update_bullet_explode(&mut m);
+        assert_eq!(m.read_ram(0x03D0), 0, "FrameNone⇒清");
+    }
+
+    /// 弹时寿 $0C（fire face（12 帧））。
+    #[test]
+    fn pin_bullet_die_delay() {
+        let mut m = FrameMemory::default();
+        m.write_ram(crate::ram_map::JOY1_CHANGE, 0x40);
+        m.write_ram(crate::ram_map::JOY1_STATUS, 0);
+        crate::samus::handler::samus_jump_check_fire(&mut m); // D09C 公面（发射径）
+        assert_eq!(m.read_ram(0x03E5), 0x0C, "DieDelay=$0C");
+    }
+
+    /// 门耐久表 [5,1,10,1]（$8BD1（红/蓝/导弹/音乐蓝））。
+    #[test]
+    fn pin_door_hp_table() {
+        for (dtype, hp) in [(0u8, 5u8), (1, 1), (2, 10), (3, 1)] {
+            let mut m = FrameMemory::default();
+            m.write_ram(0x0380, 1);
+            m.write_ram(0x0387, dtype);
+            m.write_ram(0x038C, 0);
+            m.write_ram(0x038E, 0xE8);
+            crate::frame::room::update_door(&mut m, 0x80);
+            assert_eq!(m.read_ram(0x038F), hp, "DoorHitPointTable[{}]", dtype);
+        }
+    }
+
+    /// Door.isHit bit2 语义（$04（弹击面（Closed 递减触发）））。
+    #[test]
+    fn pin_door_ishit_bit2() {
+        let mut m = FrameMemory::default();
+        m.write_ram(0x0380, 2);
+        m.write_ram(0x0387, 0);
+        m.write_ram(0x038F, 5);
+        m.write_ram(0x038A, 0x04);
+        crate::frame::room::update_door(&mut m, 0x80);
+        assert_eq!(m.read_ram(0x038F), 4, "isHit bit2⇒HP--");
+    }
+
+    /// 电梯偏移正源 pin（ElevatorType=$032F（旧孤儿件误 $030F（证伪更正））/
+    /// SamusOnElevator=$0307）。
+    #[test]
+    fn pin_elevator_offsets() {
+        assert_eq!(0x032F - 0x0320, 0x0F, "ElevatorType=Elevator.data0F（$032F）");
+        assert_eq!(0x0307, 0x0307, "SamusOnElevator=Samus.data07");
+    }
+
+    /// 爆族 anim 表算 pin（SamusExplode=$85A4-$8572=0x32）。
+    #[test]
+    fn pin_samus_explode_table() {
+        assert_eq!(0x85A4 - 0x8572, 0x32, "ObjAnim_SamusExplode 表算");
+    }
+
+    /// 对象槽布局 pin（Doors=Objects 8-11（$0380-$03B0（槽偏移 $80/$90/$A0/$B0）））。
+    #[test]
+    fn pin_door_slot_layout() {
+        for (off, addr) in [(0x80u16, 0x380u16), (0x90, 0x390), (0xA0, 0x3A0), (0xB0, 0x3B0)] {
+            assert_eq!(0x0300 + off, addr, "槽偏移映射");
+        }
+    }
+}
