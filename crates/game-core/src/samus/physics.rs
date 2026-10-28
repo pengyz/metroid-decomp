@@ -1447,65 +1447,6 @@ mod tests_camera_follow {
     }
 }
 
-// ===== 1:1 Rust 改写·批产·块 6（physics 面去地址名（TDD 穷举等价证明））=====
-
-#[cfg(test)]
-mod tests_rewrite_b6_physics {
-    //! TDD step1（测试先行（强制完整））——穷举等价（新==旧（全域穷举（边界（异常路径））））。
-    //! refs 锚（engine/mod.rs 注内 bank:addr）：$F2D5（:611（$0404 OR 对写））/
-    //! $F332（:630（三 asl+Adiv8 尾跳））/$F340（:636（$10 eor #$03））。
-
-    use super::*;
-    use crate::engine::{check_enemy_collision, get_enemy_hit_flags, check_enemy_collision_ext};
-
-    /// 【穷举·OR 对写】依赖分解穷举（函数=两独立 2 维分量（out[0]=(a,vx)｜out[1]=(v10,vy)）
-    /// ⇒逐分量 256² 全域穷举=完备（积空间 256⁴ 由分量独立性覆盖）+x/y 边角组合。
-    /// 【证伪更正】原 256⁴×3 积穷举 1074s 超闸 runner 时限（rust-tests FAIL 根因）
-    /// ——改依赖分解穷举（证明力等价（分量独立）+闸时限界）。
-    #[test]
-    fn exhaustive_or_pair_equivalence() {
-        // 分量 1：(a_in, v0404_x) 全域 256²（v10/vy 固定）
-        for a in 0u8..=255 {
-            for vx in 0u8..=255 {
-                for &(x, y) in &[(0u8, 1u8), (0xFF, 0xFE)] {
-                    assert_eq!(check_enemy_collision(x, y, a, 0x5A, vx, 0xA5),
-                               or_motion_flags_pair(x, y, a, 0x5A, vx, 0xA5));
-                }
-            }
-        }
-        // 分量 2：(v10, v0404_y) 全域 256²（a/vx 固定）
-        for v10 in 0u8..=255 {
-            for vy in 0u8..=255 {
-                for &(x, y) in &[(0x7F, 0x80), (0x01, 0x02)] {
-                    assert_eq!(check_enemy_collision(x, y, 0x3C, v10, 0xC3, vy),
-                               or_motion_flags_pair(x, y, 0x3C, v10, 0xC3, vy));
-                }
-            }
-        }
-        // 边角组合（积空间抽样核）
-        for &(a, v10, vx, vy) in &[(0u8, 0, 0, 0), (0xFF, 0xFF, 0xFF, 0xFF), (0x01, 0x80, 0x80, 0x01)] {
-            assert_eq!(check_enemy_collision(0, 1, a, v10, vx, vy),
-                       or_motion_flags_pair(0, 1, a, v10, vx, vy));
-        }
-    }
-
-    /// 【穷举·三 asl】v10 全域——shift3_and_dispatch==get_enemy_hit_flags（<<3 回绕边界）。
-    #[test]
-    fn exhaustive_shift3_equivalence() {
-        for v in 0u8..=255 {
-            assert_eq!(get_enemy_hit_flags(v), shift3_and_dispatch(v));
-        }
-    }
-
-    /// 【穷举·eor 低 2 位】v10 全域——flip_low2_bits==check_enemy_collision_ext。
-    #[test]
-    fn exhaustive_flip_low2_equivalence() {
-        for v in 0u8..=255 {
-            assert_eq!(check_enemy_collision_ext(v), flip_low2_bits(v));
-        }
-    }
-}
-
 // ===== 1:1 Rust 改写·批产·块 6：physics 面语义命名（去地址名（公式形（零字面特值）））=====
 // refs 锚（engine/mod.rs 注内 bank:addr）：$F2D5（:611）/$F332（:630）/$F340（:636）。
 

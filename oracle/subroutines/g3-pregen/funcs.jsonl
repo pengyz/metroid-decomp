@@ -1,6 +1,0 @@
-{"id": "g3-000-case", "subroutine": "g3_cluster_000", "entry": "bank07:B3B4", "stops": [], "samples": 4, "ram_addrs": ["0680", "0681", "0683", "0684", "0685"]}
-{"id": "g3-001-case", "subroutine": "g3_cluster_001", "entry": "bank07:B31B", "stops": [], "samples": 4, "ram_addrs": ["0680", "0688", "0685"]}
-{"id": "g3-002-case", "subroutine": "g3_cluster_002", "entry": "bank07:B337", "stops": [], "samples": 4, "ram_addrs": ["0681", "0685"]}
-{"id": "g3-003-case", "subroutine": "g3_cluster_003", "entry": "bank07:B34B", "stops": [], "samples": 4, "ram_addrs": ["0684", "0685"]}
-{"id": "g3-004-case", "subroutine": "g3_cluster_004", "entry": "bank07:B368", "stops": [], "samples": 4, "ram_addrs": ["0680", "0681", "0683"]}
-{"id": "g3-005-case", "subroutine": "g3_cluster_005", "entry": "bank07:B3F0", "stops": [], "samples": 4, "ram_addrs": ["0685", "0688"]}

@@ -268,15 +268,8 @@ def n12_gate_errors(root) -> list[str]:
         errs.append(f"N-0012.level={r.get('level')!r}∉{{A,B}}（rename 流程升级未完成）")
     if not _re.search(r"bank\d+:\$?[0-9A-Fa-f]{4}", r.get("evidence", "")):
         errs.append("N-0012.evidence 缺 bankNN:AAAA 具体指针（占位/纯路径不算）")
-    try:
-        cases = [_json.loads(l) for l in (root / "oracle/subroutines/l2_cases.jsonl")
-                 .read_text(encoding="utf-8").splitlines() if l.strip()]
-        rng_n = sum(1 for c in cases
-                    if "GameRng" in str(c.get("id", "")) + str(c.get("subroutine", "")))
-    except OSError as exc:
-        return errs + [f"RNG 案计数源不可读（fail-loud）: {exc}"]
-    if rng_n < 1:
-        errs.append("RNG 序列 L2 案=0（计数源 oracle/subroutines/l2_cases.jsonl）")
+    # 【2026-10-28 L2 退役】RNG L2 案计数面随 L2 基础设施删除（验收=L4；
+    # N-0012 机械门保留台账纪律腿）。
     return errs
 
 

@@ -3,8 +3,5 @@
 //! 三方全等：`case.out(golden) == run_subroutine(ROM) == game_core::l2ports`。
 //! 本 crate 不持有判定门禁；gates/cli.py subroutine-diff 经 tools/diff_subroutines.py 调用。
 
-pub mod cpu6502;
 pub mod png_encode;
-pub mod l2;
 
-pub use l2::{run_subroutine, L2RunResult};

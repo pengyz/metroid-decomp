@@ -42,7 +42,6 @@
 | `knowledge-format` | 知识库 frontmatter/type/文件名前缀 | 启用 |
 | `docs-links` | 文档相对链接有效性 | 启用 |
 | `rust-tests` | `cargo test --workspace` + 测试数 ratchet | crates/ 创建后自动启用 |
-| `subroutine-diff` | L2：ROM 原字节执行 vs Rust 函数出入参比对 | oracle/subroutines 建立后启用 |
 | `trace-diff` | L3：帧级状态向量逐 tick 比对（oracle vs Rust） | 启用（oracle 腿；game-core 腿 S5 自动启用） |
 | `visual-diff` | L4：截图逐像素（白名单外） | S6 启用 |
 | `l4` | L4 自动对拍：run-all 矩阵（用例×采集点三态）+ 逐采集点 ratchet（match 集合只增/blocked 只减，非聚合率） | 启用（Task 6） |
@@ -59,7 +58,7 @@
 **静默腐烂**（int-x 复审遗留 3）。v2（设计真相源：rounds/r7 proof-checks v2 设计节）：
 
 - **按变更面触发**：delta（staged∪worktree-vs-HEAD）∩ S_intx = ∅ ⇒ 显式 `SKIP` 行
-  （docs-only commit 免 ~43s 全量）。S_intx = integrators.rs / l2ports.rs /
+  （docs-only commit 免 ~43s 全量）。S_intx = integrators.rs /
   int_x_smt_proof.py / int-x-bridge.rs / int-y-proof.rs（可影响证书三面的文件全入面）；
   `GATES_PROOF_FORCE=1 python3 gates/cli.py check` 无视变更面强制全量（CI/里程碑/销账）。
   fail-safe：git 不可判 ⇒ 跑全量（**不确定绝不导向跳过**）；S_intx 文件消失 ⇒
