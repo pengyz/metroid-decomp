@@ -359,6 +359,36 @@ fn main() {
         let png = encode_png(&fb, 256, 240);
         let fname = format!("{}_f{:05}_{}.png", plan.name, frame, tag);
         fs::write(out.join(&fname), &png).expect("写 PNG");
+        // PPU 真值 dump（终结判卡（2026-10-28））：与 scenario_capture.lua::dumpPpu 同构
+        // 12KB（$0000-1FFF=chr 8KB（直）+$2000-27FF=nametable 2KB（A/B 半）+
+        // $2800-2FFF=竖镜（A/B 镜））——hex 串（mt9 PPU 总线对拍面）。
+        {
+            let mut hex = String::new();
+            let rs = &engine.mem.render;
+            for i in 0..0x2000usize {
+                hex.push_str(&format!("{:02x}", rs.chr.get(i).copied().unwrap_or(0)));
+            }
+            for i in 0..0x800usize {
+                hex.push_str(&format!("{:02x}", rs.nametable.get(i).copied().unwrap_or(0)));
+            }
+            for i in 0..0x400usize {
+                hex.push_str(&format!("{:02x}", rs.nametable.get(i).copied().unwrap_or(0)));
+            }
+            for i in 0x400..0x800usize {
+                hex.push_str(&format!("{:02x}", rs.nametable.get(i).copied().unwrap_or(0)));
+            }
+            // palette RAM（$3F00-$3F1F（32B（与 lua dumpPpu 同构）））
+            for i in 0..32usize {
+                hex.push_str(&format!("{:02x}", rs.palette.get(i).copied().unwrap_or(0)));
+            }
+            // 滚动/控制寄存器（scroll_x/scroll_y/ppuctrl（3B（细滚相位面）））
+            hex.push_str(&format!("{:02x}", rs.scroll_x));
+            hex.push_str(&format!("{:02x}", rs.scroll_y));
+            hex.push_str(&format!("{:02x}", rs.ppuctrl));
+            hex.push('\n');
+            let fname = format!("{}_f{:05}_{}.ppu.hex", plan.name, frame, tag);
+            fs::write(out.join(&fname), hex).expect("写 PPU dump");
+        }
         eprintln!("[rust]   capture f{:05} {} → {}", frame, tag, fname);
         produced.push((frame, tag.to_string(), fname));
     };

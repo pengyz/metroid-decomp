@@ -56,3 +56,14 @@
 - trace id: 未采（boss 战斗场景未达——代码链实证代：disasm 注+RAM 图双锚）；
 - Stage 处置: **Stage A 保真不修**（D4）——代码侧注 `// BUG-002: 保留原行为`（porter
   移植 KraidLintCounter/fireball 计时路径时引用）。
+
+## BUG-089：L4 f1000/f1150 残差=渲染/采样时序类（非内容分歧）
+
+- 现象：case-002 f1000/f1150 rust↔emu 截图差 11267/11256px（顶壁/柱纹区）。
+- 定性（终结判（2026-10-28））：Mesen2 PPU 真值逐瓦核=**CHR/名表/属性/调色板四面
+  全同**（零内容分歧）⇒残差=渲染/采样时序（精灵帧位/细滚相位/截屏瞬间）——
+  docs/findings/scroll-content-mapping.md §5。
+- 复现：`python3 tools/l4_diff_run.py run-all`（f1000/f1150 点位）+双侧 ppu.hex 对拍。
+- 影响：Stage A 像素级验收面（记账容忍（D4））；真值链=语义代码↔Mesen2 RAM/trace
+  机器对拍（四面同已证内容一致）。
+- trace id：analysis/traces/case-002-door-blue-interaction_f01000_neighbor-room.ppu.hex。
