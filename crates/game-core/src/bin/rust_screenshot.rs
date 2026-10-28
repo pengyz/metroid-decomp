@@ -380,7 +380,7 @@ fn main() {
             // restore 续跑首缝=装载态（skip 首 NMI）＝对齐验收首帧锚。
             engine.tick_frame_with(|mem| {
                 if std::env::var("DSH_FC_TRACE").is_ok() {
-                    eprintln!("[fc] {} {}", frame, mem.read_ram(0x2D));
+                    eprintln!("[fc] {} {} {}", frame, mem.read_ram(0x2D), mem.read_ram(0x1F));
                 }
                 if want_state {
                     state_rows.push(state_row(frame, mem));

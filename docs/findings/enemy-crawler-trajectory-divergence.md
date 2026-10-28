@@ -188,6 +188,34 @@ TitleRoutine 全相位日历（watch $1F 全程 f1-f350，含循环边界），�
 **替代路径**：功能5 门系统/其余功能不依赖 FC 相位（门交互是输入驱动事件），可先行。
 敌轨迹收敛挂调度重推导任务卡。
 
+
+## 双侧相位日历闭合（2026-10-28 r29）：press 点天然对齐——余差锁定三相 tick 数
+
+逐帧实测（emu watch $1F+$2D / rust DSH_FC_TRACE 扩展含 $1F）：
+
+| phase | emu tick | rust tick | 差 |
+|---|---|---|---|
+| 0 InitializeAfterReset | 2 (f1-2) | 2 (f1-2) | 0 ✓ |
+| 1 DrawIntroBackground | **3** (f3-5) | **5** (f3-7) | rust +2 |
+| 2 FadeInDelay | 2 (f6-7) | 1 (f8) | rust −1 |
+| 3 METROIDFadeIn($812C) | 206 (f8-213) | 218 (f9-226) | rust +12 |
+| 4 LoadFlashTimer | 97 (f214-310) | 84 (f227-310) | 终点同帧 ✓ |
+| 27(0x1B) 菜单 ClearAll | 3+1停 (f311-313) | 5 (f311-315) 无停 | rust 少 3 停 |
+
+**关键发现**：f311 双方同处 phase 27——菜单进入=**输入驱动**（press 310），phase 3/4 的
+内部漂移（+12）被 phase 4 的「等待按压」吸收 ⇒ 相位日历在 press 点天然汇合 ✓。
+
+**余差 6 的精确分解**（FC tick 差）：phase1 +2（rust 多 2 tick 且都 inc）、phase2 −1、
+phase27 +2（rust 5 tick 全 inc vs emu 3 停+1 inc）+ 起点差 1 = 6 ✓ 与 FC 对账闭合。
+
+**修法（精确定位，无需 boot 重排）**：
+① phase1：rust 5 tick→3 tick（去 2 cursor 续段 tick 或改门）；
+② phase2：1→2 tick（FadeInDelay 设 Timer3 后本应占 2 帧）；
+③ phase27：重施门 [1,0,1]（r26 已验结构，asm $909F）；
+三者合计净 −6 tick FC（parity 校验：⑥+①−②=…逐相验证 f550 parity 不破）。
+METROIDFadeIn 12 步表（PAL_SELECT_TABLE 13B）已核正确——phase3 的 +12 是*采样窗*
+产物非实差（press 点汇合证明），**不需要动**。
+
 ## 关联
 - 前置：docs/findings/anim-state-machine-model.md（decomp eefc9c3d）
 - 下游：f820(359)/f950(1270)/f1200(15929) 全由本轨迹差主导
