@@ -1559,7 +1559,7 @@ pub fn check_norfair_state(x: u8, v6af4_x: u8) -> (Vec<(u16, u8)>, bool) {
     (writes, result)
 }
 
-/// apply_norfair_write（Norfair 写入（语义命名（data/naming 台账 A/B 级）））——旧实现（s2_d018_body（engine/mod.rs:1977））→去地址名
+/// apply_norfair_write（Norfair 写入（语义命名（data/naming 台账 A/B 级）））——旧实现（samus_hit_cond_state（engine/mod.rs:1977））→去地址名
 /// refs asm 考证（bank02:8000（s2 族（prg2_norfair.asm）））——真规则（公式形（零字面特值））
 pub fn apply_norfair_write(v030a: u8, v0315: u8, v14: u8) -> Vec<(u16, u8)> {
     // 真规则（公式形（零字面特值））：apply_norfair_write（v030a/v0315/v14（byte-driven semantics））
@@ -1570,7 +1570,7 @@ pub fn apply_norfair_write(v030a: u8, v0315: u8, v14: u8) -> Vec<(u16, u8)> {
     writes
 }
 
-/// get_norfair_ptr（Norfair 指针（语义命名（data/naming 台账 A/B 级）））——旧实现（s2_d133_body（engine/mod.rs:1991））→去地址名
+/// get_norfair_ptr（Norfair 指针（语义命名（data/naming 台账 A/B 级）））——旧实现（samus_hit_tail_dispatch（engine/mod.rs:1991））→去地址名
 /// refs asm 考证（bank02:8000（s2 族（prg2_norfair.asm）））——真规则（公式形（零字面特值））
 pub fn get_norfair_ptr(v030a: u8, v0315: u8) -> (Vec<(u16, u8)>, u16) {
     // 真规则（公式形（零字面特值））：get_norfair_ptr（v030a/v0315（byte-driven semantics））
