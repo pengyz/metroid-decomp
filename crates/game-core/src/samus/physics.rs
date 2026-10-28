@@ -757,7 +757,11 @@ const OBJECT_ANIM_INDEX_TBL: &[u8] = &[
 /// 字段偏移=struct 权威（constants_ram:217-224：animFrame $0303/animDelay $0304/
 /// animResetIndex $0305/animIndex $0306）。
 pub fn update_obj_anim(mem: &mut FrameMemory, a_in: u8) {
-    let base = 0x0300u16; // PageIndex=0（Samus 槽——他槽随件）
+    // 【实锤③修（2026-10-28）】asm UpdateObjAnim（$DC8F）=`ldx PageIndex`——base=
+    // $0300+($4B)（全槽通用）——旧形硬编码 Samus 槽（「他槽随件」）⇒弹径调用时改写
+    // Samus 动画字段+**弹槽动画永不推进**（animIndex 冻 0x1B（f810 槽态实锤（贴图错
+    // （用户实测③）））。Samus 段 0x4B←0 先行（r25 修（mainloop:209））⇒双径兼容。
+    let base = 0x0300u16 + mem.read_ram(0x004B) as u16;
     let delay = mem.read_ram(base + 0x04);
     if delay != 0 {
         let d = delay - 1;

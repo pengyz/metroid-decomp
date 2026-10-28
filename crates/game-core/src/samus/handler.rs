@@ -1117,3 +1117,42 @@ mod tests_landing_pose {
         assert_eq!(m.read_ram(0x03D5), 0x1B, "弹 anim=RegularBullet");
     }
 }
+
+
+// ===== 弹 onScreen（TDD（测试先行（实现后补）））=====
+
+#[cfg(test)]
+mod tests_bullet_onscreen {
+    //! 判径（audit（samus-jump-fire-chain.md §7））：InitBullet/发射径写 onScreen=1
+    //! （base+0x0B 位0）——旧形漏写⇒DeleteIfOffScreen（$D5FC）首帧判 0⇒弹即删
+    //! （用户实测③（f810 rust 无弹/emu 有弹（diff 图证）））。
+    use super::*;
+    use crate::state::FrameMemory;
+
+    /// 【实锤③】发射⇒onScreen 位0=1（存活旗）。
+    #[test]
+    fn fire_sets_onscreen() {
+        let mut m = FrameMemory::default();
+        m.write_ram(crate::ram_map::JOY1_CHANGE, 0x40); // B
+        samus_jump_check_fire(&mut m);
+        assert_eq!(m.read_ram(0x03DB) & 1, 1, "onScreen 位0=1（存活旗）");
+        assert_eq!(m.read_ram(0x03D0), 1, "status=wa_Bullet(1)");
+    }
+
+    /// 【实锤③】弹槽动画推进（update_obj_anim(PageIndex)——非 Samus 槽）。
+    #[test]
+    fn bullet_anim_advances() {
+        let mut m = FrameMemory::default();
+        // 弹槽 $D0 态：status=1/animReset=0x1B/animIndex=0x1B/animDelay=0
+        m.write_ram(0x03D0, 1);
+        m.write_ram(0x03D5, 0x1B);
+        m.write_ram(0x03D6, 0x1B);
+        m.write_ram(0x03D4, 0);
+        m.write_ram(0x004B, 0xD0); // PageIndex=弹槽
+        super::super::physics::update_obj_anim(&mut m, 1);
+        let idx = m.read_ram(0x03D6);
+        let fr = m.read_ram(0x03D3);
+        assert!(idx != 0x1B || fr != 0, "弹槽 anim 推进（animIndex/animFrame 变）");
+        assert_eq!(m.read_ram(0x0306), 0, "Samus animIndex 不被误写（槽隔离）");
+    }
+}

@@ -388,6 +388,16 @@ fn main() {
             hex.push('\n');
             let fname = format!("{}_f{:05}_{}.ppu.hex", plan.name, frame, tag);
             fs::write(out.join(&fname), hex).expect("写 PPU dump");
+            // WRAM 2KB dump（与 scenario_capture.lua::dumpRam 同构（0000-07FF hex））
+            {
+                let mut ram_hex = String::new();
+                for i in 0..0x800usize {
+                    ram_hex.push_str(&format!("{:02x}", engine.mem.ram.get(i).copied().unwrap_or(0)));
+                }
+                ram_hex.push('\n');
+                let fname = format!("{}_f{:05}_{}.ram.hex", plan.name, frame, tag);
+                fs::write(out.join(&fname), ram_hex).expect("写 RAM dump");
+            }
         }
         eprintln!("[rust]   capture f{:05} {} → {}", frame, tag, fname);
         produced.push((frame, tag.to_string(), fname));
