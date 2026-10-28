@@ -99,17 +99,6 @@ pub fn boot_pre_spin(mem: &mut FrameMemory) {
     }
 }
 
-/// L2 组件 → 内存态桥（组件库反哺：**既有验证件**经写集契约挂入帧引擎——
-/// 「L2 管线按需补给」反向流；写址为 L2 归一面（&0x7FF 同源））。
-fn l2_apply(mem: &mut FrameMemory, out: crate::L2Out) {
-    mem.regs.a = out.a;
-    mem.regs.x = out.x;
-    mem.regs.y = out.y;
-    for (addr, v) in out.writes {
-        mem.write_ram(addr, v);
-    }
-}
-
 /// C158 单元——VRAM 清屏（bank07:C158-C19E）：双遍填充 PPU nametable $2000/$2400/$2800
 /// （各 1280B=$FF；**PPU 面非 RAM watch**——渲染面保真待 task-13）+ ptr 态。
 ///
@@ -119,8 +108,10 @@ fn l2_apply(mem: &mut FrameMemory, out: crate::L2Out) {
 /// 表[$01-1]→$2006/`STA $2007` ×1280）→ C19E RTS（尾共段=次遍的出口）。
 /// 结束态（RAM 面）：$00=FF、$01=2|3、$FF&=!4、A=FF/X=0/Y=0。
 pub fn c158_unit(mem: &mut FrameMemory) {
-    // 首遍：L2 反哺复用（sub_c16d 契约= $01=1/$00=FF/A=FF，44 案时代验证件）
-    l2_apply(mem, crate::l2ports::sub_c16d(&crate::L2In::default()));
+    // 首遍：C16D 直写语义（asm bank07:C16D-C174：`LDA #1/STA $01/LDA #$FF/STA $00`，A=FF）
+    mem.regs.a = 0xFF;
+    mem.write_ram(0x0001, 0x01);
+    mem.write_ram(0x0000, 0xFF);
     // 次遍：$1D/$1F 分派（C15B-C16B）→ 尾共段 $01∈{2,3}
     let hi = if mem.read_ram(0x001D) == 0 || mem.read_ram(0x001F) != 0x1D { 2 } else { 3 };
     mem.write_ram(0x0001, hi);

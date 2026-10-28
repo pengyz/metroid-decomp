@@ -17,6 +17,27 @@ fn attrib_mask(x: u8) -> u8 {
     !(0x03u8 << (x * 2))
 }
 
+/// GetNameTableAtScrollDir（$EB85，公式内联）——A=(PPUCTRL^ScrollDir)&1：1=名表 3/0=名表 0。
+/// （asm 锚 prg7_engine.asm 根件 3 指令微体；投影件退役后此为唯一实现住址。）
+fn get_name_table_at_scroll_dir(ppuctrl: u8, scroll_dir: u8) -> u8 {
+    (ppuctrl ^ scroll_dir) & 1
+}
+
+/// CheckForItem 已收史查找（$EE4A 语义实现）——y0 起 `dey/dey/bpl`（signed y>=0 有界，
+/// 非 wrapping 死环）；hi/lo 同址命中=已收。
+fn find_item_in_history(y0: u8, v06: u8, v07: u8, item_lo: &[u8], item_hi: &[u8]) -> bool {
+    let mut y = y0;
+    while (y as i8) >= 0 {
+        if item_hi.get(y as usize).copied().unwrap_or(0) == v07
+            && item_lo.get(y as usize).copied().unwrap_or(0) == v06
+        {
+            return true;
+        }
+        y = y.wrapping_sub(2);
+    }
+    false
+}
+
 /// DrawRoom（$EAAA）——房对象环→RoomRAM 缓冲（base=RoomRAMA $6000）。
 /// 返回 false=走敌门环/属性表尾（未端口面——调用方 fail-loud）。
 pub fn draw_room(mem: &mut crate::frame::FrameMemory, room: u8) -> bool {
@@ -163,12 +184,11 @@ fn load_door(mem: &mut crate::frame::FrameMemory, info: u8) {
                 hi[k] = mem.read_wram(0x6886 + k as u16);
             }
             // 【A 级补钉】CheckForItem 进口 `ldy NumberOfUniqueItems / beq @notHave`
-            // （:9425）——y0=0⇒即未收（不进环）；guard 落 call site（find_item_in_history
-            // 共享面不动（其环契约=y∈{y0,…,0}（旧对拍对象等价域）））。
+            // （:9425）——y0=0⇒即未收（不进环）；guard 落 call site。
             let found = if y0 == 0 {
                 false
             } else {
-                crate::engine::find_item_in_history(y0, item_y, item_x, &lo, &hi)
+                find_item_in_history(y0, item_y, item_x, &lo, &hi)
             };
             !found // carry=已收⇒跳（status 保持 0）/未收⇒init
         }
@@ -176,7 +196,7 @@ fn load_door(mem: &mut crate::frame::FrameMemory, info: u8) {
     if init {
         mem.write_ram(OBJECTS_BASE + x_off, 1); // status←1（Init 态）
     }
-    let nt = crate::engine::get_name_table_at_scroll_dir(
+    let nt = get_name_table_at_scroll_dir(
         mem.read_ram(PPUCTRL_ZP), mem.read_ram(SCROLL_DIR));
     mem.write_ram(OBJECTS_BASE + 0x0C + x_off, nt); // hi
     mem.write_ram(OBJECTS_BASE + 0x0E + x_off, DOOR_XS[side as usize]); // x
@@ -702,7 +722,7 @@ mod tests_load_door {
             let mut m = mem_with(0, 0);
             load_door(&mut m, (side << 4) | 1); // 蓝门（免 item 检）
             let x_off = if side == 1 { 0x30u16 } else { 0x00 }; // 白格（mx+my=0）
-            let nt = crate::engine::get_name_table_at_scroll_dir(
+            let nt = get_name_table_at_scroll_dir(
                 m.read_ram(crate::ram_map::PPUCTRL_ZP), m.read_ram(crate::ram_map::SCROLL_DIR));
             assert_eq!(m.read_ram(0x038C + x_off), nt, "hi（名表）");
             assert_eq!(m.read_ram(0x038E + x_off), if side == 1 { 0x10 } else { 0xF0 }, "x（DoorXs）");

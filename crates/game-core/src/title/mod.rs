@@ -20,6 +20,7 @@
 //! ClearSpareMem 只写 $C9 低字节（`85 c9` zp 单址）——写面以字节为准。
 
 pub mod sparkle;
+pub(crate) mod step_glue;
 /// 状态机骨架（批1 建形，枚举臂随批2-6 逐簇补）：TitleRoutine 相位面。
 /// _id 表序=分发序（StartContinueScreen15=0x15 / EndGame=0x1D 锚——128e0a6 自数证）。
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -838,15 +839,13 @@ pub struct TitleFace {
 /// **统一分发入口**（B 跑接线点）：phase→臂。已武装臂=批1-6a 交付面；未武装=Unported
 /// 表址返回；五降级件=占位臂（RAM 面+Shell 组合点，深效果 L3 裁决面）。
 pub fn dispatch_step(face: &TitleFace) -> TitleStep {
-    let l2in = crate::L2In {
-        ram: face.ram.clone(), wram: face.wram.clone(),
-        a: face.a, x: face.x, y: face.y, p: 0x24, window_bank: 0,
-    };
-    let step_from_l2 = |o: crate::L2Out| TitleStep {
+    let step_from_l2 = |o: step_glue::GlueOut| TitleStep {
         events: o.writes, shell: vec![], a_out: Some(o.a), x_out: Some(o.x), y_out: Some(o.y),
         jumped: None, unported: None, next_cursor: 0,
     };
-    use crate::verify_shim as sh;
+    // 投影层退役迁移：域件直调（胶水=取数+写事件映射，语义实现=本域 TitleSequence/
+    // FadeDriver/EffectDriver 族——见 step_glue 头注）。
+    
     match face.phase {
         // 0x00 InitializeAfterReset：**work+1 spin 等待**（r22——r21 裁定补帧：oracle
         // f1(work)+f2(wait) 形；r17 单迭代还原系 $C3 双增误修（缺帧镜像），本轮随同
@@ -855,35 +854,35 @@ pub fn dispatch_step(face: &TitleFace) -> TitleStep {
             // 【r23 机构改形】单工作段+SpinWait 等待段（正交机构）：相位推进/FC 同拍落
             // 工作段（golden f1 形——O $1F=01@f3 对齐根）；等待=SpinWait 计数（下一 tick
             // 工作零动——oracle f2 空号形）。
-            let mut s = step_from_l2(sh::title_init_after_reset(&l2in));
+            let mut s = step_from_l2(step_glue::title_init_after_reset(face));
             // InitializeAfterReset :124 `sty IntroStarOffset`（Y=0）
             s.events.push((0x00C3, 0));
             s.shell.push(crate::title::ShellCall::SpinWait(1));
             s
         }
-        0x0A | 0x0B => step_from_l2(sh::title_inc(&l2in)),
-        0x0C => step_from_l2(sh::title_change_nametable(&l2in)),
+        0x0A | 0x0B => step_from_l2(step_glue::title_inc(face)),
+        0x0C => step_from_l2(step_glue::title_change_nametable(face)),
         0x0D | 0x0E | 0x02 | 0x03 | 0x07 => step_from_l2(match face.phase {
-            0x02 => sh::title_fade_delay(&l2in), 0x03 => sh::title_metroid_fade_in(&l2in),
-            0x07 => sh::title_metroid_fade_out(&l2in), 0x0D => sh::title_message_fade_in(&l2in),
-            _ => sh::title_message_fade_out(&l2in),
+            0x02 => step_glue::title_fade_delay(face), 0x03 => step_glue::title_metroid_fade_in(face),
+            0x07 => step_glue::title_metroid_fade_out(face), 0x0D => step_glue::title_message_fade_in(face),
+            _ => step_glue::title_message_fade_out(face),
         }),
         // intro 效果族每帧壳（L8022 路 RemoveIntroSprites $C1BC——F4 离屏惯例）
-        0x04 => { let mut s = step_from_l2(sh::title_flash_timer(&l2in));
+        0x04 => { let mut s = step_from_l2(step_glue::title_flash_timer(face));
                   s.shell.insert(0, ShellCall::RemoveIntroSprites); s }
-        0x05 => { let mut s = step_from_l2(sh::title_flash_effect(&l2in));
+        0x05 => { let mut s = step_from_l2(step_glue::title_flash_effect(face));
                   s.shell.insert(0, ShellCall::RemoveIntroSprites); s }
-        0x06 => { let mut s = step_from_l2(sh::title_sparkle_step(&l2in));
+        0x06 => { let mut s = step_from_l2(step_glue::title_sparkle_step(face));
                   s.shell.insert(0, ShellCall::RemoveIntroSprites); s }
-        0x08 => { let mut s = step_from_l2(sh::title_crosshairs_step(&l2in));
+        0x08 => { let mut s = step_from_l2(step_glue::title_crosshairs_step(face));
                   s.shell.insert(0, ShellCall::RemoveIntroSprites); s }
-        0x09 => { let mut s = step_from_l2(sh::title_crosshair_continue(&l2in));
+        0x09 => { let mut s = step_from_l2(step_glue::title_crosshair_continue(face));
                   s.shell.insert(0, ShellCall::RemoveIntroSprites); s }
-        0x0F => step_from_l2(sh::title_replay_delay(&l2in)),
-        0x10 => step_from_l2(sh::title_clear_spare(&l2in)),
-        0x11 => step_from_l2(sh::title_prep_restart(&l2in)),
-        0x13 | 0x14 => step_from_l2(sh::title_no_op(&l2in)),
-        0x19 => step_from_l2(sh::title_password_gate(&l2in)),
+        0x0F => step_from_l2(step_glue::title_replay_delay(face)),
+        0x10 => step_from_l2(step_glue::title_clear_spare(face)),
+        0x11 => step_from_l2(step_glue::title_prep_restart(face)),
+        0x13 | 0x14 => step_from_l2(step_glue::title_no_op(face)),
+        0x19 => step_from_l2(step_glue::title_password_gate(face)),
         // jmp 出口臂（直域调——jumped 面透出；B 跑桥侧按转接/停点处理）
         0x16 => {
             let joy = face.ram[crate::memmap::title_state::JOY1_CHANGE as usize & 0x7FF];
