@@ -378,6 +378,51 @@ mod tests {
         }
     }
 
+    /// 【goal-r29 红测】SamusEnterDoor($8B13) 触发+全动作（横滚右门例）：
+    /// 触发=DoorEntryStatus($56)==0 且 SamusDoorData($58)!=0；动作=清拾取 Cur、
+    /// Random1&0x0F→QtyMax、asl|0x40→EnergyMax、擦对表门块($6C+y←0)、
+    /// DoorScrollStatus($57)←X（横滚 X=2−(Samus.x>>7)）、DoorEntryStatus|=$80、
+    /// DoorDelay($59)←$12（18 帧）、$58←($58<<4)|Samus.status、Samus.status←sa_Door(5)。
+    #[test]
+    fn samus_enter_door_horizontal_right() {
+        use crate::ram_map::*;
+        let mut m = FrameMemory::default();
+        m.write_ram(DOOR_ENTRY_STATUS, 0);
+        m.write_ram(SAMUS_DOOR_DATA, 2); // $A1 横滚门触碰
+        m.write_ram(crate::ram_map::SCROLL_DIR, 3); // 横滚
+        m.write_ram(0x030E, 0x30); // Samus.x bit7=0 ⇒ X=2
+        m.write_ram(SAMUS_STATUS, 2); // 进门前动作
+        m.write_ram(0x002E, 0x5A); // RandomNumber1
+        m.write_ram(0x00FF, 0x90); // PPUCTRL（bit0=0 ⇒ 擦 y=1 表）
+        m.write_ram(0x006C, 0x55);
+        m.write_ram(0x006D, 0x66);
+        samus_enter_door(&mut m);
+        assert_eq!(m.read_ram(0x0059), 0x12, "DoorDelay←18");
+        assert_eq!(m.read_ram(DOOR_ENTRY_STATUS), 0x80, "EntryStatus|=$80");
+        assert_eq!(m.read_ram(SAMUS_STATUS), 5, "sa_Door");
+        assert_eq!(m.read_ram(SAMUS_DOOR_DATA), (2 << 4) | 2, "动作保留高 4 位");
+        assert_eq!(m.read_ram(0x0057), 2, "横滚右门 X=2");
+        assert_eq!(m.read_ram(0x0093), 0x0A, "MissileQtyMax=Rnd&0x0F");
+        assert_eq!(m.read_ram(0x0094), (0x0A << 1) | 0x40, "EnergyQtyMax");
+        assert_eq!(m.read_ram(0x0095), 0, "MissileCur 清");
+        assert_eq!(m.read_ram(0x0096), 0, "EnergyCur 清");
+        assert_eq!(m.read_ram(0x006D), 0, "对表(y=1)门块擦除");
+        assert_eq!(m.read_ram(0x006C), 0x55, "同表不动");
+    }
+
+    /// 【goal-r29 红测】未触发径：DoorEntryStatus!=0 ⇒ 全态不动。
+    #[test]
+    fn samus_enter_door_not_triggered_when_status_set() {
+        use crate::ram_map::*;
+        let mut m = FrameMemory::default();
+        m.write_ram(DOOR_ENTRY_STATUS, 0x80);
+        m.write_ram(SAMUS_DOOR_DATA, 2);
+        m.write_ram(SAMUS_STATUS, 2);
+        samus_enter_door(&mut m);
+        assert_eq!(m.read_ram(0x0059), 0, "DoorDelay 不变");
+        assert_eq!(m.read_ram(SAMUS_STATUS), 2, "status 不变");
+    }
+
     /// 【goal-r16 碰撞修·红测】判点 X 环绕（x<DistToCenterX，借位）⇒ asm E946：
     /// `lda PositionX/sec/sbc DistToCenterX` 后 `txa/adc #$00/beq RTS`——环绕时
     /// `inc Temp0B_PositionHi`（横滚）⇒ 查撞点读**另一张名表**。旧形仍读当前表⇒
@@ -950,6 +995,58 @@ fn collision_point_samus(mem: &mut FrameMemory, y: u8, x: u8, hi: u8) -> bool {
         mem.write_ram(crate::ram_map::SAMUS_DOOR_DATA, v);
     }
     ok
+}
+
+/// SamusEnterDoor（**asm 内容锚** `SamusEnterDoor: ; $8B13` areas_common:1317——A 级全文）：
+/// 触发=$56==0 且 $58!=0；清拾取 Cur($95/$96)、Random1&0x0F→$93、asl|0x40→$94、
+/// 擦对表门块（$6C+(($FF^1)&1)←0）、DoorScrollStatus($57)←X（横滚 X=2−(x>>7)；
+/// 竖滚 X=4，ScrollY≠0 时 (PPUCTRL^hi)&1==0→4 / ==1→3）、$56|=$80、DoorDelay($59)←$12、
+/// $58←($58<<4)|Samus.status（出门保留动作）、Samus.status←sa_Door(5)。
+pub fn samus_enter_door(mem: &mut FrameMemory) {
+    if mem.read_ram(crate::ram_map::DOOR_ENTRY_STATUS) != 0 {
+        return;
+    }
+    if mem.read_ram(crate::ram_map::SAMUS_DOOR_DATA) == 0 {
+        return;
+    }
+    // 清拾取计数（A=0 形）+ 随机上限（asm `lda RandomNumber1/and #$0F` 族）
+    mem.write_ram(0x0095, 0);
+    mem.write_ram(0x0096, 0);
+    let r = mem.read_ram(crate::ram_map::RANDOM1) & 0x0F;
+    mem.write_ram(0x0093, r);
+    mem.write_ram(0x0094, (r << 1) | 0x40);
+    // 擦另一名表门块（asm `eor #$01/and #$01/tay/lsr/sta $6C,y`）
+    let y = (mem.read_ram(crate::ram_map::PPUCTRL_ZP) ^ 1) & 1;
+    mem.write_ram(crate::ram_map::SCROLL_BLOCK_NT3 + y as u16, 0);
+    // DoorScrollStatus 判向
+    let sd = mem.read_ram(crate::ram_map::SCROLL_DIR);
+    let x: u8 = if sd & 0x02 != 0 {
+        2u8.wrapping_sub(mem.read_ram(0x030E) >> 7) // 横滚：左门(bit7)⇒1，右⇒2
+    } else {
+        // 竖滚：X=4；ScrollY≠0 时 (PPUCTRL^hi)lsr 进位=1⇒3（下行）
+        if mem.read_ram(crate::ram_map::SCROLL_Y) != 0
+            && (mem.read_ram(crate::ram_map::PPUCTRL_ZP)
+                ^ mem.read_ram(crate::ram_map::SAMUS_HI))
+                & 1
+                != 0
+        {
+            3
+        } else {
+            4
+        }
+    };
+    mem.write_ram(0x0057, x);
+    // SamusInDoor（$8B74）：$56|=$80
+    let de = mem.read_ram(crate::ram_map::DOOR_ENTRY_STATUS);
+    mem.write_ram(crate::ram_map::DOOR_ENTRY_STATUS, de | 0x80);
+    mem.write_ram(crate::ram_map::DOOR_DELAY, 0x12); // 18 帧
+    // $58←($58<<4)|Samus.status（Amul16 形）；status←sa_Door(5)
+    let dd = mem.read_ram(crate::ram_map::SAMUS_DOOR_DATA);
+    mem.write_ram(
+        crate::ram_map::SAMUS_DOOR_DATA,
+        (dd << 4) | mem.read_ram(crate::ram_map::SAMUS_STATUS),
+    );
+    mem.write_ram(crate::ram_map::SAMUS_STATUS, 5);
 }
 
 fn object_check_move_horizontal(mem: &mut FrameMemory, x: u8, dist: u8) -> bool {

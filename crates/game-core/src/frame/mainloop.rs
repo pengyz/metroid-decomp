@@ -1105,13 +1105,9 @@ fn uw_en_projectiles(_mem: &mut crate::frame::FrameMemory) {}
 /// UpdateAllSkreeProjectiles（Skree 弹族）。
 fn uw_skree_projectiles(_mem: &mut crate::frame::FrameMemory) {}
 
-/// SamusEnterDoor（$8B13——过门检！）：SamusDoorData($6A?) 判+入门口（$56 链）。
+/// SamusEnterDoor（$8B13——过门检）：全径实现=physics::samus_enter_door（goal-r29）。
 fn uw_samus_enter_door(mem: &mut crate::frame::FrameMemory) {
-    // 过门链（sc-door-transition 流程件——DoorEntryStatus($56) 设置径随件）
-    let door = mem.read_ram(0x0056);
-    if door != 0 {
-        // 门滚已在 scroll_door（1-4 态）；SamusDoorData/DoorDelay 件随件
-    }
+    crate::samus::physics::samus_enter_door(mem);
 }
 
 /// UpdateAllDoors（门链——槽空⇒跳过；门显示随件）。
