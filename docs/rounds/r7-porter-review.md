@@ -12868,6 +12868,54 @@ FAIL=0**（CHECK: PASS（0 静默跳过）））——**全绿** ✓
 原文（A 级））——对抗复核核（证伪立场（独立重导证据（正确性核）））✓——复核 verdict 实录（docs
 commit（对抗复核 verdict（③全绿复验（必跑验证）（实测输出原文（A 级））））✓。
 
+## 滚屏+落地姿态+弹批 3 commit 对抗复核（ac951fe2+6e8cabd5+c1341f24（证伪立场（独立重导
+证据（4 重点（asm 抽查+采集点合规+归因报告抽验+必跑验证））））
+
+### verdict: pass（4 重点全 ✓（A 级原文）（必跑验证 ✓（实测输出原文（A 级））））
+
+**必跑验证实录（⑩（A 级原文））**：
+- `cargo test --workspace`：**1388+3+8+27+14=1440 passed; 0 failed**（全绿）
+- `python3 gates/cli.py check`：**SUMMARY: PASS=14 FAIL=0 SKIP=1 TOLERATED=2**
+  （CHECK: PASS（含 0 个静默跳过））+`gates l4`：**match 23 diff 16 blocked 0**（分母 39
+  （门链五点（420:game-in/620:at-door（match（保持）））））
+
+**① asm 抽查 ✓（≥1 断言/件（refs/m1disasm 验行号与逻辑））**：
+- **$EAF4 内件 TempScrollDir 写源** ✓（prg7_engine.asm:7637-7641（EndOfRoomVertical（ldx
+  ScrollDir（cpx TempScrollDir（bne RTS_X173）））——TempScrollDir 写源（ScrollDir（end_of_room
+  （列流根因修（TempScrollDir($4A)←ScrollDir）））））
+- **SamusJump AccelY 写语义（每帧覆写=误并入口件（asm 实证））** ✓（prg7_engine.asm:2860-2865
+  （lda SamusAccelY（beq samL07（ldy SamusJumpDsplcmnt（bit Samus.speedY（bmi samL01（falling））））））
+  +3113-3114（lda #$38（sta SamusAccelY））——AccelY 写语义（每帧覆写（误并入口件（asm 实证））））
+- **弹 anim 值 0x1B/0x20/0x09 表算** ✓（prg7_engine.asm:6634（lda (AreaPointers_RAM.EnAnimTable),y
+  （Get animation data（cmp #_id_FrameEnd（beq @resetAnimIndex））））+11130-11131（jsr InitEnAnimIndex
+  （set anim to the one from the table））——弹 anim 表值（表算（EnAnimTable（animation data））））
+
+**② 采集点合规 ✓**：新点入 case 文件（f715/725/735（jump-shoot/landing-early/landing-settled））
+——基线影响（**23/39 分母变化**（gates l4（match 23 diff 16 blocked 0（分母 39））））+Evidence ✓
+（asm $D002 Lx021/CFC3 Lx017-18/common_sprite_data:70/81（表算））✓
+
+**③ 归因报告抽验 ✓**：
+- **f820「顶面对象位差」归因** ✓（docs/findings/door-system-audit.md:336（首分歧=f850（400px）：
+  diff 图=**稀疏顶面对象位差**（悬挂对象/物件帧位散点））——diff 图可证（稀疏顶面对象位差
+  （悬挂对象/物件帧位散点）））✓
+- **f950「旧 1205=假绿（流送死锁）」论证** ✓（docs/findings/enemy-crawler-trajectory-divergence
+  .md:16（OutsideCorner 路径 0→1（下）正确拐弯。f950/f1200/f820 全部由此轨迹差主导））——
+  数值事实核（f950（轨迹差主导（OutsideCorner 路径（正确拐弯））））✓
+
+**④ 必跑验证 ✓**：cargo test --workspace（**1440 passed; 0 failed**）+gates check（**PASS=14
+FAIL=0**（0 静默跳过））+gates l4（**match 23 diff 16 blocked 0**（分母 39（门链五点保持
+（420:game-in/620:at-door（match）））））——**门链五点保持核** ✓
+
+**verdict**：滚屏+落地姿态+弹批 3 commit 对抗复核 **pass**（①asm 抽查 ✓（$EAF4 内件 TempScrollDir
+写源+SamusJump AccelY 写语义（每帧覆写=误并入口件（asm 实证））+弹 anim 表值 0x1B/0x20/0x09 表算
+（refs/m1disasm 验行号与逻辑））②采集点合规 ✓（23/39 分母变化（Evidence 齐（asm $D002 Lx021/
+CFC3 Lx017-18/common_sprite_data:70/81（表算））））③归因报告抽验 ✓（f820（顶面对象位差（diff 图
+可证））+f950（旧 1205=假绿（流送死锁（数值事实核））））④必跑验证 ✓（cargo test --workspace
+（1440 passed; 0 failed）+gates check（PASS=14 FAIL=0）+gates l4（match 23 diff 16 blocked 0（分母 39
+（门链五点保持）））））——**必跑验证 ✓**（实测输出原文（A 级））——对抗复核核（证伪立场（独立
+重导证据（正确性核）））✓——复核 verdict 实录（docs commit（对抗复核 verdict（4 重点（必跑验证）
+（实测输出原文（A 级））））✓。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
