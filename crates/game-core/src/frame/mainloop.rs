@@ -1034,7 +1034,11 @@ fn draw_enemy(mem: &mut crate::frame::FrameMemory, x: u8) {
     let scroll_y = mem.read_ram(crate::ram_map::SCROLL_Y);
     let horz = mem.read_ram(crate::ram_map::SCROLL_DIR) & 0x02 != 0;
     let sy = (if horz { y } else { y.wrapping_sub(scroll_y) }) as i16;
-    let sx = xpos.wrapping_sub(mem.read_ram(0x0026)) as i16;
+    // 【勘误修（2026-10-29（问题 A 根因））】敌屏位 x=房位−**ScrollX($FD)**——旧形减
+    // $26（SpareMem26（constants:488（$25=MMC1CTRL_ZP 同族误读（sprite.rs 勘误注
+    // 早已证）））——走滚径写 $FD（scroll_right）而 0x26 停旧值⇒敌屏位不减镜头⇒
+    // **随镜恒距**（用户截图症（爬虫悬空错位））。
+    let sx = xpos.wrapping_sub(mem.read_ram(crate::ram_map::SCROLL_X)) as i16;
     let mut cntrl05 = ((ctrl >> 4) & 0x03) | (ctrl & 0xC0) | 0x20;
     let mut place_i = 0usize;
     let mut frame_i = 3usize;
@@ -2640,5 +2644,34 @@ mod tests_kill_chain {
         update_enemy_pickup(&mut m, x);
         assert_eq!(m.read_wram(crate::ram_map::MISSILE_COUNT), 8, "+5 弹");
         assert_eq!(m.read_wram(0x6AF4 + x as u16), 0, "槽释");
+    }
+}
+
+// ===== 敌屏位勘误锚（TDD（问题 A（随镜恒距根因）））=====
+
+#[cfg(test)]
+mod tests_enemy_screen_pos {
+    //! 判径（sprite.rs 勘误注（$25/$26=MMC1CTRL_ZP 误读（ScrollX=$FD）））：敌屏位
+    //! x=房位−ScrollX($FD)——旧形减 0x26（SpareMem26）⇒不减镜头⇒随镜恒距。
+    use super::*;
+    use crate::frame::FrameMemory;
+
+    /// 滚动关系锚：ScrollX+10⇒OAM 屏位−10（place 微调不变（房位同））——旧形减 $26
+    /// （与 ScrollX 无关）⇒屏位恒定（随镜恒距根因）。
+    #[test]
+    fn enemy_screen_x_subtracts_scroll_x() {
+        let mut mk = |sx: u8| {
+            let mut m = FrameMemory::default();
+            m.write_ram(0x0400, 45);
+            m.write_ram(0x0401, 200);
+            m.write_ram(crate::ram_map::SCROLL_X, sx);
+            m.write_ram(crate::ram_map::SCROLL_DIR, 0x02);
+            m.write_wram(0x6AF4 + 3, 0);
+            draw_enemy(&mut m, 0);
+            m.read_ram(0x0203) as i16
+        };
+        let a = mk(50);
+        let b = mk(60);
+        assert_eq!(a - b, 10, "ScrollX+10⇒屏位−10（减 $FD（非 $26 恒定形））");
     }
 }
