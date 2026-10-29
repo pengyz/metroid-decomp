@@ -47,7 +47,7 @@
       }
     },
     "case-fcprobe": {
-      "scenario_sha256": "c58cf9ef096d84c4d9d27404eb6e4654dd0407af9a87d698f3bdd9aecaf18df2",
+      "scenario_sha256": "51d978b688513b467fe3de2a695fbe84edd1d1cfd00b0a1e27c6171cc04dba2c",
       "states": {
         "420:game-in": "match",
         "460:end": "match"
@@ -150,6 +150,14 @@
     {
       "ts": "2026-10-29T13:38:54+00:00",
       "reason": "吸收 case-fcprobe 两新采集点（420:game-in/460:end 当日双腿跑 0px 全同，cdfe4fb2 check 窗矩阵）；其余 74 格态与本锚现值逐点不变（l4_ratchet_violations 单源复核通过）——确认无回退",
+      "match": 50,
+      "diff": 26,
+      "blocked": 0,
+      "cells_total": 76
+    },
+    {
+      "ts": "2026-10-29T15:51:53+00:00",
+      "reason": "case-fcprobe watch 扩展（FC 冻结修判据面）致 scenario_sha256 漂移重锚；435074f4 check 窗矩阵=两采集点 match 保持、全 76 格 match 集合零缩水——确认无回退",
       "match": 50,
       "diff": 26,
       "blocked": 0,
