@@ -5,6 +5,15 @@
 - 对象：`2563b02b` fix(core),docs: UpdateAttrib 高字节 quirk 保真（$63 固定（D4））
 - **verdict：pass**
 
+> 【2026-10-28 更正（6866842d 撤正后复核追加）】本档 verdict **作废**——「$63 固定」
+> 系我方截读误判：asm UpdateAttrib 写尾（:9798-9801）`lda Temp00_RoomRAMPtr+1 /
+> and #$04 / ora Temp02_AttribPtr+1 / sta Temp02_AttribPtr+1` ⇒ 终
+> hi=**$63|(ptr_hi&4)**（B 半 $67），2563b02b 与本 pass 判定均错，原 rust 形即正。
+> ROM 字节直证补全：bank7 基下 $EFD5-EFDC = `A5 01 29 04 05 03 85 03`
+> （lda $01/and #$04/ora $03/sta $03）。教训：asm 大例程必须**全例程逐行读完**
+> 再下「固定/无位运算」结论（$EF9E 跨 :9723-:9824 多段，本次截读于 :9790 前）。
+> 撤正复核见 r9-task-update-attrib-quirk-revert-review.md。
+
 ## 逐条复核
 
 ### 1. asm 核 + emu 同形 —— PASS
