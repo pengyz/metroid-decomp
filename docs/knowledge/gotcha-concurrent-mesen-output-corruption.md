@@ -23,6 +23,9 @@ t28 追踪定位孤儿产物（exp-shop-*/title-menu/shop/t25 三场景/t22 时�
   两个模拟器各自时间线的拼接——输入位被另一 run 的输入污染（**幻影输入**），帧序错位产生**假 trace**。
 - 【t202 家族扩员】**第 4 员**：[gotcha-workspace-drift-images-freeze-before-diff.md](gotcha-workspace-drift-images-freeze-before-diff.md)
   （工作区 `actual/` 漂移图污染——L4 比对须冻结 A/B 或新鲜渲染立即测）
+- 【2026-10-29 家族扩员】**第 5 员**：[gotcha-gates-l4-self-runall-collision.md](gotcha-gates-l4-self-runall-collision.md)
+  （gate_l4 自跑 run-all×双会话并发 ⇒ 假「新增 blocked」FAIL——此路径族不取
+  `.scenario.lock`，check/run-all 前必查活跃 Mesen 进程）
 - 与 [gotcha-parallel-read-image-order-unreliable.md](gotcha-parallel-read-image-order-unreliable.md)
   同族：**并行不可信家族**——一个是读取端顺序不可信，一个是写入端隔离不可信；
   两者的共同解药都是"字节级锚定 + 单一事实源"。
