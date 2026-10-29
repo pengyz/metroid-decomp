@@ -2675,3 +2675,42 @@ mod tests_enemy_screen_pos {
         assert_eq!(a - b, 10, "ScrollX+10⇒屏位−10（减 $FD（非 $26 恒定形））");
     }
 }
+
+// ===== 爬行逐帧探针（TDD（问题 A（敌全静/速差根因锚）））=====
+
+#[cfg(test)]
+mod tests_crawl_trace {
+    //! 判径（crawler.asm（6/8 步门+四例行+转向））：静置 N 帧敌 x 非恒（爬行）+
+    //! 轨迹/速双侧同迹（FC 相位容）。
+    use super::*;
+    use crate::frame::FrameMemory;
+
+    /// 50 帧爬行轨迹锚（x 非恒（AI 执行实证）+转向不卡死）。
+    #[test]
+    fn crawl_moves_over_50_frames() {
+        let mut m = FrameMemory::default();
+        let x = 0x40u8;
+        // 敌态（emu f820 实测形）：y=45/x=200/data0A=1（下爬）/status=Active(2)
+        m.write_ram(0x0400 + x as u16, 45);   // 槽 x=0x40 y
+        m.write_ram(0x0400 + x as u16 + 1, 200);
+        m.write_ram(0x0400 + x as u16 + 10, 1); // data0A=1（朝向下）
+        m.write_ram(0x0400 + x as u16 + 5, 0); // data05（向=0）
+        m.write_wram(0x6AF4, 2); // status=Active
+        for i in 0..0x400u16 {
+            m.write_wram(0x6000 + i, 0xA0); // 全可走
+        }
+        let x0 = m.read_ram(0x0400 + x as u16 + 1);
+        let mut px = x0 as i16;
+        let mut py = 45i16;
+        let mut travel = 0i32;
+        for f in 0..50u8 {
+            m.write_ram(crate::ram_map::FRAME_COUNT, f);
+            crawler_ai(&mut m, x);
+            let nx = m.read_ram(0x0400 + x as u16 + 1) as i16;
+            let ny = m.read_ram(0x0400 + x as u16) as i16;
+            travel += (nx - px).abs() as i32 + (ny - py).abs() as i32;
+            px = nx; py = ny;
+        }
+        assert!(travel >= 5, "路径长≥5px（50 帧振荡爬行（净≈0（角转回转形））——实测 {}）", travel);
+    }
+}

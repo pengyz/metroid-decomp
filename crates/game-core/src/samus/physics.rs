@@ -523,6 +523,8 @@ mod tests {
         m.write_ram(SAMUS_RADIUS_Y, 15);
         m.write_ram(0x030E, 128);
         m.write_ram(SAMUS_HI, 0);
+        // 【证伪更正（2026-10-29）】radiusX 须非 0（asm `bne Lx198/sec/rts`（0⇒跳过））
+        m.write_ram(crate::ram_map::SAMUS_RADIUS_X, 8);
         assert!(!object_check_move_up(&mut m), "y=100（y−ry−8=77 撞天花板）应阻挡");
         // y=110 → y−ry−8=87（80 行=空）→ 可走（未及天花板）
         m.write_ram(SAMUS_Y, 110);
@@ -601,7 +603,21 @@ pub fn object_check_move_up(mem: &mut FrameMemory) -> bool {
     let x = mem.read_ram(0x030E);
     let hi = mem.read_ram(SAMUS_HI);
     let check_y = y.wrapping_sub(ry).wrapping_sub(8); // 向上查撞点=y−radiusY−8（asm E7A2）
-    collision_point_samus(mem, check_y, x, hi) // E7FB 门数据副作用
+    // 【问题 B 修（2026-10-29）】asm CheckMoveVertical（$E7BD）=x−radiusX 起 x 全距
+    // 走环（①垂向 family 同式（下行臂已补（goal-r11）））——旧形单点⇒台缘上跳（心空/
+    // 侧顶砖）漏检⇒**跳不上去**（用户截图②）。radiusX=0⇒跳过（`bne Lx198/sec/rts`）。
+    let rx = mem.read_ram(crate::ram_map::SAMUS_RADIUS_X);
+    if rx == 0 {
+        return true;
+    }
+    let (left, n) = vertical_span_cols(x, rx);
+    for i in 0..n {
+        let col = left.wrapping_add((i as u8).wrapping_mul(8));
+        if !collision_point_samus(mem, check_y, col, hi) {
+            return false;
+        }
+    }
+    true
 }
 
 /// SamusCollisionWithSolidEntities（**asm 内容锚+结构互核注**——全仪式关键件②）：
@@ -1585,5 +1601,34 @@ mod tests_vertical_span {
         let base = ((0x58u16 & 0xF8) << 2) | col_tile_x;
         m.write_wram(0x6000 + base, 0x40); // 侧砖
         assert!(!object_check_move_vertical(&mut m), "侧块砖⇒碰撞（单点旧形漏（嵌砖根因））");
+    }
+}
+
+// ===== 上行 x 全距检（TDD（问题 B（跳不上去根因锚）））=====
+
+#[cfg(test)]
+mod tests_up_span {
+    //! 判径（asm CheckMoveVertical（$E7BD）x 全距走环（①同族上行臂））：心块空/
+    //! 侧顶砖⇒检出（单点旧形漏）。
+    use super::*;
+    use crate::state::FrameMemory;
+
+    /// 侧列顶砖⇒碰撞（上跳受阻（单点漏（跳不上去根因）））。
+    #[test]
+    fn up_edge_overlap_detected() {
+        let mut m = FrameMemory::default();
+        m.write_ram(0x030D, 0x60); // y
+        m.write_ram(crate::ram_map::SAMUS_RADIUS_Y, 8);
+        m.write_ram(0x030E, 0x3C); // x
+        m.write_ram(crate::ram_map::SAMUS_RADIUS_X, 12);
+        m.write_ram(crate::ram_map::SAMUS_HI, 0);
+        for i in 0..0x400u16 {
+            m.write_wram(0x6000 + i, 0xA0);
+        }
+        assert!(object_check_move_up(&mut m), "全空⇒放行");
+        // check_y=0x60-8-8=0x50；侧列砖（0x40 块（col x=0x41））
+        let base = ((0x50u16 & 0xF8) << 2) | (0x41u16 >> 3);
+        m.write_wram(0x6000 + base, 0x40);
+        assert!(!object_check_move_up(&mut m), "侧顶砖⇒碰撞（跳不上去）");
     }
 }
