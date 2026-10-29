@@ -27,12 +27,32 @@ def hexrow(bs, indent="        "):
 
 
 def blob_len() -> int:
-    """common_sprite_data.asm 数据字节计（.byte/.word/.dword）。"""
+    """common_sprite_data.asm 数据字节计（.byte/.word 项计——含符号形）。
+
+    【证伪更正（2026-10-29）】旧形只计 $XX 字面——符号形 `.byte _id_ObjFrame_*`
+    （anim 表/帧表）全漏⇒915B（真 1426B（$8572-$8B03 址跨））⇒**烘焙截断**
+    （帧记录 $890A+ 越界→blob 0xFF 兜底⇒radius/ctrl 全 FF⇒弹不可见⇒「打不出子弹」
+    （用户实测（帧 0x28 记录 ROM=$890A（04 02 02 30…）实证）））。
+    """
     text = SRC.read_text(encoding="utf-8")
     n = 0
+    max_addr = 0
     for line in text.splitlines():
-        s = line.split(";")[0]
-        n += len(re.findall(r"\$[0-9A-Fa-f]{2}", s))
+        ann = re.search(r"; \$([0-9A-Fa-f]{4})", line)
+        if ann:
+            max_addr = max(max_addr, int(ann.group(1), 16))
+        s = line.split(";")[0].strip()
+        m = re.search(r"\.(byte|db)\s+(.*)", s)
+        if m:
+            n += len([x for x in m.group(2).split(",") if x.strip()])
+            continue
+        m = re.search(r"\.(word|dw)\s+(.*)", s)
+        if m:
+            n += 2 * len([x for x in m.group(2).split(",") if x.strip()])
+    # 址跨兜底（声明计漏形防护（blob=ROM 直切（多切无害（指针索引））））：
+    # 尾注 max 址+32 裕（末记录长）——n 取二者大（截断根治（帧记录 $890A+ 覆盖））。
+    if max_addr:
+        n = max(n, max_addr + 32 - 0x8572)
     return n
 
 

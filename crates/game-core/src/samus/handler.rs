@@ -362,7 +362,7 @@ fn fire_samus_projectile(mem: &mut FrameMemory) {
     mem.write_ram(base + 6, 0x1B); // animIndex
     mem.write_ram(base + 4, 0); // animDelay
     // DieDelay=0x0C
-    mem.write_ram(base + 0x15, 0x0C);
+    mem.write_ram(base + 0x0F, 0x0C);
     // speedX=BulletSpeedXTable[SamusDir]（±4）
     let dir = mem.read_ram(crate::ram_map::SAMUS_DIR);
     mem.write_ram(base + 9, if dir & 1 == 0 { 4 } else { 0xFC }); // speedX
@@ -407,7 +407,7 @@ fn fire_samus_projectile_upwards(mem: &mut FrameMemory) {
     mem.write_ram(base + 5, 0x1B); // RegularBullet（$858D-$8572（弹形态 ① 修））
     mem.write_ram(base + 6, 0x1B);
     mem.write_ram(base + 4, 0);
-    mem.write_ram(base + 0x15, 0x0C);
+    mem.write_ram(base + 0x0F, 0x0C);
     mem.write_ram(base + 8, 0xFC); // speedY←$FC（上）
     mem.write_ram(base + 9, 0); // speedX←0
     mem.write_ram(base + 0x0B, 1);
@@ -1195,4 +1195,60 @@ mod tests_bullet_onscreen {
         assert!(idx != 0x1B || fr != 0, "弹槽 anim 推进（animIndex/animFrame 变）");
         assert_eq!(m.read_ram(0x0306), 0, "Samus animIndex 不被误写（槽隔离）");
     }
+}
+// ===== 连发锚测（TDD（DieDelay 槽内（+0x0F）回归锚））=====
+
+#[cfg(test)]
+mod tests_burst_anchor {
+    //! 判径（constants_ram:924（SamusProjectileDieDelay=Objects.data0F=$030F 偏移））
+    //! ——旧 +0x15 越槽写（f810 槽态实锤（3E5=0x0B（落 $E0+5）））。
+    use super::*;
+    use crate::state::FrameMemory;
+
+    /// 【回归锚（连发 4 发逐发出弹）】DieDelay 槽内（+0x0F）——越槽面（+0x15）=0。
+    #[test]
+    fn burst_four_bullets() {
+        let mut m = FrameMemory::default();
+        for i in 0..4u8 {
+            m.write_ram(crate::ram_map::JOY1_CHANGE, 0x40);
+            m.write_ram(crate::ram_map::JOY1_STATUS, 0);
+            samus_jump_check_fire(&mut m);
+            let alive = (0..3u16).filter(|s| m.read_ram(0x03D0 + s * 0x10) == 1).count();
+            assert!(alive >= 1, "第{}发出弹（存活槽≥1）", i + 1);
+        }
+        for s in [0xD0u16, 0xE0, 0xF0] {
+            if m.read_ram(0x0300 + s) == 1 {
+                assert_eq!(m.read_ram(0x0300 + s + 0x0F), 0x0C, "DieDelay 槽内 $0C");
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests_fire_probe {
+    use super::*;
+    use crate::state::FrameMemory;
+    #[test]
+    fn fire_write_set_full() {
+        let mut m = FrameMemory::default();
+        m.write_ram(crate::ram_map::JOY1_CHANGE, 0x40);
+        m.write_ram(crate::ram_map::JOY1_STATUS, 0);
+        samus_jump_check_fire(&mut m);
+        for off in [0u16, 1, 2, 4, 5, 6, 8, 9, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F] {
+            println!("rustfire +{:02X} = {:02X}", off, m.read_ram(0x03D0 + off));
+        }
+        assert_eq!(m.read_ram(0x03D1), 2, "radiusY");
+        assert_eq!(m.read_ram(0x03DB), 1, "onScreen");
+    }
+
+    #[test]
+    fn frame_record_coverage() {
+        // 帧记录覆盖锚（截断回归（blob OOB=FF 兜底⇒radius 全 FF⇒弹不可见（用户③）））：
+        // 帧 0x28 记录（$890A（04 02 02 30 FF…））必须在烘培域内（sprite_data≥0x399）。
+        let sd = game_data::area::sprite_data::SPRITE_DATA;
+        let off = 0x890Ausize.wrapping_sub(0x8572);
+        assert!(sd.len() > off + 4, "烘培覆盖帧 0x28 记录（{}B > {}）", sd.len(), off + 4);
+        assert_eq!(&sd[off..off + 5], &[0x04, 0x02, 0x02, 0x30, 0xFF], "记录体逐字节（ROM $890A）");
+    }
+
 }

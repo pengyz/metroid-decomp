@@ -1,0 +1,11 @@
+name case-shootprobe-probe
+frames 560
+snapshot none
+press 310 start
+press 350 start
+capture 420 game-in
+press 500 b
+capture 502 fire-2
+capture 505 fire-5
+capture 510 fire-10
+capture 520 fire-20

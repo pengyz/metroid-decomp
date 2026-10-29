@@ -1055,7 +1055,7 @@ fn enemy_check_move_right(mem: &mut crate::frame::FrameMemory, x: u8) -> bool {
 /// UpdateSamusProjectiles+DoOneSamusProjectile（**asm 内容锚** `: 07:D4BF/D4CB`——r26）：
 /// 3 槽（Objects 13-15=$D0/$E0/$F0）状态 dispatch：0=ExitSub（空径——移动对拍主径！）/
 /// 1=Bullet/2=Wave/3=Ice/4=Explode/5-10=Bomb 族/11=Missile（打敌人流程件——随件）。
-fn update_samus_projectiles(mem: &mut crate::frame::FrameMemory) {
+pub fn update_samus_projectiles(mem: &mut crate::frame::FrameMemory) {
     for slot in [0xD0u8, 0xE0, 0xF0] {
         mem.write_ram(0x004B, slot); // PageIndex（DoOneSamusProjectile（$D4CB））
         let status = mem.read_ram(0x0300 + slot as u16);
@@ -1142,8 +1142,8 @@ fn update_bullet(mem: &mut crate::frame::FrameMemory) {
     }
     // CheckBulletStat（$D4F8）
     if !collided {
-        let d = mem.read_ram(base + 0x15).wrapping_sub(1);
-        mem.write_ram(base + 0x15, d);
+        let d = mem.read_ram(base + 0x0F).wrapping_sub(1);
+        mem.write_ram(base + 0x0F, d);
         if d == 0 {
             mem.write_ram(base, 0); // 时寿耗尽⇒清
         }
@@ -2219,7 +2219,7 @@ mod tests_bullet_lifetime {
         m.write_ram(0x004B, 0xD0); // PageIndex
         m.write_ram(0x03D0, 1); // wa_Bullet
         m.write_ram(0x03D0 + 0x0B, 1); // onScreen
-        m.write_ram(0x03D0 + 0x15, 3); // DieDelay=3
+        m.write_ram(0x03D0 + 0x0F, 3); // DieDelay=3
         m.write_ram(0x03D0 + 8, 0); // speedY=0
         m.write_ram(0x03D0 + 9, 4); // speedX=4
         m.write_ram(0x03D0 + 0x0C, 0); // hi
@@ -2238,7 +2238,7 @@ mod tests_bullet_lifetime {
         update_samus_projectiles(&mut m);
         assert_eq!(m.read_ram(0x03D0), 1, "status 保持");
         assert_eq!(m.read_ram(0x03D0 + 0x0E), 4, "x+=speedX（0→4）");
-        assert_eq!(m.read_ram(0x03D0 + 0x15), 2, "DieDelay dec");
+        assert_eq!(m.read_ram(0x03D0 + 0x0F), 2, "DieDelay dec");
     }
 
     /// 【撞墙爆】瓦=$50（实心）⇒status←4+anim 0x1D（BulletHit）；$4E 门瓦⇒isHit 写
@@ -2267,7 +2267,7 @@ mod tests_bullet_lifetime {
     fn lifetime_and_cleanup() {
         // 时寿耗尽
         let mut m = bullet_mem(0xA0);
-        m.write_ram(0x03D0 + 0x15, 1);
+        m.write_ram(0x03D0 + 0x0F, 1);
         update_samus_projectiles(&mut m);
         assert_eq!(m.read_ram(0x03D0), 0, "时寿耗尽⇒清");
         // onScreen 清⇒删
@@ -2342,7 +2342,7 @@ mod tests_p0_anchor_pin {
         m.write_ram(crate::ram_map::JOY1_CHANGE, 0x40);
         m.write_ram(crate::ram_map::JOY1_STATUS, 0);
         crate::samus::handler::samus_jump_check_fire(&mut m); // D09C 公面（发射径）
-        assert_eq!(m.read_ram(0x03E5), 0x0C, "DieDelay=$0C");
+        assert_eq!(m.read_ram(0x03DF), 0x0C, "DieDelay=$0C（+0x0F（data0F））");
     }
 
     /// 门耐久表 [5,1,10,1]（$8BD1（红/蓝/导弹/音乐蓝））。
