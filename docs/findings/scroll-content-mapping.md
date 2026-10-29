@@ -73,3 +73,37 @@ f1000 时刻逐字节比对。
 【附】scroll/ctrl 3B：rust=81 00 90（PPUSCROLL X=$81/PPUCTRL=$90（bit4=表1））——
 emu 侧 getState 字段名容错回退 0（不可信（Mesen2 ppu 字段名待核（不影响定性
 （四面内容同已充分）））。
+
+
+## 6. $EAF4 尾径首列 kick 全径（接缝定向卡（2026-10-29））
+
+【asm 实录（A 级）】EndOfRoom（$EAF4（:8725））：
+```
+EndOfRoom:                  ; 07:EAF4
+    stx RoomNumber          ; RoomNumber←$F0（attr 表尾命令）
+    lda ScrollDir
+    sta TempScrollDir       ; $4A←ScrollDir（防重判基准（ac951fe2 修面）
+    and #$02
+    bne Lx224
+        jmp EndOfRoomVertical   ; 竖滚尾径（首行 kick）
+Lx224:
+        jmp EndOfRoomHorizontal ; 横滚尾径（**首列 kick**）
+```
+EndOfRoomHorizontal（$E70C（:7906-7913））：
+```
+    ldx ScrollDir
+    cpx TempScrollDir
+    bne RTS_X196            ; 防重（$4A 同向）
+    lda ScrollX
+    and #$F8
+    jsr Adiv8               ; Temp00=(ScrollX&0xF8)/8（列 idx）
+    sta Temp00_RoomRAMPtr
+    lda #$00
+    jmp UpdateNameTable     ; **首列流送**（$E590（30 行竖写））
+```
+【kick=载房窗内件】EndOfRoom=DrawRoom 对象环 $FF 尾/EnemyLoop $FF 尾同汇——载房
+（setup_room→DrawRoom）执行链内⇒**kick 落载房窗**（emu 首列随房即出（l380 emu 有柱））。
+【移出史（证伪更正）】ac951fe2 期 kick 移出载房窗（room.rs:488-491 自注）——理由=
+当时 stream_column_kick 内含 iter_bogged(2)（goal-r22 形）落入载房窗与 more_init
+frame-gate [1,0,0,1] 校准冲突——**d667d6cc 已证伪 goal-r22 逐列写 bog 归因**（摘除
+逐写 bog）⇒**冲突前提失效**（kick 现价=0 bog）——恢复 kick=asm 忠实形（缝根因修）。

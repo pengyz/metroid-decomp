@@ -1,0 +1,23 @@
+# 探针：滚动接缝（用户实测①——列流缝（1-N 列空隙/覆盖序）定向采集）
+# 密集采点（滚动中每 16 帧（缝窗口（瞬态捕）））
+name case-scrollseam-probe
+frames 900
+snapshot none
+press 310 start
+press 350 start
+capture 420 game-in
+hold 430-700 right
+capture 470 scroll-r30
+capture 500 scroll-r60
+capture 530 scroll-r90
+capture 560 scroll-r120
+capture 590 scroll-r150
+capture 620 scroll-r180
+capture 650 scroll-r210
+capture 680 scroll-r240
+capture 700 scroll-end
+hold 720-880 left
+capture 760 scroll-l40
+capture 800 scroll-l80
+capture 840 scroll-l120
+capture 880 end

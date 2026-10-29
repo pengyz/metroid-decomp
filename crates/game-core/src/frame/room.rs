@@ -485,10 +485,12 @@ pub fn end_of_room(mem: &mut crate::frame::FrameMemory) {
     // （EndOfRoomHorizontal/Vertical（$E70C/$E57C））。
     let sd = mem.read_ram(crate::ram_map::SCROLL_DIR);
     mem.write_ram(0x004A, sd);
-    // 【kick 移出 load 窗（2026-10-28）】asm $EAF4 尾径含首列 kick——但 kick 的列写
-    // bog（2 帧）落入载房窗与 emu 校准 frame-gate 序列 [1,0,0,1]（more_init 测（A 级
-    // trace））冲突（本窗共 2 bog（非 4））——kick 留滚动径覆盖（≤8px 首列延迟
-    // （判据（地形列补齐）不受））——stream_column_kick 供滚动径共用。
+    // 【kick 恢复（2026-10-29（接缝定向卡（lead 复盘定谳）））】asm $EAF4 尾径含
+    // 首列 kick（EndOfRoomHorizontal（$E70C）→UpdateNameTable（findings §6））——
+    // 2026-10-28 移出的理由（kick 列写 bog 2 帧与 more_init [1,0,0,1] 冲突）已被
+    // d667d6cc 证伪（逐列写 bog 归因错误（现价=0 bog））⇒**冲突前提失效**——
+    // 恢复 asm 忠实形（用户可见缝根因修（l380 左缘柱（列迟到瞬态）））。
+    crate::samus::physics::stream_column_kick(mem);
 }
 
 /// LoadEnemy（$EB06——GetEnemyData/GetEnemyType/LEB4D/LEB6E 全径）。
