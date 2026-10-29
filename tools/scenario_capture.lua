@@ -99,6 +99,8 @@ end
 local function readRange(fromAddr, toAddr)
   local parts = {}
   for a = fromAddr, toAddr do parts[#parts + 1] = hex2(readByte(a)) end
+  -- 【②终钉】敌 extra 面（EnsExtra $6AF4-$6B73（8 槽×16B））——data05/anim 态终钉用
+  for a = 0x6AF4, 0x6B73 do parts[#parts + 1] = hex2(readByte(a)) end
   return table.concat(parts)
 end
 

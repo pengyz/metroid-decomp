@@ -1,4 +1,5 @@
 name case-jumpledge-probe
+# v2（②终钉（EnsExtra dump 面））
 frames 1000
 snapshot none
 press 310 start

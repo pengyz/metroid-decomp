@@ -842,6 +842,11 @@ fn update_enemy_anim(mem: &mut crate::frame::FrameMemory, x: u8, a: u8) {
 /// GetSpriteCntrlData→位指针（EnPlacePtrTable）→sprite 管线写（place_disp/四元组）。
 fn draw_enemy(mem: &mut crate::frame::FrameMemory, x: u8) {
     use game_data::area::enemy_gfx as eg;
+    // 【②终钉·冲突面待裁（2026-10-29）】asm 绘脸（:6178-6186）：IsObjectVisible→
+    // data05 bit1 逐帧闩（and #$FD/ora（txa<<1））——bit1=上帧可见性（CheckIfVisible
+    // 跳检闩）——旧形双面不写⇒bit1 恒 0（f800 frame/位差根因确证）。实装连锁=敌全帧
+    // 处理⇒射击帧敌命中⇒爆（status3）⇒unported F40D（爆亡链缺）⇒blocked（l4 FAIL）
+    // ——与 radius 写同卡（findings §10 全证）——按「不强修（停机待裁）」暂撤。
     let frame = mem.read_wram(0x6AF4 + x as u16 + 3); // animFrame=+3
     if frame == 0xFF {
         mem.write_ram(0x006B, 0);
@@ -2427,3 +2432,4 @@ mod tests_axis_facing {
         assert_eq!(enemy_type_times2_plus_facing(&mut m, 0), 5, "横轴：bit0=1⇒2*2+1=5");
     }
 }
+

@@ -388,11 +388,15 @@ fn main() {
             hex.push('\n');
             let fname = format!("{}_f{:05}_{}.ppu.hex", plan.name, frame, tag);
             fs::write(out.join(&fname), hex).expect("写 PPU dump");
-            // WRAM 2KB dump（与 scenario_capture.lua::dumpRam 同构（0000-07FF hex））
+            // WRAM 2KB dump（与 scenario_capture.lua::dumpRam 同构（0000-07FF hex）
+            // +敌 extra 面 $6AF4-$6B73（②终钉（EnsExtra（双侧同构）））
             {
                 let mut ram_hex = String::new();
                 for i in 0..0x800usize {
                     ram_hex.push_str(&format!("{:02X}", engine.mem.ram.get(i).copied().unwrap_or(0)));
+                }
+                for i in 0x6AF4u16..=0x6B73 {
+                    ram_hex.push_str(&format!("{:02X}", engine.mem.read_wram(i)));
                 }
                 ram_hex.push('\n');
                 let fname = format!("{}_f{:05}_{}.ram.hex", plan.name, frame, tag);

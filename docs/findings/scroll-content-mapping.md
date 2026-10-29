@@ -151,3 +151,20 @@ asm $F844 **axis 感应**（bit7 置⇒bit3/清⇒bit0）——修+TDD 二测（
 帧差终钉需扩 dump 覆域（或 .ppu OAM 反推）——遗留下一探。
 【定性】残差=敌状态/anim 演化径分歧（data05 位 6/1+写集面）——非贴图表/非位移
 ——待 data05 演化径 asm 对读（UpdateEnemy_Active 位 6/1 语义）续修。
+
+
+## 10. 问题②终钉（2026-10-29）——data05 位 6/1 全径+冲突面待裁
+
+【asm 语义全钉（A 级）】①**bit6=帧奇偶标**（$F3AA（(slot>>4) xor FrameCount bit0）
+（30fps 动画门（`asl/bmi`=bit6 入符号）））②**bit1=上帧可见性闩**（绘脸 :6178-6186
+（IsObjectVisible→`and #$FD/ora（txa<<1）`）→CheckIfVisible（$F37F）借闩跳检）③
+bit5=静止回退门/bit7=轴/bit0=向/bit2=y 力/bit3,4=阈值掩（F75B 族）。
+【f800 EnsExtra 终钉（dump 覆域扩展后）】radiusY/X=emu 08 08/rust 00 00（**敌半径
+从不写**（asm :6156-6168（帧记字 1/2→radius）缺））+animDelay/animFrame/animIndex
+3 字段相位差。
+【两修候选实装+连锁实录】①radius 写（:6156-6168 全式）②bit1 逐帧闩——**均触发连锁**：
+敌全帧处理/命中检活⇒射击帧敌**爆（status3）⇒unported F40D（爆亡链缺）**⇒blocked
+（l4 ratchet FAIL（jumpledge/shootprobe/collide 依时相位漂移））。
+【处置（按「不强修（停机待裁）」先例）】两修**暂撤回**（注证留代码原位）——待爆亡链
+件（F40D ChooseEnemyAIRoutine-explode+EnemyCompleteDeath（DE05 族））补齐后**一并
+回装**（本节即回装证据包）。缺面=一张任务卡（D7 缺口路由）。
