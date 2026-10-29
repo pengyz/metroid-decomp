@@ -366,25 +366,25 @@ fn main() {
             let mut hex = String::new();
             let rs = &engine.mem.render;
             for i in 0..0x2000usize {
-                hex.push_str(&format!("{:02x}", rs.chr.get(i).copied().unwrap_or(0)));
+                hex.push_str(&format!("{:02X}", rs.chr.get(i).copied().unwrap_or(0)));
             }
             for i in 0..0x800usize {
-                hex.push_str(&format!("{:02x}", rs.nametable.get(i).copied().unwrap_or(0)));
+                hex.push_str(&format!("{:02X}", rs.nametable.get(i).copied().unwrap_or(0)));
             }
             for i in 0..0x400usize {
-                hex.push_str(&format!("{:02x}", rs.nametable.get(i).copied().unwrap_or(0)));
+                hex.push_str(&format!("{:02X}", rs.nametable.get(i).copied().unwrap_or(0)));
             }
             for i in 0x400..0x800usize {
-                hex.push_str(&format!("{:02x}", rs.nametable.get(i).copied().unwrap_or(0)));
+                hex.push_str(&format!("{:02X}", rs.nametable.get(i).copied().unwrap_or(0)));
             }
             // palette RAM（$3F00-$3F1F（32B（与 lua dumpPpu 同构）））
             for i in 0..32usize {
-                hex.push_str(&format!("{:02x}", rs.palette.get(i).copied().unwrap_or(0)));
+                hex.push_str(&format!("{:02X}", rs.palette.get(i).copied().unwrap_or(0)));
             }
             // 滚动/控制寄存器（scroll_x/scroll_y/ppuctrl（3B（细滚相位面）））
-            hex.push_str(&format!("{:02x}", rs.scroll_x));
-            hex.push_str(&format!("{:02x}", rs.scroll_y));
-            hex.push_str(&format!("{:02x}", rs.ppuctrl));
+            hex.push_str(&format!("{:02X}", rs.scroll_x));
+            hex.push_str(&format!("{:02X}", rs.scroll_y));
+            hex.push_str(&format!("{:02X}", rs.ppuctrl));
             hex.push('\n');
             let fname = format!("{}_f{:05}_{}.ppu.hex", plan.name, frame, tag);
             fs::write(out.join(&fname), hex).expect("写 PPU dump");
@@ -392,7 +392,7 @@ fn main() {
             {
                 let mut ram_hex = String::new();
                 for i in 0..0x800usize {
-                    ram_hex.push_str(&format!("{:02x}", engine.mem.ram.get(i).copied().unwrap_or(0)));
+                    ram_hex.push_str(&format!("{:02X}", engine.mem.ram.get(i).copied().unwrap_or(0)));
                 }
                 ram_hex.push('\n');
                 let fname = format!("{}_f{:05}_{}.ram.hex", plan.name, frame, tag);

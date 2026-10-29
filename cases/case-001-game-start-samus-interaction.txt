@@ -24,7 +24,9 @@ capture 720 after-jump   # 跳跃后
 
 # ④ 角色射击
 press 800 b         # 射击（帧 800）
-capture 820 after-shoot  # 射击后
+capture 815 bullet-mid-2
+capture 820 after-shoot
+capture 825 bullet-late  # 射击后
 
 # ⑤ 组合动作（移动+跳跃+射击）
 hold 900-950 right  # 向右移动（帧 900-950）

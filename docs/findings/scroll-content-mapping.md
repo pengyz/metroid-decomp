@@ -107,3 +107,29 @@ EndOfRoomHorizontal（$E70C（:7906-7913））：
 当时 stream_column_kick 内含 iter_bogged(2)（goal-r22 形）落入载房窗与 more_init
 frame-gate [1,0,0,1] 校准冲突——**d667d6cc 已证伪 goal-r22 逐列写 bog 归因**（摘除
 逐写 bog）⇒**冲突前提失效**（kick 现价=0 bog）——恢复 kick=asm 忠实形（缝根因修）。
+
+
+## 7. 帧记录验址口径更正（2026-10-29（复核注记（bank7 基换算误称）））
+
+> 【原地注】前期记录中「bank7 基换算」措辞**更正**：帧 0x28 记录（$890A）实锤形=
+> **区域 bank1-5 五处 $890A 全同**（common_sprite_data.asm 区 bank 共载（:1311
+> .include 形）——五 bank 逐字节一致）+**bank7 窗同址字节反证**（bank7 $890A 处
+> 字节≠04 02 02 30 FF（非本体（反证排除 bank7 基）））。验址口径=区域 bank 共载
+> 形（bank1-5 同址全同）非 bank7 换算。
+
+
+## 8. 端到端火力验证归档（2026-10-29（复核返工（可复现载体）））
+
+【场景面】case-001 +f815/f825 采点（f810 原点）+case-shootprobe-probe（照抄
+case-001 输入形（press 310/350 start+450-550 right+600-650 left+700 a+**800 b**（历史
+已证出弹相位）））。
+【双侧弹槽实测（f810 相位）】case-001 f810：emu[st=01 r=0202 scr=01 x=AC dd=03]/rust
+[st=01 r=0202 scr=01 x=B0 dd=02]——**双侧出弹 ✓**（x/dd=1 帧相位残（FC 域））；
+shootprobe fire-10 同证（emu[01/AC]/rust[01/B0]）。
+【逐字节归档】f815/f825 槽区（$3D0-$3EF）**32/32 全同**（死后态逐字节对齐（修前
+死态发散（radius FF/onScreen 0）））。
+【复现载体（仓库可复现链）】①cases/case-001-…+case-shootprobe-probe.txt（已入库）
+②`python3 tools/l4_diff_run.py run-all`（双侧 .ram.hex 生成（scenario_capture.lua::
+dumpRam+rust_screenshot（已入库）））③比对=上式逐字节（hex 直比（大小写已统一 %02X））。
+【修前/修后对照】修前 f810：rust[st=00 r=FF FF scr=00 x=8C]（弹死不可见）→修后
+[st=01 r=02 02 scr=01 x=B0]（活可见）——SPRITE_DATA 烘培截断根因（a1708910 修）。

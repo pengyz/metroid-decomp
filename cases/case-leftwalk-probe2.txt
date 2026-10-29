@@ -1,0 +1,13 @@
+name case-leftwalk-probe2
+frames 1400
+snapshot none
+press 310 start
+press 350 start
+capture 420 game-in
+hold 440-1400 left
+capture 620 l180
+capture 820 l380
+capture 1020 l580
+capture 1220 l780
+capture 1390 l950
+endFrame 1400

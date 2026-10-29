@@ -1,0 +1,16 @@
+name case-collide-probe
+frames 900
+snapshot none
+press 310 start
+press 350 start
+capture 420 game-in
+hold 440-540 right
+capture 540 r100
+press 560 a
+hold 560-700 left
+capture 620 l60
+capture 700 l140
+hold 700-900 left
+capture 800 l240
+capture 890 l330
+endFrame 900
