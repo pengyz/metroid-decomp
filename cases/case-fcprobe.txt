@@ -8,6 +8,11 @@ frames 460
 snapshot none  # 上电起跑（与 case-001 同相——前 420 帧输入逐帧相同）
 
 watch 002D FC
+watch 001F TitleRoutine
+watch 001E MainRoutine
+watch 001D GameMode
+watch 001A NMIStatus
+watch 002C Timer3
 
 press 310 start     # 标题按 Start（与 case-001 同相）
 press 350 start     # 选单按 Start（START GAME）

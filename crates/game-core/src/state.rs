@@ -36,6 +36,11 @@ pub struct FrameMemory {
     /// spin 等待计数（r23：臂的跨帧 spin 等待段——>0=等待 tick（工作零动）；与 cursor
     /// 机构正交（孤儿游标 F4 语义不动））。
     pub title_spin: u8,
+    /// 本 tick 标题臂**不返回主循环**旗（r9 FC 冻结考证——findings/fc-phase-residual.md：
+    /// asm `inc FrameCount`（prg7:207）在 MainLoop 迭代尾，例程内部 WaitNMIPass_ 自旋
+    /// 跨帧时迭代未完成⇒FC 不自增；emu 上电 f4-6/title→menu f311-313 各冻 3 帧实录。
+    /// 桥侧按相位（$01/$15/$1B=内旋族）置位，main_loop_iter 消费后清）。
+    pub title_no_return: bool,
     /// 迭代内帧门队列（move-drift 定谳 R2/R3——findings/move-drift-iteration-scheduling.md）：
     /// 1=帧等待（WaitNMIPass/WriteAndWait 族——下一 tick NMI 内块全跑含 ReadJoyPads）/
     /// 0=bogged 重活帧（NMIStatus 跳过门（asm prg7:251）——内块跳过=掉帧窗，D4 保真）。
@@ -58,7 +63,7 @@ pub struct FrameMemory {
 impl Default for FrameMemory {
     fn default() -> Self {
         Self { ram: [0; 0x800], wram: [0; 0x2000], regs: Registers::default(), nmi_enabled: false,
-               title_cursor: 0, title_cursor_phase: 0, title_spin: 0,
+               title_cursor: 0, title_cursor_phase: 0, title_spin: 0, title_no_return: false,
                iter_gates: Vec::new(), iter_span_left: 0, iter_span_fc: false,
                apu_log: Vec::new(),
                joy1: 0, joy2: 0,

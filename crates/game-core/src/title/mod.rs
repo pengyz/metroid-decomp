@@ -924,7 +924,7 @@ pub fn dispatch_step(face: &TitleFace) -> TitleStep {
                 },
             }
         }
-        // ---- 批6b：01 DrawIntroBackground（3 段 2 spin——全仪式关键件）----
+        // ---- 批6b：01 DrawIntroBackground（3 段（r9 压缩：原 2 spin 去——段间无独立帧）——全仪式关键件）----
         // 段0=APU 标志面+ScreenOff（$FE&=~$18+$1A←0+spin①）｜段1=ClearNameTables RAM 面
         // （NT0+NT1 两轮 $01/$00/$FF 面）+PrepareVram($82F4 PPU 侧)+体写+ScreenOn（$FE|=$1E+
         // $1A←0+spin②）｜段2=完成。
@@ -935,7 +935,10 @@ pub fn dispatch_step(face: &TitleFace) -> TitleStep {
                 0 => TitleStep {
                     events: vec![(0x00F0, 0x10), (0x0684, 0x10),
                                  (0x00FE, pm & !0x18), (0x001A, 0)],
-                    shell: vec![ShellCall::ScreenOff, ShellCall::SpinWait(1)], a_out: None, x_out: None, y_out: None,
+                    // 【r9 FC 冻结压缩（porter）】去 spin①——emu 实录该臂 3 帧全冻结
+                    // （f4-6，相位第 3 帧内→0x02；asm WaitNMIPass_ 自旋不返回主循环，
+                    // 段间无独立帧——findings/fc-phase-residual.md；FC 冻结=桥侧旗）
+                    shell: vec![ShellCall::ScreenOff], a_out: None, x_out: None, y_out: None,
                     jumped: None, unported: None, next_cursor: 1,
                 },
                 1 => TitleStep {
@@ -947,21 +950,15 @@ pub fn dispatch_step(face: &TitleFace) -> TitleStep {
                         (crate::ram_map::PALETTE_PENDING, 0x01), (0x00C5, 0x01),
                         (0x00FF, (ff & 0xFB) & 0xFC),
                         (0x00D7, 0),
-                        // ScreenOn 面（$FE|=$1E）——**相位推进移至尾段**（r22 补帧）
+                        // ScreenOn 面（$FE|=$1E）
                         (0x00FE, pm | 0x1E), (0x001A, 0),
+                        // 【r9 FC 冻结融合（porter）】相位推进并入本段（emu f5 冻帧内推进
+                        // 实录——asm 例程尾 jmp 内旋等待不返回，独立尾段帧不存在）
+                        crate::memmap::title_state::write_event_phase(face.phase.wrapping_add(1)),
                     ],
                     shell: vec![ShellCall::ClearNameTables, ShellCall::PrepareVram(0x82F4),
                                 ShellCall::ScreenOn],
                     a_out: None, x_out: None, y_out: None,
-                    jumped: None, unported: None, next_cursor: 2,
-                },
-                2 => TitleStep {
-                    // 尾段：相位推进=步完成（r22 定数：0x01=3 tick（seg0+seg1+尾）——
-                    // 处方"各补 1"=0x00+1/0x01+1；FC 计数实测调平）
-                    events: vec![
-                        crate::memmap::title_state::write_event_phase(face.phase.wrapping_add(1)),
-                    ],
-                    shell: vec![], a_out: None, x_out: None, y_out: None,
                     jumped: None, unported: None, next_cursor: 0,
                 },
                 _ => TitleStep {
@@ -975,23 +972,23 @@ pub fn dispatch_step(face: &TitleFace) -> TitleStep {
         0x15 | 0x1B => {
             let pm = face.ram[0x00FE & 0x7FF];
             let ff = face.ram[0x00FF & 0x7FF];
+            // 【r9 FC 冻结压缩（porter）】旧形 3 work+3 SpinWait=6 tick 且每 tick 加 FC——
+            // emu 实录该臂=3 帧全冻结（f311-313，相位第 3 帧内→0x16——findings/
+            // fc-phase-residual.md）：asm 各段尾 WaitNMIPass_ 自旋**不返回主循环**（段间
+            // 无独立帧）。压缩=去 SpinWait（3 tick；FC 冻结=桥侧 no_return 旗管）。
             match face.cursor {
                 0 => TitleStep {
-                    events: clear_all_seg0_events(pm), shell: vec![ShellCall::ScreenOff, ShellCall::SpinWait(1)],
+                    events: clear_all_seg0_events(pm), shell: vec![ShellCall::ScreenOff],
                     a_out: None, x_out: None, y_out: None,
                     jumped: None, unported: None, next_cursor: 1,
                 },
-                1 => TitleStep {
-                    events: clear_all_seg1_events(&face.ram, &face.wram, face.frame_count,
-                                                  face.phase, ff),
-                    shell: vec![ShellCall::ClearNameTables, ShellCall::EraseAllSprites,
-                                ShellCall::WaitNMIPass, ShellCall::SpinWait(1)],
-                    a_out: None, x_out: None, y_out: None,
-                    jumped: None, unported: None, next_cursor: 2,
-                },
-                2 => {
-                    // VBOff 面 + PrepareVram($9984) + 体写 + NMIOn 面 + ScreenOn 面 + spin③
-                    let mut events = clear_all_seg2_events(ff & 0xFB & 0xFC);
+                1 => {
+                    // 【r9 FC 冻结融合（porter）】段1+段2 并帧（emu f312 冻帧内推进实录——
+                    // asm 段尾 WaitNMIPass_ 自旋不返回主循环，段间无独立帧）
+                    let mut events = clear_all_seg1_events(&face.ram, &face.wram, face.frame_count,
+                                                           face.phase, ff);
+                    // 段2：VBOff 面 + PrepareVram($9984) + 体写 + NMIOn 面 + ScreenOn 面
+                    events.extend(clear_all_seg2_events(ff & 0xFB & 0xFC));
                     // 绘制面补（三分靶根因件）：L9984 blob→VRAMStruct 缓冲实写
                     let bidx = face.ram[0x07A0 & 0x7FF];
                     events.extend(vram_struct_buffer_events(bidx, &START_CONTINUE_BLOB));
@@ -1002,12 +999,12 @@ pub fn dispatch_step(face: &TitleFace) -> TitleStep {
                     events.push((0x00FE, pm | 0x1E)); // ScreenOn：$FE|=$1E
                     events.push((0x001A, 0));
                     TitleStep {
-                        events, shell: vec![ShellCall::VBOffAndHorzWrite,
+                        events, shell: vec![ShellCall::ClearNameTables, ShellCall::EraseAllSprites,
+                                            ShellCall::WaitNMIPass, ShellCall::VBOffAndHorzWrite,
                                             ShellCall::PrepareVram(0x9984),
-                                            ShellCall::NMIOn, ShellCall::ScreenOn,
-                                            ShellCall::SpinWait(1)],
+                                            ShellCall::NMIOn, ShellCall::ScreenOn],
                         a_out: None, x_out: None, y_out: None,
-                        jumped: None, unported: None, next_cursor: 3,
+                        jumped: None, unported: None, next_cursor: 0,
                     }
                 }
                 _ => TitleStep {
@@ -1110,12 +1107,13 @@ pub fn dispatch_step(face: &TitleFace) -> TitleStep {
                 },
             }
         }
-        // ---- 五降级占位臂（12/01/15/1B/1C/17 已深路径化——0x18 专件=稳定锚随后）----
-        0x01 | 0x12 | 0x15 | 0x1B | 0x1C | 0x17 => TitleStep {
+        // ---- 降级占位臂（12/17 已深路径化——0x18 专件=稳定锚随后；0x12 表址 0x82ED/
+        //      0x17 表址 0x911A——旧形误记 0x939E（$1B 目标）顺正）----
+        0x12 | 0x17 => TitleStep {
             events: vec![], shell: vec![ShellCall::NmiYield], a_out: None, x_out: None,
             y_out: None, jumped: None, next_cursor: 0,
             unported: Some(match face.phase {
-                                0x17 => 0x911A, _ => 0x939E,
+                                0x17 => 0x911A, _ => 0x82ED,
             }),
         },
         // ---- 真未武装（18 深路专件/0x1E SetTimer 随件）----

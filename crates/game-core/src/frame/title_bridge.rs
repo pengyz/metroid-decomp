@@ -19,11 +19,21 @@ const TITLE_ROUTINE_PTR_TABLE: [u16; 31] = [
 /// MainTitleRoutine 分发一步（asm 内容锚 `MainTitleRoutine: ; 00:8000`）。
 pub fn main_title_routine(mem: &mut FrameMemory) {
     // 【r23 spin 等待段】>0=本 tick 工作零动（跨相续段正交机构——臂的等待段语义）。
+    // 【r9 FC 冻结（porter）】旗先于 spin 消费——spin tick=asm 例程内部 WaitNMIPass_
+    // 等待帧（不返回主循环⇒迭代未完成⇒FC 不自增）；0x00 工作段同拍推进相位，其 spin
+    // tick 入相位已是 0x01（内旋族）⇒冻（emu f3 实录同冻——findings/fc-phase-residual.md）。
+    mem.title_no_return = matches!(
+        mem.read_ram(TITLE_ROUTINE), 0x01 | 0x15 | 0x1B);
     if mem.title_spin > 0 {
         mem.title_spin -= 1;
         return;
     }
     let phase = mem.read_ram(TITLE_ROUTINE);
+    eprintln!("[dbg-t] enter phase={:02X} cur={} spin={} noret={}", phase, mem.title_cursor, mem.title_spin, mem.title_no_return);
+    // 【r9 FC 冻结（porter）】内旋族相位（$01 上电初始化臂/$15|$1B StartContinue 臂=asm
+    // WaitNMIPass_ 自旋尾——例程不返回主循环）⇒本 tick 迭代未完成，main_loop_iter 跳过
+    // `inc FrameCount`（emu f4-6/f311-313 各冻 3 帧实录——findings/fc-phase-residual.md）。
+    mem.title_no_return = matches!(phase, 0x01 | 0x15 | 0x1B);
     let mut star_src = [0u8; 0xA0];
     for (i, b) in star_src.iter_mut().enumerate() {
         *b = mem.read_wram(0x6E00 + i as u16);
@@ -67,6 +77,8 @@ pub fn main_title_routine(mem: &mut FrameMemory) {
             mem.write_ram(addr, val);
         }
         mem.write_ram(crate::ram_map::TITLE_ROUTINE, head_new); // 0x1B 落位
+        // 【r9 FC 冻结】命中帧=转换例程体同帧执行（不返回主循环）⇒冻（emu f310 实录）
+        mem.title_no_return = true;
     }
     let step = crate::title::dispatch_step(&face);
     mem.title_cursor = step.next_cursor; // 跨帧游标存回（>0=spin 续点/0=完成复位）

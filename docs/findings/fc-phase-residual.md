@@ -59,13 +59,32 @@ rust +4 后冻结并于 f810-825 出现 −1 回摆（转角回转）。f420–f
 - 门禁: python3 tools/l4_diff_run.py run case-fcprobe → 现状差 +6（本文 §2 复现）
 ```
 
-## 5. 修复后预期（假设区，待 porter 验证）
+## 5. 修复落地（2026-10-29 porter 修，本节补注）
 
-- case-001 敌槽轨迹双侧同值（f825 净位移一致）→ 爬行残差（emu +12/rust +8/4）
-  收口；L4 的 26 个 diff 点中 FC 门控族（弹相位残/敌相位残）预计部分收口
-  （其余属 BUG-089 渲染/采样时序族，独立）。
-- 风险：FC 重同步后，此前按 +6 相位标定的「定性归档」面（如 crawl travel 锚）
-  需复核是否被红——tests_crawl_trace 断言 travel≥5（路径长非逐点锚），预计不受影响。
+**改动面**（commit 见 git log）：
+- `state.rs`：FrameMemory 增 `title_no_return` 旗；
+- `mainloop.rs main_loop_iter`：FC 自增改门控（`!title_no_return`）——asm `inc FrameCount`
+  （prg7:207）在 MainLoop **迭代尾**，例程不返回的帧不自增；
+- `title_bridge.rs`：旗先于 spin 消费置位（内旋族相位 $01/$15/$1B——spin tick=例程内部
+  等待帧同冻；0x00 工作段同拍推进相位故其 spin tick 入相位已属族）+head_hit 帧置旗
+  （Start 命中帧=转换例程体同帧执行，emu f310 冻实录）；
+- `title/mod.rs`：$01 臂与 $15|$1B 臂**融合尾段**（相位推进并入最后工作段；去段间
+  SpinWait——asm 段尾内旋等待不返回主循环，段间无独立帧）；顺正占位组 unported 表址
+  （0x12→0x82ED/0x17→0x911A，旧形误记 0x939E）。
+
+**判据结果**：
+- ✅ 判据一（fcprobe 逐帧 FC 差恒 0）：达成——452 可比帧 **FC 0 分歧**；相位仅剩
+  1 处单行差（f7：0x02 fade_delay 臂时长差 1 帧，f8 起自愈）——遗留登记。
+- ❌ 判据二（case-001 敌槽轨迹双侧同值）：**未达成**——FC 对齐后爬行残差形态改变
+  （f810 起 rust 190/190/190/191 vs emu 196/200/200/200，f950 起路径分叉扩大）：
+  爬行**转向/撞角族**（CrawlerInsideCornerCheck $9AA8/OutsideCornerCheck $9AC6/
+  四例行）存在 FC 之外的独立分歧面——新考证任务（本档不修，路由 porter 考证轮）。
+- 门禁：gates check PASS=13 FAIL=0；**L4 76 格 match 集合零缩水**（FC 对齐未引起
+  任何锚定点回退——两窗均在 title 域、L4 采集点不采样该窗）；cargo test 457 过
+  0 败（含新钉 `fc_frozen_on_no_return_title_arms`）。
+
+**假设区（未证）**：$1C GameOver 臂（3 spin）同族疑同冻（本窗无证据未动）；0x02
+fade_delay 臂 1 帧时长差（f7 单行、f8 自愈）疑 glue 延迟计数边界——两案留考证。
 
 ## 6. 证据指针
 

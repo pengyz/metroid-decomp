@@ -40,11 +40,16 @@ pub fn main_loop_iter(mem: &mut FrameMemory) {
         update_timer(mem); // C266
     }
     go_main_routine(mem); // C114（分发壳——会师点；续段=GoMainRoutine 内部续跑）
-    // 【goal-r4 修】`inc FrameCount`（GoMainRoutine 返回点+wait-NMI）=**每帧递增**（asm
-    // prg7:207 `inc FrameCount`→`sta NMIStatus`→wait-NMI=60Hz 帧节律）。旧形把 FC 延至
-    // span 尾/续段不计 ⇒ FC 滞后（goal-r4 实测 f550 lag 17）⇒ fade 闪烁 `FC&1` 相位反相
-    // ⇒ 萨姆斯渲染发散。修=每 tick 无条件递增（对齐 asm 帧节律）。
-    mem.write_ram(FRAME_COUNT, mem.read_ram(FRAME_COUNT).wrapping_add(1));
+    // 【FC 冻结（r9 考证·porter 修）】`inc FrameCount`（asm prg7:207）在 **MainLoop 迭代尾**
+    // ——例程内部 WaitNMIPass_ 自旋跨帧时迭代未完成⇒不自增。emu 实录：上电 f4-6 与
+    // title→menu f311-313 各冻 3 帧（findings/fc-phase-residual.md——桥侧按内旋族相位
+    // $01/$15/$1B 置 no_return 旗）；menu→game 冻结走既有 span 门（iter_span_fc）不受此管。
+    // 旧形每 tick 无条件递增（goal-r4）治了滞后但过量 +6（=两窗 3+3），本门即 emu 对齐。
+    eprintln!("[dbg-f] post-gmr noret={} fc={}", mem.title_no_return, mem.read_ram(FRAME_COUNT));
+    if !mem.title_no_return {
+        mem.write_ram(FRAME_COUNT, mem.read_ram(FRAME_COUNT).wrapping_add(1));
+    }
+    mem.title_no_return = false;
     mem.write_ram(NMI_STATUS, 0); // 清 0（spin 入口）
 }
 
@@ -1868,6 +1873,35 @@ mod tests {
         m.write_ram(TIMER_DELAY, 5);
         main_loop_iter(&mut m);
         assert_eq!(m.read_ram(TIMER_DELAY), 4, "UpdateTimer 跑（真迭代——禁误门）");
+    }
+
+    /// FC 冻结门（r9 porter 修——findings/fc-phase-residual.md）：内旋族相位
+    /// （$01 上电初始化臂/$1B StartContinue 臂——asm 例程体+WaitNMIPass_ 自旋尾不返回
+    /// 主循环）tick 不自增 FC；相位推进并入臂内最后工作段（emu 冻帧内推进实录：
+    /// 上电 f4-5 冻/f6 推进、menu f311-312 冻/f313 起自增），臂毕恢复自增。
+    /// mutation 面：旧形（每 tick 无条件加）下两窗各多 3 ⇒ fcprobe 逐帧差 +6 ⇒ 本测红。
+    #[test]
+    fn fc_frozen_on_no_return_title_arms() {
+        let mut m = crate::frame::FrameMemory::default();
+        m.write_ram(GAME_MODE, 1);
+        // $01 臂：2 tick 全冻结，第 2 tick 相位→0x02
+        m.write_ram(crate::ram_map::TITLE_ROUTINE, 0x01);
+        for _ in 0..2 {
+            main_loop_iter(&mut m);
+        }
+        assert_eq!(m.read_ram(FRAME_COUNT), 0, "$01 臂 2 tick FC 全冻");
+        assert_eq!(m.read_ram(crate::ram_map::TITLE_ROUTINE), 0x02, "末段相位→0x02");
+        main_loop_iter(&mut m);
+        assert_eq!(m.read_ram(FRAME_COUNT), 1, "0x02 起恢复自增");
+        // $1B 臂：2 tick 全冻结，第 2 tick 相位→0x16（cursor 机 0→1）
+        m.write_ram(crate::ram_map::TITLE_ROUTINE, 0x1B);
+        for _ in 0..2 {
+            main_loop_iter(&mut m);
+        }
+        assert_eq!(m.read_ram(FRAME_COUNT), 1, "$1B 臂 2 tick FC 全冻");
+        assert_eq!(m.read_ram(crate::ram_map::TITLE_ROUTINE), 0x16, "末段相位→0x16");
+        main_loop_iter(&mut m);
+        assert_eq!(m.read_ram(FRAME_COUNT), 2, "0x16 起恢复自增");
     }
 
     /// UpdateTimer 预分频+三计时器递减。
