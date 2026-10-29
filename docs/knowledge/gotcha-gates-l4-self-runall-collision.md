@@ -41,8 +41,12 @@ status: confirmed
   工作区时必查（本条目的直接成因）。
 - l4 FAIL 且形态为「新增 blocked」时：先读涉事 case 的 `run.json`（done 块）
   与 ps 时间线定层，**禁止**当产品回退去动代码，也**禁止**盲目反复重跑。
-- 长期解（待办）：给 `tools/l4_diff_run.py` 接入 `.scenario.lock` 同族串行锁
-  + 覆盖前归档——属 gate/tools 改动，须单独 commit 写明基线影响。
+- 【2026-10-29 落地】长期解已收口：`tools/l4_diff_run.py` 接 run 级串行锁
+  `analysis/.l4_run.lock`（RunLock——独立于内层 `.scenario.lock` case 级锁；
+  先非阻塞、被占显式轮询等待、上限 `L4_RUN_LOCK_TIMEOUT_S`（默认 600s）、超时
+  fail-loud exit 2=gate 拒跑理由可见；仅 `__main__` 取，gates selftest 进程内
+  探针不受影响）。等待+超时两径实测过（占锁 8s→取得继续；占锁 30s+限 4s→exit 2）。
+  覆盖前归档由 scenario_run `archive_existing`（锁内）既有机制承担，不重复建。
 
 ## 证据指针
 

@@ -52,7 +52,11 @@
     · I2 输入对称性：plan 含 trigger/nav（运行时条件输入仅模拟器侧叠加执行，Rust 无对应面）
       ⇒ 全 action exit 2——两侧跑不同输入=假对拍，绝不静默；
     · C1 崩溃语义：run-all 任何未捕获异常 ⇒ exit 2 拒跑（与拒跑同码——exit 1 会被 gate 读作
-      "跑完"去判矩阵，崩溃残留旧 matrix 被判过=假绿后门）；矩阵落盘走 temp+rename 原子写。
+      "跑完"去判矩阵，崩溃残留旧 matrix 被判过=假绿后门）；矩阵落盘走 temp+rename 原子写；
+    · 串行锁（2026-10-29，KB 第 5 员收口）：真跑入口持 analysis/.l4_run.lock（run 级外层
+      篱笆，独立于内层 scenario_run 的 .scenario.lock case 级锁）——并发 l4 action 交错
+      重写/归档共享产物（analysis/traces+shots(_rust)）曾产出假「新增 blocked」FAIL；
+      被占时显式提示轮询等待（上限 L4_RUN_LOCK_TIMEOUT_S，默认 600s），超时 exit 2。
 """
 from __future__ import annotations
 
@@ -62,7 +66,14 @@ import json
 import os
 import subprocess
 import sys
+import time
 from pathlib import Path
+
+try:
+    import fcntl
+except ImportError:  # Windows：与 scenario_run.ScenarioLock 同族（msvcrt 首字节锁）
+    fcntl = None  # type: ignore[assignment]
+    import msvcrt  # type: ignore[import-not-found]
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "tools"))
@@ -78,6 +89,72 @@ ROM = ROOT / "rom" / "Metroid (USA).nes"  # ROM 身份锚（D3；sha 见 AGENTS.
 
 # 三 sha 锚键名（task-3 产 / task-5 matrix 消——键名契约勿改）
 ANCHOR_KEYS = ("scenario_sha256", "rom_sha256", "sched_sha256")
+
+# ---------------- run 级串行锁（KB 第 5 员收口，2026-10-29） ----------------
+# 并发 l4 action 曾交错重写共享产物（analysis/traces+shots(_rust)）⇒ 读到半成品
+# =假「新增 blocked」FAIL（同树串行窗即绿，反证非产品层）。case 级 .scenario.lock
+# 只护单次 scenario_run；本锁=run 级外层篱笆，护住「run 完→diff/复用读产物」整窗。
+
+L4_RUN_LOCK = ROOT / "analysis" / ".l4_run.lock"
+L4_RUN_LOCK_WAIT_S = float(os.environ.get("L4_RUN_LOCK_TIMEOUT_S", "600"))
+
+
+class RunLock:
+    """真跑入口外层串行锁（仅 __main__ 取——gates selftest 的进程内探针不走此径）。
+
+    先试非阻塞；被占则显式提示轮询等待（默认上限 600s，env L4_RUN_LOCK_TIMEOUT_S
+    覆盖），超时 fail-loud exit 2（gate 读作拒跑，理由可见）。与内层
+    analysis/.scenario.lock **分文件**——同文件会让等待中的腿非阻塞自撞假失败。
+    """
+
+    def __init__(self, path: Path = L4_RUN_LOCK, wait_s: float | None = None) -> None:
+        self.path = path
+        self.wait_s = L4_RUN_LOCK_WAIT_S if wait_s is None else wait_s
+        self._fh = None
+
+    def _try_acquire(self) -> bool:
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        fh = open(self.path, "w")
+        try:
+            if fcntl is not None:
+                fcntl.flock(fh.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+            else:
+                fh.write("lock\n")
+                fh.flush()
+                msvcrt.locking(fh.fileno(), msvcrt.LK_NBLCK, 1)
+        except OSError:
+            fh.close()
+            return False
+        self._fh = fh
+        return True
+
+    def acquire(self) -> None:
+        if self._try_acquire():
+            return
+        print(f"[!] 另一 L4 run 进行中（{self.path.name} 被占）——串行等待上限 "
+              f"{self.wait_s:g}s（查占用：ps aux | grep -E 'l4_diff_run|scenario_run|mesen2/Mesen'）")
+        deadline = time.monotonic() + self.wait_s
+        while time.monotonic() < deadline:
+            time.sleep(5.0)
+            if self._try_acquire():
+                print(f"[!] 锁已取得（等了 {self.wait_s - (deadline - time.monotonic()):g}s）——继续")
+                return
+        print(f"[!] L4 串行锁等待超时（>{self.wait_s:g}s）——另一 run 疑挂死，fail-loud 拒跑 "
+              f"exit 2（先清查残留 Mesen/l4_diff_run 进程再重试）", file=sys.stderr)
+        sys.exit(2)
+
+    def release(self) -> None:
+        if self._fh is None:
+            return
+        try:
+            if fcntl is not None:
+                fcntl.flock(self._fh.fileno(), fcntl.LOCK_UN)
+            else:
+                self._fh.seek(0)
+                msvcrt.locking(self._fh.fileno(), msvcrt.LK_UNLCK, 1)
+        finally:
+            self._fh.close()
+            self._fh = None
 
 
 def case_path_of(name: str) -> Path:
@@ -1051,4 +1128,9 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    _run_lock = RunLock()
+    _run_lock.acquire()
+    try:
+        main()
+    finally:
+        _run_lock.release()
