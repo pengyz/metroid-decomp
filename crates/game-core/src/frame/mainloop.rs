@@ -392,10 +392,10 @@ pub fn update_all_enemies(mem: &mut crate::frame::FrameMemory) {
             0 => {} // ExitSub（rts）
             1 => enemy_resting(mem, x), // F3BE
             2 => enemy_active(mem, x),  // F3E6
-            3 => crate::unported!("bank07:F40D"), // UpdateEnemy_Explode（ChooseEnemyAIRoutine 径）
-            4 => crate::unported!("bank07:F54D"), // Frozen
-            5 => crate::unported!("bank07:F57D"), // Pickup
-            6 => crate::unported!("bank07:F59D"), // Hurt
+            3 => update_enemy_explode(mem, x), // F40D 爆亡（计时→CompleteDeath）
+            4 => update_enemy_frozen(mem, x),  // F54D 冻（计时→回活）
+            5 => update_enemy_pickup(mem, x),  // F57D 拾取（碰触→回血/移除）
+            6 => update_enemy_hurt(mem, x),    // F59D Hurt（计时→回活）
             _ => crate::unported!("bank07:FA18"), // RemoveEnemy（状态≥7）
         }
         if x == 0 {
@@ -690,10 +690,159 @@ fn init_en_active_anim_index(mem: &mut crate::frame::FrameMemory, x: u8) {
 /// EnemyReactToSamusProjectile（**asm 内容锚** `: 07:F536`——r26）：isHit(+4) bit5=0⇒
 /// RTS（未中弹径——移动对拍主径）；中弹径=冰冻/伤害族（打敌人流程件——随件）。
 fn enemy_react_to_projectile(mem: &mut crate::frame::FrameMemory, x: u8) {
-    if mem.read_ram(0x0400 + x as u16 + 4) & 0x20 == 0 {
+    // 【实录（asm $F536 全径（findings §11）+探针偏移（+0B=health/+0D=data0D/
+    // +0E=weaponAction/+0F=specialAttribs（ens_probe trace（F863/F437/F41B 锚）））】
+    let px = x as u16;
+    let e4 = 0x0400 + px + 4; // isHit
+    if mem.read_ram(e4) & 0x20 == 0 {
+        return; // 非被弹⇒RTS
+    }
+    let sa = mem.read_ram(0x0400 + px + 0x0F); // specialAttribs（Lx321 prevStatus 记账）
+    let psc = mem.read_ram(0x0400 + px + 0x0C); // prevStatus
+    mem.write_ram(0x0400 + px + 0x0C, psc | sa); // `ora Temp0A/sta prevStatus`（Lx321）
+    let wa = mem.read_ram(0x0400 + px + 0x0E); // weaponAction
+    let miniboss = sa & 0x40 != 0;
+    // 冰冻臂（IceBeam=wa 2（audit 形）+非 miniboss+非冻）——status 4=冻结
+    let st = mem.read_wram(0x6AF4 + px); // EnsExtra.status
+    if wa == 2 && !miniboss && st != 4 {
+        mem.write_wram(0x6AF4 + px, 4); // status←Frozen
+        mem.write_ram(0x0400 + px + 0x0D, 0x40); // data0D←$40（冻计时）
+        mem.write_ram(e4, 0); // isHit 清
         return;
     }
-    crate::unported!("bank07:F536");
+    // Lx317：HP==$FF⇒无效（SFX（声=桩）+清 isHit/weaponAction）
+    let hp = mem.read_ram(0x0400 + px + 0x0B); // health（trace +0B）
+    if hp == 0xFF {
+        mem.write_ram(e4, 0);
+        mem.write_ram(0x0400 + px + 0x0E, 0);
+        return;
+    }
+    // 弹（wa_Missile）/螺（$81）⇒瞬杀（非 miniboss）
+    if !miniboss && (wa == 0x0B || wa == 0x81) {
+        mem.write_ram(e4, 0);
+        explode_enemy(mem, x);
+        return;
+    }
+    // Lx322：status←Hurt(6)+specialAttribs←$0A/$03
+    mem.write_wram(0x6AF4 + px, 6);
+    mem.write_ram(0x0400 + px + 0x0F, if miniboss { 0x03 } else { 0x0A });
+    // HP dec（波=2/束=1（Lx324/325））⇒0⇒爆
+    let dec = if wa == 4 { 2u8 } else { 1u8 }; // wa_WaveBeam=4（audit 形）
+    let nhp = hp.wrapping_sub(dec);
+    mem.write_ram(0x0400 + px + 0x0B, nhp);
+    mem.write_ram(e4, 0);
+    if nhp == 0 {
+        explode_enemy(mem, x);
+    }
+}
+
+/// ExplodeEnemy（**asm 内容锚** `: 07:F611`）：status←3+EnemyDeathAnimIndex[type×2+向]
+/// →InitEnAnimIndex+chunkyExplosionTimer←A（+06）——EnExplosions 池=小爆效果件
+/// （分卡（记账））。
+fn explode_enemy(mem: &mut crate::frame::FrameMemory, x: u8) {
+    let px = x as u16;
+    mem.write_wram(0x6AF4 + px, 3); // status←Explode
+    let ty = mem.read_wram(0x6AF4 + px + 14) as usize & 0x1F;
+    let d05 = mem.read_ram(0x0400 + px + 5);
+    let facing: usize = if d05 & 0x80 != 0 { ((d05 >> 3) & 1) as usize } else { (d05 & 1) as usize };
+    let idx = ((ty << 1) | facing) & 0x1F;
+    const ENEMY_DEATH_ANIM: [u8; 32] = [
+        // EnemyDeathAnimIndex（**ROM 字节锚** bank1:$960B（type×2+向（32B）））
+        0x27,0x27,0x29,0x29,0x2D,0x2B,0x31,0x2F,0x33,0x33,0x41,0x41,0x4B,0x4B,0x55,0x53,
+        0x72,0x74,0x00,0x00,0x00,0x00,0x69,0x69,0x69,0x69,0x00,0x00,0x00,0x00,0x00,0x00,
+    ];
+    let anim = ENEMY_DEATH_ANIM[idx];
+    mem.write_wram(0x6AF4 + px + 5, anim); // resetAnimIndex
+    mem.write_wram(0x6AF4 + px + 6, anim); // animIndex
+    mem.write_wram(0x6AF4 + px + 4, 0); // animDelay
+    mem.write_ram(0x0400 + px + 6, anim); // chunkyExplosionTimer←A（asm `sta`（+06））
+}
+
+/// UpdateEnemy_Explode（**asm 内容锚** `: 07:F40D`（jmp ChooseEnemyAIRoutine（爆在 AI
+/// Exit 臂（noMoveNoAnim 显示）+chunkyExplosionTimer（+06）计时⇒CompleteDeath））。
+fn update_enemy_explode(mem: &mut crate::frame::FrameMemory, x: u8) {
+    let px = x as u16;
+    update_enemy_anim(mem, x, 3);
+    update_enemy_common_no_move_no_anim(mem, x);
+    let timer = mem.read_ram(0x0400 + px + 6); // chunkyExplosionTimer（trace +06）
+    if timer > 0 {
+        mem.write_ram(0x0400 + px + 6, timer - 1);
+    } else {
+        enemy_complete_death(mem, x);
+    }
+}
+
+/// UpdateEnemy_Frozen（$F54D）：data0D 计时（×8（asm「frozen timer (* 8)」））⇒回 Active。
+fn update_enemy_frozen(mem: &mut crate::frame::FrameMemory, x: u8) {
+    let px = x as u16;
+    update_enemy_common_no_move_no_anim(mem, x);
+    let d = mem.read_ram(0x0400 + px + 0x0D);
+    if d > 0 {
+        mem.write_ram(0x0400 + px + 0x0D, d - 1);
+    } else {
+        mem.write_wram(0x6AF4 + px, 2); // 回 Active
+    }
+}
+
+/// UpdateEnemy_Hurt（$F59D）：specialAttribs=hitstun 延（asm「hitstun delay」）⇒回 Active。
+fn update_enemy_hurt(mem: &mut crate::frame::FrameMemory, x: u8) {
+    let px = x as u16;
+    update_enemy_common_no_move_no_anim(mem, x);
+    let d = mem.read_ram(0x0400 + px + 0x0F);
+    if d > 0 {
+        mem.write_ram(0x0400 + px + 0x0F, d - 1);
+    } else {
+        mem.write_wram(0x6AF4 + px, 2); // 回 Active
+    }
+}
+
+/// UpdateEnemy_Pickup（**asm 内容锚** `: 07:F483`）：碰触（isHit&$24）⇒RemoveEnemy+
+/// 回血/弹（+30/+20/+小（animFrame 0x80=弹药））；data0D 计时（*4）⇒到期移除。
+fn update_enemy_pickup(mem: &mut crate::frame::FrameMemory, x: u8) {
+    let px = x as u16;
+    // 碰触判**先于**显面（静态面尾清 isHit（+4←0）——序正（asm F483 先判后显））
+    let hit = mem.read_ram(0x0400 + px + 4);
+    if hit & 0x24 != 0 {
+        // 碰触⇒回血/弹+移除
+        let frame = mem.read_wram(0x6AF4 + px + 3);
+        if frame == 0x80 {
+            let m = mem.read_wram(crate::ram_map::MISSILE_COUNT);
+            mem.write_wram(crate::ram_map::MISSILE_COUNT, m.saturating_add(5));
+        } else if frame == 0x89 {
+            let h = mem.read_ram(0x0106u16);
+            mem.write_ram(0x0106u16, h.saturating_add(30));
+        } else {
+            let h = mem.read_ram(0x0106u16);
+            mem.write_ram(0x0106u16, h.saturating_add(20));
+        }
+        mem.write_wram(0x6AF4 + px, 0); // RemoveEnemy（槽释）
+        return;
+    }
+    update_enemy_common_no_move_no_anim(mem, x);
+    let d = mem.read_ram(0x0400 + px + 0x0D);
+    if d > 0 {
+        mem.write_ram(0x0400 + px + 0x0D, d - 1);
+    } else {
+        mem.write_wram(0x6AF4 + px, 0); // 到期移除
+    }
+}
+
+/// EnemyCompleteDeath（**asm 内容锚** `: 07:DCF5`）：status←Pickup+data0D←$60+
+/// 1/16 无掉+PickupTypeTable[rand&7]→animFrame（表 ROM $DE35=80 81 89）——qty 限
+/// 域=分卡（记账）。
+fn enemy_complete_death(mem: &mut crate::frame::FrameMemory, x: u8) {
+    let px = x as u16;
+    mem.write_wram(0x6AF4 + px, 5); // status←Pickup
+    mem.write_ram(0x0400 + px + 0x0D, 0x60); // data0D←$60（拾取计时）
+    let r = mem.read_ram(crate::ram_map::RANDOM1);
+    if r < 0x10 {
+        // 1/16 无掉⇒移除（LDD5B 非 Tourian）
+        mem.write_wram(0x6AF4 + px, 0);
+        return;
+    }
+    let tbl = [0x80u8, 0x81, 0x89, 0x80, 0x81, 0x89, 0x81, 0x89]; // PickupTypeTable（ROM $DE35）
+    let frame = tbl[(r & 7) as usize];
+    mem.write_wram(0x6AF4 + px + 3, frame); // animFrame←掉落型
 }
 
 /// ChooseEnemyAIRoutine（**asm 内容锚** 区 bank `$95E5`（prg1:156——type 0-0F dispatch）：
@@ -842,11 +991,26 @@ fn update_enemy_anim(mem: &mut crate::frame::FrameMemory, x: u8, a: u8) {
 /// GetSpriteCntrlData→位指针（EnPlacePtrTable）→sprite 管线写（place_disp/四元组）。
 fn draw_enemy(mem: &mut crate::frame::FrameMemory, x: u8) {
     use game_data::area::enemy_gfx as eg;
-    // 【②终钉·冲突面待裁（2026-10-29）】asm 绘脸（:6178-6186）：IsObjectVisible→
-    // data05 bit1 逐帧闩（and #$FD/ora（txa<<1））——bit1=上帧可见性（CheckIfVisible
-    // 跳检闩）——旧形双面不写⇒bit1 恒 0（f800 frame/位差根因确证）。实装连锁=敌全帧
-    // 处理⇒射击帧敌命中⇒爆（status3）⇒unported F40D（爆亡链缺）⇒blocked（l4 FAIL）
-    // ——与 radius 写同卡（findings §10 全证）——按「不强修（停机待裁）」暂撤。
+    // 【②回装（2026-10-29）】asm :6156-6168：帧记字 1/2→EnsExtra.radiusY/X（IsObject-
+    // Visible 用半径（序=半径写先行））+[:6178-6186] bit1 逐帧闩（and #$FD/ora（txa<<1））。
+    // 爆亡链件已补（F40D/DCF5/F483 全径（415 测））⇒连锁闭环（§10 回装判据达成）。
+    let frame0 = mem.read_wram(0x6AF4 + x as u16 + 3);
+    if frame0 != 0xFF {
+        let fi0 = ((frame0 & 0x7F) as usize) + if frame0 & 0x80 != 0 { 128 } else { 0 };
+        let (fo0, fl0) = eg::EN_FRAME_OFFS[fi0];
+        if fl0 > 2 {
+            mem.write_wram(0x6AF4 + x as u16 + 1, eg::EN_FRAMES[fo0 as usize + 1]);
+            mem.write_wram(0x6AF4 + x as u16 + 2, eg::EN_FRAMES[fo0 as usize + 2]);
+        }
+    }
+    let visible = enemy_check_if_visible(mem, x);
+    let e5 = 0x0400 + x as u16 + 5;
+    let d5 = mem.read_ram(e5);
+    mem.write_ram(e5, (d5 & 0xFD) | ((visible as u8) << 1)); // bit1 闩
+    if !visible {
+        mem.write_ram(0x006B, 0);
+        return;
+    }
     let frame = mem.read_wram(0x6AF4 + x as u16 + 3); // animFrame=+3
     if frame == 0xFF {
         mem.write_ram(0x006B, 0);
@@ -2433,3 +2597,48 @@ mod tests_axis_facing {
     }
 }
 
+
+// ===== 杀敌链 TDD（伤害→爆亡→拾取（回装前置锚））=====
+
+#[cfg(test)]
+mod tests_kill_chain {
+    //! 判径（asm F536/F611/DCF5（findings §11）+ens_probe 偏移（+0B health/+0E wa））。
+    use super::*;
+    use crate::frame::FrameMemory;
+
+    /// 弹击⇒HP 递减⇒0⇒爆（status3）⇒计时尽⇒拾取转（status5）。
+    #[test]
+    fn shoot_kill_full_chain() {
+        let mut m = FrameMemory::default();
+        // 敌槽 x=0x40（0x440 区）：HP=1（emu f800 实测形）+被弹旗
+        let x = 0x40u8;
+        m.write_wram(0x6AF4 + x as u16 + 14, 5); // type=5（Zoomer）
+        m.write_ram(0x0400 + x as u16 + 0x0B, 1); // health=1
+        m.write_ram(0x0400 + x as u16 + 4, 0x20); // isHit bit5（被弹）
+        m.write_ram(0x0400 + x as u16 + 0x0E, 1); // weaponAction=弹（wa 1）
+        m.write_ram(crate::ram_map::RANDOM1, 0x20); // RNG（>1/16（有掉））
+        enemy_react_to_projectile(&mut m, x);
+        assert_eq!(m.read_wram(0x6AF4 + x as u16), 3, "HP 0⇒爆（status3）");
+        let timer = m.read_ram(0x0400 + x as u16 + 6);
+        assert!(timer > 0, "chunky 计时置（+06）");
+        // 计时走尽⇒CompleteDeath⇒Pickup
+        for _ in 0..=timer {
+            update_enemy_explode(&mut m, x);
+        }
+        assert_eq!(m.read_wram(0x6AF4 + x as u16), 5, "⇒拾取（status5）");
+    }
+
+    /// 弹药拾取（animFrame=0x80）⇒+5 弹+槽释。
+    #[test]
+    fn pickup_missile_restores() {
+        let mut m = FrameMemory::default();
+        let x = 0x40u8;
+        m.write_wram(0x6AF4 + x as u16, 5); // Pickup
+        m.write_wram(0x6AF4 + x as u16 + 3, 0x80); // animFrame=MissilePickup
+        m.write_ram(0x0400 + x as u16 + 4, 0x24); // 碰触（isHit&24）
+        m.write_wram(crate::ram_map::MISSILE_COUNT, 3);
+        update_enemy_pickup(&mut m, x);
+        assert_eq!(m.read_wram(crate::ram_map::MISSILE_COUNT), 8, "+5 弹");
+        assert_eq!(m.read_wram(0x6AF4 + x as u16), 0, "槽释");
+    }
+}

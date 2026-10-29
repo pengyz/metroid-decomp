@@ -1,0 +1,16 @@
+name case-killenemy-probe
+frames 1100
+snapshot none
+press 310 start
+press 350 start
+capture 420 game-in
+hold 450-560 right
+capture 560 at-enemy
+press 580 b
+capture 590 hit-1
+press 610 b
+capture 620 hit-2
+press 640 b
+capture 650 dying
+capture 700 dead
+capture 800 after

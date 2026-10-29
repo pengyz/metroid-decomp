@@ -69,8 +69,11 @@ def gen() -> str:
     parts.append('//! 字节自证：`python3 -c "p=open(\'rom/Metroid (USA).nes\',\'rb\').read()[0x10:]; print(p[0x5DE0:0x5DF0].hex())"`\n\n')
 
     # 1. 四表（指针表本体）
-    anim = prg[BASE + (ANIM_TABLE - 0x8000):BASE + (ANIM_TABLE - 0x8000) + 64]
-    parts.append(f"/// EnemyAnimIndexTbl（$9D6A——64B 动画索引族）。\npub const EN_ANIM_TABLE: [u8; 64] = [\n")
+    # 【证伪更正（2026-10-29）】64B=截断（EnemyDeathAnimIndex（ROM $960B）max idx=
+    # 0x74（0x72/0x74）+序（0xFF 终符）⇒≥0x80——死 anim 走表越界（E0BC-wrap 实证）。
+    # 尺寸锚=max 参照 idx（0x74）+序裕⇒0x80（128B）。
+    anim = prg[BASE + (ANIM_TABLE - 0x8000):BASE + (ANIM_TABLE - 0x8000) + 128]
+    parts.append(f"/// EnemyAnimIndexTbl（$9D6A——64B 动画索引族）。\npub const EN_ANIM_TABLE: [u8; 128] = [\n")
     parts.append(hexrow(anim) + "\n];\n\n")
     f1 = prg[BASE + (FRAME_PTRS1 - 0x8000):BASE + (FRAME_PTRS1 - 0x8000) + 256]
     f2 = prg[BASE + (FRAME_PTRS2 - 0x8000):BASE + (FRAME_PTRS2 - 0x8000) + 256]
