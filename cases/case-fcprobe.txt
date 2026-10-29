@@ -1,0 +1,15 @@
+# FC 相位探针（r9 残差考证）：定位 rust↔emu FrameCount($2D) 恒差 +7 的首分歧帧
+# 背景：case-001 四采样点（f420/735/810/815/820/825）实测 rust FC = emu FC + 7（恒定）；
+#       爬行 6/8 步门（ShouldCrawlerMove $F852）由 FC 驱动 ⇒ 相位差错位移动窗与转角
+#       时机 ⇒ 环爬净位移差（emu +12 / rust +4 @f825）。本探针逐帧看 +7 在哪一帧产生。
+# 判据：两侧逐帧 FC 差首次非 0 的帧号 + 该帧所处输入相位（title/menu 过渡段）。
+name case-fcprobe
+frames 460
+snapshot none  # 上电起跑（与 case-001 同相——前 420 帧输入逐帧相同）
+
+watch 002D FC
+
+press 310 start     # 标题按 Start（与 case-001 同相）
+press 350 start     # 选单按 Start（START GAME）
+capture 420 game-in
+endFrame 460
