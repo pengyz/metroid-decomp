@@ -45,8 +45,39 @@ fn object_check_move_vertical(mem: &mut FrameMemory) -> bool {
     let ry = mem.read_ram(0x0301); // Objects.radiusY
     let x = mem.read_ram(0x030E);
     let hi = mem.read_ram(SAMUS_HI); // Samus.hi（$30C——Object 结构字节锚 F186 `BD 0C 03`）
+    let rx = mem.read_ram(crate::ram_map::SAMUS_RADIUS_X);
     let check_y = y.wrapping_add(ry); // 向下查撞点=y+radiusY（asm E7AD/E90F）
-    collision_point_samus(mem, check_y, x, hi) // E7FB 门数据副作用（LE7E6 全向共享）
+    if rx == 0 {
+        return true; // asm CheckMoveVertical `bne Lx198/sec/rts`（radiusX=0⇒跳过检）
+    }
+    // 【实锤①修（2026-10-29）】asm CheckMoveVertical（$E7BD）=x−radiusX 起
+    // **x 全距走环**（左界余块+1（步 8（GetNumBlocksToCheck）））——旧形单点（x 中心）
+    // ⇒台缘（心过空/缘叠砖）漏检⇒沉入台面下（用户①嵌砖）。horizontal_span_rows 同构。
+    let (left, n) = vertical_span_cols(x, rx);
+    for i in 0..n {
+        let col = left.wrapping_add((i as u8).wrapping_mul(8));
+        if !collision_point_samus(mem, check_y, col, hi) {
+            return false;
+        }
+    }
+    true
+}
+
+/// 垂向检 x 全距（asm CheckMoveVertical（GetNumBlocksToCheck 公式（horizontal_span_rows
+/// 同构（x/ry 轴对换）））：左界=x−radiusX（余块+1）/diam=2·radiusX 对齐/计块。
+fn vertical_span_cols(x: u8, rx: u8) -> (u8, u32) {
+    let left = x.wrapping_sub(rx);
+    let left_rem = left & 0x07;
+    let mut n: u32 = if left_rem != 0 { 1 } else { 0 };
+    let right_rem = 0u8.wrapping_sub(left_rem) & 0x07;
+    let diameter = (rx as u16) << 1;
+    let (span0, borrow) = diameter.overflowing_sub(right_rem as u16);
+    let span = if borrow { span0.wrapping_add(8) } else { span0 };
+    n += (span >> 3) as u32;
+    if span & 0x07 != 0 {
+        n += 1;
+    }
+    (left, n)
 }
 
 /// collision_point_ok（**asm 内容锚** CheckMoveVertical `: 07:E7BD`——r26 共享）：
@@ -283,6 +314,9 @@ mod tests {
         m.write_ram(SAMUS_RADIUS_Y, 15);
         m.write_ram(0x030E, 128); // x=128 → 列 16
         m.write_ram(SAMUS_HI, 0);
+        // 【证伪更正（2026-10-29）】radiusX 须非 0（asm `bne Lx198/sec/rts`（0⇒跳过检）
+        // ——旧形单点径无此门（本测未设 rx 隐 0）——设 rx=8（Y 语义本位不变）。
+        m.write_ram(crate::ram_map::SAMUS_RADIUS_X, 8);
         assert!(!object_check_move_down(&mut m), "y=177（y+ry=192 撞地板）应阻挡");
         // y=176 → y+ry=191（184 行=空）→ 可走（未及地板）
         m.write_ram(SAMUS_Y, 176);
@@ -1518,5 +1552,38 @@ mod tests_column_streaming {
         m2.write_ram(0x004A, 3);
         check_update_name_table(&mut m2);
         assert_eq!(m2.render.nametable[0], 0, "防重判跳（列不动）");
+    }
+}
+
+// ===== 垂向 x 全距检（TDD（台缘嵌砖根因锚））=====
+
+#[cfg(test)]
+mod tests_vertical_span {
+    //! 判径（asm CheckMoveVertical（$E7BD（LE7E6 全径）））：垂向检=x−radiusX 起
+    //! **x 全距走环**（余块+1（步 8））——旧形单点（x 中心）⇒台缘（心过空/缘叠砖）漏检
+    //! ⇒沉入台面下（用户①嵌砖）。
+    use super::*;
+    use crate::state::FrameMemory;
+
+    /// 【实锤①】心在空（y+ry 处 walkable）缘在砖（x+rx 侧 solid）⇒检出碰撞（false）。
+    #[test]
+    fn edge_overlap_detected() {
+        let mut m = FrameMemory::default();
+        m.write_ram(0x030D, 0x50); // y
+        m.write_ram(0x0301, 8);    // radiusY
+        m.write_ram(0x030E, 0x3C); // x（心）
+        m.write_ram(crate::ram_map::SAMUS_RADIUS_X, 12); // radiusX（缘伸 12px）
+        m.write_ram(crate::ram_map::SAMUS_HI, 0);
+        // 全域 walkable（$A0）——心/缘皆空
+        for i in 0..0x400u16 {
+            m.write_wram(0x6000 + i, 0xA0);
+        }
+        assert!(object_check_move_vertical(&mut m), "全空⇒放行");
+        // 0x40 块砖（solid=0x40）——心（0x38 块）仍空（单点旧形漏（走环检出））
+        // asm 覆域=左界起 3 块（0x30/0x38/0x40（rx=12（界齐不含次块）））
+        let col_tile_x = 0x41u16 >> 3; // 0x40 块=8
+        let base = ((0x58u16 & 0xF8) << 2) | col_tile_x;
+        m.write_wram(0x6000 + base, 0x40); // 侧砖
+        assert!(!object_check_move_vertical(&mut m), "侧块砖⇒碰撞（单点旧形漏（嵌砖根因））");
     }
 }

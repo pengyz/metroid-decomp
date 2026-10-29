@@ -1,0 +1,16 @@
+name case-jumpledge-probe
+frames 1000
+snapshot none
+press 310 start
+press 350 start
+capture 420 game-in
+hold 450-700 right
+capture 550 walk-mid
+capture 690 pre-jump
+hold 700-780 right
+press 700 a
+capture 705 takeoff
+capture 730 rise
+capture 755 peak
+capture 780 land
+capture 800 land-settled
