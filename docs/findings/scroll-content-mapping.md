@@ -133,3 +133,21 @@ shootprobe fire-10 同证（emu[01/AC]/rust[01/B0]）。
 dumpRam+rust_screenshot（已入库）））③比对=上式逐字节（hex 直比（大小写已统一 %02X））。
 【修前/修后对照】修前 f810：rust[st=00 r=FF FF scr=00 x=8C]（弹死不可见）→修后
 [st=01 r=02 02 scr=01 x=B0]（活可见）——SPRITE_DATA 烘培截断根因（a1708910 修）。
+
+
+## 9. 问题②敌面三支归因（2026-10-29（终审定性））
+
+【三支证据】①贴图帧：f800 双爬虫=同位（dx=0 最优）非镜像（镜像配更差）——帧内容
+真差（持续 106px）；帧表逐字节全同（CrawlerAnimIndexTable ROM $9AA0=35 35 3E 38
+3B 3B 38 3E）+reorient 公式同式②AI 轨迹：x=±1px（BD/5D vs BE/5C（FC 域微差））③
+touch 伤害：采点未触（截图无碰撞场景）。
+【f800 Ens 槽态直比（A 级）】**data05 一致分歧**：emu=1A/5A vs rust=58/18（XOR=0x42
+（位 6（30FPS 门）+位 1）双爬同步）——敌状态演化径分歧（确证（新发现））；rust 独有
+442/452=80（radiusX 写）+449/459=01（delay 写）（emu 无）——写集面差。
+【轴感应 facing 修（a 件）】enemy_type_times2_plus_facing=固定 bit0（注带「?」）→
+asm $F844 **axis 感应**（bit7 置⇒bit3/清⇒bit0）——修+TDD 二测（顶爬（竖轴）错帧根因
+通用面）——本 f800 案 bit7 清（修=正确但非此案直接因）。
+【缺口注】anim 态（EnsExtra $6AF4+）**不在 .ram.hex 覆域**（0x000-0x07FF）——
+帧差终钉需扩 dump 覆域（或 .ppu OAM 反推）——遗留下一探。
+【定性】残差=敌状态/anim 演化径分歧（data05 位 6/1+写集面）——非贴图表/非位移
+——待 data05 演化径 asm 对读（UpdateEnemy_Active 位 6/1 语义）续修。

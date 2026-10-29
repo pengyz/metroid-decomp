@@ -553,8 +553,13 @@ fn init_en_resting_anim_index(mem: &mut crate::frame::FrameMemory, x: u8) {
 /// GetEnemyTypeTimes2PlusFacingDirection（**asm 内容锚**——索引=type×2+facing（data05 bit0?））。
 fn enemy_type_times2_plus_facing(mem: &mut crate::frame::FrameMemory, x: u8) -> u16 {
     let t = mem.read_wram(0x6AF4 + x as u16 + 14) as u16; // EnsExtra.type
-    let facing = (mem.read_ram(0x0400 + x as u16 + 5) >> 0) & 1; // data05 bit0（facing 位）
-    (t * 2 + facing as u16) & 0x1F
+    // 【实锤②修（2026-10-29）】asm GetEnemyTypeTimes2PlusFacingDirection（$F844）=
+    // **axis 感应 facing**（`lda data05/bpl @common/lsr lsr/@common: lsr/lda type/rol`）
+    // ——bit7 置（竖轴）⇒carry=bit3/清⇒carry=bit0——旧形固定 bit0（注带「?」）
+    // ⇒顶爬虫（竖轴）读错位⇒EnemyRestingAnim 表错项⇒**持续错帧**（f800 106px 根因）。
+    let d05 = mem.read_ram(0x0400 + x as u16 + 5);
+    let facing: u16 = if d05 & 0x80 != 0 { ((d05 >> 3) & 1) as u16 } else { (d05 & 1) as u16 };
+    (t * 2 + facing) & 0x1F
 }
 
 
@@ -765,6 +770,7 @@ fn crawler_ai(mem: &mut crate::frame::FrameMemory, x: u8) {
 /// UpdateEnemyCommon@noMoveNoAnim（**asm 内容锚** `: 07:F416`——r26）：tough 调色→
 /// status≠0⇒DrawEnemy→isHit/weaponAction 清。
 fn update_enemy_common_no_move_no_anim(mem: &mut crate::frame::FrameMemory, x: u8) {
+    init_en_resting_anim_index(mem, x); // F682 resting anim 应用（F3BE 链件（缺面修））
     let special = mem.read_ram(0x0400 + x as u16 + 15); // specialAttribs=+15
     if special & 0x80 != 0 {
         let oc = mem.read_ram(0x006B);
@@ -2391,5 +2397,33 @@ mod tests_p0_anchor_pin {
         for (off, addr) in [(0x80u16, 0x380u16), (0x90, 0x390), (0xA0, 0x3A0), (0xB0, 0x3B0)] {
             assert_eq!(0x0300 + off, addr, "槽偏移映射");
         }
+    }
+}
+
+// ===== axis 感应 facing（TDD（f800 爬虫错帧根因锚））=====
+
+#[cfg(test)]
+mod tests_axis_facing {
+    //! 判径（asm $F844（GetEnemyTypeTimes2PlusFacingDirection））：axis 感应 facing
+    //! ——bit7 置（竖轴）⇒bit3/清⇒bit0——旧形固定 bit0（顶爬虫错帧根因）。
+    use super::*;
+
+    /// bit7 置（竖轴）⇒facing=bit3（非 bit0）。
+    #[test]
+    fn axis_facing_bit7_uses_bit3() {
+        let mut m = crate::frame::FrameMemory::default();
+        // slot x=0：type=2；data05=0x88（bit7 置+bit3 置（bit0 清））
+        m.write_wram(0x6AF4 + 14, 2);
+        m.write_ram(0x0405, 0x88);
+        assert_eq!(enemy_type_times2_plus_facing(&mut m, 0), 5, "竖轴：bit3=1⇒2*2+1=5（旧形读 bit0⇒4（错））");
+    }
+
+    /// bit7 清（横轴）⇒facing=bit0。
+    #[test]
+    fn axis_facing_bit7_clear_uses_bit0() {
+        let mut m = crate::frame::FrameMemory::default();
+        m.write_wram(0x6AF4 + 14, 2);
+        m.write_ram(0x0405, 0x01); // bit0 置
+        assert_eq!(enemy_type_times2_plus_facing(&mut m, 0), 5, "横轴：bit0=1⇒2*2+1=5");
     }
 }
