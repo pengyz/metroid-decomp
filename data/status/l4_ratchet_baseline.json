@@ -4,15 +4,122 @@
   "rom_sha256": "e6e6b7014685adae447ebb3833242815747bc1e5df83ade79f693fb67cf565b6",
   "cases": {
     "case-001-game-start-samus-interaction": {
-      "scenario_sha256": "23b52bdc841e702020ad97ddf202822cc56e9b0c4669daa27a1cc7c9dadf970f",
+      "scenario_sha256": "efdc8f3ab92e6f36ab52f13521b047d0e57fd666e245f30079f5e38d8f54d946",
       "states": {
         "420:game-in": "match",
-        "550:after-right": "diff",
-        "650:after-left": "diff",
-        "720:after-jump": "diff",
+        "550:after-right": "match",
+        "650:after-left": "match",
+        "715:jump-shoot": "match",
+        "720:after-jump": "match",
+        "725:landing-early": "match",
+        "735:landing-settled": "match",
+        "810:bullet-midflight": "diff",
+        "815:bullet-mid-2": "diff",
         "820:after-shoot": "diff",
+        "825:bullet-late": "diff",
         "950:combo-action": "diff",
         "1200:end": "diff"
+      }
+    },
+    "case-002-door-blue-interaction": {
+      "scenario_sha256": "e02b0e157324f3cd098c4784443c8a680cd2b4e2c2b7c51c5d9ca588c94a638b",
+      "states": {
+        "420:game-in": "match",
+        "620:at-door": "match",
+        "650:bullet-out": "match",
+        "700:door-open": "match",
+        "790:door-enter": "match",
+        "850:scrolling": "diff",
+        "1000:neighbor-room": "diff",
+        "1150:end": "diff"
+      }
+    },
+    "case-collide-probe": {
+      "scenario_sha256": "5478a7063ab2297662ffcc493651e8bb1304a45e61f1aa0aec4eb7abbd44fc29",
+      "states": {
+        "420:game-in": "match",
+        "540:r100": "match",
+        "620:l60": "match",
+        "700:l140": "match",
+        "800:l240": "diff",
+        "890:l330": "diff",
+        "900:end": "diff"
+      }
+    },
+    "case-jumpledge-probe": {
+      "scenario_sha256": "aec53510f64a173174c8dba5bb57ec84cd46d9e8bda774b097d0d20a57409b58",
+      "states": {
+        "420:game-in": "match",
+        "550:walk-mid": "match",
+        "690:pre-jump": "match",
+        "705:takeoff": "match",
+        "730:rise": "match",
+        "755:peak": "match",
+        "780:land": "match",
+        "800:land-settled": "diff"
+      }
+    },
+    "case-killenemy-probe": {
+      "scenario_sha256": "4d4f4aca8f4c6f80c68f1bbf44131938c92f15431e8eae1771717fef7b4c01fc",
+      "states": {
+        "420:game-in": "match",
+        "560:at-enemy": "match",
+        "590:hit-1": "match",
+        "620:hit-2": "match",
+        "650:dying": "match",
+        "700:dead": "match",
+        "800:after": "diff"
+      }
+    },
+    "case-leftwalk-probe": {
+      "scenario_sha256": "701d0fb51e93436eb82f6b23b5d707487511a0faf3bb1718bc35c5be181b91d4",
+      "states": {
+        "420:game-in": "match",
+        "520:left-80": "match",
+        "620:left-180": "match",
+        "720:left-280": "match",
+        "790:left-350": "match",
+        "800:end": "diff"
+      }
+    },
+    "case-leftwalk-probe2": {
+      "scenario_sha256": "b90418ab3e2e45da82137eec298c6adcdecfb64d3e8a1081241ff4186ebd3691",
+      "states": {
+        "420:game-in": "match",
+        "620:l180": "match",
+        "820:l380": "diff",
+        "1020:l580": "diff",
+        "1220:l780": "diff",
+        "1390:l950": "diff",
+        "1400:end": "diff"
+      }
+    },
+    "case-scrollseam-probe": {
+      "scenario_sha256": "b5f78ab36e289d21c939b6220980a84008def6d3138fec2acfca9adf367dc457",
+      "states": {
+        "420:game-in": "match",
+        "470:scroll-r30": "match",
+        "500:scroll-r60": "match",
+        "530:scroll-r90": "match",
+        "560:scroll-r120": "match",
+        "590:scroll-r150": "match",
+        "620:scroll-r180": "match",
+        "650:scroll-r210": "match",
+        "680:scroll-r240": "match",
+        "700:scroll-end": "match",
+        "760:scroll-l40": "match",
+        "800:scroll-l80": "diff",
+        "840:scroll-l120": "diff",
+        "880:end": "diff"
+      }
+    },
+    "case-shootprobe-probe": {
+      "scenario_sha256": "84ce494fc556f1930e8fd1e3f0f66767493d8d1609b857d22fcb2d50d3fc5e05",
+      "states": {
+        "420:game-in": "match",
+        "810:fire-10": "diff",
+        "815:fire-15": "diff",
+        "825:fire-25": "diff"
       }
     }
   },
@@ -24,6 +131,14 @@
       "diff": 6,
       "blocked": 0,
       "cells_total": 7
+    },
+    {
+      "ts": "2026-10-29T13:12:10+00:00",
+      "reason": "确认无回退证据：①串行锁落地（60408e6a）后同树两轮 fresh 双腿 run-all（A=60408e6a check 窗/B=本轮）74 格逐点位级零翻转（l4_matrix_states 对照实录）；②l4 门禁三连窗（3c3fc111/60408e6a check+A/B 轮）match 48·diff 26·blocked 0 恒定；③旧基线仅锚 case-001 7 点（其一 match 点现态保持 match，无缩水）；④复核档 e9ca3957 记录的 hit-2/dead 会话间翻转出自串行锁落地前的多会话撞车窗（KB 第 5 员同窗），锁后未复现——锁后若复现按新证据走 FC 相位考证（BUG-089 时序族），不作容忍账。本锚同时解决 case-001 scenario_sha256 漂移重锚（23b52bdc→efdc8f3a，现定义两轮稳定）。",
+      "match": 48,
+      "diff": 26,
+      "blocked": 0,
+      "cells_total": 74
     }
   ]
 }
