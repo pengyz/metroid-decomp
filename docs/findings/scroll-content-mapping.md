@@ -168,3 +168,30 @@ bit5=静止回退门/bit7=轴/bit0=向/bit2=y 力/bit3,4=阈值掩（F75B 族）
 【处置（按「不强修（停机待裁）」先例）】两修**暂撤回**（注证留代码原位）——待爆亡链
 件（F40D ChooseEnemyAIRoutine-explode+EnemyCompleteDeath（DE05 族））补齐后**一并
 回装**（本节即回装证据包）。缺面=一张任务卡（D7 缺口路由）。
+
+
+## 11. 敌爆亡链 asm 全钉（2026-10-29（回装前置件））
+
+【伤害链（A 级全径）】EnemyReactToSamusProjectile（$F536）：isHit bit5（被弹）判→
+冰冻臂（IceBeam+非 miniboss+非冻⇒status←Frozen+计时$40）→Lx317（HP==$FF⇒无效
+（SFX_Metal））→Lx319（prevStatus 记账）→**弹/螺攻击=瞬杀**（非 miniboss 非 metroid
+（`cpy #wa_Missile/beq ExplodeEnemy`（wa_ScrewAttack=$81 同）））→Lx322（**status←
+Hurt(6)**+specialAttribs←$0A/$03）→HP dec（波=2/束=1（Lx324/325 双 dec 形））⇒0⇒
+**ExplodeEnemy（$F611）**。
+【ExplodeEnemy（$F611）】status←Explode(3)→常规束杀⇒**跳块爆直取 pickup**（
+EnemyCompleteDeath@SkipChunkyExplosion）→否则：**EnemyDeathAnimIndex[type×2+向]→
+InitEnAnimIndex**+chunkyExplosionTimer←A+**EnExplosions 池**（AreaExplosionAnim+delay
+$0A+status←1（小爆效果件（独立槽组）））。
+【EnemyCompleteDeath（$DCF5）】→**status←Pickup(5)**+data0D←$60（计时）+**1/16 无掉**
+（RandomNumber1<$10）+**PickupTypeTable[rand&7]→animFrame**（表 ROM $DE35=80 81 89
+（Missile/SmallEnergy/BigEnergy）+弹药/能量 qty 限（MissilePickupQtyMax/Cur——超限⇒
+LDD5B（无掉⇒移除））。
+【Pickup 面（$F483）】碰触（isHit&$24）⇒RemoveEnemy+回血/弹（+30/+20/+小（type 0=大
+血））；静显=Common_noMoveNoAnim 复用。
+【状态谱】0=NoEnemy/1=Resting/2=Active/3=Explode/4=Frozen/5=Pickup/6=Hurt
+（constants.asm:120-126）。
+【**前置阻塞（证伪疑（禁试错（§3-5））**】Ens 偏移映射疑：constants_ram `.struct En`
+列=18 字段（y..specialAttribs）vs 槽距 0x10（16B）——rust 现用 map（+9=delay/+10=
+data0A/+14=weaponAction）与 asm 列计（+11=delay/+12=data0A/+16=weaponAction）**位移
+2**——但 f800 dump 44B/44D 双侧同值（实证两 map 在实用位一致）——**实现前须 RAM 级探针
+对正**（已知值写→asm 字段写径 trace）——此为回装/实现卡的**前置取证件**。
