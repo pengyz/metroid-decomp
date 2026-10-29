@@ -45,7 +45,6 @@ pub fn main_loop_iter(mem: &mut FrameMemory) {
     // title→menu f311-313 各冻 3 帧（findings/fc-phase-residual.md——桥侧按内旋族相位
     // $01/$15/$1B 置 no_return 旗）；menu→game 冻结走既有 span 门（iter_span_fc）不受此管。
     // 旧形每 tick 无条件递增（goal-r4）治了滞后但过量 +6（=两窗 3+3），本门即 emu 对齐。
-    eprintln!("[dbg-f] post-gmr noret={} fc={}", mem.title_no_return, mem.read_ram(FRAME_COUNT));
     if !mem.title_no_return {
         mem.write_ram(FRAME_COUNT, mem.read_ram(FRAME_COUNT).wrapping_add(1));
     }

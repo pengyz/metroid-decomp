@@ -29,11 +29,6 @@ pub fn main_title_routine(mem: &mut FrameMemory) {
         return;
     }
     let phase = mem.read_ram(TITLE_ROUTINE);
-    eprintln!("[dbg-t] enter phase={:02X} cur={} spin={} noret={}", phase, mem.title_cursor, mem.title_spin, mem.title_no_return);
-    // 【r9 FC 冻结（porter）】内旋族相位（$01 上电初始化臂/$15|$1B StartContinue 臂=asm
-    // WaitNMIPass_ 自旋尾——例程不返回主循环）⇒本 tick 迭代未完成，main_loop_iter 跳过
-    // `inc FrameCount`（emu f4-6/f311-313 各冻 3 帧实录——findings/fc-phase-residual.md）。
-    mem.title_no_return = matches!(phase, 0x01 | 0x15 | 0x1B);
     let mut star_src = [0u8; 0xA0];
     for (i, b) in star_src.iter_mut().enumerate() {
         *b = mem.read_wram(0x6E00 + i as u16);
@@ -77,7 +72,9 @@ pub fn main_title_routine(mem: &mut FrameMemory) {
             mem.write_ram(addr, val);
         }
         mem.write_ram(crate::ram_map::TITLE_ROUTINE, head_new); // 0x1B 落位
-        // 【r9 FC 冻结】命中帧=转换例程体同帧执行（不返回主循环）⇒冻（emu f310 实录）
+        // 【r9 FC 冻结】命中帧=转换例程体同帧执行（不返回主循环）⇒冻
+        // （【复核 R3 更正】emu 行距实录：menu 冻结窗=f311-f313 三行 FC 持平，命中帧
+        // 所处行号的采样归因依采样沿惯例而定——以 fcprobe 逐帧 0 分歧为判据）
         mem.title_no_return = true;
     }
     let step = crate::title::dispatch_step(&face);
