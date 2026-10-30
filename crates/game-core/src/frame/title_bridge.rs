@@ -19,13 +19,15 @@ const TITLE_ROUTINE_PTR_TABLE: [u16; 31] = [
 /// MainTitleRoutine 分发一步（asm 内容锚 `MainTitleRoutine: ; 00:8000`）。
 pub fn main_title_routine(mem: &mut FrameMemory) {
     // 【r23 spin 等待段】>0=本 tick 工作零动（跨相续段正交机构——臂的等待段语义）。
-    // 【r9 FC 冻结（porter）】旗先于 spin 消费——spin tick=asm 例程内部 WaitNMIPass_
-    // 等待帧（不返回主循环⇒迭代未完成⇒FC 不自增）；0x00 工作段同拍推进相位，其 spin
-    // tick 入相位已是 0x01（内旋族）⇒冻（emu f3 实录同冻——findings/fc-phase-residual.md）。
+    // 【r9 FC 冻结（porter+逐帧会计修订）】spin 消费 tick=asm 例程内部 WaitNMIPass_
+    // 等待帧（MainLoop 卡在例程体内⇒迭代未完成⇒FC 不自增）⇒一律置旗（通则——
+    // 0x00 臂 f2 冻/转换臂尾旋 f313-318 冻均此理，emu 逐帧实录）；族相位旗
+    // （\$01/\$15/\$1B=arm 体不返回）仍先于 spin 检查置位。
     mem.title_no_return = matches!(
         mem.read_ram(TITLE_ROUTINE), 0x01 | 0x15 | 0x1B);
     if mem.title_spin > 0 {
         mem.title_spin -= 1;
+        mem.title_no_return = true;
         return;
     }
     let phase = mem.read_ram(TITLE_ROUTINE);

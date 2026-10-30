@@ -1960,7 +1960,8 @@ mod tests {
         assert_eq!(m.read_ram(crate::ram_map::TITLE_ROUTINE), 0x02, "末段相位→0x02");
         main_loop_iter(&mut m);
         assert_eq!(m.read_ram(FRAME_COUNT), 1, "0x02 起恢复自增");
-        // $1B 臂：2 tick 全冻结（融合形——r16 形；T3 纪元 +2 残差另案）
+        // $1B 臂：2 段 tick 全冻结+相位→0x16（融合形——r16 形；T3 纪元 +3 残差=
+        // boot +1+转换窗 +2 留档，oracle UpdateTimer 调用迹仪器待建）
         m.write_ram(crate::ram_map::TITLE_ROUTINE, 0x1B);
         for _ in 0..2 {
             main_loop_iter(&mut m);
