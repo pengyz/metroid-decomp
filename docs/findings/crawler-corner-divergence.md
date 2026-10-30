@@ -77,7 +77,14 @@ asm（DistToCenterY/X 符号、+8 块距）；mutation 测=跨块 radius 单点�
 > 实测递减纪元：首递减 emu f16 vs rust f15（**差 1 帧**）、T3 曾于 f86-f216 归零
 > 闲置（更新器零值跳过+重载）、至 intro 末偏移长到 3 帧（递减计数 f360-800 双侧
 > 各 44 次相同——纯相位非速率）。逐帧会计（title 相 MR=1/2 窗的 update_timer
-> 执行差）=下轮定位面。另：BUG-091 落账（IsObjectVisible 竖滚径 radiusX/ScreenY
+> 执行差）=下轮定位面。
+> 【2026-10-30 转换臂 un-fuse 实验——证伪回滚】由 dec-gap 推演「emu 转换臂=3 无
+> prelude 帧」假设，将 \$15|\$1B 臂拆回三段（去融合）——**门禁证伪**：case-001
+> 锚定 match 集 6 点缩水（f550+ 282px 漂移，L4 FAIL 41 违规）+crawlprobe 像素
+> 4/2→1/5。行距推演不足以定 emu prelude 帧集（采样沿语义干扰）；**既定仪器=
+> oracle 侧 UpdateTimer（\$C266）调用迹 Lua hook**（逐帧 FC 记录）取真 prelude
+> 帧集后再整形。已回滚融合形（r16 形），L4/PASS 恢复；T3 纪元 +3（boot +1+
+> 转换窗 +2）留档为残余。另：BUG-091 落账（IsObjectVisible 竖滚径 radiusX/ScreenY
 > 轴错配——用户裁后续可优化）。
 
 ## 5. 证据指针
