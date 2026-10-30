@@ -128,6 +128,12 @@ asm 引证（全部 A 级，refs/m1disasm/SRC/）：
   的 tick 内序），GoMainRoutine 读 GameMode=0 走游戏路分派 AreaInit——纯排序违例。
   正确序（§3.B 五步线性序）下 GameMode 在首迭代前必为 1（asm 两处写点都在自旋前：
   prg7:142-144、:1377-1380）。
+- > 【2026-10-30 更正（map-v2 实测）】本条隐含的「TD 相位差 3 = boot 行索引 ±1 +
+  > 转换臂边界数差 2」中 **+1 归因 boot 不成立**：matched-seam 下 boot 行差是纯行号
+  > 簿记（rust f2 内容==emu f1），**f3 起行号与状态双对齐（FC offset 恒 0 至 f915）**。
+  > +1 实际诞生于 **0x01 臂窗（f4-f7）：rust 臂 tick 多跑 1 次 UpdateTimer**（emu
+  > 窗内 1 减 vs rust 2 减）。⇒ Step 1 对 TD 相位**净贡献=0**（只修行集形状）；
+  > TD +1/+2 均由 Step 4 臂重构闭合。证据：docs/findings/frame-alignment-map-v2.md §3/§4。
 
 ### F3【推翻】"0x00 臂 spin 1 帧"（S2 工单的前提）
 
@@ -221,6 +227,12 @@ asm 引证（全部 A 级，refs/m1disasm/SRC/）：
 | 0x1B | ClearAll（①②）+体+落穿 TurnOnDisplay（ScreenOn③；NMIOn 零帧）（:2316-2350） | 入口拍+①+ClearAll 尾拍+②+段拍（TR→0x16 在此）+③+完成拍 = 4 窗 | 2 tick（r9 融合形） | -2 边界 |
 | 0x16 菜单 | 无旋（:2352-…） | 每迭代 1 窗 | 1 tick | ✓（f315-350 稳态对齐实测） |
 | game-start | CheckBankSwitch 内 InitBank1（GameMode←0+ScreenNmiOff 自旋）**在 UpdateTimer 前**→gfx→prelude→AreaInit+MoreInit 头→ScreenOff 旋→房间环+PPU 拷（TD 冻 f354-358 实测 5 窗）→inc MR→ScreenOn 旋→完成 | 门=[wait, bogged(定数), wait]；InitializeStats 无旋同迭代完成 | [wait,wait,bogged(2),wait] | 行集形状待图（净 TD 贡献=0 实测） |
+
+> 【2026-10-30 定数回填（map-v2 图谱机械读数）】上表「定数待图」三处落定：**0x00
+> n₀=1**（emu f2 单窗缺行）；**0x01 内窗=3**（f4-6 缺行=2 旋+1 溢出，n₁=1，H5 证实）；
+> **0x1B 内窗=3**（f311-313 缺行）。game-start：缺行区间 [352-358] **双侧已重合**、
+> TD offset 跨窗恒 +3（净贡献 0）——S5 行集调整无必要。+1 相位改判 0x01 窗（见 F2
+> 更正注）；boot 行差纯簿记（f3 双侧全同）。全量读数：frame-alignment-map-v2.md。
 | SamusInit→intro | T3←0x2C（:C8D1 族；rust mainloop.rs:141 ✓）→SamusIntro T3==0⇒MR←3 | 每迭代 1 窗；T3 由 TD 回绕驱动每 10 窗递减 | 同构 | 无（上游相位修复后自动齐） |
 | 尾窗 f916+ | 不明重活（MR=3 内） | 冻 2 窗 | 未建模 | 开放项（F8） |
 
@@ -475,6 +487,8 @@ trace 对拍（`gates/cli.py trace`）无回退。
    候选嫌疑（C 级，仅记录）：敌槽激活后的首帧重活/弹面初始化——无证据，不许据此动手。
 2. **0x00 溢出窗数 n₀ 与 MoreInit interior 精确门序列**：asm 周期数推不出（正是"手工帧
    算术不可靠"的边界），Step 0 图谱机械读数后回填本档 §3 表（原地补注，带日期）。
+   > 【2026-10-30 已解决】n₀=1、0x01 内窗 3、0x1B 内窗 3 已回填（map-v2 §3/§4）；
+   > MoreInit 门序列无调整必要（缺行双侧已重合，F6 证实）。
 3. **Mesen endFrame 回调的确切扫描线相位**：Step 0 后与对拍无关（双缝同相），仅存档
    备查——若未来要做逐**扫描线**级对拍才需钉死。
 4. **0x1C/0x17/0x12 臂的 SpinWait→completion 机制迁移**：无对拍时线保护，随件（需要
