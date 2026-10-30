@@ -68,6 +68,17 @@ asm（DistToCenterY/X 符号、+8 块距）；mutation 测=跨块 radius 单点�
 > emu 分两帧且晚 3 帧——可见闩（draw_enemy bit1）/延迟倒数节拍/距离阈判的时序交织
 > 待下一轮专项定位（本档不修）。产件：cases/case-crawlprobe.txt+双侧逐帧
 > jsonl/state.jsonl（analysis/traces+shots_rust）。
+> 【2026-10-30 续挖（watch 扩展 00FC-030E+6B34+002C/001E）】激活门解体为**因果四层**：
+> ①敌槽 status=Resting(01) 全程在位、delay=00 就绪（非空槽非延迟面）；
+> ②UpdateEnemy 被 CheckIfVisible fresh 不可见整体弹回（d5 bit6 不翻转实证）；
+> ③可见翻转=**GameEngine 进入时机**：rust MainRoutine→3 @f793、emu @f796（+3 帧）；
+> ④intro（MR=8，f360 起）完成条件=Timer3==0，而 T3 由 UpdateTimer（07:C266）
+> **TimerDelay 10 帧 prescale** 递减（asm `dec TimerDelay/bpl`+归零重置 9）——
+> 实测递减纪元：首递减 emu f16 vs rust f15（**差 1 帧**）、T3 曾于 f86-f216 归零
+> 闲置（更新器零值跳过+重载）、至 intro 末偏移长到 3 帧（递减计数 f360-800 双侧
+> 各 44 次相同——纯相位非速率）。逐帧会计（title 相 MR=1/2 窗的 update_timer
+> 执行差）=下轮定位面。另：BUG-091 落账（IsObjectVisible 竖滚径 radiusX/ScreenY
+> 轴错配——用户裁后续可优化）。
 
 ## 5. 证据指针
 

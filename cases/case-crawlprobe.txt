@@ -6,7 +6,16 @@ frames 960
 snapshot none  # 上电起跑（与 case-001 同相）
 
 watch_range 0440-045F enemy45
+watch_range 6B34-6B45 enemystat
 watch 002D FC
+watch 002C Timer3
+watch 001E MainRoutine
+watch 00FC ScrollY
+watch 00FD ScrollX
+watch 00FE ScrollDir
+watch 0300 SamusStatus
+watch 030D SamusY
+watch 030E SamusX
 
 press 310 start     # 标题按 Start（与 case-001 同相）
 press 350 start     # 选单按 Start（START GAME）
