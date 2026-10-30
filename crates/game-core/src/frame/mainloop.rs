@@ -1194,44 +1194,112 @@ fn collision_point_ok(mem: &mut crate::frame::FrameMemory, y: u8, x: u8, hi: u8)
     true
 }
 
-/// EnemyCheckMoveUp（**asm 内容锚** `: 07:E770`——r26）：radiusY+8 判点（顶块）。
+/// EnemyCheckMoveUp（**asm 内容锚** `: 07:E770`→EnemyCheckMoveVertical `07:E783`→
+/// CheckMoveVertical **x 全距走环**——r9 转向族考证修（crawler-corner-divergence.md））：
+/// staging=enemy::movement（distY=ry+8 忠实），探行=y−distY（进入块上块），
+/// x−rx 起 n 列全距（GetNumBlocksToCheck 公式=vertical_span_cols 同构已验证）；
+/// rx==0⇒免检（asm `bne Lx198/sec/rts`）。旧形单点 (y−ry+8, x) 双错：探点 +8 落出
+/// 进入块+漏跨块列——爬虫 radius 跨块时转角决策分歧根因。
 fn enemy_check_move_up(mem: &mut crate::frame::FrameMemory, x: u8) -> bool {
     let y = mem.read_ram(0x0400 + x as u16 + 0);
     let ry = mem.read_wram(0x6AF4 + x as u16 + 1);
     let xpos = mem.read_ram(0x0400 + x as u16 + 1);
+    let rx = mem.read_wram(0x6AF4 + x as u16 + 2); // radiusX=+2
     let hi = mem.read_wram(0x6AF4 + x as u16 + 7); // hi=+7
-    let check_y = y.wrapping_sub(ry).wrapping_add(8);
-    collision_point_ok(mem, check_y, xpos, hi)
+    let st = crate::enemy::movement::enemy_check_move_up(rx, ry, xpos, y, hi);
+    match crate::enemy::movement::check_move_boundary(st, false) {
+        crate::enemy::movement::MoveCheckOutcome::NoCollision => true,
+        crate::enemy::movement::MoveCheckOutcome::NeedsBgCollision(st) => {
+            let row = st.pos_y.wrapping_sub(st.dist_to_center_y);
+            let (left, n) = crate::samus::physics::vertical_span_cols(st.pos_x, st.radius_x);
+            for i in 0..n {
+                let col = left.wrapping_add((i as u8).wrapping_mul(8));
+                if !collision_point_ok(mem, row, col, st.pos_hi) {
+                    return false;
+                }
+            }
+            true
+        }
+    }
 }
 
 /// EnemyCheckMoveDown（**asm 内容锚** `: 07:E77B`——r26）：底块判。
+/// EnemyCheckMoveDown（**asm 内容锚** `: 07:E77B`→同上 x 全距走环——r9 转向族修）：
+/// staging distY=0−ry（两位补码）⇒探行=y−(−ry)=y+ry（进入块下块）。
 fn enemy_check_move_down(mem: &mut crate::frame::FrameMemory, x: u8) -> bool {
     let y = mem.read_ram(0x0400 + x as u16 + 0);
     let ry = mem.read_wram(0x6AF4 + x as u16 + 1);
     let xpos = mem.read_ram(0x0400 + x as u16 + 1);
+    let rx = mem.read_wram(0x6AF4 + x as u16 + 2);
     let hi = mem.read_wram(0x6AF4 + x as u16 + 7);
-    let check_y = y.wrapping_add(ry).wrapping_add(8);
-    collision_point_ok(mem, check_y, xpos, hi)
+    let st = crate::enemy::movement::enemy_check_move_down(rx, ry, xpos, y, hi);
+    match crate::enemy::movement::check_move_boundary(st, false) {
+        crate::enemy::movement::MoveCheckOutcome::NoCollision => true,
+        crate::enemy::movement::MoveCheckOutcome::NeedsBgCollision(st) => {
+            let row = st.pos_y.wrapping_sub(st.dist_to_center_y);
+            let (left, n) = crate::samus::physics::vertical_span_cols(st.pos_x, st.radius_x);
+            for i in 0..n {
+                let col = left.wrapping_add((i as u8).wrapping_mul(8));
+                if !collision_point_ok(mem, row, col, st.pos_hi) {
+                    return false;
+                }
+            }
+            true
+        }
+    }
 }
 
 /// EnemyCheckMoveLeft（**asm 内容锚** `: 07:E8F1`——r26）：左块判。
+/// EnemyCheckMoveLeft（**asm 内容锚** `: 07:E8F1`→CheckMoveHorizontal **y 全距走环**
+/// （07:E89B）——r9 转向族修）：staging distX=rx+8⇒探列=x−(rx+8)（进入块左块），
+/// y−ry 起 n 行全距（horizontal_span_rows 同构）；ry==0⇒免检。
 fn enemy_check_move_left(mem: &mut crate::frame::FrameMemory, x: u8) -> bool {
     let y = mem.read_ram(0x0400 + x as u16 + 0);
     let xpos = mem.read_ram(0x0400 + x as u16 + 1);
     let rx = mem.read_wram(0x6AF4 + x as u16 + 2); // radiusX=+2
+    let ry = mem.read_wram(0x6AF4 + x as u16 + 1);
     let hi = mem.read_wram(0x6AF4 + x as u16 + 7);
-    let check_x = xpos.wrapping_sub(rx).wrapping_add(8);
-    collision_point_ok(mem, y, check_x, hi)
+    let st = crate::enemy::movement::enemy_check_move_left(rx, ry, xpos, y, hi);
+    match crate::enemy::movement::check_move_boundary(st, true) {
+        crate::enemy::movement::MoveCheckOutcome::NoCollision => true,
+        crate::enemy::movement::MoveCheckOutcome::NeedsBgCollision(st) => {
+            let col = st.pos_x.wrapping_sub(st.dist_to_center_x);
+            let (top, n) = crate::samus::physics::horizontal_span_rows(st.pos_y, st.radius_y);
+            for i in 0..n {
+                let row = top.wrapping_add((i as u8).wrapping_mul(8));
+                if !collision_point_ok(mem, row, col, st.pos_hi) {
+                    return false;
+                }
+            }
+            true
+        }
+    }
 }
 
 /// EnemyCheckMoveRight（**asm 内容锚** `: 07:E8FC`——r26）：右块判。
+/// EnemyCheckMoveRight（**asm 内容锚** `: 07:E8FC`→CheckMoveHorizontal y 全距走环
+/// ——r9 转向族修）：staging distX=0−rx⇒探列=x+rx（进入块右块），y−ry 起 n 行全距。
 fn enemy_check_move_right(mem: &mut crate::frame::FrameMemory, x: u8) -> bool {
     let y = mem.read_ram(0x0400 + x as u16 + 0);
     let xpos = mem.read_ram(0x0400 + x as u16 + 1);
     let rx = mem.read_wram(0x6AF4 + x as u16 + 2);
+    let ry = mem.read_wram(0x6AF4 + x as u16 + 1);
     let hi = mem.read_wram(0x6AF4 + x as u16 + 7);
-    let check_x = xpos.wrapping_add(rx).wrapping_add(8);
-    collision_point_ok(mem, y, check_x, hi)
+    let st = crate::enemy::movement::enemy_check_move_right(rx, ry, xpos, y, hi);
+    match crate::enemy::movement::check_move_boundary(st, true) {
+        crate::enemy::movement::MoveCheckOutcome::NoCollision => true,
+        crate::enemy::movement::MoveCheckOutcome::NeedsBgCollision(st) => {
+            let col = st.pos_x.wrapping_sub(st.dist_to_center_x);
+            let (top, n) = crate::samus::physics::horizontal_span_rows(st.pos_y, st.radius_y);
+            for i in 0..n {
+                let row = top.wrapping_add((i as u8).wrapping_mul(8));
+                if !collision_point_ok(mem, row, col, st.pos_hi) {
+                    return false;
+                }
+            }
+            true
+        }
+    }
 }
 
 
@@ -1901,6 +1969,45 @@ mod tests {
         assert_eq!(m.read_ram(crate::ram_map::TITLE_ROUTINE), 0x16, "末段相位→0x16");
         main_loop_iter(&mut m);
         assert_eq!(m.read_ram(FRAME_COUNT), 2, "0x16 起恢复自增");
+    }
+
+    /// 敌检全距（r9 转向族修 mutation 面——crawler-corner-divergence.md）：radiusX 跨块
+    /// 时上检须探左列（单点旧形只探中心列⇒漏侧壁⇒本测红）。
+    #[test]
+    fn enemy_check_move_up_span_covers_side_columns() {
+        let mut m = crate::frame::FrameMemory::default();
+        for i in 0..0x400u16 {
+            m.write_wram(0x6000 + i, 0xA0); // 全可走
+        }
+        m.write_ram(0x0400, 0x60); // y
+        m.write_ram(0x0401, 0x40); // x
+        m.write_wram(0x6AF5, 8); // radiusY=8
+        m.write_wram(0x6AF6, 12); // radiusX=12（跨 3+ 块）
+        m.write_wram(0x6AFB, 0); // hi
+        assert!(enemy_check_move_up(&mut m, 0), "全空⇒放行");
+        // 探行=0x60−(8+8)=0x50；左列=0x40−12=0x34（中心列 0x40 左侧两块）——侧壁固实
+        let idx = (((0x50u16 & 0xF8) << 2) | (0x34 >> 3)) as usize;
+        m.write_wram(0x6000 + idx as u16, 0x40);
+        assert!(!enemy_check_move_up(&mut m, 0), "左列固实⇒碰撞（单点旧形漏（中心列空））");
+    }
+
+    /// 敌检全距（右臂）：radiusY 跨块时右检须探下侧行（单点旧形漏）。
+    #[test]
+    fn enemy_check_move_right_span_covers_bottom_rows() {
+        let mut m = crate::frame::FrameMemory::default();
+        for i in 0..0x400u16 {
+            m.write_wram(0x6000 + i, 0xA0);
+        }
+        m.write_ram(0x0400, 0x60); // y
+        m.write_ram(0x0401, 0x40); // x
+        m.write_wram(0x6AF5, 12); // radiusY=12（跨 3+ 块）
+        m.write_wram(0x6AF6, 8); // radiusX=8
+        m.write_wram(0x6AFB, 0);
+        assert!(enemy_check_move_right(&mut m, 0), "全空⇒放行");
+        // 探列=0x40+8=0x48；顶行=0x60−12=0x54，n=4→行 0x54/0x5C/0x64/0x6C——下行固实
+        let idx = (((0x6Cu16 & 0xF8) << 2) | (0x48 >> 3)) as usize;
+        m.write_wram(0x6000 + idx as u16, 0x40);
+        assert!(!enemy_check_move_right(&mut m, 0), "下行固实⇒碰撞（单点旧形漏（中心行空））");
     }
 
     /// UpdateTimer 预分频+三计时器递减。

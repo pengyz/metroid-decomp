@@ -65,7 +65,7 @@ fn object_check_move_vertical(mem: &mut FrameMemory) -> bool {
 
 /// 垂向检 x 全距（asm CheckMoveVertical（GetNumBlocksToCheck 公式（horizontal_span_rows
 /// 同构（x/ry 轴对换）））：左界=x−radiusX（余块+1）/diam=2·radiusX 对齐/计块。
-fn vertical_span_cols(x: u8, rx: u8) -> (u8, u32) {
+pub(crate) fn vertical_span_cols(x: u8, rx: u8) -> (u8, u32) {
     let left = x.wrapping_sub(rx);
     let left_rem = left & 0x07;
     let mut n: u32 = if left_rem != 0 { 1 } else { 0 };
@@ -1008,7 +1008,7 @@ pub fn toggle_samus_hi(mem: &mut FrameMemory) {
 /// 对象 Y 跨度覆盖的块行枚举：顶界 top=y−ry；行数 N=top余数?1 + 中段(span>>3) + 底余数?1，
 /// 其中 bottomRem=(−(top&7))&7、span=2*ry−bottomRem（借位⇒+8）。返回 (top,N)，
 /// 行= top+8*i（i∈[0,N)）——LE7E6 循环逐行查 tile（NextPointYOffset=8）。
-fn horizontal_span_rows(y: u8, ry: u8) -> (u8, u32) {
+pub(crate) fn horizontal_span_rows(y: u8, ry: u8) -> (u8, u32) {
     let top = y.wrapping_sub(ry);
     let top_rem = top & 0x07;
     let mut n: u32 = if top_rem != 0 { 1 } else { 0 };
