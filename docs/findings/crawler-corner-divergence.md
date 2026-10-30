@@ -52,6 +52,14 @@ asm（DistToCenterY/X 符号、+8 块距）；mutation 测=跨块 radius 单点�
 （侧块/上下块碰撞单点形必红）。修后判据=case-001 敌槽轨迹双侧同值（f810-f950
 窗）+L4 零缩水。
 
+> 【2026-10-29 落地补注（b72b8f90）】修已落地：四检改走 enemy::movement 既有
+> staging（DistToCenter 公式逐字节忠实——该 L2 端口本就存在但未接线）+
+> check_move_boundary+span 构件复用（physics.rs 两 helper 转 pub(crate)）。判据
+> **部分达成**：slot4 f815-825 x 对齐（190→200=emu 同值）；slot5 与 f950+ 角检
+> 仍分歧——**残余面=转向决策的更深层**（内角/外角/翻转链的输入差异），定位需
+> f735-f820 窗逐帧 trace（crawlprobe：watch_range 0440-044F+data0A/data05/FC
+> 双侧逐帧）——待续考证。门禁 check PASS=13 FAIL=0，L4 76 格零缩水。
+
 ## 5. 证据指针
 
 - prg7_engine.asm:7991/7999/8007/8218/8303/8310（五路由+两共享核）
