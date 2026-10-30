@@ -22,20 +22,21 @@ pub fn main_title_routine(mem: &mut FrameMemory) {
     // 【r9 FC 冻结（porter+逐帧会计修订）】spin 消费 tick=asm 例程内部 WaitNMIPass_
     // 等待帧（MainLoop 卡在例程体内⇒迭代未完成⇒FC 不自增）⇒一律置旗（通则——
     // 0x00 臂 f2 冻/转换臂尾旋 f313-318 冻均此理，emu 逐帧实录）；族相位旗
-    // （\$01/\$15/\$1B=arm 体不返回）仍先于 spin 检查置位。
+    // （\$00/\$01/\$15/\$1B=arm 体不返回——0x00 系 Step 2 入族：工作拍 FC 冻结，
+    // 完成由 iter_span_fc 在 span 尾收口）仍先于 spin 检查置位。
     mem.title_no_return = matches!(
-        mem.read_ram(TITLE_ROUTINE), 0x01 | 0x15 | 0x1B);
+        mem.read_ram(TITLE_ROUTINE), 0x00 | 0x01 | 0x15 | 0x1B);
     if mem.title_spin > 0 {
         mem.title_spin -= 1;
         mem.title_no_return = true;
         return;
     }
-    let phase = mem.read_ram(TITLE_ROUTINE);
+    let mut phase = mem.read_ram(TITLE_ROUTINE);
     let mut star_src = [0u8; 0xA0];
     for (i, b) in star_src.iter_mut().enumerate() {
         *b = mem.read_wram(0x6E00 + i as u16);
     }
-    let face = crate::title::TitleFace {
+    let mut face = crate::title::TitleFace {
         phase,
         cursor: mem.title_cursor,
         a: mem.regs.a,
@@ -78,8 +79,26 @@ pub fn main_title_routine(mem: &mut FrameMemory) {
         // （【复核 R3 更正】emu 行距实录：menu 冻结窗=f311-f313 三行 FC 持平，命中帧
         // 所处行号的采样归因依采样沿惯例而定——以 fcprobe 逐帧 0 分歧为判据）
         mem.title_no_return = true;
+        // 【Step 4b dive】asm 头检命中=菜单迭代内 **jmp 直入**转换例程体（同迭代继续
+        // ——不完成不 inc）：同拍分派臂 cursor0（face 以新相位重建）；迭代收尾 inc 由
+        // 臂末窗 0xFF 哨兵承担（emu f314 FC=50 单 inc 首现行实录——map-v2 §2）。
+        mem.title_cursor = 0;
+        phase = head_new;
+        face = crate::title::TitleFace { phase: head_new, cursor: 0, ..face };
     }
     let step = crate::title::dispatch_step(&face);
+    // 【Step 2】0x00 臂重活跨帧（InitializeAfterReset+LoadStarSprites 数万周期——emu f2
+    // bogged 单窗，map-v2 §2 N₀=1 实锤）：门队列声明——span tick 无缝行/无 prelude，
+    // FC 延至 span 尾收口（iter_span_fc——emu FC=1 首现 f3 实录）。
+    if phase == 0x00 {
+        mem.iter_bogged(1);
+        mem.iter_span_fc = true;
+    }
+    // 【Step 4a】0x01 段拍后的溢出窗（n₁=1——map-v2 §2 实锤）：工作超帧 NMIStatus=1
+    // 残留⇒溢出窗 NMI 内块跳（asm prg7:251 同形）——门队列插在段拍与 0xFF 哨兵间。
+    if phase == 0x01 && step.next_cursor == 0xFF {
+        mem.iter_bogged(1);
+    }
     mem.title_cursor = step.next_cursor; // 跨帧游标存回（>0=spin 续点/0=完成复位）
     mem.title_cursor_phase = phase; // 续段归属相位（同相位续段判定——r14 复核 F4）
     // shell 组合点执行（**全臂**——两层边界：title 域声明/本侧执行；
@@ -175,17 +194,16 @@ fn prepare_vram(mem: &mut FrameMemory, addr: u16) {
 mod tests {
     use super::*;
 
-    /// 统一入口穿越（phase 0 臂**单工作段+SpinWait**（r23 机构改形）：工作段=全仪式+
-    /// 相位推进+FC 同拍；SpinWait=下一 tick 工作零动）。
+    /// 统一入口穿越（phase 0 臂**单工作段+bogged span**（Step 2 机构改形）：工作段=
+    /// 全仪式+相位推进+FC 同拍；等待=bogged 门队列（下一 tick 工作零动+NMI 内块跳过）。
     #[test]
     fn bridge_crosses_via_unified_entry() {
         let mut m = FrameMemory::default();
         main_title_routine(&mut m); // 工作段（仪式+推进）
         assert_eq!(m.read_ram(TITLE_ROUTINE), 1); // 相位推进同拍
-        assert_eq!(m.title_spin, 1, "spin 等待段挂起");
-        main_title_routine(&mut m); // spin tick（零动）
-        assert_eq!(m.title_spin, 0, "spin 消费");
-        assert_eq!(m.read_ram(TITLE_ROUTINE), 1, "spin 不扰相位");
+        assert_eq!(m.iter_gates, vec![0], "bogged 门队列挂起（N₀=1）");
+        assert!(m.iter_span_fc, "FC 延至 span 尾收口旗");
+        assert!(m.title_no_return, "0x00 工作拍 FC 冻结（Step 2 入族）");
     }
 
     /// OBJECTS_CLEAR 复合标签展开（「标签展开在 shim」契约点——$0300-$031F 32 事件）。

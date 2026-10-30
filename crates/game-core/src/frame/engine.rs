@@ -12,11 +12,13 @@ use super::memory::{FrameMemory, Registers};
 use super::rng::GameRng;
 
 /// boot 相位（spin=跨帧 yield 构造物——契约 §8.1①；tick 序=NMI(尾写 1)→唤醒→帧工作→清 0→spin）。
+/// 【Step 1 后】PreSpin/AwaitNmi=**单 tick 内瞬态**（boot_pre 内联 tick1 首，NMI#1 即唤醒
+/// ——跨帧到达路径已删除）；跨 tick 存活相位仅 PostSpin/MainLoop。
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum BootPhase {
-    /// 链前段（reset 序…C531 head+ScreenNmiOff pre——首 tick 一次跑）。
+    /// 链前段（reset 序…C531 head+ScreenNmiOff pre——tick1 首内联一次跑；瞬态）。
     PreSpin,
-    /// spin 等待（$1A=0 已写；等 NMI 尾写 1 唤醒）。
+    /// spin 等待（$1A=0 已写；tick1 内 NMI 尾写 1 唤醒——瞬态）。
     AwaitNmi,
     /// spin 出口后段（ScreenNmiOff post/CopyMap/…——被唤醒 tick 续）。
     PostSpin,
@@ -85,6 +87,16 @@ impl FrameEngine {
     /// （`inc FrameCount`（asm prg7:207）延至此+唤醒门）。
     pub fn tick_frame_with<F: FnMut(&FrameMemory)>(&mut self, mut on_spin_exit: F) {
         self.clock.tick();
+        // 【Step 1 boot 行索引修复】（frame-alignment-plan.md §4/Step 1——map-v2 §2 f1 行
+        // 缺口）：tick1=完整 boot 帧——boot_pre 内联在 NMI#1 **之前**（严格序），原 tick2
+        // 内容（NMI+boot_post+缝行+首迭代）原样落在 tick1，消除 PreSpin 空耗帧（rust
+        // f1 无行的行簿记差；TD 相位净贡献=0——map-v2 F2 更正注）。
+        // asm 序锚：prg7:142-144/:1377-1380（GameMode 写点均在 ScreenNmiOff 自旋前）+
+        // :193（直入 C0CB，NMIStatus=1 残留⇒零等待穿 C0D3）。
+        if self.phase == BootPhase::PreSpin {
+            super::boot::boot_pre_spin(&mut self.mem);
+            self.phase = BootPhase::AwaitNmi; // 同 tick 内继续（NMI#1 即 boot 唤醒 NMI）
+        }
         if self.skip_next_nmi {
             self.skip_next_nmi = false; // restore 续跑：装载点=post-NMI——首 tick 不再 NMI
         } else if self.mem.nmi_enabled {
@@ -99,20 +111,25 @@ impl FrameEngine {
         // spin——oracle 295 行=主循环 spin 出口数自证；boot tick 不采样）。
         // 缝位=**首个主循环界唤醒**（PostSpin+MainLoop——oracle f=1 语义（工作前）；
         // PreSpin/AwaitNmi=boot 内部等待不采）。span tick 不采（迭代未完成无 spin 出口）。
+        // 【Step 3】臂内 tick 同不采（F10：asm 例程体内自旋/续段/完成拍无 C0D3 执行
+        // ⇒无行——emu f4-6/f311-313 缺行实录；判定用 tick 首态=上一拍分派遗留，
+        // 与 main_loop_iter 续段谓词单源同值）。
         let in_span = self.mem.iter_span_left > 0;
         if std::env::var("DSH_SPAN_TRACE").is_ok() {
             eprintln!("[span] tick={} in_span={} left={} gates={} fc={}", self.clock.ticks(),
                       in_span, self.mem.iter_span_left, self.mem.iter_gates.len(),
                       self.mem.read_ram(crate::ram_map::FRAME_COUNT));
         }
-        if !in_span && (self.phase == BootPhase::PostSpin || self.phase == BootPhase::MainLoop) {
+        if !in_span
+            && !self.mem.title_continuation()
+            && (self.phase == BootPhase::PostSpin || self.phase == BootPhase::MainLoop)
+        {
             on_spin_exit(&self.mem);
         }
         match self.phase {
-            BootPhase::PreSpin => {
-                super::boot::boot_pre_spin(&mut self.mem);
-                self.phase = BootPhase::AwaitNmi; // spin yield（$1A=0 已写）
-            }
+            // PreSpin 已在 tick 首内联（Step 1）——此相位只存在于 tick 内中途，match 不可达
+            // （fail-loud 守卫：违反 invariant 即爆，不许静默滑过）。
+            BootPhase::PreSpin => unreachable!("boot_pre 已内联 tick 首——PreSpin 不得到达 match"),
             BootPhase::AwaitNmi => {
                 if self.mem.read_ram(crate::ram_map::NMI_STATUS) != 0 {
                     super::boot::boot_post_spin(&mut self.mem);
@@ -123,6 +140,11 @@ impl FrameEngine {
                     // 采样缝=boot_post 后/首工作前（oracle f=1 语义锚）。
                     on_spin_exit(&self.mem);
                     super::mainloop::main_loop_iter(&mut self.mem);
+                    // 【Step 2 门→span 装配】首迭代也可能声明门队列（0x00 臂 bogged——
+                    // 与 MainLoop 臂同构；缺此段则首迭代门被当 tick 消费、span 不启用）。
+                    if !self.mem.iter_gates.is_empty() {
+                        self.mem.iter_span_left = self.mem.iter_gates.len() as u8;
+                    }
                     self.end_of_tick_gate();
                     self.phase = BootPhase::MainLoop;
                 }
@@ -197,7 +219,7 @@ mod tests {
     fn spin_exit_seam_mainloop_only_constant_one() {
         let mut e = FrameEngine::new();
         let mut samples: Vec<u8> = vec![];
-        for _ in 0..4 { // tick4=首主循环采样（避 01 段 SFX 写触发声缺口 B31B——另案）
+        for _ in 0..4 { // tick3=首主循环稳态采样（Step 1 后 tick1 即出首缝；避 01 段 SFX 写触发声缺口 B31B——另案）
             e.tick_frame_with(|m| samples.push(m.read_ram(crate::ram_map::NMI_STATUS)));
         }
         assert!(!samples.is_empty(), "主循环 spin 出口应采样");
@@ -216,17 +238,25 @@ mod tests {
     }
 
     /// tick_frame 执行序（契约断言②：**f=1 帧界锚**——首 tick 后 clock=1）+ pre 链态。
+    /// 【Step 1 契约迁移】tick1=完整 boot 帧（pre+NMI#1+post+缝行+首迭代）——boot_pre
+    /// 面态断言移到**缝位样本**上（语义点=原 tick1 尾态=boot_pre 后/首工作前，emu f1 行
+    /// 同锚：\$1A=1 残留）；相位断言 AwaitNmi→MainLoop（map-v2 f1 行缺口闭合的验收锚）。
     #[test]
     fn tick_frame_runs_boot_unit_before_detonation() {
         let mut e = FrameEngine::new();
-        e.tick_frame();
+        let mut seam: Option<(u8, u8, u8, bool, u8)> = None;
+        e.tick_frame_with(|m| {
+            seam = Some((m.read_ram(0x0355), m.read_ram(0x0200), m.read_ram(0x0001),
+                         m.nmi_enabled, m.read_ram(crate::ram_map::NMI_STATUS)));
+        });
         assert_eq!(e.clock.ticks(), 1); // 契约②：f=1 帧界锚
-        assert_eq!(e.phase, BootPhase::AwaitNmi); // spin yield 态
-        assert_eq!(e.mem.read_ram(0x0355), 0x00); // 清零环已跑（**零填充**——更正案）
-        assert_eq!(e.mem.read_ram(0x0200), 0xF0); // C1A3 OAM 影子 F0 填充（帧 1 实测面）
-        assert_eq!(e.mem.read_ram(0x0001), 2); // C1A3 ptr 高位
-        assert!(e.mem.nmi_enabled); // C08A $2000=$90
-        assert_eq!(e.mem.read_ram(crate::ram_map::NMI_STATUS), 0); // spin 入口（ClearNMIStat）
+        assert_eq!(e.phase, BootPhase::MainLoop, "tick1=完整 boot 帧（Step 1：首迭代同 tick）");
+        let (zeroed, oam, ptr_hi, nmi_on, nmi_status) = seam.expect("tick1 必出缝行（boot 唤醒即穿 C0D3）");
+        assert_eq!(zeroed, 0x00); // 清零环已跑（**零填充**——更正案）
+        assert_eq!(oam, 0xF0); // C1A3 OAM 影子 F0 填充（帧 1 实测面）
+        assert_eq!(ptr_hi, 0x80, "ptr 高位缝位值（NMI/boot_post 中途转用——emu f1 行实测 0x80；旧值 2=旧锚 pre-NMI）");
+        assert!(nmi_on); // C08A $2000=$90
+        assert_eq!(nmi_status, 1); // 缝位=post-NMI#1（\$1A=1 残留——emu f1 行实测同值）
     }
 
     /// 【move-drift R2/R3】span 机制：迭代声明帧门后——span tick 无采样缝（金腿窗内无行
@@ -234,8 +264,10 @@ mod tests {
     #[test]
     fn span_gates_suppress_seam_and_defer_fc() {
         let mut e = FrameEngine::new();
-        for _ in 0..4 {
-            e.tick_frame(); // boot→MainLoop（tick4=首主循环采样）
+        for _ in 0..8 {
+            // 【Step 4 锚迁移】8 tick：boot(t1)+0x00 span(t2)+0x01 臂(t3-6：cursor0/段拍/
+            // bogged/哨兵)+0x02/0x03 常规(t7-8)——臂全毕 cursor=0 稳态，注入不撞游标
+            e.tick_frame();
         }
         let fc0 = e.mem.read_ram(crate::ram_map::FRAME_COUNT);
         // 手工注入声明径结果（门件生产=more_init/c4de_unit iter_wait/iter_bogged——另测）；

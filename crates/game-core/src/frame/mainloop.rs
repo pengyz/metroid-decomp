@@ -29,11 +29,20 @@ use crate::ram_map::{
 ///   （孤儿游标=步骤边界）。
 /// · regs.a 连续性：续段不跑 random_numbers（其写 regs.a）——分发臂继承段间 A 态（F3）。
 pub fn main_loop_iter(mem: &mut FrameMemory) {
-    let phase_now = mem.read_ram(crate::ram_map::TITLE_ROUTINE);
-    // 【r23】续段=同相位续段（F4 孤儿语义不动）**或 spin 等待段**（title_spin>0——臂的
-    // 跨帧等待段正交机构）。
-    let continuation = (mem.title_cursor > 0 && mem.title_cursor_phase == phase_now)
-        || mem.title_spin > 0;
+    // 【Step 4 完成拍哨兵】cursor==0xFF=臂末窗（asm：例程体尾段自旋窗——rts 后迭代
+    // 收尾 `inc FrameCount`（prg7:207）落本窗尾）。无 prelude（同迭代早过 RandomNumbers/
+    // CheckBankSwitch/UpdateTimer——emu 0x01/0x1B 窗各仅 1 次 TD dec 实录，map-v2 §3）；
+    // 无行（title_continuation 的 0xFF 项挡缝——单源谓词同源）。0xFF 不在合法相位/
+    // 游标值域（<0x1E）——与 F4 孤儿规则零碰撞。
+    if mem.title_cursor == 0xFF {
+        mem.title_cursor = 0;
+        mem.write_ram(FRAME_COUNT, mem.read_ram(FRAME_COUNT).wrapping_add(1));
+        mem.write_ram(NMI_STATUS, 0);
+        return;
+    }
+    // 【Step 3 谓词单源】续段/完成拍/spin 判定=FrameMemory::title_continuation（唯一实现
+    // ——engine 缝抑制同源；0xFF 完成拍哨兵显式排除出续段，Step 4 启用）。
+    let continuation = mem.title_continuation();
     if !continuation {
         random_numbers(mem); // C000（唤醒后首件）
         super::boot::c4de_unit(mem); // CheckBankSwitch（已端口复用）
@@ -1951,25 +1960,30 @@ mod tests {
     fn fc_frozen_on_no_return_title_arms() {
         let mut m = crate::frame::FrameMemory::default();
         m.write_ram(GAME_MODE, 1);
-        // $01 臂：2 tick 全冻结，第 2 tick 相位→0x02
+        // $01 臂：2 cursor 步全冻结，第 2 步相位→0x02（Step 4a 形：段拍后跟 bogged
+        // 溢出窗+0xFF 完成拍哨兵——本测直驱 main_loop_iter 不经 engine 门消费，哨兵直达）
         m.write_ram(crate::ram_map::TITLE_ROUTINE, 0x01);
         for _ in 0..2 {
             main_loop_iter(&mut m);
         }
-        assert_eq!(m.read_ram(FRAME_COUNT), 0, "$01 臂 2 tick FC 全冻");
-        assert_eq!(m.read_ram(crate::ram_map::TITLE_ROUTINE), 0x02, "末段相位→0x02");
+        assert_eq!(m.read_ram(FRAME_COUNT), 0, "$01 臂 2 cursor 步 FC 全冻");
+        assert_eq!(m.read_ram(crate::ram_map::TITLE_ROUTINE), 0x02, "段拍相位→0x02");
+        main_loop_iter(&mut m); // 0xFF 完成拍哨兵（原 0x01 迭代的收尾 inc 落此）
+        assert_eq!(m.read_ram(FRAME_COUNT), 1, "哨兵拍 inc FC（完成拍）");
         main_loop_iter(&mut m);
-        assert_eq!(m.read_ram(FRAME_COUNT), 1, "0x02 起恢复自增");
-        // $1B 臂：2 段 tick 全冻结+相位→0x16（融合形——r16 形；T3 纪元 +3 残差=
-        // boot +1+转换窗 +2 留档，oracle UpdateTimer 调用迹仪器待建）
+        assert_eq!(m.read_ram(FRAME_COUNT), 2, "0x02 起恢复自增");
+        // $1B 臂（Step 4b 形：3 cursor 步全冻结+段2 相位→0x16；第 4 tick=0xFF 哨兵 inc；
+        // dive 语义=同迭代无第二 prelude——T3 纪元残差随 map-v2 +1/+2 归零闭合）
         m.write_ram(crate::ram_map::TITLE_ROUTINE, 0x1B);
-        for _ in 0..2 {
+        for _ in 0..3 {
             main_loop_iter(&mut m);
         }
-        assert_eq!(m.read_ram(FRAME_COUNT), 1, "$1B 臂 2 tick FC 全冻");
-        assert_eq!(m.read_ram(crate::ram_map::TITLE_ROUTINE), 0x16, "末段相位→0x16");
+        assert_eq!(m.read_ram(FRAME_COUNT), 2, "$1B 臂 3 cursor 步 FC 全冻");
+        assert_eq!(m.read_ram(crate::ram_map::TITLE_ROUTINE), 0x16, "段2 相位→0x16");
+        main_loop_iter(&mut m); // 0xFF 哨兵
+        assert_eq!(m.read_ram(FRAME_COUNT), 3, "哨兵拍 inc FC（emu f314 FC=50 形）");
         main_loop_iter(&mut m);
-        assert_eq!(m.read_ram(FRAME_COUNT), 2, "0x16 起恢复自增");
+        assert_eq!(m.read_ram(FRAME_COUNT), 4, "0x16 起恢复自增");
     }
 
     /// 敌检全距（r9 转向族修 mutation 面——crawler-corner-divergence.md）：radiusX 跨块
@@ -2029,15 +2043,16 @@ mod tests {
         assert_eq!(m.read_ram(TIMER3), 1);
     }
 
-    /// GoMainRoutine 标题路**会师穿越**（bank00:8000 已通——phase 0 臂单工作段+SpinWait
-    /// （r23 机构改形）：相位推进/FC 同拍落工作段）。
+    /// GoMainRoutine 标题路**会师穿越**（bank00:8000 已通——phase 0 臂单工作段+bogged
+    /// span（Step 2 机构改形）：相位推进/FC 同拍落工作段，等待=门队列挂起）。
     #[test]
     fn go_main_routine_title_crosses_meeting_point() {
         let mut m = FrameMemory::default();
         m.write_ram(GAME_MODE, 1); // TitleRoutine=0=InitializeAfterReset
         go_main_routine(&mut m); // 工作段（仪式+推进同拍）
         assert_eq!(m.read_ram(crate::ram_map::TITLE_ROUTINE), 1); // 相位推进（inc $1F）
-        assert_eq!(m.title_spin, 1, "spin 等待段挂起");
+        assert_eq!(m.iter_gates, vec![0], "bogged 门队列挂起（N₀=1——map-v2 实锤）");
+        assert!(m.iter_span_fc, "FC 延至 span 尾收口旗");
     }
 
     /// 【move-drift R1 链合一】AreaInit→MoreInit fallthrough（asm prg7:1826-1843 无 RTS

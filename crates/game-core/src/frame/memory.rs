@@ -70,6 +70,19 @@ impl FrameMemory {
         }
     }
 
+    /// 臂内帧判定（**Step 3 谓词单源**——engine 缝抑制与 mainloop 续段共用同一实现，
+    /// 判定用 tick 首态=上一拍分派遗留）：同相位续段（cursor>0 且归属相位==当前相位
+    /// ——F4 孤儿语义）｜完成拍哨兵（0xFF，Step 4——显式排除出续段：完成拍无 prelude
+    /// 无分发）｜spin 等待段（r23）。臂内帧=asm 例程体内自旋/续段/完成拍——无 C0D3
+    /// 执行 ⇒ 无缝行、无 prelude（map-v2 §4-④/F10——与 span 三性质同源）。
+    pub fn title_continuation(&self) -> bool {
+        let c = self.title_cursor;
+        (c > 0 && c != 0xFF
+            && self.title_cursor_phase == self.read_ram(crate::ram_map::TITLE_ROUTINE))
+            || c == 0xFF
+            || self.title_spin > 0
+    }
+
     /// watch 状态向量（zp/iram/wram，大写 hex——与 oracle 帧 trace 同形）。
     /// **编码唯一源=memmap::frame_face**（严重-6 对账闭合：废本层手写切片第二源）。
     /// 委托化=task-22 slot①（lead 例外授权：只动委托结构不动语义）；wram 全 8KB 钉死（严重-5）。

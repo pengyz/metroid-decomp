@@ -39,7 +39,7 @@ pub struct FrameMemory {
     /// 本 tick 标题臂**不返回主循环**旗（r9 FC 冻结考证——findings/fc-phase-residual.md：
     /// asm `inc FrameCount`（prg7:207）在 MainLoop 迭代尾，例程内部 WaitNMIPass_ 自旋
     /// 跨帧时迭代未完成⇒FC 不自增；emu 上电 f4-6/title→menu f311-313 各冻 3 帧实录。
-    /// 桥侧按相位（$01/$15/$1B=内旋族）置位，main_loop_iter 消费后清）。
+    /// 桥侧按相位（$00/$01/$15/$1B=内旋族）置位，main_loop_iter 消费后清）。
     pub title_no_return: bool,
     /// 迭代内帧门队列（move-drift 定谳 R2/R3——findings/move-drift-iteration-scheduling.md）：
     /// 1=帧等待（WaitNMIPass/WriteAndWait 族——下一 tick NMI 内块全跑含 ReadJoyPads）/

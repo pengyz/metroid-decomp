@@ -847,17 +847,14 @@ pub fn dispatch_step(face: &TitleFace) -> TitleStep {
     // FadeDriver/EffectDriver 族——见 step_glue 头注）。
     
     match face.phase {
-        // 0x00 InitializeAfterReset：**work+1 spin 等待**（r22——r21 裁定补帧：oracle
-        // f1(work)+f2(wait) 形；r17 单迭代还原系 $C3 双增误修（缺帧镜像），本轮随同
-        // L4 捕点 F 随动重落——$C3 星轨迹盯防）。段 0=全仪式；段 1=spin 空等待。
+        // 0x00 InitializeAfterReset：**单工作段+bogged span**（Step 2 改形——map-v2 §2
+        // 实锤：emu 无内旋（prg0:104-173/:3469-3481 全文无 WaitNMIPass），f2 缺行=重活
+        // 跨帧 bogged 1 窗（N₀=1）非内旋——SpinWait(1) 伪造帧退役；等待改由桥侧
+        // iter_bogged 门队列承载（等待帧 NMI 内块跳过=asm prg7:251 掉帧门同形）。
         0x00 => {
-            // 【r23 机构改形】单工作段+SpinWait 等待段（正交机构）：相位推进/FC 同拍落
-            // 工作段（golden f1 形——O $1F=01@f3 对齐根）；等待=SpinWait 计数（下一 tick
-            // 工作零动——oracle f2 空号形）。
             let mut s = step_from_l2(step_glue::title_init_after_reset(face));
             // InitializeAfterReset :124 `sty IntroStarOffset`（Y=0）
             s.events.push((0x00C3, 0));
-            s.shell.push(crate::title::ShellCall::SpinWait(1));
             s
         }
         0x0A | 0x0B => step_from_l2(step_glue::title_inc(face)),
@@ -924,10 +921,13 @@ pub fn dispatch_step(face: &TitleFace) -> TitleStep {
                 },
             }
         }
-        // ---- 批6b：01 DrawIntroBackground（3 段（r9 压缩：原 2 spin 去——段间无独立帧）——全仪式关键件）----
-        // 段0=APU 标志面+ScreenOff（$FE&=~$18+$1A←0+spin①）｜段1=ClearNameTables RAM 面
+        // ---- 批6b：01 DrawIntroBackground（**Step 4a 改形：2 cursor 步+bogged 溢出窗+
+        //      0xFF 完成拍哨兵**（map-v2 §2：臂内窗=f4(段拍)/f5(bogged ①)/f6(完成拍)
+        //      3 窗——工作拍后跟 1 溢出窗（NMIStatus=1 残留⇒NMI 内块跳，asm prg7:251
+        //      同形）+完成拍（inc FC 落窗尾——emu f7 FC=2 首现行实录））——全仪式关键件----
+        // 段0=APU 标志面+ScreenOff（$FE&=~$18+$1A←0）｜段1=ClearNameTables RAM 面
         // （NT0+NT1 两轮 $01/$00/$FF 面）+PrepareVram($82F4 PPU 侧)+体写+ScreenOn（$FE|=$1E+
-        // $1A←0+spin②）｜段2=完成。
+        // $1A←0）｜溢出窗=桥侧 iter_bogged(1)｜完成拍=main_loop_iter 0xFF 哨兵。
         0x01 => {
             let pm = face.ram[0x00FE & 0x7FF];
             let ff = face.ram[0x00FF & 0x7FF];
@@ -935,9 +935,6 @@ pub fn dispatch_step(face: &TitleFace) -> TitleStep {
                 0 => TitleStep {
                     events: vec![(0x00F0, 0x10), (0x0684, 0x10),
                                  (0x00FE, pm & !0x18), (0x001A, 0)],
-                    // 【r9 FC 冻结压缩（porter）】去 spin①——emu 实录该臂 3 帧全冻结
-                    // （f4-6，相位第 3 帧内→0x02；asm WaitNMIPass_ 自旋不返回主循环，
-                    // 段间无独立帧——findings/fc-phase-residual.md；FC 冻结=桥侧旗）
                     shell: vec![ShellCall::ScreenOff], a_out: None, x_out: None, y_out: None,
                     jumped: None, unported: None, next_cursor: 1,
                 },
@@ -952,14 +949,17 @@ pub fn dispatch_step(face: &TitleFace) -> TitleStep {
                         (0x00D7, 0),
                         // ScreenOn 面（$FE|=$1E）
                         (0x00FE, pm | 0x1E), (0x001A, 0),
-                        // 【r9 FC 冻结融合（porter）】相位推进并入本段（emu f5 冻帧内推进
-                        // 实录——asm 例程尾 jmp 内旋等待不返回，独立尾段帧不存在）
+                        // 相位推进并入本段（emu 冻帧内推进实录——asm 例程尾 jmp 内旋等待
+                        // 不返回，独立尾段帧不存在）
                         crate::memmap::title_state::write_event_phase(face.phase.wrapping_add(1)),
                     ],
                     shell: vec![ShellCall::ClearNameTables, ShellCall::PrepareVram(0x82F4),
                                 ShellCall::ScreenOn],
                     a_out: None, x_out: None, y_out: None,
-                    jumped: None, unported: None, next_cursor: 0,
+                    jumped: None, unported: None,
+                    // 【Step 4a】next=0xFF：下一 tick=完成拍哨兵（bogged 溢出窗由桥侧门
+                    // 队列插在段拍与本拍之间——iter_bogged(1)，map-v2 n₁=1）
+                    next_cursor: 0xFF,
                 },
                 _ => TitleStep {
                     events: vec![], shell: vec![], a_out: None, x_out: None, y_out: None,
@@ -968,27 +968,32 @@ pub fn dispatch_step(face: &TitleFace) -> TitleStep {
             }
         }
         // ---- 批6b：15/1B StartContinueScreen（**同码共享臂**（字节级同段 $90BA）——
-        //      4 段 3 spin：ClearAll①②+TurnOnDisplay ScreenOn③）----
+        //      【Step 4b 改形：3 cursor 步+0xFF 完成拍哨兵】（map-v2 §2：臂内窗 3（f311-313）
+        //      +完成拍 inc 落 f314 行首现——FC=50 实录；段间 WaitNMIPass 旋=无独立帧同迭代，
+        //      桥侧 dive 同拍入臂（head_hit=jmp 直入）））----
         0x15 | 0x1B => {
             let pm = face.ram[0x00FE & 0x7FF];
             let ff = face.ram[0x00FF & 0x7FF];
-            // 【r9 FC 冻结压缩（porter）】旧形 3 work+3 SpinWait=6 tick 且每 tick 加 FC——
-            // emu 实录该臂=3 帧全冻结（f311-313，相位第 3 帧内→0x16——findings/
-            // fc-phase-residual.md）：asm 各段尾 WaitNMIPass_ 自旋**不返回主循环**（段间
-            // 无独立帧）。压缩=去 SpinWait（3 tick；FC 冻结=桥侧 no_return 旗管）。
             match face.cursor {
+                // 段0=ClearAll 头（$FE&=~$18+$1A←0）+ScreenOff（旋①=下 tick NMI 释放）
                 0 => TitleStep {
                     events: clear_all_seg0_events(pm), shell: vec![ShellCall::ScreenOff],
                     a_out: None, x_out: None, y_out: None,
                     jumped: None, unported: None, next_cursor: 1,
                 },
-                1 => {
-                    // 【r9 FC 冻结融合（porter）】段1+段2 并帧（emu f312 冻帧内推进实录——
-                    // asm 段尾 WaitNMIPass_ 自旋不返回主循环，段间无独立帧）
-                    let mut events = clear_all_seg1_events(&face.ram, &face.wram, face.frame_count,
-                                                           face.phase, ff);
-                    // 段2：VBOff 面 + PrepareVram($9984) + 体写 + NMIOn 面 + ScreenOn 面
-                    events.extend(clear_all_seg2_events(ff & 0xFB & 0xFC));
+                // 段1=ClearAll 体（ClearNameTables+EraseAllSprites+DecSpriteYCoord 面+
+                // scroll 清+$FF 面——clear_all_seg1_events 原样）
+                1 => TitleStep {
+                    events: clear_all_seg1_events(&face.ram, &face.wram, face.frame_count,
+                                                  face.phase, ff),
+                    shell: vec![ShellCall::ClearNameTables, ShellCall::EraseAllSprites,
+                                ShellCall::WaitNMIPass],
+                    a_out: None, x_out: None, y_out: None,
+                    jumped: None, unported: None, next_cursor: 2,
+                },
+                // 段2=ClearAll 尾（VBOff+PrepareVram($9984)+体写+TR←0x16+NMIOn+ScreenOn）
+                2 => {
+                    let mut events = clear_all_seg2_events(ff & 0xFB & 0xFC);
                     // 绘制面补（三分靶根因件）：L9984 blob→VRAMStruct 缓冲实写
                     let bidx = face.ram[0x07A0 & 0x7FF];
                     events.extend(vram_struct_buffer_events(bidx, &START_CONTINUE_BLOB));
@@ -999,12 +1004,13 @@ pub fn dispatch_step(face: &TitleFace) -> TitleStep {
                     events.push((0x00FE, pm | 0x1E)); // ScreenOn：$FE|=$1E
                     events.push((0x001A, 0));
                     TitleStep {
-                        events, shell: vec![ShellCall::ClearNameTables, ShellCall::EraseAllSprites,
-                                            ShellCall::WaitNMIPass, ShellCall::VBOffAndHorzWrite,
+                        events, shell: vec![ShellCall::VBOffAndHorzWrite,
                                             ShellCall::PrepareVram(0x9984),
                                             ShellCall::NMIOn, ShellCall::ScreenOn],
                         a_out: None, x_out: None, y_out: None,
-                        jumped: None, unported: None, next_cursor: 0,
+                        jumped: None, unported: None,
+                        // 【Step 4b】next=0xFF：下一 tick=完成拍哨兵（emu f314 FC=50 首现行）
+                        next_cursor: 0xFF,
                     }
                 }
                 _ => TitleStep {
