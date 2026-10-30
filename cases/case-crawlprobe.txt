@@ -9,6 +9,7 @@ watch_range 0440-045F enemy45
 watch_range 6B34-6B45 enemystat
 watch 002D FC
 watch 002C Timer3
+watch 0029 TimerDelay
 watch 001E MainRoutine
 watch 00FC ScrollY
 watch 00FD ScrollX
