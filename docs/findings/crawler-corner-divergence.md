@@ -97,6 +97,19 @@ asm（DistToCenterY/X 符号、+8 块距）；mutation 测=跨块 radius 单点�
 > 帧集后再整形。已回滚融合形（r16 形），L4/PASS 恢复；T3 纪元 +3（boot +1+
 > 转换窗 +2）留档为残余。另：BUG-091 落账（IsObjectVisible 竖滚径 radiusX/ScreenY
 > 轴错配——用户裁后续可优化）。
+> 【2026-10-30 完整帧图（TD 仪器测绘，逐帧会计工单基座）】emu 逐帧调用/自增表
+> （watch 0029+FC+MR/TR，row=pre-work 语义）：
+> boot: [f1 pre+0x00work][f2 wait(TD 恒)+inc+TR→1][f3 pre+0x01cursor0][f4 wait]
+> [f5 seg TR→2][f6 seg TR→3+inc][f7 pre+fade...每帧 call+inc]
+> 转换: [f310 pre+hit+seg0 冻][f311 冻][f312 seg+TR→0x16 冻][f313 pre+inc]
+> game-start: [f350 pre+select][f351 InitializeStats 冻][f352 pre+AreaInit(MR→1)]
+> [f353-358 MoreInit 内旋 冻][f359 pre+SamusInit(T3←44,MR→8)][f360+ intro 每帧]
+> intro: 44 decs×10 帧（SamusInit T3←44 起）→T3==0⇒GameEngine。
+> rust 对照（现态）：boot 少 0x01 内旋帧（0x00 spin 错位 f3 vs emu f2）；转换臂 2 tick
+> vs emu 4；game-start span 冻 AreaInit（emu 带 prelude 调用）+MoreInit 内旋未建模
+> （一帧直通）。**修=按此帧图重构 boot/转换/game-start 三窗的臂与 span 结构**——
+> 已知约束：GameEngine 进入帧移动会平移 gameplay 时间线⇒锚定像素集需重立+基线
+> 重锚（顺序依赖，需用户确认重锚）。
 
 ## 5. 证据指针
 
