@@ -131,6 +131,27 @@ asm（DistToCenterY/X 符号、+8 块距）；mutation 测=跨块 radius 单点�
 > 首迭代前移 1 帧（tick1 即 NMI+boot_post+首迭代，消 PreSpin 独占帧——r14 merged
 > 唤醒语义保持）+各臂内旋帧数按 emu 帧表对齐**——动 boot 时序风险高（r14 调优史），
 > 须逐步机械对拍验收。
+> 【实施工单（下一会话直开工，按序每步机械对拍验收）】
+> S1 boot 合帧：engine.rs PreSpin 臂合并——tick1=boot_pre_spin+NMI#1(nmi_handler)+
+>    boot_post_spin+main_loop_iter（=emu f1 全帧：pre+work），消 PreSpin 独占帧；
+>    AwaitNmi 相位删（restore 路径 skip_next_nmi 语义核验保留）。
+> S2 桥旗规则：0x00 入冻结族（emu f1 无 inc 实录）；spin 分支末尾 spin==0（最后
+>    一旋）⇒no_return=false（完成帧带 inc——emu 0x00 f2 末 inc 实录）。
+> S3 0x01 臂 4 tick 重构：cursor0(f3 冻)+SpinWait(1)(f4 冻)+cursor1(f5 冻 TR→2)
+>    +cursor2(f6 TR→3+inc 不冻=完成帧)——现 2 段融合拆分。
+> S4 0x1B 臂 3 段全冻（un-fuse 恢复+族旗全冻——S1/S2 落地后 un-fuse 的 282px
+>    失败因素即消）。
+> S5 game-start span 拆分：InitializeStats 冻帧+AreaInit 带 prelude tick+MoreInit
+>    内旋 span(6)+SamusInit 带 prelude——span 触发点后移 1 tick。
+> S6 验收链（每步）：crawlprobe 机械对拍（TD/FC/MR/TR/SS 逐帧）→S 全部后：
+>    case-001 敌槽轨迹全窗同值→L4 全量重采+锚定集重立（**需用户确认重锚**）→
+>    基线重锚→复核档。
+> 【2026-10-30 S1 首次试验记录（已回滚）】boot 合帧首版（PreSpin 分支内联 NMI+
+> boot_post+首迭代）实测：tick1 即跑 area_init+more_init（GameMode=0 时 GAME 路径
+> 分派早于 title 建立——boot 相位/GameMode/flag 三者交互比模型复杂，\$0001=0x67
+> 断言红），421 测中 1 红——**已回滚恢复绿**（421/0，CHECK PASS）。教训：S1 需要
+> boot 相位与 GameMode 建立顺序的先行梳理，非简单分支内联；S2-S6 同理须在完整
+> 帧图指导下整轮实施（新会话）——工单与全部实测数据已备齐（本文档）。
 
 ## 5. 证据指针
 
