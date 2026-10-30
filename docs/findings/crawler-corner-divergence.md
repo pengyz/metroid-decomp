@@ -176,3 +176,8 @@ asm（DistToCenterY/X 符号、+8 块距）；mutation 测=跨块 radius 单点�
 > 状态机。卷面：case-crawlprobe 敌槽 watch（$0440-$045F）逐帧可复现。
 > 【勘误预告】本档 S2 工单（0x00 spin 1 帧）与 S1 合帧首版均被 frame-alignment-plan.md
 > §2 对抗分析推翻/重定义——以该档 F1-F10 与 map-v2 图谱为准。
+> 【2026-10-30 更正（verifier 复核 C.3 证伪——原地标注）】上条终判补注中"rust 无死
+> ⇒无爆炸⇒无冻"句**作废**：em u 爬虫未被击杀（d5 1A/5A 交替持续；被误读的 B6→B3
+> 倒计数实为 EnsExtra slot4+$0D jumpDsplcmnt），f916-917 冻结与**首次横滚**精确同窗
+> （SX 双侧 f915=0→f918 非零）——本档 :91 原假设（首次横滚 ScrollRight VRAM）恢复
+> 为首选。激活终判闭合与行走路径残差两面不变。
