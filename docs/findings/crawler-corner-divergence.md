@@ -123,6 +123,14 @@ asm（DistToCenterY/X 符号、+8 块距）；mutation 测=跨块 radius 单点�
 > 修序（依赖序）：①boot 首迭代定位（0x00 内旋帧移到 inc 前）→②转换臂内旋帧数
 > →③game-start span 拆分——每步以 TD/FC/MR 逐帧对拍验收。**方法论定谳：手工帧
 > 算术在本域不可靠（采样沿语义三次干扰），一切以机械对拍脚本输出为准。**
+> 【2026-10-30 新鲜数据复核（重生成 rust 产物后）】分歧地图**确认为真**（非过期
+> 产物）：逐帧原始行实证——**rust 整个 MainLoop 流晚 1 帧启动**（emu 首个 prelude
+> 调用@f1，rust@f2——boot tick1=PreSpin 占帧、首迭代在 tick2），全流程逐帧平移
+> +1（TD 相位差自 f2、949 帧实测）；叠加 title 各臂内旋帧数差（0x00 spin 1 帧、
+> 0x01 内旋 2 帧、0x1B 内旋 2-3 帧 vs emu 对应值）=GameEngine 进入 +3。**修=boot
+> 首迭代前移 1 帧（tick1 即 NMI+boot_post+首迭代，消 PreSpin 独占帧——r14 merged
+> 唤醒语义保持）+各臂内旋帧数按 emu 帧表对齐**——动 boot 时序风险高（r14 调优史），
+> 须逐步机械对拍验收。
 
 ## 5. 证据指针
 
