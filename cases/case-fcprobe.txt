@@ -6,6 +6,7 @@
 name case-fcprobe
 frames 460
 snapshot none  # 上电起跑（与 case-001 同相——前 420 帧输入逐帧相同）
+sample_point spin-exit  # 缝对齐（frame-alignment-plan.md Step 0：与 rust 腿 $C0D3 缝同相）
 
 watch 002D FC
 watch 001F TitleRoutine

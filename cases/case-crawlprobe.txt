@@ -4,6 +4,7 @@
 name case-crawlprobe
 frames 960
 snapshot none  # 上电起跑（与 case-001 同相）
+sample_point spin-exit  # 缝对齐（frame-alignment-plan.md Step 0：与 rust 腿 $C0D3 缝同相；不改像素面）
 
 watch_range 0440-045F enemy45
 watch_range 6B34-6B45 enemystat
