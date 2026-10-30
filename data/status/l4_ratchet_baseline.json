@@ -46,6 +46,17 @@
         "900:end": "diff"
       }
     },
+    "case-crawlprobe": {
+      "scenario_sha256": "700acef82a2f71a646b36d68cbd294d515a4aa206b39192f2ff02c5d9ccb079d",
+      "states": {
+        "420:game-in": "match",
+        "550:after-right": "match",
+        "650:after-left": "match",
+        "720:after-jump": "match",
+        "820:after-shoot": "diff",
+        "960:end": "diff"
+      }
+    },
     "case-fcprobe": {
       "scenario_sha256": "51d978b688513b467fe3de2a695fbe84edd1d1cfd00b0a1e27c6171cc04dba2c",
       "states": {
@@ -162,6 +173,14 @@
       "diff": 26,
       "blocked": 0,
       "cells_total": 76
+    },
+    {
+      "ts": "2026-10-30T01:22:58+00:00",
+      "reason": "吸收 case-crawlprobe 六采集点（4 match/2 diff——像素面诚实 diff 为弹相位残族）；既有 76 格 match 集合零缩水（170f80f3 check 实录）——确认无回退",
+      "match": 54,
+      "diff": 28,
+      "blocked": 0,
+      "cells_total": 82
     }
   ]
 }
