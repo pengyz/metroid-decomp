@@ -80,3 +80,20 @@
   方案（cpal 合成随件）。
 - 影响：听觉面（非像素验收面）。
 - trace id：（apu_log（FrameMemory 内（.ppu.dump 同步面随件））。
+
+## BUG-091：IsObjectVisible 竖滚径轴错配——radiusX 对比 ScreenY（原版怪癖，D4 保真）
+
+- 现象：竖滚房（ScrollDir&2==0 走 VertScrollCheck 07:DFF6）的敌可见性判把
+  **radiusX（$09）**与 **ScreenY=y−ScrollY（$10）**做 `cmp`——敌可见 ⟺
+  y≥ScrollY 且 radiusX≥y−ScrollY。横向语义应为 radiusY（纵轴跨度）或屏界常量；
+  敌在屏内但距屏顶超过 radiusX 即被判不可见（Resting 敌 UpdateEnemy 整体跳过、
+  不绘制不激活）。
+- 证据：prg7_engine.asm 07:DFF6 `CPY $FC`→`A5 09/C9 10`（radiusX cmp ScreenY）；
+  m1disasm 原注自嘲「;why is $09 (radius x) used, but not $08 (radius y)?」
+  （:6494 区 IsObjectVisible 头注）——原作者怪癖非转录错。
+- 定性：原版行为（D4 保真保留；Stage B 可考虑按轴语义优化）。case-001 走横滚径
+  （ScrollDir=0x1E，&2≠0→HorzScrollCheck 轴匹配）未触发——影响面=竖滚房敌可见性。
+- 复现：units/房内敌 y=40/radiusX=2/ScrollY=0 竖滚径判不可见（asm 读证即可复现）。
+- 影响：竖滚房 Resting 敌激活/绘制时序（玩家可见为「敌睡到屏幕顶部附近才醒」——
+  原版即如此）；Stage A 一致性对拍按原版语义。
+- trace id：analysis/traces/case-crawlprobe.frames.jsonl（敌槽 d5 bit1 时序面）。
