@@ -160,3 +160,19 @@ asm（DistToCenterY/X 符号、+8 块距）；mutation 测=跨块 radius 单点�
 - enemies/crawler.asm（内角/外角/翻转/Reorient 全文——rust 结构已忠实）
 - mainloop.rs:865-925（crawler_ai）/1154-1236（移动+碰撞检）
 - case-001 双腿 ram.hex（f810-f1200 敌槽值——本档 §1）
+
+> 【2026-10-30 帧骨架对齐后终判（frame-alignment-plan Steps 0-4 落地——cf7b999b）】
+> **首分叉判据闭合**：crawlprobe matched-seam 下 slot4/5 激活 d5 序列双侧逐帧全同——
+> 42@f797（bit1 可见）/1A@f798（bit3 距离阈）/5A@f799 起交替，GameEngine 进入差
+> （MR f793-795 窗）消失，激活时机**同帧**。上游因果链（F5 单因果：TD 相位差 3=
+> 0x01 窗 +1+0x1B 窗 +2）由帧骨架对齐根治，本档 §2-§3 的激活时机面不再有独立缺陷。
+> fcprobe 5 字段×445 帧全同；crawlprobe FC/TD/MR/TR/SS 主线全同（残余仅 f916-917
+> emu 冻结投影——frame-alignment-map-v2.md §7）。
+> **新残差（激活下游，另案）**：行走路径分叉——emu slot4 沿天花板纯 x 步进（y=28 恒，
+> 6/8 门控 x+1/2帧：BC→BD@f799→…→C3 hold@f807-809→C6…）；rust 自 f797 首步即
+> **双轴对角移动**（y+x 同帧 +1：28BC→29BD→2ABE）随后围 2-3 块小回路（y 29→2B→29、
+> x BD→BE→BC 振荡）——疑似转向核/碰撞检在 rust 把天花板行走误判为转角下壁（对角
+> 双步非合法爬步）。d5 状态面双侧全同（1A/5A 交替节奏一致）——分歧在位移核不在
+> 状态机。卷面：case-crawlprobe 敌槽 watch（$0440-$045F）逐帧可复现。
+> 【勘误预告】本档 S2 工单（0x00 spin 1 帧）与 S1 合帧首版均被 frame-alignment-plan.md
+> §2 对抗分析推翻/重定义——以该档 F1-F10 与 map-v2 图谱为准。
