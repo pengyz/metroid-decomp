@@ -78,6 +78,17 @@ asm（DistToCenterY/X 符号、+8 块距）；mutation 测=跨块 radius 单点�
 > 闲置（更新器零值跳过+重载）、至 intro 末偏移长到 3 帧（递减计数 f360-800 双侧
 > 各 44 次相同——纯相位非速率）。逐帧会计（title 相 MR=1/2 窗的 update_timer
 > 执行差）=下轮定位面。
+> 【2026-10-30 归因闭合（源码阅读解）——用户指正：读 refs 源码即可，无需新仪器】
+> T3 初值装载点=SamusInit（07:C8D1）：`lda #\$2C / sta Timer3`——**44×10=440 帧淡入**
+> （m1disasm 原注「440 frames to fade in Samus (7.3 seconds)」）。crawlprobe 对照：
+> T3←44 双侧仅差 1 帧（emu f358-work/rust f359-work），但首递减差 3 帧（f366/f363）
+> ⇒差值三层 contributor：①boot T3=8 装载差 1 帧（rust f6/f7 vs emu f7/f8——boot 序）；
+> ②\$29（TimerDelay）prescaler 相位在 T3←44 时刻已累积 2 帧（title 相各臂
+> WaitNMIPass_ 内旋帧的 prelude 跳过 pattern 差累积——load→首递减距离 emu 7 帧/
+> rust 5 帧实录）；③game-start 房建相结构差：emu MR=1(AreaInit) 占 f353-356 多帧
+> +MR=2 f357-358，rust 0→2 单帧跳过（AreaInit/MoreInit 未建模为多帧相）。
+> 修=按 asm 逐臂对齐内旋帧数与房建相帧数（source-reading 可完成，Lua 仪器备而
+> 不用）——下一轮 porter 逐臂对齐。
 > 【2026-10-30 转换臂 un-fuse 实验——证伪回滚】由 dec-gap 推演「emu 转换臂=3 无
 > prelude 帧」假设，将 \$15|\$1B 臂拆回三段（去融合）——**门禁证伪**：case-001
 > 锚定 match 集 6 点缩水（f550+ 282px 漂移，L4 FAIL 41 违规）+crawlprobe 像素
