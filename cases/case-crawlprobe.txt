@@ -1,0 +1,25 @@
+# 爬行逐帧探针（r9 转向族残余定位——crawler-corner-divergence.md 落地补注）：
+# case-001 同相输入至 f950，逐帧 watch 敌槽 4/5（$0440-$045F：y/x/data05/data0A）+FC，
+# 定位 FC 对齐+全距核修后残余分歧的首分叉 tick（slot5 f810 起仍分叉/f950 起角检分叉）。
+name case-crawlprobe
+frames 960
+snapshot none  # 上电起跑（与 case-001 同相）
+
+watch_range 0440-045F enemy45
+watch 002D FC
+
+press 310 start     # 标题按 Start（与 case-001 同相）
+press 350 start     # 选单按 Start（START GAME）
+capture 420 game-in
+hold 500-550 right  # 向右移动
+capture 550 after-right
+hold 600-650 left
+capture 650 after-left
+press 700 a         # 跳跃
+capture 720 after-jump
+press 800 b         # 射击
+capture 820 after-shoot
+hold 900-950 right  # 组合移动
+press 920 a
+press 940 b
+endFrame 960

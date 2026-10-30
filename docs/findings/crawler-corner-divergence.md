@@ -55,10 +55,19 @@ asm（DistToCenterY/X 符号、+8 块距）；mutation 测=跨块 radius 单点�
 > 【2026-10-29 落地补注（b72b8f90）】修已落地：四检改走 enemy::movement 既有
 > staging（DistToCenter 公式逐字节忠实——该 L2 端口本就存在但未接线）+
 > check_move_boundary+span 构件复用（physics.rs 两 helper 转 pub(crate)）。判据
-> **部分达成**：slot4 f815-825 x 对齐（190→200=emu 同值）；slot5 与 f950+ 角检
-> 仍分歧——**残余面=转向决策的更深层**（内角/外角/翻转链的输入差异），定位需
-> f735-f820 窗逐帧 trace（crawlprobe：watch_range 0440-044F+data0A/data05/FC
-> 双侧逐帧）——待续考证。门禁 check PASS=13 FAIL=0，L4 76 格零缩水。
+> **部分达成**：slot4 f815-825 x 对齐；slot5 与 f950+ 角检仍分歧（见下注）。
+> 【2026-10-30 逐帧定位补注（case-crawlprobe）】全距核修后残余面已用逐帧 trace 钉到
+> **激活时机**：crawlprobe（case-001 同相至 f960，watch_range 0440-045F+FC）双侧 952
+> 可比帧——首分叉 **f794**：rust 双爬虫激活爬行（s4 d5=1A=bit1 可见+bit3 距离阈同帧，
+> dA=01 下壁+外角探移复合位移），emu 静止至 f796、f797 行 bit1 置（d5=42）、f798 行
+> bit3 置（d5=1A）、f799 行起同速右移（6/8 门同拍）。即 **rust 早 3-5 帧激活**，激活后
+> 速率/门一致。激活链（asm）：UpdateEnemy_CheckIfVisible（07:F37F——fresh 不可见⇒
+> pla pla 整体跳过）→UpdateEnemy_Resting（07:F3BE——bit6 30FPS 半率门=(slot/16 xor
+> FC)&0→体跑）→OrEnData05 $18→距离阈 F75B（不可见⇒清 $18）→TryBecomingActive
+> （07:F7BA——delay 递减归零 **且** bit3⇒status++）。rust 激活帧 d5=1A=bit1/bit3 同帧、
+> emu 分两帧且晚 3 帧——可见闩（draw_enemy bit1）/延迟倒数节拍/距离阈判的时序交织
+> 待下一轮专项定位（本档不修）。产件：cases/case-crawlprobe.txt+双侧逐帧
+> jsonl/state.jsonl（analysis/traces+shots_rust）。
 
 ## 5. 证据指针
 
