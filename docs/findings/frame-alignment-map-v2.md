@@ -82,6 +82,11 @@ f7:  emu(2,8)      rust(2,7)  ← 出窗 offset +1（emu 1 减 vs rust 2 减）
 4. **【证实 F10】0x01/0x1B 臂 tick 泄漏缝行**（f4-6、f311-313 共 6 行）；FC 冻结在臂内
    生效（f311-313 FC=49 恒）但 TD 不冻——**现役 continuation tick「无 prelude」性质不
    成立**（TD 在 f311/f312 各减），Step 3 的谓词单源化必须连 prelude 抑制一起补。
+   > 【2026-10-30 更正（实施期复核）】「continuation tick 跑 prelude」表述不准：TD dec
+   > 实来自**非续段拍**——0x1B 窗的 3 dec=转换检测迭代 prelude（tick310）+臂入口 cursor0
+   > 拍 prelude（tick311，cursor==0 不算续段）+完成折叠迭代 prelude（tick313）；续段/spin
+   > 消费 tick 本就跳 prelude（mainloop.rs 既有）。真正的机制缺陷=**边界数不足**（臂被
+   > 拆成多个「伪迭代」各带 prelude）——Step 4 臂重构（单迭代 dive+哨兵收尾）闭合。
 5. **【证实 F8】f916-917 emu 冻结两窗**，FC 冻 132/TD 冻 0，rust 照常 → FC −2 投影 42 帧。
 6. **【新】T3 首分歧 f7**（T3←8 的 0x02 FadeInDelay 迭代完成行 rust=f7/emu=f8——臂窗
    行集差的直接下游），f8 起即回归相等；其余 T3/SS 差集中在回绕边界行（相位伪影）。
@@ -115,3 +120,29 @@ EOF
 ```
 
 ## 6. 假设区（本档不含 C 级结论；f916-917 来源候选仍按 plan §7 H1 记录）
+
+---
+
+## 7. 收敛终态（2026-10-30 实施后实测——Steps 1-4 全落地）
+
+修复全部落地后的 matched-seam 终态（同 §5 命令复现）：
+
+| 面 | 终态 |
+|---|---|
+| 行集 | emu_only=∅；rust_only={916, 917, 960}——**全部对拍窗行集闭合**（916-917=F8 开放项、960=截断伪影） |
+| fcprobe | **5 字段（FC/TR/MR/GM/T3）×445 可比帧全同**——FC 相位探针零分歧（本案源头判据闭合） |
+| crawlprobe | MR/SS/SY/T3 **全同 0 分歧**；FC/TD 仅 f918-959（42 帧，=f916-917 冻结的下游投影）；SX 仅 f918-926（9 帧，同源） |
+| 0x01 窗 | f3-f7 逐行全同（(1,9)/(2,8)/(3,7)…）；内窗 f4-6 双侧静默 |
+| 0x1B 窗 | f310-f320 逐行全同（(49,5)…(56,8)）；内窗 f311-313 双侧静默；f314=(50,4) 单 inc/单 dec 精确落地 |
+| game-start | f348-f365 逐行全同；缺行 [352-358] 双侧重合（F6 终验） |
+| MR 窗 | f790-f800 逐行全同——**GameEngine -3 差窗（f793-795）消失**（F5 单因果链终验点闭合） |
+
+落地形（与 plan §4 的差异点，均已 asm 复核）：
+- 0x1B 臂=**dive 单迭代形**：head_hit 非独立迭代——同拍 jmp 直入臂 cursor0（face 新相
+  位重建），臂 3 cursor 步+0xFF 哨兵收尾（单 prelude@w310+单 inc@哨兵窗=emu 1 dec/1 inc
+  精确对形）。plan §4 的「入口拍在 w311」修为「入口拍=命中拍 w310」（内窗不可观测，
+  两形同可观测；dive 形与 asm jmp 语义一致故取之）。
+- 0x01 溢出窗=bogged 门（asm：旋①释放后 NMIStatus=1 残留⇒溢出窗 NMI 内块跳——
+  prg7:251 同形；plan §4 iter_bogged(n₁) 原案成立）。
+- engine AwaitNmi 臂补**门→span_left 装配**（首迭代声明门队列的同构面——缺此段则
+  0x00 臂 bogged 门被当 tick 消费）。

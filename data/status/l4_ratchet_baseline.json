@@ -47,7 +47,7 @@
       }
     },
     "case-crawlprobe": {
-      "scenario_sha256": "700acef82a2f71a646b36d68cbd294d515a4aa206b39192f2ff02c5d9ccb079d",
+      "scenario_sha256": "d9caaa3d03691d640b5071a335bae1b1d7ccce8f93ab4722fe208af679488a53",
       "states": {
         "420:game-in": "match",
         "550:after-right": "match",
@@ -58,7 +58,7 @@
       }
     },
     "case-fcprobe": {
-      "scenario_sha256": "51d978b688513b467fe3de2a695fbe84edd1d1cfd00b0a1e27c6171cc04dba2c",
+      "scenario_sha256": "80b1bbb4c8ba315781dbe6559dd7ce8029b7991ef80e003a690a2d00cd82bfde",
       "states": {
         "420:game-in": "match",
         "460:end": "match"
@@ -177,6 +177,14 @@
     {
       "ts": "2026-10-30T01:22:58+00:00",
       "reason": "吸收 case-crawlprobe 六采集点（4 match/2 diff——像素面诚实 diff 为弹相位残族）；既有 76 格 match 集合零缩水（170f80f3 check 实录）——确认无回退",
+      "match": 54,
+      "diff": 28,
+      "blocked": 0,
+      "cells_total": 82
+    },
+    {
+      "ts": "2026-10-30T13:49:30+00:00",
+      "reason": "Steps 1-4 帧骨架对齐后重锚：case-crawlprobe/case-fcprobe scenario_sha256 漂移（sample_point spin-exit 仪器行——Step 0 commit 04cec81b）+采集点语义复核。确认无回退证据：run-all 新矩阵 match 54/diff 28/blocked 0 与原锚持平（28 diff=状态账登记的结构性项——旧定义采集点不再复采 7+渲染腿缺失 6+sc-title-menu2 迭代态 4，非游戏分歧）；游戏收敛面由 matched-seam 对拍正向证实（fcprobe 5 字段×445 帧全同、crawlprobe MR/SS/SY/T3 全同——cf7b999b 提交实录）。",
       "match": 54,
       "diff": 28,
       "blocked": 0,
