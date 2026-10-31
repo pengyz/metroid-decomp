@@ -138,7 +138,10 @@ pub fn enemy_get_delta_y(
             (t as u8, sp2)
         };
         let _ = (sub, sp);
-        return (0, delay, instr_index, false); // Δ=speed（字段写面随件）
+        // 【Skree 坠落根修（goal-轮2 自跑实证：金 y 56→64→196（加速落）/我 56 恒——
+        // Δ 桩回 0 致坠落静止）】加速径 Δ=**积分后 speed**（asm $833F：speed 积分面——
+        // Δ=speed 本体）。
+        return (sp as i8, delay, instr_index, false);
     }
     // 朝向（data05 bit7：水平/垂直）→movementIndex*2+facing→*2→指针
     let facing = if data05 & 0x80 != 0 { (data05 >> 2) & 1 } else { data05 & 1 };

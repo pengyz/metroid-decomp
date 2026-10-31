@@ -954,18 +954,101 @@ fn enemy_complete_death(mem: &mut crate::frame::FrameMemory, x: u8) {
 }
 
 /// ChooseEnemyAIRoutine（**asm 内容锚** 区 bank `$95E5`（prg1:156——type 0-0F dispatch）：
-/// **05=Zoomer(Crawler——起始房敌！)**。未端口型=【占位臂记账】（DIVERGENCES 非 panic——
-/// title_bridge 同款模式）：静态显示径（update_enemy_common_no_move_no_anim）保可玩，
-/// AI 深件随 sc-enemy-encounter 包收敛（goal 流程③）。
+/// **05=Zoomer(Crawler)**/**04=Skree（goal-轮2 新端口）**。未端口型=【占位臂记账】
+/// （DIVERGENCES 非 panic——title_bridge 同款模式）：静态显示径保可玩，AI 深件随包收敛。
 fn choose_enemy_ai(mem: &mut crate::frame::FrameMemory, x: u8) {
     let t = mem.read_wram(0x6AF4 + x as u16 + 14); // type=+14
     match t {
         5 => crawler_ai(mem, x),
+        // 【goal-轮2 Rust 实现】SkreeAIRoutine（enemies/skree.asm:2-71 全谱）——
+        // 第一房间双敌型之二（sc-shoot-kill slot 0x20 type=4 实测；HP=2（01:962B）符）。
+        4 => skree_ai(mem, x),
         _ => {
             crate::frame::DIVERGENCES.with(|d| d.borrow_mut().push(0x95E5));
             update_enemy_common_no_move_no_anim(mem, x);
         }
     }
+}
+
+/// SkreeAIRoutine（**asm 内容锚** `SkreeAIRoutine_{AREA}`（refs/m1disasm/SRC/enemies/
+/// skree.asm:2-71——A 级逐行））：悬顶静息（PreAI=Resting⇒anim 8）→近距激活（阈距
+/// data05 bit3——F75B 件）→坠落（movementInstrIndex($+7)<$0F——EnemyGetDeltaY delta 径）
+/// →落地（≥$0F）⇒爆延时←$3A→≥$11⇒爆体径（jumpDsplcmnt($+13) 倒数⇒清槽+**4 弹**）。
+fn skree_ai(mem: &mut crate::frame::FrameMemory, x: u8) {
+    let pre = mem.read_ram(0x0081); // EnemyStatusPreAI
+    if pre == 1 {
+        // SkreeExit_Resting（:62-66）：anim 8+noMove
+        update_enemy_anim(mem, x, 8);
+        update_enemy_common_no_move_no_anim(mem, x);
+        return;
+    }
+    if pre == 3 {
+        // SkreeExit_Explode（:68-70）：noMoveNoAnim
+        update_enemy_common_no_move_no_anim(mem, x);
+        return;
+    }
+    let instr = mem.read_ram(0x0400 + x as u16 + 7); // movementInstrIndex=+7
+    if instr >= 0x11 {
+        // SkreeBlowUpIntoProjectiles（:27-54）：jumpDsplcmnt 倒数⇒0⇒清槽+4 弹
+        let d = mem.read_wram(0x6AF4 + x as u16 + 13); // EnsExtra.jumpDsplcmnt=+13
+        let nd = d.wrapping_sub(1);
+        mem.write_wram(0x6AF4 + x as u16 + 13, nd);
+        if nd == 0 {
+            mem.write_wram(0x6AF4 + x as u16, 0); // status←NoEnemy（:33-35）
+            // 4 弹族（SkreeProjectiles——:36-54；显示面 uw_skree_projectiles 随件）
+            crate::frame::DIVERGENCES.with(|d| d.borrow_mut().push(0x0F8C0));
+        }
+        update_enemy_anim(mem, x, 2);
+        update_enemy_common_no_move_no_anim(mem, x);
+        return;
+    }
+    if instr >= 0x0F {
+        // 刚落地（:21-25）：爆延时←$3A（约 1 秒）
+        mem.write_wram(0x6AF4 + x as u16 + 13, 0x3A);
+    }
+    // 坠落/落地径（SkreeExit_Active（:56-60）：anim 2+移动（EnemyMove delta 径））
+    let type_ = mem.read_wram(0x6AF4 + x as u16 + 14) & 0x3F;
+    let d05 = mem.read_ram(0x0400 + x as u16 + 5);
+    let mov_idx = mem.read_ram(0x0400 + x as u16 + 10); // movementIndex（union=+0x0A）
+    let instr2 = mem.read_ram(0x0400 + x as u16 + 7);
+    let delay = mem.read_ram(0x0400 + x as u16 + 9); // delay=+9
+    let sub_y = mem.read_ram(0x0400 + x as u16 + 8);
+    let speed_y = mem.read_ram(0x0400 + x as u16 + 2);
+    let accel_y = mem.read_wram(0x6AF4 + x as u16 + 10); // EnsExtra.accelY=+10
+    let (dy, ndelay, ninstr, _z) = crate::enemy::common::enemy_get_delta_y(
+        type_, d05, mov_idx, instr2, delay, sub_y, speed_y, accel_y);
+    mem.write_ram(0x0400 + x as u16 + 9, ndelay);
+    mem.write_ram(0x0400 + x as u16 + 7, ninstr);
+    // 加速径积分写回（$833F：`adc speedSubPixelY/sta/lda speedY/adc #$00/sta`——
+    // sub+accel→carry→speed+carry（IntY 同构））——纯件不落写，调用侧同式写回。
+    if accel_y != 0 {
+        let t = sub_y as u16 + accel_y as u16;
+        mem.write_ram(0x0400 + x as u16 + 8, t as u8); // speedSubPixelY
+        mem.write_ram(0x0400 + x as u16 + 2, speed_y.wrapping_add((t >> 8) as u8)); // speedY
+    }
+    if dy != 0 {
+        // Δ 施加（EnemyMove 径（:10029-10046 同构）：y±|Δ|——名表换补偿）
+        let mut y = mem.read_ram(0x0400 + x as u16 + 0);
+        let hi = mem.read_wram(0x6AF4 + x as u16 + 7);
+        for _ in 0..dy.unsigned_abs() {
+            if dy < 0 {
+                if y == 0 {
+                    y = 0xEF;
+                    mem.write_wram(0x6AF4 + x as u16 + 7, hi ^ 1);
+                } else {
+                    y -= 1;
+                }
+            } else if y == 0xEF {
+                y = 0;
+                mem.write_wram(0x6AF4 + x as u16 + 7, hi ^ 1);
+            } else {
+                y += 1;
+            }
+        }
+        mem.write_ram(0x0400 + x as u16 + 0, y);
+    }
+    update_enemy_anim(mem, x, 2);
+    update_enemy_common_no_move_no_anim(mem, x);
 }
 
 /// CrawlerAIRoutine（**asm 内容锚** `enemies/crawler.asm`——r26+2026-10-31 PreAI 门补装）：

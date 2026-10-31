@@ -26,6 +26,13 @@ import sys
 import zlib
 from pathlib import Path
 
+# 【Windows GBK 兜底】（diff_traces 同款——`⇒` 等 Unicode 崩报告）
+try:
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+except Exception:
+    pass
+
 ROOT = Path(__file__).resolve().parent.parent
 GOLDEN = ROOT / "oracle" / "screens"
 SHOTS = ROOT / "shots"
