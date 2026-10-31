@@ -852,6 +852,10 @@ pub fn samus_jump(mem: &mut FrameMemory) {
             super::physics::stop_vert_movement(mem); // D147（已全折）（松开起跳）
         }
     }
+    // 【goal-轮18 空控接线（自跑实证：f1655 Joy1Status=0x1（RIGHT）⇒金 spX=1/我 0——
+    // D055 空控未调！）】SamusJump_CheckHorzMovement（:3481 asm 调用点）——speedX=±1/0
+    // 向位（每帧横速置）。
+    samus_jump_check_horz_movement(mem); // D055
     samus_jump_tail(mem); // D015 链（audit §4（2026-10-28 全链通读端口））
 }
 
