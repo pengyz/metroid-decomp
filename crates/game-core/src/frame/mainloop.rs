@@ -1841,6 +1841,12 @@ fn uw_collision_detection(mem: &mut crate::frame::FrameMemory) {
                     // LF306：AreaEnemyDamage（01:95CE=**$0080**（Brinstar——区表））→HealthChange
                     mem.write_ram(0x006E, 0x80);
                     mem.write_ram(0x006F, 0x00);
+                    // 【击退根修（goal-轮5 自跑实证：金跳起瞬 st=2+spX=1=LF270 击退径/我恒 0）
+                    // 】SetSamusIsHitByEnemy（LF270 族）：isHit($030A)←$30|向位（bit3=向右）
+                    // ——check_health_status 受击径（CDFA）读 isHit&$20 触发击退（speedY=$FD
+                    // +AccelY=$38+knockback）——旧形未置 isHit⇒击退链永不发。
+                    let dir_bits = if ex > sx { 0x08u8 } else { 0x00 }; // 敌在右⇒推向右
+                    mem.write_ram(crate::ram_map::SAMUS_IS_HIT, 0x30 | dir_bits);
                 }
             }
         }
