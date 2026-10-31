@@ -90,10 +90,23 @@ pub fn update_enemy_common(
 
 /// 敌 ΔY 符号幅解码（**asm 内容锚** `EnemyGetDeltaY_SignMagSpeed: ; $827F`）：
 /// 移字符串字节（延时面+符号幅速度字节）→Δ（bit7=符号/低 7 位=幅——SignedMag 形）。
+/// SignMagSpeed Δ 解码（**对抗复核定谳（2026-11-01）**——asm macros.asm:27
+/// `(ysign|ymag)<<4|(xsign|xmag)` 打包 nibble 形：Δy=sign(bit7)×((b>>4)&7)（幅 0-7）；
+/// Δx=sign(bit3)×(b&7)。旧形按 bit7 符号+低 7 位幅（skree 串 0x22→+34 ✗asm +2）。
 pub fn enemy_delta_sign_mag(speed_byte: u8) -> i8 {
-    let mag = (speed_byte & 0x7F) as i8;
+    let mag = ((speed_byte >> 4) & 0x07) as i8;
     if speed_byte & 0x80 != 0 {
-        -mag
+        mag.wrapping_neg()
+    } else {
+        mag
+    }
+}
+
+/// Δx 解码（同源 nibble 形）。
+pub fn enemy_delta_x_packed(speed_byte: u8) -> i8 {
+    let mag = (speed_byte & 0x07) as i8;
+    if speed_byte & 0x08 != 0 {
+        mag.wrapping_neg()
     } else {
         mag
     }

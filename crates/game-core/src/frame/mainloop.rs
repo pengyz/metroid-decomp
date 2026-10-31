@@ -1022,16 +1022,16 @@ fn skree_ai(mem: &mut crate::frame::FrameMemory, x: u8) {
     // 选播（prg7:11428-11450——随件：现 0 起步）。
     let type_ = mem.read_wram(0x6AF4 + x as u16 + 14) & 0x3F;
     let d05 = mem.read_ram(0x0400 + x as u16 + 5);
-    let mov_idx = mem.read_ram(0x0400 + x as u16 + 10); // movementIndex=+0x0A
-    let instr2 = mem.read_ram(0x0400 + x as u16 + 7);
+    let mov_idx = mem.read_ram(0x0400 + x as u16 + 8); // movementIndex=+8（复核正——ROM BD 08 04）
+    let instr2 = mem.read_ram(0x0400 + x as u16 + 6); // movementInstrIndex=+6（复核正——BC 06 04）
     let delay = mem.read_ram(0x0400 + x as u16 + 9); // delay=+9
-    let sub_y = mem.read_ram(0x0400 + x as u16 + 8);
+    let sub_y = mem.read_ram(0x0400 + x as u16 + 6); // speedSubPixelY=+6（union 同字节——复核正）
     let speed_y = mem.read_ram(0x0400 + x as u16 + 2);
     let accel_y = mem.read_wram(0x6AF4 + x as u16 + 10);
     let (dy, ndelay, ninstr, _z) = crate::enemy::common::enemy_get_delta_y(
         type_, d05, mov_idx, instr2, delay, sub_y, speed_y, accel_y);
     mem.write_ram(0x0400 + x as u16 + 9, ndelay);
-    mem.write_ram(0x0400 + x as u16 + 7, ninstr);
+    mem.write_ram(0x0400 + x as u16 + 6, ninstr); // movementInstrIndex=+6（复核正）
     if dy != 0 {
         // Δ 施加（EnemyMove 径（:10029-10046 同构）：y±|Δ|——名表换补偿）
         let mut y = mem.read_ram(0x0400 + x as u16 + 0);
@@ -1388,7 +1388,10 @@ fn enemy_move_one_pixel_down(mem: &mut crate::frame::FrameMemory, x: u8) -> bool
     true
 }
 
-/// EnemyMoveOnePixelLeft（**asm 内容锚** `: 1142 $84A7`——r26（x dec 同构））。
+/// EnemyMoveOnePixelLeft（**asm 内容锚** `: 1214 $84A7`——r26（x dec 同构））。
+/// 【goal-轮10 asm :1142-1210 逐字】①8px 门检 ②x==0⇒名表换（横滚房 ScrollX 面）
+/// ③dec x ④左界==0（x==radiusX）⇒**失败+回滚**（inc x——旧形缺回滚！）⑤@success：
+/// jumpDsplcmnt inc（data05 bit7 置时）。
 fn enemy_move_one_pixel_left(mem: &mut crate::frame::FrameMemory, x: u8) -> bool {
     let xpos = mem.read_ram(0x0400 + x as u16 + 1); // x=+1
     let rx = mem.read_wram(0x6AF4 + x as u16 + 2); // radiusX=+2
@@ -1398,17 +1401,30 @@ fn enemy_move_one_pixel_left(mem: &mut crate::frame::FrameMemory, x: u8) -> bool
             return false;
         }
     }
+    mem.write_ram(0x00, 1); // $00=1（移动进行——inc $00（:1161））
+    // x==0⇒名表换（:1162-1180——横滚房 ScrollX/GetOtherNameTableIndex 族简化=hi 翻）
+    if xpos == 0 {
+        let hi = mem.read_wram(0x6AF4 + x as u16 + 7);
+        mem.write_wram(0x6AF4 + x as u16 + 7, hi ^ 1); // SwitchEnemyNameTable（简化形）
+    }
     let nx = xpos.wrapping_sub(1);
     mem.write_ram(0x0400 + x as u16 + 1, nx);
+    // 左界==0（dec 后 x==radiusX）⇒失败+**回滚**（inc x——:1184-1199 逐字）
     if nx == rx {
-        mem.write_ram(0x00, 1); // $00=1（离屏/wrap）
+        mem.write_ram(0x0400 + x as u16 + 1, xpos); // inc x（回滚）
+        mem.write_ram(0x00, 0);
         return false;
+    }
+    // @success（:1201-1208）：data05 bit7 置⇒jumpDsplcmnt inc
+    if mem.read_ram(0x0400 + x as u16 + 5) & 0x80 != 0 {
+        let j = mem.read_wram(0x6AF4 + x as u16 + 13);
+        mem.write_wram(0x6AF4 + x as u16 + 13, j.wrapping_add(1));
     }
     true
 }
 
 /// EnemyMoveOnePixelRight（**asm 内容锚** `: 1214 $84FE`——r26（x inc 同构））。
-/// 【goal-r16 G3'】失败时写 $00 契约：块界碰撞⇒$00=0；离屏/名表 wrap⇒$00=1（corner check 判据）。
+/// 【goal-轮10】右界判（x+radiusX==$FF?——asm :1230-1245 同构回滚）+wrap（x==0 环绕）。
 fn enemy_move_one_pixel_right(mem: &mut crate::frame::FrameMemory, x: u8) -> bool {
     let xpos = mem.read_ram(0x0400 + x as u16 + 1);
     let rx = mem.read_wram(0x6AF4 + x as u16 + 2);
@@ -1418,11 +1434,24 @@ fn enemy_move_one_pixel_right(mem: &mut crate::frame::FrameMemory, x: u8) -> boo
             return false;
         }
     }
+    mem.write_ram(0x00, 1);
     let nx = xpos.wrapping_add(1);
     mem.write_ram(0x0400 + x as u16 + 1, nx);
-    if nx == rx.wrapping_neg() {
-        mem.write_ram(0x00, 1); // $00=1（离屏/wrap）
+    if nx == 0 {
+        // wrap（x 环绕 00⇒名表换——ToggleSamusHi 同族）
+        mem.write_ram(0x00, 1);
+        let hi = mem.read_wram(0x6AF4 + x as u16 + 7);
+        mem.write_wram(0x6AF4 + x as u16 + 7, hi ^ 1);
+    }
+    // 右界判（x+radiusX 界——asm :1230-1245 回滚同构）
+    if nx.wrapping_add(rx) == 0 {
+        mem.write_ram(0x0400 + x as u16 + 1, xpos); // 回滚
+        mem.write_ram(0x00, 0);
         return false;
+    }
+    if mem.read_ram(0x0400 + x as u16 + 5) & 0x80 != 0 {
+        let j = mem.read_wram(0x6AF4 + x as u16 + 13);
+        mem.write_wram(0x6AF4 + x as u16 + 13, j.wrapping_add(1));
     }
     true
 }
