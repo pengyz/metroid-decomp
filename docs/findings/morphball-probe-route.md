@@ -46,3 +46,27 @@ python3 tools/scenario_run.py run cases/case-morphball-probe.txt --timeout 300
 # 关键字段：PowerUps(0748-0757)/PowerUpDelayFlag(0109)/SamusStatus(0300)/SamusX/Y(030E/030D)/
 #          ScrollX(FD)/RoomNumber(5A)/gear(6878)
 ```
+
+## 5. 跳墙对拍结果（2026-10-31 迭代 3-5——用户"跳不进去"专项）
+
+**路线全解（emu+rust 双腿 matched-seam，input=sched 修正后）**：
+- 走廊（y=193 地面）→ 墙位 x=4 → **全高跳（hold A 55 帧）**：y 193→110（83px）+
+  左漂过墙顶（x 4→255 回绕）→ 落坑沿 (244,113)。**rust 现版能过墙**：f1131-1180
+  跳跃轨迹与 emu 逐帧全同（含落点）。
+- **残余实锤（=用户"顶部图块碰撞异常"）**：墙顶角 1px 碰撞偏差——f1164 emu x=3 vs
+  rust x=2（rust 多进 1px）、f1172 emu 250 vs rust 249（同形），随后即回同步。
+  角部=墙顶与天花板交接 tile 的横移碰撞判差 1px——上行/横移检在角部 tile 的
+  边界条件分歧（c3315af 上行臂 x 全距修的同族残余），根因定位待专项。
+- f1-f885 全同（走廊+卷轴过渡+球房入段）；f886 起 st 0/1 墙边微闪（emu 站立
+  动画帧 vs rust 恒 1——次要）；X 分叉仅 f1164/f1172 两帧各 1px 且自愈。
+- **坑内继续**：落坑沿后左推不动（x=244 卡死——坑沿左缘实体）、二段跳（f1240）
+  越坑左落 (68,177)——球位 (104,152) 触摸未触发（拾取面=物品子系统未移植，
+  §3 任务卡；触摸时序迭代待移植后）。
+
+**工具坑（本轮实证，KB 候选）**：
+1. sched 手工生成：l4.write_schedule 的 caps 参=**元组列表**；传 parse_scenario 的
+   dict 列表（`for f,tag in caps` 解包 keys）⇒ capture 行写成 "capture frame tag"
+   ⇒ rust 解析失败/静默用旧 sched——**A 键输入整段丢失**（跳墙"未触发"假象）。
+   正解=`[(c['frame'],c['tag']) for c in plan['captures']]`。
+2. cases 加用例漏 `sample_point spin-exit` ⇒ emu 腿 endFrame 缝（F1 缝错位重演）。
+3. 对比脚本 None/0 判等：emu 缺行 None vs rust 0 会误报分歧——分叉判定须双侧非 None。

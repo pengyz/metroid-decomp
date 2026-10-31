@@ -2,8 +2,9 @@
 # 真实路线（无 fixture）：出生点向左→左门过渡→球房(图 2,14)→跳入凹室→拾取 Maru Mari
 # →形态（down）→滚行。判据：双腿 matched-seam 逐帧全同（Samus 面+gear+门/房状态）。
 name case-morphball-probe
-frames 1500
+frames 1700
 snapshot none  # 上电起跑（与 crawlprobe 同相）
+sample_point spin-exit  # 缝对齐（与 rust 腿 $C0D3 同相）
 
 watch 002D FC
 watch 002C Timer3
@@ -23,12 +24,12 @@ watch 0109 PowerUpDelayFlag
 press 310 start     # 标题（与 crawlprobe 同相）
 press 350 start     # 选单 START GAME
 capture 420 game-in
-hold 450-1130 left  # 连续左走（开口扫掠）
-press 830 a         # 扫掠跳 1（x≈89）
-press 870 a         # 扫掠跳 2（x≈75）
-press 910 a         # 扫掠跳 3（x≈61）
-press 950 a         # 扫掠跳 4（x≈47）
-press 990 a         # 扫掠跳 5（x≈33）
-press 1030 a        # 扫掠跳 6（x≈19）
-capture 1100 sweep-done
-endFrame 1200
+hold 450-1420 left  # 连续左推全程（墙顶→坑）
+hold 1130-1185 a    # 全高跳越高墙（y 193→112，落坑沿 (244,113)）
+hold 1240-1295 a    # 二段跳（坑沿→坑内 (68,177)）
+hold 1420-1500 right # 右走回球位（x 68→104）
+hold 1500-1560 a     # 球位全高跳（触摸拾取）
+capture 1300 pit
+capture 1560 ball-jump
+capture 1650 after-pickup
+endFrame 1700
