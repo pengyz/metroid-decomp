@@ -1949,12 +1949,12 @@ fn uw_collision_detection(mem: &mut crate::frame::FrameMemory) {
                     mem.write_ram(crate::ram_map::SAMUS_INVINCIBLE_DELAY, 0x32);
                     mem.write_ram(0x006E, 0x80);
                     mem.write_ram(0x006F, 0x00);
-                    // 【goal-轮16 击退 X 推根修（自跑实证：金 x 200→214 推离/我恒 196——
-                    // y 同 ✓ X 缺）】LF270 击退 X 推：敌在左⇒推右（speedX=$02）/敌在右
-                    // ⇒推左（$FE）——离敌推（碰撞伤→击退力族）。
-                    let dir_bits = if ex > sx { 0x08u8 } else { 0x00 };
+                    // 【goal-轮17 推向勘误】金腿实证（f1655 spX=1（max right）+x 200→214）
+                    // ⇒敌在左⇒**推右**（离敌推）——旧形方向反（ex>sx⇒右推 ✗）+幅值
+                    // 旧 2→实测 1（max 速面）。
+                    let dir_bits = if ex > sx { 0x00u8 } else { 0x08 }; // bit3=被推向右
                     mem.write_ram(crate::ram_map::SAMUS_IS_HIT, 0x30 | dir_bits);
-                    let push = if ex > sx { 0x02u8 } else { 0xFE }; // 推离敌
+                    let push = if ex > sx { 0xFFu8 } else { 0x01 }; // 离敌推（max 1）
                     mem.write_ram(0x0309, push); // Samus.speedX（击退 X 推）
                 }
             }
