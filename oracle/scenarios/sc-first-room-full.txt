@@ -1,0 +1,79 @@
+# 场景：sc-first-room-full —— 第一房间完整玩法综合长脚本（验收主案——操作组合全覆盖）
+# 组合面：开场→移动（左右）→跳跃→射击→跨格→变形球拾取→变球滚动→解除→敌遭遇（爬虫+Skree）
+# →击杀→碰撞受伤→长时巡游（滚动/转向/跳跃/射击交错）。
+# 帧预算：3200（约 53 秒——长脚本验收形）。
+name sc-first-room-full
+frames 3200
+watch_range 0000-00ff zp
+watch_range 0100-07ff iram
+watch_range 6988-698f pw
+watch_range 6000-7fff wram
+
+# ── 开场链（START×3+菜单 A）──
+press 360 start
+press 420 a
+press 540 start
+capture 800 spawn
+
+# ── 阶段1：移动（右行+折返）──
+hold 850-1050 right
+capture 1000 move-right
+hold 1060-1200 left
+capture 1180 move-left
+
+# ── 阶段2：跳跃组合（原地跳+跳中开火）──
+press 1250 a
+capture 1300 jump-1
+press 1350 a
+press 1360 b
+capture 1400 jump-shoot
+
+# ── 阶段3：射击组合（连射+跳射）──
+press 1500 b
+press 1530 b
+press 1560 b
+capture 1580 shoot-3
+press 1650 a
+press 1660 b
+capture 1700 jump-shoot-2
+
+# ── 阶段4：跨格（右行入敌房——Skree 遭遇）──
+hold 1800-2000 right
+capture 1950 cross-cell
+capture 2000 enemy-room
+
+# ── 阶段5：敌遭遇（射击击杀+接触受伤）──
+press 2050 b
+press 2080 b
+press 2110 b
+capture 2130 shoot-enemy
+hold 2150-2250 right
+capture 2220 touch-enemy
+hold 2260-2340 left
+capture 2320 retreat
+
+# ── 阶段6：变形球（回格取球）──
+hold 2400-2600 left
+capture 2550 back-cell
+capture 2620 item-cell
+hold 2630-2700 right
+hold 2710-2780 left
+capture 2780 after-pickup
+
+# ── 阶段7：变球滚动（DOWN 球化+滚动巡游+解除）──
+hold 2800-2900 down
+capture 2850 ball-roll-1
+hold 2850-2950 left
+capture 2920 ball-roll-left
+press 2980 a
+capture 3020 unroll
+
+# ── 阶段8：终态巡游（跳跃+射击交错）──
+press 3050 a
+press 3060 b
+hold 3080-3160 right
+capture 3120 combo-1
+press 3170 a
+capture 3200 end-state
+
+sample_point spin-exit

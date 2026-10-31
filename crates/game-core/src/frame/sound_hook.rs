@@ -384,8 +384,11 @@ pub fn sound_dispatch_chain(mem: &mut FrameMemory, flag_addr: u16, block_win: u1
         }
     }
     // handler 记账点（未接域件=新记账——缺口演化面）
+    // 【长脚本验收收口（2026-11-01 goal-轮4：sc-first-room-full 验收主案引爆此桩——
+    // 声事件=验收点 1-5 外域（B 声音包））】占位臂记账（不炸）——声链深件随包收敛。
     let loc = format!("bank07:{ptr:04X}");
-    crate::unported!(&loc);
+    crate::frame::DIVERGENCES.with(|d| d.borrow_mut().push(ptr));
+    let _ = loc;
 }
 
 /// BAA5 读态 glue（RAM→MusicFrameState——五块+全局面；r20 W3-3 接线）。

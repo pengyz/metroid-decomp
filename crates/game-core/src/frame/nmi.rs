@@ -547,12 +547,14 @@ mod tests {
         sound_engine(&mut m);
         assert_eq!(m.read_ram(0x068D), 0x80, "MusicContFlags←CurrentSoundFlags（BC90 面）");
         assert_eq!(m.read_ram(0x0628), 0xB3, "Music04Init duty 同值（BC89）");
-        // 未接 handler 引爆：NoiseCont 链（$0688=0x40 位6→字节偏移 y=2=表目1=B539 未接件）
+        // 未接 handler 记账化（2026-11-01 长脚本验收收口——占位臂模式）：NoiseCont 链
+        // （$0688=0x40 位6→字节偏移 y=2=表目1=B539 未接件）⇒**不炸**+DIVERGENCES 记账
         let mut m2 = FrameMemory::default();
         m2.write_ram(0x0688, 0x40);
         let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| sound_engine(&mut m2)));
-        let msg = panic_message(&r.unwrap_err());
-        assert!(msg.contains("unported @ bank07:B539"), "handler 记账点失准: {msg}");
+        assert!(r.is_ok(), "声 handler 记账化（不炸——长脚本验收收口）: {:?}", r.err());
+        let rec = crate::frame::DIVERGENCES.with(|d| d.borrow().clone());
+        assert!(rec.contains(&0xB539), "handler 记账点失准: {rec:?}");
     }
 
     /// 【G2/M6 钉死】超帧（NMIStatus≠0）：声/龄面**无条件跑**（E4 门外）而屏面 b-g 相挡。
