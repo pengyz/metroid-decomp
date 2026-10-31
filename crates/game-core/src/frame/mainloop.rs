@@ -1345,8 +1345,10 @@ fn enemy_move_one_pixel_up(mem: &mut crate::frame::FrameMemory, x: u8) -> bool {
     }
     let ny = y.wrapping_sub(1);
     mem.write_ram(0x0400 + x as u16 + 0, ny);
-    if ny == ry {
-        // 界判（ScrollY/名表换——简化径）
+    if y == 0 {
+        // 【wrap 值勘误（asm :1011-1016 逐字：`ldy y/bne`⇒y==0⇒`ldy #SCRN_VY($F0)`）】
+        // 旧形 0xEF 偏 1px——asm=**$F0**（屏高 240 名表换补偿）。
+        mem.write_ram(0x0400 + x as u16 + 0, 0xF0);
         mem.write_ram(0x00, 1); // $00=1（离屏/wrap）
         return false;
     }
@@ -1370,7 +1372,9 @@ fn enemy_move_one_pixel_down(mem: &mut crate::frame::FrameMemory, x: u8) -> bool
     }
     let ny = y.wrapping_add(1);
     mem.write_ram(0x0400 + x as u16 + 0, ny);
-    if ny == ry.wrapping_neg() {
+    // 【wrap 判式勘误（goal-轮9 asm :1087-1088 逐字：`ldy Ens.0.y/cpy #SCRN_VY-1($EF)`）
+    // 】旧形 `ny==−radiusY` 偏离（wrap 触发点错位）——asm=**当前 y==$EF**（屏底名表换）。
+    if y == 0xEF {
         mem.write_ram(0x00, 1); // $00=1（离屏/wrap）
         return false;
     }
