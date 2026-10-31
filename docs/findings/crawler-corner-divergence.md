@@ -181,3 +181,21 @@ asm（DistToCenterY/X 符号、+8 块距）；mutation 测=跨块 radius 单点�
 > 倒计数实为 EnsExtra slot4+$0D jumpDsplcmnt），f916-917 冻结与**首次横滚**精确同窗
 > （SX 双侧 f915=0→f918 非零）——本档 :91 原假设（首次横滚 ScrollRight VRAM）恢复
 > 为首选。激活终判闭合与行走路径残差两面不变。
+
+> 【2026-10-31 路径分叉根因修（1b873141）】行走路径分叉（上条补注的"另案"）**已修**，
+> 三层根因（全径复算逐帧吻合——复算形见 commit）：
+> ① crawler_ai 缺 EnemyStatusPreAI（$0081）Resting/Explode 三连门（asm crawler.asm:8-22
+>   ——本档 §2-③ 的"激活时机"面真正的机制缺口）：Resting 帧即跑 AI；修后激活帧被拦
+>   （asm 同拍），首动=激活次帧（emu f799 同）。
+> ② 首个 AI 帧半径未写：EnsExtra.radiusY/X 由 draw_enemy 从帧数据回装（asm prg7:6156-6168
+>   ——**每帧绘制时写**，非 spawn 期），而 draw 在同 tick 内晚于 AI ⇒ 激活帧 rx=0 ⇒
+>   全检快径（check_move_boundary 的 radius==0 NoCollision 径）⇒外角下探伪成功转角；
+>   错位后（边界 mod 8）对齐破坏 ⇒ 探针无条件位移级联=菱形回路。
+> ③ force_speed 翻转条件倒置（asm F73E bit2⊕sy₇=0 跳过）+缺 L968B bit5 门+取负语义
+>   （^0x80 vs sbc 补码链）⇒data02 残留 0x80（emu 恒 00）。
+> 验收：slot4/5 y/x/d5/d0A **f797-f915 逐帧全同**（119 帧；含 f814 转角下壁同帧同位）；
+> enemy45 分歧收窄至 f918-959（42 帧）=横滚首帧冻结窗（emu f916-917 载房窗 bog——
+> goal-r22 证伪更正注的独立机制）rust 未建模的下游：rust 无冻结⇒滚动/刷敌提前 2 帧
+> ⇒槽复用分叉（rust f916 slot4 已重生成 (28,EC) 新敌态 vs emu 原爬虫续降 y=75）。
+> **下一工单**：横滚首帧 bogged 门建模（emu 缺行 [916,917] 图谱定数=2 窗；f1064-1065
+> 同族第二窗）——门序/载房相位按 map-v2 图谱机械读数，禁止手工帧算术。
