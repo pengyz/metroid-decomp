@@ -942,13 +942,20 @@ pub fn lava_and_move_check(mem: &mut FrameMemory) {
     let disp = dy as i8;
     let steps = disp.unsigned_abs();
     let going_down = disp >= 0;
+    // 【2026-10-31 8px 门补装】asm MoveSamusDown（E4A3 `(y+ry)&7==0 → 查撞`）/
+    // MoveSamusUp（E457 `(y−ry)&7==0 → 查撞`）——**查撞每 8px 量化**（门帧才探）。
+    // 缺门症（变形球探针第二跳 f1260 实录）：rust 每像素都查 ⇒ 上升探针提前进入
+    // 天花板块行（y=54 撤 row3 固实）⇒ 提前顶头 5px+无挂顶漂移 ⇒ 弧线/落点全分叉
+    // （emu 门帧探 row4 开+漂移越块后 row3 开 ⇒ 自然顶点 47 悬停）。
+    let ry = mem.read_ram(crate::ram_map::SAMUS_RADIUS_Y);
     for _ in 0..steps {
+        let y_now = mem.read_ram(0x030D);
         // 【goal-r15 复核 R1 更正】asm 双向查撞：MoveSamusDown（E4A3 向下，点 y+ry）/
-        // MoveSamusUp（E457 `(y−ry)&7==0 → jsr ObjectCheckMoveUp(E7A2)` 向上，点 y−ry−8）。
+        // MoveSamusUp（E457 向上，点 y−ry−8）——门=(y±ry)&7==0（本修补装）。
         // > 【2026-10-27 更正】旧注「仅向下查撞（向上=跳不查）」被 ROM 证伪（E457 确查向上）；
         // > 旧「起跳即落地」病根=共享点 y−ry+8 落体内，正解=独立 up 点 y−ry−8（非删向上查撞）。
         if going_down {
-            if !object_check_move_down(mem) {
+            if (y_now.wrapping_add(ry)) & 0x07 == 0 && !object_check_move_down(mem) {
                 stop_vert_movement(mem); // D147（清垂直动量）
                 mem.write_ram(crate::ram_map::SAMUS_ACCEL_Y, 0); // 落地清重力（@landingNoBounce）
                 break;
@@ -956,7 +963,7 @@ pub fn lava_and_move_check(mem: &mut FrameMemory) {
         } else {
             // 向上：天花板查撞（点 y−ry−8）。受阻⇒停（E2CA 受阻上行 ror speedY/speedF
             // 半速反向弹跳=**deferred 子缺口**（goal-r15 R1 登记））。
-            if !object_check_move_up(mem) {
+            if (y_now.wrapping_sub(ry)) & 0x07 == 0 && !object_check_move_up(mem) {
                 stop_vert_movement(mem); // D147（受阻上行动量清）
                 break;
             }

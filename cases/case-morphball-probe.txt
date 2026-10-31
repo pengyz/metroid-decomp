@@ -15,6 +15,7 @@ watch 0050 MapPosX
 watch 0056 DoorEntry
 watch 00FD ScrollX
 watch 0300 SamusStatus
+watch 0301 SamusRadiusY
 watch 030D SamusY
 watch 030E SamusX
 watch 0308 SpeedY_I
