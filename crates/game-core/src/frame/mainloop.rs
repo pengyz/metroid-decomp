@@ -1006,26 +1006,22 @@ fn skree_ai(mem: &mut crate::frame::FrameMemory, x: u8) {
         // 刚落地（:21-25）：爆延时←$3A（约 1 秒）
         mem.write_wram(0x6AF4 + x as u16 + 13, 0x3A);
     }
-    // 坠落/落地径（SkreeExit_Active（:56-60）：anim 2+移动（EnemyMove delta 径））
+    // 坠落/落地径（SkreeExit_Active（:56-60）：anim 2+移动）——
+    // 【L977B=Skree %00000100（bit6=0）⇒**字符串径**（非加速！）】EnemyGetDeltaY（$8244
+    // ——movementIndex+instr 字符串走表）——movementIndex 初值=EnemyMovementChoice RNG
+    // 选播（prg7:11428-11450——随件：现 0 起步）。
     let type_ = mem.read_wram(0x6AF4 + x as u16 + 14) & 0x3F;
     let d05 = mem.read_ram(0x0400 + x as u16 + 5);
-    let mov_idx = mem.read_ram(0x0400 + x as u16 + 10); // movementIndex（union=+0x0A）
+    let mov_idx = mem.read_ram(0x0400 + x as u16 + 10); // movementIndex=+0x0A
     let instr2 = mem.read_ram(0x0400 + x as u16 + 7);
     let delay = mem.read_ram(0x0400 + x as u16 + 9); // delay=+9
     let sub_y = mem.read_ram(0x0400 + x as u16 + 8);
     let speed_y = mem.read_ram(0x0400 + x as u16 + 2);
-    let accel_y = mem.read_wram(0x6AF4 + x as u16 + 10); // EnsExtra.accelY=+10
+    let accel_y = mem.read_wram(0x6AF4 + x as u16 + 10);
     let (dy, ndelay, ninstr, _z) = crate::enemy::common::enemy_get_delta_y(
         type_, d05, mov_idx, instr2, delay, sub_y, speed_y, accel_y);
     mem.write_ram(0x0400 + x as u16 + 9, ndelay);
     mem.write_ram(0x0400 + x as u16 + 7, ninstr);
-    // 加速径积分写回（$833F：`adc speedSubPixelY/sta/lda speedY/adc #$00/sta`——
-    // sub+accel→carry→speed+carry（IntY 同构））——纯件不落写，调用侧同式写回。
-    if accel_y != 0 {
-        let t = sub_y as u16 + accel_y as u16;
-        mem.write_ram(0x0400 + x as u16 + 8, t as u8); // speedSubPixelY
-        mem.write_ram(0x0400 + x as u16 + 2, speed_y.wrapping_add((t >> 8) as u8)); // speedY
-    }
     if dy != 0 {
         // Δ 施加（EnemyMove 径（:10029-10046 同构）：y±|Δ|——名表换补偿）
         let mut y = mem.read_ram(0x0400 + x as u16 + 0);
