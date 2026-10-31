@@ -401,6 +401,10 @@ pub fn update_all_enemies(mem: &mut crate::frame::FrameMemory) {
             continue;
         }
         update_en_data05_bit6(mem, x); // $F3AA（30fps 标位翻转）
+        // EnemyStatusPreAI←status（asm prg7:10511 `lda EnsExtra.0.status/sta EnemyStatusPreAI`
+        // ——分派前捕获，激活同帧 AI 例程据它拦 Resting（crawler.asm:8-11——路径分叉根因件
+        // ①：缺此门则激活帧即跑 AI 且半径未写（draw 在 AI 后）⇒rx=0 快径⇒外角下探伪成功）。
+        mem.write_ram(0x0081, status); // EnemyStatusPreAI（constants_ram:633 zp $81）
         match status {
             0 => {} // ExitSub（rts）
             1 => enemy_resting(mem, x), // F3BE
@@ -498,14 +502,28 @@ fn enemy_force_speed(mem: &mut crate::frame::FrameMemory, x: u8) {
     if en_under {
         mem.write_ram(e, mem.read_ram(e) | 0x04); // OrEnData05 bit2
     }
-    // 速向力（speedY 符号 vs bit2——异向⇒翻）
+    // 速向力（face bit2 vs speedY 符号——**异向⇒翻**（asm F73E `eor speedY/bpl RTS`：
+    // bit2⊕sy₇=0 跳过）——【2026-10-31 条件取反修】旧形 `want_up=bit2==0` 把判据写反
+    // ⇒敌在萨姆斯上方（bit2=0、speedY=0）时误翻 ⇒data02 残留 0x80（emu 恒 00——
+    // crawlprobe f797 残差字节根因）。
     let d = mem.read_ram(e);
-    let want_up = d & 0x04 == 0;
+    let face_up = d & 0x04 != 0; // bit2=1=朝上（敌在萨姆斯下——OrEnData05 刚写）
     let sy = mem.read_ram(0x0400 + x as u16 + 2); // speedY
-    if (sy & 0x80 != 0) != want_up {
-        // flipSpeed（$F70F 族）：speedY 符号翻+speedSubPixelY 归零
-        mem.write_ram(0x0400 + x as u16 + 2, sy ^ 0x80); // speedY 符号翻
-        mem.write_ram(0x0400 + x as u16 + 8, 0); // speedSubPixelY←0
+    if face_up != (sy & 0x80 != 0) {
+        // flipSpeed（asm $820F 垂直形）：L968B bit5 门（置位⇒跳过——movement-string 型）
+        // →977b 表 bit7 门（加速型⇒sub-pixel 取负）→speedY 取负。sbc 链带 sec 进位
+        // （0−x=补码；sub-pixel sbc 的借位传入 speedY sbc——s≠0 时 speedY'=!sy quirk）。
+        if attribs & 0x20 == 0 {
+            let tbl = load_table_at_977b(mem, x);
+            let mut c_in = 1u8; // sec（asm $821B）
+            if tbl & 0x80 != 0 {
+                let s = mem.read_ram(0x0400 + x as u16 + 8); // speedSubPixelY=+8
+                mem.write_ram(0x0400 + x as u16 + 8, s.wrapping_neg());
+                c_in = if s == 0 { 1 } else { 0 }; // sbc 借位传出（无借位⇔s==0）
+            }
+            let v = sy.wrapping_neg().wrapping_sub((1 - c_in) as u8);
+            mem.write_ram(0x0400 + x as u16 + 2, v); // speedY 取负（sbc 链忠实）
+        }
     }
 }
 
@@ -656,15 +674,18 @@ fn update_en_data1f(mem: &mut crate::frame::FrameMemory, x: u8) {
 fn try_becoming_active(mem: &mut crate::frame::FrameMemory, x: u8) {
     // 【goal-r16 修】delay 偏移 +7→+9（ROM F7BA `DE 09 04`=dec $0409——Ens.delay=+9；
     // 旧 +7=movementInstrIndex⇒delay 永不归零⇒敌人恒 Resting 不激活）。data0A(+10)=朝向。
+    // 【2026-10-31 原地写修】asm `dec Ens.0.delay`（F7BA `DE 09 04`）=**原地写**：
+    // dec 结果先落内存（激活径 delay=0——emu f798 实录 delay=00；旧形激活径不写回⇒
+    // delay 恒 1 残留）；bit3=0 径 `inc` 退回=写回原值。
     let e = 0x0400 + x as u16 + 9; // Ens.delay（ROM F7BA 实测 $0409）
     let d = mem.read_ram(e);
+    mem.write_ram(e, d.wrapping_sub(1)); // dec 原地（asm DE 09 04）
     if d.wrapping_sub(1) != 0 {
-        mem.write_ram(e, d.wrapping_sub(1));
         return;
     }
     let d5 = mem.read_ram(0x0400 + x as u16 + 5);
     if d5 & 0x08 == 0 {
-        mem.write_ram(e, d); // inc 退回（undo）
+        mem.write_ram(e, d); // inc 退回（asm F7C6 `EE 09 04`——undo）
         return;
     }
     // @becomeActive
@@ -873,11 +894,40 @@ fn choose_enemy_ai(mem: &mut crate::frame::FrameMemory, x: u8) {
     }
 }
 
-/// CrawlerAIRoutine（**asm 内容锚** `enemies/crawler.asm`——r26）：ShouldCrawlerMove
-/// （F852——((x>>3+FC))>>1&3=6/8 帧步门）；不动帧⇒@exit（anim+显示）；动帧⇒@move（随件）。
+/// CrawlerAIRoutine（**asm 内容锚** `enemies/crawler.asm`——r26+2026-10-31 PreAI 门补装）：
+/// ShouldCrawlerMove（F852——((x>>3+FC+lsr 进位))>>1&3=6/8 帧步门）；不动帧⇒@exit
+/// （anim3+显示）；动帧⇒**EnemyStatusPreAI 三连门**（Resting⇒SkreeExit_Resting=anim8+
+/// 显示（bank1 共享 skree 出口）/PreAI Explode⇒SkreeExit_Explode（仅显示）/
+/// 现役 Explode⇒@exit）→@move。缺门症（已修）：Resting 帧即跑 AI——激活帧半径未写
+/// （draw 同 tick 后行）⇒rx=0 全检快径⇒外角下探伪成功转角⇒菱形回路（crawlprobe f797）。
 fn crawler_ai(mem: &mut crate::frame::FrameMemory, x: u8) {
-    let gate = ((x >> 3).wrapping_add(mem.read_ram(crate::ram_map::FRAME_COUNT)) >> 1) & 0x03;
+    // F852：txa/lsr×3（carry←原 bit2）/adc FrameCount（含进位）/lsr——门含 lsr 移出位。
+    let gate = ((x >> 3)
+        .wrapping_add((x >> 2) & 1)
+        .wrapping_add(mem.read_ram(crate::ram_map::FRAME_COUNT))
+        >> 1)
+        & 0x03;
     if gate == 0 {
+        update_enemy_anim(mem, x, 3); // @exit `lda #3/jsr UpdateEnemyAnim`
+        update_enemy_common_no_move_no_anim(mem, x);
+        return;
+    }
+    // EnemyStatusPreAI 三连门（crawler.asm:8-22 逐条——激活帧拦 Resting=本修核心）。
+    let pre_ai = mem.read_ram(0x0081);
+    if pre_ai == 1 {
+        // SkreeExit_Resting（bank1/4 共享——skree.asm:62 `lda #8/noMove`）
+        update_enemy_anim(mem, x, 8);
+        update_enemy_common_no_move_no_anim(mem, x);
+        return;
+    }
+    if pre_ai == 3 {
+        // SkreeExit_Explode（skree.asm:68——`jmp noMoveNoAnim` 无 anim）
+        update_enemy_common_no_move_no_anim(mem, x);
+        return;
+    }
+    if mem.read_wram(0x6AF4 + x as u16) == 3 {
+        // 现役 Explode⇒@exit（crawler.asm:20-22——anim3 落穿 noMoveNoAnim）
+        update_enemy_anim(mem, x, 3);
         update_enemy_common_no_move_no_anim(mem, x);
         return;
     }
@@ -2066,6 +2116,62 @@ mod tests {
         m.write_ram(crate::ram_map::IN_AREA, 0);
         game_main_routine(&mut m); // 一迭代（dispatch 0）
         assert_eq!(m.read_ram(crate::ram_map::MAIN_ROUTINE), 2, "一迭代 mr 00→02（fallthrough）");
+    }
+
+    /// 【PreAI 门 mutation 钉（2026-10-31 路径分叉根因件）】EnemyStatusPreAI=Resting ⇒
+    /// crawler_ai 早退（SkreeExit_Resting=anim8+显示）——敌**不动/朝向不翻**（asm
+    /// crawler.asm:8-11；缺门症：激活帧即跑 AI 且半径未写（draw 后行）⇒rx=0 快径⇒
+    /// 外角下探伪成功转角⇒菱形回路——crawlprobe f797 实录）。
+    #[test]
+    fn crawler_ai_skips_movement_while_preai_resting() {
+        let mut m = FrameMemory::default();
+        let x = 0x40u8; // slot4（字节偏移）
+        // 槽态：Resting、朝向 0（地板向右）、半径 8/8（draw 已写过形）、屏内位置
+        m.write_wram(0x6AF4 + x as u16, 1); // status=Resting
+        m.write_wram(0x6AF4 + x as u16 + 1, 8); // radiusY
+        m.write_wram(0x6AF4 + x as u16 + 2, 8); // radiusX
+        m.write_wram(0x6AF4 + x as u16 + 3, 0xFF); // animFrame=None（拦 draw_enemy 半径回装覆盖手设值）
+        m.write_wram(0x6AF4 + x as u16 + 14, 5); // type=Zoomer
+        m.write_ram(0x0400 + x as u16, 0x28); // y
+        m.write_ram(0x0400 + x as u16 + 1, 0xBC); // x
+        m.write_ram(0x0081, 1); // EnemyStatusPreAI=Resting（asm prg7:10511 捕获点）
+        m.write_ram(crate::ram_map::FRAME_COUNT, 0x0D); // 门开（(8+13)>>1&3=2）
+        crawler_ai(&mut m, x);
+        assert_eq!(m.read_ram(0x0400 + x as u16), 0x28, "PreAI=Resting ⇒ y 不动");
+        assert_eq!(m.read_ram(0x0400 + x as u16 + 1), 0xBC, "PreAI=Resting ⇒ x 不动");
+        assert_eq!(m.read_ram(0x0400 + x as u16 + 10), 0x00, "朝向不翻");
+        // PreAI=Active（激活次帧）⇒正常走（x+1——rx=8 门 (0xBC+8)&7=4≠0⇒免检直行）。
+        // 重钉半径/animFrame：首次调用尾部 update_enemy_anim(8)+draw 会推进 animFrame
+        // 并按新帧数据回装半径（测试环境无 zoomer 动画表链——产线该链自洽：半径恒 8/8）。
+        m.write_wram(0x6AF4 + x as u16 + 1, 8);
+        m.write_wram(0x6AF4 + x as u16 + 2, 8);
+        m.write_wram(0x6AF4 + x as u16 + 3, 0xFF);
+        m.write_ram(0x0081, 2);
+        crawler_ai(&mut m, x);
+        assert_eq!(m.read_ram(0x0400 + x as u16 + 1), 0xBD, "PreAI=Active ⇒ 首动 x+1");
+        // 下探被地板拦（RoomRAM row48 全实心）⇒朝向不翻（缺门症对照：rx=0 时此处伪转）
+        assert_eq!(m.read_ram(0x0400 + x as u16 + 10), 0x00, "地板实心⇒外角不转");
+    }
+
+    /// 【TryBecomingActive 原地写钉】激活径 delay=0（asm `DE 09 04` dec 原地——emu f798
+    /// delay=00 实录；旧形激活径不写回⇒delay 恒 1 残留）；bit3=0 径 inc 退回=原值。
+    #[test]
+    fn try_becoming_active_writes_dec_in_place() {
+        let mut m = FrameMemory::default();
+        let x = 0x40u8;
+        m.write_ram(0x0400 + x as u16 + 9, 1); // delay=1（dec→0）
+        m.write_ram(0x0400 + x as u16 + 5, 0x1A); // bit3 set（阈值已过）
+        m.write_wram(0x6AF4 + x as u16, 1); // Resting
+        try_becoming_active(&mut m, x);
+        assert_eq!(m.read_wram(0x6AF4 + x as u16), 2, "bit3=1 ⇒ status→Active");
+        assert_eq!(m.read_ram(0x0400 + x as u16 + 9), 0, "激活径 delay=0（原地 dec）");
+        // bit3=0 径：dec 归 0 后 inc 退回（delay 原值保留）
+        let mut m2 = FrameMemory::default();
+        m2.write_ram(0x0400 + x as u16 + 9, 1); // delay=1（dec→0 后到 bit3 检查）
+        m2.write_ram(0x0400 + x as u16 + 5, 0x02); // bit3 clear
+        try_becoming_active(&mut m2, x);
+        assert_eq!(m2.read_ram(0x0400 + x as u16 + 9), 1, "bit3=0 ⇒ delay 退回原值");
+        assert_eq!(m2.read_wram(0x6AF4 + x as u16), 0, "status 不变（default 0）");
     }
 
     /// 【move-drift R2】more_init 门件组装（asm 序：ScreenOff($C439→WriteAndWait) 等待→
