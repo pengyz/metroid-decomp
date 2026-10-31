@@ -995,8 +995,18 @@ fn skree_ai(mem: &mut crate::frame::FrameMemory, x: u8) {
         mem.write_wram(0x6AF4 + x as u16 + 13, nd);
         if nd == 0 {
             mem.write_wram(0x6AF4 + x as u16, 0); // status←NoEnemy（:33-35）
-            // 4 弹族（SkreeProjectiles——:36-54；显示面 uw_skree_projectiles 随件）
-            crate::frame::DIVERGENCES.with(|d| d.borrow_mut().push(0x0F8C0));
+            // 4 弹生成（skree.asm:36-54 逐字——SkreeProjectiles=$A0-$AF（4 槽×4B））：
+            // 每槽 dieDelay←$0A+y/x/hi←Skree 位（Y=12/8/4/0 递减环）
+            let ey = mem.read_ram(0x0400 + x as u16 + 0);
+            let ex = mem.read_ram(0x0400 + x as u16 + 1);
+            let ehi = mem.read_wram(0x6AF4 + x as u16 + 7);
+            for yy in [12u16, 8, 4, 0] {
+                let base = 0x00A0u16 + yy;
+                mem.write_ram(base, 0x0A); // dieDelay←10 帧
+                mem.write_ram(base + 1, ey);
+                mem.write_ram(base + 2, ex);
+                mem.write_ram(base + 3, ehi);
+            }
         }
         update_enemy_anim(mem, x, 2);
         update_enemy_common_no_move_no_anim(mem, x);
