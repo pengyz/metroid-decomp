@@ -199,3 +199,17 @@ asm（DistToCenterY/X 符号、+8 块距）；mutation 测=跨块 radius 单点�
 > ⇒槽复用分叉（rust f916 slot4 已重生成 (28,EC) 新敌态 vs emu 原爬虫续降 y=75）。
 > **下一工单**：横滚首帧 bogged 门建模（emu 缺行 [916,917] 图谱定数=2 窗；f1064-1065
 > 同族第二窗）——门序/载房相位按 map-v2 图谱机械读数，禁止手工帧算术。
+
+> 【2026-10-31 冻结窗闭合（1120871a）——crawlprobe 全字段全同，本案终局】上条"下一
+> 工单"两面均已修：
+> ① **IsSlotTaken 反条件勘误**（asm $EB7A：status≠0 且**可见 bit1 置**=占用跳过——
+>   经典槽回收：屏外回收/屏内保护）：旧形 bit1==0⇒占用，滚动首像素载房（ScrollX==0
+>   特殊径 inc MapPosX+GetRoomNum⇒RoomNumber←0x14⇒setup_room 全房重载）把两个在屏
+>   下行爬虫覆写成房数据新敌。**emu 无重生成**——slot5 一直在 (64→67,78) 顺墙下行
+>   （前档"slot5 重生成 (66,78)"是读面误读，原地更正）。
+> ② **载房窗 bogged(2) 门**（check_update_name_table setup_room 调用点）：emu 每次载
+>   房=2 bogged 窗（FC 冻 132/TD 冻 9）；FC 不走 iter_span_fc（普通游戏迭代尾 inc 即
+>   唯一一次——span_fc 双加=+1 相位差，实录后勘误）。
+> 终态（matched-seam）：行集 emu_only=∅/rust_only={960 截断伪影}；**enemy45 32B×943
+> 帧全同**；FC/TD/T3/MR/SS/SX/SY/SCX 8 字段×943 帧全同；fcprobe 5 字段×445 帧全同。
+> 爬虫激活时机+行走路径+冻结窗三面全部闭合——本案（r9 爬虫差分）终局。
