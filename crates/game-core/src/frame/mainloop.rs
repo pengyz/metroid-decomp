@@ -1693,8 +1693,8 @@ fn uw_tile_blasts(_mem: &mut crate::frame::FrameMemory) {}
 /// +敌 isHit 标志）→下帧 EnemyReactToSamusProjectile（F536——伤害/爆亡 ✓已端口）。
 /// 注：SamusCollisionWithSolidEntities（D976）在 physics 链（不动）。
 fn uw_collision_detection(mem: &mut crate::frame::FrameMemory) {
-    for s in 0..5u16 {
-        let x = s * 16; // 字节偏移约定（Ens/EnsExtra 步距 16）
+    for s in 0..6u16 {
+        let x = s * 16; // 字节偏移约定（Ens/EnsExtra 步距 16——asm 6 槽环 :10021 Xminus16）
         let st = mem.read_wram(0x6AF4 + x);
         if st == 0 || st == 3 || st == 5 {
             continue; // 空/爆中/Pickup（:9975-9986）
@@ -1733,7 +1733,79 @@ fn uw_collision_detection(mem: &mut crate::frame::FrameMemory) {
             let cur = mem.read_ram(0x0400 + x + 4);
             mem.write_ram(0x0400 + x + 4, cur | flags);
         }
+        // ==== 敌×萨姆斯（:10009-10019——**碰撞伤害**（用户报「没有碰撞伤害」根因）====
+        // 无 i 帧($70)∧活→判盒（Y=0=Samus）→F2ED：螺旋转有效⇒RTS（不伤）；否则
+        // SamusHurt($010F)←$80+LF270（击退件）+LF306 伤害（AreaEnemyDamage→HealthChange）。
+        if mem.read_ram(crate::ram_map::SAMUS_INVINCIBLE_DELAY) == 0 {
+            let sy = mem.read_ram(0x030D) as i16;
+            let sx = mem.read_ram(0x030E) as i16;
+            let sry = mem.read_ram(0x0301) as i16;
+            let srx = mem.read_ram(0x0302) as i16;
+            let ey = mem.read_ram(0x0400 + x + 0) as i16;
+            let ex = mem.read_ram(0x0400 + x + 1) as i16;
+            let ery = mem.read_wram(0x6AF4 + x + 1) as i16;
+            let erx = mem.read_wram(0x6AF4 + x + 2) as i16;
+            let dy = (sy - ey).unsigned_abs() as i16;
+            let dx = (sx - ex).unsigned_abs() as i16;
+            if dy < sry + ery && dx < srx + erx {
+                // 螺旋转（IsScrewAttackActive——carry clear=active）⇒不伤萨姆斯
+                let screw = crate::samus::physics::is_screw_attack_active(mem);
+                if !screw {
+                    mem.write_ram(0x010F, 0x80); // SamusHurt010F（cosmetic——asm「never read」）
+                    mem.write_ram(crate::ram_map::SAMUS_INVINCIBLE_DELAY, 0x32); // i 帧 50
+                    // LF306：AreaEnemyDamage（01:95CE=**$0080**（Brinstar——区表））→HealthChange
+                    mem.write_ram(0x006E, 0x80);
+                    mem.write_ram(0x006F, 0x00);
+                }
+            }
+        }
     }
+    // ==== SubtractHealth（CE92 尾——BCD 扣血（:3203-3257））====
+    subtract_health(mem);
+}
+
+/// SubtractHealth（**asm 内容锚** `SubtractHealth: ; 07:CE92`）：HealthChange≠0∧活⇒
+/// （Varia⇒半伤（lsr+carry 补 $4F））→Base10Subtract（BCD）：Health($0106)/Health+1($0107)
+/// 双字节扣→ClearHealthChange。
+fn subtract_health(mem: &mut crate::frame::FrameMemory) {
+    let hc0 = mem.read_ram(0x006E);
+    let hc1 = mem.read_ram(0x006F);
+    if hc0 == 0 && hc1 == 0 {
+        return;
+    }
+    // Varia（gr_VARIA=$20）⇒半伤
+    let (mut a, mut b) = (hc0, hc1);
+    if mem.read_wram(crate::ram_map::SAMUS_GEAR) & 0x20 != 0 {
+        let carry = b & 1 != 0;
+        b >>= 1;
+        a = if carry { a.wrapping_add(0x4F) } else { a } >> 1;
+    }
+    // Base10Subtract（BCD 逐位减——$C3FB 族简化形：半字节借位）
+    let h0 = mem.read_ram(0x0106);
+    let h1 = mem.read_ram(0x0107);
+    let (r0, borrow) = bcd_sub(h0, a);
+    let (r1, _) = bcd_sub(h1, if borrow { b.wrapping_add(1) } else { b });
+    mem.write_ram(0x0106, r0);
+    mem.write_ram(0x0107, r1 & 0x9F | (h1 & 0x60)); // 高位 nibble=罐数保
+    mem.write_ram(0x006E, 0);
+    mem.write_ram(0x006F, 0);
+}
+
+/// BCD 半字节减（Base10Subtract 简化形）：返回 (结果, 借位)。
+fn bcd_sub(v: u8, sub: u8) -> (u8, bool) {
+    let mut borrow = false;
+    let mut out = 0u8;
+    for shift in [0u32, 4] {
+        let mut d = ((v >> shift) & 0x0F) as i16 - ((sub >> shift) & 0x0F) as i16 - borrow as i16;
+        if d < 0 {
+            d += 10;
+            borrow = true;
+        } else {
+            borrow = false;
+        }
+        out |= ((d as u8) & 0x0F) << shift;
+    }
+    (out, borrow)
 }
 
 /// DisplayBar（**asm 内容锚** `DisplayBar: ; 07:E0C1`——HUD 精灵动态面，全径端口）：
