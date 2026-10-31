@@ -225,3 +225,14 @@ asm（DistToCenterY/X 符号、+8 块距）；mutation 测=跨块 radius 单点�
 > f813 起同形；slot2 f919 起（rust 重载敌 f925 转 Active vs emu 恒 Resting）。起点早于
 > 冻结窗 ⇒ 与两修无关的独立面（敌 anim 机/倒计数器未收口）；主 ZP/RAM 面判定不受影响。
 > watch 改名/去重工具债再次证实（本次复核第一轮对读亦中招）。
+
+> 【2026-10-31 EnsExtra 动画机残差闭合（499ac1ad）——D7 缺口清偿】上条登记的三症状
+> 三层根因全修（verifier 建议的另案本轮完成）：
+> ① update_enemy_common_no_move_no_anim 头部伪 init_en_resting_anim_index 摘除（asm
+>   F416 无此调用——每帧打回地板序列 35 抹掉转角 reorient+绕过 bit6 30fps 门）；
+> ② EnemyMoveOnePixelDown 成功径补 jD dec（asm $849D——UP inc/DOWN dec 垂直位移记账）；
+> ③ enemy_check_if_visible 忠实重建 IsObjectVisible（asm 07:DFDF 全径——旧形横房
+>   y<240 恒真：载入邻名表敌误可见 ⇒ slot2 Skree 提前激活）。
+> 终态：**enemy45 全 160B（Ens+EnsExtra）×943 帧逐字节全同**——anim 序列/jD 倒计数/
+> slot2 恒 Resting 三症状全清；8 字段+fcprobe 不变全同；gates 13/13。watch 拼接面
+> （enemy45=Ens 32B+EnsExtra 128B）自此全额入账。
