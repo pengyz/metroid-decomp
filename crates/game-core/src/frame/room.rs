@@ -534,6 +534,13 @@ fn load_enemy(mem: &mut crate::frame::FrameMemory, b0: u8, etype: u8, pos: u8) -
     mem.write_ram(en + 0x09, game_data::area::graphics::ENEMY_INIT_DELAY[t]); // Ens.delay(+9)
     mem.write_ram(en + 0x0D, game_data::area::graphics::ENEMY_FORCE_SPEED_DELAY[t]); // data0D(+0xD)
     let mut hp = game_data::area::graphics::ENEMY_HEALTH[t];
+    // 【对抗复核收敛④（2026-11-01）】movementIndex=+8 播种（EnemyMovementChoice——
+    // prg1:97D1 逐字）：每型移动索引初值（多值型 RNG 掩选——现取首值（确定形））：
+    // SidehopperFloor=1/SidehopperCeiling=3/Waver=5/Ripper=6/**Skree=7**/Zoomer=0（手动）/
+    // Rio=8/Zeb=9。
+    let mov_init = [0x01u8, 0x03, 0x05, 0x06, 0x07, 0x00, 0x08, 0x09];
+    let mov_idx = mov_init.get(t as usize).copied().unwrap_or(0);
+    mem.write_ram(en + 0x08, mov_idx); // movementIndex=+8（复核正）
     if mem.read_ram(en + 0x0F) & 0x80 != 0 {
         hp = hp.wrapping_shl(1); // tough 版双血（specialAttribs bit7——asm asl 形）
     }

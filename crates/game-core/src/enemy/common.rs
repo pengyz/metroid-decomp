@@ -164,18 +164,42 @@ pub fn enemy_get_delta_y(
     let idx = (rolled.wrapping_shl(1)) as usize; // asl（u8 回绕）
     let ptr_full = ENEMY_MOVEMENT_PTRS.get(idx / 2).copied().unwrap_or(0x97F5) as usize; // **全指针**（u16——低字节截断案修）
     let str_off = ptr_full.wrapping_sub(0x97EF); // 窗址→字符串体偏移（全指针）
-    // SignMagSpeed：字符串[instrIndex]=延时字节-[delay]==0→归零+索引+2
-    let d = MOVEMENT_STRINGS.get(str_off + instr_index as usize).copied().unwrap_or(0);
-    if d.wrapping_sub(delay) == 0 {
-        // 延时归零：重置+索引+2→读下字节
-        let speed = MOVEMENT_STRINGS.get(str_off + instr_index as usize + 1).copied().unwrap_or(0);
-        let delta = enemy_delta_sign_mag(speed);
-        (delta, 0, instr_index.wrapping_add(2), true)
-    } else {
-        // 延时+1→读符号幅（下字节）
-        let speed = MOVEMENT_STRINGS.get(str_off + instr_index as usize + 1).copied().unwrap_or(0);
-        (enemy_delta_sign_mag(speed), delay.wrapping_add(1), instr_index, false)
+    // 【对抗复核收敛③⑤（2026-11-01）】走表全谱（asm $8244-:631 逐字）：
+    // ①bit5 静息门（:588-591 `and #$20/eor #$20/beq Store`——Δ=0）
+    // ②<$F0=SignMagSpeed（[duration,packed] 对——packed nibble Δy）
+    // ③$FA=TriggerResting/$FB=StopMovement(双RTS)/$FC=RepeatPreviousUntilFailure
+    // （data1F bit7=上检/下检循环）/$FD=ClearJumpDsplcmnt/$FE=重复至无Δ休止/$FF=重启。
+    if data05 & 0x20 != 0 {
+        return (0, delay, instr_index, false); // 静息触发⇒Δ=0（:588-591）
     }
+    let mut ii = instr_index;
+    for _ in 0..16u32 {
+        // 界卫（$FF 重启循环——fail-safe）
+        let d = MOVEMENT_STRINGS.get(str_off + ii as usize).copied().unwrap_or(0xFF);
+        if d >= 0xF0 {
+            match d {
+                0xFA => return (0, delay, ii, false), // TriggerResting（随件=Δ0）
+                0xFB => return (0, delay, ii, false), // StopMovement（双RTS=停）
+                0xFC => return (0, delay, ii, false), // RepeatUntilFailure（循环径随件）
+                0xFD => {
+                    ii = ii.wrapping_add(1); // ClearJumpDsplcmnt（跳位移清——字段面随件）
+                }
+                0xFE => return (0, delay, ii, false),
+                _ => {
+                    ii = 0; // $FF=重启字符串
+                }
+            }
+            continue;
+        }
+        // SignMagSpeed：[duration]==delay⇒推进（instr+2）；否则 delay+1→Δ=packed[+1]
+        if d.wrapping_sub(delay) == 0 {
+            let speed = MOVEMENT_STRINGS.get(str_off + ii as usize + 1).copied().unwrap_or(0);
+            return (enemy_delta_sign_mag(speed), 0, ii.wrapping_add(2), true);
+        }
+        let speed = MOVEMENT_STRINGS.get(str_off + ii as usize + 1).copied().unwrap_or(0);
+        return (enemy_delta_sign_mag(speed), delay.wrapping_add(1), ii, false);
+    }
+    (0, delay, ii, false)
 }
 
 /// 指令流逐字节执行（**asm 内容锚** `@ReadByte: ; $825B`——全支分派）：
