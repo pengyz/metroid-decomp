@@ -1,1078 +1,1116 @@
 {
-  "note": "L3 用例 manifest——只存摘要（ROM 衍生 trace 不入库，红线）；trace 本体 analysis/traces/ 可再生",
-  "cases": [
+ "note": "L3 用例 manifest——只存摘要（ROM 衍生 trace 不入库，红线）；trace 本体 analysis/traces/ 可再生",
+ "cases": [
+  {
+   "id": "l3-boot-title-oracle-determinism",
+   "scenario": "boot-title",
+   "frames": 300,
+   "watch": [
     {
-      "id": "l3-boot-title-oracle-determinism",
-      "scenario": "boot-title",
-      "frames": 300,
-      "watch": [
-        {
-          "label": "zp",
-          "base": "0000",
-          "range": "0000-00ff"
-        },
-        {
-          "label": "iram",
-          "base": "0100",
-          "range": "0100-07ff"
-        }
-      ],
-      "oracle_sha256": "4f9ca79109d638de88301eaddffb576023ef770e5c79f7de71179c869a90ff38",
-      "determinism_evidence": "同场景双跑逐字节一致（2026-10-16 spin-exit 迁移后重锚，run1==run2 sha 4f9ca791…）；历史锚 4655a986…=endFrame 采样面（口径已作废，见 migration_note）",
-      "game_core_leg": "S5 落地后自动启用（analysis/dump/<scenario>.frames.jsonl）",
-      "watch_note": "显式基址区间（含栈页 $0100-$01FF；不用惯常分区假设——gotcha-stack-page 教训）；区间钉死规范=game-core memmap/frame_face.rs WATCH_FACES（zp/iram/wram，WRAM=$6000-$7FFF 全 8KB——严重-5 软上界作废）；本案 watch=[zp,iram]（oracle_sha256 锚定既有 trace 面不动），涉 WRAM 新案按规范加 wram 条目",
-      "scenario_sha256": "1865bfd01499497f79d8a09cf39b728d09dc47ea62777830b14bd7eec681a4ec",
-      "frame_keys": [],
-      "scenario_sha256_note": "锚=当前脚本 sha（task-22 slot④ 载体，diff_traces 对锚校验）；捕获时点脚本 sha=25b5206a…（run.json 在案，generated_lua_sha256=038e047e…）——e3f2473 注释更正（次要-15：陈旧「无 PRG-RAM」注）后脚本 sha 变 2725053f…，DSL 指令面未动（watch_range 逐行不变）=生成 lua 面不变，oracle_sha256 锚定 trace 仍有效；行为性脚本变更必须重采集并同步 oracle_sha256",
-      "migration_note": "task-24 3b 采样迁移（2026-10-16）：endFrame→spin-exit（$C0D3 @exitLoop_waitNMIEnd，m1disasm prg7_engine.asm:218）；oracle_sha256 全量换锚 4655a986…→4f9ca791…。【口径作废明示】历史「帧末 $1A」口径作废——帧末采样处 $1A 处于清 0/置 1 交接窗（相位敏感面）；spin 出口 $1A 恒 1 可断言（3c 门控面）。行集事实：295 行（f=1,3,7..299——boot 相入主环前缺 f=2,4,5,6；尾帧 300=spin-exit 落 DONE 截断后）；diff 键面对账（game-core 腿行集需同源对齐或显式排除缺帧行）随 3c 首跑验收核。",
-      "legs": {
-        "oracle": {
-          "sample_point": "spin-exit",
-          "rows": 295,
-          "missing": [
-            2,
-            4,
-            5,
-            6,
-            300
-          ],
-          "head_skip": 0,
-          "note": "帧键统一（task-29 b2）：行序对齐+head_skip=1（oracle 首行 GF=0/F=1 多采）；FC($002D) 逐行递增=对齐自校验键。；【2026-10-18 head_skip 终值】缝门控修行集后 FC 配对 295/295 全等=skip0×skip0（旧 head_skip=1=f 键时代语义——FC 语义终值=0）"
-        },
-        "game-core": {
-          "sample_point": "spin-exit",
-          "rows": 298,
-          "note": "帧键统一（task-29 b2）：tick 序号键→场景帧号语义（行序+FC 自校验）；head_skip=0；尾部多 3 行（GF 295-297/tick 298-300）随对齐交集显式。；【2026-10-18 行集同步】缝门控修（PostSpin+MainLoop）后 dump=f3..300（298 行/缺 [1,2]）——与 dump 同步 strict 面转",
-          "missing": [
-            1,
-            2
-          ],
-          "head_skip": 0
-        }
-      },
-      "legacy_sample_point_note": "混态期禁置全局 sample_point 键（v5 §5.3c）——per-leg 值在 legs.*；game-core 腿未迁（null=endFrame 缺省）时恒 1 断言显式不适用。"
+     "label": "zp",
+     "base": "0000",
+     "range": "0000-00ff"
     },
     {
-      "id": "l3-samus-move3-oracle-determinism",
-      "scenario": "samus-move3",
-      "frames": 1400,
-      "watch": [
-        {
-          "label": "zp",
-          "base": "0000",
-          "range": "0000-00ff"
-        },
-        {
-          "label": "iram",
-          "base": "0100",
-          "range": "0100-07ff"
-        }
-      ],
-      "oracle_sha256": "06bf0d3562721be98bd657ec9a5d79eadc37179b886fad0e903adf8c367cf474",
-      "determinism_evidence": "同场景双跑逐字节一致（2026-10-16，run1==run2 sha 06bf0d35…）",
-      "scenario_sha256": "e294b12ec664f12340b32dfba9272a05b1a1e472f5856ca3c8c9765b0b461ec7",
-      "frame_keys": [],
-      "legs": {
-        "oracle": {
-          "sample_point": "spin-exit",
-          "rows": 1383,
-          "missing": [
-            2,
-            4,
-            5,
-            6,
-            361,
-            362,
-            363,
-            542,
-            543,
-            544,
-            545,
-            546,
-            547,
-            548,
-            1002,
-            1003,
-            1400
-          ],
-          "head_skip": 1,
-          "note": "spin-exit 采样（task-24 同源）；缺帧=boot 相 [2,4,5,6]+解锁/转场相位（主循环未过 spin 出口）——行集事实如实。"
-        },
-        "game-core": {
-          "sample_point": null,
-          "rows": null,
-          "note": "task-28 ③：l3-dump --scenario samus-move3 就绪（移动链引爆面=task-11 前置证据）；porter 移动链填够即开移动版 B 跑（判据卡注）。"
-        }
-      }
-    },
-    {
-      "id": "l3-fixture-three-conditions",
-      "scenario": "fixture-test",
-      "frames": 300,
-      "watch": [
-        {
-          "label": "zp",
-          "base": "0000",
-          "range": "0000-00ff"
-        },
-        {
-          "label": "iram",
-          "base": "0100",
-          "range": "0100-07ff"
-        }
-      ],
-      "oracle_sha256": "d65a320a9ed32c0e0958f623ac26732f4fb10ef3a7febb68bebc9d45fe77066f",
-      "determinism_evidence": "fixture-test 单跑锚（fixture 场景确定性=注入帧定点，双跑待扩）",
-      "scenario_sha256": "6be28292727281b0845f544d9e7d63b468998a97e903b94ff40d9341bcdfc8eb",
-      "frame_keys": [],
-      "fixtures": [
-        {
-          "frame": 200,
-          "addr": "0700",
-          "value": "ab",
-          "persistence": "invariant",
-          "evidence": "docs/spec/state-bundle-schema.md §3 实测原文"
-        },
-        {
-          "frame": 200,
-          "addr": "0701",
-          "value": "cd",
-          "persistence": "evolving",
-          "evidence": "docs/spec/state-bundle-schema.md §3 实测原文"
-        }
-      ],
-      "legs": {
-        "oracle": {
-          "sample_point": "spin-exit",
-          "rows": 295,
-          "missing": [
-            2,
-            4,
-            5,
-            6,
-            300
-          ],
-          "head_skip": 1
-        },
-        "game-core": {
-          "sample_point": null
-        }
-      }
-    },
-    {
-      "id": "l3-bundle-ff-arbitrary-start",
-      "scenario": "bundle-ff",
-      "frames": 240,
-      "watch": [
-        {
-          "label": "zp",
-          "base": "0000",
-          "range": "0000-00ff"
-        },
-        {
-          "label": "iram",
-          "base": "0100",
-          "range": "0100-07ff"
-        }
-      ],
-      "oracle_sha256": "2b3911b8396583b1232b0d447d81ac88b1a8cbcb29501e6b6f7f2c94b5757abd",
-      "determinism_evidence": "bundle 装载快进（MSS 全机恢复——任意起点对拍面）",
-      "scenario_sha256": "b536de884e69c83190f08b9afcade862e766611e2ec1700bd1a4f783452d9403",
-      "frame_keys": [],
-      "legs": {
-        "oracle": {
-          "sample_point": "spin-exit",
-          "rows": 237,
-          "missing": [
-            103,
-            104,
-            240
-          ],
-          "head_skip": 1,
-          "note": "装载后快进——与连续 run f900+ 窗对拍：102 帧逐字节忠实，首分歧 ff f=107↔cont f=1004 zp$08（恢复相位面，findings 在案）"
-        },
-        "game-core": {
-          "sample_point": null,
-          "note": "bundle 恢复腿（restore_mss 三直映——porter a72d37a 映射件）"
-        }
-      }
-    },
-    {
-      "id": "l3-sc-door-transition",
-      "scenario": "sc-door-transition",
-      "frames": 1100,
-      "watch": [
-        {
-          "label": "zp",
-          "base": "0000",
-          "range": "0000-00ff"
-        },
-        {
-          "label": "iram",
-          "base": "0100",
-          "range": "0100-07ff"
-        }
-      ],
-      "oracle_sha256": "684eb72307f6f3037e30bc6cd799224934cdc322d72342b8af0b07358d68c559",
-      "determinism_evidence": "双跑逐字节一致（2026-10-16 run1==run2 sha 684eb723…）",
-      "scenario_sha256": "9b14fdbf70d8dd7b8c068836a493b7226ed8120bf88ef0331b17060f847063c9",
-      "frame_keys": [],
-      "legs": {
-        "oracle": {
-          "sample_point": "spin-exit",
-          "rows": 1083,
-          "missing": [
-            2,
-            4,
-            5,
-            6,
-            361,
-            362,
-            363,
-            542,
-            543,
-            544,
-            545,
-            546,
-            547,
-            548,
-            1002,
-            1003,
-            1100
-          ],
-          "head_skip": 1,
-          "note": "门转场族（SamusEnterDoor 面）——事件锚=1002-1003 转场 gap 实证；bundle=门前态 f990；bundle=analysis/bundles/sc-door-transition.mss（12514B MSS+三直映 JSON）"
-        },
-        "game-core": {
-          "sample_point": null,
-          "note": "移植线到域后 bundle-ff 模式即比"
-        }
-      }
-    },
-    {
-      "id": "l3-sc-room-scroll",
-      "scenario": "sc-room-scroll",
-      "frames": 1100,
-      "watch": [
-        {
-          "label": "zp",
-          "base": "0000",
-          "range": "0000-00ff"
-        },
-        {
-          "label": "iram",
-          "base": "0100",
-          "range": "0100-07ff"
-        }
-      ],
-      "oracle_sha256": "684eb72307f6f3037e30bc6cd799224934cdc322d72342b8af0b07358d68c559",
-      "determinism_evidence": "双跑逐字节一致（2026-10-16 run1==run2 sha 684eb723…）",
-      "scenario_sha256": "5af36a1125d2c692d90c00f9c103a052919e13cd107cedbdd255e91eeebee6a1",
-      "frame_keys": [],
-      "legs": {
-        "oracle": {
-          "sample_point": "spin-exit",
-          "rows": 1083,
-          "missing": [
-            2,
-            4,
-            5,
-            6,
-            361,
-            362,
-            363,
-            542,
-            543,
-            544,
-            545,
-            546,
-            547,
-            548,
-            1002,
-            1003,
-            1100
-          ],
-          "head_skip": 1,
-          "note": "房间滚换族（SetupRoom/GetNameTable 面）——同路径滚换相 bundle=f1002 gap 边界；bundle=analysis/bundles/sc-room-scroll.mss（12602B MSS+三直映 JSON）"
-        },
-        "game-core": {
-          "sample_point": null,
-          "note": "移植线到域后 bundle-ff 模式即比"
-        }
-      }
-    },
-    {
-      "id": "l3-sc-enemy-encounter",
-      "scenario": "sc-enemy-encounter",
-      "frames": 1350,
-      "watch": [
-        {
-          "label": "zp",
-          "base": "0000",
-          "range": "0000-00ff"
-        },
-        {
-          "label": "iram",
-          "base": "0100",
-          "range": "0100-07ff"
-        }
-      ],
-      "oracle_sha256": "39d58f388cc88c60b2aea56523bff550782aace77941ee4d8dbbd9e39c703dc2",
-      "determinism_evidence": "双跑逐字节一致（2026-10-16 run1==run2 sha 39d58f38…）",
-      "scenario_sha256": "b57c91e4cf92629cea3b24e1c2ec88c972dbe16baa4e5d98c76c7a2d6fdecf8d",
-      "frame_keys": [],
-      "legs": {
-        "oracle": {
-          "sample_point": "spin-exit",
-          "rows": 1331,
-          "missing": [
-            2,
-            4,
-            5,
-            6,
-            361,
-            362,
-            363,
-            542,
-            543,
-            544,
-            545,
-            546,
-            547,
-            548,
-            1002,
-            1003,
-            1188,
-            1189,
-            1350
-          ],
-          "head_skip": 1,
-          "note": "敌遭遇族——敌槽区 $300-35F 帧间变更 366/1331+AnimResetIndex/ObjVertSpeed 活动（有敌活动无接触伤害）；转场 gap 1002-1003/1188-1189；bundle=f1200；bundle=analysis/bundles/sc-enemy-encounter.mss（11824B MSS+三直映 JSON）"
-        },
-        "game-core": {
-          "sample_point": null,
-          "note": "移植线到域后 bundle-ff 模式即比"
-        }
-      }
-    },
-    {
-      "id": "l3-sc-item-pickup",
-      "scenario": "sc-item-pickup",
-      "frames": 1400,
-      "watch": [
-        {
-          "label": "zp",
-          "base": "0000",
-          "range": "0000-00ff"
-        },
-        {
-          "label": "iram",
-          "base": "0100",
-          "range": "0100-07ff"
-        },
-        {
-          "label": "pw",
-          "base": "6988",
-          "range": "6988-698f"
-        }
-      ],
-      "oracle_sha256": "758348ab9833ef9e7450dfff72689d7ff188d47d21f633ac281b4ee717d80f55",
-      "determinism_evidence": "双跑逐字节一致（2026-10-16 run1==run2 sha 758348ab…）",
-      "scenario_sha256": "85c9e4860cd51fec2a4afd26455241537ec58453c9bf54e0872a1127a3e016d6",
-      "frame_keys": [],
-      "legs": {
-        "oracle": {
-          "sample_point": "spin-exit",
-          "rows": 1381,
-          "missing": [
-            2,
-            4,
-            5,
-            6,
-            361,
-            362,
-            363,
-            542,
-            543,
-            544,
-            545,
-            546,
-            547,
-            548,
-            1002,
-            1003,
-            1207,
-            1208,
-            1400
-          ],
-          "head_skip": 1,
-          "note": "道具拾取族（best-effort）——【如实降级】pw 面 $6988-698F 全 00=拾取未达，降级为搜寻路径 bundle 素材（D7 不冒领）；转场 gap 1002-1003/1207-1208；bundle=f1250；bundle=analysis/bundles/sc-item-pickup.mss（11667B MSS+三直映 JSON）"
-        },
-        "game-core": {
-          "sample_point": null,
-          "note": "移植线到域后 bundle-ff 模式即比"
-        }
-      }
-    },
-    {
-      "id": "l3-samus-move-oracle-determinism",
-      "scenario": "samus-move",
-      "frames": 900,
-      "watch": [
-        {
-          "label": "zp",
-          "base": "0000",
-          "range": "0000-00ff"
-        },
-        {
-          "label": "iram",
-          "base": "0100",
-          "range": "0100-07ff"
-        }
-      ],
-      "oracle_sha256": "034c3693a77c2dc612d718c3943d9f119ec7424c24426b7f4028b2f8032e1af6",
-      "determinism_evidence": "双跑逐字节一致（2026-10-16 run1==run2 sha 034c3693…）",
-      "scenario_sha256": "0fe2c7de06f619aa3265acb4c7942ed7837c1880a9160e33b04a7decaf385ec3",
-      "frame_keys": [],
-      "legs": {
-        "oracle": {
-          "sample_point": "spin-exit",
-          "rows": 885,
-          "missing": [
-            2,
-            4,
-            5,
-            6,
-            361,
-            362,
-            363,
-            542,
-            543,
-            544,
-            545,
-            546,
-            547,
-            548,
-            900
-          ],
-          "head_skip": 0,
-          "note": "G4 首切片（移动 RAM 反应面）——spin-exit 迁移后重锚（旧 coverage 面行集：boot [2,4,5,6]+解锁转场 [361-363,542-548]+尾 900）；【2026-10-18 head_skip 终值】FC 语义 0（同 boot-title 三组合定谳法）"
-        },
-        "game-core": {
-          "sample_point": "spin-exit",
-          "rows": 898,
-          "missing": [
-            1,
-            2
-          ],
-          "head_skip": 0,
-          "note": "【2026-10-18 声明迁移（槽 3b）】sample_point endFrame 缺省→spin-exit 显式（dump=f3..900 898 行——缝门控修同源）；FC 配对 skip0×skip0=885/885 全等（FC 回绕双解 (0,0)/(1,1)——f 键消歧：双腿同缝=行键即帧键）"
-        }
-      }
-    },
-    {
-      "id": "l3-sc-title-menu2",
-      "scenario": "sc-title-menu2",
-      "frames": 900,
-      "watch": [
-        {
-          "label": "zp",
-          "base": "0000",
-          "range": "0000-00ff"
-        },
-        {
-          "label": "iram",
-          "base": "0100",
-          "range": "0100-07ff"
-        }
-      ],
-      "oracle_sha256": "4ef3e07f46105f73604a1f1902cce0b1265806a07ad6eda413fe154021656f3b",
-      "determinism_evidence": "双跑逐字节一致（2026-10-17 sha 4ef3e07f…）",
-      "scenario_sha256": "45be419ce6499cb3549ab32d9358a04eea958da2449e35d905d10196fd842b5b",
-      "frame_keys": [],
-      "legs": {
-        "oracle": {
-          "sample_point": "spin-exit",
-          "rows": 885,
-          "missing": [
-            2,
-            4,
-            5,
-            6,
-            301,
-            302,
-            303,
-            602,
-            603,
-            604,
-            605,
-            606,
-            607,
-            608,
-            900
-          ],
-          "head_skip": 1,
-          "note": "title 菜单序列（15/1B/1A 面）——菜单屏实达（START/CONTINUE+游标）+确认=START→游戏起始分支（f620 截图实证）；切换键考古=SELECT（$90EB）；bundle=analysis/bundles/sc-title-menu2.mss"
-        },
-        "game-core": {
-          "sample_point": null,
-          "note": "title 深路径件（0x18/15/1B）对拍素材——移植线到域即比"
-        }
-      }
-    },
-    {
-      "id": "l3-sc-password-entry3",
-      "scenario": "sc-password-entry3",
-      "frames": 1200,
-      "watch": [
-        {
-          "label": "zp",
-          "base": "0000",
-          "range": "0000-00ff"
-        },
-        {
-          "label": "iram",
-          "base": "0100",
-          "range": "0100-07ff"
-        },
-        {
-          "label": "pw",
-          "base": "6988",
-          "range": "6988-698f"
-        }
-      ],
-      "oracle_sha256": "2151171cc25623cdeffcc2192c972f6e50a0873a66df44f63eafd537fcee8435",
-      "determinism_evidence": "双跑逐字节一致（2026-10-17 sha 2151171c…）",
-      "scenario_sha256": "a82e6d051e051fb617314717755b89049333e7867eab03a028384f2e539b770b",
-      "frame_keys": [],
-      "legs": {
-        "oracle": {
-          "sample_point": "spin-exit",
-          "rows": 1189,
-          "missing": [
-            2,
-            4,
-            5,
-            6,
-            301,
-            302,
-            303,
-            502,
-            503,
-            504,
-            1200
-          ],
-          "head_skip": 1,
-          "note": "密码输入序列（0x18 深路径 face）——$1F→0x17→**0x18 EnterPassword 实达**+字符录入「22」显示实证（f740 截图）；输入序列=right/a/b/select（光标/循环/退格面）；bundle=analysis/bundles/sc-password-entry3.mss"
-        },
-        "game-core": {
-          "sample_point": null,
-          "note": "title 深路径件（0x18/15/1B）对拍素材——移植线到域即比"
-        }
-      }
-    },
-    {
-      "id": "l3-sc-death-chain4",
-      "scenario": "sc-death-chain4",
-      "frames": 1800,
-      "watch": [
-        {
-          "label": "zp",
-          "base": "0000",
-          "range": "0000-00ff"
-        },
-        {
-          "label": "iram",
-          "base": "0100",
-          "range": "0100-07ff"
-        }
-      ],
-      "oracle_sha256": "76703b43df5fbe4bbeb27c0f64998f4c5eb7f8e7341be009bd85249b2608f379",
-      "determinism_evidence": "双跑逐字节一致（2026-10-17 sha 76703b43…）",
-      "scenario_sha256": "b47f82de54b95bb263bbe32f02546f53273c1225d8d68c620166fd82745f41e3",
-      "frame_keys": [],
-      "legs": {
-        "oracle": {
-          "sample_point": "spin-exit",
-          "rows": 1773,
-          "missing": [
-            2,
-            4,
-            5,
-            6,
-            361,
-            362,
-            363,
-            542,
-            543,
-            544,
-            545,
-            546,
-            547,
-            548,
-            1002,
-            1003,
-            1409,
-            1411,
-            1412,
-            1413,
-            1414,
-            1573,
-            1574,
-            1575,
-            1576,
-            1577,
-            1800
-          ],
-          "head_skip": 1,
-          "note": "game-over 全链包（0x19/1A/1B/1C 素材）——fixture 压血 1+真击→血尽 0000→f1410 0x1C GAME OVER→f1415 0x19 DisplayPassword→f1578 0x1A WaitForSTART 全链实录；bundle=analysis/bundles/sc-death-chain4.mss"
-        },
-        "game-core": {
-          "sample_point": null,
-          "note": "title 域 0x19/1A/1B/1C 对拍素材——死亡/终局链移植域验证仓"
-        }
-      }
-    },
-    {
-      "id": "l3-sc-roll-nav",
-      "scenario": "sc-roll-nav",
-      "frames": 1500,
-      "watch": [
-        {
-          "label": "zp",
-          "base": "0000",
-          "range": "0000-00ff"
-        },
-        {
-          "label": "iram",
-          "base": "0100",
-          "range": "0100-07ff"
-        },
-        {
-          "label": "gear",
-          "base": "6878",
-          "range": "6878-6878"
-        }
-      ],
-      "oracle_sha256": "7967f861e79fb78eed210bc0078e46c8121f465d9a178e1d9e083d642cbeb126",
-      "determinism_evidence": "双跑逐字节一致（2026-10-17 sha 7967f861…）",
-      "scenario_sha256": "1506bc6a03b03324743a0f92c525825316b785e93acf63caafb828c02d911a7a",
-      "frame_keys": [],
-      "legs": {
-        "oracle": {
-          "sample_point": "spin-exit",
-          "rows": 1483,
-          "missing": [
-            2,
-            4,
-            5,
-            6,
-            361,
-            362,
-            363,
-            542,
-            543,
-            544,
-            545,
-            546,
-            547,
-            548,
-            1011,
-            1012,
-            1500
-          ],
-          "head_skip": 1,
-          "note": "球形滚行+地形穿越（move 深域）——形态球视觉实证（截图橙球）+滚行动力学：下坡 177→200（球体 y=200 底层）+**x 回绕穿屏**（14→255 连续滚行=NT 边界穿越）+~1px/f 滚速；事件核注：$0300 sa_Roll 瞬态面（spin 采样盲区）→视觉+轨迹为实证面；bundle=analysis/bundles/sc-roll-nav.mss"
-        },
-        "game-core": {
-          "sample_point": null,
-          "note": "m2 深路径（morph/隧道域）对拍素材——bundle-ff 模式即用"
-        }
-      }
-    },
-    {
-      "id": "l3-sc-morph-tunnel",
-      "scenario": "sc-morph-tunnel",
-      "frames": 1600,
-      "watch": [
-        {
-          "label": "zp",
-          "base": "0000",
-          "range": "0000-00ff"
-        },
-        {
-          "label": "iram",
-          "base": "0100",
-          "range": "0100-07ff"
-        },
-        {
-          "label": "gear",
-          "base": "6878",
-          "range": "6878-6878"
-        }
-      ],
-      "oracle_sha256": "8ff3f5ab27940ca6e3da1a2edf0653507f7d67efd9aabdacf8fe554d7cd2a80e",
-      "determinism_evidence": "双跑逐字节一致（2026-10-17 sha 8ff3f5ab…）",
-      "scenario_sha256": "196e0d098582705bdaead6d18fef7e20f56d0f4c49a874ff16fb3854769d40dd",
-      "frame_keys": [],
-      "legs": {
-        "oracle": {
-          "sample_point": "spin-exit",
-          "rows": 1583,
-          "missing": [
-            2,
-            4,
-            5,
-            6,
-            361,
-            362,
-            363,
-            542,
-            543,
-            544,
-            545,
-            546,
-            547,
-            548,
-            1011,
-            1012,
-            1600
-          ],
-          "head_skip": 1,
-          "note": "morph 隧道探索（球体可达性差异径）——球体 y=200 底层连续穿屏（x 回绕 255→0→…）=疑似地下通道连续面（站立层 193 不可及）；可达域差异素材；bundle=analysis/bundles/sc-morph-tunnel.mss"
-        },
-        "game-core": {
-          "sample_point": null,
-          "note": "m2 深路径（morph/隧道域）对拍素材——bundle-ff 模式即用"
-        }
-      }
-    },
-    {
-      "scenario": "sc-door-deep",
-      "legs": {
-        "oracle": {
-          "sample_point": "spin-exit",
-          "rows": 1281,
-          "missing": [],
-          "head_skip": 0,
-          "sha256": "634db9e504ddbdc39439520c24348f0a1b768c39ee20b067a3d765a78d7ffd10",
-          "note": "门深径（UpdateAllDoors 实达面——gap@987 转场窗实证）"
-        }
-      },
-      "id": "l3-sc-door-deep",
-      "frames": 1300,
-      "watch": [
-        {
-          "label": "zp",
-          "base": "0000",
-          "range": "0000-00ff"
-        },
-        {
-          "label": "iram",
-          "base": "0100",
-          "range": "0100-07ff"
-        }
-      ],
-      "oracle_sha256": "634db9e504ddbdc39439520c24348f0a1b768c39ee20b067a3d765a78d7ffd10",
-      "determinism_evidence": "双跑 sha 对锚（同帧逐字节）+事件核实证（写面窗实录）",
-      "scenario_sha256": "f23207450076935bba7243d2f13abd8d3c66f8cc0a1b9bd55bdaa432dce5c40e",
-      "frame_keys": [],
-      "scenario_sha256_note": "场景书 sha（DSL 冻结）"
-    },
-    {
-      "scenario": "sc-combat-variant",
-      "legs": {
-        "oracle": {
-          "sample_point": "spin-exit",
-          "rows": 1481,
-          "missing": [],
-          "head_skip": 0,
-          "sha256": "f858721aa32a7a829abc35b997790a2c36dcbd3fc2025e3b5f86939e40329969",
-          "note": "受击主动径（碰撞族实达面——血量递减+$030A 接触实证）"
-        }
-      },
-      "id": "l3-sc-combat-variant",
-      "frames": 1500,
-      "watch": [
-        {
-          "label": "zp",
-          "base": "0000",
-          "range": "0000-00ff"
-        },
-        {
-          "label": "iram",
-          "base": "0100",
-          "range": "0100-07ff"
-        }
-      ],
-      "oracle_sha256": "f858721aa32a7a829abc35b997790a2c36dcbd3fc2025e3b5f86939e40329969",
-      "determinism_evidence": "双跑 sha 对锚（同帧逐字节）+事件核实证（写面窗实录）",
-      "scenario_sha256": "d7468110b080e7b69e922c44aaceb6db4e26d00dd4495de3b4fff22ce6d79146",
-      "frame_keys": [],
-      "scenario_sha256_note": "场景书 sha（DSL 冻结）"
-    },
-    {
-      "id": "l3-sc-combat-beam",
-      "scenario": "sc-combat-beam",
-      "frames": 1500,
-      "watch": [
-        {
-          "label": "zp",
-          "base": "0000",
-          "range": "0000-00ff"
-        },
-        {
-          "label": "iram",
-          "base": "0100",
-          "range": "0100-07ff"
-        },
-        {
-          "label": "gear",
-          "base": "6878",
-          "range": "6878-6878"
-        }
-      ],
-      "oracle_sha256": "d55cf5717794afb2645e00aea2649fd623cef2eb461ed48154e4f51a5db6e808",
-      "determinism_evidence": "双跑 sha 对锚+gear fixture 写面实证（$6878=04@f1219）+受击 $030A@1401",
-      "scenario_sha256": "c6f430c8d8d7893e8c852658116838ea0d70f7460f84ed843cb570f195c84579",
-      "frame_keys": [],
-      "scenario_sha256_note": "场景书 sha（DSL 冻结）",
-      "legs": {
-        "oracle": {
-          "sample_point": "spin-exit",
-          "rows": 1481,
-          "missing": [],
-          "head_skip": 0,
-          "sha256": "d55cf5717794afb2645e00aea2649fd623cef2eb461ed48154e4f51a5db6e808",
-          "note": "combat 武器变体（beam 面——fixture gear 注入）"
-        }
-      }
-    },
-    {
-      "id": "l3-sc-elevator-ride",
-      "scenario": "sc-elevator-ride",
-      "scenario_sha256": "2cbceb597baa140c7e98638391b26b0451603fc736a4592ff3b67c6939554858",
-      "frames": 7200,
-      "frame_keys": [
-        "zp",
-        "iram"
-      ],
-      "legs": {
-        "oracle": {
-          "sample_point": "endFrame",
-          "rows": 7200,
-          "missing": [],
-          "head_skip": 0,
-          "note": "bundle_load f3800 落点（路径修+.mss 配对——endFrame 采样）"
-        }
-      },
-      "game_core_leg": "disabled-s5",
-      "oracle_sha256": "a78050ec61792b0daf3468f4e258aeecfced5687eeabe8d43c3713ff6fa3b698",
-      "watch": [
-        {
-          "label": "zp",
-          "base": "0000",
-          "range": "0000-00ff"
-        },
-        {
-          "label": "iram",
-          "base": "0100",
-          "range": "0100-07ff"
-        }
-      ],
-      "determinism_evidence": "bundle_load f3800 落点（mss+RAM 快照）",
-      "legacy_sample_point_note": "endFrame（bundle 载入态帧末采样——2610df9 语义）",
-      "migration_note": "②后备：bundle_load 起跑（D7：绕过房 19/25 通行面——elevator 骑行面）",
-      "scenario_sha256_note": "bundle_load 场景件（路径修：.mss 配对）",
-      "watch_note": "zp+iram（事件核：MapPos/D7B3/ElevatorType）"
-    },
-    {
-      "id": "l3-sc-pickup-real",
-      "scenario": "sc-pickup-real",
-      "scenario_sha256": "86dfd9662c3f61c21a63b4a88d78b40eee5987230b0fd951d9de291adea52dd1",
-      "frames": 3500,
-      "frame_keys": [
-        "zp",
-        "iram"
-      ],
-      "legs": {
-        "oracle": {
-          "sample_point": "endFrame",
-          "rows": 3500,
-          "missing": [],
-          "head_skip": 0,
-          "note": "拾取事件核三断言设计面（GetItem/ItemData/SamusGear）——物品真径 B→A 实证环；bundle_capture 已移除（exec 回调约束——e8fa382 修）"
-        }
-      },
-      "game_core_leg": "disabled-s5",
-      "oracle_sha256": "7736cc8596a2b232bc768256a5a39f3d655067565575c729a5c7a19876c53641",
-      "watch": [
-        {
-          "label": "zp",
-          "base": "0000",
-          "range": "0000-00ff"
-        },
-        {
-          "label": "iram",
-          "base": "0100",
-          "range": "0100-07ff"
-        }
-      ],
-      "determinism_evidence": "同输入面三跑逐字节一致（sc-pickup-real/sc-statue-gate/sc-elevator-family 同模板独立跑——oracle_sha256 三案同锚 7736cc85…=确定性副证）",
-      "legacy_sample_point_note": "endFrame（帧末采样——2610df9 语义）",
-      "watch_note": "zp+iram（事件核：拾取三断言——GetItem/ItemData 态变/SamusGear 增）",
-      "shared_template_note": "三案输入模板同（travel 节拍）——消费差=断言集（pickup/statue/elevator 三观察面）"
-    },
-    {
-      "id": "l3-sc-statue-gate",
-      "scenario": "sc-statue-gate",
-      "scenario_sha256": "eac822f5cdbe9ffc0f47f0738e55434f8c2293abcbb96842c3c049bc5b643334",
-      "frames": 3500,
-      "frame_keys": [
-        "zp",
-        "iram"
-      ],
-      "legs": {
-        "oracle": {
-          "sample_point": "endFrame",
-          "rows": 3500,
-          "missing": [],
-          "head_skip": 0,
-          "note": "statue 门机制三断言设计面（KraidStatueRaiseState/KraidStatueIsHit/StatuesBridgeIsSpawned=$54）——boss face ②③素材消费"
-        }
-      },
-      "game_core_leg": "disabled-s5",
-      "oracle_sha256": "7736cc8596a2b232bc768256a5a39f3d655067565575c729a5c7a19876c53641",
-      "watch": [
-        {
-          "label": "zp",
-          "base": "0000",
-          "range": "0000-00ff"
-        },
-        {
-          "label": "iram",
-          "base": "0100",
-          "range": "0100-07ff"
-        }
-      ],
-      "determinism_evidence": "同输入面三跑逐字节一致（sc-pickup-real/sc-statue-gate/sc-elevator-family 同模板独立跑——oracle_sha256 三案同锚 7736cc85…=确定性副证）",
-      "legacy_sample_point_note": "endFrame（帧末采样——2610df9 语义）",
-      "watch_note": "zp+iram（事件核：statue 三断言——$0360-0370 Statue 对象族）",
-      "shared_template_note": "三案输入模板同（travel 节拍）——消费差=断言集（pickup/statue/elevator 三观察面）"
-    },
-    {
-      "id": "l3-sc-elevator-family",
-      "scenario": "sc-elevator-family",
-      "scenario_sha256": "07fc9e94872dc47f2fbd88595c88aaf0046a5668c23750c285fa68da2ef26dd7",
-      "frames": 3500,
-      "frame_keys": [
-        "zp",
-        "iram"
-      ],
-      "legs": {
-        "oracle": {
-          "sample_point": "endFrame",
-          "rows": 3500,
-          "missing": [],
-          "head_skip": 0,
-          "note": "elevator 家族三断言设计面（SamusOnElevator=$0307/ElevatorType bit7/MapPos 域切换）——🟡①素材消费（statue 同族状态机族谱）"
-        }
-      },
-      "game_core_leg": "disabled-s5",
-      "oracle_sha256": "7736cc8596a2b232bc768256a5a39f3d655067565575c729a5c7a19876c53641",
-      "watch": [
-        {
-          "label": "zp",
-          "base": "0000",
-          "range": "0000-00ff"
-        },
-        {
-          "label": "iram",
-          "base": "0100",
-          "range": "0100-07ff"
-        }
-      ],
-      "determinism_evidence": "同输入面三跑逐字节一致（sc-pickup-real/sc-statue-gate/sc-elevator-family 同模板独立跑——oracle_sha256 三案同锚 7736cc85…=确定性副证）",
-      "legacy_sample_point_note": "endFrame（帧末采样——2610df9 语义）",
-      "watch_note": "zp+iram（事件核：elevator 三断言——$0307 站台判/ElevatorType bit7/MapPos 域切换）",
-      "shared_template_note": "三案输入模板同（travel 节拍）——消费差=断言集（pickup/statue/elevator 三观察面）"
-    },
-    {
-      "id": "l3-sc-pickup-touch",
-      "scenario": "sc-pickup-touch",
-      "scenario_sha256": "13a5eaf017aba60d9eba786233cd12a633aab5db24fd3334063636110f15c9d4",
-      "frames": 2000,
-      "frame_keys": [
-        "zp",
-        "iram",
-        "pw"
-      ],
-      "legs": {
-        "oracle": {
-          "sample_point": "endFrame",
-          "rows": 2000,
-          "missing": [],
-          "head_skip": 0,
-          "note": "触达战役 v1-v22 沉淀档案（三条件同窗 v20 实证+机制/几何/工具注全解——v22 预算封顶收束）"
-        }
-      },
-      "game_core_leg": "disabled-s5",
-      "oracle_sha256": "5cfd95d57b5e57ba1a5006845d61273437867f3a057f798b5d8db9f9c582cca3",
-      "watch": [
-        {
-          "label": "zp",
-          "base": "0000",
-          "range": "0000-00ff"
-        },
-        {
-          "label": "iram",
-          "base": "0100",
-          "range": "0100-07ff"
-        },
-        {
-          "label": "pw",
-          "base": "6988",
-          "range": "6988-698f"
-        }
-      ],
-      "determinism_evidence": "战役 22 迭代单跑序列（sc-pickup-touch.txt 全档案——工具注：Mesen 静默崩瞬态×5 重跑即全形）",
-      "watch_note": "zp+iram+pw（拾取三断言面：pw 位图/PowerUps type/同表活）",
-      "campaign_note": "v1-v22 全解沉淀：hi XOR PPUCTRL 碰撞/x wrap 翻转/ToggleSamusHi/屏奇偶律/存活窗西行解/房23 几何全解"
-    },
-    {
-      "id": "l3-game-start-title-to-game",
-      "scenario": "game-start",
-      "frames": 700,
-      "watch": [
-        {
-          "label": "zp",
-          "base": "0000",
-          "range": "0000-00ff"
-        },
-        {
-          "label": "iram",
-          "base": "0100",
-          "range": "0100-07ff"
-        }
-      ],
-      "watch_note": "同 boot-title watch 面（zp+iram 全页——含栈页）",
-      "game_core_leg": "S5（analysis/dump/game-start.frames.jsonl）",
-      "legs": {
-        "oracle": {
-          "sample_point": "spin-exit",
-          "rows": null,
-          "missing": []
-        },
-        "game_core": {
-          "sample_point": "spin-exit",
-          "rows": null,
-          "missing": []
-        }
-      },
-      "frame_keys": [],
-      "determinism_evidence": "r25 对拍用（title→游戏链——黑屏诊断）",
-      "oracle_sha256": "f94bc98c5f635a82408fd14b6b3c87043ccf42d905e8b5bcc7610439d604b52a",
-      "scenario_sha256": "1a307c964dfc7271b5cd9a68a99fb860bbd343e6326fefeddc4d1d7eba805eae"
+     "label": "iram",
+     "base": "0100",
+     "range": "0100-07ff"
     }
-  ]
+   ],
+   "oracle_sha256": "4f9ca79109d638de88301eaddffb576023ef770e5c79f7de71179c869a90ff38",
+   "determinism_evidence": "同场景双跑逐字节一致（2026-10-16 spin-exit 迁移后重锚，run1==run2 sha 4f9ca791…）；历史锚 4655a986…=endFrame 采样面（口径已作废，见 migration_note）",
+   "game_core_leg": "S5 落地后自动启用（analysis/dump/<scenario>.frames.jsonl）",
+   "watch_note": "显式基址区间（含栈页 $0100-$01FF；不用惯常分区假设——gotcha-stack-page 教训）；区间钉死规范=game-core memmap/frame_face.rs WATCH_FACES（zp/iram/wram，WRAM=$6000-$7FFF 全 8KB——严重-5 软上界作废）；本案 watch=[zp,iram]（oracle_sha256 锚定既有 trace 面不动），涉 WRAM 新案按规范加 wram 条目",
+   "scenario_sha256": "1865bfd01499497f79d8a09cf39b728d09dc47ea62777830b14bd7eec681a4ec",
+   "frame_keys": [],
+   "scenario_sha256_note": "锚=当前脚本 sha（task-22 slot④ 载体，diff_traces 对锚校验）；捕获时点脚本 sha=25b5206a…（run.json 在案，generated_lua_sha256=038e047e…）——e3f2473 注释更正（次要-15：陈旧「无 PRG-RAM」注）后脚本 sha 变 2725053f…，DSL 指令面未动（watch_range 逐行不变）=生成 lua 面不变，oracle_sha256 锚定 trace 仍有效；行为性脚本变更必须重采集并同步 oracle_sha256",
+   "migration_note": "task-24 3b 采样迁移（2026-10-16）：endFrame→spin-exit（$C0D3 @exitLoop_waitNMIEnd，m1disasm prg7_engine.asm:218）；oracle_sha256 全量换锚 4655a986…→4f9ca791…。【口径作废明示】历史「帧末 $1A」口径作废——帧末采样处 $1A 处于清 0/置 1 交接窗（相位敏感面）；spin 出口 $1A 恒 1 可断言（3c 门控面）。行集事实：295 行（f=1,3,7..299——boot 相入主环前缺 f=2,4,5,6；尾帧 300=spin-exit 落 DONE 截断后）；diff 键面对账（game-core 腿行集需同源对齐或显式排除缺帧行）随 3c 首跑验收核。",
+   "legs": {
+    "oracle": {
+     "sample_point": "spin-exit",
+     "rows": 295,
+     "missing": [
+      2,
+      4,
+      5,
+      6,
+      300
+     ],
+     "head_skip": 0,
+     "note": "帧键统一（task-29 b2）：行序对齐+head_skip=1（oracle 首行 GF=0/F=1 多采）；FC($002D) 逐行递增=对齐自校验键。；【2026-10-18 head_skip 终值】缝门控修行集后 FC 配对 295/295 全等=skip0×skip0（旧 head_skip=1=f 键时代语义——FC 语义终值=0）"
+    },
+    "game-core": {
+     "sample_point": "spin-exit",
+     "rows": 298,
+     "note": "帧键统一（task-29 b2）：tick 序号键→场景帧号语义（行序+FC 自校验）；head_skip=0；尾部多 3 行（GF 295-297/tick 298-300）随对齐交集显式。；【2026-10-18 行集同步】缝门控修（PostSpin+MainLoop）后 dump=f3..300（298 行/缺 [1,2]）——与 dump 同步 strict 面转",
+     "missing": [
+      1,
+      2
+     ],
+     "head_skip": 0
+    }
+   },
+   "legacy_sample_point_note": "混态期禁置全局 sample_point 键（v5 §5.3c）——per-leg 值在 legs.*；game-core 腿未迁（null=endFrame 缺省）时恒 1 断言显式不适用。"
+  },
+  {
+   "id": "l3-samus-move3-oracle-determinism",
+   "scenario": "samus-move3",
+   "frames": 1400,
+   "watch": [
+    {
+     "label": "zp",
+     "base": "0000",
+     "range": "0000-00ff"
+    },
+    {
+     "label": "iram",
+     "base": "0100",
+     "range": "0100-07ff"
+    }
+   ],
+   "oracle_sha256": "06bf0d3562721be98bd657ec9a5d79eadc37179b886fad0e903adf8c367cf474",
+   "determinism_evidence": "同场景双跑逐字节一致（2026-10-16，run1==run2 sha 06bf0d35…）",
+   "scenario_sha256": "e294b12ec664f12340b32dfba9272a05b1a1e472f5856ca3c8c9765b0b461ec7",
+   "frame_keys": [],
+   "legs": {
+    "oracle": {
+     "sample_point": "spin-exit",
+     "rows": 1383,
+     "missing": [
+      2,
+      4,
+      5,
+      6,
+      361,
+      362,
+      363,
+      542,
+      543,
+      544,
+      545,
+      546,
+      547,
+      548,
+      1002,
+      1003,
+      1400
+     ],
+     "head_skip": 1,
+     "note": "spin-exit 采样（task-24 同源）；缺帧=boot 相 [2,4,5,6]+解锁/转场相位（主循环未过 spin 出口）——行集事实如实。"
+    },
+    "game-core": {
+     "sample_point": null,
+     "rows": null,
+     "note": "task-28 ③：l3-dump --scenario samus-move3 就绪（移动链引爆面=task-11 前置证据）；porter 移动链填够即开移动版 B 跑（判据卡注）。"
+    }
+   }
+  },
+  {
+   "id": "l3-fixture-three-conditions",
+   "scenario": "fixture-test",
+   "frames": 300,
+   "watch": [
+    {
+     "label": "zp",
+     "base": "0000",
+     "range": "0000-00ff"
+    },
+    {
+     "label": "iram",
+     "base": "0100",
+     "range": "0100-07ff"
+    }
+   ],
+   "oracle_sha256": "d65a320a9ed32c0e0958f623ac26732f4fb10ef3a7febb68bebc9d45fe77066f",
+   "determinism_evidence": "fixture-test 单跑锚（fixture 场景确定性=注入帧定点，双跑待扩）",
+   "scenario_sha256": "6be28292727281b0845f544d9e7d63b468998a97e903b94ff40d9341bcdfc8eb",
+   "frame_keys": [],
+   "fixtures": [
+    {
+     "frame": 200,
+     "addr": "0700",
+     "value": "ab",
+     "persistence": "invariant",
+     "evidence": "docs/spec/state-bundle-schema.md §3 实测原文"
+    },
+    {
+     "frame": 200,
+     "addr": "0701",
+     "value": "cd",
+     "persistence": "evolving",
+     "evidence": "docs/spec/state-bundle-schema.md §3 实测原文"
+    }
+   ],
+   "legs": {
+    "oracle": {
+     "sample_point": "spin-exit",
+     "rows": 295,
+     "missing": [
+      2,
+      4,
+      5,
+      6,
+      300
+     ],
+     "head_skip": 1
+    },
+    "game-core": {
+     "sample_point": null
+    }
+   }
+  },
+  {
+   "id": "l3-bundle-ff-arbitrary-start",
+   "scenario": "bundle-ff",
+   "frames": 240,
+   "watch": [
+    {
+     "label": "zp",
+     "base": "0000",
+     "range": "0000-00ff"
+    },
+    {
+     "label": "iram",
+     "base": "0100",
+     "range": "0100-07ff"
+    }
+   ],
+   "oracle_sha256": "2b3911b8396583b1232b0d447d81ac88b1a8cbcb29501e6b6f7f2c94b5757abd",
+   "determinism_evidence": "bundle 装载快进（MSS 全机恢复——任意起点对拍面）",
+   "scenario_sha256": "b536de884e69c83190f08b9afcade862e766611e2ec1700bd1a4f783452d9403",
+   "frame_keys": [],
+   "legs": {
+    "oracle": {
+     "sample_point": "spin-exit",
+     "rows": 237,
+     "missing": [
+      103,
+      104,
+      240
+     ],
+     "head_skip": 1,
+     "note": "装载后快进——与连续 run f900+ 窗对拍：102 帧逐字节忠实，首分歧 ff f=107↔cont f=1004 zp$08（恢复相位面，findings 在案）"
+    },
+    "game-core": {
+     "sample_point": null,
+     "note": "bundle 恢复腿（restore_mss 三直映——porter a72d37a 映射件）"
+    }
+   }
+  },
+  {
+   "id": "l3-sc-door-transition",
+   "scenario": "sc-door-transition",
+   "frames": 1100,
+   "watch": [
+    {
+     "label": "zp",
+     "base": "0000",
+     "range": "0000-00ff"
+    },
+    {
+     "label": "iram",
+     "base": "0100",
+     "range": "0100-07ff"
+    }
+   ],
+   "oracle_sha256": "684eb72307f6f3037e30bc6cd799224934cdc322d72342b8af0b07358d68c559",
+   "determinism_evidence": "双跑逐字节一致（2026-10-16 run1==run2 sha 684eb723…）",
+   "scenario_sha256": "9b14fdbf70d8dd7b8c068836a493b7226ed8120bf88ef0331b17060f847063c9",
+   "frame_keys": [],
+   "legs": {
+    "oracle": {
+     "sample_point": "spin-exit",
+     "rows": 1083,
+     "missing": [
+      2,
+      4,
+      5,
+      6,
+      361,
+      362,
+      363,
+      542,
+      543,
+      544,
+      545,
+      546,
+      547,
+      548,
+      1002,
+      1003,
+      1100
+     ],
+     "head_skip": 1,
+     "note": "门转场族（SamusEnterDoor 面）——事件锚=1002-1003 转场 gap 实证；bundle=门前态 f990；bundle=analysis/bundles/sc-door-transition.mss（12514B MSS+三直映 JSON）"
+    },
+    "game-core": {
+     "sample_point": null,
+     "note": "移植线到域后 bundle-ff 模式即比"
+    }
+   }
+  },
+  {
+   "id": "l3-sc-room-scroll",
+   "scenario": "sc-room-scroll",
+   "frames": 1100,
+   "watch": [
+    {
+     "label": "zp",
+     "base": "0000",
+     "range": "0000-00ff"
+    },
+    {
+     "label": "iram",
+     "base": "0100",
+     "range": "0100-07ff"
+    }
+   ],
+   "oracle_sha256": "684eb72307f6f3037e30bc6cd799224934cdc322d72342b8af0b07358d68c559",
+   "determinism_evidence": "双跑逐字节一致（2026-10-16 run1==run2 sha 684eb723…）",
+   "scenario_sha256": "5af36a1125d2c692d90c00f9c103a052919e13cd107cedbdd255e91eeebee6a1",
+   "frame_keys": [],
+   "legs": {
+    "oracle": {
+     "sample_point": "spin-exit",
+     "rows": 1083,
+     "missing": [
+      2,
+      4,
+      5,
+      6,
+      361,
+      362,
+      363,
+      542,
+      543,
+      544,
+      545,
+      546,
+      547,
+      548,
+      1002,
+      1003,
+      1100
+     ],
+     "head_skip": 1,
+     "note": "房间滚换族（SetupRoom/GetNameTable 面）——同路径滚换相 bundle=f1002 gap 边界；bundle=analysis/bundles/sc-room-scroll.mss（12602B MSS+三直映 JSON）"
+    },
+    "game-core": {
+     "sample_point": null,
+     "note": "移植线到域后 bundle-ff 模式即比"
+    }
+   }
+  },
+  {
+   "id": "l3-sc-enemy-encounter",
+   "scenario": "sc-enemy-encounter",
+   "frames": 1350,
+   "watch": [
+    {
+     "label": "zp",
+     "base": "0000",
+     "range": "0000-00ff"
+    },
+    {
+     "label": "iram",
+     "base": "0100",
+     "range": "0100-07ff"
+    }
+   ],
+   "oracle_sha256": "39d58f388cc88c60b2aea56523bff550782aace77941ee4d8dbbd9e39c703dc2",
+   "determinism_evidence": "双跑逐字节一致（2026-10-16 run1==run2 sha 39d58f38…）",
+   "scenario_sha256": "b57c91e4cf92629cea3b24e1c2ec88c972dbe16baa4e5d98c76c7a2d6fdecf8d",
+   "frame_keys": [],
+   "legs": {
+    "oracle": {
+     "sample_point": "spin-exit",
+     "rows": 1331,
+     "missing": [
+      2,
+      4,
+      5,
+      6,
+      361,
+      362,
+      363,
+      542,
+      543,
+      544,
+      545,
+      546,
+      547,
+      548,
+      1002,
+      1003,
+      1188,
+      1189,
+      1350
+     ],
+     "head_skip": 1,
+     "note": "敌遭遇族——敌槽区 $300-35F 帧间变更 366/1331+AnimResetIndex/ObjVertSpeed 活动（有敌活动无接触伤害）；转场 gap 1002-1003/1188-1189；bundle=f1200；bundle=analysis/bundles/sc-enemy-encounter.mss（11824B MSS+三直映 JSON）"
+    },
+    "game-core": {
+     "sample_point": null,
+     "note": "移植线到域后 bundle-ff 模式即比"
+    }
+   }
+  },
+  {
+   "id": "l3-sc-item-pickup",
+   "scenario": "sc-item-pickup",
+   "frames": 1400,
+   "watch": [
+    {
+     "label": "zp",
+     "base": "0000",
+     "range": "0000-00ff"
+    },
+    {
+     "label": "iram",
+     "base": "0100",
+     "range": "0100-07ff"
+    },
+    {
+     "label": "pw",
+     "base": "6988",
+     "range": "6988-698f"
+    }
+   ],
+   "oracle_sha256": "758348ab9833ef9e7450dfff72689d7ff188d47d21f633ac281b4ee717d80f55",
+   "determinism_evidence": "双跑逐字节一致（2026-10-16 run1==run2 sha 758348ab…）",
+   "scenario_sha256": "85c9e4860cd51fec2a4afd26455241537ec58453c9bf54e0872a1127a3e016d6",
+   "frame_keys": [],
+   "legs": {
+    "oracle": {
+     "sample_point": "spin-exit",
+     "rows": 1381,
+     "missing": [
+      2,
+      4,
+      5,
+      6,
+      361,
+      362,
+      363,
+      542,
+      543,
+      544,
+      545,
+      546,
+      547,
+      548,
+      1002,
+      1003,
+      1207,
+      1208,
+      1400
+     ],
+     "head_skip": 1,
+     "note": "道具拾取族（best-effort）——【如实降级】pw 面 $6988-698F 全 00=拾取未达，降级为搜寻路径 bundle 素材（D7 不冒领）；转场 gap 1002-1003/1207-1208；bundle=f1250；bundle=analysis/bundles/sc-item-pickup.mss（11667B MSS+三直映 JSON）"
+    },
+    "game-core": {
+     "sample_point": null,
+     "note": "移植线到域后 bundle-ff 模式即比"
+    }
+   }
+  },
+  {
+   "id": "l3-samus-move-oracle-determinism",
+   "scenario": "samus-move",
+   "frames": 900,
+   "watch": [
+    {
+     "label": "zp",
+     "base": "0000",
+     "range": "0000-00ff"
+    },
+    {
+     "label": "iram",
+     "base": "0100",
+     "range": "0100-07ff"
+    }
+   ],
+   "oracle_sha256": "034c3693a77c2dc612d718c3943d9f119ec7424c24426b7f4028b2f8032e1af6",
+   "determinism_evidence": "双跑逐字节一致（2026-10-16 run1==run2 sha 034c3693…）",
+   "scenario_sha256": "0fe2c7de06f619aa3265acb4c7942ed7837c1880a9160e33b04a7decaf385ec3",
+   "frame_keys": [],
+   "legs": {
+    "oracle": {
+     "sample_point": "spin-exit",
+     "rows": 885,
+     "missing": [
+      2,
+      4,
+      5,
+      6,
+      361,
+      362,
+      363,
+      542,
+      543,
+      544,
+      545,
+      546,
+      547,
+      548,
+      900
+     ],
+     "head_skip": 0,
+     "note": "G4 首切片（移动 RAM 反应面）——spin-exit 迁移后重锚（旧 coverage 面行集：boot [2,4,5,6]+解锁转场 [361-363,542-548]+尾 900）；【2026-10-18 head_skip 终值】FC 语义 0（同 boot-title 三组合定谳法）"
+    },
+    "game-core": {
+     "sample_point": "spin-exit",
+     "rows": 898,
+     "missing": [
+      1,
+      2
+     ],
+     "head_skip": 0,
+     "note": "【2026-10-18 声明迁移（槽 3b）】sample_point endFrame 缺省→spin-exit 显式（dump=f3..900 898 行——缝门控修同源）；FC 配对 skip0×skip0=885/885 全等（FC 回绕双解 (0,0)/(1,1)——f 键消歧：双腿同缝=行键即帧键）"
+    }
+   }
+  },
+  {
+   "id": "l3-sc-title-menu2",
+   "scenario": "sc-title-menu2",
+   "frames": 900,
+   "watch": [
+    {
+     "label": "zp",
+     "base": "0000",
+     "range": "0000-00ff"
+    },
+    {
+     "label": "iram",
+     "base": "0100",
+     "range": "0100-07ff"
+    }
+   ],
+   "oracle_sha256": "4ef3e07f46105f73604a1f1902cce0b1265806a07ad6eda413fe154021656f3b",
+   "determinism_evidence": "双跑逐字节一致（2026-10-17 sha 4ef3e07f…）",
+   "scenario_sha256": "45be419ce6499cb3549ab32d9358a04eea958da2449e35d905d10196fd842b5b",
+   "frame_keys": [],
+   "legs": {
+    "oracle": {
+     "sample_point": "spin-exit",
+     "rows": 885,
+     "missing": [
+      2,
+      4,
+      5,
+      6,
+      301,
+      302,
+      303,
+      602,
+      603,
+      604,
+      605,
+      606,
+      607,
+      608,
+      900
+     ],
+     "head_skip": 1,
+     "note": "title 菜单序列（15/1B/1A 面）——菜单屏实达（START/CONTINUE+游标）+确认=START→游戏起始分支（f620 截图实证）；切换键考古=SELECT（$90EB）；bundle=analysis/bundles/sc-title-menu2.mss"
+    },
+    "game-core": {
+     "sample_point": null,
+     "note": "title 深路径件（0x18/15/1B）对拍素材——移植线到域即比"
+    }
+   }
+  },
+  {
+   "id": "l3-sc-password-entry3",
+   "scenario": "sc-password-entry3",
+   "frames": 1200,
+   "watch": [
+    {
+     "label": "zp",
+     "base": "0000",
+     "range": "0000-00ff"
+    },
+    {
+     "label": "iram",
+     "base": "0100",
+     "range": "0100-07ff"
+    },
+    {
+     "label": "pw",
+     "base": "6988",
+     "range": "6988-698f"
+    }
+   ],
+   "oracle_sha256": "2151171cc25623cdeffcc2192c972f6e50a0873a66df44f63eafd537fcee8435",
+   "determinism_evidence": "双跑逐字节一致（2026-10-17 sha 2151171c…）",
+   "scenario_sha256": "a82e6d051e051fb617314717755b89049333e7867eab03a028384f2e539b770b",
+   "frame_keys": [],
+   "legs": {
+    "oracle": {
+     "sample_point": "spin-exit",
+     "rows": 1189,
+     "missing": [
+      2,
+      4,
+      5,
+      6,
+      301,
+      302,
+      303,
+      502,
+      503,
+      504,
+      1200
+     ],
+     "head_skip": 1,
+     "note": "密码输入序列（0x18 深路径 face）——$1F→0x17→**0x18 EnterPassword 实达**+字符录入「22」显示实证（f740 截图）；输入序列=right/a/b/select（光标/循环/退格面）；bundle=analysis/bundles/sc-password-entry3.mss"
+    },
+    "game-core": {
+     "sample_point": null,
+     "note": "title 深路径件（0x18/15/1B）对拍素材——移植线到域即比"
+    }
+   }
+  },
+  {
+   "id": "l3-sc-death-chain4",
+   "scenario": "sc-death-chain4",
+   "frames": 1800,
+   "watch": [
+    {
+     "label": "zp",
+     "base": "0000",
+     "range": "0000-00ff"
+    },
+    {
+     "label": "iram",
+     "base": "0100",
+     "range": "0100-07ff"
+    }
+   ],
+   "oracle_sha256": "76703b43df5fbe4bbeb27c0f64998f4c5eb7f8e7341be009bd85249b2608f379",
+   "determinism_evidence": "双跑逐字节一致（2026-10-17 sha 76703b43…）",
+   "scenario_sha256": "b47f82de54b95bb263bbe32f02546f53273c1225d8d68c620166fd82745f41e3",
+   "frame_keys": [],
+   "legs": {
+    "oracle": {
+     "sample_point": "spin-exit",
+     "rows": 1773,
+     "missing": [
+      2,
+      4,
+      5,
+      6,
+      361,
+      362,
+      363,
+      542,
+      543,
+      544,
+      545,
+      546,
+      547,
+      548,
+      1002,
+      1003,
+      1409,
+      1411,
+      1412,
+      1413,
+      1414,
+      1573,
+      1574,
+      1575,
+      1576,
+      1577,
+      1800
+     ],
+     "head_skip": 1,
+     "note": "game-over 全链包（0x19/1A/1B/1C 素材）——fixture 压血 1+真击→血尽 0000→f1410 0x1C GAME OVER→f1415 0x19 DisplayPassword→f1578 0x1A WaitForSTART 全链实录；bundle=analysis/bundles/sc-death-chain4.mss"
+    },
+    "game-core": {
+     "sample_point": null,
+     "note": "title 域 0x19/1A/1B/1C 对拍素材——死亡/终局链移植域验证仓"
+    }
+   }
+  },
+  {
+   "id": "l3-sc-roll-nav",
+   "scenario": "sc-roll-nav",
+   "frames": 1500,
+   "watch": [
+    {
+     "label": "zp",
+     "base": "0000",
+     "range": "0000-00ff"
+    },
+    {
+     "label": "iram",
+     "base": "0100",
+     "range": "0100-07ff"
+    },
+    {
+     "label": "gear",
+     "base": "6878",
+     "range": "6878-6878"
+    }
+   ],
+   "oracle_sha256": "7967f861e79fb78eed210bc0078e46c8121f465d9a178e1d9e083d642cbeb126",
+   "determinism_evidence": "双跑逐字节一致（2026-10-17 sha 7967f861…）",
+   "scenario_sha256": "1506bc6a03b03324743a0f92c525825316b785e93acf63caafb828c02d911a7a",
+   "frame_keys": [],
+   "legs": {
+    "oracle": {
+     "sample_point": "spin-exit",
+     "rows": 1483,
+     "missing": [
+      2,
+      4,
+      5,
+      6,
+      361,
+      362,
+      363,
+      542,
+      543,
+      544,
+      545,
+      546,
+      547,
+      548,
+      1011,
+      1012,
+      1500
+     ],
+     "head_skip": 1,
+     "note": "球形滚行+地形穿越（move 深域）——形态球视觉实证（截图橙球）+滚行动力学：下坡 177→200（球体 y=200 底层）+**x 回绕穿屏**（14→255 连续滚行=NT 边界穿越）+~1px/f 滚速；事件核注：$0300 sa_Roll 瞬态面（spin 采样盲区）→视觉+轨迹为实证面；bundle=analysis/bundles/sc-roll-nav.mss"
+    },
+    "game-core": {
+     "sample_point": null,
+     "note": "m2 深路径（morph/隧道域）对拍素材——bundle-ff 模式即用"
+    }
+   }
+  },
+  {
+   "id": "l3-sc-morph-tunnel",
+   "scenario": "sc-morph-tunnel",
+   "frames": 1600,
+   "watch": [
+    {
+     "label": "zp",
+     "base": "0000",
+     "range": "0000-00ff"
+    },
+    {
+     "label": "iram",
+     "base": "0100",
+     "range": "0100-07ff"
+    },
+    {
+     "label": "gear",
+     "base": "6878",
+     "range": "6878-6878"
+    }
+   ],
+   "oracle_sha256": "8ff3f5ab27940ca6e3da1a2edf0653507f7d67efd9aabdacf8fe554d7cd2a80e",
+   "determinism_evidence": "双跑逐字节一致（2026-10-17 sha 8ff3f5ab…）",
+   "scenario_sha256": "196e0d098582705bdaead6d18fef7e20f56d0f4c49a874ff16fb3854769d40dd",
+   "frame_keys": [],
+   "legs": {
+    "oracle": {
+     "sample_point": "spin-exit",
+     "rows": 1583,
+     "missing": [
+      2,
+      4,
+      5,
+      6,
+      361,
+      362,
+      363,
+      542,
+      543,
+      544,
+      545,
+      546,
+      547,
+      548,
+      1011,
+      1012,
+      1600
+     ],
+     "head_skip": 1,
+     "note": "morph 隧道探索（球体可达性差异径）——球体 y=200 底层连续穿屏（x 回绕 255→0→…）=疑似地下通道连续面（站立层 193 不可及）；可达域差异素材；bundle=analysis/bundles/sc-morph-tunnel.mss"
+    },
+    "game-core": {
+     "sample_point": null,
+     "note": "m2 深路径（morph/隧道域）对拍素材——bundle-ff 模式即用"
+    }
+   }
+  },
+  {
+   "scenario": "sc-door-deep",
+   "legs": {
+    "oracle": {
+     "sample_point": "spin-exit",
+     "rows": 1281,
+     "missing": [],
+     "head_skip": 0,
+     "sha256": "634db9e504ddbdc39439520c24348f0a1b768c39ee20b067a3d765a78d7ffd10",
+     "note": "门深径（UpdateAllDoors 实达面——gap@987 转场窗实证）"
+    }
+   },
+   "id": "l3-sc-door-deep",
+   "frames": 1300,
+   "watch": [
+    {
+     "label": "zp",
+     "base": "0000",
+     "range": "0000-00ff"
+    },
+    {
+     "label": "iram",
+     "base": "0100",
+     "range": "0100-07ff"
+    }
+   ],
+   "oracle_sha256": "634db9e504ddbdc39439520c24348f0a1b768c39ee20b067a3d765a78d7ffd10",
+   "determinism_evidence": "双跑 sha 对锚（同帧逐字节）+事件核实证（写面窗实录）",
+   "scenario_sha256": "f23207450076935bba7243d2f13abd8d3c66f8cc0a1b9bd55bdaa432dce5c40e",
+   "frame_keys": [],
+   "scenario_sha256_note": "场景书 sha（DSL 冻结）"
+  },
+  {
+   "scenario": "sc-combat-variant",
+   "legs": {
+    "oracle": {
+     "sample_point": "spin-exit",
+     "rows": 1481,
+     "missing": [],
+     "head_skip": 0,
+     "sha256": "f858721aa32a7a829abc35b997790a2c36dcbd3fc2025e3b5f86939e40329969",
+     "note": "受击主动径（碰撞族实达面——血量递减+$030A 接触实证）"
+    }
+   },
+   "id": "l3-sc-combat-variant",
+   "frames": 1500,
+   "watch": [
+    {
+     "label": "zp",
+     "base": "0000",
+     "range": "0000-00ff"
+    },
+    {
+     "label": "iram",
+     "base": "0100",
+     "range": "0100-07ff"
+    }
+   ],
+   "oracle_sha256": "f858721aa32a7a829abc35b997790a2c36dcbd3fc2025e3b5f86939e40329969",
+   "determinism_evidence": "双跑 sha 对锚（同帧逐字节）+事件核实证（写面窗实录）",
+   "scenario_sha256": "d7468110b080e7b69e922c44aaceb6db4e26d00dd4495de3b4fff22ce6d79146",
+   "frame_keys": [],
+   "scenario_sha256_note": "场景书 sha（DSL 冻结）"
+  },
+  {
+   "id": "l3-sc-combat-beam",
+   "scenario": "sc-combat-beam",
+   "frames": 1500,
+   "watch": [
+    {
+     "label": "zp",
+     "base": "0000",
+     "range": "0000-00ff"
+    },
+    {
+     "label": "iram",
+     "base": "0100",
+     "range": "0100-07ff"
+    },
+    {
+     "label": "gear",
+     "base": "6878",
+     "range": "6878-6878"
+    }
+   ],
+   "oracle_sha256": "d55cf5717794afb2645e00aea2649fd623cef2eb461ed48154e4f51a5db6e808",
+   "determinism_evidence": "双跑 sha 对锚+gear fixture 写面实证（$6878=04@f1219）+受击 $030A@1401",
+   "scenario_sha256": "c6f430c8d8d7893e8c852658116838ea0d70f7460f84ed843cb570f195c84579",
+   "frame_keys": [],
+   "scenario_sha256_note": "场景书 sha（DSL 冻结）",
+   "legs": {
+    "oracle": {
+     "sample_point": "spin-exit",
+     "rows": 1481,
+     "missing": [],
+     "head_skip": 0,
+     "sha256": "d55cf5717794afb2645e00aea2649fd623cef2eb461ed48154e4f51a5db6e808",
+     "note": "combat 武器变体（beam 面——fixture gear 注入）"
+    }
+   }
+  },
+  {
+   "id": "l3-sc-elevator-ride",
+   "scenario": "sc-elevator-ride",
+   "scenario_sha256": "2cbceb597baa140c7e98638391b26b0451603fc736a4592ff3b67c6939554858",
+   "frames": 7200,
+   "frame_keys": [
+    "zp",
+    "iram"
+   ],
+   "legs": {
+    "oracle": {
+     "sample_point": "endFrame",
+     "rows": 7200,
+     "missing": [],
+     "head_skip": 0,
+     "note": "bundle_load f3800 落点（路径修+.mss 配对——endFrame 采样）"
+    }
+   },
+   "game_core_leg": "disabled-s5",
+   "oracle_sha256": "a78050ec61792b0daf3468f4e258aeecfced5687eeabe8d43c3713ff6fa3b698",
+   "watch": [
+    {
+     "label": "zp",
+     "base": "0000",
+     "range": "0000-00ff"
+    },
+    {
+     "label": "iram",
+     "base": "0100",
+     "range": "0100-07ff"
+    }
+   ],
+   "determinism_evidence": "bundle_load f3800 落点（mss+RAM 快照）",
+   "legacy_sample_point_note": "endFrame（bundle 载入态帧末采样——2610df9 语义）",
+   "migration_note": "②后备：bundle_load 起跑（D7：绕过房 19/25 通行面——elevator 骑行面）",
+   "scenario_sha256_note": "bundle_load 场景件（路径修：.mss 配对）",
+   "watch_note": "zp+iram（事件核：MapPos/D7B3/ElevatorType）"
+  },
+  {
+   "id": "l3-sc-pickup-real",
+   "scenario": "sc-pickup-real",
+   "scenario_sha256": "86dfd9662c3f61c21a63b4a88d78b40eee5987230b0fd951d9de291adea52dd1",
+   "frames": 3500,
+   "frame_keys": [
+    "zp",
+    "iram"
+   ],
+   "legs": {
+    "oracle": {
+     "sample_point": "endFrame",
+     "rows": 3500,
+     "missing": [],
+     "head_skip": 0,
+     "note": "拾取事件核三断言设计面（GetItem/ItemData/SamusGear）——物品真径 B→A 实证环；bundle_capture 已移除（exec 回调约束——e8fa382 修）"
+    }
+   },
+   "game_core_leg": "disabled-s5",
+   "oracle_sha256": "7736cc8596a2b232bc768256a5a39f3d655067565575c729a5c7a19876c53641",
+   "watch": [
+    {
+     "label": "zp",
+     "base": "0000",
+     "range": "0000-00ff"
+    },
+    {
+     "label": "iram",
+     "base": "0100",
+     "range": "0100-07ff"
+    }
+   ],
+   "determinism_evidence": "同输入面三跑逐字节一致（sc-pickup-real/sc-statue-gate/sc-elevator-family 同模板独立跑——oracle_sha256 三案同锚 7736cc85…=确定性副证）",
+   "legacy_sample_point_note": "endFrame（帧末采样——2610df9 语义）",
+   "watch_note": "zp+iram（事件核：拾取三断言——GetItem/ItemData 态变/SamusGear 增）",
+   "shared_template_note": "三案输入模板同（travel 节拍）——消费差=断言集（pickup/statue/elevator 三观察面）"
+  },
+  {
+   "id": "l3-sc-statue-gate",
+   "scenario": "sc-statue-gate",
+   "scenario_sha256": "eac822f5cdbe9ffc0f47f0738e55434f8c2293abcbb96842c3c049bc5b643334",
+   "frames": 3500,
+   "frame_keys": [
+    "zp",
+    "iram"
+   ],
+   "legs": {
+    "oracle": {
+     "sample_point": "endFrame",
+     "rows": 3500,
+     "missing": [],
+     "head_skip": 0,
+     "note": "statue 门机制三断言设计面（KraidStatueRaiseState/KraidStatueIsHit/StatuesBridgeIsSpawned=$54）——boss face ②③素材消费"
+    }
+   },
+   "game_core_leg": "disabled-s5",
+   "oracle_sha256": "7736cc8596a2b232bc768256a5a39f3d655067565575c729a5c7a19876c53641",
+   "watch": [
+    {
+     "label": "zp",
+     "base": "0000",
+     "range": "0000-00ff"
+    },
+    {
+     "label": "iram",
+     "base": "0100",
+     "range": "0100-07ff"
+    }
+   ],
+   "determinism_evidence": "同输入面三跑逐字节一致（sc-pickup-real/sc-statue-gate/sc-elevator-family 同模板独立跑——oracle_sha256 三案同锚 7736cc85…=确定性副证）",
+   "legacy_sample_point_note": "endFrame（帧末采样——2610df9 语义）",
+   "watch_note": "zp+iram（事件核：statue 三断言——$0360-0370 Statue 对象族）",
+   "shared_template_note": "三案输入模板同（travel 节拍）——消费差=断言集（pickup/statue/elevator 三观察面）"
+  },
+  {
+   "id": "l3-sc-elevator-family",
+   "scenario": "sc-elevator-family",
+   "scenario_sha256": "07fc9e94872dc47f2fbd88595c88aaf0046a5668c23750c285fa68da2ef26dd7",
+   "frames": 3500,
+   "frame_keys": [
+    "zp",
+    "iram"
+   ],
+   "legs": {
+    "oracle": {
+     "sample_point": "endFrame",
+     "rows": 3500,
+     "missing": [],
+     "head_skip": 0,
+     "note": "elevator 家族三断言设计面（SamusOnElevator=$0307/ElevatorType bit7/MapPos 域切换）——🟡①素材消费（statue 同族状态机族谱）"
+    }
+   },
+   "game_core_leg": "disabled-s5",
+   "oracle_sha256": "7736cc8596a2b232bc768256a5a39f3d655067565575c729a5c7a19876c53641",
+   "watch": [
+    {
+     "label": "zp",
+     "base": "0000",
+     "range": "0000-00ff"
+    },
+    {
+     "label": "iram",
+     "base": "0100",
+     "range": "0100-07ff"
+    }
+   ],
+   "determinism_evidence": "同输入面三跑逐字节一致（sc-pickup-real/sc-statue-gate/sc-elevator-family 同模板独立跑——oracle_sha256 三案同锚 7736cc85…=确定性副证）",
+   "legacy_sample_point_note": "endFrame（帧末采样——2610df9 语义）",
+   "watch_note": "zp+iram（事件核：elevator 三断言——$0307 站台判/ElevatorType bit7/MapPos 域切换）",
+   "shared_template_note": "三案输入模板同（travel 节拍）——消费差=断言集（pickup/statue/elevator 三观察面）"
+  },
+  {
+   "id": "l3-sc-pickup-touch",
+   "scenario": "sc-pickup-touch",
+   "scenario_sha256": "13a5eaf017aba60d9eba786233cd12a633aab5db24fd3334063636110f15c9d4",
+   "frames": 2000,
+   "frame_keys": [
+    "zp",
+    "iram",
+    "pw"
+   ],
+   "legs": {
+    "oracle": {
+     "sample_point": "endFrame",
+     "rows": 2000,
+     "missing": [],
+     "head_skip": 0,
+     "note": "触达战役 v1-v22 沉淀档案（三条件同窗 v20 实证+机制/几何/工具注全解——v22 预算封顶收束）"
+    }
+   },
+   "game_core_leg": "disabled-s5",
+   "oracle_sha256": "5cfd95d57b5e57ba1a5006845d61273437867f3a057f798b5d8db9f9c582cca3",
+   "watch": [
+    {
+     "label": "zp",
+     "base": "0000",
+     "range": "0000-00ff"
+    },
+    {
+     "label": "iram",
+     "base": "0100",
+     "range": "0100-07ff"
+    },
+    {
+     "label": "pw",
+     "base": "6988",
+     "range": "6988-698f"
+    }
+   ],
+   "determinism_evidence": "战役 22 迭代单跑序列（sc-pickup-touch.txt 全档案——工具注：Mesen 静默崩瞬态×5 重跑即全形）",
+   "watch_note": "zp+iram+pw（拾取三断言面：pw 位图/PowerUps type/同表活）",
+   "campaign_note": "v1-v22 全解沉淀：hi XOR PPUCTRL 碰撞/x wrap 翻转/ToggleSamusHi/屏奇偶律/存活窗西行解/房23 几何全解"
+  },
+  {
+   "id": "l3-game-start-title-to-game",
+   "scenario": "game-start",
+   "frames": 700,
+   "watch": [
+    {
+     "label": "zp",
+     "base": "0000",
+     "range": "0000-00ff"
+    },
+    {
+     "label": "iram",
+     "base": "0100",
+     "range": "0100-07ff"
+    }
+   ],
+   "watch_note": "同 boot-title watch 面（zp+iram 全页——含栈页）",
+   "game_core_leg": "S5（analysis/dump/game-start.frames.jsonl）",
+   "legs": {
+    "oracle": {
+     "sample_point": "spin-exit",
+     "rows": null,
+     "missing": []
+    },
+    "game_core": {
+     "sample_point": "spin-exit",
+     "rows": null,
+     "missing": []
+    }
+   },
+   "frame_keys": [],
+   "determinism_evidence": "r25 对拍用（title→游戏链——黑屏诊断）",
+   "oracle_sha256": "f94bc98c5f635a82408fd14b6b3c87043ccf42d905e8b5bcc7610439d604b52a",
+   "scenario_sha256": "1a307c964dfc7271b5cd9a68a99fb860bbd343e6326fefeddc4d1d7eba805eae"
+  },
+  {
+   "id": "l3-sc-morph-ball",
+   "scenario": "sc-morph-ball",
+   "frames": 1300,
+   "watch": [
+    {
+     "label": "zp",
+     "base": "0000",
+     "range": "0000-00ff"
+    },
+    {
+     "label": "iram",
+     "base": "0100",
+     "range": "0100-07ff"
+    },
+    {
+     "label": "pw",
+     "base": "6988",
+     "range": "6988-698f"
+    }
+   ],
+   "oracle_sha256": "ddb2d7680d71ab83c8c197d1283724ec502c3f783a3cc188507e1cbcfd295209",
+   "scenario_sha256": "a3c140ac447d5b1a7d84ab8ea6dcaa738a27b75e70020cf0e04b4f5b7f4abea4",
+   "determinism_evidence": "单次采集锚（2026-10-31 首锚——复采对sha随复核）",
+   "frame_keys": [],
+   "legs": {
+    "oracle": {
+     "sample_point": "spin-exit",
+     "rows": 1283,
+     "missing": []
+    },
+    "game_core": {
+     "sample_point": "spin-exit",
+     "rows": 0,
+     "missing": []
+    }
+   }
+  }
+ ]
 }

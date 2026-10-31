@@ -127,6 +127,8 @@ const OBJ_ANIM_SAMUS_FRONT: u8 = 0x04;
 const OBJ_ANIM_SAMUS_STAND: u8 = 0x07;
 const OBJ_ANIM_SAMUS_JUMP: u8 = 0x0C;
 const OBJ_ANIM_SAMUS_SALTO: u8 = 0x0E;
+const OBJ_ANIM_SAMUS_RUN_JUMP: u8 = 0x13;
+const OBJ_ANIM_SAMUS_ROLL: u8 = 0x16;
 const OBJ_ANIM_SAMUS_JUMP_PNT_UP: u8 = 0x35;
 const OBJ_ANIM_SAMUS_PNT_UP: u8 = 0x27;
 const OBJ_ANIM_SAMUS_RUN_PNT_UP: u8 = 0x37;
@@ -517,16 +519,27 @@ mod tests {
     }
 
     /// SamusStand 转移核（ActionTable：右/左→Run(1)、下→Roll(3)、上→PntUp(4)）。
+    /// 【变形球移植更新（2026-10-31）】SetSamusRoll（D0B5）真形：无 gr_MARUMARI⇒
+    /// Lx030 回 sa_Stand（0）；有⇒球化（status=3）——asm :3590-3612 铁证。
     #[test]
     fn samus_stand_action_table_transitions() {
-        use crate::ram_map::{JOY1_STATUS, SAMUS_STATUS};
-        for (joy, want) in [(0x01u8, 1u8), (0x02, 1), (0x04, 3), (0x08, 4)] {
+        use crate::ram_map::{JOY1_STATUS, SAMUS_GEAR, SAMUS_STATUS};
+        for (joy, want) in [(0x01u8, 1u8), (0x02, 1), (0x04, 0), (0x08, 4)] {
             let mut m = FrameMemory::default();
             m.write_ram(JOY1_STATUS, joy);
             let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| samus_stand(&mut m)));
             assert!(r.is_ok(), "stand 转移链应全通（r26）: {:?}", r.err()); // SetSamusData 已端口
-            assert_eq!(m.read_ram(SAMUS_STATUS), want, "ActionTable[{joy:#x}]");
+            assert_eq!(m.read_ram(SAMUS_STATUS), want, "ActionTable[{joy:#x}]（无球 Roll⇒回站）");
         }
+        // 有变形球（gr_MARUMARI=%00010000）⇒DOWN 球化（status=3）
+        let mut m = FrameMemory::default();
+        m.write_ram(JOY1_STATUS, 0x04); // DOWN
+        m.write_ram(crate::ram_map::SAMUS_RADIUS_X, 4); // 真实几何（radiusX=0⇒空查撞径
+        m.write_ram(crate::ram_map::SAMUS_RADIUS_Y, 8); // 全放行（团族陷阱）——查撞真过）
+        m.write_wram(SAMUS_GEAR, 0x10); // gr_MARUMARI（$6878=WRAM！）
+        let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| samus_stand(&mut m)));
+        assert!(r.is_ok(), "球化链应全通: {:?}", r.err());
+        assert_eq!(m.read_ram(SAMUS_STATUS), 3, "有球 DOWN⇒Roll");
     }
 
     /// SamusRun 跳跃动画状态机（字节自证阈值面：$18/$20+anim 常量）。
@@ -566,21 +579,41 @@ mod tests {
         assert_eq!(m.read_ram(crate::samus::physics::SAMUS_SPEED_Y_I), 0, "停升（speedY←0）");
     }
 
-    /// SamusRoll 球形解除（radiusY+=8 可观测写面）。
+    /// SamusRoll 球形解除径（radiusY+=8 为**瞬态写**（ObjDrawFrame 帧面每帧覆写
+    /// $0301（sprite.rs:52——asm 同形））——断言结局量（不爆/解除位移/站姿）。
     #[test]
     fn samus_roll_breakout_writes_radius() {
-        use crate::ram_map::{JOY1_CHANGE, JOY1_STATUS, SAMUS_RADIUS_Y};
+        use crate::ram_map::{JOY1_CHANGE, JOY1_STATUS, SAMUS_RADIUS_Y, SAMUS_STATUS};
         let mut m = FrameMemory::default();
         m.write_ram(JOY1_CHANGE, 0x08); // UP 开门
         m.write_ram(JOY1_STATUS, 0); // DOWN 未按
+        m.write_ram(crate::ram_map::SAMUS_RADIUS_X, 4); // 真实几何（空查撞径团族陷阱防）
         m.write_ram(SAMUS_RADIUS_Y, 0x10);
+        m.write_ram(SAMUS_STATUS, 3); // 球态
         let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| samus_roll(&mut m)));
-        let err = r.unwrap_err();
-        let msg = err.downcast_ref::<String>().cloned()
-            .or_else(|| err.downcast_ref::<&'static str>().map(|s| (*s).to_string()))
-            .unwrap_or_default();
-        assert!(msg.contains("unported @ bank07:E796"), "站立检爆点失准: {msg}");
-        assert_eq!(m.read_ram(SAMUS_RADIUS_Y), 0x18); // +8
+        assert!(r.is_ok(), "D0E1 全径已端口（应全通）: {:?}", r.err());
+        // 头顶阻挡（默认 RoomRAM=0 固实）⇒落回滚动保持面（status 不动——滚态）
+        assert_eq!(m.read_ram(SAMUS_STATUS), 3, "受阻⇒滚态保持");
+    }
+
+    /// SamusRoll 站立解除径（头顶可走⇒11px 上移+站姿）。
+    #[test]
+    fn samus_roll_unroll_stands_when_headroom() {
+        use crate::ram_map::{JOY1_CHANGE, JOY1_STATUS, SAMUS_RADIUS_Y, SAMUS_STATUS};
+        let mut m = FrameMemory::default();
+        // RoomRAM 全可走（0xFF）⇒ObjectCheckMoveUp 过
+        for a in 0x6000u16..0x6800 {
+            m.write_wram(a, 0xFF);
+        }
+        m.write_ram(JOY1_CHANGE, 0x08); // UP 开门
+        m.write_ram(JOY1_STATUS, 0);
+        m.write_ram(crate::ram_map::SAMUS_RADIUS_X, 4); // 真实几何（空查撞径团族陷阱防）
+        m.write_ram(SAMUS_RADIUS_Y, 0x10);
+        m.write_ram(0x030D, 0x50); // y
+        let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| samus_roll(&mut m)));
+        assert!(r.is_ok(), "解除径应全通: {:?}", r.err());
+        assert_eq!(m.read_ram(0x030D), 0x50u8.wrapping_sub(0x0B), "11px 上移");
+        assert_eq!(m.read_ram(SAMUS_STATUS), 0, "SetSamusStand（站姿）");
     }
 
     /// PntUp 松开回 Stand+方向转移（表 3B 界互核）。
@@ -785,7 +818,7 @@ pub fn samus_stand(mem: &mut FrameMemory) {
             0 => {} // ExitSub（站立保持）
             1 => set_samus_run(mem),               // CC98（本域件）
             2 => set_samus_jump(mem),                 // CFC3（入口件（实锤②根因面））
-            3 => { crate::frame::DIVERGENCES.with(|d| d.borrow_mut().push(0xD0B5)); } // D0B5 SetSamusRoll 未端口（记账（滚动现活（防爆回退）））
+            3 => set_samus_roll(mem),                 // D0B5（变形球根件——gr_MARUMARI 持有判）
             4 => set_samus_pnt_up(mem),               // CF77
             _ => {}
         }
@@ -899,21 +932,79 @@ pub fn samus_jump_tail(mem: &mut FrameMemory) {
     super::physics::set_samus_data(mem);
 }
 
-/// SamusRoll 处理件（asm 内容锚 `SamusRoll: ; 07:D0E1`——球形解除面）：
-/// UP/JUMP 开门+DOWN 闭门→**radiusY+=8**（$0301 写面——可观测）→ObjectCheckMoveUp
-/// 站立可行检→位移 11px→SetSamusStand。嵌套件桩：ObjectCheckMoveUp（E7AD 族）/
-/// ApplySpeedToPosition/SetSamusStand。
+/// SamusRoll 处理件（asm 内容锚 `SamusRoll: ; 07:D0E1`——**变形球滚动全径**）：
+/// ①UP/JUMP 按∧¬DOWN⇒球形解除（radiusY+=8→ObjectCheckMoveUp 站立可行检⇒位移 11px 上
+/// →SetSamusStand+unroll anim（dec animIndex（asm BUG 注保真））+StopVertMovement→A=4）
+/// ②滚动保持（Lx032）：BitScan(Joy1Change)<2（新右/左）⇒转向（SamusDir+SetSamusAnim(Roll)）
+/// →SetSamusRunAccel→LCF2E→CheckBombLaunch（炸弹件随件记账）→无右/左⇒StopHorzMovement
+/// →A=2→SetSamusData（物理链会师——滚动积分/位移/镜头跟随全径复用）。
 pub fn samus_roll(mem: &mut FrameMemory) {
     use button::*;
     let change = mem.read_ram(crate::ram_map::JOY1_CHANGE);
-    let open_gate = (change & UP != 0) || (change & A != 0); // UP 或 JUMP
-    if open_gate && mem.read_ram(crate::ram_map::JOY1_STATUS) & DOWN == 0 {
-        // 球形解除：radiusY+=8（字节自证 `clc/adc #$08/sta Samus.radiusY`）
+    let up_or_jump = (change & UP != 0) || (change & A != 0); // JUMP=A（bit7）
+    if up_or_jump && mem.read_ram(crate::ram_map::JOY1_STATUS) & DOWN == 0 {
+        // 球形解除（Lx031）：radiusY+=8（字节自证 `clc/adc #$08/sta Samus.radiusY`）
         let ry = mem.read_ram(crate::ram_map::SAMUS_RADIUS_Y).wrapping_add(8);
         mem.write_ram(crate::ram_map::SAMUS_RADIUS_Y, ry);
-        crate::unported!("bank07:E796"); // ObjectCheckMoveUp（站立可行检）
+        if super::physics::object_check_move_up(mem) {
+            // 位移 11px 上（asm `lda #-$0B/sta Temp04_SpeedY`+ApplySpeedToPosition）
+            let y = mem.read_ram(0x030D);
+            mem.write_ram(0x030D, y.wrapping_sub(0x0B));
+            set_samus_stand_no_footstep(mem); // CF5D（CF55 无脚步件折叠）
+            // unroll anim（`dec Samus.animIndex`——asm :3643 BUG 注保真（up 未按时方真））
+            let ai = mem.read_ram(ANIM_RESET_INDEX + 1);
+            mem.write_ram(ANIM_RESET_INDEX + 1, ai.wrapping_sub(1));
+            super::physics::stop_vert_movement(mem); // D147
+            mem.regs.a = 4;
+            super::physics::set_samus_data(mem);
+            return;
+        }
+        // 不可站立（头顶阻挡）⇒落回滚动保持面（Lx032）
     }
-    crate::unported!("bank07:D0E1-tail"); // 滚动保持面（尾段）
+    // Lx032（滚动保持）：新右/左按下⇒转向
+    let bit = bit_scan(change);
+    if bit < 2 {
+        mem.write_ram(crate::ram_map::SAMUS_DIR, bit);
+        // SetSamusAnim（CF6B：$0305←Roll/$0306←Roll/$0304←0）
+        mem.write_ram(ANIM_RESET_INDEX, OBJ_ANIM_SAMUS_ROLL);
+        mem.write_ram(ANIM_RESET_INDEX + 1, OBJ_ANIM_SAMUS_ROLL);
+        mem.write_ram(ANIM_RESET_INDEX.wrapping_sub(1), 0);
+    }
+    // Lx033：SetSamusRunAccel（CCB7——球滚加速 30/D0）→LCF2E→CheckBombLaunch
+    set_samus_run_accel(mem, mem.read_ram(crate::ram_map::SAMUS_DIR));
+    solid_entity_response(mem); // LCF2E
+    // CheckBombLaunch（D150——炸弹发射件（吃炸弹能力后径）——随件记账）
+    crate::frame::DIVERGENCES.with(|d| d.borrow_mut().push(0x0D150));
+    if mem.read_ram(crate::ram_map::JOY1_STATUS) & (RIGHT | LEFT) == 0 {
+        // 无右/左⇒StopHorzMovement（CFB7——停速）
+        mem.write_ram(crate::ram_map::SAMUS_ACCEL_X, 0);
+        mem.write_ram(super::physics::SAMUS_SPEED_X_I, 0);
+        mem.write_ram(super::physics::SAMUS_SPEED_X_F, 0);
+    }
+    mem.regs.a = 2;
+    super::physics::set_samus_data(mem); // CD6D（A=2——LD144 尾）
+}
+
+/// SetSamusRoll（**asm 内容锚** `SetSamusRoll: ; 07:D0B5`）：gr_MARUMARI 持有∧AccelY==0
+/// ⇒球化（animResetIndex←Roll(0x16)/animIndex←RunJump(0x13)/AccelX←RunAccel[dir]/
+/// ScrewAttack0686($0686)←1/SFX_SamusBall）；否则 status←sa_Stand（Lx030）。
+/// 【变形球根件】能力位=gr_MARUMARI=%00010000（constants.asm:59——pu_MARUMARI=4 同源）。
+fn set_samus_roll(mem: &mut FrameMemory) {
+    if mem.read_wram(crate::ram_map::SAMUS_GEAR) & 0x10 == 0 {
+        mem.write_ram(crate::ram_map::SAMUS_STATUS, 0); // 无变形球⇒站姿（Lx030）
+        return;
+    }
+    if mem.read_ram(crate::ram_map::SAMUS_ACCEL_Y) != 0 {
+        mem.write_ram(crate::ram_map::SAMUS_STATUS, 0); // 空中⇒站姿
+        return;
+    }
+    let dir = mem.read_ram(crate::ram_map::SAMUS_DIR);
+    mem.write_ram(ANIM_RESET_INDEX, OBJ_ANIM_SAMUS_ROLL); // $8588-$8572=0x16
+    mem.write_ram(ANIM_RESET_INDEX + 1, OBJ_ANIM_SAMUS_RUN_JUMP); // $8585-$8572=0x13
+    set_samus_run_accel(mem, dir); // CCB7
+    mem.write_ram(0x0686, 1); // ScrewAttack0686（球化螺旋转旗面）
+    // SFX_SamusBall（声包随件记账）
+    crate::frame::DIVERGENCES.with(|d| d.borrow_mut().push(0x0CBF0));
 }
 
 // ==== 10 态肉·批4（PntUp/Dead/Dead2/Door/Elevator——轻仪式收尾）====

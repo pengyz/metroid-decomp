@@ -24,11 +24,14 @@ pub struct WatchFace {
     pub end: u16,
 }
 
-/// 三面规范表（键集白名单 `w` 对象标签的声明源之一；区间钉死=本表）。
-pub const WATCH_FACES: [WatchFace; 3] = [
+/// 四面规范表（键集白名单 `w` 对象标签的声明源之一；区间钉死=本表）。
+/// pw=密码字节面（$6988-$698F（PasswordByte 区（constants:1247 族））——sc-item-pickup/
+/// sc-pickup-touch/sc-password-entry3 manifest watch 面）。
+pub const WATCH_FACES: [WatchFace; 4] = [
     WatchFace { label: "zp", base: 0x0000, end: 0x00FF },
     WatchFace { label: "iram", base: 0x0100, end: 0x07FF },
     WatchFace { label: "wram", base: 0x6000, end: 0x7FFF },
+    WatchFace { label: "pw", base: 0x6988, end: 0x698F },
 ];
 
 /// 大写 hex 编码（watch 面唯一编码器）。
@@ -54,6 +57,11 @@ pub fn encode_iram(ram: &[u8]) -> String {
 /// wram 编码（$6000-$7FFF 全 8KB → 16384 大写 hex；FrameMemory.wram 面）。
 pub fn encode_wram(wram: &[u8]) -> String {
     hex_upper(&wram[0x0000..0x2000])
+}
+
+/// pw 编码（$6988-$698F 密码字节 8B → 16 大写 hex；wram 偏移 $988）。
+pub fn encode_pw(wram: &[u8]) -> String {
+    hex_upper(&wram[0x0988..0x0990])
 }
 
 #[cfg(test)]

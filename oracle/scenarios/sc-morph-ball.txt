@@ -1,0 +1,22 @@
+# 场景：sc-morph-ball —— 变形球（MaruMari）取得+球形滚动（goal 流程② 演示径）
+# 取证：brinstar/items.asm @y0E/@@x02（01:A42D）`it_PowerUp, pu_MARUMARI, $96`——
+# 图格 (2,0x0E)（出生格 (3,0x0E) 左邻）；位置字节 $96→物位 (x=$68, y=$98)。
+# 路径：出生（SamusIntro 完成）→左行入 (2,0x0E) 格→接触拾取→DOWN 球化滚动。
+name sc-morph-ball
+frames 1300
+watch_range 0000-00ff zp
+watch_range 0100-07ff iram
+watch_range 6988-698f pw
+
+press 360 start
+press 420 a
+press 540 start
+hold 850-1150 left
+capture 1050 approach
+capture 1150 item-cell
+hold 1160-1240 right
+capture 1240 after-pickup
+hold 1250-1300 down
+capture 1300 ball-roll
+
+sample_point spin-exit

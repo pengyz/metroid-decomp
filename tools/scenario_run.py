@@ -731,7 +731,13 @@ def mesen_isolated_home() -> Path:
     fake.mkdir(parents=True, exist_ok=True)
     (fake / ".config").mkdir(parents=True, exist_ok=True)
     if not link.is_symlink() and not link.exists():
-        link.symlink_to(isolated)
+        try:
+            link.symlink_to(isolated)
+        except OSError:
+            # 【WinError 1314 回退】客户侧无符号链接特权（DSH 沙箱实证）——隔离径
+            # 退化为独立空配置目录（Mesen 自建配置）——隔离性保持（跨项目零共享），
+            # 仅失配置持久化（可接受——采集产物才是契约面）。
+            link.mkdir(parents=True, exist_ok=True)
     return fake
 
 

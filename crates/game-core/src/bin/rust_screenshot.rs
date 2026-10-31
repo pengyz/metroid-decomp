@@ -532,7 +532,7 @@ mod tests {
     }
 
     /// 【验收①/Step 1】构造 bundle（三直映 JSON）→ restore 后**首帧 == 期望帧**：
-    /// 首状态行（三面 zp/iram/wram）与 bundle 三直映逐字节同——装载态真灌入
+    /// 首状态行（四面 zp/iram/wram/pw）与 bundle 三直映逐字节同——装载态真灌入
     /// （boot 重跑/漏面/半解析在此必红）。
     #[test]
     fn restore_first_state_row_matches_expected() {
@@ -541,10 +541,11 @@ mod tests {
         let mut engine = FrameEngine::new();
         engine.restore_mss(&b.ram, &b.wram, b.regs);
         let hex = |x: &[u8]| x.iter().map(|v| format!("{v:02X}")).collect::<String>();
-        // 期望首帧：zp=ram[0x000-0x0FF]、iram=ram[0x100-0x7FF]、wram=全 8KB（frame_face 唯一编码）
+        // 期望首帧：zp/iram/wram 全面+pw（$6988-$698F 密码面）——frame_face 唯一编码
         let expected = format!(
-            "{{\"f\":1,\"w\":{{\"zp\":\"{}\",\"iram\":\"{}\",\"wram\":\"{}\"}}}}",
-            hex(&ram[0x000..0x100]), hex(&ram[0x100..0x800]), hex(&wram[0x0000..0x2000]));
+            "{{\"f\":1,\"w\":{{\"zp\":\"{}\",\"iram\":\"{}\",\"wram\":\"{}\",\"pw\":\"{}\"}}}}",
+            hex(&ram[0x000..0x100]), hex(&ram[0x100..0x800]), hex(&wram[0x0000..0x2000]),
+            hex(&wram[0x0988..0x0990]));
         let mut row = String::new();
         let tick = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
             engine.tick_frame_with(|mem| row = state_row(1, mem));

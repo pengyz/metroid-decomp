@@ -102,6 +102,11 @@ pub fn game_main_routine(mem: &mut FrameMemory) {
             // 【move-drift R1 链合一】asm AreaInit（C801）**无 RTS fallthrough 进 MoreInit**
             // （prg7:1826-1843——:1839 `jsr IsEngineRunning` 后直落 C81D）：一迭代双步
             // （mr 00→02——金腿窗3 状态差实证）。原拆两迭代=同迭代链断裂（定谳 R1）。
+            // 【能力移植（2026-10-31）】PowerUps 槽空标初值=**$FF**（SpawnPowerUp（EDFE）
+            // `lda #$FF/cmp type` 空槽判/UpdateOnePowerUp 同标——游戏起始面（RAM 填充面
+            // 细节随核；观测=开局无物品 ✓）。
+            mem.write_ram(0x0748, 0xFF);
+            mem.write_ram(0x0750, 0xFF);
             area_init(mem);
             more_init(mem);
         }
@@ -1782,9 +1787,15 @@ fn uw_pipe_bug_holes(_mem: &mut crate::frame::FrameMemory) {}
 /// CheckMissileToggle（弹切检——A/SELECT 切换面）。
 fn uw_check_missile_toggle(_mem: &mut crate::frame::FrameMemory) {}
 
-/// UpdateAllPowerUps（$DB37——吃能力！槽环+baked 判+拾取碰撞）。
-fn uw_all_power_ups(_mem: &mut crate::frame::FrameMemory) {
-    // sc-item-pickup 流程件——PowerUps 槽+RoomRAM buried 判+拾取碰撞随件
+/// UpdateAllPowerUps（$DB37——吃能力！槽环+埋实心块判+拾取碰撞+授予）。
+/// 【能力移植（2026-10-31）】全链端口（pickup::spawn——ScanForItems 上图/DB37 显示/
+/// DC7F 触碰/DB2F 授予/EE4A 唯一物史）——sc-item-pickup 流程件。
+fn uw_all_power_ups(mem: &mut crate::frame::FrameMemory) {
+    if let Some(item) = crate::pickup::spawn::update_all_power_ups(mem) {
+        // 拾取音乐/延迟（CBF9 PowerUpMusic——声包随件记账）
+        crate::frame::DIVERGENCES.with(|d| d.borrow_mut().push(0x0CBF9));
+        let _ = item;
+    }
 }
 
 /// UpdateTourianItems（$FDE3——Tourian 专件）。
@@ -1953,6 +1964,9 @@ pub fn get_room_num(mem: &mut FrameMemory) -> bool {
 /// →RoomPalette 读→AddToRoomPtr/SelectRoomRAM/InitTables→DrawRoom（**S6-7 房间绘制链**
 /// ——嵌套桩：game-data 房间模型协同）。
 pub fn setup_room(mem: &mut FrameMemory) {
+    // 【能力移植（2026-10-31）】ScanForItems（ED98——SetupRoom 首件（asm :8588））：
+    // 当前图格特项扫描→PowerUp 装载（吃能力上图！）。
+    crate::pickup::spawn::scan_for_items(mem);
     let room = mem.read_ram(0x005A);
     if room == 0xFF {
         return; // 未定义房（RTS）
