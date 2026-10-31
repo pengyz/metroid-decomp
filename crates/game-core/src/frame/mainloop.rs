@@ -1832,22 +1832,47 @@ fn uw_samus_enter_door(mem: &mut crate::frame::FrameMemory) {
 /// UpdateAllDoors（门链——槽空⇒跳过；门显示随件）。
 fn uw_all_doors(_mem: &mut crate::frame::FrameMemory) {}
 
-/// UpdateSkreeProjectiles（**asm 内容锚** `uw_skree_projectiles`（skree 弹族——dieDelay
-/// 倒数→清槽（弹寿 10 帧（skree.asm:39-41 `lda #$0A/sta dieDelay`））））：4 槽环
-/// （$A0-$AF（4B：dieDelay/y/x/hi））——dieDelay≠0⇒递减，归零⇒槽清（dieDelay←0 空标）。
+/// UpdateSkreeProjectiles（**asm 内容锚** `UpdateSkreeProjectile: ; 07:FBEC`（prg7:12157-
+/// 12242 全谱——goal-轮13 件））：①dieDelay 倒数 ②速表（FC5D——(Y,X)：(0,−5)/(−5,−2)
+/// /(−5,+2)/(0,+5)）③位移+出界⇒Kill ④**Samus 5 伤害**（:12214-12232——i 帧/螺旋转免伤）。
 fn uw_skree_projectiles(mem: &mut crate::frame::FrameMemory) {
-    for yy in [12u16, 8, 4, 0] {
+    const SPEED: [(i8, i8); 4] = [(0, -5), (-5, -2), (-5, 2), (0, 5)]; // FC5D 逐字
+    for (si, yy) in [12u16, 8, 4, 0].iter().enumerate() {
         let base = 0x00A0u16 + yy;
         let d = mem.read_ram(base);
         if d == 0 {
             continue; // 空槽
         }
-        let nd = d.wrapping_sub(1);
-        mem.write_ram(base, nd);
-        if nd == 0 {
-            mem.write_ram(base + 1, 0);
-            mem.write_ram(base + 2, 0);
-            mem.write_ram(base + 3, 0); // 位姿清
+        mem.write_ram(base, d.wrapping_sub(1)); // dec dieDelay
+        let (vy, vx) = SPEED[si];
+        let mut py = mem.read_ram(base + 1);
+        let mut px = mem.read_ram(base + 2);
+        let (ny, oy) = py.overflowing_add(vy as u8);
+        let (nx, ox) = px.overflowing_add(vx as u8);
+        if oy || ox {
+            mem.write_ram(base, 0); // Kill（出界——asm bcc KillSkreeProjectile）
+            continue;
+        }
+        py = ny;
+        px = nx;
+        mem.write_ram(base + 1, py);
+        mem.write_ram(base + 2, px);
+        // Samus 5 伤害（:12214-12232）
+        if mem.read_ram(crate::ram_map::SAMUS_INVINCIBLE_DELAY) == 0 {
+            let sy = mem.read_ram(0x030D) as i16;
+            let sx = mem.read_ram(0x030E) as i16;
+            let sry = mem.read_ram(0x0301) as i16;
+            let srx = mem.read_ram(0x0302) as i16;
+            let dy = (sy - py as i16).unsigned_abs() as u16;
+            let dx = (sx - px as i16).unsigned_abs() as u16;
+            if dy < sry as u16 + 4 && dx < srx as u16 + 4 {
+                if !crate::samus::physics::is_screw_attack_active(mem) {
+                    mem.write_ram(0x010F, 0x80);
+                    mem.write_ram(crate::ram_map::SAMUS_INVINCIBLE_DELAY, 0x32);
+                    mem.write_ram(0x006E, 0x50); // HealthChange←$50（5 伤害）
+                    mem.write_ram(0x006F, 0x00);
+                }
+            }
         }
     }
 }
