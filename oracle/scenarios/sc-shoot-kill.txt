@@ -1,0 +1,23 @@
+# 场景：sc-shoot-kill —— 射击击杀验证（弹-敌碰撞环+F536 伤害链实跑）
+# 事件核：走向敌（右行）→连射（b）→敌 HP 递减→爆亡（status=3）。
+name sc-shoot-kill
+frames 1200
+watch_range 0000-00ff zp
+watch_range 0100-07ff iram
+watch_range 6000-7fff wram
+
+press 360 start
+press 420 a
+press 540 start
+hold 850-1150 right
+press 1000 b
+press 1030 b
+press 1060 b
+press 1090 b
+press 1120 b
+press 1150 b
+capture 1000 approach
+capture 1100 shooting
+capture 1180 after-shoot
+
+sample_point spin-exit

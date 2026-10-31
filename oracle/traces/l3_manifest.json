@@ -1116,6 +1116,44 @@
      "missing": []
     }
    }
+  },
+  {
+   "id": "l3-sc-shoot-kill",
+   "scenario": "sc-shoot-kill",
+   "frames": 1200,
+   "watch": [
+    {
+     "label": "zp",
+     "base": "0000",
+     "range": "0000-00ff"
+    },
+    {
+     "label": "iram",
+     "base": "0100",
+     "range": "0100-07ff"
+    },
+    {
+     "label": "wram",
+     "base": "6000",
+     "range": "6000-7fff"
+    }
+   ],
+   "oracle_sha256": "beeebb5b76b986d85827531e3ced27e4f6ea1874f2d294ba332e7616539cbc8a",
+   "scenario_sha256": "807dded2ec46dfbd6481ee3ac6808e6ada6ed5d94e5f633a7f002ff5ddcbb48f",
+   "determinism_evidence": "单次采集锚（2026-10-31 首锚）",
+   "frame_keys": [],
+   "legs": {
+    "oracle": {
+     "sample_point": "spin-exit",
+     "rows": 1183,
+     "missing": []
+    },
+    "game_core": {
+     "sample_point": "spin-exit",
+     "rows": 0,
+     "missing": []
+    }
+   }
   }
  ]
 }

@@ -293,9 +293,15 @@ pub fn samus_run(mem: &mut FrameMemory) {
         super::physics::set_samus_data(mem);
         return;
     }
-    // FIRE 判（CD4B：`ora Joy1Retrig/asl/bpl`——bit6（B 键族））⇒SamusRun_Fire
+    // FIRE 判（CD4B：`ora Joy1Retrig/asl/bpl`——bit6（B 键族））⇒SamusRun_Fire（CDD7）
+    // 【打不死根修（2026-11-01 自跑实证 sc-shoot-kill：全程 $03D0=0——弹从未生成！）】
+    // 旧形=占位臂记账（不发射）⇒跑动开火死。正解=FireSamusProjectile（D1EE）+RunFire 动画。
     if (mem.read_ram(crate::ram_map::JOY1_CHANGE) | mem.read_ram(crate::memmap::title_state::JOY1_RETRIG)) & 0x40 != 0 {
-        crate::frame::DIVERGENCES.with(|d| d.borrow_mut().push(0xCDD7)); // SamusRun_Fire（打敌人包随件）
+        fire_samus_projectile(mem); // D1EE（SamusRun_Fire :3055-3057 `jsr FireSamusProjectile`）
+        // RunFire 动画（:3058-3063）：¬UP⇒animIndex←RunFire(0x22（$8594-$8572）)
+        if mem.read_ram(crate::ram_map::JOY1_STATUS) & UP == 0 {
+            mem.write_ram(ANIM_RESET_INDEX + 1, 0x22);
+        }
     }
     // samL11：无方向键⇒SetSamusStand（CF55——停跑站姿；无脚步件 CF5D 折叠（SFX 随件））
     let input = mem.read_ram(crate::ram_map::JOY1_STATUS) & (RIGHT | LEFT);
