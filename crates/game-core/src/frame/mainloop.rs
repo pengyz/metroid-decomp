@@ -426,17 +426,83 @@ pub fn update_all_enemies(mem: &mut crate::frame::FrameMemory) {
 /// data05 bit1≠0⇒退出；否则位置/半径→IsObjectVisible⇒**不可见双返**（跳过该敌）。
 fn enemy_check_if_visible(mem: &mut crate::frame::FrameMemory, x: u8) -> bool {
     if mem.read_ram(0x0400 + x as u16 + 5) & 0x02 != 0 {
-        return true; // bit1=1⇒跳过检查（视为可见）
+        return true; // $F37F bit1 闩=1 ⇒ 免 fresh 检（视为可见）
     }
-    let y = mem.read_ram(0x0400 + x as u16 + 0); // Ens.y
-    let hi = mem.read_wram(0x6AF4 + x as u16 + 7); // EnsExtra.hi
+    // IsObjectVisible（**asm 内容锚** `IsObjectVisible: ; 07:DFDF`——2026-10-31 忠实重建）：
+    // 旧形横房分支 y<240 近似恒真且丢名表/横滚轴——载入邻名表敌（hi≠PPU 当前 NT）被误判
+    // 可见 ⇒ Skree（slot2）提前可见+激活（crawlprobe f919-959 残差根因）。asm 判定链：
+    // screenY=y−ScrollY/screenX=x−ScrollX → 横房走 HorzScrollCheck（E01C）：入 carry=
+    // （x≥ScrollX）（ScreenX sbc 残留）；异名表+carry 置⇒隐形/异名表+carry 清⇒rx+screenX
+    // <256 可见；同名表⇒carry 清隐形/rx<screenX 可见。纵房 VertScrollCheck（DFF6）同构
+    // （cpy ScrollY 出 carry；异名表 sbc #$0F 带 C=0 ⇒ −16；y 轴检用 radiusX——asm quirk）。
+    let y = mem.read_ram(0x0400 + x as u16 + 0);
+    let xpos = mem.read_ram(0x0400 + x as u16 + 1);
+    let hi = mem.read_wram(0x6AF4 + x as u16 + 7);
+    let rx = mem.read_wram(0x6AF4 + x as u16 + 2); // Temp09_RadiusX（y 轴检也用 rx——asm 注 "why is $09"）
     let scroll_y = mem.read_ram(crate::ram_map::SCROLL_Y);
-    let horz = mem.read_ram(crate::ram_map::SCROLL_DIR) & 0x02 != 0;
-    let sy = if horz { y } else { y.wrapping_sub(scroll_y) };
-    // IsObjectVisible（$DFDF——$F0 范围+hi 位 vs PPUCTRL 名表）
-    let ok = sy.wrapping_sub(scroll_y) < 0xF0
-        || (hi & 1 == mem.read_ram(0x00FF) & 1 && sy < 0xF0);
-    ok || sy < 0xF0 && hi & 1 == mem.read_ram(0x00FF) & 1
+    let scroll_x = mem.read_ram(crate::ram_map::SCROLL_X);
+    let screen_y = y.wrapping_sub(scroll_y); // Temp10_ScreenY
+    let screen_x = xpos.wrapping_sub(scroll_x); // Temp0E_ScreenX
+    let same_nt = (hi ^ mem.read_ram(0x00FF)) & 0x01 == 0;
+    if mem.read_ram(crate::ram_map::SCROLL_DIR) & 0x02 != 0 {
+        let carry = xpos >= scroll_x; // sec/sbc ScrollX 残留
+        if !same_nt {
+            if carry {
+                return false; // bcs LE036（异名表+敌在滚轴右⇒隐形）
+            }
+            return (rx as u16 + screen_x as u16) < 0x100; // bcc RTS_E037=可见
+        }
+        if !carry {
+            return false; // bcc LE036
+        }
+        return rx < screen_x; // bcc RTS_E037=可见
+    }
+    let carry = y >= scroll_y; // cpy ScrollY 残留
+    if !same_nt {
+        if carry {
+            return false; // bcs LE01A
+        }
+        let sy2 = screen_y.wrapping_sub(16); // sbc #$0F（C=0 ⇒ −16）
+        return (rx as u16 + sy2 as u16) < 0xF0; // cmp #$F0/bcc=可见
+    }
+    if !carry {
+        return false; // bcc LE01A
+    }
+    rx < screen_y // cmp/bcc=可见
+}
+
+#[cfg(test)]
+mod tests_visibility {
+    use super::*;
+
+    /// 【IsObjectVisible 忠实重建钉（2026-10-31——crawlprobe slot2 残差根因）】asm 07:DFDF
+    /// HorzScrollCheck：异名表+（x≥ScrollX）⇒隐形（载入邻名表敌在 PPU 翻转前不可见）；
+    /// 同名表⇒rx<screenX 可见。旧形横房 y<240 近似恒真=误可见。
+    #[test]
+    fn enemy_visibility_horz_nametable_and_edge_rules() {
+        let mut m = crate::frame::FrameMemory::default();
+        let x = 0x40u8; // slot4
+        m.write_ram(crate::ram_map::SCROLL_DIR, 3); // 横房右滚
+        m.write_ram(0x00FF, 0x00); // PPU 当前名表 0
+        m.write_ram(crate::ram_map::SCROLL_X, 0x03);
+        m.write_ram(crate::ram_map::SCROLL_Y, 0);
+        // 异名表敌（hi=1）：x≥ScrollX ⇒ 隐形（载入侧名表在 PPU 翻转前不可见）
+        m.write_ram(0x0400 + x as u16, 0x38);
+        m.write_ram(0x0400 + x as u16 + 1, 0x8C);
+        m.write_wram(0x6AF4 + x as u16 + 7, 1); // hi=1
+        m.write_wram(0x6AF4 + x as u16 + 2, 2); // radiusX=2
+        assert!(!enemy_check_if_visible(&mut m, x), "异名表+x≥ScrollX ⇒ 隐形");
+        // 同名表敌（hi=0）：rx(8)<screenX(0x8C-3) ⇒ 可见
+        m.write_wram(0x6AF4 + x as u16 + 7, 0);
+        m.write_wram(0x6AF4 + x as u16 + 2, 8);
+        assert!(enemy_check_if_visible(&mut m, x), "同名表 rx<screenX ⇒ 可见");
+        // 同名表贴左缘：screenX≤rx ⇒ 隐形（asm cmp/bcc 形——quirk 保真）
+        m.write_ram(0x0400 + x as u16 + 1, 0x05); // screenX=2 ≤ rx=8
+        assert!(!enemy_check_if_visible(&mut m, x), "screenX≤rx ⇒ 隐形（asm quirk）");
+        // bit1 闩=1 ⇒ 免 fresh 检（$F37F 首件）
+        m.write_ram(0x0400 + x as u16 + 5, 0x02);
+        assert!(enemy_check_if_visible(&mut m, x), "bit1 闩直通");
+    }
 }
 
 /// UpdateEnemy_UpdateEnData05Bit6（**asm 内容锚** `: 07:F3AA`——r26）：
@@ -981,8 +1047,12 @@ fn crawler_ai(mem: &mut crate::frame::FrameMemory, x: u8) {
 
 /// UpdateEnemyCommon@noMoveNoAnim（**asm 内容锚** `: 07:F416`——r26）：tough 调色→
 /// status≠0⇒DrawEnemy→isHit/weaponAction 清。
+/// 【2026-10-31 伪 init 摘除】旧形头部多一次 init_en_resting_anim_index（自称"缺面修"
+/// ——asm F416 **无此调用**；resting init 属 Resting 壳 F3BE 件序 3，enemy_resting 已
+/// 接）。副作用=每帧把 rAI/aI 打回 resting 序列：转角 reorient（CrawlerReorientSprite
+/// 同 tick 更早写 3E）被抹（crawlprobe f814 起 anim 恒地板序列 35/36/37 根因）+激活帧
+/// resting init 绕过 bit6 30fps 门（f797 rAI=35 vs emu 00——壳本应被门跳过）。
 fn update_enemy_common_no_move_no_anim(mem: &mut crate::frame::FrameMemory, x: u8) {
-    init_en_resting_anim_index(mem, x); // F682 resting anim 应用（F3BE 链件（缺面修））
     let special = mem.read_ram(0x0400 + x as u16 + 15); // specialAttribs=+15
     if special & 0x80 != 0 {
         let oc = mem.read_ram(0x006B);
@@ -1184,6 +1254,13 @@ fn enemy_move_one_pixel_down(mem: &mut crate::frame::FrameMemory, x: u8) -> bool
     if ny == ry.wrapping_neg() {
         mem.write_ram(0x00, 1); // $00=1（离屏/wrap）
         return false;
+    }
+    // 【2026-10-31 jD 补装】asm $849D @success：`lda data05/bmi @endIf_D`（bit7 清）⇒
+    // **dec jumpDsplcmnt**（垂直位移记账：UP=$8441 inc/DOWN=dec——下行爬虫每成功步 −1，
+    // 含外角探针的下移步；emu 实录 00→FF(f814 首步)→FE→…；rust 旧形缺写⇒恒 00）。
+    if mem.read_ram(0x0400 + x as u16 + 5) & 0x80 == 0 {
+        let j = mem.read_wram(0x6AF4 + x as u16 + 13); // jumpDsplcmnt=+13
+        mem.write_wram(0x6AF4 + x as u16 + 13, j.wrapping_sub(1));
     }
     true
 }
