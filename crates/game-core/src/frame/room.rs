@@ -499,8 +499,12 @@ fn load_enemy(mem: &mut crate::frame::FrameMemory, b0: u8, etype: u8, pos: u8) -
     let x = (b0 & 0xF0) as u16; // 对象槽（×16 步）
     let en = 0x0400u16 + x; // Ens=2KB RAM 面（write_ram）
     let ex = 0x6AF4u16 + x; // EnsExtra=WRAM 面（write_wram）
-    // IsSlotTaken（$EB7A）：status≠0 且 data05 bit1=0 ⇒ 槽已占用（跳过条目）
-    if mem.read_wram(ex) != 0 && mem.read_ram(en + 5) & 0x02 == 0 {
+    // IsSlotTaken（**asm 内容锚** `IsSlotTaken: ; 07:EB7A`）：`lda status/beq RTS`（=0 返 0）
+    // +`lda data05/and #$02`——返回 A=status==0 ? 0 : data05 bit1；调用方 `jsr/bne` ⇒
+    // **A≠0（status≠0 且可见 bit1 置）=占用跳过**。【2026-10-31 反条件勘误】旧形 bit1==0
+    // ⇒占用——把可见活敌判为空槽覆写（滚动载房重载时在屏爬虫被刷掉——crawlprobe f916
+    // 根因）；asm 语义=经典槽回收：**屏外敌（不可见）可回收、屏内敌保护**。
+    if mem.read_wram(ex) != 0 && mem.read_ram(en + 5) & 0x02 != 0 {
         return true;
     }
     // GetEnemyType（$EB28）：specialAttribs←etype&$C0；type←etype&$3F（Boss 检=bit6——
@@ -640,6 +644,33 @@ mod tests {
         assert_eq!(attrib_mask(1), 0xF3);
         assert_eq!(attrib_mask(2), 0xCF);
         assert_eq!(attrib_mask(3), 0x3F);
+    }
+
+    /// 【IsSlotTaken 反条件勘误钉（2026-10-31——crawlprobe f916 根因）】asm $EB7A：
+    /// A=status==0 ? 0 : data05 bit1；调用方 bne ⇒ **status≠0 且可见（bit1 置）=占用跳过**。
+    /// 可见活敌（在屏爬虫）受保护；不可见/空槽可回收重载（经典槽回收）。
+    #[test]
+    fn load_enemy_skips_visible_enemy_but_recycles_invisible() {
+        let mut m = FrameMemory::default();
+        let ex = 0x6AF4u16 + 0x40; // slot4 EnsExtra
+        let en = 0x0400u16 + 0x40;
+        // 可见活敌：status=2（Active）+bit1 置 ⇒ 跳过（y/x 不被覆写）
+        m.write_wram(ex, 2);
+        m.write_ram(en + 5, 0x5A); // bit1 置（可见）
+        m.write_ram(en, 0x74);
+        m.write_ram(en + 1, 0xC8);
+        assert!(load_enemy(&mut m, 0x41, 0x05, 0x2B), "条目消费（返回 true）");
+        assert_eq!(m.read_ram(en), 0x74, "可见敌 y 保护（不被重载覆写）");
+        assert_eq!(m.read_ram(en + 1), 0xC8, "可见敌 x 保护");
+        // 不可见敌：status=2+bit1 清 ⇒ 回收（重载落位）
+        m.write_ram(en + 5, 0x58); // bit1 清
+        assert!(load_enemy(&mut m, 0x41, 0x05, 0x2B));
+        assert_eq!(m.read_ram(en), 0x28, "不可见敌回收重载 y=(pos&$F0)|8");
+        assert_eq!(m.read_ram(en + 1), 0xBC, "重载 x=(pos<<4)|$0C");
+        // 空槽：status=0 ⇒ 载入
+        m.write_wram(ex, 0);
+        assert!(load_enemy(&mut m, 0x41, 0x05, 0x2B));
+        assert_eq!(m.read_wram(ex), 1, "空槽载入 status←Resting");
     }
 }
 

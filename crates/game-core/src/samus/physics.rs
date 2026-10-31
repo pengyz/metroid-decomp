@@ -1157,6 +1157,19 @@ fn object_check_move_right(mem: &mut FrameMemory) -> bool {
 /// 行级等价；缓冲面 $07A0+ 的 L3 对拍差异随 V2 收敛）。
 fn check_update_name_table(mem: &mut FrameMemory) {
     // ①邻房装载（E54A 首件——ScrollRight/Left 每像素调；多帧（RoomNumber 任务机））
+    // 【载房窗 bog（2026-10-31 重考定谳）】ScrollRight/Left 的 ScrollX==0 特殊径（asm
+    // E6E4-E6EA：inc MapPosX+GetRoomNum）⇒ RoomNumber←新地图格房号 ⇒ 本调用 setup_room
+    // **全房重载**（InitTables+DrawRoom+EnemyLoop×LoadEnemy+EndOfRoom+kick）——emu 实测
+    // 每次载房=2 bogged 窗（crawlprobe f916-917 FC 冻 132（0x84→f918=0x85 单 inc）/
+    // TD 冻 9；goal-r22 注 f1064-1065 同族第二窗）。「逐列写 bog」归因已证伪摘除
+    // （本文件 2026-10-28 更正注），载房窗归因正确但当时未落门。NMIStatus=1⇒NMI 内块跳
+    // （asm prg7:251）。FC 不走 iter_span_fc（滚动迭代=普通游戏迭代——main_loop_iter 尾
+    // inc 即该迭代唯一一次；emu 实录 f915=132→f918=133→f919=134 每 iteration 单 inc；
+    // span_fc 只适用于工作拍 FC 被冻结的 title 臂形——双加=+1 相位差根因，f918 实录）。
+    let rn = mem.read_ram(0x005A);
+    if rn != 0xFF && rn < 0xF0 {
+        mem.iter_bogged(2);
+    }
     crate::frame::mainloop::setup_room(mem);
     if mem.read_ram(0x005A).wrapping_add(1) != 0 {
         return; // RoomNumber≠FF：装载任务未竟
