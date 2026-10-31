@@ -70,3 +70,23 @@ python3 tools/scenario_run.py run cases/case-morphball-probe.txt --timeout 300
    正解=`[(c['frame'],c['tag']) for c in plan['captures']]`。
 2. cases 加用例漏 `sample_point spin-exit` ⇒ emu 腿 endFrame 缝（F1 缝错位重演）。
 3. 对比脚本 None/0 判等：emu 缺行 None vs rust 0 会误报分歧——分叉判定须双侧非 None。
+
+## 6. 墙顶角 1px 根因定位（2026-10-31——速度字节铁证）
+
+watch 扩展（0309 SpeedX_I/0313 SpeedX_F）后双腿对比——**角部 1px=空中漂移速度模型缺失**：
+
+| 帧 | emu speedX | rust speedX | x |
+|---|---|---|---|
+| f1150-1163（贴墙跳上，左推被墙挡） | **$FE.E0（−1.125px/f 保持）** | **$00.00（清零）** | 4 恒 |
+| f1164（角部释放） | $FE.E0 ⇒ 走 1px（x=3） | $00.00 ⇒ 走 2px（x=2，自有步进） | 分歧 |
+| f1165+（过墙顶） | $FE.E0 ⇒ 1px/f | $00.00 ⇒ 1px/f（偶 2px） | 回同步 |
+
+- emu：跳跃横漂**保持速度字节**（被墙挡住不清零——asm 的速度清零属地面停走径
+  StopHorizontalMovement；空中径保持），角部释放帧按保持速度走 1px。
+- rust：跳跃横漂**不写速度字节**（$0309/$0313 恒 00），横移=自有固定步进（2px/f），
+  释放帧步进相位与 emu 错 1px ⇒ 角部 1px 偏差（随即重同步——后续帧步进节奏巧合
+  对齐，长时漂移面仍会累积）。
+- **修法方向**：rust 跳跃横漂改写 \$0309/\$0313（空中漂移速度=asm 空中横控语义——
+  按住方向⇒速度趋向空中漂移上限 \$FE.E0=−1.125px/f，被挡不清零）；角部/长漂移
+  轨迹随之对齐。asm 锚：空中横控=MoveSamusLeft/Right 同径（E626/E6A2）+速度清零
+  仅地面（check_stop_horz_mvmt 的 SAMUS_ACCEL_Y 早退 rust 已有——缺的是速度写入面）。

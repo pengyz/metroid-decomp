@@ -17,6 +17,8 @@ watch 00FD ScrollX
 watch 0300 SamusStatus
 watch 030D SamusY
 watch 030E SamusX
+watch 0309 SpeedX_I
+watch 0313 SpeedX_F
 watch_range 6878-6878 gear
 watch_range 0748-0757 powerups  # PowerUps 双槽（type/y/x/hi——$0748/$0750）
 watch 0109 PowerUpDelayFlag
