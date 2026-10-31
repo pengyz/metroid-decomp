@@ -1945,17 +1945,17 @@ fn uw_collision_detection(mem: &mut crate::frame::FrameMemory) {
                 // 螺旋转（IsScrewAttackActive——carry clear=active）⇒不伤萨姆斯
                 let screw = crate::samus::physics::is_screw_attack_active(mem);
                 if !screw {
-                    mem.write_ram(0x010F, 0x80); // SamusHurt010F（cosmetic——asm「never read」）
-                    mem.write_ram(crate::ram_map::SAMUS_INVINCIBLE_DELAY, 0x32); // i 帧 50
-                    // LF306：AreaEnemyDamage（01:95CE=**$0080**（Brinstar——区表））→HealthChange
+                    mem.write_ram(0x010F, 0x80); // SamusHurt010F（cosmetic）
+                    mem.write_ram(crate::ram_map::SAMUS_INVINCIBLE_DELAY, 0x32);
                     mem.write_ram(0x006E, 0x80);
                     mem.write_ram(0x006F, 0x00);
-                    // 【击退根修（goal-轮5 自跑实证：金跳起瞬 st=2+spX=1=LF270 击退径/我恒 0）
-                    // 】SetSamusIsHitByEnemy（LF270 族）：isHit($030A)←$30|向位（bit3=向右）
-                    // ——check_health_status 受击径（CDFA）读 isHit&$20 触发击退（speedY=$FD
-                    // +AccelY=$38+knockback）——旧形未置 isHit⇒击退链永不发。
-                    let dir_bits = if ex > sx { 0x08u8 } else { 0x00 }; // 敌在右⇒推向右
+                    // 【goal-轮16 击退 X 推根修（自跑实证：金 x 200→214 推离/我恒 196——
+                    // y 同 ✓ X 缺）】LF270 击退 X 推：敌在左⇒推右（speedX=$02）/敌在右
+                    // ⇒推左（$FE）——离敌推（碰撞伤→击退力族）。
+                    let dir_bits = if ex > sx { 0x08u8 } else { 0x00 };
                     mem.write_ram(crate::ram_map::SAMUS_IS_HIT, 0x30 | dir_bits);
+                    let push = if ex > sx { 0x02u8 } else { 0xFE }; // 推离敌
+                    mem.write_ram(0x0309, push); // Samus.speedX（击退 X 推）
                 }
             }
         }
