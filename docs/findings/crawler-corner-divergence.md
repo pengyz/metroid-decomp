@@ -213,3 +213,15 @@ asm（DistToCenterY/X 符号、+8 块距）；mutation 测=跨块 radius 单点�
 > 终态（matched-seam）：行集 emu_only=∅/rust_only={960 截断伪影}；**enemy45 32B×943
 > 帧全同**；FC/TD/T3/MR/SS/SX/SY/SCX 8 字段×943 帧全同；fcprobe 5 字段×445 帧全同。
 > 爬虫激活时机+行走路径+冻结窗三面全部闭合——本案（r9 爬虫差分）终局。
+
+> 【2026-10-31 verifier 复核轮（verdict=pass）+新缺口落账】两修（1b873141+1120871a）
+> 全部 scoped 主张独立重导通过（asm 锚/载房链/冻结窗 FC-TD 表/终态 0 分歧/机制理解）。
+> 勘误两处：①WORLD_MAP 索引=[450]=0x09/[451]=0x14（前档 [451]=0x09 差一位——运行时
+> 插桩 rn=0x14=[451] 自洽）；②「TD 冻 9」精确形=f915 TD=0→装载 9 被冻窗推迟至 f918。
+> **新缺口（D7 登记——EnsExtra 动画机残差，另案清偿）**：emu watch enemy45 尾部实为
+> 128B EnsExtra 拼接（Lua readRange 钩 $6AF4-$6B73）——对读 rust wram[0xAF4:0xB74]：
+> slot4 f797 单帧 anim 初写序差+f814 起 resetAnimIndex/animIndex 序列分歧（emu 3e/3f/40
+> 循环 vs rust 恒 35/36/37）+jumpDsplcmnt(+D) 倒计数（emu ff→…/rust 恒 00）；slot5
+> f813 起同形；slot2 f919 起（rust 重载敌 f925 转 Active vs emu 恒 Resting）。起点早于
+> 冻结窗 ⇒ 与两修无关的独立面（敌 anim 机/倒计数器未收口）；主 ZP/RAM 面判定不受影响。
+> watch 改名/去重工具债再次证实（本次复核第一轮对读亦中招）。
