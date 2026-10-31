@@ -1487,7 +1487,7 @@ fn enemy_check_move_up(mem: &mut crate::frame::FrameMemory, x: u8) -> bool {
 /// EnemyCheckMoveDown（**asm 内容锚** `: 07:E77B`——r26）：底块判。
 /// EnemyCheckMoveDown（**asm 内容锚** `: 07:E77B`→同上 x 全距走环——r9 转向族修）：
 /// staging distY=0−ry（两位补码）⇒探行=y−(−ry)=y+ry（进入块下块）。
-fn enemy_check_move_down(mem: &mut crate::frame::FrameMemory, x: u8) -> bool {
+pub(crate) fn enemy_check_move_down(mem: &mut crate::frame::FrameMemory, x: u8) -> bool {
     let y = mem.read_ram(0x0400 + x as u16 + 0);
     let ry = mem.read_wram(0x6AF4 + x as u16 + 1);
     let xpos = mem.read_ram(0x0400 + x as u16 + 1);

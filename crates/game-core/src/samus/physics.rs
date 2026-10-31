@@ -125,6 +125,36 @@ pub fn vert_accelerate(mem: &mut FrameMemory) {
 mod tests {
     use super::*;
 
+    /// 【goal-轮8】爬虫探径几何钉（发散窗 f1005 实况复现——x=199/ry=8/rx=8）：
+    /// 外角探（下移）在 (199,40) 应**被固实列挡**（span 3 列含固实）⇒不转角。
+    #[test]
+    fn crawler_probe_blocked_by_solid_column() {
+        use super::vertical_span_cols;
+        let (left, n) = vertical_span_cols(199, 8);
+        assert_eq!(left, 191);
+        assert_eq!(n, 3, "span 3 列（191/199/207→col 23/24/25）");
+        // 实况瓦：col 23=FF/col 24=FF/col 25=固实（柱）⇒检应 block
+        let mut m = FrameMemory::default();
+        for a in 0x6000u16..0x6400 {
+            m.write_wram(a, 0xFF);
+        }
+        // col 25 瓦（row 6（y=48））置固实
+        let idx = ((48u16 & 0xF8) << 2) | 25;
+        m.write_wram(0x6000 + idx, 0x0F);
+        m.write_ram(0x030D, 40);
+        m.write_ram(0x030E, 199);
+        m.write_ram(crate::ram_map::SAMUS_RADIUS_Y, 8);
+        m.write_ram(crate::ram_map::SAMUS_RADIUS_X, 8);
+        m.write_ram(crate::ram_map::SAMUS_HI, 0);
+        // 敌形（EnsExtra 槽 0）走 enemy_check_move_down
+        m.write_ram(0x0400, 40);
+        m.write_ram(0x0401, 199);
+        m.write_wram(0x6AF4 + 1, 8);
+        m.write_wram(0x6AF4 + 2, 8);
+        m.write_wram(0x6AF4 + 7, 0);
+        assert!(!crate::frame::mainloop::enemy_check_move_down(&mut m, 0), "固实列应挡探径");
+    }
+
     /// 坐标热件（纯寄存器面——wrap 语义）。
     #[test]
     fn coordinate_helpers_wrap() {
