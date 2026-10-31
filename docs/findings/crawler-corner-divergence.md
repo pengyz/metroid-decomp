@@ -236,3 +236,14 @@ asm（DistToCenterY/X 符号、+8 块距）；mutation 测=跨块 radius 单点�
 > 终态：**enemy45 全 160B（Ens+EnsExtra）×943 帧逐字节全同**——anim 序列/jD 倒计数/
 > slot2 恒 Resting 三症状全清；8 字段+fcprobe 不变全同；gates 13/13。watch 拼接面
 > （enemy45=Ens 32B+EnsExtra 128B）自此全额入账。
+
+> 【2026-10-31 verifier 复核轮②（verdict=pass）+499ac1ad 角部勘误+既有缺口登记】
+> 三修 asm 锚/终态 160B 全同/机制抽验（f797 bit6 门+f814 reorient 链+slot2 恒 Resting
+> 形）全部独立重导通过；纵房异名表径 u16/8-bit wrap 角差已修（wrapping_add——正常
+> 半径不可达，位精确对齐）。**既有结构缺口登记（D7 续——另案清偿，均有 asm A 级锚）**：
+> ① caller 门 status<2 应为 status<3（asm F351-F35F 对 Active(2) 也 fresh 检——rust
+>   不可见 Active 敌持续跑 AI vs asm 跳过；改前需专轮验证面）；
+> ② draw 路语义：asm DrawEnemy 直调 IsObjectVisible 逐帧 fresh 重评+清 bit1（无 bit1
+>   早退、空帧不闩）——rust bit1 粘滞+空帧先闩，"可见→不可见"迁移敌分歧窗；
+> ③ DOWN 一像素移动离屏径：rust 底界=$00 wrap 不回滚 vs asm 底界=$EF 换名表+dec 回滚。
+> watch 工具债续：case 计划 `watch 00FE` 实为 PPUMASK_ZP（真 ScrollDir=$49）。

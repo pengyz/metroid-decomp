@@ -463,7 +463,9 @@ fn enemy_check_if_visible(mem: &mut crate::frame::FrameMemory, x: u8) -> bool {
             return false; // bcs LE01A
         }
         let sy2 = screen_y.wrapping_sub(16); // sbc #$0F（C=0 ⇒ −16）
-        return (rx as u16 + sy2 as u16) < 0xF0; // cmp #$F0/bcc=可见
+        // asm `clc/adc` 8-bit 和会回绕（cmp 按回绕值判）——verifier 复核角部勘误（正常
+        // 半径不可达，位精确对齐）。
+        return rx.wrapping_add(sy2) < 0xF0; // cmp #$F0/bcc=可见
     }
     if !carry {
         return false; // bcc LE01A
