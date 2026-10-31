@@ -90,3 +90,19 @@ watch 扩展（0309 SpeedX_I/0313 SpeedX_F）后双腿对比——**角部 1px=�
   按住方向⇒速度趋向空中漂移上限 \$FE.E0=−1.125px/f，被挡不清零）；角部/长漂移
   轨迹随之对齐。asm 锚：空中横控=MoveSamusLeft/Right 同径（E626/E6A2）+速度清零
   仅地面（check_stop_horz_mvmt 的 SAMUS_ACCEL_Y 早退 rust 已有——缺的是速度写入面）。
+
+## 7. 修复模型定稿（2026-10-31——int_x 积分器语义破译）
+
+rust **已有**完整积分器 `horz_integrate`/`int_x`（integrators.rs:147——speed_i/f+subpix
+三态+accel 积分+limit 钳制+disp 输出），**跳跃径未接线**（自有 2px 固定步进）。
+
+- **limit 编码破译**：max_src=$12 ⇒ lim=$0120=1.125px/f（空中漂移上限=$FE.E0 ✓实测）；
+  max_src=$18 ⇒ $0180=1.5px/f（地面走跑上限）——与 SetSamusJump 的 $18/$12 同族数值
+  （gr_HIGHJUMP 分支 ldy #$18/#$12——asm D002 区）。
+- **accel 字节**：$D0（左）/？（右）——frac 每帧 −0x30（实测 D0→A0→70 递减序列）。
+- **修复接线**（跳跃空中径）：D055 已写 $0309←方向（在）→ 接 `horz_integrate`
+  （accel=$D0/max=$12 写 $0315/max 变量）→ 按 out.disp 位移（替换固定步进）→
+  solid_entity_response 的 accelX 此时=$D0（负）⇒ 贴墙早退不清零（速度保持 ✓）→
+  落地清零径已有。被挡帧积分照常（速度保持上限）✓。
+- **验收**：case-morphball-probe 墙跳窗 f1131-1180 逐帧（速度字节+位置）+角部
+  f1164 消歧+全程 matched-seam；crawlprobe 回归（地面径不动）。
