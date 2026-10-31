@@ -1017,9 +1017,13 @@ fn skree_ai(mem: &mut crate::frame::FrameMemory, x: u8) {
         mem.write_wram(0x6AF4 + x as u16 + 13, 0x3A);
     }
     // 坠落/落地径（SkreeExit_Active（:56-60）：anim 2+移动）——
-    // 【L977B=Skree %00000100（bit6=0）⇒**字符串径**（非加速！）】EnemyGetDeltaY（$8244
-    // ——movementIndex+instr 字符串走表）——movementIndex 初值=EnemyMovementChoice RNG
-    // 选播（prg7:11428-11450——随件：现 0 起步）。
+    // 【对抗复核收敛⑤（2026-11-01）】EnemyMove 双门（areas_common:115-123 逐字）：
+    // ①data05 bit6=30fps 门（`lda data05/asl/bmi`——置⇒**跳过移动**）②status==Active(2)
+    // 门（`lda status/cmp #2/bne RTS`）——两门不过⇒只 anim+draw（无位移）。
+    let d05 = mem.read_ram(0x0400 + x as u16 + 5);
+    let st_now = mem.read_wram(0x6AF4 + x as u16);
+    let gates_ok = (d05 & 0x40) == 0 && st_now == 2;
+    if gates_ok {
     let type_ = mem.read_wram(0x6AF4 + x as u16 + 14) & 0x3F;
     let d05 = mem.read_ram(0x0400 + x as u16 + 5);
     let mov_idx = mem.read_ram(0x0400 + x as u16 + 8); // movementIndex=+8（复核正——ROM BD 08 04）
@@ -1074,6 +1078,7 @@ fn skree_ai(mem: &mut crate::frame::FrameMemory, x: u8) {
         }
         mem.write_ram(0x0400 + x as u16 + 1, xx);
     }
+    } // 门径尾（gates_ok）
     update_enemy_anim(mem, x, 2);
     update_enemy_common_no_move_no_anim(mem, x);
 }
