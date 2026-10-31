@@ -193,8 +193,8 @@ mod tests {
         m.write_ram(0x030A, 0x20); // 受击（hit 标志）
         m.write_ram(crate::ram_map::SAMUS_KNOCKBACK_IS_BOMB, 0);
         let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| check_health_status(&mut m)));
-        assert!(r.is_err()); // IsSamusDead/Beep 链桩
-        assert_eq!(m.read_ram(SAMUS_INVINCIBLE_DELAY), 0x32);
+        assert!(r.is_ok(), "受击径全通（CE25 记账化（碰撞爆点收口））: {:?}", r.err()); // IsSamusDead/Beep 链=占位臂
+        assert_eq!(m.read_ram(SAMUS_INVINCIBLE_DELAY), 0x31, "置 $32 同调用 Lx006 递减（asm 形）");
         assert_eq!(m.read_ram(SAMUS_KNOCKBACK_DIR), 0xFF);
         assert_eq!(m.read_ram(SAMUS_SPEED_Y_I), 0xFD);
         assert_eq!(m.read_ram(SAMUS_ACCEL_Y), 0x38);
@@ -202,7 +202,7 @@ mod tests {
         let mut m = FrameMemory::default();
         m.write_ram(SAMUS_INVINCIBLE_DELAY, 3);
         let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| check_health_status(&mut m)));
-        assert!(r.is_err()); // CheckHealthBeep 桩
+        assert!(r.is_ok(), "倒数径全通（CheckHealthBeep 记账化）: {:?}", r.err());
         assert_eq!(m.read_ram(SAMUS_INVINCIBLE_DELAY), 2); // 倒数先行
     }
 
@@ -641,7 +641,9 @@ pub fn samus_collision_with_solid_entities(mem: &mut FrameMemory) {
     loop {
         let status = mem.read_wram(0x6AF4 + x as u16);
         if status == 4 {
-            crate::unported!("bank07:D983"); // 冻结敌几何族（F1FA 族随拼装——空径不达）
+            // 【碰撞爆点收口同族】冻结敌几何族（D983——F1FA 族随拼装）=占位臂记账
+            // （冰冻弹命中→站敌顶/电梯旗面深件随件）——碰撞径保持可跑。
+            crate::frame::DIVERGENCES.with(|d| d.borrow_mut().push(0x0D983));
         }
         if x == 0 {
             break;
@@ -883,7 +885,10 @@ pub fn check_health_status(mem: &mut FrameMemory) {
         }
         mem.write_ram(SAMUS_SPEED_Y_I, 0xFD); // 击退上抛
         mem.write_ram(SAMUS_ACCEL_Y, 0x38); // 击退重力
-        crate::unported!("bank07:CE25"); // IsSamusDead/CheckHealthBeep 链
+        // 【碰撞爆点收口（2026-11-01 用户报「碰撞直接触发 unsupport」——isHit($30) 下帧
+        // 引爆本桩！）】IsSamusDead/CheckHealthBeep（CE25 链）=占位臂记账（死亡链/低血
+        // 蜂鸣深件随件）——碰撞伤害面（击退+i 帧+扣血）保持可跑（playability 底座）。
+        crate::frame::DIVERGENCES.with(|d| d.borrow_mut().push(0x0CE25));
     }
     // Lx006：无敌倒数（i-frames 帧驱动击退衰减）
     let delay = mem.read_ram(crate::ram_map::SAMUS_INVINCIBLE_DELAY);
@@ -891,7 +896,9 @@ pub fn check_health_status(mem: &mut FrameMemory) {
         mem.write_ram(crate::ram_map::SAMUS_INVINCIBLE_DELAY, delay - 1);
         let dir = mem.read_ram(crate::ram_map::SAMUS_KNOCKBACK_DIR);
         if dir.wrapping_add(1) != 0 {
-            crate::unported!("bank07:CE52"); // 击退 X 速衰减面（Adiv16 族——随件）
+            // 【碰撞爆点收口同族】击退 X 速衰减面（CE52——Adiv16 族）=占位臂记账
+            // （碰撞/击退径保持可跑——深件随件）。
+            crate::frame::DIVERGENCES.with(|d| d.borrow_mut().push(0x0CE52));
         }
     }
     check_health_beep(mem); // CE66（低血蜂鸣——r26 端口）
