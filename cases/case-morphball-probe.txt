@@ -27,12 +27,19 @@ watch 0109 PowerUpDelayFlag
 press 310 start     # 标题（与 crawlprobe 同相）
 press 350 start     # 选单 START GAME
 capture 420 game-in
-hold 450-1420 left  # 连续左推全程（墙顶→坑）
-hold 1130-1185 a    # 全高跳越高墙（y 193→112，落坑沿 (244,113)）
+hold 450-1420 left  # 连续左推全程（走廊→墙→坑沿）
+hold 1130-1185 a    # 全高跳越高墙（y 193→110，落坑沿 (244,113)）
+capture 1128 wall-takeoff  # ── 跳墙序列 0.2s/12 帧 ──
+capture 1140 wall-rise1
+capture 1152 wall-rise2
+capture 1164 wall-top      # 角部时刻（x 回绕帧）
+capture 1176 wall-over
+capture 1188 pit-land
+capture 1200 wall-jump     # ── 结束 ──
 hold 1240-1295 a    # 二段跳（坑沿→坑内 (68,177)）
+capture 1300 pit
 hold 1420-1500 right # 右走回球位（x 68→104）
 hold 1500-1560 a     # 球位全高跳（触摸拾取）
-capture 1300 pit
 capture 1560 ball-jump
 capture 1650 after-pickup
 endFrame 1700
