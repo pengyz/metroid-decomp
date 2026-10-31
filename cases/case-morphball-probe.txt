@@ -1,0 +1,34 @@
+# 变形球专项探针（r9 收尾轮——用户实测三问：左侧球位跳入/能力获取/变形滚动）：
+# 真实路线（无 fixture）：出生点向左→左门过渡→球房(图 2,14)→跳入凹室→拾取 Maru Mari
+# →形态（down）→滚行。判据：双腿 matched-seam 逐帧全同（Samus 面+gear+门/房状态）。
+name case-morphball-probe
+frames 1500
+snapshot none  # 上电起跑（与 crawlprobe 同相）
+
+watch 002D FC
+watch 002C Timer3
+watch 0029 TimerDelay
+watch 001E MainRoutine
+watch 005A RoomNumber
+watch 0050 MapPosX
+watch 0056 DoorEntry
+watch 00FD ScrollX
+watch 0300 SamusStatus
+watch 030D SamusY
+watch 030E SamusX
+watch_range 6878-6878 gear
+watch_range 0748-0757 powerups  # PowerUps 双槽（type/y/x/hi——$0748/$0750）
+watch 0109 PowerUpDelayFlag
+
+press 310 start     # 标题（与 crawlprobe 同相）
+press 350 start     # 选单 START GAME
+capture 420 game-in
+hold 450-1130 left  # 连续左走（开口扫掠）
+press 830 a         # 扫掠跳 1（x≈89）
+press 870 a         # 扫掠跳 2（x≈75）
+press 910 a         # 扫掠跳 3（x≈61）
+press 950 a         # 扫掠跳 4（x≈47）
+press 990 a         # 扫掠跳 5（x≈33）
+press 1030 a        # 扫掠跳 6（x≈19）
+capture 1100 sweep-done
+endFrame 1200
