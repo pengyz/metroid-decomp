@@ -222,21 +222,46 @@ pub fn update_all_power_ups(mem: &mut FrameMemory) -> Option<u8> {
 }
 
 /// AreObjectsTouching（DC7F——X 槽 0（Samus）/Y 槽 $40（PowerUpDraw)）：
-/// **房距径**（F1A7 半径和+F1FA 判盒——hi 差折入 x 距（±256 房距）而非等值拒）：
-/// |Δy|<radiusY 和∧|Δx(+hi 差×256)|<radiusX 和。
+/// **屏距径**（渲染同构：屏位=x−ScrollX（hi 只进可见门不进位距））：
+/// |Δy|<radiusY 和∧|Δx|<radiusX 和（F1A7 半径和（Objects[x].radius+Objects[y].radius）
+/// +F1FA 判盒）。
+/// > 【2026-10-31 bug 报修更正】旧形 hi 差折 ±256⇒dx 恒 256+⇒**触碰永不触发**
+/// > （用户报「碰撞变形球物品后无法吃到」根因）——渲染径屏位=纯 x 差（hi 仅可见门），
+/// > 触碰同径（物 hi=1/人 hi=0 但同屏可视=屏距直比）。
 fn are_objects_touching(mem: &FrameMemory) -> bool {
     let sy = mem.read_ram(0x030D);
     let sx = mem.read_ram(0x030E);
-    let shi = mem.read_ram(0x030C) & 1;
     let iy = mem.read_ram(POWERUP_DRAW_BASE + 0x0D);
     let ix = mem.read_ram(POWERUP_DRAW_BASE + 0x0E);
-    let ihi = mem.read_ram(POWERUP_DRAW_BASE + 0x0C) & 1;
     let ry = mem.read_ram(0x0301) as u16 + mem.read_ram(POWERUP_DRAW_BASE + 0x01) as u16;
     let rx = mem.read_ram(0x0302) as u16 + mem.read_ram(POWERUP_DRAW_BASE + 0x02) as u16;
-    // 房距 x（hi 差折 ±256——F1FA 名表差面）：同房 x 直比/跨房 x±256。
-    let sx_room = sx as u16 + (shi as u16) * 256;
-    let ix_room = ix as u16 + (ihi as u16) * 256;
     let dy = (sy as i16 - iy as i16).unsigned_abs() as u16;
-    let dx = (sx_room as i16 - ix_room as i16).unsigned_abs() as u16;
+    let dx = (sx as i16 - ix as i16).unsigned_abs() as u16;
     dy < ry && dx < rx
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// 触碰判（屏距径——bug 报修回归锚（hi 差不折距））：同屏近距⇒触；hi 差仍触（同屏）。
+    #[test]
+    fn touching_fires_regardless_of_nametable_hi() {
+        let mut m = FrameMemory::default();
+        m.write_ram(0x030D, 152); // Samus y
+        m.write_ram(0x030E, 100); // x
+        m.write_ram(0x0301, 15); // radiusY
+        m.write_ram(0x0302, 4);
+        m.write_ram(POWERUP_DRAW_BASE + 0x0D, 152); // item y（同高）
+        m.write_ram(POWERUP_DRAW_BASE + 0x0E, 102); // x（2px 距）
+        m.write_ram(POWERUP_DRAW_BASE + 0x01, 3);
+        m.write_ram(POWERUP_DRAW_BASE + 0x02, 3);
+        // hi 差（物=1/人=0）——旧形折 ±256⇒不触；正解=同屏直比
+        m.write_ram(0x030C, 0);
+        m.write_ram(POWERUP_DRAW_BASE + 0x0C, 1);
+        assert!(are_objects_touching(&m), "同屏近距应触（hi 差不折距）");
+        // 远距不触
+        m.write_ram(POWERUP_DRAW_BASE + 0x0E, 200);
+        assert!(!are_objects_touching(&m), "远距不触");
+    }
 }
