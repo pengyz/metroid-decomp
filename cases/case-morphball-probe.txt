@@ -17,6 +17,8 @@ watch 00FD ScrollX
 watch 0300 SamusStatus
 watch 030D SamusY
 watch 030E SamusX
+watch 0308 SpeedY_I
+watch 0312 SpeedY_F
 watch 0309 SpeedX_I
 watch 0313 SpeedX_F
 watch 0311 SubPixX
@@ -38,8 +40,12 @@ capture 1188 pit-land
 capture 1200 wall-jump     # ── 结束 ──
 hold 1240-1295 a    # 二段跳（坑沿→坑内 (68,177)）
 capture 1300 pit
-hold 1420-1500 right # 右走回球位（x 68→104）
-hold 1500-1560 a     # 球位全高跳（触摸拾取）
-capture 1560 ball-jump
+hold 1420-1520 right # 右走进坑（x=80-95 洞，落 y=193 坑底）顶到基座壁 x=96
+hold 1500-1570 right # 坑内全高跳+右漂（跳上基座顶 y=160——用户第三级）
+hold 1502-1558 a     # （与右同按）
+capture 1460 pit-fall # 落坑
+capture 1520 pit-jump # 坑内起跳
+capture 1560 ball-jump # 基座顶/触球窗
+capture 1620 on-pedestal
 capture 1650 after-pickup
 endFrame 1700
