@@ -809,9 +809,10 @@ fn enemy_react_to_projectile(mem: &mut crate::frame::FrameMemory, x: u8) {
     mem.write_ram(0x0400 + px + 0x0C, psc | sa); // `ora Temp0A/sta prevStatus`（Lx321）
     let wa = mem.read_ram(0x0400 + px + 0x0E); // weaponAction
     let miniboss = sa & 0x40 != 0;
-    // 冰冻臂（IceBeam=wa 2（audit 形）+非 miniboss+非冻）——status 4=冻结
+    // 冰冻臂（IceBeam=wa 3（constants.asm:104！旧形误 2=Wave）+非 miniboss+非冻）
+    // ——status 4=冻结
     let st = mem.read_wram(0x6AF4 + px); // EnsExtra.status
-    if wa == 2 && !miniboss && st != 4 {
+    if wa == 3 && !miniboss && st != 4 {
         mem.write_wram(0x6AF4 + px, 4); // status←Frozen
         mem.write_ram(0x0400 + px + 0x0D, 0x40); // data0D←$40（冻计时）
         mem.write_ram(e4, 0); // isHit 清
@@ -834,7 +835,7 @@ fn enemy_react_to_projectile(mem: &mut crate::frame::FrameMemory, x: u8) {
     mem.write_wram(0x6AF4 + px, 6);
     mem.write_ram(0x0400 + px + 0x0F, if miniboss { 0x03 } else { 0x0A });
     // HP dec（波=2/束=1（Lx324/325））⇒0⇒爆
-    let dec = if wa == 4 { 2u8 } else { 1u8 }; // wa_WaveBeam=4（audit 形）
+    let dec = if wa == 2 { 2u8 } else { 1u8 }; // wa_WaveBeam=2（constants.asm:103！旧形误 4）
     let nhp = hp.wrapping_sub(dec);
     mem.write_ram(0x0400 + px + 0x0B, nhp);
     mem.write_ram(e4, 0);
@@ -1685,9 +1686,54 @@ fn uw_all_doors(_mem: &mut crate::frame::FrameMemory) {}
 /// UpdateAllTileBlasts（瓦片爆/复原——空态跳过）。
 fn uw_tile_blasts(_mem: &mut crate::frame::FrameMemory) {}
 
-/// CollisionDetection（实体碰撞——SamusCollisionWithSolidEntities 已在 physics 链！）。
-fn uw_collision_detection(_mem: &mut crate::frame::FrameMemory) {
-    // 碰撞主体已在 lava_and_move_check 链（samus_collision_with_solid_entities D976！）
+/// CollisionDetection（**asm 内容锚** Lx269（F09D）:9970-10004 敌×弹环——**击杀链接
+/// 线**（用户报「无法被子弹击杀」根因：本件原为 stub！））：每敌（status≠0∧≠Explode(3)
+/// ∧≠Pickup(5)）×每弹（status∈{1,2,3,7,0A,0B}（asm 过滤 :9991-10000））→判盒
+/// （F140：半径和（EnsExtra+Objects）+屏距）→F2CA（弹 status→weaponAction+弹 isHit 位
+/// +敌 isHit 标志）→下帧 EnemyReactToSamusProjectile（F536——伤害/爆亡 ✓已端口）。
+/// 注：SamusCollisionWithSolidEntities（D976）在 physics 链（不动）。
+fn uw_collision_detection(mem: &mut crate::frame::FrameMemory) {
+    for s in 0..5u16 {
+        let x = s * 16; // 字节偏移约定（Ens/EnsExtra 步距 16）
+        let st = mem.read_wram(0x6AF4 + x);
+        if st == 0 || st == 3 || st == 5 {
+            continue; // 空/爆中/Pickup（:9975-9986）
+        }
+        for py in [0x03D0u16, 0x03E0, 0x03F0] {
+            let pstat = mem.read_ram(py);
+            // asm 弹型过滤（:9991-10000）：<wa_BulletExplode(4)（1/2/3=束族）∨7∨0A∨0B
+            if !matches!(pstat, 1 | 2 | 3 | 7 | 0x0A | 0x0B) {
+                continue;
+            }
+            // 判盒（F140——半径和+屏距（拾取触碰同构：屏位纯差））
+            let ey = mem.read_ram(0x0400 + x + 0) as i16;
+            let ex = mem.read_ram(0x0400 + x + 1) as i16;
+            let ery = mem.read_wram(0x6AF4 + x + 1) as i16;
+            let erx = mem.read_wram(0x6AF4 + x + 2) as i16;
+            let py_y = mem.read_ram(py + 0x0D) as i16;
+            let py_x = mem.read_ram(py + 0x0E) as i16;
+            let pry = mem.read_ram(py + 1) as i16;
+            let prx = mem.read_ram(py + 2) as i16;
+            let dy = (ey - py_y).unsigned_abs() as i16;
+            let dx = (ex - py_x).unsigned_abs() as i16;
+            if dy >= ery + pry || dx >= erx + prx {
+                continue; // 未触碰（carry 置⇒F2CA bcs Lx293）
+            }
+            // ==== F2CA 命中面（:10391-10407）====
+            mem.write_ram(0x0400 + x + 0x0E, pstat); // weaponAction←弹 status
+            mem.write_ram(py + 0x0A, mem.read_ram(py + 0x0A) | 0x20); // 弹 isHit（SetSamusProjectileIsHit）
+            // GetEnemyIsHitFlags（方向位：bit5=被武器/bit4=自顶/bit3=自左——简化形）→or isHit
+            let mut flags = 0x20u8;
+            if ey < py_y {
+                flags |= 0x10;
+            }
+            if ex < py_x {
+                flags |= 0x08;
+            }
+            let cur = mem.read_ram(0x0400 + x + 4);
+            mem.write_ram(0x0400 + x + 4, cur | flags);
+        }
+    }
 }
 
 /// DisplayBar（**asm 内容锚** `DisplayBar: ; 07:E0C1`——HUD 精灵动态面，全径端口）：
@@ -3021,6 +3067,47 @@ mod tests_kill_chain {
         update_enemy_pickup(&mut m, x);
         assert_eq!(m.read_wram(crate::ram_map::MISSILE_COUNT), 8, "+5 弹");
         assert_eq!(m.read_wram(0x6AF4 + x as u16), 0, "槽释");
+    }
+
+    /// 【击杀链接线】碰撞环（uw_collision_detection）：弹到位→命中标志→F536 扣血→爆。
+    #[test]
+    fn collision_ring_links_bullet_to_kill() {
+        let mut m = FrameMemory::default();
+        let x = 0x40u8;
+        m.write_wram(0x6AF4 + x as u16, 2); // status=Active
+        m.write_wram(0x6AF4 + x as u16 + 14, 5); // type=5
+        m.write_wram(0x6AF4 + x as u16 + 1, 8); // radiusY
+        m.write_wram(0x6AF4 + x as u16 + 2, 8); // radiusX
+        m.write_ram(0x0400 + x as u16 + 0, 0x50); // 敌 y
+        m.write_ram(0x0400 + x as u16 + 1, 0x80); // 敌 x
+        m.write_ram(0x0400 + x as u16 + 0x0B, 1); // health=1
+        // 弹（$03D0）：wa 1（RegularBeam）+同位
+        m.write_ram(0x03D0, 1);
+        m.write_ram(0x03D0 + 1, 4); // radiusY
+        m.write_ram(0x03D0 + 2, 4); // radiusX
+        m.write_ram(0x03D0 + 0x0D, 0x50); // 弹 y
+        m.write_ram(0x03D0 + 0x0E, 0x82); // 弹 x（2px 距）
+        // ①碰撞环⇒命中标志
+        uw_collision_detection(&mut m);
+        assert_eq!(m.read_ram(0x0400 + x as u16 + 4) & 0x20, 0x20, "敌 isHit bit5（被弹）");
+        assert_eq!(m.read_ram(0x0400 + x as u16 + 0x0E), 1, "weaponAction←弹 status");
+        // ②F536 伤害链⇒扣血⇒爆
+        enemy_react_to_projectile(&mut m, x);
+        assert_eq!(m.read_wram(0x6AF4 + x as u16), 3, "HP 0⇒爆（status3）");
+        // 远弹不触
+        let mut m2 = FrameMemory::default();
+        m2.write_wram(0x6AF4 + x as u16, 2);
+        m2.write_wram(0x6AF4 + x as u16 + 1, 8);
+        m2.write_wram(0x6AF4 + x as u16 + 2, 8);
+        m2.write_ram(0x0400 + x as u16 + 0, 0x50);
+        m2.write_ram(0x0400 + x as u16 + 1, 0x80);
+        m2.write_ram(0x03D0, 1);
+        m2.write_ram(0x03D0 + 1, 4);
+        m2.write_ram(0x03D0 + 2, 4);
+        m2.write_ram(0x03D0 + 0x0D, 0x50);
+        m2.write_ram(0x03D0 + 0x0E, 0xC0); // 远距
+        uw_collision_detection(&mut m2);
+        assert_eq!(m2.read_ram(0x0400 + x as u16 + 4) & 0x20, 0, "远弹不触");
     }
 }
 
