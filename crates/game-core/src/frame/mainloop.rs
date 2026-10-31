@@ -371,7 +371,7 @@ pub fn update_world(mem: &mut crate::frame::FrameMemory) {
         uw_enemy_explosions(mem); // 爆族
         uw_mellows(mem); // 虫族
         uw_en_projectiles(mem); // 敌弹族
-        uw_skree_projectiles(mem); // Skree 弹族
+        uw_skree_projectiles(mem); // Skree 弹族（dieDelay 生命周期——goal-轮7 件）
         uw_samus_enter_door(mem); // $8B13（过门检！）
         uw_all_doors(mem); // 门链
         uw_tile_blasts(mem); // 瓦片爆/复原
@@ -1764,11 +1764,11 @@ fn uw_enemy_explosions(_mem: &mut crate::frame::FrameMemory) {}
 /// UpdateAllMellows（虫族）。
 fn uw_mellows(_mem: &mut crate::frame::FrameMemory) {}
 
+/// UpdateAllTileBlasts（瓦片爆/复原——空态跳过）。
+fn uw_tile_blasts(_mem: &mut crate::frame::FrameMemory) {}
+
 /// UpdateAllEnProjectiles（敌弹族——槽空⇒跳过）。
 fn uw_en_projectiles(_mem: &mut crate::frame::FrameMemory) {}
-
-/// UpdateAllSkreeProjectiles（Skree 弹族）。
-fn uw_skree_projectiles(_mem: &mut crate::frame::FrameMemory) {}
 
 /// SamusEnterDoor（$8B13——过门检）：全径实现=physics::samus_enter_door（goal-r29）。
 fn uw_samus_enter_door(mem: &mut crate::frame::FrameMemory) {
@@ -1778,8 +1778,25 @@ fn uw_samus_enter_door(mem: &mut crate::frame::FrameMemory) {
 /// UpdateAllDoors（门链——槽空⇒跳过；门显示随件）。
 fn uw_all_doors(_mem: &mut crate::frame::FrameMemory) {}
 
-/// UpdateAllTileBlasts（瓦片爆/复原——空态跳过）。
-fn uw_tile_blasts(_mem: &mut crate::frame::FrameMemory) {}
+/// UpdateSkreeProjectiles（**asm 内容锚** `uw_skree_projectiles`（skree 弹族——dieDelay
+/// 倒数→清槽（弹寿 10 帧（skree.asm:39-41 `lda #$0A/sta dieDelay`））））：4 槽环
+/// （$A0-$AF（4B：dieDelay/y/x/hi））——dieDelay≠0⇒递减，归零⇒槽清（dieDelay←0 空标）。
+fn uw_skree_projectiles(mem: &mut crate::frame::FrameMemory) {
+    for yy in [12u16, 8, 4, 0] {
+        let base = 0x00A0u16 + yy;
+        let d = mem.read_ram(base);
+        if d == 0 {
+            continue; // 空槽
+        }
+        let nd = d.wrapping_sub(1);
+        mem.write_ram(base, nd);
+        if nd == 0 {
+            mem.write_ram(base + 1, 0);
+            mem.write_ram(base + 2, 0);
+            mem.write_ram(base + 3, 0); // 位姿清
+        }
+    }
+}
 
 /// CollisionDetection（**asm 内容锚** Lx269（F09D）:9970-10004 敌×弹环——**击杀链接
 /// 线**（用户报「无法被子弹击杀」根因：本件原为 stub！））：每敌（status≠0∧≠Explode(3)
