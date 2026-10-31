@@ -1181,7 +1181,13 @@ fn draw_enemy(mem: &mut crate::frame::FrameMemory, x: u8) {
         if fl == 0 || i >= fl as usize { 0 } else { eg::EN_FRAMES[fo as usize + i] }
     };
     let ctrl = blob(0);
-    mem.write_ram(0x006B, ctrl);
+    // 【X 形根修（2026-10-31 asm WriteSpriteRAM（DEE6）逐字）】$6B=**对象控制字节**
+    // （SetMirrorCntrlBit/敌 tough 面写）**非帧 ctrl**——旧形 `sta $6B=帧ctrl` 覆写
+    // +镜像映射交叉（bit6→0x80）⇒四精灵翻位成 X 形（金=星芒——贴图错根）。
+    // 正解：attr=Temp05 ^（ObjectCntrl bit4<<2 & HFLIP($40)）（asm :6324-6328）；
+    // 镜像面 Temp04=ctrl ^ 同源（GetSpriteCntrlData :5913-5920）。
+    let obj_mirror = mem.read_ram(0x006B) & 0x10; // bit4=水平镜像控制
+    let mirror_flags = if obj_mirror != 0 { 0x40u8 } else { 0 };
     let place_idx = ((ctrl & 0x0F) as usize).min(127);
     let (po, pl) = eg::EN_PLACE_OFFS[place_idx];
     let pblob = |i: usize| -> u8 {
@@ -1204,12 +1210,10 @@ fn draw_enemy(mem: &mut crate::frame::FrameMemory, x: u8) {
     loop {
         let b = blob(frame_i);
         if b < 0xFC {
-            let dy = crate::frame::sprite::place_disp(pblob(place_i), ctrl, true);
-            let dx = crate::frame::sprite::place_disp(pblob(place_i + 1), ctrl, false);
-            let flip = mem.read_ram(0x006B) & 0xC0;
-            let attr = cntrl05
-                ^ (if flip & 0x40 != 0 { 0x80 } else { 0 })
-                ^ (if flip & 0x80 != 0 { 0x40 } else { 0 });
+            let dy = crate::frame::sprite::place_disp(pblob(place_i), ctrl ^ mirror_flags, true);
+            let dx = crate::frame::sprite::place_disp(pblob(place_i + 1), ctrl ^ mirror_flags, false);
+            // WriteSpriteRAM（:6324-6328）：attr=Temp05 ^ (ObjectCntrl bit4→HFLIP)
+            let attr = cntrl05 ^ mirror_flags;
             let oy = (sy + dy as i16 - 1) as u8;
             let ox = (sx + dx as i16) as u8;
             mem.write_ram(0x0200 + x_sprite, oy);
