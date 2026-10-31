@@ -197,44 +197,126 @@ mod r25_oam_probe {
     }
 }
 
-/// DrawEnemy（$DD8B）端口：敌人槽→OAM 四元组（精灵生成面）
+/// DrawEnemy（$DD8B）真帧径（**贴图根修**（2026-10-31 用户截图定谳：占位 tile=0x01
+/// 人形帧≠真敌帧））：animFrame==FrameNone⇒ClearObjectCntrl；animFrame*2→
+/// EnFramePtrTable1/2（carry 选表（asm :6108-6121））→帧流环（DrawSpriteObject DF19
+/// 同构）→OAM。数据面=game_data::area::enemy_gfx（r26 烘焙：EN_FRAME_OFFS/EN_FRAMES
+/// +EN_PLACE_OFFS/EN_PLACES）。
 ///
-/// 保真边界：只做渲染面（精灵生成），敌人 AI/移动/碰撞/消灭留后续（deferred）。
-/// refs asm 锚：bank7:DD8B（DrawEnemy）/bank7:DDB0（DrawEnemy_NotBlank）/
-/// bank7:DCC3（GetSpriteCntrlData）/bank7:DF19（DrawSpriteObject）/bank7:DEE6（WriteSpriteRAM）
+/// 敌结构（constants_ram:85-149——A 级）：Ens=$0400 步距 16（y+0/x+1）；EnsExtra=$6AF4
+/// 步距 16（status+0/radiusY+1/radiusX+2/**animFrame+3**/animDelay+4/resetAnimIndex+5/
+/// animIndex+6/**hi+7**/type+14）。
 pub fn draw_enemy(mem: &mut crate::frame::FrameMemory, page_index: u8) {
-    let px = (page_index as u16) << 4; // 槽×16B
-    let blob = |a: u16| -> u8 { mem.read_ram(a) };
-    // DrawEnemy（$DD8B）：animFrame==FrameNone→ClearObjectCntrl
-    let anim_frame = blob(0x6AF4 + page_index as u16); // EnsExtra.0.animFrame
+    use game_data::area::enemy_gfx as eg;
+    let px = (page_index as u16) * 16; // 槽×16B（Ens/EnsExtra 同步距）
+    let blob_e = |a: u16| -> u8 { mem.read_ram(a) };
+    // DrawEnemy（$DD8B）：animFrame==FrameNone($FF)→ClearObjectCntrl
+    let anim_frame = blob_e(0x6AF4 + px + 3); // EnsExtra.0.animFrame
     if anim_frame == 0xFF {
-        // _id_FrameNone——ClearObjectCntrl（$DF2D）
         mem.write_ram(0x006B, 0);
         return;
     }
-    // DrawEnemy_NotBlank（$DDB0）：y/x/hi
-    let y = blob(0x0400 + px); // Ens.0.y
-    let x = blob(0x0401 + px); // Ens.0.x
-    let hi = blob(0x6AF4 + page_index as u16 + 6); // EnsExtra.0.hi（偏移需考证——先用邻位）
-    // 帧指针：animFrame*2→EnFramePtrTable1/2（bank 指针表——暂用近邻模式）
-    // TODO: 完整 EnFramePtrTable1/2 表结构（bank:addr 考证）
-    // GetSpriteCntrlData（$DCC3）：控制字节→place index + cntrl05
-    // TODO: 完整 GetSpriteCntrlData（控制字节 AABBXXXX 解）
-    // DrawSpriteObject（$DF19）帧流环（与 anim_draw_object 同构）
-    // TODO: 帧数据+place 数据（待表结构考证完）
-    // 保真边界：本 turn 先落骨架（animFrame 非 None 时写 OAM 占位——红→绿门径）
-    let screen_y = y.wrapping_sub(blob(0x00FF)); // ScrollY
-    let screen_x = x.wrapping_sub(blob(0x00FE)); // ScrollX
-    let visible = screen_y < 0xF0;
-    // 写 OAM 四元组（占位形——待帧数据接完改真）
-    let xs = mem.read_ram(0x005B) as u16; // SpritePagePos
-    if visible && xs + 4 <= 0x100 {
-        mem.write_ram(0x0200 + xs, screen_y.wrapping_sub(1)); // y
-        mem.write_ram(0x0201 + xs, 0x01); // tile（占位）
-        mem.write_ram(0x0202 + xs, 0x00); // attr（占位）
-        mem.write_ram(0x0203 + xs, screen_x); // x
-        mem.write_ram(0x005B, (xs + 4) as u8); // SpritePagePos 推进
+    // 帧指针（:6108-6121）：animFrame*2→表 1/2（carry=bit7 选表）——烘焙偏移表直映
+    let idx = (anim_frame & 0x7F) as usize + if anim_frame & 0x80 != 0 { 128 } else { 0 };
+    let (f0, flen) = eg::EN_FRAME_OFFS.get(idx).copied().unwrap_or((0, 0));
+    if flen == 0 {
+        mem.write_ram(0x006B, 0);
+        return;
     }
+    let fblob = |i: u16| -> u8 {
+        let o = f0 as usize + i as usize;
+        *eg::EN_FRAMES.get(o).unwrap_or(&0xFF)
+    };
+    // y/x/hi（:6096-6105——Ens/EnsExtra）
+    let y_pos = blob_e(0x0400 + px);
+    let x_pos = blob_e(0x0401 + px);
+    let hi = blob_e(0x6AF4 + px + 7); // EnsExtra.0.hi
+    let radius_x = blob_e(0x6AF4 + px + 2);
+    // GetSpriteCntrlData（DCC3）：ctrl=AABBXXXX
+    let ctrl_byte = fblob(0);
+    let mut cntrl05 = (ctrl_byte >> 4) & 0x03;
+    let flip = ctrl_byte & 0xC0;
+    cntrl05 |= flip | 0x20;
+    let obj_cntrl = mem.read_ram(0x006B);
+    let mut flip_flags = ctrl_byte;
+    if obj_cntrl & (0x40 >> 2) != 0 {
+        flip_flags ^= 0x40;
+    }
+    // 位件指针（:6124-6130）：(ctrl&$0F)*2→EnPlacePtrTable——烘焙偏移表直映
+    let place_idx = (ctrl_byte & 0x0F) as usize;
+    let (p0, plen) = eg::EN_PLACE_OFFS.get(place_idx).copied().unwrap_or((0, 0));
+    let pblob = |i: u16| -> u8 {
+        let o = p0 as usize + i as usize;
+        *eg::EN_PLACES.get(o).unwrap_or(&0xFF)
+    };
+    // 屏位（ScrollY=$FC/ScrollX=$FD 勘误径——anim_draw_object 同构）
+    let scroll_y = mem.read_ram(crate::ram_map::SCROLL_Y);
+    let scroll_x = mem.read_ram(crate::ram_map::SCROLL_X);
+    let screen_y = y_pos.wrapping_sub(scroll_y);
+    let screen_x = x_pos.wrapping_sub(scroll_x);
+    let horz = mem.read_ram(crate::ram_map::SCROLL_DIR) & 0x02 != 0;
+    let screen_y = if horz { y_pos } else { screen_y };
+    // 可见性门（IsObjectVisible DFDF→HorzScrollCheck E01C——同构）
+    let (screen_x_v, borrow) = x_pos.overflowing_sub(scroll_x);
+    let carry = !borrow;
+    let same_nt = (hi ^ mem.read_ram(0x00FF)) & 1 == 0;
+    let visible = if same_nt {
+        carry && radius_x < screen_x_v
+    } else if !carry {
+        (radius_x as u16 + screen_x_v as u16) < 0x100
+    } else {
+        false
+    };
+    if !visible {
+        mem.write_ram(0x006B, 0);
+        return;
+    }
+    // ---- DrawSpriteObject（DF19）帧流环（与 anim_draw_object 同构）----
+    let mut frame_i: u16 = 3; // 第 4 字节起（0=ctrl/1=radiusY/2=radiusX）
+    let mut place_i: u16 = 0;
+    let mut sx = screen_x as i16;
+    let mut sy = screen_y as i16;
+    let mut x_sprite = mem.read_ram(0x005B) as u16; // SpritePagePos
+    let _ = plen;
+    loop {
+        let b = fblob(frame_i);
+        if b < 0xFC {
+            let dy = place_disp(pblob(place_i), flip_flags, true);
+            let dx = place_disp(pblob(place_i + 1), flip_flags, false);
+            let oy = (sy as i16 + dy as i16 - 1) as u8;
+            let ox = (sx as i16 + dx as i16) as u8;
+            let mut attr = cntrl05;
+            if obj_cntrl & 0x10 != 0 {
+                attr ^= 0x40;
+            }
+            if x_sprite + 4 <= 0x100 {
+                mem.write_ram(0x0200u16.wrapping_add(x_sprite), oy);
+                mem.write_ram(0x0201u16.wrapping_add(x_sprite), b);
+                mem.write_ram(0x0202u16.wrapping_add(x_sprite), attr);
+                mem.write_ram(0x0203u16.wrapping_add(x_sprite), ox);
+                x_sprite = x_sprite.wrapping_add(4);
+            }
+            place_i += 2;
+            frame_i += 1;
+        } else if b == 0xFC {
+            sy = sy.wrapping_add(fblob(frame_i + 1) as i16);
+            sx = sx.wrapping_add(fblob(frame_i + 2) as i16);
+            frame_i += 3;
+        } else if b == 0xFD {
+            frame_i += 1;
+            cntrl05 = fblob(frame_i);
+            frame_i += 1;
+        } else if b == 0xFE {
+            place_i += 2;
+            frame_i += 1;
+        } else {
+            break; // 0xFF=帧终
+        }
+        if frame_i > 0x40 {
+            break; // 流界护栏
+        }
+    }
+    mem.write_ram(0x005B, x_sprite as u8); // SpritePagePos 推进
 }
 
 #[cfg(test)]
