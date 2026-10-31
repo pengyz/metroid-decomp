@@ -106,3 +106,19 @@ rust **已有**完整积分器 `horz_integrate`/`int_x`（integrators.rs:147—�
   落地清零径已有。被挡帧积分照常（速度保持上限）✓。
 - **验收**：case-morphball-probe 墙跳窗 f1131-1180 逐帧（速度字节+位置）+角部
   f1164 消歧+全程 matched-seam；crawlprobe 回归（地面径不动）。
+
+## 8. 角部 1px 最终收窄（2026-10-31——速度/累加器全同，分歧=碰撞判行跨度）
+
+三面对比（sp/subpix/x 逐帧）：
+- **speed（$0309/$0313）全同**：FE.E0 恒持双侧 ✓——**此前"rust 速度=00"系提取 bug**
+  （`w["iram"][0x309*2]` 读成 CPU $0409=爬虫 delay；正确偏移=CPU−0x100）。
+- **subpix（$0310）全同**：逐帧 90/48/18/00… 完全一致（含被挡帧的分数演化）。
+- **disp 输出同**：f1164 双侧 disp=2（subpix 相位一致）。
+- **分歧=第二次像素步进的碰撞判**：disp=2 ⇒ 两次逐像素步进+查撞；emu 第一步 4→3 ✓、
+  第二步 3→2 **被墙顶行挡**；rust 两步全过（4→2）。f1172 同形（emu 251→250、
+  rust 251→249）随即自愈。
+- **几何**：y=113（身体底行=墙顶行 121）恰在墙顶角——水平检的行跨度**底行含入性**
+  （span 底行=墙顶行时探到固实与否）在 asm CheckMoveHorizontal（prg7:8218-8300 的
+  Y 走行+mod8 门）与 rust `horizontal_span_rows`（physics.rs:1011）间存在边界差异。
+- **下轮专项**：asm CheckMoveHorizontal 行走行序列 vs rust horizontal_span_rows 逐行
+  对核（y=113/ry=8 角部 case）；修后墙跳窗 f1164/f1172 消歧+全程回归。
