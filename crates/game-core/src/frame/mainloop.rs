@@ -1485,15 +1485,13 @@ fn enemy_move_one_pixel_right(mem: &mut crate::frame::FrameMemory, x: u8) -> boo
 
 /// MakeRoomRAMPtr（**asm 内容锚** `: 07:E96A`——r26）：位置→RoomRAM 瓦址——
 /// ptr=0x6000|名表页|((y&0xF8)<<2)|(x>>3)（y/8×32+x/8 形！）。
-/// 【沉降根修（2026-11-01 自跑实证：房在 $6400（256 非FF 全房）而探撞读 $6000（空 FF）
-/// ⇒固实瓦读成可走⇒穿地）】asm 形=对象 hi 选页（E96A:8425-8434）——其不变量=对象 hi
-/// ==房缓冲位（GetNameTableAtScrollDir==SelectRoomRAM 同式）；我方滚动生命周期（房间
-/// 重载换缓冲）打破该不变量（敌 hi 停旧值）⇒**探撞改取房实址**（RoomRAMPtr $38 位——
-/// 房实际所在缓冲）保行为等价（真机不变量下的两形同值）。
+/// 【goal-轮15 页面径回正（asm E96A:8425-8434 逐字：`lda Temp0B_PositionHi/and #$04/
+/// ora ptr+1`——**对象 hi 选页**）】轮5 的 RoomRAMPtr(\$38) 选页=偏离（对象住其房间页
+/// ——hi==房页不变量（GetNameTableAtScrollDir==SelectRoomRAM 同式）；金腿实证：爬虫
+/// hi=0×\$6000（首房固实瓦挡探 ✓）而 \$38=\$6400（现房空 FF）⇒我探径滑过=旋转根）。
 fn make_room_ram_ptr(mem: &mut crate::frame::FrameMemory, y: u8, x: u8, hi: u8) -> u16 {
     let idx = (((y & 0xF8) as u16) << 2) | ((x >> 3) as u16);
-    let _ = hi; // asm 形参保形（不变量修复后由房实址决定页）
-    let page = if mem.read_ram(0x0038) & 0x04 != 0 { 0x0400u16 } else { 0x0000 };
+    let page = if hi & 1 != 0 { 0x0400u16 } else { 0x0000 };
     0x6000 | page | (idx & 0x3FF)
 }
 
