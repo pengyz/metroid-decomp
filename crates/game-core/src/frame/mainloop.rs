@@ -1028,7 +1028,7 @@ fn skree_ai(mem: &mut crate::frame::FrameMemory, x: u8) {
     let sub_y = mem.read_ram(0x0400 + x as u16 + 6); // speedSubPixelY=+6（union 同字节——复核正）
     let speed_y = mem.read_ram(0x0400 + x as u16 + 2);
     let accel_y = mem.read_wram(0x6AF4 + x as u16 + 10);
-    let (dy, ndelay, ninstr, _z) = crate::enemy::common::enemy_get_delta_y(
+    let (dy, dx, ndelay, ninstr, _z) = crate::enemy::common::enemy_get_delta_xy(
         type_, d05, mov_idx, instr2, delay, sub_y, speed_y, accel_y);
     mem.write_ram(0x0400 + x as u16 + 9, ndelay);
     mem.write_ram(0x0400 + x as u16 + 6, ninstr); // movementInstrIndex=+6（复核正）
@@ -1052,6 +1052,27 @@ fn skree_ai(mem: &mut crate::frame::FrameMemory, x: u8) {
             }
         }
         mem.write_ram(0x0400 + x as u16 + 0, y);
+    }
+    // ⑦ deltaX 整轴（skree 串 packed nibble 低半字节——斜线下坠（复核⑦））
+    if dx != 0 {
+        let mut xx = mem.read_ram(0x0400 + x as u16 + 1);
+        let hi = mem.read_wram(0x6AF4 + x as u16 + 7);
+        for _ in 0..dx.unsigned_abs() {
+            if dx < 0 {
+                if xx == 0 {
+                    xx = 0xFF;
+                    mem.write_wram(0x6AF4 + x as u16 + 7, hi ^ 1);
+                } else {
+                    xx -= 1;
+                }
+            } else if xx == 0xFF {
+                xx = 0;
+                mem.write_wram(0x6AF4 + x as u16 + 7, hi ^ 1);
+            } else {
+                xx += 1;
+            }
+        }
+        mem.write_ram(0x0400 + x as u16 + 1, xx);
     }
     update_enemy_anim(mem, x, 2);
     update_enemy_common_no_move_no_anim(mem, x);
