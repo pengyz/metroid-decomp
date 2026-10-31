@@ -7,6 +7,7 @@ frames 1300
 watch_range 0000-00ff zp
 watch_range 0100-07ff iram
 watch_range 6988-698f pw
+watch_range 6000-7fff wram
 
 press 360 start
 press 420 a
@@ -18,5 +19,11 @@ hold 1160-1240 right
 capture 1240 after-pickup
 hold 1250-1300 down
 capture 1300 ball-roll
+# 【连播诊断捕点】敌动画帧序（f1151-1155 连续 5 帧——「单帧对/连播转」定位）
+capture 1151 anim1
+capture 1152 anim2
+capture 1153 anim3
+capture 1154 anim4
+capture 1155 anim5
 
 sample_point spin-exit

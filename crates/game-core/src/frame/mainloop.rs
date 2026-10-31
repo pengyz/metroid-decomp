@@ -1009,6 +1009,20 @@ fn crawler_ai(mem: &mut crate::frame::FrameMemory, x: u8) {
     let d5 = mem.read_ram(0x0400 + x as u16 + 5);
     let orientation = mem.read_ram(0x0400 + x as u16 + 10) & 0x03; // data0A=+10
     let direction = d5 & 1;
+    // 【岩浆折返径】（crawler.asm:26-64——**asm BUG 注保真**（D4：竖房误触发不修））：
+    // orientation==1（下墙径）∧ y==$E4（BANK1/4 阈——BANK2/5=$EB）⇒FlipDirection+
+    // orientation←3（上墙）+跳过本帧移动（@afterLavaTurnAround 直入外角检）。
+    let ey = mem.read_ram(0x0400 + x as u16 + 0);
+    if orientation == 1 && ey == 0xE4 {
+        let d = mem.read_ram(0x0400 + x as u16 + 5);
+        mem.write_ram(0x0400 + x as u16 + 5, d ^ 0x01); // CrawlerFlipDirection
+        mem.write_ram(0x0400 + x as u16 + 10, 0x03); // orientation←3（上墙）
+        // @afterLavaTurnAround（跳过 @move 移动+内角检）
+        crawler_outside_corner_check(mem, x);
+        update_enemy_anim(mem, x, 3);
+        update_enemy_common_no_move_no_anim(mem, x);
+        return;
+    }
     let idx = ((orientation as usize) * 2 + direction as usize) & 0x07;
     let ok = match idx {
         0 | 5 => enemy_move_one_pixel_right(mem, x),
@@ -1030,26 +1044,30 @@ fn crawler_ai(mem: &mut crate::frame::FrameMemory, x: u8) {
             crawler_reorient_sprite(mem, x); // $9A8F（ InsideCorner 碰撞径 `4C 8F 9A`）
         }
     }
-    // CrawlerOutsideCornerCheck（bank1:$9AC6——**goal-r16 G3'**）：恒跑，向 (data0A+1) 探移
-    // （GetNextOrientation $9ADA=iny）成功⇒data0A+1+reorient（asm `jsr $9AE2` 探移**提交**无回退）。
-    {
-        let o = mem.read_ram(0x0400 + x as u16 + 10) & 0x03;
-        let next_o = (o + 1) & 0x03;
-        let dir = mem.read_ram(0x0400 + x as u16 + 5) & 1;
-        let nidx = ((next_o as usize) * 2 + dir as usize) & 0x07;
-        let probe_ok = match nidx {
-            0 | 5 => enemy_move_one_pixel_right(mem, x),
-            1 | 4 => enemy_move_one_pixel_left(mem, x),
-            2 | 3 => enemy_move_one_pixel_down(mem, x),
-            _ => enemy_move_one_pixel_up(mem, x),
-        };
-        if probe_ok {
-            mem.write_ram(0x0400 + x as u16 + 10, next_o); // data0A+1（asm `9D 0A 04`）
-            crawler_reorient_sprite(mem, x); // $9A8F（OutsideCorner 径 `20 8F 9A`）
-        }
-    }
+    // CrawlerOutsideCornerCheck（bank1:$9AC6——**goal-r16 G3'**）：恒跑
+    crawler_outside_corner_check(mem, x);
     update_enemy_anim(mem, x, 3); // @exit `A9 03/20 0C 80`（cadence=3）
     update_enemy_common_no_move_no_anim(mem, x); // @exit 径 `4C 06 80`（anim+显示）
+}
+
+/// CrawlerOutsideCornerCheck（bank1:$9AC6——`jsr GetNextOrientation/jsr MoveRoutine`
+/// `bcc @RTS`（探移失败⇒RTS）/成功⇒data0A←next+ReorientSprite）——恒跑（@move 与
+/// @afterLavaTurnAround 共径）。
+fn crawler_outside_corner_check(mem: &mut crate::frame::FrameMemory, x: u8) {
+    let o = mem.read_ram(0x0400 + x as u16 + 10) & 0x03;
+    let next_o = (o + 1) & 0x03;
+    let dir = mem.read_ram(0x0400 + x as u16 + 5) & 1;
+    let nidx = ((next_o as usize) * 2 + dir as usize) & 0x07;
+    let probe_ok = match nidx {
+        0 | 5 => enemy_move_one_pixel_right(mem, x),
+        1 | 4 => enemy_move_one_pixel_left(mem, x),
+        2 | 3 => enemy_move_one_pixel_down(mem, x),
+        _ => enemy_move_one_pixel_up(mem, x),
+    };
+    if probe_ok {
+        mem.write_ram(0x0400 + x as u16 + 10, next_o); // data0A+1（asm `9D 0A 04`）
+        crawler_reorient_sprite(mem, x); // $9A8F（OutsideCorner 径 `20 8F 9A`）
+    }
 }
 
 /// UpdateEnemyCommon@noMoveNoAnim（**asm 内容锚** `: 07:F416`——r26）：tough 调色→

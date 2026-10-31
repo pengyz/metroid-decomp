@@ -1093,6 +1093,11 @@
      "label": "pw",
      "base": "6988",
      "range": "6988-698f"
+    },
+    {
+     "label": "wram",
+     "base": "6000",
+     "range": "6000-7fff"
     }
    ],
    "oracle_sha256": "ddb2d7680d71ab83c8c197d1283724ec502c3f783a3cc188507e1cbcfd295209",

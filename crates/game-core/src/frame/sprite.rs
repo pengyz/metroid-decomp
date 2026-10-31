@@ -233,15 +233,15 @@ pub fn draw_enemy(mem: &mut crate::frame::FrameMemory, page_index: u8) {
     let hi = blob_e(0x6AF4 + px + 7); // EnsExtra.0.hi
     let radius_x = blob_e(0x6AF4 + px + 2);
     // GetSpriteCntrlData（DCC3）：ctrl=AABBXXXX
+    // 【旋转根修（2026-10-31 连播条带定谳）】镜像位只源 ctrl AA 位（帧自带翻转）——
+    // **不取共享 ObjectCntrl($6B)**（SetMirrorCntrlBit（CD92）=Samus 专件（SamusDir→bit4）；
+    // 敌朝向已由 anim 表选择（Reorient 表 orient*2+flip）编码）。旧形读 $6B 翻敌贴图
+    // ⇒随萨姆斯朝向/调色写逐帧跳=「疯狂旋转」（单帧对/连播转——用户报修）。
     let ctrl_byte = fblob(0);
     let mut cntrl05 = (ctrl_byte >> 4) & 0x03;
     let flip = ctrl_byte & 0xC0;
     cntrl05 |= flip | 0x20;
-    let obj_cntrl = mem.read_ram(0x006B);
-    let mut flip_flags = ctrl_byte;
-    if obj_cntrl & (0x40 >> 2) != 0 {
-        flip_flags ^= 0x40;
-    }
+    let flip_flags = ctrl_byte;
     // 位件指针（:6124-6130）：(ctrl&$0F)*2→EnPlacePtrTable——烘焙偏移表直映
     let place_idx = (ctrl_byte & 0x0F) as usize;
     let (p0, plen) = eg::EN_PLACE_OFFS.get(place_idx).copied().unwrap_or((0, 0));
@@ -285,10 +285,7 @@ pub fn draw_enemy(mem: &mut crate::frame::FrameMemory, page_index: u8) {
             let dx = place_disp(pblob(place_i + 1), flip_flags, false);
             let oy = (sy as i16 + dy as i16 - 1) as u8;
             let ox = (sx as i16 + dx as i16) as u8;
-            let mut attr = cntrl05;
-            if obj_cntrl & 0x10 != 0 {
-                attr ^= 0x40;
-            }
+            let attr = cntrl05; // 镜像=ctrl AA 位（无 $6B 漏泄——旋转根修）
             if x_sprite + 4 <= 0x100 {
                 mem.write_ram(0x0200u16.wrapping_add(x_sprite), oy);
                 mem.write_ram(0x0201u16.wrapping_add(x_sprite), b);
