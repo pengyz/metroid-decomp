@@ -1475,7 +1475,7 @@ fn crawler_outside_corner_check(mem: &mut crate::frame::FrameMemory, x: u8) {
     if std::env::var("DSH_SPRITE_TRACE").is_ok() && x == 0x40 {
         use std::sync::atomic::Ordering;
         let n = DIAG_ITER.load(Ordering::Relaxed);
-        if n >= 830 && n <= 880 {
+        if n >= 860 && n <= 920 {
             eprintln!("[prb] n={} next_o={} nidx={} ok={} y={} x={}", n,
                 next_o, nidx, probe_ok,
                 mem.read_ram(0x0400 + x as u16), mem.read_ram(0x0400 + x as u16 + 1));
