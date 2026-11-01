@@ -28,13 +28,15 @@ use crate::ram_map::{
 /// · 迭代收尾（inc FrameCount）在**步骤完成点**执行：游标归零 或 分发推进了相位
 ///   （孤儿游标=步骤边界）。
 /// · regs.a 连续性：续段不跑 random_numbers（其写 regs.a）——分发臂继承段间 A 态（F3）。
+/// 【goal-轮27/29 帧直证】迭代计数（DSH_SPRITE_TRACE 诊断锚——[iter]/[crawl] 同源）。
+#[cfg(debug_assertions)]
+pub(crate) static DIAG_ITER: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
+
 pub fn main_loop_iter(mem: &mut FrameMemory) {
-    // 【goal-轮27 帧直证】迭代计数（DSH_SPRITE_TRACE 诊断锚）。
     if std::env::var("DSH_SPRITE_TRACE").is_ok() {
-        use std::sync::atomic::{AtomicU32, Ordering};
-        static ITER_N: AtomicU32 = AtomicU32::new(0);
-        let n = ITER_N.fetch_add(1, Ordering::Relaxed);
-        if n >= 1660 && n <= 1682 {
+        use std::sync::atomic::Ordering;
+        let n = DIAG_ITER.fetch_add(1, Ordering::Relaxed);
+        if n >= 1655 && n <= 1690 {
             eprintln!("[iter] n={} FC={:02X}", n, mem.read_ram(FRAME_COUNT));
         }
     }
@@ -1120,7 +1122,12 @@ fn crawler_ai(mem: &mut crate::frame::FrameMemory, x: u8) {
         & 0x03;
     if gate == 0 {
         if std::env::var("DSH_SPRITE_TRACE").is_ok() {
-            eprintln!("[crawl] FC={:02X} x={:02X} gate=0 SKIP", mem.read_ram(crate::ram_map::FRAME_COUNT), x);
+            use std::sync::atomic::Ordering;
+            let n = DIAG_ITER.load(Ordering::Relaxed);
+            if n >= 1655 && n <= 1690 {
+                eprintln!("[crawl] n={} FC={:02X} slot={:02X} gate=0 SKIP", n,
+                    mem.read_ram(crate::ram_map::FRAME_COUNT), x);
+            }
         }
         update_enemy_anim(mem, x, 3); // @exit `lda #3/jsr UpdateEnemyAnim`
         update_enemy_common_no_move_no_anim(mem, x);
@@ -1129,6 +1136,14 @@ fn crawler_ai(mem: &mut crate::frame::FrameMemory, x: u8) {
     // EnemyStatusPreAI 三连门（crawler.asm:8-22 逐条——激活帧拦 Resting=本修核心）。
     let pre_ai = mem.read_ram(0x0081);
     if pre_ai == 1 {
+        if std::env::var("DSH_SPRITE_TRACE").is_ok() {
+            use std::sync::atomic::Ordering;
+            let n = DIAG_ITER.load(Ordering::Relaxed);
+            if n >= 1655 && n <= 1690 {
+                eprintln!("[crawl] n={} FC={:02X} slot={:02X} preAI=1 SKIP", n,
+                    mem.read_ram(crate::ram_map::FRAME_COUNT), x);
+            }
+        }
         // SkreeExit_Resting（bank1/4 共享——skree.asm:62 `lda #8/noMove`）
         update_enemy_anim(mem, x, 8);
         update_enemy_common_no_move_no_anim(mem, x);
@@ -1172,13 +1187,11 @@ fn crawler_ai(mem: &mut crate::frame::FrameMemory, x: u8) {
         _ => enemy_move_one_pixel_up(mem, x),
     };
     if std::env::var("DSH_SPRITE_TRACE").is_ok() {
-        use std::sync::atomic::{AtomicU32, Ordering};
-        static ITER_N2: AtomicU32 = AtomicU32::new(0);
-        // 与 main_loop_iter 的 ITER_N 同源递增不可行（跨函）——用 FC+slot/x/y 三元组定位。
-        let _ = ITER_N2.fetch_add(1, Ordering::Relaxed);
-        if mem.read_ram(crate::ram_map::FRAME_COUNT) >= 0x76 && mem.read_ram(crate::ram_map::FRAME_COUNT) <= 0x8E {
-            eprintln!("[crawl] FC={:02X} slot={:02X} idx={} ok={} x={} y={} o={}",
-                mem.read_ram(crate::ram_map::FRAME_COUNT), x, idx, ok,
+        use std::sync::atomic::Ordering;
+        let n = DIAG_ITER.load(Ordering::Relaxed);
+        if n >= 1655 && n <= 1690 {
+            eprintln!("[crawl] n={} FC={:02X} slot={:02X} idx={} ok={} x={} y={} o={}",
+                n, mem.read_ram(crate::ram_map::FRAME_COUNT), x, idx, ok,
                 mem.read_ram(0x0400 + x as u16 + 1), mem.read_ram(0x0400 + x as u16 + 0), orientation);
         }
     }

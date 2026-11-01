@@ -981,12 +981,19 @@ pub fn lava_and_move_check(mem: &mut FrameMemory) {
     // SamusMoveVertically（E2A9——**fallthrough！**（r26 根修：旧形 return 切断移动链！））
     // VertAccelerate→积分件→位移施加→SamusMoveHorizontally。
     if std::env::var("DSH_SPRITE_TRACE").is_ok() {
+        // 【goal-轮29 诊断双调根修】旧形诊断块直接调 vert_integrate（状态推进！）⇒
+        // 后续正式积分=**双推进**⇒DSH_SPRITE_TRACE 构建行为分叉（诊断/trace 不一致全源）。
+        // 存态→取 dy→回滚（无副作用诊断）。
+        let s08 = mem.read_ram(0x0308);
+        let s12 = mem.read_ram(0x0312);
+        let s10 = mem.read_ram(0x0310);
         let dy_pre = vert_integrate(mem);
         eprintln!("[inty] FC={} spdI={:02X} spdF={:02X} subY={:02X} accelY={:02X} dy={:02X} y={:02X}",
             mem.read_ram(crate::ram_map::FRAME_COUNT), mem.read_ram(0x0308), mem.read_ram(0x0312),
             mem.read_ram(0x0310), mem.read_ram(crate::ram_map::SAMUS_ACCEL_Y), dy_pre, mem.read_ram(0x030D));
-        // 回滚（不重复积分）——仅诊断
-        mem.write_ram(0x0308, mem.read_ram(0x0308).wrapping_sub(0)); // no-op 保持
+        mem.write_ram(0x0308, s08); // 回滚（无副作用）
+        mem.write_ram(0x0312, s12);
+        mem.write_ram(0x0310, s10);
     }
     vert_accelerate(mem); // E37A（重力/加速——L2 单位！）
     let dy = vert_integrate(mem); // 积分件（速→位移！）
