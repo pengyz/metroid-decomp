@@ -439,6 +439,10 @@ fn enemy_loop(
             return false; // 环护栏（asm 形数据不环——防死环）
         }
         let Some(&b) = stream.get(i) else { return false };
+        // 【goal-实质对表】敌门环解析轨迹（i/b/ty/stride 逐条目）。
+        if std::env::var("DSH_SPRITE_TRACE").is_ok() {
+            eprintln!("[eloop] i={} b={:02X} ty={}", i, b, b & 0x0F);
+        }
         if b == 0xFF {
             end_of_room(mem);
             return true;
