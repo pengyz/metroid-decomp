@@ -140,6 +140,8 @@
 > 直写 ai=13 面 ⇒修复径=emu 侧直写径考证（SetSamusNextAnim A=13?）→补→match 动。
 > 【animIndex 写点六面】:3062/:3375(SetSamusNextAnim)/:3440/:3602/:4936/:5047——
 > A=13 源逐点对表（:3375 SetSamusNextAnim 嫌疑最大）→补/修→match 动。
+> 【SetSamusNextAnim 调用三点】:2837（CC98 转身）/:3073（开火）/:3897——A=13 源三点
+> 对表（A 值逐一考证）→补/修→match 动。
 
 ### case-002（3 diff）
 | 帧 | px | 类 | 根因 | 证据 |
