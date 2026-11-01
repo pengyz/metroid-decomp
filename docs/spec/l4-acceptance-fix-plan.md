@@ -204,6 +204,8 @@
 > 【load_enemy 初始化相对表】y/x 初值（room.rs:530-534）+激活帧（try_becoming_active
 > F7BA+RNG 播种 r28）——**初始化合规**（轮15 同构）⇒位差根非初始化 ⇒**敌 AI 走位 delta
 > 的相位/门**（crawler 6/8 门的 slot/FC 耦合）。
+> 【F852 门实值对账】门=s（slot）/FC 耦合相位——**门实值双腿对账**（敌0 slot/FC 门值）
+> ⇒若门值同则根非门 ⇒**delta 值源**（enemy_get_delta_xy 的串走位相位）。
 
 ### case-002（3 diff）
 | 帧 | px | 类 | 根因 | 证据 |
