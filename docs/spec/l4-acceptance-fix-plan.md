@@ -159,6 +159,9 @@
 > 【根定案（[uoa] 4 调实证）】update_obj_anim **每帧 4 调**（a_in=2/255/255/255——ad
 > 234→231 快耗）——**调用数过量**（asm 应 2 调：SetSamusData 首件+AnimDrawObject 首件）
 > ⇒修复径=调用数去重（补调后的 anim_draw_object+敌面径混入）→match 动。
+> 【双调修后复测】DrawBullet/爆径显式调删除后 **4 调仍存**（a_in=2/255/255/255）
+> ⇒a_in=255×3 源未 ID（regs.a=255 的 anim_draw_object 调用? 敌面径?）——下轮 255 源
+> 审计（anim_draw_object 调用者含 PageIndex 径）。
 
 ### case-002（3 diff）
 | 帧 | px | 类 | 根因 | 证据 |
