@@ -414,10 +414,11 @@ pub fn update_all_enemies(mem: &mut crate::frame::FrameMemory) {
         if n >= 1155 && n <= 1300 {
             let x2 = 0x40u8;
             let d5 = mem.read_ram(0x0400 + x2 as u16 + 5);
-            eprintln!("[vis2] n={} eB=({},{}) ry={} rx={} o={} fo0={}", n,
+            let ry = mem.read_wram(0x6AF4 + x2 as u16 + 1);
+            let fo = mem.read_ram(0x0400 + x2 as u16 + 6);
+            eprintln!("[vis2] n={} eB=({},{}) ry={} fo0={} anim={}", n,
                 mem.read_ram(0x0400 + x2 as u16), mem.read_ram(0x0400 + x2 as u16 + 1),
-                mem.read_wram(0x6AF4 + x2 as u16 + 1), mem.read_wram(0x6AF4 + x2 as u16 + 2),
-                mem.read_ram(0x0400 + x2 as u16 + 10), mem.read_ram(0x0400 + x2 as u16 + 6));
+                ry, fo, mem.read_wram(0x6AF4 + x2 as u16 + 6));
         }
     }
     mem.write_ram(0x004B, x); // PageIndex
