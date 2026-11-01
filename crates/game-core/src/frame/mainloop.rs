@@ -1826,12 +1826,15 @@ fn enemy_move_one_pixel_down(mem: &mut crate::frame::FrameMemory, x: u8) -> bool
         }
     }
     let ny = y.wrapping_add(1);
-    // 【goal-轮112 y 写径 asm 对照】写源/写径（paradox 解）。
+    // 【goal-轮118 修】asm :1107-1125 `sta Ens.0.y` 写+wrap 回滚 `dec Ens.0.y`——
+    // **写径合形已验** ✓（[ywa] asm_sty）——金方无写 paradox=**敌不更新径**（非写径）。
+    // 【goal-轮118 敌不更新径直证】updateAll 遍历/敌更新调用。
     if std::env::var("DSH_SPRITE_TRACE").is_ok() && x == 0x40 {
         use std::sync::atomic::Ordering;
         let n = DIAG_ITER.load(Ordering::Relaxed);
         if n >= 860 && n <= 920 {
-            eprintln!("[ywa] n={} asm_sty y={} ny={}", n, y, ny);
+            eprintln!("[neu] n={} move_down y={} x={}", n,
+                mem.read_ram(0x0400 + x as u16), mem.read_ram(0x0400 + x as u16 + 1));
         }
     }
     mem.write_ram(0x0400 + x as u16 + 0, ny);
