@@ -430,11 +430,10 @@ pub fn update_all_enemies(mem: &mut crate::frame::FrameMemory) {
             let fr0 = mem.read_wram(0x6AF4 + x2 as u16 + 3);
             let ea = game_data::area::graphics::ENEMY_ACTIVE_ANIM;
             let er = game_data::area::graphics::ENEMY_RESTING_ANIM;
-            eprintln!("[vis2] n={} eB=({},{}) ry={} animFrame={:02X} animIdx={} actTbl={:02X} rstTbl={:02X}", n,
+            eprintln!("[vis2] n={} eB=({},{}) ry={} animFrame={:02X} animIdx={} ry1at=[{}]", n,
                 mem.read_ram(0x0400 + x2 as u16), mem.read_ram(0x0400 + x2 as u16 + 1),
                 mem.read_wram(0x6AF4 + x2 as u16 + 1), fr0,
-                mem.read_wram(0x6AF4 + x2 as u16 + 6),
-                ea[(5 * 2) as usize], er[(5 * 2) as usize]);
+                mem.read_wram(0x6AF4 + x2 as u16 + 6), cands);
         }
     }
     mem.write_ram(0x004B, x); // PageIndex
