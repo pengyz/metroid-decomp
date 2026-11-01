@@ -2399,6 +2399,15 @@ fn uw_collision_detection(mem: &mut crate::frame::FrameMemory) {
             let e_hi = mem.read_wram(0x6AF4 + x + 7) & 1;
             let dy_adj = if s_hi != e_hi { dy + 0x100 } else { dy };
             let dx_adj = if s_hi != e_hi { dx + 0x100 } else { dx };
+            // 【goal-轮88 F1FA 判式边值直证】cmp 带位/borrow 链（金方不撞源）。
+            if std::env::var("DSH_SPRITE_TRACE").is_ok() && x == 0x40 {
+                use std::sync::atomic::Ordering;
+                let n = DIAG_ITER.load(Ordering::Relaxed);
+                if n >= 1260 && n <= 1270 {
+                    eprintln!("[f1fa] n={} dy={} cmpY={} carryY={} dx={} cmpX={} carryX={}",
+                        n, dy, sry + ery, dy >= sry + ery, dx, srx + erx, dx >= srx + erx);
+                }
+            }
             if dy_adj < sry + ery && dx_adj < srx + erx {
                 // 螺旋转（IsScrewAttackActive——carry clear=active）⇒不伤萨姆斯
                 let screw = crate::samus::physics::is_screw_attack_active(mem);
