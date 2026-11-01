@@ -1826,12 +1826,12 @@ fn enemy_move_one_pixel_down(mem: &mut crate::frame::FrameMemory, x: u8) -> bool
         }
     }
     let ny = y.wrapping_add(1);
-    // 【goal-轮108 y 写点后段直证】写径后段条件/源（paradox 解）。
+    // 【goal-轮112 y 写径 asm 对照】写源/写径（paradox 解）。
     if std::env::var("DSH_SPRITE_TRACE").is_ok() && x == 0x40 {
         use std::sync::atomic::Ordering;
         let n = DIAG_ITER.load(Ordering::Relaxed);
         if n >= 860 && n <= 920 {
-            eprintln!("[ywb] n={} y_write {}->{} wrap={}", n, y, ny, y == 0xEF);
+            eprintln!("[ywa] n={} asm_sty y={} ny={}", n, y, ny);
         }
     }
     mem.write_ram(0x0400 + x as u16 + 0, ny);
