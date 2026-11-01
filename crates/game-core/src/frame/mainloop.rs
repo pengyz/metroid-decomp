@@ -1838,6 +1838,8 @@ fn enemy_move_one_pixel_down(mem: &mut crate::frame::FrameMemory, x: u8) -> bool
     // 【wrap 判式勘误（goal-轮9 asm :1087-1088 逐字：`ldy Ens.0.y/cpy #SCRN_VY-1($EF)`）
     // 】旧形 `ny==−radiusY` 偏离（wrap 触发点错位）——asm=**当前 y==$EF**（屏底名表换）。
     if y == 0xEF {
+        // 【goal-轮110 asm 合形修】wrap 回滚（:1125 `dec Ens.0.y`——旧形缺回滚 ✗）。
+        mem.write_ram(0x0400 + x as u16 + 0, y); // 回滚（asm dec）
         mem.write_ram(0x00, 1); // $00=1（离屏/wrap）
         return false;
     }
