@@ -138,6 +138,8 @@
 > 【emu 走位率反推】f1132 emu (ad 3→2 dec + ai 11→13 **+2**)——**一次 DC8F 不可能**
 > （dec 不推进/推进 +1）⇒emu 侧=**直写 ai=13 + DC8F dec** 组合（或双调）——我方缺
 > 直写 ai=13 面 ⇒修复径=emu 侧直写径考证（SetSamusNextAnim A=13?）→补→match 动。
+> 【animIndex 写点六面】:3062/:3375(SetSamusNextAnim)/:3440/:3602/:4936/:5047——
+> A=13 源逐点对表（:3375 SetSamusNextAnim 嫌疑最大）→补/修→match 动。
 
 ### case-002（3 diff）
 | 帧 | px | 类 | 根因 | 证据 |
