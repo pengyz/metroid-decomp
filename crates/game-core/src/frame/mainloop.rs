@@ -1627,6 +1627,16 @@ fn draw_enemy(mem: &mut crate::frame::FrameMemory, x: u8) {
     if frame0 != 0xFF {
         let fi0 = ((frame0 & 0x7F) as usize) + if frame0 & 0x80 != 0 { 128 } else { 0 };
         let (fo0, fl0) = eg::EN_FRAME_OFFS[fi0];
+    // 【goal-轮94 fo0→radiusY 直证】帧面 radiusY（金方 1/9 vs 我 8）。
+    if std::env::var("DSH_SPRITE_TRACE").is_ok() && x == 0x40 {
+        use std::sync::atomic::Ordering;
+        let n = DIAG_ITER.load(Ordering::Relaxed);
+        if n >= 830 && n <= 870 {
+            eprintln!("[foy] n={} frame0={:02X} fi0={} fo0={} fl0={} ry={} rx={}", n,
+                frame0, fi0, fo0, fl0,
+                eg::EN_FRAMES[fo0 as usize + 1], eg::EN_FRAMES[fo0 as usize + 2]);
+        }
+    }
         if fl0 > 2 {
             mem.write_wram(0x6AF4 + x as u16 + 1, eg::EN_FRAMES[fo0 as usize + 1]);
             mem.write_wram(0x6AF4 + x as u16 + 2, eg::EN_FRAMES[fo0 as usize + 2]);
