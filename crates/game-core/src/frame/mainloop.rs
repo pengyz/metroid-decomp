@@ -1309,6 +1309,10 @@ fn crawler_ai(mem: &mut crate::frame::FrameMemory, x: u8) {
     if orientation == 1 && ey == 0xE4 {
         let d = mem.read_ram(0x0400 + x as u16 + 5);
         mem.write_ram(0x0400 + x as u16 + 5, d ^ 0x01); // CrawlerFlipDirection
+        if std::env::var("DSH_SPRITE_TRACE").is_ok() {
+            use std::sync::atomic::Ordering;
+            eprintln!("[flp] n={} LAVA_FLIP {:02X}->{:02X}", DIAG_ITER.load(Ordering::Relaxed), d, d ^ 1);
+        }
         mem.write_ram(0x0400 + x as u16 + 10, 0x03); // orientation←3（上墙）
         if std::env::var("DSH_SPRITE_TRACE").is_ok() {
             use std::sync::atomic::Ordering;
@@ -1344,6 +1348,10 @@ fn crawler_ai(mem: &mut crate::frame::FrameMemory, x: u8) {
         if zero != 0 {
             let d = mem.read_ram(0x0400 + x as u16 + 5);
             mem.write_ram(0x0400 + x as u16 + 5, d ^ 0x01); // FlipDirection（离屏径）
+            if std::env::var("DSH_SPRITE_TRACE").is_ok() {
+                use std::sync::atomic::Ordering;
+                eprintln!("[flp] n={} WRAP_FLIP {:02X}->{:02X}", DIAG_ITER.load(Ordering::Relaxed), d, d ^ 1);
+            }
         } else {
             let o = mem.read_ram(0x0400 + x as u16 + 10); // data0A
             mem.write_ram(0x0400 + x as u16 + 10, o.wrapping_sub(1) & 0x03); // 朝向--
