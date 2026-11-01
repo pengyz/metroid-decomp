@@ -129,6 +129,9 @@
 > ——A=3 来自 set_samus_data 调用（[ssd] 窗 n=1128+ 外）⇒根=**A 值 3 的调用点**
 > （asm Lx023 `lda #$03/jmp SetSamusData` 形——jump_tail/lava 路）——下轮 [ssd] 窗移
 > n=1115-1125 定位调用点→修。
+> 【A=3 调用点定案】[ssd] n=1114-1119 五调 A=3（**jump_tail Lx023 形 ✓ asm 合规**）
+> +n=1120+ A=2——A 值/调用点**合规** ⇒相位差非 A 值错 ⇒余=reload 时点/DC8F 走位
+> 相位面（A=3 的 reload 与 emu 的 reload 时点差）。
 
 ### case-002（3 diff）
 | 帧 | px | 类 | 根因 | 证据 |
