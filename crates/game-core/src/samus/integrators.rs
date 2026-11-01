@@ -160,6 +160,16 @@ pub fn int_x(st: &mut IntXState, accel: u8, max_src: u8) -> IntXOut {
     let t = st.speed_i.wrapping_add(sign_ext);
     let (i, c2) = t.overflowing_add(u8::from(c));
     let _ = c2;
+    // 【goal-轮33 积分算术直证】frac/int 前后值（spI 254→3 翻转源）。
+    if std::env::var("DSH_SPRITE_TRACE").is_ok() {
+        use std::sync::atomic::Ordering;
+        let n = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
+        if n >= 1258 && n <= 1275 {
+            eprintln!("[ixa] n={} spI {}->{} spF {}->{} accel={:02X} sext={:02X} c={}", n,
+                t.wrapping_sub(sign_ext).wrapping_sub(u8::from(c)), i,
+                st.speed_f.wrapping_sub(accel), st.speed_f, accel, sign_ext, c);
+        }
+    }
     st.speed_i = i;
 
     let reg_x;
