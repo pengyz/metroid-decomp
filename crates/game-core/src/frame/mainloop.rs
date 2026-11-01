@@ -1471,6 +1471,16 @@ fn crawler_outside_corner_check(mem: &mut crate::frame::FrameMemory, x: u8) {
         2 | 3 => enemy_move_one_pixel_down(mem, x),
         _ => enemy_move_one_pixel_up(mem, x),
     };
+    // 【goal-轮91 探径碰撞直证】外角探径成功/失败（转向差源）。
+    if std::env::var("DSH_SPRITE_TRACE").is_ok() && x == 0x40 {
+        use std::sync::atomic::Ordering;
+        let n = DIAG_ITER.load(Ordering::Relaxed);
+        if n >= 820 && n <= 870 {
+            eprintln!("[prb] n={} next_o={} nidx={} ok={} y={} x={}", n,
+                next_o, nidx, probe_ok,
+                mem.read_ram(0x0400 + x as u16), mem.read_ram(0x0400 + x as u16 + 1));
+        }
+    }
     if probe_ok {
         if std::env::var("DSH_SPRITE_TRACE").is_ok() {
             eprintln!("[crawl-probe] FC={:02X} slot={:02X} next={} x={} y={}",
