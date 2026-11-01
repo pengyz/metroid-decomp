@@ -1417,6 +1417,10 @@ fn move_samus_left(mem: &mut FrameMemory) -> bool {
 /// MoveSamusRight（**asm 内容锚** `MoveSamusRight: ; 07:E668`）：逐像素右移
 /// （8px 对齐门检+实体碰撞+**滚动跟随**（SamusScrX≥$8F⇒ScrollRight 滚屏）+x inc
 /// （环绕 00⇒ToggleSamusHi））。返回 carry（true=移动成功）。
+/// 【goal-轮48 asm 合规矩】E668 全径逐件对表：8px 门（(x+rx)&7）/SamusCollision
+/// WithSolidEntities/**isHit&0x41==0x40（bit6）⇒实心体触碰挡**（:7804-7808）/
+/// ScrX<$8F⇒inc ScrX/else ScrollRight（carry ok⇒跳；fail⇒补）/inc x+wrap⇒
+/// ToggleSamusHi——**四件面全合规** ✓✓（E626 左移镜像同构——1397 行 isHit&0x41==0x41 ✓）。
 fn move_samus_right(mem: &mut FrameMemory) -> bool {
     let x = mem.read_ram(0x030E);
     let rx = mem.read_ram(crate::ram_map::SAMUS_RADIUS_X);
