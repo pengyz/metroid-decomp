@@ -483,6 +483,19 @@ pub fn update_all_enemies(mem: &mut crate::frame::FrameMemory) {
 /// UpdateEnemy_CheckIfVisible（**asm 内容锚** `: 07:F37F`——r26）：
 /// data05 bit1≠0⇒退出；否则位置/半径→IsObjectVisible⇒**不可见双返**（跳过该敌）。
 fn enemy_check_if_visible(mem: &mut crate::frame::FrameMemory, x: u8) -> bool {
+    // 【goal-轮62 visible 判差直证】hi/同名表（金方 hi≠nt 判隐形源）。
+    if std::env::var("DSH_SPRITE_TRACE").is_ok() && x == 0x40 {
+        use std::sync::atomic::Ordering;
+        let n = DIAG_ITER.load(Ordering::Relaxed);
+        if n >= 1150 && n <= 1165 {
+            let hi_ = mem.read_wram(0x6AF4 + x as u16 + 7);
+            let nt_ = mem.read_ram(0x00FF);
+            let d5_ = mem.read_ram(0x0400 + x as u16 + 5);
+            eprintln!("[ivis] n={} hi={} nt={} same={} latch={} x={} sx={}", n,
+                hi_, nt_, ((hi_ ^ nt_) & 1) == 0, (d5_ >> 1) & 1,
+                mem.read_ram(0x0400 + x as u16 + 1), mem.read_ram(crate::ram_map::SCROLL_X));
+        }
+    }
     if mem.read_ram(0x0400 + x as u16 + 5) & 0x02 != 0 {
         return true; // $F37F bit1 闩=1 ⇒ 免 fresh 检（视为可见）
     }
