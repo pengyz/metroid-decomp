@@ -171,6 +171,9 @@ pub fn enemy_get_delta_xy(
     // （Y=0E）/accelY 符号分流（正⇒frac+int 加/负⇒abs 减）/speed 符号⇒TwosComplement
     // +Y=F2(-14)/|speed|≥14⇒钳位（frac=0+int=Y）/subpix+=frac⇒Delta=int+c——**全件面
     // 合规** ✓✓（168 行同构——Skree 走串径（L977B bit6=0）非本径 ✗）。
+    // 【goal-轮64 delay 装载双面合规矩】FB7B spawn（:12068）+:10604 静息转换（EnemyInit
+    // DelayTbl[y]→Ens.delay）——**双面合规** ✓✓（load_enemy 534 行/enemy_active bit5
+    // 1775 行同构——Skree delay 相位根非装载面 ✗）。
     // 朝向（data05 bit7：水平/垂直）→movementIndex*2+facing→*2→指针
     let facing = if data05 & 0x80 != 0 { (data05 >> 2) & 1 } else { data05 & 1 };
     // **8 位回绕**（asm `rol/asl` u8 语义——case-6 Δ=+48 实值对读证：movementIndex=249
