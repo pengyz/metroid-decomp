@@ -1510,6 +1510,15 @@ fn move_samus_right(mem: &mut FrameMemory) -> bool {
 /// `SamusScrX←x−ScrollX`→|Δ|（TwosComplement $95C6）逐像素 MoveSamus± 环+
 /// CheckStopHorzMvmt→门向（SamusDoorData≠0⇒SamusDoorDir（右 0/左 1））。
 pub fn samus_move_horizontally(mem: &mut FrameMemory, delta: u8) {
+    // 【goal-轮28 左撞墙碰撞直证】水平移动/碰撞结果。
+    if std::env::var("DSH_SPRITE_TRACE").is_ok() {
+        use std::sync::atomic::Ordering;
+        let n = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
+        if n >= 1255 && n <= 1295 {
+            eprintln!("[smh] n={} delta={} x={} accelX={}", n, delta,
+                mem.read_ram(0x030E), mem.read_ram(crate::ram_map::SAMUS_ACCEL_X));
+        }
+    }
     // 【goal-轮49 asm 合规矩】E31A 全径逐件对表：SamusScrX=x−ScrollX（E31D）/delta=0⇒
     // Exit10/TwosComplement（负向）/**岩浆减半（lsr+n=0⇒Exit10）**/ObjectCounter=delta
     // +逐像素环（MoveSamus+CheckStopHorzMvmt per px——stop⇒ObjectCounter=1 破环）/门向
