@@ -189,6 +189,8 @@
 > 【走位面全同+位差】敌0 speedY/speedX/movementIndex/delay/health **全同** ✓+y/x 位差
 > ⇒**走位 delta 与位脱钩**（delta 写面 vs 位整合面分离差）⇒位整合面=主攻（EnemyMove
 > Up/Down 的 y 写面）。
+> 【EnemyMoveOnePixelUp 对表】$83F5 全径：碰撞（块界）/Temp00 门/carry 门/名表切换
+> （SCRN_VY $F0）——**碰撞/名表面合规** ⇒y 写面（dec y）余=下轮对表。
 
 ### case-002（3 diff）
 | 帧 | px | 类 | 根因 | 证据 |
