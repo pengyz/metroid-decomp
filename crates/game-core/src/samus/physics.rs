@@ -1009,6 +1009,14 @@ pub fn check_health_status(mem: &mut FrameMemory) {
                     a = 0u8.wrapping_sub(a); // TwosComplement（推左）
                 }
                 mem.write_ram(SAMUS_SPEED_X_I, a); // sta Samus.speedX
+                // 【goal-轮35 "3" 写者标记】physics 1011（kb 推径）。
+                if std::env::var("DSH_SPRITE_TRACE").is_ok() {
+                    use std::sync::atomic::Ordering;
+                    let n = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
+                    if n >= 1258 && n <= 1275 {
+                        eprintln!("[w3b] n={} physics1011 speedX<-{} dir={}", n, a, dir);
+                    }
+                }
             }
         }
     }

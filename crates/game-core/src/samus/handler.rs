@@ -933,6 +933,14 @@ pub fn samus_jump_check_horz_movement(mem: &mut FrameMemory) {
         if joy & LEFT == 0 {
             // bcc Lx027（无向（X=0））
             mem.write_ram(0x0309, x);
+            // 【goal-轮35 "3" 写者标记】handler 935。
+            if std::env::var("DSH_SPRITE_TRACE").is_ok() {
+                use std::sync::atomic::Ordering;
+                let n = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
+                if n >= 1258 && n <= 1275 {
+                    eprintln!("[w3a] n={} handler935 speedX<-{}", n, x);
+                }
+            }
             return;
         }
         x = x.wrapping_sub(1); // X=-1
