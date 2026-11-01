@@ -842,7 +842,7 @@ pub fn update_obj_anim(mem: &mut FrameMemory, a_in: u8) {
     if std::env::var("DSH_SPRITE_TRACE").is_ok() {
         use std::sync::atomic::Ordering;
         let n = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
-        if n >= 1225 && n <= 1245 {
+        if n >= 1126 && n <= 1165 {
             let b = 0x0300u16 + mem.read_ram(0x004B) as u16;
             eprintln!("[anim] n={} FC={:02X} WALK ai={} ar={} ad={} a_in={}", n,
                 mem.read_ram(crate::ram_map::FRAME_COUNT),
