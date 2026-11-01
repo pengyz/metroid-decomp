@@ -975,6 +975,14 @@ pub fn check_health_status(mem: &mut FrameMemory) {
     if is_hit & 0x20 != 0 {
         // 受击面
         mem.write_ram(crate::ram_map::SAMUS_INVINCIBLE_DELAY, 0x32); // 50 帧
+        // 【goal-轮39 伤害源标记】physics:977（伤害触发径）。
+        if std::env::var("DSH_SPRITE_TRACE").is_ok() {
+            use std::sync::atomic::Ordering;
+            let n = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
+            if n >= 1258 && n <= 1275 {
+                eprintln!("[dmg2] n={} physics977 invDly<-50", n);
+            }
+        }
         mem.write_ram(crate::ram_map::SAMUS_KNOCKBACK_DIR, 0xFF);
         let bomb = mem.read_ram(crate::ram_map::SAMUS_KNOCKBACK_IS_BOMB);
         mem.write_ram(crate::ram_map::SAMUS_KNOCKBACK_IS_BOMB77, bomb);

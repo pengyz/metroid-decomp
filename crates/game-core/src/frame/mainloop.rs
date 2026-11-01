@@ -2191,6 +2191,11 @@ fn uw_skree_projectiles(mem: &mut crate::frame::FrameMemory) {
                 if !crate::samus::physics::is_screw_attack_active(mem) {
                     mem.write_ram(0x010F, 0x80);
                     mem.write_ram(crate::ram_map::SAMUS_INVINCIBLE_DELAY, 0x32);
+                    // 【goal-轮39 伤害源标记】mainloop:2193（敌撞伤害）。
+                    if std::env::var("DSH_SPRITE_TRACE").is_ok() {
+                        use std::sync::atomic::Ordering;
+                        eprintln!("[dmg] n={} mainloop2193 invDly<-50", DIAG_ITER.load(Ordering::Relaxed));
+                    }
                     mem.write_ram(0x006E, 0x50); // HealthChange←$50（5 伤害）
                     mem.write_ram(0x006F, 0x00);
                 }
