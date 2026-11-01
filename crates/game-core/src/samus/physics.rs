@@ -668,10 +668,12 @@ pub fn samus_collision_with_solid_entities(mem: &mut FrameMemory) {
         use std::sync::atomic::Ordering;
         let n = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
         if n >= 1258 && n <= 1275 {
-            eprintln!("[col] n={} sY={} sX={} eA=({},{}) eB=({},{})", n,
+            eprintln!("[col] n={} sY={} sX={} eA=({},{}) eB=({},{}) invDly={} isHit={}", n,
                 mem.read_ram(0x030D), mem.read_ram(0x030E),
                 mem.read_ram(0x0450), mem.read_ram(0x0451),
-                mem.read_ram(0x0440), mem.read_ram(0x0441));
+                mem.read_ram(0x0440), mem.read_ram(0x0441),
+                mem.read_ram(crate::ram_map::SAMUS_INVINCIBLE_DELAY),
+                mem.read_ram(crate::ram_map::SAMUS_IS_HIT));
         }
     }
     // 双旗清（注「Default to … not being on an elevator or on a frozen enemy」）
