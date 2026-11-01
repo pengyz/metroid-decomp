@@ -129,7 +129,7 @@ def main(argv: list[str]) -> int:
         print(f"{name}: 分歧 {len(d)} 帧"
               + (f"（首 f{d[0]} 尾 f{d[-1]}）" if d else "——✅ 全同"))
         ok = ok and not d
-    print("结论：" + ("✅ 全同" if ok else "❌ 有分歧"))
+    print("conclusion: " + ("ALL-SAME" if ok else "HAS-DIFF"))
     return 0 if ok else 1
 
 
@@ -201,5 +201,5 @@ if __name__ == "__main__":
         print(f"{name}: 分歧 {len(dd)} 帧"
               + (f"（首 f{dd[0]} 尾 f{dd[-1]}）" if dd else "——✅ 全同"))
         ok = ok and not dd
-    print("结论：" + ("✅ 全同" if ok else "❌ 有分歧"))
+    print("conclusion: " + ("ALL-SAME" if ok else "HAS-DIFF"))
     sys.exit(0 if ok else 1)
