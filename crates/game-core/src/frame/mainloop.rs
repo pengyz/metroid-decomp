@@ -1505,6 +1505,14 @@ fn update_enemy_common_no_move_no_anim(mem: &mut crate::frame::FrameMemory, x: u
         // data05`——**bit1=可见旗**）——绘径写面（flag=可见判定 ✓）。
         let d5 = mem.read_ram(0x0400 + x as u16 + 5);
         mem.write_ram(0x0400 + x as u16 + 5, (d5 & 0xFD) | 0x02); // 绘⇒可见旗置
+        // 【goal-轮74 置写点标记】:1507（绘⇒置）。
+        if std::env::var("DSH_SPRITE_TRACE").is_ok() && x == 0x40 {
+            use std::sync::atomic::Ordering;
+            let n = DIAG_ITER.load(Ordering::Relaxed);
+            if n >= 800 && n <= 810 {
+                eprintln!("[b1s] n={} SET_1507 d05={:02X}", n, mem.read_ram(0x0400 + x as u16 + 5));
+            }
+        }
         draw_enemy(mem, x);
     }
     mem.write_ram(0x0400 + x as u16 + 4, 0); // isHit=+4
