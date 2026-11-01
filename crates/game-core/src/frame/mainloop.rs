@@ -1327,6 +1327,9 @@ fn crawler_reorient_sprite(mem: &mut crate::frame::FrameMemory, x: u8) {
     mem.write_wram(0x6AF4 + x as u16 + 5, v); // resetAnimIndex
     mem.write_wram(0x6AF4 + x as u16 + 6, v); // animIndex
     mem.write_wram(0x6AF4 + x as u16 + 4, 0); // animDelay←0
+    // 【goal-轮32 证伪更正】轴旗假说（bit7=轴向）被金腿证伪（f1838 金 d05=0x58——bit7=0
+    // ✗）⇒回退。d05 差面实为 bit6（30fps 翻转位）+bit4/3（阈距）+bit2/1（向位）组合差
+    // ——下轮对表 F75B 阈距件+翻转位写面。
 }
 
 /// UpdateEnemyAnim（**asm 内容锚** `UpdateEnemyAnim: ; 07:E094`——敌人动画走表全径）：
