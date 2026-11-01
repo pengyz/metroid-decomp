@@ -1458,6 +1458,10 @@ pub fn samus_move_horizontally(mem: &mut FrameMemory, delta: u8) {
     // Exit10/TwosComplement（负向）/**岩浆减半（lsr+n=0⇒Exit10）**/ObjectCounter=delta
     // +逐像素环（MoveSamus+CheckStopHorzMvmt per px——stop⇒ObjectCounter=1 破环）/门向
     // （左=1/右=0）——**全件面合规** ✓✓。
+    // 【goal-轮52 状态直比】morphball 案 f1200 双侧全同（SX=84/MPX=2/SDir=2/SamX=F4 ✓）
+    // /f1300 起 SamX 0xB0 vs 0xCD（29px）+f1560 MPX/SDir 分叉（1/2 vs 3/3——**不同房**
+    // ）⇒发散起点=f1200-1300 窗（移动链合规⇒输入/门控相位面——记账）。
+    crate::frame::DIVERGENCES.with(|d| d.borrow_mut().push(0x0E31A));
     let x = mem.read_ram(0x030E);
     let sx = mem.read_ram(crate::ram_map::SCROLL_X);
     mem.write_ram(crate::ram_map::SAMUS_SCR_X, x.wrapping_sub(sx)); // E31D
