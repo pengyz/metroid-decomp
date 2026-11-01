@@ -245,6 +245,8 @@
 > loop dispatch 对表→修→match 动。
 > 【dispatch 合规】room.rs:446 `b & 0x0F` 同构（1=LoadEnemy/0/3/5=Exit ✓）——**dispatch
 > 合规**而敌未入槽 ⇒**房数据环的敌条目存在性**（room 数据的敌条目解析/触发）。
+> 【房数据敌条目考证】room 数据的敌条目（3B：slot&$F0|type/敌型/位）——**解析考证**
+> （下轮逐字对表 room 数据环）→修→match 动。
 
 ### case-002（3 diff）
 | 帧 | px | 类 | 根因 | 证据 |
