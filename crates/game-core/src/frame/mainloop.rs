@@ -1197,6 +1197,8 @@ fn crawler_ai(mem: &mut crate::frame::FrameMemory, x: u8) {
     };
     let _ = diag_n;
     // F852：txa/lsr×3（carry←原 bit2）/adc FrameCount（含进位）/lsr——门含 lsr 移出位。
+    // 【goal-轮58 证伪记账（§3.6）】gate FC+1 L4 判定 54/97（-1 微劣 vs 基线 55）⇒
+    // 回退——gate 读面保 pre-inc（toggle 读面 FC+1（轮57）中性保留）。
     let gate = ((x >> 3)
         .wrapping_add((x >> 2) & 1)
         .wrapping_add(mem.read_ram(crate::ram_map::FRAME_COUNT))
