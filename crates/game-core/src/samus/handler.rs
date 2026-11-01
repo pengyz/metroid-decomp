@@ -755,6 +755,13 @@ pub fn set_samus_stand_no_footstep(mem: &mut FrameMemory) {
     // CFB7：accelX←Y（`8c 15 03`）
     mem.write_ram(0x0315, y);
     // CF81：$0304←Y（`8c 04 03`）
+    if std::env::var("DSH_SPRITE_TRACE").is_ok() && y == 3 {
+        use std::sync::atomic::Ordering;
+        let n = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
+        if n >= 1115 && n <= 1135 {
+            eprintln!("[w304c] n={} CF81_WRITE3 y={}", n, y);
+        }
+    }
     mem.write_ram(0x0304, y);
     // CF5D：status←Y（`8c 00 03`——stand=0）
     mem.write_ram(crate::ram_map::SAMUS_STATUS, y);
