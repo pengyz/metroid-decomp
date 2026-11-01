@@ -783,6 +783,11 @@ pub fn bit_scan(mut a: u8) -> u8 {
 /// 嵌套件桩：SetSamusStand_NoFootstep（CF5D）/FireSamusProjectile（D1EE）/
 /// SetSamusData（CD6D）——随队列填。
 pub fn samus_stand(mem: &mut FrameMemory) {
+    // 【goal-轮55 asm 合规矩】CC36 全径对表：Joy1Status&~(SEL|START)⇒空⇒跳 CF5D/
+    // 输入面（DOWN|LEFT|RIGHT 或 Joy1Change UP）/BitScan→cmp BUTTONBIT_DOWN（≥⇒不改
+    // Dir）/ActionTable[向]→status 写→JumpEngine 分派（Run/Jump/Roll/PntUp）/Fire
+    // （Joy1Change|Retrig）/Jump（Joy1Change bit7）——**全件面合规** ✓✓（f1200 根
+    // 非本件——输入相位/BitScan 面余）。
     use button::*;
     let joy = mem.read_ram(crate::ram_map::JOY1_STATUS);
     if joy & !(SELECT | START) != 0 {
