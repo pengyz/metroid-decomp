@@ -16,7 +16,14 @@ impl FrameMemory {
 
     /// RAM 写（2KB 镜像归一）。
     pub fn write_ram(&mut self, addr: u16, v: u8) {
-        // 【goal-轮26 SamusX 写钩】0x30E 写点（左移速率差根）。
+        // 【goal-轮34 speed_i 写钩】0x309（Samus speed_i）写点（254→3 外部写源）。
+        if addr == 0x0309 && std::env::var("DSH_SPRITE_TRACE").is_ok() {
+            use std::sync::atomic::Ordering;
+            let n = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
+            if n >= 1258 && n <= 1275 {
+                eprintln!("[sxi] n={} speed_i<-{}", n, v);
+            }
+        }
         if addr == 0x030E && std::env::var("DSH_SPRITE_TRACE").is_ok() {
             use std::sync::atomic::Ordering;
             let n = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
