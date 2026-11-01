@@ -190,6 +190,15 @@ pub fn int_x(st: &mut IntXState, accel: u8, max_src: u8) -> IntXOut {
     let _ = sub_hi;
     if !borrow {
         // 钳位：frac := $00、int := $01（负路径已取负 ⇒ ±limit）
+        // 【goal-轮32 钳径直证】钳位触发标记（spX 翻转源）。
+        if std::env::var("DSH_SPRITE_TRACE").is_ok() {
+            use std::sync::atomic::Ordering;
+            let n = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
+            if n >= 1258 && n <= 1275 {
+                eprintln!("[ix] n={} CLAMP spI {}->{} spF {}->{} lim={:02X}{:02X}", n,
+                    st.speed_i, lim1, st.speed_f, lim0, lim1, lim0);
+            }
+        }
         st.speed_f = lim0;
         st.speed_i = lim1;
     }
