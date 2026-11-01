@@ -6,6 +6,15 @@
 name case-001-game-start-samus-interaction
 frames 1200
 snapshot none  # ②待加载存档：none=无存档（上电起跑）；有档写 snapshot <前缀>（≡bundle_load；load_snapshot 消费面缺口记账（后续增加））
+watch 002D FC
+watch 0300 SamusStatus
+watch 030D SamusY
+watch 030E SamusX
+watch 03DD BulletY       # 弹槽 0x3D0 槽面（y+0x0D）——Phase2 弹轨迹正定性
+watch 03DE BulletX       # x+0x0E
+watch 03D8 BulletSpeedY
+watch 03D9 BulletSpeedX
+watch 03D0 BulletStatus
 
 # ① 进入游戏（标题→游戏开始）
 press 310 start     # 标题按 Start
