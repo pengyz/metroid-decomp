@@ -274,7 +274,7 @@ def run_rust(name: str, sched: Path, out_dir: Path,
     if state_out:  # 【Task 4】状态行输出（对齐验收输入）
         cmd += ["--state-out", str(state_out)]
     print(f"[rust] {' '.join(cmd)}")
-    r = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True)
+    r = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, encoding="utf-8", errors="replace")
     # cargo 的 warning 走 stderr；只在真正失败时报错
     if r.returncode != 0:
         print(r.stdout)
@@ -292,7 +292,7 @@ def run_emu(name: str, timeout: float, scen_path: Path) -> bool:
     cmd = [sys.executable, str(ROOT / "tools" / "scenario_run.py"), "run", str(scen_path),
            "--timeout", str(timeout)]
     print(f"[emu] {' '.join(cmd)}")
-    r = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True)
+    r = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, encoding="utf-8", errors="replace")
     print(r.stdout[-2000:] if r.stdout else "")
     if r.returncode != 0:
         print(r.stderr[-2000:], file=sys.stderr)
