@@ -162,6 +162,9 @@
 > 【双调修后复测】DrawBullet/爆径显式调删除后 **4 调仍存**（a_in=2/255/255/255）
 > ⇒a_in=255×3 源未 ID（regs.a=255 的 anim_draw_object 调用? 敌面径?）——下轮 255 源
 > 审计（anim_draw_object 调用者含 PageIndex 径）。
+> 【anim_draw_object 调用者七面】pickup:172(0x40)/mainloop:240(0)/1880/1894(PageIndex)/
+> 2033(base&FF)/room:259(x_off)/physics:818(0)——**regs.a=255 源逐者对表**（sprite:32
+> 补调的 regs.a 来源）→ID→修→match 动。
 
 ### case-002（3 diff）
 | 帧 | px | 类 | 根因 | 证据 |
