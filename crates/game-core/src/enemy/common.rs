@@ -177,6 +177,9 @@ pub fn enemy_get_delta_xy(
     let str_off = ptr_full.wrapping_sub(0x97EF); // 窗址→字符串体偏移（全指针）
     // 【对抗复核收敛③⑤（2026-11-01）】走表全谱（asm $8244-:631 逐字）：
     // ①bit5 静息门（:588-591 `and #$20/eor #$20/beq Store`——Δ=0）
+    // 【goal-轮62 $8318 合规矩】EnemyGetDeltaX 全径对表：LoadTableAt977B（加速径分流）
+    // /**data05 bit5=横移禁位**（置⇒Δx=0 Store）/[instrIndex+1] X 字节+bit3 符号+低3
+    // 幅+TwosComplement——**全件面合规** ✓✓（179/183 行同构）。
     // ②<$F0=SignMagSpeed（[duration,packed] 对——packed nibble Δy）
     // ③$FA=TriggerResting/$FB=StopMovement(双RTS)/$FC=RepeatPreviousUntilFailure
     // （data1F bit7=上检/下检循环）/$FD=ClearJumpDsplcmnt/$FE=重复至无Δ休止/$FF=重启。
