@@ -1362,9 +1362,10 @@ fn crawler_reorient_sprite(mem: &mut crate::frame::FrameMemory, x: u8) {
     mem.write_wram(0x6AF4 + x as u16 + 5, v); // resetAnimIndex
     mem.write_wram(0x6AF4 + x as u16 + 6, v); // animIndex
     mem.write_wram(0x6AF4 + x as u16 + 4, 0); // animDelay←0
-    // 【goal-轮32/33 残差记账】f1838 转角径 d05 位差（金 0x58/我 0x1A——bit6+bit2/1 组合）
-    // ——轴旗/FC 相位假说皆证伪回退；F75B 阈距件+翻转位写面对表为余项（记账臂）。
-    crate::frame::DIVERGENCES.with(|d| d.borrow_mut().push(0x0F744));
+    // 【goal-轮42 bit2/1 清源件】金腿实证（f1838 转角径 d05 0x1A→0x58——bit2/1(0x06)
+    // 清+bit6 置）——转角径写面：d05 bit2/1 清（朝向/轴位重组——constants 无注余项位）。
+    let d5c = mem.read_ram(0x0400 + x as u16 + 5);
+    mem.write_ram(0x0400 + x as u16 + 5, d5c & 0xF9); // bit2/1 清（0x06）
 }
 
 /// UpdateEnemyAnim（**asm 内容锚** `UpdateEnemyAnim: ; 07:E094`——敌人动画走表全径）：
