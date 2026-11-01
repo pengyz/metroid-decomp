@@ -1445,6 +1445,14 @@ fn move_samus_left(mem: &mut FrameMemory) -> bool {
     let rx = mem.read_ram(crate::ram_map::SAMUS_RADIUS_X);
     if x.wrapping_sub(rx) & 0x07 == 0 && !object_check_move_left(mem) {
         mem.write_ram(crate::ram_map::SAMUS_DOOR_DATA, 0); // Lx181（撞挡）
+        // 【goal-轮30 bounce 触发直证】左撞挡标记。
+        if std::env::var("DSH_SPRITE_TRACE").is_ok() {
+            use std::sync::atomic::Ordering;
+            let n = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
+            if n >= 1255 && n <= 1295 {
+                eprintln!("[bnc] n={} LEFT_BLOCKED x={} rx={}", n, x, rx);
+            }
+        }
         return false;
     }
     samus_collision_with_solid_entities(mem); // D976
