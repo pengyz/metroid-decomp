@@ -24,6 +24,14 @@ fn blob(addr: u16) -> u8 {
 /// 含 `sta animDelay`←A 初值重置）负责。旧形在此内联 UpdateObjAnim 且漏 `sta animDelay` 重置⇒
 /// animDelay 恒 0⇒每帧换帧（动画过快）+与 update_obj_anim 双写冲突。
 pub fn anim_draw_object(mem: &mut crate::frame::FrameMemory, page_index: u8) {
+    // 【goal-轮106 regs.a 源 ID】anim_draw_object 入口插桩。
+    if std::env::var("DSH_SPRITE_TRACE").is_ok() {
+        use std::sync::atomic::Ordering;
+        let n = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
+        if n >= 1126 && n <= 1132 {
+            eprintln!("[ado] n={} pi={} regs.a={}", n, page_index, mem.regs.a);
+        }
+    }
     // 【goal-轮98 偏离修】asm AnimDrawObject(DE47)=**jsr UpdateObjAnim**（:6226）+ObjDrawFrame
     // （DE4A）——旧形"只读 animFrame 不写"**漏调 UpdateObjAnim**（emu 双调/我方单调
     // ⇒走位率差 +2 根！）。补调。

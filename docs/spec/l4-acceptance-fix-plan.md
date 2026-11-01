@@ -165,6 +165,10 @@
 > 【anim_draw_object 调用者七面】pickup:172(0x40)/mainloop:240(0)/1880/1894(PageIndex)/
 > 2033(base&FF)/room:259(x_off)/physics:818(0)——**regs.a=255 源逐者对表**（sprite:32
 > 补调的 regs.a 来源）→ID→修→match 动。
+> 【regs.a=255 源 ID】[ado] n=1126 三调（pi=0 Samus/pi=64×2 pickup）regs.a=255（0xFF）
+> ——**caller A=255**（pickup:172 前的 regs.a/physics:818 前的 regs.a）⇒补调的 a_in=
+> regs.a 在 draw 时已非 SetSamusData 的 A ⇒**a_in 语义偏离**（asm AnimDrawObject 的
+> A=caller 显式传值非 regs.a）。
 
 ### case-002（3 diff）
 | 帧 | px | 类 | 根因 | 证据 |
