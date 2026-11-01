@@ -16,7 +16,14 @@ impl FrameMemory {
 
     /// RAM 写（2KB 镜像归一）。
     pub fn write_ram(&mut self, addr: u16, v: u8) {
-        // 【goal-轮10 facing 写源直证】0x0445（敌B data05）bit0 变化挂钩。
+        // 【goal-轮20 delay 写钩】0x0449（敌B delay）写点（1 帧相位根）。
+        if addr == 0x0449 && std::env::var("DSH_SPRITE_TRACE").is_ok() {
+            use std::sync::atomic::Ordering;
+            let n = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
+            if n >= 780 && n <= 810 {
+                eprintln!("[dlw] n={} delay<-{}", n, v);
+            }
+        }
         if addr == 0x0445 && std::env::var("DSH_SPRITE_TRACE").is_ok() {
             use std::sync::atomic::Ordering;
             let n = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
