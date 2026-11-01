@@ -16,6 +16,14 @@ impl FrameMemory {
 
     /// RAM 写（2KB 镜像归一）。
     pub fn write_ram(&mut self, addr: u16, v: u8) {
+        // 【goal-轮87 广面写源】0x304 全写点挂钩（写 3 写源直证）。
+        if addr == 0x0304 && v == 3 && std::env::var("DSH_SPRITE_TRACE").is_ok() {
+            use std::sync::atomic::Ordering;
+            let n = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
+            if n >= 1115 && n <= 1135 {
+                eprintln!("[w304b] n={} write 0x304=3", n);
+            }
+        }
         self.ram[(addr as usize) & 0x7FF] = v;
     }
 
