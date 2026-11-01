@@ -104,6 +104,8 @@
 | f825 | 240 | C | 同上 | 同上 |
 | f950 | 542 | E | 组合动作相位（待逐格定位）| matrix.md |
 | f1200 | 1015 | E | 旋/解旋时机动画轴（**H1 待证**）| findings/l4-f1200-horz-momentum-divergence.md |
+> 【数据缺口】case-001 emu 侧弹字段无 watch（0x3D0 槽 y/x/speedY/speedX）——弹轨迹
+> 正定性受阻。修复径：DSL 加 watch（03DD/03DE/03D8/03D9）→重采→双腿对账→一击修。
 
 ### case-002（3 diff）
 | 帧 | px | 类 | 根因 | 证据 |
