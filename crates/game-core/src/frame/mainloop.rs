@@ -407,7 +407,20 @@ pub fn update_world(mem: &mut crate::frame::FrameMemory) {
 pub fn update_all_enemies(mem: &mut crate::frame::FrameMemory) {
     let mut x: u8 = 0x50; // _sizeof_Ens-_sizeof_Ens.0（5 槽×16）
     loop {
-        mem.write_ram(0x004B, x); // PageIndex
+        // 【goal-轮45 可见位直证】敌B bit1（金方冻结=离屏）。
+    if std::env::var("DSH_SPRITE_TRACE").is_ok() {
+        use std::sync::atomic::Ordering;
+        let n = DIAG_ITER.load(Ordering::Relaxed);
+        if n >= 1155 && n <= 1300 {
+            let x2 = 0x40u8;
+            let d5 = mem.read_ram(0x0400 + x2 as u16 + 5);
+            eprintln!("[vis2] n={} eB=({},{}) bit1={} sx={} mpx={}", n,
+                mem.read_ram(0x0400 + x2 as u16), mem.read_ram(0x0400 + x2 as u16 + 1),
+                (d5 >> 1) & 1, mem.read_ram(crate::ram_map::SCROLL_X),
+                mem.read_ram(0x0050));
+        }
+    }
+    mem.write_ram(0x004B, x); // PageIndex
         let status = mem.read_wram(0x6AF4 + x as u16); // EnsExtra.0.status
         // CheckIfVisible（$F37F——不可见⇒双返跳过该敌）
         if status != 0 && status < 2 && !enemy_check_if_visible(mem, x) {
@@ -2041,7 +2054,6 @@ fn update_bullet_explode(mem: &mut crate::frame::FrameMemory) {
 /// UpdateEnemy_Resting（**asm 内容锚** `: 07:F3BE`——r26 壳：30fps 门/件序 fail-loud）。
 fn enemy_resting(mem: &mut crate::frame::FrameMemory, x: u8) {
     let d = mem.read_ram(0x0400 + x as u16 + 5);
-    // 【goal-轮42 Resting 门检直证】bit6 门值+件径。
     if std::env::var("DSH_SPRITE_TRACE").is_ok() && x == 0x40 {
         use std::sync::atomic::Ordering;
         let n = DIAG_ITER.load(Ordering::Relaxed);
