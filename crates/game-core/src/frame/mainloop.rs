@@ -1244,10 +1244,11 @@ fn crawler_ai(mem: &mut crate::frame::FrameMemory, x: u8) {
                 mem.read_ram(0x0400 + x as u16 + 9), mem.read_ram(0x0400 + x as u16 + 3));
         }
     }
-    // 【goal-轮21 toggle 相位修（重测）】delay 递减径=bit6 30fps 门控（try_becoming_active
-    // 每 2 帧跑）——bit6 相位⇒递减帧差 1 ⇒首动差 1。asm 合形删 +1 重测（samL04/敌位修后
-    // L4 景已变——轮58 的 55→53 判定过期）。
-    let parity = ((x >> 4) ^ mem.read_ram(crate::ram_map::FRAME_COUNT)) & 1;
+    // 【goal-轮24 toggle +1 恢复】FC 增量时点补偿（emu bit6=(FC+1)&1 实测——asm 读
+    // 增量后 FC）——round-21 编辑覆盖丢失 +1 ✗ 原地恢复。
+    let parity = ((x >> 4) ^ mem.read_ram(crate::ram_map::FRAME_COUNT).wrapping_add(1)) & 1;
+    // 【goal-轮24 gate FC+1 测（§3.6 记）】gate 读新 FC=+1 ⇒L4 55→54 ⇒回退保 +0
+    //（轮58/轮24 两次判负）——机制真（FC 帧末增 vs asm 帧首增）修向负。
     let gate = ((x >> 3)
         .wrapping_add((x >> 2) & 1)
         .wrapping_add(mem.read_ram(crate::ram_map::FRAME_COUNT))
