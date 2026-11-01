@@ -1887,6 +1887,11 @@ fn uw_skree_projectiles(mem: &mut crate::frame::FrameMemory) {
 /// +敌 isHit 标志）→下帧 EnemyReactToSamusProjectile（F536——伤害/爆亡 ✓已端口）。
 /// 注：SamusCollisionWithSolidEntities（D976）在 physics 链（不动）。
 fn uw_collision_detection(mem: &mut crate::frame::FrameMemory) {
+    // 【goal-轮20 碰撞环头件】CollisionDetection（F034-F038 逐字）：`lda #$FF/sta
+    // SamusKnockbackIsBomb($73)/sta SamusHurt010F($010F)`——**每环重置 kb73=$FF**（无此
+    // 件则 CheckHealthStatus 的击退向位径（bomb≠0 门）永不发（金腿 kb77=$FF 实证）。
+    mem.write_ram(crate::ram_map::SAMUS_KNOCKBACK_IS_BOMB, 0xFF);
+    mem.write_ram(0x010F, 0xFF);
     for s in 0..6u16 {
         let x = s * 16; // 字节偏移约定（Ens/EnsExtra 步距 16——asm 6 槽环 :10021 Xminus16）
         let st = mem.read_wram(0x6AF4 + x);
@@ -1945,17 +1950,14 @@ fn uw_collision_detection(mem: &mut crate::frame::FrameMemory) {
                 // 螺旋转（IsScrewAttackActive——carry clear=active）⇒不伤萨姆斯
                 let screw = crate::samus::physics::is_screw_attack_active(mem);
                 if !screw {
-                    mem.write_ram(0x010F, 0x80); // SamusHurt010F（cosmetic）
-                    mem.write_ram(crate::ram_map::SAMUS_INVINCIBLE_DELAY, 0x32);
+                    // 【goal-轮20 偏离撤除】F282 敌×萨径只写 isHit（SetSamusIsHitByEnemy）
+                    // +LF306 伤害——**i 帧/击退速由 CheckHealthStatus（CDFA）统一置**
+                    // （旧形此处直写 i 帧+单次推=偏离（金腿 f1652 i70=0 实证））。
+                    mem.write_ram(0x010F, mem.read_wram(0x6AF4 + x + 14)); // Hurt010F←敌 type（F298）
                     mem.write_ram(0x006E, 0x80);
                     mem.write_ram(0x006F, 0x00);
-                    // 【goal-轮17 推向勘误】金腿实证（f1655 spX=1（max right）+x 200→214）
-                    // ⇒敌在左⇒**推右**（离敌推）——旧形方向反（ex>sx⇒右推 ✗）+幅值
-                    // 旧 2→实测 1（max 速面）。
                     let dir_bits = if ex > sx { 0x00u8 } else { 0x08 }; // bit3=被推向右
                     mem.write_ram(crate::ram_map::SAMUS_IS_HIT, 0x30 | dir_bits);
-                    let push = if ex > sx { 0xFFu8 } else { 0x01 }; // 离敌推（max 1）
-                    mem.write_ram(0x0309, push); // Samus.speedX（击退 X 推）
                 }
             }
         }

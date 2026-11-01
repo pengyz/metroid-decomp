@@ -920,15 +920,31 @@ pub fn check_health_status(mem: &mut FrameMemory) {
         // 蜂鸣深件随件）——碰撞伤害面（击退+i 帧+扣血）保持可跑（playability 底座）。
         crate::frame::DIVERGENCES.with(|d| d.borrow_mut().push(0x0CE25));
     }
-    // Lx006：无敌倒数（i-frames 帧驱动击退衰减）
+    // Lx006：无敌倒数（i-frames 帧驱动击退衰减）+**击退 X 速**（CE30-CE52——goal-轮20
+    // 全谱端口（消 CE52 占位臂））：A=i帧(pre-dec)>>4（Adiv16=C2BF 逐字 lsr×4）→
+    // <3 且 AccelX≠0⇒跳过写（Lx009）/AccelX==0⇒LCF4E（speedX/F←0）→向位（kb72==0⇒
+    // TwosComplement 取负=推左/≠0⇒推右）→`sta Samus.speedX`。
     let delay = mem.read_ram(crate::ram_map::SAMUS_INVINCIBLE_DELAY);
     if delay != 0 {
         mem.write_ram(crate::ram_map::SAMUS_INVINCIBLE_DELAY, delay - 1);
         let dir = mem.read_ram(crate::ram_map::SAMUS_KNOCKBACK_DIR);
         if dir.wrapping_add(1) != 0 {
-            // 【碰撞爆点收口同族】击退 X 速衰减面（CE52——Adiv16 族）=占位臂记账
-            // （碰撞/击退径保持可跑——深件随件）。
-            crate::frame::DIVERGENCES.with(|d| d.borrow_mut().push(0x0CE52));
+            let mut a = delay >> 4; // Adiv16（i帧(pre-dec)/16）
+            let mut skip = false;
+            if a < 3 {
+                if mem.read_ram(crate::ram_map::SAMUS_ACCEL_X) != 0 {
+                    skip = true; // bne Lx009（有横向加速⇒让加速径管）
+                } else {
+                    mem.write_ram(SAMUS_SPEED_X_I, 0); // LCF4E（Y=0）
+                    mem.write_ram(SAMUS_SPEED_X_F, 0);
+                }
+            }
+            if !skip {
+                if dir == 0 {
+                    a = 0u8.wrapping_sub(a); // TwosComplement（推左）
+                }
+                mem.write_ram(SAMUS_SPEED_X_I, a); // sta Samus.speedX
+            }
         }
     }
     check_health_beep(mem); // CE66（低血蜂鸣——r26 端口）
