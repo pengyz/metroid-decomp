@@ -487,7 +487,7 @@ fn enemy_check_if_visible(mem: &mut crate::frame::FrameMemory, x: u8) -> bool {
     if std::env::var("DSH_SPRITE_TRACE").is_ok() && x == 0x40 {
         use std::sync::atomic::Ordering;
         let n = DIAG_ITER.load(Ordering::Relaxed);
-        if n >= 820 && n <= 860 {
+        if n >= 800 && n <= 810 {
             let hi_ = mem.read_wram(0x6AF4 + x as u16 + 7);
             let nt_ = mem.read_ram(0x00FF);
             let d5_ = mem.read_ram(0x0400 + x as u16 + 5);
