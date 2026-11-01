@@ -254,6 +254,13 @@ pub fn samus_run(mem: &mut FrameMemory) {
             // +SetSamusData_3FrameAnimDelay（熔岩跳（三件全在（2026-10-28 端口）））
             set_samus_jump(mem);
             mem.write_ram(crate::ram_map::SAMUS_HORZ_SPEED_MAX, 0x12);
+            if std::env::var("DSH_SPRITE_TRACE").is_ok() {
+                use std::sync::atomic::Ordering;
+                let n = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
+                if n >= 1128 && n <= 1147 {
+                    eprintln!("[w304] n={} LAVA_WRITE3", n);
+                }
+            }
             mem.write_ram(ANIM_RESET_INDEX.wrapping_sub(1), 3);
         }
         // samL06（CD16）：三件+animDelay 初值 A=2（`lda #$02/bne SetSamusData`——
@@ -463,12 +470,12 @@ fn set_samus_jump(mem: &mut FrameMemory) {
 /// SetSamusRun（**asm 内容锚** `SetSamusRun: ; 07:CC98`）：WalkSoundDelay←9/转身动画
 /// （Stand⇒Run、PntUp⇒RunPntUp、其余（原跑动）⇒Front 过渡）/Run 动画置位+加速。
 fn set_samus_run(mem: &mut FrameMemory) {
-    // 【goal-轮正定性】animIndex 写点插桩（直写面）。
+    // 【goal-轮86 写源直证】0x304 写点插桩（写 3 写源）。
     if std::env::var("DSH_SPRITE_TRACE").is_ok() {
         use std::sync::atomic::Ordering;
         let n = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
-        if n >= 1238 && n <= 1252 {
-            eprintln!("[anim] n={} SET_RUN (direct-write path)", n);
+        if n >= 1128 && n <= 1147 {
+            eprintln!("[w304] n={} SET_RUN", n);
         }
     }
     // 【goal-轮54 asm 合规矩】CC98 逐件对表：WalkSoundDelay=9/animResetIndex 分支
@@ -973,6 +980,13 @@ pub fn samus_jump_tail(mem: &mut FrameMemory) {
     if mem.read_ram(0x0609) != 0 && mem.read_ram(crate::ram_map::JOY1_CHANGE) & A != 0 {
         set_samus_jump(mem);
         mem.write_ram(ANIM_RESET_INDEX.wrapping_sub(1), 3); // SetSamusData_3FrameAnimDelay
+        if std::env::var("DSH_SPRITE_TRACE").is_ok() {
+            use std::sync::atomic::Ordering;
+            let n = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
+            if n >= 1128 && n <= 1147 {
+                eprintln!("[w304] n={} SD3_WRITE3", n);
+            }
+        }
     }
     // Lx021 落地判（AccY==0）
     if mem.read_ram(crate::ram_map::SAMUS_ACCEL_Y) == 0 {
