@@ -135,6 +135,9 @@
 > 【DC8F 调用时机合规】SetSamusData 首件 `jsr UpdateObjAnim`（:2972）——我方
 > set_samus_data:796 首件同构 ✓——调用时机合规 ⇒余=**emu 侧调用次数/时点差**
 > （emu 每帧 DC8F 调用次数 vs 我方 1 次——emu 双调? 或时点）。
+> 【emu 走位率反推】f1132 emu (ad 3→2 dec + ai 11→13 **+2**)——**一次 DC8F 不可能**
+> （dec 不推进/推进 +1）⇒emu 侧=**直写 ai=13 + DC8F dec** 组合（或双调）——我方缺
+> 直写 ai=13 面 ⇒修复径=emu 侧直写径考证（SetSamusNextAnim A=13?）→补→match 动。
 
 ### case-002（3 diff）
 | 帧 | px | 类 | 根因 | 证据 |
