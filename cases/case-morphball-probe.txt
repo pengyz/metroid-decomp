@@ -17,6 +17,7 @@ watch 00FD ScrollX
 watch 0300 SamusStatus
 watch 0305 AnimResetIndex   # Phase1 增量（Stand↔Run 倒置直证面——spec v2）
 watch 0306 AnimIndex
+watch 0304 AnimDelay        # Phase2 相位对账面（4 帧相位差根——reload A/倒数相位二判一）
 watch 0012 Joy1Change       # 输入相位对照面（F3——采样/注入时点判别）
 watch 0014 Joy1Status
 watch 0301 SamusRadiusY

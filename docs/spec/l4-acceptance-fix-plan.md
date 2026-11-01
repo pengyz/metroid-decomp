@@ -37,6 +37,10 @@
 > 落过⇒推进+reload(A)/表走 FF⇒reset 回绕——我方 update_obj_anim 同构 ✓✓。**金方
 > animDelay 无 watch（数据缺）**——相位对账缺口：下步 DSL 加 watch 0304（animDelay）
 > +0306（animIndex）重采双侧→相位对账→修。
+> 【根最终定案（数据补齐后）】animDelay 节拍同（1↔2 双腿 ✓）；animIndex 周期起点差
+> ——金 f1250 已 15(0x0F Salto 周期)/我 12,13(Jump 帧)起步 f1254 才入 Salto——**Salto
+> 切换晚 4 帧** ⇒根=Salto 切换时点（JumpDisp≥\$18 阈值触发面——samL01 `cpy #\$18/
+> bcc samL04` 旋/解旋门）。Phase 2 根修对象=Salto 切换阈值触发。
 
 像素差单位=差异像素/61440。类定义：A=状态机运行期 / B=镜头-滚动内容 / C=弹道-显示 / D=敌面相位 / E=其他已定位 / T=BUG-089 渲染-采样时序（记账容忍裁定候选）。
 
