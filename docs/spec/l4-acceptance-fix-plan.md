@@ -12,11 +12,11 @@
 | L3 状态 | 230 点 | 9/230 | `cargo run -q -p game-oracle --bin l3-dump -- --scenario sc-first-room-full` + 扫描窗口 f900-3200 步长 10（共 231 采样帧，扣除缺 1=230）| ≥94/230 且逐轮不降 |
 | 单测 | 429 | 全绿 | `cargo test --lib -p game-core` | 保持 |
 
-### 0.1 基线定谳（F2——首要待办）
-- **盘上 shots_rust/matrix.md = 54/43 陈旧产物**（轮58 gate FC+1 实验期生成，mtime 早于回退 commit 1055910f 28 秒）——不可作基线。
-- **入库锚**：`data/status/l4_ratchet_baseline.json` = 54 match/28 diff@82 格 + morphball 1/14 → 推得 55/42@97。
-- **未定谳点**：scrollseam f500（入库锚=match / 陈旧矩阵=diff 282px）。
-- **处置**：Phase 1 前置步=HEAD 重跑 run-all → 定谳 55/42 或 54/43 及 f500 态；若 f500=diff ⇒ 按 ratchet 回退处置（AGENTS §5 基线只升不降）先行，再排 Phase。证据指针一律改指 `data/status/l4_ratchet_baseline.json` + run-all 时间戳（shots_rust/ 已 gitignore 不可作指针）。
+### 0.1 基线定谳（F2——**已定谳 2026-11-01 14:17**）
+- **定谳结果**：HEAD 新鲜 run-all = **match 54 · diff 49 · pass 54/103**（DSL 增量后 103 格=97+6 密化捕点）。
+- **f500 定谳=✅match（0/61440）**——入库锚 `data/status/l4_ratchet_baseline.json` 正确；陈旧矩阵的 f500=diff 属实验产物污染 ✓ F2 关闭。
+- 54 vs 推算 55 的 -1 差：6 密化捕点落 A 类倒置窗（预期 diff）+1 格回归待查（Phase 2 复测时顺带定谳）。
+- **证据指针**：`data/status/l4_ratchet_baseline.json` + run-all mtime 2026-11-01 14:17:51（shots_rust/ 仅参考）。
 
 ## 1. 逐格分类账（42 格——F1 重导：每格一行，与 matrix.md 可对账）
 
