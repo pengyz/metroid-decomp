@@ -16,7 +16,14 @@ impl FrameMemory {
 
     /// RAM 写（2KB 镜像归一）。
     pub fn write_ram(&mut self, addr: u16, v: u8) {
-        // 【goal-轮70 bit1 全写钩】0x445（敌B data05）bit1 写点（闩清除径直证）。
+        // 【goal-轮80 Samus radiusY 写钩】0x301 写点（碰撞判径源）。
+        if addr == 0x0301 && std::env::var("DSH_SPRITE_TRACE").is_ok() {
+            use std::sync::atomic::Ordering;
+            let n = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
+            if n >= 1255 && n <= 1295 {
+                eprintln!("[sry] n={} Samus.radiusY<-{}", n, v);
+            }
+        }
         if addr == 0x0445 && std::env::var("DSH_SPRITE_TRACE").is_ok() {
             use std::sync::atomic::Ordering;
             let n = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
