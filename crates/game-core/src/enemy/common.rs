@@ -167,6 +167,10 @@ pub fn enemy_get_delta_xy(
         // Δ=speed 本体）。
         return (sp as i8, 0, delay, instr_index, false);
     }
+    // 【goal-轮63 $833F 合规矩】EnemyGetDeltaY_UsingAcceleration 全径对表：max=14
+    // （Y=0E）/accelY 符号分流（正⇒frac+int 加/负⇒abs 减）/speed 符号⇒TwosComplement
+    // +Y=F2(-14)/|speed|≥14⇒钳位（frac=0+int=Y）/subpix+=frac⇒Delta=int+c——**全件面
+    // 合规** ✓✓（168 行同构——Skree 走串径（L977B bit6=0）非本径 ✗）。
     // 朝向（data05 bit7：水平/垂直）→movementIndex*2+facing→*2→指针
     let facing = if data05 & 0x80 != 0 { (data05 >> 2) & 1 } else { data05 & 1 };
     // **8 位回绕**（asm `rol/asl` u8 语义——case-6 Δ=+48 实值对读证：movementIndex=249
