@@ -235,6 +235,8 @@
 > 【GetEnemyData 语义】slot x=**room 数据首字节&0xF0**（槽位来自房间数据！）+IsSlotTaken
 > 门+type（&0x3F→EnsExtra.type）+位置（LEB4D）——**槽位=房间数据 nibble** ⇒我方
 > load_enemy 的 slot 源对表（room 数据解析）→修→match 动。
+> 【slot 源合规】load_enemy:499 `b0 & 0xF0` **同构合规** ✓——slot 源合规而敌未入槽
+> （occupancy 差）⇒**IsSlotTaken 门/入槽路径**（敌 init 的 status 写面）。
 
 ### case-002（3 diff）
 | 帧 | px | 类 | 根因 | 证据 |
