@@ -132,6 +132,9 @@
 > 【A=3 调用点定案】[ssd] n=1114-1119 五调 A=3（**jump_tail Lx023 形 ✓ asm 合规**）
 > +n=1120+ A=2——A 值/调用点**合规** ⇒相位差非 A 值错 ⇒余=reload 时点/DC8F 走位
 > 相位面（A=3 的 reload 与 emu 的 reload 时点差）。
+> 【DC8F 调用时机合规】SetSamusData 首件 `jsr UpdateObjAnim`（:2972）——我方
+> set_samus_data:796 首件同构 ✓——调用时机合规 ⇒余=**emu 侧调用次数/时点差**
+> （emu 每帧 DC8F 调用次数 vs 我方 1 次——emu 双调? 或时点）。
 
 ### case-002（3 diff）
 | 帧 | px | 类 | 根因 | 证据 |
