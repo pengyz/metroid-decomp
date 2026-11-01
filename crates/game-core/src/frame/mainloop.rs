@@ -1332,6 +1332,10 @@ fn update_enemy_common_no_move_no_anim(mem: &mut crate::frame::FrameMemory, x: u
         }
     }
     if mem.read_wram(0x6AF4 + x as u16) != 0 {
+        // 【goal-轮39 绘径可见旗写件】（asm :6178-6186 逐字：`and #$FD/ora (flag<<1)/sta
+        // data05`——**bit1=可见旗**）——绘径写面（flag=可见判定 ✓）。
+        let d5 = mem.read_ram(0x0400 + x as u16 + 5);
+        mem.write_ram(0x0400 + x as u16 + 5, (d5 & 0xFD) | 0x02); // 绘⇒可见旗置
         draw_enemy(mem, x);
     }
     mem.write_ram(0x0400 + x as u16 + 4, 0); // isHit=+4
