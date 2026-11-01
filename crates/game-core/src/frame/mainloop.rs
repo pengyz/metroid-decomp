@@ -492,6 +492,20 @@ fn enemy_check_if_visible(mem: &mut crate::frame::FrameMemory, x: u8) -> bool {
 // 【goal-轮37 记账】可见旗写面（asm :6178-6186 `and #$FD/ora (flag<<1)/sta data05`）
 // 在**绘径**（非 F37F 检）——F37F 闩位读面已折；写面随件（DIVERGENCES 记账臂）。
 fn enemy_check_if_visible_inner(mem: &mut crate::frame::FrameMemory, x: u8) -> bool {
+    // 【goal-轮61 可见位判输入直证】hi/same_nt/carry（金方 bit1=0 在屏却判不可见源）。
+    if std::env::var("DSH_SPRITE_TRACE").is_ok() && x == 0x40 {
+        use std::sync::atomic::Ordering;
+        let n = DIAG_ITER.load(Ordering::Relaxed);
+        if n >= 1150 && n <= 1165 {
+            let y_ = mem.read_ram(0x0400 + x as u16);
+            let x_ = mem.read_ram(0x0400 + x as u16 + 1);
+            let hi_ = mem.read_wram(0x6AF4 + x as u16 + 7);
+            eprintln!("[ivis] n={} y={} x={} hi={} nt={} sy={} sx={} dir={}", n,
+                y_, x_, hi_, mem.read_ram(0x00FF),
+                mem.read_ram(crate::ram_map::SCROLL_Y), mem.read_ram(crate::ram_map::SCROLL_X),
+                mem.read_ram(crate::ram_map::SCROLL_DIR));
+        }
+    }
     // IsObjectVisible（**asm 内容锚** `IsObjectVisible: ; 07:DFDF`——2026-10-31 忠实重建）：
     // 旧形横房分支 y<240 近似恒真且丢名表/横滚轴——载入邻名表敌（hi≠PPU 当前 NT）被误判
     // 可见 ⇒ Skree（slot2）提前可见+激活（crawlprobe f919-959 残差根因）。asm 判定链：
