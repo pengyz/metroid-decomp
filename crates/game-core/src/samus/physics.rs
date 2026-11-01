@@ -1455,6 +1455,10 @@ fn move_samus_right(mem: &mut FrameMemory) -> bool {
 /// `SamusScrX←x−ScrollX`→|Δ|（TwosComplement $95C6）逐像素 MoveSamus± 环+
 /// CheckStopHorzMvmt→门向（SamusDoorData≠0⇒SamusDoorDir（右 0/左 1））。
 pub fn samus_move_horizontally(mem: &mut FrameMemory, delta: u8) {
+    // 【goal-轮49 asm 合规矩】E31A 全径逐件对表：SamusScrX=x−ScrollX（E31D）/delta=0⇒
+    // Exit10/TwosComplement（负向）/**岩浆减半（lsr+n=0⇒Exit10）**/ObjectCounter=delta
+    // +逐像素环（MoveSamus+CheckStopHorzMvmt per px——stop⇒ObjectCounter=1 破环）/门向
+    // （左=1/右=0）——**全件面合规** ✓✓。
     let x = mem.read_ram(0x030E);
     let sx = mem.read_ram(crate::ram_map::SCROLL_X);
     mem.write_ram(crate::ram_map::SAMUS_SCR_X, x.wrapping_sub(sx)); // E31D
