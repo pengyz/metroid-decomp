@@ -194,6 +194,9 @@
 > 【y 写面对表】:1030-1045：dey/tya/sta Ens.0.y（**y dec 写面** ✓）+radiusY 判+
 > 名表判（ScrollY=0⇒RTS）——**y 写面合规**（dey/tya/sta 同构）⇒位差根非 y 写面 ⇒
 > 位整合调用序/相位（EnemyMove 调用次数/时点）。
+> 【EnemyMove 调用序合规】update_all_enemies:407+enemy_get_delta_xy:1132 同构（Y 先
+> delay 写/X 后无写 ✓）——**调用序合规** ⇒位差根非调用序 ⇒**相位/时点**（EnemyMove
+> 的触发帧/门相位）。
 
 ### case-002（3 diff）
 | 帧 | px | 类 | 根因 | 证据 |
