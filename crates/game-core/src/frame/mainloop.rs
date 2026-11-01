@@ -566,6 +566,9 @@ fn update_en_data05_bit6(mem: &mut crate::frame::FrameMemory, x: u8) {
     // 【goal-轮66 判定面分歧记账】toggle FC+1 后：L3 状态面 9/230（回归 ✗）vs L4 视觉
     // 面 55/97（中性 ✓）——**判定面分歧**（L4=验收标准（用户裁定）⇒保留；L3 回归=
     // 状态相位面连锁（f1836 起爬虫转角 d05 位差提前）——余项）。
+    // 【goal-轮修 asm 合形（已回退——§3.1）】F3AA parity=((x/16)^FC)&1 asm 合形删 +1
+    // ⇒L4 55→53（−2 劣化）⇒**回退保留 +1**（轮57 形）——bit6 相位假说（f797-801 反相）
+    // 被 L4 证伪（+1 实为补偿某物——FC 更新时点 vs 采样时点假说余）。
     let parity = ((x >> 4) ^ mem.read_ram(crate::ram_map::FRAME_COUNT).wrapping_add(1)) & 1;
     let nd = (d & 0xBF) | (parity << 6);
     let _ = bit6;

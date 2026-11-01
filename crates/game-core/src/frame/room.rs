@@ -441,7 +441,8 @@ fn enemy_loop(
         let Some(&b) = stream.get(i) else { return false };
         // 【goal-实质对表】敌门环解析轨迹（i/b/ty/stride 逐条目）。
         if std::env::var("DSH_SPRITE_TRACE").is_ok() {
-            eprintln!("[eloop] i={} b={:02X} ty={}", i, b, b & 0x0F);
+            eprintln!("[eloop] i={} b={:02X} ty={} b1={:02X} b2={:02X}", i, b, b & 0x0F,
+                stream.get(i+1).copied().unwrap_or(0xEE), stream.get(i+2).copied().unwrap_or(0xEE));
         }
         if b == 0xFF {
             end_of_room(mem);

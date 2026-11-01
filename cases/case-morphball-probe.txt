@@ -22,6 +22,12 @@ watch 030F JumpDisp         # Phase2 深挖面（Salto 触发实值——JumpDis
 watch 0012 Joy1Change       # 输入相位对照面（F3——采样/注入时点判别）
 watch 6AF4 En0Status        # 敌槽 WRAM 面（slot 0x40——goal 轮134 对账缺口补）
 watch 6B34 En0Status50      # slot 0x50
+watch 0440 En0Y             # 敌B(slot0x40) 位面（实质对表——分歧帧定位）
+watch 0441 En0X
+watch 0445 En0D05           # data05（可见位/facing 位）
+watch 044A En0D0A
+watch 0450 En1Y             # 敌A(slot0x50) 位面
+watch 0451 En1X
 watch 0014 Joy1Status
 watch 0301 SamusRadiusY
 watch 030D SamusY
