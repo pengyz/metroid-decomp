@@ -191,6 +191,9 @@
 > Up/Down 的 y 写面）。
 > 【EnemyMoveOnePixelUp 对表】$83F5 全径：碰撞（块界）/Temp00 门/carry 门/名表切换
 > （SCRN_VY $F0）——**碰撞/名表面合规** ⇒y 写面（dec y）余=下轮对表。
+> 【y 写面对表】:1030-1045：dey/tya/sta Ens.0.y（**y dec 写面** ✓）+radiusY 判+
+> 名表判（ScrollY=0⇒RTS）——**y 写面合规**（dey/tya/sta 同构）⇒位差根非 y 写面 ⇒
+> 位整合调用序/相位（EnemyMove 调用次数/时点）。
 
 ### case-002（3 diff）
 | 帧 | px | 类 | 根因 | 证据 |
