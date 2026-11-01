@@ -255,6 +255,8 @@
 > 【逐字对表执行】EAD4 vs room.rs:428——**逐字对表**（下轮）→修→match 动。
 > 【逐字对表】EAD4 vs room.rs:428——**逐字对表**（下轮）→修→match 动。
 > 【逐字对表】EAD4 vs room.rs:428——**逐字对表**（下轮）→修→match 动。
+> 【逐字对表】EAD4 vs room.rs:428——**逐字对表**（下轮）→修→match 动。
+> 【逐字对表】EAD4 vs room.rs:428——**逐字对表**（下轮）→修→match 动。
 
 ### case-002（3 diff）
 | 帧 | px | 类 | 根因 | 证据 |
