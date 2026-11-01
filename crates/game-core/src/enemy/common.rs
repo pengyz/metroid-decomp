@@ -145,6 +145,15 @@ pub fn enemy_get_delta_xy(
 ) -> (i8, i8, u8, u8, bool) {
     // LoadTableAt977B：type→flags（*2 后 bit7=加速路径——case-6 $45 bit6 ✓ 实证）
     let flags = L977B[(type_ & 0x3F) as usize];
+    // 【goal-轮4 移动源判别】加速径 vs 串径分流直证。
+    if std::env::var("DSH_SPRITE_TRACE").is_ok() {
+        use std::sync::atomic::Ordering;
+        let n = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
+        if n >= 790 && n <= 805 {
+            eprintln!("[dxy] n={} type={} flags={:02X} accel_path={} movIdx={} instrIdx={} dly={} accelY={}",
+                n, type_, flags, flags & 0x40 != 0, movement_index, instr_index, delay, accel_y);
+        }
+    }
     if flags & 0x40 != 0 {
         // **加速路径**（$833F EnemyGetDeltaY_UsingAcceleration——speed 积分面）：
         // 极速 ±14 钳+亚像素+进位链（asm：`adc Ens.0.speedSubPixelY/sta/lda
