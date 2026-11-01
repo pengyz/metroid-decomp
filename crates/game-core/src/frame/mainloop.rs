@@ -1705,6 +1705,14 @@ fn enemy_move_one_pixel_right(mem: &mut crate::frame::FrameMemory, x: u8) -> boo
     if xpos.wrapping_add(rx) & 0x07 == 0 {
         if !enemy_check_move_right(mem, x) {
             mem.write_ram(0x00, 0); // $00=0（碰撞）
+            // 【goal-轮18 右移块碰直证】碰撞返回。
+            if std::env::var("DSH_SPRITE_TRACE").is_ok() && x == 0x40 {
+                use std::sync::atomic::Ordering;
+                let n = DIAG_ITER.load(Ordering::Relaxed);
+                if n >= 795 && n <= 812 {
+                    eprintln!("[rgt] n={} BLOCKED x={} rx={}", n, xpos, rx);
+                }
+            }
             return false;
         }
     }
