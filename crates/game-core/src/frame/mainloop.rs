@@ -29,6 +29,15 @@ use crate::ram_map::{
 ///   （孤儿游标=步骤边界）。
 /// · regs.a 连续性：续段不跑 random_numbers（其写 regs.a）——分发臂继承段间 A 态（F3）。
 pub fn main_loop_iter(mem: &mut FrameMemory) {
+    // 【goal-轮27 帧直证】迭代计数（DSH_SPRITE_TRACE 诊断锚）。
+    if std::env::var("DSH_SPRITE_TRACE").is_ok() {
+        use std::sync::atomic::{AtomicU32, Ordering};
+        static ITER_N: AtomicU32 = AtomicU32::new(0);
+        let n = ITER_N.fetch_add(1, Ordering::Relaxed);
+        if n >= 1660 && n <= 1682 {
+            eprintln!("[iter] n={} FC={:02X}", n, mem.read_ram(FRAME_COUNT));
+        }
+    }
     // 【Step 4 完成拍哨兵】cursor==0xFF=臂末窗（asm：例程体尾段自旋窗——rts 后迭代
     // 收尾 `inc FrameCount`（prg7:207）落本窗尾）。无 prelude（同迭代早过 RandomNumbers/
     // CheckBankSwitch/UpdateTimer——emu 0x01/0x1B 窗各仅 1 次 TD dec 实录，map-v2 §3）；
@@ -1149,12 +1158,14 @@ fn crawler_ai(mem: &mut crate::frame::FrameMemory, x: u8) {
     };
     if std::env::var("DSH_SPRITE_TRACE").is_ok() {
         use std::sync::atomic::{AtomicU32, Ordering};
-        static CRAWL_TICK: AtomicU32 = AtomicU32::new(0);
-        let tick = CRAWL_TICK.fetch_add(1, Ordering::Relaxed);
-        eprintln!("[crawl] tick={} FC={:02X} slot={:02X} idx={} ok={} x={} y={} o={} d5={:02X}",
-            tick, mem.read_ram(crate::ram_map::FRAME_COUNT), x, idx, ok,
-            mem.read_ram(0x0400 + x as u16 + 1), mem.read_ram(0x0400 + x as u16 + 0),
-            orientation, mem.read_ram(0x0400 + x as u16 + 5));
+        static ITER_N2: AtomicU32 = AtomicU32::new(0);
+        // 与 main_loop_iter 的 ITER_N 同源递增不可行（跨函）——用 FC+slot/x/y 三元组定位。
+        let _ = ITER_N2.fetch_add(1, Ordering::Relaxed);
+        if mem.read_ram(crate::ram_map::FRAME_COUNT) >= 0x76 && mem.read_ram(crate::ram_map::FRAME_COUNT) <= 0x8E {
+            eprintln!("[crawl] FC={:02X} slot={:02X} idx={} ok={} x={} y={} o={}",
+                mem.read_ram(crate::ram_map::FRAME_COUNT), x, idx, ok,
+                mem.read_ram(0x0400 + x as u16 + 1), mem.read_ram(0x0400 + x as u16 + 0), orientation);
+        }
     }
     if !ok {
         // CrawlerInsideCornerCheck（bank1:$9AA8——**goal-r16 G3'**）：$00 契约判据。
@@ -1191,6 +1202,11 @@ fn crawler_outside_corner_check(mem: &mut crate::frame::FrameMemory, x: u8) {
         _ => enemy_move_one_pixel_up(mem, x),
     };
     if probe_ok {
+        if std::env::var("DSH_SPRITE_TRACE").is_ok() {
+            eprintln!("[crawl-probe] FC={:02X} slot={:02X} next={} x={} y={}",
+                mem.read_ram(crate::ram_map::FRAME_COUNT), x, next_o,
+                mem.read_ram(0x0400 + x as u16 + 1), mem.read_ram(0x0400 + x as u16 + 0));
+        }
         mem.write_ram(0x0400 + x as u16 + 10, next_o); // data0A+1（asm `9D 0A 04`）
         crawler_reorient_sprite(mem, x); // $9A8F（OutsideCorner 径 `20 8F 9A`）
     }
