@@ -1532,6 +1532,15 @@ fn crawler_reorient_sprite(mem: &mut crate::frame::FrameMemory, x: u8) {
     let orient = (mem.read_ram(0x0400 + x as u16 + 10) & 0x03) as usize;
     let idx = ((orient << 1) | flip as usize) & 0x07;
     let v = CRAWLER_SPRITE_ANIM_TBL[idx];
+    // 【goal-轮86 reorient idx 直证】reset 源（帧面差源）。
+    if std::env::var("DSH_SPRITE_TRACE").is_ok() && x == 0x40 {
+        use std::sync::atomic::Ordering;
+        let n = DIAG_ITER.load(Ordering::Relaxed);
+        if n >= 820 && n <= 860 {
+            eprintln!("[rot] n={} orient={} flip={} idx={} v={:02X}", n,
+                orient, flip, idx, v);
+        }
+    }
     // InitEnAnimIndex(F68D)
     mem.write_wram(0x6AF4 + x as u16 + 5, v); // resetAnimIndex
     mem.write_wram(0x6AF4 + x as u16 + 6, v); // animIndex
