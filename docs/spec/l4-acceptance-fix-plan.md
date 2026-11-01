@@ -211,6 +211,8 @@
 > 【PageIndex 写面考证】enemy_slots.rs=结构件（decode/encode/read/write）——PageIndex
 > （0x4B）写面在**调用侧**（update_all_enemies 的 slot 循环）⇒slot 值 64/0 差=调用侧
 > 的 PageIndex 赋值（enemy slot 遍历序）。
+> 【UpdateEnemyCommon 锚】F410（:10628）+slot 遍历序（x=0/40/80/C0）考证——下轮对表
+> 我方 update_all_enemies 的 slot 赋值序→修→match 动。
 
 ### case-002（3 diff）
 | 帧 | px | 类 | 根因 | 证据 |
