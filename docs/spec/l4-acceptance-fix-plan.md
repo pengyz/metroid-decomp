@@ -115,6 +115,9 @@
 > 【FC 键合失效定案】窗口 40 帧>20 FC 值（缠绕重复）⇒键合 overwrite 失效；且 emu
 > frames.jsonl（帧末缝）vs rust state.jsonl（spin 出口缝）**缝不齐**——双腿对账双阻。
 > **修复径**：①窄窗键合（<256 帧无缠绕）或②缝对齐重采（统一缝）→对账→samL04 同款修。
+> 【窄窗判定（f1128-1147）】f1132 起 emu (13,2) / 我 (11,3)——**ad=3 恒不减**；WALK
+> 插桩 a_in=2 vs state reload 3——**A 值源差**（set_samus_data 的 A 来源：run 径 A=2 /
+> jump_tail A=3——调用序差）⇒samL04 同类根=A 值/调用序面。
 
 ### case-002（3 diff）
 | 帧 | px | 类 | 根因 | 证据 |
