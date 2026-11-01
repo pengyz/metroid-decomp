@@ -540,6 +540,8 @@ mod tests_visibility {
 fn update_en_data05_bit6(mem: &mut crate::frame::FrameMemory, x: u8) {
     let d = mem.read_ram(0x0400 + x as u16 + 5);
     let bit6 = (d >> 6) & 1;
+    // 【goal-轮33/34 证伪记账】FC 相位两假说（全局/toggle 单点 FC+1）皆实测劣化
+    // （40/230、9/230←94/230）⇒回退——f1838 d05 bit6 差**非 FC 相位根**（§3.6 原地记）。
     let parity = ((x >> 4) ^ mem.read_ram(crate::ram_map::FRAME_COUNT)) & 1;
     let nd = (d & 0xBF) | (parity << 6);
     let _ = bit6;
