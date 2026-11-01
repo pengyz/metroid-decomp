@@ -159,10 +159,12 @@ fn samus_run_check_horz_movement_midair(mem: &mut FrameMemory) {
             return;
         }
         mem.write_ram(crate::ram_map::SAMUS_DIR, x);
-        // SetSamusAnim（CF6B——Table06+1=Jump 族：resetIndex←值/index←值-1/delay←4）
-        mem.write_ram(ANIM_RESET_INDEX, OBJ_ANIM_SAMUS_JUMP);
-        mem.write_ram(ANIM_RESET_INDEX + 1, OBJ_ANIM_SAMUS_JUMP.wrapping_sub(1));
-        mem.write_ram(ANIM_RESET_INDEX.wrapping_sub(1), 4);
+        // 【goal-轮77 samL04 偏离修】asm :2897-2902 samL04：`lda #SamusRun/cmp animReset
+        // Index/bne samL05`→`lda #SamusJump/sta animResetIndex`——**只写 animResetIndex**
+        // （Run→Jump）；旧形多写 animIndex+animDelay=4（掐死 DC8F 递减⇒ai 停 11 根！）。
+        if mem.read_ram(ANIM_RESET_INDEX) == OBJ_ANIM_SAMUS_RUN {
+            mem.write_ram(ANIM_RESET_INDEX, OBJ_ANIM_SAMUS_JUMP);
+        }
         return;
     }
     let ay = mem.read_ram(crate::ram_map::SAMUS_ACCEL_Y);
