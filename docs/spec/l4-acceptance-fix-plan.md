@@ -109,6 +109,9 @@
 > 【弹态双腿全同（数据补齐后）】f800-828 弹 st/y/x **完全一致**（emu (1,170,148/164/
 > 180)=rust ✓✓✓）⇒C 类 294px 差=**渲染面**（BUG-089 同类——非行为分歧）⇒C 类 4 格
 > 走 TOLERATED 裁定候选（AGENTS §5 视觉白名单）。
+> 【A 类 rise 窗审计】f1132 起 ai/ad 相位差（emu 13/2 / 我 11/3——ar 双腿同=12 ✓）
+> ——**samL04 同类**（anim 推进相位）——rise 径另有同款写面（samL04 修只覆盖 run 空中
+> 径）⇒下轮 rise 径写面审计（set_samus_jump/run 径的 animIndex/animDelay 写点）。
 
 ### case-002（3 diff）
 | 帧 | px | 类 | 根因 | 证据 |
