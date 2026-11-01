@@ -483,18 +483,20 @@ pub fn update_all_enemies(mem: &mut crate::frame::FrameMemory) {
 /// UpdateEnemy_CheckIfVisible（**asm 内容锚** `: 07:F37F`——r26）：
 /// data05 bit1≠0⇒退出；否则位置/半径→IsObjectVisible⇒**不可见双返**（跳过该敌）。
 fn enemy_check_if_visible(mem: &mut crate::frame::FrameMemory, x: u8) -> bool {
-    // 【goal-轮62 visible 判差直证】hi/同名表（金方 hi≠nt 判隐形源）。
+    // 【goal-轮64 闩置位帧直证】draw visible 写面（闩自持差源）。
     if std::env::var("DSH_SPRITE_TRACE").is_ok() && x == 0x40 {
         use std::sync::atomic::Ordering;
         let n = DIAG_ITER.load(Ordering::Relaxed);
-        if n >= 1150 && n <= 1165 {
+        if n >= 1145 && n <= 1160 {
             let hi_ = mem.read_wram(0x6AF4 + x as u16 + 7);
             let nt_ = mem.read_ram(0x00FF);
             let d5_ = mem.read_ram(0x0400 + x as u16 + 5);
-            eprintln!("[ivis] n={} hi={} nt={} same={} latch={} x={} sx={} dir={:02X}", n,
-                hi_, nt_, ((hi_ ^ nt_) & 1) == 0, (d5_ >> 1) & 1,
-                mem.read_ram(0x0400 + x as u16 + 1), mem.read_ram(crate::ram_map::SCROLL_X),
-                mem.read_ram(crate::ram_map::SCROLL_DIR));
+            let x_ = mem.read_ram(0x0400 + x as u16 + 1);
+            let sx_ = mem.read_ram(crate::ram_map::SCROLL_X);
+            let carry = x_ >= sx_;
+            let same = ((hi_ ^ nt_) & 1) == 0;
+            eprintln!("[ivis] n={} carry={} same={} latch={} x={} sx={}", n,
+                carry, same, (d5_ >> 1) & 1, x_, sx_);
         }
     }
     if mem.read_ram(0x0400 + x as u16 + 5) & 0x02 != 0 {
