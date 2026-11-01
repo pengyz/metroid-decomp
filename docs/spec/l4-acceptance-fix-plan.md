@@ -230,6 +230,8 @@
 > （对账缺）⇒槽位面双向对账受阻（金方 watch 未含 WRAM）。
 > 【槽位差定案】WRAM 双腿（DSL watch 补+重采）：emu slot0x50 status=**2（Active）**
 > /rust=**0（空）**——**敌未入槽 0x50** ⇒load_enemy 槽分配面（slot 0x50 占用/init）。
+> 【LoadEnemy 锚】EB06（:8741）+RemoveEnemy（FA18）——槽分配/init 逐字考证（下轮）→
+> 修→match 动。
 
 ### case-002（3 diff）
 | 帧 | px | 类 | 根因 | 证据 |
