@@ -796,6 +796,9 @@ pub fn samus_stand(mem: &mut FrameMemory) {
     // read_joy1 调用序——下轮 asm 对表）。
     // 【goal-轮70 采样时点合规矩】NMI 末 ReadJoyPads（:268——**逻辑前** ✓）——我方
     // nmi.rs:54 read_joy_pads 同构 ✓✓（采样时点合规——转换触发根非时点 ✗）。
+    // 【goal-轮71 CC36 写序合规矩】:2764-2769 写序：ActionTable[向]→**status 写**
+    // （:2769）→SetSamusData(4)（:2788-2790 anim）→JumpEngine 分派（:2796——SetSamusRun
+    // 等）——**写序合规** ✓✓（我方 825-827 同构——转换倒置根非写序 ✗）。
     crate::frame::DIVERGENCES.with(|d| d.borrow_mut().push(0x0CC36));
     use button::*;
     let joy = mem.read_ram(crate::ram_map::JOY1_STATUS);
