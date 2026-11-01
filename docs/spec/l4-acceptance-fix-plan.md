@@ -186,6 +186,9 @@
 > ⇒**敌面状态差为主**（y/x/data05/data0A）⇒敌 AI/位置面=主攻（D 类根同源）。
 > 【敌0 状态双腿差】y 63/101+x 200/152（**大幅差**）+data05 24/26+data0A 1/3——
 > **敌 AI 位置差**（D 类根实锤）⇒敌 AI 移动面=主攻（crawler/skree AI 对表）。
+> 【走位面全同+位差】敌0 speedY/speedX/movementIndex/delay/health **全同** ✓+y/x 位差
+> ⇒**走位 delta 与位脱钩**（delta 写面 vs 位整合面分离差）⇒位整合面=主攻（EnemyMove
+> Up/Down 的 y 写面）。
 
 ### case-002（3 diff）
 | 帧 | px | 类 | 根因 | 证据 |
