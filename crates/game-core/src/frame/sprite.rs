@@ -27,7 +27,9 @@ pub fn anim_draw_object(mem: &mut crate::frame::FrameMemory, page_index: u8) {
     // 【goal-轮98 偏离修】asm AnimDrawObject(DE47)=**jsr UpdateObjAnim**（:6226）+ObjDrawFrame
     // （DE4A）——旧形"只读 animFrame 不写"**漏调 UpdateObjAnim**（emu 双调/我方单调
     // ⇒走位率差 +2 根！）。补调。
-    crate::samus::physics::update_obj_anim(mem, 0);
+    // 【goal-轮99 a_in 正值修】asm UpdateObjAnim 的 A=caller 传值（SetSamusData 的 A）
+    // ——a_in=regs.a（非 0 占位）。
+    crate::samus::physics::update_obj_anim(mem, mem.regs.a);
     let px = page_index as u16;
     // 只读 animFrame（动画更新在 update_obj_anim——此处不写 $0303/$0304/$0306）
     let anim_frame = mem.read_ram(0x0303 + px);
