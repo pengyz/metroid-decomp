@@ -1866,6 +1866,13 @@ fn uw_skree_projectiles(mem: &mut crate::frame::FrameMemory) {
         mem.write_ram(0x0340 + 13, py); // PowerUpDraw.y
         mem.write_ram(0x0340 + 14, px); // PowerUpDraw.x
         mem.write_ram(0x0340 + 7, mem.read_ram(base + 3) & 1); // PowerUpDraw.hi
+        // 【goal-轮23 弹显示帧】（:12207-12212 逐字：animFrame←_id_ObjFrame_SkreeProjectile
+        // +`jsr ObjDrawFrame`——asm txa/pha/pla/tax 同构：PageIndex 换弹槽→绘→还）。
+        mem.write_ram(0x0340 + 3, 0x2C); // PowerUpDraw.animFrame（SkreeProjectile 帧 id）
+        let saved = mem.read_ram(0x004B); // PageIndex 存
+        mem.write_ram(0x004B, (base & 0xFF) as u8); // 换弹槽
+        crate::frame::sprite::anim_draw_object(mem, (base & 0xFF) as u8); // ObjDrawFrame
+        mem.write_ram(0x004B, saved); // PageIndex 还
         // Samus 5 伤害（:12214-12232）
         if mem.read_ram(crate::ram_map::SAMUS_INVINCIBLE_DELAY) == 0 {
             let sy = mem.read_ram(0x030D) as i16;
