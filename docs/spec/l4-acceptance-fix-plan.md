@@ -33,6 +33,10 @@
 > 在 f1272（f1250-1271 双腿 0x0E 全同 ✓）——非表值差、非状态机倒置、非时间平移——
 > **animDelay/表推进计时面**（DC8F UpdateObjAnim 的 delay 倒数/FF 回绕相位）。Phase 2
 > 根修对象=anim 推进计时。
+> 【DC8F 合规】UpdateObjAnim 全径对表（:5836-5870）：delay==0⇒推进/dec 后≠0⇒出/
+> 落过⇒推进+reload(A)/表走 FF⇒reset 回绕——我方 update_obj_anim 同构 ✓✓。**金方
+> animDelay 无 watch（数据缺）**——相位对账缺口：下步 DSL 加 watch 0304（animDelay）
+> +0306（animIndex）重采双侧→相位对账→修。
 
 像素差单位=差异像素/61440。类定义：A=状态机运行期 / B=镜头-滚动内容 / C=弹道-显示 / D=敌面相位 / E=其他已定位 / T=BUG-089 渲染-采样时序（记账容忍裁定候选）。
 
