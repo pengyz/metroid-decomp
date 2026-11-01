@@ -843,8 +843,10 @@ fn enemy_react_to_projectile(mem: &mut crate::frame::FrameMemory, x: u8) {
         return; // 非被弹⇒RTS
     }
     let sa = mem.read_ram(0x0400 + px + 0x0F); // specialAttribs（Lx321 prevStatus 记账）
-    let psc = mem.read_ram(0x0400 + px + 0x0C); // prevStatus
-    mem.write_ram(0x0400 + px + 0x0C, psc | sa); // `ora Temp0A/sta prevStatus`（Lx321）
+    let st0 = mem.read_wram(0x6AF4 + px); // EnsExtra.status（保存面）
+    // 【goal-轮31 保存式修】prevStatus←**status 低6|sa 高2**（asm Lx321 语义：恢复=status
+    // &$3F+sa&$C0 逆向）——旧形 psc|sa 缺 status 面⇒恢复 status=0 ✗。
+    mem.write_ram(0x0400 + px + 0x0C, (st0 & 0x3F) | (sa & 0xC0)); // prevStatus
     let wa = mem.read_ram(0x0400 + px + 0x0E); // weaponAction
     let miniboss = sa & 0x40 != 0;
     // 冰冻臂（IceBeam=wa 3（constants.asm:104！旧形误 2=Wave）+非 miniboss+非冻）
@@ -930,16 +932,23 @@ fn update_enemy_frozen(mem: &mut crate::frame::FrameMemory, x: u8) {
     }
 }
 
-/// UpdateEnemy_Hurt（$F59D）：specialAttribs=hitstun 延（asm「hitstun delay」）⇒回 Active。
+/// UpdateEnemy_Hurt（**asm 内容锚** `: 07:F4EE`——goal-轮31 全谱）：`dec specialAttribs
+/// /bne @exit`（**dec 环绕**——归零帧才恢复）→prevStatus(+0x0C)：高 2 位回
+/// specialAttribs+低 6 位回 status（**prevStatus&$3F**——旧形硬编码 2=偏离）→Metroid
+/// 冻结保持（L977B bit5）→@exit 调色（$80|PRIORITY→setHurtPalette）。
 fn update_enemy_hurt(mem: &mut crate::frame::FrameMemory, x: u8) {
     let px = x as u16;
     update_enemy_common_no_move_no_anim(mem, x);
-    let d = mem.read_ram(0x0400 + px + 0x0F);
-    if d > 0 {
-        mem.write_ram(0x0400 + px + 0x0F, d - 1);
-    } else {
-        mem.write_wram(0x6AF4 + px, 2); // 回 Active
+    let d = mem.read_ram(0x0400 + px + 0x0F); // specialAttribs=+0x0F（hitstun 延）
+    let nd = d.wrapping_sub(1); // dec 环绕（asm DE 0F 04）
+    mem.write_ram(0x0400 + px + 0x0F, nd);
+    if nd != 0 {
+        return; // bne @exit（未归零）
     }
+    // hitstun over：prevStatus(+0x0C) 高 2 位→specialAttribs/低 6 位→status
+    let prev = mem.read_ram(0x0400 + px + 0x0C); // prevStatus
+    mem.write_ram(0x0400 + px + 0x0F, prev & 0xC0); // 高 2 位回
+    mem.write_wram(0x6AF4 + px, prev & 0x3F); // status←prevStatus&$3F（asm :10810-10812）
 }
 
 /// UpdateEnemy_Pickup（**asm 内容锚** `: 07:F483`）：碰触（isHit&$24）⇒RemoveEnemy+
