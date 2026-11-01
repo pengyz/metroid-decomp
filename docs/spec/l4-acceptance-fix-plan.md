@@ -237,6 +237,9 @@
 > load_enemy 的 slot 源对表（room 数据解析）→修→match 动。
 > 【slot 源合规】load_enemy:499 `b0 & 0xF0` **同构合规** ✓——slot 源合规而敌未入槽
 > （occupancy 差）⇒**IsSlotTaken 门/入槽路径**（敌 init 的 status 写面）。
+> 【init status 合规】LEB4D：status←Resting(1)（:8798）——我方 room.rs:518 `write_wram
+> (ex, 0x01)` **同构合规** ✓——init 合规而敌未入槽 ⇒**load_enemy 调用条件/房数据环**
+> （EnemyLoop 的敌条目触发）。
 
 ### case-002（3 diff）
 | 帧 | px | 类 | 根因 | 证据 |
