@@ -1601,7 +1601,9 @@ fn draw_enemy(mem: &mut crate::frame::FrameMemory, x: u8) {
             mem.write_wram(0x6AF4 + x as u16 + 2, eg::EN_FRAMES[fo0 as usize + 2]);
         }
     }
-    let visible = enemy_check_if_visible(mem, x);
+    // 【goal-轮75 asm 合形修】draw 走 fresh 检（:6177 `jsr IsObjectVisible` 逐字——
+    // 旧形走闩径（免 fresh）=偏离）——闩径 F37F 在 update 面（非 draw）。
+    let visible = enemy_check_if_visible_inner(mem, x);
     let e5 = 0x0400 + x as u16 + 5;
     let d5 = mem.read_ram(e5);
     mem.write_ram(e5, (d5 & 0xFD) | ((visible as u8) << 1)); // bit1 闩
