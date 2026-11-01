@@ -1097,6 +1097,9 @@ fn crawler_ai(mem: &mut crate::frame::FrameMemory, x: u8) {
         >> 1)
         & 0x03;
     if gate == 0 {
+        if std::env::var("DSH_SPRITE_TRACE").is_ok() {
+            eprintln!("[crawl] FC={:02X} x={:02X} gate=0 SKIP", mem.read_ram(crate::ram_map::FRAME_COUNT), x);
+        }
         update_enemy_anim(mem, x, 3); // @exit `lda #3/jsr UpdateEnemyAnim`
         update_enemy_common_no_move_no_anim(mem, x);
         return;
@@ -1146,6 +1149,12 @@ fn crawler_ai(mem: &mut crate::frame::FrameMemory, x: u8) {
         2 | 3 => enemy_move_one_pixel_down(mem, x),
         _ => enemy_move_one_pixel_up(mem, x),
     };
+    if std::env::var("DSH_SPRITE_TRACE").is_ok() {
+        eprintln!("[crawl] FC={:02X} x={:02X} idx={} ok={} x={} o={} d5={:02X}",
+            mem.read_ram(crate::ram_map::FRAME_COUNT), x, idx, ok,
+            mem.read_ram(0x0400 + x as u16 + 1), orientation,
+            mem.read_ram(0x0400 + x as u16 + 5));
+    }
     if !ok {
         // CrawlerInsideCornerCheck（bank1:$9AA8——**goal-r16 G3'**）：$00 契约判据。
         // $00=1(离屏/wrap)⇒FlipDirection(data05 eor #1)；$00=0(块界碰撞)⇒data0A=(data0A−1)&3。
