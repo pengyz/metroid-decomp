@@ -548,6 +548,9 @@ fn update_en_data05_bit6(mem: &mut crate::frame::FrameMemory, x: u8) {
     let bit6 = (d >> 6) & 1;
     // 【goal-轮33/34 证伪记账】FC 相位两假说（全局/toggle 单点 FC+1）皆实测劣化
     // （40/230、9/230←94/230）⇒回退——f1838 d05 bit6 差**非 FC 相位根**（§3.6 原地记）。
+    // 【goal-轮38 位定义自证】constants_ram:96/156：bit0=向位（0=右/1=左）/bit1=可见旗
+    // （IsObjectVisible）；bit7=轴向（FB7B ror L977B）/bit6=toggle 翻转/bit4-3=阈距——
+    // **bit2/bit5 位源未明**（constants 无注——余项记账）。
     let parity = ((x >> 4) ^ mem.read_ram(crate::ram_map::FRAME_COUNT)) & 1;
     let nd = (d & 0xBF) | (parity << 6);
     let _ = bit6;
