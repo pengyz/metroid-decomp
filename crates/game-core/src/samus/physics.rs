@@ -797,7 +797,7 @@ pub fn set_samus_data(mem: &mut FrameMemory) {
     if std::env::var("DSH_SPRITE_TRACE").is_ok() {
         use std::sync::atomic::Ordering;
         let n = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
-        if n >= 1128 && n <= 1147 {
+        if n >= 1113 && n <= 1126 {
             eprintln!("[ssd] n={} FC={:02X} A={}", n,
                 mem.read_ram(crate::ram_map::FRAME_COUNT), mem.regs.a);
         }
@@ -851,9 +851,10 @@ pub fn update_obj_anim(mem: &mut FrameMemory, a_in: u8) {
     if std::env::var("DSH_SPRITE_TRACE").is_ok() {
         use std::sync::atomic::Ordering;
         let n = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
-        if n >= 1115 && n <= 1135 {
+        if n >= 1126 && n <= 1145 {
             let b = 0x0300u16 + mem.read_ram(0x004B) as u16;
-            eprintln!("[uoa] n={} ENTRY ai={} ar={} ad={} a_in={}", n,
+            eprintln!("[uoa] n={} FC={:02X} ENTRY ai={} ar={} ad={} a_in={}", n,
+                mem.read_ram(crate::ram_map::FRAME_COUNT),
                 mem.read_ram(b + 6), mem.read_ram(b + 5), mem.read_ram(b + 4), a_in);
         }
     }
