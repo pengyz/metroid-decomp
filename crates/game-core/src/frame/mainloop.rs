@@ -1790,7 +1790,23 @@ fn enemy_move_one_pixel_down(mem: &mut crate::frame::FrameMemory, x: u8) -> bool
     if y.wrapping_add(ry) & 0x07 == 0 {
         if !enemy_check_move_down(mem, x) {
             mem.write_ram(0x00, 0); // $00=0（碰撞）
+            // 【goal-轮101 ok 失败径直证】块撞。
+            if std::env::var("DSH_SPRITE_TRACE").is_ok() && x == 0x40 {
+                use std::sync::atomic::Ordering;
+                let n = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
+                if n >= 860 && n <= 920 {
+                    eprintln!("[dnf] n={} DOWN_BLOCKED y={} ry={}", n, y, ry);
+                }
+            }
             return false;
+        }
+    }
+    // 【goal-轮101 ok 失败径直证】wrap。
+    if std::env::var("DSH_SPRITE_TRACE").is_ok() && x == 0x40 {
+        use std::sync::atomic::Ordering;
+        let n = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
+        if n >= 860 && n <= 920 {
+            eprintln!("[dnf] n={} DOWN_OK y={} ry={}", n, y, ry);
         }
     }
     let ny = y.wrapping_add(1);
