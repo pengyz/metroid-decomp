@@ -1578,6 +1578,14 @@ fn enemy_move_one_pixel_up(mem: &mut crate::frame::FrameMemory, x: u8) -> bool {
 
 /// EnemyMoveOnePixelDown（**asm 内容锚** `: 1066 $844B`——r26 同构（y inc））。
 fn enemy_move_one_pixel_down(mem: &mut crate::frame::FrameMemory, x: u8) -> bool {
+    // 【goal-轮5 y 写源直证】敌B y 写点函数标记。
+    if std::env::var("DSH_SPRITE_TRACE").is_ok() && x == 0x40 {
+        use std::sync::atomic::Ordering;
+        let n = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
+        if n >= 795 && n <= 812 {
+            eprintln!("[yd] n={} DOWN y={}", n, mem.read_ram(0x0400 + x as u16));
+        }
+    }
     let y = mem.read_ram(0x0400 + x as u16 + 0);
     let ry = mem.read_wram(0x6AF4 + x as u16 + 1);
     if y.wrapping_add(ry) & 0x07 == 0 {
