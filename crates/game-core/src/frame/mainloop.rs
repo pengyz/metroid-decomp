@@ -1433,9 +1433,10 @@ fn crawler_ai(mem: &mut crate::frame::FrameMemory, x: u8) {
         use std::sync::atomic::Ordering;
         let n = DIAG_ITER.load(Ordering::Relaxed);
         if n >= 860 && n <= 920 {
-            eprintln!("[okj] n={} slot={:02X} idx={} ok={} zero={} o={} y={} x={}",
-                n, x, idx, ok, mem.read_ram(0x00), orientation,
-                mem.read_ram(0x0400 + x as u16), mem.read_ram(0x0400 + x as u16 + 1));
+            let y0 = mem.read_ram(0x0400 + x as u16);
+            let ry0 = mem.read_wram(0x6AF4 + x as u16 + 1);
+            eprintln!("[okj] n={} slot={:02X} idx={} ok={} zero={} bound8={} y={}",
+                n, x, idx, ok, mem.read_ram(0x00), y0.wrapping_add(ry0) & 7 == 0, y0);
         }
     }
     if !ok {
