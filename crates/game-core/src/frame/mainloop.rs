@@ -1758,7 +1758,7 @@ fn enemy_move_one_pixel_down(mem: &mut crate::frame::FrameMemory, x: u8) -> bool
     if std::env::var("DSH_SPRITE_TRACE").is_ok() && x == 0x40 {
         use std::sync::atomic::Ordering;
         let n = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
-        if n >= 795 && n <= 812 {
+        if n >= 830 && n <= 870 {
             let y0 = mem.read_ram(0x0400 + x as u16);
             let ry0 = mem.read_wram(0x6AF4 + x as u16 + 1);
             eprintln!("[yd] n={} DOWN y={} ry={} bound8={}", n, y0, ry0,
