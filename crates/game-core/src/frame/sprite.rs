@@ -24,6 +24,10 @@ fn blob(addr: u16) -> u8 {
 /// 含 `sta animDelay`←A 初值重置）负责。旧形在此内联 UpdateObjAnim 且漏 `sta animDelay` 重置⇒
 /// animDelay 恒 0⇒每帧换帧（动画过快）+与 update_obj_anim 双写冲突。
 pub fn anim_draw_object(mem: &mut crate::frame::FrameMemory, page_index: u8) {
+    // 【goal-轮98 偏离修】asm AnimDrawObject(DE47)=**jsr UpdateObjAnim**（:6226）+ObjDrawFrame
+    // （DE4A）——旧形"只读 animFrame 不写"**漏调 UpdateObjAnim**（emu 双调/我方单调
+    // ⇒走位率差 +2 根！）。补调。
+    crate::samus::physics::update_obj_anim(mem, 0);
     let px = page_index as u16;
     // 只读 animFrame（动画更新在 update_obj_anim——此处不写 $0303/$0304/$0306）
     let anim_frame = mem.read_ram(0x0303 + px);
