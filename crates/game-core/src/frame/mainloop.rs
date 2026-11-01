@@ -1776,6 +1776,9 @@ fn enemy_move_one_pixel_down(mem: &mut crate::frame::FrameMemory, x: u8) -> bool
             eprintln!("[dc] n={} DOWN_CALL y={} ry={} bound8={} check={}", n,
                 y0, ry0, y0.wrapping_add(ry0) & 7 == 0,
                 y0.wrapping_add(ry0) & 7 == 0);
+            // 【goal-轮107 调用链直证】@move→move_down 链（写径）。
+            eprintln!("[ccl] n={} @move→down y={} x={}", n, y0,
+                mem.read_ram(0x0400 + x as u16 + 1));
         }
     }
     // 【goal-轮82 animIndex 推进率直证】帧面差源（敌 rx≤4 vs 8）。
