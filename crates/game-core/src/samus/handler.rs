@@ -794,6 +794,8 @@ pub fn samus_stand(mem: &mut FrameMemory) {
     // Joy1Status/eor $00（change）/B 掩/**and Joy1Status→Joy1Change**（新按下位）/
     // Retrig 同——**全件面语义** ✓（转换触发相位根=采样帧相位——:268 调用点 vs 我方
     // read_joy1 调用序——下轮 asm 对表）。
+    // 【goal-轮70 采样时点合规矩】NMI 末 ReadJoyPads（:268——**逻辑前** ✓）——我方
+    // nmi.rs:54 read_joy_pads 同构 ✓✓（采样时点合规——转换触发根非时点 ✗）。
     crate::frame::DIVERGENCES.with(|d| d.borrow_mut().push(0x0CC36));
     use button::*;
     let joy = mem.read_ram(crate::ram_map::JOY1_STATUS);
