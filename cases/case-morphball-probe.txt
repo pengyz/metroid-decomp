@@ -30,6 +30,7 @@ watch 0450 En1Y             # 敌A(slot0x50) 位面
 watch 0451 En1X
 watch 0449 En0Delay         # 敌B delay(+9)——goal 轮20 卡帧根
 watch 0049 ScrollDir        # goal 轮66 装载帧 bit0（hi 源）
+watch 0070 SamusInvDly      # goal 轮78 金方 i 帧（knockback 判）
 watch 00FF PPUCTRL_ZP       # goal 轮66 hi 源
 watch 0448 En0MovIdx        # movementIndex(+8)
 watch 0446 En0InstrIdx      # movementInstrIndex(+6)
