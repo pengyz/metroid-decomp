@@ -452,6 +452,10 @@ fn set_samus_jump(mem: &mut FrameMemory) {
 /// SetSamusRun（**asm 内容锚** `SetSamusRun: ; 07:CC98`）：WalkSoundDelay←9/转身动画
 /// （Stand⇒Run、PntUp⇒RunPntUp、其余（原跑动）⇒Front 过渡）/Run 动画置位+加速。
 fn set_samus_run(mem: &mut FrameMemory) {
+    // 【goal-轮54 asm 合规矩】CC98 逐件对表：WalkSoundDelay=9/animResetIndex 分支
+    // （Stand→Run(X=0)/PntUp→RunPntUp(X=1)/否则 Front 转身过渡+Run）/accelX=
+    // RunAccelTbl[Dir]（30 右/D0 左）——**三件面全合规** ✓✓（f1200 状态分叉根=调用点
+    // （samus_stand 转换条件）面——非本件 ✗）。
     mem.write_ram(0x010F, 0x09); // WalkSoundDelay（constants 随核）
     let cur = mem.read_ram(ANIM_RESET_INDEX);
     let x = if cur == OBJ_ANIM_SAMUS_STAND {
