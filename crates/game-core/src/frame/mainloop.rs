@@ -411,6 +411,13 @@ pub fn update_all_enemies(mem: &mut crate::frame::FrameMemory) {
         let status = mem.read_wram(0x6AF4 + x as u16); // EnsExtra.0.status
         // CheckIfVisible（$F37F——不可见⇒双返跳过该敌）
         if status != 0 && status < 2 && !enemy_check_if_visible(mem, x) {
+            if std::env::var("DSH_SPRITE_TRACE").is_ok() {
+                use std::sync::atomic::Ordering;
+                let n = DIAG_ITER.load(Ordering::Relaxed);
+                if n >= 1660 && n <= 1666 {
+                    eprintln!("[enemy] n={} slot={:02X} SKIP invisible st={}", n, x, status);
+                }
+            }
             x = if x == 0 { break } else { x - 0x10 };
             continue;
         }
@@ -419,6 +426,13 @@ pub fn update_all_enemies(mem: &mut crate::frame::FrameMemory) {
         // ——分派前捕获，激活同帧 AI 例程据它拦 Resting（crawler.asm:8-11——路径分叉根因件
         // ①：缺此门则激活帧即跑 AI 且半径未写（draw 在 AI 后）⇒rx=0 快径⇒外角下探伪成功）。
         mem.write_ram(0x0081, status); // EnemyStatusPreAI（constants_ram:633 zp $81）
+        if std::env::var("DSH_SPRITE_TRACE").is_ok() {
+            use std::sync::atomic::Ordering;
+            let n = DIAG_ITER.load(Ordering::Relaxed);
+            if n >= 1660 && n <= 1666 && x == 0x40 {
+                eprintln!("[enemy] n={} slot=40 DISPATCH st={}", n, status);
+            }
+        }
         match status {
             0 => {} // ExitSub（rts）
             1 => enemy_resting(mem, x), // F3BE
@@ -982,6 +996,13 @@ fn enemy_complete_death(mem: &mut crate::frame::FrameMemory, x: u8) {
 /// （DIVERGENCES 非 panic——title_bridge 同款模式）：静态显示径保可玩，AI 深件随包收敛。
 fn choose_enemy_ai(mem: &mut crate::frame::FrameMemory, x: u8) {
     let t = mem.read_wram(0x6AF4 + x as u16 + 14); // type=+14
+    if std::env::var("DSH_SPRITE_TRACE").is_ok() {
+        use std::sync::atomic::Ordering;
+        let n = DIAG_ITER.load(Ordering::Relaxed);
+        if n >= 1660 && n <= 1666 {
+            eprintln!("[enemy] n={} slot={:02X} AI type={}", n, x, t);
+        }
+    }
     match t {
         5 => crawler_ai(mem, x),
         // 【goal-轮2 Rust 实现】SkreeAIRoutine（enemies/skree.asm:2-71 全谱）——
@@ -1114,6 +1135,21 @@ fn skree_ai(mem: &mut crate::frame::FrameMemory, x: u8) {
 /// 现役 Explode⇒@exit）→@move。缺门症（已修）：Resting 帧即跑 AI——激活帧半径未写
 /// （draw 同 tick 后行）⇒rx=0 全检快径⇒外角下探伪成功转角⇒菱形回路（crawlprobe f797）。
 fn crawler_ai(mem: &mut crate::frame::FrameMemory, x: u8) {
+    // 【goal-轮30 全径打印】入口+全出口（n=1664 漏步帧出口面直证）。
+    let diag_n = if std::env::var("DSH_SPRITE_TRACE").is_ok() {
+        use std::sync::atomic::Ordering;
+        let n = DIAG_ITER.load(Ordering::Relaxed);
+        if n >= 1660 && n <= 1668 {
+            eprintln!("[crawl] n={} FC={:02X} slot={:02X} ENTER d05={:02X} st={} pre={}",
+                n, mem.read_ram(crate::ram_map::FRAME_COUNT), x,
+                mem.read_ram(0x0400 + x as u16 + 5), mem.read_wram(0x6AF4 + x as u16),
+                mem.read_ram(0x0081));
+        }
+        n
+    } else {
+        u32::MAX
+    };
+    let _ = diag_n;
     // F852：txa/lsr×3（carry←原 bit2）/adc FrameCount（含进位）/lsr——门含 lsr 移出位。
     let gate = ((x >> 3)
         .wrapping_add((x >> 2) & 1)
@@ -1156,6 +1192,9 @@ fn crawler_ai(mem: &mut crate::frame::FrameMemory, x: u8) {
     }
     if mem.read_wram(0x6AF4 + x as u16) == 3 {
         // 现役 Explode⇒@exit（crawler.asm:20-22——anim3 落穿 noMoveNoAnim）
+        if std::env::var("DSH_SPRITE_TRACE").is_ok() && diag_n >= 1660 && diag_n <= 1668 {
+            eprintln!("[crawl] n={} slot={:02X} EXIT status=3", diag_n, x);
+        }
         update_enemy_anim(mem, x, 3);
         update_enemy_common_no_move_no_anim(mem, x);
         return;
