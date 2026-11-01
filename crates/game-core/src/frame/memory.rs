@@ -23,6 +23,12 @@ impl FrameMemory {
             if n >= 795 && n <= 812 {
                 eprintln!("[fbit2] n={} data05<-{:02X}", n, v);
             }
+            // 【goal-轮13 bit1 变化标记】可见位变化（金方冻=不可见）。
+            static PREV1: std::sync::atomic::AtomicU8 = std::sync::atomic::AtomicU8::new(0xFF);
+            let p = PREV1.swap(v, Ordering::Relaxed);
+            if p != 0xFF && ((p ^ v) & 2) != 0 {
+                eprintln!("[vis] n={} data05 {:02X}->{:02X} bit1 {}->{}", n, p, v, (p >> 1) & 1, (v >> 1) & 1);
+            }
         }
         if addr == 0x0440 && std::env::var("DSH_SPRITE_TRACE").is_ok() {
             use std::sync::atomic::Ordering;
