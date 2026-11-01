@@ -249,6 +249,8 @@
 > （下轮逐字对表 room 数据环）→修→match 动。
 > 【enemy_loop 锚】room.rs:428（EnemyLoop 端口）——敌条目触发逐字考证（下轮）→修
 > →match 动。
+> 【enemy_loop 逐字考证】EnemyLoop 端口逐字（AddToPtr00/0xFF 终/dispatch）——**逐字
+> 考证**（下轮）→修→match 动。
 
 ### case-002（3 diff）
 | 帧 | px | 类 | 根因 | 证据 |
