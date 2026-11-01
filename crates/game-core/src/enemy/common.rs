@@ -203,6 +203,9 @@ pub fn enemy_get_delta_xy(
             continue;
         }
         // SignMagSpeed：[duration]==delay⇒推进（instr+2）；否则 delay+1→Δ=packed[+1]
+        // 【goal-轮60 asm 合规矩】$827F 逐件对表：`inc Ens.0.delay`（**累加**到串字节
+        // ——非倒数！）/到期 reset delay=0+instrIndex+=2+重读——**全件面合规** ✓✓
+        // （205-211 同构——Skree 坠落 delay 相位根非本件 ✗）。
         if d.wrapping_sub(delay) == 0 {
             let speed = MOVEMENT_STRINGS.get(str_off + ii as usize + 1).copied().unwrap_or(0);
             return (enemy_delta_sign_mag(speed), enemy_delta_x_packed(speed), 0, ii.wrapping_add(2), true);
