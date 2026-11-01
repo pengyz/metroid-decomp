@@ -437,6 +437,18 @@ pub fn update_all_enemies(mem: &mut crate::frame::FrameMemory) {
                 mem.read_ram(0x0400 + x2 as u16 + 5));
         }
     }
+    // 【goal-轮97 updateAll 径直证】敌更新调用（金方冻径）。
+    if std::env::var("DSH_SPRITE_TRACE").is_ok() {
+        use std::sync::atomic::Ordering;
+        let n = DIAG_ITER.load(Ordering::Relaxed);
+        if n >= 860 && n <= 920 {
+            let x2 = 0x40u8;
+            let st2 = mem.read_wram(0x6AF4 + x2 as u16);
+            let d52 = mem.read_ram(0x0400 + x2 as u16 + 5);
+            eprintln!("[upd] n={} slot={} st={} bit6={} d05={:02X}", n,
+                x2, st2, (d52 >> 6) & 1, d52);
+        }
+    }
     mem.write_ram(0x004B, x); // PageIndex
         let status = mem.read_wram(0x6AF4 + x as u16); // EnsExtra.0.status
         // CheckIfVisible（$F37F——不可见⇒双返跳过该敌）
