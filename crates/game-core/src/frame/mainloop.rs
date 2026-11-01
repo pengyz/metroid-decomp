@@ -2404,8 +2404,9 @@ fn uw_collision_detection(mem: &mut crate::frame::FrameMemory) {
                 use std::sync::atomic::Ordering;
                 let n = DIAG_ITER.load(Ordering::Relaxed);
                 if n >= 1260 && n <= 1270 {
-                    eprintln!("[f1fa] n={} dy={} cmpY={} carryY={} dx={} cmpX={} carryX={}",
-                        n, dy, sry + ery, dy >= sry + ery, dx, srx + erx, dx >= srx + erx);
+                    eprintln!("[f1fa] n={} dy={} cmpY={} carryY={} dx={} cmpX={} carryX={} eB=({},{}) s=({},{})",
+                        n, dy, sry + ery, dy >= sry + ery, dx, srx + erx, dx >= srx + erx,
+                        ey, ex, sy, sx);
                 }
             }
             if dy_adj < sry + ery && dx_adj < srx + erx {
