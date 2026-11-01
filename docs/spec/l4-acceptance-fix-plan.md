@@ -142,6 +142,9 @@
 > A=13 源逐点对表（:3375 SetSamusNextAnim 嫌疑最大）→补/修→match 动。
 > 【SetSamusNextAnim 调用三点】:2837（CC98 转身）/:3073（开火）/:3897——A=13 源三点
 > 对表（A 值逐一考证）→补/修→match 动。
+> 【三点 A 值考证】:2837 A=0x04(Front)/:3073 A=@table(aimingUp)/:3897 A=StandFire
+> ——**非 13(0x0D=JumpFire)** ⇒A=13 源=**JumpFire 写面**（ObjAnim_SamusJumpFire 的
+> animIndex/animResetIndex 写径）→考证→修→match 动。
 
 ### case-002（3 diff）
 | 帧 | px | 类 | 根因 | 证据 |
