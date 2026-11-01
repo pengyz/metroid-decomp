@@ -554,6 +554,8 @@ fn update_en_data05_bit6(mem: &mut crate::frame::FrameMemory, x: u8) {
     // 【goal-轮43 bit5 定案】bit5=**静息请求位**（enemy_active `and #$20` 读面（:10604）：
     // 置⇒delay←InitDelayTbl+status--（Active→Resting））——写源=spawn init（:12049
     // `sta data05`——facing+axis 组合 bit5=0）；运行期无独立写源（读面位 ✓）。
+    // 【goal-轮45 坠落 delay 相位记账】Skree 坠落起点：金 f1878 delay=1/f1880 起移；我
+    // f1878 delay=0/f1880 已移——**delay 倒数 1 帧相位差**（移动串 delay 面）=余项。
     crate::frame::DIVERGENCES.with(|d| d.borrow_mut().push(0x0FB7B));
     let parity = ((x >> 4) ^ mem.read_ram(crate::ram_map::FRAME_COUNT)) & 1;
     let nd = (d & 0xBF) | (parity << 6);
