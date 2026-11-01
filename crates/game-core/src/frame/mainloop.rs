@@ -427,10 +427,11 @@ pub fn update_all_enemies(mem: &mut crate::frame::FrameMemory) {
             let sy = mem.read_ram(crate::ram_map::SCROLL_Y);
             let ex_ = mem.read_ram(0x0400 + x2 as u16 + 1);
             let ey_ = mem.read_ram(0x0400 + x2 as u16);
-            eprintln!("[vis2] n={} eB=({},{}) scr=({},{}) bit1={} off={}", n,
-                ey_, ex_, ey_.wrapping_sub(sy), ex_.wrapping_sub(sx),
-                (d5 >> 1) & 1,
-                ey_.wrapping_sub(sy) > 0xEF);
+            let fr0 = mem.read_wram(0x6AF4 + x2 as u16 + 3);
+            eprintln!("[vis2] n={} eB=({},{}) ry={} animFrame={:02X} animIdx={}", n,
+                mem.read_ram(0x0400 + x2 as u16), mem.read_ram(0x0400 + x2 as u16 + 1),
+                mem.read_wram(0x6AF4 + x2 as u16 + 1), fr0,
+                mem.read_wram(0x6AF4 + x2 as u16 + 6));
         }
     }
     mem.write_ram(0x004B, x); // PageIndex
