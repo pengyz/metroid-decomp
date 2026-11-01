@@ -455,7 +455,7 @@ pub fn update_all_enemies(mem: &mut crate::frame::FrameMemory) {
         let n = DIAG_ITER.load(Ordering::Relaxed);
         if n >= 860 && n <= 920 {
             let x2 = 0x40u8;
-            eprintln!("[ual] n={} x={} st={} y={} x2={} d05={:02X} dly={} mi={} ii={} hi={} ry={} rx={} ty={} ja={} jd={} sa2={} sa3={} sa4={} sa5={} sa6={} sa7={} sa8={} sa9={} sa10={}", n,
+            eprintln!("[ual] n={} x={} st={} y={} x2={} d05={:02X} dly={} mi={} ii={} hi={} ry={} rx={} ty={} ja={} jd={} sa2={} sa3={} sa4={} sa5={} sa6={} sa7={} sa8={} sa9={} sa10={} sa11={}", n,
                 x2, mem.read_wram(0x6AF4 + x2 as u16),
                 mem.read_ram(0x0400 + x2 as u16), mem.read_ram(0x0400 + x2 as u16 + 1),
                 mem.read_ram(0x0400 + x2 as u16 + 5),
@@ -476,7 +476,8 @@ pub fn update_all_enemies(mem: &mut crate::frame::FrameMemory) {
                 mem.read_wram(0x6AF4 + x2 as u16 + 3),
                 mem.read_wram(0x6AF4 + x2 as u16 + 6),
                 mem.read_ram(0x0400 + x2 as u16 + 0x0C),
-                mem.read_wram(0x6AF4 + x2 as u16 + 15));
+                mem.read_wram(0x6AF4 + x2 as u16 + 15),
+                mem.read_wram(0x6AF4 + x2 as u16 + 0));
         }
     }
     mem.write_ram(0x004B, x); // PageIndex
