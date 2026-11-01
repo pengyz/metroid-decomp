@@ -28,6 +28,9 @@ watch 0445 En0D05           # data05（可见位/facing 位）
 watch 044A En0D0A
 watch 0450 En1Y             # 敌A(slot0x50) 位面
 watch 0451 En1X
+watch 0449 En0Delay         # 敌B delay(+9)——goal 轮20 卡帧根
+watch 0448 En0MovIdx        # movementIndex(+8)
+watch 0446 En0InstrIdx      # movementInstrIndex(+6)
 watch 0014 Joy1Status
 watch 0301 SamusRadiusY
 watch 030D SamusY

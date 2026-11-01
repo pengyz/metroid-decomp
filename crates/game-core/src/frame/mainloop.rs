@@ -1244,8 +1244,10 @@ fn crawler_ai(mem: &mut crate::frame::FrameMemory, x: u8) {
                 mem.read_ram(0x0400 + x as u16 + 9), mem.read_ram(0x0400 + x as u16 + 3));
         }
     }
-    // 【goal-轮58 证伪记账（§3.6）】gate FC+1 L4 判定 54/97（-1 微劣 vs 基线 55）⇒
-    // 回退——gate 读面保 pre-inc（toggle 读面 FC+1（轮57）中性保留）。
+    // 【goal-轮21 toggle 相位修（重测）】delay 递减径=bit6 30fps 门控（try_becoming_active
+    // 每 2 帧跑）——bit6 相位⇒递减帧差 1 ⇒首动差 1。asm 合形删 +1 重测（samL04/敌位修后
+    // L4 景已变——轮58 的 55→53 判定过期）。
+    let parity = ((x >> 4) ^ mem.read_ram(crate::ram_map::FRAME_COUNT)) & 1;
     let gate = ((x >> 3)
         .wrapping_add((x >> 2) & 1)
         .wrapping_add(mem.read_ram(crate::ram_map::FRAME_COUNT))
