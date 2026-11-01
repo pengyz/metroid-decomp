@@ -858,6 +858,12 @@ fn try_becoming_active(mem: &mut crate::frame::FrameMemory, x: u8) {
     {
         let st = mem.read_wram(0x6AF4 + x as u16);
         mem.write_wram(0x6AF4 + x as u16, st.wrapping_add(1)); // status→Active
+        // 【goal-轮14 激活帧直证】status→Active 写点（首动 1 帧差源）。
+        if std::env::var("DSH_SPRITE_TRACE").is_ok() && x == 0x40 {
+            use std::sync::atomic::Ordering;
+            eprintln!("[act] n={} status {}->{} y={} x={}", DIAG_ITER.load(Ordering::Relaxed), st,
+                st.wrapping_add(1), mem.read_ram(0x0400 + x as u16), mem.read_ram(0x0400 + x as u16 + 1));
+        }
         init_en_active_anim_index(mem, x); // F699（Active 动画初始化）
         // 【goal-轮28 激活 RNG 播种】（asm :11436-11450 逐字）：movementIndex←
         // EnemyMovementChoices[(FC^RNG1)&bitflag +1]——**激活时 RNG 选播**（旧形
