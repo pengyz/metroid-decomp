@@ -551,8 +551,9 @@ fn update_en_data05_bit6(mem: &mut crate::frame::FrameMemory, x: u8) {
     // 【goal-轮38 位定义自证】constants_ram:96/156：bit0=向位（0=右/1=左）/bit1=可见旗
     // （IsObjectVisible）；bit7=轴向（FB7B ror L977B）/bit6=toggle 翻转/bit4-3=阈距——
     // **bit2/bit5 位源未明**（constants 无注——余项记账）。
-    // 【goal-轮40 级联分析】f1840+ 级联：萨姆斯面全同 ✓✓（sx/sy 94 连 SAME 延续）——
-    // 敌面双径差（爬虫 x 相位（转角 d05 bit2/1 位差）+Skree 坠落路径相位）=余项。
+    // 【goal-轮43 bit5 定案】bit5=**静息请求位**（enemy_active `and #$20` 读面（:10604）：
+    // 置⇒delay←InitDelayTbl+status--（Active→Resting））——写源=spawn init（:12049
+    // `sta data05`——facing+axis 组合 bit5=0）；运行期无独立写源（读面位 ✓）。
     crate::frame::DIVERGENCES.with(|d| d.borrow_mut().push(0x0FB7B));
     let parity = ((x >> 4) ^ mem.read_ram(crate::ram_map::FRAME_COUNT)) & 1;
     let nd = (d & 0xBF) | (parity << 6);
