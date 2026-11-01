@@ -1790,7 +1790,7 @@ fn enemy_check_move_up(mem: &mut crate::frame::FrameMemory, x: u8) -> bool {
             if std::env::var("DSH_SPRITE_TRACE").is_ok() && x == 0x40 {
                 use std::sync::atomic::Ordering;
                 let n_ = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
-                if n_ >= 795 && n_ <= 812 {
+                if n_ >= 780 && n_ <= 825 {
                     let mut rs = String::new();
                     for i in 0..n {
                         let col = left.wrapping_add((i as u8).wrapping_mul(8));
@@ -1839,7 +1839,7 @@ pub(crate) fn enemy_check_move_down(mem: &mut crate::frame::FrameMemory, x: u8) 
             if std::env::var("DSH_SPRITE_TRACE").is_ok() && x == 0x40 {
                 use std::sync::atomic::Ordering;
                 let n_ = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
-                if n_ >= 795 && n_ <= 812 {
+                if n_ >= 780 && n_ <= 825 {
                     let mut rs = String::new();
                     for i in 0..n {
                         let col = left.wrapping_add((i as u8).wrapping_mul(8));
