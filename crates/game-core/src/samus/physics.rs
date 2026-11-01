@@ -1461,7 +1461,10 @@ pub fn samus_move_horizontally(mem: &mut FrameMemory, delta: u8) {
     // 【goal-轮52 状态直比】morphball 案 f1200 双侧全同（SX=84/MPX=2/SDir=2/SamX=F4 ✓）
     // /f1300 起 SamX 0xB0 vs 0xCD（29px）+f1560 MPX/SDir 分叉（1/2 vs 3/3——**不同房**
     // ）⇒发散起点=f1200-1300 窗（移动链合规⇒输入/门控相位面——记账）。
-    crate::frame::DIVERGENCES.with(|d| d.borrow_mut().push(0x0E31A));
+    // 【goal-轮53 细化态比】f1200 根定位：金 status=1(Run)+accelX=208/spX=255 / 我
+    // status=0(Stand)+accelX=0/spX=0 ✗——**站立↔跑步状态分叉**（同位姿同输入！）——
+    // samus_stand→samus_run 转换径（CC98）面=根（记账 0x0CC98）。
+    crate::frame::DIVERGENCES.with(|d| d.borrow_mut().push(0x0CC98));
     let x = mem.read_ram(0x030E);
     let sx = mem.read_ram(crate::ram_map::SCROLL_X);
     mem.write_ram(crate::ram_map::SAMUS_SCR_X, x.wrapping_sub(sx)); // E31D
