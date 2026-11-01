@@ -643,6 +643,14 @@ fn enemy_distance_threshold(mem: &mut crate::frame::FrameMemory, x: u8) {
     let e = 0x0400 + x as u16 + 5; // Ens.data05
     let d = mem.read_ram(e);
     mem.write_ram(e, d | 0x18); // OrEnData05($18)
+    // 【goal-轮36 写面直比】阈距写打印（f1838 位差源直证）。
+    if std::env::var("DSH_SPRITE_TRACE").is_ok() {
+        use std::sync::atomic::Ordering;
+        let n = DIAG_ITER.load(Ordering::Relaxed);
+        if n >= 1820 && n <= 1830 && x == 0x40 {
+            eprintln!("[d05] n={} THR {:02X}->{:02X}", n, d, mem.read_ram(e));
+        }
+    }
     let t = mem.read_wram(0x6AF4 + x as u16 + 14) as usize & 0x0F;
     let thr = game_data::area::graphics::ENEMY_DISTANCE_THRESHOLD[t];
     if thr == 0 {
