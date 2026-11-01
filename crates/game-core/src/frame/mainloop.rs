@@ -2061,6 +2061,12 @@ fn enemy_active(mem: &mut crate::frame::FrameMemory, x: u8) {
             mem.write_ram(0x0400 + x as u16 + 9, delay); // Ens.delay(+9)
             let st = mem.read_wram(0x6AF4 + x as u16);
             mem.write_wram(0x6AF4 + x as u16, st.wrapping_sub(1));
+            // 【goal-轮17 Resting 转换标记】Active→Resting（bit5 静息径）。
+            if std::env::var("DSH_SPRITE_TRACE").is_ok() && x == 0x40 {
+                use std::sync::atomic::Ordering;
+                eprintln!("[rst] n={} RESTING {}->{} dly={}", DIAG_ITER.load(Ordering::Relaxed),
+                    st, st.wrapping_sub(1), delay);
+            }
         } else {
             // Active_BranchA（F401）：ForceSpeed(F6B9)+Threshold(F75B)+RemoveIfInLava(F51E)
             enemy_force_speed(mem, x);
