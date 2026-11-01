@@ -1858,18 +1858,19 @@ fn enemy_move_one_pixel_down(mem: &mut crate::frame::FrameMemory, x: u8) -> bool
         }
     }
     let ny = y.wrapping_add(1);
-    // 【goal-轮159 radiusY 写源直证】prg7:6158-6170 `lda (FramePtr),y+1 → sta
-    // EnsExtra.radiusY`——**ry=帧字节1**（fo0 差 ⇒ ry 差）——paradox 解径。
+    // 【goal-轮160 animFrame 写源直证】EN_ANIM_TABLE[animIndex]→animFrame（paradox
+    // 解径）——金方 animFrame/fo0 差 ⇒ radiusY=1/9。
     if std::env::var("DSH_SPRITE_TRACE").is_ok() && x == 0x40 {
         use std::sync::atomic::Ordering;
         let n = DIAG_ITER.load(Ordering::Relaxed);
         if n >= 860 && n <= 920 {
             let y0 = mem.read_ram(0x0400 + x as u16);
             let ry0 = mem.read_wram(0x6AF4 + x as u16 + 1);
-            let fo = mem.read_wram(0x6AF4 + x as u16 + 6);
-            eprintln!("[rws] n={} y={} ry={} bound8={} animIdx={} animFrame={}", n, y0, ry0,
-                y0.wrapping_add(ry0) & 7 == 0, fo,
-                mem.read_wram(0x6AF4 + x as u16 + 3));
+            let ai = mem.read_wram(0x6AF4 + x as u16 + 6);
+            eprintln!("[afw] n={} y={} ry={} bound8={} animIdx={} animFrame={} tbl={}", n, y0, ry0,
+                y0.wrapping_add(ry0) & 7 == 0, ai,
+                mem.read_wram(0x6AF4 + x as u16 + 3),
+                game_data::area::enemy_gfx::EN_ANIM_TABLE.get(ai as usize).copied().unwrap_or(0xFF));
         }
     }
     mem.write_ram(0x0400 + x as u16 + 0, ny);
