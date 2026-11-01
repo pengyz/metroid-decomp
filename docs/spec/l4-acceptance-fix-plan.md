@@ -213,6 +213,8 @@
 > 的 PageIndex 赋值（enemy slot 遍历序）。
 > 【UpdateEnemyCommon 锚】F410（:10628）+slot 遍历序（x=0/40/80/C0）考证——下轮对表
 > 我方 update_all_enemies 的 slot 赋值序→修→match 动。
+> 【PageIndex 写面】mainloop:410 `write_ram(0x004B, x)`——x 赋值序考证（loop 范围）
+> ⇒slot 值 64/0 差=x 序差→修→match 动。
 
 ### case-002（3 diff）
 | 帧 | px | 类 | 根因 | 证据 |
