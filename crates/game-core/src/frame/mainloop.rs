@@ -1749,6 +1749,15 @@ pub(crate) fn enemy_check_move_down(mem: &mut crate::frame::FrameMemory, x: u8) 
     let rx = mem.read_wram(0x6AF4 + x as u16 + 2);
     let hi = mem.read_wram(0x6AF4 + x as u16 + 7);
     let st = crate::enemy::movement::enemy_check_move_down(rx, ry, xpos, y, hi);
+    // 【goal-轮6 块判直证】敌B 穿地源：块判输入/输出。
+    if std::env::var("DSH_SPRITE_TRACE").is_ok() && x == 0x40 {
+        use std::sync::atomic::Ordering;
+        let n = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
+        if n >= 795 && n <= 812 {
+            eprintln!("[bcd] n={} y={} ry={} x={} rx={} hi={} st={:?} bound={:?}",
+                n, y, ry, xpos, rx, hi, st, crate::enemy::movement::check_move_boundary(st, false));
+        }
+    }
     match crate::enemy::movement::check_move_boundary(st, false) {
         crate::enemy::movement::MoveCheckOutcome::NoCollision => true,
         crate::enemy::movement::MoveCheckOutcome::NeedsBgCollision(st) => {
