@@ -799,6 +799,9 @@ pub fn samus_stand(mem: &mut FrameMemory) {
     // 【goal-轮71 CC36 写序合规矩】:2764-2769 写序：ActionTable[向]→**status 写**
     // （:2769）→SetSamusData(4)（:2788-2790 anim）→JumpEngine 分派（:2796——SetSamusRun
     // 等）——**写序合规** ✓✓（我方 825-827 同构——转换倒置根非写序 ✗）。
+    // 【goal-轮72 ActionTable 合规矩】CC87 表体=[Run,Run,Roll,PntUp]（bit0/1→Run/
+    // bit2→Roll/bit3→PntUp）+BitScan（E1E1——首置位号）——ACTION_TABLE=[1,1,3,4] ✓✓
+    // **全合规**（821 行 ACTION_TABLE[bit] 同构——转换倒置根非表值 ✗）。
     crate::frame::DIVERGENCES.with(|d| d.borrow_mut().push(0x0CC36));
     use button::*;
     let joy = mem.read_ram(crate::ram_map::JOY1_STATUS);
