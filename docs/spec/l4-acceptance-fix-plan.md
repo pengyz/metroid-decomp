@@ -228,6 +228,8 @@
 > （wram blob/帧 trace）⇒下轮 WRAM 面对账→修→match 动。
 > 【WRAM 面值】rust 敌槽 status=0（x=0x40）+wram blob 8192B——**金方无 wram 面**
 > （对账缺）⇒槽位面双向对账受阻（金方 watch 未含 WRAM）。
+> 【槽位差定案】WRAM 双腿（DSL watch 补+重采）：emu slot0x50 status=**2（Active）**
+> /rust=**0（空）**——**敌未入槽 0x50** ⇒load_enemy 槽分配面（slot 0x50 占用/init）。
 
 ### case-002（3 diff）
 | 帧 | px | 类 | 根因 | 证据 |
