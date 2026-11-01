@@ -1875,7 +1875,8 @@ fn update_bullet(mem: &mut crate::frame::FrameMemory) {
         bullet_explode(mem); // 撞⇒爆（status≠0 时）
     }
     // DrawBullet（$D517）：AnimDrawObject(A=1)（动画推进面 A=1）
-    crate::samus::physics::update_obj_anim(mem, 1);
+    // 【goal-轮103 双调修】asm AnimDrawObject(DE47)=UpdateObjAnim+ObjDrawFrame 单含——
+    // 旧形显式 update_obj_anim(1)+anim_draw_object 补调=双调 ✗⇒删显式（补调覆盖）。
     crate::frame::sprite::anim_draw_object(mem, mem.read_ram(0x004B));
     mem.write_ram(0x0071, 0);
 }
@@ -1889,7 +1890,7 @@ fn update_bullet_explode(mem: &mut crate::frame::FrameMemory) {
     if mem.read_ram(base + 3) == 0xF7 {
         mem.write_ram(base, 0);
     }
-    crate::samus::physics::update_obj_anim(mem, 1);
+    // 【goal-轮103 双调修】同上（爆径 AnimDrawObject 单含）。
     crate::frame::sprite::anim_draw_object(mem, mem.read_ram(0x004B));
     mem.write_ram(0x0071, 0);
 }
