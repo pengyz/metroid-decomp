@@ -2282,6 +2282,12 @@ fn uw_collision_detection(mem: &mut crate::frame::FrameMemory) {
                     mem.write_ram(0x006F, 0x00);
                     let dir_bits = if ex > sx { 0x00u8 } else { 0x08 }; // bit3=被推向右
                     mem.write_ram(crate::ram_map::SAMUS_IS_HIT, 0x30 | dir_bits);
+                    // 【goal-轮40 isHit 写者标记】mainloop:2284（敌撞置 hit）。
+                    if std::env::var("DSH_SPRITE_TRACE").is_ok() {
+                        use std::sync::atomic::Ordering;
+                        eprintln!("[hit] n={} mainloop2284 isHit<-{:02X} dir={}", DIAG_ITER.load(Ordering::Relaxed),
+                            0x30 | dir_bits, dir_bits);
+                    }
                 }
             }
         }
