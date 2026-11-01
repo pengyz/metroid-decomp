@@ -788,6 +788,9 @@ pub fn samus_stand(mem: &mut FrameMemory) {
     // Dir）/ActionTable[向]→status 写→JumpEngine 分派（Run/Jump/Roll/PntUp）/Fire
     // （Joy1Change|Retrig）/Jump（Joy1Change bit7）——**全件面合规** ✓✓（f1200 根
     // 非本件——输入相位/BitScan 面余）。
+    // 【goal-轮67 转换相位定谳】morphball f1128-1200：金 Stand(anim7)→Run(anim0) /
+    // 我**反向**（Run→Stand）——status/anim 转换相位倒置（记账）。
+    crate::frame::DIVERGENCES.with(|d| d.borrow_mut().push(0x0CC36));
     use button::*;
     let joy = mem.read_ram(crate::ram_map::JOY1_STATUS);
     if joy & !(SELECT | START) != 0 {
