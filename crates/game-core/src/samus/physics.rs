@@ -1515,8 +1515,9 @@ pub fn samus_move_horizontally(mem: &mut FrameMemory, delta: u8) {
         use std::sync::atomic::Ordering;
         let n = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
         if n >= 1255 && n <= 1295 {
-            eprintln!("[smh] n={} delta={} x={} accelX={}", n, delta,
-                mem.read_ram(0x030E), mem.read_ram(crate::ram_map::SAMUS_ACCEL_X));
+            eprintln!("[smh] n={} delta={} x={} accelX={} spX={}", n, delta,
+                mem.read_ram(0x030E), mem.read_ram(crate::ram_map::SAMUS_ACCEL_X),
+                mem.read_ram(SAMUS_SPEED_X_I));
         }
     }
     // 【goal-轮49 asm 合规矩】E31A 全径逐件对表：SamusScrX=x−ScrollX（E31D）/delta=0⇒
