@@ -985,6 +985,14 @@ pub fn check_health_status(mem: &mut FrameMemory) {
                 } else {
                     mem.write_ram(SAMUS_SPEED_X_I, 0); // LCF4E（Y=0）
                     mem.write_ram(SAMUS_SPEED_X_F, 0);
+                    // 【goal-轮27 knockback 标记】LCF4E 推径（移向反转源判别）。
+                    if std::env::var("DSH_SPRITE_TRACE").is_ok() {
+                        use std::sync::atomic::Ordering;
+                        let n = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
+                        if n >= 1255 && n <= 1295 {
+                            eprintln!("[kb] n={} LCF4E push dir={} dly={}", n, dir, delay);
+                        }
+                    }
                 }
             }
             if !skip {
