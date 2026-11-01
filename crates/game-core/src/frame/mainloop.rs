@@ -1868,7 +1868,10 @@ fn uw_skree_projectiles(mem: &mut crate::frame::FrameMemory) {
         mem.write_ram(0x0340 + 7, mem.read_ram(base + 3) & 1); // PowerUpDraw.hi
         // 【goal-轮23 弹显示帧】（:12207-12212 逐字：animFrame←_id_ObjFrame_SkreeProjectile
         // +`jsr ObjDrawFrame`——asm txa/pha/pla/tax 同构：PageIndex 换弹槽→绘→还）。
-        mem.write_ram(0x0340 + 3, 0x2C); // PowerUpDraw.animFrame（SkreeProjectile 帧 id）
+        // 【goal-轮24 弹帧 id 实证】ObjFramePtrTable（common_sprite_data:282-388）索引
+        // 自证（ObjFrame2C=表位 0x2C ✓ 名实符）⇒SkreeProjectile=表位 **0x5A**
+        // （:373−:283=90）——旧猜值 0x2C（=ObjFrame2C ✗）。
+        mem.write_ram(0x0340 + 3, 0x5A); // PowerUpDraw.animFrame（_id_ObjFrame_SkreeProjectile）
         let saved = mem.read_ram(0x004B); // PageIndex 存
         mem.write_ram(0x004B, (base & 0xFF) as u8); // 换弹槽
         crate::frame::sprite::anim_draw_object(mem, (base & 0xFF) as u8); // ObjDrawFrame
