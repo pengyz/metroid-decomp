@@ -1256,8 +1256,11 @@ fn crawler_ai(mem: &mut crate::frame::FrameMemory, x: u8) {
         use std::sync::atomic::Ordering;
         let n = DIAG_ITER.load(Ordering::Relaxed);
         if n >= 790 && n <= 812 {
-            eprintln!("[gate] n={} FC={:02X} gate={} skip={}", n,
-                mem.read_ram(crate::ram_map::FRAME_COUNT), gate, gate == 0);
+            eprintln!("[gate] n={} FC={:02X} gate={} skip={} | x3={} x2b={} sum={} half={}", n,
+                mem.read_ram(crate::ram_map::FRAME_COUNT), gate, gate == 0,
+                x >> 3, (x >> 2) & 1,
+                (x >> 3).wrapping_add((x >> 2) & 1).wrapping_add(mem.read_ram(crate::ram_map::FRAME_COUNT)),
+                (x >> 3).wrapping_add((x >> 2) & 1).wrapping_add(mem.read_ram(crate::ram_map::FRAME_COUNT)) >> 1);
         }
     }
     if gate == 0 {
