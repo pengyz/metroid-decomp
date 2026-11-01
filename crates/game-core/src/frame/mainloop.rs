@@ -1869,7 +1869,7 @@ fn enemy_move_one_pixel_down(mem: &mut crate::frame::FrameMemory, x: u8) -> bool
             let ai = mem.read_wram(0x6AF4 + x as u16 + 6);
             let af = mem.read_wram(0x6AF4 + x as u16 + 3);
             let cad = mem.read_wram(0x6AF4 + x as u16 + 4);
-            eprintln!("[dws] n={} y={} ry={} bound8={} animIdx={} animFrame={} cad={} adv={}", n, y0, ry0,
+            eprintln!("[cva] n={} y={} ry={} bound8={} animIdx={} animFrame={} cad={} adv={}", n, y0, ry0,
                 y0.wrapping_add(ry0) & 7 == 0, ai, af, cad,
                 cad == 0);
         }
