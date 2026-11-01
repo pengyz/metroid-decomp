@@ -1310,6 +1310,10 @@ fn crawler_ai(mem: &mut crate::frame::FrameMemory, x: u8) {
         let d = mem.read_ram(0x0400 + x as u16 + 5);
         mem.write_ram(0x0400 + x as u16 + 5, d ^ 0x01); // CrawlerFlipDirection
         mem.write_ram(0x0400 + x as u16 + 10, 0x03); // orientation←3（上墙）
+        if std::env::var("DSH_SPRITE_TRACE").is_ok() {
+            use std::sync::atomic::Ordering;
+            eprintln!("[trn] n={} LAVA 1->3", DIAG_ITER.load(Ordering::Relaxed));
+        }
         // @afterLavaTurnAround（跳过 @move 移动+内角检）
         crawler_outside_corner_check(mem, x);
         update_enemy_anim(mem, x, 3);
@@ -1343,6 +1347,10 @@ fn crawler_ai(mem: &mut crate::frame::FrameMemory, x: u8) {
         } else {
             let o = mem.read_ram(0x0400 + x as u16 + 10); // data0A
             mem.write_ram(0x0400 + x as u16 + 10, o.wrapping_sub(1) & 0x03); // 朝向--
+            if std::env::var("DSH_SPRITE_TRACE").is_ok() {
+                use std::sync::atomic::Ordering;
+                eprintln!("[trn] n={} COLL {}->{}", DIAG_ITER.load(Ordering::Relaxed), o, o.wrapping_sub(1) & 3);
+            }
             crawler_reorient_sprite(mem, x); // $9A8F（ InsideCorner 碰撞径 `4C 8F 9A`）
         }
     }
@@ -1373,6 +1381,10 @@ fn crawler_outside_corner_check(mem: &mut crate::frame::FrameMemory, x: u8) {
                 mem.read_ram(0x0400 + x as u16 + 1), mem.read_ram(0x0400 + x as u16 + 0));
         }
         mem.write_ram(0x0400 + x as u16 + 10, next_o); // data0A+1（asm `9D 0A 04`）
+        if std::env::var("DSH_SPRITE_TRACE").is_ok() {
+            use std::sync::atomic::Ordering;
+            eprintln!("[trn] n={} OUT {}->{}", DIAG_ITER.load(Ordering::Relaxed), o, next_o);
+        }
         crawler_reorient_sprite(mem, x); // $9A8F（OutsideCorner 径 `20 8F 9A`）
     }
 }
