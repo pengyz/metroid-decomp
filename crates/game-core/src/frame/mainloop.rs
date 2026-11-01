@@ -1570,20 +1570,15 @@ fn update_enemy_anim(mem: &mut crate::frame::FrameMemory, x: u8, a: u8) {
         }
         mem.write_wram(base + 3, v); // animFrame←表值
         mem.write_wram(base + 6, y.wrapping_add(1) as u8);
-        // 【goal-轮84 EN_ANIM_TABLE rx≤4 帧项直证】表径（金方 rx≤4 源）。
+        // 【goal-轮85 animIndex 初值直证】ENEMY_*_ANIM 表径（帧面差源）。
         if std::env::var("DSH_SPRITE_TRACE").is_ok() && x == 0x40 {
             use std::sync::atomic::Ordering;
             let n = DIAG_ITER.load(Ordering::Relaxed);
             if n >= 820 && n <= 830 {
-                let eg = &game_data::area::enemy_gfx::EN_FRAMES;
-                let mut hits = String::new();
-                for j in (0..eg.len().saturating_sub(3)).step_by(1) {
-                    if eg[j + 2] <= 4 && hits.len() < 40 {
-                        hits.push_str(&format!("{}:{} ", j, eg[j + 2]));
-                    }
-                }
-                eprintln!("[anv] n={} y={} tbl={:02X} rx={} rx4at=[{}]", n,
-                    y, v, mem.read_wram(base + 2), hits);
+                let ea = game_data::area::graphics::ENEMY_ACTIVE_ANIM;
+                let er = game_data::area::graphics::ENEMY_RESTING_ANIM;
+                eprintln!("[aiv] n={} y={} tbl={:02X} reset={} actTbl={:02X} rstTbl={:02X}", n,
+                    y, v, mem.read_wram(base + 5), ea[10], er[10]);
             }
         }
         return;
