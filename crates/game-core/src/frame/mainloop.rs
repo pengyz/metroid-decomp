@@ -416,9 +416,16 @@ pub fn update_all_enemies(mem: &mut crate::frame::FrameMemory) {
             let d5 = mem.read_ram(0x0400 + x2 as u16 + 5);
             let ry = mem.read_wram(0x6AF4 + x2 as u16 + 1);
             let fo = mem.read_ram(0x0400 + x2 as u16 + 6);
-            eprintln!("[vis2] n={} eB=({},{}) ry={} fo0={} anim={}", n,
+            let eg = &game_data::area::enemy_gfx::EN_FRAMES;
+            let mut cands = String::new();
+            for i in (1..eg.len().min(200)).step_by(8) {
+                if eg[i] == 9 {
+                    cands.push_str(&format!("{} ", i - 1));
+                }
+            }
+            eprintln!("[vis2] n={} eB=({},{}) ry={} fo0={} anim={} ry9at=[{}]", n,
                 mem.read_ram(0x0400 + x2 as u16), mem.read_ram(0x0400 + x2 as u16 + 1),
-                ry, fo, mem.read_wram(0x6AF4 + x2 as u16 + 6));
+                ry, fo, mem.read_wram(0x6AF4 + x2 as u16 + 6), cands);
         }
     }
     mem.write_ram(0x004B, x); // PageIndex
