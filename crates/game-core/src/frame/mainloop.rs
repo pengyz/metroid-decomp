@@ -1216,6 +1216,19 @@ fn crawler_ai(mem: &mut crate::frame::FrameMemory, x: u8) {
     };
     let _ = diag_n;
     // F852：txa/lsr×3（carry←原 bit2）/adc FrameCount（含进位）/lsr——门含 lsr 移出位。
+    // 【goal-轮2 采样缝更正】toggle 公式正确——"bit6 反相"=采样缝伪象（我 spin-exit=帧首
+    // /emu=帧末，同帧差一次更新）⇒真根=走位首动帧差（f798 早 1px）。
+    if std::env::var("DSH_SPRITE_TRACE").is_ok() && x == 0x40 {
+        use std::sync::atomic::Ordering;
+        let n = DIAG_ITER.load(Ordering::Relaxed);
+        if n >= 790 && n <= 805 {
+            eprintln!("[mov] n={} FC={:02X} x={} y={} d05={:02X} movIdx={} instrIdx={} dly={} spX={}",
+                n, mem.read_ram(crate::ram_map::FRAME_COUNT), x,
+                mem.read_ram(0x0400 + x as u16), mem.read_ram(0x0400 + x as u16 + 5),
+                mem.read_ram(0x0400 + x as u16 + 8), mem.read_ram(0x0400 + x as u16 + 6),
+                mem.read_ram(0x0400 + x as u16 + 9), mem.read_ram(0x0400 + x as u16 + 3));
+        }
+    }
     // 【goal-轮58 证伪记账（§3.6）】gate FC+1 L4 判定 54/97（-1 微劣 vs 基线 55）⇒
     // 回退——gate 读面保 pre-inc（toggle 读面 FC+1（轮57）中性保留）。
     let gate = ((x >> 3)
