@@ -208,6 +208,9 @@
 > ⇒若门值同则根非门 ⇒**delta 值源**（enemy_get_delta_xy 的串走位相位）。
 > 【门实值差定案】slot **64/0** ✗（PageIndex 差！）+FC 93/94（+1）+gate 2/3——**slot
 > 值差=根**（敌0 的 PageIndex=0x40 vs 0）⇒slot 分配面（EnemySlot 分配/init）。
+> 【PageIndex 写面考证】enemy_slots.rs=结构件（decode/encode/read/write）——PageIndex
+> （0x4B）写面在**调用侧**（update_all_enemies 的 slot 循环）⇒slot 值 64/0 差=调用侧
+> 的 PageIndex 赋值（enemy slot 遍历序）。
 
 ### case-002（3 diff）
 | 帧 | px | 类 | 根因 | 证据 |
