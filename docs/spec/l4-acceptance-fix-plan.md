@@ -169,6 +169,9 @@
 > ——**caller A=255**（pickup:172 前的 regs.a/physics:818 前的 regs.a）⇒补调的 a_in=
 > regs.a 在 draw 时已非 SetSamusData 的 A ⇒**a_in 语义偏离**（asm AnimDrawObject 的
 > A=caller 显式传值非 regs.a）。
+> 【a_in 显式修后复测】pi=0 a_in=**255 仍存**（regs.a=255——set_samus_data 内 A 污染）
+> +4 调仍 ⇒A=255 源=set_samus_data 流程中 A 被改（check_health_status/lava_and_move?
+> ）⇒下轮 set_samus_data 内 A 轨迹插桩。
 
 ### case-002（3 diff）
 | 帧 | px | 类 | 根因 | 证据 |
