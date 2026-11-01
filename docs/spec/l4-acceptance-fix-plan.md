@@ -232,6 +232,9 @@
 > /rust=**0（空）**——**敌未入槽 0x50** ⇒load_enemy 槽分配面（slot 0x50 占用/init）。
 > 【LoadEnemy 锚】EB06（:8741）+RemoveEnemy（FA18）——槽分配/init 逐字考证（下轮）→
 > 修→match 动。
+> 【GetEnemyData 语义】slot x=**room 数据首字节&0xF0**（槽位来自房间数据！）+IsSlotTaken
+> 门+type（&0x3F→EnsExtra.type）+位置（LEB4D）——**槽位=房间数据 nibble** ⇒我方
+> load_enemy 的 slot 源对表（room 数据解析）→修→match 动。
 
 ### case-002（3 diff）
 | 帧 | px | 类 | 根因 | 证据 |
