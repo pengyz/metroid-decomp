@@ -1363,10 +1363,9 @@ fn toggle_name_table(mem: &mut FrameMemory) {
 
 /// CheckStopHorzMvmt（**asm 内容锚** `: 07:E365`）：成功（carry）⇒出；失败⇒
 /// ObjectCounter=1 断环+（非空中/非球）⇒**jmp SetSamusStand**（CF55——停速+转站）。
-/// 【goal-轮21 墙挡转站根修（自跑实证：金墙挡 st 0/1 交替=挡⇒stand⇒输入⇒run 循环 /
-/// 我恒 st=1 ✗——旧形只清速未转站）】asm `:7250 jmp SetSamusStand` 逐字——SetSamusStand
-/// =CF55（AccelX≠0⇒直入 CF5D/否则走 SFX）→NoHorzMoveNoDelay（清横速/加速/anim 延）
-/// +`sty Samus.status`（Y=0=stand）。
+/// 【goal-轮51 asm 合规矩】E365 逐件对表：bcs Exit10/ObjectCounter=1 破环/AccelY≠0⇒
+/// 出（空中）/status==Roll⇒出（球形）/jmp SetSamusStand（CF55 全径——轮31 修 ✓）——
+/// **全件面合规** ✓✓（破环语义=ObjectCounter=1（非 dec 归零）——E31A 环 bne 跳出 ✓）。
 fn check_stop_horz_mvmt(mem: &mut FrameMemory, moved: bool) -> bool {
     if moved {
         return false; // bcs Exit10
