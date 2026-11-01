@@ -1570,6 +1570,15 @@ fn update_enemy_anim(mem: &mut crate::frame::FrameMemory, x: u8, a: u8) {
         }
         mem.write_wram(base + 3, v); // animFrame←表值
         mem.write_wram(base + 6, y.wrapping_add(1) as u8);
+        // 【goal-轮83 EN_ANIM_TABLE 表值直证】帧面差源。
+        if std::env::var("DSH_SPRITE_TRACE").is_ok() && x == 0x40 {
+            use std::sync::atomic::Ordering;
+            let n = DIAG_ITER.load(Ordering::Relaxed);
+            if n >= 820 && n <= 860 {
+                eprintln!("[anv] n={} y={} tbl={:02X} animFrame={:02X} rx={}", n,
+                    y, v, v, mem.read_wram(base + 2));
+            }
+        }
         return;
     }
     crate::unported!("bank07:E0BC-wrap"); // 表不变量破裂——fail-loud（update_obj_anim 同式）
