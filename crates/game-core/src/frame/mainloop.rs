@@ -60,9 +60,9 @@ pub fn main_loop_iter(mem: &mut FrameMemory) {
         update_timer(mem); // C266
     }
     go_main_routine(mem); // C114（分发壳——会师点；续段=GoMainRoutine 内部续跑）
-    // 【goal-轮26 相位实证回退】FC 前置增量实测劣化（14/92←32/92 全轨迹）——原尾递增
-    // 相位（pre-inc 例程面）实为金腿对表形；爬虫 f1676 漏步非 FC 相位根（tick 锚定窗
-    // 对位实证后另寻）。no_return 冻结语义复原（尾门）。
+    // 【goal-轮56 证伪更正（§3.6）】FC 前置增量（轮26 形重试）L4 判定证伪——match 骤降
+    // （1/13 等 vs 基线 55/97）⇒回退。金腿 FC=+1 恒差（ram.hex 直证）=**症状非根**——
+    // FC 依赖行为（gate/toggle/相位）随移全错；真根=FC 读面各自的相位语义（非全局移）。
     if !mem.title_no_return {
         mem.write_ram(FRAME_COUNT, mem.read_ram(FRAME_COUNT).wrapping_add(1));
     }
