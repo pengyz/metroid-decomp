@@ -694,7 +694,7 @@ fn enemy_distance_threshold(mem: &mut crate::frame::FrameMemory, x: u8) {
     if std::env::var("DSH_SPRITE_TRACE").is_ok() && x == 0x40 {
         use std::sync::atomic::Ordering;
         let n = DIAG_ITER.load(Ordering::Relaxed);
-        if n >= 790 && n <= 800 {
+        if n >= 780 && n <= 812 {
             eprintln!("[thr] n={} type={} thr={:02X} d05_pre={:02X} bit1={}", n, t, thr,
                 mem.read_ram(e), (mem.read_ram(e) >> 1) & 1);
         }
