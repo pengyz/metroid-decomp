@@ -174,6 +174,10 @@ pub fn enemy_get_delta_xy(
     // 【goal-轮64 delay 装载双面合规矩】FB7B spawn（:12068）+:10604 静息转换（EnemyInit
     // DelayTbl[y]→Ens.delay）——**双面合规** ✓✓（load_enemy 534 行/enemy_active bit5
     // 1775 行同构——Skree delay 相位根非装载面 ✗）。
+    // 【goal-轮65 调用序合规矩】EnemyMove 主环（:115-164）：bit6 门+status==Active→
+    // **EnemyGetDeltaY（:126——delay 写面）先**→逐像素 up/down 环→**EnemyGetDeltaX
+    // （:153——无 delay 写）后**→逐像素 left/right 环——**调用序合规** ✓✓（我方
+    // enemy_get_delta_xy 合一调用（Y 面先 delay ✓+X 面后 ✓）同构）。
     // 朝向（data05 bit7：水平/垂直）→movementIndex*2+facing→*2→指针
     let facing = if data05 & 0x80 != 0 { (data05 >> 2) & 1 } else { data05 & 1 };
     // **8 位回绕**（asm `rol/asl` u8 语义——case-6 Δ=+48 实值对读证：movementIndex=249
