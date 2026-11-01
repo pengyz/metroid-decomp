@@ -557,7 +557,10 @@ fn update_en_data05_bit6(mem: &mut crate::frame::FrameMemory, x: u8) {
     // 【goal-轮45 坠落 delay 相位记账】Skree 坠落起点：金 f1878 delay=1/f1880 起移；我
     // f1878 delay=0/f1880 已移——**delay 倒数 1 帧相位差**（移动串 delay 面）=余项。
     crate::frame::DIVERGENCES.with(|d| d.borrow_mut().push(0x0FB7B));
-    let parity = ((x >> 4) ^ mem.read_ram(crate::ram_map::FRAME_COUNT)) & 1;
+    // 【goal-轮57 FC 读面相位逐点（L4 判定）】toggle 单点 FC+1（轮34 形——轮33/34 用
+    // L3 判定劣化；本轮 L4 重判）。金腿 FC=+1 恒差（ram.hex 直证）⇒toggle 读面相位
+    // =+1（逐点修——非全局移）。
+    let parity = ((x >> 4) ^ mem.read_ram(crate::ram_map::FRAME_COUNT).wrapping_add(1)) & 1;
     let nd = (d & 0xBF) | (parity << 6);
     let _ = bit6;
     mem.write_ram(0x0400 + x as u16 + 5, nd);
