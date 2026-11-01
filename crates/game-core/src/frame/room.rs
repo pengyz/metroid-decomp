@@ -524,6 +524,14 @@ fn load_enemy(mem: &mut crate::frame::FrameMemory, b0: u8, etype: u8, pos: u8) -
     mem.write_ram(en + 4, 0x00); // Ens.isHit
     // GetNameTableAtScrollDir（$EB85）：(PPUCTRL_ZP^ScrollDir)&1
     let hi = mem.read_ram(crate::ram_map::PPUCTRL_ZP) ^ mem.read_ram(crate::ram_map::SCROLL_DIR);
+    // 【goal-轮65 装载帧 hi 直证】PPUCTRL^ScrollDir（金 hi=1/我 hi=0 源）。
+    if std::env::var("DSH_SPRITE_TRACE").is_ok() {
+        use std::sync::atomic::Ordering;
+        let n = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
+        eprintln!("[lhi] n={} PPUCTRL={:02X} SDir={:02X} hi={} slot={:02X}", n,
+            mem.read_ram(crate::ram_map::PPUCTRL_ZP), mem.read_ram(crate::ram_map::SCROLL_DIR),
+            hi & 1, x);
+    }
     mem.write_wram(ex + 0x07, hi & 0x01); // EnsExtra.hi
     // LEB6E：data05←shl（facing 位旋入 bit7）；InitEnemyFacing（$FB7B）：ror（L977B 位7）
     // +delay←InitDelayTbl；InitForce（$F85A）：data0D←ForceTbl；health←HealthTbl（tough×2）
