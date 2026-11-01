@@ -222,6 +222,8 @@
 > 【slot 序定案】UpdateAllEnemies（F345）：x=0x50→Xminus16→0x00（**降序** ✓）——我方
 > update_all_enemies:408（x=0x50→x-0x10）**同构合规** ⇒slot 64/0 差根非 loop 序 ⇒
 > **slot 值源**（敌0 的 PageIndex 赋值点/敌槽占用）。
+> 【slot 值源考证】敌0 槽占用（EnsExtra.status 0x6AF4+x）+PageIndex 赋值点（mainloop
+> :410 每迭代）——**赋值点合规** ⇒slot 值 64/0 差=**槽占用差**（敌0 的 status 槽位）。
 
 ### case-002（3 diff）
 | 帧 | px | 类 | 根因 | 证据 |
