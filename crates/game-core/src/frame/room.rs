@@ -522,14 +522,15 @@ fn load_enemy(mem: &mut crate::frame::FrameMemory, b0: u8, etype: u8, pos: u8) -
     mem.write_wram(ex + 0x07, hi & 0x01); // EnsExtra.hi
     // LEB6E：data05←shl（facing 位旋入 bit7）；InitEnemyFacing（$FB7B）：ror（L977B 位7）
     // +delay←InitDelayTbl；InitForce（$F85A）：data0D←ForceTbl；health←HealthTbl（tough×2）
-    // 【goal-轮41 facing 源修】asm :12047-12049 逐字：`and ScrollDir/asl/sta data05`——
-    // **facing=status&ScrollDir（bit0）**（旧形 ENEMY_FACING 表=偏离⇒Skree 向位差
-    // （金 bit0=1/我=0——f1855+ d05 0x53/0x52 实证））。
+    // 【goal-轮44 修错勘误】轮41 facing→bit7 **错**（asm :12048 注「asl to compensate for
+    // the ror」——**asl+ror 组合=facing→bit0**（0/1→0/2→ror→bit0）+axis→bit7 ✓）——
+    // 金腿实证（d05=0x53：bit0=1（facing）/bit7=0 ✓）。修正：facing→bit0。
     let t = ty as usize & 0x3F;
     let d5 = mem.read_ram(en + 5);
-    let rotated = d5 << 1; // asl Ens.data05
-    let facing_bit = mem.read_wram(ex) & mem.read_ram(crate::ram_map::SCROLL_DIR) & 0x01; // status&ScrollDir
-    let d5 = (rotated & 0x7F) | (facing_bit << 7); // ror 形（carry→bit7）
+    let shifted = d5 << 1; // asl（补偿 ror）
+    let facing_bit = mem.read_wram(ex) & mem.read_ram(crate::ram_map::SCROLL_DIR) & 0x01;
+    let rotated = (shifted >> 1) | (if facing_bit != 0 { 0x80 } else { 0 }); // ror 形（axis→bit7）
+    let d5 = (rotated & 0x7E) | facing_bit; // facing→bit0（asl+ror 组合）
     mem.write_ram(en + 5, d5);
     // 【goal-r16 复核修正 G1'】字段偏移 +2 错位修正（ROM 真值：FB7B `sta $0409`=delay+9，
     // F85A `sta $040D`=data0D+0xD / `sta $040B`=health+0xB）。旧形 delay→+0x0B（写进 health
