@@ -556,6 +556,9 @@ fn update_en_data05_bit6(mem: &mut crate::frame::FrameMemory, x: u8) {
     // `sta data05`——facing+axis 组合 bit5=0）；运行期无独立写源（读面位 ✓）。
     // 【goal-轮45 坠落 delay 相位记账】Skree 坠落起点：金 f1878 delay=1/f1880 起移；我
     // f1878 delay=0/f1880 已移——**delay 倒数 1 帧相位差**（移动串 delay 面）=余项。
+    // 【goal-轮59 坠落 delay 相位续查】EnemyGetDeltaY（$8244——movementIndex+instr
+    // 字符串走表）delay 语义：control 字节（$FA-FF）+delay 倒数——1 帧相位=串位 instr
+    // 推进相位面（下轮 asm 逐件对表 $8244 串走表）。
     crate::frame::DIVERGENCES.with(|d| d.borrow_mut().push(0x0FB7B));
     // 【goal-轮57 FC 读面相位逐点（L4 判定）】toggle 单点 FC+1（轮34 形——轮33/34 用
     // L3 判定劣化；本轮 L4 重判）。金腿 FC=+1 恒差（ram.hex 直证）⇒toggle 读面相位
