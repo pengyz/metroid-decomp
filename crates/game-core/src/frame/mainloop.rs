@@ -690,6 +690,15 @@ fn enemy_distance_threshold(mem: &mut crate::frame::FrameMemory, x: u8) {
     }
     let t = mem.read_wram(0x6AF4 + x as u16 + 14) as usize & 0x0F;
     let thr = game_data::area::graphics::ENEMY_DISTANCE_THRESHOLD[t];
+    // 【goal-轮3 F75B 判定流直证】阈值/bit1/d05 写前后。
+    if std::env::var("DSH_SPRITE_TRACE").is_ok() && x == 0x40 {
+        use std::sync::atomic::Ordering;
+        let n = DIAG_ITER.load(Ordering::Relaxed);
+        if n >= 790 && n <= 800 {
+            eprintln!("[thr] n={} type={} thr={:02X} d05_pre={:02X} bit1={}", n, t, thr,
+                mem.read_ram(e), (mem.read_ram(e) >> 1) & 1);
+        }
+    }
     if thr == 0 {
         return; // 阈 0⇒早出（Zoomer 径！）
     }
