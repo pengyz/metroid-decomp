@@ -1292,6 +1292,15 @@ fn crawler_ai(mem: &mut crate::frame::FrameMemory, x: u8) {
     // Y=(orientation*2+direction)*2→CrawlerMovementRoutinesTable→四例行。
     let d5 = mem.read_ram(0x0400 + x as u16 + 5);
     let orientation = mem.read_ram(0x0400 + x as u16 + 10) & 0x03; // data0A=+10
+    // 【goal-轮7 转向路径直证】orientation 变化+原因。
+    if std::env::var("DSH_SPRITE_TRACE").is_ok() && x == 0x40 {
+        use std::sync::atomic::Ordering;
+        let n = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
+        if n >= 795 && n <= 812 {
+            eprintln!("[trn] n={} orient={} y={} x={}", n, orientation,
+                mem.read_ram(0x0400 + x as u16), mem.read_ram(0x0400 + x as u16 + 1));
+        }
+    }
     let direction = d5 & 1;
     // 【岩浆折返径】（crawler.asm:26-64——**asm BUG 注保真**（D4：竖房误触发不修））：
     // orientation==1（下墙径）∧ y==$E4（BANK1/4 阈——BANK2/5=$EB）⇒FlipDirection+
