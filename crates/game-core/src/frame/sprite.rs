@@ -23,21 +23,18 @@ fn blob(addr: u16) -> u8 {
 /// (DC8F) 与 `jmp ObjDrawFrame`(DE4A) 分离。动画由 `update_obj_anim`（physics.rs CD6D 链首件，
 /// 含 `sta animDelay`←A 初值重置）负责。旧形在此内联 UpdateObjAnim 且漏 `sta animDelay` 重置⇒
 /// animDelay 恒 0⇒每帧换帧（动画过快）+与 update_obj_anim 双写冲突。
-pub fn anim_draw_object(mem: &mut crate::frame::FrameMemory, page_index: u8) {
+pub fn anim_draw_object(mem: &mut crate::frame::FrameMemory, page_index: u8, a_in: u8) {
     // 【goal-轮106 regs.a 源 ID】anim_draw_object 入口插桩。
     if std::env::var("DSH_SPRITE_TRACE").is_ok() {
         use std::sync::atomic::Ordering;
         let n = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
         if n >= 1126 && n <= 1132 {
-            eprintln!("[ado] n={} pi={} regs.a={}", n, page_index, mem.regs.a);
+            eprintln!("[ado] n={} pi={} a_in={}", n, page_index, a_in);
         }
     }
-    // 【goal-轮98 偏离修】asm AnimDrawObject(DE47)=**jsr UpdateObjAnim**（:6226）+ObjDrawFrame
-    // （DE4A）——旧形"只读 animFrame 不写"**漏调 UpdateObjAnim**（emu 双调/我方单调
-    // ⇒走位率差 +2 根！）。补调。
-    // 【goal-轮99 a_in 正值修】asm UpdateObjAnim 的 A=caller 传值（SetSamusData 的 A）
-    // ——a_in=regs.a（非 0 占位）。
-    crate::samus::physics::update_obj_anim(mem, mem.regs.a);
+    // 【goal-轮107 a_in 显式传值修】asm AnimDrawObject 的 A=caller 显式传值（非 regs.a
+    // ——regs.a 在 draw 时已被污染=255）——a_in 参数化。
+    crate::samus::physics::update_obj_anim(mem, a_in);
     let px = page_index as u16;
     // 只读 animFrame（动画更新在 update_obj_anim——此处不写 $0303/$0304/$0306）
     let anim_frame = mem.read_ram(0x0303 + px);
@@ -182,7 +179,7 @@ mod tests {
         m.write_ram(0x00FF, 0); // PPUCTRL_ZP
         m.write_ram(0x030D, 0x80); // y
         m.write_ram(0x030E, 0x80); // x
-        anim_draw_object(&mut m, 0);
+        anim_draw_object(&mut m, 0, 0);
         let oam: Vec<u8> = (0..0x20).map(|i| m.read_ram(0x0200 + i)).collect();
         assert!(oam.iter().any(|&b| b != 0), "OAM 有 sprite 落");
     }
@@ -202,7 +199,7 @@ mod r25_oam_probe {
         m.write_ram(0x00FF, 0x90); // PPUCTRL（bit4=1 面）
         m.write_ram(0x030D, 0x80); // y=128
         m.write_ram(0x030E, 0x80); // x=128
-        anim_draw_object(&mut m, 0);
+        anim_draw_object(&mut m, 0, 0);
         for i in 0..8u16 {
             let b = 0x0200 + i * 4;
             println!("[oam] sprite{i}: y={:02X} tile={:02X} attr={:02X} x={:02X}",

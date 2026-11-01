@@ -256,7 +256,7 @@ fn draw_door(mem: &mut crate::frame::FrameMemory, x_off: u8) {
     mem.write_ram(0x006B, cntrl);
     mem.write_ram(0x030A + x_off as u16, 0); // isHit←0
     crate::samus::physics::update_obj_anim(mem, 6); // AnimDrawObject 拆分面（A=6）
-    crate::frame::sprite::anim_draw_object(mem, x_off);
+    crate::frame::sprite::anim_draw_object(mem, x_off, 6); // A=6（拆分面）
 }
 
 /// UpdateAllDoors（$8B79）——4 门环（$B0/$A0/$90/$80（X-=0x10；bmi 环））。

@@ -169,7 +169,7 @@ pub fn update_all_power_ups(mem: &mut FrameMemory) -> Option<u8> {
         mem.write_ram(0x006B, ((fc >> 1) & 0x03) | 0x80); // ObjectCntrl
         // ObjDrawFrame（DE4A——显示（sprite 管线：PageIndex=$40 面））
         let sp0 = mem.read_ram(0x004B); // SpritePagePos 位面
-        crate::frame::sprite::anim_draw_object(mem, 0x40);
+        crate::frame::sprite::anim_draw_object(mem, 0x40, 0);
         if mem.read_ram(0x004B) == sp0 {
             continue; // 未绘出（:5563-5566 cmp/beq Exit9）
         }

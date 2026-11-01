@@ -815,7 +815,7 @@ pub fn set_samus_data(mem: &mut FrameMemory) {
         mem.write_ram(0x006B, 0x81);
     }
     set_mirror_cntrl_bit(mem); // CD92（已折——朝向镜像位）
-    crate::frame::sprite::anim_draw_object(mem, 0); // ObjDrawFrame（DE4A——sprite 管线会师！）
+    crate::frame::sprite::anim_draw_object(mem, 0, mem.regs.a); // ObjDrawFrame（DE4A）
     // 链余件（随件）：LavaAndMoveCheck（E269）/MetroidOnSamus($92) 蓝化/
     // set_mirror_cntrl_bit（CD92 已折——随接）/ObjDrawFrame（DE4A 显示面）
 }

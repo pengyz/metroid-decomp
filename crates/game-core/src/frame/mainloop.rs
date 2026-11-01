@@ -237,7 +237,7 @@ pub fn samus_intro(mem: &mut FrameMemory) {
         // 【goal-r16 修】asm DE47(AnimDrawObject)=`jsr UpdateObjAnim`(A=0)+DE4A——首句走表。
         // 旧形（拆分后）漏走表⇒animFrame 停留 0(Stand 帧 id)⇒渲染 Stand（emu 渲 Front 帧——L4 f550 差 210px）。
         crate::samus::physics::update_obj_anim(mem, 0); // UpdateObjAnim（DC8F——A=0 `lda #$00`）
-        crate::frame::sprite::anim_draw_object(mem, 0); // AnimDrawObject（$DE47——Samus 槽 0）
+        crate::frame::sprite::anim_draw_object(mem, 0, 0); // AnimDrawObject（$DE47——Samus 槽 0）
     }
 }
 
@@ -1877,7 +1877,7 @@ fn update_bullet(mem: &mut crate::frame::FrameMemory) {
     // DrawBullet（$D517）：AnimDrawObject(A=1)（动画推进面 A=1）
     // 【goal-轮103 双调修】asm AnimDrawObject(DE47)=UpdateObjAnim+ObjDrawFrame 单含——
     // 旧形显式 update_obj_anim(1)+anim_draw_object 补调=双调 ✗⇒删显式（补调覆盖）。
-    crate::frame::sprite::anim_draw_object(mem, mem.read_ram(0x004B));
+    crate::frame::sprite::anim_draw_object(mem, mem.read_ram(0x004B), 1); // DrawBullet A=1
     mem.write_ram(0x0071, 0);
 }
 
@@ -1891,7 +1891,7 @@ fn update_bullet_explode(mem: &mut crate::frame::FrameMemory) {
         mem.write_ram(base, 0);
     }
     // 【goal-轮103 双调修】同上（爆径 AnimDrawObject 单含）。
-    crate::frame::sprite::anim_draw_object(mem, mem.read_ram(0x004B));
+    crate::frame::sprite::anim_draw_object(mem, mem.read_ram(0x004B), 1); // DrawBullet A=1
     mem.write_ram(0x0071, 0);
 }
 
@@ -2030,7 +2030,7 @@ fn uw_skree_projectiles(mem: &mut crate::frame::FrameMemory) {
         mem.write_ram(0x0340 + 3, 0x5A); // PowerUpDraw.animFrame（_id_ObjFrame_SkreeProjectile）
         let saved = mem.read_ram(0x004B); // PageIndex 存
         mem.write_ram(0x004B, (base & 0xFF) as u8); // 换弹槽
-        crate::frame::sprite::anim_draw_object(mem, (base & 0xFF) as u8); // ObjDrawFrame
+        crate::frame::sprite::anim_draw_object(mem, (base & 0xFF) as u8, 0); // ObjDrawFrame
         mem.write_ram(0x004B, saved); // PageIndex 还
         // Samus 5 伤害（:12214-12232）
         if mem.read_ram(crate::ram_map::SAMUS_INVINCIBLE_DELAY) == 0 {
