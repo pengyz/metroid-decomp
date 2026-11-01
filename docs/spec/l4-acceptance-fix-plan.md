@@ -172,6 +172,8 @@
 > 【a_in 显式修后复测】pi=0 a_in=**255 仍存**（regs.a=255——set_samus_data 内 A 污染）
 > +4 调仍 ⇒A=255 源=set_samus_data 流程中 A 被改（check_health_status/lava_and_move?
 > ）⇒下轮 set_samus_data 内 A 轨迹插桩。
+> 【A 污染修后复测】lava_and_move_check A 保存/恢复修后：**pi=0 a_in=2 ✓✓（修净）**
+> +4 调=asm 一致（samus 2+pickup 2 ✓）——去重假说证伪 ⇒余=相位/走位面（非调用数）。
 
 ### case-002（3 diff）
 | 帧 | px | 类 | 根因 | 证据 |
