@@ -1320,6 +1320,10 @@ fn scroll_left(mem: &mut FrameMemory) -> bool {
 }
 
 /// ScrollRight（**asm 内容锚** `ScrollRight: ; 07:E6D2`）：滚屏 1px。返回 carry。
+/// 【goal-轮47 asm 理解（用户令：问题定位优先读 refs/m1disasm）】E6D2 全径语义：
+/// ScrollDir 2=左/3=右（cmp #$03 beq 续/`cmp #$02 bne` 竖滚禁横+inc ScrollDir 转向）
+/// +ScrollX==0 特殊径（inc MapPosX/GetRoomNum CF=1⇒界（dec MapPosX/sec））+inc ScrollX
+/// +0 环绕⇒ToggleNameTable+CheckUpdateNameTable——**MapPosX/名表切/界判定三联动**。
 fn scroll_right(mem: &mut FrameMemory) -> bool {
     let dir = mem.read_ram(crate::ram_map::SCROLL_DIR);
     if dir != 3 {
