@@ -197,6 +197,8 @@
 > 【EnemyMove 调用序合规】update_all_enemies:407+enemy_get_delta_xy:1132 同构（Y 先
 > delay 写/X 后无写 ✓）——**调用序合规** ⇒位差根非调用序 ⇒**相位/时点**（EnemyMove
 > 的触发帧/门相位）。
+> 【F852 门相位对表】门=((slot>>3)+carry+FC)>>1&3（slot 基非位置 ✓）——**门相位合规**
+> （轮43 同构）⇒位差根非门相位 ⇒**走位 delta 施加相位**（Δ 施加到 y/x 的帧界/时点）。
 
 ### case-002（3 diff）
 | 帧 | px | 类 | 根因 | 证据 |
