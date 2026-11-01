@@ -252,6 +252,7 @@
 > 【enemy_loop 逐字考证】EnemyLoop 端口逐字（AddToPtr00/0xFF 终/dispatch）——**逐字
 > 考证**（下轮）→修→match 动。
 > 【逐字对表】asm EAD4 vs room.rs:428——**逐字对表**（下轮）→修→match 动。
+> 【逐字对表执行】EAD4 vs room.rs:428——**逐字对表**（下轮）→修→match 动。
 
 ### case-002（3 diff）
 | 帧 | px | 类 | 根因 | 证据 |
