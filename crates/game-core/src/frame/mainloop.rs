@@ -1868,9 +1868,10 @@ fn enemy_move_one_pixel_down(mem: &mut crate::frame::FrameMemory, x: u8) -> bool
             let ry0 = mem.read_wram(0x6AF4 + x as u16 + 1);
             let ai = mem.read_wram(0x6AF4 + x as u16 + 6);
             let af = mem.read_wram(0x6AF4 + x as u16 + 3);
-            eprintln!("[f88] n={} y={} ry={} bound8={} animIdx={} animFrame={} fo88={}", n, y0, ry0,
-                y0.wrapping_add(ry0) & 7 == 0, ai, af,
-                game_data::area::enemy_gfx::EN_FRAME_OFFS.get(88).map(|t| t.0).unwrap_or(0xFFFF));
+            let d0A = mem.read_ram(0x0400 + x as u16 + 10);
+            eprintln!("[rtr] n={} y={} ry={} bound8={} animIdx={} animFrame={} d0A={} orient={}", n, y0, ry0,
+                y0.wrapping_add(ry0) & 7 == 0, ai, af, d0A,
+                d0A & 3);
         }
     }
     mem.write_ram(0x0400 + x as u16 + 0, ny);
