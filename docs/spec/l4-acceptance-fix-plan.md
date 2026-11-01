@@ -122,6 +122,9 @@
 > set_samus_data**（samus_run 空中径 + samus_jump_tail）⇒DC8F 双跑/终值 3 掐死递减。
 > **修复径（一击）**：同帧去重（调用序对表 asm：samL06 `bne SetSamusData` 只一径）→
 > 修→match 动。
+> 【双调假说证伪（[ssd] 直证）】set_samus_data **单调/帧 A=2**（n=1130-1147 全 A=2）
+> ⇒非双调——state reload=3 **另有写源**（非 set_samus_data 路径）⇒0x304 写 3 写源
+> 审计（handler:257/749/973 等）→修。
 
 ### case-002（3 diff）
 | 帧 | px | 类 | 根因 | 证据 |

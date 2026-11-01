@@ -793,6 +793,15 @@ fn check_health_beep(mem: &mut FrameMemory) {
 }
 
 pub fn set_samus_data(mem: &mut FrameMemory) {
+    // 【goal-轮85 双调直证】set_samus_data 入口插桩（A 值/调用序）。
+    if std::env::var("DSH_SPRITE_TRACE").is_ok() {
+        use std::sync::atomic::Ordering;
+        let n = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
+        if n >= 1128 && n <= 1147 {
+            eprintln!("[ssd] n={} FC={:02X} A={}", n,
+                mem.read_ram(crate::ram_map::FRAME_COUNT), mem.regs.a);
+        }
+    }
     update_obj_anim(mem, mem.regs.a); // DC8F（已端口——A=延迟初值面）
     if is_screw_attack_active(mem) {
         // 攻螺旋转调色（asm：`lda FrameCount/lsr/and #$03/ora #$80|PRIORITY/sta $6B`）
