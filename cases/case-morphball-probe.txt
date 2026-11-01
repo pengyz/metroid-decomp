@@ -15,6 +15,10 @@ watch 0050 MapPosX
 watch 0056 DoorEntry
 watch 00FD ScrollX
 watch 0300 SamusStatus
+watch 0305 AnimResetIndex   # Phase1 增量（Stand↔Run 倒置直证面——spec v2）
+watch 0306 AnimIndex
+watch 0012 Joy1Change       # 输入相位对照面（F3——采样/注入时点判别）
+watch 0014 Joy1Status
 watch 0301 SamusRadiusY
 watch 030D SamusY
 watch 030E SamusX
@@ -33,11 +37,17 @@ capture 420 game-in
 hold 450-1420 left  # 连续左推全程（走廊→墙→坑沿）
 hold 1130-1185 a    # 全高跳越高墙（y 193→110，落坑沿 (244,113)）
 capture 1128 wall-takeoff  # ── 跳墙序列 0.2s/12 帧 ──
+capture 1134 wall-rise0a   # Phase1 密化（倒置触发帧号级定位——spec v2）
 capture 1140 wall-rise1
+capture 1146 wall-rise1b
 capture 1152 wall-rise2
+capture 1158 wall-rise2b
 capture 1164 wall-top      # 角部时刻（x 回绕帧）
+capture 1170 wall-overa
 capture 1176 wall-over
+capture 1182 wall-overb
 capture 1188 pit-land
+capture 1194 pit-landb
 capture 1200 wall-jump     # ── 结束 ──
 hold 1240-1295 a    # 二段跳（坑沿→坑内 (68,177)）
 capture 1300 pit
