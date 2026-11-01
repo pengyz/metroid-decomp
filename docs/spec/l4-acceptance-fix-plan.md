@@ -224,6 +224,8 @@
 > **slot 值源**（敌0 的 PageIndex 赋值点/敌槽占用）。
 > 【slot 值源考证】敌0 槽占用（EnsExtra.status 0x6AF4+x）+PageIndex 赋值点（mainloop
 > :410 每迭代）——**赋值点合规** ⇒slot 值 64/0 差=**槽占用差**（敌0 的 status 槽位）。
+> 【槽位面地址勘误】0x6AF4+x=WRAM（RAM hex 0x000-0x7FF 越界）——槽位面需 WRAM 面对账
+> （wram blob/帧 trace）⇒下轮 WRAM 面对账→修→match 动。
 
 ### case-002（3 diff）
 | 帧 | px | 类 | 根因 | 证据 |
