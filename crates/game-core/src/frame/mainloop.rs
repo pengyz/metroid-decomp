@@ -418,8 +418,8 @@ pub fn update_all_enemies(mem: &mut crate::frame::FrameMemory) {
             let fo = mem.read_ram(0x0400 + x2 as u16 + 6);
             let eg = &game_data::area::enemy_gfx::EN_FRAMES;
             let mut cands = String::new();
-            for i in (1..eg.len().min(200)).step_by(8) {
-                if eg[i] == 9 {
+            for i in (1..eg.len().min(400)).step_by(1) {
+                if eg[i] == 1 && cands.len() < 50 {
                     cands.push_str(&format!("{} ", i - 1));
                 }
             }
