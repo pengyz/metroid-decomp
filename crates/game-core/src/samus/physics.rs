@@ -735,6 +735,15 @@ pub fn horz_integrate(mem: &mut FrameMemory) -> u8 {
     let accel = mem.read_ram(crate::ram_map::SAMUS_ACCEL_X); // 待名址随考证
     let max_src = mem.read_ram(crate::ram_map::SAMUS_HORZ_SPEED_MAX);
     let out = crate::samus::integrators::int_x(&mut st, accel, max_src);
+    // 【goal-轮31 horz_integrate 直证】speed 积分/钳径（spX 反转源）。
+    if std::env::var("DSH_SPRITE_TRACE").is_ok() {
+        use std::sync::atomic::Ordering;
+        let n = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
+        if n >= 1258 && n <= 1275 {
+            eprintln!("[hxi] n={} spI={} spF={} sub={} accel={:02X} max={:02X} out={}",
+                n, st.speed_i, st.speed_f, st.subpix, accel, max_src, out.disp);
+        }
+    }
     mem.write_ram(SAMUS_SPEED_X_I, st.speed_i);
     mem.write_ram(SAMUS_SPEED_X_F, st.speed_f);
     mem.write_ram(SAMUS_SUBPIX_X, st.subpix);
