@@ -49,11 +49,9 @@ pub fn main_loop_iter(mem: &mut FrameMemory) {
         update_timer(mem); // C266
     }
     go_main_routine(mem); // C114（分发壳——会师点；续段=GoMainRoutine 内部续跑）
-    // 【FC 冻结（r9 考证·porter 修）】`inc FrameCount`（asm prg7:207）在 **MainLoop 迭代尾**
-    // ——例程内部 WaitNMIPass_ 自旋跨帧时迭代未完成⇒不自增。emu 实录：上电 f4-6 与
-    // title→menu f311-313 各冻 3 帧（findings/fc-phase-residual.md——桥侧按内旋族相位
-    // $01/$15/$1B 置 no_return 旗）；menu→game 冻结走既有 span 门（iter_span_fc）不受此管。
-    // 旧形每 tick 无条件递增（goal-r4）治了滞后但过量 +6（=两窗 3+3），本门即 emu 对齐。
+    // 【goal-轮26 相位实证回退】FC 前置增量实测劣化（14/92←32/92 全轨迹）——原尾递增
+    // 相位（pre-inc 例程面）实为金腿对表形；爬虫 f1676 漏步非 FC 相位根（tick 锚定窗
+    // 对位实证后另寻）。no_return 冻结语义复原（尾门）。
     if !mem.title_no_return {
         mem.write_ram(FRAME_COUNT, mem.read_ram(FRAME_COUNT).wrapping_add(1));
     }
@@ -1150,10 +1148,13 @@ fn crawler_ai(mem: &mut crate::frame::FrameMemory, x: u8) {
         _ => enemy_move_one_pixel_up(mem, x),
     };
     if std::env::var("DSH_SPRITE_TRACE").is_ok() {
-        eprintln!("[crawl] FC={:02X} x={:02X} idx={} ok={} x={} o={} d5={:02X}",
-            mem.read_ram(crate::ram_map::FRAME_COUNT), x, idx, ok,
-            mem.read_ram(0x0400 + x as u16 + 1), orientation,
-            mem.read_ram(0x0400 + x as u16 + 5));
+        use std::sync::atomic::{AtomicU32, Ordering};
+        static CRAWL_TICK: AtomicU32 = AtomicU32::new(0);
+        let tick = CRAWL_TICK.fetch_add(1, Ordering::Relaxed);
+        eprintln!("[crawl] tick={} FC={:02X} slot={:02X} idx={} ok={} x={} y={} o={} d5={:02X}",
+            tick, mem.read_ram(crate::ram_map::FRAME_COUNT), x, idx, ok,
+            mem.read_ram(0x0400 + x as u16 + 1), mem.read_ram(0x0400 + x as u16 + 0),
+            orientation, mem.read_ram(0x0400 + x as u16 + 5));
     }
     if !ok {
         // CrawlerInsideCornerCheck（bank1:$9AA8——**goal-r16 G3'**）：$00 契约判据。
