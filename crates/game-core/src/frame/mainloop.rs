@@ -1232,7 +1232,7 @@ fn crawler_ai(mem: &mut crate::frame::FrameMemory, x: u8) {
     let diag_n = if std::env::var("DSH_SPRITE_TRACE").is_ok() {
         use std::sync::atomic::Ordering;
         let n = DIAG_ITER.load(Ordering::Relaxed);
-        if n >= 1660 && n <= 1668 {
+        if n >= 780 && n <= 835 {
             eprintln!("[crawl] n={} FC={:02X} slot={:02X} ENTER d05={:02X} st={} pre={}",
                 n, mem.read_ram(crate::ram_map::FRAME_COUNT), x,
                 mem.read_ram(0x0400 + x as u16 + 5), mem.read_wram(0x6AF4 + x as u16),
