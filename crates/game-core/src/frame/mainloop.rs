@@ -1571,6 +1571,15 @@ fn update_enemy_anim(mem: &mut crate::frame::FrameMemory, x: u8, a: u8) {
 /// ClearObjectCntrl；帧指针（EnFramePtrTable1/2——animFrame bit7 carry 选表！）→
 /// GetSpriteCntrlData→位指针（EnPlacePtrTable）→sprite 管线写（place_disp/四元组）。
 fn draw_enemy(mem: &mut crate::frame::FrameMemory, x: u8) {
+    // 【goal-轮73 draw 调用直证】双写源（n=803 清→置双写）。
+    if std::env::var("DSH_SPRITE_TRACE").is_ok() && x == 0x40 {
+        use std::sync::atomic::Ordering;
+        let n = DIAG_ITER.load(Ordering::Relaxed);
+        if n >= 800 && n <= 810 {
+            eprintln!("[drw] n={} DRAW_ENTER d05={:02X}", n,
+                mem.read_ram(0x0400 + x as u16 + 5));
+        }
+    }
     use game_data::area::enemy_gfx as eg;
     // 【②回装（2026-10-29）】asm :6156-6168：帧记字 1/2→EnsExtra.radiusY/X（IsObject-
     // Visible 用半径（序=半径写先行））+[:6178-6186] bit1 逐帧闩（and #$FD/ora（txa<<1））。
