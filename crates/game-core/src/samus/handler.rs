@@ -790,6 +790,10 @@ pub fn samus_stand(mem: &mut FrameMemory) {
     // 非本件——输入相位/BitScan 面余）。
     // 【goal-轮67 转换相位定谳】morphball f1128-1200：金 Stand(anim7)→Run(anim0) /
     // 我**反向**（Run→Stand）——status/anim 转换相位倒置（记账）。
+    // 【goal-轮68 C215 合规矩】ReadJoyPads 全径对表：strobe+8 位读/旧态→$00/新态→
+    // Joy1Status/eor $00（change）/B 掩/**and Joy1Status→Joy1Change**（新按下位）/
+    // Retrig 同——**全件面语义** ✓（转换触发相位根=采样帧相位——:268 调用点 vs 我方
+    // read_joy1 调用序——下轮 asm 对表）。
     crate::frame::DIVERGENCES.with(|d| d.borrow_mut().push(0x0CC36));
     use button::*;
     let joy = mem.read_ram(crate::ram_map::JOY1_STATUS);
