@@ -1858,18 +1858,18 @@ fn enemy_move_one_pixel_down(mem: &mut crate::frame::FrameMemory, x: u8) -> bool
         }
     }
     let ny = y.wrapping_add(1);
-    // 【goal-轮158 半径假说直证】paradox 解：金方 y=63 停⇒(63+ry)&7==0⇒ry≡1(mod 8)
-    // （EN_FRAMES ry=8 ⇒ fo0/animIndex 差 或 EnsExtra radiusY 写源差）。
+    // 【goal-轮159 radiusY 写源直证】prg7:6158-6170 `lda (FramePtr),y+1 → sta
+    // EnsExtra.radiusY`——**ry=帧字节1**（fo0 差 ⇒ ry 差）——paradox 解径。
     if std::env::var("DSH_SPRITE_TRACE").is_ok() && x == 0x40 {
         use std::sync::atomic::Ordering;
         let n = DIAG_ITER.load(Ordering::Relaxed);
         if n >= 860 && n <= 920 {
             let y0 = mem.read_ram(0x0400 + x as u16);
             let ry0 = mem.read_wram(0x6AF4 + x as u16 + 1);
-            eprintln!("[rh] n={} y={} ry={} bound8={} ry_alt1={} ry_alt9={}", n, y0, ry0,
-                y0.wrapping_add(ry0) & 7 == 0,
-                y0.wrapping_add(1) & 7 == 0,
-                y0.wrapping_add(9) & 7 == 0);
+            let fo = mem.read_wram(0x6AF4 + x as u16 + 6);
+            eprintln!("[rws] n={} y={} ry={} bound8={} animIdx={} animFrame={}", n, y0, ry0,
+                y0.wrapping_add(ry0) & 7 == 0, fo,
+                mem.read_wram(0x6AF4 + x as u16 + 3));
         }
     }
     mem.write_ram(0x0400 + x as u16 + 0, ny);
