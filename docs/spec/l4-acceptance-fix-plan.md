@@ -217,6 +217,8 @@
 > ⇒slot 值 64/0 差=x 序差→修→match 动。
 > 【x 赋值序对表】asm slot 序（x=0/40/80/C0）vs 我方 loop——**x 序考证**（下轮逐字对
 > 表）→修→match 动。
+> 【UpdateEnemyCommon 定位】F410=**单敌径**（UpdateEnemyAnim+EnemyMove+DrawEnemy）
+> ——slot 循环（EnemyUpdateAll）另址⇒下轮定位 EnemyUpdateAll 的 slot 循环→x 序对表。
 
 ### case-002（3 diff）
 | 帧 | px | 类 | 根因 | 证据 |
