@@ -499,9 +499,9 @@ fn enemy_check_if_visible(mem: &mut crate::frame::FrameMemory, x: u8) -> bool {
             let rx_ = mem.read_wram(0x6AF4 + x as u16 + 2);
             let sy_ = mem.read_ram(crate::ram_map::SCROLL_Y);
             let y_ = mem.read_ram(0x0400 + x as u16);
-            eprintln!("[ivis] n={} nt={:02X} same={} carry={} latch={} win={}", n,
+            eprintln!("[ivis] n={} nt={:02X} same={} carry={} latch={} scr=({},{})", n,
                 nt_, ((hi_ ^ nt_) & 1) == 0, carry, (d5_ >> 1) & 1,
-                !carry && (rx_ as u16 + screen_x as u16) < 0x100);
+                y_.wrapping_sub(mem.read_ram(crate::ram_map::SCROLL_Y)), screen_x);
         }
     }
     if mem.read_ram(0x0400 + x as u16 + 5) & 0x02 != 0 {
