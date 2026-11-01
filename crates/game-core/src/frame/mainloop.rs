@@ -2364,7 +2364,13 @@ fn uw_collision_detection(mem: &mut crate::frame::FrameMemory) {
             let erx = mem.read_wram(0x6AF4 + x + 2) as i16;
             let dy = (sy - ey).unsigned_abs() as i16;
             let dx = (sx - ex).unsigned_abs() as i16;
-            if dy < sry + ery && dx < srx + erx {
+            // 【goal-轮79 asm 合形修】F1FA hi（名表）距调——旧形无 hi 调=偏离（金方 hi 差
+            // ⇒距+256⇒不撞）——hi 距调：hi 差⇒距+0x100（asm @positionHi_notEqual 语义）。
+            let s_hi = mem.read_wram(0x6AF4) & 1; // Samus.hi
+            let e_hi = mem.read_wram(0x6AF4 + x + 7) & 1;
+            let dy_adj = if s_hi != e_hi { dy + 0x100 } else { dy };
+            let dx_adj = if s_hi != e_hi { dx + 0x100 } else { dx };
+            if dy_adj < sry + ery && dx_adj < srx + erx {
                 // 螺旋转（IsScrewAttackActive——carry clear=active）⇒不伤萨姆斯
                 let screw = crate::samus::physics::is_screw_attack_active(mem);
                 if !screw {
@@ -2379,10 +2385,9 @@ fn uw_collision_detection(mem: &mut crate::frame::FrameMemory) {
                     // 【goal-轮40 isHit 写者标记】mainloop:2284（敌撞置 hit）。
                     if std::env::var("DSH_SPRITE_TRACE").is_ok() {
                         use std::sync::atomic::Ordering;
-                        eprintln!("[hit] n={} isHit<-{:02X} dy={} dx={} eB=({},{}) s=({},{}) invDly={}",
-                            DIAG_ITER.load(Ordering::Relaxed), 0x30 | dir_bits,
-                            dy, dx, ey, ex, sy, sx,
-                            mem.read_ram(crate::ram_map::SAMUS_INVINCIBLE_DELAY));
+                        eprintln!("[hit] n={} dy={}<{} dx={}<{} (Σry={}/Σrx={}) eB=({},{}) s=({},{})",
+                            DIAG_ITER.load(Ordering::Relaxed), dy, sry + ery, dx, srx + erx,
+                            sry + ery, srx + erx, ey, ex, sy, sx);
                     }
                 }
             }
