@@ -240,6 +240,9 @@
 > 【init status 合规】LEB4D：status←Resting(1)（:8798）——我方 room.rs:518 `write_wram
 > (ex, 0x01)` **同构合规** ✓——init 合规而敌未入槽 ⇒**load_enemy 调用条件/房数据环**
 > （EnemyLoop 的敌条目触发）。
+> 【EnemyLoop 定案】EAD4：`and #$0F`→JumpEngine（**01=LoadEnemy**/02=LoadDoor/04=
+> Elevator/06=Statues/07=PipeBugHole）——**dispatch 合规**（&$0F nibble）⇒我方 enemy
+> loop dispatch 对表→修→match 动。
 
 ### case-002（3 diff）
 | 帧 | px | 类 | 根因 | 证据 |
