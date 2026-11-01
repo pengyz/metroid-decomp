@@ -1860,6 +1860,12 @@ fn uw_skree_projectiles(mem: &mut crate::frame::FrameMemory) {
         px = nx;
         mem.write_ram(base + 1, py);
         mem.write_ram(base + 2, px);
+        // 【goal-轮22 弹显示态件】UpdateSkreeProjectile（:12191-12205 逐字）：位姿写
+        // PowerUpDraw（$340 槽——y/x/hi）——显示面状态（ObjDrawFrame SkreeProjectile
+        // 帧（_id_ObjFrame_SkreeProjectile）随件）。
+        mem.write_ram(0x0340 + 13, py); // PowerUpDraw.y
+        mem.write_ram(0x0340 + 14, px); // PowerUpDraw.x
+        mem.write_ram(0x0340 + 7, mem.read_ram(base + 3) & 1); // PowerUpDraw.hi
         // Samus 5 伤害（:12214-12232）
         if mem.read_ram(crate::ram_map::SAMUS_INVINCIBLE_DELAY) == 0 {
             let sy = mem.read_ram(0x030D) as i16;
