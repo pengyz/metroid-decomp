@@ -1251,6 +1251,15 @@ fn crawler_ai(mem: &mut crate::frame::FrameMemory, x: u8) {
         .wrapping_add(mem.read_ram(crate::ram_map::FRAME_COUNT))
         >> 1)
         & 0x03;
+    // 【goal-轮15 gate 值直证】F852 门值逐帧（金方 2 帧跳 vs 我方移动模式）。
+    if std::env::var("DSH_SPRITE_TRACE").is_ok() && x == 0x40 {
+        use std::sync::atomic::Ordering;
+        let n = DIAG_ITER.load(Ordering::Relaxed);
+        if n >= 790 && n <= 812 {
+            eprintln!("[gate] n={} FC={:02X} gate={} skip={}", n,
+                mem.read_ram(crate::ram_map::FRAME_COUNT), gate, gate == 0);
+        }
+    }
     if gate == 0 {
         if std::env::var("DSH_SPRITE_TRACE").is_ok() {
             use std::sync::atomic::Ordering;
