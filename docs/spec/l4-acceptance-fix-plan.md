@@ -112,6 +112,9 @@
 > 【A 类 rise 窗审计】f1132 起 ai/ad 相位差（emu 13/2 / 我 11/3——ar 双腿同=12 ✓）
 > ——**samL04 同类**（anim 推进相位）——rise 径另有同款写面（samL04 修只覆盖 run 空中
 > 径）⇒下轮 rise 径写面审计（set_samus_jump/run 径的 animIndex/animDelay 写点）。
+> 【FC 键合失效定案】窗口 40 帧>20 FC 值（缠绕重复）⇒键合 overwrite 失效；且 emu
+> frames.jsonl（帧末缝）vs rust state.jsonl（spin 出口缝）**缝不齐**——双腿对账双阻。
+> **修复径**：①窄窗键合（<256 帧无缠绕）或②缝对齐重采（统一缝）→对账→samL04 同款修。
 
 ### case-002（3 diff）
 | 帧 | px | 类 | 根因 | 证据 |
