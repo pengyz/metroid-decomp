@@ -436,6 +436,15 @@ fn fire_samus_projectile_upwards(mem: &mut FrameMemory) {
 }
 
 fn set_samus_jump(mem: &mut FrameMemory) {
+    // 【goal-轮76 调用频度直证】set_samus_jump 入口插桩（animDelay=4 重写源）。
+    if std::env::var("DSH_SPRITE_TRACE").is_ok() {
+        use std::sync::atomic::Ordering;
+        let n = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
+        if n >= 1225 && n <= 1245 {
+            eprintln!("[jump] n={} FC={:02X} SET_JUMP (animDelay=4 write)", n,
+                mem.read_ram(crate::ram_map::FRAME_COUNT));
+        }
+    }
     let anim = OBJ_ANIM_SAMUS_JUMP;
     mem.write_ram(ANIM_RESET_INDEX, anim);
     mem.write_ram(ANIM_RESET_INDEX + 1, anim.wrapping_sub(1));
