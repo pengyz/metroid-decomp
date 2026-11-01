@@ -206,6 +206,8 @@
 > 的相位/门**（crawler 6/8 门的 slot/FC 耦合）。
 > 【F852 门实值对账】门=s（slot）/FC 耦合相位——**门实值双腿对账**（敌0 slot/FC 门值）
 > ⇒若门值同则根非门 ⇒**delta 值源**（enemy_get_delta_xy 的串走位相位）。
+> 【门实值差定案】slot **64/0** ✗（PageIndex 差！）+FC 93/94（+1）+gate 2/3——**slot
+> 值差=根**（敌0 的 PageIndex=0x40 vs 0）⇒slot 分配面（EnemySlot 分配/init）。
 
 ### case-002（3 diff）
 | 帧 | px | 类 | 根因 | 证据 |
