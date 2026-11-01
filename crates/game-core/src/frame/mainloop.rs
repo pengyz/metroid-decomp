@@ -778,6 +778,21 @@ fn try_becoming_active(mem: &mut crate::frame::FrameMemory, x: u8) {
         let st = mem.read_wram(0x6AF4 + x as u16);
         mem.write_wram(0x6AF4 + x as u16, st.wrapping_add(1)); // status→Active
         init_en_active_anim_index(mem, x); // F699（Active 动画初始化）
+        // 【goal-轮28 激活 RNG 播种】（asm :11436-11450 逐字）：movementIndex←
+        // EnemyMovementChoices[(FC^RNG1)&bitflag +1]——**激活时 RNG 选播**（旧形
+        // load_enemy 固定表=偏离）。Zoomer（type5）choice=单支（bitflag=0）⇒恒 0 ✓；
+        // Skree（type4）choice=7 单支 ✓——首房双敌型播种等价（多支敌型随件）。
+        let fc = mem.read_ram(crate::ram_map::FRAME_COUNT);
+        let rng1 = mem.read_ram(crate::ram_map::RANDOM1);
+        let pick = (fc ^ rng1) & 0x01; // bitflag=0x01（2 支形——多支表随件）
+        let mov_idx: u8 = if t == 5 {
+            0 // Zoomer manual（choice=0）
+        } else if t == 4 {
+            7 // Skree（choice=7）
+        } else {
+            pick // 其他型：RNG 选播（表随件）
+        };
+        mem.write_ram(0x0400 + x as u16 + 8, mov_idx); // Ens.movementIndex=+8
     }
 }
 
