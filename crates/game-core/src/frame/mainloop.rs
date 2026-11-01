@@ -573,6 +573,16 @@ fn update_en_data05_bit6(mem: &mut crate::frame::FrameMemory, x: u8) {
     let nd = (d & 0xBF) | (parity << 6);
     let _ = bit6;
     mem.write_ram(0x0400 + x as u16 + 5, nd);
+    // 【goal-轮1 公式直证】f797 bit6 实测与公式矛盾——打印 (x>>4)/FC/parity/写值。
+    if std::env::var("DSH_SPRITE_TRACE").is_ok() {
+        use std::sync::atomic::Ordering;
+        let n = DIAG_ITER.load(Ordering::Relaxed);
+        let fcv = mem.read_ram(crate::ram_map::FRAME_COUNT);
+        if n >= 790 && n <= 802 && x == 0x40 {
+            eprintln!("[tog] n={} FC={:02X} x4={} par={} d05 {:02X}->{:02X} bit6={}", n, fcv,
+                x >> 4, parity, d, nd, (nd >> 6) & 1);
+        }
+    }
     // 【goal-轮35 写面直比】d05 写点全打印（f1838 位差源直证）。
     if std::env::var("DSH_SPRITE_TRACE").is_ok() {
         use std::sync::atomic::Ordering;
