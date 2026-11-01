@@ -145,6 +145,9 @@
 > 【三点 A 值考证】:2837 A=0x04(Front)/:3073 A=@table(aimingUp)/:3897 A=StandFire
 > ——**非 13(0x0D=JumpFire)** ⇒A=13 源=**JumpFire 写面**（ObjAnim_SamusJumpFire 的
 > animIndex/animResetIndex 写径）→考证→修→match 动。
+> 【ai=13 语义更正】:3486=JumpPntUp（非 13）——**ai=13 实=Jump 动画走位第二帧**
+> （reset=12→12→13 走位）**非直写** ⇒直写假说证伪 ⇒余=走位相位差（emu reset=12 走位
+> 起点/我方走位起点差）。
 
 ### case-002（3 diff）
 | 帧 | px | 类 | 根因 | 证据 |
