@@ -449,13 +449,13 @@ pub fn update_all_enemies(mem: &mut crate::frame::FrameMemory) {
                 x2, st2, (d52 >> 6) & 1, d52);
         }
     }
-    // 【goal-轮125 updateAll 遍历径直证】敌更新调用链（paradox 解）。
+    // 【goal-轮126 updateAll 遍历径直证】敌更新调用链（paradox 解）。
     if std::env::var("DSH_SPRITE_TRACE").is_ok() {
         use std::sync::atomic::Ordering;
         let n = DIAG_ITER.load(Ordering::Relaxed);
         if n >= 860 && n <= 920 {
             let x2 = 0x40u8;
-            eprintln!("[ual] n={} x={} st={} y={} x={} d05={:02X} dly={} movIdx={} instr={} hi={} ry={}", n,
+            eprintln!("[ual] n={} x={} st={} y={} x={} d05={:02X} dly={} movIdx={} instr={} hi={} ry={} rx={}", n,
                 x2, mem.read_wram(0x6AF4 + x2 as u16),
                 mem.read_ram(0x0400 + x2 as u16), mem.read_ram(0x0400 + x2 as u16 + 1),
                 mem.read_ram(0x0400 + x2 as u16 + 5),
@@ -463,7 +463,8 @@ pub fn update_all_enemies(mem: &mut crate::frame::FrameMemory) {
                 mem.read_ram(0x0400 + x2 as u16 + 8),
                 mem.read_ram(0x0400 + x2 as u16 + 6),
                 mem.read_wram(0x6AF4 + x2 as u16 + 7),
-                mem.read_wram(0x6AF4 + x2 as u16 + 1));
+                mem.read_wram(0x6AF4 + x2 as u16 + 1),
+                mem.read_wram(0x6AF4 + x2 as u16 + 2));
         }
     }
     mem.write_ram(0x004B, x); // PageIndex
