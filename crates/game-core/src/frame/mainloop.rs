@@ -1757,6 +1757,20 @@ fn enemy_check_move_up(mem: &mut crate::frame::FrameMemory, x: u8) -> bool {
         crate::enemy::movement::MoveCheckOutcome::NeedsBgCollision(st) => {
             let row = st.pos_y.wrapping_sub(st.dist_to_center_y);
             let (left, n) = crate::samus::physics::vertical_span_cols(st.pos_x, st.radius_x);
+            // 【goal-轮11 块判结果直证】逐列 collision_point_ok 结果。
+            if std::env::var("DSH_SPRITE_TRACE").is_ok() && x == 0x40 {
+                use std::sync::atomic::Ordering;
+                let n_ = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
+                if n_ >= 795 && n_ <= 812 {
+                    let mut rs = String::new();
+                    for i in 0..n {
+                        let col = left.wrapping_add((i as u8).wrapping_mul(8));
+                        let ok = collision_point_ok(mem, row, col, st.pos_hi);
+                        rs.push_str(&format!("c{}:{} ", col, ok as u8));
+                    }
+                    eprintln!("[bcr] n={} row={} left={} n={} {}", n_, row, left, n, rs);
+                }
+            }
             for i in 0..n {
                 let col = left.wrapping_add((i as u8).wrapping_mul(8));
                 if !collision_point_ok(mem, row, col, st.pos_hi) {
@@ -1792,6 +1806,20 @@ pub(crate) fn enemy_check_move_down(mem: &mut crate::frame::FrameMemory, x: u8) 
         crate::enemy::movement::MoveCheckOutcome::NeedsBgCollision(st) => {
             let row = st.pos_y.wrapping_sub(st.dist_to_center_y);
             let (left, n) = crate::samus::physics::vertical_span_cols(st.pos_x, st.radius_x);
+            // 【goal-轮11 块判结果直证】逐列 collision_point_ok 结果。
+            if std::env::var("DSH_SPRITE_TRACE").is_ok() && x == 0x40 {
+                use std::sync::atomic::Ordering;
+                let n_ = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
+                if n_ >= 795 && n_ <= 812 {
+                    let mut rs = String::new();
+                    for i in 0..n {
+                        let col = left.wrapping_add((i as u8).wrapping_mul(8));
+                        let ok = collision_point_ok(mem, row, col, st.pos_hi);
+                        rs.push_str(&format!("c{}:{} ", col, ok as u8));
+                    }
+                    eprintln!("[bcr] n={} row={} left={} n={} {}", n_, row, left, n, rs);
+                }
+            }
             for i in 0..n {
                 let col = left.wrapping_add((i as u8).wrapping_mul(8));
                 if !collision_point_ok(mem, row, col, st.pos_hi) {
