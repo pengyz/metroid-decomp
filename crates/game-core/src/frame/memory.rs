@@ -78,7 +78,9 @@ impl FrameMemory {
             use std::sync::atomic::Ordering;
             let n = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
             if n >= 860 && n <= 920 {
-                eprintln!("[yw] n={} 0x0440<-{}", n, v);
+                static PREVY: std::sync::atomic::AtomicU8 = std::sync::atomic::AtomicU8::new(0xFF);
+                let p = PREVY.swap(v, Ordering::Relaxed);
+                eprintln!("[yw] n={} 0x0440 {:02X}->{:02X}", n, p, v);
             }
         }
         if addr == 0x0304 && v == 3 && std::env::var("DSH_SPRITE_TRACE").is_ok() {
