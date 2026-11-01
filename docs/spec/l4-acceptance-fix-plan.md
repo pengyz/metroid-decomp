@@ -243,6 +243,8 @@
 > 【EnemyLoop 定案】EAD4：`and #$0F`→JumpEngine（**01=LoadEnemy**/02=LoadDoor/04=
 > Elevator/06=Statues/07=PipeBugHole）——**dispatch 合规**（&$0F nibble）⇒我方 enemy
 > loop dispatch 对表→修→match 动。
+> 【dispatch 合规】room.rs:446 `b & 0x0F` 同构（1=LoadEnemy/0/3/5=Exit ✓）——**dispatch
+> 合规**而敌未入槽 ⇒**房数据环的敌条目存在性**（room 数据的敌条目解析/触发）。
 
 ### case-002（3 diff）
 | 帧 | px | 类 | 根因 | 证据 |
