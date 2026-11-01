@@ -1249,9 +1249,11 @@ fn crawler_ai(mem: &mut crate::frame::FrameMemory, x: u8) {
     let parity = ((x >> 4) ^ mem.read_ram(crate::ram_map::FRAME_COUNT).wrapping_add(1)) & 1;
     // 【goal-轮24 gate FC+1 测（§3.6 记）】gate 读新 FC=+1 ⇒L4 55→54 ⇒回退保 +0
     //（轮58/轮24 两次判负）——机制真（FC 帧末增 vs asm 帧首增）修向负。
+    // 【goal-轮43 gate FC-1 修】金方跳格 FC=17,18,25,26=公式((8+FC-1)>>1)&3 形 ✓
+    // （FC-1=16,17,24,25→gate=0 2 帧跳）——gate 读 FC-1 合形（FC 帧末增⇒读面=前帧）。
     let gate = ((x >> 3)
         .wrapping_add((x >> 2) & 1)
-        .wrapping_add(mem.read_ram(crate::ram_map::FRAME_COUNT))
+        .wrapping_add(mem.read_ram(crate::ram_map::FRAME_COUNT).wrapping_sub(1))
         >> 1)
         & 0x03;
     // 【goal-轮15 gate 值直证】F852 门值逐帧（金方 2 帧跳 vs 我方移动模式）。
