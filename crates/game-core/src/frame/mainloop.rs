@@ -2039,6 +2039,15 @@ fn update_bullet_explode(mem: &mut crate::frame::FrameMemory) {
 /// UpdateEnemy_Resting（**asm 内容锚** `: 07:F3BE`——r26 壳：30fps 门/件序 fail-loud）。
 fn enemy_resting(mem: &mut crate::frame::FrameMemory, x: u8) {
     let d = mem.read_ram(0x0400 + x as u16 + 5);
+    // 【goal-轮42 Resting 门检直证】bit6 门值+件径。
+    if std::env::var("DSH_SPRITE_TRACE").is_ok() && x == 0x40 {
+        use std::sync::atomic::Ordering;
+        let n = DIAG_ITER.load(Ordering::Relaxed);
+        if n >= 785 && n <= 805 {
+            eprintln!("[erst] n={} bit6={} run={} dly={} d05={:02X}", n, (d >> 6) & 1,
+                d & 0x40 == 0, mem.read_ram(0x0400 + x as u16 + 9), d);
+        }
+    }
     if d & 0x40 == 0 {
         // 30fps 标 clear⇒全件（bit6 set 时跳过=30fps 节拍）
         mem.write_wram(0x6AF4 + x as u16 + 13, 0); // jumpDsplcmnt←0
