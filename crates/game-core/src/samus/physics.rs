@@ -663,6 +663,17 @@ pub fn object_check_move_up(mem: &mut FrameMemory) -> bool {
 /// 嵌套件桩（随拼装填）：GetObjectYSlotPosition/GetEnemyXSlotPosition/
 /// GetRadiusSumsOfEnXSlotAndObjYSlot/CheckCollisionOfXSlotAndYSlot（F1FA 族）/LDC82。
 pub fn samus_collision_with_solid_entities(mem: &mut FrameMemory) {
+    // 【goal-轮36 knockback 触发直证】敌撞萨判定。
+    if std::env::var("DSH_SPRITE_TRACE").is_ok() {
+        use std::sync::atomic::Ordering;
+        let n = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
+        if n >= 1258 && n <= 1275 {
+            eprintln!("[col] n={} sY={} sX={} eA=({},{}) eB=({},{})", n,
+                mem.read_ram(0x030D), mem.read_ram(0x030E),
+                mem.read_ram(0x0450), mem.read_ram(0x0451),
+                mem.read_ram(0x0440), mem.read_ram(0x0441));
+        }
+    }
     // 双旗清（注「Default to … not being on an elevator or on a frozen enemy」）
     mem.write_ram(SAMUS_ON_ELEVATOR, 0);
     mem.write_ram(ON_FROZEN_ENEMY, 0);
