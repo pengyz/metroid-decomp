@@ -118,6 +118,10 @@
 > 【窄窗判定（f1128-1147）】f1132 起 emu (13,2) / 我 (11,3)——**ad=3 恒不减**；WALK
 > 插桩 a_in=2 vs state reload 3——**A 值源差**（set_samus_data 的 A 来源：run 径 A=2 /
 > jump_tail A=3——调用序差）⇒samL04 同类根=A 值/调用序面。
+> 【A 值双调定谳】WALK a_in=2（samL06 A=2）+state reload 3（Lx023 A=3）——**同帧双
+> set_samus_data**（samus_run 空中径 + samus_jump_tail）⇒DC8F 双跑/终值 3 掐死递减。
+> **修复径（一击）**：同帧去重（调用序对表 asm：samL06 `bne SetSamusData` 只一径）→
+> 修→match 动。
 
 ### case-002（3 diff）
 | 帧 | px | 类 | 根因 | 证据 |
