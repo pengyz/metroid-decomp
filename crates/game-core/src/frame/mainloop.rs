@@ -2296,9 +2296,9 @@ fn uw_collision_detection(mem: &mut crate::frame::FrameMemory) {
                     // 【goal-轮40 isHit 写者标记】mainloop:2284（敌撞置 hit）。
                     if std::env::var("DSH_SPRITE_TRACE").is_ok() {
                         use std::sync::atomic::Ordering;
-                        eprintln!("[hit] n={} isHit<-{:02X} dy={} dx={} sry={} ery={} srx={} erx={}",
+                        eprintln!("[hit] n={} isHit<-{:02X} dy={} dx={} eB=({},{}) s=({},{})",
                             DIAG_ITER.load(Ordering::Relaxed), 0x30 | dir_bits,
-                            dy, dx, sry, ery, srx, erx);
+                            dy, dx, ey, ex, sy, sx);
                     }
                 }
             }
