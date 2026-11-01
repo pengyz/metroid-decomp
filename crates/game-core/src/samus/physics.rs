@@ -1351,7 +1351,11 @@ fn toggle_name_table(mem: &mut FrameMemory) {
 }
 
 /// CheckStopHorzMvmt（**asm 内容锚** `: 07:E365`）：成功（carry）⇒出；失败⇒
-/// ObjectCounter=1 断环+（非空中/非球）⇒SetSamusStand（CF55——停速/走 SFX）。返回 true=断环。
+/// ObjectCounter=1 断环+（非空中/非球）⇒**jmp SetSamusStand**（CF55——停速+转站）。
+/// 【goal-轮21 墙挡转站根修（自跑实证：金墙挡 st 0/1 交替=挡⇒stand⇒输入⇒run 循环 /
+/// 我恒 st=1 ✗——旧形只清速未转站）】asm `:7250 jmp SetSamusStand` 逐字——SetSamusStand
+/// =CF55（AccelX≠0⇒直入 CF5D/否则走 SFX）→NoHorzMoveNoDelay（清横速/加速/anim 延）
+/// +`sty Samus.status`（Y=0=stand）。
 fn check_stop_horz_mvmt(mem: &mut FrameMemory, moved: bool) -> bool {
     if moved {
         return false; // bcs Exit10
@@ -1363,10 +1367,7 @@ fn check_stop_horz_mvmt(mem: &mut FrameMemory, moved: bool) -> bool {
     if mem.read_ram(crate::ram_map::SAMUS_STATUS) == 4 {
         return true; // sa_Roll（球形）出
     }
-    // SetSamusStand（CF55——「Stop horizontal movement or play walk SFX if stopped」）：
-    // 停速面（横速清零——R-mv 停速族）。嵌套件（走 SFX）随件。
-    mem.write_ram(0x0309, 0); // speedX_I←0
-    mem.write_ram(0x0313, 0); // speedX_F←0
+    crate::samus::handler::set_samus_stand(mem); // jmp SetSamusStand（CF55 全径）
     true
 }
 
