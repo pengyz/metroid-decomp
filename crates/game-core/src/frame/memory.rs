@@ -77,7 +77,7 @@ impl FrameMemory {
         if addr == 0x0440 && std::env::var("DSH_SPRITE_TRACE").is_ok() {
             use std::sync::atomic::Ordering;
             let n = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
-            if n >= 795 && n <= 810 {
+            if n >= 860 && n <= 920 {
                 eprintln!("[yw] n={} 0x0440<-{}", n, v);
             }
         }
