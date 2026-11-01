@@ -847,7 +847,16 @@ const OBJECT_ANIM_INDEX_TBL: &[u8] = &[
 /// 字段偏移=struct 权威（constants_ram:217-224：animFrame $0303/animDelay $0304/
 /// animResetIndex $0305/animIndex $0306）。
 pub fn update_obj_anim(mem: &mut FrameMemory, a_in: u8) {
-    // 【goal-轮正定性】animIndex 写点插桩（走位面）——f1240-1250 窗直写 vs 走位判别。
+    // 【goal-轮89 reload 写值直证】update_obj_anim 写点带值。
+    if std::env::var("DSH_SPRITE_TRACE").is_ok() {
+        use std::sync::atomic::Ordering;
+        let n = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
+        if n >= 1115 && n <= 1135 {
+            let b = 0x0300u16 + mem.read_ram(0x004B) as u16;
+            eprintln!("[uoa] n={} ENTRY ai={} ar={} ad={} a_in={}", n,
+                mem.read_ram(b + 6), mem.read_ram(b + 5), mem.read_ram(b + 4), a_in);
+        }
+    }
     if std::env::var("DSH_SPRITE_TRACE").is_ok() {
         use std::sync::atomic::Ordering;
         let n = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);

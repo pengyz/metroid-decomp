@@ -125,6 +125,10 @@
 > 【双调假说证伪（[ssd] 直证）】set_samus_data **单调/帧 A=2**（n=1130-1147 全 A=2）
 > ⇒非双调——state reload=3 **另有写源**（非 set_samus_data 路径）⇒0x304 写 3 写源
 > 审计（handler:257/749/973 等）→修。
+> 【reload 写值直证出根】[uoa] n=1115-1119 **a_in=3**（DC8F reload 写 3 ✓✓=写源）
+> ——A=3 来自 set_samus_data 调用（[ssd] 窗 n=1128+ 外）⇒根=**A 值 3 的调用点**
+> （asm Lx023 `lda #$03/jmp SetSamusData` 形——jump_tail/lava 路）——下轮 [ssd] 窗移
+> n=1115-1125 定位调用点→修。
 
 ### case-002（3 diff）
 | 帧 | px | 类 | 根因 | 证据 |
