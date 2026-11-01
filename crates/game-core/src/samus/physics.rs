@@ -809,7 +809,26 @@ pub fn set_samus_data(mem: &mut FrameMemory) {
         mem.write_ram(0x006B, v);
     }
     check_health_status(mem); // CDFA（链三件——已端口）
+    // 【goal-轮109 A 轨迹插桩】set_samus_data 流程 A 逐步打印（污染点 ID）。
+    if std::env::var("DSH_SPRITE_TRACE").is_ok() {
+        use std::sync::atomic::Ordering;
+        let n = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
+        if n >= 1126 && n <= 1128 {
+            eprintln!("[atr] n={} after Health A={}", n, mem.regs.a);
+        }
+    }
+    // 【goal-轮109 污染点修】lava_and_move_check（E269）污染 regs.a（2→255）——asm
+    // AnimDrawObject 的 A=caller 传值 ⇒ A 保存/恢复。
+    let a_save = mem.regs.a;
     lava_and_move_check(mem); // E269（链四件——已端口）
+    mem.regs.a = a_save;
+    if std::env::var("DSH_SPRITE_TRACE").is_ok() {
+        use std::sync::atomic::Ordering;
+        let n = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
+        if n >= 1126 && n <= 1128 {
+            eprintln!("[atr] n={} after Lava A={}", n, mem.regs.a);
+        }
+    }
     // Metroid 蓝化（asm：`lda MetroidOnSamus($92)/beq/lda #$81|PRIORITY/sta $6B`）
     if mem.read_ram(crate::ram_map::METROID_ON_SAMUS) != 0 {
         mem.write_ram(0x006B, 0x81);
