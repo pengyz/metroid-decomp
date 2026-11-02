@@ -208,3 +208,21 @@ data0A/+14=weaponAction）与 asm 列计（+11=delay/+12=data0A/+16=weaponAction
 【下一步（裁定序）】B2（spin-exit+watch $FD/$FF/$2D（仪器缝 vs 滚动状态机（分歧形态签名
 （背景 2px 偏移+$FD 同点真差）））→bisect 98 commit（首查 cf7b999b/1120871a/
 4ec7178d/dfecadee/db745dbd）→左滚 wrap 径 asm 对读根修。
+
+
+## 8. B2 形态签名定谳（2026-11-02（回归面=滚动状态机（非仪器缝）））
+
+【zp 对账（观测窗（A 级））】leftwalk-probe2 f620-820（onset）+scrollseam f795-845
+（wrap）：f620=**$FD 同（00/00）**+$FF 同+$2D ±1（FC 域）；f820=**$FD F5/F4（±1 同点真差）**
++**$FF 97/93（bit2（VRAM 增量位（列流送相位（FC 陀螺）））**+$2D ±1；f840 同形（D7/D6）。
+【截图形态（dx 配准（背景带））】f820：dx=0 差 827px→**dx=-2 剩 200px**（背景 2px 偏移
+签名）；f840：933→154（同形）；f620：0px（早期窗（无差（$2D ±1 未达画面）））。
+【判据裁定】**背景 2px 偏移+$FD 同点真差=滚动状态机真差**（lead 判据臂）——「watch 双腿
+0 差而截图 2px=仪器缝」臂**未中**（watch（$FD）确有真差（±1））——回归面=**左滚滚动
+状态机**（scroll 计数 ±1（FC 陀螺（1 帧相位））⇒背景相位 2px）。
+【合并定谳（B1+B2）】回归面=**左滚 wrap 径滚动状态机**（0a99466f..HEAD 98 commit 间
+（B1：626→12085（~19x））（B2：形态=滚动状态机真差（非仪器缝））——bisect 靶=滚径触碰
+commit（cf7b999b/1120871a/4ec7178d/dfecadee/db745dbd 首查）→左滚 wrap 径 asm 对读根修。
+
+
+> 【B1 工件归档】analysis/_gen/b1-verdict-artifacts.md（worktree l4report 626 记录+PNG sha 对照（should-fix（防 /tmp 失）））。
