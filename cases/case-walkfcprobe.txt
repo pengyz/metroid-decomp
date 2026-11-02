@@ -1,0 +1,30 @@
+# walk 窗 FC 双腿逐帧锚（B 卡 l380 收口——前提翻转定谳件）
+# 背景：B2 zp对账「f820 $2D=23/24 + $FD F5/F4 同点真差」出自 capture ram.hex 层。
+#       fcphase §2 已载「rust 腿 capture 在状态行之后沿读一拍（采样惯例差）」——
+#       capture 层 ±1 未扣惯例即判真差的疑点（crawlprobe state 层 943 帧 0 差旁证）。
+# 本探针：leftwalk-probe2 同输入（f440-1400 持左=walk 窗全窗）+ sample_point spin-exit
+#       + 逐帧 watch FC($2D)/ScrollX($FD)/ScrollY($FC)/ScrollDir($49)/PPUCTRL($FF)
+#       ——双腿 state 层逐帧对表：0 差⇒capture ±1=采样惯例（前提翻转）；
+#         真 ±1⇒walk 窗 FC 计数径根修（原判据径）。
+# 判据：state 层逐帧 FC 差恒 0 + capture 层差=+1 恒（惯例）双证。
+name case-walkfcprobe
+frames 1400
+snapshot none
+sample_point spin-exit
+
+watch 002D FC
+watch 00FD ScrollX
+watch 00FC ScrollY
+watch 0049 ScrollDir
+watch 00FF PPUCTRL
+watch 030E SamusX
+
+press 310 start
+press 350 start
+capture 420 game-in
+hold 440-1400 left
+capture 620 l180
+capture 820 l380
+capture 1020 l580
+capture 1400 end
+endFrame 1400
