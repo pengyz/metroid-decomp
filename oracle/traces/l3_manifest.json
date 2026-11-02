@@ -1100,9 +1100,9 @@
      "range": "6000-7fff"
     }
    ],
-   "oracle_sha256": "ddb2d7680d71ab83c8c197d1283724ec502c3f783a3cc188507e1cbcfd295209",
-   "scenario_sha256": "a3c140ac447d5b1a7d84ab8ea6dcaa738a27b75e70020cf0e04b4f5b7f4abea4",
-   "determinism_evidence": "单次采集锚（2026-10-31 首锚——复采对sha随复核）",
+   "oracle_sha256": "e5fe901e932feebf936722e7a4d40971616125a87fefc668b9770312dd2d3691",
+   "scenario_sha256": "c6598bf6f0a5cfe395b1da7a683a25176b1ca3bbd5e087f48243f3411909e28a",
+   "determinism_evidence": "单次采集锚（2026-10-31 首锚——复采对sha随复核） | 2026-11-02 重采重锚：readRange zp span bug 修（256B 归正（旧 384B 污染））+重采——旧 ddb2d7680d71→新 e5fe901e932f（留痕）",
    "frame_keys": [],
    "legs": {
     "oracle": {
@@ -1115,7 +1115,8 @@
      "rows": 0,
      "missing": []
     }
-   }
+   },
+   "scenario_sha256_note": " | 2026-11-02 重锚：合法演进（goal 轮（能力链移植 03d3562a+镜像修 01a572d4））——旧 a3c140ac447d→新 c6598bf6f0a5（留痕）"
   },
   {
    "id": "l3-sc-shoot-kill",
@@ -1138,9 +1139,9 @@
      "range": "6000-7fff"
     }
    ],
-   "oracle_sha256": "beeebb5b76b986d85827531e3ced27e4f6ea1874f2d294ba332e7616539cbc8a",
+   "oracle_sha256": "3b24f7977102458eb2f65d31c56685af395d9da31c548f868933098945f6f977",
    "scenario_sha256": "807dded2ec46dfbd6481ee3ac6808e6ada6ed5d94e5f633a7f002ff5ddcbb48f",
-   "determinism_evidence": "单次采集锚（2026-10-31 首锚）",
+   "determinism_evidence": "单次采集锚（2026-10-31 首锚） | 2026-11-02 重采重锚：readRange zp span bug 修（256B 归正（旧 384B 污染））+重采——旧 beeebb5b76b9→新 3b24f7977102（留痕）",
    "frame_keys": [],
    "legs": {
     "oracle": {
@@ -1181,9 +1182,9 @@
      "range": "6000-7fff"
     }
    ],
-   "oracle_sha256": "5e411098f65060e1d0f27c8199a48ef9662a285ad8035e5c87417a1f250f1686",
+   "oracle_sha256": "dc651561a44e8b80c117d41953ebbe48ce9070016b8cfbca8fe8c1484ad5772c",
    "scenario_sha256": "4e6c885045ea1ee42e5f358b0a8a37f83467b8cdfdd083ac990a2a8dd68f1a37",
-   "determinism_evidence": "单次采集锚（2026-11-01 首锚——验收主案长脚本）",
+   "determinism_evidence": "单次采集锚（2026-11-01 首锚——验收主案长脚本） | 2026-11-02 重采重锚：readRange zp span bug 修（256B 归正（旧 384B 污染））+重采——旧 5e411098f650→新 dc651561a44e（留痕）",
    "frame_keys": [],
    "legs": {
     "oracle": {
