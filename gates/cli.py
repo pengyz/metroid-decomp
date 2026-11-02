@@ -1977,6 +1977,110 @@ def cmd_baseline(args) -> int:
     return 2
 
 
+
+# ---- goal 循环纪律机械闸（v2 F 波（2026-11-02））--------------------------------
+
+# 探针标签形：行内首个 [tag] token（如 [ifm]/[ifn]/[probe-x]）——归一化=剥该 token 后比对。
+PROBE_TAG_RE = re.compile(r"\[[A-Za-z0-9_.-]{1,24}\]")
+PROBE_FIX_RE = re.compile(r"^Probe-Fix\s*[:：]", re.I | re.M)
+SEMANTIC_SUBJECT_RE = re.compile(r"^(?:feat|fix|refactor|perf)\b", re.I)
+
+
+def git_staged_diff() -> str:
+    """暂存 diff（-U0（改动行纯量））。无暂存⇒空串。"""
+    r = subprocess.run(["git", "diff", "--cached", "-U0"], capture_output=True, text=True, cwd=ROOT)
+    return r.stdout
+
+
+def _diff_changed_lines(diff_text: str) -> tuple[list[str], list[str]]:
+    """(removed, added) 改动行（去 +/- 前缀（不含 +++/--- 头））。"""
+    removed, added = [], []
+    for ln in diff_text.splitlines():
+        if ln.startswith("+++") or ln.startswith("---"):
+            continue
+        if ln.startswith("+"):
+            added.append(ln[1:])
+        elif ln.startswith("-"):
+            removed.append(ln[1:])
+    return removed, added
+
+
+def probe_tag_rename_only(diff_text: str) -> bool:
+    """纯探针标签改名判据（机械）：改动行非空且（剥 [tag] 归一化后）removed/added 逐行全等。
+
+    机械判据（lead 定稿）：全部改动行仅 [tag] 字节变、归一化后全等。空 diff/含非标签变⇒False。"""
+    removed, added = _diff_changed_lines(diff_text)
+    if not removed or len(removed) != len(added):
+        return False
+    for r, a in zip(removed, added):
+        nr, na = PROBE_TAG_RE.sub("[TAG]", r), PROBE_TAG_RE.sub("[TAG]", a)
+        if nr != na:
+            return False
+        if r == a:  # 无标签变的行（纯同行）不计改（混入即非"纯改名"）
+            return False
+    return True
+
+
+def diff_has_semantic_lines(diff_text: str) -> bool:
+    """语义行判定：改动行含代码语义（非空/非纯注释/非纯文档/非纯标签）。"""
+    removed, added = _diff_changed_lines(diff_text)
+    for ln in removed + added:
+        s = ln.strip()
+        if not s:
+            continue
+        if s.startswith(("#", "//", "///", "//!", "*", "/*")):
+            continue  # 注释/文档注
+        if s.startswith(("--", ";")):
+            continue  # asm/lua 注释
+        # 纯标签行（剥标签后空）非语义
+        if not PROBE_TAG_RE.sub("", s).strip():
+            continue
+        return True
+    return False
+
+
+def doc_dup_line_violation(diff_text: str, path_filter=r"^(?:docs/|.*\.md$)") -> list[str]:
+    """文档重复行 lint：同一非空新增行在本 commit 文档 diff 中出现 >2 次 ⇒ 违规行清单。"""
+    pf = re.compile(path_filter)
+    counts: dict[str, int] = {}
+    cur_ok = False
+    for ln in diff_text.splitlines():
+        if ln.startswith("+++ "):
+            m = re.search(r" b/(\S+)$", ln)
+            cur_ok = bool(m and pf.search(m.group(1)))
+            continue
+        if ln.startswith("+") and not ln.startswith("+++"):
+            s = ln[1:].strip()
+            if cur_ok and s:
+                counts[s] = counts.get(s, 0) + 1
+    return [ln for ln, n in counts.items() if n > 2]
+
+
+def goal_loop_gate(message: str, diff_text: str) -> tuple[bool, str]:
+    """goal 循环纪律机械闸（v2 F）：①纯探针标签改名禁 feat/fix（probe-fix 白名单可放行）
+    ②subject 语义声称×diff 无语义行⇒拒 ③文档重复行>2⇒拒。"""
+    subject = next((ln.strip() for ln in message.splitlines() if ln.strip()), "")
+    probe_fix = bool(PROBE_FIX_RE.search(message))
+    tag_only = probe_tag_rename_only(diff_text)
+    if tag_only and SEMANTIC_SUBJECT_RE.match(subject) and not probe_fix:
+        return False, (
+            "拒绝 commit：纯探针标签改名 diff 禁挂 feat/fix subject"
+            "——须 chore(instrument) 或 Probe-Fix: <理由> 白名单（v2 F①）"
+        )
+    if SEMANTIC_SUBJECT_RE.match(subject) and not diff_has_semantic_lines(diff_text):
+        return False, (
+            "拒绝 commit：subject 声称语义变更而 diff 无语义行"
+            "（注释/文档/标签行非语义）——v2 F②"
+        )
+    dups = doc_dup_line_violation(diff_text)
+    if dups:
+        return False, (
+            f"拒绝 commit：文档重复行 >2 次追加（{len(dups)} 行违规（如 {dups[0][:40]!r}））"
+            "——防逐字对表污染（v2 F③）"
+        )
+    return True, (f"goal 循环机械闸过（tag_only={tag_only} probe_fix={probe_fix}）")
+
+
 def cmd_commit_msg(args) -> int:
     msg_path = Path(args.msgfile)
     if not msg_path.is_file():
@@ -1989,6 +2093,12 @@ def cmd_commit_msg(args) -> int:
         print(f"commit-msg 拒绝（fail-closed）: {exc}")
         return 1
     ok, detail = commit_msg_check(message, touched, proof_deferred_open=proof_deferred_open())
+    if ok:
+        g_ok, g_detail = goal_loop_gate(message, git_staged_diff())
+        if not g_ok:
+            print(f"commit-msg: {g_detail}")
+            return 1
+        detail += f"；{g_detail}"
     print(f"commit-msg: {detail}")
     return 0 if ok else 1
 
@@ -2715,6 +2825,39 @@ def cmd_selftest(_args) -> int:
             check("C1③ 新鲜度正对照：本轮真落盘新矩阵 ⇒ 照常裁 PASS（封堵不误伤正常 run-all）",
                   v18 == PASS and "ratchet 守住" in d18,
                   f"verdict={v18} detail={d18[:240]}")
+
+    # v2 F：goal 循环纪律机械闸反向三测（lead 定稿④）
+    try:
+        # 判据①：纯探针标签改名 diff + feat subject ⇒ 拒（chore/Probe-Fix 放行）
+        tagdiff = "-        eprintln!(\"[ifm] n={}\", n);\n+        eprintln!(\"[ifn] n={}\", n);\n"
+        ok1, d1 = goal_loop_gate("feat(core): 某语义变更", tagdiff)
+        check("F① 纯标签改名禁 feat（反向）", not ok1, d1)
+        ok2, _ = goal_loop_gate("chore(instrument): 探针标签改名", tagdiff)
+        check("F① chore(instrument) 放行（正向）", ok2)
+        ok3, _ = goal_loop_gate("feat(core): 某语义变更\nProbe-Fix: 探针修复（合法）", tagdiff)
+        check("F① Probe-Fix 白名单通道放行（R5）", ok3)
+    except Exception as exc:  # noqa: BLE001
+        check("F① 探针改名判据", False, str(exc))
+    try:
+        # 判据②：subject 语义声称×diff 无语义行 ⇒ 拒
+        nodiff = "-// 注释行\n+// 注释改写\n"
+        ok4, d4 = goal_loop_gate("fix(core): 语义修复声称", nodiff)
+        check("F② 语义声称×无语义行（反向）", not ok4, d4)
+        semdiff = "-    let x = 1;\n+    let x = 2;\n"
+        ok5, _ = goal_loop_gate("fix(core): 语义修复", semdiff)
+        check("F② 有语义行放行（正向）", ok5)
+    except Exception as exc:  # noqa: BLE001
+        check("F② subject↔diff 一致性", False, str(exc))
+    try:
+        # 判据③：文档重复行 >2 追加 ⇒ 拒
+        dup = ("--- a/docs/x.md\n+++ b/docs/x.md\n"
+               "+同样一行内容\n+同样一行内容\n+同样一行内容\n")
+        ok6, d6 = goal_loop_gate("docs: 记录", dup)
+        check("F③ 文档重复行>2（反向）", not ok6, d6)
+        ok7, _ = goal_loop_gate("docs: 记录", dup.replace("+同样一行内容\n", "+不同内容行\n", 1))
+        check("F③ ≤2 次放行（正向）", ok7)
+    except Exception as exc:  # noqa: BLE001
+        check("F③ 文档重复行 lint", False, str(exc))
 
     failed = [c for c in cases if not c[1]]
     for name, ok, detail in cases:
