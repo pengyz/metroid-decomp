@@ -99,9 +99,19 @@ end
 local function readRange(fromAddr, toAddr)
   local parts = {}
   for a = fromAddr, toAddr do parts[#parts + 1] = hex2(readByte(a)) end
-  -- 【②终钉】敌 extra 面（EnsExtra $6AF4-$6B73（8 槽×16B））——data05/anim 态终钉用
-  for a = 0x6AF4, 0x6B73 do parts[#parts + 1] = hex2(readByte(a)) end
   return table.concat(parts)
+end
+
+-- 【zp span bug 修（2026-11-02）】EnsExtra 附加（$6AF4-$6B73）原误入 readRange 尾
+-- ⇒**全 range 读污染**（zp watch 256B+128=384B=0x180（manifest 不符实锤））——
+-- 收进 dumpRam（L4 .ram.hex 面专用（wram watch 6000-7fff 已覆 6AF4（冗余无害）））。
+local function readRangeWithEnsExtra(fromAddr, toAddr)
+  return readRange(fromAddr, toAddr) ..
+    (function()
+      local parts = {}
+      for a = 0x6AF4, 0x6B73 do parts[#parts + 1] = hex2(readByte(a)) end
+      return table.concat(parts)
+    end)()
 end
 
 local function cpuJson()
@@ -124,7 +134,7 @@ end
 local function dumpRam(tag)
   local p = string.format("%s/%s_f%05d_%s.ram.hex", PLAN.out_dir, name, frame, tag)
   local f = io.open(p, "wb")
-  if f then f:write(readRange(0x0000, 0x07FF) .. "\n") f:close() return p end
+  if f then f:write(readRangeWithEnsExtra(0x0000, 0x07FF) .. "\n") f:close() return p end
   return nil
 end
 
