@@ -1101,12 +1101,19 @@ def l4_matrix_cells(matrix: dict) -> dict[str, dict[str, dict]]:
     return out
 
 
-def l4_ratchet_violations(baseline: dict, matrix: dict) -> list[str]:
+def l4_ratchet_violations(baseline: dict, matrix: dict, for_update: bool = False) -> list[str]:
     """逐采集点 ratchet 判定（纯函数，自检/pytest 可注入）→ 回退违规清单（空=守住）。
 
     规则（决策逐字）：① match 集合只增不减——基线锚 match 的采集点现态≠match ⇒ 换坏回退；
     ② blocked 只减不增——现态 blocked 而基线未锚 blocked ⇒ 新增回退。另 rom 锚漂移 ⇒
-    fail-closed 违规（对的不是同一只 ROM=对拍对象失真）。diff 持平/改善不违规（现状参考）。"""
+    fail-closed 违规（对的不是同一只 ROM=对拍对象失真）。diff 持平/改善不违规（现状参考）。
+
+    for_update=True（**仅** tools/baseline_update.py 锚定预检）：③未锚定格/④scenario
+    漂移不计入拒绝集——二者的处方恰是 baseline_update 重锚（③「新格必须同 commit 锚定
+    （baseline_update l4）」逐字）；否则锚定工具被自己要解的 ③ 拦死=自锁（2026-11-03
+    walkfcprobe 新格实测复现：5 新格全 ③ 拒锚）。此模式拒绝集=①②+rom 锚漂移（=l4_update
+    文档契约「任何回退（match 缩水/新增 blocked/rom 锚漂移）⇒ 拒绝」逐字）。gate_l4 侧
+    全集阻断不变（新格未锚仍 FAIL——阻断面零弱化）。"""
     viol: list[str] = []
     if baseline.get("rom_sha256") != matrix.get("rom_sha256"):
         viol.append(
@@ -1132,24 +1139,28 @@ def l4_ratchet_violations(baseline: dict, matrix: dict) -> list[str]:
     # 【v2 A-lite 升级（2026-11-02）】③未锚定采集点→阻断（新格须同 commit 锚定
     # （tools/baseline_update.py l4）——否则其回退对 ratchet 不可见（notes 期为提示
     # （lead 定稿升级阻断））。
-    for case in sorted(cur):
-        bs = (base_cases.get(case) or {}).get("states", {}) or {}
-        for key in sorted(cur[case]):
-            if key not in bs:
+    # 【2026-11-03 自锁修复】for_update 路径跳过③④——锚定工具的预检若含③，
+    # 则「新格必须同 commit 锚定」的处方被自己拦死（walkfcprobe 5 新格实测全拒）。
+    # gate_l4（for_update=False 缺省）全集阻断不变。
+    if not for_update:
+        for case in sorted(cur):
+            bs = (base_cases.get(case) or {}).get("states", {}) or {}
+            for key in sorted(cur[case]):
+                if key not in bs:
+                    viol.append(
+                        f"{case}/{key}: 未锚定采集点（现态 {cur[case][key]}）——"
+                        f"新格必须同 commit 锚定（baseline_update l4）——v2 A-lite③阻断")
+        # ④scenario_sha256 漂移→阻断（采集点语义变——核合法性后重锚留痕）。
+        row_scen = {str(r.get("case")): r.get("scenario_sha256")
+                    for r in (matrix.get("rows") or [])}
+        for case in sorted(cur):
+            if (case in base_cases
+                    and (base_cases.get(case) or {}).get("scenario_sha256") != row_scen.get(case)):
                 viol.append(
-                    f"{case}/{key}: 未锚定采集点（现态 {cur[case][key]}）——"
-                    f"新格必须同 commit 锚定（baseline_update l4）——v2 A-lite③阻断")
-    # ④scenario_sha256 漂移→阻断（采集点语义变——核合法性后重锚留痕）。
-    row_scen = {str(r.get("case")): r.get("scenario_sha256")
-                for r in (matrix.get("rows") or [])}
-    for case in sorted(cur):
-        if (case in base_cases
-                and (base_cases.get(case) or {}).get("scenario_sha256") != row_scen.get(case)):
-            viol.append(
-                f"{case}: scenario_sha256 漂移（基线 "
-                f"{str((base_cases.get(case) or {}).get('scenario_sha256'))[:12]}… vs 现 "
-                f"{str(row_scen.get(case))[:12]}…）——核变更合法性后 baseline_update l4 "
-                f"重锚留痕——v2 A-lite④阻断")
+                    f"{case}: scenario_sha256 漂移（基线 "
+                    f"{str((base_cases.get(case) or {}).get('scenario_sha256'))[:12]}… vs 现 "
+                    f"{str(row_scen.get(case))[:12]}…）——核变更合法性后 baseline_update l4 "
+                    f"重锚留痕——v2 A-lite④阻断")
     return viol
 
 
@@ -2591,6 +2602,27 @@ def cmd_selftest(_args) -> int:
                                 _m6({"c": {"2:b": "match"}}))
     check("ratchet 防删点逃逸：基线 match 采集点消失 ⇒ 回退违规",
           any("1:a" in x for x in v17), f"violations={v17}")
+    # 【2026-11-03 自锁修复】for_update=True（锚定预检）：③未锚定格不拒（处方=锚定
+    # 自身）；①②+rom 漂移照拒（回退集不变）。gate 缺省全集阻断不弱化。
+    v17 = l4_ratchet_violations(_b6({"c": {"1:a": "match"}}),
+                                _m6({"c": {"1:a": "match", "2:b": "diff"}}),
+                                for_update=True)
+    check("for_update：未锚定新格（③）不拒锚定——锚定工具可执行「新格同 commit 锚定」",
+          v17 == [], f"violations={v17}")
+    v17 = l4_ratchet_violations(_b6({"c": {"1:a": "match"}}),
+                                _m6({"c": {"1:a": "match", "2:b": "diff"}}))
+    check("for_update 不弱化 gate 面：缺省全集仍报③阻断",
+          any("2:b" in x and "未锚定" in x for x in v17), f"violations={v17}")
+    v17 = l4_ratchet_violations(_b6({"c": {"1:a": "match", "2:b": "match"}}),
+                                _m6({"c": {"1:a": "diff", "2:b": "match", "3:c": "diff"}}),
+                                for_update=True)
+    check("for_update：① match 缩水照拒（回退集不变——锚定预检仍 fail-closed）",
+          any("1:a" in x for x in v17), f"violations={v17}")
+    v17 = l4_ratchet_violations(_b6({"c": {"1:a": "match"}}),
+                                _m6({"c": {"1:a": "match", "3:c": "blocked"}}),
+                                for_update=True)
+    check("for_update：② 新增 blocked 照拒（回退集不变）",
+          any("3:c" in x for x in v17), f"violations={v17}")
     for r17 in results:  # 实跑（复用 5) run_all_gates 结果，不二次跑 runner）
         if r17["name"] == "l4":
             check("l4 门禁实跑裁定 PASS/TOLERATED（逐采集点 ratchet 守住，验收④）",

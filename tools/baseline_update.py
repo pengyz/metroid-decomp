@@ -61,7 +61,11 @@ def l4_update(matrix_path: Path, baseline_path: Path, reason: str) -> dict:
     old = None
     if baseline_path.is_file():
         old = gates_cli.load_l4_ratchet_baseline(baseline_path)
-        viol = gates_cli.l4_ratchet_violations(old, matrix)
+        # 预检拒绝集=本工具文档契约「任何回退（match 缩水/新增 blocked/rom 锚漂移）」
+        # =①②+rom 锚漂移。③未锚定格/④scenario 漂移不拒——其处方恰是本次重锚
+        # （③「新格必须同 commit 锚定（baseline_update l4）」逐字），否则自锁
+        # （2026-11-03 walkfcprobe 5 新格实测全拒锚）。判定单源=gates/cli.py。
+        viol = gates_cli.l4_ratchet_violations(old, matrix, for_update=True)
         if viol:
             raise gates_cli.RatchetError(
                 "l4 ratchet 基线拒绝下调（只升不降）: " + "；".join(viol))
