@@ -195,3 +195,16 @@ LDD5B（无掉⇒移除））。
 data0A/+14=weaponAction）与 asm 列计（+11=delay/+12=data0A/+16=weaponAction）**位移
 2**——但 f800 dump 44B/44D 双侧同值（实证两 map 在实用位一致）——**实现前须 RAM 级探针
 对正**（已知值写→asm 字段写径 trace）——此为回装/实现卡的**前置取证件**。
+
+
+## 7. B 卡 B0/B1 定谳（2026-11-02（l380 回归方向裁定））
+
+【B0 方差带校准】HEAD l380=**12085px×5/5（零方差（确定性））**——±44px 方差带不适用
+（测稳（非 flaky））——12085 为真值（非噪声）。
+【B1 真值（worktree 0a99466f（tools 整钉）×现版 case）】l380=**626px**（历史值复现！）
+——与 HEAD 12085px 对照：**回归坐实**（0a99466f..HEAD 98 commit 间（~19x 劣化））。
+【B1 方法注】emu 采=真值（工具无关（共享 shots/+.l4prov.json 锚））——旧 tools 采不全
+（前吞吐修（20s 死））⇒共享主库采+旧码 rust 腿直渲+diff 比对（绕 run-all fresh 重删）。
+【下一步（裁定序）】B2（spin-exit+watch $FD/$FF/$2D（仪器缝 vs 滚动状态机（分歧形态签名
+（背景 2px 偏移+$FD 同点真差）））→bisect 98 commit（首查 cf7b999b/1120871a/
+4ec7178d/dfecadee/db745dbd）→左滚 wrap 径 asm 对读根修。
