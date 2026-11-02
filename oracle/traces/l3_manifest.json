@@ -68,8 +68,8 @@
      "range": "0100-07ff"
     }
    ],
-   "oracle_sha256": "06bf0d3562721be98bd657ec9a5d79eadc37179b886fad0e903adf8c367cf474",
-   "determinism_evidence": "同场景双跑逐字节一致（2026-10-16，run1==run2 sha 06bf0d35…）",
+   "oracle_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "determinism_evidence": "同场景双跑逐字节一致（2026-10-16，run1==run2 sha 06bf0d35…） | 2026-11-02 重锚：吞吐卡分片格式（wram shard=4（迹字节变））——旧 06bf0d356272→新 e3b0c44298fc（留痕）",
    "scenario_sha256": "e294b12ec664f12340b32dfba9272a05b1a1e472f5856ca3c8c9765b0b461ec7",
    "frame_keys": [],
    "legs": {
@@ -1097,7 +1097,8 @@
     {
      "label": "wram",
      "base": "6000",
-     "range": "6000-7fff"
+     "range": "6000-7fff",
+     "shard": 4
     }
    ],
    "oracle_sha256": "e5fe901e932feebf936722e7a4d40971616125a87fefc668b9770312dd2d3691",
@@ -1136,12 +1137,13 @@
     {
      "label": "wram",
      "base": "6000",
-     "range": "6000-7fff"
+     "range": "6000-7fff",
+     "shard": 4
     }
    ],
-   "oracle_sha256": "3b24f7977102458eb2f65d31c56685af395d9da31c548f868933098945f6f977",
+   "oracle_sha256": "e2d1f5afbfb0017a37835419dde1b34d414d197a904694da25b16e132bdc270b",
    "scenario_sha256": "807dded2ec46dfbd6481ee3ac6808e6ada6ed5d94e5f633a7f002ff5ddcbb48f",
-   "determinism_evidence": "单次采集锚（2026-10-31 首锚） | 2026-11-02 重采重锚：readRange zp span bug 修（256B 归正（旧 384B 污染））+重采——旧 beeebb5b76b9→新 3b24f7977102（留痕）",
+   "determinism_evidence": "单次采集锚（2026-10-31 首锚） | 2026-11-02 重采重锚：readRange zp span bug 修（256B 归正（旧 384B 污染））+重采——旧 beeebb5b76b9→新 3b24f7977102（留痕） | 2026-11-02 重锚：吞吐卡分片格式（wram shard=4（迹字节变））——旧 3b24f7977102→新 e2d1f5afbfb0（留痕）",
    "frame_keys": [],
    "legs": {
     "oracle": {
@@ -1179,7 +1181,8 @@
     {
      "label": "wram",
      "base": "6000",
-     "range": "6000-7fff"
+     "range": "6000-7fff",
+     "shard": 4
     }
    ],
    "oracle_sha256": "dc651561a44e8b80c117d41953ebbe48ce9070016b8cfbca8fe8c1484ad5772c",

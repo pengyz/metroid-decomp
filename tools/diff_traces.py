@@ -52,7 +52,7 @@ HEXSTR = re.compile(r"^[0-9a-fA-F]*$")
 BASERE = re.compile(r"^[0-9a-fA-F]{1,4}$")
 RANGERE = re.compile(r"^([0-9a-fA-F]{1,4})-([0-9a-fA-F]{1,4})$")
 SCENRE = re.compile(r"^[A-Za-z0-9_-]+$")
-WATCH_KEYS = {"label", "base", "range"}
+WATCH_KEYS = {"label", "base", "range", "shard"}
 # 帧记录键集白名单（严重-7）：基础键 {f,w} + case.frame_keys 显式声明扩展键（如 ram）。
 FRAME_BASE_KEYS = {"f", "w"}
 # watch 面区间钉死规范（严重-5；与 game-core memmap/frame_face.rs WATCH_FACES 同表——
@@ -157,7 +157,11 @@ def check_frames_side(frames: dict, watch: list[dict], side: str) -> str | None:
         w = frames[f]
         for entry in watch:
             label = entry["label"]
+            shard = int(entry.get("shard") or 1)
             if label not in w:
+                # 【分片镜像（吞吐卡）】shard>1：shard 帧必在；余帧缺=合法（两侧同缺）。
+                if shard > 1 and f % shard != 0:
+                    continue
                 return f"frame {f} watch 字段 {label} {side}侧缺失（逐帧存在性校验）"
             bad = field_illegal(w[label])
             if bad:
@@ -378,8 +382,16 @@ def compare_frames(left: dict, right: dict, watch: list[dict],
     for f in sorted(set(lframes) & set(rframes) if declared is not None else lframes):
         for w in watch:
             label, base = w["label"], int(w["base"], 16)
-            a = left[f][label].upper()
-            b = right[f][label].upper()
+            # 【分片镜像（吞吐卡）】shard 帧两侧同缺⇒跳；非对称缺⇒分歧。
+            la = left[f].get(label)
+            ra = right[f].get(label)
+            if la is None and ra is None:
+                continue
+            if la is None or ra is None:
+                return (f"frame {f} 字段 {label} 分片非对称缺"
+                        f"（左={'缺' if la is None else '在'}右={'缺' if ra is None else '在'}）"), excluded_hits
+            a = la.upper()
+            b = ra.upper()
             if a == b:
                 continue
             if len(a) != len(b):

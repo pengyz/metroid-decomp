@@ -1,194 +1,864 @@
 {
-  "schema": "l4-ratchet/v1",
-  "doc": "L4 逐采集点 ratchet 锚（Task 6）——match 集合只增不减 + blocked 只减不增（**非**一致率百分比：9/10→9/10 逐采集点换坏必触发）。消费面=gates/cli.py gate_l4（run-all 矩阵 vs 本锚逐采集点对账）；唯一写入口=tools/baseline_update.py l4（只升不降 + 强制 --reason）；diff=现状参考（改善 diff→match 欢迎，→blocked 由『新增 blocked』规则拦截）；白名单例外=gates/visual_whitelist.json。",
-  "rom_sha256": "e6e6b7014685adae447ebb3833242815747bc1e5df83ade79f693fb67cf565b6",
-  "cases": {
-    "case-001-game-start-samus-interaction": {
-      "scenario_sha256": "efdc8f3ab92e6f36ab52f13521b047d0e57fd666e245f30079f5e38d8f54d946",
-      "states": {
-        "420:game-in": "match",
-        "550:after-right": "match",
-        "650:after-left": "match",
-        "715:jump-shoot": "match",
-        "720:after-jump": "match",
-        "725:landing-early": "match",
-        "735:landing-settled": "match",
-        "810:bullet-midflight": "diff",
-        "815:bullet-mid-2": "diff",
-        "820:after-shoot": "diff",
-        "825:bullet-late": "diff",
-        "950:combo-action": "diff",
-        "1200:end": "diff"
-      }
+ "schema": "l4-ratchet/v1",
+ "doc": "L4 逐采集点 ratchet 锚（Task 6）——match 集合只增不减 + blocked 只减不增（**非**一致率百分比：9/10→9/10 逐采集点换坏必触发）。消费面=gates/cli.py gate_l4（run-all 矩阵 vs 本锚逐采集点对账）；唯一写入口=tools/baseline_update.py l4（只升不降 + 强制 --reason）；diff=现状参考（改善 diff→match 欢迎，→blocked 由『新增 blocked』规则拦截）；白名单例外=gates/visual_whitelist.json。",
+ "rom_sha256": "e6e6b7014685adae447ebb3833242815747bc1e5df83ade79f693fb67cf565b6",
+ "cases": {
+  "case-001-game-start-samus-interaction": {
+   "scenario_sha256": "350beb44bd3f90a83a89ed923a3c7573fa6fc9f2d7fc0082fa80ad6ebd75be97",
+   "states": {
+    "420:game-in": {
+     "state": "match",
+     "diff_pixels": 0,
+     "total_pixels": 61440,
+     "incentive": "unknown",
+     "incentive_evidence": [
+      "首采（无前采对照）"
+     ]
     },
-    "case-002-door-blue-interaction": {
-      "scenario_sha256": "e02b0e157324f3cd098c4784443c8a680cd2b4e2c2b7c51c5d9ca588c94a638b",
-      "states": {
-        "420:game-in": "match",
-        "620:at-door": "match",
-        "650:bullet-out": "match",
-        "700:door-open": "match",
-        "790:door-enter": "match",
-        "850:scrolling": "diff",
-        "1000:neighbor-room": "diff",
-        "1150:end": "diff"
-      }
+    "550:after-right": {
+     "state": "match",
+     "diff_pixels": 0,
+     "total_pixels": 61440,
+     "incentive": "active",
+     "incentive_evidence": [
+      "实质状态跨采变化（Samus/滚/弹/敌域异前采）"
+     ]
     },
-    "case-collide-probe": {
-      "scenario_sha256": "5478a7063ab2297662ffcc493651e8bb1304a45e61f1aa0aec4eb7abbd44fc29",
-      "states": {
-        "420:game-in": "match",
-        "540:r100": "match",
-        "620:l60": "match",
-        "700:l140": "match",
-        "800:l240": "diff",
-        "890:l330": "diff",
-        "900:end": "diff"
-      }
+    "650:after-left": {
+     "state": "match",
+     "diff_pixels": 0,
+     "total_pixels": 61440,
+     "incentive": "active",
+     "incentive_evidence": [
+      "实质状态跨采变化（Samus/滚/弹/敌域异前采）"
+     ]
     },
-    "case-crawlprobe": {
-      "scenario_sha256": "d9caaa3d03691d640b5071a335bae1b1d7ccce8f93ab4722fe208af679488a53",
-      "states": {
-        "420:game-in": "match",
-        "550:after-right": "match",
-        "650:after-left": "match",
-        "720:after-jump": "match",
-        "820:after-shoot": "diff",
-        "960:end": "diff"
-      }
+    "715:jump-shoot": {
+     "state": "match",
+     "diff_pixels": 0,
+     "total_pixels": 61440,
+     "incentive": "active",
+     "incentive_evidence": [
+      "实质状态跨采变化（Samus/滚/弹/敌域异前采）"
+     ]
     },
-    "case-fcprobe": {
-      "scenario_sha256": "80b1bbb4c8ba315781dbe6559dd7ce8029b7991ef80e003a690a2d00cd82bfde",
-      "states": {
-        "420:game-in": "match",
-        "460:end": "match"
-      }
+    "720:after-jump": {
+     "state": "match",
+     "diff_pixels": 0,
+     "total_pixels": 61440,
+     "incentive": "inactive",
+     "incentive_evidence": [
+      "实质状态跨采恒定（Samus/滚/弹/敌域全同前采）——激励证据缺失（假对照形（R3 标注（待复核））"
+     ]
     },
-    "case-jumpledge-probe": {
-      "scenario_sha256": "aec53510f64a173174c8dba5bb57ec84cd46d9e8bda774b097d0d20a57409b58",
-      "states": {
-        "420:game-in": "match",
-        "550:walk-mid": "match",
-        "690:pre-jump": "match",
-        "705:takeoff": "match",
-        "730:rise": "match",
-        "755:peak": "match",
-        "780:land": "match",
-        "800:land-settled": "diff"
-      }
+    "725:landing-early": {
+     "state": "match",
+     "diff_pixels": 0,
+     "total_pixels": 61440,
+     "incentive": "inactive",
+     "incentive_evidence": [
+      "实质状态跨采恒定（Samus/滚/弹/敌域全同前采）——激励证据缺失（假对照形（R3 标注（待复核））"
+     ]
     },
-    "case-killenemy-probe": {
-      "scenario_sha256": "4d4f4aca8f4c6f80c68f1bbf44131938c92f15431e8eae1771717fef7b4c01fc",
-      "states": {
-        "420:game-in": "match",
-        "560:at-enemy": "match",
-        "590:hit-1": "match",
-        "620:hit-2": "match",
-        "650:dying": "match",
-        "700:dead": "match",
-        "800:after": "diff"
-      }
+    "735:landing-settled": {
+     "state": "match",
+     "diff_pixels": 0,
+     "total_pixels": 61440,
+     "incentive": "inactive",
+     "incentive_evidence": [
+      "实质状态跨采恒定（Samus/滚/弹/敌域全同前采）——激励证据缺失（假对照形（R3 标注（待复核））"
+     ]
     },
-    "case-leftwalk-probe": {
-      "scenario_sha256": "701d0fb51e93436eb82f6b23b5d707487511a0faf3bb1718bc35c5be181b91d4",
-      "states": {
-        "420:game-in": "match",
-        "520:left-80": "match",
-        "620:left-180": "match",
-        "720:left-280": "match",
-        "790:left-350": "match",
-        "800:end": "diff"
-      }
+    "810:bullet-midflight": {
+     "state": "diff",
+     "diff_pixels": 263,
+     "total_pixels": 61440
     },
-    "case-leftwalk-probe2": {
-      "scenario_sha256": "b90418ab3e2e45da82137eec298c6adcdecfb64d3e8a1081241ff4186ebd3691",
-      "states": {
-        "420:game-in": "match",
-        "620:l180": "match",
-        "820:l380": "diff",
-        "1020:l580": "diff",
-        "1220:l780": "diff",
-        "1390:l950": "diff",
-        "1400:end": "diff"
-      }
+    "815:bullet-mid-2": {
+     "state": "diff",
+     "diff_pixels": 124,
+     "total_pixels": 61440
     },
-    "case-scrollseam-probe": {
-      "scenario_sha256": "b5f78ab36e289d21c939b6220980a84008def6d3138fec2acfca9adf367dc457",
-      "states": {
-        "420:game-in": "match",
-        "470:scroll-r30": "match",
-        "500:scroll-r60": "match",
-        "530:scroll-r90": "match",
-        "560:scroll-r120": "match",
-        "590:scroll-r150": "match",
-        "620:scroll-r180": "match",
-        "650:scroll-r210": "match",
-        "680:scroll-r240": "match",
-        "700:scroll-end": "match",
-        "760:scroll-l40": "match",
-        "800:scroll-l80": "diff",
-        "840:scroll-l120": "diff",
-        "880:end": "diff"
-      }
+    "820:after-shoot": {
+     "state": "diff",
+     "diff_pixels": 234,
+     "total_pixels": 61440
     },
-    "case-shootprobe-probe": {
-      "scenario_sha256": "84ce494fc556f1930e8fd1e3f0f66767493d8d1609b857d22fcb2d50d3fc5e05",
-      "states": {
-        "420:game-in": "match",
-        "810:fire-10": "diff",
-        "815:fire-15": "diff",
-        "825:fire-25": "diff"
-      }
+    "825:bullet-late": {
+     "state": "diff",
+     "diff_pixels": 190,
+     "total_pixels": 61440
+    },
+    "950:combo-action": {
+     "state": "diff",
+     "diff_pixels": 524,
+     "total_pixels": 61440
+    },
+    "1200:end": {
+     "state": "diff",
+     "diff_pixels": 1015,
+     "total_pixels": 61440
     }
+   }
   },
-  "history": [
-    {
-      "ts": "2026-10-26T13:08:55+00:00",
-      "reason": "Task 6 引导（genesis）：锚定 2026-10-26 run-all 真跑矩阵逐采集点现状——case-001 match 1（420:game-in）/diff 6（游戏逻辑未 L3 一致现状，与 Task 5 矩阵同态）/blocked 0；三 sha 锚 rom=e6e6b701 scenario=23b52bdc 与 Task 5 真跑同值。确认无回退：match 集合从零起锚（只增不减），blocked 空集（只减不增）",
-      "match": 1,
-      "diff": 6,
-      "blocked": 0,
-      "cells_total": 7
+  "case-002-door-blue-interaction": {
+   "scenario_sha256": "e02b0e157324f3cd098c4784443c8a680cd2b4e2c2b7c51c5d9ca588c94a638b",
+   "states": {
+    "420:game-in": {
+     "state": "match",
+     "diff_pixels": 0,
+     "total_pixels": 61440,
+     "incentive": "unknown",
+     "incentive_evidence": [
+      "首采（无前采对照）"
+     ]
     },
-    {
-      "ts": "2026-10-29T13:12:10+00:00",
-      "reason": "确认无回退证据：①串行锁落地（60408e6a）后同树两轮 fresh 双腿 run-all（A=60408e6a check 窗/B=本轮）74 格逐点位级零翻转（l4_matrix_states 对照实录）；②l4 门禁三连窗（3c3fc111/60408e6a check+A/B 轮）match 48·diff 26·blocked 0 恒定；③旧基线仅锚 case-001 7 点（其一 match 点现态保持 match，无缩水）；④复核档 e9ca3957 记录的 hit-2/dead 会话间翻转出自串行锁落地前的多会话撞车窗（KB 第 5 员同窗），锁后未复现——锁后若复现按新证据走 FC 相位考证（BUG-089 时序族），不作容忍账。本锚同时解决 case-001 scenario_sha256 漂移重锚（23b52bdc→efdc8f3a，现定义两轮稳定）。",
-      "match": 48,
-      "diff": 26,
-      "blocked": 0,
-      "cells_total": 74
+    "620:at-door": {
+     "state": "match",
+     "diff_pixels": 0,
+     "total_pixels": 61440,
+     "incentive": "active",
+     "incentive_evidence": [
+      "实质状态跨采变化（Samus/滚/弹/敌域异前采）"
+     ]
     },
-    {
-      "ts": "2026-10-29T13:38:54+00:00",
-      "reason": "吸收 case-fcprobe 两新采集点（420:game-in/460:end 当日双腿跑 0px 全同，cdfe4fb2 check 窗矩阵）；其余 74 格态与本锚现值逐点不变（l4_ratchet_violations 单源复核通过）——确认无回退",
-      "match": 50,
-      "diff": 26,
-      "blocked": 0,
-      "cells_total": 76
+    "650:bullet-out": {
+     "state": "match",
+     "diff_pixels": 0,
+     "total_pixels": 61440,
+     "incentive": "inactive",
+     "incentive_evidence": [
+      "实质状态跨采恒定（Samus/滚/弹/敌域全同前采）——激励证据缺失（假对照形（R3 标注（待复核））"
+     ]
     },
-    {
-      "ts": "2026-10-29T15:51:53+00:00",
-      "reason": "case-fcprobe watch 扩展（FC 冻结修判据面）致 scenario_sha256 漂移重锚；435074f4 check 窗矩阵=两采集点 match 保持、全 76 格 match 集合零缩水——确认无回退",
-      "match": 50,
-      "diff": 26,
-      "blocked": 0,
-      "cells_total": 76
+    "700:door-open": {
+     "state": "match",
+     "diff_pixels": 0,
+     "total_pixels": 61440,
+     "incentive": "active",
+     "incentive_evidence": [
+      "实质状态跨采变化（Samus/滚/弹/敌域异前采）"
+     ]
     },
-    {
-      "ts": "2026-10-30T01:22:58+00:00",
-      "reason": "吸收 case-crawlprobe 六采集点（4 match/2 diff——像素面诚实 diff 为弹相位残族）；既有 76 格 match 集合零缩水（170f80f3 check 实录）——确认无回退",
-      "match": 54,
-      "diff": 28,
-      "blocked": 0,
-      "cells_total": 82
+    "790:door-enter": {
+     "state": "match",
+     "diff_pixels": 0,
+     "total_pixels": 61440,
+     "incentive": "active",
+     "incentive_evidence": [
+      "实质状态跨采变化（Samus/滚/弹/敌域异前采）"
+     ]
     },
-    {
-      "ts": "2026-10-30T13:49:30+00:00",
-      "reason": "Steps 1-4 帧骨架对齐后重锚：case-crawlprobe/case-fcprobe scenario_sha256 漂移（sample_point spin-exit 仪器行——Step 0 commit 04cec81b）+采集点语义复核。确认无回退证据：run-all 新矩阵 match 54/diff 28/blocked 0 与原锚持平（28 diff=状态账登记的结构性项——旧定义采集点不再复采 7+渲染腿缺失 6+sc-title-menu2 迭代态 4，非游戏分歧）；游戏收敛面由 matched-seam 对拍正向证实（fcprobe 5 字段×445 帧全同、crawlprobe MR/SS/SY/T3 全同——cf7b999b 提交实录）。",
-      "match": 54,
-      "diff": 28,
-      "blocked": 0,
-      "cells_total": 82
+    "850:scrolling": {
+     "state": "diff",
+     "diff_pixels": 226,
+     "total_pixels": 61440
+    },
+    "1000:neighbor-room": {
+     "state": "diff",
+     "diff_pixels": 166,
+     "total_pixels": 61440
+    },
+    "1150:end": {
+     "state": "diff",
+     "diff_pixels": 170,
+     "total_pixels": 61440
     }
-  ]
+   }
+  },
+  "case-collide-probe": {
+   "scenario_sha256": "5478a7063ab2297662ffcc493651e8bb1304a45e61f1aa0aec4eb7abbd44fc29",
+   "states": {
+    "420:game-in": {
+     "state": "match",
+     "diff_pixels": 0,
+     "total_pixels": 61440,
+     "incentive": "unknown",
+     "incentive_evidence": [
+      "首采（无前采对照）"
+     ]
+    },
+    "540:r100": {
+     "state": "match",
+     "diff_pixels": 0,
+     "total_pixels": 61440,
+     "incentive": "active",
+     "incentive_evidence": [
+      "实质状态跨采变化（Samus/滚/弹/敌域异前采）"
+     ]
+    },
+    "620:l60": {
+     "state": "match",
+     "diff_pixels": 0,
+     "total_pixels": 61440,
+     "incentive": "active",
+     "incentive_evidence": [
+      "实质状态跨采变化（Samus/滚/弹/敌域异前采）"
+     ]
+    },
+    "700:l140": {
+     "state": "match",
+     "diff_pixels": 0,
+     "total_pixels": 61440,
+     "incentive": "active",
+     "incentive_evidence": [
+      "实质状态跨采变化（Samus/滚/弹/敌域异前采）"
+     ]
+    },
+    "800:l240": {
+     "state": "diff",
+     "diff_pixels": 403,
+     "total_pixels": 61440
+    },
+    "890:l330": {
+     "state": "diff",
+     "diff_pixels": 102,
+     "total_pixels": 61440
+    },
+    "900:end": {
+     "state": "diff",
+     "diff_pixels": 108,
+     "total_pixels": 61440
+    }
+   }
+  },
+  "case-crawlprobe": {
+   "scenario_sha256": "d9caaa3d03691d640b5071a335bae1b1d7ccce8f93ab4722fe208af679488a53",
+   "states": {
+    "420:game-in": {
+     "state": "match",
+     "diff_pixels": 0,
+     "total_pixels": 61440,
+     "incentive": "unknown",
+     "incentive_evidence": [
+      "首采（无前采对照）"
+     ]
+    },
+    "550:after-right": {
+     "state": "match",
+     "diff_pixels": 0,
+     "total_pixels": 61440,
+     "incentive": "active",
+     "incentive_evidence": [
+      "实质状态跨采变化（Samus/滚/弹/敌域异前采）"
+     ]
+    },
+    "650:after-left": {
+     "state": "match",
+     "diff_pixels": 0,
+     "total_pixels": 61440,
+     "incentive": "active",
+     "incentive_evidence": [
+      "实质状态跨采变化（Samus/滚/弹/敌域异前采）"
+     ]
+    },
+    "720:after-jump": {
+     "state": "match",
+     "diff_pixels": 0,
+     "total_pixels": 61440,
+     "incentive": "active",
+     "incentive_evidence": [
+      "实质状态跨采变化（Samus/滚/弹/敌域异前采）"
+     ]
+    },
+    "820:after-shoot": {
+     "state": "diff",
+     "diff_pixels": 234,
+     "total_pixels": 61440
+    },
+    "960:end": {
+     "state": "diff",
+     "diff_pixels": 228,
+     "total_pixels": 61440
+    }
+   }
+  },
+  "case-fcprobe": {
+   "scenario_sha256": "80b1bbb4c8ba315781dbe6559dd7ce8029b7991ef80e003a690a2d00cd82bfde",
+   "states": {
+    "420:game-in": {
+     "state": "match",
+     "diff_pixels": 0,
+     "total_pixels": 61440,
+     "incentive": "unknown",
+     "incentive_evidence": [
+      "首采（无前采对照）"
+     ]
+    },
+    "460:end": {
+     "state": "match",
+     "diff_pixels": 0,
+     "total_pixels": 61440,
+     "incentive": "inactive",
+     "incentive_evidence": [
+      "实质状态跨采恒定（Samus/滚/弹/敌域全同前采）——激励证据缺失（假对照形（R3 标注（待复核））"
+     ]
+    }
+   }
+  },
+  "case-jumpledge-probe": {
+   "scenario_sha256": "aec53510f64a173174c8dba5bb57ec84cd46d9e8bda774b097d0d20a57409b58",
+   "states": {
+    "420:game-in": {
+     "state": "match",
+     "diff_pixels": 0,
+     "total_pixels": 61440,
+     "incentive": "unknown",
+     "incentive_evidence": [
+      "首采（无前采对照）"
+     ]
+    },
+    "550:walk-mid": {
+     "state": "match",
+     "diff_pixels": 0,
+     "total_pixels": 61440,
+     "incentive": "active",
+     "incentive_evidence": [
+      "实质状态跨采变化（Samus/滚/弹/敌域异前采）"
+     ]
+    },
+    "690:pre-jump": {
+     "state": "match",
+     "diff_pixels": 0,
+     "total_pixels": 61440,
+     "incentive": "active",
+     "incentive_evidence": [
+      "实质状态跨采变化（Samus/滚/弹/敌域异前采）"
+     ]
+    },
+    "705:takeoff": {
+     "state": "match",
+     "diff_pixels": 0,
+     "total_pixels": 61440,
+     "incentive": "inactive",
+     "incentive_evidence": [
+      "实质状态跨采恒定（Samus/滚/弹/敌域全同前采）——激励证据缺失（假对照形（R3 标注（待复核））"
+     ]
+    },
+    "730:rise": {
+     "state": "match",
+     "diff_pixels": 0,
+     "total_pixels": 61440,
+     "incentive": "inactive",
+     "incentive_evidence": [
+      "实质状态跨采恒定（Samus/滚/弹/敌域全同前采）——激励证据缺失（假对照形（R3 标注（待复核））"
+     ]
+    },
+    "755:peak": {
+     "state": "match",
+     "diff_pixels": 0,
+     "total_pixels": 61440,
+     "incentive": "active",
+     "incentive_evidence": [
+      "实质状态跨采变化（Samus/滚/弹/敌域异前采）"
+     ]
+    },
+    "780:land": {
+     "state": "match",
+     "diff_pixels": 0,
+     "total_pixels": 61440,
+     "incentive": "active",
+     "incentive_evidence": [
+      "实质状态跨采变化（Samus/滚/弹/敌域异前采）"
+     ]
+    },
+    "800:land-settled": {
+     "state": "diff",
+     "diff_pixels": 237,
+     "total_pixels": 61440
+    }
+   }
+  },
+  "case-killenemy-probe": {
+   "scenario_sha256": "4d4f4aca8f4c6f80c68f1bbf44131938c92f15431e8eae1771717fef7b4c01fc",
+   "states": {
+    "420:game-in": {
+     "state": "match",
+     "diff_pixels": 0,
+     "total_pixels": 61440,
+     "incentive": "unknown",
+     "incentive_evidence": [
+      "首采（无前采对照）"
+     ]
+    },
+    "560:at-enemy": {
+     "state": "match",
+     "diff_pixels": 0,
+     "total_pixels": 61440,
+     "incentive": "active",
+     "incentive_evidence": [
+      "实质状态跨采变化（Samus/滚/弹/敌域异前采）"
+     ]
+    },
+    "590:hit-1": {
+     "state": "match",
+     "diff_pixels": 0,
+     "total_pixels": 61440,
+     "incentive": "inactive",
+     "incentive_evidence": [
+      "实质状态跨采恒定（Samus/滚/弹/敌域全同前采）——激励证据缺失（假对照形（R3 标注（待复核））"
+     ]
+    },
+    "620:hit-2": {
+     "state": "match",
+     "diff_pixels": 0,
+     "total_pixels": 61440,
+     "incentive": "active",
+     "incentive_evidence": [
+      "实质状态跨采变化（Samus/滚/弹/敌域异前采）"
+     ]
+    },
+    "650:dying": {
+     "state": "match",
+     "diff_pixels": 0,
+     "total_pixels": 61440,
+     "incentive": "inactive",
+     "incentive_evidence": [
+      "实质状态跨采恒定（Samus/滚/弹/敌域全同前采）——激励证据缺失（假对照形（R3 标注（待复核））"
+     ]
+    },
+    "700:dead": {
+     "state": "match",
+     "diff_pixels": 0,
+     "total_pixels": 61440,
+     "incentive": "active",
+     "incentive_evidence": [
+      "实质状态跨采变化（Samus/滚/弹/敌域异前采）"
+     ]
+    },
+    "800:after": {
+     "state": "diff",
+     "diff_pixels": 237,
+     "total_pixels": 61440
+    }
+   }
+  },
+  "case-leftwalk-probe": {
+   "scenario_sha256": "701d0fb51e93436eb82f6b23b5d707487511a0faf3bb1718bc35c5be181b91d4",
+   "states": {
+    "420:game-in": {
+     "state": "match",
+     "diff_pixels": 0,
+     "total_pixels": 61440,
+     "incentive": "unknown",
+     "incentive_evidence": [
+      "首采（无前采对照）"
+     ]
+    },
+    "520:left-80": {
+     "state": "match",
+     "diff_pixels": 0,
+     "total_pixels": 61440,
+     "incentive": "active",
+     "incentive_evidence": [
+      "实质状态跨采变化（Samus/滚/弹/敌域异前采）"
+     ]
+    },
+    "620:left-180": {
+     "state": "match",
+     "diff_pixels": 0,
+     "total_pixels": 61440,
+     "incentive": "active",
+     "incentive_evidence": [
+      "实质状态跨采变化（Samus/滚/弹/敌域异前采）"
+     ]
+    },
+    "720:left-280": {
+     "state": "match",
+     "diff_pixels": 0,
+     "total_pixels": 61440,
+     "incentive": "active",
+     "incentive_evidence": [
+      "实质状态跨采变化（Samus/滚/弹/敌域异前采）"
+     ]
+    },
+    "790:left-350": {
+     "state": "match",
+     "diff_pixels": 0,
+     "total_pixels": 61440,
+     "incentive": "active",
+     "incentive_evidence": [
+      "实质状态跨采变化（Samus/滚/弹/敌域异前采）"
+     ]
+    },
+    "800:end": {
+     "state": "diff",
+     "diff_pixels": 403,
+     "total_pixels": 61440
+    }
+   }
+  },
+  "case-leftwalk-probe2": {
+   "scenario_sha256": "b90418ab3e2e45da82137eec298c6adcdecfb64d3e8a1081241ff4186ebd3691",
+   "states": {
+    "420:game-in": {
+     "state": "match",
+     "diff_pixels": 0,
+     "total_pixels": 61440,
+     "incentive": "unknown",
+     "incentive_evidence": [
+      "首采（无前采对照）"
+     ]
+    },
+    "620:l180": {
+     "state": "match",
+     "diff_pixels": 0,
+     "total_pixels": 61440,
+     "incentive": "active",
+     "incentive_evidence": [
+      "实质状态跨采变化（Samus/滚/弹/敌域异前采）"
+     ]
+    },
+    "820:l380": {
+     "state": "diff",
+     "diff_pixels": 12085,
+     "total_pixels": 61440
+    },
+    "1020:l580": {
+     "state": "diff",
+     "diff_pixels": 332,
+     "total_pixels": 61440
+    },
+    "1220:l780": {
+     "state": "diff",
+     "diff_pixels": 272,
+     "total_pixels": 61440
+    },
+    "1390:l950": {
+     "state": "diff",
+     "diff_pixels": 272,
+     "total_pixels": 61440
+    },
+    "1400:end": {
+     "state": "diff",
+     "diff_pixels": 58,
+     "total_pixels": 61440
+    }
+   }
+  },
+  "case-morphball-probe": {
+   "scenario_sha256": "bc733460103bcada956b584e262bcff967569b950cb6bf7eeee7d77419999f93",
+   "states": {
+    "420:game-in": {
+     "state": "diff",
+     "diff_pixels": 13642,
+     "total_pixels": 61440
+    },
+    "1128:wall-takeoff": {
+     "state": "diff",
+     "diff_pixels": 17565,
+     "total_pixels": 61440
+    },
+    "1134:wall-rise0a": {
+     "state": "diff",
+     "diff_pixels": 17604,
+     "total_pixels": 61440
+    },
+    "1140:wall-rise1": {
+     "state": "diff",
+     "diff_pixels": 17548,
+     "total_pixels": 61440
+    },
+    "1146:wall-rise1b": {
+     "state": "diff",
+     "diff_pixels": 17563,
+     "total_pixels": 61440
+    },
+    "1152:wall-rise2": {
+     "state": "diff",
+     "diff_pixels": 18203,
+     "total_pixels": 61440
+    },
+    "1158:wall-rise2b": {
+     "state": "diff",
+     "diff_pixels": 25102,
+     "total_pixels": 61440
+    },
+    "1164:wall-top": {
+     "state": "diff",
+     "diff_pixels": 31255,
+     "total_pixels": 61440
+    },
+    "1170:wall-overa": {
+     "state": "diff",
+     "diff_pixels": 34075,
+     "total_pixels": 61440
+    },
+    "1176:wall-over": {
+     "state": "diff",
+     "diff_pixels": 34586,
+     "total_pixels": 61440
+    },
+    "1182:wall-overb": {
+     "state": "diff",
+     "diff_pixels": 34636,
+     "total_pixels": 61440
+    },
+    "1188:pit-land": {
+     "state": "diff",
+     "diff_pixels": 34761,
+     "total_pixels": 61440
+    },
+    "1194:pit-landb": {
+     "state": "diff",
+     "diff_pixels": 40515,
+     "total_pixels": 61440
+    },
+    "1200:wall-jump": {
+     "state": "diff",
+     "diff_pixels": 40029,
+     "total_pixels": 61440
+    },
+    "1300:pit": {
+     "state": "diff",
+     "diff_pixels": 44028,
+     "total_pixels": 61440
+    },
+    "1460:pit-fall": {
+     "state": "diff",
+     "diff_pixels": 43333,
+     "total_pixels": 61440
+    },
+    "1520:pit-jump": {
+     "state": "diff",
+     "diff_pixels": 50233,
+     "total_pixels": 61440
+    },
+    "1560:ball-jump": {
+     "state": "diff",
+     "diff_pixels": 50050,
+     "total_pixels": 61440
+    },
+    "1620:on-pedestal": {
+     "state": "diff",
+     "diff_pixels": 49654,
+     "total_pixels": 61440
+    },
+    "1650:after-pickup": {
+     "state": "diff",
+     "diff_pixels": 49854,
+     "total_pixels": 61440
+    },
+    "1700:end": {
+     "state": "diff",
+     "diff_pixels": 49661,
+     "total_pixels": 61440
+    }
+   }
+  },
+  "case-scrollseam-probe": {
+   "scenario_sha256": "b5f78ab36e289d21c939b6220980a84008def6d3138fec2acfca9adf367dc457",
+   "states": {
+    "420:game-in": {
+     "state": "match",
+     "diff_pixels": 0,
+     "total_pixels": 61440,
+     "incentive": "unknown",
+     "incentive_evidence": [
+      "首采（无前采对照）"
+     ]
+    },
+    "470:scroll-r30": {
+     "state": "match",
+     "diff_pixels": 0,
+     "total_pixels": 61440,
+     "incentive": "inactive",
+     "incentive_evidence": [
+      "实质状态跨采恒定（Samus/滚/弹/敌域全同前采）——激励证据缺失（假对照形（R3 标注（待复核））"
+     ]
+    },
+    "500:scroll-r60": {
+     "state": "match",
+     "diff_pixels": 0,
+     "total_pixels": 61440,
+     "incentive": "active",
+     "incentive_evidence": [
+      "实质状态跨采变化（Samus/滚/弹/敌域异前采）"
+     ]
+    },
+    "530:scroll-r90": {
+     "state": "match",
+     "diff_pixels": 0,
+     "total_pixels": 61440,
+     "incentive": "inactive",
+     "incentive_evidence": [
+      "实质状态跨采恒定（Samus/滚/弹/敌域全同前采）——激励证据缺失（假对照形（R3 标注（待复核））"
+     ]
+    },
+    "560:scroll-r120": {
+     "state": "match",
+     "diff_pixels": 0,
+     "total_pixels": 61440,
+     "incentive": "inactive",
+     "incentive_evidence": [
+      "实质状态跨采恒定（Samus/滚/弹/敌域全同前采）——激励证据缺失（假对照形（R3 标注（待复核））"
+     ]
+    },
+    "590:scroll-r150": {
+     "state": "match",
+     "diff_pixels": 0,
+     "total_pixels": 61440,
+     "incentive": "inactive",
+     "incentive_evidence": [
+      "实质状态跨采恒定（Samus/滚/弹/敌域全同前采）——激励证据缺失（假对照形（R3 标注（待复核））"
+     ]
+    },
+    "620:scroll-r180": {
+     "state": "match",
+     "diff_pixels": 0,
+     "total_pixels": 61440,
+     "incentive": "active",
+     "incentive_evidence": [
+      "实质状态跨采变化（Samus/滚/弹/敌域异前采）"
+     ]
+    },
+    "650:scroll-r210": {
+     "state": "match",
+     "diff_pixels": 0,
+     "total_pixels": 61440,
+     "incentive": "inactive",
+     "incentive_evidence": [
+      "实质状态跨采恒定（Samus/滚/弹/敌域全同前采）——激励证据缺失（假对照形（R3 标注（待复核））"
+     ]
+    },
+    "680:scroll-r240": {
+     "state": "match",
+     "diff_pixels": 0,
+     "total_pixels": 61440,
+     "incentive": "inactive",
+     "incentive_evidence": [
+      "实质状态跨采恒定（Samus/滚/弹/敌域全同前采）——激励证据缺失（假对照形（R3 标注（待复核））"
+     ]
+    },
+    "700:scroll-end": {
+     "state": "match",
+     "diff_pixels": 0,
+     "total_pixels": 61440,
+     "incentive": "active",
+     "incentive_evidence": [
+      "实质状态跨采变化（Samus/滚/弹/敌域异前采）"
+     ]
+    },
+    "760:scroll-l40": {
+     "state": "match",
+     "diff_pixels": 0,
+     "total_pixels": 61440,
+     "incentive": "active",
+     "incentive_evidence": [
+      "实质状态跨采变化（Samus/滚/弹/敌域异前采）"
+     ]
+    },
+    "800:scroll-l80": {
+     "state": "diff",
+     "diff_pixels": 403,
+     "total_pixels": 61440
+    },
+    "840:scroll-l120": {
+     "state": "diff",
+     "diff_pixels": 13404,
+     "total_pixels": 61440
+    },
+    "880:end": {
+     "state": "diff",
+     "diff_pixels": 14443,
+     "total_pixels": 61440
+    }
+   }
+  },
+  "case-shootprobe-probe": {
+   "scenario_sha256": "84ce494fc556f1930e8fd1e3f0f66767493d8d1609b857d22fcb2d50d3fc5e05",
+   "states": {
+    "420:game-in": {
+     "state": "match",
+     "diff_pixels": 0,
+     "total_pixels": 61440,
+     "incentive": "unknown",
+     "incentive_evidence": [
+      "首采（无前采对照）"
+     ]
+    },
+    "810:fire-10": {
+     "state": "diff",
+     "diff_pixels": 263,
+     "total_pixels": 61440
+    },
+    "815:fire-15": {
+     "state": "diff",
+     "diff_pixels": 124,
+     "total_pixels": 61440
+    },
+    "825:fire-25": {
+     "state": "diff",
+     "diff_pixels": 190,
+     "total_pixels": 61440
+    }
+   }
+  }
+ },
+ "history": [
+  {
+   "ts": "2026-10-26T13:08:55+00:00",
+   "reason": "Task 6 引导（genesis）：锚定 2026-10-26 run-all 真跑矩阵逐采集点现状——case-001 match 1（420:game-in）/diff 6（游戏逻辑未 L3 一致现状，与 Task 5 矩阵同态）/blocked 0；三 sha 锚 rom=e6e6b701 scenario=23b52bdc 与 Task 5 真跑同值。确认无回退：match 集合从零起锚（只增不减），blocked 空集（只减不增）",
+   "match": 1,
+   "diff": 6,
+   "blocked": 0,
+   "cells_total": 7
+  },
+  {
+   "ts": "2026-10-29T13:12:10+00:00",
+   "reason": "确认无回退证据：①串行锁落地（60408e6a）后同树两轮 fresh 双腿 run-all（A=60408e6a check 窗/B=本轮）74 格逐点位级零翻转（l4_matrix_states 对照实录）；②l4 门禁三连窗（3c3fc111/60408e6a check+A/B 轮）match 48·diff 26·blocked 0 恒定；③旧基线仅锚 case-001 7 点（其一 match 点现态保持 match，无缩水）；④复核档 e9ca3957 记录的 hit-2/dead 会话间翻转出自串行锁落地前的多会话撞车窗（KB 第 5 员同窗），锁后未复现——锁后若复现按新证据走 FC 相位考证（BUG-089 时序族），不作容忍账。本锚同时解决 case-001 scenario_sha256 漂移重锚（23b52bdc→efdc8f3a，现定义两轮稳定）。",
+   "match": 48,
+   "diff": 26,
+   "blocked": 0,
+   "cells_total": 74
+  },
+  {
+   "ts": "2026-10-29T13:38:54+00:00",
+   "reason": "吸收 case-fcprobe 两新采集点（420:game-in/460:end 当日双腿跑 0px 全同，cdfe4fb2 check 窗矩阵）；其余 74 格态与本锚现值逐点不变（l4_ratchet_violations 单源复核通过）——确认无回退",
+   "match": 50,
+   "diff": 26,
+   "blocked": 0,
+   "cells_total": 76
+  },
+  {
+   "ts": "2026-10-29T15:51:53+00:00",
+   "reason": "case-fcprobe watch 扩展（FC 冻结修判据面）致 scenario_sha256 漂移重锚；435074f4 check 窗矩阵=两采集点 match 保持、全 76 格 match 集合零缩水——确认无回退",
+   "match": 50,
+   "diff": 26,
+   "blocked": 0,
+   "cells_total": 76
+  },
+  {
+   "ts": "2026-10-30T01:22:58+00:00",
+   "reason": "吸收 case-crawlprobe 六采集点（4 match/2 diff——像素面诚实 diff 为弹相位残族）；既有 76 格 match 集合零缩水（170f80f3 check 实录）——确认无回退",
+   "match": 54,
+   "diff": 28,
+   "blocked": 0,
+   "cells_total": 82
+  },
+  {
+   "ts": "2026-10-30T13:49:30+00:00",
+   "reason": "Steps 1-4 帧骨架对齐后重锚：case-crawlprobe/case-fcprobe scenario_sha256 漂移（sample_point spin-exit 仪器行——Step 0 commit 04cec81b）+采集点语义复核。确认无回退证据：run-all 新矩阵 match 54/diff 28/blocked 0 与原锚持平（28 diff=状态账登记的结构性项——旧定义采集点不再复采 7+渲染腿缺失 6+sc-title-menu2 迭代态 4，非游戏分歧）；游戏收敛面由 matched-seam 对拍正向证实（fcprobe 5 字段×445 帧全同、crawlprobe MR/SS/SY/T3 全同——cf7b999b 提交实录）。",
+   "match": 54,
+   "diff": 28,
+   "blocked": 0,
+   "cells_total": 82
+  },
+  {
+   "ts": "2026-11-02T07:02:44+00:00",
+   "reason": "v2 A-lite 波锚定：morphball 21 格（全 diff（现状锚（非 match 声称）））+case-001 scenario_sha256 重锚（合法演进（goal 轮80 弹态采集点增补+我方 f815/825（03c72bfb）））——未锚定升级阻断前置件",
+   "match": 54,
+   "diff": 49,
+   "blocked": 0,
+   "cells_total": 103
+  },
+  {
+   "ts": "2026-11-02T07:04:42+00:00",
+   "reason": "v2 A-lite states schema 升级重写：对象形（state+diff_pixels/total_pixels 预留字段（本波写入不判定（R1 冻结（A-full 铺面））））",
+   "match": 54,
+   "diff": 49,
+   "blocked": 0,
+   "cells_total": 103
+  }
+ ]
 }

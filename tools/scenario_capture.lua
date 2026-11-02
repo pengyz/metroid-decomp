@@ -97,8 +97,27 @@ local function readByte(addr)
 end
 
 local function readRange(fromAddr, toAddr)
+  -- 【2026-11-02 吞吐修（API 实证：emu=read/read16/read32/readWord（无 readBytes））】
+  -- read32 4B/调（IPC 10240→2560 次/帧（4x））——逐字节 readByte 10240 次/帧（lua↔emu
+  -- IPC）⇒emu 爬行（~58/1200 帧迹（20s 死））——余 2.5x 需 wram 分片（待 diff_traces
+  -- 镜像（吞吐卡续件））。
   local parts = {}
-  for a = fromAddr, toAddr do parts[#parts + 1] = hex2(readByte(a)) end
+  local a = fromAddr
+  local last4 = toAddr - 3
+  while a <= last4 do
+    local ok, w = pcall(emu.read32, a, 8)
+    if ok and w then
+      parts[#parts + 1] = hex2(w & 0xFF) .. hex2((w >> 8) & 0xFF) .. hex2((w >> 16) & 0xFF) .. hex2((w >> 24) & 0xFF)
+      a = a + 4
+    else
+      parts[#parts + 1] = hex2(readByte(a))
+      a = a + 1
+    end
+  end
+  while a <= toAddr do
+    parts[#parts + 1] = hex2(readByte(a))
+    a = a + 1
+  end
   return table.concat(parts)
 end
 
@@ -166,6 +185,8 @@ local function dumpPpu(tag)
     parts[#parts + 1] = hex2(ctrl)
   end
   f:write(table.concat(parts) .. "\n")
+  f:flush()  -- 【2026-11-02】逐帧 flush——emu.stop 不退进程（Unix）⇒SIGKILL 丢缓冲
+             -- 尾（行截断（trace_lines 55/194/1183 不定量））——落盘即写。
   f:close()
   return p
 end
@@ -582,13 +603,19 @@ local function sampleTrace()
     wparts[#wparts + 1] = jstr(w.label) .. ":" .. readByte(tonumber(w.addr, 16))
   end
   for _, r in ipairs(PLAN.watch_ranges) do
-    wparts[#wparts + 1] = jstr(r.label) .. ':"' .. readRange(tonumber(r.from, 16), tonumber(r.to, 16)) .. '"'
+    -- 【吞吐卡分片】wram shard=4（每 4 帧写）——余帧缺键（diff_traces 分片镜像）。
+    local shard = tonumber(r.shard) or 1
+    if frame % shard == 0 then
+      wparts[#wparts + 1] = jstr(r.label) .. ':"' .. readRange(tonumber(r.from, 16), tonumber(r.to, 16)) .. '"'
+    end
   end
   local line = '{"f":' .. frame .. ',"w":{' .. table.concat(wparts, ",") .. "}"
   if PLAN.ramframe then
     line = line .. ',"ram":"' .. readRange(0x0000, 0x07FF) .. '"'
   end
   traceF:write(line .. "}\n")
+  traceF:flush()  -- 【2026-11-02】逐帧 flush（traceF 正位）——SIGKILL 丢缓冲尾⇒DONE
+                  -- 标记/迹尾截断（done=False（未完成假象））。
   nTrace = nTrace + 1
 
   -- r3：$8000 窗口指纹时间线（随采样点）

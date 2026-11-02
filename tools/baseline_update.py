@@ -65,7 +65,7 @@ def l4_update(matrix_path: Path, baseline_path: Path, reason: str) -> dict:
         if viol:
             raise gates_cli.RatchetError(
                 "l4 ratchet 基线拒绝下调（只升不降）: " + "；".join(viol))
-    states = gates_cli.l4_matrix_states(matrix)
+    states = gates_cli.l4_matrix_cells(matrix)  # v2 A-lite：对象形（state+diff/total_pixels（预留））
     row_scen = {str(r.get("case")): r.get("scenario_sha256")
                 for r in (matrix.get("rows") or [])}
     doc = {

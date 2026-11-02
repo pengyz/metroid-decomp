@@ -385,7 +385,12 @@ def parse_scenario(path: Path) -> dict:
             if int(a_s, 16) > int(b_s, 16):
                 raise err("watch_range 起点必须 <= 止点")
             label = args[1] if len(args) == 2 else f"{a_s}-{b_s}"
-            plan["watch_ranges"].append({"from": a_s, "to": b_s, "label": label})
+            # 【吞吐卡分片（2026-11-02）】wram 大区间 shard=4（每 4 帧写一次）——IPC
+            # 10240→1024 次/帧（10x（read32 4x+分片 2.5x））——PLAN 携带（executor/
+            # diff_traces 同源消费（分片镜像））。
+            shard = 4 if label == "wram" else 1
+            plan["watch_ranges"].append({"from": a_s, "to": b_s, "label": label,
+                                         "shard": shard})
         elif op == "ramframe":
             if len(args) != 1 or args[0] not in ("on", "off"):
                 raise err("ramframe 用法: ramframe on|off")
@@ -929,6 +934,18 @@ def run_scenario(name_or_path: str, timeout_s: float = 1800.0, keep_gen: bool = 
                 try:
                     xvfb.kill()
                 except Exception:
+                    pass
+        # 【批内逐案资源自清（2026-11-02（裁定触发件（最薄实现）））】每案毕释放本
+        # run 自有 Xvfb 的 socket/lock——**归属判**（本 run Popen 子进程（wait/kill 后
+        # 进程已死=归属死判（非裸 PID 启发（liveness 精判约束不变（裁定③））））——
+        # 批跑（run-all 12 case×Xvfb）socket 累积⇒后段全占/连死显示⇒采点缺（blocked
+        # 波动）根因面。
+        if display and not IS_WINDOWS:
+            n = display.lstrip(":")
+            for stale in (Path(f"/tmp/.X{n}-lock"), Path(f"/tmp/.X11-unix/X{n}")):
+                try:
+                    stale.unlink()
+                except OSError:
                     pass
     wall = round(time.time() - t0, 1)
 

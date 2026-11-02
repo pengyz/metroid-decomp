@@ -1057,7 +1057,13 @@ def load_l4_ratchet_baseline(path: Path | None = None) -> dict:
         if not isinstance(entry, dict) or not isinstance(entry.get("states"), dict):
             raise BaselineFormatError(f"{rel(p)}: {case} states 缺/非对象（fail-closed）")
         for key, state in entry["states"].items():
-            if state not in L4_CELL_STATES:
+            # 【v2 A-lite】states 值=str|dict（对象形（state+diff_pixels/total_pixels 预留
+            # +incentive 标注（R3）））——判定只取 state（字段预留不判定（R1 冻结））。
+            if isinstance(state, dict):
+                state_val = state.get("state")
+            else:
+                state_val = state
+            if state_val not in L4_CELL_STATES:
                 raise BaselineFormatError(
                     f"{rel(p)}: {case}/{key} 状态 {state!r} ∉ 三态 {L4_CELL_STATES}（fail-closed）")
     return doc
@@ -1069,7 +1075,29 @@ def l4_matrix_states(matrix: dict) -> dict[str, dict[str, str]]:
     for row in matrix.get("rows", []) or []:
         states = out.setdefault(str(row.get("case")), {})
         for cell in row.get("cells", []) or []:
-            states[f"{cell.get('frame')}:{cell.get('tag')}"] = cell.get("state")
+            states[f"{cell.get('frame')}:{cell.get('tag')}"] = _cell_state(cell)
+    return out
+
+
+def _cell_state(cell: dict) -> str:
+    """格状态归一化（str|dict 兼容（v2 A-lite states schema 升级））。"""
+    v = cell.get("state")
+    return v.get("state") if isinstance(v, dict) else v
+
+
+def l4_matrix_cells(matrix: dict) -> dict[str, dict[str, dict]]:
+    """矩阵 rows/cells → {case: {key: {state,diff_pixels,total_pixels}}}（v2 A-lite 预留
+    字段（diff_pixels/total_pixels 本波写入不判定——A-full 铺面（R1 冻结）））。"""
+    out: dict[str, dict[str, dict]] = {}
+    for row in matrix.get("rows", []) or []:
+        cells = out.setdefault(str(row.get("case")), {})
+        for cell in row.get("cells", []) or []:
+            key = f"{cell.get('frame')}:{cell.get('tag')}"
+            cells[key] = {
+                "state": _cell_state(cell),
+                "diff_pixels": cell.get("diff_pixels"),
+                "total_pixels": cell.get("total_pixels"),
+            }
     return out
 
 
@@ -1089,18 +1117,39 @@ def l4_ratchet_violations(baseline: dict, matrix: dict) -> list[str]:
     for case in sorted(base_cases):  # ① match 集合只增不减
         bstates = (base_cases.get(case) or {}).get("states", {}) or {}
         for key in sorted(bstates):
-            if bstates[key] == "match" and cur.get(case, {}).get(key) != "match":
+            if _cell_state({"state": bstates[key]}) == "match" and cur.get(case, {}).get(key) != "match":
                 viol.append(
                     f"{case}/{key}: match 集合缩水（基线 match → 现态 "
                     f"{cur.get(case, {}).get(key, '采集点消失')}）——回退 FAIL")
     for case in sorted(cur):  # ② blocked 只减不增
         for key in sorted(cur[case]):
             if (cur[case][key] == "blocked"
-                    and (base_cases.get(case) or {}).get("states", {}).get(key) != "blocked"):
+                    and _cell_state({"state": (base_cases.get(case) or {}).get("states", {}).get(key)}) != "blocked"):
                 viol.append(
                     f"{case}/{key}: 新增 blocked（基线 "
                     f"{(base_cases.get(case) or {}).get('states', {}).get(key, '未锚定')}"
                     f" → 现态 blocked）——回退 FAIL（blocked 只减不增）")
+    # 【v2 A-lite 升级（2026-11-02）】③未锚定采集点→阻断（新格须同 commit 锚定
+    # （tools/baseline_update.py l4）——否则其回退对 ratchet 不可见（notes 期为提示
+    # （lead 定稿升级阻断））。
+    for case in sorted(cur):
+        bs = (base_cases.get(case) or {}).get("states", {}) or {}
+        for key in sorted(cur[case]):
+            if key not in bs:
+                viol.append(
+                    f"{case}/{key}: 未锚定采集点（现态 {cur[case][key]}）——"
+                    f"新格必须同 commit 锚定（baseline_update l4）——v2 A-lite③阻断")
+    # ④scenario_sha256 漂移→阻断（采集点语义变——核合法性后重锚留痕）。
+    row_scen = {str(r.get("case")): r.get("scenario_sha256")
+                for r in (matrix.get("rows") or [])}
+    for case in sorted(cur):
+        if (case in base_cases
+                and (base_cases.get(case) or {}).get("scenario_sha256") != row_scen.get(case)):
+            viol.append(
+                f"{case}: scenario_sha256 漂移（基线 "
+                f"{str((base_cases.get(case) or {}).get('scenario_sha256'))[:12]}… vs 现 "
+                f"{str(row_scen.get(case))[:12]}…）——核变更合法性后 baseline_update l4 "
+                f"重锚留痕——v2 A-lite④阻断")
     return viol
 
 
@@ -1108,25 +1157,9 @@ def l4_ratchet_notes(baseline: dict, matrix: dict) -> list[str]:
     """非违规但必须显式可见的面（防静默）：未锚定采集点（新增 match/diff——须
     tools/baseline_update.py l4 锁定，否则其后续回退对 ratchet 不可见）+ 用例定义变更
     （scenario_sha256 漂移=采集点语义变，人工确认无回退后重锚）。"""
-    notes: list[str] = []
-    base_cases = baseline.get("cases", {}) or {}
-    cur = l4_matrix_states(matrix)
-    unanchored = [f"{case}/{key}={cur[case][key]}"
-                  for case in sorted(cur) for key in sorted(cur[case])
-                  if key not in ((base_cases.get(case) or {}).get("states", {}) or {})]
-    if unanchored:
-        notes.append(
-            f"未锚定采集点 {len(unanchored)} 个（新增——请 tools/baseline_update.py l4 锁定，"
-            f"否则其回退不可见）: " + "、".join(unanchored[:8]))
-    row_scen = {str(r.get("case")): r.get("scenario_sha256")
-                for r in (matrix.get("rows") or [])}
-    drift = [case for case in sorted(cur)
-             if case in base_cases
-             and (base_cases.get(case) or {}).get("scenario_sha256") != row_scen.get(case)]
-    if drift:
-        notes.append(f"用例定义变更（scenario_sha256 漂移）: {', '.join(drift[:6])}"
-                     f"——确认无回退后 baseline_update l4 重锚")
-    return notes
+    # 【v2 A-lite】未锚定/scenario_sha256 漂移已升 l4_ratchet_violations 阻断——
+    # notes 保留其余显式可见面（防静默）。
+    return []
 
 
 def l4_matrix_fingerprint(path: Path) -> tuple | None:
@@ -2766,7 +2799,8 @@ def cmd_selftest(_args) -> int:
             (tmp / "data" / "status").mkdir(parents=True)
             (tmp / "data" / "status" / "l4_ratchet_baseline.json").write_text(
                 json.dumps({"schema": "l4-ratchet/v1", "rom_sha256": "r" * 64,
-                            "cases": {"c": {"states": {"1:a": "match"}}}}, ensure_ascii=False),
+                            "cases": {"c": {"scenario_sha256": "s" * 64,
+                                           "states": {"1:a": "match"}}}}, ensure_ascii=False),
                 encoding="utf-8")
 
             def _matrix18():
