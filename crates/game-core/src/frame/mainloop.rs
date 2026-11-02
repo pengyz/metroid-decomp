@@ -63,10 +63,11 @@ pub fn main_loop_iter(mem: &mut FrameMemory) {
     // 【goal-轮56 证伪更正（§3.6）】FC 前置增量（轮26 形重试）L4 判定证伪——match 骤降
     // （1/13 等 vs 基线 55/97）⇒回退。金腿 FC=+1 恒差（ram.hex 直证）=**症状非根**——
     // FC 依赖行为（gate/toggle/相位）随移全错；真根=FC 读面各自的相位语义（非全局移）。
-    if !mem.title_no_return {
+    if !mem.title_no_return && !mem.fc_inced_this_tick {
         mem.write_ram(FRAME_COUNT, mem.read_ram(FRAME_COUNT).wrapping_add(1));
     }
     mem.title_no_return = false;
+    mem.fc_inced_this_tick = false;
     mem.write_ram(NMI_STATUS, 0); // 清 0（spin 入口）
 }
 
@@ -4035,5 +4036,56 @@ mod tests_crawl_trace {
             px = nx; py = ny;
         }
         assert!(travel >= 5, "路径长≥5px（50 帧振荡爬行（净≈0（角转回转形））——实测 {}）", travel);
+    }
+}
+
+// ===== f918 双加探针（TDD（根修①（逐迭代 FC 增计）））=====
+
+#[cfg(test)]
+mod tests_fc_per_iter {
+    //! 判径（f918 注载根因（span_fc×滚动迭代双加））：普通游戏迭代 FC 增=**恰 1**/迭代
+    //! （title 完成拍哨兵（cursor 0xFF）=恰 1/臂末迭代）——双加=2⇒红。
+    use super::*;
+    use crate::frame::FrameMemory;
+
+    /// 真 main_loop_iter FC 增计（10 轮⇒FC 增 ≤10（恰 1/迭代（title 冻臂可少））——
+    /// 双加=20⇒红（f918 根因实锤）。
+    #[test]
+    fn fc_increments_once_per_iteration() {
+        let mut m = FrameMemory::default();
+        m.write_ram(crate::ram_map::SAMUS_GEAR, 0xFF); // 全能力（render 面需）
+        let f0 = m.read_ram(FRAME_COUNT);
+        for _ in 0..10 {
+            main_loop_iter(&mut m);
+        }
+        let df = m.read_ram(FRAME_COUNT).wrapping_sub(f0) as u32;
+        assert!(df <= 10, "FC 增 ≤10/10 轮（双加=20（f918 根因））——实测 {}", df);
+        assert!(df >= 8, "FC 增 ≥8/10 轮（全冻=0 不达帧节律）——实测 {}", df);
+    }
+
+    /// 【根修③TDD】span_fc 收口 tick=恰 1 增（收口+尾 inc 同 tick=2⇒红（±1 陀螺源））。
+    #[test]
+    fn span_fc_drain_tick_single_inc() {
+        let mut m = FrameMemory::default();
+        m.write_ram(crate::ram_map::SAMUS_GEAR, 0xFF);
+        // span_fc 置位+门队列 1 项（title 0x00 臂形（bridge:95））——drain tick=收口点
+        m.iter_span_fc = true;
+        m.iter_gates = vec![1];
+        let f0 = m.read_ram(FRAME_COUNT);
+        // drain tick（门队列排空（end_of_tick_gate 收口（仅消费旗（根修③（去 inc）））
+        // +尾 inc（:67 单增（asm prg7:207）））——同 tick 恰 1
+        m.write_ram(crate::ram_map::NMI_STATUS, 0);
+        let mut fc_inced = false;
+        if m.iter_span_fc {
+            m.iter_span_fc = false; // 收口消费
+            let fc = m.read_ram(FRAME_COUNT).wrapping_add(1);
+            m.write_ram(FRAME_COUNT, fc); // 收口 +1（defer 单增唯一源（根修③））
+            fc_inced = true;
+        }
+        if !m.title_no_return && !fc_inced {
+            m.write_ram(FRAME_COUNT, m.read_ram(FRAME_COUNT).wrapping_add(1));
+        }
+        let df = m.read_ram(FRAME_COUNT).wrapping_sub(f0);
+        assert_eq!(df, 1, "drain tick 恰 1 增（双加=2（±1 陀螺源））——实测 {}", df);
     }
 }

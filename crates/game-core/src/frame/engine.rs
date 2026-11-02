@@ -172,10 +172,15 @@ impl FrameEngine {
     fn end_of_tick_gate(&mut self) {
         if self.mem.iter_gates.is_empty() {
             self.mem.write_ram(crate::ram_map::NMI_STATUS, 0);
+            // 【根修③（2026-11-02）】span_fc 收口 inc（**defer 单增唯一源**（span 尾
+            // skip 期 tail 不 inc（title_no_return）））——收口 tick 尾 inc 跳（fc_inced
+            // 旗（mainloop:67 门）——旧收口 inc+尾 inc 同 tick=+2（±1 陀螺源（B2 签名））
+            // ——TDD tests_fc_per_iter::span_fc_drain_tick_single_inc（红→绿）。
             if self.mem.iter_span_fc {
                 self.mem.iter_span_fc = false;
                 let fc = self.mem.read_ram(crate::ram_map::FRAME_COUNT).wrapping_add(1);
                 self.mem.write_ram(crate::ram_map::FRAME_COUNT, fc);
+                self.mem.fc_inced_this_tick = true; // 尾 inc 跳（单增（收口覆盖））
             }
         } else {
             let g = self.mem.iter_gates.remove(0); // 队列 ≤8 项（窗长界）——O(n) 无碍

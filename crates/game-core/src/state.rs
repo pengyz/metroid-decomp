@@ -50,6 +50,8 @@ pub struct FrameMemory {
     /// span 尾 FC 收尾旗（`inc FrameCount`（asm prg7:207 每迭代一次）延至迭代真正完成点
     /// ——UpdateAge FC==0 相位保真）。
     pub iter_span_fc: bool,
+    /// 【根修③】收口 tick FC 已增旗（尾 inc 跳（单增（span 收口覆盖）））。
+    pub fc_inced_this_tick: bool,
     /// APU 寄存器写捕获（$4000-$4017——壳层音频面消费源；驱动每帧 drain 后清）。
     pub apu_log: Vec<(u16, u8)>,
     /// 手柄 1 输入面（场景驱动；boot-title=无输入 0）。
@@ -64,7 +66,7 @@ impl Default for FrameMemory {
     fn default() -> Self {
         Self { ram: [0; 0x800], wram: [0; 0x2000], regs: Registers::default(), nmi_enabled: false,
                title_cursor: 0, title_cursor_phase: 0, title_spin: 0, title_no_return: false,
-               iter_gates: Vec::new(), iter_span_left: 0, iter_span_fc: false,
+               iter_gates: Vec::new(), iter_span_left: 0, iter_span_fc: false, fc_inced_this_tick: false,
                apu_log: Vec::new(),
                joy1: 0, joy2: 0,
                render: RenderState::default() }

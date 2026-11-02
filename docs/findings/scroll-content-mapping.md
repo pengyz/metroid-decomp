@@ -244,3 +244,19 @@ ScrollLeft（$E6A7）=room-switch 分支+dec ScrollX+CheckUpdateNameTable（thre
 【根修方向】列流送相位 FC 化（frame-gate/bog 面 FC 依赖）⇒**相位去 FC 化**（asm 忠实
 （threshold 按 ScrollX（非 FC））——与 db745dbd 的 FC 对齐**共存**（两者皆 asm 忠实
 （旧 +6=补偿巧合（双修后相位应与 emu 全合）））。
+
+
+## 10. 根修③（span_fc 收口双加）+残差定位（2026-11-02）
+
+【根修③（span_fc 收口双加（±1 陀螺源之一））】drain tick=收口 inc+尾 inc 同 tick=+2
+（TDD 红（tests_fc_per_iter::span_fc_drain_tick_single_inc（2⇒1 实锤））——修=收口
++1（defer 单增唯一源（span 尾 skip 期 tail 不 inc））+尾 inc 加 fc_inced_this_tick 跳
+（同 tick 单增）——TDD 红→绿（431 过）。
+【f918 双加排除】真 main_loop_iter 10 轮 FC=≤10（恰 1/迭代）——db745dbd 门修后无
+双加（旧根已修）。
+【l380 残差（判据未达）】l380=12085px（**不变**（根修③不涉此相位））——±1 残=
+**menu→game 冻结 FC**（db745dbd 注载「menu→game 冻结走既有 span 门（iter_span_fc）
+**不受此管**」——span_fc set 仅 title_bridge:95（0x00 臂（boot!））——menu→game（非
+0x00）span_fc 未置⇒冻结期 FC 计数径异⇒±1（B2 签名源））。
+【深径（续）】menu→game 冻结 FC 对读（emu f311-313 冻 3 帧（rust 冻期 tail inc 现态）
+）→冻结 FC 对齐根修+TDD→l380<700 判据。
