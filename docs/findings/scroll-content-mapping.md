@@ -226,3 +226,21 @@ commit（cf7b999b/1120871a/4ec7178d/dfecadee/db745dbd 首查）→左滚 wrap �
 
 
 > 【B1 工件归档】analysis/_gen/b1-verdict-artifacts.md（worktree l4report 626 记录+PNG sha 对照（should-fix（防 /tmp 失）））。
+
+
+## 9. bisect 定谳（2026-11-02（引入 commit=db745dbd（FC 冻结修）））
+
+【五候选+母验（B1 同法（worktree 直渲））】dfecadee=620px（好）/db745dbd=**16771px**
+（首坏）/cf7b999b=15668/1120871a=12122/4ec7178d=12113（后续部分缓解（HEAD=12085））——
+母 2cebd300=**620px（好）**——**db745dbd 定罪铁证**（母好→子坏）。
+【引入机理】db745dbd=FC 冻结修（title 内旋族臂不返回帧不自增 FrameCount（fcprobe 0
+分歧））——FC 时序变（旧形过量 +6（两窗 3+3）⇒修后对齐）⇒**FC 域陀螺**（B2 签名
+全吻：$2D ±1→$FD ±1（scroll 计数相位）→$FF bit2（列流送相位）→背景 2px 相位）——
+l380 的 620px（旧 +6 FC 相位恰合 f820 点）→12085px（新 emu 对齐 FC 相位错位）——
+**旧相位吻合=巧合补偿**（+6 过量恰好补 boot 偏移）。
+【wrap 径 asm 对读（进行中）】ScrollRight（$E6D2）wrap=FF→00 toggle（rust 同形 ✓）；
+ScrollLeft（$E6A7）=room-switch 分支+dec ScrollX+CheckUpdateNameTable（threshold
+（ScrollX&7（左==7）））——l380 相位=wrap 邻域（scrollseam f800 $FD=00（wrap 点））。
+【根修方向】列流送相位 FC 化（frame-gate/bog 面 FC 依赖）⇒**相位去 FC 化**（asm 忠实
+（threshold 按 ScrollX（非 FC））——与 db745dbd 的 FC 对齐**共存**（两者皆 asm 忠实
+（旧 +6=补偿巧合（双修后相位应与 emu 全合）））。
