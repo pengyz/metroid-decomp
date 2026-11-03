@@ -489,8 +489,9 @@ fn set_samus_run(mem: &mut FrameMemory) {
     } else if cur == OBJ_ANIM_SAMUS_PNT_UP {
         1
     } else {
-        // 原跑动⇒转身过渡（SetSamusNextAnim(Front)）
+        // 原跑动⇒转身过渡（SetSamusNextAnim(Front)——CF6E：animIndex←A+animDelay←0）
         mem.write_ram(ANIM_RESET_INDEX + 1, OBJ_ANIM_SAMUS_FRONT);
+        mem.write_ram(ANIM_RESET_INDEX.wrapping_sub(1), 0); // animDelay←0（H1 修——漏写致走表延迟）
         0
     };
     let anim = [OBJ_ANIM_SAMUS_RUN, OBJ_ANIM_SAMUS_RUN_PNT_UP][x];
@@ -1426,4 +1427,46 @@ mod tests_fire_probe {
         assert_eq!(&sd[off..off + 5], &[0x04, 0x02, 0x02, 0x30, 0xFF], "记录体逐字节（ROM $890A）");
     }
 
+}
+
+// ===== H1 animIndex 起点 TDD 锚（r14 配套——转身 animDelay←0 漏写修）=====
+
+#[cfg(test)]
+mod tests_h1_turnaround_delay {
+    //! asm 语义锚：SetSamusRun（CC98）转身过渡=`jsr SetSamusNextAnim(Front)`——
+    //! SetSamusNextAnim（CF6E）=animIndex←A+**animDelay←0**（立即生效）。
+    //! 旧形漏写 animDelay←0⇒转身后续走表延迟 1-3 帧（animIndex 滞后根）。
+    use super::*;
+    use crate::state::FrameMemory;
+
+    /// 转身过渡（原跑动→反向）⇒animIndex←Front(4) + animDelay←0（SetSamusNextAnim 语义）。
+    #[test]
+    fn turnaround_sets_animdelay_zero() {
+        let mut m = FrameMemory::default();
+        // 模拟原跑动状态：animResetIndex=Run(0)，animDelay=3（Run 走表中的 delay）
+        m.write_ram(ANIM_RESET_INDEX, 0x00); // Run
+        m.write_ram(ANIM_RESET_INDEX + 1, 0x02); // animIndex (in Run walk)
+        m.write_ram(ANIM_RESET_INDEX.wrapping_sub(1), 3); // animDelay=3
+        m.write_ram(crate::ram_map::SAMUS_DIR, 0); // facing right
+        // 触发转身（dir 变为 left=1）
+        m.write_ram(crate::ram_map::JOY1_STATUS, 0x02); // LEFT pressed
+        set_samus_run(&mut m);
+        assert_eq!(m.read_ram(ANIM_RESET_INDEX.wrapping_sub(1)), 0,
+            "转身过渡⇒animDelay←0（SetSamusNextAnim 语义——漏写=走表延迟根）");
+    }
+
+    /// 非转身（Stand→Run 起步）⇒animResetIndex 直写 Run（无 Front 过渡——无 delay 重置需求）。
+    #[test]
+    fn stand_to_run_no_front_transition() {
+        let mut m = FrameMemory::default();
+        m.write_ram(ANIM_RESET_INDEX, 0x07); // Stand (animResetIndex)
+        m.write_ram(ANIM_RESET_INDEX + 1, 0x08); // animIndex
+        m.write_ram(ANIM_RESET_INDEX.wrapping_sub(1), 3); // animDelay=3
+        m.write_ram(crate::ram_map::SAMUS_DIR, 0);
+        set_samus_run(&mut m);
+        // Stand→Run：animResetIndex←Run(0)，无 Front 过渡（走表继续递减）
+        assert_eq!(m.read_ram(ANIM_RESET_INDEX), 0x00, "Stand→Run⇒animResetIndex←Run");
+        assert_eq!(m.read_ram(ANIM_RESET_INDEX.wrapping_sub(1)), 3,
+            "Stand→Run⇒animDelay 不重置（非转身过渡）");
+    }
 }
