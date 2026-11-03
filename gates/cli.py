@@ -1101,13 +1101,16 @@ def l4_matrix_cells(matrix: dict) -> dict[str, dict[str, dict]]:
     return out
 
 
-def l4_ratchet_violations(baseline: dict, matrix: dict, for_update: bool = False) -> list[str]:
+def l4_ratchet_violations(baseline: dict, matrix: dict, for_update: bool = False, for_rebase: bool = False) -> list[str]:
     """逐采集点 ratchet 判定（纯函数，自检/pytest 可注入）→ 回退违规清单（空=守住）。
 
     规则（决策逐字）：① match 集合只增不减——基线锚 match 的采集点现态≠match ⇒ 换坏回退；
     ② blocked 只减不增——现态 blocked 而基线未锚 blocked ⇒ 新增回退。另 rom 锚漂移 ⇒
     fail-closed 违规（对的不是同一只 ROM=对拍对象失真）。diff 持平/改善不违规（现状参考）。
 
+    for_rebase=True（**仅** tools/baseline_update.py l4 --rebase 语义重基）：①match 缩水
+    也不入拒绝集——采集语义变更（如截取点双相位修）后的真值重基（A-full 设计「真值首锚+
+    嫌疑点标记」执行面）；拒绝集=②新增 blocked+rom 锚漂移。强制 reason+evidence 留痕。
     for_update=True（**仅** tools/baseline_update.py 锚定预检）：③未锚定格/④scenario
     漂移不计入拒绝集——二者的处方恰是 baseline_update 重锚（③「新格必须同 commit 锚定
     （baseline_update l4）」逐字）；否则锚定工具被自己要解的 ③ 拦死=自锁（2026-11-03
@@ -1121,13 +1124,15 @@ def l4_ratchet_violations(baseline: dict, matrix: dict, for_update: bool = False
             f"{str(matrix.get('rom_sha256'))[:12]}…）——fail-closed 对拍对象失真")
     base_cases = baseline.get("cases", {}) or {}
     cur = l4_matrix_states(matrix)
-    for case in sorted(base_cases):  # ① match 集合只增不减
-        bstates = (base_cases.get(case) or {}).get("states", {}) or {}
-        for key in sorted(bstates):
-            if _cell_state({"state": bstates[key]}) == "match" and cur.get(case, {}).get(key) != "match":
-                viol.append(
-                    f"{case}/{key}: match 集合缩水（基线 match → 现态 "
-                    f"{cur.get(case, {}).get(key, '采集点消失')}）——回退 FAIL")
+    # 【语义重基】for_rebase 跳过①（采集语义变更后真值重基——A-full「真值首锚」执行面）
+    if not for_rebase:
+        for case in sorted(base_cases):  # ① match 集合只增不减
+            bstates = (base_cases.get(case) or {}).get("states", {}) or {}
+            for key in sorted(bstates):
+                if _cell_state({"state": bstates[key]}) == "match" and cur.get(case, {}).get(key) != "match":
+                    viol.append(
+                        f"{case}/{key}: match 集合缩水（基线 match → 现态 "
+                        f"{cur.get(case, {}).get(key, '采集点消失')}）——回退 FAIL")
     for case in sorted(cur):  # ② blocked 只减不增
         for key in sorted(cur[case]):
             if (cur[case][key] == "blocked"
@@ -1142,7 +1147,7 @@ def l4_ratchet_violations(baseline: dict, matrix: dict, for_update: bool = False
     # 【2026-11-03 自锁修复】for_update 路径跳过③④——锚定工具的预检若含③，
     # 则「新格必须同 commit 锚定」的处方被自己拦死（walkfcprobe 5 新格实测全拒）。
     # gate_l4（for_update=False 缺省）全集阻断不变。
-    if not for_update:
+    if not for_update and not for_rebase:
         for case in sorted(cur):
             bs = (base_cases.get(case) or {}).get("states", {}) or {}
             for key in sorted(cur[case]):

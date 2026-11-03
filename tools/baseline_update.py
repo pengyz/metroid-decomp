@@ -37,7 +37,7 @@ def _gates_cli():
     return mod
 
 
-def l4_update(matrix_path: Path, baseline_path: Path, reason: str) -> dict:
+def l4_update(matrix_path: Path, baseline_path: Path, reason: str, rebase: bool = False, evidence: str = "") -> dict:
     """L4 逐采集点 ratchet 基线唯一写入口（Task 6）：只升不降 + 强制 reason 留痕。
 
     - 矩阵必须是 run-all 产物（generated_by 契约，锚不可信拒更新）；
@@ -45,12 +45,18 @@ def l4_update(matrix_path: Path, baseline_path: Path, reason: str) -> dict:
       （match 缩水/新增 blocked/rom 锚漂移）⇒ 拒绝；缺旧基线=genesis 引导；
     - states 重锚**当前矩阵逐采集点**——工具授权的更新永不丢 match 锚（缩水即拒），
       防「删采集点逃逸」；人工重定义采集点须在 reason 写明确认无回退的证据；
+    - rebase=True（**语义重基**——A-full「真值首锚」执行面）：采集语义变更（如截取点
+      双相位修）后真值重基；①match 缩水不拒（for_rebase）；强制 --evidence 留痕
+      （违者拒）；history 记 kind=rebase（审计可见）。gate_l4 侧全集阻断不变。
     - history 追加 {ts, reason, match/diff/blocked/cells_total} 留痕（基线说明面）。
     """
     reason = (reason or "").strip()
     if not reason:
         raise ValueError("基线更新必须 --reason 留说明"
                          "（AGENTS.md §2：更新基线需写明『确认无回退』的证据）")
+    if rebase and not (evidence or "").strip():
+        raise ValueError("语义重基必须 --evidence 留 A 级证据指针（AGENTS §3——"
+                         "rebase=真值重基非容忍账，无证据不立）")
     gates_cli = _gates_cli()
     matrix_path = Path(matrix_path)
     baseline_path = Path(baseline_path)
@@ -65,7 +71,7 @@ def l4_update(matrix_path: Path, baseline_path: Path, reason: str) -> dict:
         # =①②+rom 锚漂移。③未锚定格/④scenario 漂移不拒——其处方恰是本次重锚
         # （③「新格必须同 commit 锚定（baseline_update l4）」逐字），否则自锁
         # （2026-11-03 walkfcprobe 5 新格实测全拒锚）。判定单源=gates/cli.py。
-        viol = gates_cli.l4_ratchet_violations(old, matrix, for_update=True)
+        viol = gates_cli.l4_ratchet_violations(old, matrix, for_update=True, for_rebase=rebase)
         if viol:
             raise gates_cli.RatchetError(
                 "l4 ratchet 基线拒绝下调（只升不降）: " + "；".join(viol))
@@ -86,6 +92,8 @@ def l4_update(matrix_path: Path, baseline_path: Path, reason: str) -> dict:
     }
     record = {
         "ts": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "kind": "rebase" if rebase else "anchor",
+        "evidence": evidence.strip() if rebase else "",
         "reason": reason,
         "match": matrix.get("match"), "diff": matrix.get("diff"),
         "blocked": matrix.get("blocked"), "cells_total": matrix.get("cells_total"),
@@ -103,11 +111,15 @@ def _main() -> None:
             prog="baseline_update.py l4",
             description="L4 逐采集点 ratchet 基线上调（只升不降 + 强制 --reason）")
         ap.add_argument("--reason", required=True, help="必须写明『确认无回退』的证据")
+        ap.add_argument("--rebase", action="store_true",
+                        help="语义重基（采集语义变更后真值重基——强制 --evidence）")
+        ap.add_argument("--evidence", default="", help="A 级证据指针（--rebase 必填）")
         ap.add_argument("--matrix", default="shots_rust/matrix.json")
         ap.add_argument("--baseline", default=str(L4_RATCHET))
         args = ap.parse_args(sys.argv[2:])
         try:
-            rec = l4_update(Path(args.matrix), Path(args.baseline), args.reason)
+            rec = l4_update(Path(args.matrix), Path(args.baseline), args.reason,
+                            rebase=args.rebase, evidence=args.evidence)
         except Exception as exc:  # noqa: BLE001 —— 拒绝原因显式打印，禁裸 traceback
             print(f"L4 基线更新拒绝: {exc}")
             sys.exit(1)

@@ -27,6 +27,7 @@ use std::sync::Mutex;
 
 use game_core::frame::{FrameEngine, FrameMemory, Registers};
 use game_core::render::render_frame;
+use game_core::state::RenderState;
 
 // panic 消息捕获（unported 缺口 bank:addr 取证——对拍工具层记录用，不弱化引擎 fail-loud）。
 static PANIC_MSG: Mutex<Option<String>> = Mutex::new(None);
@@ -350,12 +351,26 @@ fn main() {
     let mut next_cap = 0usize;
 
     // 采集帧渲染（真实 RenderState→render_frame→PNG）。
-    let render_capture = |engine: &FrameEngine, frame: usize, tag: &str,
+    // 【修径 a（findings/walk-fc-capture-seam.md §2c/§6a——walk FC 根修）】capture 帧 N
+    // 双相位截取（emu endFrame N 单回调天然两相位）：
+    //  · 图像/PPU 面 = snap（tick(N-1) 的 on_spin_exit 缝快照（NMI(N-1) 后/工作前——
+    //    RenderState）——滚动=state-row(N-1)、名表≤work(N-2) 冲刷；
+    //    **OAM $200-2FF = tick(N-1) 收口活体**（与 ram.hex 同相位——OAMDMA 源像；
+    //    探针定谳（2026-11-03）：rs@缝+oam@收口 vs emu 金面 f1128 逐像素 0 差，
+    //    oam@缝 397px/rows1128 397px——NMI(N) 尾段 SpriteRAM 重写（73B）不入帧 N 渲染）。
+    //    缺缝（span/title 续段不采）⇒活体回退（span 冻结窗内等价）。
+    //  · ram.hex 面 = 活体（tick(N-1) 收口（$1A=00 判别位）——work(N-1) 后/NMI(N) 前）。
+    // 旧径两面整取 tick(N) 收口 ⇒ 名表/滚动 latch 晚一拍（f820 dx=+2 根因）。
+    let render_capture = |engine: &FrameEngine,
+                          snap: Option<(&RenderState, &[u8])>,
+                          frame: usize, tag: &str,
                               out: &PathBuf, produced: &mut Vec<(usize, String, String)>| {
-        let pal = &engine.mem.render.palette;
+        let (rs, oam): (&RenderState, &[u8]) =
+            snap.unwrap_or((&engine.mem.render, &engine.mem.ram[0x200..0x300]));
+        let pal = &rs.palette;
         let bg: [u8; 16] = pal[0..16].try_into().unwrap();
         let spr: [u8; 16] = pal[16..32].try_into().unwrap();
-        let fb = render_frame(&engine.mem.render, &bg, &spr, &engine.mem.ram[0x200..0x300]);
+        let fb = render_frame(rs, &bg, &spr, oam);
         let png = encode_png(&fb, 256, 240);
         let fname = format!("{}_f{:05}_{}.png", plan.name, frame, tag);
         fs::write(out.join(&fname), &png).expect("写 PNG");
@@ -364,7 +379,6 @@ fn main() {
         // $2800-2FFF=竖镜（A/B 镜））——hex 串（mt9 PPU 总线对拍面）。
         {
             let mut hex = String::new();
-            let rs = &engine.mem.render;
             for i in 0..0x2000usize {
                 hex.push_str(&format!("{:02X}", rs.chr.get(i).copied().unwrap_or(0)));
             }
@@ -409,7 +423,26 @@ fn main() {
 
     let want_state = state_out.is_some();
     let mut gap: Option<(usize, String)> = None; // (帧, unported bank:addr)
+    // 【修径 a（findings/walk-fc-capture-seam.md §2c——walk FC 根修）】capture 帧 N 的产物
+    // = **tick(N-1) 双相位**（emu endFrame N 单回调天然两相位）：
+    //  · png+ppu.hex = tick(N-1) 的 on_spin_exit 缝快照（NMI(N-1) 后/工作前——滚动=
+    //    state-row(N-1)、名表≤work(N-2) 冲刷）+ **OAM 收口活体**（tick(N-1) 收口——
+    //    与 ram.hex 同相位；探针定谳 f1128 逐像素 0 差）；
+    //  · ram.hex = tick(N-1) 收口活体（work(N-1) 后/NMI(N) 前——$1A=00 判别位）。
+    // 发射点=迭代 frame 头（=tick(frame-1) 收口，先于 joy 注入）。旧径整取 tick(frame)
+    // 收口 ⇒ 图像/名表/滚动 latch 晚一拍（walkfcprobe f820：+1 面+dx=+2/12085px 根因）。
+    let mut seam_snap: Option<(usize, RenderState, Vec<u8>)> = None; // (tick, render, oam)
     for frame in 1..=plan.frames {
+        // ——发射采集帧 frame（tick(frame-1) 相位）——
+        while next_cap < caps.len() && caps[next_cap].0 == frame {
+            let (_f, tag) = &caps[next_cap];
+            let snap = match &seam_snap {
+                Some((k, rs, oam)) if *k == frame.wrapping_sub(1) => Some((rs, oam.as_slice())),
+                _ => None,
+            };
+            render_capture(&engine, snap, frame, tag, &out, &mut produced);
+            next_cap += 1;
+        }
         engine.mem.joy1 = plan.joy.get(&frame).copied().unwrap_or(0);
         if std::env::var("DSH_SPRITE_TRACE").is_ok() && frame >= 918 && frame <= 924 {
             eprintln!("[joy] f{} nmi_en={} ppuctrl={:02X}", frame, engine.mem.nmi_enabled, engine.mem.ram[0x00FF]);
@@ -429,6 +462,17 @@ fn main() {
                 if want_state {
                     state_rows.push(state_row(frame, mem));
                 }
+                // 缝快照（修径 a 图像/PPU 面——=state 行同缝，findings §2c 之②）：
+                // post-NMI(frame)/pre-work(frame) 的 RenderState ——供采集帧 frame+1
+                // 的 png+ppu.hex（滚动=state-row(frame)、名表≤work(frame-1) 冲刷）。
+                // OAM 不入快照（收口活体——探针定谳 f1128 0 差）。
+                if next_cap < caps.len() {
+                    seam_snap = Some((
+                        frame,
+                        mem.render.clone(),
+                        mem.ram[0x200..0x300].to_vec(),
+                    ));
+                }
             });
         }));
         if tick.is_err() {
@@ -443,12 +487,7 @@ fn main() {
             }
             break;
         }
-        // 触发该帧采集点（帧渲染完成后）
-        while next_cap < caps.len() && caps[next_cap].0 == frame {
-            let (_f, tag) = &caps[next_cap];
-            render_capture(&engine, frame, tag, &out, &mut produced);
-            next_cap += 1;
-        }
+        // 采集发射已移至迭代头（tick(frame-1) 收口相位——修径 a，findings §2c）。
     }
     // 未到 gap 但超出 frames 的残留采集（防御）
     while next_cap < caps.len() {

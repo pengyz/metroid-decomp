@@ -43,27 +43,27 @@
         },
         "810:bullet-midflight": {
           "state": "diff",
-          "diff_pixels": 263,
+          "diff_pixels": 237,
           "total_pixels": 61440
         },
         "815:bullet-mid-2": {
           "state": "diff",
-          "diff_pixels": 124,
+          "diff_pixels": 102,
           "total_pixels": 61440
         },
         "820:after-shoot": {
           "state": "diff",
-          "diff_pixels": 234,
+          "diff_pixels": 140,
           "total_pixels": 61440
         },
         "825:bullet-late": {
           "state": "diff",
-          "diff_pixels": 190,
+          "diff_pixels": 233,
           "total_pixels": 61440
         },
         "950:combo-action": {
           "state": "diff",
-          "diff_pixels": 524,
+          "diff_pixels": 250,
           "total_pixels": 61440
         },
         "1200:end": {
@@ -103,17 +103,17 @@
         },
         "850:scrolling": {
           "state": "diff",
-          "diff_pixels": 226,
+          "diff_pixels": 190,
           "total_pixels": 61440
         },
         "1000:neighbor-room": {
           "state": "diff",
-          "diff_pixels": 166,
+          "diff_pixels": 110,
           "total_pixels": 61440
         },
         "1150:end": {
           "state": "diff",
-          "diff_pixels": 170,
+          "diff_pixels": 154,
           "total_pixels": 61440
         }
       }
@@ -143,17 +143,17 @@
         },
         "800:l240": {
           "state": "diff",
-          "diff_pixels": 403,
+          "diff_pixels": 103,
           "total_pixels": 61440
         },
         "890:l330": {
           "state": "diff",
-          "diff_pixels": 102,
+          "diff_pixels": 229,
           "total_pixels": 61440
         },
         "900:end": {
           "state": "diff",
-          "diff_pixels": 108,
+          "diff_pixels": 272,
           "total_pixels": 61440
         }
       }
@@ -183,12 +183,12 @@
         },
         "820:after-shoot": {
           "state": "diff",
-          "diff_pixels": 234,
+          "diff_pixels": 140,
           "total_pixels": 61440
         },
         "960:end": {
           "state": "diff",
-          "diff_pixels": 228,
+          "diff_pixels": 218,
           "total_pixels": 61440
         }
       }
@@ -248,7 +248,7 @@
         },
         "800:land-settled": {
           "state": "diff",
-          "diff_pixels": 237,
+          "diff_pixels": 103,
           "total_pixels": 61440
         }
       }
@@ -288,7 +288,7 @@
         },
         "800:after": {
           "state": "diff",
-          "diff_pixels": 237,
+          "diff_pixels": 103,
           "total_pixels": 61440
         }
       }
@@ -323,7 +323,7 @@
         },
         "800:end": {
           "state": "diff",
-          "diff_pixels": 403,
+          "diff_pixels": 103,
           "total_pixels": 61440
         }
       }
@@ -343,27 +343,27 @@
         },
         "820:l380": {
           "state": "diff",
-          "diff_pixels": 12085,
+          "diff_pixels": 233,
           "total_pixels": 61440
         },
         "1020:l580": {
           "state": "diff",
-          "diff_pixels": 332,
+          "diff_pixels": 103,
           "total_pixels": 61440
         },
         "1220:l780": {
           "state": "diff",
-          "diff_pixels": 272,
+          "diff_pixels": 108,
           "total_pixels": 61440
         },
         "1390:l950": {
           "state": "diff",
-          "diff_pixels": 272,
+          "diff_pixels": 102,
           "total_pixels": 61440
         },
         "1400:end": {
           "state": "diff",
-          "diff_pixels": 58,
+          "diff_pixels": 331,
           "total_pixels": 61440
         }
       }
@@ -377,78 +377,78 @@
           "total_pixels": 61440
         },
         "1128:wall-takeoff": {
-          "state": "match",
-          "diff_pixels": 0,
-          "total_pixels": 61440
-        },
-        "1134:wall-rise0a": {
-          "state": "diff",
-          "diff_pixels": 368,
-          "total_pixels": 61440
-        },
-        "1140:wall-rise1": {
-          "state": "diff",
-          "diff_pixels": 352,
-          "total_pixels": 61440
-        },
-        "1146:wall-rise1b": {
-          "state": "diff",
-          "diff_pixels": 306,
-          "total_pixels": 61440
-        },
-        "1152:wall-rise2": {
-          "state": "diff",
-          "diff_pixels": 238,
-          "total_pixels": 61440
-        },
-        "1158:wall-rise2b": {
-          "state": "diff",
-          "diff_pixels": 216,
-          "total_pixels": 61440
-        },
-        "1164:wall-top": {
-          "state": "diff",
-          "diff_pixels": 10039,
-          "total_pixels": 61440
-        },
-        "1170:wall-overa": {
-          "state": "diff",
-          "diff_pixels": 9867,
-          "total_pixels": 61440
-        },
-        "1176:wall-over": {
-          "state": "diff",
-          "diff_pixels": 9989,
-          "total_pixels": 61440
-        },
-        "1182:wall-overb": {
-          "state": "diff",
-          "diff_pixels": 374,
-          "total_pixels": 61440
-        },
-        "1188:pit-land": {
           "state": "diff",
           "diff_pixels": 331,
           "total_pixels": 61440
         },
-        "1194:pit-landb": {
+        "1134:wall-rise0a": {
           "state": "diff",
           "diff_pixels": 102,
           "total_pixels": 61440
         },
+        "1140:wall-rise1": {
+          "state": "diff",
+          "diff_pixels": 279,
+          "total_pixels": 61440
+        },
+        "1146:wall-rise1b": {
+          "state": "diff",
+          "diff_pixels": 135,
+          "total_pixels": 61440
+        },
+        "1152:wall-rise2": {
+          "state": "diff",
+          "diff_pixels": 278,
+          "total_pixels": 61440
+        },
+        "1158:wall-rise2b": {
+          "state": "diff",
+          "diff_pixels": 102,
+          "total_pixels": 61440
+        },
+        "1164:wall-top": {
+          "state": "diff",
+          "diff_pixels": 297,
+          "total_pixels": 61440
+        },
+        "1170:wall-overa": {
+          "state": "diff",
+          "diff_pixels": 144,
+          "total_pixels": 61440
+        },
+        "1176:wall-over": {
+          "state": "diff",
+          "diff_pixels": 283,
+          "total_pixels": 61440
+        },
+        "1182:wall-overb": {
+          "state": "diff",
+          "diff_pixels": 102,
+          "total_pixels": 61440
+        },
+        "1188:pit-land": {
+          "state": "diff",
+          "diff_pixels": 102,
+          "total_pixels": 61440
+        },
+        "1194:pit-landb": {
+          "state": "diff",
+          "diff_pixels": 229,
+          "total_pixels": 61440
+        },
         "1200:wall-jump": {
-          "state": "match",
-          "diff_pixels": 0,
+          "state": "diff",
+          "diff_pixels": 272,
           "total_pixels": 61440
         },
         "1300:pit": {
           "state": "diff",
-          "diff_pixels": 21884,
+          "diff_pixels": 20884,
           "total_pixels": 61440
         },
         "1460:pit-fall": {
           "state": "diff",
-          "diff_pixels": 17499,
+          "diff_pixels": 17523,
           "total_pixels": 61440
         },
         "1520:pit-jump": {
@@ -538,17 +538,17 @@
         },
         "800:scroll-l80": {
           "state": "diff",
-          "diff_pixels": 403,
+          "diff_pixels": 103,
           "total_pixels": 61440
         },
         "840:scroll-l120": {
           "state": "diff",
-          "diff_pixels": 13404,
+          "diff_pixels": 357,
           "total_pixels": 61440
         },
         "880:end": {
           "state": "diff",
-          "diff_pixels": 14443,
+          "diff_pixels": 112,
           "total_pixels": 61440
         }
       }
@@ -563,17 +563,17 @@
         },
         "810:fire-10": {
           "state": "diff",
-          "diff_pixels": 263,
+          "diff_pixels": 237,
           "total_pixels": 61440
         },
         "815:fire-15": {
           "state": "diff",
-          "diff_pixels": 124,
+          "diff_pixels": 102,
           "total_pixels": 61440
         },
         "825:fire-25": {
           "state": "diff",
-          "diff_pixels": 190,
+          "diff_pixels": 233,
           "total_pixels": 61440
         }
       }
@@ -593,17 +593,17 @@
         },
         "820:l380": {
           "state": "diff",
-          "diff_pixels": 12085,
+          "diff_pixels": 233,
           "total_pixels": 61440
         },
         "1020:l580": {
           "state": "diff",
-          "diff_pixels": 332,
+          "diff_pixels": 103,
           "total_pixels": 61440
         },
         "1400:end": {
           "state": "diff",
-          "diff_pixels": 58,
+          "diff_pixels": 331,
           "total_pixels": 61440
         }
       }
@@ -679,6 +679,16 @@
       "reason": "新增 walkfcprobe 探针格锚定（同 commit 锚定——前提翻转证据载体（docs/findings/walk-fc-capture-seam.md §2）：state 层 1383 帧 FC/ScrollX/ScrollY/ScrollDir/SamusX 0 差+截取缝双相位定罪；420:game-in/620:l180 现态 match，820:l380/1020:l580/1400:end 现态 diff=截取缝相位差（修径 §6a 后全矩阵 fresh 重基预期 diff→match 改善；match 集合无缩水——新增格非回退））",
       "match": 59,
       "diff": 49,
+      "blocked": 0,
+      "cells_total": 108
+    },
+    {
+      "ts": "2026-11-03T03:16:19+00:00",
+      "kind": "rebase",
+      "evidence": "walkfcprobe 双实测锚（锚A cap(N)≡行(N) RAM 面/锚B dx 三点 0/332/674 崩落）；capture_seam TDD 红→绿；466 测 0 败；矩阵 fresh 双腿 match 57/diff 51/blocked 0",
+      "reason": "采集语义重基（修径 a 截取点双相位）：2 格翻面=morphball f1128/f1200 旧 match=旧采样缝掩蔽假 match，现 diff=精灵相位族残差暴露（331/272px 纯精灵散点（背景全同）——BUG-089 同族归因已档 walk-fc-capture-seam.md §4）；基岩格 f420-f735 全 0px 保持（f720 修复后仍 match）；match 57=旧语义验证形态逐格复现。真值重基非容忍账。",
+      "match": 57,
+      "diff": 51,
       "blocked": 0,
       "cells_total": 108
     }
