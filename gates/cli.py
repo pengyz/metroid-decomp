@@ -1129,6 +1129,11 @@ def l4_ratchet_violations(baseline: dict, matrix: dict, for_update: bool = False
         for case in sorted(base_cases):  # ① match 集合只增不减
             bstates = (base_cases.get(case) or {}).get("states", {}) or {}
             for key in sorted(bstates):
+                if cur.get(case, {}).get(key) == "flaky":
+                    # 【B 径 flaky 处置（2026-11-03 lead 裁定）】flaky 格不锚值：豁免①
+                    # ——判据=多 run N 次观测记录（classify_flaky），处置记录=matrix.flaky_cells
+                    # 留痕（不静默豁免）；其余格照判（防弱化面——test_l4_flaky 钉死）。
+                    continue
                 if _cell_state({"state": bstates[key]}) == "match" and cur.get(case, {}).get(key) != "match":
                     viol.append(
                         f"{case}/{key}: match 集合缩水（基线 match → 现态 "
@@ -1151,6 +1156,8 @@ def l4_ratchet_violations(baseline: dict, matrix: dict, for_update: bool = False
         for case in sorted(cur):
             bs = (base_cases.get(case) or {}).get("states", {}) or {}
             for key in sorted(cur[case]):
+                if cur[case][key] == "flaky":
+                    continue  # B 径：flaky 不锚值（③同样豁免——观测记录留痕）
                 if key not in bs:
                     viol.append(
                         f"{case}/{key}: 未锚定采集点（现态 {cur[case][key]}）——"
