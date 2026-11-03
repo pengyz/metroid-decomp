@@ -28,13 +28,20 @@ pub fn anim_draw_object(mem: &mut crate::frame::FrameMemory, page_index: u8, a_i
     if std::env::var("DSH_SPRITE_TRACE").is_ok() {
         use std::sync::atomic::Ordering;
         let n = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
-        if n >= 1126 && n <= 1132 {
+        if n >= 812 && n <= 820 {
             eprintln!("[ado] n={} pi={} a_in={}", n, page_index, a_in);
         }
     }
     // 【goal-轮107 a_in 显式传值修】asm AnimDrawObject 的 A=caller 显式传值（非 regs.a
     // ——regs.a 在 draw 时已被污染=255）——a_in 参数化。
     crate::samus::physics::update_obj_anim(mem, a_in);
+    obj_draw_frame(mem, page_index); // ObjDrawFrame（$DE4A 纯绘——DE47=走表+本件）
+}
+
+/// ObjDrawFrame（$DE4A）——纯绘制（**无走表**）。AnimDrawObject（$DE47）=UpdateObjAnim
+/// （$DC8F）+本件；SetSamusData（$CD6D）尾=`jmp ObjDrawFrame`（单走表形——
+/// 【r14 双调根修】旧形尾调 DE47 形致同帧 2×DC8F（AD 周期 4→2 别名（dossier Q4）））。
+pub fn obj_draw_frame(mem: &mut crate::frame::FrameMemory, page_index: u8) {
     let px = page_index as u16;
     // 只读 animFrame（动画更新在 update_obj_anim——此处不写 $0303/$0304/$0306）
     let anim_frame = mem.read_ram(0x0303 + px);

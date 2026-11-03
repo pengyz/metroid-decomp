@@ -237,8 +237,8 @@ pub fn samus_intro(mem: &mut FrameMemory) {
         mem.write_ram(0x004B, 0);
         // 【goal-r16 修】asm DE47(AnimDrawObject)=`jsr UpdateObjAnim`(A=0)+DE4A——首句走表。
         // 旧形（拆分后）漏走表⇒animFrame 停留 0(Stand 帧 id)⇒渲染 Stand（emu 渲 Front 帧——L4 f550 差 210px）。
-        crate::samus::physics::update_obj_anim(mem, 0); // UpdateObjAnim（DC8F——A=0 `lda #$00`）
-        crate::frame::sprite::anim_draw_object(mem, 0, 0); // AnimDrawObject（$DE47——Samus 槽 0）
+        // 【r14 双调根修】DE47 形=单走表（旧形显式走表+anim_draw_object 内再走=双调 ✗）
+        crate::frame::sprite::anim_draw_object(mem, 0, 0); // AnimDrawObject（$DE47——A=0 单走）
     }
 }
 

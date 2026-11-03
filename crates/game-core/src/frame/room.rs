@@ -255,8 +255,8 @@ fn draw_door(mem: &mut crate::frame::FrameMemory, x_off: u8) {
     cntrl |= (x_off & 0x10) ^ 0x10; // 槽位 flip（$80/$A0 镜像）
     mem.write_ram(0x006B, cntrl);
     mem.write_ram(0x030A + x_off as u16, 0); // isHit←0
-    crate::samus::physics::update_obj_anim(mem, 6); // AnimDrawObject 拆分面（A=6）
-    crate::frame::sprite::anim_draw_object(mem, x_off, 6); // A=6（拆分面）
+    // 【r14 双调根修】DE47 形=单走表（旧形显式走表+anim_draw_object 内再走=双调 ✗）
+    crate::frame::sprite::anim_draw_object(mem, x_off, 6); // AnimDrawObject（DE47——A=6 单走）
 }
 
 /// UpdateAllDoors（$8B79）——4 门环（$B0/$A0/$90/$80（X-=0x10；bmi 环））。

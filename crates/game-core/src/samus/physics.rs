@@ -819,7 +819,7 @@ pub fn set_samus_data(mem: &mut FrameMemory) {
     if std::env::var("DSH_SPRITE_TRACE").is_ok() {
         use std::sync::atomic::Ordering;
         let n = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
-        if n >= 1113 && n <= 1126 {
+        if n >= 812 && n <= 820 {
             eprintln!("[ssd] n={} FC={:02X} A={}", n,
                 mem.read_ram(crate::ram_map::FRAME_COUNT), mem.regs.a);
         }
@@ -835,7 +835,7 @@ pub fn set_samus_data(mem: &mut FrameMemory) {
     if std::env::var("DSH_SPRITE_TRACE").is_ok() {
         use std::sync::atomic::Ordering;
         let n = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
-        if n >= 1126 && n <= 1128 {
+        if n >= 812 && n <= 820 {
             eprintln!("[atr] n={} after Health A={}", n, mem.regs.a);
         }
     }
@@ -847,7 +847,7 @@ pub fn set_samus_data(mem: &mut FrameMemory) {
     if std::env::var("DSH_SPRITE_TRACE").is_ok() {
         use std::sync::atomic::Ordering;
         let n = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
-        if n >= 1126 && n <= 1128 {
+        if n >= 812 && n <= 820 {
             eprintln!("[atr] n={} after Lava A={}", n, mem.regs.a);
         }
     }
@@ -856,7 +856,9 @@ pub fn set_samus_data(mem: &mut FrameMemory) {
         mem.write_ram(0x006B, 0x81);
     }
     set_mirror_cntrl_bit(mem); // CD92（已折——朝向镜像位）
-    crate::frame::sprite::anim_draw_object(mem, 0, mem.regs.a); // ObjDrawFrame（DE4A）
+    // 【r14 双调根修】asm CD6D 尾=`jmp ObjDrawFrame`（DE4A 纯绘（单走表形））——旧形
+    // 调 DE47 形（anim_draw_object=走表+绘）致同帧 2×DC8F（AD 周期 4→2 别名）。
+    crate::frame::sprite::obj_draw_frame(mem, 0); // ObjDrawFrame（DE4A）
     // 链余件（随件）：LavaAndMoveCheck（E269）/MetroidOnSamus($92) 蓝化/
     // set_mirror_cntrl_bit（CD92 已折——随接）/ObjDrawFrame（DE4A 显示面）
 }
@@ -892,7 +894,7 @@ pub fn update_obj_anim(mem: &mut FrameMemory, a_in: u8) {
     if std::env::var("DSH_SPRITE_TRACE").is_ok() {
         use std::sync::atomic::Ordering;
         let n = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
-        if n >= 1126 && n <= 1145 {
+        if n >= 812 && n <= 820 {
             let b = 0x0300u16 + mem.read_ram(0x004B) as u16;
             eprintln!("[uoa] n={} FC={:02X} ENTRY ai={} ar={} ad={} a_in={}", n,
                 mem.read_ram(crate::ram_map::FRAME_COUNT),
@@ -902,7 +904,7 @@ pub fn update_obj_anim(mem: &mut FrameMemory, a_in: u8) {
     if std::env::var("DSH_SPRITE_TRACE").is_ok() {
         use std::sync::atomic::Ordering;
         let n = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
-        if n >= 1126 && n <= 1165 {
+        if n >= 812 && n <= 820 {
             let b = 0x0300u16 + mem.read_ram(0x004B) as u16;
             eprintln!("[anim] n={} FC={:02X} WALK ai={} ar={} ad={} a_in={}", n,
                 mem.read_ram(crate::ram_map::FRAME_COUNT),
@@ -1841,5 +1843,49 @@ mod tests_up_span {
         let base = ((0x50u16 & 0xF8) << 2) | (0x41u16 >> 3);
         m.write_wram(0x6000 + base, 0x40);
         assert!(!object_check_move_up(&mut m), "侧顶砖⇒碰撞（跳不上去）");
+    }
+}
+
+// ===== r14 走表单走锚（TDD——双调根修（dossier Q4/复核修订①））=====
+
+#[cfg(test)]
+mod tests_r14_single_walk {
+    //! asm 语义锚：SetSamusData($CD6D)=**单走表**（首件 jsr DC8F+尾 jmp ObjDrawFrame
+    //! （DE4A 纯绘））；AnimDrawObject($DE47)=走表+绘；ObjDrawFrame($DE4A)=纯绘。
+    //! 旧形 set_samus_data 尾调 DE47 形+room/blink 显式走表+DE47=同帧 2×DC8F
+    //! （AD 周期 4→2 别名（emu 4,3,2,1 vs rust 3,1,3,1 实测））——本组测=单走守恒锚。
+    use super::*;
+    use crate::state::FrameMemory;
+
+    fn anim_delay(m: &FrameMemory) -> u8 {
+        m.read_ram(0x0304)
+    }
+
+    /// set_samus_data=单走表：ad 4→3（旧双调形=4→2 ⇒ 本测红）。
+    #[test]
+    fn set_samus_data_walks_anim_once() {
+        let mut m = FrameMemory::default();
+        m.regs.a = 4; // A=4（LCC6E stand 路 reload 值）
+        m.write_ram(0x0304, 4); // animDelay
+        set_samus_data(&mut m);
+        assert_eq!(anim_delay(&m), 3, "单走：4→3（双调形=4→2——回退即红）");
+    }
+
+    /// obj_draw_frame=纯绘（DE4A 无走表）：ad 恒 4。
+    #[test]
+    fn obj_draw_frame_does_not_walk() {
+        let mut m = FrameMemory::default();
+        m.write_ram(0x0304, 4);
+        crate::frame::sprite::obj_draw_frame(&mut m, 0);
+        assert_eq!(anim_delay(&m), 4, "DE4A 纯绘不走表");
+    }
+
+    /// anim_draw_object=单走表（DE47）：ad 4→3。
+    #[test]
+    fn anim_draw_object_walks_once() {
+        let mut m = FrameMemory::default();
+        m.write_ram(0x0304, 4);
+        crate::frame::sprite::anim_draw_object(&mut m, 0, 4);
+        assert_eq!(anim_delay(&m), 3, "DE47 单走：4→3（双调形=4→2——回退即红）");
     }
 }
