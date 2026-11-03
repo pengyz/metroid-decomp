@@ -66,7 +66,7 @@ local function jstr(s)
   return '"' .. s .. '"'
 end
 
--- 帧计数与计数器：必须先于 saveShot/dumpRam 等闭包声明（Lua 词法作用域，
+-- 帧计数与计数器：必须先于 requestShot/fulfillShot/dumpRam 等闭包声明（Lua 词法作用域，
 -- 声明在后的 local 不会被先前闭包捕获——t12 更正注）。
 local frame = 0
 local inputWarned = false
@@ -139,15 +139,84 @@ local function cpuJson()
     st["cpu.pc"], st["cpu.a"], st["cpu.x"], st["cpu.y"], st["cpu.sp"])
 end
 
-local function saveShot(tag)
-  local ok, png = pcall(emu.takeScreenshot)
-  if ok and type(png) == "string" then
-    local p = string.format("%s/%s_f%05d_%s.png", PLAN.shots_dir, name, frame, tag)
-    local f = io.open(p, "wb")
-    if f then f:write(png) f:close() return p end
+-- ---------------- 采集截取缝（fade-blink-capture-race 修径 C，2026-11-03） ----------------
+-- endFrame 帧界回调=渲染面翻转竞态窗（vblank 起点（ppu scanline 241 c25-33 实测锚））：
+-- emu.takeScreenshot 在窗内可读到未翻转的前帧 posted 像（淡入窗 FC&1 奇偶翻格根——
+-- 同回调双读实录：read1=旧像/read2=本帧真值像）。修径：
+--   · endFrame 采集块只**登记**截取请求（requestShot）——不读渲染面；
+--   · 截图在 spin-exit 缝（$C0D3——prg7_engine.asm:218 `@wait: lda NMIStatus/bne`
+--     出口；NMI 后/帧工作前）兑现（fulfillShot）——缝位=NMI 例程完成后（竞态窗外）；
+--   · 稳定双读（两次连续一致才落盘；上限 SHOT_STABLE_MAX）+SHOT-SEAM/SHOT-UNSTABLE
+--     显式留痕；漏缝=SHOT-SEAM-MISS+即时兜底读（不静默丢帧）；
+--   · 末帧截取（capture@frames）：DONE+emu.stop 顺延至缝兑现后（frames+1 兜底收口）。
+local pendingShot = nil   -- {path, frame, tag}：待缝兑现的截取请求
+local doneDeferred = false
+local doneWritten = false
+local SHOT_STABLE_MAX = 8
+
+local function takeStableShot()
+  -- 稳定双读：两次连续一致=渲染面已稳（帧界翻转已过）；耗尽返回末读+false
+  local prev = nil
+  for attempt = 1, SHOT_STABLE_MAX do
+    local ok, png = pcall(emu.takeScreenshot)
+    if ok and type(png) == "string" then
+      if prev == png then
+        return png, attempt, true
+      end
+      prev = png
+    end
   end
-  log("takeScreenshot failed at frame " .. frame)
-  return nil
+  return prev, SHOT_STABLE_MAX, false
+end
+
+local function writeDoneAndStop()
+  if doneWritten then return end
+  doneWritten = true
+  local d = io.open(donePath, "wb")
+  if d then
+    d:write(string.format('{"frames":%d,"trace_lines":%d,"captures":%d,"shots":%d}\n',
+      frames, nTrace, nCap, nShot))
+    d:close()
+  end
+  log("scenario done at frame " .. frame)
+  pcall(emu.stop)
+end
+
+local function fulfillShot(reason)
+  if not pendingShot then return end
+  local ps = pendingShot
+  pendingShot = nil
+  local png, attempts, stable = takeStableShot()
+  if not png then
+    log("SHOT-FAIL f=" .. tostring(ps.frame) .. " tag=" .. tostring(ps.tag) .. " reason=" .. reason)
+  else
+    local f = io.open(ps.path, "wb")
+    if f then f:write(png) f:close() nShot = nShot + 1
+    else
+      log("SHOT-FAIL f=" .. tostring(ps.frame) .. " tag=" .. tostring(ps.tag) .. " reason=io")
+    end
+    if stable then
+      log(string.format("SHOT-SEAM f=%d tag=%s attempts=%d reason=%s",
+        ps.frame, tostring(ps.tag), attempts, reason))
+    else
+      log(string.format("SHOT-UNSTABLE f=%d tag=%s attempts=%d reason=%s",
+        ps.frame, tostring(ps.tag), attempts, reason))
+    end
+  end
+  if ps.frame >= frames and doneDeferred then
+    writeDoneAndStop() -- 末帧截取已兑现：收口
+  end
+end
+
+local function requestShot(tag)
+  if pendingShot then
+    -- 漏缝（上一请求未及缝兑现——span/边界）：显式留痕+即时兜底读（不静默丢）
+    log("SHOT-SEAM-MISS f=" .. tostring(pendingShot.frame) .. " tag=" .. tostring(pendingShot.tag))
+    fulfillShot("seam-miss-fallback")
+  end
+  local p = string.format("%s/%s_f%05d_%s.png", PLAN.shots_dir, name, frame, tag)
+  pendingShot = { path = p, frame = frame, tag = tag }
+  return p
 end
 
 local function dumpRam(tag)
@@ -624,17 +693,23 @@ local function sampleTrace()
   end
 end
 
-if samplePoint == "spin-exit" then
-  -- spin 出口采样：$C0D3 指令入口（callbackType.exec 真执行，r3 语义）
+local function onSpinExitSeam()
+  -- spin-exit 缝（$C0D3）：采样缝（sample_point=spin-exit）+ 截取缝兑现（修径 C）共用
+  if samplePoint == "spin-exit" then sampleTrace() end
+  if pendingShot then fulfillShot("spin-exit-seam") end
+end
+if samplePoint == "spin-exit" or next(capAt) ~= nil or everyN > 0 then
+  -- spin 出口缝：$C0D3 指令入口（callbackType.exec 真执行，r3 语义）
+  -- （截取缝兑现（fade-blink 修径 C）同挂此缝——有采集点即注册）
   local ok = false
   if emu.callbackType and emu.callbackType.exec then
-    ok = pcall(emu.addMemoryCallback, function() sampleTrace() end,
+    ok = pcall(emu.addMemoryCallback, onSpinExitSeam,
       emu.callbackType.exec, 0xC0D3, 0xC0D3)
   end
   if not ok then
-    ok = pcall(emu.addMemoryCallback, function() sampleTrace() end, 2, 0xC0D3, 0xC0D3)
+    ok = pcall(emu.addMemoryCallback, onSpinExitSeam, 2, 0xC0D3, 0xC0D3)
   end
-  log("sample_point=spin-exit @C0D3 注册: " .. tostring(ok))
+  log("spin-exit 缝 @C0D3 注册(sample=" .. samplePoint .. "): " .. tostring(ok))
 end
 
 -- task-28 ①：夹具写入（F_a 帧执行——设计 §3 注入模型；断言面在 diff_traces）
@@ -669,7 +744,16 @@ local function applyFixtures()
 end
 
 emu.addEventCallback(function()
-  if frame < 1 or frame > frames then return end
+  if frame > frames then
+    -- 末帧截取缝未命中兜底（span/停机边界）：即时兑现+收口（不静默丢 DONE）
+    if doneDeferred and not doneWritten then
+      log("DONE-FALLBACK f=" .. frame .. "（缝未命中——兜底兑现截取后收口）")
+      fulfillShot("frames+1-fallback")
+      writeDoneAndStop()
+    end
+    return
+  end
+  if frame < 1 then return end
 
   applyFixtures() -- F_a 注入在采样前（断言 (b) F_a+1 读回=期望值口径）
 
@@ -681,13 +765,14 @@ emu.addEventCallback(function()
   local tag = capAt[frame]
   if not tag and everyN > 0 and frame % everyN == 0 then tag = everyTag end
   if tag then
-    local shot = saveShot(tag)
+    -- 采集截取缝（fade-blink 修径 C）：截图只登记请求（缝兑现——竞态窗外）；
+    -- ram/ppu 活体读留本位（CPU 面确定——run 间逐字节恒同实证）。
+    local shot = requestShot(tag)
     local ram = dumpRam(tag)
     local ppu = dumpPpu(tag)
     capF:write(string.format('{"f":%d,"tag":%s,"shot":%s,"ram":%s,"cpu":%s}\n',
       frame, jstr(tag), shot and jstr(shot) or "null", ram and jstr(ram) or "null", cpuJson()))
     nCap = nCap + 1
-    nShot = nShot + (shot and 1 or 0)
     capF:flush()
   end
 
@@ -804,14 +889,14 @@ emu.addEventCallback(function()
         end
       end
     end
-    local d = io.open(donePath, "wb")
-    if d then
-      d:write(string.format('{"frames":%d,"trace_lines":%d,"captures":%d,"shots":%d}\n',
-        frames, nTrace, nCap, nShot))
-      d:close()
+    if pendingShot then
+      -- 末帧截取请求待缝兑现：DONE+停机顺延（spin-exit 缝在本回调后命中；
+      -- fulfillShot 收口；frames+1 endFrame 兜底——见帧界守卫）
+      doneDeferred = true
+      log("DONE-DEFER f=" .. frame .. " 待缝兑现截取")
+    else
+      writeDoneAndStop()
     end
-    log("scenario done at frame " .. frame)
-    pcall(emu.stop)
   end
 end, "endFrame")
 

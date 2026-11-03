@@ -511,14 +511,14 @@ def to_lua(v) -> str:
 
 
 def _lint_lua_text(text: str, label: str) -> None:
-    """task-38 ③+采集截取缝契约：禁用面机械防（清单单源=tools/lint_mesen_lua.py）。
+    """task-38 ③+采集截取缝契约：机械防（清单单源=tools/lint_mesen_lua.py）。
 
     2026-11-03 fade-blink-capture-race：endFrame 直读截图=渲染面翻转竞态窗（淡入窗
     FC&1 翻格根）——SEAM 契约（requestShot 登记+fulfillShot 缝兑现）机械强制，
     legacy 直读径拒跑（fail-loud，不静默降级）。
     """
     import lint_mesen_lua as _lint
-    hits = _lint.lint_text(text, label)
+    hits = _lint.lint_text(text, label) + _lint.lint_seam(text, label)
     if hits:
         raise SystemExit(f"[lua lint] 拒跑：\n  " + "\n  ".join(hits))
 
