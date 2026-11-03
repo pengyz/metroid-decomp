@@ -21,12 +21,40 @@ BANNED = [
 ]
 
 
+# 采集截取缝契约（2026-11-03 fade-blink-capture-race 定谳）：emu.takeScreenshot 在
+# endFrame 帧界回调直读=渲染面翻转竞态窗（vblank 起点（ppu scanline 241 c25-33 实测锚））
+# ——淡入窗 FC&1 奇偶翻格根因。截图兑现点必须移至 spin-exit 缝（$C0D3（prg7:218
+# NMI 后/帧工作前——竞态窗外））：endFrame 只登记请求（requestShot），缝兑现（fulfillShot）。
+SEAM_REQUIRED = [
+    (r"local function requestShot\s*\(", "截图请求登记面缺失（endFrame 只登记不读渲染面）"),
+    (r"local function fulfillShot\s*\(", "截图缝兑现面缺失（spin-exit 缝读渲染面）"),
+    (r"SHOT-SEAM", "缝兑现留痕标记缺失（兑现须显式日志 SHOT-SEAM）"),
+]
+SEAM_FORBIDDEN = [
+    (r"local shot = saveShot\s*\(", "legacy endFrame 直读截图——帧界竞态窗（翻格根）拒跑"),
+]
+
+
 def lint_text(text: str, label: str) -> list[str]:
+    """禁用面清单（通用 lua——不含采集截取缝契约（那是 harness 专属面，见 lint_seam）。"""
     hits = []
     for pat, why in BANNED:
         for m in re.finditer(pat, text):
             line = text[:m.start()].count("\n") + 1
             hits.append(f"{label}:{line}: 禁用面 {pat} ——{why}")
+    return hits
+
+
+def lint_seam(text: str, label: str) -> list[str]:
+    """采集截取缝契约（scenario_capture.lua 专属——fade-blink-capture-race 修径 C 机械防）。"""
+    hits = []
+    for pat, why in SEAM_REQUIRED:
+        if not re.search(pat, text):
+            hits.append(f"{label}: 缺采集截取缝契约 {pat} ——{why}")
+    for pat, why in SEAM_FORBIDDEN:
+        for m in re.finditer(pat, text):
+            line = text[:m.start()].count("\n") + 1
+            hits.append(f"{label}:{line}: 采集截取缝契约 {pat} ——{why}")
     return hits
 
 
