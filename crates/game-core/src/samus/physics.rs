@@ -1042,6 +1042,17 @@ pub fn check_health_status(mem: &mut FrameMemory) {
                 }
             }
         }
+        // 【H2 r14 配套】Lx009 i-frame 闪烁（asm :CE53-:CE64）：bombed（$77 bit7=1）
+        // +偶 FC（FC&1==0）⇒animDelay←0/animFrame←FrameNone($F7)（ObjDrawFrame 跳绘）。
+        // 奇 FC 或 非 bombed ⇒不写（跳绘相位=偶帧隐/奇帧显）。
+        let bomb77 = mem.read_ram(crate::ram_map::SAMUS_KNOCKBACK_IS_BOMB77);
+        if bomb77 & 0x80 != 0 {
+            let fc = mem.read_ram(crate::ram_map::FRAME_COUNT);
+            if fc & 1 == 0 {
+                mem.write_ram(0x0304, 0); // animDelay ← 0（asm `tay/sty`——A=0）
+                mem.write_ram(0x0303, 0xF7); // animFrame ← FrameNone（asm `ldy #$F7/sty`）
+            }
+        }
     }
     check_health_beep(mem); // CE66（低血蜂鸣——r26 端口）
 }
@@ -1887,5 +1898,64 @@ mod tests_r14_single_walk {
         m.write_ram(0x0304, 4);
         crate::frame::sprite::anim_draw_object(&mut m, 0, 4);
         assert_eq!(anim_delay(&m), 3, "DE47 单走：4→3（双调形=4→2——回退即红）");
+    }
+}
+
+// ===== H2 跳绘/闪烁 TDD 锚（r14 配套——i-frame blink + 淡入闪相位）=====
+
+#[cfg(test)]
+mod tests_h2_blink {
+    //! asm 语义锚：CheckHealthStatus Lx009（:CE53-:CE64）=i-frame 闪烁——
+    //! bombed（$77 bit7=1）+偶 FC（FC&1==0）⇒animDelay←0/animFrame←FrameNone($F7)；
+    //! 奇 FC 或 非 bombed ⇒不写 $F7（跳绘相位=偶帧隐/奇帧显）。
+    //! ObjDrawFrame（:DE4A）：animFrame==$F7⇒jmp ClearObjectCntrl（跳绘）。
+    use super::*;
+    use crate::state::FrameMemory;
+
+    fn setup_iframe_bomb(m: &mut FrameMemory, fc: u8) {
+        m.write_ram(0x002D, fc); // FrameCount
+        m.write_ram(crate::ram_map::SAMUS_INVINCIBLE_DELAY, 0x20); // i-frames active
+        m.write_ram(crate::ram_map::SAMUS_KNOCKBACK_IS_BOMB77, 0x80); // bombed (bit7=1)
+        m.write_ram(crate::ram_map::SAMUS_KNOCKBACK_DIR, 0xFF); // no push
+        m.write_ram(0x0303, 0x07); // animFrame (valid frame before blink)
+    }
+
+    /// bombed + 偶 FC ⇒ animFrame←$F7 + animDelay←0（i-frame 闪烁——跳绘）。
+    #[test]
+    fn iframe_blink_even_fc_writes_framenone() {
+        let mut m = FrameMemory::default();
+        setup_iframe_bomb(&mut m, 0x40); // FC=64 (even)
+        check_health_status(&mut m);
+        assert_eq!(m.read_ram(0x0303), 0xF7, "偶 FC+bombed⇒animFrame←FrameNone($F7)");
+        assert_eq!(m.read_ram(0x0304), 0, "偶 FC+bombed⇒animDelay←0");
+    }
+
+    /// bombed + 奇 FC ⇒ animFrame 不写 $F7（跳绘相位——奇帧显）。
+    #[test]
+    fn iframe_blink_odd_fc_no_framenone() {
+        let mut m = FrameMemory::default();
+        setup_iframe_bomb(&mut m, 0x41); // FC=65 (odd)
+        check_health_status(&mut m);
+        assert_ne!(m.read_ram(0x0303), 0xF7, "奇 FC⇒不写 FrameNone（显）");
+    }
+
+    /// 非 bombed（$77 bit7=0）⇒ 不闪（无论 FC 奇偶）。
+    #[test]
+    fn iframe_blink_not_bombed_no_blink() {
+        let mut m = FrameMemory::default();
+        setup_iframe_bomb(&mut m, 0x40); // even FC
+        m.write_ram(crate::ram_map::SAMUS_KNOCKBACK_IS_BOMB77, 0x00); // hurt (not bombed)
+        check_health_status(&mut m);
+        assert_ne!(m.read_ram(0x0303), 0xF7, "非 bombed⇒不闪");
+    }
+
+    /// 无 i-frame（InvDelay=0）⇒ 不闪（闪烁仅在 i-frame 窗内）。
+    #[test]
+    fn no_iframe_no_blink() {
+        let mut m = FrameMemory::default();
+        setup_iframe_bomb(&mut m, 0x40);
+        m.write_ram(crate::ram_map::SAMUS_INVINCIBLE_DELAY, 0); // no i-frames
+        check_health_status(&mut m);
+        assert_ne!(m.read_ram(0x0303), 0xF7, "无 i-frame⇒不闪");
     }
 }

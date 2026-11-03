@@ -68,7 +68,7 @@
         },
         "1200:end": {
           "state": "diff",
-          "diff_pixels": 1015,
+          "diff_pixels": 16069,
           "total_pixels": 61440
         }
       }
@@ -143,7 +143,7 @@
         },
         "800:l240": {
           "state": "diff",
-          "diff_pixels": 103,
+          "diff_pixels": 355,
           "total_pixels": 61440
         },
         "890:l330": {
@@ -153,7 +153,7 @@
         },
         "900:end": {
           "state": "diff",
-          "diff_pixels": 272,
+          "diff_pixels": 102,
           "total_pixels": 61440
         }
       }
@@ -323,7 +323,7 @@
         },
         "800:end": {
           "state": "diff",
-          "diff_pixels": 103,
+          "diff_pixels": 355,
           "total_pixels": 61440
         }
       }
@@ -343,7 +343,7 @@
         },
         "820:l380": {
           "state": "diff",
-          "diff_pixels": 233,
+          "diff_pixels": 475,
           "total_pixels": 61440
         },
         "1020:l580": {
@@ -353,12 +353,12 @@
         },
         "1220:l780": {
           "state": "diff",
-          "diff_pixels": 108,
+          "diff_pixels": 278,
           "total_pixels": 61440
         },
         "1390:l950": {
           "state": "diff",
-          "diff_pixels": 102,
+          "diff_pixels": 272,
           "total_pixels": 61440
         },
         "1400:end": {
@@ -388,42 +388,42 @@
         },
         "1140:wall-rise1": {
           "state": "diff",
-          "diff_pixels": 279,
+          "diff_pixels": 233,
           "total_pixels": 61440
         },
         "1146:wall-rise1b": {
           "state": "diff",
-          "diff_pixels": 135,
+          "diff_pixels": 170,
           "total_pixels": 61440
         },
         "1152:wall-rise2": {
           "state": "diff",
-          "diff_pixels": 278,
+          "diff_pixels": 102,
           "total_pixels": 61440
         },
         "1158:wall-rise2b": {
           "state": "diff",
-          "diff_pixels": 102,
+          "diff_pixels": 297,
           "total_pixels": 61440
         },
         "1164:wall-top": {
           "state": "diff",
-          "diff_pixels": 297,
+          "diff_pixels": 238,
           "total_pixels": 61440
         },
         "1170:wall-overa": {
           "state": "diff",
-          "diff_pixels": 144,
+          "diff_pixels": 191,
           "total_pixels": 61440
         },
         "1176:wall-over": {
           "state": "diff",
-          "diff_pixels": 283,
+          "diff_pixels": 102,
           "total_pixels": 61440
         },
         "1182:wall-overb": {
           "state": "diff",
-          "diff_pixels": 102,
+          "diff_pixels": 281,
           "total_pixels": 61440
         },
         "1188:pit-land": {
@@ -438,42 +438,42 @@
         },
         "1200:wall-jump": {
           "state": "diff",
-          "diff_pixels": 272,
+          "diff_pixels": 102,
           "total_pixels": 61440
         },
         "1300:pit": {
           "state": "diff",
-          "diff_pixels": 20884,
+          "diff_pixels": 18848,
           "total_pixels": 61440
         },
         "1460:pit-fall": {
           "state": "diff",
-          "diff_pixels": 17523,
+          "diff_pixels": 23830,
           "total_pixels": 61440
         },
         "1520:pit-jump": {
           "state": "diff",
-          "diff_pixels": 17556,
+          "diff_pixels": 22668,
           "total_pixels": 61440
         },
         "1560:ball-jump": {
           "state": "diff",
-          "diff_pixels": 24847,
+          "diff_pixels": 24825,
           "total_pixels": 61440
         },
         "1620:on-pedestal": {
           "state": "diff",
-          "diff_pixels": 25285,
+          "diff_pixels": 25626,
           "total_pixels": 61440
         },
         "1650:after-pickup": {
           "state": "diff",
-          "diff_pixels": 25285,
+          "diff_pixels": 25626,
           "total_pixels": 61440
         },
         "1700:end": {
           "state": "diff",
-          "diff_pixels": 25285,
+          "diff_pixels": 25157,
           "total_pixels": 61440
         }
       }
@@ -532,23 +532,23 @@
           "total_pixels": 61440
         },
         "760:scroll-l40": {
-          "state": "match",
-          "diff_pixels": 0,
+          "state": "diff",
+          "diff_pixels": 282,
           "total_pixels": 61440
         },
         "800:scroll-l80": {
           "state": "diff",
-          "diff_pixels": 103,
+          "diff_pixels": 355,
           "total_pixels": 61440
         },
         "840:scroll-l120": {
           "state": "diff",
-          "diff_pixels": 357,
+          "diff_pixels": 288,
           "total_pixels": 61440
         },
         "880:end": {
           "state": "diff",
-          "diff_pixels": 112,
+          "diff_pixels": 358,
           "total_pixels": 61440
         }
       }
@@ -593,7 +593,7 @@
         },
         "820:l380": {
           "state": "diff",
-          "diff_pixels": 233,
+          "diff_pixels": 475,
           "total_pixels": 61440
         },
         "1020:l580": {
@@ -689,6 +689,16 @@
       "reason": "采集语义重基（修径 a 截取点双相位）：2 格翻面=morphball f1128/f1200 旧 match=旧采样缝掩蔽假 match，现 diff=精灵相位族残差暴露（331/272px 纯精灵散点（背景全同）——BUG-089 同族归因已档 walk-fc-capture-seam.md §4）；基岩格 f420-f735 全 0px 保持（f720 修复后仍 match）；match 57=旧语义验证形态逐格复现。真值重基非容忍账。",
       "match": 57,
       "diff": 51,
+      "blocked": 0,
+      "cells_total": 108
+    },
+    {
+      "ts": "2026-11-03T10:09:20+00:00",
+      "kind": "rebase",
+      "evidence": "scrollseam f760 diff.png 实录（emu 无 Samus / rust 有——intro 淡入 FC&1 奇帧闪现相位差）+rust ram.hex f760: Timer3=04 status=18 FC=E9 InvDelay=00（无 i-frame——blink 修不涉）+prg7_engine.asm :C9D7-:CA13（淡入奇帧闪现）+旧 diff.png jumpledge f730 同形 282px（15:26 归档）",
+      "reason": "r14 双调根修后 intro 淡入闪相位真值重基——FC 奇偶相位差（emu/rust 帧计时面）",
+      "match": 56,
+      "diff": 52,
       "blocked": 0,
       "cells_total": 108
     }
