@@ -76,6 +76,12 @@ def l4_update(matrix_path: Path, baseline_path: Path, reason: str, rebase: bool 
             raise gates_cli.RatchetError(
                 "l4 ratchet 基线拒绝下调（只升不降）: " + "；".join(viol))
     states = gates_cli.l4_matrix_cells(matrix)  # v2 A-lite：对象形（state+diff/total_pixels（预留））
+    # 【B 径 flaky 不锚值（2026-11-03）】flaky 格（判据=多 run 观测记录）不入锚——
+    # 处置记录=matrix.flaky_cells 留痕；非 flaky 格照锚（只升不降面不变）。
+    for case in list(states):
+        for key in list(states[case]):
+            if states[case][key].get("state") == "flaky":
+                del states[case][key]
     row_scen = {str(r.get("case")): r.get("scenario_sha256")
                 for r in (matrix.get("rows") or [])}
     doc = {

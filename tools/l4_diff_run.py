@@ -739,17 +739,87 @@ def matrix_row(name: str, case_file: str, caps: list, *,
     }
 
 
-def build_matrix(rows: list) -> dict:
+# ---------------- flaky 态（B 径——fade-blink-capture-race §3b） ----------------
+# 判据=多 run N 次观测记录（≥min_runs 次观测且 verdict 不一致才判 flaky）；
+# flaky 格**不计分母不锚值**、显式留痕（观测记录随格进 matrix.flaky_cells）——
+# 绝不静默豁免（观测账=l4_run_observations.jsonl，每格每 run 一行）。
+
+def l4_obs_path() -> Path:
+    """观测账路径（**动态取** SHOTS_RUST——测试隔离 monkeypatch 面；勿缓存常量）。"""
+    return SHOTS_RUST / "l4_run_observations.jsonl"
+
+
+def append_cell_observations(run_id: str, rows: list) -> int:
+    """多 run 观测账追加（flaky 判定唯一依据源——每格每 run 一行）。"""
+    SHOTS_RUST.mkdir(parents=True, exist_ok=True)
+    n = 0
+    with open(l4_obs_path(), "a", encoding="utf-8", newline="\n") as fh:
+        for row in rows:
+            for c in row["cells"]:
+                fh.write(json.dumps({
+                    "run_id": run_id, "case": row["case"],
+                    "frame": c["frame"], "tag": c["tag"], "verdict": c["state"],
+                }, ensure_ascii=False) + "\n")
+                n += 1
+    return n
+
+
+def load_cell_observations(path: Path | None = None) -> list:
+    """观测账读取（损坏行=fail-loud——证据账不许静默跳行）。"""
+    p = path or l4_obs_path()
+    if not p.is_file():
+        return []
+    out = []
+    for i, line in enumerate(p.read_text(encoding="utf-8").splitlines(), 1):
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            out.append(json.loads(line))
+        except Exception as exc:
+            raise ValueError(f"flaky 观测账损坏 {p}:{i}: {exc}——fail-loud（证据账不许静默跳行）")
+    return out
+
+
+def classify_flaky(observations: list, min_runs: int = 3) -> dict:
+    """flaky 判定（纯函数）：≥min_runs 次观测且 verdict 不一致 ⇒ flaky。
+
+    返回 {(case, frame, tag): {"verdicts": [...], "runs": [...], "n": N}}——
+    多 run 观测记录**随格留痕**（判据=观测记录本身，非阈值豁免）。"""
+    groups: dict = {}
+    for o in observations:
+        key = (str(o.get("case")), o.get("frame"), str(o.get("tag")))
+        g = groups.setdefault(key, {"verdicts": [], "runs": []})
+        g["verdicts"].append(str(o.get("verdict")))
+        g["runs"].append(str(o.get("run_id")))
+    out = {}
+    for key in sorted(groups, key=lambda k: (k[0], k[1] if isinstance(k[1], int) else 1 << 30, k[2])):
+        g = groups[key]
+        if len(g["verdicts"]) >= min_runs and len(set(g["verdicts"])) >= 2:
+            out[key] = {"verdicts": g["verdicts"], "runs": g["runs"], "n": len(g["verdicts"])}
+    return out
+
+
+def build_matrix(rows: list, flaky: dict | None = None) -> dict:
     """汇总矩阵——**分母=用例×采集点总数（含 blocked）**；pass=match 数：
     blocked 计入分母、**永不计 pass**（防假绿硬约束）。
     verdict="pass" 当且仅当 cells_total>0 且 pass==cells_total（空矩阵兜底不假绿）。
-    """
-    match = diff = blocked = 0
+
+    flaky（B 径处置）：flaky 格 state="flaky"+observations 留痕，
+    **不计 match/diff/blocked、不计分母、不锚值**（判据=多 run 观测记录——classify_flaky）；
+    格仍留在 rows（可查），处置记录进 `flaky_cells`。"""
+    flaky = flaky or {}
+    match = diff = blocked = flaky_n = 0
     roms = set()
     for row in rows:
         roms.add(row["rom_sha256"])
         for c in row["cells"]:
-            if c["state"] == "match":
+            key = (row["case"], c["frame"], c["tag"])
+            if key in flaky:
+                c["state"] = "flaky"
+                c["observations"] = flaky[key]
+                flaky_n += 1
+            elif c["state"] == "match":
                 match += 1
             elif c["state"] == "diff":
                 diff += 1
@@ -767,6 +837,11 @@ def build_matrix(rows: list) -> dict:
         "denominator_note": ("分母=用例×采集点总数（含 blocked；blocked 计入分母、"
                              "永不计 pass——防假绿硬约束）"),
         "match": match, "diff": diff, "blocked": blocked,
+        "flaky": flaky_n,
+        "flaky_cells": [
+            {"case": k[0], "frame": k[1], "tag": k[2], **flaky[k]}
+            for k in sorted(flaky, key=lambda k: (k[0], k[1] if isinstance(k[1], int) else 1 << 30, k[2]))
+        ],
         "pass": match,
         "pass_rate": f"{match}/{total}",
         "verdict": "pass" if total > 0 and match == total else "not-pass",
@@ -912,6 +987,7 @@ def _do_run_all(args) -> int:
         print(f"[!] cases/ 无对拍用例（{CASES_DIR}）——空矩阵不得绿，拒跑", file=sys.stderr)
         return 2
     rows, seen = [], {}
+    run_id = time.strftime("%Y%m%d-%H%M%S")
     for cf in case_files:
         try:
             plan = sr.parse_scenario(cf)
@@ -954,6 +1030,7 @@ def _do_run_all(args) -> int:
         row = matrix_row(name, case_file, caps, anchors=anchors, legs=out["legs"],
                          report=out["report"], snapshot=snap, error=out["error"])
         rows.append(row)
+        append_cell_observations(run_id, [row])  # B 径：多 run 观测账（flaky 判据源）
         if out["error"] is not None:
             print(f"[case] {name}: 未跑成（{out['error']}）——全格 blocked 记账（不缩分母）",
                   file=sys.stderr)
@@ -964,7 +1041,12 @@ def _do_run_all(args) -> int:
             print(f"[case] {name}: rust={out['legs']['rust']} emu={out['legs']['emu']} "
                   f"snapshot={snap or 'none(上电起跑)'} → match {n['match']} diff {n['diff']} "
                   f"blocked {n['blocked']}")
-    m = build_matrix(rows)
+    # B 径：flaky 判定（判据=多 run N 次观测记录）——处置进矩阵（不计分母不锚值+留痕）
+    flaky = classify_flaky(load_cell_observations())
+    m = build_matrix(rows, flaky=flaky)
+    if flaky:
+        print(f"[flaky] {len(flaky)} 格判 flaky（多 run 观测记录不一致）——"
+              f"不计分母不锚值，观测记录随格留痕（matrix.flaky_cells）")
     SHOTS_RUST.mkdir(parents=True, exist_ok=True)
     out_json = SHOTS_RUST / "matrix.json"
     out_md = SHOTS_RUST / "matrix.md"
