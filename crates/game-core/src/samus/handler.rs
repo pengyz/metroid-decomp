@@ -555,6 +555,22 @@ mod tests {
         assert_eq!(bit_scan(0x00), 8);
     }
 
+    /// SetSamusJump（CFC3）写契约——**dey 过渡帧语义**（animi-divergence-collide-f800 §4）：
+    /// `sty animResetIndex/dey/sty animIndex/lda #$04/sta animDelay`——reset←Jump(0x0C)/
+    /// **index←Jump-1(0x0B=JumpTransition)**/delay←4。A 级 asm 铁证（prg7:3434-3440）。
+    /// 【TDD 卡 A】钉 jump 起手 animIndex=JumpTransition（非 Jump 自身）——collide f800
+    /// 收敛偏离（emu 0D/rust 08）域的 set 语义锚（防 animIndex 初值漂移）。
+    #[test]
+    fn set_samus_jump_writes_jump_transition_index() {
+        let mut m = FrameMemory::default();
+        set_samus_jump(&mut m);
+        assert_eq!(m.read_ram(ANIM_RESET_INDEX), OBJ_ANIM_SAMUS_JUMP,
+                   "animResetIndex←Jump(0x0C)");
+        assert_eq!(m.read_ram(ANIM_RESET_INDEX + 1), OBJ_ANIM_SAMUS_JUMP.wrapping_sub(1),
+                   "animIndex←Jump-1(0x0B=JumpTransition——CFC3 dey 语义)");
+        assert_eq!(m.read_ram(ANIM_RESET_INDEX.wrapping_sub(1)), 4, "animDelay←4");
+    }
+
     /// SamusStand 转移核（ActionTable：右/左→Run(1)、下→Roll(3)、上→PntUp(4)）。
     /// 【变形球移植更新（2026-10-31）】SetSamusRoll（D0B5）真形：无 gr_MARUMARI⇒
     /// Lx030 回 sa_Stand（0）；有⇒球化（status=3）——asm :3590-3612 铁证。
