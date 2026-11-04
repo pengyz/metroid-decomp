@@ -88,3 +88,37 @@ rust 对应件（忠实面 ✓）：
    逐帧）对 collide f700-f800 两腿逐帧对表——定 STAND→JUMP 切换的**精确分歧帧**。
 2. 依分歧帧定根（①节律相位 or ②切换触发时机）→TDD 红（钉收敛时机）→修→绿。
 3. 判据：collide f800 animIndex 两腿 0 差（+全族 l4 无回退）。
+
+
+## 7. 卡 B·逐帧 trace 定根（2026-11-04）——近因①证实 + 深根=anim-set 路径/移动态
+
+【双腿逐帧实录（A 级）】emu watch_range 0305-0306 逐帧 + rust DSH_SPRITE_TRACE（[uoa]/[anim]/[ssd]）。
+- **EMU**：f778-796 FRONT(reset=04,idx=05 稳)→**f797 (reset=00,idx=08)**→**f798 JUMP(0C,0D 稳态)**。
+  f797→f798：idx 0x08→0x0D=FF-wrap **即时**收 wrap（animDelay=0⇒推进即刻，同帧切同帧 wrap）。
+- **RUST**：n=785 FRONT(04,04)→**n=787 STAND(07,07) a_in=4**→**n=788 JUMP(0C,idx=08) ad=4 a_in=2**
+  →n=789 ad=3→n=790 ad=2→…→n≈792 ad=0 才 wrap 收敛。idx=0x08（STAND 位滞）阻 ~4 帧。
+
+【近因裁定=假设① animDelay 走表节律相位（证实）】切换点（reset←JUMP）animDelay 值：
+**emu=0**（推进帧，idx 即 wrap 到 JUMP 0x0D）vs **rust=4**（STAND a_in=4 重载继承（asm LCC6E
+`lda #$04` 忠实）阻 wrap）。收敛 wrap emu@f798 vs rust@n≈792（迟 ~4 帧）。
+
+【深根=anim-set 路径/移动态分歧（A 级）】切换点**前一 anim**不同：
+- emu：**RUN(0x00)**@f797→samL04（`cmp animReset==Run`⇒`sta animReset←Jump`）→JUMP。
+- rust：**STAND(0x07)**@n=787→falling 径（asm 2868 `sta animReset←Jump`（falling+disp<0x18））→JUMP。
+即 emu 走 samL04（RUN→JUMP），rust 走 falling（STAND→JUMP）——**前 anim 移动态不同**（emu 判
+Samus 在跑 RUN，rust 判停 STAND）。碰撞后移动态（跑 vs 停）分歧⇒anim-set 路径分叉⇒animDelay
+相位（RUN/STAND 节律不同）⇒收敛时机差。触发径本身（falling+disp<0x18（handler.rs:224≈asm
+2864-2870））忠实；samL04（handler.rs:246）忠实。**分叉源=前 anim 移动态（RUN vs STAND）**。
+
+【结论分级】
+- 已证实（A 级）：近因=animDelay 相位（emu 0/rust 4 阻 wrap）；深根=anim-set 路径分叉（emu
+  RUN→samL04 vs rust STAND→falling）=**移动态分歧**；触发径/samL04/LCC6E 节律全忠实。
+- 待证：移动态分歧（RUN vs STAND）根=碰撞/physics（Samus 移速/位移判）——属 physics 域，
+  非 anim 域局部可修（AGENTS.md §4 定位层：跨层→physics）。
+
+【修径】
+- anim 域局部（近因）：切换点 reset←JUMP 时 idx 已在 FF（旧 anim 末）⇒即 wrap（不阻于
+  animDelay）——但 asm 走表核 animDelay=0 才推进（忠实）⇒此修**非 asm 忠实**（需 emu 反证
+  emu 亦仅巧合 ad=0）。
+- physics 域（深根）：移动态（碰撞后跑/停）对齐 emu——Samus 速/位移/碰撞反应径 asm 对读。
+判据：collide f800 animIndex 两腿 0 差（idx=0x0D）+l4 无回退+443 测全绿。
