@@ -2095,8 +2095,16 @@ def diff_has_semantic_lines(diff_text: str) -> bool:
     return False
 
 
+# 【2026-11-04 F③ 结构排除（gate 单独 commit）】F③ 本意拦「逐字对表散文污染」
+# （goal 循环同段落×N 追加），误伤 markdown 结构行——表格行/分隔/标题/栅栏是文档
+# 合法重复（survey 614 行表 10 分隔 8 表头实测误拦）。散文重复照判（自测锚不变）。
+_MD_STRUCT = re.compile(r"^(?:\||#{1,6}\s|-{3,}$|~~~|```)")
+
+
 def doc_dup_line_violation(diff_text: str, path_filter=r"^(?:docs/|.*\.md$)") -> list[str]:
-    """文档重复行 lint：同一非空新增行在本 commit 文档 diff 中出现 >2 次 ⇒ 违规行清单。"""
+    """文档重复行 lint：同一非空新增行在本 commit 文档 diff 中出现 >2 次 ⇒ 违规行清单。
+
+    结构行排除（_MD_STRUCT：表格行/标题/hr/栅栏）——散文重复仍全量计数。"""
     pf = re.compile(path_filter)
     counts: dict[str, int] = {}
     cur_ok = False
@@ -2107,7 +2115,7 @@ def doc_dup_line_violation(diff_text: str, path_filter=r"^(?:docs/|.*\.md$)") ->
             continue
         if ln.startswith("+") and not ln.startswith("+++"):
             s = ln[1:].strip()
-            if cur_ok and s:
+            if cur_ok and s and not _MD_STRUCT.match(s):
                 counts[s] = counts.get(s, 0) + 1
     return [ln for ln, n in counts.items() if n > 2]
 
@@ -2934,6 +2942,14 @@ def cmd_selftest(_args) -> int:
         check("F③ 文档重复行>2（反向）", not ok6, d6)
         ok7, _ = goal_loop_gate("docs: 记录", dup.replace("+同样一行内容\n", "+不同内容行\n", 1))
         check("F③ ≤2 次放行（正向）", ok7)
+        # 【2026-11-04 结构排除锚】markdown 结构行（表格分隔/标题/栅栏）×3 放行；
+        # 敌对对照：散文 ×3 仍拒（ok6 已锚）。
+        struct = ("--- a/docs/y.md\n+++ b/docs/y.md\n"
+                  "+|---|---|---|\n+|---|---|---|\n+|---|---|---|\n"
+                  "+# 小节\n+# 小节\n+# 小节\n"
+                  "+~~~\n+~~~\n+~~~\n")
+        ok8, d8 = goal_loop_gate("docs: 表格文档", struct)
+        check("F③ markdown 结构行 ×3 放行（结构排除锚）", ok8, d8)
     except Exception as exc:  # noqa: BLE001
         check("F③ 文档重复行 lint", False, str(exc))
 
