@@ -13105,6 +13105,60 @@ transient f785-797 A 级证据不可复读（watch 已还原（[ssd] 未存）�
 （animIndex/animDelay 相位实证（f800 .ram.hex）（B 级（transient 细节不可复读）））③跨层裁定 §4
 合规 ✓（条件成立（证据基被②削弱））④必跑+commit 范围 ✓（443/0+PASS=13+纯 findings/探针 guard））。
 
+## animI 卡 E 对抗复核（0b8ae14c+254a4e5d（证伪立场（独立重导证据（5 重点））））
+
+### verdict: pass（5 重点全 ✓（A 级原文）（必跑验证 ✓（实测输出原文（A 级））））——卡 B+C 遗留项
+闭环（transient 证据已持久化（watch 落 frames.jsonl（900 行全非空））+「rust 不走 intro/恒 01」
+已原地更正撤销（§8（真根=D1）））
+
+**必跑验证实录（④（A 级原文））**：
+- `cargo test --workspace`：**448+3+1+1+1+27+4=485 passed; 0 failed**（485 测（与任务规约一致））✓
+- `python3 gates/cli.py check`：**SUMMARY: PASS=13 FAIL=0 SKIP=1 TOLERATED=2**（0 静默跳过）✓
+  （l4 红已解（0b8ae14c 重锚（scenario sha 38fbb637）））
+
+**① D1 修核 ✓✓✓**：asm CF88 尾（prg7:3404-3409（`stx SamusDir`（`lda Table06+1,x`（`jmp
+SetSamusAnim`（turn around 径））））+Table06=**0x0C×3**（:3566-3568（07:D096（ObjAnim_SamusJump
+×3）））——rust handler **同形**（reset←0x0C/index←0x0C/delay←0（SetSamusAnim CF6B 全形））✓
++TDD `midair_steering_full_sets_jump_anim`（全形断言（index←0x0C（reset-only 形=红）））✓
++emu 写点 provenance（cardi-f798probe.probe.jsonl（caller 实录（C0C2/CA07…）））✓
+
+**② D2 修核 ✓✓**：asm :5555-5561（pickup `jsr ObjDrawFrame`（**纯绘**））+:12212（skree DE4A
+（`sta PowerUpDraw.animFrame`（直接设帧）（`jsr ObjDrawFrame`（**纯绘**）））——**幻影走表**=
+asm 无（spawn.rs:172（旧形 `anim_draw_object(mem,0x40,0)`（移除）））✓+[uoa] 每迭代走表数
+回归 1（幻影走表后果=RUN 3× 过速（:321）→修后 1×）✓+**三勘误 asm 核**（①SpritePagePos
+**$5B** 判据（非 $4B（:5555-5566 pha/pla/cmp））②skree 暂存 PowerUpDraw.hi=Object.hi **$34C**
+（非 +7）③skree 绘槽=staged **$40** 槽（`lda #$40/sta PageIndex`（:5502-5504）））✓
+
+**③ 证伪链核（最重）✓✓✓**：**原地更正合规**（证伪更正文化（2026-11-04 更正））——§8 撤销「房间
+过渡/门入 intro 分歧」+「移动态分叉」（真根=**D1**（CF88 全形缺失））+§9.4/§9.5 撤销「淡入节律
+时序分叉」（**全窗 0 差**（淡入写源/逻辑/时序（含 TimerDelay 相位））（「rust 提前收」=探针
+n/f 错位伪影））+§11.0 探针索引勘误（**f=n+10**（n=DIAG_ITER≠场景帧 f（影响卡 B/C/D 读数）））——
+**卡 D「淡入节律」前提被推翻 ✓**+更正合规 ✓+**新读数可复读**（watch 已落 frames.jsonl
+（**900 行全非空 watch**（MainRoutine/TimerDelay/t3/FrameCount/samus（hex 块））））✓——
+**卡 B+C 复核遗留项闭环**（transient A 级证据持久化（解「不可复读」缺口））✓
+
+**④ 判据复跑 ✓**：485 测（**485 passed; 0 failed**）+gates PASS（**PASS=13 FAIL=0**）+
+**collide f800 animI 0 差** ✓（emu/rust 双侧（frm=0x10/0x10（dly=0x02/0x02（rst=0x0C/0x0C
+（idx=**0x0D/0x0D**））））（D1 修生效（原 0x0D/0x08 五步差→0 差））+**L4 95/108 增益** ✓
+（match **95** diff 13 blocked 0（分母 108（ratchet 守住（match 只增不减））））+**fade-blink
+0px 保持** ✓（baseline「认无回退：fade-blink 淡入窗格（killenemy f560/f590、scrollseam
+f560/f700/f76…）」）
+
+**⑤ D2-1b 拾取授予径 ✓**（原「永不可达」（旧形恒等⇒`beq` 恒真⇒授予径永不可达（原版行为缺失）））——
+修后语义 **asm 合法性** ✓（prg7:5564-5576（`cmp SpritePagePos`（`beq Exit9`（未绘出⇒退出））→
+**授予径**（`tax`（`ldy ItemIndex`（`lda PowerUps.0.type,y`（授取））））——绘出⇒SpritePagePos 变
+（cmp 不等⇒授予）与 asm 同形）+TDD `powerup_touch_grants_when_drawn`（恒 continue⇒Some 断言红
+（mutation 有效））✓
+
+**verdict**：animI 卡 E 对抗复核 **pass**（①D1 修核 ✓✓✓（asm CF88尾+Table06=0x0C×3+rust 同形
+（SetSamusAnim 全形）+TDD+provenance）②D2 修核 ✓✓（asm 纯绘（两处 jsr ObjDrawFrame）+幻影走表
+移除+[uoa] 回归 1+三勘误 asm 核）③证伪链核 ✓✓✓（最重（原地更正合规（撤销「淡入节律」前提
+（真根=D1）（f=n+10 探针错位勘误））+watch 落 frames.jsonl（900 行（可复读））））④判据复跑 ✓
+（485 测+PASS=13+collide f800 animI 0 差+L4 95/108+fade-blink 0px）⑤D2-1b 授予径 ✓（原永不可达
+→修后可达（asm 合法（cmp SpritePagePos/beq/授予径））+TDD mutation 有效））——**必跑验证 ✓**
+（实测输出原文（A 级））——对抗复核核（证伪立场（独立重导证据（正确性核）））✓——**卡 B+C
+复核遗留项闭环**（transient 证据持久化+「rust 不走 intro」原地更正撤销（真根=D1））。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
