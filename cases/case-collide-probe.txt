@@ -1,5 +1,13 @@
 name case-collide-probe
 frames 900
+# 卡 E 淡入节律采点（docs/findings/animi-divergence-collide-f800.md §10-11）：
+# Timer3($2C)/TimerDelay($29) 预分频相位 + MainRoutine($1E) 淡入状态机迁移 +
+# FrameCount($2D) 对齐锚——emu 帧级落 analysis/traces/<name>.frames.jsonl（可复读）。
+watch_range 0300-030F samus
+watch 001E MainRoutine
+watch 0029 TimerDelay
+watch 002C t3
+watch 002D FrameCount
 snapshot none
 press 310 start
 press 350 start

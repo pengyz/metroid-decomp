@@ -119,7 +119,7 @@
       }
     },
     "case-collide-probe": {
-      "scenario_sha256": "5478a7063ab2297662ffcc493651e8bb1304a45e61f1aa0aec4eb7abbd44fc29",
+      "scenario_sha256": "38fbb637edba4e73acf7c74ad7b47a1ad229acfc1eba44cd0c9d979f0c38192d",
       "states": {
         "420:game-in": {
           "state": "match",
@@ -707,6 +707,16 @@
       "kind": "anchor",
       "evidence": "",
       "reason": "H3 公式合形收益锁定（bit6 无+1/crawler 门无−1——asm 合形直读 FC）：match 57→76（+20 增益 0 翻格（flips=0 实测））；flaky 跨码态混判已修（同码态键）——锚定随锁",
+      "match": 76,
+      "diff": 32,
+      "blocked": 0,
+      "cells_total": 108
+    },
+    {
+      "ts": "2026-11-04T11:58:45+00:00",
+      "kind": "anchor",
+      "evidence": "",
+      "reason": "卡 E 淡入节律采点：case-collide-probe 场景增 watch 指令（0300-030F samus/001E MainRoutine/0029 TimerDelay/002C t3/002D FrameCount）——纯观测面增补（帧级 RAM 落 frames.jsonl，渲染零影响，采集点/输入流零变更）；确认无回退：run-all 后 match 76·diff 32·blocked 0 与旧基线逐格持平（scenario_sha256 漂移=watch 行哈希，采集语义未变——非语义重基）",
       "match": 76,
       "diff": 32,
       "blocked": 0,
