@@ -159,3 +159,50 @@ $EA2B/门滚动族）定根。**如实停机报证据不强修**（AGENTS.md §3
    SamusIntro C9D7）+ status=0x18 写源（何处置 0x18）。
 2. rust 对应径：collide 门入判定（撞门→status=0x18/过渡）vs 现状（撞墙→STAND/恒 Run）。
 3. 判据：collide f800 animIndex 两腿 0 差（深根修后近因自动消）+l4 无回退+443 绿+基线保持。
+
+
+## 9. 卡 D·status=0x18 写源+触发径考证（2026-11-04）——研究定谳（不修）
+
+### 9.1 0x18 写源定位（A 级 asm 行号锚）
+status=0x18 = **Samus 淡入序第 4 调色步**（非直写常量——SamusInit 起点 + SamusIntro 步进合成）：
+- **SamusInit（07:C8D1，prg7:1968-1983）**：`ldy #_id_Palette13+1.b / sty Samus.status`
+  ⇒ status←**0x14**（_id_Palette13=**0x13**（out/M1_NES_CNS.sym:14220 `00000013 _id_Palette13`）
+  ⇒ +1=0x14）。注「Set Samus status as fading onto screen」。同程 `sta MainRoutine←_id_SamusIntro`
+  +`sta Timer3←$2C`（440 帧淡入）。
+- **SamusIntro（07:C9D7，prg7:2186-2237）**：`cmp SamusFadeInTimeTbl-(_id_Palette13+1),y`
+  （**status=表索引**）+命中⇒`inc Samus.status`（步进）+`sty PaletteDataPending`。
+  SamusFadeInTimeTbl（07:CA13）=`$1E,$14,$0B,$04,$FF`（5 值）。status 轨迹：
+  **0x14**（起点）→0x15（Timer3=0x1E）→0x16（0x14）→0x17（0x0B）→**0x18**（0x04）→（表[4]=FF
+  不再 inc）→**FF/sa_Begin**（Timer3==0 淡入完成（prg7:2194-2199））→**01/sa_Run**。
+  ⇒ **status=0x18=淡入第 4 调色步**（末步，等 Timer3==0 收 sa_Begin）。
+
+### 9.2 status 谱系全表（0x18/FF/01 写源）
+| 值 | 语义 | 写源（bank:addr） |
+|---|---|---|
+| 0x14 | 淡入起点（_id_Palette13+1） | SamusInit 07:C8D1（`sty Samus.status`，prg7:1983） |
+| 0x15-0x18 | 淡入调色步进（inc status） | SamusIntro 07:C9D7（`inc Samus.status`，prg7:2215，Timer3 表触发） |
+| FF/sa_Begin(255) | 淡入完成（Samus facing forward） | SamusIntro 07:C9D7（`lda #sa_Begin/sta`，prg7:2198-2199） |
+| 01/sa_Run | 跑动（ActionTable） | SamusStand 07:CC36（prg7:2765-2769）/ActionTable($CC87) |
+
+### 9.3 触发径（双侧 trace 对表）
+- **触发事件=游戏开场 SamusInit**（非门入/非撞墙）：场景 cases/case-collide-probe.txt
+  press 310/350 start（菜单→游戏起）⇒SamusInit（status←0x14）⇒SamusIntro 淡入（440 帧 Timer3）。
+- **emu 逐帧**（watch 0300-030F）：f785-795 **status=0x18**（淡入第 4 步，等 Timer3==0）→
+  f796 **FF/sa_Begin**（淡入完成）→f797 **01/sa_Run**。即 emu 淡入在 f785-795 仍在走（0x18）。
+- **rust 逐帧**（[ssd]）：n=787 **status=01/sa_Run**（淡入已完）。即 rust 淡入提前收（sa_Run）。
+
+### 9.4 缺口定性（A 级）
+- **rust SamusInit 写源正确**（mainloop.rs:167 `SAMUS_STATUS←0x14`=_id_Palette13+1，sym 铁证
+  0x13+1=0x14）✓；**rust SamusIntro 淡入逻辑忠实**（mainloop.rs:203-245：Timer3==0⇒sa_Begin/
+  表[0x1E,0x14,0x0B,0x04,0xFF] 步进/奇帧 Front 闪现——asm C9D7 逐字）✓。
+- **缺口=淡入时序差**（非写源）：emu f785-795 仍在淡入（status=0x18，11 帧）vs rust n=787 已
+  sa_Run（淡入提前收）。status=0x18 持续 11 帧 ⇒ emu 步进/Timer3 递减速率 vs rust 差——**淡入
+  节律（Timer3 递减/步进触发帧）分叉**。下游（anim-set RUN vs STAND/收敛）随之。
+- **非门入径**（lead 疑）：此场景 status=0x18=**游戏开场淡入**（SamusInit），非门入/房间过渡
+  （SamusEnterDoor 已端口五点 match 不涉）。卡 C「房间过渡」判**更正**：实为**开场淡入序**。
+
+### 9.5 结论（研究定谳，不修）
+status=0x18 写源=SamusInit(0x14 起)+SamusIntro(inc 至 0x18，淡入调色第 4 步)。触发=游戏开场。
+缺口=**淡入节律时序**（Timer3 递减/步进触发帧 emu vs rust 分叉）——非写源/非门入。修径=淡入节律
+（Timer3 递减率+步进触发帧）asm 对读定根（下一卡）。【2026-11-04 更正】卡 C §8「房间过渡/门入」
+定性改为「开场淡入序」（写源=SamusInit 非 SamusEnterDoor）。

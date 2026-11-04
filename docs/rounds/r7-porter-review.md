@@ -13051,6 +13051,60 @@ gates check（**PASS=13 FAIL=0 SKIP=1 TOLERATED=2**（0 静默跳过））——
 输出原文（A 级））——对抗复核核（证伪立场（独立重导证据（正确性核）））✓——复核 verdict 实录
 （docs commit（对抗复核 verdict（5 重点（必跑验证）（实测输出原文（A 级））））✓。
 
+## animI 卡 B+卡 C 两卡打包对抗复核（0fdec2e7+4c6180f4（证伪立场（独立重导证据（4 重点））））
+
+### verdict: needs_revision（②最重点「rust 不走 intro/恒 01」被证伪+transient A 级证据不可复读）
+（余项 ✓）
+
+**必跑验证实录（④（A 级原文））**：
+- `cargo test --workspace`：game-core lib=**443 passed; 0 failed**（443/0（与任务规约一致））✓
+- `python3 gates/cli.py check`：**SUMMARY: PASS=13 FAIL=0 SKIP=1 TOLERATED=2**
+  （CHECK: PASS（含 0 个静默跳过））✓
+- **commit 范围核** ✓：0fdec2e7=**纯 docs/findings**（+34（无产品码））+4c6180f4=physics.rs
+  +18/-7 但**全在 DSH_SPRITE_TRACE 探针 guard 内**（grep 过滤 guard 行后残零行（exit 1（A 级
+  证明））（trace 窗口 812-820→680-830/775-802（字段 A→A/x/rx/scrX/st/hit/ay/door））——
+  **零逻辑改动**（"纯 trace/探针/findings" 成立（产品码文件被改但仅探针 instrumentation））✓
+
+**① 卡 B 核 ✓（近因/深根两层论证（结论成立）+trace 不可复读（诚实注））**：两层论证（近因=animDelay
+相位（emu 0/rust 4 阻 wrap（asm LCC6E `lda #$04` 忠实））+深根=移动态分歧（emu RUN→samL04 vs
+rust STAND→falling（前 anim 移动态不同）））——逻辑健全 ✓+**animIndex 收敛差实证**（f800 .ram.hex
+（animIndex emu=0x0D/rust=0x08（落后一走表步）（卡 A 复读在案））+animDelay 相位（emu=0x02/
+rust=0x01））✓——**诚实注**：f797-798 逐帧 transient（RUN@797→JUMP@798 idx 即时 wrap vs rust
+STAND@a_in=4 阻 4 帧）rest on live DSH_SPRITE_TRACE（[uoa]/[anim]/[ssd]）——**不可独立复读**
+（[ssd] trace 未存（grep 零命中））——B 级（结论健全（A 级细节不可复读））✓
+
+**② 卡 C 核（最重）✗ 拒收（「rust 不走 intro/恒 01」被证伪+transient 证据不可复读）**：
+- **status($300) 双侧 .ram.hex 独立复读**（A 级）：f420=**0x14/0x14**→f540=**0x15/0x15**→
+  f620=**0x16/0x16**→f700=**0x17/0x17**→f800=**0x01/0x01**——**全点双侧一致**（无 status 分歧）。
+- **status 常量域定谳**（A 级）：0x14-0x18=_id_Palette13+1 起 **fade-in 步进**（asm:1983（`ldy
+  #_id_Palette13+1`（fade 起始））+:2214（`cmp SamusFadeInTimeTbl-(_id_Palette13+1),y`）+:
+  2218（`inc Samus.status`（fade 步进+1）））——**f420-f700 双侧均在 fade-in（intro）**。
+- **「rust 不走 intro/恒 01」被证伪**：rust .ram.hex f420-f700=0x14-0x17（**fade-in 步进（与 emu
+  全同）**）——rust **走 intro fade**（非"恒 01"（非"不走 intro"））。准确 claim=**fade-COMPLETION
+  路径分歧**（transient f785-797：emu 0x18→FF→01（完整 fade 完成）vs rust →01（跳步））——
+  **窄于"不走 intro"**。
+- **transient f785-797 A 级证据不可复读**：frames.jsonl watch 数据=**空**（`w={}`（f783-799 全空
+  （"诊断临时加，已还原场景锚"）））+[ssd] trace 未存——emu watch（0x18→FF→01）/rust [ssd]（01）
+  rest on live 诊断输出（findings 引述）——**committed 产物不可独立复读**（持久化缺口）。
+- **asm SamusIntro C9D7 读证 ✓**（fade 完成→`lda #sa_Begin/sta Samus.status`（FF）→sa_Run(01)
+  （asm:2186-2199）+fade 步进 `inc Samus.status`（:2218））——0x18 写源未定位=诚实标注 ✓
+  （findings §8（非直接 sta（计算/表径）（待门入/房间加载 asm 全径考证）））。
+
+**③ 跨层裁定 §4 合规性 ✓（条件成立）**：「非 anim/局部 physics 可修、转房间过渡/门入域」——
+（问题层：房间过渡/门入域（结构层（非 anim/局部 physics））+卡 B 修径注（anim 域局部修"非 asm
+忠实"（需 emu 反证）⇒跨层正确）+消费者（status=$300（ram_map SAMUS_STATUS=0x0300）））——
+§4 合规 ✓ 但**证据基被②削弱**（status 分歧 A 级证据不可复读（层定位 rests on non-reproducible））。
+
+**④ 必跑验证+commit 范围核 ✓**：443/0+PASS=13+0fdec2e7（纯 findings）+4c6180f4（探针 guard 内
+（零逻辑改动））。
+
+**verdict**：animI 卡 B+卡 C 两卡打包对抗复核 **needs_revision**——②最重点被证伪拒收（「rust 不走
+intro/恒 01」被 .ram.hex+asm 双证伪（rust f420-f700=0x14-0x17 fade-in（与 emu 全同）（走 intro））+
+transient f785-797 A 级证据不可复读（watch 已还原（[ssd] 未存）（持久化缺口））——需将 claim 收窄为
+"fade-COMPLETION 路径分歧（transient）"+持久化 A 级证据（或降 B 级））——①卡 B ✓（两层论证健全
+（animIndex/animDelay 相位实证（f800 .ram.hex）（B 级（transient 细节不可复读）））③跨层裁定 §4
+合规 ✓（条件成立（证据基被②削弱））④必跑+commit 范围 ✓（443/0+PASS=13+纯 findings/探针 guard））。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
