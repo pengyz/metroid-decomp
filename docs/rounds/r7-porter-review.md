@@ -12988,6 +12988,69 @@ gates check（PASS=13）+L4 run-all（23/39 逐格=清理前））——**必跑
 ——对抗复核核（证伪立场（独立重导证据（正确性核）））✓——复核 verdict 实录（docs commit（对抗
 复核 verdict（④终判（必跑验证）（实测输出原文（A 级））））✓。
 
+## animI 卡 A 对抗复核（1e130e10+findings/animi-divergence-collide-f800.md（证伪立场
+（独立重导证据（5 重点（RAM hexdump 直读核+asm 读证抽查+TDD mutation+论证完备性+必跑验证））））
+
+### verdict: pass（5 重点全 ✓（A 级原文）（必跑验证 ✓（实测输出原文（A 级））））
+
+**必跑验证实录（⑤（A 级原文））**：
+- `cargo test --workspace`：game-core lib=**443 passed; 0 failed**（443/0（与任务规约一致））✓
+- `python3 gates/cli.py check`：**SUMMARY: PASS=13 FAIL=0 SKIP=1 TOLERATED=2**
+  （CHECK: PASS（含 0 个静默跳过））✓
+
+**① RAM hexdump 直读核 ✓✓✓（双侧 .ram.hex 独立复读（A 级））**：emu 腿（analysis/traces/
+case-collide-probe_f00800_l240.ram.hex）+rust 腿（shots_rust/case-collide-probe_f00800_l240
+.ram.hex）（len=2176（2KB））——四字段双侧对照全吻合 findings §1：
+- animFrame（$0303）emu=**0x10**/rust=**0x08**（分歧）✓
+- animDelay（$0304）emu=**0x02**/rust=**0x01**（相位差 1）✓
+- animResetIndex（$0305）emu=**0x0C**/rust=**0x0C**（**一致**）✓
+- animIndex（$0306）emu=**0x0D**/rust=**0x08**（落后一走表步）✓
+
+**② asm 读证抽查 ✓✓✓（prg7_engine.asm 逐行对读（A 级））**：
+- **SetSamusJump CFC3 dey 语义** ✓（prg7:3434-3440（`ldy #ObjAnim_SamusJump`→`sty
+  Samus.animResetIndex`（reset←Jump(0x0C)）→**`dey`**（Y=Jump-1=**JumpTransition(0x0B)**）→
+  `sty Samus.animIndex`（**index←0x0B 非 Jump 自身**）→`lda #$04`→`sta Samus.animDelay`））
+- **SetSamusAnim CF6B 双写** ✓（prg7:3371-3372（`sta Samus.animResetIndex`（fallthrough→
+  CF6E）））
+- **SetSamusNextAnim CF6E 只写 index** ✓（prg7:3374-3378（`sta Samus.animIndex`（`lda #$00`
+  （`sta Samus.animDelay`（`rts`（不写 reset）））））
+- **InitObjectXSlotAnimIndex D2FA 三写面** ✓（prg7:3984-3992（Objects.0.animResetIndex,x→
+  D2FD（Objects.0.animIndex,x（Objects.0.animDelay,x））））
+
+**③ TDD mutation 有效性 ✓✓✓（A 级实证（/tmp/mut-test 隔离副本（不触 workspace crates/）））**：
+靶位 handler.rs:459（`mem.write_ram(ANIM_RESET_INDEX + 1, anim.wrapping_sub(1))`（index←0x0B））
+→mutation（改回 `anim`（Jump 自身 0x0C））→**改回 Jump 自身即红**：
+`samus::handler::tests::set_samus_jump_writes_jump_transition_index ... FAILED`
+（assertion `left == right` failed: **animIndex←Jump-1(0x0B=JumpTransition——CFC3 dey 语义)**
+（**left: 12**(=0x0C Jump 自身)/right: 11(=0x0B)））（**442 passed; 1 failed**）——mutation
+**精确钉住 dey 语义**（0x0B=JumpTransition）✓
+
+**④ 论证完备性 ✓✓✓（排除「reset 写值错」（双分支排除））**：
+- (a) **写源值正确**：TDD（set_samus_jump_writes_jump_transition_index（三断言
+  （reset←0x0C/index←0x0B/delay←4））+asm 逐行读证（CF6B/CFC3/D2FA 三写面全对表）——
+  写源写值正确 ✓
+- (b) **observed reset 字段全 capture 点双侧一致**：f540（rst=0x04/0x04）+f700（rst=0x04/0x04）+
+  f800（rst=0x0C/0x0C）——独立复读（**全同**）——若 reset 写值错⇒reset 字段必现分歧
+  （实测无）——「reset 写值错」分支排除 ✓
+- **分歧限定走表推进态**（animIndex/animFrame/animDelay）——残余根因不确定性**诚实标注**
+  （findings §5「假设（待证）」（①animDelay 走表节律相位累积差/②切动画触发时机差（待逐帧
+  trace 定帧）））+§6 下一步（DSH_SPRITE_TRACE 桩（[uoa]/[anim]/[ssd]）逐帧对表）——
+  论证完备（无过度声明）✓
+- **对抗补核**（f700/f540 时序表复读（首分歧=f800 确证（f700/f540 双侧全同（frm/dly/rst/idx
+  =0x07/0x00/0x04/0x05））））✓
+
+**⑤ 必跑验证 ✓**：cargo test --workspace（game-core lib=**443 passed; 0 failed**（443/0））+
+gates check（**PASS=13 FAIL=0 SKIP=1 TOLERATED=2**（0 静默跳过））——**实测输出原文（A 级）** ✓
+
+**verdict**：animI 卡 A 对抗复核 **pass**（①RAM hexdump 直读核 ✓✓✓（双侧 .ram.hex 独立复读
+（四字段全吻合（animFrame 0x10/0x08（animDelay 0x02/0x01（animResetIndex 0x0C 两腿同（animIndex
+0x0D/0x08）））））②asm 读证抽查 ✓✓✓（SetSamusJump CFC3 dey（index←JumpTransition 0x0B 非 Jump
+自身）+CF6B 双写/CF6E 只写 index/D2FA 三写面）③TDD mutation 有效性 ✓✓✓（改回 Jump 自身即红
+（left: 12/right: 11（442 passed; 1 failed）））④论证完备性 ✓✓✓（排除 reset 写值错（双分支排除）
+（分歧限定走表推进态（诚实标注假设）））⑤必跑验证 ✓（443/0+PASS=13））——**必跑验证 ✓**（实测
+输出原文（A 级））——对抗复核核（证伪立场（独立重导证据（正确性核）））✓——复核 verdict 实录
+（docs commit（对抗复核 verdict（5 重点（必跑验证）（实测输出原文（A 级））））✓。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
