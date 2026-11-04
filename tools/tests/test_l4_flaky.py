@@ -37,8 +37,9 @@ gates = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(gates)
 
 
-def obs(case, frame, tag, verdict, run):
-    return {"run_id": run, "case": case, "frame": frame, "tag": tag, "verdict": verdict}
+def obs(case, frame, tag, verdict, run, code_state="sha_same"):
+    return {"run_id": run, "case": case, "frame": frame, "tag": tag,
+            "verdict": verdict, "code_state": code_state}
 
 
 class TestClassifyFlaky:
@@ -60,6 +61,20 @@ class TestClassifyFlaky:
         rec = fl[("c", 560, "t")]
         assert sorted(rec["verdicts"]) == ["diff", "match", "match"]
         assert rec["n"] == 3
+
+
+    def test_cross_code_state_not_flaky(self):
+        """跨码态 verdict 漂移=修复轨迹非非确定性——不判 flaky（2026-11-04 根修）。"""
+        rows = [obs("c", 560, "t", "diff", "r1", code_state="sha_old"),
+                obs("c", 560, "t", "match", "r2", code_state="sha_new"),
+                obs("c", 560, "t", "match", "r3", code_state="sha_new")]
+        assert l4.classify_flaky(rows, min_runs=3) == {}
+
+    def test_legacy_rows_no_code_state_excluded(self):
+        """无 code_state 旧账行排除出判定（历史修复轨迹不可比——保留不删）。"""
+        rows = [{"run_id": f"r{i}", "case": "c", "frame": 560, "tag": "t", "verdict": v}
+                for i, v in enumerate(["match", "diff", "match"])]
+        assert l4.classify_flaky(rows, min_runs=3) == {}
 
 
 class TestMatrixFlakyDisposition:
@@ -100,3 +115,54 @@ class TestMatrixFlakyDisposition:
     def test_no_flaky_unchanged(self):
         m = l4.build_matrix(self._matrix(), flaky={})
         assert m["denominator"] == 2 and m["match"] == 2
+
+
+class TestMatrixMdFlakyRender:
+    """【H3 回归锚（2026-11-04）】matrix_md flaky 态渲染——flaky schema 全链补装。
+
+    红态实录（H3 修复轮）：classify_flaky 出 flaky 格后 matrix_md 图标表
+    `{"match","diff","blocked"}[c["state"]]` 直接下标 ⇒ **KeyError: 'flaky'** ⇒
+    run-all 全量拒跑（exit 2）——flaky schema（146b5ede）漏装 matrix_md 渲染面。
+    """
+
+    def test_matrix_md_renders_flaky_cell(self):
+        rows = [{
+            "case": "c", "case_file": "cases/c.txt",
+            "scenario_sha256": "s", "rom_sha256": "r", "sched_sha256": "h",
+            "artifacts": {}, "snapshot": None, "report": None,
+            "legs": {"rust": "fresh", "emu": "fresh"}, "error": None,
+            "cells": [
+                {"frame": 560, "tag": "a", "state": "match",
+                 "provenance": {"rust": "fresh", "emu": "fresh"}, "file": None,
+                 "diff_pixels": 0, "total_pixels": 1, "reason": None},
+            ],
+        }]
+        fl = {("c", 560, "a"): {"verdicts": ["match", "diff", "match"],
+                               "runs": ["r1", "r2", "r3"], "n": 3}}
+        m = l4.build_matrix(rows, flaky=fl)
+        md = l4.matrix_md(m)  # 不得 KeyError: 'flaky'
+        assert "flaky" in md
+        assert "560" in md
+
+    def test_matrix_md_renders_all_states(self):
+        rows = [{
+            "case": "c", "case_file": "cases/c.txt",
+            "scenario_sha256": "s", "rom_sha256": "r", "sched_sha256": "h",
+            "artifacts": {}, "snapshot": None, "report": None,
+            "legs": {"rust": "fresh", "emu": "fresh"}, "error": None,
+            "cells": [
+                {"frame": 560, "tag": "a", "state": "match",
+                 "provenance": {"rust": "fresh", "emu": "fresh"}, "file": None,
+                 "diff_pixels": 0, "total_pixels": 1, "reason": None},
+                {"frame": 700, "tag": "b", "state": "diff",
+                 "provenance": {"rust": "fresh", "emu": "fresh"}, "file": None,
+                 "diff_pixels": 3, "total_pixels": 1, "reason": None},
+                {"frame": 800, "tag": "c", "state": "blocked",
+                 "provenance": {"rust": "none", "emu": "none"}, "file": None,
+                 "diff_pixels": None, "total_pixels": None, "reason": "x"},
+            ],
+        }]
+        fl = {("c", 560, "a"): {"verdicts": ["match", "diff", "match"],
+                               "runs": ["r1", "r2", "r3"], "n": 3}}
+        md = l4.matrix_md(l4.build_matrix(rows, flaky=fl))
+        assert "flaky" in md and "diff" in md and "blocked" in md

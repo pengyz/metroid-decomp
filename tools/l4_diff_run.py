@@ -749,17 +749,24 @@ def l4_obs_path() -> Path:
     return SHOTS_RUST / "l4_run_observations.jsonl"
 
 
-def append_cell_observations(run_id: str, rows: list) -> int:
-    """多 run 观测账追加（flaky 判定唯一依据源——每格每 run 一行）。"""
+def append_cell_observations(run_id: str, rows: list, code_state: str | None = None) -> int:
+    """多 run 观测账追加（flaky 判定唯一依据源——每格每 run 一行）。
+
+    code_state=代码态键（git HEAD sha 或语义等价（改码后新键））——flaky 判定只在
+    **同码态内**比较（【2026-11-04 修】跨码态 verdict 变化=修复轨迹非非确定性，旧账
+    无键行排除出 flaky 判定（保留作历史）——根修前 54 格假 flaky 实证）。"""
     SHOTS_RUST.mkdir(parents=True, exist_ok=True)
     n = 0
     with open(l4_obs_path(), "a", encoding="utf-8", newline="\n") as fh:
         for row in rows:
             for c in row["cells"]:
-                fh.write(json.dumps({
+                rec = {
                     "run_id": run_id, "case": row["case"],
                     "frame": c["frame"], "tag": c["tag"], "verdict": c["state"],
-                }, ensure_ascii=False) + "\n")
+                }
+                if code_state:
+                    rec["code_state"] = code_state
+                fh.write(json.dumps(rec, ensure_ascii=False) + "\n")
                 n += 1
     return n
 
@@ -782,21 +789,32 @@ def load_cell_observations(path: Path | None = None) -> list:
 
 
 def classify_flaky(observations: list, min_runs: int = 3) -> dict:
-    """flaky 判定（纯函数）：≥min_runs 次观测且 verdict 不一致 ⇒ flaky。
+    """flaky 判定（纯函数）：**同码态内** ≥min_runs 次观测且 verdict 不一致 ⇒ flaky。
 
-    返回 {(case, frame, tag): {"verdicts": [...], "runs": [...], "n": N}}——
+    【2026-11-04 修（跨码态混判根修）】分组键加 code_state——跨代码变更的 verdict
+    漂移=修复轨迹非非确定性（根修前 54 格假 flaky：bullet/land-settled 等稳定 diff
+    格因历史 match 记录被误判）；无 code_state 的旧账行**排除出判定**（保留作历史
+    痕迹，不静默删）。返回 {(case, frame, tag): {"verdicts", "runs", "n"}}——
     多 run 观测记录**随格留痕**（判据=观测记录本身，非阈值豁免）。"""
     groups: dict = {}
+    legacy = 0
     for o in observations:
-        key = (str(o.get("case")), o.get("frame"), str(o.get("tag")))
+        cs = o.get("code_state")
+        if not cs:
+            legacy += 1
+            continue  # 旧账无码态=排除出 flaky 判定（历史修复轨迹不可比）
+        key = (str(o.get("case")), o.get("frame"), str(o.get("tag")), str(cs))
         g = groups.setdefault(key, {"verdicts": [], "runs": []})
         g["verdicts"].append(str(o.get("verdict")))
         g["runs"].append(str(o.get("run_id")))
     out = {}
-    for key in sorted(groups, key=lambda k: (k[0], k[1] if isinstance(k[1], int) else 1 << 30, k[2])):
+    for key in sorted(groups, key=lambda k: (k[0], k[1] if isinstance(k[1], int) else 1 << 30, k[2], k[3])):
         g = groups[key]
         if len(g["verdicts"]) >= min_runs and len(set(g["verdicts"])) >= 2:
-            out[key] = {"verdicts": g["verdicts"], "runs": g["runs"], "n": len(g["verdicts"])}
+            # 输出键=格三元组（同码态多态组取格名——码态留 runs 内可溯）
+            cell = key[:3]
+            out[cell] = {"verdicts": g["verdicts"], "runs": g["runs"], "n": len(g["verdicts"]),
+                         "code_state": key[3]}
     return out
 
 
@@ -877,13 +895,16 @@ def matrix_md(m: dict) -> str:
                      f"`{r['sched_sha256']}` | {len(r['artifacts'])} 件 | {snap} | "
                      f"{legs} | {nm}/{nd}/{nb} |")
     lines.append("")
-    lines.append("## 采集点格（三态：match | diff | blocked；来源=腿 provenance）")
+    lines.append("## 采集点格（match | diff | blocked | flaky（多 run 观测账不一致——不计分母不锚值））")
     lines.append("")
     lines.append("| 用例 | frame | tag | 状态 | 来源 rust/emu | 差异像素/总 | 说明 |")
     lines.append("|---|---|---|---|---|---|---|")
     for r in m["rows"]:
         for c in r["cells"]:
-            icon = {"match": "✅match", "diff": "❌diff", "blocked": "⛔blocked"}[c["state"]]
+            # 【H3 回归修（2026-11-04）】flaky 态补装（146b5ede schema 漏装渲染面——
+            # flaky 格出现即 KeyError: 'flaky' ⇒ run-all 全量拒跑）+未知态兜底显式。
+            icon = {"match": "✅match", "diff": "❌diff", "blocked": "⛔blocked",
+                    "flaky": "🎲flaky"}.get(c["state"], f"❓{c['state']}")
             prov = f"{c['provenance']['rust']}/{c['provenance']['emu']}"
             dp = "" if c["diff_pixels"] is None else f"{c['diff_pixels']}/{c['total_pixels']}"
             reason = (c["reason"] or "").replace("|", "\\|")
@@ -988,6 +1009,13 @@ def _do_run_all(args) -> int:
         return 2
     rows, seen = [], {}
     run_id = time.strftime("%Y%m%d-%H%M%S")
+    # flaky 判定码态键（【2026-11-04 修】同码态内才可比——跨码态 verdict 漂移=修复轨迹）
+    try:
+        import subprocess as _sp
+        code_state = _sp.run(["git", "rev-parse", "HEAD"], capture_output=True,
+                             text=True, timeout=10).stdout.strip() or "unknown"
+    except Exception:
+        code_state = "unknown"
     for cf in case_files:
         try:
             plan = sr.parse_scenario(cf)
@@ -1030,7 +1058,7 @@ def _do_run_all(args) -> int:
         row = matrix_row(name, case_file, caps, anchors=anchors, legs=out["legs"],
                          report=out["report"], snapshot=snap, error=out["error"])
         rows.append(row)
-        append_cell_observations(run_id, [row])  # B 径：多 run 观测账（flaky 判据源）
+        append_cell_observations(run_id, [row], code_state=code_state)  # B 径：多 run 观测账（flaky 判据源——同码态键）
         if out["error"] is not None:
             print(f"[case] {name}: 未跑成（{out['error']}）——全格 blocked 记账（不缩分母）",
                   file=sys.stderr)
