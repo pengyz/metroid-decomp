@@ -204,6 +204,15 @@ pub fn samus_intro(mem: &mut FrameMemory) {
     crate::frame::boot::c1a3_unit(mem); // EraseAllSprites（$C1A3）
     let status = mem.read_ram(0x0300); // Samus.status（$300）
     let t3 = mem.read_ram(0x002C); // Timer3（$2C）
+    if std::env::var("DSH_SPRITE_TRACE").is_ok() {
+        use std::sync::atomic::Ordering;
+        let n = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
+        if n >= 340 && n <= 802 {
+            eprintln!("[fade] n={} FC={:02X} t3={:02X} st={:02X} td={:02X}", n,
+                mem.read_ram(crate::ram_map::FRAME_COUNT), t3, status,
+                mem.read_ram(crate::ram_map::TIMER_DELAY));
+        }
+    }
     if t3 == 0 {
         // 淡入完成（r26 端口——asm 逐字）：ItemRoomMusicStatus($79)←0/Samus.status←
         // sa_Begin(255)/StartMusic($D92C)/SelectSamusPalette($CB73)/MainRoutine←3
@@ -2382,6 +2391,9 @@ fn uw_all_doors(_mem: &mut crate::frame::FrameMemory) {}
 /// 12242 全谱——goal-轮13 件））：①dieDelay 倒数 ②速表（FC5D——(Y,X)：(0,−5)/(−5,−2)
 /// /(−5,+2)/(0,+5)）③位移+出界⇒Kill ④**Samus 5 伤害**（:12214-12232——i 帧/螺旋转免伤）。
 fn uw_skree_projectiles(mem: &mut crate::frame::FrameMemory) {
+    // 【卡 E D2-2 端口】asm UpdateAllSkreeProjectiles 循环头（prg7_engine.asm:12146-
+    // 12148）：`lda #$40 / sta PageIndex`——显示面共用 PowerUpDraw($340) 槽。
+    mem.write_ram(0x004B, 0x40);
     const SPEED: [(i8, i8); 4] = [(0, -5), (-5, -2), (-5, 2), (0, 5)]; // FC5D 逐字
     for (si, yy) in [12u16, 8, 4, 0].iter().enumerate() {
         let base = 0x00A0u16 + yy;
@@ -2406,19 +2418,22 @@ fn uw_skree_projectiles(mem: &mut crate::frame::FrameMemory) {
         // 【goal-轮22 弹显示态件】UpdateSkreeProjectile（:12191-12205 逐字）：位姿写
         // PowerUpDraw（$340 槽——y/x/hi）——显示面状态（ObjDrawFrame SkreeProjectile
         // 帧（_id_ObjFrame_SkreeProjectile）随件）。
-        mem.write_ram(0x0340 + 13, py); // PowerUpDraw.y
-        mem.write_ram(0x0340 + 14, px); // PowerUpDraw.x
-        mem.write_ram(0x0340 + 7, mem.read_ram(base + 3) & 1); // PowerUpDraw.hi
+        mem.write_ram(0x0340 + 13, py); // PowerUpDraw.y（Object.y=$34D）
+        mem.write_ram(0x0340 + 14, px); // PowerUpDraw.x（Object.x=$34E）
+        mem.write_ram(0x0340 + 0x0C, mem.read_ram(base + 3) & 1); // PowerUpDraw.hi
+        // （Object.hi=$34C——旧形误写 +7=data07；PowerUpDraw=instanceof Object
+        // （constants_ram:817「just a regular object」——Object 字段位移权威））
         // 【goal-轮23 弹显示帧】（:12207-12212 逐字：animFrame←_id_ObjFrame_SkreeProjectile
-        // +`jsr ObjDrawFrame`——asm txa/pha/pla/tax 同构：PageIndex 换弹槽→绘→还）。
+        // +`jsr ObjDrawFrame`——asm txa/pha/pla=X 存还（ObjDrawFrame 内 ldx PageIndex
+        // 覆 X）非 PageIndex 换槽（旧形误读）。
         // 【goal-轮24 弹帧 id 实证】ObjFramePtrTable（common_sprite_data:282-388）索引
         // 自证（ObjFrame2C=表位 0x2C ✓ 名实符）⇒SkreeProjectile=表位 **0x5A**
         // （:373−:283=90）——旧猜值 0x2C（=ObjFrame2C ✗）。
         mem.write_ram(0x0340 + 3, 0x5A); // PowerUpDraw.animFrame（_id_ObjFrame_SkreeProjectile）
-        let saved = mem.read_ram(0x004B); // PageIndex 存
-        mem.write_ram(0x004B, (base & 0xFF) as u8); // 换弹槽
-        crate::frame::sprite::anim_draw_object(mem, (base & 0xFF) as u8, 0); // ObjDrawFrame
-        mem.write_ram(0x004B, saved); // PageIndex 还
+        // 【卡 E D2-2】asm :12212 `jsr ObjDrawFrame`（DE4A **纯绘** PowerUpDraw($40) 槽
+        // ——循环头 `lda #$40/sta PageIndex`（:12146-12148）；旧形 anim_draw_object
+        // ((base&0xFF),0)（DE47 幻影走表+错绘 Door 槽 $3A0+yy）。
+        crate::frame::sprite::obj_draw_frame(mem, 0x40);
         // Samus 5 伤害（:12214-12232）
         if mem.read_ram(crate::ram_map::SAMUS_INVINCIBLE_DELAY) == 0 {
             let sy = mem.read_ram(0x030D) as i16;
@@ -3115,6 +3130,28 @@ mod tests {
         update_timer(&mut m);
         assert_eq!(m.read_ram(TIMER_DELAY), 9);
         assert_eq!(m.read_ram(TIMER3), 1);
+    }
+
+    /// 【卡 E D2-2（animi-divergence-collide-f800.md §11）】UpdateSkreeProjectile 显示面=
+    /// **纯绘 PowerUpDraw($340) 槽**：循环头 **`lda #$40/sta PageIndex`**
+    /// （prg7_engine.asm:12146-12148）+位姿/animFrame 暂存 $340（:12191-12208）+
+    /// **`jsr ObjDrawFrame`**（:12212——DE4A 无走表）。旧形 anim_draw_object((base&0xFF),0)
+    /// =DE47 幻影走表（a_in=0 落 $4B 槽）+错绘 0xA0+yy（Door 槽）——emu probe_mem 写点
+    /// 对照：该径零 anim 写（caller 集无该站）。
+    #[test]
+    fn skree_projectile_display_is_pure_draw_powerup_slot() {
+        let mut m = FrameMemory::default();
+        m.write_ram(0x0304, 5); // Samus 槽走表哨兵
+        let base = 0x00A0u16;
+        m.write_ram(base, 2); // dieDelay>0（活槽）
+        m.write_ram(base + 1, 0x40); // py
+        m.write_ram(base + 2, 0x20); // px
+        m.write_ram(base + 3, 1); // hi=1（暂存位移锚）
+        uw_skree_projectiles(&mut m);
+        assert_eq!(m.read_ram(0x0304), 5, "纯绘=无走表（Samus 槽 animDelay 不动）");
+        assert_eq!(m.read_ram(0x004B), 0x40, "PageIndex←$40（:12146-12148 循环头端口）");
+        assert_eq!(m.read_ram(0x0340 + 0x0C), 1, "PowerUpDraw.hi=Object.hi($34C)——旧形误写 +7");
+        assert_eq!(m.read_ram(0x0340 + 3), 0x5A, "animFrame←SkreeProjectile 表位");
     }
 
     /// GoMainRoutine 标题路**会师穿越**（bank00:8000 已通——phase 0 臂单工作段+bogged

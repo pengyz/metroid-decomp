@@ -126,6 +126,12 @@ Samus 在跑 RUN，rust 判停 STAND）。碰撞后移动态（跑 vs 停）分�
 
 ## 8. 卡 C·physics 移动态定根（2026-11-04）——深根=房间过渡/门入 intro 分歧（结构性）
 
+> 【2026-11-04 更正】本节「房间过渡/门入 intro 分歧」与「emu 判 RUN 走 samL04 vs rust
+> 判 STAND 走 falling 移动态分叉」定性**撤销**——卡 E 读数重对齐（§11.0-11.2）：f797
+> 两侧收口同态（RUN reset-only），「分叉」为探针 n/f 错位+walk-entry 中间态伪影。真根
+> =D1（CF88 pressed 尾 SetSamusAnim 全形缺失——§11.4）。现象层观察（anim-set 路径差异
+> 表象）维持存档。
+
 【逐帧实录（A 级）】watch 0300-030F（status/radius/anim/x）+ 0305-0306（anim）两腿对表。
 - **EMU**：f785-795 **status=$300=0x18**（intro/fade-in 态）+anim=FRONT(04)+x=80（停）→
   f796 status=**FF/sa_Begin**（`SamusIntro C9D7`：`lda #sa_Begin/sta Samus.status`「Fade in
@@ -162,6 +168,10 @@ $EA2B/门滚动族）定根。**如实停机报证据不强修**（AGENTS.md §3
 
 
 ## 9. 卡 D·status=0x18 写源+触发径考证（2026-11-04）——研究定谳（不修）
+
+> 【2026-11-04 更正】§9.4/§9.5 的「缺口=淡入节律时序分叉」定性**撤销**——卡 E 双侧
+> 逐帧对表（§11.1）实证淡入写源/逻辑/时序（含 TimerDelay 相位）**全窗 0 差**；原
+> 「rust 提前收」读数=探针 n/f 索引错位伪影（§11.0）。0x18 写源考证（§9.1-9.2）维持。
 
 ### 9.1 0x18 写源定位（A 级 asm 行号锚）
 status=0x18 = **Samus 淡入序第 4 调色步**（非直写常量——SamusInit 起点 + SamusIntro 步进合成）：
@@ -206,3 +216,187 @@ status=0x18 写源=SamusInit(0x14 起)+SamusIntro(inc 至 0x18，淡入调色第
 缺口=**淡入节律时序**（Timer3 递减/步进触发帧 emu vs rust 分叉）——非写源/非门入。修径=淡入节律
 （Timer3 递减率+步进触发帧）asm 对读定根（下一卡）。【2026-11-04 更正】卡 C §8「房间过渡/门入」
 定性改为「开场淡入序」（写源=SamusInit 非 SamusEnterDoor）。
+
+## 10. 卡 E·淡入节律 asm 全径逐行读证（2026-11-04）——Timer3 递减率/步进触发帧/440 帧结构
+
+### 10.1 递减率（谁减/几帧一减——UpdateTimer 族）
+- **UpdateTimer 07:C266**（prg7_engine.asm:654-678，头注「Derived from FDS BIOS's
+  CounterLogic routine」——即任务书「UpdateAge 族」所指计数器族）逐行：
+  `ldx #$01 / dec TimerDelay($29) / bpl @endIf_A`——$29 每帧 dec；**结果≥0（原值≥1）⇒
+  X=$1**（本帧只减 Timer2/Timer1）；**原值==0 ⇒ dec 出 $FF（N=1）**⇒`lda #$09/sta
+  TimerDelay`+`ldx #$02`（含 Timer3）。`@loop_decTimer`（:672-677）=`lda Timer1,x/beq
+  跳/dec Timer1,x`（**非零才减**——Timer3 到 0 后冻结）+`dex/bpl`（X=2→1→0=Timer3→2→1）。
+  ⇒ **TimerDelay 9→0 十态循环；Timer3 每 10 帧减 1（于 $29 的 0→$FF 跨越帧）**。
+- **调用序 MainLoop 07:C0BC**（prg7_engine.asm:199-210）：CheckBankSwitch→**UpdateTimer**→
+  GoMainRoutine→inc FrameCount→等 NMI→RandomNumbers→循环。**UpdateTimer 先于状态机
+  分发**：SamusInit 同帧置 Timer3=44 不会被同帧减（首减最早在次帧）。
+- **rust update_timer（mainloop.rs:2959-2980）逐语义对表=忠实**：wrapping_sub-1+bpl 等价、
+  reset 0x09、非零门、i=last→0 降序（Timer3→2→1）、`regs.x=0xFF` 残迹注（asm dex 出口）✓。
+  调用序（mainloop.rs 迭代注）=UpdateTimer→GoMainRoutine→inc FrameCount ✓ 对表。
+
+### 10.2 440 帧计数结构（谁设/如何折算 440）
+- **SamusInit 07:C8D1**（prg7_engine.asm:1971-1983）：`lda #_id_SamusIntro/sta MainRoutine`；
+  **`lda #$2C/sta Timer3`**（NES_NTSC——注「440 frames to fade in Samus(7.3 seconds)」；
+  PAL=$26）；`jsr IntroMusic($CBFD)`；`ldy #_id_Palette13+1/sty Samus.status`（←**0x14**）；
+  SamusInvincibleDelay←0；PipeBugHoles/EndTimer/Rinka 簇初始化。**本径无 TimerDelay($29) 写**。
+- **结构=Timer3=44 单位 × $29 十帧预分频=440 名义帧**。收尾帧精确式：
+  **fade-done 帧 = S + 431 + d**——S=SamusInit 分发帧（该帧 UpdateTimer 已过）；d=该帧
+  UpdateTimer 后 $29 残值（0..9）⇒ 首个 Timer3 减落点=S+d+1、末落点（1→0）=S+d+431、
+  同帧 GoMainRoutine 内 SamusIntro 见 Timer3==0 收尾。**收尾帧抖动=±9 帧=$29 相位 d**。
+- **TimerDelay($29) 生命周期（SRC 全文 grep）：仅 UpdateTimer :658(dec)/:663(reset 9)
+  两写点，无任何初始化写**。boot 值源=**Startup 07:C01A**（prg7_engine.asm:59-105）清零环：
+  `$01←7/$00←0/A=0` 逐页 `sta ($00),y`——`dec $01/bmi 出/ldx $01/cpx #$01/bne 环`：
+  **$01==1 落出 ⇒ 只清 $0200-$07FF**（$01 栈页与 **$00 零页不清**——环自指保护）。
+  ⇒ **$29 boot 值=主机 RAM 残值（游戏从未写初值）**；从 MainLoop 首迭代起自由跑，
+  跨越相位=(boot 值 V+1) mod 10。**【首异主嫌①：emu（Mesen RAM init 策略）与 rust
+  （FrameMemory 初值）的 $29 boot 值若不同 ⇒ 预分频相位偏 ⇒ 收尾帧偏整周期】**。
+
+### 10.3 步进触发帧（表触发结构）
+- **SamusIntro 07:C9D7**（prg7_engine.asm:2186-2237）逐行：
+  `jsr EraseAllSprites($C1A3)`→`ldy Samus.status`→`lda Timer3/bne LC9F2`：
+  **Timer3==0 ⇒ 收尾**（sta ItemRoomMusicStatus←0/status←sa_Begin/StartMusic($D92C)/
+  SelectSamusPalette($CB73)/MainRoutine←_id_GameEngine，:2193-2203）。
+  LC9F2（:2205-2207）：`cmp #$1F/bcs RTS`——A=Timer3（bne 不改 A）：**Timer3≥31（剩
+  310 帧内）前不显示 Samus**。
+  :2209-2216：`cmp SamusFadeInTimeTbl-(_id_Palette13+1),y`（**Y=status=表索引**：0x14→表[0]）
+  命中⇒`inc Samus.status`+`sty PaletteDataPending`。**表 CA13**（:2242-2243）=
+  **$1E,$14,$0B,$04,$FF** ⇒ 步进触发帧=Timer3 首达 30/20/11/4 的减落点帧（第 14/24/33/40
+  减落点）；status 0x14→0x15→0x16→0x17→0x18（第 4 步后等 Timer3==0）。
+  :2217-2235：奇 FrameCount 闪现门（`lda FrameCount/lsr/bcc`）→SetSamusAnim($CF6B,
+  SamusFront)→SpritePagePos←0/PageIndex←0→`jmp AnimDrawObject($DE47)`。
+- **触发=逐帧比较制（cmp 表值）非边沿制** ⇒ 步进帧严格跟随 Timer3 减落点（相位由 $29 决定）；
+  4 步+收尾全部锚在预分频相位上。rust mainloop.rs:203-245 samus_intro 逻辑=asm 逐字
+  （卡 D §9.4 已证）——**写源/逻辑忠实，纯时序差**。
+
+### 10.4 定性（收窄表述——verifier 复核处方 a 并入）
+四层链总根表述**收窄**为：**fade-COMPLETION 路径分歧（transient f785-797）**——
+rust/emu 淡入写源与逻辑全忠实；分歧在**淡入收尾时序**（Timer3 减落点相位）。
+两候选根（§11 钉首异帧/首异写点后定谳）：
+① **$29 boot 相位差**（§10.2——游戏无初值写，双腿 RAM 初值策略不同即偏整周期）【主嫌】；
+② **S 帧差**（标题→GameMode 切换→SamusInit 时间线，双腿首异帧可能更早）。
+证据面纪律：本节 asm 引证全为 A 级（bank:addr+file:line 逐行读证）；结论 ① 为 A 级
+结构事实（无初值写=可复现 grep+读证）+ **B 级推断**（初值不同⇒相位偏——待 §11 双侧
+$29 轨迹实测定谳）。
+
+## 11. 卡 E·双侧逐帧对表+总根定谳（2026-11-04）——fade 0 差实证 + 首异帧 f798 + D1/D2 修
+
+### 11.0 探针索引勘误（前置更正——影响卡 B/C/D 读数）
+【2026-11-04 更正】rust DSH_SPRITE_TRACE 的 **n=DIAG_ITER ≠ 场景帧 f**：**f=n+10**
+（FC 读于处理中、state 行采于收口 inc 后：探针 FC=k ⇒ 行 FC=k+1——[fade] n=786 FC=0C↔
+行 f796 FC=0D、[ssd] n=787 FC=0D/st=01↔行 f797 FC=0E/st=01 双锚合）。卡 B/C 的
+「rust n=787 status=01 提前收」实为 f797（=emu 同帧同值）——**淡入收尾时序双腿无差**。
+卡 B 的「emu f797 ad=0」同源错位。本节读数全部按 f=n+10 重对齐。
+
+### 11.1 淡入轨迹双腿对表（A 级——emu frames.jsonl watch vs rust --state-out）
+- 对表口径：emu（cases/case-collide-probe.txt watch 001E/0029/002C/002D/0300-030F——
+  run.json scenario_sha256=38fbb637 与文件直算一致）逐帧 vs rust state 行
+  （spin 出口采样缝——同相位锚）五键（MainRoutine/TimerDelay/t3/FrameCount/status）。
+- **f350-800 全窗 0 差**（除采样缝固有缺行 f352-358（标题迁移 7 帧）——缺行集恒定已钉）。
+- 淡入结构锚（双腿同）：f350-359 t3=0x12（标题 SetTimer 残值）→**f360=S**（MR←8/SamusIntro、
+  t3←$2C=44、status←0x14、**TimerDelay@S=5**）→减落点 f366+10k（44→43→…）→步进
+  st 0x14→0x15（t3=1E）→0x16（14）→0x17（0B）→0x18（04）→**f796 t3=0 收尾**（MR←3/
+  status←FF）→f797 status=01。**收尾帧=S+d+431=360+5+431=796**（§10.2 公式实证）。
+- ⇒ **卡 D「淡入节律时序分叉（总根）」定性撤销**（§9.5 更正）：淡入写源/逻辑/时序
+  **三面全同**（TimerDelay 自由跑相位亦同——boot 清零环不涉零页（§10.2）但双腿初值同 0）。
+
+### 11.2 首异帧/首异写点（A 级——state 行+probe_mem 写点 caller 归属）
+- **首异帧=f798（anim 切换帧）**，首异字段=animFrame/animDelay/animIndex（$0303/4/6）：
+  emu(af=10,ad=02,ar=0C,ai=0D)=JUMP 稳态 vs rust(af=08,ad=03,ar=0C,ai=08)——f797 两侧
+  完全同态(08,04,00,08)；f798 起分歧；f803 着陆切 RUN 后再对齐。
+- **写点实录**（cardi-f798probe.probe.jsonl——probe_mem 0303-0306，caller=jsr 站）：
+  | 场景帧 | 写序（addr←val@caller） | 判 |
+  |---|---|---|
+  | f794-795（fade） | (05←4,06←4,04←0)@CA07 + (04←0,03←7,06←5)@DE47 | SetSamusAnim 全形(Front)+DE47 走表（奇帧闪现门） |
+  | f796（fade 收尾帧） | (04←0)@CF5D + (05←7,06←7,04←0)@CC3C + (04←4,03←8,06←8)@CD6D + (05←0)@CC14 | 地面径 SetSamusAnim(STAND) 全形+CD6D 走表(A=4)+RUN reset-only |
+  | **f797-799（下落）** | (05←0C)@CC14 + **(05←0C,06←0C,04←0)@CD16** + (04←2,03←10,06←0D)@CD6D | **CF88 pressed 尾 SetSamusAnim(Jump) 全形（caller CD16=jsr SamusRun_CheckHorzMovementMidair）**+CD6D 走表(A=2)同帧 wrap |
+  | f802+（落地跑动） | (05←0,06←0,04←0)@CDCF + (04←3,…)@CD6D | RUN 全形+CD6D 走表(A=3) |
+- **emu 每下落帧=SetSamusAnim 全形(0x0C)+1 走表**（非多走表——写点计数与 caller 归属唯一）；
+  全形 delay←0 ⇒ 同帧走表即 wrap（ad 末=02=reload A）⇒ JUMP 稳态即达。
+
+### 11.3 走表预算（A 级——rust [uoa] 逐调用 vs emu 写点数）
+- rust f798-801（n=788-791）：**1 走表/迭代**（a_in=2）——asm 忠实（samL06 `lda #$02`）；
+  n≥802（f812+）：**3 走表/迭代**——1 正当（CD6D a_in=3）+**2 幻影（a_in=0）**：
+  ENTRY 态（ai/ar/ad via $4B=0）=Samus 槽 RUN 态实锤（错槽）——=pickup/spawn.rs:172
+  DE47 形（asm :5555-5561 **`jsr ObjDrawFrame`（DE4A 纯绘）**）双 item 槽各一。
+- 幻影走表后果：RUN 动画 3× 过速（ad 1→0+advance 每迭代（3,2,1→…循环））+f814-900
+  anim 轨迹全偏（82/87 帧 diff）。
+
+### 11.4 总根定谳（D1+D2——非卡 D 淡入节律）
+- **D1（f798 分叉根=卡 A/B/C 链真正近因）**：rust `samus_run_check_horz_movement_midair`
+  （handler.rs）pressed 尾被「goal-轮77 修」换成了 samL04 reset-only 形——asm 真身
+  （prg7_engine.asm:3404-3409）=`stx SamusDir / lda Table06+1,x / jmp SetSamusAnim`
+  且 **Table06（:3566-3568）=0x0C×3**（ObjAnim_SamusJump 三连）⇒**SetSamusAnim 全形
+  （CF6B：reset←A/index←A/delay←0）每下落帧**。delay←0 缺失⇒ad 相位阻 wrap（卡 B 近因）
+  ⇒animIndex 收敛差（卡 A）⇒f800 animI 08/0D。samL04 真身=samus_run 空中径
+  （:2885-2903——rust :244-247 另折 ✓ 保留 reset-only）。
+- **D2（f812+ 过速根=r14 残留）**：DE4A 站幻影走表×2/帧（§11.3）。修径=两站换纯绘形
+  （obj_draw_frame）+`lda #$40/sta PageIndex`（:5502-5504/:12146-12148）端口。
+  随件勘误（同 asm 块）：①「未绘出」判据=SpritePagePos(**$5B**) 非 $4B（:5555-5566
+  pha/pla/cmp）——旧形恒等⇒**拾取授予径永不可达**（原版行为缺失）②skree 弹暂存
+  PowerUpDraw.hi=Object.hi(**$34C**) 非 +7（data07）③skree 绘槽=staged $40 槽
+  （旧形错绘 $3A0+yy=Door 槽）。
+- 修后验证：**f798-802 全窗 JUMP 稳态（10/02/0C/0D）+f800 animIndex=0x0D=emu 锚
+  0 差**（TDD 锚 card_e_animi_anchor 实跑）；淡入轨迹锚=逐帧双腿 0 差恒定。
+
+### 11.5 TDD 记录（红→绿）
+| 测 | 靶 | 红因 | 绿证 |
+|---|---|---|---|
+| handler::midair_steering_full_sets_jump_anim | D1 全形三写 | 旧形只写 reset（index/delay 断言红） | lib 全绿 |
+| handler::midair_steering_guards_do_not_touch_anim | D1 守门（上升禁写） | （防过应用——先行绿） | lib 全绿 |
+| spawn::powerup_display_is_pure_draw_no_walk | D2-1 纯绘+PageIndex 端口 | 幻影走表 dec animDelay（红） | lib 全绿 |
+| spawn::powerup_touch_grants_when_drawn | D2-1b $5B 判据+授予径可达 | 恒 continue⇒Some 断言红 | lib 全绿 |
+| mainloop::skree_projectile_display_is_pure_draw_powerup_slot | D2-2 纯绘+暂存位移 | 幻影走表+hi 位移错（红） | lib 全绿 |
+| tests/card_e_animi_anchor（集成） | 淡入轨迹锚+f800 animI 锚 | f798 animFrame=8≠16（红） | ok（0 差） |
+
+### 11.6 可复读面
+- emu 采点=cases/case-collide-probe.txt（已 commit 0b8ae14c——watch 5 点）；emu 帧级=
+  analysis/traces/case-collide-probe.frames.jsonl（run.json sha=38fbb637 自锚）。
+- 写点探针场景（§11.2 证据源）——全文（独立 name 防产物踩踏；内容即定义，可复跑）：
+  ```text
+  name cardi-f798probe
+  frames 900
+  watch_range 0300-030F samus
+  watch 001E MainRoutine
+  watch 0029 TimerDelay
+  watch 002C t3
+  watch 002D FrameCount
+  snapshot none
+  press 310 start
+  press 350 start
+  capture 420 game-in
+  hold 440-540 right
+  capture 540 r100
+  press 560 a
+  hold 560-700 left
+  capture 620 l60
+  capture 700 l140
+  hold 700-900 left
+  capture 800 l240
+  capture 890 l330
+  endFrame 900
+  probe_mem 0303 0306
+  watch 0314
+  ```
+  运行：`python3 tools/scenario_run.py run <该文件>` ⇒analysis/traces/cardi-f798probe.
+  {frames.jsonl,probe.jsonl}。
+- 对表脚本（f 键提取+五键对比+首异帧/首异写点）：§11.1-11.2 表由 frames.jsonl+state
+  行（rust_screenshot --state-out——zp/iram 全量编码）直接提取；state 行=spin 出口
+  采样缝（与 emu endFrame 同相位——FC 逐帧 0 差自证）。
+
+### 11.7 更正链（证伪更正——AGENTS §3.6）
+- 【2026-11-04 更正】§8 卡 C「房间过渡/门入 intro 分歧（结构性深根）」及「emu 判 RUN 走
+  samL04 vs rust 判 STAND 走 falling 移动态分叉」：**撤销**——读数为 n/f 错位伪影
+  （§11.0）+walk-entry 中间态误读（f797 两侧收口同为 RUN reset-only）。真根=D1（CF88
+  尾形缺失）。
+- 【2026-11-04 更正】§9.5 卡 D「缺口=淡入节律时序（Timer3 递减/步进触发帧分叉）」：
+  **撤销**——§11.1 全窗 0 差实证（含 TimerDelay 相位）。淡入径（写源/逻辑/时序）无缺口。
+- 卡 A/B 的现象层结论（animIndex 收敛差/animDelay 相位阻 wrap）**维持**——其根由 D1 承担
+  （§11.4）。
+
+Evidence: emu=analysis/traces/case-collide-probe.frames.jsonl（watch 5 点逐帧——
+scenario sha 38fbb637 自锚）+cardi-f798probe.probe.jsonl（probe_mem 写点 caller 归属）；
+rust=/tmp/cardi_rust_state.jsonl（--state-out zp/iram 逐帧）+DSH_SPRITE_TRACE [uoa]/
+[ssd]/[fade] 逐调用；asm=prg7_engine.asm:2885-2903(samL04)/3390-3409(CF88)/3566-3568
+(Table06)/3434-3440(CFC3)/3371-3378(CF6B)/5502-5566(UpdateAllPowerUps)/12146-12212
+(UpdateSkreeProjectile)；TDD=tests/card_e_animi_anchor.rs+lib 5 测（红→绿实录）。
+Confidence: 93

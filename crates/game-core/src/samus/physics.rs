@@ -819,13 +819,13 @@ pub fn set_samus_data(mem: &mut FrameMemory) {
     if std::env::var("DSH_SPRITE_TRACE").is_ok() {
         use std::sync::atomic::Ordering;
         let n = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
-        if n >= 775 && n <= 802 {
-            eprintln!("[ssd] n={} FC={:02X} A={} x={:02X} rx={:02X} scrX={:02X} st={:02X} hit={:02X} ay={:02X} door={:02X}", n,
+        if n >= 340 && n <= 802 {
+            eprintln!("[ssd] n={} FC={:02X} A={} x={:02X} rx={:02X} scrX={:02X} st={:02X} hit={:02X} ay={:02X} door={:02X} t3={:02X}", n,
                 mem.read_ram(crate::ram_map::FRAME_COUNT), mem.regs.a,
                 mem.read_ram(0x030E), mem.read_ram(crate::ram_map::SAMUS_RADIUS_X),
                 mem.read_ram(crate::ram_map::SAMUS_SCR_X), mem.read_ram(crate::ram_map::SAMUS_STATUS),
                 mem.read_ram(crate::ram_map::SAMUS_IS_HIT), mem.read_ram(crate::ram_map::SAMUS_ACCEL_Y),
-                mem.read_ram(crate::ram_map::SAMUS_DOOR_DATA));
+                mem.read_ram(crate::ram_map::SAMUS_DOOR_DATA), mem.read_ram(0x002C));
         }
     }
     update_obj_anim(mem, mem.regs.a); // DC8F（已端口——A=延迟初值面）

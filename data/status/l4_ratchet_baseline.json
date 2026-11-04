@@ -142,13 +142,13 @@
           "total_pixels": 61440
         },
         "800:l240": {
-          "state": "diff",
-          "diff_pixels": 252,
+          "state": "match",
+          "diff_pixels": 0,
           "total_pixels": 61440
         },
         "890:l330": {
-          "state": "diff",
-          "diff_pixels": 229,
+          "state": "match",
+          "diff_pixels": 0,
           "total_pixels": 61440
         },
         "900:end": {
@@ -322,8 +322,8 @@
           "total_pixels": 61440
         },
         "800:end": {
-          "state": "diff",
-          "diff_pixels": 252,
+          "state": "match",
+          "diff_pixels": 0,
           "total_pixels": 61440
         }
       }
@@ -342,8 +342,8 @@
           "total_pixels": 61440
         },
         "820:l380": {
-          "state": "diff",
-          "diff_pixels": 242,
+          "state": "match",
+          "diff_pixels": 0,
           "total_pixels": 61440
         },
         "1020:l580": {
@@ -352,18 +352,18 @@
           "total_pixels": 61440
         },
         "1220:l780": {
-          "state": "diff",
-          "diff_pixels": 170,
+          "state": "match",
+          "diff_pixels": 0,
           "total_pixels": 61440
         },
         "1390:l950": {
-          "state": "diff",
-          "diff_pixels": 170,
+          "state": "match",
+          "diff_pixels": 0,
           "total_pixels": 61440
         },
         "1400:end": {
-          "state": "diff",
-          "diff_pixels": 229,
+          "state": "match",
+          "diff_pixels": 0,
           "total_pixels": 61440
         }
       }
@@ -377,8 +377,8 @@
           "total_pixels": 61440
         },
         "1128:wall-takeoff": {
-          "state": "diff",
-          "diff_pixels": 229,
+          "state": "match",
+          "diff_pixels": 0,
           "total_pixels": 61440
         },
         "1134:wall-rise0a": {
@@ -387,13 +387,13 @@
           "total_pixels": 61440
         },
         "1140:wall-rise1": {
-          "state": "diff",
-          "diff_pixels": 131,
+          "state": "match",
+          "diff_pixels": 0,
           "total_pixels": 61440
         },
         "1146:wall-rise1b": {
-          "state": "diff",
-          "diff_pixels": 170,
+          "state": "match",
+          "diff_pixels": 0,
           "total_pixels": 61440
         },
         "1152:wall-rise2": {
@@ -402,18 +402,18 @@
           "total_pixels": 61440
         },
         "1158:wall-rise2b": {
-          "state": "diff",
-          "diff_pixels": 195,
+          "state": "match",
+          "diff_pixels": 0,
           "total_pixels": 61440
         },
         "1164:wall-top": {
-          "state": "diff",
-          "diff_pixels": 136,
+          "state": "match",
+          "diff_pixels": 0,
           "total_pixels": 61440
         },
         "1170:wall-overa": {
-          "state": "diff",
-          "diff_pixels": 191,
+          "state": "match",
+          "diff_pixels": 0,
           "total_pixels": 61440
         },
         "1176:wall-over": {
@@ -422,8 +422,8 @@
           "total_pixels": 61440
         },
         "1182:wall-overb": {
-          "state": "diff",
-          "diff_pixels": 179,
+          "state": "match",
+          "diff_pixels": 0,
           "total_pixels": 61440
         },
         "1188:pit-land": {
@@ -432,8 +432,8 @@
           "total_pixels": 61440
         },
         "1194:pit-landb": {
-          "state": "diff",
-          "diff_pixels": 229,
+          "state": "match",
+          "diff_pixels": 0,
           "total_pixels": 61440
         },
         "1200:wall-jump": {
@@ -443,7 +443,7 @@
         },
         "1300:pit": {
           "state": "diff",
-          "diff_pixels": 20913,
+          "diff_pixels": 20795,
           "total_pixels": 61440
         },
         "1460:pit-fall": {
@@ -537,18 +537,18 @@
           "total_pixels": 61440
         },
         "800:scroll-l80": {
-          "state": "diff",
-          "diff_pixels": 252,
+          "state": "match",
+          "diff_pixels": 0,
           "total_pixels": 61440
         },
         "840:scroll-l120": {
-          "state": "diff",
-          "diff_pixels": 158,
+          "state": "match",
+          "diff_pixels": 0,
           "total_pixels": 61440
         },
         "880:end": {
-          "state": "diff",
-          "diff_pixels": 246,
+          "state": "match",
+          "diff_pixels": 0,
           "total_pixels": 61440
         }
       }
@@ -592,8 +592,8 @@
           "total_pixels": 61440
         },
         "820:l380": {
-          "state": "diff",
-          "diff_pixels": 242,
+          "state": "match",
+          "diff_pixels": 0,
           "total_pixels": 61440
         },
         "1020:l580": {
@@ -603,7 +603,7 @@
         },
         "1400:end": {
           "state": "diff",
-          "diff_pixels": 287,
+          "diff_pixels": 58,
           "total_pixels": 61440
         }
       }
@@ -719,6 +719,16 @@
       "reason": "卡 E 淡入节律采点：case-collide-probe 场景增 watch 指令（0300-030F samus/001E MainRoutine/0029 TimerDelay/002C t3/002D FrameCount）——纯观测面增补（帧级 RAM 落 frames.jsonl，渲染零影响，采集点/输入流零变更）；确认无回退：run-all 后 match 76·diff 32·blocked 0 与旧基线逐格持平（scenario_sha256 漂移=watch 行哈希，采集语义未变——非语义重基）",
       "match": 76,
       "diff": 32,
+      "blocked": 0,
+      "cells_total": 108
+    },
+    {
+      "ts": "2026-11-04T13:09:43+00:00",
+      "kind": "anchor",
+      "evidence": "",
+      "reason": "卡 E D1/D2 根修（CF88 pressed 尾 SetSamusAnim 全形（Table06=0x0C×3——prg7:3404-3409/:3566-3568）+DE4A 两站纯绘（:5555-5561/:12212——幻影走表×2/帧清零））——collide f800 animIndex 双腿 0 差（10/02/0C/0D TDD 锚 card_e_animi_anchor）+四层链（卡 A-D）消解；确认无回退：fade-blink 淡入窗格（killenemy f560/f590、scrollseam f560/f700/f760、jumpledge f730）全 match 0px 保持、morphball f1176 match 保持；增益 match 76→95/108（+19 格 diff→match——走表相位/过速修复面）",
+      "match": 95,
+      "diff": 13,
       "blocked": 0,
       "cells_total": 108
     }

@@ -158,13 +158,17 @@ fn samus_run_check_horz_movement_midair(mem: &mut FrameMemory) {
         if mem.read_ram(ANIM_RESET_INDEX) == OBJ_ANIM_SAMUS_SALTO {
             return;
         }
-        mem.write_ram(crate::ram_map::SAMUS_DIR, x);
-        // 【goal-轮77 samL04 偏离修】asm :2897-2902 samL04：`lda #SamusRun/cmp animReset
-        // Index/bne samL05`→`lda #SamusJump/sta animResetIndex`——**只写 animResetIndex**
-        // （Run→Jump）；旧形多写 animIndex+animDelay=4（掐死 DC8F 递减⇒ai 停 11 根！）。
-        if mem.read_ram(ANIM_RESET_INDEX) == OBJ_ANIM_SAMUS_RUN {
-            mem.write_ram(ANIM_RESET_INDEX, OBJ_ANIM_SAMUS_JUMP);
-        }
+        mem.write_ram(crate::ram_map::SAMUS_DIR, x); // stx SamusDir
+        // 【卡 E D1（animi-divergence-collide-f800.md §11）】asm CF88 pressed 尾
+        // （prg7_engine.asm:3404-3409）：`stx SamusDir / lda Table06+1,x / jmp SetSamusAnim`
+        // ——Table06（:3566-3568）=**0x0C×3**（ObjAnim_SamusJump 三连）⇒ **SetSamusAnim
+        // 全形**（CF6B：reset←A/index←A/delay←0）**每下落帧**（emu probe_mem 写点实录
+        // cardi-f798probe.probe.jsonl caller=CD16 逐帧($0305←0C,$0306←0C,$0304←0)）。
+        // goal-轮77 曾误把 samL04 reset-only 形搬进本件（samL04 真身=samus_run 空中径
+        // :244-247 另折）——全形 delay←0 才使同帧 CD6D 走表 wrap 到 JUMP 稳态（卡 A 靶）。
+        mem.write_ram(ANIM_RESET_INDEX, OBJ_ANIM_SAMUS_JUMP);
+        mem.write_ram(ANIM_RESET_INDEX + 1, OBJ_ANIM_SAMUS_JUMP);
+        mem.write_ram(ANIM_RESET_INDEX.wrapping_sub(1), 0);
         return;
     }
     let ay = mem.read_ram(crate::ram_map::SAMUS_ACCEL_Y);
@@ -569,6 +573,47 @@ mod tests {
         assert_eq!(m.read_ram(ANIM_RESET_INDEX + 1), OBJ_ANIM_SAMUS_JUMP.wrapping_sub(1),
                    "animIndex←Jump-1(0x0B=JumpTransition——CFC3 dey 语义)");
         assert_eq!(m.read_ram(ANIM_RESET_INDEX.wrapping_sub(1)), 4, "animDelay←4");
+    }
+
+    /// 【卡 E D1（animi-divergence-collide-f800.md §11）】CF88 pressed 尾 asm 逐字
+    /// （prg7_engine.asm:3390-3409）：`stx SamusDir / lda Table06+1,x / jmp SetSamusAnim`
+    /// ——Table06（:3566-3568）=**0x0C×3**（ObjAnim_SamusJump 三连）⇒ **SetSamusAnim
+    /// 全形**（reset←0x0C/index←0x0C/delay←0）**每下落帧**（L/R 按下+非 salto+下落）。
+    /// emu probe_mem 写点实录（cardi-f798probe.probe.jsonl，caller=CD16）：每帧
+    /// ($0305←0C,$0306←0C,$0304←0) 后随 CD6D 走表同帧 wrap 到 JUMP 稳态。
+    /// 旧形（goal-轮77）错把 samL04 的 reset-only 形搬进本件⇒animDelay 相位阻 wrap
+    /// （collide f798-802 滞后、f800 animIndex 08/0D 五步差）。
+    #[test]
+    fn midair_steering_full_sets_jump_anim() {
+        let mut m = FrameMemory::default();
+        m.write_ram(crate::ram_map::SAMUS_ACCEL_Y, 0x1A); // 下落（bit7 清）
+        m.write_ram(crate::ram_map::JOY1_STATUS, button::LEFT);
+        m.write_ram(ANIM_RESET_INDEX, OBJ_ANIM_SAMUS_RUN); // 现 anim=RUN
+        m.write_ram(ANIM_RESET_INDEX + 1, 0x08);
+        m.write_ram(ANIM_RESET_INDEX.wrapping_sub(1), 4);
+        samus_run_check_horz_movement_midair(&mut m);
+        assert_eq!(m.read_ram(ANIM_RESET_INDEX), OBJ_ANIM_SAMUS_JUMP, "reset←Jump");
+        assert_eq!(m.read_ram(ANIM_RESET_INDEX + 1), OBJ_ANIM_SAMUS_JUMP,
+                   "SetSamusAnim 全形 index←0x0C（reset-only 形=红——emu CD16 实录全形）");
+        assert_eq!(m.read_ram(ANIM_RESET_INDEX.wrapping_sub(1)), 0,
+                   "SetSamusAnim 全形 delay←0（同帧 wrap 到 JUMP 稳态的前提）");
+        assert_eq!(m.read_ram(crate::ram_map::SAMUS_DIR), 1, "stx SamusDir（LEFT→bit 号 1）");
+    }
+
+    /// 【卡 E D1 守门】上升/空手 不动 anim（asm `bmi RTS`/`beq Lx015` 早退）——
+    /// 防全形修过应用（上升帧禁写 anim 三件）。
+    #[test]
+    fn midair_steering_guards_do_not_touch_anim() {
+        // 上升（AccelY bit7 置）
+        let mut m = FrameMemory::default();
+        m.write_ram(crate::ram_map::SAMUS_ACCEL_Y, 0x9A);
+        m.write_ram(crate::ram_map::JOY1_STATUS, button::LEFT);
+        m.write_ram(ANIM_RESET_INDEX, OBJ_ANIM_SAMUS_RUN);
+        m.write_ram(ANIM_RESET_INDEX + 1, 0x08);
+        m.write_ram(ANIM_RESET_INDEX.wrapping_sub(1), 4);
+        samus_run_check_horz_movement_midair(&mut m);
+        assert_eq!(m.read_ram(ANIM_RESET_INDEX), OBJ_ANIM_SAMUS_RUN, "上升帧禁写 anim");
+        assert_eq!(m.read_ram(ANIM_RESET_INDEX.wrapping_sub(1)), 4, "delay 不动");
     }
 
     /// SamusStand 转移核（ActionTable：右/左→Run(1)、下→Roll(3)、上→PntUp(4)）。

@@ -141,6 +141,9 @@ fn spawn_power_up(mem: &mut FrameMemory, item: &game_data::area::items::SpecialI
 /// UpdateAllPowerUps（DB37）帧径（uw_all_power_ups 会师）：双槽→埋实心块门→显示→
 /// 触碰→拾取授予。返回拾取的 pu_XXX（Some=本帧拾取）。
 pub fn update_all_power_ups(mem: &mut FrameMemory) -> Option<u8> {
+    // 【卡 E D2-1 端口】asm UpdateAllPowerUps 循环头（prg7_engine.asm:5502-5504）：
+    // `lda #$40 / sta PageIndex`——双槽显示面共用 $340 槽（r14 dossier §3.3「漏端口」补）。
+    mem.write_ram(0x004B, 0x40);
     for slot in [0u16, 8u16] {
         let type_ = mem.read_ram(POWERUPS_BASE + slot);
         if type_ == 0xFF {
@@ -167,10 +170,15 @@ pub fn update_all_power_ups(mem: &mut FrameMemory) -> Option<u8> {
         mem.write_ram(POWERUP_DRAW_BASE + 0x03, anim_frame);
         let fc = mem.read_ram(crate::ram_map::FRAME_COUNT);
         mem.write_ram(0x006B, ((fc >> 1) & 0x03) | 0x80); // ObjectCntrl
-        // ObjDrawFrame（DE4A——显示（sprite 管线：PageIndex=$40 面））
-        let sp0 = mem.read_ram(0x004B); // SpritePagePos 位面
-        crate::frame::sprite::anim_draw_object(mem, 0x40, 0);
-        if mem.read_ram(0x004B) == sp0 {
+        // 【卡 E D2-1】asm :5555-5561 `jsr ObjDrawFrame`（DE4A **纯绘**）——旧形
+        // anim_draw_object（DE47=走表+绘）⇒**幻影走表**（r14 dossier §2.1 双 item 槽
+        // a_in=0 走表实录）+走表错落 Samus 槽（$4B 漏设时代）。
+        // 【:5555-5566 块随件勘误】`lda SpritePagePos/pha…pla/cmp SpritePagePos`=
+        // **$5B**（constants_ram:568——OAM 填充计数）非 $4B（PageIndex）——旧形误读 $4B
+        // 致「未绘出」恒真⇒拾取授予径永不可达。
+        let sp0 = mem.read_ram(0x005B); // SpritePagePos
+        crate::frame::sprite::obj_draw_frame(mem, 0x40);
+        if mem.read_ram(0x005B) == sp0 {
             continue; // 未绘出（:5563-5566 cmp/beq Exit9）
         }
         // AreObjectsTouching（DC7F——X=0（Samus）/Y=$40（物）；同名表近距判）
@@ -263,5 +271,54 @@ mod tests {
         // 远距不触
         m.write_ram(POWERUP_DRAW_BASE + 0x0E, 200);
         assert!(!are_objects_touching(&m), "远距不触");
+    }
+
+    /// 【卡 E D2-1（animi-divergence-collide-f800.md §11）】UpdateAllPowerUps 显示面=
+    /// **纯绘**（asm :5555-5561 `jsr ObjDrawFrame`（DE4A））+循环头 **`lda #$40/sta
+    /// PageIndex`**（prg7_engine.asm:5502-5504）。旧形 anim_draw_object（DE47=走表+绘）
+    /// +$4B 漏设⇒**幻影走表落 Samus 槽**（r14 dossier §2.1 双 item 槽 a_in=0 走表
+    /// 实录——每帧 2 条）——走表预算 3×⇒anim 过速/相位偏。emu probe_mem 写点对照：
+    /// 该径零 anim 写（cardi-f798probe.probe.jsonl caller 集无 spawn 站）。
+    #[test]
+    fn powerup_display_is_pure_draw_no_walk() {
+        let mut m = FrameMemory::default();
+        // Samus 槽走表哨兵（幻影走表会 dec animDelay）
+        m.write_ram(0x0304, 5);
+        m.write_ram(0x0306, 0x0D);
+        // 一槽有效 powerup：type≠FF + 房块≥0xA0（埋实心门），远距不触（y/x 远离原点）
+        let (y, x, hi) = (0x40u8, 0x20u8, 0u8);
+        m.write_ram(POWERUPS_BASE, 0x01);
+        m.write_ram(POWERUPS_BASE + 1, y);
+        m.write_ram(POWERUPS_BASE + 2, x);
+        m.write_ram(POWERUPS_BASE + 3, hi);
+        let idx = (((y & 0xF8) as u16) << 2) | ((x >> 3) as u16);
+        m.write_wram(0x6000 | (idx & 0x3FF), 0xA0);
+        let _ = update_all_power_ups(&mut m);
+        assert_eq!(m.read_ram(0x0304), 5, "纯绘=无走表（Samus 槽 animDelay 不动）");
+        assert_eq!(m.read_ram(0x0306), 0x0D, "animIndex 不动（幻影走表会推进）");
+        assert_eq!(m.read_ram(0x004B), 0x40, "PageIndex←$40（:5502-5504 端口）");
+    }
+
+    /// 【卡 E D2-1b】「未绘出」判据=**SpritePagePos($5B) 推进**（:5555-5566 pha/pla/cmp）
+    /// ——旧形误读 $4B（PageIndex）⇒恒等⇒拾取授予径永不可达（原版行为缺失）。触碰+可绘
+    /// ⇒授予（能力位+槽清+PowerUpDelayFlag）。
+    #[test]
+    fn powerup_touch_grants_when_drawn() {
+        let mut m = FrameMemory::default();
+        // item 与 Samus 同位（触碰）且屏内（可绘）
+        let (y, x, hi) = (0x40u8, 0x40u8, 0u8);
+        m.write_ram(0x0300 + 0x0D, y); // Samus.y
+        m.write_ram(0x0300 + 0x0E, x); // Samus.x
+        m.write_ram(POWERUPS_BASE, 0x00); // type=0（能力件——bit0 授予）
+        m.write_ram(POWERUPS_BASE + 1, y);
+        m.write_ram(POWERUPS_BASE + 2, x);
+        m.write_ram(POWERUPS_BASE + 3, hi);
+        let idx = (((y & 0xF8) as u16) << 2) | ((x >> 3) as u16);
+        m.write_wram(0x6000 | (idx & 0x3FF), 0xA0);
+        let got = update_all_power_ups(&mut m);
+        assert_eq!(got, Some(0x00), "触碰+可绘⇒拾取授予可达（$5B 判据）");
+        assert_eq!(m.read_wram(crate::ram_map::SAMUS_GEAR) & 1, 1, "能力位 bit0 授予");
+        assert_eq!(m.read_ram(POWERUPS_BASE), 0xFF, "槽清（:5646-5658）");
+        assert_eq!(m.read_ram(POWER_UP_DELAY_FLAG), 0xFF, "PowerUpDelayFlag←FF");
     }
 }
