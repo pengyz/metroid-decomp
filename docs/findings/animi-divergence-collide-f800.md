@@ -122,3 +122,40 @@ Samus 在跑 RUN，rust 判停 STAND）。碰撞后移动态（跑 vs 停）分�
   emu 亦仅巧合 ad=0）。
 - physics 域（深根）：移动态（碰撞后跑/停）对齐 emu——Samus 速/位移/碰撞反应径 asm 对读。
 判据：collide f800 animIndex 两腿 0 差（idx=0x0D）+l4 无回退+443 测全绿。
+
+
+## 8. 卡 C·physics 移动态定根（2026-11-04）——深根=房间过渡/门入 intro 分歧（结构性）
+
+【逐帧实录（A 级）】watch 0300-030F（status/radius/anim/x）+ 0305-0306（anim）两腿对表。
+- **EMU**：f785-795 **status=$300=0x18**（intro/fade-in 态）+anim=FRONT(04)+x=80（停）→
+  f796 status=**FF/sa_Begin**（`SamusIntro C9D7`：`lda #sa_Begin/sta Samus.status`「Fade in
+  complete…Samus facing forward」）→ f797 status=**01/sa_Run**+anim=RUN(00)→f798 JUMP(0C)。
+  即 emu 走**房间过渡 intro/fade-in**（status 0x18→sa_Begin(FF)→sa_Run(01)）。
+- **RUST**（DSH_SPRITE_TRACE [ssd]）：n=787 **status=01(sa_Run)**+anim=STAND(07)+x=80+AccelY=00
+  →n=788 anim=JUMP(0C)+AccelY=1A→n=789+ x=7F（跑）→n=793 AccelY=00（落地）。
+  即 rust **不走 intro/过渡**——status 恒 01(sa_Run)。
+
+【偏离点】status($300)：**emu=0x18（intro/fade 态）vs rust=01(sa_Run)**——emu 做房间过渡
+（intro fade-in→sa_Begin→sa_Run），rust 不做（恒 Run）⇒anim-set 路径分叉（emu FRONT→RUN→
+JUMP vs rust FRONT→STAND→JUMP）⇒animDelay 相位⇒收敛时机差（卡 B 近因）。深根=**房间过渡/
+门入 intro 分歧**（emu 进房 intro，rust 不进）。
+
+【asm 考证（A 级）】
+- SamusIntro（07:C9D7）：`ldy Samus.status`（fade-in 态）/`lda Timer3/bne`（intro 未完）/
+  fade 完成⇒`lda #sa_Begin/sta Samus.status`。status=0x18=intro/fade-in 进行态。
+- CheckStopHorzMvmt（07:E365）：撞停⇒（AccelY==0 地面）`jmp SetSamusStand`（→STAND）；
+  空中（AccelY≠0）出（不动 anim）——rust n=787 AccelY=00⇒SetSamusStand（STAND）✓逻辑忠实。
+- MoveSamusLeft（07:E626）+ObjectCheckMoveLeft：8px 门检（(x-radiusX)&7==0 才 crash 检）——忠实。
+- CheckHealthStatus（07:CDFA）：isHit bit5⇒knockback（speedY=FD/AccelY=38）**不改 status**。
+
+【结论=结构性深根（lead 卡 C 步 4）】status=0x18 intro/fade（房间过渡）域——emu 进房 intro
+（status 0x18→sa_Begin→sa_Run），rust 不进（恒 Run）⇒全下游分歧（anim/收敛/l4）。
+**非 anim/局部 physics 可修**——属**房间过渡/门入**域（结构层）。status=0x18 写源非直接
+`sta Samus.status`（计算/表径）——需房间过渡/门入 asm 全径考证（SamusEnterDoor $8B13/SetupRoom
+$EA2B/门滚动族）定根。**如实停机报证据不强修**（AGENTS.md §3.5 禁试错式修改）。
+
+【修径建议（转房间过渡/门入战役）】
+1. asm 全径考证：门入→房间加载→intro fade-in（SamusEnterDoor $8B13→SetupRoom $EA2B→
+   SamusIntro C9D7）+ status=0x18 写源（何处置 0x18）。
+2. rust 对应径：collide 门入判定（撞门→status=0x18/过渡）vs 现状（撞墙→STAND/恒 Run）。
+3. 判据：collide f800 animIndex 两腿 0 差（深根修后近因自动消）+l4 无回退+443 绿+基线保持。
