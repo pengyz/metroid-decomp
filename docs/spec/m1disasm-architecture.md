@@ -42,7 +42,7 @@ grep -cE "^[ \t]*[A-Za-z_][A-Za-z0-9_.]*(\{[A-Za-z0-9_]+\})?[ \t]*:" <file>
 
 ### 1.1 映射模型（A 级：memory_layout.asm + prg*.asm `.section` 指令）
 
-~~~text
+~~~~ext
 NES CPU 空间                     ROM 构成（PRG 128KB = 8×16KB，MMC1）
 $0000-$07FF WRAM                 bank0  ─┐
 $6000-$7FFF Cart RAM（存档）      bank1   │  任一时刻一个 bank 映射进 $8000-$BFFF
@@ -52,7 +52,7 @@ $C000-$FFFF ROMFixedSlot ──┘     bank3   │
                                  bank5   │
                                  bank6  ─┘  （bank6=graphics 例外，见 §1.3）
                                  bank7  ─── 固定映射 $C000-$FFFF
-~~~
+~~~~
 
 - `memory_layout.asm`（19 行）：WLA-DX `.memorymap`（HeaderSlot/RAMConsoleSlot $0000-$07FF/
   RAMCartSlot $6000/ROMSwitchSlot $8000/ROMFixedSlot $C000）+ `.rombankmap`（8 banks × $4000）。
@@ -90,7 +90,7 @@ $C000-$FFFF ROMFixedSlot ──┘     bank3   │
 **区域 bank（bank1-5）统一模板**（`DOC/area banks.txt` 声称约 47% 逐 bank 相同——社区测量值，
 本 survey 未独立复算，标 C 级引用；但 common/专属分界由 m1disasm 源结构直接证实）：
 
-~~~text
+~~~~~ext
 $8000-$856B  areas_common.asm：CommonJump_* 跳板表($8000 起 25×jmp)、
              CrawlerMovementRoutinesTable($8048)、EnemyMove 族($8058-$856B 敌移动/加速度/逐像素移动)
 $8572-$8B13  common_sprite_data.asm（经 areas_common.asm:1311 include）：
@@ -110,11 +110,11 @@ $B200-       sound_engine.asm 副本（含按 BANK 条件汇编的 SongHeaders �
 $BFB0        reset.asm 副本（ROMSWITCH_RESET）
 $BFFA        3×.word 向量（指向 bank7 的 NMI $C0D9 / 本 bank reset）——$BFFA 向量是
              **死字节**（CPU 只从 $FFFA 取向量），原样复刻 ROM 构建残留（B 级推断）
-~~~
+~~~~~
 
 **bank0（title）段图**（A 级：段标+注址）：
 
-~~~text
+~~~~~~ext
 $8000  MainTitleRoutine（TitleRoutine 索引 JumpEngine 分发）
 $8068- 开场动画族（ClearSpareMem/METROIDFadeIn/Sparkle/Crosshairs…）
 $8AC7  IntroStarPaletteSwitch 族
@@ -125,14 +125,14 @@ $9A07  NMIScreenWrite + 结局演出族（Ending routines 段标）
 $A53E  WorldMap
 $B000- 歌曲数据（end.asm/intro.asm）+ 残留图块
 $B200  sound_engine 副本；$BFB0 reset 副本；$BFFA 向量
-~~~
+~~~~~~
 
 **bank6（graphics）**：`GFX_*` 22 段纯 `.incbin` CHR（$8000 Samus+items、$89A0 intro sprites、
 $8BE0 title、$90E0 suitless、$9DA0 各区 bg、$B4C0 font…）+ reset/向量。**无 sound_engine 副本**。
 
 **bank7（engine）段图**（A 级：段标横幅 + 注址；972 个例程标签）：
 
-~~~text
+```ext
 $C000 RandomNumbers → $C01A Startup（MMC1 初始化/清 RAM）
 $C0BC MainLoop → $C0D9 NMI（OAM DMA→palette/VRAM/scroll/pad→SoundEngine→UpdateAge）
 $C114 GoMainRoutine（MainRoutinePtrTable $C141 10 项状态机）
@@ -171,7 +171,7 @@ $F345-FE00 敌系统主体（UpdateAllEnemies/UpdateEnemy/UpdateEnemyCommon $F41
 $FDE3-FF.. Tourian 物件（UpdateTourianItems/CheckZebetite）+ TileBlast 族
            （UpdateAllTileBlasts/DrawTileBlast/TileBlastAnim $FF86）
 $FFB0 ROMFIXED_RESET（=reset.asm）；$FFFA 向量（NMI=$C0D9 / RESET=$FFB0 / IRQ=$FFB0）
-~~~
+```
 
 ### 1.4 跨 bank 运行契约（B 级推断，A 级事实标注）
 
@@ -525,7 +525,7 @@ kraid 194、ridley 88、tourian 53、item_room/fade_in 47、power_up 43、mthr_b
 复算=本表数字逐格复现（bank1 $8800=473/55、bank7 $CC00=188/10、$DC00=21/6、$FC00=26/5
 全对，F000 系 ±1=findings 滚动增长）。复现脚本（内联，可直接跑）：
 
-~~~python
+````hon
 import re, glob
 from collections import defaultdict
 refs = defaultdict(lambda: [0, set()])
@@ -537,7 +537,7 @@ for f in glob.glob('docs/findings/*.md'):
         refs[k][0] += 1; refs[k][1].add(f)
 for (b, kb), (c, fs) in sorted(refs.items()):
     print(f"bank{b} ${kb:04X}: {c}/{len(fs)}")
-~~~
+````
 
 **口径限制**：裸 `$XXXX` 引证（bank 归属歧义）未计；引证密度≠深读深度（同址可被多文档
 重复引用）；文件数=提及该区的文档数。热图数字=该区被 findings 引证次数 / 引证文档数。
