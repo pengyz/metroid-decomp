@@ -680,7 +680,10 @@ fn update_en_data05_bit6(mem: &mut crate::frame::FrameMemory, x: u8) {
     // 【goal-轮修 asm 合形（已回退——§3.1）】F3AA parity=((x/16)^FC)&1 asm 合形删 +1
     // ⇒L4 55→53（−2 劣化）⇒**回退保留 +1**（轮57 形）——bit6 相位假说（f797-801 反相）
     // 被 L4 证伪（+1 实为补偿某物——FC 更新时点 vs 采样时点假说余）。
-    let parity = ((x >> 4) ^ mem.read_ram(crate::ram_map::FRAME_COUNT).wrapping_add(1)) & 1;
+    // 【2026-11-04 更正（H3 根修——findings/h3-enemy-slot-residual.md §2）】上列 +1
+    // 补偿**失配定谳**：金腿 FC=+1 恒差是 r14 FC 对齐前的错位（补偿把公式对到错位腿）；
+    // FC 对齐后 7 采集点双腿全同（f800 全 6 槽反相实证=+1 过补）⇒asm 合形直读 FC。
+    let parity = ((x >> 4) ^ mem.read_ram(crate::ram_map::FRAME_COUNT)) & 1;
     let nd = (d & 0xBF) | (parity << 6);
     let _ = bit6;
     mem.write_ram(0x0400 + x as u16 + 5, nd);
@@ -1319,6 +1322,15 @@ fn skree_ai(mem: &mut crate::frame::FrameMemory, x: u8) {
     update_enemy_common_no_move_no_anim(mem, x);
 }
 
+/// ShouldCrawlerMove（**asm 内容锚** `07:F852`——`txa/lsr×3（carry←bit2）/adc FrameCount/
+/// lsr`）：gate=((X>>3)+bit2(X)+FC)>>1&3（移动门 6/8 帧形）。
+/// 【H3 根修（h3-enemy-slot-residual.md §2）】asm 合形直读 FC（无 −1）——goal-轮 43 的
+/// FC−1 补偿=把 dump FC（逻辑读+1）代入公式的错位代偿（金方跳格 dump 17/18/25/26=
+/// 逻辑读 16/17/24/25 ⇒ raw 公式四点全中）；r14 FC 对齐后失配（与 bit6 +1 同源）。
+fn crawler_move_gate(x: u8, fc: u8) -> u8 {
+    ((x >> 3).wrapping_add((x >> 2) & 1).wrapping_add(fc) >> 1) & 0x03
+}
+
 /// CrawlerAIRoutine（**asm 内容锚** `enemies/crawler.asm`——r26+2026-10-31 PreAI 门补装）：
 /// ShouldCrawlerMove（F852——((x>>3+FC+lsr 进位))>>1&3=6/8 帧步门）；不动帧⇒@exit
 /// （anim3+显示）；动帧⇒**EnemyStatusPreAI 三连门**（Resting⇒SkreeExit_Resting=anim8+
@@ -1355,18 +1367,9 @@ fn crawler_ai(mem: &mut crate::frame::FrameMemory, x: u8) {
                 mem.read_ram(0x0400 + x as u16 + 9), mem.read_ram(0x0400 + x as u16 + 3));
         }
     }
-    // 【goal-轮24 toggle +1 恢复】FC 增量时点补偿（emu bit6=(FC+1)&1 实测——asm 读
-    // 增量后 FC）——round-21 编辑覆盖丢失 +1 ✗ 原地恢复。
-    let parity = ((x >> 4) ^ mem.read_ram(crate::ram_map::FRAME_COUNT).wrapping_add(1)) & 1;
-    // 【goal-轮24 gate FC+1 测（§3.6 记）】gate 读新 FC=+1 ⇒L4 55→54 ⇒回退保 +0
-    //（轮58/轮24 两次判负）——机制真（FC 帧末增 vs asm 帧首增）修向负。
-    // 【goal-轮43 gate FC-1 修】金方跳格 FC=17,18,25,26=公式((8+FC-1)>>1)&3 形 ✓
-    // （FC-1=16,17,24,25→gate=0 2 帧跳）——gate 读 FC-1 合形（FC 帧末增⇒读面=前帧）。
-    let gate = ((x >> 3)
-        .wrapping_add((x >> 2) & 1)
-        .wrapping_add(mem.read_ram(crate::ram_map::FRAME_COUNT).wrapping_sub(1))
-        >> 1)
-        & 0x03;
+    // 【H3 测试缝（findings/h3-enemy-slot-residual.md）】gate 公式抽函数
+    // crawler_move_gate（行为随形——H3 TDD 红靶：FC−1 相位补偿）。
+    let gate = crawler_move_gate(x, mem.read_ram(crate::ram_map::FRAME_COUNT));
     // 【goal-轮15 gate 值直证】F852 门值逐帧（金方 2 帧跳 vs 我方移动模式）。
     if std::env::var("DSH_SPRITE_TRACE").is_ok() && x == 0x40 {
         use std::sync::atomic::Ordering;
@@ -4087,5 +4090,55 @@ mod tests_fc_per_iter {
         }
         let df = m.read_ram(FRAME_COUNT).wrapping_sub(f0);
         assert_eq!(df, 1, "drain tick 恰 1 增（双加=2（±1 陀螺源））——实测 {}", df);
+    }
+}
+
+/// 【H3 敌槽残差 TDD】（findings/h3-enemy-slot-residual.md——asm $F3AA/$F852 合形锚）。
+/// 位 6 公式与 ShouldCrawlerMove 门均须 asm 字面合形（无 ∓1 相位补偿）——
+/// f800 实测锚（emu .ram.hex 全 6 槽）：FC 逻辑读 $10 时位 6=slot&1（slot4→0/slot5→1）。
+#[cfg(test)]
+mod h3_enemy_slot_tdd {
+    use super::*;
+    use crate::frame::FrameMemory;
+
+    /// F3AA 位 6 公式 asm 合形：bit6=((X/16) xor FrameCount) bit0（$F3AA `txa/Adiv16/
+    /// eor FrameCount/lsr`——无 +1）。红态（+1 补偿）=全槽反相（h3 残差实锤）。
+    #[test]
+    fn h3_bit6_toggle_matches_asm_formula() {
+        for fc in [0x00u8, 0x10, 0x11, 0xFF] {
+            for x in [0x00u8, 0x10, 0x20, 0x30, 0x40, 0x50] {
+                let mut m = FrameMemory::default();
+                m.write_ram(crate::ram_map::FRAME_COUNT, fc);
+                m.write_ram(0x0400 + x as u16 + 5, 0x00);
+                update_en_data05_bit6(&mut m, x);
+                let got = (m.read_ram(0x0400 + x as u16 + 5) >> 6) & 1;
+                let want = ((x >> 4) ^ fc) & 1;
+                assert_eq!(
+                    got, want,
+                    "F3AA bit6=((x>>4)^FC)&1 asm 合形（x={x:#04X} FC={fc:#04X}）——f800 全槽锚"
+                );
+            }
+        }
+    }
+
+    /// F852 ShouldCrawlerMove 门 asm 合形：gate=((X>>3)+bit2(X)+FC)>>1&3（$F852
+    /// `txa/lsr×3/adc FrameCount/lsr`——adc 含 lsr 移出位=bit2(X)；无 −1）。
+    /// 金方跳格自证：槽 4（X=$40）gate=0 at 逻辑 FC 16/17/24/25（dump FC 17/18/25/26 实测）。
+    #[test]
+    fn h3_crawler_gate_matches_asm_formula() {
+        // 槽 4（X=$40）：逻辑 FC 16/17/24/25 ⇒ gate=0（金方跳格四点自证）
+        for fc in [16u8, 17, 24, 25] {
+            assert_eq!(crawler_move_gate(0x40, fc), 0, "槽 4 gate=0（FC={fc}）——金方跳格锚");
+        }
+        // 移动点（逐 FC 0,0,1,1,2,2,3,3 形）：FC 18/19 ⇒ 1/1、20/21 ⇒ 2/2、22/23 ⇒ 3/3
+        assert_eq!(crawler_move_gate(0x40, 18), 1);
+        assert_eq!(crawler_move_gate(0x40, 19), 1);
+        assert_eq!(crawler_move_gate(0x40, 20), 2);
+        assert_eq!(crawler_move_gate(0x40, 21), 2);
+        assert_eq!(crawler_move_gate(0x40, 22), 3);
+        assert_eq!(crawler_move_gate(0x40, 23), 3);
+        // 槽 5（X=$50）：(10+FC)>>1&3
+        assert_eq!(crawler_move_gate(0x50, 14), 0);
+        assert_eq!(crawler_move_gate(0x50, 15), 0);
     }
 }
