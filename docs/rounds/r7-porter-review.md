@@ -13277,6 +13277,55 @@ L4 **96/108** 无回退（match 96 diff 12 blocked 0（ratchet 守住（防回�
 （证伪立场（独立重导证据（正确性核）））✓——复核 verdict 实录（docs commit（对抗复核 verdict
 （6 重点（必跑验证）（实测输出原文（A 级））））✓。
 
+## X 相位残差链卡对抗复核（145847db findings §11（证伪立场（独立重导证据（5 重点））））
+
+### verdict: pass（5 重点全 ✓（停机报合规（A 级原文）））——②缝会计坐实=修径 a 下游遗留
+缺口（如实记）
+
+**① FC 级 joy 面直证核（最重）✓✓✓**：
+- **emu FC=120 直证**（A 级（emu frames.jsonl f=1420 watch））：**Joy1Status=1（右）
+  Joy1Change=1**——与 findings §11.1「emu 1/1」吻合 ✓
+- **数学复算 ✓✓✓（A 级独立验算）**：`0xA0+0x30=0xD0`（emu Sub=208）+`0xA0+0xD0=0x70`
+  （rust Sub=112（carry 截断 0x170&0xFF））+**diff=0x60**（±0x60 恒偏）——三断言全过
+- **rust 侧格式注**：state.jsonl=原始 hex dump（zp/iram/wram（非命名字段））——「rust 2/0」
+  需 zp 偏移解析（named-field 不直接可读）——emu 侧+数学已独立验证（核心链成立）
+
+**② 缝会计定谳核 ✓✓（坐实=修径 a 下游遗留缺口（如实记））**：
+- **双侧缺行集实录比对**（A 级）：emu 缺 f**1344-1346=3 帧** vs rust 缺 f**1343-1344=2 帧**
+  →**label 差 1** ✓——与 findings §11.2「emu 缺 1344-1346=3 vs rust 缺 1344-1345=2」
+  计数/label 差吻合（rust 精确帧位 1343-1344 vs findings 1344-1345（**微偏 1**（计数同）））
+- **坐实=修径 a（capture 双相位）下游输入面**：缝缺行区 spin-出口会计不齐⇒label↔FC 映射差 1
+  ⇒sched[label] 喂到错 FC⇒输入消费迟 1 帧——**我方修径 a 遗留缺口（如实记）**
+- findings §11.2 归因「缝会计结构族（move-drift R1 同族）」——归因健全（结构族层定位正确）
+
+**③ asm 对读 ✓✓✓**（行号逐条抽读）：
+- **samL11/12**（prg7:2945-2962（转脚真身））：`lda Joy1Status`（`and #BUTTON_RIGHT|
+  BUTTON_LEFT`（`bne samL12`（无方向⇒`jsr SetSamusStand`））（samL12（`jsr BitScan`
+  （`cmp SamusDir`（`beq` 同向跳（不同⇒**`sta SamusDir`+`jsr SetSamusRun`**（转脚
+  （accel←RunAccelTbl[新 dir]）））））——emu 集成用新加速 ✓
+- **CF55→CF4C**（prg7:3349-3370）：`ClearHorzMvmntData`（`ldy #$00`（`sty Samus.speedX`
+  （`sty SamusSpeedSubPixelX`））——**只清 speedX int+frac（SubPixX「linear counter」
+  不清** ✓
+- **集成面**：HorzAccelerate 尾 `SubPixX+=SpeedSubPixelX`（E3E5（FEE0 钳在案））——
+  SubPixX 相位差=加速度值差直接投影 ✓
+
+**④ 停机合规 ✓✓**（§11.2）：「一迭代双步/缝会计」结构族（move-drift R1 自留「同迭代链断裂」
+同族）——按任务书件 5 结构性深根**如实停机不强修**——§4 合规 ✓（层=结构族（缝会计/label↔FC
+映射）（非局部修可闭）（修径 a 架构面=需专项卡（不强修对）））
+
+**⑤ TDD 锚设计 ✓✓**（§11.4 四锚（修时防伪绿））：
+1. Joy1Status/Joy1Change FC=120 双腿 0 差锚（输入消费相位）
+2. f1300-1520 SubPixX/X 逐帧 FC 对齐 0 差锚（修后 f1521 触盒自通）
+3. f1524 gear/pw0 锚（任务书件 3 原靶）
+4. 防回迁回归面（f820-860 敌窗+f1255-1290 轨迹窗（§9 集成锚）保持）
+
+**verdict**：X 相位残差链卡对抗复核 **pass**（①FC 级 joy 面直证核 ✓✓✓（最重（emu FC=120
+Joy1Status=1/1 直证+数学复算 0xA0+0x30=0xD0/0xA0+0xD0=0x70/diff=0x60））②缝会计定谳核 ✓✓
+（坐实=修径 a 下游遗留缺口（双侧缺行集（emu 缺 3 vs rust 缺 2（label 差 1））（如实记）））
+③asm 对读 ✓✓✓（samL11/12 转脚真身+CF4C 只清 speedX（SubPixX 不清）+集成面）④停机合规 ✓✓
+（结构族非局部修可闭（§4/件 5 论证（不强修对）））⑤TDD 锚设计 ✓✓（四锚完备（修时防伪绿）））
+——**停机报合规** ✓——复核 verdict 实录（docs commit）✓。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
