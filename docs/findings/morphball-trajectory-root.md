@@ -538,3 +538,25 @@ Evidence: 双腿 state 全窗对表（f420-1200 FC/X/Y/status 0 差——[wx]/[c
 +diff 图三簇定性（HUD 顶左/双敌顶中/萨底中）+EN 值实录（30 vs 22）+morphball 七格
 0px 保持+L4 矩阵（f1200=1015/match 102）。
 Confidence: 91
+
+## 21. 伤害径状态发散卡（2026-11-06——根定谳+asm 全谱+停机报）
+
+### 21.1 首异钉点+根（件 1）
+EN 面：rust 恒 30 / emu 30→22（f950-1200 间伤害事件）。**根=SubtractHealth（CE92）
+扣血径=嵌套桩未端口**（check_health_status 击退+i 帧✓已端口但扣血链缺——EN 恒 30）。
+### 21.2 asm 全谱（件 2）
+SubtractHealth（**CE92**）：HealthChange($6E 双字节 BCD)≠0⇒IsSamusDead/EndTimer/
+MotherBrain 检→Varia 减半（gr_VARIA⇒lsr×2+补 $4F）→**Base10Subtract**（C3FB BCD
+减）Health/Health+1($0106 双字节——「Lower health digit in upper 4 bits」）→死亡判
+（BCD 0⇒sa_Dead+SetSamusExplode）。伤害置径（**LF306**）：HealthChange←AreaEnemyDamage
+（各区表 95CE——prg1-4 同址）；SamusHurt_F311（isHit 置+knockback+ClearHealthChange）。
+调用点：7049（直调）/F13D GotoSubtractHealth/12232。
+### 21.3 停机报（件 6）
+修=三件端口（SubtractHealth BCD+Base10Subtract+伤害置径 LF306（AreaEnemyDamage 伤害值
+源——game-data 缺伤害表须补）+调用点）——BCD 数学+每区伤害表=中件（本卡交付=根定谳+
+全谱）。sprite 着色族（②③+清尾三格）=另卡不碰 ✓。
+
+Evidence: check_health_status 端口对照（击退/i 帧✓/扣血✗）+asm CE92 全谱+LF306/F311
++constants_ram:806（Health $0106 BCD）+132（HealthChange $6E）+AreaEnemyDamage 四区
+95CE+Base10Subtract C3FB+L4 矩阵（f1200=1015/HUD 簇）。
+Confidence: 92
