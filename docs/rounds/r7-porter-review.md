@@ -13457,6 +13457,47 @@ clean2=…+239e6f2f26ae（**复原一致**）））
 ✓✓✓（118/118）⑤闪帧卡 verdict 已交 ✓（commit 卫生注））——**对抗复核核 ✓**（证伪立场
 （独立重导证据（正确性核）））。
 
+## case-002 邻房 9.4k 归因卡对抗复核（e9ce2e91（证伪立场（独立重导证据（5 重点））））
+
+### verdict: pass（5 重点全 ✓（A 级原文）（必跑验证 ✓））
+
+**④ 必跑验证实录（A 级原文）**：cargo test --workspace（**460+3+1+1+1+1+27+4=498 passed;
+0 failed**（498 测（与任务规约一致）））+gates check（**PASS=13 FAIL=0**（0 静默跳过））✓
+
+**① 恶化归因核（最重）✓✓**：
+- **worktree 隔离法** ✓（628bbabd^(=8ec44b75) worktree 隔离跑 case-002（/tmp/wt-pre-seam
+  （ROM/Mesen2 链入））：f1000/f1150=**46/46px**（=lead 11-04 读数复现）⇒现 9464/9469px
+  =**628bbabd..HEAD fix 副作用**（非既有显形）——**「恶化归因」成立** ✓
+- **RAM 三点逐字节** ✓（f1000 FC=**215**(pre)/216(cur)+ScrollX=**126**/128+SamusX=**13**/15
+  ⇒**当前时间线前移 1 帧**=载房掉帧计数 2→1）——掉帧计数变化→时间线平移机制 ✓
+
+**② 模型补全 asm 计数核 ✓✓✓**：
+- **y 位环 20c/单元** ✓（LEA72（`lda+clc+adc+sta+bcc+inc+dex+bne`≈20c）（room.rs:60））
+- **DrawStructRow 行壳 30c/行** ✓（行头解码+AdvanceRow（room.rs:62））
+- **setup_room 固定壳 1300c** ✓（ScanForItems+DeleteOffscreen+EndOfRoom+表查（room.rs:64））
+- **BASE 27800→29000** ✓（room.rs:66（`LOAD_BASE_CYCLES=29000`））
+- **约束反证 ✓✓✓（数学复算）**：case-002 room20 dropped=2→BASE≥2×29780−29326=**30234** vs
+  常规帧 dropped=0→BASE<**29780**（**矛盾⇒缺组件**）——补全后三房全合（room20=**2**/
+  room23=**2**/room8=**3**/常规=**0**）+29000/29780=0.974<1（常规 0 掉帧 ✓）
+
+**③ 三房校准 ✓✓**：room20=2/room23=2/room8=3+常规 0（emu 缺行集实录+pre-seam 46px 双证）
++校准锚测 `load_window_model_calibrated`（room.rs:1166-1168（三房计数断言））✓
+
+**④ 判据复跑 ✓**：f1000/f1150=**46/46px**（9464/9469→46（回 pre-seam 水平（<500px ✓）））
++match **102/108 保持**（morphball 七格全 hold（无回退））+498 测+PASS=13+防回退面 ✓
+
+**⑤ 小残差三格定性 ✓✓（不伪锚）**：f950(case-001 combo)=46px+f960(crawlprobe end)=
+**174px=双敌 sprite 着色残差**（diff 绿簇=敌 sprite 位（敌帧/调色板相位域））+f1400=58px
+——sprite 域小残差+时序微差（<500px 容内）——**登记不强修** ✓——f1200=14147px 最大残差
+族（非本卡靶（后续卡））
+
+**verdict**：case-002 邻房 9.4k 归因卡 **pass**（①恶化归因 ✓✓（最重（worktree 隔离
+46/46px 复现+RAM 三点定相位（前移 1 帧（掉帧计数 2→1））））②模型补全 asm 计数 ✓✓✓（y 环
+20c+行壳 30c+固定壳 1300c+BASE 29000（约束反证（BASE≥30234 vs <29780 矛盾⇒缺组件））））
+③三房校准 ✓✓（room20=2/room23=2/room8=3+常规 0（锚测））④判据复跑 ✓（46/46px+match 102
+保持+498 测+PASS=13）⑤小残差定性 ✓✓（f950=46/f960=174（敌 sprite 着色）/f1400=58
+（不强修）））——**对抗复核核 ✓**（证伪立场（独立重导证据（正确性核）））。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接

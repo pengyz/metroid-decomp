@@ -332,3 +332,35 @@ f950(case-001 combo)=46px/f960(crawlprobe end)=**174px=双敌 sprite 着色残�
 残差+时序微差；<500px 皆在容内。⚠ 值随模型校准微移（f950 250→46 改善/f960 46→174
 微增）——同族 sprite 相位面，登记不强修。
 ⚠ f1200(case-001 end)=14147px 仍为最大残差族（非本卡靶——后续卡）。
+
+## 14. f1200 端态动量卡（2026-11-05——归因+首异钉点（停机报））
+
+### 14.1 归因（worktree 隔离法——同 case-002 法）
+628bbabd^（8ec44b75）worktree 跑 case-001：f1200=**14147px 与现 HEAD 相同**⇒根在
+更早区间（11-04 1015→16069→14147 跨多修区变化——非近三卡副作用）。历史件状态核查：
+Salto 动画相位✓已端口（173ce165 Phase2：JumpDisp≥$18 触发面）；空中漂移速度字节
+（d568bf0c）：rust 现**保持动量**（sX=(FE,80) 恒）——「解旋清速」已消✓；但**门撞检
+阻断径**仍存=当前根（下）。
+
+### 14.2 首异钉点+模式（f1150-1210 窗外扩 f1029-1045 逐帧）
+首异=**f1033**：X 走相偏 1px。逐帧 dX 模式：emu 恒 −2/−1 交替（−1.5px/帧）；rust
+**每 6 帧丢 1 次移动**（f1033/1039/1045…dX=0 代 −1）⇒均速 1.33 vs 1.5⇒漂移累积
+（f1150 (3,16) 偏/f1200 14147px）。**每 6=8px 门（(x−rx)&7==0）撞检节律**——
+MoveSamusLeft（E626）：门帧 `jsr ObjectCheckMoveLeft / bcc Lx181`（阻断⇒crash 出口）
++每调 `SamusCollisionWithSolidEntities`（isHit&$41==$41⇒出）——rust 门撞检在墙顶角
+判阻断/emu 放行（**墙顶角 1px 类**——d568bf0c 已定名根因）。Y 弧差（f1150 +16）=
+阻断累积侧效。
+
+### 14.3 停机报（件 4——非伪修）
+根已钉至墙顶角碰撞语义（ObjectCheckMoveLeft 门撞检 corner 判定 vs emu 1px 放行
+quirk）——修需 E88B/object_check_move_horizontal corner 径 asm 逐行对读（D4 quirk
+保真：emu 的墙顶角 1px 穿透=原版行为须保留非修掉）+TDD——**深件另卡**（与 d568bf0c
+修法方向（漂移字节）已部分落的并轨）。本卡交付=归因（非近三卡副作用✓）+首异钉点
+（f1033/每 6 门撞检模式）+历史件状态核查（Salto✓/漂移字节✓/门撞检✗=当前根）。
+
+Evidence: worktree 隔离实录（/tmp/wt-pre-seam case-001 f1200=14147px=现 HEAD 同值）+
+逐帧 dX 双侧表（emu −2/−1 恒 vs rust 每 6 帧 0——f1029-1045 17 帧实录）+rust 态面
+（SubPixX 0x50/0xD0 交替+sX=(FE,80) 恒+AccelX=0——ir[0x211/0x209/0x213/0x215]）+
+asm=prg7_engine.asm:MoveSamusLeft(E626-:E663 全谱（8px 门+crash 出口+solid-entity 检））
++历史件（173ce165/d568bf0c/5abbe6c7 提交实录）。
+Confidence: 91
