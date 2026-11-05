@@ -76,11 +76,18 @@ pub fn obj_draw_frame(mem: &mut crate::frame::FrameMemory, page_index: u8) {
     let pptr = (sd::SPRITE_DATA[sd::OBJ_PLACE_PTR_TABLE as usize + place_idx as usize] as u16)
         | ((sd::SPRITE_DATA[sd::OBJ_PLACE_PTR_TABLE as usize + place_idx as usize + 1] as u16) << 8);
     // 半径（帧数据 1/2 字节）
-    let radius_y = blob(fptr + 1);
-    let radius_x = blob(fptr + 2);
-    mem.write_ram(0x0301 + px, radius_y);
-    mem.write_ram(0x0302 + px, radius_x);
-    let _ = radius_y.wrapping_sub(0x10); // ReduceYRadius（$DE3D——Temp08 面）
+    // 【径源重模卡（2026-11-06——findings §19）】帧格式字节 1/2=radiusY/X（敌径写源
+    // 6294 同式）——但 asm **DE4A 全径无径写**（Samus 径=init 15/4+roll 瞬态（D0E1
+    // +8）；emu 径恒 15/4=目标（D4 保真））。0xF7=animFrame（walk 表合法帧号 247——
+    // DC8F 仅 0xFF=终标记）但帧数据字节 1/2=流垃圾 0xFF⇒径 0xFF⇒span 64 摸地板阻断
+    // （每-6 dX=0 根）。**守卫**：animFrame≥0xF0（标记/越界段）跳径写——径保持
+    // （asm 语义：DE4A 不写径）；合法帧（<0xF0）径写保留（格式语义——敌/item 兼容）。
+    let anim_frame = mem.read_ram(0x0303 + px);
+    if anim_frame < 0xF0 {
+        mem.write_ram(0x0301 + px, blob(fptr + 1));
+        mem.write_ram(0x0302 + px, blob(fptr + 2));
+    }
+    let radius_x = mem.read_ram(0x0302 + px); // 现径（守卫后——可见性检用）
     // 位置→屏幕（IsObjectVisible $DFDF 核）
     let y_pos = mem.read_ram(0x030D + px);
     let x_pos = mem.read_ram(0x030E + px);
@@ -219,6 +226,29 @@ mod tests {
         anim_draw_object(&mut m, 0, 0);
         let attr = m.read_ram(0x0202);
         assert_eq!(attr & 0x03, 2, "调色板位=ObjectCntrl 低 2 位（E038 覆盖）");
+    }
+
+    /// 【径源重模卡】0xF7 帧（animFrame≥0xF0 标记段）跳径写（径保持——asm DE4A 无
+    /// 径写语义）；常规帧（<0xF0）径写保留（帧格式字节 1/2）。
+    #[test]
+    fn radius_guard_skips_marker_frames() {
+        let mut m = FrameMemory::default();
+        m.write_ram(0x0055, 1); // IsSamus
+        m.write_ram(0x030C, 0); // hi
+        m.write_ram(0x00FF, 0); // PPUCTRL_ZP
+        m.write_ram(0x030D, 0x80); // y
+        m.write_ram(0x030E, 0x80); // x
+        m.write_ram(0x0301, 15); // 预置径 15/4（init 常量）
+        m.write_ram(0x0302, 4);
+        m.write_ram(0x0303, 0xF7); // 标记段帧号
+        anim_draw_object(&mut m, 0, 0);
+        assert_eq!(m.read_ram(0x0301), 15, "0xF7 帧跳径写（ry 保持 15）");
+        assert_eq!(m.read_ram(0x0302), 4, "0xF7 帧跳径写（rx 保持 4）");
+        m.write_ram(0x0303, 0); // 常规帧
+        m.write_ram(0x0301, 99); // 预置非帧值（验写生效）
+        anim_draw_object(&mut m, 0, 0);
+        let ry = m.read_ram(0x0301);
+        assert_ne!(ry, 99, "常规帧径写生效（帧格式字节 1/2）");
     }
 
     /// 【守门】ObjectCntrl MSB=0⇒无覆盖（调色板=ctrl_byte 静态位）。

@@ -487,3 +487,30 @@ Evidence: asm=prg7_engine.asm:E8CE 全谱（8 位算式）+DE4A 全径（无径�
 （3631/3980/6294-6298）+sprite.rs:79-82 对照+[chk] 入口探针（y=159 ry=255 dist=7
 top=160 **n_pts=64**）+state 径面/animFrame 面+GetSpriteCntrlData（DCC3 帧流布局）。
 Confidence: 93
+
+## 19. 径源语义重模卡（2026-11-06——守卫修+判据实况）
+
+### 19.1 三径源 asm 全谱（件 1）
+①Samus 径=init 15/4 常量+roll 瞬态（D0E1 unroll `radiusY+=8`（3631）/SetSamusRoll
+D0B5 **无径写**——球径=帧格式字节面）；②敌径=帧数据径写（**6294-6298**「Get vertical
+radius in pixels of object」——帧格式字节 1/2）；③item 径=待考（SpawnPowerUp 槽写
+面）。**帧格式=[ctrl_byte, radiusY, radiusX, 流(字节3起)]**（敌径写源证）——
+**DE4A 全径无径写**（Samus 径写仅 3631 瞬态）⇒emu 径恒 15/4 ✓（D4 目标）。
+
+### 19.2 rust 侧盘点+修（件 2-3）
+sprite.rs:79-82 发明径读消费者=查撞 span（object_check_move_*）/可见性检（radiusX<
+screenX）/is_samus_on_top/触盒——影响面=移动查撞+绘制+拾取。修=**帧有效性守卫**：
+animFrame≥0xF0（标记/越界段）跳径写（径保持——asm 语义）；常规帧径写保留（格式语义
+——敌/item 兼容）。TDD：radius_guard_skips_marker_frames 红→绿（0xF7 跳/常规帧写）。
+
+### 19.3 判据实况
+**f1200=14147→1015px**（=11-04 水平复现！13.9x 收敛——每-6 阻断消除 ✓）；⚠ 1015px
+>500px 判据差一点=**11-04 期固有残差**（修前历史读数=1015）——非本修回归（下一步
+轨迹残差另卡）；**morphball 七格全 hold（0/61440）** ✓✓（径回归风险清——球径 15/4
+恒实录）；match 102/108 保持；499 测全绿（+1 守卫测）；防回退面全保持（f950=46/
+case-002=46×2/crawlprobe=174/walkfcprobe=58 无恶化）。
+
+Evidence: asm D0B5/D0E1（roll 径）+6294-6298（敌径写源）+DE4A 全径（无径写）+DC8F
+（0xFF 终标记/0xF7=帧号 247）+帧格式布局（流字节 3 起）+state 球径面（f1300-1620
+ry=15/rx=4 恒）+TDD 守卫测+L4 矩阵（f1200=1015/morphball 七格 0px）。
+Confidence: 93
