@@ -416,10 +416,13 @@ disp（int_x out）=−1/−2 交替恒正确（255/254）✓；**但每-6 门�
 x==0 环绕判）——写 x=−1 后被后续写覆回（候选：scroll_left 链的 x 写竞争）。
 
 ### 16.3 停机报（件 5——结构性深根）
-每-6 门帧行为的丢失点在 move_samus_left 写 X 后的覆写/scroll_left 链（E63F 列流送→
+每-6 门帧行为的丢失点在 move_samus_left 写 X 后的覆写/scroll_left 链（E33F 列流送→
 check_update_name_table 载房门→iter_bogged 相位耦合）——**更宽移动/滚屏模型**深件
 （件 5 情形）。本卡交付=链谱（E3E5/E31A/int_x 序）+[smh]/[hxi] 双探针实录（disp 对/
 入口增量 0——非猜）。
+> 【2026-11-06 更正】§16.2「窄化至写 X 后覆写/scroll_left 链段」**被 §17 证伪**
+> （[wx] 一击：写全缺=早退径非覆写）——真根=**0xF7 帧径 0xFF→查撞摸地板阻断**（§17.2/
+> §18.2）。disp=−1/−2 对+入口增量 0 实录仍有效（早退径的上游证据）。
 
 Evidence: asm=prg7_engine.asm:E3E5-E426（HorzAccelerate）/E31A-（SamusMoveHorizontally）+
 端口链 physics.rs:1085-1176+742-776（horz_integrate）；[hxi]/[smh] 双探针 n=1025-1039
