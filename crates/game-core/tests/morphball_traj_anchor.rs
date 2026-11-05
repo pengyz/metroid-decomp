@@ -91,6 +91,7 @@ fn morphball_traj_window_and_enemy_anchor() {
     let mut seen_e = 0usize;
     let mut seen_t = 0usize;
     let mut at1524: Option<(u8, u8, u8, u8)> = None;
+    let mut at1560: Option<(u8, u8, u8)> = None;
     for line in rows.lines() {
         let f: usize = match line
             .split("\"f\":")
@@ -127,15 +128,24 @@ fn morphball_traj_window_and_enemy_anchor() {
                 assert_eq!(zp[0x70], 0, "f{f} InvDly=0（无击退 i 帧）");
             }
         }
-        // ③ 换房窗+拾取面
+        // ③ 换房窗+拾取面+冻结面
         if f == 1524 {
             at1524 = Some((zp[0x50], zp[0x5A], wram[0x878], iram[0x648]));
+        }
+        if f == 1560 {
+            at1560 = Some((iram[0x20E], iram[0x20D], zp[0x1E]));
         }
     }
     assert_eq!(seen_e, 41, "敌B 窗金值帧全覆盖（f820-860）");
     assert_eq!(seen_t, 36, "轨迹窗金值帧全覆盖（f1255-1290）");
-    let (map_x, room, _gear, _pw0) = at1524.expect("f1524 行存在");
+    let (map_x, room, gear, pw0) = at1524.expect("f1524 行存在");
     assert_eq!((map_x, room), (1, 255), "f1524 换房窗双腿一致（MapPosX/RoomNumber）");
-    // 【残差卡点（不伪锚）】拾取面 gear/pw0：f1347 后 X 相位 ±1-2px 残差⇒f1521 触盒
-    // 边值差 1px 未触+PPUCTRL bit2 漂移（goal-轮66 面）——本卡三根外，见 findings §10。
+    assert_eq!(gear, 0x10, "拾取面 gear=gr_MARUMARI（1<<type(4)）");
+    assert_eq!(pw0, 0xFF, "拾取面 pw0=FF（物品消耗）");
+    // 【缝会计卡·冻结面锚（2026-11-05）】f1521 拾取⇒GameEngine 延时旗（$0109）⇒
+    // SetTimer 三写（Timer3←$18/NextRoutine←3/MainRoutine←WaitTimer(9)）⇒萨姆斯
+    // 冻结 (98,135)（能力动画 240 帧窗）——emu f1521+ MainRoutine=9 恒驻实录。
+    let (fx, fy, fmr) = at1560.expect("f1560 行存在");
+    assert_eq!((fx, fy), (98, 135), "f1560 萨姆斯冻结位形 (98,135)");
+    assert_eq!(fmr, 9, "f1560 MainRoutine=_id_WaitTimer（冻结窗内）");
 }

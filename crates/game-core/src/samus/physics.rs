@@ -1355,10 +1355,23 @@ fn check_update_name_table(mem: &mut FrameMemory) {
     // inc 即该迭代唯一一次；emu 实录 f915=132→f918=133→f919=134 每 iteration 单 inc；
     // span_fc 只适用于工作拍 FC 被冻结的 title 臂形——双加=+1 相位差根因，f918 实录）。
     let rn = mem.read_ram(0x005A);
-    if rn != 0xFF && rn < 0xF0 {
-        mem.iter_bogged(2);
+    let is_load = rn != 0xFF && rn < 0xF0;
+    if is_load {
+        mem.work_cycles = 0; // 周期累加起点（载房工作量——room.rs LOAD_* 模型）
     }
     crate::frame::mainloop::setup_room(mem);
+    if is_load {
+        // 【缝会计卡·掉帧窗模型（2026-11-05——findings/morphball-trajectory-root.md
+        // §12）】旧形硬编码 2——emu 实测随工作量变（room23（504 tile）=2 / room8
+        // （1024 tile）=3——morphball 812/1344 双窗实录；「每次载房=2」系 crawlprobe
+        // 2 例校准的以偏概全（2026-11-05 证伪更正））。机制=工作超帧跨 NMI 数：
+        // dropped=floor((基底+载房工作周期)/29780)（常量=asm 6502 逐条计数——
+        // room.rs LOAD_* 注）。行为后果=消费端输入相位（同 FC 迭代喂 joy[label]——
+        // 窗长差 1 ⇒转脚帧 accel 滞 1 帧（goal-轮134 下游链））。
+        let dropped = (crate::frame::room::LOAD_BASE_CYCLES + mem.work_cycles)
+            / crate::frame::room::FRAME_CYCLES;
+        mem.iter_bogged(dropped.min(255) as u8);
+    }
     if mem.read_ram(0x005A).wrapping_add(1) != 0 {
         return; // RoomNumber≠FF：装载任务未竟
     }

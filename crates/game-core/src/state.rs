@@ -54,6 +54,10 @@ pub struct FrameMemory {
     pub fc_inced_this_tick: bool,
     /// APU 寄存器写捕获（$4000-$4017——壳层音频面消费源；驱动每帧 drain 后清）。
     pub apu_log: Vec<(u16, u8)>,
+    /// 载房工作量周期累加（缝会计卡 2026-11-05——findings/morphball-trajectory-root.md
+    /// §12：掉帧窗=工作超帧跨 NMI 数（载房域 E54A-F034 零显式 Wait 实证）；各工作
+    /// 单元按 asm 6502 逐条计数累加（常量见 frame/room.rs LOAD_*）。
+    pub work_cycles: u32,
     /// 手柄 1 输入面（场景驱动；boot-title=无输入 0）。
     pub joy1: u8,
     /// 手柄 2 输入面。
@@ -67,7 +71,7 @@ impl Default for FrameMemory {
         Self { ram: [0; 0x800], wram: [0; 0x2000], regs: Registers::default(), nmi_enabled: false,
                title_cursor: 0, title_cursor_phase: 0, title_spin: 0, title_no_return: false,
                iter_gates: Vec::new(), iter_span_left: 0, iter_span_fc: false, fc_inced_this_tick: false,
-               apu_log: Vec::new(),
+               apu_log: Vec::new(), work_cycles: 0,
                joy1: 0, joy2: 0,
                render: RenderState::default() }
     }

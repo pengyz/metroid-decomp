@@ -40,6 +40,26 @@ fn find_item_in_history(y0: u8, v06: u8, v07: u8, item_lo: &[u8], item_hi: &[u8]
 
 /// DrawRoom（$EAAA）——房对象环→RoomRAM 缓冲（base=RoomRAMA $6000）。
 /// 返回 false=走敌门环/属性表尾（未端口面——调用方 fail-loud）。
+/// ============ 载房工作量周期模型（缝会计卡 2026-11-05）============
+/// 机制=**工作超帧**：载房工作跨 NMI 边界 ⇒ NMIStatus=1 内块跳（掉帧窗——D4 保真；
+/// 载房域 E54A-F034 **零显式 Wait**（WaitNMIPass/WriteAndWait 全径 grep 实证）⇒窗长
+/// =跨界数=工作周期/帧周期。常量=6502 逐条计数（asm 内容锚）：
+/// - FillRoomRAM（F01C）：内环 `sta (zp),y/dey/bne`=11/字节×768+外环 30 ≈ 8508
+/// - AttribFill（EFF8 尾）：11/字节×64 = 704；壳 ≈ 50
+/// - DrawMetatile（EF2B）主体 = 197（判界 12+索引 20+4×28-1 环 111+jsr/增指/行判 54）
+///   + UpdateAttrib（EF9E）：早退径（ObjectPalette==RoomPalette）17 / 全径 152
+/// - DrawObject 壳（LEA60-LEA8D）≈ 180（指针算 130+表取 50）
+/// - LoadEnemy（EB06/EB0C/EB28）≈ 300
+/// 基底=常规迭代体 ≈27800——约束夹逼（常规帧 0 掉帧⇒<29780；room8 载房 3 掉帧⇒
+/// ≥25850）中值；帧周期=29780（NTSC）。
+pub(crate) const LOAD_INIT_CYCLES: u32 = 9262;
+pub(crate) const LOAD_OBJ_CYCLES: u32 = 180;
+pub(crate) const LOAD_MT_FAST: u32 = 214;
+pub(crate) const LOAD_MT_FULL: u32 = 349;
+pub(crate) const LOAD_ENEMY_CYCLES: u32 = 300;
+pub(crate) const LOAD_BASE_CYCLES: u32 = 27800;
+pub(crate) const FRAME_CYCLES: u32 = 29780;
+
 pub fn draw_room(mem: &mut crate::frame::FrameMemory, room: u8) -> bool {
     let Some(stream) = gfx::ROOM_STREAMS.get(room as usize) else {
         return false;
@@ -76,6 +96,7 @@ pub fn draw_room(mem: &mut crate::frame::FrameMemory, room: u8) -> bool {
                 return enemy_loop(mem, stream, i + 1, room_palette);
             }
             _ => {
+                mem.work_cycles = mem.work_cycles.wrapping_add(LOAD_OBJ_CYCLES); // DrawObject 壳
                 // DrawObject：pos/struct 索引/属性 3B
                 let pos = b;
                 let struct_idx = stream.get(i + 1).copied().unwrap_or(0);
@@ -122,6 +143,9 @@ fn draw_struct(
             // DrawMetatile
             let Some(&mt) = data.get(idx) else { return };
             idx += 1;
+            // 【周期累加】UpdateAttrib 早退径（调色板同）/全径（asm EF9E 判入口）
+            mem.work_cycles = mem.work_cycles.wrapping_add(
+                if obj_palette == room_palette { LOAD_MT_FAST } else { LOAD_MT_FULL });
             let mt_base = (mt as usize) * 4;
             for k in 0..4u16 {
                 let tile = gfx::METATILE_DEFS
@@ -452,6 +476,7 @@ fn enemy_loop(
         match ty {
             0 | 3 | 5 => i += ty as usize, // ExitSub（asm：A=type——推进形）
             1 => {
+                mem.work_cycles = mem.work_cycles.wrapping_add(LOAD_ENEMY_CYCLES); // LoadEnemy 族
                 if !load_enemy(mem, b, stream.get(i + 1).copied().unwrap_or(0),
                                stream.get(i + 2).copied().unwrap_or(0)) {
                     return false;
@@ -574,6 +599,7 @@ pub fn select_room_ram(mem: &mut crate::frame::FrameMemory) {
 
 /// InitTables（$EFF8）：RoomRAM 全填 $FF（空 tile）+属性表（$3C0 面）填 ATDataTable[RoomPalette&3]。
 pub fn init_tables(mem: &mut crate::frame::FrameMemory) {
+    mem.work_cycles = mem.work_cycles.wrapping_add(LOAD_INIT_CYCLES); // FillRoomRAM+AttribFill 壳
     let hi = mem.read_ram(0x0038); // RoomRAMPtr hi（$60/$64）
     // FillRoomRAM（$F01C）：$FF 填 3 页半（tile 区 $000-$3BF）
     for i in 0..0x3C0u16 {

@@ -63,12 +63,12 @@
         },
         "950:combo-action": {
           "state": "diff",
-          "diff_pixels": 46,
+          "diff_pixels": 250,
           "total_pixels": 61440
         },
         "1200:end": {
           "state": "diff",
-          "diff_pixels": 14147,
+          "diff_pixels": 15517,
           "total_pixels": 61440
         }
       }
@@ -108,12 +108,12 @@
         },
         "1000:neighbor-room": {
           "state": "diff",
-          "diff_pixels": 46,
+          "diff_pixels": 9464,
           "total_pixels": 61440
         },
         "1150:end": {
           "state": "diff",
-          "diff_pixels": 46,
+          "diff_pixels": 9469,
           "total_pixels": 61440
         }
       }
@@ -188,7 +188,7 @@
         },
         "960:end": {
           "state": "diff",
-          "diff_pixels": 174,
+          "diff_pixels": 46,
           "total_pixels": 61440
         }
       }
@@ -453,27 +453,27 @@
         },
         "1520:pit-jump": {
           "state": "diff",
-          "diff_pixels": 299,
+          "diff_pixels": 118,
           "total_pixels": 61440
         },
         "1560:ball-jump": {
           "state": "diff",
-          "diff_pixels": 23065,
+          "diff_pixels": 118,
           "total_pixels": 61440
         },
         "1620:on-pedestal": {
           "state": "diff",
-          "diff_pixels": 23123,
+          "diff_pixels": 118,
           "total_pixels": 61440
         },
         "1650:after-pickup": {
           "state": "diff",
-          "diff_pixels": 23123,
+          "diff_pixels": 118,
           "total_pixels": 61440
         },
         "1700:end": {
           "state": "diff",
-          "diff_pixels": 23123,
+          "diff_pixels": 118,
           "total_pixels": 61440
         }
       }
@@ -737,6 +737,16 @@
       "kind": "anchor",
       "evidence": "",
       "reason": "敌槽生成/位形卡三根修（F351 更新门状态域 status<2→<3+F1FA 判盒 Samus.hi 源 wram[0x6AF4]→$030C+F282 status≥4 免伤门——morphball-trajectory-root.md §9 asm 逐行+六测红→绿）——morphball 七格大幅收敛：f1300 21434→0px 全 match、f1460 25400→118、f1520 25556→299（<500px 目标×2）+f1524 换房分叉消除（MapPosX 锚）；确认无回退：fade-blink/门链五点/落地三点防回退面全 match 0px 保持+493 测全绿 0 败",
+      "match": 96,
+      "diff": 12,
+      "blocked": 0,
+      "cells_total": 108
+    },
+    {
+      "ts": "2026-11-05T10:41:42+00:00",
+      "kind": "anchor",
+      "evidence": "",
+      "reason": "缝会计/输入消费相位卡（findings §12）：morphball 七格量级收敛——f1300=0px match 保持+f1460-1700 五格 23k→**118px**（<500px 判据✓——门数计算形+SetTimer 三写+延时旗检点+WaitTimer 端口四件修传导）；match 集 96 无缩水（118px 仍 diff 态——残差=物品闪帧相位差 1（下卡））；确认无回退：防回退面（collide f800/jumpledge f730/killenemy/scrollseam）全 match 0px 保持+495 测全绿",
       "match": 96,
       "diff": 12,
       "blocked": 0,

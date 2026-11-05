@@ -124,6 +124,19 @@ pub fn game_main_routine(mem: &mut FrameMemory) {
         2 => samus_init(mem), // SamusInit（r25 端口——萨姆斯出场态）
         3 => game_engine(mem), // GameEngine（已端口——移动帧环壳）
         8 => samus_intro(mem), // SamusIntro（r25 端口——淡入序+sprite 装载）
+        9 => {
+            // 【缝会计卡】WaitTimer（$C494——SetTimer 计时等待径）：Timer3≠0⇒出（冻结
+            // 保持——能力动画/GameOver 前置窗）；尽⇒NextRoutine($20)→MainRoutine
+            // （GameOver(4)/GoPassword(6) 免起乐；否则 StartMusic（D92C）后置——
+            // asm :2494-2505 全径）。
+            if mem.read_ram(crate::ram_map::TIMER3) == 0 {
+                let next = mem.read_ram(0x0020); // NextRoutine（constants_ram:480）
+                if next != 4 && next != 6 {
+                    start_music(mem); // D92C（区乐/ItemRoom 乐——声链消费面）
+                }
+                mem.write_ram(crate::ram_map::MAIN_ROUTINE, next);
+            }
+        }
         _ => {
             let loc = format!("bank07:{:04X}", MAIN_ROUTINE_PTR_TABLE.get(mr as usize).copied().unwrap_or(0));
             crate::unported!(&loc); // 其余态（MoreInit 起——迭代分类）
@@ -299,12 +312,20 @@ pub fn game_engine(mem: &mut FrameMemory) {
     }
     update_world(mem); // CB29（19 件环——渐进端口面）
     // 延时旗（MiniBossKill/PowerUp→SetTimer 240 帧→routine 3）
-    if mem.read_ram(0x0083) != 0 || mem.read_ram(0x0084) != 0 {
-        mem.write_ram(0x0083, 0);
-        mem.write_ram(0x0084, 0);
-        // SetTimer（$C4AA——Timer3←240 帧/routine←3）址随证
-        mem.write_ram(0x002C, 0x18);
-        mem.write_ram(crate::ram_map::MAIN_ROUTINE, 3);
+    // 【缝会计卡·检点勘误（2026-11-05）】asm 旗址=MiniBossKillDelayFlag($0108)/
+    // PowerUpDelayFlag($0109)（constants_ram:809-810）——旧形读 $0083/$0084（错位）
+    // ⇒拾取旗永不可见⇒SetTimer 链不发（emu f1521 拾取即冻 240 帧实录差源）。
+    if mem.read_ram(0x0108) != 0 || mem.read_ram(0x0109) != 0 {
+        mem.write_ram(0x0108, 0);
+        mem.write_ram(0x0109, 0);
+        // 【缝会计卡·SetTimer 写面勘误（2026-11-05）】asm C4AA 三写=Timer3←A（$18=24×10
+        // =240 帧）+NextRoutine($20)←X（3=GameEngine）+**MainRoutine←_id_WaitTimer(9)**
+        // （`lda #_id_WaitTimer/bne SetMainRoutine`）——旧形只写 Timer3+MainRoutine←3
+        // （下例行误当本行）⇒无 WaitTimer 冻结⇒拾取后萨姆斯续动（emu 冻 240 帧能力
+        // 动画实录（f1522 起 MainRoutine=9 恒驻））。
+        mem.write_ram(crate::ram_map::TIMER3, 0x18);
+        mem.write_ram(0x0020, 3); // NextRoutine（constants_ram:480）
+        mem.write_ram(crate::ram_map::MAIN_ROUTINE, 9); // _id_WaitTimer
     }
     // 死亡链（Samus.status==sa_Dead2(=$FD?) 且 animDelay==0⇒SilenceMusic+GameOver）
     let status = mem.read_ram(0x0300);
@@ -317,8 +338,10 @@ pub fn game_engine(mem: &mut FrameMemory) {
             let mr = mem.read_ram(crate::ram_map::MAIN_ROUTINE);
             mem.write_ram(crate::ram_map::MAIN_ROUTINE, mr.wrapping_add(1));
         } else {
-            mem.write_ram(0x002C, 0x04); // SetTimer 40 帧→routine 4（GameOver）
-            mem.write_ram(crate::ram_map::MAIN_ROUTINE, 4);
+            // SetTimer 40 帧→routine 4（GameOver）——同 C4AA 三写形（缝会计卡勘误）
+            mem.write_ram(crate::ram_map::TIMER3, 0x04);
+            mem.write_ram(0x0020, 4); // NextRoutine←4（_id_PrepareGameOver）
+            mem.write_ram(crate::ram_map::MAIN_ROUTINE, 9); // _id_WaitTimer
         }
     }
 }
@@ -3281,6 +3304,37 @@ mod tests {
         uw_collision_detection(&mut m);
         assert_eq!(m.read_ram(crate::ram_map::SAMUS_IS_HIT), 0,
                    "Frozen 敌免伤（F282 cmp #4/bcs）");
+    }
+
+    /// 【缝会计卡·SetTimer 三写（morphball-trajectory-root.md §12——asm C4AA 全谱）】
+    /// 延时旗⇒Timer3←$18+**NextRoutine($20)←3**+**MainRoutine←_id_WaitTimer(9)**——
+    /// 旧形写 MainRoutine←3（下例行）⇒无冻结⇒拾取后萨姆斯续动（emu 冻 240 帧实录）。
+    #[test]
+    fn powerup_delay_sets_wait_timer_not_game_engine() {
+        let mut m = FrameMemory::default();
+        m.write_ram(0x0109, 0xFF); // PowerUpDelayFlag（constants_ram:810——拾取授予面）
+        m.write_ram(crate::ram_map::MAIN_ROUTINE, 3);
+        game_engine(&mut m);
+        assert_eq!(m.read_ram(crate::ram_map::TIMER3), 0x18, "Timer3←$18（×10=240 帧）");
+        assert_eq!(m.read_ram(0x0020), 3, "NextRoutine←3（GameEngine——SetTimer stx）");
+        assert_eq!(m.read_ram(crate::ram_map::MAIN_ROUTINE), 9,
+                   "MainRoutine←_id_WaitTimer（SetTimer lda #id/bne）");
+    }
+
+    /// 【守门】WaitTimer（$C494）径：计时未尽⇒冻结保持；尽⇒NextRoutine→MainRoutine
+    /// （GameOver(4)/GoPassword(6) 免起乐——asm :2494-2505）。
+    #[test]
+    fn wait_timer_freezes_until_zero_then_resumes() {
+        let mut m = FrameMemory::default();
+        m.write_ram(crate::ram_map::MAIN_ROUTINE, 9);
+        m.write_ram(crate::ram_map::TIMER3, 0x18);
+        m.write_ram(0x0020, 3); // NextRoutine=GameEngine
+        game_main_routine(&mut m);
+        assert_eq!(m.read_ram(crate::ram_map::MAIN_ROUTINE), 9, "计时未尽⇒冻结保持");
+        m.write_ram(crate::ram_map::TIMER3, 0);
+        game_main_routine(&mut m);
+        assert_eq!(m.read_ram(crate::ram_map::MAIN_ROUTINE), 3,
+                   "计时尽⇒MainRoutine←NextRoutine（回 GameEngine）");
     }
 
     /// GoMainRoutine 标题路**会师穿越**（bank00:8000 已通——phase 0 臂单工作段+bogged

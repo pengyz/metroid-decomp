@@ -238,3 +238,47 @@ watch+rust state 行）+asm=prg7_engine.asm:2945-2962（samL11/12）/7170-7230�
 7230-7245（E365）/3349-3370（CF4C/CF55）/2824-2843（CC98）/3371-3390（CDBF）+nmi.rs:228
 （read_joy_pads）+rust_screenshot.rs:446（输入写点）；数值双向验算（0xA0+0x30=0xD0 /
 0xA0+0xD0=0x70）。Confidence: 93
+
+## 12. 缝会计/输入消费相位卡（2026-11-05——**全链收敛**）
+
+### 12.1 缺行集定性（全案对表）
+1700 帧双侧缺行集**唯一真差**=1344 载房窗（emu 3/rust 2）；1569-1570 rust 独缺=
+拾取分歧下游（rust 无拾取⇒续行撞界载房）；1700=尾伪差。**缝契约双腿同构**（span
+tick 不采——walk-fc-capture-seam §2c）；差=**该迭代门长**。
+
+### 12.2 机制=工作超帧（asm 实证）
+载房域 E54A-F034 **零显式 Wait**（WaitNMIPass/WriteAndWait 全径 grep）⇒窗长=NMI
+边界跨界数=工作周期/29780（NMIStatus 门跳内块（prg7:251）——ReadJoyPads 同跳⇒输入
+消费滞后）。窗长随工作量变：812 窗=room23（504 tile/12 对象/1 敌）=2；1344 窗=
+room8（1024 tile/16 对象/0 敌）=3——**「每次载房=2」系 crawlprobe 2 例校准的以偏
+概全（本日证伪更正）**。工作量实测（[loadq] 探针）+6502 逐条计数落周期模型
+（room.rs LOAD_*：InitTables 9262/元 tile 快径 214（UpdateAttrib 早退）全径 349/
+对象壳 180/敌 300/基底 27800（约束夹逼 [25850,29780)））。
+
+### 12.3 传导链（三件修——红→绿）
+1. **门数计算形**（physics.rs check_update_name_table）：iter_bogged(2) 硬编码⇒
+   `dropped=(LOAD_BASE+work_cycles)/29780`——1344 窗 2→3 **与 emu 缺行集全案对齐**；
+2. **SetTimer 三写勘误**（mainloop.rs game_engine）：asm C4AA=Timer3←$18+NextRoutine
+   ($20)←3+**MainRoutine←_id_WaitTimer(9)**——旧形写 MainRoutine←3（下例行误当本行）
+   ⇒无冻结；死亡链同形修；
+3. **延时旗检点勘误**：asm 旗址=$0108(MiniBossKill)/$0109(PowerUp)（constants:809-810）
+   ——旧形读 $0083/$0084（错位）⇒拾取旗永不可见⇒SetTimer 链不发；
+4. **WaitTimer（$C494）端口**（mr=9 分派臂——旧 unported 桩）：Timer3≠0⇒冻结保持/
+   尽⇒NextRoutine→MainRoutine（4/6 免起乐否则 StartMusic）。
+
+### 12.4 判据实况（全链收敛）
+- **缺行集双腿全案一致**（[2,4,5,6,311-313,352-358,812-813,1344-1346]——emu 同集）；
+- **f1347-1700 标签对齐 0 差**（FC/X/Y/SubPixX/gear/MainRoutine 全字段）——输入相位、
+  轨迹、拾取（f1521 gear=0x10 双腿同）、冻结（f1521+ MainRoutine=9/位形 (98,135)）全合；
+- L4 morphball 七格：f1300 **0px match**、f1460-1700 全 **118px**（<500px 判据✓——
+  修前 23k）；f1524 gear/pw0 锚+f1560 冻结锚全恢复（锚测全绿）；495 测全绿；
+  防回退面（collide f800/jumpledge f730/killenemy/scrollseam）全 match 0px 保持。
+- ⚠ 残差 118px=**物品闪帧相位差 1**（同 tile 异调色板=闪对——item anim 相位）——
+  每格恒定、<500px；下卡件。
+
+Evidence: 缺行集双侧实录+asm=prg7_engine.asm:7586-9894（载房域零 Wait grep）+
+195-290（NMIStatus 机制）/2025-2050（GameEngine 延时旗）/C4AA（SetTimer 三写）/
+C494（WaitTimer）+constants_ram:809-810（旗址）/480/496（NextRoutine/Timer3）+
+room.rs LOAD_* 常量（6502 逐条计数）+[loadq] 工作量实测+Lua inputPolled 注入语义
+（tools/scenario_capture.lua:35/514/600）+TDD 四测红→绿+锚测（f1524/f1560 恢复）
++L4 矩阵（七格 23k→118）。Confidence: 93
