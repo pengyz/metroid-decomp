@@ -705,6 +705,12 @@ SAMUS_GFX 源 [0x760]=`FE FE C0 FC...`=**块形** = chr[0x760] ✓（装载对�
 ### 28.4 停机报（件 6）
 源数据/emu CHR 面不符=更深件（ROM gfx 提取位验证/emu CHR 语义——非装载径可修）。
 本卡交付=链全端口对表✓+源实证（三面合+源差钉定——非猜）。
+> 【2026-11-06 矛盾钉定（复核 ae27e381 注——原地补）】「零占位 vs chr 块形」矛盾解：
+> **双 load_gfx 函数**——title/gfx.rs init_title_gfx（零占位（标题径——title_gfx=
+> [0u8;0x2000]））vs **frame/gfx.rs load_gfx（真数据（游戏起始径——gfx_blocks
+> SAMUS_GFX 真装载））**。chr 0x76 块形=**SAMUS_GFX 真装载产物 ✓**（非零占位——
+> game-start 用 frame/gfx.rs 径）——零占位仅标题径不涉游戏起始。§28.3 源差结论不变：
+> SAMUS_GFX 源 [0x760]=块形=chr ✓（装载对）但 emu 渲 "E"=烤焙源/emu CHR 面不符。
 
 Evidence: C5D7/C5DC/C604/C7AB/C7D5 全谱+rust gfx.rs/boot.rs 端口对照（链全✓）+
 SAMUS_GFX 源 [0x760] 字节（=chr ✓）+emu "E" 渲染（双截图）。
