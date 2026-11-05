@@ -1299,6 +1299,14 @@ pub fn samus_enter_door(mem: &mut FrameMemory) {
 fn object_check_move_horizontal(mem: &mut FrameMemory, x: u8, dist: u8) -> bool {
     let y = mem.read_ram(0x030D);
     let ry = mem.read_ram(0x0301);
+    // 【0xF7 quirk 卡·入口探针（临时——2026-11-06）】查撞 span 输入实证。
+    if std::env::var("DSH_SPRITE_TRACE").is_ok() {
+        let n = crate::frame::mainloop::DIAG_ITER.load(std::sync::atomic::Ordering::Relaxed);
+        if n >= 1025 && n <= 1050 {
+            let (top, cnt) = horizontal_span_rows(y, ry);
+            eprintln!("[chk] n={} y={} ry={} x={} dist={} top={} n_pts={}", n, y, ry, x, dist, top, cnt);
+        }
+    }
     let mut hi = mem.read_ram(crate::ram_map::SAMUS_HI);
     let (check_x, borrow) = x.overflowing_sub(dist);
     // asm E946 环绕判定（精确移植）：`ldx #$00/lda dist/bmi Lx215/dex` ⇒

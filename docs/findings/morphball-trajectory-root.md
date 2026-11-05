@@ -452,3 +452,35 @@ Evidence: [wx] 写后探针（n=1025-1035 全录——1027/1033 写缺）+[bnc]�
 rx=255）+[corner] 阻断 5 点（第 5 点 0x5D）+state 径面（f1028-1034 交替 255/255）+
 animFrame 面（0xF7 交替）+sprite.rs:79-82 帧数据径读+asm E89B/E8CE。
 Confidence: 93
+
+## 18. 0xF7 帧径 quirk 整段对拍卡（2026-11-06——两径对拍+根终谳+停机报）
+
+### 18.1 asm 两径对拍（件 1）
+①**GetNumBlocksToCheck（E8CE）8 位算式**：`tya(=rY)/asl`⇒A=0xFE(254)+carry（**8 位
+截断**！）/`sec/sbc 底余`/借位修正+8/`lsr×3`=span>>3/右余+1/X(顶余)+中心+右余=总数
+——rY=255 时 asm span=254（8 位）⇒n≈32 点 vs **rust span_rows u16（diameter=ry<<1=510）
+⇒n=64 点**（**算式不同构**——rust 多字节模型 vs asm 8 位）；
+②**帧数据读序**：ObjDrawFrame（**DE4A**）=animFrame→ObjFramePtrTable[×2]→FramePtr→
+GetSpriteCntrlData（byte0=ctrl_byte（低半字节=PlacePtrTbl 项号））→帧流（0xFC/0xFD/
+0xFE/0xFF 标记）——**DE4A 全径无径写**！径写点全谱：3631（SamusRoll ±8）/3980（子弹
+=2）/6294-6298（**敌径=帧数据**（「Get vertical radius in pixels of object」））——
+**Samus 径=init/roll 常量**（非帧数据！）。0xF7=animFrame 值（walk 表项）→ObjFramePtr
+Table[0xF7] 帧流字节 1/2=**流数据非径**（0xFF=流字节）。
+
+### 18.2 根终谳（sprite.rs:79-82 发明径读）
+rust obj_draw_frame:79-82 `blob(fptr+1/2)→$301/$302`（径写）=**发明**（asm DE4A 无此
+写）⇒0xF7 帧流字节 1/2=0xFF 被当径⇒radiusY/X=0xFF⇒span_rows u16=64 点⇒第 5 点地板
+（0x5D）阻断⇒每-6 dX=0⇒f1200 14147px。emu（DE4A 无径写）径恒 15/4⇒span≈4 点⇒不摸
+地板⇒不阻 ✓✓ **全链闭合（含 emu 不阻机制）**。
+
+### 18.3 停机报（件 6——修径=径源语义重模）
+修=移除/迁移 sprite.rs:79-82 发明径读（Samus 径=init/roll 常量径；敌径=6294 帧径径
+（draw_enemy 侧）；item 径=待考）——**径源语义重模**（Samus init/roll/敌/item 三径源
+全谱）+span_rows u16→8 位同构（E8CE 算式）+TDD——需径源全谱 asm 对读后动手（D4 保真
+——emu 径恒 15/4=目标非"修正确"）。⚠ morphball 径回归风险（径写移除影响球径面）——
+须同卡验 L4 morphball 七格保持。本卡交付=两径对拍+根终谳（emu 不阻机制含）。
+
+Evidence: asm=prg7_engine.asm:E8CE 全谱（8 位算式）+DE4A 全径（无径写）+径写点全谱
+（3631/3980/6294-6298）+sprite.rs:79-82 对照+[chk] 入口探针（y=159 ry=255 dist=7
+top=160 **n_pts=64**）+state 径面/animFrame 面+GetSpriteCntrlData（DCC3 帧流布局）。
+Confidence: 93
