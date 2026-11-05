@@ -687,3 +687,25 @@ CopyGFXBlock（C7D5：PPUADDR→ROM→图案表）+LoadSamusGFX（C5DC）/InitTi
 Evidence: GFXInfoEntry 宏+C6E0/C7AB/C7D5/C5D7/C5DC 全谱+GFX_INFO Entry0（size
 $09A0 覆盖 0x76/0x7F）+init_title_gfx 零占位实录+gfx.rs:61 纯拷贝+chr 字节（§26.2）。
 Confidence: 92
+
+## 28. 游戏起始 gfx 装载径接通卡（2026-11-06——链全端口✓+源实证+停机报）
+
+### 28.1 asm 全谱（件 1）
+装载链（C5D7 InitTitleGFX→C5DC LoadSamusGFX（SAMUS/SamusSuitless/IntroSprites/
+**Font_Complete/Font_Hud**/Solid×2）→C604 InitBrinstarGFX（BrinBG1/CREBG1/CREBG2/
+BrinstarSprites/Solid×2））+GFXInfoEntry 7B 格+LoadGFX（C7AB）/CopyGFXBlock（C7D5）。
+### 28.2 端口对表（件 2）——链全端口✓
+rust gfx.rs：init_title_gfx（TITLE/SAMUS/IntroSprites/**FONT_COMPLETE/FONT_HUD**/Solid
+×2 ✓全链）+load_gfx（GFXInfo 描述子+bank 切换+CopyGFXBlock PPU 写 ✓）+boot.rs
+init_bank1（Brinstar 环 ✓）——**装载链全端口 ✓**（font 条目在链）。
+### 28.3 源实证（件 1——SAMUS_GFX 源 vs chr）
+SAMUS_GFX 源 [0x760]=`FE FE C0 FC...`=**块形** = chr[0x760] ✓（装载对！）——但 emu
+渲 "E" ⇒ **烤焙源数据（SAMUS_GFX 提取位）/emu CHR 面不符**：emu tile 0x76 字形来自
+别处（提取位偏？emu 侧字形源？）——**非装载径**（链✓/装载✓/源=chr✓ 三面合）。
+### 28.4 停机报（件 6）
+源数据/emu CHR 面不符=更深件（ROM gfx 提取位验证/emu CHR 语义——非装载径可修）。
+本卡交付=链全端口对表✓+源实证（三面合+源差钉定——非猜）。
+
+Evidence: C5D7/C5DC/C604/C7AB/C7D5 全谱+rust gfx.rs/boot.rs 端口对照（链全✓）+
+SAMUS_GFX 源 [0x760] 字节（=chr ✓）+emu "E" 渲染（双截图）。
+Confidence: 91
