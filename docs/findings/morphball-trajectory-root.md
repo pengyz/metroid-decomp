@@ -290,3 +290,18 @@ C494（WaitTimer）+constants_ram:809-810（旗址）/480/496（NextRoutine/Time
 room.rs LOAD_* 常量（6502 逐条计数）+[loadq] 工作量实测+Lua inputPolled 注入语义
 （tools/scenario_capture.lua:35/514/600）+TDD 四测红→绿+锚测（f1524/f1560 恢复）
 +L4 矩阵（七格 23k→118）。Confidence: 93
+
+### 12.5 物品闪帧相位卡（2026-11-05——七格 0px 达成）
+根=**SpriteAttrsOverride（E038）调色板覆盖未端口**（A级全谱）：UpdateOnePowerUp
+（DB42 :5539-5554）每帧写 ObjectCntrl=((FC>>1)&3)|$80（闪帧 4 色轮换）；DCC3 尾
+MSB=1⇒E038 `attr=(ctrl_byte&0xC0)|ObjectCntrl`（asl/lsr 对=剥 MSB；PRIORITY 不入）。
+旧形 sprite.rs 恒取 ctrl_byte 静态位⇒emu 闪/rust 不闪。修=E038 覆盖端口（&0x7F=
+剥 MSB 形；首轮 0x80 留入致 VFLIP 已回退修正）；TDD 双测红→绿。
+**判据**：L4 morphball 七格 **0/61440 全零像素**（f1300-1700——连续 3 测（2 HEAD）
+一致）✓。⚠ 格态=🎲flaky（工具记账伪象）：code_state 键=git HEAD **不计未提交改动**——
+628bbabd 组 5 行=2 diff（0x80 bug worktree）+3 match（修后 worktree）同 HEAD 混账
+⇒判 flaky（classify_flaky 同码态 ≥3 不一致）。585dd937 组 3 match ✓ / e3079c52 组
+1 match ✓ 均一致；flaky 组账 append-only（不静默删）⇒格标滞留。**物理真值=七格 0px**
+（shots_rust/matrix.json 各格 pixels=0/61440）；真增益锁点（match 96→102）待工具
+码态键粒度（含 worktree 态）改进或账史滚动后落。l4_run_observations.jsonl f1300 全史
+可溯（20261103 起 80+ 行）。
