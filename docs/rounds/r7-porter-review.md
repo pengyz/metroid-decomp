@@ -13326,6 +13326,52 @@ Joy1Status=1/1 直证+数学复算 0xA0+0x30=0xD0/0xA0+0xD0=0x70/diff=0x60））
 （结构族非局部修可闭（§4/件 5 论证（不强修对）））⑤TDD 锚设计 ✓✓（四锚完备（修时防伪绿）））
 ——**停机报合规** ✓——复核 verdict 实录（docs commit）✓。
 
+## 缝会计/输入消费相位专项卡对抗复核（628bbabd（证伪立场（独立重导证据（6 重点））））
+
+### verdict: needs_revision（①最重「缺行集双腿全案一致」不可独立复读（rust trace 修前
+旧跑（Oct 31）+§12.1 帧号偏（1569-1570 vs 实测 1563-1564）））（余项 ✓）
+
+**⑤ 必跑验证实录（A 级原文）**：cargo test --workspace（**457+3+1+1+1+1+27+4=495 passed;
+0 failed**（495 测（与任务规约一致）））✓
+
+**① 掉帧窗模型核（最重）✗ 拒收（缺行集不可复读）**：
+- ✓ **6502 周期常量逐条复算**（与 asm 注释全对表）：InitTables **9262**=FillRoomRAM(F01C)
+  （内环 11/字节×768+外环 30≈8508）+AttribFill(EFF8)（11/字节×64=704）+壳≈50 ✓+
+  元 tile 快径 **214**=DrawMetatile(EF2B) 197+UpdateAttrib(EF9E) 早退 17 ✓+全径 **349**
+  =197+152 ✓+对象壳 **180**（LEA60-LEA8D）✓+敌 **300**（EB06/EB0C/EB28）✓
+- ✓ **约束夹逼** [25850,29780)：常规帧 0 掉帧⇒<29780+room8 载房 3 掉帧⇒≥25850（基底
+  27800=中值）✓——公式 `dropped=(LOAD_BASE+work_cycles)/FRAME_CYCLES` 代码形 ✓
+- ✗ **缺行集双腿全案「一致」声明不可独立复读**：rust state.jsonl=**Oct 31 20:39**
+  （**修前旧跑**（5 天前））vs emu frames.jsonl=Nov 5 18:54（今日）——commit 不含 trace
+  再生——实测缺行集 **emu≠rust**（emu=[…812,813,**1344,1345,1346**,**1700**] vs
+  rust=[…812,813,**1343,1344**,**1563,1564**]）——**1344 窗 emu=3/rust=2（修后应 3
+  但 committed trace 仍 2）**——§12.4「缺行集双腿全案一致」rest on 未持久化 post-fix 跑
+  （A 级证据缺口）
+- ✗ **§12.1 帧号偏**：「1569-1570 rust 独缺」vs 实测 **1563-1564**（偏 6 帧）
+
+**② 「每次载房=2」证伪更正核 ✓✓**：§12.2（「每次载房=2」系 crawlprobe 2 例校准的
+**以偏概全**（**本日证伪更正**）——窗长=工作周期/29780 随房量变（room23=504 tile/2 掉帧
+vs room8=1024 tile/3 掉帧）+载房域 E54A-F034 **零显式 Wait**（grep 实证））✓
+
+**③ 三勘误 asm 核 ✓✓**：WaitTimer（$C494（:1219-1222（`lda Timer3`（`bne`
+SetMainRoutine@RTS（冻结保持））））✓+SetTimer C4AA（Timer3←$18+NextRoutine($20)←3+
+MainRoutine←_id_WaitTimer(9)（旧形写 MainRoutine←3（下例行误当本行）））+旗址
+**$0108/$0109**（constants:809-810（旧形 $0083/$0084 错位））✓
+
+**④ B 案证伪核 ✓**：sched 键=**tick**（scenario_capture.lua:35/600）+circular 论证
+（FC↔tick 映射漂移=待修对象本身（B 案不成立））✓
+
+**⑥ 118px 定性核 ✓**：物品闪帧相位差（同 tile 异调色板=闪对（item anim 相位））——
+每格恒定、<500px（判据✓）（修前 23k）——diff 图唯一绿点=物品球异调色板 ✓
+
+**verdict**：缝会计/输入消费相位专项卡对抗复核 **needs_revision**——①最重「缺行集双腿
+全案一致」不可独立复读（rust trace=修前旧跑（Oct 31（commit 不含 trace 再生））（实测
+emu≠rust（1344 窗 emu=3/rust=2））+§12.1 帧号偏（1569-1570 vs 实测 1563-1564）——需
+**post-fix trace 再生落档**（或降 B 级）+帧号更正）——②「每次载房=2」证伪更正 ✓✓
+（以偏概全（本日证伪更正））③三勘误 asm ✓✓（C4AA 三写+旗址 $0108/$0109+WaitTimer
+$C494）④B 案证伪 ✓（sched 键=tick（circular 论证））⑤必跑验证 ✓（495 测）⑥118px
+定性 ✓（物品闪帧相位差）。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
