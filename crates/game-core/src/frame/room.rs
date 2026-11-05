@@ -57,7 +57,13 @@ pub(crate) const LOAD_OBJ_CYCLES: u32 = 180;
 pub(crate) const LOAD_MT_FAST: u32 = 214;
 pub(crate) const LOAD_MT_FULL: u32 = 349;
 pub(crate) const LOAD_ENEMY_CYCLES: u32 = 300;
-pub(crate) const LOAD_BASE_CYCLES: u32 = 27800;
+/// DrawObject y 位环（LEA72 每 y 单元 `lda+clc+adc+sta+bcc+inc+dex+bne`≈20c）。
+pub(crate) const LOAD_YLOOP_CYCLES: u32 = 20;
+/// DrawStructRow 行壳（行头解码+AdvanceRow ≈30c/行）。
+pub(crate) const LOAD_ROW_CYCLES: u32 = 30;
+/// setup_room 固定壳（ScanForItems+DeleteOffscreenRoomSprites+EndOfRoom+表查 ≈1300c）。
+pub(crate) const LOAD_SHELL_CYCLES: u32 = 1300;
+pub(crate) const LOAD_BASE_CYCLES: u32 = 29000;
 pub(crate) const FRAME_CYCLES: u32 = 29780;
 
 pub fn draw_room(mem: &mut crate::frame::FrameMemory, room: u8) -> bool {
@@ -99,6 +105,8 @@ pub fn draw_room(mem: &mut crate::frame::FrameMemory, room: u8) -> bool {
                 mem.work_cycles = mem.work_cycles.wrapping_add(LOAD_OBJ_CYCLES); // DrawObject 壳
                 // DrawObject：pos/struct 索引/属性 3B
                 let pos = b;
+                let yu = (pos >> 4) as u32;
+                mem.work_cycles = mem.work_cycles.wrapping_add(LOAD_YLOOP_CYCLES * yu);
                 let struct_idx = stream.get(i + 1).copied().unwrap_or(0);
                 let obj_palette = stream.get(i + 2).copied().unwrap_or(0);
                 let y = (pos >> 4) as u16;
@@ -131,6 +139,7 @@ fn draw_struct(
             return; // DrawStruct @RTS
         }
         idx += 1;
+        mem.work_cycles = mem.work_cycles.wrapping_add(LOAD_ROW_CYCLES); // DrawStructRow 行壳
         // DrawStructRow：行头（低半字节=元 tile 计（0=16）/高半字节=x 偏移）
         let count = match head & 0x0F {
             0 => 16u8,
@@ -1149,6 +1158,18 @@ mod tests_stream_content_mapping {
     /// 【复核处方强测】真驱动 draw_room 0xFF 臂（ROOM_STREAMS[1] 尾 0xFF=现成直终流）——
     /// 旧形直调 end_of_room 无回归保护（回退修复仍绿）。
     #[test]
+    /// 【case-002 归因卡·掉帧窗模型校准锚（2026-11-05）】三房实测工作量→计数=emu 缺行集
+    /// 实录（room20（case-002 邻房）=2/room23（morphball 走廊）=2/room8（球房）=3）+
+    /// 常规帧 0（BASE<29780 约束）——修前 room20=1（边界下 4%）⇒时间线前移 1 帧⇒
+    /// f1000/f1150 9.4k 像素差（滚屏偏移形）。
+    #[test]
+    fn load_window_model_calibrated() {
+        assert_eq!((LOAD_BASE_CYCLES + 31446) / FRAME_CYCLES, 2, "room20（case-002 邻房）");
+        assert_eq!((LOAD_BASE_CYCLES + 46456) / FRAME_CYCLES, 2, "room23（morphball 走廊）");
+        assert_eq!((LOAD_BASE_CYCLES + 71946) / FRAME_CYCLES, 3, "room8（morphball 球房）");
+        assert_eq!(LOAD_BASE_CYCLES / FRAME_CYCLES, 0, "常规帧 0 掉帧");
+    }
+
     fn draw_room_ff_path_writes_temp_scroll_dir() {
         let mut m = FrameMemory::default();
         m.write_ram(crate::ram_map::SCROLL_DIR, 3);

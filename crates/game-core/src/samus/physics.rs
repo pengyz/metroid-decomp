@@ -1370,6 +1370,10 @@ fn check_update_name_table(mem: &mut FrameMemory) {
         // 窗长差 1 ⇒转脚帧 accel 滞 1 帧（goal-轮134 下游链））。
         let dropped = (crate::frame::room::LOAD_BASE_CYCLES + mem.work_cycles)
             / crate::frame::room::FRAME_CYCLES;
+        // 【case-002 归因卡·临时探针（2026-11-05）】载房工作量+计数实测。
+        if std::env::var("DSH_SPRITE_TRACE").is_ok() {
+            eprintln!("[loadwin] rn={} work={} dropped={}", rn, mem.work_cycles, dropped);
+        }
         mem.iter_bogged(dropped.min(255) as u8);
     }
     if mem.read_ram(0x005A).wrapping_add(1) != 0 {

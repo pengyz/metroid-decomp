@@ -305,3 +305,30 @@ MSB=1⇒E038 `attr=(ctrl_byte&0xC0)|ObjectCntrl`（asl/lsr 对=剥 MSB；PRIORIT
 （shots_rust/matrix.json 各格 pixels=0/61440）；真增益锁点（match 96→102）待工具
 码态键粒度（含 worktree 态）改进或账史滚动后落。l4_run_observations.jsonl f1300 全史
 可溯（20261103 起 80+ 行）。
+
+## 13. case-002 邻房 9.4k 归因卡（2026-11-05——恶化归因+模型补全）
+
+### 13.1 恶化归因（worktree 隔离法——git stash 禁用）
+**628bbabd^（=8ec44b75）worktree 隔离跑 case-002**（/tmp/wt-pre-seam——ROM/Mesen2
+链入）：f1000/f1150=**46/46px**（=lead 11-04 读数复现）⇒现 9464/9469px=**628bbabd..
+HEAD 区间 fix 副作用**（①）——非既有显形。RAM 面三点定相位：f1000 FC=215(pre)/216(cur)
++ScrollX 126/128+SamusX 13/15 ⇒**当前时间线前移 1 帧**=载房掉帧计数 2→1。
+
+### 13.2 根=掉帧窗模型边界敏感（缺工作量组件）
+模型 dropped=(BASE+work)/29780 对 room20（case-002 邻房：obj=4/ysum=26/1 敌）算出
+work=29326→count=1（边界下 4%！）；真值 2（emu 缺行集/pre-seam 46px 双证）。约束反证：
+case-002 需 BASE≥30234 与常规帧 BASE<29780 **矛盾**⇒**模型缺组件**（y 位环/行壳/
+固定壳）。补全（asm 逐条计数）：y 位环 20c/y 单元（LEA72）+DrawStructRow 行壳 30c/行
++setup_room 固定壳 1300c（ScanForItems/DeleteOffscreen/EndOfRoom/表查）+BASE 27800→
+**29000**——三房全合：room20=**2**/room23=**2**/room8=**3**（emu 实录）+常规 0。
+
+### 13.3 判据实况
+case-002 f1000/f1150=**46/46px**（9464/9469→46——回 pre-seam 水平 ✓<500px）；
+match **102/108 保持**（morphball 七格全 hold ✓ 无回退）；498 测全绿（+1 校准锚
+load_window_model_calibrated：三房计数+常规 0 断言）；防回退面全保持。
+### 13.4 小残差三格定性（顺带落档——不强修）
+f950(case-001 combo)=46px/f960(crawlprobe end)=**174px=双敌 sprite 着色残差**（diff
+绿簇=敌 sprite 位——敌帧/调色板相位域）/f1400(walkfcprobe end)=58px——sprite 域小
+残差+时序微差；<500px 皆在容内。⚠ 值随模型校准微移（f950 250→46 改善/f960 46→174
+微增）——同族 sprite 相位面，登记不强修。
+⚠ f1200(case-001 end)=14147px 仍为最大残差族（非本卡靶——后续卡）。
