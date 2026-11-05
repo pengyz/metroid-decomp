@@ -756,3 +756,25 @@ Confidence: 90
 > 渲染层（sprite 瓦片→图案表基选择/attr）对拍。⚠ 采集限更正：emu ppu.hex **有**
 > （dumpPpu 采集点必调——analysis/traces/ 落点）——§29.2「无 ppu.hex」系检索位错
 > （shots/ 而非 analysis/traces/）。
+
+## 30. 渲染层 tile 索引对拍卡（2026-11-06——OAM 判别+停机报）
+
+### 30.1 关键判别（件 1——emu OAM dump）
+emu ram.hex OAM 缓冲（$0200+）：OAM+0x60 **tile=76** attr=01 x=18 / OAM+0x64
+**tile=7F** attr=01 x=20 / OAM+0x68 tile=3A——**emu OAM tile=0x76/0x7F 与 rust
+DataDisplayTbl 同 ✓**⇒「OAM tile 写入值差」**排除**。emu 从 tile 0x76 渲 "E"——
+但 CHR 两表（$0000=块/$1000=杂形）0x76 均非 "E" ⇒**图案表基差候选**（PPUCTRL
+bit3）与 **CHR dump 时序 vs 渲染时序**（运行时 CHR 写在 dump 后/渲染用先写值？）
+两可余。
+### 30.2 asm 先行（件 2——行号锚）
+OAM tile 写入径：DataDisplayTbl（E1B9 tile 值（0x76/0x7F）→OAM 拷贝（E0C7））+
+SPRWriteDigit（E173 tile=A|$A0）——**tile 值=0x76/0x7F ✓（asm 同 rust 同 emu）**；
+PPUCTRL sprite 图案表位（bit3）写点+图案表基映射=下步锚（sprite tile→CHR 偏移语义
+——0x76×16=0x760 vs "E" 在 0x10E0 映射径）。
+### 30.3 停机报（件 5）
+CHR dump 时序 vs 渲染时序（运行时 CHR 写序）/sprite 图案表基映射语义=更深渲染件。
+本卡交付=OAM 判别（写入值差排除✓）+两可余钉定+asm 锚。
+
+Evidence: emu ram.hex OAM+0x60-0x68（tile 76/7F/3A）+rust DataDisplayTbl（同）+
+CHR 两表 0x76（块/杂形）+"E"=font tile14（0x10E0）+asm E1B9/E0C7/E173。
+Confidence: 91
