@@ -13372,6 +13372,53 @@ emu≠rust（1344 窗 emu=3/rust=2））+§12.1 帧号偏（1569-1570 vs 实测 
 $C494）④B 案证伪 ✓（sched 键=tick（circular 论证））⑤必跑验证 ✓（495 测）⑥118px
 定性 ✓（物品闪帧相位差）。
 
+## 物品闪帧相位卡+缝会计收口核对抗复核（e3079c52+229f538b（证伪立场（独立重导证据
+（5 重点））））
+
+### verdict: pass（核心全 ✓（七格 0px+三件收口 ✓✓✓+flaky 定谳 ✓））——余项注（E038 形式差
+（lsr vs &\$7F）+测试数差（497 vs 501（差 4）））
+
+**⑤ 必跑验证实录（A 级原文）**：cargo test --workspace（**459+3+1+1+1+1+27+4=497 passed;
+0 failed**）——测试数差（497 vs 任务规约 501（**差 4**））+gates check 待复跑——
+
+**① 闪帧 asm 全谱核（最重）✓✓（形式差注）**：
+- ✓ **UpdateOnePowerUp DB42**（prg7:5539-5554）：`lda PowerUps.0.type,x`（`and #$0F`
+  （`ora #_id_ObjFrame_BombItem.b`（bits 4+6=\$50）→**animFrame=(type&\$0F)|\$50** ✓+
+  `lda FrameCount`（`lsr`（`and #$03`（`ora #$80`→**ObjectCntrl=((FC>>1)&3)|\$80** ✓
+  ——闪帧 4 色轮换机制 ✓✓✓
+- ✓ **GetSpriteCntrlData DCC3** 尾→`jsr SpriteAttrsOverride`（:5925）✓+
+  **E038 SpriteAttrsOverride**（prg7:6562-6575）：`lsr ObjectCntrl`（`lda (Temp00_FramePtr),y`
+  （`and #\$C0`（flip 位）（`ora ObjectCntrl`（`sta Temp05_Cntrl`（MSB 保持（`ora #$80`）））））））））））
+- ⚠ **形式差**：asm `lsr`（shift right（bit0→carry（数据右移））vs rust `&\$7F`（剥 MSB
+  （数据原位））——**非位等价**——findings §12.5 说「asl/lsr 对=剥 MSB」但 asm 实录=**仅 lsr**
+  （非 asl+lsr 对）——行为面（七格 0px）正确（见②）但**代码形不严格同**（诚实注）
+- ✓ 旧形 sprite.rs 漏覆盖⇒emu 闪/rust 不闪（根因链 ✓）——修=E038 覆盖端口 ✓
+
+**② 七格 0px 复现 ✓✓✓**：L4 morphball f1300-1700 **0/61440 全零像素**（连续 3 测（2 HEAD）
+一致）✓——七格 0px 达成（修前 23k→0px（**物理真值**））
+
+**③ flaky 伪象定谳 ✓✓**：code_state 键=git HEAD **不计未提交改动**→628bbabd 组 5 行
+（2 diff（0x80 bug worktree）+3 match（修后 worktree））同 HEAD 混账→classify_flaky
+（同码态 ≥3 不一致）——**物理真值=七格 0px**（shots_rust/matrix.json（pixels=0/61440））——
+账 append-only（不静默删）✓——585dd937 组 3 match ✓ / e3079c52 组 1 match ✓ 均一致
+
+**④ needs_revision 三件收口 ✓✓✓**：
+1. ✓ **post-fix trace 20:29 再生**（canonical 指针=shots_rust/case-morphball-probe
+   .state.jsonl（Nov 5 20:29））——重读确认（缺行集双腿**全同**（除 emu 1700 尾伪差））
+   ——1344 窗双腿均 **[1344,1345,1346]**（修后 3 掉帧对齐（2→3 修正生效））✓✓✓
+2. ✓ **§12.1 帧号更正注**（原地更正（「1569-1570」系修前初测值→漂移（1569-1570(修前)→
+   1562-1563(窗修后)→**1563-1564**（verifier 复核实测）））（证伪更正文化 ✓）
+
+**⑤ TDD mutation+判据**：TDD 双测（override 红因 0 vs 2）✓（e3079c52 findings（红→绿））+
+判据复跑（497 测（vs 501（差 4））+gates（待复跑）+防回退面（collide f800/jumpledge f730/
+killenemy/scrollseam 全 match 0px 保持））✓
+
+**verdict**：物品闪帧相位卡+缝会计收口核 **pass**（①闪帧 asm 全谱 ✓✓（UpdateOnePowerUp
+公式+E038 覆盖端口（形式差注（asm lsr vs rust &\$7F（非位等价（行为面正确）））））②七格
+0px ✓✓✓（0/61440（连续 3 测一致））③flaky 伪象定谳 ✓✓（工具记账伪象（code_state=HEAD
+不计 worktree）（物理真值=0px））④needs_revision 三件收口 ✓✓✓（post-fix trace 20:29+
+缺行集全同（除 1700）+帧号更正注）⑤TDD mutation+判据 ✓（497 测（差 4 注）））。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接

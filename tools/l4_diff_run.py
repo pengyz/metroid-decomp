@@ -749,6 +749,39 @@ def l4_obs_path() -> Path:
     return SHOTS_RUST / "l4_run_observations.jsonl"
 
 
+def code_state_key(cwd: str | None = None) -> str:
+    """代码态键（**同键=同码**——worktree 语义等价）：HEAD12+worktree 内容指纹12。
+    【2026-11-05 gate 键粒度改进件】旧形仅 `git rev-parse HEAD`——未提交改动不计
+    ⇒同 HEAD 不同 worktree 混账（628bbabd 组 2 diff（0x80 bug worktree）+3 match
+    （修后 worktree）假 flaky 实证）。新键=HEAD[:12]+sha256(HEAD+每个 porcelain
+    脏文件内容摘要)[:12]（格式 `HEAD12+dirty12`——含 `+` 分隔；旧格式行无 `+`）。
+    porcelain 不列 gitignore 生成物（shots_rust 等不入键 ✓）；clean 态 dirty 指纹
+    =sha256(HEAD)（确定性）。"""
+    import hashlib
+    import subprocess as _sp
+    try:
+        head = _sp.run(["git", "rev-parse", "HEAD"], cwd=cwd, capture_output=True,
+                       text=True, timeout=10).stdout.strip() or "unknown"
+        st = _sp.run(["git", "status", "--porcelain"], cwd=cwd, capture_output=True,
+                     text=True, timeout=10).stdout
+        h = hashlib.sha256()
+        h.update(head.encode())
+        for line in st.splitlines():
+            path = line[3:].strip().strip('"')
+            if " -> " in path:
+                path = path.split(" -> ", 1)[1]
+            p = Path(path)
+            if not p.is_absolute():
+                p = (Path(cwd) if cwd else Path.cwd()) / p
+            try:
+                h.update(hashlib.sha256(p.read_bytes()).digest())
+            except OSError:
+                h.update(b"?")
+        return f"{head[:12]}+{h.hexdigest()[:12]}"
+    except Exception:
+        return "unknown+unknown"
+
+
 def append_cell_observations(run_id: str, rows: list, code_state: str | None = None) -> int:
     """多 run 观测账追加（flaky 判定唯一依据源——每格每 run 一行）。
 
@@ -803,6 +836,10 @@ def classify_flaky(observations: list, min_runs: int = 3) -> dict:
         if not cs:
             legacy += 1
             continue  # 旧账无码态=排除出 flaky 判定（历史修复轨迹不可比）
+        if "+" not in str(cs):
+            legacy += 1
+            continue  # 【2026-11-05】旧格式键（仅 HEAD 无 worktree 指纹）=排除出判定
+                      # （保留作历史痕迹不删；同 HEAD 混账根除——键粒度改进件）
         key = (str(o.get("case")), o.get("frame"), str(o.get("tag")), str(cs))
         g = groups.setdefault(key, {"verdicts": [], "runs": []})
         g["verdicts"].append(str(o.get("verdict")))
@@ -1009,13 +1046,9 @@ def _do_run_all(args) -> int:
         return 2
     rows, seen = [], {}
     run_id = time.strftime("%Y%m%d-%H%M%S")
-    # flaky 判定码态键（【2026-11-04 修】同码态内才可比——跨码态 verdict 漂移=修复轨迹）
-    try:
-        import subprocess as _sp
-        code_state = _sp.run(["git", "rev-parse", "HEAD"], capture_output=True,
-                             text=True, timeout=10).stdout.strip() or "unknown"
-    except Exception:
-        code_state = "unknown"
+    # flaky 判定码态键（【2026-11-04 修】同码态内才可比——跨码态 verdict 漂移=修复轨迹；
+    # 【2026-11-05 键粒度改进件】worktree 语义等价（code_state_key——同键=同码））
+    code_state = code_state_key()
     for cf in case_files:
         try:
             plan = sr.parse_scenario(cf)

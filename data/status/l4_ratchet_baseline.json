@@ -447,33 +447,33 @@
           "total_pixels": 61440
         },
         "1460:pit-fall": {
-          "state": "diff",
-          "diff_pixels": 118,
+          "state": "match",
+          "diff_pixels": 0,
           "total_pixels": 61440
         },
         "1520:pit-jump": {
-          "state": "diff",
-          "diff_pixels": 118,
+          "state": "match",
+          "diff_pixels": 0,
           "total_pixels": 61440
         },
         "1560:ball-jump": {
-          "state": "diff",
-          "diff_pixels": 118,
+          "state": "match",
+          "diff_pixels": 0,
           "total_pixels": 61440
         },
         "1620:on-pedestal": {
-          "state": "diff",
-          "diff_pixels": 118,
+          "state": "match",
+          "diff_pixels": 0,
           "total_pixels": 61440
         },
         "1650:after-pickup": {
-          "state": "diff",
-          "diff_pixels": 118,
+          "state": "match",
+          "diff_pixels": 0,
           "total_pixels": 61440
         },
         "1700:end": {
-          "state": "diff",
-          "diff_pixels": 118,
+          "state": "match",
+          "diff_pixels": 0,
           "total_pixels": 61440
         }
       }
@@ -749,6 +749,16 @@
       "reason": "缝会计/输入消费相位卡（findings §12）：morphball 七格量级收敛——f1300=0px match 保持+f1460-1700 五格 23k→**118px**（<500px 判据✓——门数计算形+SetTimer 三写+延时旗检点+WaitTimer 端口四件修传导）；match 集 96 无缩水（118px 仍 diff 态——残差=物品闪帧相位差 1（下卡））；确认无回退：防回退面（collide f800/jumpledge f730/killenemy/scrollseam）全 match 0px 保持+495 测全绿",
       "match": 96,
       "diff": 12,
+      "blocked": 0,
+      "cells_total": 108
+    },
+    {
+      "ts": "2026-11-05T14:24:00+00:00",
+      "kind": "anchor",
+      "evidence": "",
+      "reason": "gate 键粒度改进件（tools/l4_diff_run.py code_state_key+classify_flaky 旧键排除——gates/cli.py selftest G①②③ 红→绿 118/118）：flaky 伪象根除（同 HEAD 不同 worktree 混账→新键 HEAD12+dirty12 语义「同键=同码」；旧格式键行排除出判定保留历史）——**七格 flaky 全清→match 96→102 真增益锁**（morphball f1300-1700 全 ✅match 0/61440）；确认无回退：防回退面（collide f800/jumpledge f730/killenemy/scrollseam）全 match 0px 保持+其余 6 diff 无恶化",
+      "match": 102,
+      "diff": 6,
       "blocked": 0,
       "cells_total": 108
     }

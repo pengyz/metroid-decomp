@@ -2953,6 +2953,72 @@ def cmd_selftest(_args) -> int:
     except Exception as exc:  # noqa: BLE001
         check("F③ 文档重复行 lint", False, str(exc))
 
+    # 7) 【gate 键粒度改进件（2026-11-05）】flaky 判定码态键=「同键=同码」：
+    #    旧形仅 git HEAD sha——未提交改动不计 ⇒ 同 HEAD 不同 worktree 混账（628bbabd
+    #    组 2 diff+3 match 假 flaky 实证）。新键=HEAD+worktree 内容指纹（含脏文件）；
+    #    旧格式键行（无 worktree 指纹）**排除出判定**（保留作历史——不静默删）。
+    try:
+        import importlib.util as _ilu
+        _spec = _ilu.spec_from_file_location(
+            "l4_diff_run_selftest", Path(__file__).resolve().parent.parent / "tools" / "l4_diff_run.py")
+        _l4 = _ilu.module_from_spec(_spec)
+        _spec.loader.exec_module(_l4)
+    except Exception as exc:  # noqa: BLE001
+        _l4 = None
+        check("G① l4_diff_run 载入", False, str(exc))
+    if _l4 is not None:
+        check("G① l4_diff_run 载入", True)
+        # ①同 HEAD 不同 worktree→不同键（不混账）
+        try:
+            import subprocess as _sp
+            with tempfile.TemporaryDirectory() as td:
+                repo = Path(td)
+                _sp.run(["git", "init", "-q"], cwd=repo, check=True)
+                _sp.run(["git", "config", "user.email", "t@t"], cwd=repo, check=True)
+                _sp.run(["git", "config", "user.name", "t"], cwd=repo, check=True)
+                (repo / "a.rs").write_text("fn a() {}\n")
+                _sp.run(["git", "add", "."], cwd=repo, check=True)
+                _sp.run(["git", "commit", "-qm", "init"], cwd=repo, check=True)
+                k_clean = _l4.code_state_key(cwd=repo)
+                (repo / "a.rs").write_text("fn a() { /* 脏 */ }\n")
+                k_dirty = _l4.code_state_key(cwd=repo)
+                (repo / "a.rs").write_text("fn a() {}\n")
+                k_clean2 = _l4.code_state_key(cwd=repo)
+                check("G① 同 HEAD 脏/净 worktree→不同键（同键=同码）",
+                      k_clean != k_dirty and k_clean == k_clean2,
+                      f"clean={k_clean} dirty={k_dirty} clean2={k_clean2}")
+        except Exception as exc:  # noqa: BLE001
+            check("G① 同 HEAD 脏/净 worktree→不同键（同键=同码）", False, str(exc))
+        # ②同键同码 3 run 不一致→flaky / 一致→非 flaky
+        try:
+            obs = [
+                {"case": "c", "frame": 1, "tag": "t", "verdict": "diff", "run_id": "r1", "code_state": "h1+w1"},
+                {"case": "c", "frame": 1, "tag": "t", "verdict": "match", "run_id": "r2", "code_state": "h1+w1"},
+                {"case": "c", "frame": 1, "tag": "t", "verdict": "match", "run_id": "r3", "code_state": "h1+w1"},
+            ]
+            fl = _l4.classify_flaky(obs)
+            obs2 = [dict(o, run_id=f"s{i}", code_state="h1+w2", verdict="match") for i, o in enumerate(obs)]
+            fl2 = _l4.classify_flaky(obs2)
+            check("G② 同键 ≥3 不一致→flaky / 一致→清",
+                  ("c", 1, "t") in fl and ("c", 1, "t") not in fl2)
+        except Exception as exc:  # noqa: BLE001
+            check("G② 同键 ≥3 不一致→flaky / 一致→清", False, str(exc))
+        # ③旧键组（无 worktree 指纹）不参与新判定（历史保留不删）
+        try:
+            legacy = [
+                {"case": "c", "frame": 2, "tag": "t", "verdict": "diff", "run_id": "o1", "code_state": "628bbabd9e5a"},
+                {"case": "c", "frame": 2, "tag": "t", "verdict": "diff", "run_id": "o2", "code_state": "628bbabd9e5a"},
+                {"case": "c", "frame": 2, "tag": "t", "verdict": "match", "run_id": "o3", "code_state": "628bbabd9e5a"},
+                {"case": "c", "frame": 2, "tag": "t", "verdict": "match", "run_id": "n1", "code_state": "e3079c520e18+w1"},
+                {"case": "c", "frame": 2, "tag": "t", "verdict": "match", "run_id": "n2", "code_state": "e3079c520e18+w1"},
+                {"case": "c", "frame": 2, "tag": "t", "verdict": "match", "run_id": "n3", "code_state": "e3079c520e18+w1"},
+            ]
+            fl3 = _l4.classify_flaky(legacy)
+            check("G③ 旧键组排除出判定（历史不删——新键组一致⇒格清）",
+                  ("c", 2, "t") not in fl3)
+        except Exception as exc:  # noqa: BLE001
+            check("G③ 旧键组排除出判定（历史不删——新键组一致⇒格清）", False, str(exc))
+
     failed = [c for c in cases if not c[1]]
     for name, ok, detail in cases:
         print(f"  [{'ok' if ok else 'FAIL'}] {name}" + (f" —— {detail}" if detail else ""))
