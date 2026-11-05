@@ -560,3 +560,24 @@ Evidence: check_health_status 端口对照（击退/i 帧✓/扣血✗）+asm CE
 +constants_ram:806（Health $0106 BCD）+132（HealthChange $6E）+AreaEnemyDamage 四区
 95CE+Base10Subtract C3FB+L4 矩阵（f1200=1015/HUD 簇）。
 Confidence: 92
+
+## 22. 伤害径三件端口卡（2026-11-06——BCD 语义深层差停机报）
+
+### 22.1 asm 全谱（件 1-3——已落 §21.2）+BCD 算式逐字
+Base10Subtract（**C3FB**）+ExtractNibbles（**C41D**）逐字：delta 拆 $01(低4)/$02(高4)
+/返回 A=health 低4→`sbc $01`（个位减）→借位修（+10/$02 调）→`lda health/and #$F0/
+sec/sbc $02`（高位减）→借位修（+$A0）→`ora $01` 合成。
+### 22.2 语义深层差（件 6 情形——三处不符）
+①**health 格式**：constants:806「Lower health digit in upper 4 bits」——高4=低位数/
+低4=高位数（交换 BCD）vs 标准 BCD 读法（0x30=30）两可；②**Base10Subtract 逐字算式
+(0x30, 0x80)=0x50** vs emu 实录 0x22（30→22）——减式结果不符；③**伤害值编码**：
+AreaEnemyDamage=$0080（bank1）=BCD 80？交换 08？vs 实扣 8——编码语义未定。
+### 22.3 停机报（件 6）
+BCD 语义（health 格式/减式/伤害编码三处）与 emu 深层差——**须 BCD 语义考证件**（emu
+实录驱动：多伤害事件的 health 值序列+伤害值序列对表定格式）后方可端口（不许猜式
+实现——D4 保真）。本卡交付=算式逐字+三处不符实录。
+
+Evidence: Base10Subtract/ExtractNibbles 逐字（C3FB/C41D）+constants:806（health 格式
+注）+AreaEnemyDamage 四区值（80/100/300/200）+算式 (0x30,0x80)=0x50 推演+emu 实录
+30→22+check_health_status 端口对照。
+Confidence: 90
