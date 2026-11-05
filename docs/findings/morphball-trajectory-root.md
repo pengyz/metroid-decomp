@@ -715,3 +715,24 @@ SAMUS_GFX 源 [0x760]=`FE FE C0 FC...`=**块形** = chr[0x760] ✓（装载对�
 Evidence: C5D7/C5DC/C604/C7AB/C7D5 全谱+rust gfx.rs/boot.rs 端口对照（链全✓）+
 SAMUS_GFX 源 [0x760] 字节（=chr ✓）+emu "E" 渲染（双截图）。
 Confidence: 91
+
+## 29. ROM gfx 提取位验证卡（2026-11-06——提取位✓+emu 字形源谜+停机报）
+
+### 29.1 提取位考证（件 1——字节锚）
+ROM bank6:8760（file off 0x18770）=`FE FE C0 FC FC C0 FE FE FE C0 C0 FC C0 C0 FE`
+=**SAMUS_GFX 烤焙源 [0x760] 同字节 ✓**——**烤焙提取位正确**（无提取位偏）。FONT
+bank6:B4C0（FONT_COMPLETE/HUD 源）=数字起（"0"=38 4C CE C6 E6 64 38/"1"=18 38...）
+——Font_HUD（dest $0A00 size $A0）=tiles 0xA0-0xAA 数字区 ✓（digit 瓦片图形对呼应）。
+"E" 图案（FC 80 80 F8 80 80 FC 形）**不在 bank6**——emu tile 0x76 "E" 字形源≠bank6
+gfx。
+### 29.2 emu CHR 面（件 2——取证限）
+emu 侧**无 ppu.hex dump**（仅截图 png——"E"/"N" 渲染可见✓但字节不可取）——emu
+tile 0x76 字形字节实录**不可得**（取证限——scenario_run 无 CHR dump 面）。
+### 29.3 停机报（件 5）
+提取位✓（ROM=烤焙）排除「提取位偏」——emu 字形源（tile 0x76 "E" 从何装载）+emu CHR
+字节取证（需 emu CHR dump 工具面）=**更深件/工具链面**（件 5 情形：转 emu CHR 取证
+工具面+字形源考证）。本卡交付=提取位✓考证（字节锚）+取证限声明。
+
+Evidence: ROM bank6:8760 字节（=SAMUS_GFX [0x760] 同）+FONT B4C0 数字起字节+Font_HUD
+dest/size（0xA0 数字区）+"E"图案 bank6 全搜（NOT FOUND）+emu 无 ppu.hex（仅 png）。
+Confidence: 90
