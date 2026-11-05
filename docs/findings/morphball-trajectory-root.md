@@ -625,3 +625,23 @@ Evidence: DisplayBar E0C1 全谱+SPRWriteDigit E173+DataDisplayTbl E1B9+health �
 实证（Health+1&0xF/Health>>4——(32,2)→"22" 对表）+rust uw_display_bar 端口（2653-）
 对照+双截图 HUD 簇。
 Confidence: 92
+
+## 25. HUD 精灵渲染面卡（2026-11-06——矛盾解+三面全合定谳+停机报）
+
+### 25.1 矛盾点先解（件 1——双截图裁剪定性）
+rust 顶左=块形（**"EN"标签+数字错瓦片图形渲染**！）+罐方块行✓；emu="EN▪22"✓——
+显示差=**sprite 瓦片图形面**（非映射/非表/非态）。
+### 25.2 三面全合定谳（件 2）
+①DataDisplayTbl（**E1B9** 40B=10 精灵 y/tile/attr/x）逐字 vs rust DATA_DISPLAY_TBL
+（mainloop.rs:2660）——**逐字节同 ✓**（含尾 3 行："E"=$21,$76,$01,$18/"N"=$21,$7F,
+$01,$20/".."=$21,$3A,$00,$28）；②digit 映射（E173/2655）同构 ✓；③health 态 (32,2)
+同 ✓。**三面全合**⇒差=④**sprite 瓦片图形（CHR 图案面）/精灵可见面**（tile 0x76/0x7F/
+0xA0+digit 渲成块形——CHR-RAM 图案数据/PPUCTRL sprite 图案表选择/可见性面）。
+### 25.3 停机报（件 5）
+CHR 图案面（sprite 瓦片图形数据——CHR-RAM 加载/图案表选择）=更深渲染件。本卡交付=
+矛盾解（三面全合+图形面定性——非猜：表逐字+映射对照+态实录+双截图裁剪）。
+
+Evidence: E1B9 表逐字（10 行含 "E"/"N"/".."）+rust DATA_DISPLAY_TBL 2660 逐字对照
+（同）+digit 映射（E173/2655）+health 态 (32,2)+双截图 HUD 裁剪（rust 块形 vs emu
+"EN▪22"）。
+Confidence: 92
