@@ -245,6 +245,14 @@ watch+rust state 行）+asm=prg7_engine.asm:2945-2962（samL11/12）/7170-7230�
 1700 帧双侧缺行集**唯一真差**=1344 载房窗（emu 3/rust 2）；1569-1570 rust 独缺=
 拾取分歧下游（rust 无拾取⇒续行撞界载房）；1700=尾伪差。**缝契约双腿同构**（span
 tick 不采——walk-fc-capture-seam §2c）；差=**该迭代门长**。
+> 【2026-11-05 更正】上段「1569-1570」系缝会计修前初测值；该第二窗帧号随各修段轨迹
+> 漂移（1569-1570（修前）→1562-1563（窗修后）→**1563-1564**（verifier 复核实测——
+> 源=旧 Oct-31 state.jsonl 作废档））。**修后（SetTimer 冻结+检点修落）二窗整体消除**：
+> canonical 修后 trace=`shots_rust/case-morphball-probe.state.jsonl`（2026-11-05 20:29
+> 再生，旧 Oct 31 档作废）缺行集=[2,4,5,6,311-313,352-358,812,813,**1344,1345,1346**]
+> =emu 同集（除 emu 尾伪差 1700）✓ 全案对齐。复现：`cargo run -q -p game-core --bin
+> rust_screenshot -- --schedule shots_rust/case-morphball-probe.sched --out /tmp/x
+> --state-out shots_rust/case-morphball-probe.state.jsonl`。
 
 ### 12.2 机制=工作超帧（asm 实证）
 载房域 E54A-F034 **零显式 Wait**（WaitNMIPass/WriteAndWait 全径 grep）⇒窗长=NMI

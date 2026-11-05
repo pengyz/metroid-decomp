@@ -56,6 +56,17 @@ pub fn obj_draw_frame(mem: &mut crate::frame::FrameMemory, page_index: u8) {
     cntrl05 |= flip | 0x20; // PRIORITY 位恒置（sprite 在 BG 后）
     // ObjectCntrl($6B) 镜像位（bit2→bit6 翻转）
     let obj_cntrl = mem.read_ram(0x006B);
+    // 【物品闪帧相位卡·SpriteAttrsOverride（E038）】GetSpriteCntrlData（DCC3）尾：
+    // ObjectCntrl **MSB=1⇒attr=(ctrl_byte&0xC0)|ObjectCntrl**（低 2 位=闪帧调色板
+    // ((FC>>1)&3——UpdateOnePowerUp :5547-5554 每帧写 $6B；PRIORITY 位不入覆盖形
+    // ——asm E038 `and #HFLIP|VFLIP / ora ObjectCntrl` 直赋 Temp05）。旧形漏此覆盖⇒
+    // 物品调色板恒取 ctrl_byte 静态位⇒emu 闪（FC/2 轮换 4 色）/rust 不闪——七格
+    // 118px 恒定残差根（diff 图唯一绿点=物品球）。
+    if obj_cntrl & 0x80 != 0 {
+        // asm E038 `asl/lsr ObjectCntrl` 对=剥 MSB（0x82→0x02）——attr 不含 0x80
+        // （MSB 仅=覆盖有效标；尾 `ora #$80` 还原供下件）。PRIORITY 位不入覆盖形。
+        cntrl05 = (ctrl_byte & 0xC0) | (obj_cntrl & 0x7F);
+    }
     let mut flip_flags = ctrl_byte;
     if obj_cntrl & (0x40 >> 2) != 0 {
         flip_flags ^= 0x40;
@@ -189,6 +200,45 @@ mod tests {
         anim_draw_object(&mut m, 0, 0);
         let oam: Vec<u8> = (0..0x20).map(|i| m.read_ram(0x0200 + i)).collect();
         assert!(oam.iter().any(|&b| b != 0), "OAM 有 sprite 落");
+    }
+
+    /// 【物品闪帧相位卡】GetSpriteCntrlData（DCC3）尾：ObjectCntrl MSB=1⇒
+    /// SpriteAttrsOverride（E038）`attr=(ctrl_byte&0xC0)|ObjectCntrl`——低 2 位=
+    /// 闪帧调色板 ((FC>>1)&3)（UpdateOnePowerUp :5547-5554 每帧写）。旧形漏此覆盖⇒
+    /// 物品调色板恒取 ctrl_byte 静态位⇒emu 闪/rust 不闪（118px 恒定残差根）。
+    #[test]
+    fn sprite_attrs_override_flash_palette() {
+        let mut m = FrameMemory::default();
+        m.write_ram(0x0055, 1); // IsSamus（槽 0 绘）
+        m.write_ram(0x0303, 0); // animFrame=0
+        m.write_ram(0x030C, 0); // hi
+        m.write_ram(0x00FF, 0); // PPUCTRL_ZP
+        m.write_ram(0x030D, 0x80); // y
+        m.write_ram(0x030E, 0x80); // x
+        m.write_ram(0x006B, 0x82); // ObjectCntrl=MSB|闪帧调色板 2
+        anim_draw_object(&mut m, 0, 0);
+        let attr = m.read_ram(0x0202);
+        assert_eq!(attr & 0x03, 2, "调色板位=ObjectCntrl 低 2 位（E038 覆盖）");
+    }
+
+    /// 【守门】ObjectCntrl MSB=0⇒无覆盖（调色板=ctrl_byte 静态位）。
+    #[test]
+    fn sprite_attrs_no_override_without_msb() {
+        let mut m = FrameMemory::default();
+        m.write_ram(0x0055, 1);
+        m.write_ram(0x0303, 0);
+        m.write_ram(0x030C, 0);
+        m.write_ram(0x00FF, 0);
+        m.write_ram(0x030D, 0x80);
+        m.write_ram(0x030E, 0x80);
+        m.write_ram(0x006B, 0x02); // 低 2 位=2 但 MSB=0（无覆盖标）
+        anim_draw_object(&mut m, 0, 0);
+        let attr = m.read_ram(0x0202);
+        // 帧 0 静态 ctrl_byte（SPRITE_DATA[OBJ_FRAME_PTR_TABLE] 指针）——期望=其位 4-5
+        let fptr = (sd::SPRITE_DATA[sd::OBJ_FRAME_PTR_TABLE as usize] as u16)
+            | ((sd::SPRITE_DATA[sd::OBJ_FRAME_PTR_TABLE as usize + 1] as u16) << 8);
+        let static_palette = (blob(fptr) >> 4) & 0x03;
+        assert_eq!(attr & 0x03, static_palette, "MSB=0⇒调色板=ctrl_byte 静态位");
     }
 }
 
