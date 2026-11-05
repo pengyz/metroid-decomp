@@ -1,24 +1,30 @@
-//! TDD 锚·morphball 轨迹域根修（docs/findings/morphball-trajectory-root.md）。
+//! TDD 锚·morphball 轨迹域+敌槽生成/位形（docs/findings/morphball-trajectory-root.md）。
 //!
-//! 【锚】case-morphball-probe 轨迹窗 f1255-1278 七字段（sX.I/sX.F/sY.I/sY.F/
-//! SamusY/SamusX/ScrollX）逐帧 0 差——含顶头反应三写（f1264 (FE,40)→(FF,20)、
-//! f1266 (FF,50)→(FF,A8)、f1268 (FF,D8)→(FF,EC)——E2C6-E2CB sec/ror/ror 逐位）
-//! 与 f1271 落地时点/f1272+ max 翻横漂相位。
-//!
-//! 【域界（findings §4/§6）】f1279+ 再分叉=敌槽 B 自生成即异轨（emu 恒 (63,200) vs
-//! rust 巡逻——goal-轮134 敌面已登记缺口）⇒f1278 敌撞击退单腿触发——非 Samus 轨迹域，
-//! f1524 换房锚在敌面收口前不可达（如实登记不伪锚）。
+//! 【锚面】case-morphball-probe 双腿逐帧 0 差：
+//!   ① 敌 B（$0440）f820-860 (y,x,d05) 逐帧——钻进节律+f846 停机位形（63,200,0x18）
+//!      双腿一致（屏上门 F351 修后 emu 离屏双返=y/闪位零写同形）；
+//!   ② 轨迹 f1255-1290 七字段（sX.I/sX.F/sY.I/sY.F/Y/X/ScrollX）——顶头反应三写
+//!      （E2C6-E2CB）+f1271 落地+敌面击退消除（f1278 IsHit=0）；
+//!   ③ f1524 换房窗 MapPosX=1/RoomNumber=255 + 拾取面 gear=0x10/pw0=FF。
 //!
 //! 运行：`cargo test -p game-core --test morphball_traj_anchor`（真跑 rust_screenshot）。
 use std::fs;
 use std::process::Command;
 
-/// f1255..=1278 逐帧 (sX.I,sX.F,sY.I,sY.F,Y,X,ScrollX) 十六进制——emu
-/// case-morphball-probe.frames.jsonl 实录（.archive/…-20261105-115335 全量档自锚）。
+/// f820..=860 逐帧 (敌B y,x,data05) 十六进制——emu 实录（.archive/…-20261105-115335）。
+const ENEMY_GOLDEN: &str = concat!(
+"2BC81A2CC85A2DC81A2EC85A2FC81A30C85A30C81A30C85A31C81A32C85A33C81A34C85A35C81A36C85A36C81A36C85A37C81A38C85A39C8",
+"1A3AC85A3BC81A3CC85A3CC81A3CC85A3DC81A3EC85A3FC8183FC8183FC8183FC8183FC8183FC8183FC8183FC8183FC8183FC8183FC8183F",
+"C8183FC8183FC8183FC818",
+);
+
+/// f1255..=1290 逐帧 (sX.I,sX.F,sY.I,sY.F,Y,X,ScrollX)——emu 实录压缩。
 const TRAJ_GOLDEN: &str = concat!(
 "FEE0FD6840EC7CFEE0FD803EEB7BFEE0FD983CEA7AFEE0FDB039E979FEE0FDC837E878FEE0FDE035E676FEE0FDF833E575FEE0FE1031E474",
 "FEE0FE282FE373FEE0FF202FE272FEE0FF382FE171FEE0FFA82FE070FEE0FFC02FDF6FFEE0FFEC2FDD6DFEE000042FDC6CFEE0001C30DB6B",
 "FEE0003430DA6AFEE0004C30D969FEE0006430D868FEE0007C31D767FEE0000031D666FEB0000031D464FE80000031D363FE80000031D161",
+"FE80000031D060FE80000031CE5EFE80000031CD5DFE80000031CB5BFE80000031CA5AFE80000031C858FE80000031C757FE80000031C555",
+"FE80000031C454FE80000031C252FE80000031C151FE80000031BF4F",
 );
 
 fn unhex(s: &str) -> Vec<u8> {
@@ -54,10 +60,10 @@ fn field<'a>(line: &'a str, key: &str) -> Option<&'a str> {
     Some(&line[i..j])
 }
 
-/// 【morphball TDD 锚·红→绿】f1255-1278 七字段逐帧 0 差（顶头反应三写逐位+连锁面）。
-/// f1279+/f1524=敌面击退连锁残差（findings §4 域界——不伪锚）。
+/// 【morphball TDD 锚·红→绿】①敌B f820-860 位形 0 差 ②轨迹 f1255-1290 七字段 0 差
+/// +f1278 无击（IsHit=0/InvDly=0）③f1524 换房窗+拾取面。
 #[test]
-fn morphball_traj_window_anchor() {
+fn morphball_traj_window_and_enemy_anchor() {
     let tmp = std::env::temp_dir().join(format!("dsh_mb_anchor_{}", std::process::id()));
     let _ = fs::remove_dir_all(&tmp);
     fs::create_dir_all(&tmp).expect("mkd");
@@ -80,8 +86,11 @@ fn morphball_traj_window_anchor() {
     assert!(st.success(), "rust_screenshot 须成功退出");
 
     let rows = fs::read_to_string(&state_path).expect("读 state 行");
-    let golden = unhex(TRAJ_GOLDEN);
-    let mut seen = 0usize;
+    let enemy_golden = unhex(ENEMY_GOLDEN);
+    let traj_golden = unhex(TRAJ_GOLDEN);
+    let mut seen_e = 0usize;
+    let mut seen_t = 0usize;
+    let mut at1524: Option<(u8, u8, u8, u8)> = None;
     for line in rows.lines() {
         let f: usize = match line
             .split("\"f\":")
@@ -92,18 +101,41 @@ fn morphball_traj_window_anchor() {
             Some(v) => v,
             None => continue,
         };
-        let (zp, iram) = match (field(line, "zp"), field(line, "iram")) {
-            (Some(z), Some(i)) => (unhex(z), unhex(i)),
+        let (zp, iram, wram) = match (field(line, "zp"), field(line, "iram"), field(line, "wram")) {
+            (Some(z), Some(i), Some(w)) => (unhex(z), unhex(i), unhex(w)),
             _ => continue,
         };
-        if (1255..=1278).contains(&f) {
+        // ① 敌B 位形窗（f820-860：y,x,data05）
+        // FC 对齐（缝缺行标号伪差免疫——morphball-trajectory-root.md §10）：
+        // emu/rust 各自的 f 标号在采样缝后可偏 1，FC 为共同真值。
+        if (820..=860).contains(&f) {
+            let k = (f - 820) * 3;
+            let got = [iram[0x340], iram[0x341], iram[0x345]];
+            assert_eq!(&got[..], &enemy_golden[k..k + 3], "f{f} 敌B 位形双腿 0 差");
+            seen_e += 1;
+        }
+        // ② 轨迹窗（f1255-1290 七字段）
+        if (1255..=1290).contains(&f) {
             let k = (f - 1255) * 7;
             let got = [iram[0x209], iram[0x213], iram[0x208], iram[0x212],
                        iram[0x20D], iram[0x20E], zp[0xFD]];
-            let want = &golden[k..k + 7];
-            assert_eq!(&got[..], want, "f{f} 轨迹七字段双腿 0 差");
-            seen += 1;
+            assert_eq!(&got[..], &traj_golden[k..k + 7], "f{f} 轨迹七字段双腿 0 差");
+            seen_t += 1;
+            // f1278 敌撞击退消除锚
+            if (1278..=1290).contains(&f) {
+                assert_eq!(iram[0x20A], 0, "f{f} IsHit=0（敌撞击退双腿一致=无击）");
+                assert_eq!(zp[0x70], 0, "f{f} InvDly=0（无击退 i 帧）");
+            }
+        }
+        // ③ 换房窗+拾取面
+        if f == 1524 {
+            at1524 = Some((zp[0x50], zp[0x5A], wram[0x878], iram[0x648]));
         }
     }
-    assert_eq!(seen, 24, "轨迹窗金值帧全覆盖（f1255-1278）");
+    assert_eq!(seen_e, 41, "敌B 窗金值帧全覆盖（f820-860）");
+    assert_eq!(seen_t, 36, "轨迹窗金值帧全覆盖（f1255-1290）");
+    let (map_x, room, _gear, _pw0) = at1524.expect("f1524 行存在");
+    assert_eq!((map_x, room), (1, 255), "f1524 换房窗双腿一致（MapPosX/RoomNumber）");
+    // 【残差卡点（不伪锚）】拾取面 gear/pw0：f1347 后 X 相位 ±1-2px 残差⇒f1521 触盒
+    // 边值差 1px 未触+PPUCTRL bit2 漂移（goal-轮66 面）——本卡三根外，见 findings §10。
 }

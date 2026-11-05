@@ -494,7 +494,11 @@ pub fn update_all_enemies(mem: &mut crate::frame::FrameMemory) {
     mem.write_ram(0x004B, x); // PageIndex
         let status = mem.read_wram(0x6AF4 + x as u16); // EnsExtra.0.status
         // CheckIfVisible（$F37F——不可见⇒双返跳过该敌）
-        if status != 0 && status < 2 && !enemy_check_if_visible(mem, x) {
+        // 【敌槽生成/位形卡（2026-11-05）】asm F351 适用域=**status 1|2（Resting|Active）**
+        // （`ldy status/beq 跳0 / cpy #$03/bcs 跳≥3`）——旧形 `status<2` 只护 Resting，
+        // **Active(2) 漏门**⇒morphball 敌B f847 离屏仍跑 AI（emu 双返回全冻）⇒f1278
+        // 敌撞击退单腿⇒七格残差（goal-轮45 探针注「敌B bit1（金方冻结=离屏）」收口）。
+        if status != 0 && status < 3 && !enemy_check_if_visible(mem, x) {
             if std::env::var("DSH_SPRITE_TRACE").is_ok() {
                 use std::sync::atomic::Ordering;
                 let n = DIAG_ITER.load(Ordering::Relaxed);
@@ -2527,11 +2531,16 @@ fn uw_collision_detection(mem: &mut crate::frame::FrameMemory) {
             let dx = (sx - ex).unsigned_abs() as i16;
             // 【goal-轮79 asm 合形修】F1FA hi（名表）距调——旧形无 hi 调=偏离（金方 hi 差
             // ⇒距+256⇒不撞）——hi 距调：hi 差⇒距+0x100（asm @positionHi_notEqual 语义）。
-            let s_hi = mem.read_wram(0x6AF4) & 1; // Samus.hi
-            let e_hi = mem.read_wram(0x6AF4 + x + 7) & 1;
+            let s_hi = mem.read_ram(0x030C) & 1; // Samus.hi（Objects.0.hi——F193 勘误）
+            let e_hi = mem.read_wram(0x6AF4 + x + 7) & 1; // EnsExtra.0.hi（F152 ✓）
             let dy_adj = if s_hi != e_hi { dy + 0x100 } else { dy };
             let dx_adj = if s_hi != e_hi { dx + 0x100 } else { dx };
             // 【goal-轮88 F1FA 判式边值直证】cmp 带位/borrow 链（金方不撞源）。
+            // 【敌槽生成/位形卡·hi 源勘误（2026-11-05）】asm F17F/F193：双侧 hi=
+            // `(hi ^ PPUCTRL_ZP)&1` 后等值比较（NT 同项相消⇒原始 hi 相等性等价）——
+            // **Samus.hi=Objects.0.hi（$030C）**；旧形误读 wram[0x6AF4]（=EnsExtra 空槽
+            // 0 的 status！）⇒恒 0⇒名表差漏判+256 距 ⇒morphball f1278 敌撞击退单腿
+            // （emu f1167 x 回绕翻 hi=1、敌 hi=0 ⇒拒触 ✓；rust 假 hi=0 ⇒误触）。
             if std::env::var("DSH_SPRITE_TRACE").is_ok() && x == 0x40 {
                 use std::sync::atomic::Ordering;
                 let n = DIAG_ITER.load(Ordering::Relaxed);
@@ -2544,7 +2553,11 @@ fn uw_collision_detection(mem: &mut crate::frame::FrameMemory) {
             if dy_adj < sry + ery && dx_adj < srx + erx {
                 // 螺旋转（IsScrewAttackActive——carry clear=active）⇒不伤萨姆斯
                 let screw = crate::samus::physics::is_screw_attack_active(mem);
-                if !screw {
+                // 【敌槽生成/位形卡·F282 状态门（2026-11-05）】asm F282：螺旋转分岔后
+                // `lda EnsExtra.0.status,x / cmp #enemyStatus_Frozen(4) / bcs Exit17`
+                // ——**status≥4（Frozen/Pickup/Hurt）免伤**；旧形无此门（Lx269 环头只滤
+                // 0/3/5）⇒Frozen/Hurt 敌误伤。环头+本门合成=asm 实效域 {Resting,Active}。
+                if !screw && mem.read_wram(0x6AF4 + x) < 4 {
                     // 【goal-轮20 偏离撤除】F282 敌×萨径只写 isHit（SetSamusIsHitByEnemy）
                     // +LF306 伤害——**i 帧/击退速由 CheckHealthStatus（CDFA）统一置**
                     // （旧形此处直写 i 帧+单次推=偏离（金腿 f1652 i70=0 实证））。
@@ -3152,6 +3165,122 @@ mod tests {
         assert_eq!(m.read_ram(0x004B), 0x40, "PageIndex←$40（:12146-12148 循环头端口）");
         assert_eq!(m.read_ram(0x0340 + 0x0C), 1, "PowerUpDraw.hi=Object.hi($34C)——旧形误写 +7");
         assert_eq!(m.read_ram(0x0340 + 3), 0x5A, "animFrame←SkreeProjectile 表位");
+    }
+
+    /// 【敌槽生成/位形卡（morphball-trajectory-root.md §9——goal-轮134/轮45 面）】
+    /// UpdateEnemy（F351）屏上门适用状态域=**status 1|2（Resting|Active）**（asm
+    /// `ldy status/beq 跳0 / cpy #$03/bcs 跳≥3`）；旧形 `status<2` 只护 Resting⇒
+    /// **Active(2) 漏门**——morphball 敌B f847 离屏仍跑 AI（y 续走 64→72）而 emu
+    /// 双返回全冻（f847 起 y/闪位零写）⇒f1278 敌撞击退单腿⇒七格 20-24k 残差。
+    #[test]
+    fn enemy_active_offscreen_is_skipped() {
+        let mut m = FrameMemory::default();
+        let x = 0x50u16;
+        // 离屏（同名表+敌在滚轴左⇒IsObjectVisible=false）
+        m.write_ram(0x00FF, 0); // PPUCTRL_ZP（同名表 hi=0）
+        m.write_ram(crate::ram_map::SCROLL_DIR, 0x02); // 横房
+        m.write_ram(crate::ram_map::SCROLL_X, 0x80);
+        m.write_ram(0x0400 + x + 1, 0x10); // 敌 x<ScrollX
+        m.write_ram(0x0400 + x + 0, 0x40); // 敌 y
+        m.write_ram(0x0400 + x + 5, 0x18); // data05：bit1=0（不闩⇒须检屏）
+        m.write_wram(0x6AF4 + x, 2); // status=Active
+        m.write_wram(0x6AF4 + x + 2, 8); // erx
+        m.write_wram(0x6AF4 + x + 7, 0); // hi
+        m.write_ram(crate::ram_map::FRAME_COUNT, 0); // slot/16^FC 位0=1⇒bit6 应翻（可检）
+        update_all_enemies(&mut m);
+        assert_eq!(m.read_ram(0x0400 + x + 0), 0x40, "离屏 Active 敌禁移（y 不动）");
+        assert_eq!(m.read_ram(0x0400 + x + 5), 0x18,
+                   "双返回⇒bit6 闪位亦不翻（F351 序：CheckIfVisible 先于 F3AA）");
+    }
+
+    /// 【守门】data05 bit1 闩=1 ⇒免检视为可见（F37F `and #$02/bne @exit`）⇒更新照跑。
+    #[test]
+    fn enemy_active_bit1_latch_skips_visibility_check() {
+        let mut m = FrameMemory::default();
+        let x = 0x50u16;
+        m.write_ram(0x00FF, 0);
+        m.write_ram(crate::ram_map::SCROLL_DIR, 0x02);
+        m.write_ram(crate::ram_map::SCROLL_X, 0x80);
+        m.write_ram(0x0400 + x + 1, 0x10); // 离屏
+        m.write_ram(0x0400 + x + 0, 0x40);
+        m.write_ram(0x0400 + x + 5, 0x1A); // bit1=1（闩）
+        m.write_wram(0x6AF4 + x, 2);
+        m.write_ram(crate::ram_map::FRAME_COUNT, 0);
+        update_all_enemies(&mut m);
+        assert_eq!(m.read_ram(0x0400 + x + 5) & 0x40, 0x40,
+                   "闩=1⇒更新径照跑（bit6 翻转）");
+    }
+
+    /// 【守门】Resting(1) 离屏=双返（旧条件已覆盖——防范围修过应用）。
+    #[test]
+    fn enemy_resting_offscreen_is_skipped() {
+        let mut m = FrameMemory::default();
+        let x = 0x50u16;
+        m.write_ram(0x00FF, 0);
+        m.write_ram(crate::ram_map::SCROLL_DIR, 0x02);
+        m.write_ram(crate::ram_map::SCROLL_X, 0x80);
+        m.write_ram(0x0400 + x + 1, 0x10);
+        m.write_ram(0x0400 + x + 0, 0x40);
+        m.write_ram(0x0400 + x + 5, 0x18);
+        m.write_wram(0x6AF4 + x, 1); // status=Resting
+        m.write_ram(crate::ram_map::FRAME_COUNT, 0);
+        update_all_enemies(&mut m);
+        assert_eq!(m.read_ram(0x0400 + x + 5), 0x18, "Resting 离屏=双返（零写）");
+    }
+
+    /// 【敌槽生成/位形卡·判盒 hi 源（morphball-trajectory-root.md §9）】F1FA 判盒
+    /// 双侧 hi=`(hi ^ PPUCTRL_ZP)&1`（F17F/F193）后等值比较——**Samus.hi=Objects.0.hi
+    /// （$030C）**；旧形误读 wram[0x6AF4]（=EnsExtra 空槽 0 的 status！）⇒恒 0⇒
+    /// 名表差漏判+256 距 ⇒morphball f1278 敌撞击退单腿（emu：f1167 x 回绕翻 hi=1、
+    /// 敌 hi=0 ⇒异名表拒触 ✓；rust 假 hi=0 ⇒误触）。
+    #[test]
+    fn enemy_hit_box_respects_samus_hi_nametable() {
+        let mut m = FrameMemory::default();
+        let x = 0x40u16;
+        m.write_ram(0x00FF, 1); // PPUCTRL_ZP（NT 位 0=1——(hi^NT) 后差保真）
+        m.write_ram(crate::ram_map::SCROLL_DIR, 0x02); // 横房
+        m.write_ram(crate::ram_map::SAMUS_INVINCIBLE_DELAY, 0);
+        // 敌（X 槽）
+        m.write_wram(0x6AF4 + x, 2); // status=Active
+        m.write_ram(0x0400 + x + 0, 63); // ey
+        m.write_ram(0x0400 + x + 1, 200); // ex
+        m.write_wram(0x6AF4 + x + 1, 8); // ery
+        m.write_wram(0x6AF4 + x + 2, 8); // erx
+        m.write_wram(0x6AF4 + x + 7, 0); // 敌 hi=0
+        // Samus（Y 槽=Objects.0）
+        m.write_ram(0x030D, 49); // y
+        m.write_ram(0x030E, 209); // x
+        m.write_ram(0x0301, 15); // radiusY
+        m.write_ram(0x0302, 4); // radiusX
+        m.write_ram(0x030C, 1); // Samus.hi=1（f1167 回绕后）——旧形误读 0x6AF4=0
+        uw_collision_detection(&mut m);
+        assert_eq!(m.read_ram(crate::ram_map::SAMUS_IS_HIT), 0,
+                   "hi 差⇒名表距+256⇒拒触（emu f1278 实录）");
+    }
+
+    /// 【守门】Frozen(4)/Hurt(6) 敌不伤萨（asm F282 `cmp #enemyStatus_Frozen/bcs
+    /// Exit17`——status≥4 免伤）；旧形无此门（Lx269 环头只滤 0/3/5）。
+    #[test]
+    fn frozen_enemy_deals_no_damage() {
+        let mut m = FrameMemory::default();
+        let x = 0x40u16;
+        m.write_ram(0x00FF, 1);
+        m.write_ram(crate::ram_map::SCROLL_DIR, 0x02);
+        m.write_ram(crate::ram_map::SAMUS_INVINCIBLE_DELAY, 0);
+        m.write_wram(0x6AF4 + x, 4); // status=Frozen
+        m.write_ram(0x0400 + x + 0, 49);
+        m.write_ram(0x0400 + x + 1, 209); // 与 Samus 同位（必触）
+        m.write_wram(0x6AF4 + x + 1, 8);
+        m.write_wram(0x6AF4 + x + 2, 8);
+        m.write_wram(0x6AF4 + x + 7, 1); // 同 hi（无名表距）
+        m.write_ram(0x030D, 49);
+        m.write_ram(0x030E, 209);
+        m.write_ram(0x0301, 15);
+        m.write_ram(0x0302, 4);
+        m.write_ram(0x030C, 1);
+        uw_collision_detection(&mut m);
+        assert_eq!(m.read_ram(crate::ram_map::SAMUS_IS_HIT), 0,
+                   "Frozen 敌免伤（F282 cmp #4/bcs）");
     }
 
     /// GoMainRoutine 标题路**会师穿越**（bank00:8000 已通——phase 0 臂单工作段+bogged

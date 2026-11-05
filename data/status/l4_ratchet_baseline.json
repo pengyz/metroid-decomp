@@ -442,38 +442,38 @@
           "total_pixels": 61440
         },
         "1300:pit": {
-          "state": "diff",
-          "diff_pixels": 20795,
+          "state": "match",
+          "diff_pixels": 0,
           "total_pixels": 61440
         },
         "1460:pit-fall": {
           "state": "diff",
-          "diff_pixels": 22818,
+          "diff_pixels": 118,
           "total_pixels": 61440
         },
         "1520:pit-jump": {
           "state": "diff",
-          "diff_pixels": 21817,
+          "diff_pixels": 299,
           "total_pixels": 61440
         },
         "1560:ball-jump": {
           "state": "diff",
-          "diff_pixels": 24055,
+          "diff_pixels": 23065,
           "total_pixels": 61440
         },
         "1620:on-pedestal": {
           "state": "diff",
-          "diff_pixels": 22999,
+          "diff_pixels": 23123,
           "total_pixels": 61440
         },
         "1650:after-pickup": {
           "state": "diff",
-          "diff_pixels": 23448,
+          "diff_pixels": 23123,
           "total_pixels": 61440
         },
         "1700:end": {
           "state": "diff",
-          "diff_pixels": 22005,
+          "diff_pixels": 23123,
           "total_pixels": 61440
         }
       }
@@ -729,6 +729,16 @@
       "reason": "卡 E D1/D2 根修（CF88 pressed 尾 SetSamusAnim 全形（Table06=0x0C×3——prg7:3404-3409/:3566-3568）+DE4A 两站纯绘（:5555-5561/:12212——幻影走表×2/帧清零））——collide f800 animIndex 双腿 0 差（10/02/0C/0D TDD 锚 card_e_animi_anchor）+四层链（卡 A-D）消解；确认无回退：fade-blink 淡入窗格（killenemy f560/f590、scrollseam f560/f700/f760、jumpledge f730）全 match 0px 保持、morphball f1176 match 保持；增益 match 76→95/108（+19 格 diff→match——走表相位/过速修复面）",
       "match": 95,
       "diff": 13,
+      "blocked": 0,
+      "cells_total": 108
+    },
+    {
+      "ts": "2026-11-05T07:57:19+00:00",
+      "kind": "anchor",
+      "evidence": "",
+      "reason": "敌槽生成/位形卡三根修（F351 更新门状态域 status<2→<3+F1FA 判盒 Samus.hi 源 wram[0x6AF4]→$030C+F282 status≥4 免伤门——morphball-trajectory-root.md §9 asm 逐行+六测红→绿）——morphball 七格大幅收敛：f1300 21434→0px 全 match、f1460 25400→118、f1520 25556→299（<500px 目标×2）+f1524 换房分叉消除（MapPosX 锚）；确认无回退：fade-blink/门链五点/落地三点防回退面全 match 0px 保持+493 测全绿 0 败",
+      "match": 96,
+      "diff": 12,
       "blocked": 0,
       "cells_total": 108
     }
