@@ -581,3 +581,23 @@ Evidence: Base10Subtract/ExtractNibbles 逐字（C3FB/C41D）+constants:806（he
 注）+AreaEnemyDamage 四区值（80/100/300/200）+算式 (0x30,0x80)=0x50 推演+emu 实录
 30→22+check_health_status 端口对照。
 Confidence: 90
+
+## 23. BCD 语义考证件（2026-11-06——实录+前提再证伪+停机报）
+
+### 23.1 emu 实录（件 1——考证副本扩 watch：health $0106/$0107+HealthChange $6E）
+case-001 全程 health 面：**唯一事件=f1029 初始化（0→(32,2)）**——无伤害事件（health
+恒 (32,2) 至 f1200）。⚠ 前提再证伪：**health 态 $0106/$0107=(32,2) 双腿同值**
+（rust state 实录同 (32,2)）——「伤害径状态发散」前提**证伪**（状态不发散！）。
+### 23.2 EN 显示差=HUD 渲染面（非 health 态）
+EN=30(rust)/22(emu) 显示差 vs health 态同值 ⇒**HUD 渲染源/映射差**（显示地址或
+BCD→十进制映射径）——非 SubtractHealth/伤害径。BCD 语义三处（格式/减式/编码）在
+health 态同值下**不构成本显示差根**。
+### 23.3 停机报（件 4-5）
+「事件→health 变化」对表=单事件（init）——case-001 无伤害事件；扩场景取证（伤害事件
+多的场景）+HUD 显示源考证（EN 渲染地址/映射）=下步（件 5 情形）。本卡交付=health 态
+双腿同值实录（前提证伪）+HUD 渲染面定性。
+
+Evidence: 考证副本（/tmp/case-bcd-forensic.txt——watch 0106/0107/6E/6F）+emu trace
+health 逐帧面（f1-1200——唯一事件 f1029 init）+rust state $0106/$0107=(32,2) 同值
+实录+diff 图 HUD 簇。
+Confidence: 91
