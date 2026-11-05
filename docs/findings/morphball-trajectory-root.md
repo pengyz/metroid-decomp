@@ -702,6 +702,10 @@ init_bank1（Brinstar 环 ✓）——**装载链全端口 ✓**（font 条目�
 SAMUS_GFX 源 [0x760]=`FE FE C0 FC...`=**块形** = chr[0x760] ✓（装载对！）——但 emu
 渲 "E" ⇒ **烤焙源数据（SAMUS_GFX 提取位）/emu CHR 面不符**：emu tile 0x76 字形来自
 别处（提取位偏？emu 侧字形源？）——**非装载径**（链✓/装载✓/源=chr✓ 三面合）。
+> 【2026-11-06 更正（复核 0cfee11b 注+§29.5 反转实证——原地）】「烤焙源差」前提
+> **证伪**：emu ppu.hex tile 0x76/0x7F 双表逐字节=rust chr **全同**（§29.5）——CHR
+> 数据同但渲染异⇒差=**渲染层**（sprite 瓦片选择/图案表基/attr）非源数据。运行时
+> CHR-RAM 写入/其他 bank 窗口映射亦排除（CHR 同=无运行时写差）。
 ### 28.4 停机报（件 6）
 源数据/emu CHR 面不符=更深件（ROM gfx 提取位验证/emu CHR 语义——非装载径可修）。
 本卡交付=链全端口对表✓+源实证（三面合+源差钉定——非猜）。
@@ -732,7 +736,23 @@ tile 0x76 字形字节实录**不可得**（取证限——scenario_run 无 CHR 
 提取位✓（ROM=烤焙）排除「提取位偏」——emu 字形源（tile 0x76 "E" 从何装载）+emu CHR
 字节取证（需 emu CHR dump 工具面）=**更深件/工具链面**（件 5 情形：转 emu CHR 取证
 工具面+字形源考证）。本卡交付=提取位✓考证（字节锚）+取证限声明。
+> 【2026-11-06 更正+取证补（§29.5-29.6）】①「E 不在 bank6」主张**不充分更正**（复核
+> 0cfee11b）：CHR-RAM 运行时写入/其他 bank 窗口映射未排除——后经 §29.5 反转实证排除
+> （CHR 同=无运行时写差）；②取证限更正：emu ppu.hex **有**（dumpPpu 采集点必调——
+> analysis/traces/ 落点）；③**"E" 字形定位**：font tile 14（`FE C0 C0 FC C0 C0 FE`）
+> =CHR 0x10E0（FONT_COMPLETE dest $1000+14×16——$1000 表 tile 0x0E）——OAM tile
+> 0x76→CHR 偏移映射错位（渲染层 tile 索引语义=下步锚）。
 
 Evidence: ROM bank6:8760 字节（=SAMUS_GFX [0x760] 同）+FONT B4C0 数字起字节+Font_HUD
 dest/size（0xA0 数字区）+"E"图案 bank6 全搜（NOT FOUND）+emu 无 ppu.hex（仅 png）。
 Confidence: 90
+
+> 【2026-11-06 反转定谳（§29.5——emu CHR 取证工具面实证）】emu ppu.hex
+> （analysis/traces/case-001...f01200_end.ppu.hex——dumpPpu :232 $0000-$2FFF 全域✓）
+> tile 0x76/0x7F/A0/A2 双表逐字节 vs rust chr**全同 ✓✓✓**——**CHR 数据同但渲染异**
+> （emu "E" vs rust 块）⇒§28.3/§29「字形源/烤焙源差」**前提证伪**：差=**渲染层**
+> （sprite 瓦片选择/图案表基（PPUCTRL bit3）/OAM attr/渲染管线）——非 CHR 数据。
+> 字形源三选一定谳：③**别的机制=渲染层**（非运行时 CHR 写/非 bank 源）。修径=
+> 渲染层（sprite 瓦片→图案表基选择/attr）对拍。⚠ 采集限更正：emu ppu.hex **有**
+> （dumpPpu 采集点必调——analysis/traces/ 落点）——§29.2「无 ppu.hex」系检索位错
+> （shots/ 而非 analysis/traces/）。
