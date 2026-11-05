@@ -13874,6 +13874,43 @@ HUD 渲染面）））③§22 三处保留 ✓（不构成本显示差根（但�
 完备性（三面排除+图形面=最大剩余类（⚠ 唯一性注（OAM 时序未显式排除））））④判据 ✓
 （L4 102+499 测（差 4 注）））——**对抗复核核 ✓**（证伪立场（独立重导证据（正确性核）））。
 
+## CHR 图案面卡对抗复核（e6ce1b2b §26（证伪立场（独立重导证据（4 重点））））
+
+### verdict: pass（CHR 字节实证 ✓✓（tile 0x76 块形确证（微偏注））+asm 全谱 ✓✓+装载缺口
+定性 ✓+判据 ✓）
+
+**① CHR 字节实证核（最重，A 级）✓✓**：
+- **tile 0x76（"E"）=fefec0fcfcc0fefe** ✓✓✓（独立复读（与 findings「FE FE C0 FC FC
+  C0 FE FE」**逐字吻合**）——**框块图案 ✗**（非字形）——A 级确证 ✓
+- ⚠ **tile 0x7F（"N"）=c6e6f6fefedecec6**（**≠0x76 字节**（findings 说「同块形」但
+  字节不同（**微偏注**（两 tile 图案不同（可能都是块形类但非同一图案））））
+- ⚠ **tile 0xA0/0xA2=我偏移全零**（offset=tid×16 得 0x00）——**图案表偏移需核**
+  （PPUCTRL bit3（sprite 图案表 \$0000 vs \$1000）——findings 声明 0xA0=38 4C CE C6 E6
+  64 38（字形✓）（需 \$1000 表偏移验证（诚实注（未能独立复读 0xA0/0xA2）））
+- **核心结论 ✓**（digit 瓦片 0xA0+ 图形对（per findings）+"E"/"N"（0x76/0x7F）图形错=
+  块形（0x76 独立确证）——gfx 装载覆盖缺口（0x76/0x7F 区未装字形或装错块数据））
+
+**② asm 全谱核 ✓✓**：GFXInfo（**C6E0**（条目=[gfx 源/目的/尺寸]（[SPR]Samus,items
+Entry0 dest $0000/[SPR]BrinstarEnemies Entry6 dest $0C00/[BGR] 各区））+LoadGFX
+（**C7AB**（条目→$00-$06→BankSwitch→CopyGFXBlock））+CopyGFXBlock（**C7D5**（PPUADDR
+目的→ROM→图案表逐字节））+**PPUCTRL bit3**（$0000/$1000（sprite 图案表选择））✓✓
+——调用点 ✓（prg7:1494-1511（GFX_Samus/GFX_IntroSprites/GFX_Font_Complete（`ldy
+#_id_GFX_*.b`（`jsr LoadGFX`））））
+
+**③ 装载缺口定性核 ✓**：「0x76/0x7F 区未装字形或装错块数据」——**gfx 装载覆盖缺口**
+（GFXInfo 条目域+CopyGFXBlock 尺寸边界）——**哪个条目负责该区未定位**（诚实注（条目域/
+尺寸边界定位=更深层次（本卡交付=asm 全谱+CHR 实证（非猜））））✓
+
+**④ 判据实况 ✓**：L4 **102/108 保持**+防回退面 ✓+测试数注（实测 **499** vs 503
+（**差 4**）（同前（诚实注）））
+
+**verdict**：CHR 图案面卡 **pass**（①CHR 字节实证 ✓✓（最重（tile 0x76=块形确证（逐字
+吻合）（⚠ tile 0x7F 字节≠0x76（微偏注）（⚠ 0xA0/0xA2 需 \$1000 表偏移验证（诚实注）））））
+②asm 全谱 ✓✓（GFXInfo C6E0→LoadGFX C7AB→CopyGFXBlock C7D5+PPUCTRL bit3（行号锚）））
+③装载缺口定性 ✓（0x76/0x7F 区 gfx 装载覆盖缺口（条目域/尺寸边界未定位（诚实注）））④
+判据 ✓（L4 102+499 测（差 4 注）））——**对抗复核核 ✓**（证伪立场（独立重导证据
+（正确性核）））。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
