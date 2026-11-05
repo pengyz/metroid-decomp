@@ -191,3 +191,50 @@ prg7_engine.asm:10488-10560（F351/F37F/F3AA）/10077-10300（F140/F17F/F193/F1F
 10331-10364（F282）/7060-7117（E2A9——前卡）；实证=emu frames.jsonl 敌窗 f820-860 逐帧+
 f846 停机位形+f1167 x 回绕+rust state 行（$030C=1/wram[0x6AF4]=0 直读）+TDD 六测红→绿
 （frozen 测 hi 修后转红门因实录）。Confidence: 93
+
+## 11. X 相位残差链卡（2026-11-05——**结构边界停机报**）
+
+### 11.1 首异链（FC 对齐口径——缝标号伪差免疫）
+f1255-1290 三根修后 0 差；**首异=FC=120（emu 行 f1420）输入面**：
+| 同 FC=120 | Joy1Status | Joy1Change |
+|---|---|---|
+| emu | **1（右）** | **1** |
+| rust | 2（左） | 0 |
+⇒ 转脚工作（右输入帧）：emu handler 见新方向→samL12 `sta SamusDir`+`jsr SetSamusRun`
+（accel←$30）→SetSamusData(3) 集成 0xA0+0x30=**0xD0**；rust handler 仍见旧方向→
+accel 滞后 1 帧→集成 0xA0+0xD0=**0x70**（emu f1421 Sub=208/rust f1420 Sub=112——
+±0x60 恒偏）⇒X 周期性 ±1 滑移⇒f1521 拾取触盒边值差 1px（emu (135,98) 触/rust (135,97)
+外）⇒f1560-1700 23k。
+
+### 11.2 根定位=输入消费相位（结构性——缝会计族）
+输入写点=rust_screenshot.rs:446 `joy1←plan.joy[label]`（tick 前）→NMI 末 read_joy_pads
+锁存→缝采样——**写点/锁存序双腿同构（goal-轮68/70）**；差异=**label↔FC 映射**：
+缝缺行区双腿 spin-出口会计不齐（emu 缺 1344-1346=3 帧 vs rust 缺 1344-1345=2 帧）
+⇒ 同 FC 的 label 差 1 ⇒ sched[label] 喂到错 FC ⇒**输入消费迟 1 帧**（FC 级 joy 面
+直证）。「一迭代双步/缝会计」结构族（move-drift R1 自留「同迭代链断裂」同族）——
+按任务书件 5 结构性深根**如实停机不强修**。
+
+### 11.3 asm 对读（E31A 族——本卡件 1 完成）
+- SamusMoveHorizontally（E31A-:7170-7230）：delta 分向逐像素环+CheckStopHorzMvmt
+  （E365：受阻⇒断环/地面⇒**SetSamusStand**（CF55→NoHorzMoveNoDelay→StopHorzMovement
+  →**ClearHorzMvmntData（CF4C）=只清 speedX int+frac——SubPixX「linear counter」
+  不清**）+stand 态/anim 全形写）。
+- **转脚真身=samL11/12（:2945-2962）**：无方向⇒SetSamusStand；有⇒BitScan/cmp
+  SamusDir/不等⇒`sta SamusDir`+`jsr SetSamusRun`（CC98——accel←RunAccelTbl[新 dir]）
+  →**SetSamusData(3)（集成）后行**——emu 集成用新加速的 asm 确认。
+- CDBF（SamusRun_SetAnim）：aim 变⇒SetSamusAnim+尾跳 CD6B（跳过 samL09-12）——
+  转脚帧 aim 未变不走此尾。
+- 集成面：HorzAccelerate 尾 `SubPixX+=SpeedSubPixelX`（前卡 E3E5 全谱+FEE0 钳在案）
+  ——SubPixX 相位差=加速度值差的直接投影（0xA0+0x30 vs 0xA0+0xD0 双向验算合）。
+
+### 11.4 TDD 锚设计（下卡随修落地——本卡不伪绿）
+- Joy1Status/Joy1Change 面 FC=120 双腿 0 差锚（输入消费相位）；
+- f1300-1520 窗 SubPixX/X 逐帧 FC 对齐 0 差锚（修后 f1521 触盒自通）；
+- f1524 gear/pw0 锚（任务书件 3 原靶）。
+防回迁回归面：f820-860 敌窗+f1255-1290 轨迹窗（本档 §9 集成锚）保持。
+
+Evidence: 双侧 FC 对齐逐帧面（Joy1Status/Change/accelX/SubPixX/X——emu frames.jsonl
+watch+rust state 行）+asm=prg7_engine.asm:2945-2962（samL11/12）/7170-7230（E31A 环）/
+7230-7245（E365）/3349-3370（CF4C/CF55）/2824-2843（CC98）/3371-3390（CDBF）+nmi.rs:228
+（read_joy_pads）+rust_screenshot.rs:446（输入写点）；数值双向验算（0xA0+0x30=0xD0 /
+0xA0+0xD0=0x70）。Confidence: 93
