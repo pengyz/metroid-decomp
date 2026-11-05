@@ -645,3 +645,23 @@ Evidence: E1B9 表逐字（10 行含 "E"/"N"/".."）+rust DATA_DISPLAY_TBL 2660 
 （同）+digit 映射（E173/2655）+health 态 (32,2)+双截图 HUD 裁剪（rust 块形 vs emu
 "EN▪22"）。
 Confidence: 92
+
+## 26. CHR 图案面卡（2026-11-06——asm 全谱+CHR 实证+停机报）
+
+### 26.1 asm 全谱（件 2——行号锚）
+GFXInfo（**C6E0**：条目=[gfx 源/目的/尺寸]——[SPR]Samus,items Entry0 dest $0000/
+[SPR]BrinstarEnemies Entry6 dest $0C00/[BGR] 各区）；LoadGFX（**C7AB**：条目→$00-$06
+→BankSwitch→CopyGFXBlock）；CopyGFXBlock（**C7D5**：PPUADDR 目的→ROM→图案表逐字节）。
+sprite 图案表选择=PPUCTRL bit3（$0000/$1000）。
+### 26.2 CHR 实证（件 1——rust ppu.hex f1200 图案字节）
+tile 0x76（"E"）=`FE FE C0 FC FC C0 FE FE...`=**框块图案** ✗（非字形）；tile 0x7F
+（"N"）=同块形 ✗；tile 0xA0（"0"）=`38 4C CE C6 E6 64 38` ✓字形正确；tile 0xA2
+（"2"）✓正确。⇒**digit 瓦片（0xA0+）图形对；"E"/"N"（0x76/0x7F）图形错=块形**——
+gfx 装载覆盖缺口（0x76/0x7F 区未装字形或装错块数据）。
+### 26.3 停机报（件 5）
+gfx 装载覆盖（0x76/0x7F 区的 gfx 条目/尺寸/源数据——GFXInfo 条目域+CopyGFXBlock 尺寸
+边界）=更深装载件。本卡交付=asm 全谱+CHR 实证（字节级：块形 vs 字形——非猜）。
+
+Evidence: GFXInfo C6E0/LoadGFX C7AB/CopyGFXBlock C7D5 全谱+rust ppu.hex f1200 图案
+字节实录（0x76=框块/0x7F=块/0xA0="0"✓/0xA2="2"✓）+双截图 HUD 裁剪对照。
+Confidence: 92
