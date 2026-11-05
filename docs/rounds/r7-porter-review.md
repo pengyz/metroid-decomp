@@ -13159,6 +13159,66 @@ f560/f700/f76…）」）
 （实测输出原文（A 级））——对抗复核核（证伪立场（独立重导证据（正确性核）））✓——**卡 B+C
 复核遗留项闭环**（transient 证据持久化+「rust 不走 intro」原地更正撤销（真根=D1））。
 
+## morphball 轨迹域卡对抗复核（d5d77c91（证伪立场（独立重导证据（6 重点））））
+
+### verdict: pass（6 重点全 ✓（A 级原文）（必跑验证 ✓（实测输出原文（A 级））））
+
+**必跑验证实录（⑥（A 级原文））**：
+- `cargo test --workspace`：**450+3+1+1+1+1+27+4=488 passed; 0 failed**（488 测（与任务规约
+  一致））✓
+- `python3 gates/cli.py check`：**SUMMARY: PASS=13 FAIL=0 SKIP=1 TOLERATED=2**
+  （CHECK: PASS（含 0 个静默跳过））✓
+- `gates l4`：**match 95 diff 13 blocked 0**（分母 108（**无回退**（ratchet 守住（match 集合
+  只增不减（防回退面 0px 保持（95 match 点）））））✓
+
+**① asm 定谳核（最重）✓✓✓**：E2C6-E2CB（prg7:7076-7084（@loop_up（jsr MoveSamusUp
+（bcs @endIf_B（失败⇒"Samus blocked upwards. Divide her speed by 2 and set the MSB to
+reverse her direction of travel"））））——**`sec`/`ror Samus.speedY`/`ror SamusSpeedSubPixelY`**
+（半速+MSB 反向（**非清零**）））+landingNoBounce（:7149-7151（`jsr StopVertMovement`
+（**清零径**））——**两径互斥**（顶钳=受阻上行径（E2C6-E2CB（ror 半速+MSB 反向））vs 落地=
+landingNoBounce（StopVertMovement（清零））））+**rust 三写同形** ✓（physics.rs
+（`mem.write_ram(SAMUS_SPEED_Y_I, (si >> 1) | 0x80)`（sec→ror int）+`mem.write_ram
+(SAMUS_SPEED_Y_F, (sf >> 1) | (carry << 7))`（ror sub）（**三写逐位**（emu f1264/1266/1268））））
+
+**② emu 三写逐位验算 ✓✓✓（A 级独立复算）**：sec→ror 数学（`new_int=(int>>1)|0x80`
+（进位1→MSB）（`new_sub=(sub>>1)|(int_bit0<<7)`））——三写全吻合：
+- f1264 (FE,40)→**calc=(FF,20)=emu=(FF,20)** ✓
+- f1266 (FF,50)→**calc=(FF,A8)=emu=(FF,A8)** ✓
+- f1268 (FF,D8)→**calc=(FF,EC)=emu=(FF,EC)** ✓
+
+**③ 勘误两条核 ✓✓**：
+- §12「上升下限钳 −2.00」**证伪**（emu 上升序列 FC→FD→FE→FF 自然衰减穿零（§2 表）——
+  1ca8b7c5 的 −2 钳方向按本窗数据证伪（morphball-trajectory-root.md:24-25/116（2026-11-05
+  更正）））✓
+- 「f1258 sX 现行树已同」✓（:39/120（[ix] CLAMP lim=**FEE0** 实录（f1250-1271 双腿 sX 全同
+  实证）））
+
+**④ TDD mutation 有效性 ✓✓✓（A 级实证（/tmp/mut-morph 隔离副本））**：morphball_traj_anchor
+集成锚（f1255-1278 七字段（sX.I/sX.F/sY.I/sY.F/SamusY/SamusX/ScrollX）逐帧 0 差）——
+改 ror 全形→清零即红：`morphball_traj_window_anchor ... FAILED`（assertion `left == right`
+failed: **f1264 轨迹七字段双腿 0 差**（left sY.I=**0**（清零）/right sY.I=**255**（ror 预期
+0xFF））（**0 passed; 1 failed**））——mutation 精确钉住 sec→ror 全形 ✓
+
+**⑤ 卡点论证 ✓✓**：
+- 七格未收敛归因=**敌槽 B 自生成即异轨**（emu 恒 (63,200) vs rust (99,152)→巡逻（f1100 前
+  已异）⇒接触盒形参不同（hi/ery/erx attrs 面））——goal-轮134 已登记对账缺口（**属敌槽/
+  生成域非 Samus 轨迹域**（不混域强修（如实停机报卡点）））✓
+- f1278 单腿撞击退证据 ✓（rust [hit] n=1266（dx=10<12（dy=9<23）（eB=(40,198) s=(49,208)
+  →IsHit=0x30|0x08））vs emu **无击**（InvDly=0））——根=敌槽 B 异轨→接触盒→单腿击退
+- **D2-1b 排除** ✓（授予径工作正常（卡 E D2-1b 修活实证）（**授予值双腿 0 差**⇒非状态差源））
+
+**⑥ 判据复跑 ✓**：488 测（**488 passed; 0 failed**）+gates PASS（**PASS=13 FAIL=0**）+
+L4 **95/108** 无回退（match 95 diff 13 blocked 0（ratchet 守住（防回退面 0px 保持）））
+
+**verdict**：morphball 轨迹域卡对抗复核 **pass**（①asm 定谳核 ✓✓✓（E2C6-E2CB sec/ror 三写
+（半速+MSB 反向（非清零））+landingNoBounce 两径互斥+rust 三写同形）②emu 三写逐位验算 ✓✓✓
+（f1264/1266/1268 sec→ror 数学独立复算全吻合）③勘误两条核 ✓✓（§12 −2.00 钳证伪+f1258 sX
+已同（FEE0 CLAMP 实录））④TDD mutation ✓✓✓（改 ror→清零即红（f1264 sY.I 0 vs 255））⑤卡点
+论证 ✓✓（敌槽 B 异轨（不混域强修）+f1278 单腿撞击退+D2-1b 排除（授予值 0 差））⑥判据复跑 ✓
+（488 测+PASS=13+L4 95/108 无回退））——**必跑验证 ✓**（实测输出原文（A 级））——对抗复核核
+（证伪立场（独立重导证据（正确性核）））✓——复核 verdict 实录（docs commit（对抗复核 verdict
+（6 重点（必跑验证）（实测输出原文（A 级））））✓。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
