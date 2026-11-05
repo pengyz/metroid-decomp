@@ -425,3 +425,30 @@ Evidence: asm=prg7_engine.asm:E3E5-E426（HorzAccelerate）/E31A-（SamusMoveHor
 端口链 physics.rs:1085-1176+742-776（horz_integrate）；[hxi]/[smh] 双探针 n=1025-1039
 15 帧实录（disp 255/254 交替 vs 入口 x 增量 0×2（每 6））+三清（§15.2）+isHit/[bnc] 实录。
 Confidence: 91
+
+## 17. E63F scroll_left 写序卡（2026-11-05——覆写点一击钉定（实为早退径）+全链定谳+停机报）
+
+### 17.1 覆写点钉定（件 2——[wx]/[smh]/[bnc] 三探针一击）
+「覆写」假设**证伪**：[wx] 写后探针实录 n=1027/1033 **写全缺=早退径**（非覆写）！
+[bnc] 标记（窗修后——旧窗 1255+ 不覆 f1033 段=**废证更正**）：n=1027/1033
+LEFT_BLOCKED **rx=255** ✓。[corner] 阻断查撞全点：5 点（y=160/168/176/184/192@x=136）
+——第 5 点 y=192 瓦片 **0x5D（固实地板）**⇒object_check_move_left 阻断 ✓。
+
+### 17.2 全链定谳（半径 0xFF 根）
+state 逐帧径面：f1030/1032/1034 **radiusY/X=255/255**（交替帧）+**animFrame=0xF7**
+（vs 常帧 0x08——walk 表交替项！animDelay 4↔0）——帧数据径读（sprite.rs:79-82：
+`blob(fptr+1/2)→$301/$302`）在 0xF7 帧得 0xFF ⇒查撞 dist=rx+8=7（wrap）+span
+摸地板⇒阻断⇒每-6 dX=0⇒X 均速 1.33 vs emu 1.5⇒f1200 14147px 全链。
+
+### 17.3 停机报（件 5+升维提示——层 5）
+emu 同 0xF7 帧径不阻（行为保真目标）——**0xF7 帧径 quirk**：asm CheckMoveHorizontal
+（E89B）/GetNumBlocksToCheck（E8CE）对 rY=255 的 8 位算式 vs rust span_rows 差
++径表 0xF7 项语义（walk 表 terminator/帧数据读序）=**更宽动画/碰撞模型**深件。
+**升维建议（lead 件 5 提示采纳）**：层 5 仍深根——应转「E31A/E63F 帧内执行序与 emu
+整段对拍」（非继续单点窄化）——下卡建议。本卡交付=覆写证伪+[bnc]/[corner]/径面/animFrame
+四层一击链（非猜）。
+
+Evidence: [wx] 写后探针（n=1025-1035 全录——1027/1033 写缺）+[bnc]（窗修后 2 标记
+rx=255）+[corner] 阻断 5 点（第 5 点 0x5D）+state 径面（f1028-1034 交替 255/255）+
+animFrame 面（0xF7 交替）+sprite.rs:79-82 帧数据径读+asm E89B/E8CE。
+Confidence: 93

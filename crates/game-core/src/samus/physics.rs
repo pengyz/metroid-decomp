@@ -1561,6 +1561,15 @@ fn move_samus_left(mem: &mut FrameMemory) -> bool {
         toggle_samus_hi(mem); // 环绕 00（dec 前判——E650）
     }
     mem.write_ram(0x030E, x.wrapping_sub(1));
+    // 【E63F 卡·写后探针（临时——2026-11-05）】写 X 后值（一击钉定覆写者）。
+    if std::env::var("DSH_SPRITE_TRACE").is_ok() {
+        let n = crate::frame::mainloop::DIAG_ITER.load(std::sync::atomic::Ordering::Relaxed);
+        if n >= 1025 && n <= 1050 {
+            eprintln!("[wx] n={} wrote_x={} (was {}) gate_check_ran={}", n,
+                mem.read_ram(0x030E), x,
+                x.wrapping_sub(rx) & 0x07 == 0);
+        }
+    }
     true
 }
 
