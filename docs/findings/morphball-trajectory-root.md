@@ -665,3 +665,25 @@ gfx 装载覆盖（0x76/0x7F 区的 gfx 条目/尺寸/源数据——GFXInfo 条
 Evidence: GFXInfo C6E0/LoadGFX C7AB/CopyGFXBlock C7D5 全谱+rust ppu.hex f1200 图案
 字节实录（0x76=框块/0x7F=块/0xA0="0"✓/0xA2="2"✓）+双截图 HUD 裁剪对照。
 Confidence: 92
+
+## 27. gfx 装载覆盖缺口卡（2026-11-06——条目覆盖✓+装载径断点+停机报）
+
+### 27.1 缺口定位（件 1）
+GFXInfo 条目表（C6E0）+GFX_INFO 烤焙（gfx_data.rs 29 项×7B）逐条对读：**Entry0
+（GFX_Samus bank6 src $8000 dest $0000 size $09A0）覆盖 0x76/0x7F ✓**（0x760/0x7F0
+在 $0000-$09A0 内）——覆盖无缺口。⚠ 装载径断点：**init_title_gfx 载全零占位**
+（`title_gfx=[0u8;0x2000]`→load_gfx→rs.chr）——GFX_INFO/GFX_DATA（23712B 烤焙✓）
+**未接游戏起始 gfx 装载径**⇒0x76/0x7F 字形缺载=块占位（chr 实证 §26.2）。
+### 27.2 asm 全谱（件 2——行号锚）
+GFXInfoEntry 宏（macros.asm:101：bank+ptr+dest+sizeof=7B）+LoadGFX（C7AB）+
+CopyGFXBlock（C7D5：PPUADDR→ROM→图案表）+LoadSamusGFX（C5DC）/InitTitleGFX（C5D7）
+双载面。rust 对应：load_gfx（gfx.rs:61——纯拷贝）✓+init_title_gfx（零占位）✗+
+游戏起始装载径（GFX_INFO 消费面）**未接**。
+### 27.3 停机报（件 5）
+游戏起始 gfx 装载径（GFX_INFO 条目消费+CopyGFXBlock 端口+装载时机）=中件（烤焙数据
+齐+装载面缺接——非猜：条目覆盖✓/零占位实录/chr 字节✓）。本卡交付=缺口定位（断点环节
+钉定）+asm 全谱。
+
+Evidence: GFXInfoEntry 宏+C6E0/C7AB/C7D5/C5D7/C5DC 全谱+GFX_INFO Entry0（size
+$09A0 覆盖 0x76/0x7F）+init_title_gfx 零占位实录+gfx.rs:61 纯拷贝+chr 字节（§26.2）。
+Confidence: 92
