@@ -398,3 +398,30 @@ LE7DE-LE81C（碰撞点环）+E626-E663（MoveSamusLeft）；[corner] 729 点瓦
 isHit 逐帧表（f1028-1047 全 0）+[bnc] 零标记+rust 端口（object_check_move_horizontal/
 span_rows/collision_point_samus/move_samus_left 逐行）。
 Confidence: 92
+
+## 16. 移动机构/积分层深读卡（2026-11-05——链谱+实录钉定+停机报）
+
+### 16.1 asm/端口链谱（件 1）
+链（physics.rs:1085-1176 端口）：vert_accelerate(E37A)→vert_integrate→Y 逐像素环
+→lava→**horz_integrate（IntXState→int_x 加速/钳）→dx→samus_move_horizontally
+（E31A：ScrX=x−ScrollX/delta=0⇒Exit10/TwosComplement/岩浆减半/OBJECT_COUNTER=n
+逐像素环（move_samus±+check_stop per px）/门向）**。HorzAccelerate（**E3E5**：SubPixX
++=AccelX+符号扩 speedX/取负/NegateTemp 钳 max——速更段）；int_x=速积分（accel+clamp）。
+
+### 16.2 每-6 dX=0 机制钉定（件 2——[smh]/[hxi] 双探针实录）
+disp（int_x out）=−1/−2 交替恒正确（255/254）✓；**但每-6 门帧 smh 入口 X 增量=0**
+（n=1027→1028：x 143→143——disp=−1 却未移！；n=1033→1034：135→135 同）⇒
+**移动施加段丢失**（非积分（disp 对）/非撞挡（三清）/非 delta 计算（对））。窄化至
+**move_samus_left 写 X 被覆/未落段**（门帧分支：scroll_left（E63F 列流送链）/SCR_X 写/
+x==0 环绕判）——写 x=−1 后被后续写覆回（候选：scroll_left 链的 x 写竞争）。
+
+### 16.3 停机报（件 5——结构性深根）
+每-6 门帧行为的丢失点在 move_samus_left 写 X 后的覆写/scroll_left 链（E63F 列流送→
+check_update_name_table 载房门→iter_bogged 相位耦合）——**更宽移动/滚屏模型**深件
+（件 5 情形）。本卡交付=链谱（E3E5/E31A/int_x 序）+[smh]/[hxi] 双探针实录（disp 对/
+入口增量 0——非猜）。
+
+Evidence: asm=prg7_engine.asm:E3E5-E426（HorzAccelerate）/E31A-（SamusMoveHorizontally）+
+端口链 physics.rs:1085-1176+742-776（horz_integrate）；[hxi]/[smh] 双探针 n=1025-1039
+15 帧实录（disp 255/254 交替 vs 入口 x 增量 0×2（每 6））+三清（§15.2）+isHit/[bnc] 实录。
+Confidence: 91

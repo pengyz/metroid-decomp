@@ -667,7 +667,7 @@ pub fn samus_collision_with_solid_entities(mem: &mut FrameMemory) {
     if std::env::var("DSH_SPRITE_TRACE").is_ok() {
         use std::sync::atomic::Ordering;
         let n = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
-        if n >= 1258 && n <= 1275 {
+        if n >= 1025 && n <= 1050 {
             eprintln!("[col] n={} sY={} sX={} eB=({},{}) eB_r=({},{}) s_r=({},{}) invDly={}", n,
                 mem.read_ram(0x030D), mem.read_ram(0x030E),
                 mem.read_ram(0x0440), mem.read_ram(0x0441),
@@ -752,7 +752,7 @@ pub fn horz_integrate(mem: &mut FrameMemory) -> u8 {
     if std::env::var("DSH_SPRITE_TRACE").is_ok() {
         use std::sync::atomic::Ordering;
         let n = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
-        if n >= 1258 && n <= 1275 {
+        if n >= 1025 && n <= 1050 {
             eprintln!("[hxi] n={} spI={} spF={} sub={} accel={:02X} max={:02X} out={}",
                 n, st.speed_i, st.speed_f, st.subpix, accel, max_src, out.disp);
         }
@@ -985,7 +985,7 @@ pub fn check_health_status(mem: &mut FrameMemory) {
         if std::env::var("DSH_SPRITE_TRACE").is_ok() {
             use std::sync::atomic::Ordering;
             let n = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
-            if n >= 1258 && n <= 1275 {
+            if n >= 1025 && n <= 1050 {
                 eprintln!("[dmg2] n={} physics977 invDly<-50", n);
             }
         }
@@ -1025,7 +1025,7 @@ pub fn check_health_status(mem: &mut FrameMemory) {
                     if std::env::var("DSH_SPRITE_TRACE").is_ok() {
                         use std::sync::atomic::Ordering;
                         let n = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
-                        if n >= 1255 && n <= 1295 {
+                        if n >= 1025 && n <= 1050 {
                             eprintln!("[kb] n={} LCF4E push dir={} dly={}", n, dir, delay);
                         }
                     }
@@ -1040,7 +1040,7 @@ pub fn check_health_status(mem: &mut FrameMemory) {
                 if std::env::var("DSH_SPRITE_TRACE").is_ok() {
                     use std::sync::atomic::Ordering;
                     let n = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
-                    if n >= 1258 && n <= 1275 {
+                    if n >= 1025 && n <= 1050 {
                         eprintln!("[w3b] n={} physics1011 speedX<-{} dir={}", n, a, dir);
                     }
                 }
@@ -1536,7 +1536,7 @@ fn move_samus_left(mem: &mut FrameMemory) -> bool {
         if std::env::var("DSH_SPRITE_TRACE").is_ok() {
             use std::sync::atomic::Ordering;
             let n = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
-            if n >= 1255 && n <= 1295 {
+            if n >= 1025 && n <= 1050 {
                 eprintln!("[bnc] n={} LEFT_BLOCKED x={} rx={}", n, x, rx);
             }
         }
@@ -1609,7 +1609,7 @@ pub fn samus_move_horizontally(mem: &mut FrameMemory, delta: u8) {
     if std::env::var("DSH_SPRITE_TRACE").is_ok() {
         use std::sync::atomic::Ordering;
         let n = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
-        if n >= 1255 && n <= 1295 {
+        if n >= 1025 && n <= 1050 {
             eprintln!("[smh] n={} delta={} x={} accelX={} spX={}", n, delta,
                 mem.read_ram(0x030E), mem.read_ram(crate::ram_map::SAMUS_ACCEL_X),
                 mem.read_ram(SAMUS_SPEED_X_I));
