@@ -1132,10 +1132,20 @@ pub fn lava_and_move_check(mem: &mut FrameMemory) {
                 break;
             }
         } else {
-            // 向上：天花板查撞（点 y−ry−8）。受阻⇒停（E2CA 受阻上行 ror speedY/speedF
-            // 半速反向弹跳=**deferred 子缺口**（goal-r15 R1 登记））。
+            // 向上：天花板查撞（点 y−ry−8）。受阻⇒**E2C6-E2CB 受阻上行反应**
+            // `sec / ror Samus.speedY / ror SamusSpeedSubPixelY`（半速+MSB 反向——
+            // jmp SamusMoveHorizontally 出环）。
+            // 【morphball 轨迹根修（2026-11-05）】旧形 stop_vert_movement 清零
+            // （goal-r15 R1 deferred 缺口——本修收口）——emu f1264/1266/1268 三写
+            // 逐位实录：(FE,40)→(FF,20)、(FF,50)→(FF,A8)、(FF,D8)→(FF,EC)
+            // （sec→ror int=(int>>1)|0x80、ror sub=(sub>>1)|旧int bit0→bit7）。
+            // 清零属落地面径（@landingNoBounce E30E-314）另折不动。
             if (y_now.wrapping_sub(ry)) & 0x07 == 0 && !object_check_move_up(mem) {
-                stop_vert_movement(mem); // D147（受阻上行动量清）
+                let si = mem.read_ram(SAMUS_SPEED_Y_I);
+                let sf = mem.read_ram(SAMUS_SPEED_Y_F);
+                let carry = si & 1;
+                mem.write_ram(SAMUS_SPEED_Y_I, (si >> 1) | 0x80); // sec→ror int
+                mem.write_ram(SAMUS_SPEED_Y_F, (sf >> 1) | (carry << 7)); // ror sub
                 break;
             }
         }
@@ -1726,6 +1736,47 @@ mod tests_camera_follow {
         samus_move_horizontally(&mut m, 0xFE); // Δ=−2
         assert_eq!(m.read_ram(0x030E), 0xFE, "x−2（环绕）");
         assert_eq!(m.read_ram(crate::ram_map::SAMUS_HI), 1, "ToggleSamusHi（环绕翻名表位）");
+    }
+
+    /// 【morphball 轨迹根修·顶头反应（morphball-trajectory-root.md §2）】受阻上行=asm
+    /// E2C6-E2CB `sec/ror Samus.speedY/ror SamusSpeedSubPixelY`（半速+MSB 反向）——
+    /// **非清零**（清零=落地面径 @landingNoBounce E30E-314 另属）。emu f1264/1266/1268
+    /// 三写逐位实录：(FE,40)→(FF,20)、(FF,50)→(FF,A8)、(FF,D8)→(FF,EC)。旧形
+    /// stop_vert_movement 清零（goal-r15 R1 deferred 缺口——本测收口）⇒morphball
+    /// f1264 弧线→f1271 提前落地→f1272 max=$18 提前翻→横漂相位连锁分叉。
+    #[test]
+    fn up_block_applies_ror_bounce_not_clear() {
+        let mut m = FrameMemory::default(); // 全零房=全固实（上方块必挡）
+        m.write_ram(0x030D, 0x48); // y
+        m.write_ram(crate::ram_map::SAMUS_RADIUS_Y, 0x10); // (y−ry)&7=0x38&7=0 门帧
+        m.write_ram(crate::ram_map::SAMUS_RADIUS_X, 0x08); // rx≠0（rx=0 asm 跳检）
+        m.write_ram(SAMUS_SPEED_Y_I, 0xFE);
+        m.write_ram(SAMUS_SPEED_Y_F, 0x28); // +重力 0x18 ⇒反应前 (FE,40)（emu f1264 同态）
+        m.write_ram(crate::ram_map::SAMUS_ACCEL_Y, 0x18);
+        lava_and_move_check(&mut m);
+        assert_eq!(m.read_ram(SAMUS_SPEED_Y_I), 0xFF,
+                   "ror int：sec→(FE>>1)|0x80=FF（emu f1264 逐位）");
+        assert_eq!(m.read_ram(SAMUS_SPEED_Y_F), 0x20,
+                   "ror sub：(40>>1)|进位0=20（emu f1264 逐位）");
+        assert_eq!(m.read_ram(crate::ram_map::SAMUS_ACCEL_Y), 0x18,
+                   "受阻上行不清重力（清零属落地面径 @landingNoBounce）");
+    }
+
+    /// 【守门】受阻下行（落地）仍=StopVertMovement+AccelY←0——防 ror 修过应用到落地面径。
+    #[test]
+    fn down_block_still_lands_and_clears_gravity() {
+        let mut m = FrameMemory::default();
+        m.write_ram(0x030D, 0x48);
+        m.write_ram(crate::ram_map::SAMUS_RADIUS_Y, 0x10); // (y+ry)&7=0x58&7=0 门帧
+        m.write_ram(crate::ram_map::SAMUS_RADIUS_X, 0x08); // rx≠0（rx=0 asm 跳检）
+        m.write_ram(SAMUS_SPEED_Y_I, 0x02); // 下行
+        m.write_ram(SAMUS_SPEED_Y_F, 0x00);
+        m.write_ram(crate::ram_map::SAMUS_ACCEL_Y, 0x1A);
+        lava_and_move_check(&mut m);
+        assert_eq!(m.read_ram(SAMUS_SPEED_Y_I), 0, "落地=StopVertMovement 清速");
+        assert_eq!(m.read_ram(SAMUS_SPEED_Y_F), 0);
+        assert_eq!(m.read_ram(crate::ram_map::SAMUS_ACCEL_Y), 0,
+                   "落地清重力（@landingNoBounce sty SamusAccelY）");
     }
 }
 
