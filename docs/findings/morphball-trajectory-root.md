@@ -364,3 +364,37 @@ Evidence: worktree 隔离实录（/tmp/wt-pre-seam case-001 f1200=14147px=现 HE
 asm=prg7_engine.asm:MoveSamusLeft(E626-:E663 全谱（8px 门+crash 出口+solid-entity 检））
 +历史件（173ce165/d568bf0c/5abbe6c7 提交实录）。
 Confidence: 91
+
+## 15. 墙顶角碰撞卡（2026-11-05——取证分流+停机报）
+
+### 15.1 asm 全谱（件 1）
+- ObjectCheckMoveLeft（**E880**：`lda radiusX/clc/adc #$08`→dist=rx+8）→
+  ObjectCheckMoveHorizontalBranch（**E893**：Temp03←dist/StoreObjectPositionToTemp/
+  rY→CheckMoveHorizontal）；
+- CheckMoveHorizontal（**E89B**：rY=0⇒sec 出/顶界=y−ry/顶余 and#7⇒+1 块/
+  GetNumBlocksToCheck）；GetNumBlocksToCheck（**E8CE**：底余=(−顶余)&7/跨度=2ry−底余
+  （+8 借位修正）/中心=跨度>>3/右余 and#7⇒+1/总数=X+中心+右余）——**rust span_rows
+  公式逐行等价 ✓**；
+- 碰撞点环 LE7DE（**E7DE**：`bne Lx202` **非块对齐⇒跳过整检（放行！）**/LE7E6：Make
+  RoomRAMPtr→瓦片→$4E 门/CheckBlastTile（< $80=固实⇒Exit16 carry 清=阻断）/>=$A0
+  可走（SamusDoorData 写：$A0→1/$A1→2/余→0）/CalculateNextBGCollisionPoint 逐点）；
+- MoveSamusLeft（**E626**：8px 门（(x−rx)&7==0）⇒ObjectCheckMoveLeft/bcc Lx181（crash
+  出口（清 $58））→每调 SamusCollisionWithSolidEntities（isHit&$41==$41⇒Lx181）→
+  ScrX/ScrollLeft→dec x）。
+
+### 15.2 取证分流（件 2——机制钉定非猜）
+f1033 窗瓦片级探针（[corner] 729 点）：**查撞点瓦片全 0xFF（可走）**⇒ObjectCheckMoveLeft
+**非阻断源**；isHit($30A) 逐帧=0⇒isHit 0x41 **亦非**；[bnc] LEFT_BLOCKED 标记**零次**
+⇒查撞从未返回阻断。**块源=移动机构/积分层**（每-6-门相位与移动路径交互——X dX=0 帧
+无撞挡证据）。
+
+### 15.3 停机报（件 6——深件另卡）
+阻断径已排除碰撞模型（瓦片/isHit/撞挡三清）——剩移动机构/积分层（move_samus_left
+调用相位/int_x 积分序/门相位耦合）=**更宽移动模型**深件。本卡交付=asm 全谱（E880/E893/
+E89B/E8CE/E7DE/E626 行号锚）+取证分流（三清实录）。
+
+Evidence: asm=prg7_engine.asm:8197-8260（E880-E8BE）+E8CE-E8EC（GetNumBlocks）+
+LE7DE-LE81C（碰撞点环）+E626-E663（MoveSamusLeft）；[corner] 729 点瓦片实录（全 0xFF）+
+isHit 逐帧表（f1028-1047 全 0）+[bnc] 零标记+rust 端口（object_check_move_horizontal/
+span_rows/collision_point_samus/move_samus_left 逐行）。
+Confidence: 92

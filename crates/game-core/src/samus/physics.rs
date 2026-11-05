@@ -1222,6 +1222,11 @@ pub(crate) fn horizontal_span_rows(y: u8, ry: u8) -> (u8, u32) {
 fn collision_point_samus(mem: &mut FrameMemory, y: u8, x: u8, hi: u8) -> bool {
     let idx = (((y & 0xF8) as u16) << 2) | ((x >> 3) as u16);
     let page = if hi & 1 != 0 { 0x0400u16 } else { 0x0000 };
+    // 【墙顶角卡·瓦片级探针（临时——2026-11-05）】f1030-1045 查撞输入/瓦片/结果。
+    if std::env::var("DSH_SPRITE_TRACE").is_ok() {
+        let t = mem.read_wram(0x6000 | page | (idx & 0x3FF));
+        eprintln!("[corner] y={} x={} hi={} idx=0x{:03X} tile=0x{:02X}", y, x, hi, idx & 0x3FF, t);
+    }
     let tile = mem.read_wram(0x6000 | page | (idx & 0x3FF));
     let ok = tile != 0x4E && tile >= 0x80;
     if ok {
