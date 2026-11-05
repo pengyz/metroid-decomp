@@ -601,3 +601,27 @@ Evidence: 考证副本（/tmp/case-bcd-forensic.txt——watch 0106/0107/6E/6F�
 health 逐帧面（f1-1200——唯一事件 f1029 init）+rust state $0106/$0107=(32,2) 同值
 实录+diff 图 HUD 簇。
 Confidence: 91
+
+## 24. HUD 显示源考证卡（2026-11-06——asm 全谱+端口对表+停机报）
+
+### 24.1 asm 全谱（件 1——行号锚）
+DisplayBar（**E0C1**）：①DataDisplayTbl（E1B9,40B=10 精灵）→OAM 拷贝 ②健康 2 位：
+`lda Health+1/and #$0F`（**upper=Health+1 低4**）/`lda Health/jsr Adiv16`（**lower=
+Health>>4**）→SPRWriteDigit（**E173**：tile=A|$A0 数字图案区）③导弹 3 位（HexToDec
+E198）④能量罐（LE14A：EnergyTankCount→满/空罐瓦片 $6F）。
+**health 格式定谳（A级）**：upper=Health+1&0x0F / lower=Health>>4——**交换 BCD ✓**
+（(32,2)→"22"=emu 实录 ✓）。
+### 24.2 端口对表（件 2）
+rust uw_display_bar（mainloop.rs:2653-）：①DataDisplayTbl 拷贝✓②digit 映射
+（$0107&0xF|$A0/$0106>>4|$A0）✓**与 asm 同构**——映射面无差。⚠ 渲染面差：rust 截图
+顶左=块形（罐瓦片？）vs emu="EN=22"（数字形）——**DataDisplayTbl 瓦片/位形/罐瓦面差**
+（非映射）。
+### 24.3 停机报（件 6）
+渲染面（DataDisplayTbl 40B 内容/瓦片 ID/位置/罐瓦 tile）与 emu 差=更深渲染件（HUD
+精灵面——非显示源映射）。本卡交付=asm 全谱+格式定谳（交换 BCD A 级）+端口对表（映射
+同构）+渲染面定性。
+
+Evidence: DisplayBar E0C1 全谱+SPRWriteDigit E173+DataDisplayTbl E1B9+health 格式
+实证（Health+1&0xF/Health>>4——(32,2)→"22" 对表）+rust uw_display_bar 端口（2653-）
+对照+双截图 HUD 簇。
+Confidence: 92
