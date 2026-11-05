@@ -13419,6 +13419,44 @@ killenemy/scrollseam 全 match 0px 保持））✓
 不计 worktree）（物理真值=0px））④needs_revision 三件收口 ✓✓✓（post-fix trace 20:29+
 缺行集全同（除 1700）+帧号更正注）⑤TDD mutation+判据 ✓（497 测（差 4 注）））。
 
+## gate 键粒度改进件对抗复核（6434f7a2（证伪立场（独立重导证据（防弱化审计（最重）
+（5 重点）））））
+
+### verdict: pass（防弱化审计 ✓✓✓（≥3 逻辑不变+ratchet 零改动+旧键排除=移除假 flaky
+非弱化））+selftest 118/118+match 102 复现+闪帧卡 verdict 已交
+
+**② 防弱化审计（最重）✓✓✓**：
+- ✓ **classify_flaky ≥3 不一致→flaky 逻辑不变**（commit msg（「同键同码 ≥3 不一致→
+  flaky / 一致→清」）——判定阈值/逻辑**零改动**（只换码态键粒度））
+- ✓ **l4 ratchet 规则零改动**（gates/cli.py diff 中 ratchet/match 只增不减/blocked/
+  回退 **grep 零命中**（只动观测账判定不动 ratchet 面））——普通回退照判 ✓
+- ✓ **旧键排除=移除假 flaky（非弱化）**：旧格式键行（code_state 无 `+`）排除出判定
+  （保留作历史痕迹（不静默删））——排除的是**混账产物**（628bbabd 组 2 diff+3 match 同
+  HEAD 假 flaky）——**新键行（含 `+`）全量 ≥3 判定**（判定能力不减）
+
+**① 键语义核 ✓✓**：code_state_key=**HEAD12+sha256(HEAD+porcelain 脏文件内容摘要)[:12]**
+（格式 `HEAD12+dirty12`（`+` 分隔））——「同键=同码」语义（含未提交态）+clean 态 dirty
+指纹=sha256(HEAD)（确定性）+porcelain 不列 gitignore 生成物（完备性 ✓）——G① selftest
+三态实测 ✓（temp git repo（clean=5e2d11609ee0+239e6f2f26ae / dirty=…+57ed472650bd /
+clean2=…+239e6f2f26ae（**复原一致**）））
+
+**③ match 102 复现 ✓**：L4 实跑 **match 102 diff 6 blocked 0**（分母 108）+七格 **0px**
+（morphball f1300-1700 全零像素）+flaky=0（旧键排除后历史 flaky 组自然清（G③ 格清））
+
+**④ selftest G①②③ 红绿实录 ✓✓✓**：**118/118 通过**——G①（同 HEAD 脏/净→不同键（同键=
+同码））+G②（同键 ≥3 不一致→flaky/一致→清）+G③（旧键组排除出判定（历史不删（新键组
+一致⇒格清）））+C1①③（崩溃判旧矩阵封堵+新鲜度正对照）全绿
+
+**⑤ 闪帧卡 verdict 已交 ✓**：e3079c52+229f538b 复核 verdict（pass（核心全 ✓（E038 形式差
+注）））已在 docs/rounds/r7-porter-review.md 落档（随 6434f7a2 混入（**commit 卫生注**：
+门禁改动应单独成件（AGENTS.md §9）但 docs 被并行混入（内容完整）））
+
+**verdict**：gate 键粒度改进件 **pass**（②防弱化审计 ✓✓✓（最重（≥3 逻辑不变+ratchet 零
+改动+旧键排除=移除假 flaky 非弱化（新键行全量判定）））①键语义 ✓✓（HEAD+worktree 指纹
+（G① 三态实测（同键=同码）））③match 102 复现 ✓（102/108+七格 0px+flaky=0）④selftest
+✓✓✓（118/118）⑤闪帧卡 verdict 已交 ✓（commit 卫生注））——**对抗复核核 ✓**（证伪立场
+（独立重导证据（正确性核）））。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
