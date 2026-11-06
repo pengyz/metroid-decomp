@@ -1374,3 +1374,20 @@ f984-988 双侧敌 status=**[0,0,0,0,2,2] 全同**（slot 4/5=2 活——非空/
 Evidence: F034 Lx269/F09D 敌环分支（type/status 判）+f984-988 双侧敌 status 全同
 实录+[0,0,0,0,2,2]+F2ED 螺旋转判（:10019 邻）。
 Confidence: 91
+
+## 59. 螺旋转+碰撞内层考证卡（2026-11-06——螺旋转排除+8 面全同+内层深件）
+
+### 59.1 asm+实录（件 1-2）
+F2ED 螺旋转判（is_screw_attack_active 三门：status==1+gear&8+anim(0x0E/0x0C)——
+physics.rs:954）；**f983-988 双侧 screw=0/status=255 全同**（螺旋转排除 ✓）。
+### 59.2 8 面全同（件 2——排除链收口）
+位置（§50）/radius（§54）/算式（§56 和式）/i 帧（§57）/hi（§57）/敌态（§58）/
+螺旋转（本卡）/健康条件——**8 面全同但触发异**（rust f986 触/emu 不触）⇒**碰撞内层**
+（F1FA 求值——scroll dir/position hi/Temp 语义）=唯一余面。
+### 59.3 停机报（件 5）
+碰撞内层（F1FA 求值链——scroll dir/position hi/Temp10-11 语义）=中件（8 面排除后
+唯一余）。本卡交付=螺旋转排除+8 面全同收口+内层定性。
+
+Evidence: F2ED 三门（physics.rs:954）+f983-988 双侧 screw/status 全同实录+8 面排除
+链（§50/54/56/57/58+本卡）。
+Confidence: 91
