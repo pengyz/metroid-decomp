@@ -857,3 +857,22 @@ Evidence: UpdateWorld:2497（归零）+6353/6674/6756（stx 三写者）+2233（
 0x10 算（rust 0x60=24 vs emu 0x50=20）+verifier OAM 全扫（emu 0x50-0x58 vs rust
 0x60-0x68）。
 Confidence: 91
+
+## 33. sprite 写者产数差考证卡（2026-11-06——OAM 前段对拍定谳+停机报）
+
+### 33.1 双侧 OAM 前段对拍（件 2——决定性）
+f1200 OAM 0x00-0x4F 逐条对：**rust 前段=20×同 sprite 星印**（tile 0x6E/y=17/attr=01
+/x=4E→0x90 递减 0x0A——IntroStar 恒印）vs **emu=富 sprite 集**（萨姆斯 8 条 CA/CB/DA/
+DB@y=45/3D+敌 8 条 0E/0D/1E/1D/2E/2D/3B/3C@y=A0/B0/B8+HUD 数字 A2 等）——**rust 游戏
+sprite 写者输出缺/被星印占**⇒产数差根=**星印写者 vs 游戏写者输出面**（非条目数微差）。
+### 33.2 asm 对照（件 1——行号锚）
+DrawSpriteObject（DE4A-DF19 帧流条目/终止判）+UpdateAllEnemies（F345 敌写者）+星印
+（LoadStarSprites/IntroStarsData——98AE/$6E00 源面）——写者全谱 §32.1 基上产数面。
+### 33.3 停机报（件 5）
+星印写者/游戏写者输出面（obj_draw_frame OAM 落位/星印覆写序）=更深件（条目数差源于
+动画帧流/星印写序——非微差）。本卡交付=OAM 前段对拍定谳（星印占位 vs 富 sprite 集
+——非猜：逐条实录）。
+
+Evidence: OAM 0x00-0x4F 逐条对拍（rust 20×0x6E 星印 vs emu 富集——全 DIFF 实录）+
+星印源（IntroStarsData $6E00）+写者全谱 §32.1。
+Confidence: 92

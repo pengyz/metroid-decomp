@@ -14221,6 +14221,35 @@ rust uw_display_bar（mainloop.rs:2681-（拷表 E0C7 循环（40B→OAM[X..X+40
 ④修径 ✓（⚠ \$5B 写者全谱需穷举（诚实注））⑤判据 ✓）——**对抗复核核 ✓**（证伪立场
 （独立重导证据（正确性核）））。
 
+## 游标+写者双修卡对抗复核（33b68b0c §32（证伪立场（独立重导证据（3 重点））））
+
+### verdict: pass（写者全谱 ✓✓✓+游标差源 ✓+修径/判据 ✓）
+
+**① 写者全谱核（最重）✓✓✓**：**5 写者行号锚逐行抽读全对表**：
+- ①CB29:2497（`ldx #$00`（`stx SpritePagePos`（帧首归零（Set start of sprite RAM
+  to $0200））））✓✓✓
+- ②6353（`stx SpritePagePos`（DrawSpriteObject 尾推进（Keep track of current
+  position in sprite RAM）））✓✓✓
+- ③6674（`stx SpritePagePos`（DisplayBar HUD 落位（Save new location in sprite RAM）））
+  ✓✓✓
+- ④6756（`stx SpritePagePos`（AddTanks 尾（Store new sprite page position）））✓✓✓
+- ⑤2233（fade-in init（Samus 起 Sprite00））✓
+- **序=UpdateWorld 归零→游戏精灵写者推进→DisplayBar HUD→tanks ✓✓✓**（与代码流一致）
+
+**② 游标差源核 ✓**：游标差 0x10=**rust 前段多 4 游戏 sprite**（HUD 落 0x60=24 sprite
+vs emu 0x50=20 sprite→**差 4 sprite×4B=0x10** ✓（算复算合））——**「sprite 写者产数差」
+定位 ✓**（obj_draw_frame 精灵条目/敌写者）——⚠ **具体哪个前段写者多产 4**（需
+obj_draw_frame 条目/敌写者 OAM 条数逐一对表（**诚实注**））——§30.4/§31 陈旧 dump 扫注
+已收 ✓（verifier 落点为准（0x50 vs 0x60））
+
+**③ 修径评估+判据 ✓**：sprite 写者产数差（obj_draw_frame 精灵条目数/敌写者 OAM 条数）
++游标管理=**中件**（产数差+游标双修）+L4 **102/108 保持**+499 测（差 4 注）+防回退面 ✓
+
+**verdict**：游标+写者双修卡 **pass**（①写者全谱 ✓✓✓（最重（5 写者行号锚逐行抽读
+全对表（序=归零→游戏精灵→HUD→tanks）））②游标差源 ✓（前段多 4 游戏 sprite（0x10 算
+合）（⚠ 具体写者产数差需逐一对表（诚实注）））③修径/判据 ✓（中件（L4 102+499 测）））——
+**对抗复核核 ✓**（证伪立场（独立重导证据（正确性核）））。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
