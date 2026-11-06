@@ -1783,13 +1783,6 @@ fn draw_enemy(mem: &mut crate::frame::FrameMemory, x: u8) {
             let oy = (sy + dy as i16 - 1) as u8;
             let ox = (sx + dx as i16) as u8;
             mem.write_ram(0x0200 + x_sprite, oy);
-            // 【第三写者径考证卡·[oamw3] 探针（临时——2026-11-06）】
-            if std::env::var("DSH_SPRITE_TRACE").is_ok() {
-                let n = crate::frame::mainloop::DIAG_ITER.load(std::sync::atomic::Ordering::Relaxed);
-                if n >= 1175 && n <= 1195 {
-                    eprintln!("[oamw3] n={} enemy_draw addr=0x{:04X} tile={:02X}", n, 0x0200u16 + x_sprite, b);
-                }
-            }
             mem.write_ram(0x0201 + x_sprite, b);
             mem.write_ram(0x0202 + x_sprite, attr);
             mem.write_ram(0x0203 + x_sprite, ox);

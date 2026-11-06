@@ -16,13 +16,6 @@ impl FrameMemory {
 
     /// RAM 写（2KB 镜像归一）。
     pub fn write_ram(&mut self, addr: u16, v: u8) {
-        // 【第四写者卡·OAM 生命周期 trace（临时——2026-11-06 升维：整帧写序）】
-        if std::env::var("DSH_SPRITE_TRACE").is_ok() && (0x0200..0x0300).contains(&addr) {
-            let n = crate::frame::mainloop::DIAG_ITER.load(std::sync::atomic::Ordering::Relaxed);
-            if n >= 1175 && n <= 1182 {
-                eprintln!("[oamlife] n={} 0x{:04X}←{:02X}", n, addr, v);
-            }
-        }
         // 【goal-轮80 Samus radiusY 写钩】0x301 写点（碰撞判径源）。
         if addr == 0x0301 && std::env::var("DSH_SPRITE_TRACE").is_ok() {
             use std::sync::atomic::Ordering;

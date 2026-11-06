@@ -148,13 +148,6 @@ pub fn obj_draw_frame(mem: &mut crate::frame::FrameMemory, page_index: u8) {
                               // bit5(0x20=priority 位)⇒左朝 sprite 不翻转（贴图错）。
             }
             mem.write_ram(0x0200u16.wrapping_add(x_sprite), oy);
-            // 【帧流深挖卡·OAM 写点归因探针（临时——2026-11-06）】
-            if std::env::var("DSH_SPRITE_TRACE").is_ok() {
-                let n = crate::frame::mainloop::DIAG_ITER.load(std::sync::atomic::Ordering::Relaxed);
-                if n >= 1175 && n <= 1195 {
-                    eprintln!("[oamw] n={} obj_draw addr=0x{:04X} tile={:02X}", n, 0x0200u16.wrapping_add(x_sprite), b);
-                }
-            }
             mem.write_ram(0x0201u16.wrapping_add(x_sprite), b);
             mem.write_ram(0x0202u16.wrapping_add(x_sprite), attr);
             mem.write_ram(0x0203u16.wrapping_add(x_sprite), ox);
@@ -392,13 +385,6 @@ pub fn draw_enemy(mem: &mut crate::frame::FrameMemory, page_index: u8) {
             let attr = cntrl05 ^ mirror_flags; // WriteSpriteRAM（:6324-6328）形
             if x_sprite + 4 <= 0x100 {
                 mem.write_ram(0x0200u16.wrapping_add(x_sprite), oy);
-                // 【帧流深挖卡·draw_enemy OAM 写点归因（临时——2026-11-06）】
-                if std::env::var("DSH_SPRITE_TRACE").is_ok() {
-                    let n = crate::frame::mainloop::DIAG_ITER.load(std::sync::atomic::Ordering::Relaxed);
-                    if n >= 1175 && n <= 1195 {
-                        eprintln!("[oamw2] n={} draw_enemy addr=0x{:04X} tile={:02X}", n, 0x0200u16.wrapping_add(x_sprite), b);
-                    }
-                }
                 mem.write_ram(0x0201u16.wrapping_add(x_sprite), b);
                 mem.write_ram(0x0202u16.wrapping_add(x_sprite), attr);
                 mem.write_ram(0x0203u16.wrapping_add(x_sprite), ox);

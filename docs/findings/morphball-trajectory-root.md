@@ -1054,3 +1054,10 @@ dump 语义面（采样点+偏移口径）=中件（工具面/oracle）。本卡
 Evidence: [oamlife] 9360 写全程 trace（前段游戏集 ✓+0x6E@sprite27+）+dump 前段 0x6E
 +iram 偏移口径注（$0100 基 vs 0x0200 裸址）。
 Confidence: 91
+
+> 【2026-11-06 dump 偏移口径核定谳（§42.4——dump 偏移口径核卡）】①dump 口径 ✓
+> **无假差**：dump[0x200-0x20F]=trace 末写**逐字节同**（17 6E 01 4E...）——dump=
+> trace 末写态 ✓（offset 0x200 基双侧同）；②**png-OAM 一致 ✓**（rust png 块形=0x6E
+> stamps 渲染✓/emu png "EN"=HUD sprite 0x76/0x7F✓）；③**0x6E stamps=游戏写者后
+> 覆写者**（y=17/x 递减星域形——覆盖前段游戏集+HUD 区 0x50-0x68）——**第四写者
+> 真存在**（§34 星域形归因方向 ✓）——写者身份（call-stack 探针）=下步。
