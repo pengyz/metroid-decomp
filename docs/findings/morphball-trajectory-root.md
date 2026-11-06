@@ -1009,3 +1009,22 @@ gate 面核（谁在游戏帧调 apply_title_step）=修 gate 靶。
 Evidence: [oamw4] 探针（apply_title_step 560 OAM 写——0x0201←0x6E 多次+0x0200-0x0B
 ←F0）+menu_choose title:641（0x0201←0x6E 源）+go_main_routine gate（§37.2）。
 Confidence: 92
+
+## 41. gate 覆盖补修卡（2026-11-06——窗过滤实录+gate 生效+源再开停机报）
+
+### 41.1 窗过滤实录（件 2——[oamw4] 窗过滤）
+**f1200 期（DIAG_ITER 1175-1195）apply_title_step OAM 写=零** ✓——**gate ✓ 生效**
+（go_main_routine gate 挡 main_title_routine——游戏帧 apply_title_step 不调）——
+§40「gate 缺口」**证伪更正**（无窗探针 560 写=title 期全程——窗过滤实录）。560 写
+=menu_choose 光标写（title 期正常应用 ✓）。
+### 41.2 0x6E stamps 源再开（件 2）
+dump（f1200）=0x6E×20 stamps vs 探针（1175-1195）游戏写者写 CA/CB（敌环=萨✓/obj=
+敌✓）——**探针时写值 ≠ dump 值**⇒**时序/dump 面**（写者输出后被覆/dump 采样点 vs
+写点）=深件（件 5 情形）。
+### 41.3 停机报（件 5）
+0x6E stamps 源（dump-vs-写点时序——谁在 f1200 后覆写 CA/CB→0x6E）=中件深挖。本卡
+交付=窗过滤实录（gate 生效✓——§40 更正）+源再开定性。
+
+Evidence: [oamw4] 窗过滤（1175-1195 零写——gate 生效）vs 无窗 560 写（title 期）+
+[oamw]/[oamw3] 游戏写者（CA/CB@0x00-0x1C/敌@0x220+）vs dump 0x6E stamps。
+Confidence: 91

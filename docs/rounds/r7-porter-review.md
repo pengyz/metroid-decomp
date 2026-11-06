@@ -14484,6 +14484,35 @@ sprite 对✓（与 emu 同位同 tile）/draw_enemy 无写/0x6E×20=第三写�
 写者收窄 ✓✓（OAM 全谱（余点 grep（0x00-0x4F 写者未命中（窗后候选（窗扩展必要性）））））
 ③判据 ✓（L4 102+499 测））——**对抗复核核 ✓**（证伪立场（独立重导证据（正确性核）））。
 
+## 窗后写者钉定卡对抗复核（6b302942 §40（证伪立场（独立重导证据（4 重点））））
+
+### verdict: pass（一击定谳 ✓✓✓+gate 缺口 ✓✓+修径 ✓+判据 ✓）
+
+**① 一击定谳核（最重）✓✓✓**：**[oamw4] 探针 560 写实录**——**apply_title_step
+（title_state.rs:243）=0x6E 写者 ✓✓✓**（0x0201←0x6E 多次=menu_choose 光标写
+（title:641 `w.push((0x0201, 0x6E))`）经 events 应用！）——§39「窗后写者」**钉定**
+=**apply_title_step 应用径**（非游戏写者/非帧末他者）✓✓✓——「menu_choose 光标写经
+events 应用」链 ✓（title:641 源→events→apply（title_bridge.rs:118））——**一击确证** ✓✓✓
+
+**② gate 缺口核 ✓✓**：
+- **矛盾确在** ✓：GameMode=0x00（游戏态（§34.1/§37.2 gate））但 apply_title_step
+  **仍写 OAM**（560 写实录）⇒**gate 覆盖缺口** ✓✓
+- **调用链核** ✓：apply_title_step←title_bridge:118←main_title_routine←go_main_routine
+  （GameMode≠0 gate）——**gate 应挡**（GameMode=0⇒main_title_routine 不调）——但
+  [oamw4] 实录 560 写⇒**他径调用/写面在 gate 后仍应用**——⚠ **具体他径未显式定位**
+  （诚实注（cached events/过渡态/其他调用径（需进一步核）））
+
+**③ 修径评估 ✓**：gate 覆盖补（apply_title_step 调用径 gate/游戏帧应用面判）+TDD——
+gate 判据 asm 对应（emu 星域写者停写条件——GameMode 判/TitleRoutine 例行序）✓
+
+**④ 判据实况 ✓**：L4 **102/108 保持**+499 测（差 4 注）+防回退面 ✓
+
+**verdict**：窗后写者钉定卡 **pass**（①一击定谳 ✓✓✓（最重（apply_title_step=0x6E 写者
+（560 写实录（menu_choose 光标经 events 应用））（§39 窗后写者钉定）））②gate 缺口 ✓✓
+（GameMode=0 但 apply_title_step 仍写（调用链核（他径未显式定位（诚实注））））③修径 ✓
+（gate 覆盖补+TDD（asm 先行））④判据 ✓（L4 102+499 测））——**对抗复核核 ✓**（证伪立场
+（独立重导证据（正确性核）））。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
