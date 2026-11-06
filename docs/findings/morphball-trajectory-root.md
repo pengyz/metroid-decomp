@@ -1099,3 +1099,21 @@ AddTanks=0x00 的推进断点）。本卡交付=asm 全径+rust 同构对照+游
 Evidence: LE14A/E17B 全径+rust mainloop:2734- 同构对照+罐落 sprite 0-19（backtrace
 §43）+游标=0x00 矛盾。
 Confidence: 91
+
+## 45. 游标推进链卡（2026-11-06——$5B trace+回绕定谳+修靶）
+
+### 45.1 $5B 推进 trace（件 1——[cursor] 48 写实录）
+每 iter $5B 序=**00→10→20→44→6C→68**（6 写：UpdateWorld 归零/写者 0x10/0x20/
+DisplayBar 表拷 0x44→0x6C（+40）/收 0x68）——推进链 ✓ 在（非断）。
+### 45.2 回绕定谳（件 2——罐数过大致 u8 回绕）
+罐 loop（AddTanks x+=4 u8）从 0x6C+4 推进 **0xFF→0x00 回绕**→罐落 sprite 0-19
+（0x00-0x4C 覆游戏集！）——**罐数（0x6877 EnergyTankCount）过大致 20+ 罐回绕**
+（asm 罐数=小（1-5）不回绕）⇒修靶=**罐数源（0x6877 vs asm EnergyTankCount 地址）
+或罐 loop 回绕保护**。
+### 45.3 停机报余
+修+TDD（罐数对/回绕护——f1200 OAM 前段游戏集+罐位+HUD 全同）=下卡（修径明确：
+罐数源考证+回绕）。本卡交付=$5B trace（推进链✓）+回绕定谳（非猜：序+backtrace 罐位）。
+
+Evidence: [cursor] 48 写序（00/10/20/44/6C/68）+[w6e] backtrace 罐位（0x6C+→回绕→
+0x00-0x4C）+asm EnergyTankCount（constants）+rust 0x6877 罐数源。
+Confidence: 91
