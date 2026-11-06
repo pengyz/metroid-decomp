@@ -896,3 +896,9 @@ sprite 写者输出面（obj_draw_frame 帧数据流→OAM tile 落值语义—�
 Evidence: zp[$1D]/[$C3] 双侧同（0x00/0x00）+OAM 前段对拍（§33 逐条）+STAR_SPRITE_SRC
 （title_state.rs）+写者全谱（§32.1/§33.2）。
 Confidence: 91
+
+> 【2026-11-06 判别补（§34.2——帧数据流输出面考证卡一击）】①**星印写者没停** ✓
+> （非游戏写者写错）：title/mod.rs:641 `w.push((0x0201, 0x6E))`+x 递减 −0x0A 星位形
+> =星印写者输出实证（OAM 前段 20×0x6E=其 stamps）；②**矛盾点**：GameMode=0x00
+> （游戏态）但星印写者仍写 OAM——**停写 gate 缺/未接**（title 模块星印写者在游戏态
+> 仍调）；③修径=星印写者停写 gate（GameMode/状态判）+TDD（f1200 OAM 前段=游戏集）。
