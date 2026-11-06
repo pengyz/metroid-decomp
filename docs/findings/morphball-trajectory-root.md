@@ -1317,3 +1317,25 @@ Confidence: 92
 Evidence: [eval] 两轮零命中实录（窗 1160-1182 误/960-995 零）+radius 全同（§54）+
 几何矛盾（§54.2）+py/px 读径（0x0440/0x0441）。
 Confidence: 90
+
+## 56. 第三写点径考证卡（2026-11-06——2543 径全谱+f986 触发实录）
+
+### 56.1 mainloop:2543 径全谱（件 1——行号锚）
+「敌×萨姆斯（asm :10009-10019——碰撞伤害）」：InvincibleDelay==0+判盒（ey/ex=
+0x0400+x+0/1（敌 y/x）+ery/erx=wram 0x6AF4+x+1/2（敌 radius））+**hi 距调**（s_hi=
+0x030C&1/e_hi=wram 0x6AF4+x+7&1——hi 差⇒±0x100）→**radius 和式**（dy_adj<sry+ery
+/dx_adj<srx+erx）→F2ED 螺旋转判→SamusHurt($010F)←$80+LF270 击退+LF306 伤害
+（AreaEnemyDamage→HealthChange）✓。**判定式=radius 和**（与 mainloop:2466 的 +4
+固定式**不同**！）。
+### 56.2 f986 触发实录（件 2）
+此径 f986：dy=22 < sry+ery=23 ✓ **应触**（hi 同（双侧 0x030C/wram 0x6AF4+x+7 同）→
+dy_adj=22）——**rust 触发 ✓ 合理**（radius 和式）；emu 未触⇒**emu 侧条件差**（i 帧
+（InvincibleDelay≠0 skip）/hi/螺旋转/其他判）——emu 条件考证=下步。
+### 56.3 停机报余
+emu 侧条件差（i 帧状态/hi/螺旋转——f986 窗 emu InvincibleDelay/hi 实录）+2543/2466
+双径语义（+4 固定 vs radius 和——2466 径疑冗余/误）=中件。本卡交付=2543 径全谱+
+f986 触发实录（非猜：mainloop:2543 逐行+几何算式）。
+
+Evidence: mainloop:2543-2570 逐行（radius 和式+hi 距调+三件链）+:10009-10019 asm 对应
++f986 几何算式（22<23 ✓）+双径语义（2466 +4 vs 2543 和式）。
+Confidence: 92
