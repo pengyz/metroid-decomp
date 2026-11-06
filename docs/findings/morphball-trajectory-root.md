@@ -1339,3 +1339,20 @@ f986 触发实录（非猜：mainloop:2543 逐行+几何算式）。
 Evidence: mainloop:2543-2570 逐行（radius 和式+hi 距调+三件链）+:10009-10019 asm 对应
 +f986 几何算式（22<23 ✓）+双径语义（2466 +4 vs 2543 和式）。
 Confidence: 92
+
+## 57. emu 条件考证卡（2026-11-06——条件实录+i 帧/hi 排除+敌分支定性）
+
+### 57.1 emu f986 窗条件实录（件 1）
+emu：**InvincibleDelay=0 ✓/hi=0 ✓**（f982-989 逐帧——与 rust 同！）——**i 帧免伤
+/hi 距调差排除** ✓。健康：emu (0,3) 恒/rust f986 (32,2)——触发差不变。
+### 57.2 敌分支定性（件 2）
+emu 未触=**敌碰撞分支候选**（CollisionDetection F034 敌环 type/status 判——该敌
+（killenemy 场景）进不进碰撞检？）或**螺旋转**（F2ED skip）——asm 敌环分支考证
+（敌类型/状态→碰撞检入径）=下步。
+### 57.3 停机报（件 5）
+敌碰撞分支（F034 敌环 type/status 判+该敌入径）+螺旋转判=中件。本卡交付=条件实录
+（i 帧/hi 排除——非猜：逐帧实录）+敌分支定性。
+
+Evidence: emu InvincibleDelay=0/hi=0 逐帧实录（f982-989）+rust 同+健康差（rust f986
+(32,2) vs emu (0,3)）+F034 敌环（§52.1）。
+Confidence: 91
