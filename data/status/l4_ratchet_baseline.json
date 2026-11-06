@@ -63,12 +63,12 @@
         },
         "950:combo-action": {
           "state": "diff",
-          "diff_pixels": 250,
+          "diff_pixels": 46,
           "total_pixels": 61440
         },
         "1200:end": {
-          "state": "diff",
-          "diff_pixels": 15517,
+          "state": "match",
+          "diff_pixels": 0,
           "total_pixels": 61440
         }
       }
@@ -108,12 +108,12 @@
         },
         "1000:neighbor-room": {
           "state": "diff",
-          "diff_pixels": 9464,
+          "diff_pixels": 46,
           "total_pixels": 61440
         },
         "1150:end": {
           "state": "diff",
-          "diff_pixels": 9469,
+          "diff_pixels": 46,
           "total_pixels": 61440
         }
       }
@@ -188,7 +188,7 @@
         },
         "960:end": {
           "state": "diff",
-          "diff_pixels": 46,
+          "diff_pixels": 174,
           "total_pixels": 61440
         }
       }
@@ -759,6 +759,16 @@
       "reason": "gate 键粒度改进件（tools/l4_diff_run.py code_state_key+classify_flaky 旧键排除——gates/cli.py selftest G①②③ 红→绿 118/118）：flaky 伪象根除（同 HEAD 不同 worktree 混账→新键 HEAD12+dirty12 语义「同键=同码」；旧格式键行排除出判定保留历史）——**七格 flaky 全清→match 96→102 真增益锁**（morphball f1300-1700 全 ✅match 0/61440）；确认无回退：防回退面（collide f800/jumpledge f730/killenemy/scrollseam）全 match 0px 保持+其余 6 diff 无恶化",
       "match": 102,
       "diff": 6,
+      "blocked": 0,
+      "cells_total": 108
+    },
+    {
+      "ts": "2026-11-06T08:56:38+00:00",
+      "kind": "anchor",
+      "evidence": "",
+      "reason": "read_ram WRAM 分派修（18 层链根——WRAM 区未分派→2KB 镜像垃圾）收口：f1200 OAM 0/256+png 0/61440 双零 match（1015px→0）——L4 102→103 增益锁；终审 pass（7a37978d 五面全过（独立复验双零+500 测+gates PASS=13））",
+      "match": 103,
+      "diff": 5,
       "blocked": 0,
       "cells_total": 108
     }
