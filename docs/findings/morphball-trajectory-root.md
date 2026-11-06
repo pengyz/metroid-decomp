@@ -1135,3 +1135,21 @@ Evidence: rust state wram[0x877]=0（f1180-1200 实录）+[w6e] backtrace 罐写
 :2749）+rust AddTanks if tanks==0 return（2737）+EnergyTankCount $6877（constants
 :1208）。
 Confidence: 91
+
+## 47. 罐写条件矛盾解卡（2026-11-06——读径映射错破案+全链根定谳）
+
+### 47.1 一击破案（件 1-2——[tank] 探针）
+AddTanks tanks 读（mainloop:2737 read(0x6877)）=**255（0xFF 垃圾！）** vs state
+wram[0x877]=0——**读径映射错**（read_ram(0x6877)≠wram[0x877]——地址换算/映射径差）
+⇒**255 罐→u8 回绕→覆前段游戏集+HUD=全链根**（§33-46 全链收口！）。
+### 47.2 全链根（件 2——16+ 层链终）
+读径映射错（0x6877 读=垃圾 255）→罐数 255→回绕覆写→OAM 前段/HUD 覆→png 块形/EN
+差——**根=读径映射**（read_ram 对 0x6877 的映射 vs wram[0x877]）。修靶=read_ram
+映射修（0x6877→wram[0x877]）+TDD。
+### 47.3 停机报余
+修+TDD（读径映射——f1200 OAM 全段双腿 0 差锚）=下卡（修径明确：read_ram 映射）。本卡
+交付=一击破案（255 垃圾读——非猜：[tank] 实录+state 对照）+全链根定谳。
+
+Evidence: [tank] 探针（read(0x6877)=255 实录）vs state wram[0x877]=0（对照）+
+EnergyTankCount $6877（constants:1208）+全链（§33-46）收口。
+Confidence: 92
