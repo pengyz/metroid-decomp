@@ -242,6 +242,10 @@ pub fn effect_event(tag: (u8, u8, u8)) -> Vec<(u16, u8)> {
 /// RAM/WRAM 归一：addr<$2000 → 镜像 &0x7FF；$6000-$7FFF → wram；其他域 fail-loud。
 pub fn apply_title_step(ram: &mut [u8], wram: &mut [u8], events: &[(u16, u8)]) {
     for &(addr, v) in events {
+        // 【窗后写者钉定卡·apply_title_step OAM 写归因（临时——2026-11-06）】
+        if std::env::var("DSH_SPRITE_TRACE").is_ok() && addr >= 0x200 && addr < 0x300 {
+            eprintln!("[oamw4] apply_title_step OAM 0x{:04X}←{:02X}", addr, v);
+        }
         if addr < 0x2000 {
             ram[(addr as usize) & 0x7FF] = v;
         } else if (0x6000..0x8000).contains(&addr) {

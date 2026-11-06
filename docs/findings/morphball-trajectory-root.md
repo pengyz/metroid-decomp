@@ -990,3 +990,22 @@ Evidence: OAM 写点全谱 grep（boot:144/1785-1788/2670-2751/150）+[oamw3] �
 萨 8 sprite CA/CB...@0x0200-0x1C 与 emu 同）+dump 0x6E stamps（两路探针零命中——
 窗后写者）。
 Confidence: 91
+
+## 40. 窗后写者钉定卡（2026-11-06——apply_title_step 一击定谳+gate 缺口）
+
+### 40.1 一击定谳（件 1——[oamw4] 探针 560 写实录）
+**apply_title_step（title_state.rs:243）=0x6E 写者 ✓✓✓**（0x0201←0x6E 多次=
+menu_choose 光标写（title:641 `w.push((0x0201, 0x6E))`）经 events 应用！）——§39
+「窗后写者」钉定=**apply_title_step 应用径**（非游戏写者/非帧末他者）。
+### 40.2 gate 缺口（件 2-3）
+**矛盾**：GameMode=0x00（游戏态——§34.1/§37.2 gate）但 apply_title_step **仍写 OAM**
+（560 写实录）⇒**gate 覆盖缺口**：go_main_routine gate（GameMode≠0⇒title 路）挡
+main_title_routine 入口，但 **apply_title_step 经他径调用/写面在 gate 后仍应用**——
+gate 面核（谁在游戏帧调 apply_title_step）=修 gate 靶。
+### 40.3 停机报（件 6 余+修径）
+修径=**gate 覆盖补**（apply_title_step 调用径 gate/游戏帧应用面判）+TDD。本卡交付=
+一击定谳（apply_title_step=0x6E 写者——非猜：560 写实录）+gate 缺口定性。
+
+Evidence: [oamw4] 探针（apply_title_step 560 OAM 写——0x0201←0x6E 多次+0x0200-0x0B
+←F0）+menu_choose title:641（0x0201←0x6E 源）+go_main_routine gate（§37.2）。
+Confidence: 92
