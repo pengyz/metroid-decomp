@@ -876,3 +876,23 @@ DrawSpriteObject（DE4A-DF19 帧流条目/终止判）+UpdateAllEnemies（F345 �
 Evidence: OAM 0x00-0x4F 逐条对拍（rust 20×0x6E 星印 vs emu 富集——全 DIFF 实录）+
 星印源（IntroStarsData $6E00）+写者全谱 §32.1。
 Confidence: 92
+
+## 34. 星印写者停写时机考证卡（2026-11-06——双侧判别+停机报）
+
+### 34.1 双侧判别（件 2）
+GameMode（zp $1D）**双侧同=0x00** ✓+IntroStarOffset（$C3）双侧同=0x00 ✓——
+「星印停写条件（GameMode 转换）差」**排除**（停写条件同）⇒OAM 前段差≠停写时机差。
+rust OAM 前段=20×tile 0x6E 重复（§33）vs emu 富集——**差在 sprite 写者输出面**
+（obj_draw_frame 帧数据流→OAM tile 落值——tile 0x6E 恒印=帧数据读/条目产数面）。
+### 34.2 asm/rust 对照（件 1——行号锚）
+星印（LoadStarSprites 98AE/IntroStarsData $6E00——title_state.rs STAR_SPRITE_SRC
+同源）；游戏写者（DrawSpriteObject DE4A-DF19/UpdateAllEnemies F345）——写者全谱
+§32.1/§33.2 基上停写/起写判据面。
+### 34.3 停机报（件 5）
+sprite 写者输出面（obj_draw_frame 帧数据流→OAM tile 落值语义——条目数/帧流数据/终止
+判）=更深件（动画帧数据流语义——件 5 情形）。本卡交付=双侧判别（GameMode 同排除
+停写差——非猜）+输出面定性。
+
+Evidence: zp[$1D]/[$C3] 双侧同（0x00/0x00）+OAM 前段对拍（§33 逐条）+STAR_SPRITE_SRC
+（title_state.rs）+写者全谱（§32.1/§33.2）。
+Confidence: 91
