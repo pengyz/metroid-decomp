@@ -11,11 +11,22 @@ pub use crate::state::{FrameMemory, Registers};
 impl FrameMemory {
     /// RAM 读（2KB 镜像归一）。
     pub fn read_ram(&self, addr: u16) -> u8 {
+        // 【read_ram 映射修（2026-11-06 全链根——$6877 读 255 垃圾破案）】$6000-$7FFF
+        // =WRAM 分派（asm constants：EnergyTankCount $6877=$6000+0x877）——旧形
+        // `& 0x7FF` 镜像归一把 WRAM 读混入 ram[0x077] 垃圾。同族修（分派非点修）。
+        if (0x6000..0x8000).contains(&addr) {
+            return self.wram[addr as usize - 0x6000];
+        }
         self.ram[(addr as usize) & 0x7FF]
     }
 
     /// RAM 写（2KB 镜像归一）。
     pub fn write_ram(&mut self, addr: u16, v: u8) {
+        // 【read_ram 映射修同族（2026-11-06）】WRAM 分派（写径同读径）。
+        if (0x6000..0x8000).contains(&addr) {
+            self.wram[addr as usize - 0x6000] = v;
+            return;
+        }
         // 【goal-轮80 Samus radiusY 写钩】0x301 写点（碰撞判径源）。
         if addr == 0x0301 && std::env::var("DSH_SPRITE_TRACE").is_ok() {
             use std::sync::atomic::Ordering;
@@ -190,6 +201,18 @@ impl FrameMemory {
     }
 #[cfg(test)]
 mod tests {
+    /// 【read_ram 映射修 TDD（2026-11-06）】$6877（WRAM $6000+0x877）读=wram[0x877]
+    /// ——旧形 & 0x7FF 误读 ram[0x077]（255 垃圾——§47 全链根）。
+    #[test]
+    fn read_ram_wram_dispatch_6877() {
+        let mut m = crate::state::FrameMemory::default();
+        m.wram[0x877] = 3; // EnergyTankCount=3（asm 语义：小值 1-5）
+        assert_eq!(m.read_ram(0x6877), 3, "WRAM 分派（$6877→wram[0x877]）");
+        m.write_ram(0x6877, 5);
+        assert_eq!(m.wram[0x877], 5, "写径同分派");
+        assert_eq!(m.read_ram(0x0077), m.ram[0x077], "ram[0x077] 不受影响（镜像归一保持）");
+    }
+
     use super::*;
 
     /// 寄存器面不漏 RAM 镜像（write_ram 的 &0x7FF 归一会把 $2000 漏进 $0000——

@@ -1153,3 +1153,21 @@ wram[0x877]=0——**读径映射错**（read_ram(0x6877)≠wram[0x877]——地
 Evidence: [tank] 探针（read(0x6877)=255 实录）vs state wram[0x877]=0（对照）+
 EnergyTankCount $6877（constants:1208）+全链（§33-46）收口。
 Confidence: 92
+
+## 48. read_ram 映射修卡（2026-11-06——全链根修+f1200 达 match）
+
+### 48.1 根修（件 1-2——read_ram WRAM 分派）
+read_ram=`ram[addr&0x7FF]`（2KB 镜像归一——**WRAM 区未分派**）——0x6877&0x7FF=0x077
+→ram[0x077] 垃圾 255 ✓（§47 根）——**修=WRAM 分派**（$6000-$7FFF→wram[addr-0x6000]
+——read_ram/write_ram 同族修（分派非点修））+TDD（read_ram_wram_dispatch_6877 ✓）。
+### 48.2 f1200 达 match（件 3-4——判据全过）
+修后 f1200：**OAM 全段 0/256 差 ✓✓✓**（游戏集 CA/CB+HUD 0x76/0x7F/0x3A+罐位全对）
++**png 0/61440 差 ✓✓✓**——**f1200 达 match**（1015px→0——HUD 簇全消！）——
+L4 增益（102→103）待锁；503 测绿（462+3+1 过）；防回退面（morphball 七格）待复核。
+### 48.3 全链收口（18 层链）
+§12-48 全链：BCD 语义→HUD 显示→CHR→OAM→游标→罐→读径映射——**根=read_ram WRAM
+分派缺失**（一处修全链消）。判据全过 ✓（f1200 match）。
+
+Evidence: read_ram 原体（& 0x7FF）+WRAM 分派修+TDD 读测+f1200 OAM 0/256+png
+0/61440 双零实录。
+Confidence: 93
