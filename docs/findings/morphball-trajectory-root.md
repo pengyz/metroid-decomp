@@ -1034,3 +1034,23 @@ dump（f1200）=0x6E×20 stamps vs 探针（1175-1195）游戏写者写 CA/CB（
 Evidence: [oamw4] 窗过滤（1175-1195 零写——gate 生效）vs 无窗 560 写（title 期）+
 [oamw]/[oamw3] 游戏写者（CA/CB@0x00-0x1C/敌@0x220+）vs dump 0x6E stamps。
 Confidence: 91
+
+## 42. 第四写者/dump 时序卡（2026-11-06——生命周期 trace 升维+dump 语义面停机报）
+
+### 42.1 生命周期 trace（件 1-2——升维（16 层链建议采纳）——[oamlife] 9360 写）
+write_ram 钩子 OAM 全写序 trace（行 1175-1182=f≈1183-1200 含 f1200）：
+①前段（sprite 0-19=0x0200-0x024F）写 **CA/CB/DA/DB/CC/CD/DC/DD（萨 8）+0E/0D/1E/
+1D/2E/2D/3B/3C（敌 8）富集 ✓**（游戏集对——与 emu OAM 前段同！）；②**0x6E 写在
+sprite 27+**（0x026D 起步 4——20 stamps）。
+### 42.2 dump 语义面（件 1——dump≠trace 写位）
+dump（f1200 .ram.hex）前段=0x6E stamps vs trace 前段写=游戏集——**dump≠trace 写位**
+⇒**dump 语义面**（采样点/映射（dump 读的是哪段 OAM？iram 偏移？））=下步（非写者
+径——写序全程对 ✓）。⚠ iram 偏移疑：dump 的 OAM 位=iram[0x100+]（基 $0100）vs
+trace 写=0x0200+（ram 基）——**偏移口径差候选**（dump 解析偏移）。
+### 42.3 停机报（件 6——升维面收口）
+dump 语义面（采样点+偏移口径）=中件（工具面/oracle）。本卡交付=生命周期 trace 升维
+（整帧写序全程——16 层链升级建议采纳）+dump 语义面定性（非猜：9360 写实录）。
+
+Evidence: [oamlife] 9360 写全程 trace（前段游戏集 ✓+0x6E@sprite27+）+dump 前段 0x6E
++iram 偏移口径注（$0100 基 vs 0x0200 裸址）。
+Confidence: 91
