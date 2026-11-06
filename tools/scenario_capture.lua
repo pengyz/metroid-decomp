@@ -279,6 +279,30 @@ if PLAN.coverage then
   log("coverage mode: " .. covMode)
 end
 
+
+-- ---------------- 动态 trace 终判卡（2026-11-06）：CollisionDetection 执行序采样 ----------------
+-- PLAN.cputrace_addrs = {addr...}（bank7 $C000-$FFFF 绝对址）+ PLAN.cputrace_window = {lo,hi}
+-- [cputrace] n=<iter> pc=<addr> a/x/y/sp 采样（exec 断点）。
+local ctAddrs = PLAN.cputrace_addrs or {}
+if #ctAddrs > 0 then
+  local ctWin = PLAN.cputrace_window or {0, 0}
+  local ctLog = io.open(string.format("%s/%s.cputrace.log", PLAN.out_dir, name), "wb")
+  local function ctHit()
+    local st = emu.getState()
+    local n = st and st.frameCount or 0
+    if n >= ctWin[1] and n <= ctWin[2] then
+      ctLog:write(string.format("[cputrace] f=%d pc=%04X a=%02X x=%02X y=%02X sp=%02X\n",
+        n, st["cpu.pc"] or 0, st["cpu.a"] or 0, st["cpu.x"] or 0, st["cpu.y"] or 0, st["cpu.sp"] or 0))
+      ctLog:flush()
+    end
+  end
+  for _, a in ipairs(ctAddrs) do
+    local ok = pcall(emu.addMemoryCallback, ctHit, "execute", a, a)
+    if not ok then pcall(emu.addMemoryCallback, ctHit, 2, a, a) end
+  end
+  log("cputrace: " .. #ctAddrs .. " addrs window " .. ctWin[1] .. "-" .. ctWin[2])
+end
+
 -- ---------------- r3：待查段指令入口覆盖（PLAN.coverage_pc）
 -- ⚠ 语义演进（probe_dispatch_diag v4/v7 A 级实证，2026-10-15）：
 --   字符串 "execute" 注册=**劣化语义**（操作数/数据读，opcode fetch 不可见——r2 F1

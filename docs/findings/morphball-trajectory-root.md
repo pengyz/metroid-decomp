@@ -1420,3 +1420,23 @@ f986 弹碰撞条件差（emu 弹态/位置/AreObjectsTouching 判）+F1FA 内�
 Evidence: F1FA:10200-10261 全谱（双轴+hi+scroll dir）+:12214-12232（Skree 弹伤五件
 链——2466 对应）+Temp 语义（10262-10269）。
 Confidence: 92
+
+## 61. 动态 trace 终判卡（2026-11-06——cputrace 一击+内层深断点停机报）
+
+### 61.1 工具面（件 1——[cputrace] 扩）
+scenario_capture.lua 扩 **PLAN.cputrace_addrs**（exec 断点+PC/a/x/y/sp 采样）+
+cputrace_window ✓（analysis/_gen 注入 PLAN——gen+编辑径）——cputrace.log 2079 命中
+落档 ✓。
+### 61.2 emu 执行实录（件 2——F1FA 按槽序）
+f=975 窗（行 975-995≈f986）：**F1FA（CheckCollision）按槽执行**——x=0x40/0x30/
+0x20/0x10/0x00/0xA0/0x90/0x80...（**slot 0x40（killenemy 敌）✓ 进检！**）+y=0x07/
+0x00——**敌环全槽进径 ✓**（emu 侧执行序正常）——emu 未触=**内层 cmp 求值**（F1FA
+内 dy/dx/cmp 址）需深断点（本卡内层未及——探针面限）。
+### 61.3 停机报（件 6——备选）
+内层 cmp 深断点（F1FA 内 cmp 址（10235/10260 邻——y 轴 cmp Temp04/x 轴 cmp Temp05）
+采样）=下步（工具面已具——扩断点即采）。本卡交付=工具面（[cputrace] 扩）+执行实录
+（F1FA 全槽进径）+内层深断点定性。
+
+Evidence: [cputrace] 2079 命中（f=975 窗 F1FA 按槽序——slot 0x40 ✓）+scenario_capture
+.lua cputrace 扩+cputrace.log 落档。
+Confidence: 91
