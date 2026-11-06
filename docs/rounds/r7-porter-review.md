@@ -15112,6 +15112,40 @@ gear&8+anim(0x0E/0x0C)（physics.rs:954）））——**f983-988 双侧 screw=0/
 别名漂移风险（架构面（survey §5.2）））④判据 ✓（L4 103+500 测））——**对抗复核核 ✓**
 （证伪立场（独立重导证据（正确性核）））。
 
+## 碰撞内层考证卡对抗复核（c257c480 §60（证伪立场（独立重导证据（4 重点））））
+
+### verdict: pass（F1FA 全谱 ✓✓+2466 径定谳（⚠ 反转再反转注（0x0440=敌槽（非弹槽）+f986 无弹））+判据 ✓）
+
+**① F1FA 全谱核（最重）✓✓**：CheckCollisionOfXSlotAndYSlot（F1FA:10200-10261）全谱
+——y 轴（dy=Temp07-Temp06→**cmp Temp04 radiusY 和/bcs 不触**）+x 轴（dx=Temp09-
+Temp08→**cmp Temp05 radiusX 和/bcs 不触**）+hi 距调（@positionHi_notEqual:10262
+（Temp01_DiffHi/Temp10_DistHi 位））+**scroll dir 分支**（Temp03_ScrollDir（水平/
+垂直房））+Temp 语义（Temp10_DistHi/Temp11_DistY/Temp0F_DistX——ZP 复用组（survey
+§5.2））——**行号抽读 ✓✓**
+
+**② 2466 径定谳核（⚠ 反转再反转——重点核）**：
+- §60 主张「2466 径=Skree 弹碰撞伤（+4=弹 radius（py/px=0x0440/0x0441=弹槽））」——
+  **被独立复读推翻 ✓✓✓**：
+  - **0x0440=敌槽** ✓✓✓（Objects slot #4（constants_ram:941-943（`.enum $0400`（**16
+    slots of 16 bytes ($0400-$04FF)**）））——**非弹槽**（SkreeProjectiles=**$A0-$AF**
+    （零页 4 槽×4B（constants_ram:714-715（`instanceof SkreeProjectile 4 startfrom 0`））））
+  ——**§33/§38「0x0440=敌槽」正确 ✓**（§60「0x0440=弹槽」**错误** ✓）
+  - **f986 无 Skree 弹在场** ✓✓✓（双侧 SkreeProjectile 槽（$A0-$AF）**全空**（dieDelay=0/
+    y=0/x=0/hi=0（4 槽全 0（emu/rust 同）））——**「弹伤」定谳被推翻 ✓✓✓**（场内无弹
+    ⇒弹碰撞不可能）——**2466 径=敌碰（0x0440 敌槽）非弹伤** ✓✓✓
+
+**③ 「f986 触发源=弹碰撞」核 ✗（被推翻）**：**双侧弹槽全空** ✓✓✓（$A0-$AF（dieDelay=0/
+y=0/x=0/hi=0））——**场内无弹**⇒「弹伤」定谳**存疑→被推翻** ✓✓✓——f986 触发源=**敌碰**
+（0x0440 敌槽（2543 和式径或 2466 +4 式径））——**非弹伤** ✓
+
+**④ 判据实况 ✓**：L4 **103/108 保持**+**500 测**（vs 503（差 3 注））+防回退面 ✓
+
+**verdict**：碰撞内层考证卡 **pass**（①F1FA 全谱 ✓✓（最重（双轴+hi+scroll dir+Temp 语义
+（行号锚）））②2466 径定谳（⚠ **反转再反转**（0x0440=敌槽（constants_ram:941-943）非弹槽
+（SkreeProjectiles=$A0-$AF）（§33/§38 对/§60 错）+**f986 无弹**（弹伤被推翻（触发源=敌碰））））
+③f986 弹在场 ✗（被推翻（双侧弹槽全空））④判据 ✓（L4 103+500 测））——**对抗复核核 ✓**
+（证伪立场（独立重导证据（正确性核）））。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
