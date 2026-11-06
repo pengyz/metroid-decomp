@@ -797,3 +797,11 @@ Confidence: 91
 > **矛盾收窄到单一假说**：dump-vs-render 时序（CHR[0x760] 渲染时刻 vs dump 时刻值差
 > ——运行时 CHR 写序）——修径=时序验证（dumpPpu 采样点改造（帧内多次 dump）——
 > tools/oracle 面（单独 commit））。
+
+> 【2026-11-06 第五面定谳（§30.4——破案：非时序）】时序假说**证伪**（第五面直判）：
+> ①调色板 3F10-3F1F 双侧**全同**✓（色差排除）；②**OAM 全扫（0x00-0xFF）：rust
+> **零个 HUD tile**（0x76/0x7F/0x3A 无）vs emu OAM+0x60-0x6C 三 sprite 在 ✓✓**——
+> **rust DisplayBar OAM 写丢失**（写未落/落位错/后写覆）⇒"块形"=HUD sprite 缺席下
+> 背景瓦透出（非 tile 图案差！）——**矛盾收窄到可修点：DisplayBar OAM 写径**
+> （SpritePagePos 游标/写落位/覆写序）。修径=uw_display_bar OAM 写路径考证+修+TDD
+> （f1200 HUD OAM 双腿 0 差锚）。时序假说/CHR 面全排除（CHR✓/tile✓/PPUCTRL✓/调色板✓）。
