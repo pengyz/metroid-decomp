@@ -969,3 +969,24 @@ apply_title_step（title_state.rs:243）sprite_copy 事件（$6E00→OAM）/其�
 Evidence: [oamw] 探针（obj_draw_frame 0x0220-0x0240 敌 tile 9 条/iter——与 emu 同）+
 [oamw2]（draw_enemy 窗内无写）+0x6E 前段 stamps 无归因（两路探针零命中）。
 Confidence: 91
+
+## 39. 第三写者径考证卡（2026-11-06——OAM 写点全谱+一击续+停机报）
+
+### 39.1 OAM 写点全谱（件 1——行号锚）
+全谱 grep：boot.rs:144/mainloop.rs:1785-1788（**敌帧流 OAM 环**——EN_FRAMES/EN_PLACES
+——sprite.rs:387 非此路！）/2670-2751（DisplayBar 族）/sprite.rs:150（obj_draw_frame）
+——排除 obj_draw_frame（敌 sprite✓§38）+五写者（§32.1）后**候选=mainloop 敌帧流环
+（1785）**。
+### 39.2 一击续（件 2——[oamw3] 探针）
+mainloop 敌帧流环写**萨姆斯 8 sprite**（CA/CB/DA/DB/CC/CD/DC/DD@OAM 0x0200-0x01C）
+**与 emu 同 ✓**（游戏写者全对！obj=敌✓/敌环=萨✓）——但 dump=0x6E stamps ⇒**stamps=
+后段写者**（探针窗后/帧相位后）覆写 CA/CB ——0x6E 写者=**第三写者径仍待钉**（窗后
+写点——OAM 全谱余点：boot:144/DisplayBar 族外）。
+### 39.3 停机报（件 6）
+0x6E stamps 写者（窗后/帧相位后写点——OAM 全谱余点+探针窗扩展）=中件深挖。本卡交付=
+OAM 写点全谱+一击续（敌环=萨✓——非猜：[oamw3] 实录）+第三写者径再收窄。
+
+Evidence: OAM 写点全谱 grep（boot:144/1785-1788/2670-2751/150）+[oamw3] 探针（敌环
+萨 8 sprite CA/CB...@0x0200-0x1C 与 emu 同）+dump 0x6E stamps（两路探针零命中——
+窗后写者）。
+Confidence: 91
