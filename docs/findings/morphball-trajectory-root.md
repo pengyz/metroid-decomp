@@ -929,3 +929,24 @@ rust 星印写者调用链（title 状态机→writes 应用径——游戏帧�
 Evidence: prg0:172-173/378-379（星载）+1436-1458（星色调）+98AE（LoadStarSprites
 $6E00 拷贝）+mainloop.rs 无星印直调（grep 实录）+title 状态机 writes 面。
 Confidence: 90
+
+## 37. title 写面应用链深挖卡（2026-11-06——链全映射+gate 反证+停机报）
+
+### 37.1 链钉定（件 1——行号锚）
+应用链全映射：title/step_glue.rs:83/139/196/286（writes→events）→**memmap/
+title_state.rs:243 apply_title_step（应用点——RAM/WRAM 写）**→frame/title_bridge.rs:
+:118（桥应用）。产出侧：title/mod.rs MenuOutcome.writes/OrchestrationOutcome.writes。
+### 37.2 gate 反证（件 2——GameMode 分派 gate ✓ 已存在）
+**go_main_routine（mainloop.rs:3021——asm GoMainRoutine C114）**：`GameMode≠0 ⇒
+main_title_routine（标题路）/GameMode=0 ⇒ game_main_routine（游戏路）`——**gate ✓
+存在**⇒星印非 title 写面（gate 挡——§34.2/34.3「星域拷贝径」归因**再证伪需**：
+OAM 前段 tile 0x6E×20 源再开（游戏写者帧流（obj_draw_frame）候选——§33 帧数据流
+语义）。
+### 37.3 停机报（件 5）
+OAM 前段 tile 0x6E×20 源=游戏写者帧流 vs 其他（title 写面已被 gate 排除）——
+**obj_draw_frame 帧数据流→OAM tile 落值语义深挖**（§33 域）=下步。本卡交付=链全映射
++gate 反证（title 写面排除——非猜：go_main_routine 逐行）。
+
+Evidence: step_glue.rs:83/139/196/286+title_state.rs:243+title_bridge.rs:118+
+go_main_routine mainloop.rs:3021（GameMode gate 逐行）+MenuOutcome.writes 产出面。
+Confidence: 91

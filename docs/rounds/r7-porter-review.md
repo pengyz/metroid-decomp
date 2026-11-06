@@ -14373,6 +14373,35 @@ gate+TDD ✓
 ✓（星域拷贝停写 gate（TitleRoutine≥0x1D 候选）（停机合规（asm 先行）））③判据 ✓（L4
 102+499 测））——**对抗复核核 ✓**（证伪立场（独立重导证据（正确性核）））。
 
+## asm 星域停写条件考证卡对抗复核（e3a95997 §36（证伪立场（独立重导证据（3 重点））））
+
+### verdict: pass（asm 面核 ✓✓✓+主循环无星印直调 ✓✓+判据 ✓）
+
+**① asm 面核（最重）✓✓✓**：
+- **prg0:170-175** ✓✓（`inc TitleRoutine`（`jmp LoadStarSprites`（Loads stars on
+  intro screen）））——title 期载入 ✓
+- **prg0:376-381** ✓✓（`jsr LoadStarSprites`（**useless（stars are already on the
+  screen at this point）**（第二次调用**标记无用**）））——星域载入**一次性**（二次调用
+  无用（asm 注释实证））✓
+- **prg0:1436-1458** ✓✓（StarPaletteSwitch（**Change star palette every 16th
+  frame**（IntroStarOffset **16 帧轮**）））——星印调色板周期 ✓
+- **LoadStarSprites 98AE=**\$6E00→OAM 拷贝 ✓✓✓——「title 期载入+停写=TitleRoutine
+  例行序自然止」**成立** ✓✓✓（星域写者在 title 例程（TitleRoutine 推进自然止（非
+  独立 gate））））
+
+**② 「主循环无星印直调」核 ✓✓**：mainloop.rs **grep 实录**——**无星印直调** ✓✓
+（0x6E/star/LoadStar/IntroStar 零命中（匹配均非星印（music/engine/RinkaSpawners）））——
+链在 **title 状态机深层**（MenuOutcome.writes 应用径）✓——**asm 对应** ✓（asm 侧星域
+写者亦在 title 例程（prg0 LoadStarSprites）（主循环无直调）——非 rust 架构特有 ✓）
+
+**③ 判据实况 ✓**：L4 **102/108 保持**+499 测（差 4 注）+防回退面 ✓
+
+**verdict**：asm 星域停写条件考证卡 **pass**（①asm 面核 ✓✓✓（最重（prg0:170-175/
+378-379/1436-1458 行号抽读（title 期载入+TitleRoutine 例行序自然止（二次调用无用））+
+LoadStarSprites 98AE=\$6E00→OAM 拷贝））②主循环无星印直调 ✓✓（grep 实录（链在 title
+状态机深层（asm 对应（非 rust 特有））））③判据 ✓（L4 102+499 测））——**对抗复核核 ✓**
+（证伪立场（独立重导证据（正确性核）））。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
