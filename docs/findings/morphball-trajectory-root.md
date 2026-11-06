@@ -1440,3 +1440,17 @@ f=975 窗（行 975-995≈f986）：**F1FA（CheckCollision）按槽执行**—�
 Evidence: [cputrace] 2079 命中（f=975 窗 F1FA 按槽序——slot 0x40 ✓）+scenario_capture
 .lua cputrace 扩+cputrace.log 落档。
 Confidence: 91
+
+## 62. 内层 cmp 深断点终判卡（2026-11-06——址估误+日志再生限停机报）
+
+### 62.1 深断点采样（件 1——工具面限）
+cputrace_addrs 扩 F1FA 内层 cmp 址（0xF24A/F24C/F25E/F260 估址）**0 命中**——
+**asm 行号≠地址**（doc 行 10235/10260 邻的 cmp 指令地址需反汇编定位——估址误）；
+zp 采样扩 ✓ 但 log 旧形（新跑未重写——日志再生疑）——**工具面限**（址估+日志）。
+### 62.2 停机报（件 5——备选）
+内层 cmp 断点=需**反汇编级 cmp 址定位**（disasm F1FA 10200-10261 指令址逐条）+
+日志再生核——工具面深改（Mesen trace API/反汇编工具链）=备选报。本卡交付=工具面限
+声明（非猜：0 命中实录）+址估误定性。
+
+Evidence: cputrace_addrs 估址 0 命中实录+zp 字段缺失（log 旧形）+asm 行≠址定性。
+Confidence: 90
