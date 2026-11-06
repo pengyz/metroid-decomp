@@ -788,3 +788,12 @@ Confidence: 91
 > 同 ✓；④运行时 CHR 写径=LoadGFX 仅 init 序（NMI PPUDATA=palette/VRAM 非 CHR）。
 > **静态链全合**（OAM✓/CHR✓/PPUCTRL✓/映射✓）——emu 从 tile 0x76 渲 "E" 仍谜⇒
 > **dump-vs-render 时序**（CHR 写序）或更深 PPU 渲染语义=停机报（件 6）。
+
+> 【2026-11-06 PPUCTRL 补取证（§30.3——判别收窄到单一假说）】取证缺口修复径=
+> **PPUCTRL_ZP（$FF 游戏镜像）ram.hex 直读**（无需工具修——dumpPpu ctrl 字段读失败
+> 绕过）。**emu zp[$FF]=0x97 / rust=0x93——bit3（OBJ 表）双侧=0 ✓✓**（表基 $0000
+> 同）⇒**图案表基假说彻底死**。⚠ 附带发现：bit2（VRAM 增量）emu=1(+32)/rust=0(+1)
+> 差（0x97 vs 0x93 低位差——渲染面无关（增量=CPU VRAM 写向）——登记待考）。
+> **矛盾收窄到单一假说**：dump-vs-render 时序（CHR[0x760] 渲染时刻 vs dump 时刻值差
+> ——运行时 CHR 写序）——修径=时序验证（dumpPpu 采样点改造（帧内多次 dump）——
+> tools/oracle 面（单独 commit））。
