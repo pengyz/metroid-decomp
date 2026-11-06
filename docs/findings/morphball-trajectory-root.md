@@ -1238,3 +1238,26 @@ isHit 设点径（SamusHurt010F:9898 族——f986 触发真源）+radius 值源
 Evidence: F1BF:10147（radius 和）+F1FA:10200（|dy|<和 && |dx|<和）+9898（isHit
 设点）+physics.rs:665（冻结环+0x0D983 占位实录）。
 Confidence: 91
+
+## 52. SamusHurt010F 触发径考证卡（2026-11-06——触发径全谱+地址语义冲突定谳）
+
+### 52.1 asm 触发径全谱（件 1——行号锚）
+**CollisionDetection（F034——prg7:9900+）**：`lda #$FF/sta SamusKnockbackIsBomb/
+sta SamusHurt010F`（**$010F 伤旗初值 0xFF**）→敌环（Mellows 等）→**IsSamusDead+
+SamusInvincibleDelay 免伤判**（`bne skip`）→碰撞检（CollisionDetectionMellow_Check
+WithObjectYSlot）→React（伤！）。**$010F=SamusHurt010F**（constants:819——"never
+read. takes on different values depending on how samus was hit"）。
+### 52.2 地址语义冲突定谳（件 2）
+**WalkSoundDelay=$53**（constants:546）非 $010F！——**rust handler.rs:291/489 误标
+0x010F=WalkSoundDelay**（地址语义冲突——$010F=SamusHurt010F 伤旗）；mainloop.rs:2474
+`write_ram(0x010F, 0x80)`=伤旗写点（触发径候选）。f986 触发源=伤旗写径（0x010F
+写点调用链）待深挖。
+### 52.3 停机报余
+f986 触发源（0x010F 写点调用链——rust 侧伤旗写径 vs emu）+handler.rs 地址语义冲突
+修（$53 真义）+H3 radius 关联=中件。本卡交付=触发径全谱+地址语义冲突定谳（非猜：
+constants:546/819 对表）。
+
+Evidence: F034（CollisionDetection 触发径）+constants:819（$010F=SamusHurt010F）+
+constants:546（WalkSoundDelay=$53）+handler.rs:291/489（误标实录）+mainloop.rs:2474
+（0x010F←0x80 写点）。
+Confidence: 92
