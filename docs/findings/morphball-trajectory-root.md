@@ -1479,3 +1479,9 @@ Confidence: 90
 > （F1FA 2016/F233/F25E/F261/F26F/F270 全 0）——F233 估址（F22B+8）或回调语义仍疑
 > ——**cmp 真址需 disasm 定位**（m1disasm 源无逐指令址——label 间指令址需汇编器输出）
 > ⇒**升级② trace logger 深改（CPU trace 全序——C++ 面报方案再动）请**。
+
+> 【2026-11-06 终判址实录（§62.6——升级②执行②）】终判址注入（F22E bne/F234 y-cmp/
+> F25F x-cmp/F261 RTS——lead 推址 ✓）+exec 枚举修：**全 0 命中**——**exec 枚举注册
+> 不可达**（ok=false 落 fallback "execute"（read 域）——F1FA 2016=jsr 读目标址事件
+> （lead 洞察 ✓ 全档案重议））——**工具面限四证**（估址差+回调语义+日志再生+exec 注册
+> 不可达）⇒**升级② trace logger 深改（CPU trace 全序——C++ 面报方案再动）请**。
