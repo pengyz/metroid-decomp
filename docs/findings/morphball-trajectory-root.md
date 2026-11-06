@@ -837,3 +837,23 @@ tile ✓（tile 散在=写落位差非覆写）。
 Evidence: OAM 全偏移扫（emu 0x61-0x6D 对齐 vs rust 0x0B/0xF3 错位）+DisplayBar E0C1/
 E0C7/E173+rust uw_display_bar 2681-+尾清 CB6A（tile 不灭）。
 Confidence: 92
+
+## 32. 游标+写者双修卡（2026-11-06——写者全谱+游标差源钉定+停机报）
+
+### 32.1 SpritePagePos 写者全谱（件 1——行号锚）
+①**UpdateWorld（CB29:2497）帧首 `ldx #$00/stx SpritePagePos`（游标归零）**；
+②精灵写者推进（DrawSpriteObject 尾 6353 stx）；③DisplayBar（E0C1:6674 stx——HUD
+落游标位）；④AddTanks（E16C:6756 stx）；⑤fade-in init（2233——Samus 起 Sprite00）。
+序=UpdateWorld 归零→游戏精灵写者推进→DisplayBar HUD→tanks。
+### 32.2 游标差源（件 2）
+游标差 0x10=**rust 前段多 4 游戏 sprite**（HUD 落 0x60=24 sprite vs emu 0x50=20）——
+**sprite 写者产数差**（obj_draw_frame 精灵数/敌写者——emu 9 vs rust 5 中 HUD 段+前段
+game sprite 数双重差）。⚠ §30.4/§31 陈旧 dump 扫注已收（verifier 落点为准）。
+### 32.3 停机报（件 4）
+sprite 写者产数差（obj_draw_frame 精灵条目数/敌写者 OAM 条数）+游标管理=中件。本卡
+交付=写者全谱（5 写者行号锚）+游标差源（前段多 4 sprite）钉定+修径（产数差+游标双修）。
+
+Evidence: UpdateWorld:2497（归零）+6353/6674/6756（stx 三写者）+2233（init）+游标差
+0x10 算（rust 0x60=24 vs emu 0x50=20）+verifier OAM 全扫（emu 0x50-0x58 vs rust
+0x60-0x68）。
+Confidence: 91
