@@ -1261,3 +1261,22 @@ Evidence: F034（CollisionDetection 触发径）+constants:819（$010F=SamusHurt
 constants:546（WalkSoundDelay=$53）+handler.rs:291/489（误标实录）+mainloop.rs:2474
 （0x010F←0x80 写点）。
 Confidence: 92
+
+## 53. 伤旗写径深挖卡（2026-11-06——触发条件实录+radius 值源差候选）
+
+### 53.1 asm 先行（件 1——行号锚）
+$010F 伤旗：CollisionDetection F034 初值 0xFF（constants:819「never read」注）→
+React（伤）径写；f986 触发链=碰撞检→React→**LF306（F306:10433）伤害置径**（Health
+Change←AreaEnemyDamage——§22 域）✓。
+### 53.2 rust 触发条件实录（件 2——mainloop:2466-2480）
+rust「Samus 5 伤害（:12214-12232）」：**InvincibleDelay==0+距离判（`dy<sry+4 &&
+dx<srx+4`——+4 固定敌半径！）+screw 判→write(0x010F,0x80)+InvincibleDelay←0x32**——
+**asm 算式（F1FA:10200）=敌 radiusX/Y 实值**（GetRadiusSums 和）vs **rust +4 固定**——
+**radius 值源差候选 ✓（H3 敌槽面关联——radius 写撤回回装在案）**。
+### 53.3 停机报余
+radius 值源（敌 radius 实值 vs +4 固定——H3 回装卡关联归属）+F306 伤害置径对读=中件。
+本卡交付=触发条件实录（非猜：mainloop:2466-2480 逐行）+radius 值源差候选定性。
+
+Evidence: F034/F306:10433 行号锚+constants:819（never read）+mainloop:2466-2480
+触发条件逐行（+4 固定实录）+asm F1FA 判定式（radius 实值）对照。
+Confidence: 92
