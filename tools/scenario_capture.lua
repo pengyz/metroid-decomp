@@ -291,13 +291,19 @@ if #ctAddrs > 0 then
     local st = emu.getState()
     local n = st and st.frameCount or 0
     if n >= ctWin[1] and n <= ctWin[2] then
-      ctLog:write(string.format("[cputrace] f=%d pc=%04X a=%02X x=%02X y=%02X sp=%02X\n",
-        n, st["cpu.pc"] or 0, st["cpu.a"] or 0, st["cpu.x"] or 0, st["cpu.y"] or 0, st["cpu.sp"] or 0))
+      local t = {}
+      for i = 0, 11 do t[#t+1] = string.format("%02X", emu.read(i, MEMTYPE) or 0) end
+      ctLog:write(string.format("[cputrace] f=%d pc=%04X a=%02X x=%02X y=%02X sp=%02X zp=%s\n",
+        n, st["cpu.pc"] or 0, st["cpu.a"] or 0, st["cpu.x"] or 0, st["cpu.y"] or 0, st["cpu.sp"] or 0, table.concat(t, "")))
       ctLog:flush()
     end
   end
   for _, a in ipairs(ctAddrs) do
-    local ok = pcall(emu.addMemoryCallback, ctHit, "execute", a, a)
+    local ok = false
+    if emu.callbackType and emu.callbackType.exec then
+      ok = pcall(emu.addMemoryCallback, ctHit, emu.callbackType.exec, a, a)
+    end
+    if not ok then ok = pcall(emu.addMemoryCallback, ctHit, "execute", a, a) end
     if not ok then pcall(emu.addMemoryCallback, ctHit, 2, a, a) end
   end
   log("cputrace: " .. #ctAddrs .. " addrs window " .. ctWin[1] .. "-" .. ctWin[2])

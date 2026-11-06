@@ -1472,3 +1472,10 @@ Confidence: 90
 > 不可靠**（真断点应必触发必执行址——0 命中=采样式/址语义疑）⇒按裁决「采样式→
 > **升级②（Mesen CPU trace 全序）**」分支 ✓。F261 出口 0 命中同证（早退线索被语义
 > 不可靠掩）。两件判定①=语义不可靠⇒升级②请。
+
+> 【2026-11-06 exec 枚举修+实录（§62.5——升级②执行①）】根因命中（scenario_capture
+> .lua:311 注「emu.callbackType.exec 枚举=真 opcode fetch 回调」）——cputrace "execute"
+> 字符串=read 域（lead 洞察 ✓）——修=exec 枚举（零成本 ✓）+重 gen+重跑：**命中不变**
+> （F1FA 2016/F233/F25E/F261/F26F/F270 全 0）——F233 估址（F22B+8）或回调语义仍疑
+> ——**cmp 真址需 disasm 定位**（m1disasm 源无逐指令址——label 间指令址需汇编器输出）
+> ⇒**升级② trace logger 深改（CPU trace 全序——C++ 面报方案再动）请**。
