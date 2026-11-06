@@ -778,3 +778,13 @@ CHR dump 时序 vs 渲染时序（运行时 CHR 写序）/sprite 图案表基映
 Evidence: emu ram.hex OAM+0x60-0x68（tile 76/7F/3A）+rust DataDisplayTbl（同）+
 CHR 两表 0x76（块/杂形）+"E"=font tile14（0x10E0）+asm E1B9/E0C7/E173。
 Confidence: 91
+
+> 【2026-11-06 判别补（§30.2——映射公式差深挖卡）】①OAM 读法复核（434ec4a7
+> convention 注）：OAM+0x60（dump 0x260）tile=0x76@y=21/x=18=HUD "E" 位 ✓；sprite8
+> tile=0x0E@y=A0=他位（非 HUD）——「0x0E 假设」**排除**（OAM tile 值=0x76 双方同真）；
+> ②**PPUCTRL 实录**：rust ctrl=0x93（bit3=0（OBJ 表 $0000）/bit4=1（BG 表 $1000））
+> =asm :155 旗（**PPUCTRL_BG_1000|PPUCTRL_OBJ_0000**）✓ 自洽——tile 0x76→$0000+
+> 0x760=块 ✓ rust 渲染自洽；③映射公式（tile×16+表基）三方（asm 旗/硬件语义/rust）
+> 同 ✓；④运行时 CHR 写径=LoadGFX 仅 init 序（NMI PPUDATA=palette/VRAM 非 CHR）。
+> **静态链全合**（OAM✓/CHR✓/PPUCTRL✓/映射✓）——emu 从 tile 0x76 渲 "E" 仍谜⇒
+> **dump-vs-render 时序**（CHR 写序）或更深 PPU 渲染语义=停机报（件 6）。
