@@ -1171,3 +1171,29 @@ L4 增益（102→103）待锁；503 测绿（462+3+1 过）；防回退面（mo
 Evidence: read_ram 原体（& 0x7FF）+WRAM 分派修+TDD 读测+f1200 OAM 0/256+png
 0/61440 双零实录。
 Confidence: 93
+
+## 49. 萨姆斯受伤行为对拍卡（2026-11-06——asm 全谱+双侧对拍+行为差定谳）
+
+### 49.1 asm 受伤径全谱（件 1——行号锚）
+①**CheckHealthStatus（$CDFA——:3082-3180）**：isHit bit5(0x20)⇒InvincibleDelay←
+0x32（50 i 帧）+KnockbackDir←0xFF/方向（isHit bit3>>3）+speedY←0xFD/AccelY←0x38
+（击退！）+IsSamusDead 判→i 帧递减+击退 X 速（floor(i/16)）+闪烁（偶帧 animFrame←
+FrameNone）+蜂鸣（血<17）；②**IsSamusDead（$CE84——:3189）**：status==sa_Dead/
+Dead2 判；③**SubtractHealth（$CE92——:3198-）**：HealthChange 判+IsSamusDead 免伤
++Varia 半伤+Base10Subtract+死判（BCD 0⇒sa_Dead）；④SamusCollisionWithSolidEntities
+（$D976——:5117）=站敌/电梯判（非 isHit 设点）；⑤isHit 设点=敌接触伤径（F311
+SamusHurt 族）。
+### 49.2 双侧对拍（件 2——killenemy 场景）
+**行为差定谳**：rust f986 伤害事件（(0,3)→(32,2)=30→22 **-8**（BCD 交换形✓§22））
+vs **emu 无伤害事件**（健康 (0,3) 恒）——**rust 碰敌触发伤害/emu 未触发**——
+敌接触触发差（场景位移差（rust/emu Samus 位不同）或碰撞径差）。
+### 49.3 判据（件 4）+停机报
+受伤行为双腿逐帧 0 差**未达**（rust 有伤害 emu 无——**行为差**）——按任务纪律
+**只对拍不修**：归因候选=敌接触触发（场景位移/碰撞径）——修径待归因定谳（asm
+碰撞径（CheckCollisionOfXSlotAndYSlot 族）考证）。crawlprobe/collide 场景双侧均
+无伤害（健康恒）✓（对照）。
+
+Evidence: asm CDFA:3082-3180/CE84:3189/CE92:3198/D976:5117 全谱+killenemy 双侧
+健康序列（rust f986 30→22 vs emu 恒 (0,3)——逐帧实录）+crawlprobe/collide 对照
+（无伤害）。
+Confidence: 91
