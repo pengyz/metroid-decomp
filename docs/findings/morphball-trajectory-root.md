@@ -1485,3 +1485,9 @@ Confidence: 90
 > 不可达**（ok=false 落 fallback "execute"（read 域）——F1FA 2016=jsr 读目标址事件
 > （lead 洞察 ✓ 全档案重议））——**工具面限四证**（估址差+回调语义+日志再生+exec 注册
 > 不可达）⇒**升级② trace logger 深改（CPU trace 全序——C++ 面报方案再动）请**。
+
+> 【2026-11-06 read val 采样实录（§62.7——升级②零深改正解）】Temp 址对表 ✓
+> （$00-Diff/$01-DiffHi/$03-ScrollDir/$04-radiusY/$05-radiusX/$06-YPos/$07-XPosY/
+> $09-XPosX/$10-DistHi/$11-DistY）+ctread 扩（read callback+val 实录）——**Mesen 运行
+> err（exit 2）**（read callback 注册/签名疑——crHit(addr,val) 签名或 "read" 类型注册）
+> ——**read val 面注册限**（工具面限五证）——修注册/签名后可采（零深改正解径 ✓ 待续）。

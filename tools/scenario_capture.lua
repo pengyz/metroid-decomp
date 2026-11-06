@@ -309,6 +309,29 @@ if #ctAddrs > 0 then
   log("cputrace: " .. #ctAddrs .. " addrs window " .. ctWin[1] .. "-" .. ctWin[2])
 end
 
+
+-- ---------------- read callback val 采样（2026-11-06 升级②零深改正解） ----------------
+-- PLAN.cputrace_read_addrs = {addr...}（Temp zp）+ PLAN.cputrace_window —— [ctread] val 实录。
+local crAddrs = PLAN.cputrace_read_addrs or {}
+if #crAddrs > 0 then
+  local crWin = PLAN.cputrace_window or {0, 0}
+  local crLog = io.open(string.format("%s/%s.ctread.log", PLAN.out_dir, name), "wb")
+  local function crHit(addr, val)
+    local st = emu.getState()
+    local n = st and st.frameCount or 0
+    if n >= crWin[1] and n <= crWin[2] then
+      crLog:write(string.format("[ctread] f=%d addr=%02X val=%02X pc=%04X\n",
+        n, addr or 0, val or 0, st["cpu.pc"] or 0))
+      crLog:flush()
+    end
+  end
+  for _, a in ipairs(crAddrs) do
+    local ok = pcall(emu.addMemoryCallback, crHit, "read", a, a)
+    if not ok then pcall(emu.addMemoryCallback, crHit, 1, a, a) end
+  end
+  log("ctread: " .. #crAddrs .. " addrs window " .. crWin[1] .. "-" .. crWin[2])
+end
+
 -- ---------------- r3：待查段指令入口覆盖（PLAN.coverage_pc）
 -- ⚠ 语义演进（probe_dispatch_diag v4/v7 A 级实证，2026-10-15）：
 --   字符串 "execute" 注册=**劣化语义**（操作数/数据读，opcode fetch 不可见——r2 F1
