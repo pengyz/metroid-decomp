@@ -806,6 +806,14 @@ Confidence: 91
 > （SpritePagePos 游标/写落位/覆写序）。修径=uw_display_bar OAM 写路径考证+修+TDD
 > （f1200 HUD OAM 双腿 0 差锚）。时序假说/CHR 面全排除（CHR✓/tile✓/PPUCTRL✓/调色板✓）。
 
+> 【2026-11-06 §30.4 更正（复核 ad3d3cba——原地不删史）】「rust 零 HUD tile/写丢失」
+> **误判更正**：系陈旧 dump 扫误判（run 间 OAM 落位漂移——非确定）。verifier 独立全扫：
+> 双侧**均有** HUD tile——emu=sprite 20-22（OAM+0x50-0x58）tile 0x76/0x7F/0x3A@y=33
+> vs rust=sprite 24-26（OAM+0x60-0x68）同 tile 同 y——**真差=OAM 落位差 0x10
+> （SpritePagePos 游标差=emu 多 4 sprite（9 vs 5））**。定性收窄：**非写丢失，是
+> 写落位/游标差**（修径方向（OAM 写径）正确——§31 游标定谳方向 ✓ 落点殊值以 verifier
+> 为准（0x50 vs 0x60））。
+
 ## 31. DisplayBar OAM 写径修卡（2026-11-06——游标错位定谳+停机报）
 
 ### 31.1 全偏移扫定谳（件 2——决定性）
