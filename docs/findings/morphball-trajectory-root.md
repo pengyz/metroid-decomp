@@ -1454,3 +1454,9 @@ zp 采样扩 ✓ 但 log 旧形（新跑未重写——日志再生疑）——*
 
 Evidence: cputrace_addrs 估址 0 命中实录+zp 字段缺失（log 旧形）+asm 行≠址定性。
 Confidence: 90
+
+> 【2026-11-06 备选③实录补（§62.2——双断点采样）】F1FA 入口 ✓ 命中（2016——slot
+> 0x40 进检）但 **F261（RTS 返回点）0 命中**（exec callback 未触发 RTS 址）+zp 采样
+> 在 lua（gen 嵌入✓）但 **log 旧形**（再生疑——gen 嵌入时机：编辑后需重 gen ✓ 已重
+> 仍旧形）——**工具面双限**（RTS 断点不触发+日志再生）——判值一击未达（返回 A/carry
+> 未采）。备选①②（反汇编级址定位/Mesen CPU trace 全序）待升级裁决。
