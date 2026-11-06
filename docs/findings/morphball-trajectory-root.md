@@ -1401,6 +1401,13 @@ CheckCollisionOfXSlotAndYSlot（F1FA:10200-10261）全谱：y 轴（dy=Temp07-Te
 位）+**scroll dir 分支**（Temp03_ScrollDir——水平/垂直房）✓。Temp 语义：Temp10_DistHi
 （hi 距位）/Temp11_DistY（y 距）/Temp0F_DistX（x 距）——ZP 复用组（survey §5.2）。
 ### 60.2 2466 径定谳（件 2——asm :12214-12232 对应）
+> 【2026-11-06 更正（复核 6a630a72——原地不删史）】「2466=Skree 弹伤/py/px=弹槽
+> 0x0440」**误读更正**：0x0440=**敌槽**（Objects slot#4——constants_ram:941-943
+> .enum $0400 16 slots×16B）；SkreeProjectiles=零页 **$A0-$AF**（4 槽×4B）**双侧全空**
+> ⇒f986 无弹在场，弹碰撞不可能。**f986 触发源=敌碰**（2543 和式径或 2466 +4 式径——
+> 同值场景两径可能同触发）。归因收口：emu 侧该径未执行（敌环迭代序/入径条件（bd481517
+> 第三候选））或 2466/2543 执行面差异——转**动态 trace**（Mesen CPU trace f986 帧——
+> emu CollisionDetection 执行实录看 skip 点）=下一步（静态 20 层穷尽）。
 **mainloop:2466「Samus 5 伤害（:12214-12232）」=Skree 弹碰撞伤**（asm :12214-12232
 实录：AreObjectsTouching（DC7F）+IsScrewAttackActive（CD9C）+SamusHurt_F311+
 HealthChange←**0x50（5 伤！）**+SubtractHealth）——**+4=弹 radius**（非敌 radius！）
