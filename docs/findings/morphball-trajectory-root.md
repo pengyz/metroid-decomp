@@ -902,3 +902,11 @@ Confidence: 91
 > =星印写者输出实证（OAM 前段 20×0x6E=其 stamps）；②**矛盾点**：GameMode=0x00
 > （游戏态）但星印写者仍写 OAM——**停写 gate 缺/未接**（title 模块星印写者在游戏态
 > 仍调）；③修径=星印写者停写 gate（GameMode/状态判）+TDD（f1200 OAM 前段=游戏集）。
+
+> 【2026-11-06 归因细化（§34.3——停写 gate 修卡 asm 先行）】§34.2「title:641=星印
+> 写者」**细化更正**：title:641=menu_choose 菜单光标写（单 sprite 0x0201←0x6E）；
+> title:1283/1314=密码屏光标写（0x0211/0x0221←0x6E）——**20×0x6E stamps=星域拷贝**
+> （IntroStarsData $6E00 数据 tile 0x6E×20 星位形 x 递减 0x0A——STAR_SPRITE_SRC
+> title_state.rs:129 源面）——星域写者=**$6E00→OAM 拷贝径**（LoadStarSprites 族
+> 端口）停写 gate 待接。修径=星域拷贝径停写 gate（GameMode/TitleRoutine 判）——
+> asm 星域写者停写条件考证（IntroStar 族）+rust 调用链核（谁调星域拷贝）=中件。
