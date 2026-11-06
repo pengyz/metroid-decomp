@@ -805,3 +805,27 @@ Confidence: 91
 > 背景瓦透出（非 tile 图案差！）——**矛盾收窄到可修点：DisplayBar OAM 写径**
 > （SpritePagePos 游标/写落位/覆写序）。修径=uw_display_bar OAM 写路径考证+修+TDD
 > （f1200 HUD OAM 双腿 0 差锚）。时序假说/CHR 面全排除（CHR✓/tile✓/PPUCTRL✓/调色板✓）。
+
+## 31. DisplayBar OAM 写径修卡（2026-11-06——游标错位定谳+停机报）
+
+### 31.1 全偏移扫定谳（件 2——决定性）
+OAM 全偏移扫（步 1——非对齐！）：emu HUD tile 在 **0x61/0x65/0x69/0x6D**（对齐
+sprite 0x60/0x64/0x68/0x6C ✓）vs **rust 在 0x0B/0xF3（错位散）**——**SpritePagePos
+游标错位/殊值**（emu=0x60 对齐 vs rust=0x0A 级错位）⇒HUD 写落错位→跨 sprite 边界
+→渲染散/灭（"块形"=错位 sprite 跨界垃圾+背景透出）。
+### 31.2 asm/rust 对照（件 1-2）
+DisplayBar（E0C1）：SpritePagePos（$5B）游标→40B 拷贝（E0C7）→$5B←游标+40→
+SPRWriteDigit（E173 Xplus4）；rust uw_display_bar（2681-）写径同构 ✓——**差在游标
+值**（SpritePagePos 写者（sprite 写径）advance/对齐殊异）。尾清（CB6A 0xF4 填 y）不灭
+tile ✓（tile 散在=写落位差非覆写）。
+### 31.3 停机报（件 5）
+游标管理（sprite 写径的 SpritePagePos advance/对齐——谁写 $5B/advance 4 序）=中件。
+本卡交付=全偏移扫定谳（游标错位——非猜）+写径对照+修径明确（游标管理修+TDD）。
+> 【2026-11-06 修径补（复核 ad3d3cba）】①游标差 0x10 来源=S**pritePagePos 初值/
+> 推进差**（emu 多 4 sprite×4B=0x10——谁多写 4 sprite=写者差）；②emu 多 4 sprite
+> （9 vs 5）=写者差考证（asm 写者序 vs rust——哪个写者缺/多）；③修径=游标管理+
+> 写者差双修。
+
+Evidence: OAM 全偏移扫（emu 0x61-0x6D 对齐 vs rust 0x0B/0xF3 错位）+DisplayBar E0C1/
+E0C7/E173+rust uw_display_bar 2681-+尾清 CB6A（tile 不灭）。
+Confidence: 92
