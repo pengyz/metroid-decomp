@@ -910,3 +910,22 @@ Confidence: 91
 > title_state.rs:129 源面）——星域写者=**$6E00→OAM 拷贝径**（LoadStarSprites 族
 > 端口）停写 gate 待接。修径=星域拷贝径停写 gate（GameMode/TitleRoutine 判）——
 > asm 星域写者停写条件考证（IntroStar 族）+rust 调用链核（谁调星域拷贝）=中件。
+
+## 36. asm 星域停写条件考证卡（2026-11-06——asm 面+调用链核+停机报）
+
+### 36.1 asm 面（件 1——行号锚）
+星载=IntroStar 例行（prg0:172-173 `jmp LoadStarSprites`/378-379（「useless, stars
+are already on the screen」）——**title 期载入**）+星色调（1436-1458 IntroStarOffset
+16 帧轮）——**停写=TitleRoutine 例行序**（title→game 转换后星载不再调——emu 星印
+停=例行序自然止）。LoadStarSprites（98AE）=$6E00→OAM 拷贝径（IntroStarsData 源）。
+### 36.2 rust 调用链核（件 2）
+主循环（mainloop.rs）**无星印直调**——星印写者链=title 状态机深层（MenuOutcome.writes
+应用径——title 模块写面被游戏帧应用？）——**GameMode 分派漏 gate 环待钉**（谁在游戏态
+应用 title 写面）。
+### 36.3 停机报（件 5）
+rust 星印写者调用链（title 状态机→writes 应用径——游戏帧应用面）=中件深挖。本卡
+交付=asm 面（title 期载入+例行序停写）+调用链核（主循环无直调——链在状态机深层）。
+
+Evidence: prg0:172-173/378-379（星载）+1436-1458（星色调）+98AE（LoadStarSprites
+$6E00 拷贝）+mainloop.rs 无星印直调（grep 实录）+title 状态机 writes 面。
+Confidence: 90
