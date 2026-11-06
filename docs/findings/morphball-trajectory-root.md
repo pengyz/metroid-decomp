@@ -1491,3 +1491,9 @@ Confidence: 90
 > $09-XPosX/$10-DistHi/$11-DistY）+ctread 扩（read callback+val 实录）——**Mesen 运行
 > err（exit 2）**（read callback 注册/签名疑——crHit(addr,val) 签名或 "read" 类型注册）
 > ——**read val 面注册限**（工具面限五证）——修注册/签名后可采（零深改正解径 ✓ 待续）。
+
+> 【2026-11-06 read val 注册修实录（§62.8——单参修（covHit 先例照抄））】covHit 先例
+> 签名=**单参 address**（scenario_capture.lua:270）——crHit 双参（addr,val）错——修=
+> 单参+emu.read 取 val+memCallbackType.read 注册 ✓——**Mesen 仍无 ctread.log 产物**
+> （read callback 注册三证（签名修后仍失败））——**工具面深改请**（C++ trace logger/
+> Mesen 回调 API 修——方案报）。
