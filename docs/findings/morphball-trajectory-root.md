@@ -1217,3 +1217,24 @@ AndYSlot（**5136**——判定）+GetRadiusSumsOfObjXSlotAndObjYSlot（5821）+
 Evidence: f982-991 双侧 y/x/status 逐帧全同实录+健康序列（rust f986 (32,2) vs emu
 (0,3) 恒）+GetRadiusSums/CheckCollision/SamusHurt010F 行号锚（5135/5136/9898）。
 Confidence: 92
+
+## 51. 碰撞径算式深挖卡（2026-11-06——asm 算式全谱+rust 对读+触发径定性）
+
+### 51.1 asm 算式全谱（件 1——行号锚）
+**GetRadiusSumsOfEnXSlotAndObjYSlot（F1BF——prg7:10147）**：敌 radiusY+萨 radiusY
+→Temp04/敌 radiusX+萨 radiusX→Temp05（**半径和**）；**CheckCollisionOfXSlotAndYSlot
+（F1FA——10200）**：|dy|（Temp07-Temp06）**cmp Temp04 和/bcs 不触**+|dx| 同式——
+**判定=|dy|<radiusY 和 && |dx|<radiusX 和** ✓；SamusHurt010F（9898——isHit 设点族）。
+### 51.2 rust 对读（件 2）
+rust samus_collision_with_solid_entities（physics.rs:665）：**仅冻结敌环（D983 status
+==4）+DIVERGENCES 占位（0x0D983）**——**敌接触伤害触发（isHit 设点）未在此径**——
+f986 触发源=他径（SamusHurt010F:9898 族端口面）——「同位置判定差」的算式差未及
+（触发径定位先）。
+### 51.3 停机报（件 6）
+isHit 设点径（SamusHurt010F:9898 族——f986 触发真源）+radius 值源（H3 敌槽面关联
+——radius 写撤回回装）=中件。本卡交付=asm 算式全谱（radius 和+比较式）+rust 对读
+（占位/触发径未及）。
+
+Evidence: F1BF:10147（radius 和）+F1FA:10200（|dy|<和 && |dx|<和）+9898（isHit
+设点）+physics.rs:665（冻结环+0x0D983 占位实录）。
+Confidence: 91
