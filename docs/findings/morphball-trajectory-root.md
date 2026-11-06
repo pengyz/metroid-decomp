@@ -1356,3 +1356,21 @@ emu 未触=**敌碰撞分支候选**（CollisionDetection F034 敌环 type/statu
 Evidence: emu InvincibleDelay=0/hi=0 逐帧实录（f982-989）+rust 同+健康差（rust f986
 (32,2) vs emu (0,3)）+F034 敌环（§52.1）。
 Confidence: 91
+
+## 58. 敌碰撞分支考证卡（2026-11-06——敌态全同排除+螺旋转候选）
+
+### 58.1 asm 敌环分支全谱（件 1——行号锚）
+CollisionDetection（F034）敌环（Lx269/F09D:9968+）：slot 空（beq NextEnemy）/
+Explode（skip）/**Pickup（beq Lx274——skip 弹碰撞）**——type/status 判 ✓；敌×萨
+（:10009-10019）→F2ED 螺旋转判（有效⇒RTS 不伤）。
+### 58.2 敌态实录（件 2——分支排除）
+f984-988 双侧敌 status=**[0,0,0,0,2,2] 全同**（slot 4/5=2 活——非空/非 Explode/
+非 Pickup）⇒**敌分支排除**（双侧入碰撞检 ✓）——emu 未触=**螺旋转（F2ED）候选**或
+碰撞内层（AreObjectsTouching/半径和求值）。
+### 58.3 停机报（件 5）
+螺旋转判（F2ED——emu f986 螺旋转态实录）+碰撞内层=中件。本卡交付=敌环分支全谱+
+敌态全同排除（非猜：逐帧实录）+螺旋转候选定性。
+
+Evidence: F034 Lx269/F09D 敌环分支（type/status 判）+f984-988 双侧敌 status 全同
+实录+[0,0,0,0,2,2]+F2ED 螺旋转判（:10019 邻）。
+Confidence: 91
