@@ -1079,3 +1079,23 @@ AddTanks 罐位（X=游标——LE14A「右→左 x=0x40 起」）vs rust 罐写
 Evidence: [w6e] backtrace（uw_display_bar:2749 AddTanks——2056 写实录：0x0201-
 0x024D sprite 0-19+0x026D+ sprite 27+）+LE14A 罐位（asm）+emu OAM 罐位（HUD 区）。
 Confidence: 92
+
+## 44. AddTanks 罐位修卡（2026-11-06——asm/rust 对照+游标矛盾停机报）
+
+### 44.1 asm 全径（件 1——行号锚）
+AddTanks（**LE14A**）：`ldx SpritePagePos`（游标）→EnergyTankCount→x=0x40（右→左）
+→tile 0x6F（满）/0x6E（空）→AddOneTank（**E17B**：y=0x17/tile/attr=01/x+Xplus4 推进）
+→`stx SpritePagePos`（收游标）。罐位=**游标起 + 每罐 4B 推进** ✓。
+### 44.2 rust 对照（件 2）
+rust AddTanks（mainloop:2734-）：`x=read(0x005B)`（游标——asm 同构✓）+罐写
+（y=0x17/tile/attr=01/x-0x0A 右→左✓）+Xplus4✓——**游标语义同构 ✓**。⚠ 矛盾：rust
+罐落 sprite 0-19（游标=0x00-0x4C）vs asm 游标=游戏写者推进后位——**游标=0x00 矛盾**
+（游戏写者（obj_draw_frame/敌环）应推进游标至 HUD 区）⇒**游标推进链疑断**（谁写
+$5B/推进序——§32.1 写者全谱的推进面）。
+### 44.3 停机报（件 5）
+游标推进链（UpdateWorld 归零→游戏写者推进→DisplayBar 游标值）=中件（rust 游标在
+AddTanks=0x00 的推进断点）。本卡交付=asm 全径+rust 同构对照+游标矛盾定性。
+
+Evidence: LE14A/E17B 全径+rust mainloop:2734- 同构对照+罐落 sprite 0-19（backtrace
+§43）+游标=0x00 矛盾。
+Confidence: 91
