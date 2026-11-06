@@ -1061,3 +1061,21 @@ Confidence: 91
 > stamps 渲染✓/emu png "EN"=HUD sprite 0x76/0x7F✓）；③**0x6E stamps=游戏写者后
 > 覆写者**（y=17/x 递减星域形——覆盖前段游戏集+HUD 区 0x50-0x68）——**第四写者
 > 真存在**（§34 星域形归因方向 ✓）——写者身份（call-stack 探针）=下步。
+
+## 43. call-stack 写者身份卡（2026-11-06——AddTanks 定谳+修靶）
+
+### 43.1 call-stack 一击（件 1——[w6e] backtrace 2056 实录）
+0x6E 写者=**uw_display_bar:2749（AddTanks 能量罐显示！）** ✓✓✓——「星域形」
+（§34/§42）**误归因更正**（y=17/x 递减=**能量罐排显示**（LE14A 罐位形）非星域）。
+罐写 OAM sprite 0-19（**覆前段游戏集**）+sprite 27+——罐位/游标差=修靶。
+### 43.2 修靶（件 2-3）
+AddTanks 罐位（X=游标——LE14A「右→左 x=0x40 起」）vs rust 罐写落位（sprite 0-19
+=游标 0 起？）——**罐位差**（emu 罐在 HUD 区 vs rust 罐在游戏集区）⇒修=AddTanks
+游标/罐位（asm LE14A 对读）+TDD。asm 对应：emu 罐位（HUD 区 0x50+）无此覆写 ✓。
+### 43.3 停机报余
+修+TDD（f1200 OAM 前段游戏集+罐位同）=下卡（修径明确：AddTanks 游标/罐位）。本卡
+交付=call-stack 一击（AddTanks——非猜：backtrace 2056 实录）+误归因更正+修靶。
+
+Evidence: [w6e] backtrace（uw_display_bar:2749 AddTanks——2056 写实录：0x0201-
+0x024D sprite 0-19+0x026D+ sprite 27+）+LE14A 罐位（asm）+emu OAM 罐位（HUD 区）。
+Confidence: 92
