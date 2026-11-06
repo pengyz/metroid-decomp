@@ -1391,3 +1391,25 @@ physics.rs:954）；**f983-988 双侧 screw=0/status=255 全同**（螺旋转排
 Evidence: F2ED 三门（physics.rs:954）+f983-988 双侧 screw/status 全同实录+8 面排除
 链（§50/54/56/57/58+本卡）。
 Confidence: 91
+
+## 60. 碰撞内层考证卡（2026-11-06——F1FA 全谱+2466 径定谳（Skree 弹伤））
+
+### 60.1 asm F1FA 全谱（件 1——行号锚）
+CheckCollisionOfXSlotAndYSlot（F1FA:10200-10261）全谱：y 轴（dy=Temp07-Temp06→
+**cmp Temp04 radiusY 和/bcs 不触**）+x 轴（dx=Temp09-Temp08→**cmp Temp05 radiusX
+和/bcs 不触**）+hi 距调（@positionHi_notEqual:10262——Temp01_DiffHi/Temp10_DistHi
+位）+**scroll dir 分支**（Temp03_ScrollDir——水平/垂直房）✓。Temp 语义：Temp10_DistHi
+（hi 距位）/Temp11_DistY（y 距）/Temp0F_DistX（x 距）——ZP 复用组（survey §5.2）。
+### 60.2 2466 径定谳（件 2——asm :12214-12232 对应）
+**mainloop:2466「Samus 5 伤害（:12214-12232）」=Skree 弹碰撞伤**（asm :12214-12232
+实录：AreObjectsTouching（DC7F）+IsScrewAttackActive（CD9C）+SamusHurt_F311+
+HealthChange←**0x50（5 伤！）**+SubtractHealth）——**+4=弹 radius**（非敌 radius！）
+——**2466 径=Skree 弹伤**（py/px=0x0440/0x0441=弹槽 0x40 y/x）非敌碰（2543）。
+**f986 触发源=弹碰撞（2466）**——emu 未触=弹条件差（弹位置/存在/接触判）。
+### 60.3 停机报余
+f986 弹碰撞条件差（emu 弹态/位置/AreObjectsTouching 判）+F1FA 内层（Temp 语义）=中件。
+本卡交付=F1FA 全谱+2466 径定谳（非猜：asm :12214-12232 逐行）。
+
+Evidence: F1FA:10200-10261 全谱（双轴+hi+scroll dir）+:12214-12232（Skree 弹伤五件
+链——2466 对应）+Temp 语义（10262-10269）。
+Confidence: 92
