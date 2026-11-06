@@ -1197,3 +1197,23 @@ Evidence: asm CDFA:3082-3180/CE84:3189/CE92:3198/D976:5117 全谱+killenemy 双�
 健康序列（rust f986 30→22 vs emu 恒 (0,3)——逐帧实录）+crawlprobe/collide 对照
 （无伤害）。
 Confidence: 91
+
+## 50. 敌接触触发差归因卡（2026-11-06——位置定谳+碰撞径锚）
+
+### 50.1 f986 窗位置对拍（件 1——候选①排除）
+f982-991 双侧 Samus **y=176/x=128/status=255 全同 ✓✓✓**（逐帧实录）——**位置差无**
+⇒**候选①（场景位移差）排除** ⇒**候选②（碰撞径差）** ✓。健康面：双侧 f982-985=
+(0,3)（30）同 ✓；f986 起 rust=(32,2)（22——伤害！）vs emu 恒 (0,3)——触发差 ✓
+（§49 复证）。
+### 50.2 碰撞径 asm 锚（件 2——行号锚）
+GetRadiusSumsOfEnXSlotAndObjYSlot（**prg7:5135**——半径和）+CheckCollisionOfXSlot
+AndYSlot（**5136**——判定）+GetRadiusSumsOfObjXSlotAndObjYSlot（5821）+SamusHurt010F
+（**9898**——isHit 设点族）——判定算式（radius 和比较/接触盒语义）深挖+rust 碰撞径
+对读=修径（下步）。
+### 50.3 停机报余
+碰撞径算式深挖（asm 逐行）+rust 对读+修+TDD（f986 窗伤害事件双腿 0 差）=下卡。本卡
+交付=位置定谳（候选①排除——非猜：f982-991 逐帧全同实录）+碰撞径锚。
+
+Evidence: f982-991 双侧 y/x/status 逐帧全同实录+健康序列（rust f986 (32,2) vs emu
+(0,3) 恒）+GetRadiusSums/CheckCollision/SamusHurt010F 行号锚（5135/5136/9898）。
+Confidence: 92
