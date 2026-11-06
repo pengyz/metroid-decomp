@@ -14887,6 +14887,36 @@ radius 值源（**H3 敌槽面关联**（radius 写撤回回装））=中件 ✓
 族））））③停机/修径 ✓（isHit 设点径+radius 值源（H3 关联））④判据 ✓（L4 103+
 500 测））——**对抗复核核 ✓**（证伪立场（独立重导证据（正确性核）））。
 
+## SamusHurt010F 触发径考证卡对抗复核（fd224462 §52（证伪立场（独立重导证据（3 重点））））
+
+### verdict: pass（触发径全谱 ✓✓✓+地址语义冲突定谳 ✓✓✓+判据 ✓）
+
+**① 触发径全谱核（最重）✓✓✓**：
+- **CollisionDetection（F034——prg7:9900+）** ✓✓✓——`lda #$FF/sta
+  SamusKnockbackIsBomb/sta SamusHurt010F`（**伤旗初值 0xFF**）→敌环（Mellows 等）→
+  **IsSamusDead+SamusInvincibleDelay 免伤判**（`bne skip`）→碰撞检→React（伤！）——
+  **行号抽读全对表 ✓✓✓**（调用点 ✓（prg7:2512（`jsr CollisionDetection`））+
+  SamusKnockbackIsBomb 处理 ✓（:3093-3096））
+- \$010F=**SamusHurt010F**（constants:819（"never read. takes on different values
+  depending on how samus was hit"））——伤旗语义 ✓✓✓
+
+**② 地址语义冲突定谳核 ✓✓✓**：
+- **A 级对表 ✓✓✓**：constants:546（`WalkSoundDelay db ;$53`）vs constants:819
+  （`SamusHurt010F db ;$010F ;never read`）——**\$010F=SamusHurt010F（伤旗）非
+  WalkSoundDelay** ✓✓✓——**rust handler.rs:291/489 误标 0x010F=WalkSoundDelay**
+  ✓✓（地址语义冲突**确证**（A 级））——mainloop.rs:2474 `write_ram(0x010F, 0x80)`
+  =伤旗写点（触发径候选）✓
+- **独立复读确证 ✓✓**（constants 对表（逐字实录））——**误标修靶明确** ✓（\$53 真义
+  =WalkSoundDelay（0x010F=SamusHurt010F（伤旗）））
+
+**③ 判据实况 ✓**：L4 **103/108 保持**+**500 测**（vs 503（差 3 注））+防回退面 ✓
+
+**verdict**：SamusHurt010F 触发径考证卡 **pass**（①触发径全谱 ✓✓✓（最重（CollisionDetection
+F034（伤旗初值 0xFF→敌环→免伤判→碰撞检→React（行号锚全对表））））②地址语义冲突定谳
+✓✓✓（\$010F=SamusHurt010F 非 WalkSoundDelay（A 级对表（rust handler.rs:291/489 误标
+确证）））③判据 ✓（L4 103+500 测））——**对抗复核核 ✓**（证伪立场（独立重导证据
+（正确性核）））。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
