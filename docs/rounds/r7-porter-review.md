@@ -14857,6 +14857,36 @@ CheckCollision/SamusHurt010F 行号锚全对表））③n/f 校准 ✓（iram �
 应用））④判据 ✓（L4 103+500 测））——**对抗复核核 ✓**（证伪立场（独立重导证据
 （正确性核）））。
 
+## 碰撞径算式深挖卡对抗复核（8588a1f7 §51（证伪立场（独立重导证据（4 重点））））
+
+### verdict: pass（判定式定谳 ✓✓✓+rust 对读 ✓✓+停机/修径 ✓+判据 ✓）
+
+**① 判定式定谳核（最重）✓✓✓**：
+- **判定式复算 ✓✓✓**：触发条件=**|dy|<radiusY 和 && |dx|<radiusX 和** ✓✓✓
+  （|dy|=|Temp07-Temp06|（cmp Temp04（radiusY 和=敌 rY+萨 rY）（bcs 不触））——
+  **复算吻合** ✓✓✓（行号抽读 ✓））
+- **行号锚全对表 ✓✓**：GetRadiusSumsOfEnXSlotAndObjYSlot（**F1BF:10147**（半径和
+  Temp04/05））+CheckCollisionOfXSlotAndYSlot（**F1FA:10200**（|dy|<和 && |dx|<和））+
+  SamusHurt010F（**9898**（isHit 设点族））——asm 算式全谱 ✓✓✓
+
+**② rust 对读核 ✓✓**：samus_collision_with_solid_entities（physics.rs:665）——
+**嵌套件桩** ✓✓（GetRadiusSumsOfEnXSlotAndObjYSlot/CheckCollisionOfXSlotAndYSlot
+（F1FA 族）/LDC82——**等待填**（「嵌套件桩（随拼装填）」注释实录））+**DIVERGENCES
+占位**（0x0D983）——**敌接触伤害触发（isHit 设点）未在此径** ✓✓（f986 触发源=他径
+（SamusHurt010F:9898 族端口面）✓——「同位置判定差」算式差未及（触发径定位先）✓）
+
+**③ 停机+修径评估 ✓**：isHit 设点径（**SamusHurt010F:9898 族**（f986 触发真源））+
+radius 值源（**H3 敌槽面关联**（radius 写撤回回装））=中件 ✓——修径=SamusHurt010F 族
+触发径定位+radius 值源考证 ✓
+
+**④ 判据实况 ✓**：L4 **103/108 保持**+**500 测**（vs 503（差 3 注））+防回退面 ✓
+
+**verdict**：碰撞径算式深挖卡 **pass**（①判定式定谳 ✓✓✓（最重（|dy|<radiusY 和 &&
+|dx|<radiusX 和（复算吻合（行号锚全对表（F1BF/F1FA/9898）））））②rust 对读 ✓✓
+（嵌套桩（F1FA 族等待填）+DIVERGENCES 占位（敌接触触发未在此径（触发源=SamusHurt010F
+族））））③停机/修径 ✓（isHit 设点径+radius 值源（H3 关联））④判据 ✓（L4 103+
+500 测））——**对抗复核核 ✓**（证伪立场（独立重导证据（正确性核）））。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
