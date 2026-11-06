@@ -950,3 +950,22 @@ OAM 前段 tile 0x6E×20 源=游戏写者帧流 vs 其他（title 写面已被 g
 Evidence: step_glue.rs:83/139/196/286+title_state.rs:243+title_bridge.rs:118+
 go_main_routine mainloop.rs:3021（GameMode gate 逐行）+MenuOutcome.writes 产出面。
 Confidence: 91
+
+## 38. 游戏写者帧流深挖卡（2026-11-06——写者 trace 一击+第三写者收窄+停机报）
+
+### 38.1 写者 trace 一击（件 1——[oamw]/[oamw2] 探针）
+obj_draw_frame（sprite.rs:150）：写**敌 sprite**（OAM 0x0220-0x0240=精灵 8-16——tile
+0E/0D/1E/1D/2E/2D/3B/3C/17）**与 emu 同位同 tile ✓**（游戏写者对！）；draw_enemy
+（:387）：窗内无写。**OAM 前段 0x00-0x4F 的 0x6E×20 stamps=第三写者**（非 obj_draw_
+frame/draw_enemy——§33/§34 归因再收窄）。
+### 38.2 第三写者候选（件 2）
+apply_title_step（title_state.rs:243）sprite_copy 事件（$6E00→OAM）/其他 OAM 写者
+——**GameMode gate（§37.2）挡 title 路**⇒sprite_copy 候选亦受 gate 制——第三写者
+径待钉（OAM 写点全谱 grep）。
+### 38.3 停机报（件 6）
+第三写者径（OAM 0x00-0x4F 写点全谱——谁写 0x6E×20）=中件深挖。本卡交付=写者 trace
+一击（obj_draw_frame=敌 sprite 对✓/draw_enemy 无写/0x6E=第三写者——非猜：探针实录）。
+
+Evidence: [oamw] 探针（obj_draw_frame 0x0220-0x0240 敌 tile 9 条/iter——与 emu 同）+
+[oamw2]（draw_enemy 窗内无写）+0x6E 前段 stamps 无归因（两路探针零命中）。
+Confidence: 91

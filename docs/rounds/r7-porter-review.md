@@ -14402,6 +14402,34 @@ LoadStarSprites 98AE=\$6E00→OAM 拷贝））②主循环无星印直调 ✓✓
 状态机深层（asm 对应（非 rust 特有））））③判据 ✓（L4 102+499 测））——**对抗复核核 ✓**
 （证伪立场（独立重导证据（正确性核）））。
 
+## title 写面应用链深挖卡对抗复核（8c739bad §37（证伪立场（独立重导证据（4 重点））））
+
+### verdict: pass（gate 反证 ✓✓✓+链全映射 ✓✓+归因再证伪 ✓+判据 ✓）
+
+**① gate 反证核（最重）✓✓✓**：**go_main_routine 逐行**（mainloop.rs:3021（asm
+GoMainRoutine **C114**（GameMode≠0⇒`main_title_routine`（标题路（会师接线（bank00:8000
+穿越）））（GameMode=0⇒`game_main_routine`（游戏路））））——**gate ✓ 存在** ⇒
+f1200 GameMode=**0x00=Play**⇒**title 写面不应用**（gate 挡）✓✓✓——**§34.2/§34.3
+「星域拷贝径」归因被 gate 反证再证伪** ✓✓✓（20×0x6E 源→**游戏写者帧流**（obj_draw_frame）
+候选）——「title 写面确实不应用」论证**成立** ✓✓✓
+
+**② 链全映射核 ✓✓**：step_glue 83/139/196/286（writes→events）→**title_state.rs:243
+apply_title_step**（RAM/WRAM 写应用点（fail-loud 域外写（:250）））→**title_bridge.rs:
+:118**（桥应用（`title_state::apply_title_step`（唯一源）））——**三环行号抽读全对表** ✓✓
+
+**③ 「归因再证伪需」评估 ✓**：gate 反证⇒title 写面排除⇒**剩余候选=游戏写者帧流**
+（obj_draw_frame 帧数据流→OAM tile 落值（§33 域））——「源再开」方向**正确** ✓——
+排除完备性（title 写面排除→剩游戏写者+OAM 时序/帧数据流解析/其他写者）——⚠ **§33/§34
+OAM 复读矛盾持续**（需统一 dump 源后复核（诚实注））
+
+**④ 判据实况 ✓**：L4 **102/108 保持**+499 测（差 4 注）+防回退面 ✓
+
+**verdict**：title 写面应用链深挖卡 **pass**（①gate 反证 ✓✓✓（最重（go_main_routine
+GameMode 分派（C114）（GameMode=0⇒title 写面排除（20×0x6E 源→游戏写者帧流候选）））））
+②链全映射 ✓✓（三环行号全对表（step_glue→title_state:243→title_bridge:118））③归因
+再证伪 ✓（「源再开」方向正确（排除完备性依赖 dump 时序核（矛盾持续（诚实注））））④
+判据 ✓（L4 102+499 测））——**对抗复核核 ✓**（证伪立场（独立重导证据（正确性核）））。
+
 ## 遗留风险清单
 
 1. task-8（F2CA 族九入口）批产滚动中（批 12 起）；task-7（Mesen2 动态收口）交付后接
