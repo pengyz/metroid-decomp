@@ -1117,3 +1117,21 @@ DisplayBar 表拷 0x44→0x6C（+40）/收 0x68）——推进链 ✓ 在（非�
 Evidence: [cursor] 48 写序（00/10/20/44/6C/68）+[w6e] backtrace 罐位（0x6C+→回绕→
 0x00-0x4C）+asm EnergyTankCount（constants）+rust 0x6877 罐数源。
 Confidence: 91
+
+## 46. 罐数源考证+回绕保护修卡（2026-11-06——罐数实录+矛盾停机报）
+
+### 46.1 罐数实录（件 1）
+rust $6877（wram[0x877]）=**0**（f1180-1200 全零实录）——EnergyTankCount 地址 ✓
+（constants:1208 对）；emu trace f1200 w=watch 面（无 6877 watch——取证限）。
+### 46.2 矛盾（件 1-2）
+**罐数=0 但 [w6e] backtrace 有罐写**（AddTanks:2749）——rust AddTanks `if tanks==0
+{return}`（mainloop:2737）应止——**罐写条件/读径矛盾**（0x6877 读点/时序/读径（WRAM
+映射））⇒罐数源考证断点（「20+ vs 1-5」差根未达——罐数 0 与罐写矛盾先解）。
+### 46.3 停机报（件 5）
+罐写条件矛盾（0x6877 读=0 但写发）=中件（读点/时序/读径）。本卡交付=罐数实录+矛盾
+定性（非猜：state wram 实录+backtrace 对照）。
+
+Evidence: rust state wram[0x877]=0（f1180-1200 实录）+[w6e] backtrace 罐写（AddTanks
+:2749）+rust AddTanks if tanks==0 return（2737）+EnergyTankCount $6877（constants
+:1208）。
+Confidence: 91
