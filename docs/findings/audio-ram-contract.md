@@ -36,13 +36,13 @@
 | $0610-17 | SFXTri* | Triangle SFX period 处理（除法中间量） | 全 00（无 SFX）— 仅静态 |
 | $061F | HasBeamSFX | bit7=long beam SFX / bit0=ice beam | 00 — 仅静态 |
 | $0620-23 | Music*InstrLength | 4 声道当前指令帧数 | 变化并重载 ✅ |
-| $0624-27 | Music*RepeatCounter | 乐曲循环计数 | 单调递减（01→02→01→00 等）✅ |
+| $0624-27 | Music*RepeatCounter | 乐曲循环计数 | 变化并循环回绕 ✅（实测 01 01 03 27 → 02 02 02 23 → 01 01 01 20 → 00 00 03 1D；【2026-11-09 r9 更正】原文「单调递减」与 dump 不符，实为每声道独立计数非单调） |
 | $0628-2A | MusicSQ1/2DutyEnvelope, TriLinearCount | APU 帧数据 | 34 34 3C；$062A 3C→1C 变化 ✅ |
 | $062B | NoteLengthTblOffset | 音长表偏移（初始化自 $BD31 表，sound_engine.asm:2040） | 0B 恒定 ✅ |
 | $062C | MusicLoopsOnEnd | FF=曲终循环 | FF 恒定 ✅ |
 | $0630-37 | Music*Base (dw) | 4 声道乐曲数据基址指针 | 00 B0 / 57 B0 / C1 B0 / 2B B1 稳定 ✅ |
 | $0638-3B | Music*InstrID | 声道内曲序指针（相对 Base 索引） | 持续推进（03 0D 03 09 → 0E 27 24 04）✅ |
-| $063C-3F | Music*RepeatID | 循环起始索引 | 01→06/1B/05/1F ✅ |
+| $063C-3F | Music*RepeatID | 循环起始索引 | 恒定 06 1B 05 01（t900 起四时刻实测；【2026-11-09 r9 更正】原文证据串「01→06/1B/05/1F」对位混乱，系把四时刻各声道值错拼为跨时刻序列） |
 | $0640-43 | Music*InstrDelay | **帧计数：倒数到 0 换新数据** | 非单调（03→27→1B→3F）= 重载行为 ✅ |
 | $0648-4A | Music*Sweep | sweep 值 | 7F 7F 00 恒定 ✅ |
 | $064B | ThisSoundChannel | 当前处理声道（00/04/08/0C） | 0C ✅ |
@@ -57,7 +57,8 @@
 | $0686 | ScrewAttack0686 | screw attack SFX 用 | 00 — 仅静态 |
 | $0688-8D | SFX*/Music*ContFlags | 续传 flags | 全 00 — 仅静态 |
 
-四时刻 diff 显示 22 个地址活跃（周期/帧计数/曲序指针/音量索引全部按静态语义运动）；
+四时刻 diff 显示 27 个地址活跃（周期/帧计数/曲序指针/音量索引全部按静态语义运动；
+【2026-11-09 r9 更正】原文 22 为程序化 diff 前的手工计数，程序化重 diff 实测 27）；
 静态谱与动态行为**零冲突**。
 
 ### 已知分歧点交叉：$BBA8 帧计数语义

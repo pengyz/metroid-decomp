@@ -40,15 +40,22 @@ roundtrip 铁证（checksum VALID + 语义吻合）。
 - 生成：`CalculatePassword` `@loop_random @ 00:8D00`：`RandomNumber1 & #$0F`（非 0，≤15）存 `$6998`。
 - 消费：`PasswordScramble`/`UnscramblePassword` 以 `Temp02_ScrambleCount` 循环执行
   整 16 字节 ring 的 ROR/ROL `$6998` 次。
-- **quirk（登记，勿改 Stage A 行为）**：两例程的 ring 闭合都不完美——scramble 用
-  `Temp00`（$00）暂存 `$6988` 原值再 ROR 回写；unscramble 用 `Temp00` 暂存 `$6997`。
-  首轮旋转的外部 C_in 来自前序指令残留（对 scramble 是 checksum ADC 的进位链尾态），
-  被第一个 ROR/ROL 吞掉——即旋转链的首位 bit 不是纯 ring，而是被外部 C 污染一位。
-  另 `$9011 TwoLowerAndSixLower`（decode 侧 chars→bytes）的 ror×3 链同样吞入进入时 C
-  （其值 = 前序 `Amul16 @ $C2C5` ASL×4 的最后一次进位），使 `PasswordByte[3I+2]` 的 bit6
-  依赖进入时的进位态。→ 建议 D4 登记 `BUG-` 条目（本卡不动 bug-ledger，见遗留假设）。
-  证据：ROM 字节 `xxd -s $((0x10+0x9011-0x8000)) -l 20 "rom/Metroid (USA).nes"`
-  → `B9 9A 69 6A 6A 6A 29 85 ...`（无 CLC/SEC，直接 ROR×3）。
+- **【2026-11-09 r9 更正】** 原文曾主张此处存在「C-in quirk」（$9011 ror×3 链吞入外部进位 →
+  PB[3I+2] bit6 依赖进入进位态；scramble/unscramble 首轮外部 C 污染；建议落 bug-ledger）。
+  该主张经 r9 对抗复核双向控制实验**全部证伪**，原地改写为：
+  **瞬态吞 C、行为无影响**——
+  a) `$9011`：ROR×3 后外部 C_in 落 **bit5**（bit7=原 v[1]、bit6=原 v[0]），随即 `AND #$C0`
+     把 bit5 清零，输出恒定（standalone C_in=0/1 实测输出均 C0）；且 Consolidate 调用序中
+     `$9011` 入口 C 实为前序 `$9001` 内 LSR×2 的进位（覆盖 `$C2C5` ASL 进位），原文因果链双错；
+  b) scramble `$8E2D`/unscramble `$8E4E` 首轮吞 C 只写入随后被 temp（$00）回写覆盖的字节
+     （`$6988`/`$6997`），保留数据 = 纯 128-bit 环转（decode 入口四组 (C,C) 组合 18 字节输出
+     全同实测；encode 入口 C=0/1 输出全同）；
+  c) encode 侧 `$8F42` ROL×3 的 C_in 同样被 `AND #$03` 掩码。
+  **结论：无行为级 C 泄漏，不构成怪癖，撤销落 bug-ledger 建议。**
+  详见 `docs/rounds/r9-password-and-audioram-review.md` §件1③（A 级控制实验）。
+  证据（ROM 字节，仅说明链结构）：
+  `xxd -s $((0x10+0x9011-0x8000)) -l 20 "rom/Metroid (USA).nes"`
+  → `B9 9A 69 6A 6A 6A 29 C0 ...`（ror×3 + AND #$C0，无 CLC/SEC）。
 
 ### 4. 144 bit = 18 字节 = 24 字符 × 6 bit —— 成立
 
@@ -73,6 +80,11 @@ PB[10]=FF -> MissileCount=255（✓ 社区记载 Justin Bailey 给满导弹）
 encode∘decode∘encode == encode (500 随机 canonical 密码): PASS
 ```
 
+> 【2026-11-09 r9 更正（表述纪律）】上述「VALID」判定在 Python 侧做 sum==checksum 比较
+> （mini-6502 未实现 `CMP abs`/0xCD，`ValidatePassword @ $8DDE` 未被执行）；checksum 字节
+> 本身为 ROM 代码产物、比较双方均出自 ROM，结论不失实，但「全程 ROM 字节执行」对本处
+> 比较一步有轻微拔高，如实标注。
+
 复现：`cd analysis/password_verify && python3 justin_bailey_check.py`
 （`emu.py`：mini-6502，bank 映射 prg[cpu-0x8000]（<0xC000）/ prg[0x1C000+cpu-0xC000]（≥0xC000）；
 `pwlib.py`：decode=$8F60+$8E4E、encode=$8E17+$8E6C。）
@@ -90,11 +102,10 @@ encode∘decode∘encode == encode (500 随机 canonical 密码): PASS
 
 ## 假设区（未证实，不进结论）
 
-1. **BUG 台账编号未落**：§3 的 C-in quirk（decode 侧 `$9011` bit6 依赖进入进位、
-   scramble/unscramble 首轮外部 C 污染）按 D4 属「Stage A 保真保留」怪癖，本卡受
-   「只写 docs/findings/」约束未动 `docs/bug-ledger.md`，待补 `BUG-` 条目。
-2. Justin Bailey 的 `PB[0..7]` 位域里含有若干「垃圾 item bit」（如 PB[5] bit6 来自
-   C-quirk）——游戏不校验 item 合法性、只查 checksum，故有效。是否与真实游戏机
+1. **~~BUG 台账编号未落~~【2026-11-09 r9 更正】撤销**：§3 的 C-in quirk 经复核双向控制
+   实验证伪（瞬态吞 C、被掩码/temp 回写丢弃，行为无影响），不构成怪癖，不落 bug-ledger。
+   详见证伪实验 `docs/rounds/r9-password-and-audioram-review.md` §件1③。
+2. Justin Bailey 的 `PB[0..7]` 位域里含有若干「垃圾 item bit」——游戏不校验 item 合法性、只查 checksum，故有效。是否与真实游戏机
    上该密码的行为逐位一致，待 Mesen 差分（本卡未跑 gameplay trace）。
 3. shift byte 值域声称「1..15」来自 `& #$0F; beq 重摇`（`00:8D00`）——成立；
    但 Justin Bailey 解出 shift=0xFF（玩家手输密码不受生成侧约束），游戏照单全收
