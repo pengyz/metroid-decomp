@@ -355,9 +355,13 @@ fn main() {
     // 双相位截取（emu endFrame N 单回调天然两相位）：
     //  · 图像/PPU 面 = snap（tick(N-1) 的 on_spin_exit 缝快照（NMI(N-1) 后/工作前——
     //    RenderState）——滚动=state-row(N-1)、名表≤work(N-2) 冲刷；
-    //    **OAM $200-2FF = tick(N-1) 收口活体**（与 ram.hex 同相位——OAMDMA 源像；
-    //    探针定谳（2026-11-03）：rs@缝+oam@收口 vs emu 金面 f1128 逐像素 0 差，
-    //    oam@缝 397px/rows1128 397px——NMI(N) 尾段 SpriteRAM 重写（73B）不入帧 N 渲染）。
+    //    **OAM $200-2FF = tick(N-1) 缝克隆（display set）**（emu spin-exit-seam 截取
+    //    同相位——修径 C 协议；asm：NMI 只 DMA 不写 SpriteRAM，SpriteRAM=GoMainRoutine
+    //    帧工作产物 ⇒ OAMDMA 源像=work(N-1) 收口=显示集）。
+    //    【2026-11-09 更正】2026-11-03 探针"oam@收口 0 差"系 walk-fc end 采集金面，
+    //    该金面=frames+1-fallback 兜底相（晚一拍）=scenario_capture.lua 末缝
+    //    sampleTrace closed-file 抛错中断缝回调之工具 bug 污染产物（SEAM-FIRE/
+    //    SAMPLE-ERR 实录定谳，commit e1609e28 修）——已按修径 C 全量 seam 相回归。
     //    缺缝（span/title 续段不采）⇒活体回退（span 冻结窗内等价）。
     //  · ram.hex 面 = 活体（tick(N-1) 收口（$1A=00 判别位）——work(N-1) 后/NMI(N) 前）。
     // 旧径两面整取 tick(N) 收口 ⇒ 名表/滚动 latch 晚一拍（f820 dx=+2 根因）。
@@ -366,7 +370,7 @@ fn main() {
                           frame: usize, tag: &str,
                               out: &PathBuf, produced: &mut Vec<(usize, String, String)>| {
         let (rs, oam): (&RenderState, &[u8]) =
-            snap.unwrap_or((&engine.mem.render, &engine.mem.ram[0x200..0x300]));
+            capture_inputs(snap, &engine.mem.render, &engine.mem.ram[0x200..0x300]);
         let pal = &rs.palette;
         let bg: [u8; 16] = pal[0..16].try_into().unwrap();
         let spr: [u8; 16] = pal[16..32].try_into().unwrap();
@@ -530,6 +534,42 @@ fn main() {
               produced.len(), blocked.len(), out_dir);
 }
 
+/// 采集帧输入选择（修径 C——findings/walk-fc-capture-seam.md §2c）：**OAM 恒取缝克隆**。
+/// asm 取证（2026-11-09，refs/m1disasm/SRC/prg7_engine.asm）：
+///  · NMI（`NMI: ; 07:C0D9` :233）开头只做 `sta OAMADDR`+`sta OAMDMA`（:241-249）
+///    ——**NMI 全程不写 SpriteRAM**（后随 CheckPaletteWrite/WriteScroll/ReadJoyPads/
+///    SoundEngine/UpdateAge 皆非 $200-2FF 写者）；
+///  · SpriteRAM($0200-2FF) = MainLoop（`MainLoop: ; 07:C0BC` :198）GoMainRoutine
+///    帧工作产物（jsr DisplayBar :2513 / UpdateObjAnim :2972,:6226 /
+///    ObjDrawFrame :5561,:12212 皆在工作链）；
+///  · 帧 N 的 OAMDMA 源像 = work(N-1) 收口 SpriteRAM = 显示集（display set）；
+///    缝克隆（post-NMI/pre-work）= 该显示集（emu spin-exit-seam 截取同相位——修径 C）。
+/// rs = 缝快照（名表/滚动 latch 相位）；缺缝（span/title 续段不采）⇒活体回退。
+///
+/// 【2026-11-09 更正链】（证伪更正——历史主张原地保留于 git 史）：
+///  ① "OAM 恒取收口"（2026-11-03 探针 f1128 "rs@缝+oam@收口 0 差"）——该金面系
+///     walk-fc end 采集 = **frames+1-fallback 兜底相（晚一拍）**，工具 bug 污染产物
+///     （③ 根因）；f650/f1400 dump 对实：mid 采集 emu png=缝克隆显示集，收口=下一
+///     相位（f650 全 0xF0 藏集）。
+///  ② is_end 判据（mid→缝/end→收口）→ f1200 回归 172px 证伪；span 判据
+///     （span_left>0→收口）→ f1400 回归 58px 证伪。
+///  ③ 两判据之根因同被证伪：frames+1-fallback 兜底相真因 = scenario_capture.lua
+///     末缝 sampleTrace "attempt to use a closed file" 抛错中断 onSpinExitSeam
+///     ⇒ fulfillShot 跳过（SEAM-FIRE f=1400/SAMPLE-ERR 实录）——已修（commit
+///     e1609e28：文件关闭移 writeDoneAndStop 收口+pcall）⇒ 金面全量 seam 相
+///     （修径 C 协议）⇒ OAM 恒取缝克隆与全部金面同相。
+fn capture_inputs<'a>(
+    snap: Option<(&'a RenderState, &'a [u8])>,
+    live_rs: &'a RenderState,
+    live_oam: &'a [u8],
+) -> (&'a RenderState, &'a [u8]) {
+    match snap {
+        // OAM 恒取缝克隆（display set——修径 C 同相位；见 doc 更正链）。
+        Some((rs, seam_oam)) => (rs, seam_oam),
+        None => (live_rs, live_oam),
+    }
+}
+
 // ---------------- 测试（Task 4 snapshot 消费面——TDD 先红后绿） ----------------
 
 #[cfg(test)]
@@ -591,5 +631,29 @@ mod tests {
         }));
         let _ = tick; // 合成态帧工作可能引爆 unported——首缝已在引爆前落下（不弱化 fail-loud）
         assert_eq!(row, expected, "restore 后首帧须=期望帧（三直映逐字节——加载≠对齐防线锚）");
+    }
+
+    /// 缝快照在场：OAM 恒取缝克隆（display set——与 emu spin-exit-seam 截取同相位）。
+    /// 【2026-11-09 更正链见证 capture_inputs doc】恒取收口→is_end→span 三主张
+    /// 皆被证伪（fallback 金面=工具 bug 污染，e1609e28 修后金面全 seam 相）。
+    #[test]
+    fn capture_inputs_uses_seam_oam_when_snap() {
+        let snap_rs = RenderState::default();
+        let live_rs = RenderState::default();
+        let snap_oam = vec![0xAAu8; 0x100];
+        let live_oam = vec![0x55u8; 0x100];
+        let (rs, oam) = capture_inputs(Some((&snap_rs, &snap_oam)), &live_rs, &live_oam);
+        assert!(std::ptr::eq(rs, &snap_rs), "rs 必须取缝快照（名表/滚动 latch 相位）");
+        assert!(std::ptr::eq(oam, snap_oam.as_slice()), "OAM 须恒取缝克隆（display set——修径 C 同相位）");
+    }
+
+    /// 缺缝（span/title 续段不采）⇒ 活体回退（span 冻结窗内等价）。
+    #[test]
+    fn capture_inputs_fallback_live_when_no_snap() {
+        let live_rs = RenderState::default();
+        let live_oam = vec![0x55u8; 0x100];
+        let (rs, oam) = capture_inputs(None, &live_rs, &live_oam);
+        assert!(std::ptr::eq(rs, &live_rs), "缺缝 rs=活体回退");
+        assert!(std::ptr::eq(oam, live_oam.as_slice()), "缺缝 OAM=活体回退");
     }
 }
