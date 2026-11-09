@@ -1623,3 +1623,15 @@ stand(0) 对照照常扣）。本卡纯守门修，正常态不受影响。
 遗留注记：rust `bcd_sub`（mainloop.rs）与 asm Base10Subtract（$C3FB）字节面结果存在
 待对读差（例：BCD 0x00−0x08：rust=0x92 借位，asm 手推=0xF9）——本卡不裁，另行卡
 （显示径/CheckHealthStatus 的 BCD 布局联动需一并核）。
+
+> 【2026-11-09 更正（r9 复核 cda2f2cb，verdict 转 pass）】上文「asm 手推=0xF9」
+> **不成立**：verifier 忠实 6502 模拟 Base10Subtract($C3FB) 实证——关键=ExtractNibbles
+> 尾部 `lda $03; and #$0F` 使 A=Health 个位 nibble（porter 手推疑漏看该步），
+> 0x00−0x08 时 **asm=(0x92,0x02) 与 rust=(0x92,0x02) 逐字节一致**——BCD 对读差
+> 不存在，L4 108/108 根基不受动摇。原「另行卡」口径作废；新口径=审计
+> rust mainloop.rs:2653 `r1 & 0x9F | (h1 & 0x60)` 掩码（asm 无对应物，罐数位边缘
+> 潜在分歧，B 级——现有 L4 面未触发）。
+> 补：调用点全谱另含 metroid.asm:288 吸血/PowerUp 径（经 $8042 CommonJump_
+> SubtractHealth 汇聚，porter 卡文未点名——不影响「一处修齐」结论）。
+> minor 建议留档：stand(0) 对照断言可钉 characterization 精确值；F13D 入口行号
+> =prg7:10056；ratchet 两条 WARN 上行待 sanctioned baseline update。
