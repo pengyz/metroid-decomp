@@ -5,8 +5,15 @@
 -- Screen text decoding: tiles 0x00-09=digits 0-9, 0x0A-1F=A-V, 0x24=space, 0x40-5F=red A-Z glyphs.
 -- Result vector (v3.6.2): $0037=PostAllTestTally, $0038=PostAllPassTally, slots $0400-$0498
 --   (result_* table in AccuracyCoin.asm:144-321; bit0=1 PASS, bit0=0 FAIL err=(byte>>2)).
+--
+-- IMPORTANT (r9 复核更正): the battery does NOT run at boot — it only starts after a
+-- Start press on the menu (AccuracyCoin.asm:18183-18186 `AND #$10 ; Start …
+-- JSR AutomaticallyRunEveryTestInROM`). This script therefore injects Start once.
+-- OUT path must be ABSOLUTE: Mesen2 chdirs into its config dir at startup, so
+-- relative io.open paths land in ~/.config/Mesen2/ (实测). run_accuracycoin.py
+-- substitutes {{OUT}} with the absolute target path before launching.
 local f = 0
-local OUT = (arg and arg[1]) or "accuracycoin_dump.log"
+local OUT = "{{OUT}}"
 local out = io.open(OUT, "w")
 out:write("lua loaded\n"); out:flush()
 local function dump()
@@ -30,10 +37,15 @@ local function dump()
   out:flush()
 end
 emu.addEventCallback(function()
+  -- Start injection during the inputPolled phase (f=60-90 window, 8 frames) so the
+  -- menu launches the full battery (see header comment).
+  if f >= 60 and f <= 90 then emu.setInput({start = (f % 2) == 0}, 0) end
+  if f > 90 and f <= 95 then emu.setInput({start = false}, 0) end
+end, "inputPolled")
+emu.addEventCallback(function()
   f = f + 1
   if f % 600 == 0 then out:write(string.format("tick f=%d\n", f)); out:flush() end
-  -- AccuracyCoin auto-runs every test at boot (AutomaticallyRunEveryTestInROM); Start just
-  -- dismisses the title/menu. Dump after the battery completes and periodically after.
+  -- Dump after the battery completes and periodically after.
   if f >= 600 and (f - 600) % 1800 == 0 then dump() end
   if f == 16000 then dump(); out:write("ENDDUMP\n"); out:flush(); out:close() end
 end, "endFrame")

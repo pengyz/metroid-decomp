@@ -10,7 +10,12 @@ Reproducibility chain (metroid-decomp tools/oracle/accuracycoin):
   2. Mesen2 binary: tools/mesen2/Mesen (2.1.1). Runs under a throwaway Xvfb display
      with an isolated HOME (settings.json pre-seeded so the first-run wizard does not
      silently exit; see findings doc for the full pitfall list).
-  3. Lua:  accuracycoin_dump.lua (this dir) — dumps CHR/NT/RAM every 1800 frames.
+  3. Lua:  accuracycoin_dump.lua (this dir) — injects one Start press (inputPolled
+     phase, f=60-90; the battery only starts from the menu via Start,
+     AccuracyCoin.asm:18183-18186) and dumps CHR/NT/RAM every 1800 frames.
+     The dump path is ABSOLUTE: Mesen2 chdirs into its config dir at startup, so
+     the runner substitutes {{OUT}} into the lua template before launch and
+     backs up any previous dump before Mesen overwrites it ("w" mode).
   4. Decode: decode_accuracycoin.py <dump.log> AccuracyCoin.asm
 
 Holds analysis/.scenario.lock (fail-fast) — never run concurrently with the L4
@@ -46,12 +51,25 @@ def main():
         sys.exit("scenario lock held by a sibling — retry later")
     print("lock ok", time.strftime("%H:%M:%S"), flush=True)
 
-    log_path = os.path.join(ROOT, args.out)
+    # Materialize the lua with the absolute dump path (Mesen2 resolves relative
+    # io.open paths against its config dir, not the process CWD).
+    log_path = os.path.abspath(os.path.join(ROOT, args.out))
+    tpl = open(args.lua).read()
+    if "{{OUT}}" not in tpl:
+        sys.exit("lua template missing {{OUT}} placeholder")
+    inst_lua = log_path + ".inst.lua"
+    open(inst_lua, "w").write(tpl.replace("{{OUT}}", log_path))
+    # Back up a previous dump: the lua opens with "w" and would silently clobber it.
+    if os.path.exists(log_path):
+        prev = log_path + ".prev"
+        os.replace(log_path, prev)
+        print(f"previous dump -> {prev}", flush=True)
+
     xv = subprocess.Popen(["Xvfb", args.display, "-screen", "0", "1024x768x24", "-nolisten", "tcp"])
     time.sleep(1.5)
     env = dict(os.environ, HOME=args.home, DISPLAY=args.display)
     mp = subprocess.Popen(
-        [args.mesen, args.rom, args.lua, "/DoNotSaveSettings"],
+        [args.mesen, args.rom, inst_lua, "/DoNotSaveSettings"],
         stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT, env=env, cwd=ROOT)
     done = False
     for i in range(args.timeout):
