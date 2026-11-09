@@ -152,6 +152,9 @@ end
 local pendingShot = nil   -- {path, frame, tag}：待缝兑现的截取请求
 local doneDeferred = false
 local doneWritten = false
+-- 【2026-11-09】文件句柄先于闭包声明（Lua 词法作用域——同 frame 计数器纪律）：
+-- writeDoneAndStop 收口关闭 traceF/capF/winF，声明晚于闭包=闭包内索引 nil 全局。
+local traceF, capF, winF = nil, nil, nil
 local SHOT_STABLE_MAX = 8
 
 local function takeStableShot()
@@ -172,6 +175,14 @@ end
 local function writeDoneAndStop()
   if doneWritten then return end
   doneWritten = true
+  -- 【2026-11-09 修复】traceF/capF/winF 关闭从 endFrame 末块（原 :842-844，frame==frames
+  -- 预关）移至此收口处：预关会让 spin-exit 案的 sampleTrace 在末缝写 traceF 时抛
+  -- "attempt to use a closed file"，中断 onSpinExitSeam ⇒ fulfillShot 被跳过 ⇒ 端采集
+  -- 兜底 frames+1 晚一拍（fallback 相金面污染根因——SEAM-FIRE/SAMPLE-ERR 实录定谳）。
+  -- 收口处关闭=缝兑现/真兜底之后，采样与截取不再竞争文件生命周期。
+  traceF:flush() traceF:close()
+  capF:flush() capF:close()
+  if winF then winF:flush() winF:close() end
   local d = io.open(donePath, "wb")
   if d then
     d:write(string.format('{"frames":%d,"trace_lines":%d,"captures":%d,"shots":%d}\n',
@@ -502,15 +513,14 @@ if PLAN.entry_probe and #PLAN.entry_probe > 0 then
 end
 
 -- ---------------- r3：$8000 窗口指纹时间线（A9 证据面：每帧 16 字节自证映射）
-local winF = nil
 if (PLAN.probe_dispatch and #PLAN.probe_dispatch > 0)
     or (PLAN.entry_probe and #PLAN.entry_probe > 0) then
   winF = io.open(PLAN.out_dir .. "/" .. name .. ".window.jsonl", "wb")
 end
 
 -- ---------------- 回调注册
-local traceF = assert(io.open(tracePath, "wb"))
-local capF = assert(io.open(capPath, "wb"))
+traceF = assert(io.open(tracePath, "wb"))
+capF = assert(io.open(capPath, "wb"))
 
 -- W-NEW 行缓冲 NMI 级插桩（t94）：probe_mem 写点 PC 轨迹（观察性，不改行为）
 if PLAN.probe_mem and #PLAN.probe_mem > 0 then
@@ -751,7 +761,12 @@ end
 
 local function onSpinExitSeam()
   -- spin-exit 缝（$C0D3）：采样缝（sample_point=spin-exit）+ 截取缝兑现（修径 C）共用
-  if samplePoint == "spin-exit" then sampleTrace() end
+  -- 【2026-11-09 修复】sampleTrace pcall 包裹：采样错误不得中断截取兑现（曾因 traceF
+  -- 预关抛 closed-file 中断本回调⇒fulfillShot 跳过⇒端采集兜底晚一拍=金面污染）。
+  if samplePoint == "spin-exit" then
+    local okS, errS = pcall(sampleTrace)
+    if not okS then log("SAMPLE-ERR f=" .. tostring(frame) .. ": " .. tostring(errS)) end
+  end
   if pendingShot then fulfillShot("spin-exit-seam") end
 end
 if samplePoint == "spin-exit" or next(capAt) ~= nil or everyN > 0 then
@@ -802,6 +817,9 @@ end
 emu.addEventCallback(function()
   if frame > frames then
     -- 末帧截取缝未命中兜底（span/停机边界）：即时兑现+收口（不静默丢 DONE）
+    -- 【2026-11-09 更正】"缝未命中"实测根因=sampleTrace closed-file 抛错中断缝回调
+    -- （非 span/停机——SEAM-FIRE f=1400 实录缝命中过）；已修（关闭移收口+pcall）。
+    -- 本兜底保留=真缝未命中（span/停机）安全网。
     if doneDeferred and not doneWritten then
       log("DONE-FALLBACK f=" .. frame .. "（缝未命中——兜底兑现截取后收口）")
       fulfillShot("frames+1-fallback")
@@ -835,9 +853,8 @@ emu.addEventCallback(function()
   if frame % 120 == 0 then traceF:flush() end
 
   if frame == frames then
-    traceF:flush() traceF:close()
-    capF:flush() capF:close()
-    if winF then winF:flush() winF:close() end
+    -- 【2026-11-09 更正】原此处 traceF/capF/winF 预关（原 :842-844）=末缝 sampleTrace
+    -- closed-file 抛错根因——关闭已移入 writeDoneAndStop 收口（见彼处注）。
     if PLAN.coverage then
       local covPath = PLAN.out_dir .. "/" .. name .. ".coverage.jsonl"
       local covF = io.open(covPath, "wb")
