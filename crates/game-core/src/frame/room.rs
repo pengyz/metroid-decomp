@@ -629,14 +629,23 @@ pub fn attrib_table_write(mem: &mut crate::frame::FrameMemory) -> bool {
     mem.write_ram(0x005A, room.wrapping_add(1)); // inc RoomNumber
     match row {
         1 | 3 => {
-            // WritePPUAttribTbl（$E5E2）：RoomRAM 属性行→PPU 属性表（MoreInit 拷贝冗余面）
+            // WritePPUAttribTbl（$E5E2）：RoomRAM 属性行→PPU 属性表。
+            // 【2026-11-09 更正】原径 `dst = 0x23C0 + (row-1)*0x20` + 8B 直写（"4 行 8B 组形随证"
+            // 半证）：row3 ⇒ dst=$2400（**NT B 瓦面 row0**——f950/f960/f1000/f1150 46px 角
+            // 病灶）+ src+0x40 溢出属性区 + 8B≠32B + NT 恒 A（NT B 属性表永留清填 FF）。
+            // asm 正源（prg7:7710）：`lda #$C0`/`#$E0`（RoomNumber $F1/$F3 行基址）、
+            // `jsr GetNameAddrs`（$E564）`ora #$03` ⇒ "$23 for attrib table 0, #$2F for
+            // attrib table 3"（PPUAddrs[$20/$2C]|3 动态按 NT）、`lda #$20` **32B 整行**、
+            // 源=$00=RoomRAM 属性区（$x3C0/$x3E0）。
             let hi = mem.read_ram(0x0038);
-            let src = ((hi as u16 + 3) << 8) | 0xC0;
-            let dst = 0x23C0u16 + (row - 1) * 0x20; // 属性行面（4 行 8B 组形随证）
-            for k in 0..0x08u16 {
-                let b = mem.read_wram(src + (row - 1) * 0x20 + k);
+            let row_off: u16 = (row - 1) * 0x10; // row1→$00 / row3→$20（$C0/$E0 基址）
+            let src = ((hi as u16 + 3) << 8) | (0xC0 + row_off);
+            let nt_hi: u16 = if (hi >> 2) & 1 == 0 { 0x23 } else { 0x2F }; // PPUAddrs[$20/$2C]|3
+            let dst = (nt_hi << 8) | (0xC0 + row_off);
+            for k in 0..0x20u16 {
+                let b = mem.read_wram(src + k);
                 mem.write_io(0x2006, (dst >> 8) as u8);
-                mem.write_io(0x2006, dst as u8 | k as u8);
+                mem.write_io(0x2006, (dst + k) as u8);
                 mem.write_io(0x2007, b);
             }
             true
@@ -730,6 +739,42 @@ mod tests {
         m.write_wram(ex, 0);
         assert!(load_enemy(&mut m, 0x41, 0x05, 0x2B));
         assert_eq!(m.read_wram(ex), 1, "空槽载入 status←Resting");
+    }
+
+    /// AttribTableWrite（$EA13）写径对拍（asm WritePPUAttribTbl $E5E2 prg7:7710）：
+    /// GetNameAddrs（$E564）`ora #$03` ⇒ "$23 for attrib table 0, #$2F for attrib table 3"
+    /// （动态按 NT）；行基址 $C0/$E0（RoomNumber $F1/$F3——`lda #$20` **32B 整行**）；
+    /// 源=RoomRAM 属性区 $x3C0/$x3E0。
+    /// 【2026-11-09 病灶钉】原径 `dst = 0x23C0 + (row-1)*0x20` + 8B 直写：row3 ⇒ dst=$2400
+    /// （**NT B 瓦面 row0**——f950/f960/f1000/f1150 46px 角病灶）+ src+0x40 溢出属性区 +
+    /// 8B≠32B + NT 恒 A（NT B 属性表永留清填 FF）。
+    #[test]
+    fn attrib_table_write_nt3_targets_mirror_attr_rows() {
+        let mut m = FrameMemory::default();
+        m.write_ram(0x0038, 0x64); // RoomRAMPtr hi=RoomRAMB（NT3——select_room_ram 语义）
+        for i in 0..0x20u16 {
+            m.write_wram(0x67C0 + i, 0x55); // 属性行 0（row1 源——55=ATDataTable[RoomPalette&3]）
+            m.write_wram(0x67E0 + i, 0xF5); // 属性行 1（row3 源）
+        }
+        m.write_ram(0x005A, 0xF1); // row1
+        assert!(attrib_table_write(&mut m), "row1 径通");
+        m.write_ram(0x005A, 0xF3); // row3
+        assert!(attrib_table_write(&mut m), "row3 径通");
+        // NT B 镜像属性区（PPU $2FC0/$2FE0 → nametable[0x7C0..0x800]）——32B×2 整行
+        assert!(
+            m.render.nametable[0x7C0..0x7E0].iter().all(|&b| b == 0x55),
+            "row1 → $2FC0 属性行 0 全 32B（GetNameAddrs|3=$2F + $C0 基址）"
+        );
+        assert!(
+            m.render.nametable[0x7E0..0x800].iter().all(|&b| b == 0xF5),
+            "row3 → $2FE0 属性行 1 全 32B（$E0 基址）"
+        );
+        // 病灶钉：NT B 瓦面 row0（nametable[0x400..]）不被属性行写污染
+        assert!(
+            m.render.nametable[0x400..0x408].iter().all(|&b| b == 0x00),
+            "NT B row0 瓦面不落属性字节（原 dst=$2400 病灶钉）"
+        );
+        assert_eq!(m.read_ram(0x005A), 0xF4, "RoomNumber 自进（row3→$F4）");
     }
 }
 

@@ -1497,3 +1497,58 @@ Confidence: 90
 > 单参+emu.read 取 val+memCallbackType.read 注册 ✓——**Mesen 仍无 ctread.log 产物**
 > （read callback 注册三证（签名修后仍失败））——**工具面深改请**（C++ trace logger/
 > Mesen 回调 API 修——方案报）。
+
+## 63. 三格清扫卡：端采集相位差+harness 文件生命周期竞争（2026-11-09）
+
+**任务**（lead m02624）：小件清扫三格（crawlprobe f960=174px / walkfcprobe f1400=58px /
+case-001 f950=46px）+ 挂起卡落账。挂起卡落账 = docs/pending-cards.md PENDING-001（commit
+89b72285）。三格全收敛：f960 174→0、f1400 58→0、f950 46→0（见 §64）。
+
+**相位差三层考证据链**（A 级）：
+
+1. **纸面渲染定谳**（dump oam+chr 重渲染 vs png 逐像素）：emu png = render(dump 标准 NES
+   语义) **1:1 一致**；rust png 不一致于任何翻转模式组合——经穷举（mode×swaprows×attr
+   掩码）命中 (mode=both/h, swaprows, attr=(a&0x3F)|0x40) = **下一动画相**（快照相位差）。
+2. **dump 相位破案**：f650 OAM 全 0xF0（游戏藏精灵形）vs emu png 有精灵 ⇒ dump 与 png 在
+   mid 采集天然两相位（"endFrame N 单回调天然两相位"注释实证）；f1400（end 采集）同相位。
+3. **emu 截取协议**（tools/scenario_capture.lua 修径 C）：endFrame 块仅 requestShot（渲染面
+   翻转竞态窗不读）→ spin-exit 缝（$C0D3 post-NMI/pre-work）fulfillShot→takeStableShot；
+   端采集 DONE-DEFER → 缝兑现后 writeDoneAndStop。
+
+**根因**（A 级运行实录）：**scenario_capture.lua 末缝 closed-file 抛错竞争**——
+`if frame == frames then traceF:close() capF:close()` 在递延兑现**之前**关闭文件 →
+spin-exit 案 sampleTrace 写已关 traceF → "attempt to use a closed file" 抛错中断
+onSpinExitSeam → fulfillShot 跳过 → DONE-FALLBACK frames+1（晚一拍相位）。
+实录：`SEAM-FIRE f=1400` → `SAMPLE-ERR f=1400: ...lua:743: attempt to use a closed file` →
+（pcall 后）`SHOT-SEAM f=1400 reason=spin-exit-seam`。**四个 fallback 金面（crawlprobe f960/
+walkfcprobe f1400/morphball f1700/fcprobe f460）= 工具 bug 污染产物**（晚一拍相位）；SHOT
+理由谱系定谳（121× spin-exit-seam + 4× frames+1-fallback 全案日志）；受控对证
+（fcprobe 有 `sample_point spin-exit` 指令=fallback / leftwalk-probe2 同输入无指令=seam）。
+span 假说（iter_span_left 判据）经 DSH_SPAN_TRACE 实录证伪（f1389-1400 全 non-span）。
+
+**修复**：harness（commit e1609e28——close 移入 writeDoneAndStop + sampleTrace pcall +
+Lua 句柄先于闭包声明（`local traceF,capF,winF` 声明序教训））+ rust 侧 capture_inputs
+**OAM 恒取缝克隆**（display set——emu spin-exit-seam 截取同相位；is_end/span 双判据均经
+实证伪，dated correction 链在 rust_screenshot.rs helper doc）。
+【2026-11-09 更正】2026-11-03 探针"oam@收口 0 差"系 fallback 相污染金面产物（walk-fc
+end 采集），非普适相位结论。
+
+## 64. Face B 定谳：AttribTableWrite 写径病灶（2026-11-09——46px 角一根因双面）
+
+f950 名表差（正确偏移重放，A 级）：142B 全在 NT B——① attr 表 $27C0-$27FF：emu=55×48+
+F5×8+5F×8（InitTables AttribFill=ATDataTable[RoomPalette&3]=$55+update_attrib 编辑）vs
+rust=FF（清填未动）② 瓦面 row0 cols 0-7：emu=`4B 4C FF×6`（状态条框越缝饰件+空）vs
+rust=`00 4C 00×6`。NT A 全同（64B attr 逐字节同）。
+
+**根因**（rust room.rs attrib_table_write vs asm WritePPUAttribTbl $E5E2 prg7:7710）：
+原径 `dst = 0x23C0 + (row-1)*0x20` + **8B** 直写 + src=RoomRAM 属性区+(row-1)*0x20——
+row3 ⇒ **dst=$2400（NT B 瓦面 row0——病灶②：src+0x40 溢出属性区字节覆写瓦面）**+
+NT 恒 A（病灶①：NT B 属性表永无写者，留 FF）+ 8B≠asm `lda #$20` 32B 整行。
+asm 正源：`lda #$C0/#$E0`（$F1/$F3 行基址 stride 0x20）+ `jsr GetNameAddrs`（$E564）
+`ora #$03` ⇒ "**#$23 for attrib table 0, #$2F for attrib table 3**"（PPUAddrs[$20/$2C]|3
+动态按 NT；NT3 落 $2FC0-$2FFF 镜像）+ 32B×2 整行 = 全 64B 属性表。
+
+**修复**（TDD RED→GREEN，tests::attrib_table_write_nt3_targets_mirror_attr_rows）：
+row_off=(row-1)*0x10（$C0/$E0）、src 属性区+row_off、nt_hi=0x23/0x2F 动态、dst=nt_hi<<8|
+($C0+row_off)、32B 整行。五案批量 53/53 全一致（f950/f960/f1000/f1150 四角格 46→0；
+morphball 21/21 守）。瓦面面（②）随 dst 修正随闭（bulk 写者本正——覆写是唯一差源）。
