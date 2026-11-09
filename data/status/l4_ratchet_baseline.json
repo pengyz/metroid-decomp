@@ -62,8 +62,8 @@
           "total_pixels": 61440
         },
         "950:combo-action": {
-          "state": "diff",
-          "diff_pixels": 46,
+          "state": "match",
+          "diff_pixels": 0,
           "total_pixels": 61440
         },
         "1200:end": {
@@ -107,13 +107,13 @@
           "total_pixels": 61440
         },
         "1000:neighbor-room": {
-          "state": "diff",
-          "diff_pixels": 46,
+          "state": "match",
+          "diff_pixels": 0,
           "total_pixels": 61440
         },
         "1150:end": {
-          "state": "diff",
-          "diff_pixels": 46,
+          "state": "match",
+          "diff_pixels": 0,
           "total_pixels": 61440
         }
       }
@@ -187,8 +187,8 @@
           "total_pixels": 61440
         },
         "960:end": {
-          "state": "diff",
-          "diff_pixels": 174,
+          "state": "match",
+          "diff_pixels": 0,
           "total_pixels": 61440
         }
       }
@@ -602,8 +602,8 @@
           "total_pixels": 61440
         },
         "1400:end": {
-          "state": "diff",
-          "diff_pixels": 58,
+          "state": "match",
+          "diff_pixels": 0,
           "total_pixels": 61440
         }
       }
@@ -769,6 +769,16 @@
       "reason": "read_ram WRAM 分派修（18 层链根——WRAM 区未分派→2KB 镜像垃圾）收口：f1200 OAM 0/256+png 0/61440 双零 match（1015px→0）——L4 102→103 增益锁；终审 pass（7a37978d 五面全过（独立复验双零+500 测+gates PASS=13））",
       "match": 103,
       "diff": 5,
+      "blocked": 0,
+      "cells_total": 108
+    },
+    {
+      "ts": "2026-11-09T05:04:17+00:00",
+      "kind": "rebase",
+      "evidence": "shots_rust/matrix.json（match 108/diff 0/blocked 0，run-all 2026-11-09 12:37-12:44 fresh 双腿）+ asm WritePPUAttribTbl $E5E2 prg7:7710（GetNameAddrs|3 ⇒ $23/$2F 动态 + lda $20 32B 整行）+ f950 双腿 ppu.hex 142B 定位重放 + SHOT-SEAM/SAMPLE-ERR/SEAM-FIRE 实录（analysis/traces/case-walkfcprobe.lua.log）",
+      "reason": "三格清扫卡（m02624）全闭合：AttribTableWrite 写径病灶修正（c68cfaff——NT 动态目标+32B 整行）后 L4 全矩阵 13 案 108 格全 match；采集相位取源修正（dc2504e3）+ harness 文件生命周期竞争修复（e1609e28）后四 end 格/fallback 相位污染金面重基为 seam 相真值。确认无回退：morphball 21/21 全 match 反回归守、walkfcprobe 5/5、全部 mid 格 0px；503 tests 绿。",
+      "match": 108,
+      "diff": 0,
       "blocked": 0,
       "cells_total": 108
     }
