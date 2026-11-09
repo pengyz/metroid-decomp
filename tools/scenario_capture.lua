@@ -339,7 +339,9 @@ end
 
 -- ---------------- read callback val 采样（2026-11-09 T1 定谳重写：主采证原语） ----------------
 -- PLAN.cputrace_read_addrs = {addr...}（Temp zp $00-$11）+ PLAN.cputrace_window。
--- 触发条件=总线读该址（含 opcode fetch/操作数读全部分发）；落盘条件=窗口内且 cpu.pc
+-- 触发条件=总线读该址（read 域分发；**语义未定谳**：样本实证 read@pc=X val=opcode
+-- 96/帧≫真取指 3/帧——疑似含取指关联读取，与 findings §65 二次更正同口径；
+-- 判别性用途请用 write/exec 回调，read 不作取指计数依据）；落盘条件=窗口内且 cpu.pc
 -- 落在 PLAN.cputrace_pc_ranges（缺省=碰撞例程 F1FA-F270 + Negate E449-E456）；
 -- 窗口内但 pc 域外每 2048 命中落一条 diag 行（防"pc 语义不符"再度盲区）。
 local crAddrs = PLAN.cputrace_read_addrs or {}

@@ -1452,6 +1452,15 @@ zp 采样扩 ✓ 但 log 旧形（新跑未重写——日志再生疑）——*
 日志再生核——工具面深改（Mesen trace API/反汇编工具链）=备选报。本卡交付=工具面限
 声明（非猜：0 命中实录）+址估误定性。
 
+> 【2026-11-09 更正】本卡（及 §62.1/62.3 全部「0 命中」实录）根因已由 Mesen 工具战役
+> （3f28a061）定谳：Mesen2 LuaApi.cpp RegisterMemoryCallback 字符串参数被 ReadInteger
+> 静默换缺省（"execute"/"read" 均落 callbackType=0=Read 域）——非「址估误」单因，
+> 注册枚举本身即不可达。整数枚举修（emu.callbackType.{read=0,write=1,exec=2}）后
+> exec 断点每帧命中实证（C0D9=1099/C0BC=1085）。详见 §65。
+> 另注：本战役 commit 3f28a061 文字「cargo test --workspace 510 passed」中 510 为
+> gate ratchet 静态 #[test] 计数口径；runtime 实测=506 passed / 0 failed（复核
+> ce49fdd5 独立复跑实录）——两口径并存，数值以 runtime 为准。
+
 Evidence: cputrace_addrs 估址 0 命中实录+zp 字段缺失（log 旧形）+asm 行≠址定性。
 Confidence: 90
 
@@ -1565,6 +1574,12 @@ callbackType=0=Read）⇒ §62 五证失败统一根因（旧 harness 字符串�
 系数据读伪影（F1FA 首指令 LDA#$02 无访存，96×/帧为 read@F1FA pc=F1FA val=A9 的
 重复计量），【2026-11-09 更正】原 exec 断点不可达结论作废；③ write=数据写（F1FC
 STA $10 窗内仅 123 次≪3936——F1FA 判定确实几乎不执行）。
+
+> 【2026-11-09 二次更正（复核 ce49fdd5 minor②）】②中「仅数据总线读不含取指」定性
+> 与自身样本矛盾：read@F1FA pc=F1FA val=A9 96/帧≫真取指 3/帧——A9=opcode 自身，
+> 样本实际含取指关联读取。read 回调确切语义（数据总线 vs 含取指）**未定谳**；
+> 本节判定结论（F1FA 几乎不执行）不受影响——判别器为 write 回调计数（123≪3936），
+> write 语义独立实证。lua 头注释同口径澄清。
 
 **根因链**（T2 exec 断点链实录，window st975-1015=41 游戏帧）：
 CollisionDetection F034=304（每游戏帧）→敌槽环 F09D=304/F09F=1824（6 槽）→Lx274
