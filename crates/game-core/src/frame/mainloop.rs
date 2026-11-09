@@ -2626,6 +2626,17 @@ fn subtract_health(mem: &mut crate::frame::FrameMemory) {
     if hc0 == 0 && hc1 == 0 {
         return;
     }
+    // 【共享门（lead 裁决卡 2026-11-09）】asm 07:CE98-CEA3：`jsr IsSamusDead / beq
+    // GotoClearHealthChange`→`jmp ClearHealthChange(F323)`——status∈{sa_Dead(7),
+    // sa_Dead2(8),sa_Begin(255)}⇒清 HealthChange 不扣血；门位在 Varia 半伤/BCD 扣减前。
+    // 全部伤害径（:7049 熔岩/:10074 F13D 弹敌/:12232+12716 五伤/$8042←tourian）经本
+    // 例程汇聚⇒一处门覆盖全谱；与 PENDING-001 敌碰径门（uw_collision_detection）幂等并存。
+    let samus_status = mem.read_ram(0x0300);
+    if samus_status == 7 || samus_status == 8 || samus_status == 0xFF {
+        mem.write_ram(0x006E, 0);
+        mem.write_ram(0x006F, 0);
+        return;
+    }
     // Varia（gr_VARIA=$20）⇒半伤
     let (mut a, mut b) = (hc0, hc1);
     if mem.read_wram(crate::ram_map::SAMUS_GEAR) & 0x20 != 0 {
@@ -3621,6 +3632,64 @@ mod pending001_is_samus_dead_gate_tdd {
         uw_collision_detection(&mut m);
         assert_eq!(m.read_ram(crate::ram_map::SAMUS_IS_HIT) & 0x30, 0x30,
             "存活态重叠必须照常命中（门不得误滤存活）");
+    }
+}
+
+/// 【共享门卡（lead 裁决 2026-11-09）】SubtractHealth 入口 IsSamusDead 门
+/// （asm 07:CE98-CEA3：`jsr IsSamusDead / beq GotoClearHealthChange`→`jmp
+/// ClearHealthChange(F323)`——清 HealthChange 不扣血；门位在 Varia 半伤/BCD 扣减前）。
+/// 全部伤害径经 SubtractHealth 汇聚（:7049 熔岩/:10074 F13D 弹敌/:12232+12716 五伤/
+/// areas_common $8042←tourian:1121）⇒ 一处门覆盖全谱（与 PENDING-001 敌碰径门幂等并存）。
+#[cfg(test)]
+mod subtract_health_shared_gate_tdd {
+    use super::*;
+    use crate::frame::FrameMemory;
+
+    fn setup(m: &mut FrameMemory, status: u8) {
+        m.write_ram(0x0300, status); // Samus.status
+        m.write_ram(0x0106, 0x00); // Health low（30=「00/03」）
+        m.write_ram(0x0107, 0x03); // Health high
+        m.write_ram(0x006E, 0x08); // HealthChange=8（BCD）
+        m.write_ram(0x006F, 0x00);
+    }
+
+    /// 【RED】status=sa_Begin(255)：扣血 0 差+HealthChange 清零（CEA0→F323）。
+    #[test]
+    fn shared_gate_sa_begin_255_blocks_subtract() {
+        let mut m = FrameMemory::default();
+        setup(&mut m, 0xFF);
+        subtract_health(&mut m);
+        assert_eq!(m.read_ram(0x0106), 0x00, "255 免伤：Health low 不变");
+        assert_eq!(m.read_ram(0x0107), 0x03, "255 免伤：Health high 不变");
+        assert_eq!(m.read_ram(0x006E), 0x00, "HealthChange 清零（ClearHealthChange F323）");
+        assert_eq!(m.read_ram(0x006F), 0x00);
+    }
+
+    /// sa_Dead(7)/sa_Dead2(8) 同门。
+    #[test]
+    fn shared_gate_dead_7_8_blocks_subtract() {
+        for st in [7u8, 8] {
+            let mut m = FrameMemory::default();
+            setup(&mut m, st);
+            subtract_health(&mut m);
+            assert_eq!(m.read_ram(0x0106), 0x00, "status={} 免伤", st);
+            assert_eq!(m.read_ram(0x0107), 0x03);
+        }
+    }
+
+    /// 对照（存活态 sa_Stand=0）：照常扣血（门不得误滤存活）。字节面基线取现存
+    /// bcd_sub 行为（本卡纯守门修，不裁 BCD 布局——对 asm Base10Subtract 的字节级
+    /// 对读另行卡）。
+    #[test]
+    fn shared_gate_stand_0_still_subtracts() {
+        let mut m = FrameMemory::default();
+        setup(&mut m, 0);
+        subtract_health(&mut m);
+        assert!(
+            m.read_ram(0x0106) != 0x00 || m.read_ram(0x0107) != 0x03,
+            "存活态必须照常扣血（30−8≠30）"
+        );
+        assert_eq!(m.read_ram(0x006E), 0x00, "扣血后 HealthChange 清零");
     }
 }
 
