@@ -1599,3 +1599,27 @@ game-core 466 测全绿。**PENDING-001 关闭**：非位置/半径/公式差，
 此门未考——独立卡待排；②sa_Begin 态存续机制（为何本场景 1100 帧内 Samus.status 恒 FF
 而 UpdateSamus LCC54 每帧写 ActionTable——疑似本场景从未离开 intro/淡入相）未深究，
 不影响本判定（门语义已独立实证）。
+
+## 66. SubtractHealth 共享门一处修齐（2026-11-09——lead 裁决卡，§65 续）
+
+asm 逐行（prg7_engine.asm:3203-3213，07:CE92）：SubtractHealth 入口序=①HealthChange
+（$6E/$6F 双字节）==0⇒rts ②**CE98 `jsr IsSamusDead / beq GotoClearHealthChange`**
+（status∈{7,8,255}⇒`jmp ClearHealthChange(F323)`——清 HealthChange 不扣血）③
+EndTimer+1 活跃⇒免伤 ④MotherBrainStatus≥3⇒免伤 ⑤Varia 半伤（+$4F BCD 修）⑥
+Base10Subtract（$C3FB 逐 nibble BCD）扣 Health/Health+1。**门位在 Varia/BCD 前**。
+
+调用点全谱（grep `jsr/jmp SubtractHealth`）：:7049（熔岩 $07 伤）/F13D（:10074，
+弹敌+炸弹径 GotoSubtractHealth）/prg7:12232+12716（两处五伤径）/areas_common:90
+$8042 CommonJump_SubtractHealth←prg3_tourian:1121——**全部伤害径经本例程汇聚**⇒
+CE98 一处门覆盖全谱（Skree/PowerUp 等逐径补门无必要）。
+
+rust 归一（uw_collision_detection 既有 PENDING-001 敌碰径门幂等并存）：subtract_health
+（mainloop.rs:2623 域）HealthChange≠0 后补同门（清 $6E/$6F 返回）。绕径审计：0x0106/
+0x0107 全写点=init/reset（:206/:309）/血包+30/+20（:1188，正向）/${tank} 满血（pickup/
+spawn.rs:212）/subtract_health 本体——**无伤害径绕过 subtract_health 直写 health**。
+TDD RED→GREEN×3（subtract_health_shared_gate_tdd：255/7/8 扣血 0 差+HealthChange 清零；
+stand(0) 对照照常扣）。本卡纯守门修，正常态不受影响。
+
+遗留注记：rust `bcd_sub`（mainloop.rs）与 asm Base10Subtract（$C3FB）字节面结果存在
+待对读差（例：BCD 0x00−0x08：rust=0x92 借位，asm 手推=0xF9）——本卡不裁，另行卡
+（显示径/CheckHealthStatus 的 BCD 布局联动需一并核）。
