@@ -2542,6 +2542,17 @@ fn uw_collision_detection(mem: &mut crate::frame::FrameMemory) {
         // 无 i 帧($70)∧活→判盒（Y=0=Samus）→F2ED：螺旋转有效⇒RTS（不伤）；否则
         // SamusHurt($010F)←$80+LF270（击退件）+LF306 伤害（AreaEnemyDamage→HealthChange）。
         if mem.read_ram(crate::ram_map::SAMUS_INVINCIBLE_DELAY) == 0 {
+            // 【PENDING-001 根因闭合（2026-11-09）】IsSamusDead 门（asm 07:F0DA）：
+            // `jsr IsSamusDead / beq NextEnemy`——IsSamusDead（07:CE84）：
+            // status∈{sa_Dead(7),sa_Dead2(8),sa_Begin(255)}⇒Z=1⇒跳过敌×萨判定。
+            // emu 实证（exec/read 回调采证）：killenemy 场景 f975-995 窗 Samus.status
+            // （$0300）恒 FF（sa_Begin"can't be hurt"淡入完成态）⇒beq 608/608 全走分支、
+            // F0DF CheckWithObjectYSlot 0 次执行⇒emu 永不触发 hurt=原版真行为；
+            // rust 缺此门⇒f986 误触发（30→22）——本门即根因修复。
+            let samus_status = mem.read_ram(0x0300);
+            if samus_status == 7 || samus_status == 8 || samus_status == 0xFF {
+                continue;
+            }
             let sy = mem.read_ram(0x030D) as i16;
             let sx = mem.read_ram(0x030E) as i16;
             let sry = mem.read_ram(0x0301) as i16;
@@ -3550,6 +3561,67 @@ pub fn enemy_init_orientation(mem: &mut crate::frame::FrameMemory, slot: u8) {
     // 注：asm 中 data0A 在 UpdateEnemy_Resting 初始化为 0，但 emu 实测 slot4 朝向=向下
     // 故 spawn 时设为 1（orientation=1→idx=2|3→Down）
     mem.write_ram(0x0400 + px + 10, 1); // data0A←1（orientation=1→Down）
+}
+
+#[cfg(test)]
+mod pending001_is_samus_dead_gate_tdd {
+    use super::*;
+    use crate::frame::FrameMemory;
+
+    /// 场景构形：敌 slot4 活跃(status=1,半径 8/8)与 Samus 重叠、无 i 帧、无螺旋转。
+    fn setup_overlap(m: &mut FrameMemory) {
+        m.write_ram(0x0300, 0xFF); // Samus.status——各用例覆写
+        m.write_ram(0x0070, 0); // InvincibleDelay=0
+        m.write_ram(0x0301, 8); // Samus.radiusY
+        m.write_ram(0x0302, 8); // Samus.radiusX
+        m.write_ram(0x030C, 0); // Samus.hi
+        m.write_ram(0x030D, 100); // Samus.y
+        m.write_ram(0x030E, 100); // Samus.x
+        m.write_wram(0x6AF4 + 0x40, 1); // EnsExtra.4.status=1（Resting/Active，<4）
+        m.write_wram(0x6AF4 + 0x41, 8); // enemy radiusY
+        m.write_wram(0x6AF4 + 0x42, 8); // enemy radiusX
+        m.write_wram(0x6AF4 + 0x47, 0); // enemy hi
+        m.write_ram(0x0440, 100); // Ens.4.y
+        m.write_ram(0x0441, 100); // Ens.4.x
+        m.write_ram(0x010E + 1, 0); // HealthChange=0（subtract_health 短路）
+    }
+
+    /// 【PENDING-001 红】IsSamusDead 门缺失：status=sa_Begin(255)（emu f975-995 实测恒 FF）
+    /// ⇒asm F0DA beq NextEnemy⇒敌×萨碰撞整个跳过⇒不得置 isHit/Hurt010F。
+    #[test]
+    fn status_sa_begin_255_skips_enemy_samus_collision() {
+        let mut m = FrameMemory::default();
+        setup_overlap(&mut m);
+        m.write_ram(0x0300, 0xFF);
+        uw_collision_detection(&mut m);
+        assert_eq!(m.read_ram(crate::ram_map::SAMUS_IS_HIT), 0,
+            "status=255(sa_Begin) 必须跳过敌×萨碰撞（asm F0DA IsSamusDead 门）——PENDING-001");
+        assert_eq!(m.read_ram(0x010F), 0xFF, "Hurt010F 只应保持环头 $FF 重置值");
+    }
+
+    /// status=sa_Dead(7)/sa_Dead2(8) 同门（IsSamusDead 三分支等价）。
+    #[test]
+    fn status_dead_7_8_skips_enemy_samus_collision() {
+        for st in [7u8, 8] {
+            let mut m = FrameMemory::default();
+            setup_overlap(&mut m);
+            m.write_ram(0x0300, st);
+            uw_collision_detection(&mut m);
+            assert_eq!(m.read_ram(crate::ram_map::SAMUS_IS_HIT), 0,
+                "status={} 同落 IsSamusDead Z=1 门", st);
+        }
+    }
+
+    /// 对照（存活态）：status=sa_Stand(0) 时碰撞照常置 isHit（门只滤 7/8/255）。
+    #[test]
+    fn status_stand_0_still_collides() {
+        let mut m = FrameMemory::default();
+        setup_overlap(&mut m);
+        m.write_ram(0x0300, 0);
+        uw_collision_detection(&mut m);
+        assert_eq!(m.read_ram(crate::ram_map::SAMUS_IS_HIT) & 0x30, 0x30,
+            "存活态重叠必须照常命中（门不得误滤存活）");
+    }
 }
 
 #[cfg(test)]
