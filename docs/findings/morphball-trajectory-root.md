@@ -1552,3 +1552,35 @@ asm 正源：`lda #$C0/#$E0`（$F1/$F3 行基址 stride 0x20）+ `jsr GetNameAdd
 row_off=(row-1)*0x10（$C0/$E0）、src 属性区+row_off、nt_hi=0x23/0x2F 动态、dst=nt_hi<<8|
 ($C0+row_off)、32B 整行。五案批量 53/53 全一致（f950/f960/f1000/f1150 四角格 46→0；
 morphball 21/21 守）。瓦面面（②）随 dst 修正随闭（bulk 写者本正——覆写是唯一差源）。
+
+## 65. PENDING-001 定谳：IsSamusDead sa_Begin 门缺失（2026-11-09——工具战役闭合）
+
+**采证工具面修复**（T1，harness 单独 commit）：Mesen2 Lua API 考证（LuaApi.cpp
+RegisterMemoryCallback）——字符串参数被 ReadInteger 静默换缺省（"execute"/"read" 均→
+callbackType=0=Read）⇒ §62 五证失败统一根因（旧 harness 字符串注册实落 Read 域）。
+正解=整数枚举 `emu.callbackType.{read=0,write=1,exec=2}`（`emu.memCallbackType` 不存在）。
+**实证语义**（v1-v6 探针，tools/scenario_capture.lua cputrace/ctread/ctwrite 重写）：
+① exec 回调=真取指断点（C0BC/C0D3/C0D9 每帧命中）——非 LastMemOperation（ Debugger.cpp
+该版实现实测非文档推测）；② read 回调=仅数据总线读不含取指——旧档案"F1FA 96×/帧执行"
+系数据读伪影（F1FA 首指令 LDA#$02 无访存，96×/帧为 read@F1FA pc=F1FA val=A9 的
+重复计量），【2026-11-09 更正】原 exec 断点不可达结论作废；③ write=数据写（F1FC
+STA $10 窗内仅 123 次≪3936——F1FA 判定确实几乎不执行）。
+
+**根因链**（T2 exec 断点链实录，window st975-1015=41 游戏帧）：
+CollisionDetection F034=304（每游戏帧）→敌槽环 F09D=304/F09F=1824（6 槽）→Lx274
+F0D4=608（2 活跃敌）→`jsr IsSamusDead`(07:F0DA)=608→`beq NextEnemy`(F0DD)=608
+**全 fetch**→F0DF `jsr CheckWithObjectYSlot`=**0**、F1FA/F234/F25F/F282/F311=**0**
+⇒ **敌×萨碰撞判定 1100 帧内从未执行**。IsSamusDead（07:CE84，prg7_engine.asm:3189）：
+`lda Samus.status($0300)/cmp #sa_Dead(7) beq/cmp #sa_Dead2(8) beq/cmp #sa_Begin(255)`
+——**status==255（sa_Begin，淡入完成"can't be hurt"态）也落 Z=1**。read 回调实录：
+f975-995 窗 $0300 val=FF 123/123 次（pc=CE87）⇒ emu 场景内 Samus 恒 sa_Begin 态
+⇒ IsSamusDead 恒"死"⇒F0DA beq 恒走分支⇒emu 永不触发 hurt=**原版真行为**（非 bug）。
+
+**rust 修复**（T3，uw_collision_detection mainloop.rs:2546 敌×萨门）：补 IsSamusDead 门
+`status∈{7,8,255}⇒continue`（asm F0DA beq NextEnemy 逐字）；TDD RED→GREEN×3
+（pending001_is_samus_dead_gate_tdd：255/7/8 拒触+stand(0) 对照照常命中）；
+game-core 466 测全绿。**PENDING-001 关闭**：非位置/半径/公式差，系移植缺 sa_Begin
+短路门。遗留注记：①rust Skree/PowerUp 径（mainloop.rs:2465 "Samus 5 伤害"）是否亦缺
+此门未考——独立卡待排；②sa_Begin 态存续机制（为何本场景 1100 帧内 Samus.status 恒 FF
+而 UpdateSamus LCC54 每帧写 ActionTable——疑似本场景从未离开 intro/淡入相）未深究，
+不影响本判定（门语义已独立实证）。

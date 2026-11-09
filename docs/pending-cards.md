@@ -6,7 +6,22 @@
 > 本文件由 2b914653（decomp-analyst 任务卡）于 2026-11-06 创建（敌接触触发差挂起落账——
 > lead 裁决 2+3 组合件 1）。
 
-## PENDING-001 敌接触触发差（killenemy rust f986 误触发 / emu 未触发）
+## PENDING-001 敌接触触发差（killenemy rust f986 误触发 / emu 未触发）【2026-11-09 已关闭：根因闭合+rust 修复】
+
+> **【2026-11-09 关闭定谳】**（findings §65，工具战役 T1-T3 闭合）：
+> - 根因=**rust 缺 IsSamusDead 门**：asm 07:F0DA `jsr IsSamusDead / beq NextEnemy`，
+>   IsSamusDead（07:CE84）status∈{sa_Dead(7),sa_Dead2(8),**sa_Begin(255)**}⇒Z=1⇒敌×萨
+>   碰撞整个跳过。emu 采证（Mesen exec/read 回调，工具面修复后）：f975-995 窗
+>   $0300=FF（sa_Begin）123/123 次、F0DF 碰撞判定 0 次执行 ⇒ emu 不触发 hurt=
+>   **原版真行为**。
+> - 修复：uw_collision_detection 补门（mainloop.rs，TDD×3，game-core 466 绿）。
+> - 重启条件达成并关闭；原"工具面限"判断证伪更正：Mesen Lua 面可达（整数枚举注册
+>   emu.callbackType.{read,write,exec}——字符串参数被 ReadInteger 静默换缺省是 §62
+>   五证失败的统一根因）。
+> - 遗留待排：①Skree/PowerUp 径同门核查（findings §65 遗留①）；②sa_Begin 态存续
+>   机制（本场景 1100 帧恒 FF vs UpdateSamus LCC54 每帧写）未深究（§65 遗留②）。
+>
+> 以下为关闭前档案（保留不删）。
 
 - **现象**：`case-killenemy-probe` 场景 f986 起血量分歧——**rust 端 (Health,Health+1)
   (0,3)→(32,2)（显示 30→22，扣 8 伤害）**，**emu 端恒 (0,3) 不受伤**。f982-985 两腿
