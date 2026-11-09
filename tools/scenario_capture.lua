@@ -190,6 +190,14 @@ local function writeDoneAndStop()
     d:close()
   end
   log("scenario done at frame " .. frame)
+  if _G.CTDIAG then
+    local s = {"ctdiag:"}
+    for a, c in pairs(_G.CTDIAG.ct) do s[#s+1] = string.format("exec %04X=%d", a, c) end
+    for a, c in pairs(_G.CTDIAG.cr) do s[#s+1] = string.format("read %02X=%d", a, c) end
+    for a, c in pairs(_G.CTDIAG.cw) do s[#s+1] = string.format("write %02X=%d", a, c) end
+    s[#s+1] = "readTotal=" .. _G.CTDIAG.crTotal
+    log(table.concat(s, " "))
+  end
   pcall(emu.stop)
 end
 
@@ -291,59 +299,123 @@ if PLAN.coverage then
 end
 
 
--- ---------------- 动态 trace 终判卡（2026-11-06）：CollisionDetection 执行序采样 ----------------
--- PLAN.cputrace_addrs = {addr...}（bank7 $C000-$FFFF 绝对址）+ PLAN.cputrace_window = {lo,hi}
--- [cputrace] n=<iter> pc=<addr> a/x/y/sp 采样（exec 断点）。
+-- ---------------- 动态 trace 终判卡（2026-11-06；2026-11-09 T1 考证重写） ----------------
+-- 【2026-11-09 T1 定谳（Mesen2 LuaApi.cpp/ScriptingContext.cpp/Debugger.cpp 静态证据；
+--   findings §62 五证失败史的统一根因）】
+-- ① callbackType 必须整数枚举 emu.callbackType={read=0,write=1,exec=2}（LuaApi
+--    GenerateEnumDefinition "callbackType"；字符串经 ReadInteger 静默换缺省 0=Read——
+--    曾致 "execute" 字符串注册实落 read 域）。
+-- ② exec 回调每指令发一次，地址=InstructionProgress.LastMemOperation（本指令最后一次
+--    总线访问的地址），**非指令 PC**——exec 回调不可当指令断点用（ Debugger.cpp:243-249
+--    ProcessInstruction 尾）。F261 RTS exec 0 命中≠未执行。
+-- ③ 回调实参=(addr, value)（ScriptingContext::InternalCallMemoryCallback push 2 参；
+--    Lua 侧多余实参忽略）——read 回调直接用第 2 参取值，免 emu.read 重入。
+-- 采证原语=ctread（read 回调每总线读 + cpu.pc 上下文）；本块（exec）仅保留作
+-- LastMemOperation 语义对照样本。
 local ctAddrs = PLAN.cputrace_addrs or {}
+_G.CTDIAG = { ct = {}, cr = {}, cw = {}, crTotal = 0 }
 if #ctAddrs > 0 then
   local ctWin = PLAN.cputrace_window or {0, 0}
   local ctLog = io.open(string.format("%s/%s.cputrace.log", PLAN.out_dir, name), "wb")
-  local function ctHit()
+  local function ctHit(address, value)
+    _G.CTDIAG.ct[address] = (_G.CTDIAG.ct[address] or 0) + 1
+    if frame < ctWin[1] or frame > ctWin[2] then return end
     local st = emu.getState()
-    local n = st and st.frameCount or 0
-    if n >= ctWin[1] and n <= ctWin[2] then
-      local t = {}
-      for i = 0, 11 do t[#t+1] = string.format("%02X", emu.read(i, MEMTYPE) or 0) end
-      ctLog:write(string.format("[cputrace] f=%d pc=%04X a=%02X x=%02X y=%02X sp=%02X zp=%s\n",
-        n, st["cpu.pc"] or 0, st["cpu.a"] or 0, st["cpu.x"] or 0, st["cpu.y"] or 0, st["cpu.sp"] or 0, table.concat(t, "")))
-      ctLog:flush()
-    end
+    local n = st and st.frameCount or frame
+    local t = {}
+    for i = 0, 11 do t[#t+1] = string.format("%02X", emu.read(i, MEMTYPE) or 0) end
+    ctLog:write(string.format("[cputrace] f=%d memop=%04X val=%02X pc=%04X a=%02X x=%02X y=%02X sp=%02X zp=%s\n",
+      n, address or 0, value or 0, st["cpu.pc"] or 0, st["cpu.a"] or 0, st["cpu.x"] or 0,
+      st["cpu.y"] or 0, st["cpu.sp"] or 0, table.concat(t, "")))
+    ctLog:flush()
   end
   for _, a in ipairs(ctAddrs) do
-    local ok = false
-    if emu.callbackType and emu.callbackType.exec then
-      ok = pcall(emu.addMemoryCallback, ctHit, emu.callbackType.exec, a, a)
-    end
-    if not ok then ok = pcall(emu.addMemoryCallback, ctHit, "execute", a, a) end
-    if not ok then pcall(emu.addMemoryCallback, ctHit, 2, a, a) end
+    local ok, err = pcall(emu.addMemoryCallback, ctHit, emu.callbackType.exec, a, a)
+    log(string.format("cputrace reg %04X exec ok=%s %s", a, tostring(ok), tostring(err or "")))
   end
-  log("cputrace: " .. #ctAddrs .. " addrs window " .. ctWin[1] .. "-" .. ctWin[2])
+  log("cputrace: " .. #ctAddrs .. " addrs exec(LastMemOperation 语义) window " .. ctWin[1] .. "-" .. ctWin[2])
 end
 
 
--- ---------------- read callback val 采样（2026-11-06 升级②零深改正解） ----------------
--- PLAN.cputrace_read_addrs = {addr...}（Temp zp）+ PLAN.cputrace_window —— [ctread] val 实录。
+-- ---------------- read callback val 采样（2026-11-09 T1 定谳重写：主采证原语） ----------------
+-- PLAN.cputrace_read_addrs = {addr...}（Temp zp $00-$11）+ PLAN.cputrace_window。
+-- 触发条件=总线读该址（含 opcode fetch/操作数读全部分发）；落盘条件=窗口内且 cpu.pc
+-- 落在 PLAN.cputrace_pc_ranges（缺省=碰撞例程 F1FA-F270 + Negate E449-E456）；
+-- 窗口内但 pc 域外每 2048 命中落一条 diag 行（防"pc 语义不符"再度盲区）。
 local crAddrs = PLAN.cputrace_read_addrs or {}
 if #crAddrs > 0 then
   local crWin = PLAN.cputrace_window or {0, 0}
+  local crRanges = PLAN.cputrace_pc_ranges or {{0xE449,0xE460},{0xF1F8,0xF274}}
   local crLog = io.open(string.format("%s/%s.ctread.log", PLAN.out_dir, name), "wb")
-  local function crHit(address)
-    local val = emu.read(address, MEMTYPE) or 0
+  local function pcInRanges(pc)
+    for _, r in ipairs(crRanges) do
+      if pc >= r[1] and pc <= r[2] then return true end
+    end
+    return false
+  end
+  local function crHit(address, value)
+    -- 廉价预滤：frame local（endFrame 维护，:71/:617）在窗外直接返回（getState 昂贵，
+    -- zp $00-$11 全游戏高频读——性能护栏）。窗口内全量 getState 采证。
+    if frame < crWin[1] or frame > crWin[2] then
+      -- T1 冒烟：前 8 次命中无条件采样（证回调确被触发，防"零产物"再现）
+      if _G.CTDIAG.crTotal < 8 then
+        _G.CTDIAG.crTotal = _G.CTDIAG.crTotal + 1
+        local st = emu.getState()
+        crLog:write(string.format("[ctread-smoke] f=%d addr=%02X val=%02X pc=%04X\n",
+          st and st.frameCount or -1, address or 0, value or emu.read(address, MEMTYPE) or 0, st and st["cpu.pc"] or 0))
+        crLog:flush()
+      else
+        _G.CTDIAG.crTotal = _G.CTDIAG.crTotal + 1
+      end
+      return
+    end
+    _G.CTDIAG.crTotal = _G.CTDIAG.crTotal + 1
+    _G.CTDIAG.cr[address] = (_G.CTDIAG.cr[address] or 0) + 1
     local st = emu.getState()
-    local n = st and st.frameCount or 0
-    if n >= crWin[1] and n <= crWin[2] then
+    local n = st and st.frameCount or frame
+    local pc = st["cpu.pc"] or 0
+    if value == nil then value = emu.read(address, MEMTYPE) or 0 end
+    if pcInRanges(pc) then
       crLog:write(string.format("[ctread] f=%d addr=%02X val=%02X pc=%04X\n",
-        n, address or 0, val, st["cpu.pc"] or 0))
+        n, address or 0, value, pc))
+      crLog:flush()
+    elseif (_G.CTDIAG.crTotal % 2048) == 0 then
+      crLog:write(string.format("[ctread-diag] f=%d addr=%02X val=%02X pc=%04X total=%d\n",
+        n, address or 0, value, pc, _G.CTDIAG.crTotal))
       crLog:flush()
     end
   end
   for _, a in ipairs(crAddrs) do
-    local ok = pcall(emu.addMemoryCallback, crHit, "read", a, a)
-    if not ok then ok = pcall(emu.addMemoryCallback, crHit,
-      emu.memCallbackType and emu.memCallbackType.read or "read", a, a) end
-    if not ok then pcall(emu.addMemoryCallback, crHit, 1, a, a) end
+    local ok, err = pcall(emu.addMemoryCallback, crHit, emu.callbackType.read, a, a)
+    log(string.format("ctread reg %02X read ok=%s %s", a, tostring(ok), tostring(err or "")))
   end
-  log("ctread: " .. #crAddrs .. " addrs window " .. crWin[1] .. "-" .. crWin[2])
+  log("ctread: " .. #crAddrs .. " addrs read(window " .. crWin[1] .. "-" .. crWin[2]
+    .. ", pc ranges " .. #crRanges .. ")")
+end
+
+-- ---------------- write callback 采样（2026-11-09 v3：入口判别器） ----------------
+-- STA $10@F1FC 是 F1FA 入口后第一条无条件写——write 命中数=真入口执行数。
+-- 对照 fetch(F1FA read) 数：若 write ≪ fetch ⇒ "96×/帧 F1FA 访问"非指令执行（数据读/
+-- 取指伪影），既往 §62/F1FA 执行前提须证伪更正。
+local cwAddrs = PLAN.cputrace_write_addrs or {}
+if #cwAddrs > 0 then
+  local cwWin = PLAN.cputrace_window or {0, 0}
+  local cwLog = io.open(string.format("%s/%s.ctwrite.log", PLAN.out_dir, name), "wb")
+  local function cwHit(address, value)
+    if frame < cwWin[1] or frame > cwWin[2] then return end
+    _G.CTDIAG.cw[address] = (_G.CTDIAG.cw[address] or 0) + 1
+    if _G.CTDIAG.cw[address] <= 12 then  -- 每址首 12 笔实录（判别器只计数）
+      local st = emu.getState()
+      cwLog:write(string.format("[ctwrite] f=%d addr=%02X val=%02X pc=%04X\n",
+        st and st.frameCount or frame, address or 0, value or 0, st and st["cpu.pc"] or 0))
+      cwLog:flush()
+    end
+  end
+  for _, a in ipairs(cwAddrs) do
+    local ok, err = pcall(emu.addMemoryCallback, cwHit, emu.callbackType.write, a, a)
+    log(string.format("ctwrite reg %02X write ok=%s %s", a, tostring(ok), tostring(err or "")))
+  end
+  log("ctwrite: " .. #cwAddrs .. " addrs write window " .. cwWin[1] .. "-" .. cwWin[2])
 end
 
 -- ---------------- r3：待查段指令入口覆盖（PLAN.coverage_pc）
