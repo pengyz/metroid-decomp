@@ -2637,20 +2637,31 @@ fn subtract_health(mem: &mut crate::frame::FrameMemory) {
         mem.write_ram(0x006F, 0);
         return;
     }
-    // Varia（gr_VARIA=$20）⇒半伤
+    // Varia（gr_VARIA=$20）⇒半伤。asm LCEA9-CEBD 忠实形：`lsr HealthChange（丢弃
+    // 进位）/ lsr HealthChange+1（借出 bit0→carry）/ bcc 退出 / lda #$4F / adc
+    // HealthChange（carry=1 ⇒ +0x4F+1）`——十位域补偿 +$50（百位借出半额）。
+    // 【bcd 掩码审计卡 2026-11-10】旧形 (a+0x4F)>>1 为分歧（$0300→$0127≠asm $0150）。
     let (mut a, mut b) = (hc0, hc1);
     if mem.read_wram(crate::ram_map::SAMUS_GEAR) & 0x20 != 0 {
-        let carry = b & 1 != 0;
+        let b_carry = b & 1 != 0;
+        a >>= 1;
         b >>= 1;
-        a = if carry { a.wrapping_add(0x4F) } else { a } >> 1;
+        if b_carry {
+            a = 0x4Fu8.wrapping_add(a).wrapping_add(1);
+        }
     }
-    // Base10Subtract（BCD 逐位减——$C3FB 族简化形：半字节借位）
+    // Base10Subtract（BCD 逐位减——$C3FB 族简化形：半字节借位）。第二调用 carry-in=
+    // 首调用 carry-out（asm :3231-3235 第二次 jsr 前**无 sec**）⇒ borrow 作 +1 并入 b。
     let h0 = mem.read_ram(0x0106);
     let h1 = mem.read_ram(0x0107);
     let (r0, borrow) = bcd_sub(h0, a);
     let (r1, _) = bcd_sub(h1, if borrow { b.wrapping_add(1) } else { b });
     mem.write_ram(0x0106, r0);
-    mem.write_ram(0x0107, r1 & 0x9F | (h1 & 0x60)); // 高位 nibble=罐数保
+    // 【bcd 掩码审计卡 2026-11-10】Health+1 全字节落写（asm :3233 `sta Health+1`
+    // 无掩码）：高位 nibble 参与借位/回绕运算（$02+0x10 借位补、负结果 +$A0 调整
+    // 合法改写 bit6-5），掩码剥离=分歧（asm $79→旧 rust $19）。证据见
+    // docs/findings/bcd-mask-audit-subtracthealth.md。
+    mem.write_ram(0x0107, r1);
     mem.write_ram(0x006E, 0);
     mem.write_ram(0x006F, 0);
 }
@@ -2670,6 +2681,80 @@ fn bcd_sub(v: u8, sub: u8) -> (u8, bool) {
         out |= ((d as u8) & 0x0F) << shift;
     }
     (out, borrow)
+}
+
+/// 【BCD 掩码审计卡（2026-11-10，verifier cda2f2cb r9 复核遗留 B 级→模拟升级 A 级）】
+/// asm 真源：SubtractHealth 07:CE92（refs/m1disasm/SRC/prg7_engine.asm:3203-3257）
+/// →Base10Subtract 07:C3FB（:1072-1092）→ExtractNibbles 07:C41D（:1094-1104）。
+/// Python 6502 级逐指令对拍（analysis/bcd_mask_audit/diff_model.py，3.36M 组合）：
+/// ① Health+1 掩码（旧 `r1 & 0x9F | (h1 & 0x60)`）为**分歧实现**——asm 无对应物，
+///   asm 的 Health+1 高位 nibble 参与 BCD 借位/回绕运算（借位时 $02+0x10、
+///   负结果 +$A0 调整会合法改写 bit6-5），掩码剥离该结果=静默漂移（asm $79→rust $19）。
+/// ② Varia 半伤公式分歧：asm LCEA9-CEBD=`a>>=1; b>>=1; b_carry⇒a=$4F+a+1`
+///   （半字节域补偿 +50 到十位）；旧 rust=`(a+0x4F)>>1`——Tourian $0300 伤害 Varia
+///   实测 asm=$0150 旧 rust=$0127。
+/// 对拍明细见 docs/findings/bcd-mask-audit-subtracthealth.md。
+#[cfg(test)]
+mod bcd_mask_audit_tdd {
+    use super::*;
+    use crate::frame::FrameMemory;
+
+    fn setup(m: &mut FrameMemory, h0: u8, h1: u8, a: u8, b: u8, varia: bool) {
+        m.write_ram(0x0300, 0); // sa_Stand=0（过 IsSamusDead 门）
+        m.write_ram(0x0106, h0);
+        m.write_ram(0x0107, h1);
+        m.write_ram(0x006E, a);
+        m.write_ram(0x006F, b);
+        let gear = if varia { 0x20 } else { 0x00 };
+        m.write_wram(crate::ram_map::SAMUS_GEAR, gear);
+    }
+
+    /// 【RED→GREEN】掩码分歧锚 1（Health+1 BCD 回绕）：Health=(00,00)，
+    /// HealthChange=(00,21)（210）。asm Base10Subtract($00, $21) 借位链：
+    /// $02=0x20+0x10=0x30、0x00−0x30 借位→adc #$A0 调整→0x79；
+    /// 旧掩码剥 bit6-5（0x79&0x9F=0x19）⇒ rust=0x19≠asm=0x79。
+    #[test]
+    fn health_plus1_bcd_wrap_no_mask() {
+        let mut m = FrameMemory::default();
+        setup(&mut m, 0x00, 0x00, 0x00, 0x21, false);
+        subtract_health(&mut m);
+        assert_eq!(m.read_ram(0x0106), 0x00);
+        assert_eq!(m.read_ram(0x0107), 0x79, "asm 07:C3FB 借位回绕真值 $79（掩码不得剥离 bit6-5）");
+    }
+
+    /// 【RED→GREEN】掩码分歧锚 2（Brinstar 可达：罐数 2 + 伤害 $0080）：
+    /// Health=(50,20)，HealthChange=(80,00)。asm r1=$19（借位进罐 nibble 域合法）；
+    /// 旧掩码 |h1&0x60 拼回 0x20 ⇒ rust=$39≠asm=$19。
+    #[test]
+    fn health_plus1_tank_borrow_faithful() {
+        let mut m = FrameMemory::default();
+        setup(&mut m, 0x50, 0x20, 0x80, 0x00, false);
+        subtract_health(&mut m);
+        assert_eq!(m.read_ram(0x0106), 0x70);
+        assert_eq!(m.read_ram(0x0107), 0x19, "asm 真值 $19（旧掩码回拼 $39）");
+    }
+
+    /// 【RED→GREEN】Varia 半伤公式（Tourian 可达：伤害 $0300 × Varia）：
+    /// asm LCEA9-CEBD：b bit0=1（lsr 借出）⇒ a=$4F+($00>>1)+1=$50 ⇒ $0150；
+    /// 旧 rust=(a+0x4F)>>1=$27 ⇒ $0127。锚 (50,98)=asm 模型逐字节真值。
+    #[test]
+    fn varia_half_damage_formula() {
+        let mut m = FrameMemory::default();
+        setup(&mut m, 0x00, 0x00, 0x00, 0x03, true);
+        subtract_health(&mut m);
+        assert_eq!(m.read_ram(0x0106), 0x50, "Varia $0300→$0150：a=$4F+(a>>1)+1");
+        assert_eq!(m.read_ram(0x0107), 0x98);
+    }
+
+    /// 对照：无借位常规扣血不回归（30−8=22）。
+    #[test]
+    fn plain_subtract_no_regression() {
+        let mut m = FrameMemory::default();
+        setup(&mut m, 0x00, 0x03, 0x08, 0x00, false);
+        subtract_health(&mut m);
+        assert_eq!(m.read_ram(0x0106), 0x92, "30−8=22 BCD（0x00−8 借位百位 3→2，个位 0→2 的回绕=0x92）");
+        assert_eq!(m.read_ram(0x0107), 0x02, "300−8=292：百位 3−借位1=2");
+    }
 }
 
 /// DisplayBar（**asm 内容锚** `DisplayBar: ; 07:E0C1`——HUD 精灵动态面，全径端口）：
