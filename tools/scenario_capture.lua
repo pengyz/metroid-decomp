@@ -184,6 +184,11 @@ local function writeDoneAndStop()
   capF:flush() capF:close()
   if winF then winF:flush() winF:close() end
   if _G.VRSNAP_F then _G.VRSNAP_F:flush() _G.VRSNAP_F:close() _G.VRSNAP_F = nil end
+  -- 写钩三件套收口（GGR 件3 纪律：SIGKILL 前 flush+close 防丢尾）
+  for _, hf in pairs(_G.HOOK_FILES or {}) do
+    hf:flush() hf:close()
+  end
+  _G.HOOK_FILES = {}
   local d = io.open(donePath, "wb")
   if d then
     d:write(string.format('{"frames":%d,"trace_lines":%d,"captures":%d,"shots":%d}\n',
@@ -350,6 +355,9 @@ if #crAddrs > 0 then
   local crWin = PLAN.cputrace_window or {0, 0}
   local crRanges = PLAN.cputrace_pc_ranges or {{0xE449,0xE460},{0xF1F8,0xF274}}
   local crLog = io.open(string.format("%s/%s.ctread.log", PLAN.out_dir, name), "wb")
+  -- 【CUT 纪律 2026-11-10（GGR 件3 对照补缺）】窗口内原为无上限——触顶显式
+  -- {"ctread":"CUT"} 标记+日志（防超长窗"静默无界/截断不可辨"）。
+  local crWinN, crCut, crCap = 0, false, 3000000
   local function pcInRanges(pc)
     for _, r in ipairs(crRanges) do
       if pc >= r[1] and pc <= r[2] then return true end
@@ -374,6 +382,16 @@ if #crAddrs > 0 then
     end
     _G.CTDIAG.crTotal = _G.CTDIAG.crTotal + 1
     _G.CTDIAG.cr[address] = (_G.CTDIAG.cr[address] or 0) + 1
+    if crWinN > crCap then
+      if not crCut then
+        crCut = true
+        crLog:write(string.format('{"ctread":"CUT","cap":%d,"at":%d}\n', crCap, crWinN))
+        crLog:flush()
+        log("CTREAD-CUT: 窗口内触顶 " .. tostring(crCap) .. "（显式标记；数据自此截断）")
+      end
+      return
+    end
+    crWinN = crWinN + 1
     local st = emu.getState()
     local n = st and st.frameCount or frame
     local pc = st["cpu.pc"] or 0
@@ -602,8 +620,19 @@ if PLAN.probe_mem and #PLAN.probe_mem > 0 then
   local probePath = PLAN.out_dir .. "/" .. name .. ".probe.jsonl"
   local probeF = io.open(probePath, "wb")
   local probeN = 0
+  -- 【CUT 纪律 2026-11-10（GGR 件3 对照补缺）】原版静默截断（>3M 静默丢）=
+  -- gotcha 级坑（>上限轨"恰在上限"全绿假象）——触顶显式 {"probe":"CUT"} 标记+日志。
+  local probeCut = false
   local function probeLog(addr, val)
-    if probeN > 3000000 then return end
+    if probeN > 3000000 then
+      if not probeCut then
+        probeCut = true
+        probeF:write('{"probe":"CUT","cap":3000000,"at":' .. tostring(probeN) .. "}\n")
+        probeF:flush()
+        log("PROBE-CUT: probe_mem 触顶 3000000（显式标记；数据自此截断）")
+      end
+      return
+    end
     probeN = probeN + 1
     local ok, st = pcall(emu.getState)
     -- ⚠ pc 字段=回调地址回显（r3 v1 实证，非写者 PC）——写者归属用 caller（栈 ret-2
@@ -751,6 +780,172 @@ if #PLAN.vram_snap > 0 then
   end, "endFrame")
   -- 收口关闭（writeDoneAndStop 统一收——见彼处 hookFiles 表）
   _G.VRSNAP_F = vrF
+end
+
+-- ---------------- NT/CHR/OAM 写钩三件套（GGR 移植件3：PLAN.write_hooks） ----------------
+-- 源=GGR tools/scenario_capture.lua:126-160（NT）/202-236（OAM）/238-300（CHR v2）/
+-- 306-318（CUT 纪律），只读参考仓。v2 口径：
+--   NT 钩：$2006 高低字节锁存 + $2007 写→目标 NT 地址归因（固定 +1 增量）；
+--   CHR 钩 v2：同锁存 + $2000 ctrl bit2 跟踪（+1/+32 增量）→ .chrwrites.jsonl 含 PC
+--     （Metroid=CHR-RAM 游戏：CHR 上载流归因价值最高）；
+--   OAM 钩：$0200-$02FF 写 + PC → .oamwrites.jsonl（NMI DMA 源页直录）。
+-- 【GGR v1 教训对照（MMIO 盲区）】写回调注册必须 emu.callbackType.write 枚举——
+-- 字符串 "write" 静默落 read 域=注册 ok 但零命中（本仓 gotcha
+-- gotcha-mesen2-callbacktype-string-enum-split.md；GGR v2 memCallbackType 表在本仓
+-- Mesen2 2.1.1 不存在）。兜底二径（写域 f30 仍零命中时自动启用+显式留痕）：
+-- callbackType.exec 落点直录（T1 定谳②：exec 地址=LastMemOperation——$2006/$2007
+-- 写指令的落点面；条目带 "src":"exec" 防混流）。
+-- 纪律：HOOK 头行+512 flush+endFrame flush+收口关闭（_G.HOOK_FILES）；触顶 3M 显式
+-- CUT 标记（不静默）；f30 零命中告警（WRITE-HOOK-BLIND）。
+_G.HOOK_FILES = {}
+_G.HOOK_DIAG = {}
+do
+  local HOOK_CAP = 3000000
+  local enabled = {}
+  for _, h in ipairs(PLAN.write_hooks or {}) do enabled[h] = true end
+
+  local function openHook(kind, header)
+    local p = string.format("%s/%s.%swrites.jsonl", PLAN.out_dir, name, kind)
+    local f = io.open(p, "wb")
+    if not f then return nil end
+    f:write(header .. "\n") f:flush()
+    _G.HOOK_FILES[kind] = f
+    _G.HOOK_DIAG[kind] = { n = 0, execN = 0, cut = false, blindLogged = false }
+    return f
+  end
+  local function hookLog(kind, line)
+    local d = _G.HOOK_DIAG[kind]
+    if d.n > HOOK_CAP then
+      if not d.cut then
+        d.cut = true
+        local f = _G.HOOK_FILES[kind]
+        if f then
+          f:write(string.format('{"%s":"CUT","cap":%d,"at":%d}\n', kind, HOOK_CAP, d.n))
+          f:flush()
+        end
+        log(string.upper(kind) .. "-CUT: 写钩触顶 " .. tostring(HOOK_CAP)
+          .. "（显式标记；数据自此截断）")
+      end
+      return
+    end
+    d.n = d.n + 1
+    local f = _G.HOOK_FILES[kind]
+    if f then
+      f:write(line .. "\n")
+      if d.n % 512 == 0 then f:flush() end
+    end
+  end
+
+  -- NT 钩（$2006 锁存+$2007→.ntwrites.jsonl；GGR :126-160 同构）
+  if enabled.nt then
+    local ppuAddr, addrLatch = 0, false
+      local function latch(address, value)
+        if not addrLatch then
+          ppuAddr = (ppuAddr & 0x00FF) | ((value or 0) << 8)
+          addrLatch = true
+        else
+          ppuAddr = (ppuAddr & 0xFF00) | (value or 0)
+          addrLatch = false
+        end
+      end
+      local okL = pcall(emu.addMemoryCallback, latch,
+        emu.callbackType.write, 0x2006, 0x2006)
+      local okD = pcall(emu.addMemoryCallback, function(address, value)
+        if ppuAddr >= 0x2000 and ppuAddr < 0x3000 then
+          hookLog("nt", string.format('{"f":%d,"addr":"%04X","val":%d}',
+            frame, ppuAddr, value or -1))
+        end
+        ppuAddr = (ppuAddr + 1) & 0x3FFF
+      end, emu.callbackType.write, 0x2007, 0x2007)
+      openHook("nt", string.format('{"nt":"HOOK","cb_latch":%s,"cb_data":%s}',
+        tostring(okL), tostring(okD)))
+      -- v1 盲区兜底（f30 零命中→exec 落点直录径，条目 src=exec）
+      emu.addEventCallback(function()
+        local d = _G.HOOK_DIAG.nt
+        if d.n == 0 and d.execN == 0 and frame == 30 and not d.blindLogged then
+          d.blindLogged = true
+          log("WRITE-HOOK-BLIND nt: 写域 30 帧零命中——启用 exec 落点直录兜底（v1 盲区径）")
+          pcall(emu.addMemoryCallback, function(address, value)
+            local stOk, st = pcall(emu.getState)
+            if stOk and st and address >= 0x2000 and address < 0x3000 then
+              d.execN = d.execN + 1
+              hookLog("nt", string.format('{"f":%d,"addr":"%04X","val":%d,"src":"exec"}',
+                frame, address, value or -1))
+            end
+          end, emu.callbackType.exec, 0x2006, 0x2007)
+        end
+      end, "endFrame")
+      log("write_hooks nt: registered(latch=" .. tostring(okL) .. " data=" .. tostring(okD) .. ")")
+  end
+
+  -- CHR 钩 v2（$2000 ctrl bit2 增量跟踪+$2007→.chrwrites.jsonl 含 PC；GGR :238-300）
+  if enabled.chr then
+    local ppuAddr, addrLatch, ppuCtrl = 0, false, 0
+      local function ctrlHit(address, value) ppuCtrl = value or 0 end
+      local function latch(address, value)
+        if not addrLatch then
+          ppuAddr = (ppuAddr & 0x00FF) | ((value or 0) << 8)
+          addrLatch = true
+        else
+          ppuAddr = (ppuAddr & 0xFF00) | (value or 0)
+          addrLatch = false
+        end
+      end
+      local okC = pcall(emu.addMemoryCallback, ctrlHit,
+        emu.callbackType.write, 0x2000, 0x2000)
+      local okL = pcall(emu.addMemoryCallback, latch,
+        emu.callbackType.write, 0x2006, 0x2006)
+      local okD = pcall(emu.addMemoryCallback, function(address, value)
+        local pc = "????"
+        do
+          local stOk, st = pcall(emu.getState)
+          if stOk and st and st["cpu.pc"] then pc = string.format("%04X", st["cpu.pc"]) end
+        end
+        if ppuAddr < 0x3000 then
+          hookLog("chr", string.format('{"f":%d,"addr":"%04X","val":%d,"pc":"%s"}',
+            frame, ppuAddr, value or -1, pc))
+        end
+        local inc = (ppuCtrl & 0x04) ~= 0 and 32 or 1
+        ppuAddr = (ppuAddr + inc) & 0x3FFF
+      end, emu.callbackType.write, 0x2007, 0x2007)
+      openHook("chr", string.format('{"chr":"HOOK2","cb_ctrl":%s,"cb_latch":%s,"cb_data":%s}',
+        tostring(okC), tostring(okL), tostring(okD)))
+      emu.addEventCallback(function()
+        local d = _G.HOOK_DIAG.chr
+        if d.n == 0 and d.execN == 0 and frame == 30 and not d.blindLogged then
+          d.blindLogged = true
+          log("WRITE-HOOK-BLIND chr: 写域 30 帧零命中——启用 exec 落点直录兜底（v1 盲区径）")
+          pcall(emu.addMemoryCallback, function(address, value)
+            if address < 0x3000 then
+              d.execN = d.execN + 1
+              hookLog("chr", string.format('{"f":%d,"addr":"%04X","val":%d,"src":"exec"}',
+                frame, address, value or -1))
+            end
+          end, emu.callbackType.exec, 0x2007, 0x2007)
+        end
+      end, "endFrame")
+      log("write_hooks chr: registered(ctrl=" .. tostring(okC) .. " latch="
+        .. tostring(okL) .. " data=" .. tostring(okD) .. ")")
+  end
+
+  -- OAM 钩（$0200-$02FF 写+PC→.oamwrites.jsonl；GGR :202-236 同构；RAM 域写回调
+  -- 已验证面=probe_mem 同族）
+  if enabled.oam then
+    local ok
+    do
+      ok = pcall(emu.addMemoryCallback, function(address, value)
+        local pc = "????"
+        do
+          local stOk, st = pcall(emu.getState)
+          if stOk and st and st["cpu.pc"] then pc = string.format("%04X", st["cpu.pc"]) end
+        end
+        hookLog("oam", string.format('{"f":%d,"addr":"%04X","val":%d,"pc":"%s"}',
+          frame, address, value or -1, pc))
+      end, emu.callbackType.write, 0x0200, 0x02FF)
+    end
+    openHook("oam", string.format('{"oam":"HOOK","cb":%s}', tostring(ok)))
+    log("write_hooks oam: registered(cb=" .. tostring(ok) .. ")")
+  end
 end
 
 emu.addEventCallback(function()

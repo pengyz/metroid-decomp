@@ -1,0 +1,6 @@
+# 场景：hooks-smoke —— 件3 写钩三件套验证（NT/CHR/OAM jsonl 逐帧合法）
+name hooks-smoke
+frames 120
+write_hooks nt
+write_hooks chr
+write_hooks oam
