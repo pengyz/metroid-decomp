@@ -21,7 +21,8 @@
     可置 bit7/bit6-5）→ `clc`。
   ⇒ **Health+1 的 bit4-bit7（罐数 nibble 域）参与全部借位/回绕运算，结果可合法改写
   bit6-5 甚至 bit7**。
-- Varia 半伤 `07:CEA9-CEBD`（prg7_engine.asm:3216-3221）：
+- Varia 半伤 `07:CEA9-CEBD`（prg7_engine.asm:3226-3235）【2026-11-10 r9 复核更正：原写
+  :3216-3221 区段偏移 10 行，标签 LCEA9-CEBD 正确】：
   `lsr HealthChange`（进位被下一条 lsr 覆盖，无效）；`lsr HealthChange+1`（bit0 借出→
   carry）；`bcc` 退出；`lda #$4F; adc HealthChange`（carry=1 ⇒ **a = $4F + (a>>1) + 1**
   = 十位域补偿 +$50）。
@@ -74,6 +75,20 @@ Tourian `=$0300`（prg3_tourian.asm:131-132）、熔岩 `#$07`（prg7_engine.asm
   上调留痕 baseline_history.jsonl，无回退：仅新增 4 测试，原 513 无一改动失败）。
 - `python3 gates/cli.py check` PASS（13 PASS / 0 FAIL / SKIP 显式打印）。
 - L4：`python3 tools/l4_diff_run.py run-all`（.l4_run.lock 串行纪律遵守）结果见 commit。
+  口径注【2026-11-10 r9 复核登记】：porter 报「101 采集点」为总采集点数，gates l4
+  ratchet 分母=98（match 98 diff 0 blocked 0）——判定不受影响，后续统一以 gates
+  ratchet 口径为准。
+
+## 5. 域局限（r9 复核新增，B 级登记）
+
+全 BCD 域对拍（r9 verifier 独立复跑）：fixed rust 与 asm 模型在 349,680/3,360,000
+组合仍分歧——Varia 半减产生非 BCD nibble 时（如 dmg 0x0015×Varia→halved 0x000A：
+asm 借位链产出 $FF，rust 单次 +10 产出 $9F）。但穷举**全部游戏内 HealthChange
+生产源**（5 张 AreaEnemyDamage $0080/$0100/$0300/$0200/$0240 + 熔岩 #$07 + 弹敌
+#$50 + MotherBrain (00,02)）× 全 Health 域 × Varia 开关：192,000 组合 diverge=0。
+即分歧域在原版不可达输入空间，属「简化形」潜在局限而非行为漂移——当前修复与
+asm 在全部可达输入上行为一致；若未来引入自定义伤害源（Stage B），需回到 asm
+全形实现。
 
 Evidence: 07:CE92/C3FB/C41D 汇编原文 + diff_model.py 3.36M 组合逐指令对拍 + 锚例字节表
 Confidence: 95（模拟=6502 指令语义确定性模型，非 Mesen 实机 trace；实机佐证由 L4 全矩阵兜底）
