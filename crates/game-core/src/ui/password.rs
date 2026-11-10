@@ -122,8 +122,10 @@ pub fn consolidate_password(chars: &[u8; 24]) -> [u8; 18] {
     pb
 }
 
-/// PasswordChecksum（00:8E21）——sum PB[0..=16]（ldy #$10 含端点=17 字节）；
-/// 返回 (A, carry)（clc+adc 每轮 ⇒ carry=末轮溢出——$8E25 循环）。
+/// PasswordChecksum（00:8E21）——sum PB[0..=16]（ldy #$10 含端点=17 字节）。
+/// 返回 (A, carry)；【2026-11-10 r9 更正】此 carry=sum>0xFF 的代数溢出位，
+/// 并非 asm 逐轮 clc+adc 的末轮进位语义——两者当前恒同值（17 字节和至多
+/// 0x10E），但消费者不应将其当作 asm C 旗镜像。现行全部调用方丢弃 carry。
 pub fn password_checksum(pb: &[u8; 18]) -> (u8, bool) {
     let mut sum = 0u16;
     for i in 0..=16usize {
