@@ -1,0 +1,7 @@
+# 场景：vrsnap-smoke-zp —— 件2 轮询面对照（zp=$0000-$00FF 中帧密面 vs oam 缺省）
+name vrsnap-smoke-zp
+frames 240
+vram_snap 64,128,192
+vrsnap_poll zp
+capture 200 smoke
+watch 0051 scrx

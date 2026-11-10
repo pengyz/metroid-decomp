@@ -176,6 +176,9 @@ def parse_scenario(path: Path) -> dict:
         "probe_mem": [],
         "probe_dispatch": [],
         "entry_probe": [],
+        "vram_snap": [],  # GGR 移植件2：中帧 VRAM 快照（扫描线级，如 vram_snap 64,128,192）
+        "vrsnap_poll": None,  # vram_snap 轮询面（oam|zp，缺省 oam）
+        "write_hooks": [],  # GGR 移植件3：NT/CHR/OAM 写钩（write_hooks nt|chr|oam，可多次）
     }
     for lineno, raw in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
         line = raw.split("#", 1)[0].strip()
@@ -288,6 +291,50 @@ def parse_scenario(path: Path) -> dict:
             if len(args) != 2:
                 raise err("probe_mem 用法: probe_mem <lo> <hi>（16 进制，NMI 级写点插桩）")
             plan["probe_mem"].append([args[0], args[1]])
+        elif op == "vram_snap":
+            # GGR 移植件2：中帧 VRAM 快照（扫描线级热写轮询——NT+CHR 各一拍/帧/扫描线）。
+            # vram_snap <sl>[,<sl>...]（0-261，逗号分隔；可多次）。源手法=
+            # GGR oracle/probes/ppu_corridor_probe.lua:8-15（sl 64/128/192 热写轮询+
+            # 「N-1 OAM 代位 vs 帧内 $2007 写流」二择判别器的捕获半）。
+            # 【本仓实测扩展 0→261】Metroid 主循环=NMI 标志旋等（$C0D3 lda/bne），
+            # 游戏写流集中 NMI 后 vblank（scanline 240-260）——GGR 可见区拍点
+            # （64/128/192）在本仓结构性空窗（vrsnap-smoke/-zp 首跑实录：仅 boot
+            # init f0-f5 命中），NMI 后窗才是本仓「中帧」价值窗。261=PAL 全界，
+            # NTSC 有效 0-260。
+            if not args:
+                raise err("vram_snap 用法: vram_snap <sl>[,<sl>...]（0-261）")
+            sls = []
+            for tok in " ".join(args).split(","):
+                tok = tok.strip()
+                if not tok.isdigit():
+                    raise err(f"vram_snap 扫描线须为整数: {tok!r}")
+                sl = int(tok)
+                if not 0 <= sl <= 261:
+                    raise err(f"vram_snap 扫描线超界 0-261: {sl}")
+                sls.append(sl)
+            for sl in sls:
+                if sl not in plan["vram_snap"]:
+                    plan["vram_snap"].append(sl)
+        elif op == "vrsnap_poll":
+            # vram_snap 轮询面选择（可选，缺省 oam）：
+            #   oam=$0200-$02FF 写（GGR 源手法面；Metroid 实测中帧命中稀——写流集中
+            #   vblank 附近，见 vrsnap-smoke 首跑实录）；
+            #   zp=$0000-$00FF 写（游戏主循环逐扫描线写零页——中帧命中密；getState
+            #   开销换节奏，验证实测 wall 可承受则留）。
+            if len(args) != 1 or args[0] not in ("oam", "zp"):
+                raise err("vrsnap_poll 用法: vrsnap_poll oam|zp")
+            plan["vrsnap_poll"] = args[0]
+        elif op == "write_hooks":
+            # GGR 移植件3：NT/CHR/OAM 写钩三件套（$2006 锁存+$2007→.ntwrites.jsonl /
+            # $2007 v2 ctrl bit2 1/32 增量→.chrwrites.jsonl 含 PC / $0200-$02FF+PC→
+            # .oamwrites.jsonl）。write_hooks nt|chr|oam（可多次）。
+            # 【GGR v1 教训对照】MMIO 写回调须枚举 emu.callbackType.write 注册
+            # （字符串 "write" 静默落 read 域=盲区——本仓 gotcha
+            # gotcha-mesen2-callbacktype-string-enum-split.md / T1 定谳同根因）。
+            if len(args) != 1 or args[0] not in ("nt", "chr", "oam"):
+                raise err("write_hooks 用法: write_hooks nt|chr|oam")
+            if args[0] not in plan["write_hooks"]:
+                plan["write_hooks"].append(args[0])
         elif op == "fixture":
             # task-28 ①：夹具状态设置（state-fixture 设计 §3 F_a 注入模型）——
             # fixture <帧号> <hex地址> <hex值> [invariant|evolving]

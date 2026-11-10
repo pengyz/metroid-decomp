@@ -1,0 +1,7 @@
+# 场景：vrsnap-smoke-nmi —— 件2 NMI 后窗验证（Metroid 写流=NMI 后 vblank，实测口径）
+name vrsnap-smoke-nmi
+frames 240
+vram_snap 64,128,192,244,250
+vrsnap_poll zp
+capture 200 smoke
+watch 0051 scrx

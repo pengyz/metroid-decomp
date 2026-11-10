@@ -1,0 +1,8 @@
+# 场景：vrsnap-smoke —— GGR 移植件2 验证（中帧 VRAM 快照：扫描线级热写轮询）
+# 用途：boot→标题屏（渲染面活跃）短窗；验证 <name>.vrsnap.jsonl + vr<sl>.{nt,chr}.hex
+# 快照流逐帧合法（可解析+字节长度恒 4KB/8KB）。非差分场景，仅供工具链路验证。
+name vrsnap-smoke
+frames 240
+vram_snap 64,128,192
+capture 200 smoke
+watch 0051 scrx

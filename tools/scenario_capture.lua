@@ -183,6 +183,7 @@ local function writeDoneAndStop()
   traceF:flush() traceF:close()
   capF:flush() capF:close()
   if winF then winF:flush() winF:close() end
+  if _G.VRSNAP_F then _G.VRSNAP_F:flush() _G.VRSNAP_F:close() _G.VRSNAP_F = nil end
   local d = io.open(donePath, "wb")
   if d then
     d:write(string.format('{"frames":%d,"trace_lines":%d,"captures":%d,"shots":%d}\n',
@@ -652,6 +653,104 @@ if PLAN.probe_mem and #PLAN.probe_mem > 0 then
     probeF:flush()
   end
   emu.addEventCallback(function() probeF:flush() end, "endFrame")
+end
+
+-- ---------------- 中帧 VRAM 快照（GGR 移植件2：PLAN.vram_snap，扫描线级热写轮询） ----------------
+-- 源手法=GGR oracle/probes/ppu_corridor_probe.lua:8-15（sl∈{64,128,192} 热写轮询，每帧
+-- 每扫描线各一拍 NT+CHR 快照——「N-1 OAM 代位 vs 帧内 $2007 写流」二择判别器的捕获半）。
+-- 触发面=写回调（$0200-$02FF OAM 页——游戏逻辑中帧高频写，轮询节奏源）；判线用
+-- getState ppu.scanline（T1 定谳：回调内 getState 采证为已验证口径）。纪律：
+--   · 回调注册=emu.callbackType.write 枚举（字符串 "write" 静默落 read 域——r3 教训）；
+--   · 快照文件落盘即 flush+close（dumpPpu 同款——SIGKILL 丢缓冲尾陷阱）；
+--   · vrTaken 每帧重置（inputPolled）；快照上限 VRSNAP_CAP，触顶显式 CUT 标记（不静默）。
+-- 产物：<name>.vrsnap.jsonl（索引流，逐行 flush）+ <name>_f%05d_vr%03d.{nt,chr}.hex。
+local vrSet = {}
+do
+  for _, sl in ipairs(PLAN.vram_snap or {}) do vrSet[sl] = true end
+end
+if #PLAN.vram_snap > 0 then
+  local VRSNAP_CAP = 4096
+  local vrTaken = {}
+  local vrN = 0
+  local vrCut = false
+  local vrF = io.open(PLAN.out_dir .. "/" .. name .. ".vrsnap.jsonl", "wb")
+  local function hex2l(v) return string.format("%02x", v) end
+  local function snapVr(sl)
+    if vrTaken[sl] then return end
+    vrTaken[sl] = true
+    vrN = vrN + 1
+    if vrN > VRSNAP_CAP then
+      if not vrCut then
+        vrCut = true
+        if vrF then vrF:write('{"vrsnap":"CUT","cap":' .. tostring(VRSNAP_CAP) .. "}\n") vrF:flush() end
+        log("VRSNAP-CUT: 快照触顶 " .. tostring(VRSNAP_CAP) .. "（显式标记，数据自此截断）")
+      end
+      return
+    end
+    -- NT $2000-$2FFF（4KB）+ CHR $0000-$1FFF（8KB）——mt=9 PPU 总线（dumpPpu 同口径）
+    local ntP = {}
+    for a = 0x2000, 0x2FFF do
+      local ok, v = pcall(emu.read, a, 9)
+      ntP[#ntP + 1] = hex2l(ok and v or 0)
+    end
+    local chrP = {}
+    for a = 0x0000, 0x1FFF do
+      local ok, v = pcall(emu.read, a, 9)
+      chrP[#chrP + 1] = hex2l(ok and v or 0)
+    end
+    local ntPath = string.format("%s/%s_f%05d_vr%03d.nt.hex", PLAN.out_dir, name, frame, sl)
+    local chrPath = string.format("%s/%s_f%05d_vr%03d.chr.hex", PLAN.out_dir, name, frame, sl)
+    local nf = io.open(ntPath, "wb")
+    if nf then nf:write(table.concat(ntP) .. "\n") nf:flush() nf:close() end
+    local cf = io.open(chrPath, "wb")
+    if cf then cf:write(table.concat(chrP) .. "\n") cf:flush() cf:close() end
+    if vrF then
+      vrF:write(string.format('{"f":%d,"sl":%d,"nt":%s,"chr":%s,"n":%d}\n',
+        frame, sl, jstr(ntPath), jstr(chrPath), vrN))
+      vrF:flush()  -- 落盘即写（SIGKILL 丢尾陷阱——dumpPpu 2026-11-02 同款）
+    end
+  end
+  -- 轮询回调：OAM 页写（$0200-$02FF，GGR 源面）或 zp 写（$0000-$00FF，中帧密面——
+  -- PLAN.vrsnap_poll 选择；Metroid OAM 写流集中 vblank 附近实测，oam 面节奏稀）。
+  do
+    local poll = PLAN.vrsnap_poll or "oam"
+    local lo, hi = 0x0200, 0x02FF
+    if poll == "zp" then lo, hi = 0x0000, 0x00FF end
+    local ok = false
+    if emu.callbackType and emu.callbackType.write then
+      ok = pcall(emu.addMemoryCallback, function()
+        if vrCut or not vrF then return end
+        local stOk, st = pcall(emu.getState)
+        if not stOk or not st then return end
+        local sl = st["ppu.scanline"] or (st.ppu and st.ppu.scanline) or -1
+        if vrSet[sl] then snapVr(sl) end
+      end, emu.callbackType.write, lo, hi)
+    end
+    if not ok then
+      ok = pcall(emu.addMemoryCallback, function() end, 1, lo, hi)
+    end
+    if vrF then
+      vrF:write(string.format('{"vrsnap":"HOOK","poll":"%s","sls":[%s],"cb":%s}\n',
+        poll,
+        table.concat((function()
+          local q = {}
+          for _, sl in ipairs(PLAN.vram_snap) do q[#q + 1] = tostring(sl) end
+          return q
+        end)(), ","), tostring(ok)))
+      vrF:flush()
+    end
+    log("vram_snap registered: poll=" .. poll .. " sls=" .. table.concat((function()
+      local q = {}
+      for _, sl in ipairs(PLAN.vram_snap) do q[#q + 1] = tostring(sl) end
+      return q
+    end)(), ",") .. " cb=" .. tostring(ok))
+  end
+  emu.addEventCallback(function() vrTaken = {} end, "inputPolled")
+  emu.addEventCallback(function()
+    if vrF then vrF:flush() end
+  end, "endFrame")
+  -- 收口关闭（writeDoneAndStop 统一收——见彼处 hookFiles 表）
+  _G.VRSNAP_F = vrF
 end
 
 emu.addEventCallback(function()
