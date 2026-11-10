@@ -142,9 +142,37 @@ pub fn main_title_routine(mem: &mut FrameMemory) {
                 mem.write_ram(a, 0);
             }
             mem.write_ram(crate::ram_map::BANK_SWITCH_PENDING, 2);
+        } else if addr == 0x8C5E {
+            // CheckPassword（**asm 内容锚** `CheckPassword: ; 00:8C5E`——prg0_title.asm:
+            // 1718-1733 逐行对读：jsr ConsolidatePassword($8F60)→jsr ValidatePassword(
+            // $8DDE)→bcs L8C69（无效：SFXMultiInitFlags|=sfxMulti_IncorrectPassword=
+            // %01（constants.asm:164）+Timer3←$0C（120 帧）+TitleRoutine←_id_EnterPassword
+            // （0x18）/valid⇒jmp InitializeGame($92D4)）。
+            let mut chars = [0u8; 24];
+            for (i, c) in chars.iter_mut().enumerate() {
+                *c = mem.read_wram(crate::ram_map::PASSWORD_CHAR + i as u16);
+            }
+            let nar = mem.read_wram(crate::ram_map::NAR_PASSWORD);
+            let (pb, valid, nar_hit) = crate::ui::password::check_password(&chars, nar != 0);
+            // ConsolidatePassword/UnscramblePassword 原位写 PasswordByte（$6988 面——
+            // DisplayPassword/存档族消费者面）。
+            for (i, b) in pb.iter().enumerate() {
+                mem.write_ram(crate::ram_map::PASSWORD_BYTE + i as u16, *b);
+            }
+            if nar_hit {
+                mem.write_ram(crate::ram_map::NAR_PASSWORD, 1); // NARPASSWORD←1（:2031-2036）
+            }
+            if valid {
+                initialize_game(mem, &pb, nar != 0 || nar_hit); // NARPASSWORD 旗=入口读值|本回合命中（asm 内存语义）
+            } else {
+                let f = mem.read_ram(crate::ram_map::SFX_MULTI_INIT) | 0x01;
+                mem.write_ram(crate::ram_map::SFX_MULTI_INIT, f);
+                mem.write_ram(title_state::TIMER3, 0x0C);
+                mem.write_ram(crate::ram_map::TITLE_ROUTINE, 0x18);
+            }
         } else {
             let loc = format!("bank00:{addr:04X}-jump");
-            crate::unported!(&loc); // 其余跳转出口（CheckPassword 转接面——随接）
+            crate::unported!(&loc); // 其余跳转出口（转接面——随接）
         }
     }
 }
@@ -240,6 +268,75 @@ mod tests {
         assert_eq!(m.read_ram(0x00C3), 0, "IntroStarOffset 复位（:124 sty）");
     }
 
+    // ---- 卡 B G1/G3：密码提交→校验→InitializeGame 出生态（TDD 锚例）----
+
+    /// JUSTIN BAILEY tile 序列（卡 A emu 腿实测锚——帧号表 0x18@f505/提交 START f1188）。
+    const JB_CHARS: [u8; 24] = [
+        0x13, 0x1E, 0x1C, 0x1D, 0x12, 0x17, 0x0B, 0x0A, 0x12, 0x15, 0x0E, 0x22,
+        0x3F, 0x3F, 0x3F, 0x3F, 0x3F, 0x3F, 0x3F, 0x3F, 0x3F, 0x3F, 0x3F, 0x3F,
+    ];
+
+    /// JB 密码 0x1A 提交→0x8C5E→InitializeGame suitless Norfair 出生态。
+    /// 断言值=卡 A emu 实测锚（$6878=7F/$6879=FF/$69B3=01/$74=11）+asm 推导面
+    /// （BankTable[1]=3（07:CA30）/RestartYPosTbl[1]=$8C/X=$78/MainRoutine←MoreInit）。
+    #[test]
+    fn justin_bailey_password_jump_spawns_suitless_norfair() {
+        let mut m = FrameMemory::default();
+        for (i, &c) in JB_CHARS.iter().enumerate() {
+            m.write_wram(crate::ram_map::PASSWORD_CHAR + i as u16, c);
+        }
+        // 预置脏面（验证覆盖真发生）。注：SAMUS_STAT00($6876) 密码路**不清**
+        // （asm InitializeGame 无此写；真机域=开机 RAM 清零残留 0）——故不预置脏值。
+        m.write_wram(crate::ram_map::SAMUS_GEAR, 0xAA);
+        m.write_ram(crate::ram_map::BANK_SWITCH_PENDING, 0xEE);
+        m.write_ram(crate::ram_map::TITLE_ROUTINE, 0x1A); // WaitForSTART
+        m.write_ram(crate::ram_map::JOY1_CHANGE, 0x10); // START
+        main_title_routine(&mut m);
+        // PB 回写面（$6988——Consolidate+Unscramble 原位铁证）
+        let want_pb: [u8; 18] = [
+            0xA6, 0xF3, 0x8E, 0xA4, 0xB9, 0x65, 0x24, 0xA9, 0xD1, 0x7F,
+            0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+        ];
+        for (i, &b) in want_pb.iter().enumerate() {
+            assert_eq!(m.read_wram(crate::ram_map::PASSWORD_BYTE + i as u16), b, "PB[{i}]");
+        }
+        // 出生态锚（卡 A emu 实测）
+        assert_eq!(m.read_wram(crate::ram_map::SAMUS_GEAR), 0x7F, "suitless 位=1");
+        assert_eq!(m.read_wram(crate::ram_map::MISSILE_COUNT), 0xFF);
+        assert_eq!(m.read_wram(crate::ram_map::JUST_IN_BAILEY), 1);
+        assert_eq!(m.read_ram(crate::ram_map::IN_AREA), 0x11, "Norfair 低半=1");
+        assert_eq!(m.read_ram(crate::ram_map::BANK_SWITCH_PENDING), 3, "BankTable[1]");
+        assert_eq!(m.read_ram(crate::ram_map::SAMUS_Y), 0x8C);
+        assert_eq!(m.read_ram(crate::ram_map::SAMUS_X), 0x78);
+        assert_eq!(m.read_ram(crate::ram_map::MAIN_ROUTINE), 1, "MoreInit");
+        assert_eq!(m.read_ram(crate::ram_map::SAMUS_ANIM_FRAME), 0x5A);
+        assert_eq!(m.read_ram(crate::ram_map::SAMUS_HI), 0);
+        assert_eq!(m.read_wram(crate::ram_map::SAMUS_STAT00), 0, "缺省 0（密码路不清零 quirk）");
+        // pw[15]=$FF：雕像四 bits 全置——Kraid=$80|$01、Ridley=$80|$02（0 亦写语义）。
+        assert_eq!(m.read_wram(crate::ram_map::KRAID_STATUE_STATUS), 0x81);
+        assert_eq!(m.read_wram(crate::ram_map::RIDLEY_STATUE_STATUS), 0x82);
+        assert_eq!(m.read_wram(crate::ram_map::MAX_MISSILES), 0xCD, "MaxMissiles=205（ROM 探针 $8D3D 实跑）");
+    }
+
+    /// 非法密码提交→invalid 路：SFX 旗+Timer3=$0C+回 EnterPassword，不出生态。
+    #[test]
+    fn bad_password_jump_returns_to_enter() {
+        let mut m = FrameMemory::default();
+        let bad = [0x01u8; 24];
+        for (i, &c) in bad.iter().enumerate() {
+            m.write_wram(crate::ram_map::PASSWORD_CHAR + i as u16, c);
+        }
+        m.write_ram(crate::ram_map::TITLE_ROUTINE, 0x1A);
+        m.write_ram(crate::ram_map::JOY1_CHANGE, 0x10);
+        main_title_routine(&mut m);
+        assert_eq!(m.read_ram(crate::ram_map::SFX_MULTI_INIT) & 0x01, 1, "IncorrectPassword SFX");
+        assert_eq!(m.read_ram(title_state::TIMER3), 0x0C, "120 帧");
+        assert_eq!(m.read_ram(crate::ram_map::TITLE_ROUTINE), 0x18, "回 EnterPassword");
+        assert_eq!(m.read_ram(crate::ram_map::MAIN_ROUTINE), 0, "未出生态");
+        assert_eq!(m.read_ram(crate::ram_map::BANK_SWITCH_PENDING), 0);
+    }
+
+
     /// 未武装臂表址爆（per-entry 形——**域外相位=契约违例面 fail-loud 样本**
     /// （0x18/0x1E 均已臂化；title 全清））。
     #[test]
@@ -254,3 +351,183 @@ mod tests {
         assert!(msg.contains("unported @ bank00:"), "表址爆失准: {msg}");
     }
 }
+
+/// InitializeGame（**asm 内容锚** `InitializeGame: ; 00:92D4`——prg0_title.asm:2699-2758
+/// 逐行移植；pw=解校验后的 PasswordByte 18B，nar_active=NARPASSWORD 旗读值）。
+fn initialize_game(mem: &mut FrameMemory, pw: &[u8; 18], nar_active: bool) {
+    // ClearRAM_33_DF（$C1D4）：zp $33-$DF 清零。
+    for a in 0x33..=0xDF {
+        mem.write_ram(a, 0);
+    }
+    // ClearSamusStats（$C578）：$0100-$010F 清零。
+    for a in 0x0100..=0x010F {
+        mem.write_ram(a, 0);
+    }
+    // LoadPasswordData（$8D12）：NARPASSWORD≠0⇒跳过全部（quirk 保真）。
+    if !nar_active {
+        load_password_data(mem, pw);
+    }
+    // 清对象数据四件：SpritePagePos($5B)/PageIndex($4B)/ObjectCntrl($6B)/Samus.hi($030C)。
+    mem.write_ram(crate::ram_map::SPRITE_PAGE_POS, 0);
+    mem.write_ram(crate::ram_map::PAGE_INDEX, 0);
+    mem.write_ram(crate::ram_map::OBJECT_CNTRL, 0);
+    mem.write_ram(crate::ram_map::SAMUS_HI, 0);
+    // SilenceMusic（$CB8E）：SFXNoiseInitFlags($0680)|=sfxNoise_SilenceMusic=%01。
+    let n = mem.read_ram(crate::ram_map::SFX_NOISE_INIT) | 0x01;
+    mem.write_ram(crate::ram_map::SFX_NOISE_INIT, n);
+    // Samus.animFrame($0303)←_id_ObjFrame_SkreeProjectile=0x5A（ObjFramePtrTable index 90）。
+    mem.write_ram(crate::ram_map::SAMUS_ANIM_FRAME, 0x5A);
+    // 出生位选：InArea&$0F≠0⇒x=1（非 Brinstar）else x=0。
+    let in_area_low = mem.read_ram(crate::ram_map::IN_AREA) & 0x0F;
+    let x: usize = if in_area_low != 0 { 1 } else { 0 };
+    // RestartYPosTbl($9325)={64,8C,5C}/RestartXPosTbl($9328)={78,78,5C}——Samus.y($030D)/x($030E)。
+    mem.write_ram(crate::ram_map::SAMUS_Y, [0x64, 0x8C, 0x5C][x]);
+    mem.write_ram(crate::ram_map::SAMUS_X, [0x78, 0x78, 0x5C][x]);
+    // inc SamusStat0B（16 位链——`inc $6881/bne skip/inc $6882`）。
+    let lo = mem.read_wram(crate::ram_map::SAMUS_STAT0B).wrapping_add(1);
+    mem.write_ram(crate::ram_map::SAMUS_STAT0B, lo);
+    if lo == 0 {
+        let hi = mem.read_wram(crate::ram_map::SAMUS_STAT0B + 1).wrapping_add(1);
+        mem.write_ram(crate::ram_map::SAMUS_STAT0B + 1, hi);
+    }
+    // MainRoutine($1E)←_id_MoreInit=1。
+    mem.write_ram(crate::ram_map::MAIN_ROUTINE, 0x01);
+    // ScreenNmiOff（07:C45D）：PPUMASK_ZP($FE)&=~$18+PPUCTRL_ZP($FF)&=~$80（$2000 端口
+    // 写走镜像读出面——本层 RAM 镜像事件）。
+    let pm = mem.read_ram(crate::ram_map::PPUMASK_ZP) & !0x18;
+    mem.write_ram(crate::ram_map::PPUMASK_ZP, pm);
+    let pc = mem.read_ram(crate::ram_map::PPUCTRL_ZP) & !0x80;
+    mem.write_ram(crate::ram_map::PPUCTRL_ZP, pc);
+    // LoadSamusGFX（$C5DC）：CHR-RAM 载面——gfx.rs sketch 零载行为等价（不碰）。
+    // NMIOn（07:C487）：PPUCTRL_ZP|=$80。
+    let pc = mem.read_ram(crate::ram_map::PPUCTRL_ZP) | 0x80;
+    mem.write_ram(crate::ram_map::PPUCTRL_ZP, pc);
+    // BankTable（07:CA30）={$02,$03,$05,$04,$06, $48,$48,$20,$96,$CA,...}→BankSwitchPending($24)。
+    // 表外索引（InArea&$0F>4=checksum 合法伪造密码域）读表后代码字节——quirk 照烤
+    // （ROM 逐字节 07:CA30-CA3F：02 03 05 04 06 48 48 20 96 CA AD 84 68 10 0D 29）。
+    const BANK_TABLE: [u8; 16] = [
+        0x02, 0x03, 0x05, 0x04, 0x06, 0x48, 0x48, 0x20, 0x96, 0xCA, 0xAD, 0x84, 0x68, 0x10, 0x0D, 0x29,
+    ];
+    mem.write_ram(crate::ram_map::BANK_SWITCH_PENDING, BANK_TABLE[in_area_low as usize]);
+}
+
+/// LoadPasswordData（**asm 内容锚** `LoadPasswordData: ; 00:8D12`——prg0_title.asm:
+/// 1839-1863；NAR 跳过由调用侧承担）。
+fn load_password_data(mem: &mut FrameMemory, pw: &[u8; 18]) {
+    load_unique_items(mem, pw);
+    load_tanks_and_missiles(mem, pw);
+    // JustInBailey($69B3)←PB[8]&$80 ? 1 : 0；InArea($74)←PB[8]&$3F。
+    let pb8 = pw[8];
+    mem.write_ram(crate::ram_map::JUST_IN_BAILEY, if pb8 & 0x80 != 0 { 1 } else { 0 });
+    mem.write_ram(crate::ram_map::IN_AREA, pb8 & 0x3F);
+    // SamusAge($687D..6880)←PB[11..14]（`ldy #3` 逆序拷贝——PB[11+B]→$687D+B）。
+    for (i, b) in pw[11..15].iter().enumerate() {
+        mem.write_ram(crate::ram_map::SAMUS_AGE + i as u16, *b);
+    }
+}
+
+/// LoadUniqueItems（**asm 内容锚** `LoadUniqueItems: ; 00:8BD4`——prg0_title.asm:
+/// 1614-1716）：59 项逐位扫描（**位序=LSB 先**——`ror` 使 bit0→carry；A 级 ROM 探针
+/// （2026-11-10 $8BD4 实跑）：JB PB=A6 F3… 命中序列与 LSB-first 映射逐位吻合、
+/// MSB-first 假设被证伪）；
+/// 有位⇒UniqueItemHistory[$6887+n..n+1]←ItemData[item] 低/高字节，NumberOfUniqueItems
+/// [$6886] 2 递增。ItemData（00:9029-$909F，@end-$start)/2=59——59 项烘焙表（见下）。
+fn load_unique_items(mem: &mut FrameMemory, pw: &[u8; 18]) {
+    mem.write_ram(crate::ram_map::NUMBER_OF_UNIQUE_ITEMS, 0);
+    let mut n = 0u16;
+    for item in 0..59usize {
+        if pw[item >> 3] & (1 << (item & 7)) != 0 {
+            let v = ITEM_DATA[item];
+            mem.write_ram(crate::ram_map::UNIQUE_ITEM_HISTORY + n, (v & 0xFF) as u8);
+            mem.write_ram(crate::ram_map::UNIQUE_ITEM_HISTORY + n + 1, (v >> 8) as u8);
+            n += 2;
+            mem.write_ram(crate::ram_map::NUMBER_OF_UNIQUE_ITEMS, n as u8);
+        }
+    }
+}
+
+/// 6502 adc 全语义（A+B+Cin→(A,Cout)）。
+fn adc(a: u8, b: u8, c_in: bool) -> (u8, bool) {
+    let s = a as u16 + b as u16 + c_in as u16;
+    (s as u8, s > 0xFF)
+}
+
+/// LoadTanksAndMissiles（**asm 内容锚** `LoadTanksAndMissiles: ; 00:8D3D`——
+/// prg0_title.asm:1867-1992 逐行对读）。
+fn load_tanks_and_missiles(mem: &mut FrameMemory, pw: &[u8; 18]) {
+    mem.write_ram(crate::ram_map::SAMUS_GEAR, pw[9]);
+    mem.write_ram(crate::ram_map::MISSILE_COUNT, pw[10]);
+    // 雕像态（Temp00/Temp02 组装后 sta——0 亦写）：
+    let mut kraid = 0u8;
+    if pw[15] & 0x80 != 0 { kraid |= 0x80; } // 雕像 up
+    if pw[15] & 0x40 != 0 { kraid |= 0x01; } // Kraid 败
+    mem.write_ram(crate::ram_map::KRAID_STATUE_STATUS, kraid);
+    let mut ridley = 0u8;
+    if pw[15] & 0x20 != 0 { ridley |= 0x80; }
+    if pw[15] & 0x10 != 0 { ridley |= 0x02; }
+    mem.write_ram(crate::ram_map::RIDLEY_STATUE_STATUS, ridley);
+    // 坦克计数：遍历 UniqueItemHistory 高字节（y=0..$83 每 2B；`and #$FC` cmp $20/
+    // $24——**全 $84 字节域扫描**（零填充域不命中））。ETank cap 6（`cmp #6/bcc`）。
+    let mut history = [0u8; 0x84];
+    for (i, h) in history.iter_mut().enumerate() {
+        *h = mem.read_wram(crate::ram_map::UNIQUE_ITEM_HISTORY + i as u16);
+    }
+    let mut etank = 0u8;
+    let mut mtank = 0u8;
+    let mut y = 0usize;
+    while y < 0x84 {
+        let hi = history[y + 1] & 0xFC;
+        if hi == 0x20 {
+            etank = etank.wrapping_add(1);
+        } else if hi == 0x24 {
+            mtank = mtank.wrapping_add(1);
+        }
+        y += 2;
+    }
+    // `cmp #$06/bcc/lda #6`——C=ETank>=6（**quirk：C 残留进 MaxMissiles adc 链**）。
+    let mut a: u8 = if etank >= 6 { 6 } else { etank };
+    let mut c = etank >= 6;
+    mem.write_ram(crate::ram_map::ENERGY_TANK_COUNT, a);
+    // MaxMissiles：A=0；mtank≠0⇒clc+adc#5×mtank；Kraid≠0⇒adc#$4B（bcs⇒cap）；
+    // Ridley≠0⇒adc#$4B（bcc⇒过/bcs⇒cap $FF）。**carry-in quirk 照搬**（mtank=0 时
+    // C=ETank>=6 残留——0x4B+1=0x4C 域，asm `ldy Temp02/beq` 不清 C）。
+    a = 0;
+    if mtank != 0 {
+        c = false; // clc
+        for _ in 0..mtank {
+            let (v, ov) = adc(a, 5, c);
+            a = v;
+            c = ov;
+        }
+    }
+    if kraid != 0 {
+        let (v, ov) = adc(a, 0x4B, c);
+        a = v;
+        c = ov;
+        if c {
+            mem.write_ram(crate::ram_map::MAX_MISSILES, 0xFF);
+            return;
+        }
+    }
+    if ridley != 0 {
+        let (v, ov) = adc(a, 0x4B, c);
+        a = v;
+        c = ov;
+        if c {
+            mem.write_ram(crate::ram_map::MAX_MISSILES, 0xFF);
+            return;
+        }
+    }
+    mem.write_ram(crate::ram_map::MAX_MISSILES, a);
+}
+
+/// ItemData 59 项（**asm 数据锚** `ItemData: ; 00:9029`-$909F @end——prg0_title.asm:
+/// 2237-2416 逐行抄录：.word ui_X+(x<<5)+y；ui_ enumid=constants.asm:67-87）。
+pub const ITEM_DATA: [u16; 59] = [
+    0x104E, 0x264B, 0x28E5, 0x2882, 0x2327, 0x2B25, 0x0325, 0x2A69, 0x2703, 0x2363,
+    0x29E2, 0x15E2, 0x212E, 0x264E, 0x262F, 0x2B4C, 0x276A, 0x278A, 0x278B, 0x276B,
+    0x274B, 0x268F, 0x266F, 0x2B71, 0x0771, 0x29F0, 0x0DF0, 0x2676, 0x2696, 0x2A55,
+    0x2353, 0x2794, 0x28F5, 0x2535, 0x2495, 0x28F6, 0x2156, 0x28F8, 0x287B, 0x24BB,
+    0x2559, 0x291D, 0x211D, 0x2658, 0x2A39, 0x2239, 0x269E, 0x2A1D, 0x21FD, 0x271B,
+    0x2867, 0x2927, 0x292B, 0x3C00, 0x4000, 0x4400, 0x4800, 0x4C00, 0x3800,
+];

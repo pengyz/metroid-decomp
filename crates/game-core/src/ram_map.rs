@@ -101,11 +101,36 @@ pub const SAMUS_AGE: u16 = 0x687D;
 pub const SAMUS_GEAR: u16 = 0x6878;
 
 /// InitializeStats 清零族（prg0_title `InitializeStats: ; 00:932B`——13 写面）。
-pub const SAMUS_STAT00: u16 = 0x6871;
-pub const ENERGY_TANK_COUNT: u16 = 0x6874;
-pub const MISSILE_COUNT: u16 = 0x6876;
-pub const MAX_MISSILES: u16 = 0x6877;
-pub const AT_ENDING: u16 = 0x69B2;
+/// 【卡 B G3 勘误（A 级——ROM 字节执行探针：$932B 实跑预置 $FF 面 $6871-$6885+
+/// $69B2/$69B3，被清零实测=$6876-$6880/$6883/$69B3，$69B2 不动）】旧 0x6871/0x6874/
+/// 0x6876/0x6877/0x69B2 系常数表错位（constants_ram.asm:1207-1221：SamusStat00=$6876/
+/// EnergyTankCount=$6877/SamusGear=$6878/MissileCount=$6879/MaxMissiles=$687A/
+/// AtEnding=$6883——与探针逐位吻合）。
+pub const SAMUS_STAT00: u16 = 0x6876;
+pub const ENERGY_TANK_COUNT: u16 = 0x6877;
+pub const MISSILE_COUNT: u16 = 0x6879;
+pub const MAX_MISSILES: u16 = 0x687A;
+pub const AT_ENDING: u16 = 0x6883;
+/// SamusStat0B dw=$6881（死亡/通关计数——InitializeGame 每次 inc）。
+pub const SAMUS_STAT0B: u16 = 0x6881;
+/// KraidStatueStatus=$687B/RidleyStatueStatus=$687C（constants_ram.asm:1212-1213）。
+pub const KRAID_STATUE_STATUS: u16 = 0x687B;
+pub const RIDLEY_STATUE_STATUS: u16 = 0x687C;
+/// NumberOfUniqueItems=$6886/UniqueItemHistory=$6887 ds $100（constants_ram.asm:1234-1237）。
+pub const NUMBER_OF_UNIQUE_ITEMS: u16 = 0x6886;
+pub const UNIQUE_ITEM_HISTORY: u16 = 0x6887;
+/// PasswordByte=$6988 ds $12/PasswordChar=$699A ds $18（constants_ram.asm:1237-1261；
+/// $6988 面=ROM 字节执行铁证——密码族 1014 组对拍）。
+pub const PASSWORD_BYTE: u16 = 0x6988;
+pub const PASSWORD_CHAR: u16 = 0x699A;
+/// NARPASSWORD=$69B2（=0/1 无敌 Samus 旗——旧 AT_ENDING 误占此址已勘误）。
+pub const NAR_PASSWORD: u16 = 0x69B2;
+/// Samus.animFrame=$0303/Samus.x=$030E（constants_ram.asm:210-232 结构体面）。
+pub const SAMUS_ANIM_FRAME: u16 = 0x0303;
+pub const SAMUS_X: u16 = 0x030E;
+/// SpritePagePos=$5B/ObjectCntrl=$6B（constants_ram zp 面——InitializeGame 清零四件）。
+pub const SPRITE_PAGE_POS: u16 = 0x005B;
+pub const OBJECT_CNTRL: u16 = 0x006B;
 /// BankSwitchPending=**$24**（【$24/$28 erratum 修正】InitializeStats 尾 `a9 02 85 24 60`
 /// （`lda #$02/sta $24/rts`）A 级铁证；$28=SwitchUpperBits（prg7:1319-1324 独立常量）。
 /// 旧 0x0028 误形致写读双方同错位（win3seq 双腿实证：金 $24=02/我 $28=02）——
