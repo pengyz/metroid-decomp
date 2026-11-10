@@ -1,0 +1,36 @@
+# 场景：sc-pw-justin-cal —— 卡 A 校准三探针（C1 retrigger 单脉冲 / C2 密码屏
+# ready 帧 / C3 提交过渡）。路径同 sc-password-entry3：start@300→select@400→
+# start@500（0x17@f501→0x18@f505）。
+# C1：f600 起单 press right ×5（20 帧距）——probe $0321/$0322 逐帧 delta，
+#     验证 press_len=2（默认）是否恰好移动 1 格。
+# C2：f508-f524 密集截图+vram_snap——定屏幕显示稳定的首安全输入帧。
+# C3：f940 START 提交——probe $1E/$1F 逐帧 + probe_mem $6988-69B3 写点，
+#     定离开 title 域（0x18→游戏内）的帧号窗口。
+name sc-pw-justin-cal
+frames 1400
+watch_range 0000-00ff zp
+watch_range 0320-0322 cursors
+watch_range 6988-69b3 pw
+probe_mem 6988 69b3
+vram_snap 128
+
+press 300 start
+press 400 select
+press 500 start
+capture 508 c2-a
+capture 512 c2-b
+capture 516 c2-c
+capture 520 c2-d
+capture 560 c2-ready
+press 600 right
+press 620 right
+press 640 right
+press 660 right
+press 680 right
+capture 700 c1-done
+press 940 start
+capture 980 c3-t40
+capture 1080 c3-t140
+capture 1200 c3-t260
+
+sample_point spin-exit
