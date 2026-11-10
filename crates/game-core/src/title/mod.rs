@@ -1113,15 +1113,6 @@ pub fn dispatch_step(face: &TitleFace) -> TitleStep {
                 },
             }
         }
-        // ---- 降级占位臂（12/17 已深路径化——0x18 专件=稳定锚随后；0x12 表址 0x82ED/
-        //      0x17 表址 0x911A——旧形误记 0x939E（$1B 目标）顺正）----
-        0x12 | 0x17 => TitleStep {
-            events: vec![], shell: vec![ShellCall::NmiYield], a_out: None, x_out: None,
-            y_out: None, jumped: None, next_cursor: 0,
-            unported: Some(match face.phase {
-                                0x17 => 0x911A, _ => 0x82ED,
-            }),
-        },
         // ---- 真未武装（18 深路专件/0x1E SetTimer 随件）----
         // ---- 批6b 终件：0x18 EnterPassword（单段帧常驻 UI——armed）----
         0x18 => {
@@ -1340,6 +1331,52 @@ pub fn title_tick_head(title_routine: u8, joy_change: u8, ppuctrl: u8)
         (0x00FF, ppuctrl & 0xFC),                           // PPUCTRL_ZP&=$FC
     ];
     (true, events, 0x1B)
+}
+
+#[cfg(test)]
+mod dpad_linear_tests {
+    use super::*;
+
+    /// 卡 A 考证回执（emu 实测证伪「行内 mod13 回绕」假设）：字符网格游标=线性
+    /// 65 格遍历——col 12 →right→ 下一行 col 0（asm prg0_title.asm:2620 `cpy #$0D/
+    /// bne→inx`；row==5→回 0）。锁死测试。
+    #[test]
+    fn dpad_right_at_col12_wraps_to_next_row_col0() {
+        let mut ram = [0u8; 0x800];
+        ram[0x0321 & 0x7FF] = 0; // InputRow=0
+        ram[0x0322 & 0x7FF] = 0x0C; // InputColumn=12
+        let (events, jumped) =
+            enter_password_body(&ram, &[0u8; 0x2000], 0, 0, 0x01, 0x18); // right
+        assert!(jumped.is_none());
+        let col = events.iter().find(|(a, _)| *a == 0x0322).unwrap().1;
+        let row = events.iter().find(|(a, _)| *a == 0x0321).unwrap().1;
+        assert_eq!(col, 0, "col 12 →right→ 下行 col 0");
+        assert_eq!(row, 1, "row 0 → 1");
+    }
+
+    /// 左边界对称（col 0 →left→ 上一行 col 12；row 0→4）。
+    #[test]
+    fn dpad_left_at_col0_wraps_to_prev_row_col12() {
+        let mut ram = [0u8; 0x800];
+        ram[0x0321 & 0x7FF] = 0;
+        ram[0x0322 & 0x7FF] = 0;
+        let (events, _) = enter_password_body(&ram, &[0u8; 0x2000], 0, 0, 0x02, 0x18);
+        let col = events.iter().find(|(a, _)| *a == 0x0322).unwrap().1;
+        let row = events.iter().find(|(a, _)| *a == 0x0321).unwrap().1;
+        assert_eq!(col, 0x0C);
+        assert_eq!(row, 4);
+    }
+
+    /// 下行回绕（row 4 →down→ row 0）。
+    #[test]
+    fn dpad_down_at_row4_wraps_to_row0() {
+        let mut ram = [0u8; 0x800];
+        ram[0x0321 & 0x7FF] = 4;
+        ram[0x0322 & 0x7FF] = 3;
+        let (events, _) = enter_password_body(&ram, &[0u8; 0x2000], 0, 0, 0x04, 0x18);
+        let row = events.iter().find(|(a, _)| *a == 0x0321).unwrap().1;
+        assert_eq!(row, 0);
+    }
 }
 
 #[cfg(test)]

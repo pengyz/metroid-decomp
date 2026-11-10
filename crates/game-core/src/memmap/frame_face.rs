@@ -25,13 +25,14 @@ pub struct WatchFace {
 }
 
 /// 四面规范表（键集白名单 `w` 对象标签的声明源之一；区间钉死=本表）。
-/// pw=密码字节面（$6988-$698F（PasswordByte 区（constants:1247 族））——sc-item-pickup/
-/// sc-pickup-touch/sc-password-entry3 manifest watch 面）。
+/// pw=密码字节面（$6988-$69B3（PasswordByte $6988 ds $12（constants_ram.asm:1237）+
+/// PasswordChar $699A ds $18（:1264）+NARPASSWORD $69B2（:1263）+JustInBailey $69B3）——
+/// sc-item-pickup/sc-pickup-touch/sc-password-entry3 manifest watch 面）。
 pub const WATCH_FACES: [WatchFace; 4] = [
     WatchFace { label: "zp", base: 0x0000, end: 0x00FF },
     WatchFace { label: "iram", base: 0x0100, end: 0x07FF },
     WatchFace { label: "wram", base: 0x6000, end: 0x7FFF },
-    WatchFace { label: "pw", base: 0x6988, end: 0x698F },
+    WatchFace { label: "pw", base: 0x6988, end: 0x69B3 },
 ];
 
 /// 大写 hex 编码（watch 面唯一编码器）。
