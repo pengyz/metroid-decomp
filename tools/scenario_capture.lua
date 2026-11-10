@@ -865,6 +865,9 @@ do
         if d.n == 0 and d.execN == 0 and frame == 30 and not d.blindLogged then
           d.blindLogged = true
           log("WRITE-HOOK-BLIND nt: 写域 30 帧零命中——启用 exec 落点直录兜底（v1 盲区径）")
+          -- exec 落点直录兜底（GGR v1 盲区径）：写回调零命中时以 exec 域探针
+          -- 诊断 $2006-$2007 访问可见性。注：MMIO 地址无可执行码，正常情况下
+          -- exec 域不应命中；命中即说明回调域语义异常（诊断信号，非数据源）。
           pcall(emu.addMemoryCallback, function(address, value)
             local stOk, st = pcall(emu.getState)
             if stOk and st and address >= 0x2000 and address < 0x3000 then

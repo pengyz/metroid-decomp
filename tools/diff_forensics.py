@@ -107,7 +107,10 @@ def read_png(path):
 
 def load_ppu(path):
     """dumpPpu 单行 hex → dict。布局不符（长度≠0x3023）显式拒收（fail-loud）。"""
-    data = bytes.fromhex(Path(path).read_text().strip())
+    try:
+        data = bytes.fromhex(Path(path).read_text().strip())
+    except ValueError:
+        raise SystemExit(f"{path}: 非 hex 字符（.ppu.hex 期望单行小写 hex）")
     if len(data) != PPU_HEX_TOTAL:
         raise SystemExit(
             f"{path}: .ppu.hex 长度 {len(data)} ≠ {PPU_HEX_TOTAL}"
