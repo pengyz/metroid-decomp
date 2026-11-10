@@ -2965,8 +2965,10 @@ pub fn more_init(mem: &mut FrameMemory) {
     // 【move-drift R3】SetupRoom 环+名表拷贝=重活（房间解压——原版掉帧窗 bogged 2 帧；
     // C 级拆分（总 4=A 级三源互证——窗3 行集×FC×$18/$19 计数））。
     mem.iter_bogged(2);
-    mem.write_ram(0x0000, mem.read_ram(0x0037)); // RoomRAMPtr→$00/$01（asm $37/$38 面）
-    mem.write_ram(0x0001, mem.read_ram(0x0038));
+    // 【址勘误 r28-1】asm prg7:1899-1901 `ldy RoomRAMPtr+1 / sty $01 / ldy RoomRAMPtr /
+    // sty $00`——RoomRAMPtr=$39/$3A（constants_ram:519-521）；旧形误取 $37/$38（WorkPtr）。
+    mem.write_ram(0x0000, mem.read_ram(0x0039)); // RoomRAMPtr lo → $00
+    mem.write_ram(0x0001, mem.read_ram(0x003A)); // RoomRAMPtr hi → $01
     mem.write_io(0x2006, 0x20);
     mem.write_io(0x2006, 0x00);
     let mut hi = mem.read_ram(0x0001);
