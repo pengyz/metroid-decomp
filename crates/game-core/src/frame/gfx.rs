@@ -71,6 +71,22 @@ pub fn init_norfair_gfx(mem: &mut FrameMemory) {
     }
 }
 
+/// LoadSamusGFX 单元（07:C5DC，prg7_engine.asm:1496-1520）：密码进场序载入。
+/// asm 全形：`ldy #GFX_Samus/jsr LoadGFX` → `lda JustInBailey/beq @endIf_A`→
+/// `ldy #GFX_SamusSuitless/jsr LoadGFX` → IntroSprites/Font_Complete/Font_Hud/
+/// Solid_0FC0 → `ldy #GFX_Solid_1FC0/jmp LoadGFX`（尾跳）。**不含 TITLE**（区别 init_title_gfx）。
+pub fn load_samus_gfx(mem: &mut FrameMemory) {
+    use gfx_id::*;
+    let mut loads = vec![SAMUS];
+    if mem.read_wram(JUST_IN_BAILEY) != 0 {
+        loads.push(SAMUS_SUITLESS);
+    }
+    loads.extend_from_slice(&[INTRO_SPRITES, FONT_COMPLETE, FONT_HUD, SOLID_0FC0, SOLID_1FC0]);
+    for id in loads {
+        load_gfx(mem, id);
+    }
+}
+
 /// InitTitleGFX 单元（boot 序：7 件载入；JustInBailey=0 时跳 Suitless）。
 pub fn init_title_gfx(mem: &mut FrameMemory) {
     use gfx_id::*;

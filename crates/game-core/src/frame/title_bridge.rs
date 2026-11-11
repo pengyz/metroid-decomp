@@ -407,7 +407,10 @@ fn initialize_game(mem: &mut FrameMemory, pw: &[u8; 18], nar_active: bool) {
     mem.write_ram(crate::ram_map::PPUMASK_ZP, pm);
     let pc = mem.read_ram(crate::ram_map::PPUCTRL_ZP) & !0x80;
     mem.write_ram(crate::ram_map::PPUCTRL_ZP, pc);
-    // LoadSamusGFX（$C5DC）：CHR-RAM 载面——gfx.rs sketch 零载行为等价（不碰）。
+    // LoadSamusGFX（$C5DC，prg7_engine.asm:1496-1520）：Samus→(JIB?Suitless)→
+    // IntroSprites→Font_Complete→Font_Hud→Solid_0FC0→Solid_1FC0 七件（ScreenNmiOff 后/
+    // NMIOn 前——ROM→CHR-RAM 写在 NMI 关闭窗口，同 asm 序）。
+    super::gfx::load_samus_gfx(mem);
     // NMIOn（07:C487）：PPUCTRL_ZP|=$80。
     let pc = mem.read_ram(crate::ram_map::PPUCTRL_ZP) | 0x80;
     mem.write_ram(crate::ram_map::PPUCTRL_ZP, pc);
