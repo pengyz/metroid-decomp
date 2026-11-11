@@ -773,9 +773,10 @@ mod tests {
             "row3 → $2FE0 属性行 1 全 32B（$E0 基址）"
         );
         // 病灶钉：NT B 瓦面 row0（nametable[0x400..]）不被属性行写污染
+        // （CIRAM 初值 $FF——未写区保持 FF，写入会变成非 FF）
         assert!(
-            m.render.nametable[0x400..0x408].iter().all(|&b| b == 0x00),
-            "NT B row0 瓦面不落属性字节（原 dst=$2400 病灶钉）"
+            m.render.nametable[0x400..0x408].iter().all(|&b| b == 0xFF),
+            "NT B row0 瓦面不落属性字节（原 dst=$2400 病灶钉；CIRAM 初值 $FF）"
         );
         assert_eq!(m.read_ram(0x005A), 0xF4, "RoomNumber 自进（row3→$F4）");
     }

@@ -100,7 +100,9 @@ pub struct RenderState {
 
 impl Default for RenderState {
     fn default() -> Self {
-        Self { chr: vec![0; 0x2000], nametable: vec![0; 0x800], ppuaddr: 0, latch_hi: true,
+        // emu CIRAM 未写区实测=$FF（case-password-justin ppu.hex 未写页全 FF）；
+        // 旧形初值 0 使未写名表渲染成 tile0（属性区也归调色板组 0）——A 级对拍定谳。
+        Self { chr: vec![0; 0x2000], nametable: vec![0xFF; 0x800], ppuaddr: 0, latch_hi: true,
                scroll_x: 0, scroll_y: 0,
                palette: [0x0F; 32], ppuctrl: 0 }
     }

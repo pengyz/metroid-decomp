@@ -1885,7 +1885,8 @@ mod tests_column_streaming {
         let mut m2 = walk_mem();
         m2.write_ram(0x004A, 3);
         check_update_name_table(&mut m2);
-        assert_eq!(m2.render.nametable[0], 0, "防重判跳（列不动）");
+        // CIRAM 初值 $FF——跳径不写 ⇒ 保持 FF（旧断言 0 系初值 0 的巧合）
+        assert_eq!(m2.render.nametable[0], 0xFF, "防重判跳（列不动）");
     }
 }
 

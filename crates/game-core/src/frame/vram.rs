@@ -86,7 +86,8 @@ mod tests {
         let blob = [0x20, 0x00, 0x03, 0xAB, 0xCD, 0xEF, 0x00];
         vram_struct_write(&mut m, &blob);
         assert_eq!(m.render.nametable[0..3], [0xAB, 0xCD, 0xEF]);
-        assert_eq!(m.render.nametable[3], 0x00, "终止后不写");
+        // CIRAM 初值 $FF（emu 未写区实测）——终止后不写 ⇒ 保持 FF
+        assert_eq!(m.render.nametable[3], 0xFF, "终止后不写（初值 $FF 保持）");
         assert_eq!(m.render.ppuaddr, 0x2003, "ppuaddr 终态=起点+count（inc=1）");
     }
 

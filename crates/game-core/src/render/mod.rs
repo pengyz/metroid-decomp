@@ -570,6 +570,8 @@ mod sprite_tests {
         let (mut rs, mut bg, spr, mut oam) = setup();
         bg[1] = 0x30; // BG pix=1 ⇒ $30（白）——非背景色
         rs.nametable[0] = 2; // tile2 @ (0,0)
+        // 属性字节显式归组 0（CIRAM 初值 $FF=组 3——不设则取不到 bg[1]）
+        rs.nametable[0x3C0] = 0x00;
         rs.chr[32..40].copy_from_slice(&[0xFF; 8]); // tile2 全 1（BG 非背景）
         oam[0..4].copy_from_slice(&[0xFF, 1, 0x20, 0]); // Y=0xFF⇒顶=0（mod 环绕）attr=bit5
         let fb = render_frame(&rs, &bg, &spr, &oam);
