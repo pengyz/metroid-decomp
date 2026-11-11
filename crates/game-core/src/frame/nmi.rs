@@ -718,10 +718,20 @@ pub fn palette_write_pending(mem: &mut FrameMemory) {
     // asm `CheckPaletteWrite 07:C1FF` 是 `dey/tya/asl/tay` **无界查表**（无范围检查）；
     // 这里保留 fail-loud 守卫但界改由烘焙表项数决定（不写死 25），只对真越界报缺口。
     use game_data::title::palette_data as pd;
+    // 【area→ROM bank 映射（A 级，r9-F1 整改）】asm `BankTable: ; 07:CA30`
+    // （prg7_engine.asm:2274-2279）= `.byte $01+1 Brinstar / $02+1 Norfair /
+    // $04+1 Kraid / $03+1 Tourian / $05+1 Ridley`——ROM 逐字节自证
+    // `02 03 05 04 06`（bank+1 形）⇒ area0..4 → ROM bank [1,2,4,3,5]。
+    // 旧式 `(InArea&0xF)+1` 给 [1,2,3,4,5]——**Kraid/Tourian 互换**（读错 bank
+    // 调色板，静默错数据）。与 mainloop.rs BANK_TABLE 同源真值（$03-1=2 等价）。
+    const AREA_TO_ROM_BANK: [usize; 5] = [1, 2, 4, 3, 5];
     let bank = if mem.read_ram(crate::ram_map::GAME_MODE) != 0 {
         0usize // 标题（bank0）
     } else {
-        ((mem.read_ram(crate::ram_map::IN_AREA) & 0x0F) as usize) + 1 // 区 bank（1-5）
+        let area = (mem.read_ram(crate::ram_map::IN_AREA) & 0x0F) as usize;
+        *AREA_TO_ROM_BANK
+            .get(area)
+            .unwrap_or_else(|| crate::unported!("bank07:CA30-area")) // area>4 表外（fail-loud）
     };
     let (data, offs): (&[u8], &[u16]) = match bank {
         1 => (&pd::PAL_DATA_1, &pd::PAL_OFFS_1),

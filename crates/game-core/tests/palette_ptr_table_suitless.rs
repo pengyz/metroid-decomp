@@ -61,3 +61,34 @@ fn palette_ptr_table_idx27_writes_suitless_varia_missile_palette1b() {
         "idx27=Palette1B：$3F10..13 ← 0F 15 34 29（asm 28 项表末项）"
     );
 }
+
+/// F1 整改 TDD（r9 证伪）：area→ROM bank 映射必须走 asm `BankTable 07:CA30`
+/// 真值 `02 03 05 04 06`（=bank+1 形）⇒ area0..4 → bank [1,2,4,3,5]
+/// （Brinstar=1/Norfair=2/Kraid=4/Tourian=3/Ridley=5——Kraid/Tourian 互换是
+/// 旧式 `(InArea&0xF)+1` 的错）。ROM 逐字节自证：
+/// `python3 -c "…off=16+7*0x4000+(0xCA30-0xC000)…"` → `02 03 05 04 06`。
+/// 判别子：bank3(Tourian) Palette00 idx0 首 8B `3f00200f2016000f` vs
+/// bank4(Kraid) `3f00200f2010000f`（[4]=0x16 vs 0x10 可判）。
+#[test]
+fn area_to_rom_bank_mapping_follows_bancctable() {
+    // Kraid（InArea=0x12，&0x0F=2）必须读 bank4 而非 bank3。
+    let mut m = FrameMemory::default();
+    m.write_ram(GAME_MODE, 0x00);
+    m.write_ram(IN_AREA, 0x12); // Kraid
+    m.write_ram(PALETTE_PENDING, 1); // idx0 = Palette00
+    palette_write_pending(&mut m);
+    assert_eq!(
+        m.render.palette[2], 0x10,
+        "Kraid=area2→ROM bank4（BankTable $05-1）：Palette00 首块 data[2]=0x10；旧式误读 bank3=data[2]=0x16"
+    );
+    // Tourian（InArea=0x13，&0x0F=3）必须读 bank3 而非 bank4。
+    let mut m = FrameMemory::default();
+    m.write_ram(GAME_MODE, 0x00);
+    m.write_ram(IN_AREA, 0x13); // Tourian
+    m.write_ram(PALETTE_PENDING, 1);
+    palette_write_pending(&mut m);
+    assert_eq!(
+        m.render.palette[2], 0x16,
+        "Tourian=area3→ROM bank3（BankTable $04-1）：Palette00 首块 data[2]=0x16；旧式误读 bank4=data[2]=0x10"
+    );
+}
