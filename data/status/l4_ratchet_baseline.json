@@ -215,41 +215,6 @@
           "state": "match",
           "diff_pixels": 0,
           "total_pixels": 61440
-        },
-        "550:walk-mid": {
-          "state": "match",
-          "diff_pixels": 0,
-          "total_pixels": 61440
-        },
-        "690:pre-jump": {
-          "state": "match",
-          "diff_pixels": 0,
-          "total_pixels": 61440
-        },
-        "705:takeoff": {
-          "state": "match",
-          "diff_pixels": 0,
-          "total_pixels": 61440
-        },
-        "730:rise": {
-          "state": "match",
-          "diff_pixels": 0,
-          "total_pixels": 61440
-        },
-        "755:peak": {
-          "state": "match",
-          "diff_pixels": 0,
-          "total_pixels": 61440
-        },
-        "780:land": {
-          "state": "match",
-          "diff_pixels": 0,
-          "total_pixels": 61440
-        },
-        "800:land-settled": {
-          "state": "match",
-          "diff_pixels": 0,
-          "total_pixels": 61440
         }
       }
     },
@@ -478,6 +443,71 @@
         }
       }
     },
+    "case-password-justin": {
+      "scenario_sha256": "b2146fc8c53f0cabb37a35f0073b1a3c41069af45397e9a4d0e10316cbb2477e",
+      "states": {
+        "320:title": {
+          "state": "match",
+          "diff_pixels": 0,
+          "total_pixels": 61440
+        },
+        "420:menu": {
+          "state": "match",
+          "diff_pixels": 0,
+          "total_pixels": 61440
+        },
+        "530:pwd-screen": {
+          "state": "diff",
+          "diff_pixels": 1294,
+          "total_pixels": 61440
+        },
+        "700:mid-1": {
+          "state": "diff",
+          "diff_pixels": 1365,
+          "total_pixels": 61440
+        },
+        "850:mid-2": {
+          "state": "diff",
+          "diff_pixels": 1294,
+          "total_pixels": 61440
+        },
+        "950:mid-3": {
+          "state": "diff",
+          "diff_pixels": 1275,
+          "total_pixels": 61440
+        },
+        "1100:mid-4": {
+          "state": "diff",
+          "diff_pixels": 1384,
+          "total_pixels": 61440
+        },
+        "1150:pw-done": {
+          "state": "diff",
+          "diff_pixels": 1294,
+          "total_pixels": 61440
+        },
+        "1190:submit": {
+          "state": "diff",
+          "diff_pixels": 769,
+          "total_pixels": 61440
+        },
+        "1300:post-submit": {
+          "state": "diff",
+          "diff_pixels": 14272,
+          "total_pixels": 61440
+        },
+        "1430:spawn-t4s": {
+          "state": "diff",
+          "diff_pixels": 14272,
+          "total_pixels": 61440
+        },
+        "2390:spawn-t20s": {
+          "state": "diff",
+          "diff_pixels": 14434,
+          "total_pixels": 61440
+        }
+      }
+    },
     "case-scrollseam-probe": {
       "scenario_sha256": "b5f78ab36e289d21c939b6220980a84008def6d3138fec2acfca9adf367dc457",
       "states": {
@@ -587,21 +617,6 @@
           "total_pixels": 61440
         },
         "620:l180": {
-          "state": "match",
-          "diff_pixels": 0,
-          "total_pixels": 61440
-        },
-        "820:l380": {
-          "state": "match",
-          "diff_pixels": 0,
-          "total_pixels": 61440
-        },
-        "1020:l580": {
-          "state": "match",
-          "diff_pixels": 0,
-          "total_pixels": 61440
-        },
-        "1400:end": {
           "state": "match",
           "diff_pixels": 0,
           "total_pixels": 61440
@@ -781,6 +796,16 @@
       "diff": 0,
       "blocked": 0,
       "cells_total": 108
+    },
+    {
+      "ts": "2026-11-11T05:06:49+00:00",
+      "kind": "anchor",
+      "evidence": "",
+      "reason": "卡C新增用例 case-password-justin 首次锚定（13→14用例/110格）：unported 全链端口完（SoundEngine_SilenceMusic B3EB + prepare_vram 99E3/93B9 + BankInitTable idx2 C51F + gfx C6E0 + SamusInit ScrollDir C902 + PalettePtrTable C1FF-idx），blocked 清零 0；既有13用例 108 格逐格核对零真回归（10 个 match→flaky 均 diff_pixels=0 的 B 径观测抖动，gate ① flaky 豁免）；官方 gates/cli.l4_ratchet_violations(default)=12违规全为新用例③未锚定，for_update/for_rebase=0违规；rom 锚一致。10 格 diff 如实锚为 diff（现状参考，非容忍/非白名单），后续波逐像素收敛。",
+      "match": 100,
+      "diff": 10,
+      "blocked": 0,
+      "cells_total": 110
     }
   ]
 }

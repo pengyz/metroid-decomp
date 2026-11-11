@@ -24,6 +24,12 @@ use crate::ram_map::{CURRENT_BANK, JUST_IN_BAILEY, MMC1CTRL_ZP, PPUCTRL_ZP, SWIT
 /// --check 校验径可复跑）。
 pub mod gfx_id {
     pub const SAMUS: u8 = 0;
+    // 区域背景/精灵件（InitNorfairGFX/Tourian/Kraid/Ridley 消费；r25 批次 3 补烘焙）
+    pub const CREBG1: u8 = 4;
+    pub const CREBG2: u8 = 5;
+    pub const NORF_BG1: u8 = 7;
+    pub const NORF_BG2: u8 = 8;
+    pub const NORFAIR_SPRITES: u8 = 9;
     pub const INTRO_SPRITES: u8 = 20;
     pub const TITLE: u8 = 21;
     pub const SOLID_1FC0: u8 = 22;
@@ -44,7 +50,24 @@ pub fn gfx_info(id: u8) -> [u8; 7] {
         24 => [0x06, 0xC0, 0xB4, 0x00, 0x0A, 0xA0, 0x00],
         25 => [0x06, 0x80, 0x99, 0xC0, 0x0F, 0x40, 0x00],
         27 => [0x06, 0xE0, 0x90, 0x00, 0x00, 0xB0, 0x07],
+        // 区域背景/精灵件（InitNorfairGFX 消费——prg7_engine.asm:1542 `InitNorfairGFX: ; 07:C622`；
+        // 描述子逐字节取自 ROM 表 prg[0x1C6E0+id*7]）
+        4 => [0x05, 0x60, 0x8D, 0x00, 0x12, 0x50, 0x04],
+        5 => [0x06, 0xF0, 0x9E, 0x00, 0x18, 0x00, 0x08],
+        7 => [0x06, 0xF0, 0xA6, 0x00, 0x10, 0x60, 0x02],
+        8 => [0x06, 0x50, 0xA9, 0x00, 0x17, 0x70, 0x00],
+        9 => [0x02, 0x60, 0x8D, 0x00, 0x0C, 0x00, 0x04],
         _ => crate::unported!("bank07:C6E0-entry"), // 未烘焙表项
+    }
+}
+
+/// InitNorfairGFX（**asm 内容锚** `InitNorfairGFX: ; 07:C622`——prg7_engine.asm:1542-1561）：
+/// `ldy #_id_GFX_CREBG1 / jsr LoadGFX` → CREBG2 → NorfBG1 → NorfBG2 → NorfairSprites →
+/// Solid_0FC0 → `ldy #_id_GFX_Solid_1FC0 / jmp LoadGFX`（尾跳，7 件）。
+pub fn init_norfair_gfx(mem: &mut FrameMemory) {
+    use gfx_id::*;
+    for id in [CREBG1, CREBG2, NORF_BG1, NORF_BG2, NORFAIR_SPRITES, SOLID_0FC0, SOLID_1FC0] {
+        load_gfx(mem, id);
     }
 }
 
@@ -73,6 +96,11 @@ pub fn gfx_block(id: u8) -> &'static [u8] {
         24 => &gb::FONT_HUD_GFX,
         25 => &gb::SOLID_0FC0_GFX,
         27 => &gb::SAMUS_SUITLESS_GFX,
+        4 => &gb::CREBG1_GFX,
+        5 => &gb::CREBG2_GFX,
+        7 => &gb::NORF_BG1_GFX,
+        8 => &gb::NORF_BG2_GFX,
+        9 => &gb::NORFAIR_SPRITES_GFX,
         _ => crate::unported!("bank07:C6E0-entry"), // 未烘焙表项
     }
 }

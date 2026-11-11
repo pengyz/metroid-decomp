@@ -214,6 +214,15 @@ fn prepare_vram(mem: &mut FrameMemory, addr: u16) {
         // L9984（prg0_title.asm:3534——StartContinueScreen :2333 装载件；r25 补）
         0x9984 => super::vram::vram_struct_write(
             mem, &game_data::title::vram_structs::START_CONTINUE_VRAM_STRUCT),
+        // L99E3（prg0_title.asm:3560——LoadPasswordScreen :2399 `ldx #<L99E3.b / ldy #>L99E3.b
+        // jsr PreparePPUProcess_`）："PASS WORD PLEASE" 行 $2088 + 属性表四段
+        // （$23C0×$10 $00 / $23D0×$08 $55 / $23D8×$20 $FF / $23DA×$04 $F0）。卡 C 阻塞件。
+        0x99E3 => super::vram::vram_struct_write(
+            mem, &game_data::title::vram_structs::PASSWORD_PLEASE_VRAM_STRUCT),
+        // @VRAMStruct（prg0_title.asm:2874——GameOver :939E `ldx #<@VRAMStruct.b /
+        // jsr PreparePPUProcess_`）："GAME OVER" 行 $218C。
+        0x93B9 => super::vram::vram_struct_write(
+            mem, &game_data::title::vram_structs::GAME_OVER_VRAM_STRUCT),
         other => crate::unported!(&format!("bank00:{other:04X}-PrepareVram")),
     }
 }

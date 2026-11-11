@@ -183,10 +183,48 @@ pub fn vram_struct_write(mem: &mut FrameMemory) {
 /// ②ClearInitFlags 的 6 旗清=**同值写事件**（L2 契约面同款——b-f270-a0 教训族）
 /// ③声态 zp 全在 watch 面（$0602/$0680-85——iram 内可观测）。
 /// 非零旗路径（SFX 分派/静音/暂停）=fail-loud（音频域件随任务展开）。
+/// ClearInitFlags（**asm 内容锚** sound_engine.asm:405 `ClearInitFlags: ; $B3D6`）：
+/// `lda #$00` → SFXNoiseInitFlags($0680)/SFXSQ1InitFlags($0681)/SFXSQ2InitFlags($0682)/
+/// SFXTriInitFlags($0683)/SFXMultiInitFlags($0684)/MusicInitFlags($0685) 六旗清 → rts。
+/// 两条入口共用（正常径 fallthrough + 静音径 `beq ClearInitFlags`）。
+fn clear_init_flags(mem: &mut FrameMemory) {
+    for addr in [
+        crate::ram_map::SFX_NOISE_INIT,
+        crate::ram_map::SFX_SQ1_INIT,
+        crate::ram_map::SFX_SQ2_INIT,
+        crate::ram_map::SFX_TRI_INIT,
+        crate::ram_map::SFX_MULTI_INIT,
+        crate::ram_map::MUSIC_INIT,
+    ] {
+        mem.write_ram(addr, 0);
+    }
+}
+
 pub fn sound_engine(mem: &mut FrameMemory) {
     mem.write_io(0x4017, 0x40 | 0x80); // APU_5STEP|IRQDISABLE（JOY2 口——APU 帧配置）
+    // 静音径（**asm 内容锚** sound_engine.asm:415 `SoundEngine_SilenceMusic: ; $B3EB`）：
+    //   `jsr InitializeSoundAddresses / beq ClearInitFlags ;Branch always.`
+    // Z=1 恒定（ClearSpecialAddresses 尾 `lda #$00` 出 A=0）⇒ 语义 = 全清后落 ClearInitFlags，
+    // **绕开**下方四 init 子件与 `sta SFXPaused`（asm 在 :392 已 bcs 分支走，:397-407 不执行）。
+    //
+    // InitializeSoundAddresses（:$B404）三子件组合——**复用 sound::initialize_sound_addresses**
+    // （task-44 W4 已端口，禁重复实现）：①ClearMusicAndSFXAddresses($B41D) 十清
+    // ②ClearSounds($B43E) 五 APU 写 ③ClearSpecialAddresses($B40E) 四清。
+    //
+    // 触发实证（A 级双侧 ram.hex）：`InitializeGame`（prg0_title.asm:2709 `jsr SilenceMusic`）
+    // 在密码进场置 SFXNoiseInitFlags bit0；emu 同拍 NMI 走本径后 6 旗全清 →
+    // f1190 emu $0680=00 而 rust(修前)=01，即原 `unported!("bank07:B3EB")` 桩的病灶。
     if mem.read_ram(crate::ram_map::SFX_NOISE_INIT) & 1 != 0 {
-        crate::unported!("bank07:B3EB"); // SoundEngine_SilenceMusic（静音路径）
+        let (ram_writes, apu_writes) = crate::sound::initialize_sound_addresses();
+        for (addr, v) in ram_writes {
+            mem.write_ram(addr, v);
+        }
+        for (reg, v) in apu_writes {
+            mem.write_io(reg, v);
+        }
+        // `beq ClearInitFlags`（$B3D6）：6 旗清后 rts
+        clear_init_flags(mem);
+        return;
     }
     if mem.read_ram(crate::ram_map::MAIN_ROUTINE) == 5 {
         crate::unported!("bank07:B3EB-paused"); // GameIsPaused 路径（_id_PauseMode=5 注证）
@@ -203,16 +241,7 @@ pub fn sound_engine(mem: &mut FrameMemory) {
         super::sound_hook::sound_dispatch_chain(mem, flag, block, 0);
     }
     // ClearInitFlags（$B3D6）：6 旗清（同值写事件）
-    for addr in [
-        crate::ram_map::SFX_NOISE_INIT,
-        crate::ram_map::SFX_SQ1_INIT,
-        crate::ram_map::SFX_SQ2_INIT,
-        crate::ram_map::SFX_TRI_INIT,
-        crate::ram_map::SFX_MULTI_INIT,
-        crate::ram_map::MUSIC_INIT,
-    ] {
-        mem.write_ram(addr, 0);
-    }
+    clear_init_flags(mem);
 }
 
 /// ReadJoyPads 单元（**asm 内容锚+结构互核注**）——
@@ -557,6 +586,47 @@ mod tests {
         assert!(rec.contains(&0xB539), "handler 记账点失准: {rec:?}");
     }
 
+    /// 静音径 TDD（**asm 内容锚** sound_engine.asm `SoundEngine_SilenceMusic: ; $B3EB`）：
+    /// `SFXNoiseInitFlags bit0=1` ⇒ InitializeSoundAddresses（ClearMusicAndSFXAddresses
+    /// 十清 + ClearSounds 五写）+ ClearSpecialAddresses 四清 + 落 ClearInitFlags 六清。
+    /// 病灶锚：卡 C 密码进场 `InitializeGame`（prg0_title.asm:2709 `jsr SilenceMusic`）置旗，
+    /// emu 同拍清光（f1190 emu $0680=00 vs rust=01）——原 unported! 桩使 rust 腿报缺口。
+    #[test]
+    fn sound_engine_silence_music_path_clears_all() {
+        use crate::ram_map::{MUSIC_INIT, SFX_NOISE_INIT, SFX_PAUSED, SFX_SQ1_INIT};
+        let mut m = FrameMemory::default();
+        // 预置非零态：证明静音径真的写（非"本就为 0"的空对照）
+        for a in [0x0653u16, 0x0654, 0x0655, 0x0607, 0x0688, 0x0689, 0x068A, 0x068B, 0x068C, 0x068D] {
+            m.write_ram(a, 0xA5);
+        }
+        for a in [0x062Du16, 0x0602, 0x065D, 0x062C] {
+            m.write_ram(a, 0x5A);
+        }
+        m.write_ram(SFX_SQ1_INIT, 0x11);
+        m.write_ram(MUSIC_INIT, 0x22);
+        m.write_ram(SFX_NOISE_INIT, 0x01); // bit0=sfxNoise_SilenceMusic ⇒ 命中静音径
+        sound_engine(&mut m);
+        // ClearMusicAndSFXAddresses（$B41D）十清
+        for a in [0x0653u16, 0x0654, 0x0655, 0x0607, 0x0688, 0x0689, 0x068A, 0x068B, 0x068C, 0x068D] {
+            assert_eq!(m.read_ram(a), 0, "ClearMusicAndSFXAddresses 清址 {a:04X} 未清");
+        }
+        // ClearSpecialAddresses（$B40E）四清
+        for a in [0x062Du16, 0x0602, 0x065D, 0x062C] {
+            assert_eq!(m.read_ram(a), 0, "ClearSpecialAddresses 清址 {a:04X} 未清");
+        }
+        // ClearSounds（$B43E）：三 VOL=0x10 + TRI_LINEAR/DMC_RAW=0
+        let apu = |addr: u16| m.apu_log.iter().rev().find(|(a, _)| *a == addr).map(|(_, v)| *v);
+        assert_eq!(apu(0x4000), Some(0x10), "SQ1_VOL 静音写");
+        assert_eq!(apu(0x4004), Some(0x10), "SQ2_VOL 静音写");
+        assert_eq!(apu(0x400C), Some(0x10), "NOISE_VOL 静音写");
+        assert_eq!(apu(0x4008), Some(0x00), "TRI_LINEAR 清");
+        assert_eq!(apu(0x4011), Some(0x00), "DMC_RAW 清");
+        // beq ClearInitFlags ⇒ 六旗全清（含 SFXPaused）
+        for a in [SFX_NOISE_INIT, SFX_SQ1_INIT, MUSIC_INIT, SFX_PAUSED] {
+            assert_eq!(m.read_ram(a), 0, "ClearInitFlags 旗 {a:04X} 未清");
+        }
+    }
+
     /// 【G2/M6 钉死】超帧（NMIStatus≠0）：声/龄面**无条件跑**（E4 门外）而屏面 b-g 相挡。
     #[test]
     fn superframe_runs_sound_but_skips_screen_phase() {
@@ -642,19 +712,18 @@ mod tests {
 /// （共享解码器——spec「与缓冲冲刷共用解码器」自证）。
 pub fn palette_write_pending(mem: &mut FrameMemory) {
     let idx = (mem.read_ram(PALETTE_PENDING).wrapping_sub(1) & 0xFF) as usize;
-    if idx >= 25 {
-        crate::unported!("bank07:C1FF-idx"); // 表外索引（fail-loud）
-    }
-    mem.write_ram(PALETTE_PENDING, 0); // 重置（`sta PaletteDataPending`）
-    // 【r25 per-bank 面】PalettePtrTable $9560 各 bank 同址（标题 bank0/游戏=区 bank）
-    // ——数据源按当前 bank 选（Samus 淡入调色=项 19+）。
+    // 【per-bank 面】PalettePtrTable $9560 各 bank 同址但**项数异**：
+    //   bank0 标题=19 项（`prg0_title.asm:3201`）/ bank1-5 区域=28 项（`prg2_norfair.asm:53-80`）。
+    //   suitless `SelectSamusPalette 07:CB73` 写 pending=25..28 ⇒ idx 24..27 是区域 bank 合法项。
+    // asm `CheckPaletteWrite 07:C1FF` 是 `dey/tya/asl/tay` **无界查表**（无范围检查）；
+    // 这里保留 fail-loud 守卫但界改由烘焙表项数决定（不写死 25），只对真越界报缺口。
     use game_data::title::palette_data as pd;
     let bank = if mem.read_ram(crate::ram_map::GAME_MODE) != 0 {
         0usize // 标题（bank0）
     } else {
         ((mem.read_ram(crate::ram_map::IN_AREA) & 0x0F) as usize) + 1 // 区 bank（1-5）
     };
-    let (data, offs): (&[u8], &[u16; 25]) = match bank {
+    let (data, offs): (&[u8], &[u16]) = match bank {
         1 => (&pd::PAL_DATA_1, &pd::PAL_OFFS_1),
         2 => (&pd::PAL_DATA_2, &pd::PAL_OFFS_2),
         3 => (&pd::PAL_DATA_3, &pd::PAL_OFFS_3),
@@ -662,6 +731,10 @@ pub fn palette_write_pending(mem: &mut FrameMemory) {
         5 => (&pd::PAL_DATA_5, &pd::PAL_OFFS_5),
         _ => (&pd::PAL_DATA_0, &pd::PAL_OFFS_0),
     };
+    if idx >= offs.len() {
+        crate::unported!("bank07:C1FF-idx"); // 真表外索引（fail-loud）
+    }
+    mem.write_ram(PALETTE_PENDING, 0); // 重置（`sta PaletteDataPending`）
     let mut o = offs[idx] as usize;
     // 共享解码器（VRAMStruct 形——块体走带：[hi][lo][ctrl][data…] 终止符制）
     loop {

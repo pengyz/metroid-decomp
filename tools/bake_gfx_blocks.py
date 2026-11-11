@@ -36,6 +36,12 @@ BLOCKS = [
     ("FONT_HUD_GFX", 24),
     ("SOLID_0FC0_GFX", 25),
     ("SAMUS_SUITLESS_GFX", 27),
+    # 区域背景/精灵件（InitNorfairGFX/Tourian/Kraid/Ridley 消费；r25 批次 3）：
+    ("CREBG1_GFX", 4),
+    ("CREBG2_GFX", 5),
+    ("NORF_BG1_GFX", 7),
+    ("NORF_BG2_GFX", 8),
+    ("NORFAIR_SPRITES_GFX", 9),
 ]
 GFXINFO_BASE = 0x1C6E0  # bank7 $C6E0（bank7 固定区 $C000 窗 → prg 偏移 0x1C000+0x6E0）
 

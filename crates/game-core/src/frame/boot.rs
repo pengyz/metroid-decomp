@@ -269,9 +269,24 @@ pub fn c4de_unit(mem: &mut FrameMemory) {
     // GoBankInit（C510）：BankInitTable（bank0:C51F `31 C5 52 C5 …`）分派。
     match idx {
         0 => c531_unit_pre(mem), // InitBank0（$C531——boot 链 pre 段）
-        1 => init_bank1(mem),    // InitBank1（$C552——游戏入场链）
+        1 => init_bank1(mem),    // InitBank1（$C552——游戏入场链 Brinstar）
+        2 => init_bank2(mem),    // InitBank2（$C583——Norfair，密码进场 InArea=$11 落此）
         _ => crate::unported!("bank00:C51F"), // 非 boot/入场表项未端口
     }
+}
+
+/// InitBank2（**asm 内容锚** `InitBank2: ; 07:C583`——prg7_engine.asm:1441-1447 逐行）：
+/// `lda #$00 / sta GameMode`（Play）→ `jsr ScreenNmiOff`（$C45D）→
+/// `jsr InitNorfairGFX`（$C622）→ `jmp NMIOn`（$C487）。
+///
+/// 形状对齐 InitBank1（同三段：GameMode / ScreenNmiOff 帧等待 / GFX 重活）——后者已由
+/// move-drift R2/R3 定谳（ScreenNmiOff=窗3 等待 1/3；GFX 装载=bogged×2）。
+fn init_bank2(mem: &mut FrameMemory) {
+    mem.write_ram(crate::ram_map::GAME_MODE, 0);
+    mem.write_ram(crate::ram_map::NMI_STATUS, 1); // ScreenNmiOff 域形
+    mem.iter_wait();
+    super::gfx::init_norfair_gfx(mem);
+    mem.iter_bogged(2);
 }
 
 /// InitBank1（**asm 内容锚** `InitBank1: ; 07:C552`——「Brinstar memory page」）：

@@ -36,6 +36,11 @@ BLOBS = [
     # L9984（prg0_title.asm:3534——StartContinueScreen15/1B :2333 `ldx #<L9984` 装载件：
     # START/Continue 选单屏 tilemap）。r25 补（title→游戏链首抓手）。
     ("START_CONTINUE_VRAM_STRUCT", 0x9984, 0),
+    # L99E3（prg0_title.asm:3560——LoadPasswordScreen 装载件："PASS WORD PLEASE" 行
+    # $2088 + 属性表 $23C0/$23D0/$23D8/$23DA 四段）。卡 C 阻塞件（10 格 blocked 根）。
+    ("PASSWORD_PLEASE_VRAM_STRUCT", 0x99E3, 0),
+    # @VRAMStruct（prg0_title.asm:2874——GameOver :939E 装载件："GAME OVER" 行 $218C）。
+    ("GAME_OVER_VRAM_STRUCT", 0x93B9, 0),
 ]
 
 

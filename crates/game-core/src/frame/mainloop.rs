@@ -168,8 +168,8 @@ pub fn area_init(mem: &mut FrameMemory) {
 /// SFXMultiInitFlags($0684)←$10 音乐起）④Samus.status←_id_Palette13+1=**$14**（淡入态）
 /// ⑤InvincibleDelay←0 ⑥敌槽清（X=$FF：PipeBugHoles .0/.1.status+.1.y（**BUG 保留**（D4）
 /// asm 注「should be .2/.3」）+.2.status=$728/$730/$732/$738、EndTimer($010A/$010B)、
-/// RinkaSpawners .0/.1=$8B/$8E）⑦InArea&$0F：0=Brinstar（Y=$27）/else=$2F+ScrollDir lsr
-/// （址未定谳——fail-loud（不猜写））⑧MirrorCntrl($FA)/MissilePickupQtyMax($93)/
+/// RinkaSpawners .0/.1=$8B/$8E）⑦InArea&$0F：0=Brinstar（Y=$27）/else=$2F+
+/// `lsr ScrollDir($49)`（`07:C902` ROM=46 49，已定谳端口）⑧MirrorCntrl($FA)/MissilePickupQtyMax($93)/
 /// EnergyPickupQtyMax($94)←Y ⑨Samus.y←AreaSamusY[area]（$95D9 五值烘焙）/x←$80/
 /// hi←PPUCTRL_ZP&1 ⑩Health($0106)←30（$00/$03）。
 pub fn samus_init(mem: &mut FrameMemory) {
@@ -189,8 +189,15 @@ pub fn samus_init(mem: &mut FrameMemory) {
     let y = if mem.read_ram(IN_AREA) & 0x0F == 0 {
         0x27u8 // Brinstar
     } else {
-        // 非 Brinstar：`lsr ScrollDir`+Y=$2F（ScrollAddr 未定谳——fail-loud 不猜写）
-        crate::unported!("bank07:C902-ScrollDir");
+        // 非 Brinstar（asm `SamusInit` prg7_engine.asm:1996-2005，`07:C900`）：
+        //   lda InArea / and #$0F / beq Lx002(07:C908)
+        //   lsr ScrollDir  ; 07:C902  ROM 逐字节 = 46 49（lsr $49 zp）
+        //   ldy #$2F       ; 横向镜像 + 拾取上限
+        // ROM 实证（bank7 fixed, file 0x1C900）= 29 0F F0 04 **46 49** A0 2F。
+        // 旧形为 fail-loud 桩（注释「ScrollAddr 未定谳」）——ROM 直读后地址已定谳，
+        // 按 asm 真形端口：lsr 的 carry 出被随后 ldy 丢弃，故只写回右移结果。
+        let sd = mem.read_ram(crate::ram_map::SCROLL_DIR);
+        mem.write_ram(crate::ram_map::SCROLL_DIR, sd >> 1);
         0x2F
     };
     mem.write_ram(MIRROR_CNTRL, y);
