@@ -3014,15 +3014,33 @@ pub fn copy_map(mem: &mut FrameMemory) {
     }
 }
 
-/// AreaPointers_ROM 烘焙（prg1 Brinstar——`14 a3 72 a3 f0 ae e0 9d e0 9e 0e 9f 6a 9d`
-/// ROM 命中（$959A）——7 指针：RoomPtrTable/StructPtrTable/MetatileDefs/EnFramePtrTable1/2/
-/// EnPlacePtrTable/EnAnimTable）。
-const AREA_POINTERS_ROM: [u8; 14] = [0x14, 0xA3, 0x72, 0xA3, 0xF0, 0xAE, 0xE0, 0x9D, 0xE0, 0x9E, 0x0E, 0x9F, 0x6A, 0x9D];
+/// AreaPointers_ROM 五区烘焙（**asm `CopyAreaPointers: ; 07:C8B0`** `lda AreaPointers_ROM,x`——
+/// ROM 侧=$959A 起 14B，**取自当前区 bank**（bank 由 InArea 经 BankTable 07:CA30 换）——
+/// 7 指针：RoomPtrTable/StructPtrTable/MetatileDefs/EnFramePtrTable1/2/EnPlacePtrTable/EnAnimTable）。
+/// 五区 ROM 独立核验（file off = bank*0x4000+0x1560-0x4000+0x4000 区换算，python 逐字节）：
+/// bank1(Brinstar)=`14 a3 72 a3 f0 ae e0 9d e0 9e 0e 9f 6a 9d`（=旧单区常量，原位不变）
+/// bank2(Norfair)=`1b a2 77 a2 ec ae 64 9c 64 9d 78 9d da 9b` /
+/// bank3(Tourian)=`d1 a7 fb a7 49 ae 2c a4 2c a5 40 a5 06 a4` /
+/// bank4(Kraid)=`d5 a1 1f a2 32 ac f7 9c f7 9d 25 9e 86 9c` /
+/// bank5(Ridley)=`7f a1 d3 a1 23 ab f0 9b f0 9c 04 9d 85 9b`。
+/// 区序（InArea&$0F 0..4）→bank（BankTable）→上列行：0→1/1→2/2→4/3→3/4→5。
+const AREA_POINTERS_BY_AREA: [[u8; 14]; 5] = [
+    [0x14, 0xA3, 0x72, 0xA3, 0xF0, 0xAE, 0xE0, 0x9D, 0xE0, 0x9E, 0x0E, 0x9F, 0x6A, 0x9D], // Brinstar (bank1 $959A)
+    [0x1B, 0xA2, 0x77, 0xA2, 0xEC, 0xAE, 0x64, 0x9C, 0x64, 0x9D, 0x78, 0x9D, 0xDA, 0x9B], // Norfair (bank2 $959A)
+    [0xD5, 0xA1, 0x1F, 0xA2, 0x32, 0xAC, 0xF7, 0x9C, 0xF7, 0x9D, 0x25, 0x9E, 0x86, 0x9C], // Kraid (bank4 $959A)
+    [0xD1, 0xA7, 0xFB, 0xA7, 0x49, 0xAE, 0x2C, 0xA4, 0x2C, 0xA5, 0x40, 0xA5, 0x06, 0xA4], // Tourian (bank3 $959A)
+    [0x7F, 0xA1, 0xD3, 0xA1, 0x23, 0xAB, 0xF0, 0x9B, 0xF0, 0x9C, 0x04, 0x9D, 0x85, 0x9B], // Ridley (bank5 $959A)
+];
 
 /// CopyAreaPointers（**asm 内容锚** `CopyAreaPointers: ; 07:C8B0`）：14B 拷
 /// AreaPointers_ROM→AreaPointers_RAM（$3B-$48——7 指针结构体）。
+/// ROM 侧按 `InArea&$0F` 选区 bank（五区已烘焙——区域未覆盖时 fail-loud D7）。
 pub fn copy_area_pointers(mem: &mut FrameMemory) {
-    for (i, b) in AREA_POINTERS_ROM.iter().enumerate() {
+    let area = mem.read_ram(crate::ram_map::IN_AREA) & 0x0F;
+    let rom = AREA_POINTERS_BY_AREA
+        .get(area as usize)
+        .unwrap_or_else(|| crate::unported!("bank07:959A-area"));
+    for (i, b) in rom.iter().enumerate() {
         mem.write_ram(0x003B + i as u16, *b);
     }
 }
@@ -3078,19 +3096,23 @@ pub fn setup_room(mem: &mut FrameMemory) {
         crate::frame::room::attrib_table_write(mem);
         return;
     }
-    // RoomPtrTable 查表（AreaPointers_RAM.RoomPtrTable=$3B/$3C 间接——基址拷自 $959A
-    // = $A314（Brinstar）——表 47 项烘焙（prg1 提取自证：A441/A454/A45C…））。
-    let y = (room as usize) << 1;
-    let lo = ROOM_PTR_TABLE[y] as u16;
-    let hi = ROOM_PTR_TABLE[y + 1] as u16;
-    mem.write_ram(0x0033, lo as u8); // RoomPtr（constants_ram:508）
-    mem.write_ram(0x0034, hi as u8);
+    // RoomPtrTable 查表（**asm `lda (AreaPointers_RAM.RoomPtrTable),y` 经 $3B/$3C 间接**——
+    // 基址拷自当前区 bank $959A，表按区分发：0=Brinstar $A314 47 项 / 1=Norfair $A21B 46 项；
+    // 折叠等价：直查该区烘焙表（表值与 ROM 逐字节同——各件头注自证），asm 形=间接查 ROM）。
+    let area = mem.read_ram(crate::ram_map::IN_AREA) & 0x0F;
+    let ptrs = game_data::area::room_ptrs(area)
+        .unwrap_or_else(|| crate::unported!("bank07:959A-RoomPtrTable"));
+    let ptr = ptrs
+        .get(room as usize)
+        .copied()
+        .unwrap_or_else(|| crate::unported!("bank07:A314-RoomPtrTable-oob"));
+    mem.write_ram(0x0033, ptr as u8); // RoomPtr lo（constants_ram:508）
+    mem.write_ram(0x0034, (ptr >> 8) as u8); // RoomPtr hi
     // 首字节读（房间数据——RoomPalette=$36 址随证）+SelectRoomRAM($EA05)/InitTables($EFF8)
     // +DrawRoom 链（S6-7 绘制面——r25 端口）。
-    let sidx = y / 2;
-    let _ = sidx;
     crate::frame::room::select_room_ram(mem);
-    let room_stream = game_data::area::graphics::ROOM_STREAMS.get(room as usize);
+    let room_stream = game_data::area::room_streams(area)
+        .and_then(|ss| ss.get(room as usize));
     let palette = room_stream.and_then(|s| s.first().copied()).unwrap_or(0);
     mem.write_ram(0x0068, palette); // RoomPalette（**$68**——r25 址勘误修（旧 $36 随证形误））
     crate::frame::room::init_tables(mem);

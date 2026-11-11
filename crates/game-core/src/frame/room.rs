@@ -67,7 +67,15 @@ pub(crate) const LOAD_BASE_CYCLES: u32 = 29000;
 pub(crate) const FRAME_CYCLES: u32 = 29780;
 
 pub fn draw_room(mem: &mut crate::frame::FrameMemory, room: u8) -> bool {
-    let Some(stream) = gfx::ROOM_STREAMS.get(room as usize) else {
+    // 房流按区分发（asm `SetupRoom` 经 $3B/$3C 间接查当前区 RoomPtrTable——
+    // 表值=ROM 当前区 bank；0=Brinstar/1=Norfair，其余区 unported fail-loud D7）。
+    let area = mem.read_ram(crate::ram_map::IN_AREA) & 0x0F;
+    let Some(stream) = game_data::area::room_streams(area)
+        .and_then(|ss| ss.get(room as usize))
+    else {
+        if game_data::area::room_streams(area).is_none() {
+            crate::unported!("bank07:959A-room_streams-area");
+        }
         return false;
     };
     // 【V2-lite】SelectRoomRAM（$EA05）：缓冲按名表位（EB85：PPUCTRL^ScrollDir）&1
@@ -131,9 +139,14 @@ fn draw_struct(
     obj_palette: u8,
     room_palette: u8,
 ) {
-    let Some(&s) = gfx::STRUCT_PTRS.get(struct_idx as usize) else { return };
-    let _ = s;
-    let Some(data) = gfx::STRUCTURES.get(struct_idx as usize) else { return };
+    // 结构表按区分发（asm `DrawObject` `lda (AreaPointers_RAM.StructPtrTable),y` 经 $3D/$3E
+    // 间接查当前区 StructPtrTable；0=Brinstar $A372/1=Norfair $A277，其余区 unported D7）。
+    let area = mem.read_ram(crate::ram_map::IN_AREA) & 0x0F;
+    let Some(structures) = game_data::area::structures(area) else {
+        crate::unported!("bank07:959A-structures-area");
+    };
+    let _ = game_data::area::struct_ptrs(area); // asm 查 StructPtrTable（值未用——DrawStruct 直吃结构流）
+    let Some(data) = structures.get(struct_idx as usize) else { return };
     let mut idx = 0usize;
     let mut work = work;
     loop {
@@ -159,8 +172,13 @@ fn draw_struct(
             mem.work_cycles = mem.work_cycles.wrapping_add(
                 if obj_palette == room_palette { LOAD_MT_FAST } else { LOAD_MT_FULL });
             let mt_base = (mt as usize) * 4;
+            // 元 tile 按区分发（asm DrawMetatile 经 $3F/$40 间接查当前区 MetatileDefs——
+            // 0=Brinstar $AEF0/1=Norfair $AEEC，其余区 unported D7）。
+            let Some(metatile) = game_data::area::metatile_defs(area) else {
+                crate::unported!("bank07:959A-metatile-area");
+            };
             for k in 0..4u16 {
-                let tile = gfx::METATILE_DEFS
+                let tile = metatile
                     .get(mt_base + k as usize)
                     .copied()
                     .unwrap_or(0);
