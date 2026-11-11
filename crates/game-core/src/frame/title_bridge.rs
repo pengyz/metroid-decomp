@@ -196,12 +196,42 @@ fn exec_shell_call(mem: &mut FrameMemory, sc: &crate::title::ShellCall) {
             }
         }
         PrepareVram(addr) => prepare_vram(mem, *addr),
+        // DisplayInputCharacters（00:940B，prg0_title.asm:2933-2949）：密码屏字符网格。
+        DisplayInputCharacters => display_input_characters(mem),
         // spin 等待段（r23：计数面——main_title_routine 入口消费）
         SpinWait(n) => mem.title_spin = *n,
         // ScreenOff/ScreenOn/NMIOn/VBOffAndHorzWrite/WaitNMIPass：$FE/$FF/$1A 镜像面
         // =臂事件承载（two-layer——事件即 RAM 面权威）；InitPasswordFontGfx/
         // DisplayInputCharacters 深件随批（未烘焙面随件爆）。
         _ => {}
+    }
+}
+
+/// DisplayInputCharacters（00:940B）实现体——asm 逐行（prg0_title.asm:2933-2949）：
+/// `lda PPUSTATUS`（锁存复位）→ `$00/$01←0`（$01=行计数）→ 环 5 行：
+/// `x=行*2 / lda PasswordRowsTbl,x → PPUADDR hi+lo`（$943F=[$21E4,$2224,$2264,$22A4,$22E4]）
+/// → 13 字符 `lda PasswordRow0,y → PPUDATA` + `lda #$FF → PPUDATA`（空白交错，`iny` **跨行连续**
+/// 不重置）→ `inc $01 / cmp #$05 / bne`。PasswordRow0（$99A2，`.stringmap "0123456789ABC…"`）
+/// ROM 逐字节=[0..63,$FF,…]，5×13=65 项恰用 0..64（第 65 项=$FF）。
+fn display_input_characters(mem: &mut FrameMemory) {
+    mem.render.reset_addr_latch();
+    // $00/$01 初值 0（asm `tya/sta $00/sta $01`——$01=行计数器）
+    mem.write_ram(0x0000, 0);
+    mem.write_ram(0x0001, 0);
+    const ROWS: [u16; 5] = [0x21E4, 0x2224, 0x2264, 0x22A4, 0x22E4];
+    let mut y = 0usize;
+    for (row, &addr) in ROWS.iter().enumerate() {
+        mem.write_io(0x2006, (addr >> 8) as u8);
+        mem.write_io(0x2006, (addr & 0xFF) as u8);
+        for _ in 0..13 {
+            // PasswordRow0[y]：y<64 ⇒ tile y；y==64 ⇒ $FF（ROM $99A2 第 65 项）
+            let tile = if y < 64 { y as u8 } else { 0xFF };
+            mem.write_io(0x2007, tile);
+            mem.write_io(0x2007, 0xFF); // 空白 tile 交错（`lda #$FF/sta PPUDATA`）
+            y += 1;
+        }
+        // `inc $01`（行计数——终值 5 与 asm 环出口一致）
+        mem.write_ram(0x0001, (row + 1) as u8);
     }
 }
 
@@ -241,6 +271,32 @@ mod tests {
         assert_eq!(m.iter_gates, vec![0], "bogged 门队列挂起（N₀=1）");
         assert!(m.iter_span_fc, "FC 延至 span 尾收口旗");
         assert!(m.title_no_return, "0x00 工作拍 FC 冻结（Step 2 入族）");
+    }
+
+    /// DisplayInputCharacters（00:940B）锚测：5 行网格 + y 跨行连续 + $FF 交错 + $01 终值 5。
+    /// A 级：PasswordRowsTbl $943F=[$21E4,$2224,$2264,$22A4,$22E4]（prg0_title.asm:3544）+
+    /// PasswordRow0 $99A2=[0..63,$FF,…]（ROM 逐字节）+ L4 f530 NT0 diff 0x1e4-0x2fa 实测。
+    #[test]
+    fn display_input_characters_writes_five_rows() {
+        let mut m = FrameMemory::default();
+        display_input_characters(&mut m);
+        // 行 0（$21E4 → off 0x1E4）：tile 0..12 + $FF 交错（偶数位=字符/奇数位=$FF）
+        for i in 0..13usize {
+            assert_eq!(m.render.nametable[0x1E4 + i * 2], i as u8, "行0 字符 {i}");
+            assert_eq!(m.render.nametable[0x1E4 + i * 2 + 1], 0xFF, "行0 空白 {i}");
+        }
+        // 行 4（$22E4 → off 0x2E4）：y=52..64（第 65 项=$FF）
+        for i in 0..13usize {
+            let y = 52 + i as u8;
+            let expect = if y < 64 { y } else { 0xFF };
+            assert_eq!(m.render.nametable[0x2E4 + i * 2], expect, "行4 字符 {i}");
+        }
+        // 行计数器 $01 终值 5（asm `inc $01/cmp #$05` 环出口）
+        assert_eq!(m.read_ram(0x0001), 5);
+        // 中间行地址（行 1/2/3 起点）
+        assert_eq!(m.render.nametable[0x224], 13);
+        assert_eq!(m.render.nametable[0x264], 26);
+        assert_eq!(m.render.nametable[0x2A4], 39);
     }
 
     /// OBJECTS_CLEAR 复合标签展开（「标签展开在 shim」契约点——$0300-$031F 32 事件）。
