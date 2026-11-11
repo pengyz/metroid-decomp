@@ -277,3 +277,92 @@ cargo test --workspace 全绿。
 7. **10 格 diff 的逐像素归因**（竖镜/LoadSamusGFX/淡入/per-area 图形表等 `/tmp/card-c-wip.patch` 大件）属卡 C 后续波，本次仅确认其非零、非既有 match 回退，未逐像素归因。
 
 Confidence: 88
+
+---
+
+## 二审（整改复核，2026-11-11）
+
+被审对象：`155ed223`（整改）+ `a4fbb1c7`（本档入库），HEAD=`a4fbb1c7`（已核 `git rev-parse HEAD`）。
+立场：证伪复核（r9 二审，独立 verifier，非实施方）。一审两条 A 级证伪 F1/F2 逐条核整改真伪 + 防弱化 + 新问题扫描。
+
+### 1. F1 整改真伪 —— **证伪不成立，整改到位**（A 级）
+
+- **ROM 自证**（一审同款命令）：
+  `python3 -c "d=open('rom/Metroid (USA).nes','rb').read();o=16+7*0x4000+(0xCA30-0xC000);print(' '.join(f'{b:02X}' for b in d[o:o+5]))"` → **`02 03 05 04 06`** ✓
+- **bank+1 形的语义链**（A 级，`refs/m1disasm/SRC/prg7_engine.asm:2274-2279` + `:1297-1311`）：
+  `BankTable` 注释逐项 `.byte $01+1 Brinstar / $02+1 Norfair / $04+1 Kraid / $03+1 Tourian / $05+1 Ridley`；
+  `CheckBankSwitch_OK` 注释 `Exit if zero… else Y contains bank#+1` 且代码 `dey / sty CurrentBank`。
+  Rust 侧 `boot.rs c4de_unit` 同形：`let idx = pending.wrapping_sub(1);` ⇒ **BankTable 字节 = bank+1**，
+  真映射 area0..4 → ROM bank **[1,2,4,3,5]**（Kraid=4/Tourian=3）。旧式 `(InArea&0xF)+1`=[1,2,3,4,5] 确为 Kraid/Tourian 互换 —— 一审 F1 陈述为真。
+- **现码**（`crates/game-core/src/frame/nmi.rs:727-735`）：
+  `const AREA_TO_ROM_BANK: [usize; 5] = [1, 2, 4, 3, 5];` + `*AREA_TO_ROM_BANK.get(area).unwrap_or_else(|| crate::unported!("bank07:CA30-area"))`（area>4 fail-loud）；`GAME_MODE!=0 → bank0`（标题）不变。
+- **判别子独立复验**（不依赖实施方的烘焙表，直接从 ROM 逐字节推）：
+  `python3 -c "p=open('rom/Metroid (USA).nes','rb').read()[0x10:]; …ptr=p[bank*0x4000+0x1560:…]; …"` →
+  `bank3 Palette00 ptr=A718 data=0f2016… data[2]=0x16`；`bank4 Palette00 ptr=A155 data=0f2010… data[2]=0x10`。
+  ⇒ **0x16/0x10 判别子真实可分**，TDD 非空转。
+- **TDD 真红真绿**（本审实测，非采信声明）：
+  把 nmi.rs 映射临时改回旧式 `((IN_AREA & 0x0F) as usize) + 1` →
+  `cargo test -p game-core --test palette_ptr_table_suitless area_to_rom_bank` →
+  `panicked at …:80:5 … left: 22 right: 16 … test result: FAILED. 0 passed; 1 failed`（22=0x16=旧式误读 bank3）；
+  `git checkout -- crates/game-core/src/frame/nmi.rs` 还原后 → `3 passed; 0 failed`。**先红后绿成立**（工作树已还原干净，`git status --short` 空）。
+- 烘焙一致性旁证：`python3 tools/bake_palette_data.py --check` → `[PASS] palette_data 与 ROM 烘焙一致`。
+
+### 2. 映射修复完备性 —— **未发现同族残留**（A 级）
+
+- 全仓 grep `InArea` × `+1`：仅两处命中，均是**说明性注释**（`nmi.rs:725` 记旧式之错、`tests/palette_ptr_table_suitless.rs:68` 同）——生产码无 `(InArea&0xF)+1` 残留。
+- `tools/`、`gates/`、`oracle/` grep `InArea`：仅 `tools/bake_area_map.py:50` 一处文档字符串（区域序定义），无 bank 映射。
+- **语义一致性核**：`mainloop.rs:2901 BANK_TABLE: [u8;16] = [0x02,0x03,0x05,0x04,0x06,…]` 写入 `BANK_SWITCH_PENDING` → `boot.rs c4de_unit` `pending.wrapping_sub(1)` → `CurrentBank`；
+  `nmi.rs AREA_TO_ROM_BANK=[1,2,4,3,5]` 直接是 bank 号。二者 = **同一 ROM 表的 bank+1 形 / bank 形**（`02-1=1`、`05-1=4`…），语义一致，非二值矛盾。
+- `title_bridge.rs:415-435` 的 16 项 `BANK_TABLE` 烤的是**同一 ROM 表**（07:CA30-CA3F 逐字节 `02 03 05 04 06 48 48 20 96 CA AD 84 68 10 0D 29`），保真 quirk 照烤，非另一套映射。
+
+### 3. F2 整改真伪 —— **证伪不成立，整改到位**（A 级）
+
+- **更正原地追加、原文未删**：`tail -c 2500 data/status/baselines/baseline_history.jsonl` 末条 `reason` 仍以原文
+  「卡C新增 4 条 TDD…两个未接线孤儿图形件已移出工作树（防全新 clone 掉测）。cargo test --workspace 全绿。」起首，
+  其后接 **`【2026-11-11 更正（r9-F2，原地标注不删史）】`**，①②③ 三点齐：
+  ①未跟踪件 mv 至 `/tmp/card-c-orphans/`、commit 零删除；②524+4=528≠529，真差 +5=4 新测试+`sound_engine_silence_music_path_clears_all`；③静态 529（gate 口径）vs runtime 525。
+- **更正内容本身复验**（不采信、独立跑）：
+  - `git diff --diff-filter=D 560bbbac 87e48ca2 --stat | wc -l` → **0**（零删除 ✓）；`ls /tmp/card-c-orphans/` → `brinstar_graphics.rs norfair_graphics.rs wait_reach.py` ✓；
+  - `grep -n sound_engine_silence_music_path_clears_all crates/game-core/src/frame/nmi.rs` → `:595` ✓，524+5=529 算术平 ✓；
+  - 静态 `#[test]` 计数（`git ls-files '*.rs' | xargs grep -h "#\[test\]" | wc -l`）= **530**；`cargo test --workspace` 逐条 `test result` 求和 = **526 passed / 0 failed**；差 4 = `crates/game-core/src/render/sprite.rs` 4 条未接入模块树（`grep -c "#\[test\]"` = 4）——与更正③同构，口径自洽。
+- **`verify_baseline_integrity`**：`python3 -c "…from gates.cli import verify_baseline_integrity…"` → **`[]`** ✓。
+- **SHA256SUMS 三行 sha 与实文件一致**（`sha256sum` 实测）：
+  `e6e6b7014685adae… rom/Metroid (USA).nes`、`9f1a4173b4462c8fdb9d194af5d59ec7e655ea5843ff0999d2ac0b643b808169 baseline.json`、`7a5cfab3d357eef5b3932870a818a4d386429ff5caa146c98a1b9a0df7e81fb0 baseline_history.jsonl` —— 三行**全等** ✓。
+  末条 `baseline_sha256` = `9f1a4173…` = 现 baseline.json 实 sha，sha 链闭合 ✓。
+
+### 4. 防弱化 —— **无弱化**（A 级）
+
+- `git diff 87e48ca2..a4fbb1c7 -- gates/` → **空**；`--stat -- data/status/l4_ratchet_baseline.json gates/ data/golden/ cases/ tools/` → **空**（白名单/阈值/用例/金面零改动）。
+- 两整改 commit 只动 5 个文件（`git log --name-status`）：`nmi.rs`、`palette_ptr_table_suitless.rs`、`SHA256SUMS`、`baseline.json`、`baseline_history.jsonl`（+ 一档入库的 review md）。
+- `baseline.json` diff 仅 `rust_test_count 529→530` 一行（sanctioned 上调，新增 F1 TDD），其余 metrics 未动；`tolerated: []` 仍空、`established` 7 项仍 true。
+- L4 ratchet 锚 12 格（`data/status/l4_ratchet_baseline.json → cases/case-password-justin.states`）逐格：`320:title/420:menu`=match(0)，其余 10 格 diff 1294/1365/1294/1275/1384/1294/769/14272/14272/14434（/61440）——与本审复跑**逐格全等**。
+
+### 5. 独立复跑 —— **全绿**（A 级）
+
+- `cargo test --workspace` → 全部 `test result: ok`，**0 failed**（479+5+… 求和 526 passed；exit 0）。
+- `cargo test -p game-core --test palette_ptr_table_suitless` → **`3 passed; 0 failed`**（含 `area_to_rom_bank_mapping_follows_bancctable`）。
+- `python3 tools/l4_diff_run.py run case-password-justin` → `汇总：一致 2 · 失配 10 · 缺口阻塞 0 · 错误 0（共 12）`；
+  `shots_rust/case-password-justin.l4report.json` `results[]` 12 格逐格：match `320:title/420:menu`（diff 0）；diff
+  `530:1294、700:1365、850:1294、950:1275、1100:1384、1150:1294、1190:769、1300:14272、1430:14272、2390:14434`，
+  `whitelist_hits` 全 0 —— **与整改声明及一审锚定值逐格一致，无一变动**。
+- `python3 gates/cli.py check` → **`SUMMARY: PASS=13 FAIL=0 SKIP=1 TOLERATED=2`**、`CHECK: PASS`；
+  `rust-tests` 行 `测试数 530（基线 530）`；`l4` 行 `match 100 diff 10 blocked 0｜白名单条目 0`；
+  `baseline-integrity: …sha 链与状态锚点一致`。SKIP=1（proof-checks，变更面不含 S_intx，显式打印）、TOLERATED=2 均为历史登记项，非本整改引入。
+
+### 6. 新问题扫描 —— **无 A 级新问题**（B 级观察 1 条）
+
+- **高位语义**：`InArea` 高半字节（`$10-$14`）经 `& 0x0F` 归一到 0-4 —— 正确（`mainloop.rs:163 is_engine_running(mem, 0x10)` 写 `IN_AREA=$10`、TDD 用 `0x11/0x12/0x13`，均落对 bank）。
+- **area>4 fail-loud 会不会被合法路径误触发**：合法游戏内 area 只有 0-4；`GAME_MODE!=0`（标题）先短路到 bank0，不经该分支。唯一能造出 `InArea&0F>4` 的是**伪造密码域** `title_bridge.rs:431 InArea←PB[8]&$3F`（注释明记「checksum 合法伪造密码域」）——但该路径在**更早的 bank 切换**就会爆：`title_bridge.rs:435 BANK_TABLE[in_area_low]` 给 `0x48…` → `boot.rs c4de_unit` `idx=pending-1=0x47` → `_ => unported!("bank00:C51F")`（**既有** fail-loud，非本次引入）。故 nmi.rs 新桩与既有守卫**同向**，不构成新的误触发面；L4 case-password-justin（含密码进场）复跑 **0 blocked**，未见新爆点。
+- **B 级观察（非阻塞）**：`c4de_unit` 对 `idx∈{3,4,5}`（即 Kraid/Tourian/Ridley 的 bank 切换）同样走 `unported!("bank00:C51F")` —— 意味着**进 Kraid/Tourian/Ridley 的 bank 切换本身仍是未端口缺口**（既有遗留，一审已知「L4 无 Kraid/Tourian 用例」同源）。本整改只修了调色板读 bank 的静默错数据，未让该缺口变绿也未使其恶化；登记为后续任务卡候选，不阻塞本次 verdict。
+
+### verdict：**pass**
+
+F1/F2 两条 A 级证伪均**整改到位且经独立复验**（ROM 字节、bank+1 语义链、TDD 真红真绿、更正三点原文保留且内容属实、sha 链闭合、`verify_baseline_integrity=[]`）；防弱化四项全过（gates/tools/l4 锚/白名单零改动）；独立复跑 `cargo test --workspace` 0 failed、L4 12 格逐格等值、`gates check PASS=13 FAIL=0`。无新 A 级问题。
+
+**遗留假设清单**：
+1. `shots_rust/` 与父态 L4 12 格无法在不改码前提下重放父态（一审遗留 6 号同款），本审以「与 ratchet 锚 + 一审复跑值逐格等值」代替（B 级）。
+2. `render/sprite.rs` 4 条 `#[test]` 未接入模块树（既有遗留，非本整改引入），静态 530 / runtime 526 的口径差恒为 4。
+3. 伪造密码域 `InArea&0F>4` 的 ROM 原真行为（bank0x48 后续字节被当 bank 号）未做 Mesen2 trace 复验，仅确认 Rust 侧既有 fail-loud 与新桩同向（B 级）。
+4. Kraid/Tourian/Ridley bank 切换 `unported!("bank00:C51F")` 为既有缺口，本审未验证其端口计划。
+
+**Confidence: 92**
