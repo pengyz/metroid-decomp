@@ -173,6 +173,10 @@ def parse_scenario(path: Path) -> dict:
         "ramframe": False,
         "coverage": False,
         "coverage_pc": [],
+        "cputrace_addrs": [],
+        "cputrace_read_addrs": [],
+        "cputrace_write_addrs": [],
+        "cputrace_window": None,
         "probe_mem": [],
         "probe_dispatch": [],
         "entry_probe": [],
@@ -447,6 +451,47 @@ def parse_scenario(path: Path) -> dict:
             if len(args) > 1 or (args and args[0] not in ("on", "off")):
                 raise err("coverage 用法: coverage [on|off]")
             plan["coverage"] = (args[0] if args else "on") != "off"
+        elif op == "cputrace":
+            # 取指探针（exec→<name>.cputrace.log，scenario_capture.lua:321）
+            if len(args) != 1:
+                raise err("cputrace 用法: cputrace <4hex>")
+            ad = args[0].lower()
+            if len(ad) != 4 or any(c not in "0123456789abcdef" for c in ad):
+                raise err("cputrace 地址须为 4 位 hex")
+            ai = int(ad, 16)  # lua format('%04X', a) 需整数（2026-11-11 修：字符串致 lua:342 类型错）
+            if ai not in plan["cputrace_addrs"]:
+                plan["cputrace_addrs"].append(ai)
+        elif op == "ctread":
+            # 总线读探针（read 回调→<name>.ctread.log，scenario_capture.lua:347）
+            if len(args) != 1:
+                raise err("ctread 用法: ctread <4hex>")
+            ad = args[0].lower()
+            if len(ad) != 4 or any(c not in "0123456789abcdef" for c in ad):
+                raise err("ctread 地址须为 4 位 hex")
+            ai = int(ad, 16)  # lua format('%04X', a) 需整数（2026-11-11 修：字符串致 lua:342 类型错）
+            if ai not in plan["cputrace_read_addrs"]:
+                plan["cputrace_read_addrs"].append(ai)
+        elif op == "ctwrite":
+            # 数据写探针（write 回调→<name>.ctwrite.log，scenario_capture.lua:419）
+            if len(args) != 1:
+                raise err("ctwrite 用法: ctwrite <4hex>")
+            ad = args[0].lower()
+            if len(ad) != 4 or any(c not in "0123456789abcdef" for c in ad):
+                raise err("ctwrite 地址须为 4 位 hex")
+            ai = int(ad, 16)  # lua format('%04X', a) 需整数（2026-11-11 修：字符串致 lua:342 类型错）
+            if ai not in plan["cputrace_write_addrs"]:
+                plan["cputrace_write_addrs"].append(ai)
+        elif op == "ctwindow":
+            # 探针窗（十进制帧闭区间；trace 行计数语义 scenario_capture.lua:324）
+            if len(args) != 2:
+                raise err("ctwindow 用法: ctwindow <起帧> <止帧>")
+            try:
+                w0, w1 = int(args[0]), int(args[1])
+            except ValueError:
+                raise err("ctwindow 须为十进制整数")
+            if w0 > w1:
+                raise err("ctwindow 起点必须 <= 止点")
+            plan["cputrace_window"] = [w0, w1]
         else:
             raise err(f"未知 DSL 指令 {op!r}")
 

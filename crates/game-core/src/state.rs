@@ -36,6 +36,11 @@ pub struct FrameMemory {
     /// spin 等待计数（r23：臂的跨帧 spin 等待段——>0=等待 tick（工作零动）；与 cursor
     /// 机构正交（孤儿游标 F4 语义不动））。
     pub title_spin: u8,
+    /// CheckPassword（00:8C5E→Consolidate/Validate/Unscramble→InitializeGame）延拍门：
+    /// emu 侧 UnscramblePassword 双层滚字节循环（prg0_title.asm:2078）纯 CPU 忙跨 2 tick
+    /// ⇒ JIB($69B3)/InitializeGame 落后 START 消费 1 拍；rust 同拍一气呵成会早 1 帧（f1190 2063px）。
+    /// 首拍命中只置位，下一 tick 才执行链（对齐 emu 忙跨相位）。
+    pub check_password_pending: bool,
     /// 本 tick 标题臂**不返回主循环**旗（r9 FC 冻结考证——findings/fc-phase-residual.md：
     /// asm `inc FrameCount`（prg7:207）在 MainLoop 迭代尾，例程内部 WaitNMIPass_ 自旋
     /// 跨帧时迭代未完成⇒FC 不自增；emu 上电 f4-6/title→menu f311-313 各冻 3 帧实录。
@@ -69,7 +74,7 @@ pub struct FrameMemory {
 impl Default for FrameMemory {
     fn default() -> Self {
         Self { ram: [0; 0x800], wram: [0; 0x2000], regs: Registers::default(), nmi_enabled: false,
-               title_cursor: 0, title_cursor_phase: 0, title_spin: 0, title_no_return: false,
+               title_cursor: 0, title_cursor_phase: 0, title_spin: 0, check_password_pending: false, title_no_return: false,
                iter_gates: Vec::new(), iter_span_left: 0, iter_span_fc: false, fc_inced_this_tick: false,
                apu_log: Vec::new(), work_cycles: 0,
                joy1: 0, joy2: 0,

@@ -25,7 +25,8 @@ fn run_one(chars: &[u8; 24]) -> FrameMemory {
     }
     m.write_ram(TITLE_ROUTINE, 0x1A); // WaitForSTART
     m.write_ram(JOY1_CHANGE, 0x10); // START 按下
-    main_title_routine(&mut m);
+    main_title_routine(&mut m); // 首拍=START 消费拍（CheckPassword 链置 pending）
+    main_title_routine(&mut m); // 第二拍执行链（emu UnscramblePassword 忙跨延拍）
     m
 }
 

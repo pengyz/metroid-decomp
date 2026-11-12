@@ -31,6 +31,16 @@ pub fn main_title_routine(mem: &mut FrameMemory) {
         mem.title_no_return = true;
         return;
     }
+    // 【f1190 相位·延拍消费】CheckPassword 链上一拍已置 pending（emu UnscramblePassword
+    // 双层滚字节循环忙跨 2 tick——prg0_title.asm:2078）：本拍才执行 Consolidate/Validate/
+    // Unscramble→InitializeGame，使 JIB($69B3)/LoadSamusGFX 与 emu 同拍（capture f1190 JIB=0）。
+    if mem.check_password_pending {
+        mem.check_password_pending = false;
+        run_check_password_chain(mem);
+        // 变体 B（A/B 定谳 2026-11-12）：不置 title_no_return——emu FC 冻结跨 4 dump 帧，
+        // 但 piece④ 前未建模也 match（f1430=0）；置 true 反引入 f1430 169px 回归（NT B 未写）。
+        return;
+    }
     let mut phase = mem.read_ram(TITLE_ROUTINE);
     let mut star_src = [0u8; 0xA0];
     for (i, b) in star_src.iter_mut().enumerate() {
@@ -148,32 +158,44 @@ pub fn main_title_routine(mem: &mut FrameMemory) {
             // $8DDE)→bcs L8C69（无效：SFXMultiInitFlags|=sfxMulti_IncorrectPassword=
             // %01（constants.asm:164）+Timer3←$0C（120 帧）+TitleRoutine←_id_EnterPassword
             // （0x18）/valid⇒jmp InitializeGame($92D4)）。
-            let mut chars = [0u8; 24];
-            for (i, c) in chars.iter_mut().enumerate() {
-                *c = mem.read_wram(crate::ram_map::PASSWORD_CHAR + i as u16);
-            }
-            let nar = mem.read_wram(crate::ram_map::NAR_PASSWORD);
-            let (pb, valid, nar_hit) = crate::ui::password::check_password(&chars, nar != 0);
-            // ConsolidatePassword/UnscramblePassword 原位写 PasswordByte（$6988 面——
-            // DisplayPassword/存档族消费者面）。
-            for (i, b) in pb.iter().enumerate() {
-                mem.write_ram(crate::ram_map::PASSWORD_BYTE + i as u16, *b);
-            }
-            if nar_hit {
-                mem.write_ram(crate::ram_map::NAR_PASSWORD, 1); // NARPASSWORD←1（:2031-2036）
-            }
-            if valid {
-                initialize_game(mem, &pb, nar != 0 || nar_hit); // NARPASSWORD 旗=入口读值|本回合命中（asm 内存语义）
-            } else {
-                let f = mem.read_ram(crate::ram_map::SFX_MULTI_INIT) | 0x01;
-                mem.write_ram(crate::ram_map::SFX_MULTI_INIT, f);
-                mem.write_ram(title_state::TIMER3, 0x0C);
-                mem.write_ram(crate::ram_map::TITLE_ROUTINE, 0x18);
-            }
+            // 【f1190 相位（A 级实测）】emu UnscramblePassword（00:8E4E @loop_A/@loop_B
+            // 双层滚字节循环，prg0_title.asm:2078）纯 CPU 忙跨 2 tick ⇒ JIB($69B3)/
+            // InitializeGame 落后 START 消费 1 拍（emu capture f1190 JIB=0 装 SAMUS）；
+            // rust 同拍一气呵成 ⇒ 早 1 帧（JIB=1 装 SUITLESS，2063px）。首拍只置
+            // pending，链延到下一 tick main_title_routine 头执行（见 check_password_pending）。
+            mem.check_password_pending = true;
         } else {
             let loc = format!("bank00:{addr:04X}-jump");
             crate::unported!(&loc); // 其余跳转出口（转接面——随接）
         }
+    }
+}
+
+/// CheckPassword 全链（asm `CheckPassword: ; 00:8C5E` prg0_title.asm:1718-1733）：
+/// Consolidate/Validate/Unscramble → valid⇒InitializeGame / 无效⇒错码+回 0x18。
+/// 独立 fn 以便延拍执行（见 main_title_routine 头 check_password_pending 消费点）。
+fn run_check_password_chain(mem: &mut FrameMemory) {
+    let mut chars = [0u8; 24];
+    for (i, c) in chars.iter_mut().enumerate() {
+        *c = mem.read_wram(crate::ram_map::PASSWORD_CHAR + i as u16);
+    }
+    let nar = mem.read_wram(crate::ram_map::NAR_PASSWORD);
+    let (pb, valid, nar_hit) = crate::ui::password::check_password(&chars, nar != 0);
+    // ConsolidatePassword/UnscramblePassword 原位写 PasswordByte（$6988 面——
+    // DisplayPassword/存档族消费者面）。
+    for (i, b) in pb.iter().enumerate() {
+        mem.write_ram(crate::ram_map::PASSWORD_BYTE + i as u16, *b);
+    }
+    if nar_hit {
+        mem.write_ram(crate::ram_map::NAR_PASSWORD, 1); // NARPASSWORD←1（:2031-2036）
+    }
+    if valid {
+        initialize_game(mem, &pb, nar != 0 || nar_hit); // NARPASSWORD 旗=入口读值|本回合命中（asm 内存语义）
+    } else {
+        let f = mem.read_ram(crate::ram_map::SFX_MULTI_INIT) | 0x01;
+        mem.write_ram(crate::ram_map::SFX_MULTI_INIT, f);
+        mem.write_ram(title_state::TIMER3, 0x0C);
+        mem.write_ram(crate::ram_map::TITLE_ROUTINE, 0x18);
     }
 }
 
@@ -357,6 +379,12 @@ mod tests {
         m.write_ram(crate::ram_map::TITLE_ROUTINE, 0x1A); // WaitForSTART
         m.write_ram(crate::ram_map::JOY1_CHANGE, 0x10); // START
         main_title_routine(&mut m);
+        // 【延拍语义锚（emu UnscramblePassword 忙跨——prg0_title.asm:2078）】首拍只置
+        // pending（START 消费拍），链（Consolidate/Validate/Unscramble→InitializeGame）
+        // 在下一拍执行——emu 实测 JIB($69B3)/出生态落后 START 消费 1 tick。
+        assert!(m.check_password_pending, "首拍=START 消费拍，链置 pending");
+        main_title_routine(&mut m); // 第二拍：执行链
+        assert!(!m.check_password_pending, "第二拍消费后清位");
         // PB 回写面（$6988——Consolidate+Unscramble 原位铁证）
         let want_pb: [u8; 18] = [
             0xA6, 0xF3, 0x8E, 0xA4, 0xB9, 0x65, 0x24, 0xA9, 0xD1, 0x7F,
@@ -393,7 +421,9 @@ mod tests {
         }
         m.write_ram(crate::ram_map::TITLE_ROUTINE, 0x1A);
         m.write_ram(crate::ram_map::JOY1_CHANGE, 0x10);
-        main_title_routine(&mut m);
+        main_title_routine(&mut m); // 首拍=START 消费拍（链置 pending，未执行）
+        assert!(m.check_password_pending, "首拍只置 pending");
+        main_title_routine(&mut m); // 第二拍执行链（invalid 路）
         assert_eq!(m.read_ram(crate::ram_map::SFX_MULTI_INIT) & 0x01, 1, "IncorrectPassword SFX");
         assert_eq!(m.read_ram(title_state::TIMER3), 0x0C, "120 帧");
         assert_eq!(m.read_ram(crate::ram_map::TITLE_ROUTINE), 0x18, "回 EnterPassword");
