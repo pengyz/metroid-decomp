@@ -36,6 +36,13 @@ pub struct FrameMemory {
     /// spin 等待计数（r23：臂的跨帧 spin 等待段——>0=等待 tick（工作零动）；与 cursor
     /// 机构正交（孤儿游标 F4 语义不动））。
     pub title_spin: u8,
+    /// ScreenOn 延迟落影旗（**转场暗窗建模** A 级锚）：asm `MoreInit ; 07:C81D` 尾
+    /// `jmp ScreenOn`（prg7_engine.asm:1927）写影子 `PPUMASK_ZP|=$1E`，随后
+    /// `WriteAndWait` 等一个 NMI 才由 `WritePPUCtrl`（07:C44D）落到真 PPUMASK——即
+    /// 「点亮」发生在**下一帧**。emu 实测转场暗窗 f1191–f1197（7 帧，$FE=06 全程、
+    /// PNG 单色黑），rust 旧形在同一 tick 内 ScreenOff→…→ScreenOn 收完 ⇒ 无暗窗。
+    /// 本旗=「ScreenOn 影子写已发生、待帧门排空（迭代完成点）后落 $FE」。
+    pub deferred_screen_on: bool,
     /// CheckPassword（00:8C5E→Consolidate/Validate/Unscramble→InitializeGame）延拍门：
     /// emu 侧 UnscramblePassword 双层滚字节循环（prg0_title.asm:2078）纯 CPU 忙跨 2 tick
     /// ⇒ JIB($69B3)/InitializeGame 落后 START 消费 1 拍；rust 同拍一气呵成会早 1 帧（f1190 2063px）。
@@ -74,7 +81,7 @@ pub struct FrameMemory {
 impl Default for FrameMemory {
     fn default() -> Self {
         Self { ram: [0; 0x800], wram: [0; 0x2000], regs: Registers::default(), nmi_enabled: false,
-               title_cursor: 0, title_cursor_phase: 0, title_spin: 0, check_password_pending: false, title_no_return: false,
+               title_cursor: 0, title_cursor_phase: 0, title_spin: 0, check_password_pending: false, deferred_screen_on: false, title_no_return: false,
                iter_gates: Vec::new(), iter_span_left: 0, iter_span_fc: false, fc_inced_this_tick: false,
                apu_log: Vec::new(), work_cycles: 0,
                joy1: 0, joy2: 0,

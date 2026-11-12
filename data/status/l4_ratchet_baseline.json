@@ -444,7 +444,7 @@
       }
     },
     "case-password-justin": {
-      "scenario_sha256": "b2146fc8c53f0cabb37a35f0073b1a3c41069af45397e9a4d0e10316cbb2477e",
+      "scenario_sha256": "67c0db95e4b572f876fa1b2513eea527c989d8e581b4a384b0c8db7b82359756",
       "states": {
         "320:title": {
           "state": "match",
@@ -457,53 +457,63 @@
           "total_pixels": 61440
         },
         "530:pwd-screen": {
-          "state": "diff",
-          "diff_pixels": 1294,
+          "state": "match",
+          "diff_pixels": 0,
           "total_pixels": 61440
         },
         "700:mid-1": {
           "state": "diff",
-          "diff_pixels": 1365,
+          "diff_pixels": 71,
           "total_pixels": 61440
         },
         "850:mid-2": {
-          "state": "diff",
-          "diff_pixels": 1294,
+          "state": "match",
+          "diff_pixels": 0,
           "total_pixels": 61440
         },
         "950:mid-3": {
-          "state": "diff",
-          "diff_pixels": 1275,
+          "state": "match",
+          "diff_pixels": 0,
           "total_pixels": 61440
         },
         "1100:mid-4": {
           "state": "diff",
-          "diff_pixels": 1384,
+          "diff_pixels": 90,
           "total_pixels": 61440
         },
         "1150:pw-done": {
-          "state": "diff",
-          "diff_pixels": 1294,
+          "state": "match",
+          "diff_pixels": 0,
           "total_pixels": 61440
         },
         "1190:submit": {
-          "state": "diff",
-          "diff_pixels": 769,
+          "state": "match",
+          "diff_pixels": 0,
+          "total_pixels": 61440
+        },
+        "1191:dark-window": {
+          "state": "match",
+          "diff_pixels": 0,
+          "total_pixels": 61440
+        },
+        "1197:last-dark": {
+          "state": "match",
+          "diff_pixels": 0,
           "total_pixels": 61440
         },
         "1300:post-submit": {
-          "state": "diff",
-          "diff_pixels": 14272,
+          "state": "match",
+          "diff_pixels": 0,
           "total_pixels": 61440
         },
         "1430:spawn-t4s": {
-          "state": "diff",
-          "diff_pixels": 14272,
+          "state": "match",
+          "diff_pixels": 0,
           "total_pixels": 61440
         },
         "2390:spawn-t20s": {
-          "state": "diff",
-          "diff_pixels": 14434,
+          "state": "match",
+          "diff_pixels": 0,
           "total_pixels": 61440
         }
       }
@@ -806,6 +816,16 @@
       "diff": 10,
       "blocked": 0,
       "cells_total": 110
+    },
+    {
+      "ts": "2026-11-12T07:41:21+00:00",
+      "kind": "anchor",
+      "evidence": "",
+      "reason": "转场暗窗建模（ScreenOff/ScreenOn 各等一 NMI）+ 用例新增两格相位锚（f1191 dark-window / f1197 last-dark，均 0px）——新格同 commit 锚定，scenario sha 随用例更新；match 108→110 / cells 110→112",
+      "match": 110,
+      "diff": 2,
+      "blocked": 0,
+      "cells_total": 112
     }
   ]
 }

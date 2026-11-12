@@ -171,6 +171,10 @@ impl FrameEngine {
     /// 排空=迭代完成点（唤醒门 NMIStatus←0（asm :210-211）+`inc FrameCount` 延迟收尾）。
     fn end_of_tick_gate(&mut self) {
         if self.mem.iter_gates.is_empty() {
+            // 【转场暗窗建模】迭代完成点=本迭代全部 WaitNMIPass 已兑现（帧门排空）——
+            // 此刻才把 MoreInit 尾的 ScreenOn 影写落到 $FE（下一 tick 的 WritePPUCtrl
+            // 写真 PPUMASK，与 asm 两段等待同相位）。
+            super::mainloop::apply_deferred_screen_on(&mut self.mem);
             self.mem.write_ram(crate::ram_map::NMI_STATUS, 0);
             // 【根修③（2026-11-02）】span_fc 收口 inc（**defer 单增唯一源**（span 尾
             // skip 期 tail 不 inc（title_no_return）））——收口 tick 尾 inc 跳（fc_inced

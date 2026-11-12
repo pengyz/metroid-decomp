@@ -662,6 +662,36 @@ fn enemy_check_if_visible_inner(mem: &mut crate::frame::FrameMemory, x: u8) -> b
 }
 
 #[cfg(test)]
+mod tests_deferred_screen_on {
+    use super::*;
+    use crate::state::FrameMemory;
+
+    /// 转场暗窗建模锚（TDD 红→绿）：MoreInit 尾的 ScreenOn 影子写必须**延迟**到帧门
+    /// 排空（迭代完成点）才落 $FE——asm `WriteAndWait`（07:C43D）写影子后
+    /// `WaitNMIPass_`（07:C43F）等一个 NMI，真 PPUMASK 由下一帧 `WritePPUCtrl` 落。
+    #[test]
+    fn deferred_screen_on_applies_at_drain_point() {
+        let mut m = FrameMemory::default();
+        m.write_ram(0x00FE, 0x06); // ScreenOff 后的影子（转场中）
+        m.deferred_screen_on = true;
+        apply_deferred_screen_on(&mut m);
+        assert_eq!(m.read_ram(0x00FE), 0x1E, "排空点应把 ScreenOn 影子落 $FE");
+        assert_eq!(m.render.ppumask, 0x1E, "同相位口径：真寄存器同步点亮（WriteAndWait 的 NMI 落点）");
+        assert!(!m.deferred_screen_on, "落影后旗须清零（单次）");
+    }
+
+    /// 对照（防误触发）：旗未置时每 tick 都会走到排空点，必须零动。
+    #[test]
+    fn deferred_screen_on_inert_without_flag() {
+        let mut m = FrameMemory::default();
+        m.write_ram(0x00FE, 0x06);
+        apply_deferred_screen_on(&mut m);
+        assert_eq!(m.read_ram(0x00FE), 0x06, "无旗不得改 $FE");
+        assert_eq!(m.render.ppumask, 0x1E, "无旗不得改真寄存器（默认 0x1E 不变）");
+    }
+}
+
+#[cfg(test)]
 mod tests_visibility {
     use super::*;
 
@@ -2993,12 +3023,33 @@ pub fn more_init(mem: &mut FrameMemory) {
     mem.write_ram(0x0030, 1); // SpareMem30
     mem.write_ram(crate::ram_map::MAIN_ROUTINE,
                   mem.read_ram(crate::ram_map::MAIN_ROUTINE).wrapping_add(1)); // inc→SamusInit
-    // jmp ScreenOn（$FE|=$1E 面——shell 组合点随件；先事件形）
-    let fe = mem.read_ram(0x00FE);
-    mem.write_ram(0x00FE, fe | 0x1E);
+    // jmp ScreenOn（$C447）：`lda PPUMASK_ZP / ora #$1E / bne WriteAndWait`——
+    // `WriteAndWait`（07:C43D）写影子后 `WaitNMIPass_`（07:C43F）等**一个 NMI**，
+    // 真 PPUMASK 由该 NMI 内的 `WritePPUCtrl`（07:C44D）落 ⇒ 点亮发生在**下一帧**。
+    // 【转场暗窗建模（2026-11-12）】旧形在本 tick 内直接 `$FE|=$1E` ⇒ ScreenOff→…→
+    // ScreenOn 同 tick 收完，暗窗消失（emu 实测暗窗 7 帧 f1191–f1197）。现改为延迟
+    // 落影：置 `deferred_screen_on`，由帧门队列排空（迭代完成点=本迭代 WaitNMIPass
+    // 全部兑现）时写 $FE——影写与真寄存器落点各差一帧，与 asm 两段等待同相位。
+    mem.deferred_screen_on = true;
     // 【move-drift R2】ScreenOn（$C447→WriteAndWait——prg7:1142-1146 fallthrough）=
     // **帧等待**（窗3 等待 3/3）。
     mem.iter_wait();
+}
+
+/// ScreenOn 延迟落影（**转场暗窗建模**）——帧门队列排空（迭代完成点）时把
+/// `deferred_screen_on` 兑现成 `PPUMASK_ZP |= $1E`（asm `WriteAndWait` 写影子；
+/// 真 PPUMASK 由下一 tick 的 `WritePPUCtrl`（07:C44D）落）。旗未置时零动
+/// （防误触发：正常帧每 tick 都会走到此点）。
+pub fn apply_deferred_screen_on(mem: &mut FrameMemory) {
+    if !mem.deferred_screen_on {
+        return;
+    }
+    mem.deferred_screen_on = false;
+    let fe = mem.read_ram(0x00FE) | 0x1E;
+    mem.write_ram(0x00FE, fe); // ScreenOn 影子写（07:C447 `ora #$1E`）
+    // 与 ScreenOff 同相位口径：`WriteAndWait` 的等待=NMI 内 `WritePPUCtrl` 落真寄存器，
+    // 该帧即已点亮 ⇒ 此处同步写真 0x2001（emu 实测 f1198 复明；见逐帧 probe 实录）。
+    mem.write_io(0x2001, fe);
 }
 
 /// 区序索引（InArea&$0F 越界稳——AREA_MAP_POS 五项）。

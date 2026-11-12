@@ -491,6 +491,11 @@ fn initialize_game(mem: &mut FrameMemory, pw: &[u8; 18], nar_active: bool) {
     // 写走镜像读出面——本层 RAM 镜像事件）。
     let pm = mem.read_ram(crate::ram_map::PPUMASK_ZP) & !0x18;
     mem.write_ram(crate::ram_map::PPUMASK_ZP, pm);
+    // 【转场暗窗相位（2026-11-12）】`WriteAndWait`（07:C43D）写影子后 `WaitNMIPass_`
+    // （07:C43F）**等一个 NMI**——真 PPUMASK 由该 NMI 内的 `WritePPUCtrl`（07:C44D）
+    // 落，因此本次等待所在帧的渲染色已是「关屏」。本层 tick 原子执行整个链，等价的
+    // 近似=此刻即写真寄存器（暗窗起点因此与该帧对齐：emu 实测 f1191 首黑）。
+    mem.write_io(0x2001, pm);
     let pc = mem.read_ram(crate::ram_map::PPUCTRL_ZP) & !0x80;
     mem.write_ram(crate::ram_map::PPUCTRL_ZP, pc);
     // LoadSamusGFX（$C5DC，prg7_engine.asm:1496-1520）：Samus→(JIB?Suitless)→
