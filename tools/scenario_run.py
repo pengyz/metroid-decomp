@@ -874,8 +874,24 @@ def kill_orphan_mesen(mesen: Path) -> int:
     pids += subprocess.run(
         ["pgrep", "-f", r"Xvfb :[0-9]+ -screen 0 1280x1024x24 -nolisten tcp"],
         capture_output=True, text=True, encoding="utf-8", errors="replace").stdout.split()
-    n = 0
+
+    # 【F5 整改（2026-11-12）】worktree 隔离：pgrep -f 无差别匹配会误杀其它 worktree
+    # （git worktree 各有独立 tools/mesen2/Mesen 绝对路径 cmdline；Xvfb 靠 cwd 归属）——
+    # r9 实测：复核 worktree /tmp/verify-r9 的 Mesen 被主树清扫 SIGKILL（互杀产品=
+    # blocked 4/flaky 10 假象）。只杀 cmdline 含本 worktree 根（Mesen）或 cwd 在本
+    # worktree（Xvfb）的进程；/proc 不可读时保守跳过（宁可漏杀不误杀）。
+    root = str(ROOT)
+    scoped = []
     for pid in pids:
+        try:
+            cl = open(f"/proc/{pid}/cmdline", "rb").read().decode("utf-8", "replace")
+            cwd = os.path.realpath(f"/proc/{pid}/cwd")
+        except OSError:
+            continue  # 进程已退或 /proc 不可用——跳过，不杀
+        if root in cl or cwd == root or cwd.startswith(root + os.sep):
+            scoped.append(pid)
+    n = 0
+    for pid in scoped:
         try:
             os.kill(int(pid), SIGKILL)
             n += 1
