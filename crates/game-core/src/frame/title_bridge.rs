@@ -24,8 +24,23 @@ pub fn main_title_routine(mem: &mut FrameMemory) {
     // 0x00 臂 f2 冻/转换臂尾旋 f313-318 冻均此理，emu 逐帧实录）；族相位旗
     // （\$00/\$01/\$15/\$1B=arm 体不返回——0x00 系 Step 2 入族：工作拍 FC 冻结，
     // 完成由 iter_span_fc 在 span 尾收口）仍先于 spin 检查置位。
-    mem.title_no_return = matches!(
-        mem.read_ram(TITLE_ROUTINE), 0x00 | 0x01 | 0x15 | 0x1B);
+    // 【FC 相位 +2 根修（2026-11-12）】0x17 LoadPasswordScreen 是**带等待的转场族**
+    // ——asm `ClearAll ; 00:909F`（prg0_title.asm:2316-2328）内 `jsr WaitNMIPass`（第 1 次帧
+    // 等待）+ `LoadPasswordScreen ; 00:911A`（:2397-2415）在 PreparePPUProcess_ 之前的
+    // `ClearNameTables/EraseAllSprites` 后 `jsr WaitNMIPass`（第 2 次）⇒ 该相位**跨 3 帧只
+    // inc 1 次 FrameCount**（emu 逐帧实录 f501=237 冻结 f502/503/504=237 ⇒ f505=238）。
+    // rust cursor 段映射：cursor0(ScreenOff+SpinWait(1))/cursor1(ClearNameTables+WaitNMIPass)
+    // = 两次等待 ⇒ 前 2 段冻结（cursor<2），第 3 段起恢复正常 inc。
+    // 证据：`DSH_FC_TRACE` 实验四 f498-512 与 `analysis/traces/case-password-justin.frames.jsonl`
+    // 的 FC 列**逐帧全等**（234..237 同步 → 238/239/…/245 同步）；不做此冻结则 f505=240（+2 恒偏）。
+    // 全 0x17 冻结（cursor<4）过量：f505=237（-1）。
+    // 【2026-11-12 更正（r9 复核 F2，原地标注不删史）】本条**不消除** f700/f1100 的 71/90px：
+    // 那两格经复核定谳为 oracle 亚帧不同步（emu 截图取 post-render 表面含更早时刻的光标精灵，
+    // dumpPpu 却读当期 PPU 内存；两侧 ppu.hex 逐字节 diff=0、OAM diff=0 且无活跃精灵），
+    // 属门禁/oracle 口径问题非移植错，需修 harness。此处仅修正 FC 计数相位使与 asm/emu 一致。
+    let t1f_now = mem.read_ram(TITLE_ROUTINE);
+    mem.title_no_return = matches!(t1f_now, 0x00 | 0x01 | 0x15 | 0x1B)
+        || (t1f_now == 0x17 && mem.title_cursor < 2);
     if mem.title_spin > 0 {
         mem.title_spin -= 1;
         mem.title_no_return = true;
