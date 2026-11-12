@@ -1253,7 +1253,14 @@ pub fn enter_password_body(ram: &[u8], wram: &[u8], frame_count: u8, joy: u8, jo
         e.push((0x07A1 + ((idx as u16 + 1) & 0x7F), pos));
         e.push((0x07A1 + ((idx as u16 + 2) & 0x7F), 0x01));
         e.push((0x07A1 + ((idx as u16 + 3) & 0x7F), tile));
+        // 【2026-11-12 修】EndVRAMStruct 终止符：asm `WriteVRAMString ; 07:C328` 尾
+        // `jsr EndVRAMStruct`（`; 07:C376`）＝`lda #$00 / sta VRAMStructBuffer,x`
+        // ——在段末（索引之后）写 #$00 终止符并弹栈退出。旧形缺此写 ⇒ 消费端
+        // `vram_struct_write` 在本段（4B）之后继续按下一段解析缓冲残留（密码屏期
+        // 残留=未初始化 $FF/消息体）⇒ 垃圾段写到 CHR 低址（实测 PPUADDR=$001F+
+        // v=$FF/inc32、$0001 v=$00）⇒ f700/f1100 各 70/71B CHR 失配。
         e.push((0x07A0, ((idx as u16 + 4) & 0xFF) as u8));
+        e.push((0x07A1 + (((idx as u16 + 4) & 0x7F)), 0x00)); // EndVRAMStruct 终止符
         // PasswordChar[cursor]←tile + 光标进位回绕
         e.push((0x699A + cursor as u16, tile));
         let nc = if cursor >= 0x17 { 0 } else { cursor.wrapping_add(1) };
