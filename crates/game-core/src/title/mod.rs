@@ -1265,9 +1265,9 @@ pub fn enter_password_body(ram: &[u8], wram: &[u8], frame_count: u8, joy: u8, jo
         // 残留=未初始化 $FF/消息体）⇒ 垃圾段写到 CHR 低址（实测 PPUADDR=$001F+
         // v=$FF/inc32、$0001 v=$00）⇒ f700/f1100 各 70/71B CHR 失配。
         // 【F3 整改（2026-11-12）】EndVRAMStruct 终止符语义对齐 asm：
-        // `EndVRAMStruct ; 07:C376`（prg7_engine.asm:947-955，fileoff 0x1C376=a9 00 9d a1 07 68 68 60）
+        // `EndVRAMStruct ; 07:C376`（prg7_engine.asm:947-955，fileoff 0x1C386=a9 00 9d a1 07 68 68 60）
         // = `lda #$00 / sta VRAMStructBuffer,x / pla pla rts`——终止符写在**当前 X**；
-        // `WritePPUByte ; 07:C36B`（:933-945，fileoff 0x1C36B=9d a1 07 e8 e0 4f 90 0a ae a0 07 a9）
+        // `WritePPUByte ; 07:C36B`（:933-945，fileoff 0x1C37B=9d a1 07 e8 e0 4f 90 0a ae a0 07 a9）
         // 在 `cpx #$4F` 判满时 `ldx VRAMStructBufferIndex` 回填**段首**再写。
         // 故 idx+4 > $4F 时 asm 不产生越界写（X 回段首），rust 旧形 `&0x7F` 会得 $07F1 越出
         // $07A1-$07EF 缓冲尾（r9-F3）。当前路径不可达（idx+4≤0x4F 恒成立），按 fail-loud 对齐。
