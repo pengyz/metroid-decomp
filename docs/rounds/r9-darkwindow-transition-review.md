@@ -15,7 +15,7 @@
   - 直接实测（A 级）：干净环境 4 条命令全部亲手跑、逐格数字、png/ppu.hex/ram.hex 双侧逐字节对比、门禁原文逐行。
   - 降权项（各 -2~-4）：①f700/f1100 的**机制**只在 oracle 侧产物内证到「emu 自身截图与自身 dump 不同相」，未下潜到 Mesen2 API 内部（哪个回调相位 flip surface），故只能断言「不是 rust 的 PPU 状态差」，不能断言「rust 渲染 100% 正确」；②`trace-diff` FAIL 的 samus-move3 空缓存属既存欠账，本轮只做了「父 commit 同样红」的对照，未做根治验证；③复核期间主仓库有另一个 agent 并发跑 L4 并改未提交代码（见 §F5），隔离 worktree 规避了产物竞态，但主仓库状态不可信。
 
---- （出现第1次）
+---
 
 ## 问题清单（按严重度排序，均带 A 级证据指针）
 
@@ -23,21 +23,21 @@
 
 实跑（`/tmp/verify-r9`，pid 3758183，16:24 启动 → 16:53 落盘，14935 B）：
 
-``` （出现第1次）
+```
 $ python3 gates/cli.py check > /tmp/check-r9.log
 SUMMARY: PASS=12 FAIL=2 SKIP=1 TOLERATED=1
 CHECK: FAIL —— trace-diff; l4。按 AGENTS.md §4 定位层后修复根因，禁止调阈值/加白名单掩盖。
-``` （出现第2次）
+```
 
 l4 项原文（节选，完整 10 条被 `|` 截断）：
 
-``` （出现第3次）
+```
 [FAIL] l4 (ENABLED, README: 启用（Task 6）) L4 逐采集点 ratchet 回退 10 处
 （match 集合只增不减 + blocked 只减不增，非聚合率）:
 case-jumpledge-probe/550:walk-mid: 未锚定采集点（现态 match）——新格必须同 commit 锚定
 （baseline_update l4）——v2 A-lite③阻断；…690:pre-jump…；…705:takeoff…；…730:rise…；
 …755:peak…；…780:land…｜用例 14 · 分母 122（blocked 0 计分母不计 pass）｜match 120 diff 2 blocked 0
-``` （出现第4次）
+```
 
 **归因（关键，决定本条是否记在实施方头上）**：
 
@@ -56,7 +56,7 @@ case-jumpledge-probe/550:walk-mid: 未锚定采集点（现态 match）——新
 1. 一次 `baseline_update l4` 补齐 10 格（`case-jumpledge-probe` 的 550/690/705/730/755/780/800 + `case-walkfcprobe` 的 820/1020/1400 全为 match 0px，直接锚定即可），使 l4 转 PASS。**这不需要改任何阈值/白名单**，是纯补锚。
 2. 后续提交的验收期望值请以实时基线为准（当前应为 122 格 / match 120 / diff 2），不要再引用已过时的 112 格 / match 110 口径。
 
---- （出现第2次）
+---
 
 ### F2（高，结论定性）：f700=71px / f1100=90px 的残差被实施方定性为「渲染相位族」，机制表述与像素证据不符
 
@@ -68,7 +68,7 @@ case-jumpledge-probe/550:walk-mid: 未锚定采集点（现态 match）——新
 
 用 f530（0px match 帧）反解 NES 调色板映射（四色单值无歧义：`0x0F→(0,0,0)`、`0x21→(100,176,255)`、`0x2A→(92,228,48)`、`0x30→(255,254,255)`），再以 `CHR@$1000` + NT + attr + PAL 纯 BG 渲染器逐帧重建：
 
-``` （出现第5次）
+```
 frame                       |rustPNG - render(rustDump)|  |emuPNG - render(emuDump)|
 f00320_title                            48                            48
 f00420_menu                             48                            48
@@ -78,7 +78,7 @@ f01100_mid-4                             0                            90   <<<
 f01191_dark-window                    2063                          2063
 f02390_spawn-t20s                      490                           490
 frames compared: 14 | emu PNG != emu dump: 7 | rust PNG != rust dump: 5
-``` （出现第6次）
+```
 
 （BG pattern base 必为 `$1000`：用 `$0000` 时匹配 0/61440 像素，用 `$1000` 时 61440/61440。）
 
@@ -98,10 +98,10 @@ frames compared: 14 | emu PNG != emu dump: 7 | rust PNG != rust dump: 5
 ⇒ **emu PNG 多出的正是一层「已经消失的精灵叠加」**：`emu.takeScreenshot()` 取到的是 post-render 表面（含该帧更早时刻的光标/候选字符精灵），而 `dumpPpu` 走 `emu.read(addr, 9)` 读 CPU 侧当时的 PPU 内存（`tools/scenario_capture.lua` 的 `dumpPpu`），二者不在同一 PPU 相位。
 
 **「帧号错位 2 帧」假设已被排除**（`/tmp/lag.py`，对目标帧与所有可用 dump 帧两两求差）：
-``` （出现第7次）
+```
 f00700: emuPNG~render(emuDump@f690)=71  @f700=71  @f720=71  @f750=67  @f780=104
 f01100: emuPNG~render(emuDump@f990)=90  @f1020=90 @f1050=90 @f1080=90 @f1100=90
-``` （出现第8次）
+```
 即使取最近的 f750 也只降到 67，f1100 与帧号完全无关 ⇒ **不是整帧滞后/错位**。且逻辑上也不成立：若真错 2 帧，两侧 dump 内容必然不同，但实测 **CHR/NT/PAL 逐字节 diff=0**。
 
 **结论定性（分类＝oracle/门禁口径问题，不是移植错）**：
@@ -113,7 +113,7 @@ f01100: emuPNG~render(emuDump@f990)=90  @f1020=90 @f1050=90 @f1080=90 @f1100=90
 1. 修正 `crates/game-core/src/title/mod.rs:1258-1261` 与主仓库未提交 `title_bridge.rs` 注释里的因果叙事（把「CHR 低址垃圾段 ⇒ 71/90px」「错位 2 帧 ⇒ 71/90px」改为「emu 截图/dump 亚帧不同步 ⇒ oracle 侧伪残差」），避免后续 agent 沿错误根因继续改动。
 2. 若要根治，正确方向是 **harness 侧**：让 `takeScreenshot` 与 `dumpPpu/dumpRam` 落在同一 PPU 相位（或对截图侧做「同帧 dump 反渲染校验」自检），把该假设变成可测事实——不是继续改 rust 渲染。
 
---- （出现第3次）
+---
 
 ### F3（中，契约不等价）：EndVRAMStruct 终止符用 `&0x7F` 取模，与 asm 的 `cpx #$4F` 溢出语义不等价
 
@@ -129,7 +129,7 @@ rust（`crates/game-core/src/title/mod.rs:1262-1263`）：
 ```rust
 e.push((0x07A0, ((idx as u16 + 4) & 0xFF) as u8));
 e.push((0x07A1 + (((idx as u16 + 4) & 0x7F)), 0x00)); // EndVRAMStruct 终止符
-``` （出现第9次）
+```
 用 `&0x7F`（模 128），asm 是 `cmp #$4F`（模 79 且溢出回卷到段首）。
 
 **现状影响**：本路径不可达。密码屏每字符只写 4 字节、`idx ∈ {0,4,8,…}`、一轮最多 8 字符 ×4B = 32B ⇒ `idx+4 ≤ 0x4F` 从未越界，实测所有用例 0px。⇒ **当前无像素后果**。
@@ -143,10 +143,10 @@ e.push((0x07A1 + (((idx as u16 + 4) & 0x7F)), 0x00)); // EndVRAMStruct 终止符
 let end_idx = idx as u16 + 4;
 let term_addr = if end_idx >= 0x4F { 0x07A1 + idx as u16 } else { 0x07A1 + end_idx };
 e.push((term_addr, 0x00));
-``` （出现第10次）
+```
 并加一条单元测试钉住 `idx=0x4C` 的溢出路径（期望写 `$07A1+0x4C`，而非 `$07F1`）。若判定「本路径永久不可达、不修」，至少在该行注释里显式标注「与 asm 溢出行为不等价，本路径 idx+4 ≤ 0x4F 保证不触发」，避免后续误当成等价实现复用。
 
---- （出现第4次）
+---
 
 ### F4（低-中，asm 建模缺口）：`more_init` 未建模 `jsr ScreenOff` 对影子 `$FE` 的清位
 
@@ -155,18 +155,18 @@ asm `MoreInit: ; 07:C81D` 内 `refs/m1disasm/SRC/prg7_engine.asm:1871` 明确有
 rust `crates/game-core/src/frame/mainloop.rs:2958 more_init` 内**无任何 `0xE7` / `!0x18` 掩码写**（`grep "0xE7\|!0x18\|!(0x08" crates/game-core/src/frame/mainloop.rs` 仅命中 `:895` 无关阈逻辑与 `:3180` 数据表常量）；ScreenOff 只以 `NMI_STATUS=0`（`:2973`）+ `iter_wait()`（`:2974`）表达「等待」。暗窗期 `$FE` 从 `0x1E → 0x06` 的实际来源是 `crates/game-core/src/frame/title_bridge.rs:492-493` 的 `& !0x18`（InitializeGame 的 ScreenNmiOff），不是 more_init。
 
 **实跑后果**：无（三帧 `$FE` 与 emu 完全对得上）：
-``` （出现第11次）
+```
 f01150_pw-done       FE emu=1E rust=1E | FF 90/90 | MR 00/00
 f01190_submit        FE emu=1E rust=06 | FF 90/90 | MR 00/01
 f01191_dark-window   FE emu=06 rust=06 | FF 90/90 | MR 01/02
 f01197_last-dark     FE emu=06 rust=06 | FF 90/90 | MR 01/02
 f01300_post-submit   FE emu=1E rust=1E | FF 90/90 | MR 08/08
-``` （出现第12次）
+```
 ⇒ 暗窗边界帧 `$FE` 双侧一致；唯一差是 `MainRoutine` 相位 rust 领先 1（f1190 0/1、f1191 与 f1197 1/2），但三格像素全 0px ⇒ **不影响验收**，仅记录。
 
 **最小整改**：在 `more_init` 的 ScreenOff 处补 `write_ram(0x00FE, read_ram(0x00FE) & !0x18)`（并确保不破坏 `more_init_declares_frame_gates` 的 `vec![1,0,0,1]` 断言），使 asm 契约面闭合；或显式注释「ScreenOff 影子清位在本模块由 title_bridge ScreenNmiOff 代偿，more_init 内不重复」。**不阻塞本轮 verdict**。
 
---- （出现第5次）
+---
 
 ### F5（低，纪律/流程）：复核期间主仓库被并发 agent 改写，且改的是「未验证的根因假设」
 
@@ -177,19 +177,19 @@ f01300_post-submit   FE emu=1E rust=1E | FF 90/90 | MR 08/08
 
 **最小整改**：并发核查请在独立 worktree 进行（`git worktree add`），勿在主仓库跑 L4 并留未提交改动；`kill_orphan_mesen` 的 `pgrep -f` 模式建议加 worktree/端口过滤，否则同机多 worktree 复核必互相清场。
 
---- （出现第6次）
+---
 
 ### F6（低，流程）：anchor history 的 `evidence` 字段为空串（历史惯例，非本轮新引入）
 
 `data/status/l4_ratchet_baseline.json` 的 history 末条：
 ```json
 {"ts":"2026-11-12T07:41:21+00:00","kind":"anchor","evidence":"","reason":"转场暗窗建模（ScreenOff/ScreenOn 各等一 NMI）+ 用例新增两格相位锚（f1191 dark-window / f1197 last-dark，均 0px）——新格同 commit 锚定，scenario sha 随用例更新；match 108→110 / cells 110→112","match":110,"diff":2,"blocked":0,"cells_total":112}
-``` （出现第13次）
+```
 21 条 history 中最近 5 条 anchor 有 4 条 `evidence=""`（2026-11-05 / 11-06 / 11-11 亦然），唯一带证据的是 2026-11-09 的 rebase 条 ⇒ **历史惯例，不是本轮引入的假陈述**。`reason` 文本数字与实跑一致（match 110 / cells 112 的**锚定前**口径；注意该口径在下一次补锚 F1 的 10 格后会变成 120/122）。
 
 **最小整改**：后续 anchor 写 `evidence`（至少给 `shots_rust/matrix.json` 的 mtime+sha、asm 地址、逐格 0px 摘要）。
 
---- （出现第7次）
+---
 
 ## A 面：asm/ROM 逐行对读
 
@@ -250,41 +250,41 @@ ROM 字节佐证：
 ### A4 「恰好 7 帧」是否被硬编码成常量（过度拟合检查）
 
 `grep -rn "1191\|1197\|1198" crates/ --include=*.rs` 的全部命中：
-``` （出现第14次）
+```
 crates/game-core/src/render/mod.rs:129
 crates/game-core/src/render/mod.rs:635
 crates/game-core/src/frame/title_bridge.rs:497
 crates/game-core/src/frame/mainloop.rs:3030
 crates/game-core/src/frame/mainloop.rs:3051
 crates/game-core/src/state.rs:42
-``` （出现第15次）
+```
 **全部是注释**，无任何常量/条件依赖具体帧号。
 
 暗窗长度由门队列自然导出：`more_init` 内 `iter_wait()`（`:2974`，ScreenOff 等 1 NMI）+ `iter_bogged(2)`（`:3004`，房间装载）+ `deferred_screen_on = true`（`:3033`）+ `iter_wait()`（`:3036`，ScreenOn 等 1 NMI）⇒ 门队列 `[1, 0, 0, 1]`，与 `mainloop.rs:3614-3620` 既有测试 `more_init_declares_frame_gates` 的断言 `vec![1, 0, 0, 1]` 一致。`end_of_tick_gate` 每 tick 弹一个，队列清空的下一 tick 才走空分支兑现 ⇒ **暗窗跨 f1191–f1197 是 asm 两段等待的自然结果，不是拟合常数**。实施方此点主张**成立**。
 
 （`iter_wait()` 语义确认：`crates/game-core/src/frame/memory.rs:151` `pub fn iter_wait(&mut self) { self.iter_gates.push(1); }` —— 无参数，一次推 1 个门；`memory.rs:158` `iter_bogged(n)` push n 个 0。）
 
---- （出现第8次）
+---
 
 ## B 面：防弱化审计
 
 ### B1 `gates/` 零改动
 
-``` （出现第16次）
+```
 $ git diff 863f258a..f7199a74 -- gates/ | wc -l
 0
-``` （出现第17次）
+```
 
 ### B2 `SHA256SUMS` 自验通过，ROM 未动
 
-``` （出现第18次）
+```
 $ git diff 863f258a..f7199a74 --stat -- data/status/baselines/SHA256SUMS
  data/status/baselines/SHA256SUMS | 4 ++--
 $ cd /home/peng/workspace/metroid-decomp && sha256sum -c data/status/baselines/SHA256SUMS
 rom/Metroid (USA).nes: 成功
 data/status/baselines/baseline.json: 成功
 data/status/baselines/baseline_history.jsonl: 成功
-``` （出现第19次）
+```
 新值：`baseline.json` = `b73fd93042194d4d99d4e2a1aad912ca80954e2409675e0ee01e1c8f799d59fd`；`baseline_history.jsonl` = `1e28413ced267960a9ebdcbc3e54662db54a9280c74321d2093a54d2e1e6bd08`。ROM sha 仍 `e6e6b7014685adae…`。
 
 ### B3 `l4_ratchet_baseline.json` 无「diff 格锚成 match」作弊、无删格
@@ -320,14 +320,14 @@ data/status/baselines/baseline_history.jsonl: 成功
 ```json
 {"ts":"2026-11-12T07:41:24+00:00","kind":"metric","metric":"rust_test_count","old":538,"new":540,
  "reason":"转场暗窗建模新增 2 条 TDD（tests_deferred_screen_on）——538→540"}
-``` （出现第20次）
+```
 静态 `#[test]` 计数 540（`grep -rn "#\[test\]" crates/ --include=*.rs | wc -l` = **540**；game-core 508 / game-data 28 / game-platform 4），`gates/cli.py:530-537 current_metrics()` 正是统计该子串次数 ⇒ 数字与机械口径一致。
 
 ### B5 新 TDD 能真红（实测 1 次）
 
 在 `/tmp/verify-r9` 把守卫 `if !mem.deferred_screen_on { return; }` 临时替换为 `if true { return; }`（备份 `/tmp/mainloop.bak`）：
 
-``` （出现第21次）
+```
 $ CARGO_TARGET_DIR=/tmp/verify-r9-target cargo test -p game-core --lib tests_deferred_screen_on
 deferred_screen_on_inert_without_flag ... ok
 deferred_screen_on_applies_at_drain_point ... FAILED
@@ -336,12 +336,12 @@ deferred_screen_on_applies_at_drain_point ... FAILED
     left: 6
    right: 30
 test result: FAILED. 1 passed; 1 failed; 482 filtered out
-``` （出现第22次）
+```
 恢复后：
-``` （出现第23次）
+```
 $ cp /tmp/mainloop.bak crates/game-core/src/frame/mainloop.rs && cargo test -p game-core --lib tests_deferred_screen_on
 test result: ok. 2 passed; 0 failed; 482 filtered out
-``` （出现第24次）
+```
 
 ⇒ **`applies_at_drain_point` 能真红**；但 **`inert_without_flag` 在实现被完全禁用时仍绿** ⇒ 该条是弱断言（只测「没旗时不变」，禁实现时天然满足），**无诊断力**。
 
@@ -349,7 +349,7 @@ test result: ok. 2 passed; 0 failed; 482 filtered out
 
 ### B6 `unported!` 未被静默降级
 
-``` （出现第25次）
+```
 $ git grep -o "unported!" 863f258a -- crates | wc -l
 52 （出现第1次）
 $ git grep -o "unported!" f7199a74 -- crates | wc -l
@@ -358,31 +358,31 @@ $ git grep -o "unported!" -- crates | wc -l
 52 （出现第3次）
 $ git diff 863f258a..f7199a74 -- crates/ | grep -c "unported"
 0
-``` （出现第26次）
+```
 宏本体 `crates/game-core/src/gap.rs:27-33`（`record($loc)` + `panic!("unported @ {}", $loc)`）未改 ⇒ fail-loud 语义保持。
 
---- （出现第9次）
+---
 
 ## C 面：独立复跑（全部亲手跑，干净 worktree `/tmp/verify-r9` @ `f7199a74`）
 
 ### C1 `cargo test --workspace`
 
-``` （出现第27次）
+```
 $ CARGO_TARGET_DIR=/tmp/verify-r9-target cargo test --workspace 2>&1 | grep -E "^test result" | awk '{p+=$4; f+=$6} END {print "TOTAL passed="p" failed="f}'
 TOTAL passed=536 failed=0
-``` （出现第28次）
+```
 ✔ 与期望 536 passed / 0 failed 一致。静态 `#[test]` = 540（gates 口径）✔。
 
 ### C2 `python3 tools/l4_diff_run.py run case-password-justin`
 
-``` （出现第29次）
+```
 锚: scenario=67c0db95e4b572f8… rom=e6e6b7014685adae… sched=d4b8cdefe466e3a8…  产物 28 件
 emu 腿: frames: 2600  trace_lines: 2600  captures: 99  shots: 99  wall: 54.7s
 320 title 0 | 420 menu 0 | 530 pwd-screen 0 | 700 mid-1 71 | 850 mid-2 0 | 950 mid-3 0
 1100 mid-4 90 | 1150 pw-done 0 | 1190 submit 0 | 1191 dark-window 0 | 1197 last-dark 0
 1300 post-submit 0 | 1430 spawn-t4s 0 | 2390 spawn-t20s 0
 一致 12 · 失配 2 · 缺口阻塞 0 · 错误 0（共 14）
-``` （出现第30次）
+```
 ✔ 与期望逐项吻合（12 一致 / 2 失配 / 0 blocked；f1190、f1191、f1197 均 0px）。
 
 （`python3 tools/l4_diff_run.py diff case-password-justin` 实测 **EXIT=1** —— 有失配即 1，符合工具契约 exit 0=全 match / 1=有 diff/blocked / 2=fail-loud。⚠ 注意若用 `| tail -N` 管道，`$?` 会取到 tail 的退出码，不能据此判断。）
@@ -390,11 +390,11 @@ emu 腿: frames: 2600  trace_lines: 2600  captures: 99  shots: 99  wall: 54.7s
 ### C3 `python3 tools/l4_diff_run.py run-all`
 
 干净 worktree fresh 矩阵（`shots_rust/matrix.json`）：
-``` （出现第31次）
+```
 {'cases_total': 14, 'cells_total': 122, 'match': 120, 'diff': 2, 'blocked': 0, 'flaky': 0,
  'pass': 120, 'pass_rate': '120/122', 'verdict': 'not-pass'}
 非 match: case-password-justin 700:mid-1 diff=71 / 1100:mid-4 diff=90（仅此 2 格）
-``` （出现第32次）
+```
 - ⚠ **任务期望「14 用例 / 112 格 / match 110 · diff 2 · blocked 0」已过时**：真实分母是 **122 格**（= 基线 112 格 + 历史 10 个未锚格，见 F1），match 120。这与 `gates check` 内部 run-all 的实文一致（`用例 14 · 分母 122（blocked 0 计分母不计 pass）｜match 120 diff 2 blocked 0`）。
 - ⚠ 并发互杀会让 blocked 虚高：我在主仓库早期见到 `cells_total 112 / match 57 / blocked 55 / flaky 10`，其中 `case-collide-probe` 的 4 格 `blocked`（`reason="缺模拟器截图"`）是 `kill_orphan_mesen()` 的 `pgrep -f "tools/mesen2/Mesen"` 把**另一个 worktree 的 Mesen** 杀掉的产品（该次 emu 腿 lua.log 只有 3 行 SHOT-SEAM、`outputs.shots` 只有 3 张、`trace_lines 692 / 900 frames`）。干净串行跑后 `blocked 0 / flaky 0` ⇒ **不是回退**。
 - `flaky_cells` 在当前干净跑中为 `[]`（空 list）；主仓库那次噪声跑里是 10 个 dict 项（每项含 case/frame/tag）。核对时按 dict 列表处理。
@@ -406,11 +406,11 @@ emu 腿: frames: 2600  trace_lines: 2600  captures: 99  shots: 99  wall: 54.7s
 16 项逐项：rom-integrity PASS / seed-integrity PASS（`reference/src/` 轨道 trace 比对 SKIP）/ assets-manifest PASS / naming-ledger PASS（WARN：738 条中第 632-738 行缺 confidence）/ knowledge-format PASS / docs-links PASS / **rust-tests PASS（「测试数 540（基线 540）」）** / **trace-diff FAIL** / **visual-diff TOLERATED** / **l4 FAIL** / completeness-ratchet PASS（57/57）/ **proof-checks SKIP**（变更面不含 S_intx）/ tree-coherence PASS / doc-sync PASS / shared-inode-locks PASS / arch-contract PASS。ratchet 7 metric 全 OK；`baseline-integrity: … sha 链与状态锚点一致`。
 
 **trace-diff FAIL 归因**（与本轮无关，但确实是既存红项）：
-``` （出现第33次）
+```
 [FAIL] trace-diff … [regen] 缓存缺失——经 tools/scenario_run.py 重采集 sc-first-room-full（响亮再生）
 [FAIL] l3-sc-first-room-full: oracle trace sha256 不符 manifest（确定性破裂/缓存陈旧/篡改）
 L3 帧级裁定: 26 条用例, 7 失败, 0 记账容忍｜l4 现状基线账外 7/7 项…
-``` （出现第34次）
+```
 - worktree `/tmp/verify-r9` 的 `analysis/` 是**新建空目录**（`ls analysis/dump | wc -l` = 0），check 现场重采得 3178 行 / sha `7ae76fd0…`，manifest 锚 `dc651561…` ⇒ 不符。
 - 对照**主仓库**（有完整 analysis 缓存）`python3 tools/diff_traces.py`：`[PASS] l3-sc-first-room-full: oracle 腿已验（sha256 对锚、3177 帧、逐帧字段合法）`；26 用例中 **0 条 sha 不符**；唯一 FAIL 是 `[FAIL] l3-samus-move3-oracle-determinism: 行数 0 != legs.oracle.rows 1383`（`analysis/traces/samus-move3.frames.jsonl` 是 0 字节、mtime 2026-10-26，manifest 锚 `e3b0c44298fc…b855` = 空文件 sha）。
 - `git show 863f258a:oracle/traces/l3_manifest.json` 的 samus-move3 锚与现在完全相同 ⇒ **父 commit 就红**。
@@ -428,7 +428,7 @@ L3 帧级裁定: 26 条用例, 7 失败, 0 记账容忍｜l4 现状基线账外 
 
 ### C6 迟到缝守卫的真实行为（`analysis/traces/case-password-justin.lua.log`）
 
-``` （出现第35次）
+```
 $ grep -o "reason=[a-z-]*" analysis/traces/case-password-justin.lua.log | sort | uniq -c
       3 reason=late-seam-fallback
      96 reason=spin-exit-seam
@@ -436,10 +436,10 @@ $ grep "late-seam-fallback" analysis/traces/case-password-justin.lua.log
 SHOT-SEAM f=1190 at=1191 tag=submit attempts=2 reason=late-seam-fallback
 SHOT-SEAM f=1191 at=1192 tag=dark-window attempts=2 reason=late-seam-fallback
 SHOT-SEAM f=1197 at=1198 tag=last-dark attempts=2 reason=late-seam-fallback
-``` （出现第36次）
+```
 96 次 `spin-exit-seam` **全部 `at==f`**（守卫 `pendingShot.frame == frame` 不放行任何跨帧兑现）；**无** `SHOT-SEAM-MISS` / `SHOT-UNSTABLE` / `SHOT-FAIL`。日志恒带 `at=%d`（`fulfillShot` 内 `string.format("SHOT-SEAM f=%d at=%d tag=%s attempts=%d reason=%s", ps.frame, frame, …)`）⇒ 实施方主张③成立。
 
---- （出现第10次）
+---
 
 ## D 面：新问题扫描
 
@@ -486,7 +486,7 @@ SHOT-SEAM f=1197 at=1198 tag=last-dark attempts=2 reason=late-seam-fallback
 
 **边界声明**：未定位到 Mesen2 API 内部（哪个回调相位 flush surface）。故只能断言「这 71/90px 不是 rust 的 PPU/渲染状态差」，**不能**断言 rust 渲染 100% 正确。
 
---- （出现第11次）
+---
 
 ## 竞争假设与证伪记录
 
@@ -500,7 +500,7 @@ SHOT-SEAM f=1197 at=1198 tag=last-dark attempts=2 reason=late-seam-fallback
 
 ⇒ **不得以「帧号错位」为由修改 rust 的 FrameCount 调度**；那会引入真实的行为偏离且不消除残差。若要消除 71/90px，需修 harness 相位（§F2 整改 2）。
 
---- （出现第12次）
+---
 
 ## 结论
 
@@ -520,7 +520,7 @@ SHOT-SEAM f=1197 at=1198 tag=last-dark attempts=2 reason=late-seam-fallback
 
 - **禁止事项（供后续 agent）**：不得为消除 l4 FAIL 而改阈值/扩白名单/删用例/删格；不得以「帧号错位」为由改 rust FrameCount 调度；不得把 f700/f1100 的 71/90px 当作移植错的证据继续改渲染路径。
 
---- （出现第13次）
+---
 
 ## 复现命令清单
 
@@ -555,4 +555,4 @@ git show 863f258a:data/status/l4_ratchet_baseline.json                  # jumple
 # /tmp/mask.py  : 差异像素按 8x8 tile 分组 + 掩码字形
 # /tmp/lag.py   : 与所有可用 dump 帧两两求差，排除整帧滞后
 # /tmp/spr.py   : 叠加精灵层（本帧/前帧 OAM、$0000/$1000 base）尝试复现 emu PNG
-``` （出现第37次）
+```
