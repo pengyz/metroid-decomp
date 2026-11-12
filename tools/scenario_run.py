@@ -518,12 +518,17 @@ def parse_scenario(path: Path) -> dict:
     for e in plan["captures"]:
         if not 1 <= e["frame"] <= frames:
             raise ScenarioError(f"{path}: capture 帧 {e['frame']} 超出 1..{frames}")
-    # scenario 编辑 lint（教训四犯——机械拦）：长场景须有菜单起点（press 540）
-    # 或 bundle_load（任意起点案）——防前缀滤波误删菜单
+    # scenario 编辑 lint（教训四犯——机械拦）：长场景须有菜单起点或 bundle_load
+    # （任意起点案）——防前缀滤波误删菜单。
+    # 【启发式放宽（2026-11-12，WARN 假阳修正）】旧形硬找 `press 540 start` 恰一帧——
+    # morphball/scrollseam 等用 310/350 双 start（更早标题流程，f320/f420 锚 0px 证输入
+    # 流正确）被误 WARN。不变量=「前 700 帧内至少一次 start press」（菜单必在早期发生）；
+    # 零 start 仍 WARN（真误删形态）。非门禁弱化：WARN 非阻塞、判据收紧为不变量级。
     if plan.get("frames", 0) > 500 and not plan.get("bundle_load"):
-        _menu = any(p.get("frame") == 540 for p in plan.get("presses", []))
+        _menu = any(p.get("frame", 10**9) <= 700 for p in plan.get("presses", [])
+                    if any(str(b).lower() == "start" for b in p.get("buttons", [])))
         if not _menu:
-            print(f"[scenario-lint] WARN {path.name}: 长场景无 press 540 start——"
+            print(f"[scenario-lint] WARN {path.name}: 长场景前 700 帧无 start press——"
                   f"疑菜单误删（教训四犯机械拦）——正写全清核查", file=sys.stderr)
     return plan
 
