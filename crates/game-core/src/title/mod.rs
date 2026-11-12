@@ -1259,8 +1259,19 @@ pub fn enter_password_body(ram: &[u8], wram: &[u8], frame_count: u8, joy: u8, jo
         // `vram_struct_write` 在本段（4B）之后继续按下一段解析缓冲残留（密码屏期
         // 残留=未初始化 $FF/消息体）⇒ 垃圾段写到 CHR 低址（实测 PPUADDR=$001F+
         // v=$FF/inc32、$0001 v=$00）⇒ f700/f1100 各 70/71B CHR 失配。
-        e.push((0x07A0, ((idx as u16 + 4) & 0xFF) as u8));
-        e.push((0x07A1 + (((idx as u16 + 4) & 0x7F)), 0x00)); // EndVRAMStruct 终止符
+        // 【F3 整改（2026-11-12）】EndVRAMStruct 终止符语义对齐 asm：
+        // `EndVRAMStruct ; 07:C376`（prg7_engine.asm:947-955，fileoff 0x1C376=a9 00 9d a1 07 68 68 60）
+        // = `lda #$00 / sta VRAMStructBuffer,x / pla pla rts`——终止符写在**当前 X**；
+        // `WritePPUByte ; 07:C36B`（:933-945，fileoff 0x1C36B=9d a1 07 e8 e0 4f 90 0a ae a0 07 a9）
+        // 在 `cpx #$4F` 判满时 `ldx VRAMStructBufferIndex` 回填**段首**再写。
+        // 故 idx+4 > $4F 时 asm 不产生越界写（X 回段首），rust 旧形 `&0x7F` 会得 $07F1 越出
+        // $07A1-$07EF 缓冲尾（r9-F3）。当前路径不可达（idx+4≤0x4F 恒成立），按 fail-loud 对齐。
+        let term_off = idx as u16 + 4;
+        if term_off > 0x4F {
+            crate::unported!("bank07:C36B-WritePPUByte-full");
+        }
+        e.push((0x07A0, (term_off & 0xFF) as u8));
+        e.push((0x07A1 + term_off, 0x00)); // EndVRAMStruct 终止符（当前 X）
         // PasswordChar[cursor]←tile + 光标进位回绕
         e.push((0x699A + cursor as u16, tile));
         let nc = if cursor >= 0x17 { 0 } else { cursor.wrapping_add(1) };
