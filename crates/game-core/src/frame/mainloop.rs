@@ -2968,6 +2968,11 @@ pub fn more_init(mem: &mut FrameMemory) {
     for a in 0x0300..=0x03FEu16 {
         mem.write_ram(a, 0);
     }
+    // 【F4 整改（2026-11-12）】asm `jsr ScreenOff ;($C439)`（prg7_engine.asm:1871，清环后
+    // ClearNameTables 前）= `lda PPUMASK_ZP($FE) / and #~(BG_ON|OBJ_ON)`——影子寄存器清
+    // 渲染位；真 PPUMASK 由 NMI 内 WritePPUCtrl 落。rust 旧形漏此写（r9-F4）。
+    let pm = mem.read_ram(0x00FE) & !0x18;
+    mem.write_ram(0x00FE, pm);
     mem.write_ram(crate::ram_map::NMI_STATUS, 0); // ScreenOff 域形（屏/可见性关）
     // 【move-drift R2】ScreenOff（$C439→WriteAndWait→WaitNMIPass_ prg7:1129-1140）=
     // **帧等待**（1 tick+NMI 内块全跑）——门队列声明（窗3 等待 1/3）。
