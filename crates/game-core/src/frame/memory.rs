@@ -123,6 +123,10 @@ impl FrameMemory {
                 self.nmi_enabled = v & 0x80 != 0; // PPUCTRL bit7=NMI（hardware.asm:28）
                 self.render.ppuctrl = v;          // 全寄存器面（图案表选 bit3/4——渲染腿）
             }
+            // $2001 PPUMASK 真寄存器面（asm `WritePPUCtrl: ; 07:C44D` 的
+            // `lda PPUMASK_ZP / sta PPUMASK`（prg7_engine.asm:517）落点——NMI 内每帧落一次；
+            // ScreenOff/ScreenNmiOff 只改影子 $FE，「渲染关」由本写进 RenderState 生效。
+            0x2001 => self.render.ppumask = v,
             0x2005 => self.render.write_reg_2005(v),   // PPUSCROLL（V1 摄像机——双写锁存）
             0x2006 => self.render.write_reg_2006(v),   // PPUADDR flip-flop（S6-10 接线）
             0x2007 => {

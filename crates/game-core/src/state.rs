@@ -101,6 +101,10 @@ pub struct RenderState {
     pub scroll_x: u8,
     /// PPUSCROLL Y（$2005 次写）。
     pub scroll_y: u8,
+    /// PPUMASK（$2001）寄存器面——bit3=BG 可见、bit4=精灵可见（asm `WritePPUCtrl`
+    /// `lda PPUMASK_ZP / sta PPUMASK`（prg7_engine.asm:517）落点；`ScreenOff`/
+    /// `ScreenNmiOff` 只改影子 $FE，真寄存器等 NMI 里 WritePPUCtrl 才落）。
+    pub ppumask: u8,
 }
 
 impl Default for RenderState {
@@ -109,6 +113,8 @@ impl Default for RenderState {
         // 旧形初值 0 使未写名表渲染成 tile0（属性区也归调色板组 0）——A 级对拍定谳。
         Self { chr: vec![0; 0x2000], nametable: vec![0xFF; 0x800], ppuaddr: 0, latch_hi: true,
                scroll_x: 0, scroll_y: 0,
+               // 渲染开（BG|OBJ|左 8 掩码=$1E 面）；测试面默认，真实路径由 $2001 写同步。
+               ppumask: 0x1E,
                palette: [0x0F; 32], ppuctrl: 0 }
     }
 }

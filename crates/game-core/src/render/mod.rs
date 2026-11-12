@@ -122,6 +122,20 @@ fn bg_pix_grid(rs: &RenderState) -> Vec<u8> {
 /// 漏此前 tile $8C 误读 SAMUS 块 $08C0，golden 为 TITLE 块 $18C0 尖刺——f30 对拍根因）。
 pub fn render_frame_bg(rs: &RenderState, bg_palette: &[u8; 16]) -> FrameBuffer {
     let mut fb = vec![0u8; 256 * 240 * 3];
+    // 【PPUMASK 门控（A 级）】bit3=BG 可见：asm `ScreenOff: ; 07:C439`
+    // `lda PPUMASK_ZP / and #~(PPUMASK_BG_ON|PPUMASK_OBJ_ON)`，真寄存器由 NMI 里
+    // `WritePPUCtrl`（:517 `sta PPUMASK`）落（prg7_engine.asm）。关时整屏只剩背景色
+    // `$3F00`（palette 组 0 色 0）——emu 渲染关窗口实测单色帧（case-password-justin
+    // f1191-f1197 = 258B/1 色）即此面；未建模时 rust 照画密码屏（旧 2063px 差）。
+    if rs.ppumask & 0x08 == 0 {
+        let rgb = NES_PALETTE[(bg_palette[0] & 0x3F) as usize];
+        for px in fb.chunks_exact_mut(3) {
+            px[0] = rgb[0];
+            px[1] = rgb[1];
+            px[2] = rgb[2];
+        }
+        return fb;
+    }
     let grid = bg_pix_grid(rs);
     for y in 0..240usize {
         for x in 0..256usize {
@@ -159,6 +173,10 @@ pub fn render_frame_bg(rs: &RenderState, bg_palette: &[u8; 16]) -> FrameBuffer {
 pub fn render_frame(rs: &RenderState, bg_palette: &[u8; 16], sprite_palette: &[u8; 16],
                     oam: &[u8]) -> FrameBuffer {
     let mut fb = render_frame_bg(rs, bg_palette);
+    // 【PPUMASK 门控】bit4=精灵可见（asm `PPUMASK_OBJ_ON`）；关时 BG 面即终稿。
+    if rs.ppumask & 0x10 == 0 {
+        return fb;
+    }
     let grid = bg_pix_grid(rs); // 优先级真值面（pix≠0 遮挡——非 RGB 近似）
     let pat_base = if rs.ppuctrl & 0x08 != 0 { 0x1000usize } else { 0 };
     for y in 0..240usize {
@@ -608,5 +626,58 @@ mod sprite_tests {
         oam[0..4].copy_from_slice(&[10, 1, 0, 20]);
         let fb = render_frame(&rs, &bg, &spr, &oam);
         assert_eq!(px(&fb, 20, 11), NES_PALETTE[0x20], "bit3=1 取 $1000 面");
+    }
+}
+
+mod tests_ppumask_gate {
+    //! 【PPUMASK 门控】(asm `ScreenOff: ; 07:C439` / `WritePPUCtrl: ; 07:C44D`
+    //! `lda PPUMASK_ZP / sta PPUMASK`）：bit3=BG 可见、bit4=精灵可见。
+    //! emu 渲染关窗口实测单色帧（case-password-justin f1191-f1197 = 258B/1 色）——
+    //! 旧 rust 无门控照画密码屏（f1190 2063px 差的主因之一）。
+    use super::*;
+
+    /// BG 关 ⇒ 整屏=背景色 `bg_palette[0]`（$3F00 面），与名表/CHR 内容无关。
+    #[test]
+    fn bg_off_fills_backdrop_only() {
+        let mut rs = RenderState::default();
+        rs.nametable[0] = 1; // 有名表内容也不该被画
+        rs.chr[16] = 0xFF; // tile1 全像素=1
+        rs.ppumask = 0x10; // 只有精灵位（bit4），BG 关（bit3=0）
+        let bg = [0x0Fu8; 16];
+        let fb = render_frame_bg(&rs, &bg);
+        let want = NES_PALETTE[0x0F];
+        for px in fb.chunks_exact(3) {
+            assert_eq!([px[0], px[1], px[2]], want, "BG 关时整屏必须=背景色");
+        }
+    }
+
+    /// 精灵关（bit4=0）⇒ OAM 精灵不叠；精灵开（bit4=1）⇒ 叠。
+    #[test]
+    fn sprite_gate_follows_ppumask_bit4() {
+        let mut rs = RenderState::default();
+        rs.nametable[..0x400].fill(0); // BG=tile0（CHR 全零 ⇒ 全 pix0 ⇒ 背景色）
+        rs.ppuctrl = 0; // 精灵图案表=$0000
+        for i in 0..8 {
+            rs.chr[1 * 16 + i] = 0xFF; // tile1 lo 面全 1 ⇒ pix=1
+        }
+        let oam = {
+            let mut o = vec![0u8; 0x100];
+            o[0] = 0xFF; // y=0xFF ⇒ 顶行 0 可见（硬件 (line-(Y+1)) mod 256 < 8）
+            o[1] = 1; // tile 1
+            o[2] = 0; // attr=0（调色板组 0，无翻转）
+            o[3] = 0; // x=0
+            o
+        };
+        let bg = [0x0Fu8; 16];
+        let mut sp = [0x0Fu8; 16];
+        sp[1] = 0x30; // 组 0 色 1（pix=1 用色）
+        // 精灵关
+        rs.ppumask = 0x08;
+        let fb = render_frame(&rs, &bg, &sp, &oam);
+        assert_eq!([fb[0], fb[1], fb[2]], NES_PALETTE[0x0F], "bit4=0 时精灵不可见");
+        // 精灵开
+        rs.ppumask = 0x18;
+        let fb = render_frame(&rs, &bg, &sp, &oam);
+        assert_eq!([fb[0], fb[1], fb[2]], NES_PALETTE[0x30], "bit4=1 时精灵可见");
     }
 }
