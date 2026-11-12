@@ -1215,6 +1215,11 @@ pub fn enter_password_body(ram: &[u8], wram: &[u8], frame_count: u8, joy: u8, jo
     let idx = ram[0x07A0 & 0x7FF] as u16;
     let msg: &[u8; 15] = if ram[0x002C & 0x7FF] != 0 { &PW_ERR_MSG } else { &PW_NOERR_MSG };
     // 头：$21,$A8,$0F（WritePPUByte 链写）
+    // 【r9'-F2 对齐】msg 段 3 头+15 文=18B；asm WritePPUByte 链在 X>=0x4F 时回填段首
+    // （cpx #$4F/bcc）——静默 &0x7F 回绕与 F3 同族，改 fail-loud（当前不可达）。
+    if idx + 18 > 0x4F {
+        crate::unported!("bank07:C36B-WritePPUByte-full-msgseg");
+    }
     let mut x = idx;
     e.push((0x07A1 + (x & 0x7F), 0x21)); x = x.wrapping_add(1);
     e.push((0x07A1 + (x & 0x7F), 0xA8)); x = x.wrapping_add(1);
@@ -1267,7 +1272,7 @@ pub fn enter_password_body(ram: &[u8], wram: &[u8], frame_count: u8, joy: u8, jo
         // 故 idx+4 > $4F 时 asm 不产生越界写（X 回段首），rust 旧形 `&0x7F` 会得 $07F1 越出
         // $07A1-$07EF 缓冲尾（r9-F3）。当前路径不可达（idx+4≤0x4F 恒成立），按 fail-loud 对齐。
         let term_off = idx as u16 + 4;
-        if term_off > 0x4F {
+        if term_off >= 0x4F {  // r9'-F1: asm cpx #$4F/bcc 满=x>=0x4F（==0x4F 也回填段首）
             crate::unported!("bank07:C36B-WritePPUByte-full");
         }
         e.push((0x07A0, (term_off & 0xFF) as u8));
