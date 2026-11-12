@@ -17,6 +17,13 @@ const TITLE_ROUTINE_PTR_TABLE: [u16; 31] = [
 ];
 
 /// MainTitleRoutine 分发一步（asm 内容锚 `MainTitleRoutine: ; 00:8000`）。
+
+/// r9'-F6'：title_no_return 判据纯函数化（供单测）。0x00/0x01/0x15/0x1B 全程冻结；
+/// 0x17 仅 cursor<2 冻结（ClearAll/LoadPasswordScreen 两次 WaitNMIPass）。
+fn title_no_return_for(t1f: u8, cursor: u8) -> bool {
+    matches!(t1f, 0x00 | 0x01 | 0x15 | 0x1B) || (t1f == 0x17 && cursor < 2)
+}
+
 pub fn main_title_routine(mem: &mut FrameMemory) {
     // 【r23 spin 等待段】>0=本 tick 工作零动（跨相续段正交机构——臂的等待段语义）。
     // 【r9 FC 冻结（porter+逐帧会计修订）】spin 消费 tick=asm 例程内部 WaitNMIPass_
@@ -38,9 +45,9 @@ pub fn main_title_routine(mem: &mut FrameMemory) {
     // 那两格经复核定谳为 oracle 亚帧不同步（emu 截图取 post-render 表面含更早时刻的光标精灵，
     // dumpPpu 却读当期 PPU 内存；两侧 ppu.hex 逐字节 diff=0、OAM diff=0 且无活跃精灵），
     // 属门禁/oracle 口径问题非移植错，需修 harness。此处仅修正 FC 计数相位使与 asm/emu 一致。
-    let t1f_now = mem.read_ram(TITLE_ROUTINE);
-    mem.title_no_return = matches!(t1f_now, 0x00 | 0x01 | 0x15 | 0x1B)
-        || (t1f_now == 0x17 && mem.title_cursor < 2);
+    // 【F6' 抽取（r9'-F6'，2026-11-12）】判据抽纯函数供单测（0x17 前 2 段冻结；
+    // 依据=ClearAll+LoadPasswordScreen 两次 WaitNMIPass 跨 3 帧只 inc 1 次，见 58859f65）
+    mem.title_no_return = title_no_return_for(mem.read_ram(TITLE_ROUTINE), mem.title_cursor);
     if mem.title_spin > 0 {
         mem.title_spin -= 1;
         mem.title_no_return = true;
@@ -649,3 +656,26 @@ pub const ITEM_DATA: [u16; 59] = [
     0x2559, 0x291D, 0x211D, 0x2658, 0x2A39, 0x2239, 0x269E, 0x2A1D, 0x21FD, 0x271B,
     0x2867, 0x2927, 0x292B, 0x3C00, 0x4000, 0x4400, 0x4800, 0x4C00, 0x3800,
 ];
+
+#[cfg(test)]
+mod tests_title_no_return {
+    use super::title_no_return_for;
+    #[test]
+    fn zerox17_freezes_first_two_cursor_segments_only() {
+        assert!(title_no_return_for(0x17, 0));
+        assert!(title_no_return_for(0x17, 1));
+        assert!(!title_no_return_for(0x17, 2), "cursor2 起恢复正常 inc（emu f505=238 实测锚）");
+        assert!(!title_no_return_for(0x17, 3));
+    }
+    #[test]
+    fn family_phases_fully_frozen() {
+        for t in [0x00u8, 0x01, 0x15, 0x1B] {
+            for c in [0u8, 1, 2, 3, 0xFF] {
+                assert!(title_no_return_for(t, c), "t1f={t:#x} cursor={c}");
+            }
+        }
+        assert!(!title_no_return_for(0x16, 0), "0x16 ChooseStartContinue 不冻结");
+        assert!(!title_no_return_for(0x18, 0), "0x18 EnterPassword 不冻结");
+    }
+}
+

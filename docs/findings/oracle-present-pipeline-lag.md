@@ -1,7 +1,7 @@
 # oracle 呈现管线浮动滞后——f700/f1100 残差定谳（2026-11-12）
 
 ## 结论（B 级→A 级实测链）
-`case-password-justin` f700=23px / f1100=42px **非移植错**：两侧 spin-exit 缝快照（CHR/NT/PAL/OAM/FC）逐字节全等；残差来自 **Mesen 呈现管线与内存 dump 无固定相位关系（lag 0-4 帧浮动）**——`emu.takeScreenshot` 与 `emu.getPixel` 读同一呈现面。
+`case-password-justin` f700/f1100 残差（历史观测 71/90px，FC 相位修后 23/42px，随取景浮动；**非移植错**：两侧 spin-exit 缝快照（CHR/NT/PAL/OAM/FC）逐字节全等；残差来自 **Mesen 呈现管线与内存 dump 无固定相位关系（lag 0-4 帧浮动）**——`emu.takeScreenshot` 与 `emu.getPixel` 读同一呈现面。
 
 ## A 级证据链
 1. **dump 全等**：`analysis/traces/*_f00700_mid-1.ppu.hex` vs `shots_rust/` 同名 → CHR/NT/PAL eq True（8192/4096/32B）；OAM `$0200-$02FF` 双侧逐字节相等；FC（`frames.jsonl w.FC` vs `DSH_FC_TRACE`）f694-705/f1094-1105 全 d=0。
