@@ -1277,11 +1277,11 @@ pub fn enter_password_body(ram: &[u8], wram: &[u8], frame_count: u8, joy: u8, jo
     let cursor_now = ram[0x0320 & 0x7FF]; // 注：体序=进/退格后重读
     if frame_count & 0x08 != 0 {
         let y = if cursor_now < 0x0C { 0x3F } else { 0x4F };
-        e.push((0x0210, y));
-        e.push((0x0211, 0x6E));
-        e.push((0x0212, 0x20)); // OAMDATA_PRIORITY
+        e.push((0x0204, y));
+        e.push((0x0205, 0x6E));
+        e.push((0x0206, 0x20)); // OAMDATA_PRIORITY
         let xi = (if cursor_now >= 0x0C { cursor_now.wrapping_sub(0x0C) } else { cursor_now }) as usize;
-        e.push((0x0213, CURSOR_X_TBL.get(xi.min(11)).copied().unwrap_or(0x48)));
+        e.push((0x0207, CURSOR_X_TBL.get(xi.min(11)).copied().unwrap_or(0x48)));
     }
     // ⑧ dpad（Joy1Retrig 低半字节门）：beep+行/列回绕+CharSelect 精灵（位3 门）
     let dpad = joy_retrig & 0x0F;
@@ -1308,10 +1308,10 @@ pub fn enter_password_body(ram: &[u8], wram: &[u8], frame_count: u8, joy: u8, jo
             e.push((0x0321, row));
         }
         if frame_count & 0x08 != 0 {
-            e.push((0x0220, CHARSEL_Y_TBL.get(row as usize % 5).copied().unwrap_or(0x77)));
-            e.push((0x0221, 0x6E));
-            e.push((0x0222, 0x20));
-            e.push((0x0223, CHARSEL_X_TBL.get(col as usize % 13).copied().unwrap_or(0x20)));
+            e.push((0x0208, CHARSEL_Y_TBL.get(row as usize % 5).copied().unwrap_or(0x77)));
+            e.push((0x0209, 0x6E));
+            e.push((0x020A, 0x20));
+            e.push((0x020B, CHARSEL_X_TBL.get(col as usize % 13).copied().unwrap_or(0x20)));
         }
     }
     (e, None)
