@@ -681,13 +681,19 @@ mod tests_deferred_screen_on {
     }
 
     /// 对照（防误触发）：旗未置时每 tick 都会走到排空点，必须零动。
+    /// 【F7 加固（2026-11-12，r9 复核 C 面）】真寄存器预置**哨兵 0x06**（非默认 0x1E）——
+    /// 旧形预置 0x1E 时「无条件写 0x1E」的坏实现与本测同过（弱断言）；哨兵使任何
+    /// 无旗写动作立即暴露。整链移除的防线=L4 锚格 f1191 dark-window/f1197 last-dark
+    /// （0px，接线断即暗窗消失→与 emu 黑窗实录失配）——单测不重复该职责。
     #[test]
     fn deferred_screen_on_inert_without_flag() {
         let mut m = FrameMemory::default();
         m.write_ram(0x00FE, 0x06);
+        m.render.ppumask = 0x06; // 哨兵（ScreenOff 态真值，非默认 0x1E）
         apply_deferred_screen_on(&mut m);
         assert_eq!(m.read_ram(0x00FE), 0x06, "无旗不得改 $FE");
-        assert_eq!(m.render.ppumask, 0x1E, "无旗不得改真寄存器（默认 0x1E 不变）");
+        assert_eq!(m.render.ppumask, 0x06, "无旗不得改真寄存器（哨兵 0x06 不变）");
+        assert!(!m.deferred_screen_on, "无旗时旗不得被误置");
     }
 }
 
