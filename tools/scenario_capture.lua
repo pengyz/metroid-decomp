@@ -221,11 +221,11 @@ local function fulfillShot(reason)
       log("SHOT-FAIL f=" .. tostring(ps.frame) .. " tag=" .. tostring(ps.tag) .. " reason=io")
     end
     if stable then
-      log(string.format("SHOT-SEAM f=%d tag=%s attempts=%d reason=%s",
-        ps.frame, tostring(ps.tag), attempts, reason))
+      log(string.format("SHOT-SEAM f=%d at=%d tag=%s attempts=%d reason=%s",
+        ps.frame, frame, tostring(ps.tag), attempts, reason))
     else
-      log(string.format("SHOT-UNSTABLE f=%d tag=%s attempts=%d reason=%s",
-        ps.frame, tostring(ps.tag), attempts, reason))
+      log(string.format("SHOT-UNSTABLE f=%d at=%d tag=%s attempts=%d reason=%s",
+        ps.frame, frame, tostring(ps.tag), attempts, reason))
     end
   end
   if ps.frame >= frames and doneDeferred then
@@ -1138,7 +1138,17 @@ local function onSpinExitSeam()
     local okS, errS = pcall(sampleTrace)
     if not okS then log("SAMPLE-ERR f=" .. tostring(frame) .. ": " .. tostring(errS)) end
   end
-  if pendingShot then fulfillShot("spin-exit-seam") end
+  -- 【2026-11-12 修】迟缝守卫：缝必须属于请求帧本身。请求帧无 spin-exit（长例行内
+  -- 忙帧/掉帧窗）时，旧形会让请求搭到后续帧的缝上兑现，而 takeStableShot 此刻读到
+  -- 的是**后续帧**的表面 ⇒ 金面相位污染。
+  -- A 级实录（case-password-justin f01190）：旧形 `SHOT-SEAM f=1190 at=1192`
+  -- ⇒ 捕到转场黑面（258B/1 色）vs emu 真值 f1190=密码屏（1516B/4 色，与 rust 逐像素
+  -- 0 差）⇒ 2063px 假失配。守卫生效后该请求落到 requestShot 的 seam-miss-fallback
+  -- 兜底（端帧界捕获经实测=滞后一帧补偿，恰得请求帧内容：probe 实录 f=1190 at=1191
+  -- reason=seam-miss-fallback → 4 色与 rust 0 差）。
+  if pendingShot and pendingShot.frame == frame then
+    fulfillShot("spin-exit-seam")
+  end
 end
 if samplePoint == "spin-exit" or next(capAt) ~= nil or everyN > 0 then
   -- spin 出口缝：$C0D3 指令入口（callbackType.exec 真执行，r3 语义）
@@ -1201,6 +1211,15 @@ emu.addEventCallback(function()
   if frame < 1 then return end
 
   applyFixtures() -- F_a 注入在采样前（断言 (b) F_a+1 读回=期望值口径）
+
+  -- 【2026-11-12 修·迟缝即时兜底】请求帧已过且缝未至（长例行内忙帧/掉帧窗无
+  -- spin-exit）⇒ 本帧界立即兑现。端帧界 takeScreenshot 的表面滞后一帧 ⇒ 恰为
+  -- 请求帧内容（A 级实录：probe f=1190 at=1191 reason=seam-miss-fallback → 4 色
+  -- 与 rust 逐像素 0 差；若不即时兜底则要等到下一采集请求，f1190 会搭到 at=1200
+  -- 捕到游戏面）。
+  if pendingShot and pendingShot.frame < frame then
+    fulfillShot("late-seam-fallback")
+  end
 
   if samplePoint ~= "spin-exit" then
     sampleTrace() -- legacy endFrame 采样（混态期未迁腿）
