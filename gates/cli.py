@@ -1939,6 +1939,13 @@ def data_boundary_warnings(root: Path, entries: list[dict]) -> list[str]:
             warns.append(f"{f}: data 类位于 game-core（运行时 ROM 字节应在 game-data/资产包）——待迁")
         if kind == "fixture" and "/tests/" not in f and not f.split("/")[-1].startswith("test"):
             warns.append(f"{f}: fixture 类不在测试面（应移入 tests/ 或 #[cfg(test)]）——待挪")
+        # 只降不留白：数据迁走后 max 必须随之下调/删条目，否则留出的余量就是将来的软化窗口
+        if kind == "data":
+            cur = data_boundary_metrics(root).get(f, {}).get("metric", 0)
+            mx = int(e.get("max", 0))
+            if 0 < cur < mx:
+                warns.append(f"{f}: data 体量已降到 {cur}（登记 max={mx}）——"
+                             "请下调 max 或删除条目（未下调=收益未锁定）")
     return warns
 
 
