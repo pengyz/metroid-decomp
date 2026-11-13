@@ -15,7 +15,7 @@
 
 | 子系统 | 数据建模 | 主干流程 | 判定 |
 |---|---|---|---|
-| 1 主流程状态机 | 表齐（10 / 31 / 9 项） | `MainRoutine` **6/10** 臂；`TitleRoutine` **31/31**；`BankInitTable` **3/9** | **4 处断点** |
+| 1 主流程状态机 | 表齐（10 / 31 / 9 项） | `MainRoutine` **7/10** 臂（#1 死后已补 4）；`TitleRoutine` **31/31**；`BankInitTable` **3/9** | **3 处断点**（#5 经查为死代码） |
 | 2 Samus 状态 | Object 15 字段齐、`sa_` 11 态齐、`wa_` 11 态齐 | 走/跑/跳/球/爬/门/电梯态在；出门链 4 桩、岩浆伤 1 桩 | **主循环可用，边角有桩** |
 | 3 场景加载/状态 | AreaPointers **5/5**、特殊道具 **5/5**、房流 **2/5**、敌四表 **1/5**、音乐数据已烘 | Brinstar/Norfair 内完整；电梯=空桩；后三区 `unported!` | **2/5 世界可玩** |
 | 4 声音 | 39 个音效 ID + 音乐表/流已烘；28 handler 臂 | `SoundEngine` 骨架完整；**24/28 臂零触达**、2 件高频走未接径 | **骨架在、内容缺、无裁判** |
@@ -42,14 +42,15 @@
 
 ### 主干流程：4 处硬断点
 
-`crates/game-core/src/frame/mainloop.rs:109` 的 `match mr` 只覆盖 `0/1/2/3/8/9`，
-其余落入 `_ => unported!("bank07:{表目标地址}")` —— **panic，不是空实现**：
+`crates/game-core/src/frame/mainloop.rs` 的 `match mr` 原覆盖 `0/1/2/3/8/9`，
+其余落入 `_ => unported!("bank07:{表目标地址}")` —— **panic，不是空实现**。
+2026-11-13 已补 `mr=4`（见下方 #1 处标注），现存 `4 缺臂` 中的 5/6/7。
 
 | 缺臂 | asm | 触发条件 | 后果 |
 |---|---|---|---|
-| **4 `PrepareGameOver $C9A6`** | `TitleRoutine←GameOver` / `BankSwitchPending←1` / `jmp ScreenOff` | `game_engine` 已正确置 `NextRoutine←4`（`mainloop.rs:2960` 区）+ `WaitTimer(9)` 会消费它 | **死亡后 panic**（`bank07:C9A6`） |
+| **4 `PrepareGameOver $C9A6`** ✅ **已修（2026-11-13）** | `TitleRoutine←GameOver` / `BankSwitchPending←1` / `jmp ScreenOff` | `game_engine` 已正确置 `NextRoutine←4` + `WaitTimer(9)` 会消费它 | ~~死亡后 panic~~ → 已端口 `prepare_game_over`，链至 `GameMode←1` 由 `InitBank0` 接管（TDD `tests_prepare_game_over` 两测） |
 | **5 `PauseMode $C9B1`** | 要求 `Joy2Status & (A\|UP)`、`EndTimer+1==0`、`GamePaused←0`、`inc MainRoutine`→6 | 游戏内按 START | 更上游就断了：`GoMainRoutine` 的 START 开关（`MainRoutine` 3↔5 + `GamePaused ^= 1` + `PauseMusic`）**完全未实现**（`game_main_routine` 头部无任何 `Joy1Change & START`），所以**按 START 静默无效** |
-| **6 `GoPassword $C9C4`** | `TitleRoutine←DisplayPassword` / `BankSwitchPending←1` / `SilenceMusic` / `jmp ScreenOff` | `NextRoutine←6`（`WaitTimer` 已能正确置） | panic（逻辑在 `ui/password.rs::go_password()` 已实现，**只缺接线**） |
+| ~~6 `GoPassword $C9C4`~~ **死代码（2026-11-13 更正）** | `TitleRoutine←DisplayPassword` / `BankSwitchPending←1` / `SilenceMusic` / `jmp ScreenOff` | **没有任何地方把 `NextRoutine` 置为 6** | 不可达 ⇒ 按 D7 **保留 `unported!` fail-loud 桩是对的**（端口它=写死代码） |
 | **7 `IncrementRoutine $C155`** | `inc MainRoutine / rts` | 真实流程不经过（`MoreInit` 尾是内联 `inc`） | 影响低；但 `is_engine_running` 依赖 `mr==7` 语义（已按判据实现） |
 
 `GamePaused($31)` 的状态更说明问题：**全仓只写不读**（`crates/game-core/src/frame/boot.rs:311`
@@ -169,17 +170,33 @@ WritePPUCtrl（唯一点亮真 PPUMASK 的地方）/ WriteScroll / ReadJoyPads`�
 
 | # | 断点 | 严重度 | 后果 | 修法 | 规模 |
 |---|---|---|---|---|---|
-| **1** | 死亡 → GameOver（`mr=4` 缺） | ★★★ | 死亡后 **panic** | 端口 `PrepareGameOver $C9A6`（4 行）+ `GameOver $939E`（`ClearAll`+`PreparePPUProcess($93B9)`+`NMIOn`+`ScreenOn`，后者已烘） | 小 |
+| **1** | 死亡 → GameOver（`mr=4` 缺） ✅ **已修** | ★★★ | ~~死亡后 panic~~ → 已端口 | `prepare_game_over`（三条写）+ 复用已有 `TitleRoutine 0x1C` 臂（`PrepareVram(0x93B9)`/`Timer3←$10`/相位→0x19 均已实现） | 小（已完成） |
 | **2** | 游戏内暂停（`GoMainRoutine` START 开关 + `mr=5`） | ★★★ | 按 START **静默无效** | 端口 3↔5 切换 + `GamePaused ^= 1` + `PauseMusic`；再端口 `PauseMode $C9B1` | 小-中 |
 | **3** | 电梯 / 区域间移动 | ★★★ | 只有 2 个区可达，且**不能换区** | `UpdateElevator $D7B3` + `SpawnElevator $EEA1` + `InitBank3/4/5` | 大 |
 | **4** | 后三区数据（Kraid/Tourian/Ridley） | ★★★ | 3/5 世界不可进 | 参数化 `bake_area_graphics.py` 烘 3 区 + 敌四表分区（**先解 16B vs 64B 尺寸疑点**） | 中 |
-| **5** | 密码屏返回（`mr=6` 缺） | ★★ | panic（但逻辑已在 `ui/password.rs`） | 只加一个 `mr==6` 臂 | 极小 |
+| ~~5~~ | ~~密码屏返回（`mr=6` 缺）~~ **死代码，不做** | — | **不可达**：`_id_GoPassword` 在 asm 全仓只出现在 `WaitTimer` 的比较里（`prg7_engine.asm:1229`），而 `stx NextRoutine` 唯一在 `SetTimer`，其两个调用点 x=3/x=4 | 保持 `unported!` 桩（端口=死代码） | — |
 | **6** | 出门链（`MoveOutDoor $D3AE` 等 4 桩） | ★★ | 走门 panic | 逐件端口 | 中 |
 | **7** | 声音内容（24/28 零触达） | ★ | 音效/音乐行为无证据 | ①补 `B7E7`/`B87F` 两件高频 ②建音频 RAM 语义列（`.sem` 扩 `$0600-$068D`） | 中 |
 | **8** | FC +2 相位 | ★ | L4 两格 23/42px + sem password 案 45.6% | 周期会计（已裁定冻结，待裁） | 大 |
 
-**优先级建议**：#5（极小，先清一个 panic）→ #1（死亡链，核心循环）→ #2（暂停，最常用）
+**优先级建议（2026-11-13 修订）**：#1（死亡链，核心循环）✅ **已完成** → #2（暂停，最常用）
 → #6（出门链，与 #3 共用机制）→ #3+#4（换区+后三区，最大块）→ #7 → #8。
+原 #5（密码返回）经查为死代码，从清单移除。
+
+> 【2026-11-13 更正】上表 #5「密码屏返回 panic」的初判**不成立**：`_id_GoPassword` 全仓只出现在
+> `WaitTimer` 的比较里（`refs/m1disasm/SRC/prg7_engine.asm:1229`），而 `stx NextRoutine` 唯一
+> 出现在 `SetTimer`（:1245），其两个调用点分别是 `ldx #$03`（能力延迟，:2052）与 `ldx #$04`
+> （死亡，:2074）——**没有任何路径把 `NextRoutine` 置为 6** ⇒ `GoPassword $C9C4` 结构性不可达
+> （与 `AreaInit $C801` 同类）。原推论「`WaitTimer` 已能置 6」是把「能比较」误当「会写入」，
+> 特此原地更正；端口它等于写死代码，保留 `unported!` fail-loud 桩符合 D7。
+>
+> 同一轮取证还澄清了**密码屏的真正触发链**（这才是玩家碰到的路径）：
+> 死亡 → `GameEngine` 检 `sa_Dead2 ∧ animDelay==0` → `SilenceMusic` →
+> `MotherBrainStatus==$0A ? inc MainRoutine : SetTimer(#$04, x=4)`（两条死亡径最终都落 mr=4）
+> → `PrepareGameOver`（`TitleRoutine←0x1C` + `$24←1` + `ScreenOff`）→ `InitBank0`（`GameMode←1`）
+> → `0x1C GameOver $939E`（GAME OVER 2.6s）→ `0x19 DisplayPassword`（`CalculatePassword` +
+> `PasswordToScreen` + `PaletteDataPending←Palette12+1`）→ `0x1A WaitForSTART`
+> → `jmp CheckPassword`（与密码屏输入同一入口）→ 有效则 `InitializeGame` 重开。
 
 ---
 

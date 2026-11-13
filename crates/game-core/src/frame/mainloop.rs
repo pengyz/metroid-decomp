@@ -137,6 +137,7 @@ pub fn game_main_routine(mem: &mut FrameMemory) {
                 mem.write_ram(crate::ram_map::MAIN_ROUTINE, next);
             }
         }
+        4 => prepare_game_over(mem), // PrepareGameOver（$C9A6——死亡链第二段；见函数注释）
         _ => {
             let loc = format!("bank07:{:04X}", MAIN_ROUTINE_PTR_TABLE.get(mr as usize).copied().unwrap_or(0));
             crate::unported!(&loc); // 其余态（MoreInit 起——迭代分类）
@@ -144,6 +145,85 @@ pub fn game_main_routine(mem: &mut FrameMemory) {
     }
     if std::env::var("DSH_MR_TRACE").is_ok() {
         eprintln!("[mr-post] FC={} status={:02X} oam0={:02X} pal={:02X?}", mem.read_ram(crate::ram_map::FRAME_COUNT), mem.read_ram(0x0300), mem.read_ram(0x0200), &mem.render.palette[..16]);
+    }
+}
+
+/// PrepareGameOver（**asm 内容锚** `PrepareGameOver: ; 07:C9A6`——`prg7_engine.asm:2124-2130`）：
+/// ```text
+/// lda #_id_GameOver.b      ; $1C
+/// sta TitleRoutine($1F)
+/// lda #$00+1
+/// sta BankSwitchPending($24)
+/// jmp ScreenOff            ; $C439 = `and #~(BG_ON|OBJ_ON)` → WriteAndWait 写影子 → WaitNMIPass 等一 NMI
+/// ```
+/// **触发链（A 级，全 asm 逐行）**：`GameEngine` 检 `Samus.status==sa_Dead2 ∧ animDelay==0`
+/// → `SilenceMusic` → `MotherBrainStatus==$0A ? inc MainRoutine : SetTimer(#$04, x=4)`
+/// （prg7:2066-2075，两条死亡径最终都落 **mr=4**）→ `WaitTimer(mr=9)` 等 `Timer3` 尽 →
+/// `MainRoutine←NextRoutine(4)`（prg7:1224-1231，`NextRoutine∈{4,6}` 免起乐）→ 本函数。
+/// 之后：下一帧帧界 `CheckBankSwitch` 消费 `$24=1` → `InitBank0`（`GameMode←1`）→
+/// 标题轴接管 → `TitleRoutine=0x1C GameOver $939E`（GAME OVER 2.6s）→ `0x19 DisplayPassword`
+/// → `0x1A WaitForSTART` → `jmp CheckPassword` → 有效密码回 `InitializeGame`。
+///
+/// **ScreenOff 的落地相位**：asm 只写影子 `PPUMASK_ZP`，真寄存器由 `WriteAndWait` 等的
+/// 那个 NMI 里 `WritePPUCtrl`（`sta PPUMASK`）落 —— 与 `initialize_game` 的 ScreenNmiOff
+/// 同构（实测不显式写 `$2001` 会晚一帧，见 b92 暗窗定谳），故此处同样双写。
+pub fn prepare_game_over(mem: &mut FrameMemory) {
+    mem.write_ram(crate::ram_map::TITLE_ROUTINE, 0x1C); // _id_GameOver
+    mem.write_ram(crate::ram_map::BANK_SWITCH_PENDING, 0x01); // 切标题页（BankTable[0]=bank0）
+    let pm = mem.read_ram(0x00FE) & !0x18; // PPUMASK_ZP &= ~(BG_ON|OBJ_ON)
+    mem.write_ram(0x00FE, pm);
+    mem.write_io(0x2001, pm); // WriteAndWait → 该 NMI 落真寄存器
+}
+
+#[cfg(test)]
+mod tests_prepare_game_over {
+    use super::*;
+    use crate::frame::memory::FrameMemory;
+    use crate::ram_map;
+
+    /// 死亡链端到端（state 机层，A 级 asm 锚）：
+    /// `GameEngine` 置 `NextRoutine←4`（prg7:2074-2075 `ldx #$04/jmp SetTimer`）→
+    /// `WaitTimer(mr=9)` 等 `Timer3` 尽 → `MainRoutine←4`（prg7:1224-1231）→
+    /// `PrepareGameOver(4)` 三写（prg7:2124-2130）→ 帧界 `CheckBankSwitch` 消费 `$24=1`
+    /// → `InitBank0`（`GameMode←1`）。
+    /// 修前此链在 `mr=4` 处 `unported!("bank07:C9A6")` panic（审计 §6 件 #1）。
+    #[test]
+    fn death_chain_reaches_game_over_and_switches_to_title_bank() {
+        let mut m = FrameMemory::default();
+        // 死亡前置：GameEngine 已 SetTimer(#$04, x=4) 且 Timer3 已尽（WaitTimer 待跑）
+        m.write_ram(ram_map::MAIN_ROUTINE, 9); // WaitTimer
+        m.write_ram(ram_map::TIMER3, 0);
+        m.write_ram(0x0020, 4); // NextRoutine←PrepareGameOver
+        m.write_ram(0x00FE, 0x1E); // 屏亮态（ScreenOff 前）
+
+        // 第一拍：WaitTimer 尽 ⇒ MainRoutine←NextRoutine(4)，且不得起乐（NextRoutine∈{4,6}）
+        game_main_routine(&mut m);
+        assert_eq!(m.read_ram(ram_map::MAIN_ROUTINE), 4, "WaitTimer 尽应置 PrepareGameOver");
+
+        // 第二拍：PrepareGameOver 三写
+        game_main_routine(&mut m);
+        assert_eq!(m.read_ram(ram_map::TITLE_ROUTINE), 0x1C, "TitleRoutine←_id_GameOver");
+        assert_eq!(m.read_ram(ram_map::BANK_SWITCH_PENDING), 0x01, "BankSwitchPending←1（切标题页）");
+        assert_eq!(m.read_ram(0x00FE) & 0x18, 0, "ScreenOff：PPUMASK_ZP 关 BG/OBJ（and #~$18）");
+        assert_eq!(m.render.ppumask & 0x18, 0, "WriteAndWait：真 PPUMASK 同拍落地");
+
+        // 帧界：CheckBankSwitch 消费 $24=1 ⇒ InitBank0 ⇒ GameMode←1（标题轴接管）
+        crate::frame::boot::c4de_unit(&mut m);
+        assert_eq!(m.read_ram(ram_map::BANK_SWITCH_PENDING), 0, "CheckBankSwitch 先清 $24");
+        assert_eq!(m.read_ram(ram_map::GAME_MODE), 1, "InitBank0 置 GameMode←1");
+    }
+
+    /// 对照（防空对照）：只清 BG/OBJ 两位（`and #~$18`），**其余位保持**，
+    /// 且绝不把 `$1E` 写回（那是 ScreenOn 的形）——防「用点屏冒充关屏」的假绿。
+    #[test]
+    fn prepare_game_over_clears_only_bg_obj_bits() {
+        let mut m = FrameMemory::default();
+        m.write_ram(ram_map::MAIN_ROUTINE, 4);
+        m.write_ram(0x00FE, 0x1E);
+        prepare_game_over(&mut m);
+        assert_eq!(m.read_ram(0x00FE), 0x06, "0x1E & ~0x18 = 0x06（低位保留，asm 只清 $18）");
+        assert_ne!(m.read_ram(0x00FE), 0x1E, "不得点屏");
+        assert_eq!(m.render.ppumask, 0x06, "真 PPUMASK 同形落地");
     }
 }
 
