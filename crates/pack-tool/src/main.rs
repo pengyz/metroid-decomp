@@ -82,7 +82,7 @@ fn cmd_extract(a: &Args) -> Result<(), String> {
     }
     let mut secs = sections(&rom)?;
     // meta.json 段（id 0）：描述+校验用，运行时从不读。**派生投影**，由提取侧常量生成。
-    let meta = build_meta_json(&secs, got_crc, rom.len() as u32);
+    let meta = build_meta_json(&secs, got_crc, rom.len() as u32)?;
     secs.insert(0, Section { key: PackKey::Meta, data: meta });
     let bytes = write_pack(&secs, got_crc, rom.len() as u32);
     if let Some(dir) = out.parent() {
@@ -153,7 +153,7 @@ fn cmd_verify(a: &Args) -> Result<(), String> {
             bad += 1;
         }
         Some(got) => {
-            let want = build_meta_json(&secs, rc, rom.len() as u32);
+            let want = build_meta_json(&secs, rc, rom.len() as u32)?;
             if got == &want[..] {
                 println!("  {:<10} OK  {:>7} B  crc32={:08X}", "meta.json", got.len(), crc32(got));
             } else {
