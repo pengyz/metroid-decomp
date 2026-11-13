@@ -105,6 +105,10 @@ pub enum PackKey {
     KrItems = 56,
     ToItems = 57,
     RiItems = 58,
+    /// SFX 4B 记录窗 `$B211..$B289`（W2/W3/W4 三族 + SamusHit/Beep，按地址引用）。
+    SfxTables = 59,
+    /// `SongHeaders ; $BD31` 12×13B（曲头表本体；流与偏移表另有段）。
+    SongHdrs = 60,
     NametableHi = 37,
 }
 
@@ -175,6 +179,8 @@ impl PackKey {
             PackKey::KrItems => "area.kr.items",
             PackKey::ToItems => "area.to.items",
             PackKey::RiItems => "area.ri.items",
+            PackKey::SfxTables => "sound.sfx_tables",
+            PackKey::SongHdrs => "song.headers",
             PackKey::NametableHi => "rom.nt_hi",
         }
     }
@@ -240,6 +246,8 @@ impl PackKey {
             56 => PackKey::KrItems,
             57 => PackKey::ToItems,
             58 => PackKey::RiItems,
+            59 => PackKey::SfxTables,
+            60 => PackKey::SongHdrs,
             37 => PackKey::NametableHi,
             _ => return None,
         })

@@ -1,6 +1,5 @@
 //! sound 数据（数据内容在 game-data（架构约束））。
 
-pub mod sound_data;
 // music_tables 已迁资产包（`assets::{music_notes,note_lengths_4/6/7}`）
 // music_streams 已迁资产包（`assets::{song_stream,stream_by_base,volume_envelope*,sfx_data}`）
 

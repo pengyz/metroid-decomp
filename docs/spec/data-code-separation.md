@@ -118,7 +118,9 @@ pub fn is_ready() -> bool;
 | W4d | `sound/music_streams.rs`（19.4 KB）→ `sound.streams`/`stream_offs`/`stream_bases`/`env_*`/`sfx_data` | `extract_music_streams` | `07c71f85` | 48 流 2092 B 逐项等（含负索引 quirk） |
 | W4e | `title/palette_data.rs`（18 常量）→ `pal.ptrs`/`pal.data`/`pal.offs` | `extract_palette_data` | `b46dec3b` | 六 bank 159 项 |
 | W4f | `area/sprite_data.rs` → `sprite.data` | `extract_sprite_data` | `c3e0adf4` | 1457 B + 三表界 |
-| W5a | `game-core/frame/sound_hook.rs::SOUND_REGION`（game-core 持 ROM 字节=架构违规）→ `sound.region` | `extract_sound_region` | 本批 | 2688 B = `prg[0x3289..0x3D09]` |
+| W5a | `game-core/frame/sound_hook.rs::SOUND_REGION`（game-core 持 ROM 字节=架构违规）→ `sound.region` | `extract_sound_region` | `c9ddefeb` | 2688 B = `prg[0x3289..0x3D09]` |
+| W5b | `area/items.rs` 五区 `ITEMS_*`（十进制结构体切片，旧判据 0 命中=隐身）→ `area.{br,no,kr,to,ri}.items`（6 B/条记录） | `extract_items` | `0dc10b35` | 15/33/9/35/6=98 条逐字节等 |
+| W5c | `sound/sound_data.rs`（11 常量）→ 拆三路：SFX 4B 记录窗 `sound.sfx_tables`（120 B）+ 曲头表 `song.headers`（156 B）+ 偏移表读 `sound.region`（`$BBFA` 在窗内）；`SONG_INTRO_HEADER` 证伪为非 ROM 行（全表无此字节序）⇒ 降为测试内 fixture；`SFX_REG_INIT_TBL`/`EN_*_B7` 三常量零消费者 ⇒ 删 | `extract_sfx_tables`/`extract_song_headers` | 本批 | W2/W3/W4 25 处记录址逐一与旧常量等 + 156 B 逐行等 |
 
 **判据（每批三条机械可复跑）**：①`pack-tool verify` 全段 OK（包 == 从 ROM 重算，不再手搓脚本）
 ②账本 `data-boundary` v2 里该文件的 `data` 条目当次删除 ③波次边界 `l4_diff_run.py run-all` 全矩阵不变。

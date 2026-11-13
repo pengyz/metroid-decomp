@@ -51,6 +51,8 @@ pub fn sections(rom: &[u8]) -> Result<Vec<Section>, String> {
     out.extend(extract_sprite_data(prg)?);
     out.extend(extract_sound_region(prg)?);
     out.extend(extract_items(prg)?);
+    out.extend(extract_sfx_tables(prg)?);
+    out.extend(extract_song_headers(prg)?);
     Ok(out)
 }
 
@@ -372,6 +374,8 @@ fn seg_meta() -> Vec<SegMeta> {
         SegMeta { key: PackKey::PalOffs, kind: "offs-table", elem: 8, count: 159, rom: "(派生)", note: "×159 (off,len) u32 LE" },
         SegMeta { key: PackKey::SpriteData, kind: "bytes", elem: 1, count: SPRITE_BLOB_LEN, rom: "bank01:$8572", note: "OBJ 精灵 blob（三表界 $0000/$0099/$016D）" },
         SegMeta { key: PackKey::SndRegion, kind: "bytes", elem: 1, count: SOUND_REGION_LEN, rom: "bank00:$B289", note: "声引擎区窗口 $B289..$BD09（区内偏移寻址）" },
+        SegMeta { key: PackKey::SfxTables, kind: "bytes", elem: 1, count: SFX_TABLES_LEN, rom: "bank00:$B211", note: "4B 记录窗（W2/W3/W4+SamusHit/Beep），按绝对地址引用" },
+        SegMeta { key: PackKey::SongHdrs, kind: "song-hdr", elem: 13, count: N_SONGS, rom: "bank00:$BD31", note: "SongHeaders 12×13B（流/偏移另有段）" },
         SegMeta { key: PackKey::BrItems, kind: "item-rec", elem: 6, count: 0, rom: "bank01:$A3D6", note: "SpecItmsTbl_BRINSTAR（Y 链→扁平 6B 记录）" },
         SegMeta { key: PackKey::NoItems, kind: "item-rec", elem: 6, count: 0, rom: "bank02:$A2D9", note: "SpecItmsTbl_NORFAIR" },
         SegMeta { key: PackKey::KrItems, kind: "item-rec", elem: 6, count: 0, rom: "bank04:$A26D", note: "SpecItmsTbl_KRAID" },
@@ -598,6 +602,28 @@ fn read_until_any(prg: &[u8], addr: u16, terms: &[u8], cap: usize) -> Vec<u8> {
         }
     }
     out
+}
+
+/// SFX 4B 记录窗 `$B211..$B289`（120 B）：`$B200` 起 `SFXData` 16 B 之后，三族记录表
+/// （W2 `$B215`起 / W3 `$B211`起 / W4 `$B265`起）+ SamusHit `$B225` / Beep `$B279`。
+/// 记录**按绝对地址引用**（`sfx_data_init` 的 src 参数即 ROM 址），故整窗入包，消费侧
+/// 用 `addr - $B211` 索引（零散切片会让地址↔偏移换算散落各处）。
+const SFX_TABLES_FLAT: usize = 0x3211;
+const SFX_TABLES_LEN: usize = 0x78;
+const SONG_HEADERS_LEN: usize = N_SONGS * 13; // 156
+
+fn extract_sfx_tables(prg: &[u8]) -> Result<Vec<Section>, String> {
+    let body = prg
+        .get(SFX_TABLES_FLAT..SFX_TABLES_FLAT + SFX_TABLES_LEN)
+        .ok_or("SFX 记录窗 $B211..$B289 越界")?;
+    Ok(vec![Section { key: PackKey::SfxTables, data: body.to_vec() }])
+}
+
+fn extract_song_headers(prg: &[u8]) -> Result<Vec<Section>, String> {
+    let body = prg
+        .get(SONG_HEADERS..SONG_HEADERS + SONG_HEADERS_LEN)
+        .ok_or("SongHeaders $BD31（12×13B）越界")?;
+    Ok(vec![Section { key: PackKey::SongHdrs, data: body.to_vec() }])
 }
 
 fn extract_music_streams(prg: &[u8]) -> Result<Vec<Section>, String> {

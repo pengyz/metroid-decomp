@@ -244,7 +244,17 @@ mod tests {
 // 「was this value non-zero at some point」——字节真照建）。
 
 /// SFXData@SamusHitSQ1SQ2（bank 窗 $B225 4B——`c1 89 02 0f`）。
-pub use game_data::sound::sound_data::SAMUS_HIT_SFX_DATA;
+/// SFX 4B 记录取件（ROM `$B211..$B289` 窗内绝对址；`InitSFXData` 的 src 参数
+/// 就是 ROM 址，故这里以地址而非数组索引定位——地址即 asm 锚）。
+fn sfx4(addr: u16) -> &'static [u8; 4] {
+    game_data::assets::sfx_record4(addr)
+        .unwrap_or_else(|| panic!("SFX 记录址 ${addr:04X} 不在 $B211..$B289 窗内"))
+}
+
+/// SamusHit 音效 4B 记录（ROM `$B225`——`InitSFXData` 的 src 址，窗内寻址）。
+fn samus_hit_sfx_data() -> &'static [u8; 4] {
+    crate::sound::sfx4(0xB225)
+}
 
 /// handler 结果（RAM 面=L2 案写集；APU 面=域测钉序）。
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -268,7 +278,7 @@ pub fn samus_hit_sfx_init(rng1: u8, channel_type: u8, current_flags: u8) -> Hand
     ram.push((0x00E2, 0x25)); // SFXDataPtr←$B225
     ram.push((0x00E3, 0xB2));
     for i in 0..4u16 {
-        apu.push((0x4000 + i, SAMUS_HIT_SFX_DATA[i as usize]));
+        apu.push((0x4000 + i, samus_hit_sfx_data()[i as usize]));
     }
     // 随机 SQ1 周期低（APU）
     apu.push((0x4002, rng1 & 0x0F));
@@ -282,7 +292,7 @@ pub fn samus_hit_sfx_init(rng1: u8, channel_type: u8, current_flags: u8) -> Hand
     ram.push((0x00E2, 0x25));
     ram.push((0x00E3, 0xB2));
     for i in 0..4u16 {
-        apu.push((0x4004 + i, SAMUS_HIT_SFX_DATA[i as usize]));
+        apu.push((0x4004 + i, samus_hit_sfx_data()[i as usize]));
     }
     // UpdateContFlags（`and #$00` 死操作照建：结果=CurrentSoundFlags）
     ram.push((0x0688 + channel_type as u16, current_flags));
@@ -355,7 +365,7 @@ pub fn samus_hit_sfx_cont(rng1: u8, channel_type: u8, frame: u8, length: u8)
         ram.push((0x00E2, 0x25));
         ram.push((0x00E3, 0xB2));
         for i in 0..4u16 {
-            apu.push((base + i, SAMUS_HIT_SFX_DATA[i as usize]));
+            apu.push((base + i, samus_hit_sfx_data()[i as usize]));
         }
         if base == 0x4000 {
             apu.push((0x4002, rng1 & 0x0F));
@@ -413,7 +423,10 @@ pub fn music_init_index_add8(index: u8) -> u8 {
 /// 写序面=`find_music_init_index_writes`（FF→逐位inc→Add8 全序）。
 
 /// SFXData@Beep（bank 窗 $B279 4B——`09 7f 30 48`）。
-pub use game_data::sound::sound_data::BEEP_SFX_DATA;
+/// 蜂鸣音效 4B 记录（ROM `$B279`）。
+fn beep_sfx_data() -> &'static [u8; 4] {
+    crate::sound::sfx4(0xB279)
+}
 
 /// BeepSFXInit（$B7D9）语义折叠：守卫（SFXTriContFlags 位7 SamusDie 演奏中⇒不响）+
 /// 3 帧+InitSFXData@Tri 面（length[ct]←3+指针面+4B APU+UpdateContFlags+占用面）。
@@ -434,7 +447,7 @@ pub fn beep_sfx_init(tri_cont_flags: u8, current_flags: u8, channel_type: u8) ->
     ram.push((0x00E2, 0x79)); // SFXData@Beep=$B279
     ram.push((0x00E3, 0xB2));
     for i in 0..4u16 {
-        apu.push((0x4008 + i, BEEP_SFX_DATA[i as usize]));
+        apu.push((0x4008 + i, beep_sfx_data()[i as usize]));
     }
     ram.push((0x0688 + ct, current_flags)); // UpdateContFlags（and #$00 死操作照建）
     ram.push((0x0652 + ct, channel_type));  // 占用面（`sta $0652,x` A=X=ct）
@@ -476,7 +489,7 @@ mod w1_tests {
 /// SongIntro 曲头（bank 窗 $BD8C 13B——SongHeader 宏 5B+4 通道字）。
 /// 宏面：NoteLengthsTbl@7/$00/$F0/$02/$05（NTSC 口径）；通道字=SongIntroSQ1/SQ2/Tri/Noise
 /// （BANK 别名面——实际表址随烘焙深证）。
-pub use game_data::sound::sound_data::SONG_INTRO_HEADER;
+
 
 /// XYMusicInit 路径 W1 面（$BC8B 三连之一 SetVolumeAndDisableSweep $B9E4 + Cont 旗面）：
 /// $0648/$0649←$7F（禁扫）+$0628←duty（X）+$0629←duty（Y 同值——tax/tay 对称）+
@@ -511,18 +524,11 @@ mod w1_music_tests {
         assert!(o.ram_events.contains(&(0x068D, 0x40)));
     }
 
-    /// 曲头烘焙面（13B 形：5B 宏+4 通道字）。
-    #[test]
-    fn song_intro_header_shape() {
-        assert_eq!(SONG_INTRO_HEADER.len(), 13);
-        assert_eq!(&SONG_INTRO_HEADER[0..5], &[0x07, 0x00, 0xF0, 0x02, 0x05]);
-    }
 }
 
 // ---- task-44 W2 高频 handler 族六件（共核 InitSFXData 面+薄壳守卫形）----
 
 /// W2 数据表 6×4B（bank 窗面——0x3xxx 偏移 hexdump 实证）。
-pub use game_data::sound::sound_data::W2_DATA;
 
 /// InitSFXData 共同面（$B452 语义折叠）——**通道映射 ROM 证反转**（七案打回实证：
 /// ct=3⇒指针低 08=$4008 Tri）：0=Noise $400C/1=SQ1 $4000/2=SQ2 $4004/3=Tri $4008。
@@ -560,12 +566,12 @@ pub fn samus_walk_sfx_init(noise_cont: u8, ct: u8, flags: u8) -> HandlerOutcome 
         return HandlerOutcome { ram_events: vec![], apu_events: vec![],
                                 a_out: noise_cont, x_out: 0x11, y_out: 0x22 }; // 守卫出口全透传
     }
-    sfx_data_init(3, &W2_DATA[5], 0xB21D, ct, flags)
+    sfx_data_init(3, sfx4(0xB21D), 0xB21D, ct, flags)
 }
 
 /// EnemyHitSFXInit（$B710）：无守卫+8 帧。
 pub fn enemy_hit_sfx_init(ct: u8, flags: u8) -> HandlerOutcome {
-    sfx_data_init(8, &W2_DATA[4], 0xB255, ct, flags)
+    sfx_data_init(8, sfx4(0xB255), 0xB255, ct, flags)
 }
 
 /// BulletFireSFXInit（$B716）短光束路：ice（位0）/long（位7）分支=W3 变体件（此处
@@ -578,12 +584,12 @@ pub fn bullet_fire_sfx_init(has_beam: u8, sq1_cont: u8, ct: u8, flags: u8)
                                      a_out: sq1_cont, x_out: 0x11, y_out: 0x22 }); // 守卫出口全透传
     }
     if has_beam & 0x80 != 0 { return None; }          // ⇒ HasLongBeamSFXInit（W3）
-    Some(sfx_data_init(3, &W2_DATA[3], 0xB24D, ct, flags))
+    Some(sfx_data_init(3, sfx4(0xB24D), 0xB24D, ct, flags))
 }
 
 /// MissileLaunchSFXInit（$B56E）：0x18 帧+**特例**（SFXNoiseVar0 $0670←$0A 噪声音高索引）。
 pub fn missile_launch_sfx_init(ct: u8, flags: u8) -> HandlerOutcome {
-    let mut o = sfx_data_init(0x18, &W2_DATA[0], 0xB215, ct, flags);
+    let mut o = sfx_data_init(0x18, sfx4(0xB215), 0xB215, ct, flags);
     o.ram_events.push((0x0670, 0x0A)); // 特例（此写在清表后——终值 0x0A）
     o.a_out = 0x0A; // 末 A-setter=`lda #$0A`
     o
@@ -591,12 +597,12 @@ pub fn missile_launch_sfx_init(ct: u8, flags: u8) -> HandlerOutcome {
 
 /// MissilePickupSFXInit（$B6CD）：无守卫+5 帧。
 pub fn missile_pickup_sfx_init(ct: u8, flags: u8) -> HandlerOutcome {
-    sfx_data_init(5, &W2_DATA[2], 0xB241, ct, flags)
+    sfx_data_init(5, sfx4(0xB241), 0xB241, ct, flags)
 }
 
 /// EnergyPickupSFXInit（$B6E7）：无守卫+6 帧。
 pub fn energy_pickup_sfx_init(ct: u8, flags: u8) -> HandlerOutcome {
-    sfx_data_init(6, &W2_DATA[1], 0xB23D, ct, flags)
+    sfx_data_init(6, sfx4(0xB23D), 0xB23D, ct, flags)
 }
 
 #[cfg(test)]
@@ -606,7 +612,7 @@ mod w2_tests {
     /// 共核面（frames/指针/APU 4B/cont/占用）。
     #[test]
     fn sfx_data_init_common_face() {
-        let o = sfx_data_init(3, &W2_DATA[5], 0xB21D, 3, 0x40);
+        let o = sfx_data_init(3, sfx4(0xB21D), 0xB21D, 3, 0x40);
         assert!(o.ram_events.contains(&(0x0663, 3)));   // length[3]
         assert!(o.ram_events.contains(&(0x068B, 0x40))); // cont[3]
         assert!(o.apu_events.contains(&(0x4008, 0x16))); // Tri 基址（映射反转证）
@@ -637,7 +643,6 @@ mod w2_tests {
 // ---- task-44 W3 中频 handler 族六件（一体）----
 
 /// W3 数据表 8×4B（0x3xxx 偏移 hexdump 实证）。
-pub use game_data::sound::sound_data::W3_DATA;
 
 /// MultiSFXInit 共同面（$B5A5——B650 家族同源）：SFXMultiLength($0664)←frames+
 /// LoadSFXData@SQ2（指针 $4004 面+4B APU）+UpdateContFlags+占用（$0653←1/$0654←2）+
@@ -661,36 +666,36 @@ fn multi_sfx_init_face(frames: u8, sq2: &[u8; 4], ct: u8, flags: u8) -> (Vec<(u1
 
 /// SpitFlameSFXInit（$B50F）：无守卫 0x14 帧。
 pub fn spit_flame_sfx_init(ct: u8, flags: u8) -> HandlerOutcome {
-    sfx_data_init(0x14, &W3_DATA[2], 0xB221, ct, flags)
+    sfx_data_init(0x14, sfx4(0xB221), 0xB221, ct, flags)
 }
 
 /// ScrewAttackSFXInit（$B52B）：5 帧+**特例**（SFXNoiseVar0 $0670←data[2]=0x00 清索引）。
 pub fn screw_attack_sfx_init(ct: u8, flags: u8) -> HandlerOutcome {
-    let mut o = sfx_data_init(5, &W3_DATA[0], 0xB211, ct, flags);
-    o.ram_events.push((0x0670, W3_DATA[0][2])); // data[2] 清索引（注「#$00」）
-    o.a_out = W3_DATA[0][2]; // 末 A-setter=`lda data+2`
+    let mut o = sfx_data_init(5, sfx4(0xB211), 0xB211, ct, flags);
+    o.ram_events.push((0x0670, sfx4(0xB211)[2])); // data[2] 清索引（注「#$00」）
+    o.a_out = sfx4(0xB211)[2]; // 末 A-setter=`lda data+2`
     o
 }
 
 /// BombExplodeSFXInit（$B583）：无守卫 0x30 帧。
 pub fn bomb_explode_sfx_init(ct: u8, flags: u8) -> HandlerOutcome {
-    sfx_data_init(0x30, &W3_DATA[1], 0xB219, ct, flags)
+    sfx_data_init(0x30, sfx4(0xB219), 0xB219, ct, flags)
 }
 
 /// BossHitSFXInit（$B5EC）：双通道族（SQ1 装载+MultiSFXInit——A=SQ1 数据[3] 末字节）。
 pub fn boss_hit_sfx_init(ct: u8, flags: u8) -> HandlerOutcome {
-    let o = sfx_data_init(0, &W3_DATA[4], 0xB22D, ct, flags); // SQ1 装载面（无 length 写——LoadSFXData 非 InitSFXData）
+    let o = sfx_data_init(0, sfx4(0xB22D), 0xB22D, ct, flags); // SQ1 装载面（无 length 写——LoadSFXData 非 InitSFXData）
     // 修正形：LoadSFXData@SQ1=指针+4B（无 length/清表）——此处重写
     let mut ram = vec![
         (0x00E0, 0x00), (0x00E1, 0x40), (0x00E2, 0x2D), (0x00E3, 0xB2),
     ];
     let mut apu = Vec::new();
     for i in 0..4u16 {
-        apu.push((0x4000 + i, W3_DATA[4][i as usize]));
+        apu.push((0x4000 + i, sfx4(0xB22D)[i as usize]));
     }
     let frames = 4u8; // **LoadSFXData 尾 A=环计数**（`tya/cmp #$04` 出口 A=4——非 data[3]！
                       // golden≠ROM 打回正）
-    let (ram2, apu2) = multi_sfx_init_face(frames, &W3_DATA[3], ct, flags);
+    let (ram2, apu2) = multi_sfx_init_face(frames, sfx4(0xB229), ct, flags);
     ram.extend(ram2);
     apu.extend(apu2);
     HandlerOutcome { ram_events: ram, apu_events: apu, a_out: 0, x_out: ct, y_out: 4 } // A=清表尾
@@ -703,9 +708,9 @@ pub fn incorrect_password_sfx_init(ct: u8, flags: u8) -> HandlerOutcome {
     ];
     let mut apu = Vec::new();
     for i in 0..4u16 {
-        apu.push((0x4000 + i, W3_DATA[5][i as usize]));
+        apu.push((0x4000 + i, sfx4(0xB231)[i as usize]));
     }
-    let (ram2, apu2) = multi_sfx_init_face(0x20, &W3_DATA[6], ct, flags);
+    let (ram2, apu2) = multi_sfx_init_face(0x20, sfx4(0xB235), ct, flags);
     ram.extend(ram2);
     apu.extend(apu2);
     // 注：SQ2 数据址各 handler 异（$B229/$B235）——multi 面 E2/E3 应随调用方；
@@ -720,7 +725,7 @@ pub fn samus_jump_sfx_init(music_cont: u8, ct: u8, flags: u8) -> HandlerOutcome 
         return HandlerOutcome { ram_events: vec![], apu_events: vec![],
                                 a_out: music_cont, x_out: 0x11, y_out: 0x22 };
     }
-    sfx_data_init(0x0C, &W3_DATA[7], 0xB251, ct, flags)
+    sfx_data_init(0x0C, sfx4(0xB251), 0xB251, ct, flags)
 }
 
 #[cfg(test)]
@@ -760,7 +765,7 @@ pub fn check_music_flags(music_cont: u8, current_flags: u8) -> bool {
 }
 
 /// InitializeMusic（$BF19）语义折叠：MusicContFlags←CurrentSoundFlags+**13B 曲头装载**
-/// （SongHeaderEndInitIndex→NoteLengthTblOffset($062B) 起 13B——SONG_INTRO_HEADER 面）+
+/// （SongHeaderEndInitIndex→NoteLengthTblOffset($062B) 起 13B——曲头行面）+
 /// InstrDelay($0640-$0643)←1×4+InstrID($0638-$063B)←0×4。
 /// 注：SongHeaderOffsetTable[MusicInitIndex]→曲头源址（表烘焙面）。
 pub fn initialize_music(current_flags: u8, header: &[u8; 13]) -> Vec<(u16, u8)> {
@@ -813,7 +818,9 @@ mod w1_residual_tests {
     /// InitializeMusic 深径（13B 头载+双初始化面）。
     #[test]
     fn initialize_music_deep_face() {
-        let ram = initialize_music(0x40, &SONG_INTRO_HEADER);
+        // 曲头 13B 形（5B 宏 + 4 通道字）：手写 fixture，非 ROM 表行（表行见 assets::song_headers）。
+        let header: [u8; 13] = [0x07, 0x00, 0xF0, 0x02, 0x05, 0x00, 0x01, 0x00, 0x03, 0x00, 0x05, 0x00, 0x07];
+        let ram = initialize_music(0x40, &header);
         assert!(ram.contains(&(0x068D, 0x40)));
         assert!(ram.contains(&(0x062B, 0x07))); // 头首字节
         assert!(ram.contains(&(0x0637, 0x07))); // 头末字节（13B 末=通道字末）
@@ -1111,7 +1118,6 @@ mod w1_tail_tests {
 // ---- task-44 W4 尾区 handler 族（Tri 周期面共形）----
 
 /// W4 数据表 7×4B（0x3xxx hexdump 实证）。
-pub use game_data::sound::sound_data::W4_DATA;
 
 /// Tri 周期面共形（$0610-$0613 块）：PeriodLow/High+ChangeLow/High（滑音 delta）。
 fn tri_period_face(period_lo: u8, period_hi: u8, change_lo: u8, change_hi: u8)
@@ -1122,21 +1128,21 @@ fn tri_period_face(period_lo: u8, period_hi: u8, change_lo: u8, change_hi: u8)
 
 /// DoorOpenCloseSFXInit（$B7AC）：周期面（data[2]/data[3]&7）+滑音 $000F+0x1F 帧。
 pub fn door_open_close_sfx_init(ct: u8, flags: u8) -> HandlerOutcome {
-    let mut o = sfx_data_init(0x1F, &W4_DATA[6], 0xB285, ct, flags);
+    let mut o = sfx_data_init(0x1F, sfx4(0xB285), 0xB285, ct, flags);
     o.ram_events.extend(tri_period_face(0x30, 0xB2 & 7, 0x0F, 0x00));
     o
 }
 
 /// BigEnemyHitSFXInit（$B7EF）：滑音 $0012+周期面+0x0A 帧。
 pub fn big_enemy_hit_sfx_init(ct: u8, flags: u8) -> HandlerOutcome {
-    let mut o = sfx_data_init(0x0A, &W4_DATA[4], 0xB27D, ct, flags);
+    let mut o = sfx_data_init(0x0A, sfx4(0xB27D), 0xB27D, ct, flags);
     o.ram_events.extend(tri_period_face(0x42, 0x18 & 7, 0x12, 0x00));
     o
 }
 
 /// SamusToBallSFXInit（$B834）：8 帧+**Divisor←5**（1/5 分频）+周期面。
 pub fn samus_to_ball_sfx_init(ct: u8, flags: u8) -> HandlerOutcome {
-    let mut o = sfx_data_init(8, &W4_DATA[1], 0xB26D, ct, flags);
+    let mut o = sfx_data_init(8, sfx4(0xB26D), 0xB26D, ct, flags);
     o.ram_events.push((0x0616, 5)); // SFXTriPeriodDivisor
     // 注：SamusToBall **无滑音面写**（asm 只设 Period 两项——golden≠core 打回正）
     o.ram_events.push((0x0610, 0xDD));
@@ -1147,13 +1153,13 @@ pub fn samus_to_ball_sfx_init(ct: u8, flags: u8) -> HandlerOutcome {
 
 /// BombLaunchSFXInit（$B878）：4 帧纯装载（无周期面）。
 pub fn bomb_launch_sfx_init(ct: u8, flags: u8) -> HandlerOutcome {
-    sfx_data_init(4, &W4_DATA[0], 0xB265, ct, flags)
+    sfx_data_init(4, sfx4(0xB265), 0xB265, ct, flags)
 }
 
 /// MetroidHitSFXInit（$B8A7）：3 帧+**RndTriPeriods RNG 面**（TRI_LO←rng|$6C/
 /// TRI_HI←(rng&1)|$F8——APU 随机周期）。
 pub fn metroid_hit_sfx_init(rng1: u8, ct: u8, flags: u8) -> HandlerOutcome {
-    let mut o = sfx_data_init(3, &W4_DATA[2], 0xB271, ct, flags);
+    let mut o = sfx_data_init(3, sfx4(0xB271), 0xB271, ct, flags);
     o.apu_events.push((0x4008, rng1 | 0x6C));
     o.apu_events.push((0x400A, (rng1 & 1) | 0xF8));
     o.a_out = (rng1 & 1) | 0xF8;
@@ -1163,7 +1169,7 @@ pub fn metroid_hit_sfx_init(rng1: u8, ct: u8, flags: u8) -> HandlerOutcome {
 /// SamusDieSFXInit（$B8D2）：**InitializeSoundAddresses 全清前置**（残面注记——
 /// 清面多址组合随件）+0x0E 帧+Divisor←$15+周期面（PeriodHigh←0）。
 pub fn samus_die_sfx_init(ct: u8, flags: u8) -> HandlerOutcome {
-    let mut o = sfx_data_init(0x0E, &W4_DATA[3], 0xB275, ct, flags);
+    let mut o = sfx_data_init(0x0E, sfx4(0xB275), 0xB275, ct, flags);
     o.ram_events.push((0x0616, 0x15));
     o.ram_events.extend(tri_period_face(0x40, 0, 0, 0));
     o
@@ -1171,7 +1177,7 @@ pub fn samus_die_sfx_init(ct: u8, flags: u8) -> HandlerOutcome {
 
 /// StatueRaiseSFXInit（$B921）：周期面+滑音 $000B+6 帧。
 pub fn statue_raise_sfx_init(ct: u8, flags: u8) -> HandlerOutcome {
-    let mut o = sfx_data_init(6, &W4_DATA[5], 0xB281, ct, flags);
+    let mut o = sfx_data_init(6, sfx4(0xB281), 0xB281, ct, flags);
     o.ram_events.extend(tri_period_face(0x11, 0x09 & 7, 0x0B, 0x00));
     o
 }
@@ -1200,10 +1206,8 @@ mod w4_tests {
 // ---- task-44 W4 曲族：MusicNNInit 双形 + 曲头烘焙 ----
 
 /// SongHeaderOffsetTable（$BBFA 12B——1 字节偏移×MusicInitIndex 索引）。
-pub use game_data::sound::sound_data::SONG_HEADER_OFFSET_TBL;
 
 /// SongHeaders（$BD31 156B=12 曲头×13B——宏 5B+4 通道字；0x3D31 hexdump 实证）。
-pub use game_data::sound::sound_data::SONG_HEADERS;
 
 /// MusicNNInit 双形语义折叠（$BC89-$BCB0）：
 /// 形A（Music00/02/03/04）：A=duty 同值→tax/tay→LBC8D；
@@ -1219,7 +1223,7 @@ pub fn music_nn_init(sq1_duty: u8, sq2_duty: u8) -> (Vec<(u16, u8)>, u8, u8, u8)
     // 此处 MusicContFlags 面+帧入口）
     // 注：完整 InitializeMusic（13B 头载+双初始化）由 initialize_music 组合；
     // 本件=Init 族的 duty 面+组合缝
-    let mut e2 = crate::sound::initialize_music(0, &SONG_HEADERS[0..13].try_into().unwrap());
+    let mut e2 = crate::sound::initialize_music(0, &game_data::assets::song_headers()[0..13].try_into().unwrap());
     ram.append(&mut e2);
     ram.push((0x064B, 0));
     (ram, 0, sq1_duty, sq2_duty)
@@ -1242,9 +1246,9 @@ mod music_family_tests {
         assert!(ram.contains(&(0x0628, 0x92)));
         assert!(ram.contains(&(0x0629, 0x96)));
         // 曲头烘焙（12×13B+偏移表 12B）
-        assert_eq!(SONG_HEADERS.len(), 156);
-        assert_eq!(SONG_HEADER_OFFSET_TBL.len(), 12);
-        assert_eq!(&SONG_HEADERS[0..5], &[0x0B, 0xFF, 0xF5, 0x00, 0x00]);
+        assert_eq!(game_data::assets::song_headers().len(), 156);
+        assert_eq!(game_data::assets::song_header_offsets().len(), 12);
+        assert_eq!(&game_data::assets::song_headers()[0..5], &[0x0B, 0xFF, 0xF5, 0x00, 0x00]);
     }
 }
 

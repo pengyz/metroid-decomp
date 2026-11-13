@@ -541,6 +541,27 @@ mod palette_tests {
         }
     }
 
+    /// 声表：SFX 4B 记录窗（`$B211..$B289`，120 B，按绝对址引用）+
+    /// 曲头表（`$BD31`，12×13B）与偏移表（`$BBFA`，落在 `sound.region` 窗内）。
+    #[test]
+    fn sound_tables_match_rom_anchors() {
+        assert_eq!(sfx_tables().len(), 0x78, "$B289-$B211");
+        assert_eq!(sfx_record4(0xB211).unwrap(), &[0x35, 0x7F, 0x00, 0xB0], "W3[0] ScrewAttack");
+        assert_eq!(sfx_record4(0xB225).unwrap(), &[0xC1, 0x89, 0x02, 0x0F], "SamusHit");
+        assert_eq!(sfx_record4(0xB279).unwrap(), &[0x09, 0x7F, 0x30, 0x48], "Beep");
+        assert_eq!(sfx_record4(0xB285).unwrap(), &[0x7F, 0x7F, 0x30, 0xB2], "W4[6]");
+        assert!(sfx_record4(0xB20F).is_none(), "窗外低址（$B200 SFXData 头）");
+        assert!(sfx_record4(0xB286).is_none(), "窗外高址（跨窗尾）");
+        assert_eq!(song_headers().len(), 12 * 13);
+        assert_eq!(&song_headers()[0..5], &[0x0B, 0xFF, 0xF5, 0x00, 0x00], "表首行 ROM $BD31");
+        assert_eq!(song_header_offsets().len(), 12);
+        assert_eq!(
+            &song_header_offsets()[0..6],
+            &[0x41, 0x8F, 0x34, 0x27, 0x1A, 0x0D],
+            "SongHeaderOffsetTable $BBFA"
+        );
+    }
+
     /// 表长事实（asm 锚）：bank0 标题 19 项 / bank1-5 区域 28 项 = 159 项；
     /// 包内 `pal.ptrs` 必须恰为 `2*159` 字节（不自洽即迁移出错）。
     #[test]
@@ -607,6 +628,40 @@ pub fn sprite_data() -> &'static [u8] {
 /// 那些各有自己的段与访问器。
 pub fn sound_region() -> &'static [u8] {
     pack::get(PackKey::SndRegion)
+}
+
+/// SFX 4B 记录窗基址（`$B211`）；窗口内记录以**绝对 ROM 址**引用。
+pub const SFX_TABLES_ADDR: u16 = 0xB211;
+
+/// 声引擎区窗口基址（`$B289`）；区内寻址一律 `addr - SOUND_REGION_ADDR`。
+pub const SOUND_REGION_ADDR: u16 = 0xB289;
+
+/// SFX 4B 记录窗（`$B211..$B289`，120 B）。
+pub fn sfx_tables() -> &'static [u8] {
+    pack::get(PackKey::SfxTables)
+}
+
+/// 窗内 4B 记录（`addr` 为 ROM 绝对址；越界返 `None`——调用点都是表内常量址）。
+pub fn sfx_record(addr: u16) -> Option<&'static [u8]> {
+    let off = addr.checked_sub(SFX_TABLES_ADDR)? as usize;
+    sfx_tables().get(off..off + 4)
+}
+
+/// 窗内 4B 记录（定长数组形——`InitSFXData`/`LoadSFXData` 的 src 参数就是这个形状）。
+pub fn sfx_record4(addr: u16) -> Option<&'static [u8; 4]> {
+    let off = addr.checked_sub(SFX_TABLES_ADDR)? as usize;
+    sfx_tables().get(off..off + 4)?.try_into().ok()
+}
+
+/// `SongHeaders ; $BD31` 12×13B（曲头表本体）。
+pub fn song_headers() -> &'static [u8] {
+    pack::get(PackKey::SongHdrs)
+}
+
+/// `SongHeaderOffsetTable ; $BBFA` 12B（`MusicInitIndex` → 曲头在表内偏移）。
+pub fn song_header_offsets() -> &'static [u8] {
+    let off = (0xBBFA - SOUND_REGION_ADDR) as usize;
+    sound_region().get(off..off + 12).unwrap_or(&[])
 }
 
 /// 三表在 blob 内的偏移（`$8572` 基）：anim 索引 / 帧指针 / 放置指针。

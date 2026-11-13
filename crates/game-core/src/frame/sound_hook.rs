@@ -216,10 +216,10 @@ pub fn sound_dispatch_chain(mem: &mut FrameMemory, flag_addr: u16, block_win: u1
                 // InitializeMusic（$BF19）：MusicContFlags←CurrentSoundFlags + 13B 曲头
                 // （SongHeaderOffsetTable[MusicInitIndex]——$065E=曲号，0x0B=Intro）
                 let idx = mem.read_ram(0x065E) as usize;
-                let off = *sound::SONG_HEADER_OFFSET_TBL.get(idx).unwrap_or(&0) as usize;
+                let off = *game_data::assets::song_header_offsets().get(idx).unwrap_or(&0) as usize;
                 let mut header = [0u8; 13];
-                if off + 13 <= sound::SONG_HEADERS.len() {
-                    header.copy_from_slice(&sound::SONG_HEADERS[off..off + 13]);
+                if off + 13 <= game_data::assets::song_headers().len() {
+                    header.copy_from_slice(&game_data::assets::song_headers()[off..off + 13]);
                 }
                 ram.extend(sound::initialize_music(cur, &header));
                 // 【LBC8D 尾（r21 终审——r23 实验确认供 1 更新：撤后声面 +1→+2）】

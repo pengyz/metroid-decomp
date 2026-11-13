@@ -40,12 +40,6 @@
       "note": "RUN_ACCEL_TBL(256) 等运动常量表。**旧口径 0 命中**（全十进制）；待迁。"
     },
     {
-      "file": "crates/game-data/src/sound/sound_data.rs",
-      "kind": "data",
-      "max": 249,
-      "note": "SONG_HEADERS(156)/SFX_REG_INIT_TBL 等音乐表。**旧口径 249 条 < 512 隐身**；待迁。"
-    },
-    {
       "file": "crates/game-data/src/render/render_data.rs",
       "kind": "data",
       "max": 200,
