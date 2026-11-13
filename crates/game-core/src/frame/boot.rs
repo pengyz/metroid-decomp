@@ -212,26 +212,6 @@ pub(crate) fn set_ppu_mirror(mem: &mut FrameMemory, a_in: u8) {
 /// （注：「Exit if zero(no bank switch issued). else Y contains bank#+1」）→
 /// :1305 `CheckBankSwitch_OK: ; 07:C4E8`（「clear BankSwitchPending…dey sty CurrentBank」）
 /// → `BankSwitch: ; 07:C4EF`（「tya sta Temp00_Bank / lda SwitchUpperBits and #$18」）→
-/// :1318 族 `MMCWritePrgBank: ; 07:C4FA`（「Write bit 0..4 of ROM bank #」×5 串行）
-/// → :1351 `GoBankInit: ; 07:C510`（「asl tay / jmp (Temp0A_BankInitPtr)」）+ 表 :1363
-/// LoadGFX（**asm 内容锚** `LoadGFX: ; 07:C7AB`/CopyGFXBlock $C7D5——r25 端口）：
-/// GFXInfo 7B 条目（bank/src/dest/size）→PPUDATA 走带（rs.chr 面）；PPU 增量=1 先行。
-pub fn load_gfx(mem: &mut FrameMemory, id: usize) {
-    use game_data::title::gfx_data as gd;
-    let e = |i: usize| gd::GFX_INFO[id * 7 + i];
-    let (off, size) = gd::GFX_OFFS[id];
-    let dest = e(3) as u16 | ((e(4) as u16) << 8);
-    // PPU 增量=1（asm `and #~PPUCTRL_INCR_DOWN`——$FF bit2 清）
-    let ff = mem.read_ram(0x00FF) & !0x04;
-    mem.write_ram(0x00FF, ff);
-    mem.write_io(0x2000, ff);
-    // CopyGFXBlock：$2006 dest→$2007 走带
-    mem.write_io(0x2006, (dest >> 8) as u8);
-    mem.write_io(0x2006, dest as u8);
-    for k in 0..size as usize {
-        mem.write_io(0x2007, gd::GFX_DATA[off as usize + k]);
-    }
-}
 
 /// `BankInitTable: ; 07:C51F`（.word InitBank0..5/ExitSub×3）。
 /// ROM 抽查佐证：`C4DE: A4 24 F0 2D 20 E8 C4 4C 10 C5`。
@@ -300,8 +280,12 @@ fn init_bank1(mem: &mut FrameMemory) {
     mem.iter_wait();
     // InitBrinstarGFX（$C604）：BrinBG1/CREBG1/CREBG2/BrinstarSprites/Solid_0FC0/
     // Solid_1FC0（GFXInfo 项 3/4/5/6/25/22——bake_gfx 29 项自描述）
-    for id in [3usize, 4, 5, 6, 25, 22] {
-        load_gfx(mem, id);
+    // 【止血件3 补件】统一到 `frame::gfx::load_gfx`（asm `LoadGFX: ; 07:C7AB` 全形：
+    // 描述子倒序拷 $00-$06 → BankSwitch 进切 → $FF 清 INCR_DOWN → CopyGFXBlock →
+    // $05/$06 归零 → 回切 CurrentBank）。旧形是本文件内的简版副本（缺 BankSwitch
+    // 双切/描述子拷贝/$05/$06 归零）——同一 asm 例程两份实现且语义不同（F 类）。
+    for id in [3u8, 4, 5, 6, 25, 22] {
+        super::gfx::load_gfx(mem, id);
     }
     mem.iter_bogged(2);
 }
@@ -602,7 +586,7 @@ mod r25_gfx_probe {
     #[test]
     fn crebg2_covers_1f00() {
         let mut m = crate::frame::FrameMemory::default();
-        load_gfx(&mut m, 5);
+        crate::frame::gfx::load_gfx(&mut m, 5);
         let expect = game_data::title::gfx_data::GFX_DATA[game_data::title::gfx_data::GFX_OFFS[5].0 as usize + 0x700];
         assert_eq!(m.render.chr[0x1F00], expect, "CREBG2 tile $FF 面");
     }
@@ -616,7 +600,7 @@ mod r25_spritegfx_probe {
     #[test]
     fn samus_gfx_tile09() {
         let mut m = crate::frame::FrameMemory::default();
-        load_gfx(&mut m, 0);
+        crate::frame::gfx::load_gfx(&mut m, 0);
         let expect = game_data::title::gfx_data::GFX_DATA[game_data::title::gfx_data::GFX_OFFS[0].0 as usize + 0x90];
         assert_eq!(m.render.chr[0x090], expect, "SamusGFX tile 09 首字节");
     }
