@@ -144,6 +144,29 @@ fn cmd_verify(a: &Args) -> Result<(), String> {
             }
         }
     }
+    // meta 描述段是提取侧常量（`extract.rs::seg_meta`）的派生投影，不进 `sections()`
+    // 的重算面——但它一旦漂移，`list`/审计读到的是旧描述（表长、elem 与真实段不符）。
+    // 故在此按当前代码重算并逐字节比对：改提取器而忘重生成包 ⇒ 当场红。
+    match pack.get(PackKey::Meta) {
+        None => {
+            println!("  {:<10} 缺段（meta 描述段）", "meta.json");
+            bad += 1;
+        }
+        Some(got) => {
+            let want = build_meta_json(&secs, rc, rom.len() as u32);
+            if got == &want[..] {
+                println!("  {:<10} OK  {:>7} B  crc32={:08X}", "meta.json", got.len(), crc32(got));
+            } else {
+                println!(
+                    "  {:<10} 不一致：包 {} B / 代码重算 {} B（提取侧常量已改而包未重生成）",
+                    "meta.json",
+                    got.len(),
+                    want.len()
+                );
+                bad += 1;
+            }
+        }
+    }
     // 包里多出来的段只提示（代码可能还不认识）
     for (id, _, len) in pack.entries() {
         if PackKey::from_id(*id).is_none() {
