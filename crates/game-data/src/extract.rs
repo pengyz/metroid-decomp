@@ -526,4 +526,45 @@ mod tests {
         assert_eq!(p.get(PackKey::GfxInfo), Some(&[1u8, 2, 3][..]));
         assert_eq!(p.get(PackKey::GfxData).map(|s| s.len()), Some(500));
     }
+
+    /// 自界含终止符：`$FF` 是块尾的一部分（房流/结构体的长度口径）。
+    #[test]
+    fn read_until_ff_includes_terminator() {
+        let prg = [0u8, 1, 2, 0xFF, 3];
+        assert_eq!(read_until_ff(&prg, 0).unwrap(), vec![0, 1, 2, 0xFF]);
+        // 无终止符 = 硬错（不得静默返回整段——缺证据 fail-loud）
+        assert!(read_until_ff(&[1u8, 2, 3], 0).is_err());
+        // 起点越界同错
+        assert!(read_until_ff(&[1u8], 5).is_err());
+    }
+
+    /// 变长块提取：指针表 → 拼接体 + `(off,len)` 索引，两者自洽可解码。
+    #[test]
+    fn extract_streams_builds_body_and_index() {
+        // 合成窗口：$8000 起两指针（$8004/$8007），数据 $8004: 01 02 FF；$8007: 03 FF
+        let mut win = vec![0x04, 0x80, 0x07, 0x80];
+        win.extend_from_slice(&[0x01, 0x02, 0xFF]);
+        win.extend_from_slice(&[0x03, 0xFF]);
+        // bank0 的切窗口起点就是 $8000（bank7 是 $C000 固定窗口，不能拿 $8000 当起点）
+        let (body, offs) = extract_streams(&win, 0, 0x8000, 2).expect("两指针应可提取");
+        assert_eq!(body, vec![0x01, 0x02, 0xFF, 0x03, 0xFF]);
+        assert_eq!(offs.len(), 2 * 8);
+        let o0 = u32::from_le_bytes(offs[0..4].try_into().unwrap());
+        let l0 = u32::from_le_bytes(offs[4..8].try_into().unwrap());
+        let o1 = u32::from_le_bytes(offs[8..12].try_into().unwrap());
+        let l1 = u32::from_le_bytes(offs[12..16].try_into().unwrap());
+        assert_eq!((o0, l0, o1, l1), (0, 3, 3, 2));
+    }
+
+    /// 重复 key 必须在解析侧被拒（段名唯一是包格式不变式）。
+    #[test]
+    fn duplicate_section_keys_are_rejected() {
+        let secs = vec![
+            Section { key: PackKey::Meta, data: b"{}".to_vec() },
+            Section { key: PackKey::Meta, data: b"{}".to_vec() },
+        ];
+        let bytes = write_pack(&secs, 1, 1);
+        let leaked: &'static [u8] = Box::leak(bytes.into_boxed_slice());
+        assert!(crate::pack::PackView::parse(leaked, None).is_err(), "重复段应被拒");
+    }
 }
