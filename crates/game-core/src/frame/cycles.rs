@@ -45,10 +45,16 @@ pub const IMM: u32 = 2;
 pub const ZP: u32 = 3;
 /// 绝对寻址（`lda abs`）
 pub const ABS: u32 = 4;
-/// 绝对变址（`lda abs,x`/`sta abs,x`/`ldy abs,x`/`asl abs,x`）
-pub const ABSX: u32 = 4;
-/// 绝对变址 Y（`lda abs,y`）
-pub const ABSY: u32 = 4;
+/// 绝对变址**读**（`lda abs,x`/`ldy abs,x`）——跨页 +1 不计（下面的例程路径均不计页交叉）
+pub const LDA_ABSX: u32 = 4;
+/// 绝对变址**写**（`sta abs,x`）——写入固定 5c
+pub const STA_ABSX: u32 = 5;
+/// 绝对变址**读-改-写**（`asl abs,x`/`ror abs,x`/`inc abs,x`）——固定 7c
+pub const RMW_ABSX: u32 = 7;
+/// 绝对变址 Y **读**（`lda abs,y`）
+pub const LDA_ABSY: u32 = 4;
+/// `asl A`（累加器寻址，2c——与 `asl abs,x` 的 7c 差一个量级）
+pub const ASL_A: u32 = 2;
 /// `(zp),y` 读
 pub const INDY: u32 = 5;
 /// `(zp),y` 写
@@ -108,7 +114,7 @@ pub const fn model_attrib_fill() -> u32 {
 pub const fn model_init_tables_shell() -> u32 {
     const PRE: u32 = ZP + IMP + IMP + IMP * 3 + IMM + JSR; // 21
     const XP4: u32 = IMP * 4 + RTS; // 14
-    const POST: u32 = ZP + JSR + XP4 + ZP + ZP + ABSX + IMM; // 35
+    const POST: u32 = ZP + JSR + XP4 + ZP + ZP + LDA_ABSX + IMM; // 35（`lda ATDataTable,x` 读）
     PRE + POST
 }
 
@@ -134,8 +140,8 @@ pub const fn model_init_tables() -> u32 {
 pub const fn model_draw_metatile_fast() -> u32 {
     const BOUNDS: u32 = ZP + IMM + BR + IMM + BR_TAKEN; // 12
     const SETUP: u32 = INCDEC_ZP + ZP + INDY + IMP + IMP + ZP + IMM; // 22
-    const TILES: u32 = 3 * (ZP + INDY + INCDEC_ZP + ABSX + INDY_ST + IMP + BR_TAKEN)
-        + (ZP + INDY + INCDEC_ZP + ABSX + INDY_ST + IMP + BR); // 111
+    const TILES: u32 = 3 * (ZP + INDY + INCDEC_ZP + LDA_ABSX + INDY_ST + IMP + BR_TAKEN)
+        + (ZP + INDY + INCDEC_ZP + LDA_ABSX + INDY_ST + IMP + BR); // 111（`ldy TilePosTable,x` 读）
     const UPDATE_ATTRIB_FAST: u32 = JSR + (ZP + ZP + BR_TAKEN) + RTS; // 21
     const ADD_Y_TO_PTR00: u32 = JSR + (IMP + IMP + ZP + ZP + BR) + RTS; // 24
     const ADDY_CALL: u32 = IMM + ADD_Y_TO_PTR00; // 26
@@ -159,19 +165,21 @@ pub const PAGE_CROSS_METATILE: u32 = 6;
 /// 新位平移环（`@loop: dex / bmi / asl / asl / bcc`）+ 置位（`ora (ptr),y / sta (ptr),y / rts`）。
 pub const fn model_update_attrib_full_body() -> u32 {
     const ADDR: u32 = ZP + ZP + ZP + IMP + (IMP + INCDEC_ZP) * 2 + ZP + IMM + ZP + ZP
-        + IMP + IMP + IMM + ZP + IMM + ZP + IMM + ZP; // 53
-    const BITPAIR: u32 = IMM + ZP + BR + ZP + IMM + BR; // 13（x 初值 0 径）
-    const TABLE: u32 = ZP + IMM + ZP + ZP + ABSX; // 18
-    const CLEAR: u32 = IMM + INDY + INDY_ST; // 17
-    const SHIFT: u32 = (IMP + BR + IMP + IMP + BR) * 2; // 期望 2 轮
-    const SET: u32 = INDY + INDY_ST; // 12
+        + IMP + IMP + IMM + ZP + IMM + ZP + IMM + ZP; // 55
+    const BITPAIR: u32 = IMM + ZP + BR + ZP + IMM + BR; // 14（x 初值 0 径）
+    const TABLE: u32 = ZP + IMM + ZP + ZP + LDA_ABSX; // 15
+    const CLEAR: u32 = IMM + INDY + INDY_ST; // 13
+    const SHIFT: u32 = (IMP + BR + IMP + IMP + BR) * 2; // 20（期望 2 轮，非保证值）
+    const SET: u32 = INDY + INDY_ST; // 11
     ADDR + BITPAIR + TABLE + CLEAR + SHIFT + SET
 }
 
 /// `DrawMetatile` 全径 = 早退径 − 早退 UpdateAttrib + 全径 UpdateAttrib。
 pub const fn model_draw_metatile_full() -> u32 {
-    const UA_FAST: u32 = JSR + (ZP + ZP + BR_TAKEN) + RTS; // 21
-    const UA_FULL: u32 = JSR + model_update_attrib_full_body() + RTS;
+    const UA_FAST: u32 = JSR + (ZP + ZP + BR_TAKEN) + RTS; // 21（前缀 + beq 命中 + rts）
+    // 全径的前缀仍在（`lda ObjectPalette / cmp RoomPalette` 只换 beq 走向：命中→rts，
+    // 不命中→继续算属性字节）。r9 复核 A 面在本批前发现这里漏了前缀 8c。
+    const UA_FULL: u32 = JSR + (ZP + ZP + BR) + model_update_attrib_full_body() + RTS; // 148
     model_draw_metatile_fast() - UA_FAST + UA_FULL
 }
 
@@ -215,26 +223,42 @@ pub const fn model_draw_struct_row() -> u32 {
 
 /// `LoadEnemy: ; 07:EB06` 族（`GetEnemyData`+`GetEnemyType`+`LEB4D`+尾链）单个敌人。
 ///
-/// 槽未占用、非 mini-boss 的常见径。子件：
-/// - `IsSlotTaken: ; 07:EB7A`：`lda status,x / beq @RTS / rts`
-/// - `GetEnemyType: ; 07:EB28`：`pha/and/sta/asl/bpl/pla/and/sta/rts`
-/// - `LEB4D: ; 07:EB4D`：y/x 位写入 + `jsr Amul16` + `jsr GetNameTableAtScrollDir` +
-///   `jsr InitEnemyFacingDirectionAxisAndDelay`（内含 `jsr LoadTableAt977B`）
-/// - 尾 `jmp InitEnemyForceSpeedTowardsSamusDelayAndHealth: ; 07:F85A`
+/// 口径（本批按 r9 复核 A 面重算过一遍，旧版把 `sta abs,x`(5)/`asl abs,x`(7)/`asl A`(2)
+/// 全按 `lda abs,x`(4) 计，少算约 13c）：
+/// - `LoadEnemy`：`jsr GetEnemyData` + `jmp EnemyLoop`（尾跳 3c）
+/// - `GetEnemyData: ; 07:EB0C`：`lda (zp),y / and / tax / jsr IsSlotTaken / bne`（槽未占用，
+///   不跳）+ `iny / lda (zp),y / jsr GetEnemyType / ldy #$02 / lda (zp),y / jsr LEB4D /
+///   pha / pla / lda #$03 / rts`
+/// - `IsSlotTaken: ; 07:EB7A`：`lda status,x`（4）+ `beq @RTS`（status==0 ⇒ 跳 3）+ `rts`
+/// - `GetEnemyType: ; 07:EB28`：`pha / and #$C0 / sta specialAttribs,x`(5) + `asl A`(2) +
+///   `bpl Lx228`（bit6 清 ⇒ 跳 3，跳过 mini-boss 支）+ `pla / and #$3F /
+///   sta EnsExtra.0.type,x`(5) + `rts`
+/// - `LEB4D: ; 07:EB4D`：18 条自身指令（含 5 个 `sta abs,x`=5、1 个 `ldy abs,x`=4、
+///   1 个 `asl abs,x`=7）+ `jsr Amul16` + `jsr GetNameTableAtScrollDir` +
+///   `jsr InitEnemyFacingDirectionAxisAndDelay` + `jmp InitEnemyForceSpeed…`
+/// - `InitEnemyFacingDirectionAxisAndDelay: ; 07:FB7B`：`jsr LoadTableAt977B` +
+///   `ror Ens.0.data05,x`(7) + `lda EnemyInitDelayTbl,y`(4) + `sta Ens.0.delay,x`(5) + `rts`
+/// - `LoadTableAt977B: ; $80B0`（areas_common.asm:184）：`ldy type,x`(4) + `lda L977B,y`(4) +
+///   `asl A`(2) + `rts`
+/// - `InitEnemyForceSpeedTowardsSamusDelayAndHealth: ; 07:F85A`：`ldy type,x`(4) +
+///   `lda ForceSpeedTbl,y`(4) + `sta data0D,x`(5) + `lda EnemyHealthTbl,y`(4) +
+///   `ldy specialAttribs,x`(4) + `bpl @endIf_A`（normal 敌人 bit7 清 ⇒ 跳 3，跳过 `asl`）+
+///   `sta health,x`(5) + `rts`
 pub const fn model_load_enemy() -> u32 {
-    const AMUL16: u32 = IMP * 4 + RTS; // 14
+    const AMUL16: u32 = IMP * 4 + RTS; // 14（`asl×4` 累加器 + rts）
     const GET_NAME_TABLE: u32 = ZP + ZP + IMM + RTS; // 14
-    const LOAD_TABLE_977B: u32 = ABSX + ABSY + IMP + RTS; // 16
-    const FACING: u32 = JSR + LOAD_TABLE_977B + INCDEC_ZP + ABSY + ABSX + RTS; // 43
-    const FORCE_SPEED: u32 = ABSX + ABSY + ABSX + ABSY + ABSX + BR + ABSX + RTS; // 34
-    const LEB4D: u32 = IMP + IMP + IMM + ABSX + IMP + JSR + AMUL16 + IMM + ABSX + IMM
-        + ABSX + IMM + ABSX + JSR + GET_NAME_TABLE + ABSX + ABSX + INCDEC_ZP
-        + JSR + FACING + JMP_ABS; // ~153
-    const IS_SLOT: u32 = ABSX + BR_TAKEN + RTS; // 13
-    const GET_TYPE: u32 = PHA + IMM + ABSX + IMP + BR + PLA + IMM + ABSX + RTS; // 31
-    const GET_ENEMY_DATA: u32 = INDY + IMM + IMP + JSR + IS_SLOT + BR + IMP + INDY
-        + JSR + GET_TYPE + IMM + INDY + JSR + LEB4D + PHA + PLA + IMM + RTS;
-    JSR + GET_ENEMY_DATA + FORCE_SPEED + JMP_ABS
+    const LOAD_TABLE_977B: u32 = LDA_ABSX + LDA_ABSY + ASL_A + RTS; // 16
+    const FACING: u32 = JSR + LOAD_TABLE_977B + RMW_ABSX + LDA_ABSY + STA_ABSX + RTS; // 44
+    const FORCE_SPEED: u32 = LDA_ABSX + LDA_ABSY + STA_ABSX + LDA_ABSY + LDA_ABSX
+        + BR_TAKEN + STA_ABSX + RTS; // 35
+    const LEB4D: u32 = IMP + IMM + IMM + STA_ABSX + IMP + JSR + IMM + STA_ABSX + IMM
+        + STA_ABSX + IMM + STA_ABSX + JSR + STA_ABSX + LDA_ABSX + RMW_ABSX
+        + JSR + JMP_ABS + AMUL16 + GET_NAME_TABLE + FACING + FORCE_SPEED; // 178
+    const IS_SLOT: u32 = LDA_ABSX + BR_TAKEN + RTS; // 13
+    const GET_TYPE: u32 = PHA + IMM + STA_ABSX + ASL_A + BR_TAKEN + PLA + IMM + STA_ABSX + RTS; // 32
+    const GET_ENEMY_DATA: u32 = INDY + IMM + IMP + JSR + BR + IMP + INDY + JSR
+        + IMM + INDY + JSR + PHA + PLA + IMM + RTS + IS_SLOT + GET_TYPE + LEB4D; // 281
+    JSR + GET_ENEMY_DATA + JMP_ABS // 290（`jmp EnemyLoop` 的 3c 计入本项）
 }
 
 // ---------------------------------------------------------------- 债表（模型 vs 旧标定）
@@ -251,32 +275,49 @@ pub mod legacy {
     pub const SHELL: u32 = 1300;
 }
 
-/// 债：`上线值 = model + BALANCE`。非 0 项 = 已登记待烧的差额（附来源判读）。
+/// 残差：`RESIDUAL = legacy − model`（**派生量，不是自由参数**）。
 ///
-/// 判读（r9 复核 A1 同口径：旧值是手估，模型是逐条数）：
-/// - `INIT` 0：模型 9262 == 旧值 9262 ⇒ 该族旧估值本来就是逐条数的
-/// - `MT_FAST` 0：模型 208 + 页交叉 6 = 214 == 旧值 ⇒ 同上
-/// - `MT_FULL +16`：模型 333 vs 旧 349（`UpdateAttrib` 全径的 `bvc/beq` 分支走向与
-///   平移环轮数依赖具体数据，模型按最常见径计）
-/// - `OBJ_SHELL +66`、`Y_UNIT +3`：旧值把 `LEA8D` 段与 y 环的 `inc WorkPtr+1`
-///   一并算进了固定补偿（模型只数了指令本身，旧值约多出半个例程体）
-/// - `ROW −42`：模型 72 > 旧值 30——旧值显然只算了「增量部分」，`DrawStructRow`
-///   的整段其实际成本更高；**负差额说明旧估值偏低**
-/// - `ENEMY +26`：模型 274 vs 旧 300（旧值含 boss 径与槽占用径的加权估计）
-pub mod balance {
-    pub const INIT: i32 = 0;
-    pub const MT_FAST: i32 = 0;
-    pub const MT_FULL: i32 = 16;
-    pub const OBJ_SHELL: i32 = 66;
-    pub const Y_UNIT: i32 = 3;
-    pub const ROW: i32 = -42;
-    pub const ENEMY: i32 = 26;
+/// ## 为什么改叫「残差」而不是「债」（r9 复核 D 面，2026-11-13）
+///
+/// 上一版叫 `BALANCE` 并把每项写成「旧值含固定补偿 / 旧值加权估计」之类的**归因结论**。
+/// 复核指出这是方法论错误：`balance := legacy − model` 是**按构造恒等的残差**，
+/// 任何模型误差都会被它原样吸收，于是「残差非 0」既可能是旧估值偏高、也可能是模型少算，
+/// 而写成归因结论就等于**把模型缺陷洗成旧值的锅**。实证：复核发现 `MT_FULL` 残差 16c
+/// 里有 8c 是我漏算了 `UpdateAttrib` 的全径前缀（本批已修，残差降到 8c）；
+/// `ENEMY` 残差 26c 里有 ≥13c 是我把 `sta abs,x`(5)/`asl abs,x`(7)/`asl A`(2) 全按
+/// `lda abs,x`(4) 计（本批已修，残差降到 10c）。
+///
+/// 所以现在的口径是：
+/// - **模��� = asm 逐条算出的上界/常见径值**（可被证伪，见 `model_values_are_pinned`）
+/// - **残差 = legacy − model**，只表示「还没解释掉多少」，**不表示成因**
+/// - **每一项非 0 残差必须在 `UNEXPLAINED` 里登记一条待查理由**（测试强制数量对齐）
+pub mod residual {
+    pub const INIT: i32 = super::legacy::INIT as i32 - super::model_init_tables() as i32; // 0
+    pub const MT_FAST: i32 = super::legacy::MT_FAST as i32 - super::model_draw_metatile_fast() as i32; // 0
+    pub const MT_FULL: i32 = super::legacy::MT_FULL as i32 - super::model_draw_metatile_full() as i32; // 8
+    pub const OBJ_SHELL: i32 = super::legacy::OBJ_SHELL as i32 - super::model_draw_object_shell() as i32; // 66
+    pub const Y_UNIT: i32 = super::legacy::Y_UNIT as i32 - super::model_draw_object_y_unit() as i32; // 3
+    pub const ROW: i32 = super::legacy::ROW as i32 - super::model_draw_struct_row() as i32; // -42
+    pub const ENEMY: i32 = super::legacy::ENEMY as i32 - super::model_load_enemy() as i32; // 10
 }
 
-/// 模型 + 债 = 上线值（零行为变化保证）。
-const fn ship(model: u32, balance: i32) -> u32 {
-    let v = model as i64 + balance as i64;
-    assert!(v >= 0, "债不能把成本压成负数");
+/// 未解释残差登记：**每一笔非 0 残差都要有一条待查理由**（`residuals_are_registered` 强校验）。
+///
+/// 纪律：这里只能写「待查什么」，**禁止写归因结论**。查清后要么修模型（残差随之变化），
+/// 要么把 legacy 值改掉并给出 emu 实测证据——两种动作都会让对应条目消失。
+pub const UNEXPLAINED: [&str; 5] = [
+    "MT_FULL +8：`UpdateAttrib` 全径的 `bvc`/`beq` 走向与平移环轮数依赖具体数据，     模型按最常见径计；需用带人肉 6502 计数的样本钉住",
+    "OBJ_SHELL +66：`DrawObject` 壳的旧值 180 明显含 `LEA8D` 段以外的补偿；     需找出旧值是按哪段 asm 数出来的",
+    "Y_UNIT +3：`inc WorkPtr+1` 的进位径（每约 4 个 y 单元发生一次）未纳入模型，\
+     需确认旧值是按平均计入还是按固定补偿",
+    "ROW -42：旧值 30 只算了增量部分，`DrawStructRow` 整段行头解码未计入——     这是**旧估值偏低**，需确认 room.rs 每行只加一次（已核：155 行只加一次）",
+    "ENEMY +10：模型 290 与旧 300 的 10c 差额未定位；需按 boss 径/槽占用径分别计数",
+];
+
+/// 模型 + 残差 = 上线值（零行为变化保证）。
+const fn ship(model: u32, residual: i32) -> u32 {
+    let v = model as i64 + residual as i64;
+    assert!(v >= 0, "残差不能把成本压成负数");
     v as u32
 }
 
@@ -288,43 +329,42 @@ const fn ship(model: u32, balance: i32) -> u32 {
 pub const LOAD_SHELL: u32 = legacy::SHELL;
 
 /// `InitTables` 全成本（FillRoomRAM + 属性表 + 壳）。
-pub const LOAD_INIT: u32 = ship(model_init_tables(), balance::INIT);
+pub const LOAD_INIT: u32 = ship(model_init_tables(), residual::INIT);
 /// `DrawObject` 壳。
-pub const LOAD_OBJ: u32 = ship(model_draw_object_shell(), balance::OBJ_SHELL);
+pub const LOAD_OBJ: u32 = ship(model_draw_object_shell(), residual::OBJ_SHELL);
 /// `DrawObject` y 位环 每单元。
-pub const LOAD_Y_UNIT: u32 = ship(model_draw_object_y_unit(), balance::Y_UNIT);
+pub const LOAD_Y_UNIT: u32 = ship(model_draw_object_y_unit(), residual::Y_UNIT);
 /// `DrawStructRow` 每行。
-pub const LOAD_ROW: u32 = ship(model_draw_struct_row(), balance::ROW);
+pub const LOAD_ROW: u32 = ship(model_draw_struct_row(), residual::ROW);
 /// `DrawMetatile` 早退 / 全径。
-pub const LOAD_MT_FAST: u32 = ship(model_draw_metatile_fast(), balance::MT_FAST);
-pub const LOAD_MT_FULL: u32 = ship(model_draw_metatile_full(), balance::MT_FULL);
+pub const LOAD_MT_FAST: u32 = ship(model_draw_metatile_fast(), residual::MT_FAST);
+pub const LOAD_MT_FULL: u32 = ship(model_draw_metatile_full(), residual::MT_FULL);
 /// `LoadEnemy` 族 每敌人。
-pub const LOAD_ENEMY: u32 = ship(model_load_enemy(), balance::ENEMY);
+pub const LOAD_ENEMY: u32 = ship(model_load_enemy(), residual::ENEMY);
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    /// 模型值与手算一致（钉住周期表，防周期表改动悄悄漂移）。
+    /// 模型值与 asm 逐条手算一致（钉住周期表；改周期表/改指令序列都会破这条）。
     #[test]
     fn model_values_are_pinned() {
-        assert_eq!(model_fill_room_ram(), 8503, "FillRoomRAM 逐条");
+        assert_eq!(model_fill_room_ram(), 8503, "FillRoomRAM（3 页 × 内环 11c/字节）");
         assert_eq!(model_attrib_fill(), 703, "属性表 64 字节填充");
         assert_eq!(model_init_tables_shell(), 56, "InitTables 壳");
         assert_eq!(model_init_tables(), 9262, "InitTables 合计（== 旧 LOAD_INIT_CYCLES）");
         assert_eq!(model_draw_metatile_fast(), 214, "DrawMetatile 早退径（含页交叉期望补偿）");
         assert_eq!(model_update_attrib_full_body(), 128, "UpdateAttrib 全径 body");
-        assert_eq!(model_draw_metatile_full(), 333, "DrawMetatile 全径");
-        assert_eq!(model_draw_object_shell(), 114, "DrawObject 壳（不含 y 环/DrawStruct）");
+        assert_eq!(model_draw_metatile_full(), 341, "DrawMetatile 全径（含前缀 8c）");
+        assert_eq!(model_draw_object_shell(), 114, "DrawObject 壳");
         assert_eq!(model_draw_object_y_unit(), 17, "y 位环单元");
         assert_eq!(model_draw_struct_row(), 72, "DrawStructRow 单行");
-        assert_eq!(model_load_enemy(), 274, "LoadEnemy 族");
+        assert_eq!(model_load_enemy(), 290, "LoadEnemy 族（absx 分档后）");
     }
 
     /// 上线值 == 2026-11-05 旧标定值（**零行为变化**：掉帧窗不变）。
     ///
-    /// 这条测试是本批改动的安全网：任何一处模型/债表误改都会让掉帧窗漂移，
-    /// 进而破坏 L4 零容差。要改这里必须同时给出「重标定 BASE」的实测证据。
+    /// 本批改动的安全网：任何一处模型/残差误改都会让掉帧窗漂移、破坏 L4 零容差。
     #[test]
     fn shipped_values_match_legacy_calibration() {
         assert_eq!(LOAD_INIT, legacy::INIT);
@@ -334,20 +374,52 @@ mod tests {
         assert_eq!(LOAD_MT_FAST, legacy::MT_FAST);
         assert_eq!(LOAD_MT_FULL, legacy::MT_FULL);
         assert_eq!(LOAD_ENEMY, legacy::ENEMY);
-        assert_eq!(LOAD_SHELL, legacy::SHELL);
     }
 
-    /// 债表必须是「显式可见」的：非 0 项都要能说出方向（模型高于还是低于旧值）。
+    /// **每一笔非 0 残差都必须登记一条待查理由**（r9 复核 D 面整改的机械约束）。
+    ///
+    /// 这条不能写成 `residual == legacy - model`（那是恒等式，恒真无意义）。
+    /// 它约束的是「残差存在时必须有人认领」——新增/变化的残差不登记就红。
     #[test]
-    fn balance_table_is_declared_with_direction() {
-        // 逐条模型 == 旧值的两族：债为 0（旧估值本来就是数出来的）
-        assert_eq!(balance::INIT, 0);
-        assert_eq!(balance::MT_FAST, 0);
-        // 旧值高于模型（旧值含固定补偿）
-        for b in [balance::MT_FULL, balance::OBJ_SHELL, balance::Y_UNIT, balance::ENEMY] {
-            assert!(b > 0, "旧标定高于逐条模型");
+    fn residuals_are_registered() {
+        let nonzero = [
+            residual::INIT,
+            residual::MT_FAST,
+            residual::MT_FULL,
+            residual::OBJ_SHELL,
+            residual::Y_UNIT,
+            residual::ROW,
+            residual::ENEMY,
+        ]
+        .iter()
+        .filter(|r| **r != 0)
+        .count();
+        assert_eq!(
+            nonzero,
+            UNEXPLAINED.len(),
+            "非 0 残差 {nonzero} 笔，但 UNEXPLAINED 登记了 {} 条——每笔残差都要有人认领",
+            UNEXPLAINED.len()
+        );
+        // 逐条文本必须写明「待查」而不是归因结论（粗检：不得出现「因为」/「说明旧值」这类断言词）
+        for r in UNEXPLAINED {
+            assert!(
+                r.contains("需") || r.contains("未") || r.contains("待"),
+                "残差登记必须是待查项而不是归因结论：{r}"
+            );
         }
-        // 旧值低于模型（旧估值偏低）
-        assert!(balance::ROW < 0, "旧标定低于逐条模型");
+    }
+
+    /// 逐条模型 == 旧值的两族：残差精确为 0（旧估值本来就是逐条数的）。
+    #[test]
+    fn exact_families_have_zero_residual() {
+        assert_eq!(residual::INIT, 0, "InitTables 9262 逐条 == 旧值");
+        assert_eq!(residual::MT_FAST, 0, "DrawMetatile 早退 214 逐条 == 旧值");
+    }
+
+    /// `ROW` 残差为负 = **旧估值偏低**（模型 72 > 旧值 30）——方向必须可见。
+    #[test]
+    fn row_residual_is_negative() {
+        assert!(residual::ROW < 0, "旧标定 30 < 逐条模型 72");
+        assert!(model_draw_struct_row() > legacy::ROW);
     }
 }

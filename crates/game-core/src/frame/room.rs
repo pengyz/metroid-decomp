@@ -53,7 +53,8 @@ fn find_item_in_history(y0: u8, v06: u8, v07: u8, item_lo: &[u8], item_hi: &[u8]
 /// 基底=常规迭代体 ≈27800——约束夹逼（常规帧 0 掉帧⇒<29780；room8 载房 3 掉帧⇒
 /// ≥25850）中值；帧周期=29780（NTSC）。
 // 常量本体已迁入 `crate::frame::cycles`（6502 逐条周期计数底座，路线丙 ②）：
-// 每个值 = asm 逐条周期模型 + 显式债表（模型 vs 2026-11-05 旧标定的差额）。
+// 每个值 = asm 逐条周期模型 + 残差（`residual = 旧标定 − 模型`，派生量非自由参数；
+// 每笔非 0 残差在 `cycles::UNEXPLAINED` 里有一条待查登记）。
 // 再导出保持既有调用面不变（本文件 6 处累加 + 测试 + physics.rs 消费）。
 pub(crate) use crate::frame::cycles::{
     LOAD_ENEMY as LOAD_ENEMY_CYCLES, LOAD_INIT as LOAD_INIT_CYCLES, LOAD_MT_FAST,
