@@ -1731,6 +1731,59 @@ def gate_doc_sync() -> tuple[str, str]:
                   f"F3 类漂移机械拦截就位）")
 
 
+SURFACE_PREFIXES = ("crates/", "gates/", "tools/", "data/status/")
+
+
+def staged_surface_conflicts(unstaged: set[str], staged: set[str]) -> list[str]:
+    """提交面一致性（纯函数）：判定「暂存面与工作树是否同源」。
+
+    门禁跑在**工作树**上，提交进库的是**暂存面**。两者在门禁相关路径上不一致时，
+    门禁结论描述的就不是被提交的树——c9ddefeb 实证：`extract.rs` 改了签名进库，
+    `pack-tool/main.rs` 的调用点修复留在工作树 ⇒ 提交树不可构建，而 check 全绿。
+
+    只在**本次提交触及门禁相关面**时才判（docs-only 提交不被他人 WIP 连坐——2026-10-15 教训）。
+    返回冲突文件列表（空=一致）。
+    """
+    def surface(paths: set[str]) -> set[str]:
+        return {p for p in paths if p.replace("\\", "/").lstrip("./").startswith(SURFACE_PREFIXES)}
+
+    staged_s = surface(staged)
+    if not staged_s:
+        return []
+    return sorted(surface(unstaged))
+
+
+def gate_staged_surface() -> tuple[str, str]:
+    """提交面一致性：暂存面触及门禁相关路径时，工作树不得再有同域未暂存改动。"""
+    clean_env = {k: v for k, v in os.environ.items() if k != "GIT_INDEX_FILE"}
+    try:
+        staged = subprocess.run(["git", "diff", "--cached", "--name-only"], cwd=ROOT,
+                                capture_output=True, text=True, encoding="utf-8",
+                                errors="replace", env=clean_env)
+        unstaged = subprocess.run(["git", "diff", "--name-only"], cwd=ROOT,
+                                  capture_output=True, text=True, encoding="utf-8",
+                                  errors="replace", env=clean_env)
+        if staged.returncode != 0 or unstaged.returncode != 0:
+            return FAIL, "git 查询失败（fail-loud，提交面一致性不可判）"
+    except OSError as exc:
+        return FAIL, f"git 不可达（fail-loud）: {exc}"
+    conflicts = staged_surface_conflicts(
+        {p.strip() for p in unstaged.stdout.splitlines() if p.strip()},
+        {p.strip() for p in staged.stdout.splitlines() if p.strip()},
+    )
+    if conflicts:
+        head = ", ".join(conflicts[:6]) + ("…" if len(conflicts) > 6 else "")
+        return FAIL, (
+            f"暂存面与工作树不同源：本次提交触及门禁相关路径，但这些同域改动未暂存——{head}"
+            "｜门禁跑在工作树上，结论不描述被提交的树（c9ddefeb 破树实证）。"
+            "处理：git add 一并提交，或 git checkout -- 丢弃。"
+        )
+    staged_n = len([l for l in staged.stdout.splitlines() if l.strip()])
+    if staged_n == 0:
+        return PASS, "无暂存内容（非提交态，不判）"
+    return PASS, f"暂存面 {staged_n} 个文件；门禁相关域无未暂存改动（结论即被提交的树）"
+
+
 def gate_shared_inode_locks() -> tuple[str, str]:
     """事故③护栏（2026-10-17）：CARGO_HOME 锁文件跨家共享 inode 机检。
 
@@ -2153,6 +2206,8 @@ GATES: list[tuple[str, str, str, str, object]] = [
     ("completeness-ratchet", "矩阵建立后启用", "all", "完备性矩阵覆盖只增不降", gate_completeness_ratchet),
     ("proof-checks", "启用（按变更面触发；SMT+桥接内联；int_y 穷举留 CI/里程碑）", "check",
      "int_x SMT 证明+公式↔Rust 桥接复跑（证书防腐，int-y 穷举 GATES_PROOF_FULL=1）", gate_proof_checks),
+    ("staged-surface", "启用（W5）", "check",
+     "暂存面≡工作树（提交面一致性：门禁结论必须描述被提交的树）", gate_staged_surface),
     ("tree-coherence", "启用", "check",
      "Rust mod 引用⊆提交树（未跟踪件掩盖破树侦测）", gate_tree_coherence),
     ("doc-sync", "启用", "check",
@@ -2917,6 +2972,20 @@ def cmd_selftest(_args) -> int:
           len(errs) == 1 and "deep/leaf.rs" in errs[0], errs[0] if errs else "未报错")
     v, d = gate_tree_coherence()
     check("tree-coherence 门禁实跑（本仓）", v == PASS, d)
+
+    # 10b) staged-surface：提交面一致性（c9ddefeb 破树实证——门禁结论须描述被提交的树）
+    check("staged-surface 暂存面触及码面 + 同域未暂存 ⇒ 报冲突",
+          staged_surface_conflicts({"crates/a.rs", "docs/x.md"}, {"crates/b.rs"})
+          == ["crates/a.rs"], staged_surface_conflicts({"crates/a.rs"}, {"crates/b.rs"}))
+    check("staged-surface 工作树干净 ⇒ 无冲突",
+          staged_surface_conflicts(set(), {"crates/b.rs"}) == [], "unstaged 空")
+    check("staged-surface docs-only 提交不被 WIP 连坐",
+          staged_surface_conflicts({"crates/a.rs"}, {"docs/x.md"}) == [], "staged 不涉码面")
+    check("staged-surface 非码面未暂存（shots/analysis）不报",
+          staged_surface_conflicts({"shots_rust/matrix.json"}, {"crates/b.rs"}) == [],
+          "产物面不入门禁相关域")
+    v, d = gate_staged_surface()
+    check("staged-surface 门禁实跑（本仓）", v == PASS, d)
 
     # 11) doc-sync：双写片段逐字同文（r12 遗留-7 机械门）
     pairs = [("t", ("a.md", r"X=(.*?)\."), ("b.md", r"Y=([^|]*)\|"))]

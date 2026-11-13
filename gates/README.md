@@ -70,6 +70,7 @@
 | `l4` | L4 自动对拍：run-all 矩阵（用例×采集点三态）+ 逐采集点 ratchet（match 集合只增/blocked 只减，非聚合率） | 启用（Task 6） |
 | `completeness-ratchet` | 完备性矩阵覆盖只增不降 | 矩阵建立后启用 |
 | `proof-checks` | int_x SMT 证明+公式↔Rust 桥接复跑（证书防腐） | 启用（按变更面触发；SMT+桥接内联；int_y 穷举留 CI/里程碑） |
+| `staged-surface` | 暂存面≡工作树（提交面一致性：门禁结论必须描述被提交的树） | 启用（W5） |
 | `tree-coherence` | Rust mod 引用⊆提交树（未跟踪件掩盖破树侦测） | 启用 |
 | `doc-sync` | 双写片段逐字同文（pipeline↔design，F3 类漂移拦截） | 启用 |
 | `shared-inode-locks` | CARGO_HOME 锁文件跨家共享 inode 机检（事故③护栏——硬链快照忘删锁复发面拦截） | 启用（事故③护栏） |
