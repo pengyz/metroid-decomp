@@ -3142,7 +3142,7 @@ pub fn get_room_num(mem: &mut FrameMemory) -> bool {
 /// →RoomPalette 读→AddToRoomPtr/SelectRoomRAM/InitTables→DrawRoom（**S6-7 房间绘制链**
 /// ——嵌套桩：game-data 房间模型协同）。
 pub fn setup_room(mem: &mut FrameMemory) {
-    mem.work_cycles = mem.work_cycles.wrapping_add(crate::frame::room::LOAD_SHELL_CYCLES); // 固定壳（ScanForItems 族）
+    mem.work_cycles = mem.work_cycles.wrapping_add(crate::frame::cycles::LOAD_SHELL); // 固定壳（ScanForItems 族）
     // 【能力移植（2026-10-31）】ScanForItems（ED98——SetupRoom 首件（asm :8588））：
     // 当前图格特项扫描→PowerUp 装载（吃能力上图！）。
     crate::pickup::spawn::scan_for_items(mem);

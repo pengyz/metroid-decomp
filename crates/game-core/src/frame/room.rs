@@ -52,17 +52,14 @@ fn find_item_in_history(y0: u8, v06: u8, v07: u8, item_lo: &[u8], item_hi: &[u8]
 /// - LoadEnemy（EB06/EB0C/EB28）≈ 300
 /// 基底=常规迭代体 ≈27800——约束夹逼（常规帧 0 掉帧⇒<29780；room8 载房 3 掉帧⇒
 /// ≥25850）中值；帧周期=29780（NTSC）。
-pub(crate) const LOAD_INIT_CYCLES: u32 = 9262;
-pub(crate) const LOAD_OBJ_CYCLES: u32 = 180;
-pub(crate) const LOAD_MT_FAST: u32 = 214;
-pub(crate) const LOAD_MT_FULL: u32 = 349;
-pub(crate) const LOAD_ENEMY_CYCLES: u32 = 300;
-/// DrawObject y 位环（LEA72 每 y 单元 `lda+clc+adc+sta+bcc+inc+dex+bne`≈20c）。
-pub(crate) const LOAD_YLOOP_CYCLES: u32 = 20;
-/// DrawStructRow 行壳（行头解码+AdvanceRow ≈30c/行）。
-pub(crate) const LOAD_ROW_CYCLES: u32 = 30;
-/// setup_room 固定壳（ScanForItems+DeleteOffscreenRoomSprites+EndOfRoom+表查 ≈1300c）。
-pub(crate) const LOAD_SHELL_CYCLES: u32 = 1300;
+// 常量本体已迁入 `crate::frame::cycles`（6502 逐条周期计数底座，路线丙 ②）：
+// 每个值 = asm 逐条周期模型 + 显式债表（模型 vs 2026-11-05 旧标定的差额）。
+// 再导出保持既有调用面不变（本文件 6 处累加 + 测试 + physics.rs 消费）。
+pub(crate) use crate::frame::cycles::{
+    LOAD_ENEMY as LOAD_ENEMY_CYCLES, LOAD_INIT as LOAD_INIT_CYCLES, LOAD_MT_FAST,
+    LOAD_MT_FULL, LOAD_OBJ as LOAD_OBJ_CYCLES, LOAD_ROW as LOAD_ROW_CYCLES,
+    LOAD_SHELL as LOAD_SHELL_CYCLES, LOAD_Y_UNIT as LOAD_YLOOP_CYCLES,
+};
 pub(crate) const LOAD_BASE_CYCLES: u32 = 29000;
 pub(crate) const FRAME_CYCLES: u32 = 29780;
 
