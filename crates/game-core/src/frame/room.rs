@@ -1229,12 +1229,36 @@ mod tests_stream_content_mapping {
     /// 实录（room20（case-002 邻房）=2/room23（morphball 走廊）=2/room8（球房）=3）+
     /// 常规帧 0（BASE<29780 约束）——修前 room20=1（边界下 4%）⇒时间线前移 1 帧⇒
     /// f1000/f1150 9.4k 像素差（滚屏偏移形）。
+    ///
+    /// 【止血件2·多点校准（2026-11-13，findings/load-window-multipoint-calibration.md）】
+    /// 新增两点 emu 实录（probe-loadwin 探针，watch FC 停滞窗 + room 转场锚）：
+    /// room19 work=36620→2 掉帧（f1067 停滞/f1068 room 0x13 入场）、
+    /// room9 work=43378→2 掉帧（f1286 停滞）。**关键结论**：新增两点对 BASE 的约束
+    /// 严格**松于**既有两点（room20 定下界 / work=0 定上界）⇒ 可行区间不变：
+    /// BASE ∈ [28114, 29780) 宽 1666c = **5.6% 帧**（非旧注记所称 13%——旧区间
+    /// [25850,29780) 来自「只取 room8 下界」的粗估，漏了 room20 这条更紧的下界）。
+    /// 现值 29000 距区间中点 28947 仅 +53c（0.18% 帧）⇒ **常数本身不是主误差源**；
+    /// 残留风险=上界余量仅 780c（2.6% 帧），任何子步骤低估都会翻窗。
     #[test]
     fn load_window_model_calibrated() {
-        assert_eq!((LOAD_BASE_CYCLES + 31446) / FRAME_CYCLES, 2, "room20（case-002 邻房）");
-        assert_eq!((LOAD_BASE_CYCLES + 46456) / FRAME_CYCLES, 2, "room23（morphball 走廊）");
-        assert_eq!((LOAD_BASE_CYCLES + 71946) / FRAME_CYCLES, 3, "room8（morphball 球房）");
-        assert_eq!(LOAD_BASE_CYCLES / FRAME_CYCLES, 0, "常规帧 0 掉帧");
+        // 五点 emu 实录（work_cycles, 实测掉帧数）
+        const POINTS: [(u32, u32, &str); 5] = [
+            (31446, 2, "room20（case-002 邻房）"),
+            (36620, 2, "room19（probe-loadwin f1067）"),
+            (43378, 2, "room9（probe-loadwin f1286）"),
+            (46456, 2, "room23（morphball 走廊）"),
+            (71946, 3, "room8（morphball 球房）"),
+        ];
+        for (work, want, name) in POINTS {
+            assert_eq!((LOAD_BASE_CYCLES + work) / FRAME_CYCLES, want, "{name}");
+        }
+        assert_eq!(LOAD_BASE_CYCLES / FRAME_CYCLES, 0, "常规帧 0 掉帧（定上界）");
+
+        // 可行区间断言（多点夹逼的机械形式）：下界由 room20 定、上界由常规帧定。
+        let lo = 2 * FRAME_CYCLES - 31446; // = 28114
+        let hi = FRAME_CYCLES; // = 29780
+        assert!(LOAD_BASE_CYCLES >= lo, "BASE 须 ≥ 下界 {lo}（否则 room20 掉帧数变 1）");
+        assert!(LOAD_BASE_CYCLES < hi, "BASE 须 < 上界 {hi}（否则常规帧掉 1 帧）");
     }
 
     fn draw_room_ff_path_writes_temp_scroll_dir() {
