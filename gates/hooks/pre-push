@@ -1,0 +1,8 @@
+#!/bin/sh
+# metroid-decomp gates: pre-push -> python3 gates/cli.py check --full
+# 慢层（l4 run-all 440s + visual-diff）的兜底执行点：commit 走快层 ≤10s，
+# push 前跑全量——门禁不取消，只换执行点（2026-11-13 量化裁定）。
+# 薄封装：扫描/裁定逻辑只存在于 gates/cli.py（无第二套扫描逻辑）。
+set -e
+repo_root=$(git rev-parse --show-toplevel) || exit 1
+exec python3 "$repo_root/gates/cli.py" check --full

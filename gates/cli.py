@@ -61,6 +61,16 @@ SKIP = "SKIP"
 TOLERATED = "TOLERATED"
 DEFERRED = "DEFERRED"   # proof-checks v2：环境执行不能（≠证书失败，绝不计 PASS）
 
+# ---------------------------------------------------------------- 门禁分层（2026-11-13 量化裁定）
+# 实测（逐门单独计时，warm）：l4=440.03s / visual-diff=4.41s / rust-tests=4.16s / trace-diff=1.33s
+# / docs-links=0.54s / 其余 10 门合计 0.60s ⇒ 总量 451s，l4 一门占 97.3%。
+# 裁定：pre-commit 只跑「快层」（≤10s 预算，去掉 l4 与 visual-diff 后实测 6.6s）；
+# 慢层（SLOW_GATES）由 pre-push 钩子与里程碑 `check --full` 兜底——不是取消门禁，是换执行点。
+# 依据：l4/visual 的失败面是 pixel/矩阵级回归，改动窗口与「提交」不同频（改代码→push 前才需要
+# 全量证明）；把 440s 放在每次 commit 上只会诱导 --no-verify 绕过（门禁最坏结局=被绕过）。
+SLOW_GATES = ("l4", "visual-diff")
+FAST_TIER_BUDGET_S = 10.0
+
 # baseline.json.metrics 的固定键集合（ratchet 计数器，均为"只增"型）。
 METRIC_KEYS = (
     "rom_files_verified",
@@ -1814,11 +1824,14 @@ GATES: list[tuple[str, str, str, str, object]] = [
 
 
 def run_gate(entry) -> dict:
+    """跑单门禁并计时（seconds 进结果=耗时量化可见，非隐性成本）。"""
     name, readme_state, command, summary, runner = entry
+    t0 = time.monotonic()
     try:
         verdict, detail = runner()
     except (RatchetError, BaselineFormatError, ValueError) as exc:
         verdict, detail = FAIL, f"{type(exc).__name__}: {exc}"
+    elapsed = time.monotonic() - t0
     return {
         "name": name,
         "readme_state": readme_state,
@@ -1826,18 +1839,41 @@ def run_gate(entry) -> dict:
         "summary": summary,
         "verdict": verdict,
         "detail": detail,
+        "seconds": elapsed,
     }
 
 
-def run_all_gates() -> list[dict]:
-    return [run_gate(entry) for entry in GATES]
+def run_all_gates(fast_only: bool = False) -> list[dict]:
+    """跑门禁。fast_only=True 时慢层（SLOW_GATES）显式 SKIP——绝不静默缺席。
+
+    慢层 SKIP 的 detail 必须写明「由哪条路径兜底」，否则 README 的「SKIP 显式打印」承诺失效。
+    """
+    out: list[dict] = []
+    for entry in GATES:
+        if fast_only and entry[0] in SLOW_GATES:
+            out.append({
+                "name": entry[0],
+                "readme_state": entry[1],
+                "command": entry[2],
+                "summary": entry[3],
+                "verdict": SKIP,
+                "detail": ("慢层（实测 "
+                           f"{'440s' if entry[0] == 'l4' else '4.4s'}）——pre-commit 快层不跑；"
+                           "由 pre-push 钩子 / `gates/cli.py check --full` / 里程碑 `all` 兜底"),
+                "seconds": 0.0,
+            })
+            continue
+        out.append(run_gate(entry))
+    return out
 
 
 def format_gate_lines(results: list[dict]) -> list[str]:
     lines = []
     for r in results:
         state = "SKIP" if r["verdict"] == SKIP else "ENABLED"
-        lines.append(f"[{r['verdict']:<9}] {r['name']:<20} ({state}, README: {r['readme_state']}) {r['detail']}")
+        secs = r.get("seconds", 0.0)
+        lines.append(f"[{r['verdict']:<9}] {r['name']:<20} ({secs:6.2f}s, {state}, "
+                     f"README: {r['readme_state']}) {r['detail']}")
     return lines
 
 
@@ -1945,7 +1981,8 @@ def baseline_section() -> tuple[dict | None, list[str], list[tuple[str, int, int
 
 
 def cmd_status(_args) -> int:
-    results = run_all_gates()
+    # 只读预检走快层（≤10s）；慢层显式 SKIP 并注明兜底路径（预检不需要 440s 矩阵）。
+    results = run_all_gates(fast_only=True)
     baseline, integrity, rows, parse_error = baseline_section()
     parse_error = parse_error or (None if baseline else "baseline 解析失败，见上方 baseline-integrity 行")
     print("== gates/cli.py status —— 只读预检（SKIP/TOLERATED 显式打印，绝不静默通过） ==")
@@ -1977,11 +2014,18 @@ def cmd_status(_args) -> int:
     return 1 if any_fail else 0
 
 
-def cmd_check(_args) -> int:
-    results = run_all_gates()
+def cmd_check(args) -> int:
+    """总闸。默认「快层」（≤10s，pre-commit 调用）；--full 跑全量（pre-push/里程碑）。
+
+    分层依据（2026-11-13 实测）：l4=440s 占 97.3%，visual-diff=44s 全 TOLERATED；
+    其余 14 门合计 6.6s。把 440s 挂在每次 commit 上只会诱导 --no-verify 绕过。
+    """
+    full = bool(getattr(args, "full", False))
+    results = run_all_gates(fast_only=not full)
     baseline, integrity, rows, parse_error = baseline_section()
     parse_error = parse_error or (None if baseline else "baseline 解析失败，见上方 baseline-integrity 行")
-    print("== gates/cli.py check —— 总闸（聚合全部门禁；SKIP/TOLERATED 显式打印） ==")
+    tier = "全量（慢层含 l4/visual-diff）" if full else f"快层（慢层 SKIP，预算 {FAST_TIER_BUDGET_S:.0f}s）"
+    print(f"== gates/cli.py check —— 总闸 [{tier}]（SKIP/TOLERATED 显式打印） ==")
     for line in format_gate_lines(results):
         print(line)
     ratchet_ok = True
@@ -2008,7 +2052,12 @@ def cmd_check(_args) -> int:
         print(f"CHECK: PASS-WITH-DEFERRED（复检欠账 {open_debts}，显式：DEFERRED 绝不计 PASS、"
               f"欠账不静默消失；解锁判据=任一次全量 proof-checks PASS 自动销账）")
         return 0
-    print("CHECK: PASS（含 0 个静默跳过：所有 SKIP 均已显式打印）")
+    total_s = sum(r.get("seconds", 0.0) for r in results)
+    note = ""
+    if not full and total_s > FAST_TIER_BUDGET_S:
+        note = (f"（超预算 {FAST_TIER_BUDGET_S:.0f}s——请检查新门是否属于慢层，"
+                f"SLOW_GATES 无覆盖：{', '.join(sorted((r['name'], round(r.get('seconds', 0.0), 1)) and r['name'] for r in results if r.get('seconds', 0.0) > 1.0))}）")
+    print(f"CHECK: PASS（含 0 个静默跳过：所有 SKIP 均已显式打印；本层耗时 {total_s:.2f}s）{note}")
     return 0
 
 
@@ -2397,7 +2446,9 @@ def cmd_selftest(_args) -> int:
           "触及 data/status/ 的提交缺 Evidence/Confidence ⇒ 拒绝（降基线提交必须带证据）")
 
     # 5) SKIP/TOLERATED 显式打印（不许静默通过）+ 前置对象消失守卫
-    results = run_all_gates()
+    # 快层：selftest 验证的是工具链逻辑（ratchet/账/打印），不是矩阵内容——
+    # 原跑全量会白等 440s 的 l4（2026-11-13 量化裁定）。
+    results = run_all_gates(fast_only=True)
     text = "\n".join(format_gate_lines(results))
     silent = [r["name"] for r in results if r["verdict"] == SKIP and ("SKIP" not in text or not r["detail"].strip())]
     check("SKIP 显式打印（含原因）", not silent, f"违规项: {silent}" if silent else f"{sum(1 for r in results if r['verdict'] == SKIP)} 个 SKIP 全部带原因打印")
@@ -2579,8 +2630,16 @@ def cmd_selftest(_args) -> int:
               err or f"trace={len(sections.get('trace', {}))} visual={len(sections.get('visual', {}))}")
         for r in results:  # 实跑（复用 5) 的 run_all_gates 结果，不二次跑 runner）
             if r["name"] in ("trace-diff", "visual-diff"):
-                check(f"{r['name']} 实跑不 FAIL（PASS 或账内容忍 TOLERATED）",
-                      r["verdict"] in (PASS, TOLERATED), f"verdict={r['verdict']} {r['detail'][:160]}")
+                if r["name"] in SLOW_GATES:
+                    # 分层后（2026-11-13）：慢层在 selftest 快层是 SKIP——断言对象换成
+                    # 「SKIP 必须显式且写明兜底路径」，绝不接受静默缺席。
+                    check(f"{r['name']} 慢层 SKIP 显式且注明兜底路径（分层契约）",
+                          r["verdict"] == SKIP and "兜底" in r["detail"],
+                          f"verdict={r['verdict']} {r['detail'][:160]}")
+                else:
+                    check(f"{r['name']} 实跑不 FAIL（PASS 或账内容忍 TOLERATED）",
+                          r["verdict"] in (PASS, TOLERATED),
+                          f"verdict={r['verdict']} {r['detail'][:160]}")
                 if r["verdict"] == TOLERATED:
                     check(f"{r['name']} TOLERATED 显式回显 reason/exit/count（不阻塞≠静默）",
                           all(k in r["detail"] for k in ("reason=", "exit=", "count=")),
@@ -2696,8 +2755,11 @@ def cmd_selftest(_args) -> int:
           any("3:c" in x for x in v17), f"violations={v17}")
     for r17 in results:  # 实跑（复用 5) run_all_gates 结果，不二次跑 runner）
         if r17["name"] == "l4":
-            check("l4 门禁实跑裁定 PASS/TOLERATED（逐采集点 ratchet 守住，验收④）",
-                  r17["verdict"] in (PASS, TOLERATED),
+            # 分层后（2026-11-13）：selftest 快层不跑 l4（440s）——断言对象换成
+            # 「SKIP 必须显式且写明兜底路径」。l4 全量裁定由 pre-push / check --full 兜底，
+            # 且 l4_ratchet_violations 的判定逻辑面已在 17) 里逐条反向打回（不依赖实跑）。
+            check("l4 慢层 SKIP 显式且注明兜底路径（分层契约）",
+                  r17["verdict"] == SKIP and "兜底" in r17["detail"],
                   f"verdict={r17['verdict']} {r17['detail'][:200]}")
 
     # 18) fix wave 假绿/漂移封堵探针（2026-10-26 最终复核 findings——C1 崩溃判旧矩阵后门 /
@@ -3145,7 +3207,10 @@ def build_parser() -> argparse.ArgumentParser:
     sub = parser.add_subparsers(dest="command", required=True)
 
     sub.add_parser("status", help="只读预检：门禁清单 + 启用/SKIP 状态 + 基线对照").set_defaults(func=cmd_status)
-    sub.add_parser("check", help="总闸（pre-commit 调用）").set_defaults(func=cmd_check)
+    p_chk = sub.add_parser("check", help="总闸（pre-commit 调用快层 ≤10s；--full 含 l4/visual 慢层）")
+    p_chk.add_argument("--full", action="store_true",
+                       help="含慢层（l4 run-all 440s + visual-diff）——pre-push/里程碑用")
+    p_chk.set_defaults(func=cmd_check)
     # 单门禁命令只有 README 命令表所列的 6 个（t10 R2：CLI 子命令面与 README 双向一致，
     # 不再注册门禁名别名；l4=Task 6 自动对拍门禁）。
     for cmd_name, gate_name in (("rom", "rom-integrity"), ("seed", "seed-integrity"),

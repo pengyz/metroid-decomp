@@ -9,7 +9,8 @@
 | 命令 | 作用 | 何时跑 |
 |---|---|---|
 | `python3 gates/cli.py status` | 只读预检：门禁状态 + 基线对照（**动手前必跑**） | 每次会话开工 |
-| `python3 gates/cli.py check` | 总闸（pre-commit 自动调用） | 任何 commit |
+| `python3 gates/cli.py check` | **快层**总闸：≤10s（pre-commit 自动调用；慢层 `l4`/`visual-diff` 显式 SKIP 并注明兜底路径） | 任何 commit |
+| `python3 gates/cli.py check --full` | **全量**总闸：含慢层 `l4`(run-all 440s)+`visual-diff`（pre-push 钩子自动调用） | push 前 / 里程碑 |
 | `python3 gates/cli.py rom` | ROM sha256 完整性 | 怀疑 `rom/` 被改 |
 | `python3 gates/cli.py seed` | `reference/seed/` 投影完整性（D3 冻结基准） | 怀疑投影基准被改 |
 | `python3 gates/cli.py naming` | 命名台账证据完整性 | 改 `data/naming/` 后 |
@@ -20,6 +21,25 @@
 | `python3 gates/cli.py selftest` | 工具链自证：ratchet 只升不降 / 基线↔历史完整性（历史下界·快照覆盖·sha 链·状态锚点）/ commit-msg 证据门禁（含 ProofDeferred）/ SKIP·TOLERATED 显式打印 / 注册表↔本文件清单 + 命令面双向相等 / proof 证书标记校验 + 触发判定 + DEFERRED 欠账（突变打回用例）/ L4 逐采集点 ratchet 反向打回（match 缩水·新增 blocked·9/10 换坏） | 改门禁后；`all` 内含 |
 | `python3 gates/cli.py baseline show\|update\|tolerate` | 基线管理：show=基线+历史；update=只升不降+强制 `--reason` 留痕；tolerate=登记显式 TOLERATED（强制 `--bug` BUG-xxx） | 基线/tolerance 变更 |
 | `python3 gates/cli.py commit-msg <msgfile>` | commit-msg 钩子入口（证据门禁本体） | 钩子自动调用 |
+
+### 门禁分层（2026-11-13 量化裁定）
+
+逐门单独计时（warm）实测：
+
+| 门 | 秒 | 占比 |
+|---|---|---|
+| `l4`（run-all 矩阵） | 440.03 | 97.3% |
+| `visual-diff` | 4.41 | 1.0% |
+| `rust-tests` | 4.16 | 0.9% |
+| `trace-diff` | 1.33 | 0.3% |
+| `docs-links` | 0.54 | 0.1% |
+| 其余 10 门合计 | 0.60 | 0.1% |
+| **总计** | **451s** | |
+
+裁定：**pre-commit 只跑快层（实测 6.5–8.2s，预算 `FAST_TIER_BUDGET_S=10s`）**，慢层
+`SLOW_GATES = ("l4", "visual-diff")` 显式 SKIP 并打印兜底路径；**pre-push 钩子跑 `check --full`**
+兜底。理由：440s 挂在每次 commit 上只会诱导 `--no-verify` 绕过——门禁最坏结局不是慢，是被绕过。
+每门耗时恒显式回显（`[PASS] 名称 ( 4.16s, ENABLED, …)`），超预算时 PASS 行附提示。
 
 > 锚点与基线位置：ROM sha256 锚点 = `rom/SHA256SUMS`（若存在）否则 `data/status/baselines/SHA256SUMS`
 > （sha256sum 兼容格式）；ratchet 基线 = `data/status/baselines/baseline.json`，
@@ -100,10 +120,11 @@
 ## hooks
 
 ```bash
-bash gates/install-hooks.sh   # 挂接 pre-commit + commit-msg
+bash gates/install-hooks.sh   # 挂接 pre-commit + commit-msg + pre-push
 ```
 
-- `pre-commit` → `gates/cli.py check`
+- `pre-commit` → `gates/cli.py check`（快层 ≤10s）
+- `pre-push` → `gates/cli.py check --full`（含 l4/visual 慢层）
 - `commit-msg` → 触及 `data/naming/`、`data/status/`、`reference/`、`rom/` 的提交必须含
   `Evidence`/`Confidence` 字段（别名集合与本表严格一致：仅 `Evidence:`/`证据:` 与
   `Confidence:`/`置信度:`，不接受未文档化别名如『信心:』/『置信:』；缺失即拒）
