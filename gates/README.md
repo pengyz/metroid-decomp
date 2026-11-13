@@ -74,7 +74,7 @@
 | `doc-sync` | 双写片段逐字同文（pipeline↔design，F3 类漂移拦截） | 启用 |
 | `shared-inode-locks` | CARGO_HOME 锁文件跨家共享 inode 机检（事故③护栏——硬链快照忘删锁复发面拦截） | 启用（事故③护栏） |
 | `arch-contract` | 依赖方向（域件禁 frame 类型=G11 破环契约）+analysis 不入库红线双哨（G12 结构哨） | 启用（r19） |
-| `data-boundary` | 数据边界：仓内不得新增 ROM 派生大常量数组（账本 `data/status/data_boundary_allowlist.json` 只减不增）+ `assets/*.pack` 不入库 | 启用（W1） |
+| `data-boundary` | 数据边界 v2：三分母（`data` 只减不增 / `fixture` 禁进包 / `symbol` 免检，账本 `data/status/data_boundary_allowlist.json`）+ 全字面量形识别（十进制/元组/结构体）+ `assets/*.pack` 不入库 | 启用（W1/v2） |
 | `tools-boundary` | 工具边界：`rom: &[u8]` 只允许出现在 `extract.rs` / `pack-tool`（运行期不读 ROM） | 启用（W1） |
 | `asset-pack` | 资产包自证：包内每段 == 从 ROM 重算（`pack-tool verify`；缺 rom/pack 显式 SKIP） | 启用（W4） |
 

@@ -1,31 +1,91 @@
 {
-  "schema": "data-boundary/v1",
-  "note": "ROM 派生数据的仓内形状登记（**只减不增**）。判据=文件内 `0xNN,` 字节字面量条数 >512。\nW1-W6 每波把一批文件迁到资产包（pack），迁完当次 commit 必须把对应条目删掉——\n条目残留会被门禁判红（防止“已迁移但仍留白名单”的软化）。\n设计见 docs/spec/data-code-separation.md。",
-  "threshold": 512,
+  "schema": "data-boundary/v2",
+  "note": "ROM 派生数据的仓内形状登记。v2 改的是**判据的分母**（W4 第一性复盘·方案 A）：\n旧口径只数 `0xNN,` 字节字面量，于是 items.rs（十进制结构体切片）与 sound_data.rs（<512 条）整类隐身，\n而 password_init.rs（验证期望向量）被当成游戏数据要迁包——两侧都错。\n\nv2 判据：体量 = max(const/static 数组顶层元素数, `0xNN` 字节字面量数)，阈值 200；\n每种文件按 kind 分局：\n  data    = 运行时游戏数据 —— 必须进资产包；只减不增；归零即红（迁完当次删条目）\n  fixture = 验证期望数据 —— 留仓、禁进包（extract 不得引用）；不受 ratchet\n  symbol  = 符号元知识（地址表/表长/小表）—— 不受 ratchet，仅登记与说明\n\n判据实现：gates/cli.py::data_boundary_violations（纯函数，selftest 覆盖）。\n设计见 docs/spec/data-code-separation.md。",
+  "threshold": 200,
   "files": [
     {
-      "file": "crates/game-core/src/enemy/common.rs",
-      "max_byte_literals": 692
-    },
-    {
       "file": "crates/game-core/src/frame/sound_hook.rs",
-      "max_byte_literals": 2701
-    },
-    {
-      "file": "crates/game-core/src/ui/password.rs",
-      "max_byte_literals": 762
-    },
-    {
-      "file": "crates/game-core/tests/common/password_init.rs",
-      "max_byte_literals": 19176
-    },
-    {
-      "file": "crates/game-data/src/title/title_data.rs",
-      "max_byte_literals": 574
+      "kind": "data",
+      "max": 2701,
+      "note": "SOUND_REGION（$B200 起 APU 寄存器初值序列，2688 条）。**运行时 ROM 字节存在 game-core**——架构违规，待迁 game-data/资产包。"
     },
     {
       "file": "crates/game-data/src/title/vram_structs.rs",
-      "max_byte_literals": 1135
+      "kind": "data",
+      "max": 1135,
+      "note": "标题/密码屏六段 VRAMStruct（INTRO_BG 1066 条为主）；待迁。"
+    },
+    {
+      "file": "crates/game-core/src/enemy/common.rs",
+      "kind": "data",
+      "max": 832,
+      "note": "L977B(64)/EN_ANIM_TABLE(118)/ENEMY_MOVEMENT_PTRS(138)/MOVEMENT_STRINGS(512)——真游戏数据，待迁。"
+    },
+    {
+      "file": "crates/game-core/src/ui/password.rs",
+      "kind": "fixture",
+      "max": 762,
+      "note": "762 条几乎全在文件内 test 模块（编码/校验向量）；生产侧只有 NAR_PASSWORD_TBL(16B) 属真数据——体积小，随 title 批一并处理。"
+    },
+    {
+      "file": "crates/game-data/src/title/title_data.rs",
+      "kind": "data",
+      "max": 596,
+      "note": "标题四表（END_STAR 156/CROSS_EXPLODE 68/PW_GRID 65/INIT_CROSS 64 等）；待迁。"
+    },
+    {
+      "file": "crates/game-data/src/area/items.rs",
+      "kind": "data",
+      "max": 490,
+      "note": "五区 SpecItmsTbl（`&[SpecialItem]` 十进制结构体切片，98 元素 / 490 字面量）。**旧口径 0 命中**——v2 元素计数才看得见；待迁。"
+    },
+    {
+      "file": "crates/game-core/src/frame/mainloop.rs",
+      "kind": "symbol",
+      "max": 391,
+      "note": "小表集合（MAIN_ROUTINE_PTR_TABLE 10 / DATA_DISPLAY_TBL 40 / 帧内 test 表）——地址与表长类元知识，非大块数据。"
+    },
+    {
+      "file": "crates/game-data/src/samus/samus_data.rs",
+      "kind": "data",
+      "max": 263,
+      "note": "RUN_ACCEL_TBL(256) 等运动常量表。**旧口径 0 命中**（全十进制）；待迁。"
+    },
+    {
+      "file": "crates/game-data/src/sound/sound_data.rs",
+      "kind": "data",
+      "max": 249,
+      "note": "SONG_HEADERS(156)/SFX_REG_INIT_TBL 等音乐表。**旧口径 249 条 < 512 隐身**；待迁。"
+    },
+    {
+      "file": "crates/game-data/src/render/render_data.rs",
+      "kind": "data",
+      "max": 200,
+      "note": "INTRO_STAR_PALETTES(8×10，ROM 派生) 为真数据；NES_PALETTE(64×3) 是标准主调色板（非 ROM 派生，可留代码）。"
+    },
+    {
+      "file": "crates/game-core/tests/common/password_init.rs",
+      "kind": "fixture",
+      "max": 19176,
+      "note": "密码初始化金向量（102 组 × 字段）。**验证期望数据，绝不进包**——v1 曾把它当待迁游戏数据。"
+    },
+    {
+      "file": "crates/game-core/tests/common/password_vectors_data.rs",
+      "kind": "fixture",
+      "max": 1014,
+      "note": "密码编码/解码向量数据（1014 元素）。验证期望数据。"
+    },
+    {
+      "file": "crates/game-core/tests/common/mod.rs",
+      "kind": "fixture",
+      "max": 1014,
+      "note": "测试公用模块（聚合 VECTORS）——与 password_vectors_data.rs 同源，验证期望数据。"
+    },
+    {
+      "file": "crates/game-data/src/enemy/enemy_data.rs",
+      "kind": "fixture",
+      "max": 88,
+      "note": "A1_015..A1_018 黄金 RAM 写迹（每项 8 场景的 (addr,val) 元组）——测试基准，不是游戏数据；真数据仅 ENEMY_ACTIVE_ANIM_INDEX(32B)。"
     }
   ]
 }

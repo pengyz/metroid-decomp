@@ -1803,7 +1803,17 @@ def gate_arch_contract() -> tuple[str, str]:
 # --- 数据/代码边界（W1 起；设计见 docs/spec/data-code-separation.md）--------------------
 
 DATA_BOUNDARY_REL = "data/status/data_boundary_allowlist.json"
-# `0xNN,` 形式的字节字面量——ROM 派生数据的机械指纹（与常量名/嵌套形状无关）。
+# 账本三分母（W4 复盘·方案 A）：种类决定判据，不再用一个「字节字面量条数」判所有文件。
+#   data    = 运行时游戏数据：必须进资产包，只减不增，迁完当次删条目
+#   fixture = 验证期望数据：留仓、禁进包（extract 不得引用），不受 ratchet
+#   symbol  = 符号元知识（地址表/表长等小表）：不受 ratchet，仅登记与说明
+DATA_BOUNDARY_KINDS = ("data", "fixture", "symbol")
+# const/static 数组头：本轮起按「顶层元素数」计（十进制/十六进制/元组/结构体一视同仁，
+# 旧口径只认 `0xNN,` ⇒ items.rs（十进制结构体）、sound_data.rs（<512 条）整类隐身）。
+_CONST_ARRAY_HEAD_RE = re.compile(
+    r"\b(?:pub\s+)?(?:const|static)\s+([A-Za-z_][A-Za-z0-9_]*)\s*:[^=]*?=\s*(?:&\s*)?\[",
+    re.S,
+)
 _BYTE_LIT_RE = re.compile(r"0x[0-9A-Fa-f]{2}\s*,")
 # 允许接收 ROM 字节的路径（`tools-boundary`）——只有提取器与它的运行器。
 ROM_BYTES_WHITELIST = {
@@ -1813,13 +1823,134 @@ ROM_BYTES_WHITELIST = {
 _ROM_PARAM_RE = re.compile(r"rom\s*:\s*&\s*\[\s*u8\s*\]")
 
 
+def strip_rust_comments(text: str) -> str:
+    """去 `//` 与 `/* */` 注释，保留字符串/字节串原文（注释里的 `0xNN` 不许计数）。"""
+    out: list[str] = []
+    i, n = 0, len(text)
+    while i < n:
+        c = text[i]
+        if c == '"':
+            j = i + 1
+            while j < n:
+                if text[j] == "\\":
+                    j += 2
+                    continue
+                if text[j] == '"':
+                    j += 1
+                    break
+                j += 1
+            out.append(text[i:j])
+            i = j
+            continue
+        if c == "/" and i + 1 < n and text[i + 1] == "/":
+            while i < n and text[i] != "\n":
+                i += 1
+            continue
+        if c == "/" and i + 1 < n and text[i + 1] == "*":
+            j = text.find("*/", i + 2)
+            i = n if j < 0 else j + 2
+            continue
+        out.append(c)
+        i += 1
+    return "".join(out)
+
+
+def array_literal_elements(text: str) -> list[tuple[str, int]]:
+    """纯函数：列出 `const/static NAME: T = [ … ]`（含 `= &[ … ]`）的顶层元素数。
+
+    按括号深度数顶层逗号 ⇒ 对 `[u8; N]` 的十进制/十六进制嵌套、`[&[(u16,u8)]; 8]` 的
+    元组、`&[Struct { … }]` 的结构体切片同样成立（旧 `0xNN,` 正则对后两者全盲）。
+    """
+    t = strip_rust_comments(text)
+    found: list[tuple[str, int]] = []
+    for m in _CONST_ARRAY_HEAD_RE.finditer(t):
+        name = m.group(1)
+        i = m.end() - 1
+        depth = 0
+        j = i
+        while j < len(t):
+            ch = t[j]
+            if ch in "[({":
+                depth += 1
+            elif ch in "])}":
+                depth -= 1
+                if depth == 0:
+                    break
+            j += 1
+        body = t[i + 1:j]
+        if not body.strip():
+            found.append((name, 0))
+            continue
+        d = 0
+        count = 0
+        k = 0
+        while k < len(body):
+            ch = body[k]
+            if ch == '"':
+                k += 1
+                while k < len(body):
+                    if body[k] == "\\":
+                        k += 2
+                        continue
+                    if body[k] == '"':
+                        k += 1
+                        break
+                    k += 1
+                continue
+            if ch in "[({":
+                d += 1
+            elif ch in "])}":
+                d -= 1
+            elif ch == "," and d == 0:
+                count += 1
+            k += 1
+        if not body.rstrip().endswith(","):
+            count += 1
+        found.append((name, count))
+    return found
+
+
+def data_boundary_metrics(root: Path) -> dict[str, dict[str, int]]:
+    """纯函数：逐文件算「数据体量」= max(const 数组顶层元素数, `0xNN` 字节字面量数)。
+
+    两个分量互补：元素数抓十进制/结构体（items.rs）、字节数抓「一条记录摊成多字节」的
+    字面量行（password_init.rs 的 19176 条 hex、sound_hook.rs 的 2701 条）。
+    """
+    out: dict[str, dict[str, int]] = {}
+    for p in sorted((root / "crates").rglob("*.rs")):
+        text = p.read_text(encoding="utf-8", errors="replace")
+        elements = sum(n for _, n in array_literal_elements(text))
+        bytes_ = len(_BYTE_LIT_RE.findall(strip_rust_comments(text)))
+        try:
+            key = str(p.relative_to(root)).replace(os.sep, "/")
+        except ValueError:  # 理论不可达（p 由 root 派生）；保守退回 rel()
+            key = rel(p)
+        out[key] = {"elements": elements, "byte_literals": bytes_,
+                    "metric": max(elements, bytes_)}
+    return out
+
+
+def data_boundary_warnings(root: Path, entries: list[dict]) -> list[str]:
+    """账本条目里的越界形态（不是违规，但要显式打印——不静默）。"""
+    warns: list[str] = []
+    for e in entries:
+        f, kind = e["file"], e["kind"]
+        if kind == "data" and f.startswith("crates/game-core/"):
+            warns.append(f"{f}: data 类位于 game-core（运行时 ROM 字节应在 game-data/资产包）——待迁")
+        if kind == "fixture" and "/tests/" not in f and not f.split("/")[-1].startswith("test"):
+            warns.append(f"{f}: fixture 类不在测试面（应移入 tests/ 或 #[cfg(test)]）——待挪")
+    return warns
+
+
 def data_boundary_violations(root: Path) -> list[str]:
     """数据边界（纯函数，可单测）：
 
-    ①`crates/**/*.rs` 里字节字面量 > `threshold` 的文件必须在账内（新增即红）
-    ②账内文件的字面量数不得增长（只减不增）
-    ③账内条目若已消失/已降到阈值以下 ⇒ 红（必须当次清理条目，防“迁完仍留白名单”）
-    ④`assets/*.pack` 必须在 .gitignore，且仓库里不得有 tracked 的 *.pack
+    ①`crates/**/*.rs` 体量 > `threshold` 且不在账内 ⇒ 红（新增数据必须显式登记）
+    ②`data` 类条目体量不得增长（只减不增：数据只许迁出，不许再进来）
+    ③`data` 类条目体量归零 ⇒ 红（迁完必须当次删条目，防软化）
+    ④`fixture` 类条目被提取器引用 ⇒ 红（验证数据绝不许进包）
+    ⑤账本条目必须带 kind ∈ {data,fixture,symbol} 与 max
+    ⑥`assets/*.pack` 必须在 .gitignore，且仓库里不得有 tracked 的 *.pack
     """
     problems: list[str] = []
     path = root / DATA_BOUNDARY_REL
@@ -1830,36 +1961,59 @@ def data_boundary_violations(root: Path) -> list[str]:
     except (OSError, json.JSONDecodeError) as exc:
         return [f"{DATA_BOUNDARY_REL} 不可解析: {exc}"]
     threshold = int(data.get("threshold", 512))
-    allow = {e["file"]: int(e["max_byte_literals"]) for e in data.get("files", [])}
-    if not allow:
+    entries = data.get("files", [])
+    if not entries:
         return [f"{DATA_BOUNDARY_REL} 的 files 为空（账本必须显式登记现存数据文件）"]
 
-    seen: dict[str, int] = {}
-    for p in sorted((root / "crates").rglob("*.rs")):
-        text = p.read_text(encoding="utf-8", errors="replace")
-        n = len(_BYTE_LIT_RE.findall(text))
-        if n > threshold:
-            try:
-                key = str(p.relative_to(root)).replace(os.sep, "/")
-            except ValueError:  # 理论不可达（p 由 root 派生）；保守退回 rel()
-                key = rel(p)
-            seen[key] = n
+    seen = data_boundary_metrics(root)
+    allow: dict[str, dict] = {}
+    for e in entries:
+        f = e.get("file")
+        kind = e.get("kind")
+        if not f or "max" not in e:
+            problems.append(f"{DATA_BOUNDARY_REL} 条目缺 file/max：{json.dumps(e, ensure_ascii=False)}")
+            continue
+        if kind not in DATA_BOUNDARY_KINDS:
+            problems.append(f"{DATA_BOUNDARY_REL} 条目 {f} 的 kind={kind!r} 非法"
+                            f"（须为 {'/'.join(DATA_BOUNDARY_KINDS)}）")
+            continue
+        allow[f] = {"kind": kind, "max": int(e["max"]), "note": e.get("note", "")}
 
-    for f, n in seen.items():
+    for f, m in seen.items():
+        cur = m["metric"]
+        if cur <= threshold:
+            continue
         if f not in allow:
             problems.append(
-                f"{f}: {n} 条字节字面量 > {threshold} 且不在数据边界账内"
-                "——ROM 派生数据须走资产包（pack-tool extract），不许把常量数组提交进仓"
+                f"{f}: 数据体量 {cur}（elem {m['elements']} / bytes {m['byte_literals']}）"
+                f" > {threshold} 且不在数据边界账内——ROM 派生数据须走资产包"
+                "（pack-tool extract），不许把常量数组提交进仓；确属符号/验证数据则登记其 kind"
             )
-        elif n > allow[f]:
-            problems.append(f"{f}: 字节字面量 {allow[f]} → {n}（只减不增：数据只许迁出，不许再进来）")
+        elif allow[f]["kind"] == "data" and cur > allow[f]["max"]:
+            problems.append(f"{f}: data 类体量 {allow[f]['max']} → {cur}"
+                            "（只减不增：数据只许迁出，不许再进来）")
 
-    for f, maxn in allow.items():
-        if f not in seen:
+    for f, e in allow.items():
+        cur = seen.get(f, {}).get("metric", 0)
+        if e["kind"] == "data" and cur == 0:
             problems.append(
-                f"{DATA_BOUNDARY_REL} 条目 {f} 已无超阈值数据（或文件已删）"
+                f"{DATA_BOUNDARY_REL} 条目 {f} 的 data 类体量已归零（或文件已删）"
                 "——迁移完成后须在同一 commit 删除该条目（防软化）"
             )
+
+    # fixture 禁进包：提取器一旦引用验证数据模块，就是「把期望值当游戏数据」的类别错误
+    extract_src = root / "crates/game-data/src/extract.rs"
+    extract_text = extract_src.read_text(encoding="utf-8", errors="replace") if extract_src.is_file() else ""
+    for f, e in allow.items():
+        if e["kind"] != "fixture":
+            continue
+        # 模块名：`x/mod.rs` 取父目录名，其余取文件 stem（裸词匹配会把 `mod`/`test` 全部误中）
+        parts = f.split("/")
+        stem = parts[-1].removesuffix(".rs")
+        mod_name = parts[-2] if stem == "mod" and len(parts) >= 2 else stem
+        if len(mod_name) > 3 and f"{mod_name}::" in extract_text:
+            problems.append(f"fixture 类 {f} 被 crates/game-data/src/extract.rs 引用"
+                            "（验证期望数据绝不许进包）")
 
     gi = root / ".gitignore"
     gitignore_text = gi.read_text(encoding="utf-8", errors="replace") if gi.is_file() else ""
@@ -1882,8 +2036,15 @@ def gate_data_boundary() -> tuple[str, str]:
         return FAIL, "数据边界违规：\n  - " + "\n  - ".join(problems)
     path = ROOT / DATA_BOUNDARY_REL
     data = json.loads(path.read_text(encoding="utf-8"))
-    return PASS, (f"{len(data.get('files', []))} 个待迁移数据文件在账内"
-                  f"（阈值 {data.get('threshold', 512)} 条字节字面量）；assets/*.pack 已忽略且无 tracked 包")
+    entries = data.get("files", [])
+    counts = {k: sum(1 for e in entries if e.get("kind") == k) for k in DATA_BOUNDARY_KINDS}
+    detail = (f"{len(entries)} 条登记（data {counts['data']} / fixture {counts['fixture']} / "
+              f"symbol {counts['symbol']}）；阈值 {data.get('threshold', 512)}"
+              "（体量=const 数组元素数与 0xNN 字面量数取大）；assets/*.pack 已忽略且无 tracked 包")
+    warns = data_boundary_warnings(ROOT, entries)
+    if warns:
+        detail += "；WARN（显式）: " + "; ".join(warns)
+    return PASS, detail
 
 
 def tools_boundary_violations(root: Path) -> list[str]:
@@ -1993,8 +2154,9 @@ GATES: list[tuple[str, str, str, str, object]] = [
      "CARGO_HOME 锁文件跨家共享 inode 机检（硬链快照忘删锁=挂死复发面拦截）", gate_shared_inode_locks),
     ("arch-contract", "启用（r19）", "check",
      "依赖方向（域件禁 frame 类型=G11 破环契约）+analysis 不入库红线双哨", gate_arch_contract),
-    ("data-boundary", "启用（W1）", "check",
-     "数据边界：仓内不得新增 ROM 派生大常量数组（账本只减不增）+ assets/*.pack 不入库", gate_data_boundary),
+    ("data-boundary", "启用（W1/v2）", "check",
+     "数据边界 v2：三分母（data 只减不增/fixture 禁进包/symbol 免检）+ 全字面量形识别 + assets/*.pack 不入库",
+     gate_data_boundary),
     ("tools-boundary", "启用（W1）", "check",
      "工具边界：rom: &[u8] 只允许出现在 extract.rs / pack-tool（运行期不读 ROM）", gate_tools_boundary),
     ("asset-pack", "启用（W4）", "check",
@@ -3124,10 +3286,10 @@ def cmd_selftest(_args) -> int:
                 body = "pub const A: [u8; %d] = [%s];\n" % (n, "".join(["0x11,"] * n))
                 (r2 / "crates" / "x" / "src" / fname).write_text(body, encoding="utf-8")
 
-            def _write_allow(entries: dict[str, int]) -> None:
+            def _write_allow(entries: dict[str, int], kind: str = "data") -> None:
                 (r2 / "data" / "status" / "data_boundary_allowlist.json").write_text(
-                    json.dumps({"schema": "data-boundary/v1", "threshold": 512,
-                                "files": [{"file": f, "max_byte_literals": n}
+                    json.dumps({"schema": "data-boundary/v2", "threshold": 200,
+                                "files": [{"file": f, "kind": kind, "max": n}
                                           for f, n in entries.items()]}, ensure_ascii=False),
                     encoding="utf-8")
 
@@ -3451,6 +3613,68 @@ def cmd_selftest(_args) -> int:
     v, det = gate_asset_pack()
     check("asset-pack 门禁实跑（本仓：verify 通过或显式 SKIP）",
           v in (PASS, SKIP), f"{v}: {det}")
+
+    # 20) 数据边界 v2：三分母 + 全字面量形（W4 第一性复盘·方案 A）
+    check("v2 元素计数：十进制数组",
+          array_literal_elements("const A: [u8; 3] = [1, 2, 3];") == [("A", 3)])
+    check("v2 元素计数：结构体切片（旧口径 0 命中）",
+          array_literal_elements(
+              "pub const B: &[S] = &[\n  S { x: 1, y: [2, 3] },\n  S { x: 4, y: [5, 6] },\n];"
+          ) == [("B", 2)])
+    check("v2 元素计数：嵌套元组切片",
+          array_literal_elements(
+              "const C: [&[(u16,u8)];2] = [ &[(1,2u8),(3,4u8)], &[(5,6u8)] ];"
+          ) == [("C", 2)])
+    check("v2 注释里的数组不计数",
+          array_literal_elements("// const X: [u8;9] = [1,2,3];\nconst D: [u8;2] = [7, 8];")
+          == [("D", 2)])
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        (root / "crates/x").mkdir(parents=True)
+        (root / "data/status").mkdir(parents=True)
+        (root / ".gitignore").write_text("assets/*.pack\n", encoding="utf-8")
+        src = root / "crates/x/y.rs"
+        led = root / DATA_BOUNDARY_REL
+
+        def write_ledger(entries: list[dict], threshold: int = 200) -> None:
+            led.write_text(json.dumps({"schema": "data-boundary/v2", "threshold": threshold,
+                                       "files": entries}), encoding="utf-8")
+
+        src.write_text("pub const T: [u8; 300] = [" + ",".join(["1"] * 300) + "];\n",
+                       encoding="utf-8")
+        write_ledger([])
+        check("v2 空账本 ⇒ 红", any("files 为空" in p for p in data_boundary_violations(root)))
+        write_ledger([{"file": "crates/x/y.rs", "kind": "data", "max": 300}])
+        check("v2 已登记 data 持平 ⇒ 绿", data_boundary_violations(root) == [],
+              str(data_boundary_violations(root)))
+        write_ledger([{"file": "crates/x/y.rs", "kind": "data", "max": 299}])
+        check("v2 data 增长 ⇒ 红", any("只减不增" in p for p in data_boundary_violations(root)))
+        write_ledger([{"file": "crates/x/y.rs", "kind": "symbol", "max": 300}])
+        check("v2 symbol 不受 ratchet ⇒ 绿", data_boundary_violations(root) == [])
+        write_ledger([{"file": "crates/x/y.rs", "kind": "mystery", "max": 300}])
+        check("v2 kind 非法 ⇒ 红", any("非法" in p for p in data_boundary_violations(root)))
+        src.write_text("pub const T: [u8; 0] = [];\n", encoding="utf-8")
+        write_ledger([{"file": "crates/x/y.rs", "kind": "data", "max": 300}])
+        check("v2 data 归零未删条目 ⇒ 红", any("已归零" in p for p in data_boundary_violations(root)))
+        src.write_text("// 文件已清空\n", encoding="utf-8")
+        check("v2 data 文件删/清空仍留条目 ⇒ 红",
+              any("已归零" in p for p in data_boundary_violations(root)))
+        (root / "crates/game-data/src").mkdir(parents=True)
+        (root / "crates/game-data/src/extract.rs").write_text(
+            "use crate::tests::vectors::V;\n", encoding="utf-8")
+        (root / "crates/tests").mkdir(parents=True)
+        (root / "crates/tests/vectors.rs").write_text("pub const V: [u8; 2] = [1, 2];\n",
+                                                      encoding="utf-8")
+        write_ledger([{"file": "crates/tests/vectors.rs", "kind": "fixture", "max": 2}])
+        check("v2 fixture 被 extract 引用 ⇒ 红",
+              any("绝不许进包" in p for p in data_boundary_violations(root)),
+              str(data_boundary_violations(root)))
+        (root / "crates/game-data/src/extract.rs").write_text("// 无引用\n", encoding="utf-8")
+        check("v2 fixture 未被引用 ⇒ 绿（不受 ratchet）", data_boundary_violations(root) == [],
+              str(data_boundary_violations(root)))
+        (root / "crates/tests/vectors.rs").write_text("pub const V: [u8; 9] = [1];\n",
+                                                      encoding="utf-8")
+        check("v2 fixture 体量任意变化 ⇒ 绿（不 ratchet）", data_boundary_violations(root) == [])
 
     failed = [c for c in cases if not c[1]]
     for name, ok, detail in cases:
