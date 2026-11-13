@@ -223,8 +223,8 @@ def read_sem(path: Path) -> tuple[list[str], list[list[str]]]:
     return cols, rows
 
 
-def diff_sem(a: Path, b: Path, only: list[str] | None = None):
-    """按列报首个分歧帧；只比双方都有值的列（交集）。"""
+def compare_sem(a: Path, b: Path, only: list[str] | None = None):
+    """判据唯一实现：返回 (code, lines, stats)。stats 供批量基线汇总用。"""
     ca, ra = read_sem(a)
     cb, rb = read_sem(b)
     shared = [c for c in ca if c in cb]
@@ -264,21 +264,30 @@ def diff_sem(a: Path, b: Path, only: list[str] | None = None):
 
     matched = 0
     diverge = 0
+    per_col: dict[str, int] = {}
+    first_div = None
     for fr in common:
         row_a, row_b = fa_map[fr], fb_map[fr]
         bad = []
+        badcols = []
         for c in covered:
             va, vb = row_a[idx_a[c]], row_b[idx_b[c]]
             if va == NA or vb == NA:
                 continue
             if int(va, 16) != int(vb, 16):
                 bad.append(f"{c}: oracle={va} rust={vb}")
+                badcols.append(c)
+                per_col[c] = per_col.get(c, 0) + 1
+        if badcols and first_div is None:
+            first_div = {"frame": fr, "cols": {c: [row_a[idx_a[c]], row_b[idx_b[c]]]
+                                               for c in badcols}}
         if bad:
             diverge += 1
-            lines.append(f"DIVERGE f{fr} " + " | ".join(bad))
-            if diverge >= 20:
-                lines.append("...（已报 20 处首分歧，后续省略）")
-                break
+            # 只截断**打印**，不断统计——批量基线要全帧计数（截断会让 per_col 少算）
+            if diverge <= 20:
+                lines.append(f"DIVERGE f{fr} " + " | ".join(bad))
+            elif diverge == 21:
+                lines.append("...（已报 20 处首分歧，后续省略打印；统计仍走全帧）")
         else:
             matched += 1
     lines.append(f"MATCHED {matched} {len(common)}  cols={','.join(covered)}"
@@ -286,7 +295,28 @@ def diff_sem(a: Path, b: Path, only: list[str] | None = None):
                  f"  frames_only=oracle+{len(only_a)}/rust+{len(only_b)}"
                  f"  phase_sensitive={','.join(phase_sensitive) or '-'}"
                  f"{'（已默认排除，--only 可单独看）' if phase_sensitive and not only else ''}")
-    return (0 if diverge == 0 else 1), lines
+    stats = {
+        "common": len(common),
+        "matched": matched + (len(common) - matched - 0 if diverge == 0 else 0),
+        "diverged": diverge,
+        "frames_only_oracle": len(only_a),
+        "frames_only_rust": len(only_b),
+        "cols": covered,
+        "not_covered": not_covered,
+        "phase_sensitive": phase_sensitive,
+        "per_col": dict(per_col),
+        "first_diverge": first_div,
+        "truncated": diverge > 20,
+    }
+    if diverge == 0:
+        stats["matched"] = len(common)
+    return (0 if diverge == 0 else 1), lines, stats
+
+
+def diff_sem(a: Path, b: Path, only: list[str] | None = None):
+    """CLI 入口：只要 (code, lines)。"""
+    code, lines, _ = compare_sem(a, b, only)
+    return code, lines
 
 
 # ---------------- 用例派生 ----------------
