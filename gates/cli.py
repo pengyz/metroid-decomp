@@ -1914,6 +1914,61 @@ def gate_tools_boundary() -> tuple[str, str]:
     return PASS, f"ROM 字节入口仅 {len(ROM_BYTES_WHITELIST)} 处（extract.rs / pack-tool），其余 crate 不接收 rom 字节"
 
 
+PACK_REL = Path("assets") / "metroid.pack"
+ASSET_PACK_TIMEOUT_S = 240
+
+
+def asset_pack_skip_detail(rom_present: bool, pack_present: bool) -> str | None:
+    """纯函数：资产包自证的前置条件判定（无 rom 或无包 ⇒ 返回显式 SKIP 措辞）。
+
+    两者缺一都**不得静默通过**：ROM 是 BYO（仓内不发版权数据），包 gitignored
+    （用户用 pack-tool 从自己的 ROM 生成）。缺件时门禁必须显式 SKIP 并给出生成命令。
+    """
+    missing = []
+    if not rom_present:
+        missing.append(PROOF_ROM_REL.as_posix())
+    if not pack_present:
+        missing.append(PACK_REL.as_posix())
+    if not missing:
+        return None
+    return (f"缺 {', '.join(missing)}（BYO-ROM + 包 gitignored："
+            f"`cargo run -p pack-tool -- extract --rom \"{PROOF_ROM_REL.as_posix()}\" "
+            f"--out {PACK_REL.as_posix()}` 生成）——显式跳过，不得静默通过")
+
+
+def gate_asset_pack() -> tuple[str, str]:
+    """G-AP 资产包自证：包内每一段 == 从 ROM 重算（`pack-tool verify`）。
+
+    补的是「资产退役」判据缺口：旧流程每批手写临时脚本比对旧常量、拿到 True 就删旧文件，
+    旧常量一旦删掉比对就**永不可复跑**，证据只剩终端输出与 commit 行文（违反
+    「判定逻辑只在 gates/」）。本闸把机械判据搬进门禁，且随时可重跑：
+    提取器改动而包未重生成、手工改包、ROM 版本不符——任一情况当场红。
+    """
+    rom_ok = (ROOT / PROOF_ROM_REL).is_file()
+    pack_ok = (ROOT / PACK_REL).is_file()
+    skip = asset_pack_skip_detail(rom_ok, pack_ok)
+    if skip:
+        return SKIP, skip
+    try:
+        proc = subprocess.run(
+            ["cargo", "run", "-q", "-p", "pack-tool", "--", "verify",
+             "--rom", PROOF_ROM_REL.as_posix(), "--pack", PACK_REL.as_posix()],
+            cwd=ROOT, capture_output=True, text=True, encoding="utf-8", errors="replace",
+            env=_child_env(), timeout=ASSET_PACK_TIMEOUT_S,
+        )
+    except subprocess.TimeoutExpired:
+        return FAIL, f"pack-tool verify 超时（>{ASSET_PACK_TIMEOUT_S}s）"
+    except OSError as exc:
+        return FAIL, f"cargo 不可达（fail-loud）: {exc}"
+    out = ((proc.stdout or "") + (proc.stderr or "")).strip()
+    if proc.returncode != 0:
+        tail = out.splitlines()[-12:]
+        return FAIL, ("资产包自证失败（段内容 != ROM 重算——提取器/包/ROM 三者已漂移）：\n  - "
+                      + "\n  - ".join(tail))
+    ok_lines = [ln for ln in out.splitlines() if " OK " in ln]
+    return PASS, f"{len(ok_lines)} 段逐段 == ROM 重算（pack-tool verify）"
+
+
 GATES: list[tuple[str, str, str, str, object]] = [
     # (name, readme_state, 所属命令, 一句话内容, runner)
     ("rom-integrity", "启用（P0）", "rom", "rom/ sha256 对照 SHA256SUMS", gate_rom_integrity),
@@ -1942,6 +1997,8 @@ GATES: list[tuple[str, str, str, str, object]] = [
      "数据边界：仓内不得新增 ROM 派生大常量数组（账本只减不增）+ assets/*.pack 不入库", gate_data_boundary),
     ("tools-boundary", "启用（W1）", "check",
      "工具边界：rom: &[u8] 只允许出现在 extract.rs / pack-tool（运行期不读 ROM）", gate_tools_boundary),
+    ("asset-pack", "启用（W4）", "check",
+     "资产包自证：每段 == 从 ROM 重算（pack-tool verify；缺 rom/pack 显式 SKIP）", gate_asset_pack),
 ]
 
 
@@ -3379,6 +3436,21 @@ def cmd_selftest(_args) -> int:
                   ("c", 2, "t") not in fl3)
         except Exception as exc:  # noqa: BLE001
             check("G③ 旧键组排除出判定（历史不删——新键组一致⇒格清）", False, str(exc))
+
+    # 19) 资产包自证门禁前置判定（W4：缺 ROM/缺包必须显式 SKIP，不得静默通过）
+    check("asset-pack 齐备 ⇒ 不 SKIP", asset_pack_skip_detail(True, True) is None)
+    d = asset_pack_skip_detail(False, True)
+    check("asset-pack 缺 ROM ⇒ 显式 SKIP 且带生成命令",
+          d is not None and "rom/Metroid (USA).nes" in d and "pack-tool" in d, d or "")
+    d = asset_pack_skip_detail(True, False)
+    check("asset-pack 缺包 ⇒ 显式 SKIP（点名 metroid.pack）",
+          d is not None and "assets/metroid.pack" in d, d or "")
+    d = asset_pack_skip_detail(False, False)
+    check("asset-pack 双缺 ⇒ 两件都点名（不许只说一半）",
+          d is not None and "rom/Metroid (USA).nes" in d and "assets/metroid.pack" in d, d or "")
+    v, det = gate_asset_pack()
+    check("asset-pack 门禁实跑（本仓：verify 通过或显式 SKIP）",
+          v in (PASS, SKIP), f"{v}: {det}")
 
     failed = [c for c in cases if not c[1]]
     for name, ok, detail in cases:
