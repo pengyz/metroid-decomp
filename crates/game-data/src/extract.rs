@@ -48,6 +48,7 @@ pub fn sections(rom: &[u8]) -> Result<Vec<Section>, String> {
     out.extend(extract_music_tables(prg)?);
     out.extend(extract_music_streams(prg)?);
     out.extend(extract_palette_data(prg)?);
+    out.extend(extract_sprite_data(prg)?);
     Ok(out)
 }
 
@@ -681,6 +682,25 @@ fn extract_palette_data(prg: &[u8]) -> Result<Vec<Section>, String> {
         Section { key: PackKey::PalData, data: body },
         Section { key: PackKey::PalOffs, data: offs },
     ])
+}
+
+
+/// sprite 数据 blob（`common_sprite_data.asm`，区 bank 共载 `$8572` 起）。
+/// 体内三表界：`ObjectAnimIndexTbl $8572` / `ObjFramePtrTable $860B` / `ObjPlacePtrTable $86DF`，
+/// 其后为帧记录 `ObjFrame_*` / 放置记录 `ObjPlace_*`（指针内嵌自洽）。
+///
+/// 长度口径（沿用原烘焙器，附来源）：asm 尾注最大址 `$8B03` + 末记录 32 B 裕 = `$8B23`，
+/// 即 `0x8B23 - 0x8572 = 1457` B。多切无害（消费端一律按表指针索引，不读尾）。
+const SPRITE_BLOB_FLAT: usize = 0x4572; // bank1 $8572（区 bank 共载同址）
+const SPRITE_BLOB_LEN: usize = 1457;
+
+fn extract_sprite_data(prg: &[u8]) -> Result<Vec<Section>, String> {
+    let end = SPRITE_BLOB_FLAT + SPRITE_BLOB_LEN;
+    let data = prg
+        .get(SPRITE_BLOB_FLAT..end)
+        .ok_or("sprite 数据 blob 越界")?
+        .to_vec();
+    Ok(vec![Section { key: PackKey::SpriteData, data }])
 }
 
 #[cfg(test)]

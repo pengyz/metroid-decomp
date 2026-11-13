@@ -492,6 +492,18 @@ pub fn palette_stream(bank: usize, idx: usize) -> Option<&'static [u8]> {
 mod palette_tests {
     use super::*;
 
+    /// sprite blob：三表界 = `$860B-$8572`/`$86DF-$860B`，且覆盖帧 0x28 记录（截断回归锚）。
+    #[test]
+    fn sprite_blob_covers_frame_records() {
+        let sd = sprite_data();
+        assert_eq!(sd.len(), 1457, "blob 长度（$8B23-$8572）");
+        assert_eq!(OBJ_FRAME_PTR_TABLE - OBJ_ANIM_INDEX_TBL, 0x860B - 0x8572);
+        assert_eq!(OBJ_PLACE_PTR_TABLE - OBJ_FRAME_PTR_TABLE, 0x86DF - 0x860B);
+        let off = 0x890Ausize - 0x8572;
+        assert!(sd.len() > off + 4, "烘培覆盖帧 0x28 记录");
+        assert_eq!(&sd[off..off + 5], &[0x04, 0x02, 0x02, 0x30, 0xFF], "ROM $890A 逐字节");
+    }
+
     /// 表长事实（asm 锚）：bank0 标题 19 项 / bank1-5 区域 28 项 = 159 项；
     /// 包内 `pal.ptrs` 必须恰为 `2*159` 字节（不自洽即迁移出错）。
     #[test]
@@ -515,3 +527,13 @@ mod palette_tests {
         assert_ne!(palette_ptrs(2)[27 * 2], 0, "Palette1B 指针低位非零");
     }
 }
+
+/// sprite 数据 blob（`common_sprite_data.asm`；区 bank 共载 `$8572`）。
+pub fn sprite_data() -> &'static [u8] {
+    pack::get(PackKey::SpriteData)
+}
+
+/// 三表在 blob 内的偏移（`$8572` 基）：anim 索引 / 帧指针 / 放置指针。
+pub const OBJ_ANIM_INDEX_TBL: usize = 0x0000; // $8572
+pub const OBJ_FRAME_PTR_TABLE: usize = 0x0099; // $860B
+pub const OBJ_PLACE_PTR_TABLE: usize = 0x016D; // $86DF

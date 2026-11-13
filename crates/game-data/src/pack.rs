@@ -98,6 +98,7 @@ pub enum PackKey {
     PalPtrs = 49,
     PalData = 50,
     PalOffs = 51,
+    SpriteData = 52,
     NametableHi = 37,
 }
 
@@ -161,6 +162,7 @@ impl PackKey {
             PackKey::PalPtrs => "pal.ptrs",
             PackKey::PalData => "pal.data",
             PackKey::PalOffs => "pal.offs",
+            PackKey::SpriteData => "sprite.data",
             PackKey::NametableHi => "rom.nt_hi",
         }
     }
@@ -219,6 +221,7 @@ impl PackKey {
             49 => PackKey::PalPtrs,
             50 => PackKey::PalData,
             51 => PackKey::PalOffs,
+            52 => PackKey::SpriteData,
             37 => PackKey::NametableHi,
             _ => return None,
         })

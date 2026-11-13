@@ -1524,7 +1524,7 @@ mod tests_fire_probe {
     fn frame_record_coverage() {
         // 帧记录覆盖锚（截断回归（blob OOB=FF 兜底⇒radius 全 FF⇒弹不可见（用户③）））：
         // 帧 0x28 记录（$890A（04 02 02 30 FF…））必须在烘培域内（sprite_data≥0x399）。
-        let sd = game_data::area::sprite_data::SPRITE_DATA;
+        let sd = game_data::assets::sprite_data();
         let off = 0x890Ausize.wrapping_sub(0x8572);
         assert!(sd.len() > off + 4, "烘培覆盖帧 0x28 记录（{}B > {}）", sd.len(), off + 4);
         assert_eq!(&sd[off..off + 5], &[0x04, 0x02, 0x02, 0x30, 0xFF], "记录体逐字节（ROM $890A）");

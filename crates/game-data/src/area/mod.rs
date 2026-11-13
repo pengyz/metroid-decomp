@@ -1,6 +1,6 @@
 //! 区域图形域（r25——三件套烘焙面）。
 pub mod graphics; // Brinstar 敌四表仍在此（房流五件套已迁包）
-pub mod sprite_data; // r25 烘焙（sprite blob——AnimDrawObject 面）
+// sprite_data 已迁资产包（`assets::sprite_data`） // r25 烘焙（sprite blob——AnimDrawObject 面）
 pub mod items; // 特项表烘焙（SpecItmsTbl——ScanForItems/吃能力面）
 
 // 房流/结构/元tile 三件套**已迁资产包**：asm 形是 `lda (AreaPointers_RAM.RoomPtrTable),y`

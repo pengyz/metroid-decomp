@@ -6,13 +6,19 @@
 //! YDisplacement $DF6B/XDisplacement $DFA3（翻转=二补-8）/ReduceYRadius $DE3D。
 //! 数据面=game-data::area::sprite_data（blob——表指针内嵌）。
 
-use game_data::area::sprite_data as sd;
+/// sprite 数据面（资产包段；三表界常量与提取口径在 `game_data::assets`）。
+mod sd {
+    pub use game_data::assets::{OBJ_ANIM_INDEX_TBL, OBJ_FRAME_PTR_TABLE, OBJ_PLACE_PTR_TABLE};
+    pub fn data() -> &'static [u8] {
+        game_data::assets::sprite_data()
+    }
+}
 
 const BLOB_BASE: u16 = 0x8572;
 
 /// blob 内字节（指针→偏移——**OOB→0xFF**（环终止形——r26 安全化））。
 fn blob(addr: u16) -> u8 {
-    sd::SPRITE_DATA
+    sd::data()
         .get(addr.wrapping_sub(BLOB_BASE) as usize)
         .copied()
         .unwrap_or(0xFF)
@@ -47,8 +53,8 @@ pub fn obj_draw_frame(mem: &mut crate::frame::FrameMemory, page_index: u8) {
     let anim_frame = mem.read_ram(0x0303 + px);
     // ---- ObjDrawFrame（$DE4A）----
     let frame_idx = anim_frame as u16 * 2;
-    let fptr = (sd::SPRITE_DATA[sd::OBJ_FRAME_PTR_TABLE as usize + frame_idx as usize] as u16)
-        | ((sd::SPRITE_DATA[sd::OBJ_FRAME_PTR_TABLE as usize + frame_idx as usize + 1] as u16) << 8);
+    let fptr = (sd::data()[sd::OBJ_FRAME_PTR_TABLE as usize + frame_idx as usize] as u16)
+        | ((sd::data()[sd::OBJ_FRAME_PTR_TABLE as usize + frame_idx as usize + 1] as u16) << 8);
     let ctrl_byte = blob(fptr);
     // GetSpriteCntrlData（$DCC3）：AABBXXXX——色位→$05 低 2 位；翻转位→$05 高位|PRIORITY($20)
     let mut cntrl05 = (ctrl_byte >> 4) & 0x03;
@@ -73,8 +79,8 @@ pub fn obj_draw_frame(mem: &mut crate::frame::FrameMemory, page_index: u8) {
     }
     // 位移表索引（低半字节×2）
     let place_idx = (ctrl_byte & 0x0F) as u16 * 2;
-    let pptr = (sd::SPRITE_DATA[sd::OBJ_PLACE_PTR_TABLE as usize + place_idx as usize] as u16)
-        | ((sd::SPRITE_DATA[sd::OBJ_PLACE_PTR_TABLE as usize + place_idx as usize + 1] as u16) << 8);
+    let pptr = (sd::data()[sd::OBJ_PLACE_PTR_TABLE as usize + place_idx as usize] as u16)
+        | ((sd::data()[sd::OBJ_PLACE_PTR_TABLE as usize + place_idx as usize + 1] as u16) << 8);
     // 半径（帧数据 1/2 字节）
     // 【径源重模卡（2026-11-06——findings §19）】帧格式字节 1/2=radiusY/X（敌径写源
     // 6294 同式）——但 asm **DE4A 全径无径写**（Samus 径=init 15/4+roll 瞬态（D0E1
@@ -265,8 +271,8 @@ mod tests {
         anim_draw_object(&mut m, 0, 0);
         let attr = m.read_ram(0x0202);
         // 帧 0 静态 ctrl_byte（SPRITE_DATA[OBJ_FRAME_PTR_TABLE] 指针）——期望=其位 4-5
-        let fptr = (sd::SPRITE_DATA[sd::OBJ_FRAME_PTR_TABLE as usize] as u16)
-            | ((sd::SPRITE_DATA[sd::OBJ_FRAME_PTR_TABLE as usize + 1] as u16) << 8);
+        let fptr = (sd::data()[sd::OBJ_FRAME_PTR_TABLE as usize] as u16)
+            | ((sd::data()[sd::OBJ_FRAME_PTR_TABLE as usize + 1] as u16) << 8);
         let static_palette = (blob(fptr) >> 4) & 0x03;
         assert_eq!(attr & 0x03, static_palette, "MSB=0⇒调色板=ctrl_byte 静态位");
     }
