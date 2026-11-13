@@ -39,6 +39,8 @@ pub fn sections(rom: &[u8]) -> Result<Vec<Section>, String> {
     // 世界地图：`WorldMap: ; 00:A53E`（prg0_title.asm:5118）32×32=1024 B，bank0。
     // `CopyMap $A93E`（prg0_title.asm:5153）运行时把它拷到 WorldMapRAM `$7000-$73FF`。
     out.push(Section { key: PackKey::WorldMap, data: bank_slice(prg, 0, WORLD_MAP_ADDR, WORLD_MAP_LEN)? });
+    out.extend(extract_area(prg, &AREA_BR)?);
+    out.extend(extract_area(prg, &AREA_NO)?);
     Ok(out)
 }
 
@@ -317,6 +319,20 @@ fn seg_meta() -> Vec<SegMeta> {
                   rom: "(派生)", note: "(off u32, len u32) LE ×14" },
         SegMeta { key: PackKey::WorldMap, kind: "bytes", elem: 1, count: WORLD_MAP_LEN,
                   rom: "bank00:$A53E", note: "WorldMap 32×32（$FF=无房；CopyMap 源）" },
+        SegMeta { key: PackKey::BrRoomPtrs, kind: "u16-table", elem: 2, count: 47, rom: "bank01:$A314", note: "Brinstar RoomPtrTable" },
+        SegMeta { key: PackKey::BrStructPtrs, kind: "u16-table", elem: 2, count: 50, rom: "bank01:$A372", note: "Brinstar StructPtrTable" },
+        SegMeta { key: PackKey::BrMetatiles, kind: "bytes", elem: 4, count: 65, rom: "bank01:$AEF0", note: "Brinstar 元tile 4B 组×65" },
+        SegMeta { key: PackKey::BrRoomStreams, kind: "bytes", elem: 1, count: 0, rom: "bank01:各指针", note: "Brinstar 房流拼接（各自界 $FF）" },
+        SegMeta { key: PackKey::BrRoomOffs, kind: "offs-table", elem: 8, count: 47, rom: "(派生)", note: "×47 (off,len)" },
+        SegMeta { key: PackKey::BrStructures, kind: "bytes", elem: 1, count: 0, rom: "bank01:各指针", note: "Brinstar 结构体拼接" },
+        SegMeta { key: PackKey::BrStructOffs, kind: "offs-table", elem: 8, count: 50, rom: "(派生)", note: "×50 (off,len)" },
+        SegMeta { key: PackKey::NoRoomPtrs, kind: "u16-table", elem: 2, count: 46, rom: "bank02:$A21B", note: "Norfair RoomPtrTable" },
+        SegMeta { key: PackKey::NoStructPtrs, kind: "u16-table", elem: 2, count: 49, rom: "bank02:$A277", note: "Norfair StructPtrTable" },
+        SegMeta { key: PackKey::NoMetatiles, kind: "bytes", elem: 4, count: 62, rom: "bank02:$AEEC", note: "Norfair 元tile 4B 组×62" },
+        SegMeta { key: PackKey::NoRoomStreams, kind: "bytes", elem: 1, count: 0, rom: "bank02:各指针", note: "Norfair 房流拼接" },
+        SegMeta { key: PackKey::NoRoomOffs, kind: "offs-table", elem: 8, count: 46, rom: "(派生)", note: "×46 (off,len)" },
+        SegMeta { key: PackKey::NoStructures, kind: "bytes", elem: 1, count: 0, rom: "bank02:各指针", note: "Norfair 结构体拼接" },
+        SegMeta { key: PackKey::NoStructOffs, kind: "offs-table", elem: 8, count: 49, rom: "(派生)", note: "×49 (off,len)" },
     ];
     v
 }
@@ -347,6 +363,85 @@ pub fn build_meta_json(sections: &[Section], rom_crc32: u32, rom_size: u32) -> V
     }
     out.push_str("\n  ]\n}\n");
     out.into_bytes()
+}
+
+
+// ---- 区域房流（Brinstar bank1 / Norfair bank2）------------------------------------
+//
+// 表长由土址机械给出（见两区 RoomPtrTable/StructPtrTable 标签地址）：
+//   Brinstar: room_ptrs $A314(47 项) / struct_ptrs $A372(50 项) / metatiles $AEF0(260 B)
+//   Norfair : room_ptrs $A21B(46 项) / struct_ptrs $A277(49 项) / metatiles $AEEC(248 B)
+// 房流/结构体**自界**：从指针起读到 `$FF`（`DrawRoom`/`DrawStruct` 终止符）。
+// 变长数组必须同时写 `(off u32, len u32)` 索引段——运行侧无表即无法定位第 N 项。
+
+struct AreaSpec {
+    bank: u8,
+    room_ptrs: u16,
+    n_rooms: usize,
+    struct_ptrs: u16,
+    n_structs: usize,
+    metatiles: u16,
+    n_metatiles: usize,
+    keys: [PackKey; 7],
+}
+
+/// Brinstar（bank1）。
+const AREA_BR: AreaSpec = AreaSpec {
+    bank: 1, room_ptrs: 0xA314, n_rooms: 47, struct_ptrs: 0xA372, n_structs: 50,
+    metatiles: 0xAEF0, n_metatiles: 260,
+    keys: [PackKey::BrRoomPtrs, PackKey::BrStructPtrs, PackKey::BrMetatiles,
+           PackKey::BrRoomStreams, PackKey::BrRoomOffs, PackKey::BrStructures, PackKey::BrStructOffs],
+};
+
+/// Norfair（bank2）。
+const AREA_NO: AreaSpec = AreaSpec {
+    bank: 2, room_ptrs: 0xA21B, n_rooms: 46, struct_ptrs: 0xA277, n_structs: 49,
+    metatiles: 0xAEEC, n_metatiles: 248,
+    keys: [PackKey::NoRoomPtrs, PackKey::NoStructPtrs, PackKey::NoMetatiles,
+           PackKey::NoRoomStreams, PackKey::NoRoomOffs, PackKey::NoStructures, PackKey::NoStructOffs],
+};
+
+/// 读到 `$FF`（含）为止；找不到终止符 ⇒ 硬错（宁可拒绝出包也不静默截断）。
+fn read_until_ff(prg: &[u8], start: usize) -> Result<Vec<u8>, String> {
+    let tail = prg.get(start..).ok_or_else(|| format!("自界越界：起点 {start}"))?;
+    let end = tail
+        .iter()
+        .position(|&b| b == 0xFF)
+        .ok_or_else(|| format!("自界失配：{start:#06X} 起无 $FF 终止符"))?;
+    Ok(tail[..=end].to_vec())
+}
+
+/// 指针表 → 拼流 + `(off,len)` 索引段。
+fn extract_streams(
+    prg: &[u8], bank: u8, ptr_addr: u16, n: usize,
+) -> Result<(Vec<u8>, Vec<u8>), String> {
+    let ptrs = bank_slice(prg, bank, ptr_addr, n * 2)?;
+    let mut body = Vec::new();
+    let mut offs = Vec::with_capacity(n * 8);
+    for i in 0..n {
+        let p = u16::from_le_bytes([ptrs[i * 2], ptrs[i * 2 + 1]]);
+        let o = bank_source_offset(bank, p)?;
+        let one = read_until_ff(prg, o)?;
+        offs.extend_from_slice(&(body.len() as u32).to_le_bytes());
+        offs.extend_from_slice(&(one.len() as u32).to_le_bytes());
+        body.extend_from_slice(&one);
+    }
+    Ok((body, offs))
+}
+
+fn extract_area(prg: &[u8], a: &AreaSpec) -> Result<Vec<Section>, String> {
+    let k = &a.keys;
+    let (rooms, room_offs) = extract_streams(prg, a.bank, a.room_ptrs, a.n_rooms)?;
+    let (structs, struct_offs) = extract_streams(prg, a.bank, a.struct_ptrs, a.n_structs)?;
+    Ok(vec![
+        Section { key: k[0], data: bank_slice(prg, a.bank, a.room_ptrs, a.n_rooms * 2)? },
+        Section { key: k[1], data: bank_slice(prg, a.bank, a.struct_ptrs, a.n_structs * 2)? },
+        Section { key: k[2], data: bank_slice(prg, a.bank, a.metatiles, a.n_metatiles)? },
+        Section { key: k[3], data: rooms },
+        Section { key: k[4], data: room_offs },
+        Section { key: k[5], data: structs },
+        Section { key: k[6], data: struct_offs },
+    ])
 }
 
 #[cfg(test)]

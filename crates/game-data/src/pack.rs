@@ -58,6 +58,21 @@ pub enum PackKey {
     EnPlaceOffs = 10,
     /// 世界地图（`WorldMap $A53E`，32×32=1 KB；行=MapY 列=MapX，`$FF`=无房）。
     WorldMap = 11,
+    // ---- 区域房流（Brinstar bank1 / Norfair bank2；指针表 + 4B 元tile 组 + 房流/结构体）----
+    BrRoomPtrs = 12,
+    BrStructPtrs = 13,
+    BrMetatiles = 14,
+    BrRoomStreams = 15,
+    BrRoomOffs = 16,
+    BrStructures = 17,
+    BrStructOffs = 18,
+    NoRoomPtrs = 19,
+    NoStructPtrs = 20,
+    NoMetatiles = 21,
+    NoRoomStreams = 22,
+    NoRoomOffs = 23,
+    NoStructures = 24,
+    NoStructOffs = 25,
 }
 
 impl PackKey {
@@ -81,6 +96,20 @@ impl PackKey {
             PackKey::EnPlaceOffs => "en.poffs",
             PackKey::WorldMap => "world.map",
             PackKey::Meta => "meta.json",
+            PackKey::BrRoomPtrs => "area.br.room_ptrs",
+            PackKey::BrStructPtrs => "area.br.struct_ptrs",
+            PackKey::BrMetatiles => "area.br.metatiles",
+            PackKey::BrRoomStreams => "area.br.room_streams",
+            PackKey::BrRoomOffs => "area.br.room_offs",
+            PackKey::BrStructures => "area.br.structs",
+            PackKey::BrStructOffs => "area.br.struct_offs",
+            PackKey::NoRoomPtrs => "area.no.room_ptrs",
+            PackKey::NoStructPtrs => "area.no.struct_ptrs",
+            PackKey::NoMetatiles => "area.no.metatiles",
+            PackKey::NoRoomStreams => "area.no.room_streams",
+            PackKey::NoRoomOffs => "area.no.room_offs",
+            PackKey::NoStructures => "area.no.structs",
+            PackKey::NoStructOffs => "area.no.struct_offs",
         }
     }
 
@@ -99,6 +128,20 @@ impl PackKey {
             10 => PackKey::EnPlaceOffs,
             11 => PackKey::WorldMap,
             0 => PackKey::Meta,
+            12 => PackKey::BrRoomPtrs,
+            13 => PackKey::BrStructPtrs,
+            14 => PackKey::BrMetatiles,
+            15 => PackKey::BrRoomStreams,
+            16 => PackKey::BrRoomOffs,
+            17 => PackKey::BrStructures,
+            18 => PackKey::BrStructOffs,
+            19 => PackKey::NoRoomPtrs,
+            20 => PackKey::NoStructPtrs,
+            21 => PackKey::NoMetatiles,
+            22 => PackKey::NoRoomStreams,
+            23 => PackKey::NoRoomOffs,
+            24 => PackKey::NoStructures,
+            25 => PackKey::NoStructOffs,
             _ => return None,
         })
     }

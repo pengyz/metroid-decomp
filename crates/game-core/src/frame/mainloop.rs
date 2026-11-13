@@ -3453,18 +3453,14 @@ pub fn setup_room(mem: &mut FrameMemory) {
     // 基址拷自当前区 bank $959A，表按区分发：0=Brinstar $A314 47 项 / 1=Norfair $A21B 46 项；
     // 折叠等价：直查该区烘焙表（表值与 ROM 逐字节同——各件头注自证），asm 形=间接查 ROM）。
     let area = mem.read_ram(crate::ram_map::IN_AREA) & 0x0F;
-    let ptrs = game_data::area::room_ptrs(area)
-        .unwrap_or_else(|| crate::unported!("bank07:959A-RoomPtrTable"));
-    let ptr = ptrs
-        .get(room as usize)
-        .copied()
+    let ptr = game_data::assets::room_ptr(area, room as usize)
         .unwrap_or_else(|| crate::unported!("bank07:A314-RoomPtrTable-oob"));
     mem.write_ram(0x0033, ptr as u8); // RoomPtr lo（constants_ram:508）
     mem.write_ram(0x0034, (ptr >> 8) as u8); // RoomPtr hi
     // 首字节读（房间数据——RoomPalette=$36 址随证）+SelectRoomRAM($EA05)/InitTables($EFF8)
     // +DrawRoom 链（S6-7 绘制面——r25 端口）。
     crate::frame::room::select_room_ram(mem);
-    let room_stream = game_data::area::room_streams(area)
+    let room_stream = game_data::assets::room_streams(area)
         .and_then(|ss| ss.get(room as usize));
     let palette = room_stream.and_then(|s| s.first().copied()).unwrap_or(0);
     mem.write_ram(0x0068, palette); // RoomPalette（**$68**——r25 址勘误修（旧 $36 随证形误））

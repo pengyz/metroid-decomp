@@ -21,11 +21,7 @@
     },
     {
       "file": "crates/game-data/src/area/graphics.rs",
-      "max_byte_literals": 3362
-    },
-    {
-      "file": "crates/game-data/src/area/norfair_graphics.rs",
-      "max_byte_literals": 3131
+      "max_byte_literals": 3100
     },
     {
       "file": "crates/game-data/src/area/sprite_data.rs",

@@ -92,6 +92,104 @@ pub fn world_map() -> &'static [u8] {
     pack::get(PackKey::WorldMap)
 }
 
+
+// ---- 区域房流（Brinstar / Norfair）------------------------------------------------
+//
+// 变长数组的索引（`(off,len)`）在包内；这里用 `LazyLock` 一次性切成
+// `&'static [&'static [u8]]`，让消费侧保持「按下标取一段」的写法而不必自己解码。
+
+use std::sync::LazyLock;
+
+fn slices(body: &'static [u8], offs: &'static [u8], n: usize) -> Vec<&'static [u8]> {
+    let mut v = Vec::with_capacity(n);
+    for i in 0..n {
+        let Some(e) = offs.get(i * 8..i * 8 + 8) else { break };
+        let o = u32::from_le_bytes([e[0], e[1], e[2], e[3]]) as usize;
+        let l = u32::from_le_bytes([e[4], e[5], e[6], e[7]]) as usize;
+        match body.get(o..o + l) {
+            Some(s) => v.push(s),
+            None => break,
+        }
+    }
+    v
+}
+
+static BR_ROOMS: LazyLock<Vec<&'static [u8]>> = LazyLock::new(|| {
+    slices(pack::get(PackKey::BrRoomStreams), pack::get(PackKey::BrRoomOffs), 47)
+});
+static BR_STRUCTS: LazyLock<Vec<&'static [u8]>> = LazyLock::new(|| {
+    slices(pack::get(PackKey::BrStructures), pack::get(PackKey::BrStructOffs), 50)
+});
+static NO_ROOMS: LazyLock<Vec<&'static [u8]>> = LazyLock::new(|| {
+    slices(pack::get(PackKey::NoRoomStreams), pack::get(PackKey::NoRoomOffs), 46)
+});
+static NO_STRUCTS: LazyLock<Vec<&'static [u8]>> = LazyLock::new(|| {
+    slices(pack::get(PackKey::NoStructures), pack::get(PackKey::NoStructOffs), 49)
+});
+
+/// 区序号（`InArea & 0x0F`：0=Brinstar / 1=Norfair）——其余区未迁包 ⇒ `None`。
+fn area_idx(area: u8) -> Option<u8> {
+    match area & 0x0F {
+        0 => Some(0),
+        1 => Some(1),
+        _ => None,
+    }
+}
+
+/// 房流指针表（u16 LE × N；N 由区决定：Brinstar 47 / Norfair 46）。
+pub fn room_ptrs(area: u8) -> Option<&'static [u8]> {
+    match area_idx(area)? {
+        0 => Some(pack::get(PackKey::BrRoomPtrs)),
+        _ => Some(pack::get(PackKey::NoRoomPtrs)),
+    }
+}
+
+/// 第 `idx` 个房指针（LE u16）——越界/未迁区 ⇒ `None`。
+pub fn room_ptr(area: u8, idx: usize) -> Option<u16> {
+    let t = room_ptrs(area)?;
+    let e = t.get(idx * 2..idx * 2 + 2)?;
+    Some(u16::from_le_bytes([e[0], e[1]]))
+}
+
+/// 第 `idx` 个结构体指针（LE u16）。
+pub fn struct_ptr(area: u8, idx: usize) -> Option<u16> {
+    let t = struct_ptrs(area)?;
+    let e = t.get(idx * 2..idx * 2 + 2)?;
+    Some(u16::from_le_bytes([e[0], e[1]]))
+}
+
+/// 结构体指针表（Brinstar 50 / Norfair 49）。
+pub fn struct_ptrs(area: u8) -> Option<&'static [u8]> {
+    match area_idx(area)? {
+        0 => Some(pack::get(PackKey::BrStructPtrs)),
+        _ => Some(pack::get(PackKey::NoStructPtrs)),
+    }
+}
+
+/// 元tile 定义（4 B/组：Brinstar 260 B / Norfair 248 B）。
+pub fn metatile_defs(area: u8) -> Option<&'static [u8]> {
+    match area_idx(area)? {
+        0 => Some(pack::get(PackKey::BrMetatiles)),
+        _ => Some(pack::get(PackKey::NoMetatiles)),
+    }
+}
+
+/// 房流（按房号下标；每段自界于 `$FF`）。
+pub fn room_streams(area: u8) -> Option<&'static [&'static [u8]]> {
+    match area_idx(area)? {
+        0 => Some(&BR_ROOMS),
+        _ => Some(&NO_ROOMS),
+    }
+}
+
+/// 结构体（按结构号下标）。
+pub fn structures(area: u8) -> Option<&'static [&'static [u8]]> {
+    match area_idx(area)? {
+        0 => Some(&BR_STRUCTS),
+        _ => Some(&NO_STRUCTS),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
