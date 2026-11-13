@@ -15,7 +15,7 @@
   ],
   "faces": {
     "behavior": {
-      "denominator": 231
+      "denominator": 247
     },
     "symbol": {
       "denominator": 492
@@ -8270,6 +8270,150 @@
       "strength": "L0",
       "covered": false,
       "evidence": "oracle/scenarios/sc-a3-028-seed7.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-case-001-game-start-samus-interaction": {
+      "id": "B-SCN-case-001-game-start-samus-interaction",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/case-001-game-start-samus-interaction.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-game-start-probe": {
+      "id": "B-SCN-game-start-probe",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/game-start-probe.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-game-start": {
+      "id": "B-SCN-game-start",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/game-start.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-hooks-smoke": {
+      "id": "B-SCN-hooks-smoke",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/hooks-smoke.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-pal1c-boot": {
+      "id": "B-SCN-pal1c-boot",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/pal1c-boot.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-sc-first-room-full": {
+      "id": "B-SCN-sc-first-room-full",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/sc-first-room-full.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-sc-morph-ball": {
+      "id": "B-SCN-sc-morph-ball",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/sc-morph-ball.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-sc-password-justin": {
+      "id": "B-SCN-sc-password-justin",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/sc-password-justin.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-sc-pw-justin-cal": {
+      "id": "B-SCN-sc-pw-justin-cal",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/sc-pw-justin-cal.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-sc-shoot-kill": {
+      "id": "B-SCN-sc-shoot-kill",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/sc-shoot-kill.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-sndchain-boot": {
+      "id": "B-SCN-sndchain-boot",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/sndchain-boot.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-sndtail-boot": {
+      "id": "B-SCN-sndtail-boot",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/sndtail-boot.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-stargate-boot": {
+      "id": "B-SCN-stargate-boot",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/stargate-boot.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-vrsnap-smoke-nmi": {
+      "id": "B-SCN-vrsnap-smoke-nmi",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/vrsnap-smoke-nmi.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-vrsnap-smoke-zp": {
+      "id": "B-SCN-vrsnap-smoke-zp",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/vrsnap-smoke-zp.txt",
+      "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
+    },
+    "B-SCN-vrsnap-smoke": {
+      "id": "B-SCN-vrsnap-smoke",
+      "face": "behavior",
+      "module": "scenario",
+      "strength": "L0",
+      "covered": false,
+      "evidence": "oracle/scenarios/vrsnap-smoke.txt",
       "note": "场景语料入口；**声明性分母**（B 面行为空间无机械分母），与 oracle 覆盖机制脱钩（rounds/r2 F3/N4）"
     }
   }
