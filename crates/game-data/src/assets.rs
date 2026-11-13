@@ -215,6 +215,30 @@ enemy_table!(enemy_distance_threshold, BrEnemyDistanceThreshold);
 enemy_table!(enemy_init_delay, BrEnemyInitDelay);
 enemy_table!(enemy_facing, BrEnemyFacing);
 
+
+// ---- ROM 查询表（窗口参数化）------------------------------------------------------
+//
+// asm `bank07:F29E` `LDA $968B,Y`（属性表，Y<0x80）/ `bank07:F2ED` 搬 `$95CE/$95CF`
+// 流向量 / `bank07:C19F` NT 高位表。窗口语义=**按区域 bank 查表**（decode-sweep r3
+// 动态定谳：game 期 `$8000` 窗口=banks1-5），故按 8 bank 全量存，`window_bank` 取数。
+
+/// `$968B` 属性表（`window_bank` × 128B）。
+pub fn rom_table_968b(window_bank: usize, y: u8) -> u8 {
+    let t = pack::get(PackKey::RomTable968B);
+    t[window_bank * 0x80 + (y & 0x7F) as usize]
+}
+
+/// `$95CE/$95CF` 流向量 `[lo, hi]`。
+pub fn rom_vec(window_bank: usize) -> (u8, u8) {
+    let t = pack::get(PackKey::RomVec95CE);
+    (t[window_bank * 2], t[window_bank * 2 + 1])
+}
+
+/// PPU NT 高位表（`$20/$24/$28/$2C`）。
+pub fn nametable_hi() -> &'static [u8] {
+    pack::get(PackKey::NametableHi)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -497,7 +497,7 @@ mod tests {
     }
 }
 
-pub mod rom_tables; // 分界线修（rom_tables（数据表）→game-data（资产解析））
+// 已迁资产包（`assets::rom_table_968b/rom_vec/nametable_hi`）——`rom_tables.rs` 删除 // 分界线修（rom_tables（数据表）→game-data（资产解析））
 pub mod world; // 数据内容在 game-data（架构约束）——世界数据（world_map+room_data）
 pub mod samus; // 数据内容在 game-data（架构约束）——Samus 数据
 pub mod enemy; // 数据内容在 game-data（架构约束）——敌人数据

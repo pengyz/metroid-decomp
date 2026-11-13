@@ -24,10 +24,6 @@
       "max_byte_literals": 1457
     },
     {
-      "file": "crates/game-data/src/rom_tables.rs",
-      "max_byte_literals": 1040
-    },
-    {
       "file": "crates/game-data/src/sound/music_streams.rs",
       "max_byte_literals": 2227
     },

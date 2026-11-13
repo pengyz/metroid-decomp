@@ -44,6 +44,7 @@ pub fn sections(rom: &[u8]) -> Result<Vec<Section>, String> {
     for (key, addr, len, _) in BR_ENEMY_TABLES {
         out.push(Section { key, data: bank_slice(prg, 1, addr, len)? });
     }
+    out.extend(extract_rom_tables(prg)?);
     Ok(out)
 }
 
@@ -344,6 +345,9 @@ fn seg_meta() -> Vec<SegMeta> {
         SegMeta { key: PackKey::BrEnemyDistanceThreshold, kind: "bytes", elem: 1, count: 16, rom: "bank01:96AB", note: "DistanceThreshold（asm 标签间距见 note）" },
         SegMeta { key: PackKey::BrEnemyInitDelay, kind: "bytes", elem: 1, count: 64, rom: "bank01:96BB", note: "InitDelay（asm 标签间距见 note）" },
         SegMeta { key: PackKey::BrEnemyFacing, kind: "bytes", elem: 1, count: 64, rom: "bank01:977B", note: "Facing（asm 标签间距见 note）" },
+        SegMeta { key: PackKey::RomTable968B, kind: "bytes", elem: 0x80, count: 8, rom: "各 bank $968B", note: "窗口参数化属性表 8×128B" },
+        SegMeta { key: PackKey::RomVec95CE, kind: "bytes", elem: 2, count: 8, rom: "各 bank $95CE", note: "F2ED 流向量 [lo,hi]×8" },
+        SegMeta { key: PackKey::NametableHi, kind: "bytes", elem: 1, count: 4, rom: "bank07:$C19F", note: "NT 高位表 20/24/28/2C" },
         SegMeta { key: PackKey::NoStructOffs, kind: "offs-table", elem: 8, count: 49, rom: "(派生)", note: "×49 (off,len)" },
     ];
     v
@@ -472,6 +476,28 @@ const BR_ENEMY_TABLES: [(PackKey, u16, usize, &str); 9] = [
     (PackKey::BrEnemyInitDelay, 0x96BB, 64, "EnemyInitDelayTbl"),
     (PackKey::BrEnemyFacing, 0x977B, 64, "L977B（朝向）"),
 ];
+
+
+/// `$968B` 属性表逐 bank（8×128B；源 `prg[w*0x4000 + 0x168B ..]`——
+/// 窗口 CPU `$8000+off` 映射，见 `rom_tables.rs` 模块注的 decode-sweep r3 定谳）。
+fn extract_rom_tables(prg: &[u8]) -> Result<Vec<Section>, String> {
+    let mut tbl = Vec::with_capacity(8 * 0x80);
+    let mut vecs = Vec::with_capacity(8 * 2);
+    for w in 0..8usize {
+        let base = w * 0x4000;
+        let t = prg.get(base + 0x168B..base + 0x168B + 0x80)
+            .ok_or_else(|| format!("$968B 表越界（bank{w}）"))?;
+        tbl.extend_from_slice(t);
+        let v = prg.get(base + 0x15CE..base + 0x15CE + 2)
+            .ok_or_else(|| format!("$95CE 向量越界（bank{w}）"))?;
+        vecs.extend_from_slice(v);
+    }
+    Ok(vec![
+        Section { key: PackKey::RomTable968B, data: tbl },
+        Section { key: PackKey::RomVec95CE, data: vecs },
+        Section { key: PackKey::NametableHi, data: vec![0x20, 0x24, 0x28, 0x2C] },
+    ])
+}
 
 #[cfg(test)]
 mod tests {

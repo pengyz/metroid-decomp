@@ -14,29 +14,26 @@
 //! 语义未证（C 级）——仅证 $968B 表 `AND #$10` 位测试（F2A1 `29 10`）与向量搬运；
 //! 对拍面=b-f282-*-w*/b-f2ed-full-w*/b-f2e8-fall-full-w* 多窗口族（8 bank 全窗口三方全等）。
 
-/// $968B 属性表逐 bank 烘焙（8×128B；Y∈[0,0x7F]——BMI 分流保证）。
+/// $968B 属性表逐 bank（8×128B；Y∈[0,0x7F]——BMI 分流保证）——数据在资产包。
 /// 源：prg[w × 0x4000 + 0x168B .. w × 0x4000 + 0x170B]（逐 bank 自证见模块注）。
-pub use game_data::rom_tables::TABLE_968B_BY_BANK;
-
 /// 表读（**窗口参数化**；Y<0x80；F2A1 `AND #$10` 位测试面）。
 /// `window_bank` 契约∈0..8（MMC1 16KB 窗口；越界=契约违规 fail-loud）。
 pub fn table_968b(window_bank: usize, y: u8) -> u8 {
-    TABLE_968B_BY_BANK[window_bank][(y & 0x7F) as usize]
+    game_data::assets::rom_table_968b(window_bank, y)
 }
 
 /// $95CE/$95CF ROM 向量逐 bank 烘焙（8×2B，[lo, hi]）。
 /// 源：prg[w × 0x4000 + 0x15CE .. w × 0x4000 + 0x15D0]。
-pub use game_data::rom_tables::ROM_VEC_BY_BANK;
-
 /// 向量读（**窗口参数化**）：(lo=$95CE, hi=$95CF)。契约同 [`table_968b`]。
 pub fn rom_vec(window_bank: usize) -> (u8, u8) {
-    let v = ROM_VEC_BY_BANK[window_bank];
-    (v[0], v[1])
+    game_data::assets::rom_vec(window_bank)
 }
 
 /// PPU nametable 高位表（bank07:C19F `20 24 28 2C`——C158 清屏目标 $2000/$2400/$2800/$2C00；
 /// 索引=$01-1，A 级字节）。
-pub use game_data::rom_tables::NAMETABLE_HI;
+pub fn nametable_hi() -> &'static [u8] {
+    game_data::assets::nametable_hi()
+}
 
 #[cfg(test)]
 mod tests {
@@ -67,5 +64,33 @@ mod tests {
     fn table_968b_y_wraps_low7() {
         assert_eq!(table_968b(3, 0x80), table_968b(3, 0x00));
         assert_eq!(table_968b(3, 0xFF), table_968b(3, 0x7F));
+    }
+
+    /// 迁移锚：8 bank 切片必须彼此不同（否则「按窗口查表」语义塌成单表）。
+    #[test]
+    fn rom_table_968b_spans_all_eight_banks() {
+        let first: Vec<u8> = (0..8).map(|w| table_968b(w, 0)).collect();
+        let uniq: std::collections::BTreeSet<u8> = first.iter().copied().collect();
+        assert!(uniq.len() >= 3, "8 个窗口首字节应有多样性（实测 {uniq:?}）");
+        // bank7（旧 A9 约定的窗口）与 bank0 必须不同——A9 证伪的就地钉。
+        assert_ne!(table_968b(7, 1), table_968b(0, 1));
+    }
+
+    /// 迁移锚：流向量 8 bank 逐值（ROM 源 `prg[w*0x4000+0x15CE..]`）。
+    #[test]
+    fn rom_vec_matches_all_bank_pairs() {
+        let expect = [
+            (0x3F, 0x00), (0x80, 0x00), (0x00, 0x01), (0x00, 0x03),
+            (0x00, 0x02), (0x40, 0x02), (0x25, 0x30), (0x03, 0x38),
+        ];
+        for (w, e) in expect.iter().enumerate() {
+            assert_eq!(rom_vec(w), *e, "bank{w} 向量");
+        }
+    }
+
+    /// 迁移锚：NT 高位表 `$20/$24/$28/$2C`（bank07:C19F，C158 清屏目标）。
+    #[test]
+    fn nametable_hi_is_the_four_screen_bases() {
+        assert_eq!(nametable_hi(), &[0x20, 0x24, 0x28, 0x2C]);
     }
 }

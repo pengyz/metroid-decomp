@@ -82,6 +82,9 @@ pub enum PackKey {
     BrEnemyDistanceThreshold = 32,
     BrEnemyInitDelay = 33,
     BrEnemyFacing = 34,
+    RomTable968B = 35,
+    RomVec95CE = 36,
+    NametableHi = 37,
 }
 
 impl PackKey {
@@ -128,6 +131,9 @@ impl PackKey {
             PackKey::BrEnemyDistanceThreshold => "area.br.en_dist_thr",
             PackKey::BrEnemyInitDelay => "area.br.en_init_delay",
             PackKey::BrEnemyFacing => "area.br.en_facing",
+            PackKey::RomTable968B => "rom.tbl968b",
+            PackKey::RomVec95CE => "rom.vec95ce",
+            PackKey::NametableHi => "rom.nt_hi",
         }
     }
 
@@ -169,6 +175,9 @@ impl PackKey {
             32 => PackKey::BrEnemyDistanceThreshold,
             33 => PackKey::BrEnemyInitDelay,
             34 => PackKey::BrEnemyFacing,
+            35 => PackKey::RomTable968B,
+            36 => PackKey::RomVec95CE,
+            37 => PackKey::NametableHi,
             _ => return None,
         })
     }
