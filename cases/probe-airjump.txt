@@ -1,0 +1,8 @@
+# 空中跳取证（站立跳：status=2 的 SamusJump 径）——进游戏后原地起跳，空中再按两次 A
+name probe-airjump
+frames 1200
+press 310 start
+press 350 start
+press 1000 a
+press 1012 a
+press 1040 a

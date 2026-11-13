@@ -1,0 +1,19 @@
+name probe-airjump2
+frames 1400
+press 310 start
+press 350 start
+hold 900-1400 right
+press 960 a
+press 972 a
+press 984 a
+press 1000 a
+press 1016 a
+press 1032 a
+press 1048 a
+press 1064 a
+press 1080 a
+press 1096 a
+press 1150 b
+press 1160 a
+press 1172 a
+press 1184 a

@@ -665,6 +665,28 @@ mod tests {
     /// SamusJump 位移门（≥$20+JUMP 松开→StopVertMovement（speedY→0））。
     /// > 【2026-10-28 证伪更正】旧测断 D015 unported 爆——D015 链已全链端口
     /// > （samus-jump-fire-chain.md）——正测义=停升写面+链全通不爆。
+    /// 【空中跳根修回归】**空中（非岩浆）按 A 不得重跳**——旧实现读 `$0609`
+    /// （MusicTriPeriodHigh，放音乐时恒非 0）⇒ 恒真 ⇒ 无限跳。
+    #[test]
+    fn lava_jump_gate_reads_samus_in_lava_not_music_period() {
+        use crate::ram_map;
+        let mut m = FrameMemory::default();
+        // 音乐在放（TRI 高字节非 0）+ 空中按 A + 不在岩浆 ⇒ 必须拒绝
+        m.write_ram(0x0609, 0x30);
+        m.write_ram(ram_map::JOY1_CHANGE, 0x80);
+        m.write_ram(ram_map::SAMUS_IN_LAVA, 0);
+        assert!(
+            !lava_jump_allowed(&m),
+            "空中非岩浆按 A 不得重跳（旧实现读 $0609 会误判为真）"
+        );
+        // 真在岩浆里 + 按 A ⇒ 允许（原版行为：岩浆中可再跳）
+        m.write_ram(ram_map::SAMUS_IN_LAVA, 1);
+        assert!(lava_jump_allowed(&m), "岩浆中按 A 应允许重跳");
+        // 在岩浆里但没按 A ⇒ 不允许
+        m.write_ram(ram_map::JOY1_CHANGE, 0x00);
+        assert!(!lava_jump_allowed(&m));
+    }
+
     #[test]
     fn samus_jump_release_gate() {
         use crate::ram_map::{JOY1_STATUS, SAMUS_JUMP_DISP};
@@ -973,10 +995,9 @@ pub fn samus_jump(mem: &mut FrameMemory) {
             super::physics::stop_vert_movement(mem); // D147（已全折）（松开起跳）
         }
     }
-    // 【goal-轮18 空控接线（自跑实证：f1655 Joy1Status=0x1（RIGHT）⇒金 spX=1/我 0——
-    // D055 空控未调！）】SamusJump_CheckHorzMovement（:3481 asm 调用点）——speedX=±1/0
-    // 向位（每帧横速置）。
-    samus_jump_check_horz_movement(mem); // D055
+    // 【重复调用修 2026-11-13】此处原有一次 `samus_jump_check_horz_movement`，
+    // 而 `samus_jump_tail` 首行也调它 ⇒ 每帧跑两次。asm `SamusJump` 只在 Lx019
+    // （D015）调一次（prg7_engine.asm:3481），故删此处，保留 tail 内那份。
     samus_jump_tail(mem); // D015 链（audit §4（2026-10-28 全链通读端口））
 }
 
@@ -1054,7 +1075,13 @@ pub fn samus_jump_tail(mem: &mut FrameMemory) {
     }
     samus_jump_check_fire(mem); // D09C
     // 岩浆跳（SamusInLava≠0 且 Joy1Change bit7）⇒SetSamusJump+3 帧延迟
-    if mem.read_ram(0x0609) != 0 && mem.read_ram(crate::ram_map::JOY1_CHANGE) & A != 0 {
+    //
+    // 【空中跳根修 2026-11-13】**旧形读 `0x0609`=MusicTriPeriodHigh（TRI 高字节周期，
+    // 音乐播放中恒非 0）而非 SamusInLava($0064)**（constants_ram.asm:574
+    // `SamusInLava db ;$64`；:993 `MusicTriPeriodHigh db ;$0609`）⇒ 只要在放音乐，
+    // 空中再按 A 就会重跑 SetSamusJump（speedY←$FC / JumpDsplcmnt←0）⇒ **无限跳**。
+    // asm `Lx020-Lx021` 的这条分支是**唯一**允许空中重跳的路径，且门槛是 SamusInLava。
+    if lava_jump_allowed(mem) {
         set_samus_jump(mem);
         mem.write_ram(ANIM_RESET_INDEX.wrapping_sub(1), 3); // SetSamusData_3FrameAnimDelay
         if std::env::var("DSH_SPRITE_TRACE").is_ok() {
@@ -1076,6 +1103,21 @@ pub fn samus_jump_tail(mem: &mut FrameMemory) {
     // Lx023：A←$03 jmp SetSamusData（CD6D）
     mem.regs.a = 3;
     super::physics::set_samus_data(mem);
+}
+
+/// 空中重跳的唯一合法门（**asm 内容锚** `SamusJump: ; 07:D002` Lx020-Lx021，
+/// `prg7_engine.asm:3496-3501`）：
+/// ```text
+/// lda SamusInLava($64) / beq Lx021     ; 不在岩浆 ⇒ 跳过
+/// lda Joy1Change / bpl Lx021           ; JUMP 未按下 ⇒ 跳过
+/// jsr SetSamusJump                     ; 「岩浆里可以再跳」
+/// jmp SetSamusData_3FrameAnimDelay
+/// ```
+/// 抽成纯函数是为了让「读对地址」可被单测钉死：旧实现读 `$0609`
+/// （`MusicTriPeriodHigh`，放音乐时恒非 0）⇒ 空中按 A 即重跳（无限跳）。
+pub fn lava_jump_allowed(mem: &FrameMemory) -> bool {
+    mem.read_ram(crate::ram_map::SAMUS_IN_LAVA) != 0
+        && mem.read_ram(crate::ram_map::JOY1_CHANGE) & 0x80 != 0 // BUTTON_A
 }
 
 /// SamusRoll 处理件（asm 内容锚 `SamusRoll: ; 07:D0E1`——**变形球滚动全径**）：
