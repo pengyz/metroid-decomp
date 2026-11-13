@@ -35,6 +35,11 @@ pub fn sections(rom: &[u8]) -> Result<Vec<Section>, String> {
     let mut out = Vec::new();
     out.push(Section { key: PackKey::GfxInfo, data: extract_gfx_info(prg)? });
     out.push(Section { key: PackKey::GfxData, data: extract_gfx_data(prg)? });
+    // 【W2 暂缓·敌帧/位数据面】不启用：`tools/bake_enemy_gfx.py` 与提交件已漂移
+    // （`--check` FAIL；脚本口径 en.places=539457 B vs 提交件 EN_PLACES=204448 B），
+    // 且两张指针表存在 34/44 个 `< $8000` 的非指针值（表长口径 $9EE0+256≠$9F0E）。
+    // 详见 `docs/findings/enemy-gfx-baker-drift.md`。迁移前必须先定谳"哪份是运行真值"，
+    // 否则就是把 1.4 MB 敌动画数据在无证据的情况下换掉。
     Ok(out)
 }
 
@@ -67,6 +72,148 @@ fn extract_gfx_data(prg: &[u8]) -> Result<Vec<u8>, String> {
         data.extend_from_slice(&prg[o..end]);
     }
     Ok(data)
+}
+
+// ---- 敌帧/位数据面（bank1 $9D6A-$9F0E 族；移植自 tools/bake_enemy_gfx.py）--------
+//
+// ROM 锚（A 级）：`AreaPointers_ROM` 7 字（prg1:88）里的 EnAnimTable `$9D6A` /
+// EnFramePtrTable1 `$9DE0` / EnFramePtrTable2 `$9EE0` / EnPlacePtrTable `$9F0E`；
+// `CopyAreaPointers $C8B0`（prg7:1936）把它们搬到 RAM `$3B-$48`。
+// 帧流=[ctrl][radiusY][radiusX][流…$FF]；位流=y/x 对。
+const EN_BANK_BASE: usize = 0x4000; // bank1（Brinstar）切窗口起点
+const EN_ANIM_TABLE: u16 = 0x9D6A;
+const EN_FRAME_PTRS1: u16 = 0x9DE0;
+const EN_FRAME_PTRS2: u16 = 0x9EE0;
+const EN_PLACE_PTRS: u16 = 0x9F0E;
+const EN_N_PLACES: usize = 128;
+
+/// `(bank1 切窗口) cpu addr → PRG 偏移`，**保留烘焙器的负索引回绕语义**。
+///
+/// 历史事实（A 级，必须记）：`tools/bake_enemy_gfx.py` 用 Python 列表负索引写这段，
+/// `$9EE0`/`$9F0E` 两张表里存在 34/44 个 `< $8000` 的指针值（这些不是合法 ROM 指针，
+/// 而是表长口径与 asm 标签不符造成的错位读），Python 的 `prg[负偏移]` 会从 PRG **尾部**
+/// 回绕取字节，于是旧常量里混入了尾部字节。W2 只做**数据搬家**，不改数据语义 ⇒ 这里
+/// 精确复刻该回绕，保证「包内字节 == 旧常量字节」可机械验证。
+/// 表长口径问题另立卡（`docs/findings/enemy-gfx-table-extent.md`）。
+fn en_off_wrapped(prg: &[u8], addr: u16) -> usize {
+    let raw = EN_BANK_BASE as isize + (addr as isize - 0x8000);
+    if raw >= 0 {
+        raw as usize
+    } else {
+        (prg.len() as isize + raw) as usize
+    }
+}
+
+fn en_off(addr: u16) -> usize {
+    EN_BANK_BASE + (addr as usize - 0x8000)
+}
+
+/// 帧流长（`[ctrl][ry][rx][流…$FF]`）——解析规则**只在提取侧实现一份**。
+///
+/// 流形：`<$FC` 单字节 / `=$FC` 偏移 3B / `=$FD` 新 ctrl 2B / `=$FE` 跳位 1B / `=$FF` 尾。
+fn frame_end(prg: &[u8], addr: u16) -> Result<usize, String> {
+    let o = en_off_wrapped(prg, addr);
+    let mut n = 3usize;
+    while n < 256 {
+        let b = *prg.get(o + n).ok_or_else(|| format!("帧流越界 addr={addr:04X} n={n}"))?;
+        if b == 0xFF {
+            return Ok(n + 1);
+        }
+        n += match b {
+            0xFC => 3,
+            0xFD => 2,
+            _ => 1,
+        };
+    }
+    Ok(n)
+}
+
+/// 位件长（至下一指针；退化情形给 16B 下界）——与烘焙器同口径。
+fn place_end(addr: u16, nxt: u16) -> usize {
+    if nxt > addr {
+        (nxt as usize - addr as usize).max(4)
+    } else {
+        16
+    }
+}
+
+#[allow(dead_code)] // W2 暂缓（见 docs/findings/enemy-gfx-baker-drift.md）：保留实现，待表长/位件长度规则定谳后启用。
+fn extract_enemy_gfx(prg: &[u8]) -> Result<Vec<Section>, String> {
+    let mut out = Vec::new();
+    out.push(Section { key: PackKey::EnAnimTable, data: en_slice(prg, EN_ANIM_TABLE, 128)? });
+
+    let f1 = en_slice(prg, EN_FRAME_PTRS1, 256)?;
+    let f2 = en_slice(prg, EN_FRAME_PTRS2, 256)?;
+    let pl = en_slice(prg, EN_PLACE_PTRS, 256)?;
+    out.push(Section { key: PackKey::EnFramePtrs1, data: f1.clone() });
+    out.push(Section { key: PackKey::EnFramePtrs2, data: f2.clone() });
+    out.push(Section { key: PackKey::EnPlacePtrs, data: pl.clone() });
+
+    // 帧数据体（两表各 128 项，共 256）
+    let mut frames = Vec::new();
+    let mut foffs: Vec<(u32, u32)> = Vec::with_capacity(256);
+    for tbl in [&f1, &f2] {
+        for i in (0..256).step_by(2) {
+            let addr = u16::from_le_bytes([tbl[i], tbl[i + 1]]);
+            if addr == 0 {
+                foffs.push((0, 0));
+                continue;
+            }
+            let ln = frame_end(prg, addr)?;
+            foffs.push((frames.len() as u32, ln as u32));
+            frames.extend_from_slice(&en_slice(prg, addr, ln)?);
+        }
+    }
+    out.push(Section { key: PackKey::EnFrames, data: frames });
+    out.push(Section { key: PackKey::EnFrameOffs, data: encode_offs(&foffs)? });
+
+    // 位件数据体（128 项，长=至下一指针）
+    let addrs: Vec<u16> = (0..256)
+        .step_by(2)
+        .map(|i| u16::from_le_bytes([pl[i], pl[i + 1]]))
+        .collect();
+    let mut places = Vec::new();
+    let mut poffs: Vec<(u32, u32)> = Vec::with_capacity(EN_N_PLACES);
+    for (i, &addr) in addrs.iter().enumerate() {
+        if addr == 0 {
+            poffs.push((0, 0));
+            continue;
+        }
+        let nxt = if i + 1 < addrs.len() && addrs[i + 1] != 0 {
+            addrs[i + 1]
+        } else {
+            addr.wrapping_add(32)
+        };
+        let ln = place_end(addr, nxt);
+        poffs.push((places.len() as u32, ln as u32));
+        places.extend_from_slice(&en_slice(prg, addr, ln)?);
+    }
+    out.push(Section { key: PackKey::EnPlaces, data: places });
+    out.push(Section { key: PackKey::EnPlaceOffs, data: encode_offs(&poffs)? });
+    Ok(out)
+}
+
+/// 切片（**复刻 Python 切片截断语义**：`prg[o:o+len]` 越界时截到 PRG 末尾，不报错）。
+///
+/// 项表里记录的 `len` 是**声明长度**（与旧常量一致），数据体按实际可得字节拼接——
+/// 与烘焙器逐字节同结果。
+fn en_slice(prg: &[u8], addr: u16, len: usize) -> Result<Vec<u8>, String> {
+    let o = en_off_wrapped(prg, addr);
+    if o >= prg.len() {
+        return Ok(Vec::new());
+    }
+    let end = (o + len).min(prg.len());
+    Ok(prg[o..end].to_vec())
+}
+
+/// `(off,len)` 表 → LE u32 对字节流。
+fn encode_offs(offs: &[(u32, u32)]) -> Result<Vec<u8>, String> {
+    let mut out = Vec::with_capacity(offs.len() * 8);
+    for (o, l) in offs {
+        out.extend_from_slice(&o.to_le_bytes());
+        out.extend_from_slice(&l.to_le_bytes());
+    }
+    Ok(out)
 }
 
 /// `GFXInfo` 在 **PRG（去掉 16 B 头）** 内的偏移：bank7 固定窗口 `$C000` ⇒ `$C6E0`。

@@ -35,6 +35,25 @@ pub enum PackKey {
     GfxInfo = 1,
     /// GFX 数据体（29 项数据按 info 顺序拼接，共 23 712 B）。
     GfxData = 2,
+
+    // ---- 敌帧/位数据面（area/enemy_gfx；bank1 $9D6A-$9F0E 族）----
+    /// `EnemyAnimIndexTbl`（bank1 `$9D6A`，128 B）。
+    EnAnimTable = 3,
+    /// `EnFramePtrTable1`（`$9DE0`，128 项 ×2 B）。
+    EnFramePtrs1 = 4,
+    /// `EnFramePtrTable2`（`$9EE0`，128 项 ×2 B）。
+    EnFramePtrs2 = 5,
+    /// `EnPlacePtrTable`（`$9F0E`，128 项 ×2 B）。
+    EnPlacePtrs = 6,
+    /// 帧数据体（帧流 `[ctrl][ry][rx][流…$FF]` 拼接）。
+    EnFrames = 7,
+    /// 位件数据体（y/x 对流拼接）。
+    EnPlaces = 8,
+    /// 帧项表（256 × `(off u32, len u32)` LE）——**烘焙侧算，运行侧只读**：
+    /// 帧流自界规则只在提取器里实现一份，运行侧不再解析（避免第二处实现）。
+    EnFrameOffs = 9,
+    /// 位件项表（128 × `(off u32, len u32)` LE）。
+    EnPlaceOffs = 10,
 }
 
 impl PackKey {
@@ -48,6 +67,14 @@ impl PackKey {
         match self {
             PackKey::GfxInfo => "gfx.info",
             PackKey::GfxData => "gfx.data",
+            PackKey::EnAnimTable => "en.anim",
+            PackKey::EnFramePtrs1 => "en.fptr1",
+            PackKey::EnFramePtrs2 => "en.fptr2",
+            PackKey::EnPlacePtrs => "en.pptr",
+            PackKey::EnFrames => "en.frames",
+            PackKey::EnPlaces => "en.places",
+            PackKey::EnFrameOffs => "en.foffs",
+            PackKey::EnPlaceOffs => "en.poffs",
         }
     }
 
@@ -56,6 +83,14 @@ impl PackKey {
         Some(match id {
             1 => PackKey::GfxInfo,
             2 => PackKey::GfxData,
+            3 => PackKey::EnAnimTable,
+            4 => PackKey::EnFramePtrs1,
+            5 => PackKey::EnFramePtrs2,
+            6 => PackKey::EnPlacePtrs,
+            7 => PackKey::EnFrames,
+            8 => PackKey::EnPlaces,
+            9 => PackKey::EnFrameOffs,
+            10 => PackKey::EnPlaceOffs,
             _ => return None,
         })
     }
