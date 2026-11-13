@@ -100,6 +100,11 @@ pub enum PackKey {
     PalOffs = 51,
     SpriteData = 52,
     SndRegion = 53,
+    BrItems = 54,
+    NoItems = 55,
+    KrItems = 56,
+    ToItems = 57,
+    RiItems = 58,
     NametableHi = 37,
 }
 
@@ -165,6 +170,11 @@ impl PackKey {
             PackKey::PalOffs => "pal.offs",
             PackKey::SpriteData => "sprite.data",
             PackKey::SndRegion => "sound.region",
+            PackKey::BrItems => "area.br.items",
+            PackKey::NoItems => "area.no.items",
+            PackKey::KrItems => "area.kr.items",
+            PackKey::ToItems => "area.to.items",
+            PackKey::RiItems => "area.ri.items",
             PackKey::NametableHi => "rom.nt_hi",
         }
     }
@@ -225,6 +235,11 @@ impl PackKey {
             51 => PackKey::PalOffs,
             52 => PackKey::SpriteData,
             53 => PackKey::SndRegion,
+            54 => PackKey::BrItems,
+            55 => PackKey::NoItems,
+            56 => PackKey::KrItems,
+            57 => PackKey::ToItems,
+            58 => PackKey::RiItems,
             37 => PackKey::NametableHi,
             _ => return None,
         })

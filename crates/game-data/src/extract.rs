@@ -50,6 +50,7 @@ pub fn sections(rom: &[u8]) -> Result<Vec<Section>, String> {
     out.extend(extract_palette_data(prg)?);
     out.extend(extract_sprite_data(prg)?);
     out.extend(extract_sound_region(prg)?);
+    out.extend(extract_items(prg)?);
     Ok(out)
 }
 
@@ -371,6 +372,11 @@ fn seg_meta() -> Vec<SegMeta> {
         SegMeta { key: PackKey::PalOffs, kind: "offs-table", elem: 8, count: 159, rom: "(派生)", note: "×159 (off,len) u32 LE" },
         SegMeta { key: PackKey::SpriteData, kind: "bytes", elem: 1, count: SPRITE_BLOB_LEN, rom: "bank01:$8572", note: "OBJ 精灵 blob（三表界 $0000/$0099/$016D）" },
         SegMeta { key: PackKey::SndRegion, kind: "bytes", elem: 1, count: SOUND_REGION_LEN, rom: "bank00:$B289", note: "声引擎区窗口 $B289..$BD09（区内偏移寻址）" },
+        SegMeta { key: PackKey::BrItems, kind: "item-rec", elem: 6, count: 0, rom: "bank01:$A3D6", note: "SpecItmsTbl_BRINSTAR（Y 链→扁平 6B 记录）" },
+        SegMeta { key: PackKey::NoItems, kind: "item-rec", elem: 6, count: 0, rom: "bank02:$A2D9", note: "SpecItmsTbl_NORFAIR" },
+        SegMeta { key: PackKey::KrItems, kind: "item-rec", elem: 6, count: 0, rom: "bank04:$A26D", note: "SpecItmsTbl_KRAID" },
+        SegMeta { key: PackKey::ToItems, kind: "item-rec", elem: 6, count: 0, rom: "bank03:$A83B", note: "SpecItmsTbl_TOURIAN" },
+        SegMeta { key: PackKey::RiItems, kind: "item-rec", elem: 6, count: 0, rom: "bank05:$A20D", note: "SpecItmsTbl_RIDLEY" },
     ];
     v
 }
@@ -733,6 +739,101 @@ fn extract_sound_region(prg: &[u8]) -> Result<Vec<Section>, String> {
     }
     Ok(vec![Section { key: PackKey::SndRegion,
                       data: prg[off..off + SOUND_REGION_LEN].to_vec() }])
+}
+
+// ---- 区特殊物品表（SpecItmsTbl）----------------------------------------------------
+//
+// 格式（`refs/m1disasm/*/items.asm:38-54` 注 + ROM 走表实证）：
+//   Y 组：`<MapY> / .word <下一 Y 组地址>`（Y 序链表，`$FFFF` 终）
+//   X 条目：`<MapX> / <下一条目相对偏移 | $FF 末条> / <条目数据…$00 终>`
+//   条目数据：it_Type（低半字节 = ChooseSpawningRoutine 分派号，prg7:9322）+ 参数
+//   （Squeept=2 / PowerUp=2 / Mellow=0 / Elevator=1 / MBCannon=1 / MB=0 / Zebetite=0 /
+//    Rinka=0 / Door=1 / Palette=0）
+// 输出：扁平 6 B 记录 `[map_y, map_x, item_type, arg0, arg1, arg2]`——Y 序链表在语义上
+// 等价于「按 (map_y,map_x) 分组」，消费侧 `ScanForItems(RD98)` 就是按当前图格匹配。
+
+/// 区序（`InArea & $0F`，与 `BankTable $CA30` 一致）：bank / 表址 / 段键。
+const AREA_ITEMS: [(u8, u16, PackKey, &str); 5] = [
+    (1, 0xA3D6, PackKey::BrItems, "SpecItmsTbl_BRINSTAR"),
+    (2, 0xA2D9, PackKey::NoItems, "SpecItmsTbl_NORFAIR"),
+    (4, 0xA26D, PackKey::KrItems, "SpecItmsTbl_KRAID"),
+    (3, 0xA83B, PackKey::ToItems, "SpecItmsTbl_TOURIAN"),
+    (5, 0xA20D, PackKey::RiItems, "SpecItmsTbl_RIDLEY"),
+];
+
+/// it_Type 低半字节 → 参数字节数（未知类型 ⇒ 硬错，不猜长度）。
+fn item_arg_len(t: u8) -> Option<usize> {
+    Some(match t {
+        0x01 => 2, // Squeept
+        0x02 => 2, // PowerUp（pu_XXX + 位置字节）
+        0x03 => 0, // Mellow
+        0x04 => 1, // Elevator
+        0x05 => 1, // MBCannon
+        0x06 => 0, // MotherBrain
+        0x07 => 0, // Zebetite
+        0x08 => 0, // RinkaSpawner
+        0x09 => 1, // Door
+        0x0A => 0, // Palette
+        _ => return None,
+    })
+}
+
+fn extract_items(prg: &[u8]) -> Result<Vec<Section>, String> {
+    let mut out = Vec::with_capacity(AREA_ITEMS.len());
+    for (bank, addr, key, label) in AREA_ITEMS {
+        let base = bank_source_offset(bank, addr)?;
+        let mut recs = Vec::new();
+        let mut y_off = base;
+        let mut seen_y: Vec<usize> = Vec::new();
+        loop {
+            if seen_y.contains(&y_off) {
+                return Err(format!("{label}: Y 链成环（off {y_off:#06X}）"));
+            }
+            seen_y.push(y_off);
+            let map_y = *prg.get(y_off).ok_or_else(|| format!("{label}: Y 组越界"))?;
+            let lo = *prg.get(y_off + 1).ok_or_else(|| format!("{label}: Y 链越界"))? as usize;
+            let hi = *prg.get(y_off + 2).ok_or_else(|| format!("{label}: Y 链越界"))? as usize;
+            let next_y = lo | (hi << 8);
+            let mut x_off = y_off + 3;
+            let mut seen_x: Vec<usize> = Vec::new();
+            loop {
+                if seen_x.contains(&x_off) {
+                    return Err(format!("{label}: X 链成环（off {x_off:#06X}）"));
+                }
+                seen_x.push(x_off);
+                let map_x = *prg.get(x_off).ok_or_else(|| format!("{label}: 条目越界"))?;
+                let next_rel = *prg.get(x_off + 1)
+                    .ok_or_else(|| format!("{label}: 条目越界"))?;
+                let mut p = x_off + 2;
+                loop {
+                    let raw = *prg.get(p).ok_or_else(|| format!("{label}: 条目数据越界"))?;
+                    if raw == 0x00 {
+                        break;
+                    }
+                    let t = raw & 0x0F;
+                    let n = item_arg_len(t)
+                        .ok_or_else(|| format!("{label}: 未知 it_Type {t:#04X}（off {p:#06X}）"))?;
+                    let mut args = [0u8; 3];
+                    for (k, slot) in args.iter_mut().enumerate().take(n) {
+                        *slot = *prg.get(p + 1 + k)
+                            .ok_or_else(|| format!("{label}: 参数越界（off {p:#06X}）"))?;
+                    }
+                    recs.extend_from_slice(&[map_y, map_x, raw, args[0], args[1], args[2]]);
+                    p += 1 + n;
+                }
+                if next_rel == 0xFF {
+                    break;
+                }
+                x_off += next_rel as usize;
+            }
+            if next_y == 0xFFFF {
+                break;
+            }
+            y_off = bank_source_offset(bank, next_y as u16)?;
+        }
+        out.push(Section { key, data: recs });
+    }
+    Ok(out)
 }
 
 /// sprite 数据 blob（`common_sprite_data.asm`，区 bank 共载 `$8572` 起）。

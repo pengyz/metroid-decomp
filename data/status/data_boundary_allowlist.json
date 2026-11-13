@@ -28,12 +28,6 @@
       "note": "标题四表（END_STAR 156/CROSS_EXPLODE 68/PW_GRID 65/INIT_CROSS 64 等）；待迁。"
     },
     {
-      "file": "crates/game-data/src/area/items.rs",
-      "kind": "data",
-      "max": 490,
-      "note": "五区 SpecItmsTbl（`&[SpecialItem]` 十进制结构体切片，98 元素 / 490 字面量）。**旧口径 0 命中**——v2 元素计数才看得见；待迁。"
-    },
-    {
       "file": "crates/game-core/src/frame/mainloop.rs",
       "kind": "symbol",
       "max": 391,

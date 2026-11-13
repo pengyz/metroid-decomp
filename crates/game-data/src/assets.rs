@@ -504,6 +504,43 @@ mod palette_tests {
         assert_eq!(&sd[off..off + 5], &[0x04, 0x02, 0x02, 0x30, 0xFF], "ROM $890A 逐字节");
     }
 
+    /// 特项表：五区条数与 asm `SpecItmsTbl_*` 走表一致（15/33/9/35/6 = 98 条），
+    /// 且首条与 ROM 同格（BRINSTAR bank1:$A3D6 → y=02 x=03 type=04 args=[03,00,00]）。
+    #[test]
+    fn item_tables_match_asm_extent_and_first_record() {
+        let counts = [15usize, 33, 9, 35, 6];
+        let mut total = 0;
+        for (area, &n) in counts.iter().enumerate() {
+            let items = items(area as u8);
+            assert_eq!(items.len(), n, "area{area} 条数");
+            total += n;
+        }
+        assert_eq!(total, 98, "五区合计");
+        let br = items(0);
+        assert_eq!(
+            br[0],
+            crate::area::items::SpecialItem {
+                map_y: 0x02,
+                map_x: 0x03,
+                item_type: 0x04,
+                args: [0x03, 0x00, 0x00]
+            },
+            "ROM $A3D6 首条（asm @@x03=$A3D9）"
+        );
+        assert!(items(5).is_empty(), "越界区返空");
+        // 分派号只允许 1..=0x0A（ChooseSpawningRoutine prg7:9322 表内）；
+        // 高半字节是 ROM 原值附加位（实测 NORFAIR 有 `$41`，分派侧只看低半字节）。
+        for area in 0..5u8 {
+            for it in items(area) {
+                assert!(
+                    (1..=0x0A).contains(&(it.item_type & 0x0F)),
+                    "area{area} 未知 it_Type {:#04X}",
+                    it.item_type
+                );
+            }
+        }
+    }
+
     /// 表长事实（asm 锚）：bank0 标题 19 项 / bank1-5 区域 28 项 = 159 项；
     /// 包内 `pal.ptrs` 必须恰为 `2*159` 字节（不自洽即迁移出错）。
     #[test]
@@ -529,6 +566,36 @@ mod palette_tests {
 }
 
 /// sprite 数据 blob（`common_sprite_data.asm`；区 bank 共载 `$8572`）。
+// ---- 区特殊物品表（SpecItmsTbl）--------------------------------------------------
+//
+// 包里是扁平 6 B 记录 `[map_y, map_x, item_type, arg0, arg1, arg2]`（Y 序链表已在提取侧
+// 展平）。这里**一次性**解码成 `SpecialItem` 切片并缓存：消费侧 `ScanForItems` 每进房扫一遍，
+// 不宜逐帧分配，也不该把 6 B 记录布局漏给调用方。
+
+static ITEMS: LazyLock<[Vec<crate::area::items::SpecialItem>; 5]> = LazyLock::new(|| {
+    let keys = [PackKey::BrItems, PackKey::NoItems, PackKey::KrItems,
+                PackKey::ToItems, PackKey::RiItems];
+    let mut out: [Vec<crate::area::items::SpecialItem>; 5] = Default::default();
+    for (slot, key) in out.iter_mut().zip(keys) {
+        let body = pack::get(key);
+        assert!(body.len() % 6 == 0, "{}: 记录长 {} 不是 6 的倍数", key.name(), body.len());
+        for r in body.chunks_exact(6) {
+            slot.push(crate::area::items::SpecialItem {
+                map_y: r[0],
+                map_x: r[1],
+                item_type: r[2],
+                args: [r[3], r[4], r[5]],
+            });
+        }
+    }
+    out
+});
+
+/// 区序（`InArea & $0F`：0=Brinstar / 1=Norfair / 2=Kraid / 3=Tourian / 4=Ridley）→ 特项表。
+pub fn items(area: u8) -> &'static [crate::area::items::SpecialItem] {
+    ITEMS.get((area & 0x0F) as usize).map(|v| v.as_slice()).unwrap_or(&[])
+}
+
 pub fn sprite_data() -> &'static [u8] {
     pack::get(PackKey::SpriteData)
 }

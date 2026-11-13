@@ -33,15 +33,7 @@ const POWER_UP_DELAY_FLAG: u16 = 0x0109;
 /// 区序→特项表（InArea&$0F：0=Brinstar/1=Norfair/2=Kraid/3=Tourian/4=Ridley——
 /// BankTable（$CA30）序自证（is_engine_running 同源））。
 fn items_table(area: u8) -> &'static [game_data::area::items::SpecialItem] {
-    use game_data::area::items as it;
-    match area & 0x0F {
-        0 => it::ITEMS_BRINSTAR,
-        1 => it::ITEMS_NORFAIR,
-        2 => it::ITEMS_KRAID,
-        3 => it::ITEMS_TOURIAN,
-        4 => it::ITEMS_RIDLEY,
-        _ => &[],
-    }
+    game_data::assets::items(area)
 }
 
 /// ScanForItems（ED98——SetupRoom 首件）：当前图格特项扫描→分派装载。
