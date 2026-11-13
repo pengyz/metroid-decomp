@@ -601,9 +601,9 @@ fn load_enemy(mem: &mut crate::frame::FrameMemory, b0: u8, etype: u8, pos: u8) -
     // 【goal-r16 复核修正 G1'】字段偏移 +2 错位修正（ROM 真值：FB7B `sta $0409`=delay+9，
     // F85A `sta $040D`=data0D+0xD / `sta $040B`=health+0xB）。旧形 delay→+0x0B（写进 health
     // 槽）⇒delay(+9) 恒 0⇒F3BE beq 跳过 TryBecomingActive⇒敌人恒 Resting 不激活。
-    mem.write_ram(en + 0x09, game_data::area::graphics::ENEMY_INIT_DELAY[t]); // Ens.delay(+9)
-    mem.write_ram(en + 0x0D, game_data::area::graphics::ENEMY_FORCE_SPEED_DELAY[t]); // data0D(+0xD)
-    let mut hp = game_data::area::graphics::ENEMY_HEALTH[t];
+    mem.write_ram(en + 0x09, game_data::assets::enemy_init_delay()[t]); // Ens.delay(+9)
+    mem.write_ram(en + 0x0D, game_data::assets::enemy_force_speed_delay()[t]); // data0D(+0xD)
+    let mut hp = game_data::assets::enemy_health()[t];
     // 【对抗复核收敛④（2026-11-01）】movementIndex=+8 播种（EnemyMovementChoice——
     // prg1:97D1 逐字）：每型移动索引初值（多值型 RNG 掩选——现取首值（确定形））：
     // SidehopperFloor=1/SidehopperCeiling=3/Waver=5/Ripper=6/**Skree=7**/Zoomer=0（手动）/
@@ -721,7 +721,7 @@ mod tests {
         assert!(draw_room(&mut m, 9), "房 9 全径通（对象环+敌门环+EndOfRoom）");
         let tiles: Vec<u8> = (0..0x3C0u16).map(|i| m.read_wram(0x6000 + i)).collect();
         assert!(tiles.iter().any(|&t| t != 0), "RoomRAM 有 tile 落");
-        assert_eq!(m.read_ram(0x0450 + 0x0B), gfx::ENEMY_HEALTH[5], "Zoomer 血量（槽 5——条目 51 形；health=+0xB ROM F85A）");
+        assert_eq!(m.read_ram(0x0450 + 0x0B), game_data::assets::enemy_health()[5], "Zoomer 血量（槽 5——条目 51 形；health=+0xB ROM F85A）");
     }
 
     /// 属性位公式形（掩码对——x 位对清+置）。

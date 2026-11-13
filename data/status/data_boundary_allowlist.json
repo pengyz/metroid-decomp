@@ -20,10 +20,6 @@
       "max_byte_literals": 19176
     },
     {
-      "file": "crates/game-data/src/area/graphics.rs",
-      "max_byte_literals": 3100
-    },
-    {
       "file": "crates/game-data/src/area/sprite_data.rs",
       "max_byte_literals": 1457
     },

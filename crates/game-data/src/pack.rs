@@ -73,6 +73,15 @@ pub enum PackKey {
     NoRoomOffs = 23,
     NoStructures = 24,
     NoStructOffs = 25,
+    BrEnemyHealth = 26,
+    BrEnemyRestingAnim = 27,
+    BrEnemyActiveAnim = 28,
+    BrEnemyActiveAnimInitOffset = 29,
+    BrEnemyForceAttribs = 30,
+    BrEnemyForceSpeedDelay = 31,
+    BrEnemyDistanceThreshold = 32,
+    BrEnemyInitDelay = 33,
+    BrEnemyFacing = 34,
 }
 
 impl PackKey {
@@ -110,6 +119,15 @@ impl PackKey {
             PackKey::NoRoomOffs => "area.no.room_offs",
             PackKey::NoStructures => "area.no.structs",
             PackKey::NoStructOffs => "area.no.struct_offs",
+            PackKey::BrEnemyHealth => "area.br.en_health",
+            PackKey::BrEnemyRestingAnim => "area.br.en_rest_anim",
+            PackKey::BrEnemyActiveAnim => "area.br.en_act_anim",
+            PackKey::BrEnemyActiveAnimInitOffset => "area.br.en_act_init",
+            PackKey::BrEnemyForceAttribs => "area.br.en_force_attr",
+            PackKey::BrEnemyForceSpeedDelay => "area.br.en_force_speed",
+            PackKey::BrEnemyDistanceThreshold => "area.br.en_dist_thr",
+            PackKey::BrEnemyInitDelay => "area.br.en_init_delay",
+            PackKey::BrEnemyFacing => "area.br.en_facing",
         }
     }
 
@@ -142,6 +160,15 @@ impl PackKey {
             23 => PackKey::NoRoomOffs,
             24 => PackKey::NoStructures,
             25 => PackKey::NoStructOffs,
+            26 => PackKey::BrEnemyHealth,
+            27 => PackKey::BrEnemyRestingAnim,
+            28 => PackKey::BrEnemyActiveAnim,
+            29 => PackKey::BrEnemyActiveAnimInitOffset,
+            30 => PackKey::BrEnemyForceAttribs,
+            31 => PackKey::BrEnemyForceSpeedDelay,
+            32 => PackKey::BrEnemyDistanceThreshold,
+            33 => PackKey::BrEnemyInitDelay,
+            34 => PackKey::BrEnemyFacing,
             _ => return None,
         })
     }

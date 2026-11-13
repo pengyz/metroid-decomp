@@ -190,6 +190,31 @@ pub fn structures(area: u8) -> Option<&'static [&'static [u8]]> {
     }
 }
 
+
+// ---- 敌九表（当前只有 Brinstar 一套；其余四区待迁）--------------------------------
+//
+// asm 形：`LoadEnemy` 按 `EnemyType` 索引各表（`crates/game-core/src/frame/room.rs`），
+// 表址 brinstar `prg1_brinstar.asm:195-421`（$962B…$977B）。**表长口径**：健康/强制速度/
+// 初始延迟/朝向在 asm 相邻标签间距各 16 B，本仓历史烘焙 64 B（跨表连读）——搬家不改语义，
+// 长度另案（`enemy-table-extent`）。
+macro_rules! enemy_table {
+    ($fname:ident, $key:ident) => {
+        /// Brinstar 敌表（未就绪即 panic：调用点只在游戏内，早已 `init_from_env`）。
+        pub fn $fname() -> &'static [u8] {
+            pack::get(PackKey::$key)
+        }
+    };
+}
+enemy_table!(enemy_health, BrEnemyHealth);
+enemy_table!(enemy_resting_anim, BrEnemyRestingAnim);
+enemy_table!(enemy_active_anim, BrEnemyActiveAnim);
+enemy_table!(enemy_active_anim_init_offset, BrEnemyActiveAnimInitOffset);
+enemy_table!(enemy_force_attribs, BrEnemyForceAttribs);
+enemy_table!(enemy_force_speed_delay, BrEnemyForceSpeedDelay);
+enemy_table!(enemy_distance_threshold, BrEnemyDistanceThreshold);
+enemy_table!(enemy_init_delay, BrEnemyInitDelay);
+enemy_table!(enemy_facing, BrEnemyFacing);
+
 #[cfg(test)]
 mod tests {
     use super::*;

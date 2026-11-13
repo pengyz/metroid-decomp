@@ -41,6 +41,9 @@ pub fn sections(rom: &[u8]) -> Result<Vec<Section>, String> {
     out.push(Section { key: PackKey::WorldMap, data: bank_slice(prg, 0, WORLD_MAP_ADDR, WORLD_MAP_LEN)? });
     out.extend(extract_area(prg, &AREA_BR)?);
     out.extend(extract_area(prg, &AREA_NO)?);
+    for (key, addr, len, _) in BR_ENEMY_TABLES {
+        out.push(Section { key, data: bank_slice(prg, 1, addr, len)? });
+    }
     Ok(out)
 }
 
@@ -332,6 +335,15 @@ fn seg_meta() -> Vec<SegMeta> {
         SegMeta { key: PackKey::NoRoomStreams, kind: "bytes", elem: 1, count: 0, rom: "bank02:各指针", note: "Norfair 房流拼接" },
         SegMeta { key: PackKey::NoRoomOffs, kind: "offs-table", elem: 8, count: 46, rom: "(派生)", note: "×46 (off,len)" },
         SegMeta { key: PackKey::NoStructures, kind: "bytes", elem: 1, count: 0, rom: "bank02:各指针", note: "Norfair 结构体拼接" },
+        SegMeta { key: PackKey::BrEnemyHealth, kind: "bytes", elem: 1, count: 64, rom: "bank01:962B", note: "EnemyHealthTbl（asm 标签间距见 note）" },
+        SegMeta { key: PackKey::BrEnemyRestingAnim, kind: "bytes", elem: 1, count: 32, rom: "bank01:963B", note: "EnemyRestingAnimIndex（asm 标签间距见 note）" },
+        SegMeta { key: PackKey::BrEnemyActiveAnim, kind: "bytes", elem: 1, count: 32, rom: "bank01:965B", note: "EnemyActiveAnimIndex（asm 标签间距见 note）" },
+        SegMeta { key: PackKey::BrEnemyActiveAnimInitOffset, kind: "bytes", elem: 1, count: 16, rom: "bank01:967B", note: "InitOffset（asm 标签间距见 note）" },
+        SegMeta { key: PackKey::BrEnemyForceAttribs, kind: "bytes", elem: 1, count: 16, rom: "bank01:968B", note: "ForceAttribs（asm 标签间距见 note）" },
+        SegMeta { key: PackKey::BrEnemyForceSpeedDelay, kind: "bytes", elem: 1, count: 64, rom: "bank01:969B", note: "ForceSpeedDelay（asm 标签间距见 note）" },
+        SegMeta { key: PackKey::BrEnemyDistanceThreshold, kind: "bytes", elem: 1, count: 16, rom: "bank01:96AB", note: "DistanceThreshold（asm 标签间距见 note）" },
+        SegMeta { key: PackKey::BrEnemyInitDelay, kind: "bytes", elem: 1, count: 64, rom: "bank01:96BB", note: "InitDelay（asm 标签间距见 note）" },
+        SegMeta { key: PackKey::BrEnemyFacing, kind: "bytes", elem: 1, count: 64, rom: "bank01:977B", note: "Facing（asm 标签间距见 note）" },
         SegMeta { key: PackKey::NoStructOffs, kind: "offs-table", elem: 8, count: 49, rom: "(派生)", note: "×49 (off,len)" },
     ];
     v
@@ -443,6 +455,23 @@ fn extract_area(prg: &[u8], a: &AreaSpec) -> Result<Vec<Section>, String> {
         Section { key: k[6], data: struct_offs },
     ])
 }
+
+
+/// Brinstar 敌九表（`prg1_brinstar.asm` 连续标签——地址由标签机械给出）。
+/// **表长口径**：健康/强制速度/初始延迟/朝向在 asm 里各 16 B（$962B→$963B 等相邻标签间距），
+/// 本仓历史烘焙为 64 B（跨表连读）。搬家不改语义 ⇒ 仍按提交件的声明长度取，等长在
+/// `docs/findings/enemy-table-extent.md`（待建）另案收敛。
+const BR_ENEMY_TABLES: [(PackKey, u16, usize, &str); 9] = [
+    (PackKey::BrEnemyHealth, 0x962B, 64, "EnemyHealthTbl"),
+    (PackKey::BrEnemyRestingAnim, 0x963B, 32, "EnemyRestingAnimIndex"),
+    (PackKey::BrEnemyActiveAnim, 0x965B, 32, "EnemyActiveAnimIndex"),
+    (PackKey::BrEnemyActiveAnimInitOffset, 0x967B, 16, "EnemyActiveAnimIndexInitOffset"),
+    (PackKey::BrEnemyForceAttribs, 0x968B, 16, "L968B（强制属性）"),
+    (PackKey::BrEnemyForceSpeedDelay, 0x969B, 64, "EnemyForceSpeedTowardsSamusDelayTbl"),
+    (PackKey::BrEnemyDistanceThreshold, 0x96AB, 16, "EnemyDistanceToSamusThreshold"),
+    (PackKey::BrEnemyInitDelay, 0x96BB, 64, "EnemyInitDelayTbl"),
+    (PackKey::BrEnemyFacing, 0x977B, 64, "L977B（朝向）"),
+];
 
 #[cfg(test)]
 mod tests {

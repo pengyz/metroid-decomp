@@ -759,8 +759,8 @@ pub fn update_all_enemies(mem: &mut crate::frame::FrameMemory) {
             let ex_ = mem.read_ram(0x0400 + x2 as u16 + 1);
             let ey_ = mem.read_ram(0x0400 + x2 as u16);
             let fr0 = mem.read_wram(0x6AF4 + x2 as u16 + 3);
-            let ea = game_data::area::graphics::ENEMY_ACTIVE_ANIM;
-            let er = game_data::area::graphics::ENEMY_RESTING_ANIM;
+            let ea = game_data::assets::enemy_active_anim();
+            let er = game_data::assets::enemy_resting_anim();
             eprintln!("[vis2] n={} eB=({},{}) ry={} animFrame={:02X} st={} pre={} d05={:02X}", n,
                 mem.read_ram(0x0400 + x2 as u16), mem.read_ram(0x0400 + x2 as u16 + 1),
                 mem.read_wram(0x6AF4 + x2 as u16 + 1), fr0,
@@ -1085,7 +1085,7 @@ fn update_en_data05_bit6(mem: &mut crate::frame::FrameMemory, x: u8) {
 fn enemy_force_speed(mem: &mut crate::frame::FrameMemory, x: u8) {
     mem.write_ram(0x0082, 0);
     let t = mem.read_wram(0x6AF4 + x as u16 + 14) as usize & 0x0F;
-    let attribs = game_data::area::graphics::ENEMY_FORCE_ATTRIBS[t];
+    let attribs = game_data::assets::enemy_force_attribs()[t];
     let status = mem.read_wram(0x6AF4 + x as u16);
     if status == 2 && attribs & 0x02 == 0 {
         return;
@@ -1095,7 +1095,7 @@ fn enemy_force_speed(mem: &mut crate::frame::FrameMemory, x: u8) {
         mem.write_ram(0x0400 + x as u16 + 13, d0d.wrapping_sub(1));
         return;
     }
-    let delay = game_data::area::graphics::ENEMY_FORCE_SPEED_DELAY.get(t).copied().unwrap_or(1);
+    let delay = game_data::assets::enemy_force_speed_delay().get(t).copied().unwrap_or(1);
     mem.write_ram(0x0400 + x as u16 + 13, delay);
     if attribs & 0x80 != 0 {
         // 【占位臂记账】x 轴力（bit7=1 型）F6DF 深件（敌移动力族——sc-enemy-encounter
@@ -1173,7 +1173,7 @@ fn enemy_distance_threshold(mem: &mut crate::frame::FrameMemory, x: u8) {
         }
     }
     let t = mem.read_wram(0x6AF4 + x as u16 + 14) as usize & 0x0F;
-    let thr = game_data::area::graphics::ENEMY_DISTANCE_THRESHOLD[t];
+    let thr = game_data::assets::enemy_distance_threshold()[t];
     // 【goal-轮3 F75B 判定流直证】阈值/bit1/d05 写前后。
     if std::env::var("DSH_SPRITE_TRACE").is_ok() && x == 0x40 {
         use std::sync::atomic::Ordering;
@@ -1217,7 +1217,7 @@ fn enemy_distance_threshold(mem: &mut crate::frame::FrameMemory, x: u8) {
 /// ENEMY_RESTING_ANIM[y]；≠resetAnimIndex⇒写 resetAnimIndex/animIndex+animDelay←0。
 fn init_en_resting_anim_index(mem: &mut crate::frame::FrameMemory, x: u8) {
     let y = enemy_type_times2_plus_facing(mem, x);
-    let idx = game_data::area::graphics::ENEMY_RESTING_ANIM[y as usize & 0x1F];
+    let idx = game_data::assets::enemy_resting_anim()[y as usize & 0x1F];
     if idx == mem.read_wram(0x6AF4 + x as u16 + 5) {
         return; // 已同⇒RTS（animDelay 不清）
     }
@@ -1242,7 +1242,7 @@ fn enemy_type_times2_plus_facing(mem: &mut crate::frame::FrameMemory, x: u8) -> 
 /// LoadTableAt977B（**asm 内容锚** `areas_common.asm:184 $80B0`——L977B[type]×2）。
 fn load_table_at_977b(mem: &mut crate::frame::FrameMemory, x: u8) -> u8 {
     let t = mem.read_wram(0x6AF4 + x as u16 + 14) as usize;
-    let e = game_data::area::graphics::ENEMY_FACING[t & 0x3F];
+    let e = game_data::assets::enemy_facing()[t & 0x3F];
     e.wrapping_shl(1)
 }
 
@@ -1371,13 +1371,13 @@ fn try_becoming_active(mem: &mut crate::frame::FrameMemory, x: u8) {
 /// →resetAnimIndex/animIndex；InitOffset 非零⇒animIndex 递减该值。
 fn init_en_active_anim_index(mem: &mut crate::frame::FrameMemory, x: u8) {
     let y = enemy_type_times2_plus_facing(mem, x);
-    let idx = game_data::area::graphics::ENEMY_ACTIVE_ANIM[y as usize & 0x1F];
+    let idx = game_data::assets::enemy_active_anim()[y as usize & 0x1F];
     if idx != mem.read_wram(0x6AF4 + x as u16 + 5) {
         mem.write_wram(0x6AF4 + x as u16 + 5, idx);
         mem.write_wram(0x6AF4 + x as u16 + 6, idx);
         mem.write_wram(0x6AF4 + x as u16 + 4, 0);
         let t = mem.read_wram(0x6AF4 + x as u16 + 14) as usize & 0x0F;
-        let off = game_data::area::graphics::ENEMY_ACTIVE_ANIM_INIT_OFFSET[t] & 0x7F;
+        let off = game_data::assets::enemy_active_anim_init_offset()[t] & 0x7F;
         let mut ai = idx;
         for _ in 0..off {
             ai = ai.wrapping_sub(1);
@@ -2012,8 +2012,8 @@ fn update_enemy_anim(mem: &mut crate::frame::FrameMemory, x: u8, a: u8) {
             use std::sync::atomic::Ordering;
             let n = DIAG_ITER.load(Ordering::Relaxed);
             if n >= 820 && n <= 830 {
-                let ea = game_data::area::graphics::ENEMY_ACTIVE_ANIM;
-                let er = game_data::area::graphics::ENEMY_RESTING_ANIM;
+                let ea = game_data::assets::enemy_active_anim();
+                let er = game_data::assets::enemy_resting_anim();
                 eprintln!("[aiv] n={} y={} tbl={:02X} reset={} actTbl={:02X} rstTbl={:02X}", n,
                     y, v, mem.read_wram(base + 5), ea[10], er[10]);
             }
@@ -2678,7 +2678,7 @@ fn enemy_active(mem: &mut crate::frame::FrameMemory, x: u8) {
         if d & 0x20 != 0 {
             // bit5 set⇒delay←EnemyInitDelayTbl[type]；status Active→Resting
             let t = mem.read_wram(0x6AF4 + x as u16 + 14); // EnsExtra.type
-            let delay = game_data::area::graphics::ENEMY_INIT_DELAY.get(t as usize).copied().unwrap_or(0);
+            let delay = game_data::assets::enemy_init_delay().get(t as usize).copied().unwrap_or(0);
             mem.write_ram(0x0400 + x as u16 + 9, delay); // Ens.delay(+9)
             let st = mem.read_wram(0x6AF4 + x as u16);
             mem.write_wram(0x6AF4 + x as u16, st.wrapping_sub(1));
@@ -4269,7 +4269,7 @@ mod r29_enemy_activation_tdd {
 pub fn enemy_spawn_delay_init(mem: &mut crate::frame::FrameMemory, slot: u8) {
     let px = (slot as u16) << 4;
     let t = mem.read_wram(0x6AF4 + slot as u16 + 14) as usize & 0x0F; // EnsExtra.type
-    let delay = game_data::area::graphics::ENEMY_INIT_DELAY.get(t).copied().unwrap_or(0x01);
+    let delay = game_data::assets::enemy_init_delay().get(t).copied().unwrap_or(0x01);
     mem.write_ram(0x0400 + px + 9, delay); // Ens.delay←EnemyInitDelayTbl[type]
 }
 
