@@ -39,26 +39,24 @@ pub mod gfx_id {
     pub const SAMUS_SUITLESS: u8 = 27;
 }
 
-/// GFXInfo 8 件烘焙（ROM 提取自证 prg[0x1C6E0+idx*7]；7B=bank/src2/dest2/size2）。
+/// GFXInfo 描述子读取（7B=bank/src2/dest2/size2）。
+///
+/// **机制形（去重修）**：asm `LoadGFX: ; 07:C7AB` 走 `ldy #7*id / lda GFXInfo,y..` 表间接读
+/// （表址 prg7_engine.asm:1669 `GFXInfo ; 07:C6E0`），rust 侧对应
+/// `game_data::title::gfx_data::GFX_INFO`（ROM 29 项×7B 全表烘焙，`tools/bake_gfx.py` 生成，
+/// 已核 `GFX_INFO == ROM[0x1C6E0..+203]` 逐字节）。旧形是手写 13 条 match 折叠——
+/// 表值虽同，但机制是"编译器常量"而非"表间接读"，且与 gfx_data.rs 重复烘焙两份。
+///
+/// 越界（id>=29）保持 fail-loud（D7）：ROM 表只有 29 项，读出去就是未取证区。
 pub fn gfx_info(id: u8) -> [u8; 7] {
-    match id {
-        0 => [0x06, 0x00, 0x80, 0x00, 0x00, 0xA0, 0x09],
-        20 => [0x06, 0xA0, 0x89, 0x00, 0x0C, 0x00, 0x01],
-        21 => [0x06, 0xE0, 0x8B, 0x00, 0x14, 0x00, 0x05],
-        22 => [0x06, 0x80, 0x99, 0xC0, 0x1F, 0x40, 0x00],
-        23 => [0x06, 0xC0, 0xB4, 0x00, 0x10, 0x00, 0x04],
-        24 => [0x06, 0xC0, 0xB4, 0x00, 0x0A, 0xA0, 0x00],
-        25 => [0x06, 0x80, 0x99, 0xC0, 0x0F, 0x40, 0x00],
-        27 => [0x06, 0xE0, 0x90, 0x00, 0x00, 0xB0, 0x07],
-        // 区域背景/精灵件（InitNorfairGFX 消费——prg7_engine.asm:1542 `InitNorfairGFX: ; 07:C622`；
-        // 描述子逐字节取自 ROM 表 prg[0x1C6E0+id*7]）
-        4 => [0x05, 0x60, 0x8D, 0x00, 0x12, 0x50, 0x04],
-        5 => [0x06, 0xF0, 0x9E, 0x00, 0x18, 0x00, 0x08],
-        7 => [0x06, 0xF0, 0xA6, 0x00, 0x10, 0x60, 0x02],
-        8 => [0x06, 0x50, 0xA9, 0x00, 0x17, 0x70, 0x00],
-        9 => [0x02, 0x60, 0x8D, 0x00, 0x0C, 0x00, 0x04],
-        _ => crate::unported!("bank07:C6E0-entry"), // 未烘焙表项
+    use game_data::title::gfx_data::GFX_INFO;
+    let off = id as usize * 7;
+    if off + 7 > GFX_INFO.len() {
+        crate::unported!("bank07:C6E0-entry"); // ROM 表 29 项外（表尾）
     }
+    let mut e = [0u8; 7];
+    e.copy_from_slice(&GFX_INFO[off..off + 7]);
+    e
 }
 
 /// InitNorfairGFX（**asm 内容锚** `InitNorfairGFX: ; 07:C622`——prg7_engine.asm:1542-1561）：
@@ -100,25 +98,23 @@ pub fn init_title_gfx(mem: &mut FrameMemory) {
     }
 }
 
-/// GFX 块源面（CopyGFXBlock ROM 侧——game-data 烘焙，tools/bake_gfx_blocks.py 生成/校验）。
+/// GFX 块源面（CopyGFXBlock ROM 侧）。
+///
+/// **机制形（去重修）**：asm `CopyGFXBlock: ; 07:C7D5` 从描述子给的 ROM 地址逐字节搬到 PPU；
+/// rust 侧对应 `gfx_data::GFX_DATA`（29 项数据体拼接，`GFX_OFFS[id]=(偏移,尺寸)` 索引），
+/// 已核 **29 项全部 `GFX_DATA[off..off+size] == ROM[bank*0x4000+src-0x8000 ..+size]` 逐字节**。
+/// 旧形是 13 条 `&gb::X_GFX` match + 独立生成件 `gfx_blocks.rs`（第三份重复烘焙）。
+///
+/// 越界（id>=29）保持 fail-loud；32 位平台对 u32 偏移的安全边界由 `GFX_OFFS` 自身保证
+/// （生成期已校验 `off+size <= GFX_DATA.len()`）。
 pub fn gfx_block(id: u8) -> &'static [u8] {
-    use game_data::render::gfx_blocks as gb;
-    match id {
-        0 => &gb::SAMUS_GFX,
-        20 => &gb::INTRO_SPRITES_GFX,
-        21 => &gb::TITLE_GFX,
-        22 => &gb::SOLID_1FC0_GFX,
-        23 => &gb::FONT_COMPLETE_GFX,
-        24 => &gb::FONT_HUD_GFX,
-        25 => &gb::SOLID_0FC0_GFX,
-        27 => &gb::SAMUS_SUITLESS_GFX,
-        4 => &gb::CREBG1_GFX,
-        5 => &gb::CREBG2_GFX,
-        7 => &gb::NORF_BG1_GFX,
-        8 => &gb::NORF_BG2_GFX,
-        9 => &gb::NORFAIR_SPRITES_GFX,
-        _ => crate::unported!("bank07:C6E0-entry"), // 未烘焙表项
-    }
+    use game_data::title::gfx_data::{GFX_DATA, GFX_OFFS};
+    let Some(&(off, size)) = GFX_OFFS.get(id as usize) else {
+        crate::unported!("bank07:C6E0-entry"); // ROM 表 29 项外（表尾）
+    };
+    let (off, size) = (off as usize, size as usize);
+    debug_assert!(off + size <= GFX_DATA.len(), "GFX_OFFS 越界（bake_gfx.py 应拦）");
+    &GFX_DATA[off..off + size]
 }
 
 /// LoadGFX 折叠（描述子→$00-$06/BankSwitch 双切/$FF 位——CHR 写=渲染面 write_io 注）。
