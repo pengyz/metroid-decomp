@@ -95,6 +95,9 @@ pub enum PackKey {
     EnvBody = 46,
     EnvOffs = 47,
     SfxData = 48,
+    PalPtrs = 49,
+    PalData = 50,
+    PalOffs = 51,
     NametableHi = 37,
 }
 
@@ -155,6 +158,9 @@ impl PackKey {
             PackKey::EnvBody => "sound.env_body",
             PackKey::EnvOffs => "sound.env_offs",
             PackKey::SfxData => "sound.sfx_data",
+            PackKey::PalPtrs => "pal.ptrs",
+            PackKey::PalData => "pal.data",
+            PackKey::PalOffs => "pal.offs",
             PackKey::NametableHi => "rom.nt_hi",
         }
     }
@@ -210,6 +216,9 @@ impl PackKey {
             46 => PackKey::EnvBody,
             47 => PackKey::EnvOffs,
             48 => PackKey::SfxData,
+            49 => PackKey::PalPtrs,
+            50 => PackKey::PalData,
+            51 => PackKey::PalOffs,
             37 => PackKey::NametableHi,
             _ => return None,
         })

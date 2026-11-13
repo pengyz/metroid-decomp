@@ -452,3 +452,66 @@ pub fn volume_envelope(i: usize) -> &'static [u8] {
 pub fn sfx_data() -> &'static [u8] {
     pack::get(PackKey::SfxData)
 }
+
+// ── 调色板（格式解释在 extract.rs；各 bank 项数=asm 表长事实） ─────────────
+
+/// PalettePtrTable 各 bank 项数（bank0 标题=19 / bank1-5 区域=28；`prg0_title.asm:3201`）。
+pub const PALETTE_ENTRIES: [usize; 6] = [19, 28, 28, 28, 28, 28];
+
+fn pal_bank_span(bank: usize) -> Option<(usize, usize)> {
+    if bank >= 6 {
+        return None;
+    }
+    let before: usize = PALETTE_ENTRIES[..bank].iter().sum();
+    Some((before, PALETTE_ENTRIES[bank]))
+}
+
+/// `PalettePtrTable ; $9560` 该 bank 的指针原值（LE u16 字节面，`2*项数` 长）。
+pub fn palette_ptrs(bank: usize) -> &'static [u8] {
+    match pal_bank_span(bank) {
+        Some((before, n)) => &pack::get(PackKey::PalPtrs)[before * 2..(before + n) * 2],
+        None => &[],
+    }
+}
+
+/// 该 bank 第 idx 条调色板记录流（`[hi][lo][ctrl][data…]`，`hi==0` 含尾）。
+pub fn palette_stream(bank: usize, idx: usize) -> Option<&'static [u8]> {
+    let (before, n) = pal_bank_span(bank)?;
+    if idx >= n {
+        return None;
+    }
+    let offs = pack::get(PackKey::PalOffs);
+    let body = pack::get(PackKey::PalData);
+    let i = before + idx;
+    let o = u32::from_le_bytes(offs[i * 8..i * 8 + 4].try_into().unwrap()) as usize;
+    let l = u32::from_le_bytes(offs[i * 8 + 4..i * 8 + 8].try_into().unwrap()) as usize;
+    Some(&body[o..o + l])
+}
+
+#[cfg(test)]
+mod palette_tests {
+    use super::*;
+
+    /// 表长事实（asm 锚）：bank0 标题 19 项 / bank1-5 区域 28 项 = 159 项；
+    /// 包内 `pal.ptrs` 必须恰为 `2*159` 字节（不自洽即迁移出错）。
+    #[test]
+    fn palette_table_extent_matches_asm_anchor() {
+        let total: usize = PALETTE_ENTRIES.iter().sum();
+        assert_eq!(total, 159, "19 + 28*5");
+        assert_eq!(palette_ptrs(0).len(), 19 * 2);
+        assert_eq!(palette_ptrs(5).len(), 28 * 2);
+        assert_eq!(palette_ptrs(6).len(), 0, "越界 bank 返空");
+        // 每条流必须自界于 `hi==0`（含尾），且 bank1 数据体非空
+        for bank in 0..6 {
+            let n = PALETTE_ENTRIES[bank];
+            for idx in 0..n {
+                let s = palette_stream(bank, idx).expect("段内索引应可取");
+                assert_eq!(*s.last().unwrap(), 0x00, "bank{bank} idx{idx} 未自界");
+            }
+            assert!(palette_stream(bank, n).is_none(), "表外索引必须 None（fail-loud 面）");
+        }
+        assert!(!palette_stream(1, 0).unwrap().is_empty(), "bank1 数据体非空");
+        // suitless Palette1B（bank2 idx27）在位（原烘焙锚测的就地接管）
+        assert_ne!(palette_ptrs(2)[27 * 2], 0, "Palette1B 指针低位非零");
+    }
+}

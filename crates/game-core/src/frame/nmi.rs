@@ -717,7 +717,6 @@ pub fn palette_write_pending(mem: &mut FrameMemory) {
     //   suitless `SelectSamusPalette 07:CB73` 写 pending=25..28 ⇒ idx 24..27 是区域 bank 合法项。
     // asm `CheckPaletteWrite 07:C1FF` 是 `dey/tya/asl/tay` **无界查表**（无范围检查）；
     // 这里保留 fail-loud 守卫但界改由烘焙表项数决定（不写死 25），只对真越界报缺口。
-    use game_data::title::palette_data as pd;
     // 【area→ROM bank 映射（A 级，r9-F1 整改）】asm `BankTable: ; 07:CA30`
     // （prg7_engine.asm:2274-2279）= `.byte $01+1 Brinstar / $02+1 Norfair /
     // $04+1 Kraid / $03+1 Tourian / $05+1 Ridley`——ROM 逐字节自证
@@ -733,19 +732,12 @@ pub fn palette_write_pending(mem: &mut FrameMemory) {
             .get(area)
             .unwrap_or_else(|| crate::unported!("bank07:CA30-area")) // area>4 表外（fail-loud）
     };
-    let (data, offs): (&[u8], &[u16]) = match bank {
-        1 => (&pd::PAL_DATA_1, &pd::PAL_OFFS_1),
-        2 => (&pd::PAL_DATA_2, &pd::PAL_OFFS_2),
-        3 => (&pd::PAL_DATA_3, &pd::PAL_OFFS_3),
-        4 => (&pd::PAL_DATA_4, &pd::PAL_OFFS_4),
-        5 => (&pd::PAL_DATA_5, &pd::PAL_OFFS_5),
-        _ => (&pd::PAL_DATA_0, &pd::PAL_OFFS_0),
-    };
-    if idx >= offs.len() {
+    // 数据在资产包（`PalettePtrTable` 各 bank 项数=asm 表长事实，见 assets::PALETTE_ENTRIES）
+    let Some(data) = game_data::assets::palette_stream(bank, idx) else {
         crate::unported!("bank07:C1FF-idx"); // 真表外索引（fail-loud）
-    }
+    };
     mem.write_ram(PALETTE_PENDING, 0); // 重置（`sta PaletteDataPending`）
-    let mut o = offs[idx] as usize;
+    let mut o = 0usize;
     // 共享解码器（VRAMStruct 形——块体走带：[hi][lo][ctrl][data…] 终止符制）
     loop {
         let hi = data[o];

@@ -47,6 +47,7 @@ pub fn sections(rom: &[u8]) -> Result<Vec<Section>, String> {
     out.extend(extract_rom_tables(prg)?);
     out.extend(extract_music_tables(prg)?);
     out.extend(extract_music_streams(prg)?);
+    out.extend(extract_palette_data(prg)?);
     Ok(out)
 }
 
@@ -614,6 +615,71 @@ fn extract_music_streams(prg: &[u8]) -> Result<Vec<Section>, String> {
         Section { key: PackKey::EnvBody, data: env_body },
         Section { key: PackKey::EnvOffs, data: env_offs },
         Section { key: PackKey::SfxData, data: sfx },
+    ])
+}
+
+
+/// 调色板（`PalettePtrTable ; $9560` 各 bank 同址；**项数按 bank 异**——bank0 标题 19 项 /
+/// bank1-5 区域 28 项，`prg0_title.asm:3201` 与 `prg2_norfair.asm:53-80`）。
+/// 每条指针 → 一条 VRAMStruct 记录流 `[hi][lo][ctrl][data…]`，`hi==0` 为终止（含该字节）；
+/// 六 bank 的流拼接为单条 `pal.data`，`pal.offs` 记各条在体内的 `(off,len)`。
+const PAL_TABLE_FLAT: usize = 0x1560; // bank0 $9560（平铺口径，各 bank +0x4000）
+pub const PAL_N: [usize; 6] = [19, 28, 28, 28, 28, 28];
+
+/// VRAMStruct 记录流（`hi==0` 终止含尾；上限 256 B 防御）。
+fn vram_stream(prg: &[u8], off: usize) -> Result<Vec<u8>, String> {
+    let mut out = Vec::new();
+    let mut o = off;
+    loop {
+        let hi = *prg.get(o).ok_or_else(|| format!("调色板流越界：{o:#06X}"))?;
+        out.push(hi);
+        if hi == 0 {
+            return Ok(out);
+        }
+        let lo = *prg.get(o + 1).ok_or("调色板流越界(lo)")?;
+        let ctrl = *prg.get(o + 2).ok_or("调色板流越界(ctrl)")?;
+        out.push(lo);
+        out.push(ctrl);
+        let mut count = (ctrl & 0x3F) as usize;
+        if count == 0 {
+            count = 256;
+        }
+        if ctrl & 0x40 != 0 {
+            out.push(*prg.get(o + 3).ok_or("调色板流越界(rle)")?);
+            o += 4;
+        } else {
+            let seg = prg.get(o + 3..o + 3 + count).ok_or("调色板流越界(data)")?;
+            out.extend_from_slice(seg);
+            o += 3 + count;
+        }
+        if out.len() > 4096 {
+            return Err(format!("调色板流未终止（{off:#06X}）"));
+        }
+    }
+}
+
+fn extract_palette_data(prg: &[u8]) -> Result<Vec<Section>, String> {
+    let mut ptrs = Vec::new();
+    let mut body = Vec::new();
+    let mut offs = Vec::new();
+    for (bank, n) in PAL_N.iter().enumerate() {
+        let boff = bank * 0x4000;
+        for i in 0..*n {
+            let o = PAL_TABLE_FLAT + boff + i * 2;
+            let lo = *prg.get(o).ok_or("PalettePtrTable 越界")?;
+            let hi = *prg.get(o + 1).ok_or("PalettePtrTable 越界")?;
+            let addr = lo as u16 | ((hi as u16) << 8);
+            ptrs.extend_from_slice(&[lo, hi]);
+            let st = vram_stream(prg, boff + (addr as usize - 0x8000))?;
+            offs.extend_from_slice(&(body.len() as u32).to_le_bytes());
+            offs.extend_from_slice(&(st.len() as u32).to_le_bytes());
+            body.extend_from_slice(&st);
+        }
+    }
+    Ok(vec![
+        Section { key: PackKey::PalPtrs, data: ptrs },
+        Section { key: PackKey::PalData, data: body },
+        Section { key: PackKey::PalOffs, data: offs },
     ])
 }
 

@@ -24,10 +24,6 @@
       "max_byte_literals": 1457
     },
     {
-      "file": "crates/game-data/src/title/palette_data.rs",
-      "max_byte_literals": 1859
-    },
-    {
       "file": "crates/game-data/src/title/title_data.rs",
       "max_byte_literals": 574
     },
