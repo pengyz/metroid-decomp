@@ -29,3 +29,6 @@ tools/mesen2/
 
 # Rust 构建产物（AGENTS §2 红线）
 target/
+
+# 资产包（ROM 派生数据，绝不入库——见 docs/spec/data-code-separation.md）
+assets/*.pack

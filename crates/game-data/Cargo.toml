@@ -5,3 +5,7 @@ edition = "2021"
 description = "Metroid remake —— 游戏数据解析（四级数据链：room→structure→metatile→CHR）"
 
 [dependencies]
+
+[features]
+# 提取器（ROM → 资产包）。只有 `pack-tool` 打开；运行期构建不启用。
+extract = []

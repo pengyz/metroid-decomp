@@ -1,0 +1,12 @@
+[package]
+name = "pack-tool"
+version = "0.1.0"
+edition = "2021"
+description = "Metroid remake —— ROM 资产提取工具（ROM → metroid.pack；开发期独立工具）"
+
+[[bin]]
+name = "pack-tool"
+path = "src/main.rs"
+
+[dependencies]
+game-data = { path = "../game-data", features = ["extract"] }

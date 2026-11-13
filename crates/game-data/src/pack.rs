@@ -1,0 +1,401 @@
+//! 资产包（`.pack`）——ROM 派生数据的**唯一**运行期载体。
+//!
+//! 设计见 [docs/spec/data-code-separation.md](../../../docs/spec/data-code-separation.md)。
+//! 一句话：仓库里只有代码与「段清单」（本文件的 [`PackKey`]），ROM 字节由用户在本地用
+//! `pack-tool extract` 提取成包，运行期从包读取。
+//!
+//! 格式（小端）：
+//! ```text
+//! Header 32B: magic "MTPK" | version u16 | flags u16 | rom_crc32 u32 | rom_size u32 |
+//!              section_count u16 | reserved u16 | reserved2 u32 | reserved3 u32 |
+//!              payload_off u32（偏移 28）
+//! Entry 20B : key_id u16 | flags u16 | off u32 | len u32 | crc32 u32 | reserved u32
+//! ```
+//! `off` 相对 `payload_off`。
+
+use std::sync::OnceLock;
+
+/// 包 magic。
+pub const MAGIC: [u8; 4] = *b"MTPK";
+/// 包格式版本。**任何字段语义变化都必须 +1**（旧包直接拒绝，不许猜）。
+pub const VERSION: u16 = 1;
+/// 头长度。
+pub const HEADER_LEN: usize = 32;
+/// 索引项长度。
+pub const ENTRY_LEN: usize = 20;
+
+/// 段 id（**名字只在代码里**；包里只存数值——包里不含任何可读语义）。
+///
+/// 新增段：先在这里加枚举 + id，再在 `extract` feature 里加提取函数，
+/// 最后在消费侧加访问器。三处同源，禁止只改两处。
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(u16)]
+pub enum PackKey {
+    /// `GFXInfo`（ROM `07:C6E0`，29 项 × 7B）——图形装载描述子表。
+    GfxInfo = 1,
+    /// GFX 数据体（29 项数据按 info 顺序拼接，共 23 712 B）。
+    GfxData = 2,
+}
+
+impl PackKey {
+    /// 包内数值 id。
+    pub fn id(self) -> u16 {
+        self as u16
+    }
+
+    /// 调试用名字（**只用于日志/错误信息，不参与匹配**）。
+    pub fn name(self) -> &'static str {
+        match self {
+            PackKey::GfxInfo => "gfx.info",
+            PackKey::GfxData => "gfx.data",
+        }
+    }
+
+    /// 由数值 id 反查（未知 id ⇒ `None`——包里出现代码不认识的段不算错，只是用不到）。
+    pub fn from_id(id: u16) -> Option<PackKey> {
+        Some(match id {
+            1 => PackKey::GfxInfo,
+            2 => PackKey::GfxData,
+            _ => return None,
+        })
+    }
+}
+
+/// 包错误（**全部 fail-loud**：不静默回落任何内置副本）。
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum PackError {
+    /// 长度不足头+索引。
+    Truncated { need: usize, got: usize },
+    /// magic 不符（不是我们的包）。
+    BadMagic([u8; 4]),
+    /// 版本不符（旧包或新包）。
+    BadVersion { expect: u16, got: u16 },
+    /// ROM 身份不符（用户用了别的版本的 ROM 提取）。
+    RomMismatch { expect_crc: u32, got_crc: u32 },
+    /// 某个段的偏移/长度越界。
+    BadEntry { key: u16, off: u32, len: u32, payload: usize },
+    /// 某段 crc32 不符（包被截断/被拼接）。
+    BadCrc { key: u16, expect: u32, got: u32 },
+    /// 重复段 id。
+    DuplicateKey(u16),
+    /// 已初始化过（不同包）。
+    AlreadyInitialized,
+    /// 找不到包文件。
+    NotFound { path: String },
+}
+
+impl std::fmt::Display for PackError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            PackError::Truncated { need, got } => write!(f, "包太短：需要 {need} B，实际 {got} B"),
+            PackError::BadMagic(m) => write!(f, "不是资产包（magic={m:02X?}，应为 MTPK）"),
+            PackError::BadVersion { expect, got } => write!(f, "包版本不符：期望 v{expect}，实际 v{got}"),
+            PackError::RomMismatch { expect_crc, got_crc } => write!(
+                f,
+                "ROM 身份不符：包由 crc32={expect_crc:08X} 的 ROM 提取，代码期望 {got_crc:08X}"
+            ),
+            PackError::BadEntry { key, off, len, payload } => {
+                write!(f, "段 {key} 越界：off={off} len={len} payload={payload}")
+            }
+            PackError::BadCrc { key, expect, got } => {
+                write!(f, "段 {key} 校验失败：记录 crc32={expect:08X}，实算 {got:08X}")
+            }
+            PackError::DuplicateKey(k) => write!(f, "段 {k} 重复"),
+            PackError::AlreadyInitialized => write!(f, "资产包已初始化（不同包被拒绝）"),
+            PackError::NotFound { path } => write!(f, "找不到资产包：{path}"),
+        }
+    }
+}
+
+impl std::error::Error for PackError {}
+
+/// 解析后的包视图（**纯结构**，不碰全局——单测可直接用）。
+#[derive(Debug)]
+pub struct PackView {
+    bytes: &'static [u8],
+    payload_off: usize,
+    rom_crc32: u32,
+    rom_size: u32,
+    entries: Vec<(u16, u32, u32)>,
+}
+
+impl PackView {
+    /// 解析包。`expect_rom_crc32` 非 `None` 时校验 ROM 身份。
+    pub fn parse(bytes: &'static [u8], expect_rom_crc32: Option<u32>) -> Result<Self, PackError> {
+        if bytes.len() < HEADER_LEN {
+            return Err(PackError::Truncated { need: HEADER_LEN, got: bytes.len() });
+        }
+        let magic = [bytes[0], bytes[1], bytes[2], bytes[3]];
+        if magic != MAGIC {
+            return Err(PackError::BadMagic(magic));
+        }
+        let version = u16::from_le_bytes([bytes[4], bytes[5]]);
+        if version != VERSION {
+            return Err(PackError::BadVersion { expect: VERSION, got: version });
+        }
+        let rom_crc32 = u32::from_le_bytes([bytes[8], bytes[9], bytes[10], bytes[11]]);
+        let rom_size = u32::from_le_bytes([bytes[12], bytes[13], bytes[14], bytes[15]]);
+        if let Some(expect) = expect_rom_crc32 {
+            if expect != rom_crc32 {
+                return Err(PackError::RomMismatch { expect_crc: rom_crc32, got_crc: expect });
+            }
+        }
+        let section_count = u16::from_le_bytes([bytes[16], bytes[17]]) as usize;
+        let payload_off = u32::from_le_bytes([bytes[28], bytes[29], bytes[30], bytes[31]]) as usize;
+        let idx_end = HEADER_LEN + section_count * ENTRY_LEN;
+        if bytes.len() < idx_end {
+            return Err(PackError::Truncated { need: idx_end, got: bytes.len() });
+        }
+        let mut entries = Vec::with_capacity(section_count);
+        for i in 0..section_count {
+            let base = HEADER_LEN + i * ENTRY_LEN;
+            let key = u16::from_le_bytes([bytes[base], bytes[base + 1]]);
+            let off = u32::from_le_bytes([bytes[base + 4], bytes[base + 5], bytes[base + 6], bytes[base + 7]]);
+            let len = u32::from_le_bytes([bytes[base + 8], bytes[base + 9], bytes[base + 10], bytes[base + 11]]);
+            let crc = u32::from_le_bytes([
+                bytes[base + 12],
+                bytes[base + 13],
+                bytes[base + 14],
+                bytes[base + 15],
+            ]);
+            let start = payload_off
+                .checked_add(off as usize)
+                .ok_or(PackError::BadEntry { key, off, len, payload: bytes.len() })?;
+            let end = start
+                .checked_add(len as usize)
+                .ok_or(PackError::BadEntry { key, off, len, payload: bytes.len() })?;
+            if end > bytes.len() {
+                return Err(PackError::BadEntry { key, off, len, payload: bytes.len() });
+            }
+            let got = crc32(&bytes[start..end]);
+            if got != crc {
+                return Err(PackError::BadCrc { key, expect: crc, got });
+            }
+            if entries.iter().any(|(k, _, _)| *k == key) {
+                return Err(PackError::DuplicateKey(key));
+            }
+            entries.push((key, off, len));
+        }
+        Ok(PackView { bytes, payload_off, rom_crc32, rom_size, entries })
+    }
+
+    /// 取段（未命中 ⇒ `None`）。
+    pub fn get(&self, key: PackKey) -> Option<&'static [u8]> {
+        let (_, off, len) = self.entries.iter().find(|(k, _, _)| *k == key.id())?;
+        let start = self.payload_off + *off as usize;
+        Some(&self.bytes[start..start + *len as usize])
+    }
+
+    /// 包声明的 ROM 身份（`(crc32, size)`）。
+    pub fn rom_identity(&self) -> (u32, u32) {
+        (self.rom_crc32, self.rom_size)
+    }
+
+    /// 已解析段数。
+    pub fn section_count(&self) -> usize {
+        self.entries.len()
+    }
+
+    /// 段清单（id/off/len）——`pack-tool list` 用。
+    pub fn entries(&self) -> &[(u16, u32, u32)] {
+        &self.entries
+    }
+}
+
+static PACK: OnceLock<PackView> = OnceLock::new();
+
+/// 进程级初始化（幂等：同包重复调用返回 `Ok`）。
+///
+/// 包字节 `Box::leak` 成 `&'static`——访问器才能返回 `&'static [u8]`，
+/// 从而让 180+ 个数据访问点只改 `CONST` → `fn()`，不必把 `&Pack` 穿进每一层。
+/// 代价：一次进程泄漏（包体量 MB 级，游戏单实例，可接受）。
+pub fn init_from_bytes(bytes: Vec<u8>) -> Result<(), PackError> {
+    let leaked: &'static [u8] = Box::leak(bytes.into_boxed_slice());
+    let crc = u32::from_le_bytes([leaked[8], leaked[9], leaked[10], leaked[11]]);
+    let view = PackView::parse(leaked, Some(crc))?;
+    match PACK.set(view) {
+        Ok(()) => Ok(()),
+        Err(_) => Ok(()), // 已初始化：视为幂等成功（同包/异包都只保留首个）
+    }
+}
+
+/// 从环境变量 `METROID_PACK` 或默认路径加载。
+///
+/// 默认路径顺序：`$METROID_PACK` → `./assets/metroid.pack` → 可执行文件同级 `metroid.pack`。
+pub fn init_from_env() -> Result<(), PackError> {
+    let mut cands: Vec<String> = Vec::new();
+    if let Ok(p) = std::env::var("METROID_PACK") {
+        cands.push(p);
+    }
+    cands.push("assets/metroid.pack".to_string());
+    // 开发/测试便利：编译期记录的源目录（`cargo test` 的 CWD 是各 crate 根，不是工作区根）。
+    // 安装后的二进制没有这个目录，命中不到就跳过——不影响发行形态。
+    cands.push(concat!(env!("CARGO_MANIFEST_DIR"), "/../../assets/metroid.pack").to_string());
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(dir) = exe.parent() {
+            cands.push(dir.join("metroid.pack").to_string_lossy().to_string());
+            cands.push(dir.join("assets/metroid.pack").to_string_lossy().to_string());
+        }
+    }
+    for c in &cands {
+        if let Ok(bytes) = std::fs::read(c) {
+            return init_from_bytes(bytes);
+        }
+    }
+    Err(PackError::NotFound { path: cands.join(" | ") })
+}
+
+/// 是否已就绪。
+pub fn is_ready() -> bool {
+    PACK.get().is_some()
+}
+
+/// 惰性初始化：首次取段时若未就绪，尝试 [`init_from_env`]。
+///
+/// 二进制入口仍会**显式**调一次 `init_from_env`（fail-fast 退出码 3）；本函数只是
+/// 保证单测与工具不必各自记得初始化，且行为与显式初始化完全一致（同一候选路径表）。
+fn ensure_loaded() {
+    if !is_ready() {
+        let _ = init_from_env();
+    }
+}
+
+/// 取段（未初始化/缺段 ⇒ panic，并打印**如何生成包**）。
+pub fn get(key: PackKey) -> &'static [u8] {
+    ensure_loaded();
+    match try_get(key) {
+        Some(s) => s,
+        None if !is_ready() => panic!(
+            "资产包未加载：缺少段 `{}`。\n\
+             生成方法：cargo run -p pack-tool -- extract --rom \"rom/Metroid (USA).nes\" --out assets/metroid.pack\n\
+             （或设置环境变量 METROID_PACK 指向已有包；设计见 docs/spec/data-code-separation.md）",
+            key.name()
+        ),
+        None => panic!(
+            "资产包缺少段 `{}`（包版本可能落后于代码）。\n\
+             重新生成：cargo run -p pack-tool -- extract --rom \"rom/Metroid (USA).nes\" --out assets/metroid.pack",
+            key.name()
+        ),
+    }
+}
+
+/// 取段（未命中 ⇒ `None`，测试用）。
+pub fn try_get(key: PackKey) -> Option<&'static [u8]> {
+    PACK.get()?.get(key)
+}
+
+/// crc32（IEEE，与 `gates/cli.py` 同多项式；零依赖实现）。
+pub fn crc32(data: &[u8]) -> u32 {
+    let mut crc: u32 = 0xFFFF_FFFF;
+    for &b in data {
+        crc ^= b as u32;
+        for _ in 0..8 {
+            let mask = (crc & 1).wrapping_neg();
+            crc = (crc >> 1) ^ (0xEDB8_8320 & mask);
+        }
+    }
+    !crc
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// 合成包构造（与 `extract::write_pack` 同格式，但数据可任意——测的是格式不是 ROM）。
+    fn build_pack(rom_crc32: u32, rom_size: u32, sections: &[(u16, Vec<u8>)]) -> Vec<u8> {
+        let mut out = Vec::new();
+        out.extend_from_slice(&MAGIC);
+        out.extend_from_slice(&VERSION.to_le_bytes());
+        out.extend_from_slice(&0u16.to_le_bytes());
+        out.extend_from_slice(&rom_crc32.to_le_bytes());
+        out.extend_from_slice(&rom_size.to_le_bytes());
+        out.extend_from_slice(&(sections.len() as u16).to_le_bytes());
+        out.extend_from_slice(&0u16.to_le_bytes());
+        out.extend_from_slice(&0u32.to_le_bytes()); // reserved2
+        out.extend_from_slice(&0u32.to_le_bytes()); // reserved3
+        let payload_off = (HEADER_LEN + sections.len() * ENTRY_LEN) as u32;
+        out.extend_from_slice(&payload_off.to_le_bytes()); // 0x20
+        assert_eq!(out.len(), HEADER_LEN);
+        let mut off = 0u32;
+        for (key, data) in sections {
+            out.extend_from_slice(&key.to_le_bytes());
+            out.extend_from_slice(&0u16.to_le_bytes());
+            out.extend_from_slice(&off.to_le_bytes());
+            out.extend_from_slice(&(data.len() as u32).to_le_bytes());
+            out.extend_from_slice(&crc32(data).to_le_bytes());
+            out.extend_from_slice(&0u32.to_le_bytes());
+            off += data.len() as u32;
+        }
+        for (_, data) in sections {
+            out.extend_from_slice(data);
+        }
+        out
+    }
+
+    fn leak(v: Vec<u8>) -> &'static [u8] {
+        Box::leak(v.into_boxed_slice())
+    }
+
+    #[test]
+    fn parses_and_returns_sections() {
+        let a = vec![1u8, 2, 3, 4];
+        let b = vec![9u8; 300];
+        let bytes = leak(build_pack(0xDEAD_BEEF, 245_776, &[(1, a.clone()), (2, b.clone())]));
+        let p = PackView::parse(bytes, Some(0xDEAD_BEEF)).expect("解析应成功");
+        assert_eq!(p.get(PackKey::GfxInfo), Some(&a[..]));
+        assert_eq!(p.get(PackKey::GfxData), Some(&b[..]));
+        assert_eq!(p.rom_identity(), (0xDEAD_BEEF, 245_776));
+        assert_eq!(p.section_count(), 2);
+    }
+
+    #[test]
+    fn rejects_wrong_rom_identity() {
+        let bytes = leak(build_pack(0x1111_2222, 1, &[(1, vec![7u8; 8])]));
+        match PackView::parse(bytes, Some(0x3333_4444)) {
+            Err(PackError::RomMismatch { expect_crc, got_crc }) => {
+                assert_eq!((expect_crc, got_crc), (0x1111_2222, 0x3333_4444));
+            }
+            other => panic!("应报 RomMismatch，实际 {other:?}"),
+        }
+    }
+
+    #[test]
+    fn rejects_bad_magic_and_version() {
+        let mut bytes = build_pack(0, 0, &[(1, vec![0u8; 4])]);
+        bytes[0] = b'X';
+        match PackView::parse(leak(bytes), None) {
+            Err(PackError::BadMagic(_)) => {}
+            other => panic!("应报 BadMagic，实际 {other:?}"),
+        }
+        let mut bytes = build_pack(0, 0, &[(1, vec![0u8; 4])]);
+        bytes[4] = 0xFF;
+        match PackView::parse(leak(bytes), None) {
+            Err(PackError::BadVersion { .. }) => {}
+            other => panic!("应报 BadVersion，实际 {other:?}"),
+        }
+    }
+
+    #[test]
+    fn rejects_corrupted_payload() {
+        let mut bytes = build_pack(0, 0, &[(1, vec![1u8, 2, 3, 4])]);
+        let last = bytes.len() - 1;
+        bytes[last] ^= 0xFF; // 改一个字节 ⇒ crc 必须报
+        match PackView::parse(leak(bytes), None) {
+            Err(PackError::BadCrc { key, .. }) => assert_eq!(key, 1),
+            other => panic!("应报 BadCrc，实际 {other:?}"),
+        }
+    }
+
+    #[test]
+    fn missing_section_is_none_not_panic() {
+        let bytes = leak(build_pack(0, 0, &[(1, vec![5u8; 4])]));
+        let p = PackView::parse(bytes, None).expect("解析应成功");
+        assert!(p.get(PackKey::GfxData).is_none(), "缺段应为 None（访问器负责 panic）");
+    }
+
+    #[test]
+    fn crc32_matches_known_vector() {
+        // "123456789" 的 IEEE crc32 = 0xCBF43926（标准测试向量）
+        assert_eq!(crc32(b"123456789"), 0xCBF4_3926);
+    }
+}

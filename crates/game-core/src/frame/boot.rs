@@ -595,7 +595,12 @@ mod r25_gfx_probe {
     fn crebg2_covers_1f00() {
         let mut m = crate::frame::FrameMemory::default();
         crate::frame::gfx::load_gfx(&mut m, 5);
-        let expect = game_data::title::gfx_data::GFX_DATA[game_data::title::gfx_data::GFX_OFFS[5].0 as usize + 0x700];
+        if !game_data::pack::is_ready() {
+            eprintln!("SKIP（显式）：未加载资产包——先跑 pack-tool extract");
+            return;
+        }
+        let (o5, _) = game_data::title::gfx_data::gfx_offs(5).expect("entry 5 应存在");
+        let expect = game_data::title::gfx_data::gfx_data()[o5 + 0x700];
         assert_eq!(m.render.chr[0x1F00], expect, "CREBG2 tile $FF 面");
     }
 }
@@ -609,7 +614,12 @@ mod r25_spritegfx_probe {
     fn samus_gfx_tile09() {
         let mut m = crate::frame::FrameMemory::default();
         crate::frame::gfx::load_gfx(&mut m, 0);
-        let expect = game_data::title::gfx_data::GFX_DATA[game_data::title::gfx_data::GFX_OFFS[0].0 as usize + 0x90];
+        if !game_data::pack::is_ready() {
+            eprintln!("SKIP（显式）：未加载资产包——先跑 pack-tool extract");
+            return;
+        }
+        let (o0, _) = game_data::title::gfx_data::gfx_offs(0).expect("entry 0 应存在");
+        let expect = game_data::title::gfx_data::gfx_data()[o0 + 0x90];
         assert_eq!(m.render.chr[0x090], expect, "SamusGFX tile 09 首字节");
     }
 }

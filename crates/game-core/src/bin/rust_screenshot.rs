@@ -310,6 +310,13 @@ fn main() {
         eprintln!("用法：rust_screenshot --schedule <path> [--out shots] [--bundle <prefix>] [--state-out <path>]");
         std::process::exit(2);
     }
+    // 资产包（ROM 派生数据的唯一载体；见 docs/spec/data-code-separation.md）。
+    // 缺包 ⇒ 直接退出并打印生成命令——绝不静默回落到内置副本（那样会把数据漏进仓库）。
+    if let Err(e) = game_data::pack::init_from_env() {
+        eprintln!("[pack] 资产包加载失败：{e}");
+        eprintln!("[pack] 生成：cargo run -p pack-tool -- extract --rom \"rom/Metroid (USA).nes\" --out assets/metroid.pack");
+        std::process::exit(3);
+    }
     let text = fs::read_to_string(&sched_path).unwrap_or_else(|e| {
         eprintln!("读调度表失败 {}: {}", sched_path, e);
         std::process::exit(1);

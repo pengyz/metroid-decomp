@@ -52,13 +52,13 @@ pub mod gfx_id {
 ///
 /// 越界（id>=29）保持 fail-loud（D7）：ROM 表只有 29 项，读出去就是未取证区。
 pub fn gfx_info(id: u8) -> [u8; 7] {
-    use game_data::title::gfx_data::GFX_INFO;
+    let info = game_data::title::gfx_data::gfx_info();
     let off = id as usize * 7;
-    if off + 7 > GFX_INFO.len() {
+    if off + 7 > info.len() {
         crate::unported!("bank07:C6E0-entry"); // ROM 表 29 项外（表尾）
     }
     let mut e = [0u8; 7];
-    e.copy_from_slice(&GFX_INFO[off..off + 7]);
+    e.copy_from_slice(&info[off..off + 7]);
     e
 }
 
@@ -111,13 +111,12 @@ pub fn init_title_gfx(mem: &mut FrameMemory) {
 /// 越界（id>=29）保持 fail-loud；32 位平台对 u32 偏移的安全边界由 `GFX_OFFS` 自身保证
 /// （生成期已校验 `off+size <= GFX_DATA.len()`）。
 pub fn gfx_block(id: u8) -> &'static [u8] {
-    use game_data::title::gfx_data::{GFX_DATA, GFX_OFFS};
-    let Some(&(off, size)) = GFX_OFFS.get(id as usize) else {
+    let Some((off, size)) = game_data::title::gfx_data::gfx_offs(id as usize) else {
         crate::unported!("bank07:C6E0-entry"); // ROM 表 29 项外（表尾）
     };
-    let (off, size) = (off as usize, size as usize);
-    debug_assert!(off + size <= GFX_DATA.len(), "GFX_OFFS 越界（bake_gfx.py 应拦）");
-    &GFX_DATA[off..off + size]
+    let data = game_data::title::gfx_data::gfx_data();
+    debug_assert!(off + size <= data.len(), "gfx_offs 越界（描述子应自洽）");
+    &data[off..off + size]
 }
 
 /// LoadGFX 折叠（描述子→$00-$06/BankSwitch 双切/$FF 位——CHR 写=渲染面 write_io 注）。

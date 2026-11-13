@@ -26,6 +26,14 @@ fn main() {
         }
     }
 
+    // 资产包（ROM 派生数据的唯一载体；见 docs/spec/data-code-separation.md）。
+    // 缺包 ⇒ 打印生成命令后退出——绝不静默回落到内置副本。
+    if let Err(e) = game_core::pack::init_from_env() {
+        eprintln!("[pack] 资产包加载失败：{e}");
+        eprintln!("[pack] 生成：cargo run -p pack-tool -- extract --rom \"rom/Metroid (USA).nes\" --out assets/metroid.pack");
+        std::process::exit(3);
+    }
+
     let mut driver = game_shell_pc::CoreDriver::new();
     let mut shell = match game_shell_pc::PcShell::new("Metroid (Rust remake)", scale, fps) {
         Ok(s) => s,
