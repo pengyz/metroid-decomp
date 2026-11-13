@@ -15,6 +15,28 @@
 use crate::frame::FrameMemory;
 use crate::sound::{self, SoundDataBlock};
 
+/// `SetSFXNoiseInitFlag: ; 07:CBA0` 的入口形：`SFXNoiseInitFlags($0680) |= bit`
+/// （`ldx #SFXNoiseInitFlags-SFXNoiseInitFlags / beq SetSoundInitFlag` ⇒ 恒走 noise 族）；
+/// 各封装子例程只差立即数——`SilenceMusic($CB8E)`=%00000001、
+/// `PauseMusic($CB92)`=%00000010（`refs/m1disasm/SRC/constants.asm:136-137`）。
+///
+/// **单一实现面**：此前 `title_bridge::initialize_game` 内联过一份 SilenceMusic，
+/// 本件（抢救件#2）需要 PauseMusic，故收敛到此函数供两处共用（防第二处展开）。
+pub fn set_sfx_noise_init(mem: &mut FrameMemory, bit: u8) {
+    let n = mem.read_ram(crate::ram_map::SFX_NOISE_INIT) | bit;
+    mem.write_ram(crate::ram_map::SFX_NOISE_INIT, n);
+}
+
+/// `SilenceMusic: ; 07:CB8E` = `set_sfx_noise_init(mem, sfxNoise_SilenceMusic)`。
+pub fn silence_music(mem: &mut FrameMemory) {
+    set_sfx_noise_init(mem, 0x01);
+}
+
+/// `PauseMusic: ; 07:CB92` = `set_sfx_noise_init(mem, sfxNoise_PauseMusic)`。
+pub fn pause_music(mem: &mut FrameMemory) {
+    set_sfx_noise_init(mem, 0x02);
+}
+
 /// 声引擎区烘焙（$B289 起 0x200B——bank0 镜面提取）。
 const SOUND_REGION: &[u8] = &[
     0xBB, 0xB2, 0x22, 0xB3, 0x00, 0xCB, 0xB2, 0xEE, 0xB4, 0x00, 0xDB, 0xB2, 0x30, 0xB3, 0x01, 0xEB,

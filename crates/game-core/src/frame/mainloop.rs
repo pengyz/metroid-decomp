@@ -97,6 +97,13 @@ const MAIN_ROUTINE_PTR_TABLE: [u16; 10] = [
 /// START 检查（暂停切换）→`lda MainRoutine($1E)/jsr JumpEngine`→MainRoutinePtrTable
 /// 10 项分派。未武装臂=per-entry 爆（移动臂迭代分类面）。
 pub fn game_main_routine(mem: &mut FrameMemory) {
+    // 【抢救件#2（A 级）】asm `GoMainRoutine: ; 07:C114` @endIf_A 段（prg7_engine.asm:311-338）：
+    // `lda Joy1Change / and #BUTTON_START / beq @endIf_B` → 命中后
+    // `lda MainRoutine / cmp #_id_GameEngine(3) / beq → PauseMode(5)` 或
+    // `cmp #_id_PauseMode(5) / bne @endIf_B`（既非 3 也非 5 ⇒ 忽略 START）→
+    // `sta MainRoutine` / `lda GamePaused / eor #$01 / sta GamePaused` / `jsr PauseMusic($CB92)`。
+    // **注意顺序**：切换发生在本帧分派**之前**，故同一帧就跑新例程（asm 原序）。
+    start_pause_toggle(mem);
     let mr = mem.read_ram(crate::ram_map::MAIN_ROUTINE);
     if std::env::var("DSH_MR_TRACE").is_ok() {
         eprintln!("[mr-trace] FC={} mr={:02X} status={:02X} t3={:02X}", mem.read_ram(crate::ram_map::FRAME_COUNT), mr, mem.read_ram(0x0300), mem.read_ram(0x002C));
@@ -138,6 +145,9 @@ pub fn game_main_routine(mem: &mut FrameMemory) {
             }
         }
         4 => prepare_game_over(mem), // PrepareGameOver（$C9A6——死亡链第二段；见函数注释）
+        5 => pause_mode(mem),        // PauseMode（$C9B1——暂停退出→密码屏）
+        6 => go_password(mem),       // GoPassword（$C9C4——切标题页显示密码）
+        7 => increment_routine(mem), // IncrementRoutine（$C155——`inc MainRoutine/rts`）
         _ => {
             let loc = format!("bank07:{:04X}", MAIN_ROUTINE_PTR_TABLE.get(mr as usize).copied().unwrap_or(0));
             crate::unported!(&loc); // 其余态（MoreInit 起——迭代分类）
@@ -173,6 +183,207 @@ pub fn prepare_game_over(mem: &mut FrameMemory) {
     let pm = mem.read_ram(0x00FE) & !0x18; // PPUMASK_ZP &= ~(BG_ON|OBJ_ON)
     mem.write_ram(0x00FE, pm);
     mem.write_io(0x2001, pm); // WriteAndWait → 该 NMI 落真寄存器
+}
+
+/// `GoMainRoutine` 的 START 暂停开关（**asm 内容锚** `07:C114` @endIf_A 段，`prg7_engine.asm:311-338`）：
+/// `Joy1Change & BUTTON_START` 命中且 `MainRoutine ∈ {3 GameEngine, 5 PauseMode}` 时
+/// 双向切换 + `GamePaused ^= 1` + `PauseMusic`；其余态忽略 START（asm `bne @endIf_B`）。
+/// 返回是否发生切换（供单测；生产路径不依赖返回值）。
+pub fn start_pause_toggle(mem: &mut FrameMemory) -> bool {
+    if mem.read_ram(crate::ram_map::JOY1_CHANGE) & 0x10 == 0 {
+        return false; // BUTTON_START=%0001_0000（hardware.asm:93）
+    }
+    let now = mem.read_ram(crate::ram_map::MAIN_ROUTINE);
+    let next = match now {
+        3 => 5u8, // GameEngine → PauseMode
+        5 => 3u8, // PauseMode → GameEngine
+        _ => return false,
+    };
+    mem.write_ram(crate::ram_map::MAIN_ROUTINE, next);
+    let gp = mem.read_ram(crate::ram_map::GAME_PAUSED) ^ 1; // `eor #$01`
+    mem.write_ram(crate::ram_map::GAME_PAUSED, gp);
+    super::sound_hook::pause_music(mem); // `jsr PauseMusic($CB92)`
+    true
+}
+
+/// PauseMode（**asm 内容锚** `PauseMode: ; 07:C9B1`——`prg7_engine.asm:2139-2166`）：
+/// ```text
+/// lda Joy2Status($15)
+/// and #BUTTON_A|BUTTON_UP   ; $88
+/// eor #BUTTON_A|BUTTON_UP
+/// bne @RTS                  ; 不是「P2 的 A+UP 同时按住」⇒ 出
+/// ldy EndTimer+1($010B) / iny / bne @RTS   ; 逃脱计时器活动 ⇒ 不能退出
+/// sta GamePaused            ; A=0（eor 结果）⇒ GamePaused←0
+/// inc MainRoutine           ; 5 → 6 = GoPassword
+/// ```
+/// **这是 mr=6 的唯一产生点**（不是 `NextRoutine`——`NextRoutine` 从不置 6，
+/// `WaitTimer` 里对 6 的比较是死分支）。原版语义：暂停画面上按住 **2P 的 A+UP**
+/// 即退出到「显示密码」屏。
+pub fn pause_mode(mem: &mut FrameMemory) {
+    // `and #$88 / eor #$88` ⇒ 全按才为 0
+    if mem.read_ram(crate::ram_map::JOY2_STATUS) & 0x88 != 0x88 {
+        return;
+    }
+    // `ldy EndTimer+1 / iny / bne` ⇒ 高字节非 0 则出
+    if mem.read_ram(crate::ram_map::END_TIMER + 1) != 0 {
+        return;
+    }
+    mem.write_ram(crate::ram_map::GAME_PAUSED, 0); // `sta GamePaused`（A=0）
+    let mr = mem.read_ram(crate::ram_map::MAIN_ROUTINE);
+    mem.write_ram(crate::ram_map::MAIN_ROUTINE, mr.wrapping_add(1)); // `inc MainRoutine`
+}
+
+/// GoPassword（**asm 内容锚** `GoPassword: ; 07:C9C4`——`prg7_engine.asm:2170-2182`）：
+/// ```text
+/// lda #_id_DisplayPassword($19) / sta TitleRoutine
+/// lda #$00+1 / sta BankSwitchPending     ; 切标题页
+/// SFXNoiseInitFlags |= sfxNoise_SilenceMusic
+/// jmp ScreenOff
+/// ```
+/// 之后：帧界 `CheckBankSwitch` → `InitBank0`（`GameMode←1`）→ 标题轴 `0x19 DisplayPassword`
+/// （`ClearAll` + `PreparePPUProcess($937F)` "PASS WORD" + `InitPasswordFontGFX` +
+/// `CalculatePassword` + `NMIOn` + `PasswordToScreen` + `PaletteDataPending←Palette12+1`）
+/// → 相位→`0x1A WaitForSTART` → `jmp CheckPassword` → 有效密码回 `InitializeGame`。
+pub fn go_password(mem: &mut FrameMemory) {
+    mem.write_ram(crate::ram_map::TITLE_ROUTINE, 0x19); // _id_DisplayPassword
+    mem.write_ram(crate::ram_map::BANK_SWITCH_PENDING, 0x01);
+    super::sound_hook::silence_music(mem); // $CB8E
+    let pm = mem.read_ram(0x00FE) & !0x18;
+    mem.write_ram(0x00FE, pm);
+    mem.write_io(0x2001, pm); // WriteAndWait 的 NMI 落真寄存器（同 prepare_game_over）
+}
+
+/// IncrementRoutine（**asm 内容锚** `IncrementRoutine: ; 07:C155`）= `inc MainRoutine / rts`。
+pub fn increment_routine(mem: &mut FrameMemory) {
+    let mr = mem.read_ram(crate::ram_map::MAIN_ROUTINE);
+    mem.write_ram(crate::ram_map::MAIN_ROUTINE, mr.wrapping_add(1));
+}
+
+#[cfg(test)]
+mod tests_pause_chain {
+    use super::*;
+    use crate::frame::memory::FrameMemory;
+    use crate::ram_map;
+
+    /// `GoMainRoutine` START 开关：3↔5 双向 + `GamePaused ^= 1` + `PauseMusic`（$CB92=%10）
+    /// ——A 级锚 `prg7_engine.asm:311-338`。
+    #[test]
+    fn start_toggles_between_engine_and_pause() {
+        let mut m = FrameMemory::default();
+        m.write_ram(ram_map::MAIN_ROUTINE, 3);
+        m.write_ram(ram_map::JOY1_CHANGE, 0x10); // START
+        assert!(start_pause_toggle(&mut m), "3 + START 应切换");
+        assert_eq!(m.read_ram(ram_map::MAIN_ROUTINE), 5, "GameEngine → PauseMode");
+        assert_eq!(m.read_ram(ram_map::GAME_PAUSED), 1, "GamePaused ^= 1（0→1）");
+        assert_eq!(m.read_ram(ram_map::SFX_NOISE_INIT) & 0x02, 0x02, "PauseMusic 置 noise init bit1");
+    }
+
+    #[test]
+    fn start_unpauses_back_to_engine() {
+        let mut m = FrameMemory::default();
+        m.write_ram(ram_map::MAIN_ROUTINE, 5);
+        m.write_ram(ram_map::GAME_PAUSED, 1);
+        m.write_ram(ram_map::JOY1_CHANGE, 0x10);
+        assert!(start_pause_toggle(&mut m));
+        assert_eq!(m.read_ram(ram_map::MAIN_ROUTINE), 3, "PauseMode → GameEngine");
+        assert_eq!(m.read_ram(ram_map::GAME_PAUSED), 0, "GamePaused ^= 1（1→0）");
+    }
+
+    /// 对照（防空对照）：非 3/5 态必须忽略 START（asm `cmp #5 / bne @endIf_B`）。
+    #[test]
+    fn start_ignored_outside_engine_and_pause() {
+        for mr in [0u8, 1, 2, 4, 8, 9] {
+            let mut m = FrameMemory::default();
+            m.write_ram(ram_map::MAIN_ROUTINE, mr);
+            m.write_ram(ram_map::JOY1_CHANGE, 0x10);
+            assert!(!start_pause_toggle(&mut m), "mr={mr} 不应被 START 改变");
+            assert_eq!(m.read_ram(ram_map::MAIN_ROUTINE), mr);
+            assert_eq!(m.read_ram(ram_map::SFX_NOISE_INIT), 0, "不得起 PauseMusic");
+        }
+        // 无 START 也不切
+        let mut m = FrameMemory::default();
+        m.write_ram(ram_map::MAIN_ROUTINE, 3);
+        m.write_ram(ram_map::JOY1_CHANGE, 0x00);
+        assert!(!start_pause_toggle(&mut m));
+        assert_eq!(m.read_ram(ram_map::MAIN_ROUTINE), 3);
+    }
+
+    /// PauseMode 成功退出：**2P 的 A+UP 同按** + `EndTimer+1==0` ⇒ `GamePaused←0` + `inc MainRoutine`
+    /// （5→6 = GoPassword，**mr=6 的唯一产生点**）。A 级锚 `prg7_engine.asm:2139-2166`。
+    #[test]
+    fn pause_mode_exits_to_go_password() {
+        let mut m = FrameMemory::default();
+        m.write_ram(ram_map::MAIN_ROUTINE, 5);
+        m.write_ram(ram_map::GAME_PAUSED, 1);
+        m.write_ram(ram_map::JOY2_STATUS, 0x88); // BUTTON_A|BUTTON_UP
+        pause_mode(&mut m);
+        assert_eq!(m.read_ram(ram_map::MAIN_ROUTINE), 6, "5 → 6（inc MainRoutine = GoPassword）");
+        assert_eq!(m.read_ram(ram_map::GAME_PAUSED), 0, "sta GamePaused（A=0）");
+    }
+
+    /// 对照三态：只按 A / 只按 UP / 逃脱计时器活动 —— 都不得退出。
+    #[test]
+    fn pause_mode_blocked_when_gate_not_met() {
+        for joy2 in [0x80u8, 0x08, 0x00] {
+            let mut m = FrameMemory::default();
+            m.write_ram(ram_map::MAIN_ROUTINE, 5);
+            m.write_ram(ram_map::JOY2_STATUS, joy2);
+            pause_mode(&mut m);
+            assert_eq!(m.read_ram(ram_map::MAIN_ROUTINE), 5, "joy2={joy2:02X} 不应退出");
+        }
+        // 逃脱场景（EndTimer+1≠0）禁止退出
+        let mut m = FrameMemory::default();
+        m.write_ram(ram_map::MAIN_ROUTINE, 5);
+        m.write_ram(ram_map::JOY2_STATUS, 0x88);
+        m.write_ram(ram_map::END_TIMER + 1, 1);
+        pause_mode(&mut m);
+        assert_eq!(m.read_ram(ram_map::MAIN_ROUTINE), 5, "逃脱场景中不能退出暂停");
+    }
+
+    /// GoPassword：`TitleRoutine←0x19` + `$24←1` + `SilenceMusic` + ScreenOff（三件 + 关屏）。
+    #[test]
+    fn go_password_switches_to_title_bank_for_display_password() {
+        let mut m = FrameMemory::default();
+        m.write_ram(ram_map::MAIN_ROUTINE, 6);
+        m.write_ram(0x00FE, 0x1E);
+        go_password(&mut m);
+        assert_eq!(m.read_ram(ram_map::TITLE_ROUTINE), 0x19, "TitleRoutine←_id_DisplayPassword");
+        assert_eq!(m.read_ram(ram_map::BANK_SWITCH_PENDING), 0x01, "BankSwitchPending←1");
+        assert_eq!(m.read_ram(ram_map::SFX_NOISE_INIT) & 0x01, 0x01, "SilenceMusic 置 bit0");
+        assert_eq!(m.read_ram(0x00FE), 0x06, "ScreenOff（0x1E & ~0x18）");
+        assert_eq!(m.render.ppumask, 0x06, "真 PPUMASK 同拍落地");
+    }
+
+    /// 端到端：3 + START → 5（暂停）→ 2P A+UP → 6 → 帧界换页 → GameMode=1 且 TitleRoutine=0x19。
+    #[test]
+    fn pause_to_password_is_reachable_end_to_end() {
+        let mut m = FrameMemory::default();
+        m.write_ram(ram_map::MAIN_ROUTINE, 3);
+        m.write_ram(ram_map::JOY1_CHANGE, 0x10);
+        // 第一拍：START ⇒ 暂停（同帧分派 PauseMode；Joy2 未按 ⇒ 停在 5）
+        game_main_routine(&mut m);
+        assert_eq!(m.read_ram(ram_map::MAIN_ROUTINE), 5, "第一拍后应处暂停");
+        // 第二拍：2P A+UP ⇒ GoPassword ⇒ 关屏 + 切页
+        m.write_ram(ram_map::JOY1_CHANGE, 0);
+        m.write_ram(ram_map::JOY2_STATUS, 0x88);
+        game_main_routine(&mut m);
+        assert_eq!(m.read_ram(ram_map::MAIN_ROUTINE), 6, "第二拍应进 GoPassword（PauseMode 的 inc 已生效）");
+        // 第三拍：mr=6 才被分派（asm `PauseMode` 的 inc 在 JumpEngine 之后 ⇒ 新值下一帧才跑）
+        game_main_routine(&mut m);
+        assert_eq!(m.read_ram(ram_map::TITLE_ROUTINE), 0x19, "DisplayPassword 相位");
+        // 帧界：消费 $24=1 ⇒ InitBank0 ⇒ GameMode←1（标题轴接管）
+        crate::frame::boot::c4de_unit(&mut m);
+        assert_eq!(m.read_ram(ram_map::GAME_MODE), 1, "InitBank0 置 GameMode←1");
+    }
+
+    /// IncrementRoutine（$C155）= `inc MainRoutine / rts`。
+    #[test]
+    fn increment_routine_advances_one() {
+        let mut m = FrameMemory::default();
+        m.write_ram(ram_map::MAIN_ROUTINE, 7);
+        increment_routine(&mut m);
+        assert_eq!(m.read_ram(ram_map::MAIN_ROUTINE), 8);
+    }
 }
 
 #[cfg(test)]

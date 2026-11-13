@@ -50,7 +50,7 @@
 |---|---|---|---|
 | **4 `PrepareGameOver $C9A6`** ✅ **已修（2026-11-13）** | `TitleRoutine←GameOver` / `BankSwitchPending←1` / `jmp ScreenOff` | `game_engine` 已正确置 `NextRoutine←4` + `WaitTimer(9)` 会消费它 | ~~死亡后 panic~~ → 已端口 `prepare_game_over`，链至 `GameMode←1` 由 `InitBank0` 接管（TDD `tests_prepare_game_over` 两测） |
 | **5 `PauseMode $C9B1`** | 要求 `Joy2Status & (A\|UP)`、`EndTimer+1==0`、`GamePaused←0`、`inc MainRoutine`→6 | 游戏内按 START | 更上游就断了：`GoMainRoutine` 的 START 开关（`MainRoutine` 3↔5 + `GamePaused ^= 1` + `PauseMusic`）**完全未实现**（`game_main_routine` 头部无任何 `Joy1Change & START`），所以**按 START 静默无效** |
-| ~~6 `GoPassword $C9C4`~~ **死代码（2026-11-13 更正）** | `TitleRoutine←DisplayPassword` / `BankSwitchPending←1` / `SilenceMusic` / `jmp ScreenOff` | **没有任何地方把 `NextRoutine` 置为 6** | 不可达 ⇒ 按 D7 **保留 `unported!` fail-loud 桩是对的**（端口它=写死代码） |
+| **6 `GoPassword $C9C4`** ✅ **已修（2026-11-13）** | `TitleRoutine←DisplayPassword($19)` / `BankSwitchPending←1` / `SilenceMusic` / `jmp ScreenOff` | **`PauseMode $C9B1` 的尾 `inc MainRoutine`（5→6）**是唯一产生点 | ~~不可达~~ → 已端口 `go_password`（见下方二次更正） |
 | **7 `IncrementRoutine $C155`** | `inc MainRoutine / rts` | 真实流程不经过（`MoreInit` 尾是内联 `inc`） | 影响低；但 `is_engine_running` 依赖 `mr==7` 语义（已按判据实现） |
 
 `GamePaused($31)` 的状态更说明问题：**全仓只写不读**（`crates/game-core/src/frame/boot.rs:311`
@@ -171,17 +171,16 @@ WritePPUCtrl（唯一点亮真 PPUMASK 的地方）/ WriteScroll / ReadJoyPads`�
 | # | 断点 | 严重度 | 后果 | 修法 | 规模 |
 |---|---|---|---|---|---|
 | **1** | 死亡 → GameOver（`mr=4` 缺） ✅ **已修** | ★★★ | ~~死亡后 panic~~ → 已端口 | `prepare_game_over`（三条写）+ 复用已有 `TitleRoutine 0x1C` 臂（`PrepareVram(0x93B9)`/`Timer3←$10`/相位→0x19 均已实现） | 小（已完成） |
-| **2** | 游戏内暂停（`GoMainRoutine` START 开关 + `mr=5`） | ★★★ | 按 START **静默无效** | 端口 3↔5 切换 + `GamePaused ^= 1` + `PauseMusic`；再端口 `PauseMode $C9B1` | 小-中 |
+| **2** | 游戏内暂停（`GoMainRoutine` START 开关 + `mr=5`） ✅ **已修** | ★★★ | ~~按 START 静默无效~~ → 已端口 | `start_pause_toggle`（3↔5 + `GamePaused ^= 1` + `PauseMusic`）+ `pause_mode`（2P A+UP 退出）+ `go_password`（mr=6） | 小-中（已完成） |
 | **3** | 电梯 / 区域间移动 | ★★★ | 只有 2 个区可达，且**不能换区** | `UpdateElevator $D7B3` + `SpawnElevator $EEA1` + `InitBank3/4/5` | 大 |
 | **4** | 后三区数据（Kraid/Tourian/Ridley） | ★★★ | 3/5 世界不可进 | 参数化 `bake_area_graphics.py` 烘 3 区 + 敌四表分区（**先解 16B vs 64B 尺寸疑点**） | 中 |
-| ~~5~~ | ~~密码屏返回（`mr=6` 缺）~~ **死代码，不做** | — | **不可达**：`_id_GoPassword` 在 asm 全仓只出现在 `WaitTimer` 的比较里（`prg7_engine.asm:1229`），而 `stx NextRoutine` 唯一在 `SetTimer`，其两个调用点 x=3/x=4 | 保持 `unported!` 桩（端口=死代码） | — |
+| **5** | 暂停→密码屏（`mr=5 PauseMode` + `mr=6 GoPassword` 缺） ✅ **已修（并入 #2）** | ★★ | ~~panic~~ → 已端口 `pause_mode`/`go_password` | `PauseMode` 需 2P 的 A+UP 同按 + 逃脱计时器未激活；成功则 `GamePaused←0` + `inc MainRoutine`(5→6) | 小（已完成） |
 | **6** | 出门链（`MoveOutDoor $D3AE` 等 4 桩） | ★★ | 走门 panic | 逐件端口 | 中 |
 | **7** | 声音内容（24/28 零触达） | ★ | 音效/音乐行为无证据 | ①补 `B7E7`/`B87F` 两件高频 ②建音频 RAM 语义列（`.sem` 扩 `$0600-$068D`） | 中 |
 | **8** | FC +2 相位 | ★ | L4 两格 23/42px + sem password 案 45.6% | 周期会计（已裁定冻结，待裁） | 大 |
 
-**优先级建议（2026-11-13 修订）**：#1（死亡链，核心循环）✅ **已完成** → #2（暂停，最常用）
+**优先级建议（2026-11-13 二次修订）**：#1（死亡链）✅ → #2 + #5（暂停→密码屏，同族三件）✅
 → #6（出门链，与 #3 共用机制）→ #3+#4（换区+后三区，最大块）→ #7 → #8。
-原 #5（密码返回）经查为死代码，从清单移除。
 
 > 【2026-11-13 更正】上表 #5「密码屏返回 panic」的初判**不成立**：`_id_GoPassword` 全仓只出现在
 > `WaitTimer` 的比较里（`refs/m1disasm/SRC/prg7_engine.asm:1229`），而 `stx NextRoutine` 唯一
@@ -189,6 +188,18 @@ WritePPUCtrl（唯一点亮真 PPUMASK 的地方）/ WriteScroll / ReadJoyPads`�
 > （死亡，:2074）——**没有任何路径把 `NextRoutine` 置为 6** ⇒ `GoPassword $C9C4` 结构性不可达
 > （与 `AreaInit $C801` 同类）。原推论「`WaitTimer` 已能置 6」是把「能比较」误当「会写入」，
 > 特此原地更正；端口它等于写死代码，保留 `unported!` fail-loud 桩符合 D7。
+>
+> 【2026-11-13 **二次更正**（推翻上面那条更正）】「`GoPassword` 结构性不可达」**仍然错了**。
+> 我只查了 `NextRoutine` 的写点，漏了 `mr` 的另一条产生路径：`PauseMode $C9B1`
+> （`prg7_engine.asm:2160-2164`）在「2P 的 A+UP 同按 ∧ `EndTimer+1==0`」满足时执行
+> `sta GamePaused`（A=0）+ **`inc MainRoutine`（5→6 = GoPassword）**。
+> 所以 mr=6 **可达**，路径是「游戏中 START 暂停 → 暂停画面上 2P 按 A+UP → 显示密码屏」。
+> 第一次更正的错误在于把「`NextRoutine` 能否为 6」（确为死分支）当成了「`mr` 能否为 6」。
+> 教训：查「某态能否到达」必须查**该状态变量的全部写点**（此处 `mr` 的写点有 `SetMainRoutine`/
+> `SetTimer`/各例程的 `inc` 三类），不能只看其中一族。
+>
+> 因此 #2 的实际范围比原估大：START 开关（3↔5）+ `PauseMode`（5→6）+ `GoPassword`（6→切页），
+> 三件同族一并端口（2026-11-13 完成）。
 >
 > 同一轮取证还澄清了**密码屏的真正触发链**（这才是玩家碰到的路径）：
 > 死亡 → `GameEngine` 检 `sa_Dead2 ∧ animDelay==0` → `SilenceMusic` →

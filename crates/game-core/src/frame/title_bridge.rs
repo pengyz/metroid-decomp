@@ -489,9 +489,9 @@ fn initialize_game(mem: &mut FrameMemory, pw: &[u8; 18], nar_active: bool) {
     mem.write_ram(crate::ram_map::PAGE_INDEX, 0);
     mem.write_ram(crate::ram_map::OBJECT_CNTRL, 0);
     mem.write_ram(crate::ram_map::SAMUS_HI, 0);
-    // SilenceMusic（$CB8E）：SFXNoiseInitFlags($0680)|=sfxNoise_SilenceMusic=%01。
-    let n = mem.read_ram(crate::ram_map::SFX_NOISE_INIT) | 0x01;
-    mem.write_ram(crate::ram_map::SFX_NOISE_INIT, n);
+    // SilenceMusic（$CB8E）：SFXNoiseInitFlags($0680)|=sfxNoise_SilenceMusic=%01
+    // ——实现收敛到 super::sound_hook::silence_music（单一实现面，见该函数注释）。
+    super::sound_hook::silence_music(mem);
     // Samus.animFrame($0303)←_id_ObjFrame_SkreeProjectile=0x5A（ObjFramePtrTable index 90）。
     mem.write_ram(crate::ram_map::SAMUS_ANIM_FRAME, 0x5A);
     // 出生位选：InArea&$0F≠0⇒x=1（非 Brinstar）else x=0。

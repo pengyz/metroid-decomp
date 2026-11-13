@@ -75,6 +75,14 @@ pub const JOY2_STATUS: u16 = 0x0015;
 /// Joy1Change=$12（constants_ram 内容锚「These addresses store any button changes」）。
 pub const JOY1_CHANGE: u16 = 0x0012;
 
+/// GamePaused=$31（constants_ram:504 内容锚「0=Game not paused, 1=Game paused」）——
+/// `GoMainRoutine` 的 START 开关 `eor #$01` 翻转、`PauseMode` 成功退出时清 0。
+pub const GAME_PAUSED: u16 = 0x0031;
+
+/// EndTimer=$010A（dw，constants_ram:812-813「Lower byte of end game escape timer」；
+/// `+1`=$010B 高字节）。`PauseMode` 用 `EndTimer+1` 判「逃脱场景中不能退出暂停」。
+pub const END_TIMER: u16 = 0x010A;
+
 /// 声态面（SFX/Music 初始化旗——constants_ram 内容锚族）：
 /// SFXPaused=$0602（「0=Game not paused, 1=Game paused」）。
 pub const SFX_PAUSED: u16 = 0x0602;
