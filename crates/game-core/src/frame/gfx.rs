@@ -24,6 +24,9 @@ use crate::ram_map::{CURRENT_BANK, JUST_IN_BAILEY, MMC1CTRL_ZP, PPUCTRL_ZP, SWIT
 /// --check 校验径可复跑）。
 pub mod gfx_id {
     pub const SAMUS: u8 = 0;
+    // Brinstar 背景/精灵件（InitBrinstarGFX 消费——asm :1523 `InitBrinstarGFX: ; 07:C604`）
+    pub const BRIN_BG1: u8 = 3;
+    pub const BRINSTAR_SPRITES: u8 = 6;
     // 区域背景/精灵件（InitNorfairGFX/Tourian/Kraid/Ridley 消费；r25 批次 3 补烘焙）
     pub const CREBG1: u8 = 4;
     pub const CREBG2: u8 = 5;

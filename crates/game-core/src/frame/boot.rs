@@ -284,7 +284,15 @@ fn init_bank1(mem: &mut FrameMemory) {
     // 描述子倒序拷 $00-$06 → BankSwitch 进切 → $FF 清 INCR_DOWN → CopyGFXBlock →
     // $05/$06 归零 → 回切 CurrentBank）。旧形是本文件内的简版副本（缺 BankSwitch
     // 双切/描述子拷贝/$05/$06 归零）——同一 asm 例程两份实现且语义不同（F 类）。
-    for id in [3u8, 4, 5, 6, 25, 22] {
+    // id 集=asm 载入序（BrinBG1/CREBG1/CREBG2/BrinstarSprites/Solid_0FC0/Solid_1FC0）
+    for id in [
+        super::gfx::gfx_id::BRIN_BG1,
+        super::gfx::gfx_id::CREBG1,
+        super::gfx::gfx_id::CREBG2,
+        super::gfx::gfx_id::BRINSTAR_SPRITES,
+        super::gfx::gfx_id::SOLID_0FC0,
+        super::gfx::gfx_id::SOLID_1FC0,
+    ] {
         super::gfx::load_gfx(mem, id);
     }
     mem.iter_bogged(2);
