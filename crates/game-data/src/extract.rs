@@ -46,6 +46,7 @@ pub fn sections(rom: &[u8]) -> Result<Vec<Section>, String> {
     }
     out.extend(extract_rom_tables(prg)?);
     out.extend(extract_music_tables(prg)?);
+    out.extend(extract_music_streams(prg)?);
     Ok(out)
 }
 
@@ -521,6 +522,98 @@ fn extract_music_tables(prg: &[u8]) -> Result<Vec<Section>, String> {
         Section { key: PackKey::NoteLen4, data: flat_slice(prg, 0xBEF7, 11)? },
         Section { key: PackKey::NoteLen6, data: flat_slice(prg, 0xBEF7 + 11, 12)? },
         Section { key: PackKey::NoteLen7, data: flat_slice(prg, 0xBEF7 + 23, 12)? },
+    ])
+}
+
+
+/// 乐流/包络（`SongHeaderOffsetTable ; $BBFA` 12B → `SongHeaders ; $BD31` 12×13B →
+/// 头[5..13]=4 通道基址字 → 流=基址起至 `0x00`(SongEnd) 含尾；
+/// `VolumeEnvelopePtrTable ; $BCB0` 5 word → 包络至 `$FF`/`$F0` 含尾）。
+///
+/// **历史 quirk（必须复刻，否则数据不等价）**：部分曲目的"基址"是音乐 RAM 地址
+/// （`$0100/$0300/$0500/$0700`），`base - $8000` 为负 —— 旧烘焙器以 Python 负索引回绕
+/// 取到 PRG 尾部数据（`prg[len+off]`）。这是自 `bake_music_streams.py` 起的既有行为，
+/// 本函数按同一口径复刻；真值待独立卡考证（登记于 findings）。
+const SONG_HDR_OFF_TBL: usize = 0x3BFA;
+const SONG_HEADERS: usize = 0x3D31;
+const ENV_PTRS_TBL: usize = 0x3CB0;
+const N_SONGS: usize = 12;
+const N_ENVS: usize = 5;
+const SFX_DATA_OFF: usize = 0x3200;
+
+fn snd_off(prg: &[u8], addr: u16) -> usize {
+    let raw = addr as i64 - 0x8000;
+    if raw < 0 {
+        (prg.len() as i64 + raw) as usize
+    } else {
+        raw as usize
+    }
+}
+
+/// 自 `addr` 起读到终止字节集合之一（含尾；上限 cap；越界即截断）。
+fn read_until_any(prg: &[u8], addr: u16, terms: &[u8], cap: usize) -> Vec<u8> {
+    let off = snd_off(prg, addr);
+    let tail = prg.get(off..).unwrap_or(&[]);
+    let mut out = Vec::new();
+    for &b in tail.iter().take(cap) {
+        out.push(b);
+        if terms.contains(&b) {
+            break;
+        }
+    }
+    out
+}
+
+fn extract_music_streams(prg: &[u8]) -> Result<Vec<Section>, String> {
+    let mut streams = Vec::new();
+    let mut offs = Vec::new();
+    let mut bases = Vec::with_capacity(N_SONGS * 8);
+    for s in 0..N_SONGS {
+        let ho = *prg
+            .get(SONG_HDR_OFF_TBL + s)
+            .ok_or_else(|| format!("SongHeaderOffsetTable 越界：{s}"))?
+            as usize;
+        let hdr = prg
+            .get(SONG_HEADERS + ho..SONG_HEADERS + ho + 13)
+            .ok_or_else(|| format!("SongHeaders 越界：song {s} off {ho}"))?;
+        for c in 0..4 {
+            let base = hdr[5 + c * 2] as u16 | ((hdr[6 + c * 2] as u16) << 8);
+            bases.extend_from_slice(&base.to_le_bytes());
+            let st = if base == 0 {
+                Vec::new()
+            } else {
+                read_until_any(prg, base, &[0x00], 1024)
+            };
+            offs.extend_from_slice(&(streams.len() as u32).to_le_bytes());
+            offs.extend_from_slice(&(st.len() as u32).to_le_bytes());
+            streams.extend_from_slice(&st);
+        }
+    }
+    let mut env_ptr_raw = Vec::with_capacity(N_ENVS * 2);
+    let mut env_body = Vec::new();
+    let mut env_offs = Vec::new();
+    for i in 0..N_ENVS {
+        let lo = *prg.get(ENV_PTRS_TBL + i * 2).ok_or("VolumeEnvelopePtrTable 越界")?;
+        let hi = *prg.get(ENV_PTRS_TBL + i * 2 + 1).ok_or("VolumeEnvelopePtrTable 越界")?;
+        env_ptr_raw.extend_from_slice(&[lo, hi]);
+        let addr = lo as u16 | ((hi as u16) << 8);
+        let e = read_until_any(prg, addr, &[0xFF, 0xF0], 64);
+        env_offs.extend_from_slice(&(env_body.len() as u32).to_le_bytes());
+        env_offs.extend_from_slice(&(e.len() as u32).to_le_bytes());
+        env_body.extend_from_slice(&e);
+    }
+    let sfx = prg
+        .get(SFX_DATA_OFF..SFX_DATA_OFF + 16)
+        .ok_or("SFXData $B200 越界")?
+        .to_vec();
+    Ok(vec![
+        Section { key: PackKey::SongStreams, data: streams },
+        Section { key: PackKey::SongStreamOffs, data: offs },
+        Section { key: PackKey::StreamBases, data: bases },
+        Section { key: PackKey::EnvPtrs, data: env_ptr_raw },
+        Section { key: PackKey::EnvBody, data: env_body },
+        Section { key: PackKey::EnvOffs, data: env_offs },
+        Section { key: PackKey::SfxData, data: sfx },
     ])
 }
 

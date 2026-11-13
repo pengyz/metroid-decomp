@@ -88,6 +88,13 @@ pub enum PackKey {
     NoteLen4 = 39,
     NoteLen6 = 40,
     NoteLen7 = 41,
+    SongStreams = 42,
+    SongStreamOffs = 43,
+    StreamBases = 44,
+    EnvPtrs = 45,
+    EnvBody = 46,
+    EnvOffs = 47,
+    SfxData = 48,
     NametableHi = 37,
 }
 
@@ -141,6 +148,13 @@ impl PackKey {
             PackKey::NoteLen4 => "sound.note_len4",
             PackKey::NoteLen6 => "sound.note_len6",
             PackKey::NoteLen7 => "sound.note_len7",
+            PackKey::SongStreams => "sound.streams",
+            PackKey::SongStreamOffs => "sound.stream_offs",
+            PackKey::StreamBases => "sound.stream_bases",
+            PackKey::EnvPtrs => "sound.env_ptrs",
+            PackKey::EnvBody => "sound.env_body",
+            PackKey::EnvOffs => "sound.env_offs",
+            PackKey::SfxData => "sound.sfx_data",
             PackKey::NametableHi => "rom.nt_hi",
         }
     }
@@ -189,6 +203,13 @@ impl PackKey {
             39 => PackKey::NoteLen4,
             40 => PackKey::NoteLen6,
             41 => PackKey::NoteLen7,
+            42 => PackKey::SongStreams,
+            43 => PackKey::SongStreamOffs,
+            44 => PackKey::StreamBases,
+            45 => PackKey::EnvPtrs,
+            46 => PackKey::EnvBody,
+            47 => PackKey::EnvOffs,
+            48 => PackKey::SfxData,
             37 => PackKey::NametableHi,
             _ => return None,
         })

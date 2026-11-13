@@ -400,11 +400,11 @@ pub fn sound_dispatch_chain(mem: &mut FrameMemory, flag_addr: u16, block_win: u1
                     let b = mem.read_ram(0x0630 + ch as u16 * 2) as u16
                         | ((mem.read_ram(0x0631 + ch as u16 * 2) as u16) << 8);
                     bases_tail[ch] = b;
-                    if b == 0 { None } else { game_data::sound::music_streams::stream_by_base(b) }
+                    if b == 0 { None } else { game_data::assets::stream_by_base(b) }
                 });
                 let out_tail = sound::music::update_all_music_channels(
                     streams_tail, bases_tail,
-                    &game_data::sound::music_streams::SFX_DATA, &st_tail);
+                    game_data::assets::sfx_data(), &st_tail);
                 ram.extend(out_tail.events);
                 apu.extend(out_tail.apu);
                 Some(sound::HandlerOutcome { ram_events: ram, apu_events: apu,
@@ -484,11 +484,11 @@ pub(crate) fn continue_music_face(mem: &mut crate::frame::FrameMemory) {
         if base == 0 {
             None // 基址 0（MusicChannelBaseEmpty）
         } else {
-            game_data::sound::music_streams::stream_by_base(base)
+            game_data::assets::stream_by_base(base)
         }
     });
     let out = sound::music::update_all_music_channels(
-        streams, bases_arr, &game_data::sound::music_streams::SFX_DATA, &st);
+        streams, bases_arr, game_data::assets::sfx_data(), &st);
     for (a, v) in out.events {
         mem.write_ram(a, v); // 有序回写（$EA 末值语义自动成立）
     }

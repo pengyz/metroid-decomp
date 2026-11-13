@@ -393,3 +393,62 @@ pub fn note_length_at(index: u8) -> u8 {
         note_lengths_7().get(i - 23).copied().unwrap_or(0)
     }
 }
+
+// ── 乐数据流 / 包络（格式解释在 extract.rs；本层只做解码） ──────────────────
+
+fn decode_slices(body: &'static [u8], offs: &'static [u8], n: usize) -> Vec<&'static [u8]> {
+    (0..n)
+        .map(|i| {
+            let o = u32::from_le_bytes(offs[i * 8..i * 8 + 4].try_into().unwrap()) as usize;
+            let l = u32::from_le_bytes(offs[i * 8 + 4..i * 8 + 8].try_into().unwrap()) as usize;
+            &body[o..o + l]
+        })
+        .collect()
+}
+
+static SONG_STREAMS: LazyLock<Vec<&'static [u8]>> =
+    LazyLock::new(|| decode_slices(pack::get(PackKey::SongStreams), pack::get(PackKey::SongStreamOffs), 48));
+static VOLUME_ENVELOPES: LazyLock<Vec<&'static [u8]>> =
+    LazyLock::new(|| decode_slices(pack::get(PackKey::EnvBody), pack::get(PackKey::EnvOffs), 5));
+
+/// 12 曲×4 通道基址字（头[5..13] 原值，LE u16；0=空通道）。
+pub fn stream_bases() -> &'static [u8] {
+    pack::get(PackKey::StreamBases)
+}
+
+/// 按曲号（`SongHeaderOffsetTable` 序）×通道（0=SQ1/1=SQ2/2=Tri/3=Noise）取流。
+pub fn song_stream(song: usize, ch: usize) -> Option<&'static [u8]> {
+    if song >= 12 || ch >= 4 {
+        return None;
+    }
+    let s = SONG_STREAMS[song * 4 + ch];
+    if s.is_empty() { None } else { Some(s) }
+}
+
+/// 按**基址**反查流（忠实径：乐循环读 `$0630+2X` 基址字取流——曲号会被
+/// `FindMusicInitIndex` 重置，不可作键）。
+pub fn stream_by_base(base: u16) -> Option<&'static [u8]> {
+    let b = stream_bases();
+    for i in 0..48 {
+        let v = u16::from_le_bytes(b[i * 2..i * 2 + 2].try_into().unwrap());
+        if v == base && base != 0 {
+            return song_stream(i / 4, i % 4);
+        }
+    }
+    None
+}
+
+/// `VolumeEnvelopePtrTable ; $BCB0`（5 word 原值）。
+pub fn volume_envelope_ptrs() -> &'static [u8] {
+    pack::get(PackKey::EnvPtrs)
+}
+
+/// 第 i 条音量包络（至 `$FF`/`$F0` 含尾）；i 越界返空切片。
+pub fn volume_envelope(i: usize) -> &'static [u8] {
+    VOLUME_ENVELOPES.get(i).copied().unwrap_or(&[])
+}
+
+/// `SFXData ; $B200` 鼓点表（16B）。
+pub fn sfx_data() -> &'static [u8] {
+    pack::get(PackKey::SfxData)
+}

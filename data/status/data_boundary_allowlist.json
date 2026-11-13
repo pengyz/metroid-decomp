@@ -24,10 +24,6 @@
       "max_byte_literals": 1457
     },
     {
-      "file": "crates/game-data/src/sound/music_streams.rs",
-      "max_byte_literals": 2227
-    },
-    {
       "file": "crates/game-data/src/title/palette_data.rs",
       "max_byte_literals": 1859
     },

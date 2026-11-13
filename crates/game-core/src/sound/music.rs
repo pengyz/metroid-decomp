@@ -548,13 +548,13 @@ pub fn update_volume_envelope_frame(
         apu.push((0x4006, periods.sq2_lo));
         apu.push((0x4007, periods.sq2_hi));
     }
-    let env = game_data::sound::music_streams::VOLUME_ENVELOPES
-        .get(face.env_index.wrapping_sub(1) as usize)
-        .copied()
-        .unwrap_or(&[]);
-    let ptr = *game_data::sound::music_streams::VOLUME_ENVELOPE_PTRS
-        .get(face.env_index.wrapping_sub(1) as usize)
-        .unwrap_or(&0);
+    let env_i = face.env_index.wrapping_sub(1) as usize;
+    let env = game_data::assets::volume_envelope(env_i);
+    let ptr_raw = game_data::assets::volume_envelope_ptrs();
+    let ptr = ptr_raw
+        .get(env_i * 2..env_i * 2 + 2)
+        .map(|b| u16::from_le_bytes([b[0], b[1]]))
+        .unwrap_or(0);
     let mut cntrl0 = None;
     let y: u8;
     if face.volume_data == 0x10 {
