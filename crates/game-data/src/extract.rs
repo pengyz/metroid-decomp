@@ -49,6 +49,7 @@ pub fn sections(rom: &[u8]) -> Result<Vec<Section>, String> {
     out.extend(extract_music_streams(prg)?);
     out.extend(extract_palette_data(prg)?);
     out.extend(extract_sprite_data(prg)?);
+    out.extend(extract_sound_region(prg)?);
     Ok(out)
 }
 
@@ -353,12 +354,30 @@ fn seg_meta() -> Vec<SegMeta> {
         SegMeta { key: PackKey::RomVec95CE, kind: "bytes", elem: 2, count: 8, rom: "各 bank $95CE", note: "F2ED 流向量 [lo,hi]×8" },
         SegMeta { key: PackKey::NametableHi, kind: "bytes", elem: 1, count: 4, rom: "bank07:$C19F", note: "NT 高位表 20/24/28/2C" },
         SegMeta { key: PackKey::NoStructOffs, kind: "offs-table", elem: 8, count: 49, rom: "(派生)", note: "×49 (off,len)" },
+        // ---- 音乐/精灵/调色板/声引擎区（W4b-e 各批的段此前缺 meta，v2 硬错后补齐）----
+        SegMeta { key: PackKey::MusicNotes, kind: "pitch-table", elem: 1, count: 128, rom: "bank00:$BE77", note: "MusicNotesTbl 音高表（APU 周期 lo）" },
+        SegMeta { key: PackKey::NoteLen4, kind: "bytes", elem: 1, count: 11, rom: "bank00:$BEF7", note: "NoteLengthsTbl 组0（曲头 Byte0=$00，11 项）" },
+        SegMeta { key: PackKey::NoteLen6, kind: "bytes", elem: 1, count: 12, rom: "bank00:$BF02", note: "NoteLengthsTbl 组1（曲头 Byte0=$0B，12 项）" },
+        SegMeta { key: PackKey::NoteLen7, kind: "bytes", elem: 1, count: 12, rom: "bank00:$BF0E", note: "NoteLengthsTbl 组2（曲头 Byte0=$17，12 项）" },
+        SegMeta { key: PackKey::SongStreams, kind: "bytes", elem: 1, count: 0, rom: "bank00:$BD31 SongHeaders", note: "12 曲×4 通道指令流拼接（自界 $00 含尾）" },
+        SegMeta { key: PackKey::SongStreamOffs, kind: "offs-table", elem: 8, count: 48, rom: "(派生)", note: "×48 (off,len) u32 LE" },
+        SegMeta { key: PackKey::StreamBases, kind: "u16-table", elem: 2, count: 48, rom: "SongHeaders[5..13]", note: "48 条流基址（含历史 quirk：部分为音乐 RAM 地址 $0100/$0300/$0500/$0700）" },
+        SegMeta { key: PackKey::EnvPtrs, kind: "u16-table", elem: 2, count: 5, rom: "bank00:$BCB0", note: "VolumeEnvelopePtrTable 5 word" },
+        SegMeta { key: PackKey::EnvBody, kind: "bytes", elem: 1, count: 0, rom: "bank00:$BCBA 起", note: "5 条包络拼接（自界 $FF/$F0 含尾）" },
+        SegMeta { key: PackKey::EnvOffs, kind: "offs-table", elem: 8, count: 5, rom: "(派生)", note: "×5 (off,len) u32 LE" },
+        SegMeta { key: PackKey::SfxData, kind: "bytes", elem: 1, count: 16, rom: "bank00:$B200", note: "SFXData 16 B" },
+        SegMeta { key: PackKey::PalPtrs, kind: "u16-table", elem: 2, count: 159, rom: "各 bank $9560", note: "PalettePtrTable 六 bank 拼接（19+28×5）" },
+        SegMeta { key: PackKey::PalData, kind: "bytes", elem: 1, count: 0, rom: "各 bank VRAMStruct 记录流", note: "六 bank 记录流拼接（hi==0 终止含尾）" },
+        SegMeta { key: PackKey::PalOffs, kind: "offs-table", elem: 8, count: 159, rom: "(派生)", note: "×159 (off,len) u32 LE" },
+        SegMeta { key: PackKey::SpriteData, kind: "bytes", elem: 1, count: SPRITE_BLOB_LEN, rom: "bank01:$8572", note: "OBJ 精灵 blob（三表界 $0000/$0099/$016D）" },
+        SegMeta { key: PackKey::SndRegion, kind: "bytes", elem: 1, count: SOUND_REGION_LEN, rom: "bank00:$B289", note: "声引擎区窗口 $B289..$BD09（区内偏移寻址）" },
     ];
     v
 }
 
 /// 生成 meta JSON 文本（自带缩进，`pack-tool list` 原样打印即可读）。
-pub fn build_meta_json(sections: &[Section], rom_crc32: u32, rom_size: u32) -> Vec<u8> {
+pub fn build_meta_json(sections: &[Section], rom_crc32: u32, rom_size: u32)
+    -> Result<Vec<u8>, String> {
     let metas = seg_meta();
     let mut out = String::with_capacity(4096);
     out.push_str("{\n");
@@ -382,7 +401,16 @@ pub fn build_meta_json(sections: &[Section], rom_crc32: u32, rom_size: u32) -> V
         ));
     }
     out.push_str("\n  ]\n}\n");
-    out.into_bytes()
+    // 缺 meta 的段不许静默跳过（自描述缺一段 = 漂移检测盲区，fail-loud）
+    let missing: Vec<&str> = sections
+        .iter()
+        .filter(|s| s.key != PackKey::Meta && !metas.iter().any(|m| m.key == s.key))
+        .map(|s| s.key.name())
+        .collect();
+    if !missing.is_empty() {
+        return Err(format!("meta 缺段（须在 seg_meta 补条目）：{missing:?}"));
+    }
+    Ok(out.into_bytes())
 }
 
 
@@ -684,6 +712,28 @@ fn extract_palette_data(prg: &[u8]) -> Result<Vec<Section>, String> {
     ])
 }
 
+
+/// 声引擎区（`sound_engine.asm` 的 `$B289` 起连续窗口）。
+///
+/// 这一段是**地址窗口**而非逻辑表：`sound_hook.rs` 用区内偏移取块描述子（5B）、
+/// 16B 表、以及各类单字节参数，全部以 `win - $B289` 寻址。长度 2688 B = `$B289..$BD09`
+/// （末项 `$BD08` 一带的三角/噪声参数表尾），由旧常量实测长度与 ROM 平铺切片逐字节相等定锚：
+/// `prg[0x3289..0x3D09]`（bank0 平铺，`addr - $8000`）。
+const SOUND_REGION_FLAT: usize = 0x3289; // bank0 $B289
+const SOUND_REGION_LEN: usize = 2688;    // 0xA80，$B289→$BD09
+
+fn extract_sound_region(prg: &[u8]) -> Result<Vec<Section>, String> {
+    let off = SOUND_REGION_FLAT;
+    if off + SOUND_REGION_LEN > prg.len() {
+        return Err(format!("声引擎区越界：需要 {} B，PRG {} B",
+                           off + SOUND_REGION_LEN, prg.len()));
+    }
+    if (prg.len() - off) < SOUND_REGION_LEN {
+        return Err("声引擎区越界".to_string());
+    }
+    Ok(vec![Section { key: PackKey::SndRegion,
+                      data: prg[off..off + SOUND_REGION_LEN].to_vec() }])
+}
 
 /// sprite 数据 blob（`common_sprite_data.asm`，区 bank 共载 `$8572` 起）。
 /// 体内三表界：`ObjectAnimIndexTbl $8572` / `ObjFramePtrTable $860B` / `ObjPlacePtrTable $86DF`，

@@ -99,6 +99,7 @@ pub enum PackKey {
     PalData = 50,
     PalOffs = 51,
     SpriteData = 52,
+    SndRegion = 53,
     NametableHi = 37,
 }
 
@@ -163,6 +164,7 @@ impl PackKey {
             PackKey::PalData => "pal.data",
             PackKey::PalOffs => "pal.offs",
             PackKey::SpriteData => "sprite.data",
+            PackKey::SndRegion => "sound.region",
             PackKey::NametableHi => "rom.nt_hi",
         }
     }
@@ -222,6 +224,7 @@ impl PackKey {
             50 => PackKey::PalData,
             51 => PackKey::PalOffs,
             52 => PackKey::SpriteData,
+            53 => PackKey::SndRegion,
             37 => PackKey::NametableHi,
             _ => return None,
         })

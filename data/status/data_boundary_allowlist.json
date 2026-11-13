@@ -4,12 +4,6 @@
   "threshold": 200,
   "files": [
     {
-      "file": "crates/game-core/src/frame/sound_hook.rs",
-      "kind": "data",
-      "max": 2701,
-      "note": "SOUND_REGION（$B200 起 APU 寄存器初值序列，2688 条）。**运行时 ROM 字节存在 game-core**——架构违规，待迁 game-data/资产包。"
-    },
-    {
       "file": "crates/game-data/src/title/vram_structs.rs",
       "kind": "data",
       "max": 1135,

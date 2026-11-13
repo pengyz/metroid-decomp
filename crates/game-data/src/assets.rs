@@ -533,6 +533,15 @@ pub fn sprite_data() -> &'static [u8] {
     pack::get(PackKey::SpriteData)
 }
 
+/// 声引擎区窗口（`bank00:$B289..$BD09`，2688 B）。
+///
+/// 这是**地址窗口**而非逻辑表：声链代码以 `win - $B289` 索引区内的块描述子（5B）、
+/// 16B 参数表与单字节参数。不要把区内的独立表（乐流/包络/音高表）当成它的子集来读——
+/// 那些各有自己的段与访问器。
+pub fn sound_region() -> &'static [u8] {
+    pack::get(PackKey::SndRegion)
+}
+
 /// 三表在 blob 内的偏移（`$8572` 基）：anim 索引 / 帧指针 / 放置指针。
 pub const OBJ_ANIM_INDEX_TBL: usize = 0x0000; // $8572
 pub const OBJ_FRAME_PTR_TABLE: usize = 0x0099; // $860B

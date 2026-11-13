@@ -101,14 +101,38 @@ pub fn is_ready() -> bool;
 | W5 | `rom_tables.rs`、`samus/samus_data.rs`、`render/render_data.rs`、`room_data/room_ram.rs`、`constants/ram_layout.rs` | ~14 KB | 同上 |
 | W6 | 删除 `tools/bake_*.py`（11 个，功能并入 `extract`），加门禁，清仓 | — | `data-boundary` 绿 + 全仓 grep 无 ROM 派生数组 |
 
-每波顺序固定：**先加段与提取器 → 改访问器 → 改调用点 → 删旧常量 → 跑 L4 → commit**。
+每波顺序固定（W4 第一性复盘后修订为四步，见 §5.1）：
+**写 extract → `pack-tool verify`（包 == ROM 重算）→ 波次边界跑全矩阵 → 才删旧件 + 删账本条（同一 commit）**。
+
+### 5.1 退役登记表（实测波次，按落地顺序）
+
+| 批 | 旧件 → 包段 | 提取函数 | commit | 验收 |
+|---|---|---|---|---|
+| W1 | `title/gfx_data.rs`（GFX_INFO/GFX_DATA）→ `gfx.info`/`gfx.data` | `extract_gfx_info`/`extract_gfx_data` | `27f821a1` + 门禁 `0a244270` | 三方式字节等 + L4 |
+| W2 | `area/enemy_gfx.rs`（1.47 MB）→ `en.anim`/`en.fptr*`/`en.pptr`/`en.frames`/`en.places`/`en.*offs` | `extract_enemy_gfx` | `3ddd7702` | 表长 118/151×2/14×2 机械定谳 |
+| W2b | 世界地图两份重复常量 → `world.map`；包首加 `meta.json` | `sections()` 内联 + `build_meta_json` | `c2309d00` | 两副本同源实证 |
+| W3 | `area/{graphics,norfair_graphics}.rs` 房流五件套 → `area.br.*`/`area.no.*` | `extract_area(&AREA_BR/&AREA_NO)` | `b61d7bdb` | br 47/50/260 + no 46/49/248 |
+| W4 | `area/graphics.rs` 敌九表 → `area.br.en_*` | `BR_ENEMY_TABLES` | `84ee8d92` | 九表逐项等 |
+| W4b | `rom_tables.rs` → `rom.tbl968b`/`rom.vec95ce`/`rom.nt_hi` | `extract_rom_tables` | `54b7dfc3` | 8×128 / 8×2 / 4 B |
+| W4c | `sound/music_tables.rs` → `sound.notes`/`sound.note_len*` | `extract_music_tables` | `82614dd2` | 128 + 11/12/12 |
+| W4d | `sound/music_streams.rs`（19.4 KB）→ `sound.streams`/`stream_offs`/`stream_bases`/`env_*`/`sfx_data` | `extract_music_streams` | `07c71f85` | 48 流 2092 B 逐项等（含负索引 quirk） |
+| W4e | `title/palette_data.rs`（18 常量）→ `pal.ptrs`/`pal.data`/`pal.offs` | `extract_palette_data` | `b46dec3b` | 六 bank 159 项 |
+| W4f | `area/sprite_data.rs` → `sprite.data` | `extract_sprite_data` | `c3e0adf4` | 1457 B + 三表界 |
+| W5a | `game-core/frame/sound_hook.rs::SOUND_REGION`（game-core 持 ROM 字节=架构违规）→ `sound.region` | `extract_sound_region` | 本批 | 2688 B = `prg[0x3289..0x3D09]` |
+
+**判据（每批三条机械可复跑）**：①`pack-tool verify` 全段 OK（包 == 从 ROM 重算，不再手搓脚本）
+②账本 `data-boundary` v2 里该文件的 `data` 条目当次删除 ③波次边界 `l4_diff_run.py run-all` 全矩阵不变。
+
+**meta 段硬约束（本批新增）**：`build_meta_json` 对"有段无 meta 条目"直接硬错——此前音乐/精灵/调色板/声引擎
+16 个段在 meta 里被静默跳过（自描述缺段=漂移检测盲区）。
 
 ## 6. 门禁
 
-1. **`data-boundary`**（新）：仓库内不得出现"ROM 派生数据"——
-   - `game-data/src` 下任何 `.rs` 里 `const NAME: [u8; N]` 且 `N > 512` 且非纯代码常量 ⇒ FAIL；
-   - 不得存在 `include_bytes!` 指向 `assets/` 之外或指向被 gitignore 的内容；
-   - `assets/*.pack` 一律 gitignore。
+1. **`data-boundary` v2**：仓库内不得出现"ROM 派生数据"——
+   - 体量 = `max(const/static 数组顶层元素数, 0xNN 字节字面量数)`，阈值 200；
+   - 账本 `data/status/data_boundary_allowlist.json` 三分：`data`（只减不增、归零即红、必须进包）/
+     `fixture`（验证期望数据，禁进包、不 ratchet）/ `symbol`（地址表类，不 ratchet）；
+   - `assets/*.pack` 一律 gitignore，且不得有 tracked 包。
 2. **`tools-boundary`**（新）：只有 `crates/pack-tool` 与 `game-data`（`extract` feature）
    允许接收 `rom: &[u8]` 形参；其它 crate 出现 ROM 形参 ⇒ FAIL。
 3. 既有 `rom-integrity` 保留（开发期本地 ROM 的 sha256 锚）。
