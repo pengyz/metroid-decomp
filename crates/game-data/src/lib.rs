@@ -502,6 +502,7 @@ pub mod world; // 数据内容在 game-data（架构约束）——世界数据�
 pub mod samus; // 数据内容在 game-data（架构约束）——Samus 数据
 pub mod enemy; // 数据内容在 game-data（架构约束）——敌人数据
 pub mod sound; // 数据内容在 game-data（架构约束）——音频数据
+pub mod assets;
 pub mod pack;
 #[cfg(feature = "extract")]
 pub mod extract;

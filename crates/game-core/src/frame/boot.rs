@@ -331,16 +331,17 @@ pub fn boot_post_spin(mem: &mut FrameMemory) {
 /// 终态（自证）：$00=0x3E/$01=0xA9（A5+4）/$02=0x00/$03=0x74（70+4）/X=0/A=末字节。
 /// ROM 抽查：WorldMap prg[0x253E..0x293E]（511/1024 非 FF）。
 pub fn copy_map(mem: &mut FrameMemory) {
-    use crate::memmap::world_map::{WORLD_MAP, WORLD_MAP_LEN, WORLD_MAP_RAM_BASE};
+    use crate::memmap::world_map::{WORLD_MAP_LEN, WORLD_MAP_RAM_BASE};
+    let src = game_data::assets::world_map();
     for i in 0..WORLD_MAP_LEN {
-        mem.write_wram(WORLD_MAP_RAM_BASE + i as u16, WORLD_MAP[i]);
+        mem.write_wram(WORLD_MAP_RAM_BASE + i as u16, src[i]);
     }
     mem.write_ram(0x0000, 0x3E); // Temp00_WorldMapPtr lo
     mem.write_ram(0x0001, 0xA9); // hi（A5+4——inc ×4）
     mem.write_ram(0x0002, 0x00); // Temp02_WorldMapRAMPtr lo
     mem.write_ram(0x0003, 0x74); // hi（70+4）
     mem.regs.x = 0;
-    mem.regs.a = WORLD_MAP[WORLD_MAP_LEN - 1];
+    mem.regs.a = src[WORLD_MAP_LEN - 1];
 }
 
 /// ScreenNmiOff 单元（**asm 引证主体**，链规 17）——refs/m1disasm/SRC/prg7_engine.asm:1165
@@ -540,11 +541,12 @@ mod tests {
     /// CopyMap：WRAM $7000-$73FF 拷贝 + 指针终态（asm 终态自证）。
     #[test]
     fn copy_map_fills_world_map_ram_and_ptr_end_state() {
-        use crate::memmap::world_map::{WORLD_MAP, WORLD_MAP_RAM_BASE};
+        use crate::memmap::world_map::WORLD_MAP_RAM_BASE;
+        let src = game_data::assets::world_map();
         let mut m = FrameMemory::default();
         copy_map(&mut m);
-        assert_eq!(m.read_wram(WORLD_MAP_RAM_BASE), WORLD_MAP[0]);
-        assert_eq!(m.read_wram(WORLD_MAP_RAM_BASE + 0x3FF), WORLD_MAP[0x3FF]);
+        assert_eq!(m.read_wram(WORLD_MAP_RAM_BASE), src[0]);
+        assert_eq!(m.read_wram(WORLD_MAP_RAM_BASE + 0x3FF), src[0x3FF]);
         assert_eq!(m.read_ram(0x0001), 0xA9); // A5+4
         assert_eq!(m.read_ram(0x0003), 0x74); // 70+4
         assert_eq!(m.regs.x, 0);
@@ -599,8 +601,8 @@ mod r25_gfx_probe {
             eprintln!("SKIP（显式）：未加载资产包——先跑 pack-tool extract");
             return;
         }
-        let (o5, _) = game_data::title::gfx_data::gfx_offs(5).expect("entry 5 应存在");
-        let expect = game_data::title::gfx_data::gfx_data()[o5 + 0x700];
+        let (o5, _) = game_data::assets::gfx_offs(5).expect("entry 5 应存在");
+        let expect = game_data::assets::gfx_data()[o5 + 0x700];
         assert_eq!(m.render.chr[0x1F00], expect, "CREBG2 tile $FF 面");
     }
 }
@@ -618,8 +620,8 @@ mod r25_spritegfx_probe {
             eprintln!("SKIP（显式）：未加载资产包——先跑 pack-tool extract");
             return;
         }
-        let (o0, _) = game_data::title::gfx_data::gfx_offs(0).expect("entry 0 应存在");
-        let expect = game_data::title::gfx_data::gfx_data()[o0 + 0x90];
+        let (o0, _) = game_data::assets::gfx_offs(0).expect("entry 0 应存在");
+        let expect = game_data::assets::gfx_data()[o0 + 0x90];
         assert_eq!(m.render.chr[0x090], expect, "SamusGFX tile 09 首字节");
     }
 }

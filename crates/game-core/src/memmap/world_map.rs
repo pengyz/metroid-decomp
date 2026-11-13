@@ -6,7 +6,7 @@
 //! 数据自证：prg[0x253E..0x293E]（511/1024 非 FF——实测地图面）。
 
 /// WorldMap ROM 数据（1KB；CopyMap 源面）。
-pub use game_data::world::world_map::WORLD_MAP;
+pub use game_data::assets::world_map;
 
 /// WorldMapRAM 基址（constants_ram.asm:1298「$7000-$73FF. The map is 1Kb in size」）。
 pub const WORLD_MAP_RAM_BASE: u16 = 0x7000;

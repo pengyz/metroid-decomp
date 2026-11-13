@@ -50,14 +50,6 @@
     {
       "file": "crates/game-data/src/title/vram_structs.rs",
       "max_byte_literals": 1135
-    },
-    {
-      "file": "crates/game-data/src/title/world_map.rs",
-      "max_byte_literals": 1028
-    },
-    {
-      "file": "crates/game-data/src/world/world_map.rs",
-      "max_byte_literals": 1024
     }
   ]
 }

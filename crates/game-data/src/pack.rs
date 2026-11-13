@@ -31,6 +31,8 @@ pub const ENTRY_LEN: usize = 20;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u16)]
 pub enum PackKey {
+    /// 资产元信息（JSON 文本；**运行时从不读**，只由 `pack-tool list/verify` 消费）。
+    Meta = 0,
     /// `GFXInfo`（ROM `07:C6E0`，29 项 × 7B）——图形装载描述子表。
     GfxInfo = 1,
     /// GFX 数据体（29 项数据按 info 顺序拼接，共 23 712 B）。
@@ -54,6 +56,8 @@ pub enum PackKey {
     EnFrameOffs = 9,
     /// 位件项表（128 × `(off u32, len u32)` LE）。
     EnPlaceOffs = 10,
+    /// 世界地图（`WorldMap $A53E`，32×32=1 KB；行=MapY 列=MapX，`$FF`=无房）。
+    WorldMap = 11,
 }
 
 impl PackKey {
@@ -75,6 +79,8 @@ impl PackKey {
             PackKey::EnPlaces => "en.places",
             PackKey::EnFrameOffs => "en.foffs",
             PackKey::EnPlaceOffs => "en.poffs",
+            PackKey::WorldMap => "world.map",
+            PackKey::Meta => "meta.json",
         }
     }
 
@@ -91,6 +97,8 @@ impl PackKey {
             8 => PackKey::EnPlaces,
             9 => PackKey::EnFrameOffs,
             10 => PackKey::EnPlaceOffs,
+            11 => PackKey::WorldMap,
+            0 => PackKey::Meta,
             _ => return None,
         })
     }
@@ -320,6 +328,38 @@ pub fn try_get(key: PackKey) -> Option<&'static [u8]> {
 }
 
 /// crc32（IEEE，与 `gates/cli.py` 同多项式；零依赖实现）。
+/// `GFX_INFO` 描述子 → 该项在 `gfx.data` 平面里的 `(偏移, 尺寸)`。
+///
+/// **格式知识在提取侧**：描述子 7 B = `[bank][src lo][src hi][dest lo][dest hi][size lo][size hi]`
+/// （`GFXInfo ; 07:C6E0`），尺寸取 `+5..+7` LE，偏移按前序项尺寸累加——
+/// 这两条约定只由 `extract.rs` 的 `extract_gfx_info`/`extract_gfx_data` 定义。
+pub fn gfx_block_offs(id: usize) -> Option<(usize, usize)> {
+    let info = get(PackKey::GfxInfo);
+    if id >= info.len() / 7 {
+        return None;
+    }
+    let mut off = 0usize;
+    for i in 0..=id {
+        let rec = info.get(i * 7..i * 7 + 7)?;
+        let size = usize::from(u16::from_le_bytes([rec[5], rec[6]]));
+        if i == id {
+            return Some((off, size));
+        }
+        off += size;
+    }
+    None
+}
+
+/// 项表（`(off u32, len u32)` LE）第 `idx` 项——越界 ⇒ `None`。
+pub fn offs_entry(key: PackKey, idx: usize) -> Option<(u32, u32)> {
+    let t = get(key);
+    let e = t.get(idx * 8..idx * 8 + 8)?;
+    Some((
+        u32::from_le_bytes([e[0], e[1], e[2], e[3]]),
+        u32::from_le_bytes([e[4], e[5], e[6], e[7]]),
+    ))
+}
+
 pub fn crc32(data: &[u8]) -> u32 {
     let mut crc: u32 = 0xFFFF_FFFF;
     for &b in data {

@@ -298,14 +298,14 @@ mod r25_oam_probe {
 /// DrawEnemy（$DD8B）真帧径（**贴图根修**（2026-10-31 用户截图定谳：占位 tile=0x01
 /// 人形帧≠真敌帧））：animFrame==FrameNone⇒ClearObjectCntrl；animFrame*2→
 /// EnFramePtrTable1/2（carry 选表（asm :6108-6121））→帧流环（DrawSpriteObject DF19
-/// 同构）→OAM。数据面=game_data::area::enemy_gfx（r26 烘焙：EN_FRAME_OFFS/EN_FRAMES
+/// 同构）→OAM。数据面=game_data::assets（敌帧/位件面：enemy_frame_off/enemy_frames
 /// +EN_PLACE_OFFS/EN_PLACES）。
 ///
 /// 敌结构（constants_ram:85-149——A 级）：Ens=$0400 步距 16（y+0/x+1）；EnsExtra=$6AF4
 /// 步距 16（status+0/radiusY+1/radiusX+2/**animFrame+3**/animDelay+4/resetAnimIndex+5/
 /// animIndex+6/**hi+7**/type+14）。
 pub fn draw_enemy(mem: &mut crate::frame::FrameMemory, page_index: u8) {
-    use game_data::area::enemy_gfx as eg;
+    use game_data::assets;
     let px = (page_index as u16) * 16; // 槽×16B（Ens/EnsExtra 同步距）
     let blob_e = |a: u16| -> u8 { mem.read_ram(a) };
     // DrawEnemy（$DD8B）：animFrame==FrameNone($FF)→ClearObjectCntrl
@@ -316,14 +316,14 @@ pub fn draw_enemy(mem: &mut crate::frame::FrameMemory, page_index: u8) {
     }
     // 帧指针（:6108-6121）：animFrame*2→表 1/2（carry=bit7 选表）——烘焙偏移表直映
     let idx = (anim_frame & 0x7F) as usize + if anim_frame & 0x80 != 0 { 128 } else { 0 };
-    let (f0, flen) = eg::frame_off(idx).unwrap_or((0, 0));
+    let (f0, flen) = assets::enemy_frame_off(idx).unwrap_or((0, 0));
     if flen == 0 {
         mem.write_ram(0x006B, 0);
         return;
     }
     let fblob = |i: u16| -> u8 {
         let o = f0 as usize + i as usize;
-        *eg::frames().get(o).unwrap_or(&0xFF)
+        *assets::enemy_frames().get(o).unwrap_or(&0xFF)
     };
     // y/x/hi（:6096-6105——Ens/EnsExtra）
     let y_pos = blob_e(0x0400 + px);
@@ -341,10 +341,10 @@ pub fn draw_enemy(mem: &mut crate::frame::FrameMemory, page_index: u8) {
     let flip_flags = ctrl_byte ^ mirror_flags;
     // 位件指针（:6124-6130）：(ctrl&$0F)*2→EnPlacePtrTable——烘焙偏移表直映
     let place_idx = (ctrl_byte & 0x0F) as usize;
-    let (p0, plen) = eg::place_off(place_idx).unwrap_or((0, 0));
+    let (p0, plen) = assets::enemy_place_off(place_idx).unwrap_or((0, 0));
     let pblob = |i: u16| -> u8 {
         let o = p0 as usize + i as usize;
-        *eg::places().get(o).unwrap_or(&0xFF)
+        *assets::enemy_places().get(o).unwrap_or(&0xFF)
     };
     // 屏位（ScrollY=$FC/ScrollX=$FD 勘误径——anim_draw_object 同构）
     let scroll_y = mem.read_ram(crate::ram_map::SCROLL_Y);

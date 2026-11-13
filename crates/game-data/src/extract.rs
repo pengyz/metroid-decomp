@@ -36,6 +36,9 @@ pub fn sections(rom: &[u8]) -> Result<Vec<Section>, String> {
     out.push(Section { key: PackKey::GfxInfo, data: extract_gfx_info(prg)? });
     out.push(Section { key: PackKey::GfxData, data: extract_gfx_data(prg)? });
     out.extend(extract_enemy_gfx(prg)?);
+    // 世界地图：`WorldMap: ; 00:A53E`（prg0_title.asm:5118）32×32=1024 B，bank0。
+    // `CopyMap $A93E`（prg0_title.asm:5153）运行时把它拷到 WorldMapRAM `$7000-$73FF`。
+    out.push(Section { key: PackKey::WorldMap, data: bank_slice(prg, 0, WORLD_MAP_ADDR, WORLD_MAP_LEN)? });
     Ok(out)
 }
 
@@ -83,6 +86,10 @@ fn extract_gfx_data(prg: &[u8]) -> Result<Vec<u8>, String> {
 //   帧指针 151 项、place 指针 14 项**全部 ≥ $8000**（合法 ROM 指针）；
 //   旧烘焙器按 128 项读把相邻数据当指针，才出现 34/44 个 `< $8000` 的伪值。
 // 帧流=[ctrl][radiusY][radiusX][流…$FF]；位流=y/x 对。
+/// `WorldMap` 的 CPU 地址（`refs/m1disasm/SRC/prg0_title.asm:5118`）与长度。
+const WORLD_MAP_ADDR: u16 = 0xA53E;
+const WORLD_MAP_LEN: usize = 1024;
+
 const EN_BANK_BASE: usize = 0x4000; // bank1（Brinstar）切窗口起点
 const EN_ANIM_TABLE: u16 = 0x9D6A;
 const EN_ANIM_LEN: usize = 118;
@@ -90,6 +97,14 @@ const EN_FRAME_PTRS: u16 = 0x9DE0;
 const EN_FRAME_LEN: usize = 151;
 const EN_PLACE_PTRS: u16 = 0x9F0E;
 const EN_PLACE_LEN: usize = 14;
+
+/// 按 (bank, cpu addr) 取 ROM 字节（bank0-6 落 `$8000` 窗口，bank7 落 `$C000`）。
+fn bank_slice(prg: &[u8], bank: u8, addr: u16, len: usize) -> Result<Vec<u8>, String> {
+    let o = bank_source_offset(bank, addr)?;
+    prg.get(o..o + len)
+        .map(|s| s.to_vec())
+        .ok_or_else(|| format!("ROM 越界 bank{bank}:{addr:04X} len={len}"))
+}
 
 fn en_off(addr: u16) -> Result<usize, String> {
     if addr < 0x8000 {
@@ -259,6 +274,79 @@ pub fn write_pack(sections: &[Section], rom_crc32: u32, rom_size: u32) -> Vec<u8
         out.extend_from_slice(&s.data);
     }
     out
+}
+
+
+// ---- 段元信息（JSON，打进包里，**只由 pack-tool 读写**）----------------------------
+//
+// 纪律：表长/编码/自界规则这些「格式知识」的唯一权威是**本文件的常量与提取函数**；
+// meta JSON 是它们的**派生投影**，用于自描述 + 漂移检测，不是第二真相源。
+// `pack-tool verify` 会校验「count × elem == 段实测长度」，不一致即硬错。
+
+/// 一段的元信息（生成 JSON 用；`elem`=单元素字节数，`count`=元素数，均来自本文件常量）。
+struct SegMeta {
+    key: PackKey,
+    kind: &'static str,
+    elem: usize,
+    count: usize,
+    rom: &'static str,
+    note: &'static str,
+}
+
+fn seg_meta() -> Vec<SegMeta> {
+    let v = vec![
+        SegMeta { key: PackKey::GfxInfo, kind: "gfx-desc", elem: 7, count: GFX_ENTRIES,
+                  rom: "bank07:$C6E0", note: "GFXInfo 29 项×7B（LoadGFX 表间接读）" },
+        SegMeta { key: PackKey::GfxData, kind: "gfx-data", elem: 1, count: 0,
+                  rom: "bank00-07:按描述子", note: "29 项图形块拼接（count 由 Info 尺寸和决定）" },
+        SegMeta { key: PackKey::EnAnimTable, kind: "bytes", elem: 1, count: EN_ANIM_LEN,
+                  rom: "bank01:$9D6A", note: "EnAnimTable（$FF=动画结束）" },
+        SegMeta { key: PackKey::EnFramePtrs1, kind: "u16-table", elem: 2, count: EN_FRAME_LEN,
+                  rom: "bank01:$9DE0", note: "帧指针 151 项（$9DE0→$9F0E=302B）" },
+        SegMeta { key: PackKey::EnFramePtrs2, kind: "u16-table", elem: 2, count: 0,
+                  rom: "bank01:$9EE0", note: "**空**：$9EE0 处无独立表（旧烘焙器 128 项读法即 bug 源）" },
+        SegMeta { key: PackKey::EnPlacePtrs, kind: "u16-table", elem: 2, count: EN_PLACE_LEN,
+                  rom: "bank01:$9F0E", note: "位件指针 14 项（表内 14 指针后即数据）" },
+        SegMeta { key: PackKey::EnFrames, kind: "bytes", elem: 1, count: 0,
+                  rom: "bank01:$9FC2+", note: "帧流拼接（各自界于 $FF）" },
+        SegMeta { key: PackKey::EnPlaces, kind: "bytes", elem: 1, count: 0,
+                  rom: "bank01:$9F2E+", note: "位件流拼接" },
+        SegMeta { key: PackKey::EnFrameOffs, kind: "offs-table", elem: 8, count: EN_FRAME_LEN,
+                  rom: "(派生)", note: "(off u32, len u32) LE ×151" },
+        SegMeta { key: PackKey::EnPlaceOffs, kind: "offs-table", elem: 8, count: EN_PLACE_LEN,
+                  rom: "(派生)", note: "(off u32, len u32) LE ×14" },
+        SegMeta { key: PackKey::WorldMap, kind: "bytes", elem: 1, count: WORLD_MAP_LEN,
+                  rom: "bank00:$A53E", note: "WorldMap 32×32（$FF=无房；CopyMap 源）" },
+    ];
+    v
+}
+
+/// 生成 meta JSON 文本（自带缩进，`pack-tool list` 原样打印即可读）。
+pub fn build_meta_json(sections: &[Section], rom_crc32: u32, rom_size: u32) -> Vec<u8> {
+    let metas = seg_meta();
+    let mut out = String::with_capacity(4096);
+    out.push_str("{\n");
+    out.push_str("  \"format\": \"metroid-asset-pack\",\n");
+    out.push_str(&format!("  \"version\": {VERSION},\n"));
+    out.push_str(&format!(
+        "  \"rom\": {{\"crc32\": \"{rom_crc32:08X}\", \"size\": {rom_size}}},\n"));
+    out.push_str("  \"sections\": [\n");
+    let mut first = true;
+    for m in &metas {
+        let Some(sec) = sections.iter().find(|s| s.key == m.key) else { continue };
+        if !first {
+            out.push_str(",\n");
+        }
+        first = false;
+        let count = if m.count > 0 { m.count } else if m.elem > 1 { sec.data.len() / m.elem } else { sec.data.len() };
+        out.push_str(&format!(
+            "    {{\"key\": {}, \"name\": \"{}\", \"kind\": \"{}\", \"elem\": {}, \"count\": {}, \"bytes\": {}, \"crc32\": \"{:08X}\", \"rom\": \"{}\", \"note\": \"{}\"}}",
+            m.key.id(), m.key.name(), m.kind, m.elem, count, sec.data.len(),
+            crc32(&sec.data), m.rom, m.note
+        ));
+    }
+    out.push_str("\n  ]\n}\n");
+    out.into_bytes()
 }
 
 #[cfg(test)]

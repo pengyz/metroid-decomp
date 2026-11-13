@@ -747,7 +747,7 @@ pub fn update_all_enemies(mem: &mut crate::frame::FrameMemory) {
             let d5 = mem.read_ram(0x0400 + x2 as u16 + 5);
             let ry = mem.read_wram(0x6AF4 + x2 as u16 + 1);
             let fo = mem.read_ram(0x0400 + x2 as u16 + 6);
-            let eg = game_data::area::enemy_gfx::frames();
+            let eg = game_data::assets::enemy_frames();
             let mut cands = String::new();
             for i in (1..eg.len().min(400)).step_by(1) {
                 if eg[i] == 1 && cands.len() < 50 {
@@ -2000,7 +2000,7 @@ fn update_enemy_anim(mem: &mut crate::frame::FrameMemory, x: u8, a: u8) {
     let reset = mem.read_wram(base + 5);
     let mut y = mem.read_wram(base + 6) as usize;
     for _ in 0..16u32 {
-        let v = *game_data::area::enemy_gfx::anim_table().get(y).unwrap_or(&0xFF);
+        let v = *game_data::assets::enemy_anim_table().get(y).unwrap_or(&0xFF);
         if v == 0xFF {
             y = reset as usize; // 回绕续走
             continue;
@@ -2036,14 +2036,14 @@ fn draw_enemy(mem: &mut crate::frame::FrameMemory, x: u8) {
                 mem.read_ram(0x0400 + x as u16 + 5));
         }
     }
-    use game_data::area::enemy_gfx as eg;
+    use game_data::assets;
     // 【②回装（2026-10-29）】asm :6156-6168：帧记字 1/2→EnsExtra.radiusY/X（IsObject-
     // Visible 用半径（序=半径写先行））+[:6178-6186] bit1 逐帧闩（and #$FD/ora（txa<<1））。
     // 爆亡链件已补（F40D/DCF5/F483 全径（415 测））⇒连锁闭环（§10 回装判据达成）。
     let frame0 = mem.read_wram(0x6AF4 + x as u16 + 3);
     if frame0 != 0xFF {
         let fi0 = ((frame0 & 0x7F) as usize) + if frame0 & 0x80 != 0 { 128 } else { 0 };
-        let (fo0, fl0) = eg::frame_off(fi0 as usize).unwrap_or((0, 0));
+        let (fo0, fl0) = assets::enemy_frame_off(fi0 as usize).unwrap_or((0, 0));
     // 【goal-轮94 fo0→radiusY 直证】帧面 radiusY（金方 1/9 vs 我 8）。
     if std::env::var("DSH_SPRITE_TRACE").is_ok() && x == 0x40 {
         use std::sync::atomic::Ordering;
@@ -2051,12 +2051,12 @@ fn draw_enemy(mem: &mut crate::frame::FrameMemory, x: u8) {
         if n >= 830 && n <= 870 {
             eprintln!("[foy] n={} frame0={:02X} fi0={} fo0={} fl0={} ry={} rx={}", n,
                 frame0, fi0, fo0, fl0,
-                eg::frames()[fo0 as usize + 1], eg::frames()[fo0 as usize + 2]);
+                assets::enemy_frames()[fo0 as usize + 1], assets::enemy_frames()[fo0 as usize + 2]);
         }
     }
         if fl0 > 2 {
-            mem.write_wram(0x6AF4 + x as u16 + 1, eg::frames()[fo0 as usize + 1]);
-            mem.write_wram(0x6AF4 + x as u16 + 2, eg::frames()[fo0 as usize + 2]);
+            mem.write_wram(0x6AF4 + x as u16 + 1, assets::enemy_frames()[fo0 as usize + 1]);
+            mem.write_wram(0x6AF4 + x as u16 + 2, assets::enemy_frames()[fo0 as usize + 2]);
         }
     }
     // 【goal-轮75 asm 合形修】draw 走 fresh 检（:6177 `jsr IsObjectVisible` 逐字——
@@ -2076,9 +2076,9 @@ fn draw_enemy(mem: &mut crate::frame::FrameMemory, x: u8) {
     }
     let table2 = frame & 0x80 != 0;
     let fi = ((frame & 0x7F) as usize) + if table2 { 128 } else { 0 };
-    let (fo, fl) = eg::frame_off(fi as usize).unwrap_or((0, 0));
+    let (fo, fl) = assets::enemy_frame_off(fi as usize).unwrap_or((0, 0));
     let blob = |i: usize| -> u8 {
-        if fl == 0 || i >= fl as usize { 0 } else { eg::frames()[fo as usize + i] }
+        if fl == 0 || i >= fl as usize { 0 } else { assets::enemy_frames()[fo as usize + i] }
     };
     let ctrl = blob(0);
     // 【X 形根修（2026-10-31 asm WriteSpriteRAM（DEE6）逐字）】$6B=**对象控制字节**
@@ -2089,9 +2089,9 @@ fn draw_enemy(mem: &mut crate::frame::FrameMemory, x: u8) {
     let obj_mirror = mem.read_ram(0x006B) & 0x10; // bit4=水平镜像控制
     let mirror_flags = if obj_mirror != 0 { 0x40u8 } else { 0 };
     let place_idx = ((ctrl & 0x0F) as usize).min(127);
-    let (po, pl) = eg::place_off(place_idx as usize).unwrap_or((0, 0));
+    let (po, pl) = assets::enemy_place_off(place_idx as usize).unwrap_or((0, 0));
     let pblob = |i: usize| -> u8 {
-        if pl == 0 || i >= pl as usize { 0 } else { eg::places()[po as usize + i] }
+        if pl == 0 || i >= pl as usize { 0 } else { assets::enemy_places()[po as usize + i] }
     };
     let y = mem.read_ram(0x0400 + x as u16 + 0); // y=+0
     let xpos = mem.read_ram(0x0400 + x as u16 + 1); // x=+1
@@ -3362,7 +3362,7 @@ pub fn area_idx(in_area: u8) -> usize {
 /// CopyMap（**asm 内容锚** `CopyMap: ; 00:A93E`——WorldMap→WRAM $7000-$73FF 1KB）。
 /// 调用点=InitBank0（prg7_engine.asm:1382——**复位链件**：boot 期一次）。
 pub fn copy_map(mem: &mut FrameMemory) {
-    for (i, b) in game_data::title::world_map::WORLD_MAP.iter().enumerate() {
+    for (i, b) in game_data::assets::world_map().iter().enumerate() {
         mem.write_wram(0x7000 + i as u16, *b);
     }
 }

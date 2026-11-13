@@ -14,7 +14,7 @@ use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 use game_data::extract::{
-    sections, write_pack, EXPECTED_ROM_CRC32, EXPECTED_ROM_SIZE,
+    build_meta_json, sections, write_pack, Section, EXPECTED_ROM_CRC32, EXPECTED_ROM_SIZE,
 };
 use game_data::pack::{crc32, PackKey, PackView};
 
@@ -80,7 +80,10 @@ fn cmd_extract(a: &Args) -> Result<(), String> {
              确实要用别的 ROM 请加 --force（后果自负：数据可能错位）"
         ));
     }
-    let secs = sections(&rom)?;
+    let mut secs = sections(&rom)?;
+    // meta.json 段（id 0）：描述+校验用，运行时从不读。**派生投影**，由提取侧常量生成。
+    let meta = build_meta_json(&secs, got_crc, rom.len() as u32);
+    secs.insert(0, Section { key: PackKey::Meta, data: meta });
     let bytes = write_pack(&secs, got_crc, rom.len() as u32);
     if let Some(dir) = out.parent() {
         if !dir.as_os_str().is_empty() {
@@ -159,6 +162,10 @@ fn cmd_list(a: &Args) -> Result<(), String> {
     let pack = load_pack(pack_path)?;
     let (c, s) = pack.rom_identity();
     println!("包 ROM 身份：{} B / crc32={:08X}；{} 段", s, c, pack.section_count());
+    if let Some(meta) = pack.get(PackKey::Meta) {
+        println!("---- meta.json ----");
+        print!("{}", String::from_utf8_lossy(meta));
+    }
     for (id, off, len) in pack.entries() {
         let name = PackKey::from_id(*id).map(|k| k.name()).unwrap_or("<未知>");
         println!("  id={:<3} {:<10} off={:<8} len={}", id, name, off, len);

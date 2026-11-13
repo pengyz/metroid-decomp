@@ -46,13 +46,13 @@ pub mod gfx_id {
 ///
 /// **机制形（去重修）**：asm `LoadGFX: ; 07:C7AB` 走 `ldy #7*id / lda GFXInfo,y..` 表间接读
 /// （表址 prg7_engine.asm:1669 `GFXInfo ; 07:C6E0`），rust 侧对应
-/// `game_data::title::gfx_data::GFX_INFO`（ROM 29 项×7B 全表烘焙，`tools/bake_gfx.py` 生成，
+/// `game_data::assets::gfx_info()`（ROM 29 项×7B 全表烘焙，`tools/bake_gfx.py` 生成，
 /// 已核 `GFX_INFO == ROM[0x1C6E0..+203]` 逐字节）。旧形是手写 13 条 match 折叠——
-/// 表值虽同，但机制是"编译器常量"而非"表间接读"，且与 gfx_data.rs 重复烘焙两份。
+/// 表值虽同，但机制是"编译器常量"而非"表间接读"，且与数据面重复烘焙两份。
 ///
 /// 越界（id>=29）保持 fail-loud（D7）：ROM 表只有 29 项，读出去就是未取证区。
 pub fn gfx_info(id: u8) -> [u8; 7] {
-    let info = game_data::title::gfx_data::gfx_info();
+    let info = game_data::assets::gfx_info();
     let off = id as usize * 7;
     if off + 7 > info.len() {
         crate::unported!("bank07:C6E0-entry"); // ROM 表 29 项外（表尾）
@@ -104,17 +104,17 @@ pub fn init_title_gfx(mem: &mut FrameMemory) {
 /// GFX 块源面（CopyGFXBlock ROM 侧）。
 ///
 /// **机制形（去重修）**：asm `CopyGFXBlock: ; 07:C7D5` 从描述子给的 ROM 地址逐字节搬到 PPU；
-/// rust 侧对应 `gfx_data::GFX_DATA`（29 项数据体拼接，`GFX_OFFS[id]=(偏移,尺寸)` 索引），
+/// rust 侧对应 `assets::gfx_data()`（29 项数据体拼接，`GFX_OFFS[id]=(偏移,尺寸)` 索引），
 /// 已核 **29 项全部 `GFX_DATA[off..off+size] == ROM[bank*0x4000+src-0x8000 ..+size]` 逐字节**。
 /// 旧形是 13 条 `&gb::X_GFX` match + 独立生成件 `gfx_blocks.rs`（第三份重复烘焙）。
 ///
 /// 越界（id>=29）保持 fail-loud；32 位平台对 u32 偏移的安全边界由 `GFX_OFFS` 自身保证
 /// （生成期已校验 `off+size <= GFX_DATA.len()`）。
 pub fn gfx_block(id: u8) -> &'static [u8] {
-    let Some((off, size)) = game_data::title::gfx_data::gfx_offs(id as usize) else {
+    let Some((off, size)) = game_data::assets::gfx_offs(id as usize) else {
         crate::unported!("bank07:C6E0-entry"); // ROM 表 29 项外（表尾）
     };
-    let data = game_data::title::gfx_data::gfx_data();
+    let data = game_data::assets::gfx_data();
     debug_assert!(off + size <= data.len(), "gfx_offs 越界（描述子应自洽）");
     &data[off..off + size]
 }
