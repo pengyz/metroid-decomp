@@ -1800,6 +1800,120 @@ def gate_arch_contract() -> tuple[str, str]:
 # ---------------------------------------------------------------- 门禁注册表
 # readme_state 必须与 gates/README.md「门禁清单」表的"状态"列逐字一致（selftest 自动比对）。
 
+# --- 数据/代码边界（W1 起；设计见 docs/spec/data-code-separation.md）--------------------
+
+DATA_BOUNDARY_REL = "data/status/data_boundary_allowlist.json"
+# `0xNN,` 形式的字节字面量——ROM 派生数据的机械指纹（与常量名/嵌套形状无关）。
+_BYTE_LIT_RE = re.compile(r"0x[0-9A-Fa-f]{2}\s*,")
+# 允许接收 ROM 字节的路径（`tools-boundary`）——只有提取器与它的运行器。
+ROM_BYTES_WHITELIST = {
+    "crates/game-data/src/extract.rs",
+    "crates/pack-tool/src/main.rs",
+}
+_ROM_PARAM_RE = re.compile(r"rom\s*:\s*&\s*\[\s*u8\s*\]")
+
+
+def data_boundary_violations(root: Path) -> list[str]:
+    """数据边界（纯函数，可单测）：
+
+    ①`crates/**/*.rs` 里字节字面量 > `threshold` 的文件必须在账内（新增即红）
+    ②账内文件的字面量数不得增长（只减不增）
+    ③账内条目若已消失/已降到阈值以下 ⇒ 红（必须当次清理条目，防“迁完仍留白名单”）
+    ④`assets/*.pack` 必须在 .gitignore，且仓库里不得有 tracked 的 *.pack
+    """
+    problems: list[str] = []
+    path = root / DATA_BOUNDARY_REL
+    if not path.is_file():
+        return [f"{DATA_BOUNDARY_REL} 缺失（数据边界账本——见 docs/spec/data-code-separation.md）"]
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return [f"{DATA_BOUNDARY_REL} 不可解析: {exc}"]
+    threshold = int(data.get("threshold", 512))
+    allow = {e["file"]: int(e["max_byte_literals"]) for e in data.get("files", [])}
+    if not allow:
+        return [f"{DATA_BOUNDARY_REL} 的 files 为空（账本必须显式登记现存数据文件）"]
+
+    seen: dict[str, int] = {}
+    for p in sorted((root / "crates").rglob("*.rs")):
+        text = p.read_text(encoding="utf-8", errors="replace")
+        n = len(_BYTE_LIT_RE.findall(text))
+        if n > threshold:
+            try:
+                key = str(p.relative_to(root)).replace(os.sep, "/")
+            except ValueError:  # 理论不可达（p 由 root 派生）；保守退回 rel()
+                key = rel(p)
+            seen[key] = n
+
+    for f, n in seen.items():
+        if f not in allow:
+            problems.append(
+                f"{f}: {n} 条字节字面量 > {threshold} 且不在数据边界账内"
+                "——ROM 派生数据须走资产包（pack-tool extract），不许把常量数组提交进仓"
+            )
+        elif n > allow[f]:
+            problems.append(f"{f}: 字节字面量 {allow[f]} → {n}（只减不增：数据只许迁出，不许再进来）")
+
+    for f, maxn in allow.items():
+        if f not in seen:
+            problems.append(
+                f"{DATA_BOUNDARY_REL} 条目 {f} 已无超阈值数据（或文件已删）"
+                "——迁移完成后须在同一 commit 删除该条目（防软化）"
+            )
+
+    gi = root / ".gitignore"
+    gitignore_text = gi.read_text(encoding="utf-8", errors="replace") if gi.is_file() else ""
+    if "assets/*.pack" not in gitignore_text:
+        problems.append(".gitignore 缺 `assets/*.pack`（资产包绝不入库）")
+    try:
+        tracked = subprocess.run(["git", "ls-files", "*.pack"], cwd=str(root),
+                                 capture_output=True, text=True, check=False).stdout.strip()
+        if tracked:
+            problems.append("仓库里有 tracked 的 *.pack（资产包绝不入库）：" + tracked.splitlines()[0])
+    except OSError as exc:
+        problems.append(f"git ls-files 失败: {exc}")
+    return problems
+
+
+def gate_data_boundary() -> tuple[str, str]:
+    """G-DB 数据边界：仓内不得长出新的大块 ROM 派生数据；资产包不入库。"""
+    problems = data_boundary_violations(ROOT)
+    if problems:
+        return FAIL, "数据边界违规：\n  - " + "\n  - ".join(problems)
+    path = ROOT / DATA_BOUNDARY_REL
+    data = json.loads(path.read_text(encoding="utf-8"))
+    return PASS, (f"{len(data.get('files', []))} 个待迁移数据文件在账内"
+                  f"（阈值 {data.get('threshold', 512)} 条字节字面量）；assets/*.pack 已忽略且无 tracked 包")
+
+
+def tools_boundary_violations(root: Path) -> list[str]:
+    """工具边界（纯函数）：只有提取器与它的运行器可以接收 `rom: &[u8]`。"""
+    problems: list[str] = []
+    for p in sorted((root / "crates").rglob("*.rs")):
+        try:
+            f = str(p.relative_to(root)).replace(os.sep, "/")
+        except ValueError:
+            f = rel(p)
+        if f in ROM_BYTES_WHITELIST:
+            continue
+        text = p.read_text(encoding="utf-8", errors="replace")
+        for i, line in enumerate(text.splitlines(), 1):
+            if _ROM_PARAM_RE.search(line):
+                problems.append(
+                    f"{f}:{i} 接收 `rom: &[u8]`（工具边界违规——只有 "
+                    "crates/game-data/src/extract.rs 与 crates/pack-tool/src/main.rs 允许）"
+                )
+    return problems
+
+
+def gate_tools_boundary() -> tuple[str, str]:
+    """G-TB 工具边界：ROM 字节入口收敛到提取工具，运行期不许读 ROM。"""
+    problems = tools_boundary_violations(ROOT)
+    if problems:
+        return FAIL, "工具边界违规：\n  - " + "\n  - ".join(problems)
+    return PASS, f"ROM 字节入口仅 {len(ROM_BYTES_WHITELIST)} 处（extract.rs / pack-tool），其余 crate 不接收 rom 字节"
+
+
 GATES: list[tuple[str, str, str, str, object]] = [
     # (name, readme_state, 所属命令, 一句话内容, runner)
     ("rom-integrity", "启用（P0）", "rom", "rom/ sha256 对照 SHA256SUMS", gate_rom_integrity),
@@ -1824,6 +1938,10 @@ GATES: list[tuple[str, str, str, str, object]] = [
      "CARGO_HOME 锁文件跨家共享 inode 机检（硬链快照忘删锁=挂死复发面拦截）", gate_shared_inode_locks),
     ("arch-contract", "启用（r19）", "check",
      "依赖方向（域件禁 frame 类型=G11 破环契约）+analysis 不入库红线双哨", gate_arch_contract),
+    ("data-boundary", "启用（W1）", "check",
+     "数据边界：仓内不得新增 ROM 派生大常量数组（账本只减不增）+ assets/*.pack 不入库", gate_data_boundary),
+    ("tools-boundary", "启用（W1）", "check",
+     "工具边界：rom: &[u8] 只允许出现在 extract.rs / pack-tool（运行期不读 ROM）", gate_tools_boundary),
 ]
 
 
@@ -2937,6 +3055,65 @@ def cmd_selftest(_args) -> int:
             finally:
                 l4m18.CASES_DIR, l4m18.SHOTS_RUST, l4m18.SHOTS_EMU, l4m18.ROM, \
                     l4m18.run_rust, l4m18.run_emu = old_g
+
+        # ---- T2：数据/工具边界（W1）——纯函数正反两向 ----
+        with tempfile.TemporaryDirectory() as td2:
+            r2 = Path(td2)
+            (r2 / "crates" / "x" / "src").mkdir(parents=True)
+            (r2 / "data" / "status").mkdir(parents=True)
+            (r2 / ".gitignore").write_text("assets/*.pack\n", encoding="utf-8")
+
+            def _write_data(fname: str, n: int) -> None:
+                body = "pub const A: [u8; %d] = [%s];\n" % (n, "".join(["0x11,"] * n))
+                (r2 / "crates" / "x" / "src" / fname).write_text(body, encoding="utf-8")
+
+            def _write_allow(entries: dict[str, int]) -> None:
+                (r2 / "data" / "status" / "data_boundary_allowlist.json").write_text(
+                    json.dumps({"schema": "data-boundary/v1", "threshold": 512,
+                                "files": [{"file": f, "max_byte_literals": n}
+                                          for f, n in entries.items()]}, ensure_ascii=False),
+                    encoding="utf-8")
+
+            _write_data("ok.rs", 3)          # 低于阈值：不入账
+            _write_allow({"crates/x/src/big.rs": 600})
+            _write_data("big.rs", 600)       # 账内、未增长 ⇒ 零违规
+            v = data_boundary_violations(r2)
+            check("T2① 账内未增长 + 小文件 ⇒ 零违规（正对照）", v == [], f"{v}")
+
+            _write_data("big.rs", 700)       # 增长 ⇒ 红
+            v = data_boundary_violations(r2)
+            check("T2② 账内文件字面量增长 ⇒ 红（只减不增）",
+                  len(v) == 1 and "只减不增" in v[0], f"{v}")
+
+            _write_allow({"crates/x/src/big.rs": 700})
+            _write_data("new.rs", 800)       # 新文件不在账 ⇒ 红
+            v = data_boundary_violations(r2)
+            check("T2③ 新增超阈值文件不在账 ⇒ 红（数据须走资产包）",
+                  len(v) == 1 and "不在数据边界账内" in v[0], f"{v}")
+
+            (r2 / "crates" / "x" / "src" / "new.rs").unlink()
+            _write_allow({"crates/x/src/big.rs": 700,
+                          "crates/x/src/gone.rs": 600})   # 残留条目 ⇒ 红（防软化）
+            v = data_boundary_violations(r2)
+            check("T2④ 账内条目已无数据/文件已删 ⇒ 红（迁移后必须删条目）",
+                  len(v) == 1 and "删除该条目" in v[0], f"{v}")
+
+            _write_allow({"crates/x/src/big.rs": 700})
+            (r2 / ".gitignore").write_text("", encoding="utf-8")
+            v = data_boundary_violations(r2)
+            check("T2⑤ .gitignore 缺 assets/*.pack ⇒ 红（包绝不入库）",
+                  len(v) == 1 and "assets/*.pack" in v[0], f"{v}")
+
+            (r2 / ".gitignore").write_text("assets/*.pack\n", encoding="utf-8")
+            bad = r2 / "crates" / "x" / "src" / "reader.rs"
+            bad.write_text("pub fn load(rom: &[u8]) -> u8 { rom[0] }\n", encoding="utf-8")
+            v = tools_boundary_violations(r2)
+            check("T2⑥ 非白名单接收 rom: &[u8] ⇒ 红（工具边界）",
+                  len(v) == 1 and "工具边界违规" in v[0], f"{v}")
+
+            bad.write_text("pub fn load(d: &[u8]) -> u8 { d[0] }\n", encoding="utf-8")
+            v = tools_boundary_violations(r2)
+            check("T2⑦ 改名不改语义（不叫 rom）⇒ 零违规（正对照，只认签名形态）", v == [], f"{v}")
 
         # ---- C1：run-all 崩溃语义=拒跑 exit 2（②）+ gate 绝不判旧矩阵（①） ----
         with tempfile.TemporaryDirectory() as td:

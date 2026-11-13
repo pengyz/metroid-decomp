@@ -1,0 +1,67 @@
+{
+ "schema": "data-boundary/v1",
+ "note": "ROM 派生数据的仓内形状登记（**只减不增**）。判据=文件内 `0xNN,` 字节字面量条数 >512。\nW1-W6 每波把一批文件迁到资产包（pack），迁完当次 commit 必须把对应条目删掉——\n条目残留会被门禁判红（防止“已迁移但仍留白名单”的软化）。\n设计见 docs/spec/data-code-separation.md。",
+ "threshold": 512,
+ "files": [
+  {
+   "file": "crates/game-core/src/enemy/common.rs",
+   "max_byte_literals": 692
+  },
+  {
+   "file": "crates/game-core/src/frame/sound_hook.rs",
+   "max_byte_literals": 2701
+  },
+  {
+   "file": "crates/game-core/src/ui/password.rs",
+   "max_byte_literals": 762
+  },
+  {
+   "file": "crates/game-core/tests/common/password_init.rs",
+   "max_byte_literals": 19176
+  },
+  {
+   "file": "crates/game-data/src/area/enemy_gfx.rs",
+   "max_byte_literals": 218984
+  },
+  {
+   "file": "crates/game-data/src/area/graphics.rs",
+   "max_byte_literals": 3362
+  },
+  {
+   "file": "crates/game-data/src/area/norfair_graphics.rs",
+   "max_byte_literals": 3131
+  },
+  {
+   "file": "crates/game-data/src/area/sprite_data.rs",
+   "max_byte_literals": 1457
+  },
+  {
+   "file": "crates/game-data/src/rom_tables.rs",
+   "max_byte_literals": 1040
+  },
+  {
+   "file": "crates/game-data/src/sound/music_streams.rs",
+   "max_byte_literals": 2227
+  },
+  {
+   "file": "crates/game-data/src/title/palette_data.rs",
+   "max_byte_literals": 1859
+  },
+  {
+   "file": "crates/game-data/src/title/title_data.rs",
+   "max_byte_literals": 574
+  },
+  {
+   "file": "crates/game-data/src/title/vram_structs.rs",
+   "max_byte_literals": 1135
+  },
+  {
+   "file": "crates/game-data/src/title/world_map.rs",
+   "max_byte_literals": 1028
+  },
+  {
+   "file": "crates/game-data/src/world/world_map.rs",
+   "max_byte_literals": 1024
+  }
+ ]
+}
