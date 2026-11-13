@@ -360,3 +360,36 @@ mod tests {
         assert!(enemy_frame_off(i).is_none(), "越界索引应 None");
     }
 }
+
+/// `MusicNotesTbl ; $BE77`（64 音符×2B：高/低 period 对；低字节 0=休止）。
+pub fn music_notes() -> &'static [u8] {
+    pack::get(PackKey::MusicNotes)
+}
+
+/// `NoteLengthsTbl ; $BEF7` @4 组（11B，PowerUp/Kraid）——组偏移=曲头 Byte0 `$00`。
+pub fn note_lengths_4() -> &'static [u8] {
+    pack::get(PackKey::NoteLen4)
+}
+
+/// 同表 @6 组（12B，区域曲族）——曲头 Byte0 `$0B`。
+pub fn note_lengths_6() -> &'static [u8] {
+    pack::get(PackKey::NoteLen6)
+}
+
+/// 同表 @7 组（12B，intro/end）——曲头 Byte0 `$17`。
+pub fn note_lengths_7() -> &'static [u8] {
+    pack::get(PackKey::NoteLen7)
+}
+
+/// 三组长度表按全表下标直索（asm `adc NoteLengthTblOffset` 直索全表，35B 连续）。
+/// 组界：`@4` 11B / `@6` 12B / `@7` 12B（=曲头 Byte0 `$00/$0B/$17`）。
+pub fn note_length_at(index: u8) -> u8 {
+    let i = index as usize;
+    if i < 11 {
+        note_lengths_4()[i]
+    } else if i < 23 {
+        note_lengths_6()[i - 11]
+    } else {
+        note_lengths_7().get(i - 23).copied().unwrap_or(0)
+    }
+}

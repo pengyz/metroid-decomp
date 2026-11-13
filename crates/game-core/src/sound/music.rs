@@ -277,7 +277,7 @@ pub fn update_music_channel(
         if instr & 0xB0 == 0xB0 {
             // asm：Y=(A&$0F)+NoteLengthTblOffset——**全表下标**（组偏移=组首 0/11/23）
             let idx = (instr & 0x0F).wrapping_add(ctx.note_len_offset);
-            let frames = game_data::sound::music_tables::note_length_at(idx);
+            let frames = game_data::assets::note_length_at(idx);
             b.instr_length = frames;
             ev.push((0x0620 + ch_addr, frames));
             if ch == 2 {
@@ -306,9 +306,9 @@ pub fn update_music_channel(
     }
 
     // 要点⑥：休止/音符→$EA（Cntrl0Data）
-    let high = game_data::sound::music_tables::MUSIC_NOTES_TBL
+    let high = game_data::assets::music_notes()
         .get(note as usize).copied().unwrap_or(0);
-    let low = game_data::sound::music_tables::MUSIC_NOTES_TBL
+    let low = game_data::assets::music_notes()
         .get(note as usize + 1).copied().unwrap_or(0);
     if low != 0 {
         p_low = low;

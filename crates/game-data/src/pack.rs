@@ -84,6 +84,10 @@ pub enum PackKey {
     BrEnemyFacing = 34,
     RomTable968B = 35,
     RomVec95CE = 36,
+    MusicNotes = 38,
+    NoteLen4 = 39,
+    NoteLen6 = 40,
+    NoteLen7 = 41,
     NametableHi = 37,
 }
 
@@ -133,6 +137,10 @@ impl PackKey {
             PackKey::BrEnemyFacing => "area.br.en_facing",
             PackKey::RomTable968B => "rom.tbl968b",
             PackKey::RomVec95CE => "rom.vec95ce",
+            PackKey::MusicNotes => "sound.notes",
+            PackKey::NoteLen4 => "sound.note_len4",
+            PackKey::NoteLen6 => "sound.note_len6",
+            PackKey::NoteLen7 => "sound.note_len7",
             PackKey::NametableHi => "rom.nt_hi",
         }
     }
@@ -177,6 +185,10 @@ impl PackKey {
             34 => PackKey::BrEnemyFacing,
             35 => PackKey::RomTable968B,
             36 => PackKey::RomVec95CE,
+            38 => PackKey::MusicNotes,
+            39 => PackKey::NoteLen4,
+            40 => PackKey::NoteLen6,
+            41 => PackKey::NoteLen7,
             37 => PackKey::NametableHi,
             _ => return None,
         })

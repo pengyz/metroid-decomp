@@ -45,6 +45,7 @@ pub fn sections(rom: &[u8]) -> Result<Vec<Section>, String> {
         out.push(Section { key, data: bank_slice(prg, 1, addr, len)? });
     }
     out.extend(extract_rom_tables(prg)?);
+    out.extend(extract_music_tables(prg)?);
     Ok(out)
 }
 
@@ -496,6 +497,30 @@ fn extract_rom_tables(prg: &[u8]) -> Result<Vec<Section>, String> {
         Section { key: PackKey::RomTable968B, data: tbl },
         Section { key: PackKey::RomVec95CE, data: vecs },
         Section { key: PackKey::NametableHi, data: vec![0x20, 0x24, 0x28, 0x2C] },
+    ])
+}
+
+
+/// sound 域平铺偏移：`文件偏移 = addr - $8000`（模块注自证 `$B31B↔prg[0x331B]`）。
+const SOUND_FLAT_BASE: usize = 0x8000;
+
+fn flat_slice(prg: &[u8], addr: u16, len: usize) -> Result<Vec<u8>, String> {
+    let off = (addr as usize)
+        .checked_sub(SOUND_FLAT_BASE)
+        .ok_or_else(|| format!("sound 域越界：{addr:#06X} < $8000"))?;
+    let s = prg
+        .get(off..off + len)
+        .ok_or_else(|| format!("sound 域越界：{addr:#06X}+{len}"))?;
+    Ok(s.to_vec())
+}
+
+/// 音乐四表（`MusicNotesTbl ; $BE77` 64 音符×2B / `NoteLengthsTbl ; $BEF7` 三组 11+12+12）。
+fn extract_music_tables(prg: &[u8]) -> Result<Vec<Section>, String> {
+    Ok(vec![
+        Section { key: PackKey::MusicNotes, data: flat_slice(prg, 0xBE77, 128)? },
+        Section { key: PackKey::NoteLen4, data: flat_slice(prg, 0xBEF7, 11)? },
+        Section { key: PackKey::NoteLen6, data: flat_slice(prg, 0xBEF7 + 11, 12)? },
+        Section { key: PackKey::NoteLen7, data: flat_slice(prg, 0xBEF7 + 23, 12)? },
     ])
 }
 
