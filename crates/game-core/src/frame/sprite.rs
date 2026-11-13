@@ -316,14 +316,14 @@ pub fn draw_enemy(mem: &mut crate::frame::FrameMemory, page_index: u8) {
     }
     // 帧指针（:6108-6121）：animFrame*2→表 1/2（carry=bit7 选表）——烘焙偏移表直映
     let idx = (anim_frame & 0x7F) as usize + if anim_frame & 0x80 != 0 { 128 } else { 0 };
-    let (f0, flen) = eg::EN_FRAME_OFFS.get(idx).copied().unwrap_or((0, 0));
+    let (f0, flen) = eg::frame_off(idx).unwrap_or((0, 0));
     if flen == 0 {
         mem.write_ram(0x006B, 0);
         return;
     }
     let fblob = |i: u16| -> u8 {
         let o = f0 as usize + i as usize;
-        *eg::EN_FRAMES.get(o).unwrap_or(&0xFF)
+        *eg::frames().get(o).unwrap_or(&0xFF)
     };
     // y/x/hi（:6096-6105——Ens/EnsExtra）
     let y_pos = blob_e(0x0400 + px);
@@ -341,10 +341,10 @@ pub fn draw_enemy(mem: &mut crate::frame::FrameMemory, page_index: u8) {
     let flip_flags = ctrl_byte ^ mirror_flags;
     // 位件指针（:6124-6130）：(ctrl&$0F)*2→EnPlacePtrTable——烘焙偏移表直映
     let place_idx = (ctrl_byte & 0x0F) as usize;
-    let (p0, plen) = eg::EN_PLACE_OFFS.get(place_idx).copied().unwrap_or((0, 0));
+    let (p0, plen) = eg::place_off(place_idx).unwrap_or((0, 0));
     let pblob = |i: u16| -> u8 {
         let o = p0 as usize + i as usize;
-        *eg::EN_PLACES.get(o).unwrap_or(&0xFF)
+        *eg::places().get(o).unwrap_or(&0xFF)
     };
     // 屏位（ScrollY=$FC/ScrollX=$FD 勘误径——anim_draw_object 同构）
     let scroll_y = mem.read_ram(crate::ram_map::SCROLL_Y);

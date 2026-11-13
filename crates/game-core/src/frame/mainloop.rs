@@ -747,7 +747,7 @@ pub fn update_all_enemies(mem: &mut crate::frame::FrameMemory) {
             let d5 = mem.read_ram(0x0400 + x2 as u16 + 5);
             let ry = mem.read_wram(0x6AF4 + x2 as u16 + 1);
             let fo = mem.read_ram(0x0400 + x2 as u16 + 6);
-            let eg = &game_data::area::enemy_gfx::EN_FRAMES;
+            let eg = game_data::area::enemy_gfx::frames();
             let mut cands = String::new();
             for i in (1..eg.len().min(400)).step_by(1) {
                 if eg[i] == 1 && cands.len() < 50 {
@@ -2000,7 +2000,7 @@ fn update_enemy_anim(mem: &mut crate::frame::FrameMemory, x: u8, a: u8) {
     let reset = mem.read_wram(base + 5);
     let mut y = mem.read_wram(base + 6) as usize;
     for _ in 0..16u32 {
-        let v = *game_data::area::enemy_gfx::EN_ANIM_TABLE.get(y).unwrap_or(&0xFF);
+        let v = *game_data::area::enemy_gfx::anim_table().get(y).unwrap_or(&0xFF);
         if v == 0xFF {
             y = reset as usize; // 回绕续走
             continue;
@@ -2043,7 +2043,7 @@ fn draw_enemy(mem: &mut crate::frame::FrameMemory, x: u8) {
     let frame0 = mem.read_wram(0x6AF4 + x as u16 + 3);
     if frame0 != 0xFF {
         let fi0 = ((frame0 & 0x7F) as usize) + if frame0 & 0x80 != 0 { 128 } else { 0 };
-        let (fo0, fl0) = eg::EN_FRAME_OFFS[fi0];
+        let (fo0, fl0) = eg::frame_off(fi0 as usize).unwrap_or((0, 0));
     // 【goal-轮94 fo0→radiusY 直证】帧面 radiusY（金方 1/9 vs 我 8）。
     if std::env::var("DSH_SPRITE_TRACE").is_ok() && x == 0x40 {
         use std::sync::atomic::Ordering;
@@ -2051,12 +2051,12 @@ fn draw_enemy(mem: &mut crate::frame::FrameMemory, x: u8) {
         if n >= 830 && n <= 870 {
             eprintln!("[foy] n={} frame0={:02X} fi0={} fo0={} fl0={} ry={} rx={}", n,
                 frame0, fi0, fo0, fl0,
-                eg::EN_FRAMES[fo0 as usize + 1], eg::EN_FRAMES[fo0 as usize + 2]);
+                eg::frames()[fo0 as usize + 1], eg::frames()[fo0 as usize + 2]);
         }
     }
         if fl0 > 2 {
-            mem.write_wram(0x6AF4 + x as u16 + 1, eg::EN_FRAMES[fo0 as usize + 1]);
-            mem.write_wram(0x6AF4 + x as u16 + 2, eg::EN_FRAMES[fo0 as usize + 2]);
+            mem.write_wram(0x6AF4 + x as u16 + 1, eg::frames()[fo0 as usize + 1]);
+            mem.write_wram(0x6AF4 + x as u16 + 2, eg::frames()[fo0 as usize + 2]);
         }
     }
     // 【goal-轮75 asm 合形修】draw 走 fresh 检（:6177 `jsr IsObjectVisible` 逐字——
@@ -2076,9 +2076,9 @@ fn draw_enemy(mem: &mut crate::frame::FrameMemory, x: u8) {
     }
     let table2 = frame & 0x80 != 0;
     let fi = ((frame & 0x7F) as usize) + if table2 { 128 } else { 0 };
-    let (fo, fl) = eg::EN_FRAME_OFFS[fi];
+    let (fo, fl) = eg::frame_off(fi as usize).unwrap_or((0, 0));
     let blob = |i: usize| -> u8 {
-        if fl == 0 || i >= fl as usize { 0 } else { eg::EN_FRAMES[fo as usize + i] }
+        if fl == 0 || i >= fl as usize { 0 } else { eg::frames()[fo as usize + i] }
     };
     let ctrl = blob(0);
     // 【X 形根修（2026-10-31 asm WriteSpriteRAM（DEE6）逐字）】$6B=**对象控制字节**
@@ -2089,9 +2089,9 @@ fn draw_enemy(mem: &mut crate::frame::FrameMemory, x: u8) {
     let obj_mirror = mem.read_ram(0x006B) & 0x10; // bit4=水平镜像控制
     let mirror_flags = if obj_mirror != 0 { 0x40u8 } else { 0 };
     let place_idx = ((ctrl & 0x0F) as usize).min(127);
-    let (po, pl) = eg::EN_PLACE_OFFS[place_idx];
+    let (po, pl) = eg::place_off(place_idx as usize).unwrap_or((0, 0));
     let pblob = |i: usize| -> u8 {
-        if pl == 0 || i >= pl as usize { 0 } else { eg::EN_PLACES[po as usize + i] }
+        if pl == 0 || i >= pl as usize { 0 } else { eg::places()[po as usize + i] }
     };
     let y = mem.read_ram(0x0400 + x as u16 + 0); // y=+0
     let xpos = mem.read_ram(0x0400 + x as u16 + 1); // x=+1
