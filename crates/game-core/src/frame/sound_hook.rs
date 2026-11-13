@@ -225,6 +225,26 @@ fn table_slice(table_ptr: u16) -> &'static [u8] {
     &SOUND_REGION[o..o + 16]
 }
 
+/// 【止血件1③ DSH_SOUND_TRACE】声链触达打点（ptr+帧+深度+接/未接面）。
+///
+/// 为什么需要它：`data/status/handler_touchlist.json` 只固化了 **`_ => None` 未接臂**
+/// （sidecar=DIVERGENCES 记账面），已接的 22 件 handler + 6 件音乐 init 组合臂**从未被
+/// 观测过触达**——「已接但实际零触达」与「已接且高频」在账上是同一行，无法区分。
+/// 本打点把两面合成同一口径（kind=handler / unhandled），供触达统计与覆盖面复盘。
+///
+/// 开销：默认一次 getenv + 分支，不开环境变量时零输出零分配。
+fn sound_trace(mem: &crate::frame::FrameMemory, ptr: u16, depth: u8, kind: &str) {
+    if std::env::var("DSH_SOUND_TRACE").is_ok() {
+        eprintln!(
+            "[sound] fc={:02X} ptr={:04X} kind={} depth={}",
+            mem.read_ram(0x002D),
+            ptr,
+            kind,
+            depth
+        );
+    }
+}
+
 /// 链走分派一步（B31B 行清偿核心）：装载→get_sound_routine→
 /// 终端/链续/handler 记账。
 pub fn sound_dispatch_chain(mem: &mut FrameMemory, flag_addr: u16, block_win: u16, depth: u8) {
@@ -371,6 +391,7 @@ pub fn sound_dispatch_chain(mem: &mut FrameMemory, flag_addr: u16, block_win: u1
             _ => None,
         };
         if let Some(out) = out {
+            sound_trace(mem, ptr, depth, "handler");
             for (a, v) in out.ram_events {
                 mem.write_ram(a, v);
             }
@@ -386,6 +407,7 @@ pub fn sound_dispatch_chain(mem: &mut FrameMemory, flag_addr: u16, block_win: u1
     // handler 记账点（未接域件=新记账——缺口演化面）
     // 【长脚本验收收口（2026-11-01 goal-轮4：sc-first-room-full 验收主案引爆此桩——
     // 声事件=验收点 1-5 外域（B 声音包））】占位臂记账（不炸）——声链深件随包收敛。
+    sound_trace(mem, ptr, depth, "unhandled");
     let loc = format!("bank07:{ptr:04X}");
     crate::frame::DIVERGENCES.with(|d| d.borrow_mut().push(ptr));
     let _ = loc;

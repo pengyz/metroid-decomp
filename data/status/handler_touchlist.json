@@ -127,5 +127,298 @@
         "case-leftwalk-probe": 30
       }
     }
+  ],
+  "handler_arms_total": 28,
+  "handler_arms_touched": 4,
+  "handler_arms_untouched": 24,
+  "sound_trace_probe": "DSH_SOUND_TRACE=1（sound_hook::sound_trace——kind=handler/unhandled，含 fc/ptr/depth）",
+  "sound_trace_source_run": "DSH_SOUND_TRACE=1 rust_screenshot 逐案（15 sched，2026-11-13）",
+  "handlers": [
+    {
+      "addr": "0xB50F",
+      "asm_label": "SpitFlameSFXInit",
+      "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:626",
+      "probe": "DSH_SOUND_TRACE kind=handler",
+      "n_events": 0,
+      "first_tick": null,
+      "cases": {}
+    },
+    {
+      "addr": "0xB52B",
+      "asm_label": "ScrewAttackSFXInit",
+      "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:650",
+      "probe": "DSH_SOUND_TRACE kind=handler",
+      "n_events": 0,
+      "first_tick": null,
+      "cases": {}
+    },
+    {
+      "addr": "0xB56E",
+      "asm_label": "MissileLaunchSFXInit",
+      "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:705",
+      "probe": "DSH_SOUND_TRACE kind=handler",
+      "n_events": 0,
+      "first_tick": null,
+      "cases": {}
+    },
+    {
+      "addr": "0xB583",
+      "asm_label": "BombExplodeSFXInit",
+      "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:726",
+      "probe": "DSH_SOUND_TRACE kind=handler",
+      "n_events": 0,
+      "first_tick": null,
+      "cases": {}
+    },
+    {
+      "addr": "0xB598",
+      "asm_label": "SamusWalkSFXInit",
+      "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:752",
+      "probe": "DSH_SOUND_TRACE kind=handler",
+      "n_events": 0,
+      "first_tick": null,
+      "cases": {}
+    },
+    {
+      "addr": "0xB5EC",
+      "asm_label": "BossHitSFXInit",
+      "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:806",
+      "probe": "DSH_SOUND_TRACE kind=handler",
+      "n_events": 0,
+      "first_tick": null,
+      "cases": {}
+    },
+    {
+      "addr": "0xB650",
+      "asm_label": "SamusHitSFXCont",
+      "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:869",
+      "probe": "DSH_SOUND_TRACE kind=handler",
+      "n_events": 0,
+      "first_tick": null,
+      "cases": {}
+    },
+    {
+      "addr": "0xB673",
+      "asm_label": "SamusHitSFXInit",
+      "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:896",
+      "probe": "DSH_SOUND_TRACE kind=handler",
+      "n_events": 0,
+      "first_tick": null,
+      "cases": {}
+    },
+    {
+      "addr": "0xB695",
+      "asm_label": "IncorrectPasswordSFXInit",
+      "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:924",
+      "probe": "DSH_SOUND_TRACE kind=handler",
+      "n_events": 0,
+      "first_tick": null,
+      "cases": {}
+    },
+    {
+      "addr": "0xB6CD",
+      "asm_label": "MissilePickupSFXInit",
+      "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:971",
+      "probe": "DSH_SOUND_TRACE kind=handler",
+      "n_events": 0,
+      "first_tick": null,
+      "cases": {}
+    },
+    {
+      "addr": "0xB6E7",
+      "asm_label": "EnergyPickupSFXInit",
+      "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:994",
+      "probe": "DSH_SOUND_TRACE kind=handler",
+      "n_events": 0,
+      "first_tick": null,
+      "cases": {}
+    },
+    {
+      "addr": "0xB703",
+      "asm_label": "SamusJumpSFXInit",
+      "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:1024",
+      "probe": "DSH_SOUND_TRACE kind=handler",
+      "n_events": 0,
+      "first_tick": null,
+      "cases": {}
+    },
+    {
+      "addr": "0xB710",
+      "asm_label": "EnemyHitSFXInit",
+      "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:1037",
+      "probe": "DSH_SOUND_TRACE kind=handler",
+      "n_events": 0,
+      "first_tick": null,
+      "cases": {}
+    },
+    {
+      "addr": "0xB716",
+      "asm_label": "BulletFireSFXInit",
+      "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:1045",
+      "probe": "DSH_SOUND_TRACE kind=handler",
+      "n_events": 0,
+      "first_tick": null,
+      "cases": {}
+    },
+    {
+      "addr": "0xB7AC",
+      "asm_label": "DoorOpenCloseSFXInit",
+      "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:1195",
+      "probe": "DSH_SOUND_TRACE kind=handler",
+      "n_events": 0,
+      "first_tick": null,
+      "cases": {}
+    },
+    {
+      "addr": "0xB7D9",
+      "asm_label": "BeepSFXInit",
+      "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:1227",
+      "probe": "DSH_SOUND_TRACE kind=handler",
+      "n_events": 130,
+      "first_tick": 2,
+      "cases": {
+        "case-password-justin": 130
+      }
+    },
+    {
+      "addr": "0xB7EF",
+      "asm_label": "BigEnemyHitSFXInit",
+      "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:1247",
+      "probe": "DSH_SOUND_TRACE kind=handler",
+      "n_events": 0,
+      "first_tick": null,
+      "cases": {}
+    },
+    {
+      "addr": "0xB834",
+      "asm_label": "SamusToBallSFXInit",
+      "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:1290",
+      "probe": "DSH_SOUND_TRACE kind=handler",
+      "n_events": 0,
+      "first_tick": null,
+      "cases": {}
+    },
+    {
+      "addr": "0xB878",
+      "asm_label": "BombLaunchSFXInit",
+      "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:1336",
+      "probe": "DSH_SOUND_TRACE kind=handler",
+      "n_events": 24,
+      "first_tick": 30,
+      "cases": {
+        "case-password-justin": 24
+      }
+    },
+    {
+      "addr": "0xB8A7",
+      "asm_label": "MetroidHitSFXInit",
+      "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:1378",
+      "probe": "DSH_SOUND_TRACE kind=handler",
+      "n_events": 0,
+      "first_tick": null,
+      "cases": {}
+    },
+    {
+      "addr": "0xB8D2",
+      "asm_label": "SamusDieSFXInit",
+      "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:1414",
+      "probe": "DSH_SOUND_TRACE kind=handler",
+      "n_events": 0,
+      "first_tick": null,
+      "cases": {}
+    },
+    {
+      "addr": "0xB921",
+      "asm_label": "StatueRaiseSFXInit",
+      "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:1463",
+      "probe": "DSH_SOUND_TRACE kind=handler",
+      "n_events": 0,
+      "first_tick": null,
+      "cases": {}
+    },
+    {
+      "addr": "0xBC77",
+      "asm_label": "GotoMusic00Init",
+      "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:2162",
+      "probe": "DSH_SOUND_TRACE kind=handler",
+      "n_events": 0,
+      "first_tick": null,
+      "cases": {}
+    },
+    {
+      "addr": "0xBC7A",
+      "asm_label": "GotoMusic01Init",
+      "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:2165",
+      "probe": "DSH_SOUND_TRACE kind=handler",
+      "n_events": 28,
+      "first_tick": 1,
+      "cases": {
+        "case-001-game-start-samus-interaction": 2,
+        "case-002-door-blue-interaction": 2,
+        "case-collide-probe": 2,
+        "case-crawlprobe": 2,
+        "case-fcprobe": 2,
+        "case-jumpledge-probe": 2,
+        "case-killenemy-probe": 2,
+        "case-leftwalk-probe": 2,
+        "case-leftwalk-probe2": 2,
+        "case-morphball-probe": 2,
+        "case-password-justin": 2,
+        "case-scrollseam-probe": 2,
+        "case-shootprobe-probe": 2,
+        "case-walkfcprobe": 2
+      }
+    },
+    {
+      "addr": "0xBC7D",
+      "asm_label": "GotoMusic02Init",
+      "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:2168",
+      "probe": "DSH_SOUND_TRACE kind=handler",
+      "n_events": 0,
+      "first_tick": null,
+      "cases": {}
+    },
+    {
+      "addr": "0xBC80",
+      "asm_label": "GotoMusic03Init",
+      "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:2171",
+      "probe": "DSH_SOUND_TRACE kind=handler",
+      "n_events": 14,
+      "first_tick": 13,
+      "cases": {
+        "bundle-ff": 1,
+        "case-001-game-start-samus-interaction": 1,
+        "case-002-door-blue-interaction": 1,
+        "case-collide-probe": 1,
+        "case-crawlprobe": 1,
+        "case-jumpledge-probe": 1,
+        "case-killenemy-probe": 1,
+        "case-leftwalk-probe": 1,
+        "case-leftwalk-probe2": 1,
+        "case-morphball-probe": 1,
+        "case-password-justin": 1,
+        "case-scrollseam-probe": 1,
+        "case-shootprobe-probe": 1,
+        "case-walkfcprobe": 1
+      }
+    },
+    {
+      "addr": "0xBC83",
+      "asm_label": "GotoMusic04Init",
+      "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:2174",
+      "probe": "DSH_SOUND_TRACE kind=handler",
+      "n_events": 0,
+      "first_tick": null,
+      "cases": {}
+    },
+    {
+      "addr": "0xBC86",
+      "asm_label": "GotoMusic05Init",
+      "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:2177",
+      "probe": "DSH_SOUND_TRACE kind=handler",
+      "n_events": 0,
+      "first_tick": null,
+      "cases": {}
+    }
   ]
 }
