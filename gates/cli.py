@@ -1219,6 +1219,46 @@ def l4_matrix_fresh_error(run_started: float, pre_fp: tuple | None,
     return None
 
 
+def l4_touchlist_violations(matrix: dict, sidecar_dir: Path,
+                             touchlist_path: Path) -> list[str]:
+    """止血件1·增长即红（2026-11-13）：L4 腿 sidecar 记账 addr 超出 handler_touchlist
+    白名单 ⇒ 违规清单（空=[]）。
+
+    语义=diff_traces.py:614「账外照红」的 L4 侧同语义（判定逻辑只在 gates/，AGENTS §2）。
+    fail-closed 三态：① 清单缺失/解析失败/entries 空 ⇒ 违规（空基线=静默放行一切记账，
+    拒）② 案 sidecar 数 < cases_total ⇒ 违规（记账不得静默缺失）③ sidecar 解析失败 ⇒
+    违规。sidecar addr=十进制 int（rust_screenshot 与 l3-dump.rs:244 同构）；清单 addr=
+    "0xB7E7" 十六进制串（data/status/handler_touchlist.json，schema handler-touchlist/v1）。"""
+    out: list[str] = []
+    try:
+        tl = json.loads(touchlist_path.read_text(encoding="utf-8"))
+        entries = tl.get("entries") or []
+        known: set[int] = set()
+        for e in entries:
+            known.add(int(str(e["addr"]), 16))
+        if not known:
+            out.append(f"触达清单 entries 为空（{touchlist_path}）——空清单=静默放行一切记账，拒")
+    except Exception as exc:  # noqa: BLE001 —— 清单坏=记账基线缺失，fail-closed
+        out.append(f"触达清单不可读（{touchlist_path}）: {exc!r}")
+        return out
+    cases_total = int(matrix.get("cases_total") or 0)
+    sidecars = sorted(sidecar_dir.glob("*.divergences.json"))
+    if len(sidecars) < cases_total:
+        out.append(f"sidecar 缺失：期望 {cases_total} 件（每案一件），实有 {len(sidecars)} 件"
+                   f"（{sidecar_dir}）——记账不得静默缺失")
+    for sp in sidecars:
+        try:
+            doc = json.loads(sp.read_text(encoding="utf-8"))
+            for g in doc.get("gap_map") or []:
+                a = int(g["addr"])
+                if a not in known:
+                    out.append(f"{sp.name}: 新记账 addr 0x{a:04X} ×{int(g.get('n', 0))} "
+                               f"不在触达清单（账外=红）")
+        except Exception as exc:  # noqa: BLE001
+            out.append(f"{sp.name} 解析失败: {exc!r}")
+    return out
+
+
 def gate_l4() -> tuple[str, str]:
     """L4 自动对拍门禁（Task 6）：run-all 实跑出矩阵 → 逐采集点 ratchet 裁定。
 
@@ -1282,6 +1322,17 @@ def gate_l4() -> tuple[str, str]:
         wl_count: object = len(wl_doc.get("whitelist") or [])
     except Exception:  # noqa: BLE001 —— 白名单计数仅显式回显，读取失败标注未知（不静默）
         wl_count = "未知（visual_whitelist.json 读取失败）"
+    # 【止血件1·增长即红（2026-11-13）】sidecar 新增清单外 addr=账外=红——
+    # handler_touchlist.json 是 L4 腿记账白名单（a880789f 固化），本检查在 run-all 之后
+    # 跑（矩阵新鲜=sidecar 必新），语义与 diff_traces.py:614「账外照红」同款。
+    tl_viol = l4_touchlist_violations(
+        matrix, ROOT / "shots_rust", ROOT / "data" / "status" / "handler_touchlist.json")
+    if tl_viol:
+        return FAIL, ("handler 触达清单增长即红（账外=红）：\n  - "
+                      + "\n  - ".join(tl_viol)
+                      + "\n  （新 addr 须先在 data/status/handler_touchlist.json 显式登记"
+                        "（带 asm 归因）才放行——止血件1）")
+
     notes = l4_ratchet_notes(baseline, matrix)
     note_s = ("；" + "；".join(notes)) if notes else ""
     return PASS, (f"L4 逐采集点 ratchet 守住（match 集合只增不减 + blocked 只减不增，"
@@ -2872,6 +2923,14 @@ def cmd_selftest(_args) -> int:
 
             mpath = tmp / "shots_rust" / "matrix.json"
             mpath.write_text(json.dumps(_matrix18(), ensure_ascii=False), encoding="utf-8")
+            # 【止血件1·增长即红】fixture 面补齐：触达清单 + 该案 sidecar（gap_map 空=无记账）
+            (tmp / "data" / "status" / "handler_touchlist.json").write_text(
+                json.dumps({"schema": "handler-touchlist/v1",
+                            "entries": [{"addr": "0xB7E7", "who": "fixture"}]},
+                           ensure_ascii=False), encoding="utf-8")
+            (tmp / "shots_rust" / "c.divergences.json").write_text(
+                json.dumps({"gap_map": [], "events": [], "count": 0, "unique": 0},
+                           ensure_ascii=False), encoding="utf-8")
             old_t = _time18.time() - 3600  # 旧/committed 矩阵（1 小时前落盘=上一轮产物）
             os.utime(mpath, (old_t, old_t))
             g18 = globals()
@@ -2911,6 +2970,59 @@ def cmd_selftest(_args) -> int:
             check("C1③ 新鲜度正对照：本轮真落盘新矩阵 ⇒ 照常裁 PASS（封堵不误伤正常 run-all）",
                   v18 == PASS and "ratchet 守住" in d18,
                   f"verdict={v18} detail={d18[:240]}")
+
+    # 止血件1·增长即红（2026-11-13）：l4_touchlist_violations 纯函数四态
+    try:
+        with tempfile.TemporaryDirectory() as td:
+            tmp = Path(td)
+            sd = tmp / "shots_rust"
+            sd.mkdir()
+            tl = tmp / "handler_touchlist.json"
+            tl.write_text(json.dumps(
+                {"schema": "handler-touchlist/v1",
+                 "entries": [{"addr": "0xB7E7"}, {"addr": "0xB87F"}]},
+                ensure_ascii=False), encoding="utf-8")
+            mtx = {"cases_total": 1}
+
+            def _sc(name: str, gap: list) -> None:
+                (sd / name).write_text(json.dumps(
+                    {"gap_map": gap, "events": [], "count": 0, "unique": len(gap)},
+                    ensure_ascii=False), encoding="utf-8")
+
+            _sc("a.divergences.json", [])                       # 无记账
+            v_ok = l4_touchlist_violations(mtx, sd, tl)
+            check("T1① 清单内 addr/无记账 ⇒ 零违规（正对照）", v_ok == [], f"{v_ok}")
+
+            _sc("b.divergences.json", [{"addr": 47079, "n": 5}])  # 47079=0xB7E7 在清单
+            v_known = l4_touchlist_violations(mtx, sd, tl)
+            check("T1② 清单内 addr（0xB7E7×5）⇒ 零违规", v_known == [], f"{v_known}")
+
+            _sc("c.divergences.json", [{"addr": 48000, "n": 7}])  # 48000=0xBB80 不在清单
+            v_new = l4_touchlist_violations(mtx, sd, tl)
+            check("T1③ 账外新 addr ⇒ 红（增长即红反向）",
+                  len(v_new) == 1 and "0xBB80" in v_new[0] and "账外=红" in v_new[0],
+                  f"{v_new}")
+
+            (sd / "b.divergences.json").unlink()
+            (sd / "c.divergences.json").unlink()
+            (sd / "a.divergences.json").unlink()
+            v_miss = l4_touchlist_violations({"cases_total": 2}, sd, tl)
+            check("T1④ sidecar 缺失 ⇒ 红（记账不得静默缺失）",
+                  any("sidecar 缺失" in x for x in v_miss), f"{v_miss}")
+
+            tl.write_text(json.dumps({"schema": "handler-touchlist/v1", "entries": []}),
+                          encoding="utf-8")
+            v_empty = l4_touchlist_violations(mtx, sd, tl)
+            check("T1⑤ 空清单 ⇒ 红（空基线=静默放行，拒）",
+                  any("为空" in x for x in v_empty), f"{v_empty}")
+
+            # 真仓库正对照：本轮 sidecar 14/14 与固化清单全等 ⇒ 零违规
+            real = l4_touchlist_violations(
+                json.loads((ROOT / "shots_rust" / "matrix.json").read_text(encoding="utf-8")),
+                ROOT / "shots_rust", ROOT / "data" / "status" / "handler_touchlist.json")
+            check("T1⑥ 真仓库现态（14 案 sidecar × 固化清单）⇒ 零违规", real == [], f"{real}")
+    except Exception as exc:  # noqa: BLE001
+        check("止血件1·增长即红 selftest", False, str(exc))
 
     # v2 F：goal 循环纪律机械闸反向三测（lead 定稿④）
     try:
