@@ -64,10 +64,14 @@ DEFERRED = "DEFERRED"   # proof-checks v2：环境执行不能（≠证书失败
 # ---------------------------------------------------------------- 门禁分层（2026-11-13 量化裁定）
 # 实测（逐门单独计时，warm）：l4=440.03s / visual-diff=4.41s / rust-tests=4.16s / trace-diff=1.33s
 # / docs-links=0.54s / 其余 10 门合计 0.60s ⇒ 总量 451s，l4 一门占 97.3%。
-# 裁定：pre-commit 只跑「快层」（≤10s 预算，去掉 l4 与 visual-diff 后实测 6.6s）；
-# 慢层（SLOW_GATES）由 pre-push 钩子与里程碑 `check --full` 兜底——不是取消门禁，是换执行点。
-# 依据：l4/visual 的失败面是 pixel/矩阵级回归，改动窗口与「提交」不同频（改代码→push 前才需要
-# 全量证明）；把 440s 放在每次 commit 上只会诱导 --no-verify 绕过（门禁最坏结局=被绕过）。
+#
+# 裁定：**慢层（SLOW_GATES）不进任何 git hook**——pre-commit 与 push 都不跑它们。
+# 慢层只在显式命令下执行：`gates/cli.py l4`（或 `visual`）/ `gates/cli.py check --full`
+# / 里程碑 `gates/cli.py all` / CI。pre-commit 只跑快层（实测 6.5–8.2s，预算 10s）。
+#
+# 依据：①440s 挂在 commit 上会诱导 `--no-verify` 绕过——门禁最坏结局不是慢，是被绕过；
+# ②把它挪到 pre-push 只是换了等待位置、总等待不减（2026-11-13 实测 push 仍 449.62s，用户裁定移除）；
+# ③l4 的失败面是 pixel/矩阵级回归，本就不该与「每次提交」同频——它属于里程碑/CI 的验收点。
 SLOW_GATES = ("l4", "visual-diff")
 FAST_TIER_BUDGET_S = 10.0
 
@@ -1858,8 +1862,9 @@ def run_all_gates(fast_only: bool = False) -> list[dict]:
                 "summary": entry[3],
                 "verdict": SKIP,
                 "detail": ("慢层（实测 "
-                           f"{'440s' if entry[0] == 'l4' else '4.4s'}）——pre-commit 快层不跑；"
-                           "由 pre-push 钩子 / `gates/cli.py check --full` / 里程碑 `all` 兜底"),
+                           f"{'440s' if entry[0] == 'l4' else '4.4s'}）——**不进任何 git hook**；"
+                           f"显式命令才跑：`gates/cli.py {'l4' if entry[0] == 'l4' else 'visual'}` "
+                           "/ `check --full` / 里程碑 `all` / CI"),
                 "seconds": 0.0,
             })
             continue
@@ -2015,7 +2020,7 @@ def cmd_status(_args) -> int:
 
 
 def cmd_check(args) -> int:
-    """总闸。默认「快层」（≤10s，pre-commit 调用）；--full 跑全量（pre-push/里程碑）。
+    """总闸。默认「快层」（≤10s，pre-commit 调用）；--full 跑全量（里程碑/CI 显式调用）。
 
     分层依据（2026-11-13 实测）：l4=440s 占 97.3%，visual-diff=44s 全 TOLERATED；
     其余 14 门合计 6.6s。把 440s 挂在每次 commit 上只会诱导 --no-verify 绕过。
@@ -2633,8 +2638,12 @@ def cmd_selftest(_args) -> int:
                 if r["name"] in SLOW_GATES:
                     # 分层后（2026-11-13）：慢层在 selftest 快层是 SKIP——断言对象换成
                     # 「SKIP 必须显式且写明兜底路径」，绝不接受静默缺席。
-                    check(f"{r['name']} 慢层 SKIP 显式且注明兜底路径（分层契约）",
-                          r["verdict"] == SKIP and "兜底" in r["detail"],
+                    # 2026-11-13 用户裁定 L4/visual 整体移出 hook：文案从「兜底」改为
+                    # 「不进任何 git hook + 显式命令清单」——断言同步认这两种写法之一
+                    # （要求仍是「必须写明执行路径」，不接受静默缺席）。
+                    check(f"{r['name']} 慢层 SKIP 显式且注明执行路径（分层契约）",
+                          r["verdict"] == SKIP
+                          and ("兜底" in r["detail"] or "显式命令才跑" in r["detail"]),
                           f"verdict={r['verdict']} {r['detail'][:160]}")
                 else:
                     check(f"{r['name']} 实跑不 FAIL（PASS 或账内容忍 TOLERATED）",
@@ -2756,10 +2765,11 @@ def cmd_selftest(_args) -> int:
     for r17 in results:  # 实跑（复用 5) run_all_gates 结果，不二次跑 runner）
         if r17["name"] == "l4":
             # 分层后（2026-11-13）：selftest 快层不跑 l4（440s）——断言对象换成
-            # 「SKIP 必须显式且写明兜底路径」。l4 全量裁定由 pre-push / check --full 兜底，
+            # 「SKIP 必须显式且写明兜底路径」。l4 全量裁定由 check --full / 里程碑 all 兜底，
             # 且 l4_ratchet_violations 的判定逻辑面已在 17) 里逐条反向打回（不依赖实跑）。
-            check("l4 慢层 SKIP 显式且注明兜底路径（分层契约）",
-                  r17["verdict"] == SKIP and "兜底" in r17["detail"],
+            check("l4 慢层 SKIP 显式且注明执行路径（分层契约）",
+                  r17["verdict"] == SKIP
+                  and ("兜底" in r17["detail"] or "显式命令才跑" in r17["detail"]),
                   f"verdict={r17['verdict']} {r17['detail'][:200]}")
 
     # 18) fix wave 假绿/漂移封堵探针（2026-10-26 最终复核 findings——C1 崩溃判旧矩阵后门 /
@@ -3209,7 +3219,7 @@ def build_parser() -> argparse.ArgumentParser:
     sub.add_parser("status", help="只读预检：门禁清单 + 启用/SKIP 状态 + 基线对照").set_defaults(func=cmd_status)
     p_chk = sub.add_parser("check", help="总闸（pre-commit 调用快层 ≤10s；--full 含 l4/visual 慢层）")
     p_chk.add_argument("--full", action="store_true",
-                       help="含慢层（l4 run-all 440s + visual-diff）——pre-push/里程碑用")
+                       help="含慢层（l4 run-all 440s + visual-diff）——里程碑/CI 显式调用，不进 hook")
     p_chk.set_defaults(func=cmd_check)
     # 单门禁命令只有 README 命令表所列的 6 个（t10 R2：CLI 子命令面与 README 双向一致，
     # 不再注册门禁名别名；l4=Task 6 自动对拍门禁）。

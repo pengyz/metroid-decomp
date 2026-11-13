@@ -10,7 +10,7 @@
 |---|---|---|
 | `python3 gates/cli.py status` | 只读预检：门禁状态 + 基线对照（**动手前必跑**） | 每次会话开工 |
 | `python3 gates/cli.py check` | **快层**总闸：≤10s（pre-commit 自动调用；慢层 `l4`/`visual-diff` 显式 SKIP 并注明兜底路径） | 任何 commit |
-| `python3 gates/cli.py check --full` | **全量**总闸：含慢层 `l4`(run-all 440s)+`visual-diff`（pre-push 钩子自动调用） | push 前 / 里程碑 |
+| `python3 gates/cli.py check --full` | **全量**总闸：含慢层 `l4`(run-all 440s)+`visual-diff`（**不进任何 git hook**，显式调用） | 里程碑 / CI |
 | `python3 gates/cli.py rom` | ROM sha256 完整性 | 怀疑 `rom/` 被改 |
 | `python3 gates/cli.py seed` | `reference/seed/` 投影完整性（D3 冻结基准） | 怀疑投影基准被改 |
 | `python3 gates/cli.py naming` | 命名台账证据完整性 | 改 `data/naming/` 后 |
@@ -37,8 +37,11 @@
 | **总计** | **451s** | |
 
 裁定：**pre-commit 只跑快层（实测 6.5–8.2s，预算 `FAST_TIER_BUDGET_S=10s`）**，慢层
-`SLOW_GATES = ("l4", "visual-diff")` 显式 SKIP 并打印兜底路径；**pre-push 钩子跑 `check --full`**
-兜底。理由：440s 挂在每次 commit 上只会诱导 `--no-verify` 绕过——门禁最坏结局不是慢，是被绕过。
+`SLOW_GATES = ("l4", "visual-diff")` 显式 SKIP 并打印显式调用路径；**慢层不进任何 git hook**
+（commit 与 push 都不跑，只在 `gates/cli.py l4` / `check --full` / `all` / CI 里执行）。
+理由：①440s 挂在 commit 上只会诱导 `--no-verify` 绕过——门禁最坏结局不是慢，是被绕过；
+②挪到 pre-push 只是换等待位置、总等待不减（实测 push 仍 449.62s）；
+③l4 失败面是 pixel/矩阵级回归，属里程碑/CI 验收点，不与每次提交同频。
 每门耗时恒显式回显（`[PASS] 名称 ( 4.16s, ENABLED, …)`），超预算时 PASS 行附提示。
 
 > 锚点与基线位置：ROM sha256 锚点 = `rom/SHA256SUMS`（若存在）否则 `data/status/baselines/SHA256SUMS`
@@ -120,11 +123,11 @@
 ## hooks
 
 ```bash
-bash gates/install-hooks.sh   # 挂接 pre-commit + commit-msg + pre-push
+bash gates/install-hooks.sh   # 挂接 pre-commit + commit-msg（慢层不进 hook）
 ```
 
 - `pre-commit` → `gates/cli.py check`（快层 ≤10s）
-- `pre-push` → `gates/cli.py check --full`（含 l4/visual 慢层）
+- 慢层 `l4`/`visual-diff` → **无钩子**：`gates/cli.py l4` / `check --full` / `all` / CI 显式调用
 - `commit-msg` → 触及 `data/naming/`、`data/status/`、`reference/`、`rom/` 的提交必须含
   `Evidence`/`Confidence` 字段（别名集合与本表严格一致：仅 `Evidence:`/`证据:` 与
   `Confidence:`/`置信度:`，不接受未文档化别名如『信心:』/『置信:』；缺失即拒）
