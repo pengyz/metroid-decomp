@@ -427,6 +427,11 @@ fn main() {
 
     let want_state = state_out.is_some();
     let mut gap: Option<(usize, String)> = None; // (帧, unported bank:addr)
+    // 【止血件1·记账可观测】占位臂缺口（DIVERGENCES）逐帧增量——L4 腿与 l3-dump 同形
+    // 落 sidecar `<name>.divergences.json`（gap_map+events+count+unique，l3-dump.rs:244 同构）。
+    // 消费端：handler 触达清单固化（白名单增长即红的数据源，diff_traces.py:616 同契约）。
+    let mut div_seen = 0usize;
+    let mut div_events: Vec<(usize, u16)> = Vec::new(); // (frame, addr)
     // 【修径 a（findings/walk-fc-capture-seam.md §2c——walk FC 根修）】capture 帧 N 的产物
     // = **tick(N-1) 双相位**（emu endFrame N 单回调天然两相位）：
     //  · png+ppu.hex = tick(N-1) 的 on_spin_exit 缝快照（NMI(N-1) 后/工作前——滚动=
@@ -479,6 +484,15 @@ fn main() {
                 }
             });
         }));
+        // 【止血件1】本帧缺口增量（sound_hook `_ => None` 记账臂等）→ 逐帧事件面。
+        // 先于 gap 分支记账：引爆帧自身的记账（panic 前 push）不丢。
+        let now_div = game_core::frame::FrameEngine::divergences();
+        if now_div.len() > div_seen {
+            for a in &now_div[div_seen..] {
+                div_events.push((frame, *a));
+            }
+            div_seen = now_div.len();
+        }
         if tick.is_err() {
             let reason = take_panic_message().unwrap_or_else(|| "unknown gap".into());
             eprintln!("[rust] ⚠ 帧 {} 引爆缺口：{}", frame, reason);
@@ -529,6 +543,28 @@ fn main() {
     }
     man.push_str("]}");
     fs::write(out.join(format!("{}.rust.captures.json", plan.name)), &man).expect("写 manifest");
+
+    // 【止血件1·记账可观测】缺口 sidecar（与 l3-dump.rs:244 同构：gap_map+events+count+unique）
+    // ——L4 腿首次落盘：矩阵跑完即得 handler 触达清单数据源（diff_traces.py:616 同契约 JSON）。
+    {
+        let gap_raw = game_core::frame::FrameEngine::divergences();
+        let mut gap_counts: std::collections::BTreeMap<u16, usize> = std::collections::BTreeMap::new();
+        for a in &gap_raw {
+            *gap_counts.entry(*a).or_default() += 1;
+        }
+        let gap_map = gap_counts.iter()
+            .map(|(a, n)| format!("{{\"addr\":{a},\"n\":{n}}}"))
+            .collect::<Vec<_>>().join(", ");
+        let djson = format!(
+            "{{\"gap_map\": [{}], \"events\": [{}], \"count\": {}, \"unique\": {}}}",
+            gap_map,
+            div_events.iter().map(|(f, a)| format!("{{\"tick\":{f},\"addr\":{a}}}"))
+                .collect::<Vec<_>>().join(", "),
+            gap_raw.len(), gap_counts.len());
+        let dgap = out.join(format!("{}.divergences.json", plan.name));
+        fs::write(&dgap, &djson).expect("写缺口记账 sidecar");
+        eprintln!("[rust]   缺口记账 {}/{} → {}", gap_raw.len(), gap_counts.len(), dgap.display());
+    }
 
     eprintln!("[rust] 完成：产出 {} 采集点，缺口阻塞 {} 采集点 → {}",
               produced.len(), blocked.len(), out_dir);

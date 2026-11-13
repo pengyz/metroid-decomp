@@ -1,0 +1,131 @@
+{
+  "schema": "handler-touchlist/v1",
+  "doc": "占位臂记账触达清单（L4 矩阵实录固化——增长即红白名单基线）。源=shots_rust/*.divergences.json（rust_screenshot 腿 DIVERGENCES sidecar，2026-11-13 新增）聚合 14 案。契约：sidecar 新增任何不在本清单的 addr=账外=红（须显式登记本清单才放行）——与 diff_traces.py:614 账外照红同语义的 L4 侧。",
+  "source_run": "python3 tools/l4_diff_run.py run-all --skip-emu @ 2026-11-13",
+  "cases_covered": 14,
+  "unique_addrs": 8,
+  "total_events": 31596,
+  "entries": [
+    {
+      "addr": "0xB7E7",
+      "asm_label": "BeepSFXCont",
+      "push_site": "sound_hook::_=>None",
+      "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:1240",
+      "n_events": 526,
+      "first_tick": 402,
+      "cases": {
+        "case-password-justin": 526
+      }
+    },
+    {
+      "addr": "0xB87F",
+      "asm_label": "BombLaunchSFXCont",
+      "push_site": "sound_hook::_=>None",
+      "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:1345",
+      "n_events": 109,
+      "first_tick": 618,
+      "cases": {
+        "case-password-justin": 109
+      }
+    },
+    {
+      "addr": "0xCBF9",
+      "asm_label": "PowerUpMusic",
+      "push_site": "frame/mainloop.rs:2928 (uw_all_power_ups 拾取音乐)",
+      "asm_ref": "refs/m1disasm/SRC/prg7_engine.asm:2681",
+      "n_events": 1,
+      "first_tick": 1520,
+      "cases": {
+        "case-morphball-probe": 1
+      }
+    },
+    {
+      "addr": "0xCC36",
+      "asm_label": "SamusStand",
+      "push_site": "samus/handler.rs:902",
+      "asm_ref": "refs/m1disasm/SRC/prg7_engine.asm:2735",
+      "n_events": 2747,
+      "first_tick": 796,
+      "cases": {
+        "case-password-justin": 962,
+        "case-001-game-start-samus-interaction": 347,
+        "case-killenemy-probe": 305,
+        "case-002-door-blue-interaction": 304,
+        "case-jumpledge-probe": 205,
+        "case-leftwalk-probe2": 138,
+        "case-walkfcprobe": 138,
+        "case-crawlprobe": 109,
+        "case-morphball-probe": 108,
+        "case-shootprobe-probe": 105,
+        "case-scrollseam-probe": 20,
+        "case-collide-probe": 5,
+        "case-leftwalk-probe": 1
+      }
+    },
+    {
+      "addr": "0xCC98",
+      "asm_label": "SetSamusRun",
+      "push_site": "samus/physics.rs:1645",
+      "asm_ref": "refs/m1disasm/SRC/prg7_engine.asm:2824",
+      "n_events": 3113,
+      "first_tick": 800,
+      "cases": {
+        "case-morphball-probe": 720,
+        "case-leftwalk-probe2": 603,
+        "case-walkfcprobe": 603,
+        "case-001-game-start-samus-interaction": 397,
+        "case-002-door-blue-interaction": 319,
+        "case-crawlprobe": 159,
+        "case-collide-probe": 103,
+        "case-scrollseam-probe": 103,
+        "case-shootprobe-probe": 101,
+        "case-leftwalk-probe": 5
+      }
+    },
+    {
+      "addr": "0xCE25",
+      "asm_label": "IsSamusDead-chain(Lx005 死分支 jmp CheckHealthBeep)",
+      "push_site": "samus/physics.rs:1005",
+      "asm_ref": "refs/m1disasm/SRC/prg7_engine.asm:3108-3118 (Lx005@CE1E 内)",
+      "n_events": 1,
+      "first_tick": 1029,
+      "cases": {
+        "case-001-game-start-samus-interaction": 1
+      }
+    },
+    {
+      "addr": "0xEEA1",
+      "asm_label": "SpawnElevator",
+      "push_site": "pickup/spawn.rs:71 (ChooseSpawningRoutine 占位臂)",
+      "asm_ref": "refs/m1disasm/SRC/prg7_engine.asm:9502",
+      "n_events": 6,
+      "first_tick": 1190,
+      "cases": {
+        "case-password-justin": 6
+      }
+    },
+    {
+      "addr": "0xFB7B",
+      "asm_label": "InitEnemyFacingDirectionAxisAndDelay",
+      "push_site": "frame/mainloop.rs:752 (敌移动 delay 记账)",
+      "asm_ref": "refs/m1disasm/SRC/prg7_engine.asm:12062",
+      "n_events": 25093,
+      "first_tick": 796,
+      "cases": {
+        "case-password-justin": 5772,
+        "case-morphball-probe": 3402,
+        "case-leftwalk-probe2": 3063,
+        "case-walkfcprobe": 3063,
+        "case-001-game-start-samus-interaction": 2125,
+        "case-002-door-blue-interaction": 1887,
+        "case-killenemy-probe": 1830,
+        "case-jumpledge-probe": 1230,
+        "case-crawlprobe": 935,
+        "case-shootprobe-probe": 630,
+        "case-collide-probe": 563,
+        "case-scrollseam-probe": 563,
+        "case-leftwalk-probe": 30
+      }
+    }
+  ]
+}
