@@ -1089,6 +1089,15 @@ fn update_en_data05_bit6(mem: &mut crate::frame::FrameMemory, x: u8) {
 /// （movement-string 型不吃速度翻转），否则按 `L977B[type]` bit7 决定是否先取负
 /// `speedSubPixelX`（`sec / lda #0 / sbc` 链——subPixelX≠0 时借位使 speedX 落在
 /// `-speedX-1`，与 Y 轴同族的 sbc 链 quirk）。
+// `En` 结构字段偏移（**ROM 字节自证**，见 `docs/findings/enemy-xaxis-force-port.md` §11）：
+// `+6` = movementInstrIndex / speedSubPixelY / chunkyExplosionTimer 的**同字节别名**；
+// 不能按 `constants_ram.asm` 的 `.struct En` 字面顺序读（照字面会把 +6/+7/+8/+9 全部错位）。
+const EN_INSTR: u16 = 6;
+const EN_SUBPIXEL_X: u16 = 7;
+const EN_SUBPIXEL_Y: u16 = 6;
+const EN_MOV_IDX: u16 = 8;
+const EN_DELAY: u16 = 9;
+
 fn enemy_force_speed_x_axis(mem: &mut crate::frame::FrameMemory, x: u8, attribs: u8) {
     let e = 0x0400 + x as u16 + 5;
     mem.write_ram(e, mem.read_ram(e) & !0x01); // AndEnData05 #~$01
@@ -1107,8 +1116,10 @@ fn enemy_force_speed_x_axis(mem: &mut crate::frame::FrameMemory, x: u8, attribs:
     let tbl = load_table_at_977b(mem, x); // A = L977B[type]（carry = 原字节 bit7）
     let mut c_in = 1u8; // sec
     if tbl & 0x80 != 0 {
-        let s = mem.read_ram(0x0400 + x as u16 + 9); // Ens.speedSubPixelX
-        mem.write_ram(0x0400 + x as u16 + 9, s.wrapping_neg());
+        // **speedSubPixelX = En+7**（ROM 自证 `$81E8: A9 00 / FD 07 04 / 9D 07 04`；
+        // `+9` 是 `delay`——r9 复核抓出本行原写 +9，会把 delay 取负）。
+        let s = mem.read_ram(0x0400 + x as u16 + EN_SUBPIXEL_X);
+        mem.write_ram(0x0400 + x as u16 + EN_SUBPIXEL_X, s.wrapping_neg());
         c_in = if s == 0 { 1 } else { 0 }; // sbc 借位传出（无借位 ⇔ s==0）
     }
     let v = sx.wrapping_neg().wrapping_sub((1 - c_in) as u8);
@@ -1196,8 +1207,11 @@ fn enemy_force_speed(mem: &mut crate::frame::FrameMemory, x: u8) {
             let tbl = load_table_at_977b(mem, x);
             let mut c_in = 1u8; // sec（asm $821B）
             if tbl & 0x80 != 0 {
-                let s = mem.read_ram(0x0400 + x as u16 + 8); // speedSubPixelY=+8
-                mem.write_ram(0x0400 + x as u16 + 8, s.wrapping_neg());
+                // **speedSubPixelY = En+6**（与 movementInstrIndex 同字节别名；ROM 自证
+                // `$8343: 7D 06 04 / 9D 06 04`、`$822C: FD 06 04 / 9D 06 04`；`+8` 是
+                // movementIndex——r9 复核抓出本行原写 +8）。
+                let s = mem.read_ram(0x0400 + x as u16 + EN_SUBPIXEL_Y);
+                mem.write_ram(0x0400 + x as u16 + EN_SUBPIXEL_Y, s.wrapping_neg());
                 c_in = if s == 0 { 1 } else { 0 }; // sbc 借位传出（无借位⇔s==0）
             }
             let v = sy.wrapping_neg().wrapping_sub((1 - c_in) as u8);
@@ -1686,10 +1700,10 @@ fn skree_ai(mem: &mut crate::frame::FrameMemory, x: u8) {
     if gates_ok {
     let type_ = mem.read_wram(0x6AF4 + x as u16 + 14) & 0x3F;
     let d05 = mem.read_ram(0x0400 + x as u16 + 5);
-    let mov_idx = mem.read_ram(0x0400 + x as u16 + 8); // movementIndex=+8（复核正——ROM BD 08 04）
-    let instr2 = mem.read_ram(0x0400 + x as u16 + 6); // movementInstrIndex=+6（复核正——BC 06 04）
-    let delay = mem.read_ram(0x0400 + x as u16 + 9); // delay=+9
-    let sub_y = mem.read_ram(0x0400 + x as u16 + 6); // speedSubPixelY=+6（union 同字节——复核正）
+    let mov_idx = mem.read_ram(0x0400 + x as u16 + EN_MOV_IDX); // ROM `BD 08 04`
+    let instr2 = mem.read_ram(0x0400 + x as u16 + EN_INSTR); // ROM `BC 06 04`
+    let delay = mem.read_ram(0x0400 + x as u16 + EN_DELAY); // ROM `FE 09 04`
+    let sub_y = mem.read_ram(0x0400 + x as u16 + EN_SUBPIXEL_Y); // union 同字节
     let speed_y = mem.read_ram(0x0400 + x as u16 + 2);
     let accel_y = mem.read_wram(0x6AF4 + x as u16 + 10);
     let d1f = mem.read_wram(0x6AF4 + x as u16 + 15);
@@ -1698,9 +1712,25 @@ fn skree_ai(mem: &mut crate::frame::FrameMemory, x: u8) {
     let (dy, dx, ndelay, ninstr, nd1f, trig) = crate::enemy::common::enemy_get_delta_xy(
         crate::frame::cur_area(mem), type_, d05, mov_idx, instr2, delay, sub_y, speed_y, accel_y, d1f, can_up, can_down);
     mem.write_wram(0x6AF4 + x as u16 + 15, nd1f);
-    if trig { let d5t = mem.read_ram(0x0400 + x as u16 + 5); mem.write_ram(0x0400 + x as u16 + 5, d5t | 0x20); mem.write_wram(0x6AF4 + x as u16 + 10, 0); }
-    mem.write_ram(0x0400 + x as u16 + 9, ndelay);
-    mem.write_ram(0x0400 + x as u16 + 6, ninstr); // movementInstrIndex=+6（复核正）
+    if trig {
+        // `$82FB @fail`：`L968B[type]` bit5 置 ⇒ **翻面朝 + 清 bits6-7**
+        // （asm `lda data05 / eor #$05 / ora L968B,y / and #$1F / sta data05`）。
+        // 对 Skree（`L968B[4]=$86`，bit5=0）不可观测；对 `$18` 一系（`L968B[0x18]=$20`）必需。
+        let l968b = game_data::assets::enemy_force_attribs(crate::frame::cur_area(mem))
+            .get(type_ as usize)
+            .copied()
+            .unwrap_or(0);
+        if l968b & 0x20 != 0 {
+            let d5f = mem.read_ram(0x0400 + x as u16 + 5);
+            mem.write_ram(0x0400 + x as u16 + 5, ((d5f ^ 0x05) | l968b) & 0x1F);
+        }
+        // `EnemyTriggerResting_AndClearEnAccelY`（`$81B1`）：bits5 置 + accelY（EnsExtra+10）清 0。
+        let d5t = mem.read_ram(0x0400 + x as u16 + 5);
+        mem.write_ram(0x0400 + x as u16 + 5, d5t | 0x20);
+        mem.write_wram(0x6AF4 + x as u16 + 10, 0);
+    }
+    mem.write_ram(0x0400 + x as u16 + EN_DELAY, ndelay);
+    mem.write_ram(0x0400 + x as u16 + EN_INSTR, ninstr);
     if dy != 0 {
         // Δ 施加（EnemyMove 径（:10029-10046 同构）：y±|Δ|——名表换补偿）
         let mut y = mem.read_ram(0x0400 + x as u16 + 0);
@@ -5052,5 +5082,27 @@ mod h3_enemy_slot_tdd {
         // 槽 5（X=$50）：(10+FC)>>1&3
         assert_eq!(crawler_move_gate(0x50, 14), 0);
         assert_eq!(crawler_move_gate(0x50, 15), 0);
+    }
+}
+
+#[cfg(test)]
+mod en_field_offset_tests {
+    /// `En` 偏移守卫（r9 复核 P0）：这些偏移都不能按 `constants_ram.asm` 的
+    /// `.struct En` 字面顺序读，必须以 ROM 字节为准（见 findings §11）。
+    #[test]
+    fn en_field_offsets_match_rom_byte_anchors() {
+        assert_eq!(super::EN_INSTR, 6, "ROM `$8258: BC 06 04`（ldy $0406）");
+        assert_eq!(super::EN_SUBPIXEL_Y, 6, "ROM `$8343: 7D 06 04`（adc $0406）");
+        assert_eq!(super::EN_SUBPIXEL_X, 7, "ROM `$81E8: FD 07 04`（sbc $0407）");
+        assert_eq!(super::EN_MOV_IDX, 8, "ROM `$8232: BD 08 04`（lda $0408）");
+        assert_eq!(super::EN_DELAY, 9, "ROM `$8290: FE 09 04`（dec $0409）");
+    }
+
+    /// 表值锚：Skree（type 4）在 Brinstar 必须 `L977B[4]=$04`、`L968B[4]=$86`
+    /// ⇒ 出生 `data05` bit7=0、`$FE` 失败径的 bit5 分支不激活（复核 R1/R5 前提）。
+    #[test]
+    fn skree_table_entries_match_rom() {
+        assert_eq!(game_data::assets::enemy_facing(0).get(4).copied(), Some(0x04));
+        assert_eq!(game_data::assets::enemy_force_attribs(0).get(4).copied(), Some(0x86));
     }
 }

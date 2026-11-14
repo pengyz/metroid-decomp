@@ -147,13 +147,67 @@ case-scrollseam-probe/1240:scroll-l40: match 集合缩水（基线 match → 现
 | 字段 | 偏移 | 证据 |
 |---|---|---|
 | `movementInstrIndex` | **+6** | ROM `BC 06 04`（areas_common `$8258` 两 bank） |
-| `speedSubPixelY` | **+7** | ROM `7E 07 04`（`EnemyIfMoveFailedVertical`） |
+| `speedSubPixelY` | **+6**（与 `movementInstrIndex` **同字节别名**） | ROM `7D 06 04 / 9D 06 04`（`$8343`）、`7E 06 04`（`$80DC/$812A`）、`FD 06 04 / 9D 06 04`（`$822C`） |
+| `speedSubPixelX` | **+7** | ROM `FD 07 04 / 9D 07 04`（`$81E8`）、`7E 07 04`（`$8163/$81A2`） |
 | `movementIndex` | **+8** | 实测定谳：改读 `+10` 使 jumpledge 5/8→3/8 |
 | `delay` | **+9** | ROM `FD 09 04`（`EnemyGetDeltaY $8280`）、`DE 09 04`（`try_becoming_active`） |
 | `data0A` | **+10** | `try_becoming_active` 注释 + 朝向写入点 |
 | `EnsExtra.accelY` | +10 | `$6AF4` 基址 |
 | `EnsExtra.data1F` | +15 | ROM `$1F676`：`asl×3 / and #$C0 / sta $6B03,x` |
 
+> 【2026-11-14 更正】§10.2 上表原写「`speedSubPixelY=+7`，证据 `7E 07 04`」是**A 级证据误标**：`$0407`
+> 是 `speedSubPixelX`，`7E 07 04` 是**对 X 子像素**的 `ror`（`EnemyIfMoveFailedHorizontal` 族）。
+> `speedSubPixelY` 在 **`+6`**，与 `movementInstrIndex` 同字节（`En` 结构在 `+6` 处是三重别名：
+> chunkyExplosionTimer / movementInstrIndex / speedSubPixelY），否则 `+B=health`、`+D=data0D`、
+> `+F=specialAttribs` 这些已命中字节无法同时自洽。`refs/m1disasm/SRC/constants_ram.asm:85-123` 的
+> `.struct En` **不能按字面顺序读**。
+
 ### 10.3 教训（第三次同型）
 
 **构建失败时的 l4 汇总是上一次二进制的读数**——`cargo run` 失败不会让 `run` 子命令报错退出到你看得见的层级。此后凡"改动后跑单案"，先 `cargo build --bin rust_screenshot` 显式过一遍，看摘要行是 `Finished` 再跑矩阵。
+
+---
+
+## §11 r9 复核（对 `0040207c`）判定与处置
+
+**verdict=fail**：方向与 6 格收益成立，但抓出两处真错、一处证据误标、一处行为缺件。
+
+### 11.1 P0（已修）
+
+1. **`enemy_force_speed_x_axis` 把 `speedSubPixelX` 写到 `+9`（`delay`）**。ROM 自证
+   （本次复核后自读，bank1 文件偏移 = `0x4000 + (addr-$8000)`）：
+   `$81E8: A9 00 / FD 07 04 / 9D 07 04 / A9 00 / FD 03 04 / 9D 03 04 / 60`
+   ⇒ 子像素写 **`+7`**、速度写 `+3`。原写 `+9` 会让加速型敌人 x 轴翻转时把 `delay` 取负。
+2. **同一函数的 y 轴力支把 `+8`（`movementIndex`）当 `speedSubPixelY`**。ROM `$822C:
+   FD 06 04 / 9D 06 04` ⇒ 应为 **`+6`**。
+
+两处已改为引用具名常量 `EN_INSTR/EN_SUBPIXEL_X/EN_SUBPIXEL_Y/EN_MOV_IDX/EN_DELAY`，
+并加偏移守卫测试 `frame::mainloop::en_field_offset_tests`。
+
+### 11.2 P1（已修 / 已补）
+
+- **证据面更正**：见 §10.2 的表与其后的 2026-11-14 更正段。
+- **`$FE` 失败径缺 `L968B[type]` bit5 分支**（asm `$82FB`）：置位时 `data05 = ((data05 ^ $05)
+  | L968B) & $1F`（翻面朝 + 清 bits6-7），随后才 `EnemyTriggerResting`。已补在
+  `skree_ai` 的 `trig` 分支（`L968B` 即包内 `area.*.en_*` 的 force-attribs 段，
+  `$968B` 地址与 `ENEMY_TABLE_LAYOUT` 第 5 项一致）。对 Skree 不可观测
+  （`L968B[4]=$86` bit5=0），对 `$18` 一系（`L968B[$18]=$20`）必需。
+- **补单测**：`$FC/$FE` 的面判据抽成 `surface_check_ok(data1f, can_up, can_down, zero_ok)`
+  并加 4 条断言（`data1F==0` 在两指令上**反向**；bit7 只查天花板；bit6 只查地面；
+  两 bit 全 0 恒不通过）。`crates/game-core/src/enemy/common.rs` 的 `#[test]` 由 0 → 4。
+
+### 11.3 已判等价（复核结论，记录备查）
+
+- `$FC/$FE` 主体、`$FE` 先减后判且不清 `data1F`、触发休止写 `data05|=0x20` +
+  `EnsExtra+10←0` —— 逐字等价。
+- 碰撞面「预取一次」等价：`EnemyCheckMoveUp/Down → CheckMoveVertical` 只读碰撞图 + 写 Temp，
+  不改敌位置；`$FC` 同调用内多次重读同一对字节 ⇒ 预取有效。前提=检查例程保持无副作用。
+- `data05` 只改 bit7 与 `asl`+`ror` **逐位等价**：`(old & 0x7F) | (L977B.bit7<<7)`；
+  `LoadTableAt977B` 的 `asl` 已覆盖 carry，bit7 来自表（不是旧 bit0）。
+
+### 11.4 P2（记录，未改）
+
+- 指令循环 `for _ in 0..16` 界卫 vs asm 无界（fail-safe 保留）。
+- delay 到期当帧不再链式调度下一字节（相对 asm `$827F` 后 `jmp @ReadByte` 有一帧相位差，
+  非本批引入）。
+- `enemy_get_delta_y` 包装里 `trig` 硬编码 `false`（已无调用者，潜在坑）。

@@ -126,6 +126,22 @@ pub fn enemy_get_delta_y(
     (dy, d, i, d1f, false)
 }
 
+/// `$FC`/`$FE` 的面检查合流判据（asm `$82B3` / `$82DE`）：`data1F` bit7=查天花板
+/// （`EnemyCheckMoveUp`）、bit6=查地面（`EnemyCheckMoveDown`）；两 bit 全 0 时两指令
+/// **反向**——`$FC` 取「立即成功」、`$FE` 取「立即失败」（asm `$82EF` 有明注）。
+/// `zero_ok`：该指令在 `data1F==0` 时是否视为通过。
+fn surface_check_ok(data1f: u8, can_up: bool, can_down: bool, zero_ok: bool) -> bool {
+    if data1f & 0x80 != 0 {
+        can_up
+    } else if data1f == 0 {
+        zero_ok
+    } else if data1f & 0x40 != 0 {
+        can_down
+    } else {
+        false
+    }
+}
+
 /// Δxy 双轴（**对抗复核⑦**——skree 串 packed nibble 双半字节（macros.asm:27）：
 /// Δy=sign(bit7)×((b>>4)&7)、Δx=sign(bit3)×(b&7)）——EnemyMove 双轴施加。
 pub fn enemy_get_delta_xy(
@@ -211,7 +227,8 @@ pub fn enemy_get_delta_xy(
                 0xFA => return (0, 0, delay, ii, data1f_in, false), // TriggerResting（随件=Δ0）
                 0xFB => return (0, 0, delay, ii, data1f_in, false), // StopMovement（双RTS=停）
                 0xFC => {
-                    let ok = if data1f_in & 0x80 != 0 { can_up } else if data1f_in == 0 { true } else { can_down };
+                    // `$82B3`：data1F bit7=查天花板、bit6=查地面；**0 值 ⇒ 立即成功**。
+                    let ok = surface_check_ok(data1f_in, can_up, can_down, true);
                     if ok { ii = ii.wrapping_sub(2); } else { ii = ii.wrapping_add(1); data1f_in = 0; }
                     continue;
                 }
@@ -219,9 +236,10 @@ pub fn enemy_get_delta_xy(
                     ii = ii.wrapping_add(1); // ClearJumpDsplcmnt（跳位移清——字段面随件）
                 }
                 0xFE => {
+                    // `$82DE`：先 `dey/dey` 回退，再按 data1F 查面；**0 值 ⇒ 立即失败**
+                    // （asm `$82EF` 注释明写与 `$FC` 不同）。
                     ii = ii.wrapping_sub(2);
-                    let ok = if data1f_in & 0x80 != 0 { can_up } else if data1f_in == 0 { false } else { can_down };
-                    if ok { continue; }
+                    if surface_check_ok(data1f_in, can_up, can_down, false) { continue; }
                     return (0, 0, delay, ii, data1f_in, true);
                 }
                 _ => {
@@ -429,3 +447,39 @@ pub use game_data::enemy::enemy_data::A1_020_GOLDEN_WRITES;
 
 /// a1-021 golden 表形烘焙（8 案 24 写全值——fixture 固定形；A 批收官卡）。
 pub use game_data::enemy::enemy_data::A1_021_GOLDEN_WRITES;
+
+#[cfg(test)]
+mod surface_check_tests {
+    use super::surface_check_ok;
+
+    /// `$FC`（zero_ok=true）与 `$FE`（zero_ok=false）在 `data1F==0` 时**反向**：
+    /// asm `$82EF` 注释 "fail instantly if data1F is zero (this is different than
+    /// EnemyGetDeltaY_RepeatPreviousUntilFailure)"。
+    #[test]
+    fn zero_data1f_is_success_for_fc_and_failure_for_fe() {
+        assert!(surface_check_ok(0x00, false, false, true));   // $FC ⇒ 通过
+        assert!(!surface_check_ok(0x00, true, true, false));   // $FE ⇒ 失败
+    }
+
+    /// bit7 ⇒ 只查天花板（`EnemyCheckMoveUp`），与 can_down 无关。
+    #[test]
+    fn bit7_checks_ceiling_only() {
+        assert!(surface_check_ok(0x80, true, false, false));
+        assert!(!surface_check_ok(0x80, false, true, true));
+    }
+
+    /// bit6 ⇒ 只查地面（`EnemyCheckMoveDown`），与 can_up 无关。
+    #[test]
+    fn bit6_checks_floor_only() {
+        assert!(surface_check_ok(0x40, false, true, false));
+        assert!(!surface_check_ok(0x40, true, false, true));
+    }
+
+    /// bit7/bit6 全 0 但 data1F≠0（如只有 bit0）⇒ 两支皆不通过（asm 两个 `bpl/beq`
+    /// 都不跳、直接落到 `ldx PageIndex` 读上一次的 carry）。
+    #[test]
+    fn neither_bit_never_passes() {
+        assert!(!surface_check_ok(0x01, true, true, true));
+        assert!(!surface_check_ok(0x20, true, true, false));
+    }
+}
