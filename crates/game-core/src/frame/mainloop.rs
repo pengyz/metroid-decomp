@@ -3341,6 +3341,25 @@ pub fn more_init(mem: &mut FrameMemory) {
     mem.iter_wait();
 }
 
+/// `ScreenNmiOff ; 07:C45D`（asm 逐行）：影子 `$FE &= ~(BG_ON|OBJ_ON)` → `jsr WriteAndWait`
+/// （等一个 NMI）→ 影子 `$FF &= ~PPUCTRL_VBLKNMI_ON` → **`sta PPUCTRL` 写真寄存器**。
+///
+/// 【相位口径】真 PPUMASK 由 `WriteAndWait` 那个 NMI 内的 `WritePPUCtrl ; 07:C44D` 落
+/// （写的是已被清位的影子 ⇒ 暗屏）；本层 tick 原子执行，等价近似=**此刻即写真寄存器**
+/// （与 `apply_deferred_screen_on` 同口径）。`$2000` 的 NMI 关位按 asm 也是立刻写。
+///
+/// 【为什么必须写真寄存器】只在 `$FE` 上清位、不写 `$2001` 时，渲染仍用上一帧的
+/// `RenderState.ppumask`（亮）⇒ 换区/进场窗口的**整屏暗窗缺失**。实证：elevprobe2
+/// f1206/f1207 emu 全黑 61440 px vs rust 亮屏 13115/12777 px 失配。
+pub fn screen_nmi_off(mem: &mut FrameMemory) {
+    let pm = mem.read_ram(crate::ram_map::PPUMASK_ZP) & !0x18;
+    mem.write_ram(crate::ram_map::PPUMASK_ZP, pm);
+    mem.write_io(0x2001, pm); // WriteAndWait 的 NMI 落点（同 tick 近似）
+    let pc = mem.read_ram(crate::ram_map::PPUCTRL_ZP) & !0x80;
+    mem.write_ram(crate::ram_map::PPUCTRL_ZP, pc);
+    mem.write_io(0x2000, pc); // asm `sta PPUCTRL`（NMI 关）
+}
+
 /// ScreenOn 延迟落影（**转场暗窗建模**）——帧门队列排空（迭代完成点）时把
 /// `deferred_screen_on` 兑现成 `PPUMASK_ZP |= $1E`（asm `WriteAndWait` 写影子；
 /// 真 PPUMASK 由下一 tick 的 `WritePPUCtrl`（07:C44D）落）。旗未置时零动

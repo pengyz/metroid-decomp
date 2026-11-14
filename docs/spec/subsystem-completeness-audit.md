@@ -199,7 +199,7 @@ WritePPUCtrl（唯一点亮真 PPUMASK 的地方）/ WriteScroll / ReadJoyPads`�
 > 补点方式同 #6 三步（先逐帧记 `$0320` 找 `status≠0` 帧 → 加 capture → 断言 `status` 序列
 > 走过 1/2/3/4/6 且 `$0074` 的区号位被改写）。
 
-> 【2026-11-14 补充：电梯覆盖缺口已闭合】新增正式用例 `cases/case-elev-norfair-transition.txt`
+> 【2026-11-14 补充：电梯覆盖缺口已**收窄**（非闭合）】新增正式用例 `cases/case-elev-norfair-transition.txt`
 > （9 格：f800/960/1040/1120/1200/1300/1420/1560/1600），**全 9 格像素 0px**，十态机
 > `1→2→3→…→8→9→1` 与 Brinstar→Norfair 换区首次取得像素证据。取证方式（两阶段）：
 > ① 探针直接注入 `LoadElevator` 字段面（`$0320/$032f/$032d/$032e/$0323`）而非靠走路进门
@@ -208,8 +208,13 @@ WritePPUCtrl（唯一点亮真 PPUMASK 的地方）/ WriteScroll / ReadJoyPads`�
 > 该证据当场抓出两处真错（详见 `docs/findings/elevator-evidence.md`）：
 > `AreaPaletteToggle` 读错址（WRAM `$6885` 而非 area bank `$95DA`）、以及
 > `WaitNMIPass_` 后 pending 被 `SelectSamusPalette` 抢覆（换区载错调色板 bank）。
-> 教训（第三次同型）：**「实现完成」与「有证据」是两件事**——r9 三次抓错（常量址、比较跳转、
-> 时序覆写）全部发生在「单测全绿 + 零对拍」的窗口里。
+> **收窄到什么程度**：像素格覆盖状态 {0,1,3,6,8}；状态 2/4/5/7/9 在 ROM 各持续 1 帧，
+> 与采集缝约定（`capture(N)=tick(N-1)`）天然错位 ⇒ 结构性不可截，只有 emu 轨迹+单测支撑。
+> RAM 行对齐用 `tools/sem.py`：**1191/1581 帧 15 列全同**，首分歧 f1227 起 `fc` 差 2 =
+> 既有 #8 相位残差。自然径入口（走进电梯按 A）仍缺，因 14 案输入窗落在 440 帧开场演出内。
+> 教训（第四次同型，本轮又抓一处）：**「实现完成」与「有证据」是两件事**——r9 已抓出
+> 常量址、比较跳转、时序覆写，本轮补证据时又抓出 `init_bank1..5` 从未建模 `ScreenNmiOff`
+> 寄存器面（换区整屏暗窗缺失）+ 漏 `jmp NMIOn`（NMI 死锁）。
 
 > 【2026-11-14 更正】#6 的「已修」只到**实现层**：r9 对抗复核（verifier）查出
 > `Doors_RemoveIfOffScreen` 曾把 `$0300,x`（绝对址 $0380..$03B0）写成零页偏移 `0x80`，

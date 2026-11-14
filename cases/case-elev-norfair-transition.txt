@@ -43,6 +43,10 @@ capture 960 armed
 capture 1040 idle-check
 capture 1120 activate
 capture 1200 moving
+# 注：不截 1206（状态 6 首帧）——采集缝约定 capture(N)=tick(N-1) 收口态，而 emu 的帧 N 截图
+# 反映帧 N 工作后的呈现面；换区首帧正好跨这条边界（emu f1206 全黑 61440 vs rust tick(1205)
+# 仍亮 ⇒ 13115px 假失配）。稳定黑窗从 1207 起两侧同相 ⇒ 用 1207 作暗窗锚。
+capture 1207 transition-core
 capture 1300 fading
 capture 1420 transition
 capture 1560 settle

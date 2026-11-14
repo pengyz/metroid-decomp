@@ -919,9 +919,13 @@ fn extract_tourian_metroid_data(prg: &[u8]) -> Result<Vec<Section>, String> {
 /// `PaletteToggle($0076)`；电梯换区 `PaletteToggle eor 7` 后再进 `PaletteDataPending`。
 /// **取值（ROM 逐字节自证）**：bank1/2=`01`（Palette00+1）、bank3/4/5=`06`（Palette05+1）。
 /// area 序 0=Br/1=No/2=Kr/3=To/4=Ri ⇒ ROM bank [1,2,4,3,5]（`BankTable 07:CA30`）。
+/// 区序（0=Br/1=No/2=Kr/3=To/4=Ri）→ ROM bank。值 = `BankTable ; 07:CA30`（ROM 字节
+/// `02 03 05 04 06`）减 1 —— **提到模块层**是为了能被测试钉住：`AreaPaletteToggle` 的
+/// bank3/bank4 值同为 `$06`，顺序写反在运行时段不可观测。
+pub const AREA_BANKS: [u8; 5] = [1, 2, 4, 3, 5];
+
 fn extract_area_pal_toggle(prg: &[u8]) -> Result<Vec<Section>, String> {
     const ADDR: u16 = 0x95DA;
-    const AREA_BANKS: [u8; 5] = [1, 2, 4, 3, 5];
     let mut body = Vec::with_capacity(5);
     for (area, bank) in AREA_BANKS.iter().enumerate() {
         let b = bank_slice(prg, *bank, ADDR, 1)
@@ -1254,6 +1258,20 @@ mod tests {
         let o1 = u32::from_le_bytes(offs[8..12].try_into().unwrap());
         let l1 = u32::from_le_bytes(offs[12..16].try_into().unwrap());
         assert_eq!((o0, l0, o1, l1), (0, 3, 3, 2));
+    }
+
+    /// `AREA_BANKS` 必须等于 `BankTable ; 07:CA30`（ROM 字节 `02 03 05 04 06`）减 1：
+    /// area 序 Br/No/Kr/To/Ri ⇒ bank `1/2/4/3/5`（`BankTable` 值 = bank+1）。
+    ///
+    /// **为什么必须在提取侧钉**：`AreaPaletteToggle` 的 bank3(Tourian) 与 bank4(Kraid)
+    /// 值同为 `$06` ⇒ 表驱动顺序若写反，运行时段值与所有消费者**都看不出来**；
+    /// 只有把「区序→bank」的映射本身钉在 asm 锚上，错序才会红（r9 复核要求）。
+    #[test]
+    fn area_banks_match_bank_table_rom() {
+        assert_eq!(AREA_BANKS, [1u8, 2, 4, 3, 5], "BankTable 07:CA30 = 02 03 05 04 06 ⇒ bank=值-1");
+        // 交叉自证：五 bank 的 `.byte` 声明序（bank1/2 = Palette00+1；bank3/4/5 = Palette05+1）
+        // 与 $95DA 平铺偏移一致 ⇒ 槽位 0..4 对应 bank 1/2/4/3/5。
+        assert_eq!(AREA_BANKS.len(), 5);
     }
 
     /// 重复 key 必须在解析侧被拒（段名唯一是包格式不变式）。

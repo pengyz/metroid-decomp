@@ -558,6 +558,11 @@ mod palette_tests {
     /// 区序（0=Br/1=No/2=Kr/3=To/4=Ri）⇒ `[01,01,06,06,06]`。
     /// **回归锚**：它曾由 `crates/game-core/src/frame/mainloop.rs` 误读 WRAM `$6885`
     /// （道具扫描项区）⇒ 恒 0 ⇒ 电梯换区 `PaletteToggle^=7` 后 pending 差 1、载错调色板。
+    /// 区序值表与 asm 逐 bank `.byte` 一致（`01 00`×2 / `06 00`×3）。
+    ///
+    /// **注意**：bank3(Tourian) 与 bank4(Kraid) 的值同为 `$06` ⇒ 二者**互换在值上不可观测**，
+    /// 单靠本测钉不住表驱动映射；映射由 `extract.rs` 侧 `AREA_BANKS` 的测试钉
+    /// （`extract::tests::area_banks_match_bank_table_rom`，r9 复核要求）。
     #[test]
     fn area_palette_toggle_matches_rom_anchor() {
         let got: Vec<u8> = (0u8..5).map(|a| area_pal_toggle(a).expect("区序 0..4")).collect();

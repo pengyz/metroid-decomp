@@ -463,7 +463,18 @@ fn main() {
     // 发射点=迭代 frame 头（=tick(frame-1) 收口，先于 joy 注入）。旧径整取 tick(frame)
     // 收口 ⇒ 图像/名表/滚动 latch 晚一拍（walkfcprobe f820：+1 面+dx=+2/12085px 根因）。
     let mut seam_snap: Option<(usize, RenderState, Vec<u8>)> = None; // (tick, render, oam)
+    // fixture 注入去重表（逐条）——与 emu 腿 `fixtureAppliedAt[i]` 同构：
+    // 触发条件 `frame >= fx.frame`（跳帧也不丢），once 语义（注入一次后不再重放）。
+    let mut fixture_applied: Vec<bool> = vec![false; plan.fixtures.len()];
     for frame in 1..=plan.frames {
+        // ——fixture 注入（须先于本帧采集发射：emu 侧在帧回调里、采样之前注入，
+        //    轨迹实证 f900 那一行已含注入值；旧形放在发射之后 ⇒ 两侧差 1 个采集索引）——
+        for (i, (ff, fa, fv)) in plan.fixtures.iter().enumerate() {
+            if !fixture_applied[i] && frame >= *ff {
+                engine.mem.write_ram(*fa, *fv);
+                fixture_applied[i] = true;
+            }
+        }
         // ——发射采集帧 frame（tick(frame-1) 相位）——
         while next_cap < caps.len() && caps[next_cap].0 == frame {
             let (_f, tag) = &caps[next_cap];
@@ -478,14 +489,6 @@ fn main() {
         if std::env::var("DSH_SPRITE_TRACE").is_ok() && frame >= 918 && frame <= 924 {
             eprintln!("[joy] f{} nmi_en={} ppuctrl={:02X}", frame, engine.mem.nmi_enabled, engine.mem.ram[0x00FF]);
             eprintln!("[joy] f{} joy1_field={:02X} sched={:02X}", frame, engine.mem.joy1, plan.joy.get(&frame).copied().unwrap_or(0));
-        }
-        // fixture 注入（帧采样/执行前——与 emu 腿同相位）：
-        // emu 侧 applyFixtures 在帧事件回调里（采样前）；rust 侧此处=采集发射之后、
-        // tick 之前 ⇒ 两侧「本帧工作前」同相位（probe 实证见 cases/_archive 记录）。
-        for (ff, fa, fv) in &plan.fixtures {
-            if *ff == frame {
-                engine.mem.write_ram(*fa, *fv);
-            }
         }
         engine.mem.joy2 = 0;
         // catch_unwind：`unported!` fail-loud 缺口在**对拍工具层**不整程崩——

@@ -667,6 +667,13 @@ mod tests {
             ],
             "WaitNMIPass_ 处须先兑现 pending=6（Norfair pal05），随后 SelectSamusPalette 才覆写"
         );
+        // 顺序钉：pending 末值必须是 SelectSamusPalette 写的 2（gear=0/non-suit=0）；
+        // 若把 select 提到 flush 之前，flush 会消费 2（BG 变 pal02）且此处末值为 0 ⇒ 双红。
+        assert_eq!(
+            mem.read_ram(crate::ram_map::PALETTE_PENDING),
+            2,
+            "末值须是 SelectSamusPalette 的覆写（proves 6 已先被消费）"
+        );
     }
 
     /// 换区核上行：$84（Ridley）⇒ Norfair(1)；其余上行 ⇒ Brinstar(0)。

@@ -76,20 +76,52 @@
   回归锚：`transition_consumes_area_palette_at_wait_nmi` 断言换区后 BG 调色板
   = `bank2 idx5` 的 16 字节；变异验证：删掉该行调用 ⇒ 测试当场红。
 
-## 5. 残余缺口（未闭合，显式登记）
+### 4.3 `init_bank1..5` 未建模 `ScreenNmiOff` 寄存器面、也未执行 asm 尾 `jmp NMIOn`
 
-1. **入口是合成的**：电梯对象由 fixture 注入，不是「走进去按 A」的自然径——
-   自然径需要能跨过 440 帧演出的用例（输入窗后移会改变既有锚，须用户裁决）。
-2. **相位近似**：§4.2 的就地兑现比 emu 早 ≤1 tick；当前采集点不在该窗口内，
-   若将来加 f1206–f1209 之间的采集点，须先把「迭代中途挂起」机制做出来。
+- asm：`InitBank2 ; 07:C583` = `lda #$00 / sta GameMode / jsr ScreenNmiOff / jsr InitNorfairGFX / jmp NMIOn`
+  （Bank3/4/5 同形）；`ScreenNmiOff ; 07:C45D` = 影子 `$FE &= ~(BG_ON|OBJ_ON)` → `jsr WriteAndWait`
+  （等 NMI）→ 影子 `$FF &= ~VBLKNMI` → **`sta PPUCTRL` 真写**。
+- 旧 Rust：只写 `NMI_STATUS=1` + `iter_wait()`（建模「等待形」），**不写影子、不写 `$2001`、
+  不清 `$FF` bit7、也不做 `nmi_on`** ⇒ 换区/进场窗口的**整屏暗窗完全缺失**。
+- 实证：elev 案 f1206/f1207，emu 全黑 61440/61440 px vs rust 亮屏 13115/12777 px。
+- 修法：抽 `mainloop::screen_nmi_off`（全形）——`init_bank1..5` 与 `title_bridge` 三处
+  旧实现**收口到一件**（同一 asm 例程三份语义不同的实现 = F 类）；每个 `init_bankN` 尾
+  补 `nmi_on`。漏 `nmi_on` 的后果极端：`nmi_enabled` 永久 false ⇒ NMI 死锁、调色板面全停
+  （本轮实测过一次全案 11/11 失配，是这个漏项的现场）。
+- 该缺陷**不是**本轮修复引入的：旧形「恰好没坏」是因为从来没人真把 NMI 关掉。
+
+## 5. 覆盖现状（诚实版）
+
+**像素格覆盖的电梯状态 = {0 未注入, 1 Idle, 3 Move, 6 换区核, 8 Fade}**（10 个采集点）。
+
+**未覆盖的 5 个状态是结构性的**：2（ScrollXToCenter）/4（ScrollY）/5、7（Fade）/9（Stop）
+在 ROM 里**各只持续 1 帧**（emu 帧级实录：`f962→2`、`f1203→4`、`f1204→5`、`f1209→7`、
+`f1450→9`），而采集缝约定是 `capture(N) = tick(N-1)` 收口态、emu 的帧 N 截图反映帧 N 工作后的
+呈现面 ⇒ 1 帧态天然跨在这条边界上，**不可截**。实测证据：在 f1206（换区首帧）加采集点给出
+13115px 假失配（emu 全黑 vs rust 仍亮），已从用例移除并在文件内注释原因。这五个状态目前只有
+emu 轨迹 + 十态机单测支撑，**不宣称像素证据**。
+
+**RAM 行对齐**：`tools/sem.py case case-elev-norfair-transition` ⇒ **MATCHED 1191/1581 帧**
+（15 列全同：fc/gm/mr/tr/gp/nr/t3/cb/bsp/ia/rm/st/sy/sx/hp），首分歧 `f1227 fc: oracle=B9
+rust=B7` —— 即既有 **#8 FC+2 相位残差**（本轮未引入，本轮之前该案因 sem 漏传 fixture 而
+整段假分歧，已修 `tools/sem.py::_derive_sched`）。
+
+其余缺口：
+
+1. **入口是合成的**：电梯对象由 fixture 注入，不是「走进去按 A」的自然径——自然径需要能跨过
+   440 帧开场演出的用例（输入窗后移会改变既有锚，须用户裁决）。
+2. **相位近似**：§4.2 的就地兑现比 emu 早 ≤1 tick；当前采集点不在该窗口内，若将来加
+   f1206–f1209 之间的采集点，须先把「迭代中途挂起」机制做出来。
 3. **只覆盖 Brinstar→Norfair 一条边**：Kraid/Tourian/Ridley 边与结局径（`$8F`）仍无像素证据。
-4. 星闪/门链同理：0px 只证「没变坏」，不证「更正后的分支被走到」。
+4. 0px 只证「没变坏」，不证「更正后的分支被走到」。
 
 ## 证据指针
 
 - 用例：`cases/case-elev-norfair-transition.txt`（9 格）、归档失败探针
   `cases/_archive/case-elevprobe-roomreload.txt`
-- 矩阵：15 用例 / 121 格 / match 119 / diff 2（2 格=已挂账 `oracle-present-pipeline-lag`）
+- 矩阵：15 用例 / 122 格 / match 120 / diff 2（2 格=已挂账 `oracle-present-pipeline-lag`）
+- emu 帧级轨迹：`analysis/traces/case-elev-norfair-transition.frames.jsonl`
+- 状态对齐：`analysis/sem/case-elev-norfair-transition.{sem,rust}.jsonl`（1191/1581 同帧同值）
 - 代码：`crates/game-core/src/frame/elevator.rs`、`crates/game-data/src/extract.rs`
   （`extract_area_pal_toggle` / `AREA_BANKS = [1,2,4,3,5]`）
 - ROM 锚：`AreaPaletteToggle ; 01..05:95DA`、`SamusElevator ; 07:D423`、

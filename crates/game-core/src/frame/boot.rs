@@ -269,10 +269,15 @@ pub fn c4de_unit(mem: &mut FrameMemory) {
 /// move-drift R2/R3 定谳（ScreenNmiOff=窗3 等待 1/3；GFX 装载=bogged×2）。
 fn init_bank2(mem: &mut FrameMemory) {
     mem.write_ram(crate::ram_map::GAME_MODE, 0);
-    mem.write_ram(crate::ram_map::NMI_STATUS, 1); // ScreenNmiOff 域形
+    // ScreenNmiOff（$C45D 全形：影子清位 + 真 $2001/$2000 写）——旧形只置 `NMI_STATUS=1`
+    // 建模等待形、**漏了寄存器面** ⇒ 换区窗口本应为黑屏却仍亮（elevprobe2 f1206/1207 实证）。
+    super::mainloop::screen_nmi_off(mem);
     mem.iter_wait();
     super::gfx::init_norfair_gfx(mem);
     mem.iter_bogged(2);
+    // asm 尾 `jmp NMIOn ; 07:C487`——**必须显式复启**：ScreenNmiOff 已写真 $2000 关掉
+    // NMI 使能位，漏这一句会让 `nmi_enabled` 永久 false（NMI 死锁、调色板/PPU 面全停）。
+    nmi_on(mem);
 }
 
 /// InitBank3（**asm 内容锚** `InitBank3: ; 07:C590`——prg7_engine.asm:1449-1470）：
@@ -285,7 +290,9 @@ fn init_bank2(mem: &mut FrameMemory) {
 /// 以 L4 归零即定谳，届时改注释与常数）。
 fn init_bank3(mem: &mut FrameMemory) {
     mem.write_ram(crate::ram_map::GAME_MODE, 0);
-    mem.write_ram(crate::ram_map::NMI_STATUS, 1); // ScreenNmiOff 域形
+    // ScreenNmiOff（$C45D 全形：影子清位 + 真 $2001/$2000 写）——旧形只置 `NMI_STATUS=1`
+    // 建模等待形、**漏了寄存器面** ⇒ 换区窗口本应为黑屏却仍亮（elevprobe2 f1206/1207 实证）。
+    super::mainloop::screen_nmi_off(mem);
     mem.iter_wait();
     // `ldy #$0D / lda MetroidData,y / sta MetroidRepelSpeed,y / dey / bpl`
     // ⇒ $77F0+i ← MetroidData[i]（i=0..13；倒序遍历只是循环形，落值同序）。
@@ -298,26 +305,39 @@ fn init_bank3(mem: &mut FrameMemory) {
     }
     super::gfx::init_tourian_gfx(mem);
     mem.iter_bogged(2);
+    // asm 尾 `jmp NMIOn ; 07:C487`——**必须显式复启**：ScreenNmiOff 已写真 $2000 关掉
+    // NMI 使能位，漏这一句会让 `nmi_enabled` 永久 false（NMI 死锁、调色板/PPU 面全停）。
+    nmi_on(mem);
 }
 
 /// InitBank4（**asm 内容锚** `InitBank4: ; 07:C5B6`——prg7_engine.asm:1472-1478）：
 /// `lda #$00 / sta GameMode` → `jsr ScreenNmiOff` → `jsr InitKraidGFX`（8 件）→ `jmp NMIOn`。
 fn init_bank4(mem: &mut FrameMemory) {
     mem.write_ram(crate::ram_map::GAME_MODE, 0);
-    mem.write_ram(crate::ram_map::NMI_STATUS, 1);
+    // ScreenNmiOff（$C45D 全形：影子清位 + 真 $2001/$2000 写）——旧形只置 `NMI_STATUS=1`
+    // 建模等待形、**漏了寄存器面** ⇒ 换区窗口本应为黑屏却仍亮（elevprobe2 f1206/1207 实证）。
+    super::mainloop::screen_nmi_off(mem);
     mem.iter_wait();
     super::gfx::init_kraid_gfx(mem);
     mem.iter_bogged(2);
+    // asm 尾 `jmp NMIOn ; 07:C487`——**必须显式复启**：ScreenNmiOff 已写真 $2000 关掉
+    // NMI 使能位，漏这一句会让 `nmi_enabled` 永久 false（NMI 死锁、调色板/PPU 面全停）。
+    nmi_on(mem);
 }
 
 /// InitBank5（**asm 内容锚** `InitBank5: ; 07:C5C3`——prg7_engine.asm:1480-1486）：
 /// `lda #$00 / sta GameMode` → `jsr ScreenNmiOff` → `jsr InitRidleyGFX`（7 件）→ `jmp NMIOn`。
 fn init_bank5(mem: &mut FrameMemory) {
     mem.write_ram(crate::ram_map::GAME_MODE, 0);
-    mem.write_ram(crate::ram_map::NMI_STATUS, 1);
+    // ScreenNmiOff（$C45D 全形：影子清位 + 真 $2001/$2000 写）——旧形只置 `NMI_STATUS=1`
+    // 建模等待形、**漏了寄存器面** ⇒ 换区窗口本应为黑屏却仍亮（elevprobe2 f1206/1207 实证）。
+    super::mainloop::screen_nmi_off(mem);
     mem.iter_wait();
     super::gfx::init_ridley_gfx(mem);
     mem.iter_bogged(2);
+    // asm 尾 `jmp NMIOn ; 07:C487`——**必须显式复启**：ScreenNmiOff 已写真 $2000 关掉
+    // NMI 使能位，漏这一句会让 `nmi_enabled` 永久 false（NMI 死锁、调色板/PPU 面全停）。
+    nmi_on(mem);
 }
 
 /// InitBank1（**asm 内容锚** `InitBank1: ; 07:C552`——「Brinstar memory page」）：
@@ -327,7 +347,9 @@ fn init_bank5(mem: &mut FrameMemory) {
 /// bogged×2（C 级拆分——总 4=A 级三源互证）。
 fn init_bank1(mem: &mut FrameMemory) {
     mem.write_ram(crate::ram_map::GAME_MODE, 0);
-    mem.write_ram(crate::ram_map::NMI_STATUS, 1); // ScreenNmiOff 域形
+    // ScreenNmiOff（$C45D 全形：影子清位 + 真 $2001/$2000 写）——旧形只置 `NMI_STATUS=1`
+    // 建模等待形、**漏了寄存器面** ⇒ 换区窗口本应为黑屏却仍亮（elevprobe2 f1206/1207 实证）。
+    super::mainloop::screen_nmi_off(mem);
     mem.iter_wait();
     // InitBrinstarGFX（$C604）：BrinBG1/CREBG1/CREBG2/BrinstarSprites/Solid_0FC0/
     // Solid_1FC0（GFXInfo 项 3/4/5/6/25/22——bake_gfx 29 项自描述）
@@ -347,6 +369,9 @@ fn init_bank1(mem: &mut FrameMemory) {
         super::gfx::load_gfx(mem, id);
     }
     mem.iter_bogged(2);
+    // asm 尾 `jmp NMIOn ; 07:C487`——**必须显式复启**：ScreenNmiOff 已写真 $2000 关掉
+    // NMI 使能位，漏这一句会让 `nmi_enabled` 永久 false（NMI 死锁、调色板/PPU 面全停）。
+    nmi_on(mem);
 }
 
 /// C531 单元（boot 分派目标；**asm 引证主体**，链规 17）——

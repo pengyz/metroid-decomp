@@ -338,7 +338,11 @@ def _derive_sched(case_name: str) -> Path:
     plan = scenario_run.parse_scenario(case)
     joy = scenario_run.expand_schedule(plan)
     snap = (plan.get("bundle_load") or {}).get("path")
-    text = l4_diff_run.schedule_text(f"{case_name}.sem", int(plan["frames"]), joy, [], snap)
+    # fixture 必须透传（2026-11-14 r9 复核发现）：漏传会让注入类用例的 Rust 腿**不注入**，
+    # 而 oracle 腿照注入 ⇒ 两侧起点不同、状态行整段假分歧（elev 案实证 f924 起 sy 74 vs B0）。
+    text = l4_diff_run.schedule_text(
+        f"{case_name}.sem", int(plan["frames"]), joy, [], snap, plan.get("fixtures")
+    )
     WORK.mkdir(parents=True, exist_ok=True)
     sched = WORK / f"{case_name}.sem.sched"
     sched.write_text(text, encoding="utf-8", newline="\n")

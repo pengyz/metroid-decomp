@@ -194,7 +194,7 @@
       }
     },
     "case-elev-norfair-transition": {
-      "scenario_sha256": "f2028ae8b0db76998cbd55f95e259eab9d4bb009e0d10ba79a5a147eb41c955d",
+      "scenario_sha256": "87f0cbdf935afe23f5f2a74f988c9276cb5cdad9e10261b4614136ed07ca0025",
       "states": {
         "800:intro-end": {
           "state": "match",
@@ -217,6 +217,11 @@
           "total_pixels": 61440
         },
         "1200:moving": {
+          "state": "match",
+          "diff_pixels": 0,
+          "total_pixels": 61440
+        },
+        "1207:transition-core": {
           "state": "match",
           "diff_pixels": 0,
           "total_pixels": 61440
@@ -886,6 +891,16 @@
       "diff": 2,
       "blocked": 0,
       "cells_total": 121
+    },
+    {
+      "ts": "2026-11-14T05:19:41+00:00",
+      "kind": "anchor",
+      "evidence": "",
+      "reason": "既有 14 案逐项无回退（含 case-password-justin 两格改善：f700 71→23px、f1100 90→42px——调色板修复波及既有锚且向好，非回退）；新增 case-elev-norfair-transition 10 格全 0px（电梯 Idle/Move/换区核/Fade 获像素证据）；diff 2 格仍为已挂账 oracle-present-pipeline-lag",
+      "match": 120,
+      "diff": 2,
+      "blocked": 0,
+      "cells_total": 122
     }
   ]
 }

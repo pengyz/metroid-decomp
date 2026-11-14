@@ -510,24 +510,18 @@ fn initialize_game(mem: &mut FrameMemory, pw: &[u8; 18], nar_active: bool) {
     }
     // MainRoutine($1E)←_id_MoreInit=1。
     mem.write_ram(crate::ram_map::MAIN_ROUTINE, 0x01);
-    // ScreenNmiOff（07:C45D）：PPUMASK_ZP($FE)&=~$18+PPUCTRL_ZP($FF)&=~$80（$2000 端口
-    // 写走镜像读出面——本层 RAM 镜像事件）。
-    let pm = mem.read_ram(crate::ram_map::PPUMASK_ZP) & !0x18;
-    mem.write_ram(crate::ram_map::PPUMASK_ZP, pm);
-    // 【转场暗窗相位（2026-11-12）】`WriteAndWait`（07:C43D）写影子后 `WaitNMIPass_`
-    // （07:C43F）**等一个 NMI**——真 PPUMASK 由该 NMI 内的 `WritePPUCtrl`（07:C44D）
-    // 落，因此本次等待所在帧的渲染色已是「关屏」。本层 tick 原子执行整个链，等价的
-    // 近似=此刻即写真寄存器（暗窗起点因此与该帧对齐：emu 实测 f1191 首黑）。
-    mem.write_io(0x2001, pm);
-    let pc = mem.read_ram(crate::ram_map::PPUCTRL_ZP) & !0x80;
-    mem.write_ram(crate::ram_map::PPUCTRL_ZP, pc);
+    // ScreenNmiOff（$C45D）——**单实现**（`mainloop::screen_nmi_off`）：旧形在此内联一份
+    // 「影子清位 + 真 $2001 写」，而 boot 的四个 InitBank 只置 `NMI_STATUS` ⇒ 同一 asm 例程
+    // 三份语义不同的实现（F 类）；已收口到共享件（含 asm 的 `sta PPUCTRL` 关 NMI 位）。
+    crate::frame::mainloop::screen_nmi_off(mem);
     // LoadSamusGFX（$C5DC，prg7_engine.asm:1496-1520）：Samus→(JIB?Suitless)→
     // IntroSprites→Font_Complete→Font_Hud→Solid_0FC0→Solid_1FC0 七件（ScreenNmiOff 后/
     // NMIOn 前——ROM→CHR-RAM 写在 NMI 关闭窗口，同 asm 序）。
     super::gfx::load_samus_gfx(mem);
-    // NMIOn（07:C487）：PPUCTRL_ZP|=$80。
-    let pc = mem.read_ram(crate::ram_map::PPUCTRL_ZP) | 0x80;
-    mem.write_ram(crate::ram_map::PPUCTRL_ZP, pc);
+    // NMIOn（07:C487）——**共用件**（`boot::nmi_on`：`sta PPUCTRL` + `sta PPUCTRL_ZP` 双写）。
+    // 旧形只写影子 $FF、不写真 $2000 ⇒ 配合上面 ScreenNmiOff 的「真关 NMI」会让
+    // `nmi_enabled` 永远为 false（NMI 死锁、调色板/PPU 面全停）——收口到共用件。
+    crate::frame::boot::nmi_on(mem);
     // BankTable（07:CA30）={$02,$03,$05,$04,$06, $48,$48,$20,$96,$CA,...}→BankSwitchPending($24)。
     // 表外索引（InArea&$0F>4=checksum 合法伪造密码域）读表后代码字节——quirk 照烤
     // （ROM 逐字节 07:CA30-CA3F：02 03 05 04 06 48 48 20 96 CA AD 84 68 10 0D 29）。
