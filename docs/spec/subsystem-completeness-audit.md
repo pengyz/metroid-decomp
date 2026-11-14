@@ -186,9 +186,9 @@ WritePPUCtrl（唯一点亮真 PPUMASK 的地方）/ WriteScroll / ReadJoyPads`�
 > **行为反向**：`samus_elevator` 的滚屏触发条件最初写成「下行 `scr_y < $84` 才滚、上行
 > `scr_y >= $64` 才滚」，与 asm 恰相反——`SamusElevator ; 07:D42E` 的 `bcc Lx057` / `bcs Lx060`
 > 都是**跳到「跳过滚动」处**，正确形是「下行 `scr_y >= $84` 才 `ScrollDown`、上行 `scr_y < $64`
-> 才 `ScrollUp`」（与 `MoveSamusUp/Down $E457/$E4A3` 同口径）。后果不是偏 1px：`ToggleSamusHi`
-> 与 `Samus.y` 的 0↔239 回绕写在同一分支体里，条件反了会让 Samus 在**不滚屏**时把 y 推到 239
-> 再翻 hi、ScrollY 与名表位置脱钩——整趟电梯画面与原版相反。已修（`fix(core)` 随本注同批），
+> 才 `ScrollUp`」（与 `MoveSamusUp/Down $E457/$E4A3` 同口径）。后果不是偏 1px：条件反了会
+> **该滚时不滚** —— `ScrollY` 不推进而 `Samus.y` 照推（回绕段 `Lx057/Lx058` 是合流点、两条路径
+> 都执行，不在分支体内），两者脱钩、0↔239 回绕发生在错误的视觉位置上。已修（`fix(core)` 同批），
 > 并补 4 条**阈值边界**断言（`scr_y==$84` 必滚 / `scr_y==$83` 不滚 / `scr_y==$63` 必滚 /
 > `scr_y==$64` 不滚），且做过**变异验证**：把条件改回反向 ⇒ 两条新测当场红。
 > 教训（第二次同型）：`#6` 是「常量/基址读错」，本轮是「比较跳转方向读反」——**都是单测绿、

@@ -253,7 +253,7 @@ fn elev_fade(mem: &mut FrameMemory) {
 }
 
 /// `ElevatorD8BF` 的调色板选取（`ldy InArea / cpy #$12 / bcc @endIf_D /
-/// lda #_id_Palette00+1`）：**InArea>=$12 的三个区（Kraid=2/Tourian=3/Ridley=4）**恒
+/// lda #_id_Palette00+1`）：**InArea 字节 $12/$13/$14（区序号 2/3/4 = Kraid/Tourian/Ridley）**恒
 /// Palette00+1(=1)，Brinstar/Norfair 用 `PaletteToggle` 值。抽成纯函数以便单测（**注意**：asm 随后 `jsr SelectSamusPalette`
 /// 会再次覆写 `PaletteDataPending`，故该值在帧末不可观测）。
 pub fn palette_pending_value(in_area: u8, palette_toggle: u8) -> u8 {
@@ -675,7 +675,7 @@ mod tests {
     /// asm `SamusElevator` 07:D42E-07:D440 = `lda Samus.y / sec / sbc ScrollY / cmp #$84 /
     /// bcc Lx057`（bcc 跳到 `Lx057` 即**跳过** ScrollDown）。
     #[test]
-    fn samus_elevator_down_scrolls_only_at_or_below_threshold() {
+    fn samus_elevator_down_scrolls_only_at_or_above_threshold() {
         // scr_y = 0x84（= 阈值）⇒ 滚：ScrollY 0x10 → 0x11
         let mut mem = m();
         mem.write_ram(ELEV_STATUS, 3);
