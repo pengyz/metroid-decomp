@@ -1,5 +1,6 @@
 name case-collide-probe
-frames 900
+# [A-重锚] 输入窗整体后移 +470（首动作 f440→f910）：开机后 440 帧开场演出（07:C8D1 SamusInit 置 Timer3=$2C，07:C266 UpdateTimer 每 10 帧减 1）期间的按键被吞，原窗无行为证据。
+frames 1370
 # 卡 E 淡入节律采点（docs/findings/animi-divergence-collide-f800.md §10-11）：
 # Timer3($2C)/TimerDelay($29) 预分频相位 + MainRoutine($1E) 淡入状态机迁移 +
 # FrameCount($2D) 对齐锚——emu 帧级落 analysis/traces/<name>.frames.jsonl（可复读）。
@@ -12,13 +13,13 @@ snapshot none
 press 310 start
 press 350 start
 capture 420 game-in
-hold 440-540 right
-capture 540 r100
-press 560 a
-hold 560-700 left
-capture 620 l60
-capture 700 l140
-hold 700-900 left
-capture 800 l240
-capture 890 l330
-endFrame 900
+hold 910-1010 right
+capture 1010 r100
+press 1030 a
+hold 1030-1170 left
+capture 1090 l60
+capture 1170 l140
+hold 1170-1370 left
+capture 1270 l240
+capture 1360 l330
+endFrame 1370

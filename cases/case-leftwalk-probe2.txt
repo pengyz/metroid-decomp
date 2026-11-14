@@ -1,13 +1,14 @@
 name case-leftwalk-probe2
-frames 1400
+# [A-重锚] 输入窗整体后移 +470（首动作 f440→f910）：开机后 440 帧开场演出（07:C8D1 SamusInit 置 Timer3=$2C，07:C266 UpdateTimer 每 10 帧减 1）期间的按键被吞，原窗无行为证据。
+frames 1870
 snapshot none
 press 310 start
 press 350 start
 capture 420 game-in
-hold 440-1400 left
-capture 620 l180
-capture 820 l380
-capture 1020 l580
-capture 1220 l780
-capture 1390 l950
-endFrame 1400
+hold 910-1870 left
+capture 1090 l180
+capture 1290 l380
+capture 1490 l580
+capture 1690 l780
+capture 1860 l950
+endFrame 1870

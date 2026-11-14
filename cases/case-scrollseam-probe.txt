@@ -1,23 +1,24 @@
 # 探针：滚动接缝（用户实测①——列流缝（1-N 列空隙/覆盖序）定向采集）
+# [A-重锚] 输入窗整体后移 +480（首动作 f430→f910）：开机后 440 帧开场演出（07:C8D1 SamusInit 置 Timer3=$2C，07:C266 UpdateTimer 每 10 帧减 1）期间的按键被吞，原窗无行为证据。
 # 密集采点（滚动中每 16 帧（缝窗口（瞬态捕）））
 name case-scrollseam-probe
-frames 900
+frames 1380
 snapshot none
 press 310 start
 press 350 start
 capture 420 game-in
-hold 430-700 right
-capture 470 scroll-r30
-capture 500 scroll-r60
-capture 530 scroll-r90
-capture 560 scroll-r120
-capture 590 scroll-r150
-capture 620 scroll-r180
-capture 650 scroll-r210
-capture 680 scroll-r240
-capture 700 scroll-end
-hold 720-880 left
-capture 760 scroll-l40
-capture 800 scroll-l80
-capture 840 scroll-l120
-capture 880 end
+hold 910-1180 right
+capture 950 scroll-r30
+capture 980 scroll-r60
+capture 1010 scroll-r90
+capture 1040 scroll-r120
+capture 1070 scroll-r150
+capture 1100 scroll-r180
+capture 1130 scroll-r210
+capture 1160 scroll-r240
+capture 1180 scroll-end
+hold 1200-1360 left
+capture 1240 scroll-l40
+capture 1280 scroll-l80
+capture 1320 scroll-l120
+capture 1360 end

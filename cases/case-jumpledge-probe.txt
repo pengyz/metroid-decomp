@@ -1,17 +1,18 @@
 name case-jumpledge-probe
+# [A-重锚] 输入窗整体后移 +460（首动作 f450→f910）：开机后 440 帧开场演出（07:C8D1 SamusInit 置 Timer3=$2C，07:C266 UpdateTimer 每 10 帧减 1）期间的按键被吞，原窗无行为证据。
 # v2（②终钉（EnsExtra dump 面））
-frames 1000
+frames 1460
 snapshot none
 press 310 start
 press 350 start
 capture 420 game-in
-hold 450-700 right
-capture 550 walk-mid
-capture 690 pre-jump
-hold 700-780 right
-press 700 a
-capture 705 takeoff
-capture 730 rise
-capture 755 peak
-capture 780 land
-capture 800 land-settled
+hold 910-1160 right
+capture 1010 walk-mid
+capture 1150 pre-jump
+hold 1160-1240 right
+press 1160 a
+capture 1165 takeoff
+capture 1190 rise
+capture 1215 peak
+capture 1240 land
+capture 1260 land-settled

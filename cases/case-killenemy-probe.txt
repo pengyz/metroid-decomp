@@ -1,16 +1,17 @@
 name case-killenemy-probe
-frames 1100
+# [A-重锚] 输入窗整体后移 +460（首动作 f450→f910）：开机后 440 帧开场演出（07:C8D1 SamusInit 置 Timer3=$2C，07:C266 UpdateTimer 每 10 帧减 1）期间的按键被吞，原窗无行为证据。
+frames 1560
 snapshot none
 press 310 start
 press 350 start
 capture 420 game-in
-hold 450-560 right
-capture 560 at-enemy
-press 580 b
-capture 590 hit-1
-press 610 b
-capture 620 hit-2
-press 640 b
-capture 650 dying
-capture 700 dead
-capture 800 after
+hold 910-1020 right
+capture 1020 at-enemy
+press 1040 b
+capture 1050 hit-1
+press 1070 b
+capture 1080 hit-2
+press 1100 b
+capture 1110 dying
+capture 1160 dead
+capture 1260 after

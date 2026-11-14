@@ -1,13 +1,14 @@
 name case-shootprobe-probe
-frames 900
+# [A-重锚] 输入窗整体后移 +460（首动作 f450→f910）：开机后 440 帧开场演出（07:C8D1 SamusInit 置 Timer3=$2C，07:C266 UpdateTimer 每 10 帧减 1）期间的按键被吞，原窗无行为证据。
+frames 1360
 snapshot none
 press 310 start
 press 350 start
 capture 420 game-in
-hold 450-550 right
-hold 600-650 left
-press 700 a
-press 800 b
-capture 810 fire-10
-capture 815 fire-15
-capture 825 fire-25
+hold 910-1010 right
+hold 1060-1110 left
+press 1160 a
+press 1260 b
+capture 1270 fire-10
+capture 1275 fire-15
+capture 1285 fire-25

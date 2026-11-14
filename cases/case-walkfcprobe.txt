@@ -1,4 +1,5 @@
 # walk 窗 FC 双腿逐帧锚（B 卡 l380 收口——前提翻转定谳件）
+# [A-重锚] 输入窗整体后移 +470（首动作 f440→f910）：开机后 440 帧开场演出（07:C8D1 SamusInit 置 Timer3=$2C，07:C266 UpdateTimer 每 10 帧减 1）期间的按键被吞，原窗无行为证据。
 # 背景：B2 zp对账「f820 $2D=23/24 + $FD F5/F4 同点真差」出自 capture ram.hex 层。
 #       fcphase §2 已载「rust 腿 capture 在状态行之后沿读一拍（采样惯例差）」——
 #       capture 层 ±1 未扣惯例即判真差的疑点（crawlprobe state 层 943 帧 0 差旁证）。
@@ -8,7 +9,7 @@
 #         真 ±1⇒walk 窗 FC 计数径根修（原判据径）。
 # 判据：state 层逐帧 FC 差恒 0 + capture 层差=+1 恒（惯例）双证。
 name case-walkfcprobe
-frames 1400
+frames 1870
 snapshot none
 sample_point spin-exit
 
@@ -22,9 +23,9 @@ watch 030E SamusX
 press 310 start
 press 350 start
 capture 420 game-in
-hold 440-1400 left
-capture 620 l180
-capture 820 l380
-capture 1020 l580
-capture 1400 end
-endFrame 1400
+hold 910-1870 left
+capture 1090 l180
+capture 1290 l380
+capture 1490 l580
+capture 1870 end
+endFrame 1870

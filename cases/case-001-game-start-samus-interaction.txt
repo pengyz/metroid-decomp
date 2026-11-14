@@ -1,54 +1,55 @@
 # 对拍用例 001：进入游戏+角色交互（左右移动+跳跃+射击）
+# [A-重锚] 输入窗整体后移 +410（首动作 f500→f910）：开机后 440 帧开场演出（07:C8D1 SamusInit 置 Timer3=$2C，07:C266 UpdateTimer 每 10 帧减 1）期间的按键被吞，原窗无行为证据。
 # 用途：验证进入游戏后角色在第一个场景中左右移动，跳跃，射击
 # 对拍：模拟器 vs Rust 实现（hash 对比（像素对比））
 # 定义：对拍用例 = ① 输入脚本 + ② 待加载存档 + ③ 对拍时长
 
 name case-001-game-start-samus-interaction
-frames 1200
+frames 1610
 snapshot none  # ②待加载存档：none=无存档（上电起跑）；有档写 snapshot <前缀>（≡bundle_load；load_snapshot 消费面缺口记账（后续增加））
 watch 002D FC
 watch 0300 SamusStatus
 watch 030D SamusY
 watch 030E SamusX
-watch 03DD BulletY       # 弹槽 0x3D0 槽面（y+0x0D）——Phase2 弹轨迹正定性
-watch 03DE BulletX       # x+0x0E
+watch 03DD BulletY  # 弹槽 0x3D0 槽面（y+0x0D）——Phase2 弹轨迹正定性
+watch 03DE BulletX  # x+0x0E
 watch 03D8 BulletSpeedY
 watch 03D9 BulletSpeedX
 watch 03D0 BulletStatus
 
 # ① 进入游戏（标题→游戏开始）
-press 310 start     # 标题按 Start
-press 350 start     # 选单按 Start（START GAME）
+press 310 start  # 标题按 Start
+press 350 start  # 选单按 Start（START GAME）
 capture 420 game-in  # 游戏画面（萨姆斯出现）
 
 # ② 角色左右移动
-hold 500-550 right  # 向右移动（帧 500-550）
-capture 550 after-right  # 向右移动后
-hold 600-650 left   # 向左移动（帧 600-650）
-capture 650 after-left   # 向左移动后
+hold 910-960 right  # 向右移动（帧910-960）
+capture 960 after-right  # 向右移动后
+hold 1010-1060 left  # 向左移动（帧1010-1060）
+capture 1060 after-left  # 向左移动后
 
 # ③ 角色跳跃
-press 700 a         # 跳跃（帧 700）
-capture 720 after-jump   # 跳跃后
+press 1110 a  # 跳跃（帧1110）
+capture 1130 after-jump  # 跳跃后
 
 # ④ 角色射击
-press 800 b         # 射击（帧 800）
-capture 815 bullet-mid-2
-capture 820 after-shoot
-capture 825 bullet-late  # 射击后
+press 1210 b  # 射击（帧1210）
+capture 1225 bullet-mid-2
+capture 1230 after-shoot
+capture 1235 bullet-late  # 射击后
 
 # ⑤ 组合动作（移动+跳跃+射击）
-hold 900-950 right  # 向右移动（帧 900-950）
-press 920 a         # 跳跃（帧 920）
-press 940 b         # 射击（帧 940）
-capture 950 combo-action  # 组合动作后
+hold 1310-1360 right  # 向右移动（帧1310-1360）
+press 1330 a  # 跳跃（帧1330）
+press 1350 b  # 射击（帧1350）
+capture 1360 combo-action  # 组合动作后
 
 # ⑥ 对拍结束
-endFrame 1200       # 结束帧（对拍点）——≡ capture 1200 end（终端采集点，同帧已有 capture 则去重）
+endFrame 1610  # 结束帧（对拍点）——≡ capture 1610 end（终端采集点，同帧已有 capture 则去重）
 
 # ③+ 定向采集（2026-10-28 复核整改（diff 归因制））：落地窗/jump-shoot/弹中段
-press 710 b        # 跳跃中射击（jump 落地窗前（弹形态定向采集））
-capture 715 jump-shoot   # 跳跃中射击帧（弹初段+跳姿）
-capture 725 landing-early  # 落地窗（jump 后 25 帧（姿态切换观察））
-capture 735 landing-settled # 落地窗（jump 后 35 帧（站姿定型））
-capture 810 bullet-midflight # 弹飞行中段（f800 射击后 10 帧）
+press 1120 b  # 跳跃中射击（jump 落地窗前（弹形态定向采集））
+capture 1125 jump-shoot  # 跳跃中射击帧（弹初段+跳姿）
+capture 1135 landing-early  # 落地窗（jump 后 25 帧（姿态切换观察））
+capture 1145 landing-settled  # 落地窗（jump 后 35 帧（站姿定型））
+capture 1220 bullet-midflight  # 弹飞行中段（f1210 射击后 10 帧）

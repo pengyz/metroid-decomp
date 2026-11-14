@@ -1,8 +1,9 @@
 # 爬行逐帧探针（r9 转向族残余定位——crawler-corner-divergence.md 落地补注）：
+# [A-重锚] 输入窗整体后移 +410（首动作 f500→f910）：开机后 440 帧开场演出（07:C8D1 SamusInit 置 Timer3=$2C，07:C266 UpdateTimer 每 10 帧减 1）期间的按键被吞，原窗无行为证据。
 # case-001 同相输入至 f950，逐帧 watch 敌槽 4/5（$0440-$045F：y/x/data05/data0A）+FC，
 # 定位 FC 对齐+全距核修后残余分歧的首分叉 tick（slot5 f810 起仍分叉/f950 起角检分叉）。
 name case-crawlprobe
-frames 960
+frames 1370
 snapshot none  # 上电起跑（与 case-001 同相）
 sample_point spin-exit  # 缝对齐（frame-alignment-plan.md Step 0：与 rust 腿 $C0D3 缝同相；不改像素面）
 
@@ -19,18 +20,18 @@ watch 0300 SamusStatus
 watch 030D SamusY
 watch 030E SamusX
 
-press 310 start     # 标题按 Start（与 case-001 同相）
-press 350 start     # 选单按 Start（START GAME）
+press 310 start  # 标题按 Start（与 case-001 同相）
+press 350 start  # 选单按 Start（START GAME）
 capture 420 game-in
-hold 500-550 right  # 向右移动
-capture 550 after-right
-hold 600-650 left
-capture 650 after-left
-press 700 a         # 跳跃
-capture 720 after-jump
-press 800 b         # 射击
-capture 820 after-shoot
-hold 900-950 right  # 组合移动
-press 920 a
-press 940 b
-endFrame 960
+hold 910-960 right  # 向右移动
+capture 960 after-right
+hold 1010-1060 left
+capture 1060 after-left
+press 1110 a  # 跳跃
+capture 1130 after-jump
+press 1210 b  # 射击
+capture 1230 after-shoot
+hold 1310-1360 right  # 组合移动
+press 1330 a
+press 1350 b
+endFrame 1370

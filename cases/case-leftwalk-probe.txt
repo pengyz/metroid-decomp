@@ -1,7 +1,8 @@
 # 对拍用例：长距离左走探针（复现「左走一定距离角色消失」）
+# [A-重锚] 输入窗整体后移 +470（首动作 f440→f910）：开机后 440 帧开场演出（07:C8D1 SamusInit 置 Timer3=$2C，07:C266 UpdateTimer 每 10 帧减 1）期间的按键被吞，原窗无行为证据。
 # 用途：确认向左走远后角色 sprite 是否消失（emu vs rust 对拍）
 name case-leftwalk-probe
-frames 800
+frames 1270
 snapshot none
 
 # 进入游戏
@@ -10,10 +11,10 @@ press 350 start
 capture 420 game-in
 
 # 长距离左走（帧 440-800，360 帧）
-hold 440-800 left
-capture 520 left-80
-capture 620 left-180
-capture 720 left-280
-capture 790 left-350
+hold 910-1270 left
+capture 990 left-80
+capture 1090 left-180
+capture 1190 left-280
+capture 1260 left-350
 
-endFrame 800
+endFrame 1270

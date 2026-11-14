@@ -1,8 +1,9 @@
 # 变形球专项探针（r9 收尾轮——用户实测三问：左侧球位跳入/能力获取/变形滚动）：
+# [A-重锚] 输入窗整体后移 +460（首动作 f450→f910）：开机后 440 帧开场演出（07:C8D1 SamusInit 置 Timer3=$2C，07:C266 UpdateTimer 每 10 帧减 1）期间的按键被吞，原窗无行为证据。
 # 真实路线（无 fixture）：出生点向左→左门过渡→球房(图 2,14)→跳入凹室→拾取 Maru Mari
 # →形态（down）→滚行。判据：双腿 matched-seam 逐帧全同（Samus 面+gear+门/房状态）。
 name case-morphball-probe
-frames 1700
+frames 2160
 snapshot none  # 上电起跑（与 crawlprobe 同相）
 sample_point spin-exit  # 缝对齐（与 rust 腿 $C0D3 同相）
 
@@ -15,25 +16,25 @@ watch 0050 MapPosX
 watch 0056 DoorEntry
 watch 00FD ScrollX
 watch 0300 SamusStatus
-watch 0305 AnimResetIndex   # Phase1 增量（Stand↔Run 倒置直证面——spec v2）
+watch 0305 AnimResetIndex  # Phase1 增量（Stand↔Run 倒置直证面——spec v2）
 watch 0306 AnimIndex
-watch 0304 AnimDelay        # Phase2 相位对账面（4 帧相位差根——reload A/倒数相位二判一）
-watch 030F JumpDisp         # Phase2 深挖面（Salto 触发实值——JumpDisp≥$18 阈值对账）
-watch 0012 Joy1Change       # 输入相位对照面（F3——采样/注入时点判别）
-watch 6AF4 En0Status        # 敌槽 WRAM 面（slot 0x40——goal 轮134 对账缺口补）
-watch 6B34 En0Status50      # slot 0x50
-watch 0440 En0Y             # 敌B(slot0x40) 位面（实质对表——分歧帧定位）
+watch 0304 AnimDelay  # Phase2 相位对账面（4 帧相位差根——reload A/倒数相位二判一）
+watch 030F JumpDisp  # Phase2 深挖面（Salto 触发实值——JumpDisp≥$18 阈值对账）
+watch 0012 Joy1Change  # 输入相位对照面（F3——采样/注入时点判别）
+watch 6AF4 En0Status  # 敌槽 WRAM 面（slot 0x40——goal 轮134 对账缺口补）
+watch 6B34 En0Status50  # slot 0x50
+watch 0440 En0Y  # 敌B(slot0x40) 位面（实质对表——分歧帧定位）
 watch 0441 En0X
-watch 0445 En0D05           # data05（可见位/facing 位）
+watch 0445 En0D05  # data05（可见位/facing 位）
 watch 044A En0D0A
-watch 0450 En1Y             # 敌A(slot0x50) 位面
+watch 0450 En1Y  # 敌A(slot0x50) 位面
 watch 0451 En1X
-watch 0449 En0Delay         # 敌B delay(+9)——goal 轮20 卡帧根
-watch 0049 ScrollDir        # goal 轮66 装载帧 bit0（hi 源）
-watch 0070 SamusInvDly      # goal 轮78 金方 i 帧（knockback 判）
-watch 00FF PPUCTRL_ZP       # goal 轮66 hi 源
-watch 0448 En0MovIdx        # movementIndex(+8)
-watch 0446 En0InstrIdx      # movementInstrIndex(+6)
+watch 0449 En0Delay  # 敌B delay(+9)——goal 轮20 卡帧根
+watch 0049 ScrollDir  # goal 轮66 装载帧 bit0（hi 源）
+watch 0070 SamusInvDly  # goal 轮78 金方 i 帧（knockback 判）
+watch 00FF PPUCTRL_ZP  # goal 轮66 hi 源
+watch 0448 En0MovIdx  # movementIndex(+8)
+watch 0446 En0InstrIdx  # movementInstrIndex(+6)
 watch 0014 Joy1Status
 watch 0301 SamusRadiusY
 watch 030D SamusY
@@ -47,32 +48,32 @@ watch_range 6878-6878 gear
 watch_range 0748-0757 powerups  # PowerUps 双槽（type/y/x/hi——$0748/$0750）
 watch 0109 PowerUpDelayFlag
 
-press 310 start     # 标题（与 crawlprobe 同相）
-press 350 start     # 选单 START GAME
+press 310 start  # 标题（与 crawlprobe 同相）
+press 350 start  # 选单 START GAME
 capture 420 game-in
-hold 450-1420 left  # 连续左推全程（走廊→墙→坑沿）
-hold 1130-1185 a    # 全高跳越高墙（y 193→110，落坑沿 (244,113)）
-capture 1128 wall-takeoff  # ── 跳墙序列 0.2s/12 帧 ──
-capture 1134 wall-rise0a   # Phase1 密化（倒置触发帧号级定位——spec v2）
-capture 1140 wall-rise1
-capture 1146 wall-rise1b
-capture 1152 wall-rise2
-capture 1158 wall-rise2b
-capture 1164 wall-top      # 角部时刻（x 回绕帧）
-capture 1170 wall-overa
-capture 1176 wall-over
-capture 1182 wall-overb
-capture 1188 pit-land
-capture 1194 pit-landb
-capture 1200 wall-jump     # ── 结束 ──
-hold 1240-1295 a    # 二段跳（坑沿→坑内 (68,177)）
-capture 1300 pit
-hold 1420-1520 right # 右走进坑（x=80-95 洞，落 y=193 坑底）顶到基座壁 x=96
-hold 1500-1570 right # 坑内全高跳+右漂（跳上基座顶 y=160——用户第三级）
-hold 1502-1558 a     # （与右同按）
-capture 1460 pit-fall # 落坑
-capture 1520 pit-jump # 坑内起跳
-capture 1560 ball-jump # 基座顶/触球窗
-capture 1620 on-pedestal
-capture 1650 after-pickup
-endFrame 1700
+hold 910-1880 left  # 连续左推全程（走廊→墙→坑沿）
+hold 1590-1645 a  # 全高跳越高墙（y 193→110，落坑沿 (244,113)）
+capture 1588 wall-takeoff  # ── 跳墙序列 0.2s/12 帧 ──
+capture 1594 wall-rise0a  # Phase1 密化（倒置触发帧号级定位——spec v2）
+capture 1600 wall-rise1
+capture 1606 wall-rise1b
+capture 1612 wall-rise2
+capture 1618 wall-rise2b
+capture 1624 wall-top  # 角部时刻（x 回绕帧）
+capture 1630 wall-overa
+capture 1636 wall-over
+capture 1642 wall-overb
+capture 1648 pit-land
+capture 1654 pit-landb
+capture 1660 wall-jump  # ── 结束 ──
+hold 1700-1755 a  # 二段跳（坑沿→坑内 (68,177)）
+capture 1760 pit
+hold 1880-1980 right  # 右走进坑（x=80-95 洞，落 y=193 坑底）顶到基座壁 x=96
+hold 1960-2030 right  # 坑内全高跳+右漂（跳上基座顶 y=160——用户第三级）
+hold 1962-2018 a  # （与右同按）
+capture 1920 pit-fall  # 落坑
+capture 1980 pit-jump  # 坑内起跳
+capture 2020 ball-jump  # 基座顶/触球窗
+capture 2080 on-pedestal
+capture 2110 after-pickup
+endFrame 2160

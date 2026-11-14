@@ -4,69 +4,69 @@
   "rom_sha256": "e6e6b7014685adae447ebb3833242815747bc1e5df83ade79f693fb67cf565b6",
   "cases": {
     "case-001-game-start-samus-interaction": {
-      "scenario_sha256": "350beb44bd3f90a83a89ed923a3c7573fa6fc9f2d7fc0082fa80ad6ebd75be97",
+      "scenario_sha256": "46b2ce1b90357ebf3e9a91d64d8953c0906da5f10f9bf99d6919e822b3a27ecd",
       "states": {
         "420:game-in": {
           "state": "match",
           "diff_pixels": 0,
           "total_pixels": 61440
         },
-        "550:after-right": {
+        "960:after-right": {
           "state": "match",
           "diff_pixels": 0,
           "total_pixels": 61440
         },
-        "650:after-left": {
+        "1060:after-left": {
           "state": "match",
           "diff_pixels": 0,
           "total_pixels": 61440
         },
-        "715:jump-shoot": {
+        "1125:jump-shoot": {
           "state": "match",
           "diff_pixels": 0,
           "total_pixels": 61440
         },
-        "720:after-jump": {
+        "1130:after-jump": {
           "state": "match",
           "diff_pixels": 0,
           "total_pixels": 61440
         },
-        "725:landing-early": {
+        "1135:landing-early": {
           "state": "match",
           "diff_pixels": 0,
           "total_pixels": 61440
         },
-        "735:landing-settled": {
+        "1145:landing-settled": {
           "state": "match",
           "diff_pixels": 0,
           "total_pixels": 61440
         },
-        "810:bullet-midflight": {
+        "1220:bullet-midflight": {
           "state": "match",
           "diff_pixels": 0,
           "total_pixels": 61440
         },
-        "815:bullet-mid-2": {
+        "1225:bullet-mid-2": {
           "state": "match",
           "diff_pixels": 0,
           "total_pixels": 61440
         },
-        "820:after-shoot": {
+        "1230:after-shoot": {
           "state": "match",
           "diff_pixels": 0,
           "total_pixels": 61440
         },
-        "825:bullet-late": {
+        "1235:bullet-late": {
           "state": "match",
           "diff_pixels": 0,
           "total_pixels": 61440
         },
-        "950:combo-action": {
+        "1360:combo-action": {
           "state": "match",
           "diff_pixels": 0,
           "total_pixels": 61440
         },
-        "1200:end": {
+        "1610:end": {
           "state": "match",
           "diff_pixels": 0,
           "total_pixels": 61440
@@ -74,84 +74,84 @@
       }
     },
     "case-002-door-blue-interaction": {
-      "scenario_sha256": "e02b0e157324f3cd098c4784443c8a680cd2b4e2c2b7c51c5d9ca588c94a638b",
+      "scenario_sha256": "3756133f761f48181d87f44542c59e8c69747a8a12d6b818e763478b587b31c5",
       "states": {
         "420:game-in": {
           "state": "match",
           "diff_pixels": 0,
           "total_pixels": 61440
         },
-        "620:at-door": {
+        "1080:at-door": {
           "state": "match",
           "diff_pixels": 0,
           "total_pixels": 61440
         },
-        "650:bullet-out": {
-          "state": "match",
-          "diff_pixels": 0,
+        "1110:bullet-out": {
+          "state": "diff",
+          "diff_pixels": 252,
           "total_pixels": 61440
         },
-        "700:door-open": {
-          "state": "match",
-          "diff_pixels": 0,
+        "1160:door-open": {
+          "state": "diff",
+          "diff_pixels": 10236,
           "total_pixels": 61440
         },
-        "790:door-enter": {
-          "state": "match",
-          "diff_pixels": 0,
+        "1250:door-enter": {
+          "state": "diff",
+          "diff_pixels": 10474,
           "total_pixels": 61440
         },
-        "850:scrolling": {
-          "state": "match",
-          "diff_pixels": 0,
+        "1310:scrolling": {
+          "state": "diff",
+          "diff_pixels": 10474,
           "total_pixels": 61440
         },
-        "1000:neighbor-room": {
-          "state": "match",
-          "diff_pixels": 0,
+        "1460:neighbor-room": {
+          "state": "diff",
+          "diff_pixels": 11015,
           "total_pixels": 61440
         },
-        "1150:end": {
-          "state": "match",
-          "diff_pixels": 0,
+        "1610:end": {
+          "state": "diff",
+          "diff_pixels": 11159,
           "total_pixels": 61440
         }
       }
     },
     "case-collide-probe": {
-      "scenario_sha256": "38fbb637edba4e73acf7c74ad7b47a1ad229acfc1eba44cd0c9d979f0c38192d",
+      "scenario_sha256": "3f4a0018dc0f0e5ad41f5e2f0b516a19ebf2dd5f2c5ae413d1c2c0315426db51",
       "states": {
         "420:game-in": {
           "state": "match",
           "diff_pixels": 0,
           "total_pixels": 61440
         },
-        "540:r100": {
+        "1010:r100": {
           "state": "match",
           "diff_pixels": 0,
           "total_pixels": 61440
         },
-        "620:l60": {
+        "1090:l60": {
           "state": "match",
           "diff_pixels": 0,
           "total_pixels": 61440
         },
-        "700:l140": {
+        "1170:l140": {
           "state": "match",
           "diff_pixels": 0,
           "total_pixels": 61440
         },
-        "800:l240": {
+        "1270:l240": {
           "state": "match",
           "diff_pixels": 0,
           "total_pixels": 61440
         },
-        "890:l330": {
+        "1360:l330": {
           "state": "match",
           "diff_pixels": 0,
           "total_pixels": 61440
         },
-        "900:end": {
+        "1370:end": {
           "state": "match",
           "diff_pixels": 0,
           "total_pixels": 61440
@@ -159,34 +159,34 @@
       }
     },
     "case-crawlprobe": {
-      "scenario_sha256": "d9caaa3d03691d640b5071a335bae1b1d7ccce8f93ab4722fe208af679488a53",
+      "scenario_sha256": "a877799fd609d3dc94970db10ff480789499806d5dac38fadeb0ea96d385a438",
       "states": {
         "420:game-in": {
           "state": "match",
           "diff_pixels": 0,
           "total_pixels": 61440
         },
-        "550:after-right": {
+        "960:after-right": {
           "state": "match",
           "diff_pixels": 0,
           "total_pixels": 61440
         },
-        "650:after-left": {
+        "1060:after-left": {
           "state": "match",
           "diff_pixels": 0,
           "total_pixels": 61440
         },
-        "720:after-jump": {
+        "1130:after-jump": {
           "state": "match",
           "diff_pixels": 0,
           "total_pixels": 61440
         },
-        "820:after-shoot": {
+        "1230:after-shoot": {
           "state": "match",
           "diff_pixels": 0,
           "total_pixels": 61440
         },
-        "960:end": {
+        "1370:end": {
           "state": "match",
           "diff_pixels": 0,
           "total_pixels": 61440
@@ -264,49 +264,84 @@
       }
     },
     "case-jumpledge-probe": {
-      "scenario_sha256": "aec53510f64a173174c8dba5bb57ec84cd46d9e8bda774b097d0d20a57409b58",
+      "scenario_sha256": "bfc71fc33a3129ddf0b76c6c6bbb71266835b3fba895012709556147a23a58c3",
       "states": {
         "420:game-in": {
           "state": "match",
           "diff_pixels": 0,
+          "total_pixels": 61440
+        },
+        "1010:walk-mid": {
+          "state": "match",
+          "diff_pixels": 0,
+          "total_pixels": 61440
+        },
+        "1150:pre-jump": {
+          "state": "diff",
+          "diff_pixels": 368,
+          "total_pixels": 61440
+        },
+        "1165:takeoff": {
+          "state": "diff",
+          "diff_pixels": 126,
+          "total_pixels": 61440
+        },
+        "1190:rise": {
+          "state": "diff",
+          "diff_pixels": 9087,
+          "total_pixels": 61440
+        },
+        "1215:peak": {
+          "state": "diff",
+          "diff_pixels": 10018,
+          "total_pixels": 61440
+        },
+        "1240:land": {
+          "state": "diff",
+          "diff_pixels": 10197,
+          "total_pixels": 61440
+        },
+        "1260:land-settled": {
+          "state": "diff",
+          "diff_pixels": 10702,
           "total_pixels": 61440
         }
       }
     },
     "case-killenemy-probe": {
-      "scenario_sha256": "4d4f4aca8f4c6f80c68f1bbf44131938c92f15431e8eae1771717fef7b4c01fc",
+      "scenario_sha256": "f22e03f3ebdde9c9ccc2f89d0256a85e5b0b580beabc22fe774b55fcca5cff39",
       "states": {
         "420:game-in": {
           "state": "match",
           "diff_pixels": 0,
           "total_pixels": 61440
         },
-        "560:at-enemy": {
+        "1020:at-enemy": {
           "state": "match",
           "diff_pixels": 0,
           "total_pixels": 61440
         },
-        "590:hit-1": {
+        "1050:hit-1": {
           "state": "match",
           "diff_pixels": 0,
           "total_pixels": 61440
         },
-        "620:hit-2": {
+        "1080:hit-2": {
           "state": "match",
           "diff_pixels": 0,
           "total_pixels": 61440
         },
-        "650:dying": {
+        "1110:dying": {
           "state": "match",
           "diff_pixels": 0,
           "total_pixels": 61440
         },
-        "700:dead": {
+        "1160:dead": {
           "state": "match",
           "diff_pixels": 0,
           "total_pixels": 61440
         },
-        "800:after": {
+        "1260:after": {
           "state": "match",
           "diff_pixels": 0,
           "total_pixels": 61440
@@ -314,34 +349,34 @@
       }
     },
     "case-leftwalk-probe": {
-      "scenario_sha256": "701d0fb51e93436eb82f6b23b5d707487511a0faf3bb1718bc35c5be181b91d4",
+      "scenario_sha256": "15a705d44bcbd342f86f8eedde543593d2ff72d2f176b59b2b8aa3dd3242e4e5",
       "states": {
         "420:game-in": {
           "state": "match",
           "diff_pixels": 0,
           "total_pixels": 61440
         },
-        "520:left-80": {
+        "990:left-80": {
           "state": "match",
           "diff_pixels": 0,
           "total_pixels": 61440
         },
-        "620:left-180": {
+        "1090:left-180": {
           "state": "match",
           "diff_pixels": 0,
           "total_pixels": 61440
         },
-        "720:left-280": {
+        "1190:left-280": {
           "state": "match",
           "diff_pixels": 0,
           "total_pixels": 61440
         },
-        "790:left-350": {
+        "1260:left-350": {
           "state": "match",
           "diff_pixels": 0,
           "total_pixels": 61440
         },
-        "800:end": {
+        "1270:end": {
           "state": "match",
           "diff_pixels": 0,
           "total_pixels": 61440
@@ -349,39 +384,39 @@
       }
     },
     "case-leftwalk-probe2": {
-      "scenario_sha256": "b90418ab3e2e45da82137eec298c6adcdecfb64d3e8a1081241ff4186ebd3691",
+      "scenario_sha256": "2fe91822045cbbf65a5dac43b891494e66edfc982050258e269d273e8dd00fe3",
       "states": {
         "420:game-in": {
           "state": "match",
           "diff_pixels": 0,
           "total_pixels": 61440
         },
-        "620:l180": {
+        "1090:l180": {
           "state": "match",
           "diff_pixels": 0,
           "total_pixels": 61440
         },
-        "820:l380": {
+        "1290:l380": {
           "state": "match",
           "diff_pixels": 0,
           "total_pixels": 61440
         },
-        "1020:l580": {
+        "1490:l580": {
           "state": "match",
           "diff_pixels": 0,
           "total_pixels": 61440
         },
-        "1220:l780": {
+        "1690:l780": {
           "state": "match",
           "diff_pixels": 0,
           "total_pixels": 61440
         },
-        "1390:l950": {
+        "1860:l950": {
           "state": "match",
           "diff_pixels": 0,
           "total_pixels": 61440
         },
-        "1400:end": {
+        "1870:end": {
           "state": "match",
           "diff_pixels": 0,
           "total_pixels": 61440
@@ -389,111 +424,111 @@
       }
     },
     "case-morphball-probe": {
-      "scenario_sha256": "bc733460103bcada956b584e262bcff967569b950cb6bf7eeee7d77419999f93",
+      "scenario_sha256": "33c772991bb69d424aaa4a4cc01311a1db001455c76592c2319912ac85b7ab14",
       "states": {
         "420:game-in": {
           "state": "match",
           "diff_pixels": 0,
           "total_pixels": 61440
         },
-        "1128:wall-takeoff": {
+        "1588:wall-takeoff": {
           "state": "match",
           "diff_pixels": 0,
           "total_pixels": 61440
         },
-        "1134:wall-rise0a": {
+        "1594:wall-rise0a": {
           "state": "match",
           "diff_pixels": 0,
           "total_pixels": 61440
         },
-        "1140:wall-rise1": {
+        "1600:wall-rise1": {
           "state": "match",
           "diff_pixels": 0,
           "total_pixels": 61440
         },
-        "1146:wall-rise1b": {
+        "1606:wall-rise1b": {
           "state": "match",
           "diff_pixels": 0,
           "total_pixels": 61440
         },
-        "1152:wall-rise2": {
+        "1612:wall-rise2": {
           "state": "match",
           "diff_pixels": 0,
           "total_pixels": 61440
         },
-        "1158:wall-rise2b": {
+        "1618:wall-rise2b": {
           "state": "match",
           "diff_pixels": 0,
           "total_pixels": 61440
         },
-        "1164:wall-top": {
+        "1624:wall-top": {
           "state": "match",
           "diff_pixels": 0,
           "total_pixels": 61440
         },
-        "1170:wall-overa": {
+        "1630:wall-overa": {
           "state": "match",
           "diff_pixels": 0,
           "total_pixels": 61440
         },
-        "1176:wall-over": {
+        "1636:wall-over": {
           "state": "match",
           "diff_pixels": 0,
           "total_pixels": 61440
         },
-        "1182:wall-overb": {
+        "1642:wall-overb": {
           "state": "match",
           "diff_pixels": 0,
           "total_pixels": 61440
         },
-        "1188:pit-land": {
+        "1648:pit-land": {
           "state": "match",
           "diff_pixels": 0,
           "total_pixels": 61440
         },
-        "1194:pit-landb": {
+        "1654:pit-landb": {
           "state": "match",
           "diff_pixels": 0,
           "total_pixels": 61440
         },
-        "1200:wall-jump": {
+        "1660:wall-jump": {
           "state": "match",
           "diff_pixels": 0,
           "total_pixels": 61440
         },
-        "1300:pit": {
+        "1760:pit": {
           "state": "match",
           "diff_pixels": 0,
           "total_pixels": 61440
         },
-        "1460:pit-fall": {
+        "1920:pit-fall": {
           "state": "match",
           "diff_pixels": 0,
           "total_pixels": 61440
         },
-        "1520:pit-jump": {
+        "1980:pit-jump": {
           "state": "match",
           "diff_pixels": 0,
           "total_pixels": 61440
         },
-        "1560:ball-jump": {
+        "2020:ball-jump": {
           "state": "match",
           "diff_pixels": 0,
           "total_pixels": 61440
         },
-        "1620:on-pedestal": {
-          "state": "match",
-          "diff_pixels": 0,
+        "2080:on-pedestal": {
+          "state": "diff",
+          "diff_pixels": 8,
           "total_pixels": 61440
         },
-        "1650:after-pickup": {
-          "state": "match",
-          "diff_pixels": 0,
+        "2110:after-pickup": {
+          "state": "diff",
+          "diff_pixels": 8,
           "total_pixels": 61440
         },
-        "1700:end": {
-          "state": "match",
-          "diff_pixels": 0,
+        "2160:end": {
+          "state": "diff",
+          "diff_pixels": 8,
           "total_pixels": 61440
         }
       }
@@ -574,99 +609,99 @@
       }
     },
     "case-scrollseam-probe": {
-      "scenario_sha256": "b5f78ab36e289d21c939b6220980a84008def6d3138fec2acfca9adf367dc457",
+      "scenario_sha256": "72f690d995a065966920b35246c938d3378a815ff07b8ef43c606d53a77f7fd7",
       "states": {
         "420:game-in": {
           "state": "match",
           "diff_pixels": 0,
           "total_pixels": 61440
         },
-        "470:scroll-r30": {
+        "950:scroll-r30": {
           "state": "match",
           "diff_pixels": 0,
           "total_pixels": 61440
         },
-        "500:scroll-r60": {
+        "980:scroll-r60": {
           "state": "match",
           "diff_pixels": 0,
           "total_pixels": 61440
         },
-        "530:scroll-r90": {
+        "1010:scroll-r90": {
           "state": "match",
           "diff_pixels": 0,
           "total_pixels": 61440
         },
-        "560:scroll-r120": {
+        "1040:scroll-r120": {
           "state": "match",
           "diff_pixels": 0,
           "total_pixels": 61440
         },
-        "590:scroll-r150": {
+        "1070:scroll-r150": {
           "state": "match",
           "diff_pixels": 0,
           "total_pixels": 61440
         },
-        "620:scroll-r180": {
+        "1100:scroll-r180": {
+          "state": "diff",
+          "diff_pixels": 642,
+          "total_pixels": 61440
+        },
+        "1130:scroll-r210": {
+          "state": "diff",
+          "diff_pixels": 252,
+          "total_pixels": 61440
+        },
+        "1160:scroll-r240": {
+          "state": "diff",
+          "diff_pixels": 252,
+          "total_pixels": 61440
+        },
+        "1180:scroll-end": {
+          "state": "diff",
+          "diff_pixels": 184,
+          "total_pixels": 61440
+        },
+        "1240:scroll-l40": {
           "state": "match",
           "diff_pixels": 0,
           "total_pixels": 61440
         },
-        "650:scroll-r210": {
-          "state": "match",
-          "diff_pixels": 0,
+        "1280:scroll-l80": {
+          "state": "diff",
+          "diff_pixels": 126,
           "total_pixels": 61440
         },
-        "680:scroll-r240": {
-          "state": "match",
-          "diff_pixels": 0,
+        "1320:scroll-l120": {
+          "state": "diff",
+          "diff_pixels": 184,
           "total_pixels": 61440
         },
-        "700:scroll-end": {
-          "state": "match",
-          "diff_pixels": 0,
-          "total_pixels": 61440
-        },
-        "760:scroll-l40": {
-          "state": "match",
-          "diff_pixels": 0,
-          "total_pixels": 61440
-        },
-        "800:scroll-l80": {
-          "state": "match",
-          "diff_pixels": 0,
-          "total_pixels": 61440
-        },
-        "840:scroll-l120": {
-          "state": "match",
-          "diff_pixels": 0,
-          "total_pixels": 61440
-        },
-        "880:end": {
-          "state": "match",
-          "diff_pixels": 0,
+        "1360:end": {
+          "state": "diff",
+          "diff_pixels": 444,
           "total_pixels": 61440
         }
       }
     },
     "case-shootprobe-probe": {
-      "scenario_sha256": "84ce494fc556f1930e8fd1e3f0f66767493d8d1609b857d22fcb2d50d3fc5e05",
+      "scenario_sha256": "98ba8c8a6b3f31e071b2607455c8230e677cce7aec1a8bc36440136033a0dff8",
       "states": {
         "420:game-in": {
           "state": "match",
           "diff_pixels": 0,
           "total_pixels": 61440
         },
-        "810:fire-10": {
+        "1270:fire-10": {
           "state": "match",
           "diff_pixels": 0,
           "total_pixels": 61440
         },
-        "815:fire-15": {
+        "1275:fire-15": {
           "state": "match",
           "diff_pixels": 0,
           "total_pixels": 61440
         },
-        "825:fire-25": {
+        "1285:fire-25": {
           "state": "match",
           "diff_pixels": 0,
           "total_pixels": 61440
@@ -674,14 +709,29 @@
       }
     },
     "case-walkfcprobe": {
-      "scenario_sha256": "3637468735453e712aa0b57cb21fb55bb24d6ac0b0a14940cf3eed17f193d014",
+      "scenario_sha256": "8f31635c023bbc637526c64cd7531d34eeeb5b98b776832d31e9054c61c58118",
       "states": {
         "420:game-in": {
           "state": "match",
           "diff_pixels": 0,
           "total_pixels": 61440
         },
-        "620:l180": {
+        "1090:l180": {
+          "state": "match",
+          "diff_pixels": 0,
+          "total_pixels": 61440
+        },
+        "1290:l380": {
+          "state": "match",
+          "diff_pixels": 0,
+          "total_pixels": 61440
+        },
+        "1490:l580": {
+          "state": "match",
+          "diff_pixels": 0,
+          "total_pixels": 61440
+        },
+        "1870:end": {
           "state": "match",
           "diff_pixels": 0,
           "total_pixels": 61440
@@ -901,6 +951,16 @@
       "diff": 2,
       "blocked": 0,
       "cells_total": 122
+    },
+    {
+      "ts": "2026-11-14T06:42:17+00:00",
+      "kind": "rebase",
+      "evidence": "asm 07:C8D1 SamusInit 置 Timer3=$2C、07:C266 UpdateTimer 每 10 帧减 1 ⇒ 440 帧演出期间按键被吞（analysis/traces/case-001 实录 SamusX 恒 128 至 f902、f903 才动）；重锚后新增 10 格中 22 格暴露既有掩盖分歧（case-002 6 格 / jumpledge 6 格 / scrollseam 7 格 / morphball 3 格），既有 110 格无一回退；门链两处真错已修（a000dc09）",
+      "reason": "A-重锚：12 案输入窗整体后移出 440 帧开场演出（首动作帧→f910+），采集点 122→132",
+      "match": 108,
+      "diff": 24,
+      "blocked": 0,
+      "cells_total": 132
     }
   ]
 }
