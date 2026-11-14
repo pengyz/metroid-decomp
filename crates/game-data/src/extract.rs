@@ -56,6 +56,7 @@ pub fn sections(rom: &[u8]) -> Result<Vec<Section>, String> {
     out.extend(extract_samus_tables(prg)?);
     out.extend(extract_intro_star_palettes(prg)?);
     out.extend(extract_title_tables(prg)?);
+    out.extend(extract_tourian_metroid_data(prg)?);
     Ok(out)
 }
 
@@ -480,6 +481,8 @@ fn seg_meta() -> Vec<SegMeta> {
         SegMeta { key: PackKey::CrossLen, kind: "title-tbl", elem: 1, count: 5, rom: "bank00:$89AA", note: "CrossExplodeLengthTbl" },
         SegMeta { key: PackKey::CrossData, kind: "title-tbl", elem: 1, count: 68, rom: "bank00:$8A4B", note: "CrossExplodeDataTbl" },        SegMeta { key: PackKey::ToItems, kind: "item-rec", elem: 6, count: 0, rom: "bank03:$A83B", note: "SpecItmsTbl_TOURIAN" },
         SegMeta { key: PackKey::RiItems, kind: "item-rec", elem: 6, count: 0, rom: "bank05:$A20D", note: "SpecItmsTbl_RIDLEY" },
+        SegMeta { key: PackKey::TourianMetroidData, kind: "bytes", elem: 1, count: 14, rom: "bank07:$C5A8",
+                  note: "MetroidData（InitBank3 逐字节拷到 $77F0-$77FD）" },
     ];
     v
 }
@@ -823,6 +826,13 @@ const SAMUS_TABLES: [(PackKey, u16, usize, &str); 3] = [
     (PackKey::SamusAccel, 0xCCC0, 2, "RunAccelerationTbl $CCC0"),
 ];
 
+/// `MetroidData: ; 07:C5A8`（prg7_engine.asm:1466-1471）：14 B，`InitBank3` 尾
+/// `ldy #$0D / lda MetroidData,y / sta MetroidRepelSpeed,y / dey / bpl` 逐字节拷到
+/// `$77F0-$77FD`（MetroidRepelSpeed/MetroidAccel/MetroidMaxSpeed/MetroidLatch0400-0450）。
+/// bank7 窗口（`$C000` 固定段）⇒ `bank_slice(prg, 7, …)`。
+const TOURIAN_METROID_DATA_ADDR: u16 = 0xC5A8;
+const TOURIAN_METROID_DATA_LEN: usize = 14;
+
 /// `IntroStarPalette0..7 ; 00:8B0F`（8×10B 连续，`StarPaletteSwitch 00:8AC7` 经
 /// `IntroStarPalettePtrTable 00:8AFF` 间接取；表尾 `00:8B5F` 即 `DoFadeOut`）。
 const INTRO_STAR_PAL_ADDR: u16 = 0x8B0F;
@@ -891,6 +901,15 @@ fn extract_title_vram(prg: &[u8]) -> Result<Vec<Section>, String> {
         out.push(Section { key, data });
     }
     Ok(out)
+}
+
+/// `MetroidData ; 07:C5A8`（14 B）——`InitBank3` 初始化 Tourian 声/物理参数。
+fn extract_tourian_metroid_data(prg: &[u8]) -> Result<Vec<Section>, String> {
+    Ok(vec![Section {
+        key: PackKey::TourianMetroidData,
+        data: bank_slice(prg, 7, TOURIAN_METROID_DATA_ADDR, TOURIAN_METROID_DATA_LEN)
+            .map_err(|e| format!("MetroidData $C5A8: {e}"))?,
+    }])
 }
 
 fn extract_sfx_tables(prg: &[u8]) -> Result<Vec<Section>, String> {

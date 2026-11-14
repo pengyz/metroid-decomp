@@ -539,6 +539,21 @@ pub fn palette_stream(bank: usize, idx: usize) -> Option<&'static [u8]> {
 mod palette_tests {
     use super::*;
 
+    /// `MetroidData ; 07:C5A8`：14 B 全值锚（`InitBank3` 拷到 $77F0-$77FD）。
+    ///
+    /// asm 逐字节（prg7_engine.asm:1466-1471）：`F8 08`（MetroidRepelSpeed）/
+    /// `30 D0 60 A0`（MetroidAccel）/`02 04`（MetroidMaxSpeed）/`00 ×6`（latch 区初值）。
+    #[test]
+    fn tourian_metroid_data_matches_asm_bytes() {
+        let md = tourian_metroid_data();
+        assert_eq!(md.len(), 14, "MetroidData 长度");
+        assert_eq!(
+            md,
+            &[0xF8, 0x08, 0x30, 0xD0, 0x60, 0xA0, 0x02, 0x04, 0, 0, 0, 0, 0, 0],
+            "MetroidData 全 14 字节"
+        );
+    }
+
     /// sprite blob：三表界 = `$860B-$8572`/`$86DF-$860B`，且覆盖帧 0x28 记录（截断回归锚）。
     #[test]
     fn sprite_blob_covers_frame_records() {
@@ -784,6 +799,16 @@ pub fn sprite_data() -> &'static [u8] {
 /// 那些各有自己的段与访问器。
 pub fn sound_region() -> &'static [u8] {
     pack::get(PackKey::SndRegion)
+}
+
+/// `MetroidData ; 07:C5A8`（14 B）——Tourian 初始化参数。
+///
+/// `InitBank3 ; 07:C590` 的形状：
+/// `ldy #$0D / Lx: lda MetroidData,y / sta MetroidRepelSpeed,y / dey / bpl`
+/// ⇒ **倒序逐字节**拷到 `$77F0-$77FD`（MetroidRepelSpeed $77F0 / MetroidAccel $77F2 /
+/// MetroidMaxSpeed $77F6 / MetroidLatch0400-0450 $77F8）。只有 latch 区后续会被改写。
+pub fn tourian_metroid_data() -> &'static [u8] {
+    pack::get(PackKey::TourianMetroidData)
 }
 
 /// SFX 4B 记录窗基址（`$B211`）；窗口内记录以**绝对 ROM 址**引用。

@@ -251,7 +251,13 @@ pub fn c4de_unit(mem: &mut FrameMemory) {
         0 => c531_unit_pre(mem), // InitBank0（$C531——boot 链 pre 段）
         1 => init_bank1(mem),    // InitBank1（$C552——游戏入场链 Brinstar）
         2 => init_bank2(mem),    // InitBank2（$C583——Norfair，密码进场 InArea=$11 落此）
-        _ => crate::unported!("bank00:C51F"), // 非 boot/入场表项未端口
+        3 => init_bank3(mem),    // InitBank3（$C590——Tourian；含 MetroidData 14B 拷贝）
+        4 => init_bank4(mem),    // InitBank4（$C5B6——Kraid）
+        5 => init_bank5(mem),    // InitBank5（$C5C3——Ridley）
+        // BankInitTable 余 3 项（$C51F+12/+14/+16）在 asm 里就是 `ExitSub`（rts）——
+        // 即 idx 6/7/8 是**空槽**，不是未端口（见 prg7_engine.asm:1370-1372。
+        6 | 7 | 8 => {}
+        _ => crate::unported!("bank00:C51F"), // 表外 idx（>=9）：ROM 表只有 9 项
     }
 }
 
@@ -266,6 +272,51 @@ fn init_bank2(mem: &mut FrameMemory) {
     mem.write_ram(crate::ram_map::NMI_STATUS, 1); // ScreenNmiOff 域形
     mem.iter_wait();
     super::gfx::init_norfair_gfx(mem);
+    mem.iter_bogged(2);
+}
+
+/// InitBank3（**asm 内容锚** `InitBank3: ; 07:C590`——prg7_engine.asm:1449-1470）：
+/// `lda #$00 / sta GameMode`（Play）→ `jsr ScreenNmiOff` → `ldy #$0D` 倒序把
+/// `MetroidData`（$C5A8，14 B）拷到 `MetroidRepelSpeed`（$77F0-$77FD）→
+/// `jsr InitTourianGFX`（10 件）→ `jmp NMIOn`。
+///
+/// 【口径】`iter_bogged(2)` 沿 InitBank1/2 同族取值（两区已定谳：GFX 装载=重活×2）。
+/// Tourian 载 10 件而非 6/7 件，**该值未经对拍校准**（C 级假设；补 Tourian 进场案后
+/// 以 L4 归零即定谳，届时改注释与常数）。
+fn init_bank3(mem: &mut FrameMemory) {
+    mem.write_ram(crate::ram_map::GAME_MODE, 0);
+    mem.write_ram(crate::ram_map::NMI_STATUS, 1); // ScreenNmiOff 域形
+    mem.iter_wait();
+    // `ldy #$0D / lda MetroidData,y / sta MetroidRepelSpeed,y / dey / bpl`
+    // ⇒ $77F0+i ← MetroidData[i]（i=0..13；倒序遍历只是循环形，落值同序）。
+    let md = game_data::assets::tourian_metroid_data();
+    if md.len() != 14 {
+        crate::unported!("bank07:C5A8-len"); // MetroidData 长度不是 14 ⇒ 包损坏
+    }
+    for (i, b) in md.iter().enumerate() {
+        mem.write_ram(0x77F0 + i as u16, *b);
+    }
+    super::gfx::init_tourian_gfx(mem);
+    mem.iter_bogged(2);
+}
+
+/// InitBank4（**asm 内容锚** `InitBank4: ; 07:C5B6`——prg7_engine.asm:1472-1478）：
+/// `lda #$00 / sta GameMode` → `jsr ScreenNmiOff` → `jsr InitKraidGFX`（8 件）→ `jmp NMIOn`。
+fn init_bank4(mem: &mut FrameMemory) {
+    mem.write_ram(crate::ram_map::GAME_MODE, 0);
+    mem.write_ram(crate::ram_map::NMI_STATUS, 1);
+    mem.iter_wait();
+    super::gfx::init_kraid_gfx(mem);
+    mem.iter_bogged(2);
+}
+
+/// InitBank5（**asm 内容锚** `InitBank5: ; 07:C5C3`——prg7_engine.asm:1480-1486）：
+/// `lda #$00 / sta GameMode` → `jsr ScreenNmiOff` → `jsr InitRidleyGFX`（7 件）→ `jmp NMIOn`。
+fn init_bank5(mem: &mut FrameMemory) {
+    mem.write_ram(crate::ram_map::GAME_MODE, 0);
+    mem.write_ram(crate::ram_map::NMI_STATUS, 1);
+    mem.iter_wait();
+    super::gfx::init_ridley_gfx(mem);
     mem.iter_bogged(2);
 }
 
@@ -425,6 +476,34 @@ mod tests {
             .cloned()
             .or_else(|| err.downcast_ref::<&'static str>().map(|s| (*s).to_string()))
             .unwrap_or_default()
+    }
+
+    /// InitBank3（07:C590）：`MetroidData` 14 B 落到 `$77F0-$77FD`（倒序循环，落值同序），
+    /// GameMode←0；BankInitTable 的 idx 6/7/8 是 asm 空槽（`ExitSub`）⇒ 不得 panic。
+    #[test]
+    fn init_bank3_copies_metroid_data_and_empty_slots_are_rts() {
+        let mut m = FrameMemory::default();
+        m.write_ram(crate::ram_map::GAME_MODE, 1);
+        for a in 0x77F0..=0x77FDu16 {
+            m.write_ram(a, 0xAA); // 预污，验证真的被覆盖
+        }
+        // 直接走 c4de_unit 的表项分派（BankSwitchPending = bank+1 = 4 ⇒ idx 3）
+        m.write_ram(crate::ram_map::BANK_SWITCH_PENDING, 4);
+        c4de_unit(&mut m);
+        assert_eq!(m.read_ram(crate::ram_map::GAME_MODE), 0, "InitBank3 置 GameMode=0");
+        let md: Vec<u8> = (0x77F0..=0x77FDu16).map(|a| m.read_ram(a)).collect();
+        assert_eq!(
+            md,
+            vec![0xF8, 0x08, 0x30, 0xD0, 0x60, 0xA0, 0x02, 0x04, 0, 0, 0, 0, 0, 0],
+            "$77F0-$77FD == MetroidData"
+        );
+        // 空槽 idx 6/7/8（pending 7/8/9）不得 panic；GameMode 不动
+        for pending in [7u8, 8, 9] {
+            m.write_ram(crate::ram_map::BANK_SWITCH_PENDING, pending);
+            m.write_ram(crate::ram_map::GAME_MODE, 1);
+            c4de_unit(&mut m);
+            assert_eq!(m.read_ram(crate::ram_map::GAME_MODE), 1, "空槽不改 GameMode");
+        }
     }
 
     /// 清零环语义（bank07:C03F-C055）：pages $07..$02 **零填充**；ZP/栈页不触。

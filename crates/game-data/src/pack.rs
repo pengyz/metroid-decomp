@@ -208,6 +208,8 @@ pub enum PackKey {
     NoEnemyFacing = 150,
     NoEnMovPtrs = 151,
     NoEnMovStr = 152,
+    // ---- Tourian 初始化数据（bank7，InitBank3 消费）----
+    TourianMetroidData = 153,
 }
 
 impl PackKey {
@@ -372,6 +374,7 @@ impl PackKey {
             PackKey::NoEnemyFacing => "area.no.en_facing",
             PackKey::NoEnMovPtrs => "area.no.en_mov_ptrs",
             PackKey::NoEnMovStr => "area.no.en_mov_str",
+            PackKey::TourianMetroidData => "tourian.metroid_data",
         }
     }
 
@@ -531,6 +534,7 @@ impl PackKey {
             150 => PackKey::NoEnemyFacing,
             151 => PackKey::NoEnMovPtrs,
             152 => PackKey::NoEnMovStr,
+            153 => PackKey::TourianMetroidData,
             _ => return None,
         })
     }

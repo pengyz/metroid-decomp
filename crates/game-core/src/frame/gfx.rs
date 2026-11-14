@@ -40,6 +40,19 @@ pub mod gfx_id {
     pub const FONT_HUD: u8 = 24;
     pub const SOLID_0FC0: u8 = 25;
     pub const SAMUS_SUITLESS: u8 = 27;
+    // 后三区件（GFXInfo 表序自证：prg7_engine.asm:1686-1755 条目注释 Entry 10-19/26/28）
+    pub const BOSS_BG: u8 = 10; // Entry 10 (0A) [BGR]Boss areas (Kr,Rd,Tr)
+    pub const TOUR_BG: u8 = 11; // Entry 11 (0B) [BGR]Tourian rooms
+    pub const ZEBETITE: u8 = 12; // Entry 12 (0C) [BGR]Mother Brain room
+    pub const TOURIAN_FONT: u8 = 13; // Entry 13 (0D) [BGR]Misc. object
+    pub const TOURIAN_SPRITES: u8 = 14; // Entry 14 (0E) [SPR]Tourian enemies
+    pub const KRAI_BG2: u8 = 15; // Entry 15 (0F) [BGR]More Kraid rooms
+    pub const KRAI_BG3: u8 = 16; // Entry 16 (10) [BGR]More Kraid rooms
+    pub const KRAID_SPRITES: u8 = 17; // Entry 17 (11) [SPR]Miniboss I enemies
+    pub const RIDL_BG: u8 = 18; // Entry 18 (12) [BGR]More Ridley rooms
+    pub const RIDLEY_SPRITES: u8 = 19; // Entry 19 (13) [SPR]Miniboss II enemies
+    pub const FONT_TOURIAN: u8 = 26; // Entry 26 (1A) [BGR]Tourian font
+    pub const EXCLAMATION: u8 = 28; // Entry 28 (1C) [BGR]Exclamation point
 }
 
 /// GFXInfo 描述子读取（7B=bank/src2/dest2/size2）。
@@ -68,6 +81,46 @@ pub fn gfx_info(id: u8) -> [u8; 7] {
 pub fn init_norfair_gfx(mem: &mut FrameMemory) {
     use gfx_id::*;
     for id in [CREBG1, CREBG2, NORF_BG1, NORF_BG2, NORFAIR_SPRITES, SOLID_0FC0, SOLID_1FC0] {
+        load_gfx(mem, id);
+    }
+}
+
+/// InitTourianGFX（**asm 内容锚** `InitTourianGFX: ; 07:C645`——prg7_engine.asm:1564-1593）：
+/// CREBG2 → BossBG → TourBG → Zebetite → TourianFont → TourianSprites → Font_Tourian →
+/// ExclamationPoint → Solid_0FC0 → `jmp LoadGFX`(Solid_1FC0)（**10 件**）。
+pub fn init_tourian_gfx(mem: &mut FrameMemory) {
+    use gfx_id::*;
+    for id in [
+        CREBG2,
+        BOSS_BG,
+        TOUR_BG,
+        ZEBETITE,
+        TOURIAN_FONT,
+        TOURIAN_SPRITES,
+        FONT_TOURIAN,
+        EXCLAMATION,
+        SOLID_0FC0,
+        SOLID_1FC0,
+    ] {
+        load_gfx(mem, id);
+    }
+}
+
+/// InitKraidGFX（**asm 内容锚** `InitKraidGFX: ; 07:C677`——prg7_engine.asm:1595-1618）：
+/// CREBG1 → CREBG2 → BossBG → KraiBG2 → KraiBG3 → KraidSprites → Solid_0FC0 → Solid_1FC0
+/// （**8 件**）。
+pub fn init_kraid_gfx(mem: &mut FrameMemory) {
+    use gfx_id::*;
+    for id in [CREBG1, CREBG2, BOSS_BG, KRAI_BG2, KRAI_BG3, KRAID_SPRITES, SOLID_0FC0, SOLID_1FC0] {
+        load_gfx(mem, id);
+    }
+}
+
+/// InitRidleyGFX（**asm 内容锚** `InitRidleyGFX: ; 07:C69F`——prg7_engine.asm:1620-1643）：
+/// CREBG1 → CREBG2 → BossBG → RidlBG → RidleySprites → Solid_0FC0 → Solid_1FC0（**7 件**）。
+pub fn init_ridley_gfx(mem: &mut FrameMemory) {
+    use gfx_id::*;
+    for id in [CREBG1, CREBG2, BOSS_BG, RIDL_BG, RIDLEY_SPRITES, SOLID_0FC0, SOLID_1FC0] {
         load_gfx(mem, id);
     }
 }

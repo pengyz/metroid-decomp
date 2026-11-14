@@ -520,18 +520,61 @@ fn enemy_loop(
                 load_door(mem, stream.get(i + 1).copied().unwrap_or(0));
                 i += 2;
             }
-            4 | 6 | 7 => {
-                let addr = match ty {
-                    4 => 0xEC04, // LoadElevator
-                    6 => 0xEC2F, // LoadStatues
-                    _ => 0xEC57, // LoadPipeBugHole
+            4 => {
+                load_elevator(mem, stream.get(i + 1).copied().unwrap_or(0));
+                i += 2; // 梯=2（SpawnElevatorRoutine 尾 `lda #$02/rts`）
+            }
+            6 | 7 => {
+                let addr = if ty == 6 {
+                    0xEC2F // LoadStatues
+                } else {
+                    0xEC57 // LoadPipeBugHole
                 };
                 crate::frame::DIVERGENCES.with(|d| d.borrow_mut().push(addr));
-                i += if ty == 4 { 2 } else { 3 }; // 梯=2（A 级）/像虫=3（待考）
+                i += 3; // 像/虫=3（待考）
             }
             _ => return false,
         }
     }
+}
+
+/// LoadElevator（`LoadElevator: ; 07:EC04` → `SpawnElevatorRoutine: ; 07:EC09`，
+/// prg7_engine.asm:8955-8967）+ 尾 `jmp EnemyLoop`（`Lx230`，:8839）。
+///
+/// ```text
+/// SpawnElevatorRoutine:
+///   lda Elevator.status / bne @exit        ; 已有电梯 ⇒ 跳过（幂等）
+///   iny / lda (Temp00_RoomPtr),y           ; y 已指向条目第 2 字节（=info）
+///   sta ElevatorType                        ; $032F（bit7=上/下，低半字节=梯号）
+///   ldy #$83 / sty Elevator.y               ; $032D
+///   lda #$80 / sta Elevator.x               ; $032E
+///   jsr GetNameTableAtScrollDir / sta Elevator.hi   ; $032C
+///   lda #_id_ObjFrame_Elevator / sta Elevator.animFrame  ; $0323
+///   inc Elevator.status                     ; $0320 ← 1
+/// @exit: lda #$02 / rts
+/// ```
+///
+/// 槽位：`Elevator = Objects + $20`（`constants_ram.asm:844`，对象槽 2 ⇒ $0320）；
+/// `ElevatorType = Elevator.data0F`（`:886`）。**注意 `iny` 后读的是 info 字节**，
+/// 不是 type 字节（type 字节在 `stream[i]`，已由 `enemy_loop` 消费）。
+fn load_elevator(mem: &mut crate::frame::FrameMemory, info: u8) {
+    const ELEVATOR: u16 = 0x0320;
+    if mem.read_ram(ELEVATOR) != 0 {
+        return; // @exit：已有电梯
+    }
+    mem.write_ram(ELEVATOR + 0x0F, info); // ElevatorType
+    mem.write_ram(ELEVATOR + 0x0D, 0x83); // y
+    mem.write_ram(ELEVATOR + 0x0E, 0x80); // x
+    let hi = get_name_table_at_scroll_dir(
+        mem.read_ram(crate::ram_map::PPUCTRL_ZP),
+        mem.read_ram(crate::ram_map::SCROLL_DIR),
+    );
+    mem.write_ram(ELEVATOR + 0x0C, hi);
+    // `_id_ObjFrame_Elevator.b` = **$23**：ObjFramePtrTable 内序数（`common_sprite_data.asm`
+    // PtrTableEntry 块按序数命名自证：…ObjFrame21(=$21)/SamusStandFire($22)/**Elevator($23)**/
+    // ObjFrame24）。`ObjDrawFrame` 取用前 `asl`（prg7:6251）⇒ animFrame 存未翻倍序数。
+    mem.write_ram(ELEVATOR + 0x03, 0x23);
+    mem.write_ram(ELEVATOR, 1); // inc status
 }
 
 /// EndOfRoom（$EAF4）——RoomNumber←$F0（属性表尾命令——SetupRoom 环续面）。
@@ -818,6 +861,50 @@ mod r25_attr_probe {
 // ===== 任务卡 1：门对象槽系统（TDD（测试先行（实现后补）））=====
 
 #[cfg(test)]
+mod tests_load_elevator {
+    //! `LoadElevator ; 07:EC04` → `SpawnElevatorRoutine ; 07:EC09`（prg7:8955-8967）：
+    //! status≠0 幂等跳过；否则 type/y=$83/x=$80/hi=GetNameTableAtScrollDir/animFrame=$23。
+    use super::*;
+    use crate::frame::FrameMemory;
+    use crate::ram_map::{PPUCTRL_ZP, SCROLL_DIR};
+
+    const ELEVATOR: u16 = 0x0320;
+
+    /// 首装：`iny` 后读的是 **info 字节**（type 字节已由 enemy_loop 消费）——
+    /// 这里直接把 info 传进来，断言它落到 ElevatorType（$032F）。
+    #[test]
+    fn first_spawn_sets_fields() {
+        for (ppuctrl, scroll_dir) in [(0x00u8, 0x02u8), (0x00, 0x00), (0x01, 0x00), (0x01, 0x02)] {
+            let want_hi = (ppuctrl ^ scroll_dir) & 0x01; // GetNameTableAtScrollDir（$EB85）
+            let mut m = FrameMemory::default();
+            m.write_ram(PPUCTRL_ZP, ppuctrl);
+            m.write_ram(SCROLL_DIR, scroll_dir);
+            load_elevator(&mut m, 0x81); // bit7=上，梯号 1
+            assert_eq!(m.read_ram(ELEVATOR), 1, "status←1");
+            assert_eq!(m.read_ram(ELEVATOR + 0x0F), 0x81, "ElevatorType←info 字节");
+            assert_eq!(m.read_ram(ELEVATOR + 0x0D), 0x83, "y←$83");
+            assert_eq!(m.read_ram(ELEVATOR + 0x0E), 0x80, "x←$80");
+            assert_eq!(m.read_ram(ELEVATOR + 0x0C), want_hi, "hi←GetNameTableAtScrollDir");
+            assert_eq!(m.read_ram(ELEVATOR + 0x03), 0x23, "animFrame←_id_ObjFrame_Elevator");
+        }
+    }
+
+    /// 幂等：已存在电梯（status≠0）⇒ `bne @exit` **一个字节都不写**。
+    #[test]
+    fn second_spawn_is_inert() {
+        let mut m = FrameMemory::default();
+        m.write_ram(ELEVATOR, 5);
+        for a in [0x0Fu16, 0x0D, 0x0E, 0x0C, 0x03] {
+            m.write_ram(ELEVATOR + a, 0x77);
+        }
+        load_elevator(&mut m, 0x8F);
+        assert_eq!(m.read_ram(ELEVATOR), 5, "status 不被改写");
+        for a in [0x0Fu16, 0x0D, 0x0E, 0x0C, 0x03] {
+            assert_eq!(m.read_ram(ELEVATOR + a), 0x77, "field {a:#x} 不得被写");
+        }
+    }
+}
+
 mod tests_load_door {
     //! 判径（findings/door-system-audit.md 任务卡 1 实录）：棋盘槽选
     //! y=((MapPosX+MapPosY)&1)<<1|side；DoorSlots=[0x00,0x30,0x20,0x10]；
