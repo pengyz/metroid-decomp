@@ -172,7 +172,7 @@ WritePPUCtrl（唯一点亮真 PPUMASK 的地方）/ WriteScroll / ReadJoyPads`�
 |---|---|---|---|---|---|
 | **1** | 死亡 → GameOver（`mr=4` 缺） ✅ **已修** | ★★★ | ~~死亡后 panic~~ → 已端口 | `prepare_game_over`（三条写）+ 复用已有 `TitleRoutine 0x1C` 臂（`PrepareVram(0x93B9)`/`Timer3←$10`/相位→0x19 均已实现） | 小（已完成） |
 | **2** | 游戏内暂停（`GoMainRoutine` START 开关 + `mr=5`） ✅ **已修** | ★★★ | ~~按 START 静默无效~~ → 已端口 | `start_pause_toggle`（3↔5 + `GamePaused ^= 1` + `PauseMusic`）+ `pause_mode`（2P A+UP 退出）+ `go_password`（mr=6） | 小-中（已完成） |
-| **3** | 电梯 / 区域间移动 | ★★★ | 只有 2 个区可达，且**不能换区** | `UpdateElevator $D7B3` + `SpawnElevator $EEA1` + `InitBank3/4/5` | 大 |
+| **3** | 电梯 / 区域间移动 ✅ **已实现 / 待差分验证** | ★★★ | ~~panic~~ → 十态+`SamusElevator`+碰撞段已端口；**但无 L4 采集点走到电梯/换区**（见下注） | `UpdateElevator $D7B3`（十态）+ `SpawnElevator $EEA1`（`load_elevator`）+ `InitBank3/4/5`（含 MetroidData→$77F0）+ 竖滚地基（`ScrollUp $E4F1`/`ScrollDown $E519`/行写核）+ `CheckCollisionOfXSlotAndYSlot $F1FA` | 大（实现完成 / 差分待补） |
 | **4** | 后三区数据（Kraid/Tourian/Ridley） | ★★★ | 3/5 世界不可进 | 在 `crates/game-data/src/extract.rs` 增 3 区段（区序见 `AREA_ITEMS`/`AREA_SPEC`）+ 敌表分区（**先解 16B vs 64B 尺寸疑点**，见 `docs/findings/enemy-table-extent.md`） | 中 |
 | **5** | 暂停→密码屏（`mr=5 PauseMode` + `mr=6 GoPassword` 缺） ✅ **已修（并入 #2）** | ★★ | ~~panic~~ → 已端口 `pause_mode`/`go_password` | `PauseMode` 需 2P 的 A+UP 同按 + 逃脱计时器未激活；成功则 `GamePaused←0` + `inc MainRoutine`(5→6) | 小（已完成） |
 | **6** | 出门链（`MoveOutDoor $D3AE` 等 4 桩） ✅ **已实现 / 待差分验证** | ★★ | ~~走门 panic~~ → 已端口；**但无 L4 采集点走到该链**（见下行注） | `samus_door` 全链（D3A8 逐字节）+ `Door_DeleteOffscreenEnemies`（D48C，**保真两处 asm 自带 BUG**：敌环 `#$60`/`#$20` 而非 `#$50`/`#$10`；管道虫洞环 `bne` 致槽 0 不访问）+ `Doors_RemoveIfOffScreen`（ED65，4 门 $B0..$80）+ `GotoClearAllMetroidLatches`（$95AB 区 bank 桩表：仅 bank3 Tourian 有效，其余 `60 EA EA`）+ 音乐面（`ItemRoomMusicStatus`/`KraidRidleyPresent`→TourianMusic） | 中（实现完成 / 差分待补） |
@@ -181,6 +181,23 @@ WritePPUCtrl（唯一点亮真 PPUMASK 的地方）/ WriteScroll / ReadJoyPads`�
 
 **优先级建议（2026-11-13 二次修订）**：#1（死亡链）✅ → #2 + #5（暂停→密码屏，同族三件）✅
 → #6（出门链，与 #3 共用机制）✅ → #3+#4（换区+后三区，最大块）→ #7 → #8。
+
+> 【2026-11-14 更正】#3 的「已实现」同样只到**实现层**，而且 r9 对抗复核当场抓出一处
+> **行为反向**：`samus_elevator` 的滚屏触发条件最初写成「下行 `scr_y < $84` 才滚、上行
+> `scr_y >= $64` 才滚」，与 asm 恰相反——`SamusElevator ; 07:D42E` 的 `bcc Lx057` / `bcs Lx060`
+> 都是**跳到「跳过滚动」处**，正确形是「下行 `scr_y >= $84` 才 `ScrollDown`、上行 `scr_y < $64`
+> 才 `ScrollUp`」（与 `MoveSamusUp/Down $E457/$E4A3` 同口径）。后果不是偏 1px：`ToggleSamusHi`
+> 与 `Samus.y` 的 0↔239 回绕写在同一分支体里，条件反了会让 Samus 在**不滚屏**时把 y 推到 239
+> 再翻 hi、ScrollY 与名表位置脱钩——整趟电梯画面与原版相反。已修（`fix(core)` 随本注同批），
+> 并补 4 条**阈值边界**断言（`scr_y==$84` 必滚 / `scr_y==$83` 不滚 / `scr_y==$63` 必滚 /
+> `scr_y==$64` 不滚），且做过**变异验证**：把条件改回反向 ⇒ 两条新测当场红。
+> 教训（第二次同型）：`#6` 是「常量/基址读错」，本轮是「比较跳转方向读反」——**都是单测绿、
+> asm 读错**。凡 asm 里出现 `bcc/bcs/bmi/bpl` 再跟一个 `jsr Scroll*`，判据必须写成
+> 「**跳到哪儿 = 跳过什么**」，不能凭物理直觉反推。
+> 覆盖缺口（与 #6 同级，须在结项前补）：`cases/*.txt` 里没有任何电梯用例，14 案 112 格
+> 无一进入 Tourian/Kraid/Ridley，也无一触发 `Elevator.status≠0` ⇒ 电梯十态**零对拍证据**。
+> 补点方式同 #6 三步（先逐帧记 `$0320` 找 `status≠0` 帧 → 加 capture → 断言 `status` 序列
+> 走过 1/2/3/4/6 且 `$0074` 的区号位被改写）。
 
 > 【2026-11-14 更正】#6 的「已修」只到**实现层**：r9 对抗复核（verifier）查出
 > `Doors_RemoveIfOffScreen` 曾把 `$0300,x`（绝对址 $0380..$03B0）写成零页偏移 `0x80`，

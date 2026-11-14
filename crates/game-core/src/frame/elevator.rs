@@ -48,8 +48,8 @@ const S_X: u16 = 0x0E;
 /// 电梯槽 PageIndex（槽 2 × $10）——`ObjDrawFrame`/`AnimDrawObject` 取页基。
 const ELEV_PAGE: u8 = 0x20;
 
-/// `SCRN_VX` = 256 / `SCRN_VY` = 240（`hardware.asm:138-139`）。
-const SCRN_VX: u8 = 0; // 256 取低字节（`#(SCRN_VX/2)` = 128）
+/// `SCRN_VY` = 240（`hardware.asm:138-139`）。`SCRN_VX`=256 放不进 u8，其唯一用途是
+/// `SCRN_VX/2`=128，故不设该常量而直接写 `0x80`（避免「256 塞 u8 溢出」陷阱）。
 const SCRN_VY: u8 = 240;
 
 /// `sa_Elevator` = 9（`constants.asm` `sa_Elevator` 序数；`GoSamusHandler` 十态表 index 9）。
@@ -78,6 +78,9 @@ const OBJFRAME_ELEVATOR: u8 = 0x23;
 
 /// `PaletteToggle`（`constants_ram.asm:609`）/ eor 掩码 `(Palette00+1)^(Palette05+1)` = 1^6 = 7。
 const PALETTE_TOGGLE: u16 = 0x0076;
+/// `PaletteToggle eor #(_id_Palette00+1)~(_id_Palette05+1)`——**前提**：Palette00..05 的
+/// 表序 id 恰为 0..5（`prg0_title.asm` PalettePtrTable 序），故 `1 ^ 6 = 7`；Tourian 径直接
+/// `lda #_id_Palette00+1` = 1。两处常量耦合同一前提，改表序须同时复核。
 const PALETTE_TOGGLE_XOR: u8 = 0x07;
 
 /// `enemyStatus_Frozen` = 4（`constants.asm:124`）。
@@ -143,7 +146,7 @@ fn elev_idle(mem: &mut FrameMemory) {
     mem.write_ram(ELEVATOR + F_STATUS, st); // ⇒ 2 ScrollXToCenter
     mem.write_ram(SAMUS + S_STATUS, SA_ELEVATOR);
     set_samus_anim(mem, ANIM_SAMUS_FRONT);
-    mem.write_ram(SAMUS + S_X, SCRN_VX / 2 + 128); // #(SCRN_VX/2) = 128
+    mem.write_ram(SAMUS + S_X, 0x80); // #(SCRN_VX/2)
     mem.write_ram(SAMUS + S_Y, SCRN_VY / 2 - 8); // #(SCRN_VY/2-8) = 112
     draw_elevator(mem);
 }
@@ -250,8 +253,8 @@ fn elev_fade(mem: &mut FrameMemory) {
 }
 
 /// `ElevatorD8BF` 的调色板选取（`ldy InArea / cpy #$12 / bcc @endIf_D /
-/// lda #_id_Palette00+1`）：Tourian（InArea>=$12）恒 Palette00+1(=1)，否则用
-/// `PaletteToggle` 值。抽成纯函数以便单测（**注意**：asm 随后 `jsr SelectSamusPalette`
+/// lda #_id_Palette00+1`）：**InArea>=$12 的三个区（Kraid=2/Tourian=3/Ridley=4）**恒
+/// Palette00+1(=1)，Brinstar/Norfair 用 `PaletteToggle` 值。抽成纯函数以便单测（**注意**：asm 随后 `jsr SelectSamusPalette`
 /// 会再次覆写 `PaletteDataPending`，故该值在帧末不可观测）。
 pub fn palette_pending_value(in_area: u8, palette_toggle: u8) -> u8 {
     if in_area >= 0x12 {
@@ -351,7 +354,9 @@ pub fn samus_elevator(mem: &mut FrameMemory) {
         if etype & 0x80 == 0 {
             // 电梯下行
             let scr_y = mem.read_ram(SAMUS + S_Y).wrapping_sub(mem.read_ram(SCROLL_Y));
-            if scr_y < 0x84 {
+            // asm `cmp #$84 / bcc Lx057`——**低于 $84 就不滚**（bcc 跳到跳滚处）；
+            // 即 Samus 落到屏幕下段才把摄像机往下推（与 MoveSamusDown 同口径）。
+            if scr_y >= 0x84 {
                 crate::samus::physics::scroll_down(mem);
             }
             let mut y = mem.read_ram(SAMUS + S_Y);
@@ -364,7 +369,9 @@ pub fn samus_elevator(mem: &mut FrameMemory) {
         } else {
             // 电梯上行
             let scr_y = mem.read_ram(SAMUS + S_Y).wrapping_sub(mem.read_ram(SCROLL_Y));
-            if scr_y >= 0x64 {
+            // asm `cmp #$64 / bcs Lx060`——**≥ $64 就不滚**（bcs 跳到跳滚处）；
+            // 即 Samus 升到屏幕上段才把摄像机往上推（与 MoveSamusUp 同口径）。
+            if scr_y < 0x64 {
                 crate::samus::physics::scroll_up(mem);
             }
             let mut y = mem.read_ram(SAMUS + S_Y);
@@ -662,6 +669,57 @@ mod tests {
         assert_eq!(mem.read_ram(ROOM_PTR), 0);
         assert_eq!(mem.read_ram(BANK_SWITCH_PENDING), 1);
         assert_eq!(mem.read_ram(TITLE_ROUTINE), 0x1D, "TitleRoutine←_id_EndGame");
+    }
+
+    /// P0 回归锚（r9 第三轮抓出的反向比较）：下行时 **scr_y < $84 不滚**、**>= $84 才滚**。
+    /// asm `SamusElevator` 07:D42E-07:D440 = `lda Samus.y / sec / sbc ScrollY / cmp #$84 /
+    /// bcc Lx057`（bcc 跳到 `Lx057` 即**跳过** ScrollDown）。
+    #[test]
+    fn samus_elevator_down_scrolls_only_at_or_below_threshold() {
+        // scr_y = 0x84（= 阈值）⇒ 滚：ScrollY 0x10 → 0x11
+        let mut mem = m();
+        mem.write_ram(ELEV_STATUS, 3);
+        mem.write_ram(ELEV_TYPE, 0x02); // bit7 清 ⇒ 下行
+        mem.write_ram(SCROLL_DIR, 1); // 已在向下滚（否则本拍只切方向不动）
+        mem.write_ram(SCROLL_Y, 0x10);
+        mem.write_ram(SAMUS + S_Y, 0x94); // scr_y = 0x94 - 0x10 = 0x84
+        samus_elevator(&mut mem);
+        assert_eq!(mem.read_ram(SCROLL_Y), 0x11, "scr_y==$84 ⇒ 必须 ScrollDown");
+
+        // scr_y = 0x83（阈值下 1px）⇒ 不滚
+        let mut mem = m();
+        mem.write_ram(ELEV_STATUS, 3);
+        mem.write_ram(ELEV_TYPE, 0x02);
+        mem.write_ram(SCROLL_DIR, 1);
+        mem.write_ram(SCROLL_Y, 0x10);
+        mem.write_ram(SAMUS + S_Y, 0x93); // scr_y = 0x83
+        samus_elevator(&mut mem);
+        assert_eq!(mem.read_ram(SCROLL_Y), 0x10, "scr_y<$84 ⇒ 不滚（bcc 跳滚）");
+    }
+
+    /// 同上，上行反侧：**scr_y >= $64 不滚**、**< $64 才滚**。
+    /// asm 07:D453-07:D460 = `cmp #$64 / bcs Lx060`（bcs 跳到 `Lx060` 即跳过 ScrollUp）。
+    #[test]
+    fn samus_elevator_up_scrolls_only_below_threshold() {
+        // scr_y = 0x63 ⇒ 滚：ScrollY 0x10 → 0x0F
+        let mut mem = m();
+        mem.write_ram(ELEV_STATUS, 8);
+        mem.write_ram(ELEV_TYPE, 0x82); // bit7 置 ⇒ 上行
+        mem.write_ram(SCROLL_DIR, 0); // 已在向上滚
+        mem.write_ram(SCROLL_Y, 0x10);
+        mem.write_ram(SAMUS + S_Y, 0x73); // scr_y = 0x73 - 0x10 = 0x63
+        samus_elevator(&mut mem);
+        assert_eq!(mem.read_ram(SCROLL_Y), 0x0F, "scr_y<$64 ⇒ 必须 ScrollUp");
+
+        // scr_y = 0x64（= 阈值）⇒ 不滚
+        let mut mem = m();
+        mem.write_ram(ELEV_STATUS, 8);
+        mem.write_ram(ELEV_TYPE, 0x82);
+        mem.write_ram(SCROLL_DIR, 0);
+        mem.write_ram(SCROLL_Y, 0x10);
+        mem.write_ram(SAMUS + S_Y, 0x74); // scr_y = 0x64
+        samus_elevator(&mut mem);
+        assert_eq!(mem.read_ram(SCROLL_Y), 0x10, "scr_y>=$64 ⇒ 不滚（bcs 跳滚）");
     }
 
     /// Tourian（InArea>=$12）恒用 Palette00+1=1（纯函数面——帧末值会被
