@@ -108,3 +108,44 @@ shoot 4/4、walkfc 5/5。
 - 教训：**0px 一致只证明「两侧同一种走法」，不证明「这段代码被走到」**。本次之前，
   14 案的动作证据全为空对空——与 `shootprobe`/`scrollseam` 同类问题第四次复发。今后
   新 case 的输入窗必须避开 `MainRoutine==8` 区间（`Timer3` 耗尽前）。
+
+## 7. 2026-11-14 追加：敌生命周期缺件已修，但 jumpledge 的真因是跳跃垂直物理
+
+**已修（`6d5b280e`）**：`DeleteOffscreenRoomSprites ; 07:EC9B` 全件端口（`SetupRoom` 的
+`jsr ScanForItems` 之前的 `jsr DeleteOffscreenRoomSprites`，asm :8586/:8588），并把
+`setup_room` 的次序改回 asm 形。单测 5 条钉判据方向（目标名表 ∧ 不可见才删；PowerUp
+是「相等才删」；`UpdateDoorData` 形是 `(ScrollDir-1)^3 & 旧值` 取交集，不是清位）。
+
+**采集点级零翻转**：矩阵仍 15 案 / 132 格 / match 108 / diff 24。只有像素量收缩
+（jumpledge f1215 10018→9914、f1240 10197→9995、f1260 10702→10500）⇒ 本件不是这 6 格
+的根因。
+
+**jumpledge 的真因（本轮新证据，未修）**：`f1165 takeoff` 两腿 Samus 槽（`$0300-$031F`）
+**逐字节全等**（`speedY=FC subY=E8 subX=E0 accelY=18 horzSpeedMax=12`），到 `f1190 rise`
+即分叉：
+
+| 址 | 字段 | emu | rust |
+|---|---|---|---|
+| `$0308` | SamusSpeedY 整 | `01` | `00` |
+| `$030D` | Samus.y | `B7` | `AC`（**高 11px**）|
+| `$030E` | Samus.x | `0C` | `0E` |
+| `$030F` | — | `0A` | `15` |
+| `$0310` | SamusSubPixelY | `60` | `18` |
+| `$0311` | SamusSubPixelX | `00` | `D0` |
+| `$0312/$0313` | 垂直次级累积 | `F8/20` | `B6/80` |
+| `$0314` | SamusAccelY | `18` | **`1A`** |
+| `$0316` | SamusHorzSpeedMax | `12` | **`18`** |
+
+读法：`accelY` 在 emu 仍为跳起值 `$18`，rust 已变成落体值 `$1A` ⇒ **rust 某个帧读到
+`accelY==0` 后走了 `VertAccelerate ; 07:E37A` 的「置落体重力」径**（asm `lda SamusAccelY /
+bne @dontStartFalling`，只有为 0 才写 `#$1A`）。而 `horzSpeedMax` 同样是在那条径里写的
+（`lda #$18 / sta SamusHorzSpeedMax`）——rust 的 `$18` 与 `accelY=$1A` 同源，互为旁证。
+
+结论：跳跃途中 `SamusAccelY` 被某处清零（asm 只有 `@landingNoBounce` 落地径会清），
+随后被重力径改写 ⇒ 弧线/落点全分叉，摄像机跟随随之偏移（画面表现为恒定 3px 水平相位差，
+把 rust 平移 +3 后 f1190 的 diff 由 9087 降到 697）。下一个待查点=**空中误判落地**
+（`MoveSamusDown` 的 8px 门 + `ObjectCheckMoveDown` 判定，或 `StopVertMovement` 的
+调用面），不是敌 AI。
+
+**另一处独立差**：`ItemIndex`（`$4C`，`constants_ram.asm:537`，`#$00 or #$08`，加到
+PowerUpType 地址上）emu=`08` / rust=`00` —— 与拾取面相关，与上述跳跃链无关，另行立案。
