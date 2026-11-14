@@ -118,6 +118,8 @@ pub enum PackKey {
     SamusActions = 65,
     SamusPntUp = 66,
     SamusAccel = 67,
+    /// `IntroStarPalette0..7 ; 00:8B0F`（8×10B，星闪调色板）。
+    IntroStarPal = 68,
     NametableHi = 37,
 }
 
@@ -197,6 +199,7 @@ impl PackKey {
             PackKey::SamusActions => "samus.actions",
             PackKey::SamusPntUp => "samus.pnt_up",
             PackKey::SamusAccel => "samus.accel",
+            PackKey::IntroStarPal => "title.star_pal",
             PackKey::NametableHi => "rom.nt_hi",
         }
     }
@@ -271,6 +274,7 @@ impl PackKey {
             65 => PackKey::SamusActions,
             66 => PackKey::SamusPntUp,
             67 => PackKey::SamusAccel,
+            68 => PackKey::IntroStarPal,
             37 => PackKey::NametableHi,
             _ => return None,
         })

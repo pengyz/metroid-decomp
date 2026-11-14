@@ -28,12 +28,6 @@
       "note": "小表集合（MAIN_ROUTINE_PTR_TABLE 10 / DATA_DISPLAY_TBL 40 / 帧内 test 表）——地址与表长类元知识，非大块数据。"
     },
     {
-      "file": "crates/game-data/src/render/render_data.rs",
-      "kind": "data",
-      "max": 200,
-      "note": "INTRO_STAR_PALETTES(8×10，ROM 派生) 为真数据；NES_PALETTE(64×3) 是标准主调色板（非 ROM 派生，可留代码）。"
-    },
-    {
       "file": "crates/game-core/tests/common/password_init.rs",
       "kind": "fixture",
       "max": 19176,

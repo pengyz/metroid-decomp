@@ -541,6 +541,20 @@ mod palette_tests {
         }
     }
 
+    /// 星闪调色板 8×10B（`00:8B0F`）：块首 + 指针表对齐（`$8B0F + idx*10`）。
+    #[test]
+    fn intro_star_palettes_match_rom_anchors() {
+        let pal = intro_star_palettes();
+        assert_eq!(pal.len(), 8 * 10, "IntroStarPalette0..7");
+        assert_eq!(&pal[0..10], &[0x03, 0x0F, 0x02, 0x13, 0x00, 0x03, 0x00, 0x34, 0x0F, 0x00], "Palette0");
+        assert_eq!(&pal[40..50], &[0x03, 0x17, 0x01, 0x14, 0x00, 0x03, 0x10, 0x0F, 0x28, 0x00], "Palette4");
+        assert_eq!(&pal[70..80], &[0x03, 0x0F, 0x12, 0x14, 0x00, 0x03, 0x10, 0x24, 0x0F, 0x00], "Palette7");
+        // 指针表 `IntroStarPalettePtrTable 00:8AFF` 与块内偏移互核（8 项等距 10 B）。
+        for i in 1..8 {
+            assert_ne!(&pal[i * 10..i * 10 + 10], &pal[0..10], "Palette{i} 不重复（asm 注释：non-repeating）");
+        }
+    }
+
     /// Samus 三张小表：`ActionTable` 4 B / PntUp 状态表 3 B / `RunAccelerationTbl` 2 B。
     /// 旧 `RUN_ACCEL_TBL [u8;256]` 自 `$CCC0` 起吞了后续代码（`$A6 $4D`=`ldx $4D`），
     /// 本测同时挡住"再退回长窗烘焙"。
@@ -685,6 +699,11 @@ pub fn sfx_record(addr: u16) -> Option<&'static [u8]> {
 pub fn sfx_record4(addr: u16) -> Option<&'static [u8; 4]> {
     let off = addr.checked_sub(SFX_TABLES_ADDR)? as usize;
     sfx_tables().get(off..off + 4)?.try_into().ok()
+}
+
+/// `IntroStarPalette0..7 ; 00:8B0F`（8×10B：星闪调色板，按 `IntroStarOffset` 索引）。
+pub fn intro_star_palettes() -> &'static [u8] {
+    pack::get(PackKey::IntroStarPal)
 }
 
 /// `ActionTable ; 07:CC87`（4 B：`sa_Run/sa_Run/sa_Roll/sa_PntUp`）——

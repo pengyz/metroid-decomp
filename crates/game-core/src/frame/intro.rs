@@ -34,7 +34,9 @@ pub const INTRO_STAR_PALETTE_PTRS: [u16; 8] =
 
 /// IntroStarPalette0-7 块（00:8B0F 族，8×10B——ROM 提取自证 prg[0x0B0F..0x0B5F]）。
 /// 每块=两个 5B 流：`[ctrl=03][3B 色值][00]`。
-pub use game_data::render::render_data::INTRO_STAR_PALETTES;
+fn intro_star_palettes() -> &'static [u8] {
+    game_data::assets::intro_star_palettes()
+}
 
 /// StarPaletteSwitch 单元（boot 场景：FrameCount=0/队列空 ⇒ 双 call 生产）。
 pub fn star_palette_switch(mem: &mut FrameMemory) {
@@ -52,7 +54,7 @@ pub fn star_palette_switch(mem: &mut FrameMemory) {
     mem.write_ram(0x0002, ptr as u8 & 0xFF);
     mem.write_ram(0x0003, (ptr >> 8) as u8);
     mem.write_ram(INTRO_STAR_OFFSET, mem.read_ram(INTRO_STAR_OFFSET).wrapping_add(1));
-    let block = &INTRO_STAR_PALETTES[idx];
+    let block = &intro_star_palettes()[idx * 10..idx * 10 + 10];
     // call1（$3F19 面）：stream1=block[0..5]
     mem.write_ram(0x0000, 0x19);
     mem.write_ram(0x0001, 0x3F);

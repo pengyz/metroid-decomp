@@ -55,6 +55,7 @@ pub fn sections(rom: &[u8]) -> Result<Vec<Section>, String> {
     out.extend(extract_song_headers(prg)?);
     out.extend(extract_title_vram(prg)?);
     out.extend(extract_samus_tables(prg)?);
+    out.extend(extract_intro_star_palettes(prg)?);
     Ok(out)
 }
 
@@ -387,7 +388,8 @@ fn seg_meta() -> Vec<SegMeta> {
         SegMeta { key: PackKey::SamusActions, kind: "u8", elem: 1, count: 4, rom: "bank07:$CC87", note: "ActionTable（sa_Run/sa_Run/sa_Roll/sa_PntUp）" },
         SegMeta { key: PackKey::SamusPntUp, kind: "u8", elem: 1, count: 3, rom: "bank07:$D1EB", note: "PntUp 状态表（01 01 03）" },
         SegMeta { key: PackKey::SamusAccel, kind: "u8", elem: 1, count: 2, rom: "bank07:$CCC0", note: "RunAccelerationTbl（$30/$D0；旧 256B 烘焙吞代码已更正）" },        SegMeta { key: PackKey::NoItems, kind: "item-rec", elem: 6, count: 0, rom: "bank02:$A2D9", note: "SpecItmsTbl_NORFAIR" },
-        SegMeta { key: PackKey::KrItems, kind: "item-rec", elem: 6, count: 0, rom: "bank04:$A26D", note: "SpecItmsTbl_KRAID" },
+
+        SegMeta { key: PackKey::IntroStarPal, kind: "pal10", elem: 10, count: 8, rom: "bank00:$8B0F", note: "IntroStarPalette0..7（星闪；表尾 $8B5F=DoFadeOut）" },        SegMeta { key: PackKey::KrItems, kind: "item-rec", elem: 6, count: 0, rom: "bank04:$A26D", note: "SpecItmsTbl_KRAID" },
         SegMeta { key: PackKey::ToItems, kind: "item-rec", elem: 6, count: 0, rom: "bank03:$A83B", note: "SpecItmsTbl_TOURIAN" },
         SegMeta { key: PackKey::RiItems, kind: "item-rec", elem: 6, count: 0, rom: "bank05:$A20D", note: "SpecItmsTbl_RIDLEY" },
     ];
@@ -645,6 +647,18 @@ const SAMUS_TABLES: [(PackKey, u16, usize, &str); 3] = [
     (PackKey::SamusPntUp, 0xD1EB, 3, "PntUp 状态表 $D1EB"),
     (PackKey::SamusAccel, 0xCCC0, 2, "RunAccelerationTbl $CCC0"),
 ];
+
+/// `IntroStarPalette0..7 ; 00:8B0F`（8×10B 连续，`StarPaletteSwitch 00:8AC7` 经
+/// `IntroStarPalettePtrTable 00:8AFF` 间接取；表尾 `00:8B5F` 即 `DoFadeOut`）。
+const INTRO_STAR_PAL_ADDR: u16 = 0x8B0F;
+const INTRO_STAR_PAL_LEN: usize = 8 * 10;
+
+fn extract_intro_star_palettes(prg: &[u8]) -> Result<Vec<Section>, String> {
+    Ok(vec![Section {
+        key: PackKey::IntroStarPal,
+        data: bank_slice(prg, 0, INTRO_STAR_PAL_ADDR, INTRO_STAR_PAL_LEN)?,
+    }])
+}
 
 fn extract_samus_tables(prg: &[u8]) -> Result<Vec<Section>, String> {
     let mut out = Vec::with_capacity(SAMUS_TABLES.len());
