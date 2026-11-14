@@ -219,13 +219,17 @@ pub fn enemy_get_delta_xy(
         return (0, 0, delay, instr_index, data1f_in, false); // 静息触发⇒Δ=0（:588-591）
     }
     let mut ii = instr_index;
+    // 【指令节拍修（2026-11-15）】asm `$827F` 到期支是「delay=0、instr+=2、**当帧继续读下一条**」
+    // （`beq EnemyGetDeltaY@ReadByte`），即到期那一帧发出的是**新指令**的 Δ，指令占用帧数恰为
+    // duration。旧形在该支 `return` 旧 Δ ⇒ 每条指令多吃一个移动帧（Skree 坠落慢一半的根因）。
+    let mut dly = delay;
     for _ in 0..16u32 {
         // 界卫（$FF 重启循环——fail-safe）
         let d = game_data::assets::enemy_movement_strings(area).get(str_off + ii as usize).copied().unwrap_or(0xFF);
         if d >= 0xF0 {
             match d {
-                0xFA => return (0, 0, delay, ii, data1f_in, false), // TriggerResting（随件=Δ0）
-                0xFB => return (0, 0, delay, ii, data1f_in, false), // StopMovement（双RTS=停）
+                0xFA => return (0, 0, dly, ii, data1f_in, false), // TriggerResting（随件=Δ0）
+                0xFB => return (0, 0, dly, ii, data1f_in, false), // StopMovement（双RTS=停）
                 0xFC => {
                     // `$82B3`：data1F bit7=查天花板、bit6=查地面；**0 值 ⇒ 立即成功**。
                     let ok = surface_check_ok(data1f_in, can_up, can_down, true);
@@ -240,7 +244,7 @@ pub fn enemy_get_delta_xy(
                     // （asm `$82EF` 注释明写与 `$FC` 不同）。
                     ii = ii.wrapping_sub(2);
                     if surface_check_ok(data1f_in, can_up, can_down, false) { continue; }
-                    return (0, 0, delay, ii, data1f_in, true);
+                    return (0, 0, dly, ii, data1f_in, true);
                 }
                 _ => {
                     ii = 0; // $FF=重启字符串
@@ -255,14 +259,16 @@ pub fn enemy_get_delta_xy(
         // 【goal-轮61 索引面合规矩】$822B/@ReadByte 逐件对表：Ptr=(movementIndex*2+
         // facing)*2→EnemyMovementPtrs[y]（:565-574）+instrIndex=Y 偏移（:596-600）
         // ——**索引面合规** ✓✓（串位 instr 推进相位根非本件 ✗）。
-        if d.wrapping_sub(delay) == 0 {
-            let speed = game_data::assets::enemy_movement_strings(area).get(str_off + ii as usize + 1).copied().unwrap_or(0);
-            return (enemy_delta_sign_mag(speed), enemy_delta_x_packed(speed), 0, ii.wrapping_add(2), data1f_in, false);
+        if d.wrapping_sub(dly) == 0 {
+            dly = 0;
+            ii = ii.wrapping_add(2);
+            continue; // 当帧继续读下一条（asm `beq @ReadByte`）
         }
+        dly = dly.wrapping_add(1);
         let speed = game_data::assets::enemy_movement_strings(area).get(str_off + ii as usize + 1).copied().unwrap_or(0);
-        return (enemy_delta_sign_mag(speed), enemy_delta_x_packed(speed), delay.wrapping_add(1), ii, data1f_in, false);
+        return (enemy_delta_sign_mag(speed), enemy_delta_x_packed(speed), dly, ii, data1f_in, false);
     }
-    (0, 0, delay, ii, data1f_in, false)
+    (0, 0, dly, ii, data1f_in, false)
 }
 
 /// 指令流逐字节执行（**asm 内容锚** `@ReadByte: ; $825B`——全支分派）：
@@ -481,5 +487,37 @@ mod surface_check_tests {
     fn neither_bit_never_passes() {
         assert!(!surface_check_ok(0x01, true, true, true));
         assert!(!surface_check_ok(0x20, true, true, false));
+    }
+}
+
+#[cfg(test)]
+mod tests_movement_cadence {
+    use super::*;
+
+    /// asm `$827F` 到期支：`delay=0 / instr+=2 / 当帧继续读下一条`（`beq @ReadByte`）。
+    /// 锈腿旧形在到期支 `return` 旧指令的 Δ ⇒ 每条指令多吃一个移动帧（Skree 坠落慢一半的根因）。
+    /// 锚：`EnemyMovementPtrs[7]` 右向（`$9891`，串基 `$97EF` ⇒ 偏移 0xA2）
+    /// = `04 22 | 01 42 | 01 22 | 01 42 | 01 62 | 01 42 | 04 62 | FC …`。
+    #[test]
+    fn expired_sign_mag_speed_reads_next_instruction_same_frame() {
+        if !game_data::pack::is_ready() {
+            let _ = game_data::pack::init_from_env();
+        }
+        if !game_data::pack::is_ready() {
+            eprintln!("SKIP（显式）：未加载资产包——先跑 pack-tool extract");
+            return;
+        }
+        let strs = game_data::assets::enemy_movement_strings(0);
+        assert_eq!(
+            &strs[0xA2..0xA8],
+            &[0x04, 0x22, 0x01, 0x42, 0x01, 0x22],
+            "Skree mov7_R 串锚"
+        );
+
+        // `instr=2`（`01 42`）在 `delay=1` 到期 ⇒ 当帧应读下一条 `01 22` 发 Δ=+2、instr→4。
+        let (dy, dx, dly, ii, _d1f, trig) =
+            enemy_get_delta_xy(0, 4, 0x00, 7, 2, 1, 0, 0, 0, 0x00, false, true);
+        assert_eq!((dy, dx), (2, 2), "到期当帧必须发下一条指令的 Δ（0x22 ⇒ y+2/x+2），不是旧指令 0x42 的 y+4");
+        assert_eq!((dly, ii, trig), (1, 4, false), "延续下一条指令：delay=1 / instr=4");
     }
 }

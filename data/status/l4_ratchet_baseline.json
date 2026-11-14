@@ -87,33 +87,33 @@
           "total_pixels": 61440
         },
         "1110:bullet-out": {
-          "state": "diff",
-          "diff_pixels": 203,
+          "state": "match",
+          "diff_pixels": 0,
           "total_pixels": 61440
         },
         "1160:door-open": {
           "state": "diff",
-          "diff_pixels": 10907,
+          "diff_pixels": 10818,
           "total_pixels": 61440
         },
         "1250:door-enter": {
           "state": "diff",
-          "diff_pixels": 9806,
+          "diff_pixels": 9768,
           "total_pixels": 61440
         },
         "1310:scrolling": {
           "state": "diff",
-          "diff_pixels": 9806,
+          "diff_pixels": 9768,
           "total_pixels": 61440
         },
         "1460:neighbor-room": {
           "state": "diff",
-          "diff_pixels": 13450,
+          "diff_pixels": 13412,
           "total_pixels": 61440
         },
         "1610:end": {
           "state": "diff",
-          "diff_pixels": 13456,
+          "diff_pixels": 13418,
           "total_pixels": 61440
         }
       }
@@ -278,17 +278,17 @@
         },
         "1150:pre-jump": {
           "state": "diff",
-          "diff_pixels": 262,
+          "diff_pixels": 268,
           "total_pixels": 61440
         },
         "1165:takeoff": {
           "state": "diff",
-          "diff_pixels": 166,
+          "diff_pixels": 153,
           "total_pixels": 61440
         },
         "1190:rise": {
           "state": "diff",
-          "diff_pixels": 259,
+          "diff_pixels": 185,
           "total_pixels": 61440
         },
         "1215:peak": {
@@ -643,22 +643,22 @@
         },
         "1100:scroll-r180": {
           "state": "diff",
-          "diff_pixels": 596,
+          "diff_pixels": 494,
           "total_pixels": 61440
         },
         "1130:scroll-r210": {
           "state": "diff",
-          "diff_pixels": 166,
+          "diff_pixels": 153,
           "total_pixels": 61440
         },
         "1160:scroll-r240": {
           "state": "diff",
-          "diff_pixels": 166,
+          "diff_pixels": 153,
           "total_pixels": 61440
         },
         "1180:scroll-end": {
           "state": "diff",
-          "diff_pixels": 262,
+          "diff_pixels": 268,
           "total_pixels": 61440
         },
         "1240:scroll-l40": {
@@ -969,6 +969,16 @@
       "reason": "敌移动指令 $FC/$FE 端口 + skree_ai 字段偏移定谳（+6 instr / +7 subY）+ x 轴力补丁：match 108→114（+6 全为新增，0 格回退）",
       "match": 114,
       "diff": 18,
+      "blocked": 0,
+      "cells_total": 132
+    },
+    {
+      "ts": "2026-11-14T17:27:54+00:00",
+      "kind": "anchor",
+      "evidence": "",
+      "reason": "敌移动指令节拍修（areas_common.asm:622-646 到期支 continue）：case-002 1110:bullet-out 由 diff 转 match（match 114→115），逐格复核 0 回退",
+      "match": 115,
+      "diff": 17,
       "blocked": 0,
       "cells_total": 132
     }
