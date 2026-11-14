@@ -138,6 +138,8 @@ pub enum PackKey {
     InitCross = 83,
     CrossLen = 84,
     CrossData = 85,
+    BrEnMovPtrs = 86,
+    BrEnMovStr = 87,
     NametableHi = 37,
 }
 
@@ -235,6 +237,8 @@ impl PackKey {
             PackKey::InitCross => "title.init_cross",
             PackKey::CrossLen => "title.cross_len",
             PackKey::CrossData => "title.cross_data",
+            PackKey::BrEnMovPtrs => "area.br.enemy_mov_ptrs",
+            PackKey::BrEnMovStr => "area.br.enemy_mov_str",
             PackKey::NametableHi => "rom.nt_hi",
         }
     }
@@ -327,6 +331,8 @@ impl PackKey {
             83 => PackKey::InitCross,
             84 => PackKey::CrossLen,
             85 => PackKey::CrossData,
+            86 => PackKey::BrEnMovPtrs,
+            87 => PackKey::BrEnMovStr,
             37 => PackKey::NametableHi,
             _ => return None,
         })

@@ -4,12 +4,6 @@
   "threshold": 200,
   "files": [
     {
-      "file": "crates/game-core/src/enemy/common.rs",
-      "kind": "data",
-      "max": 832,
-      "note": "L977B(64)/EN_ANIM_TABLE(118)/ENEMY_MOVEMENT_PTRS(138)/MOVEMENT_STRINGS(512)——真游戏数据，待迁。"
-    },
-    {
       "file": "crates/game-core/src/ui/password.rs",
       "kind": "fixture",
       "max": 762,

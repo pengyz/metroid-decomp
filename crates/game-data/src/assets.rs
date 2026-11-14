@@ -633,6 +633,25 @@ mod palette_tests {
         assert_ne!(palette_ptrs(2)[27 * 2], 0, "Palette1B 指针低位非零");
     }
 
+    /// 敌移动面三件（`areas_common.asm:555 LoadEnemyMovementPtr`）：
+    /// 指针表真表 **36 B**（9 索引 × R/L×2），旧烘焙 138 项=过度读；
+    /// 串区 `$97EF..$99EF`；`L977B` 复用已迁的 `BrEnemyFacing`（同 64 B）。
+    #[test]
+    fn enemy_movement_segments_match_asm_anchors() {
+        let ptrs = enemy_movement_ptrs();
+        assert_eq!(ptrs.len(), 36, "EnemyMovementPtrs 9×R/L×u16");
+        let first = u16::from_le_bytes([ptrs[0], ptrs[1]]);
+        assert_eq!(first, 0x97EF, "首个指针 = 串区起点 $97EF");
+        assert!(ptrs.chunks(2).all(|w| {
+            let p = u16::from_le_bytes([w[0], w[1]]) as usize;
+            (0x97EF..=0x98C0 + 24).contains(&p)
+        }), "全部指针落在串区内");
+        assert_eq!(enemy_movement_strings().len(), 512);
+        // L977B 与朝向段同源（迁移只改来源不改字节）。
+        assert_eq!(enemy_facing().len(), 64);
+        assert_eq!(enemy_anim_table().len(), 118);
+    }
+
     /// 标题屏 17 表锚（`prg0_title.asm` 标签 ↔ 段长；`BOTTOM_SPARKLE_DATA` 真长
     /// 98 B 是本次更正的烘焙漂移——旧 54 B 在表中间插了假终止符）。
     #[test]
@@ -742,6 +761,12 @@ pub fn sfx_record4(addr: u16) -> Option<&'static [u8; 4]> {
     let off = addr.checked_sub(SFX_TABLES_ADDR)? as usize;
     sfx_tables().get(off..off + 4)?.try_into().ok()
 }
+
+/// `EnemyMovementPtrs ; 01:96DB`（9 索引 × R/L × u16 = 36 B，LE）。
+pub fn enemy_movement_ptrs() -> &'static [u8] { pack::get(PackKey::BrEnMovPtrs) }
+
+/// 移动指令串区 `$97EF..$99EF`（消费侧按指针偏移取值）。
+pub fn enemy_movement_strings() -> &'static [u8] { pack::get(PackKey::BrEnMovStr) }
 
 /// 标题屏 17 张小表（bank0；表址/真长/漂移更正说明见 `extract::TITLE_TABLES`）。
 pub fn title_fade() -> &'static [u8] { pack::get(PackKey::Fade) }

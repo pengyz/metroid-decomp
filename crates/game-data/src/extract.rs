@@ -357,6 +357,8 @@ fn seg_meta() -> Vec<SegMeta> {
         SegMeta { key: PackKey::BrEnemyDistanceThreshold, kind: "bytes", elem: 1, count: 16, rom: "bank01:96AB", note: "DistanceThreshold（asm 标签间距见 note）" },
         SegMeta { key: PackKey::BrEnemyInitDelay, kind: "bytes", elem: 1, count: 64, rom: "bank01:96BB", note: "InitDelay（asm 标签间距见 note）" },
         SegMeta { key: PackKey::BrEnemyFacing, kind: "bytes", elem: 1, count: 64, rom: "bank01:977B", note: "Facing（asm 标签间距见 note）" },
+        SegMeta { key: PackKey::BrEnMovPtrs, kind: "words", elem: 2, count: 18, rom: "bank01:96DB", note: "EnemyMovementPtrs 9×R/L（旧烘焙 138 项=过度读，真表 36 B）" },
+        SegMeta { key: PackKey::BrEnMovStr, kind: "bytes", elem: 1, count: 512, rom: "bank01:97EF", note: "移动指令串窗 $97EF..$99EF（覆盖被引用上界）" },
         SegMeta { key: PackKey::RomTable968B, kind: "bytes", elem: 0x80, count: 8, rom: "各 bank $968B", note: "窗口参数化属性表 8×128B" },
         SegMeta { key: PackKey::RomVec95CE, kind: "bytes", elem: 2, count: 8, rom: "各 bank $95CE", note: "F2ED 流向量 [lo,hi]×8" },
         SegMeta { key: PackKey::NametableHi, kind: "bytes", elem: 1, count: 4, rom: "bank07:$C19F", note: "NT 高位表 20/24/28/2C" },
@@ -536,7 +538,7 @@ fn extract_area(prg: &[u8], a: &AreaSpec) -> Result<Vec<Section>, String> {
 /// **表长口径**：健康/强制速度/初始延迟/朝向在 asm 里各 16 B（$962B→$963B 等相邻标签间距），
 /// 本仓历史烘焙为 64 B（跨表连读）。搬家不改语义 ⇒ 仍按提交件的声明长度取，等长在
 /// `docs/findings/enemy-table-extent.md`（待建）另案收敛。
-const BR_ENEMY_TABLES: [(PackKey, u16, usize, &str); 9] = [
+const BR_ENEMY_TABLES: [(PackKey, u16, usize, &str); 11] = [
     (PackKey::BrEnemyHealth, 0x962B, 64, "EnemyHealthTbl"),
     (PackKey::BrEnemyRestingAnim, 0x963B, 32, "EnemyRestingAnimIndex"),
     (PackKey::BrEnemyActiveAnim, 0x965B, 32, "EnemyActiveAnimIndex"),
@@ -546,6 +548,13 @@ const BR_ENEMY_TABLES: [(PackKey, u16, usize, &str); 9] = [
     (PackKey::BrEnemyDistanceThreshold, 0x96AB, 16, "EnemyDistanceToSamusThreshold"),
     (PackKey::BrEnemyInitDelay, 0x96BB, 64, "EnemyInitDelayTbl"),
     (PackKey::BrEnemyFacing, 0x977B, 64, "L977B（朝向）"),
+    // `EnemyMovementPtrs ; 01:96DB` 真表 **9 索引 × R/L × 2 B = 36 B**（asm 18 个 `.word`）；
+    // 旧烘焙读成 138 项（276 B）是过度读（紧随其后的加速/速度表被当指针读入），
+    // 消费侧只索引 `(movementIndex*2+facing)*2` ⇒ 只前 36 B 有语义。
+    (PackKey::BrEnMovPtrs, 0x96DB, 36, "EnemyMovementPtrs"),
+    // 移动指令串区 `$97EF..$99EF`（512 B 窗口；首个指针 $97EF，被引用串上界 $98B9+
+    // 指令尾，窗口为覆盖上界，消费侧按指针偏移取值）。
+    (PackKey::BrEnMovStr, 0x97EF, 512, "EnemyMovementNN_R/L 串区"),
 ];
 
 
