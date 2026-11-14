@@ -1,0 +1,28 @@
+# 归档：#8 相位残差的**复现配方**（不参与 run-all；`_archive/` 不在非递归 glob 内）
+# 来源：case-elev-norfair-transition 的边界变体——把暗窗锚放回 f1206（换区首帧）。
+# 现象：emu f1206 全黑 61440px vs rust 仍亮 13115px ⇒ 「ScreenNmiOff 的执行相位比 emu 晚 1 tick」。
+# 归因：#8 FrameCount +2 相位族（sem 实测：1581 帧里仅 fc 一列差，恒定 +2）。
+# 用途：#8 修好后把本文件移回 cases/、登记 1 格，应自动转绿——作为 #8 的验收点。
+#       （r9 复核 P1-2：1 帧态可截，此前的「结构性不可截」是误诊，已撤。）
+name case-elev-f1206-boundary
+frames 1600
+snapshot none
+watch 0320 ElevStatus
+watch 001e MainRoutine
+watch 0074 InArea
+watch 002d FrameCount
+press 310 start
+press 350 start
+fixture 900 0320 01 evolving
+fixture 900 032f 01 evolving
+fixture 900 032d 83 evolving
+fixture 900 032e 80 evolving
+fixture 900 0323 23 evolving
+fixture 920 030e 80 evolving
+fixture 920 030d 74 evolving
+fixture 920 0308 00 evolving
+hold 960-1560 down
+capture 1205 pre-dark
+capture 1206 boundary
+capture 1207 post-dark
+endFrame 1230

@@ -102,3 +102,34 @@ BG 面仍是 pal05 ⇒ 照绿）」。**不成立**：`select_samus_palette` 只
 `screen_nmi_off` 是否是 asm `$C45D` 的等价形（含 `sta PPUCTRL` 关 NMI 位）、
 `init_bankN` 尾 `nmi_on` 是否与 asm `jmp NMIOn` 同位置、以及 sem 修复后的 1191/1581 读数
 是否与 #8 的既有残差口径一致。
+
+---
+
+## 五、第二轮复核（对 `53e379bd`）verdict=**fail（窄）**与最终处置
+
+复核承认：三处代码修订（`screen_nmi_off` 全形 / `nmi_on` 双写 / fixture 相位对称）经逐行核实成立、
+无 P0；fixture 相位与映射钉扎两项上轮 P1 实质闭合。它同时**撤回自己上轮的 R6 判断**
+（`PALETTE_PENDING==2` 顺序钉成立）。判 fail 的理由全部落在**证据表述层**：
+
+| # | 复核意见 | 处置 |
+|---|---|---|
+| P1-1 | `nmi_on` 漏 asm `NMIOn ; 07:C487 @loop`（轮询 `PPUSTATUS` VBLK 位等 VBlank 结束） | **登记为有意识口径**：按帧原子模型下该轮询恒已满足（前置 `screen_nmi_off` 里的 `iter_wait()` 已推到 NMI 之后），已在 `boot::nmi_on` 写明依据 + **反例条件**（若建模帧内相位/在该两件间插桩，必须补轮询，否则会在 VBlank 中使能 NMI 多触发一次） |
+| P1-2 | 「状态 2/4/5/7/9 **结构性不可截**」是误诊：1 帧态可截，f1206 的 13115px 是 #8 残差实例 | **全盘接受**：`docs/findings/elevator-evidence.md` §5 加更正段（撤回「不可截」与「f1207 替换 f1206」的说法，改为「暂不进 ratchet 的真实理由是暴露已登记待修的 #8」）；并把 f1206 变体归档为 **#8 的复现配方+验收点**（`cases/_archive/case-elev-f1206-boundary.txt`） |
+| P1-3 | `MATCHED 1191/1581` 被写成「15 列全同」不足；余 390 帧须给分歧列分布 | **补实测**：逐列分解 1581 公共帧 ⇒ **分歧仅 `fc` 一列、390 帧、恒定 +2**（首 f1211 oracle=169/rust=167，末 f1600 46/44），其余 14 列全帧相同 ⇒ 干净归因 #8 |
+| P2-4 | spec 仍留「十态机首次取得像素证据 / 9 格全 0px」（与新增括注矛盾、计数 stale）；findings 里 8/5/7 的 Fade 标签打架 | **已改**：审计文档计数改 10 格、加二次更正段明说「像素证据只覆盖 {0,1,3,6,8}」；findings §5 计数与标签统一 |
+| P2-5/6 | `AREA_BANKS` 手抄字面量不读 ROM；`len()==5` 恒真；宣称的「交叉自证」未实现 | **改为从 ROM 现算**：`extract::area_banks(prg)` 读 `BankTable ; 07:CA30` 减 1（不再有手抄表）；测试 `area_banks_derive_from_rom_bank_table` 打开真 ROM 断言 `[1,2,4,3,5]` 且 `AreaPaletteToggle` 五 bank = `01/01/06/06/06` |
+
+### 我方一处保留意见（已记录，不再重复）
+
+复核 R8 说「删 f1206 掩盖真差」——**部分成立**：当时确实用不敏感的全黑格换掉了唯一的红格。
+但结论不是「把红格放回 ratchet」，而是「红格不该喂给 ratchet、该喂给 #8 的复现清单」——
+现按后者处置（归档 + 写明验收点），既不留假绿、也不让 ratchet 常红。
+
+### 最终状态
+
+- `nmi_on` 的 VBlank 轮询：**登记为帧粒度近似**（附反例条件），非静默遗漏。
+- 证据表述：覆盖状态、1 帧态可截性、sem 分歧面、格数全部与实测一致。
+- `AREA_BANKS`：**ROM 派生**，手抄常量退场。
+- 复跑：`cargo test --workspace`（630 基线）、`gates/cli.py check` PASS=16、
+  L4 全矩阵 15 用例 / 122 格 / match 120 / diff 2（与 `53e379bd` 逐项相同——本轮只动注释、
+  文档与「ROM 派生等价替换」）。

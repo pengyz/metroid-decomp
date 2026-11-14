@@ -173,6 +173,15 @@ pub fn c4b2_unit(mem: &mut FrameMemory) {
 /// **结构互核注**：①PPUSTATUS 轮询=瞬时级（序幕双 vblank 先例——task-13 对齐注）②
 /// $FF bit7 置=write_io($2000) 同步 **nmi_enabled 复启**（ScreenNmiOff 的关↔NMIOn 的开
 /// =boot 链 NMI 开关配对面）③`bne LC481` 恒转（ora 非零——相位互核）。
+/// `NMIOn ; 07:C487` = 等 VBlank **结束** → `or #VBLKNMI_ON` → `LC481`（`sta PPUCTRL` /
+/// `sta PPUCTRL_ZP` 双写）。
+///
+/// **等待形未建模（有意识的口径，非遗漏）**：`@loop` 轮询 `PPUSTATUS` 的 VBLK 位，
+/// 是**帧内相位**等待，不是帧等待。本模型按帧原子执行，且唯一调用前置
+/// （`screen_nmi_off` 内的 `iter_wait()` = asm `WriteAndWait` 的「等 NMI」）已把执行点
+/// 推到 NMI 之后 ⇒ 到此处 VBlank 已结束，`@loop` 在帧粒度下**恒已满足**（零代价）。
+/// 反例条件：若将来建模帧内相位（或在此两件之间加采集点/插桩），必须补该轮询，
+/// 否则会在 VBlank 中使能 NMI ⇒ 立刻多触发一次 NMI（r9 复核 P1-1 的登记项）。
 pub fn nmi_on(mem: &mut FrameMemory) {
     let f = mem.read_ram(crate::ram_map::PPUCTRL_ZP) | 0x80;
     mem.write_io(0x2000, f);

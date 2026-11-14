@@ -919,15 +919,34 @@ fn extract_tourian_metroid_data(prg: &[u8]) -> Result<Vec<Section>, String> {
 /// `PaletteToggle($0076)`；电梯换区 `PaletteToggle eor 7` 后再进 `PaletteDataPending`。
 /// **取值（ROM 逐字节自证）**：bank1/2=`01`（Palette00+1）、bank3/4/5=`06`（Palette05+1）。
 /// area 序 0=Br/1=No/2=Kr/3=To/4=Ri ⇒ ROM bank [1,2,4,3,5]（`BankTable 07:CA30`）。
-/// 区序（0=Br/1=No/2=Kr/3=To/4=Ri）→ ROM bank。值 = `BankTable ; 07:CA30`（ROM 字节
-/// `02 03 05 04 06`）减 1 —— **提到模块层**是为了能被测试钉住：`AreaPaletteToggle` 的
-/// bank3/bank4 值同为 `$06`，顺序写反在运行时段不可观测。
-pub const AREA_BANKS: [u8; 5] = [1, 2, 4, 3, 5];
+/// `BankTable ; 07:CA30`（bank7 固定窗）——5 个区各自的 bank **+1**（ROM 字节
+/// `02 03 05 04 06`；`CheckBankSwitch ; 07:C4DE` 用它做 `SwitchBank` 参数）。
+pub const BANK_TABLE_ADDR: u16 = 0xCA30;
+
+/// 区序（0=Br/1=No/2=Kr/3=To/4=Ri）→ ROM bank，**从 ROM 现算**（不手抄）：
+/// `AREA_BANKS[i] = BankTable[i] - 1`。
+///
+/// 为什么必须现算：`AreaPaletteToggle` 的 bank3(Tourian) 与 bank4(Kraid) 值同为 `$06`
+/// ⇒ 表驱动顺序写反在运行时段值与所有消费者**都看不出来**（r9 复核 P1-③）。
+/// 手抄的常量只能钉住「常量与注释一致」；从 ROM 读 `BankTable` 才钉住「与 ROM 同源」。
+pub fn area_banks(prg: &[u8]) -> Result<[u8; 5], String> {
+    let raw = bank_slice(prg, 7, BANK_TABLE_ADDR, 5)
+        .map_err(|e| format!("BankTable 07:CA30: {e}"))?;
+    let mut out = [0u8; 5];
+    for (i, b) in raw.iter().enumerate() {
+        if *b == 0 {
+            return Err(format!("BankTable[{i}] = 0（应 = bank+1）"));
+        }
+        out[i] = b - 1;
+    }
+    Ok(out)
+}
 
 fn extract_area_pal_toggle(prg: &[u8]) -> Result<Vec<Section>, String> {
     const ADDR: u16 = 0x95DA;
+    let banks = area_banks(prg)?;
     let mut body = Vec::with_capacity(5);
-    for (area, bank) in AREA_BANKS.iter().enumerate() {
+    for (area, bank) in banks.iter().enumerate() {
         let b = bank_slice(prg, *bank, ADDR, 1)
             .map_err(|e| format!("AreaPaletteToggle area{area} bank{bank} $95DA: {e}"))?;
         body.push(b[0]);
@@ -1267,11 +1286,22 @@ mod tests {
     /// 值同为 `$06` ⇒ 表驱动顺序若写反，运行时段值与所有消费者**都看不出来**；
     /// 只有把「区序→bank」的映射本身钉在 asm 锚上，错序才会红（r9 复核要求）。
     #[test]
-    fn area_banks_match_bank_table_rom() {
-        assert_eq!(AREA_BANKS, [1u8, 2, 4, 3, 5], "BankTable 07:CA30 = 02 03 05 04 06 ⇒ bank=值-1");
-        // 交叉自证：五 bank 的 `.byte` 声明序（bank1/2 = Palette00+1；bank3/4/5 = Palette05+1）
-        // 与 $95DA 平铺偏移一致 ⇒ 槽位 0..4 对应 bank 1/2/4/3/5。
-        assert_eq!(AREA_BANKS.len(), 5);
+    fn area_banks_derive_from_rom_bank_table() {
+        // 手工锚（A 级）：ROM `07:CA30` = `02 03 05 04 06` ⇒ bank = 值-1 = [1,2,4,3,5]。
+        // 解析面从 ROM 现读（`area_banks`）——两者一致性由本测钉住；若将来有人改死表，
+        // 只有「与 ROM 同源」这层能发现。
+        let rom = match std::fs::read(concat!(env!("CARGO_MANIFEST_DIR"), "/../../rom/Metroid (USA).nes")) {
+            Ok(r) => r,
+            Err(e) => {
+                eprintln!("跳过：无 ROM（{e}）——本测需真 ROM 才能验 BankTable 同源");
+                return;
+            }
+        };
+        let prg = &rom[0x10..];
+        assert_eq!(crate::extract::area_banks(prg).unwrap(), [1u8, 2, 4, 3, 5]);
+        // 逐 bank 自证：AreaPaletteToggle（$95DA）= bank1/2 → 01、bank3/4/5 → 06
+        let pal = extract_area_pal_toggle(prg).unwrap();
+        assert_eq!(pal[0].data, vec![0x01, 0x01, 0x06, 0x06, 0x06]);
     }
 
     /// 重复 key 必须在解析侧被拒（段名唯一是包格式不变式）。

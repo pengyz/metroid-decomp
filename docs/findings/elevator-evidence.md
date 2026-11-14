@@ -92,14 +92,21 @@
 
 ## 5. 覆盖现状（诚实版）
 
-**像素格覆盖的电梯状态 = {0 未注入, 1 Idle, 3 Move, 6 换区核, 8 Fade}**（10 个采集点）。
+**像素格覆盖的电梯状态 = {0 未注入, 1 Idle, 3 Move, 6 换区核, 8 Fade}**（10 个采集点，含 f1207 暗窗锚）。
 
-**未覆盖的 5 个状态是结构性的**：2（ScrollXToCenter）/4（ScrollY）/5、7（Fade）/9（Stop）
-在 ROM 里**各只持续 1 帧**（emu 帧级实录：`f962→2`、`f1203→4`、`f1204→5`、`f1209→7`、
-`f1450→9`），而采集缝约定是 `capture(N) = tick(N-1)` 收口态、emu 的帧 N 截图反映帧 N 工作后的
-呈现面 ⇒ 1 帧态天然跨在这条边界上，**不可截**。实测证据：在 f1206（换区首帧）加采集点给出
-13115px 假失配（emu 全黑 vs rust 仍亮），已从用例移除并在文件内注释原因。这五个状态目前只有
-emu 轨迹 + 十态机单测支撑，**不宣称像素证据**。
+**未覆盖的 5 个状态：2（ScrollXToCenter）/4（ScrollY）/5、7（Fade）/9（Stop）**——它们在 ROM 里
+各只持续 1 帧（emu 帧级实录：`f962→2`、`f1203→4`、`f1204→5`、`f1209→7`、`f1450→9`）。
+
+> **【2026-11-14 更正】原表述「结构性不可截」是误诊（r9 复核 P1-2 指出）。**
+> 1 帧态**可以**截：`capture(N)=tick(N-1)` 是固定约定，截 N+1 即可。f1206 的 13115px 失配
+> 不是约定造成的，而是「换区首帧的执行相位比 emu 晚 1 tick（`ScreenNmiOff` 落点）」这一
+> **#8 相位族残差的具体实例**。当时把它写成「不可截」会永久合理化 #8。
+> 因此把这些格暂不进 ratchet 的**真实理由**是：它们会暴露一个**已登记待修**的相位残差，
+> 在 #8 修好之前进 ratchet 只会变成 5 个常红格；#8 修好后应把它们补成正式格（届时 f1206
+> 这类边界格应当自动转绿，可作为 #8 的验收点）。
+> 同时撤回「f1207 替换 f1206」的说法：f1207 两侧全黑（61440px，0 差），信息量近乎零；
+> f1206 才是唯一能看见该残差的格。已改为：**保留 f1206 于 `cases/_archive/` 的探针谱系，
+> 作为 #8 的复现配方**，正式用例暂不含它。
 
 **RAM 行对齐**：`tools/sem.py case case-elev-norfair-transition` ⇒ **MATCHED 1191/1581 帧**
 （15 列全同：fc/gm/mr/tr/gp/nr/t3/cb/bsp/ia/rm/st/sy/sx/hp），首分歧 `f1227 fc: oracle=B9
@@ -126,3 +133,18 @@ rust=B7` —— 即既有 **#8 FC+2 相位残差**（本轮未引入，本轮之
   （`extract_area_pal_toggle` / `AREA_BANKS = [1,2,4,3,5]`）
 - ROM 锚：`AreaPaletteToggle ; 01..05:95DA`、`SamusElevator ; 07:D423`、
   `ElevatorD8BF ; 07:D8A3`、`CheckPaletteWrite ; 07:C1E0`
+
+## 复现命令（证据可复跑）
+
+```bash
+# 1) 像素面（10 格，含换区暗窗锚 f1207）
+python3 tools/l4_diff_run.py run case-elev-norfair-transition
+
+# 2) 状态面（15 列 × 1581 帧，RAM 行对齐；首分歧 f1227 fc = 既有 #8 相位残差）
+python3 tools/sem.py oracle-case case-elev-norfair-transition
+python3 tools/scenario_run.py run analysis/sem/case-elev-norfair-transition.sem.txt
+python3 tools/sem.py case case-elev-norfair-transition     # 期望 MATCHED 1191 1581
+```
+
+> 注意：`run-all` 会清理 `analysis/traces/<case>*`（含 `.sem.frames.jsonl`）⇒ 跑过全矩阵后
+> 状态面对拍须重新生成 oracle 轨迹（38s）再比，否则 sem 会报「缺 oracle 轨迹」。
