@@ -109,6 +109,11 @@ pub enum PackKey {
     SfxTables = 59,
     /// `SongHeaders ; $BD31` 12×13B（曲头表本体；流与偏移表另有段）。
     SongHdrs = 60,
+    /// 标题屏 VRAMStruct blob（`VRAMStructWriteData` 源，四态各自入段）。
+    VramIntro = 61,
+    VramStart = 62,
+    VramPass = 63,
+    VramOver = 64,
     NametableHi = 37,
 }
 
@@ -181,6 +186,10 @@ impl PackKey {
             PackKey::RiItems => "area.ri.items",
             PackKey::SfxTables => "sound.sfx_tables",
             PackKey::SongHdrs => "song.headers",
+            PackKey::VramIntro => "title.vram_intro",
+            PackKey::VramStart => "title.vram_start",
+            PackKey::VramPass => "title.vram_pass",
+            PackKey::VramOver => "title.vram_over",
             PackKey::NametableHi => "rom.nt_hi",
         }
     }
@@ -248,6 +257,10 @@ impl PackKey {
             58 => PackKey::RiItems,
             59 => PackKey::SfxTables,
             60 => PackKey::SongHdrs,
+            61 => PackKey::VramIntro,
+            62 => PackKey::VramStart,
+            63 => PackKey::VramPass,
+            64 => PackKey::VramOver,
             37 => PackKey::NametableHi,
             _ => return None,
         })

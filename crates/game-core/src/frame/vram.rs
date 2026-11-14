@@ -115,11 +115,11 @@ mod tests {
         assert_eq!(m.render.nametable[0x3E0], 0x22, "inc=32 步进（bit7 旗）——次字节落 +32");
     }
 
-    /// intro BG 真值回归（烘焙 blob 首记录=属性表 $23C0 32B——game-data 同源对拍）。
+    /// intro BG 真值回归（包内 blob 首记录=属性表 $23C0 32B——ROM `$82F4` 源）。
     #[test]
     fn intro_bg_blob_first_record_regression() {
         let mut m = FrameMemory::default();
-        let blob: &[u8] = &game_data::title::vram_structs::INTRO_BG_VRAM_STRUCT;
+        let blob: &[u8] = game_data::assets::vram_intro();
         assert_eq!(*blob.last().unwrap(), 0x00, "含 VRAMStructEnd 终止");
         vram_struct_write(&mut m, blob);
         // 首记录：$23C0 属性表 32B（前 8B=00——asm :620 自证）

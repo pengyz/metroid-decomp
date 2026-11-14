@@ -280,23 +280,24 @@ fn display_input_characters(mem: &mut FrameMemory) {
 }
 
 /// PreparePPUProcess 组合点（asm 引证主体 `PreparePPUProcess: ; 07:C20E`——ptr→VRAMStructWrite）。
-/// blob 面=game-data 烘焙（tools/bake_vram_structs.py）；未烘焙址 fail-loud（随件补）。
+/// blob 面读资产包 `title.vram_*` 四段（VRAMStruct 记录流，`hi==0` 终止含尾）；
+/// 未接址 fail-loud（随件补）。
 fn prepare_vram(mem: &mut FrameMemory, addr: u16) {
     match addr {
         0x82F4 => super::vram::vram_struct_write(
-            mem, &game_data::title::vram_structs::INTRO_BG_VRAM_STRUCT),
+            mem, game_data::assets::vram_intro()),
         // L9984（prg0_title.asm:3534——StartContinueScreen :2333 装载件；r25 补）
         0x9984 => super::vram::vram_struct_write(
-            mem, &game_data::title::vram_structs::START_CONTINUE_VRAM_STRUCT),
+            mem, game_data::assets::vram_start_continue()),
         // L99E3（prg0_title.asm:3560——LoadPasswordScreen :2399 `ldx #<L99E3.b / ldy #>L99E3.b
         // jsr PreparePPUProcess_`）："PASS WORD PLEASE" 行 $2088 + 属性表四段
         // （$23C0×$10 $00 / $23D0×$08 $55 / $23D8×$20 $FF / $23DA×$04 $F0）。卡 C 阻塞件。
         0x99E3 => super::vram::vram_struct_write(
-            mem, &game_data::title::vram_structs::PASSWORD_PLEASE_VRAM_STRUCT),
+            mem, game_data::assets::vram_password_please()),
         // @VRAMStruct（prg0_title.asm:2874——GameOver :939E `ldx #<@VRAMStruct.b /
         // jsr PreparePPUProcess_`）："GAME OVER" 行 $218C。
         0x93B9 => super::vram::vram_struct_write(
-            mem, &game_data::title::vram_structs::GAME_OVER_VRAM_STRUCT),
+            mem, game_data::assets::vram_game_over()),
         other => crate::unported!(&format!("bank00:{other:04X}-PrepareVram")),
     }
 }

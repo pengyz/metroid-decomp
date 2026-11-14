@@ -53,6 +53,7 @@ pub fn sections(rom: &[u8]) -> Result<Vec<Section>, String> {
     out.extend(extract_items(prg)?);
     out.extend(extract_sfx_tables(prg)?);
     out.extend(extract_song_headers(prg)?);
+    out.extend(extract_title_vram(prg)?);
     Ok(out)
 }
 
@@ -377,6 +378,10 @@ fn seg_meta() -> Vec<SegMeta> {
         SegMeta { key: PackKey::SfxTables, kind: "bytes", elem: 1, count: SFX_TABLES_LEN, rom: "bank00:$B211", note: "4B 记录窗（W2/W3/W4+SamusHit/Beep），按绝对地址引用" },
         SegMeta { key: PackKey::SongHdrs, kind: "song-hdr", elem: 13, count: N_SONGS, rom: "bank00:$BD31", note: "SongHeaders 12×13B（流/偏移另有段）" },
         SegMeta { key: PackKey::BrItems, kind: "item-rec", elem: 6, count: 0, rom: "bank01:$A3D6", note: "SpecItmsTbl_BRINSTAR（Y 链→扁平 6B 记录）" },
+        SegMeta { key: PackKey::VramIntro, kind: "vram-struct", elem: 1, count: 1066, rom: "bank00:$82F4", note: "INTRO_BG（hi==0 终止含尾）" },
+        SegMeta { key: PackKey::VramStart, kind: "vram-struct", elem: 1, count: 20, rom: "bank00:$9984", note: "START_CONTINUE（hi==0 终止含尾）" },
+        SegMeta { key: PackKey::VramPass, kind: "vram-struct", elem: 1, count: 36, rom: "bank00:$99E3", note: "PASSWORD_PLEASE（hi==0 终止含尾）" },
+        SegMeta { key: PackKey::VramOver, kind: "vram-struct", elem: 1, count: 13, rom: "bank00:$93B9", note: "GAME_OVER（hi==0 终止含尾）" },
         SegMeta { key: PackKey::NoItems, kind: "item-rec", elem: 6, count: 0, rom: "bank02:$A2D9", note: "SpecItmsTbl_NORFAIR" },
         SegMeta { key: PackKey::KrItems, kind: "item-rec", elem: 6, count: 0, rom: "bank04:$A26D", note: "SpecItmsTbl_KRAID" },
         SegMeta { key: PackKey::ToItems, kind: "item-rec", elem: 6, count: 0, rom: "bank03:$A83B", note: "SpecItmsTbl_TOURIAN" },
@@ -611,6 +616,30 @@ fn read_until_any(prg: &[u8], addr: u16, terms: &[u8], cap: usize) -> Vec<u8> {
 const SFX_TABLES_FLAT: usize = 0x3211;
 const SFX_TABLES_LEN: usize = 0x78;
 const SONG_HEADERS_LEN: usize = N_SONGS * 13; // 156
+
+/// 标题屏 VRAMStruct blob（`VRAMStructWriteData` 07:C2E4 的源；记录三态
+/// `[hi,lo,ctrl,…]`、`hi==0` 终止、ctrl bit7=增量32/bit6=RLE/低 6 位计数(0⇒256)）。
+/// 四态各自自界（含终止符），故按段独立（不再拼接，消费侧无需偏移表）。
+/// 表址：`$82F4`/`$9984`/`$99E3`/`$93B9`——均 bank0 平铺。
+const TITLE_VRAM: [(PackKey, u16, usize, &str); 4] = [
+    (PackKey::VramIntro, 0x82F4, 1066, "INTRO_BG $82F4"),
+    (PackKey::VramStart, 0x9984, 20, "START_CONTINUE $9984"),
+    (PackKey::VramPass, 0x99E3, 36, "PASSWORD_PLEASE $99E3"),
+    (PackKey::VramOver, 0x93B9, 13, "GAME_OVER $93B9"),
+];
+
+fn extract_title_vram(prg: &[u8]) -> Result<Vec<Section>, String> {
+    let mut out = Vec::with_capacity(TITLE_VRAM.len());
+    for (key, addr, len, label) in TITLE_VRAM {
+        let data = bank_slice(prg, 0, addr, len)?;
+        if data.last() != Some(&0x00) && data.last() != Some(&0xFF) {
+            // VRAMStruct 以 hi==0 终止（含尾）；末字节非 0 说明长度切错（fail-loud）。
+            return Err(format!("{label} 末字节非终止：{:02X}", data.last().copied().unwrap_or(0)));
+        }
+        out.push(Section { key, data });
+    }
+    Ok(out)
+}
 
 fn extract_sfx_tables(prg: &[u8]) -> Result<Vec<Section>, String> {
     let body = prg

@@ -4,12 +4,6 @@
   "threshold": 200,
   "files": [
     {
-      "file": "crates/game-data/src/title/vram_structs.rs",
-      "kind": "data",
-      "max": 1135,
-      "note": "标题/密码屏六段 VRAMStruct（INTRO_BG 1066 条为主）；待迁。"
-    },
-    {
       "file": "crates/game-core/src/enemy/common.rs",
       "kind": "data",
       "max": 832,

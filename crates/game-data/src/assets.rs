@@ -541,6 +541,29 @@ mod palette_tests {
         }
     }
 
+    /// 标题屏 VRAMStruct 四段：各段自界（`hi==0` 终止含尾）+ 首记录 ROM 锚。
+    #[test]
+    fn title_vram_structs_match_rom_anchors() {
+        let intro = vram_intro();
+        assert_eq!(intro.len(), 1066, "INTRO_BG $82F4..（含终止）");
+        assert_eq!(&intro[0..4], &[0x23, 0xC0, 0x20, 0x00], "首记录 $23C0 属性表 32B");
+        assert_eq!(*intro.last().unwrap(), 0x00, "VRAMStructEnd");
+        assert_eq!(vram_start_continue().len(), 20, "START_CONTINUE $9984");
+        assert_eq!(&vram_start_continue()[0..3], &[0x21, 0x8C, 0x05], "行 $218C 拳\"START\"（asm :3534）");
+        assert_eq!(vram_password_please().len(), 36, "PASSWORD_PLEASE $99E3");
+        assert_eq!(&vram_password_please()[0..3], &[0x20, 0x88, 0x10], "\"PASS WORD PLEASE\" 行 $2088（16 字符）");
+        assert_eq!(vram_game_over().len(), 13, "GAME_OVER $93B9");
+        assert_eq!(&vram_game_over()[0..3], &[0x21, 0x8C, 0x09], "\"GAME OVER\" 行 $218C（9 字符）");
+        for (name, seg) in [
+            ("intro", intro),
+            ("start", vram_start_continue()),
+            ("pass", vram_password_please()),
+            ("over", vram_game_over()),
+        ] {
+            assert_eq!(*seg.last().unwrap(), 0x00, "{name} 段须以 hi==0 终止含尾");
+        }
+    }
+
     /// 声表：SFX 4B 记录窗（`$B211..$B289`，120 B，按绝对址引用）+
     /// 曲头表（`$BD31`，12×13B）与偏移表（`$BBFA`，落在 `sound.region` 窗内）。
     #[test]
@@ -651,6 +674,24 @@ pub fn sfx_record(addr: u16) -> Option<&'static [u8]> {
 pub fn sfx_record4(addr: u16) -> Option<&'static [u8; 4]> {
     let off = addr.checked_sub(SFX_TABLES_ADDR)? as usize;
     sfx_tables().get(off..off + 4)?.try_into().ok()
+}
+
+/// 标题屏 VRAMStruct blob（四态，各自以 `hi==0` 终止含尾）。
+/// `VRAMStructWriteData` 07:C2E4 消费；记录三态 `[hi,lo,ctrl,…]`。
+pub fn vram_intro() -> &'static [u8] {
+    pack::get(PackKey::VramIntro)
+}
+
+pub fn vram_start_continue() -> &'static [u8] {
+    pack::get(PackKey::VramStart)
+}
+
+pub fn vram_password_please() -> &'static [u8] {
+    pack::get(PackKey::VramPass)
+}
+
+pub fn vram_game_over() -> &'static [u8] {
+    pack::get(PackKey::VramOver)
 }
 
 /// `SongHeaders ; $BD31` 12×13B（曲头表本体）。
