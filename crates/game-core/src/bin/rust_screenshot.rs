@@ -129,6 +129,9 @@ struct Plan {
     frames: usize,
     joy: HashMap<usize, u8>,
     captures: Vec<(usize, String)>,
+    /// fixture <帧> <hex地址> <hex值>（=emu 腿 `fixture` 同语义：帧 F 采样/执行前写入 RAM）。
+    /// 【2026-11-14】两腿必须同注入，否则起点不同（emu 生效/rust 缺省 ⇒ 假失配或假一致）。
+    fixtures: Vec<(usize, u16, u8)>,
     /// 【Task 4】snapshot <prefix>（≡bundle_load 语义（task-2 决议））；`none`=显式无存档
     /// （上电起跑——**不找 none.mss**）；缺省=无 snapshot 行（同上电起跑）。
     snapshot: Option<String>,
@@ -140,6 +143,7 @@ fn parse_schedule(text: &str) -> Result<Plan, String> {
     let mut joy = HashMap::new();
     let mut captures = Vec::new();
     let mut snapshot: Option<String> = None;
+    let mut fixtures: Vec<(usize, u16, u8)> = Vec::new();
     for (ln, line) in text.lines().enumerate() {
         let line = line.split('#').next().unwrap_or("").trim();
         if line.is_empty() {
@@ -166,6 +170,17 @@ fn parse_schedule(text: &str) -> Result<Plan, String> {
                 let tag = tok.get(2).unwrap_or(&"cap").to_string();
                 captures.push((f, tag));
             }
+            "fixture" => {
+                let f: usize = tok.get(1).and_then(|s| s.parse().ok())
+                    .ok_or_else(|| format!("line {}: fixture 帧号", ln + 1))?;
+                let a: u16 = tok.get(2)
+                    .and_then(|s| u16::from_str_radix(s.trim_start_matches("0x"), 16).ok())
+                    .ok_or_else(|| format!("line {}: fixture 地址 hex", ln + 1))?;
+                let v: u8 = tok.get(3)
+                    .and_then(|s| u8::from_str_radix(s.trim_start_matches("0x"), 16).ok())
+                    .ok_or_else(|| format!("line {}: fixture 值 hex", ln + 1))?;
+                fixtures.push((f, a, v));
+            }
             "snapshot" => {
                 let p = tok.get(1).ok_or_else(|| format!("line {}: snapshot <prefix>|none", ln + 1))?;
                 // `snapshot none`=显式无存档（上电起跑）——不找 none.mss（spec D 决议）
@@ -177,7 +192,7 @@ fn parse_schedule(text: &str) -> Result<Plan, String> {
     if frames == 0 {
         return Err("缺 frames".into());
     }
-    Ok(Plan { name, frames, joy, captures, snapshot })
+    Ok(Plan { name, frames, joy, captures, fixtures, snapshot })
 }
 
 // ---------------- bundle 三直映（snapshot 消费面——Task 4） ----------------
@@ -463,6 +478,14 @@ fn main() {
         if std::env::var("DSH_SPRITE_TRACE").is_ok() && frame >= 918 && frame <= 924 {
             eprintln!("[joy] f{} nmi_en={} ppuctrl={:02X}", frame, engine.mem.nmi_enabled, engine.mem.ram[0x00FF]);
             eprintln!("[joy] f{} joy1_field={:02X} sched={:02X}", frame, engine.mem.joy1, plan.joy.get(&frame).copied().unwrap_or(0));
+        }
+        // fixture 注入（帧采样/执行前——与 emu 腿同相位）：
+        // emu 侧 applyFixtures 在帧事件回调里（采样前）；rust 侧此处=采集发射之后、
+        // tick 之前 ⇒ 两侧「本帧工作前」同相位（probe 实证见 cases/_archive 记录）。
+        for (ff, fa, fv) in &plan.fixtures {
+            if *ff == frame {
+                engine.mem.write_ram(*fa, *fv);
+            }
         }
         engine.mem.joy2 = 0;
         // catch_unwind：`unported!` fail-loud 缺口在**对拍工具层**不整程崩——

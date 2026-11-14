@@ -554,6 +554,17 @@ mod palette_tests {
         );
     }
 
+    /// `AreaPaletteToggle ; 01/02/03/04/05:95DA`（ROM 逐字节 `01 00`×2 / `06 00`×3）——
+    /// 区序（0=Br/1=No/2=Kr/3=To/4=Ri）⇒ `[01,01,06,06,06]`。
+    /// **回归锚**：它曾由 `crates/game-core/src/frame/mainloop.rs` 误读 WRAM `$6885`
+    /// （道具扫描项区）⇒ 恒 0 ⇒ 电梯换区 `PaletteToggle^=7` 后 pending 差 1、载错调色板。
+    #[test]
+    fn area_palette_toggle_matches_rom_anchor() {
+        let got: Vec<u8> = (0u8..5).map(|a| area_pal_toggle(a).expect("区序 0..4")).collect();
+        assert_eq!(got, vec![0x01, 0x01, 0x06, 0x06, 0x06], "AreaPaletteToggle 五区");
+        assert_eq!(area_pal_toggle(5), None, "区序 5 表外");
+    }
+
     /// sprite blob：三表界 = `$860B-$8572`/`$86DF-$860B`，且覆盖帧 0x28 记录（截断回归锚）。
     #[test]
     fn sprite_blob_covers_frame_records() {
@@ -809,6 +820,14 @@ pub fn sound_region() -> &'static [u8] {
 /// MetroidMaxSpeed $77F6 / MetroidLatch0400-0450 $77F8）。只有 latch 区后续会被改写。
 pub fn tourian_metroid_data() -> &'static [u8] {
     pack::get(PackKey::TourianMetroidData)
+}
+
+/// `AreaPaletteToggle`（5 区，area 序 Br/No/Kr/To/Ri）——`MoreInit 07:C81D` 写
+/// `PaletteToggle($0076)`；电梯换区再做 `eor 7`。ROM 值：`[01,01,06,06,06]`。
+pub fn area_pal_toggle(area: u8) -> Option<u8> {
+    pack::get(PackKey::AreaPalToggle)
+        .get(area_idx(area)? as usize)
+        .copied()
 }
 
 /// SFX 4B 记录窗基址（`$B211`）；窗口内记录以**绝对 ROM 址**引用。

@@ -199,6 +199,18 @@ WritePPUCtrl（唯一点亮真 PPUMASK 的地方）/ WriteScroll / ReadJoyPads`�
 > 补点方式同 #6 三步（先逐帧记 `$0320` 找 `status≠0` 帧 → 加 capture → 断言 `status` 序列
 > 走过 1/2/3/4/6 且 `$0074` 的区号位被改写）。
 
+> 【2026-11-14 补充：电梯覆盖缺口已闭合】新增正式用例 `cases/case-elev-norfair-transition.txt`
+> （9 格：f800/960/1040/1120/1200/1300/1420/1560/1600），**全 9 格像素 0px**，十态机
+> `1→2→3→…→8→9→1` 与 Brinstar→Norfair 换区首次取得像素证据。取证方式（两阶段）：
+> ① 探针直接注入 `LoadElevator` 字段面（`$0320/$032f/$032d/$032e/$0323`）而非靠走路进门
+> ——因为 14 案输入窗全落在 `SamusIntro`（`Timer3=$2C`，440 帧）内，自然输入无法进 GameEngine；
+> ② 两侧调度器同时支持 `fixture <帧> <addr> <val>` 才使注入可对拍（Rust 侧旧无此 op）。
+> 该证据当场抓出两处真错（详见 `docs/findings/elevator-evidence.md`）：
+> `AreaPaletteToggle` 读错址（WRAM `$6885` 而非 area bank `$95DA`）、以及
+> `WaitNMIPass_` 后 pending 被 `SelectSamusPalette` 抢覆（换区载错调色板 bank）。
+> 教训（第三次同型）：**「实现完成」与「有证据」是两件事**——r9 三次抓错（常量址、比较跳转、
+> 时序覆写）全部发生在「单测全绿 + 零对拍」的窗口里。
+
 > 【2026-11-14 更正】#6 的「已修」只到**实现层**：r9 对抗复核（verifier）查出
 > `Doors_RemoveIfOffScreen` 曾把 `$0300,x`（绝对址 $0380..$03B0）写成零页偏移 `0x80`，
 > 且循环用 `while x >= 0` 跑 12 轮（asm `bmi` 回跳 ⇒ 恰 4 轮）——两处已修并加零页哨兵断言。

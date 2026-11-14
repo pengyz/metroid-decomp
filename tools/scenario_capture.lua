@@ -1165,16 +1165,14 @@ if samplePoint == "spin-exit" or next(capAt) ~= nil or everyN > 0 then
 end
 
 -- task-28 ①：夹具写入（F_a 帧执行——设计 §3 注入模型；断言面在 diff_traces）
-local fixtureApplied = false
+-- 【2026-11-14 修·多批夹具】旧实现用单一全局 fixtureApplied：第一批命中后永不再跑
+-- ⇒ 后续批次的 fixture 静默失效（elevprobe 实录 f900 批生效、f1100 批零效果）。
+-- 改为逐条 applied 表 + frame>=fx.frame 触发（帧计数若跳帧也不丢，取最近可用帧）。
+-- 无既有 case 使用 fixture op（case-morphball-probe 仅注释提及）⇒ 语义放宽无回归面。
+local fixtureAppliedAt = {}
 local function applyFixtures()
-  if fixtureApplied then return end
-  local due = false
-  for _, fx in ipairs(PLAN.fixtures or {}) do
-    if fx.frame == frame then due = true end
-  end
-  if not due then return end
-  for _, fx in ipairs(PLAN.fixtures or {}) do
-    if fx.frame == frame then
+  for i, fx in ipairs(PLAN.fixtures or {}) do
+    if not fixtureAppliedAt[i] and frame >= fx.frame then
       -- task-32 实战修正：MEMTYPE=8 数值枚举（探针实证 emu.memType.cpu=nil/"cpu" 待验
       -- ——write 用 MEMTYPE 同 readByte 口径）
       -- CPU 态 register 注入径（register set API（非 RAM 地址）——a/x/y/p→emu 寄存器设置）
@@ -1188,11 +1186,11 @@ local function applyFixtures()
       else
         okw, errw = pcall(emu.write, tonumber(fx.addr, 16), tonumber(fx.value, 16), MEMTYPE)
       end
-      log(string.format("fixture applied f=%d $%s=$%s (%s) ok=%s err=%s",
-        frame, fx.addr, fx.value, fx.persistence, tostring(okw), tostring(errw)))
+      log(string.format("fixture applied want_f=%d at_f=%d $%s=$%s (%s) ok=%s err=%s",
+        fx.frame, frame, fx.addr, fx.value, fx.persistence, tostring(okw), tostring(errw)))
+      fixtureAppliedAt[i] = true
     end
   end
-  fixtureApplied = true
 end
 
 emu.addEventCallback(function()

@@ -1,0 +1,48 @@
+# 探针 case-elevprobe：电梯房可达性（RoomNumber/MapPos 注入 → 滚动触 CheckUpdateNameTable → SetupRoom → ScanForItems 生成电梯对象）
+# 事实锚（A 级）：WorldMap 00:A53E（prg 0x253E）cell (22,11) = room $0B（Brinstar 表，SpecItmsTbl type=$04 arg=$01 → Norfair）
+# 相位锚：SamusInit 设 Timer3=$2C，UpdateTimer 每 10 帧减一 ⇒ 开场淡入 440 帧（asm 注「440 frames to fade in Samus」），f359 进游戏 ⇒ f800 后才可控
+name case-elevprobe
+frames 1400
+snapshot none
+watch 005a RoomNum
+watch 0050 MapPosX
+watch 004f MapPosY
+watch 0074 InArea
+watch 001e MainRoutine
+watch 0320 ElevStatus
+watch 032f ElevType
+watch 032d ElevY
+watch 032e ElevX
+watch 0307 SamusOnElev
+watch 030d SamusY
+watch 030e SamusX
+watch 0049 ScrollDir
+watch 004a ScrollX
+watch 004b ScrollY
+watch 0014 Joy1
+watch 0300 SamusStatus
+watch 0106 Health
+watch 0107 HealthHi
+watch 0323 ElevAnim
+watch 032c ElevHi
+press 310 start
+press 350 start
+capture 800 intro-end
+hold 800-1180 right
+capture 880 pre-inject
+fixture 900 005a 0b evolving
+fixture 900 0050 16 evolving
+fixture 900 004f 0b evolving
+capture 940 post-inject
+capture 1000 load-window
+capture 1060 after-load
+# 把 Samus 摆到电梯台面上方（elev y=131 ⇒ Samus.y=116=$74 恰 dist_y+1==radius_y），x 对齐 $80
+fixture 1100 030e 80 evolving
+fixture 1100 030d 74 evolving
+fixture 1100 0308 00 evolving
+hold 1120-1400 down
+capture 1200 on-elev
+capture 1260 ride-start
+capture 1340 riding
+capture 1400 riding2
+endFrame 1400

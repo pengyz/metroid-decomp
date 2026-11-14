@@ -3286,7 +3286,10 @@ pub fn more_init(mem: &mut FrameMemory) {
     let map_y = game_data::title::world_map::AREA_MAP_POS
         [area_idx(mem.read_ram(crate::ram_map::IN_AREA))].1; // ROM $95D8
     mem.write_ram(0x004F, map_y); // MapPosY（constants_ram:542）
-    let pt = mem.read_ram(0x6885); // AreaPaletteToggle
+    // AreaPaletteToggle（各 area bank $95DA，ROM）——**旧读 $6885 是错址**（WRAM 项扫计数区
+    // ⇒ 恒 0 ⇒ 电梯换区 `PaletteToggle^=7` 后 pending 差 1 ⇒ 载错调色板；L4 elevprobe2 实证）。
+    let pt = game_data::assets::area_pal_toggle(mem.read_ram(crate::ram_map::IN_AREA))
+        .unwrap_or_else(|| crate::unported!("bank07:CA30-pal-toggle"));
     mem.write_ram(0x0076, pt); // PaletteToggle（constants_ram:609）
     mem.write_ram(0x005A, 0xFF); // RoomNumber=$FF（constants_ram:567——undefined room）
     copy_area_pointers(mem); // C8B0（已端口）
@@ -3913,6 +3916,20 @@ mod tests {
 #[cfg(test)]
 mod r25_chain_probe {
     use super::*;
+
+    /// `AreaPaletteToggle` 真源（各 area bank `$95DA`）：区 0/1 ⇒ `$01`、区 2/3/4 ⇒ `$06`。
+    /// **回归锚**：旧形读 WRAM `$6885`（道具扫描计数区）⇒ 恒 0，电梯换区 pending 差 1。
+    #[test]
+    fn more_init_sets_palette_toggle_from_area_rom() {
+        for (area, want) in [(0u8, 0x01u8), (1, 0x01), (2, 0x06), (3, 0x06), (4, 0x06)] {
+            let mut m = crate::frame::FrameMemory::default();
+            copy_map(&mut m);
+            m.write_ram(crate::ram_map::MAIN_ROUTINE, 1);
+            m.write_ram(crate::ram_map::IN_AREA, area);
+            more_init(&mut m);
+            assert_eq!(m.read_ram(0x0076), want, "区 {area} 的 PaletteToggle");
+        }
+    }
 
     /// more_init 递进面（r25 诊断锚：mr 1→2——CopyMap 前置（单测态补地图面））。
     #[test]

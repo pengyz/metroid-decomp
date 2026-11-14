@@ -57,6 +57,7 @@ pub fn sections(rom: &[u8]) -> Result<Vec<Section>, String> {
     out.extend(extract_intro_star_palettes(prg)?);
     out.extend(extract_title_tables(prg)?);
     out.extend(extract_tourian_metroid_data(prg)?);
+    out.extend(extract_area_pal_toggle(prg)?);
     Ok(out)
 }
 
@@ -483,6 +484,8 @@ fn seg_meta() -> Vec<SegMeta> {
         SegMeta { key: PackKey::RiItems, kind: "item-rec", elem: 6, count: 0, rom: "bank05:$A20D", note: "SpecItmsTbl_RIDLEY" },
         SegMeta { key: PackKey::TourianMetroidData, kind: "bytes", elem: 1, count: 14, rom: "bank07:$C5A8",
                   note: "MetroidData（InitBank3 逐字节拷到 $77F0-$77FD）" },
+        SegMeta { key: PackKey::AreaPalToggle, kind: "bytes", elem: 1, count: 5, rom: "bank1/2/3/4/5:$95DA",
+                  note: "AreaPaletteToggle 5 区（Br/No=01，Kr/To/Ri=06）——MoreInit→PaletteToggle" },
     ];
     v
 }
@@ -910,6 +913,22 @@ fn extract_tourian_metroid_data(prg: &[u8]) -> Result<Vec<Section>, String> {
         data: bank_slice(prg, 7, TOURIAN_METROID_DATA_ADDR, TOURIAN_METROID_DATA_LEN)
             .map_err(|e| format!("MetroidData $C5A8: {e}"))?,
     }])
+}
+
+/// `AreaPaletteToggle`（各 area bank `$95DA`，1 B/区）——`MoreInit 07:C81D` 读它写入
+/// `PaletteToggle($0076)`；电梯换区 `PaletteToggle eor 7` 后再进 `PaletteDataPending`。
+/// **取值（ROM 逐字节自证）**：bank1/2=`01`（Palette00+1）、bank3/4/5=`06`（Palette05+1）。
+/// area 序 0=Br/1=No/2=Kr/3=To/4=Ri ⇒ ROM bank [1,2,4,3,5]（`BankTable 07:CA30`）。
+fn extract_area_pal_toggle(prg: &[u8]) -> Result<Vec<Section>, String> {
+    const ADDR: u16 = 0x95DA;
+    const AREA_BANKS: [u8; 5] = [1, 2, 4, 3, 5];
+    let mut body = Vec::with_capacity(5);
+    for (area, bank) in AREA_BANKS.iter().enumerate() {
+        let b = bank_slice(prg, *bank, ADDR, 1)
+            .map_err(|e| format!("AreaPaletteToggle area{area} bank{bank} $95DA: {e}"))?;
+        body.push(b[0]);
+    }
+    Ok(vec![Section { key: PackKey::AreaPalToggle, data: body }])
 }
 
 fn extract_sfx_tables(prg: &[u8]) -> Result<Vec<Section>, String> {

@@ -193,6 +193,56 @@
         }
       }
     },
+    "case-elev-norfair-transition": {
+      "scenario_sha256": "f2028ae8b0db76998cbd55f95e259eab9d4bb009e0d10ba79a5a147eb41c955d",
+      "states": {
+        "800:intro-end": {
+          "state": "match",
+          "diff_pixels": 0,
+          "total_pixels": 61440
+        },
+        "960:armed": {
+          "state": "match",
+          "diff_pixels": 0,
+          "total_pixels": 61440
+        },
+        "1040:idle-check": {
+          "state": "match",
+          "diff_pixels": 0,
+          "total_pixels": 61440
+        },
+        "1120:activate": {
+          "state": "match",
+          "diff_pixels": 0,
+          "total_pixels": 61440
+        },
+        "1200:moving": {
+          "state": "match",
+          "diff_pixels": 0,
+          "total_pixels": 61440
+        },
+        "1300:fading": {
+          "state": "match",
+          "diff_pixels": 0,
+          "total_pixels": 61440
+        },
+        "1420:transition": {
+          "state": "match",
+          "diff_pixels": 0,
+          "total_pixels": 61440
+        },
+        "1560:settle": {
+          "state": "match",
+          "diff_pixels": 0,
+          "total_pixels": 61440
+        },
+        "1600:end": {
+          "state": "match",
+          "diff_pixels": 0,
+          "total_pixels": 61440
+        }
+      }
+    },
     "case-fcprobe": {
       "scenario_sha256": "80b1bbb4c8ba315781dbe6559dd7ce8029b7991ef80e003a690a2d00cd82bfde",
       "states": {
@@ -463,7 +513,7 @@
         },
         "700:mid-1": {
           "state": "diff",
-          "diff_pixels": 71,
+          "diff_pixels": 23,
           "total_pixels": 61440
         },
         "850:mid-2": {
@@ -478,7 +528,7 @@
         },
         "1100:mid-4": {
           "state": "diff",
-          "diff_pixels": 90,
+          "diff_pixels": 42,
           "total_pixels": 61440
         },
         "1150:pw-done": {
@@ -826,6 +876,16 @@
       "diff": 2,
       "blocked": 0,
       "cells_total": 112
+    },
+    {
+      "ts": "2026-11-14T04:44:39+00:00",
+      "kind": "anchor",
+      "evidence": "",
+      "reason": "新增 case-elev-norfair-transition（9 格全 0px）：电梯十态 1→2→3→…→8→9→1 与 Brinstar→Norfair 换区首获像素证据；其余 14 案逐案读数不变（match 110→119 全为新增格，无既有格回退；2 格 diff 仍为已挂账 oracle-present-pipeline-lag f700=23px/f1100=42px）",
+      "match": 119,
+      "diff": 2,
+      "blocked": 0,
+      "cells_total": 121
     }
   ]
 }

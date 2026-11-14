@@ -210,6 +210,10 @@ pub enum PackKey {
     NoEnMovStr = 152,
     // ---- Tourian 初始化数据（bank7，InitBank3 消费）----
     TourianMetroidData = 153,
+    /// `AreaPaletteToggle`（各 area bank `$95DA`，1 B/区，area 序 Br/No/Kr/To/Ri）。
+    /// 修：`MoreInit` 把它写进 `PaletteToggle`；旧 rust 读 WRAM $6885（**错址**）⇒ 恒 0
+    /// ⇒ 电梯换区 `PaletteToggle^=7` 后 pending 差 1 ⇒ 载错调色板（L4 实证 12421px）。
+    AreaPalToggle = 154,
 }
 
 impl PackKey {
@@ -375,6 +379,7 @@ impl PackKey {
             PackKey::NoEnMovPtrs => "area.no.en_mov_ptrs",
             PackKey::NoEnMovStr => "area.no.en_mov_str",
             PackKey::TourianMetroidData => "tourian.metroid_data",
+            PackKey::AreaPalToggle => "area.pal_toggle",
         }
     }
 

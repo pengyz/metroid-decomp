@@ -1,0 +1,49 @@
+# 用例 case-elev-norfair-transition（前身探针 case-elevprobe2）：不重载房间（避免 DrawRoom 覆盖几何致死），直接合成电梯对象（= LoadElevator 的字段写入面）
+# 目的：拿 ElevatorIdle→ScrollXToCenter→Move→ScrollY→Fade→Transition 的真 ROM 代码执行证据
+name case-elev-norfair-transition
+frames 1600
+snapshot none
+watch 005a RoomNum
+watch 0050 MapPosX
+watch 004f MapPosY
+watch 0074 InArea
+watch 001c PalPending
+watch 0023 CurBank
+watch 001e MainRoutine
+watch 0320 ElevStatus
+watch 032f ElevType
+watch 032d ElevY
+watch 032e ElevX
+watch 032c ElevHi
+watch 0323 ElevAnim
+watch 0300 SamusStatus
+watch 0307 SamusOnElev
+watch 030d SamusY
+watch 030e SamusX
+watch 0049 ScrollDir
+watch 004a ScrollX
+watch 004b ScrollY
+watch 0106 Health
+watch 0107 HealthHi
+press 310 start
+press 350 start
+capture 800 intro-end
+# 合成电梯对象（LoadElevator 等价：status=1/type=1/y=$83/x=$80/anim=$23）
+fixture 900 0320 01 evolving
+fixture 900 032f 01 evolving
+fixture 900 032d 83 evolving
+fixture 900 032e 80 evolving
+fixture 900 0323 23 evolving
+# Samus 摆到台面上（elev.y=$83 ⇒ Samus.y=$74）
+fixture 920 030e 80 evolving
+fixture 920 030d 74 evolving
+fixture 920 0308 00 evolving
+hold 960-1560 down
+capture 960 armed
+capture 1040 idle-check
+capture 1120 activate
+capture 1200 moving
+capture 1300 fading
+capture 1420 transition
+capture 1560 settle
+endFrame 1600

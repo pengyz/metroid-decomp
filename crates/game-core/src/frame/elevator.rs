@@ -299,9 +299,14 @@ fn elev_transition(mem: &mut FrameMemory) {
     // 在 Tourian（InArea >= $12）恒用 Palette00+1，否则用 PaletteToggle。
     let pending = palette_pending_value(mem.read_ram(IN_AREA), pt);
     mem.write_ram(PALETTE_PENDING, pending);
-    // jsr WaitNMIPass_（ClearNMIStat + 等 NMI）
+    // jsr WaitNMIPass_（ClearNMIStat + 等 NMI）——asm 语义=交出本迭代余量、等一次 NMI；
+    // 该 NMI 的 `CheckPaletteWrite`（07:C1E0）**先消费刚写的 pending**：emu 实录
+    // f1207 pending=6 → f1208 消费（bank 已切换 ⇒ 取 Norfair 表 pal05）。
+    // 本模型无「迭代中途挂起/续跑」机制（iter_wait 只记帧账）⇒ **就地兑现该段 NMI**
+    // （相位早 ≤1 tick；像素面 f1300+ 归零——见 docs/findings/elevator-evidence.md）。
     mem.write_ram(NMI_STATUS, 1);
     mem.iter_wait();
+    crate::frame::nmi::check_palette_write(mem);
     crate::frame::mainloop::select_samus_palette(mem);
     crate::frame::mainloop::start_music(mem);
     // jsr ScreenOn（$C447）——影子 |= $1E，真 PPUMASK 由 NMI 落（延迟落影同族形）。
@@ -636,6 +641,32 @@ mod tests {
         assert_eq!(mem.read_ram(ELEV_STATUS), 7, "⇒ 7 Fade（淡入）");
         assert_eq!(mem.read_ram(SAMUS + S_ANIM_INDEX), ANIM_SAMUS_FADE_IN);
         assert_eq!(mem.read_ram(ELEVATOR + F_ANIM_INDEX), ANIM_ELEV_FADE_IN);
+    }
+
+    /// 换区核的**调色板兑现**（WaitNMIPass_ 语义锚——emu 实录 f1207 pending=6 →
+    /// f1208 消费、bank 已切换 ⇒ 取 Norfair 表 pal05）。
+    /// 过：上行低半字节=1 → InArea=$11、PaletteToggle 1^7=6 ⇒ 该 NMI 载
+    /// `bank2 idx5` = `0F 20 10 00 0F 28 16 04 0F 16 11 04 0F 35 1B 16`（ROM 49 项表真值）。
+    /// 不过（旧形）：pending=6 被随后的 SelectSamusPalette(2) 抢覆 ⇒ 该帧**零写**
+    /// （emu 实测：像素面 f1300+ 12421px 全屏错色）。
+    #[test]
+    fn transition_consumes_area_palette_at_wait_nmi() {
+        let mut mem = m();
+        mem.write_ram(ELEV_STATUS, 6);
+        mem.write_ram(ELEV_TYPE, 0x01); // 上行 ⇒ 目的区 1（Norfair）
+        mem.write_ram(PALETTE_TOGGLE, 0x01);
+        mem.write_ram(MAIN_ROUTINE, 3);
+        update_elevator(&mut mem);
+        assert_eq!(mem.read_ram(IN_AREA), 0x11);
+        let bg: Vec<u8> = mem.render.palette[0..16].to_vec();
+        assert_eq!(
+            bg,
+            vec![
+                0x0F, 0x20, 0x10, 0x00, 0x0F, 0x28, 0x16, 0x04, 0x0F, 0x16, 0x11, 0x04, 0x0F, 0x35,
+                0x1B, 0x16
+            ],
+            "WaitNMIPass_ 处须先兑现 pending=6（Norfair pal05），随后 SelectSamusPalette 才覆写"
+        );
     }
 
     /// 换区核上行：$84（Ridley）⇒ Norfair(1)；其余上行 ⇒ Brinstar(0)。
