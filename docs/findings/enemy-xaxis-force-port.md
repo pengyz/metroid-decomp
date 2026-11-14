@@ -90,3 +90,35 @@ case-scrollseam-probe/1240:scroll-l40: match 集合缩水（基线 match → 现
 4. 这条修好还会连带改善 `case-jumpledge-probe` 的 148px（同一只 Skree 的四个弹）与 `case-002` 的万像素面。
 
 也就是说：**x 轴力批次本身没有错，它只是把一个更早的缺件照出来了**。补丁继续留在本目录，等移动引擎落地后再一起入库。
+
+## 9. 后续：`$FC/$FE` 指令已按 asm 实现，但仍不足以让 Skree 落地（2026-11-14 负结果留档）
+
+在 §8 定谳（Skree 从不执行移动指令）之后，本轮把两处真正缺件的指令补上了，并做了 A/B 实测。结论是**这一步必要但不充分**，代码已回退，留档以免重试。
+
+### 9.1 补的两条指令（asm 依据）
+
+`refs/m1disasm/SRC/areas_common.asm`：
+
+- `$FC` **RepeatPreviousUntilFailure**（`:702-731`）：`data1F` bit7 ⇒ 上检（`EnemyCheckMoveUp`）；`data1F == 0` ⇒ **立即成功**；bit6 ⇒ 下检（`EnemyCheckMoveDown`）。成功 ⇒ `movementInstrIndex -= 2`（重复上一条 SignMagSpeed）；失败 ⇒ `movementInstrIndex += 1` 且 `data1F ← 0`。
+- `$FE` **RepeatPreviousUntilNoDeltaYThenTriggerResting**（`:749-787`）：先 `-= 2`；`data1F == 0` ⇒ **立即失败**（与 `$FC` 相反）；失败 ⇒ `EnemyTriggerResting_AndClearEnAccelY`（`data05 |= #$20`、`accelY ← 0`）。
+
+旧实现把这两条与 `$FA/$FB` 一起当作"停止"（`return (0, 0, delay, ii, false)`），所以 `movementInstrIndex` 永远停在 `$FC` 那一格——这正是 §8 观察到的"位置恒定"。
+
+### 9.2 实测（三案单跑）
+
+- 补 `$FC/$FE` 后（`movementIndex` 保持 `+8`、`speedSubPixelY` 改 `+7`）：`case-jumpledge-probe` **5/8**（与补丁态持平，未新增 match）；`case-scrollseam-probe` **6/14**，`f1240` 仍 **184px**，且末尾 `f1360` 由 126px 劣化到 8998px。
+- 期间尝试把 `movementIndex` 改读 `+10`（依 ROM `lda $040a,x` 的字符匹配）：`case-jumpledge-probe` 由 5/8 掉到 **3/8** ⇒ **`+8` 才是 movementIndex**（`+10` 是 `data0A`，见 `try_becoming_active` 注释）。这条已由实测定谳，勿再按字节匹配推断字段。
+
+### 9.3 说明缺口仍在更下游
+
+`$FC` 走通后 `data1F = 0x40`（Skree：`L977B[4]=$04` → `LoadTableAt977B` 载器×2 = `$08` → `asl×3` = `$40`）⇒ 应当用**下检** `EnemyCheckMoveDown` 判落地。实测 rust 仍不落地，说明 `crates/game-core/src/frame/mainloop.rs::enemy_check_move_down` 对 Skree 的判据（半径、离屏名表、`hi` 面）与金腿不一致，而不是 `$FC` 本身。
+
+### 9.4 为什么不留代码
+
+引入 `$FC/$FE` 后 `case-scrollseam-probe` 末格从 126px 劣化到 8998px（采集点级 match 数量不变，但量值大幅回退），且 `case-jumpledge-probe` 无净收益。按"格级 ratchet + 量值不劣化"两条一起看，这一批不具备入库条件，全部回退。
+
+### 9.5 下一步的判据（给后来者）
+
+1. 先用临时 watch 取金腿 Skree 在落地前 3 帧的 `En`、`EnsExtra` 全 16 字节，确认 `movementInstrIndex` 是否真到 `$0F`、`data1F` 是否真为 `$40`；
+2. 再用同一帧比 rust 的 `enemy_check_move_down` 返回位（不是比最终像素）；
+3. 两者对上之后再上 `$FC/$FE`，并以 `case-scrollseam-probe/f1240` 回 match **且** `f1360` 不劣化为双验收。
