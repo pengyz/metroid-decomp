@@ -173,15 +173,18 @@ pub fn c4b2_unit(mem: &mut FrameMemory) {
 /// **结构互核注**：①PPUSTATUS 轮询=瞬时级（序幕双 vblank 先例——task-13 对齐注）②
 /// $FF bit7 置=write_io($2000) 同步 **nmi_enabled 复启**（ScreenNmiOff 的关↔NMIOn 的开
 /// =boot 链 NMI 开关配对面）③`bne LC481` 恒转（ora 非零——相位互核）。
-/// `NMIOn ; 07:C487` = 等 VBlank **结束** → `or #VBLKNMI_ON` → `LC481`（`sta PPUCTRL` /
-/// `sta PPUCTRL_ZP` 双写）。
+/// `NMIOn ; 07:C487` = 等 VBlank **结束**（`@loop`: `lda PPUSTATUS / and #PPUSTATUS_VBLK /
+/// bne @loop`）→ `or #VBLKNMI_ON` → `LC481`（`sta PPUCTRL` / `sta PPUCTRL_ZP` 双写）。
 ///
-/// **等待形未建模（有意识的口径，非遗漏）**：`@loop` 轮询 `PPUSTATUS` 的 VBLK 位，
-/// 是**帧内相位**等待，不是帧等待。本模型按帧原子执行，且唯一调用前置
-/// （`screen_nmi_off` 内的 `iter_wait()` = asm `WriteAndWait` 的「等 NMI」）已把执行点
-/// 推到 NMI 之后 ⇒ 到此处 VBlank 已结束，`@loop` 在帧粒度下**恒已满足**（零代价）。
-/// 反例条件：若将来建模帧内相位（或在此两件之间加采集点/插桩），必须补该轮询，
-/// 否则会在 VBlank 中使能 NMI ⇒ 立刻多触发一次 NMI（r9 复核 P1-1 的登记项）。
+/// **等待形未建模（有意识的取舍，非遗漏；r9 复核 P1-1）**：正确理由不是「到此处 VBlank 已结束」
+/// ——从 ROM 语义看恰恰相反：`WaitNMIPass_ ; 07:C43F` 等的是 `NMIStatus != 0`（**NMI 处理完**，
+/// handler 只有几条指令），而 VBlank 有约 20 行 ⇒ NMI 返回时 VBLK 位通常**仍为 1**，真机上
+/// `@loop` 确实会自旋（且本函数共 7 处调用，其中 `title_bridge` 那条路径前面没有 `iter_wait()`）。
+/// 不建模的真实代价评估：`@loop` 只消耗**帧内剩余 VBlank（≤1 帧）**，其唯一效果是把
+/// `sta $2000` 的落点从「帧内中段」推到「帧边界」；而 `nmi_enabled` 的生效点是**下一帧的 NMI**
+/// ⇒ 在按帧采集的任何采集点上**不可观测**（本模型帧原子，无帧内相位面）。
+/// 反例条件：一旦引入帧内相位建模、或在本函数前后加采集点/插桩，必须补该轮询，
+/// 否则会在 VBlank 中使能 NMI ⇒ 立刻多触发一次 NMI（画面多一帧）。
 pub fn nmi_on(mem: &mut FrameMemory) {
     let f = mem.read_ram(crate::ram_map::PPUCTRL_ZP) | 0x80;
     mem.write_io(0x2000, f);

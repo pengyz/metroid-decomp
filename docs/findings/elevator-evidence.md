@@ -2,7 +2,7 @@
 
 > 目标：让 `UpdateElevator ; 07:D7B3`（十态）+ `SamusElevator ; 07:D423` + 换区核
 > `ElevatorD8BF ; 07:D8A3` 从「单测绿」升级为「有 L4 像素证据」。
-> 结论：**已达成** —— `cases/case-elev-norfair-transition.txt` 9 格全 0px。
+> 结论：**已达成** —— `cases/case-elev-norfair-transition.txt` **10 格全部 0px**（状态 2/4/5/7/9 见 §5）。
 > 过程中抓出**两处真错**（均在状态面之外，见 §4）。
 
 ## 1. 为什么原来没有证据
@@ -124,13 +124,13 @@ rust=B7` —— 即既有 **#8 FC+2 相位残差**（本轮未引入，本轮之
 
 ## 证据指针
 
-- 用例：`cases/case-elev-norfair-transition.txt`（9 格）、归档失败探针
+- 用例：`cases/case-elev-norfair-transition.txt`（10 格，含 f1207 暗窗锚）、归档失败探针
   `cases/_archive/case-elevprobe-roomreload.txt`
 - 矩阵：15 用例 / 122 格 / match 120 / diff 2（2 格=已挂账 `oracle-present-pipeline-lag`）
 - emu 帧级轨迹：`analysis/traces/case-elev-norfair-transition.frames.jsonl`
 - 状态对齐：`analysis/sem/case-elev-norfair-transition.{sem,rust}.jsonl`（1191/1581 同帧同值）
 - 代码：`crates/game-core/src/frame/elevator.rs`、`crates/game-data/src/extract.rs`
-  （`extract_area_pal_toggle` / `AREA_BANKS = [1,2,4,3,5]`）
+  （`extract_area_pal_toggle` / `extract::area_banks(prg)`（读 `BankTable ; 07:CA30` 现算））
 - ROM 锚：`AreaPaletteToggle ; 01..05:95DA`、`SamusElevator ; 07:D423`、
   `ElevatorD8BF ; 07:D8A3`、`CheckPaletteWrite ; 07:C1E0`
 
