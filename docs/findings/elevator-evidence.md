@@ -108,10 +108,10 @@
 > f1206 才是唯一能看见该残差的格。已改为：**保留 f1206 于 `cases/_archive/` 的探针谱系，
 > 作为 #8 的复现配方**，正式用例暂不含它。
 
-**RAM 行对齐**：`tools/sem.py case case-elev-norfair-transition` ⇒ **MATCHED 1191/1581 帧**
-（15 列全同：fc/gm/mr/tr/gp/nr/t3/cb/bsp/ia/rm/st/sy/sx/hp），首分歧 `f1227 fc: oracle=B9
-rust=B7` —— 即既有 **#8 FC+2 相位残差**（本轮未引入，本轮之前该案因 sem 漏传 fixture 而
-整段假分歧，已修 `tools/sem.py::_derive_sched`）。
+**RAM 行对齐**：`tools/sem.py case case-elev-norfair-transition` ⇒ **MATCHED 1191/1581 帧**。
+1581 公共帧中分歧**仅在 `fc` 一列、390 帧、恒定 +2**（首 f1211 `169/167`、末 f1600 `46/44`），
+其余 14 列（gm/mr/tr/gp/nr/t3/cb/bsp/ia/rm/st/sy/sx/hp）全帧相同 ⇒ 归因既有 **#8 FC+2 相位残差**
+（本轮未引入；本轮之前该案因 sem 漏传 fixture 而整段假分歧，已修 `tools/sem.py::_derive_sched`）。
 
 其余缺口：
 
