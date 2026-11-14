@@ -46,7 +46,7 @@ fn object_check_move_vertical(mem: &mut FrameMemory) -> bool {
     let x = mem.read_ram(0x030E);
     let hi = mem.read_ram(SAMUS_HI); // Samus.hi（$30C——Object 结构字节锚 F186 `BD 0C 03`）
     let rx = mem.read_ram(crate::ram_map::SAMUS_RADIUS_X);
-    let check_y = y.wrapping_add(ry); // 向下查撞点=y+radiusY（asm E7AD/E90F）
+    let mut check_y = y.wrapping_add(ry); // 向下查撞点=y+radiusY（asm E7AD/E90F）
     if rx == 0 {
         return true; // asm CheckMoveVertical `bne Lx198/sec/rts`（radiusX=0⇒跳过检）
     }
@@ -59,7 +59,29 @@ fn object_check_move_vertical(mem: &mut FrameMemory) -> bool {
     // ——碰撞点落到相邻名表（RoomRAM 另一页）。旧形不调 hi ⇒ 在 x≈0..7 的左缘读到本页
     // 第 31 列（可能是固实墙）⇒ 空中误判落地（jumpledge f1181 accelY 被清零根因）。
     let mut hi_eff = hi;
-    if x < rx && mem.read_ram(crate::ram_map::SCROLL_DIR) & 0x02 != 0 {
+    let scroll_dir = mem.read_ram(crate::ram_map::SCROLL_DIR);
+    // 【Y 段回卷修（2026-11-14）】asm `CalculateFirstBGCollisionPoint ; 07:E90F` 的 Y 段
+    // （向下查：Temp02_DistToCenterY = −radiusY = 0xF1，`bpl` 不取 ⇒ 走 `Lx212/LE934`）：
+    //   jsr LE95F              ; X = y − Temp02 = y+radiusY（sbc 借位意味 y < 256−radiusY）
+    //   bcs Lx212              ; 无借位（y ≥ 256−radiusY）⇒ 必调整
+    //   cpx #$F0 / bcc Lx214   ; 否则边界值 ≥$F0 才调整
+    //   Lx212: txa / adc #$0F  ; X += 0x0F（越过 240 行后回卷到名表顶部）
+    //   LE934: lda ScrollDir / and #$02 / bne Lx214 / inc Temp0B_PositionHi
+    //          ; 竖滚房才换名表页（横滚房"允许回绕"，只改行号）
+    // 旧形只在 y+ry 上做 8 位回绕 ⇒ y≥0xF0 时读到**本页顶行**（空瓦）⇒ 误判可走 ⇒
+    // Samus 穿地板（跳落后 Y 一直涨到回绕、随后伪上升，jumpledge f1190+ 根因）。
+    if y >= 0u8.wrapping_sub(ry) || check_y >= 0xF0 {
+        check_y = check_y.wrapping_add(0x0F);
+        if scroll_dir & 0x02 == 0 {
+            hi_eff ^= 1;
+        }
+    }
+    // 【X 左界回绕修（2026-11-14）】asm `CalculateFirstBGCollisionPoint ; 07:E93D` 的
+    // `ldx #$00 / lda Temp03_DistToCenterX / bmi / dex` ⇒ txa(=$FF) + carry(x−rx 的借位)
+    // `adc #$00 / beq RTS`：**x < radiusX（左界为负）时置位⇒若横滚房则 `inc Temp0B_PositionHi`**
+    // ——碰撞点落到相邻名表（RoomRAM 另一页）。旧形不调 hi ⇒ 在 x≈0..7 的左缘读到本页
+    // 第 31 列（可能是固实墙）⇒ 空中误判落地（jumpledge f1181 accelY 被清零根因）。
+    if x < rx && scroll_dir & 0x02 != 0 {
         hi_eff ^= 1;
     }
     let (left, n) = vertical_span_cols(x, rx);
@@ -397,6 +419,54 @@ mod tests {
         assert!(!object_check_move_down(&mut m), "邻页固实应阻挡");
     }
 
+    /// 【Y 段回卷修·红测（2026-11-14）】asm `CalculateFirstBGCollisionPoint ; 07:E90F`
+    /// 向下查（Temp02=−radiusY）：`jsr LE95F` 得 X=y+radiusY 与借位；`bcs Lx212`
+    /// （无借位）或 `cpx #$F0 / bcc`（<$F0 直接用）都未命中 ⇒ `txa / adc #$0F`：
+    /// **X += 0x0F**（越过 240 行回卷到名表顶部）；`LE934` 仅竖滚房 `inc Temp0B_PositionHi`。
+    /// 旧形只做 8 位回绕 ⇒ y≥0xF0 时读到本页顶行（空瓦）⇒ 穿地板。
+    #[test]
+    fn object_check_move_down_wraps_row_when_bottom_boundary_passes_240() {
+        use crate::ram_map::{SAMUS_HI, SAMUS_RADIUS_X, SAMUS_RADIUS_Y, SAMUS_X, SAMUS_Y};
+        // y=0xE7 / ry=0x0F ⇒ 边界 0xF6 ≥ 0xF0 ⇒ asm 回卷成 0x05（行 0）
+        let solid: u8 = 0x5C; // 固实瓦（<0x80 ⇒ 阻挡）
+        let empty: u8 = 0xFF; // 空瓦
+        let build = |row0_solid: u8, row_f0_solid: u8, scroll_dir: u8| {
+            let mut m = FrameMemory::default();
+            for i in 0..0x800u16 {
+                m.write_wram(0x6000 | i, 0xFF);
+            }
+            let idx0 = ((0x05u16 & 0xF8) << 2) | (0x80u16 >> 3);
+            let idxf0 = ((0xF6u16 & 0xF8) << 2) | (0x80u16 >> 3);
+            m.write_wram(0x6000 | idx0, row0_solid);
+            m.write_wram(0x6000 | idxf0, row_f0_solid);
+            m.write_ram(SAMUS_Y, 0xE7);
+            m.write_ram(SAMUS_RADIUS_Y, 0x0F);
+            m.write_ram(SAMUS_X, 0x80);
+            m.write_ram(SAMUS_RADIUS_X, 8);
+            m.write_ram(SAMUS_HI, 0);
+            m.write_ram(crate::ram_map::SCROLL_DIR, scroll_dir);
+            m
+        };
+        // 回卷目标行（0x05）固实、原始边界行（0xF6）空 ⇒ 必须阻挡
+        let mut m = build(solid, empty, 3);
+        assert!(
+            !object_check_move_down(&mut m),
+            "边界越过 240 行应回卷到行 0 查（那里固实 ⇒ 阻挡）"
+        );
+        // 反之 ⇒ 可走
+        let mut m = build(empty, solid, 3);
+        assert!(
+            object_check_move_down(&mut m),
+            "回卷目标行空 ⇒ 可走（旧形会读到 0xF6 行的固实 ⇒ 误阻挡）"
+        );
+        // 竖滚房（ScrollDir&2==0）⇒ 另换名表页 1
+        let mut m = build(empty, solid, 0);
+        // 只在页 1 的 0x05 行放固实
+        let idx0 = ((0x05u16 & 0xF8) << 2) | (0x80u16 >> 3);
+        m.write_wram(0x6000 | 0x400 | idx0, solid);
+        assert!(!object_check_move_down(&mut m), "竖滚房回卷应读邻页（页 1 固实 ⇒ 阻挡）");
+    }
+
     /// 【goal-r16 碰撞修·红测】水平查撞必须扫 **Y 跨度覆盖的每一行块**
     /// （asm CheckMoveHorizontal E89B：NextPointYOffset=8，自顶界 (y−ry) 起逐 +8 行、
     /// 共 GetNumBlocksToCheck 行——LE7E6 循环逐行查 tile）。旧形只查顶行一点⇒
@@ -677,17 +747,34 @@ pub fn object_check_move_up(mem: &mut FrameMemory) -> bool {
     let x = mem.read_ram(0x030E);
     let hi = mem.read_ram(SAMUS_HI);
     let check_y = y.wrapping_sub(ry).wrapping_sub(8); // 向上查撞点=y−radiusY−8（asm E7A2）
+    // 【Y 段回卷修（2026-11-14）】向上查的 Temp02_DistToCenterY = +(radiusY+8)（`:E7A2`
+    // `clc/adc #$08`）⇒ 走 `Lx213` 支：`bcs Lx214`（无借位=正常）否则 `txa / sbc #$0F`
+    // （带借位 ⇒ X −= 0x10，顶部越界回卷到名表底部）；`LE934` 同判——竖滚房才
+    // `inc Temp0B_PositionHi`，横滚房只改行号。
+    let rx = mem.read_ram(crate::ram_map::SAMUS_RADIUS_X);
+    let dist_up = ry.wrapping_add(8);
+    let mut check_y_adj = check_y;
+    let mut hi_eff = hi;
+    let scroll_dir = mem.read_ram(crate::ram_map::SCROLL_DIR);
+    if y < dist_up {
+        check_y_adj = check_y.wrapping_sub(0x10);
+        if scroll_dir & 0x02 == 0 {
+            hi_eff ^= 1;
+        }
+    }
+    if x < rx && scroll_dir & 0x02 != 0 {
+        hi_eff ^= 1;
+    }
     // 【问题 B 修（2026-10-29）】asm CheckMoveVertical（$E7BD）=x−radiusX 起 x 全距
     // 走环（①垂向 family 同式（下行臂已补（goal-r11）））——旧形单点⇒台缘上跳（心空/
     // 侧顶砖）漏检⇒**跳不上去**（用户截图②）。radiusX=0⇒跳过（`bne Lx198/sec/rts`）。
-    let rx = mem.read_ram(crate::ram_map::SAMUS_RADIUS_X);
     if rx == 0 {
         return true;
     }
     let (left, n) = vertical_span_cols(x, rx);
     for i in 0..n {
         let col = left.wrapping_add((i as u8).wrapping_mul(8));
-        if !collision_point_samus(mem, check_y, col, hi) {
+        if !collision_point_samus(mem, check_y_adj, col, hi_eff) {
             return false;
         }
     }
