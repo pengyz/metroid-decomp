@@ -24,10 +24,10 @@ $ python3 tools/bake_enemy_gfx.py --check
 
 | 烘焙器 | `--check` |
 |---|---|
-| `bake_area_graphics.py` | FAIL（per-area 参数化后产物改为 `brinstar_graphics.rs`/`norfair_graphics.rs`，属预期漂移） |
+| `bake_area_graphics.py` | **已删除**（W4/W5 起该脚本的职责全部迁入 `crates/game-data/src/extract.rs`；本行保留为历史记录） |
 | `bake_enemy_gfx.py` | **FAIL（本档）** |
-| `bake_gfx.py` | FAIL（W1 已把 `title/gfx_data.rs` 改为包访问器，属预期） |
-| `bake_area_map.py` / `bake_music_streams.py` / `bake_music_tables.py` / `bake_palette_data.py` / `bake_sprite_data.py` / `bake_vram_structs.py` | PASS |
+| `bake_gfx.py` | **已删除**（W1 起职责迁入 `extract.rs`；本行保留为历史记录） |
+| 其余烘焙脚本 | **全部已删除**——数据一律由 `pack-tool extract` 从 ROM 直取（`extract.rs` 登记段址与长度）。本 findings 的"漂移"问题随之终结：不再存在"烘焙器 ↔ 提交件"两套真相 |
 
 ## 2. 差异的量化
 

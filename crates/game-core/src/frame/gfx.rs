@@ -20,7 +20,7 @@ use super::memory::FrameMemory;
 use crate::ram_map::{CURRENT_BANK, JUST_IN_BAILEY, MMC1CTRL_ZP, PPUCTRL_ZP, SWITCH_UPPER};
 
 /// GFXInfo 描述子 id（表序自证——macros.asm PtrTableEntry 序号+prg7_engine 注释互证）。
-/// 描述子真值=prg[0x1C6E0+id*7]（**ROM 提取自证**——tools/bake_gfx_blocks.py 提取径同源，
+/// 描述子真值=prg[0x1C6E0+id*7]（**ROM 提取自证**——`crates/game-data/src/extract.rs` 的 gfx 提取径同源，
 /// --check 校验径可复跑）。
 pub mod gfx_id {
     pub const SAMUS: u8 = 0;
@@ -46,7 +46,7 @@ pub mod gfx_id {
 ///
 /// **机制形（去重修）**：asm `LoadGFX: ; 07:C7AB` 走 `ldy #7*id / lda GFXInfo,y..` 表间接读
 /// （表址 prg7_engine.asm:1669 `GFXInfo ; 07:C6E0`），rust 侧对应
-/// `game_data::assets::gfx_info()`（ROM 29 项×7B 全表烘焙，`tools/bake_gfx.py` 生成，
+/// `game_data::assets::gfx_info()`（ROM 29 项×7B 全表烘焙，`crates/game-data/src/extract.rs` 生成，
 /// 已核 `GFX_INFO == ROM[0x1C6E0..+203]` 逐字节）。旧形是手写 13 条 match 折叠——
 /// 表值虽同，但机制是"编译器常量"而非"表间接读"，且与数据面重复烘焙两份。
 ///
@@ -180,7 +180,7 @@ mod tests {
         assert_eq!(m.read_ram(PPUCTRL_ZP) & 0x04, 0); // 增量位清
     }
 
-    /// GFXInfo 表 8 项钉死（**独立对 ROM**——prg[0x1C6E0+id*7] 提取值，tools/bake_gfx_blocks.py
+    /// GFXInfo 表 8 项钉死（**独立对 ROM**——prg[0x1C6E0+id*7] 提取值，`extract.rs` 的 gfx 提取
     /// --check 同源核）；防同源弱化（A7）：表值损坏必红。
     #[test]
     fn pin_gfx_info_table_rom_truth() {

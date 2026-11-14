@@ -173,7 +173,7 @@ WritePPUCtrl（唯一点亮真 PPUMASK 的地方）/ WriteScroll / ReadJoyPads`�
 | **1** | 死亡 → GameOver（`mr=4` 缺） ✅ **已修** | ★★★ | ~~死亡后 panic~~ → 已端口 | `prepare_game_over`（三条写）+ 复用已有 `TitleRoutine 0x1C` 臂（`PrepareVram(0x93B9)`/`Timer3←$10`/相位→0x19 均已实现） | 小（已完成） |
 | **2** | 游戏内暂停（`GoMainRoutine` START 开关 + `mr=5`） ✅ **已修** | ★★★ | ~~按 START 静默无效~~ → 已端口 | `start_pause_toggle`（3↔5 + `GamePaused ^= 1` + `PauseMusic`）+ `pause_mode`（2P A+UP 退出）+ `go_password`（mr=6） | 小-中（已完成） |
 | **3** | 电梯 / 区域间移动 | ★★★ | 只有 2 个区可达，且**不能换区** | `UpdateElevator $D7B3` + `SpawnElevator $EEA1` + `InitBank3/4/5` | 大 |
-| **4** | 后三区数据（Kraid/Tourian/Ridley） | ★★★ | 3/5 世界不可进 | 参数化 `bake_area_graphics.py` 烘 3 区 + 敌四表分区（**先解 16B vs 64B 尺寸疑点**） | 中 |
+| **4** | 后三区数据（Kraid/Tourian/Ridley） | ★★★ | 3/5 世界不可进 | 在 `crates/game-data/src/extract.rs` 增 3 区段（区序见 `AREA_ITEMS`/`AREA_SPEC`）+ 敌表分区（**先解 16B vs 64B 尺寸疑点**，见 `docs/findings/enemy-table-extent.md`） | 中 |
 | **5** | 暂停→密码屏（`mr=5 PauseMode` + `mr=6 GoPassword` 缺） ✅ **已修（并入 #2）** | ★★ | ~~panic~~ → 已端口 `pause_mode`/`go_password` | `PauseMode` 需 2P 的 A+UP 同按 + 逃脱计时器未激活；成功则 `GamePaused←0` + `inc MainRoutine`(5→6) | 小（已完成） |
 | **6** | 出门链（`MoveOutDoor $D3AE` 等 4 桩） | ★★ | 走门 panic | 逐件端口 | 中 |
 | **7** | 声音内容（24/28 零触达） | ★ | 音效/音乐行为无证据 | ①补 `B7E7`/`B87F` 两件高频 ②建音频 RAM 语义列（`.sem` 扩 `$0600-$068D`） | 中 |

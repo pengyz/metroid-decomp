@@ -1,0 +1,24 @@
+metroid-decomp
+==============
+
+本仓库**不包含任何原版游戏数据**（ROM、图案表、调色板、音乐/音效数据、房间布局、
+密码表等）。仓库内只有：反编译研究成果（Rust 源码、规格书、考证文档）与从 ROM 派生
+数据的**提取器**。
+
+要在本机运行游戏，需自备合法持有的原版 ROM（《Metroid》NES USA/NTSC，ROM
+SHA-256 `e6e6b7014685adae447ebb3833242815747bc1e5df83ade79f693fb67cf565b6`），
+并用随仓库提供的工具生成资产包：
+
+    cargo run -p pack-tool -- extract --rom "rom/Metroid (USA).nes" --out assets/metroid.pack
+
+工具会校验 ROM 身份（大小 131088 B、CRC32 `A2C89CB9`），再按提取器里登记的
+`(bank:addr, 长度)` 从 ROM 切出各数据段写入 `assets/metroid.pack`。该包是**本机派生
+产物**，已被 `.gitignore` 忽略，不随仓库分发。
+
+游戏本体（`crates/` 下的 Rust 代码）只做逻辑搬运与渲染，不含原版数据字节；
+运行时通过 `assets::*` 访问器读取上面生成的包。
+
+分发的二进制（若提供）同样**不含**原版数据，首次运行需要用户自行提供 ROM 并生成包。
+
+法律声明：本项目面向技术研究与移植学习。ROM 版权归 Nintendo 所有。请仅使用你合法
+持有的 ROM 副本。

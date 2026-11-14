@@ -539,7 +539,7 @@ fn ensure_loaded() {
 }
 
 /// 取段（未初始化/缺段 ⇒ panic，并打印**如何生成包**）。
-pub fn get(key: PackKey) -> &'static [u8] {
+pub(crate) fn get(key: PackKey) -> &'static [u8] {
     ensure_loaded();
     match try_get(key) {
         Some(s) => s,
@@ -558,7 +558,7 @@ pub fn get(key: PackKey) -> &'static [u8] {
 }
 
 /// 取段（未命中 ⇒ `None`，测试用）。
-pub fn try_get(key: PackKey) -> Option<&'static [u8]> {
+pub(crate) fn try_get(key: PackKey) -> Option<&'static [u8]> {
     PACK.get()?.get(key)
 }
 
@@ -568,7 +568,7 @@ pub fn try_get(key: PackKey) -> Option<&'static [u8]> {
 /// **格式知识在提取侧**：描述子 7 B = `[bank][src lo][src hi][dest lo][dest hi][size lo][size hi]`
 /// （`GFXInfo ; 07:C6E0`），尺寸取 `+5..+7` LE，偏移按前序项尺寸累加——
 /// 这两条约定只由 `extract.rs` 的 `extract_gfx_info`/`extract_gfx_data` 定义。
-pub fn gfx_block_offs(id: usize) -> Option<(usize, usize)> {
+pub(crate) fn gfx_block_offs(id: usize) -> Option<(usize, usize)> {
     let info = get(PackKey::GfxInfo);
     if id >= info.len() / 7 {
         return None;
@@ -586,7 +586,7 @@ pub fn gfx_block_offs(id: usize) -> Option<(usize, usize)> {
 }
 
 /// 项表（`(off u32, len u32)` LE）第 `idx` 项——越界 ⇒ `None`。
-pub fn offs_entry(key: PackKey, idx: usize) -> Option<(u32, u32)> {
+pub(crate) fn offs_entry(key: PackKey, idx: usize) -> Option<(u32, u32)> {
     let t = get(key);
     let e = t.get(idx * 8..idx * 8 + 8)?;
     Some((
