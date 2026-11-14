@@ -140,7 +140,7 @@
 # 1) 像素面（10 格，含换区暗窗锚 f1207）
 python3 tools/l4_diff_run.py run case-elev-norfair-transition
 
-# 2) 状态面（15 列 × 1581 帧，RAM 行对齐；首分歧 f1227 fc = 既有 #8 相位残差）
+# 2) 状态面（15 列 × 1581 帧，RAM 行对齐；390 帧仅 fc 差 +2，首分歧 f1211 = 既有 #8 相位残差）
 python3 tools/sem.py oracle-case case-elev-norfair-transition
 python3 tools/scenario_run.py run analysis/sem/case-elev-norfair-transition.sem.txt
 python3 tools/sem.py case case-elev-norfair-transition     # 期望 MATCHED 1191 1581

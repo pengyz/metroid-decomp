@@ -133,3 +133,25 @@ BG 面仍是 pal05 ⇒ 照绿）」。**不成立**：`select_samus_palette` 只
 - 复跑：`cargo test --workspace`（630 基线）、`gates/cli.py check` PASS=16、
   L4 全矩阵 15 用例 / 122 格 / match 120 / diff 2（与 `53e379bd` 逐项相同——本轮只动注释、
   文档与「ROM 派生等价替换」）。
+
+---
+
+## 六、终审 verdict = **pass**（对 `4dc48016`，含 `cbe16f3f`/`fac556e6`）
+
+复核员实读 `git show 4dc48016 -- docs/findings/elevator-evidence.md`，确认 hunk 落在 :111-114 且与
+约定文本逐字一致、树内 `grep -c "15 列全同"` = 0；并顺带核对 `cbe16f3f`（知识条目：把本三轮打回的
+「断言自实现 / 局部证据当全称 / 声明与 diff 不一致」归为同一根因 = **结论与事实之间缺一次机械核对**）
+与 `fac556e6`（`knowledge_entries 47→48` 的 sanctioned 基线变动，history/SHA256SUMS 齐备）。
+
+### #3 电梯证据线结项口径（复核员指定保留）
+- **像素证据覆盖状态 `{0,1,3,6,8}`**——10 格全 0px（其中 f1207 为全黑暗窗锚、信息量低）。
+- **无像素证据**：状态 `2/4/5/7/9`、自然径入口（走进去按 A）、其余三条换区边、结局径 `$8F`。
+- **唯一已挂账分歧**：#8 相位残差（`fc` 恒定 +2、换区首帧晚 1 tick），已有验收点
+  `cases/_archive/case-elev-f1206-boundary.txt`。
+
+### 三轮复核的净收益（记入方法论）
+| 轮次 | 抓到的真错 | 若不复核的后果 |
+|---|---|---|
+| 1（对 `1235e25d`） | `samus_elevator` 滚屏阈值两个方向都反 | 该滚不滚、`ScrollY` 与 `Samus.y` 脱钩、回绕发生在错误视觉位置；23 条单测全绿 |
+| 2（对 `53e379bd`） | `init_bank1..5` 未建模 `ScreenNmiOff` 寄存器面 + 漏 `jmp NMIOn` | 换区整屏暗窗缺失（61440px 差）；漏 `nmi_on` 会让 NMI 死锁（实测 11/11 全案失配） |
+| 3（对 `37f122be`） | `nmi_on` 取舍理由与 ROM 语义**相反**（"NMI 之后 ⇒ VBlank 已结束"）；声明与 diff 不一致 | 用错误理由结案，未来同类取舍会照错的先例办 |
