@@ -693,12 +693,31 @@ pub fn samus_collision_with_solid_entities(mem: &mut FrameMemory) {
         }
         x -= 0x10;
     }
+    // ---- $D9A3 电梯段：`lda Elevator.status / beq @RTS` ⇒ LDC82 ⇒ @isSamusOnTop ----
+    // （SamusOnElevator++；双旗已在上方清 0）。
+    crate::frame::elevator::samus_on_elevator_check(mem);
 }
 
 /// @isSamusOnTop 顶部判定（asm :D9BA 内容锚——冻结敌/电梯共用）：
 /// `lda Temp10_DistHi/and #$02/bne no`（垂直差向=下方?）→`ldy Temp11_DistY/iny/
 /// cpy Temp04_YSlotRadiusY/beq Exit8`（**一像素重合=站在顶**）。
 /// 返回 true=站在目标顶部。
+/// `@isSamusOnTop ; 07:D9BA` **全形**（含命中旗副作用）：
+/// `dist_hi&2≠0`（Samus 在目标上方判负）或 `dist_y+1 != radiusY` ⇒ **不在顶**，
+/// 且落 `Samus.isHit = (isHit & $38) | dist_hi | $40`（asm `ora Temp10_DistHi /
+/// ora #$40`——冻敌/电梯共用同件）。
+pub fn is_samus_on_top_effect(
+    mem: &mut FrameMemory,
+    c: &SlotCollision,
+) -> bool {
+    if c.dist_hi & 0x02 == 0 && (c.dist_y as u16 + 1) == c.radius_y as u16 {
+        return true; // Z=1（beq Exit8）
+    }
+    let hit = (mem.read_ram(crate::ram_map::SAMUS_IS_HIT) & 0x38) | c.dist_hi | 0x40;
+    mem.write_ram(crate::ram_map::SAMUS_IS_HIT, hit);
+    false
+}
+
 pub fn is_samus_on_top(dist_hi: u8, dist_y: u8, target_radius_y: u8) -> bool {
     if dist_hi & 0x02 != 0 {
         return false; // 在下方
@@ -1513,7 +1532,7 @@ fn scroll_block_gate(mem: &mut FrameMemory) -> bool {
 
 /// ScrollLeft（**asm 内容锚** `ScrollLeft: ; 07:E6A7`）：滚屏 1px。返回 carry
 /// （true=滚动成功——屏内 x 不动；false=不能滚）。
-fn scroll_left(mem: &mut FrameMemory) -> bool {
+pub(crate) fn scroll_left(mem: &mut FrameMemory) -> bool {
     let dir = mem.read_ram(crate::ram_map::SCROLL_DIR);
     if dir != 2 {
         if dir != 3 {
@@ -1547,7 +1566,7 @@ fn scroll_left(mem: &mut FrameMemory) -> bool {
 /// ScrollDir 2=左/3=右（cmp #$03 beq 续/`cmp #$02 bne` 竖滚禁横+inc ScrollDir 转向）
 /// +ScrollX==0 特殊径（inc MapPosX/GetRoomNum CF=1⇒界（dec MapPosX/sec））+inc ScrollX
 /// +0 环绕⇒ToggleNameTable+CheckUpdateNameTable——**MapPosX/名表切/界判定三联动**。
-fn scroll_right(mem: &mut FrameMemory) -> bool {
+pub(crate) fn scroll_right(mem: &mut FrameMemory) -> bool {
     let dir = mem.read_ram(crate::ram_map::SCROLL_DIR);
     if dir != 3 {
         if dir != 2 {
@@ -1597,7 +1616,125 @@ const SCRN_VY: u8 = 240;
 /// @noNewRoom: dex / jmp ScrollVertically_Merge
 /// @atTopBound: inc MapPosY / @cantScroll: sec / rts
 /// ```
-fn scroll_up(mem: &mut FrameMemory) -> bool {
+/// 双槽碰撞结果（`CheckCollisionOfXSlotAndYSlot ; 07:F1FA` 返回值面）。
+/// `no_overlap` = asm 的 **carry set**（不重叠）；其余四个 temp 供 `@isSamusOnTop`
+/// 与命中反应件消费（`Temp10_DistHi`/`Temp11_DistY`/`Temp04_YSlotRadiusY`）。
+pub struct SlotCollision {
+    /// asm carry：true=不重叠（`@RTS` 前 sec）。
+    pub no_overlap: bool,
+    /// `Temp10_DistHi`（`asl` 后形：bit2=恒置 + bit1=Y 差为负 + bit0=X 差为负）。
+    pub dist_hi: u8,
+    /// `Temp11_DistY`（Y 轴绝对距离低字节）。
+    pub dist_y: u8,
+    /// `Temp04_YSlotRadiusY`（Y 半径和）。
+    pub radius_y: u8,
+    /// `Temp0F_DistX`（X 轴绝对距离低字节）。
+    pub dist_x: u8,
+    /// `Temp05_YSlotRadiusX`（X 半径和）。
+    pub radius_x: u8,
+}
+
+/// 取 `Objects` 槽坐标 + 名表位（`GetObjectXSlotPosition ; 07:F172` /
+/// `GetObjectYSlotPosition ; 07:F186`）：`hi` 先 `eor PPUCTRL_ZP & #$01`
+/// （页面相对位）再入比较面。
+fn obj_slot_pos(mem: &mut FrameMemory, page: u16) -> (u8, u8, u8) {
+    let y = mem.read_ram(page + 0x0D);
+    let x = mem.read_ram(page + 0x0E);
+    let hi = (mem.read_ram(page + 0x0C) ^ mem.read_ram(0x00FF)) & 0x01;
+    (y, x, hi)
+}
+
+/// `CheckCollisionOfXSlotAndYSlot ; 07:F1FA`——两槽 AABB 中心距判（X 槽 × Y 槽）。
+///
+/// asm 形：`Temp10_DistHi←$02`；`Temp03←$02 & ScrollDir`（0=竖滚房/非零=横滚房）；
+/// Y 差 `x.y - y.y` → 竖滚房用 `hi*240 + coord` 有效坐标（`sbc #$100-SCRN_VY` 补偿），
+/// 横滚房按 8 位有符号；`|dy| >= $100` 或 `>= 半径和` ⇒ carry set（不重叠）；
+/// 通过后 `asl Temp10_DistHi`（⇒ $04 | Y负<<1 | X负）再做 X 轴（横滚房用 `hi*256`）。
+///
+/// 等价的整数形（与 asm 的 sbc 借位链同值）：直接按有效坐标算有符号差，取绝对值
+/// 与半径和比较，符号位填 `Temp10_DistHi` 低两位。
+pub fn check_collision_of_slots(
+    x_pos: (u8, u8, u8),
+    y_pos: (u8, u8, u8),
+    radius_y_sum: u8,
+    radius_x_sum: u8,
+    scroll_dir: u8,
+) -> SlotCollision {
+    let vertical_room = scroll_dir & 0x02 == 0;
+    let (xy, xx, xh) = (x_pos.0 as i32, x_pos.1 as i32, x_pos.2 as i32);
+    let (yy, yx, yh) = (y_pos.0 as i32, y_pos.1 as i32, y_pos.2 as i32);
+
+    // ---- Y 轴 ----
+    let dy: i32 = if vertical_room {
+        // 竖滚房：有效坐标 hi*240 + coord（asm 的 256→240 补偿）
+        (xh * 240 + xy) - (yh * 240 + yy)
+    } else {
+        // 横滚房：8 位（高位不参与）
+        xy - yy
+    };
+    if dy.abs() >= 0x100 {
+        return SlotCollision {
+            no_overlap: true,
+            dist_hi: 0x02,
+            dist_y: 0,
+            radius_y: radius_y_sum,
+            dist_x: 0,
+            radius_x: radius_x_sum,
+        };
+    }
+    let dy_mag = dy.unsigned_abs() as u8;
+    if dy_mag >= radius_y_sum {
+        return SlotCollision {
+            no_overlap: true,
+            dist_hi: 0x02,
+            dist_y: dy_mag,
+            radius_y: radius_y_sum,
+            dist_x: 0,
+            radius_x: radius_x_sum,
+        };
+    }
+
+    // ---- X 轴 ----
+    let dx: i32 = if vertical_room {
+        xx - yx // 竖滚房：8 位
+    } else {
+        (xh * 256 + xx) - (yh * 256 + yx) // 横滚房：hi*256
+    };
+    let dist_hi = 0x04 | if dy < 0 { 0x02 } else { 0 } | if dx < 0 { 0x01 } else { 0 };
+    if dx.abs() >= 0x100 {
+        return SlotCollision {
+            no_overlap: true,
+            dist_hi,
+            dist_y: dy_mag,
+            radius_y: radius_y_sum,
+            dist_x: 0,
+            radius_x: radius_x_sum,
+        };
+    }
+    let dx_mag = dx.unsigned_abs() as u8;
+    SlotCollision {
+        no_overlap: dx_mag >= radius_x_sum,
+        dist_hi,
+        dist_y: dy_mag,
+        radius_y: radius_y_sum,
+        dist_x: dx_mag,
+        radius_x: radius_x_sum,
+    }
+}
+
+/// `LDC82 ; 07:DC82` = `GetObjectXSlotPosition`（X 槽）+ `GetRadiusSumsOfObjXSlotAndObjYSlot`
+/// + `CheckCollisionOfXSlotAndYSlot`：两 `Objects` 槽碰撞（电梯 × Samus 等）。
+pub fn collide_object_slots(mem: &mut FrameMemory, x_page: u16, y_page: u16) -> SlotCollision {
+    let x_pos = obj_slot_pos(mem, x_page);
+    let y_pos = obj_slot_pos(mem, y_page);
+    // AddObjectYSlotRadiusY / AddObjectYSlotRadiusX：X 槽半径 + Y 槽半径
+    let ry = mem.read_ram(x_page + 0x01).wrapping_add(mem.read_ram(y_page + 0x01));
+    let rx = mem.read_ram(x_page + 0x02).wrapping_add(mem.read_ram(y_page + 0x02));
+    let sd = mem.read_ram(crate::ram_map::SCROLL_DIR);
+    check_collision_of_slots(x_pos, y_pos, ry, rx, sd)
+}
+
+pub(crate) fn scroll_up(mem: &mut FrameMemory) -> bool {
     let dir = mem.read_ram(crate::ram_map::SCROLL_DIR);
     if dir != 0 {
         if dir != 1 {
@@ -1645,7 +1782,7 @@ fn scroll_up(mem: &mut FrameMemory) -> bool {
 ///     jsr ToggleNameTable / ldx #$FF
 /// @noNameTableSwitch: inx / ScrollVertically_Merge: stx ScrollY
 /// ```
-fn scroll_down(mem: &mut FrameMemory) -> bool {
+pub(crate) fn scroll_down(mem: &mut FrameMemory) -> bool {
     let dir = mem.read_ram(crate::ram_map::SCROLL_DIR);
     if dir != 1 {
         if dir != 0 {

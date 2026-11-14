@@ -253,6 +253,9 @@ pub const SAMUS_HI: u16 = 0x030C;
 pub const SAMUS_IS_HIT: u16 = 0x030A;
 /// SamusScrX=$51（「Samus x position on screen」——滚动跟随阈值面（右 $8F/左 $71））。
 /// （SAMUS_SCR_X 已有——见下。）
+/// `RoomPtr`（`constants_ram.asm:508` `RoomPtr dw ;$33`——当前房间指针低/高字节，
+/// 结局径 `sty RoomPtr` 清 0；`CopyAreaPointers` 消费）。
+pub const ROOM_PTR: u16 = 0x0033;
 pub const SAMUS_DOOR_DIR: u16 = 0x004E;
 pub const MAP_POS_X: u16 = 0x0050;
 pub const MAP_POS_Y: u16 = 0x004F;

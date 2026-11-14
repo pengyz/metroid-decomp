@@ -1329,7 +1329,7 @@ fn door_delete_offscreen_enemies(mem: &mut FrameMemory) {
 /// Tourian 实现（`03:A315`）：`ldy #$05 / jsr ClearMetroidLatch / dey / bpl`（6 次，
 /// y=5..0）——`ClearMetroidLatch(03:99B1)` = `lda #$00 / sta MetroidLatch0400,y`，
 /// 故清 `$77F8..$77FD`；尾 `sta MetroidOnSamus`（A=0）⇒ `$92 ← 0`。
-fn goto_clear_all_metroid_latches(mem: &mut FrameMemory) {
+pub(crate) fn goto_clear_all_metroid_latches(mem: &mut FrameMemory) {
     let area = (mem.read_ram(crate::ram_map::IN_AREA) & 0x0F) as usize;
     if crate::frame::mainloop::BANK_TABLE[area] != 0x04 {
         return; // 非 Tourian bank ⇒ 空桩
@@ -1426,8 +1426,9 @@ pub fn samus_door(mem: &mut FrameMemory) {
 /// `lda Elevator.status/cmp #$03/cmp #$08`（态门）→ElevatorType 方向（bit7=up）→
 /// 屏幕 Y 检（Samus.y-ScrollY≥$84→ScrollDown）→wrap 检（SCRN_VY-1）。深链件=桩。
 pub fn samus_elevator(mem: &mut FrameMemory) {
-    let _ = mem;
-    crate::unported!("bank07:D42E"); // 方向/滚动链（随件）
+    // `SamusElevator ; 07:D423` 全形（十态闸 + 位移 + 卷屏跟随）落 `frame::elevator`
+    // （电梯件与对象槽面同域；`$D42E` 桩撤除）。
+    crate::frame::elevator::samus_elevator(mem);
 }
 
 // ===== 跳跃链（TDD（测试先行（实现后补）））=====

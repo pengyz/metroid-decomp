@@ -2723,9 +2723,9 @@ fn uw_area_routine(_mem: &mut crate::frame::FrameMemory) {
     // Brinstar 区专径（空态无液面——首房间实证；活性随件）
 }
 
-/// UpdateElevator（$D7B3——电梯显示族）：槽空⇒跳过。
-fn uw_elevator(_mem: &mut crate::frame::FrameMemory) {
-    // 电梯槽（Elevator=$0320）status=0⇒跳过 ✓
+/// UpdateElevator（`$D7B3`）——电梯十态（`frame::elevator`；槽空 status=0 ⇒ ExitSub 恒空径）。
+fn uw_elevator(mem: &mut crate::frame::FrameMemory) {
+    crate::frame::elevator::update_elevator(mem);
 }
 
 /// UpdateAllEnemyExplosions（爆族——槽空⇒跳过）。
