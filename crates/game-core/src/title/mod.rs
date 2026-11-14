@@ -233,15 +233,19 @@ impl TitleSequence {
 // ---- 批3·①淡变族（02/03/0D/0E——**同形折叠主件**）----
 // 共形骨架=Timer3 门 + FrameCount 掩 + 表步进 + 完成转移（chain 19「同形族」正样）。
 // 窗口读表（A9 族口径——L2 案显式 window_bank=0 钉窗）：
-//   FADE_TABLE=$8B6D 组合 12B（[0..4]=fade-out 序、[5]=$FF 终止、[6..10]=fade-in 序、
+//   title_fade()=$8B6D 组合 12B（[0..4]=fade-out 序、[5]=$FF 终止、[6..10]=fade-in 序、
 //   [11]=$FF——0D 的 `cmp #$0B` 端测=索引 11 即终止符位，双表单数组索引实证）；
-//   PAL_SELECT_TABLE=$8A9A 13B（idx12=$FF；idx10/11 双 0c——调色板 id 重复列，字节为准）。
+//   title_pal_select()=$8A9A 13B（idx12=$FF；idx10/11 双 0c——调色板 id 重复列，字节为准）。
 
 /// 淡变组合表（bank0:$8B6D 12B）。
-pub use game_data::title::title_data::FADE_TABLE;
+pub fn title_fade() -> &'static [u8] {
+    game_data::assets::title_fade()
+}
 
 /// PalSelect 表（bank0:$8A9A 13B）。
-pub use game_data::title::title_data::PAL_SELECT_TABLE;
+pub fn title_pal_select() -> &'static [u8] {
+    game_data::assets::title_pal_select()
+}
 
 /// 淡变驱动面（zp 快照）。
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -310,7 +314,7 @@ impl FadeDriver {
                     return FadeOutcome { slot_writes: vec![], x_out: None, phase: None, a_out: m, y_out: None, writes: vec![] };
                 }
                 // LoadPalData 步进（ldy pal_index；Z=表耗尽）
-                let t = PAL_SELECT_TABLE[f.pal_index as usize];
+                let t = title_pal_select()[f.pal_index as usize];
                 if t == 0xFF {
                     return FadeOutcome { slot_writes: vec![], x_out: None, phase: Some(f.phase.wrapping_add(1)), a_out: 0x20,
                                          y_out: Some(f.pal_index),
@@ -334,7 +338,7 @@ impl FadeDriver {
                     writes.push(("SECOND_CROSS", 0));
                     // phase inc 由 tick 统一推
                     // 无条件 DoFadeOut 随后执行
-                    let t = FADE_TABLE[f.fade_index as usize];
+                    let t = title_fade()[f.fade_index as usize];
                     if t != 0xFF {
                         writes.push(("PENDING_PAL", t));
                         writes.push(("FADE_INDEX", f.fade_index.wrapping_add(1)));
@@ -343,7 +347,7 @@ impl FadeDriver {
                     return FadeOutcome { slot_writes, x_out: Some(0xFF), phase: Some(f.phase.wrapping_add(1)), a_out: t,
                                          y_out: Some(f.fade_index), writes };
                 }
-                let t = FADE_TABLE[f.fade_index as usize];
+                let t = title_fade()[f.fade_index as usize];
                 if t != 0xFF {
                     writes.push(("PENDING_PAL", t));
                     writes.push(("FADE_INDEX", f.fade_index.wrapping_add(1)));
@@ -371,7 +375,7 @@ impl FadeDriver {
                     };
                 }
                 // DoFadeOut 步进（ldy fade_index）
-                let t = FADE_TABLE[f.fade_index as usize];
+                let t = title_fade()[f.fade_index as usize];
                 FadeOutcome { slot_writes: vec![], x_out: None, phase: None, a_out: t, y_out: Some(f.fade_index),
                               writes: vec![("PENDING_PAL", t), ("FADE_INDEX", f.fade_index.wrapping_add(1))] }
             }
@@ -437,7 +441,7 @@ impl EffectDriver {
                                            y_out: None, writes: vec![], sparkle_init: false };
                 }
                 let c1 = f.pal_index & 3;
-                let t = PAL_SELECT_TABLE[c1 as usize];
+                let t = title_pal_select()[c1 as usize];
                 let mut pending: Option<u8> = None;
                 let mut idx = c1;
                 if t != 0xFF {
@@ -613,7 +617,9 @@ pub struct MenuOutcome {
 }
 
 /// StartContTbl（bank0:$9118 2B）。
-pub use game_data::title::title_data::START_CONT_TBL;
+pub fn title_start_cont() -> &'static [u8] {
+    game_data::assets::title_start_cont()
+}
 
 /// 16 ChooseStartContinue（$90D7-$9117 65B）。
 /// 结构互核注：**both-quirk**——Joy1Change 同按 START|SELECT（$30）时 `cmp` 两路**皆不入**
@@ -637,7 +643,7 @@ pub fn menu_choose(joy_change: u8, start_continue: u8) -> MenuOutcome {
         w.push((0x0683, 0x08)); // SFXTriInitFlags|=sfxTri_Beep（夹具 0 起=精确值）
     }
     let y = sc;
-    w.push((0x0200, START_CONT_TBL[y as usize]));
+    w.push((0x0200, title_start_cont()[y as usize]));
     w.push((0x0201, 0x6E));
     w.push((0x0202, 0x03));
     w.push((0x0203, 0x50));
@@ -666,7 +672,9 @@ pub fn wait_for_start(joy_change: u8) -> MenuOutcome {
 // ---- 批6a·⑥⑦（19 门面 + 1D EndGame 分发；17/18 深路 L3 降级）----
 
 /// EndStarDataTable（bank0:$9EB8 156B）。
-pub use game_data::title::title_data::END_STAR_TBL;
+pub fn title_end_star() -> &'static [u8] {
+    game_data::assets::title_end_star()
+}
 
 /// 19 DisplayPassword（$9359-$937E）门面：Timer3≠0 ⇒ 直出（深路=NMI 自旋族 L3 降级）。
 pub fn password_display_gate(timer3: u8) -> MenuOutcome {
@@ -681,7 +689,7 @@ pub fn end_game(is_credits: u8, frame_count: u8, palette: u8, room_ptr: u8, x_in
     -> MenuOutcome {
     let mut w = Vec::new();
     for y in 0..0x9Cu16 {
-        w.push((0x0270 + y, END_STAR_TBL[y as usize]));
+        w.push((0x0270 + y, title_end_star()[y as usize]));
     }
     let mut pal = palette;
     if is_credits == 0 && (frame_count & 0x0F) == 0 {
@@ -996,7 +1004,7 @@ pub fn dispatch_step(face: &TitleFace) -> TitleStep {
                     let mut events = clear_all_seg2_events(ff & 0xFB & 0xFC);
                     // 绘制面补（三分靶根因件）：L9984 blob→VRAMStruct 缓冲实写
                     let bidx = face.ram[0x07A0 & 0x7FF];
-                    events.extend(vram_struct_buffer_events(bidx, &START_CONTINUE_BLOB));
+                    events.extend(vram_struct_buffer_events(bidx, game_data::assets::vram_start_continue()));
                     events.push((0x0325, 0)); // StartContinue←0
                     events.push((crate::ram_map::PALETTE_PENDING, 0x0D)); // _id_Palette0C+1
                     events.push(crate::memmap::title_state::write_event_phase(0x16)); // ←ChooseStartContinue
@@ -1174,19 +1182,33 @@ mod dispatch_contract_tests {
 // ④A/B 位=Joy1Change 位7/位6（hardware.asm:95-96）。
 
 /// ERROR TRY AGAIN 文（bank0:$8759 15B）。
-pub use game_data::title::title_data::PW_ERR_MSG;
-/// 空白覆盖文（bank0:$8768 15B 全 $FF）。
-pub use game_data::title::title_data::PW_NOERR_MSG;
-/// PasswordRowTbl（bank0:$9998 5×2B 行指针）。
-pub use game_data::title::title_data::PW_ROW_TBL;
+/// `PasswordRowTbl ; 00:9998`（5×u16 LE——行基址 `$99A2 + 13*row`）。
+/// 空白覆盖文（bank0:$8768 15 B 全 `$FF`——与 `PW_ERR_MSG` 同族，写入网格前清位）。
+const PW_NOERR_MSG: [u8; 15] = [0xFF; 15];
+
+pub fn title_pw_rows() -> &'static [u8] {
+    game_data::assets::title_pw_rows()
+}
+
+pub fn title_pw_err() -> &'static [u8] {
+    game_data::assets::title_pw_err()
+}
 /// 字符格（bank0:$99A2 起 65B——0x00-0x3F 递序+末位 $FF）。
-pub use game_data::title::title_data::PW_GRID;
+pub fn title_pw_grid() -> &'static [u8] {
+    game_data::assets::title_pw_grid()
+}
 /// CursorPosXTbl（bank0:$92C8 12B）。
-pub use game_data::title::title_data::CURSOR_X_TBL;
+pub fn title_cursor_x() -> &'static [u8] {
+    game_data::assets::title_cursor_x()
+}
 /// CharSelectYTbl（bank0:$92B6 5B）。
-pub use game_data::title::title_data::CHARSEL_Y_TBL;
+pub fn title_charsel_y() -> &'static [u8] {
+    game_data::assets::title_charsel_y()
+}
 /// CharSelectXTbl（bank0:$92BB 13B）。
-pub use game_data::title::title_data::CHARSEL_X_TBL;
+pub fn title_charsel_x() -> &'static [u8] {
+    game_data::assets::title_charsel_x()
+}
 
 /// 0x18 EnterPassword 帧体（单段；事件=全量 RAM 面；jumped=START⇒$8C5E）。
 #[allow(clippy::too_many_arguments)]
@@ -1213,7 +1235,7 @@ pub fn enter_password_body(ram: &[u8], wram: &[u8], frame_count: u8, joy: u8, jo
     // ③ 缓冲头（$1B←1；X 链自 $07A0）+msg 15 文（X 链不回写——字节真）
     e.push((0x001B, 1));
     let idx = ram[0x07A0 & 0x7FF] as u16;
-    let msg: &[u8; 15] = if ram[0x002C & 0x7FF] != 0 { &PW_ERR_MSG } else { &PW_NOERR_MSG };
+    let msg: &[u8] = if ram[0x002C & 0x7FF] != 0 { title_pw_err() } else { &PW_NOERR_MSG };
     // 头：$21,$A8,$0F（WritePPUByte 链写）
     // 【r9'-F2 对齐】msg 段 3 头+15 文=18B；asm WritePPUByte 链在 X>=0x4F 时回填段首
     // （cpx #$4F/bcc）——静默 &0x7F 回绕与 F3 同族，改 fail-loud（当前不可达）。
@@ -1241,11 +1263,11 @@ pub fn enter_password_body(ram: &[u8], wram: &[u8], frame_count: u8, joy: u8, jo
                   else { cursor.wrapping_add(0x09) };
         e.push((0x0006, pos));
         let row = ram[0x0321 & 0x7FF] as usize & 0x07;
-        let tbl = PW_ROW_TBL[row.min(4)];
+        let tbl = title_pw_rows()[row.min(4) * 2] as u16 | ((title_pw_rows()[row.min(4) * 2 + 1] as u16) << 8);
         e.push((0x0000, (tbl & 0xFF) as u8));
         e.push((0x0001, (tbl >> 8) as u8));
         let col = ram[0x0322 & 0x7FF] as usize;
-        let tile = PW_GRID.get(row.min(4) * 13 + col.min(12)).copied().unwrap_or(0xFF);
+        let tile = title_pw_grid().get(row.min(4) * 13 + col.min(12)).copied().unwrap_or(0xFF);
         e.push((0x0781, tile));       // VRAMStringRAMBuffer
         e.push((0x0780, 0x11));       // 维面（1×1）
         // PrepareWriteVRAMStringRAM：$00←pos/$01←$21/$02←$80/$03←$07
@@ -1297,7 +1319,7 @@ pub fn enter_password_body(ram: &[u8], wram: &[u8], frame_count: u8, joy: u8, jo
         e.push((0x0205, 0x6E));
         e.push((0x0206, 0x20)); // OAMDATA_PRIORITY
         let xi = (if cursor_now >= 0x0C { cursor_now.wrapping_sub(0x0C) } else { cursor_now }) as usize;
-        e.push((0x0207, CURSOR_X_TBL.get(xi.min(11)).copied().unwrap_or(0x48)));
+        e.push((0x0207, title_cursor_x().get(xi.min(11)).copied().unwrap_or(0x48)));
     }
     // ⑧ dpad（Joy1Retrig 低半字节门）：beep+行/列回绕+CharSelect 精灵（位3 门）
     let dpad = joy_retrig & 0x0F;
@@ -1324,10 +1346,10 @@ pub fn enter_password_body(ram: &[u8], wram: &[u8], frame_count: u8, joy: u8, jo
             e.push((0x0321, row));
         }
         if frame_count & 0x08 != 0 {
-            e.push((0x0208, CHARSEL_Y_TBL.get(row as usize % 5).copied().unwrap_or(0x77)));
+            e.push((0x0208, title_charsel_y().get(row as usize % 5).copied().unwrap_or(0x77)));
             e.push((0x0209, 0x6E));
             e.push((0x020A, 0x20));
-            e.push((0x020B, CHARSEL_X_TBL.get(col as usize % 13).copied().unwrap_or(0x20)));
+            e.push((0x020B, title_charsel_x().get(col as usize % 13).copied().unwrap_or(0x20)));
         }
     }
     (e, None)
@@ -1425,7 +1447,6 @@ mod tick_head_tests {
 }
 
 /// L9984 "START CONTINUE" VRAMStruct blob（bank0:$9984 20B——[hi][lo][len][data…]+终止）。
-pub use game_data::title::title_data::START_CONTINUE_BLOB;
 
 /// VRAMStruct 缓冲写事件（绘制面通用——blob→$07A1+idx 走带+PPUDataPending 触发）。
 /// idx=当前 $07A0 缓冲索引；写后索引推进由 NMI 冲刷复位（对 0x18 面同构）。

@@ -632,6 +632,48 @@ mod palette_tests {
         // suitless Palette1B（bank2 idx27）在位（原烘焙锚测的就地接管）
         assert_ne!(palette_ptrs(2)[27 * 2], 0, "Palette1B 指针低位非零");
     }
+
+    /// 标题屏 17 表锚（`prg0_title.asm` 标签 ↔ 段长；`BOTTOM_SPARKLE_DATA` 真长
+    /// 98 B 是本次更正的烘焙漂移——旧 54 B 在表中间插了假终止符）。
+    #[test]
+    fn title_tables_match_asm_anchors() {
+        let exp: [(&str, usize); 17] = [
+            ("title.fade", 12), ("title.pal_select", 13), ("title.start_cont", 2),
+            ("title.end_star", 156), ("title.pw_err", 15), ("title.pw_rows", 10),
+            ("title.pw_grid", 65), ("title.cursor_x", 12), ("title.charsel_y", 5),
+            ("title.charsel_x", 13), ("title.sparkle_top", 54), ("title.sparkle_bottom", 98),
+            ("title.sparkle_init", 11), ("title.flash_pal", 10), ("title.init_cross", 64),
+            ("title.cross_len", 5), ("title.cross_data", 68),
+        ];
+        let got: [(&'static str, usize); 17] = [
+            (PackKey::Fade.name(), title_fade().len()),
+            (PackKey::PalSelect.name(), title_pal_select().len()),
+            (PackKey::StartCont.name(), title_start_cont().len()),
+            (PackKey::EndStar.name(), title_end_star().len()),
+            (PackKey::PwErr.name(), title_pw_err().len()),
+            (PackKey::PwRows.name(), title_pw_rows().len()),
+            (PackKey::PwGrid.name(), title_pw_grid().len()),
+            (PackKey::CursorX.name(), title_cursor_x().len()),
+            (PackKey::CharselY.name(), title_charsel_y().len()),
+            (PackKey::CharselX.name(), title_charsel_x().len()),
+            (PackKey::SparkleTop.name(), title_sparkle_top().len()),
+            (PackKey::SparkleBottom.name(), title_sparkle_bottom().len()),
+            (PackKey::SparkleInit.name(), title_sparkle_init().len()),
+            (PackKey::ScreenFlashPal.name(), title_flash_pal().len()),
+            (PackKey::InitCross.name(), title_init_cross().len()),
+            (PackKey::CrossLen.name(), title_cross_len().len()),
+            (PackKey::CrossData.name(), title_cross_data().len()),
+        ];
+        assert_eq!(got, exp);
+        // 行指针表（`PasswordRowTbl ; 00:9998` → 五个 u16 LE，行距 13）。
+        let rows = title_pw_rows();
+        let addrs: Vec<u16> = (0..5).map(|r| u16::from_le_bytes([rows[r * 2], rows[r * 2 + 1]])).collect();
+        assert_eq!(addrs, vec![0x99A2, 0x99AF, 0x99BC, 0x99C9, 0x99D6]);
+        assert!(addrs.windows(2).all(|w| w[1] - w[0] == 13));
+        // Bottom 表末尾必须是 `SignMagSpeed $00` 终止项（98 B 的第 97 字节为 0）。
+        assert_eq!(title_sparkle_bottom()[96], 0x00);
+        assert_eq!(title_sparkle_top()[0], 0x01);
+    }
 }
 
 /// sprite 数据 blob（`common_sprite_data.asm`；区 bank 共载 `$8572`）。
@@ -700,6 +742,28 @@ pub fn sfx_record4(addr: u16) -> Option<&'static [u8; 4]> {
     let off = addr.checked_sub(SFX_TABLES_ADDR)? as usize;
     sfx_tables().get(off..off + 4)?.try_into().ok()
 }
+
+/// 标题屏 17 张小表（bank0；表址/真长/漂移更正说明见 `extract::TITLE_TABLES`）。
+pub fn title_fade() -> &'static [u8] { pack::get(PackKey::Fade) }
+pub fn title_pal_select() -> &'static [u8] { pack::get(PackKey::PalSelect) }
+pub fn title_start_cont() -> &'static [u8] { pack::get(PackKey::StartCont) }
+pub fn title_end_star() -> &'static [u8] { pack::get(PackKey::EndStar) }
+pub fn title_pw_err() -> &'static [u8] { pack::get(PackKey::PwErr) }
+/// `PasswordRowTbl ; 00:9998`（5×u16 LE：`$99A2/$99AF/$99BC/$99C9/$99D6`）。
+pub fn title_pw_rows() -> &'static [u8] { pack::get(PackKey::PwRows) }
+/// 密码 5×13 网格（`PasswordRow0..` @ `$99A2`，65 B）。
+pub fn title_pw_grid() -> &'static [u8] { pack::get(PackKey::PwGrid) }
+pub fn title_cursor_x() -> &'static [u8] { pack::get(PackKey::CursorX) }
+pub fn title_charsel_y() -> &'static [u8] { pack::get(PackKey::CharselY) }
+pub fn title_charsel_x() -> &'static [u8] { pack::get(PackKey::CharselX) }
+pub fn title_sparkle_top() -> &'static [u8] { pack::get(PackKey::SparkleTop) }
+/// 98 B（49 条，含 `SignMagSpeed $00` 终止）——旧 54 B 截断是烘焙漂移，已更正。
+pub fn title_sparkle_bottom() -> &'static [u8] { pack::get(PackKey::SparkleBottom) }
+pub fn title_sparkle_init() -> &'static [u8] { pack::get(PackKey::SparkleInit) }
+pub fn title_flash_pal() -> &'static [u8] { pack::get(PackKey::ScreenFlashPal) }
+pub fn title_init_cross() -> &'static [u8] { pack::get(PackKey::InitCross) }
+pub fn title_cross_len() -> &'static [u8] { pack::get(PackKey::CrossLen) }
+pub fn title_cross_data() -> &'static [u8] { pack::get(PackKey::CrossData) }
 
 /// `IntroStarPalette0..7 ; 00:8B0F`（8×10B：星闪调色板，按 `IntroStarOffset` 索引）。
 pub fn intro_star_palettes() -> &'static [u8] {

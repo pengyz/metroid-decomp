@@ -124,6 +124,7 @@ pub fn is_ready() -> bool;
 | W5d | `title/vram_structs.rs`（4 blob 1066/20/36/13 B，含终止）→ `title.vram_intro`/`vram_start`/`vram_pass`/`vram_over` | `extract_title_vram` | 本批 | 四段各自界且逐字节等 ROM（`$82F4`/`$9984`/`$99E3`/`$93B9`，bank0 窗）|
 | W5e | `samus/samus_data.rs`（三表）→ `samus.actions`(4B)/`samus.pnt_up`(3B)/`samus.accel`(2B)；**更正**：旧 `RUN_ACCEL_TBL [u8;256]` 自 `$CCC0` 起吞了后续代码，已按 asm 真长 2 B 收口 | `extract_samus_tables` | 本批 | 三表逐字节等 ROM；`$CCC0+2` 即 `SetSamusRunAccel` 之后代码 |
 | W5f | `render/render_data.rs`：`INTRO_STAR_PALETTES`（8×10B）→ `title.star_pal`；`NES_PALETTE` **不迁**（PPU 硬件主调色板，ROM 中不存在 ⇒ 平台常量随代码） | `extract_intro_star_palettes` | 本批 | 80 B 与 ROM `$8B0F` 窗逐字节等 + 八块互不重复（asm：non-repeating） |
+| W5g | `title/title_data.rs` 整文件（20 常量）→ 17 段 `title.*`；`BOTTOM_SPARKLE_DATA` 真长 **98 B**（旧 54 B 截断=烘焙漂移）；`START_CONTINUE_BLOB` 与 `title.vram_start` 同源 ⇒ 删；`PW_NOERR_MSG`（全 `$FF`）与 `INIT_SPARKLE_DATA/_TBL` 重复对 ⇒ 代码侧收口 | `extract_title_tables` | 本批 | 11 表「旧==包==ROM」逐字节等；`BOTTOM` 98 B == ROM `$89E9`（旧 54 B 不等）；`pack-tool verify` 86 段 OK |
 
 **判据（每批三条机械可复跑）**：①`pack-tool verify` 全段 OK（包 == 从 ROM 重算，不再手搓脚本）
 ②账本 `data-boundary` v2 里该文件的 `data` 条目当次删除 ③波次边界 `l4_diff_run.py run-all` 全矩阵不变。

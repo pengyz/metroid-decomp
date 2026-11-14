@@ -50,19 +50,25 @@ fn nibble_sub(a: u8) -> u8 {
 
 /// 淡变/运动数据表（窗口读 bank0——L2 案 window_bank=0 显式钉窗）：
 /// SparkleAddressTbl $89AF 双字→Top $89B3/Bottom $89E9。
-pub use game_data::title::title_data::TOP_SPARKLE_DATA;
+pub fn title_sparkle_top() -> &'static [u8] {
+    game_data::assets::title_sparkle_top()
+}
 
 /// Bottom 闪星数据（$89E9 起 54B 截面——B2 MSB 面 $99 族在此表）。
-pub use game_data::title::title_data::BOTTOM_SPARKLE_DATA;
+pub fn title_sparkle_bottom() -> &'static [u8] {
+    game_data::assets::title_sparkle_bottom()
+}
 
 /// LoadSparkleData 初值表（$87C4 11B——两槽同值装载）。
-pub use game_data::title::title_data::INIT_SPARKLE_DATA;
+pub fn title_sparkle_init() -> &'static [u8] {
+    game_data::assets::title_sparkle_init()
+}
 
 impl SparkleSlot {
     /// 单跑 SparkleUpdate（$87D9 语义折叠）；`slot`=0（X=0，Top 表）/1（X=$10，Bottom 表）。
     pub fn update(&mut self, slot: u8) -> SparkleRunOutcome {
         let mut w = Vec::new();
-        let tbl: &[u8] = if slot == 0 { &TOP_SPARKLE_DATA } else { &BOTTOM_SPARKLE_DATA };
+        let tbl: &[u8] = if slot == 0 { title_sparkle_top() } else { title_sparkle_bottom() };
         if self.next_delay == 0 {
             // DoSparkleSpriteCoord（数据驱动）——表指针 zp 写（$00=低 $B3/$E9、$01=高 $89）
             w.push((0x20, 0, if slot == 0 { 0xB3 } else { 0xE9 }));
@@ -192,7 +198,9 @@ mod tests {
 }
 
 /// InitCrossMissiles 初值表（bank0:$88BE 64B——X=$3F..0 双槽装载面）。
-pub use game_data::title::title_data::INIT_CROSS_TBL;
+pub fn title_init_cross() -> &'static [u8] {
+    game_data::assets::title_init_cross()
+}
 
 /// InitCrossMissiles（$8897-$88BD）语义折叠——**BUG 保真（D4，注②同族）**：
 /// `cmp PPUCTRL_ZP`（zp $FF **RAM 值**——asm 注「supposed to be #$FF」=立即数之误）——
@@ -203,7 +211,7 @@ pub fn init_cross_missiles(ff_zp: u8) -> Vec<SlotWrite> {
     // 覆盖槽 0-3 面 $6EA0+x 与槽 4-7 面 $6EE0+x=+0x40+x 及尾特例 $6F00/$6F0D/$6F10/$6F1D）。
     let mut w = vec![(0x20, 0xBD, 0x20)]; // $BD←$20（CrossMsl4to7SpawnDelay）
     for x in (0..0x40u8).rev() {
-        let v = INIT_CROSS_TBL[x as usize];
+        let v = title_init_cross()[x as usize];
         if v == ff_zp {
             continue; // BUG（D4）：`cmp PPUCTRL_ZP`=zp $FF RAM 值——命中跳过（注「supposed to be #$FF」）
         }
@@ -220,13 +228,19 @@ pub fn init_cross_missiles(ff_zp: u8) -> Vec<SlotWrite> {
 // ---- 批4b·crosshairs 子机器（UpdateCrossExplode/FlashIntroScreen——09/08 组合点）----
 
 /// CrossExplode 长度表（bank0:$89AA 5B——DataTbl 终止索引）。
-pub use game_data::title::title_data::CROSS_EXPLODE_LENGTH_TBL;
+pub fn title_cross_len() -> &'static [u8] {
+    game_data::assets::title_cross_len()
+}
 
 /// CrossExplode 数据表（bank0:$8A4B 68B）。
-pub use game_data::title::title_data::CROSS_EXPLODE_DATA_TBL;
+pub fn title_cross_data() -> &'static [u8] {
+    game_data::assets::title_cross_data()
+}
 
 /// ScreenFlash 调色板表（bank0:$8ABD 10B，$FF 终止）。
-pub use game_data::title::title_data::SCREEN_FLASH_PAL_TBL;
+pub fn title_flash_pal() -> &'static [u8] {
+    game_data::assets::title_flash_pal()
+}
 
 /// UpdateCrossExplode（$8976-$89A9）语义折叠。
 /// 返回 (A, X, Y 末值, 写面)。标记：0x20=zp 面；0x08=SpriteRAM $0200 相对原始偏移。
@@ -242,15 +256,15 @@ pub fn update_cross_explode(is_updating: u8, index: u8, frame_count: u8) -> (u8,
     if index == 4 {
         w.push((0x20, 0xC7, 0)); // 末索引：清绘制标志
     }
-    let end = CROSS_EXPLODE_LENGTH_TBL[idx as usize];
+    let end = title_cross_len()[idx as usize];
     w.push((0x20, 0x00, end)); // $00←终止索引
     let mut y: usize = 0;
     let mut x: u8 = 0;
     loop {
-        x = CROSS_EXPLODE_DATA_TBL[y];
+        x = title_cross_data()[y];
         y += 1;
         loop {
-            let v = CROSS_EXPLODE_DATA_TBL[y];
+            let v = title_cross_data()[y];
             w.push((0x08, x, v)); // sta $0200,x
             x = x.wrapping_add(1);
             y += 1;
@@ -276,7 +290,7 @@ pub fn update_cross_explode(is_updating: u8, index: u8, frame_count: u8) -> (u8,
 pub fn flash_intro_screen(index: u8) -> (u8, Option<u8>, Vec<SlotWrite>) {
     let mut w: Vec<SlotWrite> = Vec::new();
     let y = index;
-    let t = *SCREEN_FLASH_PAL_TBL.get(index as usize).unwrap_or(&0xFF);
+    let t = *title_flash_pal().get(index as usize).unwrap_or(&0xFF);
     if t == 0xFF {
         w.push((0x20, 0xC2, 0));
         w.push((0x20, 0xC0, 0));
@@ -442,7 +456,7 @@ mod tests_b11_sparkle_init {
         let w = load_sparkle_data();
         // 参考径（证伪立场）：asm 逐钉（ldx #$0A/dex/bpl 循环（11 字节反向载）+
         // $6B 覆写 IntroSprs.1.y（$6EB0）+$DC 覆写 .1.x（$6EB3））
-        let tbl = INIT_SPARKLE_DATA_TBL;
+        let tbl = title_sparkle_init();
         assert_eq!(tbl.len(), 11);
         let mut expected: Vec<(u16, u8)> = Vec::new();
         for i in 0..11u16 {
@@ -458,7 +472,7 @@ mod tests_b11_sparkle_init {
     /// 【边界】表值逐钉（asm .byte 序（$3C,$C6,$01,$18,0,0,0,0,$20,0,0））。
     #[test]
     fn init_sparkle_table_bytes() {
-        assert_eq!(INIT_SPARKLE_DATA_TBL, [0x3C, 0xC6, 0x01, 0x18, 0, 0, 0, 0, 0x20, 0, 0]);
+        assert_eq!(title_sparkle_init(), [0x3C, 0xC6, 0x01, 0x18, 0, 0, 0, 0, 0x20, 0, 0]);
     }
 }
 
@@ -467,7 +481,6 @@ mod tests_b11_sparkle_init {
 
 /// InitSparkleDataTbl（00:87C4（prg0_title.asm:809-810））——11 字节初值
 /// （$3C,$C6,$01,$18,0,0,0,0,$20,0,0）。数据驱动（表值不进逻辑）。
-pub use game_data::title::title_data::INIT_SPARKLE_DATA_TBL;
 
 /// Sparkle 初载（旧 LoadSparkleData（00:87AB）：11 字节表载双槽（IntroSprs.0.y=$6EA0/IntroSprs
 /// .1.y=$6EB0（步距 $10（IntroSpr 面（constants_ram.asm:183-191（y+0/x+3））））+
@@ -475,8 +488,8 @@ pub use game_data::title::title_data::INIT_SPARKLE_DATA_TBL;
 pub fn load_sparkle_data() -> Vec<(u16, u8)> {
     let mut w = Vec::with_capacity(24);
     for i in 0..11u16 {
-        w.push((0x6EA0 + i, INIT_SPARKLE_DATA_TBL[i as usize]));
-        w.push((0x6EB0 + i, INIT_SPARKLE_DATA_TBL[i as usize]));
+        w.push((0x6EA0 + i, title_sparkle_init()[i as usize]));
+        w.push((0x6EB0 + i, title_sparkle_init()[i as usize]));
     }
     w.push((0x6EB0, 0x6B));  // lda #$6B/sta IntroSprs.1.y
     w.push((0x6EB3, 0xDC)); // lda #$DC/sta IntroSprs.1.x（x=+3（IntroSpr 面））

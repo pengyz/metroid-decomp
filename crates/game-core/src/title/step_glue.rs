@@ -240,8 +240,17 @@ pub(crate) fn title_flash_effect(face: &TitleFace) -> GlueOut {
     let mut top = crate::title::sparkle::SparkleSlot::default();
     let mut bottom = crate::title::sparkle::SparkleSlot::default();
     let o = crate::title::EffectDriver::FlashStep.tick(&f, &mut top, &mut bottom);
-    effect_out(face, o, Some(crate::title::sparkle::INIT_SPARKLE_DATA))
+    let init = *SPARKLE_INIT_FIXTURE.get_or_init(|| {
+        crate::title::sparkle::title_sparkle_init()
+            .try_into()
+            .expect("title.sparkle_init 段长 11 B")
+    });
+    effect_out(face, o, Some(init))
 }
+
+/// `InitSparkleDataTbl ; 00:87C4` 11 B（资产包 `title.sparkle_init` 的同源投影；
+/// 这里是定长数组形，供 `effect_out` 的 `[u8;11]` 形参）。
+static SPARKLE_INIT_FIXTURE: std::sync::OnceLock<[u8; 11]> = std::sync::OnceLock::new();
 
 /// 槽面解码（memmap 读→SparkleSlot）。
 fn decode_sparkle(face: &TitleFace, base: u16) -> crate::title::sparkle::SparkleSlot {

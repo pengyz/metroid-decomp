@@ -56,6 +56,7 @@ pub fn sections(rom: &[u8]) -> Result<Vec<Section>, String> {
     out.extend(extract_title_vram(prg)?);
     out.extend(extract_samus_tables(prg)?);
     out.extend(extract_intro_star_palettes(prg)?);
+    out.extend(extract_title_tables(prg)?);
     Ok(out)
 }
 
@@ -390,7 +391,24 @@ fn seg_meta() -> Vec<SegMeta> {
         SegMeta { key: PackKey::SamusAccel, kind: "u8", elem: 1, count: 2, rom: "bank07:$CCC0", note: "RunAccelerationTbl（$30/$D0；旧 256B 烘焙吞代码已更正）" },        SegMeta { key: PackKey::NoItems, kind: "item-rec", elem: 6, count: 0, rom: "bank02:$A2D9", note: "SpecItmsTbl_NORFAIR" },
 
         SegMeta { key: PackKey::IntroStarPal, kind: "pal10", elem: 10, count: 8, rom: "bank00:$8B0F", note: "IntroStarPalette0..7（星闪；表尾 $8B5F=DoFadeOut）" },        SegMeta { key: PackKey::KrItems, kind: "item-rec", elem: 6, count: 0, rom: "bank04:$A26D", note: "SpecItmsTbl_KRAID" },
-        SegMeta { key: PackKey::ToItems, kind: "item-rec", elem: 6, count: 0, rom: "bank03:$A83B", note: "SpecItmsTbl_TOURIAN" },
+
+        SegMeta { key: PackKey::Fade, kind: "title-tbl", elem: 1, count: 12, rom: "bank00:$8B6D", note: "FadeOutPaletteData" },
+        SegMeta { key: PackKey::PalSelect, kind: "title-tbl", elem: 1, count: 13, rom: "bank00:$8A9A", note: "PalSelect" },
+        SegMeta { key: PackKey::StartCont, kind: "title-tbl", elem: 1, count: 2, rom: "bank00:$9118", note: "StartContTbl" },
+        SegMeta { key: PackKey::EndStar, kind: "title-tbl", elem: 1, count: 156, rom: "bank00:$9EB8", note: "EndStar" },
+        SegMeta { key: PackKey::PwErr, kind: "title-tbl", elem: 1, count: 15, rom: "bank00:$8759", note: "PwErrMsg" },
+        SegMeta { key: PackKey::PwRows, kind: "title-tbl", elem: 1, count: 10, rom: "bank00:$9998", note: "PasswordRowTbl 5×u16" },
+        SegMeta { key: PackKey::PwGrid, kind: "title-tbl", elem: 1, count: 65, rom: "bank00:$99A2", note: "PasswordRow 网格 5×13" },
+        SegMeta { key: PackKey::CursorX, kind: "title-tbl", elem: 1, count: 12, rom: "bank00:$92C8", note: "CursorX" },
+        SegMeta { key: PackKey::CharselY, kind: "title-tbl", elem: 1, count: 5, rom: "bank00:$92B6", note: "CharselY" },
+        SegMeta { key: PackKey::CharselX, kind: "title-tbl", elem: 1, count: 13, rom: "bank00:$92BB", note: "CharselX" },
+        SegMeta { key: PackKey::SparkleTop, kind: "title-tbl", elem: 1, count: 54, rom: "bank00:$89B3", note: "TopSparkle 27 条" },
+        SegMeta { key: PackKey::SparkleBottom, kind: "title-tbl", elem: 1, count: 98, rom: "bank00:$89E9", note: "BottomSparkle 49 条含终止（旧 54B 截断已更正）" },
+        SegMeta { key: PackKey::SparkleInit, kind: "title-tbl", elem: 1, count: 11, rom: "bank00:$87C4", note: "InitSparkleDataTbl" },
+        SegMeta { key: PackKey::ScreenFlashPal, kind: "title-tbl", elem: 1, count: 10, rom: "bank00:$8ABD", note: "ScreenFlashPal" },
+        SegMeta { key: PackKey::InitCross, kind: "title-tbl", elem: 1, count: 64, rom: "bank00:$88BE", note: "InitCrossTbl" },
+        SegMeta { key: PackKey::CrossLen, kind: "title-tbl", elem: 1, count: 5, rom: "bank00:$89AA", note: "CrossExplodeLengthTbl" },
+        SegMeta { key: PackKey::CrossData, kind: "title-tbl", elem: 1, count: 68, rom: "bank00:$8A4B", note: "CrossExplodeDataTbl" },        SegMeta { key: PackKey::ToItems, kind: "item-rec", elem: 6, count: 0, rom: "bank03:$A83B", note: "SpecItmsTbl_TOURIAN" },
         SegMeta { key: PackKey::RiItems, kind: "item-rec", elem: 6, count: 0, rom: "bank05:$A20D", note: "SpecItmsTbl_RIDLEY" },
     ];
     v
@@ -652,6 +670,43 @@ const SAMUS_TABLES: [(PackKey, u16, usize, &str); 3] = [
 /// `IntroStarPalettePtrTable 00:8AFF` 间接取；表尾 `00:8B5F` 即 `DoFadeOut`）。
 const INTRO_STAR_PAL_ADDR: u16 = 0x8B0F;
 const INTRO_STAR_PAL_LEN: usize = 8 * 10;
+
+/// 标题屏 17 张小表（bank0 平铺；`(key, 表址, 真长, asm 标签)`）。
+///
+/// 两处**烘焙漂移更正**（旧常量与 ROM 不符，本次以 ROM/asm 为真）：
+/// - `BOTTOM_SPARKLE_DATA`：asm `BottomSparkleDataTbl ; 00:89E9` 共 **49 条**
+///   （`SignMagSpeed` 2 B/条 + 若干 `.byte $FF, -N` 直写），末尾 `SignMagSpeed $00,0,0`
+///   即终止项 ⇒ 真长 **98 B**。旧常量只 54 B 且尾部塞 `00 00 00 00`，等于在表中间
+///   插了个假终止符（下标 50 处 `b1==0` ⇒ 提前 complete）。
+/// - `PW_ROW_TBL` 是 `.word PasswordRow0..4`（`PasswordRowTbl ; 00:9998` 10 B）；
+///   旧常量以 `u16` 数组保存同一组值，字节序一致。
+const TITLE_TABLES: [(PackKey, u16, usize, &str); 17] = [
+    (PackKey::Fade, 0x8B6D, 12, "FadeOutPaletteData $8B6D"),
+    (PackKey::PalSelect, 0x8A9A, 13, "PalSelect $8A9A"),
+    (PackKey::StartCont, 0x9118, 2, "StartContTbl $9118"),
+    (PackKey::EndStar, 0x9EB8, 156, "EndStar $9EB8"),
+    (PackKey::PwErr, 0x8759, 15, "PwErrMsg $8759"),
+    (PackKey::PwRows, 0x9998, 10, "PasswordRowTbl $9998（5×u16）"),
+    (PackKey::PwGrid, 0x99A2, 65, "PasswordRow0..（5×13 B 网格）"),
+    (PackKey::CursorX, 0x92C8, 12, "CursorX $92C8"),
+    (PackKey::CharselY, 0x92B6, 5, "CharselY $92B6"),
+    (PackKey::CharselX, 0x92BB, 13, "CharselX $92BB"),
+    (PackKey::SparkleTop, 0x89B3, 54, "TopSparkleDataTbl $89B3（27 条）"),
+    (PackKey::SparkleBottom, 0x89E9, 98, "BottomSparkleDataTbl $89E9（49 条含终止）"),
+    (PackKey::SparkleInit, 0x87C4, 11, "InitSparkleDataTbl $87C4"),
+    (PackKey::ScreenFlashPal, 0x8ABD, 10, "ScreenFlashPal $8ABD"),
+    (PackKey::InitCross, 0x88BE, 64, "InitCrossTbl $88BE"),
+    (PackKey::CrossLen, 0x89AA, 5, "CrossExplodeLengthTbl $89AA"),
+    (PackKey::CrossData, 0x8A4B, 68, "CrossExplodeDataTbl $8A4B"),
+];
+
+fn extract_title_tables(prg: &[u8]) -> Result<Vec<Section>, String> {
+    let mut out = Vec::with_capacity(TITLE_TABLES.len());
+    for (key, addr, len, label) in TITLE_TABLES {
+        out.push(Section { key, data: bank_slice(prg, 0, addr, len).map_err(|e| format!("{label}: {e}"))? });
+    }
+    Ok(out)
+}
 
 fn extract_intro_star_palettes(prg: &[u8]) -> Result<Vec<Section>, String> {
     Ok(vec![Section {
