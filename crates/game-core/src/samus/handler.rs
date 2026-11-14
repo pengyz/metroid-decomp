@@ -1255,8 +1255,9 @@ const ENS_BASE: u16 = 0x0400;
 const ENS_EXTRA_BASE: u16 = 0x6AF4;
 /// 管道虫洞槽基址（`PipeBugHoles instanceof PipeBugHole 4 startfrom 0` ;$0728）。
 const PIPE_BUG_HOLES: u16 = 0x0728;
-/// 门槽首偏移（`Doors instanceof Object 4 startfrom 0`，Objects=$0300 ⇒ $0380）。
-const DOORS_OFF: u16 = 0x80;
+/// 对象槽基址（`Objects instanceof Object 16 startfrom 0` ;$0300——constants_ram.asm）。
+/// 门是对象槽 8-11 ⇒ `Objects + $80` = `$0380..$03B0`（**绝对址**，不是零页偏移）。
+const OBJECTS_BASE: u16 = 0x0300;
 /// music_Tourian（constants.asm:167 `= %01000000 export`）。
 const MUSIC_TOURIAN: u8 = 0x40;
 
@@ -1343,13 +1344,19 @@ fn goto_clear_all_metroid_latches(mem: &mut FrameMemory) {
 /// 9D 00 03 20 F4 F1`）：x 自 $B0 起每轮 −$10（`Xminus16`+`bmi` 环）⇒ 4 门
 /// $B0/$A0/$90/$80；`status≠0` 且 `onScreen==0` ⇒ `status ← 0`（A=0 直接回存）。
 fn doors_remove_if_offscreen(mem: &mut FrameMemory) {
+    // `ldx #Doors-Objects+_sizeof_Doors-_sizeof_Doors.0` = $B0；循环尾
+    // `jsr Xminus16 / bmi @loop` —— **bmi 是回跳条件**：减后仍为负才继续（i8 符号位）。
+    // 序列 $B0→$A0→$90→$80→$70（$70 为正 ⇒ 退出）⇒ 恰 4 槽，$03B0..$0380。
     let mut x: i16 = 0xB0;
-    while x >= 0 {
-        let xu = x as u16;
-        if mem.read_ram(DOORS_OFF + xu) != 0 && mem.read_ram(DOORS_OFF + xu + 0x0B) == 0 {
-            mem.write_ram(DOORS_OFF + xu, 0);
+    loop {
+        let xu = OBJECTS_BASE + x as u16;
+        if mem.read_ram(xu) != 0 && mem.read_ram(xu + 0x0B) == 0 {
+            mem.write_ram(xu, 0);
         }
         x -= 0x10;
+        if (x as i8) >= 0 {
+            break;
+        }
     }
 }
 
@@ -1836,19 +1843,43 @@ mod tests_door_chain {
         assert_eq!(m.read_ram(ENS_EXTRA_BASE), 0x04);
     }
 
-    /// `Doors_RemoveIfOffScreen`：x=$B0 起 −$10（4 门）；status≠0 ∧ onScreen=0 ⇒ status=0。
+    /// `Doors_RemoveIfOffScreen ; 07:ED65`：**绝对址** $03B0/$03A0/$0390/$0380 四槽
+    /// （`lda $0300,x`，x=$B0..$80）；status≠0 ∧ onScreen=0 ⇒ status←0。
+    ///
+    /// 断言只用裸绝对址（不复用实现常量），并预置零页/栈页哨兵：越界访问会当场翻红。
     #[test]
     fn offscreen_door_is_removed_onscreen_kept() {
         let mut m = door_mem(0x05, 0x01);
-        m.write_ram(DOORS_OFF + 0xB0, 0x01); // slot 11：存在、不在屏
-        m.write_ram(DOORS_OFF + 0xB0 + 0x0B, 0x00);
-        m.write_ram(DOORS_OFF + 0xA0, 0x01); // slot 10：存在、在屏
-        m.write_ram(DOORS_OFF + 0xA0 + 0x0B, 0x01);
-        m.write_ram(DOORS_OFF + 0x80, 0x00); // slot 8：空槽
+        m.write_ram(0x03B0, 0x01); // 门槽 11：存在、不在屏
+        m.write_ram(0x03BB, 0x00); // +0x0B onScreen=0
+        m.write_ram(0x03A0, 0x01); // 门槽 10：存在、在屏
+        m.write_ram(0x03AB, 0x01);
+        m.write_ram(0x0380, 0x00); // 门槽 8：空槽
+        // 越界哨兵：$0130/$0120/$0100（旧错基址会写到这里）与 $0080/$00A0
+        for a in [0x0130u16, 0x0120, 0x0100, 0x0080, 0x00A0, 0x013B] {
+            m.write_ram(a, 0x5A);
+        }
         samus_door(&mut m);
-        assert_eq!(m.read_ram(DOORS_OFF + 0xB0), 0x00);
-        assert_eq!(m.read_ram(DOORS_OFF + 0xA0), 0x01);
-        assert_eq!(m.read_ram(DOORS_OFF + 0x80), 0x00);
+        assert_eq!(m.read_ram(0x03B0), 0x00, "离屏门槽 11 应被清");
+        assert_eq!(m.read_ram(0x03A0), 0x01, "在屏门槽 10 应保留");
+        assert_eq!(m.read_ram(0x0380), 0x00, "空槽保持 0");
+        for a in [0x0130u16, 0x0120, 0x0100, 0x0080, 0x00A0, 0x013B] {
+            assert_eq!(m.read_ram(a), 0x5A, "越界哨兵 {a:#06X} 不得被触碰");
+        }
+    }
+
+    /// 访问集合恰为 4 槽：$0370/$0360/$0350/$0340（非门槽）即便命中删除条件也不动。
+    #[test]
+    fn doors_remove_touches_exactly_four_slots() {
+        let mut m = door_mem(0x05, 0x01);
+        for a in [0x0340u16, 0x0350, 0x0360, 0x0370] {
+            m.write_ram(a, 0x01); // status≠0
+            m.write_ram(a + 0x0B, 0x00); // onScreen=0 ⇒ 若被访问就会被清
+        }
+        samus_door(&mut m);
+        for a in [0x0340u16, 0x0350, 0x0360, 0x0370] {
+            assert_eq!(m.read_ram(a), 0x01, "{a:#06X} 不在 $B0/$A0/$90/$80 访问集内");
+        }
     }
 
     /// `PipeBugHoles` 环：偏移 $18/$10/$08，**槽 0 不被访问**（`bne` 在 0 处退出）；
