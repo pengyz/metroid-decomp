@@ -260,6 +260,8 @@ pub const SAMUS_DOOR_DATA: u16 = 0x0058;
 pub const OBJECT_COUNTER: u16 = 0x0065;
 pub const SCROLL_BLOCK_NT3: u16 = 0x006C;
 pub const ITEM_ROOM_MUSIC_STATUS: u16 = 0x0079;
+/// `KraidRidleyPresent db ;$6987`（constants_ram.asm:1234）——#$01=Kraid/Ridley 在场。
+pub const KRAID_RIDLEY_PRESENT: u16 = 0x6987;
 
 /// Samus.y=$030D（`.struct Object` y——「Object y position in room」）。
 pub const SAMUS_Y: u16 = 0x030D;

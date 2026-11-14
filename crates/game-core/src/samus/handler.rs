@@ -759,22 +759,21 @@ mod tests {
         assert_eq!(m.read_ram(0x0304), 0xFF); // dec wrap
     }
 
-    /// Door 状态机（入门相短路+延迟倒数面）。
+    /// Door 状态机（入门相短路 + 延迟倒数 + 移位面）——**原「MoveOutDoor 未端口」桩测
+    /// 已随 #6 端口退役**：旧断言 `panic!(bank07:D3AE)` 现在是真行为断言。
     #[test]
     fn samus_door_state_machine_face() {
-        use crate::ram_map::{DOOR_DELAY, DOOR_ENTRY_STATUS};
+        use crate::ram_map::{DOOR_DELAY, DOOR_ENTRY_STATUS, SAMUS_X};
         let mut m = FrameMemory::default();
-        m.write_ram(DOOR_ENTRY_STATUS, 2); // 入门相（<$05）→短路
+        m.write_ram(SAMUS_X, 0x40);
+        m.write_ram(DOOR_ENTRY_STATUS, 2); // 入门相（<$05）→ 只走尾
         samus_door(&mut m);
+        assert_eq!(m.read_ram(SAMUS_X), 0x40, "入门相不移位");
         m.write_ram(DOOR_ENTRY_STATUS, 5); // 移动相
         m.write_ram(DOOR_DELAY, 3);
-        let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| samus_door(&mut m)));
-        let err = r.unwrap_err();
-        let msg = err.downcast_ref::<String>().cloned()
-            .or_else(|| err.downcast_ref::<&'static str>().map(|s| (*s).to_string()))
-            .unwrap_or_default();
-        assert!(msg.contains("unported @ bank07:D3AE"), "MoveOutDoor 爆点失准: {msg}");
+        samus_door(&mut m);
         assert_eq!(m.read_ram(DOOR_DELAY), 2); // 倒数先行
+        assert_eq!(m.read_ram(SAMUS_X), 0x41); // MoveOutDoor（D3F7）已端口
     }
 
     /// run 全径输出探针（r26 诊断锚：Joy1=RIGHT→speedX 非零！）。
@@ -1250,22 +1249,170 @@ pub fn samus_dead2(mem: &mut FrameMemory) {
     mem.write_ram(0x0304, d);
 }
 
-/// SamusDoor 处理件（字节自证 D3A8 区——门滚动态状态机）：
-/// `lda DoorEntryStatus($56)/cmp #$05/bcc`（<$55 入门相）→`dec DoorDelay($59)/bne
-/// MoveOutDoor`（延迟倒数）→完成相（`asl/bcc`→`lsr/sta DoorEntryStatus`）→敌清链
-/// （Door_DeleteOffscreenEnemies/Doors_RemoveIfOffScreen/GotoClearAllMetroidLatches）
-/// →音乐面（ItemRoomMusicStatus/StartMusic）。深链件=桩（随件填）。
+/// 敌槽基址（`Ens instanceof En $6 startfrom 0` ;$0400——constants_ram.asm:950）。
+const ENS_BASE: u16 = 0x0400;
+/// 敌附加槽基址（`EnsExtra instanceof EnExtra 6 startfrom 0` ;$6AF4——:1272）。
+const ENS_EXTRA_BASE: u16 = 0x6AF4;
+/// 管道虫洞槽基址（`PipeBugHoles instanceof PipeBugHole 4 startfrom 0` ;$0728）。
+const PIPE_BUG_HOLES: u16 = 0x0728;
+/// 门槽首偏移（`Doors instanceof Object 4 startfrom 0`，Objects=$0300 ⇒ $0380）。
+const DOORS_OFF: u16 = 0x80;
+/// music_Tourian（constants.asm:167 `= %01000000 export`）。
+const MUSIC_TOURIAN: u8 = 0x40;
+
+/// 门态尾部三件（asm `Lx055: jsr CheckHealthStatus / jsr SetMirrorCntrlBit /
+/// jmp ObjDrawFrame`）——SamusDoor 两个出口（`bcc Lx055` 与 MoveOutDoor 尾）都走这里。
+fn samus_door_tail(mem: &mut FrameMemory) {
+    super::physics::check_health_status(mem); // CDFA
+    super::physics::set_mirror_cntrl_bit(mem); // CD92
+    crate::frame::sprite::obj_draw_frame(mem, 0); // DE4A
+}
+
+/// `MoveOutDoor ; 07:D3F7`——`lda SamusDoorDir/beq Lx054`：
+/// 门通向左（dir≠0）⇒ `ldy Samus.x / bne / jsr ToggleSamusHi` 后 `dec Samus.x`；
+/// 门通向右（dir=0）⇒ `inc Samus.x / bne / jsr ToggleSamusHi`（进位到 0 才翻第 9 位）。
+fn move_out_door(mem: &mut FrameMemory) {
+    if mem.read_ram(crate::ram_map::SAMUS_DOOR_DIR) != 0 {
+        if mem.read_ram(crate::ram_map::SAMUS_X) == 0 {
+            super::physics::toggle_samus_hi(mem); // Lx053 前件
+        }
+        let x = mem.read_ram(crate::ram_map::SAMUS_X).wrapping_sub(1);
+        mem.write_ram(crate::ram_map::SAMUS_X, x);
+    } else {
+        let x = mem.read_ram(crate::ram_map::SAMUS_X).wrapping_add(1);
+        mem.write_ram(crate::ram_map::SAMUS_X, x);
+        if x == 0 {
+            super::physics::toggle_samus_hi(mem); // Lx054 尾件
+        }
+    }
+}
+
+/// `Door_DeleteOffscreenEnemies ; 07:D48C`（ROM 字节 `A2 60 38 20 B4 D4 8A E9 20 AA
+/// 10 F7` 逐字节自证）：
+/// ① 敌环 `ldx #$60`/`sbc #$20`/`bpl` ⇒ 偏移 **$60/$40/$20/$00**（asm 自带 BUG 注：
+///    应为 `#$50`/`#$10`——当前形会碰到槽 6（敌弹区）并漏掉槽 1/3/5；D4 保真保留）。
+///    每槽：`lda Ens.data05,x / and #$02 / bne 跳` ⇒ 不可见（bit1 清）时
+///    `EnsExtra.status,x ← 0`（A 被 and 清零）。
+/// ② 管道虫洞环 `ldx #$18`/`sbc #$08`/`bne`（ROM `A2 18 20 A8 D4 8A 38 E9 08 AA
+///    D0 F6`）⇒ 偏移 **$18/$10/$08**，**槽 0 不被访问**（`bne` 在 0 处退出——同样是
+///    原版行为，非笔误）。y=GetNameTableAtScrollDir，`cmp PipeBugHoles.hi,x / bne`
+///    ⇒ hi 与当前名表**相等**才 `status ← $FF`（删洞）。
+fn door_delete_offscreen_enemies(mem: &mut FrameMemory) {
+    let mut x: i16 = 0x60;
+    while x >= 0 {
+        let xu = x as u16;
+        if mem.read_ram(ENS_BASE + xu + 5) & 0x02 == 0 {
+            mem.write_ram(ENS_EXTRA_BASE + xu, 0); // EnExtra.status（字段 0）
+        }
+        x -= 0x20;
+    }
+    let y = (mem.read_ram(crate::ram_map::PPUCTRL_ZP) ^ mem.read_ram(crate::ram_map::SCROLL_DIR))
+        & 0x01;
+    let mut x: u16 = 0x18;
+    loop {
+        if mem.read_ram(PIPE_BUG_HOLES + x + 4) == y {
+            mem.write_ram(PIPE_BUG_HOLES + x, 0xFF);
+        }
+        x = x.wrapping_sub(8);
+        if x == 0 {
+            break; // `bne`——到 0 即退出（槽 0 不处理）
+        }
+    }
+}
+
+/// `GotoClearAllMetroidLatches ; 03:95AB`——**area bank 桩表**（实测各 bank $95AB 字节）：
+/// bank1/2/4/5 = `60 EA EA`（`rts`+NOP×2，空桩），bank3(Tourian) = `4C 15 A3`
+/// （`jmp ClearAllMetroidLatches`）。BankTable(07:CA30) 值为 bank+1 ⇒ 判据
+/// `BANK_TABLE[InArea&$0F] == $04`。
+///
+/// Tourian 实现（`03:A315`）：`ldy #$05 / jsr ClearMetroidLatch / dey / bpl`（6 次，
+/// y=5..0）——`ClearMetroidLatch(03:99B1)` = `lda #$00 / sta MetroidLatch0400,y`，
+/// 故清 `$77F8..$77FD`；尾 `sta MetroidOnSamus`（A=0）⇒ `$92 ← 0`。
+fn goto_clear_all_metroid_latches(mem: &mut FrameMemory) {
+    let area = (mem.read_ram(crate::ram_map::IN_AREA) & 0x0F) as usize;
+    if crate::frame::mainloop::BANK_TABLE[area] != 0x04 {
+        return; // 非 Tourian bank ⇒ 空桩
+    }
+    for y in 0..=5u16 {
+        mem.write_ram(0x77F8 + y, 0x00);
+    }
+    mem.write_ram(crate::ram_map::METROID_ON_SAMUS, 0x00);
+}
+
+/// `Doors_RemoveIfOffScreen ; 07:ED65`（ROM `A2 B0 BD 00 03 F0 08 BD 0B 03 D0 03
+/// 9D 00 03 20 F4 F1`）：x 自 $B0 起每轮 −$10（`Xminus16`+`bmi` 环）⇒ 4 门
+/// $B0/$A0/$90/$80；`status≠0` 且 `onScreen==0` ⇒ `status ← 0`（A=0 直接回存）。
+fn doors_remove_if_offscreen(mem: &mut FrameMemory) {
+    let mut x: i16 = 0xB0;
+    while x >= 0 {
+        let xu = x as u16;
+        if mem.read_ram(DOORS_OFF + xu) != 0 && mem.read_ram(DOORS_OFF + xu + 0x0B) == 0 {
+            mem.write_ram(DOORS_OFF + xu, 0);
+        }
+        x -= 0x10;
+    }
+}
+
+/// SamusDoor 处理件（`07:D3A8` 区逐字节自证；ROM 字节已核）：
+/// `lda DoorEntryStatus / cmp #$05 / bcc Lx055`（<5 入门相：不动位、只走尾）→
+/// `dec DoorDelay / bne MoveOutDoor` → 完成相 `asl / bcc Lx049 / lsr / sta / bne Lx055`
+/// （bit7 为「再等一轮」旗：清掉后仍非零则本帧只走尾）→
+/// `Lx049`：敌清链三件 + 音乐面（ItemRoomMusicStatus≠0 ⇒ StartMusic，bit7 置则清 0；
+/// `KraidRidleyPresent≠0` ⇒ TourianMusic + 清旗 + ItemRoomMusicStatus←$80）→
+/// `Lx052`：`Samus.status ← SamusDoorData & $0F`、`SamusDoorData ← 0`、
+/// `DoorEntryStatus ← 0`、`jsr StopVertMovement` → **落到 MoveOutDoor**（同帧再移 1px）→
+/// 尾三件。
 pub fn samus_door(mem: &mut FrameMemory) {
     let status = mem.read_ram(crate::ram_map::DOOR_ENTRY_STATUS);
     if status < 0x05 {
-        return; // 入门相（Lx055 路——ScrollDoor 族另面）
+        samus_door_tail(mem); // `bcc Lx055`——入门相直接到尾部（不移位！）
+        return;
     }
-    let delay = mem.read_ram(crate::ram_map::DOOR_DELAY).wrapping_sub(1);
-    mem.write_ram(crate::ram_map::DOOR_DELAY, delay);
-    if delay != 0 {
-        crate::unported!("bank07:D3AE"); // MoveOutDoor（移动面——随件）
+    {
+        let delay = mem.read_ram(crate::ram_map::DOOR_DELAY).wrapping_sub(1);
+        mem.write_ram(crate::ram_map::DOOR_DELAY, delay);
+        if delay != 0 {
+            move_out_door(mem);
+            samus_door_tail(mem);
+            return;
+        }
+        // 完成相：`asl`（bit7→C）——置位则清旗后判余值
+        if status & 0x80 != 0 {
+            let rest = status & 0x7F; // lsr
+            mem.write_ram(crate::ram_map::DOOR_ENTRY_STATUS, rest);
+            if rest != 0 {
+                move_out_door(mem);
+                samus_door_tail(mem);
+                return;
+            }
+        }
+        // Lx049
+        door_delete_offscreen_enemies(mem);
+        doors_remove_if_offscreen(mem);
+        goto_clear_all_metroid_latches(mem); // 03:95AB（bank 分派桩）
+        let music_status = mem.read_ram(crate::ram_map::ITEM_ROOM_MUSIC_STATUS);
+        if music_status != 0 {
+            crate::frame::mainloop::start_music(mem); // D92C
+            if music_status & 0x80 != 0 {
+                mem.write_ram(crate::ram_map::ITEM_ROOM_MUSIC_STATUS, 0x00);
+            }
+        }
+        // Lx051
+        if mem.read_ram(crate::ram_map::KRAID_RIDLEY_PRESENT) != 0 {
+            let f = mem.read_ram(crate::ram_map::MUSIC_INIT) | MUSIC_TOURIAN; // TourianMusic
+            mem.write_ram(crate::ram_map::MUSIC_INIT, f);
+            mem.write_ram(crate::ram_map::KRAID_RIDLEY_PRESENT, 0x00);
+            mem.write_ram(crate::ram_map::ITEM_ROOM_MUSIC_STATUS, 0x80); // Lx050
+        }
+        // Lx052
+        let st = mem.read_ram(crate::ram_map::SAMUS_DOOR_DATA) & 0x0F;
+        mem.write_ram(crate::ram_map::SAMUS_STATUS, st);
+        mem.write_ram(crate::ram_map::SAMUS_DOOR_DATA, 0x00);
+        mem.write_ram(crate::ram_map::DOOR_ENTRY_STATUS, 0x00);
+        super::physics::stop_vert_movement(mem); // D147
     }
-    crate::unported!("bank07:D3BA"); // 完成相敌清链（随件）
+    move_out_door(mem); // 完成相 fall-through 到 D3F7
+    samus_door_tail(mem); // Lx055
 }
 
 /// SamusElevator 处理件（字节自证 D423 区——电梯态）：
@@ -1575,5 +1722,187 @@ mod tests_h1_turnaround_delay {
         assert_eq!(m.read_ram(ANIM_RESET_INDEX), 0x00, "Stand→Run⇒animResetIndex←Run");
         assert_eq!(m.read_ram(ANIM_RESET_INDEX.wrapping_sub(1)), 3,
             "Stand→Run⇒animDelay 不重置（非转身过渡）");
+    }
+}
+
+#[cfg(test)]
+mod tests_door_chain {
+    //! 出门链（`SamusDoor ; 07:D3A8` 区）判径：asm 逐行 + ROM 字节自证
+    //! （D48C 区 `A2 60 … 10 F7` / `A2 18 … D0 F6`，ED65 区 `A2 B0 BD 00 03 …`）。
+    use super::*;
+    use crate::state::FrameMemory;
+
+    fn door_mem(status: u8, delay: u8) -> FrameMemory {
+        let mut m = FrameMemory::default();
+        m.write_ram(crate::ram_map::DOOR_ENTRY_STATUS, status);
+        m.write_ram(crate::ram_map::DOOR_DELAY, delay);
+        m.write_ram(crate::ram_map::SAMUS_X, 0x80);
+        m
+    }
+
+    /// 完成相：`dec DoorDelay`→0 ⇒ 清链 + `Samus.status ← SamusDoorData&$0F` +
+    /// `SamusDoorData←0` + `DoorEntryStatus←0` + StopVertMovement，**随后落到 MoveOutDoor**
+    /// （同帧 x+1，dir=0）。
+    #[test]
+    fn completion_restores_status_and_moves_one_pixel() {
+        let mut m = door_mem(0x05, 0x01);
+        m.write_ram(crate::ram_map::SAMUS_DOOR_DATA, 0x0A);
+        m.write_ram(0x0308, 0xFA);
+        samus_door(&mut m);
+        assert_eq!(m.read_ram(crate::ram_map::DOOR_ENTRY_STATUS), 0x00);
+        assert_eq!(m.read_ram(crate::ram_map::SAMUS_STATUS), 0x0A);
+        assert_eq!(m.read_ram(crate::ram_map::SAMUS_DOOR_DATA), 0x00);
+        assert_eq!(m.read_ram(crate::ram_map::SAMUS_X), 0x81);
+        assert_eq!(m.read_ram(0x0308), 0x00); // StopVertMovement
+    }
+
+    /// 移动相：`bne MoveOutDoor`——Delay 递减 1、x 移 1px、门态不变（不走清链）。
+    #[test]
+    fn moving_phase_decrements_delay_only() {
+        let mut m = door_mem(0x05, 0x03);
+        m.write_ram(crate::ram_map::SAMUS_DOOR_DATA, 0x0A);
+        samus_door(&mut m);
+        assert_eq!(m.read_ram(crate::ram_map::DOOR_DELAY), 0x02);
+        assert_eq!(m.read_ram(crate::ram_map::DOOR_ENTRY_STATUS), 0x05);
+        assert_eq!(m.read_ram(crate::ram_map::SAMUS_X), 0x81);
+        assert_eq!(m.read_ram(crate::ram_map::SAMUS_DOOR_DATA), 0x0A); // 未清
+    }
+
+    /// 入门相：`cmp #$05 / bcc Lx055`——不递减、不移位、不动状态。
+    #[test]
+    fn entry_phase_is_inert() {
+        let mut m = door_mem(0x04, 0x03);
+        samus_door(&mut m);
+        assert_eq!(m.read_ram(crate::ram_map::DOOR_DELAY), 0x03);
+        assert_eq!(m.read_ram(crate::ram_map::SAMUS_X), 0x80);
+        assert_eq!(m.read_ram(crate::ram_map::DOOR_ENTRY_STATUS), 0x04);
+    }
+
+    /// bit7 旗：`asl / bcc / lsr / sta / bne`——清 bit7 后仍非零 ⇒ 本帧只走尾（不清链、
+    /// 不改 Samus.status），但 MoveOutDoor 照走。
+    #[test]
+    fn bit7_flag_clears_and_defers_completion() {
+        let mut m = door_mem(0x85, 0x01);
+        m.write_ram(crate::ram_map::SAMUS_DOOR_DATA, 0x0A);
+        m.write_ram(crate::ram_map::SAMUS_STATUS, 0x05);
+        samus_door(&mut m);
+        assert_eq!(m.read_ram(crate::ram_map::DOOR_ENTRY_STATUS), 0x05); // 0x85 & 0x7F
+        assert_eq!(m.read_ram(crate::ram_map::SAMUS_STATUS), 0x05); // 未改
+        assert_eq!(m.read_ram(crate::ram_map::SAMUS_DOOR_DATA), 0x0A); // 未清
+        assert_eq!(m.read_ram(crate::ram_map::SAMUS_X), 0x81); // 仍移位
+    }
+
+    /// 方向：dir≠0（门通向左）⇒ `dec Samus.x`；x 归零时 `ToggleSamusHi` 先翻第 9 位。
+    #[test]
+    fn leftward_door_decrements_x_and_toggles_hi_at_zero() {
+        let mut m = door_mem(0x05, 0x01);
+        m.write_ram(crate::ram_map::SAMUS_DOOR_DIR, 0x01);
+        samus_door(&mut m);
+        assert_eq!(m.read_ram(crate::ram_map::SAMUS_X), 0x7F);
+        let mut m = door_mem(0x05, 0x03);
+        m.write_ram(crate::ram_map::SAMUS_DOOR_DIR, 0x01);
+        m.write_ram(crate::ram_map::SAMUS_X, 0x00);
+        m.write_ram(0x030C, 0x00); // Samus.hi
+        samus_door(&mut m);
+        assert_eq!(m.read_ram(crate::ram_map::SAMUS_X), 0xFF);
+        assert_eq!(m.read_ram(0x030C), 0x01); // hi 已翻
+    }
+
+    /// `Door_DeleteOffscreenEnemies` 敌环 BUG 偏移：**$60/$40/$20/$00**
+    /// （`ldx #$60`/`sbc #$20` —— asm 自带「应为 #$50/#$10」注，D4 保真）。
+    #[test]
+    fn enemy_cleanup_uses_bug_offsets() {
+        let mut m = door_mem(0x05, 0x01);
+        for off in [0x60u16, 0x40, 0x20, 0x00] {
+            m.write_ram(ENS_BASE + off + 5, 0x00); // data05 bit1 清 ⇒ 不可见
+            m.write_ram(ENS_EXTRA_BASE + off, 0x04); // 原 status=冻结
+        }
+        m.write_ram(ENS_BASE + 0x10 + 5, 0x00); // 槽 1：BUG 导致**不被访问**
+        m.write_ram(ENS_EXTRA_BASE + 0x10, 0x04);
+        samus_door(&mut m);
+        for off in [0x60u16, 0x40, 0x20, 0x00] {
+            assert_eq!(m.read_ram(ENS_EXTRA_BASE + off), 0x00, "off={off:#x}");
+        }
+        assert_eq!(m.read_ram(ENS_EXTRA_BASE + 0x10), 0x04); // 槽 1 保持原样
+    }
+
+    /// 可见敌（bit1 置）不被清。
+    #[test]
+    fn visible_enemy_survives_cleanup() {
+        let mut m = door_mem(0x05, 0x01);
+        m.write_ram(ENS_BASE + 5, 0x02); // data05 bit1 置 ⇒ 可见
+        m.write_ram(ENS_EXTRA_BASE, 0x04);
+        samus_door(&mut m);
+        assert_eq!(m.read_ram(ENS_EXTRA_BASE), 0x04);
+    }
+
+    /// `Doors_RemoveIfOffScreen`：x=$B0 起 −$10（4 门）；status≠0 ∧ onScreen=0 ⇒ status=0。
+    #[test]
+    fn offscreen_door_is_removed_onscreen_kept() {
+        let mut m = door_mem(0x05, 0x01);
+        m.write_ram(DOORS_OFF + 0xB0, 0x01); // slot 11：存在、不在屏
+        m.write_ram(DOORS_OFF + 0xB0 + 0x0B, 0x00);
+        m.write_ram(DOORS_OFF + 0xA0, 0x01); // slot 10：存在、在屏
+        m.write_ram(DOORS_OFF + 0xA0 + 0x0B, 0x01);
+        m.write_ram(DOORS_OFF + 0x80, 0x00); // slot 8：空槽
+        samus_door(&mut m);
+        assert_eq!(m.read_ram(DOORS_OFF + 0xB0), 0x00);
+        assert_eq!(m.read_ram(DOORS_OFF + 0xA0), 0x01);
+        assert_eq!(m.read_ram(DOORS_OFF + 0x80), 0x00);
+    }
+
+    /// `PipeBugHoles` 环：偏移 $18/$10/$08，**槽 0 不被访问**（`bne` 在 0 处退出）；
+    /// hi==GetNameTableAtScrollDir 才 status←$FF。
+    #[test]
+    fn pipe_bug_holes_clear_matching_nametable_but_skip_slot0() {
+        let mut m = door_mem(0x05, 0x01);
+        m.write_ram(crate::ram_map::PPUCTRL_ZP, 0x00);
+        m.write_ram(crate::ram_map::SCROLL_DIR, 0x00); // ⇒ y=0
+        for off in [0x18u16, 0x10, 0x08, 0x00] {
+            m.write_ram(PIPE_BUG_HOLES + off, 0x07); // status=pipe bug
+            m.write_ram(PIPE_BUG_HOLES + off + 4, 0x00); // hi=0
+        }
+        samus_door(&mut m);
+        for off in [0x18u16, 0x10, 0x08] {
+            assert_eq!(m.read_ram(PIPE_BUG_HOLES + off), 0xFF, "off={off:#x}");
+        }
+        assert_eq!(m.read_ram(PIPE_BUG_HOLES), 0x07); // 槽 0 原版不处理
+    }
+
+    /// 异名表洞不删（`bne RTS`）。
+    #[test]
+    fn pipe_bug_hole_other_nametable_kept() {
+        let mut m = door_mem(0x05, 0x01);
+        m.write_ram(crate::ram_map::PPUCTRL_ZP, 0x00);
+        m.write_ram(crate::ram_map::SCROLL_DIR, 0x01); // ⇒ y=1
+        m.write_ram(PIPE_BUG_HOLES + 0x18, 0x07);
+        m.write_ram(PIPE_BUG_HOLES + 0x18 + 4, 0x00);
+        samus_door(&mut m);
+        assert_eq!(m.read_ram(PIPE_BUG_HOLES + 0x18), 0x07);
+    }
+
+    /// `GotoClearAllMetroidLatches`（$95AB 桩表）：Tourian(bank3) 才清 6 latch +
+    /// MetroidOnSamus；其余 bank 是 `60 EA EA` 空桩。
+    #[test]
+    fn metroid_latches_cleared_only_in_tourian() {
+        let mut m = door_mem(0x05, 0x01);
+        m.write_ram(crate::ram_map::IN_AREA, 0x03); // Tourian
+        for y in 0..=5u16 {
+            m.write_ram(0x77F8 + y, 0x7B);
+        }
+        m.write_ram(crate::ram_map::METROID_ON_SAMUS, 0x01);
+        samus_door(&mut m);
+        for y in 0..=5u16 {
+            assert_eq!(m.read_ram(0x77F8 + y), 0x00);
+        }
+        assert_eq!(m.read_ram(crate::ram_map::METROID_ON_SAMUS), 0x00);
+
+        let mut m = door_mem(0x05, 0x01);
+        m.write_ram(crate::ram_map::IN_AREA, 0x00); // Brinstar
+        m.write_ram(0x77F8, 0x7B);
+        m.write_ram(crate::ram_map::METROID_ON_SAMUS, 0x01);
+        samus_door(&mut m);
+        assert_eq!(m.read_ram(0x77F8), 0x7B);
+        assert_eq!(m.read_ram(crate::ram_map::METROID_ON_SAMUS), 0x01);
     }
 }

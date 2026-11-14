@@ -175,12 +175,12 @@ WritePPUCtrl（唯一点亮真 PPUMASK 的地方）/ WriteScroll / ReadJoyPads`�
 | **3** | 电梯 / 区域间移动 | ★★★ | 只有 2 个区可达，且**不能换区** | `UpdateElevator $D7B3` + `SpawnElevator $EEA1` + `InitBank3/4/5` | 大 |
 | **4** | 后三区数据（Kraid/Tourian/Ridley） | ★★★ | 3/5 世界不可进 | 在 `crates/game-data/src/extract.rs` 增 3 区段（区序见 `AREA_ITEMS`/`AREA_SPEC`）+ 敌表分区（**先解 16B vs 64B 尺寸疑点**，见 `docs/findings/enemy-table-extent.md`） | 中 |
 | **5** | 暂停→密码屏（`mr=5 PauseMode` + `mr=6 GoPassword` 缺） ✅ **已修（并入 #2）** | ★★ | ~~panic~~ → 已端口 `pause_mode`/`go_password` | `PauseMode` 需 2P 的 A+UP 同按 + 逃脱计时器未激活；成功则 `GamePaused←0` + `inc MainRoutine`(5→6) | 小（已完成） |
-| **6** | 出门链（`MoveOutDoor $D3AE` 等 4 桩） | ★★ | 走门 panic | 逐件端口 | 中 |
+| **6** | 出门链（`MoveOutDoor $D3AE` 等 4 桩） ✅ **已修** | ★★ | ~~走门 panic~~ → 已端口 | `samus_door` 全链（D3A8 逐字节）+ `Door_DeleteOffscreenEnemies`（D48C，**保真两处 asm 自带 BUG**：敌环 `#$60`/`#$20` 而非 `#$50`/`#$10`；管道虫洞环 `bne` 致槽 0 不访问）+ `Doors_RemoveIfOffScreen`（ED65，4 门 $B0..$80）+ `GotoClearAllMetroidLatches`（$95AB 区 bank 桩表：仅 bank3 Tourian 有效，其余 `60 EA EA`）+ 音乐面（`ItemRoomMusicStatus`/`KraidRidleyPresent`→TourianMusic） | 中（已完成） |
 | **7** | 声音内容（24/28 零触达） | ★ | 音效/音乐行为无证据 | ①补 `B7E7`/`B87F` 两件高频 ②建音频 RAM 语义列（`.sem` 扩 `$0600-$068D`） | 中 |
 | **8** | FC +2 相位 | ★ | L4 两格 23/42px + sem password 案 45.6% | 周期会计（已裁定冻结，待裁） | 大 |
 
 **优先级建议（2026-11-13 二次修订）**：#1（死亡链）✅ → #2 + #5（暂停→密码屏，同族三件）✅
-→ #6（出门链，与 #3 共用机制）→ #3+#4（换区+后三区，最大块）→ #7 → #8。
+→ #6（出门链，与 #3 共用机制）✅ → #3+#4（换区+后三区，最大块）→ #7 → #8。
 
 > 【2026-11-13 更正】上表 #5「密码屏返回 panic」的初判**不成立**：`_id_GoPassword` 全仓只出现在
 > `WaitTimer` 的比较里（`refs/m1disasm/SRC/prg7_engine.asm:1229`），而 `stx NextRoutine` 唯一
