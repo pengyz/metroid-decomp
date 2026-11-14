@@ -120,9 +120,10 @@ pub fn enemy_get_delta_y(
     area: u8, type_: u8, data05: u8, movement_index: u8,
     instr_index: u8, delay: u8,
     speed_sub: u8, speed: u8, accel_y: u8,
-) -> (i8, u8, u8, bool) {
-    let (dy, _dx, d, i, z) = enemy_get_delta_xy(area, type_, data05, movement_index, instr_index, delay, speed_sub, speed, accel_y);
-    (dy, d, i, z)
+    data1f: u8, can_up: bool, can_down: bool,
+) -> (i8, u8, u8, u8, bool) {
+    let (dy, _dx, d, i, d1f, _tr) = enemy_get_delta_xy(area, type_, data05, movement_index, instr_index, delay, speed_sub, speed, accel_y, data1f, can_up, can_down);
+    (dy, d, i, d1f, false)
 }
 
 /// Δxy 双轴（**对抗复核⑦**——skree 串 packed nibble 双半字节（macros.asm:27）：
@@ -131,7 +132,8 @@ pub fn enemy_get_delta_xy(
     area: u8, type_: u8, data05: u8, movement_index: u8,
     instr_index: u8, delay: u8,
     speed_sub: u8, speed: u8, accel_y: u8,
-) -> (i8, i8, u8, u8, bool) {
+    mut data1f_in: u8, can_up: bool, can_down: bool,
+) -> (i8, i8, u8, u8, u8, bool) {
     // LoadTableAt977B：type→flags（*2 后 bit7=加速路径——case-6 $45 bit6 ✓ 实证）
     let flags = game_data::assets::enemy_facing(area).get((type_ & 0x3F) as usize).copied().unwrap_or(0);
     // 【goal-轮4 移动源判别】加速径 vs 串径分流直证。
@@ -163,7 +165,7 @@ pub fn enemy_get_delta_xy(
         // 【Skree 坠落根修（goal-轮2 自跑实证：金 y 56→64→196（加速落）/我 56 恒——
         // Δ 桩回 0 致坠落静止）】加速径 Δ=**积分后 speed**（asm $833F：speed 积分面——
         // Δ=speed 本体）。
-        return (sp as i8, 0, delay, instr_index, false);
+        return (sp as i8, 0, delay, instr_index, data1f_in, false);
     }
     // 【goal-轮63 $833F 合规矩】EnemyGetDeltaY_UsingAcceleration 全径对表：max=14
     // （Y=0E）/accelY 符号分流（正⇒frac+int 加/负⇒abs 减）/speed 符号⇒TwosComplement
@@ -198,7 +200,7 @@ pub fn enemy_get_delta_xy(
     // ③$FA=TriggerResting/$FB=StopMovement(双RTS)/$FC=RepeatPreviousUntilFailure
     // （data1F bit7=上检/下检循环）/$FD=ClearJumpDsplcmnt/$FE=重复至无Δ休止/$FF=重启。
     if data05 & 0x20 != 0 {
-        return (0, 0, delay, instr_index, false); // 静息触发⇒Δ=0（:588-591）
+        return (0, 0, delay, instr_index, data1f_in, false); // 静息触发⇒Δ=0（:588-591）
     }
     let mut ii = instr_index;
     for _ in 0..16u32 {
@@ -206,13 +208,22 @@ pub fn enemy_get_delta_xy(
         let d = game_data::assets::enemy_movement_strings(area).get(str_off + ii as usize).copied().unwrap_or(0xFF);
         if d >= 0xF0 {
             match d {
-                0xFA => return (0, 0, delay, ii, false), // TriggerResting（随件=Δ0）
-                0xFB => return (0, 0, delay, ii, false), // StopMovement（双RTS=停）
-                0xFC => return (0, 0, delay, ii, false), // RepeatUntilFailure（循环径随件）
+                0xFA => return (0, 0, delay, ii, data1f_in, false), // TriggerResting（随件=Δ0）
+                0xFB => return (0, 0, delay, ii, data1f_in, false), // StopMovement（双RTS=停）
+                0xFC => {
+                    let ok = if data1f_in & 0x80 != 0 { can_up } else if data1f_in == 0 { true } else { can_down };
+                    if ok { ii = ii.wrapping_sub(2); } else { ii = ii.wrapping_add(1); data1f_in = 0; }
+                    continue;
+                }
                 0xFD => {
                     ii = ii.wrapping_add(1); // ClearJumpDsplcmnt（跳位移清——字段面随件）
                 }
-                0xFE => return (0, 0, delay, ii, false),
+                0xFE => {
+                    ii = ii.wrapping_sub(2);
+                    let ok = if data1f_in & 0x80 != 0 { can_up } else if data1f_in == 0 { false } else { can_down };
+                    if ok { continue; }
+                    return (0, 0, delay, ii, data1f_in, true);
+                }
                 _ => {
                     ii = 0; // $FF=重启字符串
                 }
@@ -228,12 +239,12 @@ pub fn enemy_get_delta_xy(
         // ——**索引面合规** ✓✓（串位 instr 推进相位根非本件 ✗）。
         if d.wrapping_sub(delay) == 0 {
             let speed = game_data::assets::enemy_movement_strings(area).get(str_off + ii as usize + 1).copied().unwrap_or(0);
-            return (enemy_delta_sign_mag(speed), enemy_delta_x_packed(speed), 0, ii.wrapping_add(2), true);
+            return (enemy_delta_sign_mag(speed), enemy_delta_x_packed(speed), 0, ii.wrapping_add(2), data1f_in, false);
         }
         let speed = game_data::assets::enemy_movement_strings(area).get(str_off + ii as usize + 1).copied().unwrap_or(0);
-        return (enemy_delta_sign_mag(speed), enemy_delta_x_packed(speed), delay.wrapping_add(1), ii, false);
+        return (enemy_delta_sign_mag(speed), enemy_delta_x_packed(speed), delay.wrapping_add(1), ii, data1f_in, false);
     }
-    (0, 0, delay, ii, false)
+    (0, 0, delay, ii, data1f_in, false)
 }
 
 /// 指令流逐字节执行（**asm 内容锚** `@ReadByte: ; $825B`——全支分派）：

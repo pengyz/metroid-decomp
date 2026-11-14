@@ -122,3 +122,38 @@ case-scrollseam-probe/1240:scroll-l40: match 集合缩水（基线 match → 现
 1. 先用临时 watch 取金腿 Skree 在落地前 3 帧的 `En`、`EnsExtra` 全 16 字节，确认 `movementInstrIndex` 是否真到 `$0F`、`data1F` 是否真为 `$40`；
 2. 再用同一帧比 rust 的 `enemy_check_move_down` 返回位（不是比最终像素）；
 3. 两者对上之后再上 `$FC/$FE`，并以 `case-scrollseam-probe/f1240` 回 match **且** `f1360` 不劣化为双验收。
+
+## 10. 【2026-11-14 更正】§9 的结论作废：补丁入库，净 +6 格
+
+§9 记录"补 `$FC/$FE` 后无净收益、劣化一处，代码回退"——**该结论作废**，原因是**测量跑在未编译成功的二进制上**：那一轮的 `eprintln!` 探针格式化参数个数不匹配（`error: argument never used`，`mainloop.rs:884` 的 `[ivis]` 块），构建失败，而 `tools/l4_diff_run.py` 走 `cargo run` 失败后报出的汇总数字来自**上一次成功的二进制**。所以 §9.2 的表是旧行为，不是 `$FC/$FE` 的效果。
+
+修正后的事实（同批改动，构建成功）：
+
+| 用例 | 基线 | 本批 |
+|---|---|---|
+| `case-scrollseam-probe` | 7/14 | **10/14** |
+| `case-jumpledge-probe` | 5/8 | **5/8**（量值塌缩，格数不变） |
+| 全矩阵 | match 108 / diff 24 | **match 114 / diff 18** |
+
+逐格核对：**0 格回退，6 格新增 match**——`case-jumpledge-probe` 的 `1215:peak`/`1240:land`/`1260:land-settled`，`case-scrollseam-probe` 的 `1280:scroll-l80`/`1320:scroll-l120`/`1360:end`。`case-scrollseam-probe/1240`（§8 里那格幽灵）已回 match。
+
+### 10.1 真正生效的两处
+
+1. **`$FC/$FE` 语义**（按 §9.1，未变）——补齐后 Skree 会落地、会爆体、会在 `f1188` 前后消失。
+2. **`skree_ai` 的 `instr` 读错了字段**：`crates/game-core/src/frame/mainloop.rs::skree_ai` 首行读的是 `En+7`（`speedSubPixelY`），应为 **`En+6`**（`movementInstrIndex`，ROM `BC 06 04` 两处实证）。读错位的后果是"坠落速度值被当成指令索引"，于是 `>= 0x11` 的爆体分支几乎立即命中、`jumpDsplmn t` 从 0 回绕 255 帧 —— 表现出来就是"既不落地也不消失"。
+
+### 10.2 字段偏移的实证表（勿再按字节匹配推断）
+
+| 字段 | 偏移 | 证据 |
+|---|---|---|
+| `movementInstrIndex` | **+6** | ROM `BC 06 04`（areas_common `$8258` 两 bank） |
+| `speedSubPixelY` | **+7** | ROM `7E 07 04`（`EnemyIfMoveFailedVertical`） |
+| `movementIndex` | **+8** | 实测定谳：改读 `+10` 使 jumpledge 5/8→3/8 |
+| `delay` | **+9** | ROM `FD 09 04`（`EnemyGetDeltaY $8280`）、`DE 09 04`（`try_becoming_active`） |
+| `data0A` | **+10** | `try_becoming_active` 注释 + 朝向写入点 |
+| `EnsExtra.accelY` | +10 | `$6AF4` 基址 |
+| `EnsExtra.data1F` | +15 | ROM `$1F676`：`asl×3 / and #$C0 / sta $6B03,x` |
+
+### 10.3 教训（第三次同型）
+
+**构建失败时的 l4 汇总是上一次二进制的读数**——`cargo run` 失败不会让 `run` 子命令报错退出到你看得见的层级。此后凡"改动后跑单案"，先 `cargo build --bin rust_screenshot` 显式过一遍，看摘要行是 `Finished` 再跑矩阵。

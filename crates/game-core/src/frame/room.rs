@@ -787,12 +787,16 @@ fn load_enemy(mem: &mut crate::frame::FrameMemory, b0: u8, etype: u8, pos: u8) -
     // 【goal-轮44 修错勘误】轮41 facing→bit7 **错**（asm :12048 注「asl to compensate for
     // the ror」——**asl+ror 组合=facing→bit0**（0/1→0/2→ror→bit0）+axis→bit7 ✓）——
     // 金腿实证（d05=0x53：bit0=1（facing）/bit7=0 ✓）。修正：facing→bit0。
+    // 【A 级勘误 2026-11-14】`asl $0405,x`（ROM `EB7E`=`1E 05 04`）+ `ror`（`FB7B`
+    // =`20 B0 80`/`7E 05 04`）净效果：`d05' = (L977B[type].bit7<<7) | (d05 & $7F)`——
+    // **bit0 保持旧值**，出生径无「按 ScrollDir 置 bit0」的写点（bit0 由运行期
+    // `EnemyForceSpeedTowardsSamus` 的 x 轴力 F6DF 段写）。旧形用
+    // `EnsExtra.status & ScrollDir & 1` 塞 bit0，是缺失 x 轴力时的补偿。
     let t = ty as usize & 0x3F;
-    let d5 = mem.read_ram(en + 5);
-    let shifted = d5 << 1; // asl（补偿 ror）
-    let facing_bit = mem.read_wram(ex) & mem.read_ram(crate::ram_map::SCROLL_DIR) & 0x01;
-    let rotated = (shifted >> 1) | (if facing_bit != 0 { 0x80 } else { 0 }); // ror 形（axis→bit7）
-    let d5 = (rotated & 0x7E) | facing_bit; // facing→bit0（asl+ror 组合）
+    let d5_prev = mem.read_ram(en + 5);
+    // `LoadTableAt977B` 返回 asl 后的值；asl 的 carry 是**原字节 bit7** ⇒ 取原表。
+    let raw977b = game_data::assets::enemy_facing(crate::frame::cur_area(mem))[t & 0x3F];
+    let d5 = (d5_prev & 0x7F) | if raw977b & 0x80 != 0 { 0x80 } else { 0 };
     mem.write_ram(en + 5, d5);
     // 【goal-r16 复核修正 G1'】字段偏移 +2 错位修正（ROM 真值：FB7B `sta $0409`=delay+9，
     // F85A `sta $040D`=data0D+0xD / `sta $040B`=health+0xB）。旧形 delay→+0x0B（写进 health
@@ -804,9 +808,10 @@ fn load_enemy(mem: &mut crate::frame::FrameMemory, b0: u8, etype: u8, pos: u8) -
     // prg1:97D1 逐字）：每型移动索引初值（多值型 RNG 掩选——现取首值（确定形））：
     // SidehopperFloor=1/SidehopperCeiling=3/Waver=5/Ripper=6/**Skree=7**/Zoomer=0（手动）/
     // Rio=8/Zeb=9。
-    let mov_init = [0x01u8, 0x03, 0x05, 0x06, 0x07, 0x00, 0x08, 0x09];
-    let mov_idx = mov_init.get(t as usize).copied().unwrap_or(0);
-    mem.write_ram(en + 0x08, mov_idx); // movementIndex=+8（复核正）
+    // 【A 级勘误 2026-11-14】删「movementIndex=+8 播种」：`GetEnemyData ; 07:EB06` 全径
+    // 的 `sta abs,x` 只有 `$040F`/`$0400`/`$0401`/`$0404`（及 EnsExtra `$6AF4`/`$6AFB`）
+    // ——**没有 `$0408`**；movementIndex 只由 `UpdateEnemy_Resting_TryBecomingActive`
+    // 经 `EnemyMovementChoiceOffset` 随机取。
     if mem.read_ram(en + 0x0F) & 0x80 != 0 {
         hp = hp.wrapping_shl(1); // tough 版双血（specialAttribs bit7——asm asl 形）
     }

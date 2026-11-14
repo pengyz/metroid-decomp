@@ -88,32 +88,32 @@
         },
         "1110:bullet-out": {
           "state": "diff",
-          "diff_pixels": 252,
+          "diff_pixels": 203,
           "total_pixels": 61440
         },
         "1160:door-open": {
           "state": "diff",
-          "diff_pixels": 10236,
+          "diff_pixels": 10907,
           "total_pixels": 61440
         },
         "1250:door-enter": {
           "state": "diff",
-          "diff_pixels": 10474,
+          "diff_pixels": 9806,
           "total_pixels": 61440
         },
         "1310:scrolling": {
           "state": "diff",
-          "diff_pixels": 10474,
+          "diff_pixels": 9806,
           "total_pixels": 61440
         },
         "1460:neighbor-room": {
           "state": "diff",
-          "diff_pixels": 11015,
+          "diff_pixels": 13450,
           "total_pixels": 61440
         },
         "1610:end": {
           "state": "diff",
-          "diff_pixels": 11159,
+          "diff_pixels": 13456,
           "total_pixels": 61440
         }
       }
@@ -278,32 +278,32 @@
         },
         "1150:pre-jump": {
           "state": "diff",
-          "diff_pixels": 368,
+          "diff_pixels": 262,
           "total_pixels": 61440
         },
         "1165:takeoff": {
           "state": "diff",
-          "diff_pixels": 126,
+          "diff_pixels": 166,
           "total_pixels": 61440
         },
         "1190:rise": {
           "state": "diff",
-          "diff_pixels": 9087,
+          "diff_pixels": 259,
           "total_pixels": 61440
         },
         "1215:peak": {
-          "state": "diff",
-          "diff_pixels": 10018,
+          "state": "match",
+          "diff_pixels": 0,
           "total_pixels": 61440
         },
         "1240:land": {
-          "state": "diff",
-          "diff_pixels": 10197,
+          "state": "match",
+          "diff_pixels": 0,
           "total_pixels": 61440
         },
         "1260:land-settled": {
-          "state": "diff",
-          "diff_pixels": 10702,
+          "state": "match",
+          "diff_pixels": 0,
           "total_pixels": 61440
         }
       }
@@ -643,22 +643,22 @@
         },
         "1100:scroll-r180": {
           "state": "diff",
-          "diff_pixels": 642,
+          "diff_pixels": 596,
           "total_pixels": 61440
         },
         "1130:scroll-r210": {
           "state": "diff",
-          "diff_pixels": 252,
+          "diff_pixels": 166,
           "total_pixels": 61440
         },
         "1160:scroll-r240": {
           "state": "diff",
-          "diff_pixels": 252,
+          "diff_pixels": 166,
           "total_pixels": 61440
         },
         "1180:scroll-end": {
           "state": "diff",
-          "diff_pixels": 184,
+          "diff_pixels": 262,
           "total_pixels": 61440
         },
         "1240:scroll-l40": {
@@ -667,18 +667,18 @@
           "total_pixels": 61440
         },
         "1280:scroll-l80": {
-          "state": "diff",
-          "diff_pixels": 126,
+          "state": "match",
+          "diff_pixels": 0,
           "total_pixels": 61440
         },
         "1320:scroll-l120": {
-          "state": "diff",
-          "diff_pixels": 184,
+          "state": "match",
+          "diff_pixels": 0,
           "total_pixels": 61440
         },
         "1360:end": {
-          "state": "diff",
-          "diff_pixels": 444,
+          "state": "match",
+          "diff_pixels": 0,
           "total_pixels": 61440
         }
       }
@@ -959,6 +959,16 @@
       "reason": "A-重锚：12 案输入窗整体后移出 440 帧开场演出（首动作帧→f910+），采集点 122→132",
       "match": 108,
       "diff": 24,
+      "blocked": 0,
+      "cells_total": 132
+    },
+    {
+      "ts": "2026-11-14T15:26:47+00:00",
+      "kind": "anchor",
+      "evidence": "",
+      "reason": "敌移动指令 $FC/$FE 端口 + skree_ai 字段偏移定谳（+6 instr / +7 subY）+ x 轴力补丁：match 108→114（+6 全为新增，0 格回退）",
+      "match": 114,
+      "diff": 18,
       "blocked": 0,
       "cells_total": 132
     }

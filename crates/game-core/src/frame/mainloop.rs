@@ -878,10 +878,6 @@ fn enemy_check_if_visible(mem: &mut crate::frame::FrameMemory, x: u8) -> bool {
             let rx_ = mem.read_wram(0x6AF4 + x as u16 + 2);
             let sy_ = mem.read_ram(crate::ram_map::SCROLL_Y);
             let y_ = mem.read_ram(0x0400 + x as u16);
-            eprintln!("[ivis] n={} nt={:02X} same={} carry={} latch={} eB=({},{}) scr=({},{})", n,
-                nt_, ((hi_ ^ nt_) & 1) == 0, carry, (d5_ >> 1) & 1,
-                mem.read_ram(0x0400 + x as u16), mem.read_ram(0x0400 + x as u16 + 1),
-                y_.wrapping_sub(mem.read_ram(crate::ram_map::SCROLL_Y)), screen_x);
         }
     }
     if mem.read_ram(0x0400 + x as u16 + 5) & 0x02 != 0 {
@@ -1082,6 +1078,63 @@ fn update_en_data05_bit6(mem: &mut crate::frame::FrameMemory, x: u8) {
 /// UpdateEnemy_ForceSpeedTowardsSamus（**asm 内容锚** `: 07:F6B9`——r26 主径）：
 /// Enemy82($82)←0→L968B[type]（ENEMY_FORCE_ATTRIBS）→Y→Active 且 bit1=0⇒RTS→
 /// dec Ens.data0D 非零⇒RTS→归零：delay 重载+bit7=1⇒x 轴力/0⇒skipXAxis（Zoomer 径）。
+/// `UpdateEnemy_Active` 的 **x 轴力**段（asm `07:F6DF`–`07:F70F`，含
+/// `EnemyIfMoveFailedHorizontal_Bounce@flipSpeed ; 00:81DA`）：
+/// ①`AndEnData05 #~$01` 清 facing；②横滚房先比名表（`LoadEnHiToYAndLoadEorHiToCarry
+/// ; 07:F752` = `EnsExtra.hi ^ Samus.hi` 的 bit0 进 carry），异名表 ⇒ facing =
+/// `EnsExtra.hi ^ PPUCTRL_ZP` 的 bit0；同名表/竖滚房 ⇒ `cmp Samus.x`：
+/// `enX == Samus.x` 时 `inc Enemy82($0082)`，carry(=enX≥Samus.x) 即 facing；
+/// ③`OrEnData05` 写 bit0；④`lsr/ror` 把 bit0 挪到 bit7 后与 `speedX` 的符号异或，
+/// 同号（已朝萨姆斯）⇒ 返回；异号 ⇒ flipSpeed：`L968B[type]` bit5 置 ⇒ 直接返回
+/// （movement-string 型不吃速度翻转），否则按 `L977B[type]` bit7 决定是否先取负
+/// `speedSubPixelX`（`sec / lda #0 / sbc` 链——subPixelX≠0 时借位使 speedX 落在
+/// `-speedX-1`，与 Y 轴同族的 sbc 链 quirk）。
+fn enemy_force_speed_x_axis(mem: &mut crate::frame::FrameMemory, x: u8, attribs: u8) {
+    let e = 0x0400 + x as u16 + 5;
+    mem.write_ram(e, mem.read_ram(e) & !0x01); // AndEnData05 #~$01
+    let bit0 = enemy_facing_towards_samus_bit(mem, x);
+    let d = mem.read_ram(e);
+    mem.write_ram(e, d | bit0); // OrEnData05
+    // lsr/ror：bit0 → bit7；再 eor speedX 的符号位
+    let facing_left = bit0 != 0;
+    let sx = mem.read_ram(0x0400 + x as u16 + 3); // Ens.speedX
+    if facing_left == (sx & 0x80 != 0) {
+        return; // bpl @endIf_D（已朝萨姆斯）
+    }
+    if attribs & 0x20 != 0 {
+        return; // flipSpeed 首件：L968B bit5 ⇒ rts
+    }
+    let tbl = load_table_at_977b(mem, x); // A = L977B[type]（carry = 原字节 bit7）
+    let mut c_in = 1u8; // sec
+    if tbl & 0x80 != 0 {
+        let s = mem.read_ram(0x0400 + x as u16 + 9); // Ens.speedSubPixelX
+        mem.write_ram(0x0400 + x as u16 + 9, s.wrapping_neg());
+        c_in = if s == 0 { 1 } else { 0 }; // sbc 借位传出（无借位 ⇔ s==0）
+    }
+    let v = sx.wrapping_neg().wrapping_sub((1 - c_in) as u8);
+    mem.write_ram(0x0400 + x as u16 + 3, v);
+}
+
+/// x 轴朝向位（`07:F6F5`–`07:F70A`）：横滚房异名表 ⇒ `EnsExtra.hi ^ PPUCTRL_ZP`
+/// 的 bit0；否则 `enX ≥ Samus.x`（`enX == Samus.x` 时先 `inc Enemy82($0082)`）。
+fn enemy_facing_towards_samus_bit(mem: &mut crate::frame::FrameMemory, x: u8) -> u8 {
+    let dir = mem.read_ram(crate::ram_map::SCROLL_DIR);
+    if dir >= 0x02 {
+        let en_hi = mem.read_wram(0x6AF4 + x as u16 + 7); // EnsExtra.hi
+        let sam_hi = mem.read_ram(crate::ram_map::SAMUS_HI);
+        if (en_hi ^ sam_hi) & 0x01 != 0 {
+            return (en_hi ^ mem.read_ram(crate::ram_map::PPUCTRL_ZP)) & 0x01;
+        }
+    }
+    let ex = mem.read_ram(0x0400 + x as u16 + 1);
+    let sx = mem.read_ram(crate::ram_map::SAMUS_X);
+    if ex == sx {
+        let v = mem.read_ram(0x0082);
+        mem.write_ram(0x0082, v.wrapping_add(1)); // inc Enemy82（不影响 carry）
+    }
+    (ex >= sx) as u8
+}
+
 fn enemy_force_speed(mem: &mut crate::frame::FrameMemory, x: u8) {
     mem.write_ram(0x0082, 0);
     let t = mem.read_wram(0x6AF4 + x as u16 + 14) as usize & 0x0F;
@@ -1098,10 +1151,8 @@ fn enemy_force_speed(mem: &mut crate::frame::FrameMemory, x: u8) {
     let delay = game_data::assets::enemy_force_speed_delay(crate::frame::cur_area(mem)).get(t).copied().unwrap_or(1);
     mem.write_ram(0x0400 + x as u16 + 13, delay);
     if attribs & 0x80 != 0 {
-        // 【占位臂记账】x 轴力（bit7=1 型）F6DF 深件（敌移动力族——sc-enemy-encounter
-        // 包随件）：记账+跳过（x 力不施）——可玩性优先（占位臂模式）。
-        crate::frame::DIVERGENCES.with(|d| d.borrow_mut().push(0xF6DF));
-        return;
+        // x 轴力（asm `UpdateEnemy_Active` 内 F6DF–F70F；占位臂已端口 2026-11-14）
+        enemy_force_speed_x_axis(mem, x, attribs);
     }
     // @skipXAxis（F70F）y 轴力：data05 bit2 清+名表/位比较→bit2 置+速向力
     let e = 0x0400 + x as u16 + 5;
@@ -1596,7 +1647,7 @@ fn skree_ai(mem: &mut crate::frame::FrameMemory, x: u8) {
         update_enemy_common_no_move_no_anim(mem, x);
         return;
     }
-    let instr = mem.read_ram(0x0400 + x as u16 + 7); // movementInstrIndex=+7
+    let instr = mem.read_ram(0x0400 + x as u16 + 6); // movementInstrIndex=+6（ROM BC 06 04）
     if instr >= 0x11 {
         // SkreeBlowUpIntoProjectiles（:27-54）：jumpDsplcmnt 倒数⇒0⇒清槽+4 弹
         let d = mem.read_wram(0x6AF4 + x as u16 + 13); // EnsExtra.jumpDsplcmnt=+13
@@ -1641,8 +1692,13 @@ fn skree_ai(mem: &mut crate::frame::FrameMemory, x: u8) {
     let sub_y = mem.read_ram(0x0400 + x as u16 + 6); // speedSubPixelY=+6（union 同字节——复核正）
     let speed_y = mem.read_ram(0x0400 + x as u16 + 2);
     let accel_y = mem.read_wram(0x6AF4 + x as u16 + 10);
-    let (dy, dx, ndelay, ninstr, _z) = crate::enemy::common::enemy_get_delta_xy(
-        crate::frame::cur_area(mem), type_, d05, mov_idx, instr2, delay, sub_y, speed_y, accel_y);
+    let d1f = mem.read_wram(0x6AF4 + x as u16 + 15);
+    let can_up = enemy_check_move_up(mem, x);
+    let can_down = enemy_check_move_down(mem, x);
+    let (dy, dx, ndelay, ninstr, nd1f, trig) = crate::enemy::common::enemy_get_delta_xy(
+        crate::frame::cur_area(mem), type_, d05, mov_idx, instr2, delay, sub_y, speed_y, accel_y, d1f, can_up, can_down);
+    mem.write_wram(0x6AF4 + x as u16 + 15, nd1f);
+    if trig { let d5t = mem.read_ram(0x0400 + x as u16 + 5); mem.write_ram(0x0400 + x as u16 + 5, d5t | 0x20); mem.write_wram(0x6AF4 + x as u16 + 10, 0); }
     mem.write_ram(0x0400 + x as u16 + 9, ndelay);
     mem.write_ram(0x0400 + x as u16 + 6, ninstr); // movementInstrIndex=+6（复核正）
     if dy != 0 {
@@ -1933,14 +1989,6 @@ fn update_enemy_common_no_move_no_anim(mem: &mut crate::frame::FrameMemory, x: u
         // data05`——**bit1=可见旗**）——绘径写面（flag=可见判定 ✓）。
         let d5 = mem.read_ram(0x0400 + x as u16 + 5);
         mem.write_ram(0x0400 + x as u16 + 5, (d5 & 0xFD) | 0x02); // 绘⇒可见旗置
-        // 【goal-轮74 置写点标记】:1507（绘⇒置）。
-        if std::env::var("DSH_SPRITE_TRACE").is_ok() && x == 0x40 {
-            use std::sync::atomic::Ordering;
-            let n = DIAG_ITER.load(Ordering::Relaxed);
-            if n >= 800 && n <= 810 {
-                eprintln!("[b1s] n={} SET_1507 d05={:02X}", n, mem.read_ram(0x0400 + x as u16 + 5));
-            }
-        }
         draw_enemy(mem, x);
     }
     mem.write_ram(0x0400 + x as u16 + 4, 0); // isHit=+4
