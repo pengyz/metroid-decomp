@@ -795,18 +795,6 @@ pub fn object_check_move_up(mem: &mut FrameMemory) -> bool {
 /// GetRadiusSumsOfEnXSlotAndObjYSlot/CheckCollisionOfXSlotAndYSlot（F1FA 族）/LDC82。
 pub fn samus_collision_with_solid_entities(mem: &mut FrameMemory) {
     // 【goal-轮36 knockback 触发直证】敌撞萨判定。
-    if std::env::var("DSH_SPRITE_TRACE").is_ok() {
-        use std::sync::atomic::Ordering;
-        let n = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
-        if n >= 1025 && n <= 1050 {
-            eprintln!("[col] n={} sY={} sX={} eB=({},{}) eB_r=({},{}) s_r=({},{}) invDly={}", n,
-                mem.read_ram(0x030D), mem.read_ram(0x030E),
-                mem.read_ram(0x0440), mem.read_ram(0x0441),
-                mem.read_wram(0x6B35), mem.read_wram(0x6B36),
-                mem.read_ram(0x0301), mem.read_ram(0x0302),
-                mem.read_ram(crate::ram_map::SAMUS_INVINCIBLE_DELAY));
-        }
-    }
     // 双旗清（注「Default to … not being on an elevator or on a frozen enemy」）
     mem.write_ram(SAMUS_ON_ELEVATOR, 0);
     mem.write_ram(ON_FROZEN_ENEMY, 0);
@@ -899,14 +887,6 @@ pub fn horz_integrate(mem: &mut FrameMemory) -> u8 {
     let max_src = mem.read_ram(crate::ram_map::SAMUS_HORZ_SPEED_MAX);
     let out = crate::samus::integrators::int_x(&mut st, accel, max_src);
     // 【goal-轮31 horz_integrate 直证】speed 积分/钳径（spX 反转源）。
-    if std::env::var("DSH_SPRITE_TRACE").is_ok() {
-        use std::sync::atomic::Ordering;
-        let n = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
-        if n >= 1025 && n <= 1050 {
-            eprintln!("[hxi] n={} spI={} spF={} sub={} accel={:02X} max={:02X} out={}",
-                n, st.speed_i, st.speed_f, st.subpix, accel, max_src, out.disp);
-        }
-    }
     mem.write_ram(SAMUS_SPEED_X_I, st.speed_i);
     mem.write_ram(SAMUS_SPEED_X_F, st.speed_f);
     mem.write_ram(SAMUS_SUBPIX_X, st.subpix);
@@ -966,18 +946,6 @@ fn check_health_beep(mem: &mut FrameMemory) {
 
 pub fn set_samus_data(mem: &mut FrameMemory) {
     // 【goal-轮85 双调直证】set_samus_data 入口插桩（A 值/调用序）。
-    if std::env::var("DSH_SPRITE_TRACE").is_ok() {
-        use std::sync::atomic::Ordering;
-        let n = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
-        if n >= 340 && n <= 802 {
-            eprintln!("[ssd] n={} FC={:02X} A={} x={:02X} rx={:02X} scrX={:02X} st={:02X} hit={:02X} ay={:02X} door={:02X} t3={:02X}", n,
-                mem.read_ram(crate::ram_map::FRAME_COUNT), mem.regs.a,
-                mem.read_ram(0x030E), mem.read_ram(crate::ram_map::SAMUS_RADIUS_X),
-                mem.read_ram(crate::ram_map::SAMUS_SCR_X), mem.read_ram(crate::ram_map::SAMUS_STATUS),
-                mem.read_ram(crate::ram_map::SAMUS_IS_HIT), mem.read_ram(crate::ram_map::SAMUS_ACCEL_Y),
-                mem.read_ram(crate::ram_map::SAMUS_DOOR_DATA), mem.read_ram(0x002C));
-        }
-    }
     update_obj_anim(mem, mem.regs.a); // DC8F（已端口——A=延迟初值面）
     if is_screw_attack_active(mem) {
         // 攻螺旋转调色（asm：`lda FrameCount/lsr/and #$03/ora #$80|PRIORITY/sta $6B`）
@@ -986,25 +954,11 @@ pub fn set_samus_data(mem: &mut FrameMemory) {
     }
     check_health_status(mem); // CDFA（链三件——已端口）
     // 【goal-轮109 A 轨迹插桩】set_samus_data 流程 A 逐步打印（污染点 ID）。
-    if std::env::var("DSH_SPRITE_TRACE").is_ok() {
-        use std::sync::atomic::Ordering;
-        let n = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
-        if n >= 680 && n <= 830 {
-            eprintln!("[atr] n={} after Health A={}", n, mem.regs.a);
-        }
-    }
     // 【goal-轮109 污染点修】lava_and_move_check（E269）污染 regs.a（2→255）——asm
     // AnimDrawObject 的 A=caller 传值 ⇒ A 保存/恢复。
     let a_save = mem.regs.a;
     lava_and_move_check(mem); // E269（链四件——已端口）
     mem.regs.a = a_save;
-    if std::env::var("DSH_SPRITE_TRACE").is_ok() {
-        use std::sync::atomic::Ordering;
-        let n = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
-        if n >= 680 && n <= 830 {
-            eprintln!("[atr] n={} after Lava A={}", n, mem.regs.a);
-        }
-    }
     // Metroid 蓝化（asm：`lda MetroidOnSamus($92)/beq/lda #$81|PRIORITY/sta $6B`）
     if mem.read_ram(crate::ram_map::METROID_ON_SAMUS) != 0 {
         mem.write_ram(0x006B, 0x81);
@@ -1045,26 +999,6 @@ const OBJECT_ANIM_INDEX_TBL: &[u8] = &[
 /// animResetIndex $0305/animIndex $0306）。
 pub fn update_obj_anim(mem: &mut FrameMemory, a_in: u8) {
     // 【goal-轮89 reload 写值直证】update_obj_anim 写点带值。
-    if std::env::var("DSH_SPRITE_TRACE").is_ok() {
-        use std::sync::atomic::Ordering;
-        let n = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
-        if n >= 680 && n <= 830 {
-            let b = 0x0300u16 + mem.read_ram(0x004B) as u16;
-            eprintln!("[uoa] n={} FC={:02X} ENTRY ai={} ar={} ad={} a_in={}", n,
-                mem.read_ram(crate::ram_map::FRAME_COUNT),
-                mem.read_ram(b + 6), mem.read_ram(b + 5), mem.read_ram(b + 4), a_in);
-        }
-    }
-    if std::env::var("DSH_SPRITE_TRACE").is_ok() {
-        use std::sync::atomic::Ordering;
-        let n = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
-        if n >= 680 && n <= 830 {
-            let b = 0x0300u16 + mem.read_ram(0x004B) as u16;
-            eprintln!("[anim] n={} FC={:02X} WALK ai={} ar={} ad={} a_in={}", n,
-                mem.read_ram(crate::ram_map::FRAME_COUNT),
-                mem.read_ram(b + 6), mem.read_ram(b + 5), mem.read_ram(b + 4), a_in);
-        }
-    }
     // 【实锤③修（2026-10-28）】asm UpdateObjAnim（$DC8F）=`ldx PageIndex`——base=
     // $0300+($4B)（全槽通用）——旧形硬编码 Samus 槽（「他槽随件」）⇒弹径调用时改写
     // Samus 动画字段+**弹槽动画永不推进**（animIndex 冻 0x1B（f810 槽态实锤（贴图错
@@ -1132,13 +1066,6 @@ pub fn check_health_status(mem: &mut FrameMemory) {
         // 受击面
         mem.write_ram(crate::ram_map::SAMUS_INVINCIBLE_DELAY, 0x32); // 50 帧
         // 【goal-轮39 伤害源标记】physics:977（伤害触发径）。
-        if std::env::var("DSH_SPRITE_TRACE").is_ok() {
-            use std::sync::atomic::Ordering;
-            let n = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
-            if n >= 1025 && n <= 1050 {
-                eprintln!("[dmg2] n={} physics977 invDly<-50", n);
-            }
-        }
         mem.write_ram(crate::ram_map::SAMUS_KNOCKBACK_DIR, 0xFF);
         let bomb = mem.read_ram(crate::ram_map::SAMUS_KNOCKBACK_IS_BOMB);
         mem.write_ram(crate::ram_map::SAMUS_KNOCKBACK_IS_BOMB77, bomb);
@@ -1172,13 +1099,6 @@ pub fn check_health_status(mem: &mut FrameMemory) {
                     mem.write_ram(SAMUS_SPEED_X_I, 0); // LCF4E（Y=0）
                     mem.write_ram(SAMUS_SPEED_X_F, 0);
                     // 【goal-轮27 knockback 标记】LCF4E 推径（移向反转源判别）。
-                    if std::env::var("DSH_SPRITE_TRACE").is_ok() {
-                        use std::sync::atomic::Ordering;
-                        let n = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
-                        if n >= 1025 && n <= 1050 {
-                            eprintln!("[kb] n={} LCF4E push dir={} dly={}", n, dir, delay);
-                        }
-                    }
                 }
             }
             if !skip {
@@ -1187,13 +1107,6 @@ pub fn check_health_status(mem: &mut FrameMemory) {
                 }
                 mem.write_ram(SAMUS_SPEED_X_I, a); // sta Samus.speedX
                 // 【goal-轮35 "3" 写者标记】physics 1011（kb 推径）。
-                if std::env::var("DSH_SPRITE_TRACE").is_ok() {
-                    use std::sync::atomic::Ordering;
-                    let n = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
-                    if n >= 1025 && n <= 1050 {
-                        eprintln!("[w3b] n={} physics1011 speedX<-{} dir={}", n, a, dir);
-                    }
-                }
             }
         }
         // 【H2 r14 配套】Lx009 i-frame 闪烁（asm :CE53-:CE64）：bombed（$77 bit7=1）
@@ -1241,21 +1154,6 @@ pub fn lava_and_move_check(mem: &mut FrameMemory) {
     // 先落地再查 lava，萨姆斯落地则不触发 E269）。
     // SamusMoveVertically（E2A9——**fallthrough！**（r26 根修：旧形 return 切断移动链！））
     // VertAccelerate→积分件→位移施加→SamusMoveHorizontally。
-    if std::env::var("DSH_SPRITE_TRACE").is_ok() {
-        // 【goal-轮29 诊断双调根修】旧形诊断块直接调 vert_integrate（状态推进！）⇒
-        // 后续正式积分=**双推进**⇒DSH_SPRITE_TRACE 构建行为分叉（诊断/trace 不一致全源）。
-        // 存态→取 dy→回滚（无副作用诊断）。
-        let s08 = mem.read_ram(0x0308);
-        let s12 = mem.read_ram(0x0312);
-        let s10 = mem.read_ram(0x0310);
-        let dy_pre = vert_integrate(mem);
-        eprintln!("[inty] FC={} spdI={:02X} spdF={:02X} subY={:02X} accelY={:02X} dy={:02X} y={:02X}",
-            mem.read_ram(crate::ram_map::FRAME_COUNT), mem.read_ram(0x0308), mem.read_ram(0x0312),
-            mem.read_ram(0x0310), mem.read_ram(crate::ram_map::SAMUS_ACCEL_Y), dy_pre, mem.read_ram(0x030D));
-        mem.write_ram(0x0308, s08); // 回滚（无副作用）
-        mem.write_ram(0x0312, s12);
-        mem.write_ram(0x0310, s10);
-    }
     vert_accelerate(mem); // E37A（重力/加速——L2 单位！）
     let dy = vert_integrate(mem); // 积分件（速→位移！）
     // 【goal-r8/r11】asm E2E3 @loop_down `jsr MoveSamusDown/bcs @endIf_D`——逐像素步进
@@ -1414,10 +1312,6 @@ fn collision_point_samus(mem: &mut FrameMemory, y: u8, x: u8, hi: u8) -> bool {
     let idx = (((y & 0xF8) as u16) << 2) | ((x >> 3) as u16);
     let page = if hi & 1 != 0 { 0x0400u16 } else { 0x0000 };
     // 【墙顶角卡·瓦片级探针（临时——2026-11-05）】f1030-1045 查撞输入/瓦片/结果。
-    if std::env::var("DSH_SPRITE_TRACE").is_ok() {
-        let t = mem.read_wram(0x6000 | page | (idx & 0x3FF));
-        eprintln!("[corner] y={} x={} hi={} idx=0x{:03X} tile=0x{:02X}", y, x, hi, idx & 0x3FF, t);
-    }
     let tile = mem.read_wram(0x6000 | page | (idx & 0x3FF));
     let ok = tile != 0x4E && tile >= 0x80;
     if ok {
@@ -1491,13 +1385,6 @@ fn object_check_move_horizontal(mem: &mut FrameMemory, x: u8, dist: u8) -> bool 
     let y = mem.read_ram(0x030D);
     let ry = mem.read_ram(0x0301);
     // 【0xF7 quirk 卡·入口探针（临时——2026-11-06）】查撞 span 输入实证。
-    if std::env::var("DSH_SPRITE_TRACE").is_ok() {
-        let n = crate::frame::mainloop::DIAG_ITER.load(std::sync::atomic::Ordering::Relaxed);
-        if n >= 1025 && n <= 1050 {
-            let (top, cnt) = horizontal_span_rows(y, ry);
-            eprintln!("[chk] n={} y={} ry={} x={} dist={} top={} n_pts={}", n, y, ry, x, dist, top, cnt);
-        }
-    }
     let mut hi = mem.read_ram(crate::ram_map::SAMUS_HI);
     let (check_x, borrow) = x.overflowing_sub(dist);
     // asm E946 环绕判定（精确移植）：`ldx #$00/lda dist/bmi Lx215/dex` ⇒
@@ -1575,9 +1462,6 @@ fn check_update_name_table(mem: &mut FrameMemory) {
         let dropped = (crate::frame::room::LOAD_BASE_CYCLES + mem.work_cycles)
             / crate::frame::room::FRAME_CYCLES;
         // 【case-002 归因卡·临时探针（2026-11-05）】载房工作量+计数实测。
-        if std::env::var("DSH_SPRITE_TRACE").is_ok() {
-            eprintln!("[loadwin] rn={} work={} dropped={}", rn, mem.work_cycles, dropped);
-        }
         mem.iter_bogged(dropped.min(255) as u8);
     }
     if mem.read_ram(0x005A).wrapping_add(1) != 0 {
@@ -1981,13 +1865,6 @@ fn move_samus_left(mem: &mut FrameMemory) -> bool {
     if x.wrapping_sub(rx) & 0x07 == 0 && !object_check_move_left(mem) {
         mem.write_ram(crate::ram_map::SAMUS_DOOR_DATA, 0); // Lx181（撞挡）
         // 【goal-轮30 bounce 触发直证】左撞挡标记。
-        if std::env::var("DSH_SPRITE_TRACE").is_ok() {
-            use std::sync::atomic::Ordering;
-            let n = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
-            if n >= 1025 && n <= 1050 {
-                eprintln!("[bnc] n={} LEFT_BLOCKED x={} rx={}", n, x, rx);
-            }
-        }
         return false;
     }
     samus_collision_with_solid_entities(mem); // D976
@@ -2010,14 +1887,6 @@ fn move_samus_left(mem: &mut FrameMemory) -> bool {
     }
     mem.write_ram(0x030E, x.wrapping_sub(1));
     // 【E63F 卡·写后探针（临时——2026-11-05）】写 X 后值（一击钉定覆写者）。
-    if std::env::var("DSH_SPRITE_TRACE").is_ok() {
-        let n = crate::frame::mainloop::DIAG_ITER.load(std::sync::atomic::Ordering::Relaxed);
-        if n >= 1025 && n <= 1050 {
-            eprintln!("[wx] n={} wrote_x={} (was {}) gate_check_ran={}", n,
-                mem.read_ram(0x030E), x,
-                x.wrapping_sub(rx) & 0x07 == 0);
-        }
-    }
     true
 }
 
@@ -2063,15 +1932,6 @@ fn move_samus_right(mem: &mut FrameMemory) -> bool {
 /// CheckStopHorzMvmt→门向（SamusDoorData≠0⇒SamusDoorDir（右 0/左 1））。
 pub fn samus_move_horizontally(mem: &mut FrameMemory, delta: u8) {
     // 【goal-轮28 左撞墙碰撞直证】水平移动/碰撞结果。
-    if std::env::var("DSH_SPRITE_TRACE").is_ok() {
-        use std::sync::atomic::Ordering;
-        let n = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
-        if n >= 1025 && n <= 1050 {
-            eprintln!("[smh] n={} delta={} x={} accelX={} spX={}", n, delta,
-                mem.read_ram(0x030E), mem.read_ram(crate::ram_map::SAMUS_ACCEL_X),
-                mem.read_ram(SAMUS_SPEED_X_I));
-        }
-    }
     // 【goal-轮49 asm 合规矩】E31A 全径逐件对表：SamusScrX=x−ScrollX（E31D）/delta=0⇒
     // Exit10/TwosComplement（负向）/**岩浆减半（lsr+n=0⇒Exit10）**/ObjectCounter=delta
     // +逐像素环（MoveSamus+CheckStopHorzMvmt per px——stop⇒ObjectCounter=1 破环）/门向

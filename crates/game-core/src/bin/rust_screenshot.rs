@@ -311,6 +311,7 @@ fn main() {
     let mut out_dir = String::from("shots");
     let mut bundle_cli: Option<String> = None;
     let mut state_out: Option<String> = None;
+    let mut trace_flags: Vec<String> = Vec::new();
     let mut i = 1;
     while i < args.len() {
         match args[i].as_str() {
@@ -486,7 +487,7 @@ fn main() {
             next_cap += 1;
         }
         engine.mem.joy1 = plan.joy.get(&frame).copied().unwrap_or(0);
-        if std::env::var("DSH_SPRITE_TRACE").is_ok() && frame >= 918 && frame <= 924 {
+        if trace_flags.iter().any(|t| t == "sprite") && frame >= 918 && frame <= 924 {
             eprintln!("[joy] f{} nmi_en={} ppuctrl={:02X}", frame, engine.mem.nmi_enabled, engine.mem.ram[0x00FF]);
             eprintln!("[joy] f{} joy1_field={:02X} sched={:02X}", frame, engine.mem.joy1, plan.joy.get(&frame).copied().unwrap_or(0));
         }
@@ -498,7 +499,7 @@ fn main() {
             // 状态行=**spin 出口采样缝**（post-NMI 相位 P——emu ff 行同相位锚）；
             // restore 续跑首缝=装载态（skip 首 NMI）＝对齐验收首帧锚。
             engine.tick_frame_with(|mem| {
-                if std::env::var("DSH_FC_TRACE").is_ok() {
+                if trace_flags.iter().any(|t| t == "fc") {
                     eprintln!("[fc] {} {} {}", frame, mem.read_ram(0x2D), mem.read_ram(0x1F));
                 }
                 if want_state {

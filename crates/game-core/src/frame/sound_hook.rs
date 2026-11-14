@@ -89,15 +89,6 @@ fn table_slice(table_ptr: u16) -> &'static [u8] {
 ///
 /// 开销：默认一次 getenv + 分支，不开环境变量时零输出零分配。
 fn sound_trace(mem: &crate::frame::FrameMemory, ptr: u16, depth: u8, kind: &str) {
-    if std::env::var("DSH_SOUND_TRACE").is_ok() {
-        eprintln!(
-            "[sound] fc={:02X} ptr={:04X} kind={} depth={}",
-            mem.read_ram(0x002D),
-            ptr,
-            kind,
-            depth
-        );
-    }
 }
 
 /// 链走分派一步（B31B 行清偿核心）：装载→get_sound_routine→

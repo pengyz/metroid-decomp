@@ -258,13 +258,6 @@ pub fn samus_run(mem: &mut FrameMemory) {
             // +SetSamusData_3FrameAnimDelay（熔岩跳（三件全在（2026-10-28 端口）））
             set_samus_jump(mem);
             mem.write_ram(crate::ram_map::SAMUS_HORZ_SPEED_MAX, 0x12);
-            if std::env::var("DSH_SPRITE_TRACE").is_ok() {
-                use std::sync::atomic::Ordering;
-                let n = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
-                if n >= 1128 && n <= 1147 {
-                    eprintln!("[w304] n={} LAVA_WRITE3", n);
-                }
-            }
             mem.write_ram(ANIM_RESET_INDEX.wrapping_sub(1), 3);
         }
         // samL06（CD16）：三件+animDelay 初值 A=2（`lda #$02/bne SetSamusData`——
@@ -450,14 +443,6 @@ fn fire_samus_projectile_upwards(mem: &mut FrameMemory) {
 
 fn set_samus_jump(mem: &mut FrameMemory) {
     // 【goal-轮76 调用频度直证】set_samus_jump 入口插桩（animDelay=4 重写源）。
-    if std::env::var("DSH_SPRITE_TRACE").is_ok() {
-        use std::sync::atomic::Ordering;
-        let n = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
-        if n >= 1225 && n <= 1245 {
-            eprintln!("[jump] n={} FC={:02X} SET_JUMP (animDelay=4 write)", n,
-                mem.read_ram(crate::ram_map::FRAME_COUNT));
-        }
-    }
     let anim = OBJ_ANIM_SAMUS_JUMP;
     mem.write_ram(ANIM_RESET_INDEX, anim);
     mem.write_ram(ANIM_RESET_INDEX + 1, anim.wrapping_sub(1));
@@ -475,13 +460,6 @@ fn set_samus_jump(mem: &mut FrameMemory) {
 /// （Stand⇒Run、PntUp⇒RunPntUp、其余（原跑动）⇒Front 过渡）/Run 动画置位+加速。
 fn set_samus_run(mem: &mut FrameMemory) {
     // 【goal-轮86 写源直证】0x304 写点插桩（写 3 写源）。
-    if std::env::var("DSH_SPRITE_TRACE").is_ok() {
-        use std::sync::atomic::Ordering;
-        let n = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
-        if n >= 1128 && n <= 1147 {
-            eprintln!("[w304] n={} SET_RUN", n);
-        }
-    }
     // 【goal-轮54 asm 合规矩】CC98 逐件对表：WalkSoundDelay=9/animResetIndex 分支
     // （Stand→Run(X=0)/PntUp→RunPntUp(X=1)/否则 Front 转身过渡+Run）/accelX=
     // RunAccelTbl[Dir]（30 右/D0 左）——**三件面全合规** ✓✓（f1200 状态分叉根=调用点
@@ -840,13 +818,6 @@ pub fn set_samus_stand_no_footstep(mem: &mut FrameMemory) {
     // CFB7：accelX←Y（`8c 15 03`）
     mem.write_ram(0x0315, y);
     // CF81：$0304←Y（`8c 04 03`）
-    if std::env::var("DSH_SPRITE_TRACE").is_ok() && y == 3 {
-        use std::sync::atomic::Ordering;
-        let n = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
-        if n >= 1115 && n <= 1135 {
-            eprintln!("[w304c] n={} CF81_WRITE3 y={}", n, y);
-        }
-    }
     mem.write_ram(0x0304, y);
     // CF5D：status←Y（`8c 00 03`——stand=0）
     mem.write_ram(crate::ram_map::SAMUS_STATUS, y);
@@ -1018,13 +989,6 @@ pub fn samus_jump_check_horz_movement(mem: &mut FrameMemory) {
             // bcc Lx027（无向（X=0））
             mem.write_ram(0x0309, x);
             // 【goal-轮35 "3" 写者标记】handler 935。
-            if std::env::var("DSH_SPRITE_TRACE").is_ok() {
-                use std::sync::atomic::Ordering;
-                let n = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
-                if n >= 1258 && n <= 1275 {
-                    eprintln!("[w3a] n={} handler935 speedX<-{}", n, x);
-                }
-            }
             return;
         }
         x = x.wrapping_sub(1); // X=-1
@@ -1085,13 +1049,6 @@ pub fn samus_jump_tail(mem: &mut FrameMemory) {
     if lava_jump_allowed(mem) {
         set_samus_jump(mem);
         mem.write_ram(ANIM_RESET_INDEX.wrapping_sub(1), 3); // SetSamusData_3FrameAnimDelay
-        if std::env::var("DSH_SPRITE_TRACE").is_ok() {
-            use std::sync::atomic::Ordering;
-            let n = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
-            if n >= 1128 && n <= 1147 {
-                eprintln!("[w304] n={} SD3_WRITE3", n);
-            }
-        }
     }
     // Lx021 落地判（AccY==0）
     if mem.read_ram(crate::ram_map::SAMUS_ACCEL_Y) == 0 {

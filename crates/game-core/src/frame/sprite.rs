@@ -31,13 +31,6 @@ fn blob(addr: u16) -> u8 {
 /// animDelay 恒 0⇒每帧换帧（动画过快）+与 update_obj_anim 双写冲突。
 pub fn anim_draw_object(mem: &mut crate::frame::FrameMemory, page_index: u8, a_in: u8) {
     // 【goal-轮106 regs.a 源 ID】anim_draw_object 入口插桩。
-    if std::env::var("DSH_SPRITE_TRACE").is_ok() {
-        use std::sync::atomic::Ordering;
-        let n = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
-        if n >= 812 && n <= 820 {
-            eprintln!("[ado] n={} pi={} a_in={}", n, page_index, a_in);
-        }
-    }
     // 【goal-轮107 a_in 显式传值修】asm AnimDrawObject 的 A=caller 显式传值（非 regs.a
     // ——regs.a 在 draw 时已被污染=255）——a_in 参数化。
     crate::samus::physics::update_obj_anim(mem, a_in);

@@ -28,18 +28,8 @@ use crate::ram_map::{
 /// · 迭代收尾（inc FrameCount）在**步骤完成点**执行：游标归零 或 分发推进了相位
 ///   （孤儿游标=步骤边界）。
 /// · regs.a 连续性：续段不跑 random_numbers（其写 regs.a）——分发臂继承段间 A 态（F3）。
-/// 【goal-轮27/29 帧直证】迭代计数（DSH_SPRITE_TRACE 诊断锚——[iter]/[crawl] 同源）。
-#[cfg(debug_assertions)]
-pub(crate) static DIAG_ITER: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
 
 pub fn main_loop_iter(mem: &mut FrameMemory) {
-    if std::env::var("DSH_SPRITE_TRACE").is_ok() {
-        use std::sync::atomic::Ordering;
-        let n = DIAG_ITER.fetch_add(1, Ordering::Relaxed);
-        if n >= 1655 && n <= 1690 {
-            eprintln!("[iter] n={} FC={:02X}", n, mem.read_ram(FRAME_COUNT));
-        }
-    }
     // 【Step 4 完成拍哨兵】cursor==0xFF=臂末窗（asm：例程体尾段自旋窗——rts 后迭代
     // 收尾 `inc FrameCount`（prg7:207）落本窗尾）。无 prelude（同迭代早过 RandomNumbers/
     // CheckBankSwitch/UpdateTimer——emu 0x01/0x1B 窗各仅 1 次 TD dec 实录，map-v2 §3）；
@@ -105,9 +95,6 @@ pub fn game_main_routine(mem: &mut FrameMemory) {
     // **注意顺序**：切换发生在本帧分派**之前**，故同一帧就跑新例程（asm 原序）。
     start_pause_toggle(mem);
     let mr = mem.read_ram(crate::ram_map::MAIN_ROUTINE);
-    if std::env::var("DSH_MR_TRACE").is_ok() {
-        eprintln!("[mr-trace] FC={} mr={:02X} status={:02X} t3={:02X}", mem.read_ram(crate::ram_map::FRAME_COUNT), mr, mem.read_ram(0x0300), mem.read_ram(0x002C));
-    }
     if (mr as usize) < 10 {
         let target = MAIN_ROUTINE_PTR_TABLE[mr as usize];
         // JumpEngine 指针写（$0C/$0D——同标题面）
@@ -152,9 +139,6 @@ pub fn game_main_routine(mem: &mut FrameMemory) {
             let loc = format!("bank07:{:04X}", MAIN_ROUTINE_PTR_TABLE.get(mr as usize).copied().unwrap_or(0));
             crate::unported!(&loc); // 其余态（MoreInit 起——迭代分类）
         }
-    }
-    if std::env::var("DSH_MR_TRACE").is_ok() {
-        eprintln!("[mr-post] FC={} status={:02X} oam0={:02X} pal={:02X?}", mem.read_ram(crate::ram_map::FRAME_COUNT), mem.read_ram(0x0300), mem.read_ram(0x0200), &mem.render.palette[..16]);
     }
 }
 
@@ -515,15 +499,6 @@ pub fn samus_intro(mem: &mut FrameMemory) {
     crate::frame::boot::c1a3_unit(mem); // EraseAllSprites（$C1A3）
     let status = mem.read_ram(0x0300); // Samus.status（$300）
     let t3 = mem.read_ram(0x002C); // Timer3（$2C）
-    if std::env::var("DSH_SPRITE_TRACE").is_ok() {
-        use std::sync::atomic::Ordering;
-        let n = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
-        if n >= 340 && n <= 802 {
-            eprintln!("[fade] n={} FC={:02X} t3={:02X} st={:02X} td={:02X}", n,
-                mem.read_ram(crate::ram_map::FRAME_COUNT), t3, status,
-                mem.read_ram(crate::ram_map::TIMER_DELAY));
-        }
-    }
     if t3 == 0 {
         // 淡入完成（r26 端口——asm 逐字）：ItemRoomMusicStatus($79)←0/Samus.status←
         // sa_Begin(255)/StartMusic($D92C)/SelectSamusPalette($CB73)/MainRoutine←3
@@ -739,79 +714,8 @@ pub fn update_all_enemies(mem: &mut crate::frame::FrameMemory) {
     let mut x: u8 = 0x50; // _sizeof_Ens-_sizeof_Ens.0（5 槽×16）
     loop {
         // 【goal-轮45 可见位直证】敌B bit1（金方冻结=离屏）。
-    if std::env::var("DSH_SPRITE_TRACE").is_ok() {
-        use std::sync::atomic::Ordering;
-        let n = DIAG_ITER.load(Ordering::Relaxed);
-        if n >= 1155 && n <= 1300 {
-            let x2 = 0x40u8;
-            let d5 = mem.read_ram(0x0400 + x2 as u16 + 5);
-            let ry = mem.read_wram(0x6AF4 + x2 as u16 + 1);
-            let fo = mem.read_ram(0x0400 + x2 as u16 + 6);
-            let eg = game_data::assets::enemy_frames();
-            let mut cands = String::new();
-            for i in (1..eg.len().min(400)).step_by(1) {
-                if eg[i] == 1 && cands.len() < 50 {
-                    cands.push_str(&format!("{} ", i - 1));
-                }
-            }
-            let sx = mem.read_ram(crate::ram_map::SCROLL_X);
-            let sy = mem.read_ram(crate::ram_map::SCROLL_Y);
-            let ex_ = mem.read_ram(0x0400 + x2 as u16 + 1);
-            let ey_ = mem.read_ram(0x0400 + x2 as u16);
-            let fr0 = mem.read_wram(0x6AF4 + x2 as u16 + 3);
-            let ea = game_data::assets::enemy_active_anim(crate::frame::cur_area(mem));
-            let er = game_data::assets::enemy_resting_anim(crate::frame::cur_area(mem));
-            eprintln!("[vis2] n={} eB=({},{}) ry={} animFrame={:02X} st={} pre={} d05={:02X}", n,
-                mem.read_ram(0x0400 + x2 as u16), mem.read_ram(0x0400 + x2 as u16 + 1),
-                mem.read_wram(0x6AF4 + x2 as u16 + 1), fr0,
-                mem.read_wram(0x6AF4 + x2 as u16), mem.read_ram(0x0081),
-                mem.read_ram(0x0400 + x2 as u16 + 5));
-        }
-    }
     // 【goal-轮97 updateAll 径直证】敌更新调用（金方冻径）。
-    if std::env::var("DSH_SPRITE_TRACE").is_ok() {
-        use std::sync::atomic::Ordering;
-        let n = DIAG_ITER.load(Ordering::Relaxed);
-        if n >= 860 && n <= 920 {
-            let x2 = 0x40u8;
-            let st2 = mem.read_wram(0x6AF4 + x2 as u16);
-            let d52 = mem.read_ram(0x0400 + x2 as u16 + 5);
-            eprintln!("[upd] n={} slot={} st={} bit6={} d05={:02X}", n,
-                x2, st2, (d52 >> 6) & 1, d52);
-        }
-    }
     // 【goal-轮144 updateAll 遍历径直证】敌更新调用链（paradox 解）。
-    if std::env::var("DSH_SPRITE_TRACE").is_ok() {
-        use std::sync::atomic::Ordering;
-        let n = DIAG_ITER.load(Ordering::Relaxed);
-        if n >= 860 && n <= 920 {
-            let x2 = 0x40u8;
-            eprintln!("[ual] n={} x={} st={} y={} x2={} d05={:02X} dly={} mi={} ii={} hi={} ry={} rx={} ty={} ja={} jd={} sa2={} sa3={} sa4={} sa5={} sa6={} sa7={} sa8={} sa9={} sa10={} sa11={} sa12={}", n,
-                x2, mem.read_wram(0x6AF4 + x2 as u16),
-                mem.read_ram(0x0400 + x2 as u16), mem.read_ram(0x0400 + x2 as u16 + 1),
-                mem.read_ram(0x0400 + x2 as u16 + 5),
-                mem.read_ram(0x0400 + x2 as u16 + 9),
-                mem.read_ram(0x0400 + x2 as u16 + 8),
-                mem.read_ram(0x0400 + x2 as u16 + 6),
-                mem.read_wram(0x6AF4 + x2 as u16 + 7),
-                mem.read_wram(0x6AF4 + x2 as u16 + 1),
-                mem.read_wram(0x6AF4 + x2 as u16 + 2),
-                mem.read_wram(0x6AF4 + x2 as u16 + 14),
-                mem.read_wram(0x6AF4 + x2 as u16 + 13),
-                mem.read_ram(0x0400 + x2 as u16 + 0x0D),
-                mem.read_ram(0x0400 + x2 as u16 + 0x0F),
-                mem.read_ram(0x0400 + x2 as u16 + 0x0B),
-                mem.read_wram(0x6AF4 + x2 as u16 + 4),
-                mem.read_ram(0x0400 + x2 as u16 + 0x0E),
-                mem.read_wram(0x6AF4 + x2 as u16 + 5),
-                mem.read_wram(0x6AF4 + x2 as u16 + 3),
-                mem.read_wram(0x6AF4 + x2 as u16 + 6),
-                mem.read_ram(0x0400 + x2 as u16 + 0x0C),
-                mem.read_wram(0x6AF4 + x2 as u16 + 15),
-                mem.read_wram(0x6AF4 + x2 as u16 + 0),
-                mem.read_wram(0x6AF4 + x2 as u16 + 0));
-        }
-    }
     mem.write_ram(0x004B, x); // PageIndex
         let status = mem.read_wram(0x6AF4 + x as u16); // EnsExtra.0.status
         // CheckIfVisible（$F37F——不可见⇒双返跳过该敌）
@@ -820,13 +724,6 @@ pub fn update_all_enemies(mem: &mut crate::frame::FrameMemory) {
         // **Active(2) 漏门**⇒morphball 敌B f847 离屏仍跑 AI（emu 双返回全冻）⇒f1278
         // 敌撞击退单腿⇒七格残差（goal-轮45 探针注「敌B bit1（金方冻结=离屏）」收口）。
         if status != 0 && status < 3 && !enemy_check_if_visible(mem, x) {
-            if std::env::var("DSH_SPRITE_TRACE").is_ok() {
-                use std::sync::atomic::Ordering;
-                let n = DIAG_ITER.load(Ordering::Relaxed);
-                if n >= 1660 && n <= 1666 {
-                    eprintln!("[enemy] n={} slot={:02X} SKIP invisible st={}", n, x, status);
-                }
-            }
             x = if x == 0 { break } else { x - 0x10 };
             continue;
         }
@@ -835,13 +732,6 @@ pub fn update_all_enemies(mem: &mut crate::frame::FrameMemory) {
         // ——分派前捕获，激活同帧 AI 例程据它拦 Resting（crawler.asm:8-11——路径分叉根因件
         // ①：缺此门则激活帧即跑 AI 且半径未写（draw 在 AI 后）⇒rx=0 快径⇒外角下探伪成功）。
         mem.write_ram(0x0081, status); // EnemyStatusPreAI（constants_ram:633 zp $81）
-        if std::env::var("DSH_SPRITE_TRACE").is_ok() {
-            use std::sync::atomic::Ordering;
-            let n = DIAG_ITER.load(Ordering::Relaxed);
-            if n >= 1660 && n <= 1666 && x == 0x40 {
-                eprintln!("[enemy] n={} slot=40 DISPATCH st={}", n, status);
-            }
-        }
         match status {
             0 => {} // ExitSub（rts）
             1 => enemy_resting(mem, x), // F3BE
@@ -863,23 +753,6 @@ pub fn update_all_enemies(mem: &mut crate::frame::FrameMemory) {
 /// data05 bit1≠0⇒退出；否则位置/半径→IsObjectVisible⇒**不可见双返**（跳过该敌）。
 fn enemy_check_if_visible(mem: &mut crate::frame::FrameMemory, x: u8) -> bool {
     // 【goal-轮64 闩置位帧直证】draw visible 写面（闩自持差源）。
-    if std::env::var("DSH_SPRITE_TRACE").is_ok() && x == 0x40 {
-        use std::sync::atomic::Ordering;
-        let n = DIAG_ITER.load(Ordering::Relaxed);
-        if n >= 800 && n <= 810 {
-            let hi_ = mem.read_wram(0x6AF4 + x as u16 + 7);
-            let nt_ = mem.read_ram(0x00FF);
-            let d5_ = mem.read_ram(0x0400 + x as u16 + 5);
-            let x_ = mem.read_ram(0x0400 + x as u16 + 1);
-            let sx_ = mem.read_ram(crate::ram_map::SCROLL_X);
-            let carry = x_ >= sx_;
-            let same = ((hi_ ^ nt_) & 1) == 0;
-            let screen_x = x_.wrapping_sub(sx_);
-            let rx_ = mem.read_wram(0x6AF4 + x as u16 + 2);
-            let sy_ = mem.read_ram(crate::ram_map::SCROLL_Y);
-            let y_ = mem.read_ram(0x0400 + x as u16);
-        }
-    }
     if mem.read_ram(0x0400 + x as u16 + 5) & 0x02 != 0 {
         return true; // $F37F bit1 闩=1 ⇒ 免 fresh 检（视为可见）
     }
@@ -890,19 +763,6 @@ fn enemy_check_if_visible(mem: &mut crate::frame::FrameMemory, x: u8) -> bool {
 // 在**绘径**（非 F37F 检）——F37F 闩位读面已折；写面随件（DIVERGENCES 记账臂）。
 fn enemy_check_if_visible_inner(mem: &mut crate::frame::FrameMemory, x: u8) -> bool {
     // 【goal-轮61 可见位判输入直证】hi/same_nt/carry（金方 bit1=0 在屏却判不可见源）。
-    if std::env::var("DSH_SPRITE_TRACE").is_ok() && x == 0x40 {
-        use std::sync::atomic::Ordering;
-        let n = DIAG_ITER.load(Ordering::Relaxed);
-        if n >= 1150 && n <= 1165 {
-            let y_ = mem.read_ram(0x0400 + x as u16);
-            let x_ = mem.read_ram(0x0400 + x as u16 + 1);
-            let hi_ = mem.read_wram(0x6AF4 + x as u16 + 7);
-            eprintln!("[ivis] n={} y={} x={} hi={} nt={} sy={} sx={} dir={}", n,
-                y_, x_, hi_, mem.read_ram(0x00FF),
-                mem.read_ram(crate::ram_map::SCROLL_Y), mem.read_ram(crate::ram_map::SCROLL_X),
-                mem.read_ram(crate::ram_map::SCROLL_DIR));
-        }
-    }
     // IsObjectVisible（**asm 内容锚** `IsObjectVisible: ; 07:DFDF`——2026-10-31 忠实重建）：
     // 旧形横房分支 y<240 近似恒真且丢名表/横滚轴——载入邻名表敌（hi≠PPU 当前 NT）被误判
     // 可见 ⇒ Skree（slot2）提前可见+激活（crawlprobe f919-959 残差根因）。asm 判定链：
@@ -1054,24 +914,7 @@ fn update_en_data05_bit6(mem: &mut crate::frame::FrameMemory, x: u8) {
     let _ = bit6;
     mem.write_ram(0x0400 + x as u16 + 5, nd);
     // 【goal-轮1 公式直证】f797 bit6 实测与公式矛盾——打印 (x>>4)/FC/parity/写值。
-    if std::env::var("DSH_SPRITE_TRACE").is_ok() {
-        use std::sync::atomic::Ordering;
-        let n = DIAG_ITER.load(Ordering::Relaxed);
-        let fcv = mem.read_ram(crate::ram_map::FRAME_COUNT);
-        if n >= 790 && n <= 802 && x == 0x40 {
-            eprintln!("[tog] n={} FC={:02X} x4={} par={} d05 {:02X}->{:02X} bit6={}", n, fcv,
-                x >> 4, parity, d, nd, (nd >> 6) & 1);
-        }
-    }
     // 【goal-轮35 写面直比】d05 写点全打印（f1838 位差源直证）。
-    if std::env::var("DSH_SPRITE_TRACE").is_ok() {
-        use std::sync::atomic::Ordering;
-        let n = DIAG_ITER.load(Ordering::Relaxed);
-        if n >= 1820 && n <= 1845 && x == 0x40 {
-            eprintln!("[d05] n={} TOGGLE {:02X}->{:02X} par={} FC={:02X}", n, d, nd, parity,
-                mem.read_ram(crate::ram_map::FRAME_COUNT));
-        }
-    }
 }
 
 
@@ -1230,24 +1073,9 @@ fn enemy_distance_threshold(mem: &mut crate::frame::FrameMemory, x: u8) {
     let d = mem.read_ram(e);
     mem.write_ram(e, d | 0x18); // OrEnData05($18)
     // 【goal-轮36 写面直比】阈距写打印（f1838 位差源直证）。
-    if std::env::var("DSH_SPRITE_TRACE").is_ok() {
-        use std::sync::atomic::Ordering;
-        let n = DIAG_ITER.load(Ordering::Relaxed);
-        if n >= 1820 && n <= 1830 && x == 0x40 {
-            eprintln!("[d05] n={} THR {:02X}->{:02X}", n, d, mem.read_ram(e));
-        }
-    }
     let t = mem.read_wram(0x6AF4 + x as u16 + 14) as usize & 0x0F;
     let thr = game_data::assets::enemy_distance_threshold(crate::frame::cur_area(mem))[t];
     // 【goal-轮3 F75B 判定流直证】阈值/bit1/d05 写前后。
-    if std::env::var("DSH_SPRITE_TRACE").is_ok() && x == 0x40 {
-        use std::sync::atomic::Ordering;
-        let n = DIAG_ITER.load(Ordering::Relaxed);
-        if n >= 780 && n <= 812 {
-            eprintln!("[thr] n={} type={} thr={:02X} d05_pre={:02X} bit1={} bit6={}", n, t, thr,
-                mem.read_ram(e), (mem.read_ram(e) >> 1) & 1, (mem.read_ram(e) >> 6) & 1);
-        }
-    }
     if thr == 0 {
         return; // 阈 0⇒早出（Zoomer 径！）
     }
@@ -1408,11 +1236,6 @@ fn try_becoming_active(mem: &mut crate::frame::FrameMemory, x: u8) {
         let st = mem.read_wram(0x6AF4 + x as u16);
         mem.write_wram(0x6AF4 + x as u16, st.wrapping_add(1)); // status→Active
         // 【goal-轮14 激活帧直证】status→Active 写点（首动 1 帧差源）。
-        if std::env::var("DSH_SPRITE_TRACE").is_ok() && x == 0x40 {
-            use std::sync::atomic::Ordering;
-            eprintln!("[act] n={} status {}->{} y={} x={}", DIAG_ITER.load(Ordering::Relaxed), st,
-                st.wrapping_add(1), mem.read_ram(0x0400 + x as u16), mem.read_ram(0x0400 + x as u16 + 1));
-        }
         init_en_active_anim_index(mem, x); // F699（Active 动画初始化）
         // 【goal-轮28 激活 RNG 播种】（asm :11436-11450 逐字）：movementIndex←
         // EnemyMovementChoices[(FC^RNG1)&bitflag +1]——**激活时 RNG 选播**（旧形
@@ -1625,13 +1448,6 @@ fn enemy_complete_death(mem: &mut crate::frame::FrameMemory, x: u8) {
 /// （DIVERGENCES 非 panic——title_bridge 同款模式）：静态显示径保可玩，AI 深件随包收敛。
 fn choose_enemy_ai(mem: &mut crate::frame::FrameMemory, x: u8) {
     let t = mem.read_wram(0x6AF4 + x as u16 + 14); // type=+14
-    if std::env::var("DSH_SPRITE_TRACE").is_ok() {
-        use std::sync::atomic::Ordering;
-        let n = DIAG_ITER.load(Ordering::Relaxed);
-        if n >= 1660 && n <= 1666 {
-            eprintln!("[enemy] n={} slot={:02X} AI type={}", n, x, t);
-        }
-    }
     match t {
         5 => crawler_ai(mem, x),
         // 【goal-轮2 Rust 实现】SkreeAIRoutine（enemies/skree.asm:2-71 全谱）——
@@ -1795,55 +1611,14 @@ fn crawler_move_gate(x: u8, fc: u8) -> u8 {
 /// （draw 同 tick 后行）⇒rx=0 全检快径⇒外角下探伪成功转角⇒菱形回路（crawlprobe f797）。
 fn crawler_ai(mem: &mut crate::frame::FrameMemory, x: u8) {
     // 【goal-轮30 全径打印】入口+全出口（n=1664 漏步帧出口面直证）。
-    let diag_n = if std::env::var("DSH_SPRITE_TRACE").is_ok() {
-        use std::sync::atomic::Ordering;
-        let n = DIAG_ITER.load(Ordering::Relaxed);
-        if n >= 780 && n <= 835 {
-            eprintln!("[crawl] n={} FC={:02X} slot={:02X} ENTER d05={:02X} st={} pre={}",
-                n, mem.read_ram(crate::ram_map::FRAME_COUNT), x,
-                mem.read_ram(0x0400 + x as u16 + 5), mem.read_wram(0x6AF4 + x as u16),
-                mem.read_ram(0x0081));
-        }
-        n
-    } else {
-        u32::MAX
-    };
-    let _ = diag_n;
     // F852：txa/lsr×3（carry←原 bit2）/adc FrameCount（含进位）/lsr——门含 lsr 移出位。
     // 【goal-轮2 采样缝更正】toggle 公式正确——"bit6 反相"=采样缝伪象（我 spin-exit=帧首
     // /emu=帧末，同帧差一次更新）⇒真根=走位首动帧差（f798 早 1px）。
-    if std::env::var("DSH_SPRITE_TRACE").is_ok() && x == 0x40 {
-        use std::sync::atomic::Ordering;
-        let n = DIAG_ITER.load(Ordering::Relaxed);
-        if n >= 790 && n <= 805 {
-            eprintln!("[mov] n={} FC={:02X} x={} y={} d05={:02X} movIdx={} instrIdx={} dly={} spX={}",
-                n, mem.read_ram(crate::ram_map::FRAME_COUNT), x,
-                mem.read_ram(0x0400 + x as u16), mem.read_ram(0x0400 + x as u16 + 5),
-                mem.read_ram(0x0400 + x as u16 + 8), mem.read_ram(0x0400 + x as u16 + 6),
-                mem.read_ram(0x0400 + x as u16 + 9), mem.read_ram(0x0400 + x as u16 + 3));
-        }
-    }
     // 【H3 测试缝（findings/h3-enemy-slot-residual.md）】gate 公式抽函数
     // crawler_move_gate（行为随形——H3 TDD 红靶：FC−1 相位补偿）。
     let gate = crawler_move_gate(x, mem.read_ram(crate::ram_map::FRAME_COUNT));
     // 【goal-轮15 gate 值直证】F852 门值逐帧（金方 2 帧跳 vs 我方移动模式）。
-    if std::env::var("DSH_SPRITE_TRACE").is_ok() && x == 0x40 {
-        use std::sync::atomic::Ordering;
-        let n = DIAG_ITER.load(Ordering::Relaxed);
-        if n >= 860 && n <= 920 {
-            eprintln!("[gate] n={} FC={:02X} gate={} skip={}", n,
-                mem.read_ram(crate::ram_map::FRAME_COUNT), gate, gate == 0);
-        }
-    }
     if gate == 0 {
-        if std::env::var("DSH_SPRITE_TRACE").is_ok() {
-            use std::sync::atomic::Ordering;
-            let n = DIAG_ITER.load(Ordering::Relaxed);
-            if n >= 1655 && n <= 1690 {
-                eprintln!("[crawl] n={} FC={:02X} slot={:02X} gate=0 SKIP", n,
-                    mem.read_ram(crate::ram_map::FRAME_COUNT), x);
-            }
-        }
         update_enemy_anim(mem, x, 3); // @exit `lda #3/jsr UpdateEnemyAnim`
         update_enemy_common_no_move_no_anim(mem, x);
         return;
@@ -1851,14 +1626,6 @@ fn crawler_ai(mem: &mut crate::frame::FrameMemory, x: u8) {
     // EnemyStatusPreAI 三连门（crawler.asm:8-22 逐条——激活帧拦 Resting=本修核心）。
     let pre_ai = mem.read_ram(0x0081);
     if pre_ai == 1 {
-        if std::env::var("DSH_SPRITE_TRACE").is_ok() {
-            use std::sync::atomic::Ordering;
-            let n = DIAG_ITER.load(Ordering::Relaxed);
-            if n >= 1655 && n <= 1690 {
-                eprintln!("[crawl] n={} FC={:02X} slot={:02X} preAI=1 SKIP", n,
-                    mem.read_ram(crate::ram_map::FRAME_COUNT), x);
-            }
-        }
         // SkreeExit_Resting（bank1/4 共享——skree.asm:62 `lda #8/noMove`）
         update_enemy_anim(mem, x, 8);
         update_enemy_common_no_move_no_anim(mem, x);
@@ -1871,9 +1638,6 @@ fn crawler_ai(mem: &mut crate::frame::FrameMemory, x: u8) {
     }
     if mem.read_wram(0x6AF4 + x as u16) == 3 {
         // 现役 Explode⇒@exit（crawler.asm:20-22——anim3 落穿 noMoveNoAnim）
-        if std::env::var("DSH_SPRITE_TRACE").is_ok() && diag_n >= 1660 && diag_n <= 1668 {
-            eprintln!("[crawl] n={} slot={:02X} EXIT status=3", diag_n, x);
-        }
         update_enemy_anim(mem, x, 3);
         update_enemy_common_no_move_no_anim(mem, x);
         return;
@@ -1883,14 +1647,6 @@ fn crawler_ai(mem: &mut crate::frame::FrameMemory, x: u8) {
     let d5 = mem.read_ram(0x0400 + x as u16 + 5);
     let orientation = mem.read_ram(0x0400 + x as u16 + 10) & 0x03; // data0A=+10
     // 【goal-轮7 转向路径直证】orientation 变化+原因。
-    if std::env::var("DSH_SPRITE_TRACE").is_ok() && x == 0x40 {
-        use std::sync::atomic::Ordering;
-        let n = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
-        if n >= 795 && n <= 812 {
-            eprintln!("[trn] n={} orient={} y={} x={}", n, orientation,
-                mem.read_ram(0x0400 + x as u16), mem.read_ram(0x0400 + x as u16 + 1));
-        }
-    }
     let direction = d5 & 1;
     // 【岩浆折返径】（crawler.asm:26-64——**asm BUG 注保真**（D4：竖房误触发不修））：
     // orientation==1（下墙径）∧ y==$E4（BANK1/4 阈——BANK2/5=$EB）⇒FlipDirection+
@@ -1899,15 +1655,7 @@ fn crawler_ai(mem: &mut crate::frame::FrameMemory, x: u8) {
     if orientation == 1 && ey == 0xE4 {
         let d = mem.read_ram(0x0400 + x as u16 + 5);
         mem.write_ram(0x0400 + x as u16 + 5, d ^ 0x01); // CrawlerFlipDirection
-        if std::env::var("DSH_SPRITE_TRACE").is_ok() {
-            use std::sync::atomic::Ordering;
-            eprintln!("[flp] n={} LAVA_FLIP {:02X}->{:02X}", DIAG_ITER.load(Ordering::Relaxed), d, d ^ 1);
-        }
         mem.write_ram(0x0400 + x as u16 + 10, 0x03); // orientation←3（上墙）
-        if std::env::var("DSH_SPRITE_TRACE").is_ok() {
-            use std::sync::atomic::Ordering;
-            eprintln!("[trn] n={} LAVA 1->3", DIAG_ITER.load(Ordering::Relaxed));
-        }
         // @afterLavaTurnAround（跳过 @move 移动+内角检）
         crawler_outside_corner_check(mem, x);
         update_enemy_anim(mem, x, 3);
@@ -1921,16 +1669,6 @@ fn crawler_ai(mem: &mut crate::frame::FrameMemory, x: u8) {
         2 | 3 => enemy_move_one_pixel_down(mem, x),
         _ => enemy_move_one_pixel_up(mem, x),
     };
-    if std::env::var("DSH_SPRITE_TRACE").is_ok() {
-        use std::sync::atomic::Ordering;
-        let n = DIAG_ITER.load(Ordering::Relaxed);
-        if n >= 860 && n <= 920 {
-            let y0 = mem.read_ram(0x0400 + x as u16);
-            let ry0 = mem.read_wram(0x6AF4 + x as u16 + 1);
-            eprintln!("[okj] n={} slot={:02X} idx={} ok={} zero={} bound8={} y={}",
-                n, x, idx, ok, mem.read_ram(0x00), y0.wrapping_add(ry0) & 7 == 0, y0);
-        }
-    }
     if !ok {
         // CrawlerInsideCornerCheck（bank1:$9AA8——**goal-r16 G3'**）：$00 契约判据。
         // $00=1(离屏/wrap)⇒FlipDirection(data05 eor #1)；$00=0(块界碰撞)⇒data0A=(data0A−1)&3。
@@ -1939,17 +1677,9 @@ fn crawler_ai(mem: &mut crate::frame::FrameMemory, x: u8) {
         if zero != 0 {
             let d = mem.read_ram(0x0400 + x as u16 + 5);
             mem.write_ram(0x0400 + x as u16 + 5, d ^ 0x01); // FlipDirection（离屏径）
-            if std::env::var("DSH_SPRITE_TRACE").is_ok() {
-                use std::sync::atomic::Ordering;
-                eprintln!("[flp] n={} WRAP_FLIP {:02X}->{:02X}", DIAG_ITER.load(Ordering::Relaxed), d, d ^ 1);
-            }
         } else {
             let o = mem.read_ram(0x0400 + x as u16 + 10); // data0A
             mem.write_ram(0x0400 + x as u16 + 10, o.wrapping_sub(1) & 0x03); // 朝向--
-            if std::env::var("DSH_SPRITE_TRACE").is_ok() {
-                use std::sync::atomic::Ordering;
-                eprintln!("[trn] n={} COLL {}->{}", DIAG_ITER.load(Ordering::Relaxed), o, o.wrapping_sub(1) & 3);
-            }
             crawler_reorient_sprite(mem, x); // $9A8F（ InsideCorner 碰撞径 `4C 8F 9A`）
         }
     }
@@ -1974,27 +1704,8 @@ fn crawler_outside_corner_check(mem: &mut crate::frame::FrameMemory, x: u8) {
         _ => enemy_move_one_pixel_up(mem, x),
     };
     // 【goal-轮91 探径碰撞直证】外角探径成功/失败（转向差源）。
-    if std::env::var("DSH_SPRITE_TRACE").is_ok() && x == 0x40 {
-        use std::sync::atomic::Ordering;
-        let n = DIAG_ITER.load(Ordering::Relaxed);
-        if n >= 860 && n <= 920 {
-            eprintln!("[prb] n={} next_o={} nidx={} ok={} movIdx={} instr={} y={} x={}", n,
-                next_o, nidx, probe_ok,
-                mem.read_ram(0x0400 + x as u16 + 8), mem.read_ram(0x0400 + x as u16 + 6),
-                mem.read_ram(0x0400 + x as u16), mem.read_ram(0x0400 + x as u16 + 1));
-        }
-    }
     if probe_ok {
-        if std::env::var("DSH_SPRITE_TRACE").is_ok() {
-            eprintln!("[crawl-probe] FC={:02X} slot={:02X} next={} x={} y={}",
-                mem.read_ram(crate::ram_map::FRAME_COUNT), x, next_o,
-                mem.read_ram(0x0400 + x as u16 + 1), mem.read_ram(0x0400 + x as u16 + 0));
-        }
         mem.write_ram(0x0400 + x as u16 + 10, next_o); // data0A+1（asm `9D 0A 04`）
-        if std::env::var("DSH_SPRITE_TRACE").is_ok() {
-            use std::sync::atomic::Ordering;
-            eprintln!("[trn] n={} OUT {}->{}", DIAG_ITER.load(Ordering::Relaxed), o, next_o);
-        }
         crawler_reorient_sprite(mem, x); // $9A8F（OutsideCorner 径 `20 8F 9A`）
     }
 }
@@ -2039,14 +1750,6 @@ fn crawler_reorient_sprite(mem: &mut crate::frame::FrameMemory, x: u8) {
     let idx = ((orient << 1) | flip as usize) & 0x07;
     let v = CRAWLER_SPRITE_ANIM_TBL[idx];
     // 【goal-轮86 reorient idx 直证】reset 源（帧面差源）。
-    if std::env::var("DSH_SPRITE_TRACE").is_ok() && x == 0x40 {
-        use std::sync::atomic::Ordering;
-        let n = DIAG_ITER.load(Ordering::Relaxed);
-        if n >= 820 && n <= 860 {
-            eprintln!("[rot] n={} orient={} flip={} idx={} v={:02X}", n,
-                orient, flip, idx, v);
-        }
-    }
     // InitEnAnimIndex(F68D)
     mem.write_wram(0x6AF4 + x as u16 + 5, v); // resetAnimIndex
     mem.write_wram(0x6AF4 + x as u16 + 6, v); // animIndex
@@ -2086,16 +1789,6 @@ fn update_enemy_anim(mem: &mut crate::frame::FrameMemory, x: u8, a: u8) {
         mem.write_wram(base + 3, v); // animFrame←表值
         mem.write_wram(base + 6, y.wrapping_add(1) as u8);
         // 【goal-轮85 animIndex 初值直证】ENEMY_*_ANIM 表径（帧面差源）。
-        if std::env::var("DSH_SPRITE_TRACE").is_ok() && x == 0x40 {
-            use std::sync::atomic::Ordering;
-            let n = DIAG_ITER.load(Ordering::Relaxed);
-            if n >= 820 && n <= 830 {
-                let ea = game_data::assets::enemy_active_anim(crate::frame::cur_area(mem));
-                let er = game_data::assets::enemy_resting_anim(crate::frame::cur_area(mem));
-                eprintln!("[aiv] n={} y={} tbl={:02X} reset={} actTbl={:02X} rstTbl={:02X}", n,
-                    y, v, mem.read_wram(base + 5), ea[10], er[10]);
-            }
-        }
         return;
     }
     crate::unported!("bank07:E0BC-wrap"); // 表不变量破裂——fail-loud（update_obj_anim 同式）
@@ -2106,14 +1799,6 @@ fn update_enemy_anim(mem: &mut crate::frame::FrameMemory, x: u8, a: u8) {
 /// GetSpriteCntrlData→位指针（EnPlacePtrTable）→sprite 管线写（place_disp/四元组）。
 fn draw_enemy(mem: &mut crate::frame::FrameMemory, x: u8) {
     // 【goal-轮73 draw 调用直证】双写源（n=803 清→置双写）。
-    if std::env::var("DSH_SPRITE_TRACE").is_ok() && x == 0x40 {
-        use std::sync::atomic::Ordering;
-        let n = DIAG_ITER.load(Ordering::Relaxed);
-        if n >= 800 && n <= 810 {
-            eprintln!("[drw] n={} DRAW_ENTER d05={:02X}", n,
-                mem.read_ram(0x0400 + x as u16 + 5));
-        }
-    }
     use game_data::assets;
     // 【②回装（2026-10-29）】asm :6156-6168：帧记字 1/2→EnsExtra.radiusY/X（IsObject-
     // Visible 用半径（序=半径写先行））+[:6178-6186] bit1 逐帧闩（and #$FD/ora（txa<<1））。
@@ -2123,15 +1808,6 @@ fn draw_enemy(mem: &mut crate::frame::FrameMemory, x: u8) {
         let fi0 = ((frame0 & 0x7F) as usize) + if frame0 & 0x80 != 0 { 128 } else { 0 };
         let (fo0, fl0) = assets::enemy_frame_off(fi0 as usize).unwrap_or((0, 0));
     // 【goal-轮94 fo0→radiusY 直证】帧面 radiusY（金方 1/9 vs 我 8）。
-    if std::env::var("DSH_SPRITE_TRACE").is_ok() && x == 0x40 {
-        use std::sync::atomic::Ordering;
-        let n = DIAG_ITER.load(Ordering::Relaxed);
-        if n >= 830 && n <= 870 {
-            eprintln!("[foy] n={} frame0={:02X} fi0={} fo0={} fl0={} ry={} rx={}", n,
-                frame0, fi0, fo0, fl0,
-                assets::enemy_frames()[fo0 as usize + 1], assets::enemy_frames()[fo0 as usize + 2]);
-        }
-    }
         if fl0 > 2 {
             mem.write_wram(0x6AF4 + x as u16 + 1, assets::enemy_frames()[fo0 as usize + 1]);
             mem.write_wram(0x6AF4 + x as u16 + 2, assets::enemy_frames()[fo0 as usize + 2]);
@@ -2251,81 +1927,20 @@ fn enemy_move_one_pixel_up(mem: &mut crate::frame::FrameMemory, x: u8) -> bool {
 /// EnemyMoveOnePixelDown（**asm 内容锚** `: 1066 $844B`——r26 同构（y inc））。
 fn enemy_move_one_pixel_down(mem: &mut crate::frame::FrameMemory, x: u8) -> bool {
     // 【goal-轮104 move_down 调用计数直证】调用/施加径差。
-    if std::env::var("DSH_SPRITE_TRACE").is_ok() && x == 0x40 {
-        use std::sync::atomic::Ordering;
-        let n = DIAG_ITER.load(Ordering::Relaxed);
-        if n >= 860 && n <= 920 {
-            let y0 = mem.read_ram(0x0400 + x as u16);
-            let ry0 = mem.read_wram(0x6AF4 + x as u16 + 1);
-            eprintln!("[dc] n={} DOWN_CALL y={} ry={} bound8={} check={}", n,
-                y0, ry0, y0.wrapping_add(ry0) & 7 == 0,
-                y0.wrapping_add(ry0) & 7 == 0);
-            // 【goal-轮107 调用链直证】@move→move_down 链（写径）。
-            eprintln!("[ccl] n={} @move→down y={} x={}", n, y0,
-                mem.read_ram(0x0400 + x as u16 + 1));
-        }
-    }
     // 【goal-轮82 animIndex 推进率直证】帧面差源（敌 rx≤4 vs 8）。
-    if std::env::var("DSH_SPRITE_TRACE").is_ok() && x == 0x40 {
-        use std::sync::atomic::Ordering;
-        let n = DIAG_ITER.load(Ordering::Relaxed);
-        if n >= 820 && n <= 860 {
-            eprintln!("[ani] n={} animIdx={} animFrame={:02X} ry={} rx={}", n,
-                mem.read_wram(0x6AF4 + x as u16 + 6), mem.read_wram(0x6AF4 + x as u16 + 3),
-                mem.read_wram(0x6AF4 + x as u16 + 1), mem.read_wram(0x6AF4 + x as u16 + 2));
-        }
-    }
-    if std::env::var("DSH_SPRITE_TRACE").is_ok() && x == 0x40 {
-        use std::sync::atomic::Ordering;
-        let n = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
-        if n >= 830 && n <= 870 {
-            let y0 = mem.read_ram(0x0400 + x as u16);
-            let ry0 = mem.read_wram(0x6AF4 + x as u16 + 1);
-            eprintln!("[yd] n={} DOWN y={} ry={} bound8={}", n, y0, ry0,
-                y0.wrapping_add(ry0) & 7 == 0);
-        }
-    }
     let y = mem.read_ram(0x0400 + x as u16 + 0);
     let ry = mem.read_wram(0x6AF4 + x as u16 + 1);
     if y.wrapping_add(ry) & 0x07 == 0 {
         if !enemy_check_move_down(mem, x) {
             mem.write_ram(0x00, 0); // $00=0（碰撞）
             // 【goal-轮101 ok 失败径直证】块撞。
-            if std::env::var("DSH_SPRITE_TRACE").is_ok() && x == 0x40 {
-                use std::sync::atomic::Ordering;
-                let n = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
-                if n >= 860 && n <= 920 {
-                    eprintln!("[dnf] n={} DOWN_BLOCKED y={} ry={}", n, y, ry);
-                }
-            }
             return false;
         }
     }
     // 【goal-轮101 ok 失败径直证】wrap。
-    if std::env::var("DSH_SPRITE_TRACE").is_ok() && x == 0x40 {
-        use std::sync::atomic::Ordering;
-        let n = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
-        if n >= 860 && n <= 920 {
-            eprintln!("[dnf] n={} DOWN_OK y={} ry={}", n, y, ry);
-        }
-    }
     let ny = y.wrapping_add(1);
     // 【goal-轮162 animIndex 写源直证】EN_ANIM_TABLE[animIndex] 节拍（paradox 解径）
     // ——金方 animIndex 差 ⇒ animFrame 差 ⇒ fo0 差 ⇒ radiusY=1/9。
-    if std::env::var("DSH_SPRITE_TRACE").is_ok() && x == 0x40 {
-        use std::sync::atomic::Ordering;
-        let n = DIAG_ITER.load(Ordering::Relaxed);
-        if n >= 860 && n <= 920 {
-            let y0 = mem.read_ram(0x0400 + x as u16);
-            let ry0 = mem.read_wram(0x6AF4 + x as u16 + 1);
-            let ai = mem.read_wram(0x6AF4 + x as u16 + 6);
-            let af = mem.read_wram(0x6AF4 + x as u16 + 3);
-            let d0A = mem.read_ram(0x0400 + x as u16 + 10);
-            eprintln!("[ifo] n={} y={} ry={} bound8={} animIdx={} animFrame={} d0A={} orient={}", n, y0, ry0,
-                y0.wrapping_add(ry0) & 7 == 0, ai, af, d0A,
-                d0A & 3);
-        }
-    }
     mem.write_ram(0x0400 + x as u16 + 0, ny);
     // 【wrap 判式勘误（goal-轮9 asm :1087-1088 逐字：`ldy Ens.0.y/cpy #SCRN_VY-1($EF)`）
     // 】旧形 `ny==−radiusY` 偏离（wrap 触发点错位）——asm=**当前 y==$EF**（屏底名表换）。
@@ -2389,13 +2004,6 @@ fn enemy_move_one_pixel_right(mem: &mut crate::frame::FrameMemory, x: u8) -> boo
         if !enemy_check_move_right(mem, x) {
             mem.write_ram(0x00, 0); // $00=0（碰撞）
             // 【goal-轮18 右移块碰直证】碰撞返回。
-            if std::env::var("DSH_SPRITE_TRACE").is_ok() && x == 0x40 {
-                use std::sync::atomic::Ordering;
-                let n = DIAG_ITER.load(Ordering::Relaxed);
-                if n >= 795 && n <= 812 {
-                    eprintln!("[rgt] n={} BLOCKED x={} rx={}", n, xpos, rx);
-                }
-            }
             return false;
         }
     }
@@ -2470,19 +2078,6 @@ fn enemy_check_move_up(mem: &mut crate::frame::FrameMemory, x: u8) -> bool {
             let row = st.pos_y.wrapping_sub(st.dist_to_center_y);
             let (left, n) = crate::samus::physics::vertical_span_cols(st.pos_x, st.radius_x);
             // 【goal-轮11 块判结果直证】逐列 collision_point_ok 结果。
-            if std::env::var("DSH_SPRITE_TRACE").is_ok() && x == 0x40 {
-                use std::sync::atomic::Ordering;
-                let n_ = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
-                if n_ >= 780 && n_ <= 825 {
-                    let mut rs = String::new();
-                    for i in 0..n {
-                        let col = left.wrapping_add((i as u8).wrapping_mul(8));
-                        let ok = collision_point_ok(mem, row, col, st.pos_hi);
-                        rs.push_str(&format!("c{}:{} ", col, ok as u8));
-                    }
-                    eprintln!("[bcr] n={} row={} left={} n={} {}", n_, row, left, n, rs);
-                }
-            }
             for i in 0..n {
                 let col = left.wrapping_add((i as u8).wrapping_mul(8));
                 if !collision_point_ok(mem, row, col, st.pos_hi) {
@@ -2505,33 +2100,12 @@ pub(crate) fn enemy_check_move_down(mem: &mut crate::frame::FrameMemory, x: u8) 
     let hi = mem.read_wram(0x6AF4 + x as u16 + 7);
     let st = crate::enemy::movement::enemy_check_move_down(rx, ry, xpos, y, hi);
     // 【goal-轮6 块判直证】敌B 穿地源：块判输入/输出。
-    if std::env::var("DSH_SPRITE_TRACE").is_ok() && x == 0x40 {
-        use std::sync::atomic::Ordering;
-        let n = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
-        if n >= 795 && n <= 812 {
-            eprintln!("[bcd] n={} y={} ry={} x={} rx={} hi={} st={:?} bound={:?}",
-                n, y, ry, xpos, rx, hi, st, crate::enemy::movement::check_move_boundary(st, false));
-        }
-    }
     match crate::enemy::movement::check_move_boundary(st, false) {
         crate::enemy::movement::MoveCheckOutcome::NoCollision => true,
         crate::enemy::movement::MoveCheckOutcome::NeedsBgCollision(st) => {
             let row = st.pos_y.wrapping_sub(st.dist_to_center_y);
             let (left, n) = crate::samus::physics::vertical_span_cols(st.pos_x, st.radius_x);
             // 【goal-轮11 块判结果直证】逐列 collision_point_ok 结果。
-            if std::env::var("DSH_SPRITE_TRACE").is_ok() && x == 0x40 {
-                use std::sync::atomic::Ordering;
-                let n_ = crate::frame::mainloop::DIAG_ITER.load(Ordering::Relaxed);
-                if n_ >= 780 && n_ <= 825 {
-                    let mut rs = String::new();
-                    for i in 0..n {
-                        let col = left.wrapping_add((i as u8).wrapping_mul(8));
-                        let ok = collision_point_ok(mem, row, col, st.pos_hi);
-                        rs.push_str(&format!("c{}:{} ", col, ok as u8));
-                    }
-                    eprintln!("[bcr] n={} row={} left={} n={} {}", n_, row, left, n, rs);
-                }
-            }
             for i in 0..n {
                 let col = left.wrapping_add((i as u8).wrapping_mul(8));
                 if !collision_point_ok(mem, row, col, st.pos_hi) {
@@ -2719,14 +2293,6 @@ fn update_bullet_explode(mem: &mut crate::frame::FrameMemory) {
 /// UpdateEnemy_Resting（**asm 内容锚** `: 07:F3BE`——r26 壳：30fps 门/件序 fail-loud）。
 fn enemy_resting(mem: &mut crate::frame::FrameMemory, x: u8) {
     let d = mem.read_ram(0x0400 + x as u16 + 5);
-    if std::env::var("DSH_SPRITE_TRACE").is_ok() && x == 0x40 {
-        use std::sync::atomic::Ordering;
-        let n = DIAG_ITER.load(Ordering::Relaxed);
-        if n >= 785 && n <= 805 {
-            eprintln!("[erst] n={} bit6={} run={} dly={} d05={:02X}", n, (d >> 6) & 1,
-                d & 0x40 == 0, mem.read_ram(0x0400 + x as u16 + 9), d);
-        }
-    }
     if d & 0x40 == 0 {
         // 30fps 标 clear⇒全件（bit6 set 时跳过=30fps 节拍）
         mem.write_wram(0x6AF4 + x as u16 + 13, 0); // jumpDsplcmnt←0
@@ -2761,11 +2327,6 @@ fn enemy_active(mem: &mut crate::frame::FrameMemory, x: u8) {
             let st = mem.read_wram(0x6AF4 + x as u16);
             mem.write_wram(0x6AF4 + x as u16, st.wrapping_sub(1));
             // 【goal-轮17 Resting 转换标记】Active→Resting（bit5 静息径）。
-            if std::env::var("DSH_SPRITE_TRACE").is_ok() && x == 0x40 {
-                use std::sync::atomic::Ordering;
-                eprintln!("[rst] n={} RESTING {}->{} dly={}", DIAG_ITER.load(Ordering::Relaxed),
-                    st, st.wrapping_sub(1), delay);
-            }
         } else {
             // Active_BranchA（F401）：ForceSpeed(F6B9)+Threshold(F75B)+RemoveIfInLava(F51E)
             enemy_force_speed(mem, x);
@@ -2892,10 +2453,6 @@ fn uw_skree_projectiles(mem: &mut crate::frame::FrameMemory) {
                     mem.write_ram(0x010F, 0x80);
                     mem.write_ram(crate::ram_map::SAMUS_INVINCIBLE_DELAY, 0x32);
                     // 【goal-轮39 伤害源标记】mainloop:2193（敌撞伤害）。
-                    if std::env::var("DSH_SPRITE_TRACE").is_ok() {
-                        use std::sync::atomic::Ordering;
-                        eprintln!("[dmg] n={} mainloop2193 invDly<-50", DIAG_ITER.load(Ordering::Relaxed));
-                    }
                     mem.write_ram(0x006E, 0x50); // HealthChange←$50（5 伤害）
                     mem.write_ram(0x006F, 0x00);
                 }
@@ -2993,15 +2550,6 @@ fn uw_collision_detection(mem: &mut crate::frame::FrameMemory) {
             // **Samus.hi=Objects.0.hi（$030C）**；旧形误读 wram[0x6AF4]（=EnsExtra 空槽
             // 0 的 status！）⇒恒 0⇒名表差漏判+256 距 ⇒morphball f1278 敌撞击退单腿
             // （emu f1167 x 回绕翻 hi=1、敌 hi=0 ⇒拒触 ✓；rust 假 hi=0 ⇒误触）。
-            if std::env::var("DSH_SPRITE_TRACE").is_ok() && x == 0x40 {
-                use std::sync::atomic::Ordering;
-                let n = DIAG_ITER.load(Ordering::Relaxed);
-                if n >= 1260 && n <= 1270 {
-                    eprintln!("[f1fa] n={} dy={} cmpY={} carryY={} dx={} cmpX={} carryX={} eB=({},{}) s=({},{})",
-                        n, dy, sry + ery, dy >= sry + ery, dx, srx + erx, dx >= srx + erx,
-                        ey, ex, sy, sx);
-                }
-            }
             if dy_adj < sry + ery && dx_adj < srx + erx {
                 // 螺旋转（IsScrewAttackActive——carry clear=active）⇒不伤萨姆斯
                 let screw = crate::samus::physics::is_screw_attack_active(mem);
@@ -3019,14 +2567,6 @@ fn uw_collision_detection(mem: &mut crate::frame::FrameMemory) {
                     let dir_bits = if ex > sx { 0x00u8 } else { 0x08 }; // bit3=被推向右
                     mem.write_ram(crate::ram_map::SAMUS_IS_HIT, 0x30 | dir_bits);
                     // 【goal-轮40 isHit 写者标记】mainloop:2284（敌撞置 hit）。
-                    if std::env::var("DSH_SPRITE_TRACE").is_ok() {
-                        use std::sync::atomic::Ordering;
-                        let e_hi_ = mem.read_wram(0x6AF4 + x + 7) & 1;
-                        let s_hi_ = mem.read_wram(0x6AF4) & 1;
-                        eprintln!("[hit] n={} dy={}<{} dx={}<{} eB_r=({},{}) s_r=({},{}) hi=(e{} s{})",
-                            DIAG_ITER.load(Ordering::Relaxed), dy, sry + ery, dx, srx + erx,
-                            ery, erx, sry, srx, e_hi_, s_hi_);
-                    }
                 }
             }
         }
