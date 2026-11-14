@@ -78,6 +78,7 @@
 | `data-boundary` | 数据边界 v2：三分母（`data` 只减不增 / `fixture` 禁进包 / `symbol` 免检，账本 `data/status/data_boundary_allowlist.json`）+ 全字面量形识别（十进制/元组/结构体）+ `assets/*.pack` 不入库 | 启用（W1/v2） |
 | `tools-boundary` | 工具边界：`rom: &[u8]` 只允许出现在 `extract.rs` / `pack-tool`（运行期不读 ROM） | 启用（W1） |
 | `asset-pack` | 资产包自证：包内每段 == 从 ROM 重算（`pack-tool verify`；缺 rom/pack 显式 SKIP） | 启用（W4） |
+| `no-env-hooks` | 禁逻辑层环境变量测试钩子：诊断只能走独立测试用例或 `--trace` 启动参数（用户裁定 2026-11-15） | 启用（2026-11-15） |
 
 ### proof-checks（证书防腐 v2，2026-10-15）
 

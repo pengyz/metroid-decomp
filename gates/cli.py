@@ -2135,6 +2135,45 @@ def gate_tools_boundary() -> tuple[str, str]:
     return PASS, f"ROM 字节入口仅 {len(ROM_BYTES_WHITELIST)} 处（extract.rs / pack-tool），其余 crate 不接收 rom 字节"
 
 
+# 允许在**非 bin** 源码里读环境变量的路径（`no-env-hooks`）——只有资产包定位这一处
+# （`METROID_PACK` 是运行时配置，不是测试钩子；包 gitignored，用户自备 ROM 生成）。
+ENV_HOOK_WHITELIST = {"crates/game-data/src/pack.rs"}
+_ENV_VAR_RE = re.compile(r"std::env::(?:var|var_os|vars|vars_os)\s*\(")
+
+
+def env_hook_violations(root: Path) -> list[str]:
+    """G-EH 禁环境变量测试钩子：逻辑里不许用 env 做诊断/开关。
+
+    纪律（用户裁定 2026-11-15）：诊断要么写成独立测试用例，要么由**启动参数**控制
+    （`crates/game-core/src/bin/rust_screenshot.rs --trace <name>`）；逻辑层（域件/引擎）
+    读 `std::env` 会让「构建行为」与「生产行为」分叉，且 game-core 本就不许 I/O。
+    """
+    bad: list[str] = []
+    for p in sorted((root / "crates").glob("*/src/**/*.rs")):
+        rel = p.relative_to(root).as_posix()
+        if "/src/bin/" in "/" + rel:
+            continue  # 二进制工具：允许启动参数/环境配置（诊断回放具）
+        if rel in ENV_HOOK_WHITELIST:
+            continue
+        try:
+            text = p.read_text(encoding="utf-8")
+        except OSError:
+            continue
+        for i, line in enumerate(text.splitlines(), 1):
+            code = line.split("//", 1)[0]
+            if _ENV_VAR_RE.search(code):
+                bad.append(f"{rel}:{i} 逻辑层读环境变量（应改为测试用例或启动参数）：{line.strip()[:110]}")
+    return bad
+
+
+def gate_no_env_hooks() -> tuple[str, str]:
+    """G-EH 禁环境变量测试钩子（逻辑层）。"""
+    problems = env_hook_violations(ROOT)
+    if problems:
+        return FAIL, "逻辑层环境变量钩子：\n  - " + "\n  - ".join(problems)
+    return PASS, f"逻辑层无 std::env 钩子（白名单 {len(ENV_HOOK_WHITELIST)} 处=资产包定位）；诊断走 --trace 启动参数/独立测试"
+
+
 PACK_REL = Path("assets") / "metroid.pack"
 ASSET_PACK_TIMEOUT_S = 240
 
@@ -2223,6 +2262,9 @@ GATES: list[tuple[str, str, str, str, object]] = [
      "工具边界：rom: &[u8] 只允许出现在 extract.rs / pack-tool（运行期不读 ROM）", gate_tools_boundary),
     ("asset-pack", "启用（W4）", "check",
      "资产包自证：每段 == 从 ROM 重算（pack-tool verify；缺 rom/pack 显式 SKIP）", gate_asset_pack),
+    ("no-env-hooks", "启用（2026-11-15）", "check",
+     "禁逻辑层环境变量测试钩子：诊断只能走独立测试用例或 --trace 启动参数（用户裁定）",
+     gate_no_env_hooks),
 ]
 
 
