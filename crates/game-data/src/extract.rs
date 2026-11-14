@@ -54,6 +54,7 @@ pub fn sections(rom: &[u8]) -> Result<Vec<Section>, String> {
     out.extend(extract_sfx_tables(prg)?);
     out.extend(extract_song_headers(prg)?);
     out.extend(extract_title_vram(prg)?);
+    out.extend(extract_samus_tables(prg)?);
     Ok(out)
 }
 
@@ -382,7 +383,10 @@ fn seg_meta() -> Vec<SegMeta> {
         SegMeta { key: PackKey::VramStart, kind: "vram-struct", elem: 1, count: 20, rom: "bank00:$9984", note: "START_CONTINUE（hi==0 终止含尾）" },
         SegMeta { key: PackKey::VramPass, kind: "vram-struct", elem: 1, count: 36, rom: "bank00:$99E3", note: "PASSWORD_PLEASE（hi==0 终止含尾）" },
         SegMeta { key: PackKey::VramOver, kind: "vram-struct", elem: 1, count: 13, rom: "bank00:$93B9", note: "GAME_OVER（hi==0 终止含尾）" },
-        SegMeta { key: PackKey::NoItems, kind: "item-rec", elem: 6, count: 0, rom: "bank02:$A2D9", note: "SpecItmsTbl_NORFAIR" },
+
+        SegMeta { key: PackKey::SamusActions, kind: "u8", elem: 1, count: 4, rom: "bank07:$CC87", note: "ActionTable（sa_Run/sa_Run/sa_Roll/sa_PntUp）" },
+        SegMeta { key: PackKey::SamusPntUp, kind: "u8", elem: 1, count: 3, rom: "bank07:$D1EB", note: "PntUp 状态表（01 01 03）" },
+        SegMeta { key: PackKey::SamusAccel, kind: "u8", elem: 1, count: 2, rom: "bank07:$CCC0", note: "RunAccelerationTbl（$30/$D0；旧 256B 烘焙吞代码已更正）" },        SegMeta { key: PackKey::NoItems, kind: "item-rec", elem: 6, count: 0, rom: "bank02:$A2D9", note: "SpecItmsTbl_NORFAIR" },
         SegMeta { key: PackKey::KrItems, kind: "item-rec", elem: 6, count: 0, rom: "bank04:$A26D", note: "SpecItmsTbl_KRAID" },
         SegMeta { key: PackKey::ToItems, kind: "item-rec", elem: 6, count: 0, rom: "bank03:$A83B", note: "SpecItmsTbl_TOURIAN" },
         SegMeta { key: PackKey::RiItems, kind: "item-rec", elem: 6, count: 0, rom: "bank05:$A20D", note: "SpecItmsTbl_RIDLEY" },
@@ -627,6 +631,28 @@ const TITLE_VRAM: [(PackKey, u16, usize, &str); 4] = [
     (PackKey::VramPass, 0x99E3, 36, "PASSWORD_PLEASE $99E3"),
     (PackKey::VramOver, 0x93B9, 13, "GAME_OVER $93B9"),
 ];
+
+/// Samus 三张小表（bank7 固定窗 `$C000` ⇒ `addr` 直接过 `bank_slice(prg, 7, …)`）。
+/// - `ActionTable ; 07:CC87` **4 B**（`.byte sa_Run/sa_Run/sa_Roll/sa_PntUp` = `01 01 03 04`）。
+/// - PntUp 状态表 **3 B** @ `07:D1EB`（`01 01 03`；第 4 字节 `$A5` 已是
+///   `FireSamusProjectile` 首码——表界由指令流互核）。
+/// - `RunAccelerationTbl ; 07:CCC0` **2 B**（`.byte $30` 右 / `.byte $D0` 左）。
+///   **历史缺陷更正**：旧 `RUN_ACCEL_TBL: [u8; 256]` 自 $CCC0 起吞了后续**代码**
+///   （`$A6 $4D`=`ldx $4D` …）；消费侧只取 `[dir]`（dir∈{0,1}）故行为未受影响，
+///   但把一个代码窗当数据表烘焙是错的，此处按 asm 真长 2 B 收口。
+const SAMUS_TABLES: [(PackKey, u16, usize, &str); 3] = [
+    (PackKey::SamusActions, 0xCC87, 4, "ActionTable $CC87"),
+    (PackKey::SamusPntUp, 0xD1EB, 3, "PntUp 状态表 $D1EB"),
+    (PackKey::SamusAccel, 0xCCC0, 2, "RunAccelerationTbl $CCC0"),
+];
+
+fn extract_samus_tables(prg: &[u8]) -> Result<Vec<Section>, String> {
+    let mut out = Vec::with_capacity(SAMUS_TABLES.len());
+    for (key, addr, len, label) in SAMUS_TABLES {
+        out.push(Section { key, data: bank_slice(prg, 7, addr, len).map_err(|e| format!("{label}: {e}"))? });
+    }
+    Ok(out)
+}
 
 fn extract_title_vram(prg: &[u8]) -> Result<Vec<Section>, String> {
     let mut out = Vec::with_capacity(TITLE_VRAM.len());

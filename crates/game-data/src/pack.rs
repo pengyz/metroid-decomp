@@ -114,6 +114,10 @@ pub enum PackKey {
     VramStart = 62,
     VramPass = 63,
     VramOver = 64,
+    /// Samus 三张小表（`ActionTable` $CC87 / PntUp 状态表 $D1EB / `RunAccelerationTbl` $CCC0）。
+    SamusActions = 65,
+    SamusPntUp = 66,
+    SamusAccel = 67,
     NametableHi = 37,
 }
 
@@ -190,6 +194,9 @@ impl PackKey {
             PackKey::VramStart => "title.vram_start",
             PackKey::VramPass => "title.vram_pass",
             PackKey::VramOver => "title.vram_over",
+            PackKey::SamusActions => "samus.actions",
+            PackKey::SamusPntUp => "samus.pnt_up",
+            PackKey::SamusAccel => "samus.accel",
             PackKey::NametableHi => "rom.nt_hi",
         }
     }
@@ -261,6 +268,9 @@ impl PackKey {
             62 => PackKey::VramStart,
             63 => PackKey::VramPass,
             64 => PackKey::VramOver,
+            65 => PackKey::SamusActions,
+            66 => PackKey::SamusPntUp,
+            67 => PackKey::SamusAccel,
             37 => PackKey::NametableHi,
             _ => return None,
         })

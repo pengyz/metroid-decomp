@@ -28,12 +28,6 @@
       "note": "小表集合（MAIN_ROUTINE_PTR_TABLE 10 / DATA_DISPLAY_TBL 40 / 帧内 test 表）——地址与表长类元知识，非大块数据。"
     },
     {
-      "file": "crates/game-data/src/samus/samus_data.rs",
-      "kind": "data",
-      "max": 263,
-      "note": "RUN_ACCEL_TBL(256) 等运动常量表。**旧口径 0 命中**（全十进制）；待迁。"
-    },
-    {
       "file": "crates/game-data/src/render/render_data.rs",
       "kind": "data",
       "max": 200,

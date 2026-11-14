@@ -821,7 +821,9 @@ pub mod button {
 /// ActionTable（asm :2804 内容锚 `ActionTable: ; 07:CC87`——ROM 自证 `01 01 03 04`）：
 /// 索引=BitScan 位号（0=右/1=左/2=下/3=上）→ 转移目标态（sa_Run/sa_Run/sa_Roll/
 /// sa_PntUp）。
-pub use game_data::samus::samus_data::ACTION_TABLE;
+fn action_table() -> &'static [u8] {
+    game_data::assets::action_table()
+}
 
 /// SetSamusStand_NoFootstep 折叠（**字节自证**——asm :CF5D/`NoHorzMoveNoDelay: ;
 /// 07:CF81`；名址映射以 ROM 字节为准：`20 81 cf 8c 00 03 a5 14 29 08 d0 0e a9 07 8d 05 03
@@ -940,7 +942,7 @@ pub fn samus_stand(mem: &mut FrameMemory) {
                 mem.write_ram(crate::ram_map::SAMUS_DIR, bit); // 1=left, 0=right
             }
             // 转移核：ActionTable[bit] → status（R-mv-1）
-            mem.write_ram(crate::ram_map::SAMUS_STATUS, ACTION_TABLE[bit as usize]);
+            mem.write_ram(crate::ram_map::SAMUS_STATUS, action_table()[bit as usize]);
         }
     }
     // FIRE（Joy1Change|Joy1Retrig 高位）→ FireSamusProjectile
@@ -1199,7 +1201,9 @@ fn set_samus_roll(mem: &mut FrameMemory) {
 
 /// PntUp 状态表（字节自证 D1EB 3B `01 01 03`——x=BitScan(0..2)=右/左/下→Run/Run/Roll；
 /// 第 4 字节 `a5`=FireSamusProjectile 首码（表界互核：表长 3=D1EE 处 jsr 目标））。
-pub use game_data::samus::samus_data::PNT_UP_STATUS_TABLE;
+fn pnt_up_status_table() -> &'static [u8] {
+    game_data::assets::pnt_up_status_table()
+}
 
 /// SamusPntUp 处理件（字节自证 D198 区）：UP 保持/松开→sa_Stand(0)；DOWN|LEFT|RIGHT
 /// →BitScan→SamusDir（x<2）+表转移；FIRE→FireSamusProjectile 桩；JUMP→sa_PntJump(6)
@@ -1217,7 +1221,7 @@ pub fn samus_pnt_up(mem: &mut FrameMemory) {
             mem.write_ram(crate::ram_map::SAMUS_DIR, bit as u8);
         }
         if bit < 3 {
-            mem.write_ram(crate::ram_map::SAMUS_STATUS, PNT_UP_STATUS_TABLE[bit]);
+            mem.write_ram(crate::ram_map::SAMUS_STATUS, pnt_up_status_table()[bit]);
         }
     }
     let fire = mem.read_ram(crate::ram_map::JOY1_CHANGE) | mem.read_ram(crate::memmap::title_state::JOY1_RETRIG);

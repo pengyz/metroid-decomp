@@ -541,6 +541,17 @@ mod palette_tests {
         }
     }
 
+    /// Samus 三张小表：`ActionTable` 4 B / PntUp 状态表 3 B / `RunAccelerationTbl` 2 B。
+    /// 旧 `RUN_ACCEL_TBL [u8;256]` 自 `$CCC0` 起吞了后续代码（`$A6 $4D`=`ldx $4D`），
+    /// 本测同时挡住"再退回长窗烘焙"。
+    #[test]
+    fn samus_tables_match_rom_anchors() {
+        assert_eq!(action_table(), &[1, 1, 3, 4], "ActionTable $CC87 = sa_Run/sa_Run/sa_Roll/sa_PntUp");
+        assert_eq!(pnt_up_status_table(), &[1, 1, 3], "PntUp 状态表 $D1EB");
+        assert_eq!(run_accel_tbl(), &[0x30, 0xD0], "RunAccelerationTbl $CCC0（真长 2 B）");
+        assert_eq!(run_accel_tbl().len(), 2, "表界：$CCC0+2 已是 SetSamusRunAccel 之后的代码");
+    }
+
     /// 标题屏 VRAMStruct 四段：各段自界（`hi==0` 终止含尾）+ 首记录 ROM 锚。
     #[test]
     fn title_vram_structs_match_rom_anchors() {
@@ -674,6 +685,23 @@ pub fn sfx_record(addr: u16) -> Option<&'static [u8]> {
 pub fn sfx_record4(addr: u16) -> Option<&'static [u8; 4]> {
     let off = addr.checked_sub(SFX_TABLES_ADDR)? as usize;
     sfx_tables().get(off..off + 4)?.try_into().ok()
+}
+
+/// `ActionTable ; 07:CC87`（4 B：`sa_Run/sa_Run/sa_Roll/sa_PntUp`）——
+/// `status = ActionTable[BitScan(方向位)]`。
+pub fn action_table() -> &'static [u8] {
+    pack::get(PackKey::SamusActions)
+}
+
+/// PntUp 状态表 @ `07:D1EB`（3 B：右/左→Run、下→Roll）。
+pub fn pnt_up_status_table() -> &'static [u8] {
+    pack::get(PackKey::SamusPntUp)
+}
+
+/// `RunAccelerationTbl ; 07:CCC0`（2 B：`$30` 右 / `$D0` 左）。
+/// 旧 `[u8;256]` 烘焙吞了后续代码，已按 asm 真长更正（消费侧只索引 0/1，行为不变）。
+pub fn run_accel_tbl() -> &'static [u8] {
+    pack::get(PackKey::SamusAccel)
 }
 
 /// 标题屏 VRAMStruct blob（四态，各自以 `hi==0` 终止含尾）。

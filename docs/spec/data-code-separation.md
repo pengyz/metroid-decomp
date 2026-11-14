@@ -122,6 +122,7 @@ pub fn is_ready() -> bool;
 | W5b | `area/items.rs` 五区 `ITEMS_*`（十进制结构体切片，旧判据 0 命中=隐身）→ `area.{br,no,kr,to,ri}.items`（6 B/条记录） | `extract_items` | `0dc10b35` | 15/33/9/35/6=98 条逐字节等 |
 | W5c | `sound/sound_data.rs`（11 常量）→ 拆三路：SFX 4B 记录窗 `sound.sfx_tables`（120 B）+ 曲头表 `song.headers`（156 B）+ 偏移表读 `sound.region`（`$BBFA` 在窗内）；`SONG_INTRO_HEADER` 证伪为非 ROM 行（全表无此字节序）⇒ 降为测试内 fixture；`SFX_REG_INIT_TBL`/`EN_*_B7` 三常量零消费者 ⇒ 删 | `extract_sfx_tables`/`extract_song_headers` | 本批 | W2/W3/W4 25 处记录址逐一与旧常量等 + 156 B 逐行等 |
 | W5d | `title/vram_structs.rs`（4 blob 1066/20/36/13 B，含终止）→ `title.vram_intro`/`vram_start`/`vram_pass`/`vram_over` | `extract_title_vram` | 本批 | 四段各自界且逐字节等 ROM（`$82F4`/`$9984`/`$99E3`/`$93B9`，bank0 窗）|
+| W5e | `samus/samus_data.rs`（三表）→ `samus.actions`(4B)/`samus.pnt_up`(3B)/`samus.accel`(2B)；**更正**：旧 `RUN_ACCEL_TBL [u8;256]` 自 `$CCC0` 起吞了后续代码，已按 asm 真长 2 B 收口 | `extract_samus_tables` | 本批 | 三表逐字节等 ROM；`$CCC0+2` 即 `SetSamusRunAccel` 之后代码 |
 
 **判据（每批三条机械可复跑）**：①`pack-tool verify` 全段 OK（包 == 从 ROM 重算，不再手搓脚本）
 ②账本 `data-boundary` v2 里该文件的 `data` 条目当次删除 ③波次边界 `l4_diff_run.py run-all` 全矩阵不变。
