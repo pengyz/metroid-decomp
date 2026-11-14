@@ -13,8 +13,7 @@
 
 use super::memory::FrameMemory;
 use crate::ram_map::{
-    FRAME_COUNT, GAME_MODE, NMI_STATUS, RANDOM1, RANDOM2, TIMER1, TIMER2,
-    TIMER3, TIMER_DELAY,
+    FRAME_COUNT, GAME_MODE, NMI_STATUS, RANDOM1, RANDOM2, TIMER1, TIMER_DELAY,
 };
 
 /// 主循环一迭代（C0BC 体；spin 唤醒已由本 tick NMI 完成）。
@@ -1072,10 +1071,8 @@ fn enemy_distance_threshold(mem: &mut crate::frame::FrameMemory, x: u8) {
     let e = 0x0400 + x as u16 + 5; // Ens.data05
     let d = mem.read_ram(e);
     mem.write_ram(e, d | 0x18); // OrEnData05($18)
-    // 【goal-轮36 写面直比】阈距写打印（f1838 位差源直证）。
     let t = mem.read_wram(0x6AF4 + x as u16 + 14) as usize & 0x0F;
     let thr = game_data::assets::enemy_distance_threshold(crate::frame::cur_area(mem))[t];
-    // 【goal-轮3 F75B 判定流直证】阈值/bit1/d05 写前后。
     if thr == 0 {
         return; // 阈 0⇒早出（Zoomer 径！）
     }
@@ -1085,21 +1082,27 @@ fn enemy_distance_threshold(mem: &mut crate::frame::FrameMemory, x: u8) {
         mem.write_ram(e, d & !0x18);
         return;
     }
-    let (axis_bit, mut mask) = if thr & 0x80 != 0 { (0x08u8, !0x08u8) } else { (0x10, !0x10) };
-    let _ = axis_bit;
-    let thr_v = (thr & 0x7F) as u16;
-    // 位置比较（hi 位旋入 bit7 形）
+    // asm `ldy #~$08` 默认；`asl / bcs Lx342`——阈 bit7 置 ⇒ 掩 bit3，否则 `ldy #~$10` 掩 bit4。
+    let mask = if thr & 0x80 != 0 { !0x08u8 } else { !0x10u8 };
+    let thr_v = thr & 0x7F;
     let d = mem.read_ram(e);
+    // asm：轴由 d05 bit7 选（置⇒y 轴，清⇒x 轴）
     let (sam_pos, en_pos) = if d & 0x80 != 0 {
-        (mem.read_ram(0x030D), mem.read_ram(0x0400 + x as u16 + 0)) // y 轴
+        (mem.read_ram(crate::ram_map::SAMUS_Y), mem.read_ram(0x0400 + x as u16))
     } else {
-        (mem.read_ram(0x030E), mem.read_ram(0x0400 + x as u16 + 1)) // x 轴
+        (mem.read_ram(crate::ram_map::SAMUS_X), mem.read_ram(0x0400 + x as u16 + 1))
     };
-    let sam_hi = mem.read_wram(0x6AF4) & 1; // Samus.hi
-    let en_hi = mem.read_wram(0x6AF4 + x as u16 + 7) & 1; // EnsExtra.hi
-    let sam = ((sam_hi as u16) << 7) | sam_pos as u16; // ror 形（hi→bit7）
-    let en = ((en_hi as u16) << 7) | en_pos as u16;
-    let dist = (en as i16 - sam as i16).unsigned_abs() >> 4; // 二补+>>4（/16）
+    // 【2026-11-15 修】Samus.hi 原读 $6AF4（=EnsExtra 槽 0 的 status）——真址 Objects 槽 0 的
+    // hi = $030C（constants_ram Objects 结构 +0x0C）。错址令阈值判据整体失真。
+    let sam_hi = mem.read_ram(crate::ram_map::SAMUS_HI) & 1;
+    let en_hi = mem.read_wram(0x6AF4 + x as u16 + 7) & 1; // EnsExtra.hi（$6AFB 起）
+    // asm `lsr / ror Temp`：位置右移 1 位、hi 位旋入 bit7 ⇒ 值 = (hi*256+pos)/2（8 位模）
+    let sam = ((sam_hi << 7) | (sam_pos >> 1)) as u8;
+    let en = ((en_hi << 7) | (en_pos >> 1)) as u8;
+    // `sec / sbc` 8 位；负⇒二补取绝对值；再 `lsr`×3 ⇒ 合计 /16
+    let diff = en.wrapping_sub(sam);
+    let abs = if (diff as i8) < 0 { diff.wrapping_neg() } else { diff };
+    let dist = abs >> 3;
     if dist >= thr_v {
         mem.write_ram(e, d & mask); // 距大⇒清对应位
     }
@@ -2036,7 +2039,7 @@ fn enemy_move_one_pixel_right(mem: &mut crate::frame::FrameMemory, x: u8) -> boo
 /// ora ptr+1`——**对象 hi 选页**）】轮5 的 RoomRAMPtr(\$38) 选页=偏离（对象住其房间页
 /// ——hi==房页不变量（GetNameTableAtScrollDir==SelectRoomRAM 同式）；金腿实证：爬虫
 /// hi=0×\$6000（首房固实瓦挡探 ✓）而 \$38=\$6400（现房空 FF）⇒我探径滑过=旋转根）。
-fn make_room_ram_ptr(mem: &mut crate::frame::FrameMemory, y: u8, x: u8, hi: u8) -> u16 {
+fn make_room_ram_ptr(_mem: &mut crate::frame::FrameMemory, y: u8, x: u8, hi: u8) -> u16 {
     let idx = (((y & 0xF8) as u16) << 2) | ((x >> 3) as u16);
     let page = if hi & 1 != 0 { 0x0400u16 } else { 0x0000 };
     0x6000 | page | (idx & 0x3FF)
@@ -3159,6 +3162,7 @@ pub fn go_main_routine(mem: &mut FrameMemory) {
 
 #[cfg(test)]
 mod tests {
+    use crate::ram_map::{TIMER2, TIMER3};
     use super::*;
 
     /// RandomNumbers 合成值自证（+$19/+$5F——注×5 互证面）。
@@ -3577,6 +3581,34 @@ mod r25_chain_probe {
             more_init(&mut m);
             assert_eq!(m.read_ram(0x0076), want, "区 {area} 的 PaletteToggle");
         }
+    }
+
+    /// `UpdateEnemy_EnData05DistanceToSamusThreshold ; 07:F75B` 的 **Samus.hi 取址**与
+    /// **asm 位形算术**回归锚（2026-11-15 修：原读 `$6AF4`＝EnsExtra 槽 0 status）。
+    ///
+    /// ROM 依据：`lda Samus.hi / lsr / ror Temp00`（hi→bit7、位置右移 1）⇒ 值=(hi*256+pos)/2；
+    /// `sec/sbc` 8 位 → 负者二补 → `lsr`×3 ⇒ 合计 /16；`cmp 阈&$7F / bcc` 距小则保留位。
+    /// 反证：Skree（type 4，阈 `$83`＝bit7 置 ⇒ 掩 bit3、幅 3）、Samus.hi=1、敌 hi=1、x 相同
+    /// ⇒ 真值距 0（保留 bit3）；若 Samus.hi 读成 `$6AF4`(0)，敌侧多出 128 ⇒ 距 16 ≥ 3 ⇒ 误清 bit3。
+    #[test]
+    fn distance_threshold_reads_samus_hi_from_objects_slot() {
+        let _ = game_data::pack::init_from_env();
+        if !game_data::pack::is_ready() {
+            eprintln!("SKIP（显式）：未加载资产包——先跑 pack-tool extract");
+            return;
+        }
+        const SLOT: u8 = 0x20;
+        let mut m = crate::frame::FrameMemory::default();
+        m.write_ram(crate::ram_map::SAMUS_X, 0x80);
+        m.write_ram(crate::ram_map::SAMUS_HI, 0x01);
+        m.write_ram(0x0421, 0x80); // 敌 x 与萨姆斯相同
+        m.write_wram(0x6AF4 + SLOT as u16 + 7, 0x01); // EnsExtra.hi
+        m.write_wram(0x6AF4 + SLOT as u16 + 14, 0x04); // type 4 = Skree（阈 $83）
+        m.write_ram(0x0400 + SLOT as u16 + 5, 0x02); // data05 bit1 可见
+        m.write_wram(0x6AF4, 0x00); // 干扰：槽 0 status（错址会读到这里）
+        enemy_distance_threshold(&mut m, SLOT);
+        let d5 = m.read_ram(0x0400 + SLOT as u16 + 5);
+        assert_eq!(d5 & 0x18, 0x18, "距 0 < 阈 3 ⇒ 保留 bits3/4（d05={d5:02X}）");
     }
 
     /// more_init 递进面（r25 诊断锚：mr 1→2——CopyMap 前置（单测态补地图面））。
@@ -4646,3 +4678,4 @@ mod en_field_offset_tests {
         assert_eq!(game_data::assets::enemy_force_attribs(0).get(4).copied(), Some(0x86));
     }
 }
+
