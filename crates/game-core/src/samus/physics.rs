@@ -53,10 +53,19 @@ fn object_check_move_vertical(mem: &mut FrameMemory) -> bool {
     // 【实锤①修（2026-10-29）】asm CheckMoveVertical（$E7BD）=x−radiusX 起
     // **x 全距走环**（左界余块+1（步 8（GetNumBlocksToCheck）））——旧形单点（x 中心）
     // ⇒台缘（心过空/缘叠砖）漏检⇒沉入台面下（用户①嵌砖）。horizontal_span_rows 同构。
+    // 【X 左界回绕修（2026-11-14）】asm `CalculateFirstBGCollisionPoint ; 07:E93D` 的
+    // `ldx #$00 / lda Temp03_DistToCenterX / bmi / dex` ⇒ txa(=$FF) + carry(x−rx 的借位)
+    // `adc #$00 / beq RTS`：**x < radiusX（左界为负）时置位⇒若横滚房则 `inc Temp0B_PositionHi`**
+    // ——碰撞点落到相邻名表（RoomRAM 另一页）。旧形不调 hi ⇒ 在 x≈0..7 的左缘读到本页
+    // 第 31 列（可能是固实墙）⇒ 空中误判落地（jumpledge f1181 accelY 被清零根因）。
+    let mut hi_eff = hi;
+    if x < rx && mem.read_ram(crate::ram_map::SCROLL_DIR) & 0x02 != 0 {
+        hi_eff ^= 1;
+    }
     let (left, n) = vertical_span_cols(x, rx);
     for i in 0..n {
         let col = left.wrapping_add((i as u8).wrapping_mul(8));
-        if !collision_point_samus(mem, check_y, col, hi) {
+        if !collision_point_samus(mem, check_y, col, hi_eff) {
             return false;
         }
     }
@@ -351,6 +360,41 @@ mod tests {
         // y=176 → y+ry=191（184 行=空）→ 可走（未及地板）
         m.write_ram(SAMUS_Y, 176);
         assert!(object_check_move_down(&mut m), "y=176（y+ry=191 未及地板）应可走");
+    }
+
+    /// 【X 左界回绕修·红测（2026-11-14）】asm `CalculateFirstBGCollisionPoint ; 07:E93D`
+    /// 的 `txa(=$FF) + carry(x−rx) / adc #$00 / beq`：x < radiusX ⇒ 碰撞点落**相邻名表**
+    /// （横滚房 `inc Temp0B_PositionHi` ⇒ RoomRAM 另一页）。旧形不调 hi ⇒ 在左缘读到本页
+    /// 第 31 列（若该列固实则空中误判落地——jumpledge f1181 `accelY` 被清零的根因）。
+    #[test]
+    fn object_check_move_down_wraps_to_adjacent_nametable_at_left_edge() {
+        use crate::ram_map::{SAMUS_HI, SAMUS_RADIUS_X, SAMUS_RADIUS_Y, SAMUS_X, SAMUS_Y};
+        let build = |page0_solid: u8, page1_solid: u8| {
+            let mut m = FrameMemory::default();
+            for i in 0..0x800u16 {
+                m.write_wram(0x6000 | i, 0xFF);
+            }
+            // y=169/ry=15 ⇒ 查撞行 184；x=1/rx=8 ⇒ 左界列 31（0xF9>>3）
+            let idx = (((184u16 & 0xF8) << 2) | (0xF9u16 >> 3)) & 0x3FF;
+            m.write_wram(0x6000 | idx, page0_solid);
+            m.write_wram(0x6000 | 0x0400 | idx, page1_solid);
+            m.write_ram(SAMUS_Y, 169);
+            m.write_ram(SAMUS_RADIUS_Y, 15);
+            m.write_ram(SAMUS_X, 1);
+            m.write_ram(SAMUS_RADIUS_X, 8);
+            m.write_ram(SAMUS_HI, 0);
+            m.write_ram(crate::ram_map::SCROLL_DIR, 3); // 横滚房
+            m
+        };
+        // 本页固实、邻页空 ⇒ 必须**可走**（旧形读本页 ⇒ 误判落地）
+        let mut m = build(0x5C, 0xFF);
+        assert!(
+            object_check_move_down(&mut m),
+            "x<radiusX 的左界回绕应读相邻名表（本页固实不该判阻挡）"
+        );
+        // 邻页固实 ⇒ 必须阻挡
+        let mut m = build(0xFF, 0x5C);
+        assert!(!object_check_move_down(&mut m), "邻页固实应阻挡");
     }
 
     /// 【goal-r16 碰撞修·红测】水平查撞必须扫 **Y 跨度覆盖的每一行块**
