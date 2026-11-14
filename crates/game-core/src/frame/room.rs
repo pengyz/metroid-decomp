@@ -356,7 +356,10 @@ pub fn delete_offscreen_room_sprites(mem: &mut crate::frame::FrameMemory) {
     // ② 敌槽（$50 → $00，步 $10；`bpl` 环）。
     let mut xo: u8 = 0x50;
     loop {
-        let hi = mem.read_wram(ENS_EXTRA + xo as u16);
+        // **`EnsExtra.0.hi` = `EnsExtra + 7`**（asm `07:ECAD tya / eor EnsExtra.0.hi,x /
+        // lsr / bcs`；`+0` 是 status——r9 之外本次自检抓出的错位，会把 Active(2)/Resting(1)
+        // 的名字表位当 hi 用，随 nt 奇偶误删活敌）。
+        let hi = mem.read_wram(ENS_EXTRA + xo as u16 + 7);
         if (nt ^ hi) & 1 == 0 && mem.read_ram(ENS + xo as u16 + 5) & 0x02 == 0 {
             mem.write_wram(ENS_EXTRA + xo as u16, 0);
         }
@@ -1566,12 +1569,20 @@ mod tests_delete_offscreen_room_sprites {
         m
     }
 
+    // 【2026-11-15 修正】三条旧测把 hi 写进了 `EnsExtra+0`（=status）——它们当初是按
+    // 实现（bug：判据读 status）写的，等价于「断言自实现」。现按 asm `07:ECAD`
+    // `eor EnsExtra.0.hi,x` 改为写 `+7`，并显式区分 status 与 hi。
+    fn put(m: &mut crate::frame::FrameMemory, slot: u16, status: u8, hi: u8, d05: u8) {
+        m.write_wram(0x6AF4 + slot, status);
+        m.write_wram(0x6AF4 + slot + 7, hi);
+        m.write_ram(0x0400 + slot + 5, d05);
+    }
+
     #[test]
     fn enemy_in_target_nt_and_invisible_is_removed() {
         let mut m = mem_with_nt(0x00, 0x00); // nt = 0
         let slot = 0x50u16; // Ens 槽 5
-        m.write_wram(0x6AF4 + slot, 0x00); // hi bit0 = 0（同目标名表）
-        m.write_ram(0x0400 + slot + 5, 0x00); // data05 bit1 = 0（不可见）
+        put(&mut m, slot, 0x02, 0x00, 0x00); // hi=0 同目标名表、d05 bit1=0
         delete_offscreen_room_sprites(&mut m);
         assert_eq!(m.read_wram(0x6AF4 + slot), 0, "目标名表内不可见敌应被清 status");
     }
@@ -1580,8 +1591,7 @@ mod tests_delete_offscreen_room_sprites {
     fn visible_enemy_survives_even_in_target_nt() {
         let mut m = mem_with_nt(0x00, 0x00);
         let slot = 0x40u16;
-        m.write_wram(0x6AF4 + slot, 0x02);
-        m.write_ram(0x0400 + slot + 5, 0x02); // bit1=1 可见
+        put(&mut m, slot, 0x02, 0x00, 0x02); // bit1=1 可见
         delete_offscreen_room_sprites(&mut m);
         assert_eq!(m.read_wram(0x6AF4 + slot), 2, "可见敌不得被清（asm `and #$02 / bne`）");
     }
@@ -1590,10 +1600,23 @@ mod tests_delete_offscreen_room_sprites {
     fn enemy_in_other_nt_survives() {
         let mut m = mem_with_nt(0x00, 0x00); // nt = 0
         let slot = 0x30u16;
-        m.write_wram(0x6AF4 + slot, 0x01); // hi bit0 = 1（异名表）
-        m.write_ram(0x0400 + slot + 5, 0x00);
+        put(&mut m, slot, 0x02, 0x01, 0x00); // hi bit0 = 1（异名表）
         delete_offscreen_room_sprites(&mut m);
-        assert_eq!(m.read_wram(0x6AF4 + slot), 1, "异名表敌不删（判据是「在目标名表」）");
+        assert_eq!(m.read_wram(0x6AF4 + slot), 2, "异名表敌不删（判据是「在目标名表」）");
+    }
+
+    /// **判据必须是 `hi`(+7) 而不是 `status`(+0)**：status=2 的 bit0 恒 0，若误读
+    /// status 当 hi，则 nt=0 时会无差别删掉活敌（`(0^2)&1==0`）。这条测在旧实现下必红。
+    #[test]
+    fn guard_reads_hi_not_status() {
+        let mut m = mem_with_nt(0x00, 0x00); // nt = 0
+        let slot = 0x20u16;
+        put(&mut m, slot, 0x02, 0x01, 0x00); // status=2(Active)、hi=1、不可见
+        delete_offscreen_room_sprites(&mut m);
+        assert_eq!(
+            m.read_wram(0x6AF4 + slot), 2,
+            "hi=1 与 nt=0 不同名表 ⇒ 必须保留（误读 status 会清掉它）"
+        );
     }
 
     #[test]
