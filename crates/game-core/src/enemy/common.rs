@@ -117,23 +117,23 @@ pub fn enemy_delta_x_packed(speed_byte: u8) -> i8 {
 /// 符号幅速度）→Δ。输入=（type, data05, movementIndex, movementInstrIndex, delay）
 /// →输出（Δ, 新 delay, 新 instrIndex, 延时是否归零）。
 pub fn enemy_get_delta_y(
-    type_: u8, data05: u8, movement_index: u8,
+    area: u8, type_: u8, data05: u8, movement_index: u8,
     instr_index: u8, delay: u8,
     speed_sub: u8, speed: u8, accel_y: u8,
 ) -> (i8, u8, u8, bool) {
-    let (dy, _dx, d, i, z) = enemy_get_delta_xy(type_, data05, movement_index, instr_index, delay, speed_sub, speed, accel_y);
+    let (dy, _dx, d, i, z) = enemy_get_delta_xy(area, type_, data05, movement_index, instr_index, delay, speed_sub, speed, accel_y);
     (dy, d, i, z)
 }
 
 /// Δxy 双轴（**对抗复核⑦**——skree 串 packed nibble 双半字节（macros.asm:27）：
 /// Δy=sign(bit7)×((b>>4)&7)、Δx=sign(bit3)×(b&7)）——EnemyMove 双轴施加。
 pub fn enemy_get_delta_xy(
-    type_: u8, data05: u8, movement_index: u8,
+    area: u8, type_: u8, data05: u8, movement_index: u8,
     instr_index: u8, delay: u8,
     speed_sub: u8, speed: u8, accel_y: u8,
 ) -> (i8, i8, u8, u8, bool) {
     // LoadTableAt977B：type→flags（*2 后 bit7=加速路径——case-6 $45 bit6 ✓ 实证）
-    let flags = game_data::assets::enemy_facing().get((type_ & 0x3F) as usize).copied().unwrap_or(0);
+    let flags = game_data::assets::enemy_facing(area).get((type_ & 0x3F) as usize).copied().unwrap_or(0);
     // 【goal-轮4 移动源判别】加速径 vs 串径分流直证。
     if std::env::var("DSH_SPRITE_TRACE").is_ok() {
         use std::sync::atomic::Ordering;
@@ -182,7 +182,7 @@ pub fn enemy_get_delta_xy(
     // rol→0xF2（carry=bit7）→asl→0xE4——usize 无界误案修）
     let rolled = movement_index.wrapping_shl(1) | facing; // rol 域形（carry=facing）
     let idx = (rolled.wrapping_shl(1)) as usize; // asl（u8 回绕）
-    let ptrs = game_data::assets::enemy_movement_ptrs();
+    let ptrs = game_data::assets::enemy_movement_ptrs(area);
     // **全指针**（u16 LE——低字节截断案修；缺项回落 $97F5 = 00_R 空串）
     let ptr_full = ptrs
         .get(idx / 2 * 2..idx / 2 * 2 + 2)
@@ -203,7 +203,7 @@ pub fn enemy_get_delta_xy(
     let mut ii = instr_index;
     for _ in 0..16u32 {
         // 界卫（$FF 重启循环——fail-safe）
-        let d = game_data::assets::enemy_movement_strings().get(str_off + ii as usize).copied().unwrap_or(0xFF);
+        let d = game_data::assets::enemy_movement_strings(area).get(str_off + ii as usize).copied().unwrap_or(0xFF);
         if d >= 0xF0 {
             match d {
                 0xFA => return (0, 0, delay, ii, false), // TriggerResting（随件=Δ0）
@@ -227,10 +227,10 @@ pub fn enemy_get_delta_xy(
         // facing)*2→EnemyMovementPtrs[y]（:565-574）+instrIndex=Y 偏移（:596-600）
         // ——**索引面合规** ✓✓（串位 instr 推进相位根非本件 ✗）。
         if d.wrapping_sub(delay) == 0 {
-            let speed = game_data::assets::enemy_movement_strings().get(str_off + ii as usize + 1).copied().unwrap_or(0);
+            let speed = game_data::assets::enemy_movement_strings(area).get(str_off + ii as usize + 1).copied().unwrap_or(0);
             return (enemy_delta_sign_mag(speed), enemy_delta_x_packed(speed), 0, ii.wrapping_add(2), true);
         }
-        let speed = game_data::assets::enemy_movement_strings().get(str_off + ii as usize + 1).copied().unwrap_or(0);
+        let speed = game_data::assets::enemy_movement_strings(area).get(str_off + ii as usize + 1).copied().unwrap_or(0);
         return (enemy_delta_sign_mag(speed), enemy_delta_x_packed(speed), delay.wrapping_add(1), ii, false);
     }
     (0, 0, delay, ii, false)

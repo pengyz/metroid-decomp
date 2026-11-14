@@ -89,12 +89,47 @@ fn room_graphics_dispatch_tables_match_rom_anchors() {
 }
 
 #[test]
-fn room_graphics_dispatch_unbaked_area_is_none() {
-    // Kraid/Tourian/Ridley 未烘焙——None → 调用方 unported! fail-loud（D7）。
-    assert!(game_data::assets::room_ptrs(2).is_none());
-    assert!(game_data::assets::room_ptrs(3).is_none());
-    assert!(game_data::assets::room_ptrs(4).is_none());
-    assert!(game_data::assets::structures(5).is_none());
+fn room_graphics_dispatch_unknown_area_is_none() {
+    // 五区全迁（0=Br/1=No/2=Kr/3=To/4=Ri）；未登记区 ⇒ None → 调用方 unported!
+    // fail-loud（D7）。$0F 掩码后 5..$0F 都算未知。
+    for a in 0..=4u8 {
+        assert!(game_data::assets::room_ptrs(a).is_some(), "区 {a} 应已迁包");
+        assert!(game_data::assets::structures(a).is_some(), "区 {a} 结构体应已迁包");
+    }
+    for a in [5u8, 6, 0x0F, 0xFF] {
+        assert!(game_data::assets::room_ptrs(a).is_none(), "区 {a:#04X} 应缺失");
+        assert!(game_data::assets::structures(a).is_none());
+    }
+}
+
+/// 后三区（Kraid/Tourian/Ridley）房流五件套 + 敌表锚：项数由 asm 地址差机械给出
+/// （`n_rooms=(struct_ptrs-room_ptrs)/2`、`n_structs=(items_tbl-struct_ptrs)/2`），
+/// 房指针首项与 asm `Room00_{AREA}` 标签逐字节对齐。
+#[test]
+fn last_three_areas_match_asm_anchors() {
+    // (area, n_rooms, n_structs, metatile_bytes, room0_addr)——room0 取 asm
+    // `Room00_{AREA}` 标签址（三区首四项已与指针表逐字节对齐）。结构体数据在 bank 内
+    // 另有落点，故只断言落窗（$8000..$FFFF）。
+    let cases = [(2u8, 37usize, 39usize, 164usize, 0xA2B7u16),
+                 (3, 21, 32, 216, 0xA8AF),
+                 (4, 42, 29, 132, 0xA23F)];
+    for (area, nr, ns, mt, room0) in cases {
+        assert_eq!(game_data::assets::room_ptrs(area).unwrap().len(), nr * 2, "区{area} 房指针");
+        assert_eq!(game_data::assets::struct_ptrs(area).unwrap().len(), ns * 2, "区{area} 结构指针");
+        assert_eq!(game_data::assets::metatile_defs(area).unwrap().len(), mt, "区{area} 元tile");
+        assert_eq!(game_data::assets::room_streams(area).unwrap().len(), nr);
+        assert_eq!(game_data::assets::structures(area).unwrap().len(), ns);
+        // 每段房流自界于 $FF（末字节即终止符）
+        for (i, s) in game_data::assets::room_streams(area).unwrap().iter().enumerate() {
+            assert_eq!(*s.last().unwrap(), 0xFF, "区{area} 房流 {i} 必须以 $FF 收尾");
+        }
+        for (i, s) in game_data::assets::structures(area).unwrap().iter().enumerate() {
+            assert_eq!(*s.last().unwrap(), 0xFF, "区{area} 结构体 {i} 必须以 $FF 收尾");
+        }
+        assert_eq!(game_data::assets::room_ptr(area, 0), Some(room0), "区{area} Room00 址");
+        let s0 = game_data::assets::struct_ptr(area, 0).expect("结构 0 指针");
+        assert!((0x8000..=0xFFFF).contains(&s0), "区{area} 结构 0 指针 {s0:#06X} 应落 bank 窗");
+    }
 }
 
 /// Norfair 五件套迁包锚：48/49/248 形状 + 房流 $FF 自界（原 `norfair_graphics.rs`

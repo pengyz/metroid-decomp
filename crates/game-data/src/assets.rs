@@ -126,22 +126,38 @@ static NO_ROOMS: LazyLock<Vec<&'static [u8]>> = LazyLock::new(|| {
 static NO_STRUCTS: LazyLock<Vec<&'static [u8]>> = LazyLock::new(|| {
     slices(pack::get(PackKey::NoStructures), pack::get(PackKey::NoStructOffs), 49)
 });
+static KR_ROOMS: LazyLock<Vec<&'static [u8]>> = LazyLock::new(|| {
+    slices(pack::get(PackKey::KrRoomStreams), pack::get(PackKey::KrRoomOffs), 37)
+});
+static KR_STRUCTS: LazyLock<Vec<&'static [u8]>> = LazyLock::new(|| {
+    slices(pack::get(PackKey::KrStructures), pack::get(PackKey::KrStructOffs), 39)
+});
+static TO_ROOMS: LazyLock<Vec<&'static [u8]>> = LazyLock::new(|| {
+    slices(pack::get(PackKey::ToRoomStreams), pack::get(PackKey::ToRoomOffs), 21)
+});
+static TO_STRUCTS: LazyLock<Vec<&'static [u8]>> = LazyLock::new(|| {
+    slices(pack::get(PackKey::ToStructures), pack::get(PackKey::ToStructOffs), 32)
+});
+static RI_ROOMS: LazyLock<Vec<&'static [u8]>> = LazyLock::new(|| {
+    slices(pack::get(PackKey::RiRoomStreams), pack::get(PackKey::RiRoomOffs), 42)
+});
+static RI_STRUCTS: LazyLock<Vec<&'static [u8]>> = LazyLock::new(|| {
+    slices(pack::get(PackKey::RiStructures), pack::get(PackKey::RiStructOffs), 29)
+});
 
-/// 区序号（`InArea & 0x0F`：0=Brinstar / 1=Norfair）——其余区未迁包 ⇒ `None`。
+/// 区序号（`InArea & 0x0F`：0=Br/1=No/2=Kr/3=To/4=Ri）——未知区 ⇒ `None`（fail-loud）。
 fn area_idx(area: u8) -> Option<u8> {
     match area & 0x0F {
-        0 => Some(0),
-        1 => Some(1),
+        0..=4 => Some(area & 0x0F),
         _ => None,
     }
 }
 
 /// 房流指针表（u16 LE × N；N 由区决定：Brinstar 47 / Norfair 46）。
 pub fn room_ptrs(area: u8) -> Option<&'static [u8]> {
-    match area_idx(area)? {
-        0 => Some(pack::get(PackKey::BrRoomPtrs)),
-        _ => Some(pack::get(PackKey::NoRoomPtrs)),
-    }
+    const K: [PackKey; 5] = [PackKey::BrRoomPtrs, PackKey::NoRoomPtrs, PackKey::KrRoomPtrs,
+                             PackKey::ToRoomPtrs, PackKey::RiRoomPtrs];
+    Some(pack::get(K[area_idx(area)? as usize]))
 }
 
 /// 第 `idx` 个房指针（LE u16）——越界/未迁区 ⇒ `None`。
@@ -160,25 +176,26 @@ pub fn struct_ptr(area: u8, idx: usize) -> Option<u16> {
 
 /// 结构体指针表（Brinstar 50 / Norfair 49）。
 pub fn struct_ptrs(area: u8) -> Option<&'static [u8]> {
-    match area_idx(area)? {
-        0 => Some(pack::get(PackKey::BrStructPtrs)),
-        _ => Some(pack::get(PackKey::NoStructPtrs)),
-    }
+    const K: [PackKey; 5] = [PackKey::BrStructPtrs, PackKey::NoStructPtrs, PackKey::KrStructPtrs,
+                             PackKey::ToStructPtrs, PackKey::RiStructPtrs];
+    Some(pack::get(K[area_idx(area)? as usize]))
 }
 
 /// 元tile 定义（4 B/组：Brinstar 260 B / Norfair 248 B）。
 pub fn metatile_defs(area: u8) -> Option<&'static [u8]> {
-    match area_idx(area)? {
-        0 => Some(pack::get(PackKey::BrMetatiles)),
-        _ => Some(pack::get(PackKey::NoMetatiles)),
-    }
+    const K: [PackKey; 5] = [PackKey::BrMetatiles, PackKey::NoMetatiles, PackKey::KrMetatiles,
+                             PackKey::ToMetatiles, PackKey::RiMetatiles];
+    Some(pack::get(K[area_idx(area)? as usize]))
 }
 
 /// 房流（按房号下标；每段自界于 `$FF`）。
 pub fn room_streams(area: u8) -> Option<&'static [&'static [u8]]> {
     match area_idx(area)? {
         0 => Some(&BR_ROOMS),
-        _ => Some(&NO_ROOMS),
+        1 => Some(&NO_ROOMS),
+        2 => Some(&KR_ROOMS),
+        3 => Some(&TO_ROOMS),
+        _ => Some(&RI_ROOMS),
     }
 }
 
@@ -186,34 +203,64 @@ pub fn room_streams(area: u8) -> Option<&'static [&'static [u8]]> {
 pub fn structures(area: u8) -> Option<&'static [&'static [u8]]> {
     match area_idx(area)? {
         0 => Some(&BR_STRUCTS),
-        _ => Some(&NO_STRUCTS),
+        1 => Some(&NO_STRUCTS),
+        2 => Some(&KR_STRUCTS),
+        3 => Some(&TO_STRUCTS),
+        _ => Some(&RI_STRUCTS),
     }
 }
 
 
-// ---- 敌九表（当前只有 Brinstar 一套；其余四区待迁）--------------------------------
+// ---- 敌九表（五区各一套，地址布局同址、内容按区 bank）----------------------------
 //
 // asm 形：`LoadEnemy` 按 `EnemyType` 索引各表（`crates/game-core/src/frame/room.rs`），
 // 表址 brinstar `prg1_brinstar.asm:195-421`（$962B…$977B）。**表长口径**：健康/强制速度/
 // 初始延迟/朝向在 asm 相邻标签间距各 16 B，本仓历史烘焙 64 B（跨表连读）——搬家不改语义，
 // 长度另案（`enemy-table-extent`）。
-macro_rules! enemy_table {
-    ($fname:ident, $key:ident) => {
-        /// Brinstar 敌表（未就绪即 panic：调用点只在游戏内，早已 `init_from_env`）。
-        pub fn $fname() -> &'static [u8] {
-            pack::get(PackKey::$key)
-        }
-    };
+/// 敌表区索引（0=Br/1=No/2=Kr/3=To/4=Ri——`InArea & $0F`）。
+fn enemy_table(area: u8, idx: usize) -> &'static [u8] {
+    const KEYS: [[PackKey; 11]; 5] = [
+        [PackKey::BrEnemyHealth, PackKey::BrEnemyRestingAnim, PackKey::BrEnemyActiveAnim,
+         PackKey::BrEnemyActiveAnimInitOffset, PackKey::BrEnemyForceAttribs,
+         PackKey::BrEnemyForceSpeedDelay, PackKey::BrEnemyDistanceThreshold,
+         PackKey::BrEnemyInitDelay, PackKey::BrEnemyFacing, PackKey::BrEnMovPtrs,
+         PackKey::BrEnMovStr],
+        [PackKey::NoEnemyHealth, PackKey::NoEnemyRestingAnim, PackKey::NoEnemyActiveAnim,
+         PackKey::NoEnemyActiveAnimInitOffset, PackKey::NoEnemyForceAttribs,
+         PackKey::NoEnemyForceSpeedDelay, PackKey::NoEnemyDistanceThreshold,
+         PackKey::NoEnemyInitDelay, PackKey::NoEnemyFacing, PackKey::NoEnMovPtrs,
+         PackKey::NoEnMovStr],
+        [PackKey::KrEnemyHealth, PackKey::KrEnemyRestingAnim, PackKey::KrEnemyActiveAnim,
+         PackKey::KrEnemyActiveAnimInitOffset, PackKey::KrEnemyForceAttribs,
+         PackKey::KrEnemyForceSpeedDelay, PackKey::KrEnemyDistanceThreshold,
+         PackKey::KrEnemyInitDelay, PackKey::KrEnemyFacing, PackKey::KrEnMovPtrs,
+         PackKey::KrEnMovStr],
+        [PackKey::ToEnemyHealth, PackKey::ToEnemyRestingAnim, PackKey::ToEnemyActiveAnim,
+         PackKey::ToEnemyActiveAnimInitOffset, PackKey::ToEnemyForceAttribs,
+         PackKey::ToEnemyForceSpeedDelay, PackKey::ToEnemyDistanceThreshold,
+         PackKey::ToEnemyInitDelay, PackKey::ToEnemyFacing, PackKey::ToEnMovPtrs,
+         PackKey::ToEnMovStr],
+        [PackKey::RiEnemyHealth, PackKey::RiEnemyRestingAnim, PackKey::RiEnemyActiveAnim,
+         PackKey::RiEnemyActiveAnimInitOffset, PackKey::RiEnemyForceAttribs,
+         PackKey::RiEnemyForceSpeedDelay, PackKey::RiEnemyDistanceThreshold,
+         PackKey::RiEnemyInitDelay, PackKey::RiEnemyFacing, PackKey::RiEnMovPtrs,
+         PackKey::RiEnMovStr],
+    ];
+    pack::get(KEYS[(area & 0x0F) as usize % 5][idx])
 }
-enemy_table!(enemy_health, BrEnemyHealth);
-enemy_table!(enemy_resting_anim, BrEnemyRestingAnim);
-enemy_table!(enemy_active_anim, BrEnemyActiveAnim);
-enemy_table!(enemy_active_anim_init_offset, BrEnemyActiveAnimInitOffset);
-enemy_table!(enemy_force_attribs, BrEnemyForceAttribs);
-enemy_table!(enemy_force_speed_delay, BrEnemyForceSpeedDelay);
-enemy_table!(enemy_distance_threshold, BrEnemyDistanceThreshold);
-enemy_table!(enemy_init_delay, BrEnemyInitDelay);
-enemy_table!(enemy_facing, BrEnemyFacing);
+
+/// 五区敌表访问器（`area = InArea & $0F`；未就绪即 panic——调用点只在游戏内）。
+pub fn enemy_health(area: u8) -> &'static [u8] { enemy_table(area, 0) }
+pub fn enemy_resting_anim(area: u8) -> &'static [u8] { enemy_table(area, 1) }
+pub fn enemy_active_anim(area: u8) -> &'static [u8] { enemy_table(area, 2) }
+pub fn enemy_active_anim_init_offset(area: u8) -> &'static [u8] { enemy_table(area, 3) }
+pub fn enemy_force_attribs(area: u8) -> &'static [u8] { enemy_table(area, 4) }
+pub fn enemy_force_speed_delay(area: u8) -> &'static [u8] { enemy_table(area, 5) }
+pub fn enemy_distance_threshold(area: u8) -> &'static [u8] { enemy_table(area, 6) }
+pub fn enemy_init_delay(area: u8) -> &'static [u8] { enemy_table(area, 7) }
+pub fn enemy_facing(area: u8) -> &'static [u8] { enemy_table(area, 8) }
+pub fn enemy_movement_ptrs(area: u8) -> &'static [u8] { enemy_table(area, 9) }
+pub fn enemy_movement_strings(area: u8) -> &'static [u8] { enemy_table(area, 10) }
 
 
 // ---- ROM 查询表（窗口参数化）------------------------------------------------------
@@ -638,7 +685,7 @@ mod palette_tests {
     /// 串区 `$97EF..$99EF`；`L977B` 复用已迁的 `BrEnemyFacing`（同 64 B）。
     #[test]
     fn enemy_movement_segments_match_asm_anchors() {
-        let ptrs = enemy_movement_ptrs();
+        let ptrs = enemy_movement_ptrs(0);
         assert_eq!(ptrs.len(), 36, "EnemyMovementPtrs 9×R/L×u16");
         let first = u16::from_le_bytes([ptrs[0], ptrs[1]]);
         assert_eq!(first, 0x97EF, "首个指针 = 串区起点 $97EF");
@@ -646,9 +693,9 @@ mod palette_tests {
             let p = u16::from_le_bytes([w[0], w[1]]) as usize;
             (0x97EF..=0x98C0 + 24).contains(&p)
         }), "全部指针落在串区内");
-        assert_eq!(enemy_movement_strings().len(), 512);
+        assert_eq!(enemy_movement_strings(0).len(), 512);
         // L977B 与朝向段同源（迁移只改来源不改字节）。
-        assert_eq!(enemy_facing().len(), 64);
+        assert_eq!(enemy_facing(0).len(), 64);
         assert_eq!(enemy_anim_table().len(), 118);
     }
 
@@ -761,12 +808,6 @@ pub fn sfx_record4(addr: u16) -> Option<&'static [u8; 4]> {
     let off = addr.checked_sub(SFX_TABLES_ADDR)? as usize;
     sfx_tables().get(off..off + 4)?.try_into().ok()
 }
-
-/// `EnemyMovementPtrs ; 01:96DB`（9 索引 × R/L × u16 = 36 B，LE）。
-pub fn enemy_movement_ptrs() -> &'static [u8] { pack::get(PackKey::BrEnMovPtrs) }
-
-/// 移动指令串区 `$97EF..$99EF`（消费侧按指针偏移取值）。
-pub fn enemy_movement_strings() -> &'static [u8] { pack::get(PackKey::BrEnMovStr) }
 
 /// 标题屏 17 张小表（bank0；表址/真长/漂移更正说明见 `extract::TITLE_TABLES`）。
 pub fn title_fade() -> &'static [u8] { pack::get(PackKey::Fade) }

@@ -39,11 +39,10 @@ pub fn sections(rom: &[u8]) -> Result<Vec<Section>, String> {
     // 世界地图：`WorldMap: ; 00:A53E`（prg0_title.asm:5118）32×32=1024 B，bank0。
     // `CopyMap $A93E`（prg0_title.asm:5153）运行时把它拷到 WorldMapRAM `$7000-$73FF`。
     out.push(Section { key: PackKey::WorldMap, data: bank_slice(prg, 0, WORLD_MAP_ADDR, WORLD_MAP_LEN)? });
-    out.extend(extract_area(prg, &AREA_BR)?);
-    out.extend(extract_area(prg, &AREA_NO)?);
-    for (key, addr, len, _) in BR_ENEMY_TABLES {
-        out.push(Section { key, data: bank_slice(prg, 1, addr, len)? });
+    for spec in [&AREA_BR, &AREA_NO, &AREA_KR, &AREA_TO, &AREA_RI] {
+        out.extend(extract_area(prg, spec)?);
     }
+    out.extend(extract_enemy_tables_all(prg)?);
     out.extend(extract_rom_tables(prg)?);
     out.extend(extract_music_tables(prg)?);
     out.extend(extract_music_streams(prg)?);
@@ -359,6 +358,75 @@ fn seg_meta() -> Vec<SegMeta> {
         SegMeta { key: PackKey::BrEnemyFacing, kind: "bytes", elem: 1, count: 64, rom: "bank01:977B", note: "Facing（asm 标签间距见 note）" },
         SegMeta { key: PackKey::BrEnMovPtrs, kind: "words", elem: 2, count: 18, rom: "bank01:96DB", note: "EnemyMovementPtrs 9×R/L（旧烘焙 138 项=过度读，真表 36 B）" },
         SegMeta { key: PackKey::BrEnMovStr, kind: "bytes", elem: 1, count: 512, rom: "bank01:97EF", note: "移动指令串窗 $97EF..$99EF（覆盖被引用上界）" },
+        // ---- Kr（bank4）房流与敌表 ----
+        SegMeta { key: PackKey::KrRoomPtrs, kind: "u16-table", elem: 2, count: 37, rom: "bank04:A1D5", note: "RoomPtrTable" },
+        SegMeta { key: PackKey::KrStructPtrs, kind: "u16-table", elem: 2, count: 39, rom: "bank04:A21F", note: "StructPtrTable" },
+        SegMeta { key: PackKey::KrMetatiles, kind: "bytes", elem: 4, count: 41, rom: "bank04:AC32", note: "元tile 4B 组×41" },
+        SegMeta { key: PackKey::KrRoomStreams, kind: "bytes", elem: 1, count: 0, rom: "bank04:各指针", note: "房流拼接（各自界 $FF）" },
+        SegMeta { key: PackKey::KrRoomOffs, kind: "offs-table", elem: 8, count: 37, rom: "(派生)", note: "×37 (off,len)" },
+        SegMeta { key: PackKey::KrStructures, kind: "bytes", elem: 1, count: 0, rom: "bank04:各指针", note: "结构体拼接" },
+        SegMeta { key: PackKey::KrStructOffs, kind: "offs-table", elem: 8, count: 39, rom: "(派生)", note: "×39 (off,len)" },
+        SegMeta { key: PackKey::KrEnemyHealth, kind: "bytes", elem: 1, count: 64, rom: "bank04:962B", note: "EnemyHealthTbl（窗口；语义 16）" },
+        SegMeta { key: PackKey::KrEnemyRestingAnim, kind: "bytes", elem: 1, count: 32, rom: "bank04:963B", note: "EnemyRestingAnimIndex" },
+        SegMeta { key: PackKey::KrEnemyActiveAnim, kind: "bytes", elem: 1, count: 32, rom: "bank04:965B", note: "EnemyActiveAnimIndex" },
+        SegMeta { key: PackKey::KrEnemyActiveAnimInitOffset, kind: "bytes", elem: 1, count: 16, rom: "bank04:967B", note: "EnemyActiveAnimIndexInitOffset" },
+        SegMeta { key: PackKey::KrEnemyForceAttribs, kind: "bytes", elem: 1, count: 16, rom: "bank04:968B", note: "L968B 强制属性" },
+        SegMeta { key: PackKey::KrEnemyForceSpeedDelay, kind: "bytes", elem: 1, count: 64, rom: "bank04:969B", note: "ForceSpeedTowardsSamusDelayTbl（窗口；语义 16）" },
+        SegMeta { key: PackKey::KrEnemyDistanceThreshold, kind: "bytes", elem: 1, count: 16, rom: "bank04:96AB", note: "EnemyDistanceToSamusThreshold" },
+        SegMeta { key: PackKey::KrEnemyInitDelay, kind: "bytes", elem: 1, count: 64, rom: "bank04:96BB", note: "EnemyInitDelayTbl（窗口；语义 32）" },
+        SegMeta { key: PackKey::KrEnemyFacing, kind: "bytes", elem: 1, count: 64, rom: "bank04:977B", note: "L977B 朝向表" },
+        SegMeta { key: PackKey::KrEnMovPtrs, kind: "bytes", elem: 1, count: 36, rom: "bank04:96DB", note: "EnemyMovementPtrs（9×R/L×2B）" },
+        SegMeta { key: PackKey::KrEnMovStr, kind: "bytes", elem: 1, count: 512, rom: "bank04:97EF", note: "移动指令串窗" },
+        // ---- To（bank3）房流与敌表 ----
+        SegMeta { key: PackKey::ToRoomPtrs, kind: "u16-table", elem: 2, count: 21, rom: "bank03:A7D1", note: "RoomPtrTable" },
+        SegMeta { key: PackKey::ToStructPtrs, kind: "u16-table", elem: 2, count: 32, rom: "bank03:A7FB", note: "StructPtrTable" },
+        SegMeta { key: PackKey::ToMetatiles, kind: "bytes", elem: 4, count: 54, rom: "bank03:AE49", note: "元tile 4B 组×54" },
+        SegMeta { key: PackKey::ToRoomStreams, kind: "bytes", elem: 1, count: 0, rom: "bank03:各指针", note: "房流拼接（各自界 $FF）" },
+        SegMeta { key: PackKey::ToRoomOffs, kind: "offs-table", elem: 8, count: 21, rom: "(派生)", note: "×21 (off,len)" },
+        SegMeta { key: PackKey::ToStructures, kind: "bytes", elem: 1, count: 0, rom: "bank03:各指针", note: "结构体拼接" },
+        SegMeta { key: PackKey::ToStructOffs, kind: "offs-table", elem: 8, count: 32, rom: "(派生)", note: "×32 (off,len)" },
+        SegMeta { key: PackKey::ToEnemyHealth, kind: "bytes", elem: 1, count: 64, rom: "bank03:962B", note: "EnemyHealthTbl（窗口；语义 16）" },
+        SegMeta { key: PackKey::ToEnemyRestingAnim, kind: "bytes", elem: 1, count: 32, rom: "bank03:963B", note: "EnemyRestingAnimIndex" },
+        SegMeta { key: PackKey::ToEnemyActiveAnim, kind: "bytes", elem: 1, count: 32, rom: "bank03:965B", note: "EnemyActiveAnimIndex" },
+        SegMeta { key: PackKey::ToEnemyActiveAnimInitOffset, kind: "bytes", elem: 1, count: 16, rom: "bank03:967B", note: "EnemyActiveAnimIndexInitOffset" },
+        SegMeta { key: PackKey::ToEnemyForceAttribs, kind: "bytes", elem: 1, count: 16, rom: "bank03:968B", note: "L968B 强制属性" },
+        SegMeta { key: PackKey::ToEnemyForceSpeedDelay, kind: "bytes", elem: 1, count: 64, rom: "bank03:969B", note: "ForceSpeedTowardsSamusDelayTbl（窗口；语义 16）" },
+        SegMeta { key: PackKey::ToEnemyDistanceThreshold, kind: "bytes", elem: 1, count: 16, rom: "bank03:96AB", note: "EnemyDistanceToSamusThreshold" },
+        SegMeta { key: PackKey::ToEnemyInitDelay, kind: "bytes", elem: 1, count: 64, rom: "bank03:96BB", note: "EnemyInitDelayTbl（窗口；语义 32）" },
+        SegMeta { key: PackKey::ToEnemyFacing, kind: "bytes", elem: 1, count: 64, rom: "bank03:977B", note: "L977B 朝向表" },
+        SegMeta { key: PackKey::ToEnMovPtrs, kind: "bytes", elem: 1, count: 36, rom: "bank03:96DB", note: "EnemyMovementPtrs（9×R/L×2B）" },
+        SegMeta { key: PackKey::ToEnMovStr, kind: "bytes", elem: 1, count: 512, rom: "bank03:97EF", note: "移动指令串窗" },
+        // ---- Ri（bank5）房流与敌表 ----
+        SegMeta { key: PackKey::RiRoomPtrs, kind: "u16-table", elem: 2, count: 42, rom: "bank05:A17F", note: "RoomPtrTable" },
+        SegMeta { key: PackKey::RiStructPtrs, kind: "u16-table", elem: 2, count: 29, rom: "bank05:A1D3", note: "StructPtrTable" },
+        SegMeta { key: PackKey::RiMetatiles, kind: "bytes", elem: 4, count: 33, rom: "bank05:AB23", note: "元tile 4B 组×33" },
+        SegMeta { key: PackKey::RiRoomStreams, kind: "bytes", elem: 1, count: 0, rom: "bank05:各指针", note: "房流拼接（各自界 $FF）" },
+        SegMeta { key: PackKey::RiRoomOffs, kind: "offs-table", elem: 8, count: 42, rom: "(派生)", note: "×42 (off,len)" },
+        SegMeta { key: PackKey::RiStructures, kind: "bytes", elem: 1, count: 0, rom: "bank05:各指针", note: "结构体拼接" },
+        SegMeta { key: PackKey::RiStructOffs, kind: "offs-table", elem: 8, count: 29, rom: "(派生)", note: "×29 (off,len)" },
+        SegMeta { key: PackKey::RiEnemyHealth, kind: "bytes", elem: 1, count: 64, rom: "bank05:962B", note: "EnemyHealthTbl（窗口；语义 16）" },
+        SegMeta { key: PackKey::RiEnemyRestingAnim, kind: "bytes", elem: 1, count: 32, rom: "bank05:963B", note: "EnemyRestingAnimIndex" },
+        SegMeta { key: PackKey::RiEnemyActiveAnim, kind: "bytes", elem: 1, count: 32, rom: "bank05:965B", note: "EnemyActiveAnimIndex" },
+        SegMeta { key: PackKey::RiEnemyActiveAnimInitOffset, kind: "bytes", elem: 1, count: 16, rom: "bank05:967B", note: "EnemyActiveAnimIndexInitOffset" },
+        SegMeta { key: PackKey::RiEnemyForceAttribs, kind: "bytes", elem: 1, count: 16, rom: "bank05:968B", note: "L968B 强制属性" },
+        SegMeta { key: PackKey::RiEnemyForceSpeedDelay, kind: "bytes", elem: 1, count: 64, rom: "bank05:969B", note: "ForceSpeedTowardsSamusDelayTbl（窗口；语义 16）" },
+        SegMeta { key: PackKey::RiEnemyDistanceThreshold, kind: "bytes", elem: 1, count: 16, rom: "bank05:96AB", note: "EnemyDistanceToSamusThreshold" },
+        SegMeta { key: PackKey::RiEnemyInitDelay, kind: "bytes", elem: 1, count: 64, rom: "bank05:96BB", note: "EnemyInitDelayTbl（窗口；语义 32）" },
+        SegMeta { key: PackKey::RiEnemyFacing, kind: "bytes", elem: 1, count: 64, rom: "bank05:977B", note: "L977B 朝向表" },
+        SegMeta { key: PackKey::RiEnMovPtrs, kind: "bytes", elem: 1, count: 36, rom: "bank05:96DB", note: "EnemyMovementPtrs（9×R/L×2B）" },
+        SegMeta { key: PackKey::RiEnMovStr, kind: "bytes", elem: 1, count: 512, rom: "bank05:97EF", note: "移动指令串窗" },
+        // ---- Norfair 敌表（bank02，同址布局）----
+        SegMeta { key: PackKey::NoEnemyHealth, kind: "bytes", elem: 1, count: 64, rom: "bank02:962B", note: "EnemyHealthTbl（窗口；语义 16）" },
+        SegMeta { key: PackKey::NoEnemyRestingAnim, kind: "bytes", elem: 1, count: 32, rom: "bank02:963B", note: "EnemyRestingAnimIndex" },
+        SegMeta { key: PackKey::NoEnemyActiveAnim, kind: "bytes", elem: 1, count: 32, rom: "bank02:965B", note: "EnemyActiveAnimIndex" },
+        SegMeta { key: PackKey::NoEnemyActiveAnimInitOffset, kind: "bytes", elem: 1, count: 16, rom: "bank02:967B", note: "EnemyActiveAnimIndexInitOffset" },
+        SegMeta { key: PackKey::NoEnemyForceAttribs, kind: "bytes", elem: 1, count: 16, rom: "bank02:968B", note: "L968B 强制属性" },
+        SegMeta { key: PackKey::NoEnemyForceSpeedDelay, kind: "bytes", elem: 1, count: 64, rom: "bank02:969B", note: "ForceSpeedTowardsSamusDelayTbl（窗口；语义 16）" },
+        SegMeta { key: PackKey::NoEnemyDistanceThreshold, kind: "bytes", elem: 1, count: 16, rom: "bank02:96AB", note: "EnemyDistanceToSamusThreshold" },
+        SegMeta { key: PackKey::NoEnemyInitDelay, kind: "bytes", elem: 1, count: 64, rom: "bank02:96BB", note: "EnemyInitDelayTbl（窗口；语义 32）" },
+        SegMeta { key: PackKey::NoEnemyFacing, kind: "bytes", elem: 1, count: 64, rom: "bank02:977B", note: "L977B 朝向表" },
+        SegMeta { key: PackKey::NoEnMovPtrs, kind: "bytes", elem: 1, count: 36, rom: "bank02:96DB", note: "EnemyMovementPtrs（9×R/L×2B）" },
+        SegMeta { key: PackKey::NoEnMovStr, kind: "bytes", elem: 1, count: 512, rom: "bank02:97EF", note: "移动指令串窗" },
         SegMeta { key: PackKey::RomTable968B, kind: "bytes", elem: 0x80, count: 8, rom: "各 bank $968B", note: "窗口参数化属性表 8×128B" },
         SegMeta { key: PackKey::RomVec95CE, kind: "bytes", elem: 2, count: 8, rom: "各 bank $95CE", note: "F2ED 流向量 [lo,hi]×8" },
         SegMeta { key: PackKey::NametableHi, kind: "bytes", elem: 1, count: 4, rom: "bank07:$C19F", note: "NT 高位表 20/24/28/2C" },
@@ -490,6 +558,35 @@ const AREA_NO: AreaSpec = AreaSpec {
            PackKey::NoRoomStreams, PackKey::NoRoomOffs, PackKey::NoStructures, PackKey::NoStructOffs],
 };
 
+
+/// Kraid（bank4）——`AreaPointers_ROM` 四项（prg4_kraid.asm:93-99）：
+/// room $A1D5/37 项（→$A21F）、struct $A21F/39 项（→$A26D=SpecItmsTbl）、
+/// metatiles $AC32/164 B（asm 41 组 ×4）。
+const AREA_KR: AreaSpec = AreaSpec {
+    bank: 4, room_ptrs: 0xA1D5, n_rooms: 37, struct_ptrs: 0xA21F, n_structs: 39,
+    metatiles: 0xAC32, n_metatiles: 164,
+    keys: [PackKey::KrRoomPtrs, PackKey::KrStructPtrs, PackKey::KrMetatiles,
+           PackKey::KrRoomStreams, PackKey::KrRoomOffs, PackKey::KrStructures, PackKey::KrStructOffs],
+};
+
+/// Tourian（bank3）——room $A7D1/21（→$A7FB）、struct $A7FB/32（→$A83B=SpecItmsTbl）、
+/// metatiles $AE49/216 B（asm 54 组 ×4）。
+const AREA_TO: AreaSpec = AreaSpec {
+    bank: 3, room_ptrs: 0xA7D1, n_rooms: 21, struct_ptrs: 0xA7FB, n_structs: 32,
+    metatiles: 0xAE49, n_metatiles: 216,
+    keys: [PackKey::ToRoomPtrs, PackKey::ToStructPtrs, PackKey::ToMetatiles,
+           PackKey::ToRoomStreams, PackKey::ToRoomOffs, PackKey::ToStructures, PackKey::ToStructOffs],
+};
+
+/// Ridley（bank5）——room $A17F/42（→$A1D3）、struct $A1D3/29（→$A20D=SpecItmsTbl）、
+/// metatiles $AB23/132 B（asm 33 组 ×4）。
+const AREA_RI: AreaSpec = AreaSpec {
+    bank: 5, room_ptrs: 0xA17F, n_rooms: 42, struct_ptrs: 0xA1D3, n_structs: 29,
+    metatiles: 0xAB23, n_metatiles: 132,
+    keys: [PackKey::RiRoomPtrs, PackKey::RiStructPtrs, PackKey::RiMetatiles,
+           PackKey::RiRoomStreams, PackKey::RiRoomOffs, PackKey::RiStructures, PackKey::RiStructOffs],
+};
+
 /// 读到 `$FF`（含）为止；找不到终止符 ⇒ 硬错（宁可拒绝出包也不静默截断）。
 fn read_until_ff(prg: &[u8], start: usize) -> Result<Vec<u8>, String> {
     let tail = prg.get(start..).ok_or_else(|| format!("自界越界：起点 {start}"))?;
@@ -534,28 +631,79 @@ fn extract_area(prg: &[u8], a: &AreaSpec) -> Result<Vec<Section>, String> {
 }
 
 
+
+/// 各区敌表（**地址五区同构**——`EnemyHealthTbl ; NN:962B` 等标签在 bank1-5 同址，
+/// 长度按 asm 标签间距/字节数机械给出，见 `docs/findings/enemy-table-extent.md`）：
+/// health 16（$962B→$963B）/ resting 32 / active 32 / init-offset 16 / force-attribs 16 /
+/// force-speed 16（$969B→$96AB）/ distance 16 / init-delay 32（$96BB→$96DB）/
+/// facing 64（$977B 起，窗口）/ mov-ptrs 36 / mov-str 512。
+const ENEMY_TABLE_LAYOUT: [(u16, usize); 11] = [
+    // **表长 vs 窗口**（enemy-table-extent 疑点定谳）：asm 标签间距给的是**语义表长**
+    // （health 16 / force-speed 16 / init-delay 32），但 `LoadEnemy` 用 `type & $3F`
+    // （0..63）索引 health —— 原版读的是**连续 ROM**，越过 16 B 后读到的是紧随其后的
+    // 敌人动画表。为复刻这一跨表连读，段按**窗口**取（64/64/64），与历史烘焙一致；
+    // 语义长度写在 `docs/findings/enemy-table-extent.md`。
+    (0x962B, 64), // EnemyHealthTbl（语义 16；窗口 64 覆盖 type&$3F 连读）
+    (0x963B, 32), // EnemyRestingAnimIndex
+    (0x965B, 32), // EnemyActiveAnimIndex
+    (0x967B, 16), // EnemyActiveAnimIndexInitOffset
+    (0x968B, 16), // L968B（强制属性；bank4 该标签跨 32 B=并入 force-speed）
+    (0x969B, 64), // EnemyForceSpeedTowardsSamusDelayTbl（语义 16；窗口 64）
+    (0x96AB, 16), // EnemyDistanceToSamusThreshold
+    (0x96BB, 64), // EnemyInitDelayTbl（语义 32；窗口 64）
+    (0x977B, 64), // L977B 朝向表（窗口）
+    (0x96DB, 36), // EnemyMovementPtrs（9 索引 × R/L × 2 B）
+    (0x97EF, 512), // 移动指令串窗
+];
+
+/// 五区敌表段键（顺序与 [`ENEMY_TABLE_LAYOUT`] 一一对应）。
+fn enemy_keys(area: usize) -> [PackKey; 11] {
+    match area {
+        0 => [PackKey::BrEnemyHealth, PackKey::BrEnemyRestingAnim, PackKey::BrEnemyActiveAnim,
+              PackKey::BrEnemyActiveAnimInitOffset, PackKey::BrEnemyForceAttribs,
+              PackKey::BrEnemyForceSpeedDelay, PackKey::BrEnemyDistanceThreshold,
+              PackKey::BrEnemyInitDelay, PackKey::BrEnemyFacing, PackKey::BrEnMovPtrs,
+              PackKey::BrEnMovStr],
+        1 => [PackKey::NoEnemyHealth, PackKey::NoEnemyRestingAnim, PackKey::NoEnemyActiveAnim,
+              PackKey::NoEnemyActiveAnimInitOffset, PackKey::NoEnemyForceAttribs,
+              PackKey::NoEnemyForceSpeedDelay, PackKey::NoEnemyDistanceThreshold,
+              PackKey::NoEnemyInitDelay, PackKey::NoEnemyFacing, PackKey::NoEnMovPtrs,
+              PackKey::NoEnMovStr],
+        2 => [PackKey::KrEnemyHealth, PackKey::KrEnemyRestingAnim, PackKey::KrEnemyActiveAnim,
+              PackKey::KrEnemyActiveAnimInitOffset, PackKey::KrEnemyForceAttribs,
+              PackKey::KrEnemyForceSpeedDelay, PackKey::KrEnemyDistanceThreshold,
+              PackKey::KrEnemyInitDelay, PackKey::KrEnemyFacing, PackKey::KrEnMovPtrs,
+              PackKey::KrEnMovStr],
+        3 => [PackKey::ToEnemyHealth, PackKey::ToEnemyRestingAnim, PackKey::ToEnemyActiveAnim,
+              PackKey::ToEnemyActiveAnimInitOffset, PackKey::ToEnemyForceAttribs,
+              PackKey::ToEnemyForceSpeedDelay, PackKey::ToEnemyDistanceThreshold,
+              PackKey::ToEnemyInitDelay, PackKey::ToEnemyFacing, PackKey::ToEnMovPtrs,
+              PackKey::ToEnMovStr],
+        _ => [PackKey::RiEnemyHealth, PackKey::RiEnemyRestingAnim, PackKey::RiEnemyActiveAnim,
+              PackKey::RiEnemyActiveAnimInitOffset, PackKey::RiEnemyForceAttribs,
+              PackKey::RiEnemyForceSpeedDelay, PackKey::RiEnemyDistanceThreshold,
+              PackKey::RiEnemyInitDelay, PackKey::RiEnemyFacing, PackKey::RiEnMovPtrs,
+              PackKey::RiEnMovStr],
+    }
+}
+
+/// 五区敌表提取（bank = 1..5 顺序；段内容 = `bank_slice(bank, addr, len)`）。
+fn extract_enemy_tables_all(prg: &[u8]) -> Result<Vec<Section>, String> {
+    let mut out = Vec::with_capacity(55);
+    for (i, bank) in [1u8, 2, 3, 4, 5].into_iter().enumerate() {
+        let keys = enemy_keys(i);
+        for (j, (addr, len)) in ENEMY_TABLE_LAYOUT.iter().enumerate() {
+            out.push(Section { key: keys[j], data: bank_slice(prg, bank, *addr, *len)? });
+        }
+    }
+    Ok(out)
+}
+
 /// Brinstar 敌九表（`prg1_brinstar.asm` 连续标签——地址由标签机械给出）。
 /// **表长口径**：健康/强制速度/初始延迟/朝向在 asm 里各 16 B（$962B→$963B 等相邻标签间距），
 /// 本仓历史烘焙为 64 B（跨表连读）。搬家不改语义 ⇒ 仍按提交件的声明长度取，等长在
 /// `docs/findings/enemy-table-extent.md`（待建）另案收敛。
-const BR_ENEMY_TABLES: [(PackKey, u16, usize, &str); 11] = [
-    (PackKey::BrEnemyHealth, 0x962B, 64, "EnemyHealthTbl"),
-    (PackKey::BrEnemyRestingAnim, 0x963B, 32, "EnemyRestingAnimIndex"),
-    (PackKey::BrEnemyActiveAnim, 0x965B, 32, "EnemyActiveAnimIndex"),
-    (PackKey::BrEnemyActiveAnimInitOffset, 0x967B, 16, "EnemyActiveAnimIndexInitOffset"),
-    (PackKey::BrEnemyForceAttribs, 0x968B, 16, "L968B（强制属性）"),
-    (PackKey::BrEnemyForceSpeedDelay, 0x969B, 64, "EnemyForceSpeedTowardsSamusDelayTbl"),
-    (PackKey::BrEnemyDistanceThreshold, 0x96AB, 16, "EnemyDistanceToSamusThreshold"),
-    (PackKey::BrEnemyInitDelay, 0x96BB, 64, "EnemyInitDelayTbl"),
-    (PackKey::BrEnemyFacing, 0x977B, 64, "L977B（朝向）"),
-    // `EnemyMovementPtrs ; 01:96DB` 真表 **9 索引 × R/L × 2 B = 36 B**（asm 18 个 `.word`）；
-    // 旧烘焙读成 138 项（276 B）是过度读（紧随其后的加速/速度表被当指针读入），
-    // 消费侧只索引 `(movementIndex*2+facing)*2` ⇒ 只前 36 B 有语义。
-    (PackKey::BrEnMovPtrs, 0x96DB, 36, "EnemyMovementPtrs"),
-    // 移动指令串区 `$97EF..$99EF`（512 B 窗口；首个指针 $97EF，被引用串上界 $98B9+
-    // 指令尾，窗口为覆盖上界，消费侧按指针偏移取值）。
-    (PackKey::BrEnMovStr, 0x97EF, 512, "EnemyMovementNN_R/L 串区"),
-];
+
 
 
 /// `$968B` 属性表逐 bank（8×128B；源 `prg[w*0x4000 + 0x168B ..]`——
