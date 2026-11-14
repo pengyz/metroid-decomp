@@ -175,7 +175,7 @@ WritePPUCtrl（唯一点亮真 PPUMASK 的地方）/ WriteScroll / ReadJoyPads`�
 | **3** | 电梯 / 区域间移动 | ★★★ | 只有 2 个区可达，且**不能换区** | `UpdateElevator $D7B3` + `SpawnElevator $EEA1` + `InitBank3/4/5` | 大 |
 | **4** | 后三区数据（Kraid/Tourian/Ridley） | ★★★ | 3/5 世界不可进 | 在 `crates/game-data/src/extract.rs` 增 3 区段（区序见 `AREA_ITEMS`/`AREA_SPEC`）+ 敌表分区（**先解 16B vs 64B 尺寸疑点**，见 `docs/findings/enemy-table-extent.md`） | 中 |
 | **5** | 暂停→密码屏（`mr=5 PauseMode` + `mr=6 GoPassword` 缺） ✅ **已修（并入 #2）** | ★★ | ~~panic~~ → 已端口 `pause_mode`/`go_password` | `PauseMode` 需 2P 的 A+UP 同按 + 逃脱计时器未激活；成功则 `GamePaused←0` + `inc MainRoutine`(5→6) | 小（已完成） |
-| **6** | 出门链（`MoveOutDoor $D3AE` 等 4 桩） ✅ **已实现 / 待差分验证** | ★★ | ~~走门 panic~~ → 已端口；**但无 L4 采集点走到该链**（见下行注） | `samus_door` 全链（D3A8 逐字节）+ `Door_DeleteOffscreenEnemies`（D48C，**保真两处 asm 自带 BUG**：敌环 `#$60`/`#$20` 而非 `#$50`/`#$10`；管道虫洞环 `bne` 致槽 0 不访问）+ `Doors_RemoveIfOffScreen`（ED65，4 门 $B0..$80）+ `GotoClearAllMetroidLatches`（$95AB 区 bank 桩表：仅 bank3 Tourian 有效，其余 `60 EA EA`）+ 音乐面（`ItemRoomMusicStatus`/`KraidRidleyPresent`→TourianMusic） | 中（已完成） |
+| **6** | 出门链（`MoveOutDoor $D3AE` 等 4 桩） ✅ **已实现 / 待差分验证** | ★★ | ~~走门 panic~~ → 已端口；**但无 L4 采集点走到该链**（见下行注） | `samus_door` 全链（D3A8 逐字节）+ `Door_DeleteOffscreenEnemies`（D48C，**保真两处 asm 自带 BUG**：敌环 `#$60`/`#$20` 而非 `#$50`/`#$10`；管道虫洞环 `bne` 致槽 0 不访问）+ `Doors_RemoveIfOffScreen`（ED65，4 门 $B0..$80）+ `GotoClearAllMetroidLatches`（$95AB 区 bank 桩表：仅 bank3 Tourian 有效，其余 `60 EA EA`）+ 音乐面（`ItemRoomMusicStatus`/`KraidRidleyPresent`→TourianMusic） | 中（实现完成 / 差分待补） |
 | **7** | 声音内容（24/28 零触达） | ★ | 音效/音乐行为无证据 | ①补 `B7E7`/`B87F` 两件高频 ②建音频 RAM 语义列（`.sem` 扩 `$0600-$068D`） | 中 |
 | **8** | FC +2 相位 | ★ | L4 两格 23/42px + sem password 案 45.6% | 周期会计（已裁定冻结，待裁） | 大 |
 
@@ -187,7 +187,14 @@ WritePPUCtrl（唯一点亮真 PPUMASK 的地方）/ WriteScroll / ReadJoyPads`�
 > 且循环用 `while x >= 0` 跑 12 轮（asm `bmi` 回跳 ⇒ 恰 4 轮）——两处已修并加零页哨兵断言。
 > 更关键的是**覆盖**：现有 14 案 112 格里没有任何采集点会让 `SamusDoor` 被调用
 > （唯一门案 `case-002-door-blue-interaction` 全程 `DoorEntryStatus=0`、`Samus.status` 从未出现 5），
-> 故该链目前**只有单测证据、零对拍证据**。结项前须补一条门退出窗口内的采样点。
+> 故该链目前**只有单测证据、零对拍证据**。结项前须补采样点，且必须按三步做，
+> 否则「补了采集点但没走到 SamusDoor」会成为假绿：
+> 1. **先定位帧号**：用 oracle 逐帧记录 `$0056`（`tools/scenario_capture.lua` 的 readRangeWithEnsExtra
+>    已能取 wram，加一条 per-frame 记录），找到第一个 `$56≠0` 的帧 F 与 `$59` 递减段；
+> 2. 在 `F..F+40` 内加 2 个 `capture`（`ram.hex` 已含 `$0000-$07FF`，`$56/$59/$58/$4E/$0300/$030E`
+>    无需额外 watch 配置）；
+> 3. **断言该段真的进链**：`$56 ∈ {1,2,3,4,5,$80..$84}` 且 `$59` 曾非 0、`$0300` 曾为 5。
+>    三条任一不成立即视为采样点无效，须重定位帧号。
 
 > 【2026-11-13 更正】上表 #5「密码屏返回 panic」的初判**不成立**：`_id_GoPassword` 全仓只出现在
 > `WaitTimer` 的比较里（`refs/m1disasm/SRC/prg7_engine.asm:1229`），而 `stx NextRoutine` 唯一

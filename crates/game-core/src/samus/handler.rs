@@ -1854,15 +1854,18 @@ mod tests_door_chain {
         m.write_ram(0x03BB, 0x00); // +0x0B onScreen=0
         m.write_ram(0x03A0, 0x01); // 门槽 10：存在、在屏
         m.write_ram(0x03AB, 0x01);
-        m.write_ram(0x0380, 0x00); // 门槽 8：空槽
+        // 门槽 8（$0380）是**循环最后一轮**的落点 ⇒ 必须设成「存在+离屏」并断言被清，
+        // 否则「少跑最后一轮」（如 break 条件写成 `(x as i8) > 0`）仍会绿（r9 复评 P2）。
+        m.write_ram(0x0380, 0x01);
+        m.write_ram(0x038B, 0x00);
         // 越界哨兵：$0130/$0120/$0100（旧错基址会写到这里）与 $0080/$00A0
         for a in [0x0130u16, 0x0120, 0x0100, 0x0080, 0x00A0, 0x013B] {
             m.write_ram(a, 0x5A);
         }
         samus_door(&mut m);
-        assert_eq!(m.read_ram(0x03B0), 0x00, "离屏门槽 11 应被清");
+        assert_eq!(m.read_ram(0x03B0), 0x00, "离屏门槽 11 应被清（首轮）");
         assert_eq!(m.read_ram(0x03A0), 0x01, "在屏门槽 10 应保留");
-        assert_eq!(m.read_ram(0x0380), 0x00, "空槽保持 0");
+        assert_eq!(m.read_ram(0x0380), 0x00, "离屏门槽 8 应被清（末轮——漏跑即红）");
         for a in [0x0130u16, 0x0120, 0x0100, 0x0080, 0x00A0, 0x013B] {
             assert_eq!(m.read_ram(a), 0x5A, "越界哨兵 {a:#06X} 不得被触碰");
         }
