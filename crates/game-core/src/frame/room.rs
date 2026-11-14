@@ -311,6 +311,155 @@ fn draw_door(mem: &mut crate::frame::FrameMemory, x_off: u8) {
     crate::frame::sprite::anim_draw_object(mem, x_off, 6); // AnimDrawObject（DE47——A=6 单走）
 }
 
+/// DeleteOffscreenRoomSprites（`07:EC9B`）——载房前清掉「即将进入视野的名表里」的陈旧对象。
+///
+/// asm 逐件（`refs/m1disasm/SRC/prg7_engine.asm:9064-9180`）：
+/// ① `UpdateDoorData`×2（y=0/1，清方向位的 scroll-block 掩码）
+/// ② 敌六槽：`(nt ^ EnsExtra.hi) & 1 == 0` ∧ `Ens.data05 & $02 == 0` ⇒ `status←0`
+/// ③ Mellow 四槽：同判 ⇒ `status←0`
+/// ④ `Doors_RemoveIfOffScreen`
+/// ⑤ `EraseScrollBlockOnNameTableAtScrollDir`（`ScrollBlockOnNameTable3[nt^1]←0`）
+/// ⑥ TileBlast 十三槽：`((nt<<2) ^ roomRAMPtr+1) & $04 == 0` ⇒ `routine←0`
+/// ⑦ Samus 弹 D/E/F 槽：`status >= wa_BulletExplode+1` ∧ `(nt ^ hi)&1 == 0` ⇒ `status←0`
+/// ⑧ 电梯：`nt == Elevator.hi` ⇒ `status←0`
+/// ⑨ Mem0700 六槽：`data04 == 0` ⇒ `status←$FF`
+/// ⑩ 石像：`nt == Statue.hi` ⇒ `status←0`
+/// ⑪ PipeBugHole 四槽：`nt == hi` ⇒ `status←$FF`
+/// ⑫ PowerUps 两槽：`nt == hi` ⇒ `type←$FF`
+/// ⑬ `jmp GotoDeleteOffscreenRoomSprites_Tourian`（区 bank 桩：Br/No/Kr/Ri = `60 EA EA` 空桩）
+///
+/// `nt = GetNameTableAtScrollDir = ($FF ^ ScrollDir) & 1`（`$EB85`）＝**正在进入视野**的名表。
+/// 判据是「对象在这个名表里 ⇒ 当前必然离屏」，故可删（与 `DeleteEnemyOffscreen $D4B4` 同族）。
+pub fn delete_offscreen_room_sprites(mem: &mut crate::frame::FrameMemory) {
+    const ENS_EXTRA: u16 = 0x6AF4;
+    const ENS: u16 = 0x0400;
+    const MELLOWS: u16 = 0x00B0;
+    const TILE_BLASTS: u16 = 0x0500;
+    const MEM0700: u16 = 0x0700;
+    const PIPE_BUG_HOLES: u16 = 0x0728;
+    const POWER_UPS: u16 = 0x0748;
+    const STATUE_OFF: u16 = 0x60; // Objects 槽 6
+    const ELEVATOR_OFF: u16 = 0x20; // Objects 槽 2
+    const WA_BULLET_EXPLODE: u8 = 0x04;
+
+    let scroll_dir = mem.read_ram(crate::ram_map::SCROLL_DIR);
+    let ppuctrl = mem.read_ram(crate::ram_map::PPUCTRL_ZP);
+    let nt = get_name_table_at_scroll_dir(ppuctrl, scroll_dir);
+
+    // ① UpdateDoorData（$ED51）——x 入口 = ScrollDir-1；两 y 槽（$6C/$6D）。
+    let x = scroll_dir.wrapping_sub(1);
+    for y in 0u16..2 {
+        let v = (x ^ 0x03) & mem.read_ram(0x006C + y);
+        mem.write_ram(0x006C + y, v);
+    }
+
+    // ② 敌槽（$50 → $00，步 $10；`bpl` 环）。
+    let mut xo: u8 = 0x50;
+    loop {
+        let hi = mem.read_wram(ENS_EXTRA + xo as u16);
+        if (nt ^ hi) & 1 == 0 && mem.read_ram(ENS + xo as u16 + 5) & 0x02 == 0 {
+            mem.write_wram(ENS_EXTRA + xo as u16, 0);
+        }
+        xo = xo.wrapping_sub(0x10);
+        if (xo as i8) < 0 {
+            break;
+        }
+    }
+
+    // ③ Mellow 四槽（$30 → $00，步 $08）。
+    let mut xo: u8 = 0x30;
+    loop {
+        let hi = mem.read_ram(MELLOWS + xo as u16 + 3);
+        if (nt ^ hi) & 1 == 0 {
+            mem.write_ram(MELLOWS + xo as u16, 0);
+        }
+        xo = xo.wrapping_sub(0x08);
+        if (xo as i8) < 0 {
+            break;
+        }
+    }
+
+    // ④ 门（$ED65，复用已端口件）。
+    crate::samus::handler::doors_remove_if_offscreen(mem);
+
+    // ⑤ EraseScrollBlockOnNameTableAtScrollDir（$ED5B）：目标 = nt^1 那条掩码清 0。
+    mem.write_ram(0x006C + (nt ^ 1) as u16, 0);
+
+    // ⑥ TileBlast 十三槽（$C0 → $00，步 $10）：`roomRAMPtr+1` = 槽内 +9。
+    let ty4 = nt.wrapping_shl(2);
+    let mut xo: u8 = 0xC0;
+    loop {
+        let hi = mem.read_ram(TILE_BLASTS + xo as u16 + 9);
+        if (ty4 ^ hi) & 0x04 == 0 {
+            mem.write_ram(TILE_BLASTS + xo as u16, 0);
+        }
+        xo = xo.wrapping_sub(0x10);
+        if xo == 0xF0 {
+            break; // asm `cmp #-sizeof(TileBlast)` ⇒ 处理完 $00 后停
+        }
+    }
+
+    // ⑦ Samus 弹三槽（D/E/F）：非束族（status >= wa_BulletExplode+1）且在该名表 ⇒ 清。
+    for off in [0xD0u8, 0xE0, 0xF0] {
+        let o = 0x0300 + off as u16;
+        if mem.read_ram(o) >= WA_BULLET_EXPLODE + 1
+            && (nt ^ mem.read_ram(o + 0x0C)) & 1 == 0
+        {
+            mem.write_ram(o, 0);
+        }
+    }
+
+    // ⑧ 电梯。
+    let elev = 0x0300 + ELEVATOR_OFF;
+    if nt == mem.read_ram(elev + 0x0C) {
+        mem.write_ram(elev, 0);
+    }
+
+    // ⑨ Mem0700 六槽（$1E → $00，步 $06）：data04==0 ⇒ status←$FF。
+    let mut xo: u8 = 0x1E;
+    loop {
+        if mem.read_ram(MEM0700 + xo as u16 + 4) == 0 {
+            mem.write_ram(MEM0700 + xo as u16, 0xFF);
+        }
+        xo = xo.wrapping_sub(0x06);
+        if (xo as i8) < 0 {
+            break;
+        }
+    }
+
+    // ⑩ 石像。
+    let statue = 0x0300 + STATUE_OFF;
+    if nt == mem.read_ram(statue + 0x0C) {
+        mem.write_ram(statue, 0);
+    }
+
+    // ⑪ PipeBugHole 四槽（$18 → $00，步 $08）：hi(+4) 命中 ⇒ status←$FF。
+    let mut xo: u8 = 0x18;
+    loop {
+        if nt == mem.read_ram(PIPE_BUG_HOLES + xo as u16 + 4) {
+            mem.write_ram(PIPE_BUG_HOLES + xo as u16, 0xFF);
+        }
+        xo = xo.wrapping_sub(0x08);
+        if (xo as i8) < 0 {
+            break;
+        }
+    }
+
+    // ⑫ PowerUp 两槽（$00/$08）：hi(+3) 命中 ⇒ type←$FF。
+    for xo in [0u8, 0x08] {
+        if nt == mem.read_ram(POWER_UPS + xo as u16 + 3) {
+            mem.write_ram(POWER_UPS + xo as u16, 0xFF);
+        }
+    }
+
+    // ⑬ Tourian 尾（`GotoDeleteOffscreenRoomSprites_Tourian ; 03:95AE`）：
+    // 区 bank 桩——ROM 实测 bank1/2/4/5 = `60 EA EA`（rts），bank3 = `4C 6F 9C`（jmp）。
+    // 非 Tourian 到此即完；Tourian 实件（Metroid 家族清理）尚未端口 ⇒ 显式记账。
+    if crate::frame::mainloop::BANK_TABLE[crate::frame::cur_area(mem) as usize] == 0x04 {
+        crate::frame::DIVERGENCES.with(|d| d.borrow_mut().push(0x9C6F));
+    }
+}
+
 /// UpdateAllDoors（$8B79）——4 门环（$B0/$A0/$90/$80（X-=0x10；bmi 环））。
 pub fn update_all_doors(mem: &mut crate::frame::FrameMemory) {
     for x in [0xB0u8, 0xA0, 0x90, 0x80] {
@@ -1395,5 +1544,75 @@ mod tests_update_attrib_quirk {
         assert_ne!(b, 0, "B 半区属性写落 $67xx（asm 终形（hi|=ptr_hi&4））");
         // $63xx 内应有写（f(0x40) 公式位）
         assert_eq!((b >> 4) & 0x03, 2, "quadrant x=2（色位 4-5）");
+    }
+}
+
+#[cfg(test)]
+mod tests_delete_offscreen_room_sprites {
+    //! `DeleteOffscreenRoomSprites ; 07:EC9B` 语义钉（A-重锚暴露的「敌不消失」根修）。
+    //! 逐条对 asm 的判据方向：`(nt ^ hi) & 1 == 0`（= 在目标名表）才删；
+    //! 敌还要求 `data05 & $02 == 0`（不可见）；PowerUp 是「相等才删」（`bne exit`）。
+    use super::*;
+
+    fn mem_with_nt(ppuctrl: u8, scroll_dir: u8) -> crate::frame::FrameMemory {
+        let mut m = crate::frame::FrameMemory::default();
+        m.write_ram(crate::ram_map::PPUCTRL_ZP, ppuctrl);
+        m.write_ram(crate::ram_map::SCROLL_DIR, scroll_dir);
+        m
+    }
+
+    #[test]
+    fn enemy_in_target_nt_and_invisible_is_removed() {
+        let mut m = mem_with_nt(0x00, 0x00); // nt = 0
+        let slot = 0x50u16; // Ens 槽 5
+        m.write_wram(0x6AF4 + slot, 0x00); // hi bit0 = 0（同目标名表）
+        m.write_ram(0x0400 + slot + 5, 0x00); // data05 bit1 = 0（不可见）
+        delete_offscreen_room_sprites(&mut m);
+        assert_eq!(m.read_wram(0x6AF4 + slot), 0, "目标名表内不可见敌应被清 status");
+    }
+
+    #[test]
+    fn visible_enemy_survives_even_in_target_nt() {
+        let mut m = mem_with_nt(0x00, 0x00);
+        let slot = 0x40u16;
+        m.write_wram(0x6AF4 + slot, 0x02);
+        m.write_ram(0x0400 + slot + 5, 0x02); // bit1=1 可见
+        delete_offscreen_room_sprites(&mut m);
+        assert_eq!(m.read_wram(0x6AF4 + slot), 2, "可见敌不得被清（asm `and #$02 / bne`）");
+    }
+
+    #[test]
+    fn enemy_in_other_nt_survives() {
+        let mut m = mem_with_nt(0x00, 0x00); // nt = 0
+        let slot = 0x30u16;
+        m.write_wram(0x6AF4 + slot, 0x01); // hi bit0 = 1（异名表）
+        m.write_ram(0x0400 + slot + 5, 0x00);
+        delete_offscreen_room_sprites(&mut m);
+        assert_eq!(m.read_wram(0x6AF4 + slot), 1, "异名表敌不删（判据是「在目标名表」）");
+    }
+
+    #[test]
+    fn scroll_block_mask_clears_direction_bit_and_erases_target_nt() {
+        // scroll_dir=3 ⇒ x_dir=2 ⇒ 2^3=1 ⇒ 两掩码 &= ~1；nt=(0^3)&1=1 ⇒ $6C+(1^1)=$6C ← 0
+        let mut m = mem_with_nt(0x00, 0x03);
+        m.write_ram(0x006C, 0xFF);
+        m.write_ram(0x006D, 0xFF);
+        delete_offscreen_room_sprites(&mut m);
+        assert_eq!(m.read_ram(0x006C), 0x00, "EraseScrollBlock 清 nt^1 槽（=$6C）");
+        // UpdateDoorData 形 = `(ScrollDir-1) ^ 3 & 旧值`（**取交集而非清位**）：
+        // dir=3 ⇒ x_dir=2 ⇒ 2^3=1 ⇒ 只剩 bit0 ⇒ $6D 变 1（原版语义，照录）。
+        assert_eq!(m.read_ram(0x006D), 0x01, "UpdateDoorData = (x^3) & 旧值（取交集）");
+    }
+
+    #[test]
+    fn power_up_in_target_nt_is_marked_used() {
+        let mut m = mem_with_nt(0x00, 0x00);
+        m.write_ram(0x0748 + 3, 0x00); // 槽 0 hi = 0 == nt
+        m.write_ram(0x0748 + 8 + 3, 0x01); // 槽 1 hi = 1 != nt
+        m.write_ram(0x0748, 0x05);
+        m.write_ram(0x0748 + 8, 0x05);
+        delete_offscreen_room_sprites(&mut m);
+        assert_eq!(m.read_ram(0x0748), 0xFF, "同 nt 的 PowerUp 应 type←$FF");
+        assert_eq!(m.read_ram(0x0748 + 8), 0x05, "异 nt 不动（asm `bne` 早退）");
     }
 }

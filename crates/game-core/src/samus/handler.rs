@@ -1343,7 +1343,7 @@ pub(crate) fn goto_clear_all_metroid_latches(mem: &mut FrameMemory) {
 /// `Doors_RemoveIfOffScreen ; 07:ED65`（ROM `A2 B0 BD 00 03 F0 08 BD 0B 03 D0 03
 /// 9D 00 03 20 F4 F1`）：x 自 $B0 起每轮 −$10（`Xminus16`+`bmi` 环）⇒ 4 门
 /// $B0/$A0/$90/$80；`status≠0` 且 `onScreen==0` ⇒ `status ← 0`（A=0 直接回存）。
-fn doors_remove_if_offscreen(mem: &mut FrameMemory) {
+pub(crate) fn doors_remove_if_offscreen(mem: &mut FrameMemory) {
     // `ldx #Doors-Objects+_sizeof_Doors-_sizeof_Doors.0` = $B0；循环尾
     // `jsr Xminus16 / bmi @loop` —— **bmi 是回跳条件**：减后仍为负才继续（i8 符号位）。
     // 序列 $B0→$A0→$90→$80→$70（$70 为正 ⇒ 退出）⇒ 恰 4 槽，$03B0..$0380。

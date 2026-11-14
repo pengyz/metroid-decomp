@@ -3461,10 +3461,11 @@ pub fn get_room_num(mem: &mut FrameMemory) -> bool {
 /// →RoomPalette 读→AddToRoomPtr/SelectRoomRAM/InitTables→DrawRoom（**S6-7 房间绘制链**
 /// ——嵌套桩：game-data 房间模型协同）。
 pub fn setup_room(mem: &mut FrameMemory) {
-    mem.work_cycles = mem.work_cycles.wrapping_add(crate::frame::cycles::LOAD_SHELL); // 固定壳（ScanForItems 族）
-    // 【能力移植（2026-10-31）】ScanForItems（ED98——SetupRoom 首件（asm :8588））：
-    // 当前图格特项扫描→PowerUp 装载（吃能力上图！）。
-    crate::pickup::spawn::scan_for_items(mem);
+    mem.work_cycles = mem.work_cycles.wrapping_add(crate::frame::cycles::LOAD_SHELL); // 固定壳
+    // 【2026-11-14 顺序更正】asm `SetupRoom ; 07:EA2B` 的次序是：
+    // `lda RoomNumber / cmp #$FF beq RTS / cmp #$FE beq DrawRoom / cmp #$F0 bcs AttribTableWrite`
+    // → `jsr DeleteOffscreenRoomSprites` → `jsr ScanForItems`。
+    // 旧形把 ScanForItems 提到最前——未定义房（$FF）也会先吃一次特项扫描（错序）。
     let room = mem.read_ram(0x005A);
     if room == 0xFF {
         return; // 未定义房（RTS）
@@ -3477,6 +3478,10 @@ pub fn setup_room(mem: &mut FrameMemory) {
         crate::frame::room::attrib_table_write(mem);
         return;
     }
+    // DeleteOffscreenRoomSprites（$EC9B）——载房前清「正在进入视野的名表」里的陈旧对象。
+    crate::frame::room::delete_offscreen_room_sprites(mem);
+    // ScanForItems（$ED98）——当前图格特项扫描 → PowerUp 装载。
+    crate::pickup::spawn::scan_for_items(mem);
     // RoomPtrTable 查表（**asm `lda (AreaPointers_RAM.RoomPtrTable),y` 经 $3B/$3C 间接**——
     // 基址拷自当前区 bank $959A，表按区分发：0=Brinstar $A314 47 项 / 1=Norfair $A21B 46 项；
     // 折叠等价：直查该区烘焙表（表值与 ROM 逐字节同——各件头注自证），asm 形=间接查 ROM）。
