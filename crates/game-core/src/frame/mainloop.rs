@@ -2745,8 +2745,14 @@ fn uw_samus_enter_door(mem: &mut crate::frame::FrameMemory) {
     crate::samus::physics::samus_enter_door(mem);
 }
 
-/// UpdateAllDoors（门链——槽空⇒跳过；门显示随件）。
-fn uw_all_doors(_mem: &mut crate::frame::FrameMemory) {}
+/// UpdateAllDoors（$8B79——`jsr` 点 prg7_engine.asm:2510，件序在 SamusEnterDoor 与
+/// UpdateAllTileBlasts 之间；实件在 `crate::frame::room::update_all_doors`）。
+/// 2026-11-14 更正：本函数曾是空壳（`{}`），导致门链实现齐备却从未接线——
+/// A 方案把输入窗移出开场演出后，`case-002` 立即暴露（emu 门 status 2/anim $31
+/// vs rust 永停 status 1 全零）。空壳期所有门单测仍绿，因为没有一条链路走到 `jsr` 点。
+fn uw_all_doors(mem: &mut crate::frame::FrameMemory) {
+    crate::frame::room::update_all_doors(mem);
+}
 
 /// UpdateSkreeProjectiles（**asm 内容锚** `UpdateSkreeProjectile: ; 07:FBEC`（prg7:12157-
 /// 12242 全谱——goal-轮13 件））：①dieDelay 倒数 ②速表（FC5D——(Y,X)：(0,−5)/(−5,−2)

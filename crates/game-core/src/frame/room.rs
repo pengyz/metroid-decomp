@@ -321,6 +321,10 @@ pub fn update_all_doors(mem: &mut crate::frame::FrameMemory) {
 /// UpdateDoor（$8B87）——7 态 JumpEngine 分派（0=ExitSub/1=Init/2=Closed/3=Open/
 /// 4-6=过门态（任务卡 5 桩（unported fail-loud（lead 裁定面）））。
 pub fn update_door(mem: &mut crate::frame::FrameMemory, x_off: u8) {
+    // UpdateDoor（$8B87）首件 `stx PageIndex`（$004B）—— DrawDoor→AnimDrawObject→
+    // UpdateObjAnim（$DC8F）用 `ldx PageIndex` 取槽，缺此写会把动画推进到别的槽
+    // （2026-11-14 实测：门 status 已 2 但 animFrame 恒 0、animDelay 恒 0、半径错）。
+    mem.write_ram(crate::ram_map::PAGE_INDEX, x_off);
     let x = x_off as u16;
     let status = mem.read_ram(0x0300 + x);
     match status {
@@ -1022,8 +1026,18 @@ mod tests_update_door {
             assert_eq!(m.read_ram(0x0300 + 0x80), 2, "status→2（t={}）", dtype);
             assert_eq!(m.read_ram(0x038F), [5u8, 1, 10, 1][dtype as usize], "HP←表（t={}）", dtype);
             assert_eq!(m.read_ram(0x0305 + 0x80), 0x30, "animReset←DoorClose_Reset");
-            assert_eq!(m.read_ram(0x0306 + 0x80), 0x30, "animIndex（D2FA 落穿）");
-            assert_eq!(m.read_ram(0x0304 + 0x80), 0, "animDelay←0");
+            // DrawDoor→AnimDrawObject→UpdateObjAnim（$DC8F）在 Init 末尾就地走一格：
+            // animDelay←A($06)、animIndex $30→$31、animFrame←ObjectAnimIndexTbl[$30]。
+            // 【2026-11-14 更正】旧断言写 `animIndex==$30 / animDelay==0`——那是
+            // `update_door` 漏写 `PageIndex`（$8B87 首件 `stx PageIndex`）时的观测值：
+            // 走表打到了上一个 PageIndex 的槽，门自己从不前进（emu 实测 $31/4）。
+            assert_eq!(m.read_ram(0x0304 + 0x80), 0x06, "animDelay←A=6（UpdateObjAnim）");
+            assert_eq!(m.read_ram(0x0306 + 0x80), 0x31, "animIndex 前进一格（$30→$31）");
+            assert_eq!(
+                m.read_ram(0x0303 + 0x80),
+                game_data::assets::sprite_data()[0x30],
+                "animFrame←ObjectAnimIndexTbl[$30]（$8572 偏移表）",
+            );
             assert_eq!(m.read_ram(0x030A + 0x80), 0, "isHit←0（DrawDoor）");
             // 实瓦（$4E×6 纵写（ptr=make_room_ram_ptr($50,$E8,0)））+DoorRoomRAMPtr
             let (lo, hi) = make_room_ram_ptr(0x50, 0xE8, 0);
@@ -1227,7 +1241,8 @@ mod tests_door_transition_chain {
                 assert_eq!(m.read_ram(0x0300 + 0x80), 5, "→Scroll（e={}）", entry);
                 assert_eq!(m.read_ram(0x0091), 0, "dir 清（e={}）", entry);
                 assert_eq!(m.read_ram(0x0305 + 0x80), 0x30, "闭 anim Reset（e={}）", entry);
-                assert_eq!(m.read_ram(0x0306 + 0x80), 0x2E, "闭 anim base（e={}）", entry);
+                // 【2026-11-14 更正】base=$2E 后 DrawDoor 的 UpdateObjAnim 就地走一格 ⇒ $2F。
+                assert_eq!(m.read_ram(0x0306 + 0x80), 0x2F, "闭 anim base 走一格（$2E→$2F（e={}）", entry);
                 let (lo, hi) = make_room_ram_ptr(0x50, 0xE8, 0);
                 let base = ((hi as u16) << 8) | lo as u16;
                 assert_eq!(m.read_wram(base), 0x4E, "回封 Solid（e={}）", entry);
