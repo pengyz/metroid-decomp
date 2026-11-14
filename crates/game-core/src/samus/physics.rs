@@ -1119,6 +1119,12 @@ pub fn lava_and_move_check(mem: &mut FrameMemory) {
     // 天花板块行（y=54 撤 row3 固实）⇒ 提前顶头 5px+无挂顶漂移 ⇒ 弧线/落点全分叉
     // （emu 门帧探 row4 开+漂移越块后 row3 开 ⇒ 自然顶点 47 悬停）。
     let ry = mem.read_ram(crate::ram_map::SAMUS_RADIUS_Y);
+    // 【asm 内容锚】`SamusMoveVertically ; 07:E2A9` 首件：`lda Samus.y / sec / sbc ScrollY /
+    // sta SamusScrY`（$52，每帧一次；逐像素环内只 inc/dec 它）。
+    mem.write_ram(
+        crate::ram_map::SAMUS_SCR_Y,
+        mem.read_ram(0x030D).wrapping_sub(mem.read_ram(crate::ram_map::SCROLL_Y)),
+    );
     for _ in 0..steps {
         let y_now = mem.read_ram(0x030D);
         // 【goal-r15 复核 R1 更正】asm 双向查撞：MoveSamusDown（E4A3 向下，点 y+ry）/
@@ -1149,12 +1155,47 @@ pub fn lava_and_move_check(mem: &mut FrameMemory) {
                 break;
             }
         }
+        // 【竖滚跟随】asm MoveSamusDown 的 `SamusScrY>=#$84 ⇒ jsr ScrollDown`（成功则不
+        // inc ScrY）/ MoveSamusUp 的 `SamusScrY<#$66 ⇒ jsr ScrollUp`（成功则不 dec ScrY）——
+        // 即**摄像机跟着萨姆斯走**（竖房/电梯/换区的地基）。横滚房里 ScrollDir&2≠0 ⇒
+        // scroll_* 立即返回 false，等价于旧形（只 inc/dec ScrY）。
+        let scr_y = mem.read_ram(crate::ram_map::SAMUS_SCR_Y);
+        let moved_camera = if going_down {
+            if scr_y >= 0x84 {
+                scroll_down(mem)
+            } else {
+                false
+            }
+        } else if scr_y < 0x66 {
+            scroll_up(mem)
+        } else {
+            false
+        };
+        if !moved_camera {
+            let nv = if going_down { scr_y.wrapping_add(1) } else { scr_y.wrapping_sub(1) };
+            mem.write_ram(crate::ram_map::SAMUS_SCR_Y, nv);
+        }
         let y = mem.read_ram(0x030D);
         // 【goal-r15】asm MoveSamusUp（Lx155 `dec Samus.y/inc SamusJumpDsplcmnt`）/
         // MoveSamusDown（E4A3 Lx162 `inc Samus.y/dec SamusJumpDsplcmnt`）——**逐像素位移
         // 计数**（JumpDsplcmnt 净上移）。旧形漏 inc/dec→JumpDsplcmnt 恒 0→SamusJump
         // 位移门（≥$20 松开→StopVertMovement）永不触发→跳跃无界（L4 f950 发散根因）。
         let disp_cnt = mem.read_ram(crate::ram_map::SAMUS_JUMP_DISP);
+        // 【Y 环绕 = 名表位翻转】asm MoveSamusDown：`y==SCRN_VY-1 ⇒ (ScrollDir&2==0 ⇒
+        // ToggleSamusHi) / y←$FF` 再 `inc y`（⇒0）；MoveSamusUp：`y==0 ⇒ (同门 ⇒
+        // ToggleSamusHi) / y←SCRN_VY` 再 `dec y`（⇒239）。
+        if going_down && y == SCRN_VY - 1 {
+            if mem.read_ram(crate::ram_map::SCROLL_DIR) & 0x02 == 0 {
+                toggle_samus_hi(mem);
+            }
+            mem.write_ram(0x030D, 0xFF);
+        } else if !going_down && y == 0 {
+            if mem.read_ram(crate::ram_map::SCROLL_DIR) & 0x02 == 0 {
+                toggle_samus_hi(mem);
+            }
+            mem.write_ram(0x030D, SCRN_VY);
+        }
+        let y = mem.read_ram(0x030D);
         if going_down {
             mem.write_ram(0x030D, y.wrapping_add(1));
             mem.write_ram(crate::ram_map::SAMUS_JUMP_DISP, disp_cnt.wrapping_sub(1)); // MoveSamusDown `dec`
@@ -1394,7 +1435,18 @@ fn check_update_name_table(mem: &mut FrameMemory) {
     }
     let dir = mem.read_ram(crate::ram_map::SCROLL_DIR);
     if dir & 2 == 0 {
-        return; // 竖滚径（CheckUpdateNameTableVertical——随件）
+        // 竖滚径（CheckUpdateNameTableVertical ; 07:E571 → EndOfRoomVertical $E57C）
+        // 阈值表 `CheckUpdateNameTableVertical_ScrollYThresholds ; 07:E55E` = `07 00`
+        // （ScrollDir 0=向上⇒7 / 1=向下⇒0）。
+        let threshold: u8 = if dir == 1 { 0 } else { 7 };
+        if mem.read_ram(crate::ram_map::SCROLL_Y) & 0x07 != threshold {
+            return;
+        }
+        if dir != mem.read_ram(0x004A) {
+            return; // TempScrollDir 防重流
+        }
+        stream_row_kick(mem);
+        return;
     }
     let threshold: u8 = if dir == 3 { 0 } else { 7 };
     if mem.read_ram(crate::ram_map::SCROLL_X) & 0x07 != threshold {
@@ -1429,6 +1481,26 @@ pub fn stream_column_kick(mem: &mut FrameMemory) {
         let v = mem.read_wram(src + idx as u16 + row * 32);
         mem.write_io(0x2006, (addr >> 8) as u8);
         mem.write_io(0x2006, (addr & 0xFF) as u8);
+        mem.write_io(0x2007, v);
+    }
+}
+
+/// 行写核（`EndOfRoomVertical ; 07:E57C` → `UpdateNameTable ; 07:E590` 的竖滚分支）：
+/// `Temp00 = (ScrollY & $F8) << 2`（= 行号×32，RoomRAM/PPU 同偏移）；`GetNameAddrs`
+/// 给 NT 高低字节；control byte = `@controlBitsTable[ScrollDir>>1]` = **$20**
+/// （PPU inc=1、长度 32）⇒ 竖滚一次写**一整行 32 字节线性**（与横滚的 30 行竖写对偶）。
+pub fn stream_row_kick(mem: &mut FrameMemory) {
+    mem.render.reset_addr_latch();
+    let dir = mem.read_ram(crate::ram_map::SCROLL_DIR);
+    let off = ((mem.read_ram(crate::ram_map::SCROLL_Y) & 0xF8) as u16) << 2;
+    let y = (mem.read_ram(0x00FF) ^ dir) & 1; // GetNameAddrs（$E564 经 GetNameTableAtScrollDir）
+    let src = 0x6000u16 + (y as u16) * 0x400 + off;
+    let dst = if y == 0 { 0x2000u16 } else { 0x2C00 } + off;
+    for i in 0..32u16 {
+        let v = mem.read_wram(src + i);
+        let a = dst + i;
+        mem.write_io(0x2006, (a >> 8) as u8);
+        mem.write_io(0x2006, (a & 0xFF) as u8);
         mem.write_io(0x2007, v);
     }
 }
@@ -1502,6 +1574,106 @@ fn scroll_right(mem: &mut FrameMemory) -> bool {
     if sx == 0 {
         toggle_name_table(mem); // inc 溢出（FF→00）⇒名表换
     }
+    check_update_name_table(mem);
+    true
+}
+
+/// `SCRN_VY` = 240（一屏高）。asm 宏值见 `constants.asm`（`SCRN_VY = $F0`）。
+const SCRN_VY: u8 = 240;
+
+/// ScrollUp（**asm 内容锚** `ScrollUp: ; 07:E4F1`——prg7:7519-7524）：竖滚 1px 向上。
+/// 返回 carry 语义（true=滚动成功；false=界/方向不相容）。
+///
+/// ```text
+/// lda ScrollDir / beq @currentlyScrollingUp   ; 0=正在向上
+///   cmp #$01 / bne @cantScroll                 ; 2/3=横滚⇒禁
+///   dec ScrollDir            ; 1（向下）⇒0（向上）
+///   lda ScrollY / beq @currentlyScrollingUp
+///   dec MapPosY              ; 转向时已在半屏⇒地图格随手上移
+/// @currentlyScrollingUp:
+///   ldx ScrollY / bne @noNewRoom
+///     dec MapPosY / jsr GetRoomNum / bcs @atTopBound
+///     jsr ToggleNameTable / ldx #SCRN_VY
+/// @noNewRoom: dex / jmp ScrollVertically_Merge
+/// @atTopBound: inc MapPosY / @cantScroll: sec / rts
+/// ```
+fn scroll_up(mem: &mut FrameMemory) -> bool {
+    let dir = mem.read_ram(crate::ram_map::SCROLL_DIR);
+    if dir != 0 {
+        if dir != 1 {
+            return false; // 横滚不能竖滚（@cantScroll）
+        }
+        mem.write_ram(crate::ram_map::SCROLL_DIR, 0);
+        if mem.read_ram(crate::ram_map::SCROLL_Y) != 0 {
+            mem.write_ram(crate::ram_map::MAP_POS_Y,
+                          mem.read_ram(crate::ram_map::MAP_POS_Y).wrapping_sub(1));
+        }
+    }
+    let mut x = mem.read_ram(crate::ram_map::SCROLL_Y);
+    if x == 0 {
+        mem.write_ram(crate::ram_map::MAP_POS_Y,
+                      mem.read_ram(crate::ram_map::MAP_POS_Y).wrapping_sub(1));
+        if !scroll_block_gate(mem) {
+            // @atTopBound：上界（GetRoomNum CF=1）——MapPosY 复位
+            mem.write_ram(crate::ram_map::MAP_POS_Y,
+                          mem.read_ram(crate::ram_map::MAP_POS_Y).wrapping_add(1));
+            return false;
+        }
+        toggle_name_table(mem);
+        x = SCRN_VY;
+    }
+    x = x.wrapping_sub(1);
+    // ScrollVertically_Merge
+    mem.write_ram(crate::ram_map::SCROLL_Y, x);
+    check_update_name_table(mem);
+    true
+}
+
+/// ScrollDown（**asm 内容锚** `ScrollDown: ; 07:E519`——prg7:7549-7556）：竖滚 1px 向下。
+///
+/// ```text
+/// ldx ScrollDir / dex / beq @currentlyScrollingDown  ; 1=正在向下
+///   bpl cantScroll                                    ; 2/3=横滚⇒禁
+///   inc ScrollDir              ; 0（向上）⇒1
+///   lda ScrollY / beq @currentlyScrollingDown
+///   inc MapPosY
+/// @currentlyScrollingDown:
+///   lda ScrollY / bne @noNewRoom
+///     inc MapPosY / jsr GetRoomNum / bcs atBottomBound
+/// @noNewRoom:
+///   ldx ScrollY / cpx #SCRN_VY-1 / bne @noNameTableSwitch
+///     jsr ToggleNameTable / ldx #$FF
+/// @noNameTableSwitch: inx / ScrollVertically_Merge: stx ScrollY
+/// ```
+fn scroll_down(mem: &mut FrameMemory) -> bool {
+    let dir = mem.read_ram(crate::ram_map::SCROLL_DIR);
+    if dir != 1 {
+        if dir != 0 {
+            return false; // 横滚（2/3）不能竖滚（dex 后 bpl ⇒ cantScroll）
+        }
+        mem.write_ram(crate::ram_map::SCROLL_DIR, 1);
+        if mem.read_ram(crate::ram_map::SCROLL_Y) != 0 {
+            mem.write_ram(crate::ram_map::MAP_POS_Y,
+                          mem.read_ram(crate::ram_map::MAP_POS_Y).wrapping_add(1));
+        }
+    }
+    if mem.read_ram(crate::ram_map::SCROLL_Y) == 0 {
+        mem.write_ram(crate::ram_map::MAP_POS_Y,
+                      mem.read_ram(crate::ram_map::MAP_POS_Y).wrapping_add(1));
+        if !scroll_block_gate(mem) {
+            // atBottomBound：下界——MapPosY 复位
+            mem.write_ram(crate::ram_map::MAP_POS_Y,
+                          mem.read_ram(crate::ram_map::MAP_POS_Y).wrapping_sub(1));
+            return false;
+        }
+    }
+    let mut x = mem.read_ram(crate::ram_map::SCROLL_Y);
+    if x == SCRN_VY - 1 {
+        toggle_name_table(mem);
+        x = 0xFF;
+    }
+    x = x.wrapping_add(1);
+    mem.write_ram(crate::ram_map::SCROLL_Y, x);
     check_update_name_table(mem);
     true
 }
@@ -1677,6 +1849,120 @@ pub fn samus_move_horizontally(mem: &mut FrameMemory, delta: u8) {
 /// 【goal-r22 红测】滚屏列写 = NMI bogged 2 帧（emu 实测 f916-917/f1064-1065 各停 2 帧
 /// ——CheckUpdateNameTable(E54A) ④列流送 30 块 PPU 竖写=重活）。旧形无门 ⇒ FC 相位漂移
 /// ⇒ 爬行 6/8 移动窗错相 ⇒ 敌轨迹级联（docs/findings/enemy-crawler-trajectory-divergence.md）。
+mod tests_vertical_scroll {
+    //! 竖滚双件（`ScrollUp ; 07:E4F1` / `ScrollDown ; 07:E519`）语义钉：
+    //! 方向切换（0↔1）、`ScrollY` 环绕 + 名表换（ToggleNameTable）、上/下界（GetRoomNum
+    //! CF=1 ⇒ 复位 MapPosY 并返回「不能滚」）、横滚域拒绝（`ScrollDir&2≠0`）。
+    use super::*;
+    use crate::ram_map::{MAP_POS_Y, SCROLL_DIR, SCROLL_Y};
+    use crate::state::FrameMemory; // G11 取型径（经 crate::state）
+
+    fn mem() -> FrameMemory {
+        let mut m = FrameMemory::default();
+        // WorldMapRAM($7000)：置 (MapY=0..2, MapX=0) 为有效房号，其余 0x00 也非 $FF ⇒
+        // get_room_num 恒 true（本组只测竖滚件自身，房号内容无关）。
+        for i in 0..8u16 {
+            m.write_wram(0x7000 + i, 0x11);
+        }
+        m
+    }
+
+    /// 向下滚常规：`ScrollY` 0→1（无新房间，因为 ScrollY==0 会先 inc MapPosY 载房）。
+    #[test]
+    fn scroll_down_new_row_increments_map_pos() {
+        let mut m = mem();
+        m.write_ram(SCROLL_DIR, 1);
+        m.write_ram(SCROLL_Y, 0);
+        m.write_ram(MAP_POS_Y, 5);
+        assert!(scroll_down(&mut m), "可滚 ⇒ carry clear（true）");
+        assert_eq!(m.read_ram(MAP_POS_Y), 6, "ScrollY==0 ⇒ MapPosY+1（上方新格）");
+        assert_eq!(m.read_ram(SCROLL_Y), 1, "新格 ⇒ ScrollY←1");
+    }
+
+    /// 向下滚：`ScrollY==239` ⇒ 名表换 + 归 0（MapPosY 不动）。
+    #[test]
+    fn scroll_down_wraps_scroll_y_and_toggles_name_table() {
+        let mut m = mem();
+        m.write_ram(SCROLL_DIR, 1);
+        m.write_ram(SCROLL_Y, 239);
+        m.write_ram(MAP_POS_Y, 5);
+        m.write_ram(0x00FF, 0x00);
+        assert!(scroll_down(&mut m));
+        assert_eq!(m.read_ram(SCROLL_Y), 0, "239 溢回 0");
+        assert_eq!(m.read_ram(0x00FF), 0x03, "ToggleNameTable：PPUCTRL^=3");
+        assert_eq!(m.read_ram(MAP_POS_Y), 5, "同格内滚动不改 MapPosY");
+    }
+
+    /// 向下滚：半屏中（ScrollY≠0）不改 MapPosY。
+    #[test]
+    fn scroll_down_mid_screen_keeps_map_pos() {
+        let mut m = mem();
+        m.write_ram(SCROLL_DIR, 1);
+        m.write_ram(SCROLL_Y, 7);
+        m.write_ram(MAP_POS_Y, 5);
+        assert!(scroll_down(&mut m));
+        assert_eq!(m.read_ram(SCROLL_Y), 8);
+        assert_eq!(m.read_ram(MAP_POS_Y), 5);
+    }
+
+    /// 向上滚：`ScrollY==0` ⇒ MapPosY-1 + `ScrollY←239`（dex from 240）。
+    #[test]
+    fn scroll_up_new_row_decrements_map_pos() {
+        let mut m = mem();
+        m.write_ram(SCROLL_DIR, 0);
+        m.write_ram(SCROLL_Y, 0);
+        m.write_ram(MAP_POS_Y, 5);
+        m.write_ram(0x00FF, 0x00);
+        assert!(scroll_up(&mut m));
+        assert_eq!(m.read_ram(MAP_POS_Y), 4, "ScrollY==0 ⇒ MapPosY-1");
+        assert_eq!(m.read_ram(SCROLL_Y), 239, "新格 ⇒ ScrollY←239");
+        assert_eq!(m.read_ram(0x00FF), 0x03, "ToggleNameTable");
+    }
+
+    /// 方向切换：向下滚时按 ScrollUp ⇒ ScrollDir 0 且（半屏中）MapPosY-1。
+    #[test]
+    fn scroll_up_switches_direction_and_steps_map_pos() {
+        let mut m = mem();
+        m.write_ram(SCROLL_DIR, 1); // 正在向下
+        m.write_ram(SCROLL_Y, 0x40);
+        m.write_ram(MAP_POS_Y, 5);
+        assert!(scroll_up(&mut m));
+        assert_eq!(m.read_ram(SCROLL_DIR), 0, "dec ScrollDir ⇒ 0");
+        assert_eq!(m.read_ram(MAP_POS_Y), 4, "转向时已在半屏 ⇒ MapPosY-1");
+        assert_eq!(m.read_ram(SCROLL_Y), 0x3F);
+    }
+
+    /// 横滚域（ScrollDir 2/3）⇒ 两件都拒绝且**零写入**。
+    #[test]
+    fn vertical_scroll_rejects_horizontal_direction() {
+        for dir in [2u8, 3] {
+            let mut m = mem();
+            m.write_ram(SCROLL_DIR, dir);
+            m.write_ram(SCROLL_Y, 0x40);
+            m.write_ram(MAP_POS_Y, 5);
+            assert!(!scroll_up(&mut m), "dir={dir} 上滚必须失败");
+            assert!(!scroll_down(&mut m), "dir={dir} 下滚必须失败");
+            assert_eq!(m.read_ram(SCROLL_DIR), dir, "方向不得被改写");
+            assert_eq!(m.read_ram(SCROLL_Y), 0x40, "ScrollY 不得被改写");
+            assert_eq!(m.read_ram(MAP_POS_Y), 5, "MapPosY 不得被改写");
+        }
+    }
+
+    /// 上界：GetRoomNum 返回 CF=1（WorldMapRAM 该格 $FF）⇒ MapPosY 复位 + 返回「不能滚」。
+    #[test]
+    fn scroll_up_at_bound_restores_map_pos() {
+        let mut m = mem();
+        m.write_ram(SCROLL_DIR, 0);
+        m.write_ram(SCROLL_Y, 0);
+        m.write_ram(MAP_POS_Y, 3);
+        // (MapY=2, MapX=0) 置 $FF ⇒ 上界
+        m.write_wram(0x7000 + 2 * 32, 0xFF);
+        assert!(!scroll_up(&mut m), "上界 ⇒ carry set（false）");
+        assert_eq!(m.read_ram(MAP_POS_Y), 3, "MapPosY 复位回 3");
+        assert_eq!(m.read_ram(SCROLL_Y), 0, "ScrollY 不动");
+    }
+}
+
 #[test]
 fn scroll_right_column_draw_bogs_two_frames() {
     let mut m = crate::frame::FrameMemory::default();
