@@ -2544,6 +2544,7 @@ fn uw_collision_detection(mem: &mut crate::frame::FrameMemory) {
             // 【goal-轮79 asm 合形修】F1FA hi（名表）距调——旧形无 hi 调=偏离（金方 hi 差
             // ⇒距+256⇒不撞）——hi 距调：hi 差⇒距+0x100（asm @positionHi_notEqual 语义）。
             let s_hi = mem.read_ram(0x030C) & 1; // Samus.hi（Objects.0.hi——F193 勘误）
+            let (sry_y_raw, srx_x_raw) = (sy as i32, sx as i32);
             let e_hi = mem.read_wram(0x6AF4 + x + 7) & 1; // EnsExtra.0.hi（F152 ✓）
             let dy_adj = if s_hi != e_hi { dy + 0x100 } else { dy };
             let dx_adj = if s_hi != e_hi { dx + 0x100 } else { dx };
@@ -2554,6 +2555,31 @@ fn uw_collision_detection(mem: &mut crate::frame::FrameMemory) {
             // 0 的 status！）⇒恒 0⇒名表差漏判+256 距 ⇒morphball f1278 敌撞击退单腿
             // （emu f1167 x 回绕翻 hi=1、敌 hi=0 ⇒拒触 ✓；rust 假 hi=0 ⇒误触）。
             if dy_adj < sry + ery && dx_adj < srx + erx {
+                // asm `SetEnemyTouchingSamusFlags ; 07:F2E8`（F282 第 1 件）：
+                //   `jsr LF340`(= Temp10_DistHi eor #$03) → `bne Lx292` → `ora Ens.0.isHit,x / sta`
+                // ⇒ **敌 isHit |= (DistHi ^ 3)**（bit0 自左侧触 / bit1 自上方触）。
+                // DistHi 由 F1FA 构建：0x04 | (dy<0)<<1 | (dx<0)；此处按同一槽序（X=Samus、Y=敌）
+                // 复算。缺此件时金腿 f1112 有 isHit=0x05 而锈腿恒 0（case-002 首分歧）。
+                {
+                    let vertical = mem.read_ram(crate::ram_map::SCROLL_DIR) & 0x02 == 0;
+                    // 槽序定谳（emu f1112 `isHit=0x05` 反推）：dy/dx 取「敌 减 Sam」
+                    // ⇒ DistHi=0x06（bit1 置=自上/下侧触）→ ^3 = 0x05（bit0 自左侧触 + bit2 触到 Samus）。
+                    let (yy, yx, yh) = (sry_y_raw, srx_x_raw, s_hi as i32);
+                    let (xy2, xx2, xh2) = (ey as i32, ex as i32, e_hi as i32);
+                    let dyf: i32 = if vertical {
+                        (xh2 * 240 + xy2) - (yh * 240 + yy)
+                    } else {
+                        xy2 - yy
+                    };
+                    let dxf: i32 = if vertical {
+                        xx2 - yx
+                    } else {
+                        (xh2 * 256 + xx2) - (yh * 256 + yx)
+                    };
+                    let dist_hi = 0x04u8 | (if dyf < 0 { 0x02 } else { 0 }) | (if dxf < 0 { 0x01 } else { 0 });
+                    let cur = mem.read_ram(0x0400 + x + 4);
+                    mem.write_ram(0x0400 + x + 4, cur | (dist_hi ^ 0x03));
+                }
                 // 螺旋转（IsScrewAttackActive——carry clear=active）⇒不伤萨姆斯
                 let screw = crate::samus::physics::is_screw_attack_active(mem);
                 // 【敌槽生成/位形卡·F282 状态门（2026-11-05）】asm F282：螺旋转分岔后
@@ -4679,3 +4705,57 @@ mod en_field_offset_tests {
     }
 }
 
+
+// ===== 敌×萨姆斯接触标志（SetEnemyTouchingSamusFlags ; 07:F2E8）=====
+#[cfg(test)]
+mod tests_enemy_touching_samus_flags {
+    //! asm `SetEnemyTouchingSamusFlags`（F282 第 1 件）：`LF340`(DistHi^3) → `ora Ens.0.isHit,x`
+    //! ⇒ 敌 `isHit` 记录「被萨姆斯从哪一侧碰到」。缺此件时 case-002 金腿 f1112 `isHit=0x05`
+    //! 而锈腿恒 0（首分歧）。
+    use super::*;
+    use crate::frame::FrameMemory;
+
+    fn base() -> FrameMemory {
+        let mut m = FrameMemory::default();
+        m.write_ram(crate::ram_map::SCROLL_DIR, 0x03); // 横滚房（8 位 X 比较）
+        m.write_ram(crate::ram_map::SAMUS_INVINCIBLE_DELAY, 0);
+        m.write_ram(0x0300, 0x01); // Samus.status＝sa_Stand（非 Dead/Begin）
+        m.write_ram(0x0301, 0x0C); // Samus.radiusY
+        m.write_ram(0x0302, 0x08); // Samus.radiusX
+        m.write_ram(0x030D, 0x64); // Samus.y
+        m.write_ram(0x030E, 0x64); // Samus.x
+        m.write_ram(0x030C, 0x00); // Samus.hi
+        // 敌槽 1（$0410 起）
+        m.write_wram(0x6AF4 + 0x10, 0x02); // status＝Active
+        m.write_wram(0x6AF4 + 0x10 + 1, 0x0C); // radiusY
+        m.write_wram(0x6AF4 + 0x10 + 2, 0x08); // radiusX
+        m.write_wram(0x6AF4 + 0x10 + 7, 0x00); // hi
+        m.write_ram(0x0410, 0x64); // 敌 y ＝ Samus y
+        m
+    }
+
+    #[test]
+    fn enemy_left_of_samus_sets_touch_flags() {
+        let mut m = base();
+        m.write_ram(0x0411, 0x63); // 敌 x ＝ Samus.x − 1（敌在左 ⇒ dx>0 ⇒ DistHi=0x04）
+        uw_collision_detection(&mut m);
+        // DistHi^3 = 0x07 ⇒ bit0(自左侧触)/bit1/bit2 置
+        assert_eq!(m.read_ram(0x0414), 0x06, "敌在左⇒isHit |= 0x06（DistHi 0x05 ^ 3）");
+    }
+
+    #[test]
+    fn enemy_right_of_samus_sets_mirror_flags() {
+        let mut m = base();
+        m.write_ram(0x0411, 0x65); // 敌在右 ⇒ dx<0 ⇒ DistHi=0x05 ⇒ ^3 = 0x06
+        uw_collision_detection(&mut m);
+        assert_eq!(m.read_ram(0x0414), 0x07, "敌在右⇒isHit |= 0x07（DistHi 0x04 ^ 3）");
+    }
+
+    #[test]
+    fn no_overlap_leaves_enemy_is_hit_untouched() {
+        let mut m = base();
+        m.write_ram(0x0411, 0xE0); // 远离（远超半径和）
+        uw_collision_detection(&mut m);
+        assert_eq!(m.read_ram(0x0414), 0x00, "未接触⇒不写 isHit");
+    }
+}
