@@ -180,6 +180,12 @@ def check_inventory(root: Path) -> list[str]:
         )
 
     b_unp = int((base.get("counts") or {}).get("unported", 0))
+    b_por = int((base.get("counts") or {}).get("ported", 0))
+    if cur["counts"]["ported"] < b_por:
+        return [
+            f"ported 回退：{b_por} → {cur['counts']['ported']}"
+            "（已复核登记的例程不得降级；确需降级须改 overrides 并在此说明）"
+        ]
     if cur["counts"]["unported"] > b_unp:
         problems.append(
             f"unported 增长：{b_unp} → {cur['counts']['unported']}"

@@ -1,5 +1,36 @@
 {
  "schema": 1,
  "note": "例程清单人工映射：asm label -> Rust 符号。candidate 升 ported 必须按 asm 逐行复核（输入/输出/副作用/边界）。",
- "labels": {}
+ "labels": {
+  "RandomNumbers": {
+   "status": "ported",
+   "rust": "crates/game-core/src/frame/mainloop.rs:74",
+   "note": "asm 07:C000 循环 5×(n1+=5,n2+=0x13)=每调 +0x19/+0x5F；Rust 直接加合成值并置 A=n1，等价（注×5 互证）"
+  },
+  "UpdateTimer": {
+   "status": "ported",
+   "rust": "crates/game-core/src/frame/mainloop.rs:3162",
+   "note": "asm 07:C266 TimerDelay 预分频（dec/bpl，归零重置 9 并含 Timer3）+ 非零递减；Rust 同形且保留 X=$FF 残迹"
+  },
+  "GoMainRoutine": {
+   "status": "ported",
+   "rust": "crates/game-core/src/frame/mainloop.rs:3184",
+   "note": "asm 07:C114 GameMode≠0 ⇒ jmp MainTitleRoutine，否则主例程分发；Rust 同形"
+  },
+  "ScreenNmiOff": {
+   "status": "ported",
+   "rust": "crates/game-core/src/frame/mainloop.rs:3010",
+   "note": "asm 07:C45D 影子 $FE 清 BG/OBJ → WriteAndWait → $FF 清 VBLKNMI → sta PPUCTRL；Rust 同形（WriteAndWait 按同 tick 近似，注释已记）"
+  },
+  "CheckPaletteWrite": {
+   "status": "ported",
+   "rust": "crates/game-core/src/frame/nmi.rs:83",
+   "note": "asm 07:C1E0 四路（EndGame/待写/StarPalette/RTS）；Rust 四路齐备，EndGame 支显式 unported(bank00:9F54)"
+  },
+  "NMIOn": {
+   "status": "ported",
+   "rust": "crates/game-core/src/frame/boot.rs:188",
+   "note": "asm 07:C487 等 VBlank 结束后 $FF|=VBLKNMI 并写 PPUCTRL；Rust 同形但**未建模轮询**（按帧采集不可观测，注释列反例条件）"
+  }
+ }
 }
