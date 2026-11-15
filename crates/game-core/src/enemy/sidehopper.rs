@@ -248,4 +248,29 @@ mod tests_sidehopper {
         assert_eq!(m.read_ram(ANIM_ACTIVE_SLOT), 0x03);
         assert_eq!(m.read_ram(ANIM_RESTING_SLOT), 0x03);
     }
+
+    /// **接线确认（dispatch 面，不是直接调本模块）**：走真实调用链
+    /// `update_all_enemies → UpdateEnemy → choose_enemy_ai → sidehopper_ai/ripper_ai`，
+    /// 证明 type 0/1/3 的敌人确实进到本件（而不只是「函数存在且自测通过」）。
+    #[test]
+    fn dispatch_wiring_reaches_this_module_for_types_0_1_3() {
+        for (t, want_anim) in [(0u8, 0x09u8), (1, 0x0F), (3, 0x09)] {
+            let mut m = FrameMemory::default();
+            game_data::pack::init_from_env().ok();
+            let x = 0x20u8;
+            m.write_ram(crate::ram_map::IN_AREA, 0); // Brinstar
+            m.write_ram(en_addr(x, 0), 0x40); // y
+            m.write_ram(en_addr(x, 1), 0x50); // x
+            m.write_ram(en_addr(x, EN_F_DATA05), 0x02); // bit1 闩 ⇒ 免 fresh 可见检
+            m.write_wram(ens_addr(x, ENS_F_STATUS), 0x02); // Active
+            m.write_wram(ens_addr(x, ENS_F_TYPE), t);
+            m.write_wram(ens_addr(x, F_RESET_ANIM), 0xFF); // ≠ 目标 ⇒ flip 必写
+            crate::enemy::slot_cycle::update_all_enemies(&mut m);
+            // `$85/$86` 只由本件写（回退臂 `update_enemy_common_no_move_no_anim` 不碰它）
+            // ⇒ 哨兵 0x00 变成目标值即为「进了本件」的充分证据。
+            // 注意 `$00/$01` 是 asm 的临时量（后续 AI 会覆盖），不能在此断言。
+            assert_eq!(m.read_ram(FLIP_ANIM_IDX), want_anim, "type={t} 未进本件");
+            assert_eq!(m.read_ram(FLIP_ANIM_IDX + 1), want_anim, "type={t} 左朝向未写");
+        }
+    }
 }
