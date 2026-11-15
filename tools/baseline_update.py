@@ -17,14 +17,24 @@ L4_RATCHET = Path("data/status/l4_ratchet_baseline.json")
 
 
 def update(new_count: int) -> None:
-    old = json.loads(BASELINE.read_text()) if BASELINE.exists() else {"rust_test_count": 584}
-    old_count = old.get("rust_test_count", 584)
-    if new_count < old_count:
-        print(f"ERR: 基线只升不降（{old_count}→{new_count}）——拒绝")
-        sys.exit(1)
-    old["rust_test_count"] = new_count
-    BASELINE.write_text(json.dumps(old, indent=2) + "\n")
-    print(f"baseline 上调：rust_test_count {old_count}→{new_count}（PENDING（现值高于基线））")
+    """测试数基线上调——**判定与落盘都交给 gates/cli.py**（单源，不复制 ratchet 逻辑）。
+
+    历史缺陷（2026-11-16 更正）：本函数原写 `data/status/baselines/rust_test_count.json`，
+    而门禁读的是 `data/status/baselines/baseline.json` ⇒ 两处各自积累（该文件漂到 605，
+    门禁侧 594），工具上调对门禁无效。现在改为调 gates 的 `baseline_update` +
+    `save_baseline` + `append_history`，与 `gates/cli.py baseline update` 同一条路。
+    """
+    gates = _gates_cli()
+    baseline = gates.load_baseline()
+    baseline, record = gates.baseline_update(
+        baseline, "rust_test_count", new_count, sys.argv[2] if len(sys.argv) > 2 and sys.argv[2].startswith("--reason") else "")
+    if len(sys.argv) > 2 and sys.argv[2] == "--reason":
+        # 用真实 reason 重算（上面只为形状；reason 为空时 gates 会拒）
+        baseline = gates.load_baseline()
+        baseline, record = gates.baseline_update(baseline, "rust_test_count", new_count, sys.argv[3])
+    record["baseline_sha256"] = gates.save_baseline(baseline)
+    gates.append_history(record)
+    print(f"BASELINE UPDATE（走 gates 单源）: {record['metric']} {record['old']} -> {record['new']}")
 
 
 def _gates_cli():

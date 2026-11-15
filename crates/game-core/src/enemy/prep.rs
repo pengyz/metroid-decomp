@@ -240,13 +240,15 @@ pub(crate) fn enemy_distance_threshold(mem: &mut crate::frame::FrameMemory, x: u
 /// InitEnRestingAnimIndex（**asm 内容锚** `: 07:F682`——r26）：type×2+facing 索引→
 /// ENEMY_RESTING_ANIM[y]；≠resetAnimIndex⇒写 resetAnimIndex/animIndex+animDelay←0。
 pub(crate) fn init_en_resting_anim_index(mem: &mut crate::frame::FrameMemory, x: u8) {
+    use crate::enemy::anim_idx::AnimIdx;
     let y = enemy_type_times2_plus_facing(mem, x);
-    let idx = game_data::assets::enemy_resting_anim(crate::frame::cur_area(mem))[y as usize & 0x1F];
-    if idx == mem.read_wram(0x6AF4 + x as u16 + 5) {
+    let area = crate::frame::cur_area(mem);
+    let idx = AnimIdx::at(area, game_data::assets::enemy_resting_anim(area)[y as usize & 0x1F]);
+    if idx.off() == mem.read_wram(0x6AF4 + x as u16 + 5) {
         return; // 已同⇒RTS（animDelay 不清）
     }
-    mem.write_wram(0x6AF4 + x as u16 + 5, idx); // resetAnimIndex
-    mem.write_wram(0x6AF4 + x as u16 + 6, idx); // animIndex
+    mem.write_wram(0x6AF4 + x as u16 + 5, idx.off()); // resetAnimIndex
+    mem.write_wram(0x6AF4 + x as u16 + 6, idx.off()); // animIndex
     mem.write_wram(0x6AF4 + x as u16 + 4, 0); // animDelay←0
 }
 

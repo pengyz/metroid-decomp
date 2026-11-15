@@ -1,5 +1,6 @@
 //! 敌人绘制与动画实体化（`DrawEnemy` 07:F42E 邻域）。
 
+use crate::enemy::anim_idx::AnimIdx;
 use crate::enemy::framework::*;
 use crate::enemy::motion::*;
 use crate::enemy::prep::*;
@@ -126,19 +127,20 @@ pub(crate) fn update_enemy_anim(mem: &mut crate::frame::FrameMemory, x: u8, a: u
         }
     }
     mem.write_wram(base + 4, a); // sta animDelay←A
+    // 按区解析：`animIndex` 是**本区** EnAnimTable 的下标（见 `enemy/anim_idx.rs`）。
     let area = crate::world::room_load::area_idx(mem.read_ram(ram_map::IN_AREA)) as u8;
-    let reset = mem.read_wram(base + 5);
-    let mut y = mem.read_wram(base + 6) as usize;
+    let reset = AnimIdx::at(area, mem.read_wram(base + 5));
+    let mut cur = AnimIdx::at(area, mem.read_wram(base + 6));
     for _ in 0..16u32 {
-        let v = *game_data::assets::enemy_anim_table(area).get(y).unwrap_or(&0xFF);
-        if v == 0xFF {
-            y = reset as usize; // 回绕续走
-            continue;
+        match cur.resolve() {
+            Some(v) => {
+                mem.write_wram(base + 3, v); // animFrame←表值
+                mem.write_wram(base + 6, cur.next().off());
+                return;
+            }
+            // `$FF`（或越界）⇒ `animIndex←resetAnimIndex` 续走
+            None => cur = reset,
         }
-        mem.write_wram(base + 3, v); // animFrame←表值
-        mem.write_wram(base + 6, y.wrapping_add(1) as u8);
-        // 【goal-轮85 animIndex 初值直证】ENEMY_*_ANIM 表径（帧面差源）。
-        return;
     }
     crate::unported!("bank07:E0BC-wrap"); // 表不变量破裂——fail-loud（update_obj_anim 同式）
 }

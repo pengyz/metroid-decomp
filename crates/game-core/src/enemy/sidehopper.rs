@@ -15,6 +15,7 @@
 //! bank1(Brinstar) `$9D6A` 基 → floor `$9D73`−基=**$09**、ceiling `$9D79`−基=**$0F**；
 //! bank5(Ridley) `$9B85` 基 → floor `$9BC7`−基=**$42**、ceiling `$9BCD`−基=**$48**。
 
+use crate::enemy::anim_idx::AnimIdx;
 use crate::enemy::{framework, prep, tables};
 
 const ENS: u16 = 0x6AF4;
@@ -92,13 +93,13 @@ pub(crate) fn sidehopper_ai(mem: &mut crate::frame::FrameMemory, x: u8, ceiling:
 fn init_en_active_anim_index_no_init_offset(mem: &mut crate::frame::FrameMemory, x: u8) {
     let area = crate::frame::cur_area(mem);
     let y = tables::enemy_type_times2_plus_facing(mem, x);
-    let idx = game_data::assets::enemy_active_anim(area)[y as usize & 0x1F];
+    let idx = AnimIdx::at(area, game_data::assets::enemy_active_anim(area)[y as usize & 0x1F]);
     let sq = ENS + x as u16;
-    if idx == mem.read_wram(sq + F_RESET_ANIM) {
+    if idx.off() == mem.read_wram(sq + F_RESET_ANIM) {
         return;
     }
-    mem.write_wram(sq + F_RESET_ANIM, idx);
-    mem.write_wram(sq + F_ANIM_INDEX, idx);
+    mem.write_wram(sq + F_RESET_ANIM, idx.off());
+    mem.write_wram(sq + F_ANIM_INDEX, idx.off());
     mem.write_wram(sq + F_ANIM_DELAY, 0);
 }
 

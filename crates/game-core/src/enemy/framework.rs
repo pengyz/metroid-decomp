@@ -87,19 +87,19 @@ pub(crate) fn try_becoming_active(mem: &mut crate::frame::FrameMemory, x: u8) {
 /// InitEnActiveAnimIndex（**asm 内容锚** `: 07:F699`——r26）：ENEMY_ACTIVE_ANIM[y]
 /// →resetAnimIndex/animIndex；InitOffset 非零⇒animIndex 递减该值。
 pub(crate) fn init_en_active_anim_index(mem: &mut crate::frame::FrameMemory, x: u8) {
+    use crate::enemy::anim_idx::AnimIdx;
     let y = enemy_type_times2_plus_facing(mem, x);
-    let idx = game_data::assets::enemy_active_anim(crate::frame::cur_area(mem))[y as usize & 0x1F];
-    if idx != mem.read_wram(0x6AF4 + x as u16 + 5) {
-        mem.write_wram(0x6AF4 + x as u16 + 5, idx);
-        mem.write_wram(0x6AF4 + x as u16 + 6, idx);
-        mem.write_wram(0x6AF4 + x as u16 + 4, 0);
-        let t = mem.read_wram(0x6AF4 + x as u16 + 14) as usize & 0x0F;
-        let off = game_data::assets::enemy_active_anim_init_offset(crate::frame::cur_area(mem))[t] & 0x7F;
-        let mut ai = idx;
-        for _ in 0..off {
-            ai = ai.wrapping_sub(1);
-        }
-        mem.write_wram(0x6AF4 + x as u16 + 6, ai);
+    let area = crate::frame::cur_area(mem);
+    let idx = AnimIdx::at(area, game_data::assets::enemy_active_anim(area)[y as usize & 0x1F]);
+    let sq = 0x6AF4 + x as u16;
+    if idx.off() != mem.read_wram(sq + 5) {
+        mem.write_wram(sq + 5, idx.off()); // resetAnimIndex
+        mem.write_wram(sq + 6, idx.off()); // animIndex
+        mem.write_wram(sq + 4, 0);
+        let t = mem.read_wram(sq + 14) as usize & 0x0F;
+        let off = game_data::assets::enemy_active_anim_init_offset(area)[t] & 0x7F;
+        // InitOffset 递减只在**本区**内（`AnimIdx` 不换区）
+        mem.write_wram(sq + 6, idx.back_within_area(off).off());
     }
 }
 
