@@ -210,25 +210,11 @@ pub fn enemy_type_times2_plus_facing(data05: u8, type_: u8) -> (u8, u8) {
 }
 
 
-/// EnemyActiveAnimIndex 烘焙（bank1 $965B——32B（type×2+facing 索引域）；per-area）。
-pub use game_data::enemy::enemy_data::ENEMY_ACTIVE_ANIM_INDEX;
-
-/// InitEnActiveAnimIndex_NoInitOffset（**asm 内容锚** `07:FBCA`——entry 靶正（$801E jmp
-/// `4c ca fb`））：GetEnemyTypeTimes2 会师→表[y] 读→同判（cmp resetAnimIndex→Exit）→
-/// **双写**（resetAnimIndex←表[y]/jmp SetEnAnimIndex（animIndex←同））。
-pub fn init_en_active_anim_index(data05: u8, type_: u8, reset_anim_index: u8, x: u16)
-    -> (u8, u8, Vec<(u16, u8)>) {
-    let (_, y) = enemy_type_times2_plus_facing(data05, type_);
-    let tbl_val = ENEMY_ACTIVE_ANIM_INDEX.get(y as usize).copied().unwrap_or(0);
-    if tbl_val == reset_anim_index {
-        return (tbl_val, y, vec![]); // Exit13（同动画——无写）
-    }
-    let mut w = Vec::new();
-    w.push((0x6AF9 + x, tbl_val)); // resetAnimIndex←表[y]（WRAM 槽面）
-    w.push((0x6AFA + x, tbl_val)); // animIndex←同（SetEnAnimIndex）
-    (tbl_val, y, w)
-}
-
+// `EnemyActiveAnimIndex`（各 bank `$965B`，32 B = type×2+facing）**按区**入包后由
+// `game_data::assets::enemy_active_anim(area)` 提供；旧的纯函数封装
+// `init_en_active_anim_index(data05,type,reset,x)` 全仓零调用者且读 bank1 单表，
+// 已按 `docs/findings/per-bank-assets.md` §6 第 1 步删除（生产路径走
+// `crates/game-core/src/enemy/framework.rs::init_en_active_anim_index(mem,x)`）。
 
 /// a1-015 golden 表形烘焙（8 案 52 写全值——fixture 固定形；计算面公式余（D3 迹精化））。
 /// 注：值=AnimDrawObject OAM 写序列+temp 17 写（前缀固定 203/135/1/135+位相关中段

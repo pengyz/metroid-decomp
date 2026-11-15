@@ -7,7 +7,7 @@ use crate::enemy::crawler::crawler_ai;
 use crate::enemy::motion::*;
 use crate::enemy::prep::*;
 use crate::enemy::skree::skree_ai;
-use crate::enemy::sidehopper::{ripper_ai, sidehopper_ai};
+use crate::enemy::sidehopper::{ripper_i_ai, ripper_ii_ai, sidehopper_ai};
 use crate::frame::tick::*;
 use crate::ram_map;
 
@@ -283,7 +283,8 @@ pub(crate) fn choose_enemy_ai(mem: &mut crate::frame::FrameMemory, x: u8) {
         Routine::Skree => skree_ai(mem, x),
         Routine::SidehopperFloor => sidehopper_ai(mem, x, false),
         Routine::SidehopperCeiling => sidehopper_ai(mem, x, true),
-        Routine::Ripper => ripper_ai(mem, x),
+        Routine::RipperI => ripper_i_ai(mem, x),
+        Routine::RipperII => ripper_ii_ai(mem, x),
         Routine::Waver => crate::enemy::waver::waver_ai(mem, x),
         // `RemoveEnemy ; 07:FA18`：`lda #enemyStatus_NoEnemy / sta EnsExtra.0.status,x / rts`
         Routine::RemoveEnemy => {

@@ -102,22 +102,26 @@ fn init_en_active_anim_index_no_init_offset(mem: &mut crate::frame::FrameMemory,
     mem.write_wram(sq + F_ANIM_DELAY, 0);
 }
 
-/// `RipperAIRoutine`（`enemies/ripper.asm`）——bank1/4 复用 Sidehopper 尾件，
-/// bank2（Norfair）是 Ripper II（喷焰，帧步进 3）。
-pub(crate) fn ripper_ai(mem: &mut crate::frame::FrameMemory, x: u8) {
+/// `RipperAIRoutine`（**bank1/4 版**，`enemies/ripper.asm`）：`InitEnActiveAnimIndex_
+/// NoInitOffset` 后 `jmp CommonEnemyStub2`（= Sidehopper 尾件，floor 动画）。
+pub(crate) fn ripper_i_ai(mem: &mut crate::frame::FrameMemory, x: u8) {
     let sq = ENS + x as u16;
     if mem.read_wram(sq + F_STATUS) != STATUS_EXPLODE {
         init_en_active_anim_index_no_init_offset(mem, x);
     }
-    // bank2 专件（Ripper II）：`lda #$03 / sta $00 / sta $01` 后走 Decide
-    if crate::frame::cur_area(mem) == 1 {
-        mem.write_ram(ANIM_ACTIVE_SLOT, 0x03);
-        mem.write_ram(ANIM_RESTING_SLOT, 0x03);
-        framework::update_enemy_common_decide(mem, x);
-        return;
-    }
-    // bank1/4：`jmp CommonEnemyStub2`（= Sidehopper 尾件，floor 动画）
     sidehopper_ai(mem, x, false);
+}
+
+/// `RipperAIRoutine`（**bank2 版 = Ripper II**）：`$00←$03`/`$01←$03` 后直接 Decide
+/// （喷焰型；帧步进 3 而非 Sidehopper 的 6/8）。
+pub(crate) fn ripper_ii_ai(mem: &mut crate::frame::FrameMemory, x: u8) {
+    let sq = ENS + x as u16;
+    if mem.read_wram(sq + F_STATUS) != STATUS_EXPLODE {
+        init_en_active_anim_index_no_init_offset(mem, x);
+    }
+    mem.write_ram(ANIM_ACTIVE_SLOT, 0x03);
+    mem.write_ram(ANIM_RESTING_SLOT, 0x03);
+    framework::update_enemy_common_decide(mem, x);
 }
 
 #[cfg(test)]
@@ -229,7 +233,7 @@ mod tests_sidehopper {
         let mut m = FrameMemory::default();
         stage(&mut m, 0x20, 3, 1);
         m.write_ram(crate::ram_map::IN_AREA, 0);
-        ripper_ai(&mut m, 0x20);
+        ripper_i_ai(&mut m, 0x20);
         assert_eq!(m.read_ram(FLIP_ANIM_IDX), 0x09);
         assert_eq!(m.read_ram(ANIM_ACTIVE_SLOT), 0x06);
     }
@@ -244,7 +248,7 @@ mod tests_sidehopper {
         let mut m = FrameMemory::default();
         stage(&mut m, 0x20, 2, 3);
         m.write_ram(crate::ram_map::IN_AREA, 1);
-        ripper_ai(&mut m, 0x20);
+        ripper_ii_ai(&mut m, 0x20);
         assert_eq!(m.read_ram(ANIM_ACTIVE_SLOT), 0x03);
         assert_eq!(m.read_ram(ANIM_RESTING_SLOT), 0x03);
     }

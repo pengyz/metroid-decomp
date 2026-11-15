@@ -6,7 +6,7 @@
 //!
 //! | bank | 地址 | type 00 | 02 | 04 | 06 | 0B |
 //! |---|---|---|---|---|---|---|
-//! | Brinstar `01` | `01:95E5` | Sidehopper floor | Waver | Skree | Rio | Null（硬崩） |
+//! | Brinstar `01` | `01:95E5` | Sidehopper floor | Waver | Skree | Rio | Null（空指针跳 `$0000`：行为未定，C 级） |
 //! | Norfair `02` | `02:95E5` | Swooper(未见萨) | Ripper II | **RemoveEnemy** | Crawler | **Squeept** |
 //! | Tourian `03` | `03:95E5` | Metroid(红) | `L9A27` | **Rinka** | RemoveEnemy | RemoveEnemy |
 //! | Kraid `04` | `04:95E5` | Sidehopper floor | `RTS_95CB` | Skree | **`RTS_95CB`** | `RTS_95CB` |
@@ -30,14 +30,17 @@ pub(crate) enum Routine {
     SidehopperFloor,
     SidehopperCeiling,
     Waver,
-    Ripper,
+    /// `RipperAIRoutine`（bank1/4：复用 Sidehopper 尾件）。
+    RipperI,
+    /// `RipperAIRoutine`（bank2 = Ripper II：喷焰，帧步进 3）。
+    RipperII,
     Skree,
     Crawler,
     /// `RemoveEnemy ; 07:FA18`——清槽。
     RemoveEnemy,
     /// `RTS_95CB`——直接返回，什么都不做（Kraid bank4 占位）。
     Rts95CB,
-    /// 跳表里的空指针（Brinstar 0B–0F）——原版跳 `$0000` 硬崩。
+    /// 跳表里的空指针（Brinstar 0B–0F）——原版跳 `$0000`（零页，行为未定；C 级）。
     Null,
     /// 尚未端口的例程（保留 asm label 名，用于 fail-loud 记账）。
     Unported(&'static str),
@@ -50,7 +53,7 @@ const BRINSTAR: [Routine; 16] = [
     SidehopperFloor,
     SidehopperCeiling,
     Waver,
-    Ripper,
+    RipperI,
     Skree,
     Crawler,
     Unported("RioAIRoutine"),
@@ -69,7 +72,7 @@ const BRINSTAR: [Routine; 16] = [
 const NORFAIR: [Routine; 16] = [
     Unported("SwooperAIRoutine00"),
     Unported("SwooperAIRoutine01"),
-    Ripper,
+    RipperII,
     RemoveEnemy,
     RemoveEnemy,
     RemoveEnemy,
@@ -110,7 +113,7 @@ const KRAID: [Routine; 16] = [
     SidehopperFloor,
     SidehopperCeiling,
     Rts95CB,
-    Ripper,
+    RipperI,
     Skree,
     Crawler,
     Rts95CB,
@@ -146,15 +149,22 @@ const RIDLEY: [Routine; 16] = [
 ];
 
 /// 区序号（`InArea & $0F`：0=Brinstar 1=Norfair 2=Kraid 3=Tourian 4=Ridley）
-/// → 该区 bank 的跳表。未知区按 Brinstar 处理（与 `frame::cur_area` 的用法一致，
-/// 未知区的敌人本就不该出现；调用方另有记账）。
+/// → 该区 bank 的跳表。
+///
+/// **未知区 fail-loud**（2026-11-16 按复核意见改）：原版没有「未知区回落 Brinstar」
+/// 这一语义，静默回落会把真实缺口洗成「行为正确」；这里记 `unported!` 后仍返回
+/// Brinstar 表只为不在战斗帧里 panic（调用方已在 `frame::cur_area` 侧 fail-loud）。
 pub(crate) fn table(area: u8) -> &'static [Routine; 16] {
     match area & 0x0F {
+        0 => &BRINSTAR,
         1 => &NORFAIR,
         2 => &KRAID,
         3 => &TOURIAN,
         4 => &RIDLEY,
-        _ => &BRINSTAR,
+        _ => {
+            crate::unported!("bank07:CA30-choose_enemy_ai");
+            &BRINSTAR
+        }
     }
 }
 
@@ -180,9 +190,13 @@ mod tests_ai_table {
         assert_eq!(routine_for(0, 2), Waver);
         assert_eq!(routine_for(0, 4), Skree);
         assert_eq!(routine_for(0, 0x0B), Null); // Brinstar 0B–0F 是空指针
+        // Ripper I / II 必须是**两个表项**（同名 asm label、bank1/4 与 bank2 语义不同）
+        assert_eq!(routine_for(0, 3), RipperI);
+        assert_eq!(routine_for(2, 3), RipperI);
+        assert_eq!(routine_for(1, 2), RipperII);
 
         // Norfair：02=Ripper II、04=RemoveEnemy（旧实现会误跑 Skree）、0B=Squeept
-        assert_eq!(routine_for(1, 2), Ripper);
+        assert_eq!(routine_for(1, 2), RipperII);
         assert_eq!(routine_for(1, 4), RemoveEnemy);
         assert_eq!(routine_for(1, 0x0B), Unported("SqueeptAIRoutine"));
         assert_eq!(routine_for(1, 0x0C), Unported("MultiviolaAIRoutine"));
@@ -237,7 +251,10 @@ mod tests_ai_table {
 
     /// 未知区序号回落到 Brinstar 表（调用方另记 DIVERGENCES）。
     #[test]
-    fn unknown_area_falls_back_to_brinstar_table() {
-        assert_eq!(routine_for(0x0F, 2), Waver);
+    fn unknown_area_is_fail_loud() {
+        // 原版没有「未知区回落 Brinstar」语义（2026-11-16 按复核意见改）：
+        // 未知区必须 fail-loud（`unported!`），不能静默给出一张表。
+        let r = std::panic::catch_unwind(|| routine_for(0x0F, 2));
+        assert!(r.is_err(), "未知区必须 panic（fail-loud），实测未 panic");
     }
 }
