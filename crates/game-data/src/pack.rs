@@ -222,6 +222,53 @@ pub enum PackKey {
     KrEnemyDeathAnim = 157,
     ToEnemyDeathAnim = 158,
     RiEnemyDeathAnim = 159,
+    // ---- 敌帧/位数据面（**按区**；bank1/2/3/4/5 的 anim/fptr/pptr/frames/places 各一套）----
+    // 复合段布局见 `extract.rs::extract_enemy_sprites_all`：头 6×u32 + 七块顺序拼接。
+    // 旧形（id 3-10）是 bank1 单表 ⇒ 非 Brinstar 的 animIndex 查错表（证据：
+    // docs/findings/per-bank-assets.md §1/§3）。
+    BrEnSprites = 160,
+    NoEnSprites = 161,
+    KrEnSprites = 162,
+    ToEnSprites = 163,
+    RiEnSprites = 164,
+}
+
+/// 敌帧/位复合段头长（6 × u32：anim_len / fptr_entries / place_cnt / frames_len / places_len / pad）。
+pub const EN_SPR_HDR: usize = 24;
+
+/// 敌帧/位复合段的分块偏移：`[(off, len); 7]` = anim / fptr / pptr / frames / places / foffs / poffs。
+///
+/// **提取侧写、消费侧读，双方共用这一个函数**（避免两处各写一套偏移算错）。
+pub fn en_spr_sections(blob: &[u8]) -> Option<[(usize, usize); 7]> {
+    if blob.len() < EN_SPR_HDR {
+        return None;
+    }
+    let u = |i: usize| -> Option<usize> {
+        let b = blob.get(i * 4..i * 4 + 4)?;
+        Some(u32::from_le_bytes([b[0], b[1], b[2], b[3]]) as usize)
+    };
+    let anim_len = u(0)?;
+    let fptr_entries = u(1)?;
+    let place_cnt = u(2)?;
+    let frames_len = u(3)?;
+    let places_len = u(4)?;
+    let fptr_len = fptr_entries * 2;
+    let pptr_len = place_cnt * 2;
+    let foffs_len = fptr_entries * 8;
+    let poffs_len = place_cnt * 8;
+    let mut off = EN_SPR_HDR;
+    let mut out = [(0usize, 0usize); 7];
+    for (i, len) in [anim_len, fptr_len, pptr_len, frames_len, places_len, foffs_len, poffs_len]
+        .into_iter()
+        .enumerate()
+    {
+        if off + len > blob.len() {
+            return None;
+        }
+        out[i] = (off, len);
+        off += len;
+    }
+    Some(out)
 }
 
 impl PackKey {
@@ -393,6 +440,11 @@ impl PackKey {
             PackKey::RiEnemyDeathAnim => "area.ri.en_death_anim",
             PackKey::TourianMetroidData => "tourian.metroid_data",
             PackKey::AreaPalToggle => "area.pal_toggle",
+            PackKey::BrEnSprites => "area.br.en_sprites",
+            PackKey::NoEnSprites => "area.no.en_sprites",
+            PackKey::KrEnSprites => "area.kr.en_sprites",
+            PackKey::ToEnSprites => "area.to.en_sprites",
+            PackKey::RiEnSprites => "area.ri.en_sprites",
         }
     }
 
@@ -557,6 +609,11 @@ impl PackKey {
             157 => PackKey::KrEnemyDeathAnim,
             158 => PackKey::ToEnemyDeathAnim,
             159 => PackKey::RiEnemyDeathAnim,
+            160 => PackKey::BrEnSprites,
+            161 => PackKey::NoEnSprites,
+            162 => PackKey::KrEnSprites,
+            163 => PackKey::ToEnSprites,
+            164 => PackKey::RiEnSprites,
             153 => PackKey::TourianMetroidData,
             154 => PackKey::AreaPalToggle,
             _ => return None,

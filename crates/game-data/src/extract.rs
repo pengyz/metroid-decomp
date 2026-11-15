@@ -35,7 +35,7 @@ pub fn sections(rom: &[u8]) -> Result<Vec<Section>, String> {
     let mut out = Vec::new();
     out.push(Section { key: PackKey::GfxInfo, data: extract_gfx_info(prg)? });
     out.push(Section { key: PackKey::GfxData, data: extract_gfx_data(prg)? });
-    out.extend(extract_enemy_gfx(prg)?);
+    out.extend(extract_enemy_sprites_all(prg)?);
     // 世界地图：`WorldMap: ; 00:A53E`（prg0_title.asm:5118）32×32=1024 B，bank0。
     // `CopyMap $A93E`（prg0_title.asm:5153）运行时把它拷到 WorldMapRAM `$7000-$73FF`。
     out.push(Section { key: PackKey::WorldMap, data: bank_slice(prg, 0, WORLD_MAP_ADDR, WORLD_MAP_LEN)? });
@@ -109,15 +109,7 @@ fn extract_gfx_data(prg: &[u8]) -> Result<Vec<u8>, String> {
 const WORLD_MAP_ADDR: u16 = 0xA53E;
 const WORLD_MAP_LEN: usize = 1024;
 
-const EN_BANK_BASE: usize = 0x4000; // bank1（Brinstar）切窗口起点
-const EN_ANIM_TABLE: u16 = 0x9D6A;
-const EN_ANIM_LEN: usize = 118;
-const EN_FRAME_PTRS: u16 = 0x9DE0;
-const EN_FRAME_LEN: usize = 151;
-const EN_PLACE_PTRS: u16 = 0x9F0E;
-const EN_PLACE_LEN: usize = 14;
-
-/// 按 (bank, cpu addr) 取 ROM 字节（bank0-6 落 `$8000` 窗口，bank7 落 `$C000`）。
+/// 按 `(bank, cpu addr)` 取 ROM 字节（bank0-6 落 `$8000` 窗口，bank7 落 `$C000`）。
 fn bank_slice(prg: &[u8], bank: u8, addr: u16, len: usize) -> Result<Vec<u8>, String> {
     let o = bank_source_offset(bank, addr)?;
     prg.get(o..o + len)
@@ -125,21 +117,31 @@ fn bank_slice(prg: &[u8], bank: u8, addr: u16, len: usize) -> Result<Vec<u8>, St
         .ok_or_else(|| format!("ROM 越界 bank{bank}:{addr:04X} len={len}"))
 }
 
-fn en_off(addr: u16) -> Result<usize, String> {
+/// 按 `(bank, cpu addr)` 取**敌数据窗口**的 PRG 偏移（bank0-6 落 `$8000` 窗口）。
+fn en_off_b(bank: u8, addr: u16) -> Result<usize, String> {
     if addr < 0x8000 {
-        return Err(format!("敌数据指针非法（< $8000）: {addr:04X}"));
+        return Err(format!("敌数据指针非法（< $8000）: bank{bank}:{addr:04X}"));
     }
-    Ok(EN_BANK_BASE + (addr as usize - 0x8000))
+    bank_source_offset(bank, addr)
+}
+
+fn en_slice_b(prg: &[u8], bank: u8, addr: u16, len: usize) -> Result<Vec<u8>, String> {
+    let o = en_off_b(bank, addr)?;
+    prg.get(o..o + len)
+        .map(|s| s.to_vec())
+        .ok_or_else(|| format!("敌数据越界 bank{bank}:{addr:04X} off={o} len={len}"))
 }
 
 /// 帧流长（`[ctrl][ry][rx][流…$FF]`）——解析规则**只在提取侧实现一份**。
 ///
 /// 流形：`<$FC` 单字节 / `=$FC` 偏移 3B / `=$FD` 新 ctrl 2B / `=$FE` 跳位 1B / `=$FF` 尾。
-fn frame_end(prg: &[u8], addr: u16) -> Result<usize, String> {
-    let o = en_off(addr)?;
+fn frame_end_b(prg: &[u8], bank: u8, addr: u16) -> Result<usize, String> {
+    let o = en_off_b(bank, addr)?;
     let mut n = 3usize;
     while n < 256 {
-        let b = *prg.get(o + n).ok_or_else(|| format!("帧流越界 addr={addr:04X} n={n}"))?;
+        let b = *prg
+            .get(o + n)
+            .ok_or_else(|| format!("帧流越界 bank{bank}:{addr:04X} n={n}"))?;
         if b == 0xFF {
             return Ok(n + 1);
         }
@@ -152,7 +154,7 @@ fn frame_end(prg: &[u8], addr: u16) -> Result<usize, String> {
     Ok(n)
 }
 
-/// 位件长（至下一指针；退化情形给 16B 下界）——与烘焙器同口径。
+/// 位件长（至下一指针；退化情形给 16B 下界）——与旧烘焙器同口径（见 findings §6 的真值欠账）。
 fn place_end(addr: u16, nxt: u16) -> usize {
     if nxt > addr {
         (nxt as usize - addr as usize).max(4)
@@ -161,71 +163,134 @@ fn place_end(addr: u16, nxt: u16) -> usize {
     }
 }
 
-#[allow(dead_code)] // W2 暂缓（见 docs/findings/enemy-gfx-baker-drift.md）：待 L4/语义基线复核后启用。
-fn extract_enemy_gfx(prg: &[u8]) -> Result<Vec<Section>, String> {
-    let mut out = Vec::new();
-    out.push(Section { key: PackKey::EnAnimTable, data: en_slice(prg, EN_ANIM_TABLE, EN_ANIM_LEN)? });
-
-    let f = en_slice(prg, EN_FRAME_PTRS, EN_FRAME_LEN * 2)?;
-    out.push(Section { key: PackKey::EnFramePtrs1, data: f.clone() });
-    out.push(Section { key: PackKey::EnFramePtrs2, data: Vec::new() }); // Brinstar 单帧表（151 项已全在 fptr1）
-
-    let pl = en_slice(prg, EN_PLACE_PTRS, EN_PLACE_LEN * 2)?;
-    out.push(Section { key: PackKey::EnPlacePtrs, data: pl.clone() });
-
-    // 帧数据体（151 项）
-    let mut frames = Vec::new();
-    let mut foffs: Vec<(u32, u32)> = Vec::with_capacity(EN_FRAME_LEN);
-    for i in (0..EN_FRAME_LEN * 2).step_by(2) {
-        let addr = u16::from_le_bytes([f[i], f[i + 1]]);
-        if addr == 0 {
-            foffs.push((0, 0));
-            continue;
-        }
-        let ln = frame_end(prg, addr)?;
-        foffs.push((frames.len() as u32, ln as u32));
-        frames.extend_from_slice(&en_slice(prg, addr, ln)?);
-    }
-    out.push(Section { key: PackKey::EnFrames, data: frames });
-    out.push(Section { key: PackKey::EnFrameOffs, data: encode_offs(&foffs)? });
-
-    // 位件数据体（14 项，长=至下一指针）
-    let addrs: Vec<u16> = (0..EN_PLACE_LEN * 2)
-        .step_by(2)
-        .map(|i| u16::from_le_bytes([pl[i], pl[i + 1]]))
-        .collect();
-    let mut places = Vec::new();
-    let mut poffs: Vec<(u32, u32)> = Vec::with_capacity(EN_PLACE_LEN);
-    for (i, &addr) in addrs.iter().enumerate() {
-        if addr == 0 {
-            poffs.push((0, 0));
-            continue;
-        }
-        // 末项无后继指针 ⇒ 走 `place_end` 的退化分支（16B 下界）。
-        // **不改成 addr+32**：旧烘焙器在此处得到 16（其后继是错位读来的伪指针 ⇒ nxt<addr
-        // ⇒ 退化分支），本波只做搬家 ⇒ 保持 16 才能逐项字节相等。
-        // 真值待考：帧数据首指针 `$9FC2` ⇒ 末位件实际只到 `$9FC1`（=4B），
-        // 即旧数据在末项上**多读了 12B 帧数据**；是否影响渲染取决于是否有房间用 index 13，
-        // 另立卡（见 findings §6）。
-        let nxt = if i + 1 < addrs.len() && addrs[i + 1] != 0 {
-            addrs[i + 1]
-        } else {
-            0
-        };
-        let ln = place_end(addr, nxt);
-        poffs.push((places.len() as u32, ln as u32));
-        places.extend_from_slice(&en_slice(prg, addr, ln)?);
-    }
-    out.push(Section { key: PackKey::EnPlaces, data: places });
-    out.push(Section { key: PackKey::EnPlaceOffs, data: encode_offs(&poffs)? });
-    Ok(out)
+/// 一个区的敌帧/位数据面基址与表长（`docs/findings/per-bank-assets.md` §1，ROM 实读）。
+///
+/// 三条机械关系在五区全部成立：`anim_len = fptr - anim`、`fptr_entries = (place - fptr)/2`、
+/// `place_cnt = (place 表首指针 - place)/2`（提取时会逐条断言，防手抄漂移）。
+#[derive(Clone, Copy)]
+pub struct EnemySpriteSpec {
+    pub bank: u8,
+    pub anim: u16,
+    pub anim_len: usize,
+    pub fptr: u16,
+    pub fptr_entries: usize,
+    pub place: u16,
+    pub place_cnt: usize,
 }
 
-fn en_slice(prg: &[u8], addr: u16, len: usize) -> Result<Vec<u8>, String> {
-    let o = en_off(addr)?;
-    prg.get(o..o + len)
-        .map(|s| s.to_vec())
-        .ok_or_else(|| format!("敌数据越界 addr={addr:04X} off={o} len={len}"))
+/// 五区（area 序 Br/No/Kr/To/Ri；bank 序 `BankTable 07:CA30 = 02 03 05 04 06` 减 1）。
+pub const ENEMY_SPRITES: [EnemySpriteSpec; 5] = [
+    EnemySpriteSpec { bank: 1, anim: 0x9D6A, anim_len: 118, fptr: 0x9DE0, fptr_entries: 151, place: 0x9F0E, place_cnt: 16 },
+    EnemySpriteSpec { bank: 2, anim: 0x9BDA, anim_len: 138, fptr: 0x9C64, fptr_entries: 138, place: 0x9D78, place_cnt: 14 },
+    EnemySpriteSpec { bank: 3, anim: 0xA406, anim_len: 38,  fptr: 0xA42C, fptr_entries: 138, place: 0xA540, place_cnt: 16 },
+    EnemySpriteSpec { bank: 4, anim: 0x9C86, anim_len: 113, fptr: 0x9CF7, fptr_entries: 151, place: 0x9E25, place_cnt: 16 },
+    EnemySpriteSpec { bank: 5, anim: 0x9B85, anim_len: 107, fptr: 0x9BF0, fptr_entries: 138, place: 0x9D04, place_cnt: 15 },
+];
+
+/// 敌帧/位数据面：**每区一套**复合段（布局见 `pack::en_spr_sections`）。
+///
+/// 旧形是 bank1 单表（`EN_ANIM_TABLE/EN_FRAME_PTRS/EN_PLACE_PTRS` 硬编码）⇒ 非 Brinstar
+/// 敌人的 `animIndex` 去查了 Brinstar 的表：Ridley 的 Dessgeega 取 `0x42`，`bank1[0x42]`
+/// 是 `0xFF` ⇒ 16 次原地回绕，落 `unported!("bank07:E0BC-wrap")`。
+fn extract_enemy_sprites_all(prg: &[u8]) -> Result<Vec<Section>, String> {
+    const KEYS: [PackKey; 5] = [
+        PackKey::BrEnSprites,
+        PackKey::NoEnSprites,
+        PackKey::KrEnSprites,
+        PackKey::ToEnSprites,
+        PackKey::RiEnSprites,
+    ];
+    let mut out = Vec::with_capacity(5);
+    for (i, spec) in ENEMY_SPRITES.iter().enumerate() {
+        let b = spec.bank;
+        // 机械自检：表长与相邻标签地址一致（防手抄漂移；不等即拒出包）。
+        let anim_end = spec.anim.wrapping_add(spec.anim_len as u16);
+        if anim_end != spec.fptr {
+            return Err(format!(
+                "敌帧表基址不自洽（area {i}）：anim {:#06X}+{} != fptr {:#06X}",
+                spec.anim, spec.anim_len, spec.fptr
+            ));
+        }
+        let fptr_end = spec.fptr.wrapping_add((spec.fptr_entries * 2) as u16);
+        if fptr_end != spec.place {
+            return Err(format!(
+                "敌帧指针表不自洽（area {i}）：fptr {:#06X}+{}B != pptr {:#06X}",
+                spec.fptr,
+                spec.fptr_entries * 2,
+                spec.place
+            ));
+        }
+
+        let anim = en_slice_b(prg, b, spec.anim, spec.anim_len)?;
+        let f = en_slice_b(prg, b, spec.fptr, spec.fptr_entries * 2)?;
+        let pl = en_slice_b(prg, b, spec.place, spec.place_cnt * 2)?;
+
+        // place 项数自检：表首指针必须等于 place 基址 + 2*项数。
+        let first_place = u16::from_le_bytes([pl[0], pl[1]]);
+        let expect = spec.place + (spec.place_cnt * 2) as u16;
+        if first_place != expect {
+            return Err(format!(
+                "place 表项数不自洽（area {i}）：首指针 {first_place:#06X} != {expect:#06X}"
+            ));
+        }
+
+        // 帧数据体：逐指针取流长（`$0000` 项留 (0,0) —— 原版表里确有零项）。
+        let mut frames = Vec::new();
+        let mut foffs: Vec<(u32, u32)> = Vec::with_capacity(spec.fptr_entries);
+        for k in (0..spec.fptr_entries * 2).step_by(2) {
+            let addr = u16::from_le_bytes([f[k], f[k + 1]]);
+            if addr == 0 {
+                foffs.push((0, 0));
+                continue;
+            }
+            let ln = frame_end_b(prg, b, addr)?;
+            foffs.push((frames.len() as u32, ln as u32));
+            frames.extend_from_slice(&en_slice_b(prg, b, addr, ln)?);
+        }
+
+        // 位件数据体：长=至下一指针（末项走退化分支）。
+        let addrs: Vec<u16> = (0..spec.place_cnt * 2)
+            .step_by(2)
+            .map(|k| u16::from_le_bytes([pl[k], pl[k + 1]]))
+            .collect();
+        let mut places = Vec::new();
+        let mut poffs: Vec<(u32, u32)> = Vec::with_capacity(spec.place_cnt);
+        for (k, &addr) in addrs.iter().enumerate() {
+            if addr == 0 {
+                poffs.push((0, 0));
+                continue;
+            }
+            let nxt = addrs.get(k + 1).copied().unwrap_or(0);
+            let ln = place_end(addr, nxt);
+            poffs.push((places.len() as u32, ln as u32));
+            places.extend_from_slice(&en_slice_b(prg, b, addr, ln)?);
+        }
+
+        let foffs = encode_offs(&foffs)?;
+        let poffs = encode_offs(&poffs)?;
+
+        // 复合段 = 头 6×u32 + 七块定序拼接（布局见 pack::en_spr_sections）。
+        let mut blob = Vec::with_capacity(24 + anim.len() + f.len() + pl.len());
+        for v in [
+            spec.anim_len as u32,
+            spec.fptr_entries as u32,
+            spec.place_cnt as u32,
+            frames.len() as u32,
+            places.len() as u32,
+            0u32,
+        ] {
+            blob.extend_from_slice(&v.to_le_bytes());
+        }
+        blob.extend_from_slice(&anim);
+        blob.extend_from_slice(&f);
+        blob.extend_from_slice(&pl);
+        blob.extend_from_slice(&frames);
+        blob.extend_from_slice(&places);
+        blob.extend_from_slice(&foffs);
+        blob.extend_from_slice(&poffs);
+        out.push(Section { key: KEYS[i], data: blob });
+    }
+    Ok(out)
 }
 
 /// `(off,len)` 表 → LE u32 对字节流。
@@ -318,22 +383,17 @@ fn seg_meta() -> Vec<SegMeta> {
                   rom: "bank07:$C6E0", note: "GFXInfo 29 项×7B（LoadGFX 表间接读）" },
         SegMeta { key: PackKey::GfxData, kind: "gfx-data", elem: 1, count: 0,
                   rom: "bank00-07:按描述子", note: "29 项图形块拼接（count 由 Info 尺寸和决定）" },
-        SegMeta { key: PackKey::EnAnimTable, kind: "bytes", elem: 1, count: EN_ANIM_LEN,
-                  rom: "bank01:$9D6A", note: "EnAnimTable（$FF=动画结束）" },
-        SegMeta { key: PackKey::EnFramePtrs1, kind: "u16-table", elem: 2, count: EN_FRAME_LEN,
-                  rom: "bank01:$9DE0", note: "帧指针 151 项（$9DE0→$9F0E=302B）" },
-        SegMeta { key: PackKey::EnFramePtrs2, kind: "u16-table", elem: 2, count: 0,
-                  rom: "bank01:$9EE0", note: "**空**：$9EE0 处无独立表（旧烘焙器 128 项读法即 bug 源）" },
-        SegMeta { key: PackKey::EnPlacePtrs, kind: "u16-table", elem: 2, count: EN_PLACE_LEN,
-                  rom: "bank01:$9F0E", note: "位件指针 14 项（表内 14 指针后即数据）" },
-        SegMeta { key: PackKey::EnFrames, kind: "bytes", elem: 1, count: 0,
-                  rom: "bank01:$9FC2+", note: "帧流拼接（各自界于 $FF）" },
-        SegMeta { key: PackKey::EnPlaces, kind: "bytes", elem: 1, count: 0,
-                  rom: "bank01:$9F2E+", note: "位件流拼接" },
-        SegMeta { key: PackKey::EnFrameOffs, kind: "offs-table", elem: 8, count: EN_FRAME_LEN,
-                  rom: "(派生)", note: "(off u32, len u32) LE ×151" },
-        SegMeta { key: PackKey::EnPlaceOffs, kind: "offs-table", elem: 8, count: EN_PLACE_LEN,
-                  rom: "(派生)", note: "(off u32, len u32) LE ×14" },
+        // 敌帧/位数据面：**每区一套复合段**（头 6×u32 + anim/fptr/pptr/frames/places/foffs/poffs）。
+        SegMeta { key: PackKey::BrEnSprites, kind: "en-spr", elem: 1, count: 0,
+                  rom: "bank01:$9D6A+", note: "Brinstar anim118/fptr151/place16（规格见 ENEMY_SPRITES[0]）" },
+        SegMeta { key: PackKey::NoEnSprites, kind: "en-spr", elem: 1, count: 0,
+                  rom: "bank02:$9BDA+", note: "Norfair anim138/fptr138/place14（ENEMY_SPRITES[1]）" },
+        SegMeta { key: PackKey::KrEnSprites, kind: "en-spr", elem: 1, count: 0,
+                  rom: "bank04:$9C86+", note: "Kraid anim113/fptr151/place16（ENEMY_SPRITES[2]）" },
+        SegMeta { key: PackKey::ToEnSprites, kind: "en-spr", elem: 1, count: 0,
+                  rom: "bank03:$A406+", note: "Tourian anim38/fptr138/place16（ENEMY_SPRITES[3]）" },
+        SegMeta { key: PackKey::RiEnSprites, kind: "en-spr", elem: 1, count: 0,
+                  rom: "bank05:$9B85+", note: "Ridley anim107/fptr138/place15（ENEMY_SPRITES[4]）" },
         SegMeta { key: PackKey::WorldMap, kind: "bytes", elem: 1, count: WORLD_MAP_LEN,
                   rom: "bank00:$A53E", note: "WorldMap 32×32（$FF=无房；CopyMap 源）" },
         SegMeta { key: PackKey::BrRoomPtrs, kind: "u16-table", elem: 2, count: 47, rom: "bank01:$A314", note: "Brinstar RoomPtrTable" },

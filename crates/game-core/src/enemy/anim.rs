@@ -15,14 +15,16 @@ pub(crate) fn draw_enemy(mem: &mut crate::frame::FrameMemory, x: u8) {
     // 【②回装（2026-10-29）】asm :6156-6168：帧记字 1/2→EnsExtra.radiusY/X（IsObject-
     // Visible 用半径（序=半径写先行））+[:6178-6186] bit1 逐帧闩（and #$FD/ora（txa<<1））。
     // 爆亡链件已补（F40D/DCF5/F483 全径（415 测））⇒连锁闭环（§10 回装判据达成）。
+    // **按区**取敌帧/位数据面（`docs/findings/per-bank-assets.md` §1：五区基址/表长各异）。
+    let area = crate::world::room_load::area_idx(mem.read_ram(ram_map::IN_AREA)) as u8;
     let frame0 = mem.read_wram(0x6AF4 + x as u16 + 3);
     if frame0 != 0xFF {
         let fi0 = ((frame0 & 0x7F) as usize) + if frame0 & 0x80 != 0 { 128 } else { 0 };
-        let (fo0, fl0) = assets::enemy_frame_off(fi0 as usize).unwrap_or((0, 0));
+        let (fo0, fl0) = assets::enemy_frame_off(area, fi0 as usize).unwrap_or((0, 0));
     // 【goal-轮94 fo0→radiusY 直证】帧面 radiusY（金方 1/9 vs 我 8）。
         if fl0 > 2 {
-            mem.write_wram(0x6AF4 + x as u16 + 1, assets::enemy_frames()[fo0 as usize + 1]);
-            mem.write_wram(0x6AF4 + x as u16 + 2, assets::enemy_frames()[fo0 as usize + 2]);
+            mem.write_wram(0x6AF4 + x as u16 + 1, assets::enemy_frames(area)[fo0 as usize + 1]);
+            mem.write_wram(0x6AF4 + x as u16 + 2, assets::enemy_frames(area)[fo0 as usize + 2]);
         }
     }
     // 【goal-轮75 asm 合形修】draw 走 fresh 检（:6177 `jsr IsObjectVisible` 逐字——
@@ -42,9 +44,9 @@ pub(crate) fn draw_enemy(mem: &mut crate::frame::FrameMemory, x: u8) {
     }
     let table2 = frame & 0x80 != 0;
     let fi = ((frame & 0x7F) as usize) + if table2 { 128 } else { 0 };
-    let (fo, fl) = assets::enemy_frame_off(fi as usize).unwrap_or((0, 0));
+    let (fo, fl) = assets::enemy_frame_off(area, fi as usize).unwrap_or((0, 0));
     let blob = |i: usize| -> u8 {
-        if fl == 0 || i >= fl as usize { 0 } else { assets::enemy_frames()[fo as usize + i] }
+        if fl == 0 || i >= fl as usize { 0 } else { assets::enemy_frames(area)[fo as usize + i] }
     };
     let ctrl = blob(0);
     // 【X 形根修（2026-10-31 asm WriteSpriteRAM（DEE6）逐字）】$6B=**对象控制字节**
@@ -55,9 +57,9 @@ pub(crate) fn draw_enemy(mem: &mut crate::frame::FrameMemory, x: u8) {
     let obj_mirror = mem.read_ram(0x006B) & 0x10; // bit4=水平镜像控制
     let mirror_flags = if obj_mirror != 0 { 0x40u8 } else { 0 };
     let place_idx = ((ctrl & 0x0F) as usize).min(127);
-    let (po, pl) = assets::enemy_place_off(place_idx as usize).unwrap_or((0, 0));
+    let (po, pl) = assets::enemy_place_off(area, place_idx as usize).unwrap_or((0, 0));
     let pblob = |i: usize| -> u8 {
-        if pl == 0 || i >= pl as usize { 0 } else { assets::enemy_places()[po as usize + i] }
+        if pl == 0 || i >= pl as usize { 0 } else { assets::enemy_places(area)[po as usize + i] }
     };
     let y = mem.read_ram(0x0400 + x as u16 + 0); // y=+0
     let xpos = mem.read_ram(0x0400 + x as u16 + 1); // x=+1
@@ -124,10 +126,11 @@ pub(crate) fn update_enemy_anim(mem: &mut crate::frame::FrameMemory, x: u8, a: u
         }
     }
     mem.write_wram(base + 4, a); // sta animDelay←A
+    let area = crate::world::room_load::area_idx(mem.read_ram(ram_map::IN_AREA)) as u8;
     let reset = mem.read_wram(base + 5);
     let mut y = mem.read_wram(base + 6) as usize;
     for _ in 0..16u32 {
-        let v = *game_data::assets::enemy_anim_table().get(y).unwrap_or(&0xFF);
+        let v = *game_data::assets::enemy_anim_table(area).get(y).unwrap_or(&0xFF);
         if v == 0xFF {
             y = reset as usize; // 回绕续走
             continue;

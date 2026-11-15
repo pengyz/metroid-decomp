@@ -50,39 +50,93 @@ pub fn gfx_block(id: usize) -> Option<&'static [u8]> {
 
 // ---- 敌帧/位件（bank1 `$9D6A`-`$9F0E` 族）----------------------------------------
 
-/// `EnAnimTable`（`$FF`=动画结束、animIndex 回 reset）。
-pub fn enemy_anim_table() -> &'static [u8] {
-    pack::get(PackKey::EnAnimTable)
+/// 一个区的敌帧/位数据面（`EnAnimTable` / 帧指针 / 位件指针 / 帧体 / 位件体 + 两套索引）。
+///
+/// **按区**（`docs/findings/per-bank-assets.md` §1）：五区的基址与表长各不相同，
+/// 旧形是 bank1 单表 ⇒ 非 Brinstar 敌人的 `animIndex` 查错表。
+#[derive(Clone, Copy)]
+pub struct EnemySprites {
+    pub anim: &'static [u8],
+    pub fptr: &'static [u8],
+    pub pptr: &'static [u8],
+    pub frames: &'static [u8],
+    pub places: &'static [u8],
+    pub foffs: &'static [u8],
+    pub poffs: &'static [u8],
 }
 
-/// 帧指针表（LE u16 项，项数见 [`crate::extract`] 的表长定谳）。
-pub fn enemy_frame_ptrs() -> &'static [u8] {
-    pack::get(PackKey::EnFramePtrs1)
+static EN_SPR: LazyLock<[EnemySprites; 5]> = LazyLock::new(|| {
+    const K: [PackKey; 5] = [
+        PackKey::BrEnSprites,
+        PackKey::NoEnSprites,
+        PackKey::KrEnSprites,
+        PackKey::ToEnSprites,
+        PackKey::RiEnSprites,
+    ];
+    K.map(|k| {
+        let blob: &'static [u8] = pack::get(k);
+        let s = pack::en_spr_sections(blob).expect("敌帧/位复合段布局非法（头 6×u32 + 七块）");
+        let cut = |i: usize| -> &'static [u8] { &blob[s[i].0..s[i].0 + s[i].1] };
+        EnemySprites {
+            anim: cut(0),
+            fptr: cut(1),
+            pptr: cut(2),
+            frames: cut(3),
+            places: cut(4),
+            foffs: cut(5),
+            poffs: cut(6),
+        }
+    })
+});
+
+/// 按区取敌帧/位数据面（`area = InArea & $0F`；越界 fail-loud）。
+pub fn enemy_sprites(area: u8) -> EnemySprites {
+    let a = area_idx(area)
+        .unwrap_or_else(|| panic!("敌帧/位数据面：非法区号 area={area:#04X}（应为 0..=4）"));
+    EN_SPR[a as usize]
+}
+
+/// 动画表（`EnAnimTable`；`$FF`=动画结束）。
+pub fn enemy_anim_table(area: u8) -> &'static [u8] {
+    enemy_sprites(area).anim
+}
+
+/// 帧指针表（LE u16 项）。
+pub fn enemy_frame_ptrs(area: u8) -> &'static [u8] {
+    enemy_sprites(area).fptr
 }
 
 /// 位件指针表（LE u16 项）。
-pub fn enemy_place_ptrs() -> &'static [u8] {
-    pack::get(PackKey::EnPlacePtrs)
+pub fn enemy_place_ptrs(area: u8) -> &'static [u8] {
+    enemy_sprites(area).pptr
 }
 
 /// 帧数据体。
-pub fn enemy_frames() -> &'static [u8] {
-    pack::get(PackKey::EnFrames)
+pub fn enemy_frames(area: u8) -> &'static [u8] {
+    enemy_sprites(area).frames
 }
 
 /// 位件数据体。
-pub fn enemy_places() -> &'static [u8] {
-    pack::get(PackKey::EnPlaces)
+pub fn enemy_places(area: u8) -> &'static [u8] {
+    enemy_sprites(area).places
+}
+
+fn offs_at(t: &'static [u8], idx: usize) -> Option<(u32, u32)> {
+    let e = t.get(idx * 8..idx * 8 + 8)?;
+    Some((
+        u32::from_le_bytes([e[0], e[1], e[2], e[3]]),
+        u32::from_le_bytes([e[4], e[5], e[6], e[7]]),
+    ))
 }
 
 /// 第 `idx` 帧项 `(偏移, 长)`——越界 ⇒ `None`。
-pub fn enemy_frame_off(idx: usize) -> Option<(u32, u32)> {
-    pack::offs_entry(PackKey::EnFrameOffs, idx)
+pub fn enemy_frame_off(area: u8, idx: usize) -> Option<(u32, u32)> {
+    offs_at(enemy_sprites(area).foffs, idx)
 }
 
 /// 第 `idx` 位件项 `(偏移, 长)`——越界 ⇒ `None`。
-pub fn enemy_place_off(idx: usize) -> Option<(u32, u32)> {
-    pack::offs_entry(PackKey::EnPlaceOffs, idx)
+pub fn enemy_place_off(area: u8, idx: usize) -> Option<(u32, u32)> {
+    offs_at(enemy_sprites(area).poffs, idx)
 }
 
 // ---- 世界地图 -------------------------------------------------------------------
@@ -381,17 +435,33 @@ mod tests {
         assert_eq!(sum, gfx_data().len(), "描述子尺寸和与数据体长度不符");
     }
 
-    /// 敌面段形状：118 动画项 / 151 帧指针×2B / 14 位件指针×2B（表长定谳的形状面）。
+    /// 敌帧/位数据面：**五区各自**的长度必须与 ROM 实读一致
+    /// （`docs/findings/per-bank-assets.md` §1；旧形是 bank1 单表）。
     #[test]
     fn enemy_segments_shape_matches_table_extent() {
         if !is_ready() {
             eprintln!("SKIP（显式）：资产包未加载——先跑 pack-tool extract");
             return;
         }
-        assert_eq!(enemy_anim_table().len(), 118, "EnAnimTable 118 项（$9D6A→$9DE0）");
-        assert_eq!(enemy_frame_ptrs().len(), 151 * 2, "帧指针 151 项×2B");
-        assert_eq!(enemy_place_ptrs().len(), 14 * 2, "位件指针 14 项×2B");
-        assert!(!enemy_frames().is_empty() && !enemy_places().is_empty());
+        // anim 长 / 帧指针项数 / 位件项数（Br/No/Kr/To/Ri）
+        let anim = [118usize, 138, 38, 113, 107];
+        let fptr = [151usize, 138, 138, 151, 138];
+        let pptr = [16usize, 14, 16, 16, 15];
+        for a in 0..5u8 {
+            let s = enemy_sprites(a);
+            assert_eq!(s.anim.len(), anim[a as usize], "area {a} anim 长");
+            assert_eq!(s.fptr.len(), fptr[a as usize] * 2, "area {a} 帧指针项数");
+            assert_eq!(s.pptr.len(), pptr[a as usize] * 2, "area {a} 位件指针项数");
+            assert!(!s.frames.is_empty() && !s.places.is_empty(), "area {a} 数据体非空");
+            assert_eq!(s.foffs.len(), fptr[a as usize] * 8, "area {a} 帧索引项数");
+            assert_eq!(s.poffs.len(), pptr[a as usize] * 8, "area {a} 位件索引项数");
+        }
+        // 与 bank1 相同的 anim 字节数必须 < 118（否则说明五区其实同表 ⇒ 按区没生效）
+        let b1 = enemy_sprites(0).anim;
+        for a in 1..5u8 {
+            let same = b1.iter().zip(enemy_sprites(a).anim).filter(|(x, y)| x == y).count();
+            assert!(same < 118, "area {a} 的 anim 表不应与 Brinstar 相同（实测应 <118）");
+        }
     }
 
     /// 首项尺寸必须从描述子 `+5..+7` 读（守 `GFXInfo` 的 7 B 列义——
@@ -417,40 +487,50 @@ mod tests {
             eprintln!("SKIP（显式）：资产包未加载——先跑 pack-tool extract");
             return;
         }
-        let fp = enemy_frame_ptrs();
-        let pp = enemy_place_ptrs();
-        assert_eq!(fp.len() % 2, 0, "帧指针表应为 u16 项");
-        assert_eq!(pp.len() % 2, 0, "位件指针表应为 u16 项");
-        for (i, w) in fp.chunks_exact(2).enumerate() {
-            let p = u16::from_le_bytes([w[0], w[1]]);
-            assert!(p >= 0x8000, "帧指针 {i} 非法: {p:04X}");
-        }
-        for (i, w) in pp.chunks_exact(2).enumerate() {
-            let p = u16::from_le_bytes([w[0], w[1]]);
-            assert!(p >= 0x8000, "位件指针 {i} 非法: {p:04X}");
+        for a in 0..5u8 {
+            let s = enemy_sprites(a);
+            assert_eq!(s.fptr.len() % 2, 0, "area {a} 帧指针表应为 u16 项");
+            assert_eq!(s.pptr.len() % 2, 0, "area {a} 位件指针表应为 u16 项");
+            for (i, w) in s.fptr.chunks_exact(2).enumerate() {
+                let p = u16::from_le_bytes([w[0], w[1]]);
+                if p == 0 {
+                    continue; // 原版表里确有零项（提取时留 (0,0)）
+                }
+                assert!(p >= 0x8000, "area {a} 帧指针 {i} 非法: {p:04X}");
+            }
+            for (i, w) in s.pptr.chunks_exact(2).enumerate() {
+                let p = u16::from_le_bytes([w[0], w[1]]);
+                assert!(p >= 0x8000, "area {a} 位件指针 {i} 非法: {p:04X}");
+            }
         }
     }
 
-    /// 敌面项表自洽 + 帧流末字节恒 `$FF`（防「空对空」假绿）。
+    /// 敌面项表自洽 + 帧流末字节恒 `$FF`（防「空对空」假绿）——五区逐区。
     #[test]
     fn enemy_offsets_fit_and_streams_end_with_ff() {
         if !is_ready() {
             eprintln!("SKIP（显式）：资产包未加载——先跑 pack-tool extract");
             return;
         }
-        let body = enemy_frames();
-        let mut checked = 0;
-        let mut i = 0;
-        while let Some((o, l)) = enemy_frame_off(i) {
-            if l > 0 {
-                assert!((o + l) as usize <= body.len(), "帧项 {i} 越出数据体");
-                assert_eq!(body[(o + l) as usize - 1], 0xFF, "帧项 {i} 末字节应为 $FF");
-                checked += 1;
+        for a in 0..5u8 {
+            let s = enemy_sprites(a);
+            let mut checked = 0;
+            let mut i = 0;
+            while let Some((o, l)) = enemy_frame_off(a, i) {
+                if l > 0 {
+                    assert!((o + l) as usize <= s.frames.len(), "area {a} 帧项 {i} 越出数据体");
+                    assert_eq!(
+                        s.frames[(o + l) as usize - 1],
+                        0xFF,
+                        "area {a} 帧项 {i} 末字节应为 $FF"
+                    );
+                    checked += 1;
+                }
+                i += 1;
             }
-            i += 1;
+            assert!(checked > 0, "area {a} 至少要校验到一项");
+            assert!(enemy_frame_off(a, i).is_none(), "area {a} 越界索引应 None");
         }
-        assert!(checked > 0, "至少要校验到一项");
-        assert!(enemy_frame_off(i).is_none(), "越界索引应 None");
     }
 }
 
@@ -773,7 +853,7 @@ mod palette_tests {
         assert_eq!(enemy_movement_strings(0).len(), 512);
         // L977B 与朝向段同源（迁移只改来源不改字节）。
         assert_eq!(enemy_facing(0).len(), 64);
-        assert_eq!(enemy_anim_table().len(), 118);
+        assert_eq!(enemy_anim_table(0).len(), 118);
     }
 
     /// 标题屏 17 表锚（`prg0_title.asm` 标签 ↔ 段长；`BOTTOM_SPARKLE_DATA` 真长
