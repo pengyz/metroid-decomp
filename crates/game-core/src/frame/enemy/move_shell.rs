@@ -9,11 +9,7 @@ use crate::frame::enemy::prims::*;
 use crate::frame::enemy::update::{
     EN_DELAY, EN_INSTR, EN_MOV_IDX, EN_SUBPIXEL_X, EN_SUBPIXEL_Y,
 };
-use crate::frame::enemy::behaviour::{
-    enemy_check_move_down, enemy_check_move_up, enemy_move_one_pixel_down,
-    enemy_move_one_pixel_left, enemy_move_one_pixel_right, enemy_move_one_pixel_up,
-    update_enemy_anim, update_enemy_common_no_move_no_anim,
-};
+
 
 
 
@@ -211,7 +207,7 @@ fn enemy_delta_for_move(mem: &mut crate::frame::FrameMemory, x: u8) -> (i8, i8) 
     (dy, dx)
 }
 
-fn apply_enemy_delta_axis(mem: &mut crate::frame::FrameMemory, x: u8, delta: i8, vertical: bool) {
+pub(crate) fn apply_enemy_delta_axis(mem: &mut crate::frame::FrameMemory, x: u8, delta: i8, vertical: bool) {
     let mut qty = if delta < 0 {
         twos(delta as u8)
     } else {
@@ -238,7 +234,7 @@ fn apply_enemy_delta_axis(mem: &mut crate::frame::FrameMemory, x: u8, delta: i8,
 }
 
 /// `EnemyMove ; $8058`。
-fn enemy_move(mem: &mut crate::frame::FrameMemory, x: u8) {
+pub(crate) fn enemy_move(mem: &mut crate::frame::FrameMemory, x: u8) {
     // 门 1：`lda data05 / asl / bmi @RTS` ⇒ bit6 置（30FPS 半速帧）整件跳过。
     if mem.read_ram(en_addr(x, EN_F_DATA05)) & 0x40 != 0 {
         return;
@@ -252,34 +248,8 @@ fn enemy_move(mem: &mut crate::frame::FrameMemory, x: u8) {
     apply_enemy_delta_axis(mem, x, dx, false);
 }
 
-/// `@noMove ; 07:F438`（入口 3：anim + 尾件，无移动）。
-fn update_enemy_common_no_move_anim(mem: &mut crate::frame::FrameMemory, x: u8, anim: u8) {
-    update_enemy_anim(mem, x, anim);
-    update_enemy_common_no_move_no_anim(mem, x);
-}
 
-/// `UpdateEnemyCommon ; 07:F410`（入口 1：anim + move）。
-fn update_enemy_common_anim_move(mem: &mut crate::frame::FrameMemory, x: u8, anim: u8) {
-    update_enemy_anim(mem, x, anim);
-    enemy_move(mem, x);
-    update_enemy_common_no_move_no_anim(mem, x);
-}
 
-/// `UpdateEnemyCommon_Decide`（prg1_brinstar.asm:863）：按 `EnemyStatusPreAI` 选入口；
-/// 活动态 anim 索引取 `$00`、休止态取 `$01`（均由调用者预设）。
-fn update_enemy_common_decide(mem: &mut crate::frame::FrameMemory, x: u8) {
-    match mem.read_ram(0x0081) {
-        1 => {
-            let anim = mem.read_ram(0x0001);
-            update_enemy_common_no_move_anim(mem, x, anim);
-        }
-        3 => update_enemy_common_no_move_no_anim(mem, x),
-        _ => {
-            let anim = mem.read_ram(0x0000);
-            update_enemy_common_anim_move(mem, x, anim);
-        }
-    }
-}
 
 #[cfg(test)]
 mod tests_enemy_move_shell {
