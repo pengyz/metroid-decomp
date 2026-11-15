@@ -349,6 +349,11 @@ fn seg_meta() -> Vec<SegMeta> {
         SegMeta { key: PackKey::NoRoomStreams, kind: "bytes", elem: 1, count: 0, rom: "bank02:各指针", note: "Norfair 房流拼接" },
         SegMeta { key: PackKey::NoRoomOffs, kind: "offs-table", elem: 8, count: 46, rom: "(派生)", note: "×46 (off,len)" },
         SegMeta { key: PackKey::NoStructures, kind: "bytes", elem: 1, count: 0, rom: "bank02:各指针", note: "Norfair 结构体拼接" },
+        SegMeta { key: PackKey::BrEnemyDeathAnim, kind: "bytes", elem: 1, count: 32, rom: "bank01:960B", note: "EnemyDeathAnimIndex（type×2+向；按区不同）" },
+        SegMeta { key: PackKey::NoEnemyDeathAnim, kind: "bytes", elem: 1, count: 32, rom: "bank02:960B", note: "EnemyDeathAnimIndex（type×2+向；按区不同）" },
+        SegMeta { key: PackKey::KrEnemyDeathAnim, kind: "bytes", elem: 1, count: 32, rom: "bank04:960B", note: "EnemyDeathAnimIndex（type×2+向；按区不同）" },
+        SegMeta { key: PackKey::ToEnemyDeathAnim, kind: "bytes", elem: 1, count: 32, rom: "bank03:960B", note: "EnemyDeathAnimIndex（type×2+向；按区不同）" },
+        SegMeta { key: PackKey::RiEnemyDeathAnim, kind: "bytes", elem: 1, count: 32, rom: "bank05:960B", note: "EnemyDeathAnimIndex（type×2+向；按区不同）" },
         SegMeta { key: PackKey::BrEnemyHealth, kind: "bytes", elem: 1, count: 64, rom: "bank01:962B", note: "EnemyHealthTbl（asm 标签间距见 note）" },
         SegMeta { key: PackKey::BrEnemyRestingAnim, kind: "bytes", elem: 1, count: 32, rom: "bank01:963B", note: "EnemyRestingAnimIndex（asm 标签间距见 note）" },
         SegMeta { key: PackKey::BrEnemyActiveAnim, kind: "bytes", elem: 1, count: 32, rom: "bank01:965B", note: "EnemyActiveAnimIndex（asm 标签间距见 note）" },
@@ -643,7 +648,7 @@ fn extract_area(prg: &[u8], a: &AreaSpec) -> Result<Vec<Section>, String> {
 /// health 16（$962B→$963B）/ resting 32 / active 32 / init-offset 16 / force-attribs 16 /
 /// force-speed 16（$969B→$96AB）/ distance 16 / init-delay 32（$96BB→$96DB）/
 /// facing 64（$977B 起，窗口）/ mov-ptrs 36 / mov-str 512。
-const ENEMY_TABLE_LAYOUT: [(u16, usize); 11] = [
+const ENEMY_TABLE_LAYOUT: [(u16, usize); 12] = [
     // **表长 vs 窗口**（enemy-table-extent 疑点定谳）：asm 标签间距给的是**语义表长**
     // （health 16 / force-speed 16 / init-delay 32），但 `LoadEnemy` 用 `type & $3F`
     // （0..63）索引 health —— 原版读的是**连续 ROM**，越过 16 B 后读到的是紧随其后的
@@ -660,43 +665,48 @@ const ENEMY_TABLE_LAYOUT: [(u16, usize); 11] = [
     (0x977B, 64), // L977B 朝向表（窗口）
     (0x96DB, 36), // EnemyMovementPtrs（9 索引 × R/L × 2 B）
     (0x97EF, 512), // 移动指令串窗
+    (0x960B, 32), // EnemyDeathAnimIndex（**按区不同**：bank1/3 首字节 0x27/0x08）
+
 ];
 
 /// 五区敌表段键（顺序与 [`ENEMY_TABLE_LAYOUT`] 一一对应）。
-fn enemy_keys(area: usize) -> [PackKey; 11] {
+fn enemy_keys(area: usize) -> [PackKey; 12] {
     match area {
         0 => [PackKey::BrEnemyHealth, PackKey::BrEnemyRestingAnim, PackKey::BrEnemyActiveAnim,
               PackKey::BrEnemyActiveAnimInitOffset, PackKey::BrEnemyForceAttribs,
               PackKey::BrEnemyForceSpeedDelay, PackKey::BrEnemyDistanceThreshold,
               PackKey::BrEnemyInitDelay, PackKey::BrEnemyFacing, PackKey::BrEnMovPtrs,
-              PackKey::BrEnMovStr],
+              PackKey::BrEnMovStr, PackKey::BrEnemyDeathAnim],
         1 => [PackKey::NoEnemyHealth, PackKey::NoEnemyRestingAnim, PackKey::NoEnemyActiveAnim,
               PackKey::NoEnemyActiveAnimInitOffset, PackKey::NoEnemyForceAttribs,
               PackKey::NoEnemyForceSpeedDelay, PackKey::NoEnemyDistanceThreshold,
               PackKey::NoEnemyInitDelay, PackKey::NoEnemyFacing, PackKey::NoEnMovPtrs,
-              PackKey::NoEnMovStr],
+              PackKey::NoEnMovStr, PackKey::NoEnemyDeathAnim],
         2 => [PackKey::KrEnemyHealth, PackKey::KrEnemyRestingAnim, PackKey::KrEnemyActiveAnim,
               PackKey::KrEnemyActiveAnimInitOffset, PackKey::KrEnemyForceAttribs,
               PackKey::KrEnemyForceSpeedDelay, PackKey::KrEnemyDistanceThreshold,
               PackKey::KrEnemyInitDelay, PackKey::KrEnemyFacing, PackKey::KrEnMovPtrs,
-              PackKey::KrEnMovStr],
+              PackKey::KrEnMovStr, PackKey::KrEnemyDeathAnim],
         3 => [PackKey::ToEnemyHealth, PackKey::ToEnemyRestingAnim, PackKey::ToEnemyActiveAnim,
               PackKey::ToEnemyActiveAnimInitOffset, PackKey::ToEnemyForceAttribs,
               PackKey::ToEnemyForceSpeedDelay, PackKey::ToEnemyDistanceThreshold,
               PackKey::ToEnemyInitDelay, PackKey::ToEnemyFacing, PackKey::ToEnMovPtrs,
-              PackKey::ToEnMovStr],
+              PackKey::ToEnMovStr, PackKey::ToEnemyDeathAnim],
         _ => [PackKey::RiEnemyHealth, PackKey::RiEnemyRestingAnim, PackKey::RiEnemyActiveAnim,
               PackKey::RiEnemyActiveAnimInitOffset, PackKey::RiEnemyForceAttribs,
               PackKey::RiEnemyForceSpeedDelay, PackKey::RiEnemyDistanceThreshold,
               PackKey::RiEnemyInitDelay, PackKey::RiEnemyFacing, PackKey::RiEnMovPtrs,
-              PackKey::RiEnMovStr],
+              PackKey::RiEnMovStr, PackKey::RiEnemyDeathAnim],
     }
 }
 
 /// 五区敌表提取（bank = 1..5 顺序；段内容 = `bank_slice(bank, addr, len)`）。
 fn extract_enemy_tables_all(prg: &[u8]) -> Result<Vec<Section>, String> {
-    let mut out = Vec::with_capacity(55);
-    for (i, bank) in [1u8, 2, 3, 4, 5].into_iter().enumerate() {
+    let mut out = Vec::with_capacity(60);
+    // **区序 → bank**：0=Br(1) 1=No(2) 2=Kr(4) 3=To(3) 4=Ri(5)——即 `BankTable 07:CA30`
+    // 的 `02 03 05 04 06` 减 1。**不能按 bank 数字升序**：升序会把 Kraid(bank4) 与
+    // Tourian(bank3) 的表互换（`enemy_keys` 的区序是 InArea 序，不是 bank 序）。
+    for (i, bank) in [1u8, 2, 4, 3, 5].into_iter().enumerate() {
         let keys = enemy_keys(i);
         for (j, (addr, len)) in ENEMY_TABLE_LAYOUT.iter().enumerate() {
             out.push(Section { key: keys[j], data: bank_slice(prg, bank, *addr, *len)? });

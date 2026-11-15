@@ -219,32 +219,32 @@ pub fn structures(area: u8) -> Option<&'static [&'static [u8]]> {
 // 长度另案（`enemy-table-extent`）。
 /// 敌表区索引（0=Br/1=No/2=Kr/3=To/4=Ri——`InArea & $0F`）。
 fn enemy_table(area: u8, idx: usize) -> &'static [u8] {
-    const KEYS: [[PackKey; 11]; 5] = [
+    const KEYS: [[PackKey; 12]; 5] = [
         [PackKey::BrEnemyHealth, PackKey::BrEnemyRestingAnim, PackKey::BrEnemyActiveAnim,
          PackKey::BrEnemyActiveAnimInitOffset, PackKey::BrEnemyForceAttribs,
          PackKey::BrEnemyForceSpeedDelay, PackKey::BrEnemyDistanceThreshold,
          PackKey::BrEnemyInitDelay, PackKey::BrEnemyFacing, PackKey::BrEnMovPtrs,
-         PackKey::BrEnMovStr],
+         PackKey::BrEnMovStr, PackKey::BrEnemyDeathAnim],
         [PackKey::NoEnemyHealth, PackKey::NoEnemyRestingAnim, PackKey::NoEnemyActiveAnim,
          PackKey::NoEnemyActiveAnimInitOffset, PackKey::NoEnemyForceAttribs,
          PackKey::NoEnemyForceSpeedDelay, PackKey::NoEnemyDistanceThreshold,
          PackKey::NoEnemyInitDelay, PackKey::NoEnemyFacing, PackKey::NoEnMovPtrs,
-         PackKey::NoEnMovStr],
+         PackKey::NoEnMovStr, PackKey::NoEnemyDeathAnim],
         [PackKey::KrEnemyHealth, PackKey::KrEnemyRestingAnim, PackKey::KrEnemyActiveAnim,
          PackKey::KrEnemyActiveAnimInitOffset, PackKey::KrEnemyForceAttribs,
          PackKey::KrEnemyForceSpeedDelay, PackKey::KrEnemyDistanceThreshold,
          PackKey::KrEnemyInitDelay, PackKey::KrEnemyFacing, PackKey::KrEnMovPtrs,
-         PackKey::KrEnMovStr],
+         PackKey::KrEnMovStr, PackKey::KrEnemyDeathAnim],
         [PackKey::ToEnemyHealth, PackKey::ToEnemyRestingAnim, PackKey::ToEnemyActiveAnim,
          PackKey::ToEnemyActiveAnimInitOffset, PackKey::ToEnemyForceAttribs,
          PackKey::ToEnemyForceSpeedDelay, PackKey::ToEnemyDistanceThreshold,
          PackKey::ToEnemyInitDelay, PackKey::ToEnemyFacing, PackKey::ToEnMovPtrs,
-         PackKey::ToEnMovStr],
+         PackKey::ToEnMovStr, PackKey::ToEnemyDeathAnim],
         [PackKey::RiEnemyHealth, PackKey::RiEnemyRestingAnim, PackKey::RiEnemyActiveAnim,
          PackKey::RiEnemyActiveAnimInitOffset, PackKey::RiEnemyForceAttribs,
          PackKey::RiEnemyForceSpeedDelay, PackKey::RiEnemyDistanceThreshold,
          PackKey::RiEnemyInitDelay, PackKey::RiEnemyFacing, PackKey::RiEnMovPtrs,
-         PackKey::RiEnMovStr],
+         PackKey::RiEnMovStr, PackKey::RiEnemyDeathAnim],
     ];
     pack::get(KEYS[(area & 0x0F) as usize % 5][idx])
 }
@@ -261,7 +261,35 @@ pub fn enemy_init_delay(area: u8) -> &'static [u8] { enemy_table(area, 7) }
 pub fn enemy_facing(area: u8) -> &'static [u8] { enemy_table(area, 8) }
 pub fn enemy_movement_ptrs(area: u8) -> &'static [u8] { enemy_table(area, 9) }
 pub fn enemy_movement_strings(area: u8) -> &'static [u8] { enemy_table(area, 10) }
+/// `EnemyDeathAnimIndex ; 各 bank $960B`（32 B，`type*2+朝向` 索引）——**按区不同**。
+pub fn enemy_death_anim(area: u8) -> &'static [u8] { enemy_table(area, 11) }
 
+
+/// ## 按区表必须带区：`EnemyDeathAnimIndex` 的回归锚
+#[cfg(test)]
+mod tests_per_area_tables {
+    use super::*;
+
+    /// `EnemyDeathAnimIndex ; 各 bank $960B` **按区不同**（A 级：ROM 逐字节）。
+    /// 旧形是单常量取 bank1 ⇒ 其余四区爆体帧错表。此测钉住五区首字节与长度。
+    #[test]
+    fn enemy_death_anim_differs_per_area() {
+        init_from_env().ok();
+        let br = enemy_death_anim(0);
+        let no = enemy_death_anim(1);
+        let kr = enemy_death_anim(2);
+        let to = enemy_death_anim(3);
+        let ri = enemy_death_anim(4);
+        for t in [br, no, kr, to, ri] {
+            assert_eq!(t.len(), 32, "EnemyDeathAnimIndex 窗口 32 B（type×2+朝向）");
+        }
+        // bank1/2/3/4/5 的 $960B 首字节
+        assert_eq!((br[0], no[0], kr[0], to[0], ri[0]), (0x27, 0x28, 0x27, 0x08, 0x23));
+        // 差异不止首字节：bank1 vs bank3 整表不同
+        assert_ne!(br, to, "Brinstar 与 Tourian 的爆体帧表必须不同");
+        assert_ne!(no, ri, "Norfair 与 Ridley 的爆体帧表必须不同");
+    }
+}
 
 // ---- ROM 查询表（窗口参数化）------------------------------------------------------
 //

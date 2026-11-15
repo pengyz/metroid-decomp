@@ -165,12 +165,12 @@ pub(crate) fn explode_enemy(mem: &mut crate::frame::FrameMemory, x: u8) {
     let d05 = mem.read_ram(0x0400 + px + 5);
     let facing: usize = if d05 & 0x80 != 0 { ((d05 >> 3) & 1) as usize } else { (d05 & 1) as usize };
     let idx = ((ty << 1) | facing) & 0x1F;
-    const ENEMY_DEATH_ANIM: [u8; 32] = [
-        // EnemyDeathAnimIndex（**ROM 字节锚** bank1:$960B（type×2+向（32B）））
-        0x27,0x27,0x29,0x29,0x2D,0x2B,0x31,0x2F,0x33,0x33,0x41,0x41,0x4B,0x4B,0x55,0x53,
-        0x72,0x74,0x00,0x00,0x00,0x00,0x69,0x69,0x69,0x69,0x00,0x00,0x00,0x00,0x00,0x00,
-    ];
-    let anim = ENEMY_DEATH_ANIM[idx];
+    // `EnemyDeathAnimIndex ; 各 bank $960B`（32 B = type×2+朝向）——**按区不同**：
+    // bank1 `27 27 29 29…` / bank2 `28 28 28 28…` / bank3 `08 08 08 08…` /
+    // bank4 `27 27 29 29…`(尾部与 bank1 不同) / bank5 `23 23 23 23…`。
+    // 旧形是单常量取 bank1 ⇒ 其余四区爆体帧全用 Brinstar 的表（bank 维度丢失）。
+    let area = crate::frame::cur_area(mem);
+    let anim = game_data::assets::enemy_death_anim(area)[idx];
     mem.write_wram(0x6AF4 + px + 5, anim); // resetAnimIndex
     mem.write_wram(0x6AF4 + px + 6, anim); // animIndex
     mem.write_wram(0x6AF4 + px + 4, 0); // animDelay

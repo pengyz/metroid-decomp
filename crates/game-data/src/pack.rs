@@ -214,6 +214,14 @@ pub enum PackKey {
     /// 修：`MoreInit` 把它写进 `PaletteToggle`；旧 rust 读 WRAM $6885（**错址**）⇒ 恒 0
     /// ⇒ 电梯换区 `PaletteToggle^=7` 后 pending 差 1 ⇒ 载错调色板（L4 实证 12421px）。
     AreaPalToggle = 154,
+    // 敌死亡动画索引表 `EnemyDeathAnimIndex ; 各 bank $960B`（32 B = type×2+facing）。
+    // **按区不同**（bank1 `27 27 29 29…` vs bank3 `08 08 08 08…`）——先前 Rust 侧是单常量
+    // 取 bank1，等于让其余四区的爆体帧全用 Brinstar 的表。
+    BrEnemyDeathAnim = 155,
+    NoEnemyDeathAnim = 156,
+    KrEnemyDeathAnim = 157,
+    ToEnemyDeathAnim = 158,
+    RiEnemyDeathAnim = 159,
 }
 
 impl PackKey {
@@ -378,6 +386,11 @@ impl PackKey {
             PackKey::NoEnemyFacing => "area.no.en_facing",
             PackKey::NoEnMovPtrs => "area.no.en_mov_ptrs",
             PackKey::NoEnMovStr => "area.no.en_mov_str",
+            PackKey::BrEnemyDeathAnim => "area.br.en_death_anim",
+            PackKey::NoEnemyDeathAnim => "area.no.en_death_anim",
+            PackKey::KrEnemyDeathAnim => "area.kr.en_death_anim",
+            PackKey::ToEnemyDeathAnim => "area.to.en_death_anim",
+            PackKey::RiEnemyDeathAnim => "area.ri.en_death_anim",
             PackKey::TourianMetroidData => "tourian.metroid_data",
             PackKey::AreaPalToggle => "area.pal_toggle",
         }
@@ -539,7 +552,13 @@ impl PackKey {
             150 => PackKey::NoEnemyFacing,
             151 => PackKey::NoEnMovPtrs,
             152 => PackKey::NoEnMovStr,
+            155 => PackKey::BrEnemyDeathAnim,
+            156 => PackKey::NoEnemyDeathAnim,
+            157 => PackKey::KrEnemyDeathAnim,
+            158 => PackKey::ToEnemyDeathAnim,
+            159 => PackKey::RiEnemyDeathAnim,
             153 => PackKey::TourianMetroidData,
+            154 => PackKey::AreaPalToggle,
             _ => return None,
         })
     }
