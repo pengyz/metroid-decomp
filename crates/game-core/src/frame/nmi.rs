@@ -92,7 +92,7 @@ pub fn check_palette_write(mem: &mut FrameMemory) {
         return;
     }
     if mem.read_ram(GAME_MODE) != 0 && mem.read_ram(TITLE_ROUTINE) < 0x15 {
-        super::intro::star_palette_switch(mem); // StarPaletteSwitch（asm 内容锚——已端口）
+        crate::title::intro::star_palette_switch(mem); // StarPaletteSwitch（asm 内容锚——已端口）
     }
     // ④否则 RTS（静默）
 }
@@ -662,7 +662,7 @@ mod tests {
     fn vram_struct_walk_mirror_producer() {
         use crate::ram_map::PPUCTRL_ZP;
         let mut m = FrameMemory::default();
-        crate::frame::intro::star_palette_switch(&mut m); // 生产（双 call 缓冲）
+        crate::title::intro::star_palette_switch(&mut m); // 生产（双 call 缓冲）
         m.write_ram(PPUCTRL_ZP, 0x90); // NMI 位+增量位预置
         vram_struct_write(&mut m); // 全通（尾跳 WriteScroll 已端口）
         // ctrl bit7=0（两段皆 0x03）⇒ $FF 增量位（0x04）清——SetPPUInc 域形

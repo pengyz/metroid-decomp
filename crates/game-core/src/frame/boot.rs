@@ -125,7 +125,7 @@ pub fn c158_unit(mem: &mut FrameMemory) {
     // （asm :385「It also clears the associated attribute table」自证；HiPPUTable $C19F=20/24/28/2C）。
     // 首遍 NT0、次遍 NT($01-1)（与 RAM 面同分派）。
     for nt_plus1 in [1u8, hi] {
-        super::vram::clear_name_table_ppu(mem, nt_plus1 - 1, 0xFF);
+        crate::render::vram::clear_name_table_ppu(mem, nt_plus1 - 1, 0xFF);
     }
     // 结束态（RAM 面）：$00=FF、$01=2|3、$FF&=!4、A=FF/X=0/Y=0（PPU 面见上——S6-10）。
     mem.regs.a = 0xFF;
@@ -285,7 +285,7 @@ fn init_bank2(mem: &mut FrameMemory) {
     // 建模等待形、**漏了寄存器面** ⇒ 换区窗口本应为黑屏却仍亮（elevprobe2 f1206/1207 实证）。
     super::tick::screen_nmi_off(mem);
     mem.iter_wait();
-    super::gfx::init_norfair_gfx(mem);
+    crate::render::gfx::init_norfair_gfx(mem);
     mem.iter_bogged(2);
     // asm 尾 `jmp NMIOn ; 07:C487`——**必须显式复启**：ScreenNmiOff 已写真 $2000 关掉
     // NMI 使能位，漏这一句会让 `nmi_enabled` 永久 false（NMI 死锁、调色板/PPU 面全停）。
@@ -315,7 +315,7 @@ fn init_bank3(mem: &mut FrameMemory) {
     for (i, b) in md.iter().enumerate() {
         mem.write_ram(0x77F0 + i as u16, *b);
     }
-    super::gfx::init_tourian_gfx(mem);
+    crate::render::gfx::init_tourian_gfx(mem);
     mem.iter_bogged(2);
     // asm 尾 `jmp NMIOn ; 07:C487`——**必须显式复启**：ScreenNmiOff 已写真 $2000 关掉
     // NMI 使能位，漏这一句会让 `nmi_enabled` 永久 false（NMI 死锁、调色板/PPU 面全停）。
@@ -330,7 +330,7 @@ fn init_bank4(mem: &mut FrameMemory) {
     // 建模等待形、**漏了寄存器面** ⇒ 换区窗口本应为黑屏却仍亮（elevprobe2 f1206/1207 实证）。
     super::tick::screen_nmi_off(mem);
     mem.iter_wait();
-    super::gfx::init_kraid_gfx(mem);
+    crate::render::gfx::init_kraid_gfx(mem);
     mem.iter_bogged(2);
     // asm 尾 `jmp NMIOn ; 07:C487`——**必须显式复启**：ScreenNmiOff 已写真 $2000 关掉
     // NMI 使能位，漏这一句会让 `nmi_enabled` 永久 false（NMI 死锁、调色板/PPU 面全停）。
@@ -345,7 +345,7 @@ fn init_bank5(mem: &mut FrameMemory) {
     // 建模等待形、**漏了寄存器面** ⇒ 换区窗口本应为黑屏却仍亮（elevprobe2 f1206/1207 实证）。
     super::tick::screen_nmi_off(mem);
     mem.iter_wait();
-    super::gfx::init_ridley_gfx(mem);
+    crate::render::gfx::init_ridley_gfx(mem);
     mem.iter_bogged(2);
     // asm 尾 `jmp NMIOn ; 07:C487`——**必须显式复启**：ScreenNmiOff 已写真 $2000 关掉
     // NMI 使能位，漏这一句会让 `nmi_enabled` 永久 false（NMI 死锁、调色板/PPU 面全停）。
@@ -371,14 +371,14 @@ fn init_bank1(mem: &mut FrameMemory) {
     // 双切/描述子拷贝/$05/$06 归零）——同一 asm 例程两份实现且语义不同（F 类）。
     // id 集=asm 载入序（BrinBG1/CREBG1/CREBG2/BrinstarSprites/Solid_0FC0/Solid_1FC0）
     for id in [
-        super::gfx::gfx_id::BRIN_BG1,
-        super::gfx::gfx_id::CREBG1,
-        super::gfx::gfx_id::CREBG2,
-        super::gfx::gfx_id::BRINSTAR_SPRITES,
-        super::gfx::gfx_id::SOLID_0FC0,
-        super::gfx::gfx_id::SOLID_1FC0,
+        crate::render::gfx::gfx_id::BRIN_BG1,
+        crate::render::gfx::gfx_id::CREBG1,
+        crate::render::gfx::gfx_id::CREBG2,
+        crate::render::gfx::gfx_id::BRINSTAR_SPRITES,
+        crate::render::gfx::gfx_id::SOLID_0FC0,
+        crate::render::gfx::gfx_id::SOLID_1FC0,
     ] {
-        super::gfx::load_gfx(mem, id);
+        crate::render::gfx::load_gfx(mem, id);
     }
     mem.iter_bogged(2);
     // asm 尾 `jmp NMIOn ; 07:C487`——**必须显式复启**：ScreenNmiOff 已写真 $2000 关掉
@@ -407,7 +407,7 @@ fn c531_unit_pre(mem: &mut FrameMemory) {
 pub fn boot_post_spin(mem: &mut FrameMemory) {
     screen_nmi_off_post(mem);
     copy_map(mem);
-    super::gfx::init_title_gfx(mem); // InitTitleGFX（asm :1493 族——已端口）
+    crate::render::gfx::init_title_gfx(mem); // InitTitleGFX（asm :1493 族——已端口）
     nmi_on(mem); // NMIOn（asm 内容锚——已端口；boot 链末件）
 }
 
@@ -712,7 +712,7 @@ mod r25_gfx_probe {
     #[test]
     fn crebg2_covers_1f00() {
         let mut m = crate::frame::FrameMemory::default();
-        crate::frame::gfx::load_gfx(&mut m, 5);
+        crate::render::gfx::load_gfx(&mut m, 5);
         if !game_data::pack::is_ready() {
             eprintln!("SKIP（显式）：未加载资产包——先跑 pack-tool extract");
             return;
@@ -731,7 +731,7 @@ mod r25_spritegfx_probe {
     #[test]
     fn samus_gfx_tile09() {
         let mut m = crate::frame::FrameMemory::default();
-        crate::frame::gfx::load_gfx(&mut m, 0);
+        crate::render::gfx::load_gfx(&mut m, 0);
         if !game_data::pack::is_ready() {
             eprintln!("SKIP（显式）：未加载资产包——先跑 pack-tool extract");
             return;

@@ -27,26 +27,21 @@ pub(crate) mod room_load;
 pub mod tick;
 pub(crate) mod world_tick;
 pub(crate) mod projectile;
-pub mod gfx;
 #[cfg(test)]
 mod tests;
-pub mod intro;
 pub mod memory;
 pub mod nmi;
 pub mod rng;
 pub mod sound_hook;
-pub mod render;
-pub mod statue;
 pub mod title_bridge;
-pub mod vram;
 pub mod room;
 pub mod sprite; // r25 sprite 管线（AnimDrawObject \ 族） // r25 房间绘制引擎（DrawRoom \ 族）
 
 pub use clock::{VirtualClock, TARGET_FPS};
 pub use engine::FrameEngine;
-pub use gfx::init_title_gfx;
+pub use crate::render::gfx::init_title_gfx;
 pub use tick::{main_loop_iter, samus_init};
-pub use intro::star_palette_switch;
+pub use crate::title::intro::star_palette_switch;
 pub use boot::io;
 pub use memory::{FrameMemory, Registers};
 pub use nmi::nmi_handler;

@@ -2,3 +2,5 @@
 pub mod room;
 pub mod door;
 pub mod camera;
+
+pub(crate) mod statue;

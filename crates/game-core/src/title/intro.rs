@@ -23,7 +23,7 @@
 //! **撤回**——Y 型系清零环端口误读（零填充更正，50af369）；更正后 $07A0=0 门放行，
 //! 生产端先行=真实执行序。
 
-use super::memory::FrameMemory;
+use crate::state::FrameMemory;
 use crate::ram_map::{
     FRAME_COUNT, INTRO_STAR_OFFSET, PPU_DATA_PENDING, VRAM_STRUCT_INDEX,
 };

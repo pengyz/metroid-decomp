@@ -681,3 +681,7 @@ mod tests_ppumask_gate {
         assert_eq!([fb[0], fb[1], fb[2]], NES_PALETTE[0x30], "bit4=1 时精灵可见");
     }
 }
+
+pub(crate) mod gfx;
+pub(crate) mod ppu;
+pub(crate) mod vram;

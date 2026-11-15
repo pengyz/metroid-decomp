@@ -15,7 +15,7 @@
 //! $687C/StatuesBridgeIsSpawned=$54/Statue 槽=$0360（RaiseState $0364/$0365/IsHit
 //! $0366/$0367/Y $036F/$0370）/TileBlasts=$0500（13×16B：routine+0/delay+7/type+10）。
 
-use super::FrameMemory;
+use crate::state::FrameMemory;
 
 /// 址常量（考证自证——见模块注）。
 const KRAID_STATUS: u16 = 0x687B;

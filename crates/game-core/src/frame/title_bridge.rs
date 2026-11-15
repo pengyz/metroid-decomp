@@ -284,19 +284,19 @@ fn display_input_characters(mem: &mut FrameMemory) {
 /// 未接址 fail-loud（随件补）。
 fn prepare_vram(mem: &mut FrameMemory, addr: u16) {
     match addr {
-        0x82F4 => super::vram::vram_struct_write(
+        0x82F4 => crate::render::vram::vram_struct_write(
             mem, game_data::assets::vram_intro()),
         // L9984（prg0_title.asm:3534——StartContinueScreen :2333 装载件；r25 补）
-        0x9984 => super::vram::vram_struct_write(
+        0x9984 => crate::render::vram::vram_struct_write(
             mem, game_data::assets::vram_start_continue()),
         // L99E3（prg0_title.asm:3560——LoadPasswordScreen :2399 `ldx #<L99E3.b / ldy #>L99E3.b
         // jsr PreparePPUProcess_`）："PASS WORD PLEASE" 行 $2088 + 属性表四段
         // （$23C0×$10 $00 / $23D0×$08 $55 / $23D8×$20 $FF / $23DA×$04 $F0）。卡 C 阻塞件。
-        0x99E3 => super::vram::vram_struct_write(
+        0x99E3 => crate::render::vram::vram_struct_write(
             mem, game_data::assets::vram_password_please()),
         // @VRAMStruct（prg0_title.asm:2874——GameOver :939E `ldx #<@VRAMStruct.b /
         // jsr PreparePPUProcess_`）："GAME OVER" 行 $218C。
-        0x93B9 => super::vram::vram_struct_write(
+        0x93B9 => crate::render::vram::vram_struct_write(
             mem, game_data::assets::vram_game_over()),
         other => crate::unported!(&format!("bank00:{other:04X}-PrepareVram")),
     }
@@ -517,7 +517,7 @@ fn initialize_game(mem: &mut FrameMemory, pw: &[u8; 18], nar_active: bool) {
     // LoadSamusGFX（$C5DC，prg7_engine.asm:1496-1520）：Samus→(JIB?Suitless)→
     // IntroSprites→Font_Complete→Font_Hud→Solid_0FC0→Solid_1FC0 七件（ScreenNmiOff 后/
     // NMIOn 前——ROM→CHR-RAM 写在 NMI 关闭窗口，同 asm 序）。
-    super::gfx::load_samus_gfx(mem);
+    crate::render::gfx::load_samus_gfx(mem);
     // NMIOn（07:C487）——**共用件**（`boot::nmi_on`：`sta PPUCTRL` + `sta PPUCTRL_ZP` 双写）。
     // 旧形只写影子 $FF、不写真 $2000 ⇒ 配合上面 ScreenNmiOff 的「真关 NMI」会让
     // `nmi_enabled` 永远为 false（NMI 死锁、调色板/PPU 面全停）——收口到共用件。

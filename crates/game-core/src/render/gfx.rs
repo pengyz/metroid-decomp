@@ -16,7 +16,7 @@
 //!
 //! 生效面：CopyGFXBlock 的 CHR 写=PPU 面（write_io 族——渲染面挂 task-13）。
 
-use super::memory::FrameMemory;
+use crate::state::FrameMemory;
 use crate::ram_map::{CURRENT_BANK, JUST_IN_BAILEY, MMC1CTRL_ZP, PPUCTRL_ZP, SWITCH_UPPER};
 
 /// GFXInfo 描述子 id（表序自证——macros.asm PtrTableEntry 序号+prg7_engine 注释互证）。
@@ -211,7 +211,7 @@ fn bank_switch(mem: &mut FrameMemory, bank: u8) {
     let v = (mem.read_ram(SWITCH_UPPER) & 0x18) | bank;
     mem.write_ram(SWITCH_UPPER, v);
     mem.regs.a = v;
-    super::boot::mmc1_serial_write(mem, super::boot::io::MMC1_PRG);
+    crate::frame::boot::mmc1_serial_write(mem, crate::frame::boot::io::MMC1_PRG);
     let _ = MMC1CTRL_ZP;
 }
 

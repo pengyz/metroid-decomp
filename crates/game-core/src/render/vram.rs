@@ -13,7 +13,7 @@
 //!
 //! 数据面=game-data 烘焙（tools/bake_vram_structs.py，--check 校验径）。
 
-use super::memory::FrameMemory;
+use crate::state::FrameMemory;
 
 /// VRAMStructWrite 消费（blob 含 hi==0 终止符——消费至终止）。
 /// 写径=write_io($2006/$2007)（RenderState 三分域）；增量由 SetPPUInc 面（$FF bit2）进 write_io 取。
@@ -33,7 +33,7 @@ pub fn vram_struct_write(mem: &mut FrameMemory, blob: &[u8]) {
         let ff = mem.read_ram(crate::ram_map::PPUCTRL_ZP);
         let ff = if inc_down { ff | 0x04 } else { ff & !0x04 };
         mem.write_ram(crate::ram_map::PPUCTRL_ZP, ff);
-        mem.write_io(super::boot::io::PPU_CTRL, ff);
+        mem.write_io(crate::frame::boot::io::PPU_CTRL, ff);
         let rle = ctrl & 0x40 != 0;
         let count = match ctrl & 0x3F {
             0 => 256usize, // `and #$3F; tax`+`dex/bne`：0⇒256 次（字节驱动 quirk）
@@ -65,7 +65,7 @@ pub fn clear_name_table_ppu(mem: &mut FrameMemory, nt: u8, fill: u8) {
     // PPUCTRL_ZP/PPUCTRL 增量 1（`and #~PPUCTRL_INCR_DOWN`）
     let ff = mem.read_ram(crate::ram_map::PPUCTRL_ZP) & !0x04;
     mem.write_ram(crate::ram_map::PPUCTRL_ZP, ff);
-    mem.write_io(super::boot::io::PPU_CTRL, ff);
+    mem.write_io(crate::frame::boot::io::PPU_CTRL, ff);
     let base: u16 = 0x2000 + 0x400 * (nt as u16 & 3); // HiPPUTable[nt]=20/24/28/2C
     mem.write_io(0x2006, (base >> 8) as u8);
     mem.write_io(0x2006, 0x00);

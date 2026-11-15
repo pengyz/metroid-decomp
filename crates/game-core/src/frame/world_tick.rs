@@ -67,7 +67,7 @@ pub fn update_world(mem: &mut crate::frame::FrameMemory) {
     #[allow(unreachable_code)]
     {
         crate::samus::update_samus(mem); // UpdateSamus（CC0D——samus 域件会师）
-        crate::frame::statue::update_all_statues(mem); // UpdateAllStatues（D9D4 会师）
+        crate::world::statue::update_all_statues(mem); // UpdateAllStatues（D9D4 会师）
         // ---- r26 dispatch 壳补齐（复核 C blocker——asm 件序 5-20 逐件！）----
         uw_area_routine(mem); // $95C3（区专径）
         uw_elevator(mem); // $D7B3
