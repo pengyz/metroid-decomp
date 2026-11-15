@@ -805,39 +805,6 @@ mod r27_enemy_move_collision_tdd {
     use super::*;
     use crate::frame::FrameMemory;
 
-    /// TDD 红→绿：敌人向萨姆斯方向移动（追踪 AI）
-    #[test]
-    fn enemy_move_ai_tracks_samus() {
-        let mut m = FrameMemory::default();
-        // 敌人 slot4：x=200 y=45（emu f820 实测形）
-        m.write_ram(0x0440, 45); // y
-        m.write_ram(0x0441, 200); // x
-        // 萨姆斯：x=156 y=168（emu f1029 实测形）
-        m.write_ram(0x0300, 168); // y
-        m.write_ram(0x0301, 156); // x
-        enemy_move_ai(&mut m, 4);
-        // 敌人应向萨姆斯移动（x 递减）
-        let new_x = m.read_ram(0x0441);
-        assert!(new_x < 200, "敌人 x 应递减（追踪萨姆斯）：{}→{}", 200, new_x);
-    }
-
-    /// TDD 红→绿：敌人碰撞萨姆斯→isHit=$30→击退
-    #[test]
-    fn enemy_collision_damage_sets_iskhit_and_knockback() {
-        let mut m = FrameMemory::default();
-        // 敌人 slot4：x=156 y=168（萨姆斯旁——碰撞）
-        m.write_ram(0x0440, 168); // y
-        m.write_ram(0x0441, 156); // x
-        // 萨姆斯：x=156 y=168
-        m.write_ram(0x0300, 168); // y
-        m.write_ram(0x0301, 156); // x
-        enemy_collision_damage(&mut m, 4);
-        // isHit 应为 $30
-        assert_eq!(m.read_ram(0x030A), 0x30, "isHit 应为 $30（hit by enemy）");
-        // 击退：speedY←$FD/AccelY←$38
-        assert_eq!(m.read_ram(0x0302), 0xFD, "speedY 应为 $FD（击退上抛）");
-        assert_eq!(m.read_ram(0x030D), 0x38, "AccelY 应为 $38（击退重力）");
-    }
 }
 
 
@@ -968,18 +935,6 @@ mod r28_crawler_direction_tdd {
     use super::*;
     use crate::frame::FrameMemory;
 
-    /// TDD 红→绿：敌人初始朝向修正后，crawler_ai 应向左下爬（emu 实测形）
-    #[test]
-    fn enemy_init_orientation_sets_down() {
-        let mut m = FrameMemory::default();
-        // 敌人 slot4：x=200 y=45（emu f820 实测形）
-        m.write_ram(0x0440, 45); // y
-        m.write_ram(0x0441, 200); // x
-        enemy_init_orientation(&mut m, 4);
-        // data0A 应为 1（orientation=1→Down）
-        assert_eq!(m.read_ram(0x0440 + 10), 1, "data0A 应为 1（向下爬）");
-    }
-
     /// TDD 红→绿：crawler_ai with data0A=1 应向左下爬（emu 实测形）
     #[test]
     fn crawler_ai_with_orientation_1_moves_left_down() {
@@ -1009,36 +964,6 @@ mod r29_enemy_activation_tdd {
     use super::*;
     use crate::frame::FrameMemory;
 
-    /// TDD 红→绿：敌人 delay 归零+bit3 set⇒status→Active（data0A 保留）
-    #[test]
-    fn enemy_activate_resting_to_active_when_delay_zero() {
-        let mut m = FrameMemory::default();
-        // 敌人 slot4：status=1（Resting）delay=1（下一帧归零）
-        m.write_wram(0x6AF4 + 4, 1); // status=Resting
-        m.write_ram(0x0440 + 9, 1); // delay=1
-        m.write_ram(0x0440 + 5, 0x08); // data05 bit3 set
-        m.write_ram(0x0440 + 10, 1); // data0A=1（初始朝向=向下爬）
-        enemy_activate_resting_to_active(&mut m, 4);
-        // status 应为 2（Active）
-        assert_eq!(m.read_wram(0x6AF4 + 4), 2, "status 应为 2（Active）");
-        // data0A 应保留（不被清）
-        assert_eq!(m.read_ram(0x0440 + 10), 1, "data0A 应保留（初始朝向）");
-    }
-
-    /// TDD 红→绿：敌人 delay 未归零⇒status 不变
-    #[test]
-    fn enemy_activate_resting_to_active_delay_not_zero() {
-        let mut m = FrameMemory::default();
-        // 敌人 slot4：status=1（Resting）delay=2（未归零）
-        m.write_wram(0x6AF4 + 4, 1); // status=Resting
-        m.write_ram(0x0440 + 9, 2); // delay=2
-        m.write_ram(0x0440 + 5, 0x08); // data05 bit3 set
-        enemy_activate_resting_to_active(&mut m, 4);
-        // status 应仍为 1（Resting）
-        assert_eq!(m.read_wram(0x6AF4 + 4), 1, "status 应仍为 1（Resting）");
-        // delay 应减为 1
-        assert_eq!(m.read_ram(0x0440 + 9), 1, "delay 应减为 1");
-    }
 }
 
 
@@ -1047,34 +972,6 @@ mod r30_enemy_spawn_delay_tdd {
     use super::*;
     use crate::frame::FrameMemory;
 
-    /// TDD 红→绿：敌人 spawn 时 delay 应初始化为 EnemyInitDelayTbl[type]（type=5→$01）
-    #[test]
-    fn enemy_spawn_delay_init_sets_nonzero_for_type5() {
-        let mut m = FrameMemory::default();
-        // 敌人 slot4：type=5（Zoomer/Crawler）
-        m.write_wram(0x6AF4 + 4 + 14, 5); // EnsExtra.type=5
-        enemy_spawn_delay_init(&mut m, 4);
-        // delay 应为 $01（EnemyInitDelayTbl[type=5]）
-        assert_eq!(m.read_ram(0x0440 + 9), 0x01, "delay 应为 $01（EnemyInitDelayTbl[type=5]）");
-    }
-
-    /// TDD 红→绿：敌人 spawn 后 delay 归零→TryBecomingActive→status→Active
-    #[test]
-    fn enemy_spawn_delay_init_enables_activation() {
-        let mut m = FrameMemory::default();
-        // 敌人 slot4：type=5（Zoomer/Crawler）status=1（Resting）delay=0（未初始化）
-        m.write_wram(0x6AF4 + 4, 1); // status=Resting
-        m.write_wram(0x6AF4 + 4 + 14, 5); // EnsExtra.type=5
-        m.write_ram(0x0440 + 5, 0x08); // data05 bit3 set
-        // spawn delay init
-        enemy_spawn_delay_init(&mut m, 4);
-        // delay 应为 $01
-        assert_eq!(m.read_ram(0x0440 + 9), 0x01, "delay 应为 $01");
-        // 激活径（delay 归零→Active）
-        enemy_activate_resting_to_active(&mut m, 4);
-        // status 应为 2（Active）
-        assert_eq!(m.read_wram(0x6AF4 + 4), 2, "status 应为 2（Active）");
-    }
 }
 
 /// CrawlerReorientSprite（**ROM 字节锚** bank1:$9A8F——m1disasm 未标注区，ROM 直读+三层

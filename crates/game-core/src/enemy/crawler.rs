@@ -19,9 +19,7 @@
 //! 只有名字没有值），且全仓零引用——已删除，改由下方 ROM 锚测试守住真实现。
 
 use crate::enemy::motion::*;
-use crate::enemy::prep::*;
 use crate::frame::tick::*;
-use crate::ram_map;
 
 /// ShouldCrawlerMove（**asm 内容锚** `07:F852`——`txa/lsr×3（carry←bit2）/adc FrameCount/
 /// lsr`）：gate=((X>>3)+bit2(X)+FC)>>1&3（移动门 6/8 帧形）。

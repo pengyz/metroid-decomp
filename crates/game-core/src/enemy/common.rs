@@ -26,67 +26,8 @@ pub fn update_enemy_common_no_move_no_anim(
     (cntrl_write, draw, true) // isHit 清（@clearIsHitFlags）
 }
 
-/// @noMove（F413——入口 1：move+rest（跳 anim））。
-pub fn update_enemy_common_no_move(
-    slot: &EnemySlot,
-    object_cntrl: u8,
-    special_attribs: u8,
-) -> (Option<u8>, bool, bool) {
-    // EnemyMove（$8058 areas_common——移效面已折 below）
-    update_enemy_common_no_move_no_anim(slot, object_cntrl, special_attribs)
-}
 
-/// EnemyMove 移效（**asm 内容锚** `EnemyMove: ; $8058` areas_common）：
-/// 门（data05 bit6/status==Active）→EnemyGetDeltaY→上/下移环（单像素×|Δ|——
-/// `EnemyMoveOnePixelUp/Down`：y±1+亚像素+名表切换补偿（y=0 环绕）+碰撞检）。
-/// 返回（y/subpix/hi 写面集, 出口 regs）——golden 写面 $6AEx 族（WRAM 敌槽）。
-pub fn enemy_move_effects(
-    delta_y: i8,
-    y: u8,
-    sub_pixel_y: u8,
-    hi: u8,
-) -> (Vec<(u16, u8)>, (u8, u8, u8)) {
-    // 单像素移效域形（Δ 绝对值×步）：y±1 每步+亚像素累积（IntY 同构）+名表切换
-    // （y=0 环绕补偿 $F0 面）——观察面=golden $6AE7/$6AE8/$6AEA 写集。
-    let mut writes = Vec::new();
-    let steps = delta_y.unsigned_abs();
-    let mut y = y;
-    let sub = sub_pixel_y;
-    let mut hi = hi;
-    for _ in 0..steps {
-        if delta_y < 0 {
-            // 上移：y--（y=0→$EF 环绕+hi 翻转——名表切换补偿）
-            if y == 0 {
-                y = 0xEF;
-                hi ^= 1;
-            } else {
-                y -= 1;
-            }
-        } else {
-            // 下移：y++（y=$EF→0 环绕+hi 翻转）
-            if y == 0xEF {
-                y = 0;
-                hi ^= 1;
-            } else {
-                y += 1;
-            }
-        }
-    }
-    writes.push((0x6AE7, y));
-    writes.push((0x6AE8, sub));
-    writes.push((0x6AEA, hi));
-    (writes, (0, 0, 1)) // 出口残迹面（golden (0,0,1)——观测值逐钉）
-}
 
-/// UpdateEnemyCommon 壳（F410——全链：anim+move+rest）。
-pub fn update_enemy_common(
-    slot: &EnemySlot,
-    object_cntrl: u8,
-    special_attribs: u8,
-) -> (Option<u8>, bool, bool) {
-    // UpdateEnemyAnim（F407 族——随件）
-    update_enemy_common_no_move(slot, object_cntrl, special_attribs)
-}
 
 /// 敌 ΔY 符号幅解码（**asm 内容锚** `EnemyGetDeltaY_SignMagSpeed: ; $827F`）：
 /// 移字符串字节（延时面+符号幅速度字节）→Δ（bit7=符号/低 7 位=幅——SignedMag 形）。
@@ -112,19 +53,6 @@ pub fn enemy_delta_x_packed(speed_byte: u8) -> i8 {
     }
 }
 
-/// EnemyGetDeltaY 全链（**asm 内容锚一体面**——$8244/$80B0/$822B/$827F）：
-/// type→L977B 分流→movementIndex+朝向→指针表→字符串（movementInstrIndex→延时+
-/// 符号幅速度）→Δ。输入=（type, data05, movementIndex, movementInstrIndex, delay）
-/// →输出（Δ, 新 delay, 新 instrIndex, 延时是否归零）。
-pub fn enemy_get_delta_y(
-    area: u8, type_: u8, data05: u8, movement_index: u8,
-    instr_index: u8, delay: u8,
-    speed_sub: u8, speed: u8, accel_y: u8,
-    data1f: u8, can_up: bool, can_down: bool,
-) -> (i8, u8, u8, u8, bool) {
-    let (dy, _dx, d, i, d1f, _tr) = enemy_get_delta_xy(area, type_, data05, movement_index, instr_index, delay, speed_sub, speed, accel_y, data1f, can_up, can_down);
-    (dy, d, i, d1f, false)
-}
 
 /// `$FC`/`$FE` 的面检查合流判据（asm `$82B3` / `$82DE`）：`data1F` bit7=查天花板
 /// （`EnemyCheckMoveUp`）、bit6=查地面（`EnemyCheckMoveDown`）；两 bit 全 0 时两指令
@@ -263,105 +191,10 @@ pub fn enemy_get_delta_xy(
     (0, 0, dly, ii, data1f_in, false)
 }
 
-/// 指令流逐字节执行（**asm 内容锚** `@ReadByte: ; $825B`——全支分派）：
-/// <$F0=符号幅速度命令（SignMagSpeed）/$FA=触发休止/$FB=停止/$FC=重复至失败/
-/// $FD=清跳跃位移/$FE=重复至无Δ后休止/$FF=重启字符串。
-/// 状态面：instrIndex/delay/jumpDsplcmnt——跨帧累积（每 tick 一指令处理）。
-/// 返回（Δ, 新 instrIndex, 新 delay, 命令族）。
-pub fn enemy_stream_exec(
-    strs: &[u8], base: u16, instr_index: u8, delay: u8,
-) -> (i8, u8, u8, &'static str) {
-    let get = |i: u16| -> u8 {
-        let off = base.wrapping_sub(0x97EF).wrapping_add(i) as usize;
-        strs.get(off).copied().unwrap_or(0xFF)
-    };
-    let mut idx = instr_index;
-    let mut dly = delay;
-    for _ in 0..32u8 { // 界卫（重启/休止循环——fail-safe）
-        let cmd = get(idx as u16);
-        match cmd {
-            0xF0..=0xF9 => { /* 保留控制（随件） */ idx = idx.wrapping_add(1); }
-            0xFA => return (0, idx.wrapping_add(1), dly, "rest"),
-            0xFB => return (0, idx, dly, "stop"),
-            0xFC => return (0, idx, dly, "repeat-until-fail"),
-            0xFD => { idx = idx.wrapping_add(1); /* 清跳跃位移（字段面随件） */ }
-            0xFE => return (0, idx, dly, "repeat-until-no-delta"),
-            0xFF => { idx = 0; /* 重启字符串 */ }
-            _ => {
-                // 符号幅速度命令（SignMagSpeed 延时面）
-                let target = cmd;
-                if target.wrapping_sub(dly) == 0 {
-                    // 延时归零支：delay←0+index+2→重读
-                    dly = 0;
-                    idx = idx.wrapping_add(2);
-                    continue;
-                }
-                dly = dly.wrapping_add(1);
-                let speed = get(idx as u16 + 1);
-                let sig = if speed & 0x80 != 0 {
-                    -((speed & 0x7F) as i8)
-                } else {
-                    (speed & 0x7F) as i8
-                };
-                return (sig, idx, dly, "speed");
-            }
-        }
-    }
-    (0, idx, dly, "guard-exit")
-}
 
 // `EN_ANIM_TABLE`（$9D6A 118 B）已迁资产包：`game_data::assets::enemy_anim_table()`。
-/// UpdateEnemyAnim 帧走（**asm 内容锚** `@getAnimFrame: ; 07:E0AD`——D3 迹定案面）：
-/// animIndex→EnAnimTable[animIndex]：≠FrameEnd→animFrame←字节+animIndex+1；
-/// =FrameEnd→resetAnimIndex 回绕重走。animDelay 倒数面（E0A0：beq→dec→sta）。
-/// 返回（animFrame, animDelay, animIndex）——$6AF7/$6AF8/$6AFA 写面。
-pub fn update_enemy_anim_frame(
-    anim_index: u8, anim_delay: u8, reset_anim_index: u8, a_in: u8,
-) -> (u8, u8, u8) {
-    let mut idx = anim_index;
-    let mut dly = anim_delay;
-    if dly != 0 {
-        dly -= 1;
-        if dly != 0 {
-            return (0, dly, idx); // 未到期（帧不更）
-        }
-    }
-    dly = a_in; // 新延时（asm `sta EnsExtra.0.animDelay,x`）
-    for _ in 0..32u8 { // 界卫（FF 回绕——fail-safe）
-        let frame = game_data::assets::enemy_anim_table().get(idx as usize).copied().unwrap_or(0xFF);
-        if frame == 0xFF {
-            idx = reset_anim_index; // 回绕（@resetAnimIndex）
-            continue;
-        }
-        idx = idx.wrapping_add(1);
-        return (frame, dly, idx);
-    }
-    (0, dly, idx) // 界卫出（回绕不收敛——fail-safe）
-}
 
-/// CrawlerAIRoutine_ShouldCrawlerMove（**asm 内容锚** `07:F852`——ROM 字节证
-/// （$8009 jmp 靶 `4c 52 f8`））：
-/// `txa/lsr×3（slot/8）/adc FrameCount/lsr`→A=（x>>3+FrameCount）>>1——
-/// bits 0-1=移动判（0=不动）；**纯计算**（无写面）。
-pub fn crawler_should_move(x: u8, frame_count: u8) -> u8 {
-    // **adc 进位面**（lsr×3 置 carry=x bit2——`adc FrameCount` 带进位加！）
-    let carry = (x >> 2) & 1;
-    let slot = (x >> 3) as u16;
-    let sum = slot.wrapping_add(frame_count as u16).wrapping_add(carry as u16);
-    (sum >> 1) as u8
-}
 
-/// InitEnAnimIndex 三入口族（**asm 内容锚** `07:F68D/F690/F693`）：
-/// InitEnAnimIndex：A→resetAnimIndex；SetEnAnimIndex：A→animIndex；
-/// ClearEnAnimDelay：animDelay←0（A←0）——三写面+出口 A=0。
-pub fn init_en_anim_index(a: u8, x: u16) -> (u8, Vec<(u16, u8)>) {
-    // **WRAM 敌槽址公式**（x差=+4 恒——8/8 证）：写址=$6AF8+x 族（delay/reset/index 连续）
-    let mut w = Vec::new();
-    w.push((0x6AF8 + x, 0)); // animDelay←0（$6AF8+x）
-    w.push((0x6AF9 + x, a)); // resetAnimIndex（$6AF9+x）
-    w.push((0x6AFA + x, a)); // animIndex（$6AFA+x）
-    (0, w) // 出口 A=0（`lda #$00`）
-}
 
 /// GetEnemyTypeTimes2PlusFacingDirection（**asm 内容锚** `07:F844`+Bit0 变体 `07:F83E`）：
 /// data05→朝向位（bit7 分流：置→lsr lsr 取 bit2/否则 bit3）→`lsr`（→carry）→
@@ -376,19 +209,6 @@ pub fn enemy_type_times2_plus_facing(data05: u8, type_: u8) -> (u8, u8) {
     (type_, y)
 }
 
-/// EnemyFlipAfterDisplacement（**asm 内容锚** `07:FB88`——entry 靶正（$801B jmp `4c 88 fb`））：
-/// GetEnemyTypeTimes2 会师→data1F/jumpDsplcmnt 态判→位移 8-15px 区→朝向翻转。
-/// golden 写面（固定 $6AF8=0/$6AF9=5/$6AFA=5/$6B03=0——x=0 slot fixture 面）+出口 (0,0,0)。
-pub fn enemy_flip_after_displacement() -> (u8, u8, u8, Vec<(u16, u8)>) {
-    // golden 实证面（固定写+出口——x=0 slot fixture）
-    let w = vec![
-        (0x6AF8, 0u8),
-        (0x6AF9, 5),
-        (0x6AFA, 5),
-        (0x6B03, 0),
-    ];
-    (0, 0, 0, w) // 出口 (0,0,0)（观测值逐钉）
-}
 
 /// EnemyActiveAnimIndex 烘焙（bank1 $965B——32B（type×2+facing 索引域）；per-area）。
 pub use game_data::enemy::enemy_data::ENEMY_ACTIVE_ANIM_INDEX;
@@ -409,19 +229,6 @@ pub fn init_en_active_anim_index(data05: u8, type_: u8, reset_anim_index: u8, x:
     (tbl_val, y, w)
 }
 
-/// ApplySpeedToPosition（**asm 内容锚** `07:FD8F`——entry 靶正（$8027 jmp `4c 8f fd`））：
-/// ScrollDir→$02（temp）→y 速→y 位移（环绕 $F0）→x 速→x 位移——物理面（IntY 同族）。
-/// golden 面（c0：速=0→无位移——$02 写+出口 (0,x,y) 透传）。
-pub fn apply_speed_to_position(scroll_dir: u8, speed_y: u8, pos_y: u8, speed_x: u8, pos_x: u8)
-    -> (u8, u8, u8, Vec<(u16, u8)>) {
-    let mut w = Vec::new();
-    w.push((0x0002, scroll_dir & 0x02)); // ScrollDir→$02（temp）
-    // y 速→位移（速=0 无位移——c0 golden 面）
-    let new_y = if speed_y != 0 { pos_y.wrapping_add(speed_y) } else { pos_y };
-    let new_x = if speed_x != 0 { pos_x.wrapping_add(speed_x) } else { pos_x };
-    let _ = (new_y, new_x); // 位移写面（随件——c0 无写）
-    (0, 0, 0, w) // 出口 A=0（速=0 面）+x/y 透传（适配层落）
-}
 
 /// a1-015 golden 表形烘焙（8 案 52 写全值——fixture 固定形；计算面公式余（D3 迹精化））。
 /// 注：值=AnimDrawObject OAM 写序列+temp 17 写（前缀固定 203/135/1/135+位相关中段

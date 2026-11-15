@@ -13,7 +13,6 @@ pub(crate) use crate::ui::hud::*;
 pub(crate) use crate::world::room_load::*;
 pub use crate::world::room_load::copy_area_pointers;
 pub(crate) use crate::world::scroll::*;
-pub(crate) use crate::enemy::ai_dispatch::*;
 use crate::ram_map::{
     FRAME_COUNT, GAME_MODE, NMI_STATUS, RANDOM1, RANDOM2, TIMER1, TIMER_DELAY,
 };
