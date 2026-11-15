@@ -2193,6 +2193,38 @@ def gate_routine_inventory() -> tuple[str, str]:
     return PASS, last
 
 
+BANKVARS_LEDGER_REL = Path("data/status/bankvars.json")
+BANKVARS_TIMEOUT_S = 120
+
+
+def gate_bankvars() -> tuple[str, str]:
+    """G-BV 按区变量账本：`pending` 只减不增 + 每条 covered 必须有按区访问器。
+
+    结构驱动的**第二个分母门**（第一个是 routine-inventory）：ROM 里同一地址在五个区
+    bank 各有一份不同数据（`$95C3-$95E6` 区头、`$960B-$97D5` 敌表区），Rust 侧若用单张表
+    承载就会读到别人的字节，而且测试也只看一个区⇒永远绿。清单由 tools/bankvars.py 机械生成
+    （扫 asm 标签 + 比 ROM 字节），判据：①发现的按区变量必须已登记②账本字节锚不得与 ROM
+    漂移③covered 必须写 accessor（否则是假 covered）。地址相等判据抓不到「不同地址同一
+    角色」，那类由 extract.rs::ENEMY_SPRITES 规格覆盖（见 docs/findings/per-bank-assets.md）。
+    """
+    if not (ROOT / BANKVARS_LEDGER_REL).is_file():
+        return FAIL, f"缺 {BANKVARS_LEDGER_REL.as_posix()}（先跑 python3 tools/bankvars.py --write）"
+    try:
+        proc = subprocess.run(
+            [sys.executable, "tools/bankvars.py"],
+            cwd=ROOT, capture_output=True, text=True, encoding="utf-8", errors="replace",
+            env=_child_env(), timeout=BANKVARS_TIMEOUT_S,
+        )
+    except subprocess.TimeoutExpired:
+        return FAIL, f"bankvars 校验超时（>{BANKVARS_TIMEOUT_S}s）"
+    out = ((proc.stdout or "") + (proc.stderr or "")).strip()
+    if proc.returncode != 0:
+        bad = [ln for ln in out.splitlines() if ln.strip()][-8:]
+        return FAIL, "按区变量账本不齐：\n  - " + "\n  - ".join(bad)
+    last = out.splitlines()[-1] if out else ""
+    return PASS, last
+
+
 PACK_REL = Path("assets") / "metroid.pack"
 ASSET_PACK_TIMEOUT_S = 240
 
@@ -2287,6 +2319,9 @@ GATES: list[tuple[str, str, str, str, object]] = [
     ("routine-inventory", "启用（结构驱动）", "check",
      "例程清单：unported 只减不增 + 分母指纹不漂移（tools/routine_inventory.py --check）",
      gate_routine_inventory),
+    ("bankvars", "启用（结构驱动）", "check",
+     "按区变量账本：pending 只减不增 + covered 必须带按区访问器（tools/bankvars.py）",
+     gate_bankvars),
 ]
 
 

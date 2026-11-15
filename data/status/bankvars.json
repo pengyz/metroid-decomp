@@ -1,0 +1,855 @@
+{
+  "schema": "bankvars-v1",
+  "vars": [
+    {
+      "name": "AreaRoutine",
+      "region": "area-header",
+      "addr": "95C3",
+      "areas": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "sha16": {
+        "0": "f386fab87e0ad65e",
+        "1": "db72b425fa712260",
+        "2": "d03d10fbc3be4bc9",
+        "3": "74d1dd8b0563fde2",
+        "4": "dbc56423382a9609"
+      },
+      "status": "pending",
+      "accessor": null,
+      "note": ""
+    },
+    {
+      "name": "TwosComplement_",
+      "region": "area-header",
+      "addr": "95C6",
+      "areas": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "sha16": {
+        "0": "1484354b7366db07",
+        "1": "043a3b76becef915",
+        "2": "1afbd4500242c15d",
+        "3": "6f2cd1acd33dbf40",
+        "4": "bd73eb0f7d37621d"
+      },
+      "status": "pending",
+      "accessor": null,
+      "note": ""
+    },
+    {
+      "name": "RTS_95CB",
+      "region": "area-header",
+      "addr": "95CB",
+      "areas": [
+        2,
+        3
+      ],
+      "sha16": {
+        "2": "d4df9287f8c28f70",
+        "3": "c5524096504aa08c"
+      },
+      "status": "pending",
+      "accessor": null,
+      "note": ""
+    },
+    {
+      "name": "L95CC",
+      "region": "area-header",
+      "addr": "95CC",
+      "areas": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "sha16": {
+        "1": "bc07e1d2078bb4dc",
+        "2": "1751133025772f37",
+        "3": "c9687eadb752c53c",
+        "4": "b6798468530fe0f1"
+      },
+      "status": "pending",
+      "accessor": null,
+      "note": ""
+    },
+    {
+      "name": "AreaMusicFlag",
+      "region": "area-header",
+      "addr": "95CD",
+      "areas": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "sha16": {
+        "0": "b4ed23c8536b789b",
+        "1": "648a2839fe5572c1",
+        "2": "a1e37216f2ed2749",
+        "3": "6c1a81508e73a240",
+        "4": "615bdc087f9c45c1"
+      },
+      "status": "pending",
+      "accessor": null,
+      "note": ""
+    },
+    {
+      "name": "AreaEnemyDamage",
+      "region": "area-header",
+      "addr": "95CE",
+      "areas": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "sha16": {
+        "0": "84e961cc20df43c7",
+        "1": "15adf46d89ab8baa",
+        "2": "0110cecceecc3000",
+        "3": "bb1b156dfecc7951",
+        "4": "bffe9aacc85273e8"
+      },
+      "status": "pending",
+      "accessor": null,
+      "note": ""
+    },
+    {
+      "name": "AreaItemRoomNumbers",
+      "region": "area-header",
+      "addr": "95D0",
+      "areas": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "sha16": {
+        "0": "f26d839a28506f80",
+        "1": "fe4afa27e0c1e31b",
+        "2": "4ece2d45b2b78928",
+        "3": "f47118a9e2561ab4",
+        "4": "ce37baff0b876e0e"
+      },
+      "status": "pending",
+      "accessor": null,
+      "note": ""
+    },
+    {
+      "name": "AreaMapPosX",
+      "region": "area-header",
+      "addr": "95D7",
+      "areas": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "sha16": {
+        "0": "1cc7c7e7e4aa71fb",
+        "1": "caee67f2543e0ff9",
+        "2": "df474ef736ed9354",
+        "3": "d50e2e7fa2d44e8a",
+        "4": "0f8b32e6e27da26d"
+      },
+      "status": "pending",
+      "accessor": null,
+      "note": ""
+    },
+    {
+      "name": "AreaMapPosY",
+      "region": "area-header",
+      "addr": "95D8",
+      "areas": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "sha16": {
+        "0": "069acb68a29d5fe1",
+        "1": "9de6bd0aafcd06cb",
+        "2": "852da056e5a2443b",
+        "3": "1acb27afe72e0315",
+        "4": "45081be096d3927d"
+      },
+      "status": "pending",
+      "accessor": null,
+      "note": ""
+    },
+    {
+      "name": "AreaSamusY",
+      "region": "area-header",
+      "addr": "95D9",
+      "areas": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "sha16": {
+        "0": "0663a75fd338e78a",
+        "1": "a37d220cb79cde89",
+        "2": "fb871172f7ced59a",
+        "3": "13be782fd50fc762",
+        "4": "73fa36013544c369"
+      },
+      "status": "pending",
+      "accessor": null,
+      "note": ""
+    },
+    {
+      "name": "AreaPaletteToggle",
+      "region": "area-header",
+      "addr": "95DA",
+      "areas": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "sha16": {
+        "0": "41580715a168714f",
+        "1": "f2867ef84b82a24b",
+        "2": "e4ba6e152c1b41c4",
+        "3": "d4e371b4cd97d617",
+        "4": "7abecc8c4bcc2ea0"
+      },
+      "status": "covered",
+      "accessor": "crates/game-data/src/assets.rs::area_pal_toggle(area)",
+      "note": ""
+    },
+    {
+      "name": "AreaEnProjectileKilledAnimIndex",
+      "region": "area-header",
+      "addr": "95DC",
+      "areas": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "sha16": {
+        "0": "258eddd3bc24902f",
+        "1": "87eca0dd6cbcfeb2",
+        "2": "f339752700e81009",
+        "3": "d9623346bfea179a",
+        "4": "d70f33d79031e394"
+      },
+      "status": "pending",
+      "accessor": null,
+      "note": ""
+    },
+    {
+      "name": "AreaExplosionAnimIndex",
+      "region": "area-header",
+      "addr": "95DD",
+      "areas": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "sha16": {
+        "0": "81f083e456905850",
+        "1": "60e202c8c2c92fc1",
+        "2": "afc24e5c2398a392",
+        "3": "409c81f72d6f92a0",
+        "4": "8723d33f471bcb2e"
+      },
+      "status": "pending",
+      "accessor": null,
+      "note": ""
+    },
+    {
+      "name": "AreaEnProjectileFallingAnimIndex",
+      "region": "area-header",
+      "addr": "95E0",
+      "areas": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "sha16": {
+        "0": "5b9e28b8a4335ba5",
+        "1": "e7c99177dd8193c6",
+        "2": "648c09d627fc1b99",
+        "3": "510ae7673804d9b2",
+        "4": "9db1a9c79744c7c4"
+      },
+      "status": "pending",
+      "accessor": null,
+      "note": ""
+    },
+    {
+      "name": "AreaEnProjectileSplatterAnimIndex",
+      "region": "area-header",
+      "addr": "95E2",
+      "areas": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "sha16": {
+        "0": "0bffdc2f277ebbb2",
+        "1": "94c055d40a2885ef",
+        "2": "0cb277b6a947ae39",
+        "3": "e64087fd9783940b",
+        "4": "a3d67561ebbd925e"
+      },
+      "status": "pending",
+      "accessor": null,
+      "note": ""
+    },
+    {
+      "name": "AreaMellowAnimIndex",
+      "region": "area-header",
+      "addr": "95E4",
+      "areas": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "sha16": {
+        "0": "3f404e876075099b",
+        "1": "df1b9f6b8a1acfa6",
+        "2": "a888db2be9c7e8dc",
+        "3": "1c38053583b99f91",
+        "4": "ee87e62f774deb0a"
+      },
+      "status": "pending",
+      "accessor": null,
+      "note": ""
+    },
+    {
+      "name": "ChooseEnemyAIRoutine",
+      "region": "area-header",
+      "addr": "95E5",
+      "areas": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "sha16": {
+        "0": "a18ea9c0cb6e1534",
+        "1": "f147627e733fd919",
+        "2": "2447a3635ea6db9f",
+        "3": "ea5d38fcf752d607",
+        "4": "b6b262ae901586b5"
+      },
+      "status": "covered",
+      "accessor": "crates/game-core/src/enemy/ai_table.rs::routine_for(area, type)",
+      "note": ""
+    },
+    {
+      "name": "EnemyDeathAnimIndex",
+      "region": "enemy-tables",
+      "addr": "960B",
+      "areas": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "sha16": {
+        "0": "f386fab87e0ad65e",
+        "1": "ac0ecd2550e3e5bc",
+        "2": "c6345aabc5e07629",
+        "3": "8ace73d3046d1a5f",
+        "4": "445018bc6f1501ac"
+      },
+      "status": "covered",
+      "accessor": "crates/game-data/src/assets.rs::enemy_death_anim(area)",
+      "note": ""
+    },
+    {
+      "name": "EnemyHealthTbl",
+      "region": "enemy-tables",
+      "addr": "962B",
+      "areas": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "sha16": {
+        "0": "85ceaabc2eb268b6",
+        "1": "3f740a8eb10eee1b",
+        "2": "7a4871656dc0cbfe",
+        "3": "2a27fd9b1fbd053c",
+        "4": "533ea50b52b329a2"
+      },
+      "status": "covered",
+      "accessor": "crates/game-data/src/assets.rs::enemy_health(area)",
+      "note": ""
+    },
+    {
+      "name": "EnemyRestingAnimIndex",
+      "region": "enemy-tables",
+      "addr": "963B",
+      "areas": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "sha16": {
+        "0": "a1ca890529b0187c",
+        "1": "9a23a0570541efe6",
+        "2": "2d12e4e396544a16",
+        "3": "0a2c971445e6afd1",
+        "4": "50bebc4a77cd6a32"
+      },
+      "status": "covered",
+      "accessor": "crates/game-data/src/assets.rs::enemy_resting_anim(area)",
+      "note": ""
+    },
+    {
+      "name": "EnemyActiveAnimIndex",
+      "region": "enemy-tables",
+      "addr": "965B",
+      "areas": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "sha16": {
+        "0": "e2c377f839ad6d40",
+        "1": "05c36d9d62a2a317",
+        "2": "fe2fa64b02f64222",
+        "3": "db9dcc319e8dd6a6",
+        "4": "6e574abb14af8c01"
+      },
+      "status": "covered",
+      "accessor": "crates/game-data/src/assets.rs::enemy_active_anim(area)",
+      "note": ""
+    },
+    {
+      "name": "EnemyActiveAnimIndexInitOffset",
+      "region": "enemy-tables",
+      "addr": "967B",
+      "areas": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "sha16": {
+        "0": "4e7f75583ca15d42",
+        "1": "5e030bdb3279ad98",
+        "2": "992c30aaa46eff45",
+        "3": "82b8c3b372f3e9d4",
+        "4": "5e030bdb3279ad98"
+      },
+      "status": "covered",
+      "accessor": "crates/game-data/src/assets.rs::enemy_active_anim_init_offset(area)",
+      "note": ""
+    },
+    {
+      "name": "L968B",
+      "region": "enemy-tables",
+      "addr": "968B",
+      "areas": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "sha16": {
+        "0": "a54af3207d90924c",
+        "1": "956b1c643233d490",
+        "2": "5f17f4a50c146c5c",
+        "3": "0261b8e2b79084b3",
+        "4": "f51bfa9331196555"
+      },
+      "status": "covered",
+      "accessor": "crates/game-data/src/assets.rs::enemy_force_attribs(area)",
+      "note": ""
+    },
+    {
+      "name": "EnemyForceSpeedTowardsSamusDelayTbl",
+      "region": "enemy-tables",
+      "addr": "969B",
+      "areas": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "sha16": {
+        "0": "f386fab87e0ad65e",
+        "1": "6cf39512d60f63c5",
+        "2": "ea0cfe6da5945cbe",
+        "3": "ed42a11e74a30da0",
+        "4": "305d9385049ebc3d"
+      },
+      "status": "covered",
+      "accessor": "crates/game-data/src/assets.rs::enemy_force_speed_delay(area)",
+      "note": ""
+    },
+    {
+      "name": "EnemyDistanceToSamusThreshold",
+      "region": "enemy-tables",
+      "addr": "96AB",
+      "areas": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "sha16": {
+        "0": "35ba5e1ddc071303",
+        "1": "b9d5d48330f8e8b0",
+        "2": "374708fff7719dd5",
+        "3": "4007b2b34798e22f",
+        "4": "328108882b3c9c32"
+      },
+      "status": "covered",
+      "accessor": "crates/game-data/src/assets.rs::enemy_distance_threshold(area)",
+      "note": ""
+    },
+    {
+      "name": "EnemyInitDelayTbl",
+      "region": "enemy-tables",
+      "addr": "96BB",
+      "areas": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "sha16": {
+        "0": "a01b0a7088901203",
+        "1": "6d6812d9d6d3593e",
+        "2": "ea0cfe6da5945cbe",
+        "3": "c50d3b5f5b184d4b",
+        "4": "6d6812d9d6d3593e"
+      },
+      "status": "covered",
+      "accessor": "crates/game-data/src/assets.rs::enemy_init_delay(area)",
+      "note": ""
+    },
+    {
+      "name": "EnemyMovementChoiceOffset",
+      "region": "enemy-tables",
+      "addr": "96CB",
+      "areas": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "sha16": {
+        "0": "85eab9101c60192e",
+        "1": "04294d9ed0a3f107",
+        "2": "a396cf969a7c417b",
+        "3": "2da62d2b6260f80e",
+        "4": "d46b217ec332cbf1"
+      },
+      "status": "pending",
+      "accessor": null,
+      "note": ""
+    },
+    {
+      "name": "EnemyMovementPtrs",
+      "region": "enemy-tables",
+      "addr": "96DB",
+      "areas": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "sha16": {
+        "0": "43fd5e5acdeba9bd",
+        "1": "fd8de2a29bd959c5",
+        "2": "018760f92ed44680",
+        "3": "cf8deb52cbc91105",
+        "4": "2bdf99ab44ad6504"
+      },
+      "status": "covered",
+      "accessor": "crates/game-data/src/assets.rs::enemy_movement_ptrs(area)",
+      "note": ""
+    },
+    {
+      "name": "EnAccelYTable",
+      "region": "enemy-tables",
+      "addr": "972B",
+      "areas": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "sha16": {
+        "0": "f386fab87e0ad65e",
+        "1": "28b826c2026f6adb",
+        "2": "53e825236e17d6c5",
+        "3": "968d97874fda2ba2",
+        "4": "73be52ad669e1bec"
+      },
+      "status": "pending",
+      "accessor": null,
+      "note": ""
+    },
+    {
+      "name": "EnAccelXTable",
+      "region": "enemy-tables",
+      "addr": "973F",
+      "areas": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "sha16": {
+        "0": "6bd21f756b477ff9",
+        "1": "374708fff7719dd5",
+        "2": "2f3da189966b3ab7",
+        "3": "de1cc894767ac418",
+        "4": "374708fff7719dd5"
+      },
+      "status": "pending",
+      "accessor": null,
+      "note": ""
+    },
+    {
+      "name": "EnSpeedYTable",
+      "region": "enemy-tables",
+      "addr": "9753",
+      "areas": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "sha16": {
+        "0": "46e9efc852125137",
+        "1": "8600e6e83a938175",
+        "2": "b8252cd8c36ded14",
+        "3": "2ec9b64da3b2a2ce",
+        "4": "e999e2bbcffce7d4"
+      },
+      "status": "pending",
+      "accessor": null,
+      "note": ""
+    },
+    {
+      "name": "EnSpeedXTable",
+      "region": "enemy-tables",
+      "addr": "9767",
+      "areas": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "sha16": {
+        "0": "7e8d569a87c17aa3",
+        "1": "a9e4bf1826f84a82",
+        "2": "dd1fb31b8329ddf1",
+        "3": "9c688151fa92bc31",
+        "4": "a9e4bf1826f84a82"
+      },
+      "status": "pending",
+      "accessor": null,
+      "note": ""
+    },
+    {
+      "name": "L977B",
+      "region": "enemy-tables",
+      "addr": "977B",
+      "areas": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "sha16": {
+        "0": "5b1caaf114d4dc5f",
+        "1": "be5a484bf790ee8c",
+        "2": "3cc664a795b42df3",
+        "3": "d1146b1aa69e0fdf",
+        "4": "be5a484bf790ee8c"
+      },
+      "status": "covered",
+      "accessor": "crates/game-data/src/assets.rs::enemy_facing(area)",
+      "note": ""
+    },
+    {
+      "name": "EnProjectileRisingAnimIndexTable",
+      "region": "enemy-tables",
+      "addr": "978B",
+      "areas": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "sha16": {
+        "0": "f315a06789f8206c",
+        "1": "de97c1f98e97601f",
+        "2": "e0dd0dd20df2aa03",
+        "3": "4e1f97cd4e02580e",
+        "4": "a62308544539b02c"
+      },
+      "status": "pending",
+      "accessor": null,
+      "note": ""
+    },
+    {
+      "name": "EnProjectilePosOffsetX",
+      "region": "enemy-tables",
+      "addr": "979B",
+      "areas": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "sha16": {
+        "0": "4e7f75583ca15d42",
+        "1": "563c910adf587d99",
+        "2": "9f1260cbb963d530",
+        "3": "f2340aedfc2a46e2",
+        "4": "3f76fd5b43907569"
+      },
+      "status": "pending",
+      "accessor": null,
+      "note": ""
+    },
+    {
+      "name": "EnProjectilePosOffsetY",
+      "region": "enemy-tables",
+      "addr": "97A3",
+      "areas": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "sha16": {
+        "0": "a1ca890529b0187c",
+        "1": "4a26d89df41ebcf9",
+        "2": "90a18bae0a6bd848",
+        "3": "e4c9b600d1b83a13",
+        "4": "d013a3d81483df09"
+      },
+      "status": "pending",
+      "accessor": null,
+      "note": ""
+    },
+    {
+      "name": "EnProjectileMovementPtrTable",
+      "region": "enemy-tables",
+      "addr": "97A7",
+      "areas": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "sha16": {
+        "0": "2eba07d77e1e8564",
+        "1": "8a35f10005b7bbc9",
+        "2": "ad47e906324da6b1",
+        "3": "49735985239649c6",
+        "4": "12393ca036c2d6ed"
+      },
+      "status": "pending",
+      "accessor": null,
+      "note": ""
+    },
+    {
+      "name": "VRAMStringPtrTable",
+      "region": "enemy-tables",
+      "addr": "97AF",
+      "areas": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "sha16": {
+        "0": "61fe0799667d676b",
+        "1": "1c4155c73402a708",
+        "2": "3f4e6d87031e9061",
+        "3": "4cf21f5bda432406",
+        "4": "5badebe724a10094"
+      },
+      "status": "pending",
+      "accessor": null,
+      "note": ""
+    },
+    {
+      "name": "EnemyMovementChoices",
+      "region": "enemy-tables",
+      "addr": "97D1",
+      "areas": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "sha16": {
+        "0": "dd9ed3375123ae59",
+        "1": "630524f8ea8ed9e5",
+        "2": "100542e7e74a6d13",
+        "3": "8e12f1ca6f8f202b",
+        "4": "ec32ac12a62e1177"
+      },
+      "status": "pending",
+      "accessor": null,
+      "note": ""
+    }
+  ]
+}

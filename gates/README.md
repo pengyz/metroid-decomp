@@ -80,6 +80,7 @@
 | `asset-pack` | 资产包自证：包内每段 == 从 ROM 重算（`pack-tool verify`；缺 rom/pack 显式 SKIP） | 启用（W4） |
 | `no-env-hooks` | 禁逻辑层环境变量测试钩子：诊断只能走独立测试用例或 `--trace` 启动参数（用户裁定 2026-11-15） | 启用（2026-11-15） |
 | `routine-inventory` | 例程清单：`unported` 只减不增 + 分母指纹不漂移（`tools/routine_inventory.py --check`） | 启用（结构驱动） |
+| `bankvars` | 按区变量账本：`pending` 只减不增 + `covered` 必须带按区访问器（`tools/bankvars.py`） | 启用（结构驱动） |
 
 ### proof-checks（证书防腐 v2，2026-10-15）
 

@@ -89,6 +89,23 @@
 5. 值层 newtype：`AnimIdx{area, off}`（`resolve()` 是唯一读表入口，**不提供 `From<u8>`**），防止「裸 u8 跨区使用」这种错误再次静默通过编译。
 6. 新门 `bankvars`：按 §4 的地址区生成基线（地址 + 各 bank 字节 sha），校验差异项只减不增，并要求每个差异项在 Rust 有按区访问器、不存在单常量副本。
 
+### 6.1 进度（2026-11-16）
+
+第 1–5 步已完成并推送（`3b2a1a4f` fail-loud、`6150a40e` 五区 `en_sprites` 复合段、`fade507f` 死封装/未知区/Ripper 拆分、`8cafda0f` `AnimIdx`）。第 6 步的门已落地：
+
+```bash
+python3 tools/bankvars.py          # 校验（门禁 `bankvars` 即跑它）
+python3 tools/bankvars.py --list   # 人读清单
+python3 tools/bankvars.py --write  # 重写账本骨架（新增一律 pending）
+```
+
+账本 `data/status/bankvars.json` 实测 **39 项**按区变量：`covered 13`（已有按区访问器，逐项写明 accessor 指针）/ `pending 26`（尚未按区化，只减不增）。
+
+**判据的边界（必须知道）**：`bankvars` 用「同一地址在 ≥2 区出现且字节不同」判按区，
+因此**抓不到**「不同地址、同一角色」这一类——即 §1 的 anim/fptr/place 基址（五区地址各不同）。
+那类由 `crates/game-data/src/extract.rs::ENEMY_SPRITES` 的定谳规格覆盖，并由
+`extract_enemy_sprites_all` 的三条机械自检守住（不自洽即拒绝出包）。
+
 ## 7. 自证命令（任何人可复跑）
 
 ```bash
