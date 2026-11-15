@@ -271,23 +271,28 @@ pub(crate) fn enemy_complete_death(mem: &mut crate::frame::FrameMemory, x: u8) {
     mem.write_wram(0x6AF4 + px + 3, frame); // animFrame←掉落型
 }
 
-/// ChooseEnemyAIRoutine（**asm 内容锚** 区 bank `$95E5`（prg1:156——type 0-0F dispatch）：
-/// **05=Zoomer(Crawler)**/**04=Skree（goal-轮2 新端口）**。未端口型=【占位臂记账】
-/// （DIVERGENCES 非 panic——title_bridge 同款模式）：静态显示径保可玩，AI 深件随包收敛。
+/// `ChooseEnemyAIRoutine`——**按区 bank** 的 16 项跳表（`prg{1,2,3,4,5}_*.asm` 各一份）。
+/// 同一 `type` 号在不同区含义不同（见 `enemy/ai_table.rs` 的对照表）：派发必须按
+/// `(area, type)` 查表，不能用全局 `match`。未端口例程与空指针都记账后走占位臂。
 pub(crate) fn choose_enemy_ai(mem: &mut crate::frame::FrameMemory, x: u8) {
+    use crate::enemy::ai_table::{routine_for, Routine};
     let t = mem.read_wram(0x6AF4 + x as u16 + 14); // type=+14
-    match t {
-        5 => crawler_ai(mem, x),
-        // 【goal-轮2 Rust 实现】SkreeAIRoutine（enemies/skree.asm:2-71 全谱）——
-        // 第一房间双敌型之二（sc-shoot-kill slot 0x20 type=4 实测；HP=2（01:962B）符）。
-        4 => skree_ai(mem, x),
-        // 【结构驱动】enemies/sidehopper.asm + ripper.asm（bank1/4 共用尾件）
-        0 => sidehopper_ai(mem, x, false), // Sidehopper floor
-        1 => sidehopper_ai(mem, x, true),  // Ceiling sidehopper
-        3 => ripper_ai(mem, x),            // Ripper（bank2=Ripper II）
-        // 【结构驱动】enemies/waver.asm（12 行；$85/$86 左右两值不同）
-        2 => crate::enemy::waver::waver_ai(mem, x), // Waver
-        _ => {
+    let area = crate::frame::cur_area(mem);
+    match routine_for(area, t) {
+        Routine::Crawler => crawler_ai(mem, x),
+        Routine::Skree => skree_ai(mem, x),
+        Routine::SidehopperFloor => sidehopper_ai(mem, x, false),
+        Routine::SidehopperCeiling => sidehopper_ai(mem, x, true),
+        Routine::Ripper => ripper_ai(mem, x),
+        Routine::Waver => crate::enemy::waver::waver_ai(mem, x),
+        // `RemoveEnemy ; 07:FA18`：`lda #enemyStatus_NoEnemy / sta EnsExtra.0.status,x / rts`
+        Routine::RemoveEnemy => {
+            mem.write_wram(0x6AF4 + x as u16, 0);
+        }
+        // `RTS_95CB`：Kraid bank4 的占位项，asm 直接 `rts`——什么都不做。
+        Routine::Rts95CB => {}
+        // 空指针（Brinstar 0B–0F）与未端口例程：记账 + 占位臂保可玩。
+        Routine::Null | Routine::Unported(_) => {
             crate::frame::DIVERGENCES.with(|d| d.borrow_mut().push(0x95E5));
             update_enemy_common_no_move_no_anim(mem, x);
         }

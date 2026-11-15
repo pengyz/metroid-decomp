@@ -135,6 +135,16 @@
       "status": "ported",
       "rust": "crates/game-core/src/enemy/waver.rs:60",
       "note": "asm enemies/waver.asm（bank1 01:99E5，12 行）：$85←Waver2_R、$86←Waver2_L（Brinstar 01:9D8B/01:9D88 − EnAnimTable 01:9D6A ⇒ $21/$1E；Kraid 同值）；status≠Explode 走 EnemyFlipAfterDisplacement；尾件 $00←$06、$01←$08 → Decide。Rust waver_ai 逐行同形，dispatch type=2 已接线"
+    },
+    "ChooseEnemyAIRoutine": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/ai_table.rs:1",
+      "note": "asm 每区一份跳表（prg1/2/3/4/5 的 $95E5，各 16 项 .word）。Rust 侧 ai_table.rs 逐区转写五张表并按 (area,type) 派发；此前是单张全局 match（在 Brinstar 恰好正确，Norfair type4 等会误派）。未端口项与空指针记账后走占位臂，Rts95CB 直接 rts。"
+    },
+    "RemoveEnemy": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/framework.rs:choose_enemy_ai",
+      "note": "asm 07:FA18 = lda #enemyStatus_NoEnemy / sta EnsExtra.0.status,x / rts；Rust 在派发表 RemoveEnemy 项清槽"
     }
   }
 }
