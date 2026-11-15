@@ -5,8 +5,8 @@
 //!
 //! 本文件由 `frame/mainloop.rs` 原样搬出（纯搬移，逻辑/注释/测试均未改动）。
 
-use crate::frame::enemy::prims::*;
-use crate::frame::enemy::update::{
+use crate::enemy::prims::*;
+use crate::enemy::slot_cycle::{
     EN_DELAY, EN_INSTR, EN_MOV_IDX, EN_SUBPIXEL_X, EN_SUBPIXEL_Y,
 };
 

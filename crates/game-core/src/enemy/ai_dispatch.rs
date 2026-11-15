@@ -3,7 +3,7 @@
 //! 由 `frame/mainloop.rs` 原样搬出（纯搬移）。asm 根：`UpdateEnemy` 族与
 //! `InitEnemyFacingDirectionAxisAndDelay ; 07:FB7B`、`SetEnemySpawnDelay`。
 
-use crate::frame::enemy::{behaviour::*, update::*};
+use crate::enemy::{behaviour::*, slot_cycle::*};
 use crate::frame::tick::*;
 use crate::frame::FrameMemory;
 use crate::ram_map;

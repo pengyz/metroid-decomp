@@ -195,7 +195,7 @@ mod tests_prepare_game_over {
 
 
 
-pub use crate::frame::enemy::update::update_all_enemies;
+pub use crate::enemy::slot_cycle::update_all_enemies;
 
 
 

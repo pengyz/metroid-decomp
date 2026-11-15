@@ -21,7 +21,6 @@ pub mod clock;
 pub mod cycles; // 6502 逐条周期计数底座（路线丙 ②）
 pub mod elevator;
 pub mod engine;
-pub(crate) mod enemy;
 pub(crate) mod room_load;
 pub mod tick;
 pub(crate) mod world_tick;

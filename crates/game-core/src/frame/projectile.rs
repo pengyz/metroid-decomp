@@ -3,7 +3,7 @@
 //! 由 `frame/mainloop.rs` 原样搬出（纯搬移）。asm 根：`UpdateSamusProjectiles` 族、
 //! `SamusProjectileHitDoorOrStatue ; 07:E81E`、`CollisionDetection` 族。
 
-use crate::frame::enemy::behaviour::*;
+use crate::enemy::behaviour::*;
 use crate::frame::tick::*;
 use crate::ram_map;
 

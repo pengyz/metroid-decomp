@@ -4,15 +4,15 @@
 //! `GoMainRoutine ; 07:C114`、`MainRoutinePtrTable 07:C141`、`UpdateTimer ; 07:C266`、
 //! `IsEngineRunning ; 07:CA18`。
 
-pub(crate) use crate::frame::enemy::behaviour::*;
-pub(crate) use crate::frame::enemy::prims::*;
-pub(crate) use crate::frame::enemy::update::*;
+pub(crate) use crate::enemy::behaviour::*;
+pub(crate) use crate::enemy::prims::*;
+pub(crate) use crate::enemy::slot_cycle::*;
 pub(crate) use crate::frame::projectile::*;
 pub(crate) use crate::ui::hud::*;
 pub(crate) use crate::frame::room_load::*;
 pub use crate::frame::room_load::copy_area_pointers;
 pub(crate) use crate::frame::world_tick::*;
-pub(crate) use crate::frame::enemy::ai::*;
+pub(crate) use crate::enemy::ai_dispatch::*;
 use crate::ram_map::{
     FRAME_COUNT, GAME_MODE, NMI_STATUS, RANDOM1, RANDOM2, TIMER1, TIMER_DELAY,
 };
@@ -232,7 +232,7 @@ mod tests_prepare_game_over {
 
 
 
-pub use crate::frame::enemy::update::update_all_enemies;
+pub use crate::enemy::slot_cycle::update_all_enemies;
 
 use crate::frame::FrameMemory;
 use crate::ram_map;

@@ -27,3 +27,8 @@ pub mod mellow;
 pub mod spawn_control;
 pub mod ai;
 pub mod system;
+pub mod ai_dispatch;
+pub mod behaviour;
+pub mod motion;
+pub mod prims;
+pub mod slot_cycle;
