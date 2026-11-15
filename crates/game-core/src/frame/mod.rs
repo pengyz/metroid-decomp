@@ -23,6 +23,8 @@ pub mod elevator;
 pub mod engine;
 pub(crate) mod enemy;
 pub(crate) mod hud;
+pub(crate) mod room_load;
+pub(crate) mod world_tick;
 pub(crate) mod projectile;
 pub mod gfx;
 pub mod mainloop;
