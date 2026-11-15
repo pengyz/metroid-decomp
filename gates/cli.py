@@ -1820,23 +1820,11 @@ def gate_shared_inode_locks() -> tuple[str, str]:
 
 
 def gate_arch_contract() -> tuple[str, str]:
-    """G12 结构哨（r19）：①依赖方向——域件禁 `use crate::frame::`（G11 破环契约：
-    FrameMemory/RenderState/Registers 经 crate::state 取型）②analysis/ 不入库红线
-    （AGENTS §2 红线表——可再生工作区）。
+    """仓库红线哨（原 G12 结构哨，2026-11-15 按用户裁定 m21400 裁剪）：
+    保留 `analysis/` 不入库红线（AGENTS §2）；**移除 G11 依赖方向判据**——
+    重构期（域目录重划分）不设文件级依赖限制，拆分完成后再按新形态另立门禁。
     """
     problems: list[str] = []
-    domain_dirs = ["samus", "enemy", "world", "weapon", "pickup", "ui",
-                   "title", "ending", "input", "sound"]
-    root = Path("crates/game-core/src")
-    for d in domain_dirs:
-        base = root / d
-        if not base.is_dir():
-            continue
-        for p in sorted(base.rglob("*.rs")):
-            text = p.read_text(encoding="utf-8", errors="replace")
-            for i, line in enumerate(text.splitlines(), 1):
-                if "use crate::frame::" in line:
-                    problems.append(f"{rel(p)}:{i} 域件引用 frame（G11 破环契约违例——经 crate::state 取型）")
     try:
         out = subprocess.run(["git", "ls-files", "analysis/"], capture_output=True,
                              text=True, check=False).stdout.strip()
@@ -1847,7 +1835,7 @@ def gate_arch_contract() -> tuple[str, str]:
         problems.append(f"git ls-files 失败: {exc}")
     if problems:
         return ("FAIL", "；".join(problems[:6]))
-    return ("PASS", f"依赖方向（{len(domain_dirs)} 域→state 层）+analysis 不入库 双契约在位")
+    return ("PASS", "analysis/ 不入库红线在位（G11 依赖方向判据已按 m21400 移除，重构期放开）")
 
 
 # ---------------------------------------------------------------- 门禁注册表
@@ -2284,8 +2272,8 @@ GATES: list[tuple[str, str, str, str, object]] = [
      "双写片段逐字同文（pipeline↔design，F3 类漂移拦截）", gate_doc_sync),
     ("shared-inode-locks", "启用（事故③护栏）", "check",
      "CARGO_HOME 锁文件跨家共享 inode 机检（硬链快照忘删锁=挂死复发面拦截）", gate_shared_inode_locks),
-    ("arch-contract", "启用（r19）", "check",
-     "依赖方向（域件禁 frame 类型=G11 破环契约）+analysis 不入库红线双哨", gate_arch_contract),
+    ("arch-contract", "启用（r19→m21400 裁剪）", "check",
+     "analysis/ 不入库红线（G11 依赖方向判据已按用户裁定移除，重构期放开）", gate_arch_contract),
     ("data-boundary", "启用（W1/v2）", "check",
      "数据边界 v2：三分母（data 只减不增/fixture 禁进包/symbol 免检）+ 全字面量形识别 + assets/*.pack 不入库",
      gate_data_boundary),
