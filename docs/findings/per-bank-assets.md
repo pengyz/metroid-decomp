@@ -169,3 +169,68 @@ Ri anim 107 fptr 138 place 15 first_place_ptr 0x9d22
 - 本文只证「地址与长度」，**不证**这些表在 Rust 侧应该怎么消费（消费规则仍以各 AI 例程的 asm 为准）。
 - 危险资产清单的 43 项来自地址区扫描 + 逐项字节比对，**未逐项核对其 Rust 消费点**；迁移时应逐项复核（清单可能多列或漏列）。
 - 「共享 703 组」的判定基于内容相同，不代表语义相同；若将来发现某区对共享表有差异使用（如越界读进相邻区数据），须单独取证。
+
+## 6.3 敌辅助表与动画索引按区入包（2026-11-16，`pending` 26→0）
+
+### 6.3.1 敌辅助表窗（`area.{x}.en_aux`，`PackKey` 170-174，5 段各 186 B）
+
+两块 ROM 区段拼接（中间的 `$96DB-$972A` = `EnemyMovementPtrs` + 移动串，已有独立段，不重复）：
+
+| 偏移 | 长度 | asm 标签（`bank1:$96CB` 起） | 消费面 |
+|---|---|---|---|
+| 0..16 | 16 | `EnemyMovementChoiceOffset` `$96CB` | `EnData08` → `EnemyMovementChoices` 下标 |
+| 16..36 | 20 | `EnAccelYTable` `$972B` | 敌人竖直加速度 |
+| 36..56 | 20 | `EnAccelXTable` `$973F` | 敌人水平加速度 |
+| 56..76 | 20 | `EnSpeedYTable` `$9753` | 敌人竖直速度 |
+| 76..96 | 20 | `EnSpeedXTable` `$9767` | 敌人水平速度 |
+| 96..112 | 16 | `L977B` `$977B` | （另有独立段 `enemy_facing`，此处为窗内视图） |
+| 112..128 | 16 | `EnProjectileRisingAnimIndexTable` `$978B` | 弹体上升动画 |
+| 128..136 | 8 | `EnProjectilePosOffsetX` `$979B` | 弹体 X 偏移 |
+| 136..140 | 4 | `EnProjectilePosOffsetY` `$97A3` | 弹体 Y 偏移 |
+| 140..148 | 8 | `EnProjectileMovementPtrTable` `$97A7`（4×u16） | 弹体移动串 |
+| 148..182 | 34 | `VRAMStringPtrTable` `$97AF` | 区内 VRAM 串指针（`PtrTableEntryArea`） |
+| 182..186 | 4 | `EnemyMovementChoices` `$97D1` | 移动指令串可选起点 |
+
+五区首字节（ROM 实读，`bank*0x4000`）证明「同一地址不同内容」：
+
+```
+choice[0..4]   Br 00 03 06 08 | No 12 14 00 00 | Kr 00 03 00 06 | To 00 02 00 00 | Ri 18 1a 00 03
+accelY[0..4]   Br 7f 40 30 c0 | No 80 80 00 00 | Kr 7f 70 70 90 | To 18 30 00 c0 | Ri 80 80 00 00
+choices        Br 01 01 02 01 | No 00 02 00 09 | Kr 01 01 02 01 | To 00 00 00 01 | Ri 01 04 05 01
+```
+
+### 6.3.2 敌动画索引窗（`area.{x}.en_anim_idx`，`PackKey` 175-179，5 段各 9 B）
+
+`$95DC-$95E4`，asm `prg1_brinstar.asm:142-152`（`{AREA}` 宏五区实例化）：
+
+| 偏移 | 宽度 | 标签 | 访问器 |
+|---|---|---|---|
+| 0 | 1 | `AreaEnProjectileKilledAnimIndex` | `en_projectile_killed_anim(area)` |
+| 1 | 1 | `AreaExplosionAnimIndex` | `explosion_anim(area)` |
+| 2..4 | 2 | 填充（Norfair 非零） | — |
+| 4..6 | 2 | `AreaEnProjectileFallingAnimIndex` | `en_projectile_falling_anim(area)` |
+| 6..8 | 2 | `AreaEnProjectileSplatterAnimIndex` | `en_projectile_splatter_anim(area)` |
+| 8 | 1 | `AreaMellowAnimIndex` | `mellow_anim_index(area)` |
+
+值是 `EnAnim_Xxx_{AREA} - EnAnimTable_{AREA}`，即**本区 anim 表下标**——必须与 `assets::enemy_anim_table(area)` 同区配对。
+
+```
+bank1 03 43 00 00 00 00 00 00 69      bank2 03 77 53 57 55 59 5b 4f 32
+bank4 03 43 00 00 00 00 00 00 64      bank3 03 21 00 00 00 00 00 10 00
+bank5 03 58 44 4a 48 4a 4a 36 25
+```
+
+Norfair 的 `falling/splatter` = `0x5955/0x4F5B`（Brinstar 为 `0/0`）——回退成单表会让该区弹体动画静默退化。
+
+### 6.3.3 四项按区**代码桩**（非数据）
+
+`AreaRoutine $95C3`（`jmp` 本区例程三字节）、`TwosComplement_ $95C6`、`RTS_95CB`、`L95CC`：
+它们是每 bank 各一份的**代码**，不是可提取的数据资产。账本状态标 `code` 并写明归属（由
+`enemy::ai_table::routine_for` 与 `frame` 调度面覆盖），**不进资产包**；门禁仍要求它们被登记，
+新增同类项照样会红。
+
+### 6.3.4 收口
+
+`pending 26 → 0`（`covered 35 / code 4 / 共 39`）；包 162 → **172 段**；测试 598 → **600**；
+L4 15 案/132 格 match 115 · diff 17 逐格不变。**诚实边界**：本批为数据面按区化，
+11 张表的消费点（敌人移动/弹道）多数尚未接 AI，故无像素证据；价值在于「跨区取错表」这条路被关掉。

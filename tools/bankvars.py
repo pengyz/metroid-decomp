@@ -15,9 +15,11 @@
   2. 扫描 `refs/m1disasm/SRC/prg{1..5}_*.asm` 的标签行 `Name: ; BB:XXXX`，取落在上述
      地址区的标签；同一地址在 ≥2 个区出现时，比 ROM 在该 bank 的字节窗口。
   3. 只要有一个区的字节与别区不同 ⇒ 该地址是**按区变量**，必须进账本。
-  4. 账本（data/status/bankvars.json）每项状态二选一：
+  4. 账本（data/status/bankvars.json）每项状态三选一：
      - `covered`：已有按区访问器（写明 accessor 指针）；
-     - `pending`：尚未按区化——**只减不增**（与 unported 同口径）。
+     - `pending`：尚未按区化——**只减不增**（与 unported 同口径）；
+     - `code`：按区**代码桩**（非数据，如 `AreaRoutine` 的 `jmp` 三字节 / `RTS_95CB`），
+       由 dispatch 面覆盖，不进资产包——必须写明 note 说明归属。
 
 用法：
     python3 tools/bankvars.py            # 校验（门禁用）
@@ -196,8 +198,10 @@ def main(argv: list[str]) -> int:
             continue
         if old.get("sha16") and old["sha16"] != v["sha16"]:
             problems.append(f"ROM 字节与账本不符：{v['addr']} {v['name']}（账本 {old['sha16']} vs 现值 {v['sha16']}）")
-        if old.get("status") not in ("covered", "pending"):
+        if old.get("status") not in ("covered", "pending", "code"):
             problems.append(f"账本状态非法：{v['addr']} {v['name']} status={old.get('status')!r}")
+        if old.get("status") == "code" and not old.get("note"):
+            problems.append(f"code 项必须写明 note（说明由哪个面覆盖）：{v['addr']} {v['name']}")
         if old.get("status") == "covered" and not old.get("accessor"):
             problems.append(f"covered 项必须写明 accessor：{v['addr']} {v['name']}")
     pending = [v for v in ledger.get("vars", []) if v.get("status") == "pending"]

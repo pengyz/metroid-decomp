@@ -59,6 +59,8 @@ pub fn sections(rom: &[u8]) -> Result<Vec<Section>, String> {
     out.extend(extract_tourian_metroid_data(prg)?);
     out.extend(extract_area_pal_toggle(prg)?);
     out.extend(extract_area_headers(prg)?);
+    out.extend(extract_en_aux(prg)?);
+    out.extend(extract_en_anim_idx(prg)?);
     Ok(out)
 }
 
@@ -557,6 +559,16 @@ fn seg_meta() -> Vec<SegMeta> {
         SegMeta { key: PackKey::AreaKrHeader, kind: "bytes", elem: 13, count: 1, rom: "bank04:$95CD", note: "Kraid 区头" },
         SegMeta { key: PackKey::AreaToHeader, kind: "bytes", elem: 13, count: 1, rom: "bank03:$95CD", note: "Tourian 区头" },
         SegMeta { key: PackKey::AreaRiHeader, kind: "bytes", elem: 13, count: 1, rom: "bank05:$95CD", note: "Ridley 区头" },
+        SegMeta { key: PackKey::AreaBrEnAux, kind: "bytes", elem: 1, count: 0, rom: "bank01:$96CB+$972B", note: "Brinstar 敌辅助表（16 B choice offset + 170 B 窗）" },
+        SegMeta { key: PackKey::AreaNoEnAux, kind: "bytes", elem: 1, count: 0, rom: "bank02:$96CB+$972B", note: "Norfair 敌辅助表" },
+        SegMeta { key: PackKey::AreaKrEnAux, kind: "bytes", elem: 1, count: 0, rom: "bank04:$96CB+$972B", note: "Kraid 敌辅助表" },
+        SegMeta { key: PackKey::AreaToEnAux, kind: "bytes", elem: 1, count: 0, rom: "bank03:$96CB+$972B", note: "Tourian 敌辅助表" },
+        SegMeta { key: PackKey::AreaRiEnAux, kind: "bytes", elem: 1, count: 0, rom: "bank05:$96CB+$972B", note: "Ridley 敌辅助表" },
+        SegMeta { key: PackKey::AreaBrEnAnimIdx, kind: "bytes", elem: 1, count: 9, rom: "bank01:$95DC", note: "弹体/爆炸/梅洛姆动画索引" },
+        SegMeta { key: PackKey::AreaNoEnAnimIdx, kind: "bytes", elem: 1, count: 9, rom: "bank02:$95DC", note: "弹体/爆炸/梅洛姆动画索引" },
+        SegMeta { key: PackKey::AreaKrEnAnimIdx, kind: "bytes", elem: 1, count: 9, rom: "bank04:$95DC", note: "弹体/爆炸/梅洛姆动画索引" },
+        SegMeta { key: PackKey::AreaToEnAnimIdx, kind: "bytes", elem: 1, count: 9, rom: "bank03:$95DC", note: "弹体/爆炸/梅洛姆动画索引" },
+        SegMeta { key: PackKey::AreaRiEnAnimIdx, kind: "bytes", elem: 1, count: 9, rom: "bank05:$95DC", note: "弹体/爆炸/梅洛姆动画索引" },
     ];
     v
 }
@@ -1058,6 +1070,73 @@ fn extract_area_headers(prg: &[u8]) -> Result<Vec<Section>, String> {
         let b = bank_slice(prg, *bank, AREA_HEADER_ADDR, AREA_HEADER_LEN)
             .map_err(|e| format!("区头 area{area} bank{bank} $95CD: {e}"))?;
         out.push(Section { key: area_header_keys(area), data: b.to_vec() });
+    }
+    Ok(out)
+}
+
+/// 敌辅助表窗：`$96CB` 16 B（`EnemyMovementChoiceOffset`）+ `$972B-$97D5` 170 B
+/// （`EnAccelY/XTable`、`EnSpeedY/XTable`、`L977B`、弹道动画/偏移/指针、`VRAMStringPtrTable`、
+/// `EnemyMovementChoices`）。两块**不连续**（中间 $96DB-$972A 是 movPtrs/movStr，已有独立段），
+/// 因此拼接成 186 B：前 16 B = choice offset，其后 = `$972B` 起的连续窗。
+pub const EN_AUX_CHOICE_ADDR: u16 = 0x96CB;
+pub const EN_AUX_CHOICE_LEN: usize = 16;
+pub const EN_AUX_BODY_ADDR: u16 = 0x972B;
+pub const EN_AUX_BODY_LEN: usize = 170;
+pub const EN_AUX_LEN: usize = EN_AUX_CHOICE_LEN + EN_AUX_BODY_LEN;
+
+fn en_aux_keys(area: usize) -> PackKey {
+    match area {
+        0 => PackKey::AreaBrEnAux,
+        1 => PackKey::AreaNoEnAux,
+        2 => PackKey::AreaKrEnAux,
+        3 => PackKey::AreaToEnAux,
+        4 => PackKey::AreaRiEnAux,
+        _ => unreachable!("area 序只 0..=4"),
+    }
+}
+
+fn extract_en_aux(prg: &[u8]) -> Result<Vec<Section>, String> {
+    let banks = area_banks(prg)?;
+    let mut out = Vec::with_capacity(5);
+    for (area, bank) in banks.iter().enumerate() {
+        let mut body = en_slice_b(prg, *bank, EN_AUX_CHOICE_ADDR, EN_AUX_CHOICE_LEN)
+            .map_err(|e| format!("敌辅助表 area{area} bank{bank} $96CB: {e}"))?;
+        body.extend(
+            en_slice_b(prg, *bank, EN_AUX_BODY_ADDR, EN_AUX_BODY_LEN)
+                .map_err(|e| format!("敌辅助表 area{area} bank{bank} $972B: {e}"))?,
+        );
+        if body.len() != EN_AUX_LEN {
+            return Err(format!("敌辅助表 area{area} 长度 {}≠{EN_AUX_LEN}", body.len()));
+        }
+        out.push(Section { key: en_aux_keys(area), data: body });
+    }
+    Ok(out)
+}
+
+/// 每区 `$95DC-$95E4`（9 B）：`killed(1) explosion(1) pad(2) falling(2) splatter(2) mellow(1)`。
+/// asm 依据 `prg1_brinstar.asm:142-152`（`{AREA}` 宏五区实例化，五区同址）。
+const EN_ANIM_IDX_ADDR: u16 = 0x95DC;
+const EN_ANIM_IDX_LEN: usize = 9;
+
+fn en_anim_idx_keys(area: usize) -> PackKey {
+    match area {
+        0 => PackKey::AreaBrEnAnimIdx,
+        1 => PackKey::AreaNoEnAnimIdx,
+        2 => PackKey::AreaKrEnAnimIdx,
+        3 => PackKey::AreaToEnAnimIdx,
+        _ => PackKey::AreaRiEnAnimIdx,
+    }
+}
+
+fn extract_en_anim_idx(prg: &[u8]) -> Result<Vec<Section>, String> {
+    let mut out = Vec::with_capacity(5);
+    let banks = area_banks(prg)?;
+    for (area, &bank) in banks.iter().enumerate() {
+        let body = bank_slice(prg, bank, EN_ANIM_IDX_ADDR, EN_ANIM_IDX_LEN)?;
+        if body.len() != EN_ANIM_IDX_LEN {
+            return Err(format!("bank{bank}:$95DC 段长 {} != 9", body.len()));
+        }
+        out.push(Section { key: en_anim_idx_keys(area), data: body.to_vec() });
     }
     Ok(out)
 }

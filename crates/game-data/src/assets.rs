@@ -330,6 +330,80 @@ pub fn enemy_death_anim(area: u8) -> &'static [u8] { enemy_table(area, 11) }
 mod tests_per_area_tables {
     use super::*;
 
+    /// 敌动画索引窗 `$95DC-$95E5` 五区锚（ROM `bank*0x4000` 实读）。
+    ///
+    /// `killed` 五区同为 `0x03`；`explosion` Br `0x43` / Kr `0x43` / To `0x21` / No `0x77` / Ri `0x58`。
+    /// **Norfair 的 `falling/splatter` 非零**（`0x5955/0x4F5B`）——这正是它必须按区的原因：
+    /// 若有人换回单表，Norfair 的弹体动画会退化成 Brinstar 的 `0`。
+    #[test]
+    fn en_anim_idx_rom_anchor_five_areas() {
+        init_from_env().ok();
+        assert_eq!(en_projectile_killed_anim(0), 0x03);
+        assert_eq!(explosion_anim(0), 0x43);
+        assert_eq!(explosion_anim(1), 0x77);
+        assert_eq!(explosion_anim(2), 0x43);
+        assert_eq!(explosion_anim(3), 0x21);
+        assert_eq!(explosion_anim(4), 0x58);
+        assert_eq!(en_projectile_falling_anim(0), 0x0000);
+        assert_eq!(en_projectile_falling_anim(1), 0x5955);
+        assert_eq!(en_projectile_splatter_anim(1), 0x4F5B);
+        assert_eq!(mellow_anim_index(0), 0x69);
+        assert_eq!(mellow_anim_index(4), 0x25);
+        assert_ne!(mellow_anim_index(0), mellow_anim_index(4));
+    }
+
+    /// 敌辅助表窗（`$96CB` 16 B + `$972B-$97D5` 170 B）五区锚——**形状 + 按区差异**。
+    ///
+    /// ROM 首字节（`bank*0x4000`）：
+    /// `choice[0..4]`：Br `00 03 06 08` / No `12 14 00 00` / Kr `00 03 00 06` / To `00 02 00 00` / Ri `18 1a 00 03`
+    /// `accelY[0..4]`：Br `7f 40 30 c0` / No `80 80 00 00` / Kr `7f 70 70 90` / To `18 30 00 c0` / Ri `80 80 00 00`
+    /// `choices`：Br `01 01 02 01` / To `00 00 00 01` / Ri `01 04 05 01`
+    #[test]
+    fn en_aux_tables_rom_anchor_five_areas() {
+        init_from_env().ok();
+        let want_choice: [[u8; 4]; 5] = [
+            [0x00, 0x03, 0x06, 0x08],
+            [0x12, 0x14, 0x00, 0x00],
+            [0x00, 0x03, 0x00, 0x06],
+            [0x00, 0x02, 0x00, 0x00],
+            [0x18, 0x1A, 0x00, 0x03],
+        ];
+        let want_accel_y: [[u8; 4]; 5] = [
+            [0x7F, 0x40, 0x30, 0xC0],
+            [0x80, 0x80, 0x00, 0x00],
+            [0x7F, 0x70, 0x70, 0x90],
+            [0x18, 0x30, 0x00, 0xC0],
+            [0x80, 0x80, 0x00, 0x00],
+        ];
+        let want_choices: [[u8; 4]; 5] = [
+            [0x01, 0x01, 0x02, 0x01],
+            [0x00, 0x02, 0x00, 0x09],
+            [0x01, 0x01, 0x02, 0x01],
+            [0x00, 0x00, 0x00, 0x01],
+            [0x01, 0x04, 0x05, 0x01],
+        ];
+        for area in 0..5u8 {
+            let i = area as usize;
+            assert_eq!(enemy_movement_choice_offset(area).len(), 16);
+            assert_eq!(en_accel_y(area).len(), 20);
+            assert_eq!(en_accel_x(area).len(), 20);
+            assert_eq!(en_speed_y(area).len(), 20);
+            assert_eq!(en_speed_x(area).len(), 20);
+            assert_eq!(en_projectile_rising_anim(area).len(), 16);
+            assert_eq!(en_projectile_pos_offset_x(area).len(), 8);
+            assert_eq!(en_projectile_pos_offset_y(area).len(), 4);
+            assert_eq!(en_projectile_movement_ptrs(area).len(), 8);
+            assert_eq!(vram_string_ptrs(area).len(), 34);
+            assert_eq!(enemy_movement_choices(area).len(), 4);
+            assert_eq!(&enemy_movement_choice_offset(area)[..4], &want_choice[i], "area{area} $96CB");
+            assert_eq!(&en_accel_y(area)[..4], &want_accel_y[i], "area{area} $972B");
+            assert_eq!(enemy_movement_choices(area), &want_choices[i], "area{area} $97D1");
+        }
+        // 按区不同（若有人把它换回单表，这里必红）
+        assert_ne!(en_accel_y(0), en_accel_y(4));
+        assert_ne!(enemy_movement_choice_offset(0), enemy_movement_choice_offset(1));
+    }
+
     /// 区头窗 `$95CD-$95D9`（13 B）五区逐字节锚——**消费点 5 处的唯一源**。
     ///
     /// ROM 字节（`bank_source_offset` 同式，逻辑 bank N 落文件第 N+1 块）：
@@ -1053,6 +1127,109 @@ pub fn area_header(area: u8) -> AreaHeader {
         samus_y: b[12],
     }
 }
+
+/// 敌辅助表窗（ROM `$96CB` 16 B + `$972B-$97D5` 170 B，拼接 186 B）——按区唯一源。
+///
+/// 组成（偏移以拼接后为基准）：
+/// `0..16` `EnemyMovementChoiceOffset` / `16..36` `EnAccelYTable` / `36..56` `EnAccelXTable` /
+/// `56..76` `EnSpeedYTable` / `76..96` `EnSpeedXTable` / `96..112` `L977B`（另有 `enemy_facing`）/
+/// `112..128` `EnProjectileRisingAnimIndexTable` / `128..136` `EnProjectilePosOffsetX` /
+/// `136..140` `EnProjectilePosOffsetY` / `140..148` `EnProjectileMovementPtrTable` /
+/// `148..182` `VRAMStringPtrTable` / `182..186` `EnemyMovementChoices`。
+/// 两块之间的 `$96DB-$972A`（movPtrs/movStr）已有独立段，故不重复。
+pub const EN_AUX_CHOICE_LEN: usize = 16;
+
+fn en_aux_key(area: u8) -> Option<PackKey> {
+    match area_idx(area)? {
+        0 => Some(PackKey::AreaBrEnAux),
+        1 => Some(PackKey::AreaNoEnAux),
+        2 => Some(PackKey::AreaKrEnAux),
+        3 => Some(PackKey::AreaToEnAux),
+        4 => Some(PackKey::AreaRiEnAux),
+        _ => None,
+    }
+}
+
+fn en_aux(area: u8) -> &'static [u8] {
+    let key = en_aux_key(area)
+        .unwrap_or_else(|| panic!("敌辅助表：非法区号 area={area:#04X}（InArea&$0F 应为 0..=4）"));
+    let b = pack::get(key);
+    assert_eq!(b.len(), 186, "敌辅助表段长应为 186 B");
+    b
+}
+
+fn en_aux_slice(area: u8, off: usize, len: usize) -> &'static [u8] {
+    &en_aux(area)[off..off + len]
+}
+
+/// `EnemyMovementChoiceOffset ; $96CB`（16 B）——`EnData08` 索引到 `EnemyMovementChoices` 的偏移。
+pub fn enemy_movement_choice_offset(area: u8) -> &'static [u8] {
+    en_aux_slice(area, 0, EN_AUX_CHOICE_LEN)
+}
+/// `EnAccelYTable ; $972B`（20 B）。
+pub fn en_accel_y(area: u8) -> &'static [u8] { en_aux_slice(area, 16, 20) }
+/// `EnAccelXTable ; $973F`（20 B）。
+pub fn en_accel_x(area: u8) -> &'static [u8] { en_aux_slice(area, 36, 20) }
+/// `EnSpeedYTable ; $9753`（20 B）。
+pub fn en_speed_y(area: u8) -> &'static [u8] { en_aux_slice(area, 56, 20) }
+/// `EnSpeedXTable ; $9767`（20 B）。
+pub fn en_speed_x(area: u8) -> &'static [u8] { en_aux_slice(area, 76, 20) }
+/// `EnProjectileRisingAnimIndexTable ; $978B`（16 B）。
+pub fn en_projectile_rising_anim(area: u8) -> &'static [u8] { en_aux_slice(area, 112, 16) }
+/// `EnProjectilePosOffsetX ; $979B`（8 B）。
+pub fn en_projectile_pos_offset_x(area: u8) -> &'static [u8] { en_aux_slice(area, 128, 8) }
+/// `EnProjectilePosOffsetY ; $97A3`（4 B）。
+pub fn en_projectile_pos_offset_y(area: u8) -> &'static [u8] { en_aux_slice(area, 136, 4) }
+/// `EnProjectileMovementPtrTable ; $97A7`（8 B，4 × u16）。
+pub fn en_projectile_movement_ptrs(area: u8) -> &'static [u8] { en_aux_slice(area, 140, 8) }
+/// `VRAMStringPtrTable ; $97AF`（34 B，`PtrTableEntryArea` 记录）。
+pub fn vram_string_ptrs(area: u8) -> &'static [u8] { en_aux_slice(area, 148, 34) }
+/// `EnemyMovementChoices ; $97D1`（4 B）——移动指令串的可选起点偏移。
+pub fn enemy_movement_choices(area: u8) -> &'static [u8] { en_aux_slice(area, 182, 4) }
+
+// ---- `$95DC-$95E4`（9 B）：弹体/爆炸/梅洛姆**动画索引**（按区） ----
+//
+// asm `prg1_brinstar.asm:142-152`（`{AREA}` 宏五区实例化，五区同址）：
+// `$95DC AreaEnProjectileKilledAnimIndex`(1) / `$95DD AreaExplosionAnimIndex`(1) /
+// `$95DE-$95DF` 填充(2) / `$95E0 AreaEnProjectileFallingAnimIndex`(2) /
+// `$95E2 AreaEnProjectileSplatterAnimIndex`(2) / `$95E4 AreaMellowAnimIndex`(1)。
+//
+// 值 = `EnAnim_Xxx_{AREA} - EnAnimTable_{AREA}`，即**本区 anim 表下标**——
+// 所以它必须与 `assets::enemy_anim_table(area)` 同区配对，跨区使用会取到别的动画。
+
+fn en_anim_idx_key(area: u8) -> Option<PackKey> {
+    match area_idx(area)? {
+        0 => Some(PackKey::AreaBrEnAnimIdx),
+        1 => Some(PackKey::AreaNoEnAnimIdx),
+        2 => Some(PackKey::AreaKrEnAnimIdx),
+        3 => Some(PackKey::AreaToEnAnimIdx),
+        4 => Some(PackKey::AreaRiEnAnimIdx),
+        _ => None,
+    }
+}
+
+fn en_anim_idx(area: u8) -> &'static [u8] {
+    let key = en_anim_idx_key(area)
+        .unwrap_or_else(|| panic!("敌动画索引：非法区号 area={area:#04X}（InArea&$0F 应为 0..=4）"));
+    let b = pack::get(key);
+    assert_eq!(b.len(), 9, "敌动画索引段长应为 9 B");
+    b
+}
+
+/// `AreaEnProjectileKilledAnimIndex ; $95DC`（1 B）。
+pub fn en_projectile_killed_anim(area: u8) -> u8 { en_anim_idx(area)[0] }
+/// `AreaExplosionAnimIndex ; $95DD`（1 B）。
+pub fn explosion_anim(area: u8) -> u8 { en_anim_idx(area)[1] }
+/// `AreaEnProjectileFallingAnimIndex ; $95E0`（word）。
+pub fn en_projectile_falling_anim(area: u8) -> u16 {
+    u16::from_le_bytes([en_anim_idx(area)[4], en_anim_idx(area)[5]])
+}
+/// `AreaEnProjectileSplatterAnimIndex ; $95E2`（word）。
+pub fn en_projectile_splatter_anim(area: u8) -> u16 {
+    u16::from_le_bytes([en_anim_idx(area)[6], en_anim_idx(area)[7]])
+}
+/// `AreaMellowAnimIndex ; $95E4`（1 B）。
+pub fn mellow_anim_index(area: u8) -> u8 { en_anim_idx(area)[8] }
 
 /// SFX 4B 记录窗基址（`$B211`）；窗口内记录以**绝对 ROM 址**引用。
 pub const SFX_TABLES_ADDR: u16 = 0xB211;

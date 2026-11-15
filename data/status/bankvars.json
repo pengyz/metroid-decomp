@@ -19,9 +19,9 @@
         "3": "d03d10fbc3be4bc9",
         "4": "0833ce12ca9df9d3"
       },
-      "status": "pending",
+      "status": "code",
       "accessor": null,
-      "note": ""
+      "note": "按区代码桩（非数据）：AreaRoutine 跳本区例程 / 区内小工具，由 dispatch 面（enemy::ai_table::routine_for 与 frame 调度）覆盖，不进资产包"
     },
     {
       "name": "TwosComplement_",
@@ -41,9 +41,9 @@
         "3": "1afbd4500242c15d",
         "4": "a10907baa37b0320"
       },
-      "status": "pending",
+      "status": "code",
       "accessor": null,
-      "note": ""
+      "note": "按区代码桩（非数据）：AreaRoutine 跳本区例程 / 区内小工具，由 dispatch 面（enemy::ai_table::routine_for 与 frame 调度）覆盖，不进资产包"
     },
     {
       "name": "RTS_95CB",
@@ -57,9 +57,9 @@
         "2": "d78fafe07c436136",
         "3": "d4df9287f8c28f70"
       },
-      "status": "pending",
+      "status": "code",
       "accessor": null,
-      "note": ""
+      "note": "按区代码桩（非数据）：AreaRoutine 跳本区例程 / 区内小工具，由 dispatch 面（enemy::ai_table::routine_for 与 frame 调度）覆盖，不进资产包"
     },
     {
       "name": "L95CC",
@@ -77,9 +77,9 @@
         "3": "1751133025772f37",
         "4": "5228e7725493740f"
       },
-      "status": "pending",
+      "status": "code",
       "accessor": null,
-      "note": ""
+      "note": "按区代码桩（非数据）：AreaRoutine 跳本区例程 / 区内小工具，由 dispatch 面（enemy::ai_table::routine_for 与 frame 调度）覆盖，不进资产包"
     },
     {
       "name": "AreaMusicFlag",
@@ -253,9 +253,9 @@
         "3": "f339752700e81009",
         "4": "008168cf1f35b20e"
       },
-      "status": "pending",
-      "accessor": null,
-      "note": ""
+      "status": "covered",
+      "accessor": "game_data::assets::en_projectile_killed_anim(area)",
+      "note": "段 area.{br,no,kr,to,ri}.en_anim_idx（$95DC-$95E4 9 B，PackKey 175-179）"
     },
     {
       "name": "AreaExplosionAnimIndex",
@@ -275,9 +275,9 @@
         "3": "afc24e5c2398a392",
         "4": "cf5c27d20d3463cc"
       },
-      "status": "pending",
-      "accessor": null,
-      "note": ""
+      "status": "covered",
+      "accessor": "game_data::assets::explosion_anim(area)",
+      "note": "段 area.{br,no,kr,to,ri}.en_anim_idx（$95DC-$95E4 9 B，PackKey 175-179）"
     },
     {
       "name": "AreaEnProjectileFallingAnimIndex",
@@ -297,9 +297,9 @@
         "3": "648c09d627fc1b99",
         "4": "29fbdbb3362327e6"
       },
-      "status": "pending",
-      "accessor": null,
-      "note": ""
+      "status": "covered",
+      "accessor": "game_data::assets::en_projectile_falling_anim(area)",
+      "note": "段 area.{br,no,kr,to,ri}.en_anim_idx（$95DC-$95E4 9 B，PackKey 175-179）"
     },
     {
       "name": "AreaEnProjectileSplatterAnimIndex",
@@ -319,9 +319,9 @@
         "3": "0cb277b6a947ae39",
         "4": "76eb9217510dcfd3"
       },
-      "status": "pending",
-      "accessor": null,
-      "note": ""
+      "status": "covered",
+      "accessor": "game_data::assets::en_projectile_splatter_anim(area)",
+      "note": "段 area.{br,no,kr,to,ri}.en_anim_idx（$95DC-$95E4 9 B，PackKey 175-179）"
     },
     {
       "name": "AreaMellowAnimIndex",
@@ -341,9 +341,9 @@
         "3": "a888db2be9c7e8dc",
         "4": "8ab1de27fe6b52f0"
       },
-      "status": "pending",
-      "accessor": null,
-      "note": ""
+      "status": "covered",
+      "accessor": "game_data::assets::mellow_anim_index(area)",
+      "note": "段 area.{br,no,kr,to,ri}.en_anim_idx（$95DC-$95E4 9 B，PackKey 175-179）"
     },
     {
       "name": "ChooseEnemyAIRoutine",
@@ -583,8 +583,8 @@
         "3": "a396cf969a7c417b",
         "4": "97c88f3f21cf961b"
       },
-      "status": "pending",
-      "accessor": null,
+      "status": "covered",
+      "accessor": "crates/game-data/src/assets.rs::enemy_movement_choice_offset(area)",
       "note": ""
     },
     {
@@ -627,8 +627,8 @@
         "3": "53e825236e17d6c5",
         "4": "95c04a75c65e09df"
       },
-      "status": "pending",
-      "accessor": null,
+      "status": "covered",
+      "accessor": "crates/game-data/src/assets.rs::en_accel_y(area)",
       "note": ""
     },
     {
@@ -649,8 +649,8 @@
         "3": "2f3da189966b3ab7",
         "4": "0e858576afc496dc"
       },
-      "status": "pending",
-      "accessor": null,
+      "status": "covered",
+      "accessor": "crates/game-data/src/assets.rs::en_accel_x(area)",
       "note": ""
     },
     {
@@ -671,8 +671,8 @@
         "3": "b8252cd8c36ded14",
         "4": "a696ca1158f2fb3f"
       },
-      "status": "pending",
-      "accessor": null,
+      "status": "covered",
+      "accessor": "crates/game-data/src/assets.rs::en_speed_y(area)",
       "note": ""
     },
     {
@@ -693,8 +693,8 @@
         "3": "dd1fb31b8329ddf1",
         "4": "0bce871286be854e"
       },
-      "status": "pending",
-      "accessor": null,
+      "status": "covered",
+      "accessor": "crates/game-data/src/assets.rs::en_speed_x(area)",
       "note": ""
     },
     {
@@ -737,8 +737,8 @@
         "3": "e0dd0dd20df2aa03",
         "4": "3f533321d73c2449"
       },
-      "status": "pending",
-      "accessor": null,
+      "status": "covered",
+      "accessor": "crates/game-data/src/assets.rs::en_projectile_rising_anim(area)",
       "note": ""
     },
     {
@@ -759,8 +759,8 @@
         "3": "9f1260cbb963d530",
         "4": "52e63c275babc0df"
       },
-      "status": "pending",
-      "accessor": null,
+      "status": "covered",
+      "accessor": "crates/game-data/src/assets.rs::en_projectile_pos_offset_x(area)",
       "note": ""
     },
     {
@@ -781,8 +781,8 @@
         "3": "90a18bae0a6bd848",
         "4": "015dbde2a75df8cb"
       },
-      "status": "pending",
-      "accessor": null,
+      "status": "covered",
+      "accessor": "crates/game-data/src/assets.rs::en_projectile_pos_offset_y(area)",
       "note": ""
     },
     {
@@ -803,8 +803,8 @@
         "3": "ad47e906324da6b1",
         "4": "3b8dcf472f73f685"
       },
-      "status": "pending",
-      "accessor": null,
+      "status": "covered",
+      "accessor": "crates/game-data/src/assets.rs::en_projectile_movement_ptrs(area)",
       "note": ""
     },
     {
@@ -825,8 +825,8 @@
         "3": "3f4e6d87031e9061",
         "4": "850b9d54b887a549"
       },
-      "status": "pending",
-      "accessor": null,
+      "status": "covered",
+      "accessor": "crates/game-data/src/assets.rs::vram_string_ptrs(area)",
       "note": ""
     },
     {
@@ -847,8 +847,8 @@
         "3": "100542e7e74a6d13",
         "4": "a1675fd8375a0af1"
       },
-      "status": "pending",
-      "accessor": null,
+      "status": "covered",
+      "accessor": "crates/game-data/src/assets.rs::enemy_movement_choices(area)",
       "note": ""
     }
   ]

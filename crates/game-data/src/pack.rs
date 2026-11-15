@@ -220,6 +220,18 @@ pub enum PackKey {
     AreaKrHeader = 167,
     AreaToHeader = 168,
     AreaRiHeader = 169,
+    /// 各区**敌辅助表窗**（`$96CB` 16 B + `$972B-$97D5` 170 B，拼接 186 B）。
+    AreaBrEnAux = 170,
+    AreaNoEnAux = 171,
+    AreaKrEnAux = 172,
+    AreaToEnAux = 173,
+    AreaRiEnAux = 174,
+    /// `$95DC-$95E4`（9 B）：弹体/爆炸/梅洛姆动画索引（**按区**）。
+    AreaBrEnAnimIdx = 175,
+    AreaNoEnAnimIdx = 176,
+    AreaKrEnAnimIdx = 177,
+    AreaToEnAnimIdx = 178,
+    AreaRiEnAnimIdx = 179,
     // 敌死亡动画索引表 `EnemyDeathAnimIndex ; 各 bank $960B`（32 B = type×2+facing）。
     // **按区不同**（bank1 `27 27 29 29…` vs bank3 `08 08 08 08…`）——先前 Rust 侧是单常量
     // 取 bank1，等于让其余四区的爆体帧全用 Brinstar 的表。
@@ -451,6 +463,16 @@ impl PackKey {
             PackKey::AreaKrHeader => "area.kr.header",
             PackKey::AreaToHeader => "area.to.header",
             PackKey::AreaRiHeader => "area.ri.header",
+            PackKey::AreaBrEnAux => "area.br.en_aux",
+            PackKey::AreaNoEnAux => "area.no.en_aux",
+            PackKey::AreaKrEnAux => "area.kr.en_aux",
+            PackKey::AreaToEnAux => "area.to.en_aux",
+            PackKey::AreaRiEnAux => "area.ri.en_aux",
+            PackKey::AreaBrEnAnimIdx => "area.br.en_anim_idx",
+            PackKey::AreaNoEnAnimIdx => "area.no.en_anim_idx",
+            PackKey::AreaKrEnAnimIdx => "area.kr.en_anim_idx",
+            PackKey::AreaToEnAnimIdx => "area.to.en_anim_idx",
+            PackKey::AreaRiEnAnimIdx => "area.ri.en_anim_idx",
             PackKey::BrEnSprites => "area.br.en_sprites",
             PackKey::NoEnSprites => "area.no.en_sprites",
             PackKey::KrEnSprites => "area.kr.en_sprites",
@@ -632,6 +654,16 @@ impl PackKey {
             167 => PackKey::AreaKrHeader,
             168 => PackKey::AreaToHeader,
             169 => PackKey::AreaRiHeader,
+            170 => PackKey::AreaBrEnAux,
+            171 => PackKey::AreaNoEnAux,
+            172 => PackKey::AreaKrEnAux,
+            173 => PackKey::AreaToEnAux,
+            174 => PackKey::AreaRiEnAux,
+            175 => PackKey::AreaBrEnAnimIdx,
+            176 => PackKey::AreaNoEnAnimIdx,
+            177 => PackKey::AreaKrEnAnimIdx,
+            178 => PackKey::AreaToEnAnimIdx,
+            179 => PackKey::AreaRiEnAnimIdx,
             _ => return None,
         })
     }
