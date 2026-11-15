@@ -139,7 +139,7 @@ mod tests {
 
 use crate::enemy::framework::*;
 use crate::enemy::motion::*;
-use crate::enemy::prims::*;
+use crate::enemy::prep::*;
 use crate::frame::tick::*;
 use crate::ram_map;
 

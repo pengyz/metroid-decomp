@@ -6,7 +6,7 @@
 //! 派发（`skree_ai` / `crawler_ai`）与其辅助件。
 
 use crate::enemy::{framework::*, anim::*, skree::*, crawler::*};
-use crate::enemy::prims::*;
+use crate::enemy::prep::*;
 use crate::frame::tick::*;
 use crate::ram_map;
 

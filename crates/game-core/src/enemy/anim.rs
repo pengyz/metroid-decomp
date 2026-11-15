@@ -2,7 +2,7 @@
 
 use crate::enemy::framework::*;
 use crate::enemy::motion::*;
-use crate::enemy::prims::*;
+use crate::enemy::prep::*;
 use crate::frame::tick::*;
 use crate::ram_map;
 
@@ -103,4 +103,39 @@ pub(crate) fn draw_enemy(mem: &mut crate::frame::FrameMemory, x: u8) {
         }
     }
     mem.write_ram(0x005B, x_sprite as u8);
+}
+
+/// `UpdateEnemyAnim ; 07:E094`（走表动画推进）。
+/// UpdateEnemyAnim（**asm 内容锚** `UpdateEnemyAnim: ; 07:E094`——敌人动画走表全径）：
+/// status==Pickup(5)⇒RTS；delay 门（≠0 递减未归零⇒RTS）→`sta animDelay←A`→走
+/// EN_ANIM_TABLE[animIndex]（区表——Brinstar $9D6A）：FF⇒animIndex←reset 续走；
+/// 否则 animFrame(+3)←表值、animIndex+1。调用形：CrawlerAI @exit `lda #3/jsr $800C`。
+pub(crate) fn update_enemy_anim(mem: &mut crate::frame::FrameMemory, x: u8, a: u8) {
+    let base = 0x6AF4u16 + x as u16;
+    if mem.read_wram(base) == 5 {
+        return; // Pickup 态不更
+    }
+    let delay = mem.read_wram(base + 4);
+    if delay != 0 {
+        let d = delay - 1;
+        mem.write_wram(base + 4, d);
+        if d != 0 {
+            return;
+        }
+    }
+    mem.write_wram(base + 4, a); // sta animDelay←A
+    let reset = mem.read_wram(base + 5);
+    let mut y = mem.read_wram(base + 6) as usize;
+    for _ in 0..16u32 {
+        let v = *game_data::assets::enemy_anim_table().get(y).unwrap_or(&0xFF);
+        if v == 0xFF {
+            y = reset as usize; // 回绕续走
+            continue;
+        }
+        mem.write_wram(base + 3, v); // animFrame←表值
+        mem.write_wram(base + 6, y.wrapping_add(1) as u8);
+        // 【goal-轮85 animIndex 初值直证】ENEMY_*_ANIM 表径（帧面差源）。
+        return;
+    }
+    crate::unported!("bank07:E0BC-wrap"); // 表不变量破裂——fail-loud（update_obj_anim 同式）
 }

@@ -5,7 +5,8 @@
 //! `IsEngineRunning ; 07:CA18`。
 
 pub(crate) use crate::enemy::{framework::*, anim::*, skree::*, crawler::*};
-pub(crate) use crate::enemy::prims::*;
+pub(crate) use crate::enemy::prep::*;
+pub(crate) use crate::enemy::motion::*;
 pub(crate) use crate::enemy::slot_cycle::*;
 pub(crate) use crate::weapon::projectile::*;
 pub(crate) use crate::ui::hud::*;

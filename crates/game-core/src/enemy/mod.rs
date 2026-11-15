@@ -29,7 +29,7 @@ pub mod ai;
 pub mod system;
 pub mod ai_dispatch;
 pub mod motion;
-pub mod prims;
+pub mod prep;
 pub mod slot_cycle;
 pub mod tables;
 pub mod framework;

@@ -5,7 +5,7 @@
 use crate::frame::tick::*;
 use crate::frame::FrameMemory;
 
-pub(crate) use crate::enemy::prims::{EN_BASE, ENS_BASE, ENS_F_TYPE};
+pub(crate) use crate::enemy::prep::{EN_BASE, ENS_BASE, ENS_F_TYPE};
 
 /// LoadTableAt977B（**asm 内容锚** `areas_common.asm:184 $80B0`——L977B[type]×2）。
 pub(crate) fn load_table_at_977b(mem: &mut crate::frame::FrameMemory, x: u8) -> u8 {

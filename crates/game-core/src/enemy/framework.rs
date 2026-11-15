@@ -5,7 +5,7 @@
 use crate::enemy::anim::draw_enemy;
 use crate::enemy::crawler::crawler_ai;
 use crate::enemy::motion::*;
-use crate::enemy::prims::*;
+use crate::enemy::prep::*;
 use crate::enemy::skree::skree_ai;
 use crate::frame::tick::*;
 use crate::ram_map;
