@@ -114,3 +114,40 @@ python3 gates/cli.py check                            # 门禁：unported 不得
 - `unported` 里有 ROM 死代码与不可达桩，不是每一条都该实现；登记为
   `out-of-scope` 需要证据（不可达性论证），不能靠感觉抹掉。
 - 清单产出「还缺什么」；**对不对仍然只由 L4 判**（零容差，不修订）。
+
+## 8. 当前工作单元：通用 `EnemyMove` / `UpdateEnemyCommon`
+
+敌 AI 家族里有一批例程不是独立逻辑，而是**共用同一个移动壳**。按 `refs/m1disasm/SRC` 读实：
+
+```
+RipperAIRoutine      ─┐
+SidehopperFloor/Ceil  ├→ UpdateEnemyCommon_Decide ─┬→ @active : UpdateEnemyCommon(anim=$00)
+WaverAIRoutine       ─┤                            ├→ @resting: @noMove(anim=$01)
+（其余复用同一壳的）  ─┘                            └→ @explode: @noMoveNoAnim
+                                   UpdateEnemyCommon → UpdateEnemyAnim(A) → EnemyMove($8058)
+```
+
+`EnemyMove ; $8058` 本体（areas_common.asm:112-178）：
+
+1. 门：`data05` bit6 置 ⇒ RTS；`EnsExtra.status != Active` ⇒ RTS；
+2. `jsr EnemyGetDeltaY` → `Temp00_Delta`：负 ⇒ `TwosComplement` → `EnemyMovePixelQty`，循环
+   `EnemyMoveOnePixelUp` + `EnemyIfMoveFailedUp`（失败即 abort）；正/零同理走 Down；
+3. ΔX 同构（Left/Right）。
+
+四个失败处理器（`$80B8/$80FB/$8134/$816E`）不是简单「停下」，它们按
+`L977B[type]` 的 bit7/bit2/bit1/bit0 与 `EnsExtra.data1F` 的 0/$40/$80/$C0 分叉：
+
+| data1F | 竖直撞墙 | 水平撞墙 |
+|---|---|---|
+| $00 | bounce（反弹） | bounce |
+| $40 | 落地/贴右墙 ⇒ 触发休止 | 同左 |
+| $80/$C0 | 速度减半并反向 / 清速 | 同左 |
+
+movement-string 类敌（`L977B[type]` bit7=0）则按 bit2/bit1/bit0 决定是否翻转对应轴。
+
+**为什么先做它**：ripper / sidehopper / waver / squeept / rio 等 6+ 个家族的 AI 主体就是
+「设 anim 值 + 转这个壳」，壳补好之后它们的移植量落到每人几十行；反过来逐个硬写会
+产生 6 份互不一致的移动语义（本项目已经吃过「同一 asm 例程多份实现必然漂移」的亏）。
+
+验收三段：①单测覆盖四个失败处理器的 data1F 四档 × 竖直/水平 ②逐帧（新用例或现有敌
+房间）位移与 `data05`/`data1F` 收敛 ③L4 像素格不得回退。
