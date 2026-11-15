@@ -1223,7 +1223,7 @@ const MUSIC_TOURIAN: u8 = 0x40;
 fn samus_door_tail(mem: &mut FrameMemory) {
     super::physics::check_health_status(mem); // CDFA
     super::physics::set_mirror_cntrl_bit(mem); // CD92
-    crate::frame::sprite::obj_draw_frame(mem, 0); // DE4A
+    crate::render::oam::obj_draw_frame(mem, 0); // DE4A
 }
 
 /// `MoveOutDoor ; 07:D3F7`——`lda SamusDoorDir/beq Lx054`：

@@ -1320,3 +1320,5 @@ mod w4_final_tests {
 }
 pub mod music;
 pub mod sfx;
+
+pub(crate) mod hook;

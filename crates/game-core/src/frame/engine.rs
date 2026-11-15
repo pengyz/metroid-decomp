@@ -231,7 +231,7 @@ mod tests {
     fn placeholder_arm_records_divergence() {
         let mut m = crate::frame::FrameMemory::default();
         m.write_ram(crate::ram_map::TITLE_ROUTINE, 0x18); // EnterPassword（已臂化）
-        crate::frame::title_bridge::main_title_routine(&mut m);
+        crate::title::bridge::main_title_routine(&mut m);
         let recorded = crate::frame::DIVERGENCES.with(|d| d.borrow().clone());
         assert!(!recorded.contains(&0x9147), "0x18 专件未清: {recorded:?}");
     }

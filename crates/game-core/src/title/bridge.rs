@@ -141,7 +141,7 @@ pub fn main_title_routine(mem: &mut FrameMemory) {
     if let Some(addr) = step.unported {
         if step.shell.contains(&crate::title::ShellCall::NmiYield) {
             // **占位臂**（表址供首分歧记账+NmiYield 帧界让出——B 跑分类面，非引爆）
-            super::DIVERGENCES.with(|d| d.borrow_mut().push(addr));
+            crate::frame::DIVERGENCES.with(|d| d.borrow_mut().push(addr));
             return;
         }
         let loc = format!("bank00:{addr:04X}");
@@ -491,8 +491,8 @@ fn initialize_game(mem: &mut FrameMemory, pw: &[u8; 18], nar_active: bool) {
     mem.write_ram(crate::ram_map::OBJECT_CNTRL, 0);
     mem.write_ram(crate::ram_map::SAMUS_HI, 0);
     // SilenceMusic（$CB8E）：SFXNoiseInitFlags($0680)|=sfxNoise_SilenceMusic=%01
-    // ——实现收敛到 super::sound_hook::silence_music（单一实现面，见该函数注释）。
-    super::sound_hook::silence_music(mem);
+    // ——实现收敛到 crate::sound::hook::silence_music（单一实现面，见该函数注释）。
+    crate::sound::hook::silence_music(mem);
     // Samus.animFrame($0303)←_id_ObjFrame_SkreeProjectile=0x5A（ObjFramePtrTable index 90）。
     mem.write_ram(crate::ram_map::SAMUS_ANIM_FRAME, 0x5A);
     // 出生位选：InArea&$0F≠0⇒x=1（非 Brinstar）else x=0。

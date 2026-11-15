@@ -232,7 +232,7 @@ pub fn sound_engine(mem: &mut FrameMemory) {
         (crate::ram_map::SFX_TRI_INIT, 0xB29D),
         (crate::ram_map::MUSIC_INIT, 0xB2B1), // MusicInit（BC36 两步 else：$065D=0→B2B1）
     ] {
-        super::sound_hook::sound_dispatch_chain(mem, flag, block, 0);
+        crate::sound::hook::sound_dispatch_chain(mem, flag, block, 0);
     }
     // ClearInitFlags（$B3D6）：6 旗清（同值写事件）
     clear_init_flags(mem);

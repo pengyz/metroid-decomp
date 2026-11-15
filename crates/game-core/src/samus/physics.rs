@@ -966,7 +966,7 @@ pub fn set_samus_data(mem: &mut FrameMemory) {
     set_mirror_cntrl_bit(mem); // CD92（已折——朝向镜像位）
     // 【r14 双调根修】asm CD6D 尾=`jmp ObjDrawFrame`（DE4A 纯绘（单走表形））——旧形
     // 调 DE47 形（anim_draw_object=走表+绘）致同帧 2×DC8F（AD 周期 4→2 别名）。
-    crate::frame::sprite::obj_draw_frame(mem, 0); // ObjDrawFrame（DE4A）
+    crate::render::oam::obj_draw_frame(mem, 0); // ObjDrawFrame（DE4A）
     // 链余件（随件）：LavaAndMoveCheck（E269）/MetroidOnSamus($92) 蓝化/
     // set_mirror_cntrl_bit（CD92 已折——随接）/ObjDrawFrame（DE4A 显示面）
 }
@@ -2396,7 +2396,7 @@ mod tests_r14_single_walk {
     fn obj_draw_frame_does_not_walk() {
         let mut m = FrameMemory::default();
         m.write_ram(0x0304, 4);
-        crate::frame::sprite::obj_draw_frame(&mut m, 0);
+        crate::render::oam::obj_draw_frame(&mut m, 0);
         assert_eq!(anim_delay(&m), 4, "DE4A 纯绘不走表");
     }
 
@@ -2405,7 +2405,7 @@ mod tests_r14_single_walk {
     fn anim_draw_object_walks_once() {
         let mut m = FrameMemory::default();
         m.write_ram(0x0304, 4);
-        crate::frame::sprite::anim_draw_object(&mut m, 0, 4);
+        crate::render::oam::anim_draw_object(&mut m, 0, 4);
         assert_eq!(anim_delay(&m), 3, "DE47 单走：4→3（双调形=4→2——回退即红）");
     }
 }

@@ -641,8 +641,8 @@ pub(crate) fn draw_enemy(mem: &mut crate::frame::FrameMemory, x: u8) {
     loop {
         let b = blob(frame_i);
         if b < 0xFC {
-            let dy = crate::frame::sprite::place_disp(pblob(place_i), ctrl ^ mirror_flags, true);
-            let dx = crate::frame::sprite::place_disp(pblob(place_i + 1), ctrl ^ mirror_flags, false);
+            let dy = crate::render::oam::place_disp(pblob(place_i), ctrl ^ mirror_flags, true);
+            let dx = crate::render::oam::place_disp(pblob(place_i + 1), ctrl ^ mirror_flags, false);
             // WriteSpriteRAM（:6324-6328）：attr=Temp05 ^ (ObjectCntrl bit4→HFLIP)
             let attr = cntrl05 ^ mirror_flags;
             let oy = (sy + dy as i16 - 1) as u8;

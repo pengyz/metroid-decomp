@@ -8,7 +8,7 @@ pub(crate) use crate::frame::enemy::behaviour::*;
 pub(crate) use crate::frame::enemy::prims::*;
 pub(crate) use crate::frame::enemy::update::*;
 pub(crate) use crate::frame::projectile::*;
-pub(crate) use crate::frame::hud::*;
+pub(crate) use crate::ui::hud::*;
 pub(crate) use crate::frame::room_load::*;
 pub use crate::frame::room_load::copy_area_pointers;
 pub(crate) use crate::frame::world_tick::*;
@@ -388,7 +388,7 @@ pub fn start_pause_toggle(mem: &mut FrameMemory) -> bool {
     mem.write_ram(crate::ram_map::MAIN_ROUTINE, next);
     let gp = mem.read_ram(crate::ram_map::GAME_PAUSED) ^ 1; // `eor #$01`
     mem.write_ram(crate::ram_map::GAME_PAUSED, gp);
-    super::sound_hook::pause_music(mem); // `jsr PauseMusic($CB92)`
+    crate::sound::hook::pause_music(mem); // `jsr PauseMusic($CB92)`
     true
 }
 
@@ -433,7 +433,7 @@ pub fn pause_mode(mem: &mut FrameMemory) {
 pub fn go_password(mem: &mut FrameMemory) {
     mem.write_ram(crate::ram_map::TITLE_ROUTINE, 0x19); // _id_DisplayPassword
     mem.write_ram(crate::ram_map::BANK_SWITCH_PENDING, 0x01);
-    super::sound_hook::silence_music(mem); // $CB8E
+    crate::sound::hook::silence_music(mem); // $CB8E
     let pm = mem.read_ram(0x00FE) & !0x18;
     mem.write_ram(0x00FE, pm);
     mem.write_io(0x2001, pm); // WriteAndWait 的 NMI 落真寄存器（同 prepare_game_over）
@@ -556,7 +556,7 @@ pub fn samus_intro(mem: &mut FrameMemory) {
         // 【goal-r16 修】asm DE47(AnimDrawObject)=`jsr UpdateObjAnim`(A=0)+DE4A——首句走表。
         // 旧形（拆分后）漏走表⇒animFrame 停留 0(Stand 帧 id)⇒渲染 Stand（emu 渲 Front 帧——L4 f550 差 210px）。
         // 【r14 双调根修】DE47 形=单走表（旧形显式走表+anim_draw_object 内再走=双调 ✗）
-        crate::frame::sprite::anim_draw_object(mem, 0, 0); // AnimDrawObject（$DE47——A=0 单走）
+        crate::render::oam::anim_draw_object(mem, 0, 0); // AnimDrawObject（$DE47——A=0 单走）
     }
 }
 
@@ -688,7 +688,7 @@ pub fn update_timer(mem: &mut FrameMemory) {
 /// GameMode=0 ⇒ START 检查/主例程分发（游戏面——task-11 面 fail-loud）。
 pub fn go_main_routine(mem: &mut FrameMemory) {
     if mem.read_ram(GAME_MODE) != 0 {
-        super::title_bridge::main_title_routine(mem); // **会师接线**（bank00:8000 穿越）
+        crate::title::bridge::main_title_routine(mem); // **会师接线**（bank00:8000 穿越）
         return; // 标题路终（asm：`jmp MainTitleRoutine` 尾跳语义）
     }
     game_main_routine(mem); // 游戏侧分发（C11B+——T45-3 移动臂首靶）

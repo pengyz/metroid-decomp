@@ -159,7 +159,7 @@ pub(crate) fn update_bullet(mem: &mut crate::frame::FrameMemory) {
     // DrawBullet（$D517）：AnimDrawObject(A=1)（动画推进面 A=1）
     // 【goal-轮103 双调修】asm AnimDrawObject(DE47)=UpdateObjAnim+ObjDrawFrame 单含——
     // 旧形显式 update_obj_anim(1)+anim_draw_object 补调=双调 ✗⇒删显式（补调覆盖）。
-    crate::frame::sprite::anim_draw_object(mem, mem.read_ram(0x004B), 1); // DrawBullet A=1
+    crate::render::oam::anim_draw_object(mem, mem.read_ram(0x004B), 1); // DrawBullet A=1
     mem.write_ram(0x0071, 0);
 }
 
@@ -173,7 +173,7 @@ pub(crate) fn update_bullet_explode(mem: &mut crate::frame::FrameMemory) {
         mem.write_ram(base, 0);
     }
     // 【goal-轮103 双调修】同上（爆径 AnimDrawObject 单含）。
-    crate::frame::sprite::anim_draw_object(mem, mem.read_ram(0x004B), 1); // DrawBullet A=1
+    crate::render::oam::anim_draw_object(mem, mem.read_ram(0x004B), 1); // DrawBullet A=1
     mem.write_ram(0x0071, 0);
 }
 
@@ -223,7 +223,7 @@ pub(crate) fn uw_skree_projectiles(mem: &mut crate::frame::FrameMemory) {
         // 【卡 E D2-2】asm :12212 `jsr ObjDrawFrame`（DE4A **纯绘** PowerUpDraw($40) 槽
         // ——循环头 `lda #$40/sta PageIndex`（:12146-12148）；旧形 anim_draw_object
         // ((base&0xFF),0)（DE47 幻影走表+错绘 Door 槽 $3A0+yy）。
-        crate::frame::sprite::obj_draw_frame(mem, 0x40);
+        crate::render::oam::obj_draw_frame(mem, 0x40);
         // Samus 5 伤害（:12214-12232）
         if mem.read_ram(crate::ram_map::SAMUS_INVINCIBLE_DELAY) == 0 {
             let sy = mem.read_ram(0x030D) as i16;

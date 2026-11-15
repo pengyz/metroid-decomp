@@ -685,3 +685,5 @@ mod tests_ppumask_gate {
 pub(crate) mod gfx;
 pub(crate) mod ppu;
 pub(crate) mod vram;
+
+pub mod oam;

@@ -308,7 +308,7 @@ fn draw_door(mem: &mut crate::frame::FrameMemory, x_off: u8) {
     mem.write_ram(0x006B, cntrl);
     mem.write_ram(0x030A + x_off as u16, 0); // isHit←0
     // 【r14 双调根修】DE47 形=单走表（旧形显式走表+anim_draw_object 内再走=双调 ✗）
-    crate::frame::sprite::anim_draw_object(mem, x_off, 6); // AnimDrawObject（DE47——A=6 单走）
+    crate::render::oam::anim_draw_object(mem, x_off, 6); // AnimDrawObject（DE47——A=6 单走）
 }
 
 /// DeleteOffscreenRoomSprites（`07:EC9B`）——载房前清掉「即将进入视野的名表里」的陈旧对象。

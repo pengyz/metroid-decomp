@@ -169,7 +169,7 @@ pub fn update_all_power_ups(mem: &mut FrameMemory) -> Option<u8> {
         // **$5B**（constants_ram:568——OAM 填充计数）非 $4B（PageIndex）——旧形误读 $4B
         // 致「未绘出」恒真⇒拾取授予径永不可达。
         let sp0 = mem.read_ram(0x005B); // SpritePagePos
-        crate::frame::sprite::obj_draw_frame(mem, 0x40);
+        crate::render::oam::obj_draw_frame(mem, 0x40);
         if mem.read_ram(0x005B) == sp0 {
             continue; // 未绘出（:5563-5566 cmp/beq Exit9）
         }

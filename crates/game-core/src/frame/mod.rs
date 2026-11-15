@@ -22,7 +22,6 @@ pub mod cycles; // 6502 逐条周期计数底座（路线丙 ②）
 pub mod elevator;
 pub mod engine;
 pub(crate) mod enemy;
-pub(crate) mod hud;
 pub(crate) mod room_load;
 pub mod tick;
 pub(crate) mod world_tick;
@@ -32,10 +31,7 @@ mod tests;
 pub mod memory;
 pub mod nmi;
 pub mod rng;
-pub mod sound_hook;
-pub mod title_bridge;
 pub mod room;
-pub mod sprite; // r25 sprite 管线（AnimDrawObject \ 族） // r25 房间绘制引擎（DrawRoom \ 族）
 
 pub use clock::{VirtualClock, TARGET_FPS};
 pub use engine::FrameEngine;

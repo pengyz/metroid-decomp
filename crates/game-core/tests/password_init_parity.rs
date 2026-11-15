@@ -8,7 +8,7 @@
 mod common;
 use common::password_init::VECTORS;
 
-use game_core::frame::title_bridge::main_title_routine;
+use game_core::title::bridge::main_title_routine;
 use game_core::frame::FrameMemory;
 use game_core::ram_map::{
     BANK_SWITCH_PENDING, IN_AREA, KRAID_STATUE_STATUS, MAIN_ROUTINE, MAX_MISSILES,

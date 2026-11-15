@@ -4,6 +4,7 @@
 //! `HexToDec ; 07:E198`、`SPRWriteDigit`。
 
 use crate::frame::tick::*;
+use crate::frame::FrameMemory;
 use crate::ram_map;
 
 pub(crate) const DATA_DISPLAY_TBL: [u8; 40] = [

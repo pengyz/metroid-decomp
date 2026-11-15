@@ -107,7 +107,7 @@ pub fn update_elevator(mem: &mut FrameMemory) {
 /// （FrameCount bit0=1 才画；`lsr` 把 bit0 移进 carry）。
 fn draw_elevator(mem: &mut FrameMemory) {
     if mem.read_ram(crate::ram_map::FRAME_COUNT) & 0x01 == 1 {
-        crate::frame::sprite::obj_draw_frame(mem, ELEV_PAGE);
+        crate::render::oam::obj_draw_frame(mem, ELEV_PAGE);
     }
 }
 
@@ -248,7 +248,7 @@ fn elev_fade(mem: &mut FrameMemory) {
         set_samus_anim(mem, ANIM_SAMUS_FRONT);
         draw_elevator(mem);
     } else {
-        crate::frame::sprite::anim_draw_object(mem, ELEV_PAGE, 0x01);
+        crate::render::oam::anim_draw_object(mem, ELEV_PAGE, 0x01);
     }
 }
 
@@ -390,7 +390,7 @@ pub fn samus_elevator(mem: &mut FrameMemory) {
         // jmp LD47E：隔帧（FrameCount/2）画
         if mem.read_ram(crate::ram_map::FRAME_COUNT) & 0x01 == 1 {
             crate::samus::physics::set_mirror_cntrl_bit(mem);
-            crate::frame::sprite::anim_draw_object(mem, 0x00, 0x01);
+            crate::render::oam::anim_draw_object(mem, 0x00, 0x01);
         }
         return;
     }
@@ -398,12 +398,12 @@ pub fn samus_elevator(mem: &mut FrameMemory) {
     mem.write_ram(crate::samus::physics::SAMUS_SPEED_Y_I, 0);
     if est == 5 || est == 7 {
         crate::samus::physics::set_mirror_cntrl_bit(mem);
-        crate::frame::sprite::anim_draw_object(mem, 0x00, 0x01);
+        crate::render::oam::anim_draw_object(mem, 0x00, 0x01);
         return;
     }
     if mem.read_ram(crate::ram_map::FRAME_COUNT) & 0x01 == 1 {
         crate::samus::physics::set_mirror_cntrl_bit(mem);
-        crate::frame::sprite::anim_draw_object(mem, 0x00, 0x01);
+        crate::render::oam::anim_draw_object(mem, 0x00, 0x01);
     }
 }
 
