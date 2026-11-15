@@ -9,13 +9,7 @@
 //!
 //! 迁移注：存量 l2ports 切片转写（sub_F2xx 字面形态）按 §5 留作 verify_shim 参考件，
 //! 逐域被语义实现替换后退役——对拍连续性优先，暂不删。
-
-pub mod cd9c;
-pub mod flow_scratch;
 pub mod frame_face;
-pub mod object;
-pub mod rng_state;
 pub mod rom_tables;
-pub mod tile_blasts;
 pub mod title_state;
 pub mod world_map;
