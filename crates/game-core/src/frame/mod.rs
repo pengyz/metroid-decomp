@@ -24,6 +24,7 @@ pub mod engine;
 pub(crate) mod enemy;
 pub(crate) mod hud;
 pub(crate) mod room_load;
+pub(crate) mod tick;
 pub(crate) mod world_tick;
 pub(crate) mod projectile;
 pub mod gfx;
