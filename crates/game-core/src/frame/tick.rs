@@ -566,7 +566,7 @@ pub fn samus_intro(mem: &mut FrameMemory) {
 /// （bmi/beq⇒Lx114）③item 径：ItemRoomMusicStatus←$81/A←music_ItemRoom($20)
 /// ④Lx114：`ora MusicInitFlags($0685) / sta MusicInitFlags`（**音乐起**——声链消费面）。
 pub fn start_music(mem: &mut FrameMemory) {
-    let area = (mem.read_ram(crate::ram_map::IN_AREA) & 0x0F) as usize % 5;
+    let area = crate::world::room_load::area_idx(mem.read_ram(crate::ram_map::IN_AREA));
     let mut a = game_data::title::area_tables::AREA_MUSIC_FLAG[area];
     let elevator_up = mem.read_ram(0x0320) == 0x06 && mem.read_ram(0x032F) & 0x80 != 0;
     let item_room = mem.read_ram(0x0079);

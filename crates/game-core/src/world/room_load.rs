@@ -137,9 +137,17 @@ pub fn apply_deferred_screen_on(mem: &mut FrameMemory) {
     mem.write_io(0x2001, fe);
 }
 
-/// 区序索引（InArea&$0F 越界稳——AREA_MAP_POS 五项）。
+/// 区序索引（`InArea & $0F`）。
+///
+/// **越界 fail-loud**：原版只有 0..=4（Br/No/Kr/To/Ri）。旧形 `% 5` 会把 `$05/$0F`
+/// 静默折回 Brinstar/Ridley——数据合法、行为错、且不记账，属最难查的一类。
+/// 契约：`InArea` 的 `$10` 位是「进游戏/区号」标记，低 4 位才是区号；低 4 位 ≥5 是移植侧
+/// 错误（ROM 不会产生），故在此爆在 `bank07:CA30`（`BankTable` 所在）而不是猜一个区。
 pub fn area_idx(in_area: u8) -> usize {
-    (in_area & 0x0F) as usize % 5
+    match in_area & 0x0F {
+        0..=4 => (in_area & 0x0F) as usize,
+        _ => crate::unported!("bank07:CA30-area_idx"),
+    }
 }
 
 /// CopyMap（**asm 内容锚** `CopyMap: ; 00:A93E`——WorldMap→WRAM $7000-$73FF 1KB）。

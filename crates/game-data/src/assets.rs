@@ -246,7 +246,13 @@ fn enemy_table(area: u8, idx: usize) -> &'static [u8] {
          PackKey::RiEnemyInitDelay, PackKey::RiEnemyFacing, PackKey::RiEnMovPtrs,
          PackKey::RiEnMovStr, PackKey::RiEnemyDeathAnim],
     ];
-    pack::get(KEYS[(area & 0x0F) as usize % 5][idx])
+    // **禁止 `% 5` 静默回绕**：`area` 是 `InArea & $0F`，原版只有 0..=4 有意义。
+    // 越界（如 $15/$1F）在旧形里会静默取到别的区的表——那是最难查的一类错：
+    // 数据合法、行为错、且不记账。这里改成 fail-loud（`area_idx` 是唯一判据）。
+    let a = area_idx(area).unwrap_or_else(|| {
+        panic!("敌表访问：非法区号 area={area:#04X}（InArea&$0F 应为 0..=4）")
+    });
+    pack::get(KEYS[a as usize][idx])
 }
 
 /// 五区敌表访问器（`area = InArea & $0F`；未就绪即 panic——调用点只在游戏内）。
@@ -288,6 +294,18 @@ mod tests_per_area_tables {
         // 差异不止首字节：bank1 vs bank3 整表不同
         assert_ne!(br, to, "Brinstar 与 Tourian 的爆体帧表必须不同");
         assert_ne!(no, ri, "Norfair 与 Ridley 的爆体帧表必须不同");
+    }
+
+    /// 越界区号必须 **fail-loud**，不能静默回绕到别区的表。
+    ///
+    /// 旧形 `KEYS[(area & 0x0F) % 5][idx]`：`area=$05` 会取到 Brinstar 的表、
+    /// `$0F` 取到 Ridley 的表 —— 数据合法、行为错、且不记账。原版语义里 `InArea & $0F`
+    /// 只有 0..=4 有意义，其余取值属于移植侧的错误而不是 ROM 的取值。
+    #[test]
+    #[should_panic(expected = "非法区号")]
+    fn enemy_table_rejects_area_out_of_range() {
+        init_from_env().ok();
+        let _ = enemy_health(0x05);
     }
 }
 
