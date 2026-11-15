@@ -2548,6 +2548,24 @@ fn uw_collision_detection(mem: &mut crate::frame::FrameMemory) {
             let e_hi = mem.read_wram(0x6AF4 + x + 7) & 1; // EnsExtra.0.hi（F152 ✓）
             let dy_adj = if s_hi != e_hi { dy + 0x100 } else { dy };
             let dx_adj = if s_hi != e_hi { dx + 0x100 } else { dx };
+            // Temp10_DistHi（F1FA 构建，槽序「X=Samus、Y=敌」⇒ dy/dx 取「敌 减 Sam」——
+            // emu f1112 `isHit=0x05`/`Samus.isHit=0x30` 反推）：0x04 | (dy<0)<<1 | (dx<0)。
+            let dist_hi: u8 = {
+                let vertical = mem.read_ram(crate::ram_map::SCROLL_DIR) & 0x02 == 0;
+                let (yy, yx, yh) = (sry_y_raw, srx_x_raw, s_hi as i32);
+                let (ey_i, ex_i, ehi_i) = (ey as i32, ex as i32, e_hi as i32);
+                let dyf: i32 = if vertical {
+                    (ehi_i * 240 + ey_i) - (yh * 240 + yy)
+                } else {
+                    ey_i - yy
+                };
+                let dxf: i32 = if vertical {
+                    ex_i - yx
+                } else {
+                    (ehi_i * 256 + ex_i) - (yh * 256 + yx)
+                };
+                0x04u8 | (if dyf < 0 { 0x02 } else { 0 }) | (if dxf < 0 { 0x01 } else { 0 })
+            };
             // 【goal-轮88 F1FA 判式边值直证】cmp 带位/borrow 链（金方不撞源）。
             // 【敌槽生成/位形卡·hi 源勘误（2026-11-05）】asm F17F/F193：双侧 hi=
             // `(hi ^ PPUCTRL_ZP)&1` 后等值比较（NT 同项相消⇒原始 hi 相等性等价）——
@@ -2558,28 +2576,9 @@ fn uw_collision_detection(mem: &mut crate::frame::FrameMemory) {
                 // asm `SetEnemyTouchingSamusFlags ; 07:F2E8`（F282 第 1 件）：
                 //   `jsr LF340`(= Temp10_DistHi eor #$03) → `bne Lx292` → `ora Ens.0.isHit,x / sta`
                 // ⇒ **敌 isHit |= (DistHi ^ 3)**（bit0 自左侧触 / bit1 自上方触）。
-                // DistHi 由 F1FA 构建：0x04 | (dy<0)<<1 | (dx<0)；此处按同一槽序（X=Samus、Y=敌）
-                // 复算。缺此件时金腿 f1112 有 isHit=0x05 而锈腿恒 0（case-002 首分歧）。
-                {
-                    let vertical = mem.read_ram(crate::ram_map::SCROLL_DIR) & 0x02 == 0;
-                    // 槽序定谳（emu f1112 `isHit=0x05` 反推）：dy/dx 取「敌 减 Sam」
-                    // ⇒ DistHi=0x06（bit1 置=自上/下侧触）→ ^3 = 0x05（bit0 自左侧触 + bit2 触到 Samus）。
-                    let (yy, yx, yh) = (sry_y_raw, srx_x_raw, s_hi as i32);
-                    let (xy2, xx2, xh2) = (ey as i32, ex as i32, e_hi as i32);
-                    let dyf: i32 = if vertical {
-                        (xh2 * 240 + xy2) - (yh * 240 + yy)
-                    } else {
-                        xy2 - yy
-                    };
-                    let dxf: i32 = if vertical {
-                        xx2 - yx
-                    } else {
-                        (xh2 * 256 + xx2) - (yh * 256 + yx)
-                    };
-                    let dist_hi = 0x04u8 | (if dyf < 0 { 0x02 } else { 0 }) | (if dxf < 0 { 0x01 } else { 0 });
-                    let cur = mem.read_ram(0x0400 + x + 4);
-                    mem.write_ram(0x0400 + x + 4, cur | (dist_hi ^ 0x03));
-                }
+                // 缺此件时金腿 f1112 有 isHit=0x05 而锈腿恒 0（case-002 首分歧）。
+                let cur_e = mem.read_ram(0x0400 + x + 4);
+                mem.write_ram(0x0400 + x + 4, cur_e | (dist_hi ^ 0x03));
                 // 螺旋转（IsScrewAttackActive——carry clear=active）⇒不伤萨姆斯
                 let screw = crate::samus::physics::is_screw_attack_active(mem);
                 // 【敌槽生成/位形卡·F282 状态门（2026-11-05）】asm F282：螺旋转分岔后
@@ -2593,8 +2592,12 @@ fn uw_collision_detection(mem: &mut crate::frame::FrameMemory) {
                     mem.write_ram(0x010F, mem.read_wram(0x6AF4 + x + 14)); // Hurt010F←敌 type（F298）
                     mem.write_ram(0x006E, 0x80);
                     mem.write_ram(0x006F, 0x00);
-                    let dir_bits = if ex > sx { 0x00u8 } else { 0x08 }; // bit3=被推向右
-                    mem.write_ram(crate::ram_map::SAMUS_IS_HIT, 0x30 | dir_bits);
+                    // asm `SetSamusIsHitByEnemy ; 07:F338`：`lda Temp10_DistHi / asl asl asl`
+                    // → `SetSamusIsHitFlags`（`ora Samus.isHit / sta`）⇒ **Samus.isHit |= DistHi<<3**
+                    // （bit0→bit3 被推向右 / bit1→bit4 被推向下 / bit2→bit5 恒置）。
+                    // 旧形 `0x30 | (ex>sx ? 0 : 8)` 在「敌我同列」时多置 bit3 ⇒ 击退方向反。
+                    let cur_s = mem.read_ram(crate::ram_map::SAMUS_IS_HIT);
+                    mem.write_ram(crate::ram_map::SAMUS_IS_HIT, cur_s | dist_hi.wrapping_shl(3));
                     // 【goal-轮40 isHit 写者标记】mainloop:2284（敌撞置 hit）。
                 }
             }
@@ -3808,7 +3811,10 @@ mod pending001_is_samus_dead_gate_tdd {
         setup_overlap(&mut m);
         m.write_ram(0x0300, 0);
         uw_collision_detection(&mut m);
-        assert_eq!(m.read_ram(crate::ram_map::SAMUS_IS_HIT) & 0x30, 0x30,
+        // 断言「命中发生」而非具体方向位：方向位现由 `SetSamusIsHitByEnemy`
+        // （`Samus.isHit |= DistHi<<3`）按几何给出，位级钉在
+        // `tests_enemy_touching_samus_flags::samus_is_hit_*` 两测。
+        assert_ne!(m.read_ram(crate::ram_map::SAMUS_IS_HIT), 0,
             "存活态重叠必须照常命中（门不得误滤存活）");
     }
 }
@@ -4749,6 +4755,30 @@ mod tests_enemy_touching_samus_flags {
         m.write_ram(0x0411, 0x65); // 敌在右 ⇒ dx<0 ⇒ DistHi=0x05 ⇒ ^3 = 0x06
         uw_collision_detection(&mut m);
         assert_eq!(m.read_ram(0x0414), 0x07, "敌在右⇒isHit |= 0x07（DistHi 0x04 ^ 3）");
+    }
+
+    /// asm `SetSamusIsHitByEnemy ; 07:F338`：`Samus.isHit |= Temp10_DistHi << 3`。
+    /// 旧形 `0x30 | (ex>sx ? 0 : 0x08)` 在「敌我同列」时多置 bit3（被推向右）⇒ 击退方向反
+    /// （case-002 f1113：金腿 Samus.x 117 向左、锈腿 120 向右）。
+    #[test]
+    fn samus_is_hit_uses_dist_hi_shifted_seven_not_forced_direction() {
+        let mut m = base();
+        m.write_ram(0x0411, 0x64); // 与 Samus 同列（dx=0 ⇒ DistHi bit0=0）；敌 y 同 ⇒ bit1=0
+        uw_collision_detection(&mut m);
+        // DistHi = 0x04（只有常量位）⇒ <<3 = 0x20。旧形会给 0x38（多 0x10+0x08 或 0x08）。
+        assert_eq!(m.read_ram(crate::ram_map::SAMUS_IS_HIT), 0x20,
+                   "同列相触⇒Samus.isHit=0x20（DistHi 0x04 <<3），不含方向位");
+    }
+
+    /// 敌在 Samus 下方（dy>0⇒DistHi bit1=0）与上方（bit1=1）两侧位钉。
+    #[test]
+    fn samus_is_hit_sets_vertical_bit_from_dy_sign() {
+        let mut m = base();
+        m.write_ram(0x0410, 0x64 - 11); // 敌在 Samus 上方 11px ⇒ dy = 敌−Sam < 0 ⇒ bit1 置
+        m.write_ram(0x0411, 0x64);
+        uw_collision_detection(&mut m);
+        assert_eq!(m.read_ram(crate::ram_map::SAMUS_IS_HIT), 0x30,
+                   "敌在上⇒DistHi 0x06 <<3 = 0x30");
     }
 
     #[test]
