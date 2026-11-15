@@ -8,7 +8,7 @@
 use crate::frame::enemy::update::{
     load_table_at_977b, EN_DELAY, EN_INSTR, EN_MOV_IDX, EN_SUBPIXEL_X, EN_SUBPIXEL_Y,
 };
-use crate::frame::mainloop::{
+use crate::frame::enemy::behaviour::{
     enemy_check_move_down, enemy_check_move_up, enemy_move_one_pixel_down,
     enemy_move_one_pixel_left, enemy_move_one_pixel_right, enemy_move_one_pixel_up,
     update_enemy_anim, update_enemy_common_no_move_no_anim,

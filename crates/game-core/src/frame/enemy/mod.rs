@@ -5,5 +5,6 @@
 //! 施加到 FrameMemory 并驱动渲染"，所以它必须留在 frame 侧（G11：域件禁 `use
 //! crate::frame::`）。
 
+pub(crate) mod behaviour;
 pub(crate) mod move_shell;
 pub(crate) mod update;
