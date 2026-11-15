@@ -32,3 +32,4 @@ pub mod behaviour;
 pub mod motion;
 pub mod prims;
 pub mod slot_cycle;
+pub mod tables;
