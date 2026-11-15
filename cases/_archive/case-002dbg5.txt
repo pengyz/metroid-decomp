@@ -1,0 +1,59 @@
+# 对拍用例 002：门系统链（走右→射击蓝门→开门动画→入门→邻房采集）
+# [A-重锚] 输入窗整体后移 +460（首动作 f450→f910）：开机后 440 帧开场演出（07:C8D1 SamusInit 置 Timer3=$2C，07:C266 UpdateTimer 每 10 帧减 1）期间的按键被吞，原窗无行为证据。
+# 用途：验证门对象槽/弹击 isHit&4/UpdateDoor 状态机/过渡链全链（功能5 六件链）
+# 对拍：模拟器 vs Rust 实现（像素对比（L4 对拍矩阵））
+# 定义：对拍用例 = ① 输入脚本 + ② 待加载存档 + ③ 对拍时长
+
+name case-002dbg5
+frames 1660
+snapshot none  # 上电起跑（同 case-001）
+
+# ① 进入游戏（标题→游戏开始（同 case-001 序））
+press 310 start
+press 350 start
+capture 420 game-in
+
+# ② 走右至蓝门（起始房右行（SamusRun 序））
+hold 910-1080 right
+capture 1080 at-door
+
+# ③ 射击蓝门（B 弹（wa_Bullet→isHit&4→HP--（蓝 1 击开）））
+press 1090 b
+press 1100 b
+capture 1110 bullet-out
+
+# ④ 开门动画（DoorOpen 帧序（~30 帧））
+capture 1160 door-open
+
+# ⑤ 入门（走入门框（SamusEnterDoor 触发（DoorDelay 18 帧序）））
+hold 1180-1240 right
+capture 1250 door-enter
+
+# ⑥ 滚动过渡（LetSamusIn→Scroll→LetSamusOut（配对门 X^$10））
+capture 1310 scrolling
+
+# ⑦ 邻房采集（出门右行入邻房）
+hold 1340-1440 right
+capture 1460 neighbor-room
+capture 1610 end
+
+watch 0420 En2y
+watch 0421 En2x
+watch 0422 En2spY
+watch 0423 En2spX
+watch 0424 En2hit
+watch 0425 En2d05
+watch 0426 En2i6
+watch 0427 En2subX
+watch 0428 En2mov
+watch 0429 En2dly
+watch 042b En2hp
+watch 030e SamusX
+watch 030d SamusY
+watch 0300 SamusSt
+watch 0307 SamusD07
+watch 0020 Joy1
+watch 0021 Joy2
+watch 030c SamusHi
+watch 6af4 En2St
+watch 6afb En2Hi

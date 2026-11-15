@@ -1,0 +1,5 @@
+{
+ "schema": 1,
+ "note": "例程清单人工映射：asm label -> Rust 符号。candidate 升 ported 必须按 asm 逐行复核（输入/输出/副作用/边界）。",
+ "labels": {}
+}

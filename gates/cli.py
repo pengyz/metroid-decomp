@@ -2174,6 +2174,37 @@ def gate_no_env_hooks() -> tuple[str, str]:
     return PASS, f"逻辑层无 std::env 钩子（白名单 {len(ENV_HOOK_WHITELIST)} 处=资产包定位）；诊断走 --trace 启动参数/独立测试"
 
 
+ROUTINE_INV_REL = Path("data/status/routine_inventory.json")
+ROUTINE_INV_TIMEOUT_S = 180
+
+
+def gate_routine_inventory() -> tuple[str, str]:
+    """G-RI 例程清单：`unported` 只减不增 + 分母（refs/m1disasm/SRC 指纹）不漂移。
+
+    结构驱动迁移的**分母门**：把「还缺什么」从「L4 哪格不对挖哪格」变成机械清单。
+    清单由 tools/routine_inventory.py 从 refs/m1disasm/SRC 的源码级 label 生成
+    （code/data 按下一条指示区分；同一例程被多 bank include 只算一次）。
+    判据三条：①unported 数不得增长（缺口只减不增）②源码指纹与清单锚一致
+    （改了 asm 证据必须显式重生成并解释）③无清单外新例程。
+    """
+    if not (ROOT / ROUTINE_INV_REL).is_file():
+        return FAIL, f"缺 {ROUTINE_INV_REL.as_posix()}（先跑 python3 tools/routine_inventory.py --write）"
+    try:
+        proc = subprocess.run(
+            [sys.executable, "tools/routine_inventory.py", "--check"],
+            cwd=ROOT, capture_output=True, text=True, encoding="utf-8", errors="replace",
+            env=_child_env(), timeout=ROUTINE_INV_TIMEOUT_S,
+        )
+    except subprocess.TimeoutExpired:
+        return FAIL, f"routine_inventory --check 超时（>{ROUTINE_INV_TIMEOUT_S}s）"
+    out = ((proc.stdout or "") + (proc.stderr or "")).strip()
+    if proc.returncode != 0:
+        bad = [ln for ln in out.splitlines() if ln.startswith("[FAIL]")] or out.splitlines()[-6:]
+        return FAIL, "例程清单回退/漂移：\n  - " + "\n  - ".join(bad)
+    last = out.splitlines()[-1] if out else ""
+    return PASS, last
+
+
 PACK_REL = Path("assets") / "metroid.pack"
 ASSET_PACK_TIMEOUT_S = 240
 
@@ -2265,6 +2296,9 @@ GATES: list[tuple[str, str, str, str, object]] = [
     ("no-env-hooks", "启用（2026-11-15）", "check",
      "禁逻辑层环境变量测试钩子：诊断只能走独立测试用例或 --trace 启动参数（用户裁定）",
      gate_no_env_hooks),
+    ("routine-inventory", "启用（结构驱动）", "check",
+     "例程清单：unported 只减不增 + 分母指纹不漂移（tools/routine_inventory.py --check）",
+     gate_routine_inventory),
 ]
 
 
@@ -3731,6 +3765,11 @@ def cmd_selftest(_args) -> int:
     v, det = gate_asset_pack()
     check("asset-pack 门禁实跑（本仓：verify 通过或显式 SKIP）",
           v in (PASS, SKIP), f"{v}: {det}")
+
+    # 19b) 例程清单门禁（结构驱动分母：unported 只减不增）
+    check("routine-inventory 清单文件存在", (ROOT / ROUTINE_INV_REL).is_file())
+    v, det = gate_routine_inventory()
+    check("routine-inventory 门禁实跑 PASS", v == PASS, f"{v}: {det}")
 
     # 20) 数据边界 v2：三分母 + 全字面量形（W4 第一性复盘·方案 A）
     check("v2 元素计数：十进制数组",
