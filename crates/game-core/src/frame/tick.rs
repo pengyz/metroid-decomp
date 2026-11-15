@@ -501,10 +501,8 @@ pub fn samus_init(mem: &mut FrameMemory) {
     mem.write_ram(MIRROR_CNTRL, y);
     mem.write_ram(0x0093, y); // MissilePickupQtyMax
     mem.write_ram(0x0094, y); // EnergyPickupQtyMax
-    let area = (mem.read_ram(IN_AREA) & 0x0F) as usize;
-    let y_pos = *game_data::title::area_tables::AREA_SAMUS_Y
-        .get(area)
-        .unwrap_or(&game_data::title::area_tables::AREA_SAMUS_Y[0]);
+    // AreaSamusY（各 area bank $95D9）——走区头段（旧形是 Rust 抄本 `AREA_SAMUS_Y`）。
+    let y_pos = game_data::assets::area_header((mem.read_ram(IN_AREA) & 0x0F) as u8).samus_y;
     mem.write_ram(SAMUS_Y, y_pos);
     mem.write_ram(0x030E, 0x80); // Samus.x
     mem.write_ram(0x030C, mem.read_ram(crate::ram_map::PPUCTRL_ZP) & 0x01); // Samus.hi
@@ -566,8 +564,9 @@ pub fn samus_intro(mem: &mut FrameMemory) {
 /// （bmi/beq⇒Lx114）③item 径：ItemRoomMusicStatus←$81/A←music_ItemRoom($20)
 /// ④Lx114：`ora MusicInitFlags($0685) / sta MusicInitFlags`（**音乐起**——声链消费面）。
 pub fn start_music(mem: &mut FrameMemory) {
-    let area = crate::world::room_load::area_idx(mem.read_ram(crate::ram_map::IN_AREA));
-    let mut a = game_data::title::area_tables::AREA_MUSIC_FLAG[area];
+    // AreaMusicFlag（各 area bank $95CD）——走区头段（旧形是 Rust 抄本 `AREA_MUSIC_FLAG`）。
+    let mut a = game_data::assets::area_header((mem.read_ram(crate::ram_map::IN_AREA) & 0x0F) as u8)
+        .music_flag;
     let elevator_up = mem.read_ram(0x0320) == 0x06 && mem.read_ram(0x032F) & 0x80 != 0;
     let item_room = mem.read_ram(0x0079);
     if elevator_up || (item_room != 0 && item_room & 0x80 == 0) {

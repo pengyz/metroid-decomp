@@ -84,7 +84,14 @@ def load_rom() -> bytes:
 
 
 def rom_off(bank: int, addr: int) -> int:
-    return (bank - 1) * 0x4000 + (addr - 0x8000)
+    """PRG 偏移（**与 extract.rs::bank_source_offset 同式**）。
+
+    注意：iNES 的 PRG 文件序与 MMC1 的 bank 号**不是**一回事——
+    逻辑 bank N 落文件第 N+1 个 16 KB 块（`.nes` 首块是固定 bank 的镜像/占位）。
+    早前写成 `(bank-1)*0x4000` 读到的是**隔壁区**的字节（自查：Brinstar 物品房号
+    `2b 2c 28 0b 1c 0a 1a` 在文件 0x55D0 = 逻辑 bank1:$95D0）。
+    """
+    return bank * 0x4000 + (addr - 0x8000)
 
 
 def label_addrs() -> dict[int, dict[int, str]]:

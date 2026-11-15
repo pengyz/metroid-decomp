@@ -106,6 +106,38 @@ python3 tools/bankvars.py --write  # 重写账本骨架（新增一律 pending�
 那类由 `crates/game-data/src/extract.rs::ENEMY_SPRITES` 的定谳规格覆盖，并由
 `extract_enemy_sprites_all` 的三条机械自检守住（不自洽即拒绝出包）。
 
+### 6.2 区头参数窗 `$95CD-$95D9`（13 B × 5 区，2026-11-16）
+
+一次收 6 项 pending：`AreaMusicFlag $95CD` / `AreaEnemyDamage $95CE`(word) /
+`AreaItemRoomNumbers $95D0`(7 B) / `AreaMapPosX $95D7` / `AreaMapPosY $95D8` / `AreaSamusY $95D9`。
+13 B 到 `$95DA AreaPaletteToggle` 为止**恰好连续**，因此按区一段（`area.{br,no,kr,to,ri}.header`）。
+
+五个消费点全在 bank7（固定 bank 读当前映射区），这也是「抄一份到 Rust」看起来能用的原因：
+
+| 字段 | 消费者 | 去向 |
+|---|---|---|
+| `AreaMusicFlag` | `StartMusic ; 07:D93A` | `ora MusicInitFlags($0685)` |
+| `AreaEnemyDamage` | `SamusHurt ; 07:F306` | `HealthChange($6E)`（word） |
+| `AreaItemRoomNumbers` | `GetRoomNum ; 07:E758` | 7 项循环比房号 ⇒ item room music |
+| `AreaMapPosX/Y` | `MoreInit ; 07:C81D` | `MapPosX($50)` / `MapPosY($4F)` |
+| `AreaSamusY` | `SamusInit ; 07:C907` | `Samus.y($030D)` |
+
+**退役三张 Rust 抄本表**：`title/area_tables.rs`（`AREA_SAMUS_Y` + `AREA_MUSIC_FLAG`，整文件删）与
+`title/world_map.rs::AREA_MAP_POS`。统一入口 `assets::area_header(area) -> AreaHeader`。
+
+> 【2026-11-16 更正】旧 Rust 抄本 `AREA_MUSIC_FLAG = [01,08,40,10,80]`（区序 Br/No/Kr/To/Ri）
+> **把 Kraid 与 Tourian 写反了**。ROM 与 `constants.asm:166-173` 一致：
+> `music_KraidArea = %00010000 (0x10)`、`music_Tourian = %01000000 (0x40)`。
+> 实测 ROM 区头：bank4(Kraid) 首字节 `10`、bank3(Tourian) 首字节 `40`。
+> 影响：Kraid/Tourian 的 region music init flag 互换（L4 无用例进这两区，故一直未显形）。
+> 旧抄本被删，现由 `assets::area_header()` 的单源供数；`area_header_rom_anchor_five_areas` 逐字节钉五区。
+
+> 【同批自纠】`tools/bankvars.py::rom_off` 原写 `(bank-1)*0x4000 + (addr-$8000)`，
+> 与 `extract.rs::bank_source_offset`（`bank*0x4000 + …`）**差一个 16 KB 块**——
+> 即每个区读到的是隔壁区的字节。发现方式：区头锚测拿 Kraid 得到 `0x10`（Tourian 的值）。
+> 已按 `bank_source_offset` 同式修正；39 项清单集合不变（差异判据对整块平移不敏感），
+> 但**sha16 锚全部重算**——若只看「项数没变」就会漏掉这个读数错误。
+
 ## 7. 自证命令（任何人可复跑）
 
 ```bash

@@ -9,8 +9,7 @@
 // （`refs/m1disasm/SRC/prg0_title.asm:5118`，32×32=1 KB）。本文件只保留**布局知识**。
 
 
-/// 区域起点（AreaMapPosX/Y $95D7/$95D8 族——序=InArea&$0F：0=Brinstar…4=Ridley）。
-pub const AREA_MAP_POS: [(u8, u8); 5] = [(3, 14), (22, 13), (3, 4), (7, 20), (25, 24)];
+// 区域起点 AREA_MAP_POS 已退役：AreaMapPosX/Y（$95D7/$95D8）现走 `assets::area_header()`。
 
 #[cfg(test)]
 mod tests {
@@ -21,7 +20,6 @@ mod tests {
     /// 数据已迁资产包（`assets::world_map()`）⇒ 无包时**显式 SKIP**（不静默通过）。
     #[test]
     fn world_map_rom_anchor() {
-        assert_eq!(AREA_MAP_POS[0], (0x03, 0x0E), "Brinstar 起点（MapPos 03/0E）");
         if !crate::assets::is_ready() {
             eprintln!("SKIP（显式）：资产包未加载——先跑 pack-tool extract");
             return;

@@ -330,6 +330,51 @@ pub fn enemy_death_anim(area: u8) -> &'static [u8] { enemy_table(area, 11) }
 mod tests_per_area_tables {
     use super::*;
 
+    /// 区头窗 `$95CD-$95D9`（13 B）五区逐字节锚——**消费点 5 处的唯一源**。
+    ///
+    /// ROM 字节（`bank_source_offset` 同式，逻辑 bank N 落文件第 N+1 块）：
+    /// ```text
+    /// bank1 01 80 00 2b 2c 28 0b 1c 0a 1a 03 0e b0   (Brinstar)
+    /// bank2 08 00 01 10 05 27 04 0f ff ff 16 0d 6e   (Norfair)
+    /// bank4 10 00 02 ff ff ff ff ff ff ff 07 14 6e   (Kraid)
+    /// bank3 40 00 03 ff ff ff ff ff ff ff 03 04 6e   (Tourian)
+    /// bank5 80 00 02 ff ff ff ff ff ff ff 19 18 6e   (Ridley)
+    /// ```
+    #[test]
+    fn area_header_rom_anchor_five_areas() {
+        init_from_env().ok();
+        // music_Brinstar/`Norfair`/`KraidArea`/`Tourian`/`RidleyArea` = 01/08/10/40/80
+        // （constants.asm:166-173）。**旧 Rust 抄本 `AREA_MUSIC_FLAG` 把 Kraid 与 Tourian
+        // 写反了**（记成 40/10）——本测按 ROM 字节钉正，并在文档登记该更正。
+        let want_music = [0x01u8, 0x08, 0x10, 0x40, 0x80];
+        let want_dmg = [0x0080u16, 0x0100, 0x0200, 0x0300, 0x0240];
+        let want_rooms = [
+            [0x2B, 0x2C, 0x28, 0x0B, 0x1C, 0x0A, 0x1A],
+            [0x10, 0x05, 0x27, 0x04, 0x0F, 0xFF, 0xFF],
+            [0xFF; 7],
+            [0xFF; 7],
+            [0xFF; 7],
+        ];
+        let want_map = [(0x03u8, 0x0Eu8), (0x16, 0x0D), (0x07, 0x14), (0x03, 0x04), (0x19, 0x18)];
+        let want_sy = [0xB0u8, 0x6E, 0x6E, 0x6E, 0x6E];
+        for area in 0..5u8 {
+            let h = area_header(area);
+            assert_eq!(h.music_flag, want_music[area as usize], "area{area} AreaMusicFlag $95CD");
+            assert_eq!(h.enemy_damage, want_dmg[area as usize], "area{area} AreaEnemyDamage $95CE(word)");
+            assert_eq!(h.item_rooms, want_rooms[area as usize], "area{area} AreaItemRoomNumbers $95D0");
+            assert_eq!((h.map_x, h.map_y), want_map[area as usize], "area{area} AreaMapPosX/Y $95D7/$95D8");
+            assert_eq!(h.samus_y, want_sy[area as usize], "area{area} AreaSamusY $95D9");
+        }
+    }
+
+    /// 区头访问对非法区号 fail-loud（`InArea&$0F` 只 0..=4）。
+    #[test]
+    #[should_panic(expected = "非法区号")]
+    fn area_header_rejects_area_out_of_range() {
+        init_from_env().ok();
+        let _ = area_header(0x05);
+    }
+
     /// `EnemyDeathAnimIndex ; 各 bank $960B` **按区不同**（A 级：ROM 逐字节）。
     /// 旧形是单常量取 bank1 ⇒ 其余四区爆体帧错表。此测钉住五区首字节与长度。
     #[test]
@@ -959,6 +1004,54 @@ pub fn area_pal_toggle(area: u8) -> Option<u8> {
     pack::get(PackKey::AreaPalToggle)
         .get(area_idx(area)? as usize)
         .copied()
+}
+
+/// 区头参数窗（ROM `$95CD-$95D9`，13 B）——**唯一访问面**。
+///
+/// 这些值原先在 Rust 侧被抄成三张硬编码表（`AREA_MUSIC_FLAG`/`AREA_MAP_POS`/
+/// `AREA_SAMUS_Y`），等于同一份 ROM 数据有两个真相源。现在一律走本函数，
+/// 五个消费点（`StartMusic`/`SamusHurt`/`GetRoomNum`/`MoreInit`/`SamusInit`）同源。
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct AreaHeader {
+    /// `AreaMusicFlag ; $95CD`——区域音乐 init flag（`music_{AREA}`）。
+    pub music_flag: u8,
+    /// `AreaEnemyDamage ; $95CE`（**word**）——区域敌基础伤害，`SamusHurt` 写 `HealthChange`。
+    pub enemy_damage: u16,
+    /// `AreaItemRoomNumbers ; $95D0`（7 B）——物品房音乐触发房号（`$FF`=无）。
+    pub item_rooms: [u8; 7],
+    /// `AreaMapPosX ; $95D7`——世界地图上萨姆斯起点 X。
+    pub map_x: u8,
+    /// `AreaMapPosY ; $95D8`——世界地图上萨姆斯起点 Y。
+    pub map_y: u8,
+    /// `AreaSamusY ; $95D9`——进入区域时萨姆斯纵向屏幕位置（写 `Samus.y`）。
+    pub samus_y: u8,
+}
+
+fn area_header_key(area: u8) -> Option<PackKey> {
+    match area_idx(area)? {
+        0 => Some(PackKey::AreaBrHeader),
+        1 => Some(PackKey::AreaNoHeader),
+        2 => Some(PackKey::AreaKrHeader),
+        3 => Some(PackKey::AreaToHeader),
+        4 => Some(PackKey::AreaRiHeader),
+        _ => None,
+    }
+}
+
+/// 读区头参数（ROM `$95CD-$95D9`）。`area` 为 `InArea & $0F`；非法区号 panic（fail-loud）。
+pub fn area_header(area: u8) -> AreaHeader {
+    let key = area_header_key(area)
+        .unwrap_or_else(|| panic!("区头访问：非法区号 area={area:#04X}（InArea&$0F 应为 0..=4）"));
+    let b = pack::get(key);
+    assert_eq!(b.len(), 13, "区头段长应为 13 B（$95CD-$95D9）");
+    AreaHeader {
+        music_flag: b[0],
+        enemy_damage: u16::from_le_bytes([b[1], b[2]]),
+        item_rooms: [b[3], b[4], b[5], b[6], b[7], b[8], b[9]],
+        map_x: b[10],
+        map_y: b[11],
+        samus_y: b[12],
+    }
 }
 
 /// SFX 4B 记录窗基址（`$B211`）；窗口内记录以**绝对 ROM 址**引用。

@@ -58,6 +58,7 @@ pub fn sections(rom: &[u8]) -> Result<Vec<Section>, String> {
     out.extend(extract_title_tables(prg)?);
     out.extend(extract_tourian_metroid_data(prg)?);
     out.extend(extract_area_pal_toggle(prg)?);
+    out.extend(extract_area_headers(prg)?);
     Ok(out)
 }
 
@@ -551,6 +552,11 @@ fn seg_meta() -> Vec<SegMeta> {
                   note: "MetroidData（InitBank3 逐字节拷到 $77F0-$77FD）" },
         SegMeta { key: PackKey::AreaPalToggle, kind: "bytes", elem: 1, count: 5, rom: "bank1/2/3/4/5:$95DA",
                   note: "AreaPaletteToggle 5 区（Br/No=01，Kr/To/Ri=06）——MoreInit→PaletteToggle" },
+        SegMeta { key: PackKey::AreaBrHeader, kind: "bytes", elem: 13, count: 1, rom: "bank01:$95CD", note: "Brinstar 区头（music/damage/itemrooms/mappos/samusY）" },
+        SegMeta { key: PackKey::AreaNoHeader, kind: "bytes", elem: 13, count: 1, rom: "bank02:$95CD", note: "Norfair 区头" },
+        SegMeta { key: PackKey::AreaKrHeader, kind: "bytes", elem: 13, count: 1, rom: "bank04:$95CD", note: "Kraid 区头" },
+        SegMeta { key: PackKey::AreaToHeader, kind: "bytes", elem: 13, count: 1, rom: "bank03:$95CD", note: "Tourian 区头" },
+        SegMeta { key: PackKey::AreaRiHeader, kind: "bytes", elem: 13, count: 1, rom: "bank05:$95CD", note: "Ridley 区头" },
     ];
     v
 }
@@ -1022,6 +1028,38 @@ fn extract_area_pal_toggle(prg: &[u8]) -> Result<Vec<Section>, String> {
         body.push(b[0]);
     }
     Ok(vec![Section { key: PackKey::AreaPalToggle, data: body }])
+}
+
+/// 区头参数窗 `$95CD-$95D9`（13 B）——**消费点全在 bank7**（固定 bank 读当前映射区）：
+/// - `$95CD AreaMusicFlag` → `StartMusic 07:D93A` 的 music flag
+/// - `$95CE AreaEnemyDamage`（word）→ `SamusHurt 07:F306` 写 `HealthChange($6E)`
+/// - `$95D0 AreaItemRoomNumbers`（7 B）→ `GetRoomNum 07:E758` 物品房音乐判据
+/// - `$95D7/$95D8 AreaMapPosX/Y` → `MoreInit 07:C81D` 写 `MapPosX/Y`
+/// - `$95D9 AreaSamusY` → `SamusInit 07:C907` 写 `Samus.y`
+/// 13 B 到 `$95DA AreaPaletteToggle` 为止恰好连续（不含后者——它已单段）。
+pub const AREA_HEADER_ADDR: u16 = 0x95CD;
+pub const AREA_HEADER_LEN: usize = 13;
+
+fn area_header_keys(area: usize) -> PackKey {
+    match area {
+        0 => PackKey::AreaBrHeader,
+        1 => PackKey::AreaNoHeader,
+        2 => PackKey::AreaKrHeader,
+        3 => PackKey::AreaToHeader,
+        4 => PackKey::AreaRiHeader,
+        _ => unreachable!("area 序只 0..=4"),
+    }
+}
+
+fn extract_area_headers(prg: &[u8]) -> Result<Vec<Section>, String> {
+    let banks = area_banks(prg)?;
+    let mut out = Vec::with_capacity(5);
+    for (area, bank) in banks.iter().enumerate() {
+        let b = bank_slice(prg, *bank, AREA_HEADER_ADDR, AREA_HEADER_LEN)
+            .map_err(|e| format!("区头 area{area} bank{bank} $95CD: {e}"))?;
+        out.push(Section { key: area_header_keys(area), data: b.to_vec() });
+    }
+    Ok(out)
 }
 
 fn extract_sfx_tables(prg: &[u8]) -> Result<Vec<Section>, String> {

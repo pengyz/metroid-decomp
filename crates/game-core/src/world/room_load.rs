@@ -41,12 +41,10 @@ pub fn more_init(mem: &mut FrameMemory) {
     mem.write_ram(0x0053, 0); // ScrollBlockOnNameTable0
     mem.write_ram(0x0030, 1); // SpareMem30
     mem.write_ram(crate::ram_map::SCROLL_DIR, 2); // ScrollDir=2（横房）——【勘误修】$49！
-    let map_x = game_data::title::world_map::AREA_MAP_POS
-        [area_idx(mem.read_ram(crate::ram_map::IN_AREA))].0; // ROM $95D7（r25 正源）
-    mem.write_ram(0x0050, map_x); // MapPosX（constants_ram:543）
-    let map_y = game_data::title::world_map::AREA_MAP_POS
-        [area_idx(mem.read_ram(crate::ram_map::IN_AREA))].1; // ROM $95D8
-    mem.write_ram(0x004F, map_y); // MapPosY（constants_ram:542）
+    // AreaMapPosX/Y（各 area bank $95D7/$95D8）——**走区头段**，不再有 Rust 抄本。
+    let hdr = game_data::assets::area_header((mem.read_ram(crate::ram_map::IN_AREA) & 0x0F) as u8);
+    mem.write_ram(0x0050, hdr.map_x); // MapPosX（constants_ram:543）
+    mem.write_ram(0x004F, hdr.map_y); // MapPosY（constants_ram:542）
     // AreaPaletteToggle（各 area bank $95DA，ROM）——**旧读 $6885 是错址**（WRAM 项扫计数区
     // ⇒ 恒 0 ⇒ 电梯换区 `PaletteToggle^=7` 后 pending 差 1 ⇒ 载错调色板；L4 elevprobe2 实证）。
     let pt = game_data::assets::area_pal_toggle(mem.read_ram(crate::ram_map::IN_AREA))
