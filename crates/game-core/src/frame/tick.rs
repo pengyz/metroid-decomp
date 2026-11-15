@@ -5,6 +5,7 @@
 //! `IsEngineRunning ; 07:CA18`。
 
 pub(crate) use crate::frame::enemy::behaviour::*;
+pub(crate) use crate::frame::enemy::prims::*;
 pub(crate) use crate::frame::enemy::update::*;
 pub(crate) use crate::frame::projectile::*;
 pub(crate) use crate::frame::hud::*;

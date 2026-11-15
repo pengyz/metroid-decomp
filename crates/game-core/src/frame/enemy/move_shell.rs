@@ -5,8 +5,9 @@
 //!
 //! 本文件由 `frame/mainloop.rs` 原样搬出（纯搬移，逻辑/注释/测试均未改动）。
 
+use crate::frame::enemy::prims::*;
 use crate::frame::enemy::update::{
-    load_table_at_977b, EN_DELAY, EN_INSTR, EN_MOV_IDX, EN_SUBPIXEL_X, EN_SUBPIXEL_Y,
+    EN_DELAY, EN_INSTR, EN_MOV_IDX, EN_SUBPIXEL_X, EN_SUBPIXEL_Y,
 };
 use crate::frame::enemy::behaviour::{
     enemy_check_move_down, enemy_check_move_up, enemy_move_one_pixel_down,
@@ -14,46 +15,10 @@ use crate::frame::enemy::behaviour::{
     update_enemy_anim, update_enemy_common_no_move_no_anim,
 };
 
-const EN_BASE: u16 = 0x0400;
-const ENS_BASE: u16 = 0x6AF4;
-const EN_F_DATA05: u16 = 5;
-const EN_F_SPEED_Y: u16 = 2;
-const EN_F_SPEED_X: u16 = 3;
-const ENS_F_STATUS: u16 = 0;
-const ENS_F_ACCEL_Y: u16 = 10;
-const ENS_F_ACCEL_X: u16 = 11;
-const ENS_F_TYPE: u16 = 14;
-const ENS_F_DATA1F: u16 = 15;
 
-fn en_addr(x: u8, f: u16) -> u16 {
-    EN_BASE + x as u16 + f
-}
-fn ens_addr(x: u8, f: u16) -> u16 {
-    ENS_BASE + x as u16 + f
-}
 
-/// `L977B[type]` 的**原始字节**。
-///
-/// 注意：asm 的 `LoadTableAt977B` 返回 `A = L977B[y] << 1`（后面的 `bpl/bmi` 因此测的是
-/// **原字节 bit6**）。这里给原始值，各调用点用 raw 位判据，避免再被 `asl` 绕一次。
-fn l977b_raw(mem: &mut crate::frame::FrameMemory, x: u8) -> u8 {
-    load_table_at_977b(mem, x) >> 1
-}
 
-/// `L968B[type]`（`ReadTableAt968B`）——区域相关属性表。
-fn l968b_of(mem: &mut crate::frame::FrameMemory, x: u8) -> u8 {
-    let t = (mem.read_wram(ens_addr(x, ENS_F_TYPE)) & 0x0F) as usize;
-    game_data::assets::enemy_force_attribs(crate::frame::cur_area(mem))
-        .get(t)
-        .copied()
-        .unwrap_or(0)
-}
 
-/// `XorEnData05 ; $856B`。
-fn xor_en_data05(mem: &mut crate::frame::FrameMemory, x: u8, mask: u8) {
-    let a = en_addr(x, EN_F_DATA05);
-    mem.write_ram(a, mem.read_ram(a) ^ mask);
-}
 
 /// `EnemyTriggerResting ; $81B8`：data05 bit5 置（A 恒 0）。
 fn enemy_trigger_resting(mem: &mut crate::frame::FrameMemory, x: u8) {
@@ -73,18 +38,7 @@ fn enemy_trigger_resting_clear_accel_x(mem: &mut crate::frame::FrameMemory, x: u
     mem.write_wram(ens_addr(x, ENS_F_ACCEL_X), 0);
 }
 
-/// `sec/clc + ror hi + ror lo`：16 位右移一位，进位补进 hi 的 bit7。
-/// `carry_in=true` = asm 的 `sec`（减半并把方向钉成负），`false` = `clc`（减半保持正）。
-fn ror16(hi: u8, lo: u8, carry_in: bool) -> (u8, u8) {
-    let v = ((hi as u16) << 8) | lo as u16;
-    let r = (v >> 1) | if carry_in { 0x8000 } else { 0 };
-    ((r >> 8) as u8, (r & 0xFF) as u8)
-}
 
-/// `twos_complement`：`lda #$00 / sbc v` ⇒ `0 - v`。
-fn twos(v: u8) -> u8 {
-    v.wrapping_neg()
-}
 
 /// `EnemyIfMoveFailedVertical_Bounce($81FC)` / `_Horizontal_Bounce($81C7)`。
 fn enemy_if_move_failed_bounce(mem: &mut crate::frame::FrameMemory, x: u8, vertical: bool) {

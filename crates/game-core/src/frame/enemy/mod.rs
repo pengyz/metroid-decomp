@@ -8,4 +8,5 @@
 pub(crate) mod ai;
 pub(crate) mod behaviour;
 pub(crate) mod move_shell;
+pub(crate) mod prims;
 pub(crate) mod update;

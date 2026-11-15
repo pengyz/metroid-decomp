@@ -3,7 +3,7 @@
 //! 由 `frame/mainloop.rs` 原样搬出（纯搬移）。asm 根：`UpdateEnemy_*` 07:F3BE..F57D、
 //! `enemies/{skree,crawler}.asm`、`EnemyMoveOnePixel*` $83F5..、`DrawEnemy` 07:F42E 邻域。
 
-use crate::frame::enemy::update::*;
+use crate::frame::enemy::prims::*;
 use crate::frame::tick::*;
 use crate::ram_map;
 
