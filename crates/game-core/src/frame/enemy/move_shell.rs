@@ -5,11 +5,13 @@
 //!
 //! 本文件由 `frame/mainloop.rs` 原样搬出（纯搬移，逻辑/注释/测试均未改动）。
 
+use crate::frame::enemy::update::{
+    load_table_at_977b, EN_DELAY, EN_INSTR, EN_MOV_IDX, EN_SUBPIXEL_X, EN_SUBPIXEL_Y,
+};
 use crate::frame::mainloop::{
     enemy_check_move_down, enemy_check_move_up, enemy_move_one_pixel_down,
     enemy_move_one_pixel_left, enemy_move_one_pixel_right, enemy_move_one_pixel_up,
-    load_table_at_977b, update_enemy_anim, update_enemy_common_no_move_no_anim, EN_DELAY,
-    EN_INSTR, EN_MOV_IDX, EN_SUBPIXEL_X, EN_SUBPIXEL_Y,
+    update_enemy_anim, update_enemy_common_no_move_no_anim,
 };
 
 const EN_BASE: u16 = 0x0400;

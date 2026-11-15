@@ -6,3 +6,4 @@
 //! crate::frame::`）。
 
 pub(crate) mod move_shell;
+pub(crate) mod update;
