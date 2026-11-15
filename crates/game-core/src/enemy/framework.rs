@@ -7,6 +7,7 @@ use crate::enemy::crawler::crawler_ai;
 use crate::enemy::motion::*;
 use crate::enemy::prep::*;
 use crate::enemy::skree::skree_ai;
+use crate::enemy::sidehopper::{ripper_ai, sidehopper_ai};
 use crate::frame::tick::*;
 use crate::ram_map;
 
@@ -56,12 +57,28 @@ pub(crate) fn try_becoming_active(mem: &mut crate::frame::FrameMemory, x: u8) {
         let fc = mem.read_ram(crate::ram_map::FRAME_COUNT);
         let rng1 = mem.read_ram(crate::ram_map::RANDOM1);
         let pick = (fc ^ rng1) & 0x01; // bitflag=0x01（2 支形——多支表随件）
-        let mov_idx: u8 = if t == 5 {
-            0 // Zoomer manual（choice=0）
-        } else if t == 4 {
-            7 // Skree（choice=7）
+        // 【movement choice 表】（prg1_brinstar.asm:492-508 `EnemyMovementChoices` 逐项）：
+        // 00 Floor Sidehopper=$01,$02 / 01 Ceiling=$03,$04 / 02 Waver=$05 / 03 Ripper=$06 /
+        // 04 Skree=$07 / 05 Zoomer=manual(0) / 06 Rio=$08。两选一型用 `(FC^RNG)&1` 选播。
+        let area = crate::frame::cur_area(mem);
+        let mov_idx: u8 = if area == 0 {
+            match t {
+                0 => 0x01 | (pick & 0x01) as u8, // Sidehopper floor：$01/$02
+                1 => 0x03 | (pick & 0x01) as u8, // Ceiling sidehopper：$03/$04
+                2 => 0x05,                       // Waver
+                3 => 0x06,                       // Ripper
+                4 => 0x07,                       // Skree
+                5 => 0x00,                       // Zoomer（manual——crawler_ai 自己走）
+                6 => 0x08,                       // Rio（swoopers）
+                _ => {
+                    crate::frame::DIVERGENCES.with(|d| d.borrow_mut().push(0x97D1));
+                    pick
+                }
+            }
         } else {
-            pick // 其他型：RNG 选播（表随件）
+            // 其他区的 choice 表未端口（Norfair/Ridley/Tourian 各有自己的表）——记账不猜
+            crate::frame::DIVERGENCES.with(|d| d.borrow_mut().push(0x97D1));
+            pick
         };
         mem.write_ram(0x0400 + x as u16 + 8, mov_idx); // Ens.movementIndex=+8
     }
@@ -264,6 +281,10 @@ pub(crate) fn choose_enemy_ai(mem: &mut crate::frame::FrameMemory, x: u8) {
         // 【goal-轮2 Rust 实现】SkreeAIRoutine（enemies/skree.asm:2-71 全谱）——
         // 第一房间双敌型之二（sc-shoot-kill slot 0x20 type=4 实测；HP=2（01:962B）符）。
         4 => skree_ai(mem, x),
+        // 【结构驱动】enemies/sidehopper.asm + ripper.asm（bank1/4 共用尾件）
+        0 => sidehopper_ai(mem, x, false), // Sidehopper floor
+        1 => sidehopper_ai(mem, x, true),  // Ceiling sidehopper
+        3 => ripper_ai(mem, x),            // Ripper（bank2=Ripper II）
         _ => {
             crate::frame::DIVERGENCES.with(|d| d.borrow_mut().push(0x95E5));
             update_enemy_common_no_move_no_anim(mem, x);

@@ -105,6 +105,31 @@
   "CrawlerAnimIndexTable": {
    "status": "data",
    "note": "8 字节动画索引表（.byte 组，被 .if 包住致分析器判 code）；数据面，非例程"
+  },
+  "SidehopperFloorAIRoutine": {
+   "status": "ported",
+   "rust": "crates/game-core/src/enemy/sidehopper.rs:78",
+   "note": "asm enemies/sidehopper.asm:4-16（anim 偏移→FlipAnimIndex $85/$86 → status≠Explode 走 EnemyFlipAfterDisplacement → $00=6/$01=8 → Decide）；Rust sidehopper_ai(ceiling=false) 逐行同形，动画偏移按各 bank EnAnimTable 基址算得（bank1 $09 / bank5 $42）"
+  },
+  "SidehopperCeilingAIRoutine": {
+   "status": "ported",
+   "rust": "crates/game-core/src/enemy/sidehopper.rs:78",
+   "note": "asm sidehopper.asm:26-32 仅换 Ceiling 动画偏移（bank1 $0F / bank5 $48），其余同尾件；Rust sidehopper_ai(ceiling=true)"
+  },
+  "RipperAIRoutine": {
+   "status": "ported",
+   "rust": "crates/game-core/src/enemy/sidehopper.rs:126",
+   "note": "asm enemies/ripper.asm：status≠Explode 走 InitEnActiveAnimIndex_NoInitOffset；bank1/4 jmp CommonEnemyStub2（Sidehopper 尾件），bank2 是 Ripper II（$00=$01=3）；Rust ripper_ai 同形"
+  },
+  "EnemyFlipAfterDisplacement": {
+   "status": "ported",
+   "rust": "crates/game-core/src/enemy/sidehopper.rs:52",
+   "note": "asm 07:FB88：|jumpDsplcmnt| 负则二补；<8 回休止动画、8..15 切 hopping（animIndex=idx-1/resetAnimIndex=idx/清 delay）、≥16 不动；Rust 同形"
+  },
+  "InitEnActiveAnimIndex_NoInitOffset": {
+   "status": "ported",
+   "rust": "crates/game-core/src/enemy/sidehopper.rs:112",
+   "note": "asm 07:FBCA：resetAnimIndex≠表值才写三件，且不递减 InitOffset（与 InitEnActiveAnimIndex 的差别）；Rust 同形"
   }
  }
 }

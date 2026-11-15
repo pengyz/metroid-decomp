@@ -22,3 +22,4 @@ pub mod tables;
 pub mod framework;
 pub mod anim;
 pub mod skree;
+pub mod sidehopper;
