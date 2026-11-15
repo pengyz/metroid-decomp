@@ -46,7 +46,18 @@ _DATA_DIRECTIVES = (
     ".byte", ".byte", ".db", ".word", ".dw", ".ds", ".incbin",
     ".asc", ".asciitable", ".utf8", ".utf16",
 )
-_LABEL_RE = re.compile(r"^([A-Za-z_][\w@.]*)\s*:")
+_LABEL_RE = re.compile(r"^([A-Za-z_][\w@.{}]*)\s*:")
+
+# 6502 助记符（wla-dx 方言）。用途：若 label 后第一行既不是数据指示、首 token 也不是
+# 助记符（而是 `SetPaletteEntry …`/`SignMagSpeed …` 这类**生成数据的宏**），则按 data 计
+# ——否则 palettes.asm / enemy_sprite_data 这类表会被误判成例程，虚增分母。
+_MNEMONICS = frozenset("""
+adc and asl bcc bcs beq bit bmi bne bpl brk bvc bvs clc cld cli clv cmp cpx cpy dec dex dey
+eor inc inx iny jmp jsr lda ldx ldy lsr nop ora pha php pla plp rol ror rti rts sbc sec sed sei
+sta stx sty tax tay tsx txa txs tya
+""".split())
+
+_AREA_SUFFIX = re.compile(r"_\{[A-Za-z0-9_]+\}$")
 _LOCAL_SUFFIX = re.compile(r"^(.*)@(loop|loop_[A-Za-z0-9_]+|RTS|exitloop_[A-Za-z0-9_]+|[A-Za-z0-9_]+)$")
 _RUST_FN_RE = re.compile(r"^\s*(?:pub(?:\([^)]*\))?\s+)?(?:const\s+)?fn\s+([a-z0-9_]+)")
 
@@ -75,6 +86,8 @@ def parse_asm(root: Path) -> list[dict]:
     """源码级 label 清单：[{file,line,label,kind}]，kind ∈ {code,data}。"""
     rows: list[dict] = []
     for path in sorted((root / SRC_REL).rglob("*.asm")):
+        if "/pal/" in path.as_posix():
+            continue  # D6：保真期只做 NES_NTSC，PAL 变体不进分母
         lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
         rel = str(path.relative_to(root))
         for i, raw in enumerate(lines):
@@ -82,12 +95,20 @@ def parse_asm(root: Path) -> list[dict]:
             m = _LABEL_RE.match(head.strip())
             if not m:
                 continue
-            label = m.group(1)
+            label = _AREA_SUFFIX.sub("", m.group(1))
+            # 向后找第一条**既非空、也不是 label**的行：连续 label 链（多个标签指向
+            # 同一块数据/代码）必须穿透，否则链尾的数据表会被误判成 code。
             j = i + 1
-            while j < len(lines) and not lines[j].split(";", 1)[0].strip():
-                j += 1
-            nxt = lines[j].split(";", 1)[0].strip().lower() if j < len(lines) else ""
-            kind = "data" if nxt.startswith(_DATA_DIRECTIVES) else "code"
+            nxt = ""
+            while j < len(lines):
+                head_j = lines[j].split(";", 1)[0].strip()
+                if not head_j or head_j.startswith("@") or _LABEL_RE.match(head_j):
+                    j += 1
+                    continue
+                nxt = head_j.lower()
+                break
+            first_tok = nxt[1:].split(None, 1)[0] if nxt.startswith(".") else (nxt.split(None, 1)[0] if nxt else "")
+            kind = "data" if (nxt.startswith(_DATA_DIRECTIVES) or (first_tok and first_tok not in _MNEMONICS)) else "code"
             rows.append({"file": rel, "line": i + 1, "label": label, "kind": kind})
     return rows
 
@@ -103,6 +124,8 @@ def load_overrides(root: Path) -> dict[str, dict]:
 def source_fingerprint(root: Path) -> str:
     h = hashlib.sha256()
     for path in sorted((root / SRC_REL).rglob("*.asm")):
+        if "/pal/" in path.as_posix():
+            continue  # 与 parse_asm 同口径（D6 NTSC-only）
         h.update(str(path.relative_to(root)).encode())
         h.update(path.read_bytes())
     return h.hexdigest()

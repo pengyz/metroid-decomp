@@ -23,10 +23,16 @@
   5 个区域 bank 各自 `include` 一次，按实例数会把分母放大 5 倍，且每份实例没有独立信息量。
 - **使用** `refs/m1disasm/SRC/**/*.asm` 的**源码级 label**，并按「下一条非空行是不是数据指示
   （`.byte`/`.word`/`.dw`/`.ds`/`.incbin`…）」分成 `code` 与 `data` 两类：
-  - `code` = 例程 → **本清单的分子分母都只算它**；
+  - label 允许 `_{AREA}` 这类宏占位（`SkreeAIRoutine_{AREA}:`），登记时**去掉占位后缀**，
+  否则 `enemies/*.asm`（敌 AI 全部用 `{AREA}` 参数化）会整批漏掉；
+- 分类要穿透两种情况：①**label 链**（多个标签指向同一块数据）②`@loop` 这类局部标签；
+  穿透后若首 token 不是 6502 助记符而是 `SetPaletteEntry`/`SignMagSpeed` 这类**生成数据的宏**，
+  仍按 data 计（否则 `palettes.asm` / `enemy_sprite_data` 会被当成上千条例程）；
+- `SRC/songs/pal/` 整棵排除（D6：保真期只做 NES_NTSC）；
+- `code` = 例程 → **本清单的分子分母都只算它**；
   - `data` = 数据表 → 已由资产包 `pack-tool verify` 逐段对 ROM 自证，这里只登记、不计缺口。
 
-当前分母：**code 1714 条 / data label 437 条**（另有 `@loop` 类局部标签与
+当前分母：**code 1464 条 / data label 2642 条**（另有 `@loop` 类局部标签与
 `L####`/`RTS_####` 自动名不计）。
 
 ## 3. 三档状态（口径）
@@ -44,8 +50,8 @@
 ## 4. 当前读数
 
 ```
-code 例程 1714：candidate 244（14.2%）/ unported 1470
-data label 437（不计缺口）
+code 例程 1464：ported 6 / candidate 230（15.7%）/ unported 1228
+data label 2642（不计缺口）
 ```
 
 按文件分组（非 ported = candidate + unported）：
