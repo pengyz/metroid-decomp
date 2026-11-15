@@ -1385,7 +1385,7 @@ pub fn samus_door(mem: &mut FrameMemory) {
 pub fn samus_elevator(mem: &mut FrameMemory) {
     // `SamusElevator ; 07:D423` 全形（十态闸 + 位移 + 卷屏跟随）落 `frame::elevator`
     // （电梯件与对象槽面同域；`$D42E` 桩撤除）。
-    crate::frame::elevator::samus_elevator(mem);
+    crate::world::elevator::samus_elevator(mem);
 }
 
 // ===== 跳跃链（TDD（测试先行（实现后补）））=====

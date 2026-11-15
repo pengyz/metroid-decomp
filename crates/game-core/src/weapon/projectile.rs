@@ -131,7 +131,7 @@ pub(crate) fn update_bullet(mem: &mut crate::frame::FrameMemory) {
     }
     if !collided {
         // CollisionWithBG（$D609）：瓦判（GetObjRoomRAMPtr 同核（make_room_ram_ptr））
-        let (lo, hi) = crate::frame::room::make_room_ram_ptr(
+        let (lo, hi) = crate::world::room_draw::make_room_ram_ptr(
             mem.read_ram(base + 0x0D), mem.read_ram(base + 0x0E), mem.read_ram(base + 0x0C));
         let tile = mem.read_wram(((hi as u16) << 8) | lo as u16);
         if tile >= 0xA0 {

@@ -1277,7 +1277,7 @@ mod tests_bullet_lifetime {
         m.write_ram(0x03D0 + 0x0D, 0x50); // y
         m.write_ram(0x03D0 + 0x0E, 0x00); // x
         // 瓦写入（RoomRAM（make_room_ram_ptr(0x50, 0x00, 0)））
-        let (lo, hi) = crate::frame::room::make_room_ram_ptr(0x50, 0x00, 0);
+        let (lo, hi) = crate::world::room_draw::make_room_ram_ptr(0x50, 0x00, 0);
         m.write_wram(((hi as u16) << 8) | lo as u16, tile);
         m
     }
@@ -1405,7 +1405,7 @@ mod tests_p0_anchor_pin {
             m.write_ram(0x0387, dtype);
             m.write_ram(0x038C, 0);
             m.write_ram(0x038E, 0xE8);
-            crate::frame::room::update_door(&mut m, 0x80);
+            crate::world::room_draw::update_door(&mut m, 0x80);
             assert_eq!(m.read_ram(0x038F), hp, "DoorHitPointTable[{}]", dtype);
         }
     }
@@ -1418,7 +1418,7 @@ mod tests_p0_anchor_pin {
         m.write_ram(0x0387, 0);
         m.write_ram(0x038F, 5);
         m.write_ram(0x038A, 0x04);
-        crate::frame::room::update_door(&mut m, 0x80);
+        crate::world::room_draw::update_door(&mut m, 0x80);
         assert_eq!(m.read_ram(0x038F), 4, "isHit bit2⇒HP--");
     }
 

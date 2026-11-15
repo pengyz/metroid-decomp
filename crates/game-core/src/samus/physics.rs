@@ -814,7 +814,7 @@ pub fn samus_collision_with_solid_entities(mem: &mut FrameMemory) {
     }
     // ---- $D9A3 电梯段：`lda Elevator.status / beq @RTS` ⇒ LDC82 ⇒ @isSamusOnTop ----
     // （SamusOnElevator++；双旗已在上方清 0）。
-    crate::frame::elevator::samus_on_elevator_check(mem);
+    crate::world::elevator::samus_on_elevator_check(mem);
 }
 
 /// @isSamusOnTop 顶部判定（asm :D9BA 内容锚——冻结敌/电梯共用）：
@@ -1459,8 +1459,8 @@ fn check_update_name_table(mem: &mut FrameMemory) {
         // dropped=floor((基底+载房工作周期)/29780)（常量=asm 6502 逐条计数——
         // room.rs LOAD_* 注）。行为后果=消费端输入相位（同 FC 迭代喂 joy[label]——
         // 窗长差 1 ⇒转脚帧 accel 滞 1 帧（goal-轮134 下游链））。
-        let dropped = (crate::frame::room::LOAD_BASE_CYCLES + mem.work_cycles)
-            / crate::frame::room::FRAME_CYCLES;
+        let dropped = (crate::world::room_draw::LOAD_BASE_CYCLES + mem.work_cycles)
+            / crate::world::room_draw::FRAME_CYCLES;
         // 【case-002 归因卡·临时探针（2026-11-05）】载房工作量+计数实测。
         mem.iter_bogged(dropped.min(255) as u8);
     }
@@ -2280,7 +2280,7 @@ mod tests_column_streaming {
     fn end_of_room_sets_temp_scroll_dir() {
         let mut m = FrameMemory::default();
         m.write_ram(crate::ram_map::SCROLL_DIR, 2);
-        crate::frame::room::end_of_room(&mut m);
+        crate::world::room_draw::end_of_room(&mut m);
         assert_eq!(m.read_ram(0x005A), 0xF0, "RoomNumber←$F0");
         assert_eq!(m.read_ram(0x004A), 2, "TempScrollDir←ScrollDir（根因修）");
     }

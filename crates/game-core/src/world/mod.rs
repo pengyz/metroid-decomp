@@ -4,3 +4,7 @@ pub mod door;
 pub mod camera;
 
 pub(crate) mod statue;
+pub(crate) mod elevator;
+pub(crate) mod room_load;
+pub(crate) mod scroll;
+pub(crate) mod room_draw;

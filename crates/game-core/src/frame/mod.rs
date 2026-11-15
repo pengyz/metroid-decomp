@@ -19,18 +19,13 @@ thread_local! {
 pub mod boot;
 pub mod clock;
 pub mod cycles; // 6502 逐条周期计数底座（路线丙 ②）
-pub mod elevator;
 pub mod engine;
-pub(crate) mod room_load;
 pub mod tick;
-pub(crate) mod world_tick;
-pub(crate) mod projectile;
 #[cfg(test)]
 mod tests;
 pub mod memory;
 pub mod nmi;
 pub mod rng;
-pub mod room;
 
 pub use clock::{VirtualClock, TARGET_FPS};
 pub use engine::FrameEngine;

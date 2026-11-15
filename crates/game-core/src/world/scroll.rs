@@ -100,7 +100,7 @@ pub(crate) fn uw_area_routine(_mem: &mut crate::frame::FrameMemory) {
 
 /// UpdateElevator（`$D7B3`）——电梯十态（`frame::elevator`；槽空 status=0 ⇒ ExitSub 恒空径）。
 pub(crate) fn uw_elevator(mem: &mut crate::frame::FrameMemory) {
-    crate::frame::elevator::update_elevator(mem);
+    crate::world::elevator::update_elevator(mem);
 }
 
 /// UpdateAllEnemyExplosions（爆族——槽空⇒跳过）。
@@ -121,12 +121,12 @@ pub(crate) fn uw_samus_enter_door(mem: &mut crate::frame::FrameMemory) {
 }
 
 /// UpdateAllDoors（$8B79——`jsr` 点 prg7_engine.asm:2510，件序在 SamusEnterDoor 与
-/// UpdateAllTileBlasts 之间；实件在 `crate::frame::room::update_all_doors`）。
+/// UpdateAllTileBlasts 之间；实件在 `crate::world::room_draw::update_all_doors`）。
 /// 2026-11-14 更正：本函数曾是空壳（`{}`），导致门链实现齐备却从未接线——
 /// A 方案把输入窗移出开场演出后，`case-002` 立即暴露（emu 门 status 2/anim $31
 /// vs rust 永停 status 1 全零）。空壳期所有门单测仍绿，因为没有一条链路走到 `jsr` 点。
 pub(crate) fn uw_all_doors(mem: &mut crate::frame::FrameMemory) {
-    crate::frame::room::update_all_doors(mem);
+    crate::world::room_draw::update_all_doors(mem);
 }
 
 /// UpdateAllPipeBugHoles（虫洞族——空态跳过）。

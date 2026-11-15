@@ -212,11 +212,11 @@ pub fn setup_room(mem: &mut FrameMemory) {
     }
     if room >= 0xF0 {
         // AttribTableWrite（$EA13——r25 端口：$F0-$F4 命令链）
-        crate::frame::room::attrib_table_write(mem);
+        crate::world::room_draw::attrib_table_write(mem);
         return;
     }
     // DeleteOffscreenRoomSprites（$EC9B）——载房前清「正在进入视野的名表」里的陈旧对象。
-    crate::frame::room::delete_offscreen_room_sprites(mem);
+    crate::world::room_draw::delete_offscreen_room_sprites(mem);
     // ScanForItems（$ED98）——当前图格特项扫描 → PowerUp 装载。
     crate::pickup::spawn::scan_for_items(mem);
     // RoomPtrTable 查表（**asm `lda (AreaPointers_RAM.RoomPtrTable),y` 经 $3B/$3C 间接**——
@@ -229,13 +229,13 @@ pub fn setup_room(mem: &mut FrameMemory) {
     mem.write_ram(0x0034, (ptr >> 8) as u8); // RoomPtr hi
     // 首字节读（房间数据——RoomPalette=$36 址随证）+SelectRoomRAM($EA05)/InitTables($EFF8)
     // +DrawRoom 链（S6-7 绘制面——r25 端口）。
-    crate::frame::room::select_room_ram(mem);
+    crate::world::room_draw::select_room_ram(mem);
     let room_stream = game_data::assets::room_streams(area)
         .and_then(|ss| ss.get(room as usize));
     let palette = room_stream.and_then(|s| s.first().copied()).unwrap_or(0);
     mem.write_ram(0x0068, palette); // RoomPalette（**$68**——r25 址勘误修（旧 $36 随证形误））
-    crate::frame::room::init_tables(mem);
-    if !crate::frame::room::draw_room(mem, room) {
+    crate::world::room_draw::init_tables(mem);
+    if !crate::world::room_draw::draw_room(mem, room) {
         crate::unported!("bank07:EAD4"); // 敌门环未竟件（type 2/4/6/7 族）
     }
 }
