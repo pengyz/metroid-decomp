@@ -285,6 +285,8 @@ pub(crate) fn choose_enemy_ai(mem: &mut crate::frame::FrameMemory, x: u8) {
         0 => sidehopper_ai(mem, x, false), // Sidehopper floor
         1 => sidehopper_ai(mem, x, true),  // Ceiling sidehopper
         3 => ripper_ai(mem, x),            // Ripper（bank2=Ripper II）
+        // 【结构驱动】enemies/waver.asm（12 行；$85/$86 左右两值不同）
+        2 => crate::enemy::waver::waver_ai(mem, x), // Waver
         _ => {
             crate::frame::DIVERGENCES.with(|d| d.borrow_mut().push(0x95E5));
             update_enemy_common_no_move_no_anim(mem, x);

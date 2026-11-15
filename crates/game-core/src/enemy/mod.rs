@@ -23,3 +23,5 @@ pub mod framework;
 pub mod anim;
 pub mod skree;
 pub mod sidehopper;
+
+pub(crate) mod waver;

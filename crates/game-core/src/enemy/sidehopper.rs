@@ -25,7 +25,7 @@ const F_ANIM_INDEX: u16 = 6;
 const F_JUMP_DSPL: u16 = 13;
 /// `EnemyFlipAfterDisplacementAnimIndex dw ;$85`（`constants_ram.asm:639`）——
 /// 右朝向在 `$85`、左朝向在 `$86`（sidehopper 两条写同值）。
-const FLIP_ANIM_IDX: u16 = 0x0085;
+pub(crate) const FLIP_ANIM_IDX: u16 = 0x0085;
 /// `$00/$01`：`UpdateEnemyCommon_Decide` 用的活动/休止动画索引（asm 尾件写入）。
 const ANIM_ACTIVE_SLOT: u16 = 0x0000;
 const ANIM_RESTING_SLOT: u16 = 0x0001;
