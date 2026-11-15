@@ -48,7 +48,7 @@ const PTR_HI: u16 = 0x0001;
 pub fn boot_pre_spin(mem: &mut FrameMemory) {
     // 【r25】CopyMap（InitBank0 件（prg7:1382）——WorldMap→WRAM $7000 1KB；游戏起点房
     // 查表源（GetRoomNum））。
-    crate::frame::mainloop::copy_map(mem);
+    crate::frame::tick::copy_map(mem);
     // ① MMC1 复位写（A=0：CHR0/CHR1 串行清零）
     mem.regs.a = 0x00;
     mmc1_serial_write(mem, io::MMC1_CHR0);
@@ -283,7 +283,7 @@ fn init_bank2(mem: &mut FrameMemory) {
     mem.write_ram(crate::ram_map::GAME_MODE, 0);
     // ScreenNmiOff（$C45D 全形：影子清位 + 真 $2001/$2000 写）——旧形只置 `NMI_STATUS=1`
     // 建模等待形、**漏了寄存器面** ⇒ 换区窗口本应为黑屏却仍亮（elevprobe2 f1206/1207 实证）。
-    super::mainloop::screen_nmi_off(mem);
+    super::tick::screen_nmi_off(mem);
     mem.iter_wait();
     super::gfx::init_norfair_gfx(mem);
     mem.iter_bogged(2);
@@ -304,7 +304,7 @@ fn init_bank3(mem: &mut FrameMemory) {
     mem.write_ram(crate::ram_map::GAME_MODE, 0);
     // ScreenNmiOff（$C45D 全形：影子清位 + 真 $2001/$2000 写）——旧形只置 `NMI_STATUS=1`
     // 建模等待形、**漏了寄存器面** ⇒ 换区窗口本应为黑屏却仍亮（elevprobe2 f1206/1207 实证）。
-    super::mainloop::screen_nmi_off(mem);
+    super::tick::screen_nmi_off(mem);
     mem.iter_wait();
     // `ldy #$0D / lda MetroidData,y / sta MetroidRepelSpeed,y / dey / bpl`
     // ⇒ $77F0+i ← MetroidData[i]（i=0..13；倒序遍历只是循环形，落值同序）。
@@ -328,7 +328,7 @@ fn init_bank4(mem: &mut FrameMemory) {
     mem.write_ram(crate::ram_map::GAME_MODE, 0);
     // ScreenNmiOff（$C45D 全形：影子清位 + 真 $2001/$2000 写）——旧形只置 `NMI_STATUS=1`
     // 建模等待形、**漏了寄存器面** ⇒ 换区窗口本应为黑屏却仍亮（elevprobe2 f1206/1207 实证）。
-    super::mainloop::screen_nmi_off(mem);
+    super::tick::screen_nmi_off(mem);
     mem.iter_wait();
     super::gfx::init_kraid_gfx(mem);
     mem.iter_bogged(2);
@@ -343,7 +343,7 @@ fn init_bank5(mem: &mut FrameMemory) {
     mem.write_ram(crate::ram_map::GAME_MODE, 0);
     // ScreenNmiOff（$C45D 全形：影子清位 + 真 $2001/$2000 写）——旧形只置 `NMI_STATUS=1`
     // 建模等待形、**漏了寄存器面** ⇒ 换区窗口本应为黑屏却仍亮（elevprobe2 f1206/1207 实证）。
-    super::mainloop::screen_nmi_off(mem);
+    super::tick::screen_nmi_off(mem);
     mem.iter_wait();
     super::gfx::init_ridley_gfx(mem);
     mem.iter_bogged(2);
@@ -361,7 +361,7 @@ fn init_bank1(mem: &mut FrameMemory) {
     mem.write_ram(crate::ram_map::GAME_MODE, 0);
     // ScreenNmiOff（$C45D 全形：影子清位 + 真 $2001/$2000 写）——旧形只置 `NMI_STATUS=1`
     // 建模等待形、**漏了寄存器面** ⇒ 换区窗口本应为黑屏却仍亮（elevprobe2 f1206/1207 实证）。
-    super::mainloop::screen_nmi_off(mem);
+    super::tick::screen_nmi_off(mem);
     mem.iter_wait();
     // InitBrinstarGFX（$C604）：BrinBG1/CREBG1/CREBG2/BrinstarSprites/Solid_0FC0/
     // Solid_1FC0（GFXInfo 项 3/4/5/6/25/22——bake_gfx 29 项自描述）

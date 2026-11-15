@@ -1288,7 +1288,7 @@ fn door_delete_offscreen_enemies(mem: &mut FrameMemory) {
 /// 故清 `$77F8..$77FD`；尾 `sta MetroidOnSamus`（A=0）⇒ `$92 ← 0`。
 pub(crate) fn goto_clear_all_metroid_latches(mem: &mut FrameMemory) {
     let area = (mem.read_ram(crate::ram_map::IN_AREA) & 0x0F) as usize;
-    if crate::frame::mainloop::BANK_TABLE[area] != 0x04 {
+    if crate::frame::tick::BANK_TABLE[area] != 0x04 {
         return; // 非 Tourian bank ⇒ 空桩
     }
     for y in 0..=5u16 {
@@ -1356,7 +1356,7 @@ pub fn samus_door(mem: &mut FrameMemory) {
         goto_clear_all_metroid_latches(mem); // 03:95AB（bank 分派桩）
         let music_status = mem.read_ram(crate::ram_map::ITEM_ROOM_MUSIC_STATUS);
         if music_status != 0 {
-            crate::frame::mainloop::start_music(mem); // D92C
+            crate::frame::tick::start_music(mem); // D92C
             if music_status & 0x80 != 0 {
                 mem.write_ram(crate::ram_map::ITEM_ROOM_MUSIC_STATUS, 0x00);
             }

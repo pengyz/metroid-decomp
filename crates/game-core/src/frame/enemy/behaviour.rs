@@ -4,7 +4,7 @@
 //! `enemies/{skree,crawler}.asm`、`EnemyMoveOnePixel*` $83F5..、`DrawEnemy` 07:F42E 邻域。
 
 use crate::frame::enemy::update::*;
-use crate::frame::mainloop::*;
+use crate::frame::tick::*;
 use crate::ram_map;
 
 /// UpdateEnemy_Resting_UpdateEnData1F（**asm 内容锚** `: 07:F676`——r26）：

@@ -11,7 +11,7 @@
 //! 旧实现把该径留作 `unported!("bank07:C902-ScrollDir")` fail-loud 桩
 //! （注释「ScrollAddr 未定谳——不猜写」）——ROM 直读后地址已定谳，按 asm 真形端口。
 
-use game_core::frame::mainloop::samus_init;
+use game_core::frame::tick::samus_init;
 use game_core::frame::FrameMemory;
 use game_core::ram_map::{IN_AREA, MIRROR_CNTRL, SCROLL_DIR};
 

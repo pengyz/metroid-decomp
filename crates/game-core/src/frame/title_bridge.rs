@@ -510,10 +510,10 @@ fn initialize_game(mem: &mut FrameMemory, pw: &[u8; 18], nar_active: bool) {
     }
     // MainRoutine($1E)←_id_MoreInit=1。
     mem.write_ram(crate::ram_map::MAIN_ROUTINE, 0x01);
-    // ScreenNmiOff（$C45D）——**单实现**（`mainloop::screen_nmi_off`）：旧形在此内联一份
+    // ScreenNmiOff（$C45D）——**单实现**（`tick::screen_nmi_off`）：旧形在此内联一份
     // 「影子清位 + 真 $2001 写」，而 boot 的四个 InitBank 只置 `NMI_STATUS` ⇒ 同一 asm 例程
     // 三份语义不同的实现（F 类）；已收口到共享件（含 asm 的 `sta PPUCTRL` 关 NMI 位）。
-    crate::frame::mainloop::screen_nmi_off(mem);
+    crate::frame::tick::screen_nmi_off(mem);
     // LoadSamusGFX（$C5DC，prg7_engine.asm:1496-1520）：Samus→(JIB?Suitless)→
     // IntroSprites→Font_Complete→Font_Hud→Solid_0FC0→Solid_1FC0 七件（ScreenNmiOff 后/
     // NMIOn 前——ROM→CHR-RAM 写在 NMI 关闭窗口，同 asm 序）。

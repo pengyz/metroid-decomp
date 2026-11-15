@@ -6,7 +6,7 @@
 //! 派发（`skree_ai` / `crawler_ai`）与其辅助件。
 
 use crate::frame::enemy::behaviour::*;
-use crate::frame::mainloop::*;
+use crate::frame::tick::*;
 use crate::ram_map;
 
 /// UpdateAllEnemies+UpdateEnemy（**asm 内容锚** `UpdateAllEnemies: ; 07:F345`/

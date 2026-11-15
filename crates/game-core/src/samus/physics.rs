@@ -183,7 +183,7 @@ mod tests {
         m.write_wram(0x6AF4 + 1, 8);
         m.write_wram(0x6AF4 + 2, 8);
         m.write_wram(0x6AF4 + 7, 0);
-        assert!(!crate::frame::mainloop::enemy_check_move_down(&mut m, 0), "固实列应挡探径");
+        assert!(!crate::frame::tick::enemy_check_move_down(&mut m, 0), "固实列应挡探径");
     }
 
     /// 坐标热件（纯寄存器面——wrap 语义）。
@@ -1450,7 +1450,7 @@ fn check_update_name_table(mem: &mut FrameMemory) {
     if is_load {
         mem.work_cycles = 0; // 周期累加起点（载房工作量——room.rs LOAD_* 模型）
     }
-    crate::frame::mainloop::setup_room(mem);
+    crate::frame::tick::setup_room(mem);
     if is_load {
         // 【缝会计卡·掉帧窗模型（2026-11-05——findings/morphball-trajectory-root.md
         // §12）】旧形硬编码 2——emu 实测随工作量变（room23（504 tile）=2 / room8
@@ -1542,7 +1542,7 @@ pub fn stream_row_kick(mem: &mut FrameMemory) {
 /// GetRoomNum 横滚门（asm E720——门检+图格查房已并入 get_room_num 单径）。返回
 /// true=可滚（asm carry 反形）。
 fn scroll_block_gate(mem: &mut FrameMemory) -> bool {
-    crate::frame::mainloop::get_room_num(mem)
+    crate::frame::tick::get_room_num(mem)
 }
 
 /// ScrollLeft（**asm 内容锚** `ScrollLeft: ; 07:E6A7`）：滚屏 1px。返回 carry
@@ -2120,7 +2120,7 @@ mod tests_camera_follow {
 
     fn walkable_room() -> FrameMemory {
         let mut m = FrameMemory::default();
-        crate::frame::mainloop::copy_map(&mut m); // 真 WorldMap（图格→真房间号——装载径）
+        crate::frame::tick::copy_map(&mut m); // 真 WorldMap（图格→真房间号——装载径）
         m.write_ram(crate::ram_map::MAP_POS_X, 0x03); // 实出生图格（金腿 $50=03/$4F=0E）
         m.write_ram(crate::ram_map::MAP_POS_Y, 0x0E);
         for a in 0x6000u16..0x6400 {

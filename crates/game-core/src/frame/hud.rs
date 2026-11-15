@@ -3,7 +3,7 @@
 //! 由 `frame/mainloop.rs` 原样搬出（纯搬移）。asm 根：`DisplayBar` 07:E0B2 邻域、
 //! `HexToDec ; 07:E198`、`SPRWriteDigit`。
 
-use crate::frame::mainloop::*;
+use crate::frame::tick::*;
 use crate::ram_map;
 
 pub(crate) const DATA_DISPLAY_TBL: [u8; 40] = [

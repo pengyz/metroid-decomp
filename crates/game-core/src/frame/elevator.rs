@@ -292,7 +292,7 @@ fn elev_transition(mem: &mut FrameMemory) {
     } else {
         etype & 0x0F
     };
-    crate::frame::mainloop::is_engine_running(mem, dest | 0x10);
+    crate::frame::tick::is_engine_running(mem, dest | 0x10);
     // 调色板切换：PaletteToggle eor (Palette00+1)^(Palette05+1)
     let pt = mem.read_ram(PALETTE_TOGGLE) ^ PALETTE_TOGGLE_XOR;
     mem.write_ram(PALETTE_TOGGLE, pt);
@@ -307,13 +307,13 @@ fn elev_transition(mem: &mut FrameMemory) {
     mem.write_ram(NMI_STATUS, 1);
     mem.iter_wait();
     crate::frame::nmi::check_palette_write(mem);
-    crate::frame::mainloop::select_samus_palette(mem);
-    crate::frame::mainloop::start_music(mem);
+    crate::frame::tick::select_samus_palette(mem);
+    crate::frame::tick::start_music(mem);
     // jsr ScreenOn（$C447）——影子 |= $1E，真 PPUMASK 由 NMI 落（延迟落影同族形）。
     mem.deferred_screen_on = true;
     mem.write_ram(NMI_STATUS, 1);
     mem.iter_wait();
-    crate::frame::mainloop::copy_area_pointers(mem);
+    crate::frame::tick::copy_area_pointers(mem);
     destroy_enemies(mem);
     // 淡入动画 + status+1（⇒ 7 Fade）+ Timer1←$40
     mem.write_ram(SAMUS + S_ANIM_RESET, ANIM_SAMUS_FADE_IN_RESET);

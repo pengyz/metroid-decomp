@@ -4,7 +4,7 @@
 //! `SamusProjectileHitDoorOrStatue ; 07:E81E`、`CollisionDetection` 族。
 
 use crate::frame::enemy::behaviour::*;
-use crate::frame::mainloop::*;
+use crate::frame::tick::*;
 use crate::ram_map;
 
 pub fn samus_projectile_hit_door_or_statue(

@@ -129,7 +129,7 @@ impl FrameEngine {
                     // （星调色板 switch 在 boot NMI 多自增一次且首个迭代的队列门错相）。
                     // 采样缝=boot_post 后/首工作前（oracle f=1 语义锚）。
                     on_spin_exit(&self.mem);
-                    super::mainloop::main_loop_iter(&mut self.mem);
+                    super::tick::main_loop_iter(&mut self.mem);
                     // 【Step 2 门→span 装配】首迭代也可能声明门队列（0x00 臂 bogged——
                     // 与 MainLoop 臂同构；缺此段则首迭代门被当 tick 消费、span 不启用）。
                     if !self.mem.iter_gates.is_empty() {
@@ -144,7 +144,7 @@ impl FrameEngine {
                     // span tick：迭代工作中（四件/臂冻结——等待帧/bogged 帧见门队列语义）
                     self.mem.iter_span_left -= 1;
                 } else {
-                    super::mainloop::main_loop_iter(&mut self.mem); // 主循环一迭代（C0BC 体）
+                    super::tick::main_loop_iter(&mut self.mem); // 主循环一迭代（C0BC 体）
                     if !self.mem.iter_gates.is_empty() {
                         // 迭代声明跨帧：span=门队列长（门描述 T+1..T+n 的 NMI 内块跑/跳）
                         self.mem.iter_span_left = self.mem.iter_gates.len() as u8;
@@ -164,7 +164,7 @@ impl FrameEngine {
             // 【转场暗窗建模】迭代完成点=本迭代全部 WaitNMIPass 已兑现（帧门排空）——
             // 此刻才把 MoreInit 尾的 ScreenOn 影写落到 $FE（下一 tick 的 WritePPUCtrl
             // 写真 PPUMASK，与 asm 两段等待同相位）。
-            super::mainloop::apply_deferred_screen_on(&mut self.mem);
+            super::tick::apply_deferred_screen_on(&mut self.mem);
             self.mem.write_ram(crate::ram_map::NMI_STATUS, 0);
             // 【根修③（2026-11-02）】span_fc 收口 inc（**defer 单增唯一源**（span 尾
             // skip 期 tail 不 inc（title_no_return）））——收口 tick 尾 inc 跳（fc_inced

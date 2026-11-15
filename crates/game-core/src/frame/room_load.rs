@@ -3,7 +3,7 @@
 //! 由 `frame/mainloop.rs` 原样搬出（纯搬移）。asm 根：`MoreInit ; 07:C81D`、
 //! `CopyAreaPointers 07:C8B0`、`GetRoomNum ; 07:E720`、`SetupRoom ; 07:EA2B`、`ScreenNmiOff ; 07:C45D`。
 
-use crate::frame::mainloop::*;
+use crate::frame::tick::*;
 use crate::frame::FrameMemory;
 use crate::ram_map;
 

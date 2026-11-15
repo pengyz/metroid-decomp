@@ -13,7 +13,7 @@
 //! 房流/结构/元 tile 烘焙件头注：Brinstar RoomPtrTable $A314(47 项)/StructPtrTable $A372(50)/
 //! MetatileDefs $AEF0(260B)；Norfair $A21B(46)/$A277(49)/$AEEC(248B)。
 
-use game_core::frame::mainloop::copy_area_pointers;
+use game_core::frame::tick::copy_area_pointers;
 use game_core::frame::FrameMemory;
 use game_core::ram_map::IN_AREA;
 

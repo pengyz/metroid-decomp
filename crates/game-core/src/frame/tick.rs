@@ -4,7 +4,235 @@
 //! `GoMainRoutine ; 07:C114`、`MainRoutinePtrTable 07:C141`、`UpdateTimer ; 07:C266`、
 //! `IsEngineRunning ; 07:CA18`。
 
-use crate::frame::mainloop::*;
+pub(crate) use crate::frame::enemy::behaviour::*;
+pub(crate) use crate::frame::enemy::update::*;
+pub(crate) use crate::frame::projectile::*;
+pub(crate) use crate::frame::hud::*;
+pub(crate) use crate::frame::room_load::*;
+pub use crate::frame::room_load::copy_area_pointers;
+pub(crate) use crate::frame::world_tick::*;
+pub(crate) use crate::frame::enemy::ai::*;
+use crate::ram_map::{
+    FRAME_COUNT, GAME_MODE, NMI_STATUS, RANDOM1, RANDOM2, TIMER1, TIMER_DELAY,
+};
+
+/// 主循环一迭代（C0BC 体；spin 唤醒已由本 tick NMI 完成）。
+///
+/// **迭代序门**（r14 复核 F3/F4 修订版——asm 内容锚）：主循环体四件
+/// （RandomNumbers C000/CheckBankSwitch/UpdateTimer C266/inc FrameCount）=**每迭代恰好
+/// 一次**；spin/等待段 CPU 自旋在 GoMainRoutine 内部 ⇒ 迭代未完成、四件全冻结
+/// （O f3→f7 四帧窗口仅 1 次 UpdateTimer dec 实证）。
+/// · 续段判定=入口 title_cursor>0 且**归属相位==当前相位**（F4：相位推进后残留的
+///   孤儿 cursor=新相位首个真迭代——禁误门为续段）。
+/// · 迭代收尾（inc FrameCount）在**步骤完成点**执行：游标归零 或 分发推进了相位
+///   （孤儿游标=步骤边界）。
+/// · regs.a 连续性：续段不跑 random_numbers（其写 regs.a）——分发臂继承段间 A 态（F3）。
+
+
+
+
+/// MainRoutinePtrTable 烘焙（07:C141——10 项；表址自证）。
+pub(crate) const MAIN_ROUTINE_PTR_TABLE: [u16; 10] = [
+    0xC801, 0xC81D, 0xC8D1, 0xC92B, 0xC9A6, // AreaInit/MoreInit/SamusInit/GameEngine/PrepareGameOver
+    0xC9B1, 0xC9C4, 0xC155, 0xC9D7, 0xC494, // PauseMode/GoPassword/IncrementRoutine/SamusIntro/WaitTimer
+];
+
+
+
+
+
+
+
+#[cfg(test)]
+mod tests_pause_chain {
+    use super::*;
+    use crate::frame::memory::FrameMemory;
+    use crate::ram_map;
+
+    /// `GoMainRoutine` START 开关：3↔5 双向 + `GamePaused ^= 1` + `PauseMusic`（$CB92=%10）
+    /// ——A 级锚 `prg7_engine.asm:311-338`。
+    #[test]
+    fn start_toggles_between_engine_and_pause() {
+        let mut m = FrameMemory::default();
+        m.write_ram(ram_map::MAIN_ROUTINE, 3);
+        m.write_ram(ram_map::JOY1_CHANGE, 0x10); // START
+        assert!(start_pause_toggle(&mut m), "3 + START 应切换");
+        assert_eq!(m.read_ram(ram_map::MAIN_ROUTINE), 5, "GameEngine → PauseMode");
+        assert_eq!(m.read_ram(ram_map::GAME_PAUSED), 1, "GamePaused ^= 1（0→1）");
+        assert_eq!(m.read_ram(ram_map::SFX_NOISE_INIT) & 0x02, 0x02, "PauseMusic 置 noise init bit1");
+    }
+
+    #[test]
+    fn start_unpauses_back_to_engine() {
+        let mut m = FrameMemory::default();
+        m.write_ram(ram_map::MAIN_ROUTINE, 5);
+        m.write_ram(ram_map::GAME_PAUSED, 1);
+        m.write_ram(ram_map::JOY1_CHANGE, 0x10);
+        assert!(start_pause_toggle(&mut m));
+        assert_eq!(m.read_ram(ram_map::MAIN_ROUTINE), 3, "PauseMode → GameEngine");
+        assert_eq!(m.read_ram(ram_map::GAME_PAUSED), 0, "GamePaused ^= 1（1→0）");
+    }
+
+    /// 对照（防空对照）：非 3/5 态必须忽略 START（asm `cmp #5 / bne @endIf_B`）。
+    #[test]
+    fn start_ignored_outside_engine_and_pause() {
+        for mr in [0u8, 1, 2, 4, 8, 9] {
+            let mut m = FrameMemory::default();
+            m.write_ram(ram_map::MAIN_ROUTINE, mr);
+            m.write_ram(ram_map::JOY1_CHANGE, 0x10);
+            assert!(!start_pause_toggle(&mut m), "mr={mr} 不应被 START 改变");
+            assert_eq!(m.read_ram(ram_map::MAIN_ROUTINE), mr);
+            assert_eq!(m.read_ram(ram_map::SFX_NOISE_INIT), 0, "不得起 PauseMusic");
+        }
+        // 无 START 也不切
+        let mut m = FrameMemory::default();
+        m.write_ram(ram_map::MAIN_ROUTINE, 3);
+        m.write_ram(ram_map::JOY1_CHANGE, 0x00);
+        assert!(!start_pause_toggle(&mut m));
+        assert_eq!(m.read_ram(ram_map::MAIN_ROUTINE), 3);
+    }
+
+    /// PauseMode 成功退出：**2P 的 A+UP 同按** + `EndTimer+1==0` ⇒ `GamePaused←0` + `inc MainRoutine`
+    /// （5→6 = GoPassword，**mr=6 的唯一产生点**）。A 级锚 `prg7_engine.asm:2139-2166`。
+    #[test]
+    fn pause_mode_exits_to_go_password() {
+        let mut m = FrameMemory::default();
+        m.write_ram(ram_map::MAIN_ROUTINE, 5);
+        m.write_ram(ram_map::GAME_PAUSED, 1);
+        m.write_ram(ram_map::JOY2_STATUS, 0x88); // BUTTON_A|BUTTON_UP
+        pause_mode(&mut m);
+        assert_eq!(m.read_ram(ram_map::MAIN_ROUTINE), 6, "5 → 6（inc MainRoutine = GoPassword）");
+        assert_eq!(m.read_ram(ram_map::GAME_PAUSED), 0, "sta GamePaused（A=0）");
+    }
+
+    /// 对照三态：只按 A / 只按 UP / 逃脱计时器活动 —— 都不得退出。
+    #[test]
+    fn pause_mode_blocked_when_gate_not_met() {
+        for joy2 in [0x80u8, 0x08, 0x00] {
+            let mut m = FrameMemory::default();
+            m.write_ram(ram_map::MAIN_ROUTINE, 5);
+            m.write_ram(ram_map::JOY2_STATUS, joy2);
+            pause_mode(&mut m);
+            assert_eq!(m.read_ram(ram_map::MAIN_ROUTINE), 5, "joy2={joy2:02X} 不应退出");
+        }
+        // 逃脱场景（EndTimer+1≠0）禁止退出
+        let mut m = FrameMemory::default();
+        m.write_ram(ram_map::MAIN_ROUTINE, 5);
+        m.write_ram(ram_map::JOY2_STATUS, 0x88);
+        m.write_ram(ram_map::END_TIMER + 1, 1);
+        pause_mode(&mut m);
+        assert_eq!(m.read_ram(ram_map::MAIN_ROUTINE), 5, "逃脱场景中不能退出暂停");
+    }
+
+    /// GoPassword：`TitleRoutine←0x19` + `$24←1` + `SilenceMusic` + ScreenOff（三件 + 关屏）。
+    #[test]
+    fn go_password_switches_to_title_bank_for_display_password() {
+        let mut m = FrameMemory::default();
+        m.write_ram(ram_map::MAIN_ROUTINE, 6);
+        m.write_ram(0x00FE, 0x1E);
+        go_password(&mut m);
+        assert_eq!(m.read_ram(ram_map::TITLE_ROUTINE), 0x19, "TitleRoutine←_id_DisplayPassword");
+        assert_eq!(m.read_ram(ram_map::BANK_SWITCH_PENDING), 0x01, "BankSwitchPending←1");
+        assert_eq!(m.read_ram(ram_map::SFX_NOISE_INIT) & 0x01, 0x01, "SilenceMusic 置 bit0");
+        assert_eq!(m.read_ram(0x00FE), 0x06, "ScreenOff（0x1E & ~0x18）");
+        assert_eq!(m.render.ppumask, 0x06, "真 PPUMASK 同拍落地");
+    }
+
+    /// 端到端：3 + START → 5（暂停）→ 2P A+UP → 6 → 帧界换页 → GameMode=1 且 TitleRoutine=0x19。
+    #[test]
+    fn pause_to_password_is_reachable_end_to_end() {
+        let mut m = FrameMemory::default();
+        m.write_ram(ram_map::MAIN_ROUTINE, 3);
+        m.write_ram(ram_map::JOY1_CHANGE, 0x10);
+        // 第一拍：START ⇒ 暂停（同帧分派 PauseMode；Joy2 未按 ⇒ 停在 5）
+        game_main_routine(&mut m);
+        assert_eq!(m.read_ram(ram_map::MAIN_ROUTINE), 5, "第一拍后应处暂停");
+        // 第二拍：2P A+UP ⇒ GoPassword ⇒ 关屏 + 切页
+        m.write_ram(ram_map::JOY1_CHANGE, 0);
+        m.write_ram(ram_map::JOY2_STATUS, 0x88);
+        game_main_routine(&mut m);
+        assert_eq!(m.read_ram(ram_map::MAIN_ROUTINE), 6, "第二拍应进 GoPassword（PauseMode 的 inc 已生效）");
+        // 第三拍：mr=6 才被分派（asm `PauseMode` 的 inc 在 JumpEngine 之后 ⇒ 新值下一帧才跑）
+        game_main_routine(&mut m);
+        assert_eq!(m.read_ram(ram_map::TITLE_ROUTINE), 0x19, "DisplayPassword 相位");
+        // 帧界：消费 $24=1 ⇒ InitBank0 ⇒ GameMode←1（标题轴接管）
+        crate::frame::boot::c4de_unit(&mut m);
+        assert_eq!(m.read_ram(ram_map::GAME_MODE), 1, "InitBank0 置 GameMode←1");
+    }
+
+    /// IncrementRoutine（$C155）= `inc MainRoutine / rts`。
+    #[test]
+    fn increment_routine_advances_one() {
+        let mut m = FrameMemory::default();
+        m.write_ram(ram_map::MAIN_ROUTINE, 7);
+        increment_routine(&mut m);
+        assert_eq!(m.read_ram(ram_map::MAIN_ROUTINE), 8);
+    }
+}
+
+#[cfg(test)]
+mod tests_prepare_game_over {
+    use super::*;
+    use crate::frame::memory::FrameMemory;
+    use crate::ram_map;
+
+    /// 死亡链端到端（state 机层，A 级 asm 锚）：
+    /// `GameEngine` 置 `NextRoutine←4`（prg7:2074-2075 `ldx #$04/jmp SetTimer`）→
+    /// `WaitTimer(mr=9)` 等 `Timer3` 尽 → `MainRoutine←4`（prg7:1224-1231）→
+    /// `PrepareGameOver(4)` 三写（prg7:2124-2130）→ 帧界 `CheckBankSwitch` 消费 `$24=1`
+    /// → `InitBank0`（`GameMode←1`）。
+    /// 修前此链在 `mr=4` 处 `unported!("bank07:C9A6")` panic（审计 §6 件 #1）。
+    #[test]
+    fn death_chain_reaches_game_over_and_switches_to_title_bank() {
+        let mut m = FrameMemory::default();
+        // 死亡前置：GameEngine 已 SetTimer(#$04, x=4) 且 Timer3 已尽（WaitTimer 待跑）
+        m.write_ram(ram_map::MAIN_ROUTINE, 9); // WaitTimer
+        m.write_ram(ram_map::TIMER3, 0);
+        m.write_ram(0x0020, 4); // NextRoutine←PrepareGameOver
+        m.write_ram(0x00FE, 0x1E); // 屏亮态（ScreenOff 前）
+
+        // 第一拍：WaitTimer 尽 ⇒ MainRoutine←NextRoutine(4)，且不得起乐（NextRoutine∈{4,6}）
+        game_main_routine(&mut m);
+        assert_eq!(m.read_ram(ram_map::MAIN_ROUTINE), 4, "WaitTimer 尽应置 PrepareGameOver");
+
+        // 第二拍：PrepareGameOver 三写
+        game_main_routine(&mut m);
+        assert_eq!(m.read_ram(ram_map::TITLE_ROUTINE), 0x1C, "TitleRoutine←_id_GameOver");
+        assert_eq!(m.read_ram(ram_map::BANK_SWITCH_PENDING), 0x01, "BankSwitchPending←1（切标题页）");
+        assert_eq!(m.read_ram(0x00FE) & 0x18, 0, "ScreenOff：PPUMASK_ZP 关 BG/OBJ（and #~$18）");
+        assert_eq!(m.render.ppumask & 0x18, 0, "WriteAndWait：真 PPUMASK 同拍落地");
+
+        // 帧界：CheckBankSwitch 消费 $24=1 ⇒ InitBank0 ⇒ GameMode←1（标题轴接管）
+        crate::frame::boot::c4de_unit(&mut m);
+        assert_eq!(m.read_ram(ram_map::BANK_SWITCH_PENDING), 0, "CheckBankSwitch 先清 $24");
+        assert_eq!(m.read_ram(ram_map::GAME_MODE), 1, "InitBank0 置 GameMode←1");
+    }
+
+    /// 对照（防空对照）：只清 BG/OBJ 两位（`and #~$18`），**其余位保持**，
+    /// 且绝不把 `$1E` 写回（那是 ScreenOn 的形）——防「用点屏冒充关屏」的假绿。
+    #[test]
+    fn prepare_game_over_clears_only_bg_obj_bits() {
+        let mut m = FrameMemory::default();
+        m.write_ram(ram_map::MAIN_ROUTINE, 4);
+        m.write_ram(0x00FE, 0x1E);
+        prepare_game_over(&mut m);
+        assert_eq!(m.read_ram(0x00FE), 0x06, "0x1E & ~0x18 = 0x06（低位保留，asm 只清 $18）");
+        assert_ne!(m.read_ram(0x00FE), 0x1E, "不得点屏");
+        assert_eq!(m.render.ppumask, 0x06, "真 PPUMASK 同形落地");
+    }
+}
+
+
+
+
+
+
+
+
+
+
+pub use crate::frame::enemy::update::update_all_enemies;
+
 use crate::frame::FrameMemory;
 use crate::ram_map;
 use crate::ram_map::*;
@@ -464,4 +692,15 @@ pub fn go_main_routine(mem: &mut FrameMemory) {
     }
     game_main_routine(mem); // 游戏侧分发（C11B+——T45-3 移动臂首靶）
 }
+
+
+pub(crate) const BANK_TABLE: [u8; 16] = [0x02, 0x03, 0x05, 0x04, 0x06, 0x48, 0x48, 0x20, 0x96, 0xCA, 0xAD, 0x84, 0x68, 0x10, 0x0D, 0x29];
+
+pub(crate) const AREA_POINTERS_BY_AREA: [[u8; 14]; 5] = [
+    [0x14, 0xA3, 0x72, 0xA3, 0xF0, 0xAE, 0xE0, 0x9D, 0xE0, 0x9E, 0x0E, 0x9F, 0x6A, 0x9D], // Brinstar (bank1 $959A)
+    [0x1B, 0xA2, 0x77, 0xA2, 0xEC, 0xAE, 0x64, 0x9C, 0x64, 0x9D, 0x78, 0x9D, 0xDA, 0x9B], // Norfair (bank2 $959A)
+    [0xD5, 0xA1, 0x1F, 0xA2, 0x32, 0xAC, 0xF7, 0x9C, 0xF7, 0x9D, 0x25, 0x9E, 0x86, 0x9C], // Kraid (bank4 $959A)
+    [0xD1, 0xA7, 0xFB, 0xA7, 0x49, 0xAE, 0x2C, 0xA4, 0x2C, 0xA5, 0x40, 0xA5, 0x06, 0xA4], // Tourian (bank3 $959A)
+    [0x7F, 0xA1, 0xD3, 0xA1, 0x23, 0xAB, 0xF0, 0x9B, 0xF0, 0x9C, 0x04, 0x9D, 0x85, 0x9B], // Ridley (bank5 $959A)
+];
 

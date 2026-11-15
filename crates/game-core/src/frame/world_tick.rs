@@ -3,7 +3,7 @@
 //! 由 `frame/mainloop.rs` 原样搬出（纯搬移）。asm 根：`ScrollDoor ; 07:E1F1`、
 //! `UpdateWorld` 分派、`Uw*` 各对象更新件。
 
-use crate::frame::mainloop::*;
+use crate::frame::tick::*;
 use crate::frame::FrameMemory;
 use crate::ram_map;
 

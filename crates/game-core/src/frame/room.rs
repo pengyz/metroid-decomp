@@ -458,7 +458,7 @@ pub fn delete_offscreen_room_sprites(mem: &mut crate::frame::FrameMemory) {
     // ⑬ Tourian 尾（`GotoDeleteOffscreenRoomSprites_Tourian ; 03:95AE`）：
     // 区 bank 桩——ROM 实测 bank1/2/4/5 = `60 EA EA`（rts），bank3 = `4C 6F 9C`（jmp）。
     // 非 Tourian 到此即完；Tourian 实件（Metroid 家族清理）尚未端口 ⇒ 显式记账。
-    if crate::frame::mainloop::BANK_TABLE[crate::frame::cur_area(mem) as usize] == 0x04 {
+    if crate::frame::tick::BANK_TABLE[crate::frame::cur_area(mem) as usize] == 0x04 {
         crate::frame::DIVERGENCES.with(|d| d.borrow_mut().push(0x9C6F));
     }
 }

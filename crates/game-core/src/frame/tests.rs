@@ -1,57 +1,11 @@
-//! 主循环族（bank07:C0BC 体；two-layer 域模块——frame/ 互斥面）。
+//! frame 域测试集（原 mainloop.rs 的测试模块，纯搬移）。
 //!
-//! **asm 内容锚+结构互核注**（施工令②精化版）——
-//! refs/m1disasm/SRC/prg7_engine.asm 主循环体（C0BC 族）：`jsr CheckBankSwitch`→
-//! `jsr UpdateTimer`→`jsr GoMainRoutine`→`inc FrameCount`→`lda #$00/sta NMIStatus`→
-//! spin（`@loop_waitNMIEnd: tay/lda NMIStatus/bne`）→`jsr RandomNumbers`→`jmp MainLoop`。
-//!
-//! **tick 内序**（契约 §8.1）：NMI 尾写 1（唤醒）→ RandomNumbers → C0BC 体 → 清 0 →
-//! spin yield——本模块=一迭代；**spin=跨帧 yield**（引擎相位机）。
-//!
-//! **会师点**：GoMainRoutine 标题路=`jmp MainTitleRoutine`（**00:8000**——port2 task-23
-//! title 簇头；TitleRoutinePtrTable 31 项分发表）——分发壳↔方法集对表点。
+//! 子模块照旧 `use super::*;`——本模块用 `pub(crate) use` 把 frame 域公开面再导出一次，
+//! 使其对子模块可见（普通 `use` 不能穿透到子模块的 glob）。
 
-use super::memory::FrameMemory;
-pub(crate) use crate::frame::enemy::behaviour::*;
-pub(crate) use crate::frame::enemy::update::*;
-pub(crate) use crate::frame::projectile::*;
-pub(crate) use crate::frame::hud::*;
-pub(crate) use crate::frame::room_load::*;
-pub use crate::frame::room_load::copy_area_pointers;
-pub(crate) use crate::frame::world_tick::*;
-pub(crate) use crate::frame::enemy::ai::*;
 pub(crate) use crate::frame::tick::*;
-pub use crate::frame::tick::{main_loop_iter, samus_init};
-use crate::ram_map::{
-    FRAME_COUNT, GAME_MODE, NMI_STATUS, RANDOM1, RANDOM2, TIMER1, TIMER_DELAY,
-};
-
-/// 主循环一迭代（C0BC 体；spin 唤醒已由本 tick NMI 完成）。
-///
-/// **迭代序门**（r14 复核 F3/F4 修订版——asm 内容锚）：主循环体四件
-/// （RandomNumbers C000/CheckBankSwitch/UpdateTimer C266/inc FrameCount）=**每迭代恰好
-/// 一次**；spin/等待段 CPU 自旋在 GoMainRoutine 内部 ⇒ 迭代未完成、四件全冻结
-/// （O f3→f7 四帧窗口仅 1 次 UpdateTimer dec 实证）。
-/// · 续段判定=入口 title_cursor>0 且**归属相位==当前相位**（F4：相位推进后残留的
-///   孤儿 cursor=新相位首个真迭代——禁误门为续段）。
-/// · 迭代收尾（inc FrameCount）在**步骤完成点**执行：游标归零 或 分发推进了相位
-///   （孤儿游标=步骤边界）。
-/// · regs.a 连续性：续段不跑 random_numbers（其写 regs.a）——分发臂继承段间 A 态（F3）。
-
-
-
-
-/// MainRoutinePtrTable 烘焙（07:C141——10 项；表址自证）。
-pub(crate) const MAIN_ROUTINE_PTR_TABLE: [u16; 10] = [
-    0xC801, 0xC81D, 0xC8D1, 0xC92B, 0xC9A6, // AreaInit/MoreInit/SamusInit/GameEngine/PrepareGameOver
-    0xC9B1, 0xC9C4, 0xC155, 0xC9D7, 0xC494, // PauseMode/GoPassword/IncrementRoutine/SamusIntro/WaitTimer
-];
-
-
-
-
-
-
+use crate::frame::FrameMemory;
+use crate::ram_map::*;
 
 #[cfg(test)]
 mod tests_pause_chain {
@@ -355,7 +309,6 @@ mod bcd_mask_audit_tdd {
 
 
 /// BankTable 烘焙（07:CA30——16 项（A&0xF 索引→BankSwitchPending 值））。
-pub(crate) const BANK_TABLE: [u8; 16] = [0x02, 0x03, 0x05, 0x04, 0x06, 0x48, 0x48, 0x20, 0x96, 0xCA, 0xAD, 0x84, 0x68, 0x10, 0x0D, 0x29];
 
 
 
@@ -373,13 +326,6 @@ pub(crate) const BANK_TABLE: [u8; 16] = [0x02, 0x03, 0x05, 0x04, 0x06, 0x48, 0x4
 /// bank4(Kraid)=`d5 a1 1f a2 32 ac f7 9c f7 9d 25 9e 86 9c` /
 /// bank5(Ridley)=`7f a1 d3 a1 23 ab f0 9b f0 9c 04 9d 85 9b`。
 /// 区序（InArea&$0F 0..4）→bank（BankTable）→上列行：0→1/1→2/2→4/3→3/4→5。
-pub(crate) const AREA_POINTERS_BY_AREA: [[u8; 14]; 5] = [
-    [0x14, 0xA3, 0x72, 0xA3, 0xF0, 0xAE, 0xE0, 0x9D, 0xE0, 0x9E, 0x0E, 0x9F, 0x6A, 0x9D], // Brinstar (bank1 $959A)
-    [0x1B, 0xA2, 0x77, 0xA2, 0xEC, 0xAE, 0x64, 0x9C, 0x64, 0x9D, 0x78, 0x9D, 0xDA, 0x9B], // Norfair (bank2 $959A)
-    [0xD5, 0xA1, 0x1F, 0xA2, 0x32, 0xAC, 0xF7, 0x9C, 0xF7, 0x9D, 0x25, 0x9E, 0x86, 0x9C], // Kraid (bank4 $959A)
-    [0xD1, 0xA7, 0xFB, 0xA7, 0x49, 0xAE, 0x2C, 0xA4, 0x2C, 0xA5, 0x40, 0xA5, 0x06, 0xA4], // Tourian (bank3 $959A)
-    [0x7F, 0xA1, 0xD3, 0xA1, 0x23, 0xAB, 0xF0, 0x9B, 0xF0, 0x9C, 0x04, 0x9D, 0x85, 0x9B], // Ridley (bank5 $959A)
-];
 
 
 

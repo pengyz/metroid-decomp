@@ -4,7 +4,7 @@
 //! `InitEnemyFacingDirectionAxisAndDelay ; 07:FB7B`、`SetEnemySpawnDelay`。
 
 use crate::frame::enemy::{behaviour::*, update::*};
-use crate::frame::mainloop::*;
+use crate::frame::tick::*;
 use crate::frame::FrameMemory;
 use crate::ram_map;
 use crate::ram_map::*;

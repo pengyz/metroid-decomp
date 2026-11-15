@@ -3,11 +3,11 @@
 //! asm 引证（A 级）：refs/m1disasm/SRC/prg7_engine.asm `RandomNumbers: ; 07:C000`（注
 //! 「RandomNumber1 is increased by #$19 every frame / RandomNumber2 … by #$5F every
 //! frame」——体 `ldx #$05` 循环 `+5/+$13`×5=**+$19/+$5F 合成值注体互证**）。
-//! 实现走 frame::mainloop::random_numbers（RAM 态面 $2E/$2F）；本 handle 保留为 D1
+//! 实现走 frame::tick::random_numbers（RAM 态面 $2E/$2F）；本 handle 保留为 D1
 //! 接口占位。【N-0012 解案】原「算法未证」桩（bank07:C000 fail-loud）已退役——执行序
 //! 引爆定位+asm 考证闭环（口径：C 级缺口→引爆定位→asm 自证→解案）。
 
-/// 游戏 PRNG 句柄（算法=双累加器——步进走 mainloop::random_numbers）。
+/// 游戏 PRNG 句柄（算法=双累加器——步进走 tick::random_numbers）。
 #[derive(Clone, Debug, Default)]
 pub struct GameRng;
 
