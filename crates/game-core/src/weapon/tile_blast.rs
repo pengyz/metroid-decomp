@@ -61,7 +61,7 @@ pub struct HurtOutcome {
 
 /// 伤害序列（F311 SamusHurt_F311 链语义折叠；Y=0 槽固定=Samus）。
 /// A 级：bank07:F311-F329 + F338-F33F + F27B-F281 逐字节；$030A+Y 写面复用
-/// memmap::enemy_attrs（Object.isHit 双语境——constants_ram:228）。
+/// Object.isHit 与敌 attrs 双语境（`constants_ram.asm:228`；原 `memmap::enemy_attrs` 已退役）。
 pub fn hurt_sequence(p: &HurtParams) -> HurtOutcome {
     let is_hit = ((p.dist_hi << 3) & 0xFF) | p.is_hit_old;
     HurtOutcome {

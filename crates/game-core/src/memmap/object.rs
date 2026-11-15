@@ -6,7 +6,7 @@
 //! 结构证据：refs/m1disasm/SRC/constants_ram.asm:217 `.struct Object`（status@0、
 //! radiusY@$0301、radiusX@$0302、isHit@$030A、posY@$030D、posX@$030E、hi@$030C 族）。
 //! **视图范围=FE83/F186 触达子集**；全 struct 视图（speed/anim 族）留待批量期（缺口注，
-//! 不发明未触达字段的语义）。isHit 面复用 [`crate::memmap::enemy_attrs`]（双语境：
+//! 不发明未触达字段的语义）。isHit 面复用 `memmap::enemy_attrs`（已退役）（双语境：
 //! task-8 命名=敌属性掩码数组；m1disasm 语境=Object.isHit「Samus hit by enemy」——
 //! 同字节多语境正是映射层职责，台账 N-0065 注记）。
 

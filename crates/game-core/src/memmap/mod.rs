@@ -11,10 +11,6 @@
 //! 逐域被语义实现替换后退役——对拍连续性优先，暂不删。
 
 pub mod cd9c;
-pub mod enemy_attrs;
-pub mod enemy_slots;
-pub mod enemy_collision_flags;
-pub mod enemy_state;
 pub mod flow_scratch;
 pub mod frame_face;
 pub mod object;
