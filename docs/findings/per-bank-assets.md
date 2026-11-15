@@ -234,3 +234,41 @@ Norfair 的 `falling/splatter` = `0x5955/0x4F5B`（Brinstar 为 `0/0`）——�
 `pending 26 → 0`（`covered 35 / code 4 / 共 39`）；包 162 → **172 段**；测试 598 → **600**；
 L4 15 案/132 格 match 115 · diff 17 逐格不变。**诚实边界**：本批为数据面按区化，
 11 张表的消费点（敌人移动/弹道）多数尚未接 AI，故无像素证据；价值在于「跨区取错表」这条路被关掉。
+
+## 6.4 消费点接线：Resting→Active 改读按区表（`try_becoming_active`）
+
+asm 根：`UpdateEnemy_Resting_TryBecomingActive@becomeActive ; 07:F7CA-07:F839`。
+
+旧形把「Brinstar 七型 → 移动索引」硬编码成 `match`，掩码恒 `& 0x01`，且**整段
+`LoadTableAt977B` 分支缺失**（加速度/速度/子像素四表从未装载）。现按 asm 逐件改为：
+
+1. `movementIndex ← EnemyMovementChoices[ off + 1 + ((FC^RNG1) & mask) ]`，
+   `off = EnemyMovementChoiceOffset[type]`（两张表都来自 `area.{x}.en_aux` / `area.{x}.en_mov_choices`）。
+2. `L977B[type] & $40` 置位（asm `asl` 后测 bit7）⇒ 清 `speedSubPixelY/X`，
+   按 `movementIndex` 从 `EnAccelY/EnAccelX/EnSpeedY/EnSpeedX` 装载
+   （四表在 ROM 里连续，`y` 越界读即进下一张表 ⇒ 用同一 80 B 窗按 base 索引）。
+3. 朝向翻转：`data05` bit7=0 且 bit0=1 ⇒ 翻 X；bit7=1 且 bit2=1 ⇒ 翻 Y；
+   翻转前查 `$968B[type]` bit5（置位则不翻）。
+4. 末尾 `data05 &= $DF`（清休止位 5）——旧形缺失。
+
+### 6.4.1 `EnemyMovementChoices` 段（`area.{x}.en_mov_choices`，`PackKey` 180-184，30 B）
+
+`$97D1-$97EE`，记录格式 `[mask][value…]`（`mask = 可能值数-1`）。五区表长（asm 标签 + 记录长度机械自证）：
+Br **30**（`$97EF` 起是移动串）/ No **22**（`$97E7`）/ Kr **24**（`$97E9`）/ To **4**（`$97D5`）/ Ri **28**（`$97ED`）。
+统一提 30 B 窗：Tourian 的 `type4(Rinka)` 偏移恰等于表长（原版会把它当记录读后续移动串字节，
+是 ROM quirk），窗口保留到 `$97EE` 使这类「表外读」也落在真实 ROM 数据上；提取侧的自检
+只统计表内记录（否则 Tourian 会推得 86 B）。
+
+### 6.4.2 顺带修正
+
+`en_aux` 窗体从 186 B 收到 **182 B**（`$972B-$97D0`）——原窗口尾部 4 B 与新的候选表段重复。
+
+### 6.4.3 证据与边界
+
+- 单测锚（`become_active_reads_per_area_movement_choices_and_tables` /
+  `become_active_flips_horizontal_when_facing_left`）：按 ROM 表推出 `movementIndex=0x02`、
+  `accelY=0x30`/`accelX=0x00`/`speedY=0xFE`/`speedX=0x02`、以及朝左时 `speedX→0xFE`。
+- L4 全矩阵 **逐格不变**（15 案/132 格 match 115 · diff 17）。**这不算验证通过**：
+  现有用例的采集窗（f420 起）都在敌人完成激活之后，无法区分「该分支在窗内未执行」与
+  「装载值恰与既有初值相同」。要拿到像素证据，须造「采集窗内发生 Resting→Active」的用例
+  （fixture 置 delay=1 并令 bit3 置位）。

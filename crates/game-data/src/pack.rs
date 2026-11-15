@@ -232,6 +232,12 @@ pub enum PackKey {
     AreaKrEnAnimIdx = 177,
     AreaToEnAnimIdx = 178,
     AreaRiEnAnimIdx = 179,
+    /// `$97D1-$97EE`（30 B）：`EnemyMovementChoices` 移动索引候选集（**按区**）。
+    AreaBrEnMovChoices = 180,
+    AreaNoEnMovChoices = 181,
+    AreaKrEnMovChoices = 182,
+    AreaToEnMovChoices = 183,
+    AreaRiEnMovChoices = 184,
     // 敌死亡动画索引表 `EnemyDeathAnimIndex ; 各 bank $960B`（32 B = type×2+facing）。
     // **按区不同**（bank1 `27 27 29 29…` vs bank3 `08 08 08 08…`）——先前 Rust 侧是单常量
     // 取 bank1，等于让其余四区的爆体帧全用 Brinstar 的表。
@@ -473,6 +479,11 @@ impl PackKey {
             PackKey::AreaKrEnAnimIdx => "area.kr.en_anim_idx",
             PackKey::AreaToEnAnimIdx => "area.to.en_anim_idx",
             PackKey::AreaRiEnAnimIdx => "area.ri.en_anim_idx",
+            PackKey::AreaBrEnMovChoices => "area.br.en_mov_choices",
+            PackKey::AreaNoEnMovChoices => "area.no.en_mov_choices",
+            PackKey::AreaKrEnMovChoices => "area.kr.en_mov_choices",
+            PackKey::AreaToEnMovChoices => "area.to.en_mov_choices",
+            PackKey::AreaRiEnMovChoices => "area.ri.en_mov_choices",
             PackKey::BrEnSprites => "area.br.en_sprites",
             PackKey::NoEnSprites => "area.no.en_sprites",
             PackKey::KrEnSprites => "area.kr.en_sprites",
@@ -664,6 +675,11 @@ impl PackKey {
             177 => PackKey::AreaKrEnAnimIdx,
             178 => PackKey::AreaToEnAnimIdx,
             179 => PackKey::AreaRiEnAnimIdx,
+            180 => PackKey::AreaBrEnMovChoices,
+            181 => PackKey::AreaNoEnMovChoices,
+            182 => PackKey::AreaKrEnMovChoices,
+            183 => PackKey::AreaToEnMovChoices,
+            184 => PackKey::AreaRiEnMovChoices,
             _ => return None,
         })
     }

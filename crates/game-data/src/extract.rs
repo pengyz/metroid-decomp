@@ -61,6 +61,7 @@ pub fn sections(rom: &[u8]) -> Result<Vec<Section>, String> {
     out.extend(extract_area_headers(prg)?);
     out.extend(extract_en_aux(prg)?);
     out.extend(extract_en_anim_idx(prg)?);
+    out.extend(extract_en_mov_choices(prg)?);
     Ok(out)
 }
 
@@ -569,6 +570,11 @@ fn seg_meta() -> Vec<SegMeta> {
         SegMeta { key: PackKey::AreaKrEnAnimIdx, kind: "bytes", elem: 1, count: 9, rom: "bank04:$95DC", note: "弹体/爆炸/梅洛姆动画索引" },
         SegMeta { key: PackKey::AreaToEnAnimIdx, kind: "bytes", elem: 1, count: 9, rom: "bank03:$95DC", note: "弹体/爆炸/梅洛姆动画索引" },
         SegMeta { key: PackKey::AreaRiEnAnimIdx, kind: "bytes", elem: 1, count: 9, rom: "bank05:$95DC", note: "弹体/爆炸/梅洛姆动画索引" },
+        SegMeta { key: PackKey::AreaBrEnMovChoices, kind: "bytes", elem: 1, count: 30, rom: "bank01:$97D1", note: "移动索引候选集（表长 30）" },
+        SegMeta { key: PackKey::AreaNoEnMovChoices, kind: "bytes", elem: 1, count: 30, rom: "bank02:$97D1", note: "移动索引候选集（表长 22）" },
+        SegMeta { key: PackKey::AreaKrEnMovChoices, kind: "bytes", elem: 1, count: 30, rom: "bank04:$97D1", note: "移动索引候选集（表长 24）" },
+        SegMeta { key: PackKey::AreaToEnMovChoices, kind: "bytes", elem: 1, count: 30, rom: "bank03:$97D1", note: "移动索引候选集（表长 4）" },
+        SegMeta { key: PackKey::AreaRiEnMovChoices, kind: "bytes", elem: 1, count: 30, rom: "bank05:$97D1", note: "移动索引候选集（表长 28）" },
     ];
     v
 }
@@ -1077,11 +1083,12 @@ fn extract_area_headers(prg: &[u8]) -> Result<Vec<Section>, String> {
 /// 敌辅助表窗：`$96CB` 16 B（`EnemyMovementChoiceOffset`）+ `$972B-$97D5` 170 B
 /// （`EnAccelY/XTable`、`EnSpeedY/XTable`、`L977B`、弹道动画/偏移/指针、`VRAMStringPtrTable`、
 /// `EnemyMovementChoices`）。两块**不连续**（中间 $96DB-$972A 是 movPtrs/movStr，已有独立段），
-/// 因此拼接成 186 B：前 16 B = choice offset，其后 = `$972B` 起的连续窗。
+/// 因此拼接成 182 B：前 16 B = choice offset，其后 = `$972B-$97D0` 的连续窗。
+/// （`$97D1` 起的 `EnemyMovementChoices` 另有独立段 `area.{x}.en_mov_choices`，不重复。）
 pub const EN_AUX_CHOICE_ADDR: u16 = 0x96CB;
 pub const EN_AUX_CHOICE_LEN: usize = 16;
 pub const EN_AUX_BODY_ADDR: u16 = 0x972B;
-pub const EN_AUX_BODY_LEN: usize = 170;
+pub const EN_AUX_BODY_LEN: usize = 166;
 pub const EN_AUX_LEN: usize = EN_AUX_CHOICE_LEN + EN_AUX_BODY_LEN;
 
 fn en_aux_keys(area: usize) -> PackKey {
@@ -1137,6 +1144,54 @@ fn extract_en_anim_idx(prg: &[u8]) -> Result<Vec<Section>, String> {
             return Err(format!("bank{bank}:$95DC 段长 {} != 9", body.len()));
         }
         out.push(Section { key: en_anim_idx_keys(area), data: body.to_vec() });
+    }
+    Ok(out)
+}
+
+/// 每区 `$97D1-$97EE`（30 B）：`EnemyMovementChoices`。
+/// 表长按 asm 标签机械自证（每条记录 `1 + mask + 1` 字节）：
+/// Br 30（$97EF 起是移动串）/ No 22（$97E7）/ Kr 24（$97E9）/ To 4（$97D5）/ Ri 28（$97ED）。
+const EN_MOV_CHOICES_ADDR: u16 = 0x97D1;
+const EN_MOV_CHOICES_LEN: usize = 30;
+
+fn en_mov_choices_keys(area: usize) -> PackKey {
+    match area {
+        0 => PackKey::AreaBrEnMovChoices,
+        1 => PackKey::AreaNoEnMovChoices,
+        2 => PackKey::AreaKrEnMovChoices,
+        3 => PackKey::AreaToEnMovChoices,
+        _ => PackKey::AreaRiEnMovChoices,
+    }
+}
+
+fn extract_en_mov_choices(prg: &[u8]) -> Result<Vec<Section>, String> {
+    let banks = area_banks(prg)?;
+    let mut out = Vec::with_capacity(5);
+    for (area, &bank) in banks.iter().enumerate() {
+        let body = bank_slice(prg, bank, EN_MOV_CHOICES_ADDR, EN_MOV_CHOICES_LEN)?;
+        // 机械自检：由偏移表推出的表尾必须与 asm 标签给出的位置一致（Br 30/No 22/Kr 24/To 4/Ri 28）
+        let offs = bank_slice(prg, bank, 0x96CB, 16)?;
+        let want = match area {
+            0 => 30,
+            1 => 22,
+            2 => 24,
+            3 => 4,
+            _ => 28,
+        };
+        let mut end = 0usize;
+        for &o in offs.iter() {
+            let o = o as usize;
+            // 只统计落在 asm 标注表内的记录。Tourian 的 type4(Rinka) 偏移 = 表长 4（越界），
+            // 原版会把它当记录读后续移动串字节（quirk），不能参与表长推导。
+            if o < want {
+                let mask = body[o] as usize;
+                end = end.max(o + mask + 1 + 1);
+            }
+        }
+        if end != want {
+            return Err(format!("bank{bank}:$97D1 移动候选表推得表长 {end} != asm 标注 {want}"));
+        }
+        out.push(Section { key: en_mov_choices_keys(area), data: body.to_vec() });
     }
     Ok(out)
 }

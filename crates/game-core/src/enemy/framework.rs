@@ -54,33 +54,84 @@ pub(crate) fn try_becoming_active(mem: &mut crate::frame::FrameMemory, x: u8) {
         // EnemyMovementChoices[(FC^RNG1)&bitflag +1]——**激活时 RNG 选播**（旧形
         // load_enemy 固定表=偏离）。Zoomer（type5）choice=单支（bitflag=0）⇒恒 0 ✓；
         // Skree（type4）choice=7 单支 ✓——首房双敌型播种等价（多支敌型随件）。
+        // 【asm 07:F7E0-07:F84B 逐字，按区表】movementIndex 播种：
+        //   ldy type ; lda EnemyMovementChoiceOffset,y      ← 每区 16 项偏移表
+        //   clc adc #<EnemyMovementChoices ; → Temp00          ← 指针 = 表基 + 偏移
+        //   lda FrameCount ; eor RandomNumber1 ; and (Temp00),y ← 掩码=记录首字节（可能值数-1）
+        //   tay ; iny ; lda (Temp00),y → movementIndex
+        // 旧形把「Brinstar 七型」硬编码成 match + 恒 `&0x01` 掩码，等于**替 ROM 猜表**；
+        // 现改为真读 `area.{x}.en_aux` 的两张按区表。
         let fc = mem.read_ram(crate::ram_map::FRAME_COUNT);
         let rng1 = mem.read_ram(crate::ram_map::RANDOM1);
-        let pick = (fc ^ rng1) & 0x01; // bitflag=0x01（2 支形——多支表随件）
-        // 【movement choice 表】（prg1_brinstar.asm:492-508 `EnemyMovementChoices` 逐项）：
-        // 00 Floor Sidehopper=$01,$02 / 01 Ceiling=$03,$04 / 02 Waver=$05 / 03 Ripper=$06 /
-        // 04 Skree=$07 / 05 Zoomer=manual(0) / 06 Rio=$08。两选一型用 `(FC^RNG)&1` 选播。
         let area = crate::frame::cur_area(mem);
-        let mov_idx: u8 = if area == 0 {
-            match t {
-                0 => 0x01 | (pick & 0x01) as u8, // Sidehopper floor：$01/$02
-                1 => 0x03 | (pick & 0x01) as u8, // Ceiling sidehopper：$03/$04
-                2 => 0x05,                       // Waver
-                3 => 0x06,                       // Ripper
-                4 => 0x07,                       // Skree
-                5 => 0x00,                       // Zoomer（manual——crawler_ai 自己走）
-                6 => 0x08,                       // Rio（swoopers）
-                _ => {
-                    crate::frame::DIVERGENCES.with(|d| d.borrow_mut().push(0x97D1));
-                    pick
-                }
+        let ti = (t as usize) & 0x0F;
+        let base = game_data::assets::enemy_movement_choice_offset(area)[ti] as usize;
+        let tbl = game_data::assets::enemy_movement_choices(area);
+        let mask = tbl[base]; // 记录首字节 = 可能值数-1
+        let pick = (fc ^ rng1) & mask;
+        let slot = base + 1 + pick as usize;
+        let mov_idx = match tbl.get(slot) {
+            Some(v) => *v,
+            None => {
+                // 原版此处读表外 ROM（Tourian 的 Rinka 偏移即落在表尾），行为不可从包内复现
+                crate::frame::DIVERGENCES.with(|d| d.borrow_mut().push(0x97D1));
+                0
             }
-        } else {
-            // 其他区的 choice 表未端口（Norfair/Ridley/Tourian 各有自己的表）——记账不猜
-            crate::frame::DIVERGENCES.with(|d| d.borrow_mut().push(0x97D1));
-            pick
         };
-        mem.write_ram(0x0400 + x as u16 + 8, mov_idx); // Ens.movementIndex=+8
+        mem.write_ram(0x0400 + x as u16 + 8, mov_idx); // Ens.movementIndex（$0408）
+
+        // 【asm 07:F81A-07:F839】`jsr LoadTableAt977B`（= L977B[type]<<1）：bit7 置位
+        // ⇒ 该敌型走「加速度+速度+子像素」模型 ⇒ 按 movementIndex 从四张表初始化，
+        // 再按朝向翻转符号。四表在 ROM 里连续（accelY/accelX/speedY/speedX 各 20 B），
+        // asm 各自 base+y 查表（y 越界即读进下一张表）——故这里用同一 80 B 窗按 base 索引。
+        if game_data::assets::enemy_facing(area)[ti] & 0x40 != 0 {
+            let e = 0x0400 + x as u16;
+            let xa = 0x6AF4 + x as u16;
+            mem.write_ram(e + 6, 0); // Ens.speedSubPixelY（$0406）
+            mem.write_ram(e + 7, 0); // Ens.speedSubPixelX（$0407）
+            let w = game_data::assets::en_accel_speed_window(area);
+            let mi = mov_idx as usize;
+            let load = |off: usize| -> u8 {
+                match w.get(off + mi) {
+                    Some(v) => *v,
+                    None => {
+                        crate::frame::DIVERGENCES.with(|d| d.borrow_mut().push(0x972B));
+                        0
+                    }
+                }
+            };
+            mem.write_wram(xa + 10, load(0)); // EnsExtra.accelY（$6AFE）
+            mem.write_wram(xa + 11, load(20)); // EnsExtra.accelX（$6AFF）
+            mem.write_ram(e + 2, load(40)); // Ens.speedY（$0402）
+            mem.write_ram(e + 3, load(60)); // Ens.speedX（$0403）
+            // 朝向：data05 bit7=0 ⇒ 水平（bit0=1 表示朝左，需翻 X）；
+            //       bit7=1 ⇒ 垂直（bit2=1 表示朝下，需翻 Y）。asm 07:F832。
+            let d5b = mem.read_ram(e + 5);
+            let bank = crate::frame::area_bank(area);
+            let no_flip = game_data::assets::rom_table_968b(bank as usize, t) & 0x20 != 0;
+            if d5b & 0x80 == 0 {
+                if d5b & 0x01 != 0 && !no_flip {
+                    // EnemyIfMoveFailedHorizontal_Bounce@flipSpeedAndAccel（$81D1）
+                    let a = mem.read_wram(xa + 11);
+                    mem.write_wram(xa + 11, a.wrapping_neg()); // TwosComplement
+                    let s = mem.read_ram(e + 3);
+                    mem.write_ram(e + 3, s.wrapping_neg());
+                    let sp = mem.read_ram(e + 7);
+                    mem.write_ram(e + 7, sp.wrapping_neg());
+                }
+            } else if d5b & 0x04 != 0 && !no_flip {
+                // EnemyIfMoveFailedVertical_Bounce@flipSpeedAndAccel（$8206）
+                let a = mem.read_wram(xa + 10);
+                mem.write_wram(xa + 10, a.wrapping_neg());
+                let s = mem.read_ram(e + 2);
+                mem.write_ram(e + 2, s.wrapping_neg());
+                let sp = mem.read_ram(e + 6);
+                mem.write_ram(e + 6, sp.wrapping_neg());
+            }
+        }
+        // 【asm 07:F839】`lda #~$20 ; jmp AndEnData05` ⇒ 清 data05 bit5（解除休止标记）。
+        let d5c = mem.read_ram(0x0400 + x as u16 + 5);
+        mem.write_ram(0x0400 + x as u16 + 5, d5c & 0xDF);
     }
 }
 
@@ -416,4 +467,68 @@ pub(crate) fn update_enemy_common_no_move_no_anim(mem: &mut crate::frame::FrameM
     }
     mem.write_ram(0x0400 + x as u16 + 4, 0); // isHit=+4
     mem.write_ram(0x0400 + x as u16 + 14, 0); // weaponAction=+14
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::frame::FrameMemory;
+
+    /// Resting→Active 的 movementIndex 播种与四表初始化（asm `07:F7E0-07:F839`）。
+    ///
+    /// 断言的是**从 ROM 表推出来的值**，不是实现的中间量：
+    /// `movementIndex = EnemyMovementChoices[ off + 1 + ((FC^RNG1) & mask) ]`，
+    /// 且当 `L977B[type] & $40` 置位时，四张表按该索引装载（越界读=同窗下一张表）。
+    #[test]
+    fn become_active_reads_per_area_movement_choices_and_tables() {
+        let mut m = FrameMemory::default();
+        m.write_ram(ram_map::IN_AREA, 0x00); // Brinstar
+        let x = 0u8;
+        let e = 0x0400 + x as u16;
+        let q = 0x6AF4 + x as u16;
+        // type 0（Sidehopper 地面）：L977B[0]=0x64（bit6 置 ⇒ 走加速模型）
+        m.write_wram(q + 14, 0x00);
+        m.write_wram(q, 0x00); // status=Resting
+        m.write_ram(e + 9, 0x01); // delay=1（dec 后归零）
+        m.write_ram(e + 5, 0x08); // data05 bit3=1（允许激活）；bit0=0（朝右）
+        m.write_ram(ram_map::FRAME_COUNT, 0x05);
+        m.write_ram(ram_map::RANDOM1, 0x00);
+
+        try_becoming_active(&mut m, x);
+
+        // 表推：offset[0]=0x00 ⇒ mask=0x01 ⇒ pick=(5^0)&1=1 ⇒ choices[0+1+1]=0x02
+        let mov = m.read_ram(e + 8);
+        assert_eq!(mov, 0x02, "movementIndex 应来自按区表（Brinstar Sidehopper 双支）");
+        // 四表（Brinstar，index=2，ROM `$972B/$973F/$9753/$9767` 实读）：
+        // accelY 0x30 / accelX 0x00 / speedY 0xFE / speedX 0x02
+        assert_eq!(m.read_wram(q + 10), 0x30, "accelY");
+        assert_eq!(m.read_wram(q + 11), 0x00, "accelX");
+        assert_eq!(m.read_ram(e + 2), 0xFE, "speedY");
+        assert_eq!(m.read_ram(e + 3), 0x02, "speedX");
+        assert_eq!(m.read_ram(e + 6), 0x00, "speedSubPixelY 清 0");
+        assert_eq!(m.read_ram(e + 7), 0x00, "speedSubPixelX 清 0");
+        assert_eq!(m.read_ram(e + 5) & 0x20, 0x00, "data05 bit5 清（解除休止）");
+        assert_eq!(m.read_wram(q) & 0x0F, 0x01, "status Resting(0)→Active(1)");
+    }
+
+    /// 朝左（data05 bit0=1）⇒ 水平四量取反（asm `$81D1 @flipSpeedAndAccel`）。
+    #[test]
+    fn become_active_flips_horizontal_when_facing_left() {
+        let mut m = FrameMemory::default();
+        m.write_ram(ram_map::IN_AREA, 0x00);
+        let x = 0u8;
+        let (e, q) = (0x0400u16, 0x6AF4u16);
+        m.write_wram(q + 14, 0x00);
+        m.write_wram(q, 0x00);
+        m.write_ram(e + 9, 0x01);
+        m.write_ram(e + 5, 0x09); // bit3=1（可激活）+ bit0=1（朝左）
+        m.write_ram(ram_map::FRAME_COUNT, 0x05);
+        m.write_ram(ram_map::RANDOM1, 0x00);
+
+        try_becoming_active(&mut m, x);
+
+        assert_eq!(m.read_ram(e + 8), 0x02);
+        assert_eq!(m.read_wram(q + 11), 0x00u8.wrapping_sub(0x00), "accelX 取反");
+        assert_eq!(m.read_ram(e + 3), 0x00u8.wrapping_sub(0x02), "speedX 取反（0x02→0xFE）");
+    }
 }

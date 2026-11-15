@@ -394,10 +394,10 @@ mod tests_per_area_tables {
             assert_eq!(en_projectile_pos_offset_y(area).len(), 4);
             assert_eq!(en_projectile_movement_ptrs(area).len(), 8);
             assert_eq!(vram_string_ptrs(area).len(), 34);
-            assert_eq!(enemy_movement_choices(area).len(), 4);
             assert_eq!(&enemy_movement_choice_offset(area)[..4], &want_choice[i], "area{area} $96CB");
             assert_eq!(&en_accel_y(area)[..4], &want_accel_y[i], "area{area} $972B");
-            assert_eq!(enemy_movement_choices(area), &want_choices[i], "area{area} $97D1");
+            assert_eq!(enemy_movement_choices(area).len(), 30);
+            assert_eq!(&enemy_movement_choices(area)[..4], &want_choices[i], "area{area} $97D1");
         }
         // 按区不同（若有人把它换回单表，这里必红）
         assert_ne!(en_accel_y(0), en_accel_y(4));
@@ -1128,14 +1128,14 @@ pub fn area_header(area: u8) -> AreaHeader {
     }
 }
 
-/// 敌辅助表窗（ROM `$96CB` 16 B + `$972B-$97D5` 170 B，拼接 186 B）——按区唯一源。
+/// 敌辅助表窗（ROM `$96CB` 16 B + `$972B-$97D0` 166 B，拼接 182 B）——按区唯一源。
 ///
 /// 组成（偏移以拼接后为基准）：
 /// `0..16` `EnemyMovementChoiceOffset` / `16..36` `EnAccelYTable` / `36..56` `EnAccelXTable` /
 /// `56..76` `EnSpeedYTable` / `76..96` `EnSpeedXTable` / `96..112` `L977B`（另有 `enemy_facing`）/
 /// `112..128` `EnProjectileRisingAnimIndexTable` / `128..136` `EnProjectilePosOffsetX` /
 /// `136..140` `EnProjectilePosOffsetY` / `140..148` `EnProjectileMovementPtrTable` /
-/// `148..182` `VRAMStringPtrTable` / `182..186` `EnemyMovementChoices`。
+/// `148..182` `VRAMStringPtrTable`。（`EnemyMovementChoices` 另有独立段，见 `enemy_movement_choices`。）
 /// 两块之间的 `$96DB-$972A`（movPtrs/movStr）已有独立段，故不重复。
 pub const EN_AUX_CHOICE_LEN: usize = 16;
 
@@ -1154,7 +1154,7 @@ fn en_aux(area: u8) -> &'static [u8] {
     let key = en_aux_key(area)
         .unwrap_or_else(|| panic!("敌辅助表：非法区号 area={area:#04X}（InArea&$0F 应为 0..=4）"));
     let b = pack::get(key);
-    assert_eq!(b.len(), 186, "敌辅助表段长应为 186 B");
+    assert_eq!(b.len(), 182, "敌辅助表段长应为 182 B");
     b
 }
 
@@ -1184,8 +1184,29 @@ pub fn en_projectile_pos_offset_y(area: u8) -> &'static [u8] { en_aux_slice(area
 pub fn en_projectile_movement_ptrs(area: u8) -> &'static [u8] { en_aux_slice(area, 140, 8) }
 /// `VRAMStringPtrTable ; $97AF`（34 B，`PtrTableEntryArea` 记录）。
 pub fn vram_string_ptrs(area: u8) -> &'static [u8] { en_aux_slice(area, 148, 34) }
-/// `EnemyMovementChoices ; $97D1`（4 B）——移动指令串的可选起点偏移。
-pub fn enemy_movement_choices(area: u8) -> &'static [u8] { en_aux_slice(area, 182, 4) }
+/// `EnAccelY/X` + `EnSpeedY/X` **连续 80 B 窗**（各 20 B）——asm 用同一 `y` 分别查四表，
+/// `y` 越界时会读进下一张表，故必须按同一窗口索引而不是切成四个独立切片。
+pub fn en_accel_speed_window(area: u8) -> &'static [u8] { en_aux_slice(area, 16, 80) }
+
+/// `EnemyMovementChoices ; $97D1`（30 B）——每种敌型的「移动索引候选集」字符串表。
+///
+/// 记录格式：`[mask][value…]`，`mask = 可能值数-1`；`EnemyMovementChoiceOffset[type]`
+/// 给出记录起点偏移。五区**表长不同**（Br 30 / No 22 / Kr 24 / To 4 / Ri 28），
+/// 这里统一按 30 B 窗提取（`$97D1-$97EE`）——Tourian 的 `Rinka` 偏移恰落在表尾，
+/// 原版会继续读后续移动串字节，故窗口保留到 `$97EE` 以保持「表外读」也在 ROM 真实数据上。
+pub fn enemy_movement_choices(area: u8) -> &'static [u8] {
+    let key = match area_idx(area) {
+        Some(0) => PackKey::AreaBrEnMovChoices,
+        Some(1) => PackKey::AreaNoEnMovChoices,
+        Some(2) => PackKey::AreaKrEnMovChoices,
+        Some(3) => PackKey::AreaToEnMovChoices,
+        Some(4) => PackKey::AreaRiEnMovChoices,
+        _ => panic!("移动候选表：非法区号 area={area:#04X}（InArea&$0F 应为 0..=4）"),
+    };
+    let b = pack::get(key);
+    assert_eq!(b.len(), 30, "移动候选表段长应为 30 B");
+    b
+}
 
 // ---- `$95DC-$95E4`（9 B）：弹体/爆炸/梅洛姆**动画索引**（按区） ----
 //

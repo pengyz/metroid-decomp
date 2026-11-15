@@ -44,3 +44,18 @@ pub use rng::GameRng;
 pub fn cur_area(mem: &FrameMemory) -> u8 {
     mem.read_ram(crate::ram_map::IN_AREA) & 0x0F
 }
+
+/// 区序号 → MMC1 bank 号（`BankTable ; 07:CA30` = `02 03 05 04 06` 减一）。
+///
+/// 0=Br→1 / 1=No→2 / 2=Kr→4 / 3=To→3 / 4=Ri→5。**注意 Kr/To 的 bank 序与区序相反**，
+/// 任何「area+1」式推算都会把这两区弄反（`680507b9` 修过一次同类）。
+pub fn area_bank(area: u8) -> u8 {
+    match area & 0x0F {
+        0 => 1,
+        1 => 2,
+        2 => 4,
+        3 => 3,
+        4 => 5,
+        _ => crate::unported!("bank07:CA30-area_bank"),
+    }
+}
