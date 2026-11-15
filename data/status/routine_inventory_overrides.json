@@ -31,6 +31,80 @@
    "status": "ported",
    "rust": "crates/game-core/src/frame/boot.rs:188",
    "note": "asm 07:C487 等 VBlank 结束后 $FF|=VBLKNMI 并写 PPUCTRL；Rust 同形但**未建模轮询**（按帧采集不可观测，注释列反例条件）"
+  },
+  "SkreeAIRoutine": {
+   "status": "ported",
+   "rust": "crates/game-core/src/frame/mainloop.rs:1470",
+   "note": "enemies/skree.asm 全文（5 个 label）与 Rust `skree_ai` 逐段对应：入口 PreAI 分流（1⇒Resting/3⇒Explode）、instr>=0x11⇒爆体（jumpDsplcmnt 倒数、清槽、4 弹 dieDelay=$0A+y/x/hi）、0x0F..0x10⇒设 $3A、其余⇒坠落（bit6+Active 双门 + $FC/$FE 串步进）"
+  },
+  "SkreeBlowUpIntoProjectiles": {
+   "status": "ported",
+   "rust": "crates/game-core/src/frame/mainloop.rs:1470",
+   "note": "enemies/skree.asm 全文（5 个 label）与 Rust `skree_ai` 逐段对应：入口 PreAI 分流（1⇒Resting/3⇒Explode）、instr>=0x11⇒爆体（jumpDsplcmnt 倒数、清槽、4 弹 dieDelay=$0A+y/x/hi）、0x0F..0x10⇒设 $3A、其余⇒坠落（bit6+Active 双门 + $FC/$FE 串步进）"
+  },
+  "SkreeExit_Active": {
+   "status": "ported",
+   "rust": "crates/game-core/src/frame/mainloop.rs:1470",
+   "note": "enemies/skree.asm 全文（5 个 label）与 Rust `skree_ai` 逐段对应：入口 PreAI 分流（1⇒Resting/3⇒Explode）、instr>=0x11⇒爆体（jumpDsplcmnt 倒数、清槽、4 弹 dieDelay=$0A+y/x/hi）、0x0F..0x10⇒设 $3A、其余⇒坠落（bit6+Active 双门 + $FC/$FE 串步进）"
+  },
+  "SkreeExit_Resting": {
+   "status": "ported",
+   "rust": "crates/game-core/src/frame/mainloop.rs:1470",
+   "note": "enemies/skree.asm 全文（5 个 label）与 Rust `skree_ai` 逐段对应：入口 PreAI 分流（1⇒Resting/3⇒Explode）、instr>=0x11⇒爆体（jumpDsplcmnt 倒数、清槽、4 弹 dieDelay=$0A+y/x/hi）、0x0F..0x10⇒设 $3A、其余⇒坠落（bit6+Active 双门 + $FC/$FE 串步进）"
+  },
+  "SkreeExit_Explode": {
+   "status": "ported",
+   "rust": "crates/game-core/src/frame/mainloop.rs:1470",
+   "note": "enemies/skree.asm 全文（5 个 label）与 Rust `skree_ai` 逐段对应：入口 PreAI 分流（1⇒Resting/3⇒Explode）、instr>=0x11⇒爆体（jumpDsplcmnt 倒数、清槽、4 弹 dieDelay=$0A+y/x/hi）、0x0F..0x10⇒设 $3A、其余⇒坠落（bit6+Active 双门 + $FC/$FE 串步进）"
+  },
+  "CrawlerAIRoutine": {
+   "status": "ported",
+   "rust": "crates/game-core/src/frame/mainloop.rs:1601",
+   "note": "enemies/crawler.asm 与 `crawler_ai`/`crawler_outside_corner_check`/`crawler_reorient_sprite` 对应：F852 门（6/8 帧）、PreAI 三门（Bank1/4 走 skree 共享出口、Bank2/5 自有）、岩浆折返（y=$E4 阈，asm BUG 保真）、JumpByRTS 四例程（idx=(orient*2+dir) match 内联）、内/外角检、ReorientSprite"
+  },
+  "CrawlerExit_Explode": {
+   "status": "ported",
+   "rust": "crates/game-core/src/frame/mainloop.rs:1601",
+   "note": "enemies/crawler.asm 与 `crawler_ai`/`crawler_outside_corner_check`/`crawler_reorient_sprite` 对应：F852 门（6/8 帧）、PreAI 三门（Bank1/4 走 skree 共享出口、Bank2/5 自有）、岩浆折返（y=$E4 阈，asm BUG 保真）、JumpByRTS 四例程（idx=(orient*2+dir) match 内联）、内/外角检、ReorientSprite"
+  },
+  "CrawlerExit_Resting": {
+   "status": "ported",
+   "rust": "crates/game-core/src/frame/mainloop.rs:1601",
+   "note": "enemies/crawler.asm 与 `crawler_ai`/`crawler_outside_corner_check`/`crawler_reorient_sprite` 对应：F852 门（6/8 帧）、PreAI 三门（Bank1/4 走 skree 共享出口、Bank2/5 自有）、岩浆折返（y=$E4 阈，asm BUG 保真）、JumpByRTS 四例程（idx=(orient*2+dir) match 内联）、内/外角检、ReorientSprite"
+  },
+  "CrawlerInsideCornerCheck": {
+   "status": "ported",
+   "rust": "crates/game-core/src/frame/mainloop.rs:1601",
+   "note": "enemies/crawler.asm 与 `crawler_ai`/`crawler_outside_corner_check`/`crawler_reorient_sprite` 对应：F852 门（6/8 帧）、PreAI 三门（Bank1/4 走 skree 共享出口、Bank2/5 自有）、岩浆折返（y=$E4 阈，asm BUG 保真）、JumpByRTS 四例程（idx=(orient*2+dir) match 内联）、内/外角检、ReorientSprite"
+  },
+  "CrawlerFlipDirection": {
+   "status": "ported",
+   "rust": "crates/game-core/src/frame/mainloop.rs:1601",
+   "note": "enemies/crawler.asm 与 `crawler_ai`/`crawler_outside_corner_check`/`crawler_reorient_sprite` 对应：F852 门（6/8 帧）、PreAI 三门（Bank1/4 走 skree 共享出口、Bank2/5 自有）、岩浆折返（y=$E4 阈，asm BUG 保真）、JumpByRTS 四例程（idx=(orient*2+dir) match 内联）、内/外角检、ReorientSprite"
+  },
+  "JumpByRTSToMovementRoutine": {
+   "status": "ported",
+   "rust": "crates/game-core/src/frame/mainloop.rs:1601",
+   "note": "enemies/crawler.asm 与 `crawler_ai`/`crawler_outside_corner_check`/`crawler_reorient_sprite` 对应：F852 门（6/8 帧）、PreAI 三门（Bank1/4 走 skree 共享出口、Bank2/5 自有）、岩浆折返（y=$E4 阈，asm BUG 保真）、JumpByRTS 四例程（idx=(orient*2+dir) match 内联）、内/外角检、ReorientSprite"
+  },
+  "CrawlerOutsideCornerCheck": {
+   "status": "ported",
+   "rust": "crates/game-core/src/frame/mainloop.rs:1700",
+   "note": "enemies/crawler.asm 与 `crawler_ai`/`crawler_outside_corner_check`/`crawler_reorient_sprite` 对应：F852 门（6/8 帧）、PreAI 三门（Bank1/4 走 skree 共享出口、Bank2/5 自有）、岩浆折返（y=$E4 阈，asm BUG 保真）、JumpByRTS 四例程（idx=(orient*2+dir) match 内联）、内/外角检、ReorientSprite"
+  },
+  "CrawlerOutsideCornerGetNextOrientation": {
+   "status": "ported",
+   "rust": "crates/game-core/src/frame/mainloop.rs:1700",
+   "note": "enemies/crawler.asm 与 `crawler_ai`/`crawler_outside_corner_check`/`crawler_reorient_sprite` 对应：F852 门（6/8 帧）、PreAI 三门（Bank1/4 走 skree 共享出口、Bank2/5 自有）、岩浆折返（y=$E4 阈，asm BUG 保真）、JumpByRTS 四例程（idx=(orient*2+dir) match 内联）、内/外角检、ReorientSprite（next orientation=(o+1)&3 内联）"
+  },
+  "CrawlerReorientSprite": {
+   "status": "ported",
+   "rust": "crates/game-core/src/frame/mainloop.rs:1747",
+   "note": "asm `lda data05/lsr`+`lda data0A/and #3/rol`+`CrawlerAnimIndexTable,y` ⇒ 索引=(orient<<1)|dir；Rust 同形"
+  },
+  "CrawlerAnimIndexTable": {
+   "status": "data",
+   "note": "8 字节动画索引表（.byte 组，被 .if 包住致分析器判 code）；数据面，非例程"
   }
  }
 }

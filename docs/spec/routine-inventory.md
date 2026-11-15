@@ -29,10 +29,14 @@
   穿透后若首 token 不是 6502 助记符而是 `SetPaletteEntry`/`SignMagSpeed` 这类**生成数据的宏**，
   仍按 data 计（否则 `palettes.asm` / `enemy_sprite_data` 会被当成上千条例程）；
 - `SRC/songs/pal/` 整棵排除（D6：保真期只做 NES_NTSC）；
+- 汇编器自动名不算例程：`L####`（wla-dx 自动跳转标）与 `RTS_*`（局部出口标）整类剔除，
+  否则一个例程里每处跳转目标都会被当成「一条待移植例程」（实测虚增 244 条）；
+- overrides 支持 `status: "data"`：分析器被 `.if`/宏包住的表判成 code 时，可显式退回
+  数据面（不计数、不算缺口），必须写 note 说明是哪种表。
 - `code` = 例程 → **本清单的分子分母都只算它**；
   - `data` = 数据表 → 已由资产包 `pack-tool verify` 逐段对 ROM 自证，这里只登记、不计缺口。
 
-当前分母：**code 1464 条 / data label 2642 条**（另有 `@loop` 类局部标签与
+当前分母：**code 1220 条 / data label 2625 条**（另有 `@loop` 类局部标签与
 `L####`/`RTS_####` 自动名不计）。
 
 ## 3. 三档状态（口径）
@@ -50,8 +54,8 @@
 ## 4. 当前读数
 
 ```
-code 例程 1464：ported 6 / candidate 230（15.7%）/ unported 1228
-data label 2642（不计缺口）
+code 例程 1220：ported 20 / candidate 228（18.7%）/ unported 972
+data label 2625（不计缺口）
 ```
 
 按文件分组（非 ported = candidate + unported）：

@@ -57,6 +57,7 @@ eor inc inx iny jmp jsr lda ldx ldy lsr nop ora pha php pla plp rol ror rti rts 
 sta stx sty tax tay tsx txa txs tya
 """.split())
 
+_LOCAL_LABEL = re.compile(r"^(?:RTS_|_|L[0-9A-Fa-f]{4}$)")
 _AREA_SUFFIX = re.compile(r"_\{[A-Za-z0-9_]+\}$")
 _LOCAL_SUFFIX = re.compile(r"^(.*)@(loop|loop_[A-Za-z0-9_]+|RTS|exitloop_[A-Za-z0-9_]+|[A-Za-z0-9_]+)$")
 _RUST_FN_RE = re.compile(r"^\s*(?:pub(?:\([^)]*\))?\s+)?(?:const\s+)?fn\s+([a-z0-9_]+)")
@@ -96,6 +97,8 @@ def parse_asm(root: Path) -> list[dict]:
             if not m:
                 continue
             label = _AREA_SUFFIX.sub("", m.group(1))
+            if _LOCAL_LABEL.match(label):
+                continue  # 汇编器自动名/局部出口标（RTS_Crawler06、L1234、_tmp）不算例程
             # 向后找第一条**既非空、也不是 label**的行：连续 label 链（多个标签指向
             # 同一块数据/代码）必须穿透，否则链尾的数据表会被误判成 code。
             j = i + 1
@@ -151,6 +154,11 @@ def build(root: Path) -> dict:
             continue
         ovr = overrides.get(row["label"]) or {}
         status = str(ovr.get("status") or "")
+        if status == "data":
+            # 分析器把「label 后是 .if/.byte 组」的表误判成例程时，可在 overrides 里显式
+            # 标 data 退回数据面（不计数、不算缺口）。必须给 note 说明是哪种表。
+            data_labels += 1
+            continue
         rust = str(ovr.get("rust") or "")
         if status not in ("ported", "candidate", "unported"):
             hit = fns.get(snake_case(row["label"]))
