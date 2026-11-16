@@ -150,6 +150,29 @@ pub struct Anim {
     pub index: u8,
 }
 
+/// 碰撞半径（`$0301 radiusY` / `$0302 radiusX`）。
+///
+/// 两者成对参与「物体边界是否落在瓦片边界上」的判定（`EnemyMoveOnePixelDown` 的
+/// `(y+radiusY)&7==0` 一族），拆开存最容易出现的错是「只改 y 忘了 x」。
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct Radius {
+    pub y: u8,
+    pub x: u8,
+}
+
+/// 子像素累加器（`$0310 subPixelY` / `$0311 subPixelX` / `$0312 speedSubPixelY` / `$0313 speedSubPixelX`）。
+///
+/// 这是 6502 里「8.8 定点数」的小数面：整数部在 `$0308/$0309`，本结构是小数部。
+/// `lsr/ror` 的半速反弹、`asl/rol` 的加速都在这一对之间搬运位——所以它们必须一起看，
+/// 单独改一个 e 半速运算就错在末位。
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct SubPixel {
+    pub y: u8,
+    pub x: u8,
+    pub speed_y: u8,
+    pub speed_x: u8,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct SamusState {
     status: SamusStatus,
@@ -166,6 +189,18 @@ pub struct SamusState {
     pos: Position,
     /// 动画四元组 `$0303-$0306`。
     anim: Anim,
+    /// 碰撞半径 `$0301/$0302`。
+    radius: Radius,
+    /// `SamusOnElevator`（`$0307`）。
+    on_elevator: u8,
+    /// `Samus.isHit`（`$030A`）——**位域**（`& $41 == $40` 一类判据），保持 `u8`。
+    is_hit: u8,
+    /// `Samus.onScreen`（`$030B`）。
+    on_screen: u8,
+    /// `SamusJumpDsplcmnt`（`$030F`）。
+    jump_disp: u8,
+    /// 子像素四件 `$0310-$0313`。
+    sub: SubPixel,
 }
 
 impl Default for SamusState {
@@ -178,6 +213,12 @@ impl Default for SamusState {
             accel_x: 0,
             pos: Position::default(),
             anim: Anim::default(),
+            radius: Radius::default(),
+            on_elevator: 0,
+            is_hit: 0,
+            on_screen: 0,
+            jump_disp: 0,
+            sub: SubPixel::default(),
         }
     }
 }
@@ -222,6 +263,16 @@ impl SamusState {
             ANIM_DELAY => self.anim.delay,
             ANIM_RESET_INDEX => self.anim.reset,
             ANIM_INDEX => self.anim.index,
+            SAMUS_RADIUS_Y => self.radius.y,
+            SAMUS_RADIUS_X => self.radius.x,
+            SAMUS_ON_ELEVATOR => self.on_elevator,
+            SAMUS_IS_HIT => self.is_hit,
+            ON_SCREEN => self.on_screen,
+            SAMUS_JUMP_DISP => self.jump_disp,
+            SAMUS_SUBPIXEL_Y => self.sub.y,
+            SAMUS_SUBPIXEL_X => self.sub.x,
+            SAMUS_SPEED_SUBPIXEL_Y => self.sub.speed_y,
+            SAMUS_SPEED_SUBPIXEL_X => self.sub.speed_x,
             _ => return None,
         })
     }
@@ -240,13 +291,25 @@ impl SamusState {
             ANIM_DELAY => self.anim.delay = v,
             ANIM_RESET_INDEX => self.anim.reset = v,
             ANIM_INDEX => self.anim.index = v,
+            SAMUS_RADIUS_Y => self.radius.y = v,
+            SAMUS_RADIUS_X => self.radius.x = v,
+            SAMUS_ON_ELEVATOR => self.on_elevator = v,
+            SAMUS_IS_HIT => self.is_hit = v,
+            ON_SCREEN => self.on_screen = v,
+            SAMUS_JUMP_DISP => self.jump_disp = v,
+            SAMUS_SUBPIXEL_Y => self.sub.y = v,
+            SAMUS_SUBPIXEL_X => self.sub.x = v,
+            SAMUS_SPEED_SUBPIXEL_Y => self.sub.speed_y = v,
+            SAMUS_SPEED_SUBPIXEL_X => self.sub.speed_x = v,
             _ => return false,
         }
         true
     }
 
     /// 迁入 typed 的地址清单（`snapshot_nes()` 逐项投影用——**唯一投影源**）。
-    pub const TYPED_ADDRS: [u16; 12] = [
+    /// `$0300-$0315` 全 22 字节（asm `Samus` 结构体一字节对一字段）——迁完即整段退出
+    /// `NesStorage.ram`，本表成为「域状态 ↔ NES 字节」的唯一映射。
+    pub const TYPED_ADDRS: [u16; 22] = [
         SAMUS_STATUS,
         SAMUS_SPEED_Y_INT,
         SAMUS_SPEED_X_INT,
@@ -259,6 +322,16 @@ impl SamusState {
         ANIM_DELAY,
         ANIM_RESET_INDEX,
         ANIM_INDEX,
+        SAMUS_RADIUS_Y,
+        SAMUS_RADIUS_X,
+        SAMUS_ON_ELEVATOR,
+        SAMUS_IS_HIT,
+        ON_SCREEN,
+        SAMUS_JUMP_DISP,
+        SAMUS_SUBPIXEL_Y,
+        SAMUS_SUBPIXEL_X,
+        SAMUS_SPEED_SUBPIXEL_Y,
+        SAMUS_SPEED_SUBPIXEL_X,
     ];
 
     pub fn pos(&self) -> Position {
@@ -275,6 +348,22 @@ impl SamusState {
 
     pub fn set_anim(&mut self, a: Anim) {
         self.anim = a;
+    }
+
+    pub fn radius(&self) -> Radius {
+        self.radius
+    }
+
+    pub fn set_radius(&mut self, r: Radius) {
+        self.radius = r;
+    }
+
+    pub fn sub(&self) -> SubPixel {
+        self.sub
+    }
+
+    pub fn set_sub(&mut self, s: SubPixel) {
+        self.sub = s;
     }
 }
 
@@ -426,6 +515,22 @@ impl<'a> Samus<'a> {
 
     pub fn set_anim(&mut self, a: Anim) {
         self.mem.samus.set_anim(a);
+    }
+
+    pub fn radius(&self) -> Radius {
+        self.mem.samus.radius()
+    }
+
+    pub fn set_radius(&mut self, r: Radius) {
+        self.mem.samus.set_radius(r);
+    }
+
+    pub fn sub(&self) -> SubPixel {
+        self.mem.samus.sub()
+    }
+
+    pub fn set_sub(&mut self, s: SubPixel) {
+        self.mem.samus.set_sub(s);
     }
 
     pub fn set_x(&mut self, v: u8) {
@@ -588,6 +693,41 @@ mod tests {
         mem.write_ram(0x0306, 0x30);
         assert_eq!(mem.samus().anim().index, 0x30);
         assert_eq!(mem.snapshot_nes().ram[0x0306], 0x30);
+    }
+
+    /// 余下 10 字节（半径/电梯/受伤/屏内/跳跃位移/子像素）typed 化：投影逐项落位。
+    #[test]
+    fn remaining_fields_are_typed_and_project() {
+        let mut mem = m();
+        mem.samus().set_radius(Radius { y: 0x0F, x: 0x04 });
+        mem.samus().set_sub(SubPixel { y: 0x12, x: 0x34, speed_y: 0x56, speed_x: 0x78 });
+        mem.write_ram(0x0307, 1);
+        mem.write_ram(0x030A, 0x40);
+        mem.write_ram(0x030B, 1);
+        mem.write_ram(0x030F, 0x3A);
+        let img = mem.snapshot_nes();
+        assert_eq!((img.ram[0x0301], img.ram[0x0302]), (0x0F, 0x04));
+        assert_eq!((img.ram[0x0310], img.ram[0x0311], img.ram[0x0312], img.ram[0x0313]), (0x12, 0x34, 0x56, 0x78));
+        assert_eq!((img.ram[0x0307], img.ram[0x030A], img.ram[0x030B], img.ram[0x030F]), (1, 0x40, 1, 0x3A));
+    }
+
+    /// 全 22 字节覆盖：`$0300-$0315` 每一格都必须可 typed 读写（无遗漏、无重复）。
+    #[test]
+    fn all_22_samus_bytes_are_typed() {
+        let mut mem = m();
+        let mut seen = std::collections::BTreeSet::new();
+        for a in 0x0300u16..=0x0315 {
+            let v = (a as u8) ^ 0x5A;
+            assert!(mem.samus.set_byte(a, v), "{a:#06X} 必须已 typed 化");
+            assert_eq!(mem.samus.get_byte(a), Some(v), "{a:#06X} 往返不一致");
+            seen.insert(a);
+        }
+        assert_eq!(seen.len(), 22);
+        assert_eq!(SamusState::TYPED_ADDRS.len(), 22);
+        let img = mem.snapshot_nes();
+        for a in 0x0300u16..=0x0315 {
+            assert_eq!(img.ram[a as usize], (a as u8) ^ 0x5A, "投影 {a:#06X}");
+        }
     }
 
     /// typed 地址表与实际投影一致：每个 TYPED_ADDRS 项在投影上都能读回 typed 值。
