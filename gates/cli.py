@@ -2365,7 +2365,7 @@ GATES: list[tuple[str, str, str, str, object]] = [
      "按区变量账本：pending 只减不增 + covered 必须带按区访问器（tools/bankvars.py）",
      gate_bankvars),
     ("no-raw-addr", "启用（typed 域）", "check",
-     "域代码裸地址字面量只减不增（typed 视图已存在；tools/no_raw_addr.py）",
+     "typed 绕过面只减不增：裸地址字面量 + ram_map 具名常量（tools/no_raw_addr.py）",
      gate_no_raw_addr),
 ]
 

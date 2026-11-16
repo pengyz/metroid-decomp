@@ -19,7 +19,7 @@
 use crate::state::Manager; // G11 破环：类型层直取（原经 frame/）
 use crate::samus::state::SamusStatus;
 use crate::ram_map::{
-    ON_FROZEN_ENEMY, SAMUS_ACCEL_Y, SAMUS_HI, SAMUS_HORZ_SPEED_MAX, SAMUS_ON_ELEVATOR,
+    ON_FROZEN_ENEMY, SAMUS_ACCEL_Y, SAMUS_HI, SAMUS_ON_ELEVATOR,
     SAMUS_RADIUS_Y, SAMUS_Y,
 };
 
@@ -132,7 +132,7 @@ pub fn vert_accelerate(mem: &mut Manager) {
     if mem.read_ram(SAMUS_ACCEL_Y) != 0 {
         return; // 空中——`bne @dontStartFalling`
     }
-    mem.write_ram(SAMUS_HORZ_SPEED_MAX, 0x18); // 最大跑速 1.5px（R-mv 跑速面）
+    mem.samus().set_horz_speed_max(0x18); // 最大跑速 1.5px（R-mv 跑速面）
     // 8 像素对齐检测（几何节流）
     // 【goal-r11】asm E37A `jsr ObjectCheckMoveDown/bcc @dontStartFalling`——受阻不设重力。
     // 旧形仅 aligned(8px 边界)查撞→非边界帧不查→设重力→弹跳。修=**每像素查撞**。
@@ -319,7 +319,7 @@ mod tests {
     fn horz_integrate_output_probe() {
         let mut m = Manager::default();
         m.write_ram(crate::ram_map::SAMUS_ACCEL_X, 0x30); // 右加速
-        m.write_ram(crate::ram_map::SAMUS_HORZ_SPEED_MAX, 0x18); // max 1.5px
+        m.samus().set_horz_speed_max(0x18); // max 1.5px
         let d = horz_integrate(&mut m);
         let si = m.read_ram(SAMUS_SPEED_X_I);
         let sf = m.read_ram(SAMUS_SPEED_X_F);
@@ -682,12 +682,12 @@ mod tests {
         let mut m = Manager::default();
         m.write_ram(SAMUS_ACCEL_Y, 5); // 空中
         vert_accelerate(&mut m);
-        assert_eq!(m.read_ram(SAMUS_HORZ_SPEED_MAX), 0); // 未初始化
+        assert_eq!(m.samus().horz_speed_max(), 0); // 未初始化
         m.write_ram(SAMUS_ACCEL_Y, 0); // 地面
         m.write_ram(SAMUS_Y, 0x40);
         m.write_ram(SAMUS_RADIUS_Y, 0x10); // y+ry=0x50 → &7=0 → 对齐
         vert_accelerate(&mut m); // r26 collision 已端口（零爆！）
-        assert_eq!(m.read_ram(SAMUS_HORZ_SPEED_MAX), 0x18); // maxspeed 已初始化
+        assert_eq!(m.samus().horz_speed_max(), 0x18); // maxspeed 已初始化
     }
 }
 
@@ -885,7 +885,7 @@ pub fn horz_integrate(mem: &mut Manager) -> u8 {
         subpix: mem.read_ram(SAMUS_SUBPIX_X),
     };
     let accel = mem.read_ram(crate::ram_map::SAMUS_ACCEL_X); // 待名址随考证
-    let max_src = mem.read_ram(crate::ram_map::SAMUS_HORZ_SPEED_MAX);
+    let max_src = mem.samus().horz_speed_max();
     let out = crate::samus::integrators::int_x(&mut st, accel, max_src);
     // 【goal-轮31 horz_integrate 直证】speed 积分/钳径（spX 反转源）。
     mem.write_ram(SAMUS_SPEED_X_I, st.speed_i);

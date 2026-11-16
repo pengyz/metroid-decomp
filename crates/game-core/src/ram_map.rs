@@ -304,7 +304,6 @@ pub const SAMUS_SPEED_SUBPIXEL_X: u16 = 0x0313;
 /// 跳跃起点垂直位移（补码像素计）。
 /// 地址证据（A 级）：m1disasm 线索 $030F（Samus.data0F）+ seed 跳跃例程引用；
 /// 语义证据（B 级）：trace FF→F7→EF 递增位移后稳定（落地）。
-pub const SAMUS_JUMP_DISPLACEMENT: u16 = 0x030F;
 
 /// UpdateSamus 例程入口（显示/移动总控）。
 /// 地址证据（A 级）：seed bank07:CC0D `A2 00` LDX #$00（metroid.asm:101625），
@@ -353,7 +352,6 @@ mod tests {
         assert_eq!(SAMUS_SUBPIXEL_X, 0x311);
         assert_eq!(SAMUS_SPEED_SUBPIXEL_Y, 0x312);
         assert_eq!(SAMUS_SPEED_SUBPIXEL_X, 0x313);
-        assert_eq!(SAMUS_JUMP_DISPLACEMENT, 0x30F);
         assert_eq!(UPDATE_SAMUS_ENTRY, 0xCC0D);
         assert_eq!(JUMP_ENGINE_ENTRY, 0xC27C);
         assert_eq!(SAMUS_SPEED_Y_INT, 0x308);

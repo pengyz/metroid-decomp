@@ -257,7 +257,7 @@ pub fn samus_run(mem: &mut Manager) {
             // LCD40（:3110（audit（D002 族）））：SetSamusJump+SamusHorzSpeedMax←$12
             // +SetSamusData_3FrameAnimDelay（熔岩跳（三件全在（2026-10-28 端口）））
             set_samus_jump(mem);
-            mem.write_ram(crate::ram_map::SAMUS_HORZ_SPEED_MAX, 0x12);
+            mem.samus().set_horz_speed_max(0x12);
             mem.write_ram(ANIM_RESET_INDEX.wrapping_sub(1), 3);
         }
         // samL06（CD16）：三件+animDelay 初值 A=2（`lda #$02/bne SetSamusData`——
@@ -294,7 +294,7 @@ pub fn samus_run(mem: &mut Manager) {
     // JUMP 判（CD39：`lda Joy1Change/bpl samL10`）⇒LCD40 起跳
     if mem.read_ram(crate::ram_map::JOY1_CHANGE) & 0x80 != 0 {
         set_samus_jump(mem); // CFC3（动画+位移/速面）
-        mem.write_ram(crate::ram_map::SAMUS_HORZ_SPEED_MAX, 0x12);
+        mem.samus().set_horz_speed_max(0x12);
         mem.regs.a = 3;
         super::physics::set_samus_data(mem);
         return;

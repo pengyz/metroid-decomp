@@ -29,6 +29,10 @@ const ANIM_RESET_INDEX: u16 = 0x0305;
 const ANIM_INDEX: u16 = 0x0306;
 /// `Samus.onScreen`。
 const ON_SCREEN: u16 = 0x030B;
+/// `SamusHorizontalSpeedMax`（`$0316`）——asm 里紧贴 `Samus` 结构体之后的**独立一字节**，
+/// 但语义上是 Samus 域状态（跑速上限，`SamusSetHorizontalSpeed ; 07:E4A9` 读它钳制）。
+/// typed 面按**域**收（不是按 asm 结构体边界），故它以第 23 个 typed 字节存在。
+const HORZ_SPEED_MAX: u16 = 0x0316;
 /// `Health` 低字节（`constants_ram.asm:806`）。
 const HEALTH_LO: u16 = 0x0106;
 /// `Health` 高字节。
@@ -201,6 +205,8 @@ pub struct SamusState {
     jump_disp: u8,
     /// 子像素四件 `$0310-$0313`。
     sub: SubPixel,
+    /// `SamusHorizontalSpeedMax`（`$0316`）——跑速上限（0x18=1.5px/帧）。
+    horz_speed_max: u8,
 }
 
 impl Default for SamusState {
@@ -219,6 +225,7 @@ impl Default for SamusState {
             on_screen: 0,
             jump_disp: 0,
             sub: SubPixel::default(),
+            horz_speed_max: 0,
         }
     }
 }
@@ -273,6 +280,7 @@ impl SamusState {
             SAMUS_SUBPIXEL_X => self.sub.x,
             SAMUS_SPEED_SUBPIXEL_Y => self.sub.speed_y,
             SAMUS_SPEED_SUBPIXEL_X => self.sub.speed_x,
+            HORZ_SPEED_MAX => self.horz_speed_max,
             _ => return None,
         })
     }
@@ -301,6 +309,7 @@ impl SamusState {
             SAMUS_SUBPIXEL_X => self.sub.x = v,
             SAMUS_SPEED_SUBPIXEL_Y => self.sub.speed_y = v,
             SAMUS_SPEED_SUBPIXEL_X => self.sub.speed_x = v,
+            HORZ_SPEED_MAX => self.horz_speed_max = v,
             _ => return false,
         }
         true
@@ -309,7 +318,7 @@ impl SamusState {
     /// 迁入 typed 的地址清单（`snapshot_nes()` 逐项投影用——**唯一投影源**）。
     /// `$0300-$0315` 全 22 字节（asm `Samus` 结构体一字节对一字段）——迁完即整段退出
     /// `NesStorage.ram`，本表成为「域状态 ↔ NES 字节」的唯一映射。
-    pub const TYPED_ADDRS: [u16; 22] = [
+    pub const TYPED_ADDRS: [u16; 23] = [
         SAMUS_STATUS,
         SAMUS_SPEED_Y_INT,
         SAMUS_SPEED_X_INT,
@@ -332,6 +341,7 @@ impl SamusState {
         SAMUS_SUBPIXEL_X,
         SAMUS_SPEED_SUBPIXEL_Y,
         SAMUS_SPEED_SUBPIXEL_X,
+        HORZ_SPEED_MAX,
     ];
 
     pub fn pos(&self) -> Position {
@@ -544,6 +554,14 @@ impl<'a> Samus<'a> {
         self.set(SAMUS_JUMP_DISP, v);
     }
 
+    /// `SamusHorizontalSpeedMax`（`$0316`）——跑速上限（0x18=1.5px/帧）。
+    pub fn horz_speed_max(&self) -> u8 {
+        self.get(HORZ_SPEED_MAX)
+    }
+    pub fn set_horz_speed_max(&mut self, v: u8) {
+        self.set(HORZ_SPEED_MAX, v);
+    }
+
     pub fn sub_pixel_y(&self) -> u8 {
         self.get(SAMUS_SUBPIXEL_Y)
     }
@@ -722,12 +740,28 @@ mod tests {
             assert_eq!(mem.samus.get_byte(a), Some(v), "{a:#06X} 往返不一致");
             seen.insert(a);
         }
-        assert_eq!(seen.len(), 22);
-        assert_eq!(SamusState::TYPED_ADDRS.len(), 22);
+        assert_eq!(seen.len(), 22, "asm Samus 结构体 $0300-$0315 共 22 字节");
+        // 第 23 项是 `SamusHorizontalSpeedMax`（$0316）——asm 里在结构体之外，但属 Samus 域。
+        assert!(mem.samus.set_byte(0x0316, 0x18), "$0316 必须已 typed 化");
+        assert_eq!(mem.samus.get_byte(0x0316), Some(0x18));
+        assert_eq!(SamusState::TYPED_ADDRS.len(), 23);
         let img = mem.snapshot_nes();
         for a in 0x0300u16..=0x0315 {
             assert_eq!(img.ram[a as usize], (a as u8) ^ 0x5A, "投影 {a:#06X}");
         }
+        assert_eq!(img.ram[0x0316], 0x18, "水平速上限也是 typed 面");
+    }
+
+    /// `$0316` 走 typed：地址面、视图面、投影面三者同源。
+    #[test]
+    fn horz_speed_max_is_typed_on_all_three_faces() {
+        let mut mem = m();
+        mem.write_ram(0x0316, 0x18);
+        assert_eq!(mem.samus().horz_speed_max(), 0x18, "视图面");
+        assert_eq!(mem.read_ram(0x0316), 0x18, "地址面");
+        assert_eq!(mem.snapshot_nes().ram[0x0316], 0x18, "投影面");
+        mem.samus().set_horz_speed_max(0x12);
+        assert_eq!(mem.read_ram(0x0316), 0x12, "视图写回地址面");
     }
 
     /// typed 地址表与实际投影一致：每个 TYPED_ADDRS 项在投影上都能读回 typed 值。
