@@ -43,13 +43,13 @@ pub(crate) fn try_becoming_active(mem: &mut crate::frame::Manager, x: u8) {
     if d.wrapping_sub(1) != 0 {
         return;
     }
-    let d5 = mem.read_ram(0x0400 + x as u16 + 5);
+    let d5 = mem.enemy(slot_of(x)).data05();
     if d5 & 0x08 == 0 {
         mem.write_ram(e, d); // inc 退回（asm F7C6 `EE 09 04`——undo）
         return;
     }
     // @becomeActive
-    let t = mem.read_wram(0x6AF4 + x as u16 + 14);
+    let t = mem.enemy(slot_of(x)).enemy_type();
     if t == 7 {
         crate::unported!("bank07:CBA4"); // SFX_OutOfPipe（声事件——出声面）
     }
@@ -138,7 +138,7 @@ pub(crate) fn try_becoming_active(mem: &mut crate::frame::Manager, x: u8) {
             }
         }
         // 【asm 07:F839】`lda #~$20 ; jmp AndEnData05` ⇒ 清 data05 bit5（解除休止标记）。
-        let d5c = mem.read_ram(0x0400 + x as u16 + 5);
+        let d5c = mem.enemy(slot_of(x)).data05();
         mem.write_ram(0x0400 + x as u16 + 5, d5c & 0xDF);
     }
 }
@@ -510,7 +510,7 @@ pub(crate) fn enemy_complete_death(mem: &mut crate::frame::Manager, x: u8) {
 /// `(area, type)` 查表，不能用全局 `match`。未端口例程与空指针都记账后走占位臂。
 pub(crate) fn choose_enemy_ai(mem: &mut crate::frame::Manager, x: u8) {
     use crate::enemy::ai_table::{routine_for, Routine};
-    let t = mem.read_wram(0x6AF4 + x as u16 + 14); // type=+14
+    let t = mem.enemy(slot_of(x)).enemy_type(); // type=+14
     let area = crate::frame::cur_area(mem);
     match routine_for(area, t) {
         Routine::Crawler => crawler_ai(mem, x),
@@ -534,7 +534,7 @@ pub(crate) fn choose_enemy_ai(mem: &mut crate::frame::Manager, x: u8) {
 
 /// UpdateEnemy_Resting（**asm 内容锚** `: 07:F3BE`——r26 壳：30fps 门/件序 fail-loud）。
 pub(crate) fn enemy_resting(mem: &mut crate::frame::Manager, x: u8) {
-    let d = mem.read_ram(0x0400 + x as u16 + 5);
+    let d = mem.enemy(slot_of(x)).data05();
     if d & 0x40 == 0 {
         // 30fps 标 clear⇒全件（bit6 set 时跳过=30fps 节拍）
         mem.write_wram(0x6AF4 + x as u16 + 13, 0); // jumpDsplcmnt←0
@@ -544,7 +544,7 @@ pub(crate) fn enemy_resting(mem: &mut crate::frame::Manager, x: u8) {
         enemy_distance_threshold(mem, x); // F75B（件序 2——阈距判）
         init_en_resting_anim_index(mem, x); // F682（件序 3）
         update_en_data1f(mem, x); // F676（件序 4）
-        let delay = mem.read_ram(0x0400 + x as u16 + 9);
+        let delay = mem.enemy(slot_of(x)).delay();
         if delay != 0 {
             try_becoming_active(mem, x); // F7BA（件序 5——延迟归零⇒激活）
         }
@@ -558,12 +558,12 @@ pub(crate) fn enemy_resting(mem: &mut crate::frame::Manager, x: u8) {
 /// `20 B9 F6 20 5B F7 20 1E F5`）；AI 分派在 BranchB→F40D（Resting/Active 共用）。
 /// 旧形三径皆 `unported!` ⇒ 敌人激活即 panic。
 pub(crate) fn enemy_active(mem: &mut crate::frame::Manager, x: u8) {
-    let d = mem.read_ram(0x0400 + x as u16 + 5);
+    let d = mem.enemy(slot_of(x)).data05();
     if d & 0x40 == 0 {
         // bit6 clear ⇒ 走 BranchA/bit5 径（bit6 set⇒30fps 直跳 BranchB）
         if d & 0x20 != 0 {
             // bit5 set⇒delay←EnemyInitDelayTbl[type]；status Active→Resting
-            let t = mem.read_wram(0x6AF4 + x as u16 + 14); // EnsExtra.type
+            let t = mem.enemy(slot_of(x)).enemy_type(); // EnsExtra.type
             let delay = game_data::assets::enemy_init_delay(crate::frame::cur_area(mem)).get(t as usize).copied().unwrap_or(0);
             mem.write_ram(0x0400 + x as u16 + 9, delay); // Ens.delay(+9)
             mem.enemy(slot_of(x)).dec_status(); // Active→Resting（asm `dec`）
@@ -631,7 +631,7 @@ pub(crate) fn update_enemy_common_no_move_anim(mem: &mut crate::frame::Manager, 
 /// 同 tick 更早写 3E）被抹（crawlprobe f814 起 anim 恒地板序列 35/36/37 根因）+激活帧
 /// resting init 绕过 bit6 30fps 门（f797 rAI=35 vs emu 00——壳本应被门跳过）。
 pub(crate) fn update_enemy_common_no_move_no_anim(mem: &mut crate::frame::Manager, x: u8) {
-    let special = mem.read_ram(0x0400 + x as u16 + 15); // specialAttribs=+15
+    let special = mem.enemy(slot_of(x)).special_attribs(); // specialAttribs=+15
     if special & 0x80 != 0 {
         let oc = mem.read_ram(0x006B);
         if oc & 0x80 == 0 {
@@ -641,7 +641,7 @@ pub(crate) fn update_enemy_common_no_move_no_anim(mem: &mut crate::frame::Manage
     if mem.read_wram(0x6AF4 + x as u16) != 0 {
         // 【goal-轮39 绘径可见旗写件】（asm :6178-6186 逐字：`and #$FD/ora (flag<<1)/sta
         // data05`——**bit1=可见旗**）——绘径写面（flag=可见判定 ✓）。
-        let d5 = mem.read_ram(0x0400 + x as u16 + 5);
+        let d5 = mem.enemy(slot_of(x)).data05();
         mem.write_ram(0x0400 + x as u16 + 5, (d5 & 0xFD) | 0x02); // 绘⇒可见旗置
         draw_enemy(mem, x);
     }

@@ -32,6 +32,10 @@ pub mod ens {
     pub const HEALTH: u16 = 11;
     pub const PREV_STATUS: u16 = 12;
     pub const DATA0D: u16 = 13;
+    /// `Ens.0.weaponAction`（`$040E`）——击杀它的武器类型，`ExplodeEnemy` 用它判「普通束」。
+    pub const WEAPON_ACTION: u16 = 14;
+    /// `Ens.0.specialAttribs`（`$040F`）——`$40`=miniboss（不播爆散/三连爆）。
+    pub const SPECIAL_ATTRIBS: u16 = 15;
 
     /// `$0406` 的三个语义名（见 [`DATA06`]）——**只登记不合并**。
     pub const DATA06_ALIASES: [&str; 3] =
@@ -52,6 +56,8 @@ pub mod ens_extra {
     pub const ACCEL_Y: u16 = 10;
     /// 横加速（`$6AFF`）。
     pub const ACCEL_X: u16 = 11;
+    /// 跳跃位移（`$6B01`）——Skree 的 `jumpDsplcmnt` 倒数。
+    pub const JUMP_DSPLCMNT: u16 = 13;
     /// 敌类型（`$6B02`）。
     pub const TYPE: u16 = 14;
     pub const DATA1F: u16 = 15;
@@ -315,6 +321,32 @@ impl<'a> Enemy<'a> {
     }
     pub fn prev_status(&self) -> u8 {
         self.get(ens::PREV_STATUS)
+    }
+    /// `Ens.speedSubPixelX`（`$0407`）——横速小数位。
+    pub fn speed_subpixel_x(&self) -> u8 {
+        self.get(ens::SPEED_SUBPIXEL_X)
+    }
+    pub fn set_speed_subpixel_x(&mut self, v: u8) {
+        self.set(ens::SPEED_SUBPIXEL_X, v);
+    }
+    /// `Ens.data0A`（`$040A`）——无独立语义名（`_todo_`），按 asm 用途保留裸字段。
+    pub fn data0a(&self) -> u8 {
+        self.get(ens::DATA0A)
+    }
+    /// 击杀武器（`$040E`）——`<= $01` 即普通束（见 `ExplodeEnemy ; 07:F611`）。
+    pub fn weapon_action(&self) -> u8 {
+        self.get(ens::WEAPON_ACTION)
+    }
+    /// 特殊属性（`$040F`）——bit6 = miniboss。
+    pub fn special_attribs(&self) -> u8 {
+        self.get(ens::SPECIAL_ATTRIBS)
+    }
+    /// 跳跃位移（`$6B01`）。
+    pub fn jump_dsplcmnt(&self) -> u8 {
+        self.getx(ens_extra::JUMP_DSPLCMNT)
+    }
+    pub fn set_jump_dsplcmnt(&mut self, v: u8) {
+        self.setx(ens_extra::JUMP_DSPLCMNT, v);
     }
 
     // ---- EnsExtra 面 ----
