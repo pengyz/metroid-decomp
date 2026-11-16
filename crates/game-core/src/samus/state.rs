@@ -775,3 +775,87 @@ mod tests {
         assert!(!SamusStatus::Elevator.is_dead());
     }
 }
+
+/// # 行为面：聚合根开始承载自己的逻辑
+///
+/// 第 1 步（`5817a049`）只做了「typed 类搬到实体目录」——那是搬家。这一步把**纯自域**
+/// 的过程搬进来，`Samus` 才真的是聚合根：判断与写入都建立在同一份不变量上（status 用
+/// 枚举、竖速用 `i8` 语义），跨域写入仍按「取句柄 → 短句柄用完即还」的顺序穿过
+/// `self.mem`（与 asm 的 `lda/sta` 顺序同构）。
+impl<'a> Samus<'a> {
+    /// 球形态落地反弹（asm 内容锚 `SamusMoveVertically ; 07:E2A9` 的 `@loop_down`
+    /// `; 07:E2E3` 受阻分支 `$E2E6-$E309`）：`status != sa_Roll` ⇒ `@landingNoBall`；
+    /// 否则 `lsr Samus.speedY`（进位=原 bit0）——减半后为 0 ⇒ `@landingNoBounce`，
+    /// 非 0 ⇒ `ror SamusSpeedSubPixelY` 后**双取负**（第二次带第一次借位）
+    /// ⇒ `jmp SamusMoveHorizontally`。返回 true=已走反弹径（调用方不得再走落地清零）。
+    pub(crate) fn ball_bounce_after_landing(&mut self) -> bool {
+        if self.status() != Some(SamusStatus::Roll) {
+            return false; // sa_Roll（constants.asm:106）
+        }
+        let si = self.get(SAMUS_SPEED_Y_INT);
+        let half = si >> 1;
+        let carry = si & 1;
+        self.set(SAMUS_SPEED_Y_INT, half); // `lsr Samus.speedY` 原址写
+        if half == 0 {
+            return false; // `beq @landingNoBounce`
+        }
+        let sf = self.get(SAMUS_SPEED_SUBPIXEL_Y);
+        let ror = (sf >> 1) | (carry << 7); // `ror SamusSpeedSubPixelY`
+        let ns = 0u8.wrapping_sub(ror);
+        let borrow = u8::from(ror != 0);
+        let nsi = 0u8.wrapping_sub(half).wrapping_sub(borrow);
+        self.set(SAMUS_SPEED_SUBPIXEL_Y, ns);
+        self.set(SAMUS_SPEED_Y_INT, nsi);
+        true
+    }
+
+    /// 岩浆态副作用（`LavaAndMoveCheck ; 07:E269`）：击退方向 `$FF`、清 `HealthChange`、
+    /// 无敌延时 `$32`、每 4 帧播一次跳跃 SFX、伤害节拍 `(FrameCount>>1)&3==0`
+    /// （无 Varia 该拍必伤；有 Varia 仅 `FrameCount` 奇数的拍半伤）。
+    pub(crate) fn apply_lava_state(&mut self, in_lava: bool) {
+        if !in_lava {
+            self.mem.write_ram(crate::ram_map::SAMUS_IN_LAVA, 0);
+            return;
+        }
+        self.mem.write_ram(crate::ram_map::SAMUS_KNOCKBACK_DIR, 0xFF);
+        self.mem.write_ram(crate::ram_map::HEALTH_CHANGE, 0);
+        self.mem.write_ram(crate::ram_map::HEALTH_CHANGE + 1, 0);
+        self.mem
+            .write_ram(crate::ram_map::SAMUS_INVINCIBLE_DELAY, 0x32);
+        let fc = self.mem.read_ram(crate::ram_map::FRAME_COUNT);
+        if fc & 0x03 == 0 {
+            // SFX_SamusJump（constants.asm:160 `sfxSQ1_SamusJump = %00000010`）
+            let f = self.mem.read_ram(0x0681) | 0x02;
+            self.mem.write_ram(0x0681, f);
+        }
+        if (fc >> 1) & 0x03 == 0 {
+            // gr_VARIA=%00100000（constants.asm:75）×SamusGear($6878)
+            let has_varia = self.mem.read_ram(crate::ram_map::SAMUS_GEAR) & 0x20 != 0;
+            let carry = fc & 0x01 != 0; // asm `lda FrameCount / lsr` 的进位
+            if !has_varia || carry {
+                self.mem.write_ram(crate::ram_map::HEALTH_CHANGE, 0x07);
+                crate::weapon::projectile::subtract_health(&mut *self.mem);
+            }
+        }
+        self.mem.write_ram(crate::ram_map::SAMUS_IN_LAVA, 1);
+    }
+
+    /// 水平移动受阻判定（`CheckStopHorzMvmt ; 07:E365`）：返回 true=环终止。
+    /// `moved`=本帧是否真的移动成功（asm 进位）。
+    pub(crate) fn check_stop_horz_mvmt(&mut self, moved: bool) -> bool {
+        if moved {
+            return false; // bcs Exit10
+        }
+        self.mem.write_ram(crate::ram_map::OBJECT_COUNTER, 1); // 断环
+        if self.get(SAMUS_ACCEL_Y) != 0 {
+            return true; // 空中出
+        }
+        // asm `cmp #sa_Roll`（$E370）= **3**；旧形误写 4（=sa_PntUp）——
+        // 后果是球形 Samus 撞墙被强行 `SetSamusStand`（球被「站起来」）。
+        if self.status() == Some(SamusStatus::Roll) {
+            return true; // sa_Roll 显式放行
+        }
+        crate::samus::handler::set_samus_stand(&mut *self.mem); // jmp SetSamusStand（CF55）
+        true
+    }
+}

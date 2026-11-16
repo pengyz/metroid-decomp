@@ -1143,68 +1143,6 @@ fn is_samus_in_lava(mem: &mut Manager) -> bool {
     mem.read_ram(0x030D) >= 0xD8
 }
 
-/// 岩浆状态面（**asm 内容锚** `LavaAndMoveCheck ; 07:E269` 的 `$E27C-$E2A7` 段）：
-/// 入岩浆 ⇒ `SamusKnockbackDir($72)←$FF`（不推）/ `ClearHealthChange ; 07:F323`
-/// （`HealthChange($6E)` 与 `+1` 双字节清 0）/ `SamusInvincibleDelay($70)←$32`（闪烁）/
-/// `FrameCount&3==0 ⇒ SFX_SamusJump`（`$CBAC→$CBE8`：`SFXSQ1InitFlags($0681)|=$02`）/
-/// 伤害节拍 `(FrameCount>>1)&3==0`（`lsr` 的进位即 `FrameCount` bit0）——
-/// 无 Varia 于该拍必伤，有 Varia 仅进位为 1（奇数帧）时伤 ⇒ 8 帧内 2 伤 vs 1 伤；
-/// 伤害= `HealthChange←$07` + `SubtractHealth($CE92)`。两径合并写
-/// `SamusInLava($64)←{0,1}`（asm `ldy #$FF` / `ldy #$00` + `iny` + `sty` 的等价面）。
-fn apply_lava_state(mem: &mut Manager, in_lava: bool) {
-    if !in_lava {
-        mem.write_ram(crate::ram_map::SAMUS_IN_LAVA, 0);
-        return;
-    }
-    mem.write_ram(crate::ram_map::SAMUS_KNOCKBACK_DIR, 0xFF);
-    mem.write_ram(crate::ram_map::HEALTH_CHANGE, 0);
-    mem.write_ram(crate::ram_map::HEALTH_CHANGE + 1, 0);
-    mem.write_ram(crate::ram_map::SAMUS_INVINCIBLE_DELAY, 0x32);
-    let fc = mem.read_ram(crate::ram_map::FRAME_COUNT);
-    if fc & 0x03 == 0 {
-        // SFX_SamusJump（constants.asm:160 `sfxSQ1_SamusJump = %00000010`）
-        let f = mem.read_ram(0x0681) | 0x02;
-        mem.write_ram(0x0681, f);
-    }
-    if (fc >> 1) & 0x03 == 0 {
-        // gr_VARIA=%00100000（constants.asm:75）×SamusGear($6878)
-        let has_varia = mem.read_ram(crate::ram_map::SAMUS_GEAR) & 0x20 != 0;
-        let carry = fc & 0x01 != 0; // asm `lda FrameCount / lsr` 的进位
-        if !has_varia || carry {
-            mem.write_ram(crate::ram_map::HEALTH_CHANGE, 0x07);
-            crate::weapon::projectile::subtract_health(mem);
-        }
-    }
-    mem.write_ram(crate::ram_map::SAMUS_IN_LAVA, 1);
-}
-
-/// 球形态落地反弹（**asm 内容锚** `SamusMoveVertically ; 07:E2A9` 的 `@loop_down`
-/// `; 07:E2E3` 受阻分支 `$E2E6-$E309`）：`status != sa_Roll` ⇒ `@landingNoBall`；
-/// 否则 `lsr Samus.speedY`（进位=原 bit0）——减半后为 0 ⇒ `@landingNoBounce`，
-/// 非 0 ⇒ `ror SamusSpeedSubPixelY`（进位进 bit7）后**双取负**（`lda #$00/sec/sbc`
-/// 连做两次，第二次带第一次的借位）⇒ `jmp SamusMoveHorizontally`。
-/// 返回 true=已走反弹径（调用方**不得**再走落地清零）。
-fn ball_bounce_after_landing(mem: &mut Manager) -> bool {
-    if mem.samus().status() != Some(SamusStatus::Roll) {
-        return false; // sa_Roll（constants.asm:106）
-    }
-    let si = mem.read_ram(SAMUS_SPEED_Y_I);
-    let half = si >> 1;
-    let carry = si & 1;
-    mem.write_ram(SAMUS_SPEED_Y_I, half); // `lsr Samus.speedY` 原址写
-    if half == 0 {
-        return false; // `beq @landingNoBounce`
-    }
-    let sf = mem.read_ram(SAMUS_SPEED_Y_F);
-    let ror = (sf >> 1) | (carry << 7); // `ror SamusSpeedSubPixelY`
-    let ns = 0u8.wrapping_sub(ror);
-    let borrow = u8::from(ror != 0);
-    let nsi = 0u8.wrapping_sub(half).wrapping_sub(borrow);
-    mem.write_ram(SAMUS_SPEED_Y_F, ns);
-    mem.write_ram(SAMUS_SPEED_Y_I, nsi);
-    true
-}
-
 pub fn lava_and_move_check(mem: &mut Manager) {
     let status = mem.samus().status_raw();
     if status != 9 {
@@ -1253,7 +1191,7 @@ pub fn lava_and_move_check(mem: &mut Manager) {
                 // speedY，`jmp SamusMoveHorizontally`（**不走落地清零径**）。
                 // 数值自证（100% 录像 f984）：speedY=2/subY=78 ⇒ half=1、carry=0、sub=39、
                 // 取负 217、`0-1-借位1`=254 == emu 实测 254。
-                if ball_bounce_after_landing(mem) {
+                if mem.samus().ball_bounce_after_landing() {
                     break; // jmp SamusMoveHorizontally（不再走落地清零径）
                 }
                 stop_vert_movement(mem); // D147（清垂直动量）
@@ -1329,7 +1267,7 @@ pub fn lava_and_move_check(mem: &mut Manager) {
     }
     // 【goal-r10】lava check（移动后——asm E269 顺序调整，落地后查 lava）
     let in_lava = is_samus_in_lava(mem);
-    apply_lava_state(mem, in_lava);
+    mem.samus().apply_lava_state(in_lava);
     // SamusMoveHorizontally（E31A——**fallthrough 尾链**（摄像机跟随根件——playability P0））
     let dx = horz_integrate(mem);
     samus_move_horizontally(mem, dx);
@@ -1902,30 +1840,6 @@ fn toggle_name_table(mem: &mut Manager) {
     mem.write_ram(0x00FF, ff);
 }
 
-/// CheckStopHorzMvmt（**asm 内容锚** `: 07:E365`）：成功（carry）⇒出；失败⇒
-/// ObjectCounter=1 断环+（非空中/非球）⇒**jmp SetSamusStand**（CF55——停速+转站）。
-/// 【goal-轮51 asm 合规矩】E365 逐件对表：bcs Exit10/ObjectCounter=1 破环/AccelY≠0⇒
-/// 出（空中）/status==Roll⇒出（球形）/jmp SetSamusStand（CF55 全径——轮31 修 ✓）——
-/// **全件面合规** ✓✓（破环语义=ObjectCounter=1（非 dec 归零）——E31A 环 bne 跳出 ✓）。
-fn check_stop_horz_mvmt(mem: &mut Manager, moved: bool) -> bool {
-    if moved {
-        return false; // bcs Exit10
-    }
-    mem.write_ram(crate::ram_map::OBJECT_COUNTER, 1); // 断环
-    if mem.read_ram(crate::ram_map::SAMUS_ACCEL_Y) != 0 {
-        return true; // 空中出
-    }
-    // asm `cmp #sa_Roll`（$E370）= **3**；旧形误写 4（=sa_PntUp）。
-    // 后果：球形 Samus 撞墙被 `CheckStopHorzMvmt` 强行 `SetSamusStand`（球被「站起来」），
-    // 而 ROM 里球形是显式放行（`beq Exit10`）。100% 录像 f2230 起的 192/207px 即此：
-    // 低矮通道内 emu 保持滚动、rust 每帧被拽成站立/跑动。
-    if mem.samus().status() == Some(crate::samus::state::SamusStatus::Roll) {
-        return true; // sa_Roll（球形）出
-    }
-    crate::samus::handler::set_samus_stand(mem); // jmp SetSamusStand（CF55 全径）
-    true
-}
-
 /// MoveSamusLeft（**asm 内容锚** `MoveSamusLeft: ; 07:E626`）：逐像素左移
 /// （8px 对齐门检+实体碰撞+**滚动跟随**（SamusScrX<$71⇒ScrollLeft 滚屏）+x dec
 /// （x==0 先判⇒ToggleSamusHi））。返回 carry（true=移动成功）。
@@ -2030,7 +1944,7 @@ pub fn samus_move_horizontally(mem: &mut Manager, delta: u8) {
     mem.write_ram(crate::ram_map::OBJECT_COUNTER, n);
     loop {
         let moved = if right { move_samus_right(mem) } else { move_samus_left(mem) };
-        let stop = check_stop_horz_mvmt(mem, moved);
+        let stop = mem.samus().check_stop_horz_mvmt(moved);
         let c = mem.read_ram(crate::ram_map::OBJECT_COUNTER).wrapping_sub(1);
         mem.write_ram(crate::ram_map::OBJECT_COUNTER, c);
         if stop || c == 0 {
@@ -2060,7 +1974,7 @@ mod tests_stop_horz {
         let mut m = Manager::default();
         m.write_ram(crate::ram_map::SAMUS_STATUS, 3); // sa_Roll
         m.write_ram(crate::ram_map::SAMUS_ACCEL_Y, 0); // 着地
-        assert!(check_stop_horz_mvmt(&mut m, false));
+        assert!(m.samus().check_stop_horz_mvmt(false));
         assert_eq!(
             m.read_ram(crate::ram_map::SAMUS_STATUS), 3,
             "球形必须原样放行（不得 SetSamusStand）"
@@ -2074,7 +1988,7 @@ mod tests_stop_horz {
         let mut m = Manager::default();
         m.write_ram(crate::ram_map::SAMUS_STATUS, 1); // sa_Run
         m.write_ram(crate::ram_map::SAMUS_ACCEL_Y, 0);
-        assert!(check_stop_horz_mvmt(&mut m, false));
+        assert!(m.samus().check_stop_horz_mvmt(false));
         assert_eq!(m.read_ram(crate::ram_map::SAMUS_STATUS), 0);
         assert_eq!(m.samus().anim_index(), 0x07, "站立动画（SetSamusStand 的 CF5D 支）");
     }
@@ -2085,7 +1999,7 @@ mod tests_stop_horz {
         let mut m = Manager::default();
         m.write_ram(crate::ram_map::SAMUS_STATUS, 2); // sa_Jump
         m.write_ram(crate::ram_map::SAMUS_ACCEL_Y, 0x18);
-        assert!(check_stop_horz_mvmt(&mut m, false));
+        assert!(m.samus().check_stop_horz_mvmt(false));
         assert_eq!(m.read_ram(crate::ram_map::SAMUS_STATUS), 2);
     }
 
@@ -2094,7 +2008,7 @@ mod tests_stop_horz {
     fn successful_move_is_noop() {
         let mut m = Manager::default();
         m.write_ram(crate::ram_map::SAMUS_STATUS, 3);
-        assert!(!check_stop_horz_mvmt(&mut m, true));
+        assert!(!m.samus().check_stop_horz_mvmt(true));
         assert_eq!(m.read_ram(crate::ram_map::SAMUS_STATUS), 3);
         assert_eq!(m.read_ram(crate::ram_map::OBJECT_COUNTER), 0);
     }
@@ -2620,7 +2534,7 @@ mod tests_lava_damage {
     #[test]
     fn entering_lava_sets_fixed_side_effects() {
         let mut m = mem_in_lava(0x00, 0x00);
-        apply_lava_state(&mut m, true);
+        m.samus().apply_lava_state(true);
         assert_eq!(m.read_ram(ram_map::SAMUS_KNOCKBACK_DIR), 0xFF, "岩浆=不推");
         assert_eq!(m.read_ram(ram_map::SAMUS_INVINCIBLE_DELAY), 0x32, "闪 50 帧");
         assert_eq!(m.read_ram(ram_map::SAMUS_IN_LAVA), 1, "SamusInLava←1");
@@ -2635,7 +2549,7 @@ mod tests_lava_damage {
     #[test]
     fn lava_damage_without_varia_every_qualifying_beat() {
         let mut m = mem_in_lava(0x00, 0x00);
-        apply_lava_state(&mut m, true);
+        m.samus().apply_lava_state(true);
         // $0299 - $0007（BCD） = $0292
         assert_eq!(m.read_ram(0x0106), 0x92);
         assert_eq!(m.read_ram(0x0107), 0x02);
@@ -2646,15 +2560,15 @@ mod tests_lava_damage {
     fn lava_damage_with_varia_only_on_carry_beat() {
         // fc=2：量化拍（(2>>1)&3==0）但 carry=0 ⇒ 不伤
         let mut even = mem_in_lava(0x02, 0x20);
-        apply_lava_state(&mut even, true);
+        even.samus().apply_lava_state(true);
         assert_eq!(even.read_ram(0x0106), 0x99, "有 Varia + 偶数帧 ⇒ 该拍不伤");
         // fc=3：(3>>1)&3==1 ⇒ 不在伤害拍；用 fc=6 与 fc=7 对照同一量化拍
         let mut odd = mem_in_lava(0x07, 0x20); // (7>>1)&3==3 ⇒ 非伤害拍
-        apply_lava_state(&mut odd, true);
+        odd.samus().apply_lava_state(true);
         assert_eq!(odd.read_ram(0x0106), 0x99, "非伤害拍不伤");
         // 直接构造 carry=1 且量化拍成立：fc=0b1_0? 需 (fc>>1)&3==0 ⇒ fc∈{0,1}；carry=1 ⇒ fc=1
         let mut carry = mem_in_lava(0x01, 0x20);
-        apply_lava_state(&mut carry, true);
+        carry.samus().apply_lava_state(true);
         // 有 Varia ⇒ SubtractHealth 半伤（lsr），$07→$03 ⇒ $0299-$0003=$0296
         assert_eq!(carry.read_ram(0x0106), 0x96, "有 Varia + 奇数帧 ⇒ 半伤 3 点");
     }
@@ -2665,7 +2579,7 @@ mod tests_lava_damage {
         let mut m = mem_in_lava(0x00, 0x00);
         m.write_ram(ram_map::SAMUS_IN_LAVA, 1);
         m.write_ram(ram_map::HEALTH_CHANGE, 0x22);
-        apply_lava_state(&mut m, false);
+        m.samus().apply_lava_state(false);
         assert_eq!(m.read_ram(ram_map::SAMUS_IN_LAVA), 0);
         assert_eq!(m.read_ram(ram_map::HEALTH_CHANGE), 0x22, "非岩浆径不清伤害账");
     }
@@ -2689,7 +2603,7 @@ mod tests_ball_bounce {
     #[test]
     fn ball_landing_halves_and_negates() {
         let mut m = mem(0x02, 0x4E, 3); // speedY=2, subY=78
-        assert!(ball_bounce_after_landing(&mut m), "球体落地必走反弹径");
+        assert!(m.samus().ball_bounce_after_landing(), "球体落地必走反弹径");
         assert_eq!(m.read_ram(SAMUS_SPEED_Y_I), 0xFE, "0-1-借位1=254（emu 实测 254）");
         assert_eq!(m.read_ram(SAMUS_SPEED_Y_F), 0xD9, "0-39=217");
     }
@@ -2698,7 +2612,7 @@ mod tests_ball_bounce {
     #[test]
     fn slow_ball_does_not_bounce() {
         let mut m = mem(0x01, 0x40, 3);
-        assert!(!ball_bounce_after_landing(&mut m), "half==0 ⇒ 落地清零径");
+        assert!(!m.samus().ball_bounce_after_landing(), "half==0 ⇒ 落地清零径");
         assert_eq!(m.read_ram(SAMUS_SPEED_Y_I), 0x00, "lsr 仍原址写 0");
     }
 
@@ -2706,7 +2620,7 @@ mod tests_ball_bounce {
     #[test]
     fn standing_landing_does_not_bounce() {
         let mut m = mem(0x02, 0x4E, 0);
-        assert!(!ball_bounce_after_landing(&mut m));
+        assert!(!m.samus().ball_bounce_after_landing());
         assert_eq!(m.read_ram(SAMUS_SPEED_Y_I), 0x02, "非球体不动竖速");
     }
 }
