@@ -1,6 +1,6 @@
 # case-002 三处根因：敌绘制偏移 / 弹越界判据 / Skree 穿地
 
-> 2026-11-16。case-002 从 **3/8 → 8/8 全 0px**，全矩阵 **match 115 → 123 · diff 17 → 9**。
+> 2026-11-16。case-002 从 **3/8 → 8/8 全 0px**，全矩阵 **match 115 → 126 · diff 17 → 6**（132 格）。
 > 三处分歧各自独立，但**同一类病**：asm 的一条例程在 Rust 侧有两份实现，或一份实现遗漏了分支。
 
 ## 0. 结论摘要
@@ -63,12 +63,24 @@ adc pos / bcs @then_B
 
 - 诊断副本 `case-002-transdbg`：8/8 全 0px。
 - 正式用例 `case-002-door-blue-interaction`：**8/8**（f420/f1080/f1110/f1160/f1250/f1310/f1460/f1610）。
-- 全矩阵：15 案 132 格 → **match 123 · diff 9 · blocked 0**；顺带 `jumpledge` 由 5/8 转 8/8（同一条 `EnemyMove` 径）。
+- 全矩阵：15 案 132 格 → **match 126 · diff 6 · blocked 0**；顺带 `jumpledge` 由 5/8 转 8/8、
+  `scrollseam` 由 10/14 转 13/14（同一条 `EnemyMove` / 弹径）。
 - 测试 602 passed；门禁 PASS=19。
 
 ## 5. 未解释项与边界
 
 - 本轮的像素证据只覆盖 Brinstar 首房与门过渡径；`ApplySpeedToPosition` 的**垂直房**分支仍无用例覆盖
   （矩阵 15 案中只有电梯案进垂直滚屏），实为「按 asm 实现、无像素佐证」。
+- **屏底 `y==0xEF` 语义不符**（既有残差，本次被 Skree 新径继承）：`crates/game-core/src/enemy/motion.rs`
+  的 `enemy_move_one_pixel_down` 在此处「回滚 + 返回失败」，而 asm `$845B-$8497` 是 `ldy #$FF` →
+  （竖房且 ScrollY≠0 且名表匹配才 `SwitchEnemyNameTable`）→ `iny` ⇒ `y=0x00` 并落存。旧 Skree 内联件
+  则是「y=0 + hi^=1」（无条件换表）——三者互不相同。case-002 的敌人在 y≈196 被 BG 挡住，不触此边。
+- **`$FA` 径未建模**（既有）：asm 的 `GotoEnemyGetDeltaY_TriggerResting ; $82FB` 有两个入口
+  （`$FC` 失败与 `$FA`），rust `enemy/common.rs` 的 `0xFA` 支仍返回 `trig=false`。Δ 恒 0 不可见，
+  但 `data05|=0x20` / `accelY←0` 两个副作用缺失。
+- **更正（commit `ee1335c6` 说明段）**：该 commit 正文称「`data/status/routine_inventory.json` 重新生成、
+  code 1220→1135」——**系误判**：该文件内容与前一版逐字节相同（md5 一致、`git diff` 为空），
+  所谓分母移动并不存在；把它写进 bugfix commit 的理由不成立。此处留痕，不改写已推送历史。
+
 - `render/oam.rs::draw_enemy` 仍是死件（只有 `crates/game-core/src/frame/tests.rs:1480` 调它）。
   按「同一 asm 例程只留一份」纪律应删除并把该测试改指活件——**未做**，登记在此。
