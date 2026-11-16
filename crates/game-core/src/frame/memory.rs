@@ -247,4 +247,9 @@ impl Manager {
     pub fn samus(&mut self) -> crate::memmap::views::samus::Samus<'_> {
         crate::memmap::views::samus::Samus::new(self)
     }
+
+    /// 敌槽语义句柄（`$0400+i*16` / `$6AF4+i*16`）——槽号而非字节偏移。
+    pub fn enemy(&mut self, slot: u8) -> crate::memmap::views::enemy::Enemy<'_> {
+        crate::memmap::views::enemy::Enemy::new(self, slot)
+    }
 }

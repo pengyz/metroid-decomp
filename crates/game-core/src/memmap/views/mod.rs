@@ -18,5 +18,6 @@
 //!    把「进位写进下一字节」的规则关在视图里。
 //! 3. **借用互斥**：视图持 `&mut`，一次只能持一个域——逼着按 asm 的执行顺序逐域操作。
 
+pub mod enemy;
 pub mod samus;
 pub mod title;
