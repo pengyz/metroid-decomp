@@ -31,7 +31,7 @@ pub struct SparkleSlot {
     pub complete: u8,   // 偏移 0x0A（字节真）
 }
 
-/// 槽写事件（slot 0/1 + 字段偏移 + 值——地址由 memmap::title_state 映射）。
+/// 槽写事件（slot 0/1 + 字段偏移 + 值——地址由 memmap::views::title 映射）。
 pub type SlotWrite = (u8, u8, u8);
 
 /// 单跑 SparkleUpdate 结果（出口 A=WriteIntroSprite 末 x 值 / complete 检出值）。

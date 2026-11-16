@@ -6,7 +6,7 @@
 //! unported 表址爆（`bank00:<表址>` per-entry 形）+ jumped 转接面（当前=爆——转接件随接）。
 
 use crate::frame::FrameMemory;
-use crate::memmap::title_state;
+use crate::memmap::views::title;
 use crate::ram_map::{
     FRAME_COUNT, JOY1_CHANGE, PPUCTRL_ZP, TITLE_ROUTINE,
 };
@@ -74,7 +74,7 @@ pub fn main_title_routine(mem: &mut FrameMemory) {
         a: mem.regs.a,
         x: mem.regs.x,
         y: mem.regs.y,
-        timer3: mem.read_ram(title_state::TIMER3),
+        timer3: mem.read_ram(title::TIMER3),
         frame_count: mem.read_ram(FRAME_COUNT),
         joy_change: mem.read_ram(JOY1_CHANGE),
         ppuctrl: mem.read_ram(PPUCTRL_ZP),
@@ -99,7 +99,7 @@ pub fn main_title_routine(mem: &mut FrameMemory) {
     let cursor = mem.read_ram(crate::ram_map::TITLE_ROUTINE); // 当前相位（头检面）
     let (head_hit, head_events, head_new) = crate::title::title_tick_head(
         cursor,
-        mem.read_ram(crate::memmap::title_state::JOY1_CHANGE),
+        mem.read_ram(crate::memmap::views::title::JOY1_CHANGE),
         mem.read_ram(crate::ram_map::PPUCTRL_ZP),
     );
     if head_hit {
@@ -147,7 +147,7 @@ pub fn main_title_routine(mem: &mut FrameMemory) {
         let loc = format!("bank00:{addr:04X}");
         crate::unported!(&loc); // 真未武装（18/1E——深路专件/随件）：per-entry 爆
     }
-    title_state::apply_title_step(&mut mem.ram, &mut mem.wram, &step.events);
+    title::apply_title_step(&mut mem.ram, &mut mem.wram, &step.events);
     if let Some(a) = step.a_out {
         mem.regs.a = a;
     }
@@ -216,7 +216,7 @@ fn run_check_password_chain(mem: &mut FrameMemory) {
     } else {
         let f = mem.read_ram(crate::ram_map::SFX_MULTI_INIT) | 0x01;
         mem.write_ram(crate::ram_map::SFX_MULTI_INIT, f);
-        mem.write_ram(title_state::TIMER3, 0x0C);
+        mem.write_ram(title::TIMER3, 0x0C);
         mem.write_ram(crate::ram_map::TITLE_ROUTINE, 0x18);
     }
 }
@@ -347,7 +347,7 @@ mod tests {
     /// OBJECTS_CLEAR 复合标签展开（「标签展开在 shim」契约点——$0300-$031F 32 事件）。
     #[test]
     fn objects_clear_label_expands_in_shim() {
-        let events = crate::memmap::title_state::objects_clear_events();
+        let events = crate::memmap::views::title::objects_clear_events();
         assert_eq!(events.len(), 32);
         assert_eq!(events[0], (0x0300, 0));
         assert_eq!(events[31], (0x031F, 0));
@@ -448,7 +448,7 @@ mod tests {
         assert!(m.check_password_pending, "首拍只置 pending");
         main_title_routine(&mut m); // 第二拍执行链（invalid 路）
         assert_eq!(m.read_ram(crate::ram_map::SFX_MULTI_INIT) & 0x01, 1, "IncorrectPassword SFX");
-        assert_eq!(m.read_ram(title_state::TIMER3), 0x0C, "120 帧");
+        assert_eq!(m.read_ram(title::TIMER3), 0x0C, "120 帧");
         assert_eq!(m.read_ram(crate::ram_map::TITLE_ROUTINE), 0x18, "回 EnterPassword");
         assert_eq!(m.read_ram(crate::ram_map::MAIN_ROUTINE), 0, "未出生态");
         assert_eq!(m.read_ram(crate::ram_map::BANK_SWITCH_PENDING), 0);
