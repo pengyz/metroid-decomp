@@ -280,14 +280,13 @@ pub fn make_room_ram_ptr(y_pos: u8, x_pos: u8, nt_hi: u8) -> (u8, u8) {
 fn write_door_bg_tiles(mem: &mut crate::frame::Manager, x_off: u8, tile: u8) {
     let x_pos = DOOR_X_TABLE[((x_off >> 4) & 1) as usize];
     let nt = mem.read_ram(0x030C + x_off as u16);
-    let (lo, hi) = make_room_ram_ptr(0x50, x_pos, nt);
-    let base = ((hi as u16) << 8) | lo as u16;
-    for k in 0..6u16 {
-        mem.write_wram(base.wrapping_add(k * 0x20), tile);
+    // 6 行纵写（行步 8 → 缓冲内 $20 步）：y=0x50,0x58,…,0x78
+    for k in 0..6u8 {
+        mem.room().set_tile(0x50u8.wrapping_add(k * 8), x_pos, nt, tile);
     }
-    let y = ((x_off >> 3) & 6) as u16;
-    mem.write_ram(0x005C + y, lo);
-    mem.write_ram(0x005D + y, hi);
+    let ptr = crate::world::room_ram::Room::addr(0x50, x_pos, nt);
+    // 列索引 = (x_off>>3)&6 的字节偏移 ÷ 2（lo/hi 交织）⇒ 等价 (x_off>>4)&3
+    crate::world::door::set_door_room_ptr(mem, (x_off >> 4) & 3, ptr);
 }
 
 /// DrawDoor（$8BB1）——ObjectCntrl($6B)（type（3→1）|$80|$20|flip）/isHit←0/动画面

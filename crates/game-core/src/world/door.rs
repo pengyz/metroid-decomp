@@ -7,6 +7,29 @@
 
 use crate::frame::Manager;
 
+/// `DoorRoomRAMPtr`：门的四列房间指针数组（`$5C/$5D`、`$5E/$5F`、`$60/$61`、`$62/$63`），
+/// **lo/hi 交织**、索引步长 2（asm `sta DoorRoomRAMPtr,x` / `sta DoorRoomRAMPtr+1,x`，x∈{0,2,4,6}）。
+pub const DOOR_ROOM_PTR_LO: u16 = 0x005C;
+pub const DOOR_ROOM_PTR_HI: u16 = 0x005D;
+
+/// 写第 `idx`（0..4）个门的房间指针。
+pub(crate) fn set_door_room_ptr(mem: &mut Manager, idx: u8, ptr: u16) {
+    debug_assert!(idx < 4, "DoorRoomRAMPtr 只有 4 列");
+    let o = (idx as u16) * 2;
+    mem.write_ram(DOOR_ROOM_PTR_LO + o, ptr as u8);
+    mem.write_ram(DOOR_ROOM_PTR_HI + o, (ptr >> 8) as u8);
+}
+
+/// 读第 `idx`（0..4）个门的房间指针（`DoorRoomRAMPtr`）。
+pub(crate) fn door_room_ptr(mem: &Manager, idx: u8) -> u16 {
+    debug_assert!(idx < 4, "DoorRoomRAMPtr 只有 4 列");
+    let o = (idx as u16) * 2;
+    u16::from_le_bytes([
+        mem.read_ram(DOOR_ROOM_PTR_LO + o),
+        mem.read_ram(DOOR_ROOM_PTR_HI + o),
+    ])
+}
+
 /// 管道虫洞表（`PipeBugHoles`）。
 pub(crate) const PIPE_BUG_HOLES: u16 = 0x0728;
 
