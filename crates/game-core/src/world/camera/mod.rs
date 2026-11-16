@@ -5,6 +5,8 @@
 //! 到界时把 `MapPosX` 复位）。任何单独改其中一个的写法都会让映射与像素脱钩，
 //! 症状是"滚动量对了但房间位置错了"（L4 上表现为背景整体错位、HUD 正常）。
 
+pub(crate) mod scroll;
+
 use crate::frame::Manager;
 
 /// `ScrollDir`：0=上、1=下、2=左、3=右（asm `@currentlyScrollingUp` 起的四态）。

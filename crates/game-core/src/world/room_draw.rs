@@ -743,7 +743,7 @@ pub fn end_of_room(mem: &mut crate::frame::Manager) {
     // 2026-10-28 移出的理由（kick 列写 bog 2 帧与 more_init [1,0,0,1] 冲突）已被
     // d667d6cc 证伪（逐列写 bog 归因错误（现价=0 bog））⇒**冲突前提失效**——
     // 恢复 asm 忠实形（用户可见缝根因修（l380 左缘柱（列迟到瞬态）））。
-    crate::samus::physics::stream_column_kick(mem);
+    crate::world::camera::scroll::stream_column_kick(mem);
 }
 
 /// LoadEnemy（$EB06——GetEnemyData/GetEnemyType/LEB4D/LEB6E 全径）。

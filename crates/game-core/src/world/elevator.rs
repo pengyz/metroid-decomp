@@ -170,9 +170,9 @@ fn elev_scroll_x_to_center(mem: &mut Manager) {
         .read_ram(ELEVATOR + F_X)
         .wrapping_sub(mem.read_ram(SCROLL_X));
     if d & 0x80 != 0 {
-        crate::samus::physics::scroll_right(mem);
+        crate::world::camera::scroll::scroll_right(mem);
     } else {
-        crate::samus::physics::scroll_left(mem);
+        crate::world::camera::scroll::scroll_left(mem);
     }
     draw_elevator(mem);
 }
@@ -230,9 +230,9 @@ fn elev_scroll_y(mem: &mut Manager) {
 /// `ElevScrollRoom ; 07:D892`——按 `ElevatorType` bit7 选 `ScrollUp` / `ScrollDown`。
 fn elev_scroll_room(mem: &mut Manager) {
     if mem.read_ram(ELEVATOR + F_TYPE) & 0x80 != 0 {
-        crate::samus::physics::scroll_up(mem);
+        crate::world::camera::scroll::scroll_up(mem);
     } else {
-        crate::samus::physics::scroll_down(mem);
+        crate::world::camera::scroll::scroll_down(mem);
     }
     draw_elevator(mem);
 }
@@ -362,7 +362,7 @@ pub fn samus_elevator(mem: &mut Manager) {
             // asm `cmp #$84 / bcc Lx057`——**低于 $84 就不滚**（bcc 跳到跳滚处）；
             // 即 Samus 落到屏幕下段才把摄像机往下推（与 MoveSamusDown 同口径）。
             if scr_y >= 0x84 {
-                crate::samus::physics::scroll_down(mem);
+                crate::world::camera::scroll::scroll_down(mem);
             }
             let mut y = mem.read_ram(SAMUS + S_Y);
             if y == SCRN_VY - 1 {
@@ -377,7 +377,7 @@ pub fn samus_elevator(mem: &mut Manager) {
             // asm `cmp #$64 / bcs Lx060`——**≥ $64 就不滚**（bcs 跳到跳滚处）；
             // 即 Samus 升到屏幕上段才把摄像机往上推（与 MoveSamusUp 同口径）。
             if scr_y < 0x64 {
-                crate::samus::physics::scroll_up(mem);
+                crate::world::camera::scroll::scroll_up(mem);
             }
             let mut y = mem.read_ram(SAMUS + S_Y);
             if y == 0 {

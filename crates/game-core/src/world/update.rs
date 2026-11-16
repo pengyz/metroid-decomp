@@ -1,4 +1,9 @@
-//! 世界推进：门滚屏、UpdateWorld 分派、各对象更新薄壳（Uw*）。
+//! 世界推进分派：`UpdateWorld` 的逐件调用序 + 各对象更新薄壳（Uw*）+ 门过渡滚屏。
+//!
+//! 【2026-11-17 改名】原 `world/scroll.rs`。文件名曾承诺"滚动"，但它装的是
+//! **世界推进的分派表**；相机滚动状态与行为归 `world/camera/`。
+//! 判据：谁能写 `SCROLL_*`/`MAP_POS_*`——只有相机。
+
 //!
 //! 由 `frame/mainloop.rs` 原样搬出（纯搬移）。asm 根：`ScrollDoor ; 07:E1F1`、
 //! `UpdateWorld` 分派、`Uw*` 各对象更新件。
