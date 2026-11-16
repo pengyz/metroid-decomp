@@ -272,6 +272,28 @@ def check_reuse(side: str, name: str, anchors: dict) -> str | None:
     return None
 
 
+def emu_artifacts_complete(name: str, caps: list) -> bool:
+    """emu 产物完整性：每个采集点的 emu 截图 + 逐帧 trace 都在。
+
+    锚匹配只证明"这份产物属于这次输入"，不证明文件还在——缓存复用必须两者都成立，
+    否则会出现"锚说能复用、diff 却读不到图"的 blocked 假象。
+    """
+    for f, tag in caps:
+        if not (SHOTS_EMU / f"{name}_f{f:05d}_{tag}.png").is_file():
+            return False
+    return (ROOT / "analysis" / "traces" / f"{name}.frames.jsonl").is_file()
+
+
+def emu_cache_hit(name: str, anchors: dict, caps: list) -> bool:
+    """emu 腿是否可整腿复用：emu 产物只依赖（用例 DSL, ROM, 展开调度），三者都在锚里。
+
+    rust 代码改动不使 emu 产物失效——这正是矩阵从"18 分钟"降到"只跑 rust"的关键。
+    """
+    if not emu_artifacts_complete(name, caps):
+        return False
+    return check_reuse("emu", name, anchors) is None
+
+
 def run_rust(name: str, sched: Path, out_dir: Path,
              state_out: Path | None = None, bundle: str | None = None) -> bool:
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -962,7 +984,7 @@ def matrix_md(m: dict) -> str:
 def execute_case(*, name: str, scen_path: Path, frames: int, joy: dict, caps: list,
                  snap: str | None, anchors: dict, skip_rust: bool, skip_emu: bool,
                  timeout: float, fixtures: list | None = None,
-                 joy2: dict | None = None) -> dict:
+                 joy2: dict | None = None, reuse_emu: bool = False) -> dict:
     """跑双腿+对拍（`run` / `run-all` 共用核心）——**不 exit**，返回记账 dict：
     {"legs": {"rust": "fresh|reused|none", "emu": …}, "report": l4report|None,
      "error": str|None, "exit_code": int|None}。
@@ -997,6 +1019,10 @@ def execute_case(*, name: str, scen_path: Path, frames: int, joy: dict, caps: li
         write_prov("rust", name, anchors)  # 腿成功 → 落锚存证
         legs["rust"] = "fresh"
     if skip_emu:
+        legs["emu"] = "reused"
+    elif reuse_emu:
+        # 缓存命中：锚（用例/ROM/调度）与产物均在 ⇒ emu 腿不必重跑
+        print(f"[emu] reused（锚匹配且产物齐备：{name}）")
         legs["emu"] = "reused"
     else:
         if run_emu(name, timeout, scen_path):
@@ -1091,10 +1117,12 @@ def _do_run_all(args) -> int:
         except FileNotFoundError as exc:
             print(f"[!] {exc}", file=sys.stderr)
             return 2
+        reuse_emu = (not args.skip_emu) and (not getattr(args, "fresh_emu", False)) \
+            and emu_cache_hit(name, anchors, caps)
         out = execute_case(name=name, scen_path=cf, frames=frames, joy=joy, caps=caps, joy2=joy2,
                            fixtures=plan.get("fixtures"),
                            snap=snap, anchors=anchors, skip_rust=args.skip_rust,
-                           skip_emu=args.skip_emu, timeout=args.timeout)
+                           skip_emu=args.skip_emu, timeout=args.timeout, reuse_emu=reuse_emu)
         try:
             case_file = str(cf.relative_to(ROOT))
         except ValueError:
@@ -1147,6 +1175,8 @@ def main():
     ap.add_argument("name", nargs="?", default=None,
                     help="用例名/路径（run-all 不接——全量遍历 cases/）")
     ap.add_argument("--timeout", type=float, default=240.0)
+    ap.add_argument("--fresh-emu", action="store_true",
+                    help="禁用 emu 腿缓存（强制重跑 Mesen；默认：锚+产物齐备即复用）")
     ap.add_argument("--skip-emu", action="store_true",
                     help="跳过模拟器运行（复用已有 shots/——复用前校验锚，不符/无锚 exit 2）")
     ap.add_argument("--skip-rust", action="store_true",
