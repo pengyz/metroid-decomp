@@ -108,3 +108,29 @@ Confidence: 90
 Evidence: asm bank07:F611-F673（ExplodeEnemy 尾件）、bank07:FA9D-FAEA（爆炸池 update/绘制/位移表）、
 bank07:DD8B（DrawEnemy 空帧门）；录像池字节 `$04C0-$04DF` 与 OAM 逐帧对读。
 Confidence: 92
+
+## 掉落物（Pickup）闪色与寿命节拍（2026-11-16，录像 f2170 驱动）
+
+**症状**：100% 录像 f2170/f2175/f2190 各差 44px，f2180 归零——每 10 帧交替一次。OAM 对读定位到单枚精灵 `attr` 差 1 位：emu `0x21`（调色板 1）/ rust `0x20`（调色板 0）。
+
+**asm**（`UpdateEnemy_Pickup ; 07:F483` 的 `@pickupWasNotTouched ; 07:F4D4` 尾）：
+
+```asm
+    lda FrameCount
+    and #$02
+    lsr
+    ora #$80 | OAMDATA_PRIORITY
+    sta ObjectCntrl          ; ⇒ 0x80 / 0xA1 每 2 帧交替
+    jmp UpdateEnemyCommon@noMoveNoAnim
+```
+
+**两处缺口**（同一函数，都是整支没写）：
+
+| 缺口 | asm | 旧 rust | 后果 |
+|---|---|---|---|
+| 闪色 | `ObjectCntrl ← (FrameCount&2)>>1 \| $80 \| $20` | 完全不写 `$6B` | 调色板恒 0，emu 交替 |
+| 寿命节拍 | `lda FrameCount / and #$03 / bne` ⇒ 每 4 帧才 `dec data0D`；`bne` ⇒ 减**后**为 0 才移除 | 每帧递减、且在减**前**为 0 才移除 | 掉落物存活时间约为 1/4 且少一帧 |
+
+**验证**：窗口 f2160–f2190 由 `44/0/44/0` 交替变为 **全 0px**；单测 `pickup_flickers_palette_every_two_frames`（断言 OAM attr 0x20/0x21）+ `pickup_die_delay_ticks_every_four_frames`（FrameCount 0..3 只有 0 递减）。
+
+**方法论**：`$6B` 在帧末被 `DrawSpriteObject`→`ClearObjectCntrl` 清 0，所以**测试不能断言调用后的 `$6B`**，必须断言 OAM 的 attr 字节（或把采样点放在绘制时刻）。

@@ -455,13 +455,20 @@ pub(crate) fn update_enemy_pickup(mem: &mut crate::frame::FrameMemory, x: u8) {
         mem.write_wram(0x6AF4 + px, 0); // RemoveEnemy（槽释）
         return;
     }
-    update_enemy_common_no_move_no_anim(mem, x);
-    let d = mem.read_ram(0x0400 + px + 0x0D);
-    if d > 0 {
-        mem.write_ram(0x0400 + px + 0x0D, d - 1);
-    } else {
-        mem.write_wram(0x6AF4 + px, 0); // 到期移除
+    // `@pickupWasNotTouched ; 07:F4D4`：`lda FrameCount / and #$03 / bne @endIf_D` ⇒
+    // **每 4 帧**才递减 data0D；`dec data0D / bne @endIf_D` ⇒ 减后为 0 才 RemoveEnemy。
+    if mem.read_ram(crate::ram_map::FRAME_COUNT) & 0x03 == 0 {
+        let d = mem.read_ram(0x0400 + px + 0x0D).wrapping_sub(1);
+        mem.write_ram(0x0400 + px + 0x0D, d);
+        if d == 0 {
+            mem.write_wram(0x6AF4 + px, 0); // RemoveEnemy（到期）
+        }
     }
+    // 闪色（`07:F4E2`）：`lda FrameCount / and #$02 / lsr / ora #$80|OAMDATA_PRIORITY /
+    // sta ObjectCntrl` ⇒ 覆盖态在 0x80（调色板 0）与 0xA1（调色板 1）间每 2 帧交替。
+    let fc = mem.read_ram(crate::ram_map::FRAME_COUNT);
+    mem.write_ram(0x006B, ((fc & 0x02) >> 1) | 0x80 | 0x20);
+    update_enemy_common_no_move_no_anim(mem, x);
 }
 
 /// EnemyCompleteDeath（**asm 内容锚** `: 07:DCF5`）：status←Pickup+data0D←$60+
@@ -836,5 +843,51 @@ mod tests_enemy_explosion_pool {
         super::explode_enemy(&mut m, x as u8);
         assert_eq!(m.read_ram(0x04C0), 0x00, "槽 0 未被覆盖");
         assert_eq!(m.read_ram(0x04C6), 0x00, "槽 0 delay 未被写");
+    }
+}
+
+#[cfg(test)]
+mod tests_pickup_flicker {
+    use crate::frame::FrameMemory;
+
+    fn stage(m: &mut FrameMemory, fc: u8, die_delay: u8) -> u8 {
+        let x: u8 = 0x10;
+        m.write_ram(crate::ram_map::FRAME_COUNT, fc);
+        m.write_wram(0x6AF4 + x as u16, 0x05); // status＝Pickup
+        m.write_ram(0x0400 + x as u16, 0x50); // y（屏内）
+        m.write_ram(0x0400 + x as u16 + 1, 0x60); // x（屏内）
+        m.write_wram(0x6AF4 + x as u16 + 1, 0x08); // radiusY
+        m.write_wram(0x6AF4 + x as u16 + 2, 0x08); // radiusX
+        m.write_ram(0x0400 + x as u16 + 0x0D, die_delay);
+        x
+    }
+
+    /// `@pickupWasNotTouched ; 07:F4D4` 尾：`lda FrameCount / and #$02 / lsr /
+    /// ora #$80|OAMDATA_PRIORITY / sta ObjectCntrl` ⇒ 覆盖态在 0x80/0xA1 间每 2 帧交替
+    /// （emu f2170 attr=0x21 vs rust 0x20 的成因）。
+    #[test]
+    fn pickup_flickers_palette_every_two_frames() {
+        let mut m = FrameMemory::default();
+        let x = stage(&mut m, 0x00, 0x60);
+        m.write_wram(0x6AF4 + x as u16 + 3, 0x89); // animFrame＝小能量
+        super::update_enemy_pickup(&mut m, x);
+        assert_eq!(m.read_ram(0x0202), 0x20, "bit1 清 ⇒ 调色板 0（+PRIORITY）");
+        assert_eq!(m.read_ram(0x006B), 0x00, "帧终 ClearObjectCntrl");
+        let mut m = FrameMemory::default();
+        let x = stage(&mut m, 0x02, 0x60);
+        m.write_wram(0x6AF4 + x as u16 + 3, 0x89);
+        super::update_enemy_pickup(&mut m, x);
+        assert_eq!(m.read_ram(0x0202), 0x21, "bit1 置 ⇒ 调色板 1（$80|$20|1）");
+    }
+
+    /// `lda FrameCount / and #$03 / bne @endIf_D` ⇒ data0D **每 4 帧**才递减一次。
+    #[test]
+    fn pickup_die_delay_ticks_every_four_frames() {
+        for (fc, want) in [(0u8, 0x5Fu8), (1, 0x60), (2, 0x60), (3, 0x60)] {
+            let mut m = FrameMemory::default();
+            let x = stage(&mut m, fc, 0x60);
+            super::update_enemy_pickup(&mut m, x);
+            assert_eq!(m.read_ram(0x0400 + x as u16 + 0x0D), want, "FrameCount={fc}");
+        }
     }
 }
