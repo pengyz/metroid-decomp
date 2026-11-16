@@ -70,6 +70,7 @@ end
 -- 声明在后的 local 不会被先前闭包捕获——t12 更正注）。
 local frame = 0
 local inputWarned = false
+local inputWarned2 = false
 local nTrace, nCap, nShot = 0, 0, 0
 
 -- ---------------- 逐帧输入调度（task-2 输入单源：Python 预展开，本文件只消费）
@@ -78,6 +79,9 @@ local nTrace, nCap, nShot = 0, 0, 0
 -- 【anti-drift 纪律】禁止在 Lua 侧再展开 press/hold/press_len/对向键（两处展开=漂移假对拍）。
 -- trigger/nav 为运行时条件输入（RAM 读驱动），在 inputPolled 回调叠加于本表之上。
 local schedule = PLAN.schedule or {}
+-- 2P 通道（2026-11-16）：只来自录像 p2 列（PLAN.schedule2）。asm 消费点
+-- `PauseMode ; 07:C9B1` 读 Joy2Status($15) 的 A|UP（放弃进度回密码屏，原版 quirk）。
+local schedule2 = PLAN.schedule2 or {}
 local btnBits = PLAN.btn_bits or {}
 
 -- sc-loop 导航速度估计表（navPrev[key]={x}）
@@ -956,6 +960,7 @@ emu.addEventCallback(function()
   -- 消费预展开 joy1（位解码为按钮表——算术式取位，勿引入 Lua 版本位运算依赖）。
   -- 静态对向键已在 expand_schedule 消解（后写覆盖）；btn 内仅条件输入可再现冲突。
   local joy = schedule[frame] or 0
+  local joy2 = schedule2[frame] or 0
   local btn = {}
   for b, bit in pairs(btnBits) do
     if math.floor(joy / bit) % 2 == 1 then btn[b] = true end
@@ -1033,6 +1038,18 @@ emu.addEventCallback(function()
   if not okIn and not inputWarned then
     inputWarned = true
     log("setInput FAILED: " .. tostring(errIn))
+  end
+  -- 2P（端口 1）：无 2P 的用例 joy2 恒 0（空按键表=全部松开），行为与旧形等价。
+  if joy2 ~= 0 or next(schedule2) ~= nil then
+    local btn2 = {}
+    for b, bit in pairs(btnBits) do
+      if math.floor(joy2 / bit) % 2 == 1 then btn2[b] = true end
+    end
+    local okIn2, errIn2 = pcall(emu.setInput, btn2, 1)
+    if not okIn2 and not inputWarned2 then
+      inputWarned2 = true
+      log("setInput(port1) FAILED: " .. tostring(errIn2))
+    end
   end
 end, "inputPolled")
 

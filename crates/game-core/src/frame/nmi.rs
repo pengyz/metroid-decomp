@@ -194,6 +194,44 @@ fn clear_init_flags(mem: &mut FrameMemory) {
     }
 }
 
+/// `SoundEngine_GameIsPaused ; $B399` + `PauseSFX ; $B38F`（暂停态声引擎）——
+/// 旧形是 `unported!("bank07:B3EB-paused")` fail-loud 桩：它只挡「当前主例程==PauseMode(5)」
+/// 这一支，而**录像 f22449 的 2P Up+A 正好把游戏推进这一支**（`PauseMode ; 07:C9B1` ⇒
+/// `GoPassword`），桩一响整段后续全部不可比。
+///
+/// asm 逐字：
+/// ```text
+/// SoundEngine_GameIsPaused: lda SFXPaused / beq PauseSFX
+///     lda PauseSFXStatus / cmp #$12 / beq @RTS        ; 已播满 18 帧 ⇒ 退出
+///     and #$03 / cmp #$03 / bne @endIf_A              ; 每 4 帧
+///         ldy #<SFXData@GamePaused($B20D) / jsr LoadSFXData@SQ1
+///     @endIf_A: inc PauseSFXStatus
+///     @RTS: rts
+/// PauseSFX($B38F): inc SFXPaused / jsr ClearSounds / sta PauseSFXStatus   ; A=$00（ClearSounds 尾）
+/// ```
+fn sound_engine_game_is_paused(mem: &mut FrameMemory) {
+    use crate::ram_map::{PAUSE_SFX_STATUS, SFX_PAUSED};
+    if mem.read_ram(SFX_PAUSED) != 0 {
+        let st = mem.read_ram(PAUSE_SFX_STATUS);
+        if st == 0x12 {
+            return; // `cmp #$12 / beq @RTS`
+        }
+        if st & 0x03 == 0x03 {
+            // `ldy #<SFXData@GamePaused.b`（$B20D 低字节）→ `jsr LoadSFXData@SQ1`
+            crate::sound::load_sfx_data_sq1(mem, 0x0D);
+        }
+        mem.write_ram(PAUSE_SFX_STATUS, st.wrapping_add(1)); // `inc PauseSFXStatus`
+        return;
+    }
+    // PauseSFX（$B38F）：首帧进暂停
+    mem.write_ram(SFX_PAUSED, 1); // `inc SFXPaused`（0→1）
+    for (reg, v) in [(0x4000u16, 0x10u8), (0x4004, 0x10), (0x400C, 0x10),
+                     (0x4008, 0x00), (0x4011, 0x00)] {
+        mem.write_io(reg, v); // ClearSounds $B43E 五写
+    }
+    mem.write_ram(PAUSE_SFX_STATUS, 0); // `sta PauseSFXStatus`（A=0）
+}
+
 pub fn sound_engine(mem: &mut FrameMemory) {
     mem.write_io(0x4017, 0x40 | 0x80); // APU_5STEP|IRQDISABLE（JOY2 口——APU 帧配置）
     // 静音径（**asm 内容锚** sound_engine.asm:415 `SoundEngine_SilenceMusic: ; $B3EB`）：
@@ -220,8 +258,10 @@ pub fn sound_engine(mem: &mut FrameMemory) {
         clear_init_flags(mem);
         return;
     }
+    // `cmp #_id_PauseMode.b / beq SoundEngine_GameIsPaused`（sound_engine.asm:395）
     if mem.read_ram(crate::ram_map::MAIN_ROUTINE) == 5 {
-        crate::unported!("bank07:B3EB-paused"); // GameIsPaused 路径（_id_PauseMode=5 注证）
+        sound_engine_game_is_paused(mem);
+        return;
     }
     mem.write_ram(crate::ram_map::SFX_PAUSED, 0); // `sta SFXPaused`
     // 四 init 子件：flags=0 短路（RunSoundRoutine 分派出口）；非零=域件桩

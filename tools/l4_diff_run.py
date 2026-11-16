@@ -184,7 +184,8 @@ def load_pil():
 
 
 def schedule_text(name: str, frames: int, joy: dict, caps: list,
-                  snapshot: str | None = None, fixtures=None) -> str:
+                  snapshot: str | None = None, fixtures=None,
+                  joy2: dict | None = None) -> str:
     """调度表文本（**唯一**序列化面）——.sched 落盘与调度 hash 同源同 bytes。
 
     snapshot=<prefix>（Task 4）：有快照才落行（非快照用例字节不变——锚不漂移）；
@@ -200,15 +201,18 @@ def schedule_text(name: str, frames: int, joy: dict, caps: list,
         lines.append(f"fixture {int(fx['frame'])} {fx['addr']} {fx['value']}")
     for f in sorted(joy):
         lines.append(f"joy {f} {joy[f]:02X}")
+    # 2P 通道（2026-11-16）：只来自录像 p2 列；无 2P 的用例字节不变（锚不漂移）。
+    for f in sorted(joy2 or {}):
+        lines.append(f"joy2 {f} {joy2[f]:02X}")
     for f, tag in caps:
         lines.append(f"capture {f} {tag}")
     return "\n".join(lines) + "\n"
 
 
 def write_schedule(name: str, frames: int, joy: dict, caps: list, path: Path,
-                   snapshot: str | None = None, fixtures=None):
-    """展开结果落 .sched（Rust 侧消费）——joy=scenario_run.expand_schedule 产物（同源）。"""
-    path.write_text(schedule_text(name, frames, joy, caps, snapshot, fixtures),
+                   snapshot: str | None = None, fixtures=None, joy2: dict | None = None):
+    """展开结果落 .sched（Rust 侧消费）——joy/joy2=scenario_run.expand_schedule_pads 产物（同源）。"""
+    path.write_text(schedule_text(name, frames, joy, caps, snapshot, fixtures, joy2),
                     encoding="utf-8", newline="\n")  # 禁 CRLF 翻译：sched hash 按 LF 计
 
 
@@ -957,7 +961,8 @@ def matrix_md(m: dict) -> str:
 
 def execute_case(*, name: str, scen_path: Path, frames: int, joy: dict, caps: list,
                  snap: str | None, anchors: dict, skip_rust: bool, skip_emu: bool,
-                 timeout: float, fixtures: list | None = None) -> dict:
+                 timeout: float, fixtures: list | None = None,
+                 joy2: dict | None = None) -> dict:
     """跑双腿+对拍（`run` / `run-all` 共用核心）——**不 exit**，返回记账 dict：
     {"legs": {"rust": "fresh|reused|none", "emu": …}, "report": l4report|None,
      "error": str|None, "exit_code": int|None}。
@@ -980,7 +985,8 @@ def execute_case(*, name: str, scen_path: Path, frames: int, joy: dict, caps: li
                     "exit_code": 2}
     sched = SHOTS_RUST / f"{name}.sched"
     SHOTS_RUST.mkdir(parents=True, exist_ok=True)
-    write_schedule(name, frames, joy, caps, sched, snapshot=snap, fixtures=fixtures)  # 与锚同源字节
+    write_schedule(name, frames, joy, caps, sched, snapshot=snap, fixtures=fixtures,
+                   joy2=joy2)  # 与锚同源字节
     print(f"[sched] → {sched}")
     if skip_rust:
         legs["rust"] = "reused"
@@ -1072,20 +1078,20 @@ def _do_run_all(args) -> int:
             print(f"[!] {exc}", file=sys.stderr)
             return 2
         frames = int(plan["frames"])
-        joy = sr.expand_schedule(plan)  # 唯一展开源（task-2 输入单源）
+        joy, joy2 = sr.expand_pads(plan)  # 唯一展开源（task-2 输入单源，双端口）
         caps = sorted((int(c["frame"]), c["tag"]) for c in plan.get("captures", []))
         if not caps:
             print(f"[!] 用例 {name} 无采集点（capture/endFrame 全缺）——分母会静默缩水，"
                   f"拒跑", file=sys.stderr)
             return 2
         snap = (plan.get("bundle_load") or {}).get("path")
-        sched_text = schedule_text(name, frames, joy, caps, snap, plan.get("fixtures"))
+        sched_text = schedule_text(name, frames, joy, caps, snap, plan.get("fixtures"), joy2)
         try:
             anchors = compute_anchors(cf, sched_text)
         except FileNotFoundError as exc:
             print(f"[!] {exc}", file=sys.stderr)
             return 2
-        out = execute_case(name=name, scen_path=cf, frames=frames, joy=joy, caps=caps,
+        out = execute_case(name=name, scen_path=cf, frames=frames, joy=joy, caps=caps, joy2=joy2,
                            fixtures=plan.get("fixtures"),
                            snap=snap, anchors=anchors, skip_rust=args.skip_rust,
                            skip_emu=args.skip_emu, timeout=args.timeout)
@@ -1175,7 +1181,7 @@ def main():
     plan = sr.parse_scenario(scen_path)
     name = plan.get("name") or args.name
     frames = int(plan["frames"])
-    joy = sr.expand_schedule(plan)  # 唯一展开源（task-2 输入单源——Rust/Lua 同产物）
+    joy, joy2 = sr.expand_pads(plan)  # 唯一展开源（task-2 输入单源——Rust/Lua 同产物）
     caps = sorted((int(c["frame"]), c["tag"]) for c in plan.get("captures", []))
     # I1：run/diff 拒空采集点（0 采集点 → results=[] 会 fail=0 exit 0『✅ 全部一致』=空跑出绿）
     if args.action in ("run", "diff") and not caps:
@@ -1219,7 +1225,8 @@ def main():
         n = args.frames or frames
         sched = SHOTS_RUST / f"{name}.sched"
         SHOTS_RUST.mkdir(parents=True, exist_ok=True)
-        write_schedule(name, frames, joy, caps, sched, snapshot=snap, fixtures=plan.get("fixtures"))
+        write_schedule(name, frames, joy, caps, sched, snapshot=snap, fixtures=plan.get("fixtures"),
+                       joy2=joy2)
         print(f"[sched] → {sched}")
         state_path = SHOTS_RUST / f"{name}.state.jsonl"
         if not run_rust(name, sched, SHOTS_RUST, state_out=state_path, bundle=snap):
@@ -1252,6 +1259,7 @@ def main():
     if args.action == "run":
         # 双腿+对拍（与 run-all 共用 execute_case——复用腿先过锚校验，不静默复用）
         out = execute_case(name=name, scen_path=scen_path, frames=frames, joy=joy,
+                           joy2=joy2,
                            fixtures=plan.get("fixtures"),
                            caps=caps, snap=snap, anchors=anchors,
                            skip_rust=args.skip_rust, skip_emu=args.skip_emu,

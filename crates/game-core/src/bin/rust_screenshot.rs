@@ -11,7 +11,9 @@
 //! 调度表文本格式（每行空白分隔，# 注释）：
 //!     name <scenario>
 //!     frames <N>
-//!     joy <frame> <joy1_hex>      # 1-based 帧 → NES 手柄字节（可稀疏；缺省 0）
+//!     joy <frame> <joy1_hex>      # 1-based 帧 → 1P 手柄字节（可稀疏；缺省 0）
+//!     joy2 <frame> <joy2_hex>     # 1-based 帧 → **2P** 手柄字节（只来自录像 p2 列；
+//!                                 # 缺省 0。asm 消费点 `PauseMode ; 07:C9B1` 读 $15 的 A|UP）
 //!     capture <frame> <tag>       # 采集点（帧渲染完成后截图）
 //!
 //! 用法：
@@ -128,6 +130,9 @@ struct Plan {
     name: String,
     frames: usize,
     joy: HashMap<usize, u8>,
+    /// 2P 手柄（`joy2 <frame> <hex>`）——`ReadJoyPads ; 07:C215` 本来就读双端口
+    /// （`crates/game-core/src/frame/nmi.rs:252`），缺的只是把值喂进来。
+    joy2: HashMap<usize, u8>,
     captures: Vec<(usize, String)>,
     /// fixture <帧> <hex地址> <hex值>（=emu 腿 `fixture` 同语义：帧 F 采样/执行前写入 RAM）。
     /// 【2026-11-14】两腿必须同注入，否则起点不同（emu 生效/rust 缺省 ⇒ 假失配或假一致）。
@@ -141,6 +146,7 @@ fn parse_schedule(text: &str) -> Result<Plan, String> {
     let mut name = String::from("rust");
     let mut frames = 0usize;
     let mut joy = HashMap::new();
+    let mut joy2 = HashMap::new();
     let mut captures = Vec::new();
     let mut snapshot: Option<String> = None;
     let mut fixtures: Vec<(usize, u16, u8)> = Vec::new();
@@ -163,6 +169,14 @@ fn parse_schedule(text: &str) -> Result<Plan, String> {
                     .and_then(|s| u8::from_str_radix(s.trim_start_matches("0x"), 16).ok())
                     .ok_or_else(|| format!("line {}: joy 值 hex", ln + 1))?;
                 joy.insert(f, v);
+            }
+            "joy2" => {
+                let f: usize = tok.get(1).and_then(|s| s.parse().ok())
+                    .ok_or_else(|| format!("line {}: joy2 帧号", ln + 1))?;
+                let v: u8 = tok.get(2)
+                    .and_then(|s| u8::from_str_radix(s.trim_start_matches("0x"), 16).ok())
+                    .ok_or_else(|| format!("line {}: joy2 值 hex", ln + 1))?;
+                joy2.insert(f, v);
             }
             "capture" => {
                 let f: usize = tok.get(1).and_then(|s| s.parse().ok())
@@ -192,7 +206,7 @@ fn parse_schedule(text: &str) -> Result<Plan, String> {
     if frames == 0 {
         return Err("缺 frames".into());
     }
-    Ok(Plan { name, frames, joy, captures, fixtures, snapshot })
+    Ok(Plan { name, frames, joy, joy2, captures, fixtures, snapshot })
 }
 
 // ---------------- bundle 三直映（snapshot 消费面——Task 4） ----------------
@@ -512,7 +526,10 @@ fn main() {
             eprintln!("[joy] f{} nmi_en={} ppuctrl={:02X}", frame, engine.mem.nmi_enabled, engine.mem.ram[0x00FF]);
             eprintln!("[joy] f{} joy1_field={:02X} sched={:02X}", frame, engine.mem.joy1, plan.joy.get(&frame).copied().unwrap_or(0));
         }
-        engine.mem.joy2 = 0;
+        // 2P（2026-11-16）：录像 p2 列——Metroid 的 2P 用于 `PauseMode ; 07:C9B1` 的
+        // A+UP（放弃进度回密码屏，原版 quirk，见 docs/bug-ledger.md）。旧形硬编码 0
+        // ⇒ 录像 f22449 起行为不可比。
+        engine.mem.joy2 = plan.joy2.get(&frame).copied().unwrap_or(0);
         // catch_unwind：`unported!` fail-loud 缺口在**对拍工具层**不整程崩——
         // 引擎/测试仍确定性引爆（fail-loud 语义不变）；对拍记录缺口帧+原因，
         // 其后采集点标记 blocked（诚实记账——非伪造帧）。
@@ -667,6 +684,18 @@ fn capture_inputs<'a>(
 mod tests {
     use super::*;
     use game_core::frame::{FrameMemory, Registers};
+
+    /// 2P 通道（2026-11-16）：`joy2 <frame> <hex>` 与 `joy` 同形解析，缺省为空表
+    /// （旧 .sched 无该行 ⇒ 行为与硬编码 0 等价，锚不漂移）。
+    #[test]
+    fn schedule_parses_joy2_channel() {
+        let p = parse_schedule("name t\nframes 10\njoy 3 41\njoy2 22449 88\ncapture 5 cap\n").unwrap();
+        assert_eq!(p.joy.get(&3), Some(&0x41));
+        assert_eq!(p.joy2.get(&22449), Some(&0x88), "2P=A|UP");
+        assert!(p.joy.get(&22449).is_none(), "1P/2P 通道不串");
+        let p2 = parse_schedule("name t\nframes 10\njoy 3 41\n").unwrap();
+        assert!(p2.joy2.is_empty(), "无 joy2 行 ⇒ 空表（等价旧形）");
+    }
 
     /// 三直映 JSON fixture（tools/scenario_capture.lua::bundle_capture 真格式）：
     /// {"mss_bytes":N,"ram":"<4096 hex>","wram":"<16384 hex>","regs":{a,x,y,sp,pc,ps},"frame":N}

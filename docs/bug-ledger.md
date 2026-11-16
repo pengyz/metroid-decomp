@@ -97,3 +97,19 @@
 - 影响：竖滚房 Resting 敌激活/绘制时序（玩家可见为「敌睡到屏幕顶部附近才醒」——
   原版即如此）；Stage A 一致性对拍按原版语义。
 - trace id：analysis/traces/case-crawlprobe.frames.jsonl（敌槽 d5 bit1 时序面）。
+
+## BUG-092：2P 手柄 A+UP = 放弃当前进度回密码屏（无确认）
+
+- 现象: 游戏中（`MainRoutine=5 PauseMode`）按住 **2P** 手柄的 `A+UP`，游戏立刻放弃当前进度、
+  切到密码输入屏（`MainRoutine 5→6 GoPassword`）。没有「确认/取消」对话框，也没有存档提示——
+  1P 手柄的 A+UP 什么都不做。
+- 复现: 任一录像/场景在暂停态把 2P 的 `A|UP`（`$88`）喂进去即可；A 级实测=
+  `movies/lordtom-metroid-100p.inputlog` 的 **f22449** 起（帧号即行序，p2 列=0x88），
+  emu 与 rust 两侧 `MainRoutine` 同在 f22451 由 5 变 6。
+- 影响: 录像对拍必须实现 2P 通道（已做：`joy2` 通道 + `emu.setInput(btn,1)` + `FrameMemory.joy2`），
+  否则 f22449 之后整段不可比。**不影响** 1P 玩法。
+- 证据: asm `PauseMode ; 07:C9B1`（`refs/m1disasm/SRC/prg7_engine.asm:2139`）：
+  `lda Joy2Status / and #BUTTON_A|BUTTON_UP / eor #BUTTON_A|BUTTON_UP / bne @RTS` →
+  查 `EndTimer+1` → `sta GamePaused / inc MainRoutine`；rust 侧 `crates/game-core/src/frame/tick.rs:410`。
+- 处理: Stage A 保真保留（代码注释已引 BUG-092）；Stage B 若要改，应改为「暂停菜单里显式确认」。
+- 登记: 2026-11-16 / lead（用户裁定 D4：保真保留，不修成对话框）

@@ -543,9 +543,22 @@ def parse_scenario(path: Path) -> dict:
 # ---------------------------------------------------------------- 输入展开（唯一源）
 
 def expand_schedule(plan: dict) -> dict[int, int]:
+    """逐帧 **1P** 输入展开（向后兼容门面——唯一实现在 :func:`expand_pads`）。"""
+    return expand_pads(plan)[0]
+
+
+def expand_pads(plan: dict) -> tuple[dict[int, int], dict[int, int]]:
     """逐帧输入展开**唯一实现**（task-2 输入单源——anti-drift 硬判据的根）。
 
-    展开 DSL 静态输入段 → {frame: joy1}（1-based，非零帧才入表，返回按帧号升序）：
+    返回 `(joy1, joy2)`：1P 来自 DSL（press/hold）与 `inputlog` 的 p1 列；2P **只来自
+    `inputlog` 的 p2 列**（Metroid 的 2P 仅在「Up+A 放弃进度回密码屏」这类原版 quirk 上
+    使用，手写 DSL 不造第二套语法——需要 2P 就写录像）。
+
+    2P 语义的 asm 锚：`PauseMode ; 07:C9B1` 读 `Joy2Status($15)` 的 `A|UP`。两侧同源：
+    emu 腿 `emu.setInput(btn, 1)`、Rust 腿 `FrameMemory.joy2`——`ReadJoyPads ; 07:C215`
+    本来就读双端口，缺的只是把值喂进来。
+
+    展开 DSL 静态输入段 → `{frame: joy1}`（1-based，非零帧才入表，返回按帧号升序）：
       · hold <a-b> <btn>：帧 a..b（含）按住；
       · press <f> <btn>：帧 f..f+press_len-1 按住（press_len 默认 PRESS_LEN_DEFAULT）；
       · 同帧多按钮 OR 成 joy1（位映射 BUTTON_BITS）；
@@ -605,7 +618,13 @@ def expand_schedule(plan: dict) -> dict[int, int]:
             joy[f] = p1
         else:
             joy.pop(f, None)
-    return joy
+
+    # 2P：只认录像 p2 列（非零帧才入表；与 1P 同「非零才落行」口径——sched 字节最小化）
+    joy2: dict[int, int] = {}
+    for f, (_p1, p2, _cmd) in log_table.items():
+        if p2:
+            joy2[f] = p2
+    return joy, joy2
 
 
 # ---------------------------------------------------------------- Lua 生成
@@ -657,7 +676,10 @@ def generate_lua(plan: dict, scenario_path: Path) -> tuple[str, str]:
     # raw 输入段不进 Lua（唯一展开源=expand_schedule——防二次展开漂移假对拍）
     plan_lua.pop("presses", None)
     plan_lua.pop("holds", None)
-    plan_lua["schedule"] = expand_schedule(plan)
+    joy1, joy2 = expand_pads(plan)
+    plan_lua["schedule"] = joy1
+    if joy2:  # 无 2P 的用例不落键（PLAN 字节不漂移）
+        plan_lua["schedule2"] = joy2
     plan_lua["btn_bits"] = BUTTON_BITS
     plan_lua["out_dir"] = str((TRACES_DIR).resolve())
     plan_lua["shots_dir"] = str((SHOTS_DIR).resolve())

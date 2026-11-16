@@ -916,12 +916,13 @@ mod palette_tests {
     /// 曲头表（`$BD31`，12×13B）与偏移表（`$BBFA`，落在 `sound.region` 窗内）。
     #[test]
     fn sound_tables_match_rom_anchors() {
-        assert_eq!(sfx_tables().len(), 0x78, "$B289-$B211");
+        assert_eq!(sfx_tables().len(), 0x7c, "$B289-$B20D（GamePaused 4B + 记录窗 0x78）");
+        assert_eq!(sfx_record4(0xB20D).unwrap(), &[0x80, 0x7F, 0x80, 0x48], "SFXData@GamePaused（ROM 实读）");
         assert_eq!(sfx_record4(0xB211).unwrap(), &[0x35, 0x7F, 0x00, 0xB0], "W3[0] ScrewAttack");
         assert_eq!(sfx_record4(0xB225).unwrap(), &[0xC1, 0x89, 0x02, 0x0F], "SamusHit");
         assert_eq!(sfx_record4(0xB279).unwrap(), &[0x09, 0x7F, 0x30, 0x48], "Beep");
         assert_eq!(sfx_record4(0xB285).unwrap(), &[0x7F, 0x7F, 0x30, 0xB2], "W4[6]");
-        assert!(sfx_record4(0xB20F).is_none(), "窗外低址（$B200 SFXData 头）");
+        assert!(sfx_record4(0xB20C).is_none(), "窗外低址（$B200 SFXData 头区）");
         assert!(sfx_record4(0xB286).is_none(), "窗外高址（跨窗尾）");
         assert_eq!(song_headers().len(), 12 * 13);
         assert_eq!(&song_headers()[0..5], &[0x0B, 0xFF, 0xF5, 0x00, 0x00], "表首行 ROM $BD31");
@@ -1253,7 +1254,9 @@ pub fn en_projectile_splatter_anim(area: u8) -> u16 {
 pub fn mellow_anim_index(area: u8) -> u8 { en_anim_idx(area)[8] }
 
 /// SFX 4B 记录窗基址（`$B211`）；窗口内记录以**绝对 ROM 址**引用。
-pub const SFX_TABLES_ADDR: u16 = 0xB211;
+/// SFX 段窗起点：`SFXData@GamePaused ; $B20D`（暂停音 4 B）——其后紧跟
+/// `$B211..$B289` 的 4 B 记录窗（记录仍按绝对地址寻址，故起点下移不影响任何调用点）。
+pub const SFX_TABLES_ADDR: u16 = 0xB20D;
 
 /// 声引擎区窗口基址（`$B289`）；区内寻址一律 `addr - SOUND_REGION_ADDR`。
 pub const SOUND_REGION_ADDR: u16 = 0xB289;

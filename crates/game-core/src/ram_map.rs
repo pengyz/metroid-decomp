@@ -86,6 +86,8 @@ pub const END_TIMER: u16 = 0x010A;
 /// 声态面（SFX/Music 初始化旗——constants_ram 内容锚族）：
 /// SFXPaused=$0602（「0=Game not paused, 1=Game paused」）。
 pub const SFX_PAUSED: u16 = 0x0602;
+/// `PauseSFXStatus ; $0603`（`constants_ram.asm:1005`）：暂停音已播帧数（`< #$12`）。
+pub const PAUSE_SFX_STATUS: u16 = 0x0603;
 /// SFXNoiseInitFlags=$0680（「Initialization flags for noise SFX」）。
 pub const SFX_NOISE_INIT: u16 = 0x0680;
 /// SFXSQ1InitFlags=$0681。

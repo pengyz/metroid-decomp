@@ -248,7 +248,21 @@ mod tests {
 /// 就是 ROM 址，故这里以地址而非数组索引定位——地址即 asm 锚）。
 fn sfx4(addr: u16) -> &'static [u8; 4] {
     game_data::assets::sfx_record4(addr)
-        .unwrap_or_else(|| panic!("SFX 记录址 ${addr:04X} 不在 $B211..$B289 窗内"))
+        .unwrap_or_else(|| panic!("SFX 记录址 ${addr:04X} 不在 $B20D..$B289 窗内"))
+}
+
+/// `LoadSFXData@SQ1 ; $B368`（**asm 内容锚**）：`APURegisterPtr←$4000`、
+/// `SFXDataPtr←$B2:Y`，随后 4 字节**间接**写 `$4000..$4003`。
+/// 调用形（asm `$B3AF`）：`ldy #<SFXData@Xxx` 只传低字节——高字节恒 `>SFXData($B2)`。
+pub(crate) fn load_sfx_data_sq1(mem: &mut crate::frame::FrameMemory, low: u8) {
+    mem.write_ram(0x00E0, 0x00); // APURegisterPtr ← $4000（<SQ1_VOL / >SQ1_VOL）
+    mem.write_ram(0x00E1, 0x40);
+    mem.write_ram(0x00E2, low); // SFXDataPtr ← $B2:low
+    mem.write_ram(0x00E3, 0xB2);
+    let rec = sfx4(0xB200 | low as u16);
+    for i in 0..4u16 {
+        mem.write_io(0x4000 + i, rec[i as usize]);
+    }
 }
 
 /// SamusHit 音效 4B 记录（ROM `$B225`——`InitSFXData` 的 src 址，窗内寻址）。

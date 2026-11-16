@@ -38,7 +38,7 @@ def joy_canon(joy: dict) -> bytes:
     return json.dumps({str(k): v for k, v in sorted(joy.items())}, sort_keys=True).encode()
 
 
-CASE001_JOY_SHA256 = "03778026161b919c5dde79582684548e569b5894040107415498fcf41609dd9a"  # cases/（1200 帧）
+CASE001_JOY_SHA256 = "28fd38817e91bcd290f012da213f65e6ec96a893aa580b34c87cc5bf6612b635"  # cases/（1610 帧；2026-11-16 A-重锚后重钉）
 ORACLE001_JOY_SHA256 = "e4b43358b669b59b71895f66b4b595f71cc2c73c68f799581f9c532a487538f9"  # oracle（1800 帧）
 
 
@@ -109,9 +109,9 @@ class TestExpandSchedule:
 class TestNoRegression:
     def test_cases_case001_joy_hash_frozen(self):
         plan = sr.parse_scenario(CASES / "case-001-game-start-samus-interaction.txt")
-        assert plan["frames"] == 1200
+        assert plan["frames"] == 1610  # 【2026-11-16 更正】1200→1610：A-重锚后用例权威窗
         joy = sr.expand_schedule(plan)
-        assert len(joy) == 161
+        assert len(joy) == 163
         assert hashlib.sha256(joy_canon(joy)).hexdigest() == CASE001_JOY_SHA256
 
     def test_oracle_case001_joy_hash_frozen(self):
@@ -233,7 +233,37 @@ class TestSemanticDecisions:
         """cases/case-001 权威定义：采集点对齐 + endFrame 终端采集点（tag=end）。"""
         plan = sr.parse_scenario(CASES / "case-001-game-start-samus-interaction.txt")
         caps = [(int(c["frame"]), c["tag"]) for c in plan["captures"]]
-        assert sorted(caps) == [(420, "game-in"), (550, "after-right"), (650, "after-left"),
-                                (720, "after-jump"), (820, "after-shoot"),
-                                (950, "combo-action"), (1200, "end")]
+        # 【2026-11-16 更正】A-重锚后权威采集点（旧表 550/650/720/820/950/1200 已被
+        # 逐帧证据替换为下列 12 点；本断言此后随 cases/ 单源同步）
+        assert sorted(caps) == [(420, "game-in"), (960, "after-right"), (1060, "after-left"),
+                                (1125, "jump-shoot"), (1130, "after-jump"),
+                                (1135, "landing-early"), (1145, "landing-settled"),
+                                (1220, "bullet-midflight"), (1225, "bullet-mid-2"),
+                                (1230, "after-shoot"), (1235, "bullet-late"),
+                                (1360, "combo-action"), (1610, "end")]
         assert plan["bundle_load"] is None  # snapshot none
+
+
+def test_expand_schedule_pads_two_player_from_inputlog(tmp_path):
+    """2P 通道（2026-11-16）：`expand_pads` 返回 (joy1, joy2)；
+    joy2 **只来自录像 p2 列**（手写 DSL 不造第二套语法）。
+    asm 锚：`PauseMode ; 07:C9B1` 读 Joy2Status($15) 的 A|UP。"""
+    log = tmp_path / "m.inputlog"
+    log.write_text("# frames 3\n41 00 00\n00 88 00\n41 00 00\n",
+                   encoding="utf-8", newline="\n")
+    plan = synth_plan(presses=[])
+    plan["input_log"] = str(log)
+    joy1, joy2 = sr.expand_pads(plan)
+    assert joy1 == {1: 0x41, 3: 0x41}, joy1
+    assert joy2 == {2: 0x88}, "2P 只在 p2 非零帧落表"
+    # 门面保持向后兼容：expand_schedule == joy1
+    assert sr.expand_schedule(plan) == joy1
+
+
+def test_sched_text_joy2_lines_only_when_present():
+    """无 2P 的用例 .sched 字节不变（锚不漂移）；有 2P 才落 joy2 行。"""
+    base = l4.schedule_text("n", 5, {1: 0x41}, [(5, "cap")])
+    assert "joy2" not in base
+    with2 = l4.schedule_text("n", 5, {1: 0x41}, [(5, "cap")], joy2={2: 0x88})
+    assert "joy2 2 88" in with2
+    assert with2.replace("joy2 2 88\n", "") == base
