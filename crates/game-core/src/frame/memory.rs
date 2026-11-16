@@ -18,7 +18,9 @@ impl Manager {
         // `& 0x7FF` 镜像归一把 WRAM 读混入 ram[0x077] 垃圾。同族修（分派非点修）。
         // **WRAM 必须先判**：否则 `0x6B00 & 0x7FF == 0x0300` 会误落 typed 面（本轮实证）。
         if (0x6000..0x8000).contains(&addr) {
-            return self.wram()[addr as usize - 0x6000];
+            // 单一分派：WRAM 面只经 `read_wram`（敌槽 typed 域在同一入口判）。
+            // 若这里直读 `storage`，`read_ram` 与 `read_wram` 会对同一格给两个答案。
+            return self.read_wram(addr);
         }
         // 【镜像归一先于 typed 分派（2026-11-17）】`read_ram(0x0B00)` 与 `read_ram(0x0300)`
         // 是同一格（2KB 镜像），若先查 typed 会漏判 ⇒ 别名绕过 typed 面。
@@ -35,7 +37,8 @@ impl Manager {
         // 【read_ram 映射修同族（2026-11-06）】WRAM 分派（写径同读径）——必须先于 typed，
         // 理由同读径（`0x6B00` 的镜像别名等于 `$0300`）。
         if (0x6000..0x8000).contains(&addr) {
-            self.wram_mut()[addr as usize - 0x6000] = v;
+            // 单一分派：同 read_ram——写径也必须经过 `write_wram` 的 typed 判。
+            self.write_wram(addr, v);
             return;
         }
         let a = addr & 0x7FF;
