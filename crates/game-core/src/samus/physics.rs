@@ -1915,7 +1915,11 @@ fn check_stop_horz_mvmt(mem: &mut Manager, moved: bool) -> bool {
     if mem.read_ram(crate::ram_map::SAMUS_ACCEL_Y) != 0 {
         return true; // 空中出
     }
-    if mem.read_ram(crate::ram_map::SAMUS_STATUS) == 4 {
+    // asm `cmp #sa_Roll`（$E370）= **3**；旧形误写 4（=sa_PntUp）。
+    // 后果：球形 Samus 撞墙被 `CheckStopHorzMvmt` 强行 `SetSamusStand`（球被「站起来」），
+    // 而 ROM 里球形是显式放行（`beq Exit10`）。100% 录像 f2230 起的 192/207px 即此：
+    // 低矮通道内 emu 保持滚动、rust 每帧被拽成站立/跑动。
+    if mem.samus().status() == Some(crate::memmap::views::samus::SamusStatus::Roll) {
         return true; // sa_Roll（球形）出
     }
     crate::samus::handler::set_samus_stand(mem); // jmp SetSamusStand（CF55 全径）
@@ -2043,6 +2047,68 @@ pub fn samus_move_horizontally(mem: &mut Manager, delta: u8) {
 /// 【goal-r22 红测】滚屏列写 = NMI bogged 2 帧（emu 实测 f916-917/f1064-1065 各停 2 帧
 /// ——CheckUpdateNameTable(E54A) ④列流送 30 块 PPU 竖写=重活）。旧形无门 ⇒ FC 相位漂移
 /// ⇒ 爬行 6/8 移动窗错相 ⇒ 敌轨迹级联（docs/findings/enemy-crawler-trajectory-divergence.md）。
+mod tests_stop_horz {
+    use super::*;
+
+    /// asm `CheckStopHorzMvmt ; 07:E365` 的球形放行：`cmp #sa_Roll`（=3）⇒ `beq Exit10`。
+    ///
+    /// 旧形把 `sa_Roll` 写成 4（=sa_PntUp）⇒ 球形 Samus 撞墙时走 `jmp SetSamusStand`，
+    /// 被「强行站起来」；100% 录像 f2230 起 192/207px（低矮通道内 emu 保持滚动、rust
+    /// 每帧站/跑交替）就是这条错比较的像素面证据。
+    #[test]
+    fn blocked_move_keeps_ball_status() {
+        let mut m = Manager::default();
+        m.write_ram(crate::ram_map::SAMUS_STATUS, 3); // sa_Roll
+        m.write_ram(crate::ram_map::SAMUS_ACCEL_Y, 0); // 着地
+        assert!(check_stop_horz_mvmt(&mut m, false));
+        assert_eq!(
+            m.read_ram(crate::ram_map::SAMUS_STATUS), 3,
+            "球形必须原样放行（不得 SetSamusStand）"
+        );
+        assert_eq!(m.read_ram(crate::ram_map::OBJECT_COUNTER), 1, "破环仍要写 ObjectCounter=1");
+    }
+
+    /// 对照：站立/跑步（非球、着地、受阻）⇒ `SetSamusStand`（status←0 + 站立动画）。
+    #[test]
+    fn blocked_move_stands_when_not_ball() {
+        let mut m = Manager::default();
+        m.write_ram(crate::ram_map::SAMUS_STATUS, 1); // sa_Run
+        m.write_ram(crate::ram_map::SAMUS_ACCEL_Y, 0);
+        assert!(check_stop_horz_mvmt(&mut m, false));
+        assert_eq!(m.read_ram(crate::ram_map::SAMUS_STATUS), 0);
+        assert_eq!(m.samus().anim_index(), 0x07, "站立动画（SetSamusStand 的 CF5D 支）");
+    }
+
+    /// 对照：空中（accelY≠0）⇒ 直接出，不改 status。
+    #[test]
+    fn blocked_move_in_air_keeps_status() {
+        let mut m = Manager::default();
+        m.write_ram(crate::ram_map::SAMUS_STATUS, 2); // sa_Jump
+        m.write_ram(crate::ram_map::SAMUS_ACCEL_Y, 0x18);
+        assert!(check_stop_horz_mvmt(&mut m, false));
+        assert_eq!(m.read_ram(crate::ram_map::SAMUS_STATUS), 2);
+    }
+
+    /// 对照：成功移动（carry=1）⇒ 什么都不做。
+    #[test]
+    fn successful_move_is_noop() {
+        let mut m = Manager::default();
+        m.write_ram(crate::ram_map::SAMUS_STATUS, 3);
+        assert!(!check_stop_horz_mvmt(&mut m, true));
+        assert_eq!(m.read_ram(crate::ram_map::SAMUS_STATUS), 3);
+        assert_eq!(m.read_ram(crate::ram_map::OBJECT_COUNTER), 0);
+    }
+
+    /// 守卫：状态枚举数值锚（防「再写一次 4」）。
+    #[test]
+    fn roll_enum_value_is_three() {
+        use crate::memmap::views::samus::SamusStatus;
+        assert_eq!(SamusStatus::Roll.to_byte(), 3);
+        assert_eq!(SamusStatus::PointUp.to_byte(), 4);
+    }
+}
+
+#[cfg(test)]
 mod tests_vertical_scroll {
     //! 竖滚双件（`ScrollUp ; 07:E4F1` / `ScrollDown ; 07:E519`）语义钉：
     //! 方向切换（0↔1）、`ScrollY` 环绕 + 名表换（ToggleNameTable）、上/下界（GetRoomNum
