@@ -1391,9 +1391,13 @@ mod tests_kill_chain {
         m.write_ram(0x0400 + x as u16 + 0x0E, 1); // weaponAction=弹（wa 1）
         m.write_ram(crate::ram_map::RANDOM1, 0x20); // RNG（>1/16（有掉））
         enemy_react_to_projectile(&mut m, x);
-        assert_eq!(m.read_wram(0x6AF4 + x as u16), 3, "HP 0⇒爆（status3）");
+        // 【asm 更正（07:F617-F623）】被**普通束**打死的非 miniboss **跳过 chunky 爆炸动画**、
+        // 立刻变掉落物（`jsr EnemyCompleteDeath@SkipChunkyExplosion`）⇒ status=5 而非 3。
+        // 旧断言写 status=3 是把「一律播爆散」的旧实现当期望（录像 f2151 实证：emu=5/rust=3）。
+        assert_eq!(m.read_wram(0x6AF4 + x as u16), 5, "普通束杀⇒立刻变掉落物（status5）");
+        assert_eq!(m.read_ram(0x0400 + x as u16 + 0x0D), 0x60, "拾取计时 $60");
         let timer = m.read_ram(0x0400 + x as u16 + 6);
-        assert!(timer > 0, "chunky 计时置（+06）");
+        assert!(timer > 0, "chunky 计时仍写（asm 不 return，+06）");
         // 计时走尽⇒CompleteDeath⇒Pickup
         for _ in 0..=timer {
             update_enemy_explode(&mut m, x);
@@ -1433,13 +1437,16 @@ mod tests_kill_chain {
         m.write_ram(0x03D0 + 2, 4); // radiusX
         m.write_ram(0x03D0 + 0x0D, 0x50); // 弹 y
         m.write_ram(0x03D0 + 0x0E, 0x82); // 弹 x（2px 距）
+        // `EnemyCompleteDeath` 的 1/16「不掉落」支（`lda RandomNumber1 / cmp #$10 / bcc`）⇒
+        // 置 RNG≥$10 才有掉落物；否则 RemoveEnemy 把 status 清 0（那是正确行为，非失败）。
+        m.write_ram(crate::ram_map::RANDOM1, 0x20);
         // ①碰撞环⇒命中标志
         uw_collision_detection(&mut m);
         assert_eq!(m.read_ram(0x0400 + x as u16 + 4) & 0x20, 0x20, "敌 isHit bit5（被弹）");
         assert_eq!(m.read_ram(0x0400 + x as u16 + 0x0E), 1, "weaponAction←弹 status");
         // ②F536 伤害链⇒扣血⇒爆
         enemy_react_to_projectile(&mut m, x);
-        assert_eq!(m.read_wram(0x6AF4 + x as u16), 3, "HP 0⇒爆（status3）");
+        assert_eq!(m.read_wram(0x6AF4 + x as u16), 5, "普通束杀⇒掉落物（status5，asm F623）");
         // 远弹不触
         let mut m2 = FrameMemory::default();
         m2.write_wram(0x6AF4 + x as u16, 2);

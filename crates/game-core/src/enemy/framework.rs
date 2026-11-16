@@ -212,6 +212,17 @@ pub(crate) fn enemy_react_to_projectile(mem: &mut crate::frame::FrameMemory, x: 
 pub(crate) fn explode_enemy(mem: &mut crate::frame::FrameMemory, x: u8) {
     let px = x as u16;
     mem.write_wram(0x6AF4 + px, 3); // status←Explode
+    // `bit Temp0A_EnSpecialAttribs / bvs @endIf_A` + `lda weaponAction / cmp #wa_RegularBeam+1 /
+    // bcs @endIf_A`（07:F617-F623）：**非 miniboss 且被普通束击中（weaponAction ≤ wa_RegularBeam=1）
+    // ⇒ 跳过 chunky 爆炸动画，直接 EnemyCompleteDeath@SkipChunkyExplosion**（立刻变掉落物）。
+    // 旧形无此分支 ⇒ 一律播 0x40 帧爆炸动画，掉落物晚 ~64 帧出现（录像 f2151：emu status=5
+    // 画掉落帧、rust status=3 画爆散帧 ⇒ OAM 多/少各 4 枚精灵）。
+    // 注意 asm **不 return**：随后仍执行 InitEnAnimIndex + `sta chunkyExplosionTimer`。
+    let sa_x = mem.read_ram(0x0400 + px + 0x0F); // specialAttribs
+    let wa_x = mem.read_ram(0x0400 + px + 0x0E); // weaponAction
+    if sa_x & 0x40 == 0 && wa_x < 0x02 {
+        enemy_complete_death(mem, x);
+    }
     let ty = mem.read_wram(0x6AF4 + px + 14) as usize & 0x1F;
     let d05 = mem.read_ram(0x0400 + px + 5);
     let facing: usize = if d05 & 0x80 != 0 { ((d05 >> 3) & 1) as usize } else { (d05 & 1) as usize };
@@ -227,6 +238,7 @@ pub(crate) fn explode_enemy(mem: &mut crate::frame::FrameMemory, x: u8) {
     mem.write_wram(0x6AF4 + px + 4, 0); // animDelay
     mem.write_ram(0x0400 + px + 6, anim); // chunkyExplosionTimer←A（asm `sta`（+06））
 }
+
 
 /// UpdateEnemy_Explode（**asm 内容锚** `: 07:F40D`（jmp ChooseEnemyAIRoutine（爆在 AI
 /// Exit 臂（noMoveNoAnim 显示）+chunkyExplosionTimer（+06）计时⇒CompleteDeath））。
@@ -335,6 +347,17 @@ pub(crate) fn enemy_complete_death(mem: &mut crate::frame::FrameMemory, x: u8) {
         mem.write_wram(0x6AF4 + px, 0);
         return;
     }
+    // `jsr ReadTableAt968B / sta Temp00`（$968B 项存 Temp00，本径后续不读）→
+    // `jsr LoadTableAt977B / and #$20 / sta EnsExtra.0.type,x`（07:DD1A-07:DD23）：
+    // **把 type 覆盖成 0 / $20**（`LoadTableAt977B` 返回 `val<<1` ⇒ `and #$20` 测的是
+    // 原字节 bit4，置位写 $20）。这一步不能省——紧随其后的
+    // `jsr GetEnemyTypeTimes2PlusFacingDirection` 用的是**覆盖后的 type**：
+    // 录像 f2152 实证 om 掉它会让死亡动画索引从 0x27 变成 0x41（OAM/调色板全错）。
+    let t_idx = (mem.read_wram(0x6AF4 + px + 14) & 0x3F) as usize;
+    let facing_bit = if t_idx < 64 {
+        game_data::assets::enemy_facing(crate::frame::cur_area(mem))[t_idx] & 0x20
+    } else { 0 };
+    mem.write_wram(0x6AF4 + px + 14, facing_bit); // type←0 / $20
     let tbl = [0x80u8, 0x81, 0x89, 0x80, 0x81, 0x89, 0x81, 0x89]; // PickupTypeTable（ROM $DE35）
     let frame = tbl[(r & 7) as usize];
     mem.write_wram(0x6AF4 + px + 3, frame); // animFrame←掉落型
@@ -576,5 +599,42 @@ mod tests_hurt_palette {
         // attr 的低 2 位＝调色板：受伤径为 0x80|0x00|PRIORITY ⇒ 调色板位为 0
         let attr = m.read_ram(0x0202);
         assert_eq!(attr & 0x03, 0, "受伤敌调色板 0（attr={attr:#04X}）");
+    }
+}
+
+#[cfg(test)]
+mod tests_explode_regular_beam {
+    use crate::frame::FrameMemory;
+
+    /// `ExplodeEnemy ; 07:F611`：被**普通束**打死的非 miniboss **立刻变掉落物**
+    /// （status←Pickup=5，`EnemyCompleteDeath@SkipChunkyExplosion`），跳过 chunky 爆炸动画。
+    /// 录像 f2151 实证：旧形一律 status=3 播 0x40 帧爆炸 ⇒ 掉落晚 ~64 帧、OAM 差 4 枚精灵。
+    #[test]
+    fn regular_beam_kill_becomes_pickup_immediately() {
+        let mut m = FrameMemory::default();
+        let x = 0x10u16; // 槽 1
+        m.write_ram(0x0400 + x + 0x0E, 0x01); // weaponAction = wa_RegularBeam
+        m.write_ram(0x0400 + x + 0x0F, 0x00); // specialAttribs：非 miniboss
+        m.write_ram(crate::ram_map::RANDOM1, 0x20); // ≥$10 ⇒ 有掉落
+        super::explode_enemy(&mut m, 0x10);
+        assert_eq!(m.read_wram(0x6AF4 + x), 5, "status←Pickup（不等爆炸动画）");
+        assert_eq!(m.read_ram(0x0400 + x + 0x0D), 0x60, "data0D←$60 拾取计时");
+    }
+
+    /// miniboss（specialAttribs bit6）或非普通束（如导弹 0x0B）⇒ **仍走爆炸动画**
+    /// （status=3），与 asm 的 `bvs @endIf_A` / `bcs @endIf_A` 一致。
+    #[test]
+    fn miniboss_or_missile_kill_stays_exploding() {
+        let mut m = FrameMemory::default();
+        let x = 0x10u16;
+        m.write_ram(0x0400 + x + 0x0E, 0x0B); // 导弹
+        m.write_ram(0x0400 + x + 0x0F, 0x00);
+        super::explode_enemy(&mut m, 0x10);
+        assert_eq!(m.read_wram(0x6AF4 + x), 3, "导弹杀：爆炸动画");
+        let mut m2 = FrameMemory::default();
+        m2.write_ram(0x0400 + x + 0x0E, 0x01);
+        m2.write_ram(0x0400 + x + 0x0F, 0x40); // miniboss
+        super::explode_enemy(&mut m2, 0x10);
+        assert_eq!(m2.read_wram(0x6AF4 + x), 3, "miniboss：爆炸动画");
     }
 }
