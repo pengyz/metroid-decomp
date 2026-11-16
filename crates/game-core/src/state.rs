@@ -56,8 +56,13 @@ impl Manager {
             ram: self.storage.ram,
             wram: self.storage.wram,
         };
-        // typed 域投影（每迁一个字段在此加一行；未迁字段仍在 ram 里，天然一致）。
-        img.ram[crate::ram_map::SAMUS_STATUS as usize & 0x7FF] = self.samus.status_byte();
+        // typed 域投影：逐项取 `SamusState::TYPED_ADDRS`（唯一投影源，加字段只改那张表）。
+        // 未迁字段仍在 ram 里，天然一致。
+        for a in crate::memmap::views::samus::SamusState::TYPED_ADDRS {
+            if let Some(v) = self.samus.get_byte(a) {
+                img.ram[a as usize & 0x7FF] = v;
+            }
+        }
         img
     }
 }

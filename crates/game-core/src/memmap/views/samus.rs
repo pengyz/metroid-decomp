@@ -121,11 +121,26 @@ impl SamusStatus {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct SamusState {
     status: SamusStatus,
+    /// `Samus.speedY`（`$0308`）——asm 侧为二补数，typed 面出 `i8`（`lsr/ror` 半速反弹等
+    /// 算术不再以裸字节外泄）。
+    speed_y: i8,
+    /// `Samus.speedX`（`$0309`）。
+    speed_x: i8,
+    /// `SamusAccelY`（`$0314`）。
+    accel_y: i8,
+    /// `SamusAccelX`（`$0315`）。
+    accel_x: i8,
 }
 
 impl Default for SamusState {
     fn default() -> Self {
-        Self { status: SamusStatus::Stand }
+        Self {
+            status: SamusStatus::Stand,
+            speed_y: 0,
+            speed_x: 0,
+            accel_y: 0,
+            accel_x: 0,
+        }
     }
 }
 
@@ -150,6 +165,42 @@ impl SamusState {
     pub fn set_status_byte(&mut self, v: u8) {
         self.status = SamusStatus::from_byte(v);
     }
+
+    /// typed 域的字节读写面（地址 → 值）。`None` = 该地址尚未 typed 化，走存储层。
+    ///
+    /// 这是 `read_ram/write_ram` 与 `Samus` 视图**共用的唯一映射表**——加新字段只改这里
+    /// 与 `snapshot_nes()` 各一行，避免"两份地址映射"漂移。
+    pub fn get_byte(&self, addr: u16) -> Option<u8> {
+        Some(match addr {
+            SAMUS_STATUS => self.status.to_byte(),
+            SAMUS_SPEED_Y_INT => self.speed_y as u8,
+            SAMUS_SPEED_X_INT => self.speed_x as u8,
+            SAMUS_ACCEL_Y => self.accel_y as u8,
+            SAMUS_ACCEL_X => self.accel_x as u8,
+            _ => return None,
+        })
+    }
+
+    pub fn set_byte(&mut self, addr: u16, v: u8) -> bool {
+        match addr {
+            SAMUS_STATUS => self.status = SamusStatus::from_byte(v),
+            SAMUS_SPEED_Y_INT => self.speed_y = v as i8,
+            SAMUS_SPEED_X_INT => self.speed_x = v as i8,
+            SAMUS_ACCEL_Y => self.accel_y = v as i8,
+            SAMUS_ACCEL_X => self.accel_x = v as i8,
+            _ => return false,
+        }
+        true
+    }
+
+    /// 迁入 typed 的地址清单（`snapshot_nes()` 逐项投影用——**唯一投影源**）。
+    pub const TYPED_ADDRS: [u16; 5] = [
+        SAMUS_STATUS,
+        SAMUS_SPEED_Y_INT,
+        SAMUS_SPEED_X_INT,
+        SAMUS_ACCEL_Y,
+        SAMUS_ACCEL_X,
+    ];
 }
 
 /// **Samus 主体**：既是状态句柄，也是行为载体（领域层只认这个类型）。
@@ -175,17 +226,16 @@ impl<'a> Samus<'a> {
 
     #[inline]
     fn get(&self, addr: u16) -> u8 {
-        // typed 域辖字段（$0300）走 `Manager.samus`；其余仍在字节面。
-        if addr == SAMUS_STATUS {
-            return self.mem.samus.status_byte();
+        // typed 域辖字段走 `Manager.samus`；其余仍在字节面。
+        if let Some(v) = self.mem.samus.get_byte(addr) {
+            return v;
         }
         self.mem.ram()[(addr as usize) & 0x7FF]
     }
 
     #[inline]
     fn set(&mut self, addr: u16, v: u8) {
-        if addr == SAMUS_STATUS {
-            self.mem.samus.set_status_byte(v);
+        if self.mem.samus.set_byte(addr, v) {
             return;
         }
         self.mem.ram_mut()[(addr as usize) & 0x7FF] = v;
@@ -388,12 +438,56 @@ mod tests {
         assert_eq!(mem.snapshot_nes().ram[0x0300], 3, "投影仍取 typed 值");
     }
 
-    /// 速度是二补数：`-2` 写进 `$0308` 得 `0xFE`。
+
+    /// 速度/加速 typed 化：`i8` 与字节二补数互转，投影逐项落位。
+    #[test]
+    fn speeds_and_accel_are_typed_and_project() {
+        let mut mem = m();
+        mem.samus().set_speed_y(-2);
+        mem.samus().set_speed_x(3);
+        mem.samus().set_accel_y(-1);
+        mem.samus().set_accel_x(7);
+        let img = mem.snapshot_nes();
+        assert_eq!(img.ram[0x0308], 0xFE, "speedY=-2 → $0308=$FE");
+        assert_eq!(img.ram[0x0309], 0x03);
+        assert_eq!(img.ram[0x0314], 0xFF, "accelY=-1 → $0314=$FF");
+        assert_eq!(img.ram[0x0315], 0x07);
+        // 地址面读的是同一份 typed 状态。
+        assert_eq!(mem.read_ram(0x0308), 0xFE);
+        assert_eq!(mem.samus().speed_y(), -2);
+    }
+
+    /// 字节面写入经 typed 解码后存取：`write_ram($0308,$FE)` ⇒ 速度就是 -2（不是 254）。
+    #[test]
+    fn byte_write_decodes_into_signed_typed_field() {
+        let mut mem = m();
+        mem.write_ram(0x0308, 0xFE);
+        assert_eq!(mem.samus().speed_y(), -2);
+        assert_eq!(mem.snapshot_nes().ram[0x0308], 0xFE, "往返保真");
+    }
+
+    /// typed 地址表与实际投影一致：每个 TYPED_ADDRS 项在投影上都能读回 typed 值。
+    #[test]
+    fn typed_addr_table_is_the_single_projection_source() {
+        let mut mem = m();
+        mem.write_ram(0x0300, 9);
+        mem.write_ram(0x0308, 0x02);
+        mem.write_ram(0x0309, 0x01);
+        mem.write_ram(0x0314, 0x18);
+        mem.write_ram(0x0315, 0x00);
+        let img = mem.snapshot_nes();
+        for a in SamusState::TYPED_ADDRS {
+            let typed = mem.samus.get_byte(a).expect("TYPED_ADDRS 项必须可 typed 读");
+            assert_eq!(img.ram[a as usize & 0x7FF], typed, "投影与 typed 面不一致 @ {a:#06X}");
+        }
+    }
+
+    /// 速度是二补数：`-2` 写进 `$0308` 得 `0xFE`（旧形态断言，保留作回归）。
     #[test]
     fn speed_y_is_signed() {
         let mut mem = m();
         mem.samus().set_speed_y(-2);
-        assert_eq!(mem.ram()[0x0308], 0xFE);
+        assert_eq!(mem.snapshot_nes().ram[0x0308], 0xFE);
         assert_eq!(mem.samus().speed_y(), -2);
     }
 

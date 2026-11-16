@@ -11,10 +11,10 @@ pub use crate::state::{Manager, Registers};
 impl Manager {
     /// RAM 读（2KB 镜像归一）。
     pub fn read_ram(&self, addr: u16) -> u8 {
-        // 【typed 域辖】Samus.status（$0300）真相在 `Manager.samus`（`views::samus::SamusState`），
-        // 字节数组不再持有它；地址面保持不变（兼容辖），逐域迁完后此分支即"读取口"唯一实现。
-        if addr == crate::ram_map::SAMUS_STATUS {
-            return self.samus.status_byte();
+        // 【typed 域辖】Samus 的已 typed 化字段真相在 `Manager.samus`（`views::samus::SamusState`），
+        // 字节数组不再持有它们；地址面保持不变（兼容辖），逐域迁完后此分支即"读取口"唯一实现。
+        if let Some(v) = self.samus.get_byte(addr) {
+            return v;
         }
         // 【read_ram 映射修（2026-11-06 全链根——$6877 读 255 垃圾破案）】$6000-$7FFF
         // =WRAM 分派（asm constants：EnergyTankCount $6877=$6000+0x877）——旧形
@@ -27,9 +27,8 @@ impl Manager {
 
     /// RAM 写（2KB 镜像归一）。
     pub fn write_ram(&mut self, addr: u16, v: u8) {
-        // 【typed 域辖】同 read_ram：写 $0300 落 typed 状态，不落字节数组。
-        if addr == crate::ram_map::SAMUS_STATUS {
-            self.samus.set_status_byte(v);
+        // 【typed 域辖】同 read_ram：已 typed 化地址落 typed 状态，不落字节数组。
+        if self.samus.set_byte(addr, v) {
             return;
         }
         // 【read_ram 映射修同族（2026-11-06）】WRAM 分派（写径同读径）。
@@ -200,8 +199,9 @@ impl Manager {
         mem.ram_mut().copy_from_slice(&ram[..0x800]);
         mem.wram_mut().copy_from_slice(&wram[..0x2000]);
         // typed 域辖字段从字节面回灌（MSS 是外部真相面，恢复后必须重建 typed 状态）。
-        mem.samus
-            .set_status_byte(ram[crate::ram_map::SAMUS_STATUS as usize & 0x7FF]);
+        for a in crate::memmap::views::samus::SamusState::TYPED_ADDRS {
+            mem.samus.set_byte(a, ram[a as usize & 0x7FF]);
+        }
         mem.regs = regs;
         mem.nmi_enabled = mem.ram()[0x00FF] & 0x80 != 0;
         mem
