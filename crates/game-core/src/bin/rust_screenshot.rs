@@ -319,6 +319,13 @@ fn main() {
             "--out" => { out_dir = args.get(i + 1).cloned().unwrap_or_else(|| "shots".into()); i += 2; }
             "--bundle" => { bundle_cli = args.get(i + 1).cloned(); i += 2; } // Task 4 snapshot 起跑
             "--state-out" => { state_out = args.get(i + 1).cloned(); i += 2; } // 对齐验收状态行
+            // 诊断面（启动参数，非逻辑层钩子）：`--trace oam:<f0>-<f1>` 打印采集帧 OAM。
+            "--trace" => {
+                for f in args.get(i + 1).map(|s| s.as_str()).unwrap_or("").split(',') {
+                    if !f.is_empty() { trace_flags.push(f.to_string()); }
+                }
+                i += 2;
+            }
             _ => { eprintln!("未知参数 {}", args[i]); std::process::exit(2); }
         }
     }
@@ -399,6 +406,20 @@ fn main() {
         let spr: [u8; 16] = pal[16..32].try_into().unwrap();
         let fb = render_frame(rs, &bg, &spr, oam);
         let png = encode_png(&fb, 256, 240);
+        if let Some(w) = trace_flags.iter().filter_map(|t| t.strip_prefix("oam:")).next() {
+            if let Some((lo, hi)) = w.split_once('-') {
+                let lo: usize = lo.parse().unwrap_or(0);
+                let hi: usize = hi.parse().unwrap_or(0);
+                if frame >= lo && frame <= hi {
+                    for k in 0..64usize {
+                        let y = oam[k * 4];
+                        if y >= 0xF0 { continue; }
+                        eprintln!("[oam] f{} {:02} y={} tile={:02X} attr={:02X} x={}",
+                            frame, k, y, oam[k * 4 + 1], oam[k * 4 + 2], oam[k * 4 + 3]);
+                    }
+                }
+            }
+        }
         let fname = format!("{}_f{:05}_{}.png", plan.name, frame, tag);
         fs::write(out.join(&fname), &png).expect("写 PNG");
         // PPU 真值 dump（终结判卡（2026-10-28））：与 scenario_capture.lua::dumpPpu 同构

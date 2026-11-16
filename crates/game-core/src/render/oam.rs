@@ -40,6 +40,20 @@ pub fn anim_draw_object(mem: &mut crate::frame::FrameMemory, page_index: u8, a_i
 /// ObjDrawFrame（$DE4A）——纯绘制（**无走表**）。AnimDrawObject（$DE47）=UpdateObjAnim
 /// （$DC8F）+本件；SetSamusData（$CD6D）尾=`jmp ObjDrawFrame`（单走表形——
 /// 【r14 双调根修】旧形尾调 DE47 形致同帧 2×DC8F（AD 周期 4→2 别名（dossier Q4）））。
+/// GetNewControlByte（$DF3B）的取值律（纯函数，便于单测）：
+/// - `ObjectCntrl` MSB=0 ⇒ **原值直用**（帧数据字节本身就是 OAM attr 位形）；
+/// - MSB=1 ⇒ `SpriteAttrsOverride`（E038）`attr = (ctrl & $C0) | (ObjectCntrl & $7F)`。
+///
+/// 帧数据里 `FD <ctrl>` 是「换一组 sprite 属性」（门/物品的多段 metasprite），
+/// 覆盖与否**只由 ObjectCntrl 的 MSB 决定**，与入口那次覆盖同一条律。
+fn new_ctrl_byte(c: u8, obj_cntrl: u8) -> u8 {
+    if obj_cntrl & 0x80 != 0 {
+        (c & 0xC0) | (obj_cntrl & 0x7F)
+    } else {
+        c
+    }
+}
+
 pub fn obj_draw_frame(mem: &mut crate::frame::FrameMemory, page_index: u8) {
     let px = page_index as u16;
     // 只读 animFrame（动画更新在 update_obj_anim——此处不写 $0303/$0304/$0306）
@@ -159,11 +173,16 @@ pub fn obj_draw_frame(mem: &mut crate::frame::FrameMemory, page_index: u8) {
             sx = sx.wrapping_add(blob(fptr.wrapping_add(frame_i + 2)) as i16);
             frame_i += 3;
         } else if b == 0xFD {
-            // GetNewControlByte（$DF3B）：新控制字节=**原值直用**（asm `sta Temp05_Cntrl`
-            // ——AABB 已在 OAM attr 位形（r25 勘误修：旧形 >>4 再解致组位错（组 2 误）））
+            // GetNewControlByte（$DF3B）——两条径，取决于 ObjectCntrl 的 MSB：
+            //   `asl ObjectCntrl / bcc LDF45`（MSB=0）⇒ `lsr` 还原后 `lda (FramePtr),y /
+            //   sta Temp05_Cntrl` = **原值直用**；
+            //   MSB=1 ⇒ `jsr SpriteAttrsOverride`（E038）⇒ `attr=(ctrl&$C0)|(ObjectCntrl&$7F)`。
+            // 【f2084 根因】旧形无条件走「原值直用」⇒ 门（DrawDoor 写 $6B=$B1 置 MSB）的
+            // 分片控制字节 `FD E3` 被原样当 attr（0xE3：调色板 3，品红），而 emu 走覆盖形
+            // 得 `(E3&C0)|B1&7F=F1`（调色板 1，蓝）⇒ 门下半三枚精灵调色板错、上半对。
             frame_i += 1;
             let c = blob(fptr.wrapping_add(frame_i));
-            cntrl05 = c;
+            cntrl05 = new_ctrl_byte(c, obj_cntrl);
             frame_i += 1;
         } else if b == 0xFE {
             // SkipPlacementData（$DF32）
@@ -449,4 +468,19 @@ mod r26_draw_enemy_tdd {
         draw_enemy(&mut m, 4);
         assert_eq!(m.read_ram(0x006B), 0, "animFrame=None 应 ClearObjectCntrl");
     }
+    /// 【f2084 根因】`FD <ctrl>` 分段控制字节在 ObjectCntrl MSB=1 时必须走 E038 覆盖形。
+    ///
+    /// 失败形态（旧形无条件原值直用）：门 `$6B=$B1`、帧数据 `FD E3` ⇒ old attr `0xE3`
+    /// （调色板 3，品红）vs asm `(E3&C0)|(B1&7F)=F1`（调色板 1，蓝）——录像 f2084 门
+    /// 下半三枚精灵 159px 差异即此。
+    #[test]
+    fn new_ctrl_byte_applies_object_cntrl_override() {
+        // MSB=1：低 7 位来自 ObjectCntrl（含调色板位与镜像位），高位取帧字节的翻转位。
+        assert_eq!(new_ctrl_byte(0xE3, 0xB1) & 0x03, 1, "调色板=ObjectCntrl 低 2 位");
+        assert_eq!(new_ctrl_byte(0xE3, 0xB1), 0xF1, "asm E038 逐位形");
+        // MSB=0：原值直用（不剥任何位）。
+        assert_eq!(new_ctrl_byte(0xE3, 0x00), 0xE3);
+        assert_eq!(new_ctrl_byte(0x21, 0x10), 0x21);
+    }
+
 }
