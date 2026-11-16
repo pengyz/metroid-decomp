@@ -87,8 +87,7 @@ pub fn draw_room(mem: &mut crate::frame::Manager, room: u8) -> bool {
     // 【址勘误 r28-1】RoomRAMPtr=**$39/$3A**（constants_ram:519-521「Low byte of pointer to
     // room RAM (#$00)」/「High byte of pointer to room RAM (#$60 or #$64)」）；$37/$38 是
     // RoomRAMWorkPtr（装载写游标，DrawObject 逐行推进）。旧形把缓冲基址写进游标槽。
-    mem.write_ram(0x0039, (base & 0xFF) as u8); // RoomRAMPtr lo
-    mem.write_ram(0x003A, (base >> 8) as u8); // RoomRAMPtr hi
+    mem.room().set_room_ptr(base); // RoomRAMPtr（$39/$3A）
     let room_palette = stream.first().copied().unwrap_or(0); // RoomPalette（首字节——SetupRoom 读）
     let mut i = 1usize; // 对象环起点=首字节后（RoomPalette 已消费——asm 形）
     loop {
@@ -809,14 +808,13 @@ fn load_enemy(mem: &mut crate::frame::Manager, b0: u8, etype: u8, pos: u8) -> bo
 /// SelectRoomRAM（$EA05）：名表 0→$6000/名表 3→$6400（RoomRAMPtr 高字节）。
 pub fn select_room_ram(mem: &mut crate::frame::Manager) {
     let hi = 0x60u8 | ((mem.read_ram(crate::ram_map::PPUCTRL_ZP) ^ mem.read_ram(crate::ram_map::SCROLL_DIR)) & 1) << 2;
-    mem.write_ram(0x0039, 0x00); // RoomRAMPtr lo（址勘误 r28-1）
-    mem.write_ram(0x003A, hi); // RoomRAMPtr hi
+    mem.room().set_room_ptr((hi as u16) << 8); // RoomRAMPtr lo=$00 / hi（址勘误 r28-1）
 }
 
 /// InitTables（$EFF8）：RoomRAM 全填 $FF（空 tile）+属性表（$3C0 面）填 ATDataTable[RoomPalette&3]。
 pub fn init_tables(mem: &mut crate::frame::Manager) {
     mem.work_cycles = mem.work_cycles.wrapping_add(LOAD_INIT_CYCLES); // FillRoomRAM+AttribFill 壳
-    let hi = mem.read_ram(0x003A); // RoomRAMPtr hi（$60/$64——址勘误 r28-1）
+    let hi = (mem.room().room_ptr() >> 8) as u8; // RoomRAMPtr hi（$60/$64——址勘误 r28-1）
     // FillRoomRAM（$F01C）：$FF 填 3 页半（tile 区 $000-$3BF）
     for i in 0..0x3C0u16 {
         mem.write_wram(((hi as u16) << 8) | i, 0xFF);
@@ -844,7 +842,7 @@ pub fn attrib_table_write(mem: &mut crate::frame::Manager) -> bool {
             // `jsr GetNameAddrs`（$E564）`ora #$03` ⇒ "$23 for attrib table 0, #$2F for
             // attrib table 3"（PPUAddrs[$20/$2C]|3 动态按 NT）、`lda #$20` **32B 整行**、
             // 源=$00=RoomRAM 属性区（$x3C0/$x3E0）。
-            let hi = mem.read_ram(0x003A);
+            let hi = (mem.room().room_ptr() >> 8) as u8;
             let row_off: u16 = (row - 1) * 0x10; // row1→$00 / row3→$20（$C0/$E0 基址）
             let src = ((hi as u16 + 3) << 8) | (0xC0 + row_off);
             let nt_hi: u16 = if (hi >> 2) & 1 == 0 { 0x23 } else { 0x2F }; // PPUAddrs[$20/$2C]|3
@@ -958,7 +956,7 @@ mod tests {
     #[test]
     fn attrib_table_write_nt3_targets_mirror_attr_rows() {
         let mut m = Manager::default();
-        m.write_ram(0x003A, 0x64); // RoomRAMPtr hi=RoomRAMB（NT3——select_room_ram 语义）
+        m.room().set_room_ptr(0x6400); // RoomRAMPtr=RoomRAMB（NT3——select_room_ram 语义）
         for i in 0..0x20u16 {
             m.write_wram(0x67C0 + i, 0x55); // 属性行 0（row1 源——55=ATDataTable[RoomPalette&3]）
             m.write_wram(0x67E0 + i, 0xF5); // 属性行 1（row3 源）

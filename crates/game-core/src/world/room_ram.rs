@@ -84,6 +84,13 @@ impl<'a> Room<'a> {
         u16::from_le_bytes([self.mem.read_ram(ROOM_PTR), self.mem.read_ram(ROOM_PTR + 1)])
     }
 
+    /// 设读基址 `RoomRAMPtr`（asm `sta RoomRAMPtr/sta RoomRAMPtr+1`）。
+    pub fn set_room_ptr(&mut self, v: u16) {
+        let [lo, hi] = v.to_le_bytes();
+        self.mem.write_ram(ROOM_PTR, lo);
+        self.mem.write_ram(ROOM_PTR + 1, hi);
+    }
+
     /// 当前房号（`RoomPtr`）。
     pub fn number(&self) -> u8 {
         self.mem.read_ram(ROOM_NUMBER)

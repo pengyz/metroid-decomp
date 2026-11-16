@@ -68,8 +68,9 @@ pub fn more_init(mem: &mut Manager) {
     mem.iter_bogged(2);
     // 【址勘误 r28-1】asm prg7:1899-1901 `ldy RoomRAMPtr+1 / sty $01 / ldy RoomRAMPtr /
     // sty $00`——RoomRAMPtr=$39/$3A（constants_ram:519-521）；旧形误取 $37/$38（WorkPtr）。
-    mem.write_ram(0x0000, mem.read_ram(0x0039)); // RoomRAMPtr lo → $00
-    mem.write_ram(0x0001, mem.read_ram(0x003A)); // RoomRAMPtr hi → $01
+    let room_ptr = mem.room().room_ptr();
+    mem.write_ram(0x0000, room_ptr as u8); // RoomRAMPtr lo → $00
+    mem.write_ram(0x0001, (room_ptr >> 8) as u8); // RoomRAMPtr hi → $01
     mem.write_io(0x2006, 0x20);
     mem.write_io(0x2006, 0x00);
     let mut hi = mem.read_ram(0x0001);
