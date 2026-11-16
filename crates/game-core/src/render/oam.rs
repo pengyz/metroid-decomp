@@ -129,6 +129,11 @@ pub(crate) fn draw_sprite_stream(mem: &mut crate::frame::FrameMemory, s: SpriteS
             break; // 流界护栏（合法帧远小于此）
         }
     }
+    // `$FF` 帧终 ⇒ fallthrough 到 `ClearObjectCntrl ; 07:DF2D`（`lda #$00 / sta ObjectCntrl`）。
+    // 这一步**不能省**：`$6B` 是「下一个对象/下一枚精灵」的覆盖状态，敌侧
+    // `@setHurtPalette`/tough/冻结写入后必须由本环收尾清掉，否则会泄漏给
+    // 同一帧后续敌人（录像 f2137：槽 0 的爬虫被槽 1 的受伤调色板污染）。
+    mem.write_ram(0x006B, 0);
     mem.write_ram(0x005B, x_sprite as u8); // SpritePagePos 推进
 }
 
@@ -380,6 +385,30 @@ mod tests_sprite_stream {
         assert_eq!(m.read_ram(0x0203), 0x60, "x=100-4（place dx=-4）");
         assert_eq!(m.read_ram(0x0200), 0x2F, "y=60-12-1（place dy=-12，PPU y+1 形）");
         assert_eq!(m.read_ram(0x005B), 4, "SpritePagePos 推进 4");
+    }
+
+    /// `$FF` 帧终 ⇒ `ClearObjectCntrl`（`$DF2D`）：`$6B` 必须归零。
+    /// 否则调用方（敌 `@setHurtPalette`/tough/冻结）写入的覆盖态会**泄漏给
+    /// 同一帧后续对象**——录像 f2137 实证：槽 1 受伤爬虫的 palette-0 覆盖
+    /// 污染了后画的槽 0（attr 0x22→0xA0 系）。
+    #[test]
+    fn stream_clears_object_cntrl_at_frame_end() {
+        let mut m = FrameMemory::default();
+        m.write_ram(0x006B, 0xA0);
+        m.write_ram(0x005B, 0);
+        draw_sprite_stream(
+            &mut m,
+            SpriteStream {
+                frame_byte: &|i| *[0x21u8, 0x0C, 0x08, 0xCE, 0xFF].get(i as usize).unwrap_or(&0xFF),
+                place_byte: &|i| *[0xF4u8, 0xFC].get(i as usize).unwrap_or(&0),
+                ctrl: 0x21,
+                obj_cntrl: 0xA0,
+                screen_x: 100,
+                screen_y: 60,
+            },
+        );
+        assert_eq!(m.read_ram(0x006B), 0, "帧终清 ObjectCntrl");
+        assert_eq!(m.read_ram(0x0202), 0x20, "覆盖形：attr=(ctrl&$C0)|($6B&$7F)=(00)|(20)");
     }
 
     /// 帧首字节即 `$FF`（animFrame=None 的帧面）⇒ 一个 sprite 都不落。

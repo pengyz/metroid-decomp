@@ -259,18 +259,36 @@ pub(crate) fn update_enemy_frozen(mem: &mut crate::frame::FrameMemory, x: u8) {
 /// specialAttribs+低 6 位回 status（**prevStatus&$3F**——旧形硬编码 2=偏离）→Metroid
 /// 冻结保持（L977B bit5）→@exit 调色（$80|PRIORITY→setHurtPalette）。
 pub(crate) fn update_enemy_hurt(mem: &mut crate::frame::FrameMemory, x: u8) {
+    // `UpdateEnemy_Hurt ; 07:F4EE` 的**顺序**：先递减 hitstun（并可能恢复 status），
+    // 再 `$6B←$80|$00|PRIORITY`（**受伤敌恒用调色板 0**，`@exit ; 07:F510`），
+    // 最后 `jmp UpdateEnemyCommon@setHurtPalette`（只画、不动不推帧）。
+    // 旧形把「画」放在递减之前 ⇒ ①hitstun 结束那一帧仍按受伤态画（晚一帧恢复）
+    // ②从不写 $6B ⇒ 受伤敌的调色板取自帧记录（录像 f2137 实证 attr=A2 vs A0）。
     let px = x as u16;
-    update_enemy_common_no_move_no_anim(mem, x);
     let d = mem.read_ram(0x0400 + px + 0x0F); // specialAttribs=+0x0F（hitstun 延）
     let nd = d.wrapping_sub(1); // dec 环绕（asm DE 0F 04）
     mem.write_ram(0x0400 + px + 0x0F, nd);
-    if nd != 0 {
-        return; // bne @exit（未归零）
+    if nd == 0 {
+        // hitstun over：prevStatus(+0x0C) 高 2 位→specialAttribs/低 6 位→status
+        let prev = mem.read_ram(0x0400 + px + 0x0C); // prevStatus
+        mem.write_ram(0x0400 + px + 0x0F, prev & 0xC0); // 高 2 位回
+        mem.write_wram(0x6AF4 + px, prev & 0x3F); // status←prevStatus&$3F（asm :10810-10812）
+        // `jsr LoadTableAt977B / and #$20`（该例程返回 `val<<1` ⇒ 实为原字节 bit4）：
+        // 置位=Metroid 被导弹打中时仍保持冻结（`FreezeEnemyAndRememberPrevStatus`）。
+        let t = (mem.read_wram(0x6AF4 + px + 0x0E) & 0x0F) as usize;
+        let flags = game_data::assets::enemy_facing(crate::frame::cur_area(mem))
+            .get(t)
+            .copied()
+            .unwrap_or(0);
+        if flags & 0x10 != 0 {
+            mem.write_ram(0x0400 + px + 0x0C, mem.read_wram(0x6AF4 + px)); // prevStatus←status
+            mem.write_wram(0x6AF4 + px, 4); // status←enemyStatus_Frozen
+        }
     }
-    // hitstun over：prevStatus(+0x0C) 高 2 位→specialAttribs/低 6 位→status
-    let prev = mem.read_ram(0x0400 + px + 0x0C); // prevStatus
-    mem.write_ram(0x0400 + px + 0x0F, prev & 0xC0); // 高 2 位回
-    mem.write_wram(0x6AF4 + px, prev & 0x3F); // status←prevStatus&$3F（asm :10810-10812）
+    // @exit：受伤敌调色板覆盖（$80|$00|PRIORITY）——置 MSB 后 @noMoveNoAnim 的
+    // tough 判据（`lda ObjectCntrl / bmi`）自然跳过，等价于 asm 直跳 @setHurtPalette。
+    mem.write_ram(0x006B, 0x80 | 0x20);
+    update_enemy_common_no_move_no_anim(mem, x);
 }
 
 /// UpdateEnemy_Pickup（**asm 内容锚** `: 07:F483`）：碰触（isHit&$24）⇒RemoveEnemy+
@@ -531,5 +549,32 @@ mod tests {
         assert_eq!(m.read_ram(e + 8), 0x02);
         assert_eq!(m.read_wram(q + 11), 0x00u8.wrapping_sub(0x00), "accelX 取反");
         assert_eq!(m.read_ram(e + 3), 0x00u8.wrapping_sub(0x02), "speedX 取反（0x02→0xFE）");
+    }
+}
+
+#[cfg(test)]
+mod tests_hurt_palette {
+    use crate::frame::FrameMemory;
+
+    /// `UpdateEnemy_Hurt ; 07:F4EE`：受伤敌**恒用调色板 0**（`@exit ; 07:F510`
+    /// `$6B←$80|$00|PRIORITY`），且 `$FF` 帧终由 `ClearObjectCntrl` 收尾。
+    /// 录像 f2137 实证：旧形从不写 `$6B` ⇒ 受伤爬虫按帧记录调色板 2 画
+    /// （attr 0xA2 vs 0xA0，98px）。
+    #[test]
+    fn hurt_enemy_uses_palette_zero_and_clears_cntrl() {
+        let mut m = FrameMemory::default();
+        let x = 0x10u16; // 槽 1
+        m.write_wram(0x6AF4 + x, 6); // status = Hurt
+        m.write_ram(0x0400 + x, 0x40); // y（屏幕内）
+        m.write_ram(0x0400 + x + 1, 0x40); // x
+        m.write_ram(0x0400 + x + 0x0F, 2); // hitstun
+        m.write_wram(0x6AF4 + x + 3, 0x39); // animFrame（表 1）
+        m.write_ram(0x005B, 0);
+        super::update_enemy_hurt(&mut m, 0x10);
+        assert_eq!(m.read_ram(0x006B), 0, "$FF 帧终清 ObjectCntrl");
+        assert_eq!(m.read_ram(0x0400 + x + 0x0F), 1, "hitstun 递减");
+        // attr 的低 2 位＝调色板：受伤径为 0x80|0x00|PRIORITY ⇒ 调色板位为 0
+        let attr = m.read_ram(0x0202);
+        assert_eq!(attr & 0x03, 0, "受伤敌调色板 0（attr={attr:#04X}）");
     }
 }

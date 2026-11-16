@@ -122,14 +122,18 @@ pub(crate) fn update_bullet(mem: &mut crate::frame::FrameMemory) {
         mem.write_ram(0x0071, 0);
         return;
     }
-    // ExplodeIfHitSprite（$D5DA）：isHit,x≠0⇒清+爆
-    let mut collided = false;
+    // ExplodeIfHitSprite（$D5DA）：isHit,x≠0 ⇒ 清 + 爆（status←4）。
+    // **注意**：asm 这里**不设 carry**——ExplodeIfHitSprite 之后仍无条件执行
+    // `jsr UpdateBullet_CollisionWithBG`（$D609），撞敌的弹若前方是空气**照样前移**。
+    // 旧形把它当「已碰撞」⇒ 跳过 CollisionWithBG ⇒ 弹停在撞点（比原版少移一步）。
+    // 实证：录像 f2135——emu `$03D0` status=4 且 x=214（先爆后移），rust 停在 x=210。
     if mem.read_ram(base + 0x0A) != 0 {
         mem.write_ram(base + 0x0A, 0);
         bullet_explode(mem);
-        collided = true;
     }
-    if !collided {
+    // CollisionWithBG（$D609）恒执行；`collided` 只表示**瓦判为固实**（asm carry 清）。
+    let mut collided = false;
+    {
         // CollisionWithBG（$D609）：瓦判（GetObjRoomRAMPtr 同核（make_room_ram_ptr））
         let (lo, hi) = crate::world::room_draw::make_room_ram_ptr(
             mem.read_ram(base + 0x0D), mem.read_ram(base + 0x0E), mem.read_ram(base + 0x0C));
@@ -518,3 +522,52 @@ pub(crate) fn bcd_sub(v: u8, sub: u8) -> (u8, bool) {
     (out, borrow)
 }
 
+
+#[cfg(test)]
+mod tests_bullet_explode_order {
+    use crate::frame::FrameMemory;
+
+    /// 弹出膛槽（$0300+PageIndex）：status/speeds/isHit/onScreen/hi/y/x/timer。
+    fn bullet(m: &mut FrameMemory, y: u8, x: u8, sx: u8) {
+        m.write_ram(0x004B, 0); // PageIndex → base=$0300
+        m.write_ram(0x0300, 1); // status
+        m.write_ram(0x0308, 0); // speedY
+        m.write_ram(0x0309, sx); // speedX
+        m.write_ram(0x030A, 1); // isHit（撞敌）
+        m.write_ram(0x030B, 1); // onScreen
+        m.write_ram(0x030C, 0); // hi
+        m.write_ram(0x030D, y);
+        m.write_ram(0x030E, x);
+        m.write_ram(0x030F, 0x20); // 时寿
+    }
+
+    fn room_byte(m: &mut FrameMemory, y: u8, x: u8, val: u8) {
+        let idx = (((y & 0xF8) as u16) << 2) | ((x >> 3) as u16);
+        m.write_wram(0x6000 | (idx & 0x3FF), val);
+    }
+
+    /// asm `$D4EB`：ExplodeIfHitSprite **不设 carry** ⇒ CollisionWithBG 仍执行；
+    /// 前方空气（≥$A0）⇒ 照样前移一步。旧形把「撞敌」当「已碰撞」⇒ 停在撞点。
+    /// 实证：TASVideos 100% 录像 f2135（emu status=4 且 x 210→214）。
+    #[test]
+    fn hit_sprite_then_move_when_air_ahead() {
+        let mut m = FrameMemory::default();
+        bullet(&mut m, 0x90, 0xD0, 4);
+        room_byte(&mut m, 0x90, 0xD0, 0xA0); // 空气
+        super::update_bullet(&mut m);
+        assert_eq!(m.read_ram(0x0300), 4, "撞敌⇒status←4（爆）");
+        assert_eq!(m.read_ram(0x030A), 0, "isHit 清");
+        assert_eq!(m.read_ram(0x030E), 0xD4, "空气⇒仍前移一步（asm carry 由瓦判给）");
+    }
+
+    /// 前方固实（<$80）⇒ 不移，且走 CheckBulletStat 的 collided 径（status≠0 ⇒ 爆）。
+    #[test]
+    fn hit_sprite_then_stop_when_solid_ahead() {
+        let mut m = FrameMemory::default();
+        bullet(&mut m, 0x90, 0xD0, 4);
+        room_byte(&mut m, 0x90, 0xD0, 0x01); // 固实
+        super::update_bullet(&mut m);
+        assert_eq!(m.read_ram(0x0300), 4, "固实⇒爆");
+        assert_eq!(m.read_ram(0x030E), 0xD0, "固实⇒不移");
+    }
+}
