@@ -64,7 +64,7 @@ pub(crate) use crate::frame::cycles::{
 pub(crate) const LOAD_BASE_CYCLES: u32 = 29000;
 pub(crate) const FRAME_CYCLES: u32 = 29780;
 
-pub fn draw_room(mem: &mut crate::frame::FrameMemory, room: u8) -> bool {
+pub fn draw_room(mem: &mut crate::frame::Manager, room: u8) -> bool {
     // 房流按区分发（asm `SetupRoom` 经 $3B/$3C 间接查当前区 RoomPtrTable——
     // 表值=ROM 当前区 bank；0=Brinstar/1=Norfair，其余区 unported fail-loud D7）。
     let area = mem.read_ram(crate::ram_map::IN_AREA) & 0x0F;
@@ -131,7 +131,7 @@ pub fn draw_room(mem: &mut crate::frame::FrameMemory, room: u8) -> bool {
 
 /// DrawStruct（$EF8C）——结构行流（行头+元 tile 流至 $FF）。
 fn draw_struct(
-    mem: &mut crate::frame::FrameMemory,
+    mem: &mut crate::frame::Manager,
     work: u16,
     struct_idx: u8,
     obj_palette: u8,
@@ -211,7 +211,7 @@ fn draw_struct(
 /// 直索））→**已收（carry）⇒跳 init（status 保持 0）**/未收⇒status←1；
 /// 位域写（hi[$38C+x]←NT/x[$38E+x]←DoorXs[side]/y[$38D+x]←$68/ScrollBlockOnNameTable3
 /// [1^NT]|=DoorScrollBlocks[side]）。
-fn load_door(mem: &mut crate::frame::FrameMemory, info: u8) {
+fn load_door(mem: &mut crate::frame::Manager, info: u8) {
     use crate::ram_map::*;
     const OBJECTS_BASE: u16 = 0x0380;
     const DOOR_SLOTS: [u8; 4] = [0x00, 0x30, 0x20, 0x10]; // $EC00（白右/白左/黑右/黑左）
@@ -283,7 +283,7 @@ pub fn make_room_ram_ptr(y_pos: u8, x_pos: u8, nt_hi: u8) -> (u8, u8) {
 
 /// WriteDoorBGTiles（$8CF7-8D33）——6 瓦纵写（y 步 $20）+DoorRoomRAMPtr 写站
 /// （y=(slot Adiv8)&6（$80..$B0→0/2/4/6））。
-fn write_door_bg_tiles(mem: &mut crate::frame::FrameMemory, x_off: u8, tile: u8) {
+fn write_door_bg_tiles(mem: &mut crate::frame::Manager, x_off: u8, tile: u8) {
     let x_pos = DOOR_X_TABLE[((x_off >> 4) & 1) as usize];
     let nt = mem.read_ram(0x030C + x_off as u16);
     let (lo, hi) = make_room_ram_ptr(0x50, x_pos, nt);
@@ -298,7 +298,7 @@ fn write_door_bg_tiles(mem: &mut crate::frame::FrameMemory, x_off: u8, tile: u8)
 
 /// DrawDoor（$8BB1）——ObjectCntrl($6B)（type（3→1）|$80|$20|flip）/isHit←0/动画面
 /// （A=6 周期（拆分面：update_obj_anim(6)+anim_draw_object（goal-r16 修）））。
-fn draw_door(mem: &mut crate::frame::FrameMemory, x_off: u8) {
+fn draw_door(mem: &mut crate::frame::Manager, x_off: u8) {
     let mut ty = mem.read_ram(0x0307 + x_off as u16);
     if ty == 3 {
         ty = 1; // 音乐蓝画同蓝
@@ -330,7 +330,7 @@ fn draw_door(mem: &mut crate::frame::FrameMemory, x_off: u8) {
 ///
 /// `nt = GetNameTableAtScrollDir = ($FF ^ ScrollDir) & 1`（`$EB85`）＝**正在进入视野**的名表。
 /// 判据是「对象在这个名表里 ⇒ 当前必然离屏」，故可删（与 `DeleteEnemyOffscreen $D4B4` 同族）。
-pub fn delete_offscreen_room_sprites(mem: &mut crate::frame::FrameMemory) {
+pub fn delete_offscreen_room_sprites(mem: &mut crate::frame::Manager) {
     const ENS_EXTRA: u16 = 0x6AF4;
     const ENS: u16 = 0x0400;
     const MELLOWS: u16 = 0x00B0;
@@ -464,7 +464,7 @@ pub fn delete_offscreen_room_sprites(mem: &mut crate::frame::FrameMemory) {
 }
 
 /// UpdateAllDoors（$8B79）——4 门环（$B0/$A0/$90/$80（X-=0x10；bmi 环））。
-pub fn update_all_doors(mem: &mut crate::frame::FrameMemory) {
+pub fn update_all_doors(mem: &mut crate::frame::Manager) {
     for x in [0xB0u8, 0xA0, 0x90, 0x80] {
         update_door(mem, x);
     }
@@ -472,7 +472,7 @@ pub fn update_all_doors(mem: &mut crate::frame::FrameMemory) {
 
 /// UpdateDoor（$8B87）——7 态 JumpEngine 分派（0=ExitSub/1=Init/2=Closed/3=Open/
 /// 4-6=过门态（任务卡 5 桩（unported fail-loud（lead 裁定面）））。
-pub fn update_door(mem: &mut crate::frame::FrameMemory, x_off: u8) {
+pub fn update_door(mem: &mut crate::frame::Manager, x_off: u8) {
     // UpdateDoor（$8B87）首件 `stx PageIndex`（$004B）—— DrawDoor→AnimDrawObject→
     // UpdateObjAnim（$DC8F）用 `ldx PageIndex` 取槽，缺此写会把动画推进到别的槽
     // （2026-11-14 实测：门 status 已 2 但 animFrame 恒 0、animDelay 恒 0、半径错）。
@@ -620,7 +620,7 @@ pub fn update_door(mem: &mut crate::frame::FrameMemory, x_off: u8) {
 }
 
 /// DoorSubRoutine8C61（重关径）：HP←1/实瓦/status←2/闭动画（$30+$2E）。
-fn door_sub_8c61(mem: &mut crate::frame::FrameMemory, x_off: u8) {
+fn door_sub_8c61(mem: &mut crate::frame::Manager, x_off: u8) {
     let x = x_off as u16;
     mem.write_ram(0x038F + x - 0x80, 1);
     write_door_bg_tiles(mem, x_off, 0x4E);
@@ -634,7 +634,7 @@ fn door_sub_8c61(mem: &mut crate::frame::FrameMemory, x_off: u8) {
 /// EnemyLoop（$EAD4）——敌/门条目环（3B：slot&$F0|type/敌型/位%yyyyxxxx；$FF=EndOfRoom）。
 /// type：0/3/5=ExitSub（no-op——A=type（asm 形））；1=LoadEnemy；2/4/6/7=门/梯/像/虫（未端口）。
 fn enemy_loop(
-    mem: &mut crate::frame::FrameMemory,
+    mem: &mut crate::frame::Manager,
     stream: &[u8],
     start: usize,
     room_palette: u8,
@@ -709,7 +709,7 @@ fn enemy_loop(
 /// 槽位：`Elevator = Objects + $20`（`constants_ram.asm:844`，对象槽 2 ⇒ $0320）；
 /// `ElevatorType = Elevator.data0F`（`:886`）。**注意 `iny` 后读的是 info 字节**，
 /// 不是 type 字节（type 字节在 `stream[i]`，已由 `enemy_loop` 消费）。
-fn load_elevator(mem: &mut crate::frame::FrameMemory, info: u8) {
+fn load_elevator(mem: &mut crate::frame::Manager, info: u8) {
     const ELEVATOR: u16 = 0x0320;
     if mem.read_ram(ELEVATOR) != 0 {
         return; // @exit：已有电梯
@@ -730,7 +730,7 @@ fn load_elevator(mem: &mut crate::frame::FrameMemory, info: u8) {
 }
 
 /// EndOfRoom（$EAF4）——RoomNumber←$F0（属性表尾命令——SetupRoom 环续面）。
-pub fn end_of_room(mem: &mut crate::frame::FrameMemory) {
+pub fn end_of_room(mem: &mut crate::frame::Manager) {
     mem.write_ram(0x005A, 0xF0);
     // 【根因修（2026-10-28（scroll-column-streaming.md））】asm $EAF4 双写面：
     // TempScrollDir($4A)←ScrollDir（列流防重判基准——旧漏写⇒$4A 恒 0⇒
@@ -748,7 +748,7 @@ pub fn end_of_room(mem: &mut crate::frame::FrameMemory) {
 
 /// LoadEnemy（$EB06——GetEnemyData/GetEnemyType/LEB4D/LEB6E 全径）。
 /// 结构址：Ens=$0400+slot（16B 步）/EnsExtra=$6AF4+slot（En/EnExtra 布局——constants:85/125）。
-fn load_enemy(mem: &mut crate::frame::FrameMemory, b0: u8, etype: u8, pos: u8) -> bool {
+fn load_enemy(mem: &mut crate::frame::Manager, b0: u8, etype: u8, pos: u8) -> bool {
     let x = (b0 & 0xF0) as u16; // 对象槽（×16 步）
     let en = 0x0400u16 + x; // Ens=2KB RAM 面（write_ram）
     let ex = 0x6AF4u16 + x; // EnsExtra=WRAM 面（write_wram）
@@ -812,14 +812,14 @@ fn load_enemy(mem: &mut crate::frame::FrameMemory, b0: u8, etype: u8, pos: u8) -
 }
 
 /// SelectRoomRAM（$EA05）：名表 0→$6000/名表 3→$6400（RoomRAMPtr 高字节）。
-pub fn select_room_ram(mem: &mut crate::frame::FrameMemory) {
+pub fn select_room_ram(mem: &mut crate::frame::Manager) {
     let hi = 0x60u8 | ((mem.read_ram(crate::ram_map::PPUCTRL_ZP) ^ mem.read_ram(crate::ram_map::SCROLL_DIR)) & 1) << 2;
     mem.write_ram(0x0039, 0x00); // RoomRAMPtr lo（址勘误 r28-1）
     mem.write_ram(0x003A, hi); // RoomRAMPtr hi
 }
 
 /// InitTables（$EFF8）：RoomRAM 全填 $FF（空 tile）+属性表（$3C0 面）填 ATDataTable[RoomPalette&3]。
-pub fn init_tables(mem: &mut crate::frame::FrameMemory) {
+pub fn init_tables(mem: &mut crate::frame::Manager) {
     mem.work_cycles = mem.work_cycles.wrapping_add(LOAD_INIT_CYCLES); // FillRoomRAM+AttribFill 壳
     let hi = mem.read_ram(0x003A); // RoomRAMPtr hi（$60/$64——址勘误 r28-1）
     // FillRoomRAM（$F01C）：$FF 填 3 页半（tile 区 $000-$3BF）
@@ -835,7 +835,7 @@ pub fn init_tables(mem: &mut crate::frame::FrameMemory) {
 
 /// AttribTableWrite（$EA13）——$F0-$F4 命令链（RoomNumber 低半字节=行索引；inc 自进）：
 /// 0/2=no-op、1/3=WritePPUAttribTbl（属性行→PPU）、4=RoomFinished（$FF）。
-pub fn attrib_table_write(mem: &mut crate::frame::FrameMemory) -> bool {
+pub fn attrib_table_write(mem: &mut crate::frame::Manager) -> bool {
     let room = mem.read_ram(0x005A);
     let row = (room & 0x0F) as u16;
     mem.write_ram(0x005A, room.wrapping_add(1)); // inc RoomNumber
@@ -870,7 +870,7 @@ pub fn attrib_table_write(mem: &mut crate::frame::FrameMemory) -> bool {
     }
 }
 fn update_attrib(
-    mem: &mut crate::frame::FrameMemory,
+    mem: &mut crate::frame::Manager,
     ptr: u16,
     obj_palette: u8,
     room_palette: u8,
@@ -905,12 +905,12 @@ fn update_attrib(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::frame::FrameMemory;
+    use crate::frame::Manager;
 
     /// 起始房（房 9）绘制形：RoomRAM 有 tile 落+敌门环通（双 Zoomer 条目——type=1）。
     #[test]
     fn draw_start_room_writes_tiles() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         assert!(draw_room(&mut m, 9), "房 9 全径通（对象环+敌门环+EndOfRoom）");
         let tiles: Vec<u8> = (0..0x3C0u16).map(|i| m.read_wram(0x6000 + i)).collect();
         assert!(tiles.iter().any(|&t| t != 0), "RoomRAM 有 tile 落");
@@ -931,7 +931,7 @@ mod tests {
     /// 可见活敌（在屏爬虫）受保护；不可见/空槽可回收重载（经典槽回收）。
     #[test]
     fn load_enemy_skips_visible_enemy_but_recycles_invisible() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         let ex = 0x6AF4u16 + 0x40; // slot4 EnsExtra
         let en = 0x0400u16 + 0x40;
         // 可见活敌：status=2（Active）+bit1 置 ⇒ 跳过（y/x 不被覆写）
@@ -962,7 +962,7 @@ mod tests {
     /// 8B≠32B + NT 恒 A（NT B 属性表永留清填 FF）。
     #[test]
     fn attrib_table_write_nt3_targets_mirror_attr_rows() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(0x003A, 0x64); // RoomRAMPtr hi=RoomRAMB（NT3——select_room_ram 语义）
         for i in 0..0x20u16 {
             m.write_wram(0x67C0 + i, 0x55); // 属性行 0（row1 源——55=ATDataTable[RoomPalette&3]）
@@ -998,7 +998,7 @@ mod r25_attr_probe {
     /// 属性表落面（房 9 绘制后 $63C0 区——地面带组选核）。
     #[test]
     fn room9_attrib_table() {
-        let mut m = crate::frame::FrameMemory::default();
+        let mut m = crate::frame::Manager::default();
         select_room_ram(&mut m);
         m.write_ram(0x0068, 0x03); // RoomPalette=3（房 9 首字节）
         init_tables(&mut m);
@@ -1015,7 +1015,7 @@ mod tests_load_elevator {
     //! `LoadElevator ; 07:EC04` → `SpawnElevatorRoutine ; 07:EC09`（prg7:8955-8967）：
     //! status≠0 幂等跳过；否则 type/y=$83/x=$80/hi=GetNameTableAtScrollDir/animFrame=$23。
     use super::*;
-    use crate::frame::FrameMemory;
+    use crate::frame::Manager;
     use crate::ram_map::{PPUCTRL_ZP, SCROLL_DIR};
 
     const ELEVATOR: u16 = 0x0320;
@@ -1026,7 +1026,7 @@ mod tests_load_elevator {
     fn first_spawn_sets_fields() {
         for (ppuctrl, scroll_dir) in [(0x00u8, 0x02u8), (0x00, 0x00), (0x01, 0x00), (0x01, 0x02)] {
             let want_hi = (ppuctrl ^ scroll_dir) & 0x01; // GetNameTableAtScrollDir（$EB85）
-            let mut m = FrameMemory::default();
+            let mut m = Manager::default();
             m.write_ram(PPUCTRL_ZP, ppuctrl);
             m.write_ram(SCROLL_DIR, scroll_dir);
             load_elevator(&mut m, 0x81); // bit7=上，梯号 1
@@ -1042,7 +1042,7 @@ mod tests_load_elevator {
     /// 幂等：已存在电梯（status≠0）⇒ `bne @exit` **一个字节都不写**。
     #[test]
     fn second_spawn_is_inert() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(ELEVATOR, 5);
         for a in [0x0Fu16, 0x0D, 0x0E, 0x0C, 0x03] {
             m.write_ram(ELEVATOR + a, 0x77);
@@ -1061,11 +1061,11 @@ mod tests_load_door {
     //! DoorType[$387+x]←info&3；1|3⇒status[$380+x]←1；0|2⇒CheckForItem（史空=未收⇒1
     //! （已收⇒跳））；hi/x/y 位域+$09←$0A+ScrollBlock OR。
     use super::*;
-    use crate::frame::FrameMemory;
+    use crate::frame::Manager;
     use crate::ram_map::{MAP_POS_X, MAP_POS_Y};
 
-    fn mem_with(map_x: u8, map_y: u8) -> FrameMemory {
-        let mut m = FrameMemory::default();
+    fn mem_with(map_x: u8, map_y: u8) -> Manager {
+        let mut m = Manager::default();
         m.write_ram(MAP_POS_X, map_x);
         m.write_ram(MAP_POS_Y, map_y);
         m
@@ -1150,10 +1150,10 @@ mod tests_update_door {
     //! 永久开（status←0）/蓝门偶帧重关（HP 0→8C61（1/实瓦/2/闭）））/DoorRoomRAMPtr 写站
     //! +make_room_ram_ptr（01100HYY YYYXXXXX）。
     use super::*;
-    use crate::frame::FrameMemory;
+    use crate::frame::Manager;
 
-    fn door_mem(status: u8, door_type: u8) -> FrameMemory {
-        let mut m = FrameMemory::default();
+    fn door_mem(status: u8, door_type: u8) -> Manager {
+        let mut m = Manager::default();
         let x = 0x80u16;
         m.write_ram(0x0300 + x, status);
         m.write_ram(0x0307 + x, door_type);
@@ -1286,10 +1286,10 @@ mod tests_door_bg_tiles {
     //! 判径（audit 任务卡 4 实录）：双变体共径 Common（仅瓦字节 $4E↔$FF）；4 调用点
     //! 状态环（Init Solid/首开帧 Air/重关 Solid/LetSamusIn Solid（4/5 桩面除外））。
     use super::*;
-    use crate::frame::FrameMemory;
+    use crate::frame::Manager;
 
-    fn door_mem(status: u8, door_type: u8) -> FrameMemory {
-        let mut m = FrameMemory::default();
+    fn door_mem(status: u8, door_type: u8) -> Manager {
+        let mut m = Manager::default();
         let x = 0x80u16;
         m.write_ram(0x0300 + x, status);
         m.write_ram(0x0307 + x, door_type);
@@ -1362,10 +1362,10 @@ mod tests_door_transition_chain {
     //! +→5+dir 清+音乐蓝换曲（右 Tourian/左 MB）/≥5⇒仅 Draw）/Scroll（==5⇒配对 X^$10
     //! status←6+anim Open/本门←2；≠5⇒仅 Draw）/LetSamusOut（==0⇒8C61 重关/≠0⇒Draw）。
     use super::*;
-    use crate::frame::FrameMemory;
+    use crate::frame::Manager;
 
-    fn chain_mem(status: u8, door_type: u8, entry: u8) -> FrameMemory {
-        let mut m = FrameMemory::default();
+    fn chain_mem(status: u8, door_type: u8, entry: u8) -> Manager {
+        let mut m = Manager::default();
         let x = 0x80u16;
         m.write_ram(0x0300 + x, status);
         m.write_ram(0x0307 + x, door_type);
@@ -1465,7 +1465,7 @@ mod tests_stream_content_mapping {
     //! enemy_loop 尾径**同汇 EndOfRoom（$EAF4）**（RoomNumber←$F0+TempScrollDir←ScrollDir
     //! 双写）——旧内联径漏 $4A 写⇒流送防重判永跳⇒内容映射锁死（f1200/f1000 族根因候选）。
     use super::*;
-    use crate::state::FrameMemory;
+    use crate::state::Manager;
 
     /// 【径汇修正】0xFF 直终径⇒$5A=$F0+$4A=ScrollDir（双写面（asm EndOfRoom :8727-8732））。
     /// 【复核处方强测】真驱动 draw_room 0xFF 臂（ROOM_STREAMS[1] 尾 0xFF=现成直终流）——
@@ -1508,7 +1508,7 @@ mod tests_stream_content_mapping {
     }
 
     fn draw_room_ff_path_writes_temp_scroll_dir() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(crate::ram_map::SCROLL_DIR, 3);
         m.write_ram(crate::ram_map::PPUCTRL_ZP, 0);
         // ROOM_STREAMS[1]=[02 07 02 02 87 02 02 FF]——palette+对象环+0xFF 直终（被修径）
@@ -1527,12 +1527,12 @@ mod tests_update_attrib_quirk {
     //! 旧形「修」为 $63|(ptr>>8)&4（B 半写 $67（偏离 ROM））⇒邻房（B 半）特殊调色
     //! diverge（f1000 族根因）。保真=高字节固定 $63。
     use super::*;
-    use crate::state::FrameMemory;
+    use crate::state::Manager;
 
     /// B 半区房（$6400 基）对象属性写⇒落 $63xx（A 区 quirk（非 $67xx））。
     #[test]
     fn attrib_hi_fixed_63_for_b_half() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         // ptr=$6440（B 半区元块位）/obj_palette=2/room_palette=0（异调⇒写径）
         update_attrib(&mut m, 0x6440, 2, 0);
         // quirk：写落 $63xx——任一 $63C0-FF 内（f(r) 公式）非 $67xx
@@ -1551,8 +1551,8 @@ mod tests_delete_offscreen_room_sprites {
     //! 敌还要求 `data05 & $02 == 0`（不可见）；PowerUp 是「相等才删」（`bne exit`）。
     use super::*;
 
-    fn mem_with_nt(ppuctrl: u8, scroll_dir: u8) -> crate::frame::FrameMemory {
-        let mut m = crate::frame::FrameMemory::default();
+    fn mem_with_nt(ppuctrl: u8, scroll_dir: u8) -> crate::frame::Manager {
+        let mut m = crate::frame::Manager::default();
         m.write_ram(crate::ram_map::PPUCTRL_ZP, ppuctrl);
         m.write_ram(crate::ram_map::SCROLL_DIR, scroll_dir);
         m
@@ -1561,7 +1561,7 @@ mod tests_delete_offscreen_room_sprites {
     // 【2026-11-15 修正】三条旧测把 hi 写进了 `EnsExtra+0`（=status）——它们当初是按
     // 实现（bug：判据读 status）写的，等价于「断言自实现」。现按 asm `07:ECAD`
     // `eor EnsExtra.0.hi,x` 改为写 `+7`，并显式区分 status 与 hi。
-    fn put(m: &mut crate::frame::FrameMemory, slot: u16, status: u8, hi: u8, d05: u8) {
+    fn put(m: &mut crate::frame::Manager, slot: u16, status: u8, hi: u8, d05: u8) {
         m.write_wram(0x6AF4 + slot, status);
         m.write_wram(0x6AF4 + slot + 7, hi);
         m.write_ram(0x0400 + slot + 5, d05);

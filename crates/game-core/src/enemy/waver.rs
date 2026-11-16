@@ -40,7 +40,7 @@ pub(crate) const WAVER_ANIM_R: u8 = 0x21;
 pub(crate) const WAVER_ANIM_L: u8 = 0x1E;
 
 /// `WaverAIRoutine`（`enemies/waver.asm`）。
-pub(crate) fn waver_ai(mem: &mut crate::frame::FrameMemory, x: u8) {
+pub(crate) fn waver_ai(mem: &mut crate::frame::Manager, x: u8) {
     mem.write_ram(FLIP_ANIM_IDX, WAVER_ANIM_R);
     mem.write_ram(FLIP_ANIM_IDX + 1, WAVER_ANIM_L);
     let sq = ENS + x as u16;
@@ -58,9 +58,9 @@ mod tests_waver {
     use super::*;
     use crate::enemy::prep::{EN_F_DATA05, ENS_F_STATUS, ENS_F_TYPE};
     use crate::enemy::tables::{en_addr, ens_addr};
-    use crate::frame::FrameMemory;
+    use crate::frame::Manager;
 
-    fn stage(m: &mut FrameMemory, x: u8, status: u8, jump: u8) {
+    fn stage(m: &mut Manager, x: u8, status: u8, jump: u8) {
         game_data::pack::init_from_env().ok();
         m.write_ram(en_addr(x, 0), 0x40); // y
         m.write_ram(en_addr(x, 1), 0x50); // x
@@ -73,7 +73,7 @@ mod tests_waver {
     /// 尾件 `$00/$01`（活动/休止动画索引）与 `$85/$86`（右/左）逐项对齐 asm。
     #[test]
     fn writes_both_facing_anims_and_stub2_slots() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         stage(&mut m, 0x20, 0x02, 0x00);
         waver_ai(&mut m, 0x20);
         assert_eq!(m.read_ram(FLIP_ANIM_IDX), WAVER_ANIM_R);
@@ -87,7 +87,7 @@ mod tests_waver {
     /// 但尾件照写 ⇒ 用 `$85/$86` 与 `$00/$01` 两组证据区分「跳过」与「未执行」。
     #[test]
     fn explode_status_skips_flip_but_still_runs_stub2() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         stage(&mut m, 0x20, 0x03, 0x00);
         waver_ai(&mut m, 0x20);
         assert_eq!(m.read_ram(FLIP_ANIM_IDX), WAVER_ANIM_R);
@@ -98,7 +98,7 @@ mod tests_waver {
     /// `EnemyRestingAnimIndex` 表里 type2 右朝向（index 4）的值，而不是 Waver 的 hopping 值。
     #[test]
     fn small_displacement_uses_resting_table_not_waver_anim() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         stage(&mut m, 0x20, 0x02, 0x03);
         m.write_wram(ens_addr(0x20, 5), 0xFF);
         enemy_flip_after_displacement(&mut m, 0x20);
@@ -115,7 +115,7 @@ mod tests_waver {
     #[test]
     fn dispatch_wiring_reaches_waver_for_type_2() {
         use crate::enemy::prep::ENS_F_STATUS;
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         game_data::pack::init_from_env().ok();
         let x = 0x20u8;
         m.write_ram(crate::ram_map::IN_AREA, 0); // Brinstar

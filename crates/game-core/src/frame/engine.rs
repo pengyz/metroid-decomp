@@ -8,7 +8,7 @@
 //! NMI 向量 $C0D9（bank7 同证）。
 
 use super::clock::VirtualClock;
-use super::memory::{FrameMemory, Registers};
+use super::memory::{Manager, Registers};
 use super::rng::GameRng;
 
 /// boot 相位（spin=跨帧 yield 构造物——契约 §8.1①；tick 序=NMI(尾写 1)→唤醒→帧工作→清 0→spin）。
@@ -29,7 +29,7 @@ pub enum BootPhase {
 /// 帧引擎（内存模型 + 虚拟时钟 + PRNG 句柄 + boot 相位机）。
 pub struct FrameEngine {
     /// 全内存模型。
-    pub mem: FrameMemory,
+    pub mem: Manager,
     /// 虚拟时钟（60Hz tick）。
     pub clock: VirtualClock,
     /// 游戏 PRNG（算法缺口面）。
@@ -51,7 +51,7 @@ impl FrameEngine {
     /// 新建（RAM/WRAM/寄存器零态）。
     pub fn new() -> Self {
         Self {
-            mem: FrameMemory::default(),
+            mem: Manager::default(),
             clock: VirtualClock::new(),
             rng: GameRng::new(),
             phase: BootPhase::PreSpin,
@@ -61,12 +61,12 @@ impl FrameEngine {
 
     /// 【Task 4 snapshot 消费面】bundle 恢复=**从快照态起跑**（非重跑 boot——
     /// boot_pre_spin 清 RAM 低页/清 WRAM 会把装载态抹掉，"加载成功"≠从快照态起跑）：
-    /// · `mem`←`FrameMemory::restore_mss`（三直映灌入，spec §4 接缝表）；
+    /// · `mem`←`Manager::restore_mss`（三直映灌入，spec §4 接缝表）；
     /// · `phase`←MainLoop（快照采样点=spin 出口=游戏主循环中段）；
     /// · 首 tick 跳过 NMI（装载点=post-NMI 相位 P——emu bundle-ff f=1 行==bundle 三直映
     ///   实证同锚）；首缝=装载态逐字节（对齐验收首帧锚）。
     pub fn restore_mss(&mut self, ram: &[u8], wram: &[u8], regs: Registers) {
-        self.mem = FrameMemory::restore_mss(ram, wram, regs);
+        self.mem = Manager::restore_mss(ram, wram, regs);
         self.phase = BootPhase::MainLoop;
         self.skip_next_nmi = true;
     }
@@ -85,7 +85,7 @@ impl FrameEngine {
     /// 四件/臂/采样缝（金腿窗内无行同形），tick 尾按门置 NMIStatus（等待帧=0→下一 NMI 内块
     /// 全跑；bogged=1→内块跳过（asm prg7:251 掉帧门）），队列排空 tick 尾=迭代完成点
     /// （`inc FrameCount`（asm prg7:207）延至此+唤醒门）。
-    pub fn tick_frame_with<F: FnMut(&FrameMemory)>(&mut self, mut on_spin_exit: F) {
+    pub fn tick_frame_with<F: FnMut(&Manager)>(&mut self, mut on_spin_exit: F) {
         self.clock.tick();
         // 【Step 1 boot 行索引修复】（frame-alignment-plan.md §4/Step 1——map-v2 §2 f1 行
         // 缺口）：tick1=完整 boot 帧——boot_pre 内联在 NMI#1 **之前**（严格序），原 tick2
@@ -229,7 +229,7 @@ mod tests {
     /// 1C/17/18 全清，title 面账清=strict 绿前置达成；直测桥面）。
     #[test]
     fn placeholder_arm_records_divergence() {
-        let mut m = crate::frame::FrameMemory::default();
+        let mut m = crate::frame::Manager::default();
         m.write_ram(crate::ram_map::TITLE_ROUTINE, 0x18); // EnterPassword（已臂化）
         crate::title::bridge::main_title_routine(&mut m);
         let recorded = crate::frame::DIVERGENCES.with(|d| d.borrow().clone());
@@ -302,7 +302,7 @@ mod tests {
         ram[0x001A] = 0x01; // spin 出口相位 P 常量 1（$1A=NMIStatus）
         let wram = vec![0x5Au8; 0x2000]; // boot 清 WRAM 区标志值
         let regs = Registers { a: 1, x: 2, y: 3, sp: 4, pc: 0xC0D3, p: 0x24 };
-        let expect = FrameMemory::restore_mss(&ram, &wram, regs).watch_snapshot();
+        let expect = Manager::restore_mss(&ram, &wram, regs).watch_snapshot();
 
         let mut e = FrameEngine::new();
         e.restore_mss(&ram, &wram, regs);

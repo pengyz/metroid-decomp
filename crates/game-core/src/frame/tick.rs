@@ -47,14 +47,14 @@ pub(crate) const MAIN_ROUTINE_PTR_TABLE: [u16; 10] = [
 #[cfg(test)]
 mod tests_pause_chain {
     use super::*;
-    use crate::frame::memory::FrameMemory;
+    use crate::frame::memory::Manager;
     use crate::ram_map;
 
     /// `GoMainRoutine` START 开关：3↔5 双向 + `GamePaused ^= 1` + `PauseMusic`（$CB92=%10）
     /// ——A 级锚 `prg7_engine.asm:311-338`。
     #[test]
     fn start_toggles_between_engine_and_pause() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(ram_map::MAIN_ROUTINE, 3);
         m.write_ram(ram_map::JOY1_CHANGE, 0x10); // START
         assert!(start_pause_toggle(&mut m), "3 + START 应切换");
@@ -65,7 +65,7 @@ mod tests_pause_chain {
 
     #[test]
     fn start_unpauses_back_to_engine() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(ram_map::MAIN_ROUTINE, 5);
         m.write_ram(ram_map::GAME_PAUSED, 1);
         m.write_ram(ram_map::JOY1_CHANGE, 0x10);
@@ -78,7 +78,7 @@ mod tests_pause_chain {
     #[test]
     fn start_ignored_outside_engine_and_pause() {
         for mr in [0u8, 1, 2, 4, 8, 9] {
-            let mut m = FrameMemory::default();
+            let mut m = Manager::default();
             m.write_ram(ram_map::MAIN_ROUTINE, mr);
             m.write_ram(ram_map::JOY1_CHANGE, 0x10);
             assert!(!start_pause_toggle(&mut m), "mr={mr} 不应被 START 改变");
@@ -86,7 +86,7 @@ mod tests_pause_chain {
             assert_eq!(m.read_ram(ram_map::SFX_NOISE_INIT), 0, "不得起 PauseMusic");
         }
         // 无 START 也不切
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(ram_map::MAIN_ROUTINE, 3);
         m.write_ram(ram_map::JOY1_CHANGE, 0x00);
         assert!(!start_pause_toggle(&mut m));
@@ -97,7 +97,7 @@ mod tests_pause_chain {
     /// （5→6 = GoPassword，**mr=6 的唯一产生点**）。A 级锚 `prg7_engine.asm:2139-2166`。
     #[test]
     fn pause_mode_exits_to_go_password() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(ram_map::MAIN_ROUTINE, 5);
         m.write_ram(ram_map::GAME_PAUSED, 1);
         m.write_ram(ram_map::JOY2_STATUS, 0x88); // BUTTON_A|BUTTON_UP
@@ -110,14 +110,14 @@ mod tests_pause_chain {
     #[test]
     fn pause_mode_blocked_when_gate_not_met() {
         for joy2 in [0x80u8, 0x08, 0x00] {
-            let mut m = FrameMemory::default();
+            let mut m = Manager::default();
             m.write_ram(ram_map::MAIN_ROUTINE, 5);
             m.write_ram(ram_map::JOY2_STATUS, joy2);
             pause_mode(&mut m);
             assert_eq!(m.read_ram(ram_map::MAIN_ROUTINE), 5, "joy2={joy2:02X} 不应退出");
         }
         // 逃脱场景（EndTimer+1≠0）禁止退出
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(ram_map::MAIN_ROUTINE, 5);
         m.write_ram(ram_map::JOY2_STATUS, 0x88);
         m.write_ram(ram_map::END_TIMER + 1, 1);
@@ -128,7 +128,7 @@ mod tests_pause_chain {
     /// GoPassword：`TitleRoutine←0x19` + `$24←1` + `SilenceMusic` + ScreenOff（三件 + 关屏）。
     #[test]
     fn go_password_switches_to_title_bank_for_display_password() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(ram_map::MAIN_ROUTINE, 6);
         m.write_ram(0x00FE, 0x1E);
         go_password(&mut m);
@@ -142,7 +142,7 @@ mod tests_pause_chain {
     /// 端到端：3 + START → 5（暂停）→ 2P A+UP → 6 → 帧界换页 → GameMode=1 且 TitleRoutine=0x19。
     #[test]
     fn pause_to_password_is_reachable_end_to_end() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(ram_map::MAIN_ROUTINE, 3);
         m.write_ram(ram_map::JOY1_CHANGE, 0x10);
         // 第一拍：START ⇒ 暂停（同帧分派 PauseMode；Joy2 未按 ⇒ 停在 5）
@@ -164,7 +164,7 @@ mod tests_pause_chain {
     /// IncrementRoutine（$C155）= `inc MainRoutine / rts`。
     #[test]
     fn increment_routine_advances_one() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(ram_map::MAIN_ROUTINE, 7);
         increment_routine(&mut m);
         assert_eq!(m.read_ram(ram_map::MAIN_ROUTINE), 8);
@@ -174,7 +174,7 @@ mod tests_pause_chain {
 #[cfg(test)]
 mod tests_prepare_game_over {
     use super::*;
-    use crate::frame::memory::FrameMemory;
+    use crate::frame::memory::Manager;
     use crate::ram_map;
 
     /// 死亡链端到端（state 机层，A 级 asm 锚）：
@@ -185,7 +185,7 @@ mod tests_prepare_game_over {
     /// 修前此链在 `mr=4` 处 `unported!("bank07:C9A6")` panic（审计 §6 件 #1）。
     #[test]
     fn death_chain_reaches_game_over_and_switches_to_title_bank() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         // 死亡前置：GameEngine 已 SetTimer(#$04, x=4) 且 Timer3 已尽（WaitTimer 待跑）
         m.write_ram(ram_map::MAIN_ROUTINE, 9); // WaitTimer
         m.write_ram(ram_map::TIMER3, 0);
@@ -213,7 +213,7 @@ mod tests_prepare_game_over {
     /// 且绝不把 `$1E` 写回（那是 ScreenOn 的形）——防「用点屏冒充关屏」的假绿。
     #[test]
     fn prepare_game_over_clears_only_bg_obj_bits() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(ram_map::MAIN_ROUTINE, 4);
         m.write_ram(0x00FE, 0x1E);
         prepare_game_over(&mut m);
@@ -234,11 +234,11 @@ mod tests_prepare_game_over {
 
 pub use crate::enemy::slot_cycle::update_all_enemies;
 
-use crate::frame::FrameMemory;
+use crate::frame::Manager;
 use crate::ram_map;
 use crate::ram_map::*;
 
-pub fn main_loop_iter(mem: &mut FrameMemory) {
+pub fn main_loop_iter(mem: &mut Manager) {
     // 【Step 4 完成拍哨兵】cursor==0xFF=臂末窗（asm：例程体尾段自旋窗——rts 后迭代
     // 收尾 `inc FrameCount`（prg7:207）落本窗尾）。无 prelude（同迭代早过 RandomNumbers/
     // CheckBankSwitch/UpdateTimer——emu 0x01/0x1B 窗各仅 1 次 TD dec 实录，map-v2 §3）；
@@ -250,7 +250,7 @@ pub fn main_loop_iter(mem: &mut FrameMemory) {
         mem.write_ram(NMI_STATUS, 0);
         return;
     }
-    // 【Step 3 谓词单源】续段/完成拍/spin 判定=FrameMemory::title_continuation（唯一实现
+    // 【Step 3 谓词单源】续段/完成拍/spin 判定=Manager::title_continuation（唯一实现
     // ——engine 缝抑制同源；0xFF 完成拍哨兵显式排除出续段，Step 4 启用）。
     let continuation = mem.title_continuation();
     if !continuation {
@@ -277,7 +277,7 @@ pub fn main_loop_iter(mem: &mut FrameMemory) {
 ///
 /// **结构互核注**：注释值=循环体×5 的合成值（$05×5=$19 ✓/$13×5=$5F ✓——注与体互证）；
 /// A 终值=RandomNumber1。
-pub fn random_numbers(mem: &mut FrameMemory) {
+pub fn random_numbers(mem: &mut Manager) {
     let n1 = mem.read_ram(RANDOM1).wrapping_add(0x19);
     let n2 = mem.read_ram(RANDOM2).wrapping_add(0x5F);
     mem.write_ram(RANDOM1, n1);
@@ -288,7 +288,7 @@ pub fn random_numbers(mem: &mut FrameMemory) {
 /// 游戏侧主例程分发（**asm 内容锚**——T45-3 移动臂首靶；C11B+ 面）：
 /// START 检查（暂停切换）→`lda MainRoutine($1E)/jsr JumpEngine`→MainRoutinePtrTable
 /// 10 项分派。未武装臂=per-entry 爆（移动臂迭代分类面）。
-pub fn game_main_routine(mem: &mut FrameMemory) {
+pub fn game_main_routine(mem: &mut Manager) {
     // 【抢救件#2（A 级）】asm `GoMainRoutine: ; 07:C114` @endIf_A 段（prg7_engine.asm:311-338）：
     // `lda Joy1Change / and #BUTTON_START / beq @endIf_B` → 命中后
     // `lda MainRoutine / cmp #_id_GameEngine(3) / beq → PauseMode(5)` 或
@@ -363,7 +363,7 @@ pub fn game_main_routine(mem: &mut FrameMemory) {
 /// **ScreenOff 的落地相位**：asm 只写影子 `PPUMASK_ZP`，真寄存器由 `WriteAndWait` 等的
 /// 那个 NMI 里 `WritePPUCtrl`（`sta PPUMASK`）落 —— 与 `initialize_game` 的 ScreenNmiOff
 /// 同构（实测不显式写 `$2001` 会晚一帧，见 b92 暗窗定谳），故此处同样双写。
-pub fn prepare_game_over(mem: &mut FrameMemory) {
+pub fn prepare_game_over(mem: &mut Manager) {
     mem.write_ram(crate::ram_map::TITLE_ROUTINE, 0x1C); // _id_GameOver
     mem.write_ram(crate::ram_map::BANK_SWITCH_PENDING, 0x01); // 切标题页（BankTable[0]=bank0）
     let pm = mem.read_ram(0x00FE) & !0x18; // PPUMASK_ZP &= ~(BG_ON|OBJ_ON)
@@ -375,7 +375,7 @@ pub fn prepare_game_over(mem: &mut FrameMemory) {
 /// `Joy1Change & BUTTON_START` 命中且 `MainRoutine ∈ {3 GameEngine, 5 PauseMode}` 时
 /// 双向切换 + `GamePaused ^= 1` + `PauseMusic`；其余态忽略 START（asm `bne @endIf_B`）。
 /// 返回是否发生切换（供单测；生产路径不依赖返回值）。
-pub fn start_pause_toggle(mem: &mut FrameMemory) -> bool {
+pub fn start_pause_toggle(mem: &mut Manager) -> bool {
     if mem.read_ram(crate::ram_map::JOY1_CHANGE) & 0x10 == 0 {
         return false; // BUTTON_START=%0001_0000（hardware.asm:93）
     }
@@ -405,7 +405,7 @@ pub fn start_pause_toggle(mem: &mut FrameMemory) -> bool {
 /// **这是 mr=6 的唯一产生点**（不是 `NextRoutine`——`NextRoutine` 从不置 6，
 /// `WaitTimer` 里对 6 的比较是死分支）。原版语义：暂停画面上按住 **2P 的 A+UP**
 /// 即退出到「显示密码」屏。
-pub fn pause_mode(mem: &mut FrameMemory) {
+pub fn pause_mode(mem: &mut Manager) {
     // `and #$88 / eor #$88` ⇒ 全按才为 0
     if mem.read_ram(crate::ram_map::JOY2_STATUS) & 0x88 != 0x88 {
         return;
@@ -430,7 +430,7 @@ pub fn pause_mode(mem: &mut FrameMemory) {
 /// （`ClearAll` + `PreparePPUProcess($937F)` "PASS WORD" + `InitPasswordFontGFX` +
 /// `CalculatePassword` + `NMIOn` + `PasswordToScreen` + `PaletteDataPending←Palette12+1`）
 /// → 相位→`0x1A WaitForSTART` → `jmp CheckPassword` → 有效密码回 `InitializeGame`。
-pub fn go_password(mem: &mut FrameMemory) {
+pub fn go_password(mem: &mut Manager) {
     mem.write_ram(crate::ram_map::TITLE_ROUTINE, 0x19); // _id_DisplayPassword
     mem.write_ram(crate::ram_map::BANK_SWITCH_PENDING, 0x01);
     crate::sound::hook::silence_music(mem); // $CB8E
@@ -440,7 +440,7 @@ pub fn go_password(mem: &mut FrameMemory) {
 }
 
 /// IncrementRoutine（**asm 内容锚** `IncrementRoutine: ; 07:C155`）= `inc MainRoutine / rts`。
-pub fn increment_routine(mem: &mut FrameMemory) {
+pub fn increment_routine(mem: &mut Manager) {
     let mr = mem.read_ram(crate::ram_map::MAIN_ROUTINE);
     mem.write_ram(crate::ram_map::MAIN_ROUTINE, mr.wrapping_add(1));
 }
@@ -449,7 +449,7 @@ pub fn increment_routine(mem: &mut FrameMemory) {
 /// `ScrollX($26)/ScrollY($25)←0`/`PPUCTRL_ZP($FF)&=$FC`（名表 0）/`inc MainRoutine`
 /// （→MoreInit）/`ABStatus←Joy1Status&(A|B)`/`jsr EraseAllSprites`（C1A3 已折）/
 /// `lda #$10/jsr IsEngineRunning`（CA18——页切检桩）。
-pub fn area_init(mem: &mut FrameMemory) {
+pub fn area_init(mem: &mut Manager) {
     mem.write_ram(crate::ram_map::SCROLL_X, 0);
     mem.write_ram(crate::ram_map::SCROLL_Y, 0);
     let ff = mem.read_ram(crate::ram_map::PPUCTRL_ZP) & 0xFC;
@@ -470,7 +470,7 @@ pub fn area_init(mem: &mut FrameMemory) {
 /// `lsr ScrollDir($49)`（`07:C902` ROM=46 49，已定谳端口）⑧MirrorCntrl($FA)/MissilePickupQtyMax($93)/
 /// EnergyPickupQtyMax($94)←Y ⑨Samus.y←AreaSamusY[area]（$95D9 五值烘焙）/x←$80/
 /// hi←PPUCTRL_ZP&1 ⑩Health($0106)←30（$00/$03）。
-pub fn samus_init(mem: &mut FrameMemory) {
+pub fn samus_init(mem: &mut Manager) {
     use crate::ram_map::{IN_AREA, MIRROR_CNTRL, MAIN_ROUTINE, SAMUS_STATUS, SAMUS_Y};
     mem.write_ram(MAIN_ROUTINE, 8); // SamusIntro（下一帧——表序 _id_SamusIntro=8（r25 正））
     mem.write_ram(0x002C, 0x2C); // Timer3（440 帧淡入）
@@ -516,7 +516,7 @@ pub fn samus_init(mem: &mut FrameMemory) {
 /// ③Timer3≥$1F⇒退出（310 帧内不画）④SamusFadeInTimeTbl($CA13: 1E/14/0B/04/FF) 对照：
 /// Timer3==表[y-$14]⇒inc Samus.status+PaletteDataPending←y（淡入调色步进）⑤奇帧（FC&1）
 /// 闪现：SetSamusAnim(SamusFront)+SpritePagePos←0+PageIndex←0+AnimDrawObject($DE47)。
-pub fn samus_intro(mem: &mut FrameMemory) {
+pub fn samus_intro(mem: &mut Manager) {
     crate::frame::boot::erase_all_sprites(mem); // EraseAllSprites（$C1A3）
     let status = mem.read_ram(0x0300); // Samus.status（$300）
     let t3 = mem.read_ram(0x002C); // Timer3（$2C）
@@ -563,7 +563,7 @@ pub fn samus_intro(mem: &mut FrameMemory) {
 /// ②正常径：AreaMusicFlag（ROM 区 bank $95CD）+ItemRoomMusicStatus($79) 判
 /// （bmi/beq⇒Lx114）③item 径：ItemRoomMusicStatus←$81/A←music_ItemRoom($20)
 /// ④Lx114：`ora MusicInitFlags($0685) / sta MusicInitFlags`（**音乐起**——声链消费面）。
-pub fn start_music(mem: &mut FrameMemory) {
+pub fn start_music(mem: &mut Manager) {
     // AreaMusicFlag（各 area bank $95CD）——走区头段（旧形是 Rust 抄本 `AREA_MUSIC_FLAG`）。
     let mut a = game_data::assets::area_header((mem.read_ram(crate::ram_map::IN_AREA) & 0x0F) as u8)
         .music_flag;
@@ -581,7 +581,7 @@ pub fn start_music(mem: &mut FrameMemory) {
 /// SamusGear($6878) bit5（Varia）→carry；MissileToggle($010E) rol⇒A=(m<<1)|v；
 /// adc #_id_Palette01+1(=2)；JustInBailey($69B3)≠0⇒adc #$17（no-suit 族）；
 /// sta PaletteDataPending($1C)（下一 NMI 写调色板）。
-pub fn select_samus_palette(mem: &mut FrameMemory) {
+pub fn select_samus_palette(mem: &mut Manager) {
     let gear = mem.read_ram(0x6878);
     let varia = (gear >> 5) & 1; // asl×3 出 carry=bit5
     let missile = mem.read_ram(0x010E) & 0x01;
@@ -596,7 +596,7 @@ pub fn select_samus_palette(mem: &mut FrameMemory) {
 /// ScrollDoor×2（E1F1 双调=双速滚门）/NARPASSWORD quirk（**D4 保真**）/UpdateWorld
 /// （CB29——19 件环：敌人/弹/萨姆斯/区域/梯/像/爆/虫/门/瓦碰/状态栏/能力件）/
 /// 延时旗（MiniBossKill/PowerUp→SetTimer 240 帧）/死亡链（SilenceMusic→GameOver）。
-pub fn game_engine(mem: &mut FrameMemory) {
+pub fn game_engine(mem: &mut Manager) {
     scroll_door(mem); // E1F1×2（双速滚门——2 调=2 px/帧）
     scroll_door(mem);
     if mem.read_ram(0x69B2) != 0 {
@@ -645,7 +645,7 @@ pub fn game_engine(mem: &mut FrameMemory) {
 /// `ldy MainRoutine/cpy #IncrementRoutine(7)/beq RTS`（淡入/等待）→`cpy #GameEngine(3)/
 /// beq SwitchBank`→否则 RTS。SwitchBank（CA23）：`sta InArea($74)/and #$0F/tay/
 /// lda BankTable,y/sta BankSwitchPending($28)/jmp CheckBankSwitch`（已折）。
-pub fn is_engine_running(mem: &mut FrameMemory, a_in: u8) {
+pub fn is_engine_running(mem: &mut Manager, a_in: u8) {
     let mr = mem.read_ram(crate::ram_map::MAIN_ROUTINE);
     if mr == 7 {
         return; // IncrementRoutine（淡入/等待——RTS）
@@ -663,7 +663,7 @@ pub fn is_engine_running(mem: &mut FrameMemory, a_in: u8) {
 // （UpdateWorld 旧壳已并入上方 r26 dispatch——原块删除）
 /// UpdateTimer 单元（**asm 内容锚**）——`UpdateTimer: ; 07:C266`：TimerDelay 预分频
 /// （dec/bpl——10 帧节拍，归零重置 9 并含 Timer3）→ Timer1/2/3 非零递减。
-pub fn update_timer(mem: &mut FrameMemory) {
+pub fn update_timer(mem: &mut Manager) {
     // 寄存器残迹注（B 案 $69 机理）：asm 定时环 `ldx #$02/lda $2A,x/dex/bpl`——
     // **dex 出口 X=$FF**（JumpEngine `stx TempX($69)` 保存面源）。
     mem.regs.x = 0xFF;
@@ -685,7 +685,7 @@ pub fn update_timer(mem: &mut FrameMemory) {
 /// GoMainRoutine 分发壳（**asm 内容锚+结构互核注**）——`GoMainRoutine: ; 07:C114`：
 /// GameMode≠0 ⇒ `jmp MainTitleRoutine`（**00:8000 会师点**——port2 title 簇头）；
 /// GameMode=0 ⇒ START 检查/主例程分发（游戏面——task-11 面 fail-loud）。
-pub fn go_main_routine(mem: &mut FrameMemory) {
+pub fn go_main_routine(mem: &mut Manager) {
     if mem.read_ram(GAME_MODE) != 0 {
         crate::title::bridge::main_title_routine(mem); // **会师接线**（bank00:8000 穿越）
         return; // 标题路终（asm：`jmp MainTitleRoutine` 尾跳语义）

@@ -115,7 +115,7 @@ fn main() -> ExitCode {
             a: b.regs.a, x: b.regs.x, y: b.regs.y,
             p: b.regs.ps, sp: b.regs.sp, pc: b.regs.pc,
         };
-        engine.mem = game_core::frame::FrameMemory::restore_mss(&ram, &wram, regs);
+        engine.mem = game_core::frame::Manager::restore_mss(&ram, &wram, regs);
         println!("[bundle] restore_mss 已装: ram={}B wram={}B pc=${:04X}",
             ram.len(), wram.len(), b.regs.pc);
     }

@@ -10,7 +10,7 @@ use crate::ram_map;
 /// skree.asm:2-71——A 级逐行））：悬顶静息（PreAI=Resting⇒anim 8）→近距激活（阈距
 /// data05 bit3——F75B 件）→坠落（movementInstrIndex($+7)<$0F——EnemyGetDeltaY delta 径）
 /// →落地（≥$0F）⇒爆延时←$3A→≥$11⇒爆体径（jumpDsplcmnt($+13) 倒数⇒清槽+**4 弹**）。
-pub(crate) fn skree_ai(mem: &mut crate::frame::FrameMemory, x: u8) {
+pub(crate) fn skree_ai(mem: &mut crate::frame::Manager, x: u8) {
     let pre = mem.read_ram(0x0081); // EnemyStatusPreAI
     if pre == 1 {
         // SkreeExit_Resting（:62-66）：anim 8+noMove

@@ -4,14 +4,14 @@
 //! `UpdateWorld` 分派、`Uw*` 各对象更新件。
 
 use crate::frame::tick::*;
-use crate::frame::FrameMemory;
+use crate::frame::Manager;
 use crate::ram_map;
 
 /// ScrollDoor（**asm 内容锚** `ScrollDoor: ; 07:E1F1`——r26 端口）：
 /// DoorEntryStatus($56)：0=非门出/1=右滚(ScrollRight $E6D2)/2=左滚(ScrollLeft $E6A7)/
 /// 3=下滚(ScrollDown $E519)/4=上滚(ScrollUp $E4F1)；滚至 ScrollX/Y 归中⇒DoorEntryStatus←5
 /// （出门）。滚件=1px/调（双调=双速）。
-pub fn scroll_door(mem: &mut FrameMemory) {
+pub fn scroll_door(mem: &mut Manager) {
     let d = mem.read_ram(0x0056);
     if d == 0 {
         return;
@@ -47,7 +47,7 @@ pub fn scroll_door(mem: &mut FrameMemory) {
 }
 
 /// 滚 1px（ScrollRight/Left/Up/Down 簇共径——名表换/换页件随证）。
-pub(crate) fn scroll_by(mem: &mut crate::frame::FrameMemory, addr: u16, up: bool) {
+pub(crate) fn scroll_by(mem: &mut crate::frame::Manager, addr: u16, up: bool) {
     let v = mem.read_ram(addr);
     let nv = if up { v.wrapping_add(1) } else { v.wrapping_sub(1) };
     mem.write_ram(addr, nv);
@@ -59,7 +59,7 @@ pub(crate) fn scroll_by(mem: &mut crate::frame::FrameMemory, addr: u16, up: bool
 /// 爆/虫/弹/瓦碰/SamusEnterDoor($8B13)/UpdateAllDoors/TileBlasts/CollisionDetection/
 /// DisplayBar($E0C1)/PipeBugHoles/CheckMissileToggle/UpdateAllPowerUps($DB37)/
 /// UpdateTourianItems($FDE3)/尾清 sprite RAM（$F4 填）。
-pub fn update_world(mem: &mut crate::frame::FrameMemory) {
+pub fn update_world(mem: &mut crate::frame::Manager) {
     mem.write_ram(0x005B, 0); // SpritePagePos←0
     update_all_enemies(mem); // F345（敌环——槽×6+状态 dispatch）
     // UpdateSamusProjectiles（D4BF——随件）
@@ -94,31 +94,31 @@ pub fn update_world(mem: &mut crate::frame::FrameMemory) {
 }
 
 /// AreaRoutine（区 bank $95C3——区专径：液面/滚屏特效族）。
-pub(crate) fn uw_area_routine(_mem: &mut crate::frame::FrameMemory) {
+pub(crate) fn uw_area_routine(_mem: &mut crate::frame::Manager) {
     // Brinstar 区专径（空态无液面——首房间实证；活性随件）
 }
 
 /// UpdateElevator（`$D7B3`）——电梯十态（`frame::elevator`；槽空 status=0 ⇒ ExitSub 恒空径）。
-pub(crate) fn uw_elevator(mem: &mut crate::frame::FrameMemory) {
+pub(crate) fn uw_elevator(mem: &mut crate::frame::Manager) {
     crate::world::elevator::update_elevator(mem);
 }
 
 /// UpdateAllEnemyExplosions（爆族——槽空⇒跳过）。
-pub(crate) fn uw_enemy_explosions(mem: &mut crate::frame::FrameMemory) {
+pub(crate) fn uw_enemy_explosions(mem: &mut crate::frame::Manager) {
     crate::enemy::framework::update_all_enemy_explosions(mem);
 }
 
 /// UpdateAllMellows（虫族）。
-pub(crate) fn uw_mellows(_mem: &mut crate::frame::FrameMemory) {}
+pub(crate) fn uw_mellows(_mem: &mut crate::frame::Manager) {}
 
 /// UpdateAllTileBlasts（瓦片爆/复原——空态跳过）。
-pub(crate) fn uw_tile_blasts(_mem: &mut crate::frame::FrameMemory) {}
+pub(crate) fn uw_tile_blasts(_mem: &mut crate::frame::Manager) {}
 
 /// UpdateAllEnProjectiles（敌弹族——槽空⇒跳过）。
-pub(crate) fn uw_en_projectiles(_mem: &mut crate::frame::FrameMemory) {}
+pub(crate) fn uw_en_projectiles(_mem: &mut crate::frame::Manager) {}
 
 /// SamusEnterDoor（$8B13——过门检）：全径实现=physics::samus_enter_door（goal-r29）。
-pub(crate) fn uw_samus_enter_door(mem: &mut crate::frame::FrameMemory) {
+pub(crate) fn uw_samus_enter_door(mem: &mut crate::frame::Manager) {
     crate::samus::physics::samus_enter_door(mem);
 }
 
@@ -127,20 +127,20 @@ pub(crate) fn uw_samus_enter_door(mem: &mut crate::frame::FrameMemory) {
 /// 2026-11-14 更正：本函数曾是空壳（`{}`），导致门链实现齐备却从未接线——
 /// A 方案把输入窗移出开场演出后，`case-002` 立即暴露（emu 门 status 2/anim $31
 /// vs rust 永停 status 1 全零）。空壳期所有门单测仍绿，因为没有一条链路走到 `jsr` 点。
-pub(crate) fn uw_all_doors(mem: &mut crate::frame::FrameMemory) {
+pub(crate) fn uw_all_doors(mem: &mut crate::frame::Manager) {
     crate::world::room_draw::update_all_doors(mem);
 }
 
 /// UpdateAllPipeBugHoles（虫洞族——空态跳过）。
-pub(crate) fn uw_pipe_bug_holes(_mem: &mut crate::frame::FrameMemory) {}
+pub(crate) fn uw_pipe_bug_holes(_mem: &mut crate::frame::Manager) {}
 
 /// CheckMissileToggle（弹切检——A/SELECT 切换面）。
-pub(crate) fn uw_check_missile_toggle(_mem: &mut crate::frame::FrameMemory) {}
+pub(crate) fn uw_check_missile_toggle(_mem: &mut crate::frame::Manager) {}
 
 /// UpdateAllPowerUps（$DB37——吃能力！槽环+埋实心块判+拾取碰撞+授予）。
 /// 【能力移植（2026-10-31）】全链端口（pickup::spawn——ScanForItems 上图/DB37 显示/
 /// DC7F 触碰/DB2F 授予/EE4A 唯一物史）——sc-item-pickup 流程件。
-pub(crate) fn uw_all_power_ups(mem: &mut crate::frame::FrameMemory) {
+pub(crate) fn uw_all_power_ups(mem: &mut crate::frame::Manager) {
     if let Some(item) = crate::pickup::spawn::update_all_power_ups(mem) {
         // 拾取音乐/延迟（CBF9 PowerUpMusic——声包随件记账）
         crate::frame::DIVERGENCES.with(|d| d.borrow_mut().push(0x0CBF9));
@@ -149,5 +149,5 @@ pub(crate) fn uw_all_power_ups(mem: &mut crate::frame::FrameMemory) {
 }
 
 /// UpdateTourianItems（$FDE3——Tourian 专件）。
-pub(crate) fn uw_tourian_items(_mem: &mut crate::frame::FrameMemory) {}
+pub(crate) fn uw_tourian_items(_mem: &mut crate::frame::Manager) {}
 

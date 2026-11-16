@@ -10,7 +10,7 @@ use crate::ram_map;
 /// DrawEnemy（**asm 内容锚** `DrawEnemy: ; 07:DD8B`——r26 端口）：animFrame==FrameNone⇒
 /// ClearObjectCntrl；帧指针（EnFramePtrTable1/2——animFrame bit7 carry 选表！）→
 /// GetSpriteCntrlData→位指针（EnPlacePtrTable）→sprite 管线写（place_disp/四元组）。
-pub(crate) fn draw_enemy(mem: &mut crate::frame::FrameMemory, x: u8) {
+pub(crate) fn draw_enemy(mem: &mut crate::frame::Manager, x: u8) {
     // 【goal-轮73 draw 调用直证】双写源（n=803 清→置双写）。
     use game_data::assets;
     // 【②回装（2026-10-29）】asm :6156-6168：帧记字 1/2→EnsExtra.radiusY/X（IsObject-
@@ -98,7 +98,7 @@ pub(crate) fn draw_enemy(mem: &mut crate::frame::FrameMemory, x: u8) {
 /// status==Pickup(5)⇒RTS；delay 门（≠0 递减未归零⇒RTS）→`sta animDelay←A`→走
 /// EN_ANIM_TABLE[animIndex]（区表——Brinstar $9D6A）：FF⇒animIndex←reset 续走；
 /// 否则 animFrame(+3)←表值、animIndex+1。调用形：CrawlerAI @exit `lda #3/jsr $800C`。
-pub(crate) fn update_enemy_anim(mem: &mut crate::frame::FrameMemory, x: u8, a: u8) {
+pub(crate) fn update_enemy_anim(mem: &mut crate::frame::Manager, x: u8, a: u8) {
     let base = 0x6AF4u16 + x as u16;
     if mem.read_wram(base) == 5 {
         return; // Pickup 态不更

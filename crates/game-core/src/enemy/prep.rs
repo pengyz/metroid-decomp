@@ -5,7 +5,7 @@
 //! `EnData05DistanceToSamusThreshold ; 07:F75B`、`InitEnRestingAnimIndex`。
 
 use crate::frame::tick::*;
-use crate::frame::FrameMemory;
+use crate::frame::Manager;
 use crate::ram_map;
 
 pub(crate) use crate::enemy::tables::{en_addr, ens_addr, enemy_type_times2_plus_facing, l968b_of, l977b_raw, load_table_at_977b};
@@ -23,7 +23,7 @@ pub(crate) const ENS_F_DATA1F: u16 = 15;
 
 // 【goal-轮37 记账】可见旗写面（asm :6178-6186 `and #$FD/ora (flag<<1)/sta data05`）
 // 在**绘径**（非 F37F 检）——F37F 闩位读面已折；写面随件（DIVERGENCES 记账臂）。
-pub(crate) fn enemy_check_if_visible_inner(mem: &mut crate::frame::FrameMemory, x: u8) -> bool {
+pub(crate) fn enemy_check_if_visible_inner(mem: &mut crate::frame::Manager, x: u8) -> bool {
     // 【goal-轮61 可见位判输入直证】hi/same_nt/carry（金方 bit1=0 在屏却判不可见源）。
     // IsObjectVisible（**asm 内容锚** `IsObjectVisible: ; 07:DFDF`——2026-10-31 忠实重建）：
     // 旧形横房分支 y<240 近似恒真且丢名表/横滚轴——载入邻名表敌（hi≠PPU 当前 NT）被误判
@@ -70,7 +70,7 @@ pub(crate) fn enemy_check_if_visible_inner(mem: &mut crate::frame::FrameMemory, 
     rx < screen_y // cmp/bcc=可见
 }
 
-pub(crate) fn enemy_force_speed_x_axis(mem: &mut crate::frame::FrameMemory, x: u8, attribs: u8) {
+pub(crate) fn enemy_force_speed_x_axis(mem: &mut crate::frame::Manager, x: u8, attribs: u8) {
     let e = 0x0400 + x as u16 + 5;
     mem.write_ram(e, mem.read_ram(e) & !0x01); // AndEnData05 #~$01
     let bit0 = enemy_facing_towards_samus_bit(mem, x);
@@ -100,7 +100,7 @@ pub(crate) fn enemy_force_speed_x_axis(mem: &mut crate::frame::FrameMemory, x: u
 
 /// x 轴朝向位（`07:F6F5`–`07:F70A`）：横滚房异名表 ⇒ `EnsExtra.hi ^ PPUCTRL_ZP`
 /// 的 bit0；否则 `enX ≥ Samus.x`（`enX == Samus.x` 时先 `inc Enemy82($0082)`）。
-pub(crate) fn enemy_facing_towards_samus_bit(mem: &mut crate::frame::FrameMemory, x: u8) -> u8 {
+pub(crate) fn enemy_facing_towards_samus_bit(mem: &mut crate::frame::Manager, x: u8) -> u8 {
     let dir = mem.read_ram(crate::ram_map::SCROLL_DIR);
     if dir >= 0x02 {
         let en_hi = mem.read_wram(0x6AF4 + x as u16 + 7); // EnsExtra.hi
@@ -118,7 +118,7 @@ pub(crate) fn enemy_facing_towards_samus_bit(mem: &mut crate::frame::FrameMemory
     (ex >= sx) as u8
 }
 
-pub(crate) fn enemy_force_speed(mem: &mut crate::frame::FrameMemory, x: u8) {
+pub(crate) fn enemy_force_speed(mem: &mut crate::frame::Manager, x: u8) {
     mem.write_ram(0x0082, 0);
     let t = mem.read_wram(0x6AF4 + x as u16 + 14) as usize & 0x0F;
     let attribs = game_data::assets::enemy_force_attribs(crate::frame::cur_area(mem))[t];
@@ -196,7 +196,7 @@ pub(crate) fn enemy_force_speed(mem: &mut crate::frame::FrameMemory, x: u8) {
 /// ①data05 bits3/4 置+掩码默认 ②阈表（ENEMY_DISTANCE_THRESHOLD[type]）为 0⇒早出
 /// （**Zoomer 径！**）③bit1（不可见）⇒清 bits3/4 ④bit7 轴选→掩 bit3/4 ⑤|敌-萨|>>4
 /// vs 阈&$7F：距大⇒清对应位。Or/AndEnData05=bits3/4 掩写件。
-pub(crate) fn enemy_distance_threshold(mem: &mut crate::frame::FrameMemory, x: u8) {
+pub(crate) fn enemy_distance_threshold(mem: &mut crate::frame::Manager, x: u8) {
     let e = 0x0400 + x as u16 + 5; // Ens.data05
     let d = mem.read_ram(e);
     mem.write_ram(e, d | 0x18); // OrEnData05($18)
@@ -239,7 +239,7 @@ pub(crate) fn enemy_distance_threshold(mem: &mut crate::frame::FrameMemory, x: u
 
 /// InitEnRestingAnimIndex（**asm 内容锚** `: 07:F682`——r26）：type×2+facing 索引→
 /// ENEMY_RESTING_ANIM[y]；≠resetAnimIndex⇒写 resetAnimIndex/animIndex+animDelay←0。
-pub(crate) fn init_en_resting_anim_index(mem: &mut crate::frame::FrameMemory, x: u8) {
+pub(crate) fn init_en_resting_anim_index(mem: &mut crate::frame::Manager, x: u8) {
     use crate::enemy::anim_idx::AnimIdx;
     let y = enemy_type_times2_plus_facing(mem, x);
     let area = crate::frame::cur_area(mem);
@@ -253,7 +253,7 @@ pub(crate) fn init_en_resting_anim_index(mem: &mut crate::frame::FrameMemory, x:
 }
 
 /// `XorEnData05 ; $856B`。
-pub(crate) fn xor_en_data05(mem: &mut crate::frame::FrameMemory, x: u8, mask: u8) {
+pub(crate) fn xor_en_data05(mem: &mut crate::frame::Manager, x: u8, mask: u8) {
     let a = en_addr(x, EN_F_DATA05);
     mem.write_ram(a, mem.read_ram(a) ^ mask);
 }

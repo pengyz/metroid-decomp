@@ -16,7 +16,7 @@
 //! 地址面：PageIndex=$4B/IsSamus=$55（constants_ram 内容锚）；Samus.status=$0300
 //! （Object 结构首字段——constants_ram `.struct Object` 内容锚）。
 
-use crate::state::FrameMemory; // G11 破环：类型层直取（原经 frame/）
+use crate::state::Manager; // G11 破环：类型层直取（原经 frame/）
 use crate::ram_map::{IS_SAMUS, PAGE_INDEX, SAMUS_STATUS};
 
 /// Samus 处理态（GoSamusHandler 表序自证——asm `.word` 10 项）。
@@ -79,7 +79,7 @@ impl SamusHandler {
 }
 
 /// UpdateSamus（asm :2705 内容锚）：PageIndex=0/IsSamus=1→处理→IsSamus=0。
-pub fn update_samus(mem: &mut FrameMemory) {
+pub fn update_samus(mem: &mut Manager) {
     mem.write_ram(PAGE_INDEX, 0); // `ldx #$00/stx PageIndex`
     mem.write_ram(IS_SAMUS, 1); // `inx/stx IsSamus`
     go_samus_handler(mem);
@@ -87,7 +87,7 @@ pub fn update_samus(mem: &mut FrameMemory) {
 }
 
 /// GoSamusHandler 分发壳（asm :2716 族内容锚）：status 位 7=站立直入；否则表序分派。
-pub fn go_samus_handler(mem: &mut FrameMemory) {
+pub fn go_samus_handler(mem: &mut Manager) {
     let status = mem.read_ram(SAMUS_STATUS);
     let handler = if status & 0x80 != 0 {
         SamusHandler::Stand // `bmi SamusStand`
@@ -136,7 +136,7 @@ const OBJ_ANIM_SAMUS_RUN_PNT_UP: u8 = 0x37;
 
 /// SetSamusRunAccel（**asm 内容锚** `: 07:CCB7`——r26）：SamusAccelX←RunAccelerationTbl[x]
 /// （右=$30/左=$D0——$CCC0）。
-fn set_samus_run_accel(mem: &mut FrameMemory, x: u8) {
+fn set_samus_run_accel(mem: &mut Manager, x: u8) {
     let v = if x == 0 { 0x30u8 } else { 0xD0 };
     mem.write_ram(crate::ram_map::SAMUS_ACCEL_X, v);
 }
@@ -144,7 +144,7 @@ fn set_samus_run_accel(mem: &mut FrameMemory, x: u8) {
 /// SamusRun_CheckHorzMovementMidair（**asm 内容锚** `: 07:CF88`——r26 全件）：
 /// Joy1(RIGHT|LEFT)⇒BitScan→SetSamusRunAccel→（上行/空翻返）→SamusDir+SetSamusAnim
 /// （Table06=Jump 动画族）；无键⇒中立跳族（上行/落地/非中立跳返→StopHorzMovement）。
-fn samus_run_check_horz_movement_midair(mem: &mut FrameMemory) {
+fn samus_run_check_horz_movement_midair(mem: &mut Manager) {
     use button::*;
     let joy = mem.read_ram(crate::ram_map::JOY1_STATUS);
     let input = joy & (RIGHT | LEFT);
@@ -185,7 +185,7 @@ fn samus_run_check_horz_movement_midair(mem: &mut FrameMemory) {
 }
 
 /// LCF2E（**asm 内容锚** `: 07:CF2E`——r26）：Samus.isHit 判（固实实体接触）→贴墙反应。
-fn solid_entity_response(mem: &mut FrameMemory) {
+fn solid_entity_response(mem: &mut Manager) {
     // 【goal-r13】SamusIsHit=$030A（constants_ram:228）——旧形误读 $0308（=speedY_I）。
     let ishit = mem.read_ram(0x030A);
     if (ishit >> 1) & 0x02 == 0 {
@@ -218,7 +218,7 @@ fn solid_entity_response(mem: &mut FrameMemory) {
 ///   →animDelay←3。
 /// 【贴图根修】（2026-10-26 渲染目检：金腿跑动 run 动画/我方错播 jump）——旧形无条件跑
 /// 空中径（samL04 run→jump 切）致地面跑动贴图错。asm 表址定谳（common_sprite_data）。
-pub fn samus_run(mem: &mut FrameMemory) {
+pub fn samus_run(mem: &mut Manager) {
     use button::*;
     let accel_y = mem.read_ram(crate::ram_map::SAMUS_ACCEL_Y);
     if accel_y != 0 {
@@ -331,7 +331,7 @@ pub fn samus_run(mem: &mut FrameMemory) {
 /// X=(Joy1Status&UP)>>3⇒anim=RunAnimationTbl[X]（Run=0x00/RunPntUp=0x37）≠animResetIndex
 /// ⇒SetSamusAnim+**尾跳** SetSamusData_3FrameAnimDelay（pla/pla——跳过 samus_run 余段）。
 /// 返回 true=尾跳（调用方即收链）。
-fn samus_run_set_anim(mem: &mut FrameMemory) -> bool {
+fn samus_run_set_anim(mem: &mut Manager) -> bool {
     use button::*;
     let x = if mem.read_ram(crate::ram_map::JOY1_STATUS) & UP != 0 { 1usize } else { 0 };
     let anim = [OBJ_ANIM_SAMUS_RUN, OBJ_ANIM_SAMUS_RUN_PNT_UP][x];
@@ -351,7 +351,7 @@ fn samus_run_set_anim(mem: &mut FrameMemory) -> bool {
 /// FireSamusProjectile（**asm 内容锚** `FireSamusProjectile: ; 07:D1EE`——goal-r10 端口）：
 /// SearchOpenSlot（D1F7）→InitBullet（D2EB）→speedX（BulletSpeedXTable）→speedY=0/onScreen=1。
 /// 射弹槽=0xD0/0xE0/0xF0（Objects.status 0x03D0/03E0/03F0）。
-fn fire_samus_projectile(mem: &mut FrameMemory) {
+fn fire_samus_projectile(mem: &mut Manager) {
     // FireSamusProjectile（**asm 内容锚** `: 07:D1EE`）：UP（Joy1Status bit2）⇒Upwards/
     // 否则 Forwards（分派器——audit §7）。
     if mem.read_ram(crate::ram_map::JOY1_STATUS) & 0x08 != 0 {
@@ -405,7 +405,7 @@ fn fire_samus_projectile(mem: &mut FrameMemory) {
 /// FireSamusProjectileUpwards（**asm 内容锚** `: 07:D275`（audit §7））：同 Forwards
 /// 构（搜槽/InitBullet/DieDelay $0C）但 speedY←$FC/speedX←0/纵臂炮位放
 /// （BulletUpwardsOffsetX[Dir]→Temp05；UpwardsOffsetY[status&1]→Temp04）。
-fn fire_samus_projectile_upwards(mem: &mut FrameMemory) {
+fn fire_samus_projectile_upwards(mem: &mut Manager) {
     let mut slot: Option<u8> = None;
     for s in [0xD0u8, 0xE0, 0xF0] {
         if mem.read_ram(0x0300 + s as u16) == 0 {
@@ -441,7 +441,7 @@ fn fire_samus_projectile_upwards(mem: &mut FrameMemory) {
     mem.write_ram(ANIM_RESET_INDEX.wrapping_sub(1), 0);
 }
 
-fn set_samus_jump(mem: &mut FrameMemory) {
+fn set_samus_jump(mem: &mut Manager) {
     // 【goal-轮76 调用频度直证】set_samus_jump 入口插桩（animDelay=4 重写源）。
     let anim = OBJ_ANIM_SAMUS_JUMP;
     mem.write_ram(ANIM_RESET_INDEX, anim);
@@ -458,7 +458,7 @@ fn set_samus_jump(mem: &mut FrameMemory) {
 
 /// SetSamusRun（**asm 内容锚** `SetSamusRun: ; 07:CC98`）：WalkSoundDelay←9/转身动画
 /// （Stand⇒Run、PntUp⇒RunPntUp、其余（原跑动）⇒Front 过渡）/Run 动画置位+加速。
-fn set_samus_run(mem: &mut FrameMemory) {
+fn set_samus_run(mem: &mut Manager) {
     // 【goal-轮86 写源直证】0x304 写点插桩（写 3 写源）。
     // 【goal-轮54 asm 合规矩】CC98 逐件对表：WalkSoundDelay=9/animResetIndex 分支
     // （Stand→Run(X=0)/PntUp→RunPntUp(X=1)/否则 Front 转身过渡+Run）/accelX=
@@ -508,7 +508,7 @@ mod tests {
     #[test]
     fn fire_samus_projectile_places_bullet_at_arm_cannon() {
         use crate::ram_map::{SAMUS_DIR, SAMUS_HI, SAMUS_Y};
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(SAMUS_Y, 100);
         m.write_ram(0x030E, 50); // Samus.x
         m.write_ram(SAMUS_HI, 1);
@@ -519,7 +519,7 @@ mod tests {
         assert_eq!(m.read_ram(base + 0x0E), 50 + 8, "bullet.x=Samus.x+8（右，常规光束 status=1→idx2）");
         assert_eq!(m.read_ram(base + 0x0C), 1, "bullet.hi=Samus.hi");
         // 左射（dir=1）：offset=−8
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(SAMUS_Y, 100);
         m.write_ram(0x030E, 50); // Samus.x
         m.write_ram(SAMUS_DIR, 1); // 左
@@ -544,7 +544,7 @@ mod tests {
     /// 收敛偏离（emu 0D/rust 08）域的 set 语义锚（防 animIndex 初值漂移）。
     #[test]
     fn set_samus_jump_writes_jump_transition_index() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         set_samus_jump(&mut m);
         assert_eq!(m.read_ram(ANIM_RESET_INDEX), OBJ_ANIM_SAMUS_JUMP,
                    "animResetIndex←Jump(0x0C)");
@@ -563,7 +563,7 @@ mod tests {
     /// （collide f798-802 滞后、f800 animIndex 08/0D 五步差）。
     #[test]
     fn midair_steering_full_sets_jump_anim() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(crate::ram_map::SAMUS_ACCEL_Y, 0x1A); // 下落（bit7 清）
         m.write_ram(crate::ram_map::JOY1_STATUS, button::LEFT);
         m.write_ram(ANIM_RESET_INDEX, OBJ_ANIM_SAMUS_RUN); // 现 anim=RUN
@@ -583,7 +583,7 @@ mod tests {
     #[test]
     fn midair_steering_guards_do_not_touch_anim() {
         // 上升（AccelY bit7 置）
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(crate::ram_map::SAMUS_ACCEL_Y, 0x9A);
         m.write_ram(crate::ram_map::JOY1_STATUS, button::LEFT);
         m.write_ram(ANIM_RESET_INDEX, OBJ_ANIM_SAMUS_RUN);
@@ -601,14 +601,14 @@ mod tests {
     fn samus_stand_action_table_transitions() {
         use crate::ram_map::{JOY1_STATUS, SAMUS_GEAR, SAMUS_STATUS};
         for (joy, want) in [(0x01u8, 1u8), (0x02, 1), (0x04, 0), (0x08, 4)] {
-            let mut m = FrameMemory::default();
+            let mut m = Manager::default();
             m.write_ram(JOY1_STATUS, joy);
             let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| samus_stand(&mut m)));
             assert!(r.is_ok(), "stand 转移链应全通（r26）: {:?}", r.err()); // SetSamusData 已端口
             assert_eq!(m.read_ram(SAMUS_STATUS), want, "ActionTable[{joy:#x}]（无球 Roll⇒回站）");
         }
         // 有变形球（gr_MARUMARI=%00010000）⇒DOWN 球化（status=3）
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(JOY1_STATUS, 0x04); // DOWN
         m.write_ram(crate::ram_map::SAMUS_RADIUS_X, 4); // 真实几何（radiusX=0⇒空查撞径
         m.write_ram(crate::ram_map::SAMUS_RADIUS_Y, 8); // 全放行（团族陷阱）——查撞真过）
@@ -623,14 +623,14 @@ mod tests {
     fn samus_run_jump_anim_state_machine() {
         use crate::ram_map::{JOY1_STATUS, SAMUS_JUMP_DISP};
         // 下落（speedY_i=0）+位移 0x10 → anim=$0C
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(crate::ram_map::SAMUS_ACCEL_Y, 1);
         m.write_ram(SAMUS_JUMP_DISP, 0x10);
         let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| samus_run(&mut m)));
         assert!(r.is_ok(), "run/jump 链应全通（r26）: {:?}", r.err());
         assert_eq!(m.read_ram(ANIM_RESET_INDEX), 0x0C);
         // 上升（speedY_i=0x80）+位移 0x28+UP → anim=$35
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(crate::ram_map::SAMUS_ACCEL_Y, 1);
         m.write_ram(crate::samus::physics::SAMUS_SPEED_Y_I, 0x80);
         m.write_ram(SAMUS_JUMP_DISP, 0x28);
@@ -648,7 +648,7 @@ mod tests {
     #[test]
     fn lava_jump_gate_reads_samus_in_lava_not_music_period() {
         use crate::ram_map;
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         // 音乐在放（TRI 高字节非 0）+ 空中按 A + 不在岩浆 ⇒ 必须拒绝
         m.write_ram(0x0609, 0x30);
         m.write_ram(ram_map::JOY1_CHANGE, 0x80);
@@ -668,7 +668,7 @@ mod tests {
     #[test]
     fn samus_jump_release_gate() {
         use crate::ram_map::{JOY1_STATUS, SAMUS_JUMP_DISP};
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(crate::samus::physics::SAMUS_SPEED_Y_I, 0x80); // 上升
         m.write_ram(SAMUS_JUMP_DISP, 0x20); // ≥$20
         m.write_ram(JOY1_STATUS, 0); // JUMP 松开
@@ -682,7 +682,7 @@ mod tests {
     #[test]
     fn samus_roll_breakout_writes_radius() {
         use crate::ram_map::{JOY1_CHANGE, JOY1_STATUS, SAMUS_RADIUS_Y, SAMUS_STATUS};
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(JOY1_CHANGE, 0x08); // UP 开门
         m.write_ram(JOY1_STATUS, 0); // DOWN 未按
         m.write_ram(crate::ram_map::SAMUS_RADIUS_X, 4); // 真实几何（空查撞径团族陷阱防）
@@ -698,7 +698,7 @@ mod tests {
     #[test]
     fn samus_roll_unroll_stands_when_headroom() {
         use crate::ram_map::{JOY1_CHANGE, JOY1_STATUS, SAMUS_RADIUS_Y, SAMUS_STATUS};
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         // RoomRAM 全可走（0xFF）⇒ObjectCheckMoveUp 过
         for a in 0x6000u16..0x6800 {
             m.write_wram(a, 0xFF);
@@ -718,7 +718,7 @@ mod tests {
     #[test]
     fn samus_pnt_up_release_and_direction() {
         use crate::ram_map::{JOY1_STATUS, SAMUS_STATUS};
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(JOY1_STATUS, 0x04); // DOWN（UP 松开）
         let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| samus_pnt_up(&mut m)));
         assert!(r.is_ok(), "pnt_up 链应全通（r26）: {:?}", r.err()); // SetSamusData 已端口
@@ -728,7 +728,7 @@ mod tests {
     /// Dead2 微件（dec animDelay 全可端）。
     #[test]
     fn samus_dead2_decrements_anim_delay() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(0x0304, 5);
         samus_dead2(&mut m);
         assert_eq!(m.read_ram(0x0304), 4);
@@ -742,7 +742,7 @@ mod tests {
     #[test]
     fn samus_door_state_machine_face() {
         use crate::ram_map::{DOOR_DELAY, DOOR_ENTRY_STATUS, SAMUS_X};
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(SAMUS_X, 0x40);
         m.write_ram(DOOR_ENTRY_STATUS, 2); // 入门相（<$05）→ 只走尾
         samus_door(&mut m);
@@ -758,7 +758,7 @@ mod tests {
     #[test]
     fn run_chain_output_probe() {
         use crate::ram_map::{JOY1_STATUS, SAMUS_STATUS};
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(SAMUS_STATUS, 1);
         m.write_ram(JOY1_STATUS, 0x01);
         samus_run(&mut m);
@@ -773,7 +773,7 @@ mod tests {
     /// UpdateSamus 面：PageIndex/IsSamus 落态+**站立径零爆全通**（r26 链贯通！）。
     #[test]
     fn update_samus_spine_face() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(SAMUS_STATUS, 0x80); // 站立旗
         update_samus(&mut m); // 全链（stand→physics→显示会师→蜂鸣）——零爆完成！
         assert_eq!(m.read_ram(crate::ram_map::PAGE_INDEX), 0, "PageIndex 归零");
@@ -810,7 +810,7 @@ fn action_table() -> &'static [u8] {
 /// **结构互核注**：asm 标签（animResetIndex/animIndex/animDelay）↔字节址（$0305/$0306/
 /// $0304）映射=**本码字节自证**（名址一致性随 task-18 残余考证）；CF81=jsr CFB7+sty $0304
 /// （Y 写面）；**BUG 注保真**（fire 动画单帧——D4 保留）。
-pub fn set_samus_stand_no_footstep(mem: &mut FrameMemory) {
+pub fn set_samus_stand_no_footstep(mem: &mut Manager) {
     let y = 0u8; // 链内 Y 终值=0（CF4C `ldy #$00` 先行——字节自证）
     // CF4C：speedX_i/speedX_f←0（`8c 09 03 8c 13 03`）
     mem.write_ram(0x0309, 0);
@@ -836,7 +836,7 @@ pub fn set_samus_stand_no_footstep(mem: &mut FrameMemory) {
 
 /// SetSamusStand（**asm 内容锚** `: 07:CF55`（audit §2 面））：AccelX≠0⇒NoFootstep；
 /// 否则 SFX_SamusWalk（落地步声（声面（记账）））→NoFootstep。
-pub fn set_samus_stand(mem: &mut FrameMemory) {
+pub fn set_samus_stand(mem: &mut Manager) {
     if mem.read_ram(crate::ram_map::SAMUS_ACCEL_X) == 0 {
         // SFX_SamusWalk（声面（最小面（记账）））
     }
@@ -845,7 +845,7 @@ pub fn set_samus_stand(mem: &mut FrameMemory) {
 
 /// SetSamusPntUp（**asm 内容锚** `: 07:CF77`）：status←sa_PntUp(4)+
 /// anim←ObjAnim_SamusPntUp(0x27)（表算（$8599-$8572））。
-pub fn set_samus_pnt_up(mem: &mut FrameMemory) {
+pub fn set_samus_pnt_up(mem: &mut Manager) {
     mem.write_ram(crate::ram_map::SAMUS_STATUS, 4);
     mem.write_ram(ANIM_RESET_INDEX, 0x27);
     mem.write_ram(ANIM_RESET_INDEX + 1, 0x27);
@@ -871,7 +871,7 @@ pub fn bit_scan(mut a: u8) -> u8 {
 /// →JUMP（sa_Jump）→SetSamusData（CD6D）。
 /// 嵌套件桩：SetSamusStand_NoFootstep（CF5D）/FireSamusProjectile（D1EE）/
 /// SetSamusData（CD6D）——随队列填。
-pub fn samus_stand(mem: &mut FrameMemory) {
+pub fn samus_stand(mem: &mut Manager) {
     // 【goal-轮55 asm 合规矩】CC36 全径对表：Joy1Status&~(SEL|START)⇒空⇒跳 CF5D/
     // 输入面（DOWN|LEFT|RIGHT 或 Joy1Change UP）/BitScan→cmp BUTTONBIT_DOWN（≥⇒不改
     // Dir）/ActionTable[向]→status 写→JumpEngine 分派（Run/Jump/Roll/PntUp）/Fire
@@ -953,7 +953,7 @@ pub fn samus_stand(mem: &mut FrameMemory) {
 /// UP→JumpPntUp 动画+sa_PntJump(6) 状态→Fire 检→岩浆跳（SetSamusJump+3 帧延迟）→
 /// 触地检（AccelY）。嵌套件桩：SamusJump_CheckHorzMovement/LCF2E/
 /// SamusJump_CheckFire/SetSamusJump/SetSamusData_3FrameAnimDelay。
-pub fn samus_jump(mem: &mut FrameMemory) {
+pub fn samus_jump(mem: &mut Manager) {
     // **高跳语义**（asm Lx017-Lx018：`ldy #$18/lda SamusGear/and #gr_HIGHJUMP/beq/ldy #$12`
     // →`sty SamusAccelY`——**重力常数**：$18=普通/$12=高跳（低重力=高跳！decomp 疑②证实）。
     // 【根因 ① 修（2026-10-28）】asm D002 handler **不写重力**（Lx017/18=SetSamusJump
@@ -976,7 +976,7 @@ pub fn samus_jump(mem: &mut FrameMemory) {
 /// SamusJump_CheckHorzMovement（**asm 内容锚** `: 07:D055`（audit §5））：
 /// X∈{1,0,-1}（RIGHT/LEFT）/Y 转向旗/同向⇒Dir 不动/转向⇒SetSamusAnim(animReset 重启
 /// （表族全匀）+animDelay←8+Dir←Y/**Samus.speedX($309)←X（向位）**。
-pub fn samus_jump_check_horz_movement(mem: &mut FrameMemory) {
+pub fn samus_jump_check_horz_movement(mem: &mut Manager) {
     use button::*;
     let joy = mem.read_ram(crate::ram_map::JOY1_STATUS);
     let mut x: u8 = 1; // ldx #$01
@@ -1009,7 +1009,7 @@ pub fn samus_jump_check_horz_movement(mem: &mut FrameMemory) {
 
 /// SamusJump_CheckFire（**asm 内容锚** `: 07:D09C`（audit §6））：B（Joy1Change|Retrig
 /// bit6）⇒animReset==JumpPntUp(0x35)⇒Upwards/否则 Forwards+JumpFire 动画。
-pub fn samus_jump_check_fire(mem: &mut FrameMemory) {
+pub fn samus_jump_check_fire(mem: &mut Manager) {
     use button::*;
     let fire = mem.read_ram(crate::ram_map::JOY1_CHANGE)
         | mem.read_ram(crate::memmap::views::title::JOY1_RETRIG);
@@ -1030,7 +1030,7 @@ pub fn samus_jump_check_fire(mem: &mut FrameMemory) {
 /// SamusJump 尾·D015 链（**asm 内容锚** `Lx019-Lx023（$D015-$D050）`（audit §4））：
 /// CheckHorzMovement/LCF2E（复用 solid_entity_response）/UP⇒PntJump(6)+anim 0x35/
 /// CheckFire/岩浆跳/落地判（AccY==0⇒PntUp/Stand）/SetSamusData（A=3）。
-pub fn samus_jump_tail(mem: &mut FrameMemory) {
+pub fn samus_jump_tail(mem: &mut Manager) {
     use button::*;
     samus_jump_check_horz_movement(mem); // D055
     solid_entity_response(mem); // LCF2E（r26 端口件（复用））
@@ -1073,7 +1073,7 @@ pub fn samus_jump_tail(mem: &mut FrameMemory) {
 /// ```
 /// 抽成纯函数是为了让「读对地址」可被单测钉死：旧实现读 `$0609`
 /// （`MusicTriPeriodHigh`，放音乐时恒非 0）⇒ 空中按 A 即重跳（无限跳）。
-pub fn lava_jump_allowed(mem: &FrameMemory) -> bool {
+pub fn lava_jump_allowed(mem: &Manager) -> bool {
     mem.read_ram(crate::ram_map::SAMUS_IN_LAVA) != 0
         && mem.read_ram(crate::ram_map::JOY1_CHANGE) & 0x80 != 0 // BUTTON_A
 }
@@ -1084,7 +1084,7 @@ pub fn lava_jump_allowed(mem: &FrameMemory) -> bool {
 /// ②滚动保持（Lx032）：BitScan(Joy1Change)<2（新右/左）⇒转向（SamusDir+SetSamusAnim(Roll)）
 /// →SetSamusRunAccel→LCF2E→CheckBombLaunch（炸弹件随件记账）→无右/左⇒StopHorzMovement
 /// →A=2→SetSamusData（物理链会师——滚动积分/位移/镜头跟随全径复用）。
-pub fn samus_roll(mem: &mut FrameMemory) {
+pub fn samus_roll(mem: &mut Manager) {
     use button::*;
     let change = mem.read_ram(crate::ram_map::JOY1_CHANGE);
     let up_or_jump = (change & UP != 0) || (change & A != 0); // JUMP=A（bit7）
@@ -1135,7 +1135,7 @@ pub fn samus_roll(mem: &mut FrameMemory) {
 /// ⇒球化（animResetIndex←Roll(0x16)/animIndex←RunJump(0x13)/AccelX←RunAccel[dir]/
 /// ScrewAttack0686($0686)←1/SFX_SamusBall）；否则 status←sa_Stand（Lx030）。
 /// 【变形球根件】能力位=gr_MARUMARI=%00010000（constants.asm:59——pu_MARUMARI=4 同源）。
-fn set_samus_roll(mem: &mut FrameMemory) {
+fn set_samus_roll(mem: &mut Manager) {
     if mem.read_wram(crate::ram_map::SAMUS_GEAR) & 0x10 == 0 {
         mem.write_ram(crate::ram_map::SAMUS_STATUS, 0); // 无变形球⇒站姿（Lx030）
         return;
@@ -1164,7 +1164,7 @@ fn pnt_up_status_table() -> &'static [u8] {
 /// SamusPntUp 处理件（字节自证 D198 区）：UP 保持/松开→sa_Stand(0)；DOWN|LEFT|RIGHT
 /// →BitScan→SamusDir（x<2）+表转移；FIRE→FireSamusProjectile 桩；JUMP→sa_PntJump(6)
 /// →SetSamusData 桩+JumpEngine 尾。
-pub fn samus_pnt_up(mem: &mut FrameMemory) {
+pub fn samus_pnt_up(mem: &mut Manager) {
     use button::*;
     let joy = mem.read_ram(crate::ram_map::JOY1_STATUS);
     if joy & UP == 0 {
@@ -1194,14 +1194,14 @@ pub fn samus_pnt_up(mem: &mut FrameMemory) {
 
 /// SamusDead 处理件（字节自证 D41A `a9 01 4c 6d cd`——lda #$01/jmp SetSamusData）：
 /// 可观测=SetSamusData 效果（动画面）——桩。
-pub fn samus_dead(mem: &mut FrameMemory) {
+pub fn samus_dead(mem: &mut Manager) {
     mem.regs.a = 0x01;
     mem.regs.a = 0x01; super::physics::set_samus_data(mem); // CD6D（A=1 参数面）
 }
 
 /// SamusDead2 处理件（字节自证 D41F `ce 05 03 60`——dec Samus.animDelay/rts）：
 /// **全可端微件**（单写面）。
-pub fn samus_dead2(mem: &mut FrameMemory) {
+pub fn samus_dead2(mem: &mut Manager) {
     let d = mem.read_ram(ANIM_RESET_INDEX.wrapping_sub(1)).wrapping_sub(1); // animDelay=$0304
     mem.write_ram(0x0304, d);
 }
@@ -1220,7 +1220,7 @@ const MUSIC_TOURIAN: u8 = 0x40;
 
 /// 门态尾部三件（asm `Lx055: jsr CheckHealthStatus / jsr SetMirrorCntrlBit /
 /// jmp ObjDrawFrame`）——SamusDoor 两个出口（`bcc Lx055` 与 MoveOutDoor 尾）都走这里。
-fn samus_door_tail(mem: &mut FrameMemory) {
+fn samus_door_tail(mem: &mut Manager) {
     super::physics::check_health_status(mem); // CDFA
     super::physics::set_mirror_cntrl_bit(mem); // CD92
     crate::render::oam::obj_draw_frame(mem, 0); // DE4A
@@ -1229,7 +1229,7 @@ fn samus_door_tail(mem: &mut FrameMemory) {
 /// `MoveOutDoor ; 07:D3F7`——`lda SamusDoorDir/beq Lx054`：
 /// 门通向左（dir≠0）⇒ `ldy Samus.x / bne / jsr ToggleSamusHi` 后 `dec Samus.x`；
 /// 门通向右（dir=0）⇒ `inc Samus.x / bne / jsr ToggleSamusHi`（进位到 0 才翻第 9 位）。
-fn move_out_door(mem: &mut FrameMemory) {
+fn move_out_door(mem: &mut Manager) {
     if mem.read_ram(crate::ram_map::SAMUS_DOOR_DIR) != 0 {
         if mem.read_ram(crate::ram_map::SAMUS_X) == 0 {
             super::physics::toggle_samus_hi(mem); // Lx053 前件
@@ -1255,7 +1255,7 @@ fn move_out_door(mem: &mut FrameMemory) {
 ///    D0 F6`）⇒ 偏移 **$18/$10/$08**，**槽 0 不被访问**（`bne` 在 0 处退出——同样是
 ///    原版行为，非笔误）。y=GetNameTableAtScrollDir，`cmp PipeBugHoles.hi,x / bne`
 ///    ⇒ hi 与当前名表**相等**才 `status ← $FF`（删洞）。
-fn door_delete_offscreen_enemies(mem: &mut FrameMemory) {
+fn door_delete_offscreen_enemies(mem: &mut Manager) {
     let mut x: i16 = 0x60;
     while x >= 0 {
         let xu = x as u16;
@@ -1286,7 +1286,7 @@ fn door_delete_offscreen_enemies(mem: &mut FrameMemory) {
 /// Tourian 实现（`03:A315`）：`ldy #$05 / jsr ClearMetroidLatch / dey / bpl`（6 次，
 /// y=5..0）——`ClearMetroidLatch(03:99B1)` = `lda #$00 / sta MetroidLatch0400,y`，
 /// 故清 `$77F8..$77FD`；尾 `sta MetroidOnSamus`（A=0）⇒ `$92 ← 0`。
-pub(crate) fn goto_clear_all_metroid_latches(mem: &mut FrameMemory) {
+pub(crate) fn goto_clear_all_metroid_latches(mem: &mut Manager) {
     let area = (mem.read_ram(crate::ram_map::IN_AREA) & 0x0F) as usize;
     if crate::frame::tick::BANK_TABLE[area] != 0x04 {
         return; // 非 Tourian bank ⇒ 空桩
@@ -1300,7 +1300,7 @@ pub(crate) fn goto_clear_all_metroid_latches(mem: &mut FrameMemory) {
 /// `Doors_RemoveIfOffScreen ; 07:ED65`（ROM `A2 B0 BD 00 03 F0 08 BD 0B 03 D0 03
 /// 9D 00 03 20 F4 F1`）：x 自 $B0 起每轮 −$10（`Xminus16`+`bmi` 环）⇒ 4 门
 /// $B0/$A0/$90/$80；`status≠0` 且 `onScreen==0` ⇒ `status ← 0`（A=0 直接回存）。
-pub(crate) fn doors_remove_if_offscreen(mem: &mut FrameMemory) {
+pub(crate) fn doors_remove_if_offscreen(mem: &mut Manager) {
     // `ldx #Doors-Objects+_sizeof_Doors-_sizeof_Doors.0` = $B0；循环尾
     // `jsr Xminus16 / bmi @loop` —— **bmi 是回跳条件**：减后仍为负才继续（i8 符号位）。
     // 序列 $B0→$A0→$90→$80→$70（$70 为正 ⇒ 退出）⇒ 恰 4 槽，$03B0..$0380。
@@ -1326,7 +1326,7 @@ pub(crate) fn doors_remove_if_offscreen(mem: &mut FrameMemory) {
 /// `Lx052`：`Samus.status ← SamusDoorData & $0F`、`SamusDoorData ← 0`、
 /// `DoorEntryStatus ← 0`、`jsr StopVertMovement` → **落到 MoveOutDoor**（同帧再移 1px）→
 /// 尾三件。
-pub fn samus_door(mem: &mut FrameMemory) {
+pub fn samus_door(mem: &mut Manager) {
     let status = mem.read_ram(crate::ram_map::DOOR_ENTRY_STATUS);
     if status < 0x05 {
         samus_door_tail(mem); // `bcc Lx055`——入门相直接到尾部（不移位！）
@@ -1382,7 +1382,7 @@ pub fn samus_door(mem: &mut FrameMemory) {
 /// SamusElevator 处理件（字节自证 D423 区——电梯态）：
 /// `lda Elevator.status/cmp #$03/cmp #$08`（态门）→ElevatorType 方向（bit7=up）→
 /// 屏幕 Y 检（Samus.y-ScrollY≥$84→ScrollDown）→wrap 检（SCRN_VY-1）。深链件=桩。
-pub fn samus_elevator(mem: &mut FrameMemory) {
+pub fn samus_elevator(mem: &mut Manager) {
     // `SamusElevator ; 07:D423` 全形（十态闸 + 位移 + 卷屏跟随）落 `frame::elevator`
     // （电梯件与对象槽面同域；`$D42E` 桩撤除）。
     crate::world::elevator::samus_elevator(mem);
@@ -1397,10 +1397,10 @@ mod tests_jump_chain {
     //! Forwards+JumpFire）/D015 尾（UP⇒PntJump(6)+anim 0x35/落地（AccY==0）⇒
     //! PntUp/Stand/CD6D（A=3））。
     use super::*;
-    use crate::state::FrameMemory; // G11 取型径（经 crate::state）
+    use crate::state::Manager; // G11 取型径（经 crate::state）
 
-    fn jmp_mem() -> FrameMemory {
-        let mut m = FrameMemory::default();
+    fn jmp_mem() -> Manager {
+        let mut m = Manager::default();
         m.write_ram(crate::ram_map::SAMUS_DIR, 0); // 向右
         m
     }
@@ -1495,12 +1495,12 @@ mod tests_landing_pose {
     //! set_samus_stand（status←0+anim 0x07）；samus_jump **不每帧写重力**（入口一次性
     //! （set_samus_jump（高跳齿轮 0x12 分支）））；弹 anim=RegularBullet(0x1B)。
     use super::*;
-    use crate::state::FrameMemory;
+    use crate::state::Manager;
 
     /// 【根因 ①】grounded（AccY=0）+Jump 姿态⇒落地切站（status 0+anim 0x07）。
     #[test]
     fn landing_switches_to_stand() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(crate::ram_map::SAMUS_ACCEL_Y, 0); // ground（phys 面置 0）
         m.write_ram(crate::ram_map::SAMUS_STATUS, 2);
         m.write_ram(ANIM_RESET_INDEX, OBJ_ANIM_SAMUS_JUMP);
@@ -1512,7 +1512,7 @@ mod tests_landing_pose {
     /// 【入口一次性】samus_jump 不覆写 AccelY（重力=set_samus_jump 入口件（高跳 0x12））。
     #[test]
     fn jump_handler_preserves_accel_y() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(crate::ram_map::SAMUS_ACCEL_Y, 0x1A); // fall 态（phys 写）
         m.write_ram(crate::ram_map::SAMUS_STATUS, 2);
         samus_jump(&mut m);
@@ -1522,7 +1522,7 @@ mod tests_landing_pose {
     /// 【弹形态 ①】发弹⇒animReset=RegularBullet(0x1B)（非 0x00）。
     #[test]
     fn bullet_anim_regular() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(crate::ram_map::JOY1_CHANGE, 0x40); // B
         samus_jump_check_fire(&mut m);
         assert_eq!(m.read_ram(0x03D5), 0x1B, "弹 anim=RegularBullet");
@@ -1538,12 +1538,12 @@ mod tests_stand_jump {
     //! sa_Jump⇒**SetSamusJump（$CFC3（入口件（speedY←$FC/JumpDisp/anim）））**——
     //! 旧形漏派发⇒静止跳无冲量（用户实测②）。
     use super::*;
-    use crate::state::FrameMemory;
+    use crate::state::Manager;
 
     /// 【实锤②】静止（status0）+A 按⇒status2+speedY=$FC（set_samus_jump 入口件生效）。
     #[test]
     fn standing_jump_triggers_entry() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(crate::ram_map::SAMUS_STATUS, 0);
         m.write_ram(crate::ram_map::JOY1_STATUS, 0x80); // A（无方向）
         m.write_ram(crate::ram_map::JOY1_CHANGE, 0x80);
@@ -1562,12 +1562,12 @@ mod tests_bullet_onscreen {
     //! （base+0x0B 位0）——旧形漏写⇒DeleteIfOffScreen（$D5FC）首帧判 0⇒弹即删
     //! （用户实测③（f810 rust 无弹/emu 有弹（diff 图证）））。
     use super::*;
-    use crate::state::FrameMemory;
+    use crate::state::Manager;
 
     /// 【实锤③】发射⇒onScreen 位0=1（存活旗）。
     #[test]
     fn fire_sets_onscreen() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(crate::ram_map::JOY1_CHANGE, 0x40); // B
         samus_jump_check_fire(&mut m);
         assert_eq!(m.read_ram(0x03DB) & 1, 1, "onScreen 位0=1（存活旗）");
@@ -1577,7 +1577,7 @@ mod tests_bullet_onscreen {
     /// 【实锤③】弹槽动画推进（update_obj_anim(PageIndex)——非 Samus 槽）。
     #[test]
     fn bullet_anim_advances() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         // 弹槽 $D0 态：status=1/animReset=0x1B/animIndex=0x1B/animDelay=0
         m.write_ram(0x03D0, 1);
         m.write_ram(0x03D5, 0x1B);
@@ -1598,12 +1598,12 @@ mod tests_burst_anchor {
     //! 判径（constants_ram:924（SamusProjectileDieDelay=Objects.data0F=$030F 偏移））
     //! ——旧 +0x15 越槽写（f810 槽态实锤（3E5=0x0B（落 $E0+5）））。
     use super::*;
-    use crate::state::FrameMemory;
+    use crate::state::Manager;
 
     /// 【回归锚（连发 4 发逐发出弹）】DieDelay 槽内（+0x0F）——越槽面（+0x15）=0。
     #[test]
     fn burst_four_bullets() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         for i in 0..4u8 {
             m.write_ram(crate::ram_map::JOY1_CHANGE, 0x40);
             m.write_ram(crate::ram_map::JOY1_STATUS, 0);
@@ -1622,10 +1622,10 @@ mod tests_burst_anchor {
 #[cfg(test)]
 mod tests_fire_probe {
     use super::*;
-    use crate::state::FrameMemory;
+    use crate::state::Manager;
     #[test]
     fn fire_write_set_full() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(crate::ram_map::JOY1_CHANGE, 0x40);
         m.write_ram(crate::ram_map::JOY1_STATUS, 0);
         samus_jump_check_fire(&mut m);
@@ -1656,12 +1656,12 @@ mod tests_h1_turnaround_delay {
     //! SetSamusNextAnim（CF6E）=animIndex←A+**animDelay←0**（立即生效）。
     //! 旧形漏写 animDelay←0⇒转身后续走表延迟 1-3 帧（animIndex 滞后根）。
     use super::*;
-    use crate::state::FrameMemory;
+    use crate::state::Manager;
 
     /// 转身过渡（原跑动→反向）⇒animIndex←Front(4) + animDelay←0（SetSamusNextAnim 语义）。
     #[test]
     fn turnaround_sets_animdelay_zero() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         // 模拟原跑动状态：animResetIndex=Run(0)，animDelay=3（Run 走表中的 delay）
         m.write_ram(ANIM_RESET_INDEX, 0x00); // Run
         m.write_ram(ANIM_RESET_INDEX + 1, 0x02); // animIndex (in Run walk)
@@ -1677,7 +1677,7 @@ mod tests_h1_turnaround_delay {
     /// 非转身（Stand→Run 起步）⇒animResetIndex 直写 Run（无 Front 过渡——无 delay 重置需求）。
     #[test]
     fn stand_to_run_no_front_transition() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(ANIM_RESET_INDEX, 0x07); // Stand (animResetIndex)
         m.write_ram(ANIM_RESET_INDEX + 1, 0x08); // animIndex
         m.write_ram(ANIM_RESET_INDEX.wrapping_sub(1), 3); // animDelay=3
@@ -1695,10 +1695,10 @@ mod tests_door_chain {
     //! 出门链（`SamusDoor ; 07:D3A8` 区）判径：asm 逐行 + ROM 字节自证
     //! （D48C 区 `A2 60 … 10 F7` / `A2 18 … D0 F6`，ED65 区 `A2 B0 BD 00 03 …`）。
     use super::*;
-    use crate::state::FrameMemory;
+    use crate::state::Manager;
 
-    fn door_mem(status: u8, delay: u8) -> FrameMemory {
-        let mut m = FrameMemory::default();
+    fn door_mem(status: u8, delay: u8) -> Manager {
+        let mut m = Manager::default();
         m.write_ram(crate::ram_map::DOOR_ENTRY_STATUS, status);
         m.write_ram(crate::ram_map::DOOR_DELAY, delay);
         m.write_ram(crate::ram_map::SAMUS_X, 0x80);

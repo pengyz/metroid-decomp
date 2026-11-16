@@ -17,19 +17,19 @@ use crate::enemy::slot_cycle::{
 
 
 /// `EnemyTriggerResting ; $81B8`：data05 bit5 置（A 恒 0）。
-fn enemy_trigger_resting(mem: &mut crate::frame::FrameMemory, x: u8) {
+fn enemy_trigger_resting(mem: &mut crate::frame::Manager, x: u8) {
     let a = en_addr(x, EN_F_DATA05);
     mem.write_ram(a, mem.read_ram(a) | 0x20);
 }
 
 /// `EnemyTriggerResting_AndClearEnAccelY ; $81B1`。
-fn enemy_trigger_resting_clear_accel_y(mem: &mut crate::frame::FrameMemory, x: u8) {
+fn enemy_trigger_resting_clear_accel_y(mem: &mut crate::frame::Manager, x: u8) {
     enemy_trigger_resting(mem, x);
     mem.write_wram(ens_addr(x, ENS_F_ACCEL_Y), 0);
 }
 
 /// `EnemyTriggerResting_AndClearEnAccelX ; $81C0`。
-fn enemy_trigger_resting_clear_accel_x(mem: &mut crate::frame::FrameMemory, x: u8) {
+fn enemy_trigger_resting_clear_accel_x(mem: &mut crate::frame::Manager, x: u8) {
     enemy_trigger_resting(mem, x);
     mem.write_wram(ens_addr(x, ENS_F_ACCEL_X), 0);
 }
@@ -37,7 +37,7 @@ fn enemy_trigger_resting_clear_accel_x(mem: &mut crate::frame::FrameMemory, x: u
 
 
 /// `EnemyIfMoveFailedVertical_Bounce($81FC)` / `_Horizontal_Bounce($81C7)`。
-fn enemy_if_move_failed_bounce(mem: &mut crate::frame::FrameMemory, x: u8, vertical: bool) {
+fn enemy_if_move_failed_bounce(mem: &mut crate::frame::Manager, x: u8, vertical: bool) {
     // 1. `LoadBit5ofTableAt968B` 置 ⇒ 该类型不反弹。
     if l968b_of(mem, x) & 0x20 != 0 {
         return;
@@ -72,7 +72,7 @@ fn enemy_if_move_failed_bounce(mem: &mut crate::frame::FrameMemory, x: u8, verti
 /// 注意 asm 的不对称（`$8110` 注释自问「不该与 Up 对称吗」）：`data1F=$40` 时
 /// **Up 是「减半且向上」、Down 是「触发休止后 fallthrough 到 movementStrings」**，
 /// 后者不清 speedY。这里按 ROM 保真（D4）。
-fn enemy_if_move_failed_vertical(mem: &mut crate::frame::FrameMemory, x: u8, up: bool) {
+fn enemy_if_move_failed_vertical(mem: &mut crate::frame::Manager, x: u8, up: bool) {
     if mem.read_ram(en_addr(x, EN_F_DATA05)) & 0x80 != 0 {
         enemy_if_move_failed_bounce(mem, x, true);
         return;
@@ -127,7 +127,7 @@ fn enemy_if_move_failed_vertical(mem: &mut crate::frame::FrameMemory, x: u8, up:
 ///
 /// 两侧都是**先查 `L977B` bit6**（加速/串类）：串类翻 `data05` bit0（`L977B` bit0 置才翻）；
 /// 加速类再看 `data05` bit7（竖直朝向）与 `data1F`。
-fn enemy_if_move_failed_horizontal(mem: &mut crate::frame::FrameMemory, x: u8, right: bool) {
+fn enemy_if_move_failed_horizontal(mem: &mut crate::frame::Manager, x: u8, right: bool) {
     let raw = l977b_raw(mem, x);
     if raw & 0x40 == 0 {
         if raw & 0x01 != 0 {
@@ -175,7 +175,7 @@ fn enemy_if_move_failed_horizontal(mem: &mut crate::frame::FrameMemory, x: u8, r
 
 /// 取本帧 Δ（`EnemyGetDeltaY` + `EnemyGetDeltaX` 共用一次串步进——`$8318` 明确
 /// 「Read the same sign-magnitude speed vector byte as in EnemyGetDeltaY」）。
-fn enemy_delta_for_move(mem: &mut crate::frame::FrameMemory, x: u8) -> (i8, i8) {
+fn enemy_delta_for_move(mem: &mut crate::frame::Manager, x: u8) -> (i8, i8) {
     let type_ = mem.read_wram(ens_addr(x, ENS_F_TYPE)) & 0x0F;
     let d05 = mem.read_ram(en_addr(x, EN_F_DATA05));
     let mov_idx = mem.read_ram(en_addr(x, EN_MOV_IDX));
@@ -224,7 +224,7 @@ fn enemy_delta_for_move(mem: &mut crate::frame::FrameMemory, x: u8) -> (i8, i8) 
     (dy, dx)
 }
 
-pub(crate) fn apply_enemy_delta_axis(mem: &mut crate::frame::FrameMemory, x: u8, delta: i8, vertical: bool) {
+pub(crate) fn apply_enemy_delta_axis(mem: &mut crate::frame::Manager, x: u8, delta: i8, vertical: bool) {
     let mut qty = if delta < 0 {
         twos(delta as u8)
     } else {
@@ -251,7 +251,7 @@ pub(crate) fn apply_enemy_delta_axis(mem: &mut crate::frame::FrameMemory, x: u8,
 }
 
 /// `EnemyMove ; $8058`。
-pub(crate) fn enemy_move(mem: &mut crate::frame::FrameMemory, x: u8) {
+pub(crate) fn enemy_move(mem: &mut crate::frame::Manager, x: u8) {
     // 门 1：`lda data05 / asl / bmi @RTS` ⇒ bit6 置（30FPS 半速帧）整件跳过。
     if mem.read_ram(en_addr(x, EN_F_DATA05)) & 0x40 != 0 {
         return;
@@ -271,9 +271,9 @@ pub(crate) fn enemy_move(mem: &mut crate::frame::FrameMemory, x: u8) {
 #[cfg(test)]
 mod tests_enemy_move_shell {
     use super::*;
-    use crate::frame::FrameMemory;
+    use crate::frame::Manager;
 
-    fn stage(m: &mut FrameMemory, x: u8, type_: u8, d05: u8, status: u8) {
+    fn stage(m: &mut Manager, x: u8, type_: u8, d05: u8, status: u8) {
         m.write_ram(en_addr(x, 0), 0x40); // y（非块界，避免碰撞判）
         m.write_ram(en_addr(x, 1), 0x40); // x
         m.write_ram(en_addr(x, EN_F_DATA05), d05);
@@ -284,7 +284,7 @@ mod tests_enemy_move_shell {
     }
 
     /// 在 0..16 里找一个满足位条件的敌类型（用真实 ROM 表，不硬编码假设）。
-    fn find_type(m: &mut FrameMemory, pred: impl Fn(u8) -> bool) -> Option<u8> {
+    fn find_type(m: &mut Manager, pred: impl Fn(u8) -> bool) -> Option<u8> {
         let saved = m.read_wram(ens_addr(0x10, ENS_F_TYPE));
         for t in 0u8..16 {
             m.write_wram(ens_addr(0x10, ENS_F_TYPE), t);
@@ -299,7 +299,7 @@ mod tests_enemy_move_shell {
 
     #[test]
     fn enemy_move_skips_when_data05_bit6_set() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         stage(&mut m, 0x10, 4, 0x40, 0x02);
         m.write_ram(en_addr(0x10, 0), 0x50);
         enemy_move(&mut m, 0x10);
@@ -308,7 +308,7 @@ mod tests_enemy_move_shell {
 
     #[test]
     fn enemy_move_skips_when_not_active() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         stage(&mut m, 0x10, 4, 0x00, 0x01);
         m.write_ram(en_addr(0x10, 0), 0x50);
         enemy_move(&mut m, 0x10);
@@ -318,7 +318,7 @@ mod tests_enemy_move_shell {
     /// `data1F=$40` + 竖直朝向 + 加速类 ⇒ Up 径：16 位 `sec/ror` 减半且向上。
     #[test]
     fn failed_up_with_data1f_40_halves_speed_upward() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         // data05 bit7=0（水平朝向）才走 @facingHorizontal 的 data1F 分叉
         stage(&mut m, 0x10, 0, 0x00, 0x02);
         let Some(t) = find_type(&mut m, |r| r & 0x40 != 0) else {
@@ -336,7 +336,7 @@ mod tests_enemy_move_shell {
     /// `data1F=$40` + Down 径 ⇒ 触发休止（bit5 置、accelY 清零），且**不清 speedY**（asm 不对称）。
     #[test]
     fn failed_down_with_data1f_40_triggers_resting() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         stage(&mut m, 0x10, 0, 0x00, 0x02);
         let Some(t) = find_type(&mut m, |r| r & 0x40 != 0) else {
             panic!("本区 L977B 没有加速类类型，测试前提不成立");
@@ -354,7 +354,7 @@ mod tests_enemy_move_shell {
     /// 串类 + `L977B` bit0 置 ⇒ 水平失败翻 `data05` bit0。
     #[test]
     fn failed_horizontal_string_class_flips_bit0_when_table_bit0_set() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         stage(&mut m, 0x10, 0, 0x00, 0x02);
         let Some(t) = find_type(&mut m, |r| r & 0x40 == 0 && r & 0x01 != 0) else {
             panic!("本区 L977B 没有 (bit6=0,bit0=1) 类型，测试前提不成立");
@@ -367,7 +367,7 @@ mod tests_enemy_move_shell {
     /// 串类 + `L977B` bit1 清 ⇒ 竖直失败**不翻**竖直朝向。
     #[test]
     fn failed_vertical_string_class_no_flip_when_table_bit1_clear() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         stage(&mut m, 0x10, 0, 0x00, 0x02);
         let Some(t) = find_type(&mut m, |r| r & 0x40 == 0 && r & 0x02 == 0) else {
             panic!("本区 L977B 没有 (bit6=0,bit1=0) 类型，测试前提不成立");
@@ -383,7 +383,7 @@ mod tests_enemy_move_shell {
     /// 在本区**不可观测**；这里只钉可观测的一半，另一半留待有该属性的区域用例。
     #[test]
     fn bounce_flips_facing_and_negates_speed() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         stage(&mut m, 0x10, 0, 0x00, 0x02);
         let area = crate::frame::cur_area(&m);
         let attrs = game_data::assets::enemy_force_attribs(area);
@@ -403,7 +403,7 @@ mod tests_enemy_move_shell {
 /// EnemyMoveOnePixelUp（**asm 内容锚** `areas_common.asm:989 $83F5`——r26）：
 /// 顶界块界判（(y-radiusY)&7==0⇒EnemyCheckMoveUp）→y dec（y==0 换名表族）→
 /// radiusY 界判→成功（carry=1）/失败（carry=0）。返回 bool（carry）。
-pub(crate) fn enemy_move_one_pixel_up(mem: &mut crate::frame::FrameMemory, x: u8) -> bool {
+pub(crate) fn enemy_move_one_pixel_up(mem: &mut crate::frame::Manager, x: u8) -> bool {
     let y = mem.read_ram(0x0400 + x as u16 + 0); // y=+0
     let ry = mem.read_wram(0x6AF4 + x as u16 + 1); // radiusY=+1
     if y.wrapping_sub(ry) & 0x07 == 0 {
@@ -431,7 +431,7 @@ pub(crate) fn enemy_move_one_pixel_up(mem: &mut crate::frame::FrameMemory, x: u8
 }
 
 /// EnemyMoveOnePixelDown（**asm 内容锚** `: 1066 $844B`——r26 同构（y inc））。
-pub(crate) fn enemy_move_one_pixel_down(mem: &mut crate::frame::FrameMemory, x: u8) -> bool {
+pub(crate) fn enemy_move_one_pixel_down(mem: &mut crate::frame::Manager, x: u8) -> bool {
     // 【goal-轮104 move_down 调用计数直证】调用/施加径差。
     // 【goal-轮82 animIndex 推进率直证】帧面差源（敌 rx≤4 vs 8）。
     let y = mem.read_ram(0x0400 + x as u16 + 0);
@@ -470,7 +470,7 @@ pub(crate) fn enemy_move_one_pixel_down(mem: &mut crate::frame::FrameMemory, x: 
 /// 【goal-轮10 asm :1142-1210 逐字】①8px 门检 ②x==0⇒名表换（横滚房 ScrollX 面）
 /// ③dec x ④左界==0（x==radiusX）⇒**失败+回滚**（inc x——旧形缺回滚！）⑤@success：
 /// jumpDsplcmnt inc（data05 bit7 置时）。
-pub(crate) fn enemy_move_one_pixel_left(mem: &mut crate::frame::FrameMemory, x: u8) -> bool {
+pub(crate) fn enemy_move_one_pixel_left(mem: &mut crate::frame::Manager, x: u8) -> bool {
     let xpos = mem.read_ram(0x0400 + x as u16 + 1); // x=+1
     let rx = mem.read_wram(0x6AF4 + x as u16 + 2); // radiusX=+2
     if xpos.wrapping_sub(rx) & 0x07 == 0 {
@@ -503,7 +503,7 @@ pub(crate) fn enemy_move_one_pixel_left(mem: &mut crate::frame::FrameMemory, x: 
 
 /// EnemyMoveOnePixelRight（**asm 内容锚** `: 1214 $84FE`——r26（x inc 同构））。
 /// 【goal-轮10】右界判（x+radiusX==$FF?——asm :1230-1245 同构回滚）+wrap（x==0 环绕）。
-pub(crate) fn enemy_move_one_pixel_right(mem: &mut crate::frame::FrameMemory, x: u8) -> bool {
+pub(crate) fn enemy_move_one_pixel_right(mem: &mut crate::frame::Manager, x: u8) -> bool {
     let xpos = mem.read_ram(0x0400 + x as u16 + 1);
     let rx = mem.read_wram(0x6AF4 + x as u16 + 2);
     if xpos.wrapping_add(rx) & 0x07 == 0 {
@@ -541,7 +541,7 @@ pub(crate) fn enemy_move_one_pixel_right(mem: &mut crate::frame::FrameMemory, x:
 /// ora ptr+1`——**对象 hi 选页**）】轮5 的 RoomRAMPtr(\$38) 选页=偏离（对象住其房间页
 /// ——hi==房页不变量（GetNameTableAtScrollDir==SelectRoomRAM 同式）；金腿实证：爬虫
 /// hi=0×\$6000（首房固实瓦挡探 ✓）而 \$38=\$6400（现房空 FF）⇒我探径滑过=旋转根）。
-pub(crate) fn make_room_ram_ptr(_mem: &mut crate::frame::FrameMemory, y: u8, x: u8, hi: u8) -> u16 {
+pub(crate) fn make_room_ram_ptr(_mem: &mut crate::frame::Manager, y: u8, x: u8, hi: u8) -> u16 {
     let idx = (((y & 0xF8) as u16) << 2) | ((x >> 3) as u16);
     let page = if hi & 1 != 0 { 0x0400u16 } else { 0x0000 };
     0x6000 | page | (idx & 0x3FF)
@@ -550,7 +550,7 @@ pub(crate) fn make_room_ram_ptr(_mem: &mut crate::frame::FrameMemory, y: u8, x: 
 /// 碰撞核（**asm 内容锚** `CheckMoveVertical: ; 07:E7BD`/Horizontal $E89B——r26）：
 /// 逐点（块界）→MakeRoomRAMPtr→tile 值类：**<$80=固实（碰撞！）**/$4E=固实空（门/像）/
 /// $80-$9F=可炸/≥$A0=可走。返回 carry（可走=true）。
-pub(crate) fn collision_point_ok(mem: &mut crate::frame::FrameMemory, y: u8, x: u8, hi: u8) -> bool {
+pub(crate) fn collision_point_ok(mem: &mut crate::frame::Manager, y: u8, x: u8, hi: u8) -> bool {
     let ptr = make_room_ram_ptr(mem, y, x, hi);
     let tile = mem.read_wram(ptr);
     if tile == 0x4E {
@@ -570,7 +570,7 @@ pub(crate) fn collision_point_ok(mem: &mut crate::frame::FrameMemory, y: u8, x: 
 /// x−rx 起 n 列全距（GetNumBlocksToCheck 公式=vertical_span_cols 同构已验证）；
 /// rx==0⇒免检（asm `bne Lx198/sec/rts`）。旧形单点 (y−ry+8, x) 双错：探点 +8 落出
 /// 进入块+漏跨块列——爬虫 radius 跨块时转角决策分歧根因。
-pub(crate) fn enemy_check_move_up(mem: &mut crate::frame::FrameMemory, x: u8) -> bool {
+pub(crate) fn enemy_check_move_up(mem: &mut crate::frame::Manager, x: u8) -> bool {
     let y = mem.read_ram(0x0400 + x as u16 + 0);
     let ry = mem.read_wram(0x6AF4 + x as u16 + 1);
     let xpos = mem.read_ram(0x0400 + x as u16 + 1);
@@ -597,7 +597,7 @@ pub(crate) fn enemy_check_move_up(mem: &mut crate::frame::FrameMemory, x: u8) ->
 /// EnemyCheckMoveDown（**asm 内容锚** `: 07:E77B`——r26）：底块判。
 /// EnemyCheckMoveDown（**asm 内容锚** `: 07:E77B`→同上 x 全距走环——r9 转向族修）：
 /// staging distY=0−ry（两位补码）⇒探行=y−(−ry)=y+ry（进入块下块）。
-pub(crate) fn enemy_check_move_down(mem: &mut crate::frame::FrameMemory, x: u8) -> bool {
+pub(crate) fn enemy_check_move_down(mem: &mut crate::frame::Manager, x: u8) -> bool {
     let y = mem.read_ram(0x0400 + x as u16 + 0);
     let ry = mem.read_wram(0x6AF4 + x as u16 + 1);
     let xpos = mem.read_ram(0x0400 + x as u16 + 1);
@@ -626,7 +626,7 @@ pub(crate) fn enemy_check_move_down(mem: &mut crate::frame::FrameMemory, x: u8) 
 /// EnemyCheckMoveLeft（**asm 内容锚** `: 07:E8F1`→CheckMoveHorizontal **y 全距走环**
 /// （07:E89B）——r9 转向族修）：staging distX=rx+8⇒探列=x−(rx+8)（进入块左块），
 /// y−ry 起 n 行全距（horizontal_span_rows 同构）；ry==0⇒免检。
-pub(crate) fn enemy_check_move_left(mem: &mut crate::frame::FrameMemory, x: u8) -> bool {
+pub(crate) fn enemy_check_move_left(mem: &mut crate::frame::Manager, x: u8) -> bool {
     let y = mem.read_ram(0x0400 + x as u16 + 0);
     let xpos = mem.read_ram(0x0400 + x as u16 + 1);
     let rx = mem.read_wram(0x6AF4 + x as u16 + 2); // radiusX=+2
@@ -652,7 +652,7 @@ pub(crate) fn enemy_check_move_left(mem: &mut crate::frame::FrameMemory, x: u8) 
 /// EnemyCheckMoveRight（**asm 内容锚** `: 07:E8FC`——r26）：右块判。
 /// EnemyCheckMoveRight（**asm 内容锚** `: 07:E8FC`→CheckMoveHorizontal y 全距走环
 /// ——r9 转向族修）：staging distX=0−rx⇒探列=x+rx（进入块右块），y−ry 起 n 行全距。
-pub(crate) fn enemy_check_move_right(mem: &mut crate::frame::FrameMemory, x: u8) -> bool {
+pub(crate) fn enemy_check_move_right(mem: &mut crate::frame::Manager, x: u8) -> bool {
     let y = mem.read_ram(0x0400 + x as u16 + 0);
     let xpos = mem.read_ram(0x0400 + x as u16 + 1);
     let rx = mem.read_wram(0x6AF4 + x as u16 + 2);

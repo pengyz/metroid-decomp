@@ -12,14 +12,14 @@
 //! （注释「ScrollAddr 未定谳——不猜写」）——ROM 直读后地址已定谳，按 asm 真形端口。
 
 use game_core::frame::tick::samus_init;
-use game_core::frame::FrameMemory;
+use game_core::frame::Manager;
 use game_core::ram_map::{IN_AREA, MIRROR_CNTRL, SCROLL_DIR};
 
 #[test]
 fn samus_init_non_brinstar_lsr_scrolldir_and_ldy_2f() {
     // 非 Brinstar（InArea=0x11 Norfair，JUSTIN BAILEY 出生区）：
     // ScrollDir=2(Left) --lsr--> 1(Down)；MirrorCntrl/MissilePickupQtyMax/EnergyPickupQtyMax ← $2F
-    let mut m = FrameMemory::default();
+    let mut m = Manager::default();
     m.write_ram(IN_AREA, 0x11);
     m.write_ram(SCROLL_DIR, 0x02);
     samus_init(&mut m);
@@ -36,7 +36,7 @@ fn samus_init_non_brinstar_lsr_scrolldir_and_ldy_2f() {
 #[test]
 fn samus_init_brinstar_leaves_scrolldir_and_ldy_27() {
     // Brinstar（InArea=0）：beq Lx002 直接跳到 C908，不执行 lsr；Y=$27
-    let mut m = FrameMemory::default();
+    let mut m = Manager::default();
     m.write_ram(IN_AREA, 0x00);
     m.write_ram(SCROLL_DIR, 0x02);
     samus_init(&mut m);

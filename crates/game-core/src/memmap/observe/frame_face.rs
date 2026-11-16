@@ -11,7 +11,7 @@
 //! | wram | **$6000-$7FFF 全 8KB** | 16384 hex |
 //!
 //! 【WRAM 区间钉死（2026-10-15，lead 裁定）】全 8KB=「全状态无隐藏态」原则（RNG 全状态
-//! 证明义务同族：软上界留盲区=留隐患）+ FrameMemory 8KB 同框；旧「$6000-$6Cxx」软上界
+//! 证明义务同族：软上界留盲区=留隐患）+ Manager 8KB 同框；旧「$6000-$6Cxx」软上界
 //! **正式作废**，降级为游戏用区观察注（findings/ram-region-6af4-contradiction.md 定谳的
 //! 用区事实不变，watch 面口径独立钉死）。
 
@@ -55,7 +55,7 @@ pub fn encode_iram(ram: &[u8]) -> String {
     hex_upper(&ram[0x100..0x800])
 }
 
-/// wram 编码（$6000-$7FFF 全 8KB → 16384 大写 hex；FrameMemory.wram 面）。
+/// wram 编码（$6000-$7FFF 全 8KB → 16384 大写 hex；Manager.wram 面）。
 pub fn encode_wram(wram: &[u8]) -> String {
     hex_upper(&wram[0x0000..0x2000])
 }

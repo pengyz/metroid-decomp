@@ -27,7 +27,7 @@ use std::fs;
 use std::path::PathBuf;
 use std::sync::Mutex;
 
-use game_core::frame::{FrameEngine, FrameMemory, Registers};
+use game_core::frame::{FrameEngine, Manager, Registers};
 use game_core::render::render_frame;
 use game_core::state::RenderState;
 
@@ -310,7 +310,7 @@ fn load_bundle(prefix: &str) -> Result<Bundle, String> {
 
 /// 状态行（`{"f":N,"w":{"zp":…,"iram":…,"wram":…}}`——oracle/l3-dump 帧 trace
 /// **同形单一格式**（对齐验收两侧同解析）；编码唯一源=memmap::observe::frame_face（watch_snapshot）。
-fn state_row(frame: usize, mem: &FrameMemory) -> String {
+fn state_row(frame: usize, mem: &Manager) -> String {
     let snap = mem.watch_snapshot();
     let parts: Vec<String> = snap.iter().map(|(k, v)| format!("\"{k}\":\"{v}\"")).collect();
     format!("{{\"f\":{frame},\"w\":{{{}}}}}", parts.join(","))
@@ -414,7 +414,7 @@ fn main() {
                           frame: usize, tag: &str,
                               out: &PathBuf, produced: &mut Vec<(usize, String, String)>| {
         let (rs, oam): (&RenderState, &[u8]) =
-            capture_inputs(snap, &engine.mem.render, &engine.mem.ram[0x200..0x300]);
+            capture_inputs(snap, &engine.mem.render, &engine.mem.ram()[0x200..0x300]);
         let pal = &rs.palette;
         let bg: [u8; 16] = pal[0..16].try_into().unwrap();
         let spr: [u8; 16] = pal[16..32].try_into().unwrap();
@@ -469,7 +469,7 @@ fn main() {
             {
                 let mut ram_hex = String::new();
                 for i in 0..0x800usize {
-                    ram_hex.push_str(&format!("{:02X}", engine.mem.ram.get(i).copied().unwrap_or(0)));
+                    ram_hex.push_str(&format!("{:02X}", engine.mem.ram().get(i).copied().unwrap_or(0)));
                 }
                 for i in 0x6AF4u16..=0x6B73 {
                     ram_hex.push_str(&format!("{:02X}", engine.mem.read_wram(i)));
@@ -523,7 +523,7 @@ fn main() {
         }
         engine.mem.joy1 = plan.joy.get(&frame).copied().unwrap_or(0);
         if trace_flags.iter().any(|t| t == "sprite") && frame >= 918 && frame <= 924 {
-            eprintln!("[joy] f{} nmi_en={} ppuctrl={:02X}", frame, engine.mem.nmi_enabled, engine.mem.ram[0x00FF]);
+            eprintln!("[joy] f{} nmi_en={} ppuctrl={:02X}", frame, engine.mem.nmi_enabled, engine.mem.ram()[0x00FF]);
             eprintln!("[joy] f{} joy1_field={:02X} sched={:02X}", frame, engine.mem.joy1, plan.joy.get(&frame).copied().unwrap_or(0));
         }
         // 2P（2026-11-16）：录像 p2 列——Metroid 的 2P 用于 `PauseMode ; 07:C9B1` 的
@@ -551,7 +551,7 @@ fn main() {
                     seam_snap = Some((
                         frame,
                         mem.render.clone(),
-                        mem.ram[0x200..0x300].to_vec(),
+                        mem.ram()[0x200..0x300].to_vec(),
                     ));
                 }
             });
@@ -683,7 +683,7 @@ fn capture_inputs<'a>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use game_core::frame::{FrameMemory, Registers};
+    use game_core::frame::{Manager, Registers};
 
     /// 2P 通道（2026-11-16）：`joy2 <frame> <hex>` 与 `joy` 同形解析，缺省为空表
     /// （旧 .sched 无该行 ⇒ 行为与硬编码 0 等价，锚不漂移）。

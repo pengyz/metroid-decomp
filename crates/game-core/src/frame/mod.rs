@@ -33,7 +33,7 @@ pub use crate::render::gfx::init_title_gfx;
 pub use tick::{main_loop_iter, samus_init};
 pub use crate::title::intro::star_palette_switch;
 pub use boot::io;
-pub use memory::{FrameMemory, Registers};
+pub use memory::{Manager, Registers};
 pub use nmi::nmi_handler;
 pub use rng::GameRng;
 
@@ -41,7 +41,7 @@ pub use rng::GameRng;
 ///
 /// 敌九表按**区 bank** 存放（五区同址 `$962B…$977B`，内容不同）⇒ 所有敌表读取都必须
 /// 先取区号。`InArea` 高半字节是「进区方向」等附加位，故统一掩 `$0F`。
-pub fn cur_area(mem: &FrameMemory) -> u8 {
+pub fn cur_area(mem: &Manager) -> u8 {
     mem.read_ram(crate::ram_map::IN_AREA) & 0x0F
 }
 

@@ -5,7 +5,7 @@
 //! ②dispatch_step 统一分发 ③TitleStep 应用（apply_title_step 唯一源）+
 //! unported 表址爆（`bank00:<表址>` per-entry 形）+ jumped 转接面（当前=爆——转接件随接）。
 
-use crate::frame::FrameMemory;
+use crate::frame::Manager;
 use crate::memmap::views::title;
 use crate::ram_map::{
     FRAME_COUNT, JOY1_CHANGE, PPUCTRL_ZP, TITLE_ROUTINE,
@@ -24,7 +24,7 @@ fn title_no_return_for(t1f: u8, cursor: u8) -> bool {
     matches!(t1f, 0x00 | 0x01 | 0x15 | 0x1B) || (t1f == 0x17 && cursor < 2)
 }
 
-pub fn main_title_routine(mem: &mut FrameMemory) {
+pub fn main_title_routine(mem: &mut Manager) {
     // 【r23 spin 等待段】>0=本 tick 工作零动（跨相续段正交机构——臂的等待段语义）。
     // 【r9 FC 冻结（porter+逐帧会计修订）】spin 消费 tick=asm 例程内部 WaitNMIPass_
     // 等待帧（MainLoop 卡在例程体内⇒迭代未完成⇒FC 不自增）⇒一律置旗（通则——
@@ -196,7 +196,7 @@ pub fn main_title_routine(mem: &mut FrameMemory) {
 /// CheckPassword 全链（asm `CheckPassword: ; 00:8C5E` prg0_title.asm:1718-1733）：
 /// Consolidate/Validate/Unscramble → valid⇒InitializeGame / 无效⇒错码+回 0x18。
 /// 独立 fn 以便延拍执行（见 main_title_routine 头 check_password_pending 消费点）。
-fn run_check_password_chain(mem: &mut FrameMemory) {
+fn run_check_password_chain(mem: &mut Manager) {
     let mut chars = [0u8; 24];
     for (i, c) in chars.iter_mut().enumerate() {
         *c = mem.read_wram(crate::ram_map::PASSWORD_CHAR + i as u16);
@@ -222,7 +222,7 @@ fn run_check_password_chain(mem: &mut FrameMemory) {
 }
 
 /// shell 组合点执行体（全臂——S6-4 精灵面 + S6-10 PPU 面）。
-fn exec_shell_call(mem: &mut FrameMemory, sc: &crate::title::ShellCall) {
+fn exec_shell_call(mem: &mut Manager, sc: &crate::title::ShellCall) {
     use crate::title::ShellCall::*;
     match sc {
         EraseAllSprites => crate::frame::boot::erase_all_sprites(mem), // $F0 填充（C1A3）
@@ -257,7 +257,7 @@ fn exec_shell_call(mem: &mut FrameMemory, sc: &crate::title::ShellCall) {
 /// → 13 字符 `lda PasswordRow0,y → PPUDATA` + `lda #$FF → PPUDATA`（空白交错，`iny` **跨行连续**
 /// 不重置）→ `inc $01 / cmp #$05 / bne`。PasswordRow0（$99A2，`.stringmap "0123456789ABC…"`）
 /// ROM 逐字节=[0..63,$FF,…]，5×13=65 项恰用 0..64（第 65 项=$FF）。
-fn display_input_characters(mem: &mut FrameMemory) {
+fn display_input_characters(mem: &mut Manager) {
     mem.render.reset_addr_latch();
     // $00/$01 初值 0（asm `tya/sta $00/sta $01`——$01=行计数器）
     mem.write_ram(0x0000, 0);
@@ -282,7 +282,7 @@ fn display_input_characters(mem: &mut FrameMemory) {
 /// PreparePPUProcess 组合点（asm 引证主体 `PreparePPUProcess: ; 07:C20E`——ptr→VRAMStructWrite）。
 /// blob 面读资产包 `title.vram_*` 四段（VRAMStruct 记录流，`hi==0` 终止含尾）；
 /// 未接址 fail-loud（随件补）。
-fn prepare_vram(mem: &mut FrameMemory, addr: u16) {
+fn prepare_vram(mem: &mut Manager, addr: u16) {
     match addr {
         0x82F4 => crate::render::vram::vram_struct_write(
             mem, game_data::assets::vram_intro()),
@@ -310,7 +310,7 @@ mod tests {
     /// 全仪式+相位推进+FC 同拍；等待=bogged 门队列（下一 tick 工作零动+NMI 内块跳过）。
     #[test]
     fn bridge_crosses_via_unified_entry() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         main_title_routine(&mut m); // 工作段（仪式+推进）
         assert_eq!(m.read_ram(TITLE_ROUTINE), 1); // 相位推进同拍
         assert_eq!(m.iter_gates, vec![0], "bogged 门队列挂起（N₀=1）");
@@ -323,7 +323,7 @@ mod tests {
     /// PasswordRow0 $99A2=[0..63,$FF,…]（ROM 逐字节）+ L4 f530 NT0 diff 0x1e4-0x2fa 实测。
     #[test]
     fn display_input_characters_writes_five_rows() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         display_input_characters(&mut m);
         // 行 0（$21E4 → off 0x1E4）：tile 0..12 + $FF 交错（偶数位=字符/奇数位=$FF）
         for i in 0..13usize {
@@ -357,7 +357,7 @@ mod tests {
     /// 星槽 $0260-$02FF（LoadStarSprites 载面）不得抹。
     #[test]
     fn remove_intro_sprites_preserves_star_slots() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(0x0260, 0x73); // 星槽首字节（IntroStarsData[0]）
         m.write_ram(0x02FF, 0x85); // 星槽末字节
         m.write_ram(0x0210, 0x00);
@@ -372,7 +372,7 @@ mod tests {
     /// r14 残差件：$C3 恒差根）。
     #[test]
     fn init_after_reset_resets_star_offset() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(0x00C3, 0x05); // 预置非零（复位必须落地）
         main_title_routine(&mut m); // 00 臂段0（工作）
         assert_eq!(m.read_ram(0x00C3), 0, "IntroStarOffset 复位（:124 sty）");
@@ -391,7 +391,7 @@ mod tests {
     /// （BankTable[1]=3（07:CA30）/RestartYPosTbl[1]=$8C/X=$78/MainRoutine←MoreInit）。
     #[test]
     fn justin_bailey_password_jump_spawns_suitless_norfair() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         for (i, &c) in JB_CHARS.iter().enumerate() {
             m.write_wram(crate::ram_map::PASSWORD_CHAR + i as u16, c);
         }
@@ -437,7 +437,7 @@ mod tests {
     /// 非法密码提交→invalid 路：SFX 旗+Timer3=$0C+回 EnterPassword，不出生态。
     #[test]
     fn bad_password_jump_returns_to_enter() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         let bad = [0x01u8; 24];
         for (i, &c) in bad.iter().enumerate() {
             m.write_wram(crate::ram_map::PASSWORD_CHAR + i as u16, c);
@@ -459,7 +459,7 @@ mod tests {
     /// （0x18/0x1E 均已臂化；title 全清））。
     #[test]
     fn bridge_unported_arm_detonates_with_table_addr() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(TITLE_ROUTINE, 0xFF); // 域外相位（契约违例 fail-loud 样本）
         let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| main_title_routine(&mut m)));
         let err = r.unwrap_err();
@@ -472,7 +472,7 @@ mod tests {
 
 /// InitializeGame（**asm 内容锚** `InitializeGame: ; 00:92D4`——prg0_title.asm:2699-2758
 /// 逐行移植；pw=解校验后的 PasswordByte 18B，nar_active=NARPASSWORD 旗读值）。
-fn initialize_game(mem: &mut FrameMemory, pw: &[u8; 18], nar_active: bool) {
+fn initialize_game(mem: &mut Manager, pw: &[u8; 18], nar_active: bool) {
     // ClearRAM_33_DF（$C1D4）：zp $33-$DF 清零。
     for a in 0x33..=0xDF {
         mem.write_ram(a, 0);
@@ -533,7 +533,7 @@ fn initialize_game(mem: &mut FrameMemory, pw: &[u8; 18], nar_active: bool) {
 
 /// LoadPasswordData（**asm 内容锚** `LoadPasswordData: ; 00:8D12`——prg0_title.asm:
 /// 1839-1863；NAR 跳过由调用侧承担）。
-fn load_password_data(mem: &mut FrameMemory, pw: &[u8; 18]) {
+fn load_password_data(mem: &mut Manager, pw: &[u8; 18]) {
     load_unique_items(mem, pw);
     load_tanks_and_missiles(mem, pw);
     // JustInBailey($69B3)←PB[8]&$80 ? 1 : 0；InArea($74)←PB[8]&$3F。
@@ -552,7 +552,7 @@ fn load_password_data(mem: &mut FrameMemory, pw: &[u8; 18]) {
 /// MSB-first 假设被证伪）；
 /// 有位⇒UniqueItemHistory[$6887+n..n+1]←ItemData[item] 低/高字节，NumberOfUniqueItems
 /// [$6886] 2 递增。ItemData（00:9029-$909F，@end-$start)/2=59——59 项烘焙表（见下）。
-fn load_unique_items(mem: &mut FrameMemory, pw: &[u8; 18]) {
+fn load_unique_items(mem: &mut Manager, pw: &[u8; 18]) {
     mem.write_ram(crate::ram_map::NUMBER_OF_UNIQUE_ITEMS, 0);
     let mut n = 0u16;
     for item in 0..59usize {
@@ -574,7 +574,7 @@ fn adc(a: u8, b: u8, c_in: bool) -> (u8, bool) {
 
 /// LoadTanksAndMissiles（**asm 内容锚** `LoadTanksAndMissiles: ; 00:8D3D`——
 /// prg0_title.asm:1867-1992 逐行对读）。
-fn load_tanks_and_missiles(mem: &mut FrameMemory, pw: &[u8; 18]) {
+fn load_tanks_and_missiles(mem: &mut Manager, pw: &[u8; 18]) {
     mem.write_ram(crate::ram_map::SAMUS_GEAR, pw[9]);
     mem.write_ram(crate::ram_map::MISSILE_COUNT, pw[10]);
     // 雕像态（Temp00/Temp02 组装后 sta——0 亦写）：

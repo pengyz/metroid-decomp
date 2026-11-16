@@ -18,7 +18,7 @@
 //!
 //! 数据面：game_data::area::items（tools/bake_items.py ROM 烘焙——五区 SpecItmsTbl）。
 
-use crate::state::FrameMemory;
+use crate::state::Manager;
 
 /// PowerUps 基（2 槽×8B（constants_ram:1154-1158 `$0748-$0757`））。
 const POWERUPS_BASE: u16 = 0x0748;
@@ -38,7 +38,7 @@ fn items_table(area: u8) -> &'static [game_data::area::items::SpecialItem] {
 
 /// ScanForItems（ED98——SetupRoom 首件）：当前图格特项扫描→分派装载。
 /// 【语义等价形】Y 序链表=按 (map_y,map_x) 排序扁表；扫描匹配当前图格 ✓。
-pub fn scan_for_items(mem: &mut FrameMemory) {
+pub fn scan_for_items(mem: &mut Manager) {
     let map_x = mem.read_ram(crate::ram_map::MAP_POS_X);
     let map_y = mem.read_ram(crate::ram_map::MAP_POS_Y);
     let area = mem.read_ram(crate::ram_map::IN_AREA);
@@ -50,7 +50,7 @@ pub fn scan_for_items(mem: &mut FrameMemory) {
 }
 
 /// ChooseSpawningRoutine（EDD6）分派：it_Type 低半字节。
-fn spawn_item(mem: &mut FrameMemory, item: &game_data::area::items::SpecialItem) {
+fn spawn_item(mem: &mut Manager, item: &game_data::area::items::SpecialItem) {
     match item.item_type & 0x0F {
         0x02 => spawn_power_up(mem, item),
         // 【占位臂记账】Squeept/Mellow/Elevator/MBCannon/MB/Zebetite/Rinka/Door/Palette
@@ -81,7 +81,7 @@ fn create_item_id(map_x: u8, map_y: u8, item_type: u8) -> (u8, u8) {
 }
 
 /// CheckForItem（EE4A）：UniqueItemHistory（$6887 起 2B/件）比对。返回 true=已收集。
-fn check_for_item(mem: &FrameMemory, id: (u8, u8)) -> bool {
+fn check_for_item(mem: &Manager, id: (u8, u8)) -> bool {
     let n = mem.read_wram(NUM_UNIQUE_ITEMS) as usize;
     for i in 0..n {
         let lo = mem.read_wram(UNIQUE_ITEM_HISTORY + (i * 2) as u16);
@@ -94,7 +94,7 @@ fn check_for_item(mem: &FrameMemory, id: (u8, u8)) -> bool {
 }
 
 /// GetItemXYPos 尾径（DC1C→史录——非 beam 件入史）。返回 false=史满（$6886 上界）。
-fn record_item(mem: &mut FrameMemory, id: (u8, u8)) -> bool {
+fn record_item(mem: &mut Manager, id: (u8, u8)) -> bool {
     let n = mem.read_wram(NUM_UNIQUE_ITEMS) as usize;
     if n >= 0x5B {
         return false; // 史满（$6887+2n<$68FC 界）
@@ -106,7 +106,7 @@ fn record_item(mem: &mut FrameMemory, id: (u8, u8)) -> bool {
 }
 
 /// SpawnPowerUp（EDFE）：槽分配→PrepareItemID+CheckForItem→位置解码→槽写。
-fn spawn_power_up(mem: &mut FrameMemory, item: &game_data::area::items::SpecialItem) {
+fn spawn_power_up(mem: &mut Manager, item: &game_data::area::items::SpecialItem) {
     let slot = if mem.read_ram(POWERUPS_BASE) == 0xFF {
         0u16
     } else if mem.read_ram(POWERUPS_BASE + 8) == 0xFF {
@@ -132,7 +132,7 @@ fn spawn_power_up(mem: &mut FrameMemory, item: &game_data::area::items::SpecialI
 
 /// UpdateAllPowerUps（DB37）帧径（uw_all_power_ups 会师）：双槽→埋实心块门→显示→
 /// 触碰→拾取授予。返回拾取的 pu_XXX（Some=本帧拾取）。
-pub fn update_all_power_ups(mem: &mut FrameMemory) -> Option<u8> {
+pub fn update_all_power_ups(mem: &mut Manager) -> Option<u8> {
     // 【卡 E D2-1 端口】asm UpdateAllPowerUps 循环头（prg7_engine.asm:5502-5504）：
     // `lda #$40 / sta PageIndex`——双槽显示面共用 $340 槽（r14 dossier §3.3「漏端口」补）。
     mem.write_ram(0x004B, 0x40);
@@ -228,7 +228,7 @@ pub fn update_all_power_ups(mem: &mut FrameMemory) -> Option<u8> {
 /// > 【2026-10-31 bug 报修更正】旧形 hi 差折 ±256⇒dx 恒 256+⇒**触碰永不触发**
 /// > （用户报「碰撞变形球物品后无法吃到」根因）——渲染径屏位=纯 x 差（hi 仅可见门），
 /// > 触碰同径（物 hi=1/人 hi=0 但同屏可视=屏距直比）。
-fn are_objects_touching(mem: &FrameMemory) -> bool {
+fn are_objects_touching(mem: &Manager) -> bool {
     let sy = mem.read_ram(0x030D);
     let sx = mem.read_ram(0x030E);
     let iy = mem.read_ram(POWERUP_DRAW_BASE + 0x0D);
@@ -247,7 +247,7 @@ mod tests {
     /// 触碰判（屏距径——bug 报修回归锚（hi 差不折距））：同屏近距⇒触；hi 差仍触（同屏）。
     #[test]
     fn touching_fires_regardless_of_nametable_hi() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(0x030D, 152); // Samus y
         m.write_ram(0x030E, 100); // x
         m.write_ram(0x0301, 15); // radiusY
@@ -273,7 +273,7 @@ mod tests {
     /// 该径零 anim 写（cardi-f798probe.probe.jsonl caller 集无 spawn 站）。
     #[test]
     fn powerup_display_is_pure_draw_no_walk() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         // Samus 槽走表哨兵（幻影走表会 dec animDelay）
         m.write_ram(0x0304, 5);
         m.write_ram(0x0306, 0x0D);
@@ -296,7 +296,7 @@ mod tests {
     /// ⇒授予（能力位+槽清+PowerUpDelayFlag）。
     #[test]
     fn powerup_touch_grants_when_drawn() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         // item 与 Samus 同位（触碰）且屏内（可绘）
         let (y, x, hi) = (0x40u8, 0x40u8, 0u8);
         m.write_ram(0x0300 + 0x0D, y); // Samus.y

@@ -36,7 +36,7 @@ pub(crate) fn crawler_move_gate(x: u8, fc: u8) -> u8 {
 /// 显示（bank1 共享 skree 出口）/PreAI Explode⇒SkreeExit_Explode（仅显示）/
 /// 现役 Explode⇒@exit）→@move。缺门症（已修）：Resting 帧即跑 AI——激活帧半径未写
 /// （draw 同 tick 后行）⇒rx=0 全检快径⇒外角下探伪成功转角⇒菱形回路（crawlprobe f797）。
-pub(crate) fn crawler_ai(mem: &mut crate::frame::FrameMemory, x: u8) {
+pub(crate) fn crawler_ai(mem: &mut crate::frame::Manager, x: u8) {
     // 【goal-轮30 全径打印】入口+全出口（n=1664 漏步帧出口面直证）。
     // F852：txa/lsr×3（carry←原 bit2）/adc FrameCount（含进位）/lsr——门含 lsr 移出位。
     // 【goal-轮2 采样缝更正】toggle 公式正确——"bit6 反相"=采样缝伪象（我 spin-exit=帧首
@@ -119,7 +119,7 @@ pub(crate) fn crawler_ai(mem: &mut crate::frame::FrameMemory, x: u8) {
 /// CrawlerOutsideCornerCheck（bank1:$9AC6——`jsr GetNextOrientation/jsr MoveRoutine`
 /// `bcc @RTS`（探移失败⇒RTS）/成功⇒data0A←next+ReorientSprite）——恒跑（@move 与
 /// @afterLavaTurnAround 共径）。
-pub(crate) fn crawler_outside_corner_check(mem: &mut crate::frame::FrameMemory, x: u8) {
+pub(crate) fn crawler_outside_corner_check(mem: &mut crate::frame::Manager, x: u8) {
     let o = mem.read_ram(0x0400 + x as u16 + 10) & 0x03;
     let next_o = (o + 1) & 0x03;
     let dir = mem.read_ram(0x0400 + x as u16 + 5) & 1;
@@ -142,7 +142,7 @@ pub(crate) fn crawler_outside_corner_check(mem: &mut crate::frame::FrameMemory, 
 /// `lda data05/lsr`（flip=bit0 进 carry）`lda data0A/and #3/rol A`（idx=orient*2+flip）
 /// `lda $9AA0,y / jmp InitEnAnimIndex`（F68D：reset/index←A、animDelay←0）。
 /// 旧形「随件占位」⇒ 敌 animFrame 恒 0 ⇒ 画错帧（emu tile CA/CB/DA/DB vs rust 14）。
-pub(crate) fn crawler_reorient_sprite(mem: &mut crate::frame::FrameMemory, x: u8) {
+pub(crate) fn crawler_reorient_sprite(mem: &mut crate::frame::Manager, x: u8) {
     const CRAWLER_SPRITE_ANIM_TBL: [u8; 8] =
         [0x35, 0x35, 0x3E, 0x38, 0x3B, 0x3B, 0x38, 0x3E]; // ROM $9AA0（orient*2+flip）
     let d05 = mem.read_ram(0x0400 + x as u16 + 5);
@@ -164,7 +164,7 @@ pub(crate) fn crawler_reorient_sprite(mem: &mut crate::frame::FrameMemory, x: u8
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::frame::FrameMemory;
+    use crate::frame::Manager;
 
     /// `ShouldCrawlerMove ; 07:F852` 的 6/8 帧性：256 帧里恰好 64 帧 gate==0
     /// （每 8 帧动 6 帧）。对多个槽位抽样，覆盖 `x>>3` 与 `bit2` 两项。
@@ -193,7 +193,7 @@ mod tests {
         const TBL: [u8; 8] = [0x35, 0x35, 0x3E, 0x38, 0x3B, 0x3B, 0x38, 0x3E];
         for orient in 0u8..4 {
             for flip in 0u8..2 {
-                let mut m = FrameMemory::default();
+                let mut m = Manager::default();
                 let x = 0x10u8;
                 let en = 0x0400 + x as u16;
                 m.write_ram(en + 5, flip); // data05 方向位
@@ -212,7 +212,7 @@ mod tests {
     #[test]
     fn reorient_clears_bit2_and_bit1_keeps_others() {
         for d5 in [0x1Au8, 0x5A, 0x7F] {
-            let mut m = FrameMemory::default();
+            let mut m = Manager::default();
             let x = 0x10u8;
             let en = 0x0400 + x as u16;
             m.write_ram(en + 5, d5);

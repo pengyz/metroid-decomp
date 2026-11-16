@@ -179,7 +179,7 @@ impl GameDriver for CoreDriver {
             &self.engine.mem.render,
             &slice16(&pal[0..16]),
             &slice16(&pal[16..32]),
-            &self.engine.mem.ram[0x200..0x300],
+            &self.engine.mem.ram()[0x200..0x300],
         );
         self.rgb.copy_from_slice(&fb);
     }

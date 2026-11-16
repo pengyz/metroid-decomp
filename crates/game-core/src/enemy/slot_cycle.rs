@@ -15,7 +15,7 @@ use crate::ram_map;
 /// ①PageIndex←x ②EnsExtra.status：Resting/Active⇒CheckIfVisible ③UpdateEnData05Bit6
 /// ④JumpEngine：0=ExitSub/1=Resting/2=Active/3=Explode/4=Frozen/5=Pickup/6=Hurt/
 /// ≥7⇒RemoveEnemy。件径=敌域 L2 单位（engine::update_enemy_*）会师面。
-pub fn update_all_enemies(mem: &mut crate::frame::FrameMemory) {
+pub fn update_all_enemies(mem: &mut crate::frame::Manager) {
     let mut x: u8 = 0x50; // _sizeof_Ens-_sizeof_Ens.0（5 槽×16）
     loop {
         // 【goal-轮45 可见位直证】敌B bit1（金方冻结=离屏）。
@@ -56,7 +56,7 @@ pub fn update_all_enemies(mem: &mut crate::frame::FrameMemory) {
 
 /// UpdateEnemy_CheckIfVisible（**asm 内容锚** `: 07:F37F`——r26）：
 /// data05 bit1≠0⇒退出；否则位置/半径→IsObjectVisible⇒**不可见双返**（跳过该敌）。
-pub(crate) fn enemy_check_if_visible(mem: &mut crate::frame::FrameMemory, x: u8) -> bool {
+pub(crate) fn enemy_check_if_visible(mem: &mut crate::frame::Manager, x: u8) -> bool {
     // 【goal-轮64 闩置位帧直证】draw visible 写面（闩自持差源）。
     if mem.read_ram(0x0400 + x as u16 + 5) & 0x02 != 0 {
         return true; // $F37F bit1 闩=1 ⇒ 免 fresh 检（视为可见）
@@ -68,14 +68,14 @@ pub(crate) fn enemy_check_if_visible(mem: &mut crate::frame::FrameMemory, x: u8)
 #[cfg(test)]
 mod tests_deferred_screen_on {
     use super::*;
-    use crate::state::FrameMemory;
+    use crate::state::Manager;
 
     /// 转场暗窗建模锚（TDD 红→绿）：MoreInit 尾的 ScreenOn 影子写必须**延迟**到帧门
     /// 排空（迭代完成点）才落 $FE——asm `WriteAndWait`（07:C43D）写影子后
     /// `WaitNMIPass_`（07:C43F）等一个 NMI，真 PPUMASK 由下一帧 `WritePPUCtrl` 落。
     #[test]
     fn deferred_screen_on_applies_at_drain_point() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(0x00FE, 0x06); // ScreenOff 后的影子（转场中）
         m.deferred_screen_on = true;
         apply_deferred_screen_on(&mut m);
@@ -91,7 +91,7 @@ mod tests_deferred_screen_on {
     /// （0px，接线断即暗窗消失→与 emu 黑窗实录失配）——单测不重复该职责。
     #[test]
     fn deferred_screen_on_inert_without_flag() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(0x00FE, 0x06);
         m.render.ppumask = 0x06; // 哨兵（ScreenOff 态真值，非默认 0x1E）
         apply_deferred_screen_on(&mut m);
@@ -110,7 +110,7 @@ mod tests_visibility {
     /// 同名表⇒rx<screenX 可见。旧形横房 y<240 近似恒真=误可见。
     #[test]
     fn enemy_visibility_horz_nametable_and_edge_rules() {
-        let mut m = crate::frame::FrameMemory::default();
+        let mut m = crate::frame::Manager::default();
         let x = 0x40u8; // slot4
         m.write_ram(crate::ram_map::SCROLL_DIR, 3); // 横房右滚
         m.write_ram(0x00FF, 0x00); // PPU 当前名表 0
@@ -137,7 +137,7 @@ mod tests_visibility {
 
 /// UpdateEnemy_UpdateEnData05Bit6（**asm 内容锚** `: 07:F3AA`——r26）：
 /// data05 bit6←(slot÷16 xor FrameCount) bit0（**30fps 动画标**——D4 保真）。
-pub(crate) fn update_en_data05_bit6(mem: &mut crate::frame::FrameMemory, x: u8) {
+pub(crate) fn update_en_data05_bit6(mem: &mut crate::frame::Manager, x: u8) {
     let d = mem.read_ram(0x0400 + x as u16 + 5);
     let bit6 = (d >> 6) & 1;
     // 【goal-轮33/34 证伪记账】FC 相位两假说（全局/toggle 单点 FC+1）皆实测劣化

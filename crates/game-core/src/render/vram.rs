@@ -13,11 +13,11 @@
 //!
 //! 数据面=game-data 烘焙（tools/bake_vram_structs.py，--check 校验径）。
 
-use crate::state::FrameMemory;
+use crate::state::Manager;
 
 /// VRAMStructWrite 消费（blob 含 hi==0 终止符——消费至终止）。
 /// 写径=write_io($2006/$2007)（RenderState 三分域）；增量由 SetPPUInc 面（$FF bit2）进 write_io 取。
-pub fn vram_struct_write(mem: &mut FrameMemory, blob: &[u8]) {
+pub fn vram_struct_write(mem: &mut Manager, blob: &[u8]) {
     // asm 入口：`ldx PPUSTATUS`（07:C30C）——地址锁存复位
     mem.render.reset_addr_latch();
     let mut i = 0usize;
@@ -60,7 +60,7 @@ pub fn vram_struct_write(mem: &mut FrameMemory, blob: &[u8]) {
 /// `ldx PPUSTATUS`（锁存复位）→增量 1→`HiPPUTable[nt]→$2006/#$00→$2006`→
 /// `ldx #$04/ldy #$00` 环 `sta PPUDATA`——**NT+属性 1024B**（4×256；:385「also clears
 /// the associated attribute table」自证）填 fill。nt=名表号 0..3（HiPPUTable $C19F=20/24/28/2C）。
-pub fn clear_name_table_ppu(mem: &mut FrameMemory, nt: u8, fill: u8) {
+pub fn clear_name_table_ppu(mem: &mut Manager, nt: u8, fill: u8) {
     mem.render.reset_addr_latch();
     // PPUCTRL_ZP/PPUCTRL 增量 1（`and #~PPUCTRL_INCR_DOWN`）
     let ff = mem.read_ram(crate::ram_map::PPUCTRL_ZP) & !0x04;
@@ -81,7 +81,7 @@ mod tests {
     /// 非 RLE 记录（hi/lo/len/data×len）→ 名表写+终止符停。
     #[test]
     fn plain_record_writes_nametable() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         // $2000 起 3 字节 AB CD EF + 终止
         let blob = [0x20, 0x00, 0x03, 0xAB, 0xCD, 0xEF, 0x00];
         vram_struct_write(&mut m, &blob);
@@ -94,7 +94,7 @@ mod tests {
     /// RLE 记录（ctrl|0x40）：单字节重复 count 次。
     #[test]
     fn rle_record_repeats_byte() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         let blob = [0x20, 0x00, 0x40 | 0x04, 0x77, 0x00]; // 0x77 ×4 @ $2000
         vram_struct_write(&mut m, &blob);
         assert_eq!(m.render.nametable[0..4], [0x77; 4]);
@@ -103,7 +103,7 @@ mod tests {
     /// 计数 quirk（低6位=0 ⇒ 256）+ 多记录链 + 增量 32 位（ctrl bit7）。
     #[test]
     fn count_zero_means_256_and_inc32_flag() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         // 记录1：RLE 0x55×256 @ $2100（ctrl=0x40 低6位 0）；记录2：inc32 非 RLE 2B @ $23C0；终止
         let mut blob = vec![0x21, 0x00, 0x40, 0x55];
         blob.extend([0x23, 0xC0, 0x80 | 0x02, 0x11, 0x22]);
@@ -118,7 +118,7 @@ mod tests {
     /// intro BG 真值回归（包内 blob 首记录=属性表 $23C0 32B——ROM `$82F4` 源）。
     #[test]
     fn intro_bg_blob_first_record_regression() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         let blob: &[u8] = game_data::assets::vram_intro();
         assert_eq!(*blob.last().unwrap(), 0x00, "含 VRAMStructEnd 终止");
         vram_struct_write(&mut m, blob);

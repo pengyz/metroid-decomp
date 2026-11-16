@@ -14,7 +14,7 @@
 //! （seq|bank:addr|调用深度|域|首执行|命中）boot 相 43 入口 f0 reset 链 11 节点对表——
 //! 嵌套桩序（C158/C1A3/C4B2/C4DE/C266/C114/C000）即该链的未端口段，逐个引爆=按队列 seq 排。
 
-use super::memory::FrameMemory;
+use super::memory::Manager;
 
 /// MMC1 寄存器面（memmap 纪律：非 RAM 地址只活在此；bank07:$FFB0/$C01A 序引用）。
 pub mod io {
@@ -45,7 +45,7 @@ const PTR_LO: u16 = 0x0000;
 const PTR_HI: u16 = 0x0001;
 
 /// bank07:$C01A 主初始化（执行序一步一单元；未端口步=unported! 引爆）。
-pub fn boot_pre_spin(mem: &mut FrameMemory) {
+pub fn boot_pre_spin(mem: &mut Manager) {
     // 【r25】CopyMap（InitBank0 件（prg7:1382）——WorldMap→WRAM $7000 1KB；游戏起点房
     // 查表源（GetRoomNum））。
     crate::frame::tick::copy_map(mem);
@@ -107,7 +107,7 @@ pub fn boot_pre_spin(mem: &mut FrameMemory) {
 /// `85 01` STA $01/$00=FF）→ PPU 面（`AD 02 20` 读 status/`$FF` 清 bit2/`STA $2000`/
 /// 表[$01-1]→$2006/`STA $2007` ×1280）→ C19E RTS（尾共段=次遍的出口）。
 /// 结束态（RAM 面）：$00=FF、$01=2|3、$FF&=!4、A=FF/X=0/Y=0。
-pub fn clear_name_tables(mem: &mut FrameMemory) {
+pub fn clear_name_tables(mem: &mut Manager) {
     // 首遍：C16D 直写语义（asm bank07:C16D-C174：`LDA #1/STA $01/LDA #$FF/STA $00`，A=FF）
     mem.regs.a = 0xFF;
     mem.write_ram(0x0001, 0x01);
@@ -139,7 +139,7 @@ pub fn clear_name_tables(mem: &mut FrameMemory) {
 /// $1D≠0 ⇒ 尾跳窗口 $988A（bank00——boot 态 MMC1 自证：FFB0 序 control=$FF（mode3）+
 /// C01A 序 PRG reg=0 ⇒ $8000=bank0）。$988A 双检（`C9 1D` CMP 立即数同族陷阱/$C8/$2D）：
 /// boot 态全短路→$98AD RTS 直回；**游戏态路径未端口**（$989B DEC 循环+后续）——fail-loud。
-pub fn erase_all_sprites(mem: &mut FrameMemory) {
+pub fn erase_all_sprites(mem: &mut Manager) {
     for y in 0..=0xFFu8 {
         mem.write_ram(0x0200 + y as u16, 0xF0);
     }
@@ -161,7 +161,7 @@ pub fn erase_all_sprites(mem: &mut FrameMemory) {
 /// `$25=($25&!1)|bit`（RAM 面）→ `STA $8000` ×5 串行（寄存器面）。
 /// boot 态：$25=0x0E（C06D 置）→ $00=0/$25=0x0E/A=0x0E；control=0x0E（mode3 ✓ 与
 /// $988A bank0 归属自证一致）。
-pub fn prep_vert_mirror(mem: &mut FrameMemory) {
+pub fn prep_vert_mirror(mem: &mut Manager) {
     set_ppu_mirror(mem, 0x47); // C4B4 `A9 47` 自载（C4D9 变体=$FA——同段）
 }
 
@@ -185,7 +185,7 @@ pub fn prep_vert_mirror(mem: &mut FrameMemory) {
 /// ⇒ 在按帧采集的任何采集点上**不可观测**（本模型帧原子，无帧内相位面）。
 /// 反例条件：一旦引入帧内相位建模、或在本函数前后加采集点/插桩，必须补该轮询，
 /// 否则会在 VBlank 中使能 NMI ⇒ 立刻多触发一次 NMI（画面多一帧）。
-pub fn nmi_on(mem: &mut FrameMemory) {
+pub fn nmi_on(mem: &mut Manager) {
     let f = mem.read_ram(crate::ram_map::PPUCTRL_ZP) | 0x80;
     mem.write_io(0x2000, f);
     mem.write_ram(crate::ram_map::PPUCTRL_ZP, f);
@@ -210,7 +210,7 @@ const INTRO_STARS_DATA: [u8; 0xA0] = [
 /// PrepPPUMirror（C4D9→`lda MirrorCntrl/jmp SetPPUMirror`）/WritePPUCtrl（C44D）三路
 /// 汇入——域形抽共享 fn 复刻共享段结构）：bit=(A>>3)&1（`lsr ×3/and #$01`）→
 /// $00=bit → $25=($25&!1)|bit（MMC1CTRL_ZP）→ MMC1CTRL 串行（寄存器面）。
-pub(crate) fn set_ppu_mirror(mem: &mut FrameMemory, a_in: u8) {
+pub(crate) fn set_ppu_mirror(mem: &mut Manager, a_in: u8) {
     let bit = (a_in >> 3) & 1;
     mem.write_ram(0x0000, bit);
     let v = (mem.read_ram(crate::ram_map::MMC1CTRL_ZP) & 0xFE) | bit;
@@ -228,7 +228,7 @@ pub(crate) fn set_ppu_mirror(mem: &mut FrameMemory, a_in: u8) {
 /// `BankInitTable: ; 07:C51F`（.word InitBank0..5/ExitSub×3）。
 /// ROM 抽查佐证：`C4DE: A4 24 F0 2D 20 E8 C4 4C 10 C5`。
 /// boot 态 $24=1（C0B4 置）→ 索引 0 → 表项 InitBank0（$C531）。其他表项未端口——fail-loud。
-pub fn check_bank_switch(mem: &mut FrameMemory) {
+pub fn check_bank_switch(mem: &mut Manager) {
     // GoBankInit 指针写（asm C510：`lda BankInitTable,y/sta Temp0A/sta $0B`——
     // B 案 $0A/$0B=$C531 对形；InitBank0=$C531）
     mem.write_ram(0x000A, 0x31);
@@ -279,7 +279,7 @@ pub fn check_bank_switch(mem: &mut FrameMemory) {
 ///
 /// 形状对齐 InitBank1（同三段：GameMode / ScreenNmiOff 帧等待 / GFX 重活）——后者已由
 /// move-drift R2/R3 定谳（ScreenNmiOff=窗3 等待 1/3；GFX 装载=bogged×2）。
-fn init_bank2(mem: &mut FrameMemory) {
+fn init_bank2(mem: &mut Manager) {
     mem.write_ram(crate::ram_map::GAME_MODE, 0);
     // ScreenNmiOff（$C45D 全形：影子清位 + 真 $2001/$2000 写）——旧形只置 `NMI_STATUS=1`
     // 建模等待形、**漏了寄存器面** ⇒ 换区窗口本应为黑屏却仍亮（elevprobe2 f1206/1207 实证）。
@@ -300,7 +300,7 @@ fn init_bank2(mem: &mut FrameMemory) {
 /// 【口径】`iter_bogged(2)` 沿 InitBank1/2 同族取值（两区已定谳：GFX 装载=重活×2）。
 /// Tourian 载 10 件而非 6/7 件，**该值未经对拍校准**（C 级假设；补 Tourian 进场案后
 /// 以 L4 归零即定谳，届时改注释与常数）。
-fn init_bank3(mem: &mut FrameMemory) {
+fn init_bank3(mem: &mut Manager) {
     mem.write_ram(crate::ram_map::GAME_MODE, 0);
     // ScreenNmiOff（$C45D 全形：影子清位 + 真 $2001/$2000 写）——旧形只置 `NMI_STATUS=1`
     // 建模等待形、**漏了寄存器面** ⇒ 换区窗口本应为黑屏却仍亮（elevprobe2 f1206/1207 实证）。
@@ -324,7 +324,7 @@ fn init_bank3(mem: &mut FrameMemory) {
 
 /// InitBank4（**asm 内容锚** `InitBank4: ; 07:C5B6`——prg7_engine.asm:1472-1478）：
 /// `lda #$00 / sta GameMode` → `jsr ScreenNmiOff` → `jsr InitKraidGFX`（8 件）→ `jmp NMIOn`。
-fn init_bank4(mem: &mut FrameMemory) {
+fn init_bank4(mem: &mut Manager) {
     mem.write_ram(crate::ram_map::GAME_MODE, 0);
     // ScreenNmiOff（$C45D 全形：影子清位 + 真 $2001/$2000 写）——旧形只置 `NMI_STATUS=1`
     // 建模等待形、**漏了寄存器面** ⇒ 换区窗口本应为黑屏却仍亮（elevprobe2 f1206/1207 实证）。
@@ -339,7 +339,7 @@ fn init_bank4(mem: &mut FrameMemory) {
 
 /// InitBank5（**asm 内容锚** `InitBank5: ; 07:C5C3`——prg7_engine.asm:1480-1486）：
 /// `lda #$00 / sta GameMode` → `jsr ScreenNmiOff` → `jsr InitRidleyGFX`（7 件）→ `jmp NMIOn`。
-fn init_bank5(mem: &mut FrameMemory) {
+fn init_bank5(mem: &mut Manager) {
     mem.write_ram(crate::ram_map::GAME_MODE, 0);
     // ScreenNmiOff（$C45D 全形：影子清位 + 真 $2001/$2000 写）——旧形只置 `NMI_STATUS=1`
     // 建模等待形、**漏了寄存器面** ⇒ 换区窗口本应为黑屏却仍亮（elevprobe2 f1206/1207 实证）。
@@ -357,7 +357,7 @@ fn init_bank5(mem: &mut FrameMemory) {
 /// `ldy #$00/jsr BankSwitch`/`jsr InitBrinstarGFX`/`jmp NMIOn`。
 /// 【move-drift R2/R3】ScreenNmiOff=帧等待（窗3 等待 1/3）；InitBrinstarGFX=重活
 /// bogged×2（C 级拆分——总 4=A 级三源互证）。
-fn init_bank1(mem: &mut FrameMemory) {
+fn init_bank1(mem: &mut Manager) {
     mem.write_ram(crate::ram_map::GAME_MODE, 0);
     // ScreenNmiOff（$C45D 全形：影子清位 + 真 $2001/$2000 写）——旧形只置 `NMI_STATUS=1`
     // 建模等待形、**漏了寄存器面** ⇒ 换区窗口本应为黑屏却仍亮（elevprobe2 f1206/1207 实证）。
@@ -395,7 +395,7 @@ fn init_bank1(mem: &mut FrameMemory) {
 /// IntroStarsData→IntroStarSprite，$A0 字节）→ `jsr InitTitleGFX ($C5D7)` → `jmp NMIOn
 /// ($C487)`（「Turn on VBlank interrupts」）。ROM 抽查：`C531: A0 00 84 31 C8 84 1D`。
 /// 链首桩=ScreenNmiOff（C45D）——逐段端口。
-fn init_bank0_title(mem: &mut FrameMemory) {
+fn init_bank0_title(mem: &mut Manager) {
     mem.write_ram(0x0031, 0); // GamePaused=0
     mem.write_ram(0x001D, 1); // GameMode=1（title）
     // ScreenNmiOff（asm :1165——pre 段；spin=跨帧 yield（§8.1））
@@ -404,7 +404,7 @@ fn init_bank0_title(mem: &mut FrameMemory) {
 
 /// spin 出口后段（c531 链续——NMI 尾写 1 唤醒后执行）：ScreenNmiOff post → CopyMap →
 /// InitTitleGFX 桩。
-pub fn boot_post_spin(mem: &mut FrameMemory) {
+pub fn boot_post_spin(mem: &mut Manager) {
     screen_nmi_off_post(mem);
     copy_map(mem);
     crate::render::gfx::init_title_gfx(mem); // InitTitleGFX（asm :1493 族——已端口）
@@ -418,7 +418,7 @@ pub fn boot_post_spin(mem: &mut FrameMemory) {
 /// → `rts`。拷贝面=WorldMap 1KB → WRAM $7000-$73FF（constants_ram.asm:1298 注证）。
 /// 终态（自证）：$00=0x3E/$01=0xA9（A5+4）/$02=0x00/$03=0x74（70+4）/X=0/A=末字节。
 /// ROM 抽查：WorldMap prg[0x253E..0x293E]（511/1024 非 FF）。
-pub fn copy_map(mem: &mut FrameMemory) {
+pub fn copy_map(mem: &mut Manager) {
     use crate::memmap::world_map::{WORLD_MAP_LEN, WORLD_MAP_RAM_BASE};
     let src = game_data::assets::world_map();
     for i in 0..WORLD_MAP_LEN {
@@ -444,7 +444,7 @@ pub fn copy_map(mem: &mut FrameMemory) {
 /// **NMI 面引爆**（task-13 对表中）：自旋出口的 $1A 可观测值=NMI 端写值
 /// （prg7_engine.asm:280 `sty NMIStatus`）——NMI 单元未端口前不可发明，fail-loud
 /// 爆在 `bank07:C0D9`（lead 提前招呼已发）。
-pub fn screen_nmi_off_pre(mem: &mut FrameMemory) {
+pub fn screen_nmi_off_pre(mem: &mut Manager) {
     use crate::ram_map::{NMI_STATUS, PPUMASK_ZP};
     let m = mem.read_ram(PPUMASK_ZP) & !(0x08u8 | 0x10);
     mem.write_ram(PPUMASK_ZP, m); // WriteAndWait `sta PPUMASK_ZP`
@@ -453,7 +453,7 @@ pub fn screen_nmi_off_pre(mem: &mut FrameMemory) {
 
 /// spin 出口后段（§8.1 跨帧定案：NMI 尾写 1 后唤醒）：PPUCTRL_ZP &= !0x80；
 /// STA PPUCTRL_ZP/PPUCTRL（NMI 关）。
-pub fn screen_nmi_off_post(mem: &mut FrameMemory) {
+pub fn screen_nmi_off_post(mem: &mut Manager) {
     use crate::ram_map::PPUCTRL_ZP;
     let c = mem.read_ram(PPUCTRL_ZP) & !0x80;
     mem.write_ram(PPUCTRL_ZP, c);
@@ -461,7 +461,7 @@ pub fn screen_nmi_off_post(mem: &mut FrameMemory) {
 }
 
 /// MMC1 串行写（5 次 STA，值 LSR 递移——bank07:C01C/C02B/C4FA 形态；非 RAM 面）。
-pub(crate) fn mmc1_serial_write(mem: &mut FrameMemory, _reg: u16) {
+pub(crate) fn mmc1_serial_write(mem: &mut Manager, _reg: u16) {
     let mut v = mem.regs.a;
     for _ in 0..5 {
         let _ = v; // STA reg（MMC1 移位面——RAM watch 不可见）
@@ -475,7 +475,7 @@ pub(crate) fn mmc1_serial_write(mem: &mut FrameMemory, _reg: u16) {
 /// 【更正 2026-10-15】前版误读「值=Y 型填充」（BNE 目标错位一位）——decomp 写点级捕获
 /// （$07A0 无 0xA0 写，真机写值域 {0,6,12}）反推定谳（P28-F1 升级案）；帧 1 $0300-$07FF
 /// 全零=本环直接态（前注「后续覆写后态」解释一并作废）。
-fn clear_pages(mem: &mut FrameMemory, mut page: u8, end_excl: u8) {
+fn clear_pages(mem: &mut Manager, mut page: u8, end_excl: u8) {
     loop {
         let base = (page as u16) << 8;
         for y in 0..=0xFFu8 {
@@ -490,7 +490,7 @@ fn clear_pages(mem: &mut FrameMemory, mut page: u8, end_excl: u8) {
 
 /// WRAM 清零环（bank07:C057-C06B）：pages hi 降至 lo（CPX #$60/BCS 含等值页）——
 /// **零填充**（同 `tya ;A = 0` 面；前版 Y 型误读同源更正）。
-fn clear_pages_wram(mem: &mut FrameMemory, mut page: u8, lo: u8) {
+fn clear_pages_wram(mem: &mut Manager, mut page: u8, lo: u8) {
     loop {
         let base = (page as u16) << 8;
         for y in 0..=0xFFu8 {
@@ -519,7 +519,7 @@ mod tests {
     /// GameMode←0；BankInitTable 的 idx 6/7/8 是 asm 空槽（`ExitSub`）⇒ 不得 panic。
     #[test]
     fn init_bank3_copies_metroid_data_and_empty_slots_are_rts() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(crate::ram_map::GAME_MODE, 1);
         for a in 0x77F0..=0x77FDu16 {
             m.write_ram(a, 0xAA); // 预污，验证真的被覆盖
@@ -546,7 +546,7 @@ mod tests {
     /// 清零环语义（bank07:C03F-C055）：pages $07..$02 **零填充**；ZP/栈页不触。
     #[test]
     fn clear_ram_lo_zero_fills_pages() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(0x0355, 0xAA); // 预污
         clear_pages(&mut m, 7, 2);
         assert_eq!(m.read_ram(0x0355), 0x00); // 零填充（更正案）
@@ -558,12 +558,12 @@ mod tests {
     /// 首遍经 sub_c16d 反哺（$00=FF/A=FF）——组件库复用溯源。
     #[test]
     fn c158_dispatch_two_states_and_c16d_reuse() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         clear_name_tables(&mut m); // $1D=0 → $01=2
         assert_eq!(m.read_ram(0x0001), 2);
         assert_eq!(m.read_ram(0x0000), 0xFF); // sub_c16d 反哺 + 尾共段
         assert_eq!(m.regs.a, 0xFF); // C16D 契约 A=FF
-        let mut m2 = FrameMemory::default();
+        let mut m2 = Manager::default();
         m2.write_ram(0x001D, 5);
         m2.write_ram(0x001F, 0x1D);
         clear_name_tables(&mut m2); // $1D≠0 ∧ $1F==$1D（立即数）→ $01=3
@@ -573,7 +573,7 @@ mod tests {
     /// C1A3 OAM 影子清屏（帧 1 实测面）+ boot 态双检短路。
     #[test]
     fn c1a3_fills_oam_shadow_and_boot_short_circuits() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(0x001D, 1); // boot 态（C082 置位）
         erase_all_sprites(&mut m);
         assert_eq!(m.read_ram(0x0200), 0xF0);
@@ -585,7 +585,7 @@ mod tests {
     /// C1A3 游戏态路径 fail-loud（$1F<$1D ∧ $C8≠0 ∧ $2D 偶——$989B DEC 循环未端口）。
     #[test]
     fn c1a3_ingame_path_detonates() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(0x001D, 1);
         m.write_ram(0x00C8, 1); // $C8≠0
         let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| erase_all_sprites(&mut m)));
@@ -596,7 +596,7 @@ mod tests {
     /// NMIOn：$FF bit7 置+nmi_enabled 复启（开关配对面）。
     #[test]
     fn nmi_on_reenables_nmi() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(crate::ram_map::PPUCTRL_ZP, 0x10);
         nmi_on(&mut m);
         assert_eq!(m.read_ram(crate::ram_map::PPUCTRL_ZP), 0x90);
@@ -606,7 +606,7 @@ mod tests {
     /// C4B2 MMC1 control 状态面（boot 态 $25=0x0E→$00=0/$25=0x0E/A=0x0E）。
     #[test]
     fn c4b2_writes_control_state() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(0x0025, 0x0E);
         prep_vert_mirror(&mut m);
         assert_eq!(m.read_ram(0x0000), 0x00); // ($47>>3)&1=0
@@ -617,7 +617,7 @@ mod tests {
     /// C4DE 早出（$24==0：A 不动）与状态面（$24=0/$23=idx/$00=idx/$28 组合）。
     #[test]
     fn c4de_early_exit_and_state_update() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.regs.a = 0x77;
         check_bank_switch(&mut m); // $24==0 → 早出
         assert_eq!(m.regs.a, 0x77);
@@ -632,7 +632,7 @@ mod tests {
     /// 等待→InitBrinstarGFX 重活 bogged×2）——窗3 门序 [W,B,B,W,B,B,W] 前段。
     #[test]
     fn c4de_initbank1_declares_frame_gates() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(0x0024, 2); // BankSwitchPending=2→InitBank1（BankTable[0]=$01+1）
         check_bank_switch(&mut m);
         assert_eq!(m.iter_gates, vec![1, 0, 0], "ScreenNmiOff(W)+InitBrinstarGFX bogged(2)");
@@ -643,7 +643,7 @@ mod tests {
     #[test]
     fn screen_nmi_off_pre_post_semantics() {
         use crate::ram_map::{NMI_STATUS, PPUMASK_ZP, PPUCTRL_ZP};
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(PPUMASK_ZP, 0xFF);
         m.write_ram(PPUCTRL_ZP, 0x90);
         screen_nmi_off_pre(&mut m);
@@ -659,7 +659,7 @@ mod tests {
     fn copy_map_fills_world_map_ram_and_ptr_end_state() {
         use crate::memmap::world_map::WORLD_MAP_RAM_BASE;
         let src = game_data::assets::world_map();
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         copy_map(&mut m);
         assert_eq!(m.read_wram(WORLD_MAP_RAM_BASE), src[0]);
         assert_eq!(m.read_wram(WORLD_MAP_RAM_BASE + 0x3FF), src[0x3FF]);
@@ -676,7 +676,7 @@ mod tests {
     fn clear_loop_writes_within_real_capture_domain() {
         use crate::ram_map::VRAM_STRUCT_INDEX;
         let real_boot_domain = [0u8, 6, 12]; // decomp 写点级实录（boot 300f）
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(VRAM_STRUCT_INDEX, 0xEE); // 预污哨兵
         clear_pages(&mut m, 7, 2);
         let v = m.read_ram(VRAM_STRUCT_INDEX);
@@ -688,7 +688,7 @@ mod tests {
     #[test]
     fn clear_loop_never_pattern_fills_vram_index() {
         use crate::ram_map::VRAM_STRUCT_INDEX;
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         clear_pages(&mut m, 7, 2);
         assert_eq!(m.read_ram(VRAM_STRUCT_INDEX), 0x00); // 0xA0 永不出现在此址
     }
@@ -696,7 +696,7 @@ mod tests {
     /// WRAM 环（bank07:C057-C06B）：$6000-$7FFF **零填充**（更正案）。
     #[test]
     fn clear_wram_zero_fills() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_wram(0x72AB, 0xAA);
         clear_pages_wram(&mut m, 0x7F, 0x60);
         assert_eq!(m.read_wram(0x72AB), 0x00);
@@ -711,7 +711,7 @@ mod r25_gfx_probe {
     /// load_gfx(5=CREBG2) 写面锚（PPU $1F00（tile $FF）←数据体 offset 0x700）。
     #[test]
     fn crebg2_covers_1f00() {
-        let mut m = crate::frame::FrameMemory::default();
+        let mut m = crate::frame::Manager::default();
         crate::render::gfx::load_gfx(&mut m, 5);
         if !game_data::pack::is_ready() {
             eprintln!("SKIP（显式）：未加载资产包——先跑 pack-tool extract");
@@ -730,7 +730,7 @@ mod r25_spritegfx_probe {
     /// SamusGFX（entry 0→PPU $0000）写面锚：tile $09（Samus sprite 件）落值。
     #[test]
     fn samus_gfx_tile09() {
-        let mut m = crate::frame::FrameMemory::default();
+        let mut m = crate::frame::Manager::default();
         crate::render::gfx::load_gfx(&mut m, 0);
         if !game_data::pack::is_ready() {
             eprintln!("SKIP（显式）：未加载资产包——先跑 pack-tool extract");

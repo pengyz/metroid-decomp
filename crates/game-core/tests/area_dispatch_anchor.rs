@@ -14,7 +14,7 @@
 //! MetatileDefs $AEF0(260B)；Norfair $A21B(46)/$A277(49)/$AEEC(248B)。
 
 use game_core::frame::tick::copy_area_pointers;
-use game_core::frame::FrameMemory;
+use game_core::frame::Manager;
 use game_core::ram_map::IN_AREA;
 
 /// 首指针 lo/hi（ROM 五区 RoomPtrTable 域首项——bank*0x4000+0x1560 换算）。
@@ -33,7 +33,7 @@ fn copy_area_pointers_dispatches_five_area_banks() {
         (0x13u8, AREA3_PTR),
         (0x14u8, AREA4_PTR),
     ] {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(IN_AREA, area);
         copy_area_pointers(&mut m);
         let lo = m.read_ram(0x003B);
@@ -50,7 +50,7 @@ fn copy_area_pointers_dispatches_five_area_banks() {
 #[should_panic(expected = "unported @ bank07:959A-area")]
 fn copy_area_pointers_unbaked_area_fails_loud() {
     // 未烘焙区（InArea&$0F=5+）——D7 fail-loud，确定性爆在 bank:addr。
-    let mut m = FrameMemory::default();
+    let mut m = Manager::default();
     m.write_ram(IN_AREA, 0x05);
     copy_area_pointers(&mut m);
 }

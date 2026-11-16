@@ -12,7 +12,7 @@
 //! 块表 $B289（5B：TablePtr2+DefaultRoutine2+ChannelType）；表区 $B2BB 起
 //! （8 词×10——前 4B 头/表目 y=4 起（port2 注②））。
 
-use crate::frame::FrameMemory;
+use crate::frame::Manager;
 use crate::sound::{self, SoundDataBlock};
 
 /// `SetSFXNoiseInitFlag: ; 07:CBA0` 的入口形：`SFXNoiseInitFlags($0680) |= bit`
@@ -22,18 +22,18 @@ use crate::sound::{self, SoundDataBlock};
 ///
 /// **单一实现面**：此前 `title_bridge::initialize_game` 内联过一份 SilenceMusic，
 /// 本件（抢救件#2）需要 PauseMusic，故收敛到此函数供两处共用（防第二处展开）。
-pub fn set_sfx_noise_init(mem: &mut FrameMemory, bit: u8) {
+pub fn set_sfx_noise_init(mem: &mut Manager, bit: u8) {
     let n = mem.read_ram(crate::ram_map::SFX_NOISE_INIT) | bit;
     mem.write_ram(crate::ram_map::SFX_NOISE_INIT, n);
 }
 
 /// `SilenceMusic: ; 07:CB8E` = `set_sfx_noise_init(mem, sfxNoise_SilenceMusic)`。
-pub fn silence_music(mem: &mut FrameMemory) {
+pub fn silence_music(mem: &mut Manager) {
     set_sfx_noise_init(mem, 0x01);
 }
 
 /// `PauseMusic: ; 07:CB92` = `set_sfx_noise_init(mem, sfxNoise_PauseMusic)`。
-pub fn pause_music(mem: &mut FrameMemory) {
+pub fn pause_music(mem: &mut Manager) {
     set_sfx_noise_init(mem, 0x02);
 }
 
@@ -84,7 +84,7 @@ fn table_slice(table_ptr: u16) -> &'static [u8] {
 ///
 /// 链走分派一步（B31B 行清偿核心）：装载→get_sound_routine→
 /// 终端/链续/handler 记账。
-pub fn sound_dispatch_chain(mem: &mut FrameMemory, flag_addr: u16, block_win: u16, depth: u8) {
+pub fn sound_dispatch_chain(mem: &mut Manager, flag_addr: u16, block_win: u16, depth: u8) {
     if depth > 12 {
         crate::unported!("bank07:B3xx-chain"); // 链深护栏（环走防御）
     }
@@ -249,7 +249,7 @@ pub fn sound_dispatch_chain(mem: &mut FrameMemory, flag_addr: u16, block_win: u1
 }
 
 /// BAA5 读态 glue（RAM→MusicFrameState——五块+全局面；r20 W3-3 接线）。
-fn read_music_frame_state(mem: &crate::frame::FrameMemory) -> sound::music::MusicFrameState {
+fn read_music_frame_state(mem: &crate::frame::Manager) -> sound::music::MusicFrameState {
     let r = |a: u16| mem.read_ram(a);
     let mut st = sound::music::MusicFrameState::default();
     for ch in 0..4u16 {
@@ -282,7 +282,7 @@ fn read_music_frame_state(mem: &crate::frame::FrameMemory) -> sound::music::Musi
 
 /// ContinueMusic（BC4B）装配面——$068D≠0 ⇒ BAA5 全径（W3-3/4）；SongEnd⇒EndOrLoopMusic
 /// 最小面（$062C 无重复⇒$068D←0；有重复⇒unported fail-loud——曲重启面随件）。
-pub(crate) fn continue_music_face(mem: &mut crate::frame::FrameMemory) {
+pub(crate) fn continue_music_face(mem: &mut crate::frame::Manager) {
     if mem.read_ram(0x068D) == 0 {
         return; // beq 出（无音路）
     }
@@ -328,7 +328,7 @@ mod w3_wiring_tests {
     /// 流取径=**基址反查**（Intro 真基址 B0B9/B000/B076/B115——r20）。
     #[test]
     fn continue_music_gate_and_assembly() {
-        let mut m = crate::frame::FrameMemory::default();
+        let mut m = crate::frame::Manager::default();
         continue_music_face(&mut m);
         assert_eq!(m.read_ram(0x068D), 0, "无音路零写");
         m.write_ram(0x068D, 0x10);
@@ -347,7 +347,7 @@ mod w3_wiring_tests {
     /// 接线-2：$EA 有序回写（末值=事件流末写）。
     #[test]
     fn continue_music_ea_final_value() {
-        let mut m = crate::frame::FrameMemory::default();
+        let mut m = crate::frame::Manager::default();
         m.write_ram(0x068D, 0x10);
         for (ch, (lo, hi)) in [(0xB9u8, 0xB0u8), (0x00, 0xB0), (0x76, 0xB0), (0x15, 0xB1)]
             .into_iter().enumerate()

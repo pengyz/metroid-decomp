@@ -230,10 +230,10 @@ mod tests_ai_table {
     fn dispatch_uses_area_specific_table() {
         use crate::enemy::prep::{EN_F_DATA05, ENS_F_STATUS, ENS_F_TYPE};
         use crate::enemy::tables::{en_addr, ens_addr};
-        use crate::frame::FrameMemory;
+        use crate::frame::Manager;
 
         let run = |area: u8| {
-            let mut m = FrameMemory::default();
+            let mut m = Manager::default();
             game_data::pack::init_from_env().ok();
             let x = 0x20u8;
             m.write_ram(crate::ram_map::IN_AREA, area);

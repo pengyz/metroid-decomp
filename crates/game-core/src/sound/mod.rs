@@ -254,7 +254,7 @@ fn sfx4(addr: u16) -> &'static [u8; 4] {
 /// `LoadSFXData@SQ1 ; $B368`（**asm 内容锚**）：`APURegisterPtr←$4000`、
 /// `SFXDataPtr←$B2:Y`，随后 4 字节**间接**写 `$4000..$4003`。
 /// 调用形（asm `$B3AF`）：`ldy #<SFXData@Xxx` 只传低字节——高字节恒 `>SFXData($B2)`。
-pub(crate) fn load_sfx_data_sq1(mem: &mut crate::frame::FrameMemory, low: u8) {
+pub(crate) fn load_sfx_data_sq1(mem: &mut crate::frame::Manager, low: u8) {
     mem.write_ram(0x00E0, 0x00); // APURegisterPtr ← $4000（<SQ1_VOL / >SQ1_VOL）
     mem.write_ram(0x00E1, 0x40);
     mem.write_ram(0x00E2, low); // SFXDataPtr ← $B2:low

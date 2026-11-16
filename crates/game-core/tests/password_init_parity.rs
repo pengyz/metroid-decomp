@@ -9,7 +9,7 @@ mod common;
 use common::password_init::VECTORS;
 
 use game_core::title::bridge::main_title_routine;
-use game_core::frame::FrameMemory;
+use game_core::frame::Manager;
 use game_core::ram_map::{
     BANK_SWITCH_PENDING, IN_AREA, KRAID_STATUE_STATUS, MAIN_ROUTINE, MAX_MISSILES,
     MISSILE_COUNT, NAR_PASSWORD, NUMBER_OF_UNIQUE_ITEMS, PASSWORD_BYTE, PASSWORD_CHAR,
@@ -18,8 +18,8 @@ use game_core::ram_map::{
 use game_core::ram_map::{ENERGY_TANK_COUNT, JUST_IN_BAILEY, SAMUS_GEAR, JOY1_CHANGE};
 
 /// 单组对拍：chars 写入 PasswordChar 面 → 0x1A+START 提交 → 出生态逐字段全等。
-fn run_one(chars: &[u8; 24]) -> FrameMemory {
-    let mut m = FrameMemory::default();
+fn run_one(chars: &[u8; 24]) -> Manager {
+    let mut m = Manager::default();
     for (i, &c) in chars.iter().enumerate() {
         m.write_wram(PASSWORD_CHAR + i as u16, c);
     }

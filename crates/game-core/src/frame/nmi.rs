@@ -13,12 +13,12 @@
 //! 契约断言三件套（lead 令：随单测固化）：$1A 恒 1（本模块 nmi_tail 测）/ f=1 帧界锚
 //! （engine 测）/ 栈页三字节排除（**比较器侧**——tools/ 面非本模块辖，见 §8.1②）。
 
-use super::memory::FrameMemory;
+use super::memory::Manager;
 use super::io;
 use crate::ram_map::{GAME_MODE, NMI_STATUS, PALETTE_PENDING, PPU_DATA_PENDING, TITLE_ROUTINE, VRAM_STRUCT_INDEX};
 
 /// NMI 处理器（60Hz VBlank 调用）。
-pub fn nmi_handler(mem: &mut FrameMemory) {
+pub fn nmi_handler(mem: &mut Manager) {
     // ①头：OAM 面（寄存器面 write_io）
     mem.write_io(io::OAMADDR, 0x00);
     mem.write_io(io::OAMDMA, 0x02); // $200-$2FF → OAM
@@ -36,7 +36,7 @@ pub fn nmi_handler(mem: &mut FrameMemory) {
 /// e.WritePPUCtrl（$FF/$FE 影子）→f.WriteScroll（**滚动写在 VRAM 冲刷后**——关键时序；
 /// `lda PPUSTATUS` 翻转复位先于 $2005 双写（spec §3.5））→g.ReadJoyPads→声/龄面。
 /// ScrollDir（Temp02/03=$02/$03——$00=纵房/$02=横房）=scratch 面（非持久影子）。
-fn nmi_body(mem: &mut FrameMemory) {
+fn nmi_body(mem: &mut Manager) {
     // 超帧门（E4 表：NMIStatus==0 才做 b-g 相——超时帧跳过 vblank 后半=掉帧语义）
     if mem.read_ram(NMI_STATUS) == 0 {
         // GameMode 分派（GameMode=$1D（N-00xx asm 名）：≠0 → NMIScreenWrite）
@@ -62,7 +62,7 @@ fn nmi_body(mem: &mut FrameMemory) {
 /// **boot/title 态（TitleRoutine<$1D，Startup 置 0）⇒ 即时 RTS（零 RAM 写）**；
 /// ≥$1D=结束画面路径（LoadCredits (9C45)/EndMsgWrite/HideShowEndMsg 族——未端口 fail-loud）。
 /// 出口 A=TitleRoutine（帧界可观测面）。
-pub fn nmi_screen_write(mem: &mut FrameMemory) {
+pub fn nmi_screen_write(mem: &mut Manager) {
     let t = mem.read_ram(TITLE_ROUTINE);
     mem.regs.a = t;
     if t < 0x1D {
@@ -80,7 +80,7 @@ pub fn nmi_screen_write(mem: &mut FrameMemory) {
 /// ③GameMode≠0 ∧ TitleRoutine<`_id_StartContinueScreen15`(=0x15；表第 22 位自数证)
 ///   →`jmp StarPaletteSwitch`（00:8AC7——intro 星星闪烁轮换，**boot 路径**）；
 /// ④否则 RTS。
-pub fn check_palette_write(mem: &mut FrameMemory) {
+pub fn check_palette_write(mem: &mut Manager) {
     if mem.read_ram(GAME_MODE) != 0 && mem.read_ram(TITLE_ROUTINE) >= 0x1D {
         crate::unported!("bank00:9F54"); // EndGamePaletteWrite（结束路径）
     }
@@ -103,7 +103,7 @@ pub fn check_palette_write(mem: &mut FrameMemory) {
 /// 未跑）⇒ 静默 RTS**；≠0 ⇒ ptr=$07A1（Temp00_VRAMStructPtr）→ `jsr VRAMStructWrite`
 /// （缓冲走带——PPU 面/渲染面）→ 清三态（VRAMStructBufferIndex/$07A1/PPUDataPending=0）。
 /// 消费端=StarPaletteSwitch 生产端的对子（$07A0 队列门复位面）。
-pub fn check_vram_struct_write(mem: &mut FrameMemory) {
+pub fn check_vram_struct_write(mem: &mut Manager) {
     if mem.read_ram(PPU_DATA_PENDING) == 0 {
         return; // boot 态静默（@RTS）
     }
@@ -132,7 +132,7 @@ pub fn check_vram_struct_write(mem: &mut FrameMemory) {
 /// **动 $FF**（PPUCTRL_ZP——RAM watch 面）：ctrl bit7=1→增量 32 置位 INCR_DOWN、
 /// bit7=0→清——段级 $FF 副作用=可观测面。
 /// PPU 面（PPUADDR/PPUDATA）=write_io 族（渲染面暂不建模——挂 task-13）。
-pub fn vram_struct_write(mem: &mut FrameMemory) {
+pub fn vram_struct_write(mem: &mut Manager) {
     let base = 0x07A1u16;
     let mut off = 0usize; // 走带偏移（AddYToPtr00 的域形）
     loop {
@@ -181,7 +181,7 @@ pub fn vram_struct_write(mem: &mut FrameMemory) {
 /// `lda #$00` → SFXNoiseInitFlags($0680)/SFXSQ1InitFlags($0681)/SFXSQ2InitFlags($0682)/
 /// SFXTriInitFlags($0683)/SFXMultiInitFlags($0684)/MusicInitFlags($0685) 六旗清 → rts。
 /// 两条入口共用（正常径 fallthrough + 静音径 `beq ClearInitFlags`）。
-fn clear_init_flags(mem: &mut FrameMemory) {
+fn clear_init_flags(mem: &mut Manager) {
     for addr in [
         crate::ram_map::SFX_NOISE_INIT,
         crate::ram_map::SFX_SQ1_INIT,
@@ -209,7 +209,7 @@ fn clear_init_flags(mem: &mut FrameMemory) {
 ///     @RTS: rts
 /// PauseSFX($B38F): inc SFXPaused / jsr ClearSounds / sta PauseSFXStatus   ; A=$00（ClearSounds 尾）
 /// ```
-fn sound_engine_game_is_paused(mem: &mut FrameMemory) {
+fn sound_engine_game_is_paused(mem: &mut Manager) {
     use crate::ram_map::{PAUSE_SFX_STATUS, SFX_PAUSED};
     if mem.read_ram(SFX_PAUSED) != 0 {
         let st = mem.read_ram(PAUSE_SFX_STATUS);
@@ -232,7 +232,7 @@ fn sound_engine_game_is_paused(mem: &mut FrameMemory) {
     mem.write_ram(PAUSE_SFX_STATUS, 0); // `sta PauseSFXStatus`（A=0）
 }
 
-pub fn sound_engine(mem: &mut FrameMemory) {
+pub fn sound_engine(mem: &mut Manager) {
     mem.write_io(0x4017, 0x40 | 0x80); // APU_5STEP|IRQDISABLE（JOY2 口——APU 帧配置）
     // 静音径（**asm 内容锚** sound_engine.asm:415 `SoundEngine_SilenceMusic: ; $B3EB`）：
     //   `jsr InitializeSoundAddresses / beq ClearInitFlags ;Branch always.`
@@ -288,7 +288,7 @@ pub fn sound_engine(mem: &mut FrameMemory) {
 /// ——输入面域形=直接按钮字节（序列化等价自证）②变更路径（Joy1Change/$12 面）**boot
 /// 场景不触发**（无输入 0^0=0）——fail-loud 桩（输入场景=task-11 samus 移动 demo 的
 /// 引爆面）③fallthrough 双 pad（pad2 复用 ReadOnePad 无 jsr——栈面一层）。
-pub fn read_joy_pads(mem: &mut FrameMemory) {
+pub fn read_joy_pads(mem: &mut Manager) {
     for (idx, input) in [(0u16, mem.joy1), (1u16, mem.joy2)] {
         // 串行累装域形：输入字节直配（strobe/shift 等价——8 次 rol 累装按钮字节）
         let new = input;
@@ -336,7 +336,7 @@ pub fn read_joy_pads(mem: &mut FrameMemory) {
 /// ——boot 的 prep_vert_mirror 同段复用，域形=共享 fn 复刻共享结构）②寄存器面写走 write_io
 /// （$2000/$2001——NMI 使能位面同步 nmi_enabled 权威）③ExitSub（C45C）=共享 RTS 尾
 /// （asm 「Exit subroutines」）。
-pub fn write_ppu_ctrl(mem: &mut FrameMemory) {
+pub fn write_ppu_ctrl(mem: &mut Manager) {
     let c = mem.read_ram(crate::ram_map::PPUCTRL_ZP);
     mem.write_io(0x2000, c);
     let m = mem.read_ram(crate::ram_map::PPUMASK_ZP);
@@ -354,7 +354,7 @@ pub fn write_ppu_ctrl(mem: &mut FrameMemory) {
 /// 双路汇聚（走带尾跳 `jmp WriteScroll` + NMI 工作体直调）——**同一 RTS 语义**：
 /// 尾跳路的 RTS 回 CheckVRAMStructBufferWrite 清理段（栈深一层，走带注②面），直调路回
 /// NMI 体——域形折叠为普通返回，调用方各自续。
-pub fn write_scroll(mem: &mut FrameMemory) {
+pub fn write_scroll(mem: &mut Manager) {
     let x = mem.read_ram(crate::ram_map::SCROLL_X);
     let y = mem.read_ram(crate::ram_map::SCROLL_Y);
     mem.write_io(0x2005, x); // PPUSCROLL
@@ -369,7 +369,7 @@ pub fn write_scroll(mem: &mut FrameMemory) {
 ///
 /// **结构互核注**：三重短路门（GameMode/MainRoutine/FrameCount 节拍）——标题态全不触
 /// SamusAge（帧界可观测面零写）；游戏路径=**Samus 年龄域件**（task-11 面）fail-loud。
-pub fn update_age(mem: &mut FrameMemory) {
+pub fn update_age(mem: &mut Manager) {
     if mem.read_ram(crate::ram_map::GAME_MODE) != 0 {
         return; // 标题/密码态即时 RTS
     }
@@ -401,7 +401,7 @@ pub fn update_age(mem: &mut FrameMemory) {
 
 /// 尾段（**恒量 1 写**——:279-280 `ldy #$01 / sty NMIStatus`）。
 /// 契约断言面：spin 出口采样点 $1A==1（§8.1②采样点对齐）。
-pub fn nmi_tail(mem: &mut FrameMemory) {
+pub fn nmi_tail(mem: &mut Manager) {
     mem.write_ram(NMI_STATUS, 0x01);
 }
 
@@ -411,7 +411,7 @@ mod tests {
     #[test]
     fn c3_intro_route_repro() {
         use crate::ram_map::{FRAME_COUNT, GAME_MODE, INTRO_STAR_OFFSET, PALETTE_PENDING, TITLE_ROUTINE};
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(GAME_MODE, 1);
         m.write_ram(TITLE_ROUTINE, 0);
         m.write_ram(FRAME_COUNT, 0);
@@ -420,7 +420,7 @@ mod tests {
         println!("[repro-clean] $C3={} $1C={} $2D={}", m.read_ram(INTRO_STAR_OFFSET), m.read_ram(PALETTE_PENDING), m.read_ram(FRAME_COUNT));
         assert_eq!(m.read_ram(INTRO_STAR_OFFSET), 1, "intro 路应 inc $C3");
         // 全 boot 序列态复现
-        let mut m2 = FrameMemory::default();
+        let mut m2 = Manager::default();
         crate::frame::boot::boot_pre_spin(&mut m2);
         crate::frame::boot::boot_post_spin(&mut m2);
         println!("[boot-state] $C3={} $1C={} $2D={} $1D={} $1F={} $07A0={}",
@@ -434,7 +434,7 @@ mod tests {
     #[test]
     fn joy_retrig_delay_decrement() {
         use crate::ram_map::{JOY1_STATUS, JOY2_STATUS};
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         // 两次 read_joy_pads（无输入同键）→ $18: 0→FF→FE / $19 同
         read_joy_pads(&mut m);
         read_joy_pads(&mut m);
@@ -447,7 +447,7 @@ mod tests {
     /// 【S6-5】寄存器影子契约：$FF/$FE 影子驱动 $2000/$2001+滚动双写面。
     #[test]
     fn register_shadow_contract() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(crate::ram_map::PPUCTRL_ZP, 0x90);
         m.write_ram(crate::ram_map::PPUMASK_ZP, 0x1E);
         write_ppu_ctrl(&mut m);
@@ -463,7 +463,7 @@ mod tests {
     fn vram_walk_rle_step_mirror() {
         // 构造 RLE 段：[20][00][45][AA]（hi=20/lo=00/ctrl=0x45（RLE+5）/val=AA）
         // 段长=4（3 hdr+1 val）→ 下段头应在 +4
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         let seg = [0x20u8, 0x00, 0x45, 0xAA, 0x20, 0x10, 0x03, 0x01, 0x02, 0x03, 0x00];
         for (i, b) in seg.iter().enumerate() {
             m.write_ram(0x07A1 + i as u16, *b);
@@ -486,7 +486,7 @@ mod tests {
     /// SpriteRAM 解析+8/scanline quirk（D4 保真面）。
     #[test]
     fn sprite_state_and_scanline_limit() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         for i in 0..10u16 {
             m.write_ram(0x0200 + i * 4, 50);
             m.write_ram(0x0200 + i * 4 + 1, i as u8);
@@ -511,7 +511,7 @@ mod tests {
     /// 契约断言①：NMI 尾恒量 1（:279 `ldy #$01`——非 Y 依赖，会签决定性证据）。
     #[test]
     fn nmi_tail_writes_constant_one() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(NMI_STATUS, 0);
         nmi_tail(&mut m);
         assert_eq!(m.read_ram(NMI_STATUS), 1);
@@ -520,7 +520,7 @@ mod tests {
     /// NMIScreenWrite boot 态短路（TitleRoutine<$1D：零 RAM 写+A=TitleRoutine）。
     #[test]
     fn nmi_screen_write_boot_path_short_circuits() {
-        let mut m = FrameMemory::default(); // TitleRoutine=0
+        let mut m = Manager::default(); // TitleRoutine=0
         nmi_screen_write(&mut m);
         assert_eq!(m.regs.a, 0);
         assert_eq!(m.ram, [0u8; 0x800]); // 零 RAM 写
@@ -529,7 +529,7 @@ mod tests {
     /// NMIScreenWrite 结束画面路径 fail-loud（TitleRoutine≥$1D）。
     #[test]
     fn nmi_screen_write_endgame_path_detonates() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(TITLE_ROUTINE, 0x1D);
         let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| nmi_screen_write(&mut m)));
         let msg = panic_message(&r.unwrap_err());
@@ -542,7 +542,7 @@ mod tests {
     /// 串行会清队列门后误自增 IntroStarOffset（$C3 恒差 1 根因）。
     #[test]
     fn palette_pending_excludes_star_switch() {
-        let mut m = crate::frame::FrameMemory::default();
+        let mut m = crate::frame::Manager::default();
         m.write_ram(GAME_MODE, 1);
         m.write_ram(crate::ram_map::TITLE_ROUTINE, 0x03); // <0x15（③条件本应命中）
         m.write_ram(crate::ram_map::FRAME_COUNT, 0); // 16 帧门开
@@ -556,24 +556,24 @@ mod tests {
 
     fn check_palette_write_routes_three_paths() {
         use crate::ram_map::{GAME_MODE, PALETTE_PENDING, TITLE_ROUTINE};
-        let boom = |m: &mut FrameMemory| {
+        let boom = |m: &mut Manager| {
             panic_message(&std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
                 check_palette_write(m)
             })).unwrap_err())
         };
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(GAME_MODE, 1); // boot/title 态 → StarPaletteSwitch（已端口=全通）
         check_palette_write(&mut m);
         assert_eq!(m.read_ram(crate::ram_map::PPU_DATA_PENDING), 1); // 生产端效应断言
-        let mut m2 = FrameMemory::default();
+        let mut m2 = Manager::default();
         m2.write_ram(GAME_MODE, 1);
         m2.write_ram(TITLE_ROUTINE, 0x1D); // ending
         assert!(boom(&mut m2).contains("unported @ bank00:9F54"));
-        let mut m3 = FrameMemory::default();
+        let mut m3 = Manager::default();
         m3.write_ram(PALETTE_PENDING, 2);
         check_palette_write(&mut m3); // pending 路径全通（S6-3 已端口）
         assert_eq!(m3.read_ram(PALETTE_PENDING), 0); // 重置面
-        let mut m4 = FrameMemory::default(); // GameMode=0 & 无 pending → 静默
+        let mut m4 = Manager::default(); // GameMode=0 & 无 pending → 静默
         check_palette_write(&mut m4);
     }
 
@@ -581,7 +581,7 @@ mod tests {
     #[test]
     fn update_age_title_short_circuits() {
         use crate::ram_map::{FRAME_COUNT, GAME_MODE, MAIN_ROUTINE, SAMUS_AGE};
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(GAME_MODE, 1); // title 态
         update_age(&mut m); // 短路（零写）
         assert_eq!(m.read_wram(SAMUS_AGE), 0); // WRAM 面（$687D）
@@ -598,7 +598,7 @@ mod tests {
     #[test]
     fn sound_engine_boot_face_and_flag_detonates() {
         use crate::ram_map::{MUSIC_INIT, SFX_NOISE_INIT, SFX_PAUSED, SFX_SQ1_INIT};
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         sound_engine(&mut m);
         assert_eq!(m.read_ram(SFX_PAUSED), 0);
         assert_eq!(m.read_ram(SFX_NOISE_INIT), 0); // 6 旗清（同值写事件）
@@ -612,7 +612,7 @@ mod tests {
         assert_eq!(m.read_ram(0x0628), 0xB3, "Music04Init duty 同值（BC89）");
         // 未接 handler 记账化（2026-11-01 长脚本验收收口——占位臂模式）：NoiseCont 链
         // （$0688=0x40 位6→字节偏移 y=2=表目1=B539 未接件）⇒**不炸**+DIVERGENCES 记账
-        let mut m2 = FrameMemory::default();
+        let mut m2 = Manager::default();
         m2.write_ram(0x0688, 0x40);
         let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| sound_engine(&mut m2)));
         assert!(r.is_ok(), "声 handler 记账化（不炸——长脚本验收收口）: {:?}", r.err());
@@ -628,7 +628,7 @@ mod tests {
     #[test]
     fn sound_engine_silence_music_path_clears_all() {
         use crate::ram_map::{MUSIC_INIT, SFX_NOISE_INIT, SFX_PAUSED, SFX_SQ1_INIT};
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         // 预置非零态：证明静音径真的写（非"本就为 0"的空对照）
         for a in [0x0653u16, 0x0654, 0x0655, 0x0607, 0x0688, 0x0689, 0x068A, 0x068B, 0x068C, 0x068D] {
             m.write_ram(a, 0xA5);
@@ -665,7 +665,7 @@ mod tests {
     #[test]
     fn superframe_runs_sound_but_skips_screen_phase() {
         use crate::ram_map::{JOY1_STATUS, NMI_STATUS, SFX_PAUSED};
-        let mut m = crate::frame::FrameMemory::default();
+        let mut m = crate::frame::Manager::default();
         m.write_ram(NMI_STATUS, 1); // 超帧态（帧未完成旗）
         m.write_ram(SFX_PAUSED, 5); // 判别位（声面跑⇒被清）
         m.joy1 = 0x20; // 判别位（读手柄挡⇒$14 不落）
@@ -673,7 +673,7 @@ mod tests {
         assert_eq!(m.read_ram(SFX_PAUSED), 0, "SoundEngine 无条件（E4 门外）");
         assert_eq!(m.read_ram(JOY1_STATUS), 0, "ReadJoyPads 属门内 b-g 相（超帧挡）");
         // 对照：非超帧两面全跑
-        let mut m2 = crate::frame::FrameMemory::default();
+        let mut m2 = crate::frame::Manager::default();
         m2.write_ram(SFX_PAUSED, 5);
         m2.joy1 = 0x20;
         nmi_body(&mut m2);
@@ -685,7 +685,7 @@ mod tests {
     #[test]
     fn read_joy_pads_boot_zero_and_change_detonates() {
         use crate::ram_map::{JOY1_STATUS, JOY2_STATUS};
-        let mut m = FrameMemory::default(); // joy1/joy2=0
+        let mut m = Manager::default(); // joy1/joy2=0
         read_joy_pads(&mut m);
         assert_eq!(m.read_ram(JOY1_STATUS), 0);
         assert_eq!(m.read_ram(JOY2_STATUS), 0);
@@ -701,7 +701,7 @@ mod tests {
     #[test]
     fn vram_struct_walk_mirror_producer() {
         use crate::ram_map::PPUCTRL_ZP;
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         crate::title::intro::star_palette_switch(&mut m); // 生产（双 call 缓冲）
         m.write_ram(PPUCTRL_ZP, 0x90); // NMI 位+增量位预置
         vram_struct_write(&mut m); // 全通（尾跳 WriteScroll 已端口）
@@ -713,7 +713,7 @@ mod tests {
     #[test]
     fn check_vram_struct_boot_silent_and_pending_detonates() {
         use crate::ram_map::{PPU_DATA_PENDING, VRAM_STRUCT_INDEX};
-        let mut m = FrameMemory::default(); // $1B=0
+        let mut m = Manager::default(); // $1B=0
         check_vram_struct_write(&mut m); // 静默
         assert_eq!(m.read_ram(VRAM_STRUCT_INDEX), 0);
         m.write_ram(PPU_DATA_PENDING, 1);
@@ -726,7 +726,7 @@ mod tests {
     /// 超帧跳过面：$1A≠0 ⇒ 工作体跳过（不炸桩）；$1A=0 ⇒ 进 GameMode 分派桩。
     #[test]
     fn overframe_gate_skips_body() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(NMI_STATUS, 1);
         nmi_body(&mut m); // 不炸=跳过成功
         m.write_ram(NMI_STATUS, 0);
@@ -744,7 +744,7 @@ mod tests {
 /// `dey/tya/asp（PaletteDataPending-1）*2→PalettePtrTable,y` 查表→X/Y=数据指针→
 /// `PaletteDataPending←0`→PreparePPUProcess（C20E）：`Temp00←X/Y→**jmp VRAMStructWrite**
 /// （共享解码器——spec「与缓冲冲刷共用解码器」自证）。
-pub fn palette_write_pending(mem: &mut FrameMemory) {
+pub fn palette_write_pending(mem: &mut Manager) {
     let idx = (mem.read_ram(PALETTE_PENDING).wrapping_sub(1) & 0xFF) as usize;
     // 【per-bank 面】PalettePtrTable $9560 各 bank 同址但**项数异**：
     //   bank0 标题=19 项（`prg0_title.asm:3201`）/ bank1-5 区域=28 项（`prg2_norfair.asm:53-80`）。
@@ -813,7 +813,7 @@ pub struct Sprite {
 }
 
 /// 解析 SpriteRAM（$0200-$02FF——watch 面 raw）→64 精灵视图。
-pub fn sprite_state(mem: &FrameMemory) -> Vec<Sprite> {
+pub fn sprite_state(mem: &Manager) -> Vec<Sprite> {
     (0..64u16)
         .map(|i| {
             let b = 0x0200 + i * 4;
@@ -850,7 +850,7 @@ mod r25_pal_probe {
     /// 调色板解码径（entry 0 房调色+entry 19 淡入 sprite 色叠载——f520 期望形）。
     #[test]
     fn palette_entry19_decodes() {
-        let mut m = crate::frame::FrameMemory::default();
+        let mut m = crate::frame::Manager::default();
         m.write_ram(crate::ram_map::GAME_MODE, 0);
         m.write_ram(crate::ram_map::IN_AREA, 0);
         // entry 0（房调色——MoreInit `PaletteDataPending←1`）

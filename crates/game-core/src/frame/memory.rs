@@ -6,9 +6,9 @@
 
 /// G11 类型下沉（r19）：定义归 `crate::state`（frame↔域件环消除）——本件保留 re-export
 /// （兼容径）+方法实现（同 crate 跨模块 impl）。
-pub use crate::state::{FrameMemory, Registers};
+pub use crate::state::{Manager, Registers};
 
-impl FrameMemory {
+impl Manager {
     /// RAM 读（2KB 镜像归一）。
     pub fn read_ram(&self, addr: u16) -> u8 {
         // 【read_ram 映射修（2026-11-06 全链根——$6877 读 255 垃圾破案）】$6000-$7FFF
@@ -117,7 +117,7 @@ impl FrameMemory {
     /// 【S6-10 接线】write_io PPU 面喂入 RenderState（$2006 flip-flop+$2007 分域）。
     #[test]
     fn write_io_feeds_render_state() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_io(0x2006, 0x10); // hi
         m.write_io(0x2006, 0x00); // lo → $1000
         m.write_io(0x2007, 0xAB); // CHR 写
@@ -135,7 +135,7 @@ mod tests {
     /// ——旧形 & 0x7FF 误读 ram[0x077]（255 垃圾——§47 全链根）。
     #[test]
     fn read_ram_wram_dispatch_6877() {
-        let mut m = crate::state::FrameMemory::default();
+        let mut m = crate::state::Manager::default();
         m.wram[0x877] = 3; // EnergyTankCount=3（asm 语义：小值 1-5）
         assert_eq!(m.read_ram(0x6877), 3, "WRAM 分派（$6877→wram[0x877]）");
         m.write_ram(0x6877, 5);
@@ -149,7 +149,7 @@ mod tests {
     /// tick_frame 测试实抓回归案；寄存器面唯一入口=write_io）。
     #[test]
     fn write_io_does_not_leak_into_ram_mirror() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_io(0x2000, 0x90);
         m.write_io(0x2005, 0x00);
         assert_eq!(m.read_ram(0x0000), 0x00);
@@ -159,7 +159,7 @@ mod tests {
     /// 2KB 镜像归一 + watch 面编码（zp=512 hex、iram=3584 hex，大写）。
     #[test]
     fn ram_mirror_and_watch_face() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(0x0800, 0xAB); // 镜像回 $0000
         assert_eq!(m.read_ram(0x0000), 0xAB);
         assert_eq!(m.read_ram(0x1000), 0xAB); // $1000 镜像面
@@ -173,14 +173,14 @@ mod tests {
     }
 }
 
-/// MSS↔FrameMemory 映射（**spec §4 分工件**——docs/spec/state-bundle-schema.md §4
+/// MSS↔Manager 映射（**spec §4 分工件**——docs/spec/state-bundle-schema.md §4
 /// 接缝表；双腿任意起点收官缝）：
 /// · RAM 区（$0000-$07FF）→ ram[0x800] **直映**（A 级）
 /// · WRAM（$6000-$7FFF）→ wram[0x2000] **直映**
 /// · CPU 寄存器（cpu.a/x/y/sp/pc/ps）→ regs 直映（ps↔p=status 同义名）
 /// · mapper.prgReg/chrReg/prgMode=**memmap 扩展面**（task-14 A9 后遗同面——随接）
 /// · ppu.*=S6 渲染腿（bundle v1 不含）；apu/clock=时钟/RNG 对表（task-10 定谳后接）。
-impl FrameMemory {
+impl Manager {
     /// MSS 恢复构造（直映三面）。
     pub fn restore_mss(ram: &[u8], wram: &[u8], regs: Registers) -> Self {
         assert!(ram.len() >= 0x800, "MSS RAM 面不足 $800");
@@ -212,7 +212,7 @@ mod mss_map_tests {
         let mut wram = vec![0u8; 0x2000];
         wram[0x1234] = 0xAB;
         let regs = Registers { a: 1, x: 2, y: 3, sp: 4, pc: 0x8000, p: 0x24 }; // MSS ps↔p（status 同义）
-        let mem = FrameMemory::restore_mss(&ram, &wram, regs);
+        let mem = Manager::restore_mss(&ram, &wram, regs);
         assert_eq!(mem.read_ram(0x001A), 1);
         assert_eq!(mem.read_wram(0x7234), 0xAB);
         assert_eq!((mem.regs.a, mem.regs.pc), (1, 0x8000));
@@ -224,7 +224,7 @@ mod mss_map_tests {
     }
 }
 
-impl FrameMemory {
+impl Manager {
     /// 语义视图入口：`mem.samus()` —— `memmap::views` 的唯一构造点。
     ///
     /// 视图持 `&mut self.ram`，因此一次只能持一个域（`views/mod.rs` 细则 3）；领域代码

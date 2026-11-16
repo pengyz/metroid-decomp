@@ -4,7 +4,7 @@
 //! `CopyAreaPointers 07:C8B0`、`GetRoomNum ; 07:E720`、`SetupRoom ; 07:EA2B`、`ScreenNmiOff ; 07:C45D`。
 
 use crate::frame::tick::*;
-use crate::frame::FrameMemory;
+use crate::frame::Manager;
 use crate::ram_map;
 
 /// MoreInit（**asm 内容锚** `MoreInit: ; 07:C81D`——区域/房间链头）：
@@ -13,7 +13,7 @@ use crate::ram_map;
 /// （「should clear $DF」注））/ScreenOff/ClearNameTables（已折）/EraseAllSprites（已折）
 /// /ScrollBlock 族清/ScrollDir←2/AreaMapPos→MapPos/PaletteToggle/RoomNumber←$FF/
 /// CopyAreaPointers→GetRoomNum→SetupRoom 环（房间链——嵌套桩）。
-pub fn more_init(mem: &mut FrameMemory) {
+pub fn more_init(mem: &mut Manager) {
     mem.write_ram(crate::ram_map::PALETTE_PENDING, 1); // Palette00+1
     mem.write_ram(0x0075, 0xFF);
     for a in [crate::ram_map::AT_ENDING, 0x0056, 0x0057, 0x0055] {
@@ -110,7 +110,7 @@ pub fn more_init(mem: &mut FrameMemory) {
 /// 【为什么必须写真寄存器】只在 `$FE` 上清位、不写 `$2001` 时，渲染仍用上一帧的
 /// `RenderState.ppumask`（亮）⇒ 换区/进场窗口的**整屏暗窗缺失**。实证：elevprobe2
 /// f1206/f1207 emu 全黑 61440 px vs rust 亮屏 13115/12777 px 失配。
-pub fn screen_nmi_off(mem: &mut FrameMemory) {
+pub fn screen_nmi_off(mem: &mut Manager) {
     let pm = mem.read_ram(crate::ram_map::PPUMASK_ZP) & !0x18;
     mem.write_ram(crate::ram_map::PPUMASK_ZP, pm);
     mem.write_io(0x2001, pm); // WriteAndWait 的 NMI 落点（同 tick 近似）
@@ -123,7 +123,7 @@ pub fn screen_nmi_off(mem: &mut FrameMemory) {
 /// `deferred_screen_on` 兑现成 `PPUMASK_ZP |= $1E`（asm `WriteAndWait` 写影子；
 /// 真 PPUMASK 由下一 tick 的 `WritePPUCtrl`（07:C44D）落）。旗未置时零动
 /// （防误触发：正常帧每 tick 都会走到此点）。
-pub fn apply_deferred_screen_on(mem: &mut FrameMemory) {
+pub fn apply_deferred_screen_on(mem: &mut Manager) {
     if !mem.deferred_screen_on {
         return;
     }
@@ -150,7 +150,7 @@ pub fn area_idx(in_area: u8) -> usize {
 
 /// CopyMap（**asm 内容锚** `CopyMap: ; 00:A93E`——WorldMap→WRAM $7000-$73FF 1KB）。
 /// 调用点=InitBank0（prg7_engine.asm:1382——**复位链件**：boot 期一次）。
-pub fn copy_map(mem: &mut FrameMemory) {
+pub fn copy_map(mem: &mut Manager) {
     for (i, b) in game_data::assets::world_map().iter().enumerate() {
         mem.write_wram(0x7000 + i as u16, *b);
     }
@@ -159,7 +159,7 @@ pub fn copy_map(mem: &mut FrameMemory) {
 /// CopyAreaPointers（**asm 内容锚** `CopyAreaPointers: ; 07:C8B0`）：14B 拷
 /// AreaPointers_ROM→AreaPointers_RAM（$3B-$48——7 指针结构体）。
 /// ROM 侧按 `InArea&$0F` 选区 bank（五区已烘焙——区域未覆盖时 fail-loud D7）。
-pub fn copy_area_pointers(mem: &mut FrameMemory) {
+pub fn copy_area_pointers(mem: &mut Manager) {
     let area = mem.read_ram(crate::ram_map::IN_AREA) & 0x0F;
     let rom = AREA_POINTERS_BY_AREA
         .get(area as usize)
@@ -174,7 +174,7 @@ pub fn copy_area_pointers(mem: &mut FrameMemory) {
 /// 按位与——挡⇒不载房）+MapPos 数学（MapY*32+MapX+$7000）→WorldMapRAM 查表
 /// →RoomNumber($5A)+特别房音乐（$79——AreaItemRoomNumbers 7 项）。
 /// 返回 **true=取得房间号（可滚）**（asm carry 反形：CF=1=失败）。
-pub fn get_room_num(mem: &mut FrameMemory) -> bool {
+pub fn get_room_num(mem: &mut Manager) -> bool {
     let dir = mem.read_ram(crate::ram_map::SCROLL_DIR); // ScrollDir
     if dir >= 2 {
         // 横滚面（asm `lsr/beq` 分流：2/3=横）：ScrollBlock 门（门挡=停滚语义）
@@ -203,7 +203,7 @@ pub fn get_room_num(mem: &mut FrameMemory) -> bool {
 /// .RoomPtrTable=$3B/$3C 间接**——`lda (AreaPointers_RAM.RoomPtrTable),y`）→RoomPtr($33/$34)
 /// →RoomPalette 读→AddToRoomPtr/SelectRoomRAM/InitTables→DrawRoom（**S6-7 房间绘制链**
 /// ——嵌套桩：game-data 房间模型协同）。
-pub fn setup_room(mem: &mut FrameMemory) {
+pub fn setup_room(mem: &mut Manager) {
     mem.work_cycles = mem.work_cycles.wrapping_add(crate::frame::cycles::LOAD_SHELL); // 固定壳
     // 【2026-11-14 顺序更正】asm `SetupRoom ; 07:EA2B` 的次序是：
     // `lda RoomNumber / cmp #$FF beq RTS / cmp #$FE beq DrawRoom / cmp #$F0 bcs AttribTableWrite`

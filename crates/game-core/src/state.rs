@@ -1,6 +1,6 @@
 //! `game-core::state` —— 周期态类型层（G11 类型下沉——r19）。
 //!
-//! 【消环声明】`FrameMemory`/`RenderState`/`Registers` 的**定义**归本层（frame/ 之下），
+//! 【消环声明】`Manager`/`RenderState`/`Registers` 的**定义**归本层（frame/ 之下），
 //! 域件（samus/title/…）与 render/ 经本层取型 ⇒ **frame↔域件环消除**（原域件反向借用
 //! frame 类型）。方法实现（impl 块）留原位（frame/memory.rs、frame/render.rs——同 crate
 //! 跨模块 impl 合法）；frame/ 保留 re-export（兼容径）。依赖方向正典：域件←frame 会师
@@ -17,13 +17,27 @@ pub struct Registers {
     pub pc: u16,
 }
 
+impl Manager {
+    /// RAM 2KB 镜像面只读视图（跨 crate 消费方唯一入口；域代码请用 `read_ram` 或域句柄）。
+    pub fn ram(&self) -> &[u8; 0x800] {
+        &self.ram
+    }
+
+    /// WRAM 8KB 只读视图（同上）。
+    pub fn wram(&self) -> &[u8; 0x2000] {
+        &self.wram
+    }
+}
+
 /// 全内存模型（定义=态层；方法实现见 frame/memory.rs）。
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct FrameMemory {
-    /// RAM 2KB 归一镜像面（$0000-$07FF）。
-    pub ram: [u8; 0x800],
-    /// WRAM 8KB（$6000-$7FFF）。
-    pub wram: [u8; 0x2000],
+pub struct Manager {
+    /// RAM 2KB 归一镜像面（$0000-$07FF）。**私有存储面**：域代码不得直接索引，
+    /// 一律经 `read_ram/write_ram` 或域句柄（`manager.samus()` 等）；`pub(crate)`
+    /// 仅留给 memmap/observe 的字节导出面。
+    pub(crate) ram: [u8; 0x800],
+    /// WRAM 8KB（$6000-$7FFF）。同上（私有存储面）。
+    pub(crate) wram: [u8; 0x2000],
     /// 寄存器面。
     pub regs: Registers,
     /// NMI 使能态（PPUCTRL bit7——write_io($2000) 权威面；60Hz VBlank 调度开关）。
@@ -78,7 +92,7 @@ pub struct FrameMemory {
     pub render: RenderState,
 }
 
-impl Default for FrameMemory {
+impl Default for Manager {
     fn default() -> Self {
         Self { ram: [0; 0x800], wram: [0; 0x2000], regs: Registers::default(), nmi_enabled: false,
                title_cursor: 0, title_cursor_phase: 0, title_spin: 0, check_password_pending: false, deferred_screen_on: false, title_no_return: false,

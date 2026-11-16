@@ -88,22 +88,22 @@ impl SamusStatus {
 
 /// **Samus 主体**：既是状态句柄，也是行为载体（领域层只认这个类型）。
 ///
-/// 包装 `&mut FrameMemory` 而不是只包装 `&mut ram`：Samus 的行为会跨域取值（碰撞要查房间
+/// 包装 `&mut Manager` 而不是只包装 `&mut ram`：Samus 的行为会跨域取值（碰撞要查房间
 /// RAM、射击要查敌槽、能力位在 WRAM `$6878`），只借 ram 会逼调用方拆借。
 ///
 /// 与「全局单例 + `get::<Samus>()`」的区别（设计裁定）：本类型是**短生命周期句柄**，
-/// 由唯一所有者 `FrameMemory` 现场派生——`mem.samus()`。这样：
+/// 由唯一所有者 `Manager` 现场派生——`mem.samus()`。这样：
 /// - 调用点写法与类实例一致（`mem.samus().move_vertically()`）；
 /// - 无 `unsafe`、无 `RefCell`、无运行期类型分发（`get::<T>()` 需要 `Any`+downcast，
 ///   在静态语言里等于把类型检查推迟到运行期）；
 /// - 借用检查器保证「同一时刻只有一个域持有可变访问」，与 asm 的时序天然同构；
-/// - 测试可并行（每个测试各持一份 `FrameMemory`；全局单例会毁掉这一点）。
+/// - 测试可并行（每个测试各持一份 `Manager`；全局单例会毁掉这一点）。
 pub struct Samus<'a> {
-    mem: &'a mut crate::frame::FrameMemory,
+    mem: &'a mut crate::frame::Manager,
 }
 
 impl<'a> Samus<'a> {
-    pub(crate) fn new(mem: &'a mut crate::frame::FrameMemory) -> Self {
+    pub(crate) fn new(mem: &'a mut crate::frame::Manager) -> Self {
         Self { mem }
     }
 
@@ -275,11 +275,11 @@ impl<'a> Samus<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::frame::FrameMemory;
+    use crate::frame::Manager;
 
-    /// 各测独立持一份 `FrameMemory`（短生命周期句柄的前提：无全局单例）。
-    fn m() -> FrameMemory {
-        FrameMemory::default()
+    /// 各测独立持一份 `Manager`（短生命周期句柄的前提：无全局单例）。
+    fn m() -> Manager {
+        Manager::default()
     }
 
     /// 枚举 ↔ 字节往返：`status` 落在 `$0300`，写枚举即写该字节。

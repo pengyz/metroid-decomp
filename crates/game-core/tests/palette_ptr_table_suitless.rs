@@ -22,12 +22,12 @@
 //! `unported!("bank07:C1FF-idx")` 导致 L4 f2390 格 blocked。
 
 use game_core::frame::nmi::palette_write_pending;
-use game_core::frame::FrameMemory;
+use game_core::frame::Manager;
 use game_core::ram_map::{GAME_MODE, IN_AREA, PALETTE_PENDING};
 
 /// 设 Norfair 区 bank（InArea=0x11 → bank2）、游戏内（GameMode=0）。
-fn norfair_mem() -> FrameMemory {
-    let mut m = FrameMemory::default();
+fn norfair_mem() -> Manager {
+    let mut m = Manager::default();
     m.write_ram(GAME_MODE, 0x00);
     m.write_ram(IN_AREA, 0x11); // & 0x0F = 1 ⇒ bank 2（Norfair）
     m
@@ -72,7 +72,7 @@ fn palette_ptr_table_idx27_writes_suitless_varia_missile_palette1b() {
 #[test]
 fn area_to_rom_bank_mapping_follows_bancctable() {
     // Kraid（InArea=0x12，&0x0F=2）必须读 bank4 而非 bank3。
-    let mut m = FrameMemory::default();
+    let mut m = Manager::default();
     m.write_ram(GAME_MODE, 0x00);
     m.write_ram(IN_AREA, 0x12); // Kraid
     m.write_ram(PALETTE_PENDING, 1); // idx0 = Palette00
@@ -82,7 +82,7 @@ fn area_to_rom_bank_mapping_follows_bancctable() {
         "Kraid=area2→ROM bank4（BankTable $05-1）：Palette00 首块 data[2]=0x10；旧式误读 bank3=data[2]=0x16"
     );
     // Tourian（InArea=0x13，&0x0F=3）必须读 bank3 而非 bank4。
-    let mut m = FrameMemory::default();
+    let mut m = Manager::default();
     m.write_ram(GAME_MODE, 0x00);
     m.write_ram(IN_AREA, 0x13); // Tourian
     m.write_ram(PALETTE_PENDING, 1);

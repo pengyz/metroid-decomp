@@ -23,7 +23,7 @@
 //! **撤回**——Y 型系清零环端口误读（零填充更正，50af369）；更正后 $07A0=0 门放行，
 //! 生产端先行=真实执行序。
 
-use crate::state::FrameMemory;
+use crate::state::Manager;
 use crate::ram_map::{
     FRAME_COUNT, INTRO_STAR_OFFSET, PPU_DATA_PENDING, VRAM_STRUCT_INDEX,
 };
@@ -39,7 +39,7 @@ fn intro_star_palettes() -> &'static [u8] {
 }
 
 /// StarPaletteSwitch 单元（boot 场景：FrameCount=0/队列空 ⇒ 双 call 生产）。
-pub fn star_palette_switch(mem: &mut FrameMemory) {
+pub fn star_palette_switch(mem: &mut Manager) {
     // ①16 帧门
     if mem.read_ram(FRAME_COUNT) & 0x0F != 0 {
         return;
@@ -75,7 +75,7 @@ pub fn star_palette_switch(mem: &mut FrameMemory) {
 /// **结构互核注**：EndVRAMStruct 的 `pla/pla` 逃逸=弹一层返回跳出写系——本模型折叠为
 /// walk 终止（缓冲满 `cpx #_sizeof_VRAMStructBuffer`（$4F）路径=unported）；
 /// 终止符写 buffer[x] **不推进索引**——下 call 从索引处覆写（双 call 连续生产语义自证）。
-pub fn prep_ppu_palette_string(mem: &mut FrameMemory, src: &[u8]) {
+pub fn prep_ppu_palette_string(mem: &mut Manager, src: &[u8]) {
     mem.write_ram(PPU_DATA_PENDING, 1);
     let mut x = mem.read_ram(VRAM_STRUCT_INDEX) as usize;
     let dst_lo = mem.read_ram(0x0000);
@@ -123,7 +123,7 @@ mod tests {
     /// 【复审残余 4】终止符断言独立案（review 4 案之 4——覆盖恢复）。
     #[test]
     fn terminator_byte_assertion_standalone() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(0x0000, 0x00);
         m.write_ram(0x0001, 0x20);
         write_vram_string(&mut m, &[0x22, 0x11, 0x22, 0x33, 0x44]); // 2×2 块
@@ -135,7 +135,7 @@ mod tests {
     /// 【返工补案 1】单行块（宽=3|高=1）+**终止符断言**（F1——+末=0 且索引不动）。
     #[test]
     fn write_vram_string_single_row_terminator() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         write_vram_string(&mut m, &[0x13, 0xAA, 0xBB, 0xCC]); // 高1|宽3
         let buf: Vec<u8> = (0..8).map(|k| m.read_ram(0x07A1 + k)).collect();
         // [00][00][03][AA][BB][CC][00 终止][—]
@@ -146,7 +146,7 @@ mod tests {
     /// 【返工补案 2】1×N 竖排（宽=1|高=3）——行间换行几何。
     #[test]
     fn write_vram_string_single_col() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(0x0000, 0x00);
         m.write_ram(0x0001, 0x20);
         write_vram_string(&mut m, &[0x31, 0xAA, 0xBB, 0xCC]); // 高3|宽1
@@ -159,7 +159,7 @@ mod tests {
     /// 【返工补案 3】恰满边界（F2——asm 精确序：写 79B 后溢出=0x4E 后中止）。
     #[test]
     fn write_vram_string_exact_full_boundary() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         // 高1|宽16+高1|宽16…：构造恰 79B 场景——宽16|高2 行 chunk=2*(3+16)=38B（不足）
         // 直接验共享件：写 79 字节成功、第 80 触发溢出域
         let mut x = 0usize;
@@ -179,7 +179,7 @@ mod tests {
     /// （非溢出点）——丢弃未提交段语义。
     #[test]
     fn overflow_terminator_at_committed_index() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         // committed 索引=3（模拟已提交段末）
         m.write_ram(VRAM_STRUCT_INDEX, 3);
         // 走 x=0..0x4E 连写（溢出第 79 写）——committed 索引仍=3
@@ -199,7 +199,7 @@ mod tests {
     /// 【返工补案 4】终止符覆盖语义（F1——双 call 连续：终止符被下 call 覆写）。
     #[test]
     fn end_vram_struct_terminator_overwrite() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(0x0000, 0x00);
         m.write_ram(0x0001, 0x21); // dst=$2100（hi≠0）
         write_vram_string(&mut m, &[0x11, 0xAA]); // 单块 4B（[21][00][01][AA]）
@@ -214,7 +214,7 @@ mod tests {
     /// WriteVRAMString 块写手（段头三字节+名表换行 +$20——S6-1 面）。
     #[test]
     fn write_vram_string_blocks() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(0x0000, 0x00); // dst lo
         m.write_ram(0x0001, 0x20); // dst hi（$2000）
         // 宽2|高2 打包=0x22；瓦数据 4 字节
@@ -233,7 +233,7 @@ mod tests {
     /// 16 帧门（FrameCount&0xF≠0 ⇒ 静默）。
     #[test]
     fn star_palette_16frame_gate() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(FRAME_COUNT, 3);
         star_palette_switch(&mut m);
         assert_eq!(m.read_ram(INTRO_STAR_OFFSET), 0);
@@ -242,7 +242,7 @@ mod tests {
     /// 队列门 + boot 路径全生产（双 call 缓冲几何+终止符覆写语义——结构互核注面）。
     #[test]
     fn star_palette_produces_two_stream_chunks() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(VRAM_STRUCT_INDEX, 1);
         star_palette_switch(&mut m);
         assert_eq!(m.read_ram(INTRO_STAR_OFFSET), 0);
@@ -261,7 +261,7 @@ mod tests {
 /// WritePPUByte 共享件（**asm 精确序**——F2 边界契约）：`sta VRAMStructBuffer,x/
 /// inx/cpx #$4F/bcc @RTS`——**先写后检**：写 x=0..0x4E（79B）→inx 至 $4F⇒溢出。
 /// 返回 Some(新 x) 或 None（溢出——调用方走 EndVRAMStruct 语义：补 0 终止+中止）。
-fn write_ppu_byte_to_buffer(mem: &mut FrameMemory, x: usize, byte: u8) -> Option<usize> {
+fn write_ppu_byte_to_buffer(mem: &mut Manager, x: usize, byte: u8) -> Option<usize> {
     mem.write_ram(0x07A1 + x as u16, byte);
     let x = x + 1;
     if x < 0x4F {
@@ -278,7 +278,7 @@ fn write_ppu_byte_to_buffer(mem: &mut FrameMemory, x: usize, byte: u8) -> Option
 
 /// EndVRAMStruct 终止件（asm 内容锚 `EndVRAMStruct: ; 07:C376`）：`lda #$00/sta
 /// VRAMStructBuffer,x`（终止符——**索引不动**）+溢出安全（PLA PLA 逃逸域形=中止）。
-fn end_vram_struct(mem: &mut FrameMemory, x: usize) {
+fn end_vram_struct(mem: &mut Manager, x: usize) {
     if x < 0x4F {
         mem.write_ram(0x07A1 + x as u16, 0);
     }
@@ -292,7 +292,7 @@ fn end_vram_struct(mem: &mut FrameMemory, x: usize) {
 ///
 /// **结构互核注**：行间 +$20=名表换行语义（spec §2.1 自证）；段头宽=长度（解码器
 /// 同构消费——[hi][lo][len][tile…] 行 chunk）；src 格式=[宽|高 打包字节][瓦数据...]。
-pub fn write_vram_string(mem: &mut FrameMemory, src: &[u8]) {
+pub fn write_vram_string(mem: &mut Manager, src: &[u8]) {
     mem.write_ram(PPU_DATA_PENDING, 1);
     let packed = src[0];
     let width = (packed & 0x0F) as usize;

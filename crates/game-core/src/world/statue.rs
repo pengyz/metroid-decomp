@@ -15,7 +15,7 @@
 //! $687C/StatuesBridgeIsSpawned=$54/Statue 槽=$0360（RaiseState $0364/$0365/IsHit
 //! $0366/$0367/Y $036F/$0370）/TileBlasts=$0500（13×16B：routine+0/delay+7/type+10）。
 
-use crate::state::FrameMemory;
+use crate::state::Manager;
 
 /// 址常量（考证自证——见模块注）。
 const KRAID_STATUS: u16 = 0x687B;
@@ -31,7 +31,7 @@ const TILE_BLASTS: u16 = 0x0500;
 const SLOT: u16 = 16;
 
 /// UpdateAllStatues 单元（状态机+门判+桥生成）。
-pub fn update_all_statues(mem: &mut FrameMemory) {
+pub fn update_all_statues(mem: &mut Manager) {
     let status = mem.read_ram(STATUE_SLOT);
     if status == 0 {
         return;
@@ -57,7 +57,7 @@ pub fn update_all_statues(mem: &mut FrameMemory) {
 
 /// UpdateStatue_Raise raise 状态机（单元 2——1px/call 到 16 界）。
 /// idx: 0=Kraid/1=Ridley。返回是否推进。
-pub fn update_statue_raise(mem: &mut FrameMemory, idx: u8) {
+pub fn update_statue_raise(mem: &mut Manager, idx: u8) {
     let (raise, y_addr, status) = if idx == 0 {
         (KRAID_RAISE, KRAID_Y, KRAID_STATUS)
     } else {
@@ -85,13 +85,13 @@ pub fn update_statue_raise(mem: &mut FrameMemory, idx: u8) {
 }
 
 /// UpdateStatue（单元 2 壳——Raise+StartRaising+anim 三面）。
-fn update_statue(mem: &mut FrameMemory, idx: u8) {
+fn update_statue(mem: &mut Manager, idx: u8) {
     update_statue_raise(mem, idx);
     crate::unported!("bank07:DA7C"); // UpdateStatue_StartRaising（触发时序——随件）
 }
 
 /// UpdateAllStatues_Bridge（**task-37 对表核心**——门判①②③+8×TileBlasts 生成）。
-pub fn update_statues_bridge(mem: &mut FrameMemory) {
+pub fn update_statues_bridge(mem: &mut Manager) {
     if mem.read_ram(BRIDGE_SPAWNED) & 0x80 != 0 {
         return; // ① 已生成
     }
@@ -119,7 +119,7 @@ mod tests {
     /// 【全仪式·桥门判】双 AND 门+8 瓦爆生成（task-37 核心面）。
     #[test]
     fn bridge_gate_and_tile_blasts() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(STATUE_SLOT, 2);
         // 双像未全 up→门不开
         m.write_ram(KRAID_STATUS, 0x80);
@@ -139,7 +139,7 @@ mod tests {
     /// 【全仪式·raise 状态机】1px/call 到 16 界→bit7=up 双址置。
     #[test]
     fn statue_raise_state_machine() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(KRAID_Y, 0x1F); // 低半字节 F=15px 待升（asm 语义：Y&$0F=剩余偏移）
         for _ in 0..15 {
             update_statue_raise(&mut m, 0);

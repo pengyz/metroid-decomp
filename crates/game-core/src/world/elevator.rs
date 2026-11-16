@@ -13,7 +13,7 @@
 //! **帧等待口径**：`WaitNMIPass_`（07:C43F）= `ClearNMIStat` + 等 NMI 走完 ⇒ rust 侧
 //! 沿用全仓同族形（`NMI_STATUS←1` + `iter_wait()`；见 `frame::boot::init_bank1`）。
 
-use crate::frame::FrameMemory;
+use crate::frame::Manager;
 use crate::ram_map::{
     AT_ENDING, BANK_SWITCH_PENDING, IN_AREA, ITEM_ROOM_MUSIC_STATUS, JOY1_STATUS, MAIN_ROUTINE,
     MAP_POS_Y, MIRROR_CNTRL, MUSIC_INIT, NMI_STATUS, PALETTE_PENDING, PPUCTRL_ZP, PPUMASK_ZP,
@@ -89,7 +89,7 @@ const ENEMY_STATUS_FROZEN: u8 = 4;
 /// `UpdateElevator ; 07:D7B3`——十态分派（`ldx #Elevator-Objects / stx PageIndex /
 /// lda Elevator.status / jsr JumpEngine`）。status > 9 在 asm 里越表读指针（UB），
 /// rust 侧按 ExitSub 静默（不臆造）。
-pub fn update_elevator(mem: &mut FrameMemory) {
+pub fn update_elevator(mem: &mut Manager) {
     match mem.read_ram(ELEVATOR + F_STATUS) {
         0 => {} // ExitSub（$C45C）
         1 => elev_idle(mem),
@@ -105,20 +105,20 @@ pub fn update_elevator(mem: &mut FrameMemory) {
 
 /// `DrawElevator`（$D806）：`lda FrameCount / lsr / bcc rts`——**隔帧显示**
 /// （FrameCount bit0=1 才画；`lsr` 把 bit0 移进 carry）。
-fn draw_elevator(mem: &mut FrameMemory) {
+fn draw_elevator(mem: &mut Manager) {
     if mem.read_ram(crate::ram_map::FRAME_COUNT) & 0x01 == 1 {
         crate::render::oam::obj_draw_frame(mem, ELEV_PAGE);
     }
 }
 
 /// `ToggleObjectXSlotHi`（$D648）：`lda Objects.0.hi,x / eor #$01 / sta`。
-fn toggle_object_hi(mem: &mut FrameMemory, page: u16, f_hi: u16) {
+fn toggle_object_hi(mem: &mut Manager, page: u16, f_hi: u16) {
     let h = mem.read_ram(page + f_hi) ^ 0x01;
     mem.write_ram(page + f_hi, h);
 }
 
 /// `SetSamusAnim`（$CD6D 形）：写 animResetIndex/animIndex + delay 0。
-fn set_samus_anim(mem: &mut FrameMemory, idx: u8) {
+fn set_samus_anim(mem: &mut Manager, idx: u8) {
     mem.write_ram(SAMUS + S_ANIM_RESET, idx);
     mem.write_ram(SAMUS + S_ANIM_INDEX, idx);
     mem.write_ram(SAMUS + S_ANIM_DELAY, 0);
@@ -126,7 +126,7 @@ fn set_samus_anim(mem: &mut FrameMemory, idx: u8) {
 
 /// `ElevatorIdle ; 07:D7D1`——站梯上按 上/下（按 `ElevatorType` bit7 取 BUTTON_UP/DOWN）
 /// 即启动：清垂直速度 → 写 speedY/animDelay=0 → status+1 → Samus 置电梯态/居中位。
-fn elev_idle(mem: &mut FrameMemory) {
+fn elev_idle(mem: &mut Manager) {
     if mem.read_ram(SAMUS_ON_ELEVATOR) == 0 {
         draw_elevator(mem);
         return;
@@ -154,7 +154,7 @@ fn elev_idle(mem: &mut FrameMemory) {
 /// `ElevatorScrollXToCenter ; 07:D80E`——水平居中（`ScrollX==0` 即到位）：
 /// 置 `MirrorCntrl|=$08`（名表竖排）+ `ScrollDir&=1`（转竖滚）+ status+1；
 /// 否则电梯在 ScrollX 右侧 ⇒ ScrollRight、左侧 ⇒ ScrollLeft（`bmi` 判 8 位差符号）。
-fn elev_scroll_x_to_center(mem: &mut FrameMemory) {
+fn elev_scroll_x_to_center(mem: &mut Manager) {
     if mem.read_ram(SCROLL_X) == 0 {
         let mc = mem.read_ram(MIRROR_CNTRL) | 0x08;
         mem.write_ram(MIRROR_CNTRL, mc);
@@ -179,7 +179,7 @@ fn elev_scroll_x_to_center(mem: &mut FrameMemory) {
 
 /// `ElevatorMove ; 07:D83D`——电梯逐像素上下移动（y 0↔239 环绕时翻 hi 位），
 /// 抵达 y=$83 即 status+1（⇒ 4 ScrollY）。
-fn elev_move(mem: &mut FrameMemory) {
+fn elev_move(mem: &mut Manager) {
     let etype = mem.read_ram(ELEVATOR + F_TYPE);
     let a_final: u8;
     if etype & 0x80 != 0 {
@@ -212,7 +212,7 @@ fn elev_move(mem: &mut FrameMemory) {
 
 /// `ElevatorScrollY ; 07:D870`——`ScrollY!=0` 继续滚（`ElevScrollRoom`）；到 0 则
 /// 置 Samus/电梯淡出动画 + status+1（⇒ 5 Fade）+ `Timer1←$40`（**原版即退化单帧**）。
-fn elev_scroll_y(mem: &mut FrameMemory) {
+fn elev_scroll_y(mem: &mut Manager) {
     if mem.read_ram(SCROLL_Y) != 0 {
         elev_scroll_room(mem);
         return;
@@ -228,7 +228,7 @@ fn elev_scroll_y(mem: &mut FrameMemory) {
 }
 
 /// `ElevScrollRoom ; 07:D892`——按 `ElevatorType` bit7 选 `ScrollUp` / `ScrollDown`。
-fn elev_scroll_room(mem: &mut FrameMemory) {
+fn elev_scroll_room(mem: &mut Manager) {
     if mem.read_ram(ELEVATOR + F_TYPE) & 0x80 != 0 {
         crate::samus::physics::scroll_up(mem);
     } else {
@@ -240,7 +240,7 @@ fn elev_scroll_room(mem: &mut FrameMemory) {
 /// `ElevatorFade ; 07:D8A3`（status 5→6 淡出 / 7→8 淡入，**各单帧**）：
 /// `inc status`；新值==8 ⇒ animFrame←$23 + SetSamusAnim(SamusFront) + DrawElevator；
 /// 否则 `AnimDrawObject(page, 1)`（逐帧推进动画）。
-fn elev_fade(mem: &mut FrameMemory) {
+fn elev_fade(mem: &mut Manager) {
     let st = mem.read_ram(ELEVATOR + F_STATUS).wrapping_add(1);
     mem.write_ram(ELEVATOR + F_STATUS, st);
     if st == 8 {
@@ -269,7 +269,7 @@ pub fn palette_pending_value(in_area: u8, palette_toggle: u8) -> u8 {
 /// `ora #$10 / jsr IsEngineRunning`（⇒ InArea=$1X + BankSwitchPending）→ 调色板切换
 /// → `WaitNMIPass_` → SelectSamusPalette → StartMusic → ScreenOn → CopyAreaPointers
 /// → DestroyEnemies → Samus/电梯淡入动画 + status+1（⇒ 7 Fade）+ Timer1←$40。
-fn elev_transition(mem: &mut FrameMemory) {
+fn elev_transition(mem: &mut Manager) {
     let etype = mem.read_ram(ELEVATOR + F_TYPE);
     if etype == 0x8F {
         // Samus made it! YAY!（`_id_IncrementRoutine` / AtEnding++ / RoomPtr=0 /
@@ -328,7 +328,7 @@ fn elev_transition(mem: &mut FrameMemory) {
 /// `ElevatorStop ; 07:D94E`——`ScrollY!=0` 继续滚；到 0 则停：Samus 回站立、
 /// 电梯槽回 Idle(1)、`ElevatorType ^= $80`（换向）；换向到「上层」（bit7 清）时
 /// `ToggleScroll`（ScrollDir^=3 + MirrorCntrl^=8）+ 落 MirrorCntrl。
-fn elev_stop(mem: &mut FrameMemory) {
+fn elev_stop(mem: &mut Manager) {
     if mem.read_ram(SCROLL_Y) != 0 {
         elev_scroll_room(mem);
         return;
@@ -352,7 +352,7 @@ fn elev_stop(mem: &mut FrameMemory) {
 /// 仅当 `Elevator.status∈{3,8}`（ElevatorMove）才按 `ElevatorType` 方向逐像素走；
 /// 屏幕 Y（`Samus.y - ScrollY`）越过 $84（下行）/ 低于 $64（上行）时驱动卷屏。
 /// 其余状态：清 speedY，status∈{5,7}（淡出/淡入）每帧画，否则隔帧（`FrameCount/2` 判）。
-pub fn samus_elevator(mem: &mut FrameMemory) {
+pub fn samus_elevator(mem: &mut Manager) {
     let est = mem.read_ram(ELEVATOR + F_STATUS);
     if est == 3 || est == 8 {
         let etype = mem.read_ram(ELEVATOR + F_TYPE);
@@ -410,7 +410,7 @@ pub fn samus_elevator(mem: &mut FrameMemory) {
 /// `DestroyEnemies ; 07:C8BB`——清敌 RAM：`$97..$DE`（`CannonIndex` 起至
 /// `SoundRoutineTablePtr-1`，**原版 off-by-one**：漏 $DF）+ `EnsExtra.status` 全 256 B
 /// 清 0，然后 `MetroidOnSamus←X(=0)` + `GotoClearAllMetroidLatches`。
-pub fn destroy_enemies(mem: &mut FrameMemory) {
+pub fn destroy_enemies(mem: &mut Manager) {
     // 槽环：`cpx #(SoundRoutineTablePtr-1)-CannonIndex / bcs @endIf_A` ⇒ 只清 $97..$DE。
     // CannonIndex（$0097）到 SoundRoutineTablePtr-1（$00DE）——15 个敌对弹/敌面字段，
     // 逐址清 0（原版即按址环，非按槽；此处照录地址区间）。
@@ -431,7 +431,7 @@ pub fn destroy_enemies(mem: &mut FrameMemory) {
 /// 再 `@isSamusOnTop` ⇒ 站顶则 `SamusOnElevator++`。
 ///
 /// 前置：双旗已由 `samus::physics::samus_collision_with_solid_entities` 清 0。
-pub fn samus_on_elevator_check(mem: &mut FrameMemory) {
+pub fn samus_on_elevator_check(mem: &mut Manager) {
     if mem.read_ram(ELEVATOR + F_STATUS) == 0 {
         return;
     }
@@ -477,10 +477,10 @@ pub const MAP_Y: u16 = MAP_POS_Y;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::state::FrameMemory;
+    use crate::state::Manager;
 
-    fn m() -> FrameMemory {
-        FrameMemory::default()
+    fn m() -> Manager {
+        Manager::default()
     }
 
     /// 十态表宽度自证：JumpEngine 表 10 项（0..=9），越界静默（不臆造指针）。

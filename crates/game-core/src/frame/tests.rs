@@ -4,20 +4,20 @@
 //! 使其对子模块可见（普通 `use` 不能穿透到子模块的 glob）。
 
 pub(crate) use crate::frame::tick::*;
-use crate::frame::FrameMemory;
+use crate::frame::Manager;
 use crate::ram_map::*;
 
 #[cfg(test)]
 mod tests_pause_chain {
     use super::*;
-    use crate::frame::memory::FrameMemory;
+    use crate::frame::memory::Manager;
     use crate::ram_map;
 
     /// `GoMainRoutine` START 开关：3↔5 双向 + `GamePaused ^= 1` + `PauseMusic`（$CB92=%10）
     /// ——A 级锚 `prg7_engine.asm:311-338`。
     #[test]
     fn start_toggles_between_engine_and_pause() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(ram_map::MAIN_ROUTINE, 3);
         m.write_ram(ram_map::JOY1_CHANGE, 0x10); // START
         assert!(start_pause_toggle(&mut m), "3 + START 应切换");
@@ -28,7 +28,7 @@ mod tests_pause_chain {
 
     #[test]
     fn start_unpauses_back_to_engine() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(ram_map::MAIN_ROUTINE, 5);
         m.write_ram(ram_map::GAME_PAUSED, 1);
         m.write_ram(ram_map::JOY1_CHANGE, 0x10);
@@ -41,7 +41,7 @@ mod tests_pause_chain {
     #[test]
     fn start_ignored_outside_engine_and_pause() {
         for mr in [0u8, 1, 2, 4, 8, 9] {
-            let mut m = FrameMemory::default();
+            let mut m = Manager::default();
             m.write_ram(ram_map::MAIN_ROUTINE, mr);
             m.write_ram(ram_map::JOY1_CHANGE, 0x10);
             assert!(!start_pause_toggle(&mut m), "mr={mr} 不应被 START 改变");
@@ -49,7 +49,7 @@ mod tests_pause_chain {
             assert_eq!(m.read_ram(ram_map::SFX_NOISE_INIT), 0, "不得起 PauseMusic");
         }
         // 无 START 也不切
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(ram_map::MAIN_ROUTINE, 3);
         m.write_ram(ram_map::JOY1_CHANGE, 0x00);
         assert!(!start_pause_toggle(&mut m));
@@ -60,7 +60,7 @@ mod tests_pause_chain {
     /// （5→6 = GoPassword，**mr=6 的唯一产生点**）。A 级锚 `prg7_engine.asm:2139-2166`。
     #[test]
     fn pause_mode_exits_to_go_password() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(ram_map::MAIN_ROUTINE, 5);
         m.write_ram(ram_map::GAME_PAUSED, 1);
         m.write_ram(ram_map::JOY2_STATUS, 0x88); // BUTTON_A|BUTTON_UP
@@ -73,14 +73,14 @@ mod tests_pause_chain {
     #[test]
     fn pause_mode_blocked_when_gate_not_met() {
         for joy2 in [0x80u8, 0x08, 0x00] {
-            let mut m = FrameMemory::default();
+            let mut m = Manager::default();
             m.write_ram(ram_map::MAIN_ROUTINE, 5);
             m.write_ram(ram_map::JOY2_STATUS, joy2);
             pause_mode(&mut m);
             assert_eq!(m.read_ram(ram_map::MAIN_ROUTINE), 5, "joy2={joy2:02X} 不应退出");
         }
         // 逃脱场景（EndTimer+1≠0）禁止退出
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(ram_map::MAIN_ROUTINE, 5);
         m.write_ram(ram_map::JOY2_STATUS, 0x88);
         m.write_ram(ram_map::END_TIMER + 1, 1);
@@ -91,7 +91,7 @@ mod tests_pause_chain {
     /// GoPassword：`TitleRoutine←0x19` + `$24←1` + `SilenceMusic` + ScreenOff（三件 + 关屏）。
     #[test]
     fn go_password_switches_to_title_bank_for_display_password() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(ram_map::MAIN_ROUTINE, 6);
         m.write_ram(0x00FE, 0x1E);
         go_password(&mut m);
@@ -105,7 +105,7 @@ mod tests_pause_chain {
     /// 端到端：3 + START → 5（暂停）→ 2P A+UP → 6 → 帧界换页 → GameMode=1 且 TitleRoutine=0x19。
     #[test]
     fn pause_to_password_is_reachable_end_to_end() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(ram_map::MAIN_ROUTINE, 3);
         m.write_ram(ram_map::JOY1_CHANGE, 0x10);
         // 第一拍：START ⇒ 暂停（同帧分派 PauseMode；Joy2 未按 ⇒ 停在 5）
@@ -127,7 +127,7 @@ mod tests_pause_chain {
     /// IncrementRoutine（$C155）= `inc MainRoutine / rts`。
     #[test]
     fn increment_routine_advances_one() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(ram_map::MAIN_ROUTINE, 7);
         increment_routine(&mut m);
         assert_eq!(m.read_ram(ram_map::MAIN_ROUTINE), 8);
@@ -137,7 +137,7 @@ mod tests_pause_chain {
 #[cfg(test)]
 mod tests_prepare_game_over {
     use super::*;
-    use crate::frame::memory::FrameMemory;
+    use crate::frame::memory::Manager;
     use crate::ram_map;
 
     /// 死亡链端到端（state 机层，A 级 asm 锚）：
@@ -148,7 +148,7 @@ mod tests_prepare_game_over {
     /// 修前此链在 `mr=4` 处 `unported!("bank07:C9A6")` panic（审计 §6 件 #1）。
     #[test]
     fn death_chain_reaches_game_over_and_switches_to_title_bank() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         // 死亡前置：GameEngine 已 SetTimer(#$04, x=4) 且 Timer3 已尽（WaitTimer 待跑）
         m.write_ram(ram_map::MAIN_ROUTINE, 9); // WaitTimer
         m.write_ram(ram_map::TIMER3, 0);
@@ -176,7 +176,7 @@ mod tests_prepare_game_over {
     /// 且绝不把 `$1E` 写回（那是 ScreenOn 的形）——防「用点屏冒充关屏」的假绿。
     #[test]
     fn prepare_game_over_clears_only_bg_obj_bits() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(ram_map::MAIN_ROUTINE, 4);
         m.write_ram(0x00FE, 0x1E);
         prepare_game_over(&mut m);
@@ -236,9 +236,9 @@ pub use crate::enemy::slot_cycle::update_all_enemies;
 #[cfg(test)]
 mod bcd_mask_audit_tdd {
     use super::*;
-    use crate::frame::FrameMemory;
+    use crate::frame::Manager;
 
-    fn setup(m: &mut FrameMemory, h0: u8, h1: u8, a: u8, b: u8, varia: bool) {
+    fn setup(m: &mut Manager, h0: u8, h1: u8, a: u8, b: u8, varia: bool) {
         m.write_ram(0x0300, 0); // sa_Stand=0（过 IsSamusDead 门）
         m.write_ram(0x0106, h0);
         m.write_ram(0x0107, h1);
@@ -254,7 +254,7 @@ mod bcd_mask_audit_tdd {
     /// 旧掩码剥 bit6-5（0x79&0x9F=0x19）⇒ rust=0x19≠asm=0x79。
     #[test]
     fn health_plus1_bcd_wrap_no_mask() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         setup(&mut m, 0x00, 0x00, 0x00, 0x21, false);
         subtract_health(&mut m);
         assert_eq!(m.read_ram(0x0106), 0x00);
@@ -266,7 +266,7 @@ mod bcd_mask_audit_tdd {
     /// 旧掩码 |h1&0x60 拼回 0x20 ⇒ rust=$39≠asm=$19。
     #[test]
     fn health_plus1_tank_borrow_faithful() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         setup(&mut m, 0x50, 0x20, 0x80, 0x00, false);
         subtract_health(&mut m);
         assert_eq!(m.read_ram(0x0106), 0x70);
@@ -278,7 +278,7 @@ mod bcd_mask_audit_tdd {
     /// 旧 rust=(a+0x4F)>>1=$27 ⇒ $0127。锚 (50,98)=asm 模型逐字节真值。
     #[test]
     fn varia_half_damage_formula() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         setup(&mut m, 0x00, 0x00, 0x00, 0x03, true);
         subtract_health(&mut m);
         assert_eq!(m.read_ram(0x0106), 0x50, "Varia $0300→$0150：a=$4F+(a>>1)+1");
@@ -288,7 +288,7 @@ mod bcd_mask_audit_tdd {
     /// 对照：无借位常规扣血不回归（30−8=22）。
     #[test]
     fn plain_subtract_no_regression() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         setup(&mut m, 0x00, 0x03, 0x08, 0x00, false);
         subtract_health(&mut m);
         assert_eq!(m.read_ram(0x0106), 0x92, "30−8=22 BCD（0x00−8 借位百位 3→2，个位 0→2 的回绕=0x92）");
@@ -343,7 +343,7 @@ mod tests {
     /// RandomNumbers 合成值自证（+$19/+$5F——注×5 互证面）。
     #[test]
     fn random_numbers_accumulates() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(RANDOM1, 0x11); // boot 初值（C0AC 自证）
         m.write_ram(RANDOM2, 0xFF);
         random_numbers(&mut m);
@@ -356,7 +356,7 @@ mod tests {
     /// （等待段自旋于 GoMainRoutine 内部——循环体四件每迭代一次）。
     #[test]
     fn continuation_tick_freezes_iteration_items() {
-        let mut m = crate::frame::FrameMemory::default();
+        let mut m = crate::frame::Manager::default();
         m.write_ram(GAME_MODE, 1); // 标题路（continuation 语义面——GameMode=1 免游戏派发）
         m.write_ram(crate::ram_map::TITLE_ROUTINE, 1);
         m.title_cursor = 1;
@@ -374,7 +374,7 @@ mod tests {
     /// F4 孤儿游标=新相位首个真迭代（相位推进后残留 cursor——禁误门）：循环体跑。
     #[test]
     fn orphan_cursor_after_phase_advance_is_fresh_iteration() {
-        let mut m = crate::frame::FrameMemory::default();
+        let mut m = crate::frame::Manager::default();
         m.write_ram(GAME_MODE, 1); // 标题路（continuation 语义面）
         m.write_ram(crate::ram_map::TITLE_ROUTINE, 2);
         m.title_cursor = 2;
@@ -391,7 +391,7 @@ mod tests {
     /// mutation 面：旧形（每 tick 无条件加）下两窗各多 3 ⇒ fcprobe 逐帧差 +6 ⇒ 本测红。
     #[test]
     fn fc_frozen_on_no_return_title_arms() {
-        let mut m = crate::frame::FrameMemory::default();
+        let mut m = crate::frame::Manager::default();
         m.write_ram(GAME_MODE, 1);
         // $01 臂：2 cursor 步全冻结，第 2 步相位→0x02（Step 4a 形：段拍后跟 bogged
         // 溢出窗+0xFF 完成拍哨兵——本测直驱 main_loop_iter 不经 engine 门消费，哨兵直达）
@@ -423,7 +423,7 @@ mod tests {
     /// 时上检须探左列（单点旧形只探中心列⇒漏侧壁⇒本测红）。
     #[test]
     fn enemy_check_move_up_span_covers_side_columns() {
-        let mut m = crate::frame::FrameMemory::default();
+        let mut m = crate::frame::Manager::default();
         for i in 0..0x400u16 {
             m.write_wram(0x6000 + i, 0xA0); // 全可走
         }
@@ -442,7 +442,7 @@ mod tests {
     /// 敌检全距（右臂）：radiusY 跨块时右检须探下侧行（单点旧形漏）。
     #[test]
     fn enemy_check_move_right_span_covers_bottom_rows() {
-        let mut m = crate::frame::FrameMemory::default();
+        let mut m = crate::frame::Manager::default();
         for i in 0..0x400u16 {
             m.write_wram(0x6000 + i, 0xA0);
         }
@@ -461,7 +461,7 @@ mod tests {
     /// UpdateTimer 预分频+三计时器递减。
     #[test]
     fn update_timer_prescaler_and_decrement() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(TIMER_DELAY, 3);
         m.write_ram(TIMER1, 5);
         m.write_ram(TIMER2, 0); // 零不减
@@ -484,7 +484,7 @@ mod tests {
     /// 对照：该径零 anim 写（caller 集无该站）。
     #[test]
     fn skree_projectile_display_is_pure_draw_powerup_slot() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(0x0304, 5); // Samus 槽走表哨兵
         let base = 0x00A0u16;
         m.write_ram(base, 2); // dieDelay>0（活槽）
@@ -505,7 +505,7 @@ mod tests {
     /// 双返回全冻（f847 起 y/闪位零写）⇒f1278 敌撞击退单腿⇒七格 20-24k 残差。
     #[test]
     fn enemy_active_offscreen_is_skipped() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         let x = 0x50u16;
         // 离屏（同名表+敌在滚轴左⇒IsObjectVisible=false）
         m.write_ram(0x00FF, 0); // PPUCTRL_ZP（同名表 hi=0）
@@ -527,7 +527,7 @@ mod tests {
     /// 【守门】data05 bit1 闩=1 ⇒免检视为可见（F37F `and #$02/bne @exit`）⇒更新照跑。
     #[test]
     fn enemy_active_bit1_latch_skips_visibility_check() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         let x = 0x50u16;
         m.write_ram(0x00FF, 0);
         m.write_ram(crate::ram_map::SCROLL_DIR, 0x02);
@@ -545,7 +545,7 @@ mod tests {
     /// 【守门】Resting(1) 离屏=双返（旧条件已覆盖——防范围修过应用）。
     #[test]
     fn enemy_resting_offscreen_is_skipped() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         let x = 0x50u16;
         m.write_ram(0x00FF, 0);
         m.write_ram(crate::ram_map::SCROLL_DIR, 0x02);
@@ -566,7 +566,7 @@ mod tests {
     /// 敌 hi=0 ⇒异名表拒触 ✓；rust 假 hi=0 ⇒误触）。
     #[test]
     fn enemy_hit_box_respects_samus_hi_nametable() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         let x = 0x40u16;
         m.write_ram(0x00FF, 1); // PPUCTRL_ZP（NT 位 0=1——(hi^NT) 后差保真）
         m.write_ram(crate::ram_map::SCROLL_DIR, 0x02); // 横房
@@ -593,7 +593,7 @@ mod tests {
     /// Exit17`——status≥4 免伤）；旧形无此门（Lx269 环头只滤 0/3/5）。
     #[test]
     fn frozen_enemy_deals_no_damage() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         let x = 0x40u16;
         m.write_ram(0x00FF, 1);
         m.write_ram(crate::ram_map::SCROLL_DIR, 0x02);
@@ -619,7 +619,7 @@ mod tests {
     /// 旧形写 MainRoutine←3（下例行）⇒无冻结⇒拾取后萨姆斯续动（emu 冻 240 帧实录）。
     #[test]
     fn powerup_delay_sets_wait_timer_not_game_engine() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(0x0109, 0xFF); // PowerUpDelayFlag（constants_ram:810——拾取授予面）
         m.write_ram(crate::ram_map::MAIN_ROUTINE, 3);
         game_engine(&mut m);
@@ -633,7 +633,7 @@ mod tests {
     /// （GameOver(4)/GoPassword(6) 免起乐——asm :2494-2505）。
     #[test]
     fn wait_timer_freezes_until_zero_then_resumes() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(crate::ram_map::MAIN_ROUTINE, 9);
         m.write_ram(crate::ram_map::TIMER3, 0x18);
         m.write_ram(0x0020, 3); // NextRoutine=GameEngine
@@ -649,7 +649,7 @@ mod tests {
     /// span（Step 2 机构改形）：相位推进/FC 同拍落工作段，等待=门队列挂起）。
     #[test]
     fn go_main_routine_title_crosses_meeting_point() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(GAME_MODE, 1); // TitleRoutine=0=InitializeAfterReset
         go_main_routine(&mut m); // 工作段（仪式+推进同拍）
         assert_eq!(m.read_ram(crate::ram_map::TITLE_ROUTINE), 1); // 相位推进（inc $1F）
@@ -661,7 +661,7 @@ mod tests {
     /// 直落 C81D）：**一迭代双步 mr 00→02**（金腿窗3 状态差实证——同迭代链断裂修复锚）。
     #[test]
     fn game_dispatch_area_init_falls_into_more_init_same_iter() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         copy_map(&mut m);
         m.write_ram(GAME_MODE, 0);
         m.write_ram(crate::ram_map::MAIN_ROUTINE, 0);
@@ -676,7 +676,7 @@ mod tests {
     /// 外角下探伪成功转角⇒菱形回路——crawlprobe f797 实录）。
     #[test]
     fn crawler_ai_skips_movement_while_preai_resting() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         let x = 0x40u8; // slot4（字节偏移）
         // 槽态：Resting、朝向 0（地板向右）、半径 8/8（draw 已写过形）、屏内位置
         m.write_wram(0x6AF4 + x as u16, 1); // status=Resting
@@ -709,7 +709,7 @@ mod tests {
     /// delay=00 实录；旧形激活径不写回⇒delay 恒 1 残留）；bit3=0 径 inc 退回=原值。
     #[test]
     fn try_becoming_active_writes_dec_in_place() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         let x = 0x40u8;
         m.write_ram(0x0400 + x as u16 + 9, 1); // delay=1（dec→0）
         m.write_ram(0x0400 + x as u16 + 5, 0x1A); // bit3 set（阈值已过）
@@ -718,7 +718,7 @@ mod tests {
         assert_eq!(m.read_wram(0x6AF4 + x as u16), 2, "bit3=1 ⇒ status→Active");
         assert_eq!(m.read_ram(0x0400 + x as u16 + 9), 0, "激活径 delay=0（原地 dec）");
         // bit3=0 径：dec 归 0 后 inc 退回（delay 原值保留）
-        let mut m2 = FrameMemory::default();
+        let mut m2 = Manager::default();
         m2.write_ram(0x0400 + x as u16 + 9, 1); // delay=1（dec→0 后到 bit3 检查）
         m2.write_ram(0x0400 + x as u16 + 5, 0x02); // bit3 clear
         try_becoming_active(&mut m2, x);
@@ -730,7 +730,7 @@ mod tests {
     /// SetupRoom 环+名表拷贝重活 bogged×2→尾 `jmp ScreenOn` 等待）——窗3 门序后段。
     #[test]
     fn more_init_declares_frame_gates() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         copy_map(&mut m);
         m.write_ram(crate::ram_map::MAIN_ROUTINE, 1);
         m.write_ram(crate::ram_map::IN_AREA, 0);
@@ -749,7 +749,7 @@ mod r25_chain_probe {
     #[test]
     fn more_init_sets_palette_toggle_from_area_rom() {
         for (area, want) in [(0u8, 0x01u8), (1, 0x01), (2, 0x06), (3, 0x06), (4, 0x06)] {
-            let mut m = crate::frame::FrameMemory::default();
+            let mut m = crate::frame::Manager::default();
             copy_map(&mut m);
             m.write_ram(crate::ram_map::MAIN_ROUTINE, 1);
             m.write_ram(crate::ram_map::IN_AREA, area);
@@ -773,7 +773,7 @@ mod r25_chain_probe {
             return;
         }
         const SLOT: u8 = 0x20;
-        let mut m = crate::frame::FrameMemory::default();
+        let mut m = crate::frame::Manager::default();
         m.write_ram(crate::ram_map::SAMUS_X, 0x80);
         m.write_ram(crate::ram_map::SAMUS_HI, 0x01);
         m.write_ram(0x0421, 0x80); // 敌 x 与萨姆斯相同
@@ -789,7 +789,7 @@ mod r25_chain_probe {
     /// more_init 递进面（r25 诊断锚：mr 1→2——CopyMap 前置（单测态补地图面））。
     #[test]
     fn more_init_advances_mr() {
-        let mut m = crate::frame::FrameMemory::default();
+        let mut m = crate::frame::Manager::default();
         copy_map(&mut m); // WorldMap（boot 链件）
         m.write_ram(crate::ram_map::MAIN_ROUTINE, 1);
         m.write_ram(crate::ram_map::IN_AREA, 0);
@@ -803,7 +803,7 @@ mod r25_chain_probe {
 #[cfg(test)]
 mod r27_enemy_move_collision_tdd {
     use super::*;
-    use crate::frame::FrameMemory;
+    use crate::frame::Manager;
 
 }
 
@@ -811,10 +811,10 @@ mod r27_enemy_move_collision_tdd {
 #[cfg(test)]
 mod pending001_is_samus_dead_gate_tdd {
     use super::*;
-    use crate::frame::FrameMemory;
+    use crate::frame::Manager;
 
     /// 场景构形：敌 slot4 活跃(status=1,半径 8/8)与 Samus 重叠、无 i 帧、无螺旋转。
-    fn setup_overlap(m: &mut FrameMemory) {
+    fn setup_overlap(m: &mut Manager) {
         m.write_ram(0x0300, 0xFF); // Samus.status——各用例覆写
         m.write_ram(0x0070, 0); // InvincibleDelay=0
         m.write_ram(0x0301, 8); // Samus.radiusY
@@ -835,7 +835,7 @@ mod pending001_is_samus_dead_gate_tdd {
     /// ⇒asm F0DA beq NextEnemy⇒敌×萨碰撞整个跳过⇒不得置 isHit/Hurt010F。
     #[test]
     fn status_sa_begin_255_skips_enemy_samus_collision() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         setup_overlap(&mut m);
         m.write_ram(0x0300, 0xFF);
         uw_collision_detection(&mut m);
@@ -848,7 +848,7 @@ mod pending001_is_samus_dead_gate_tdd {
     #[test]
     fn status_dead_7_8_skips_enemy_samus_collision() {
         for st in [7u8, 8] {
-            let mut m = FrameMemory::default();
+            let mut m = Manager::default();
             setup_overlap(&mut m);
             m.write_ram(0x0300, st);
             uw_collision_detection(&mut m);
@@ -860,7 +860,7 @@ mod pending001_is_samus_dead_gate_tdd {
     /// 对照（存活态）：status=sa_Stand(0) 时碰撞照常置 isHit（门只滤 7/8/255）。
     #[test]
     fn status_stand_0_still_collides() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         setup_overlap(&mut m);
         m.write_ram(0x0300, 0);
         uw_collision_detection(&mut m);
@@ -880,9 +880,9 @@ mod pending001_is_samus_dead_gate_tdd {
 #[cfg(test)]
 mod subtract_health_shared_gate_tdd {
     use super::*;
-    use crate::frame::FrameMemory;
+    use crate::frame::Manager;
 
-    fn setup(m: &mut FrameMemory, status: u8) {
+    fn setup(m: &mut Manager, status: u8) {
         m.write_ram(0x0300, status); // Samus.status
         m.write_ram(0x0106, 0x00); // Health low（30=「00/03」）
         m.write_ram(0x0107, 0x03); // Health high
@@ -893,7 +893,7 @@ mod subtract_health_shared_gate_tdd {
     /// 【RED】status=sa_Begin(255)：扣血 0 差+HealthChange 清零（CEA0→F323）。
     #[test]
     fn shared_gate_sa_begin_255_blocks_subtract() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         setup(&mut m, 0xFF);
         subtract_health(&mut m);
         assert_eq!(m.read_ram(0x0106), 0x00, "255 免伤：Health low 不变");
@@ -906,7 +906,7 @@ mod subtract_health_shared_gate_tdd {
     #[test]
     fn shared_gate_dead_7_8_blocks_subtract() {
         for st in [7u8, 8] {
-            let mut m = FrameMemory::default();
+            let mut m = Manager::default();
             setup(&mut m, st);
             subtract_health(&mut m);
             assert_eq!(m.read_ram(0x0106), 0x00, "status={} 免伤", st);
@@ -919,7 +919,7 @@ mod subtract_health_shared_gate_tdd {
     /// 对读另行卡）。
     #[test]
     fn shared_gate_stand_0_still_subtracts() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         setup(&mut m, 0);
         subtract_health(&mut m);
         assert!(
@@ -933,12 +933,12 @@ mod subtract_health_shared_gate_tdd {
 #[cfg(test)]
 mod r28_crawler_direction_tdd {
     use super::*;
-    use crate::frame::FrameMemory;
+    use crate::frame::Manager;
 
     /// TDD 红→绿：crawler_ai with data0A=1 应向左下爬（emu 实测形）
     #[test]
     fn crawler_ai_with_orientation_1_moves_left_down() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         // 敌人 slot4：x=200 y=45（emu f820 实测形）
         m.write_ram(0x0440, 45); // y
         m.write_ram(0x0441, 200); // x
@@ -962,7 +962,7 @@ mod r28_crawler_direction_tdd {
 #[cfg(test)]
 mod r29_enemy_activation_tdd {
     use super::*;
-    use crate::frame::FrameMemory;
+    use crate::frame::Manager;
 
 }
 
@@ -970,7 +970,7 @@ mod r29_enemy_activation_tdd {
 #[cfg(test)]
 mod r30_enemy_spawn_delay_tdd {
     use super::*;
-    use crate::frame::FrameMemory;
+    use crate::frame::Manager;
 
 }
 
@@ -980,7 +980,7 @@ mod r30_enemy_spawn_delay_tdd {
 /// `jmp InitEnAnimIndex`。旧形「随件占位」⇒ 敌 animFrame 恒 0 ⇒ 画错帧。
 #[test]
 fn crawler_reorient_sets_anim_index_from_orientation() {
-    let mut m = crate::frame::FrameMemory::default();
+    let mut m = crate::frame::Manager::default();
     // slot4：data05=0x18（flip=bit0=0）、data0A(orientation)=1（沿壁向下）
     m.write_ram(0x0445, 0x18); // slot4 data05（flip=bit0=0）
     m.write_ram(0x044A, 0x01); // slot4 data0A（orient=1 沿壁向下）
@@ -996,7 +996,7 @@ fn crawler_reorient_sets_anim_index_from_orientation() {
 /// EN_ANIM_TABLE[animIndex]：FF⇒animIndex←reset 续走；否则 animFrame←表值、animIndex+1。
 #[test]
 fn update_enemy_anim_walks_frame_ids() {
-    let mut m = crate::frame::FrameMemory::default();
+    let mut m = crate::frame::Manager::default();
     // Zoomer 沿壁：reset=$3E、animIndex=$3E（EnAnimTable[62]=$5E、[63]=$5F、[64]=FF?）
     m.write_wram(0x6AF4 + 0x40 + 5, 0x3E);
     m.write_wram(0x6AF4 + 0x40 + 6, 0x3E);
@@ -1019,7 +1019,7 @@ fn update_enemy_anim_walks_frame_ids() {
 #[cfg(test)]
 mod r31_hud_display_bar_tdd {
     use super::*;
-    use crate::frame::FrameMemory;
+    use crate::frame::Manager;
 
     /// 【goal-r17 HUD·红测】DisplayBar(E0C1) 游戏开局态：
     /// 拷 DataDisplayTbl(E1B9, 40B)→OAM；健康 2 位=($0107&0xF)|$A0、($0106>>4)|$A0
@@ -1027,7 +1027,7 @@ mod r31_hud_display_bar_tdd {
     /// 无罐 ⇒ LE14A RTS。$5B←40。
     #[test]
     fn display_bar_game_start_en30_no_missiles() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         for i in 0..0x100u16 {
             m.write_ram(0x0200 + i, 0x11); // 垃圾底——验证拷贝
         }
@@ -1067,11 +1067,11 @@ mod tests_projectile_hit_door {
     //! 列匹配（&$04 且 &$1F）/槽选 Y=X*8|$80/类型门（偶=仅导弹或爆（0x04+anim 0x91）
     //! （否则弹开（不写））/奇=任意）/isHit[$30A+y]←$04/SFXTri|=$0683|=2/雕像兜底 inc。
     use super::*;
-    use crate::frame::FrameMemory;
+    use crate::frame::Manager;
 
     /// 状态构造：4 门全布（DoorRoomRAMPtr=$5C-$63（列=Temp04 对齐）+门 status/类型）。
-    fn mem_doors(door_type: u8, projectile_status: u8, anim: u8) -> FrameMemory {
-        let mut m = FrameMemory::default();
+    fn mem_doors(door_type: u8, projectile_status: u8, anim: u8) -> Manager {
+        let mut m = Manager::default();
         m.write_ram(0x0071, 1); // UpdatingSamusProjectile
         m.write_ram(0x004B, 0xD0); // PageIndex（弹槽偏移）
         m.write_ram(0x0300 + 0xD0, projectile_status);
@@ -1160,10 +1160,10 @@ mod tests_bullet_lifetime {
     //! 积分）+时寿 dec；实心（<$A0）⇒爆（status←4+anim 0x1D）；$4E 门瓦⇒任务卡 2 径
     //! （isHit 写）+爆；DieDelay 耗尽⇒清；爆态（4）animFrame==$F7⇒清；onScreen 清⇒删。
     use super::*;
-    use crate::frame::FrameMemory;
+    use crate::frame::Manager;
 
-    fn bullet_mem(tile: u8) -> FrameMemory {
-        let mut m = FrameMemory::default();
+    fn bullet_mem(tile: u8) -> Manager {
+        let mut m = Manager::default();
         m.write_ram(0x004B, 0xD0); // PageIndex
         m.write_ram(0x03D0, 1); // wa_Bullet
         m.write_ram(0x03D0 + 0x0B, 1); // onScreen
@@ -1239,12 +1239,12 @@ mod tests_p0_anchor_pin {
     //! 删除件锚保留面（asm 真值回归钉）：爆族 anim 表值/FrameNone 门/门耐久表/
     //! 电梯偏移/弹时寿——每测独立断言（替代面（bullet_explode/update_bullet/door））。
     use super::*;
-    use crate::state::FrameMemory;
+    use crate::state::Manager;
 
     /// 爆 anim（bullet_explode（0x1D=BulletHit（$858F-$8572）））。
     #[test]
     fn pin_bullet_hit_anim() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(0x004B, 0xD0);
         m.write_ram(0x03D0, 1);
         bullet_explode(&mut m);
@@ -1254,7 +1254,7 @@ mod tests_p0_anchor_pin {
     /// 爆 anim（导弹径（0x91=MissileExplode（$8603-$8572（表算））））。
     #[test]
     fn pin_missile_explode_anim() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(0x004B, 0xD0);
         m.write_ram(0x03D0, 0x0B);
         bullet_explode(&mut m);
@@ -1264,7 +1264,7 @@ mod tests_p0_anchor_pin {
     /// 爆不重入（已爆（status 4）⇒保（asm beq @RTS））。
     #[test]
     fn pin_explode_no_reentry() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(0x004B, 0xD0);
         m.write_ram(0x03D0, 4);
         m.write_ram(0x03D5, 0x77);
@@ -1275,7 +1275,7 @@ mod tests_p0_anchor_pin {
     /// FrameNone($F7) 爆尽清（update_bullet_explode）。
     #[test]
     fn pin_frame_none_kill() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(0x004B, 0xD0);
         m.write_ram(0x03D0, 4);
         m.write_ram(0x03D3, 0xF7);
@@ -1286,7 +1286,7 @@ mod tests_p0_anchor_pin {
     /// 弹时寿 $0C（fire face（12 帧））。
     #[test]
     fn pin_bullet_die_delay() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(crate::ram_map::JOY1_CHANGE, 0x40);
         m.write_ram(crate::ram_map::JOY1_STATUS, 0);
         crate::samus::handler::samus_jump_check_fire(&mut m); // D09C 公面（发射径）
@@ -1297,7 +1297,7 @@ mod tests_p0_anchor_pin {
     #[test]
     fn pin_door_hp_table() {
         for (dtype, hp) in [(0u8, 5u8), (1, 1), (2, 10), (3, 1)] {
-            let mut m = FrameMemory::default();
+            let mut m = Manager::default();
             m.write_ram(0x0380, 1);
             m.write_ram(0x0387, dtype);
             m.write_ram(0x038C, 0);
@@ -1310,7 +1310,7 @@ mod tests_p0_anchor_pin {
     /// Door.isHit bit2 语义（$04（弹击面（Closed 递减触发）））。
     #[test]
     fn pin_door_ishit_bit2() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(0x0380, 2);
         m.write_ram(0x0387, 0);
         m.write_ram(0x038F, 5);
@@ -1353,7 +1353,7 @@ mod tests_axis_facing {
     /// bit7 置（竖轴）⇒facing=bit3（非 bit0）。
     #[test]
     fn axis_facing_bit7_uses_bit3() {
-        let mut m = crate::frame::FrameMemory::default();
+        let mut m = crate::frame::Manager::default();
         // slot x=0：type=2；data05=0x88（bit7 置+bit3 置（bit0 清））
         m.write_wram(0x6AF4 + 14, 2);
         m.write_ram(0x0405, 0x88);
@@ -1363,7 +1363,7 @@ mod tests_axis_facing {
     /// bit7 清（横轴）⇒facing=bit0。
     #[test]
     fn axis_facing_bit7_clear_uses_bit0() {
-        let mut m = crate::frame::FrameMemory::default();
+        let mut m = crate::frame::Manager::default();
         m.write_wram(0x6AF4 + 14, 2);
         m.write_ram(0x0405, 0x01); // bit0 置
         assert_eq!(enemy_type_times2_plus_facing(&mut m, 0), 5, "横轴：bit0=1⇒2*2+1=5");
@@ -1377,12 +1377,12 @@ mod tests_axis_facing {
 mod tests_kill_chain {
     //! 判径（asm F536/F611/DCF5（findings §11）+ens_probe 偏移（+0B health/+0E wa））。
     use super::*;
-    use crate::frame::FrameMemory;
+    use crate::frame::Manager;
 
     /// 弹击⇒HP 递减⇒0⇒爆（status3）⇒计时尽⇒拾取转（status5）。
     #[test]
     fn shoot_kill_full_chain() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         // 敌槽 x=0x40（0x440 区）：HP=1（emu f800 实测形）+被弹旗
         let x = 0x40u8;
         m.write_wram(0x6AF4 + x as u16 + 14, 5); // type=5（Zoomer）
@@ -1408,7 +1408,7 @@ mod tests_kill_chain {
     /// 弹药拾取（animFrame=0x80）⇒+5 弹+槽释。
     #[test]
     fn pickup_missile_restores() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         let x = 0x40u8;
         m.write_wram(0x6AF4 + x as u16, 5); // Pickup
         m.write_wram(0x6AF4 + x as u16 + 3, 0x80); // animFrame=MissilePickup
@@ -1422,7 +1422,7 @@ mod tests_kill_chain {
     /// 【击杀链接线】碰撞环（uw_collision_detection）：弹到位→命中标志→F536 扣血→爆。
     #[test]
     fn collision_ring_links_bullet_to_kill() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         let x = 0x40u8;
         m.write_wram(0x6AF4 + x as u16, 2); // status=Active
         m.write_wram(0x6AF4 + x as u16 + 14, 5); // type=5
@@ -1448,7 +1448,7 @@ mod tests_kill_chain {
         enemy_react_to_projectile(&mut m, x);
         assert_eq!(m.read_wram(0x6AF4 + x as u16), 5, "普通束杀⇒掉落物（status5，asm F623）");
         // 远弹不触
-        let mut m2 = FrameMemory::default();
+        let mut m2 = Manager::default();
         m2.write_wram(0x6AF4 + x as u16, 2);
         m2.write_wram(0x6AF4 + x as u16 + 1, 8);
         m2.write_wram(0x6AF4 + x as u16 + 2, 8);
@@ -1471,14 +1471,14 @@ mod tests_enemy_screen_pos {
     //! 判径（sprite.rs 勘误注（$25/$26=MMC1CTRL_ZP 误读（ScrollX=$FD）））：敌屏位
     //! x=房位−ScrollX($FD)——旧形减 0x26（SpareMem26）⇒不减镜头⇒随镜恒距。
     use super::*;
-    use crate::frame::FrameMemory;
+    use crate::frame::Manager;
 
     /// 滚动关系锚：ScrollX+10⇒OAM 屏位−10（place 微调不变（房位同））——旧形减 $26
     /// （与 ScrollX 无关）⇒屏位恒定（随镜恒距根因）。
     #[test]
     fn enemy_screen_x_subtracts_scroll_x() {
         let mut mk = |sx: u8| {
-            let mut m = FrameMemory::default();
+            let mut m = Manager::default();
             m.write_ram(0x0400, 45);
             m.write_ram(0x0401, 200);
             m.write_ram(crate::ram_map::SCROLL_X, sx);
@@ -1503,10 +1503,10 @@ mod tests_enemy_palette_override {
     //! `UpdateEnemy_Frozen`（$F443 ⇒ `$80|$01|PRIORITY`）。
     //! 旧形只读 $6B bit4 做镜像、忽略 MSB ⇒ tough/冻结敌调色板覆盖从未生效。
     use super::*;
-    use crate::frame::FrameMemory;
+    use crate::frame::Manager;
 
     fn attr_with_obj_cntrl(v: u8) -> u8 {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(0x0400, 45);
         m.write_ram(0x0401, 200);
         m.write_ram(crate::ram_map::SCROLL_X, 0);
@@ -1544,12 +1544,12 @@ mod tests_crawl_trace {
     //! 判径（crawler.asm（6/8 步门+四例行+转向））：静置 N 帧敌 x 非恒（爬行）+
     //! 轨迹/速双侧同迹（FC 相位容）。
     use super::*;
-    use crate::frame::FrameMemory;
+    use crate::frame::Manager;
 
     /// 50 帧爬行轨迹锚（x 非恒（AI 执行实证）+转向不卡死）。
     #[test]
     fn crawl_moves_over_50_frames() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         let x = 0x40u8;
         // 敌态（emu f820 实测形）：y=45/x=200/data0A=1（下爬）/status=Active(2)
         m.write_ram(0x0400 + x as u16, 45);   // 槽 x=0x40 y
@@ -1583,13 +1583,13 @@ mod tests_fc_per_iter {
     //! 判径（f918 注载根因（span_fc×滚动迭代双加））：普通游戏迭代 FC 增=**恰 1**/迭代
     //! （title 完成拍哨兵（cursor 0xFF）=恰 1/臂末迭代）——双加=2⇒红。
     use super::*;
-    use crate::frame::FrameMemory;
+    use crate::frame::Manager;
 
     /// 真 main_loop_iter FC 增计（10 轮⇒FC 增 ≤10（恰 1/迭代（title 冻臂可少））——
     /// 双加=20⇒红（f918 根因实锤）。
     #[test]
     fn fc_increments_once_per_iteration() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(crate::ram_map::SAMUS_GEAR, 0xFF); // 全能力（render 面需）
         let f0 = m.read_ram(FRAME_COUNT);
         for _ in 0..10 {
@@ -1603,7 +1603,7 @@ mod tests_fc_per_iter {
     /// 【根修③TDD】span_fc 收口 tick=恰 1 增（收口+尾 inc 同 tick=2⇒红（±1 陀螺源））。
     #[test]
     fn span_fc_drain_tick_single_inc() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(crate::ram_map::SAMUS_GEAR, 0xFF);
         // span_fc 置位+门队列 1 项（title 0x00 臂形（bridge:95））——drain tick=收口点
         m.iter_span_fc = true;
@@ -1633,7 +1633,7 @@ mod tests_fc_per_iter {
 #[cfg(test)]
 mod h3_enemy_slot_tdd {
     use super::*;
-    use crate::frame::FrameMemory;
+    use crate::frame::Manager;
 
     /// F3AA 位 6 公式 asm 合形：bit6=((X/16) xor FrameCount) bit0（$F3AA `txa/Adiv16/
     /// eor FrameCount/lsr`——无 +1）。红态（+1 补偿）=全槽反相（h3 残差实锤）。
@@ -1641,7 +1641,7 @@ mod h3_enemy_slot_tdd {
     fn h3_bit6_toggle_matches_asm_formula() {
         for fc in [0x00u8, 0x10, 0x11, 0xFF] {
             for x in [0x00u8, 0x10, 0x20, 0x30, 0x40, 0x50] {
-                let mut m = FrameMemory::default();
+                let mut m = Manager::default();
                 m.write_ram(crate::ram_map::FRAME_COUNT, fc);
                 m.write_ram(0x0400 + x as u16 + 5, 0x00);
                 update_en_data05_bit6(&mut m, x);
@@ -1707,10 +1707,10 @@ mod tests_enemy_touching_samus_flags {
     //! ⇒ 敌 `isHit` 记录「被萨姆斯从哪一侧碰到」。缺此件时 case-002 金腿 f1112 `isHit=0x05`
     //! 而锈腿恒 0（首分歧）。
     use super::*;
-    use crate::frame::FrameMemory;
+    use crate::frame::Manager;
 
-    fn base() -> FrameMemory {
-        let mut m = FrameMemory::default();
+    fn base() -> Manager {
+        let mut m = Manager::default();
         m.write_ram(crate::ram_map::SCROLL_DIR, 0x03); // 横滚房（8 位 X 比较）
         m.write_ram(crate::ram_map::SAMUS_INVINCIBLE_DELAY, 0);
         m.write_ram(0x0300, 0x01); // Samus.status＝sa_Stand（非 Dead/Begin）

@@ -16,7 +16,7 @@
 //!
 //! 积分器拼装位：int_x/int_y（integrators.rs 证明级件）随 state 处理族收编到此域。
 
-use crate::state::FrameMemory; // G11 破环：类型层直取（原经 frame/）
+use crate::state::Manager; // G11 破环：类型层直取（原经 frame/）
 use crate::memmap::views::samus::SamusStatus;
 use crate::ram_map::{
     ON_FROZEN_ENEMY, SAMUS_ACCEL_Y, SAMUS_HI, SAMUS_HORZ_SPEED_MAX, SAMUS_ON_ELEVATOR,
@@ -41,7 +41,7 @@ pub fn x_plus_4(x: u8) -> u8 {
 /// 向下查撞点=**y+radiusY**（asm `lda #$00/sec/sbc radiusY`→DistToCenterY=−radiusY→
 /// 查撞点 Y=y−(−radiusY)=y+radiusY（下方））。旧形误用 `y−ry+8`（上方）→地板在下方读到
 /// 空瓦→穿地（L4 f820 发散根因）。仅向下查撞用（@loop_down）；上/横各有独立点。
-fn object_check_move_vertical(mem: &mut FrameMemory) -> bool {
+fn object_check_move_vertical(mem: &mut Manager) -> bool {
     let y = mem.read_ram(0x030D);
     let ry = mem.read_ram(0x0301); // Objects.radiusY
     let x = mem.read_ram(0x030E);
@@ -114,7 +114,7 @@ pub(crate) fn vertical_span_cols(x: u8, rx: u8) -> (u8, u32) {
 
 /// collision_point_ok（**asm 内容锚** CheckMoveVertical `: 07:E7BD`——r26 共享）：
 /// tile 值类：<$80=固实（碰撞！）/$4E=门像/≥$80=可走。
-fn collision_point_ok(mem: &mut FrameMemory, y: u8, x: u8, hi: u8) -> bool {
+fn collision_point_ok(mem: &mut Manager, y: u8, x: u8, hi: u8) -> bool {
     let idx = (((y & 0xF8) as u16) << 2) | ((x >> 3) as u16);
     let page = if hi & 1 != 0 { 0x0400u16 } else { 0x0000 };
     let ptr = 0x6000 | page | (idx & 0x3FF);
@@ -128,7 +128,7 @@ fn collision_point_ok(mem: &mut FrameMemory, y: u8, x: u8, hi: u8) -> bool {
     true
 }
 
-pub fn vert_accelerate(mem: &mut FrameMemory) {
+pub fn vert_accelerate(mem: &mut Manager) {
     if mem.read_ram(SAMUS_ACCEL_Y) != 0 {
         return; // 空中——`bne @dontStartFalling`
     }
@@ -166,7 +166,7 @@ mod tests {
         assert_eq!(left, 191);
         assert_eq!(n, 3, "span 3 列（191/199/207→col 23/24/25）");
         // 实况瓦：col 23=FF/col 24=FF/col 25=固实（柱）⇒检应 block
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         for a in 0x6000u16..0x6400 {
             m.write_wram(a, 0xFF);
         }
@@ -198,7 +198,7 @@ mod tests {
     /// 积分器拼装面（R-mv-2：vert_integrate——RAM 三态往返+位移）。
     #[test]
     fn vert_integrate_ram_roundtrip() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(SAMUS_SPEED_Y_I, 0x02);
         m.write_ram(SAMUS_SPEED_Y_F, 0x80);
         m.write_ram(SAMUS_ACCEL_Y, 0x1A);
@@ -216,7 +216,7 @@ mod tests {
     /// （$0310 位移 subpix——旧形误清它→落地下速 frac 残留 0x9C→f820 相位发散）。
     #[test]
     fn stop_vert_movement_clears_two_faces() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(SAMUS_SPEED_Y_I, 0x80);
         m.write_ram(SAMUS_SPEED_Y_F, 0x9C);
         m.write_ram(SAMUS_SUBPIX_Y, 0x55);
@@ -229,7 +229,7 @@ mod tests {
     /// CD92 镜像位（SamusDir bit0→bit4 OR 入 $6B）。
     #[test]
     fn set_mirror_cntrl_bit_or_face() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(crate::ram_map::SAMUS_DIR, 1);
         m.write_ram(0x006B, 0x03);
         set_mirror_cntrl_bit(&mut m);
@@ -240,7 +240,7 @@ mod tests {
     #[test]
     fn lava_check_status_gates() {
         use crate::ram_map::SAMUS_STATUS;
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(SAMUS_STATUS, 7); // Dead→短路
         lava_and_move_check(&mut m); // 无炸
         m.write_ram(SAMUS_STATUS, 1); // run→全链（r26 移动物理 fallthrough）
@@ -251,7 +251,7 @@ mod tests {
     #[test]
     fn check_health_status_hit_face() {
         use crate::ram_map::{SAMUS_ACCEL_Y, SAMUS_INVINCIBLE_DELAY, SAMUS_KNOCKBACK_DIR};
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(0x030A, 0x20); // 受击（hit 标志）
         m.write_ram(crate::ram_map::SAMUS_KNOCKBACK_IS_BOMB, 0);
         let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| check_health_status(&mut m)));
@@ -261,7 +261,7 @@ mod tests {
         assert_eq!(m.read_ram(SAMUS_SPEED_Y_I), 0xFD);
         assert_eq!(m.read_ram(SAMUS_ACCEL_Y), 0x38);
         // 无敌倒数面（无受击标志）
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(SAMUS_INVINCIBLE_DELAY, 3);
         let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| check_health_status(&mut m)));
         assert!(r.is_ok(), "倒数径全通（CheckHealthBeep 记账化）: {:?}", r.err());
@@ -272,7 +272,7 @@ mod tests {
     #[test]
     fn is_screw_attack_three_gates() {
         use crate::ram_map::{gear, SAMUS_GEAR, SAMUS_STATUS};
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         assert!(!is_screw_attack_active(&m)); // status=0 门
         m.write_ram(SAMUS_STATUS, 1);
         assert!(!is_screw_attack_active(&m)); // gear 门
@@ -290,7 +290,7 @@ mod tests {
     /// UpdateObjAnim 倒数+表走+回绕（struct 字段面）。
     #[test]
     fn update_obj_anim_walks_table() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         // animDelay=1（倒数→0 落入表走）；animIndex=0（SamusRun 首帧）
         m.write_ram(0x0304, 1);
         m.write_ram(0x0306, 0);
@@ -317,7 +317,7 @@ mod tests {
     /// horz_integrate 输出探针（r26 诊断锚：accelX=0x30→speedX 非零！）。
     #[test]
     fn horz_integrate_output_probe() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(crate::ram_map::SAMUS_ACCEL_X, 0x30); // 右加速
         m.write_ram(crate::ram_map::SAMUS_HORZ_SPEED_MAX, 0x18); // max 1.5px
         let d = horz_integrate(&mut m);
@@ -330,7 +330,7 @@ mod tests {
     /// D976 双旗清+冻敌环空径全通（r26——同值写事件清零先行面）。
     #[test]
     fn solid_entities_clears_flags_then_walk() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(SAMUS_ON_ELEVATOR, 1);
         m.write_ram(ON_FROZEN_ENEMY, 1);
         samus_collision_with_solid_entities(&mut m); // 空径环全通（零爆！）
@@ -354,7 +354,7 @@ mod tests {
     /// ObjectCheckMoveDown 壳（collision 已端口——r26 成功态）。
     #[test]
     fn object_check_move_down_detonates_at_nested() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         let _ = object_check_move_down(&mut m); // 零爆（collision_point_ok 全径）
     }
 
@@ -366,7 +366,7 @@ mod tests {
         use crate::ram_map::{SAMUS_HI, SAMUS_RADIUS_Y, SAMUS_Y};
         // 下方查撞点 y+ry=192 行（tile row 192）→ idx=((192&0xF8)<<2)|(128>>3)=768|16=784
         let floor_idx = 0x6000u16 | 784;
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         // 填满可走（≥$80），再在 y+ry=192 行置固实地板（<$80）
         for i in 0..1024u16 {
             m.write_wram(0x6000 | i, 0xFF);
@@ -393,7 +393,7 @@ mod tests {
     fn object_check_move_down_wraps_to_adjacent_nametable_at_left_edge() {
         use crate::ram_map::{SAMUS_HI, SAMUS_RADIUS_X, SAMUS_RADIUS_Y, SAMUS_X, SAMUS_Y};
         let build = |page0_solid: u8, page1_solid: u8| {
-            let mut m = FrameMemory::default();
+            let mut m = Manager::default();
             for i in 0..0x800u16 {
                 m.write_wram(0x6000 | i, 0xFF);
             }
@@ -432,7 +432,7 @@ mod tests {
         let solid: u8 = 0x5C; // 固实瓦（<0x80 ⇒ 阻挡）
         let empty: u8 = 0xFF; // 空瓦
         let build = |row0_solid: u8, row_f0_solid: u8, scroll_dir: u8| {
-            let mut m = FrameMemory::default();
+            let mut m = Manager::default();
             for i in 0..0x800u16 {
                 m.write_wram(0x6000 | i, 0xFF);
             }
@@ -475,7 +475,7 @@ mod tests {
     #[test]
     fn object_check_move_left_blocked_by_lower_solid_row() {
         use crate::ram_map::{SAMUS_HI, SAMUS_RADIUS_Y, SAMUS_Y};
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         for i in 0..1024u16 {
             m.write_wram(0x6000 | i, 0xFF); // 全可走
         }
@@ -507,7 +507,7 @@ mod tests {
     #[test]
     fn object_check_move_right_reads_current_nametable() {
         use crate::ram_map::{SAMUS_HI, SAMUS_RADIUS_X, SAMUS_RADIUS_Y, SAMUS_Y};
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         for i in 0..1024u16 {
             m.write_wram(0x6000u16 | i, 0xFF); // 表 0 全可走
         }
@@ -539,7 +539,7 @@ mod tests {
         let col = 17u16;
         let idx = |yrow: u16| 0x6000u16 | (((yrow & 0xF8) << 2) | col);
         for (tile, want) in [(0xA1u8, 2u8), (0xA0, 1), (0xA5, 0)] {
-            let mut m = FrameMemory::default();
+            let mut m = Manager::default();
             for i in 0..1024u16 {
                 m.write_wram(0x6000 | i, 0x5C); // 全固实
             }
@@ -565,7 +565,7 @@ mod tests {
     #[test]
     fn samus_enter_door_horizontal_right() {
         use crate::ram_map::*;
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(DOOR_ENTRY_STATUS, 0);
         m.write_ram(SAMUS_DOOR_DATA, 2); // $A1 横滚门触碰
         m.write_ram(crate::ram_map::SCROLL_DIR, 3); // 横滚
@@ -593,7 +593,7 @@ mod tests {
     #[test]
     fn samus_enter_door_not_triggered_when_status_set() {
         use crate::ram_map::*;
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(DOOR_ENTRY_STATUS, 0x80);
         m.write_ram(SAMUS_DOOR_DATA, 2);
         m.write_ram(SAMUS_STATUS, 2);
@@ -609,7 +609,7 @@ mod tests {
     #[test]
     fn object_check_move_left_wrapped_point_reads_other_nametable() {
         use crate::ram_map::{SAMUS_HI, SAMUS_RADIUS_X, SAMUS_RADIUS_Y, SAMUS_Y};
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         for i in 0..2048u16 {
             m.write_wram(0x6000u16.wrapping_add(i), 0xFF); // 两表全可走
         }
@@ -635,7 +635,7 @@ mod tests {
     #[test]
     fn object_check_move_right_blocked_by_lower_solid_row() {
         use crate::ram_map::{SAMUS_HI, SAMUS_RADIUS_Y, SAMUS_Y};
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         for i in 0..1024u16 {
             m.write_wram(0x6000 | i, 0xFF);
         }
@@ -659,7 +659,7 @@ mod tests {
         use crate::ram_map::{SAMUS_HI, SAMUS_RADIUS_Y, SAMUS_Y};
         // 上方查撞点 y−ry−8=77 行（tile row 72）→ idx=((72)<<2)|(128>>3)=288|16=304
         let ceil_idx = 0x6000u16 | 304;
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         for i in 0..1024u16 {
             m.write_wram(0x6000 | i, 0xFF);
         }
@@ -679,7 +679,7 @@ mod tests {
     /// VertAccelerate 头：空中跳过+地面 maxspeed 初始化+对齐检测引爆。
     #[test]
     fn vert_accelerate_head_face() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(SAMUS_ACCEL_Y, 5); // 空中
         vert_accelerate(&mut m);
         assert_eq!(m.read_ram(SAMUS_HORZ_SPEED_MAX), 0); // 未初始化
@@ -730,7 +730,7 @@ pub fn tile_class(t: u8) -> TileClass {
 /// → CheckMoveVertical（radiusX==0 ⇒ sec 出）→ 瓦片环（MakeRoomRAMPtr/分类面）。
 /// 嵌套件桩（随拼装填）：StoreObjectPositionToTemp/GetNumBlocksToCheck/
 /// CalculateFirstBGCollisionPoint/MakeRoomRAMPtr。
-pub fn object_check_move_down(mem: &mut FrameMemory) -> bool {
+pub fn object_check_move_down(mem: &mut Manager) -> bool {
     // 壳：A = -radiusY（向下偏移）——几何面
     let _ry = mem.read_ram(SAMUS_RADIUS_Y);
     // ObjectCheckMoveVertical（E7B5——同构敌径（collision_point_ok））
@@ -742,7 +742,7 @@ pub fn object_check_move_down(mem: &mut FrameMemory) -> bool {
 /// （=radiusY+8）→ ObjectCheckMoveVertical（查撞点 Y=y−(radiusY+8)=y−ry−8——上方）。
 /// 与 object_check_move_down（下方 y+ry）相对。【goal-r15 复核 R1 闭合】旧形误删向上查撞
 /// →天花板穿透；正解=独立 up 点 y−ry−8（非删除——旧「起跳即落地」病根是共享点落在体内）。
-pub fn object_check_move_up(mem: &mut FrameMemory) -> bool {
+pub fn object_check_move_up(mem: &mut Manager) -> bool {
     let y = mem.read_ram(0x030D);
     let ry = mem.read_ram(SAMUS_RADIUS_Y);
     let x = mem.read_ram(0x030E);
@@ -794,7 +794,7 @@ pub fn object_check_move_up(mem: &mut FrameMemory) -> bool {
 /// 事件**（清零先行——b-f270-a0 教训族复用）。
 /// 嵌套件桩（随拼装填）：GetObjectYSlotPosition/GetEnemyXSlotPosition/
 /// GetRadiusSumsOfEnXSlotAndObjYSlot/CheckCollisionOfXSlotAndYSlot（F1FA 族）/LDC82。
-pub fn samus_collision_with_solid_entities(mem: &mut FrameMemory) {
+pub fn samus_collision_with_solid_entities(mem: &mut Manager) {
     // 【goal-轮36 knockback 触发直证】敌撞萨判定。
     // 双旗清（注「Default to … not being on an elevator or on a frozen enemy」）
     mem.write_ram(SAMUS_ON_ELEVATOR, 0);
@@ -827,7 +827,7 @@ pub fn samus_collision_with_solid_entities(mem: &mut FrameMemory) {
 /// 且落 `Samus.isHit = (isHit & $38) | dist_hi | $40`（asm `ora Temp10_DistHi /
 /// ora #$40`——冻敌/电梯共用同件）。
 pub fn is_samus_on_top_effect(
-    mem: &mut FrameMemory,
+    mem: &mut Manager,
     c: &SlotCollision,
 ) -> bool {
     if c.dist_hi & 0x02 == 0 && (c.dist_y as u16 + 1) == c.radius_y as u16 {
@@ -860,7 +860,7 @@ pub const SAMUS_SUBPIX_X: u16 = 0x0311;
 
 /// 垂直积分拼装（R-mv-2 速度积分面）：RAM 三态→IntYState→int_y（E3A5 族）→写回。
 /// 返回本帧整像素位移（补码）。
-pub fn vert_integrate(mem: &mut FrameMemory) -> u8 {
+pub fn vert_integrate(mem: &mut Manager) -> u8 {
     let mut st = crate::samus::integrators::IntYState {
         speed_i: mem.read_ram(SAMUS_SPEED_Y_I),
         speed_f: mem.read_ram(SAMUS_SPEED_Y_F),
@@ -878,7 +878,7 @@ pub fn vert_integrate(mem: &mut FrameMemory) -> u8 {
 }
 
 /// 水平积分拼装（R-mv-3 速度积分面）：RAM 三态→IntXState→int_x（max_src=HorzSpeedMax）。
-pub fn horz_integrate(mem: &mut FrameMemory) -> u8 {
+pub fn horz_integrate(mem: &mut Manager) -> u8 {
     let mut st = crate::samus::integrators::IntXState {
         speed_i: mem.read_ram(SAMUS_SPEED_X_I),
         speed_f: mem.read_ram(SAMUS_SPEED_X_F),
@@ -902,7 +902,7 @@ pub fn horz_integrate(mem: &mut FrameMemory) -> u8 {
 /// sty $0308（Samus.speedY）/sty $0312（SamusSpeedSubPixelY 速 frac）/rts）：**双写微件全端口**。
 /// > 【2026-10-27 更正】旧注误记 `8c 10 03`（sty $0310 subpixY）——ROM 实测 `8c 12 03`
 /// > （sty $0312 速 frac）；旧形据此误清 $0310→落地下速 frac 残留→相位发散。已正。
-pub fn stop_vert_movement(mem: &mut FrameMemory) {
+pub fn stop_vert_movement(mem: &mut Manager) {
     mem.write_ram(SAMUS_SPEED_Y_I, 0); // Samus.speedY（$0308）
     mem.write_ram(SAMUS_SPEED_Y_F, 0); // SamusSpeedSubPixelY（$0312 速 frac——D147）
 }
@@ -910,7 +910,7 @@ pub fn stop_vert_movement(mem: &mut FrameMemory) {
 /// SetMirrorCntrlBit（**字节自证** CD92 `a5 4d 20 ?? ?? 0d 6b 00 8d 6b 00 60`——
 /// `lda SamusDir($4D)/jsr Amul16`（bit0→bit4）`/ora ObjectCntrl($6B)/sta $6B/rts`）：
 /// 朝向镜像位 OR 入 $6B（bit4 面）。
-pub fn set_mirror_cntrl_bit(mem: &mut FrameMemory) {
+pub fn set_mirror_cntrl_bit(mem: &mut Manager) {
     let v = (mem.read_ram(crate::ram_map::SAMUS_DIR) & 1) << 4;
     let c = mem.read_ram(0x006B) | v;
     mem.write_ram(0x006B, c);
@@ -926,7 +926,7 @@ pub fn set_mirror_cntrl_bit(mem: &mut FrameMemory) {
 /// 血量判（Health+1(\$0107)==0⇒蜂鸣径；==1 且 Health(\$0106)<\$70⇒蜂鸣径）→
 /// 16 帧节拍（FC&0x0F==0⇒SFX_Beep）→**SFXTriInitFlags(\$0683)|=sfxTri_Beep(\$08)**
 /// →SamusIsHit←0。
-fn check_health_beep(mem: &mut FrameMemory) {
+fn check_health_beep(mem: &mut Manager) {
     let hi = mem.read_ram(0x0107); // Health+1
     let low = mem.read_ram(0x0106); // Health
     let beep = if hi.wrapping_sub(1) == 0xFF {
@@ -945,7 +945,7 @@ fn check_health_beep(mem: &mut FrameMemory) {
     // 旧形误写 $0308（=SAMUS_SPEED_Y_I 跳跃初速！）→清跳跃初速→跳不起来。
 }
 
-pub fn set_samus_data(mem: &mut FrameMemory) {
+pub fn set_samus_data(mem: &mut Manager) {
     // 【goal-轮85 双调直证】set_samus_data 入口插桩（A 值/调用序）。
     update_obj_anim(mem, mem.regs.a); // DC8F（已端口——A=延迟初值面）
     if is_screw_attack_active(mem) {
@@ -998,7 +998,7 @@ const OBJECT_ANIM_INDEX_TBL: &[u8] = &[
 /// 依赖）——界护栏 16 次回绕 fail-loud（P1 同族防御；真机语义=表健全态等价）。
 /// 字段偏移=struct 权威（constants_ram:217-224：animFrame $0303/animDelay $0304/
 /// animResetIndex $0305/animIndex $0306）。
-pub fn update_obj_anim(mem: &mut FrameMemory, a_in: u8) {
+pub fn update_obj_anim(mem: &mut Manager, a_in: u8) {
     // 【goal-轮89 reload 写值直证】update_obj_anim 写点带值。
     // 【实锤③修（2026-10-28）】asm UpdateObjAnim（$DC8F）=`ldx PageIndex`——base=
     // $0300+($4B)（全槽通用）——旧形硬编码 Samus 槽（「他槽随件」）⇒弹径调用时改写
@@ -1036,7 +1036,7 @@ pub fn update_obj_anim(mem: &mut FrameMemory, a_in: u8) {
 ///
 /// **结构互核注**：anim 常量互证（Salto=$0E/Jump=$0C——SamusRun 字节面同源）；
 /// 能力回环位面（gr_SCREWATTACK=$08——T45-4 考证窗核心常量）。
-pub fn is_screw_attack_active(mem: &FrameMemory) -> bool {
+pub fn is_screw_attack_active(mem: &Manager) -> bool {
     if mem.read_ram(crate::ram_map::SAMUS_STATUS) != 1 {
         return false;
     }
@@ -1061,7 +1061,7 @@ pub fn is_screw_attack_active(mem: &FrameMemory) -> bool {
 /// （击退重力））→Lx006 无敌倒数（`dec $70`+击退衰减（KnockbackDir 驱动 X 速
 /// （Adiv16=帧/16）））→CheckHealthBeep（低血蜂鸣——桩）。
 /// 嵌套件桩：SFX_SamusHit（音频面）/IsSamusDead/CheckHealthBeep。
-pub fn check_health_status(mem: &mut FrameMemory) {
+pub fn check_health_status(mem: &mut Manager) {
     let is_hit = mem.read_ram(0x030A); // Samus.isHit（struct 权威）
     if is_hit & 0x20 != 0 {
         // 受击面
@@ -1135,7 +1135,7 @@ pub fn check_health_status(mem: &mut FrameMemory) {
 
 /// IsSamusInLava（**asm 内容锚** `: 07:E25D`——r26）：ScrollDir≤1（竖滚）⇒非
 /// 熔岩；横滚且 Samus.y≥$D8（底 24px）⇒熔岩中。返回 true=熔岩中。
-fn is_samus_in_lava(mem: &mut FrameMemory) -> bool {
+fn is_samus_in_lava(mem: &mut Manager) -> bool {
     let dir = mem.read_ram(crate::ram_map::SCROLL_DIR);
     if 0x01u8 >= dir {
         return false;
@@ -1151,7 +1151,7 @@ fn is_samus_in_lava(mem: &mut FrameMemory) -> bool {
 /// 无 Varia 于该拍必伤，有 Varia 仅进位为 1（奇数帧）时伤 ⇒ 8 帧内 2 伤 vs 1 伤；
 /// 伤害= `HealthChange←$07` + `SubtractHealth($CE92)`。两径合并写
 /// `SamusInLava($64)←{0,1}`（asm `ldy #$FF` / `ldy #$00` + `iny` + `sty` 的等价面）。
-fn apply_lava_state(mem: &mut FrameMemory, in_lava: bool) {
+fn apply_lava_state(mem: &mut Manager, in_lava: bool) {
     if !in_lava {
         mem.write_ram(crate::ram_map::SAMUS_IN_LAVA, 0);
         return;
@@ -1184,7 +1184,7 @@ fn apply_lava_state(mem: &mut FrameMemory, in_lava: bool) {
 /// 非 0 ⇒ `ror SamusSpeedSubPixelY`（进位进 bit7）后**双取负**（`lda #$00/sec/sbc`
 /// 连做两次，第二次带第一次的借位）⇒ `jmp SamusMoveHorizontally`。
 /// 返回 true=已走反弹径（调用方**不得**再走落地清零）。
-fn ball_bounce_after_landing(mem: &mut FrameMemory) -> bool {
+fn ball_bounce_after_landing(mem: &mut Manager) -> bool {
     if mem.samus().status() != Some(SamusStatus::Roll) {
         return false; // sa_Roll（constants.asm:106）
     }
@@ -1205,7 +1205,7 @@ fn ball_bounce_after_landing(mem: &mut FrameMemory) -> bool {
     true
 }
 
-pub fn lava_and_move_check(mem: &mut FrameMemory) {
+pub fn lava_and_move_check(mem: &mut Manager) {
     let status = mem.samus().status_raw();
     if status != 9 {
         // `sa_Elevator = 9`（constants.asm:112——旧注「表序 4」系误记：4 是 sa_PntUp，
@@ -1344,7 +1344,7 @@ pub fn lava_and_move_check(mem: &mut FrameMemory) {
 
 /// ToggleSamusHi（**asm 内容锚** `ToggleSamusHi: ; 07:E249`）：Samus.hi($30C)^=1
 /// （x 第 9 位——名表位；x 环绕 00 且横滚向时翻）。
-pub fn toggle_samus_hi(mem: &mut FrameMemory) {
+pub fn toggle_samus_hi(mem: &mut Manager) {
     let hi = mem.read_ram(crate::ram_map::SAMUS_HI) ^ 0x01;
     mem.write_ram(crate::ram_map::SAMUS_HI, hi);
 }
@@ -1376,7 +1376,7 @@ pub(crate) fn horizontal_span_rows(y: u8, ry: u8) -> (u8, u32) {
 /// 碰撞点 Samus 门数据副作用（**asm 内容锚** `IsWalkableTile: ; 07:E7FB`——LE7E6 循环
 /// 对 Samus（IsSamus≠0）的写点）：可走瓦（≥$A0）时写 SamusDoorData($58)——
 /// $A0(竖滚门)→1、$A1(横滚门)→2、其余→0。$4E/<$80 固实不写（blocked）。
-fn collision_point_samus(mem: &mut FrameMemory, y: u8, x: u8, hi: u8) -> bool {
+fn collision_point_samus(mem: &mut Manager, y: u8, x: u8, hi: u8) -> bool {
     let idx = (((y & 0xF8) as u16) << 2) | ((x >> 3) as u16);
     let page = if hi & 1 != 0 { 0x0400u16 } else { 0x0000 };
     // 【墙顶角卡·瓦片级探针（临时——2026-11-05）】f1030-1045 查撞输入/瓦片/结果。
@@ -1402,7 +1402,7 @@ fn collision_point_samus(mem: &mut FrameMemory, y: u8, x: u8, hi: u8) -> bool {
 /// 擦对表门块（$6C+(($FF^1)&1)←0）、DoorScrollStatus($57)←X（横滚 X=2−(x>>7)；
 /// 竖滚 X=4，ScrollY≠0 时 (PPUCTRL^hi)&1==0→4 / ==1→3）、$56|=$80、DoorDelay($59)←$12、
 /// $58←($58<<4)|Samus.status（出门保留动作）、Samus.status←sa_Door(5)。
-pub fn samus_enter_door(mem: &mut FrameMemory) {
+pub fn samus_enter_door(mem: &mut Manager) {
     if mem.read_ram(crate::ram_map::DOOR_ENTRY_STATUS) != 0 {
         return;
     }
@@ -1447,7 +1447,7 @@ pub fn samus_enter_door(mem: &mut FrameMemory) {
     mem.samus().set_status(SamusStatus::Door);
 }
 
-fn object_check_move_horizontal(mem: &mut FrameMemory, x: u8, dist: u8) -> bool {
+fn object_check_move_horizontal(mem: &mut Manager, x: u8, dist: u8) -> bool {
     let y = mem.read_ram(0x030D);
     let ry = mem.read_ram(0x0301);
     // 【0xF7 quirk 卡·入口探针（临时——2026-11-06）】查撞 span 输入实证。
@@ -1475,7 +1475,7 @@ fn object_check_move_horizontal(mem: &mut FrameMemory, x: u8, dist: u8) -> bool 
 /// ObjectCheckMoveLeft（**asm 内容锚** `: 07:E880`）：`lda radiusX/clc/adc #$08`→核判点
 /// =x−(radiusX+8)（左块——核 `PositionX−DistToCenterX` 形）。carry=true 可走。
 /// 【goal-r16 修】逐行扫（旧形只查顶行一点⇒顶行可走下行固实漏判⇒走进地形）。
-fn object_check_move_left(mem: &mut FrameMemory) -> bool {
+fn object_check_move_left(mem: &mut Manager) -> bool {
     let x = mem.read_ram(0x030E);
     let rx = mem.read_ram(crate::ram_map::SAMUS_RADIUS_X);
     object_check_move_horizontal(mem, x, rx.wrapping_add(8))
@@ -1486,7 +1486,7 @@ fn object_check_move_left(mem: &mut FrameMemory) -> bool {
 /// ObjectCheckMoveRight（**asm 内容锚** `: 07:E88B`）：`lda #$00/sec/sbc radiusX`→核判点
 /// =x−(0−radiusX)=x+radiusX（右块）。carry=true 可走。
 /// 【goal-r16 修】逐行扫（同左向——LE7E6 全径）。
-fn object_check_move_right(mem: &mut FrameMemory) -> bool {
+fn object_check_move_right(mem: &mut Manager) -> bool {
     let x = mem.read_ram(0x030E);
     let rx = mem.read_ram(crate::ram_map::SAMUS_RADIUS_X);
     object_check_move_horizontal(mem, x, 0u8.wrapping_sub(rx)) // dist=−rx（asm E88B）
@@ -1500,7 +1500,7 @@ fn object_check_move_right(mem: &mut FrameMemory) -> bool {
 /// 目标=PPU 名表（$2000/$2C00——PPUAddrs 表 E560）；30 块竖写（控制位 $1E|$80）。
 /// 【V2-lite】流送直写 PPU 面（金径=VRAMStructBuffer+NMI 刷（WritePPUByte $C36B）——
 /// 行级等价；缓冲面 $07A0+ 的 L3 对拍差异随 V2 收敛）。
-fn check_update_name_table(mem: &mut FrameMemory) {
+fn check_update_name_table(mem: &mut Manager) {
     // ①邻房装载（E54A 首件——ScrollRight/Left 每像素调；多帧（RoomNumber 任务机））
     // 【载房窗 bog（2026-10-31 重考定谳）】ScrollRight/Left 的 ScrollX==0 特殊径（asm
     // E6E4-E6EA：inc MapPosX+GetRoomNum）⇒ RoomNumber←新地图格房号 ⇒ 本调用 setup_room
@@ -1563,7 +1563,7 @@ fn check_update_name_table(mem: &mut FrameMemory) {
 /// （audit（scroll-column-streaming.md §1）））：Temp00=(ScrollX&0xF8)/8（列 idx）；
 /// GetNameAddrs（GetNT=(PPUCTRL^ScrollDir)&1→PPU $20/$2C+RoomRAM $60/$64）；
 /// 30 行竖写（dst+idx+row*32（PPU inc=32 形））。
-pub fn stream_column_kick(mem: &mut FrameMemory) {
+pub fn stream_column_kick(mem: &mut Manager) {
     // 【证伪更正（2026-10-28）】goal-r22「列写=PPU 重活⇒NMI bogged 2 帧」=**误归因**
     // ——emu 实测 f916-917/f1064-1065 各停 2 帧=**载房窗 bog**（GetRoomNum 越界载房
     // （more_init 序列 [1,0,0,1] 已模））非逐列写 bog。逐列写 bog⇒移动相移：
@@ -1589,7 +1589,7 @@ pub fn stream_column_kick(mem: &mut FrameMemory) {
 /// `Temp00 = (ScrollY & $F8) << 2`（= 行号×32，RoomRAM/PPU 同偏移）；`GetNameAddrs`
 /// 给 NT 高低字节；control byte = `@controlBitsTable[ScrollDir>>1]` = **$20**
 /// （PPU inc=1、长度 32）⇒ 竖滚一次写**一整行 32 字节线性**（与横滚的 30 行竖写对偶）。
-pub fn stream_row_kick(mem: &mut FrameMemory) {
+pub fn stream_row_kick(mem: &mut Manager) {
     mem.render.reset_addr_latch();
     let dir = mem.read_ram(crate::ram_map::SCROLL_DIR);
     let off = ((mem.read_ram(crate::ram_map::SCROLL_Y) & 0xF8) as u16) << 2;
@@ -1607,13 +1607,13 @@ pub fn stream_row_kick(mem: &mut FrameMemory) {
 
 /// GetRoomNum 横滚门（asm E720——门检+图格查房已并入 get_room_num 单径）。返回
 /// true=可滚（asm carry 反形）。
-fn scroll_block_gate(mem: &mut FrameMemory) -> bool {
+fn scroll_block_gate(mem: &mut Manager) -> bool {
     crate::frame::tick::get_room_num(mem)
 }
 
 /// ScrollLeft（**asm 内容锚** `ScrollLeft: ; 07:E6A7`）：滚屏 1px。返回 carry
 /// （true=滚动成功——屏内 x 不动；false=不能滚）。
-pub(crate) fn scroll_left(mem: &mut FrameMemory) -> bool {
+pub(crate) fn scroll_left(mem: &mut Manager) -> bool {
     let dir = mem.read_ram(crate::ram_map::SCROLL_DIR);
     if dir != 2 {
         if dir != 3 {
@@ -1647,7 +1647,7 @@ pub(crate) fn scroll_left(mem: &mut FrameMemory) -> bool {
 /// ScrollDir 2=左/3=右（cmp #$03 beq 续/`cmp #$02 bne` 竖滚禁横+inc ScrollDir 转向）
 /// +ScrollX==0 特殊径（inc MapPosX/GetRoomNum CF=1⇒界（dec MapPosX/sec））+inc ScrollX
 /// +0 环绕⇒ToggleNameTable+CheckUpdateNameTable——**MapPosX/名表切/界判定三联动**。
-pub(crate) fn scroll_right(mem: &mut FrameMemory) -> bool {
+pub(crate) fn scroll_right(mem: &mut Manager) -> bool {
     let dir = mem.read_ram(crate::ram_map::SCROLL_DIR);
     if dir != 3 {
         if dir != 2 {
@@ -1718,7 +1718,7 @@ pub struct SlotCollision {
 /// 取 `Objects` 槽坐标 + 名表位（`GetObjectXSlotPosition ; 07:F172` /
 /// `GetObjectYSlotPosition ; 07:F186`）：`hi` 先 `eor PPUCTRL_ZP & #$01`
 /// （页面相对位）再入比较面。
-fn obj_slot_pos(mem: &mut FrameMemory, page: u16) -> (u8, u8, u8) {
+fn obj_slot_pos(mem: &mut Manager, page: u16) -> (u8, u8, u8) {
     let y = mem.read_ram(page + 0x0D);
     let x = mem.read_ram(page + 0x0E);
     let hi = (mem.read_ram(page + 0x0C) ^ mem.read_ram(0x00FF)) & 0x01;
@@ -1805,7 +1805,7 @@ pub fn check_collision_of_slots(
 
 /// `LDC82 ; 07:DC82` = `GetObjectXSlotPosition`（X 槽）+ `GetRadiusSumsOfObjXSlotAndObjYSlot`
 /// + `CheckCollisionOfXSlotAndYSlot`：两 `Objects` 槽碰撞（电梯 × Samus 等）。
-pub fn collide_object_slots(mem: &mut FrameMemory, x_page: u16, y_page: u16) -> SlotCollision {
+pub fn collide_object_slots(mem: &mut Manager, x_page: u16, y_page: u16) -> SlotCollision {
     let x_pos = obj_slot_pos(mem, x_page);
     let y_pos = obj_slot_pos(mem, y_page);
     // AddObjectYSlotRadiusY / AddObjectYSlotRadiusX：X 槽半径 + Y 槽半径
@@ -1815,7 +1815,7 @@ pub fn collide_object_slots(mem: &mut FrameMemory, x_page: u16, y_page: u16) -> 
     check_collision_of_slots(x_pos, y_pos, ry, rx, sd)
 }
 
-pub(crate) fn scroll_up(mem: &mut FrameMemory) -> bool {
+pub(crate) fn scroll_up(mem: &mut Manager) -> bool {
     let dir = mem.read_ram(crate::ram_map::SCROLL_DIR);
     if dir != 0 {
         if dir != 1 {
@@ -1863,7 +1863,7 @@ pub(crate) fn scroll_up(mem: &mut FrameMemory) -> bool {
 ///     jsr ToggleNameTable / ldx #$FF
 /// @noNameTableSwitch: inx / ScrollVertically_Merge: stx ScrollY
 /// ```
-pub(crate) fn scroll_down(mem: &mut FrameMemory) -> bool {
+pub(crate) fn scroll_down(mem: &mut Manager) -> bool {
     let dir = mem.read_ram(crate::ram_map::SCROLL_DIR);
     if dir != 1 {
         if dir != 0 {
@@ -1897,7 +1897,7 @@ pub(crate) fn scroll_down(mem: &mut FrameMemory) -> bool {
 }
 
 /// ToggleNameTable（**asm 内容锚** `ToggleNameTable: ; 07:E9B7`）：PPUCTRL_ZP^=3。
-fn toggle_name_table(mem: &mut FrameMemory) {
+fn toggle_name_table(mem: &mut Manager) {
     let ff = mem.read_ram(0x00FF) ^ 0x03;
     mem.write_ram(0x00FF, ff);
 }
@@ -1907,7 +1907,7 @@ fn toggle_name_table(mem: &mut FrameMemory) {
 /// 【goal-轮51 asm 合规矩】E365 逐件对表：bcs Exit10/ObjectCounter=1 破环/AccelY≠0⇒
 /// 出（空中）/status==Roll⇒出（球形）/jmp SetSamusStand（CF55 全径——轮31 修 ✓）——
 /// **全件面合规** ✓✓（破环语义=ObjectCounter=1（非 dec 归零）——E31A 环 bne 跳出 ✓）。
-fn check_stop_horz_mvmt(mem: &mut FrameMemory, moved: bool) -> bool {
+fn check_stop_horz_mvmt(mem: &mut Manager, moved: bool) -> bool {
     if moved {
         return false; // bcs Exit10
     }
@@ -1925,7 +1925,7 @@ fn check_stop_horz_mvmt(mem: &mut FrameMemory, moved: bool) -> bool {
 /// MoveSamusLeft（**asm 内容锚** `MoveSamusLeft: ; 07:E626`）：逐像素左移
 /// （8px 对齐门检+实体碰撞+**滚动跟随**（SamusScrX<$71⇒ScrollLeft 滚屏）+x dec
 /// （x==0 先判⇒ToggleSamusHi））。返回 carry（true=移动成功）。
-fn move_samus_left(mem: &mut FrameMemory) -> bool {
+fn move_samus_left(mem: &mut Manager) -> bool {
     let x = mem.read_ram(0x030E);
     let rx = mem.read_ram(crate::ram_map::SAMUS_RADIUS_X);
     if x.wrapping_sub(rx) & 0x07 == 0 && !object_check_move_left(mem) {
@@ -1963,7 +1963,7 @@ fn move_samus_left(mem: &mut FrameMemory) -> bool {
 /// WithSolidEntities/**isHit&0x41==0x40（bit6）⇒实心体触碰挡**（:7804-7808）/
 /// ScrX<$8F⇒inc ScrX/else ScrollRight（carry ok⇒跳；fail⇒补）/inc x+wrap⇒
 /// ToggleSamusHi——**四件面全合规** ✓✓（E626 左移镜像同构——1397 行 isHit&0x41==0x41 ✓）。
-fn move_samus_right(mem: &mut FrameMemory) -> bool {
+fn move_samus_right(mem: &mut Manager) -> bool {
     let x = mem.read_ram(0x030E);
     let rx = mem.read_ram(crate::ram_map::SAMUS_RADIUS_X);
     if x.wrapping_add(rx) & 0x07 == 0 && !object_check_move_right(mem) {
@@ -1996,7 +1996,7 @@ fn move_samus_right(mem: &mut FrameMemory) -> bool {
 /// SamusMoveHorizontally（**asm 内容锚** `SamusMoveHorizontally: ; 07:E31A`）：
 /// `SamusScrX←x−ScrollX`→|Δ|（TwosComplement $95C6）逐像素 MoveSamus± 环+
 /// CheckStopHorzMvmt→门向（SamusDoorData≠0⇒SamusDoorDir（右 0/左 1））。
-pub fn samus_move_horizontally(mem: &mut FrameMemory, delta: u8) {
+pub fn samus_move_horizontally(mem: &mut Manager, delta: u8) {
     // 【goal-轮28 左撞墙碰撞直证】水平移动/碰撞结果。
     // 【goal-轮49 asm 合规矩】E31A 全径逐件对表：SamusScrX=x−ScrollX（E31D）/delta=0⇒
     // Exit10/TwosComplement（负向）/**岩浆减半（lsr+n=0⇒Exit10）**/ObjectCounter=delta
@@ -2049,10 +2049,10 @@ mod tests_vertical_scroll {
     //! CF=1 ⇒ 复位 MapPosY 并返回「不能滚」）、横滚域拒绝（`ScrollDir&2≠0`）。
     use super::*;
     use crate::ram_map::{MAP_POS_Y, SCROLL_DIR, SCROLL_Y};
-    use crate::state::FrameMemory; // G11 取型径（经 crate::state）
+    use crate::state::Manager; // G11 取型径（经 crate::state）
 
-    fn mem() -> FrameMemory {
-        let mut m = FrameMemory::default();
+    fn mem() -> Manager {
+        let mut m = Manager::default();
         // WorldMapRAM($7000)：置 (MapY=0..2, MapX=0) 为有效房号，其余 0x00 也非 $FF ⇒
         // get_room_num 恒 true（本组只测竖滚件自身，房号内容无关）。
         for i in 0..8u16 {
@@ -2159,7 +2159,7 @@ mod tests_vertical_scroll {
 
 #[test]
 fn scroll_right_column_draw_bogs_two_frames() {
-    let mut m = crate::frame::FrameMemory::default();
+    let mut m = crate::frame::Manager::default();
     // 场景：右向滚（ScrollDir=3）、RoomNumber 已装载完（$5A=FF）、TempScrollDir 同向、
     // SCROLL_X 到 8px 阈（dir==3 ⇒ &7==0）、名表位就绪
     m.write_ram(crate::ram_map::SCROLL_DIR, 3);
@@ -2184,8 +2184,8 @@ mod tests_camera_follow {
 
     use super::*;
 
-    fn walkable_room() -> FrameMemory {
-        let mut m = FrameMemory::default();
+    fn walkable_room() -> Manager {
+        let mut m = Manager::default();
         crate::frame::tick::copy_map(&mut m); // 真 WorldMap（图格→真房间号——装载径）
         m.write_ram(crate::ram_map::MAP_POS_X, 0x03); // 实出生图格（金腿 $50=03/$4F=0E）
         m.write_ram(crate::ram_map::MAP_POS_Y, 0x0E);
@@ -2265,7 +2265,7 @@ mod tests_camera_follow {
     /// f1264 弧线→f1271 提前落地→f1272 max=$18 提前翻→横漂相位连锁分叉。
     #[test]
     fn up_block_applies_ror_bounce_not_clear() {
-        let mut m = FrameMemory::default(); // 全零房=全固实（上方块必挡）
+        let mut m = Manager::default(); // 全零房=全固实（上方块必挡）
         m.write_ram(0x030D, 0x48); // y
         m.write_ram(crate::ram_map::SAMUS_RADIUS_Y, 0x10); // (y−ry)&7=0x38&7=0 门帧
         m.write_ram(crate::ram_map::SAMUS_RADIUS_X, 0x08); // rx≠0（rx=0 asm 跳检）
@@ -2284,7 +2284,7 @@ mod tests_camera_follow {
     /// 【守门】受阻下行（落地）仍=StopVertMovement+AccelY←0——防 ror 修过应用到落地面径。
     #[test]
     fn down_block_still_lands_and_clears_gravity() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(0x030D, 0x48);
         m.write_ram(crate::ram_map::SAMUS_RADIUS_Y, 0x10); // (y+ry)&7=0x58&7=0 门帧
         m.write_ram(crate::ram_map::SAMUS_RADIUS_X, 0x08); // rx≠0（rx=0 asm 跳检）
@@ -2326,10 +2326,10 @@ mod tests_column_streaming {
     //! （根因修）；列流（30 行（dst=NT($20/$2C)+idx+row*32））左行实文可检；
     //! 防重判（dir≠$4A⇒跳）。
     use super::*;
-    use crate::state::FrameMemory; // G11 取型径（经 crate::state）
+    use crate::state::Manager; // G11 取型径（经 crate::state）
 
-    fn walk_mem() -> FrameMemory {
-        let mut m = FrameMemory::default();
+    fn walk_mem() -> Manager {
+        let mut m = Manager::default();
         m.write_ram(crate::ram_map::SCROLL_DIR, 2); // 左滚
         m.write_ram(0x00FF, 0); // PPUCTRL（GetNT=(0^2)&1=0⇒NT0）
         m.write_ram(crate::ram_map::SCROLL_X, 0x07); // 左阈（&7==7）
@@ -2344,7 +2344,7 @@ mod tests_column_streaming {
     /// 【根因修】end_of_room⇒$4A←ScrollDir+$5A←$F0（asm $EAF4 双写面）。
     #[test]
     fn end_of_room_sets_temp_scroll_dir() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(crate::ram_map::SCROLL_DIR, 2);
         crate::world::room_draw::end_of_room(&mut m);
         assert_eq!(m.read_ram(0x005A), 0xF0, "RoomNumber←$F0");
@@ -2378,12 +2378,12 @@ mod tests_vertical_span {
     //! **x 全距走环**（余块+1（步 8））——旧形单点（x 中心）⇒台缘（心过空/缘叠砖）漏检
     //! ⇒沉入台面下（用户①嵌砖）。
     use super::*;
-    use crate::state::FrameMemory;
+    use crate::state::Manager;
 
     /// 【实锤①】心在空（y+ry 处 walkable）缘在砖（x+rx 侧 solid）⇒检出碰撞（false）。
     #[test]
     fn edge_overlap_detected() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(0x030D, 0x50); // y
         m.write_ram(0x0301, 8);    // radiusY
         m.write_ram(0x030E, 0x3C); // x（心）
@@ -2410,12 +2410,12 @@ mod tests_up_span {
     //! 判径（asm CheckMoveVertical（$E7BD）x 全距走环（①同族上行臂））：心块空/
     //! 侧顶砖⇒检出（单点旧形漏）。
     use super::*;
-    use crate::state::FrameMemory;
+    use crate::state::Manager;
 
     /// 侧列顶砖⇒碰撞（上跳受阻（单点漏（跳不上去根因）））。
     #[test]
     fn up_edge_overlap_detected() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(0x030D, 0x60); // y
         m.write_ram(crate::ram_map::SAMUS_RADIUS_Y, 8);
         m.write_ram(0x030E, 0x3C); // x
@@ -2441,16 +2441,16 @@ mod tests_r14_single_walk {
     //! 旧形 set_samus_data 尾调 DE47 形+room/blink 显式走表+DE47=同帧 2×DC8F
     //! （AD 周期 4→2 别名（emu 4,3,2,1 vs rust 3,1,3,1 实测））——本组测=单走守恒锚。
     use super::*;
-    use crate::state::FrameMemory;
+    use crate::state::Manager;
 
-    fn anim_delay(m: &FrameMemory) -> u8 {
+    fn anim_delay(m: &Manager) -> u8 {
         m.read_ram(0x0304)
     }
 
     /// set_samus_data=单走表：ad 4→3（旧双调形=4→2 ⇒ 本测红）。
     #[test]
     fn set_samus_data_walks_anim_once() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.regs.a = 4; // A=4（LCC6E stand 路 reload 值）
         m.write_ram(0x0304, 4); // animDelay
         set_samus_data(&mut m);
@@ -2460,7 +2460,7 @@ mod tests_r14_single_walk {
     /// obj_draw_frame=纯绘（DE4A 无走表）：ad 恒 4。
     #[test]
     fn obj_draw_frame_does_not_walk() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(0x0304, 4);
         crate::render::oam::obj_draw_frame(&mut m, 0);
         assert_eq!(anim_delay(&m), 4, "DE4A 纯绘不走表");
@@ -2469,7 +2469,7 @@ mod tests_r14_single_walk {
     /// anim_draw_object=单走表（DE47）：ad 4→3。
     #[test]
     fn anim_draw_object_walks_once() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(0x0304, 4);
         crate::render::oam::anim_draw_object(&mut m, 0, 4);
         assert_eq!(anim_delay(&m), 3, "DE47 单走：4→3（双调形=4→2——回退即红）");
@@ -2485,9 +2485,9 @@ mod tests_h2_blink {
     //! 奇 FC 或 非 bombed ⇒不写 $F7（跳绘相位=偶帧隐/奇帧显）。
     //! ObjDrawFrame（:DE4A）：animFrame==$F7⇒jmp ClearObjectCntrl（跳绘）。
     use super::*;
-    use crate::state::FrameMemory;
+    use crate::state::Manager;
 
-    fn setup_iframe_bomb(m: &mut FrameMemory, fc: u8) {
+    fn setup_iframe_bomb(m: &mut Manager, fc: u8) {
         m.write_ram(0x002D, fc); // FrameCount
         m.write_ram(crate::ram_map::SAMUS_INVINCIBLE_DELAY, 0x20); // i-frames active
         m.write_ram(crate::ram_map::SAMUS_KNOCKBACK_IS_BOMB77, 0x80); // bombed (bit7=1)
@@ -2498,7 +2498,7 @@ mod tests_h2_blink {
     /// bombed + 偶 FC ⇒ animFrame←$F7 + animDelay←0（i-frame 闪烁——跳绘）。
     #[test]
     fn iframe_blink_even_fc_writes_framenone() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         setup_iframe_bomb(&mut m, 0x40); // FC=64 (even)
         check_health_status(&mut m);
         assert_eq!(m.read_ram(0x0303), 0xF7, "偶 FC+bombed⇒animFrame←FrameNone($F7)");
@@ -2508,7 +2508,7 @@ mod tests_h2_blink {
     /// bombed + 奇 FC ⇒ animFrame 不写 $F7（跳绘相位——奇帧显）。
     #[test]
     fn iframe_blink_odd_fc_no_framenone() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         setup_iframe_bomb(&mut m, 0x41); // FC=65 (odd)
         check_health_status(&mut m);
         assert_ne!(m.read_ram(0x0303), 0xF7, "奇 FC⇒不写 FrameNone（显）");
@@ -2517,7 +2517,7 @@ mod tests_h2_blink {
     /// 非 bombed（$77 bit7=0）⇒ 不闪（无论 FC 奇偶）。
     #[test]
     fn iframe_blink_not_bombed_no_blink() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         setup_iframe_bomb(&mut m, 0x40); // even FC
         m.write_ram(crate::ram_map::SAMUS_KNOCKBACK_IS_BOMB77, 0x00); // hurt (not bombed)
         check_health_status(&mut m);
@@ -2527,7 +2527,7 @@ mod tests_h2_blink {
     /// 无 i-frame（InvDelay=0）⇒ 不闪（闪烁仅在 i-frame 窗内）。
     #[test]
     fn no_iframe_no_blink() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         setup_iframe_bomb(&mut m, 0x40);
         m.write_ram(crate::ram_map::SAMUS_INVINCIBLE_DELAY, 0); // no i-frames
         check_health_status(&mut m);
@@ -2540,8 +2540,8 @@ mod tests_lava_damage {
     use super::*;
     use crate::ram_map;
 
-    fn mem_in_lava(fc: u8, gear: u8) -> FrameMemory {
-        let mut m = FrameMemory::default();
+    fn mem_in_lava(fc: u8, gear: u8) -> Manager {
+        let mut m = Manager::default();
         m.write_ram(ram_map::FRAME_COUNT, fc);
         m.write_ram(ram_map::SAMUS_GEAR, gear);
         m.write_ram(ram_map::SAMUS_STATUS, 0); // sa_Stand（非 Dead 门内）
@@ -2610,8 +2610,8 @@ mod tests_ball_bounce {
     use super::*;
     use crate::ram_map;
 
-    fn mem(speed_y: u8, sub_y: u8, status: u8) -> FrameMemory {
-        let mut m = FrameMemory::default();
+    fn mem(speed_y: u8, sub_y: u8, status: u8) -> Manager {
+        let mut m = Manager::default();
         m.write_ram(ram_map::SAMUS_STATUS, status);
         m.write_ram(SAMUS_SPEED_Y_I, speed_y);
         m.write_ram(SAMUS_SPEED_Y_F, sub_y);
@@ -2654,7 +2654,7 @@ mod tests_lava_gate {
     #[test]
     fn elevator_and_dead_status_gate() {
         // sa_Dead ⇒ lava_and_move_check 立即返回（不动 SamusInLava/伤害）
-        let mut dead = FrameMemory::default();
+        let mut dead = Manager::default();
         dead.write_ram(ram_map::SAMUS_STATUS, 7);
         dead.write_ram(ram_map::SCROLL_DIR, 0x02);
         dead.write_ram(0x030D, 0xE0);
@@ -2662,7 +2662,7 @@ mod tests_lava_gate {
         lava_and_move_check(&mut dead);
         assert_eq!(dead.read_ram(ram_map::SAMUS_IN_LAVA), 0x7F, "死人不出岩浆账");
         // sa_Elevator(9)：asm 跳过死亡门 ⇒ 继续走（此处置于非岩浆区 ⇒ 清 0）
-        let mut elev = FrameMemory::default();
+        let mut elev = Manager::default();
         elev.write_ram(ram_map::SAMUS_STATUS, 9);
         elev.write_ram(ram_map::SCROLL_DIR, 0x02);
         elev.write_ram(0x030D, 0x20);

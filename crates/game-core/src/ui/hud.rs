@@ -4,7 +4,7 @@
 //! `HexToDec ; 07:E198`、`SPRWriteDigit`。
 
 use crate::frame::tick::*;
-use crate::frame::FrameMemory;
+use crate::frame::Manager;
 use crate::ram_map;
 
 pub(crate) const DATA_DISPLAY_TBL: [u8; 40] = [
@@ -16,7 +16,7 @@ pub(crate) const DATA_DISPLAY_TBL: [u8; 40] = [
 ];
 
 /// SPRWriteDigit（E173）：tile=A|$A0（数字图案区），X+4（Xplus4 E193）。
-pub(crate) fn spr_write_digit(mem: &mut crate::frame::FrameMemory, x: u8, a: u8) {
+pub(crate) fn spr_write_digit(mem: &mut crate::frame::Manager, x: u8, a: u8) {
     mem.write_ram(0x0200u16 + x as u16 + 1, a | 0xA0);
 }
 
@@ -28,7 +28,7 @@ pub(crate) fn hex_to_dec(n: u8) -> (u8, u8, u8) {
     (hundreds as u8, tens as u8, rem % 10)
 }
 
-pub(crate) fn uw_display_bar(mem: &mut crate::frame::FrameMemory) {
+pub(crate) fn uw_display_bar(mem: &mut crate::frame::Manager) {
     // ① 拷表（E0C7 循环：40B→OAM[X..X+40)，$5B←X+40，pla 恢复原 X）
     let x0 = mem.read_ram(0x005B);
     let mut x = x0;

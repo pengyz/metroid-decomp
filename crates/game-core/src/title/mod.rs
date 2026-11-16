@@ -822,7 +822,7 @@ pub struct TitleStep {
     pub jumped: Option<u16>,
     /// 未武装臂（桥侧 `unported!("bank00:…")` 爆）。
     pub unported: Option<u16>,
-    /// 下一帧游标（0=入口完成复位；>0=spin 续点——桥侧存回 FrameMemory 传回）。
+    /// 下一帧游标（0=入口完成复位；>0=spin 续点——桥侧存回 Manager 传回）。
     pub next_cursor: u8,
 }
 

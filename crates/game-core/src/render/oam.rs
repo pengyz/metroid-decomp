@@ -29,7 +29,7 @@ fn blob(addr: u16) -> u8 {
 /// (DC8F) 与 `jmp ObjDrawFrame`(DE4A) 分离。动画由 `update_obj_anim`（physics.rs CD6D 链首件，
 /// 含 `sta animDelay`←A 初值重置）负责。旧形在此内联 UpdateObjAnim 且漏 `sta animDelay` 重置⇒
 /// animDelay 恒 0⇒每帧换帧（动画过快）+与 update_obj_anim 双写冲突。
-pub fn anim_draw_object(mem: &mut crate::frame::FrameMemory, page_index: u8, a_in: u8) {
+pub fn anim_draw_object(mem: &mut crate::frame::Manager, page_index: u8, a_in: u8) {
     // 【goal-轮106 regs.a 源 ID】anim_draw_object 入口插桩。
     // 【goal-轮107 a_in 显式传值修】asm AnimDrawObject 的 A=caller 显式传值（非 regs.a
     // ——regs.a 在 draw 时已被污染=255）——a_in 参数化。
@@ -75,7 +75,7 @@ pub(crate) struct SpriteStream<'a> {
     pub screen_y: u8,
 }
 
-pub(crate) fn draw_sprite_stream(mem: &mut crate::frame::FrameMemory, s: SpriteStream<'_>) {
+pub(crate) fn draw_sprite_stream(mem: &mut crate::frame::Manager, s: SpriteStream<'_>) {
     // GetSpriteCntrlData（$DCC3）头：低 2 位=调色板、高 2 位=翻转、PRIORITY 恒置；
     // 尾：`ObjectCntrl` MSB=1 ⇒ SpriteAttrsOverride（$E038）直赋 `(ctrl&$C0)|(ObjectCntrl&$7F)`。
     let mut cntrl05 = if s.obj_cntrl & 0x80 != 0 {
@@ -137,7 +137,7 @@ pub(crate) fn draw_sprite_stream(mem: &mut crate::frame::FrameMemory, s: SpriteS
     mem.write_ram(0x005B, x_sprite as u8); // SpritePagePos 推进
 }
 
-pub fn obj_draw_frame(mem: &mut crate::frame::FrameMemory, page_index: u8) {
+pub fn obj_draw_frame(mem: &mut crate::frame::Manager, page_index: u8) {
     let px = page_index as u16;
     // 只读 animFrame（动画更新在 update_obj_anim——此处不写 $0303/$0304/$0306）
     let anim_frame = mem.read_ram(0x0303 + px);
@@ -251,12 +251,12 @@ pub fn place_disp(b: u8, flip_flags: u8, is_y: bool) -> i8 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::frame::FrameMemory;
+    use crate::frame::Manager;
 
     /// Samus（槽 0）sprite 装载形：OAM 落字节（金侧 f520 萨姆斯 sprite 对形底座）。
     #[test]
     fn samus_sprite_writes_oam() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(0x0055, 1); // IsSamus
         m.write_ram(0x0303, 0); // animFrame=0（帧 0）
         m.write_ram(0x030C, 0); // hi
@@ -274,7 +274,7 @@ mod tests {
     /// 物品调色板恒取 ctrl_byte 静态位⇒emu 闪/rust 不闪（118px 恒定残差根）。
     #[test]
     fn sprite_attrs_override_flash_palette() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(0x0055, 1); // IsSamus（槽 0 绘）
         m.write_ram(0x0303, 0); // animFrame=0
         m.write_ram(0x030C, 0); // hi
@@ -291,7 +291,7 @@ mod tests {
     /// 径写语义）；常规帧（<0xF0）径写保留（帧格式字节 1/2）。
     #[test]
     fn radius_guard_skips_marker_frames() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(0x0055, 1); // IsSamus
         m.write_ram(0x030C, 0); // hi
         m.write_ram(0x00FF, 0); // PPUCTRL_ZP
@@ -313,7 +313,7 @@ mod tests {
     /// 【守门】ObjectCntrl MSB=0⇒无覆盖（调色板=ctrl_byte 静态位）。
     #[test]
     fn sprite_attrs_no_override_without_msb() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(0x0055, 1);
         m.write_ram(0x0303, 0);
         m.write_ram(0x030C, 0);
@@ -338,7 +338,7 @@ mod r25_oam_probe {
     /// Samus sprite OAM 面（8 精灵 y/tile/attr/x——头部可见面核）。
     #[test]
     fn samus_oam_dump() {
-        let mut m = crate::frame::FrameMemory::default();
+        let mut m = crate::frame::Manager::default();
         m.write_ram(0x0055, 1); // IsSamus
         m.write_ram(0x0303, 0); // animFrame=0
         m.write_ram(0x030C, 0); // hi
@@ -359,9 +359,9 @@ mod tests_sprite_stream {
     //! 帧流环**唯一实现**的等价锚（原 `r26_draw_enemy_tdd` 两条随死件删除后补于此处，
     //! 覆盖不变）：①有帧数据 ⇒ 落 OAM ②`animFrame==0xFF` ⇒ 不落 OAM。
     use super::*;
-    use crate::frame::FrameMemory;
+    use crate::frame::Manager;
 
-    fn run(m: &mut FrameMemory, frame: &[u8], place: &[u8]) {
+    fn run(m: &mut Manager, frame: &[u8], place: &[u8]) {
         draw_sprite_stream(
             m,
             SpriteStream {
@@ -378,7 +378,7 @@ mod tests_sprite_stream {
     /// 有帧数据（ctrl/radiusY/radiusX/tile…/$FF）⇒ OAM 四元组落（y/tile/attr/x）。
     #[test]
     fn stream_writes_oam_quads() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(0x005B, 0);
         run(&mut m, &[0x21, 0x0C, 0x08, 0xCE, 0xFF], &[0xF4, 0xFC]);
         assert_eq!(m.read_ram(0x0201), 0xCE, "tile 落位");
@@ -393,7 +393,7 @@ mod tests_sprite_stream {
     /// 污染了后画的槽 0（attr 0x22→0xA0 系）。
     #[test]
     fn stream_clears_object_cntrl_at_frame_end() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(0x006B, 0xA0);
         m.write_ram(0x005B, 0);
         draw_sprite_stream(
@@ -414,7 +414,7 @@ mod tests_sprite_stream {
     /// 帧首字节即 `$FF`（animFrame=None 的帧面）⇒ 一个 sprite 都不落。
     #[test]
     fn stream_with_only_terminator_writes_nothing() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(0x005B, 0);
         run(&mut m, &[0x21, 0x0C, 0x08, 0xFF], &[0, 0]);
         assert_eq!(m.read_ram(0x0201), 0, "无 sprite");
@@ -426,7 +426,7 @@ mod tests_sprite_stream {
     /// `21 0C 08 CE FC 00 FC DE EE FF` —— 第一枚画在 dx=0，之后 x-4 再画两枚。
     #[test]
     fn stream_offset_accumulates_for_following_sprites() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(0x005B, 0);
         run(
             &mut m,
@@ -441,7 +441,7 @@ mod tests_sprite_stream {
     /// `0xFE` 跳过一位件（`SkipPlacementData ; $DF32`）：不绘制，但位件游标前进 2。
     #[test]
     fn stream_skips_placement_on_fe() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         m.write_ram(0x005B, 0);
         run(
             &mut m,

@@ -8,7 +8,7 @@ use crate::frame::tick::*;
 use crate::ram_map;
 
 pub fn samus_projectile_hit_door_or_statue(
-    mem: &mut crate::frame::FrameMemory,
+    mem: &mut crate::frame::Manager,
     temp04_lo: u8,
     temp04_hi: u8,
 ) {
@@ -61,7 +61,7 @@ pub fn samus_projectile_hit_door_or_statue(
 /// UpdateSamusProjectiles+DoOneSamusProjectile（**asm 内容锚** `: 07:D4BF/D4CB`——r26）：
 /// 3 槽（Objects 13-15=$D0/$E0/$F0）状态 dispatch：0=ExitSub（空径——移动对拍主径！）/
 /// 1=Bullet/2=Wave/3=Ice/4=Explode/5-10=Bomb 族/11=Missile（打敌人流程件——随件）。
-pub fn update_samus_projectiles(mem: &mut crate::frame::FrameMemory) {
+pub fn update_samus_projectiles(mem: &mut crate::frame::Manager) {
     for slot in [0xD0u8, 0xE0, 0xF0] {
         mem.write_ram(0x004B, slot); // PageIndex（DoOneSamusProjectile（$D4CB））
         let status = mem.read_ram(0x0300 + slot as u16);
@@ -84,7 +84,7 @@ pub fn update_samus_projectiles(mem: &mut crate::frame::FrameMemory) {
 
 /// 弹爆径（UpdateBullet_Explode（$D5E4（audit §8）））：anim←BulletHit(0x1D)
 /// （导弹⇒MissileExplode(0x91)）+status←wa_BulletExplode(4)。
-pub(crate) fn bullet_explode(mem: &mut crate::frame::FrameMemory) {
+pub(crate) fn bullet_explode(mem: &mut crate::frame::Manager) {
     let x = mem.read_ram(0x004B) as u16;
     let base = 0x0300u16 + x;
     let st = mem.read_ram(base);
@@ -99,7 +99,7 @@ pub(crate) fn bullet_explode(mem: &mut crate::frame::FrameMemory) {
 }
 
 /// 弹移动（UpdateBullet_Move（$D624（audit §8）））：speedX/Y→位移（wrapping）。
-pub(crate) fn bullet_move(mem: &mut crate::frame::FrameMemory) {
+pub(crate) fn bullet_move(mem: &mut crate::frame::Manager) {
     let x = mem.read_ram(0x004B) as u16;
     let base = 0x0300u16 + x;
     let sx = mem.read_ram(base + 9);
@@ -112,7 +112,7 @@ pub(crate) fn bullet_move(mem: &mut crate::frame::FrameMemory) {
 /// UpdatingSamusProjectile($71)←1/删除（onScreen 清）/精灵撞（isHit）/BG 撞
 /// （空气（≥$A0）⇒移+免撞；实心⇒爆（$4E 门瓦⇒任务卡 2 径复用））/时寿 dec（长束免）/
 /// DrawBullet（AnimDrawObject(A=1)）。
-pub(crate) fn update_bullet(mem: &mut crate::frame::FrameMemory) {
+pub(crate) fn update_bullet(mem: &mut crate::frame::Manager) {
     let x = mem.read_ram(0x004B) as u16;
     let base = 0x0300u16 + x;
     mem.write_ram(0x0071, 1);
@@ -169,7 +169,7 @@ pub(crate) fn update_bullet(mem: &mut crate::frame::FrameMemory) {
 
 /// UpdateBulletExplode（$D5C8）：animFrame==_id_FrameNone($F7)（动画尽）⇒清；
 /// DrawBullet。
-pub(crate) fn update_bullet_explode(mem: &mut crate::frame::FrameMemory) {
+pub(crate) fn update_bullet_explode(mem: &mut crate::frame::Manager) {
     let x = mem.read_ram(0x004B) as u16;
     let base = 0x0300u16 + x;
     mem.write_ram(0x0071, 1);
@@ -184,7 +184,7 @@ pub(crate) fn update_bullet_explode(mem: &mut crate::frame::FrameMemory) {
 /// UpdateSkreeProjectiles（**asm 内容锚** `UpdateSkreeProjectile: ; 07:FBEC`（prg7:12157-
 /// 12242 全谱——goal-轮13 件））：①dieDelay 倒数 ②速表（FC5D——(Y,X)：(0,−5)/(−5,−2)
 /// /(−5,+2)/(0,+5)）③位移+出界⇒Kill ④**Samus 5 伤害**（:12214-12232——i 帧/螺旋转免伤）。
-pub(crate) fn uw_skree_projectiles(mem: &mut crate::frame::FrameMemory) {
+pub(crate) fn uw_skree_projectiles(mem: &mut crate::frame::Manager) {
     // 【卡 E D2-2 端口】asm UpdateAllSkreeProjectiles 循环头（prg7_engine.asm:12146-
     // 12148）：`lda #$40 / sta PageIndex`——显示面共用 PowerUpDraw($340) 槽。
     mem.write_ram(0x004B, 0x40);
@@ -319,7 +319,7 @@ pub(crate) fn uw_skree_projectiles(mem: &mut crate::frame::FrameMemory) {
 /// （F140：半径和（EnsExtra+Objects）+屏距）→F2CA（弹 status→weaponAction+弹 isHit 位
 /// +敌 isHit 标志）→下帧 EnemyReactToSamusProjectile（F536——伤害/爆亡 ✓已端口）。
 /// 注：SamusCollisionWithSolidEntities（D976）在 physics 链（不动）。
-pub(crate) fn uw_collision_detection(mem: &mut crate::frame::FrameMemory) {
+pub(crate) fn uw_collision_detection(mem: &mut crate::frame::Manager) {
     // 【goal-轮20 碰撞环头件】CollisionDetection（F034-F038 逐字）：`lda #$FF/sta
     // SamusKnockbackIsBomb($73)/sta SamusHurt010F($010F)`——**每环重置 kb73=$FF**（无此
     // 件则 CheckHealthStatus 的击退向位径（bomb≠0 门）永不发（金腿 kb77=$FF 实证）。
@@ -459,7 +459,7 @@ pub(crate) fn uw_collision_detection(mem: &mut crate::frame::FrameMemory) {
 /// SubtractHealth（**asm 内容锚** `SubtractHealth: ; 07:CE92`）：HealthChange≠0∧活⇒
 /// （Varia⇒半伤（lsr+carry 补 $4F））→Base10Subtract（BCD）：Health($0106)/Health+1($0107)
 /// 双字节扣→ClearHealthChange。
-pub(crate) fn subtract_health(mem: &mut crate::frame::FrameMemory) {
+pub(crate) fn subtract_health(mem: &mut crate::frame::Manager) {
     let hc0 = mem.read_ram(0x006E);
     let hc1 = mem.read_ram(0x006F);
     if hc0 == 0 && hc1 == 0 {
@@ -525,10 +525,10 @@ pub(crate) fn bcd_sub(v: u8, sub: u8) -> (u8, bool) {
 
 #[cfg(test)]
 mod tests_bullet_explode_order {
-    use crate::frame::FrameMemory;
+    use crate::frame::Manager;
 
     /// 弹出膛槽（$0300+PageIndex）：status/speeds/isHit/onScreen/hi/y/x/timer。
-    fn bullet(m: &mut FrameMemory, y: u8, x: u8, sx: u8) {
+    fn bullet(m: &mut Manager, y: u8, x: u8, sx: u8) {
         m.write_ram(0x004B, 0); // PageIndex → base=$0300
         m.write_ram(0x0300, 1); // status
         m.write_ram(0x0308, 0); // speedY
@@ -541,7 +541,7 @@ mod tests_bullet_explode_order {
         m.write_ram(0x030F, 0x20); // 时寿
     }
 
-    fn room_byte(m: &mut FrameMemory, y: u8, x: u8, val: u8) {
+    fn room_byte(m: &mut Manager, y: u8, x: u8, val: u8) {
         let idx = (((y & 0xF8) as u16) << 2) | ((x >> 3) as u16);
         m.write_wram(0x6000 | (idx & 0x3FF), val);
     }
@@ -551,7 +551,7 @@ mod tests_bullet_explode_order {
     /// 实证：TASVideos 100% 录像 f2135（emu status=4 且 x 210→214）。
     #[test]
     fn hit_sprite_then_move_when_air_ahead() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         bullet(&mut m, 0x90, 0xD0, 4);
         room_byte(&mut m, 0x90, 0xD0, 0xA0); // 空气
         super::update_bullet(&mut m);
@@ -563,7 +563,7 @@ mod tests_bullet_explode_order {
     /// 前方固实（<$80）⇒ 不移，且走 CheckBulletStat 的 collided 径（status≠0 ⇒ 爆）。
     #[test]
     fn hit_sprite_then_stop_when_solid_ahead() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         bullet(&mut m, 0x90, 0xD0, 4);
         room_byte(&mut m, 0x90, 0xD0, 0x01); // 固实
         super::update_bullet(&mut m);

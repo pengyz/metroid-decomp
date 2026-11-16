@@ -16,7 +16,7 @@
 //!
 //! 生效面：CopyGFXBlock 的 CHR 写=PPU 面（write_io 族——渲染面挂 task-13）。
 
-use crate::state::FrameMemory;
+use crate::state::Manager;
 use crate::ram_map::{CURRENT_BANK, JUST_IN_BAILEY, MMC1CTRL_ZP, PPUCTRL_ZP, SWITCH_UPPER};
 
 /// GFXInfo 描述子 id（表序自证——macros.asm PtrTableEntry 序号+prg7_engine 注释互证）。
@@ -78,7 +78,7 @@ pub fn gfx_info(id: u8) -> [u8; 7] {
 /// InitNorfairGFX（**asm 内容锚** `InitNorfairGFX: ; 07:C622`——prg7_engine.asm:1542-1561）：
 /// `ldy #_id_GFX_CREBG1 / jsr LoadGFX` → CREBG2 → NorfBG1 → NorfBG2 → NorfairSprites →
 /// Solid_0FC0 → `ldy #_id_GFX_Solid_1FC0 / jmp LoadGFX`（尾跳，7 件）。
-pub fn init_norfair_gfx(mem: &mut FrameMemory) {
+pub fn init_norfair_gfx(mem: &mut Manager) {
     use gfx_id::*;
     for id in [CREBG1, CREBG2, NORF_BG1, NORF_BG2, NORFAIR_SPRITES, SOLID_0FC0, SOLID_1FC0] {
         load_gfx(mem, id);
@@ -88,7 +88,7 @@ pub fn init_norfair_gfx(mem: &mut FrameMemory) {
 /// InitTourianGFX（**asm 内容锚** `InitTourianGFX: ; 07:C645`——prg7_engine.asm:1564-1593）：
 /// CREBG2 → BossBG → TourBG → Zebetite → TourianFont → TourianSprites → Font_Tourian →
 /// ExclamationPoint → Solid_0FC0 → `jmp LoadGFX`(Solid_1FC0)（**10 件**）。
-pub fn init_tourian_gfx(mem: &mut FrameMemory) {
+pub fn init_tourian_gfx(mem: &mut Manager) {
     use gfx_id::*;
     for id in [
         CREBG2,
@@ -109,7 +109,7 @@ pub fn init_tourian_gfx(mem: &mut FrameMemory) {
 /// InitKraidGFX（**asm 内容锚** `InitKraidGFX: ; 07:C677`——prg7_engine.asm:1595-1618）：
 /// CREBG1 → CREBG2 → BossBG → KraiBG2 → KraiBG3 → KraidSprites → Solid_0FC0 → Solid_1FC0
 /// （**8 件**）。
-pub fn init_kraid_gfx(mem: &mut FrameMemory) {
+pub fn init_kraid_gfx(mem: &mut Manager) {
     use gfx_id::*;
     for id in [CREBG1, CREBG2, BOSS_BG, KRAI_BG2, KRAI_BG3, KRAID_SPRITES, SOLID_0FC0, SOLID_1FC0] {
         load_gfx(mem, id);
@@ -118,7 +118,7 @@ pub fn init_kraid_gfx(mem: &mut FrameMemory) {
 
 /// InitRidleyGFX（**asm 内容锚** `InitRidleyGFX: ; 07:C69F`——prg7_engine.asm:1620-1643）：
 /// CREBG1 → CREBG2 → BossBG → RidlBG → RidleySprites → Solid_0FC0 → Solid_1FC0（**7 件**）。
-pub fn init_ridley_gfx(mem: &mut FrameMemory) {
+pub fn init_ridley_gfx(mem: &mut Manager) {
     use gfx_id::*;
     for id in [CREBG1, CREBG2, BOSS_BG, RIDL_BG, RIDLEY_SPRITES, SOLID_0FC0, SOLID_1FC0] {
         load_gfx(mem, id);
@@ -129,7 +129,7 @@ pub fn init_ridley_gfx(mem: &mut FrameMemory) {
 /// asm 全形：`ldy #GFX_Samus/jsr LoadGFX` → `lda JustInBailey/beq @endIf_A`→
 /// `ldy #GFX_SamusSuitless/jsr LoadGFX` → IntroSprites/Font_Complete/Font_Hud/
 /// Solid_0FC0 → `ldy #GFX_Solid_1FC0/jmp LoadGFX`（尾跳）。**不含 TITLE**（区别 init_title_gfx）。
-pub fn load_samus_gfx(mem: &mut FrameMemory) {
+pub fn load_samus_gfx(mem: &mut Manager) {
     use gfx_id::*;
     let mut loads = vec![SAMUS];
     if mem.read_wram(JUST_IN_BAILEY) != 0 {
@@ -142,7 +142,7 @@ pub fn load_samus_gfx(mem: &mut FrameMemory) {
 }
 
 /// InitTitleGFX 单元（boot 序：7 件载入；JustInBailey=0 时跳 Suitless）。
-pub fn init_title_gfx(mem: &mut FrameMemory) {
+pub fn init_title_gfx(mem: &mut Manager) {
     use gfx_id::*;
     let mut loads = vec![TITLE, SAMUS];
     if mem.read_wram(JUST_IN_BAILEY) != 0 {
@@ -173,7 +173,7 @@ pub fn gfx_block(id: u8) -> &'static [u8] {
 }
 
 /// LoadGFX 折叠（描述子→$00-$06/BankSwitch 双切/$FF 位——CHR 写=渲染面 write_io 注）。
-pub fn load_gfx(mem: &mut FrameMemory, id: u8) {
+pub fn load_gfx(mem: &mut Manager, id: u8) {
     let e = gfx_info(id);
     // 描述子倒序拷贝（LC7B6：x=6..0 ← entry[7id+6..7id]）
     for x in 0..7u16 {
@@ -206,7 +206,7 @@ pub fn load_gfx(mem: &mut FrameMemory, id: u8) {
 }
 
 /// BankSwitch（C4EF 族共享段——与 check_bank_switch 同源）：$00=bank/$28 组合/PRG 串行。
-fn bank_switch(mem: &mut FrameMemory, bank: u8) {
+fn bank_switch(mem: &mut Manager, bank: u8) {
     mem.write_ram(0x0000, bank);
     let v = (mem.read_ram(SWITCH_UPPER) & 0x18) | bank;
     mem.write_ram(SWITCH_UPPER, v);
@@ -223,7 +223,7 @@ mod tests {
     /// $01-$06=entry22[1..6]）+$FF 增量位清。
     #[test]
     fn init_title_gfx_boot_final_descriptor() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         init_title_gfx(&mut m);
         assert_eq!(m.read_ram(0x0000), 0); // 回切 CurrentBank=0
         assert_eq!(
@@ -262,7 +262,7 @@ mod tests {
     /// （全逐字节）+ 邻域不越界（$13FF/$1900 不动）+ $05/$06 消耗终态 0/0。
     #[test]
     fn copy_gfx_block_fills_chr_via_ppu() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         load_gfx(&mut m, 21); // TITLE（dest=$1400 size=$0500）
         let block = gfx_block(21);
         assert_eq!(&m.render.chr[0x1400..0x1400 + block.len()], block, "CHR 载面全逐字节");
@@ -274,7 +274,7 @@ mod tests {
     /// InitTitleGFX 七件载面（boot 序 JustInBailey=0）：各块 dest 区全对 + 无重叠互污。
     #[test]
     fn init_title_gfx_loads_all_blocks() {
-        let mut m = FrameMemory::default();
+        let mut m = Manager::default();
         init_title_gfx(&mut m);
         for id in [21u8, 0, 20, 23, 24, 25, 22] {
             let e = gfx_info(id);
