@@ -54,6 +54,84 @@ pub(crate) fn new_ctrl_byte(c: u8, obj_cntrl: u8) -> u8 {
     }
 }
 
+/// **帧流环唯一实现**（`DrawSpriteObject ; $DF19`）——对象（`obj_draw_frame`）与
+/// 敌人（`crate::enemy::anim::draw_enemy`）共用。
+///
+/// 历史教训：本环曾在三处各自复制（对象活件 / 敌活件 / 死件），三次漏分支各造成一个
+/// 像素缺陷——`0xFC` 偏移只跳过不叠加（case-002 220px）、`0xFD` 覆盖形缺失
+/// （f2084 159px）、敌侧 `$6B` MSB 覆盖整支未读（tough/冻结敌调色板恒错）。
+/// 语义只允许在这里写一次：`<0xFC` 写 OAM、`0xFC` 加屏位偏移、`0xFD` 换控制字节、
+/// `0xFE` 跳过一位件、`$FF` 帧终。
+pub(crate) struct SpriteStream<'a> {
+    /// 帧数据取字节（对象读 ROM 表、敌读按区资产段）
+    pub frame_byte: &'a dyn Fn(u16) -> u8,
+    /// 位件表取字节（同上）
+    pub place_byte: &'a dyn Fn(u16) -> u8,
+    /// 帧数据第 0 字节（AABBXXXX）
+    pub ctrl: u8,
+    /// `ObjectCntrl($6B)`：MSB=1 覆盖调色板、bit4=水平镜像
+    pub obj_cntrl: u8,
+    pub screen_x: u8,
+    pub screen_y: u8,
+}
+
+pub(crate) fn draw_sprite_stream(mem: &mut crate::frame::FrameMemory, s: SpriteStream<'_>) {
+    // GetSpriteCntrlData（$DCC3）头：低 2 位=调色板、高 2 位=翻转、PRIORITY 恒置；
+    // 尾：`ObjectCntrl` MSB=1 ⇒ SpriteAttrsOverride（$E038）直赋 `(ctrl&$C0)|(ObjectCntrl&$7F)`。
+    let mut cntrl05 = if s.obj_cntrl & 0x80 != 0 {
+        new_ctrl_byte(s.ctrl, s.obj_cntrl)
+    } else {
+        ((s.ctrl >> 4) & 0x03) | (s.ctrl & 0xC0) | 0x20
+    };
+    // 镜像：`$6B` bit4 → HFLIP($40)，逐枚 `attr = Temp05 ^ HFLIP`（WriteSpriteRAM $DEE6）
+    let mirror = if s.obj_cntrl & 0x10 != 0 { 0x40u8 } else { 0 };
+    let flip_flags = s.ctrl ^ mirror; // place_disp 的翻转口径（Y=$80/X=$40）
+    let mut frame_i: u16 = 3; // 0=ctrl / 1=radiusY / 2=radiusX
+    let mut place_i: u16 = 0;
+    let mut sx = s.screen_x as i16;
+    let mut sy = s.screen_y as i16;
+    let mut x_sprite = mem.read_ram(0x005B) as u16; // SpritePagePos
+    loop {
+        let b = (s.frame_byte)(frame_i);
+        if b < 0xFC {
+            // WriteSpriteRAM（$DEE6）：OAM 四元组（y/tile/attr/x）
+            let dy = place_disp((s.place_byte)(place_i), flip_flags, true);
+            let dx = place_disp((s.place_byte)(place_i + 1), flip_flags, false);
+            let oy = (sy as i16 + dy as i16 - 1) as u8; // PPU y+1 形
+            let ox = (sx as i16 + dx as i16) as u8;
+            let attr = cntrl05 ^ mirror;
+            if x_sprite + 4 <= 0x100 {
+                mem.write_ram(0x0200u16.wrapping_add(x_sprite), oy);
+                mem.write_ram(0x0201u16.wrapping_add(x_sprite), b);
+                mem.write_ram(0x0202u16.wrapping_add(x_sprite), attr);
+                mem.write_ram(0x0203u16.wrapping_add(x_sprite), ox);
+                x_sprite = x_sprite.wrapping_add(4);
+            }
+            place_i += 2;
+            frame_i += 1;
+        } else if b == 0xFC {
+            // OffsetObjectPosition（$DF51）：屏位偏移，不绘制
+            sy = sy.wrapping_add((s.frame_byte)(frame_i + 1) as i16);
+            sx = sx.wrapping_add((s.frame_byte)(frame_i + 2) as i16);
+            frame_i += 3;
+        } else if b == 0xFD {
+            // GetNewControlByte（$DF3B）：MSB=1 ⇒ E038 覆盖形，否则原值直用
+            cntrl05 = new_ctrl_byte((s.frame_byte)(frame_i + 1), s.obj_cntrl);
+            frame_i += 2;
+        } else if b == 0xFE {
+            // SkipPlacementData（$DF32）：跳一位件，不绘制
+            place_i += 2;
+            frame_i += 1;
+        } else {
+            break; // $FF = 帧终
+        }
+        if frame_i > 0x40 {
+            break; // 流界护栏（合法帧远小于此）
+        }
+    }
+    mem.write_ram(0x005B, x_sprite as u8); // SpritePagePos 推进
+}
+
 pub fn obj_draw_frame(mem: &mut crate::frame::FrameMemory, page_index: u8) {
     let px = page_index as u16;
     // 只读 animFrame（动画更新在 update_obj_anim——此处不写 $0303/$0304/$0306）
@@ -140,61 +218,19 @@ pub fn obj_draw_frame(mem: &mut crate::frame::FrameMemory, page_index: u8) {
         mem.write_ram(0x006B, 0); // ClearObjectCntrl（$DF2D）
         return;
     }
-    // ---- DrawSpriteObject（$DF19）帧流环 ----
-    let mut frame_i: u16 = 3; // 第 4 字节起
-    let mut place_i: u16 = 0;
-    let mut sx = screen_x as i16;
-    let mut sy = screen_y as i16;
-    let mut x_sprite = mem.read_ram(0x005B) as u16; // SpritePagePos
-    loop {
-        let b = blob(fptr.wrapping_add(frame_i));
-        if b < 0xFC {
-            // WriteSpriteRAM（$DEE6）：OAM 四元组（y/tile/attr/x）
-            let dy = place_disp(blob(pptr.wrapping_add(place_i)), flip_flags, true);
-            let dx = place_disp(blob(pptr.wrapping_add(place_i + 1)), flip_flags, false);
-            let oy = (sy as i16 + dy as i16 - 1) as u8; // PPU y+1 形
-            let ox = (sx as i16 + dx as i16) as u8;
-            let mut attr = cntrl05;
-            if obj_cntrl & 0x10 != 0 {
-                attr ^= 0x40; // ObjectCntrl **bit4**=水平镜像（$6B——constants_ram「Bit 4 controls
-                              // object horizontal mirroring」；CD92 SamusDir bit0→bit4）。旧形误用
-                              // bit5(0x20=priority 位)⇒左朝 sprite 不翻转（贴图错）。
-            }
-            mem.write_ram(0x0200u16.wrapping_add(x_sprite), oy);
-            mem.write_ram(0x0201u16.wrapping_add(x_sprite), b);
-            mem.write_ram(0x0202u16.wrapping_add(x_sprite), attr);
-            mem.write_ram(0x0203u16.wrapping_add(x_sprite), ox);
-            x_sprite = x_sprite.wrapping_add(4);
-            place_i += 2;
-            frame_i += 1;
-        } else if b == 0xFC {
-            // OffsetObjectPosition（$DF51）：y/x 偏移量调整
-            sy = sy.wrapping_add(blob(fptr.wrapping_add(frame_i + 1)) as i16);
-            sx = sx.wrapping_add(blob(fptr.wrapping_add(frame_i + 2)) as i16);
-            frame_i += 3;
-        } else if b == 0xFD {
-            // GetNewControlByte（$DF3B）——两条径，取决于 ObjectCntrl 的 MSB：
-            //   `asl ObjectCntrl / bcc LDF45`（MSB=0）⇒ `lsr` 还原后 `lda (FramePtr),y /
-            //   sta Temp05_Cntrl` = **原值直用**；
-            //   MSB=1 ⇒ `jsr SpriteAttrsOverride`（E038）⇒ `attr=(ctrl&$C0)|(ObjectCntrl&$7F)`。
-            // 【f2084 根因】旧形无条件走「原值直用」⇒ 门（DrawDoor 写 $6B=$B1 置 MSB）的
-            // 分片控制字节 `FD E3` 被原样当 attr（0xE3：调色板 3，品红），而 emu 走覆盖形
-            // 得 `(E3&C0)|B1&7F=F1`（调色板 1，蓝）⇒ 门下半三枚精灵调色板错、上半对。
-            frame_i += 1;
-            let c = blob(fptr.wrapping_add(frame_i));
-            cntrl05 = new_ctrl_byte(c, obj_cntrl);
-            frame_i += 1;
-        } else if b == 0xFE {
-            // SkipPlacementData（$DF32）
-            place_i += 2;
-            frame_i += 1;
-        } else {
-            // $FF：尾（stx SpritePagePos/ClearObjectCntrl）
-            mem.write_ram(0x005B, x_sprite as u8);
-            mem.write_ram(0x006B, 0);
-            return;
-        }
-    }
+    // ---- DrawSpriteObject（$DF19）帧流环——**唯一实现**见 draw_sprite_stream ----
+    draw_sprite_stream(
+        mem,
+        SpriteStream {
+            frame_byte: &|i| blob(fptr.wrapping_add(i)),
+            place_byte: &|i| blob(pptr.wrapping_add(i)),
+            ctrl: ctrl_byte,
+            obj_cntrl,
+            screen_x,
+            screen_y,
+        },
+    );
+    mem.write_ram(0x006B, 0); // 尾 ClearObjectCntrl（$DF2D）
 }
 
 /// 位移符号形（Y/XDisplacement 正常径——翻转=二补-8（$DFB1 `eor #$FF/adc #$F8`））。
@@ -313,174 +349,77 @@ mod r25_oam_probe {
     }
 }
 
-/// DrawEnemy（$DD8B）真帧径（**贴图根修**（2026-10-31 用户截图定谳：占位 tile=0x01
-/// 人形帧≠真敌帧））：animFrame==FrameNone⇒ClearObjectCntrl；animFrame*2→
-/// EnFramePtrTable1/2（carry 选表（asm :6108-6121））→帧流环（DrawSpriteObject DF19
-/// 同构）→OAM。数据面=game_data::assets（敌帧/位件面：enemy_frame_off/enemy_frames
-/// +EN_PLACE_OFFS/EN_PLACES）。
-///
-/// 敌结构（constants_ram:85-149——A 级）：Ens=$0400 步距 16（y+0/x+1）；EnsExtra=$6AF4
-/// 步距 16（status+0/radiusY+1/radiusX+2/**animFrame+3**/animDelay+4/resetAnimIndex+5/
-/// animIndex+6/**hi+7**/type+14）。
-pub fn draw_enemy(mem: &mut crate::frame::FrameMemory, page_index: u8) {
-    use game_data::assets;
-    let px = (page_index as u16) * 16; // 槽×16B（Ens/EnsExtra 同步距）
-    let blob_e = |a: u16| -> u8 { mem.read_ram(a) };
-    // DrawEnemy（$DD8B）：animFrame==FrameNone($FF)→ClearObjectCntrl
-    // **按区**取敌帧/位数据面（五区基址/表长各异，见 docs/findings/per-bank-assets.md §1）。
-    let area = crate::world::room_load::area_idx(mem.read_ram(crate::ram_map::IN_AREA)) as u8;
-    let anim_frame = blob_e(0x6AF4 + px + 3); // EnsExtra.0.animFrame
-    if anim_frame == 0xFF {
-        mem.write_ram(0x006B, 0);
-        return;
-    }
-    // 帧指针（:6108-6121）：animFrame*2→表 1/2（carry=bit7 选表）——烘焙偏移表直映
-    let idx = (anim_frame & 0x7F) as usize + if anim_frame & 0x80 != 0 { 128 } else { 0 };
-    let (f0, flen) = assets::enemy_frame_off(area, idx).unwrap_or((0, 0));
-    if flen == 0 {
-        mem.write_ram(0x006B, 0);
-        return;
-    }
-    let fblob = |i: u16| -> u8 {
-        let o = f0 as usize + i as usize;
-        *assets::enemy_frames(area).get(o).unwrap_or(&0xFF)
-    };
-    // y/x/hi（:6096-6105——Ens/EnsExtra）
-    let y_pos = blob_e(0x0400 + px);
-    let x_pos = blob_e(0x0401 + px);
-    let hi = blob_e(0x6AF4 + px + 7); // EnsExtra.0.hi
-    let radius_x = blob_e(0x6AF4 + px + 2);
-    // GetSpriteCntrlData（DCC3）：ctrl=AABBXXXX
-    // 【X 形根修同构】镜像=ObjectCntrl($6B) **bit4**→HFLIP($40) eor（WriteSpriteRAM
-    // :6324-6328 逐字）——非 ctrl 位交叉。
-    let ctrl_byte = fblob(0);
-    let mut cntrl05 = (ctrl_byte >> 4) & 0x03;
-    let flip = ctrl_byte & 0xC0;
-    cntrl05 |= flip | 0x20;
-    let mirror_flags = if mem.read_ram(0x006B) & 0x10 != 0 { 0x40u8 } else { 0 };
-    let flip_flags = ctrl_byte ^ mirror_flags;
-    // 位件指针（:6124-6130）：(ctrl&$0F)*2→EnPlacePtrTable——烘焙偏移表直映
-    let place_idx = (ctrl_byte & 0x0F) as usize;
-    let (p0, plen) = assets::enemy_place_off(area, place_idx).unwrap_or((0, 0));
-    let pblob = |i: u16| -> u8 {
-        let o = p0 as usize + i as usize;
-        *assets::enemy_places(area).get(o).unwrap_or(&0xFF)
-    };
-    // 屏位（ScrollY=$FC/ScrollX=$FD 勘误径——anim_draw_object 同构）
-    let scroll_y = mem.read_ram(crate::ram_map::SCROLL_Y);
-    let scroll_x = mem.read_ram(crate::ram_map::SCROLL_X);
-    let screen_y = y_pos.wrapping_sub(scroll_y);
-    let screen_x = x_pos.wrapping_sub(scroll_x);
-    let horz = mem.read_ram(crate::ram_map::SCROLL_DIR) & 0x02 != 0;
-    let screen_y = if horz { y_pos } else { screen_y };
-    // 可见性门（IsObjectVisible DFDF→HorzScrollCheck E01C——同构）
-    let (screen_x_v, borrow) = x_pos.overflowing_sub(scroll_x);
-    let carry = !borrow;
-    let same_nt = (hi ^ mem.read_ram(0x00FF)) & 1 == 0;
-    let visible = if same_nt {
-        carry && radius_x < screen_x_v
-    } else if !carry {
-        (radius_x as u16 + screen_x_v as u16) < 0x100
-    } else {
-        false
-    };
-    if !visible {
-        mem.write_ram(0x006B, 0);
-        return;
-    }
-    // ---- DrawSpriteObject（DF19）帧流环（与 anim_draw_object 同构）----
-    let mut frame_i: u16 = 3; // 第 4 字节起（0=ctrl/1=radiusY/2=radiusX）
-    let mut place_i: u16 = 0;
-    let mut sx = screen_x as i16;
-    let mut sy = screen_y as i16;
-    let mut x_sprite = mem.read_ram(0x005B) as u16; // SpritePagePos
-    let _ = plen;
-    loop {
-        let b = fblob(frame_i);
-        if b < 0xFC {
-            let dy = place_disp(pblob(place_i), flip_flags, true);
-            let dx = place_disp(pblob(place_i + 1), flip_flags, false);
-            let oy = (sy as i16 + dy as i16 - 1) as u8;
-            let ox = (sx as i16 + dx as i16) as u8;
-            let attr = cntrl05 ^ mirror_flags; // WriteSpriteRAM（:6324-6328）形
-            if x_sprite + 4 <= 0x100 {
-                mem.write_ram(0x0200u16.wrapping_add(x_sprite), oy);
-                mem.write_ram(0x0201u16.wrapping_add(x_sprite), b);
-                mem.write_ram(0x0202u16.wrapping_add(x_sprite), attr);
-                mem.write_ram(0x0203u16.wrapping_add(x_sprite), ox);
-                x_sprite = x_sprite.wrapping_add(4);
-            }
-            place_i += 2;
-            frame_i += 1;
-        } else if b == 0xFC {
-            sy = sy.wrapping_add(fblob(frame_i + 1) as i16);
-            sx = sx.wrapping_add(fblob(frame_i + 2) as i16);
-            frame_i += 3;
-        } else if b == 0xFD {
-            frame_i += 1;
-            cntrl05 = fblob(frame_i);
-            frame_i += 1;
-        } else if b == 0xFE {
-            place_i += 2;
-            frame_i += 1;
-        } else {
-            break; // 0xFF=帧终
-        }
-        if frame_i > 0x40 {
-            break; // 流界护栏
-        }
-    }
-    mem.write_ram(0x005B, x_sprite as u8); // SpritePagePos 推进
-}
-
 #[cfg(test)]
-mod r26_draw_enemy_tdd {
+mod tests_sprite_stream {
+    //! 帧流环**唯一实现**的等价锚（原 `r26_draw_enemy_tdd` 两条随死件删除后补于此处，
+    //! 覆盖不变）：①有帧数据 ⇒ 落 OAM ②`animFrame==0xFF` ⇒ 不落 OAM。
     use super::*;
     use crate::frame::FrameMemory;
 
-    /// TDD 红→绿：敌人槽 animFrame 非 None 时生成 OAM 精灵
+    fn run(m: &mut FrameMemory, frame: &[u8], place: &[u8]) {
+        draw_sprite_stream(
+            m,
+            SpriteStream {
+                frame_byte: &|i| *frame.get(i as usize).unwrap_or(&0xFF),
+                place_byte: &|i| *place.get(i as usize).unwrap_or(&0),
+                ctrl: frame[0],
+                obj_cntrl: 0,
+                screen_x: 100,
+                screen_y: 60,
+            },
+        );
+    }
+
+    /// 有帧数据（ctrl/radiusY/radiusX/tile…/$FF）⇒ OAM 四元组落（y/tile/attr/x）。
     #[test]
-    fn draw_enemy_generates_oam_when_animframe_set() {
+    fn stream_writes_oam_quads() {
         let mut m = FrameMemory::default();
-        // 敌人槽 4（$0440）：y=45 x=200（emu f820 实测形）
-        m.write_ram(0x0440, 45); // y
-        m.write_ram(0x0441, 200); // x
-        // EnsExtra.0.animFrame（$6AF4+4）= 非 None
-        m.write_ram(0x6AF4 + 4, 0x01);
-        // ScrollY/ScrollX
-        m.write_ram(0x00FF, 0);
-        m.write_ram(0x00FE, 0);
-        // SpritePagePos=0
         m.write_ram(0x005B, 0);
-        draw_enemy(&mut m, 4);
-        // OAM spr0 应有内容
-        let oam_y = m.read_ram(0x0200);
-        let oam_x = m.read_ram(0x0203);
-        assert!(oam_y != 0 || oam_x != 0, "敌人 OAM 应有 sprite 落（y={:02X} x={:02X}）", oam_y, oam_x);
+        run(&mut m, &[0x21, 0x0C, 0x08, 0xCE, 0xFF], &[0xF4, 0xFC]);
+        assert_eq!(m.read_ram(0x0201), 0xCE, "tile 落位");
+        assert_eq!(m.read_ram(0x0203), 0x60, "x=100-4（place dx=-4）");
+        assert_eq!(m.read_ram(0x0200), 0x2F, "y=60-12-1（place dy=-12，PPU y+1 形）");
+        assert_eq!(m.read_ram(0x005B), 4, "SpritePagePos 推进 4");
     }
 
-    /// TDD 红→绿：animFrame==None 时 ClearObjectCntrl（不写 OAM）
+    /// 帧首字节即 `$FF`（animFrame=None 的帧面）⇒ 一个 sprite 都不落。
     #[test]
-    fn draw_enemy_clears_cntrl_when_blank() {
+    fn stream_with_only_terminator_writes_nothing() {
         let mut m = FrameMemory::default();
-        m.write_ram(0x6AF4 + 4, 0xFF); // animFrame=None
-        m.write_ram(0x006B, 0x80); // ObjectCntrl 有值
-        draw_enemy(&mut m, 4);
-        assert_eq!(m.read_ram(0x006B), 0, "animFrame=None 应 ClearObjectCntrl");
-    }
-    /// 【f2084 根因】`FD <ctrl>` 分段控制字节在 ObjectCntrl MSB=1 时必须走 E038 覆盖形。
-    ///
-    /// 失败形态（旧形无条件原值直用）：门 `$6B=$B1`、帧数据 `FD E3` ⇒ old attr `0xE3`
-    /// （调色板 3，品红）vs asm `(E3&C0)|(B1&7F)=F1`（调色板 1，蓝）——录像 f2084 门
-    /// 下半三枚精灵 159px 差异即此。
-    #[test]
-    fn new_ctrl_byte_applies_object_cntrl_override() {
-        // MSB=1：低 7 位来自 ObjectCntrl（含调色板位与镜像位），高位取帧字节的翻转位。
-        assert_eq!(new_ctrl_byte(0xE3, 0xB1) & 0x03, 1, "调色板=ObjectCntrl 低 2 位");
-        assert_eq!(new_ctrl_byte(0xE3, 0xB1), 0xF1, "asm E038 逐位形");
-        // MSB=0：原值直用（不剥任何位）。
-        assert_eq!(new_ctrl_byte(0xE3, 0x00), 0xE3);
-        assert_eq!(new_ctrl_byte(0x21, 0x10), 0x21);
+        m.write_ram(0x005B, 0);
+        run(&mut m, &[0x21, 0x0C, 0x08, 0xFF], &[0, 0]);
+        assert_eq!(m.read_ram(0x0201), 0, "无 sprite");
+        assert_eq!(m.read_ram(0x005B), 0, "SpritePagePos 不推进");
     }
 
+    /// `0xFC` 偏移必须**叠加**到后续 sprite 的基准屏位（case-002 f1160 根因：
+    /// 旧形只 `frame_i += 3` 不叠加 ⇒ 后半组恒偏 4px）。帧面取自 Skree 帧 37：
+    /// `21 0C 08 CE FC 00 FC DE EE FF` —— 第一枚画在 dx=0，之后 x-4 再画两枚。
+    #[test]
+    fn stream_offset_accumulates_for_following_sprites() {
+        let mut m = FrameMemory::default();
+        m.write_ram(0x005B, 0);
+        run(
+            &mut m,
+            &[0x21, 0x0C, 0x08, 0xCE, 0xFC, 0x00, 0xFC, 0xDE, 0xEE, 0xFF],
+            &[0x04, 0x00, 0x04, 0x00, 0x04, 0x00],
+        );
+        assert_eq!(m.read_ram(0x0203), 0x64, "首枚 x=100+0");
+        assert_eq!(m.read_ram(0x0207), 0x60, "第二枚 x=100-4（偏移累计）");
+        assert_eq!(m.read_ram(0x020B), 0x60, "第三枚仍 100-4（累计不丢失）");
+    }
+
+    /// `0xFE` 跳过一位件（`SkipPlacementData ; $DF32`）：不绘制，但位件游标前进 2。
+    #[test]
+    fn stream_skips_placement_on_fe() {
+        let mut m = FrameMemory::default();
+        m.write_ram(0x005B, 0);
+        run(
+            &mut m,
+            &[0x21, 0x0C, 0x08, 0xFE, 0xCE, 0xFF],
+            &[0x04, 0x00, 0x04, 0x08],
+        );
+        assert_eq!(m.read_ram(0x0201), 0xCE, "跳过一位件后才画");
+        assert_eq!(m.read_ram(0x0203), 0x6C, "x=100+8（用了第 2 组的 dx）");
+    }
 }

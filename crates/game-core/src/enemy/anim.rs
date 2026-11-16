@@ -56,7 +56,6 @@ pub(crate) fn draw_enemy(mem: &mut crate::frame::FrameMemory, x: u8) {
     // 正解：attr=Temp05 ^（ObjectCntrl bit4<<2 & HFLIP($40)）（asm :6324-6328）；
     // 镜像面 Temp04=ctrl ^ 同源（GetSpriteCntrlData :5913-5920）。
     let obj_mirror = mem.read_ram(0x006B) & 0x10; // bit4=水平镜像控制
-    let mirror_flags = if obj_mirror != 0 { 0x40u8 } else { 0 };
     let place_idx = ((ctrl & 0x0F) as usize).min(127);
     let (po, pl) = assets::enemy_place_off(area, place_idx as usize).unwrap_or((0, 0));
     let pblob = |i: usize| -> u8 {
@@ -66,63 +65,32 @@ pub(crate) fn draw_enemy(mem: &mut crate::frame::FrameMemory, x: u8) {
     let xpos = mem.read_ram(0x0400 + x as u16 + 1); // x=+1
     let scroll_y = mem.read_ram(crate::ram_map::SCROLL_Y);
     let horz = mem.read_ram(crate::ram_map::SCROLL_DIR) & 0x02 != 0;
-    let mut sy = (if horz { y } else { y.wrapping_sub(scroll_y) }) as i16;
+    let sy = (if horz { y } else { y.wrapping_sub(scroll_y) }) as i16;
     // 【勘误修（2026-10-29（问题 A 根因））】敌屏位 x=房位−**ScrollX($FD)**——旧形减
     // $26（SpareMem26（constants:488（$25=MMC1CTRL_ZP 同族误读（sprite.rs 勘误注
     // 早已证）））——走滚径写 $FD（scroll_right）而 0x26 停旧值⇒敌屏位不减镜头⇒
     // **随镜恒距**（用户截图症（爬虫悬空错位））。
-    let mut sx = xpos.wrapping_sub(mem.read_ram(crate::ram_map::SCROLL_X)) as i16;
+    let sx = xpos.wrapping_sub(mem.read_ram(crate::ram_map::SCROLL_X)) as i16;
     let obj_cntrl = mem.read_ram(0x006B);
     // GetSpriteCntrlData（$DCC3）尾：ObjectCntrl **MSB=1 ⇒ SpriteAttrsOverride（E038）
     // `Temp05=(ctrl&$C0)|(ObjectCntrl&$7F)`**——敌侧同样适用：`UpdateEnemyCommon@noMoveNoAnim`
     // （$F419）给 tough 敌写 `$80|$03|PRIORITY`、`UpdateEnemy_Frozen`（$F443）给冻结敌写
     // `$80|$01|PRIORITY`。旧形只取 bit4 做镜像、忽略 MSB ⇒ **tough/冻结敌的调色板覆盖
     // 完全没生效**（与本轮 f2084 门精灵同一缺陷类）。
-    let mut cntrl05 = if obj_cntrl & 0x80 != 0 {
-        crate::render::oam::new_ctrl_byte(ctrl, obj_cntrl)
-    } else {
-        ((ctrl >> 4) & 0x03) | (ctrl & 0xC0) | 0x20
-    };
-    let mut place_i = 0usize;
-    let mut frame_i = 3usize;
-    let mut x_sprite = mem.read_ram(0x005B) as u16;
-    loop {
-        let b = blob(frame_i);
-        if b < 0xFC {
-            let dy = crate::render::oam::place_disp(pblob(place_i), ctrl ^ mirror_flags, true);
-            let dx = crate::render::oam::place_disp(pblob(place_i + 1), ctrl ^ mirror_flags, false);
-            // WriteSpriteRAM（:6324-6328）：attr=Temp05 ^ (ObjectCntrl bit4→HFLIP)
-            let attr = cntrl05 ^ mirror_flags;
-            let oy = (sy + dy as i16 - 1) as u8;
-            let ox = (sx + dx as i16) as u8;
-            mem.write_ram(0x0200 + x_sprite, oy);
-            mem.write_ram(0x0201 + x_sprite, b);
-            mem.write_ram(0x0202 + x_sprite, attr);
-            mem.write_ram(0x0203 + x_sprite, ox);
-            x_sprite = x_sprite.wrapping_add(4);
-            place_i += 2;
-            frame_i += 1;
-        } else if b == 0xFC {
-            // OffsetObjectPosition（$DF51）逐字：`lda (FramePtr),y / clc / adc Temp10_ScreenY /
-            // sta Temp10_ScreenY`，再对 Temp0E_ScreenX 同形 ⇒ **累计**到后续所有 sprite 的
-            // 基准屏位。旧形只 `frame_i += 3` 不叠加 ⇒ 后半组 sprite 恒偏 4px（case-002
-            // f1160 = 220px：Skree 帧 37 的 `fc 00 fc`（y+0/x-4）未被应用）。
-            sy = sy.wrapping_add(blob(frame_i + 1) as i16);
-            sx = sx.wrapping_add(blob(frame_i + 2) as i16);
-            frame_i += 3;
-        } else if b == 0xFD {
-            // GetNewControlByte（$DF3B）——MSB=1 ⇒ E038 覆盖形（与门/物品同律）。
-            frame_i += 1;
-            cntrl05 = crate::render::oam::new_ctrl_byte(blob(frame_i), obj_cntrl);
-            frame_i += 1;
-        } else if b == 0xFE {
-            place_i += 2;
-            frame_i += 1;
-        } else {
-            break;
-        }
-    }
-    mem.write_ram(0x005B, x_sprite as u8);
+    // ---- DrawSpriteObject（$DF19）帧流环——**唯一实现**见 `render::oam::draw_sprite_stream` ----
+    // 历史：本环曾被两处各自复制，`0xFC` 偏移只跳过不叠加（case-002 220px）、`0xFD`
+    // 覆盖形缺失（f2084 159px）两个像素缺陷都源于「同一 asm 环写两遍」。
+    crate::render::oam::draw_sprite_stream(
+        mem,
+        crate::render::oam::SpriteStream {
+            frame_byte: &|i| blob(i as usize),
+            place_byte: &|i| pblob(i as usize),
+            ctrl,
+            obj_cntrl,
+            screen_x: sx as u8,
+            screen_y: sy as u8,
+        },
+    );
 }
 
 /// `UpdateEnemyAnim ; 07:E094`（走表动画推进）。
