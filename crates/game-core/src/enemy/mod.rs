@@ -4,6 +4,7 @@
 //! 未语义考证字段保留 `_todo_` 前缀 + 触达证据注——禁伪语义命名，宁缺勿滥。
 //! F2CA 族九入口 = 本域方法集素材（decode-sweep r1 §3；切片考证=单元 spec 输入）。
 
+pub mod state;
 pub mod common;
 pub mod slot;
 pub mod movement;

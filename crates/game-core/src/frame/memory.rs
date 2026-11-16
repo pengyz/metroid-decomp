@@ -11,7 +11,7 @@ pub use crate::state::{Manager, Registers};
 impl Manager {
     /// RAM 读（2KB 镜像归一）。
     pub fn read_ram(&self, addr: u16) -> u8 {
-        // 【typed 域辖】Samus 的已 typed 化字段真相在 `Manager.samus`（`views::samus::SamusState`），
+        // 【typed 域辖】Samus 的已 typed 化字段真相在 `Manager.samus`（`samus::state::SamusState`），
         // 字节数组不再持有它们；地址面保持不变（兼容辖），逐域迁完后此分支即"读取口"唯一实现。
         if let Some(v) = self.samus.get_byte(addr) {
             return v;
@@ -199,7 +199,7 @@ impl Manager {
         mem.ram_mut().copy_from_slice(&ram[..0x800]);
         mem.wram_mut().copy_from_slice(&wram[..0x2000]);
         // typed 域辖字段从字节面回灌（MSS 是外部真相面，恢复后必须重建 typed 状态）。
-        for a in crate::memmap::views::samus::SamusState::TYPED_ADDRS {
+        for a in crate::samus::state::SamusState::TYPED_ADDRS {
             mem.samus.set_byte(a, ram[a as usize & 0x7FF]);
         }
         mem.regs = regs;
@@ -258,16 +258,16 @@ mod mss_map_tests {
 }
 
 impl Manager {
-    /// 语义视图入口：`mem.samus()` —— `memmap::views` 的唯一构造点。
+    /// 实体句柄入口：`mem.samus()` —— 三个实体目录的唯一构造点。
     ///
-    /// 视图持 `&mut self.ram_mut()`，因此一次只能持一个域（`views/mod.rs` 细则 3）；领域代码
+    /// 视图持 `&mut self.ram_mut()`，因此一次只能持一个域（`samus::state` 细则 3）；领域代码
     /// 经它读写 `$0300-$0315`，不再拼地址。
-    pub fn samus(&mut self) -> crate::memmap::views::samus::Samus<'_> {
-        crate::memmap::views::samus::Samus::new(self)
+    pub fn samus(&mut self) -> crate::samus::state::Samus<'_> {
+        crate::samus::state::Samus::new(self)
     }
 
     /// 敌槽语义句柄（`$0400+i*16` / `$6AF4+i*16`）——槽号而非字节偏移。
-    pub fn enemy(&mut self, slot: u8) -> crate::memmap::views::enemy::Enemy<'_> {
-        crate::memmap::views::enemy::Enemy::new(self, slot)
+    pub fn enemy(&mut self, slot: u8) -> crate::enemy::state::Enemy<'_> {
+        crate::enemy::state::Enemy::new(self, slot)
     }
 }

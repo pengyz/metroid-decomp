@@ -304,13 +304,13 @@ pub fn read_joy_pads(mem: &mut Manager) {
             // `ldy #$20`（变更重置率）→同键检（≠→跳 dec）→`sty RetrigDelay1,x`（$20）。
             let b_removed = old & !0x40; // ~BUTTON_B（$40=B）
             let changed = (b_removed ^ new) & new;
-            mem.write_ram(crate::memmap::views::title::JOY1_CHANGE + idx, changed);
-            mem.write_ram(crate::memmap::views::title::JOY1_RETRIG + idx, changed);
+            mem.write_ram(crate::title::state::JOY1_CHANGE + idx, changed);
+            mem.write_ram(crate::title::state::JOY1_RETRIG + idx, changed);
             mem.write_ram(0x0018 + idx, 0x20); // 变更重置率 $20
         } else {
             // 【r26 根修】同键路径清 Joy1Change/Retrig（**1 帧边沿**！——旧形未清致边沿存活 2 帧）
-            mem.write_ram(crate::memmap::views::title::JOY1_CHANGE + idx, 0);
-            mem.write_ram(crate::memmap::views::title::JOY1_RETRIG + idx, 0);
+            mem.write_ram(crate::title::state::JOY1_CHANGE + idx, 0);
+            mem.write_ram(crate::title::state::JOY1_RETRIG + idx, 0);
             // 同键路径（asm C24D+：`lda Joy1Status/x/cmp $00/bne` 同→`dec RetrigDelay1,x`
             // ——**B 案 $18 机理**：清零后每 NMI dec（0→FF→FE…）；归零→重触发 sty $20
             // 路径（变更件桩））。
@@ -320,7 +320,7 @@ pub fn read_joy_pads(mem: &mut Manager) {
                 // 重触发路径（asm C25x：`sta Joy1Retrig,x`（A=当前状态）/`ldy #$08`→
                 // `sty RetrigDelay1,x`（快重触发率 $08）——无输入亦可达（dec 归零自然
                 // 触发——B 跑 300 帧实证）。
-                mem.write_ram(crate::memmap::views::title::JOY1_RETRIG + idx, new);
+                mem.write_ram(crate::title::state::JOY1_RETRIG + idx, new);
                 mem.write_ram(0x0018 + idx, 0x08);
             }
         }
@@ -693,7 +693,7 @@ mod tests {
         m.joy1 = 0x20; // 按钮按下（输入场景——变更路已折）
         read_joy_pads(&mut m);
         // 变更路效果：Change/Retrig←掩码 + delay←$20 重置
-        assert_eq!(m.read_ram(crate::memmap::views::title::JOY1_CHANGE), 0x20);
+        assert_eq!(m.read_ram(crate::title::state::JOY1_CHANGE), 0x20);
         assert_eq!(m.read_ram(0x0018), 0x20); // 变更重置率
     }
 

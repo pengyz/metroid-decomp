@@ -88,3 +88,47 @@ impl SamusState {
 | 3 | `$030C/$030D/$030E` → `Position { hi, y, x }`（+ `y16()`） | `c875f3b9` | 641 |
 | 4（待做） | 动画四元组 `frame/delay/reset/index` | — | — |
 | 5（待做） | `radiusY/radiusX`、`isHit`、`onScreen`、`subPixel*` | — | — |
+
+## 6. 分层裁定（2026-11-17）：typed 类不属于 memmap
+
+用户追问「最新的 typed 类不应该放 view 路径下了吧，它实际上就是语义类实体」，辩证后成立，
+但成立的理由不是「它们已经有行为」（当时没有：74 个方法绝大多数是取值/赋值），而是**它们
+拥有不变量**：`Anim{frame,delay,reset,index}` 四字节是一个不变量、`Position{hi,y,x}` 是一个
+不变量、`Undefined(u8)` 定义「什么算合法」。
+
+### 6.1 身份
+
+Samus = **单例聚合根（singleton aggregate root）**，且必须分开记两个身份：
+
+| 身份 | 含义 | 约束 |
+|---|---|---|
+| 模型身份＝聚合根 | 一致性边界：22 字节 + gear + 碰撞判据必须一帧内自洽，改动经由它 | 跨域写入必须走 `systems/`，不许绕 |
+| 机制身份＝独占借用句柄 | `Samus<'a> { mem: &'a mut Manager }`，不拥有状态 | 不可 Clone、不可持久化、同刻只一个域 |
+
+敌人的聚合根是**池**（12 槽）不是单只敌人：分配、`RemoveEnemy`、跨槽扫描都是池级，
+`Manager::enemy(slot)` 只是池成员句柄。
+
+### 6.2 目录
+
+`memmap` 退回「存储 + 导出」：
+
+```
+crates/game-core/src/
+├── samus/{mod.rs, state.rs, physics.rs, handler.rs, ...}
+├── enemy/{mod.rs, state.rs, motion.rs, ai_table.rs, ...}
+├── title/{mod.rs, state.rs, bridge.rs, ...}
+└── memmap/{mod.rs, storage.rs, observe/, world_map.rs}
+```
+
+迁移方式：`git mv memmap/views/{samus,enemy,title}.rs → {samus,enemy,title}/state.rs`，
+删 `memmap/views/`，`memmap/mod.rs` 的模块声明去掉 `views`，三条细则的权威位置移到
+`samus/state.rs` 头注释（其余域指过来）。
+
+### 6.3 后续两步（尚未落地）
+
+1. `samus/physics.rs` 的纯自域函数搬成 `impl Samus`（球反弹、岩浆径、`CheckStopHorzMvmt`）
+   —— 这一步才真正兑现「聚合」，此前只是搬家。
+2. `systems/` 收跨域（子弹命中敌人、岩浆写 `HealthChange` + 击退）。
+
+止损：第 1 步两周内不落地 ⇒ 承认只是搬家，不再追加实体化；`no-raw-addr` 门继续按住增量
+（本次迁移后账本 810→807，豁免面从 `memmap/views/*` 改为三处 `*/state.rs`）。

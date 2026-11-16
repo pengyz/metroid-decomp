@@ -58,7 +58,7 @@ impl Manager {
         };
         // typed 域投影：逐项取 `SamusState::TYPED_ADDRS`（唯一投影源，加字段只改那张表）。
         // 未迁字段仍在 ram 里，天然一致。
-        for a in crate::memmap::views::samus::SamusState::TYPED_ADDRS {
+        for a in crate::samus::state::SamusState::TYPED_ADDRS {
             if let Some(v) = self.samus.get_byte(a) {
                 img.ram[a as usize & 0x7FF] = v;
             }
@@ -74,7 +74,7 @@ pub struct Manager {
     /// 上层只见 `ram()/wram()` 只读视图与域句柄（`manager.samus()`），字段不出本模块。
     storage: crate::memmap::storage::NesStorage,
     /// Samus 域 typed 状态（试点：`status`）。真相面；`snapshot_nes()` 把它投影回 `$0300`。
-    pub(crate) samus: crate::memmap::views::samus::SamusState,
+    pub(crate) samus: crate::samus::state::SamusState,
     /// 寄存器面。
     pub regs: Registers,
     /// NMI 使能态（PPUCTRL bit7——write_io($2000) 权威面；60Hz VBlank 调度开关）。

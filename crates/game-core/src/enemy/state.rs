@@ -7,7 +7,7 @@
 //! - 槽号是**语义**，字节偏移是**实现**：`mem.enemy(slot)` 收 `slot: u8`（0..=11），
 //!   内部换算 `x = slot * 16`；调用点不再写 `en_addr(x, f)` 这种双参数拼接。
 //! - `$0406` 一字节三名（`chunkyExplosionTimer` / `movementInstrIndex` /
-//!   `speedSubPixelY`）——`views/mod.rs` 细则①「同址多义不美化」：本视图**分别**暴露
+//!   `speedSubPixelY`）——`samus::state` 细则①「同址多义不美化」：本视图**分别**暴露
 //!   三个访问器，各自写明 asm 语义，**不合并成一个"猜含义"的名字**；具体谁在用，
 //!   由读代码的人按上下文判断（这正是原版 ROM 的设计：三处代码各按自己的语义用同一格）。
 

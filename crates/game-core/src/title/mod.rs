@@ -25,11 +25,11 @@ pub(crate) mod step_glue;
 /// _id 表序=分发序（StartContinueScreen15=0x15 / EndGame=0x1D 锚——128e0a6 自数证）。
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct TitleSequence {
-    /// TitleRoutine 相位（zp $1F 面由 memmap::views::title 承载；值=表下标）。
+    /// TitleRoutine 相位（zp $1F 面由 title::state 承载；值=表下标）。
     pub phase: u8,
 }
 
-/// 批1 助手簇结果（写事件语义面；地址由 memmap::views::title 映射）。
+/// 批1 助手簇结果（写事件语义面；地址由 title::state 映射）。
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct HelperOutcome {
     /// TitleRoutine 写面（Some=inc $1F 新值（**mod 256 回绕**，INC zp 语义）；
@@ -116,7 +116,7 @@ mod tests {
 /// 前 0x40 字节用对[0]、其后用对[1]；结构互核：模式=页 63/67 前 64B=$C0 其余=$C4）。
 const RAM_FILL_PAIRS: [[u8; 2]; 4] = [[0x00, 0x00], [0x00, 0x00], [0x00, 0x00], [0xC0, 0xC4]];
 
-/// 批2 编排结果（写面语义；地址由 memmap::views::title 映射）。
+/// 批2 编排结果（写面语义；地址由 title::state 映射）。
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct OrchestrationOutcome {
     /// TitleRoutine 写面（Some=写入值：00/0C=old+1；11 路 B=**置 2**（sty Y=2 非 inc）；路 A=None）。
@@ -269,7 +269,7 @@ pub struct FadeOutcome {
     pub x_out: Option<u8>,
     pub y_out: Option<u8>,
     pub writes: Vec<(&'static str, u8)>,
-    /// 槽面写（InitCrossMissiles 标记三元组——memmap::views::title::effect_event 映射）。
+    /// 槽面写（InitCrossMissiles 标记三元组——title::effect_event 映射）。
     pub slot_writes: Vec<SlotWriteTag>,
 }
 
@@ -769,9 +769,9 @@ pub fn clear_all_seg2_events(ff_in: u8) -> Vec<(u16, u8)> {
 // ==== 会师接线契约（task-23 × frame/ B 跑）====
 //
 // 【① 分发入口形状】统一入口=**本文件 `dispatch_step`**（phase→臂匹配归 title 域所有；
-// 桥侧只解码→调用→应用）。入参 `TitleFace` 由 `memmap::views::title::decode_title_face`
+// 桥侧只解码→调用→应用）。入参 `TitleFace` 由 `title::decode_title_face`
 // 解码（star_src=WRAM $6E00-$6E9F 面、ff=zp $FF、joy=Joy1Change $12、…——逐字段注）。
-// 【② outcome 应用面】`memmap::views::title::apply_title_step`（标签→址映射统一在
+// 【② outcome 应用面】`title::apply_title_step`（标签→址映射统一在
 // memmap（two-layer §1）；桥侧亦可直读 step.events 已是 (addr,val) 事件）。
 // 【③ 未武装臂】`TitleStep::Unported{ table_addr }` 返回值——**桥侧爆**
 // `unported!("bank00:<表址>")`（你的 per-entry 形状照用；表址在本匹配内逐臂给）。
@@ -826,7 +826,7 @@ pub struct TitleStep {
     pub next_cursor: u8,
 }
 
-/// 解码入参面（memmap::views::title::decode_title_face 产出本型）。
+/// 解码入参面（title::decode_title_face 产出本型）。
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TitleFace {
     pub phase: u8,
@@ -890,7 +890,7 @@ pub fn dispatch_step(face: &TitleFace) -> TitleStep {
         0x19 => step_from_l2(step_glue::title_password_gate(face)),
         // jmp 出口臂（直域调——jumped 面透出；B 跑桥侧按转接/停点处理）
         0x16 => {
-            let joy = face.ram[crate::memmap::views::title::JOY1_CHANGE as usize & 0x7FF];
+            let joy = face.ram[crate::title::state::JOY1_CHANGE as usize & 0x7FF];
             let sc = face.ram[0x0325 & 0x7FF];
             let o = menu_choose(joy, sc);
             TitleStep { events: o.writes, shell: vec![], a_out: Some(o.a_out),
@@ -898,7 +898,7 @@ pub fn dispatch_step(face: &TitleFace) -> TitleStep {
                         jumped: if o.jumped { Some(0x932B) } else { None }, unported: None, next_cursor: 0 }
         }
         0x1A => {
-            let joy = face.ram[crate::memmap::views::title::JOY1_CHANGE as usize & 0x7FF];
+            let joy = face.ram[crate::title::state::JOY1_CHANGE as usize & 0x7FF];
             let o = wait_for_start(joy);
             TitleStep { events: o.writes, shell: vec![], a_out: Some(o.a_out),
                         x_out: o.x_out.or(Some(face.x)), y_out: o.y_out.or(Some(face.y)),
@@ -923,7 +923,7 @@ pub fn dispatch_step(face: &TitleFace) -> TitleStep {
                     jumped: None, unported: None, next_cursor: 1,
                 },
                 _ => TitleStep {
-                    events: vec![crate::memmap::views::title::write_event_phase(face.phase.wrapping_add(1))],
+                    events: vec![crate::title::state::write_event_phase(face.phase.wrapping_add(1))],
                     shell: vec![], a_out: None, x_out: None, y_out: None,
                     jumped: None, unported: None, next_cursor: 0,
                 },
@@ -959,7 +959,7 @@ pub fn dispatch_step(face: &TitleFace) -> TitleStep {
                         (0x00FE, pm | 0x1E), (0x001A, 0),
                         // 相位推进并入本段（emu 冻帧内推进实录——asm 例程尾 jmp 内旋等待
                         // 不返回，独立尾段帧不存在）
-                        crate::memmap::views::title::write_event_phase(face.phase.wrapping_add(1)),
+                        crate::title::state::write_event_phase(face.phase.wrapping_add(1)),
                     ],
                     shell: vec![ShellCall::ClearNameTables, ShellCall::PrepareVram(0x82F4),
                                 ShellCall::ScreenOn],
@@ -1007,7 +1007,7 @@ pub fn dispatch_step(face: &TitleFace) -> TitleStep {
                     events.extend(vram_struct_buffer_events(bidx, game_data::assets::vram_start_continue()));
                     events.push((0x0325, 0)); // StartContinue←0
                     events.push((crate::ram_map::PALETTE_PENDING, 0x0D)); // _id_Palette0C+1
-                    events.push(crate::memmap::views::title::write_event_phase(0x16)); // ←ChooseStartContinue
+                    events.push(crate::title::state::write_event_phase(0x16)); // ←ChooseStartContinue
                     events.push((0x00FF, (ff & 0xFB & 0xFC & !0x84) | 0x80)); // NMIOn：$FF|=$80
                     events.push((0x00FE, pm | 0x1E)); // ScreenOn：$FE|=$1E
                     events.push((0x001A, 0));
@@ -1050,8 +1050,8 @@ pub fn dispatch_step(face: &TitleFace) -> TitleStep {
                     // VBOff+PrepareVram(@VRAMStruct $93B9)+InitPasswordFontGFX+NMIOn+
                     // 体写（Timer3←$10、相位←0x19）+ScreenOn+spin③
                     let mut events = clear_all_seg2_events(ff & 0xFB & 0xFC);
-                    events.push((crate::memmap::views::title::TIMER3, 0x10));
-                    events.push(crate::memmap::views::title::write_event_phase(0x19));
+                    events.push((crate::title::state::TIMER3, 0x10));
+                    events.push(crate::title::state::write_event_phase(0x19));
                     events.push((0x00FF, (ff & 0xFB & 0xFC & !0x84) | 0x80)); // NMIOn
                     events.push((0x00FE, pm | 0x1E)); // ScreenOn
                     events.push((0x001A, 0));
@@ -1098,10 +1098,10 @@ pub fn dispatch_step(face: &TitleFace) -> TitleStep {
                     // $320←0、$324←0、inc、jmp TurnOnDisplay 尾链）
                     events.push((crate::ram_map::PALETTE_PENDING, 0x13));
                     events.push((0x0321, 0)); events.push((0x0322, 0));
-                    events.push((crate::memmap::views::title::TIMER3, 0));
+                    events.push((crate::title::state::TIMER3, 0));
                     events.push((0x0320, 0));
                     events.push((0x0324, 0));
-                    events.push(crate::memmap::views::title::write_event_phase(face.phase.wrapping_add(1)));
+                    events.push(crate::title::state::write_event_phase(face.phase.wrapping_add(1)));
                     events.push((0x00FF, (ff & 0xFB & 0xFC & !0x84) | 0x80)); // NMIOn
                     events.push((0x00FE, pm | 0x1E)); // ScreenOn
                     events.push((0x001A, 0));
@@ -1124,7 +1124,7 @@ pub fn dispatch_step(face: &TitleFace) -> TitleStep {
         // ---- 真未武装（18 深路专件/0x1E SetTimer 随件）----
         // ---- 批6b 终件：0x18 EnterPassword（单段帧常驻 UI——armed）----
         0x18 => {
-            let joy = face.ram[crate::memmap::views::title::JOY1_CHANGE as usize & 0x7FF];
+            let joy = face.ram[crate::title::state::JOY1_CHANGE as usize & 0x7FF];
             let joy_retrig = face.ram[0x0016 & 0x7FF];
             let (events, jumped) = enter_password_body(&face.ram, &face.wram, face.frame_count,
                                                        joy, joy_retrig, face.phase);
@@ -1134,7 +1134,7 @@ pub fn dispatch_step(face: &TitleFace) -> TitleStep {
         // ---- 0x1E SetTimer（随件——`85 2c 86 20 a9 09` 字节真：Timer3←A/NextRoutine←X/
         //      MainRoutine($1E)←_id_WaitTimer(0x09)）----
         0x1E => TitleStep {
-            events: vec![(crate::memmap::views::title::TIMER3, face.a),
+            events: vec![(crate::title::state::TIMER3, face.a),
                          (0x0020, face.x), // NextRoutine
                          (0x001E, 0x09)],  // MainRoutine←WaitTimer
             shell: vec![], a_out: Some(0x09), x_out: Some(face.x), y_out: Some(face.y),
@@ -1463,3 +1463,5 @@ pub mod gfx;
 pub(crate) mod intro;
 
 pub mod bridge;
+
+pub mod state;

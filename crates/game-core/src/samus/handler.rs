@@ -302,7 +302,7 @@ pub fn samus_run(mem: &mut Manager) {
     // FIRE 判（CD4B：`ora Joy1Retrig/asl/bpl`——bit6（B 键族））⇒SamusRun_Fire（CDD7）
     // 【打不死根修（2026-11-01 自跑实证 sc-shoot-kill：全程 $03D0=0——弹从未生成！）】
     // 旧形=占位臂记账（不发射）⇒跑动开火死。正解=FireSamusProjectile（D1EE）+RunFire 动画。
-    if (mem.read_ram(crate::ram_map::JOY1_CHANGE) | mem.read_ram(crate::memmap::views::title::JOY1_RETRIG)) & 0x40 != 0 {
+    if (mem.read_ram(crate::ram_map::JOY1_CHANGE) | mem.read_ram(crate::title::state::JOY1_RETRIG)) & 0x40 != 0 {
         fire_samus_projectile(mem); // D1EE（SamusRun_Fire :3055-3057 `jsr FireSamusProjectile`）
         // RunFire 动画（:3058-3063）：¬UP⇒animIndex←RunFire(0x22（$8594-$8572）)
         if mem.read_ram(crate::ram_map::JOY1_STATUS) & UP == 0 {
@@ -916,7 +916,7 @@ pub fn samus_stand(mem: &mut Manager) {
         }
     }
     // FIRE（Joy1Change|Joy1Retrig 高位）→ FireSamusProjectile
-    let fire = mem.read_ram(crate::ram_map::JOY1_CHANGE) | mem.read_ram(crate::memmap::views::title::JOY1_RETRIG);
+    let fire = mem.read_ram(crate::ram_map::JOY1_CHANGE) | mem.read_ram(crate::title::state::JOY1_RETRIG);
     if fire & B != 0 {
         fire_samus_projectile(mem); // D1EE（射弹——goal-r10 端口） // FireSamusProjectile
     }
@@ -1012,7 +1012,7 @@ pub fn samus_jump_check_horz_movement(mem: &mut Manager) {
 pub fn samus_jump_check_fire(mem: &mut Manager) {
     use button::*;
     let fire = mem.read_ram(crate::ram_map::JOY1_CHANGE)
-        | mem.read_ram(crate::memmap::views::title::JOY1_RETRIG);
+        | mem.read_ram(crate::title::state::JOY1_RETRIG);
     if fire & B == 0 {
         return;
     }
@@ -1180,7 +1180,7 @@ pub fn samus_pnt_up(mem: &mut Manager) {
             mem.write_ram(crate::ram_map::SAMUS_STATUS, pnt_up_status_table()[bit]);
         }
     }
-    let fire = mem.read_ram(crate::ram_map::JOY1_CHANGE) | mem.read_ram(crate::memmap::views::title::JOY1_RETRIG);
+    let fire = mem.read_ram(crate::ram_map::JOY1_CHANGE) | mem.read_ram(crate::title::state::JOY1_RETRIG);
     if fire & B != 0 {
         fire_samus_projectile(mem); // D1EE（射弹——goal-r10 端口） // FireSamusProjectile（上射）
     }
@@ -1439,7 +1439,7 @@ mod tests_jump_chain {
         // 无 B ⇒ 弹槽不动
         let mut m = jmp_mem();
         m.write_ram(crate::ram_map::JOY1_CHANGE, 0);
-        m.write_ram(crate::memmap::views::title::JOY1_RETRIG, 0);
+        m.write_ram(crate::title::state::JOY1_RETRIG, 0);
         samus_jump_check_fire(&mut m);
         assert_eq!(m.read_ram(0x03D0), 0, "无 B⇒不发弹");
         // B（Forwards（animReset≠0x35））⇒弹生（status=1）+anim JumpFire

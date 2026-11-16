@@ -6,7 +6,7 @@
 //! unported 表址爆（`bank00:<表址>` per-entry 形）+ jumped 转接面（当前=爆——转接件随接）。
 
 use crate::frame::Manager;
-use crate::memmap::views::title;
+use crate::title::state as title;
 use crate::ram_map::{
     FRAME_COUNT, JOY1_CHANGE, PPUCTRL_ZP, TITLE_ROUTINE,
 };
@@ -101,7 +101,7 @@ pub fn main_title_routine(mem: &mut Manager) {
     let cursor = mem.read_ram(crate::ram_map::TITLE_ROUTINE); // 当前相位（头检面）
     let (head_hit, head_events, head_new) = crate::title::title_tick_head(
         cursor,
-        mem.read_ram(crate::memmap::views::title::JOY1_CHANGE),
+        mem.read_ram(crate::title::state::JOY1_CHANGE),
         mem.read_ram(crate::ram_map::PPUCTRL_ZP),
     );
     if head_hit {
@@ -350,7 +350,7 @@ mod tests {
     /// OBJECTS_CLEAR 复合标签展开（「标签展开在 shim」契约点——$0300-$031F 32 事件）。
     #[test]
     fn objects_clear_label_expands_in_shim() {
-        let events = crate::memmap::views::title::objects_clear_events();
+        let events = crate::title::state::objects_clear_events();
         assert_eq!(events.len(), 32);
         assert_eq!(events[0], (0x0300, 0));
         assert_eq!(events[31], (0x031F, 0));

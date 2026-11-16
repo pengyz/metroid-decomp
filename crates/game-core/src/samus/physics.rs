@@ -17,7 +17,7 @@
 //! 积分器拼装位：int_x/int_y（integrators.rs 证明级件）随 state 处理族收编到此域。
 
 use crate::state::Manager; // G11 破环：类型层直取（原经 frame/）
-use crate::memmap::views::samus::SamusStatus;
+use crate::samus::state::SamusStatus;
 use crate::ram_map::{
     ON_FROZEN_ENEMY, SAMUS_ACCEL_Y, SAMUS_HI, SAMUS_HORZ_SPEED_MAX, SAMUS_ON_ELEVATOR,
     SAMUS_RADIUS_Y, SAMUS_Y,
@@ -1919,7 +1919,7 @@ fn check_stop_horz_mvmt(mem: &mut Manager, moved: bool) -> bool {
     // 后果：球形 Samus 撞墙被 `CheckStopHorzMvmt` 强行 `SetSamusStand`（球被「站起来」），
     // 而 ROM 里球形是显式放行（`beq Exit10`）。100% 录像 f2230 起的 192/207px 即此：
     // 低矮通道内 emu 保持滚动、rust 每帧被拽成站立/跑动。
-    if mem.samus().status() == Some(crate::memmap::views::samus::SamusStatus::Roll) {
+    if mem.samus().status() == Some(crate::samus::state::SamusStatus::Roll) {
         return true; // sa_Roll（球形）出
     }
     crate::samus::handler::set_samus_stand(mem); // jmp SetSamusStand（CF55 全径）
@@ -2102,7 +2102,7 @@ mod tests_stop_horz {
     /// 守卫：状态枚举数值锚（防「再写一次 4」）。
     #[test]
     fn roll_enum_value_is_three() {
-        use crate::memmap::views::samus::SamusStatus;
+        use crate::samus::state::SamusStatus;
         assert_eq!(SamusStatus::Roll.to_byte(), 3);
         assert_eq!(SamusStatus::PointUp.to_byte(), 4);
     }

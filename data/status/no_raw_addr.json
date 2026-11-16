@@ -9,15 +9,15 @@
     "$6BB4"
   ],
   "exempt": {
-    "memmap/views/mod.rs": "typed 层自己的实现面",
-    "memmap/views/samus.rs": "typed 层自己的实现面",
-    "memmap/views/enemy.rs": "typed 层自己的实现面",
+    "samus/state.rs": "typed 层自己的实现面",
+    "enemy/state.rs": "typed 层自己的实现面",
+    "title/state.rs": "typed 层自己的实现面",
     "memmap/storage.rs": "存储层（字节面本体）",
     "memmap/mod.rs": "存储层导出面",
     "ram_map.rs": "符号→地址的唯一定义处",
     "frame/memory.rs": "read_ram/write_ram 兼容辖（迁移完成后收口）"
   },
-  "total": 810,
+  "total": 807,
   "files": {
     "enemy/anim.rs": 7,
     "enemy/crawler.rs": 26,
@@ -32,7 +32,6 @@
     "frame/engine.rs": 1,
     "frame/tests.rs": 170,
     "frame/tick.rs": 10,
-    "memmap/views/title.rs": 3,
     "pickup/spawn.rs": 15,
     "render/gfx.rs": 1,
     "render/oam.rs": 36,

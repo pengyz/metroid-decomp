@@ -455,7 +455,7 @@ pub fn area_init(mem: &mut Manager) {
     let ff = mem.read_ram(crate::ram_map::PPUCTRL_ZP) & 0xFC;
     mem.write_ram(crate::ram_map::PPUCTRL_ZP, ff);
     mem.write_ram(crate::ram_map::MAIN_ROUTINE, mem.read_ram(crate::ram_map::MAIN_ROUTINE).wrapping_add(1));
-    let ab = mem.read_ram(crate::memmap::views::title::JOY1_STATUS) & 0xC0;
+    let ab = mem.read_ram(crate::title::state::JOY1_STATUS) & 0xC0;
     mem.write_ram(0x0027, ab); // ABStatus（:254 族）
     crate::frame::boot::erase_all_sprites(mem); // EraseAllSprites（已折）
     is_engine_running(mem, 0x10); // CA18（已端口——A=$10 Brinstar 页备）

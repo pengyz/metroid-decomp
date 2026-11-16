@@ -6,7 +6,7 @@
 //! SamusSubPixelY/SamusSubPixelX/SamusSpeedSubPixelY/SamusSpeedSubPixelX/SamusAccelY/
 //! SamusAccelX）；`Samus.status` 取值=`constants.asm:112` 的 `sa_*` 十态。
 //!
-//! 形态纪律（`views/mod.rs` 三条细则）：
+//! 形态纪律（typed 域三条细则；迁移期唯一权威位置=本文件头，其余域沿用）：
 //! - `status` 出 [`SamusStatus`] 枚举而不是裸 `u8`——调用方写 `SamusStatus::Roll` 而不是 `3`；
 //! - 速度/加速出 `i8`（asm 侧本就是二补数，`lda/lsr/ror` 的算术在视图里不外泄）；
 //! - `health` 跨 `$0106/$0107` 两个字节，视图出 `u16` 并封装「低字节在 $0106」的规则。

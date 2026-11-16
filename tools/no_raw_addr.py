@@ -50,9 +50,10 @@ ADDR_RE = re.compile(
 )
 
 EXEMPT = {
-    "memmap/views/mod.rs": "typed 层自己的实现面",
-    "memmap/views/samus.rs": "typed 层自己的实现面",
-    "memmap/views/enemy.rs": "typed 层自己的实现面",
+    # 2026-11-17：typed 类从 memmap/views/ 迁入实体目录（聚合根/句柄不是内存映射的一部分）
+    "samus/state.rs": "typed 层自己的实现面",
+    "enemy/state.rs": "typed 层自己的实现面",
+    "title/state.rs": "typed 层自己的实现面",
     "memmap/storage.rs": "存储层（字节面本体）",
     "memmap/mod.rs": "存储层导出面",
     "ram_map.rs": "符号→地址的唯一定义处",

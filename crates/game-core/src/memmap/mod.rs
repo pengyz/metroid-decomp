@@ -1,4 +1,12 @@
-//! game-core::memmap —— 映射层：typed state ↔ RAM/WRAM 字节域（two-layer-architecture.md §1）。
+//! game-core::memmap —— **存储与导出层**：NES 字节容器 + 字节导出面。
+//!
+//! 分层（2026-11-17 裁定，见 docs/findings/typed-domain-migration.md）：
+//! - `storage`：`NesStorage{ram,wram}` 字节容器，`Manager` 私有字段，只此一层摸字节布局；
+//! - `observe`：状态→NES 字节的**单向投影**（`snapshot_nes()`），只服务对拍与 `--state-out`；
+//! - `world_map`：地图格常量。
+//!
+//! **语义面不在这里**：实体语义（`samus::state` / `enemy::state` / `title::state`）住在
+//! 各自的实体目录，因为它们是聚合根/句柄，不是内存映射的一部分。
 //!
 //! **地址常量只活在本层**（含 repr/codec）；注释回指 bank:addr 证据。产品层（enemy/ 等）
 //! 语义命名零地址字面量；验证适配层（verify_shim）经本层 codec 做状态⇄字节换算，
@@ -11,5 +19,4 @@
 //! 逐域被语义实现替换后退役——对拍连续性优先，暂不删。
 pub(crate) mod storage;
 pub mod observe;
-pub mod views;
 pub mod world_map;
