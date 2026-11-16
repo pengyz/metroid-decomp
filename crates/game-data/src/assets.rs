@@ -1355,3 +1355,74 @@ pub fn song_header_offsets() -> &'static [u8] {
 pub const OBJ_ANIM_INDEX_TBL: usize = 0x0000; // $8572
 pub const OBJ_FRAME_PTR_TABLE: usize = 0x0099; // $860B
 pub const OBJ_PLACE_PTR_TABLE: usize = 0x016D; // $86DF
+
+/// ROM 查询表访问器锚（承接 core 侧已删 `memmap/rom_tables.rs` 的 6 条覆盖——
+/// 覆盖对象同名同签名，只是数据源从核心层烘焙改为资产包）。
+#[cfg(test)]
+mod tests_rom_queries {
+    use super::*;
+
+    fn boot() {
+        init_from_env().ok();
+    }
+
+    /// 窗口参数取数：同 Y 不同窗口命中不同 bank 切片（A9 处置核心行为）。
+    #[test]
+    fn table_968b_is_window_parameterized() {
+        boot();
+        assert_eq!(rom_table_968b(7, 0), 0x20);
+        assert_eq!(rom_table_968b(7, 1), 0x9A);
+        assert_eq!(rom_table_968b(0, 1), 0x1A);
+        assert_eq!(rom_table_968b(3, 1), 0xFE);
+        assert_eq!(rom_table_968b(6, 1), 0x0E);
+    }
+
+    /// 向量逐 bank 锚点（ROM 字节自证值）。
+    #[test]
+    fn rom_vec_per_bank_anchors() {
+        boot();
+        assert_eq!(rom_vec(7), (0x03, 0x38));
+        assert_eq!(rom_vec(0), (0x3F, 0x00));
+        assert_eq!(rom_vec(2), (0x00, 0x01));
+        assert_eq!(rom_vec(5), (0x40, 0x02));
+        assert_eq!(rom_vec(6), (0x25, 0x30));
+    }
+
+    /// Y 索引掩 0x7F（BMI 分流契约面）。
+    #[test]
+    fn table_968b_y_wraps_low7() {
+        boot();
+        assert_eq!(rom_table_968b(3, 0x80), rom_table_968b(3, 0x00));
+        assert_eq!(rom_table_968b(3, 0xFF), rom_table_968b(3, 0x7F));
+    }
+
+    /// 迁移锚：8 bank 切片必须彼此不同（否则「按窗口查表」语义塌成单表）。
+    #[test]
+    fn rom_table_968b_spans_all_eight_banks() {
+        boot();
+        let first: Vec<u8> = (0..8).map(|w| rom_table_968b(w, 0)).collect();
+        let uniq: std::collections::BTreeSet<u8> = first.iter().copied().collect();
+        assert!(uniq.len() >= 3, "8 个窗口首字节应有多样性（实测 {uniq:?}）");
+        assert_ne!(rom_table_968b(7, 1), rom_table_968b(0, 1));
+    }
+
+    /// 迁移锚：流向量 8 bank 逐值。
+    #[test]
+    fn rom_vec_matches_all_bank_pairs() {
+        boot();
+        let expect = [
+            (0x3F, 0x00), (0x80, 0x00), (0x00, 0x01), (0x00, 0x03),
+            (0x00, 0x02), (0x40, 0x02), (0x25, 0x30), (0x03, 0x38),
+        ];
+        for (w, e) in expect.iter().enumerate() {
+            assert_eq!(rom_vec(w), *e, "bank{w} 向量");
+        }
+    }
+
+    /// 迁移锚：NT 高位表 `$20/$24/$28/$2C`（bank07:C19F，ClearNameTables 清屏目标）。
+    #[test]
+    fn nametable_hi_is_the_four_screen_bases() {
+        boot();
+        assert_eq!(nametable_hi(), &[0x20, 0x24, 0x28, 0x2C]);
+    }
+}
