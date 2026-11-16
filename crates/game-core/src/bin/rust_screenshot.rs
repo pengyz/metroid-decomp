@@ -309,7 +309,7 @@ fn load_bundle(prefix: &str) -> Result<Bundle, String> {
 }
 
 /// 状态行（`{"f":N,"w":{"zp":…,"iram":…,"wram":…}}`——oracle/l3-dump 帧 trace
-/// **同形单一格式**（对齐验收两侧同解析）；编码唯一源=memmap::frame_face（watch_snapshot）。
+/// **同形单一格式**（对齐验收两侧同解析）；编码唯一源=memmap::observe::frame_face（watch_snapshot）。
 fn state_row(frame: usize, mem: &FrameMemory) -> String {
     let snap = mem.watch_snapshot();
     let parts: Vec<String> = snap.iter().map(|(k, v)| format!("\"{k}\":\"{v}\"")).collect();

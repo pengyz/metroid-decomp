@@ -1,4 +1,4 @@
-//! game-core::memmap::frame_face —— L3 watch 状态向量整面编码（**字段面生成唯一源**，
+//! game-core::memmap::observe::frame_face —— L3 watch 状态向量整面编码（**字段面生成唯一源**，
 //! l3-gamecore-leg-verification.md §1 规则 1 / 严重-6 对账闭合件）。
 //!
 //! watch_snapshot/l3-dump 经本模块编码——废手写切片第二源（frame/memory.rs 旧
