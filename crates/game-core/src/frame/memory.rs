@@ -262,6 +262,25 @@ mod mss_map_tests {
         assert_eq!(back.snapshot_nes().ram[0x0300], 9, "再次投影一致");
     }
 
+    /// **敌槽回灌不能漏**：`restore_mss` 里那段 `$6AF4 + slot*16` 的循环若被删掉，
+    /// 上面那条只覆盖 Samus 三字节的测仍会全绿——这里把 12 槽 × 7 字节钉住。
+    #[test]
+    fn mss_roundtrip_preserves_enemy_typed_slots() {
+        let mut mem = Manager::default();
+        for slot in 0..crate::enemy::state::SLOT_COUNT as usize {
+            mem.enemies[slot].set_byte(0, slot as u8 + 1); // status
+            mem.enemies[slot].set_byte(3, slot as u8 + 0x20); // animFrame
+            mem.enemies[slot].set_byte(6, slot as u8 + 0x40); // animIndex
+        }
+        let (ram, wram, regs) = mem.capture_mss();
+        let back = Manager::restore_mss(&ram, &wram, regs);
+        for slot in 0..crate::enemy::state::SLOT_COUNT as usize {
+            assert_eq!(back.enemies[slot].get_byte(0), Some(slot as u8 + 1), "槽 {slot} status");
+            assert_eq!(back.enemies[slot].get_byte(3), Some(slot as u8 + 0x20), "槽 {slot} animFrame");
+            assert_eq!(back.enemies[slot].get_byte(6), Some(slot as u8 + 0x40), "槽 {slot} animIndex");
+        }
+    }
+
     use super::*;
 
     /// MSS 映射保真（三直映往返+nmi 推导）。

@@ -80,6 +80,22 @@ mod tests {
         assert_eq!(m.ram()[0x0300], 0, "字节面不持有 typed 字段（分层的代价，显式锁定）");
     }
 
+    /// **写口双写防线**：`write_ram` 命中 typed 面时必须提前 return，
+    /// 不得"既写 typed 又写字节面"——否则字节面会悄悄变成第二真相源
+    /// （读径仍走 typed、`snapshot_nes` 仍用 typed 覆盖，所有既有测试都会绿）。
+    #[test]
+    fn write_path_does_not_mirror_typed_bytes_into_storage() {
+        let mut m = Manager::default();
+        m.write_ram(0x0300, 3); // typed：status
+        m.write_ram(0x0308, 0xFE); // typed：speedY（i8 -2）
+        m.write_wram(0x6AF4, 5); // typed：敌槽 0 的 status（0..=6 才是 typed 面）
+        assert_eq!(m.read_wram(0x6AF4), 5);
+        assert_eq!(m.read_ram(0x0300), 3);
+        assert_eq!(m.ram()[0x0300], 0, "write_ram 写 typed 后，字节面不得留副本");
+        assert_eq!(m.ram()[0x0308], 0, "同上（速度面）");
+        assert_eq!(m.wram()[0x6AF4 - 0x6000], 0, "write_wram 同病同查（$6AF4+14 是 type，不在 typed 面，故不查）");
+    }
+
     /// 2KB 镜像别名不得绕过 typed 面：`$0B00` 与 `$0300` 是同一格。
     #[test]
     fn mirrored_alias_does_not_bypass_typed() {
