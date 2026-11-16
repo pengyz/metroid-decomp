@@ -12,16 +12,17 @@
     "samus/state.rs": "typed 层自己的实现面",
     "enemy/state.rs": "typed 层自己的实现面",
     "title/state.rs": "typed 层自己的实现面",
+    "world/object.rs": "对象池本体：池基址/步长的唯一定义处（等价的 enemy/state.rs）",
     "memmap/storage.rs": "存储层（字节面本体）",
     "memmap/mod.rs": "存储层导出面",
     "ram_map.rs": "符号→地址的唯一定义处",
     "frame/memory.rs": "read_ram/write_ram 兼容辖（迁移完成后收口）"
   },
-  "total": 165,
+  "total": 160,
   "files": {
     "enemy/prep.rs": 5,
     "frame/tests.rs": 9,
-    "samus/handler.rs": 80,
+    "samus/handler.rs": 75,
     "samus/physics.rs": 61,
     "title/bridge.rs": 8,
     "weapon/projectile.rs": 2

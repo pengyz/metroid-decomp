@@ -383,7 +383,7 @@ pub fn delete_offscreen_room_sprites(mem: &mut crate::frame::Manager) {
     }
 
     // ④ 门（$ED65，复用已端口件）。
-    crate::samus::handler::doors_remove_if_offscreen(mem);
+    crate::world::door::doors_remove_if_offscreen(mem);
 
     // ⑤ EraseScrollBlockOnNameTableAtScrollDir（$ED5B）：目标 = nt^1 那条掩码清 0。
     mem.write_ram(0x006C + (nt ^ 1) as u16, 0);
