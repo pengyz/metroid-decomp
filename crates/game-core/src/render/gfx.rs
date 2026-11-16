@@ -205,7 +205,7 @@ pub fn load_gfx(mem: &mut FrameMemory, id: u8) {
     bank_switch(mem, cur);
 }
 
-/// BankSwitch（C4EF 族共享段——与 c4de_unit 同源）：$00=bank/$28 组合/PRG 串行。
+/// BankSwitch（C4EF 族共享段——与 check_bank_switch 同源）：$00=bank/$28 组合/PRG 串行。
 fn bank_switch(mem: &mut FrameMemory, bank: u8) {
     mem.write_ram(0x0000, bank);
     let v = (mem.read_ram(SWITCH_UPPER) & 0x18) | bank;

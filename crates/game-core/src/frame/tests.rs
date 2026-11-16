@@ -120,7 +120,7 @@ mod tests_pause_chain {
         game_main_routine(&mut m);
         assert_eq!(m.read_ram(ram_map::TITLE_ROUTINE), 0x19, "DisplayPassword 相位");
         // 帧界：消费 $24=1 ⇒ InitBank0 ⇒ GameMode←1（标题轴接管）
-        crate::frame::boot::c4de_unit(&mut m);
+        crate::frame::boot::check_bank_switch(&mut m);
         assert_eq!(m.read_ram(ram_map::GAME_MODE), 1, "InitBank0 置 GameMode←1");
     }
 
@@ -167,7 +167,7 @@ mod tests_prepare_game_over {
         assert_eq!(m.render.ppumask & 0x18, 0, "WriteAndWait：真 PPUMASK 同拍落地");
 
         // 帧界：CheckBankSwitch 消费 $24=1 ⇒ InitBank0 ⇒ GameMode←1（标题轴接管）
-        crate::frame::boot::c4de_unit(&mut m);
+        crate::frame::boot::check_bank_switch(&mut m);
         assert_eq!(m.read_ram(ram_map::BANK_SWITCH_PENDING), 0, "CheckBankSwitch 先清 $24");
         assert_eq!(m.read_ram(ram_map::GAME_MODE), 1, "InitBank0 置 GameMode←1");
     }

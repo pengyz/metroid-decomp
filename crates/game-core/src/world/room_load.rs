@@ -35,8 +35,8 @@ pub fn more_init(mem: &mut FrameMemory) {
     // 【move-drift R2】ScreenOff（$C439→WriteAndWait→WaitNMIPass_ prg7:1129-1140）=
     // **帧等待**（1 tick+NMI 内块全跑）——门队列声明（窗3 等待 1/3）。
     mem.iter_wait();
-    crate::frame::boot::c158_unit(mem); // ClearNameTables（已折）
-    crate::frame::boot::c1a3_unit(mem); // EraseAllSprites（已折）
+    crate::frame::boot::clear_name_tables(mem); // ClearNameTables（已折）
+    crate::frame::boot::erase_all_sprites(mem); // EraseAllSprites（已折）
     mem.write_ram(0x005A, 0); // ScrollBlockOnNameTable3
     mem.write_ram(0x0053, 0); // ScrollBlockOnNameTable0
     mem.write_ram(0x0030, 1); // SpareMem30

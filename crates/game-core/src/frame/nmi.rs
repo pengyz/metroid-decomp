@@ -333,7 +333,7 @@ pub fn read_joy_pads(mem: &mut FrameMemory) {
 /// `lda MirrorCntrl/jsr PrepPPUMirror`（$C4D9→`jmp SetPPUMirror`））。
 ///
 /// **结构互核注**：①零直接 RAM 写，但 **SetPPUMirror 共享尾动 $00/$25**（三路汇入共享段
-/// ——boot 的 c4b2_unit 同段复用，域形=共享 fn 复刻共享结构）②寄存器面写走 write_io
+/// ——boot 的 prep_vert_mirror 同段复用，域形=共享 fn 复刻共享结构）②寄存器面写走 write_io
 /// （$2000/$2001——NMI 使能位面同步 nmi_enabled 权威）③ExitSub（C45C）=共享 RTS 尾
 /// （asm 「Exit subroutines」）。
 pub fn write_ppu_ctrl(mem: &mut FrameMemory) {

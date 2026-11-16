@@ -72,9 +72,9 @@ pub fn boot_pre_spin(mem: &mut FrameMemory) {
     mem.write_io(io::PPU_SCROLL, 0x00);
     mem.write_ram(0x001D, 0x01); // INY/STY $1D
     // C158 单元（VRAM 清屏双遍——已端口）
-    c158_unit(mem);
+    clear_name_tables(mem);
     // C1A3 单元（OAM 影子清屏——已端口）
-    c1a3_unit(mem);
+    erase_all_sprites(mem);
     #[allow(unreachable_code)]
     {
         // C158 后序（桩移除后可达；现为执行序地图占位）
@@ -83,7 +83,7 @@ pub fn boot_pre_spin(mem: &mut FrameMemory) {
         mem.write_ram(0x00FE, 0x02);
         mem.write_ram(0x00FA, 0x47);
         // C4B2 单元（MMC1 control 串行写——已端口）
-        c4b2_unit(mem);
+        prep_vert_mirror(mem);
         #[allow(unreachable_code)]
         {
             mem.write_io(io::APU_4011, 0x00);
@@ -94,7 +94,7 @@ pub fn boot_pre_spin(mem: &mut FrameMemory) {
             mem.write_ram(0x002F, 0xFF);
             mem.write_ram(0x0024, 0x01);
             // C4DE 单元（PRG 换 bank+分派——已端口）
-            c4de_unit(mem);
+            check_bank_switch(mem);
         }
     }
 }
@@ -107,7 +107,7 @@ pub fn boot_pre_spin(mem: &mut FrameMemory) {
 /// `85 01` STA $01/$00=FF）→ PPU 面（`AD 02 20` 读 status/`$FF` 清 bit2/`STA $2000`/
 /// 表[$01-1]→$2006/`STA $2007` ×1280）→ C19E RTS（尾共段=次遍的出口）。
 /// 结束态（RAM 面）：$00=FF、$01=2|3、$FF&=!4、A=FF/X=0/Y=0。
-pub fn c158_unit(mem: &mut FrameMemory) {
+pub fn clear_name_tables(mem: &mut FrameMemory) {
     // 首遍：C16D 直写语义（asm bank07:C16D-C174：`LDA #1/STA $01/LDA #$FF/STA $00`，A=FF）
     mem.regs.a = 0xFF;
     mem.write_ram(0x0001, 0x01);
@@ -139,7 +139,7 @@ pub fn c158_unit(mem: &mut FrameMemory) {
 /// $1D≠0 ⇒ 尾跳窗口 $988A（bank00——boot 态 MMC1 自证：FFB0 序 control=$FF（mode3）+
 /// C01A 序 PRG reg=0 ⇒ $8000=bank0）。$988A 双检（`C9 1D` CMP 立即数同族陷阱/$C8/$2D）：
 /// boot 态全短路→$98AD RTS 直回；**游戏态路径未端口**（$989B DEC 循环+后续）——fail-loud。
-pub fn c1a3_unit(mem: &mut FrameMemory) {
+pub fn erase_all_sprites(mem: &mut FrameMemory) {
     for y in 0..=0xFFu8 {
         mem.write_ram(0x0200 + y as u16, 0xF0);
     }
@@ -161,7 +161,7 @@ pub fn c1a3_unit(mem: &mut FrameMemory) {
 /// `$25=($25&!1)|bit`（RAM 面）→ `STA $8000` ×5 串行（寄存器面）。
 /// boot 态：$25=0x0E（C06D 置）→ $00=0/$25=0x0E/A=0x0E；control=0x0E（mode3 ✓ 与
 /// $988A bank0 归属自证一致）。
-pub fn c4b2_unit(mem: &mut FrameMemory) {
+pub fn prep_vert_mirror(mem: &mut FrameMemory) {
     set_ppu_mirror(mem, 0x47); // C4B4 `A9 47` 自载（C4D9 变体=$FA——同段）
 }
 
@@ -228,7 +228,7 @@ pub(crate) fn set_ppu_mirror(mem: &mut FrameMemory, a_in: u8) {
 /// `BankInitTable: ; 07:C51F`（.word InitBank0..5/ExitSub×3）。
 /// ROM 抽查佐证：`C4DE: A4 24 F0 2D 20 E8 C4 4C 10 C5`。
 /// boot 态 $24=1（C0B4 置）→ 索引 0 → 表项 InitBank0（$C531）。其他表项未端口——fail-loud。
-pub fn c4de_unit(mem: &mut FrameMemory) {
+pub fn check_bank_switch(mem: &mut FrameMemory) {
     // GoBankInit 指针写（asm C510：`lda BankInitTable,y/sta Temp0A/sta $0B`——
     // B 案 $0A/$0B=$C531 对形；InitBank0=$C531）
     mem.write_ram(0x000A, 0x31);
@@ -260,7 +260,7 @@ pub fn c4de_unit(mem: &mut FrameMemory) {
     mem.regs.a = mem.read_ram(0x0000); // C50D LDA $00（分派索引）
     // GoBankInit（C510）：BankInitTable（bank0:C51F `31 C5 52 C5 …`）分派。
     match idx {
-        0 => c531_unit_pre(mem), // InitBank0（$C531——boot 链 pre 段）
+        0 => init_bank0_title(mem), // InitBank0（$C531——boot 链 pre 段）
         1 => init_bank1(mem),    // InitBank1（$C552——游戏入场链 Brinstar）
         2 => init_bank2(mem),    // InitBank2（$C583——Norfair，密码进场 InArea=$11 落此）
         3 => init_bank3(mem),    // InitBank3（$C590——Tourian；含 MetroidData 14B 拷贝）
@@ -395,7 +395,7 @@ fn init_bank1(mem: &mut FrameMemory) {
 /// IntroStarsData→IntroStarSprite，$A0 字节）→ `jsr InitTitleGFX ($C5D7)` → `jmp NMIOn
 /// ($C487)`（「Turn on VBlank interrupts」）。ROM 抽查：`C531: A0 00 84 31 C8 84 1D`。
 /// 链首桩=ScreenNmiOff（C45D）——逐段端口。
-fn c531_unit_pre(mem: &mut FrameMemory) {
+fn init_bank0_title(mem: &mut FrameMemory) {
     mem.write_ram(0x0031, 0); // GamePaused=0
     mem.write_ram(0x001D, 1); // GameMode=1（title）
     // ScreenNmiOff（asm :1165——pre 段；spin=跨帧 yield（§8.1））
@@ -524,9 +524,9 @@ mod tests {
         for a in 0x77F0..=0x77FDu16 {
             m.write_ram(a, 0xAA); // 预污，验证真的被覆盖
         }
-        // 直接走 c4de_unit 的表项分派（BankSwitchPending = bank+1 = 4 ⇒ idx 3）
+        // 直接走 check_bank_switch 的表项分派（BankSwitchPending = bank+1 = 4 ⇒ idx 3）
         m.write_ram(crate::ram_map::BANK_SWITCH_PENDING, 4);
-        c4de_unit(&mut m);
+        check_bank_switch(&mut m);
         assert_eq!(m.read_ram(crate::ram_map::GAME_MODE), 0, "InitBank3 置 GameMode=0");
         let md: Vec<u8> = (0x77F0..=0x77FDu16).map(|a| m.read_ram(a)).collect();
         assert_eq!(
@@ -538,7 +538,7 @@ mod tests {
         for pending in [7u8, 8, 9] {
             m.write_ram(crate::ram_map::BANK_SWITCH_PENDING, pending);
             m.write_ram(crate::ram_map::GAME_MODE, 1);
-            c4de_unit(&mut m);
+            check_bank_switch(&mut m);
             assert_eq!(m.read_ram(crate::ram_map::GAME_MODE), 1, "空槽不改 GameMode");
         }
     }
@@ -559,14 +559,14 @@ mod tests {
     #[test]
     fn c158_dispatch_two_states_and_c16d_reuse() {
         let mut m = FrameMemory::default();
-        c158_unit(&mut m); // $1D=0 → $01=2
+        clear_name_tables(&mut m); // $1D=0 → $01=2
         assert_eq!(m.read_ram(0x0001), 2);
         assert_eq!(m.read_ram(0x0000), 0xFF); // sub_c16d 反哺 + 尾共段
         assert_eq!(m.regs.a, 0xFF); // C16D 契约 A=FF
         let mut m2 = FrameMemory::default();
         m2.write_ram(0x001D, 5);
         m2.write_ram(0x001F, 0x1D);
-        c158_unit(&mut m2); // $1D≠0 ∧ $1F==$1D（立即数）→ $01=3
+        clear_name_tables(&mut m2); // $1D≠0 ∧ $1F==$1D（立即数）→ $01=3
         assert_eq!(m2.read_ram(0x0001), 3);
     }
 
@@ -575,7 +575,7 @@ mod tests {
     fn c1a3_fills_oam_shadow_and_boot_short_circuits() {
         let mut m = FrameMemory::default();
         m.write_ram(0x001D, 1); // boot 态（C082 置位）
-        c1a3_unit(&mut m);
+        erase_all_sprites(&mut m);
         assert_eq!(m.read_ram(0x0200), 0xF0);
         assert_eq!(m.read_ram(0x02FF), 0xF0);
         assert_eq!(m.read_ram(0x01FF), 0x00); // 栈页不触
@@ -588,7 +588,7 @@ mod tests {
         let mut m = FrameMemory::default();
         m.write_ram(0x001D, 1);
         m.write_ram(0x00C8, 1); // $C8≠0
-        let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| c1a3_unit(&mut m)));
+        let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| erase_all_sprites(&mut m)));
         let msg = panic_message(&r.unwrap_err());
         assert!(msg.contains("unported @ bank00:988A"), "引爆点失准: {msg}");
     }
@@ -608,7 +608,7 @@ mod tests {
     fn c4b2_writes_control_state() {
         let mut m = FrameMemory::default();
         m.write_ram(0x0025, 0x0E);
-        c4b2_unit(&mut m);
+        prep_vert_mirror(&mut m);
         assert_eq!(m.read_ram(0x0000), 0x00); // ($47>>3)&1=0
         assert_eq!(m.read_ram(0x0025), 0x0E);
         assert_eq!(m.regs.a, 0x0E);
@@ -619,10 +619,10 @@ mod tests {
     fn c4de_early_exit_and_state_update() {
         let mut m = FrameMemory::default();
         m.regs.a = 0x77;
-        c4de_unit(&mut m); // $24==0 → 早出
+        check_bank_switch(&mut m); // $24==0 → 早出
         assert_eq!(m.regs.a, 0x77);
         m.write_ram(0x0024, 1); // boot 态
-        c4de_unit(&mut m); // 全链静默完成（spin yield 无炸——跨帧状态机）
+        check_bank_switch(&mut m); // 全链静默完成（spin yield 无炸——跨帧状态机）
         assert_eq!(m.read_ram(0x0024), 0); // C4E8 已跑
         assert_eq!(m.read_ram(0x0023), 0);
         assert_eq!(m.read_ram(0x0028), 0); // ($28&0x18)|0
@@ -634,7 +634,7 @@ mod tests {
     fn c4de_initbank1_declares_frame_gates() {
         let mut m = FrameMemory::default();
         m.write_ram(0x0024, 2); // BankSwitchPending=2→InitBank1（BankTable[0]=$01+1）
-        c4de_unit(&mut m);
+        check_bank_switch(&mut m);
         assert_eq!(m.iter_gates, vec![1, 0, 0], "ScreenNmiOff(W)+InitBrinstarGFX bogged(2)");
         assert_eq!(m.read_ram(crate::ram_map::GAME_MODE), 0, "InitBank1 GameMode←0（Play）");
     }

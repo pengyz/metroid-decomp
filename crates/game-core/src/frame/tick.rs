@@ -157,7 +157,7 @@ mod tests_pause_chain {
         game_main_routine(&mut m);
         assert_eq!(m.read_ram(ram_map::TITLE_ROUTINE), 0x19, "DisplayPassword 相位");
         // 帧界：消费 $24=1 ⇒ InitBank0 ⇒ GameMode←1（标题轴接管）
-        crate::frame::boot::c4de_unit(&mut m);
+        crate::frame::boot::check_bank_switch(&mut m);
         assert_eq!(m.read_ram(ram_map::GAME_MODE), 1, "InitBank0 置 GameMode←1");
     }
 
@@ -204,7 +204,7 @@ mod tests_prepare_game_over {
         assert_eq!(m.render.ppumask & 0x18, 0, "WriteAndWait：真 PPUMASK 同拍落地");
 
         // 帧界：CheckBankSwitch 消费 $24=1 ⇒ InitBank0 ⇒ GameMode←1（标题轴接管）
-        crate::frame::boot::c4de_unit(&mut m);
+        crate::frame::boot::check_bank_switch(&mut m);
         assert_eq!(m.read_ram(ram_map::BANK_SWITCH_PENDING), 0, "CheckBankSwitch 先清 $24");
         assert_eq!(m.read_ram(ram_map::GAME_MODE), 1, "InitBank0 置 GameMode←1");
     }
@@ -255,7 +255,7 @@ pub fn main_loop_iter(mem: &mut FrameMemory) {
     let continuation = mem.title_continuation();
     if !continuation {
         random_numbers(mem); // C000（唤醒后首件）
-        super::boot::c4de_unit(mem); // CheckBankSwitch（已端口复用）
+        super::boot::check_bank_switch(mem); // CheckBankSwitch（已端口复用）
         update_timer(mem); // C266
     }
     go_main_routine(mem); // C114（分发壳——会师点；续段=GoMainRoutine 内部续跑）
@@ -457,7 +457,7 @@ pub fn area_init(mem: &mut FrameMemory) {
     mem.write_ram(crate::ram_map::MAIN_ROUTINE, mem.read_ram(crate::ram_map::MAIN_ROUTINE).wrapping_add(1));
     let ab = mem.read_ram(crate::memmap::title_state::JOY1_STATUS) & 0xC0;
     mem.write_ram(0x0027, ab); // ABStatus（:254 族）
-    crate::frame::boot::c1a3_unit(mem); // EraseAllSprites（已折）
+    crate::frame::boot::erase_all_sprites(mem); // EraseAllSprites（已折）
     is_engine_running(mem, 0x10); // CA18（已端口——A=$10 Brinstar 页备）
 }
 
@@ -517,7 +517,7 @@ pub fn samus_init(mem: &mut FrameMemory) {
 /// Timer3==表[y-$14]⇒inc Samus.status+PaletteDataPending←y（淡入调色步进）⑤奇帧（FC&1）
 /// 闪现：SetSamusAnim(SamusFront)+SpritePagePos←0+PageIndex←0+AnimDrawObject($DE47)。
 pub fn samus_intro(mem: &mut FrameMemory) {
-    crate::frame::boot::c1a3_unit(mem); // EraseAllSprites（$C1A3）
+    crate::frame::boot::erase_all_sprites(mem); // EraseAllSprites（$C1A3）
     let status = mem.read_ram(0x0300); // Samus.status（$300）
     let t3 = mem.read_ram(0x002C); // Timer3（$2C）
     if t3 == 0 {
@@ -657,7 +657,7 @@ pub fn is_engine_running(mem: &mut FrameMemory, a_in: u8) {
     mem.write_ram(crate::ram_map::IN_AREA, a_in);
     let idx = (a_in & 0x0F) as usize;
     mem.write_ram(crate::ram_map::BANK_SWITCH_PENDING, BANK_TABLE[idx]);
-    crate::frame::boot::c4de_unit(mem); // CheckBankSwitch（已折）
+    crate::frame::boot::check_bank_switch(mem); // CheckBankSwitch（已折）
 }
 
 // （UpdateWorld 旧壳已并入上方 r26 dispatch——原块删除）

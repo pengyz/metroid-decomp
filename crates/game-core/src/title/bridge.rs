@@ -225,8 +225,8 @@ fn run_check_password_chain(mem: &mut FrameMemory) {
 fn exec_shell_call(mem: &mut FrameMemory, sc: &crate::title::ShellCall) {
     use crate::title::ShellCall::*;
     match sc {
-        EraseAllSprites => crate::frame::boot::c1a3_unit(mem), // $F0 填充（C1A3）
-        ClearNameTables => crate::frame::boot::c158_unit(mem), // RAM 面+PPU 面（C158——S6-10）
+        EraseAllSprites => crate::frame::boot::erase_all_sprites(mem), // $F0 填充（C1A3）
+        ClearNameTables => crate::frame::boot::clear_name_tables(mem), // RAM 面+PPU 面（C158——S6-10）
         RemoveIntroSprites => {
             // **F4 离屏惯例**（C1BC：「sprite values with #$F4——bottom right+
             // blank graphic」——S6-4 精灵面迭代件；port2 fcda70b 变体就绪）。

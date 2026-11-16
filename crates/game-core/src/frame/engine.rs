@@ -269,7 +269,7 @@ mod tests {
             e.tick_frame();
         }
         let fc0 = e.mem.read_ram(crate::ram_map::FRAME_COUNT);
-        // 手工注入声明径结果（门件生产=more_init/c4de_unit iter_wait/iter_bogged——另测）；
+        // 手工注入声明径结果（门件生产=more_init/check_bank_switch iter_wait/iter_bogged——另测）；
         // 形态=工作 tick 尾已弹首门后（不变量 span_left=gates.len()+1）。
         e.mem.iter_gates = vec![1, 0];
         e.mem.iter_span_left = 3;
