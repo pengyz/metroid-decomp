@@ -216,6 +216,24 @@ impl Manager {
 
 #[cfg(test)]
 mod mss_map_tests {
+    /// MSS 往返必须保住 typed 域：`capture_mss` 走投影、`restore_mss` 回灌 typed。
+    /// （漏一个方向 = 快照恢复后 Samus 状态回零，而像素面可能很久才显形。）
+    #[test]
+    fn mss_roundtrip_preserves_typed_domains() {
+        let mut mem = Manager::default();
+        mem.write_ram(0x0300, 9); // status = Elevator
+        mem.write_ram(0x0308, 0xFE); // speedY = -2
+        mem.write_ram(0x030E, 0xD8); // x
+        let (ram, wram, regs) = mem.capture_mss();
+        assert_eq!((ram[0x0300], ram[0x0308], ram[0x030E]), (9, 0xFE, 0xD8), "投影必须含 typed 字段");
+
+        let mut back = Manager::restore_mss(&ram, &wram, regs);
+        assert_eq!(back.samus().status_raw(), 9, "restore 后 status 必须回灌 typed");
+        assert_eq!(back.samus().speed_y(), -2);
+        assert_eq!(back.samus().x(), 0xD8);
+        assert_eq!(back.snapshot_nes().ram[0x0300], 9, "再次投影一致");
+    }
+
     use super::*;
 
     /// MSS 映射保真（三直映往返+nmi 推导）。
