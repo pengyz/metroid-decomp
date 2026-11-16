@@ -86,24 +86,35 @@ impl SamusStatus {
     }
 }
 
-/// Samus 字段视图（借 `&mut [u8; 0x800]`——RAM 2KB 镜像面）。
-pub struct SamusView<'a> {
-    ram: &'a mut [u8; 0x800],
+/// **Samus 主体**：既是状态句柄，也是行为载体（领域层只认这个类型）。
+///
+/// 包装 `&mut FrameMemory` 而不是只包装 `&mut ram`：Samus 的行为会跨域取值（碰撞要查房间
+/// RAM、射击要查敌槽、能力位在 WRAM `$6878`），只借 ram 会逼调用方拆借。
+///
+/// 与「全局单例 + `get::<Samus>()`」的区别（设计裁定）：本类型是**短生命周期句柄**，
+/// 由唯一所有者 `FrameMemory` 现场派生——`mem.samus()`。这样：
+/// - 调用点写法与类实例一致（`mem.samus().move_vertically()`）；
+/// - 无 `unsafe`、无 `RefCell`、无运行期类型分发（`get::<T>()` 需要 `Any`+downcast，
+///   在静态语言里等于把类型检查推迟到运行期）；
+/// - 借用检查器保证「同一时刻只有一个域持有可变访问」，与 asm 的时序天然同构；
+/// - 测试可并行（每个测试各持一份 `FrameMemory`；全局单例会毁掉这一点）。
+pub struct Samus<'a> {
+    mem: &'a mut crate::frame::FrameMemory,
 }
 
-impl<'a> SamusView<'a> {
-    pub(crate) fn new(ram: &'a mut [u8; 0x800]) -> Self {
-        Self { ram }
+impl<'a> Samus<'a> {
+    pub(crate) fn new(mem: &'a mut crate::frame::FrameMemory) -> Self {
+        Self { mem }
     }
 
     #[inline]
     fn get(&self, addr: u16) -> u8 {
-        self.ram[(addr as usize) & 0x7FF]
+        self.mem.ram[(addr as usize) & 0x7FF]
     }
 
     #[inline]
     fn set(&mut self, addr: u16, v: u8) {
-        self.ram[(addr as usize) & 0x7FF] = v;
+        self.mem.ram[(addr as usize) & 0x7FF] = v;
     }
 
     pub fn status(&self) -> Option<SamusStatus> {
@@ -264,48 +275,48 @@ impl<'a> SamusView<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::frame::FrameMemory;
 
-    fn view(buf: &mut [u8; 0x800]) -> SamusView<'_> {
-        SamusView::new(buf)
+    /// 各测独立持一份 `FrameMemory`（短生命周期句柄的前提：无全局单例）。
+    fn m() -> FrameMemory {
+        FrameMemory::default()
     }
 
     /// 枚举 ↔ 字节往返：`status` 落在 `$0300`，写枚举即写该字节。
     #[test]
     fn status_roundtrip_through_view() {
-        let mut ram = [0u8; 0x800];
-        {
-            let mut s = view(&mut ram);
-            s.set_status(SamusStatus::Elevator);
-        }
-        assert_eq!(ram[0x0300], 9, "sa_Elevator=9（旧注误记 4）");
-        assert_eq!(view(&mut ram).status(), Some(SamusStatus::Elevator));
+        let mut mem = m();
+        mem.samus().set_status(SamusStatus::Elevator);
+        assert_eq!(mem.ram[0x0300], 9, "sa_Elevator=9（旧注误记 4）");
+        assert_eq!(mem.samus().status(), Some(SamusStatus::Elevator));
     }
 
     /// 未定义值不静默映射（fail-loud 由调用方决定）。
     #[test]
     fn undefined_status_is_none() {
-        let mut ram = [0u8; 0x800];
-        ram[0x0300] = 0x0A;
-        assert_eq!(view(&mut ram).status(), None);
+        let mut mem = m();
+        mem.ram[0x0300] = 0x0A;
+        assert_eq!(mem.samus().status(), None);
+        assert_eq!(mem.samus().status_raw(), 0x0A);
     }
 
     /// 速度是二补数：`-2` 写进 `$0308` 得 `0xFE`。
     #[test]
     fn speed_y_is_signed() {
-        let mut ram = [0u8; 0x800];
-        view(&mut ram).set_speed_y(-2);
-        assert_eq!(ram[0x0308], 0xFE);
-        assert_eq!(view(&mut ram).speed_y(), -2);
+        let mut mem = m();
+        mem.samus().set_speed_y(-2);
+        assert_eq!(mem.ram[0x0308], 0xFE);
+        assert_eq!(mem.samus().speed_y(), -2);
     }
 
     /// 血量跨两字节：`0x0120` ⇒ `$0106=0x20` / `$0107=0x01`。
     #[test]
     fn health_spans_two_bytes() {
-        let mut ram = [0u8; 0x800];
-        view(&mut ram).set_health(0x0120);
-        assert_eq!(ram[0x0106], 0x20);
-        assert_eq!(ram[0x0107], 0x01);
-        assert_eq!(view(&mut ram).health(), 0x0120);
+        let mut mem = m();
+        mem.samus().set_health(0x0120);
+        assert_eq!(mem.ram[0x0106], 0x20);
+        assert_eq!(mem.ram[0x0107], 0x01);
+        assert_eq!(mem.samus().health(), 0x0120);
     }
 
     /// 球形态/死亡族判据（asm `cmp #sa_Roll`、`status >= sa_Dead`）。
