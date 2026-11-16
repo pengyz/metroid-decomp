@@ -228,6 +228,7 @@ pub const SAMUS_JUMP_DISP: u16 = 0x030F;
 /// DoorEntryStatus=$56（constants_ram 内容锚「0=Not in door, 1=In right door, 2=In
 /// left door, 3=Scroll up…」）。
 pub const DOOR_ENTRY_STATUS: u16 = 0x0056;
+pub const DOOR_SCROLL_STATUS: u16 = 0x0057;
 
 /// DoorDelay=$59（内容锚「Number of frames to delay when Samus entering/exiting doors」）。
 pub const DOOR_DELAY: u16 = 0x0059;
@@ -264,6 +265,7 @@ pub const MAP_POS_Y: u16 = 0x004F;
 pub const SAMUS_DOOR_DATA: u16 = 0x0058;
 pub const OBJECT_COUNTER: u16 = 0x0065;
 pub const SCROLL_BLOCK_NT3: u16 = 0x006C;
+pub const SCROLL_BLOCK_NT0: u16 = 0x006D;
 pub const ITEM_ROOM_MUSIC_STATUS: u16 = 0x0079;
 /// `KraidRidleyPresent db ;$6987`（constants_ram.asm:1234）——#$01=Kraid/Ridley 在场。
 pub const KRAID_RIDLEY_PRESENT: u16 = 0x6987;

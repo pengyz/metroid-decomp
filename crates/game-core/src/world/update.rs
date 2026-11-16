@@ -12,51 +12,88 @@ use crate::frame::tick::*;
 use crate::frame::Manager;
 use crate::ram_map;
 
-/// ScrollDoor（**asm 内容锚** `ScrollDoor: ; 07:E1F1`——r26 端口）：
-/// DoorEntryStatus($56)：0=非门出/1=右滚(ScrollRight $E6D2)/2=左滚(ScrollLeft $E6A7)/
-/// 3=下滚(ScrollDown $E519)/4=上滚(ScrollUp $E4F1)；滚至 ScrollX/Y 归中⇒DoorEntryStatus←5
-/// （出门）。滚件=1px/调（双调=双速）。
+/// ScrollDoor（**asm 内容锚** `ScrollDoor: ; 07:E1F1`，`refs/m1disasm/SRC/prg7_engine.asm:7006`）：
+///
+/// DoorEntryStatus($56)：0=非门出 / 1=右滚 / 2=左滚（横） / 3=下滚 / 4=上滚（竖）。
+/// 逐像素滚由 `world::camera::scroll` 执行；滚到底是什么状态由 **ScrollX/ScrollY 归 0** 判定
+/// （asm `LE204: ldx ScrollX / bne Exit15`、`LE21B: ldx ScrollY / bne Exit15`）。
+///
+/// 【2026-11-17 修】旧形把"进度"记在 `$0026`/`$0025` 上并自增——而 `$0025` 是
+/// **MMC1CTRL_ZP（MMC1 移位寄存器口）**，`$0026` 亦非滚屏计数器。那段代码既没滚屏、
+/// 又往 mapper 控制口写值，是"看起来在滚门、实际在改 bank 寄存器"的典型。
 pub fn scroll_door(mem: &mut Manager) {
-    let d = mem.read_ram(0x0056);
+    use crate::world::camera::scroll::{scroll_down, scroll_left, scroll_right, scroll_up};
+    let d = mem.read_ram(ram_map::DOOR_ENTRY_STATUS);
     if d == 0 {
         return;
     }
     match d {
+        // DoorEntryStatus=1：`jsr ScrollRight` → `jmp LE204`
         1 => {
-            // ScrollRight（$E6D2）：ScrollX+1（越 255⇒名表换）
-            scroll_by(mem, 0x0026, true);
-            if mem.read_ram(0x0026) == 0 {
-                mem.write_ram(0x0056, 0x05); // DoOneDoorScroll 出门面
+            scroll_right(mem);
+            if mem.camera().scroll_x() == 0 {
+                do_one_door_scroll(mem, 5); // `ldx #$05`（出门）
             }
         }
+        // DoorEntryStatus=2：`jsr ScrollLeft` → fallthrough 到 LE204 同一判据
         2 => {
-            scroll_by(mem, 0x0026, false);
-            if mem.read_ram(0x0026) == 0 {
-                mem.write_ram(0x0056, 0x05);
+            scroll_left(mem);
+            if mem.camera().scroll_x() == 0 {
+                do_one_door_scroll(mem, 5);
             }
         }
         3 => {
-            scroll_by(mem, 0x0025, true);
-            if mem.read_ram(0x0025) == 0 {
-                mem.write_ram(0x0056, 0x05); // VerticalRoomCentered 形
-            }
+            scroll_down(mem);
+            vertical_room_centered(mem);
         }
         4 => {
-            scroll_by(mem, 0x0025, false);
-            if mem.read_ram(0x0025) == 0 {
-                mem.write_ram(0x0056, 0x05);
-            }
+            scroll_up(mem);
+            vertical_room_centered(mem);
         }
-        _ => {} // 5+（出门序——SamusEnterDoor 面随件）
+        _ => {} // 5+：出门序（SamusEnterDoor 面）
     }
 }
 
-/// 滚 1px（ScrollRight/Left/Up/Down 簇共径——名表换/换页件随证）。
-pub(crate) fn scroll_by(mem: &mut crate::frame::Manager, addr: u16, up: bool) {
-    let v = mem.read_ram(addr);
-    let nv = if up { v.wrapping_add(1) } else { v.wrapping_sub(1) };
-    mem.write_ram(addr, nv);
+/// `VerticalRoomCentered ; 07:E21B`：竖滚居中后清门名表数据，X=1（右手门）/2（左手门）。
+fn vertical_room_centered(mem: &mut Manager) {
+    if mem.camera().scroll_y() != 0 {
+        return; // `bne Exit15`
+    }
+    mem.write_ram(ram_map::SCROLL_BLOCK_NT3, 0); // `stx ScrollBlockOnNameTable3`
+    mem.write_ram(ram_map::SCROLL_BLOCK_NT0, 0); // `stx ScrollBlockOnNameTable0`
+    let x = if mem.samus().x() & 0x80 != 0 { 1 } else { 2 }; // `lda Samus.x / bmi` 后 `inx`
+    toggle_scroll_and_finish(mem, x);
 }
+
+/// `DoOneDoorScroll ; 07:E22C`：DoorDelay←$20，按 `SamusDoorData*8` 的进位与
+/// `DoorScrollStatus<3` 决定是否 ToggleScroll，末了写 MirrorCntrl 与 DoorEntryStatus。
+fn do_one_door_scroll(mem: &mut Manager, x: u8) {
+    mem.write_ram(ram_map::DOOR_DELAY, 0x20); // `lda #$20 / sta DoorDelay`
+    let data = mem.read_ram(ram_map::SAMUS_DOOR_DATA);
+    let carry = data & 0xE0 != 0; // `jsr Amul8` 的进位 = A*8 溢出（A≥$20）
+    if carry {
+        mem.write_ram(ram_map::MIRROR_CNTRL, 0x47); // `lda #$47`（横滚镜）
+        mem.write_ram(ram_map::DOOR_ENTRY_STATUS, x); // `stx DoorEntryStatus`
+        return;
+    }
+    if mem.read_ram(ram_map::DOOR_SCROLL_STATUS) < 0x03 {
+        toggle_scroll_and_finish(mem, x); // `cpy #$03 / bcc LE241`
+        return;
+    }
+    mem.write_ram(ram_map::MIRROR_CNTRL, 0x47);
+    mem.write_ram(ram_map::DOOR_ENTRY_STATUS, x);
+}
+
+/// `ToggleScroll ; 07:E252`：ScrollDir ^= $03；返回 MirrorCntrl ^ $08，随后
+/// `sta MirrorCntrl / stx DoorEntryStatus`。
+fn toggle_scroll_and_finish(mem: &mut Manager, x: u8) {
+    let dir = mem.read_ram(ram_map::SCROLL_DIR) ^ 0x03;
+    mem.write_ram(ram_map::SCROLL_DIR, dir);
+    let mirror = mem.read_ram(ram_map::MIRROR_CNTRL) ^ 0x08;
+    mem.write_ram(ram_map::MIRROR_CNTRL, mirror);
+    mem.write_ram(ram_map::DOOR_ENTRY_STATUS, x);
+}
+
 
 /// UpdateWorld（**asm 内容锚** `UpdateWorld: ; 07:CB29`——r26 环壳：19 件渐进端口）。
 /// 件序：SpritePagePos←0/UpdateAllEnemies($F345)/UpdateSamusProjectiles($D4BF)/
@@ -156,3 +193,65 @@ pub(crate) fn uw_all_power_ups(mem: &mut crate::frame::Manager) {
 /// UpdateTourianItems（$FDE3——Tourian 专件）。
 pub(crate) fn uw_tourian_items(_mem: &mut crate::frame::Manager) {}
 
+
+#[cfg(test)]
+mod tests_scroll_door {
+    use super::*;
+
+    /// `LE204: ldx ScrollX / bne Exit15` —— 归 0 才算滚完，且置 DoorDelay=$20、DoorEntryStatus=5。
+    #[test]
+    fn horizontal_door_scroll_finishes_at_scroll_x_zero() {
+        let mut m = Manager::default();
+        m.write_ram(ram_map::DOOR_ENTRY_STATUS, 1);
+        m.camera().set_scroll_x(0);
+        scroll_door(&mut m);
+        assert_eq!(m.read_ram(ram_map::DOOR_ENTRY_STATUS), 5);
+        assert_eq!(m.read_ram(ram_map::DOOR_DELAY), 0x20);
+    }
+
+    /// 未归 0 时不结束（继续逐像素滚）。
+    #[test]
+    fn horizontal_door_scroll_continues_when_not_centered() {
+        let mut m = Manager::default();
+        m.write_ram(ram_map::DOOR_ENTRY_STATUS, 1);
+        m.camera().set_scroll_x(0x40);
+        scroll_door(&mut m);
+        assert_eq!(m.read_ram(ram_map::DOOR_ENTRY_STATUS), 1); // 未结束
+    }
+
+    /// `VerticalRoomCentered`：ScrollY 归 0 后清两个 name-table 区块标记。
+    #[test]
+    fn vertical_door_centering_clears_nt_block_flags() {
+        let mut m = Manager::default();
+        m.write_ram(ram_map::DOOR_ENTRY_STATUS, 3);
+        m.camera().set_scroll_y(0);
+        m.write_ram(ram_map::SCROLL_BLOCK_NT3, 0x33);
+        m.write_ram(ram_map::SCROLL_BLOCK_NT0, 0x33);
+        // 直接测 `VerticalRoomCentered`（`scroll_door` 会先滚一像素，ScrollY 已非 0）
+        vertical_room_centered(&mut m);
+        assert_eq!(m.read_ram(ram_map::SCROLL_BLOCK_NT3), 0);
+        assert_eq!(m.read_ram(ram_map::SCROLL_BLOCK_NT0), 0);
+    }
+
+    /// 回归：旧实现往 `$0025`（MMC1CTRL_ZP，mapper 移位寄存器口）与 `$0026` 写"进度"。
+    #[test]
+    fn door_scroll_never_touches_mmc1_control_port() {
+        let mut m = Manager::default();
+        m.write_ram(ram_map::DOOR_ENTRY_STATUS, 1);
+        m.camera().set_scroll_x(0);
+        let before_25 = m.read_ram(0x0025);
+        let before_26 = m.read_ram(0x0026);
+        scroll_door(&mut m);
+        assert_eq!(m.read_ram(0x0025), before_25);
+        assert_eq!(m.read_ram(0x0026), before_26);
+    }
+
+    /// DoorEntryStatus=0（不在门里）⇒ 完全 no-op。
+    #[test]
+    fn no_door_entry_is_noop() {
+        let mut m = Manager::default();
+        scroll_door(&mut m);
+        assert_eq!(m.read_ram(ram_map::DOOR_ENTRY_STATUS), 0);
+        assert_eq!(m.read_ram(ram_map::DOOR_DELAY), 0);
+    }
+}
