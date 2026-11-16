@@ -271,14 +271,9 @@ const DOOR_HP_TABLE: [u8; 4] = [5, 1, 10, 1]; // $8BD1（红/蓝/导弹/音乐�
 /// MakeRoomRAMPtr（07:E96A）——ptr=01100HYY YYYXXXXX
 /// （hi=$18|Ybit7|Ybit6<<1|(NT&4)；lo=(Y&$38)<<2|X>>3（RoomRAMA=$6000>>10=$18））。
 pub fn make_room_ram_ptr(y_pos: u8, x_pos: u8, nt_hi: u8) -> (u8, u8) {
-    // 【证伪自纠】hi=01100HYY——rol 双移（$18<<2=$60 基）：hi=$60|Ybit7<<1|Ybit6|(NT&4)
-    // （asm `lda #RoomRAMA>>10/sta $05`（$18）后 asl/rol 双对（Y 高两位入 $05 低两位））
-    let mut hi = 0x60u8;
-    hi |= ((y_pos >> 7) & 1) << 1;
-    hi |= (y_pos >> 6) & 1;
-    let lo = ((y_pos & 0x38) << 2) | (x_pos >> 3);
-    hi |= nt_hi & 0x04;
-    (lo, hi)
+    // 换算公式只此一份：`crate::world::room_ram::Room::offset`（原注释见该函数）。
+    let abs = crate::world::room_ram::Room::addr(y_pos, x_pos, nt_hi);
+    (abs as u8, (abs >> 8) as u8)
 }
 
 /// WriteDoorBGTiles（$8CF7-8D33）——6 瓦纵写（y 步 $20）+DoorRoomRAMPtr 写站
