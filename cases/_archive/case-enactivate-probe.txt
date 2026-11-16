@@ -1,0 +1,53 @@
+# 对拍用例：敌人 Resting→Active（movementIndex 播种 + accel/speed 四表装载）
+# asm 根：UpdateEnemy_Resting_TryBecomingActive@becomeActive ; 07:F7CA-07:F839
+# 时机：GameEngine 从 f903 起才跑 UpdateWorld（此前是 SamusIntro 演出，敌环根本不执行）——所以注入/采集全部放在 f940 之后。
+# 做法：把首房存在的 Zoomer 槽（槽 4）用 fixture 改造成 **Resting 的 Sidehopper 地面型**
+# （type=0，L977B[0]=$64 的 bit6 置位 ⇒ 走加速模型），delay=1、data05 bit3=1，
+# 位置抬到空中（y=$30,x=$C0）。下一帧两侧都执行同一激活路径，随后按四表轨迹下坠。
+# 判别力：若 movementIndex 播种或 accel/speed 装载/朝向翻转任一处不同，10 帧内轨迹即分叉。
+name case-enactivate-probe
+frames 1360
+snapshot none
+watch 002D FC
+watch 0440 En4Y
+watch 0441 En4X
+watch 0442 En4SpeedY
+watch 0443 En4SpeedX
+watch 0448 En4MovIdx
+watch 0449 En4Delay
+watch 6B34 En4Status
+watch 6B42 En4Type
+watch 6B3E En4AccelY
+watch 6B3F En4AccelX
+press 310 start
+press 350 start
+capture 940 pre-inject
+# 注入（f430）：槽 4 变 Resting Sidehopper，delay=1（下一帧归零即激活）
+# 位置保持原样（y=$28,x=$BC）——若挪到屏外，UpdateEnemy_CheckIfVisible 会整帧跳过，激活路径根本执行不到
+# 位置挪到萨姆斯附近（f420 萨姆斯 y=$B0 x=$80）：y=$A8 x=$98，rY/rX=8 ⇒ 必过 IsObjectVisible
+fixture 960 0440 a8 evolving
+fixture 960 0441 98 evolving
+fixture 960 0442 00 evolving
+fixture 960 0443 00 evolving
+fixture 960 0445 08 evolving
+fixture 960 0446 00 evolving
+fixture 960 0447 00 evolving
+fixture 960 0448 00 evolving
+fixture 960 0449 01 evolving
+# 槽 4 的 EnExtra 基址 = $6AF4 + 16*4 = $6B34（status+0/accelY+10/accelX+11/type+14/data1F+15）
+# status 语义（asm 07:F351 跳表）：0=空槽/1=Resting/2=Active ⇒ 注入必须是 1
+fixture 960 6B34 01 evolving
+fixture 960 6B35 08 evolving
+fixture 960 6B36 08 evolving
+fixture 960 6B3B 00 evolving
+fixture 960 6B3E 00 evolving
+fixture 960 6B3F 00 evolving
+fixture 960 6B42 00 evolving
+fixture 960 6B43 00 evolving
+capture 970 injected
+capture 1010 activated
+capture 1060 falling-50f
+capture 1130 falling-120f
+capture 1220 falling-210f
+capture 1320 late
+endFrame 1360
