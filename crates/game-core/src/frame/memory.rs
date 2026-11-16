@@ -11,6 +11,11 @@ pub use crate::state::{Manager, Registers};
 impl Manager {
     /// RAM 读（2KB 镜像归一）。
     pub fn read_ram(&self, addr: u16) -> u8 {
+        // 【typed 域辖】Samus.status（$0300）真相在 `Manager.samus`（`views::samus::SamusState`），
+        // 字节数组不再持有它；地址面保持不变（兼容辖），逐域迁完后此分支即"读取口"唯一实现。
+        if addr == crate::ram_map::SAMUS_STATUS {
+            return self.samus.status_byte();
+        }
         // 【read_ram 映射修（2026-11-06 全链根——$6877 读 255 垃圾破案）】$6000-$7FFF
         // =WRAM 分派（asm constants：EnergyTankCount $6877=$6000+0x877）——旧形
         // `& 0x7FF` 镜像归一把 WRAM 读混入 ram[0x077] 垃圾。同族修（分派非点修）。
@@ -22,6 +27,11 @@ impl Manager {
 
     /// RAM 写（2KB 镜像归一）。
     pub fn write_ram(&mut self, addr: u16, v: u8) {
+        // 【typed 域辖】同 read_ram：写 $0300 落 typed 状态，不落字节数组。
+        if addr == crate::ram_map::SAMUS_STATUS {
+            self.samus.set_status_byte(v);
+            return;
+        }
         // 【read_ram 映射修同族（2026-11-06）】WRAM 分派（写径同读径）。
         if (0x6000..0x8000).contains(&addr) {
             self.wram_mut()[addr as usize - 0x6000] = v;
@@ -104,11 +114,12 @@ impl Manager {
     /// 委托化=task-22 slot①（lead 例外授权：只动委托结构不动语义）；wram 全 8KB 钉死（严重-5）。
     /// pw=密码字节面（$6988-$698F——sc-item-pickup 系 manifest watch）。
     pub fn watch_snapshot(&self) -> Vec<(&'static str, String)> {
+        let img = self.snapshot_nes();
         vec![
-            ("zp", crate::memmap::observe::frame_face::encode_zp(self.ram())),
-            ("iram", crate::memmap::observe::frame_face::encode_iram(self.ram())),
-            ("wram", crate::memmap::observe::frame_face::encode_wram(self.wram())),
-            ("pw", crate::memmap::observe::frame_face::encode_pw(self.wram())),
+            ("zp", crate::memmap::observe::frame_face::encode_zp(&img.ram)),
+            ("iram", crate::memmap::observe::frame_face::encode_iram(&img.ram)),
+            ("wram", crate::memmap::observe::frame_face::encode_wram(&img.wram)),
+            ("pw", crate::memmap::observe::frame_face::encode_pw(&img.wram)),
         ]
     }
 }
@@ -188,6 +199,9 @@ impl Manager {
         let mut mem = Self::default();
         mem.ram_mut().copy_from_slice(&ram[..0x800]);
         mem.wram_mut().copy_from_slice(&wram[..0x2000]);
+        // typed 域辖字段从字节面回灌（MSS 是外部真相面，恢复后必须重建 typed 状态）。
+        mem.samus
+            .set_status_byte(ram[crate::ram_map::SAMUS_STATUS as usize & 0x7FF]);
         mem.regs = regs;
         mem.nmi_enabled = mem.ram()[0x00FF] & 0x80 != 0;
         mem
@@ -195,7 +209,8 @@ impl Manager {
 
     /// 导出 MSS 面（反向——三直映；bundle 生产侧用）。
     pub fn capture_mss(&self) -> (Vec<u8>, Vec<u8>, Registers) {
-        (self.ram().to_vec(), self.wram().to_vec(), self.regs)
+        let img = self.snapshot_nes();
+        (img.ram.to_vec(), img.wram.to_vec(), self.regs)
     }
 }
 

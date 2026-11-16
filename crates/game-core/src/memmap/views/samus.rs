@@ -38,6 +38,7 @@ const HEALTH_HI: u16 = 0x0107;
 ///
 /// 【旧注纠正】`sa_Elevator` 不是表序 4 而是 **9**（表序 4 是 `sa_PntUp`）；旧实现按 4
 /// 判定会让电梯态落进 `status >= sa_Dead(7)` 的死人出径。
+#[repr(u8)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SamusStatus {
     Stand = 0,
@@ -50,6 +51,9 @@ pub enum SamusStatus {
     Dead = 7,
     Dead2 = 8,
     Elevator = 9,
+    /// 未定义字节（ROM 行为空间外）。**保真保留原值**：`from_byte/to_byte` 往返不丢失，
+    /// 存储层不可能产生它，但脚本注入/未初始化态可能。
+    Undefined(u8),
 }
 
 impl SamusStatus {
@@ -71,8 +75,30 @@ impl SamusStatus {
         })
     }
 
+    /// 字节 → 枚举（不失败版：未定义值进 [`Self::Undefined`]，往返保真——存储层用）。
+    pub fn from_byte(v: u8) -> Self {
+        Self::from_u8(v).unwrap_or(Self::Undefined(v))
+    }
+
+    /// 枚举 → 字节（存储层投影用）。
+    pub fn to_byte(self) -> u8 {
+        match self {
+            Self::Stand => 0,
+            Self::Run => 1,
+            Self::Jump => 2,
+            Self::Roll => 3,
+            Self::PointUp => 4,
+            Self::Door => 5,
+            Self::JumpUp => 6,
+            Self::Dead => 7,
+            Self::Dead2 => 8,
+            Self::Elevator => 9,
+            Self::Undefined(v) => v,
+        }
+    }
+
     pub fn as_u8(self) -> u8 {
-        self as u8
+        self.to_byte()
     }
 
     /// 球形态（`cmp #sa_Roll` 的语义面——落地反弹/变形判定用）。
@@ -83,6 +109,46 @@ impl SamusStatus {
     /// 死亡族（`status >= sa_Dead`——`SamusMoveVertically` 等件的短路判据）。
     pub fn is_dead(self) -> bool {
         matches!(self, Self::Dead | Self::Dead2)
+    }
+}
+
+/// **Samus 域的 typed 状态**（存储层：`Manager.samus`）。
+///
+/// 【第一批】只收 `status`（`$0300`）：它是本域语义密度最高的字段（十态枚举），且是
+/// 「typed 存储 → NES 字节投影」这套机制的试点。其余 21 字节仍在 `NesStorage.ram` 里，
+/// 后续按字段逐个迁入本结构——每迁一个，`Manager::snapshot_nes()` 的投影就多一行，
+/// 而 `read_ram/write_ram` 的地址面保持不变（兼容辖）。
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SamusState {
+    status: SamusStatus,
+}
+
+impl Default for SamusState {
+    fn default() -> Self {
+        Self { status: SamusStatus::Stand }
+    }
+}
+
+impl SamusState {
+    /// 枚举面（未定义值 → `None`，调用方 fail-loud）。
+    pub fn status(&self) -> Option<SamusStatus> {
+        match self.status {
+            SamusStatus::Undefined(_) => None,
+            s => Some(s),
+        }
+    }
+
+    /// 字节面（保真：含未定义值）。
+    pub fn status_byte(&self) -> u8 {
+        self.status.to_byte()
+    }
+
+    pub fn set_status(&mut self, s: SamusStatus) {
+        self.status = s;
+    }
+
+    pub fn set_status_byte(&mut self, v: u8) {
+        self.status = SamusStatus::from_byte(v);
     }
 }
 
@@ -109,16 +175,24 @@ impl<'a> Samus<'a> {
 
     #[inline]
     fn get(&self, addr: u16) -> u8 {
+        // typed 域辖字段（$0300）走 `Manager.samus`；其余仍在字节面。
+        if addr == SAMUS_STATUS {
+            return self.mem.samus.status_byte();
+        }
         self.mem.ram()[(addr as usize) & 0x7FF]
     }
 
     #[inline]
     fn set(&mut self, addr: u16, v: u8) {
+        if addr == SAMUS_STATUS {
+            self.mem.samus.set_status_byte(v);
+            return;
+        }
         self.mem.ram_mut()[(addr as usize) & 0x7FF] = v;
     }
 
     pub fn status(&self) -> Option<SamusStatus> {
-        SamusStatus::from_u8(self.get(SAMUS_STATUS))
+        self.mem.samus.status()
     }
 
     /// 原始字节（比较 `>= sa_Dead` 这类**数值序**判据时用；语义判据请用 [`Self::status`]）。
@@ -127,7 +201,7 @@ impl<'a> Samus<'a> {
     }
 
     pub fn set_status(&mut self, v: SamusStatus) {
-        self.set(SAMUS_STATUS, v.as_u8());
+        self.mem.samus.set_status(v);
     }
 
     pub fn radius_y(&self) -> u8 {
@@ -282,22 +356,36 @@ mod tests {
         Manager::default()
     }
 
-    /// 枚举 ↔ 字节往返：`status` 落在 `$0300`，写枚举即写该字节。
+    /// 枚举 ↔ 字节往返：`status` 已 typed 化（真相在 `Manager.samus`），
+    /// NES 字节面经 `snapshot_nes()` 投影得到。
     #[test]
     fn status_roundtrip_through_view() {
         let mut mem = m();
         mem.samus().set_status(SamusStatus::Elevator);
-        assert_eq!(mem.ram()[0x0300], 9, "sa_Elevator=9（旧注误记 4）");
+        assert_eq!(mem.snapshot_nes().ram[0x0300], 9, "sa_Elevator=9（旧注误记 4）");
         assert_eq!(mem.samus().status(), Some(SamusStatus::Elevator));
+        // 地址面（兼容辖）读的是同一份 typed 状态。
+        assert_eq!(mem.read_ram(0x0300), 9);
     }
 
-    /// 未定义值不静默映射（fail-loud 由调用方决定）。
+    /// 未定义值不静默映射（fail-loud 由调用方决定），且**字节往返保真**。
     #[test]
     fn undefined_status_is_none() {
         let mut mem = m();
-        mem.ram_mut()[0x0300] = 0x0A;
+        mem.write_ram(0x0300, 0x0A);
         assert_eq!(mem.samus().status(), None);
         assert_eq!(mem.samus().status_raw(), 0x0A);
+        assert_eq!(mem.snapshot_nes().ram[0x0300], 0x0A, "未定义值必须原样投影");
+    }
+
+    /// 单一真相：`$0300` 的真相在 typed 状态，直接改字节数组不改变它（这是 typed 化的定义）。
+    #[test]
+    fn raw_byte_write_does_not_override_typed_truth() {
+        let mut mem = m();
+        mem.samus().set_status(SamusStatus::Roll);
+        mem.ram_mut()[0x0300] = 0x07; // 直接写存储层
+        assert_eq!(mem.samus().status(), Some(SamusStatus::Roll), "typed 面不被裸字节改写");
+        assert_eq!(mem.snapshot_nes().ram[0x0300], 3, "投影仍取 typed 值");
     }
 
     /// 速度是二补数：`-2` 写进 `$0308` 得 `0xFE`。

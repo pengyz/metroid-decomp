@@ -52,7 +52,13 @@ impl Manager {
     /// 不改变行为"（域 typed 化前后 `snapshot_nes()` 必须逐字节相同）。**不是第二真相源**：
     /// 真相在域状态里，本函数只做投影。
     pub fn snapshot_nes(&self) -> crate::memmap::storage::NesImage {
-        crate::memmap::storage::NesImage { ram: self.storage.ram, wram: self.storage.wram }
+        let mut img = crate::memmap::storage::NesImage {
+            ram: self.storage.ram,
+            wram: self.storage.wram,
+        };
+        // typed 域投影（每迁一个字段在此加一行；未迁字段仍在 ram 里，天然一致）。
+        img.ram[crate::ram_map::SAMUS_STATUS as usize & 0x7FF] = self.samus.status_byte();
+        img
     }
 }
 
@@ -62,6 +68,8 @@ pub struct Manager {
     /// 私有存储层（NES 字节容器）。**未来被 typed struct 逐域替换的那一层**：
     /// 上层只见 `ram()/wram()` 只读视图与域句柄（`manager.samus()`），字段不出本模块。
     storage: crate::memmap::storage::NesStorage,
+    /// Samus 域 typed 状态（试点：`status`）。真相面；`snapshot_nes()` 把它投影回 `$0300`。
+    pub(crate) samus: crate::memmap::views::samus::SamusState,
     /// 寄存器面。
     pub regs: Registers,
     /// NMI 使能态（PPUCTRL bit7——write_io($2000) 权威面；60Hz VBlank 调度开关）。
@@ -118,7 +126,7 @@ pub struct Manager {
 
 impl Default for Manager {
     fn default() -> Self {
-        Self { storage: crate::memmap::storage::NesStorage::default(), regs: Registers::default(), nmi_enabled: false,
+        Self { storage: crate::memmap::storage::NesStorage::default(), samus: Default::default(), regs: Registers::default(), nmi_enabled: false,
                title_cursor: 0, title_cursor_phase: 0, title_spin: 0, check_password_pending: false, deferred_screen_on: false, title_no_return: false,
                iter_gates: Vec::new(), iter_span_left: 0, iter_span_fc: false, fc_inced_this_tick: false,
                apu_log: Vec::new(), work_cycles: 0,
