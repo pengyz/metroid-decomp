@@ -79,4 +79,14 @@ mod tests {
         assert_eq!(m.read_ram(0x0300), 3, "读口与投影同源");
         assert_eq!(m.ram()[0x0300], 0, "字节面不持有 typed 字段（分层的代价，显式锁定）");
     }
+
+    /// 2KB 镜像别名不得绕过 typed 面：`$0B00` 与 `$0300` 是同一格。
+    #[test]
+    fn mirrored_alias_does_not_bypass_typed() {
+        let mut m = Manager::default();
+        m.write_ram(0x0B00, 3); // 镜像地址写
+        assert_eq!(m.read_ram(0x0300), 3, "镜像写必须落到 typed 真相面");
+        assert_eq!(m.read_ram(0x0B00), 3, "镜像读同源");
+        assert_eq!(m.snapshot_nes().ram[0x0300], 3, "投影同步");
+    }
 }

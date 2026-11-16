@@ -38,14 +38,6 @@ impl Manager {
         &mut self.storage.wram
     }
 
-    /// RAM+WRAM 同时可变（两者是 `storage` 里**互不重叠的字段**，故可安全同时借出；
-    /// 仅给「同一例程内先后要写两块」的 asm 形态用，如标题步的 `&mut ram, &mut wram`）。
-    pub(crate) fn ram_wram_mut(
-        &mut self,
-    ) -> (&mut [u8; 0x800], &mut [u8; 0x2000]) {
-        (&mut self.storage.ram, &mut self.storage.wram)
-    }
-
     /// **NES 字节布局快照**：当前状态 → NES 字节的单向投影。
     ///
     /// 用途只有两个：①对拍腿（`ram.hex`/`ppu.hex` 与 `--state-out`）②验证"存储层换实现

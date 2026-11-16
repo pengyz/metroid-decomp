@@ -13,27 +13,33 @@ impl Manager {
     pub fn read_ram(&self, addr: u16) -> u8 {
         // 【typed 域辖】Samus 的已 typed 化字段真相在 `Manager.samus`（`samus::state::SamusState`），
         // 字节数组不再持有它们；地址面保持不变（兼容辖），逐域迁完后此分支即"读取口"唯一实现。
-        if let Some(v) = self.samus.get_byte(addr) {
-            return v;
-        }
         // 【read_ram 映射修（2026-11-06 全链根——$6877 读 255 垃圾破案）】$6000-$7FFF
         // =WRAM 分派（asm constants：EnergyTankCount $6877=$6000+0x877）——旧形
         // `& 0x7FF` 镜像归一把 WRAM 读混入 ram[0x077] 垃圾。同族修（分派非点修）。
+        // **WRAM 必须先判**：否则 `0x6B00 & 0x7FF == 0x0300` 会误落 typed 面（本轮实证）。
         if (0x6000..0x8000).contains(&addr) {
             return self.wram()[addr as usize - 0x6000];
         }
-        self.ram()[(addr as usize) & 0x7FF]
+        // 【镜像归一先于 typed 分派（2026-11-17）】`read_ram(0x0B00)` 与 `read_ram(0x0300)`
+        // 是同一格（2KB 镜像），若先查 typed 会漏判 ⇒ 别名绕过 typed 面。
+        let a = addr & 0x7FF;
+        if let Some(v) = self.samus.get_byte(a) {
+            return v;
+        }
+        self.ram()[a as usize]
     }
 
     /// RAM 写（2KB 镜像归一）。
     pub fn write_ram(&mut self, addr: u16, v: u8) {
         // 【typed 域辖】同 read_ram：已 typed 化地址落 typed 状态，不落字节数组。
-        if self.samus.set_byte(addr, v) {
-            return;
-        }
-        // 【read_ram 映射修同族（2026-11-06）】WRAM 分派（写径同读径）。
+        // 【read_ram 映射修同族（2026-11-06）】WRAM 分派（写径同读径）——必须先于 typed，
+        // 理由同读径（`0x6B00` 的镜像别名等于 `$0300`）。
         if (0x6000..0x8000).contains(&addr) {
             self.wram_mut()[addr as usize - 0x6000] = v;
+            return;
+        }
+        let a = addr & 0x7FF;
+        if self.samus.set_byte(a, v) {
             return;
         }
         // 【goal-轮80 Samus radiusY 写钩】0x301 写点（碰撞判径源）。
