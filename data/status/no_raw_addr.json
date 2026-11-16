@@ -1,0 +1,49 @@
+{
+  "schema": "no-raw-addr-v1",
+  "note": "域代码里裸地址字面量的棘轮上限（只减不增）。受监控地址族：Samus $0300-$0315、敌槽基址 $0400/$6AF4、爆炸池 $04C0/$6BB4。迁移到 typed 视图后跑 tools/no_raw_addr.py --write 下调。",
+  "monitored": [
+    "$0300-$0315",
+    "$0400",
+    "$6AF4",
+    "$04C0",
+    "$6BB4"
+  ],
+  "exempt": {
+    "memmap/views/mod.rs": "typed 层自己的实现面",
+    "memmap/views/samus.rs": "typed 层自己的实现面",
+    "memmap/views/enemy.rs": "typed 层自己的实现面",
+    "memmap/storage.rs": "存储层（字节面本体）",
+    "memmap/mod.rs": "存储层导出面",
+    "ram_map.rs": "符号→地址的唯一定义处",
+    "frame/memory.rs": "read_ram/write_ram 兼容辖（迁移完成后收口）"
+  },
+  "total": 810,
+  "files": {
+    "enemy/anim.rs": 7,
+    "enemy/crawler.rs": 26,
+    "enemy/framework.rs": 139,
+    "enemy/motion.rs": 52,
+    "enemy/prep.rs": 36,
+    "enemy/sidehopper.rs": 1,
+    "enemy/skree.rs": 8,
+    "enemy/slot_cycle.rs": 12,
+    "enemy/tables.rs": 3,
+    "enemy/waver.rs": 1,
+    "frame/engine.rs": 1,
+    "frame/tests.rs": 170,
+    "frame/tick.rs": 10,
+    "memmap/views/title.rs": 3,
+    "pickup/spawn.rs": 15,
+    "render/gfx.rs": 1,
+    "render/oam.rs": 36,
+    "samus/handler.rs": 41,
+    "samus/physics.rs": 92,
+    "title/bridge.rs": 1,
+    "title/mod.rs": 2,
+    "title/step_glue.rs": 1,
+    "weapon/projectile.rs": 49,
+    "world/elevator.rs": 4,
+    "world/room_draw.rs": 98,
+    "world/room_load.rs": 1
+  }
+}

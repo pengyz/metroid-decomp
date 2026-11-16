@@ -2225,6 +2225,41 @@ def gate_bankvars() -> tuple[str, str]:
     return PASS, last
 
 
+NO_RAW_ADDR_LEDGER_REL = Path("data/status/no_raw_addr.json")
+NO_RAW_ADDR_TIMEOUT_S = 120
+
+
+def gate_no_raw_addr() -> tuple[str, str]:
+    """G-NA 域代码裸地址字面量棘轮：只减不增（typed 视图已存在，新代码必须用它）。
+
+    背景：`memmap/views/` 已把 Samus 全 22 字节（`$0300-$0315`）与敌槽两基址
+    （`$0400`/`$6AF4`）、爆炸池（`$04C0`/`$6BB4`）包成语义对象，但调用点仍大量直接写
+    `mem.write_ram(0x0300, …)`。这类代码不报错、只是**绕开类型系统**；一旦某字段成了
+    「双表示」，裸写那侧会被静默丢弃（`c875f3b9` 的 dump 漏字段就是同族故障）。
+
+    门的定位是**止住增量**：现状入账封顶，之后每文件不得上调、总量不得上调；
+    迁移掉一批就 `tools/no_raw_addr.py --write` 把账本往下压。
+    adapter/boundary 面（typed 层自身、`ram_map.rs` 符号定义、`read_ram` 兼容辖、`bin/`）
+    按职责豁免，豁免理由写在账本的 `exempt` 字段里，不藏在代码里。
+    """
+    if not (ROOT / NO_RAW_ADDR_LEDGER_REL).is_file():
+        return FAIL, f"缺 {NO_RAW_ADDR_LEDGER_REL.as_posix()}（先跑 python3 tools/no_raw_addr.py --write）"
+    try:
+        proc = subprocess.run(
+            [sys.executable, "tools/no_raw_addr.py"],
+            cwd=ROOT, capture_output=True, text=True, encoding="utf-8", errors="replace",
+            env=_child_env(), timeout=NO_RAW_ADDR_TIMEOUT_S,
+        )
+    except subprocess.TimeoutExpired:
+        return FAIL, f"no-raw-addr 校验超时（>{NO_RAW_ADDR_TIMEOUT_S}s）"
+    out = ((proc.stdout or "") + (proc.stderr or "")).strip()
+    if proc.returncode != 0:
+        bad = [ln for ln in out.splitlines() if ln.strip()][-8:]
+        return FAIL, "裸地址字面量超出账本：\n  - " + "\n  - ".join(bad)
+    last = out.splitlines()[-1] if out else ""
+    return PASS, last
+
+
 PACK_REL = Path("assets") / "metroid.pack"
 ASSET_PACK_TIMEOUT_S = 240
 
@@ -2322,6 +2357,9 @@ GATES: list[tuple[str, str, str, str, object]] = [
     ("bankvars", "启用（结构驱动）", "check",
      "按区变量账本：pending 只减不增 + covered 必须带按区访问器（tools/bankvars.py）",
      gate_bankvars),
+    ("no-raw-addr", "启用（typed 域）", "check",
+     "域代码裸地址字面量只减不增（typed 视图已存在；tools/no_raw_addr.py）",
+     gate_no_raw_addr),
 ]
 
 
