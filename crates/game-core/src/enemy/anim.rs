@@ -99,6 +99,13 @@ pub(crate) fn draw_enemy(mem: &mut crate::frame::Manager, x: u8) {
 /// EN_ANIM_TABLE[animIndex]（区表——Brinstar $9D6A）：FF⇒animIndex←reset 续走；
 /// 否则 animFrame(+3)←表值、animIndex+1。调用形：CrawlerAI @exit `lda #3/jsr $800C`。
 pub(crate) fn update_enemy_anim(mem: &mut crate::frame::Manager, x: u8, a: u8) {
+    // 【2026-11-17 结构发现，勿"顺手句柄化"】`x` 在这里**不是槽偏移**，而是 asm 的
+    // "Ens 基址 + x" 索引：敌槽用 `0..=0xAF`（16 步长），**爆炸池用 `0xC0..=0xD8`（8 步长）**
+    // ——因为 `$6AF4 + $C0` 恰等于 `$6BB4`（爆炸池额外面基址，见 `explosion::ens_offset`）。
+    // 一个函数同时服务两个池，所以不能改 `mem.enemy(slot_of(x))`：爆炸槽不是 16 的倍数，
+    // `slot_of` 的 debug_assert 会当场炸（本日试改即被 `explosion_lifetime_expires_and_frees_slot` 抓出）。
+    // 正确做法是等把本函数拆成 `update_enemy_anim` / `update_explosion_anim` 两件再做，
+    // 现在保留基址形是有意的（`enemy/state.rs::slot_of` 的注释也指向这里）。
     let base = 0x6AF4u16 + x as u16;
     if mem.read_wram(base) == 5 {
         return; // Pickup 态不更
@@ -128,4 +135,30 @@ pub(crate) fn update_enemy_anim(mem: &mut crate::frame::Manager, x: u8, a: u8) {
         }
     }
     crate::unported!("bank07:E0BC-wrap"); // 表不变量破裂——fail-loud（update_obj_anim 同式）
+}
+
+
+#[cfg(test)]
+mod tests_dual_pool_base {
+    /// **钉住双池共享的地址恒等式**：`update_enemy_anim`/`draw_enemy` 的 `x` 同时用于
+    /// 敌槽（0..=0xAF，步长 16）与爆炸池（0xC0..=0xD8，步长 8）。这条恒等式一旦被
+    /// 重构者"修正"成纯敌槽换算，爆炸池的动画会静默错位（见函数头注释）。
+    #[test]
+    fn explosion_pool_base_is_reachable_from_ens_offset() {
+        for slot in 0..crate::enemy::explosion::SLOT_COUNT {
+            let ex = crate::enemy::explosion::ens_offset(slot);
+            assert!(ex >= 0xC0, "爆炸槽的 asm x 必须在 $C0 之上（got {ex:#04X}）");
+            assert_eq!(
+                crate::enemy::state::ENS_EXTRA_BASE + ex as u16,
+                crate::enemy::explosion::EXTRA_BASE + slot as u16 * 8,
+                "`$6AF4 + x` 必须落在爆炸池额外面（slot {slot}）"
+            );
+            // 换算成敌槽号会落到 12 及以上（`$C0/16=12`）——即**超出敌槽 0..=11 的合法范围**，
+            // 这正是不能把共享例程的 `x` 当成敌槽偏移套 `slot_of()` 的原因。
+            assert!(
+                ex as usize / 16 >= crate::enemy::state::SLOT_COUNT as usize,
+                "爆炸槽 {slot} 换算成敌槽号会落进合法敌槽区间（x={ex:#04X}）"
+            );
+        }
+    }
 }

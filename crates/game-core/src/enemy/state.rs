@@ -215,6 +215,17 @@ impl SlotState {
     }
 }
 
+/// `EnsExtra` 基址（`$6AF4`，16 字节/槽）——句柄内部的唯一定义处。
+pub(crate) const ENS_EXTRA_BASE: u16 = 0x6AF4;
+
+/// 敌槽字节偏移 → 槽号。asm 例程普遍以 `x = slot*16` 作索引，句柄化时在此换算一次。
+/// 【2026-11-17 上移】原在 `enemy/framework.rs`，因 `enemy/anim.rs` 也要用而收进本模块。
+#[inline]
+pub(crate) fn slot_of(x: u8) -> u8 {
+    debug_assert_eq!(x % 16, 0, "敌槽偏移必须是 16 的倍数，收到 {x:#04X}");
+    x / 16
+}
+
 /// **一个敌槽的语义句柄**（短生命周期，由 `Manager::enemy(slot)` 派生）。
 pub struct Enemy<'a> {
     mem: &'a mut Manager,
@@ -403,6 +414,9 @@ impl<'a> Enemy<'a> {
     }
     pub fn set_anim_delay(&mut self, v: u8) {
         self.setx(ensx::ANIM_DELAY, v);
+    }
+    pub fn reset_anim_index(&self) -> u8 {
+        self.getx(ens_extra::RESET_ANIM_INDEX)
     }
     pub fn set_reset_anim_index(&mut self, v: u8) {
         self.setx(ensx::RESET_ANIM_INDEX, v);

@@ -19,7 +19,7 @@ pub(crate) const SLOT_COUNT: u8 = 4;
 /// 额外面基址（`EnExplosionsExtra.0`）。
 pub(crate) const EXTRA_BASE: u16 = 0x6BB4;
 /// 额外面槽步长（16 B）。
-pub(crate) const EXTRA_STRIDE: u16 = 16;
+pub(crate) const EXTRA_STRIDE: u16 = 8;
 
 /// 主面字段偏移（`Ens` 布局的子集，起点 `$04C0`）。
 pub(crate) mod expl {
@@ -30,7 +30,12 @@ pub(crate) mod expl {
     pub(crate) const QUANTITY: u16 = 7;
 }
 
-/// 额外面字段偏移（`EnsExtra` 布局，起点 `$6BB4`）。
+/// **额外面步长 = 8**（与主面一致）——`M1_NES_NTSC.sym` 实测：
+/// `EnExplosionsExtra.0=$6BB4 / .1=$6BBC / .2=$6BC4 / .3=$6BCC`，`.struct EnExplosionExtra`
+/// 只有 8 字节（status/radiusY/radiusX/animFrame/animDelay/resetAnimIndex/animIndex/hi）。
+/// 【2026-11-17 真错更正】此前按 16 步长构造句柄 ⇒ 槽 1–3 的 status/anim 全错位
+/// （槽 0 因 `0*16==0*8` 恰好正确，故 L4 的 f2152 窗口看不出来——那里只用到槽 0）。
+/// 额外面字段偏移（`EnExplosionExtra` 布局，起点 `$6BB4`）。
 pub(crate) mod explx {
     pub(crate) const STATUS: u16 = 0;
     pub(crate) const ANIM_FRAME: u16 = 3;
@@ -158,7 +163,9 @@ impl Explosion<'_> {
 mod tests_explosion_pool {
     use crate::frame::Manager;
 
-    /// 两半存储的步长不同是这池最容易写错的地方：槽 1 的主面是 `$04C8`、额外面是 `$6BC4`。
+    /// 两半存储的**步长相同（都是 8）但基址不同**：槽 1 主面 `$04C8`、额外面 `$6BBC`。
+    /// 【2026-11-17 更正】旧版此处断言额外面是 `$6BC4`（16 步长假设）——那是**错的**，
+    /// asm `.sym` 实测 `EnExplosionsExtra.1=$6BBC`（槽步长 8，与 `EnExplosionExtra` 8 字节对齐）。
     #[test]
     fn halves_use_different_strides() {
         let mut m = Manager::default();
@@ -166,7 +173,7 @@ mod tests_explosion_pool {
         m.explosion(1).occupy();
         assert_eq!(m.read_ram(0x04C8), 0x50);
         assert_eq!(m.read_ram(0x04C9), 0x41);
-        assert_eq!(m.read_wram(0x6BC4), 1);
+        assert_eq!(m.read_wram(0x6BBC), 1);
         assert!(!m.explosion(1).is_free());
         assert!(m.explosion(0).is_free());
     }

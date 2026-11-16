@@ -9,16 +9,8 @@ use crate::enemy::prep::*;
 use crate::enemy::skree::skree_ai;
 use crate::enemy::sidehopper::{ripper_i_ai, ripper_ii_ai, sidehopper_ai};
 use crate::frame::tick::*;
-use crate::enemy::state::EnemyStatus;
+use crate::enemy::state::{slot_of, EnemyStatus};
 use crate::ram_map;
-
-/// 敌代码内部一直用「字节偏移 `x`（=16×槽号）」；句柄 API 收槽号。
-/// 只在本文件做这一处换算，避免调用点各写一次 `x / 16`。
-#[inline]
-fn slot_of(x: u8) -> u8 {
-    debug_assert_eq!(x % 16, 0, "敌槽偏移必须是 16 的倍数（got {x}）");
-    x / 16
-}
 
 /// UpdateEnemy_Resting_UpdateEnData1F（**asm 内容锚** `: 07:F676`——r26）：
 /// L977B 条目×2→再 asl×3→and #$C0→data1F（**bit2-3→bit6-7**）。
