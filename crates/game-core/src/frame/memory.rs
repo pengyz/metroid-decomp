@@ -223,3 +223,13 @@ mod mss_map_tests {
         assert_eq!(regs2, regs);
     }
 }
+
+impl FrameMemory {
+    /// 语义视图入口：`mem.samus()` —— `memmap::views` 的唯一构造点。
+    ///
+    /// 视图持 `&mut self.ram`，因此一次只能持一个域（`views/mod.rs` 细则 3）；领域代码
+    /// 经它读写 `$0300-$0315`，不再拼地址。
+    pub fn samus(&mut self) -> crate::memmap::views::samus::SamusView<'_> {
+        crate::memmap::views::samus::SamusView::new(&mut self.ram)
+    }
+}

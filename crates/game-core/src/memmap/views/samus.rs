@@ -1,0 +1,320 @@
+//! Samus 状态语义视图——`$0300-$0315` 的字段面（地址只活在本文件）。
+//!
+//! 地址证据（A 级）：`refs/m1disasm/SRC/constants_ram.asm:218-238` + `:860-878`
+//! （`Samus` 结构体 22 字节：status/radiusY/radiusX/animFrame/animDelay/animResetIndex/
+//! animIndex/SamusOnElevator/speedY/speedX/isHit/onScreen/hi/y/x/SamusJumpDsplcmnt/
+//! SamusSubPixelY/SamusSubPixelX/SamusSpeedSubPixelY/SamusSpeedSubPixelX/SamusAccelY/
+//! SamusAccelX）；`Samus.status` 取值=`constants.asm:112` 的 `sa_*` 十态。
+//!
+//! 形态纪律（`views/mod.rs` 三条细则）：
+//! - `status` 出 [`SamusStatus`] 枚举而不是裸 `u8`——调用方写 `SamusStatus::Roll` 而不是 `3`；
+//! - 速度/加速出 `i8`（asm 侧本就是二补数，`lda/lsr/ror` 的算术在视图里不外泄）；
+//! - `health` 跨 `$0106/$0107` 两个字节，视图出 `u16` 并封装「低字节在 $0106」的规则。
+
+use crate::ram_map::{
+    SAMUS_ACCEL_X, SAMUS_ACCEL_Y, SAMUS_ANIM_FRAME, SAMUS_HI, SAMUS_IS_HIT, SAMUS_JUMP_DISP,
+    SAMUS_ON_ELEVATOR, SAMUS_RADIUS_X, SAMUS_RADIUS_Y, SAMUS_SPEED_SUBPIXEL_X,
+    SAMUS_SPEED_SUBPIXEL_Y, SAMUS_SPEED_X_INT, SAMUS_SPEED_Y_INT, SAMUS_STATUS, SAMUS_SUBPIXEL_X,
+    SAMUS_SUBPIXEL_Y, SAMUS_X, SAMUS_Y,
+};
+
+// 下列字段 `ram_map` 未立名（历史只给被单独引用的字节起名）——地址归属本层，
+// 在此就地定义；`ram_map` 侧的重复名（`SAMUS_JUMP_DISP` / `SAMUS_JUMP_DISP`
+// 同指 `$030F`）留待 `consts.rs` 统一时合并。
+/// `Samus.animDelay`（`constants_ram.asm:222`）。
+const ANIM_DELAY: u16 = 0x0304;
+/// `Samus.animResetIndex`。
+const ANIM_RESET_INDEX: u16 = 0x0305;
+/// `Samus.animIndex`。
+const ANIM_INDEX: u16 = 0x0306;
+/// `Samus.onScreen`。
+const ON_SCREEN: u16 = 0x030B;
+/// `Health` 低字节（`constants_ram.asm:806`）。
+const HEALTH_LO: u16 = 0x0106;
+/// `Health` 高字节。
+const HEALTH_HI: u16 = 0x0107;
+
+/// `Samus.status`（`constants.asm:112` 的 `sa_*` 十态）。
+///
+/// 【旧注纠正】`sa_Elevator` 不是表序 4 而是 **9**（表序 4 是 `sa_PntUp`）；旧实现按 4
+/// 判定会让电梯态落进 `status >= sa_Dead(7)` 的死人出径。
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SamusStatus {
+    Stand = 0,
+    Run = 1,
+    Jump = 2,
+    Roll = 3,
+    PointUp = 4,
+    Door = 5,
+    JumpUp = 6,
+    Dead = 7,
+    Dead2 = 8,
+    Elevator = 9,
+}
+
+impl SamusStatus {
+    /// 字节 → 枚举。未定义值不在 ROM 行为空间内（十态遍历完整），返回 `None` 供调用方
+    /// fail-loud，不静默映射成 `Stand`。
+    pub fn from_u8(v: u8) -> Option<Self> {
+        Some(match v {
+            0 => Self::Stand,
+            1 => Self::Run,
+            2 => Self::Jump,
+            3 => Self::Roll,
+            4 => Self::PointUp,
+            5 => Self::Door,
+            6 => Self::JumpUp,
+            7 => Self::Dead,
+            8 => Self::Dead2,
+            9 => Self::Elevator,
+            _ => return None,
+        })
+    }
+
+    pub fn as_u8(self) -> u8 {
+        self as u8
+    }
+
+    /// 球形态（`cmp #sa_Roll` 的语义面——落地反弹/变形判定用）。
+    pub fn is_roll(self) -> bool {
+        matches!(self, Self::Roll)
+    }
+
+    /// 死亡族（`status >= sa_Dead`——`SamusMoveVertically` 等件的短路判据）。
+    pub fn is_dead(self) -> bool {
+        matches!(self, Self::Dead | Self::Dead2)
+    }
+}
+
+/// Samus 字段视图（借 `&mut [u8; 0x800]`——RAM 2KB 镜像面）。
+pub struct SamusView<'a> {
+    ram: &'a mut [u8; 0x800],
+}
+
+impl<'a> SamusView<'a> {
+    pub(crate) fn new(ram: &'a mut [u8; 0x800]) -> Self {
+        Self { ram }
+    }
+
+    #[inline]
+    fn get(&self, addr: u16) -> u8 {
+        self.ram[(addr as usize) & 0x7FF]
+    }
+
+    #[inline]
+    fn set(&mut self, addr: u16, v: u8) {
+        self.ram[(addr as usize) & 0x7FF] = v;
+    }
+
+    pub fn status(&self) -> Option<SamusStatus> {
+        SamusStatus::from_u8(self.get(SAMUS_STATUS))
+    }
+
+    /// 原始字节（比较 `>= sa_Dead` 这类**数值序**判据时用；语义判据请用 [`Self::status`]）。
+    pub fn status_raw(&self) -> u8 {
+        self.get(SAMUS_STATUS)
+    }
+
+    pub fn set_status(&mut self, v: SamusStatus) {
+        self.set(SAMUS_STATUS, v.as_u8());
+    }
+
+    pub fn radius_y(&self) -> u8 {
+        self.get(SAMUS_RADIUS_Y)
+    }
+    pub fn set_radius_y(&mut self, v: u8) {
+        self.set(SAMUS_RADIUS_Y, v);
+    }
+    pub fn radius_x(&self) -> u8 {
+        self.get(SAMUS_RADIUS_X)
+    }
+    pub fn set_radius_x(&mut self, v: u8) {
+        self.set(SAMUS_RADIUS_X, v);
+    }
+
+    pub fn anim_frame(&self) -> u8 {
+        self.get(SAMUS_ANIM_FRAME)
+    }
+    pub fn set_anim_frame(&mut self, v: u8) {
+        self.set(SAMUS_ANIM_FRAME, v);
+    }
+    pub fn anim_delay(&self) -> u8 {
+        self.get(ANIM_DELAY)
+    }
+    pub fn set_anim_delay(&mut self, v: u8) {
+        self.set(ANIM_DELAY, v);
+    }
+    pub fn anim_reset_index(&self) -> u8 {
+        self.get(ANIM_RESET_INDEX)
+    }
+    pub fn anim_index(&self) -> u8 {
+        self.get(ANIM_INDEX)
+    }
+    pub fn set_anim_index(&mut self, v: u8) {
+        self.set(ANIM_INDEX, v);
+    }
+
+    pub fn on_elevator(&self) -> bool {
+        self.get(SAMUS_ON_ELEVATOR) != 0
+    }
+    pub fn set_on_elevator(&mut self, v: bool) {
+        self.set(SAMUS_ON_ELEVATOR, v as u8);
+    }
+
+    /// `speedY`（`$0308`）——asm 侧二补数，视图出 `i8`。
+    pub fn speed_y(&self) -> i8 {
+        self.get(SAMUS_SPEED_Y_INT) as i8
+    }
+    pub fn set_speed_y(&mut self, v: i8) {
+        self.set(SAMUS_SPEED_Y_INT, v as u8);
+    }
+    pub fn speed_x(&self) -> i8 {
+        self.get(crate::ram_map::SAMUS_SPEED_X_INT) as i8
+    }
+    pub fn set_speed_x(&mut self, v: i8) {
+        self.set(crate::ram_map::SAMUS_SPEED_X_INT, v as u8);
+    }
+
+    pub fn is_hit(&self) -> u8 {
+        self.get(SAMUS_IS_HIT)
+    }
+    pub fn set_is_hit(&mut self, v: u8) {
+        self.set(SAMUS_IS_HIT, v);
+    }
+    pub fn on_screen(&self) -> u8 {
+        self.get(ON_SCREEN)
+    }
+
+    pub fn hi(&self) -> u8 {
+        self.get(SAMUS_HI)
+    }
+    pub fn set_hi(&mut self, v: u8) {
+        self.set(SAMUS_HI, v);
+    }
+    pub fn y(&self) -> u8 {
+        self.get(SAMUS_Y)
+    }
+    pub fn set_y(&mut self, v: u8) {
+        self.set(SAMUS_Y, v);
+    }
+    pub fn x(&self) -> u8 {
+        self.get(SAMUS_X)
+    }
+    pub fn set_x(&mut self, v: u8) {
+        self.set(SAMUS_X, v);
+    }
+
+    pub fn jump_displacement(&self) -> u8 {
+        self.get(SAMUS_JUMP_DISP)
+    }
+    pub fn set_jump_displacement(&mut self, v: u8) {
+        self.set(SAMUS_JUMP_DISP, v);
+    }
+
+    pub fn sub_pixel_y(&self) -> u8 {
+        self.get(SAMUS_SUBPIXEL_Y)
+    }
+    pub fn set_sub_pixel_y(&mut self, v: u8) {
+        self.set(SAMUS_SUBPIXEL_Y, v);
+    }
+    pub fn sub_pixel_x(&self) -> u8 {
+        self.get(SAMUS_SUBPIXEL_X)
+    }
+    pub fn set_sub_pixel_x(&mut self, v: u8) {
+        self.set(SAMUS_SUBPIXEL_X, v);
+    }
+    pub fn speed_sub_pixel_y(&self) -> u8 {
+        self.get(SAMUS_SPEED_SUBPIXEL_Y)
+    }
+    pub fn set_speed_sub_pixel_y(&mut self, v: u8) {
+        self.set(SAMUS_SPEED_SUBPIXEL_Y, v);
+    }
+    pub fn speed_sub_pixel_x(&self) -> u8 {
+        self.get(SAMUS_SPEED_SUBPIXEL_X)
+    }
+    pub fn set_speed_sub_pixel_x(&mut self, v: u8) {
+        self.set(SAMUS_SPEED_SUBPIXEL_X, v);
+    }
+
+    pub fn accel_y(&self) -> i8 {
+        self.get(SAMUS_ACCEL_Y) as i8
+    }
+    pub fn set_accel_y(&mut self, v: i8) {
+        self.set(SAMUS_ACCEL_Y, v as u8);
+    }
+    pub fn accel_x(&self) -> i8 {
+        self.get(SAMUS_ACCEL_X) as i8
+    }
+    pub fn set_accel_x(&mut self, v: i8) {
+        self.set(SAMUS_ACCEL_X, v as u8);
+    }
+
+    /// 血量（`$0106` 低 + `$0107` 高）——`SamusHurt ; 07:F306` 的 `lda/sta` 两字节接力
+    /// 就封在这里。
+    pub fn health(&self) -> u16 {
+        u16::from(self.get(HEALTH_LO)) | (u16::from(self.get(HEALTH_HI)) << 8)
+    }
+
+    pub fn set_health(&mut self, v: u16) {
+        self.set(HEALTH_LO, (v & 0x00FF) as u8);
+        self.set(HEALTH_HI, (v >> 8) as u8);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn view(buf: &mut [u8; 0x800]) -> SamusView<'_> {
+        SamusView::new(buf)
+    }
+
+    /// 枚举 ↔ 字节往返：`status` 落在 `$0300`，写枚举即写该字节。
+    #[test]
+    fn status_roundtrip_through_view() {
+        let mut ram = [0u8; 0x800];
+        {
+            let mut s = view(&mut ram);
+            s.set_status(SamusStatus::Elevator);
+        }
+        assert_eq!(ram[0x0300], 9, "sa_Elevator=9（旧注误记 4）");
+        assert_eq!(view(&mut ram).status(), Some(SamusStatus::Elevator));
+    }
+
+    /// 未定义值不静默映射（fail-loud 由调用方决定）。
+    #[test]
+    fn undefined_status_is_none() {
+        let mut ram = [0u8; 0x800];
+        ram[0x0300] = 0x0A;
+        assert_eq!(view(&mut ram).status(), None);
+    }
+
+    /// 速度是二补数：`-2` 写进 `$0308` 得 `0xFE`。
+    #[test]
+    fn speed_y_is_signed() {
+        let mut ram = [0u8; 0x800];
+        view(&mut ram).set_speed_y(-2);
+        assert_eq!(ram[0x0308], 0xFE);
+        assert_eq!(view(&mut ram).speed_y(), -2);
+    }
+
+    /// 血量跨两字节：`0x0120` ⇒ `$0106=0x20` / `$0107=0x01`。
+    #[test]
+    fn health_spans_two_bytes() {
+        let mut ram = [0u8; 0x800];
+        view(&mut ram).set_health(0x0120);
+        assert_eq!(ram[0x0106], 0x20);
+        assert_eq!(ram[0x0107], 0x01);
+        assert_eq!(view(&mut ram).health(), 0x0120);
+    }
+
+    /// 球形态/死亡族判据（asm `cmp #sa_Roll`、`status >= sa_Dead`）。
+    #[test]
+    fn roll_and_dead_predicates() {
+        assert!(SamusStatus::Roll.is_roll());
+        assert!(!SamusStatus::Stand.is_roll());
+        assert!(SamusStatus::Dead.is_dead());
+        assert!(SamusStatus::Dead2.is_dead());
+        assert!(!SamusStatus::Elevator.is_dead());
+    }
+}

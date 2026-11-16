@@ -17,6 +17,7 @@
 //! 积分器拼装位：int_x/int_y（integrators.rs 证明级件）随 state 处理族收编到此域。
 
 use crate::state::FrameMemory; // G11 破环：类型层直取（原经 frame/）
+use crate::memmap::views::samus::SamusStatus;
 use crate::ram_map::{
     ON_FROZEN_ENEMY, SAMUS_ACCEL_Y, SAMUS_HI, SAMUS_HORZ_SPEED_MAX, SAMUS_ON_ELEVATOR,
     SAMUS_RADIUS_Y, SAMUS_Y,
@@ -1184,7 +1185,7 @@ fn apply_lava_state(mem: &mut FrameMemory, in_lava: bool) {
 /// 连做两次，第二次带第一次的借位）⇒ `jmp SamusMoveHorizontally`。
 /// 返回 true=已走反弹径（调用方**不得**再走落地清零）。
 fn ball_bounce_after_landing(mem: &mut FrameMemory) -> bool {
-    if mem.read_ram(crate::ram_map::SAMUS_STATUS) != 3 {
+    if mem.samus().status() != Some(SamusStatus::Roll) {
         return false; // sa_Roll（constants.asm:106）
     }
     let si = mem.read_ram(SAMUS_SPEED_Y_I);
@@ -1205,7 +1206,7 @@ fn ball_bounce_after_landing(mem: &mut FrameMemory) -> bool {
 }
 
 pub fn lava_and_move_check(mem: &mut FrameMemory) {
-    let status = mem.read_ram(crate::ram_map::SAMUS_STATUS);
+    let status = mem.samus().status_raw();
     if status != 9 {
         // `sa_Elevator = 9`（constants.asm:112——旧注「表序 4」系误记：4 是 sa_PntUp，
         // 会让电梯态误入 `>= sa_Dead` 的死人出径）
@@ -1441,11 +1442,9 @@ pub fn samus_enter_door(mem: &mut FrameMemory) {
     mem.write_ram(crate::ram_map::DOOR_DELAY, 0x12); // 18 帧
     // $58←($58<<4)|Samus.status（Amul16 形）；status←sa_Door(5)
     let dd = mem.read_ram(crate::ram_map::SAMUS_DOOR_DATA);
-    mem.write_ram(
-        crate::ram_map::SAMUS_DOOR_DATA,
-        (dd << 4) | mem.read_ram(crate::ram_map::SAMUS_STATUS),
-    );
-    mem.write_ram(crate::ram_map::SAMUS_STATUS, 5);
+    let st = mem.samus().status_raw(); // 借用互斥：先取后写（asm 同序 $58←($58<<4)|status）
+    mem.write_ram(crate::ram_map::SAMUS_DOOR_DATA, (dd << 4) | st);
+    mem.samus().set_status(SamusStatus::Door);
 }
 
 fn object_check_move_horizontal(mem: &mut FrameMemory, x: u8, dist: u8) -> bool {
