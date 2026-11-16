@@ -46,6 +46,28 @@ impl SamusState {
 4. 投影测试三件套：typed→字节往返、字节→typed 解码、**表与投影一致**；
 5. 迁移完成后跑一次 100% 录像窗口（f2160 附近），确认 `frames_synced` 不退。
 
+## 3.5 迁字段的真实成本：找全「读取面」
+
+第三批踩到一个必须记下来的坑：迁完 `hi/y/x` 后，既有锚测
+`capture_seam::capture_n_ram_face_matches_state_row_n` 立刻红——
+`capture(450) SamusX=0 vs 128`。
+
+原因不是 typed 结构写错，而是 **ram.hex dump 直接遍历 `mem.ram()`（裸存储）**，
+而 typed 字段的真相在 `Manager.samus` 里，裸面自然是 0。
+
+所以地址面（`read_ram`）只是**明面上的**读取者；真正的暗面是**整面导出**：
+
+| 导出面 | 位置 | 处置 |
+|---|---|---|
+| `ram.hex` / `ppu.hex` dump | `crates/game-core/src/bin/rust_screenshot.rs` | 改走 `snapshot_nes()` |
+| `TitleFace.ram/wram` | `crates/game-core/src/title/bridge.rs` | 改走 `snapshot_nes()` |
+| `--state-out` / `watch_snapshot` | `frame/memory.rs` | 已走投影 |
+| `capture_mss` | `frame/memory.rs` | 已走投影 |
+
+结论：**每迁一批字段，先全仓搜 `\.ram()`/`\.wram()` 的直读点**，再动结构——
+否则会得到"测试绿但 dump 缺字段"的假绿，而这类假绿恰好会被下游锚测（如 capture_seam）抓住，
+但那是在付出一次红测之后。
+
 ## 4. 已知陷阱
 
 - **裸字节写会静默失效**：迁入 typed 后 `ram_mut()[0x0300] = v` 不再改变状态。
@@ -63,6 +85,6 @@ impl SamusState {
 |---|---|---|---|
 | 1 | `$0300 status`（枚举 + `Undefined`） | `9dbbfe07` | 637 |
 | 2 | `$0308/$0309/$0314/$0315`（`i8`） | `4043b7e6` | 640 |
-| 3（待做） | `hi/y/x` 位置三元组 | — | — |
+| 3 | `$030C/$030D/$030E` → `Position { hi, y, x }`（+ `y16()`） | `c875f3b9` | 641 |
 | 4（待做） | 动画四元组 `frame/delay/reset/index` | — | — |
 | 5（待做） | `radiusY/radiusX`、`isHit`、`onScreen`、`subPixel*` | — | — |
