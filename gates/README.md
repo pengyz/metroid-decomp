@@ -81,7 +81,7 @@
 | `no-env-hooks` | 禁逻辑层环境变量测试钩子：诊断只能走独立测试用例或 `--trace` 启动参数（用户裁定 2026-11-15） | 启用（2026-11-15） |
 | `routine-inventory` | 例程清单：`unported` 只减不增 + 分母指纹不漂移（`tools/routine_inventory.py --check`） | 启用（结构驱动） |
 | `bankvars` | 按区变量账本：`pending` 只减不增 + `covered` 必须带按区访问器（`tools/bankvars.py`） | 启用（结构驱动） |
-| `no-raw-addr` | typed 绕过面只减不增：**生产面**裸地址字面量 + `ram_map::X` 具名常量（`tools/no_raw_addr.py`，双账本；测试面单独统计不参与棘轮——测试钉 NES 字节是断言，用 typed 视图会让断言读回自己） | 启用（typed 域） |
+| `no-raw-addr` | typed 绕过面只减不增（字面量识别含 `u16` 后缀与大小写变体；**不含 `0x400` 短形**——它同时是名表段长，会产生假阳）：**生产面**裸地址字面量 + `ram_map::X` 具名常量（`tools/no_raw_addr.py`，双账本；测试面单独统计不参与棘轮——测试钉 NES 字节是断言，用 typed 视图会让断言读回自己） | 启用（typed 域） |
 
 ### proof-checks（证书防腐 v2，2026-10-15）
 

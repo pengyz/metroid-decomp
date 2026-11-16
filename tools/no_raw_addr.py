@@ -55,8 +55,13 @@ RAM_MAP = SRC / "ram_map.rs"
 
 # 受监控的地址族：Samus 主体 22 字节 + 敌槽两基址 + 爆炸池两基址。
 # 加新地址族前先确认它已有 typed 视图（否则门会逼人迁移一个还不存在的对象）。
+# 【2026-11-17 加固】旧式要求字面量后是词边界，而 Rust 主流写法是 `0x6AF4u16`——
+# 后缀形（`u16` / `_u16`）与短形（`0x400` / `0x4c0`）全部隐形，等于门看不见绕过。
+# 现在：不分大小写、可选类型后缀。（**不加短形** `0x400`——它同时是名表段长，
+# 会把 `render/ppu.rs` 的 `nametable[0..0x400]` 误判成敌槽基址；宁可漏也要零假阳。）
 ADDR_RE = re.compile(
-    r"\b0x(?:0?3(?:0[0-9a-fA-F]|1[0-6])|0400|6AF4|04C0|6BB4)\b"
+    r"\b0x(?:0?3(?:0[0-9a-f]|1[0-6])|0400|6af4|04c0|6bb4)(?:_?u(?:16|32))?\b",
+    re.IGNORECASE,
 )
 
 EXEMPT = {
@@ -66,6 +71,7 @@ EXEMPT = {
     "title/state.rs": "typed 层自己的实现面",
     "world/object.rs": "对象池本体：池基址/步长的唯一定义处（等价的 enemy/state.rs）",
     "enemy/explosion.rs": "爆炸池本体：两半存储（$04C0 8 B / $6BB4 16 B）基址与步长的唯一定义处",
+    "state.rs": "`Manager` 本体：存储字段与 `restore_mss` 回灌（字节面→typed 的唯一入口）",
     "memmap/storage.rs": "存储层（字节面本体）",
     "memmap/mod.rs": "存储层导出面",
     "ram_map.rs": "符号→地址的唯一定义处",
