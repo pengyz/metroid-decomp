@@ -253,24 +253,22 @@ pub(crate) fn explode_enemy(mem: &mut crate::frame::Manager, x: u8) {
     // asm：`ldx #EnExplosions.0-Ens / @loop: lda EnsExtra.status,x / beq @exitLoop /
     // adc #_sizeof_EnExplosions.0 / cmp #EnExplosions-Ens+_sizeof` ⇒ 池满则整段跳过。
     let area_now = crate::frame::cur_area(mem);
-    for i in 0..4u8 {
-        let ex = 0xC0 + i * 8;
-        if mem.read_wram(0x6AF4 + ex as u16) != 0 {
+    for slot in 0..crate::enemy::explosion::SLOT_COUNT {
+        if !mem.explosion(slot).is_free() {
             continue;
         }
         let ex_anim = game_data::assets::explosion_anim(area_now);
-        mem.write_wram(0x6AF4 + ex as u16 + 5, ex_anim); // resetAnimIndex
-        mem.write_wram(0x6AF4 + ex as u16 + 6, ex_anim); // animIndex
-        mem.write_wram(0x6AF4 + ex as u16 + 4, 0); // animDelay←0
-        mem.write_ram(0x0400 + ex as u16 + 6, 0x0A); // delay←$0A
-        // **爆炸池不是敌槽**：`$04C0` 池是 8 B/槽（4 槽）、步长 ≠ 敌槽 16 B，`slot_of(ex)` 不成立。
-        // 而且它的 status **自成一域**（0=空槽，asm 这里只做 `inc status`：0→1＝占用），
-        // 与 `enemyStatus_*` 七态不是同一套词表 ⇒ 刻意不用 `EnemyStatus`。
-        mem.write_wram(0x6AF4 + ex as u16, 1); // asm `inc status`（池域：0→1＝占用）
-        mem.write_ram(0x0400 + ex as u16 + 7, if sa_x & 0x40 != 0 { 3 } else { 0 });
-        mem.write_ram(0x0400 + ex as u16, mem.read_ram(0x0400 + px)); // y
-        mem.write_ram(0x0400 + ex as u16 + 1, mem.read_ram(0x0400 + px + 1)); // x
-        mem.write_wram(0x6AF4 + ex as u16 + 7, mem.read_wram(0x6AF4 + px + 7)); // hi
+        let enemy_y = mem.enemy(slot_of(px as u8)).y();
+        let enemy_x = mem.enemy(slot_of(px as u8)).pos_x();
+        let enemy_hi = mem.enemy(slot_of(px as u8)).hi();
+        // 注意：位置三字节抄自**敌槽**，不是爆炸池原值。
+        let mut e = mem.explosion(slot);
+        e.set_anim(ex_anim);
+        e.set_delay(0x0A);
+        e.occupy(); // asm `inc status`（池域：0→1＝占用）
+        e.set_quantity(if sa_x & 0x40 != 0 { 3 } else { 0 });
+        e.set_pos(enemy_y, enemy_x);
+        e.set_hi(enemy_hi);
         break;
     }
 }
@@ -279,13 +277,13 @@ pub(crate) fn explode_enemy(mem: &mut crate::frame::Manager, x: u8) {
 /// 【步骤 2/3：update 接上，绘制待接】`UpdateAllEnemyExplosions ; 07:FA9D`：
 /// 4 槽逐个 `stx PageIndex`，status≠0 才 `jsr UpdateEnemyExplosion`。
 pub(crate) fn update_all_enemy_explosions(mem: &mut crate::frame::Manager) {
-    for i in 0..4u8 {
-        let x = 0xC0 + i * 8;
+    for slot in 0..crate::enemy::explosion::SLOT_COUNT {
+        let x = crate::enemy::explosion::ens_offset(slot);
         mem.write_ram(0x004B, x); // PageIndex（asm `stx PageIndex`）
-        if mem.read_wram(0x6AF4 + x as u16) == 0 {
+        if mem.explosion(slot).is_free() {
             continue;
         }
-        update_enemy_explosion(mem, x);
+        update_enemy_explosion(mem, slot, x);
     }
 }
 
@@ -294,26 +292,24 @@ pub(crate) fn update_all_enemy_explosions(mem: &mut crate::frame::Manager) {
 /// `@explosionMovementTable ; 07:FAEA`（(dy,dx)：单爆 (0,0) / 三连末 ($0C,$1C) /
 /// 次 ($10,$F0) / 首 ($F0,$08)）位移；尾件 `lda #$80 / sta ObjectCntrl / lda #$03 /
 /// jmp AnimDrawEnemy`（`AnimDrawEnemy ; 07:F97E` = `jsr UpdateEnemyAnim` + `jmp DrawEnemy`）。
-fn update_enemy_explosion(mem: &mut crate::frame::Manager, x: u8) {
-    let ex = 0x0400 + x as u16;
-    let exx = 0x6AF4 + x as u16;
-    let d = mem.read_ram(ex + 6).wrapping_sub(1);
-    mem.write_ram(ex + 6, d);
+fn update_enemy_explosion(mem: &mut crate::frame::Manager, slot: u8, x: u8) {
+    let d = mem.explosion(slot).delay().wrapping_sub(1);
+    mem.explosion(slot).set_delay(d);
     if d == 0 {
-        mem.write_ram(ex + 6, 0x0C); // 3 视频帧 × 4 动画帧
-        let q = mem.read_ram(ex + 7).wrapping_sub(1);
-        mem.write_ram(ex + 7, q);
+        mem.explosion(slot).set_delay(0x0C); // 3 视频帧 × 4 动画帧
+        let q = mem.explosion(slot).quantity().wrapping_sub(1);
+        mem.explosion(slot).set_quantity(q);
         // `bmi @removeExplosion / bne @dontRemoveExplosion` ⇒ 负或零都移除
         if q == 0 || q & 0x80 != 0 {
-            mem.write_wram(exx, 0); // RemoveEnemy
+            mem.explosion(slot).free(); // RemoveEnemy
         }
     }
-    if mem.read_ram(ex + 6) == 0x09 {
+    if mem.explosion(slot).delay() == 0x09 {
         // @applySpeed（跳过瓦判）：直接给 y/x 速度
         const TBL: [(u8, u8); 4] = [(0x00, 0x00), (0x0C, 0x1C), (0x10, 0xF0), (0xF0, 0x08)];
-        let q = (mem.read_ram(ex + 7) as usize).min(3);
+        let q = (mem.explosion(slot).quantity() as usize).min(3);
         let (dy, dx) = TBL[q];
-        apply_explosion_speed(mem, x, dy, dx);
+        apply_explosion_speed(mem, slot, dy, dx);
     }
     // 尾件（07:FAE1）：`lda #$80 / sta ObjectCntrl / lda #$03 / jmp AnimDrawEnemy`
     // `AnimDrawEnemy ; 07:F97E` = `jsr UpdateEnemyAnim` + `jmp DrawEnemy`；
@@ -325,13 +321,11 @@ fn update_enemy_explosion(mem: &mut crate::frame::Manager, x: u8) {
 
 /// `@applySpeed`（`ApplySpeedToPosition ; 07:FD8F` 的敌侧入口）。失败（carry clear）
 /// ⇒ 调用方 `RemoveEnemy`。
-fn apply_explosion_speed(mem: &mut crate::frame::Manager, x: u8, dy: u8, dx: u8) {
+fn apply_explosion_speed(mem: &mut crate::frame::Manager, slot: u8, dy: u8, dx: u8) {
     let horizontal_scroll = mem.read_ram(0x0049) & 0x02 != 0; // ScrollDir
-    let ex = 0x0400 + x as u16;
-    let exx = 0x6AF4 + x as u16;
-    let mut hi = mem.read_wram(exx + 7);
-    let mut y = mem.read_ram(ex);
-    let mut pos_x = mem.read_ram(ex + 1);
+    let mut hi = mem.explosion(slot).hi();
+    let mut y = mem.explosion(slot).y();
+    let mut pos_x = mem.explosion(slot).x();
     let mut fail = false;
     if dy != 0 {
         if dy & 0x80 == 0 {
@@ -373,12 +367,11 @@ fn apply_explosion_speed(mem: &mut crate::frame::Manager, x: u8, dy: u8, dx: u8)
         pos_x = n;
     }
     if fail {
-        mem.write_wram(exx, 0); // RemoveEnemy
+        mem.explosion(slot).free(); // RemoveEnemy
         return;
     }
-    mem.write_ram(ex, y);
-    mem.write_ram(ex + 1, pos_x);
-    mem.write_wram(exx + 7, hi & 0x01);
+    mem.explosion(slot).set_pos(y, pos_x);
+    mem.explosion(slot).set_hi(hi & 0x01);
 }
 
 /// UpdateEnemy_Explode（**asm 内容锚** `: 07:F40D`（jmp ChooseEnemyAIRoutine（爆在 AI

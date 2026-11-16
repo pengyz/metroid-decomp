@@ -65,6 +65,7 @@ EXEMPT = {
     "enemy/state.rs": "typed 层自己的实现面",
     "title/state.rs": "typed 层自己的实现面",
     "world/object.rs": "对象池本体：池基址/步长的唯一定义处（等价的 enemy/state.rs）",
+    "enemy/explosion.rs": "爆炸池本体：两半存储（$04C0 8 B / $6BB4 16 B）基址与步长的唯一定义处",
     "memmap/storage.rs": "存储层（字节面本体）",
     "memmap/mod.rs": "存储层导出面",
     "ram_map.rs": "符号→地址的唯一定义处",
