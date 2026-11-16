@@ -185,7 +185,11 @@ pub(crate) fn uw_skree_projectiles(mem: &mut crate::frame::FrameMemory) {
     // 12148）：`lda #$40 / sta PageIndex`——显示面共用 PowerUpDraw($340) 槽。
     mem.write_ram(0x004B, 0x40);
     const SPEED: [(i8, i8); 4] = [(0, -5), (-5, -2), (-5, 2), (0, 5)]; // FC5D 逐字
-    for (si, yy) in [12u16, 8, 4, 0].iter().enumerate() {
+    for yy in [12u16, 8, 4, 0] {
+        // 【2026-11-16 修：case-002 f1250】速度表按**槽号**索引（asm 更新循环 `ldy` 从 0 递增，
+        // 槽 i ↔ SPEED[i]）。旧形用 `enumerate` 序号（循环序 12,8,4,0 ⇒ si=0 对槽 3）⇒四枚弹
+        // 方向整体错位（f1250 rust x=0x9C vs emu 0x38）⇒无一命中 Samus ⇒ 缺伤害/击退。
+        let si = (yy / 4) as usize;
         let base = 0x00A0u16 + yy;
         let d = mem.read_ram(base);
         if d == 0 {
@@ -193,18 +197,78 @@ pub(crate) fn uw_skree_projectiles(mem: &mut crate::frame::FrameMemory) {
         }
         mem.write_ram(base, d.wrapping_sub(1)); // dec dieDelay
         let (vy, vx) = SPEED[si];
+        // 【2026-11-16 修：case-002 f1250 真因】`ApplySpeedToPosition ; 07:FD8F` 逐字：
+        // 越界不是「u8 加法进位」而是**分轴、按滚动方向**判：
+        //  · y 正：`adc pos / bcs` 或 `cmp #$F0 / bcs` ⇒ 包到 240 以上；水平房（ScrollDir&2≠0）
+        //    ⇒ @exit_failure；垂直房 ⇒ +$10 回绕并 inc hi。
+        //  · y 负：`adc pos / bcs` 无借位=正常；借位 ⇒ 水平房 failure / 垂直房回绕 inc hi。
+        //  · x 正/负：与 y **对称相反**——垂直房 failure，水平房回绕 inc hi（永不杀）。
+        // 旧形 `overflowing_add` 一判到底 ⇒ 凡负速（`pos + 0xFB`）恒 u8 进位 ⇒ 四枚弹里
+        // 三枚在出生帧即被误杀（dieDelay 0 / 位姿停在出生点），仅向 +5 的那枚存活。
+        let vy_v = mem.read_ram(crate::ram_map::SCROLL_DIR) & 0x02 != 0; // true=水平房
         let mut py = mem.read_ram(base + 1);
         let mut px = mem.read_ram(base + 2);
-        let (ny, oy) = py.overflowing_add(vy as u8);
-        let (nx, ox) = px.overflowing_add(vx as u8);
-        if oy || ox {
-            mem.write_ram(base, 0); // Kill（出界——asm bcc KillSkreeProjectile）
+        let mut phi = mem.read_ram(base + 3);
+        let mut failed = false;
+        if vy > 0 {
+            let s = py as u16 + vy as u16;
+            if s > 0xFF || s >= 0xF0 {
+                if vy_v {
+                    failed = true;
+                } else {
+                    py = (s as u8).wrapping_add(0x10);
+                    phi = phi.wrapping_add(1);
+                }
+            } else {
+                py = s as u8;
+            }
+        } else if vy < 0 {
+            let m = (-(vy as i16)) as u8;
+            if py < m {
+                if vy_v {
+                    failed = true;
+                } else {
+                    py = py.wrapping_sub(m).wrapping_sub(0x10);
+                    phi = phi.wrapping_add(1);
+                }
+            } else {
+                py -= m;
+            }
+        }
+        if !failed {
+            if vx > 0 {
+                let s = px as u16 + vx as u16;
+                if s > 0xFF {
+                    if vy_v {
+                        px = s as u8;
+                        phi = phi.wrapping_add(1);
+                    } else {
+                        failed = true;
+                    }
+                } else {
+                    px = s as u8;
+                }
+            } else if vx < 0 {
+                let m = (-(vx as i16)) as u8;
+                if px < m {
+                    if vy_v {
+                        px = px.wrapping_sub(m);
+                        phi = phi.wrapping_add(1);
+                    } else {
+                        failed = true;
+                    }
+                } else {
+                    px -= m;
+                }
+            }
+        }
+        if failed {
+            mem.write_ram(base, 0); // KillSkreeProjectile
             continue;
         }
-        py = ny;
-        px = nx;
         mem.write_ram(base + 1, py);
         mem.write_ram(base + 2, px);
+        mem.write_ram(base + 3, phi & 1);
         // 【goal-轮22 弹显示态件】UpdateSkreeProjectile（:12191-12205 逐字）：位姿写
         // PowerUpDraw（$340 槽——y/x/hi）——显示面状态（ObjDrawFrame SkreeProjectile
         // 帧（_id_ObjFrame_SkreeProjectile）随件）。

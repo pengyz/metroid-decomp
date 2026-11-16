@@ -187,7 +187,7 @@ fn enemy_delta_for_move(mem: &mut crate::frame::FrameMemory, x: u8) -> (i8, i8) 
     let d1f = mem.read_wram(ens_addr(x, ENS_F_DATA1F));
     let can_up = enemy_check_move_up(mem, x);
     let can_down = enemy_check_move_down(mem, x);
-    let (dy, dx, ndelay, ninstr, nd1f, _trig) = crate::enemy::common::enemy_get_delta_xy(
+    let (dy, dx, ndelay, ninstr, nd1f, trig) = crate::enemy::common::enemy_get_delta_xy(
         crate::frame::cur_area(mem),
         type_,
         d05,
@@ -204,6 +204,23 @@ fn enemy_delta_for_move(mem: &mut crate::frame::FrameMemory, x: u8) -> (i8, i8) 
     mem.write_wram(ens_addr(x, ENS_F_DATA1F), nd1f);
     mem.write_ram(en_addr(x, EN_DELAY), ndelay);
     mem.write_ram(en_addr(x, EN_INSTR), ninstr);
+    if trig {
+        // `EnemyGetDeltaY@fail ; $82FB`（areas_common.asm:773-797）：`L968B[type]` bit5 置 ⇒
+        // `data05 = ((data05 ^ $05) | L968B) & $1F`（清 bits6-7；bit5 随后由 TriggerResting 置）。
+        let t = mem.read_wram(ens_addr(x, ENS_F_TYPE)) & 0x0F;
+        let l968b = game_data::assets::enemy_force_attribs(crate::frame::cur_area(mem))
+            .get(t as usize)
+            .copied()
+            .unwrap_or(0);
+        if l968b & 0x20 != 0 {
+            let d5 = mem.read_ram(en_addr(x, EN_F_DATA05));
+            mem.write_ram(en_addr(x, EN_F_DATA05), ((d5 ^ 0x05) | l968b) & 0x1F);
+        }
+        // `EnemyTriggerResting_AndClearEnAccelY ; $81B1`：data05 bit5 置 + accelY←0。
+        let d5 = mem.read_ram(en_addr(x, EN_F_DATA05));
+        mem.write_ram(en_addr(x, EN_F_DATA05), d5 | 0x20);
+        mem.write_wram(ens_addr(x, ENS_F_ACCEL_Y), 0);
+    }
     (dy, dx)
 }
 

@@ -52,90 +52,13 @@ pub(crate) fn skree_ai(mem: &mut crate::frame::FrameMemory, x: u8) {
         // 刚落地（:21-25）：爆延时←$3A（约 1 秒）
         mem.write_wram(0x6AF4 + x as u16 + 13, 0x3A);
     }
-    // 坠落/落地径（SkreeExit_Active（:56-60）：anim 2+移动）——
-    // 【对抗复核收敛⑤（2026-11-01）】EnemyMove 双门（areas_common:115-123 逐字）：
-    // ①data05 bit6=30fps 门（`lda data05/asl/bmi`——置⇒**跳过移动**）②status==Active(2)
-    // 门（`lda status/cmp #2/bne RTS`）——两门不过⇒只 anim+draw（无位移）。
-    let d05 = mem.read_ram(0x0400 + x as u16 + 5);
-    let st_now = mem.read_wram(0x6AF4 + x as u16);
-    let gates_ok = (d05 & 0x40) == 0 && st_now == 2;
-    if gates_ok {
-    let type_ = mem.read_wram(0x6AF4 + x as u16 + 14) & 0x3F;
-    let d05 = mem.read_ram(0x0400 + x as u16 + 5);
-    let mov_idx = mem.read_ram(0x0400 + x as u16 + EN_MOV_IDX); // ROM `BD 08 04`
-    let instr2 = mem.read_ram(0x0400 + x as u16 + EN_INSTR); // ROM `BC 06 04`
-    let delay = mem.read_ram(0x0400 + x as u16 + EN_DELAY); // ROM `FE 09 04`
-    let sub_y = mem.read_ram(0x0400 + x as u16 + EN_SUBPIXEL_Y); // union 同字节
-    let speed_y = mem.read_ram(0x0400 + x as u16 + 2);
-    let accel_y = mem.read_wram(0x6AF4 + x as u16 + 10);
-    let d1f = mem.read_wram(0x6AF4 + x as u16 + 15);
-    let can_up = enemy_check_move_up(mem, x);
-    let can_down = enemy_check_move_down(mem, x);
-    let (dy, dx, ndelay, ninstr, nd1f, trig) = crate::enemy::common::enemy_get_delta_xy(
-        crate::frame::cur_area(mem), type_, d05, mov_idx, instr2, delay, sub_y, speed_y, accel_y, d1f, can_up, can_down);
-    mem.write_wram(0x6AF4 + x as u16 + 15, nd1f);
-    if trig {
-        // `$82FB @fail`：`L968B[type]` bit5 置 ⇒ **翻面朝 + 清 bits6-7**
-        // （asm `lda data05 / eor #$05 / ora L968B,y / and #$1F / sta data05`）。
-        // 对 Skree（`L968B[4]=$86`，bit5=0）不可观测；对 `$18` 一系（`L968B[0x18]=$20`）必需。
-        let l968b = game_data::assets::enemy_force_attribs(crate::frame::cur_area(mem))
-            .get(type_ as usize)
-            .copied()
-            .unwrap_or(0);
-        if l968b & 0x20 != 0 {
-            let d5f = mem.read_ram(0x0400 + x as u16 + 5);
-            mem.write_ram(0x0400 + x as u16 + 5, ((d5f ^ 0x05) | l968b) & 0x1F);
-        }
-        // `EnemyTriggerResting_AndClearEnAccelY`（`$81B1`）：bits5 置 + accelY（EnsExtra+10）清 0。
-        let d5t = mem.read_ram(0x0400 + x as u16 + 5);
-        mem.write_ram(0x0400 + x as u16 + 5, d5t | 0x20);
-        mem.write_wram(0x6AF4 + x as u16 + 10, 0);
-    }
-    mem.write_ram(0x0400 + x as u16 + EN_DELAY, ndelay);
-    mem.write_ram(0x0400 + x as u16 + EN_INSTR, ninstr);
-    if dy != 0 {
-        // Δ 施加（EnemyMove 径（:10029-10046 同构）：y±|Δ|——名表换补偿）
-        let mut y = mem.read_ram(0x0400 + x as u16 + 0);
-        let hi = mem.read_wram(0x6AF4 + x as u16 + 7);
-        for _ in 0..dy.unsigned_abs() {
-            if dy < 0 {
-                if y == 0 {
-                    y = 0xEF;
-                    mem.write_wram(0x6AF4 + x as u16 + 7, hi ^ 1);
-                } else {
-                    y -= 1;
-                }
-            } else if y == 0xEF {
-                y = 0;
-                mem.write_wram(0x6AF4 + x as u16 + 7, hi ^ 1);
-            } else {
-                y += 1;
-            }
-        }
-        mem.write_ram(0x0400 + x as u16 + 0, y);
-    }
-    // ⑦ deltaX 整轴（skree 串 packed nibble 低半字节——斜线下坠（复核⑦））
-    if dx != 0 {
-        let mut xx = mem.read_ram(0x0400 + x as u16 + 1);
-        let hi = mem.read_wram(0x6AF4 + x as u16 + 7);
-        for _ in 0..dx.unsigned_abs() {
-            if dx < 0 {
-                if xx == 0 {
-                    xx = 0xFF;
-                    mem.write_wram(0x6AF4 + x as u16 + 7, hi ^ 1);
-                } else {
-                    xx -= 1;
-                }
-            } else if xx == 0xFF {
-                xx = 0;
-                mem.write_wram(0x6AF4 + x as u16 + 7, hi ^ 1);
-            } else {
-                xx += 1;
-            }
-        }
-        mem.write_ram(0x0400 + x as u16 + 1, xx);
-    }
-    } // 门径尾（gates_ok）
-    update_enemy_anim(mem, x, 2);
-    update_enemy_common_no_move_no_anim(mem, x);
+    // SkreeExit_Active（skree.asm:56-60 逐字）：`lda #$02 / jmp CommonJump_UpdateEnemyCommon`
+    // ⇒ **标准件** UpdateEnemyCommon（07:F410）= UpdateEnemyAnim(2) + EnemyMove + 尾件。
+    // 【2026-11-16 修：case-002 f1122】旧形在此**内联复制**了一份 Δ 引擎 + 手写「y±|Δ| 一次写回」，
+    // 绕过 EnemyMove 的逐像素 `EnemyMoveOnePixelDown`⇒`EnemyCheckMoveDown`（BG 碰撞）——
+    // 后果=Skree 穿地 8px（一整块）：f1122 锈 y=198/金 196，f1124 锈 204 恒/金 196 恒。
+    // 同族病=「同一 asm 例程两份不等价实现」（`docs/findings/per-bank-assets.md` §0 纪律）。
+    // 触发休止（`EnemyGetDeltaY@fail`→`EnemyTriggerResting_AndClearEnAccelY $81B1`）已归位到
+    // 唯一的 Δ 引擎 `motion.rs::enemy_delta_for_move`（asm 本体就在 EnemyGetDeltaY 内）。
+    update_enemy_common_anim_move(mem, x, 2);
 }

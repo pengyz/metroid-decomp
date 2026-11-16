@@ -66,12 +66,12 @@ pub(crate) fn draw_enemy(mem: &mut crate::frame::FrameMemory, x: u8) {
     let xpos = mem.read_ram(0x0400 + x as u16 + 1); // x=+1
     let scroll_y = mem.read_ram(crate::ram_map::SCROLL_Y);
     let horz = mem.read_ram(crate::ram_map::SCROLL_DIR) & 0x02 != 0;
-    let sy = (if horz { y } else { y.wrapping_sub(scroll_y) }) as i16;
+    let mut sy = (if horz { y } else { y.wrapping_sub(scroll_y) }) as i16;
     // 【勘误修（2026-10-29（问题 A 根因））】敌屏位 x=房位−**ScrollX($FD)**——旧形减
     // $26（SpareMem26（constants:488（$25=MMC1CTRL_ZP 同族误读（sprite.rs 勘误注
     // 早已证）））——走滚径写 $FD（scroll_right）而 0x26 停旧值⇒敌屏位不减镜头⇒
     // **随镜恒距**（用户截图症（爬虫悬空错位））。
-    let sx = xpos.wrapping_sub(mem.read_ram(crate::ram_map::SCROLL_X)) as i16;
+    let mut sx = xpos.wrapping_sub(mem.read_ram(crate::ram_map::SCROLL_X)) as i16;
     let mut cntrl05 = ((ctrl >> 4) & 0x03) | (ctrl & 0xC0) | 0x20;
     let mut place_i = 0usize;
     let mut frame_i = 3usize;
@@ -93,6 +93,12 @@ pub(crate) fn draw_enemy(mem: &mut crate::frame::FrameMemory, x: u8) {
             place_i += 2;
             frame_i += 1;
         } else if b == 0xFC {
+            // OffsetObjectPosition（$DF51）逐字：`lda (FramePtr),y / clc / adc Temp10_ScreenY /
+            // sta Temp10_ScreenY`，再对 Temp0E_ScreenX 同形 ⇒ **累计**到后续所有 sprite 的
+            // 基准屏位。旧形只 `frame_i += 3` 不叠加 ⇒ 后半组 sprite 恒偏 4px（case-002
+            // f1160 = 220px：Skree 帧 37 的 `fc 00 fc`（y+0/x-4）未被应用）。
+            sy = sy.wrapping_add(blob(frame_i + 1) as i16);
+            sx = sx.wrapping_add(blob(frame_i + 2) as i16);
             frame_i += 3;
         } else if b == 0xFD {
             frame_i += 1;

@@ -92,28 +92,28 @@
           "total_pixels": 61440
         },
         "1160:door-open": {
-          "state": "diff",
-          "diff_pixels": 10818,
+          "state": "match",
+          "diff_pixels": 0,
           "total_pixels": 61440
         },
         "1250:door-enter": {
-          "state": "diff",
-          "diff_pixels": 9768,
+          "state": "match",
+          "diff_pixels": 0,
           "total_pixels": 61440
         },
         "1310:scrolling": {
-          "state": "diff",
-          "diff_pixels": 9768,
+          "state": "match",
+          "diff_pixels": 0,
           "total_pixels": 61440
         },
         "1460:neighbor-room": {
-          "state": "diff",
-          "diff_pixels": 13412,
+          "state": "match",
+          "diff_pixels": 0,
           "total_pixels": 61440
         },
         "1610:end": {
-          "state": "diff",
-          "diff_pixels": 13418,
+          "state": "match",
+          "diff_pixels": 0,
           "total_pixels": 61440
         }
       }
@@ -277,18 +277,18 @@
           "total_pixels": 61440
         },
         "1150:pre-jump": {
-          "state": "diff",
-          "diff_pixels": 268,
+          "state": "match",
+          "diff_pixels": 0,
           "total_pixels": 61440
         },
         "1165:takeoff": {
-          "state": "diff",
-          "diff_pixels": 153,
+          "state": "match",
+          "diff_pixels": 0,
           "total_pixels": 61440
         },
         "1190:rise": {
-          "state": "diff",
-          "diff_pixels": 185,
+          "state": "match",
+          "diff_pixels": 0,
           "total_pixels": 61440
         },
         "1215:peak": {
@@ -643,22 +643,22 @@
         },
         "1100:scroll-r180": {
           "state": "diff",
-          "diff_pixels": 494,
+          "diff_pixels": 274,
           "total_pixels": 61440
         },
         "1130:scroll-r210": {
-          "state": "diff",
-          "diff_pixels": 153,
+          "state": "match",
+          "diff_pixels": 0,
           "total_pixels": 61440
         },
         "1160:scroll-r240": {
-          "state": "diff",
-          "diff_pixels": 153,
+          "state": "match",
+          "diff_pixels": 0,
           "total_pixels": 61440
         },
         "1180:scroll-end": {
-          "state": "diff",
-          "diff_pixels": 268,
+          "state": "match",
+          "diff_pixels": 0,
           "total_pixels": 61440
         },
         "1240:scroll-l40": {
@@ -979,6 +979,26 @@
       "reason": "敌移动指令节拍修（areas_common.asm:622-646 到期支 continue）：case-002 1110:bullet-out 由 diff 转 match（match 114→115），逐格复核 0 回退",
       "match": 115,
       "diff": 17,
+      "blocked": 0,
+      "cells_total": 132
+    },
+    {
+      "ts": "2026-11-16T02:39:25+00:00",
+      "kind": "anchor",
+      "evidence": "",
+      "reason": "case-002 全 8 格转 match（Skree 穿地 8px + 0xFC 位移 + 弹越界判据）",
+      "match": 115,
+      "diff": 17,
+      "blocked": 0,
+      "cells_total": 132
+    },
+    {
+      "ts": "2026-11-16T02:52:54+00:00",
+      "kind": "anchor",
+      "evidence": "",
+      "reason": "case-002 三根因修复后全 8 格转 match（07:DF51 偏移/07:FD8F 越界判据/07:F410 逐像素径）；jumpledge 同径 5/8→8/8",
+      "match": 126,
+      "diff": 6,
       "blocked": 0,
       "cells_total": 132
     }
