@@ -19,7 +19,7 @@
     "ram_map.rs": "符号→地址的唯一定义处",
     "frame/memory.rs": "read_ram/write_ram 兼容辖（迁移完成后收口）"
   },
-  "total": 748,
+  "total": 724,
   "files": {
     "enemy/anim.rs": 7,
     "enemy/crawler.rs": 26,
@@ -38,7 +38,7 @@
     "render/gfx.rs": 1,
     "render/oam.rs": 36,
     "samus/handler.rs": 38,
-    "samus/physics.rs": 92,
+    "samus/physics.rs": 68,
     "title/bridge.rs": 1,
     "title/mod.rs": 2,
     "title/step_glue.rs": 1,

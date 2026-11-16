@@ -45,10 +45,10 @@ pub fn x_plus_4(x: u8) -> u8 {
 /// 查撞点 Y=y−(−radiusY)=y+radiusY（下方））。旧形误用 `y−ry+8`（上方）→地板在下方读到
 /// 空瓦→穿地（L4 f820 发散根因）。仅向下查撞用（@loop_down）；上/横各有独立点。
 fn object_check_move_vertical(mem: &mut Manager) -> bool {
-    let y = mem.read_ram(0x030D);
+    let y = mem.samus().y();
     let ry = mem.read_ram(0x0301); // Objects.radiusY
-    let x = mem.read_ram(0x030E);
-    let hi = mem.read_ram(SAMUS_HI); // Samus.hi（$30C——Object 结构字节锚 F186 `BD 0C 03`）
+    let x = mem.samus().x();
+    let hi = mem.samus().hi(); // Samus.hi（$30C——Object 结构字节锚 F186 `BD 0C 03`）
     let rx = mem.read_ram(crate::ram_map::SAMUS_RADIUS_X);
     let mut check_y = y.wrapping_add(ry); // 向下查撞点=y+radiusY（asm E7AD/E90F）
     if rx == 0 {
@@ -149,7 +149,7 @@ pub fn vert_accelerate(mem: &mut Manager) {
         return;
     }
     // 双旗门（D976 内部置位后检查）
-    // if mem.read_ram(SAMUS_ON_ELEVATOR) != 0 || mem.read_ram(ON_FROZEN_ENEMY) != 0 { return; }
+    // if mem.samus().on_elevator() != 0 || mem.read_ram(ON_FROZEN_ENEMY) != 0 { return; }
     // 【goal-r11】asm E37A：受阻（地上）⇒@dontStartFalling **不设重力**。旧形落地清
     // accelY=0→下帧 accelY==0→再设重力→弹跳（accelY 交替 1A/00）。修=受阻不设重力
     // （object_check_move_down false=固实=受阻⇒return 已有），此处仅"不阻"时设。
@@ -735,7 +735,7 @@ pub fn tile_class(t: u8) -> TileClass {
 /// CalculateFirstBGCollisionPoint/MakeRoomRAMPtr。
 pub fn object_check_move_down(mem: &mut Manager) -> bool {
     // 壳：A = -radiusY（向下偏移）——几何面
-    let _ry = mem.read_ram(SAMUS_RADIUS_Y);
+    let _ry = mem.samus().radius_y();
     // ObjectCheckMoveVertical（E7B5——同构敌径（collision_point_ok））
     object_check_move_vertical(mem)
 }
@@ -746,10 +746,10 @@ pub fn object_check_move_down(mem: &mut Manager) -> bool {
 /// 与 object_check_move_down（下方 y+ry）相对。【goal-r15 复核 R1 闭合】旧形误删向上查撞
 /// →天花板穿透；正解=独立 up 点 y−ry−8（非删除——旧「起跳即落地」病根是共享点落在体内）。
 pub fn object_check_move_up(mem: &mut Manager) -> bool {
-    let y = mem.read_ram(0x030D);
-    let ry = mem.read_ram(SAMUS_RADIUS_Y);
-    let x = mem.read_ram(0x030E);
-    let hi = mem.read_ram(SAMUS_HI);
+    let y = mem.samus().y();
+    let ry = mem.samus().radius_y();
+    let x = mem.samus().x();
+    let hi = mem.samus().hi();
     let check_y = y.wrapping_sub(ry).wrapping_sub(8); // 向上查撞点=y−radiusY−8（asm E7A2）
     // 【Y 段回卷修（2026-11-14）】向上查的 Temp02_DistToCenterY = +(radiusY+8)（`:E7A2`
     // `clc/adc #$08`）⇒ 走 `Lx213` 支：`bcs Lx214`（无借位=正常）否则 `txa / sbc #$0F`
@@ -800,7 +800,7 @@ pub fn object_check_move_up(mem: &mut Manager) -> bool {
 pub fn samus_collision_with_solid_entities(mem: &mut Manager) {
     // 【goal-轮36 knockback 触发直证】敌撞萨判定。
     // 双旗清（注「Default to … not being on an elevator or on a frozen enemy」）
-    mem.write_ram(SAMUS_ON_ELEVATOR, 0);
+    mem.samus().set_on_elevator(false);
     mem.write_ram(ON_FROZEN_ENEMY, 0);
     // 冻敌环（D983——r26 空径环端口：仅冻结敌（status==4!）进几何碰撞族）
     let mut x: u8 = 0x50;
@@ -1120,8 +1120,8 @@ pub fn check_health_status(mem: &mut Manager) {
         if bomb77 & 0x80 != 0 {
             let fc = mem.read_ram(crate::ram_map::FRAME_COUNT);
             if fc & 1 == 0 {
-                mem.write_ram(0x0304, 0); // animDelay ← 0（asm `tay/sty`——A=0）
-                mem.write_ram(0x0303, 0xF7); // animFrame ← FrameNone（asm `ldy #$F7/sty`）
+                mem.samus().set_anim_delay(0); // animDelay ← 0（asm `tay/sty`——A=0）
+                mem.samus().set_anim_frame(0xF7); // animFrame ← FrameNone（asm `ldy #$F7/sty`）
             }
         }
     }
@@ -1143,7 +1143,7 @@ fn is_samus_in_lava(mem: &mut Manager) -> bool {
     if 0x01u8 >= dir {
         return false;
     }
-    mem.read_ram(0x030D) >= 0xD8
+    mem.samus().y() >= 0xD8
 }
 
 pub fn lava_and_move_check(mem: &mut Manager) {
@@ -1174,12 +1174,10 @@ pub fn lava_and_move_check(mem: &mut Manager) {
     let ry = mem.read_ram(crate::ram_map::SAMUS_RADIUS_Y);
     // 【asm 内容锚】`SamusMoveVertically ; 07:E2A9` 首件：`lda Samus.y / sec / sbc ScrollY /
     // sta SamusScrY`（$52，每帧一次；逐像素环内只 inc/dec 它）。
-    mem.write_ram(
-        crate::ram_map::SAMUS_SCR_Y,
-        mem.read_ram(0x030D).wrapping_sub(mem.read_ram(crate::ram_map::SCROLL_Y)),
-    );
+    let scr_y = mem.samus().y().wrapping_sub(mem.read_ram(crate::ram_map::SCROLL_Y));
+    mem.write_ram(crate::ram_map::SAMUS_SCR_Y, scr_y);
     for _ in 0..steps {
-        let y_now = mem.read_ram(0x030D);
+        let y_now = mem.samus().y();
         // 【goal-r15 复核 R1 更正】asm 双向查撞：MoveSamusDown（E4A3 向下，点 y+ry）/
         // MoveSamusUp（E457 向上，点 y−ry−8）——门=(y±ry)&7==0（本修补装）。
         // > 【2026-10-27 更正】旧注「仅向下查撞（向上=跳不查）」被 ROM 证伪（E457 确查向上）；
@@ -1239,7 +1237,7 @@ pub fn lava_and_move_check(mem: &mut Manager) {
             let nv = if going_down { scr_y.wrapping_add(1) } else { scr_y.wrapping_sub(1) };
             mem.write_ram(crate::ram_map::SAMUS_SCR_Y, nv);
         }
-        let y = mem.read_ram(0x030D);
+        let y = mem.samus().y();
         // 【goal-r15】asm MoveSamusUp（Lx155 `dec Samus.y/inc SamusJumpDsplcmnt`）/
         // MoveSamusDown（E4A3 Lx162 `inc Samus.y/dec SamusJumpDsplcmnt`）——**逐像素位移
         // 计数**（JumpDsplcmnt 净上移）。旧形漏 inc/dec→JumpDsplcmnt 恒 0→SamusJump
@@ -1252,19 +1250,19 @@ pub fn lava_and_move_check(mem: &mut Manager) {
             if mem.read_ram(crate::ram_map::SCROLL_DIR) & 0x02 == 0 {
                 toggle_samus_hi(mem);
             }
-            mem.write_ram(0x030D, 0xFF);
+            mem.samus().set_y(0xFF);
         } else if !going_down && y == 0 {
             if mem.read_ram(crate::ram_map::SCROLL_DIR) & 0x02 == 0 {
                 toggle_samus_hi(mem);
             }
-            mem.write_ram(0x030D, SCRN_VY);
+            mem.samus().set_y(SCRN_VY);
         }
-        let y = mem.read_ram(0x030D);
+        let y = mem.samus().y();
         if going_down {
-            mem.write_ram(0x030D, y.wrapping_add(1));
+            mem.samus().set_y(y.wrapping_add(1));
             mem.write_ram(crate::ram_map::SAMUS_JUMP_DISP, disp_cnt.wrapping_sub(1)); // MoveSamusDown `dec`
         } else {
-            mem.write_ram(0x030D, y.wrapping_sub(1));
+            mem.samus().set_y(y.wrapping_sub(1));
             mem.write_ram(crate::ram_map::SAMUS_JUMP_DISP, disp_cnt.wrapping_add(1)); // MoveSamusUp `inc`
         }
     }
@@ -1362,7 +1360,7 @@ pub fn samus_enter_door(mem: &mut Manager) {
     // DoorScrollStatus 判向
     let sd = mem.read_ram(crate::ram_map::SCROLL_DIR);
     let x: u8 = if sd & 0x02 != 0 {
-        2u8.wrapping_sub(mem.read_ram(0x030E) >> 7) // 横滚：左门(bit7)⇒1，右⇒2
+        2u8.wrapping_sub(mem.samus().x() >> 7) // 横滚：左门(bit7)⇒1，右⇒2
     } else {
         // 竖滚：X=4；ScrollY≠0 时 (PPUCTRL^hi)lsr 进位=1⇒3（下行）
         if mem.read_ram(crate::ram_map::SCROLL_Y) != 0
@@ -1389,7 +1387,7 @@ pub fn samus_enter_door(mem: &mut Manager) {
 }
 
 fn object_check_move_horizontal(mem: &mut Manager, x: u8, dist: u8) -> bool {
-    let y = mem.read_ram(0x030D);
+    let y = mem.samus().y();
     let ry = mem.read_ram(0x0301);
     // 【0xF7 quirk 卡·入口探针（临时——2026-11-06）】查撞 span 输入实证。
     let mut hi = mem.read_ram(crate::ram_map::SAMUS_HI);
@@ -1417,7 +1415,7 @@ fn object_check_move_horizontal(mem: &mut Manager, x: u8, dist: u8) -> bool {
 /// =x−(radiusX+8)（左块——核 `PositionX−DistToCenterX` 形）。carry=true 可走。
 /// 【goal-r16 修】逐行扫（旧形只查顶行一点⇒顶行可走下行固实漏判⇒走进地形）。
 fn object_check_move_left(mem: &mut Manager) -> bool {
-    let x = mem.read_ram(0x030E);
+    let x = mem.samus().x();
     let rx = mem.read_ram(crate::ram_map::SAMUS_RADIUS_X);
     object_check_move_horizontal(mem, x, rx.wrapping_add(8))
 }
@@ -1428,7 +1426,7 @@ fn object_check_move_left(mem: &mut Manager) -> bool {
 /// =x−(0−radiusX)=x+radiusX（右块）。carry=true 可走。
 /// 【goal-r16 修】逐行扫（同左向——LE7E6 全径）。
 fn object_check_move_right(mem: &mut Manager) -> bool {
-    let x = mem.read_ram(0x030E);
+    let x = mem.samus().x();
     let rx = mem.read_ram(crate::ram_map::SAMUS_RADIUS_X);
     object_check_move_horizontal(mem, x, 0u8.wrapping_sub(rx)) // dist=−rx（asm E88B）
 }
@@ -1580,7 +1578,7 @@ pub fn collide_object_slots(mem: &mut Manager, x_page: u16, y_page: u16) -> Slot
 /// （8px 对齐门检+实体碰撞+**滚动跟随**（SamusScrX<$71⇒ScrollLeft 滚屏）+x dec
 /// （x==0 先判⇒ToggleSamusHi））。返回 carry（true=移动成功）。
 fn move_samus_left(mem: &mut Manager) -> bool {
-    let x = mem.read_ram(0x030E);
+    let x = mem.samus().x();
     let rx = mem.read_ram(crate::ram_map::SAMUS_RADIUS_X);
     if x.wrapping_sub(rx) & 0x07 == 0 && !object_check_move_left(mem) {
         mem.write_ram(crate::ram_map::SAMUS_DOOR_DATA, 0); // Lx181（撞挡）
@@ -1605,7 +1603,7 @@ fn move_samus_left(mem: &mut Manager) -> bool {
     if x == 0 && mem.read_ram(crate::ram_map::SCROLL_DIR) & 0x02 != 0 {
         toggle_samus_hi(mem); // 环绕 00（dec 前判——E650）
     }
-    mem.write_ram(0x030E, x.wrapping_sub(1));
+    mem.samus().set_x(x.wrapping_sub(1));
     // 【E63F 卡·写后探针（临时——2026-11-05）】写 X 后值（一击钉定覆写者）。
     true
 }
@@ -1618,7 +1616,7 @@ fn move_samus_left(mem: &mut Manager) -> bool {
 /// ScrX<$8F⇒inc ScrX/else ScrollRight（carry ok⇒跳；fail⇒补）/inc x+wrap⇒
 /// ToggleSamusHi——**四件面全合规** ✓✓（E626 左移镜像同构——1397 行 isHit&0x41==0x41 ✓）。
 fn move_samus_right(mem: &mut Manager) -> bool {
-    let x = mem.read_ram(0x030E);
+    let x = mem.samus().x();
     let rx = mem.read_ram(crate::ram_map::SAMUS_RADIUS_X);
     if x.wrapping_add(rx) & 0x07 == 0 && !object_check_move_right(mem) {
         mem.write_ram(crate::ram_map::SAMUS_DOOR_DATA, 0); // Lx186（撞挡）
@@ -1640,7 +1638,7 @@ fn move_samus_right(mem: &mut Manager) -> bool {
                       mem.read_ram(crate::ram_map::SAMUS_SCR_X).wrapping_add(1));
     }
     let nx = x.wrapping_add(1);
-    mem.write_ram(0x030E, nx);
+    mem.samus().set_x(nx);
     if nx == 0 && mem.read_ram(crate::ram_map::SCROLL_DIR) & 0x02 != 0 {
         toggle_samus_hi(mem); // 环绕 00（inc 后判——E692）
     }
@@ -1663,7 +1661,7 @@ pub fn samus_move_horizontally(mem: &mut Manager, delta: u8) {
     // status=0(Stand)+accelX=0/spX=0 ✗——**站立↔跑步状态分叉**（同位姿同输入！）——
     // samus_stand→samus_run 转换径（CC98）面=根（记账 0x0CC98）。
     crate::frame::DIVERGENCES.with(|d| d.borrow_mut().push(0x0CC98));
-    let x = mem.read_ram(0x030E);
+    let x = mem.samus().x();
     let sx = mem.read_ram(crate::ram_map::SCROLL_X);
     mem.write_ram(crate::ram_map::SAMUS_SCR_X, x.wrapping_sub(sx)); // E31D
     if delta == 0 {
