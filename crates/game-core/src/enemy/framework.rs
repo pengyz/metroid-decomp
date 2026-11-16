@@ -237,8 +237,138 @@ pub(crate) fn explode_enemy(mem: &mut crate::frame::FrameMemory, x: u8) {
     mem.write_wram(0x6AF4 + px + 6, anim); // animIndex
     mem.write_wram(0x6AF4 + px + 4, 0); // animDelay
     mem.write_ram(0x0400 + px + 6, anim); // chunkyExplosionTimer←A（asm `sta`（+06））
+
+    // 【步骤 1/3：只做 spawn，update/draw 未接】`ExplodeEnemy` 尾件 07:F62E-07:F673：
+    // 在 `EnExplosions` 池（`$04C0`，4 槽 × 8 B，额外面 `$6BB4`）里找第一个 status==0 的槽，
+    // `InitEnAnimIndex(AreaExplosionAnimIndex)` + `delay←$0A` + `inc status` +
+    // `quantity←0`（miniboss ⇒ 3）+ 位置三字节抄自敌槽。
+    // asm：`ldx #EnExplosions.0-Ens / @loop: lda EnsExtra.status,x / beq @exitLoop /
+    // adc #_sizeof_EnExplosions.0 / cmp #EnExplosions-Ens+_sizeof` ⇒ 池满则整段跳过。
+    let area_now = crate::frame::cur_area(mem);
+    for i in 0..4u8 {
+        let ex = 0xC0 + i * 8;
+        if mem.read_wram(0x6AF4 + ex as u16) != 0 {
+            continue;
+        }
+        let ex_anim = game_data::assets::explosion_anim(area_now);
+        mem.write_wram(0x6AF4 + ex as u16 + 5, ex_anim); // resetAnimIndex
+        mem.write_wram(0x6AF4 + ex as u16 + 6, ex_anim); // animIndex
+        mem.write_wram(0x6AF4 + ex as u16 + 4, 0); // animDelay←0
+        mem.write_ram(0x0400 + ex as u16 + 6, 0x0A); // delay←$0A
+        mem.write_wram(0x6AF4 + ex as u16, 1); // status←Active
+        mem.write_ram(0x0400 + ex as u16 + 7, if sa_x & 0x40 != 0 { 3 } else { 0 });
+        mem.write_ram(0x0400 + ex as u16, mem.read_ram(0x0400 + px)); // y
+        mem.write_ram(0x0400 + ex as u16 + 1, mem.read_ram(0x0400 + px + 1)); // x
+        mem.write_wram(0x6AF4 + ex as u16 + 7, mem.read_wram(0x6AF4 + px + 7)); // hi
+        break;
+    }
 }
 
+
+/// 【步骤 2/3：update 接上，绘制待接】`UpdateAllEnemyExplosions ; 07:FA9D`：
+/// 4 槽逐个 `stx PageIndex`，status≠0 才 `jsr UpdateEnemyExplosion`。
+pub(crate) fn update_all_enemy_explosions(mem: &mut crate::frame::FrameMemory) {
+    for i in 0..4u8 {
+        let x = 0xC0 + i * 8;
+        mem.write_ram(0x004B, x); // PageIndex（asm `stx PageIndex`）
+        if mem.read_wram(0x6AF4 + x as u16) == 0 {
+            continue;
+        }
+        update_enemy_explosion(mem, x);
+    }
+}
+
+/// `UpdateEnemyExplosion ; 07:FAB4`：`dec delay`；归零 ⇒ `delay←$0C`、`dec quantity`，
+/// 负或零 ⇒ `RemoveEnemy`（07:FA18 把 status 清 0）；`delay==9` 时按 quantity 查
+/// `@explosionMovementTable ; 07:FAEA`（(dy,dx)：单爆 (0,0) / 三连末 ($0C,$1C) /
+/// 次 ($10,$F0) / 首 ($F0,$08)）位移；尾件 `lda #$80 / sta ObjectCntrl / lda #$03 /
+/// jmp AnimDrawEnemy`（`AnimDrawEnemy ; 07:F97E` = `jsr UpdateEnemyAnim` + `jmp DrawEnemy`）。
+fn update_enemy_explosion(mem: &mut crate::frame::FrameMemory, x: u8) {
+    let ex = 0x0400 + x as u16;
+    let exx = 0x6AF4 + x as u16;
+    let d = mem.read_ram(ex + 6).wrapping_sub(1);
+    mem.write_ram(ex + 6, d);
+    if d == 0 {
+        mem.write_ram(ex + 6, 0x0C); // 3 视频帧 × 4 动画帧
+        let q = mem.read_ram(ex + 7).wrapping_sub(1);
+        mem.write_ram(ex + 7, q);
+        // `bmi @removeExplosion / bne @dontRemoveExplosion` ⇒ 负或零都移除
+        if q == 0 || q & 0x80 != 0 {
+            mem.write_wram(exx, 0); // RemoveEnemy
+        }
+    }
+    if mem.read_ram(ex + 6) == 0x09 {
+        // @applySpeed（跳过瓦判）：直接给 y/x 速度
+        const TBL: [(u8, u8); 4] = [(0x00, 0x00), (0x0C, 0x1C), (0x10, 0xF0), (0xF0, 0x08)];
+        let q = (mem.read_ram(ex + 7) as usize).min(3);
+        let (dy, dx) = TBL[q];
+        apply_explosion_speed(mem, x, dy, dx);
+    }
+    // 尾件（07:FAE1）：`lda #$80 / sta ObjectCntrl / lda #$03 / jmp AnimDrawEnemy`
+    // `AnimDrawEnemy ; 07:F97E` = `jsr UpdateEnemyAnim` + `jmp DrawEnemy`；
+    // `DrawEnemy ; 07:DD8B` 先比 `animFrame == _id_FrameNone($FF)` ⇒ 空帧转 ClearObjectCntrl。
+    mem.write_ram(0x006B, 0x80); // ObjectCntrl（覆盖形：非 MSB 位作调色板/优先级）
+    update_enemy_anim(mem, x, 0x03);
+    draw_enemy(mem, x);
+}
+
+/// `@applySpeed`（`ApplySpeedToPosition ; 07:FD8F` 的敌侧入口）。失败（carry clear）
+/// ⇒ 调用方 `RemoveEnemy`。
+fn apply_explosion_speed(mem: &mut crate::frame::FrameMemory, x: u8, dy: u8, dx: u8) {
+    let horizontal_scroll = mem.read_ram(0x0049) & 0x02 != 0; // ScrollDir
+    let ex = 0x0400 + x as u16;
+    let exx = 0x6AF4 + x as u16;
+    let mut hi = mem.read_wram(exx + 7);
+    let mut y = mem.read_ram(ex);
+    let mut pos_x = mem.read_ram(ex + 1);
+    let mut fail = false;
+    if dy != 0 {
+        if dy & 0x80 == 0 {
+            let (n, c) = y.overflowing_add(dy);
+            if c || n >= 0xF0 {
+                if horizontal_scroll {
+                    fail = true;
+                } else {
+                    hi = hi.wrapping_add(1);
+                }
+                y = n.wrapping_add(0x10);
+            } else {
+                y = n;
+            }
+        } else {
+            let (n, c) = y.overflowing_add(dy);
+            if !c {
+                if horizontal_scroll {
+                    fail = true;
+                } else {
+                    hi = hi.wrapping_add(1);
+                }
+                y = n.wrapping_sub(0x10);
+            } else {
+                y = n;
+            }
+        }
+    }
+    if !fail && dx != 0 {
+        let (n, c) = pos_x.overflowing_add(dx);
+        if c != (dx & 0x80 == 0) {
+            // 正速进位 / 负速借位 ⇒ 越界
+            if !horizontal_scroll {
+                fail = true;
+            } else {
+                hi = hi.wrapping_add(1);
+            }
+        }
+        pos_x = n;
+    }
+    if fail {
+        mem.write_wram(exx, 0); // RemoveEnemy
+        return;
+    }
+    mem.write_ram(ex, y);
+    mem.write_ram(ex + 1, pos_x);
+    mem.write_wram(exx + 7, hi & 0x01);
+}
 
 /// UpdateEnemy_Explode（**asm 内容锚** `: 07:F40D`（jmp ChooseEnemyAIRoutine（爆在 AI
 /// Exit 臂（noMoveNoAnim 显示）+chunkyExplosionTimer（+06）计时⇒CompleteDeath））。
@@ -636,5 +766,75 @@ mod tests_explode_regular_beam {
         m2.write_ram(0x0400 + x + 0x0F, 0x40); // miniboss
         super::explode_enemy(&mut m2, 0x10);
         assert_eq!(m2.read_wram(0x6AF4 + x), 3, "miniboss：爆炸动画");
+    }
+}
+
+#[cfg(test)]
+mod tests_enemy_explosion_pool {
+    use crate::frame::FrameMemory;
+
+    fn stage_enemy(m: &mut FrameMemory, x: u16) {
+        m.write_ram(0x0400 + x, 0x50); // y
+        m.write_ram(0x0400 + x + 1, 0x80); // x
+        m.write_wram(0x6AF4 + x + 14, 0); // type
+        m.write_ram(0x0400 + x + 0x0E, 0x0B); // weaponAction＝导弹（走爆炸动画）
+    }
+
+    /// `ExplodeEnemy` 尾件（07:F62E-F673）：杀敌后在该池里放一个爆炸特效，
+    /// 位置三字节抄自敌槽；单爆 quantity=0、miniboss quantity=3。
+    #[test]
+    fn explode_enemy_spawns_explosion_slot() {
+        let mut m = FrameMemory::default();
+        let x = 0x10u16;
+        stage_enemy(&mut m, x);
+        super::explode_enemy(&mut m, x as u8);
+        assert_eq!(m.read_wram(0x6AF4 + 0xC0), 1, "池槽 0 status←Active");
+        assert_eq!(m.read_ram(0x04C0), 0x50, "y 抄自敌槽");
+        assert_eq!(m.read_ram(0x04C1), 0x80, "x 抄自敌槽");
+        assert_eq!(m.read_ram(0x04C6), 0x0A, "delay←$0A");
+        assert_eq!(m.read_ram(0x04C7), 0x00, "单爆 quantity=0");
+        assert_eq!(m.read_wram(0x6AF4 + 0xC6), 0x43, "animIndex＝AreaExplosionAnimIndex（Brinstar $43）");
+    }
+
+    /// miniboss（specialAttribs bit6）⇒ quantity=3（三连爆）。
+    #[test]
+    fn miniboss_spawns_triple_explosion() {
+        let mut m = FrameMemory::default();
+        let x = 0x10u16;
+        stage_enemy(&mut m, x);
+        m.write_ram(0x0400 + x + 0x0F, 0x40);
+        super::explode_enemy(&mut m, x as u8);
+        assert_eq!(m.read_ram(0x04C7), 3, "miniboss ⇒ quantity=3");
+    }
+
+    /// `UpdateEnemyExplosion ; 07:FAB4`：delay 递减；归零 ⇒ delay←$0C、quantity--；
+    /// 单爆（quantity 0→$FF）当拍 `RemoveEnemy`（status 清 0）。池满时 spawn 跳过。
+    #[test]
+    fn explosion_lifetime_expires_and_frees_slot() {
+        let mut m = FrameMemory::default();
+        m.write_wram(0x6AF4 + 0xC0, 1); // status=Active
+        m.write_ram(0x04C6, 0x02); // delay
+        m.write_ram(0x04C0, 0x40);
+        m.write_ram(0x04C1, 0x40);
+        super::update_all_enemy_explosions(&mut m);
+        assert_eq!(m.read_ram(0x04C6), 0x01, "delay 递减");
+        assert_eq!(m.read_wram(0x6AF4 + 0xC0), 1, "未到期仍 Active");
+        super::update_all_enemy_explosions(&mut m);
+        assert_eq!(m.read_ram(0x04C6), 0x0C, "delay 归零后重置 $0C");
+        assert_eq!(m.read_wram(0x6AF4 + 0xC0), 0, "单爆 quantity 用尽 ⇒ RemoveEnemy");
+    }
+
+    /// 池满（4 槽都占）⇒ spawn 整段跳过，不覆盖任何槽。
+    #[test]
+    fn spawn_skipped_when_pool_full() {
+        let mut m = FrameMemory::default();
+        for i in 0..4u16 {
+            m.write_wram(0x6AF4 + 0xC0 + i * 8, 1);
+        }
+        let x = 0x10u16;
+        stage_enemy(&mut m, x);
+        super::explode_enemy(&mut m, x as u8);
+        assert_eq!(m.read_ram(0x04C0), 0x00, "槽 0 未被覆盖");
+        assert_eq!(m.read_ram(0x04C6), 0x00, "槽 0 delay 未被写");
     }
 }

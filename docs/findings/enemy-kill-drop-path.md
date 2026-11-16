@@ -77,3 +77,34 @@ if sa_x & 0x40 == 0 && wa_x < 0x02 { enemy_complete_death(mem, x); }
 Evidence: asm `07:F611-F623`（prg7_engine.asm:11202-11230）、`07:DD0D-07:DD23`（:5956-5968）、
 录像 f2152 两侧 `ram.hex` 的 OAM/敌槽逐字节对读。
 Confidence: 90
+
+## 追加：`EnExplosions` 池补齐（三件套），f2152 归零
+
+上节残留的 99px 已修。三件套按 asm 逐字实现，**分三步验证**（每步都单独跑窗口）：
+
+| 步骤 | 内容 | 观察 |
+|---|---|---|
+| 1 | `ExplodeEnemy` 尾件 07:F62E-F673 的 **spawn** | 池字节出现「幽灵槽」：rust 有、emu 无 |
+| 2 | `UpdateAllEnemyExplosions ; 07:FA9D` + `UpdateEnemyExplosion ; 07:FAB4` | 幽灵槽在年龄到期后被 `RemoveEnemy` 收掉 ⇒ 池字节对齐 |
+| 3 | 尾件 `lda #$80 / sta ObjectCntrl / lda #$03 / jmp AnimDrawEnemy` | f2152 **99 → 0px** |
+
+第 1 步的「幽灵槽」是重要教训：**只 spawn 不 update 会让槽永久滞留**，于是第 3 步一旦接上绘制，
+旧槽会被画出来，反而把本来全绿的 f2144–f2150 打成 12499px（我第一次就是直接三件一起上，被打回）。
+三步分开、每步看池字节，才定位到「滞留」而不是「绘制错了」。
+
+实现锚（`crates/game-core/src/enemy/framework.rs`）：
+- 池 `$04C0` 4 槽 × 8 B（`y+0/x+1/data05+5/delay+6/quantity+7`），额外面 `$6BB4`
+  （`status+0/radiusY+1/radiusX+2/animFrame+3/animDelay+4/resetAnimIndex+5/animIndex+6/hi+7`）。
+- `@explosionMovementTable ; 07:FAEA`：`(0,0) / ($0C,$1C) / ($10,$F0) / ($F0,$08)`，按 `quantity*2` 索引。
+- 绘制前 `ObjectCntrl←$80`；`AnimDrawEnemy ; 07:F97E` = `UpdateEnemyAnim` + `DrawEnemy`；
+  `DrawEnemy ; 07:DD8B` 先比 `animFrame==$FF`（空帧 ⇒ `ClearObjectCntrl`）。
+
+结果：`case-movie-100p-en1` 窗口 f2144–f2152 **5/5 全 0px**；权威矩阵
+**15 案/132 格 · match 126 · diff 6 · blocked 0（逐格无回退）**；测试 622→**626**。
+
+下一步首分歧（同一 bisect2 窗口实测）：f2160 8px → f2170/f2190/f2210/f2230 **44px 与 0 交替**
+（2 帧动画里有一帧不对），f2240 起稳定 ~240px（常驻对象）。已定界，未修。
+
+Evidence: asm bank07:F611-F673（ExplodeEnemy 尾件）、bank07:FA9D-FAEA（爆炸池 update/绘制/位移表）、
+bank07:DD8B（DrawEnemy 空帧门）；录像池字节 `$04C0-$04DF` 与 OAM 逐帧对读。
+Confidence: 92

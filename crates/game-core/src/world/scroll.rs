@@ -104,7 +104,9 @@ pub(crate) fn uw_elevator(mem: &mut crate::frame::FrameMemory) {
 }
 
 /// UpdateAllEnemyExplosions（爆族——槽空⇒跳过）。
-pub(crate) fn uw_enemy_explosions(_mem: &mut crate::frame::FrameMemory) {}
+pub(crate) fn uw_enemy_explosions(mem: &mut crate::frame::FrameMemory) {
+    crate::enemy::framework::update_all_enemy_explosions(mem);
+}
 
 /// UpdateAllMellows（虫族）。
 pub(crate) fn uw_mellows(_mem: &mut crate::frame::FrameMemory) {}
