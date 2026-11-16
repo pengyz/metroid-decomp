@@ -137,6 +137,19 @@ impl Position {
     }
 }
 
+/// `Samus` 的动画四元组（`$0303 frame` / `$0304 delay` / `$0305 resetIndex` / `$0306 index`）。
+///
+/// 四者是一个整体：`index` 指向 anim 表项、`frame` 是该表项内的帧计数、`delay` 是**帧内**
+/// 倒计时、`resetIndex` 是动画结束后的回卷目标。拆开存取就会出现「改了 index 忘了 reset」
+/// 这类错位（`InitEnAnimIndex` 一族维护的正是这个不变量）。
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct Anim {
+    pub frame: u8,
+    pub delay: u8,
+    pub reset: u8,
+    pub index: u8,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct SamusState {
     status: SamusStatus,
@@ -151,6 +164,8 @@ pub struct SamusState {
     accel_x: i8,
     /// 位置三元组 `$030C/$030D/$030E`。
     pos: Position,
+    /// 动画四元组 `$0303-$0306`。
+    anim: Anim,
 }
 
 impl Default for SamusState {
@@ -162,6 +177,7 @@ impl Default for SamusState {
             accel_y: 0,
             accel_x: 0,
             pos: Position::default(),
+            anim: Anim::default(),
         }
     }
 }
@@ -202,6 +218,10 @@ impl SamusState {
             SAMUS_HI => self.pos.hi,
             SAMUS_Y => self.pos.y,
             SAMUS_X => self.pos.x,
+            SAMUS_ANIM_FRAME => self.anim.frame,
+            ANIM_DELAY => self.anim.delay,
+            ANIM_RESET_INDEX => self.anim.reset,
+            ANIM_INDEX => self.anim.index,
             _ => return None,
         })
     }
@@ -216,13 +236,17 @@ impl SamusState {
             SAMUS_HI => self.pos.hi = v,
             SAMUS_Y => self.pos.y = v,
             SAMUS_X => self.pos.x = v,
+            SAMUS_ANIM_FRAME => self.anim.frame = v,
+            ANIM_DELAY => self.anim.delay = v,
+            ANIM_RESET_INDEX => self.anim.reset = v,
+            ANIM_INDEX => self.anim.index = v,
             _ => return false,
         }
         true
     }
 
     /// 迁入 typed 的地址清单（`snapshot_nes()` 逐项投影用——**唯一投影源**）。
-    pub const TYPED_ADDRS: [u16; 8] = [
+    pub const TYPED_ADDRS: [u16; 12] = [
         SAMUS_STATUS,
         SAMUS_SPEED_Y_INT,
         SAMUS_SPEED_X_INT,
@@ -231,6 +255,10 @@ impl SamusState {
         SAMUS_HI,
         SAMUS_Y,
         SAMUS_X,
+        SAMUS_ANIM_FRAME,
+        ANIM_DELAY,
+        ANIM_RESET_INDEX,
+        ANIM_INDEX,
     ];
 
     pub fn pos(&self) -> Position {
@@ -239,6 +267,14 @@ impl SamusState {
 
     pub fn set_pos(&mut self, p: Position) {
         self.pos = p;
+    }
+
+    pub fn anim(&self) -> Anim {
+        self.anim
+    }
+
+    pub fn set_anim(&mut self, a: Anim) {
+        self.anim = a;
     }
 }
 
@@ -381,6 +417,15 @@ impl<'a> Samus<'a> {
 
     pub fn set_pos(&mut self, p: Position) {
         self.mem.samus.set_pos(p);
+    }
+
+    /// 动画四元组（typed 面）。
+    pub fn anim(&self) -> Anim {
+        self.mem.samus.anim()
+    }
+
+    pub fn set_anim(&mut self, a: Anim) {
+        self.mem.samus.set_anim(a);
     }
 
     pub fn set_x(&mut self, v: u8) {
@@ -526,6 +571,23 @@ mod tests {
         assert_eq!(mem.read_ram(0x030D), 0x9D);
         mem.write_ram(0x030C, 0x00);
         assert_eq!(mem.samus().pos().hi, 0x00, "字节写落 typed");
+    }
+
+    /// 动画四元组 typed 化：四字节一起存取，投影逐项落位（`index/reset` 不再各自漂移）。
+    #[test]
+    fn anim_quad_is_typed_and_projects() {
+        let mut mem = m();
+        mem.samus().set_anim(Anim { frame: 0x12, delay: 0x01, reset: 0x20, index: 0x21 });
+        let img = mem.snapshot_nes();
+        assert_eq!(
+            (img.ram[0x0303], img.ram[0x0304], img.ram[0x0305], img.ram[0x0306]),
+            (0x12, 0x01, 0x20, 0x21)
+        );
+        assert_eq!(mem.samus().anim().index, 0x21);
+        // 地址面同源（asm 侧仍按字节改写，落 typed）
+        mem.write_ram(0x0306, 0x30);
+        assert_eq!(mem.samus().anim().index, 0x30);
+        assert_eq!(mem.snapshot_nes().ram[0x0306], 0x30);
     }
 
     /// typed 地址表与实际投影一致：每个 TYPED_ADDRS 项在投影上都能读回 typed 值。
