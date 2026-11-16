@@ -189,6 +189,28 @@ mod tests_batch2 {
         assert_eq!(objects_clear_events()[0], (0x0300, 0));
         assert_eq!(objects_clear_events()[31], (0x031F, 0));
     }
+
+    /// 回归（2026-11-17）：`OBJECTS_CLEAR` 的 `$0300-$031F` 清块**必须**落到 typed 真相面。
+    ///
+    /// 旧形 `apply_title_step(ram: &mut [u8], …)` 直写字节切片，而 `$0300-$0315` 是 Samus
+    /// typed 辖内字段 ⇒ 清块只改了字节、`snapshot_nes()` 随后用 typed 旧值覆盖回去，
+    /// `read_ram(0x0300)` 于是读回"没被清掉"的旧状态（`prep_restart` 路 B 已踩中）。
+    #[test]
+    fn objects_clear_reaches_typed_surface() {
+        let mut mem = crate::frame::Manager::default();
+        mem.samus()
+            .set_status(crate::samus::state::SamusStatus::Roll); // 先立一个非零状态
+        let before = mem.read_ram(0x0300);
+        assert_eq!(before, 3, "前提：typed 面确有一个待清的值");
+        apply_title_step(&mut mem, &objects_clear_events());
+        for addr in 0x0300..=0x0315u16 {
+            assert_eq!(mem.read_ram(addr), 0, "${addr:04X} 清块必须落到 typed 真相面");
+        }
+        let img = mem.snapshot_nes();
+        for addr in 0x0300..=0x0315usize {
+            assert_eq!(img.ram[addr], 0, "投影同步：${addr:04X}");
+        }
+    }
 }
 
 // ---- 批4a 特效簇映射面（IntroSpr 槽 $6EA0/$6EB0 步距 $10 + SpriteRAM.4 面 $0210/$0220）----
@@ -238,14 +260,17 @@ pub fn effect_event(tag: (u8, u8, u8)) -> Vec<(u16, u8)> {
 
 // ==== 会师契约应用件（② outcome 应用面）====
 
-/// 应用 TitleStep 写事件到内存面（桥侧一步到位；或直读 step.events 自行投影）。
-/// RAM/WRAM 归一：addr<$2000 → 镜像 &0x7FF；$6000-$7FFF → wram；其他域 fail-loud。
-pub fn apply_title_step(ram: &mut [u8], wram: &mut [u8], events: &[(u16, u8)]) {
+/// 应用 TitleStep 写事件到内存面。
+///
+/// **必须经 [`Manager::write_ram`]**：`$0300-$0315` 是 typed 辖内字段（Samus 22 字节），
+/// 直写 `ram` 切片会绕开 typed 存储，而 `snapshot_nes()` 随后用 typed 值把这块覆盖回去
+/// ⇒ `read_ram(0x0300)` 与 `snapshot_nes().ram[0x0300]` 互相矛盾（`prep_restart` 路 B 的
+/// 32 条 `OBJECTS_CLEAR($0300+i)` 已经踩中这条）。`write_ram` 对 `$0000-$07FF` 走镜像、
+/// `$6000-$7FFF` 走 WRAM，并对 typed 地址转投 typed 存储——语义与旧切片版完全一致。
+pub fn apply_title_step(mem: &mut crate::frame::Manager, events: &[(u16, u8)]) {
     for &(addr, v) in events {
-        if addr < 0x2000 {
-            ram[(addr as usize) & 0x7FF] = v;
-        } else if (0x6000..0x8000).contains(&addr) {
-            wram[addr as usize - 0x6000] = v;
+        if addr < 0x2000 || (0x6000..0x8000).contains(&addr) {
+            mem.write_ram(addr, v);
         } else {
             panic!("apply_title_step 域外写 ${addr:04X}——fail-loud");
         }

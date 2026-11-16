@@ -149,8 +149,7 @@ pub fn main_title_routine(mem: &mut Manager) {
         let loc = format!("bank00:{addr:04X}");
         crate::unported!(&loc); // 真未武装（18/1E——深路专件/随件）：per-entry 爆
     }
-    let (ram, wram) = mem.ram_wram_mut();
-    title::apply_title_step(ram, wram, &step.events);
+    title::apply_title_step(mem, &step.events);
     if let Some(a) = step.a_out {
         mem.regs.a = a;
     }

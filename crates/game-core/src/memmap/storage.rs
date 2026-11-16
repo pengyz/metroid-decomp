@@ -66,8 +66,17 @@ mod tests {
     #[test]
     fn nes_storage_is_private_to_manager() {
         // 编译期契约：外部拿不到 NesStorage 字段，只能走 ram()/wram()/snapshot_nes()。
-        let m = Manager::default();
-        assert_eq!(m.ram(), &[0u8; 0x800]);
-        assert_eq!(m.snapshot_nes().ram, *m.ram());
+        // 【2026-11-17 更正】旧版只在全零 Manager 上断言 `snapshot_nes().ram == *ram()`，
+        // 那是一条**空断言**（typed 字段一旦非零该等式即为假）。真相是：
+        // 字节面**不**持有 typed 字段（`write_ram` 对 typed 地址提前 return），
+        // 该 22 字节的唯一真相在 `Manager.samus`，`snapshot_nes()` 才是字节面。
+        let mut m = Manager::default();
+        m.ram_mut()[0x0200] = 0xAA; // 非 typed 面
+        m.samus().set_status(crate::samus::state::SamusStatus::Roll);
+        let img = m.snapshot_nes();
+        assert_eq!(img.ram[0x0200], 0xAA, "非 typed 面直通");
+        assert_eq!(img.ram[0x0300], 3, "typed 字段由投影产出");
+        assert_eq!(m.read_ram(0x0300), 3, "读口与投影同源");
+        assert_eq!(m.ram()[0x0300], 0, "字节面不持有 typed 字段（分层的代价，显式锁定）");
     }
 }
