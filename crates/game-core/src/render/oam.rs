@@ -46,7 +46,7 @@ pub fn anim_draw_object(mem: &mut crate::frame::FrameMemory, page_index: u8, a_i
 ///
 /// 帧数据里 `FD <ctrl>` 是「换一组 sprite 属性」（门/物品的多段 metasprite），
 /// 覆盖与否**只由 ObjectCntrl 的 MSB 决定**，与入口那次覆盖同一条律。
-fn new_ctrl_byte(c: u8, obj_cntrl: u8) -> u8 {
+pub(crate) fn new_ctrl_byte(c: u8, obj_cntrl: u8) -> u8 {
     if obj_cntrl & 0x80 != 0 {
         (c & 0xC0) | (obj_cntrl & 0x7F)
     } else {

@@ -1486,6 +1486,50 @@ mod tests_enemy_screen_pos {
     }
 }
 
+// ===== 敌调色板覆盖（tough/冻结敌 E038 形）=====
+
+#[cfg(test)]
+mod tests_enemy_palette_override {
+    //! 判径（`GetSpriteCntrlData ; 07:DCC3` 尾 + `SpriteAttrsOverride ; 07:E038`）：
+    //! `ObjectCntrl($6B)` MSB=1 ⇒ `Temp05=(ctrl&$C0)|(ObjectCntrl&$7F)`。敌侧两处写 MSB：
+    //! `UpdateEnemyCommon@noMoveNoAnim`（$F419 tough ⇒ `$80|$03|PRIORITY`）、
+    //! `UpdateEnemy_Frozen`（$F443 ⇒ `$80|$01|PRIORITY`）。
+    //! 旧形只读 $6B bit4 做镜像、忽略 MSB ⇒ tough/冻结敌调色板覆盖从未生效。
+    use super::*;
+    use crate::frame::FrameMemory;
+
+    fn attr_with_obj_cntrl(v: u8) -> u8 {
+        let mut m = FrameMemory::default();
+        m.write_ram(0x0400, 45);
+        m.write_ram(0x0401, 200);
+        m.write_ram(crate::ram_map::SCROLL_X, 0);
+        m.write_ram(crate::ram_map::SCROLL_DIR, 0x02);
+        m.write_wram(0x6AF4 + 3, 0); // animFrame=0
+        m.write_ram(0x006B, v);
+        draw_enemy(&mut m, 0);
+        m.read_ram(0x0202)
+    }
+
+    #[test]
+    fn tough_enemy_uses_palette_three() {
+        let a = attr_with_obj_cntrl(0x80 | 0x03 | 0x20);
+        assert_eq!(a & 0x03, 3, "tough 敌调色板=ObjectCntrl 低 2 位（E038 覆盖）");
+    }
+
+    #[test]
+    fn frozen_enemy_uses_palette_one() {
+        let a = attr_with_obj_cntrl(0x80 | 0x01 | 0x20);
+        assert_eq!(a & 0x03, 1, "冻结敌调色板=1");
+    }
+
+    #[test]
+    fn no_override_without_msb() {
+        let a = attr_with_obj_cntrl(0x00);
+        let b = attr_with_obj_cntrl(0x02);
+        assert_eq!(a, b, "MSB=0 ⇒ 调色板取帧 ctrl 静态位（ObjectCntrl 低 2 位不参与）");
+    }
+}
+
 // ===== 爬行逐帧探针（TDD（问题 A（敌全静/速差根因锚）））=====
 
 #[cfg(test)]

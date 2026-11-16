@@ -72,7 +72,17 @@ pub(crate) fn draw_enemy(mem: &mut crate::frame::FrameMemory, x: u8) {
     // 早已证）））——走滚径写 $FD（scroll_right）而 0x26 停旧值⇒敌屏位不减镜头⇒
     // **随镜恒距**（用户截图症（爬虫悬空错位））。
     let mut sx = xpos.wrapping_sub(mem.read_ram(crate::ram_map::SCROLL_X)) as i16;
-    let mut cntrl05 = ((ctrl >> 4) & 0x03) | (ctrl & 0xC0) | 0x20;
+    let obj_cntrl = mem.read_ram(0x006B);
+    // GetSpriteCntrlData（$DCC3）尾：ObjectCntrl **MSB=1 ⇒ SpriteAttrsOverride（E038）
+    // `Temp05=(ctrl&$C0)|(ObjectCntrl&$7F)`**——敌侧同样适用：`UpdateEnemyCommon@noMoveNoAnim`
+    // （$F419）给 tough 敌写 `$80|$03|PRIORITY`、`UpdateEnemy_Frozen`（$F443）给冻结敌写
+    // `$80|$01|PRIORITY`。旧形只取 bit4 做镜像、忽略 MSB ⇒ **tough/冻结敌的调色板覆盖
+    // 完全没生效**（与本轮 f2084 门精灵同一缺陷类）。
+    let mut cntrl05 = if obj_cntrl & 0x80 != 0 {
+        crate::render::oam::new_ctrl_byte(ctrl, obj_cntrl)
+    } else {
+        ((ctrl >> 4) & 0x03) | (ctrl & 0xC0) | 0x20
+    };
     let mut place_i = 0usize;
     let mut frame_i = 3usize;
     let mut x_sprite = mem.read_ram(0x005B) as u16;
@@ -101,8 +111,9 @@ pub(crate) fn draw_enemy(mem: &mut crate::frame::FrameMemory, x: u8) {
             sx = sx.wrapping_add(blob(frame_i + 2) as i16);
             frame_i += 3;
         } else if b == 0xFD {
+            // GetNewControlByte（$DF3B）——MSB=1 ⇒ E038 覆盖形（与门/物品同律）。
             frame_i += 1;
-            cntrl05 = blob(frame_i);
+            cntrl05 = crate::render::oam::new_ctrl_byte(blob(frame_i), obj_cntrl);
             frame_i += 1;
         } else if b == 0xFE {
             place_i += 2;
