@@ -488,7 +488,8 @@ mod tests {
         let q = 0x6AF4 + x as u16;
         // type 0（Sidehopper 地面）：L977B[0]=0x64（bit6 置 ⇒ 走加速模型）
         m.write_wram(q + 14, 0x00);
-        m.write_wram(q, 0x00); // status=Resting
+        // status 语义（asm 07:F351 跳表 0=ExitSub/1=Resting/2=Active/…/>=7 RemoveEnemy）
+        m.write_wram(q, 0x01); // status=Resting
         m.write_ram(e + 9, 0x01); // delay=1（dec 后归零）
         m.write_ram(e + 5, 0x08); // data05 bit3=1（允许激活）；bit0=0（朝右）
         m.write_ram(ram_map::FRAME_COUNT, 0x05);
@@ -508,7 +509,7 @@ mod tests {
         assert_eq!(m.read_ram(e + 6), 0x00, "speedSubPixelY 清 0");
         assert_eq!(m.read_ram(e + 7), 0x00, "speedSubPixelX 清 0");
         assert_eq!(m.read_ram(e + 5) & 0x20, 0x00, "data05 bit5 清（解除休止）");
-        assert_eq!(m.read_wram(q) & 0x0F, 0x01, "status Resting(0)→Active(1)");
+        assert_eq!(m.read_wram(q) & 0x0F, 0x02, "status Resting(1)→Active(2)");
     }
 
     /// 朝左（data05 bit0=1）⇒ 水平四量取反（asm `$81D1 @flipSpeedAndAccel`）。
