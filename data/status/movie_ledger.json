@@ -20,6 +20,33 @@
       "first_divergence_px": 154,
       "status": "pilot",
       "notes": "截到 f3260（首个 2P 输入 f3265 之前，本 pilot 只用 1P）。首分歧 f1040 为 Samus 自身精灵面（154px，HUD/房间/敌人全同）。"
+    },
+    {
+      "id": "tasvideos-2305-lordtom-100p",
+      "title": "Metroid 100% (Lord Tom, 33:25.70)",
+      "author": "Lord Tom",
+      "site": "TASVideos",
+      "url": "https://tasvideos.org/2305M",
+      "source_url": "https://tasvideos.org/2305S?handler=Download",
+      "format": "fm2",
+      "core": "FCEUX 9816 (emuVersion 9816)",
+      "frames": 120540,
+      "first_p1_frame": 8,
+      "first_p2_frame": 22449,
+      "reset_count": 1,
+      "sha256": "471b441cb2368c95cd450f53b5d5d24d061c0ad43465d61bc410a76d4117f7eb",
+      "rom_identity": "fm2 romChecksum = base64(b'\\xb2\\xd2\\xd9\\xedh\\xb3\\xe5\\xe0\\xd2\\x90S\\xeaR[\\xd3|') ⇒ 解码 == 本仓 ROM 无头 MD5 b2d2d9ed68b3e5e0d29053ea525bd37c（逐字节吻合）",
+      "window_used": "movies/cases/case-movie-100p-*.txt（gitignored）",
+      "frames_synced": 2159,
+      "frames_synced_note": "连续逐像素 0px 到 f2159（含 2P 段 f22449 之后未测；本数=连续 0px 的最后一帧）。修到 f2152 归零、f2160 起出现 8px 单帧分歧后暂停。",
+      "first_divergence_frame": 2160,
+      "first_divergence_px": 8,
+      "known_open": [
+        "f2160 = 8px 单帧（PPU 逐字节全同 ⇒ 只能是精灵面；已收窄到 Samus 精灵组区域 x171-224/y146-170，未定到具体 ctrl/tile）",
+        "f2240 起稳定 ~240px（常驻对象，未定界）",
+        "f22449 起 2P 段（Up+A 放弃进度回密码屏）已解锁但未逐段跑完"
+      ],
+      "notes": "100% 路线本身使用 Up+A 复位、door glitch、morph-jump 穿单层地板、offscreen wrap 等技巧（2305S 投稿说明自述）——我们不判路线纯度，只取其输入来扩覆盖。"
     }
   ]
 }
