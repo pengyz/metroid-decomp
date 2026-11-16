@@ -468,8 +468,12 @@ fn main() {
             // +敌 extra 面 $6AF4-$6B73（②终钉（EnsExtra（双侧同构）））
             {
                 let mut ram_hex = String::new();
+                // 【取投影不取裸存储】typed 化后的字段（Samus.status/speed/pos 等）真相在
+                // `Manager.samus`，`ram()` 是未迁字段的原始面；dump 必须走 `snapshot_nes()`，
+                // 否则 typed 值不出现在 ram.hex 里（capture_seam 锚测当场红过）。
+                let img = engine.mem.snapshot_nes();
                 for i in 0..0x800usize {
-                    ram_hex.push_str(&format!("{:02X}", engine.mem.ram().get(i).copied().unwrap_or(0)));
+                    ram_hex.push_str(&format!("{:02X}", img.ram.get(i).copied().unwrap_or(0)));
                 }
                 for i in 0x6AF4u16..=0x6B73 {
                     ram_hex.push_str(&format!("{:02X}", engine.mem.read_wram(i)));

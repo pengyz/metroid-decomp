@@ -79,8 +79,10 @@ pub fn main_title_routine(mem: &mut Manager) {
         joy_change: mem.read_ram(JOY1_CHANGE),
         ppuctrl: mem.read_ram(PPUCTRL_ZP),
         star_src,
-        wram: mem.wram().to_vec(),
-        ram: mem.ram().to_vec(),
+        // 【取投影不取裸存储】TitleFace 是"整面快照"输出面（喂 L2/trace 比对），
+        // typed 化字段的真相在 `Manager.samus` 等域状态里，裸 `ram()` 会漏掉它们。
+        wram: mem.snapshot_nes().wram.to_vec(),
+        ram: mem.snapshot_nes().ram.to_vec(),
     };
     // **JumpEngine TempX/TempY 保存**（asm C27C：`sty TempY($6A)/stx TempX($69)`——
     // B 案 $69/$6A=FF/FF 机理：调用点寄存器保存（帧 3 面））

@@ -118,6 +118,25 @@ impl SamusStatus {
 /// 「typed 存储 → NES 字节投影」这套机制的试点。其余 21 字节仍在 `NesStorage.ram` 里，
 /// 后续按字段逐个迁入本结构——每迁一个，`Manager::snapshot_nes()` 的投影就多一行，
 /// 而 `read_ram/write_ram` 的地址面保持不变（兼容辖）。
+/// `Samus` 的位置三元组（`$030C hi` / `$030D y` / `$030E x`）。
+///
+/// 三字节必须**一起**看才是坐标：`hi` 是 256px 页内的高位（滚动/换屏时翻转），
+/// 把 `(hi,y,x)` 拆成三个独立字节正是"回绕逻辑散落各处"的根源。typed 化后由
+/// [`Position`] 承载，后续把 `y±dy` 的回绕封成方法时只改这一处。
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct Position {
+    pub hi: u8,
+    pub y: u8,
+    pub x: u8,
+}
+
+impl Position {
+    /// 16 位屏内 y（`hi:y` 拼接，asm 侧 `hi*256+y` 的语义面）。
+    pub fn y16(self) -> u16 {
+        (self.hi as u16) << 8 | self.y as u16
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct SamusState {
     status: SamusStatus,
@@ -130,6 +149,8 @@ pub struct SamusState {
     accel_y: i8,
     /// `SamusAccelX`（`$0315`）。
     accel_x: i8,
+    /// 位置三元组 `$030C/$030D/$030E`。
+    pos: Position,
 }
 
 impl Default for SamusState {
@@ -140,6 +161,7 @@ impl Default for SamusState {
             speed_x: 0,
             accel_y: 0,
             accel_x: 0,
+            pos: Position::default(),
         }
     }
 }
@@ -177,6 +199,9 @@ impl SamusState {
             SAMUS_SPEED_X_INT => self.speed_x as u8,
             SAMUS_ACCEL_Y => self.accel_y as u8,
             SAMUS_ACCEL_X => self.accel_x as u8,
+            SAMUS_HI => self.pos.hi,
+            SAMUS_Y => self.pos.y,
+            SAMUS_X => self.pos.x,
             _ => return None,
         })
     }
@@ -188,19 +213,33 @@ impl SamusState {
             SAMUS_SPEED_X_INT => self.speed_x = v as i8,
             SAMUS_ACCEL_Y => self.accel_y = v as i8,
             SAMUS_ACCEL_X => self.accel_x = v as i8,
+            SAMUS_HI => self.pos.hi = v,
+            SAMUS_Y => self.pos.y = v,
+            SAMUS_X => self.pos.x = v,
             _ => return false,
         }
         true
     }
 
     /// 迁入 typed 的地址清单（`snapshot_nes()` 逐项投影用——**唯一投影源**）。
-    pub const TYPED_ADDRS: [u16; 5] = [
+    pub const TYPED_ADDRS: [u16; 8] = [
         SAMUS_STATUS,
         SAMUS_SPEED_Y_INT,
         SAMUS_SPEED_X_INT,
         SAMUS_ACCEL_Y,
         SAMUS_ACCEL_X,
+        SAMUS_HI,
+        SAMUS_Y,
+        SAMUS_X,
     ];
+
+    pub fn pos(&self) -> Position {
+        self.pos
+    }
+
+    pub fn set_pos(&mut self, p: Position) {
+        self.pos = p;
+    }
 }
 
 /// **Samus 主体**：既是状态句柄，也是行为载体（领域层只认这个类型）。
@@ -335,6 +374,15 @@ impl<'a> Samus<'a> {
     pub fn x(&self) -> u8 {
         self.get(SAMUS_X)
     }
+    /// 位置三元组（typed 面：一次拿全 `hi/y/x`，避免三字节各自漂移）。
+    pub fn pos(&self) -> Position {
+        self.mem.samus.pos()
+    }
+
+    pub fn set_pos(&mut self, p: Position) {
+        self.mem.samus.set_pos(p);
+    }
+
     pub fn set_x(&mut self, v: u8) {
         self.set(SAMUS_X, v);
     }
@@ -464,6 +512,20 @@ mod tests {
         mem.write_ram(0x0308, 0xFE);
         assert_eq!(mem.samus().speed_y(), -2);
         assert_eq!(mem.snapshot_nes().ram[0x0308], 0xFE, "往返保真");
+    }
+
+    /// 位置三元组 typed 化：`(hi,y,x)` 一起存取，投影三字节逐项落位。
+    #[test]
+    fn position_triple_is_typed_and_projects() {
+        let mut mem = m();
+        mem.samus().set_pos(Position { hi: 0x01, y: 0x9D, x: 0xD8 });
+        let img = mem.snapshot_nes();
+        assert_eq!((img.ram[0x030C], img.ram[0x030D], img.ram[0x030E]), (0x01, 0x9D, 0xD8));
+        assert_eq!(mem.samus().pos().y16(), 0x019D);
+        // 地址面同源
+        assert_eq!(mem.read_ram(0x030D), 0x9D);
+        mem.write_ram(0x030C, 0x00);
+        assert_eq!(mem.samus().pos().hi, 0x00, "字节写落 typed");
     }
 
     /// typed 地址表与实际投影一致：每个 TYPED_ADDRS 项在投影上都能读回 typed 值。
