@@ -1174,7 +1174,8 @@ mod tests_bullet_lifetime {
         m.write_ram(0x03D0 + 0x0D, 0x50); // y
         m.write_ram(0x03D0 + 0x0E, 0x00); // x
         // 瓦写入（RoomRAM（make_room_ram_ptr(0x50, 0x00, 0)））
-        let (lo, hi) = crate::world::room_draw::make_room_ram_ptr(0x50, 0x00, 0);
+        let ptr = crate::world::room_ram::Room::addr(0x50, 0x00, 0);
+        let (lo, hi) = (ptr as u8, (ptr >> 8) as u8);
         m.write_wram(((hi as u16) << 8) | lo as u16, tile);
         m
     }

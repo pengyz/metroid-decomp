@@ -267,13 +267,6 @@ fn load_door(mem: &mut crate::frame::Manager, info: u8) {
 const DOOR_X_TABLE: [u8; 2] = [0xE8, 0x10]; // $8D3A（右/左 bg 瓦列像素）
 const DOOR_HP_TABLE: [u8; 4] = [5, 1, 10, 1]; // $8BD1（红/蓝/导弹/音乐蓝）
 
-/// MakeRoomRAMPtr（07:E96A）——ptr=01100HYY YYYXXXXX
-/// （hi=$18|Ybit7|Ybit6<<1|(NT&4)；lo=(Y&$38)<<2|X>>3（RoomRAMA=$6000>>10=$18））。
-pub fn make_room_ram_ptr(y_pos: u8, x_pos: u8, nt_hi: u8) -> (u8, u8) {
-    // 换算公式只此一份：`crate::world::room_ram::Room::offset`（原注释见该函数）。
-    let abs = crate::world::room_ram::Room::addr(y_pos, x_pos, nt_hi);
-    (abs as u8, (abs >> 8) as u8)
-}
 
 /// WriteDoorBGTiles（$8CF7-8D33）——6 瓦纵写（y 步 $20）+DoorRoomRAMPtr 写站
 /// （y=(slot Adiv8)&6（$80..$B0→0/2/4/6））。
@@ -1178,7 +1171,8 @@ mod tests_update_door {
             );
             assert_eq!(m.read_ram(0x030A + 0x80), 0, "isHit←0（DrawDoor）");
             // 实瓦（$4E×6 纵写（ptr=make_room_ram_ptr($50,$E8,0)））+DoorRoomRAMPtr
-            let (lo, hi) = make_room_ram_ptr(0x50, 0xE8, 0);
+            let ptr = crate::world::room_ram::Room::addr(0x50, 0xE8, 0);
+    let (lo, hi) = (ptr as u8, (ptr >> 8) as u8);
             let base = ((hi as u16) << 8) | lo as u16;
             for k in 0..6u16 {
                 assert_eq!(m.read_wram(base.wrapping_add(k * 0x20)), 0x4E, "实瓦[{}]（t={}）", k, dtype);
@@ -1244,7 +1238,8 @@ mod tests_update_door {
         m.write_ram(0x038F, 0x50);
         update_door(&mut m, 0x80);
         assert_eq!(m.read_ram(0x0300 + 0x80), 0, "导弹门永久开（status←0）");
-        let (lo, hi) = make_room_ram_ptr(0x50, 0xE8, 0);
+        let ptr = crate::world::room_ram::Room::addr(0x50, 0xE8, 0);
+    let (lo, hi) = (ptr as u8, (ptr >> 8) as u8);
         let base = ((hi as u16) << 8) | lo as u16;
         assert_eq!(m.read_wram(base), 0xFF, "Air 瓦（首开帧）");
         // 蓝门首开帧⇒Air+HP 递减径（偶帧 dec）
@@ -1265,7 +1260,8 @@ mod tests_update_door {
             (0x00, 0x00, 4, 0x00, 0x60 | 4),
             (0xFF, 0xF8, 4, ((0xFF & 0x38) << 2) | (0xF8 >> 3), 0x60 | 2 | 1 | 4),
         ] {
-            let (lo, hi) = make_room_ram_ptr(y, x, nt);
+            let ptr = crate::world::room_ram::Room::addr(y, x, nt);
+    let (lo, hi) = (ptr as u8, (ptr >> 8) as u8);
             assert_eq!((lo, hi), (el, eh), "y={:02X} x={:02X} nt={}", y, x, nt);
         }
     }
@@ -1298,7 +1294,8 @@ mod tests_door_bg_tiles {
             let mut m = door_mem(1, 1);
             write_door_bg_tiles(&mut m, x_off, 0x4E);
             let x_pos = if x_off == 0x80 { 0xE8 } else { 0x10 };
-            let (lo, hi) = make_room_ram_ptr(0x50, x_pos, 0);
+            let ptr = crate::world::room_ram::Room::addr(0x50, x_pos, 0);
+    let (lo, hi) = (ptr as u8, (ptr >> 8) as u8);
             let base = ((hi as u16) << 8) | lo as u16;
             // Solid 面（6 瓦全 $4E）+DoorRoomRAMPtr（共径（指针恒同））
             for k in 0..6u16 {
@@ -1324,7 +1321,8 @@ mod tests_door_bg_tiles {
     #[test]
     fn state_cycle_tile_faces() {
         let x_pos = 0xE8u8;
-        let (lo, hi) = make_room_ram_ptr(0x50, x_pos, 0);
+        let ptr = crate::world::room_ram::Room::addr(0x50, x_pos, 0);
+    let (lo, hi) = (ptr as u8, (ptr >> 8) as u8);
         let base = ((hi as u16) << 8) | lo as u16;
         // Init⇒Solid
         let mut m = door_mem(1, 1);
@@ -1381,7 +1379,8 @@ mod tests_door_transition_chain {
                 assert_eq!(m.read_ram(0x0305 + 0x80), 0x30, "闭 anim Reset（e={}）", entry);
                 // 【2026-11-14 更正】base=$2E 后 DrawDoor 的 UpdateObjAnim 就地走一格 ⇒ $2F。
                 assert_eq!(m.read_ram(0x0306 + 0x80), 0x2F, "闭 anim base 走一格（$2E→$2F（e={}）", entry);
-                let (lo, hi) = make_room_ram_ptr(0x50, 0xE8, 0);
+                let ptr = crate::world::room_ram::Room::addr(0x50, 0xE8, 0);
+    let (lo, hi) = (ptr as u8, (ptr >> 8) as u8);
                 let base = ((hi as u16) << 8) | lo as u16;
                 assert_eq!(m.read_wram(base), 0x4E, "回封 Solid（e={}）", entry);
             } else {
@@ -1439,7 +1438,8 @@ mod tests_door_transition_chain {
             if entry == 0 {
                 assert_eq!(m.read_ram(0x0300 + 0x80), 2, "8C61 重关（e={}）", entry);
                 assert_eq!(m.read_ram(0x038F), 1, "HP←1（e={}）", entry);
-                let (lo, hi) = make_room_ram_ptr(0x50, 0xE8, 0);
+                let ptr = crate::world::room_ram::Room::addr(0x50, 0xE8, 0);
+    let (lo, hi) = (ptr as u8, (ptr >> 8) as u8);
                 let base = ((hi as u16) << 8) | lo as u16;
                 assert_eq!(m.read_wram(base), 0x4E, "实瓦回封（e={}）", entry);
             } else {

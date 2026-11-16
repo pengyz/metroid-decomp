@@ -542,9 +542,11 @@ pub(crate) fn enemy_move_one_pixel_right(mem: &mut crate::frame::Manager, x: u8)
 /// ——hi==房页不变量（GetNameTableAtScrollDir==SelectRoomRAM 同式）；金腿实证：爬虫
 /// hi=0×\$6000（首房固实瓦挡探 ✓）而 \$38=\$6400（现房空 FF）⇒我探径滑过=旋转根）。
 pub(crate) fn make_room_ram_ptr(_mem: &mut crate::frame::Manager, y: u8, x: u8, hi: u8) -> u16 {
-    let idx = (((y & 0xF8) as u16) << 2) | ((x >> 3) as u16);
-    let page = if hi & 1 != 0 { 0x0400u16 } else { 0x0000 };
-    0x6000 | page | (idx & 0x3FF)
+    // 【2026-11-17 收口】换算只此一份：`Room::addr`。对象面的 `hi` 用 **bit0** 选页
+    // （`Temp0B_PositionHi & $04` 的等价形），房间面用 **bit2**——这里显式换算，
+    // 避免两套公式各自演化（此前两份实现是"同结果、不同写法"，改一处必漂移）。
+    let nt_page = if hi & 1 != 0 { 0x04 } else { 0x00 };
+    crate::world::room_ram::Room::addr(y, x, nt_page)
 }
 
 /// 碰撞核（**asm 内容锚** `CheckMoveVertical: ; 07:E7BD`/Horizontal $E89B——r26）：
