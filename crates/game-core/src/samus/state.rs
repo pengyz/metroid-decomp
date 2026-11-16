@@ -731,6 +731,26 @@ mod tests {
 
     /// 全 22 字节覆盖：`$0300-$0315` 每一格都必须可 typed 读写（无遗漏、无重复）。
     #[test]
+    /// **投影表与解码表必须同源**：`get_byte` 的 match 与 `TYPED_ADDRS` 是两份手写清单，
+    /// `len()==23` 只能抓"数错"，抓不住"只往一边加一字节"（症状：`read_ram` 读到新值、
+    /// ram.hex dump 仍是旧字节——全绿）。这里逐地址断言两者等价。
+    #[test]
+    fn typed_addrs_and_decoder_agree_on_every_address() {
+        let mut mem = m();
+        for a in 0x0300u16..=0x03FF {
+            assert_eq!(
+                mem.samus.get_byte(a).is_some(),
+                SamusState::TYPED_ADDRS.contains(&a),
+                "{a:#06X}：解码面与 TYPED_ADDRS 不一致（加字段忘登记投影表会命中这里）"
+            );
+        }
+        // 反向也查一遍：TYPED_ADDRS 里的每一项都必须真能解码。
+        for &a in SamusState::TYPED_ADDRS.iter() {
+            assert!(mem.samus.get_byte(a).is_some(), "{a:#06X} 登记了但解不出");
+        }
+    }
+
+    #[test]
     fn all_22_samus_bytes_are_typed() {
         let mut mem = m();
         let mut seen = std::collections::BTreeSet::new();
