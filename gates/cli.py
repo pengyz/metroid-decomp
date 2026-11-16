@@ -1257,6 +1257,13 @@ def l4_touchlist_violations(matrix: dict, sidecar_dir: Path,
         return out
     cases_total = int(matrix.get("cases_total") or 0)
     sidecars = sorted(sidecar_dir.glob("*.divergences.json"))
+    # 只对**矩阵内**的案子记账：`movies/cases/*` 的探索性探针（录像对拍、逐帧 bisect）
+    # 也会落 sidecar，它们的记账 addr 是"还没接的 handler"的勘探结果，不应污染 L4 账。
+    # 判据取自矩阵本身（rows[].case），不另设名单——名单会漂移。
+    matrix_cases = {r.get("case") for r in (matrix.get("rows") or []) if r.get("case")}
+    if matrix_cases:
+        sidecars = [sp for sp in sidecars
+                    if sp.name[: -len(".divergences.json")] in matrix_cases]
     if len(sidecars) < cases_total:
         out.append(f"sidecar 缺失：期望 {cases_total} 件（每案一件），实有 {len(sidecars)} 件"
                    f"（{sidecar_dir}）——记账不得静默缺失")
@@ -3554,14 +3561,16 @@ def cmd_selftest(_args) -> int:
             cdir.mkdir()
             (cdir / "case-x.txt").write_text("name case-x\nframes 10\ncapture 5 mid\n",
                                              encoding="utf-8")
-            old_g = (l4m18.CASES_DIR, l4m18.SHOTS_RUST, srm18.expand_schedule)
+            # 打桩打在**真正的展开入口**上：2P 通道上线后唯一实现是 expand_pads，
+            # expand_schedule 退化为它的薄壳（见 scenario_run 的 anti-drift 注释）。
+            old_g = (l4m18.CASES_DIR, l4m18.SHOTS_RUST, srm18.expand_pads)
             l4m18.CASES_DIR = cdir
             l4m18.SHOTS_RUST = tmp / "shots_rust"
 
             def _boom18(plan):
                 raise RuntimeError("simulated do_run_all crash")
 
-            srm18.expand_schedule = _boom18
+            srm18.expand_pads = _boom18
             try:
                 rc18 = l4m18.do_run_all(
                     argparse.Namespace(skip_rust=True, skip_emu=True, timeout=1.0))
@@ -3571,7 +3580,7 @@ def cmd_selftest(_args) -> int:
                 check("C1② do_run_all 全量兜底：中途未捕获异常 ⇒ exit 2 拒跑（非 exit 1 裸 traceback 当『跑完』）",
                       False, f"异常逃逸 do_run_all（未兜底——gate 会把 exit 1 当『跑完』判旧矩阵）: {exc!r}")
             finally:
-                l4m18.CASES_DIR, l4m18.SHOTS_RUST, srm18.expand_schedule = old_g
+                l4m18.CASES_DIR, l4m18.SHOTS_RUST, srm18.expand_pads = old_g
 
         with tempfile.TemporaryDirectory() as td:
             tmp = Path(td)
