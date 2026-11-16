@@ -176,12 +176,24 @@ def _write_one(ledger: Path, counts: dict[str, int], allow_raise: bool, schema: 
             for f, (now, was) in sorted(raised.items()):
                 print(f"  - {f}: {was} → {now}", file=sys.stderr)
             return 2
+    prod = {f: n for f, n in counts.items() if not _is_test_surface(f)}
     doc = {"schema": schema, "note": note, "monitored": monitored, "exempt": EXEMPT,
-           "total": total, "files": dict(sorted(counts.items()))}
+           "total": total, "prod_total": sum(prod.values()),
+           "test_total": total - sum(prod.values()),
+           "files": dict(sorted(counts.items()))}
     ledger.parent.mkdir(parents=True, exist_ok=True)
     ledger.write_text(json.dumps(doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(f"账本已写：{ledger.relative_to(ROOT)}  总 {total} 处 / {len(counts)} 文件")
     return 0
+
+
+def _is_test_surface(f: str) -> bool:
+    """测试面判定：测试代码里钉 NES 字节是**断言**，不是绕过 typed。
+
+    这与生产的"绕过"不同：测试要证明的是"N 字节落到 N 地址"，用 typed 视图反而会让
+    断言变成"视图读回自己"。所以测试面单独统计、单独展示，不参与棘轮比较。
+    """
+    return f == "frame/tests.rs" or f.endswith("/tests.rs") or f.startswith("tests/")
 
 
 def _check_one(ledger: Path, counts: dict[str, int], what: str) -> list[str]:
@@ -196,15 +208,18 @@ def _check_one(ledger: Path, counts: dict[str, int], what: str) -> list[str]:
         elif n > was:
             problems.append(f"[{what}] {f}: {was} → {n}（只减不增）")
     total_now = sum(counts.values())
-    if total_now > old["total"]:
-        problems.append(f"[{what}] 总量 {old['total']} → {total_now}（只减不增）")
+    base = old.get("prod_total", old["total"])
+    if total_now > base:
+        problems.append(f"[{what}] 生产面总量 {base} → {total_now}（只减不增）")
     return problems
 
 
 def check() -> int:
     raw_now = scan()
     named_now = scan_named()
-    problems = _check_one(LEDGER, raw_now, "裸地址") + _check_one(LEDGER_NAMED, named_now, "具名常量")
+    raw_prod = {f: n for f, n in raw_now.items() if not _is_test_surface(f)}
+    named_prod = {f: n for f, n in named_now.items() if not _is_test_surface(f)}
+    problems = _check_one(LEDGER, raw_prod, "裸地址") + _check_one(LEDGER_NAMED, named_prod, "具名常量")
     if problems:
         print("typed 面被绕过（视图已存在：改用 mem.samus()/mem.enemy(slot)）：", file=sys.stderr)
         for p in problems:
@@ -215,7 +230,8 @@ def check() -> int:
     lowered = (raw_old["total"] - sum(raw_now.values())) + (named_old["total"] - sum(named_now.values()))
     tail = f"；可下调账本 {lowered} 处（--write）" if lowered > 0 else ""
     print(
-        f"typed 绕过面在账内：裸地址 {sum(raw_now.values())}/{raw_old['total']} 处 / {len(raw_now)} 文件"
+        f"typed 绕过面在账内（**生产面**受棘轮）：裸地址 {sum(raw_prod.values())}/{raw_old['total']} 处 / {len(raw_prod)} 文件"
+        f"；测试面另计 {sum(raw_now.values()) - sum(raw_prod.values())} 处（不参与棘轮，见 _is_test_surface）"
         f"；具名常量 {sum(named_now.values())}/{named_old['total']} 处 / {len(named_now)} 文件"
         f"（受监控 {', '.join(raw_old['monitored'])}；豁免 {len(EXEMPT)} 个边界文件）{tail}"
     )
