@@ -38,6 +38,12 @@
       "kind": "fixture",
       "max": 88,
       "note": "A1_015..A1_018 黄金 RAM 写迹（每项 8 场景的 (addr,val) 元组）——测试基准，不是游戏数据；真数据仅 ENEMY_ACTIVE_ANIM_INDEX(32B)。"
+    },
+    {
+      "file": "crates/game-core/src/samus/physics.rs",
+      "kind": "symbol",
+      "max": 223,
+      "note": "**代码里的地址/常量元知识**，不是 ROM 数据块：`0x0300-$0315` Samus 结构体字段址、`sa_*`/`gr_*` 位值、岩浆伤害节拍（$07/$32/$FF）、球反弹算式内联量；另含测试向量（`tests_lava_damage`/`tests_ball_bounce`/`tests_lava_gate` 的期望 RAM 值）。223 = 本方（2026-11-16 movie-p1）实测体量，上调即红。"
     }
   ]
 }
