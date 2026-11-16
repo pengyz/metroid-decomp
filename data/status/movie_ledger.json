@@ -1,0 +1,25 @@
+{
+  "schema": "movie-ledger-v1",
+  "note": "社区 TAS 录像的输入面登记。**不含任何 ROM/录像数据**——只记来源 URL、sha256、帧数与实测同步帧数；录像本体由 tools/movie_import.py 按需下载并 gitignore。",
+  "movies": [
+    {
+      "id": "tasvideos-3666-anyp",
+      "title": "NES Metroid any% (obsoleted)",
+      "author": "The8bitbeast",
+      "site": "TASVideos",
+      "url": "https://tasvideos.org/3666M",
+      "format": "bk2",
+      "core": "NesHawk",
+      "frames": 28690,
+      "first_p1_frame": 7,
+      "first_p2_frame": 3265,
+      "sha256": "53f25c7e2bde5a7e69790880483b88e81227b935fc1e90517ae2fe71f8fd84b2",
+      "window_used": 3260,
+      "frames_synced": 1039,
+      "first_divergence_frame": 1040,
+      "first_divergence_px": 154,
+      "status": "pilot",
+      "notes": "截到 f3260（首个 2P 输入 f3265 之前，本 pilot 只用 1P）。首分歧 f1040 为 Samus 自身精灵面（154px，HUD/房间/敌人全同）。"
+    }
+  ]
+}

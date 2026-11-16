@@ -162,6 +162,7 @@ def parse_scenario(path: Path) -> dict:
         "navs": [],
         "triggers": [],
         "holds": [],
+        "input_log": None,  # 录像逐帧输入表（tools/movie_import.py 产物；绝对优先覆盖）
         "captures": [],
         "capture_every": None,
         "watch": [],
@@ -275,6 +276,12 @@ def parse_scenario(path: Path) -> dict:
                 if b not in BUTTONS:
                     raise err(f"未知按钮 {b!r}（可选: {sorted(BUTTONS)}）")
             plan["holds"].append({"from": int(a_s), "to": int(b_s), "buttons": btns})
+        elif op == "inputlog":
+            # 录像输入面：inputlog <路径>（相对仓库根；逐帧表由 tools/movie_import.py 生成）。
+            # 语义=该表对 1..N 帧**绝对优先**（覆盖 press/hold 的合成结果）——录像即权威输入。
+            if len(args) != 1:
+                raise err("inputlog 用法: inputlog <路径>")
+            plan["input_log"] = args[0]
         elif op == "capture":
             if len(args) != 2 or not args[0].isdigit():
                 raise err("capture 用法: capture <帧号> <tag>")
@@ -567,6 +574,19 @@ def expand_schedule(plan: dict) -> dict[int, int]:
     for e in plan.get("presses", []):
         add(int(e["frame"]), int(e["frame"]) + press_len - 1, e["buttons"])
 
+    # 录像输入表（inputlog）：逐帧绝对优先——录像即权威输入，press/hold 只用于
+    # 「无录像的用例」。表为空/未声明的用例字节不变（锚不漂移）。
+    log_path = plan.get("input_log")
+    log_table: dict[int, tuple[int, int, int]] = {}
+    if log_path:
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        import movie_import  # 单源：.inputlog 读写语义只在 movie_import
+
+        lp = Path(log_path)
+        if not lp.is_absolute():
+            lp = ROOT / lp
+        log_table = movie_import.read_inputlog(lp)
+
     joy: dict[int, int] = {}
     for f in sorted(per_frame):
         d = per_frame[f]
@@ -580,6 +600,11 @@ def expand_schedule(plan: dict) -> dict[int, int]:
             bits |= BUTTON_BITS[btn]
         if bits:
             joy[f] = bits
+    for f, (p1, _p2, _cmd) in log_table.items():
+        if p1:
+            joy[f] = p1
+        else:
+            joy.pop(f, None)
     return joy
 
 
