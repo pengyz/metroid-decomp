@@ -115,6 +115,100 @@ impl EnemyStatus {
 /// 敌槽数（对象槽 0-11 之后，`Ens` 面 12×16 B）。
 pub const SLOT_COUNT: u8 = 12;
 
+/// `EnsExtra` 里被 typed 化的字节偏移（`$6AF4 + slot*16 + off`）。
+/// 前 7 字节成三个**不变量组**：status（独占）、碰撞半径（成对定义盒）、动画四元组
+/// （`index` 指表项 / `frame` 表项内帧序号 / `delay` 帧内倒计时 / `reset` 回卷目标——
+/// 四者互相约束，拆开就会"改 index 忘 reset"）。
+pub mod ensx {
+    /// `EnsExtra.status`。
+    pub const STATUS: u16 = 0;
+    /// `EnsExtra.radiusY`。
+    pub const RADIUS_Y: u16 = 1;
+    /// `EnsExtra.radiusX`。
+    pub const RADIUS_X: u16 = 2;
+    /// `EnsExtra.animFrame`。
+    pub const ANIM_FRAME: u16 = 3;
+    /// `EnsExtra.animDelay`。
+    pub const ANIM_DELAY: u16 = 4;
+    /// `EnsExtra.resetAnimIndex`。
+    pub const RESET_ANIM_INDEX: u16 = 5;
+    /// `EnsExtra.animIndex`。
+    pub const ANIM_INDEX: u16 = 6;
+    /// typed 面的字节上界（0..=6 归 typed，7 起仍是字节面）。
+    pub const TYPED_MAX: u16 = ANIM_INDEX;
+}
+
+/// 碰撞半径（`radiusY/radiusX`）——成对解释"这个判定盒有多大"，分开存就会有一半是旧值。
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct Radius {
+    pub y: u8,
+    pub x: u8,
+}
+
+/// 动画四元组（`animFrame/animDelay/resetAnimIndex/animIndex`）——见 [`ensx`] 注释。
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct Anim {
+    pub frame: u8,
+    pub delay: u8,
+    pub reset: u8,
+    pub index: u8,
+}
+
+/// 一个敌槽的 typed 状态（`EnsExtra` 前 7 字节）。其余字节仍走 `NesStorage`。
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub(crate) struct SlotState {
+    pub status: EnemyStatus,
+    pub radius: Radius,
+    pub anim: Anim,
+}
+
+impl Default for EnemyStatus {
+    fn default() -> Self {
+        Self::NoEnemy
+    }
+}
+
+/// 地址 → (槽号, 槽内偏移)：`$6AF4 + slot*16 + off`（`off` 必须 < 16）。
+pub fn split_ens_extra(addr: u16) -> Option<(usize, u16)> {
+    const BASE: u16 = 0x6AF4;
+    let end = BASE + SLOT_COUNT as u16 * 16;
+    if !(BASE..end).contains(&addr) {
+        return None;
+    }
+    let rel = addr - BASE;
+    Some(((rel / 16) as usize, rel % 16))
+}
+
+impl SlotState {
+    /// typed 字节读（`off` 是 `$6AF4 + slot*16` 之后的偏移）；`None` ⇒ 该字节未 typed 化。
+    pub fn get_byte(&self, off: u16) -> Option<u8> {
+        Some(match off {
+            ensx::STATUS => self.status.to_byte(),
+            ensx::RADIUS_Y => self.radius.y,
+            ensx::RADIUS_X => self.radius.x,
+            ensx::ANIM_FRAME => self.anim.frame,
+            ensx::ANIM_DELAY => self.anim.delay,
+            ensx::RESET_ANIM_INDEX => self.anim.reset,
+            ensx::ANIM_INDEX => self.anim.index,
+            _ => return None,
+        })
+    }
+
+    pub fn set_byte(&mut self, off: u16, v: u8) -> bool {
+        match off {
+            ensx::STATUS => self.status = EnemyStatus::from_byte(v),
+            ensx::RADIUS_Y => self.radius.y = v,
+            ensx::RADIUS_X => self.radius.x = v,
+            ensx::ANIM_FRAME => self.anim.frame = v,
+            ensx::ANIM_DELAY => self.anim.delay = v,
+            ensx::RESET_ANIM_INDEX => self.anim.reset = v,
+            ensx::ANIM_INDEX => self.anim.index = v,
+            _ => return false,
+        }
+        true
+    }
+}
+
 /// **一个敌槽的语义句柄**（短生命周期，由 `Manager::enemy(slot)` 派生）。
 pub struct Enemy<'a> {
     mem: &'a mut Manager,
@@ -285,6 +379,55 @@ impl<'a> Enemy<'a> {
     /// 用于跨域系统函数（拿 `&mut Manager` 的既有件）——本句柄不长期持有。
     pub fn mem(&mut self) -> &mut Manager {
         self.mem
+    }
+}
+
+#[cfg(test)]
+mod tests_typed_slot {
+    use super::{ensx, EnemyStatus};
+    use crate::frame::Manager;
+
+    fn m() -> Manager {
+        Manager::default()
+    }
+
+    /// `$6AF4 + slot*16 + off`（off 0..=6）是 typed 辖：地址面、视图面、投影面三面同源。
+    #[test]
+    fn ens_extra_typed_bytes_are_single_source() {
+        let mut mem = m();
+        let base = 0x6AF4u16 + 3 * 16;
+        mem.write_wram(base + ensx::STATUS, 2); // Active
+        mem.write_wram(base + ensx::RADIUS_Y, 12);
+        mem.write_wram(base + ensx::ANIM_INDEX, 0x42);
+        assert_eq!(mem.enemy(3).status(), EnemyStatus::Active, "视图面");
+        assert_eq!(mem.read_wram(base + ensx::RADIUS_Y), 12, "地址面");
+        let img = mem.snapshot_nes();
+        assert_eq!(img.wram[(base + ensx::ANIM_INDEX - 0x6000) as usize], 0x42, "投影面");
+        // 视图写回地址面
+        mem.enemy(3).set_status(EnemyStatus::Pickup);
+        assert_eq!(mem.read_wram(base + ensx::STATUS), 5);
+    }
+
+    /// 未 typed 的字节（如 `hi` = +7）仍直落字节面，不被 typed 层吞掉。
+    #[test]
+    fn untyped_bytes_fall_through() {
+        let mut mem = m();
+        let a = 0x6AF4u16 + 2 * 16 + 7;
+        mem.write_wram(a, 0x9D);
+        assert_eq!(mem.read_wram(a), 0x9D);
+    }
+
+    /// MSS 恢复必须把敌 typed 面一并回灌（同族事故：整面 dump 曾漏 typed）。
+    #[test]
+    fn restore_mss_backfills_enemy_typed() {
+        let ram = vec![0u8; 0x800];
+        let mut wram = vec![0u8; 0x2000];
+        let base = 0x6AF4u16 + 5 * 16;
+        wram[(base - 0x6000) as usize + ensx::STATUS as usize] = 4; // Frozen
+        wram[(base - 0x6000) as usize + ensx::ANIM_FRAME as usize] = 0x11;
+        let mut mem = Manager::restore_mss(&ram, &wram, Default::default());
+        assert_eq!(mem.enemy(5).status(), EnemyStatus::Frozen);
+        assert_eq!(mem.enemy(5).anim_frame(), 0x11);
     }
 }
 

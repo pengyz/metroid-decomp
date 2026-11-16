@@ -48,11 +48,22 @@ impl Manager {
 
     /// WRAM 读（$6000-$7FFF 字节偏移面）。
     pub fn read_wram(&self, addr: u16) -> u8 {
+        // 【typed 域辖】敌槽 `EnsExtra` 前 7 字节真相在 `Manager.enemies`。
+        if let Some((slot, off)) = crate::enemy::state::split_ens_extra(addr) {
+            if let Some(v) = self.enemies[slot].get_byte(off) {
+                return v;
+            }
+        }
         self.wram()[(addr as usize - 0x6000) & 0x1FFF]
     }
 
     /// WRAM 写。
     pub fn write_wram(&mut self, addr: u16, v: u8) {
+        if let Some((slot, off)) = crate::enemy::state::split_ens_extra(addr) {
+            if self.enemies[slot].set_byte(off, v) {
+                return;
+            }
+        }
         self.wram_mut()[(addr as usize - 0x6000) & 0x1FFF] = v;
     }
 
@@ -207,6 +218,14 @@ impl Manager {
         // typed 域辖字段从字节面回灌（MSS 是外部真相面，恢复后必须重建 typed 状态）。
         for a in crate::samus::state::SamusState::TYPED_ADDRS {
             mem.samus.set_byte(a, ram[a as usize & 0x7FF]);
+        }
+        // 敌槽 `EnsExtra` 前 7 字节（$6AF4 + slot*16）同样从字节面回灌——否则恢复后
+        // 这些字段读回的是 typed 默认零值（同族事故：整面 dump 曾漏 typed）。
+        for slot in 0..crate::enemy::state::SLOT_COUNT as usize {
+            for off in 0..=crate::enemy::state::ensx::TYPED_MAX {
+                let a = 0x6AF4u16 + slot as u16 * 16 + off;
+                mem.enemies[slot].set_byte(off, wram[(a - 0x6000) as usize & 0x1FFF]);
+            }
         }
         mem.regs = regs;
         mem.nmi_enabled = mem.ram()[0x00FF] & 0x80 != 0;

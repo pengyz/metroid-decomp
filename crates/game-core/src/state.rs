@@ -55,6 +55,15 @@ impl Manager {
                 img.ram[a as usize & 0x7FF] = v;
             }
         }
+        // 敌槽 typed 域（`EnsExtra` 前 7 字节）：`$6AF4` 在 WRAM 面 ⇒ 投影到 `wram`。
+        for (slot, st) in self.enemies.iter().enumerate() {
+            for off in 0..=crate::enemy::state::ensx::TYPED_MAX {
+                if let Some(v) = st.get_byte(off) {
+                    let a = 0x6AF4u16 + slot as u16 * 16 + off;
+                    img.wram[(a - 0x6000) as usize & 0x1FFF] = v;
+                }
+            }
+        }
         img
     }
 }
@@ -67,6 +76,9 @@ pub struct Manager {
     storage: crate::memmap::storage::NesStorage,
     /// Samus 域 typed 状态（试点：`status`）。真相面；`snapshot_nes()` 把它投影回 `$0300`。
     pub(crate) samus: crate::samus::state::SamusState,
+    /// 敌槽 typed 状态（`EnsExtra` 前 7 字节 × 12 槽）。真相面；`snapshot_nes()` 投影回
+    /// `$6AF4 + slot*16`。其余 `EnsExtra` 字节仍在 `storage`。
+    pub(crate) enemies: [crate::enemy::state::SlotState; crate::enemy::state::SLOT_COUNT as usize],
     /// 寄存器面。
     pub regs: Registers,
     /// NMI 使能态（PPUCTRL bit7——write_io($2000) 权威面；60Hz VBlank 调度开关）。
@@ -123,7 +135,7 @@ pub struct Manager {
 
 impl Default for Manager {
     fn default() -> Self {
-        Self { storage: crate::memmap::storage::NesStorage::default(), samus: Default::default(), regs: Registers::default(), nmi_enabled: false,
+        Self { storage: crate::memmap::storage::NesStorage::default(), samus: Default::default(), enemies: Default::default(), regs: Registers::default(), nmi_enabled: false,
                title_cursor: 0, title_cursor_phase: 0, title_spin: 0, check_password_pending: false, deferred_screen_on: false, title_no_return: false,
                iter_gates: Vec::new(), iter_span_left: 0, iter_span_fc: false, fc_inced_this_tick: false,
                apu_log: Vec::new(), work_cycles: 0,
