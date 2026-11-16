@@ -109,12 +109,12 @@ impl<'a> Samus<'a> {
 
     #[inline]
     fn get(&self, addr: u16) -> u8 {
-        self.mem.ram[(addr as usize) & 0x7FF]
+        self.mem.ram()[(addr as usize) & 0x7FF]
     }
 
     #[inline]
     fn set(&mut self, addr: u16, v: u8) {
-        self.mem.ram[(addr as usize) & 0x7FF] = v;
+        self.mem.ram_mut()[(addr as usize) & 0x7FF] = v;
     }
 
     pub fn status(&self) -> Option<SamusStatus> {
@@ -287,7 +287,7 @@ mod tests {
     fn status_roundtrip_through_view() {
         let mut mem = m();
         mem.samus().set_status(SamusStatus::Elevator);
-        assert_eq!(mem.ram[0x0300], 9, "sa_Elevator=9（旧注误记 4）");
+        assert_eq!(mem.ram()[0x0300], 9, "sa_Elevator=9（旧注误记 4）");
         assert_eq!(mem.samus().status(), Some(SamusStatus::Elevator));
     }
 
@@ -295,7 +295,7 @@ mod tests {
     #[test]
     fn undefined_status_is_none() {
         let mut mem = m();
-        mem.ram[0x0300] = 0x0A;
+        mem.ram_mut()[0x0300] = 0x0A;
         assert_eq!(mem.samus().status(), None);
         assert_eq!(mem.samus().status_raw(), 0x0A);
     }
@@ -305,7 +305,7 @@ mod tests {
     fn speed_y_is_signed() {
         let mut mem = m();
         mem.samus().set_speed_y(-2);
-        assert_eq!(mem.ram[0x0308], 0xFE);
+        assert_eq!(mem.ram()[0x0308], 0xFE);
         assert_eq!(mem.samus().speed_y(), -2);
     }
 
@@ -314,8 +314,8 @@ mod tests {
     fn health_spans_two_bytes() {
         let mut mem = m();
         mem.samus().set_health(0x0120);
-        assert_eq!(mem.ram[0x0106], 0x20);
-        assert_eq!(mem.ram[0x0107], 0x01);
+        assert_eq!(mem.ram()[0x0106], 0x20);
+        assert_eq!(mem.ram()[0x0107], 0x01);
         assert_eq!(mem.samus().health(), 0x0120);
     }
 

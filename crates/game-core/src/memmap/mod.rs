@@ -9,6 +9,7 @@
 //!
 //! 迁移注：存量 l2ports 切片转写（sub_F2xx 字面形态）按 §5 留作 verify_shim 参考件，
 //! 逐域被语义实现替换后退役——对拍连续性优先，暂不删。
+pub(crate) mod storage;
 pub mod observe;
 pub mod views;
 pub mod world_map;

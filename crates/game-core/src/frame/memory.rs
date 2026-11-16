@@ -15,30 +15,30 @@ impl Manager {
         // =WRAM 分派（asm constants：EnergyTankCount $6877=$6000+0x877）——旧形
         // `& 0x7FF` 镜像归一把 WRAM 读混入 ram[0x077] 垃圾。同族修（分派非点修）。
         if (0x6000..0x8000).contains(&addr) {
-            return self.wram[addr as usize - 0x6000];
+            return self.wram()[addr as usize - 0x6000];
         }
-        self.ram[(addr as usize) & 0x7FF]
+        self.ram()[(addr as usize) & 0x7FF]
     }
 
     /// RAM 写（2KB 镜像归一）。
     pub fn write_ram(&mut self, addr: u16, v: u8) {
         // 【read_ram 映射修同族（2026-11-06）】WRAM 分派（写径同读径）。
         if (0x6000..0x8000).contains(&addr) {
-            self.wram[addr as usize - 0x6000] = v;
+            self.wram_mut()[addr as usize - 0x6000] = v;
             return;
         }
         // 【goal-轮80 Samus radiusY 写钩】0x301 写点（碰撞判径源）。
-        self.ram[(addr as usize) & 0x7FF] = v;
+        self.ram_mut()[(addr as usize) & 0x7FF] = v;
     }
 
     /// WRAM 读（$6000-$7FFF 字节偏移面）。
     pub fn read_wram(&self, addr: u16) -> u8 {
-        self.wram[(addr as usize - 0x6000) & 0x1FFF]
+        self.wram()[(addr as usize - 0x6000) & 0x1FFF]
     }
 
     /// WRAM 写。
     pub fn write_wram(&mut self, addr: u16, v: u8) {
-        self.wram[(addr as usize - 0x6000) & 0x1FFF] = v;
+        self.wram_mut()[(addr as usize - 0x6000) & 0x1FFF] = v;
     }
 
     /// IO/寄存器面写（PPU/APU/手柄——**不入 RAM**：write_ram 的 2KB 镜像归一会把
@@ -58,7 +58,7 @@ impl Manager {
             0x2007 => {
                 // PPUDATA→RenderState 喂入（S6-10 ①——840ad00 建模件运行时喂入面）
                 // 增量位=PPUCTRL bit2（1/32）——从 ram $FF 读
-                let inc = if self.ram[0x00FF] & 0x04 != 0 { 32u16 } else { 1u16 };
+                let inc = if self.ram()[0x00FF] & 0x04 != 0 { 32u16 } else { 1u16 };
                 self.render.write_ppudata(v, inc);
             }
             _ => {
@@ -105,10 +105,10 @@ impl Manager {
     /// pw=密码字节面（$6988-$698F——sc-item-pickup 系 manifest watch）。
     pub fn watch_snapshot(&self) -> Vec<(&'static str, String)> {
         vec![
-            ("zp", crate::memmap::observe::frame_face::encode_zp(&self.ram)),
-            ("iram", crate::memmap::observe::frame_face::encode_iram(&self.ram)),
-            ("wram", crate::memmap::observe::frame_face::encode_wram(&self.wram)),
-            ("pw", crate::memmap::observe::frame_face::encode_pw(&self.wram)),
+            ("zp", crate::memmap::observe::frame_face::encode_zp(self.ram())),
+            ("iram", crate::memmap::observe::frame_face::encode_iram(self.ram())),
+            ("wram", crate::memmap::observe::frame_face::encode_wram(self.wram())),
+            ("pw", crate::memmap::observe::frame_face::encode_pw(self.wram())),
         ]
     }
 }
@@ -124,7 +124,7 @@ impl Manager {
         assert_eq!(m.render.chr[0x1000], 0xAB);
         m.write_io(0x2006, 0x20);
         m.write_io(0x2006, 0x00); // $2000
-        m.ram[0x00FF] = 0x04; // 32 增量
+        m.ram_mut()[0x00FF] = 0x04; // 32 增量
         m.write_io(0x2007, 0xCD); // 名表写+32 步进
         assert_eq!(m.render.nametable[0], 0xCD);
         assert_eq!(m.render.ppuaddr, 0x2020);
@@ -136,11 +136,11 @@ mod tests {
     #[test]
     fn read_ram_wram_dispatch_6877() {
         let mut m = crate::state::Manager::default();
-        m.wram[0x877] = 3; // EnergyTankCount=3（asm 语义：小值 1-5）
+        m.wram_mut()[0x877] = 3; // EnergyTankCount=3（asm 语义：小值 1-5）
         assert_eq!(m.read_ram(0x6877), 3, "WRAM 分派（$6877→wram[0x877]）");
         m.write_ram(0x6877, 5);
-        assert_eq!(m.wram[0x877], 5, "写径同分派");
-        assert_eq!(m.read_ram(0x0077), m.ram[0x077], "ram[0x077] 不受影响（镜像归一保持）");
+        assert_eq!(m.wram()[0x877], 5, "写径同分派");
+        assert_eq!(m.read_ram(0x0077), m.ram()[0x077], "ram[0x077] 不受影响（镜像归一保持）");
     }
 
     use super::*;
@@ -186,16 +186,16 @@ impl Manager {
         assert!(ram.len() >= 0x800, "MSS RAM 面不足 $800");
         assert!(wram.len() >= 0x2000, "MSS WRAM 面不足 $2000");
         let mut mem = Self::default();
-        mem.ram.copy_from_slice(&ram[..0x800]);
-        mem.wram.copy_from_slice(&wram[..0x2000]);
+        mem.ram_mut().copy_from_slice(&ram[..0x800]);
+        mem.wram_mut().copy_from_slice(&wram[..0x2000]);
         mem.regs = regs;
-        mem.nmi_enabled = mem.ram[0x00FF] & 0x80 != 0;
+        mem.nmi_enabled = mem.ram()[0x00FF] & 0x80 != 0;
         mem
     }
 
     /// 导出 MSS 面（反向——三直映；bundle 生产侧用）。
     pub fn capture_mss(&self) -> (Vec<u8>, Vec<u8>, Registers) {
-        (self.ram.to_vec(), self.wram.to_vec(), self.regs)
+        (self.ram().to_vec(), self.wram().to_vec(), self.regs)
     }
 }
 
@@ -227,7 +227,7 @@ mod mss_map_tests {
 impl Manager {
     /// 语义视图入口：`mem.samus()` —— `memmap::views` 的唯一构造点。
     ///
-    /// 视图持 `&mut self.ram`，因此一次只能持一个域（`views/mod.rs` 细则 3）；领域代码
+    /// 视图持 `&mut self.ram_mut()`，因此一次只能持一个域（`views/mod.rs` 细则 3）；领域代码
     /// 经它读写 `$0300-$0315`，不再拼地址。
     pub fn samus(&mut self) -> crate::memmap::views::samus::Samus<'_> {
         crate::memmap::views::samus::Samus::new(self)

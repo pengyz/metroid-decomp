@@ -79,8 +79,8 @@ pub fn main_title_routine(mem: &mut Manager) {
         joy_change: mem.read_ram(JOY1_CHANGE),
         ppuctrl: mem.read_ram(PPUCTRL_ZP),
         star_src,
-        wram: mem.wram.to_vec(),
-        ram: mem.ram.to_vec(),
+        wram: mem.wram().to_vec(),
+        ram: mem.ram().to_vec(),
     };
     // **JumpEngine TempX/TempY 保存**（asm C27C：`sty TempY($6A)/stx TempX($69)`——
     // B 案 $69/$6A=FF/FF 机理：调用点寄存器保存（帧 3 面））
@@ -147,7 +147,8 @@ pub fn main_title_routine(mem: &mut Manager) {
         let loc = format!("bank00:{addr:04X}");
         crate::unported!(&loc); // 真未武装（18/1E——深路专件/随件）：per-entry 爆
     }
-    title::apply_title_step(&mut mem.ram, &mut mem.wram, &step.events);
+    let (ram, wram) = mem.ram_wram_mut();
+    title::apply_title_step(ram, wram, &step.events);
     if let Some(a) = step.a_out {
         mem.regs.a = a;
     }

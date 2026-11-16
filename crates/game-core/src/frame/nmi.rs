@@ -523,7 +523,7 @@ mod tests {
         let mut m = Manager::default(); // TitleRoutine=0
         nmi_screen_write(&mut m);
         assert_eq!(m.regs.a, 0);
-        assert_eq!(m.ram, [0u8; 0x800]); // 零 RAM 写
+        assert_eq!(m.ram(), &[0u8; 0x800]); // 零 RAM 写
     }
 
     /// NMIScreenWrite 结束画面路径 fail-loud（TitleRoutine≥$1D）。

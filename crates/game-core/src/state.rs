@@ -20,24 +20,48 @@ pub struct Registers {
 impl Manager {
     /// RAM 2KB 镜像面只读视图（跨 crate 消费方唯一入口；域代码请用 `read_ram` 或域句柄）。
     pub fn ram(&self) -> &[u8; 0x800] {
-        &self.ram
+        &self.storage.ram
     }
 
     /// WRAM 8KB 只读视图（同上）。
     pub fn wram(&self) -> &[u8; 0x2000] {
-        &self.wram
+        &self.storage.wram
+    }
+
+    /// RAM 可变视图（仅 memmap 层与测试装配使用；生产域代码走域句柄）。
+    pub(crate) fn ram_mut(&mut self) -> &mut [u8; 0x800] {
+        &mut self.storage.ram
+    }
+
+    /// WRAM 可变视图（同上）。
+    pub(crate) fn wram_mut(&mut self) -> &mut [u8; 0x2000] {
+        &mut self.storage.wram
+    }
+
+    /// RAM+WRAM 同时可变（两者是 `storage` 里**互不重叠的字段**，故可安全同时借出；
+    /// 仅给「同一例程内先后要写两块」的 asm 形态用，如标题步的 `&mut ram, &mut wram`）。
+    pub(crate) fn ram_wram_mut(
+        &mut self,
+    ) -> (&mut [u8; 0x800], &mut [u8; 0x2000]) {
+        (&mut self.storage.ram, &mut self.storage.wram)
+    }
+
+    /// **NES 字节布局快照**：当前状态 → NES 字节的单向投影。
+    ///
+    /// 用途只有两个：①对拍腿（`ram.hex`/`ppu.hex` 与 `--state-out`）②验证"存储层换实现
+    /// 不改变行为"（域 typed 化前后 `snapshot_nes()` 必须逐字节相同）。**不是第二真相源**：
+    /// 真相在域状态里，本函数只做投影。
+    pub fn snapshot_nes(&self) -> crate::memmap::storage::NesImage {
+        crate::memmap::storage::NesImage { ram: self.storage.ram, wram: self.storage.wram }
     }
 }
 
 /// 全内存模型（定义=态层；方法实现见 frame/memory.rs）。
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Manager {
-    /// RAM 2KB 归一镜像面（$0000-$07FF）。**私有存储面**：域代码不得直接索引，
-    /// 一律经 `read_ram/write_ram` 或域句柄（`manager.samus()` 等）；`pub(crate)`
-    /// 仅留给 memmap/observe 的字节导出面。
-    pub(crate) ram: [u8; 0x800],
-    /// WRAM 8KB（$6000-$7FFF）。同上（私有存储面）。
-    pub(crate) wram: [u8; 0x2000],
+    /// 私有存储层（NES 字节容器）。**未来被 typed struct 逐域替换的那一层**：
+    /// 上层只见 `ram()/wram()` 只读视图与域句柄（`manager.samus()`），字段不出本模块。
+    storage: crate::memmap::storage::NesStorage,
     /// 寄存器面。
     pub regs: Registers,
     /// NMI 使能态（PPUCTRL bit7——write_io($2000) 权威面；60Hz VBlank 调度开关）。
@@ -94,7 +118,7 @@ pub struct Manager {
 
 impl Default for Manager {
     fn default() -> Self {
-        Self { ram: [0; 0x800], wram: [0; 0x2000], regs: Registers::default(), nmi_enabled: false,
+        Self { storage: crate::memmap::storage::NesStorage::default(), regs: Registers::default(), nmi_enabled: false,
                title_cursor: 0, title_cursor_phase: 0, title_spin: 0, check_password_pending: false, deferred_screen_on: false, title_no_return: false,
                iter_gates: Vec::new(), iter_span_left: 0, iter_span_fc: false, fc_inced_this_tick: false,
                apu_log: Vec::new(), work_cycles: 0,
