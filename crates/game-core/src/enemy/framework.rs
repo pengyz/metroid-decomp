@@ -9,6 +9,7 @@ use crate::enemy::prep::*;
 use crate::enemy::skree::skree_ai;
 use crate::enemy::sidehopper::{ripper_i_ai, ripper_ii_ai, sidehopper_ai};
 use crate::frame::tick::*;
+use crate::enemy::state::EnemyStatus;
 use crate::ram_map;
 
 /// UpdateEnemy_Resting_UpdateEnData1F（**asm 内容锚** `: 07:F676`——r26）：
@@ -175,7 +176,7 @@ pub(crate) fn enemy_react_to_projectile(mem: &mut crate::frame::Manager, x: u8) 
     // ——status 4=冻结
     let st = mem.read_wram(0x6AF4 + px); // EnsExtra.status
     if wa == 3 && !miniboss && st != 4 {
-        mem.write_wram(0x6AF4 + px, 4); // status←Frozen
+        mem.write_wram(0x6AF4 + px, EnemyStatus::Frozen.to_byte()); // status←Frozen
         mem.write_ram(0x0400 + px + 0x0D, 0x40); // data0D←$40（冻计时）
         mem.write_ram(e4, 0); // isHit 清
         return;
@@ -194,7 +195,7 @@ pub(crate) fn enemy_react_to_projectile(mem: &mut crate::frame::Manager, x: u8) 
         return;
     }
     // Lx322：status←Hurt(6)+specialAttribs←$0A/$03
-    mem.write_wram(0x6AF4 + px, 6);
+    mem.write_wram(0x6AF4 + px, EnemyStatus::Hurt.to_byte());
     mem.write_ram(0x0400 + px + 0x0F, if miniboss { 0x03 } else { 0x0A });
     // HP dec（波=2/束=1（Lx324/325））⇒0⇒爆
     let dec = if wa == 2 { 2u8 } else { 1u8 }; // wa_WaveBeam=2（constants.asm:103！旧形误 4）
@@ -211,7 +212,7 @@ pub(crate) fn enemy_react_to_projectile(mem: &mut crate::frame::Manager, x: u8) 
 /// （分卡（记账））。
 pub(crate) fn explode_enemy(mem: &mut crate::frame::Manager, x: u8) {
     let px = x as u16;
-    mem.write_wram(0x6AF4 + px, 3); // status←Explode
+    mem.write_wram(0x6AF4 + px, EnemyStatus::Explode.to_byte()); // status←Explode
     // `bit Temp0A_EnSpecialAttribs / bvs @endIf_A` + `lda weaponAction / cmp #wa_RegularBeam+1 /
     // bcs @endIf_A`（07:F617-F623）：**非 miniboss 且被普通束击中（weaponAction ≤ wa_RegularBeam=1）
     // ⇒ 跳过 chunky 爆炸动画，直接 EnemyCompleteDeath@SkipChunkyExplosion**（立刻变掉落物）。
@@ -392,7 +393,7 @@ pub(crate) fn update_enemy_frozen(mem: &mut crate::frame::Manager, x: u8) {
     if d > 0 {
         mem.write_ram(0x0400 + px + 0x0D, d - 1);
     } else {
-        mem.write_wram(0x6AF4 + px, 2); // 回 Active
+        mem.write_wram(0x6AF4 + px, EnemyStatus::Active.to_byte()); // 回 Active
     }
 }
 
@@ -424,7 +425,7 @@ pub(crate) fn update_enemy_hurt(mem: &mut crate::frame::Manager, x: u8) {
             .unwrap_or(0);
         if flags & 0x10 != 0 {
             mem.write_ram(0x0400 + px + 0x0C, mem.read_wram(0x6AF4 + px)); // prevStatus←status
-            mem.write_wram(0x6AF4 + px, 4); // status←enemyStatus_Frozen
+            mem.write_wram(0x6AF4 + px, EnemyStatus::Frozen.to_byte()); // status←enemyStatus_Frozen
         }
     }
     // @exit：受伤敌调色板覆盖（$80|$00|PRIORITY）——置 MSB 后 @noMoveNoAnim 的
@@ -452,7 +453,7 @@ pub(crate) fn update_enemy_pickup(mem: &mut crate::frame::Manager, x: u8) {
             let h = mem.read_ram(0x0106u16);
             mem.write_ram(0x0106u16, h.saturating_add(20));
         }
-        mem.write_wram(0x6AF4 + px, 0); // RemoveEnemy（槽释）
+        mem.write_wram(0x6AF4 + px, EnemyStatus::NoEnemy.to_byte()); // RemoveEnemy（槽释）
         return;
     }
     // `@pickupWasNotTouched ; 07:F4D4`：`lda FrameCount / and #$03 / bne @endIf_D` ⇒
@@ -461,7 +462,7 @@ pub(crate) fn update_enemy_pickup(mem: &mut crate::frame::Manager, x: u8) {
         let d = mem.read_ram(0x0400 + px + 0x0D).wrapping_sub(1);
         mem.write_ram(0x0400 + px + 0x0D, d);
         if d == 0 {
-            mem.write_wram(0x6AF4 + px, 0); // RemoveEnemy（到期）
+            mem.write_wram(0x6AF4 + px, EnemyStatus::NoEnemy.to_byte()); // RemoveEnemy（到期）
         }
     }
     // 闪色（`07:F4E2`）：`lda FrameCount / and #$02 / lsr / ora #$80|OAMDATA_PRIORITY /
@@ -476,12 +477,12 @@ pub(crate) fn update_enemy_pickup(mem: &mut crate::frame::Manager, x: u8) {
 /// 域=分卡（记账）。
 pub(crate) fn enemy_complete_death(mem: &mut crate::frame::Manager, x: u8) {
     let px = x as u16;
-    mem.write_wram(0x6AF4 + px, 5); // status←Pickup
+    mem.write_wram(0x6AF4 + px, EnemyStatus::Pickup.to_byte()); // status←Pickup
     mem.write_ram(0x0400 + px + 0x0D, 0x60); // data0D←$60（拾取计时）
     let r = mem.read_ram(crate::ram_map::RANDOM1);
     if r < 0x10 {
         // 1/16 无掉⇒移除（LDD5B 非 Tourian）
-        mem.write_wram(0x6AF4 + px, 0);
+        mem.write_wram(0x6AF4 + px, EnemyStatus::NoEnemy.to_byte());
         return;
     }
     // `jsr ReadTableAt968B / sta Temp00`（$968B 项存 Temp00，本径后续不读）→

@@ -57,6 +57,61 @@ pub mod ens_extra {
     pub const DATA1F: u16 = 15;
 }
 
+/// `EnsExtra.status`（`refs/m1disasm/SRC/constants.asm:135-142` 的 `enemyStatus_*`）。
+///
+/// asm 原文七态 + 一句"更都等于没有敌人"：`0 NoEnemy / 1 Resting / 2 Active /
+/// 3 Explode / 4 Frozen / 5 Pickup / 6 Hurt`，`>6` 与原版一样按空槽处理。
+/// 未定义值保真（`Undefined(u8)`）——不静默映射成 `NoEnemy`，否则"原版把 7 当空槽"
+/// 这条 quirk 会被悄悄改成"从未见过 7"。
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum EnemyStatus {
+    NoEnemy,
+    Resting,
+    Active,
+    Explode,
+    Frozen,
+    Pickup,
+    Hurt,
+    Undefined(u8),
+}
+
+impl EnemyStatus {
+    pub const ENUM_MAX: u8 = 6;
+
+    pub fn from_byte(b: u8) -> Self {
+        match b {
+            0 => Self::NoEnemy,
+            1 => Self::Resting,
+            2 => Self::Active,
+            3 => Self::Explode,
+            4 => Self::Frozen,
+            5 => Self::Pickup,
+            6 => Self::Hurt,
+            other => Self::Undefined(other),
+        }
+    }
+
+    pub fn to_byte(self) -> u8 {
+        match self {
+            Self::NoEnemy => 0,
+            Self::Resting => 1,
+            Self::Active => 2,
+            Self::Explode => 3,
+            Self::Frozen => 4,
+            Self::Pickup => 5,
+            Self::Hurt => 6,
+            Self::Undefined(b) => b,
+        }
+    }
+
+    /// 空槽判据：`NoEnemy(0)` 本身是空槽，asm 另注"大于 6 同等于没有敌人"
+    /// （`; greater than 6 is the same as no enemy`）⇒ 两段都算空。
+    pub fn is_empty(self) -> bool {
+        let b = self.to_byte();
+        b == 0 || b > Self::ENUM_MAX
+    }
+}
+
 /// 敌槽数（对象槽 0-11 之后，`Ens` 面 12×16 B）。
 pub const SLOT_COUNT: u8 = 12;
 
@@ -169,11 +224,16 @@ impl<'a> Enemy<'a> {
     }
 
     // ---- EnsExtra 面 ----
-    pub fn status(&self) -> u8 {
+    /// `EnsExtra.status` 原始字节（判 `>6` 这类数值序时用；语义判据请用 [`Self::status`]）。
+    pub fn status_raw(&self) -> u8 {
         self.getx(ens_extra::STATUS)
     }
-    pub fn set_status(&mut self, v: u8) {
-        self.setx(ens_extra::STATUS, v);
+    /// `EnsExtra.status` 语义态（`enemyStatus_*`，含 `Undefined` 保真）。
+    pub fn status(&self) -> EnemyStatus {
+        EnemyStatus::from_byte(self.getx(ens_extra::STATUS))
+    }
+    pub fn set_status(&mut self, v: EnemyStatus) {
+        self.setx(ens_extra::STATUS, v.to_byte());
     }
     pub fn radius_y(&self) -> u8 {
         self.getx(ens_extra::RADIUS_Y)
@@ -228,8 +288,9 @@ mod tests {
         assert_eq!(mem.enemy(2).x(), 32);
         mem.enemy(2).set_y(0x9D);
         assert_eq!(mem.read_ram(0x0420), 0x9D);
-        mem.enemy(2).set_status(0x02);
+        mem.enemy(2).set_status(EnemyStatus::Active);
         assert_eq!(mem.read_wram(0x6B14), 0x02);
+        assert_eq!(mem.enemy(2).status(), EnemyStatus::Active);
     }
 
     /// 越界槽号 fail-loud（不静默回绕到别的槽）。
@@ -259,5 +320,31 @@ mod tests {
         mem.enemy(3).set_speed_y(-2);
         assert_eq!(mem.enemy(3).speed_y(), -2);
         assert_eq!(mem.read_ram(0x0430 + ens::SPEED_Y), 0xFE);
+    }
+
+    /// 七态逐字节往返 + 未定义值保真（`>6` 是原版 quirk：按空槽处理，但不能洗成 0）。
+    #[test]
+    fn status_enum_roundtrips_and_preserves_undefined() {
+        let mut mem = m();
+        for (b, want) in [
+            (0u8, EnemyStatus::NoEnemy),
+            (1, EnemyStatus::Resting),
+            (2, EnemyStatus::Active),
+            (3, EnemyStatus::Explode),
+            (4, EnemyStatus::Frozen),
+            (5, EnemyStatus::Pickup),
+            (6, EnemyStatus::Hurt),
+        ] {
+            mem.enemy(3).set_status(want);
+            assert_eq!(mem.enemy(3).status_raw(), b, "枚举→字节");
+            assert_eq!(mem.enemy(3).status(), want, "字节→枚举");
+            assert_eq!(want.is_empty(), b == 0, "只有 NoEnemy 是空槽");
+        }
+        let odd = EnemyStatus::Undefined(0x09);
+        mem.enemy(3).set_status(odd);
+        assert_eq!(mem.enemy(3).status(), odd, "未定义值原样保留");
+        assert_eq!(mem.enemy(3).status_raw(), 0x09);
+        assert!(odd.is_empty(), "asm：greater than 6 = 没有敌人");
+        assert!(EnemyStatus::NoEnemy.is_empty());
     }
 }
