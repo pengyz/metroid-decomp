@@ -17,11 +17,11 @@
     "ram_map.rs": "符号→地址的唯一定义处",
     "frame/memory.rs": "read_ram/write_ram 兼容辖（迁移完成后收口）"
   },
-  "total": 789,
+  "total": 779,
   "files": {
     "enemy/anim.rs": 7,
     "enemy/crawler.rs": 26,
-    "enemy/framework.rs": 121,
+    "enemy/framework.rs": 111,
     "enemy/motion.rs": 52,
     "enemy/prep.rs": 36,
     "enemy/sidehopper.rs": 1,

@@ -2,7 +2,7 @@
   "schema": "no-named-addr-v1",
   "note": "域代码里通过 ram_map::X 具名常量绕过 typed 面的棘轮上限（只减不增）。X 的取值落在受监控地址族内即计入；名字→值由 ram_map.rs 的 pub const 解析。",
   "monitored": [
-    "$0300-$0315",
+    "$0300-$0316",
     "$0400",
     "$6AF4",
     "$04C0",

@@ -241,9 +241,9 @@ pub(crate) fn explode_enemy(mem: &mut crate::frame::Manager, x: u8) {
     // 旧形是单常量取 bank1 ⇒ 其余四区爆体帧全用 Brinstar 的表（bank 维度丢失）。
     let area = crate::frame::cur_area(mem);
     let anim = game_data::assets::enemy_death_anim(area)[idx];
-    mem.write_wram(0x6AF4 + px + 5, anim); // resetAnimIndex
-    mem.write_wram(0x6AF4 + px + 6, anim); // animIndex
-    mem.write_wram(0x6AF4 + px + 4, 0); // animDelay
+    // `InitEnAnimIndex` 的落点：reset/index 同写、delay 归零——三件是一个动画切换动作。
+    let frame = mem.enemy(slot_of(px as u8)).anim_frame();
+    mem.enemy(slot_of(px as u8)).set_anim(crate::enemy::state::Anim { frame, delay: 0, reset: anim, index: anim });
     mem.write_ram(0x0400 + px + 6, anim); // chunkyExplosionTimer←A（asm `sta`（+06））
 
     // 【步骤 1/3：只做 spawn，update/draw 未接】`ExplodeEnemy` 尾件 07:F62E-07:F673：
@@ -453,7 +453,7 @@ pub(crate) fn update_enemy_pickup(mem: &mut crate::frame::Manager, x: u8) {
     let hit = mem.read_ram(0x0400 + px + 4);
     if hit & 0x24 != 0 {
         // 碰触⇒回血/弹+移除
-        let frame = mem.read_wram(0x6AF4 + px + 3);
+        let frame = mem.enemy(slot_of(px as u8)).anim_frame();
         if frame == 0x80 {
             let m = mem.read_wram(crate::ram_map::MISSILE_COUNT);
             mem.write_wram(crate::ram_map::MISSILE_COUNT, m.saturating_add(5));
@@ -509,7 +509,7 @@ pub(crate) fn enemy_complete_death(mem: &mut crate::frame::Manager, x: u8) {
     mem.write_wram(0x6AF4 + px + 14, facing_bit); // type←0 / $20
     let tbl = [0x80u8, 0x81, 0x89, 0x80, 0x81, 0x89, 0x81, 0x89]; // PickupTypeTable（ROM $DE35）
     let frame = tbl[(r & 7) as usize];
-    mem.write_wram(0x6AF4 + px + 3, frame); // animFrame←掉落型
+    mem.enemy(slot_of(px as u8)).set_anim_frame(frame); // animFrame←掉落型
 }
 
 /// `ChooseEnemyAIRoutine`——**按区 bank** 的 16 项跳表（`prg{1,2,3,4,5}_*.asm` 各一份）。
@@ -723,6 +723,7 @@ mod tests {
 
 #[cfg(test)]
 mod tests_hurt_palette {
+    use super::*;
     use crate::frame::Manager;
 
     /// `UpdateEnemy_Hurt ; 07:F4EE`：受伤敌**恒用调色板 0**（`@exit ; 07:F510`
@@ -737,7 +738,7 @@ mod tests_hurt_palette {
         m.write_ram(0x0400 + x, 0x40); // y（屏幕内）
         m.write_ram(0x0400 + x + 1, 0x40); // x
         m.write_ram(0x0400 + x + 0x0F, 2); // hitstun
-        m.write_wram(0x6AF4 + x + 3, 0x39); // animFrame（表 1）
+        m.enemy(slot_of(x as u8)).set_anim_frame(0x39); // animFrame（表 1）
         m.write_ram(0x005B, 0);
         super::update_enemy_hurt(&mut m, 0x10);
         assert_eq!(m.read_ram(0x006B), 0, "$FF 帧终清 ObjectCntrl");
@@ -857,6 +858,7 @@ mod tests_enemy_explosion_pool {
 
 #[cfg(test)]
 mod tests_pickup_flicker {
+    use super::*;
     use crate::frame::Manager;
 
     fn stage(m: &mut Manager, fc: u8, die_delay: u8) -> u8 {
@@ -865,8 +867,8 @@ mod tests_pickup_flicker {
         m.write_wram(0x6AF4 + x as u16, 0x05); // status＝Pickup
         m.write_ram(0x0400 + x as u16, 0x50); // y（屏内）
         m.write_ram(0x0400 + x as u16 + 1, 0x60); // x（屏内）
-        m.write_wram(0x6AF4 + x as u16 + 1, 0x08); // radiusY
-        m.write_wram(0x6AF4 + x as u16 + 2, 0x08); // radiusX
+        m.enemy(slot_of(x as u8)).set_radius_y(0x08); // radiusY
+        m.enemy(slot_of(x as u8)).set_radius_x(0x08); // radiusX
         m.write_ram(0x0400 + x as u16 + 0x0D, die_delay);
         x
     }
@@ -878,13 +880,13 @@ mod tests_pickup_flicker {
     fn pickup_flickers_palette_every_two_frames() {
         let mut m = Manager::default();
         let x = stage(&mut m, 0x00, 0x60);
-        m.write_wram(0x6AF4 + x as u16 + 3, 0x89); // animFrame＝小能量
+        m.enemy(slot_of(x as u8)).set_anim_frame(0x89); // animFrame＝小能量
         super::update_enemy_pickup(&mut m, x);
         assert_eq!(m.read_ram(0x0202), 0x20, "bit1 清 ⇒ 调色板 0（+PRIORITY）");
         assert_eq!(m.read_ram(0x006B), 0x00, "帧终 ClearObjectCntrl");
         let mut m = Manager::default();
         let x = stage(&mut m, 0x02, 0x60);
-        m.write_wram(0x6AF4 + x as u16 + 3, 0x89);
+        m.enemy(slot_of(x as u8)).set_anim_frame(0x89);
         super::update_enemy_pickup(&mut m, x);
         assert_eq!(m.read_ram(0x0202), 0x21, "bit1 置 ⇒ 调色板 1（$80|$20|1）");
     }

@@ -354,6 +354,37 @@ impl<'a> Enemy<'a> {
     pub fn anim_frame(&self) -> u8 {
         self.getx(ens_extra::ANIM_FRAME)
     }
+    /// 动画状态整组写（`Anim` 四元组是一个不变量：`index` 指表项、`frame` 表项内序号、
+    /// `delay` 帧内倒计时、`reset` 回卷目标）。**逐字节写会允许"改一个忘另一个"。**
+    pub fn set_anim(&mut self, a: Anim) {
+        self.setx(ensx::ANIM_FRAME, a.frame);
+        self.setx(ensx::ANIM_DELAY, a.delay);
+        self.setx(ensx::RESET_ANIM_INDEX, a.reset);
+        self.setx(ensx::ANIM_INDEX, a.index);
+    }
+
+    pub fn set_anim_frame(&mut self, v: u8) {
+        self.setx(ensx::ANIM_FRAME, v);
+    }
+    pub fn anim_delay(&self) -> u8 {
+        self.getx(ensx::ANIM_DELAY)
+    }
+    pub fn set_anim_delay(&mut self, v: u8) {
+        self.setx(ensx::ANIM_DELAY, v);
+    }
+    pub fn set_reset_anim_index(&mut self, v: u8) {
+        self.setx(ensx::RESET_ANIM_INDEX, v);
+    }
+    pub fn set_anim_index(&mut self, v: u8) {
+        self.setx(ensx::ANIM_INDEX, v);
+    }
+    pub fn set_radius_y(&mut self, v: u8) {
+        self.setx(ensx::RADIUS_Y, v);
+    }
+    pub fn set_radius_x(&mut self, v: u8) {
+        self.setx(ensx::RADIUS_X, v);
+    }
+
     pub fn anim_index(&self) -> u8 {
         self.getx(ens_extra::ANIM_INDEX)
     }
@@ -384,7 +415,7 @@ impl<'a> Enemy<'a> {
 
 #[cfg(test)]
 mod tests_typed_slot {
-    use super::{ensx, EnemyStatus};
+    use super::{ensx, Anim, EnemyStatus};
     use crate::frame::Manager;
 
     fn m() -> Manager {
@@ -406,6 +437,18 @@ mod tests_typed_slot {
         // 视图写回地址面
         mem.enemy(3).set_status(EnemyStatus::Pickup);
         assert_eq!(mem.read_wram(base + ensx::STATUS), 5);
+    }
+
+    /// `set_anim` 是四元组整体写：任何一处都读得回，且不会只改一半。
+    #[test]
+    fn set_anim_writes_all_four_fields() {
+        let mut mem = m();
+        mem.enemy(7).set_anim(Anim { frame: 0x21, delay: 0x0C, reset: 0x30, index: 0x31 });
+        let e = mem.enemy(7);
+        assert_eq!((e.anim_frame(), e.anim_delay(), e.anim_index()), (0x21, 0x0C, 0x31));
+        let base = 0x6AF4u16 + 7 * 16;
+        assert_eq!(mem.read_wram(base + ensx::RESET_ANIM_INDEX), 0x30, "reset 也落盘");
+        assert_eq!(mem.read_wram(base + ensx::ANIM_INDEX), 0x31, "index 落盘");
     }
 
     /// 未 typed 的字节（如 `hi` = +7）仍直落字节面，不被 typed 层吞掉。
