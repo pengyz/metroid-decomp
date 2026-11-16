@@ -55,8 +55,7 @@ pub(crate) fn try_becoming_active(mem: &mut crate::frame::Manager, x: u8) {
     }
     #[allow(unreachable_code)]
     {
-        let st = mem.read_wram(0x6AF4 + x as u16);
-        mem.write_wram(0x6AF4 + x as u16, st.wrapping_add(1)); // status→Active
+        mem.enemy(slot_of(x)).inc_status(); // status→Active（asm `inc`，非枚举映射）
         // 【goal-轮14 激活帧直证】status→Active 写点（首动 1 帧差源）。
         init_en_active_anim_index(mem, x); // F699（Active 动画初始化）
         // 【goal-轮28 激活 RNG 播种】（asm :11436-11450 逐字）：movementIndex←
@@ -264,7 +263,10 @@ pub(crate) fn explode_enemy(mem: &mut crate::frame::Manager, x: u8) {
         mem.write_wram(0x6AF4 + ex as u16 + 6, ex_anim); // animIndex
         mem.write_wram(0x6AF4 + ex as u16 + 4, 0); // animDelay←0
         mem.write_ram(0x0400 + ex as u16 + 6, 0x0A); // delay←$0A
-        mem.write_wram(0x6AF4 + ex as u16, 1); // status←Active
+        // **爆炸池不是敌槽**：`$04C0` 池是 8 B/槽（4 槽）、步长 ≠ 敌槽 16 B，`slot_of(ex)` 不成立。
+        // 而且它的 status **自成一域**（0=空槽，asm 这里只做 `inc status`：0→1＝占用），
+        // 与 `enemyStatus_*` 七态不是同一套词表 ⇒ 刻意不用 `EnemyStatus`。
+        mem.write_wram(0x6AF4 + ex as u16, 1); // asm `inc status`（池域：0→1＝占用）
         mem.write_ram(0x0400 + ex as u16 + 7, if sa_x & 0x40 != 0 { 3 } else { 0 });
         mem.write_ram(0x0400 + ex as u16, mem.read_ram(0x0400 + px)); // y
         mem.write_ram(0x0400 + ex as u16 + 1, mem.read_ram(0x0400 + px + 1)); // x
@@ -526,9 +528,7 @@ pub(crate) fn choose_enemy_ai(mem: &mut crate::frame::Manager, x: u8) {
         Routine::RipperII => ripper_ii_ai(mem, x),
         Routine::Waver => crate::enemy::waver::waver_ai(mem, x),
         // `RemoveEnemy ; 07:FA18`：`lda #enemyStatus_NoEnemy / sta EnsExtra.0.status,x / rts`
-        Routine::RemoveEnemy => {
-            mem.write_wram(0x6AF4 + x as u16, 0);
-        }
+        Routine::RemoveEnemy => mem.enemy(slot_of(x)).set_status(EnemyStatus::NoEnemy),
         // `RTS_95CB`：Kraid bank4 的占位项，asm 直接 `rts`——什么都不做。
         Routine::Rts95CB => {}
         // 空指针（Brinstar 0B–0F）与未端口例程：记账 + 占位臂保可玩。
@@ -573,8 +573,7 @@ pub(crate) fn enemy_active(mem: &mut crate::frame::Manager, x: u8) {
             let t = mem.read_wram(0x6AF4 + x as u16 + 14); // EnsExtra.type
             let delay = game_data::assets::enemy_init_delay(crate::frame::cur_area(mem)).get(t as usize).copied().unwrap_or(0);
             mem.write_ram(0x0400 + x as u16 + 9, delay); // Ens.delay(+9)
-            let st = mem.read_wram(0x6AF4 + x as u16);
-            mem.write_wram(0x6AF4 + x as u16, st.wrapping_sub(1));
+            mem.enemy(slot_of(x)).dec_status(); // Active→Resting（asm `dec`）
             // 【goal-轮17 Resting 转换标记】Active→Resting（bit5 静息径）。
         } else {
             // Active_BranchA（F401）：ForceSpeed(F6B9)+Threshold(F75B)+RemoveIfInLava(F51E)
@@ -599,7 +598,7 @@ pub(crate) fn enemy_remove_if_in_lava(mem: &mut crate::frame::Manager, x: u8) {
         return; // 熔岩上方⇒exit
     }
     // 熔岩中⇒RemoveEnemy（清槽）
-    mem.write_wram(0x6AF4 + x as u16, 0); // EnsExtra.status←0（槽空）
+    mem.enemy(slot_of(x)).set_status(EnemyStatus::NoEnemy); // 槽空
 }
 
 /// `UpdateEnemyCommon ; 07:F410`（入口 1：anim + move）。

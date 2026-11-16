@@ -235,6 +235,22 @@ impl<'a> Enemy<'a> {
     pub fn set_status(&mut self, v: EnemyStatus) {
         self.setx(ens_extra::STATUS, v.to_byte());
     }
+
+    /// asm `@becomeActive: inc EnsExtra.0.status,x`——**字节自增，不映射枚举**。
+    ///
+    /// 这条径在 ROM 里就是数值 `inc`：从 Resting(1) 走到 Active(2) 只是巧合地等于
+    /// 枚举 +1；若哪天从 6 走 inc 会得到 7（原版按"没有敌人"处理）。枚举化会把这种
+    /// 可达的 `Undefined` 变成不可表达，反而失真。
+    pub fn inc_status(&mut self) {
+        let v = self.status_raw().wrapping_add(1);
+        self.setx(ens_extra::STATUS, v);
+    }
+
+    /// asm 静息径的 `dec EnsExtra.0.status,x`（Active→Resting）。保留字节语义，理由同 [`Self::inc_status`]。
+    pub fn dec_status(&mut self) {
+        let v = self.status_raw().wrapping_sub(1);
+        self.setx(ens_extra::STATUS, v);
+    }
     pub fn radius_y(&self) -> u8 {
         self.getx(ens_extra::RADIUS_Y)
     }
