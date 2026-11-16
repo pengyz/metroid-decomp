@@ -5,5 +5,6 @@ pub(crate) mod door;
 pub(crate) mod elevator;
 pub(crate) mod room_load;
 pub(crate) mod scroll;
+pub(crate) mod camera;
 pub(crate) mod object;
 pub(crate) mod room_draw;

@@ -1552,30 +1552,30 @@ fn scroll_block_gate(mem: &mut Manager) -> bool {
 /// ScrollLeft（**asm 内容锚** `ScrollLeft: ; 07:E6A7`）：滚屏 1px。返回 carry
 /// （true=滚动成功——屏内 x 不动；false=不能滚）。
 pub(crate) fn scroll_left(mem: &mut Manager) -> bool {
-    let dir = mem.read_ram(crate::ram_map::SCROLL_DIR);
-    if dir != 2 {
-        if dir != 3 {
+    let dir = mem.camera().dir();
+    if dir != crate::world::camera::dir::LEFT {
+        if dir != crate::world::camera::dir::RIGHT {
             return false; // 竖滚不能横滚（@cantScroll sec）
         }
-        mem.write_ram(crate::ram_map::SCROLL_DIR, 2); // dec ScrollDir（3→2=左）
-        if mem.read_ram(crate::ram_map::SCROLL_X) != 0 {
-            mem.write_ram(crate::ram_map::MAP_POS_X,
-                          mem.read_ram(crate::ram_map::MAP_POS_X).wrapping_sub(1));
+        mem.camera().set_dir(crate::world::camera::dir::LEFT); // dec ScrollDir（3→2=左）
+        if mem.camera().scroll_x() != 0 {
+            let mx = mem.camera().map_x().wrapping_sub(1);
+            mem.camera().set_map_x(mx);
         }
     }
-    if mem.read_ram(crate::ram_map::SCROLL_X) == 0 {
-        mem.write_ram(crate::ram_map::MAP_POS_X,
-                      mem.read_ram(crate::ram_map::MAP_POS_X).wrapping_sub(1));
+    if mem.camera().scroll_x() == 0 {
+        let mx = mem.camera().map_x().wrapping_sub(1);
+        mem.camera().set_map_x(mx);
         if !scroll_block_gate(mem) {
             // @atLeftBound：MapPosX 复位（inc）——CF=1 不能滚
-            mem.write_ram(crate::ram_map::MAP_POS_X,
-                          mem.read_ram(crate::ram_map::MAP_POS_X).wrapping_add(1));
+            let mx = mem.camera().map_x().wrapping_add(1);
+            mem.camera().set_map_x(mx);
             return false;
         }
         toggle_name_table(mem);
     }
-    let sx = mem.read_ram(crate::ram_map::SCROLL_X).wrapping_sub(1);
-    mem.write_ram(crate::ram_map::SCROLL_X, sx);
+    let sx = mem.camera().scroll_x().wrapping_sub(1);
+    mem.camera().set_scroll_x(sx);
     check_update_name_table(mem);
     true
 }
@@ -1586,29 +1586,29 @@ pub(crate) fn scroll_left(mem: &mut Manager) -> bool {
 /// +ScrollX==0 特殊径（inc MapPosX/GetRoomNum CF=1⇒界（dec MapPosX/sec））+inc ScrollX
 /// +0 环绕⇒ToggleNameTable+CheckUpdateNameTable——**MapPosX/名表切/界判定三联动**。
 pub(crate) fn scroll_right(mem: &mut Manager) -> bool {
-    let dir = mem.read_ram(crate::ram_map::SCROLL_DIR);
-    if dir != 3 {
-        if dir != 2 {
+    let dir = mem.camera().dir();
+    if dir != crate::world::camera::dir::RIGHT {
+        if dir != crate::world::camera::dir::LEFT {
             return false; // 竖滚不能横滚
         }
-        mem.write_ram(crate::ram_map::SCROLL_DIR, 3); // inc ScrollDir（2→3=右）
-        if mem.read_ram(crate::ram_map::SCROLL_X) != 0 {
-            mem.write_ram(crate::ram_map::MAP_POS_X,
-                          mem.read_ram(crate::ram_map::MAP_POS_X).wrapping_add(1));
+        mem.camera().set_dir(crate::world::camera::dir::RIGHT); // inc ScrollDir（2→3=右）
+        if mem.camera().scroll_x() != 0 {
+            let mx = mem.camera().map_x().wrapping_add(1);
+            mem.camera().set_map_x(mx);
         }
     }
-    if mem.read_ram(crate::ram_map::SCROLL_X) == 0 {
-        mem.write_ram(crate::ram_map::MAP_POS_X,
-                      mem.read_ram(crate::ram_map::MAP_POS_X).wrapping_add(1));
+    if mem.camera().scroll_x() == 0 {
+        let mx = mem.camera().map_x().wrapping_add(1);
+        mem.camera().set_map_x(mx);
         if !scroll_block_gate(mem) {
             // @atRightBound：MapPosX 复位（dec）——CF=1 不能滚
-            mem.write_ram(crate::ram_map::MAP_POS_X,
-                          mem.read_ram(crate::ram_map::MAP_POS_X).wrapping_sub(1));
+            let mx = mem.camera().map_x().wrapping_sub(1);
+            mem.camera().set_map_x(mx);
             return false;
         }
     }
-    let sx = mem.read_ram(crate::ram_map::SCROLL_X).wrapping_add(1);
-    mem.write_ram(crate::ram_map::SCROLL_X, sx);
+    let sx = mem.camera().scroll_x().wrapping_add(1);
+    mem.camera().set_scroll_x(sx);
     if sx == 0 {
         toggle_name_table(mem); // inc 溢出（FF→00）⇒名表换
     }
