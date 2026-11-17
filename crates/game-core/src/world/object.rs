@@ -5,6 +5,7 @@
 //! 谁是 Samus——识别 Samus 的唯一入口仍是 `Manager::samus()`。
 
 use crate::frame::Manager;
+use crate::memmap::nesmap::{NesSpan, SpanKey};
 
 /// 对象池基址（`Objects`）。
 pub(crate) const OBJECTS_BASE: u16 = 0x0300;
@@ -158,4 +159,37 @@ mod tests_object_pool {
         assert_eq!(m.read_ram(0x03AB), 1);
         assert_eq!(m.object(10).on_screen(), 1);
     }
+}
+
+// ─────────────────────────── P2：`NesMapped` 声明 ───────────────────────────
+
+/// 对象池未 typed 的缺口说明。
+const OBJ_UNMODELED: &str = "对象池未 typed：门/子弹/道具字段的真相仍在字节面（本池只是读写视图）";
+
+/// 对象池 `$0300-$03FF`（16 槽 × 16 B）的 `NesMapped` 声明。
+///
+/// **slot0 起前 23 B 是 Samus 的 typed overlay**：`$0300-$0316` 的真相在 `SamusState`
+/// （`R2` 已证 `$0307` 同时是 `SamusOnElevator` 与对象槽 0 的 `DoorType`）⇒ 本池对这段
+/// 只有**只读视图**（`View`），不抢 owner 位。其余 233 B 未 typed ⇒ `Unmodeled`。
+///
+/// `View` 长度取 `SamusState::TYPED_LEN`（不另立数字：Samus 的 typed 面一变，这里自动跟）。
+impl<'a> crate::memmap::nesmap::NesMapped for Object<'a> {
+    const DISCRIMINATOR: Option<u16> = None;
+
+    const SPANS: &'static [(NesSpan, SpanKey)] = &[
+        (
+            NesSpan::value(OBJECTS_BASE, crate::samus::state::SamusState::TYPED_LEN),
+            SpanKey::View(&["SamusState"]),
+        ),
+        (
+            NesSpan::value(
+                OBJECTS_BASE + crate::samus::state::SamusState::TYPED_LEN,
+                SLOT_COUNT as u16 * SLOT_STRIDE - crate::samus::state::SamusState::TYPED_LEN,
+            ),
+            SpanKey::Unmodeled(OBJ_UNMODELED),
+        ),
+    ];
+
+    /// 0 个 `Owner` 段 ⇒ 无可投影的真相（本池的字节由各持有域投影）。
+    fn project(&self, _out: &mut crate::memmap::storage::NesImage) {}
 }

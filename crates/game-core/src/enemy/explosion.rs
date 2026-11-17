@@ -9,6 +9,7 @@
 //! 因此刻意不复用 `EnemyStatus`——两套词表合并就会在 0 号槽上互相误判。
 
 use crate::frame::Manager;
+use crate::memmap::nesmap::{NesSpan, SpanKey};
 
 /// 主面基址（`EnExplosions.0`）。
 pub(crate) const BASE: u16 = 0x04C0;
@@ -276,4 +277,34 @@ mod tests_pool_separation {
         assert_eq!(EXTRA_STRIDE, 8, "额外面与主面同步长（asm EnExplosionExtra 8 字节）");
         assert_ne!(STRIDE, crate::enemy::state::ENEMY_STRIDE, "敌池 16 / 爆炸池 8");
     }
+}
+
+// ─────────────────────────── P2：`NesMapped` 声明 ───────────────────────────
+
+/// 爆炸主面未 typed 的缺口说明。
+const EXPL_MAIN_UNMODELED: &str = "爆炸主面未 typed：y/x/data05/delay/quantity 真相在字节面";
+/// 爆炸额外面未 typed 的缺口说明。
+const EXPL_EXTRA_UNMODELED: &str =
+    "爆炸额外面未 typed：status/animFrame/animDelay/resetAnimIndex/animIndex/hi 真相在字节面";
+
+/// 爆炸域两面（`$04C0-$04DF` 主面 + `$6BB4-$6BD3` 额外面，各 4 槽 × 8 B）的声明。
+///
+/// 全部未 typed（0 个 owner）——与 `typed-domain-migration` 的 I-1 结论一致：爆炸池
+/// 是**故意**留在字节面的域（`Explosion` 句柄只做读写视图）。
+impl<'a> crate::memmap::nesmap::NesMapped for Explosion<'a> {
+    const DISCRIMINATOR: Option<u16> = None;
+
+    const SPANS: &'static [(NesSpan, SpanKey)] = &[
+        (
+            NesSpan::value(BASE, SLOT_COUNT as u16 * STRIDE),
+            SpanKey::Unmodeled(EXPL_MAIN_UNMODELED),
+        ),
+        (
+            NesSpan::value(EXTRA_BASE, SLOT_COUNT as u16 * EXTRA_STRIDE),
+            SpanKey::Unmodeled(EXPL_EXTRA_UNMODELED),
+        ),
+    ];
+
+    /// 0 个 `Owner` 段 ⇒ 无可投影的真相（爆炸池的真相在字节面）。
+    fn project(&self, _out: &mut crate::memmap::storage::NesImage) {}
 }

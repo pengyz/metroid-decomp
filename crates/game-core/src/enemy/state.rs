@@ -12,6 +12,7 @@
 //!   由读代码的人按上下文判断（这正是原版 ROM 的设计：三处代码各按自己的语义用同一格）。
 
 use crate::frame::Manager;
+use crate::memmap::nesmap::{NesSpan, SpanKey};
 use crate::ram_map;
 
 /// `Ens` 结构体的字段偏移（`$0400+i*16+f`）。
@@ -802,5 +803,75 @@ mod tests_anim_step {
     fn out_of_range_index_wraps_like_ff() {
         let a = Anim { frame: 0x00, delay: 1, reset: 0, index: 200 };
         assert_eq!(a.step(&TBL, 5), AnimStep::Advance { delay: 5, frame: 0x10, index: 1 });
+    }
+}
+
+// ─────────────────────────── P2：`NesMapped` 声明（域级） ───────────────────────────
+
+/// 敌域主面（`Ens`）未 typed 的缺口说明。
+const ENS_MAIN_UNMODELED: &str = "敌域主面未 typed：字段真相在字节面（EnsFace 只读视图）";
+/// 敌域额外面（`EnsExtra`）尾 9 B 未 typed 的缺口说明。
+const ENSX_TAIL: &str = "EnsExtra 尾 9 B 未 typed：accelY/jumpDsplcmnt/type/data1F 等仍在字节面";
+
+/// `EnsExtra` 第 `slot` 槽的槽首地址（`$6AF4 + slot*16`）——只从既有常量推导。
+const fn ensx_slot(slot: u16) -> u16 {
+    ENS_EXTRA_BASE + slot * ENEMY_STRIDE
+}
+
+/// 每槽 `EnsExtra` 的**未 typed 尾巴**长度（`16 - 7 = 9` B）。
+const ENSX_TAIL_LEN: u16 = ENEMY_STRIDE - ensx::TYPED_MAX - 1;
+
+/// 敌域两面的 `NesMapped` 声明（**域级**：12 槽全脸；句柄级 `project` 只写本槽 7 B）。
+///
+/// - 主面 `Ens`（`$0400-$04BF`，12 槽 × 16 B）：**未 typed**——字段真相仍在字节面
+///   （`EnsFace` 只是读视图），整脸登记为 `Unmodeled`（typed 债 192 B）。
+/// - 额外面 `EnsExtra`（`$6AF4-$6BB3`）：每槽前 7 B（`status..animIndex`）已是 typed
+///   （`SlotState` = 真相面）⇒ `Owner`；尾 9 B 未 typed ⇒ `Unmodeled`（债 108 B）。
+///
+/// 判别字段 `status` 的地址随槽变（`$6AF4 + slot*16`），故 `DISCRIMINATOR = None`；
+/// 判别感知腿（P3）按槽算地址，不在这里伪装成单值。
+impl<'a> crate::memmap::nesmap::NesMapped for Enemy<'a> {
+    const DISCRIMINATOR: Option<u16> = None;
+
+    const SPANS: &'static [(NesSpan, SpanKey)] = &[
+        // 主面整脸（12 槽 × 16 B）：未 typed。
+        (
+            NesSpan::value(ENS_BASE, SLOT_COUNT as u16 * ENEMY_STRIDE),
+            SpanKey::Unmodeled(ENS_MAIN_UNMODELED),
+        ),
+        // 额外面：逐槽 typed 7 B + 未 typed 尾 9 B（手写 12 对，不循环生成）。
+    (NesSpan::value(ensx_slot(0), ensx::TYPED_MAX + 1), SpanKey::Owner),
+    (NesSpan::value(ensx_slot(0) + ensx::TYPED_MAX + 1, ENSX_TAIL_LEN), SpanKey::Unmodeled(ENSX_TAIL)),
+    (NesSpan::value(ensx_slot(1), ensx::TYPED_MAX + 1), SpanKey::Owner),
+    (NesSpan::value(ensx_slot(1) + ensx::TYPED_MAX + 1, ENSX_TAIL_LEN), SpanKey::Unmodeled(ENSX_TAIL)),
+    (NesSpan::value(ensx_slot(2), ensx::TYPED_MAX + 1), SpanKey::Owner),
+    (NesSpan::value(ensx_slot(2) + ensx::TYPED_MAX + 1, ENSX_TAIL_LEN), SpanKey::Unmodeled(ENSX_TAIL)),
+    (NesSpan::value(ensx_slot(3), ensx::TYPED_MAX + 1), SpanKey::Owner),
+    (NesSpan::value(ensx_slot(3) + ensx::TYPED_MAX + 1, ENSX_TAIL_LEN), SpanKey::Unmodeled(ENSX_TAIL)),
+    (NesSpan::value(ensx_slot(4), ensx::TYPED_MAX + 1), SpanKey::Owner),
+    (NesSpan::value(ensx_slot(4) + ensx::TYPED_MAX + 1, ENSX_TAIL_LEN), SpanKey::Unmodeled(ENSX_TAIL)),
+    (NesSpan::value(ensx_slot(5), ensx::TYPED_MAX + 1), SpanKey::Owner),
+    (NesSpan::value(ensx_slot(5) + ensx::TYPED_MAX + 1, ENSX_TAIL_LEN), SpanKey::Unmodeled(ENSX_TAIL)),
+    (NesSpan::value(ensx_slot(6), ensx::TYPED_MAX + 1), SpanKey::Owner),
+    (NesSpan::value(ensx_slot(6) + ensx::TYPED_MAX + 1, ENSX_TAIL_LEN), SpanKey::Unmodeled(ENSX_TAIL)),
+    (NesSpan::value(ensx_slot(7), ensx::TYPED_MAX + 1), SpanKey::Owner),
+    (NesSpan::value(ensx_slot(7) + ensx::TYPED_MAX + 1, ENSX_TAIL_LEN), SpanKey::Unmodeled(ENSX_TAIL)),
+    (NesSpan::value(ensx_slot(8), ensx::TYPED_MAX + 1), SpanKey::Owner),
+    (NesSpan::value(ensx_slot(8) + ensx::TYPED_MAX + 1, ENSX_TAIL_LEN), SpanKey::Unmodeled(ENSX_TAIL)),
+    (NesSpan::value(ensx_slot(9), ensx::TYPED_MAX + 1), SpanKey::Owner),
+    (NesSpan::value(ensx_slot(9) + ensx::TYPED_MAX + 1, ENSX_TAIL_LEN), SpanKey::Unmodeled(ENSX_TAIL)),
+    (NesSpan::value(ensx_slot(10), ensx::TYPED_MAX + 1), SpanKey::Owner),
+    (NesSpan::value(ensx_slot(10) + ensx::TYPED_MAX + 1, ENSX_TAIL_LEN), SpanKey::Unmodeled(ENSX_TAIL)),
+    (NesSpan::value(ensx_slot(11), ensx::TYPED_MAX + 1), SpanKey::Owner),
+    (NesSpan::value(ensx_slot(11) + ensx::TYPED_MAX + 1, ENSX_TAIL_LEN), SpanKey::Unmodeled(ENSX_TAIL)),
+    ];
+
+    /// 只写**本槽** `EnsExtra` 的 7 个 typed 字节（`getx` = 该域自己的读径）。
+    fn project(&self, out: &mut crate::memmap::storage::NesImage) {
+        let base = ensx_slot(u16::from(self.slot));
+        for off in 0..=ensx::TYPED_MAX {
+            let a = base + off;
+            out.wram[usize::from(a - crate::memmap::nesmap::WRAM_BASE)] = self.getx(off);
+        }
     }
 }

@@ -11,6 +11,7 @@
 //! 业务层只经 [`Room`] 的语义方法读写，不再自己拼 `hi<<8|lo`。
 
 use crate::frame::Manager;
+use crate::memmap::nesmap::{NesSpan, SpanKey};
 
 /// 房间缓冲基址（`RoomRAM` 的低页）。
 pub const ROOM_RAM_BASE: u16 = 0x6000;
@@ -134,4 +135,41 @@ mod tests {
         assert_eq!(m.read_ram(0x0038), 0x64);
         assert_eq!(m.read_ram(0x0039), 0x00); // 基址独立于写游标
     }
+}
+
+// ─────────────────────────── P2：`NesMapped` 声明 ───────────────────────────
+
+/// 房间缓冲（WRAM 瓦片矩阵）未 typed 的缺口说明。
+const ROOM_BUF_UNMODELED: &str = "房间缓冲未 typed：瓦片真相在 WRAM 字节面（$6000 起 2 KB）";
+/// 房间游标（`RoomPtr`/`RoomRAMWorkPtr`/`RoomNumber`）未 typed 的缺口说明。
+const ROOM_CURSOR_UNMODELED: &str = "房间游标未 typed：小端指针与房间号真相在字节面";
+
+/// 房间域 `NesMapped` 声明：WRAM 房间缓冲整块 + 三个游标，全部未 typed（0 个 owner）。
+///
+/// 缓冲 `$6000-$67FF` 不在 P2 对拍面（`$0000-$07FF ∪ $6AF4-$6BD3`）内，但它仍是实体
+/// 字节，按「每字节有主」纪律登记为 `Unmodeled`（typed 债，§2 的迁移清单里）。
+impl<'a> crate::memmap::nesmap::NesMapped for Room<'a> {
+    const DISCRIMINATOR: Option<u16> = None;
+
+    const SPANS: &'static [(NesSpan, SpanKey)] = &[
+        (
+            NesSpan::value(ROOM_RAM_BASE, ROOM_RAM_LEN),
+            SpanKey::Unmodeled(ROOM_BUF_UNMODELED),
+        ),
+        (
+            NesSpan::value(ROOM_NUMBER, 1),
+            SpanKey::Unmodeled(ROOM_CURSOR_UNMODELED),
+        ),
+        (
+            NesSpan::value(WORK_PTR, 2),
+            SpanKey::Unmodeled(ROOM_CURSOR_UNMODELED),
+        ),
+        (
+            NesSpan::value(ROOM_PTR, 2),
+            SpanKey::Unmodeled(ROOM_CURSOR_UNMODELED),
+        ),
+    ];
+
+    /// 0 个 `Owner` 段 ⇒ 无可投影的真相（缓冲由 `storage` 字节面持有）。
+    fn project(&self, _out: &mut crate::memmap::storage::NesImage) {}
 }

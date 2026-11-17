@@ -153,16 +153,16 @@ mod tests {
 /// `tests_mss::typed_manifest_exactly_covers_bypass_face_and_carves_out_storage`
 /// 机械钉住（读径绕过 storage 的地址集合 == 本清单；清单地址的 storage 字节 == 0）。
 /// 加 typed 字段只改 `TYPED_ADDRS`/`TYPED_MAX`，本清单自动跟随——**禁止第二份手写地址表**。
-struct TypedRestoreManifest;
+pub(crate) struct TypedRestoreManifest;
 
 impl TypedRestoreManifest {
     /// RAM 面 typed 地址（$0000-$07FF 域内，未做 2KB 镜像归一）。
-    fn ram_addrs() -> &'static [u16] {
+    pub(crate) fn ram_addrs() -> &'static [u16] {
         &crate::samus::state::SamusState::TYPED_ADDRS
     }
 
     /// WRAM 面 typed 地址迭代器（$6000-$7FFF，未做字节偏移变换）。
-    fn wram_addrs() -> impl Iterator<Item = u16> {
+    pub(crate) fn wram_addrs() -> impl Iterator<Item = u16> {
         (0..crate::enemy::state::SLOT_COUNT as u16).flat_map(|slot| {
             (0..=crate::enemy::state::ensx::TYPED_MAX).map(move |off| 0x6AF4 + slot * 16 + off)
         })

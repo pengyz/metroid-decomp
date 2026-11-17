@@ -11,6 +11,7 @@
 //! - 速度/加速出 `i8`（asm 侧本就是二补数，`lda/lsr/ror` 的算术在视图里不外泄）；
 //! - `health` 跨 `$0106/$0107` 两个字节，视图出 `u16` 并封装「低字节在 $0106」的规则。
 
+use crate::memmap::nesmap::{NesSpan, SpanKey};
 use crate::ram_map::{
     SAMUS_ACCEL_X, SAMUS_ACCEL_Y, SAMUS_ANIM_FRAME, SAMUS_HI, SAMUS_IS_HIT, SAMUS_JUMP_DISP,
     SAMUS_ON_ELEVATOR, SAMUS_RADIUS_X, SAMUS_RADIUS_Y, SAMUS_SPEED_SUBPIXEL_X,
@@ -34,9 +35,9 @@ const ON_SCREEN: u16 = 0x030B;
 /// typed 面按**域**收（不是按 asm 结构体边界），故它以第 23 个 typed 字节存在。
 const HORZ_SPEED_MAX: u16 = 0x0316;
 /// `Health` 低字节（`constants_ram.asm:806`）。
-const HEALTH_LO: u16 = 0x0106;
+pub(crate) const HEALTH_LO: u16 = 0x0106;
 /// `Health` 高字节。
-const HEALTH_HI: u16 = 0x0107;
+pub(crate) const HEALTH_HI: u16 = 0x0107;
 
 /// `Samus.status`（`constants.asm:112` 的 `sa_*` 十态）。
 ///
@@ -344,6 +345,10 @@ impl SamusState {
         HORZ_SPEED_MAX,
     ];
 
+    /// typed 面在 `$0300` 起的**连续**字节数（= [`Self::TYPED_ADDRS`] 长度）——对象池声明
+    /// 「slot0 是 Samus 的 typed overlay」时用它定 `View` 段长度（不另立数字）。
+    pub const TYPED_LEN: u16 = Self::TYPED_ADDRS.len() as u16;
+
     pub fn pos(&self) -> Position {
         self.pos
     }
@@ -614,6 +619,63 @@ impl<'a> Samus<'a> {
     pub fn set_health(&mut self, v: u16) {
         self.set(HEALTH_LO, (v & 0x00FF) as u8);
         self.set(HEALTH_HI, (v >> 8) as u8);
+    }
+}
+
+/// Samus 血量两字节未 typed 的缺口说明（`SPANS` 里唯一一条非 `Owner`）。
+const TODO: &str = "血量两字节未 typed：health()/set_health() 仍走字节面（$0106 低 / $0107 高）";
+
+impl crate::memmap::nesmap::NesMapped for SamusState {
+    /// 判别字段：`status`（`$0300`，`sa_*` 十态）——同址按状态重解释时的判别源
+    /// （P3 的判别感知腿用；P2 只登记，不参与 `coverage` 计位）。
+    const DISCRIMINATOR: Option<u16> = Some(SAMUS_STATUS);
+
+    /// **23 条逐字节 `Owner` 声明**（`$0300-$0316`，按地址升序）：typed 面每字节恰一个 owner；
+    /// 末尾 2 条是 `Unmodeled` 的血量两字节（`$0106-$0107`，仍在字节面）——共 25 条。
+    ///
+    /// 手写而非循环生成——循环会让声明退化成 [`Self::TYPED_ADDRS`] 的回声，覆盖度核算
+    /// 就变成自证（`docs/spec/entity-ownership-and-nesmap.md` §6 防自证）。地址取既有常量：
+    /// 本文件豁免 `no-raw-addr`，但声明仍不许再写一遍字面量（否则地址有了两个家）。
+    const SPANS: &'static [(NesSpan, SpanKey)] = &[
+        (NesSpan::value(SAMUS_STATUS, 1), SpanKey::Owner),
+        (NesSpan::value(SAMUS_RADIUS_Y, 1), SpanKey::Owner),
+        (NesSpan::value(SAMUS_RADIUS_X, 1), SpanKey::Owner),
+        (NesSpan::value(SAMUS_ANIM_FRAME, 1), SpanKey::Owner),
+        (NesSpan::value(ANIM_DELAY, 1), SpanKey::Owner),
+        (NesSpan::value(ANIM_RESET_INDEX, 1), SpanKey::Owner),
+        (NesSpan::value(ANIM_INDEX, 1), SpanKey::Owner),
+        (NesSpan::value(SAMUS_ON_ELEVATOR, 1), SpanKey::Owner),
+        (NesSpan::value(SAMUS_SPEED_Y_INT, 1), SpanKey::Owner),
+        (NesSpan::value(SAMUS_SPEED_X_INT, 1), SpanKey::Owner),
+        (NesSpan::value(SAMUS_IS_HIT, 1), SpanKey::Owner),
+        (NesSpan::value(ON_SCREEN, 1), SpanKey::Owner),
+        (NesSpan::value(SAMUS_HI, 1), SpanKey::Owner),
+        (NesSpan::value(SAMUS_Y, 1), SpanKey::Owner),
+        (NesSpan::value(SAMUS_X, 1), SpanKey::Owner),
+        (NesSpan::value(SAMUS_JUMP_DISP, 1), SpanKey::Owner),
+        (NesSpan::value(SAMUS_SUBPIXEL_Y, 1), SpanKey::Owner),
+        (NesSpan::value(SAMUS_SUBPIXEL_X, 1), SpanKey::Owner),
+        (NesSpan::value(SAMUS_SPEED_SUBPIXEL_Y, 1), SpanKey::Owner),
+        (NesSpan::value(SAMUS_SPEED_SUBPIXEL_X, 1), SpanKey::Owner),
+        (NesSpan::value(SAMUS_ACCEL_Y, 1), SpanKey::Owner),
+        (NesSpan::value(SAMUS_ACCEL_X, 1), SpanKey::Owner),
+        (NesSpan::value(HORZ_SPEED_MAX, 1), SpanKey::Owner),
+        // 血量两字节（`$0106` 低 / `$0107` 高）：**未 typed**——`health()` 走 `get()` 的字节面回退。
+        (NesSpan::value(HEALTH_LO, 2), SpanKey::Unmodeled(TODO)),
+    ];
+
+    /// 逐字节取 `get_byte`（typed 真相）写进 RAM 面——与 `snapshot_nes()` 同源同值。
+    fn project(&self, out: &mut crate::memmap::storage::NesImage) {
+        for (span, key) in Self::SPANS {
+            if !matches!(key, crate::memmap::nesmap::SpanKey::Owner) {
+                continue;
+            }
+            for a in span.addrs() {
+                if let Some(v) = self.get_byte(a) {
+                    out.ram[usize::from(a) & (crate::memmap::nesmap::RAM_LEN - 1)] = v;
+                }
+            }
+        }
     }
 }
 

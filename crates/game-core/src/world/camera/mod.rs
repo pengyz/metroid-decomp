@@ -8,6 +8,11 @@
 pub(crate) mod scroll;
 
 use crate::frame::Manager;
+use crate::memmap::nesmap::{NesSpan, SpanKey};
+use crate::ram_map::{
+    MAP_POS_X, MAP_POS_Y, SAMUS_SCR_X, SAMUS_SCR_Y, SCROLL_BLOCK_NT3, SCROLL_DIR, SCROLL_X,
+    SCROLL_Y,
+};
 
 /// `ScrollDir`：0=上、1=下、2=左、3=右（asm `@currentlyScrollingUp` 起的四态）。
 pub(crate) mod dir {
@@ -111,4 +116,55 @@ mod tests_camera {
         assert_eq!(m.camera().map_x(), 5);
         assert_eq!(m.camera().dir(), dir::RIGHT);
     }
+}
+
+// ─────────────────────────── P2：`NesMapped` 声明 ───────────────────────────
+
+/// 相机域未 typed 的缺口说明。
+const CAM_UNMODELED: &str = "相机域未 typed：滚动/地图位/屏幕位真相在字节面";
+
+/// 相机域 `NesMapped` 声明：8 个访问器各 1 B，全部未 typed（0 个 owner）。
+///
+/// 这 8 B 散在零页（`$0049`/`$004F-$0052`/`$006C`/`$00FC-$00FD`），不在对象/敌域任何槽里——
+/// 所以必须显式登记，否则它们就是"没人解释的字节"（覆盖度门的空洞）。
+impl<'a> crate::memmap::nesmap::NesMapped for Camera<'a> {
+    const DISCRIMINATOR: Option<u16> = None;
+
+    const SPANS: &'static [(NesSpan, SpanKey)] = &[
+        (
+            NesSpan::value(SCROLL_X, 1),
+            SpanKey::Unmodeled(CAM_UNMODELED),
+        ),
+        (
+            NesSpan::value(SCROLL_Y, 1),
+            SpanKey::Unmodeled(CAM_UNMODELED),
+        ),
+        (
+            NesSpan::value(SCROLL_DIR, 1),
+            SpanKey::Unmodeled(CAM_UNMODELED),
+        ),
+        (
+            NesSpan::value(MAP_POS_X, 1),
+            SpanKey::Unmodeled(CAM_UNMODELED),
+        ),
+        (
+            NesSpan::value(MAP_POS_Y, 1),
+            SpanKey::Unmodeled(CAM_UNMODELED),
+        ),
+        (
+            NesSpan::value(SAMUS_SCR_X, 1),
+            SpanKey::Unmodeled(CAM_UNMODELED),
+        ),
+        (
+            NesSpan::value(SAMUS_SCR_Y, 1),
+            SpanKey::Unmodeled(CAM_UNMODELED),
+        ),
+        (
+            NesSpan::value(SCROLL_BLOCK_NT3, 1),
+            SpanKey::Unmodeled(CAM_UNMODELED),
+        ),
+    ];
+
+    /// 0 个 `Owner` 段 ⇒ 无可投影的真相。
+    fn project(&self, _out: &mut crate::memmap::storage::NesImage) {}
 }
