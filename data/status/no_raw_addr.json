@@ -21,7 +21,7 @@
     "ram_map.rs": "符号→地址的唯一定义处",
     "frame/memory.rs": "read_ram/write_ram 兼容辖（迁移完成后收口）"
   },
-  "total": 705,
+  "total": 700,
   "files": {
     "enemy/crawler.rs": 26,
     "enemy/framework.rs": 54,
@@ -45,7 +45,7 @@
     "title/step_glue.rs": 1,
     "weapon/projectile.rs": 53,
     "world/elevator.rs": 7,
-    "world/room_draw.rs": 102,
+    "world/room_draw.rs": 97,
     "world/room_load.rs": 1
   }
 }

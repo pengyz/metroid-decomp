@@ -453,6 +453,11 @@ impl<'a> Samus<'a> {
     pub fn set_anim_delay(&mut self, v: u8) {
         self.set(ANIM_DELAY, v);
     }
+    /// `$0305 animResetIndex`——动画播完回卷到的表项索引。
+    pub fn set_anim_reset_index(&mut self, v: u8) {
+        self.set(ANIM_RESET_INDEX, v);
+    }
+
     pub fn anim_reset_index(&self) -> u8 {
         self.get(ANIM_RESET_INDEX)
     }

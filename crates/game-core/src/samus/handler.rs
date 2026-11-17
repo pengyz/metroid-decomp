@@ -80,7 +80,7 @@ impl SamusHandler {
 
 /// UpdateSamus（asm :2705 内容锚）：PageIndex=0/IsSamus=1→处理→IsSamus=0。
 pub fn update_samus(mem: &mut Manager) {
-    mem.write_ram(PAGE_INDEX, 0); // `ldx #$00/stx PageIndex`
+    mem.set_page_index(0); // `ldx #$00/stx PageIndex`
     mem.write_ram(IS_SAMUS, 1); // `inx/stx IsSamus`
     go_samus_handler(mem);
     mem.write_ram(IS_SAMUS, 0); // `dec IsSamus`
@@ -88,7 +88,7 @@ pub fn update_samus(mem: &mut Manager) {
 
 /// GoSamusHandler 分发壳（asm :2716 族内容锚）：status 位 7=站立直入；否则表序分派。
 pub fn go_samus_handler(mem: &mut Manager) {
-    let status = mem.read_ram(SAMUS_STATUS);
+    let status = mem.samus().status_raw();
     let handler = if status & 0x80 != 0 {
         SamusHandler::Stand // `bmi SamusStand`
     } else {
@@ -138,7 +138,7 @@ const OBJ_ANIM_SAMUS_RUN_PNT_UP: u8 = 0x37;
 /// （右=$30/左=$D0——$CCC0）。
 fn set_samus_run_accel(mem: &mut Manager, x: u8) {
     let v = if x == 0 { 0x30u8 } else { 0xD0 };
-    mem.write_ram(crate::ram_map::SAMUS_ACCEL_X, v);
+    mem.samus().set_accel_x(v as i8);
 }
 
 /// SamusRun_CheckHorzMovementMidair（**asm 内容锚** `: 07:CF88`——r26 全件）：
@@ -151,11 +151,11 @@ fn samus_run_check_horz_movement_midair(mem: &mut Manager) {
     if input != 0 {
         let x = bit_scan(input);
         set_samus_run_accel(mem, x);
-        let ay = mem.read_ram(crate::ram_map::SAMUS_ACCEL_Y);
+        let ay = mem.samus().accel_y() as u8;
         if ay & 0x80 != 0 {
             return;
         }
-        if mem.read_ram(ANIM_RESET_INDEX) == OBJ_ANIM_SAMUS_SALTO {
+        if mem.samus().anim_reset_index() == OBJ_ANIM_SAMUS_SALTO {
             return;
         }
         mem.write_ram(crate::ram_map::SAMUS_DIR, x); // stx SamusDir
@@ -166,20 +166,20 @@ fn samus_run_check_horz_movement_midair(mem: &mut Manager) {
         // cardi-f798probe.probe.jsonl caller=CD16 逐帧($0305←0C,$0306←0C,$0304←0)）。
         // goal-轮77 曾误把 samL04 reset-only 形搬进本件（samL04 真身=samus_run 空中径
         // :244-247 另折）——全形 delay←0 才使同帧 CD6D 走表 wrap 到 JUMP 稳态（卡 A 靶）。
-        mem.write_ram(ANIM_RESET_INDEX, OBJ_ANIM_SAMUS_JUMP);
-        mem.write_ram(ANIM_RESET_INDEX + 1, OBJ_ANIM_SAMUS_JUMP);
-        mem.write_ram(ANIM_RESET_INDEX.wrapping_sub(1), 0);
+        mem.samus().set_anim_reset_index(OBJ_ANIM_SAMUS_JUMP);
+        mem.samus().set_anim_index(OBJ_ANIM_SAMUS_JUMP);
+        mem.samus().set_anim_delay(0);
         return;
     }
-    let ay = mem.read_ram(crate::ram_map::SAMUS_ACCEL_Y);
+    let ay = mem.samus().accel_y() as u8;
     if ay & 0x80 != 0 || ay == 0 {
         return;
     }
-    if mem.read_ram(ANIM_RESET_INDEX) != OBJ_ANIM_SAMUS_JUMP {
+    if mem.samus().anim_reset_index() != OBJ_ANIM_SAMUS_JUMP {
         return;
     }
     // StopHorzMovement（$CFB7）
-    mem.write_ram(crate::ram_map::SAMUS_ACCEL_X, 0);
+    mem.samus().set_accel_x(0);
     mem.write_ram(crate::samus::physics::SAMUS_SPEED_X_I, 0);
     mem.write_ram(crate::samus::physics::SAMUS_SPEED_X_F, 0);
 }
@@ -192,7 +192,7 @@ fn solid_entity_response(mem: &mut Manager) {
         return; // 未触固实实体——RTS_X014
     }
     // 贴墙反应（asm CF2E）：触左（bit0=0）且 accelX>=0⇒StopHorzMovement；触右且 accelX<0⇒同。
-    let accel_x = mem.read_ram(crate::ram_map::SAMUS_ACCEL_X);
+    let accel_x = mem.samus().accel_x() as u8;
     let touched_right = ishit & 0x01 != 0;
     if touched_right {
         if accel_x & 0x80 == 0 {
@@ -204,7 +204,7 @@ fn solid_entity_response(mem: &mut Manager) {
         }
     }
     // StopHorzMovement（CF55 族）：清水平动量
-    mem.write_ram(crate::ram_map::SAMUS_ACCEL_X, 0);
+    mem.samus().set_accel_x(0);
     mem.write_ram(crate::samus::physics::SAMUS_SPEED_X_I, 0);
     mem.write_ram(crate::samus::physics::SAMUS_SPEED_X_F, 0);
 }
@@ -220,25 +220,25 @@ fn solid_entity_response(mem: &mut Manager) {
 /// 空中径（samL04 run→jump 切）致地面跑动贴图错。asm 表址定谳（common_sprite_data）。
 pub fn samus_run(mem: &mut Manager) {
     use button::*;
-    let accel_y = mem.read_ram(crate::ram_map::SAMUS_ACCEL_Y);
+    let accel_y = mem.samus().accel_y() as u8;
     if accel_y != 0 {
         // ==== 空中径（samL01-06）====
-        let disp = mem.read_ram(crate::ram_map::SAMUS_JUMP_DISP);
+        let disp = mem.samus().jump_displacement();
         let speed_y_i = mem.read_ram(super::physics::SAMUS_SPEED_Y_I);
         if speed_y_i & 0x80 == 0 {
             // 下落：位移<$18→unspin（Jump 动画）
             if disp < 0x18 {
-                mem.write_ram(ANIM_RESET_INDEX, OBJ_ANIM_SAMUS_JUMP);
+                mem.samus().set_anim_reset_index(OBJ_ANIM_SAMUS_JUMP);
             }
         } else {
             // 上升：≥$18→salto（若现≠JumpFire）
             if disp >= 0x18 {
-                if mem.read_ram(ANIM_RESET_INDEX) != 0x20 {
-                    mem.write_ram(ANIM_RESET_INDEX, OBJ_ANIM_SAMUS_SALTO);
+                if mem.samus().anim_reset_index() != 0x20 {
+                    mem.samus().set_anim_reset_index(OBJ_ANIM_SAMUS_SALTO);
                 }
                 if disp >= 0x20 {
                     if mem.read_ram(crate::ram_map::JOY1_STATUS) & UP != 0 {
-                        mem.write_ram(ANIM_RESET_INDEX, OBJ_ANIM_SAMUS_JUMP_PNT_UP);
+                        mem.samus().set_anim_reset_index(OBJ_ANIM_SAMUS_JUMP_PNT_UP);
                     }
                     if mem.read_ram(crate::ram_map::JOY1_STATUS) & A == 0 {
                         super::physics::stop_vert_movement(mem); // D147（已全折）
@@ -247,8 +247,8 @@ pub fn samus_run(mem: &mut Manager) {
             }
         }
         // samL04（CD02）：run 动画⇒jump 动画切（**仅空中径**——地面径不过此件！）
-        if mem.read_ram(ANIM_RESET_INDEX) == OBJ_ANIM_SAMUS_RUN {
-            mem.write_ram(ANIM_RESET_INDEX, OBJ_ANIM_SAMUS_JUMP);
+        if mem.samus().anim_reset_index() == OBJ_ANIM_SAMUS_RUN {
+            mem.samus().set_anim_reset_index(OBJ_ANIM_SAMUS_JUMP);
         }
         // samL05（CD0E）：熔岩跳判
         if mem.read_ram(crate::ram_map::SAMUS_IN_LAVA) != 0
@@ -258,7 +258,7 @@ pub fn samus_run(mem: &mut Manager) {
             // +SetSamusData_3FrameAnimDelay（熔岩跳（三件全在（2026-10-28 端口）））
             set_samus_jump(mem);
             mem.samus().set_horz_speed_max(0x12);
-            mem.write_ram(ANIM_RESET_INDEX.wrapping_sub(1), 3);
+            mem.samus().set_anim_delay(3);
         }
         // samL06（CD16）：三件+animDelay 初值 A=2（`lda #$02/bne SetSamusData`——
         // UpdateObjAnim 经 A 取初值（DC8F `sta animDelay`）！禁事后覆写 $304（掐死递减）。
@@ -306,7 +306,7 @@ pub fn samus_run(mem: &mut Manager) {
         fire_samus_projectile(mem); // D1EE（SamusRun_Fire :3055-3057 `jsr FireSamusProjectile`）
         // RunFire 动画（:3058-3063）：¬UP⇒animIndex←RunFire(0x22（$8594-$8572）)
         if mem.read_ram(crate::ram_map::JOY1_STATUS) & UP == 0 {
-            mem.write_ram(ANIM_RESET_INDEX + 1, 0x22);
+            mem.samus().set_anim_index(0x22);
         }
     }
     // samL11：无方向键⇒SetSamusStand（CF55——停跑站姿；无脚步件 CF5D 折叠（SFX 随件））
@@ -335,13 +335,13 @@ fn samus_run_set_anim(mem: &mut Manager) -> bool {
     use button::*;
     let x = if mem.read_ram(crate::ram_map::JOY1_STATUS) & UP != 0 { 1usize } else { 0 };
     let anim = [OBJ_ANIM_SAMUS_RUN, OBJ_ANIM_SAMUS_RUN_PNT_UP][x];
-    if anim == mem.read_ram(ANIM_RESET_INDEX) {
+    if anim == mem.samus().anim_reset_index() {
         return false;
     }
     // SetSamusAnim（CF6B：$0305←A/$0306←A/$0304←0）
-    mem.write_ram(ANIM_RESET_INDEX, anim);
-    mem.write_ram(ANIM_RESET_INDEX + 1, anim);
-    mem.write_ram(ANIM_RESET_INDEX.wrapping_sub(1), 0);
+    mem.samus().set_anim_reset_index(anim);
+    mem.samus().set_anim_index(anim);
+    mem.samus().set_anim_delay(0);
     true
 }
 
@@ -398,8 +398,8 @@ fn fire_samus_projectile(mem: &mut Manager) {
     mem.write_ram(base + 0x0C, shi); // bullet.hi = Samus.hi
     // Forwards @exit（$D269）：animIndex←ObjAnim_SamusStandFire(0x09（$857B-$8572）)
     // （SetSamusNextAnim（Index+delay0）——弹形态 ②（f810/820 射姿残差根因））
-    mem.write_ram(ANIM_RESET_INDEX + 1, 0x09);
-    mem.write_ram(ANIM_RESET_INDEX.wrapping_sub(1), 0);
+    mem.samus().set_anim_index(0x09);
+    mem.samus().set_anim_delay(0);
 }
 
 /// FireSamusProjectileUpwards（**asm 内容锚** `: 07:D275`（audit §7））：同 Forwards
@@ -437,17 +437,17 @@ fn fire_samus_projectile_upwards(mem: &mut Manager) {
     mem.write_ram(base + 0x0D, sy.wrapping_add(off_y));
     mem.write_ram(base + 0x0E, sx.wrapping_add(off_x));
     mem.write_ram(base + 0x0C, shi);
-    mem.write_ram(ANIM_RESET_INDEX + 1, 0x09); // StandFire（@exit 同径）
-    mem.write_ram(ANIM_RESET_INDEX.wrapping_sub(1), 0);
+    mem.samus().set_anim_index(0x09); // StandFire（@exit 同径）
+    mem.samus().set_anim_delay(0);
 }
 
 fn set_samus_jump(mem: &mut Manager) {
     // 【goal-轮76 调用频度直证】set_samus_jump 入口插桩（animDelay=4 重写源）。
     let anim = OBJ_ANIM_SAMUS_JUMP;
-    mem.write_ram(ANIM_RESET_INDEX, anim);
-    mem.write_ram(ANIM_RESET_INDEX + 1, anim.wrapping_sub(1));
-    mem.write_ram(ANIM_RESET_INDEX.wrapping_sub(1), 4);
-    mem.write_ram(crate::ram_map::SAMUS_JUMP_DISP, 0);
+    mem.samus().set_anim_reset_index(anim);
+    mem.samus().set_anim_index(anim.wrapping_sub(1));
+    mem.samus().set_anim_delay(4);
+    mem.samus().set_jump_displacement(0);
     mem.write_ram(super::physics::SAMUS_SPEED_Y_I, 0xFC);
     // 【goal-r10+CFC3 Lx017/18（audit §3）】重力常数：$18=普通/$12=高跳齿轮
     // （低重力=高跳）——入口一次性。
@@ -465,19 +465,19 @@ fn set_samus_run(mem: &mut Manager) {
     // RunAccelTbl[Dir]（30 右/D0 左）——**三件面全合规** ✓✓（f1200 状态分叉根=调用点
     // （samus_stand 转换条件）面——非本件 ✗）。
     mem.write_ram(0x010F, 0x09); // WalkSoundDelay（constants 随核）
-    let cur = mem.read_ram(ANIM_RESET_INDEX);
+    let cur = mem.samus().anim_reset_index();
     let x = if cur == OBJ_ANIM_SAMUS_STAND {
         0usize
     } else if cur == OBJ_ANIM_SAMUS_PNT_UP {
         1
     } else {
         // 原跑动⇒转身过渡（SetSamusNextAnim(Front)——CF6E：animIndex←A+animDelay←0）
-        mem.write_ram(ANIM_RESET_INDEX + 1, OBJ_ANIM_SAMUS_FRONT);
-        mem.write_ram(ANIM_RESET_INDEX.wrapping_sub(1), 0); // animDelay←0（H1 修——漏写致走表延迟）
+        mem.samus().set_anim_index(OBJ_ANIM_SAMUS_FRONT);
+        mem.samus().set_anim_delay(0); // animDelay←0（H1 修——漏写致走表延迟）
         0
     };
     let anim = [OBJ_ANIM_SAMUS_RUN, OBJ_ANIM_SAMUS_RUN_PNT_UP][x];
-    mem.write_ram(ANIM_RESET_INDEX, anim);
+    mem.samus().set_anim_reset_index(anim);
     let dir = mem.read_ram(crate::ram_map::SAMUS_DIR);
     set_samus_run_accel(mem, dir);
 }

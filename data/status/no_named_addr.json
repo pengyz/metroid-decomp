@@ -21,13 +21,13 @@
     "ram_map.rs": "符号→地址的唯一定义处",
     "frame/memory.rs": "read_ram/write_ram 兼容辖（迁移完成后收口）"
   },
-  "total": 160,
-  "prod_total": 151,
+  "total": 151,
+  "prod_total": 142,
   "test_total": 9,
   "files": {
     "enemy/prep.rs": 5,
     "frame/tests.rs": 9,
-    "samus/handler.rs": 75,
+    "samus/handler.rs": 66,
     "samus/physics.rs": 61,
     "title/bridge.rs": 8,
     "weapon/projectile.rs": 2
