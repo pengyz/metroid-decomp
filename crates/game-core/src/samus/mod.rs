@@ -5,6 +5,7 @@
 //! spec 源=docs/spec/samus-movement.md（R-mv-1..5 v0.1）——细化随笔落（lead 裁定）。
 
 pub mod state;
+pub mod health_change;
 pub mod handler;
 pub mod physics;
 pub mod integrators; // 【G6 归位（r19）】原 crate::integrators（int_y/int_x 物理积分件）

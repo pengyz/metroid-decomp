@@ -12,10 +12,14 @@
   ],
   "face_total": 2272,
   "owner_bytes": [
-    23,
+    25,
     84
   ],
   "owner_spans": [
+    {
+      "start": 110,
+      "len": 2
+    },
     {
       "start": 768,
       "len": 1
@@ -302,7 +306,7 @@
       "reason": "爆炸额外面未 typed：status/animFrame/animDelay/resetAnimIndex/animIndex/hi 真相在字节面（crates/game-core/src/enemy/explosion.rs:288）"
     }
   ],
-  "undeclared_total": 1553,
+  "undeclared_total": 1551,
   "undeclared": [
     {
       "start": 0,
@@ -331,8 +335,13 @@
     },
     {
       "start": 109,
-      "len": 143,
-      "reason": "Samus/滚动零散面：world/room_load.rs:175 读 $6C/$6D ScrollBlock；samus/state.rs:942 写 HEALTH_CHANGE=$6E；world/elevator.rs:424 写 METROID_ON_SAMUS=$92；world/update.rs:75 写 MIRROR_CNTRL=$FA；$FC/$FD 已由 Camera 声明，不在本段"
+      "len": 1,
+      "reason": "ScrollBlockOnNameTable0=$6D：world/update.rs:63 写 0、world/update.rs:229 写 $33；读在 world/room_load.rs:175 的 GetRoomNum 门（现存唯一读写族，未 typed）"
+    },
+    {
+      "start": 112,
+      "len": 140,
+      "reason": "Samus/滚动零散面 $70-$FB：world/elevator.rs:424 写 METROID_ON_SAMUS=$92；world/update.rs:75 写 MIRROR_CNTRL=$FA；$FC/$FD 已由 Camera 声明不在本段；其余（$70-$91/$93-$F9）为 asm 临时量与未逐字节收族的零散面"
     },
     {
       "start": 254,
@@ -371,6 +380,17 @@
       "undeclared_total": 1553,
       "state_sha256": "c56cb4693657ebd1372d130042c38b87017edf855019f902a072b9f2a121bdb4",
       "prev_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "ts": "2026-11-17T18:59:21+08:00",
+      "reason": "下调 Undeclared 1553 → 1551 B / Unmodeled 612 → 612 B",
+      "owner_total": 109,
+      "view_bytes": 23,
+      "view_only_bytes": 0,
+      "unmodeled_total": 612,
+      "undeclared_total": 1551,
+      "state_sha256": "7e8e608b2b26d7291fa1aed2f8338be5ac328673cb1cc33d1747821e84d0cae5",
+      "prev_sha256": "3c9d89e5191e4a4465a10a8e2ff453597ea920b1ecddf6309d1a700fee7bd6f7"
     }
   ]
 }

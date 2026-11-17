@@ -39,6 +39,10 @@ impl Manager {
         if let Some(v) = self.samus.get_byte(a) {
             return v;
         }
+        // `HealthChange`（`$006E/$006F`）：typed 真源在 `Manager.health_change`。
+        if let Some(v) = self.health_change.get_byte(a) {
+            return v;
+        }
         self.ram()[a as usize]
     }
 
@@ -54,6 +58,10 @@ impl Manager {
         }
         let a = addr & 0x7FF;
         if self.samus.set_byte(a, v) {
+            return;
+        }
+        // `HealthChange`（`$006E/$006F`）：写径同读径，落 typed 真相。
+        if self.health_change.set_byte(a, v) {
             return;
         }
         // 【goal-轮80 Samus radiusY 写钩】0x301 写点（碰撞判径源）。

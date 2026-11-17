@@ -157,8 +157,14 @@ pub(crate) struct TypedRestoreManifest;
 
 impl TypedRestoreManifest {
     /// RAM 面 typed 地址（$0000-$07FF 域内，未做 2KB 镜像归一）。
-    pub(crate) fn ram_addrs() -> &'static [u16] {
-        &crate::samus::state::SamusState::TYPED_ADDRS
+    ///
+    /// 枚举源=各域的地址表（`SamusState::TYPED_ADDRS` / `HealthChange::ADDRS` / …）：
+    /// 加 typed 域只在 chain 上接一段，**禁止第二份手写地址表**。
+    pub(crate) fn ram_addrs() -> impl Iterator<Item = u16> {
+        crate::samus::state::SamusState::TYPED_ADDRS
+            .iter()
+            .copied()
+            .chain(crate::samus::health_change::HealthChange::ADDRS)
     }
 
     /// WRAM 面 typed 地址迭代器（$6000-$7FFF，未做字节偏移变换）。
@@ -186,8 +192,14 @@ impl Manager {
         mem.wram_mut().copy_from_slice(&wram[..0x2000]);
         // typed 域辖字段从字节面回灌（MSS 是外部真相面，恢复后必须重建 typed 状态）。
         // 枚举源=`TypedRestoreManifest`——下面清零用的是同一份清单（回灌/清零禁各写一份）。
-        for &a in TypedRestoreManifest::ram_addrs() {
+        for a in crate::samus::state::SamusState::TYPED_ADDRS {
             mem.samus.set_byte(a, ram[a as usize & 0x7FF]);
+        }
+        for a in crate::samus::health_change::HealthChange::ADDRS {
+            assert!(
+                mem.health_change.set_byte(a, ram[a as usize & 0x7FF]),
+                "`HealthChange` 地址必须在 typed 域内"
+            );
         }
         // 敌槽 `EnsExtra` 前 7 字节（$6AF4 + slot*16）同样从字节面回灌——否则恢复后
         // 这些字段读回的是 typed 默认零值（同族事故：整面 dump 曾漏 typed）。
@@ -200,7 +212,7 @@ impl Manager {
         // 不清零 ⇒ 字节面冻结一份「恢复时刻的旧值」，此后任何 typed 写都不再同步它，
         // `ram()`/`wram()` 便静默说谎（Task 1 刚修好的同源 dump 跟着说谎）——而读径照走
         // typed、矩阵照绿，只有字节面错。故清零与回灌必须用同一份清单、成对执行。
-        for &a in TypedRestoreManifest::ram_addrs() {
+        for a in TypedRestoreManifest::ram_addrs() {
             mem.ram_mut()[(a & 0x7FF) as usize] = 0;
         }
         for a in TypedRestoreManifest::wram_addrs() {
@@ -211,7 +223,7 @@ impl Manager {
         // 「typed 是唯一真相、storage 只留未迁族」——恢复完成后立刻钉住：回灌漏项或
         // 清零漏项都在这里 fail-loud，而不是等 dump 差分再回溯。
         debug_assert!(
-            TypedRestoreManifest::ram_addrs().iter().all(|&a| {
+            TypedRestoreManifest::ram_addrs().all(|a| {
                 let i = (a & 0x7FF) as usize;
                 mem.ram()[i] == 0 && mem.read_ram(a) == ram[i]
             }) && TypedRestoreManifest::wram_addrs().all(|a| {
@@ -349,7 +361,7 @@ mod tests_mss {
         let wram = nonzero_face(0x2000);
         let mem = Manager::restore_mss(&ram, &wram, Registers::default());
 
-        for &a in TypedRestoreManifest::ram_addrs() {
+        for a in TypedRestoreManifest::ram_addrs() {
             let i = (a & 0x7FF) as usize;
             assert_eq!(mem.read_ram(a), ram[i], "{a:#06X}：typed 回灌值");
             assert_eq!(mem.ram()[i], 0, "{a:#06X}：整段拷贝必须被清零");
@@ -363,7 +375,7 @@ mod tests_mss {
         let mut bypass: Vec<u16> = (0..0x800u16)
             .filter(|&a| mem.read_ram(a) != mem.ram()[a as usize])
             .collect();
-        let mut manifest: Vec<u16> = TypedRestoreManifest::ram_addrs().to_vec();
+        let mut manifest: Vec<u16> = TypedRestoreManifest::ram_addrs().collect();
         bypass.sort_unstable();
         manifest.sort_unstable();
         assert_eq!(bypass, manifest, "RAM 面：读径绕过 storage 的地址集合 != typed 清单");
@@ -432,7 +444,7 @@ mod tests_mss {
         let regs = Registers { a: 7, x: 9, y: 11, sp: 0xFD, pc: 0xC0DE, p: 0x31 };
         let mem = Manager::restore_mss(&ram, &wram, regs);
 
-        let typed_ram: Vec<u16> = TypedRestoreManifest::ram_addrs().to_vec();
+        let typed_ram: Vec<u16> = TypedRestoreManifest::ram_addrs().collect();
         for a in 0..0x800u16 {
             if typed_ram.contains(&a) {
                 continue;
