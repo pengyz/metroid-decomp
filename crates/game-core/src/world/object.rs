@@ -24,10 +24,20 @@ pub(crate) mod obj {
     pub(crate) const ANIM_INDEX: u16 = 6;
     /// 门专用（`DoorType`），其余对象为普通字段——同址多义，不美化（见 `samus/state.rs` 细则①）。
     pub(crate) const DOOR_TYPE: u16 = 7;
-    pub(crate) const Y: u16 = 8;
-    pub(crate) const X: u16 = 9;
+    /// `speedY`（`$0308`，i8）。
+    pub(crate) const SPEED_Y: u16 = 8;
+    /// `speedX`（`$0309`，i8）。
+    pub(crate) const SPEED_X: u16 = 9;
+    /// `y`（`$030D`）——房间坐标，非屏幕坐标。
+    pub(crate) const Y: u16 = 0x0D;
+    /// `x`（`$030E`）。
+    pub(crate) const X: u16 = 0x0E;
     /// 已上屏标记（`onScreen`）：`Doors_RemoveIfOffScreen ; 07:ED65` 读 `$030B,x`。
     pub(crate) const ON_SCREEN: u16 = 0x0B;
+    /// `isHit`（`$030A`）。
+    pub(crate) const IS_HIT: u16 = 0x0A;
+    /// `hi`（`$030C`，名表号高位 / 目标名表）。
+    pub(crate) const HI: u16 = 0x0C;
 }
 
 /// 一个对象槽的借用视图。
@@ -74,8 +84,56 @@ impl Object<'_> {
         self.mem.read_ram(self.addr(obj::X))
     }
 
+    /// `$0308 speedY`（i8）。
+    pub fn speed_y(&self) -> i8 {
+        self.mem.read_ram(self.addr(obj::SPEED_Y)) as i8
+    }
+
+    pub fn set_speed_y(&mut self, v: i8) {
+        self.mem.write_ram(self.addr(obj::SPEED_Y), v as u8);
+    }
+
+    /// `$0309 speedX`（i8）。
+    pub fn speed_x(&self) -> i8 {
+        self.mem.read_ram(self.addr(obj::SPEED_X)) as i8
+    }
+
+    pub fn set_speed_x(&mut self, v: i8) {
+        self.mem.write_ram(self.addr(obj::SPEED_X), v as u8);
+    }
+
     pub fn door_type(&self) -> u8 {
         self.mem.read_ram(self.addr(obj::DOOR_TYPE))
+    }
+
+    pub fn set_y(&mut self, v: u8) {
+        self.mem.write_ram(self.addr(obj::Y), v);
+    }
+
+    pub fn set_x(&mut self, v: u8) {
+        self.mem.write_ram(self.addr(obj::X), v);
+    }
+
+    pub fn set_door_type(&mut self, v: u8) {
+        self.mem.write_ram(self.addr(obj::DOOR_TYPE), v);
+    }
+
+    /// `$030A isHit`（门绘制前清零；子弹命中标记）。
+    pub fn is_hit(&self) -> u8 {
+        self.mem.read_ram(self.addr(obj::IS_HIT))
+    }
+
+    pub fn set_is_hit(&mut self, v: u8) {
+        self.mem.write_ram(self.addr(obj::IS_HIT), v);
+    }
+
+    /// `$030C hi`（对象所在名表号；门用它决定写哪页）。
+    pub fn hi(&self) -> u8 {
+        self.mem.read_ram(self.addr(obj::HI))
+    }
+
+    pub fn set_hi(&mut self, v: u8) {
+        self.mem.write_ram(self.addr(obj::HI), v);
     }
 }
 

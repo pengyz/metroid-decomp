@@ -1,7 +1,7 @@
 {
   "schema": "raw-surface-v1",
   "note": "裸字节读写的**文件级**棘轮（只减不增）。语义视图已覆盖 Samus/敌槽/爆炸池/对象池/相机/房间；剩余族（asm Temp、OAM 影子、声音旗标、PageIndex 等伪寄存器）尚未视图化。",
-  "total": 1232,
+  "total": 1203,
   "files": {
     "enemy/anim_tick.rs": 2,
     "enemy/crawler.rs": 24,
@@ -34,14 +34,14 @@
     "world/camera/scroll.rs": 38,
     "world/door.rs": 9,
     "world/elevator.rs": 96,
-    "world/object.rs": 7,
-    "world/room_draw.rs": 141,
+    "world/room_draw.rs": 130,
     "world/room_load.rs": 44,
-    "world/room_ram.rs": 11,
     "world/statue.rs": 21,
     "world/update.rs": 16
   },
   "exempt": {
+    "world/object.rs": "对象池基址/槽步长唯一定义处（边界件，等价 enemy/state.rs）",
+    "world/room_ram.rs": "房间缓冲基址与游标唯一定义处（边界件）",
     "memmap/raw.rs": "裸面本体（`read_ram/write_ram/read_wram/write_wram` 的唯一实现）",
     "memmap/storage.rs": "存储层（NesStorage 字节数组的持有者）",
     "memmap/observe/frame_face.rs": "观察面（把状态导出成 NES 字节，供对拍）",

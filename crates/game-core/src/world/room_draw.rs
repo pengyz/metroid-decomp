@@ -221,7 +221,7 @@ fn load_door(mem: &mut crate::frame::Manager, info: u8) {
     let y_idx = (((sum & 1) << 1) | side) as usize;
     let x_off = DOOR_SLOTS[y_idx] as u16;
     let door_type = info & 3;
-    mem.write_ram(OBJECTS_BASE + 7 + x_off, door_type); // DoorType（data07）
+    mem.object(((0x80 + x_off) / 16) as u8).set_door_type(door_type); // DoorType（data07）
     let init = match door_type {
         1 | 3 => true, // 蓝/音乐蓝（@if_B 直入）
         _ => {
@@ -248,13 +248,13 @@ fn load_door(mem: &mut crate::frame::Manager, info: u8) {
         }
     };
     if init {
-        mem.write_ram(OBJECTS_BASE + x_off, 1); // status←1（Init 态）
+        mem.object(((0x80 + x_off) / 16) as u8).set_status(1); // status←1（Init 态）
     }
     let nt = get_name_table_at_scroll_dir(
         mem.read_ram(PPUCTRL_ZP), mem.read_ram(SCROLL_DIR));
-    mem.write_ram(OBJECTS_BASE + 0x0C + x_off, nt); // hi
-    mem.write_ram(OBJECTS_BASE + 0x0E + x_off, DOOR_XS[side as usize]); // x
-    mem.write_ram(OBJECTS_BASE + 0x0D + x_off, 0x68); // y（恒 $68）
+    mem.object(((0x80 + x_off) / 16) as u8).set_hi(nt); // hi
+    mem.object(((0x80 + x_off) / 16) as u8).set_x(DOOR_XS[side as usize]); // x
+    mem.object(((0x80 + x_off) / 16) as u8).set_y(0x68); // y（恒 $68）
     let block = DOOR_SCROLL_BLOCKS[side as usize];
     let other = (nt ^ 1) as u16;
     let cur = mem.read_ram(SCROLL_BLOCK_NT3 + other);
@@ -272,7 +272,7 @@ const DOOR_HP_TABLE: [u8; 4] = [5, 1, 10, 1]; // $8BD1（红/蓝/导弹/音乐�
 /// （y=(slot Adiv8)&6（$80..$B0→0/2/4/6））。
 fn write_door_bg_tiles(mem: &mut crate::frame::Manager, x_off: u8, tile: u8) {
     let x_pos = DOOR_X_TABLE[((x_off >> 4) & 1) as usize];
-    let nt = mem.read_ram(0x030C + x_off as u16);
+    let nt = mem.object(x_off / 16).hi();
     // 6 行纵写（行步 8 → 缓冲内 $20 步）：y=0x50,0x58,…,0x78
     for k in 0..6u8 {
         mem.room().set_tile(0x50u8.wrapping_add(k * 8), x_pos, nt, tile);
@@ -285,14 +285,14 @@ fn write_door_bg_tiles(mem: &mut crate::frame::Manager, x_off: u8, tile: u8) {
 /// DrawDoor（$8BB1）——ObjectCntrl($6B)（type（3→1）|$80|$20|flip）/isHit←0/动画面
 /// （A=6 周期（拆分面：update_obj_anim(6)+anim_draw_object（goal-r16 修）））。
 fn draw_door(mem: &mut crate::frame::Manager, x_off: u8) {
-    let mut ty = mem.read_ram(0x0307 + x_off as u16);
+    let mut ty = mem.object(x_off / 16).door_type();
     if ty == 3 {
         ty = 1; // 音乐蓝画同蓝
     }
     let mut cntrl = ty | 0x80 | 0x20;
     cntrl |= (x_off & 0x10) ^ 0x10; // 槽位 flip（$80/$A0 镜像）
     mem.set_obj_cntrl(cntrl);
-    mem.write_ram(0x030A + x_off as u16, 0); // isHit←0
+    mem.object(x_off / 16).set_is_hit(0); // isHit←0
     // 【r14 双调根修】DE47 形=单走表（旧形显式走表+anim_draw_object 内再走=双调 ✗）
     crate::render::oam::anim_draw_object(mem, x_off, 6); // AnimDrawObject（DE47——A=6 单走）
 }
@@ -462,14 +462,14 @@ pub fn update_door(mem: &mut crate::frame::Manager, x_off: u8) {
     // UpdateDoor（$8B87）首件 `stx PageIndex`（$004B）—— DrawDoor→AnimDrawObject→
     // UpdateObjAnim（$DC8F）用 `ldx PageIndex` 取槽，缺此写会把动画推进到别的槽
     // （2026-11-14 实测：门 status 已 2 但 animFrame 恒 0、animDelay 恒 0、半径错）。
-    mem.write_ram(crate::ram_map::PAGE_INDEX, x_off);
+    mem.set_page_index(x_off);
     let x = x_off as u16;
-    let status = mem.read_ram(0x0300 + x);
+    let status = mem.object((x / 16) as u8).status();
     match status {
         0 => {} // ExitSub（无门）
         1 => {
             // Init（$8B9D）：status++/anim（$30 双写+Delay0）/实瓦/HP←表→DrawDoor
-            mem.write_ram(0x0300 + x, status.wrapping_add(1));
+            mem.object((x / 16) as u8).set_status(status.wrapping_add(1));
             mem.write_ram(0x0305 + x, 0x30); // InitObjectXSlotAnimIndex（D2FA：Reset+Index）
             mem.write_ram(0x0306 + x, 0x30);
             mem.write_ram(0x0304 + x, 0);

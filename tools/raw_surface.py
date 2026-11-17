@@ -29,6 +29,8 @@ CALL_RE = re.compile(r"\b(?:read|write)_(?:ram|wram)\s*\(")
 
 # 边界/兼容面：这些文件本来就在裸字节层工作，不入账（理由写在账本 exempt 里）。
 EXEMPT = {
+    "world/object.rs": "对象池基址/槽步长唯一定义处（边界件，等价 enemy/state.rs）",
+    "world/room_ram.rs": "房间缓冲基址与游标唯一定义处（边界件）",
     "memmap/raw.rs": "裸面本体（`read_ram/write_ram/read_wram/write_wram` 的唯一实现）",
     "memmap/storage.rs": "存储层（NesStorage 字节数组的持有者）",
     "memmap/observe/frame_face.rs": "观察面（把状态导出成 NES 字节，供对拍）",
