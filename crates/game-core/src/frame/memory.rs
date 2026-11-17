@@ -142,6 +142,33 @@ mod tests {
     }
 }
 
+/// **typed 回灌清单（唯一枚举源）**——`restore_mss` 只认这一处。
+///
+/// 两个面各给出「哪些地址由 typed 状态拥有」：
+/// · RAM：`SamusState::TYPED_ADDRS`（$0300-$0316 的 23 个字节，投影/解码同源）
+/// · WRAM：敌槽 `EnsExtra` 前 `0..=TYPED_MAX` 字节（基址 `$6AF4`、步长 16、`SLOT_COUNT` 槽）
+///
+/// 清单与「整段拷贝」是**互斥**的：整段拷贝先把 MSS 字节灌进 `storage`，随后清单里
+/// 每个地址都被 typed 回灌并**在 storage 中清零**。判据由
+/// `tests_mss::typed_manifest_exactly_covers_bypass_face_and_carves_out_storage`
+/// 机械钉住（读径绕过 storage 的地址集合 == 本清单；清单地址的 storage 字节 == 0）。
+/// 加 typed 字段只改 `TYPED_ADDRS`/`TYPED_MAX`，本清单自动跟随——**禁止第二份手写地址表**。
+struct TypedRestoreManifest;
+
+impl TypedRestoreManifest {
+    /// RAM 面 typed 地址（$0000-$07FF 域内，未做 2KB 镜像归一）。
+    fn ram_addrs() -> &'static [u16] {
+        &crate::samus::state::SamusState::TYPED_ADDRS
+    }
+
+    /// WRAM 面 typed 地址迭代器（$6000-$7FFF，未做字节偏移变换）。
+    fn wram_addrs() -> impl Iterator<Item = u16> {
+        (0..crate::enemy::state::SLOT_COUNT as u16).flat_map(|slot| {
+            (0..=crate::enemy::state::ensx::TYPED_MAX).map(move |off| 0x6AF4 + slot * 16 + off)
+        })
+    }
+}
+
 /// MSS↔Manager 映射（**spec §4 分工件**——docs/spec/state-bundle-schema.md §4
 /// 接缝表；双腿任意起点收官缝）：
 /// · RAM 区（$0000-$07FF）→ ram[0x800] **直映**（A 级）
@@ -158,19 +185,41 @@ impl Manager {
         mem.ram_mut().copy_from_slice(&ram[..0x800]);
         mem.wram_mut().copy_from_slice(&wram[..0x2000]);
         // typed 域辖字段从字节面回灌（MSS 是外部真相面，恢复后必须重建 typed 状态）。
-        for a in crate::samus::state::SamusState::TYPED_ADDRS {
+        // 枚举源=`TypedRestoreManifest`——下面清零用的是同一份清单（回灌/清零禁各写一份）。
+        for &a in TypedRestoreManifest::ram_addrs() {
             mem.samus.set_byte(a, ram[a as usize & 0x7FF]);
         }
         // 敌槽 `EnsExtra` 前 7 字节（$6AF4 + slot*16）同样从字节面回灌——否则恢复后
         // 这些字段读回的是 typed 默认零值（同族事故：整面 dump 曾漏 typed）。
-        for slot in 0..crate::enemy::state::SLOT_COUNT as usize {
-            for off in 0..=crate::enemy::state::ensx::TYPED_MAX {
-                let a = 0x6AF4u16 + slot as u16 * 16 + off;
-                mem.enemies[slot].set_byte(off, wram[(a - 0x6000) as usize & 0x1FFF]);
-            }
+        for a in TypedRestoreManifest::wram_addrs() {
+            let (slot, off) = crate::enemy::state::split_ens_extra(a)
+                .expect("typed 清单地址必须落在敌槽面 $6AF4-$6BD3");
+            mem.enemies[slot].set_byte(off, wram[(a - 0x6000) as usize & 0x1FFF]);
+        }
+        // 【spec §2 R3 / P1】**清零 typed 格**：typed 是唯一真相，`storage` 只留未迁族。
+        // 不清零 ⇒ 字节面冻结一份「恢复时刻的旧值」，此后任何 typed 写都不再同步它，
+        // `ram()`/`wram()` 便静默说谎（Task 1 刚修好的同源 dump 跟着说谎）——而读径照走
+        // typed、矩阵照绿，只有字节面错。故清零与回灌必须用同一份清单、成对执行。
+        for &a in TypedRestoreManifest::ram_addrs() {
+            mem.ram_mut()[(a & 0x7FF) as usize] = 0;
+        }
+        for a in TypedRestoreManifest::wram_addrs() {
+            mem.wram_mut()[((a - 0x6000) & 0x1FFF) as usize] = 0;
         }
         mem.regs = regs;
         mem.nmi_enabled = mem.ram()[0x00FF] & 0x80 != 0;
+        // 「typed 是唯一真相、storage 只留未迁族」——恢复完成后立刻钉住：回灌漏项或
+        // 清零漏项都在这里 fail-loud，而不是等 dump 差分再回溯。
+        debug_assert!(
+            TypedRestoreManifest::ram_addrs().iter().all(|&a| {
+                let i = (a & 0x7FF) as usize;
+                mem.ram()[i] == 0 && mem.read_ram(a) == ram[i]
+            }) && TypedRestoreManifest::wram_addrs().all(|a| {
+                let i = ((a - 0x6000) & 0x1FFF) as usize;
+                mem.wram()[i] == 0 && mem.read_wram(a) == wram[i]
+            }),
+            "restore_mss：typed 格必须在 storage 清零（typed 是唯一真相，storage 只留未迁族）"
+        );
         mem
     }
 
@@ -255,5 +304,130 @@ impl Manager {
     /// 敌槽语义句柄（`$0400+i*16` / `$6AF4+i*16`）——槽号而非字节偏移。
     pub fn enemy(&mut self, slot: u8) -> crate::enemy::state::Enemy<'_> {
         crate::enemy::state::Enemy::new(self, slot)
+    }
+}
+
+/// **P1·R3 断言组**：`restore_mss` 之后 typed 格不得在 `storage` 里留副本。
+///
+/// 背景（spec §2 R3）：`restore_mss` 曾把 0x800 字节无条件拷回 `storage.ram`，于是
+/// typed 字段在字节面留一份**恢复时刻的旧值**——读径走 typed 所以矩阵全绿，但字节面
+/// 已不再描述状态；Task 1 刚让 dump 尾段与 RAM 同源，这份 stale 会直接让 dump 说谎。
+#[cfg(test)]
+mod tests_mss {
+    use super::*;
+    use crate::enemy::state::EnemyStatus;
+    use crate::samus::state::SamusStatus;
+
+    /// 用例2（brief Step 1·7）：restore 后 storage 无 typed 副本，读径仍走 typed。
+    #[test]
+    fn restore_leaves_no_typed_copy_in_storage() {
+        let mut src = crate::state::Manager::default();
+        src.samus().set_status(crate::samus::state::SamusStatus::Roll);
+        src.enemy(3).set_status(crate::enemy::state::EnemyStatus::Active);
+        let (ram, wram, regs) = src.capture_mss();
+        let mut restored = crate::state::Manager::restore_mss(&ram, &wram, regs);
+        assert_eq!(restored.ram()[0x0300], 0, "storage 不得保留 typed 副本");
+        assert_eq!(restored.read_ram(0x0300), 3, "读径仍走 typed");
+        assert_eq!(restored.enemy(3).status(), crate::enemy::state::EnemyStatus::Active);
+    }
+
+    /// 全非零字节面（`i%255+1` ∈ 1..=255）。**非零是判据的一部分**：typed 格若留在
+    /// storage 且值相同，"读径 vs 存储"的差分就看不见它——用零字节会让漏清零假绿。
+    fn nonzero_face(n: usize) -> Vec<u8> {
+        (0..n).map(|i| (i % 255 + 1) as u8).collect()
+    }
+
+    /// 对抗问 2+3：typed 回灌清单与「整段拷贝」无交集，且清单**恰好**覆盖 typed 面。
+    ///
+    /// 判据不是"清单看起来对"，而是机械对账两遍：
+    /// · 逐地址：读径 == 输入字节（回灌真发生）且 storage == 0（整段拷贝被抹掉）；
+    /// · 全集：`{a | read(a) != storage[a]}` **等于**清单集合——多一个=漏清零，
+    ///   少一个=漏回灌（两种情况都会让字节面变成第二真相/读回陈旧值）。
+    #[test]
+    fn typed_manifest_exactly_covers_bypass_face_and_carves_out_storage() {
+        let ram = nonzero_face(0x800);
+        let wram = nonzero_face(0x2000);
+        let mem = Manager::restore_mss(&ram, &wram, Registers::default());
+
+        for &a in TypedRestoreManifest::ram_addrs() {
+            let i = (a & 0x7FF) as usize;
+            assert_eq!(mem.read_ram(a), ram[i], "{a:#06X}：typed 回灌值");
+            assert_eq!(mem.ram()[i], 0, "{a:#06X}：整段拷贝必须被清零");
+        }
+        for a in TypedRestoreManifest::wram_addrs() {
+            let i = ((a - 0x6000) & 0x1FFF) as usize;
+            assert_eq!(mem.read_wram(a), wram[i], "{a:#06X}：敌槽 typed 回灌值");
+            assert_eq!(mem.wram()[i], 0, "{a:#06X}：敌槽整段拷贝必须被清零");
+        }
+
+        let mut bypass: Vec<u16> = (0..0x800u16)
+            .filter(|&a| mem.read_ram(a) != mem.ram()[a as usize])
+            .collect();
+        let mut manifest: Vec<u16> = TypedRestoreManifest::ram_addrs().to_vec();
+        bypass.sort_unstable();
+        manifest.sort_unstable();
+        assert_eq!(bypass, manifest, "RAM 面：读径绕过 storage 的地址集合 != typed 清单");
+
+        let mut wbypass: Vec<u16> = (0x6AF4u16..0x6AF4 + crate::enemy::state::SLOT_COUNT as u16 * 16)
+            .filter(|&a| mem.read_wram(a) != mem.wram()[((a - 0x6000) & 0x1FFF) as usize])
+            .collect();
+        let mut wmanifest: Vec<u16> = TypedRestoreManifest::wram_addrs().collect();
+        wbypass.sort_unstable();
+        wmanifest.sort_unstable();
+        assert_eq!(wbypass, wmanifest, "WRAM 面：敌槽 typed 清单 != 读径绕过集合");
+    }
+
+    /// 对抗问 4：既有行为不得被改掉——非 typed 字节逐字节原样恢复，
+    /// 且 `capture(restore(x))` 两面对 x 逐字节相等（typed 面按 typed 重建）。
+    ///
+    /// 这条挡的是"顺手把整段拷贝改成子集化"（漏恢复某段未 typed 字节）这类回归。
+    #[test]
+    fn restore_preserves_untyped_bytes_and_roundtrips_whole_face() {
+        let ram = nonzero_face(0x800);
+        let wram = nonzero_face(0x2000);
+        let regs = Registers { a: 7, x: 9, y: 11, sp: 0xFD, pc: 0xC0DE, p: 0x31 };
+        let mem = Manager::restore_mss(&ram, &wram, regs);
+
+        let typed_ram: Vec<u16> = TypedRestoreManifest::ram_addrs().to_vec();
+        for a in 0..0x800u16 {
+            if typed_ram.contains(&a) {
+                continue;
+            }
+            let i = a as usize;
+            assert_eq!(mem.ram()[i], ram[i], "{a:#06X}：未迁族必须留在字节面");
+            assert_eq!(mem.read_ram(a), ram[i], "{a:#06X}：未迁族读径同值");
+        }
+        let typed_wram: Vec<u16> = TypedRestoreManifest::wram_addrs().collect();
+        for a in 0x6000u16..0x8000 {
+            if typed_wram.contains(&a) {
+                continue;
+            }
+            let i = (a - 0x6000) as usize;
+            assert_eq!(mem.wram()[i], wram[i], "{a:#06X}：WRAM 未迁族必须留在字节面");
+            assert_eq!(mem.read_wram(a), wram[i], "{a:#06X}：WRAM 未迁族读径同值");
+        }
+
+        let (r2, w2, regs2) = mem.capture_mss();
+        assert_eq!(r2, ram, "capture(restore(x)) 的 RAM 面必须逐字节等于 x");
+        assert_eq!(w2, wram, "capture(restore(x)) 的 WRAM 面必须逐字节等于 x");
+        assert_eq!(regs2, regs);
+    }
+
+    /// 修复的**危害面**：restore 之后 typed 写不得让字节面复活旧值。
+    /// 旧形留副本时，副本只冻结在"恢复时刻"——之后任何 typed 写都与它分叉，
+    /// `ram()` 便悄悄说谎（Task 1 的同源 dump 跟着说谎）。
+    #[test]
+    fn typed_write_after_restore_cannot_revive_stale_storage() {
+        let mut src = Manager::default();
+        src.samus().set_status(SamusStatus::Roll); // 非零：旧形会把 3 冻结在 storage
+        src.enemy(0).set_status(EnemyStatus::Active); // 同上（2）
+        let (ram, wram, regs) = src.capture_mss();
+        let mut mem = Manager::restore_mss(&ram, &wram, regs);
+        mem.samus().set_status(SamusStatus::Elevator);
+        mem.enemy(0).set_status(EnemyStatus::Frozen);
+        assert_eq!(mem.ram()[0x0300], 0, "typed 写不得在字节面留旧值");
+        assert_eq!(mem.wram()[(0x6AF4 - 0x6000) as usize], 0, "敌槽同病同查");
+        assert_eq!(mem.snapshot_nes().ram[0x0300], 9, "投影才是字节面唯一出口");
+        assert_eq!(mem.snapshot_nes().wram[(0x6AF4 - 0x6000) as usize], 4);
     }
 }
