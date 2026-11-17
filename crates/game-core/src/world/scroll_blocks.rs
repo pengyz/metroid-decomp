@@ -1,6 +1,6 @@
 //! 名表门挡字（`$6C/$6D`，asm `ScrollBlockOnNameTable3` / `ScrollBlockOnNameTable0`）。
 //!
-//! asm 侧是两个**相邻**的全局字节（`constants_ram.asm:246/247`），语义是「两张名表上
+//! asm 侧是两个**相邻**的全局字节（`constants_ram.asm:609/610`），语义是「两张名表上
 //! 还压着哪几个门」——门挡位置位时 `GetRoomNum` 视为不可滚（`sec/bne RTS_E76F`），
 //! 所以它们既被房间装载清、也被门绘制置位/滚动清位，是典型的「多写者单语义」字节。
 //!

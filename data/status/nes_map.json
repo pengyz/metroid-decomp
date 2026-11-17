@@ -552,6 +552,7 @@
       "kind": "undeclared",
       "refs": [
         "asm:refs/m1disasm/SRC/constants_ram.asm:986",
+        "asm:refs/m1disasm/out/M1_NES_NTSC.sym:11708",
         "world/statue.rs:30",
         "world/room_draw.rs:381"
       ]
@@ -561,7 +562,8 @@
       "len": 48,
       "kind": "undeclared",
       "refs": [
-        "asm:refs/m1disasm/SRC/constants_ram.asm:991"
+        "asm:refs/m1disasm/out/M1_NES_NTSC.sym:11847",
+        "asm:refs/m1disasm/out/M1_NES_NTSC.sym:11995"
       ]
     },
     {

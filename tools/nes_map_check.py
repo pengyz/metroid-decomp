@@ -63,9 +63,9 @@ PLACEHOLDER_REASONS = {
 # reason 必须指向**真实代码行**（不只“像指针”）：文件在、行号在文件内、该行非空且非纯注释。
 # · `path.rs:123` / `path.py:123-130`：源码证据（行必须是代码，不许是空行/注释）；
 # · `asm:refs/...asm:123`：汇编证据（`refs/` 下，必须带 `asm:` 前缀；`;` 注释行也算证据，
-#   因为 m1disasm 的注释常是地址/语义锚）。
+#   因为 m1disasm 的注释常是地址/语义锚）；`.sym` 符号表的地址行同属机械证据。
 CODE_POINTER_RE = re.compile(
-    r"(?P<asm>asm:)?(?P<path>[A-Za-z0-9_./-]+\.(?:rs|py|asm))"
+    r"(?P<asm>asm:)?(?P<path>[A-Za-z0-9_./-]+\.(?:rs|py|asm|sym))"
     r"(?::(?P<line>\d+)(?:-(?P<end>\d+))?)?"
 )
 
@@ -132,7 +132,7 @@ def pointer_errors(reason) -> list[str]:
         return ["reason 缺 `path:line` 形式的代码行指针（只给文件名不算证据）"]
     for m in located:
         raw = m.group("path")
-        is_asm = bool(m.group("asm")) or raw.endswith(".asm")
+        is_asm = bool(m.group("asm")) or raw.endswith((".asm", ".sym"))
         if raw.endswith(".asm") and not m.group("asm"):
             errs.append(f"{raw}: 汇编指针必须带 `asm:` 前缀")
             continue
@@ -180,8 +180,10 @@ PIECES = [
     (0x04E0, 0x0010, ["asm:refs/m1disasm/SRC/constants_ram.asm:975"]),
     (0x04F0, 0x0010, ["asm:refs/m1disasm/SRC/constants_ram.asm:976"]),
     (0x0500, 0x00D0, ["asm:refs/m1disasm/SRC/constants_ram.asm:986",
+                      "asm:refs/m1disasm/out/M1_NES_NTSC.sym:11708",
                       "world/statue.rs:30", "world/room_draw.rs:381"]),
-    (0x05D0, 0x0030, ["asm:refs/m1disasm/SRC/constants_ram.asm:991"]),
+    (0x05D0, 0x0030, ["asm:refs/m1disasm/out/M1_NES_NTSC.sym:11847",
+                      "asm:refs/m1disasm/out/M1_NES_NTSC.sym:11995"]),
     (0x0600, 0x0083, ["sound/mod.rs:25", "sound/mod.rs:33",
                       "asm:refs/m1disasm/SRC/constants_ram.asm:1001"]),
     (0x0683, 0x0002, ["sound/state.rs:1"]),
@@ -227,7 +229,7 @@ def _segments(addrs) -> list[dict]:
     return out
 
 
-POINTER_TOKEN_RE = re.compile(r"(?:asm:)?[A-Za-z0-9_./-]+\.(?:rs|py|asm)(?::\d+(?:-\d+)?)?")
+POINTER_TOKEN_RE = re.compile(r"(?:asm:)?[A-Za-z0-9_./-]+\.(?:rs|py|asm|sym)(?::\d+(?:-\d+)?)?")
 
 
 def extract_refs(text) -> list[str]:
