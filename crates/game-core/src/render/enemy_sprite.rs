@@ -15,14 +15,20 @@
 use crate::enemy::prep::enemy_check_if_visible_inner;
 use crate::ram_map;
 
-/// 绘制所需的外部世界输入（相机面）。
+/// 绘制时刻的**外部世界输入**：相机面 + 当前区。
 ///
-/// `horizontal` 来自 `ScrollDir & $02`：横滚房用房间内绝对 y，竖滚房用 y−`ScrollY`。
+/// 两者都是「绘制要读、但不属于任何敌人」的东西，所以一律由边界入口取一次、显式传入，
+/// 核心函数不再自己 `read_ram`。这样核心可用假 `View` 单测（不必先摆相机字节、
+/// 也不必先切到某个区），且「本绘制依赖相机与区」在签名上可见。
+///
+/// * `horizontal` 来自 `ScrollDir & $02`：横滚房用房内绝对 y，竖滚房用 y−`ScrollY`。
+/// * `area` 来自 `InArea & $0F`（0..=4）：决定按区的帧/位数据面（per-bank-assets §1）。
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) struct View {
     pub scroll_x: u8,
     pub scroll_y: u8,
     pub horizontal: bool,
+    pub area: u8,
 }
 
 impl View {
@@ -32,6 +38,7 @@ impl View {
             scroll_x: mem.read_ram(ram_map::SCROLL_X),
             scroll_y: mem.read_ram(ram_map::SCROLL_Y),
             horizontal: mem.read_ram(ram_map::SCROLL_DIR) & 0x02 != 0,
+            area: crate::world::room_load::area_idx(mem.read_ram(ram_map::IN_AREA)) as u8,
         }
     }
 }
@@ -56,7 +63,7 @@ fn draw_at(mem: &mut crate::frame::Manager, x: u8, view: View) {
     // Visible 用半径（序=半径写先行））+[:6178-6186] bit1 逐帧闩（and #$FD/ora（txa<<1））。
     // 爆亡链件已补（F40D/DCF5/F483 全径（415 测））⇒连锁闭环（§10 回装判据达成）。
     // **按区**取敌帧/位数据面（`docs/findings/per-bank-assets.md` §1：五区基址/表长各异）。
-    let area = crate::world::room_load::area_idx(mem.read_ram(ram_map::IN_AREA)) as u8;
+    let area = view.area;
     let frame0 = mem.ens_face(x).anim_frame();
     if frame0 != 0xFF {
         let fi0 = ((frame0 & 0x7F) as usize) + if frame0 & 0x80 != 0 { 128 } else { 0 };
@@ -165,5 +172,8 @@ mod tests_view {
         assert!(v.horizontal, "ScrollDir bit1 置位=横滚房");
         m.write_ram(ram_map::SCROLL_DIR, 0x00);
         assert!(!View::from_scene(&m).horizontal);
+        // 区号同样在边界取一次（0=Brinstar 默认；换成 4=Ridley 后应跟随）。
+        m.write_ram(ram_map::IN_AREA, 0x04);
+        assert_eq!(View::from_scene(&m).area, 4, "InArea&$0F=4 ⇒ 区号 4");
     }
 }
