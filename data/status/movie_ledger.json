@@ -37,16 +37,17 @@
       "sha256": "471b441cb2368c95cd450f53b5d5d24d061c0ad43465d61bc410a76d4117f7eb",
       "rom_identity": "fm2 romChecksum = base64(b'\\xb2\\xd2\\xd9\\xedh\\xb3\\xe5\\xe0\\xd2\\x90S\\xeaR[\\xd3|') ⇒ 解码 == 本仓 ROM 无头 MD5 b2d2d9ed68b3e5e0d29053ea525bd37c（逐字节吻合）",
       "window_used": "movies/cases/case-movie-100p-*.txt（gitignored）",
-      "frames_synced": 4017,
+      "frames_synced": 3889,
       "frames_synced_note": "连续逐像素 0px 到 f2159（含 2P 段 f22449 之后未测；本数=连续 0px 的最后一帧）。修到 f2152 归零、f2160 起出现 8px 单帧分歧后暂停。",
-      "first_divergence_frame": 4018,
+      "first_divergence_frame": 3890,
       "first_divergence_px": 8,
       "known_open": [
         "f4018 关屏单帧采样相位（state 全同，待单独定谳）",
         "f4200 起 1089px 级联",
         "2P 段（f22449 起）仅单点抽查"
       ],
-      "notes": "100% 全收集（Lord Tom，120540 帧）。f4018=12404px 是 PrepareGameOver 关屏那一帧：两侧 $FE 均 0x06（BG/OBJ 关）而像素为「emu 全黑 vs rust 仍显示上一屏」⇒ 采样相位面，非行为差。f4019–f4026 全 0px（GameOver 屏 'GAME OVER' 已正确绘制，靠 InitPasswordFontGfx 两件 CHR）。"
+      "notes": "100% 全收集（Lord Tom，120540 帧）。f4018=12404px 是 PrepareGameOver 关屏那一帧：两侧 $FE 均 0x06（BG/OBJ 关）而像素为「emu 全黑 vs rust 仍显示上一屏」⇒ 采样相位面，非行为差。f4019–f4026 全 0px（GameOver 屏 'GAME OVER' 已正确绘制，靠 InitPasswordFontGfx 两件 CHR）。 usable_until=3889：f3890 起 Mesen2 腿出现 100%% 路线不应发生的死亡（连吃三下）→ GAME OVER → PASS WORD。已排除输入相位：(1) FrameCount 增量体检 3960 帧仅 25 个 lag、末个在 f1756，f1757-3960 零 lag；(2) 在 f1756 插入 1 帧使全程后移的对照跑，血量/状态逐帧与原版完全相同。作者核心为 FCEUX emuVersion 9816；本机 FCEUX 2.5.0 在该环境启动即 abort（buffer overflow detected），无法取参照轨迹 ⇒ 该段按覆盖率缺口处理，不再作为修复目标。",
+      "usable_until": 3889
     }
   ]
 }
