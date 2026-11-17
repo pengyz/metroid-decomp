@@ -91,7 +91,7 @@ fn main() {
             if *gf == fi {
                 let pal = &engine.mem.render.palette;
                 let fb = game_core::render::render_frame(
-                    &engine.mem.render, &bg16(pal), &spr16(pal), &engine.mem.ram()[0x200..0x300]);
+                    &engine.mem.render, &bg16(pal), &spr16(pal), engine.mem.oam_shadow());
                 let png = encode_rgb(256, 240, &fb);
                 std::fs::write(std::path::Path::new("analysis/render-shots").join(gname), &png).expect("写 PNG");
                 written += 1;

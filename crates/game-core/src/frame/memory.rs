@@ -166,6 +166,7 @@ impl TypedRestoreManifest {
             .copied()
             .chain(crate::samus::health_change::HealthChange::ADDRS)
             .chain(crate::sound::state::SoundInitFlags::ADDRS)
+            .chain(crate::render::oam_shadow::OamShadow::addrs())
     }
 
     /// WRAM 面 typed 地址迭代器（$6000-$7FFF，未做字节偏移变换）。
@@ -208,6 +209,10 @@ impl Manager {
                 "`SoundInitFlags` 地址必须在 typed 域内"
             );
         }
+        // OAM 可整页拷贝（`OamShadow::from_page`）——比逐址 set_byte 少 255 次分派。
+        let mut oam_page = [0u8; crate::render::oam_shadow::OAM_LEN];
+        oam_page.copy_from_slice(&ram[0x0200..0x0300]);
+        mem.oam = crate::render::oam_shadow::OamShadow::from_page(oam_page);
         // 敌槽 `EnsExtra` 前 7 字节（$6AF4 + slot*16）同样从字节面回灌——否则恢复后
         // 这些字段读回的是 typed 默认零值（同族事故：整面 dump 曾漏 typed）。
         for a in TypedRestoreManifest::wram_addrs() {

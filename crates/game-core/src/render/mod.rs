@@ -689,3 +689,4 @@ pub(crate) mod ppu;
 pub(crate) mod vram;
 
 pub mod oam;
+pub mod oam_shadow;

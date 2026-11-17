@@ -415,7 +415,7 @@ fn main() {
                           frame: usize, tag: &str,
                               out: &PathBuf, produced: &mut Vec<(usize, String, String)>| {
         let (rs, oam): (&RenderState, &[u8]) =
-            capture_inputs(snap, &engine.mem.render, &engine.mem.ram()[0x200..0x300]);
+            capture_inputs(snap, &engine.mem.render, engine.mem.oam_shadow());
         let pal = &rs.palette;
         let bg: [u8; 16] = pal[0..16].try_into().unwrap();
         let spr: [u8; 16] = pal[16..32].try_into().unwrap();
@@ -542,7 +542,7 @@ fn main() {
                     seam_snap = Some((
                         frame,
                         mem.render.clone(),
-                        mem.ram()[0x200..0x300].to_vec(),
+                        mem.oam_shadow().to_vec(),
                     ));
                 }
             });

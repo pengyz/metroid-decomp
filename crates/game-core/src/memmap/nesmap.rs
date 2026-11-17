@@ -178,24 +178,15 @@ fn scan(spans: &[(NesSpan, SpanKey)]) -> Maps {
 ///
 /// 返回 `Err` 的情形（逐行，不合并、不静默）：空段、越界、同一字节被两个 `Owner`
 /// 认领、计数超 `u8`（brief 签名 `[u8; 2]`——聚合面请分域核算后相加）。
-pub fn coverage(spans: &[(NesSpan, SpanKey)]) -> Result<[u8; 2], Vec<String>> {
+pub fn coverage(spans: &[(NesSpan, SpanKey)]) -> Result<[u16; 2], Vec<String>> {
     let m = scan(spans);
     if !m.errs.is_empty() {
         return Err(m.errs);
     }
-    let mut errs = Vec::new();
-    for (slot, name) in [(0usize, "RAM"), (1usize, "WRAM")] {
-        if m.own_count[slot] > u32::from(u8::MAX) {
-            errs.push(format!(
-                "{name} 面 owner 字节数 {} 超出 u8（brief 签名 [u8; 2]）——聚合核算请分域跑",
-                m.own_count[slot]
-            ));
-        }
-    }
-    if !errs.is_empty() {
-        return Err(errs);
-    }
-    Ok([m.own_count[0] as u8, m.own_count[1] as u8])
+    // 【2026-11-17 更正】旧签名 `[u8; 2]` 是 P2 过渡期（Owner 仅 107 B）的窄口径：OAM
+    // 256 B 迁入 typed 后 RAM 面 Owner 越过 255，u8 会 fail-loud。比对面总量 2272 B
+    // < u16::MAX，故聚合口径改为 u16（语义不变：每面 owner 字节数）。
+    Ok([m.own_count[0] as u16, m.own_count[1] as u16])
 }
 
 /// **声明空洞**：`domain` 内没有任何 span（任何键）覆盖的字节地址（升序）。
@@ -321,6 +312,7 @@ pub fn dump_json() -> Result<String, Vec<String>> {
     push_entity::<crate::samus::state::SamusState>(&mut spans, "SamusState", &mut all);
     push_entity::<crate::samus::health_change::HealthChange>(&mut spans, "HealthChange", &mut all);
     push_entity::<crate::sound::state::SoundInitFlags>(&mut spans, "SoundInitFlags", &mut all);
+    push_entity::<crate::render::oam_shadow::OamShadow>(&mut spans, "OamShadow", &mut all);
     push_entity::<crate::enemy::state::Enemy<'static>>(&mut spans, "Enemy", &mut all);
     push_entity::<crate::world::object::Object<'static>>(&mut spans, "Object", &mut all);
     push_entity::<crate::world::room_ram::Room<'static>>(&mut spans, "Room", &mut all);
@@ -400,7 +392,7 @@ mod tests {
             "dump 必须带 schema 头：{}",
             &json[..json.len().min(80)]
         );
-        assert!(json.contains("\"coverage\":[27,84]"), "owner 字节数锚点");
+        assert!(json.contains("\"coverage\":[283,84]"), "owner 字节数锚点");
     }
 
     /// 每条 Unmodeled 说明都必须带可 grep 的代码指针（`*.rs`），否则

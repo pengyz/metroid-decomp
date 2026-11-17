@@ -12,13 +12,17 @@
   ],
   "face_total": 2272,
   "owner_bytes": [
-    27,
+    283,
     84
   ],
   "owner_spans": [
     {
       "start": 110,
       "len": 2
+    },
+    {
+      "start": 512,
+      "len": 256
     },
     {
       "start": 768,
@@ -310,7 +314,7 @@
       "reason": "爆炸额外面未 typed：status/animFrame/animDelay/resetAnimIndex/animIndex/hi 真相在字节面（crates/game-core/src/enemy/explosion.rs:288）"
     }
   ],
-  "undeclared_total": 1549,
+  "undeclared_total": 1293,
   "undeclared": [
     {
       "start": 0,
@@ -363,11 +367,6 @@
       "reason": "6502 硬件栈页剩余部分（$0100-$01FF）；Rust 侧不模拟 JSR/RTS 的栈字节，frame/boot.rs:581 断言 $01FF 不被触碰；$0108/$0109 是原版借栈页放的延时旗，已单列"
     },
     {
-      "start": 512,
-      "len": 256,
-      "reason": "OAM 影子页：frame/boot.rs:144 erase_all_sprites 整页 256 B 填 $F0；render/oam.rs:107 draw_sprite_stream 按 SpritePagePos 写四元组（最远 $02FF）；frame/nmi.rs 读 OAM"
-    },
-    {
       "start": 1248,
       "len": 419,
       "reason": "声引擎其余旗标面 $04E0-$0682：sound/state.rs:25 的 SFX_PAUSED=$0602/SFX_NOISE_INIT=$0680；$04E0-$05FF 原版未用保留面（Mesen2 RAM dump 恒 0，比对面由 memmap/observe/dump.rs 界定）；$0603-$067F 为未逐字节收族的零散面"
@@ -411,6 +410,17 @@
       "undeclared_total": 1549,
       "state_sha256": "335ae443d30f463953886470f71999d65da740fe0efe50e7b341fb84d8506e18",
       "prev_sha256": "e67fba17c7f057f42e79b56177d585a567fb97ae4ffd07ca0b31ab3c4a981a42"
+    },
+    {
+      "ts": "2026-11-17T19:06:42+08:00",
+      "reason": "下调 Undeclared 1549 → 1293 B / Unmodeled 612 → 612 B",
+      "owner_total": 367,
+      "view_bytes": 23,
+      "view_only_bytes": 0,
+      "unmodeled_total": 612,
+      "undeclared_total": 1293,
+      "state_sha256": "56237aec1fa03ffa3df978b86935c589834bbc732e41e3f26138535112e6080a",
+      "prev_sha256": "f9ab398f3c75a9d252183574276589f92cfbed60b29b18b09253ab85912d4668"
     }
   ]
 }

@@ -71,10 +71,10 @@ mod tests {
         // 字节面**不**持有 typed 字段（`write_ram` 对 typed 地址提前 return），
         // 该 22 字节的唯一真相在 `Manager.samus`，`snapshot_nes()` 才是字节面。
         let mut m = Manager::default();
-        m.ram_mut()[0x0200] = 0xAA; // 非 typed 面
+        m.ram_mut()[0x0700] = 0xAA; // 非 typed 面（$0200 OAM 页已 typed，见 render/oam_shadow.rs）
         m.samus().set_status(crate::samus::state::SamusStatus::Roll);
         let img = m.snapshot_nes();
-        assert_eq!(img.ram[0x0200], 0xAA, "非 typed 面直通");
+        assert_eq!(img.ram[0x0700], 0xAA, "非 typed 面直通");
         assert_eq!(img.ram[0x0300], 3, "typed 字段由投影产出");
         assert_eq!(m.read_ram(0x0300), 3, "读口与投影同源");
         assert_eq!(m.ram()[0x0300], 0, "字节面不持有 typed 字段（分层的代价，显式锁定）");
