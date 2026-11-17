@@ -154,6 +154,49 @@ impl Explosion<'_> {
         self.mem.write_wram(self.eaddr(explx::ANIM_DELAY), 0);
     }
 
+    #[inline]
+    fn extra_read(&self, off: u16) -> u8 {
+        self.mem.read_wram(self.eaddr(off))
+    }
+
+    #[inline]
+    fn extra_write(&mut self, off: u16, v: u8) {
+        self.mem.write_wram(self.eaddr(off), v);
+    }
+
+    /// 动画四元组整读（与 `write_anim` 配对）。
+    pub(crate) fn anim(&self) -> crate::enemy::state::Anim {
+        crate::enemy::state::Anim {
+            frame: self.extra_read(explx::ANIM_FRAME),
+            delay: self.extra_read(explx::ANIM_DELAY),
+            reset: self.extra_read(explx::RESET_ANIM),
+            index: self.extra_read(explx::ANIM_INDEX),
+        }
+    }
+
+    pub(crate) fn write_anim(&mut self, a: crate::enemy::state::Anim) {
+        self.extra_write(explx::ANIM_FRAME, a.frame);
+        self.extra_write(explx::ANIM_DELAY, a.delay);
+        self.extra_write(explx::RESET_ANIM, a.reset);
+        self.extra_write(explx::ANIM_INDEX, a.index);
+    }
+
+    /// 爆炸池的 `UpdateEnemyAnim` 侧（**无 Pickup 门**——池 status 是"占用"词表）。
+    pub(crate) fn advance_anim(&mut self, table: &[u8], a: u8) -> bool {
+        match self.anim().step(table, a) {
+            crate::enemy::state::AnimStep::Tick(d) => {
+                self.extra_write(explx::ANIM_DELAY, d);
+                false
+            }
+            crate::enemy::state::AnimStep::Advance { delay, frame, index } => {
+                let reset = self.extra_read(explx::RESET_ANIM);
+                self.write_anim(crate::enemy::state::Anim { frame, delay, reset, index });
+                true
+            }
+            crate::enemy::state::AnimStep::Broken => crate::unported!("bank07:E0BC-wrap"),
+        }
+    }
+
     pub fn anim_index(&self) -> u8 {
         self.mem.read_wram(self.eaddr(explx::ANIM_INDEX))
     }

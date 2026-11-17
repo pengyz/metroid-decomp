@@ -160,6 +160,46 @@ pub struct Anim {
     pub index: u8,
 }
 
+/// 走表推进的一步结果（`Anim::step` 的返回值）——纯值，不含 I/O。
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum AnimStep {
+    /// `animDelay` 递减后仍未归零：只更新 delay，帧不动（asm: `dec / bne @exit`）
+    Tick(u8),
+    /// delay 归零 ⇒ 重灌 `a` 并走表：`animFrame` 取表值、`animIndex` 自增
+    Advance { delay: u8, frame: u8, index: u8 },
+    /// 走表不变量破裂（`$FF` 连撞 16 次）——调用方 fail-loud
+    Broken,
+}
+
+impl Anim {
+    /// `UpdateEnemyAnim ; 07:E094` 的**表段**（纯函数，无 I/O、无资产全局）。
+    ///
+    /// asm 形（`refs/m1disasm/SRC/areas_common.asm` 邻域）：
+    /// `dec animDelay / bne exit` → `sta animDelay←A` → 取 `EnAnimTable[animIndex]`；
+    /// 表值是 `$FF` ⇒ `animIndex ← resetAnimIndex` 再取一次（最多 16 次本模型护栏）。
+    ///
+    /// 表由调用方传入（按区 `assets::enemy_anim_table(area)`）：值对象不该知道"区"，
+    /// 也不该在单测里拉起 gitignored 的资产包。
+    pub(crate) fn step(self, table: &[u8], a: u8) -> AnimStep {
+        if self.delay != 0 {
+            let d = self.delay - 1;
+            if d != 0 {
+                return AnimStep::Tick(d);
+            }
+        }
+        let mut idx = self.index;
+        for _ in 0..16u32 {
+            match table.get(idx as usize) {
+                Some(&v) if v != 0xFF => {
+                    return AnimStep::Advance { delay: a, frame: v, index: idx.wrapping_add(1) }
+                }
+                _ => idx = self.reset,
+            }
+        }
+        AnimStep::Broken
+    }
+}
+
 /// 一个敌槽的 typed 状态（`EnsExtra` 前 7 字节）。其余字节仍走 `NesStorage`。
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub(crate) struct SlotState {
@@ -437,6 +477,35 @@ impl<'a> Enemy<'a> {
     pub fn anim_index(&self) -> u8 {
         self.getx(ens_extra::ANIM_INDEX)
     }
+    /// 动画四元组整体读出（与 [`Self::set_anim`] 配对，保证读写同源）。
+    pub(crate) fn anim(&self) -> Anim {
+        Anim {
+            frame: self.anim_frame(),
+            delay: self.anim_delay(),
+            reset: self.reset_anim_index(),
+            index: self.anim_index(),
+        }
+    }
+
+    /// `UpdateEnemyAnim ; 07:E094` 的**实体侧**：Pickup 态不更（asm 首件 `cmp #$05 / beq`）
+    /// + 调 [`Anim::step`] + 写回本槽。返回是否推进了帧（供调用方判断要不要重绘）。
+    pub(crate) fn advance_anim(&mut self, table: &[u8], a: u8) -> bool {
+        if self.status_raw() == 5 {
+            return false; // Pickup 态不更
+        }
+        match self.anim().step(table, a) {
+            AnimStep::Tick(d) => {
+                self.set_anim_delay(d);
+                false
+            }
+            AnimStep::Advance { delay, frame, index } => {
+                self.set_anim(Anim { frame, delay, reset: self.reset_anim_index(), index });
+                true
+            }
+            AnimStep::Broken => crate::unported!("bank07:E0BC-wrap"),
+        }
+    }
+
     pub fn hi(&self) -> u8 {
         self.getx(ens_extra::HI)
     }
@@ -597,5 +666,52 @@ mod tests {
         assert_eq!(mem.enemy(3).status_raw(), 0x09);
         assert!(odd.is_empty(), "asm：greater than 6 = 没有敌人");
         assert!(EnemyStatus::NoEnemy.is_empty());
+    }
+}
+
+
+#[cfg(test)]
+mod tests_anim_step {
+    use super::*;
+
+    /// 表：`0x10` 是正常项、`0x11` 是 `$FF`（走回卷）。
+    const TBL: [u8; 18] = [
+        0x10, 0xFF, 0x10, 0x10, 0xFF, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10,
+        0x10, 0x10, 0x99,
+    ];
+
+    /// delay 未归零 ⇒ 只递减，帧不动（asm `dec / bne`）。
+    #[test]
+    fn tick_only_decrements_delay() {
+        let a = Anim { frame: 0x33, delay: 3, reset: 0, index: 1 };
+        assert_eq!(a.step(&TBL, 5), AnimStep::Tick(2));
+    }
+
+    /// delay 归零 ⇒ 重灌 `a` 并取 `table[index]`，index 自增。
+    #[test]
+    fn advance_reads_table_and_bumps_index() {
+        let a = Anim { frame: 0x33, delay: 1, reset: 0, index: 2 };
+        assert_eq!(a.step(&TBL, 5), AnimStep::Advance { delay: 5, frame: 0x10, index: 3 });
+    }
+
+    /// `$FF` ⇒ 回卷到 `reset` 再取（asm `animIndex ← resetAnimIndex`）。
+    #[test]
+    fn ff_entry_wraps_to_reset() {
+        let a = Anim { frame: 0x00, delay: 1, reset: 2, index: 1 };
+        assert_eq!(a.step(&TBL, 5), AnimStep::Advance { delay: 5, frame: 0x10, index: 3 });
+    }
+
+    /// reset 本身也指向 `$FF` ⇒ 16 次后判不变量破裂（而不是无限循环或静默取 $FF）。
+    #[test]
+    fn broken_when_reset_also_points_at_ff() {
+        let a = Anim { frame: 0x00, delay: 1, reset: 1, index: 1 };
+        assert_eq!(a.step(&TBL, 5), AnimStep::Broken);
+    }
+
+    /// 越界索引等同 `$FF`（不 panic、按回卷处理）——与 `AnimIdx::resolve` 的 None 同义。
+    #[test]
+    fn out_of_range_index_wraps_like_ff() {
+        let a = Anim { frame: 0x00, delay: 1, reset: 0, index: 200 };
+        assert_eq!(a.step(&TBL, 5), AnimStep::Advance { delay: 5, frame: 0x10, index: 1 });
     }
 }

@@ -121,47 +121,19 @@ pub(crate) fn update_enemy_anim(mem: &mut crate::frame::Manager, x: u8, a: u8) {
 /// 一旦有人把内部改成 `slot_of(x)` 就整条静默错位（2026-11-17 试改即被池测抓出）。
 /// 现在两个池各有具名入口，巧合被关在 `update_anim_at` 里且有 pin 测守着。
 pub(crate) fn update_explosion_anim(mem: &mut crate::frame::Manager, slot: u8, a: u8) {
-    let x = crate::enemy::explosion::ens_offset(slot);
-    update_anim_at(mem, x, a);
+    // 与敌侧同源：表由调用方按区取，推进在实体（`Explosion::advance_anim`，无 Pickup 门）。
+    let area = crate::world::room_load::area_idx(mem.read_ram(ram_map::IN_AREA)) as u8;
+    let table = game_data::assets::enemy_anim_table(area);
+    mem.explosion(slot).advance_anim(table, a);
 }
 
 fn update_anim_at(mem: &mut crate::frame::Manager, x: u8, a: u8) {
-    // 【2026-11-17 结构发现，勿"顺手句柄化"】`x` 在这里**不是槽偏移**，而是 asm 的
-    // "Ens 基址 + x" 索引：敌槽用 `0..=0xAF`（16 步长），**爆炸池用 `0xC0..=0xD8`（8 步长）**
-    // ——因为 `$6AF4 + $C0` 恰等于 `$6BB4`（爆炸池额外面基址，见 `explosion::ens_offset`）。
-    // 一个函数同时服务两个池，所以不能改 `mem.enemy(slot_of(x))`：爆炸槽不是 16 的倍数，
-    // `slot_of` 的 debug_assert 会当场炸（本日试改即被 `explosion_lifetime_expires_and_frees_slot` 抓出）。
-    // 正确做法是等把本函数拆成 `update_enemy_anim` / `update_explosion_anim` 两件再做，
-    // 现在保留基址形是有意的（`enemy/state.rs::slot_of` 的注释也指向这里）。
-    let base = 0x6AF4u16 + x as u16;
-    if mem.read_wram(base) == 5 {
-        return; // Pickup 态不更
-    }
-    let delay = mem.read_wram(base + 4);
-    if delay != 0 {
-        let d = delay - 1;
-        mem.write_wram(base + 4, d);
-        if d != 0 {
-            return;
-        }
-    }
-    mem.write_wram(base + 4, a); // sta animDelay←A
-    // 按区解析：`animIndex` 是**本区** EnAnimTable 的下标（见 `enemy/anim_idx.rs`）。
+    // 【2026-11-17 三层归位】走表逻辑已下沉到 `Anim::step`（值对象，纯函数），
+    // Pickup 门与写回在 `Enemy::advance_anim`（实体）。本函数只剩「按区取表 + 分派到句柄」
+    // 这一件跨域适配——资产是外部依赖，实体不该自己去查。
     let area = crate::world::room_load::area_idx(mem.read_ram(ram_map::IN_AREA)) as u8;
-    let reset = AnimIdx::at(area, mem.read_wram(base + 5));
-    let mut cur = AnimIdx::at(area, mem.read_wram(base + 6));
-    for _ in 0..16u32 {
-        match cur.resolve() {
-            Some(v) => {
-                mem.write_wram(base + 3, v); // animFrame←表值
-                mem.write_wram(base + 6, cur.next().off());
-                return;
-            }
-            // `$FF`（或越界）⇒ `animIndex←resetAnimIndex` 续走
-            None => cur = reset,
-        }
-    }
-    crate::unported!("bank07:E0BC-wrap"); // 表不变量破裂——fail-loud（update_obj_anim 同式）
+    let table = game_data::assets::enemy_anim_table(area);
+    mem.enemy(crate::enemy::state::slot_of(x)).advance_anim(table, a);
 }
 
 
