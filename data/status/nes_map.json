@@ -12,7 +12,7 @@
   ],
   "face_total": 2272,
   "owner_bytes": [
-    25,
+    27,
     84
   ],
   "owner_spans": [
@@ -111,6 +111,10 @@
     {
       "start": 790,
       "len": 1
+    },
+    {
+      "start": 1667,
+      "len": 2
     },
     {
       "start": 27380,
@@ -306,7 +310,7 @@
       "reason": "爆炸额外面未 typed：status/animFrame/animDelay/resetAnimIndex/animIndex/hi 真相在字节面（crates/game-core/src/enemy/explosion.rs:288）"
     }
   ],
-  "undeclared_total": 1551,
+  "undeclared_total": 1549,
   "undeclared": [
     {
       "start": 0,
@@ -365,8 +369,13 @@
     },
     {
       "start": 1248,
-      "len": 800,
-      "reason": "声引擎/房间绘制/VRAM 缓冲工作区：sound/state.rs:25 的 SFX_PAUSED=$0602/SFX_NOISE_INIT=$0680/MUSIC_INIT=$0685、sound/hook.rs:314 写 $068D；world/room_draw.rs:324-326 的 MEM0700/PIPE_BUG_HOLES=$0728/POWER_UPS=$0748；pickup/spawn.rs:24 的 POWERUPS_BASE=$0748；title/intro.rs:80-113 与 frame/nmi.rs:116 的 VRAMStructBuffer=$07A0；$04E0-$05FF 原版未用保留面（Mesen2 RAM dump 恒 0，比对面由 memmap/observe/dump.rs 界定）"
+      "len": 419,
+      "reason": "声引擎其余旗标面 $04E0-$0682：sound/state.rs:25 的 SFX_PAUSED=$0602/SFX_NOISE_INIT=$0680；$04E0-$05FF 原版未用保留面（Mesen2 RAM dump 恒 0，比对面由 memmap/observe/dump.rs 界定）；$0603-$067F 为未逐字节收族的零散面"
+    },
+    {
+      "start": 1669,
+      "len": 379,
+      "reason": "声引擎旗标/房间绘制/VRAM 缓冲工作区 $0685-$07FF：sound/state.rs:25 的 MUSIC_INIT=$0685、sound/hook.rs:314 写 $068D；world/room_draw.rs:324-326 的 MEM0700/PIPE_BUG_HOLES=$0728/POWER_UPS=$0748；pickup/spawn.rs:24 的 POWERUPS_BASE=$0748；title/intro.rs:80-113 与 frame/nmi.rs:116 的 VRAMStructBuffer=$07A0"
     }
   ],
   "history": [
@@ -391,6 +400,17 @@
       "undeclared_total": 1551,
       "state_sha256": "7e8e608b2b26d7291fa1aed2f8338be5ac328673cb1cc33d1747821e84d0cae5",
       "prev_sha256": "3c9d89e5191e4a4465a10a8e2ff453597ea920b1ecddf6309d1a700fee7bd6f7"
+    },
+    {
+      "ts": "2026-11-17T19:03:52+08:00",
+      "reason": "下调 Undeclared 1551 → 1549 B / Unmodeled 612 → 612 B",
+      "owner_total": 111,
+      "view_bytes": 23,
+      "view_only_bytes": 0,
+      "unmodeled_total": 612,
+      "undeclared_total": 1549,
+      "state_sha256": "335ae443d30f463953886470f71999d65da740fe0efe50e7b341fb84d8506e18",
+      "prev_sha256": "e67fba17c7f057f42e79b56177d585a567fb97ae4ffd07ca0b31ab3c4a981a42"
     }
   ]
 }

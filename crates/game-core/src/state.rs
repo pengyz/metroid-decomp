@@ -61,6 +61,12 @@ impl Manager {
                 img.ram[a as usize & 0x7FF] = v;
             }
         }
+        // 声引擎 init 旗（`$0683/$0684`）typed 域投影。
+        for a in crate::sound::state::SoundInitFlags::ADDRS {
+            if let Some(v) = self.sound_init.get_byte(a) {
+                img.ram[a as usize & 0x7FF] = v;
+            }
+        }
         // 敌槽 typed 域（`EnsExtra` 前 7 字节）：`$6AF4` 在 WRAM 面 ⇒ 投影到 `wram`。
         for (slot, st) in self.enemies.iter().enumerate() {
             for off in 0..=crate::enemy::state::ensx::TYPED_MAX {
@@ -84,6 +90,8 @@ pub struct Manager {
     pub(crate) samus: crate::samus::state::SamusState,
     /// `HealthChange`（`$006E/$006F`）typed 状态。真相面；`snapshot_nes()` 投影回字节面。
     pub(crate) health_change: crate::samus::health_change::HealthChange,
+    /// 声引擎 init 旗（`$0683/$0684`）typed 状态。真相面；`snapshot_nes()` 投影回字节面。
+    pub(crate) sound_init: crate::sound::state::SoundInitFlags,
     /// 敌槽 typed 状态（`EnsExtra` 前 7 字节 × 12 槽）。真相面；`snapshot_nes()` 投影回
     /// `$6AF4 + slot*16`。其余 `EnsExtra` 字节仍在 `storage`。
     pub(crate) enemies: [crate::enemy::state::SlotState; crate::enemy::state::SLOT_COUNT as usize],
@@ -143,7 +151,7 @@ pub struct Manager {
 
 impl Default for Manager {
     fn default() -> Self {
-        Self { storage: crate::memmap::storage::NesStorage::default(), samus: Default::default(), health_change: Default::default(), enemies: Default::default(), regs: Registers::default(), nmi_enabled: false,
+        Self { storage: crate::memmap::storage::NesStorage::default(), samus: Default::default(), health_change: Default::default(), sound_init: Default::default(), enemies: Default::default(), regs: Registers::default(), nmi_enabled: false,
                title_cursor: 0, title_cursor_phase: 0, title_spin: 0, check_password_pending: false, deferred_screen_on: false, title_no_return: false,
                iter_gates: Vec::new(), iter_span_left: 0, iter_span_fc: false, fc_inced_this_tick: false,
                apu_log: Vec::new(), work_cycles: 0,

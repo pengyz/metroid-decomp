@@ -43,6 +43,10 @@ impl Manager {
         if let Some(v) = self.health_change.get_byte(a) {
             return v;
         }
+        // 声引擎 init 旗（`$0683/$0684`）：typed 真源在 `Manager.sound_init`。
+        if let Some(v) = self.sound_init.get_byte(a) {
+            return v;
+        }
         self.ram()[a as usize]
     }
 
@@ -62,6 +66,10 @@ impl Manager {
         }
         // `HealthChange`（`$006E/$006F`）：写径同读径，落 typed 真相。
         if self.health_change.set_byte(a, v) {
+            return;
+        }
+        // 声引擎 init 旗（`$0683/$0684`）：写径同读径，落 typed 真相。
+        if self.sound_init.set_byte(a, v) {
             return;
         }
         // 【goal-轮80 Samus radiusY 写钩】0x301 写点（碰撞判径源）。

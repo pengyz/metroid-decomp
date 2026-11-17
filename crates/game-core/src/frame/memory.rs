@@ -165,6 +165,7 @@ impl TypedRestoreManifest {
             .iter()
             .copied()
             .chain(crate::samus::health_change::HealthChange::ADDRS)
+            .chain(crate::sound::state::SoundInitFlags::ADDRS)
     }
 
     /// WRAM 面 typed 地址迭代器（$6000-$7FFF，未做字节偏移变换）。
@@ -199,6 +200,12 @@ impl Manager {
             assert!(
                 mem.health_change.set_byte(a, ram[a as usize & 0x7FF]),
                 "`HealthChange` 地址必须在 typed 域内"
+            );
+        }
+        for a in crate::sound::state::SoundInitFlags::ADDRS {
+            assert!(
+                mem.sound_init.set_byte(a, ram[a as usize & 0x7FF]),
+                "`SoundInitFlags` 地址必须在 typed 域内"
             );
         }
         // 敌槽 `EnsExtra` 前 7 字节（$6AF4 + slot*16）同样从字节面回灌——否则恢复后

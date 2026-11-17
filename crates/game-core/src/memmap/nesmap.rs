@@ -320,6 +320,7 @@ pub fn dump_json() -> Result<String, Vec<String>> {
     let mut all: Vec<(NesSpan, SpanKey)> = Vec::new();
     push_entity::<crate::samus::state::SamusState>(&mut spans, "SamusState", &mut all);
     push_entity::<crate::samus::health_change::HealthChange>(&mut spans, "HealthChange", &mut all);
+    push_entity::<crate::sound::state::SoundInitFlags>(&mut spans, "SoundInitFlags", &mut all);
     push_entity::<crate::enemy::state::Enemy<'static>>(&mut spans, "Enemy", &mut all);
     push_entity::<crate::world::object::Object<'static>>(&mut spans, "Object", &mut all);
     push_entity::<crate::world::room_ram::Room<'static>>(&mut spans, "Room", &mut all);
@@ -399,7 +400,7 @@ mod tests {
             "dump 必须带 schema 头：{}",
             &json[..json.len().min(80)]
         );
-        assert!(json.contains("\"coverage\":[25,84]"), "owner 字节数锚点");
+        assert!(json.contains("\"coverage\":[27,84]"), "owner 字节数锚点");
     }
 
     /// 每条 Unmodeled 说明都必须带可 grep 的代码指针（`*.rs`），否则
