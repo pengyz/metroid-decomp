@@ -401,6 +401,33 @@ mod tests {
         assert!(json.contains("\"coverage\":[23,84]"), "owner 字节数锚点");
     }
 
+    /// 每条 Unmodeled 说明都必须带可 grep 的代码指针（`*.rs`），否则
+    /// "整段未建模" 会变成免检通道——门禁侧 `nes_map_check.py` 对账本 reason
+    /// 做同样的 `CODE_POINTER_RE` 校验，这里在声明源头先红。
+    #[test]
+    fn unmodeled_notes_name_a_code_location() {
+        let groups: [&[(NesSpan, SpanKey)]; 6] = [
+            spans_of::<SamusState>(),
+            spans_of::<Enemy<'static>>(),
+            spans_of::<crate::world::object::Object<'static>>(),
+            spans_of::<Room<'static>>(),
+            spans_of::<Camera<'static>>(),
+            spans_of::<explosion::Explosion<'static>>(),
+        ];
+        for spans in groups {
+            for (span, key) in spans {
+                if let SpanKey::Unmodeled(note) = key {
+                    assert!(
+                        note.contains(".rs"),
+                        "Unmodeled {:#06X}+{} 缺代码指针：{note}",
+                        span.start,
+                        span.len
+                    );
+                }
+            }
+        }
+    }
+
     /// 带生命周期的实体类型取关联常量：`T::SPANS` 在 `impl<'a>` 上需要显式实例化。
     fn spans_of<T: NesMapped>() -> &'static [(NesSpan, SpanKey)] {
         T::SPANS

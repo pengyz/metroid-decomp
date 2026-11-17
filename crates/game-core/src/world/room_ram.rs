@@ -140,9 +140,9 @@ mod tests {
 // ─────────────────────────── P2：`NesMapped` 声明 ───────────────────────────
 
 /// 房间缓冲（WRAM 瓦片矩阵）未 typed 的缺口说明。
-const ROOM_BUF_UNMODELED: &str = "房间缓冲未 typed：瓦片真相在 WRAM 字节面（$6000 起 2 KB）";
+const ROOM_BUF_UNMODELED: &str = "房间缓冲未 typed：瓦片真相在 WRAM 字节面（$6000 起 2 KB；crates/game-core/src/world/room_ram.rs:17）";
 /// 房间游标（`RoomPtr`/`RoomRAMWorkPtr`/`RoomNumber`）未 typed 的缺口说明。
-const ROOM_CURSOR_UNMODELED: &str = "房间游标未 typed：小端指针与房间号真相在字节面";
+const ROOM_CURSOR_UNMODELED: &str = "房间游标未 typed：小端指针与房间号真相在字节面（crates/game-core/src/world/room_ram.rs:156）";
 
 /// 房间域 `NesMapped` 声明：WRAM 房间缓冲整块 + 三个游标，全部未 typed（0 个 owner）。
 ///

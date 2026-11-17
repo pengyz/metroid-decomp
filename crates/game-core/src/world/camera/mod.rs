@@ -121,7 +121,7 @@ mod tests_camera {
 // ─────────────────────────── P2：`NesMapped` 声明 ───────────────────────────
 
 /// 相机域未 typed 的缺口说明。
-const CAM_UNMODELED: &str = "相机域未 typed：滚动/地图位/屏幕位真相在字节面";
+const CAM_UNMODELED: &str = "相机域未 typed：滚动/地图位/屏幕位真相在字节面（crates/game-core/src/world/camera/mod.rs:124）";
 
 /// 相机域 `NesMapped` 声明：8 个访问器各 1 B，全部未 typed（0 个 owner）。
 ///

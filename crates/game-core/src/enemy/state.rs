@@ -809,9 +809,9 @@ mod tests_anim_step {
 // ─────────────────────────── P2：`NesMapped` 声明（域级） ───────────────────────────
 
 /// 敌域主面（`Ens`）未 typed 的缺口说明。
-const ENS_MAIN_UNMODELED: &str = "敌域主面未 typed：字段真相在字节面（EnsFace 只读视图）";
+const ENS_MAIN_UNMODELED: &str = "敌域主面未 typed：字段真相在字节面（EnsFace 只读视图；crates/game-core/src/enemy/state.rs:283）";
 /// 敌域额外面（`EnsExtra`）尾 9 B 未 typed 的缺口说明。
-const ENSX_TAIL: &str = "EnsExtra 尾 9 B 未 typed：accelY/jumpDsplcmnt/type/data1F 等仍在字节面";
+const ENSX_TAIL: &str = "EnsExtra 尾 9 B 未 typed：accelY/jumpDsplcmnt/type/data1F 等仍在字节面（crates/game-core/src/enemy/state.rs:814）";
 
 /// `EnsExtra` 第 `slot` 槽的槽首地址（`$6AF4 + slot*16`）——只从既有常量推导。
 const fn ensx_slot(slot: u16) -> u16 {

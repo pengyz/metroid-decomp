@@ -623,7 +623,7 @@ impl<'a> Samus<'a> {
 }
 
 /// Samus 血量两字节未 typed 的缺口说明（`SPANS` 里唯一一条非 `Owner`）。
-const TODO: &str = "血量两字节未 typed：health()/set_health() 仍走字节面（$0106 低 / $0107 高）";
+const TODO: &str = "血量两字节未 typed：health()/set_health() 仍走字节面（$0106 低 / $0107 高；crates/game-core/src/samus/state.rs:615）";
 
 impl crate::memmap::nesmap::NesMapped for SamusState {
     /// 判别字段：`status`（`$0300`，`sa_*` 十态）——同址按状态重解释时的判别源

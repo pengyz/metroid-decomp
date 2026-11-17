@@ -164,7 +164,7 @@ mod tests_object_pool {
 // ─────────────────────────── P2：`NesMapped` 声明 ───────────────────────────
 
 /// 对象池未 typed 的缺口说明。
-const OBJ_UNMODELED: &str = "对象池未 typed：门/子弹/道具字段的真相仍在字节面（本池只是读写视图）";
+const OBJ_UNMODELED: &str = "对象池未 typed：门/子弹/道具字段的真相仍在字节面（本池只是读写视图；crates/game-core/src/world/object.rs:11）";
 
 /// 对象池 `$0300-$03FF`（16 槽 × 16 B）的 `NesMapped` 声明。
 ///

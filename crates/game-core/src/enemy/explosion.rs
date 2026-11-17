@@ -282,10 +282,10 @@ mod tests_pool_separation {
 // ─────────────────────────── P2：`NesMapped` 声明 ───────────────────────────
 
 /// 爆炸主面未 typed 的缺口说明。
-const EXPL_MAIN_UNMODELED: &str = "爆炸主面未 typed：y/x/data05/delay/quantity 真相在字节面";
+const EXPL_MAIN_UNMODELED: &str = "爆炸主面未 typed：y/x/data05/delay/quantity 真相在字节面（crates/game-core/src/enemy/explosion.rs:285）";
 /// 爆炸额外面未 typed 的缺口说明。
 const EXPL_EXTRA_UNMODELED: &str =
-    "爆炸额外面未 typed：status/animFrame/animDelay/resetAnimIndex/animIndex/hi 真相在字节面";
+    "爆炸额外面未 typed：status/animFrame/animDelay/resetAnimIndex/animIndex/hi 真相在字节面（crates/game-core/src/enemy/explosion.rs:288）";
 
 /// 爆炸域两面（`$04C0-$04DF` 主面 + `$6BB4-$6BD3` 额外面，各 4 槽 × 8 B）的声明。
 ///
