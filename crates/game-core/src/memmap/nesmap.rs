@@ -246,6 +246,100 @@ pub fn unowned_bytes(spans: &[(NesSpan, SpanKey)], domain: &[NesSpan]) -> [usize
     n
 }
 
+/// P2 比对面（spec §3）：`$0000-$07FF`（RAM 2KB 镜像）+ `$6AF4-$6BD3`（额外面 224 B）。
+///
+/// 尾界不在这里写死：取 `observe::dump::EXTRA_RANGE`（与 oracle `ram.hex` 同源，
+/// 由敌/爆炸池实体常量推导）。这样"哪些字节必须被解释"的真相来自**对拍投影**，
+/// 不是本模块自己的声明，更不是 `data/status/nes_map.json` 账本。
+pub fn spec_face() -> [NesSpan; 2] {
+    let (lo, hi) = crate::memmap::observe::dump::EXTRA_RANGE;
+    [
+        NesSpan::value(0, RAM_LEN as u16),
+        NesSpan::value(lo, hi - lo + 1),
+    ]
+}
+
+/// 静态腿出口：把六份 `NesMapped::SPANS` + 比对面机械导出成单行 JSON。
+///
+/// 消费端 = `tools/nes_map_check.py`（判定权在门禁，不在本函数）。本函数只遍历
+/// **声明**与两个既有常量，不读任何 NES 字节。
+pub fn dump_json() -> Result<String, Vec<String>> {
+    use std::fmt::Write as _;
+
+    fn json_str(s: &str) -> String {
+        let mut out = String::with_capacity(s.len() + 2);
+        out.push('"');
+        for c in s.chars() {
+            match c {
+                '"' => out.push_str("\\\""),
+                '\\' => out.push_str("\\\\"),
+                '\n' => out.push_str("\\n"),
+                '\r' => out.push_str("\\r"),
+                '\t' => out.push_str("\\t"),
+                c if (c as u32) < 0x20 => {
+                    write!(out, "\\u{:04x}", c as u32).expect("写 String 不会失败");
+                }
+                c => out.push(c),
+            }
+        }
+        out.push('"');
+        out
+    }
+
+    fn key_json(key: &SpanKey) -> (&'static str, String) {
+        match key {
+            SpanKey::Owner => ("owner", "null".to_string()),
+            SpanKey::View(holders) => ("view", json_str(&holders.join(","))),
+            SpanKey::Case(v) => ("case", v.to_string()),
+            SpanKey::Mode(v) => ("mode", v.to_string()),
+            SpanKey::Ephemeral(s) => ("ephemeral", json_str(s)),
+            SpanKey::Unmodeled(s) => ("unmodeled", json_str(s)),
+        }
+    }
+
+    fn push_entity<T: NesMapped>(
+        out: &mut Vec<String>,
+        entity: &str,
+        all: &mut Vec<(NesSpan, SpanKey)>,
+    ) {
+        for (span, key) in T::SPANS {
+            let (k, note) = key_json(key);
+            out.push(format!(
+                "{{\"entity\":{},\"start\":{},\"len\":{},\"key\":{},\"note\":{}}}",
+                json_str(entity),
+                span.start,
+                span.len,
+                json_str(k),
+                note
+            ));
+            all.push((*span, *key));
+        }
+    }
+
+    let mut spans: Vec<String> = Vec::new();
+    let mut all: Vec<(NesSpan, SpanKey)> = Vec::new();
+    push_entity::<crate::samus::state::SamusState>(&mut spans, "SamusState", &mut all);
+    push_entity::<crate::enemy::state::Enemy<'static>>(&mut spans, "Enemy", &mut all);
+    push_entity::<crate::world::object::Object<'static>>(&mut spans, "Object", &mut all);
+    push_entity::<crate::world::room_ram::Room<'static>>(&mut spans, "Room", &mut all);
+    push_entity::<crate::world::camera::Camera<'static>>(&mut spans, "Camera", &mut all);
+    push_entity::<crate::enemy::explosion::Explosion<'static>>(&mut spans, "Explosion", &mut all);
+
+    let coverage = coverage(&all)?;
+    let face = spec_face();
+    let face_json: Vec<String> = face
+        .iter()
+        .map(|s| format!("{{\"start\":{},\"len\":{}}}", s.start, s.len))
+        .collect();
+    Ok(format!(
+        "{{\"schema\":\"nesmap-dump-v1\",\"face\":[{}],\"spans\":[{}],\"coverage\":[{},{}]}}",
+        face_json.join(","),
+        spans.join(","),
+        coverage[0],
+        coverage[1]
+    ))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -266,6 +360,46 @@ mod tests {
     use crate::world::room_ram::{
         Room, ROOM_NUMBER, ROOM_PTR, ROOM_RAM_BASE, ROOM_RAM_LEN, WORK_PTR,
     };
+
+    /// 静态腿的比对面必须与 oracle `ram.hex` 同源——**独立于 `nes_map.json` 账本**。
+    /// 若哪天有人把门逼绿的方式改成"缩小比对面"，这里先红。
+    #[test]
+    fn spec_face_matches_oracle_dump() {
+        let face = spec_face();
+        assert_eq!((face[0].start, face[0].len), (0x0000, 0x0800), "RAM 2KB 镜像面");
+        assert_eq!(
+            (face[1].start, face[1].len),
+            (
+                crate::enemy::state::ENS_EXTRA_BASE,
+                0x00E0
+            ),
+            "额外面 224 B（起点取实体常量，长度用字面量独立锚定）"
+        );
+        assert_eq!(
+            usize::from(face[0].len) + usize::from(face[1].len),
+            0x8E0,
+            "比对面 = 2272 B（与 observe::dump::DUMP_LEN 同数）"
+        );
+        let (lo, hi) = crate::memmap::observe::dump::EXTRA_RANGE;
+        assert_eq!(
+            (face[1].start, face[1].start + face[1].len - 1),
+            (lo, hi),
+            "尾界必须等于 oracle dump 的额外面闭区间"
+        );
+        assert_eq!(
+            crate::enemy::state::ENS_EXTRA_BASE + 0xC0,
+            crate::enemy::explosion::EXTRA_BASE,
+            "敌额外面尾与爆炸额外面首首尾相接"
+        );
+
+        let json = dump_json().expect("六份声明不应有 Owner 重叠");
+        assert!(
+            json.starts_with("{\"schema\":\"nesmap-dump-v1\""),
+            "dump 必须带 schema 头：{}",
+            &json[..json.len().min(80)]
+        );
+        assert!(json.contains("\"coverage\":[23,84]"), "owner 字节数锚点");
+    }
 
     /// 带生命周期的实体类型取关联常量：`T::SPANS` 在 `impl<'a>` 上需要显式实例化。
     fn spans_of<T: NesMapped>() -> &'static [(NesSpan, SpanKey)] {
