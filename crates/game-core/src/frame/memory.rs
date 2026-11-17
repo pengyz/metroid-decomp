@@ -59,6 +59,130 @@ impl Manager {
     /// ——F4 孤儿语义）｜完成拍哨兵（0xFF，Step 4——显式排除出续段：完成拍无 prelude
     /// 无分发）｜spin 等待段（r23）。臂内帧=asm 例程体内自旋/续段/完成拍——无 C0D3
     /// 执行 ⇒ 无缝行、无 prelude（map-v2 §4-④/F10——与 span 三性质同源）。
+    // ---- 密码屏 / 特项历史 语义视图 ----------------------------------------
+    // 族内尚未 typed 化（asm 临时量与 WRAM 状态位），按 `raw.rs` 的迁移纪律在**本兼容
+    // 辖**收口（`data/status/raw_surface.json` 只减不增：域件不得直接摸裸面）。
+    // asm 根：`AddItemToHistory ; 07:DC54`、`CheckForItem ; 07:EE4A`、
+    // `UniqueItemSearch ; 00:8B9C`、`CalculatePassword ; 00:8C7A`、
+    // `LoadPasswordCharToVRAMStringRAM ; 00:93F9`。
+
+    /// `NumberOfUniqueItems`（$6886）——**字节计数**（每件 +2；asm 07:DC54 `iny/iny`）。
+    pub fn unique_item_count(&self) -> u8 {
+        self.read_wram(crate::ram_map::NUMBER_OF_UNIQUE_ITEMS)
+    }
+
+    /// `UniqueItemHistory`（$6887+off）的 2 字节项（lo,hi；`CreateItemID` 字节序）。
+    pub fn unique_item_word_at(&self, off: u16) -> (u8, u8) {
+        let base = crate::ram_map::UNIQUE_ITEM_HISTORY + off;
+        (self.read_wram(base), self.read_wram(base + 1))
+    }
+
+    /// `AddItemToHistory ; 07:DC54`：按**字节游标**追加（写址=count，count+=2）；
+    /// 越过 256 字节预算 ⇒ false（容纳不下，asm 无越界保护，调用点保持原样）。
+    pub fn unique_item_push(&mut self, id: (u8, u8)) -> bool {
+        let n = self.unique_item_count() as u16;
+        if n + 2 > 0x100 {
+            return false;
+        }
+        let base = crate::ram_map::UNIQUE_ITEM_HISTORY + n;
+        self.write_wram(base, id.0);
+        self.write_wram(base + 1, id.1);
+        self.write_wram(crate::ram_map::NUMBER_OF_UNIQUE_ITEMS, (n + 2) as u8);
+        true
+    }
+
+    /// `CheckForItem ; 07:EE4A`：从尾部按 2 B 步长反向扫（先比 hi、再比 lo）。
+    pub fn unique_item_find(&self, id: (u8, u8)) -> bool {
+        let mut y = self.unique_item_count();
+        while y >= 2 {
+            let (lo, hi) = self.unique_item_word_at(y as u16 - 2);
+            if hi == id.1 && lo == id.0 {
+                return true;
+            }
+            y -= 2;
+        }
+        false
+    }
+
+    /// `PasswordByte`（$6988）第 i 字节。
+    pub fn password_byte(&self, i: u16) -> u8 {
+        self.read_ram(crate::ram_map::PASSWORD_BYTE + i)
+    }
+
+    /// 写回 `PasswordByte`（`CalculatePassword` 尾的 18 B 落盘面）。
+    pub fn password_set_byte(&mut self, i: u16, v: u8) {
+        self.write_ram(crate::ram_map::PASSWORD_BYTE + i, v);
+    }
+
+    /// `PasswordChar`（$699A）第 i 字节（=名表 tile 号，`LoadPasswordChar` 产物）。
+    pub fn password_char(&self, i: u16) -> u8 {
+        self.read_ram(crate::ram_map::PASSWORD_CHAR + i)
+    }
+
+    /// 整块落盘（`CalculatePassword` 尾：18 B PasswordByte + 24 B PasswordChar）。
+    pub fn password_store(&mut self, bytes: &[u8; 18], chars: &[u8; 24]) {
+        for (i, b) in bytes.iter().enumerate() {
+            self.password_set_byte(i as u16, *b);
+        }
+        for (i, c) in chars.iter().enumerate() {
+            self.write_ram(crate::ram_map::PASSWORD_CHAR + i as u16, *c);
+        }
+    }
+
+    /// `CalculatePassword ; 00:8C7A` 的进度输入面（游戏状态字段，随机字节单独取）：
+    /// (InArea&$3F, suitless, SamusGear, MissileCount, KraidStatueStatus,
+    ///  RidleyStatueStatus, SamusAge[0..4])。
+    pub fn password_inputs(&self) -> [u8; 10] {
+        let r = |a: u16| self.read_ram(a);
+        let mut age = [0u8; 4];
+        for (i, v) in age.iter_mut().enumerate() {
+            *v = r(crate::ram_map::SAMUS_AGE + i as u16);
+        }
+        [
+            r(crate::ram_map::IN_AREA) & 0x3F,
+            u8::from(r(crate::ram_map::JUST_IN_BAILEY) != 0),
+            r(crate::ram_map::SAMUS_GEAR),
+            r(crate::ram_map::MISSILE_COUNT),
+            r(crate::ram_map::KRAID_STATUE_STATUS),
+            r(crate::ram_map::RIDLEY_STATUE_STATUS),
+            age[0], age[1], age[2], age[3],
+        ]
+    }
+
+    /// `RandomNumber1`（$2E）——`CalculatePassword` 的 `$0F` 掩码环取值面。
+    pub fn random_number1(&self) -> u8 {
+        self.read_ram(crate::ram_map::RANDOM1)
+    }
+
+    /// `PrepareItemID ; 07:EE3D` + `GetItemXYPos ; 07:DC1C` 的输入面：
+    /// (MapPosX, MapPosY, ScrollDir, ScrollX, ScrollY, PPUCTRL_ZP)。
+    pub fn item_spawn_inputs(&self) -> (u8, u8, u8, u8, u8, u8) {
+        let r = |a: u16| self.read_ram(a);
+        (
+            r(crate::ram_map::MAP_POS_X),
+            r(crate::ram_map::MAP_POS_Y),
+            r(crate::ram_map::SCROLL_DIR),
+            r(crate::ram_map::SCROLL_X),
+            r(crate::ram_map::SCROLL_Y),
+            r(crate::ram_map::PPUCTRL_ZP),
+        )
+    }
+
+    /// PPUMASK 影子（$FE；渲染权威面——`nmi.rs` 每帧据此刷真 $2001）。
+    pub fn ppumask_shadow(&self) -> u8 {
+        self.read_ram(0x00FE)
+    }
+
+    /// 写 PPUMASK 影子（`ScreenOff/ScreenOn ; 07:C439/C447` 的 `sta PPUMASK_ZP` 面）。
+    pub fn set_ppumask_shadow(&mut self, v: u8) {
+        self.write_ram(0x00FE, v);
+    }
+
+    /// `ClearNMIStat ; 07:C434`（`lda #0 / sta NMIStatus`——自旋入口）。
+    pub fn clear_nmi_status(&mut self) {
+        self.write_ram(crate::ram_map::NMI_STATUS, 0);
+    }
+
     pub fn title_continuation(&self) -> bool {
         let c = self.title_cursor;
         (c > 0 && c != 0xFF

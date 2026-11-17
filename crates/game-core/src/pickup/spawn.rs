@@ -24,9 +24,6 @@ use crate::state::Manager;
 const POWERUPS_BASE: u16 = 0x0748;
 /// PowerUpDraw=Object 实例 @$0340（constants:849——PageIndex=$40 面）。
 const POWERUP_DRAW_BASE: u16 = 0x0340;
-/// NumberOfUniqueItems=$6886（constants:1228）/UniqueItemHistory=$6887 起（2B/件）。
-const NUM_UNIQUE_ITEMS: u16 = 0x6886;
-const UNIQUE_ITEM_HISTORY: u16 = 0x6887;
 /// PowerUpDelayFlag=$0109（constants:810——拾取音乐/延迟旗）。
 const POWER_UP_DELAY_FLAG: u16 = 0x0109;
 
@@ -80,29 +77,59 @@ fn create_item_id(map_x: u8, map_y: u8, item_type: u8) -> (u8, u8) {
     (b0, b1)
 }
 
-/// CheckForItem（EE4A）：UniqueItemHistory（$6887 起 2B/件）比对。返回 true=已收集。
+/// CheckForItem（EE4A）：UniqueItemHistory（$6887 起 2B/件，**NumberOfUniqueItems=字节计数**）
+/// 反向比对。返回 true=已收集。
+///
+/// asm 逐行（prg7_engine.asm:9593-9612）：
+/// ```text
+/// ldy NumberOfUniqueItems      ; 字节计数（0=史空）
+/// beq @samusDoesNotHaveThisItem
+/// @loop: lda Temp06_ItemID+1
+///        cmp UniqueItemHistory-1,y   ; 高字节 = 末字节
+///        bne @noMatch
+///        lda Temp06_ItemID
+///        cmp UniqueItemHistory-2,y   ; 低字节 = 首字节
+///        beq @samusHasThisItem
+/// @noMatch: dey / dey / bne @loop    ; 从尾部向前每 2B 一件
+/// ```
+/// 旧形把 $6886 当「件数」（`i*2` 寻址 + `0..n` 环）⇒ 1 件时只查 1 件且地址正确、
+/// 2 件时查 2 件但第 2 件地址错位 ⇒ 已收集物重复入史（A 级：$6886 语义见
+/// `AddItemToHistory ; 07:DC54` 的 `iny/iny/sty`）。
 fn check_for_item(mem: &Manager, id: (u8, u8)) -> bool {
-    let n = mem.read_wram(NUM_UNIQUE_ITEMS) as usize;
-    for i in 0..n {
-        let lo = mem.read_wram(UNIQUE_ITEM_HISTORY + (i * 2) as u16);
-        let hi = mem.read_wram(UNIQUE_ITEM_HISTORY + (i * 2 + 1) as u16);
-        if lo == id.0 && hi == id.1 {
-            return true;
-        }
-    }
-    false
+    // `CheckForItem ; 07:EE4A`：从尾部按 2 B 步长反向扫（视图内收口，语义见
+    // `Manager::unique_item_find`）。
+    mem.unique_item_find(id)
 }
 
-/// GetItemXYPos 尾径（DC1C→史录——非 beam 件入史）。返回 false=史满（$6886 上界）。
 fn record_item(mem: &mut Manager, id: (u8, u8)) -> bool {
-    let n = mem.read_wram(NUM_UNIQUE_ITEMS) as usize;
-    if n >= 0x5B {
-        return false; // 史满（$6887+2n<$68FC 界）
+    // `AddItemToHistory ; 07:DC54`：字节游标追加（视图内收口）。
+    mem.unique_item_push(id)
+}
+
+fn get_item_xy_pos(mem: &Manager, item_hi: u8) -> (u8, u8) {
+    // `GetItemXYPos ; 07:DC1C`（= MapScrollRoutine 07:DC1E）逐行；输入面走语义视图
+    // `item_spawn_inputs`（MapPosX/MapPosY/ScrollDir/ScrollX/ScrollY/PPUCTRL_ZP）。
+    let (map_x, map_y, scroll_dir, scroll_x, scroll_y, ppuctrl) = mem.item_spawn_inputs();
+    let mut item_x = map_x;
+    let mut item_y = map_y;
+    let vertical = (scroll_dir >> 1) == 0; // lsr 后 Z 置位
+    let plus = (scroll_dir & 0x01) != 0; // 进位 = bit0（1=Down/Right）
+    if vertical {
+        if plus && scroll_y != 0 {
+            item_y = item_y.wrapping_sub(1); // 下滚且偏移≠0 ⇒ y-=1
+        }
+    } else if plus && scroll_x != 0 {
+        item_x = item_x.wrapping_sub(1); // 右滚且偏移≠0 ⇒ x-=1
     }
-    mem.write_wram(UNIQUE_ITEM_HISTORY + (n * 2) as u16, id.0);
-    mem.write_wram(UNIQUE_ITEM_HISTORY + (n * 2 + 1) as u16, id.1);
-    mem.write_wram(NUM_UNIQUE_ITEMS, (n + 1) as u8);
-    true
+    // 名表位不同（(PPUCTRL_ZP ^ ItemHi) & 1）⇒ 该轴 +1
+    if (ppuctrl ^ item_hi) & 0x01 != 0 {
+        if vertical {
+            item_y = item_y.wrapping_add(1);
+        } else {
+            item_x = item_x.wrapping_add(1);
+        }
+    }
+    (item_x, item_y)
 }
 
 /// SpawnPowerUp（EDFE）：槽分配→PrepareItemID+CheckForItem→位置解码→槽写。
@@ -115,7 +142,15 @@ fn spawn_power_up(mem: &mut Manager, item: &game_data::area::items::SpecialItem)
         return; // 双槽满（EE0F 后 @exit）
     };
     let item_type = item.args[0]; // pu_XXX
-    let id = create_item_id(item.map_x, item.map_y, item_type);
+    // PrepareItemID（07:EE3D）：`sta Temp09_ItemType` + `lda MapPosX / sta Temp07_ItemX`
+    // + `lda MapPosY / sta Temp06_ItemY` ⇒ **ID 取当前图格（MapPosX/MapPosY），
+    // 不是特项表里的逐项 map_x/map_y**（后者只用于屏幕位置解码）。
+    let (map_pos_x, map_pos_y, _, _, _, _) = mem.item_spawn_inputs();
+    let id = create_item_id(
+        map_pos_x,
+        map_pos_y,
+        item_type,
+    );
     if check_for_item(mem, id) {
         return; // 已收集（EE4A carry 置——bcs @exit）
     }
@@ -178,11 +213,13 @@ pub fn update_all_power_ups(mem: &mut Manager) -> Option<u8> {
             continue; // 未触碰（:5604-5606 bcs Exit9）
         }
         // ==== 拾取授予（:5608-）====
-        record_item(mem, create_item_id(
-            mem.read_ram(crate::ram_map::MAP_POS_X),
-            mem.read_ram(crate::ram_map::MAP_POS_Y),
-            type_,
-        ));
+        // asm（:5614-5628）：非 $FF 件先 `lda PowerUps.0.hi,x → Temp08_ItemHi` +
+        // `lda PowerUps.0.type,x → Temp09_ItemType`，再 `jsr GetItemXYPos`（07:DC1C：
+        // MapPosX/MapPosY + 滚动/名表位修正）→ CreateItemID → AddItemToHistory。
+        {
+            let (item_x, item_y) = get_item_xy_pos(mem, hi);
+            record_item(mem, create_item_id(item_x, item_y, type_));
+        }
         let gear = mem.read_wram(crate::ram_map::SAMUS_GEAR);
         if type_ == 0x06 || type_ == 0x07 {
             // beam 件（wave/ice）：清旧 beam 位（:5633-5639）

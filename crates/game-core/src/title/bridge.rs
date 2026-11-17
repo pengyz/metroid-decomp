@@ -257,6 +257,10 @@ fn exec_shell_call(mem: &mut Manager, sc: &crate::title::ShellCall) {
         }
         // ScreenOff/ScreenOn/NMIOn/VBOffAndHorzWrite/WaitNMIPass：$FE/$FF/$1A 镜像面
         // =臂事件承载（two-layer——事件即 RAM 面权威）。
+        // CalculatePassword（`00:8C7A`）/PasswordToScreen（`00:93C6`）：0x19 DisplayPassword
+        // 体（RAM 面 + 名表写；两者皆 0 spin——等待面由相邻 WaitNMIPass/SpinWait 承载）。
+        CalculatePassword => calculate_password(mem),
+        PasswordToScreen => password_to_screen(mem),
         _ => {}
     }
 }
@@ -289,6 +293,155 @@ fn display_input_characters(mem: &mut Manager) {
     }
 }
 
+/// `ItemData` 表尾 OOB 读面（`UniqueItemSearch ; 00:8B9C` 的 `cpx` 多查一项——asm
+/// 注释自标 `(BUG! ... goes oob of the ItemData table)`，D4 保真保留）。
+///
+/// ROM 锚（A 级）：`ItemData@end ; 00:909F` 之后 2 字节 = bank00:$909F-$90A0 =
+/// `20 39`（=ClearAll 首指令 `jsr ScreenOff` 的 opcode/operand 低字节）⇒ 小端字 $3920。
+/// 命中该 OOB 项时 UniqueItemFound(59) 会置 `PasswordByte[59>>3=7] |= 1<<3`（=物品列表
+/// 尾部的实际可达面——历史条目若恰好等于 $3920 才会触发）。
+pub const ITEM_DATA_OOB: u16 = 0x3920;
+
+/// ProcessUniqueItems（`00:8B79`）+ UniqueItemSearch（`00:8B9C`）+
+/// UniqueItemFound（`00:8BB5`）——把 UniqueItemHistory 里已获物品置位到 PasswordByte。
+///
+/// asm 逐行（prg0_title.asm:1523-1616）：
+/// - `$03 ← NumberOfUniqueItems`（**字节数**，非对数）
+/// - `y=0; $04=0`；环：`y=$04; iny; $00←History-1+y; iny; $01←History-1+y; $04←y`
+///   ⇒ 每轮消费 `History[$04..$04+2]` 一对（ItemData 表项同形 2 B 字）
+/// - `jsr UniqueItemSearch`：x=0 起线性扫 ItemData（`y=2x`；先比低字节再比高字节），
+///   命中 ⇒ `UniqueItemFound(x)`；`inx; cpx #(表长/2+1=60); bcc` ⇒ **多扫一项 OOB**
+/// - `UniqueItemFound`：`idx=x>>3`、`bit=x&7`、`PasswordByte[idx] |= 1<<bit`
+/// - 环条件 `y=$04; cpy $03; bcc @loop` ⇒ 直到 `$04 >= count`
+fn process_unique_items(mem: &mut Manager, pb: &mut [u8; 18]) {
+    use crate::ram_map;
+    let count = mem.unique_item_count();
+    let mut y = 0u8; // Temp04_UniqueItemIndex
+    loop {
+        // iny/iny 两读（History-1+y 的 y 从 1 起 ⇒ 落 History[$04]/History[$04+1]）
+        let (lo, hi) = mem.unique_item_word_at(y as u16);
+        y = y.wrapping_add(2);
+        let word = (lo as u16) | ((hi as u16) << 8);
+        // UniqueItemSearch：x=0..=59（60 项——第 60 项越界读 ITEM_DATA_OOB）
+        let mut found = None;
+        for x in 0..60u8 {
+            let item = if (x as usize) < ITEM_DATA.len() {
+                ITEM_DATA[x as usize]
+            } else {
+                ITEM_DATA_OOB
+            };
+            if item == word {
+                found = Some(x);
+                break;
+            }
+        }
+        if let Some(item_no) = found {
+            // UniqueItemFound（00:8BB5）——读-改-写 PasswordByte[idx] |= 掩码
+            let (addr, val) = crate::ui::password::set_unique_item_bit(item_no, pb);
+            pb[(addr - ram_map::PASSWORD_BYTE) as usize] = val;
+        }
+        // `cpy Temp03 / bcc @loop`：count 为字节数（y 已 +2）
+        if y >= count {
+            return;
+        }
+    }
+}
+
+/// CalculatePassword（`CalculatePassword ; 00:8C7A`，prg0_title.asm:1741-1800）实现体。
+///
+/// asm 逐行：
+/// 1. `lda #$00 / ldy #$0F` 环 ⇒ PasswordByte[0..=15] 与 PasswordChar[0..=15] 清 0
+/// 2. `jsr ProcessUniqueItems`（物品位面）
+/// 3. MotherBrain 位（`PasswordByte+((58/2)/8)=+3` 的 `1<<(29&7)=$20`）命中 ⇒
+///    惩罚：`PasswordByte+$07←0`、`PasswordByte+$06 &= $03`（母亲脑/斑马/都里安门复位）
+/// 4. `PasswordByte+$08 ← (InArea & $3F) | (JustInBailey? $80:0)`
+/// 5. `+$09 ← SamusGear`；`+$0A ← MissileCount`
+/// 6. `$00` 雕像 4 位（Kraid&$80→bit7 / &$01→bit6；Ridley&$80→bit5 / &$02→bit4）
+///    ⇒ `+$0F`
+/// 7. `ldy #$03` 反序环 ⇒ `+$0B..+$0E ← SamusAge[0..4]`
+/// 8. `@loop_random`：`jsr RandomNumbers` 直到 `RandomNumber1 & $0F ≠ 0` ⇒ `+$10 ← r`
+/// 9. `jsr PasswordChecksumAndScramble`（$8E17）→ `jmp LoadPasswordChar`（$8E6C）
+fn calculate_password(mem: &mut Manager) {
+    let mut pb = [0u8; 18];
+    // 1. 清前 16 B（Rust 侧 pb/chars 零起点 + 后 2 B 由 checksum 覆盖，语义等价）
+    // 2. 物品面
+    process_unique_items(mem, &mut pb);
+    // 3. MotherBrain 已击败 ⇒ 惩罚复位
+    if pb[3] & 0x20 != 0 {
+        pb[7] = 0;
+        pb[6] &= 0x03;
+    }
+    // 4-5. 区域/无装甲/装备/导弹（进度输入面走语义视图）
+    let progress = mem.password_inputs();
+    let in_area = progress[0];
+    let suitless = progress[1] != 0;
+    pb[8] = if suitless { in_area | 0x80 } else { in_area };
+    pb[9] = progress[2]; // SamusGear
+    pb[10] = progress[3]; // MissileCount
+    // 6. 雕像状态 4 位
+    let kraid = progress[4]; // KraidStatueStatus
+    let ridley = progress[5]; // RidleyStatueStatus
+    let mut statues = 0u8;
+    if kraid & 0x80 != 0 {
+        statues |= 0x80; // Kraid 雕像仍立
+    }
+    if kraid & 0x01 != 0 {
+        statues |= 0x40; // Kraid 已击败
+    }
+    if ridley & 0x80 != 0 {
+        statues |= 0x20; // Ridley 雕像仍立
+    }
+    if ridley & 0x02 != 0 {
+        statues |= 0x10; // Ridley 已击败
+    }
+    pb[0x0F] = statues;
+    // 7. SamusAge[0..4] ⇒ +$0B..+$0E
+    pb[0x0B..0x0F].copy_from_slice(&progress[6..10]);
+    // 8. 随机 4 LSB 非零（不允许 RandomNumber1 为 16 的倍数）
+    loop {
+        crate::frame::tick::random_numbers(mem);
+        let r = mem.random_number1();
+        if r & 0x0F != 0 {
+            pb[0x10] = r;
+            break;
+        }
+    }
+    // 9. 校验和 + 置乱 + 24 字符
+    crate::ui::password::checksum_and_scramble(&mut pb);
+    let chars = crate::ui::password::load_password_char(&pb);
+    // 写回 RAM 面（$6988 18 B / $699A 24 B——视图内收口）
+    mem.password_store(&pb, &chars);
+}
+
+/// PasswordToScreen（`PasswordToScreen ; 00:93C6`，prg0_title.asm:2887-2920）实现体。
+///
+/// asm 逐行：`jsr WaitNMIPass`（壳面已由前段承载）→ 四轮：
+/// `ldy #$05/$0B/$11/$17 / jsr LoadPasswordCharToVRAMStringRAM`
+/// + `ldx #$A9/$B0/$E9/$F0 / ldy #$21 / jsr PrepareWriteVRAMStringRAM`
+/// （最后 `jmp`）。LoadPasswordCharToVRAMStringRAM（`00:93F9`）：
+/// `lda #$16 / sta VRAMStringRAMDimensions`（1 行 × 6 列）+ `ldx #$05` 环
+/// `lda PasswordChar,y / sta VRAMStringRAMBuffer,x / dey / dex / bpl`
+/// ⇒ buffer[5..0] = PasswordChar[base..base-5] ⇒ **buffer[0..6] = PasswordChar[6k..6k+6]**
+/// （base=$05/$0B/$11/$17 = 每组末索引）。写面 = $2006 hi/lo + 6×$2007。
+fn password_to_screen(mem: &mut Manager) {
+    const ROWS: [(u16, u16); 4] = [
+        (0x21A9, 0x05),
+        (0x21B0, 0x0B),
+        (0x21E9, 0x11),
+        (0x21F0, 0x17),
+    ];
+    mem.render.reset_addr_latch();
+    for (addr, base) in ROWS {
+        mem.write_io(0x2006, (addr >> 8) as u8);
+        mem.write_io(0x2006, (addr & 0xFF) as u8);
+        for i in (0..6u16).rev() {
+            // asm：x=5..0 时 y=base..base-5 ⇒ buffer[x] = PasswordChar[base-x]
+            let c = mem.password_char(base - i);
+            mem.write_io(0x2007, c);
+        }
+    }
+}
+
 /// PreparePPUProcess 组合点（asm 引证主体 `PreparePPUProcess: ; 07:C20E`——ptr→VRAMStructWrite）。
 /// blob 面读资产包 `title.vram_*` 四段（VRAMStruct 记录流，`hi==0` 终止含尾）；
 /// 未接址 fail-loud（随件补）。
@@ -308,9 +461,29 @@ fn prepare_vram(mem: &mut Manager, addr: u16) {
         // jsr PreparePPUProcess_`）："GAME OVER" 行 $218C。
         0x93B9 => crate::render::vram::vram_struct_write(
             mem, game_data::assets::vram_game_over()),
+        // @VRAMStruct（prg0_title.asm:2882——DisplayPassword :9359 的
+        // `ldx #<@VRAMStruct.b / ldy #>@VRAMStruct.b / jsr PreparePPUProcess_`）。
+        // ROM 锚（A 级）：bank00:$937F-$9393 21 B =
+        //   21 4B 09 19 0A 1C 1C FF 20 18 1B 0D  (VRAMStructData $214B,"PASS WORD")
+        //   23 D0 48 00                          (VRAMStructDataRepeat $23D0,$08,$00)
+        //   23 D8 60 55                          (VRAMStructDataRepeat $23D8,$20,$55)
+        //   00                                   (VRAMStructEnd)
+        // 不扩资产包 PackKey（三处同源+包重建代价）：按 `INTRO_STARS_DATA` 先例在
+        // game-core 内以 const 烘焙（doc 注释即字节锚，`tests` 中断言前 3 字节）。
+        0x937F => crate::render::vram::vram_struct_write(mem, &PASS_WORD_VRAM),
         other => crate::unported!(&format!("bank00:{other:04X}-PrepareVram")),
     }
 }
+
+/// `bank00:$937F` DisplayPassword 的 @VRAMStruct（21 B，见 `prepare_vram` 臂注——
+/// ROM 逐字节实取：`python3 -c "print(open('rom/Metroid (USA).nes','rb').read()[16+0x137F:16+0x1394].hex())"`）。
+pub const PASS_WORD_VRAM: [u8; 21] = [
+    0x21, 0x4B, 0x09, // 目标 $214B，非 RLE，9 B："PASS WORD"
+    0x19, 0x0A, 0x1C, 0x1C, 0xFF, 0x20, 0x18, 0x1B, 0x0D, //
+    0x23, 0xD0, 0x48, 0x00, // $23D0 RLE count 8 填 $00
+    0x23, 0xD8, 0x60, 0x55, // $23D8 RLE count $20=32 填 $55
+    0x00, // VRAMStructEnd
+];
 
 #[cfg(test)]
 mod tests {

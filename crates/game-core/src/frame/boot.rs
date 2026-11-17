@@ -93,8 +93,11 @@ pub fn boot_pre_spin(mem: &mut Manager) {
             mem.write_ram(0x002E, 0x11);
             mem.write_ram(0x002F, 0xFF);
             mem.write_ram(0x0024, 0x01);
-            // C4DE 单元（PRG 换 bank+分派——已端口）
+            // C4DE 单元（PRG 换 bank+分派——已端口）。boot 链的**自旋后段自管**：
+            // `BootPhase::AwaitNmi` 分支在唤醒拍调 `boot_post_spin`（engine.rs:125），
+            // 故此处清掉 mid-game 用的挂起项（不让 MainLoop 拍重复执行 post-spin）。
             check_bank_switch(mem);
+            mem.bank_init_pending = None;
         }
     }
 }
@@ -227,8 +230,17 @@ pub(crate) fn set_ppu_mirror(mem: &mut Manager, a_in: u8) {
 
 /// `BankInitTable: ; 07:C51F`（.word InitBank0..5/ExitSub×3）。
 /// ROM 抽查佐证：`C4DE: A4 24 F0 2D 20 E8 C4 4C 10 C5`。
-/// boot 态 $24=1（C0B4 置）→ 索引 0 → 表项 InitBank0（$C531）。其他表项未端口——fail-loud。
-pub fn check_bank_switch(mem: &mut Manager) {
+/// boot 态 $24=1（C0B4 置）→ 索引 0 → 表项 InitBank0（$C531）。
+///
+/// **返回「本迭代是否尾跳进 bank-init 体」（asm 语义面，A 级）**：`CheckBankSwitch_OK`
+/// 尾接 `jmp GoBankInit`（`07:C4EF`→`C510`）——**不是 `jsr`**，故 `MainLoop` 里紧随其后的
+/// `jsr UpdateTimer`（`prg7_engine.asm:191-207`）在该迭代永不到达；控制经 bank-init 体的
+/// `WaitNMIPass` 自旋跨帧，唤醒拍 `jmp NMIOn` 的 `rts` 才返回 `jsr UpdateTimer`。
+/// 返回 `true` ⇒ 调用方（`main_loop_iter`）必须**跳过本 tick 的 UpdateTimer/GoMainRoutine**，
+/// 并把 post-spin 体挂到 `mem.bank_init_pending`（唤醒拍先跑体再 Update）。
+/// `BankInitTable` 余 3 项 = `ExitSub`（`rts`）⇒ `false`（迭代照常往下走）。
+/// 实证：100% 录像 lua f4019 执行 C531/C45D 但**无** C266（UpdateTimer）执行。
+pub fn check_bank_switch(mem: &mut Manager) -> bool {
     // GoBankInit 指针写（asm C510：`lda BankInitTable,y/sta Temp0A/sta $0B`——
     // B 案 $0A/$0B=$C531 对形；InitBank0=$C531）
     mem.write_ram(0x000A, 0x31);
@@ -245,7 +257,7 @@ pub fn check_bank_switch(mem: &mut Manager) {
     // `ldy BankSwitchPending($24)/beq RTS/jsr CheckBankSwitch_OK/jmp GoBankInit`。
     let pending = mem.read_ram(crate::ram_map::BANK_SWITCH_PENDING);
     if pending == 0 {
-        return; // 早出（A 不动——C4E0 BEQ $C50F）
+        return false; // 早出（A 不动——C4E0 BEQ $C50F）
     }
     // CheckBankSwitch_OK（C4E8）：清 $24→CurrentBank($23)←idx→$00←idx→
     // $28←(SwitchUpperBits&$18)|idx→MMC1 串行写（C4FA 共享段——与 C01A 折叠同源）。
@@ -260,16 +272,73 @@ pub fn check_bank_switch(mem: &mut Manager) {
     mem.regs.a = mem.read_ram(0x0000); // C50D LDA $00（分派索引）
     // GoBankInit（C510）：BankInitTable（bank0:C51F `31 C5 52 C5 …`）分派。
     match idx {
-        0 => init_bank0_title(mem), // InitBank0（$C531——boot 链 pre 段）
-        1 => init_bank1(mem),    // InitBank1（$C552——游戏入场链 Brinstar）
-        2 => init_bank2(mem),    // InitBank2（$C583——Norfair，密码进场 InArea=$11 落此）
-        3 => init_bank3(mem),    // InitBank3（$C590——Tourian；含 MetroidData 14B 拷贝）
-        4 => init_bank4(mem),    // InitBank4（$C5B6——Kraid）
-        5 => init_bank5(mem),    // InitBank5（$C5C3——Ridley）
+        // InitBank0（$C531）：**拆 pre/post**——自旋（`ScreenNmiOff` 的 NMI 等）跨帧，
+        // 醒来的那一拍才继续 CopyMap/InitTitleGFX/NMIOn 并落到 `jsr UpdateTimer`
+        // （bank07:C4DE `jmp GoBankInit` ⇒ 本迭代不到 `jsr UpdateTimer`；emu lua f4019
+        // 无 C266 实证）。pre 段在此，post 见 `bank_init_post_spin`。
+        0 => init_bank0_title(mem),
+        // InitBank1..5（$C552/$C583/$C590/$C5B6/$C5C3）：**保持同拍全形**（pre + NMI 等 +
+        // 体 + `jmp NMIOn`），尾返回 false ⇒ 本迭代照跑 `UpdateTimer`。
+        // 【为何不与 bank0 同拆】elev-norfair-transition 的 InitBank2（$C583）换区实测：
+        // emu lua f1205 是「先 UT、后 CBS 派发 InitBank2」，而拆成「切换拍免 UT」会把
+        // 其后唤醒拍的 `inc FrameCount`/`UpdateTimer` 整体推后一拍 ⇒ 落定画面 248px
+        // 常驻失配（case-elev-norfair-transition f1420/1560/1600）。同拍全形=既有
+        // L4 基线（15 用例全 match 的形），不动。
+        1 => {
+            init_bank1_pre(mem);
+            mem.iter_wait();
+            init_bank1_post(mem);
+            return false;
+        }
+        2 => {
+            init_bank2_pre(mem);
+            mem.iter_wait();
+            init_bank2_post(mem);
+            return false;
+        }
+        3 => {
+            init_bank3_pre(mem);
+            mem.iter_wait();
+            init_bank3_post(mem);
+            return false;
+        }
+        4 => {
+            init_bank4_pre(mem);
+            mem.iter_wait();
+            init_bank4_post(mem);
+            return false;
+        }
+        5 => {
+            init_bank5_pre(mem);
+            mem.iter_wait();
+            init_bank5_post(mem);
+            return false;
+        }
         // BankInitTable 余 3 项（$C51F+12/+14/+16）在 asm 里就是 `ExitSub`（rts）——
         // 即 idx 6/7/8 是**空槽**，不是未端口（见 prg7_engine.asm:1370-1372。
-        6 | 7 | 8 => {}
+        6 | 7 | 8 => return false, // ExitSub（rts）——控制回 MainLoop，UpdateTimer 照跑
         _ => crate::unported!("bank00:C51F"), // 表外 idx（>=9）：ROM 表只有 9 项
+    }
+    // 尾跳 GoBankInit（C4EF `jmp GoBankInit`）：本迭代不到 UpdateTimer ⇒ 挂 post-spin。
+    mem.bank_init_pending = Some(idx);
+    true
+}
+
+/// bank-init 体的 **post-spin 段**（asm：`ScreenNmiOff` 的 `WaitNMIPass_` 自旋唤醒后
+/// 才执行的部分——`lda PPUCTRL_ZP/and #~VBLKNMI_ON/sta PPUCTRL_ZP/sta PPUCTRL` + GFX 装载
+/// + 尾 `jmp NMIOn`）。由 `main_loop_iter` 在**唤醒拍**先执行，再 UpdateTimer。
+pub(crate) fn bank_init_post_spin(mem: &mut Manager, idx: u8) {
+    match idx {
+        // InitBank0 唤醒后：ScreenNmiOff post + CopyMap + InitTitleGFX + NMIOn =
+        // `boot_post_spin`（boot 链同件）——mid-game 银行切换共用（旧形**整段缺失**：
+        // 死亡→标题屏的 CopyMap/InitTitleGFX/NMIOn 从未执行，标题 GFX 无来源）。
+        0 => boot_post_spin(mem),
+        1 => init_bank1_post(mem),
+        2 => init_bank2_post(mem),
+        3 => init_bank3_post(mem),
+        4 => init_bank4_post(mem),
+        5 => init_bank5_post(mem),
+        _ => crate::unported!("bank00:C51F"),
     }
 }
 
@@ -279,12 +348,16 @@ pub fn check_bank_switch(mem: &mut Manager) {
 ///
 /// 形状对齐 InitBank1（同三段：GameMode / ScreenNmiOff 帧等待 / GFX 重活）——后者已由
 /// move-drift R2/R3 定谳（ScreenNmiOff=窗3 等待 1/3；GFX 装载=bogged×2）。
-fn init_bank2(mem: &mut Manager) {
+fn init_bank2_pre(mem: &mut Manager) {
     mem.write_ram(crate::ram_map::GAME_MODE, 0);
-    // ScreenNmiOff（$C45D 全形：影子清位 + 真 $2001/$2000 写）——旧形只置 `NMI_STATUS=1`
-    // 建模等待形、**漏了寄存器面** ⇒ 换区窗口本应为黑屏却仍亮（elevprobe2 f1206/1207 实证）。
-    super::tick::screen_nmi_off(mem);
-    mem.iter_wait();
+    screen_nmi_off_spin_start(mem);
+}
+
+/// InitBank2 的 post-spin 体（自旋唤醒后）：ScreenNmiOff 尾（PPUCTRL 关 NMI 位）+ GFX 装载
+/// + 尾 `jmp NMIOn`。`iter_bogged(2)`=GFX 重活帧（move-drift R2/R3 定谳形，帧预算不变：
+/// 旧形把整段挤在切换拍 + gate[1,0,0]，新形=切换拍(pre)+唤醒拍(post: bogged×2) ⇒ 同 3 帧）。
+fn init_bank2_post(mem: &mut Manager) {
+    screen_nmi_off_post(mem);
     crate::render::gfx::init_norfair_gfx(mem);
     mem.iter_bogged(2);
     // asm 尾 `jmp NMIOn ; 07:C487`——**必须显式复启**：ScreenNmiOff 已写真 $2000 关掉
@@ -300,12 +373,16 @@ fn init_bank2(mem: &mut Manager) {
 /// 【口径】`iter_bogged(2)` 沿 InitBank1/2 同族取值（两区已定谳：GFX 装载=重活×2）。
 /// Tourian 载 10 件而非 6/7 件，**该值未经对拍校准**（C 级假设；补 Tourian 进场案后
 /// 以 L4 归零即定谳，届时改注释与常数）。
-fn init_bank3(mem: &mut Manager) {
+fn init_bank3_pre(mem: &mut Manager) {
     mem.write_ram(crate::ram_map::GAME_MODE, 0);
-    // ScreenNmiOff（$C45D 全形：影子清位 + 真 $2001/$2000 写）——旧形只置 `NMI_STATUS=1`
-    // 建模等待形、**漏了寄存器面** ⇒ 换区窗口本应为黑屏却仍亮（elevprobe2 f1206/1207 实证）。
-    super::tick::screen_nmi_off(mem);
-    mem.iter_wait();
+    screen_nmi_off_spin_start(mem);
+}
+
+/// InitBank3 的 post-spin 体（自旋唤醒后）：ScreenNmiOff 尾（PPUCTRL 关 NMI 位）+ GFX 装载
+/// + 尾 `jmp NMIOn`。`iter_bogged(2)`=GFX 重活帧（move-drift R2/R3 定谳形，帧预算不变：
+/// 旧形把整段挤在切换拍 + gate[1,0,0]，新形=切换拍(pre)+唤醒拍(post: bogged×2) ⇒ 同 3 帧）。
+fn init_bank3_post(mem: &mut Manager) {
+    screen_nmi_off_post(mem);
     // `ldy #$0D / lda MetroidData,y / sta MetroidRepelSpeed,y / dey / bpl`
     // ⇒ $77F0+i ← MetroidData[i]（i=0..13；倒序遍历只是循环形，落值同序）。
     let md = game_data::assets::tourian_metroid_data();
@@ -324,12 +401,16 @@ fn init_bank3(mem: &mut Manager) {
 
 /// InitBank4（**asm 内容锚** `InitBank4: ; 07:C5B6`——prg7_engine.asm:1472-1478）：
 /// `lda #$00 / sta GameMode` → `jsr ScreenNmiOff` → `jsr InitKraidGFX`（8 件）→ `jmp NMIOn`。
-fn init_bank4(mem: &mut Manager) {
+fn init_bank4_pre(mem: &mut Manager) {
     mem.write_ram(crate::ram_map::GAME_MODE, 0);
-    // ScreenNmiOff（$C45D 全形：影子清位 + 真 $2001/$2000 写）——旧形只置 `NMI_STATUS=1`
-    // 建模等待形、**漏了寄存器面** ⇒ 换区窗口本应为黑屏却仍亮（elevprobe2 f1206/1207 实证）。
-    super::tick::screen_nmi_off(mem);
-    mem.iter_wait();
+    screen_nmi_off_spin_start(mem);
+}
+
+/// InitBank4 的 post-spin 体（自旋唤醒后）：ScreenNmiOff 尾（PPUCTRL 关 NMI 位）+ GFX 装载
+/// + 尾 `jmp NMIOn`。`iter_bogged(2)`=GFX 重活帧（move-drift R2/R3 定谳形，帧预算不变：
+/// 旧形把整段挤在切换拍 + gate[1,0,0]，新形=切换拍(pre)+唤醒拍(post: bogged×2) ⇒ 同 3 帧）。
+fn init_bank4_post(mem: &mut Manager) {
+    screen_nmi_off_post(mem);
     crate::render::gfx::init_kraid_gfx(mem);
     mem.iter_bogged(2);
     // asm 尾 `jmp NMIOn ; 07:C487`——**必须显式复启**：ScreenNmiOff 已写真 $2000 关掉
@@ -339,12 +420,16 @@ fn init_bank4(mem: &mut Manager) {
 
 /// InitBank5（**asm 内容锚** `InitBank5: ; 07:C5C3`——prg7_engine.asm:1480-1486）：
 /// `lda #$00 / sta GameMode` → `jsr ScreenNmiOff` → `jsr InitRidleyGFX`（7 件）→ `jmp NMIOn`。
-fn init_bank5(mem: &mut Manager) {
+fn init_bank5_pre(mem: &mut Manager) {
     mem.write_ram(crate::ram_map::GAME_MODE, 0);
-    // ScreenNmiOff（$C45D 全形：影子清位 + 真 $2001/$2000 写）——旧形只置 `NMI_STATUS=1`
-    // 建模等待形、**漏了寄存器面** ⇒ 换区窗口本应为黑屏却仍亮（elevprobe2 f1206/1207 实证）。
-    super::tick::screen_nmi_off(mem);
-    mem.iter_wait();
+    screen_nmi_off_spin_start(mem);
+}
+
+/// InitBank5 的 post-spin 体（自旋唤醒后）：ScreenNmiOff 尾（PPUCTRL 关 NMI 位）+ GFX 装载
+/// + 尾 `jmp NMIOn`。`iter_bogged(2)`=GFX 重活帧（move-drift R2/R3 定谳形，帧预算不变：
+/// 旧形把整段挤在切换拍 + gate[1,0,0]，新形=切换拍(pre)+唤醒拍(post: bogged×2) ⇒ 同 3 帧）。
+fn init_bank5_post(mem: &mut Manager) {
+    screen_nmi_off_post(mem);
     crate::render::gfx::init_ridley_gfx(mem);
     mem.iter_bogged(2);
     // asm 尾 `jmp NMIOn ; 07:C487`——**必须显式复启**：ScreenNmiOff 已写真 $2000 关掉
@@ -357,12 +442,19 @@ fn init_bank5(mem: &mut Manager) {
 /// `ldy #$00/jsr BankSwitch`/`jsr InitBrinstarGFX`/`jmp NMIOn`。
 /// 【move-drift R2/R3】ScreenNmiOff=帧等待（窗3 等待 1/3）；InitBrinstarGFX=重活
 /// bogged×2（C 级拆分——总 4=A 级三源互证）。
-fn init_bank1(mem: &mut Manager) {
+fn init_bank1_pre(mem: &mut Manager) {
     mem.write_ram(crate::ram_map::GAME_MODE, 0);
-    // ScreenNmiOff（$C45D 全形：影子清位 + 真 $2001/$2000 写）——旧形只置 `NMI_STATUS=1`
-    // 建模等待形、**漏了寄存器面** ⇒ 换区窗口本应为黑屏却仍亮（elevprobe2 f1206/1207 实证）。
-    super::tick::screen_nmi_off(mem);
-    mem.iter_wait();
+    // ScreenNmiOff 的**自旋前段**（$C45D 前两件：影子清位 + 真 $2001 落点）——
+    // 旧形只置 `NMI_STATUS=1` 建模等待形、**漏了寄存器面** ⇒ 换区窗口本应为黑屏却仍亮
+    // （elevprobe2 f1206/1207 实证）。`$2000` 的 NMI 关位按 asm 在自旋**后**（post 段）。
+    screen_nmi_off_spin_start(mem);
+}
+
+/// InitBank1 的 post-spin 体（自旋唤醒后）：ScreenNmiOff 尾 + GFX 装载 + 尾 `jmp NMIOn`。
+/// `iter_bogged(2)`=GFX 重活帧（move-drift R2/R3 定谳形；帧预算守恒：旧形整段挤在切换拍
+/// + gate[1,0,0]=3 帧，新形=切换拍(pre 无门)+唤醒拍(post: bogged×2) ⇒ 同 3 帧）。
+fn init_bank1_post(mem: &mut Manager) {
+    screen_nmi_off_post(mem);
     // InitBrinstarGFX（$C604）：BrinBG1/CREBG1/CREBG2/BrinstarSprites/Solid_0FC0/
     // Solid_1FC0（GFXInfo 项 3/4/5/6/25/22——bake_gfx 29 项自描述）
     // 【止血件3 补件】统一到 `frame::gfx::load_gfx`（asm `LoadGFX: ; 07:C7AB` 全形：
@@ -445,10 +537,24 @@ pub fn copy_map(mem: &mut Manager) {
 /// （prg7_engine.asm:280 `sty NMIStatus`）——NMI 单元未端口前不可发明，fail-loud
 /// 爆在 `bank07:C0D9`（lead 提前招呼已发）。
 pub fn screen_nmi_off_pre(mem: &mut Manager) {
-    use crate::ram_map::{NMI_STATUS, PPUMASK_ZP};
-    let m = mem.read_ram(PPUMASK_ZP) & !(0x08u8 | 0x10);
-    mem.write_ram(PPUMASK_ZP, m); // WriteAndWait `sta PPUMASK_ZP`
+    use crate::ram_map::NMI_STATUS;
+    let m = mem.ppumask_shadow() & !(0x08u8 | 0x10);
+    mem.set_ppumask_shadow(m); // WriteAndWait `sta PPUMASK_ZP`
     mem.write_ram(NMI_STATUS, 0); // ClearNMIStat（C434）——spin 入口（跨帧 yield）
+}
+
+/// ScreenNmiOff 的**自旋前段**（bank-init 用；asm `ScreenNmiOff ; 07:C45D` 前半）：
+/// `lda PPUMASK_ZP / and #~(BG_ON|OBJ_ON)` → `jsr WriteAndWait`（`07:C43D`：
+/// `sta PPUMASK_ZP` + `WaitNMIPass_` 自旋）——即**影子清位 + 等一个 NMI**；
+/// `lda PPUCTRL_ZP / and #~VBLKNMI_ON / sta PPUCTRL_ZP / sta PPUCTRL` 在自旋**之后**，
+/// 归 `screen_nmi_off_post`（唤醒拍执行）。
+/// 真 `$2001` 在本拍落（`WriteAndWait` 那个 NMI 的 `WritePPUCtrl` 同相位近似——
+/// elevprobe2 f1206/f1207 暗窗定谳：只写影子会晚一帧仍亮屏）。
+fn screen_nmi_off_spin_start(mem: &mut Manager) {
+    let m = mem.ppumask_shadow() & !(0x08u8 | 0x10);
+    mem.set_ppumask_shadow(m); // WriteAndWait `sta PPUMASK_ZP`
+    mem.write_io(0x2001, m); // NMI 内 WritePPUCtrl 落真寄存器（同拍近似）
+    mem.clear_nmi_status(); // ClearNMIStat——自旋入口（跨帧 yield）
 }
 
 /// spin 出口后段（§8.1 跨帧定案：NMI 尾写 1 后唤醒）：PPUCTRL_ZP &= !0x80；
@@ -517,6 +623,7 @@ mod tests {
 
     /// InitBank3（07:C590）：`MetroidData` 14 B 落到 `$77F0-$77FD`（倒序循环，落值同序），
     /// GameMode←0；BankInitTable 的 idx 6/7/8 是 asm 空槽（`ExitSub`）⇒ 不得 panic。
+    /// 【2026-11-18】InitBank1..5 同拍全形（不拆 pre/post）——见本测试断言注释。
     #[test]
     fn init_bank3_copies_metroid_data_and_empty_slots_are_rts() {
         let mut m = Manager::default();
@@ -526,8 +633,15 @@ mod tests {
         }
         // 直接走 check_bank_switch 的表项分派（BankSwitchPending = bank+1 = 4 ⇒ idx 3）
         m.write_ram(crate::ram_map::BANK_SWITCH_PENDING, 4);
-        check_bank_switch(&mut m);
+        let switched = check_bank_switch(&mut m);
         assert_eq!(m.read_ram(crate::ram_map::GAME_MODE), 0, "InitBank3 置 GameMode=0");
+        // 【2026-11-18 更正】BankInit1..5 保持**同拍全形**（pre + NMI 等 + 体 + `jmp NMIOn`，
+        // 尾返回 false ⇒ 本迭代照跑 UpdateTimer）。只有 InitBank0 走 pre/post 拆分
+        // （GameOver 交班帧数证据 bank07:C4DE + emu lua f4019 无 C266）。
+        // 证据：case-elev-norfair-transition 的 InitBank2 换区——拆开会把唤醒拍
+        // `inc FrameCount`/`UpdateTimer` 整体推后一拍，落定画面 248px 常驻失配。
+        assert!(!switched, "InitBank3 尾 rts 回 MainLoop（照跑 UpdateTimer）");
+        assert_eq!(m.bank_init_pending, None, "非 bank0 不留唤醒拍待办");
         let md: Vec<u8> = (0x77F0..=0x77FDu16).map(|a| m.read_ram(a)).collect();
         assert_eq!(
             md,
@@ -634,9 +748,15 @@ mod tests {
     fn c4de_initbank1_declares_frame_gates() {
         let mut m = Manager::default();
         m.write_ram(0x0024, 2); // BankSwitchPending=2→InitBank1（BankTable[0]=$01+1）
-        check_bank_switch(&mut m);
-        assert_eq!(m.iter_gates, vec![1, 0, 0], "ScreenNmiOff(W)+InitBrinstarGFX bogged(2)");
+        let switched = check_bank_switch(&mut m);
+        // 【2026-11-18 更正】InitBank1 保持**同拍全形**：门序 [W,B,B] 在切换拍一次声明
+        // （asm `jsr ScreenNmiOff`→WriteAndWait 等待 + InitBrinstarGFX 重活 bogged×2）。
+        // 拆成 pre/post 会推后唤醒拍的 `inc FrameCount`/`UpdateTimer`（elev 换区实证）。
+        assert!(!switched, "InitBank1 尾 `jmp NMIOn` 落 rts ⇒ 本迭代照跑 UpdateTimer");
+        assert_eq!(m.bank_init_pending, None);
         assert_eq!(m.read_ram(crate::ram_map::GAME_MODE), 0, "InitBank1 GameMode←0（Play）");
+        assert_eq!(m.iter_gates, vec![1, 0, 0], "门序：NMI 等 1 + GFX 重活 bogged(2)");
+        assert!(m.nmi_enabled, "尾 `jmp NMIOn` 必须复启 NMI");
     }
 
     /// ScreenNmiOff pre 段（$FE 遮蔽+$1A=0 spin 入口）+ post 段（$FF 清 bit7/NMI 关）。

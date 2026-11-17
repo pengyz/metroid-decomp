@@ -510,7 +510,7 @@
       "refs": [
         "world/room_load.rs:32",
         "render/vram.rs:35",
-        "frame/memory.rs:195"
+        "frame/memory.rs:198"
       ]
     },
     {
@@ -527,7 +527,7 @@
       "kind": "undeclared",
       "refs": [
         "ui/hud.rs:47",
-        "frame/memory.rs:195"
+        "frame/memory.rs:198"
       ]
     },
     {

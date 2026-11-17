@@ -808,6 +808,11 @@ pub enum ShellCall {
     DisplayInputCharacters,
     /// RemoveIntroSprites（$C1BC：精灵值载 $F4——右下+空图形=离屏惯例；intro 每帧壳）。
     RemoveIntroSprites,
+    /// CalculatePassword（`00:8C7A`：ProcessUniqueItems→母亲脑惩罚→区域/装备/导弹/
+    /// 雕像/SamusAge/随机 4 LSB→校验和+置乱→24 字符；0 spin，纯 RAM 面）。
+    CalculatePassword,
+    /// PasswordToScreen（`00:93C6`：WaitNMIPass + 4×6 字符名表写 $21A9/$21B0/$21E9/$21F0）。
+    PasswordToScreen,
 }
 
 /// title 域一 tick 结果（写面=语义标签事件（已映射址）；shell=组合点；exit=分发出口）。
@@ -887,7 +892,92 @@ pub fn dispatch_step(face: &TitleFace) -> TitleStep {
         0x10 => step_from_l2(step_glue::title_clear_spare(face)),
         0x11 => step_from_l2(step_glue::title_prep_restart(face)),
         0x13 | 0x14 => step_from_l2(step_glue::title_no_op(face)),
-        0x19 => step_from_l2(step_glue::title_password_gate(face)),
+        // ---- DisplayPassword（`DisplayPassword ; 00:9359`，prg0_title.asm:2795-2822）----
+        // 门：`lda Timer3 / bne @RTS_9324`（**160 帧显示窗**——GameOver 置 Timer3←$10、
+        // 每 10 帧 dec 1 ⇒ 从进屏到清屏正好 160 帧）。窗口未满 ⇒ 本 tick 零动作（A=Timer3
+        // 出口面），且把 0x1C 交班带来的 cursor=3 归一为 0（首个体拍从 ClearAll 头起）。
+        // 窗口满（Timer3==0）⇒ 5 段：
+        //   0 ClearAll 头（ScreenOff+1 spin）→ 1 ClearAll 体（ClearNameTables/EraseAllSprites/
+        //   WaitNMIPass）→ 2 ClearAll 尾 + PreparePPUProcess_($937F "PASS WORD")+
+        //   InitPasswordFontGFX+CalculatePassword+NMIOn → 3 PasswordToScreen（WaitNMIPass+
+        //   4 行名表写）→ 4 尾（PaletteDataPending←$13、inc TitleRoutine→0x1A、
+        //   ScreenOn）→ 0xFF 完成拍哨兵（体 rts 落循环顶 NMI 自旋，该帧不跑 UpdateTimer）。
+        0x19 => {
+            let pm = face.ram[0x00FE & 0x7FF];
+            let ff = face.ram[0x00FF & 0x7FF];
+            if face.timer3 != 0 {
+                // `lda Timer3 / bne RTS_9324`——窗口内每帧只管 A 出口（零事件零壳）。
+                TitleStep {
+                    events: vec![], shell: vec![], a_out: Some(face.timer3),
+                    x_out: None, y_out: None, jumped: None, unported: None, next_cursor: 0,
+                }
+            } else {
+                match face.cursor {
+                    0 => TitleStep {
+                        events: clear_all_seg0_events(pm),
+                        // ClearAll 首件 `jsr ScreenOff`（C439：影子清位 + WriteAndWait 自旋）
+                        // ——自旋等到的正是**本帧的边界**（tick 模型里帧边界已隐式存在），
+                        // 故此处只落影子、不另发 SpinWait 占一整拍（否则体整体后移 1 帧）。
+                        // 体拍序参照 emu 名表落笔（ctwrite/ppu.hex）：ClearNameTables 擦
+                        // "GAME OVER"、次拍 $937F 落 "PASS WORD"、再一拍 PasswordToScreen 4 行、
+                        // 末拍 $13←$13+相位→0x1A+ScreenOn。
+                        shell: vec![ShellCall::ScreenOff],
+                        a_out: None, x_out: None, y_out: None,
+                        jumped: None, unported: None, next_cursor: 1,
+                    },
+                    1 => TitleStep {
+                        events: clear_all_seg1_events(&face.ram, &face.wram, face.frame_count,
+                                                      face.phase, ff),
+                        shell: vec![ShellCall::ClearNameTables, ShellCall::EraseAllSprites,
+                                    ShellCall::WaitNMIPass],
+                        a_out: None, x_out: None, y_out: None,
+                        jumped: None, unported: None, next_cursor: 2,
+                    },
+                    2 => {
+                        // ClearAll 尾（VBOffAndHorzWrite）+ PreparePPUProcess_($937F)+
+                        // InitPasswordFontGFX + CalculatePassword + NMIOn。
+                        let mut events = clear_all_seg2_events(ff & 0xFB & 0xFC);
+                        events.push((0x00FF, (ff & 0xFB & 0xFC & !0x84) | 0x80)); // NMIOn
+                        events.push((0x001A, 0));
+                        TitleStep {
+                            events,
+                            shell: vec![ShellCall::VBOffAndHorzWrite,
+                                        ShellCall::PrepareVram(0x937F),
+                                        ShellCall::InitPasswordFontGfx,
+                                        ShellCall::CalculatePassword,
+                                        ShellCall::NMIOn],
+                            a_out: None, x_out: None, y_out: None,
+                            jumped: None, unported: None, next_cursor: 3,
+                        }
+                    }
+                    3 => TitleStep {
+                        // `jsr WaitNMIPass` + 4×(LoadPasswordCharToVRAMStringRAM +
+                        // PrepareWriteVRAMStringRAM)。
+                        events: vec![],
+                        shell: vec![ShellCall::WaitNMIPass, ShellCall::PasswordToScreen],
+                        a_out: None, x_out: None, y_out: None,
+                        jumped: None, unported: None, next_cursor: 4,
+                    },
+                    4 => TitleStep {
+                        // `lda #_id_Palette12+1.b / sta PaletteDataPending`（←$13）+
+                        // `inc TitleRoutine`（→0x1A）+ `jmp ScreenOn`。
+                        events: vec![
+                            (crate::ram_map::PALETTE_PENDING, 0x13),
+                            crate::title::state::write_event_phase(face.phase.wrapping_add(1)),
+                            (0x00FE, pm | 0x1E), // ScreenOn（影子；$2001 由 NMI 刷）
+                            (0x001A, 0),
+                        ],
+                        shell: vec![ShellCall::WaitNMIPass, ShellCall::ScreenOn],
+                        a_out: None, x_out: None, y_out: None,
+                        jumped: None, unported: None, next_cursor: 0xFF,
+                    },
+                    _ => TitleStep {
+                        events: vec![], shell: vec![], a_out: None, x_out: None, y_out: None,
+                        jumped: None, unported: None, next_cursor: 0,
+                    },
+                }
+            }
+        }
         // jmp 出口臂（直域调——jumped 面透出；B 跑桥侧按转接/停点处理）
         0x16 => {
             let joy = face.ram[crate::title::state::JOY1_CHANGE as usize & 0x7FF];
@@ -1465,3 +1555,86 @@ pub(crate) mod intro;
 pub mod bridge;
 
 pub mod state;
+
+#[cfg(test)]
+mod display_password_tests {
+    use super::*;
+
+    /// 构造 0x19 面的最小 TitleFace（ram/wram 全零，只关心段契约与寄存器面）。
+    fn face(cursor: u8, timer3: u8, phase: u8) -> TitleFace {
+        TitleFace {
+            phase, cursor, a: 0, x: 0, y: 0, timer3,
+            frame_count: 0, joy_change: 0, ppuctrl: 0x90,
+            star_src: [0u8; 0xA0],
+            wram: vec![0u8; 0x8000],
+            ram: vec![0u8; 0x0800],
+        }
+    }
+
+    /// 门（`lda Timer3 / bne @RTS_9324`）：窗口内零事件零壳，A=Timer3 出口面，
+    /// 且把 GameOver 交班带来的 cursor 归一为 0（下一拍从 ClearAll 头起）。
+    #[test]
+    fn timer3_window_gate_is_silent_and_normalizes_cursor() {
+        let st = dispatch_step(&face(3, 0x10, 0x19));
+        assert!(st.events.is_empty(), "Timer3≠0 不得写任何 RAM");
+        assert!(st.shell.is_empty(), "Timer3≠0 不得发任何 shell");
+        assert_eq!(st.a_out, Some(0x10), "A 出口=Timer3（bne 不取）");
+        assert_eq!(st.next_cursor, 0, "cursor 归一（交班 cursor=3 → 0）");
+        assert!(st.jumped.is_none() && st.unported.is_none());
+    }
+
+    /// ClearAll 头段（cursor0）：`jsr ScreenOff` 的影子面（$FE &= ~(BG|OBJ)）+ $1A←0。
+    #[test]
+    fn seg0_screen_off_shadow_and_nmi_status() {
+        let st = dispatch_step(&face(0, 0, 0x19));
+        assert_eq!(st.next_cursor, 1);
+        assert!(st.shell.contains(&ShellCall::ScreenOff), "首件必须是 ScreenOff");
+        assert!(st.events.contains(&(0x00FE, 0x00)), "$FE←0（1E & ~18）");
+        assert!(st.events.contains(&(0x001A, 0)), "$1A←0（ClearNMIStat 面）");
+    }
+
+    /// 进屏链路（cursor2 ⇒ cursor3）：PASS WORD 名表体 + 字体 + 密钥计算 + NMIOn。
+    #[test]
+    fn seg2_prepares_password_screen_and_nmi_on() {
+        let mut f = face(2, 0, 0x19);
+        f.ram[0x00FF] = 0x94; // 进屏前 $FF（NMIOn: ($FF & ~$06) | $80 = $90）
+        let st = dispatch_step(&f);
+        assert_eq!(st.next_cursor, 3);
+        for want in [
+            ShellCall::VBOffAndHorzWrite,
+            ShellCall::PrepareVram(0x937F), // bank00:$937F = "PASS WORD" VRAMStruct
+            ShellCall::InitPasswordFontGfx,
+            ShellCall::CalculatePassword,
+            ShellCall::NMIOn,
+        ] {
+            assert!(st.shell.contains(&want), "缺 shell 件：{want:?}");
+        }
+        // NMIOn：`lda PPUCTRL_ZP / ora #$80`（VBLKNMI_ON 置位）
+        assert!(st.events.contains(&(0x00FF, 0x90)), "$FF←$90（NMIOn 面）");
+        assert!(st.events.contains(&(0x001A, 0)), "$1A←0");
+    }
+
+    /// 收尾段（cursor4）：PaletteDataPending←$13 + TitleRoutine 19→1A + ScreenOn。
+    #[test]
+    fn seg4_palette_pending_phase_advance_and_screen_on() {
+        let st = dispatch_step(&face(4, 0, 0x19));
+        assert!(st.events.contains(&(crate::ram_map::PALETTE_PENDING, 0x13)),
+                "PaletteDataPending←$13（_id_Palette12+1）");
+        assert!(st.events.contains(&(crate::ram_map::TITLE_ROUTINE, 0x1A)),
+                "inc TitleRoutine：0x19→0x1A（进 WaitForSTART）");
+        assert!(st.events.contains(&(0x00FE, 0x1E)), "ScreenOn：$FE|=$1E");
+        assert!(st.shell.contains(&ShellCall::ScreenOn));
+        assert_eq!(st.next_cursor, 0xFF, "体 rts ⇒ 完成拍哨兵（该帧不跑 UpdateTimer）");
+        assert_eq!(st.a_out, None);
+    }
+
+    /// 密码屏 4 行名表写址（PasswordToScreen 的 ldx #$A9/$B0/$E9/$F0 + ldy #$21）。
+    #[test]
+    fn password_to_screen_rows_are_21a9_21b0_21e9_21f0() {
+        // 与 bridge::password_to_screen 的 ROWS 常量同源锁死（写址面）。
+        let rows: [(u16, u16); 4] = [(0x21A9, 0x05), (0x21B0, 0x0B), (0x21E9, 0x11), (0x21F0, 0x17)];
+        assert_eq!(rows.map(|r| r.0), [0x21A9, 0x21B0, 0x21E9, 0x21F0]);
+        // base = 每组末索引（ldy=base + ldx #$05 递减环 ⇒ 取 PasswordChar[base-5..=base]）
+        assert_eq!(rows.map(|r| r.1), [0x05, 0x0B, 0x11, 0x17]);
+    }
+}

@@ -277,9 +277,27 @@ pub fn main_loop_iter(mem: &mut Manager) {
     // 【Step 3 谓词单源】续段/完成拍/spin 判定=Manager::title_continuation（唯一实现
     // ——engine 缝抑制同源；0xFF 完成拍哨兵显式排除出续段，Step 4 启用）。
     let continuation = mem.title_continuation();
-    if !continuation {
-        random_numbers(mem); // C000（唤醒后首件）
-        super::boot::check_bank_switch(mem); // CheckBankSwitch（已端口复用）
+    // 【bank-init 唤醒拍】asm `CheckBankSwitch` 尾跳 `GoBankInit`（07:C4EF→C510）⇒ 切换拍
+    // 不到 `jsr UpdateTimer`；控制留在 bank-init 体的 `WaitNMIPass` 自旋里，唤醒拍先跑完
+    // 体（ScreenNmiOff 尾/GFX/`jmp NMIOn` 的 rts 落回 `jsr UpdateTimer`），**才** Update。
+    // 唤醒拍 = 迭代体内续段 ⇒ 无 RandomNumbers、无 CheckBankSwitch（asm 只过一次）。
+    let from_bank_init = mem.bank_init_pending.take();
+    if let Some(idx) = from_bank_init {
+        super::boot::bank_init_post_spin(mem, idx);
+    }
+    if from_bank_init.is_some() || !continuation {
+        if from_bank_init.is_none() {
+            random_numbers(mem); // C000（唤醒后首件）
+            if super::boot::check_bank_switch(mem) {
+                // 尾跳 GoBankInit：本迭代**永不到** UpdateTimer/GoMainRoutine/inc FrameCount
+                // （prg7_engine.asm:191-207 顺序）；NMIStatus 清 0=自旋入口（跨帧 yield）。
+                // 实证：100% 录像 lua f4019 有 C531/C45D 执行、无 C266 执行。
+                mem.title_no_return = false;
+                mem.fc_inced_this_tick = false;
+                mem.write_ram(NMI_STATUS, 0);
+                return;
+            }
+        }
         update_timer(mem); // C266
     }
     go_main_routine(mem); // C114（分发壳——会师点；续段=GoMainRoutine 内部续跑）
@@ -393,6 +411,12 @@ pub fn prepare_game_over(mem: &mut Manager) {
     let pm = mem.read_ram(0x00FE) & !0x18; // PPUMASK_ZP &= ~(BG_ON|OBJ_ON)
     mem.write_ram(0x00FE, pm);
     mem.write_io(0x2001, pm); // WriteAndWait → 该 NMI 落真寄存器
+    // 【帧等待】`jmp ScreenOff` 的 WriteAndWait（07:C43D）= `sta PPUMASK_ZP` + `WaitNMIPass_`
+    // 自旋（`jsr ClearNMIStat` 后等 `NMIStatus!=0`）——**该迭代在此自旋跨帧**：唤醒后直接
+    // 回 MainLoop 顶（`inc FrameCount`/清 NMIStatus/等下一个 NMI）⇒ 本迭代的 UpdateTimer
+    // 已在自旋**之前**跑过，而**下一拍不再跑 UpdateTimer**（下一拍=唤醒拍收尾+循环顶自旋）。
+    // 实证：100% 录像 lua f4018 无 C266 执行（f4017 有：PrepareGameOver 派发拍）。
+    mem.iter_wait();
 }
 
 /// `GoMainRoutine` 的 START 暂停开关（**asm 内容锚** `07:C114` @endIf_A 段，`prg7_engine.asm:311-338`）：
@@ -732,3 +756,68 @@ pub(crate) const AREA_POINTERS_BY_AREA: [[u8; 14]; 5] = [
     [0x7F, 0xA1, 0xD3, 0xA1, 0x23, 0xAB, 0xF0, 0x9B, 0xF0, 0x9C, 0x04, 0x9D, 0x85, 0x9B], // Ridley (bank5 $959A)
 ];
 
+
+#[cfg(test)]
+mod tests_handoff_phase {
+    use super::*;
+    use crate::frame::memory::Manager;
+    use crate::ram_map;
+
+    /// 【交班相位①】PrepareGameOver 的 `jmp ScreenOff` 声明 1 帧 WriteAndWait 自旋门
+    /// （asm 07:C9A6 → C439/C43D/C43F）；该门使**下一拍不跑 UpdateTimer**。
+    #[test]
+    fn prepare_game_over_declares_screen_off_wait() {
+        let mut m = Manager::default();
+        prepare_game_over(&mut m);
+        assert_eq!(m.read_ram(ram_map::TITLE_ROUTINE), 0x1C, "_id_GameOver");
+        assert_eq!(m.read_ram(ram_map::BANK_SWITCH_PENDING), 0x01);
+        assert_eq!(m.iter_gates.last(), Some(&1), "ScreenOff(WriteAndWait)=1 帧门");
+    }
+
+    /// 【交班相位②·A 级 asm 根因】`CheckBankSwitch` 尾跳 `GoBankInit`（07:C4DE：
+    /// `jmp GoBankInit`），MainLoop 的 `jsr UpdateTimer`（07:C0BC 序：CBS→UT→GoMainRoutine）
+    /// **本迭代永不到达** ⇒ 银行切换拍不得推进 `TimerDelay`/`Timer3`。唤醒拍（InitBank0
+    /// 体尾 `jmp NMIOn` 的 rts 落回 `jsr UpdateTimer`）必须恢复推进——两拍合起来才是 emu
+    /// lua f4019(无 C266)/f4020(有 C266) 的图案。
+    #[test]
+    fn bank_switch_tick_skips_update_timer_like_asm() {
+        let mut m = Manager::default();
+        m.write_ram(ram_map::TIMER_DELAY, 0x08);
+        m.write_ram(ram_map::TIMER3, 0x10);
+        m.write_ram(ram_map::BANK_SWITCH_PENDING, 0x01);
+        main_loop_iter(&mut m);
+        assert_eq!(m.read_ram(ram_map::TIMER_DELAY), 0x08,
+                   "CBS 尾跳 ⇒ 该迭代不得跑 UpdateTimer（asm 07:C4DE）");
+        assert_eq!(m.read_ram(ram_map::TIMER3), 0x10);
+        assert_eq!(m.bank_init_pending, Some(0), "唤醒拍待跑 InitBank0 体");
+        // 唤醒拍：InitBank0 体的 post-spin（ScreenNmiOff 后的 CopyMap/gfx/NMIOn）跑完，
+        // 恢复 UpdateTimer ⇒ 相位守恒（不补帧、不跳过）。
+        main_loop_iter(&mut m);
+        assert_eq!(m.read_ram(ram_map::TIMER_DELAY), 0x07,
+                   "唤醒拍必须恢复 UpdateTimer（NMIOn rts ⇒ jmp 回 `jsr UpdateTimer`）");
+        assert!(m.bank_init_pending.is_none());
+    }
+
+    /// 【交班相位③】三连帧不推进定时器：自旋门拍 + 银行切换拍都不动
+    /// `TimerDelay`/`Timer3`（emu 100% 录像 f4018/f4019 实测无 C266 执行），
+    /// 且第三拍（唤醒）只推进 1 次 ⇒ 整段 Timer 相位既不重复推进也不缺失。
+    #[test]
+    fn handoff_three_ticks_hold_timer_phase() {
+        let mut m = Manager::default();
+        m.write_ram(ram_map::TIMER_DELAY, 0x08);
+        m.write_ram(ram_map::TIMER3, 0x10);
+        // 帧1：PrepareGameOver（本拍 UT 已跑 ⇒ 门生效于下一拍）
+        prepare_game_over(&mut m);
+        assert_eq!(m.read_ram(ram_map::TIMER_DELAY), 0x08);
+        // 帧2：引擎在门内不调 main_loop_iter（AwaitNmi 拍）——这里用「不调用」表达，
+        // 但银行切换同样发生在本拍之后 ⇒ 直接推进到银行切换拍。
+        m.write_ram(ram_map::BANK_SWITCH_PENDING, 0x01);
+        m.iter_gates.clear();
+        main_loop_iter(&mut m); // 帧2=银行切换拍（无 UT）
+        let (d2, t2) = (m.read_ram(ram_map::TIMER_DELAY), m.read_ram(ram_map::TIMER3));
+        assert_eq!((d2, t2), (0x08, 0x10), "三连帧中段：定时器必须不变");
+        main_loop_iter(&mut m); // 帧3=唤醒拍（有 UT，恰好 1 次）
+        assert_eq!(m.read_ram(ram_map::TIMER_DELAY), 0x07, "唤醒拍推进 1 次");
+        assert_eq!(m.read_ram(ram_map::TIMER3), 0x10, "Timer3 每 10 次 UT 才减 1");
+    }
+}
