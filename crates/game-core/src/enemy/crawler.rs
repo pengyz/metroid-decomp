@@ -90,6 +90,11 @@ pub(crate) fn crawler_ai(mem: &mut crate::frame::Manager, x: u8) {
         return;
     }
     let idx = ((orientation as usize) * 2 + direction as usize) & 0x07;
+    // 【$00 判据归属（2026-11-17 定谳）】asm `JumpByRTSToMovementRoutine ; 01:9AE2` 先写
+    // `$00 ← data05 >> 1`，但紧接着的 `EnemyMoveOnePixel*` 无条件覆写（瓦撞径 `sty $00`=0、
+    // 边界回滚径 `inc $00`=1）⇒ 该写入在 asm 里也是死写；`$00` 的真语义=**移动失败种类**
+    // （0=瓦撞 贴墙 / 1=边界回滚 翻向）。故此处不写 `$00`，正确性由 `enemy/motion.rs`
+    // 四个 `enemy_move_one_pixel_*` 的回滚径写 1 保证（100% 录像 f2576 定谳）。
     let ok = match idx {
         0 | 5 => enemy_move_one_pixel_right(mem, x),
         1 | 4 => enemy_move_one_pixel_left(mem, x),

@@ -488,9 +488,13 @@ pub(crate) fn enemy_move_one_pixel_left(mem: &mut crate::frame::Manager, x: u8) 
     let nx = xpos.wrapping_sub(1);
     mem.write_ram(0x0400 + x as u16 + 1, nx);
     // 左界==0（dec 后 x==radiusX）⇒失败+**回滚**（inc x——:1184-1199 逐字）
+    // 【$00 语义修（2026-11-17，100% 录像 f2576 定谳）】asm 此径是 `inc x / clc / bcc @RTS`，
+    // **不改 `$00`** ⇒ 它保持前面 `inc $00` 的 1（=「试图换名表/离屏」），
+    // 而瓦撞径才是 `ldy #$00 / sty $00`（=0）。调用方 `CrawlerInsideCornerCheck` 正是用
+    // `lda $00 / bne` 区分「翻向」与「贴墙转角」——旧形在此写 0 ⇒ 爬虫总走贴墙 ⇒ 位置分叉。
     if nx == rx {
         mem.write_ram(0x0400 + x as u16 + 1, xpos); // inc x（回滚）
-        mem.write_ram(0x00, 0);
+        mem.write_ram(0x00, 1);
         return false;
     }
     // @success（:1201-1208）：data05 bit7 置⇒jumpDsplcmnt inc
@@ -525,7 +529,8 @@ pub(crate) fn enemy_move_one_pixel_right(mem: &mut crate::frame::Manager, x: u8)
     // 右界判（x+radiusX 界——asm :1230-1245 回滚同构）
     if nx.wrapping_add(rx) == 0 {
         mem.write_ram(0x0400 + x as u16 + 1, xpos); // 回滚
-        mem.write_ram(0x00, 0);
+        // 同左径：【$00 语义修】asm `dec x / clc / bcc @RTS` 不改 `$00` ⇒ 保持 1（离屏判）。
+        mem.write_ram(0x00, 1);
         return false;
     }
     if mem.read_ram(0x0400 + x as u16 + 5) & 0x80 != 0 {
