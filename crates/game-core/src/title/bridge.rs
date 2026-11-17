@@ -246,9 +246,17 @@ fn exec_shell_call(mem: &mut Manager, sc: &crate::title::ShellCall) {
         DisplayInputCharacters => display_input_characters(mem),
         // spin 等待段（r23：计数面——main_title_routine 入口消费）
         SpinWait(n) => mem.title_spin = *n,
+        // InitPasswordFontGfx（`InitPasswordFontGFX ; 07:C6D6`，prg7_engine.asm:1655）：
+        // `ldy #_id_GFX_Font_Complete / jsr LoadGFX` → `ldy #_id_GFX_Solid_1FC0 / jmp LoadGFX`
+        // ——两件 CHR 装载（`LoadGFX ; 07:C7AB` 描述子径已端口在 `render::gfx::load_gfx`）。
+        // 缺它时 nametable 有正确 tile 号但 CHR 仍是房间/上一屏内容 ⇒ 文字显示成噪点
+        // （100% 录像 f4023 的 167px 即此：GameOver 屏 "GAME OVER" 画成花）。
+        InitPasswordFontGfx => {
+            crate::render::gfx::load_gfx(mem, crate::render::gfx::gfx_id::FONT_COMPLETE);
+            crate::render::gfx::load_gfx(mem, crate::render::gfx::gfx_id::SOLID_1FC0);
+        }
         // ScreenOff/ScreenOn/NMIOn/VBOffAndHorzWrite/WaitNMIPass：$FE/$FF/$1A 镜像面
-        // =臂事件承载（two-layer——事件即 RAM 面权威）；InitPasswordFontGfx/
-        // DisplayInputCharacters 深件随批（未烘焙面随件爆）。
+        // =臂事件承载（two-layer——事件即 RAM 面权威）。
         _ => {}
     }
 }

@@ -37,16 +37,16 @@
       "sha256": "471b441cb2368c95cd450f53b5d5d24d061c0ad43465d61bc410a76d4117f7eb",
       "rom_identity": "fm2 romChecksum = base64(b'\\xb2\\xd2\\xd9\\xedh\\xb3\\xe5\\xe0\\xd2\\x90S\\xeaR[\\xd3|') ⇒ 解码 == 本仓 ROM 无头 MD5 b2d2d9ed68b3e5e0d29053ea525bd37c（逐字节吻合）",
       "window_used": "movies/cases/case-movie-100p-*.txt（gitignored）",
-      "frames_synced": 4022,
+      "frames_synced": 4017,
       "frames_synced_note": "连续逐像素 0px 到 f2159（含 2P 段 f22449 之后未测；本数=连续 0px 的最后一帧）。修到 f2152 归零、f2160 起出现 8px 单帧分歧后暂停。",
-      "first_divergence_frame": 4023,
+      "first_divergence_frame": 4018,
       "first_divergence_px": 8,
       "known_open": [
-        "f4023 Game Over 屏文字带 167px（TitleRoutine=$1C）",
-        "f4200 起 1089px 级联（应在 f4023 修好后收敛）",
+        "f4018 关屏单帧采样相位（state 全同，待单独定谳）",
+        "f4200 起 1089px 级联",
         "2P 段（f22449 起）仅单点抽查"
       ],
-      "notes": "100% 全收集（Lord Tom，120540 帧）。首分歧 f4023=167px：PrepareGameOver 后 Game Over 屏居中 64×8 文字带（两侧 gm/mr/status/animDelay 全同 ⇒ 标题轴 GameOver 相位/字模面）。"
+      "notes": "100% 全收集（Lord Tom，120540 帧）。f4018=12404px 是 PrepareGameOver 关屏那一帧：两侧 $FE 均 0x06（BG/OBJ 关）而像素为「emu 全黑 vs rust 仍显示上一屏」⇒ 采样相位面，非行为差。f4019–f4026 全 0px（GameOver 屏 'GAME OVER' 已正确绘制，靠 InitPasswordFontGfx 两件 CHR）。"
     }
   ]
 }
