@@ -37,12 +37,12 @@
       "sha256": "471b441cb2368c95cd450f53b5d5d24d061c0ad43465d61bc410a76d4117f7eb",
       "rom_identity": "fm2 romChecksum = base64(b'\\xb2\\xd2\\xd9\\xedh\\xb3\\xe5\\xe0\\xd2\\x90S\\xeaR[\\xd3|') ⇒ 解码 == 本仓 ROM 无头 MD5 b2d2d9ed68b3e5e0d29053ea525bd37c（逐字节吻合）",
       "window_used": "movies/cases/case-movie-100p-*.txt（gitignored）",
-      "frames_synced": 3000,
+      "frames_synced": 3800,
       "frames_synced_note": "连续逐像素 0px 到 f2159（含 2P 段 f22449 之后未测；本数=连续 0px 的最后一帧）。修到 f2152 归零、f2160 起出现 8px 单帧分歧后暂停。",
-      "first_divergence_frame": 3001,
+      "first_divergence_frame": 3801,
       "first_divergence_px": 8,
       "known_open": [
-        "f3000 之后未扫",
+        "f3800 之后未扫（下一步 3810–3900）",
         "f22449 起的 2P 段仅单点抽查"
       ],
       "notes": "100% 录像（120540 帧，Lord Tom/FCEUX 9816，2P 起 f22449）。连续 0px 已到 f3000（sweep 2260–3000 全 0px）。已修：岩浆伤径、球形态落地反弹、门 $FD 覆盖形、敌调色板覆盖、弹撞敌/瓦判顺序、受伤 $6B、ExplodeEnemy 普通束、type 覆盖、EnExplosions 池、掉落物闪色/寿命、sa_Roll 比较 4→3、爬虫 $00 移动失败种类（瓦撞=0/边界回滚=1）。"

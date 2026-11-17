@@ -442,8 +442,20 @@ fn fire_samus_projectile_upwards(mem: &mut Manager) {
 }
 
 fn set_samus_jump(mem: &mut Manager) {
+    set_samus_jump_anim(mem, OBJ_ANIM_SAMUS_JUMP);
+}
+
+/// `SetSamusJumpPntUp ; 07:CFBE`（`refs/m1disasm/SRC/prg7_engine.asm:3432`）：与
+/// `SetSamusJump` 共体（`jmp LCFC5`），**唯一差别是动画常量**
+/// `ObjAnim_SamusJumpPntUp = $35`（reset）⇒ `animIndex = $34`（`dey`）。
+fn set_samus_jump_pnt_up(mem: &mut Manager) {
+    set_samus_jump_anim(mem, OBJ_ANIM_SAMUS_JUMP_PNT_UP);
+}
+
+/// `LCFC5 ; 07:CFC5`（两跳共体）：`sty animResetIndex / dey ⇒ animIndex / animDelay←4 /
+/// jumpDsplcmnt←0 / speedY←$FC / SFX_SamusJump / accelY←(高跳? $12 : $18)`。
+fn set_samus_jump_anim(mem: &mut Manager, anim: u8) {
     // 【goal-轮76 调用频度直证】set_samus_jump 入口插桩（animDelay=4 重写源）。
-    let anim = OBJ_ANIM_SAMUS_JUMP;
     mem.samus().set_anim_reset_index(anim);
     mem.samus().set_anim_index(anim.wrapping_sub(1));
     mem.samus().set_anim_delay(4);
@@ -712,6 +724,37 @@ mod tests {
         assert!(r.is_ok(), "解除径应全通: {:?}", r.err());
         assert_eq!(m.read_ram(0x030D), 0x50u8.wrapping_sub(0x0B), "11px 上移");
         assert_eq!(m.read_ram(SAMUS_STATUS), 0, "SetSamusStand（站姿）");
+    }
+
+    /// 【100% 录像 f3536】PntUp 帧按 A ⇒ `sa_PntJump`，且 asm 尾件 `JumpEngine` 落到
+    /// `SetSamusJumpPntUp`（`animReset=0x35/animIndex=0x34/animDelay=4/accelY=$18`）。
+    #[test]
+    fn pnt_up_jump_press_applies_jump_pnt_up_anim() {
+        use crate::ram_map::{JOY1_CHANGE, JOY1_STATUS};
+        let mut m = Manager::default();
+        m.samus().set_status(crate::samus::state::SamusStatus::PointUp);
+        m.write_ram(JOY1_STATUS, 0x08); // UP 保持
+        m.write_ram(JOY1_CHANGE, 0x80); // A 本帧按下
+        samus_pnt_up(&mut m);
+        assert_eq!(m.samus().status_raw(), 6, "sa_PntJump");
+        assert_eq!(m.samus().anim_reset_index(), OBJ_ANIM_SAMUS_JUMP_PNT_UP);
+        assert_eq!(m.samus().anim_index(), OBJ_ANIM_SAMUS_JUMP_PNT_UP - 1);
+        assert_eq!(m.samus().anim_delay(), 4);
+        assert_eq!(m.samus().accel_y(), 0x18, "普通重力");
+    }
+
+    /// 【100% 录像 f3577】落地（accelY==0）时 `SetSamusPntUp` 的 Z 标志恒 1（asm
+    /// `ClearSamusSpeedX` 的 `ldy #$00` 置 Z）⇒ **必然被 `SetSamusStand` 覆盖**。
+    #[test]
+    fn jump_landing_always_ends_standing() {
+        use crate::ram_map::JOY1_STATUS;
+        let mut m = Manager::default();
+        m.samus().set_status(crate::samus::state::SamusStatus::JumpUp);
+        m.write_ram(JOY1_STATUS, 0x01); // 只按右，不按 UP
+        m.samus().set_accel_y(0);
+        samus_jump(&mut m);
+        assert_eq!(m.samus().status_raw(), 0, "落地必回 Stand（原版 quirk）");
+        assert_eq!(m.samus().anim_reset_index(), OBJ_ANIM_SAMUS_STAND);
     }
 
     /// PntUp 松开回 Stand+方向转移（表 3B 界互核）。
@@ -1052,11 +1095,18 @@ pub fn samus_jump_tail(mem: &mut Manager) {
     }
     // Lx021 落地判（AccY==0）
     if mem.read_ram(crate::ram_map::SAMUS_ACCEL_Y) == 0 {
+        // 【原版 quirk（D4 保真）】asm `Lx021 ; 07:D03C`：
+        //   `lda Samus.status / cmp #sa_PntJump / bne Lx022 / jsr SetSamusPntUp / bne Lx023
+        //    Lx022: jsr SetSamusStand`
+        // `SetSamusPntUp` 尾是 `jsr ClearSamusMovementX` → `ldy #$00`（**LDY 置 Z=1**）
+        // → `sty` 不改标志 ⇒ 返回时 Z **恒为 1** ⇒ `bne Lx023` 永不跳 ⇒ **必然落到
+        // `SetSamusStand`**。也就是「落地时先按 PntUp、随即被 Stand 覆盖」是原版行为，
+        // 上指跳落地一律回 Stand（PntUp 姿态只在**空中**保持）。
+        // 实测（100% 录像 f3577）：emu 落地后 `status=00/anim=08`，旧 rust 停在 `04/27`。
         if mem.read_ram(crate::ram_map::SAMUS_STATUS) == 6 {
-            set_samus_pnt_up(mem); // CF77（SetSamusPntUp）
-        } else {
-            set_samus_stand(mem); // CF55（SetSamusStand）
+            set_samus_pnt_up(mem); // CF77（副作用面：写 PntUp 动画，随后被覆盖）
         }
+        set_samus_stand(mem); // CF55（`SetSamusPntUp` 的 Z 标志恒 1 ⇒ 必然执行）
     }
     // Lx023：A←$03 jmp SetSamusData（CD6D）
     mem.regs.a = 3;
@@ -1190,6 +1240,20 @@ pub fn samus_pnt_up(mem: &mut Manager) {
     // 【goal-r16 修】asm SamusPntUp(D198) `lda #$04/jsr SetSamusData`——A=4。旧形漏设 regs.a。
     mem.regs.a = 4;
     super::physics::set_samus_data(mem); // CD6D（A=4）
+    // 【asm 尾件 `lda Samus.status / jsr JumpEngine`（`prg7_engine.asm:3786-3800`）】旧形缺整支：
+    // 上指跳（JUMP 本帧按下 ⇒ status←sa_PntJump=6）必须落到表项 `SetSamusJumpPntUp`，
+    // 否则动画停在 PntUp 的 `$27`、accelY 也不重置。
+    // 实测（100% 录像 f3536）：emu `animReset=35/animIndex=34/animDelay=4/accelY=18`，
+    // rust 仍 `27/–/1A` ⇒ Samus 精灵整只错帧。
+    // 表：0=SetSamusStand / 1=SetSamusRun / 3=SetSamusRoll / 6=SetSamusJumpPntUp，其余 ExitSub。
+    // 【范围限定】只实现表项 6（`SetSamusJumpPntUp`）——它是**本轮实测驱动**的那一条
+    // （100% 录像 f3536：emu `animReset=35/animIndex=34/accelY=18`）。其余表项
+    // （0 Stand / 1 Run / 3 Roll）在现架构下由各自径承担，改它们会移动已被 L4 冻结的行为
+    // （`jump_tail_faces` / `samus_pnt_up_release_and_direction` 当场红）⇒ 留待单独取证，
+    // 不在本条修复里顺带改。
+    if mem.samus().status_raw() == 6 {
+        set_samus_jump_pnt_up(mem);
+    }
 }
 
 /// SamusDead 处理件（字节自证 D41A `a9 01 4c 6d cd`——lda #$01/jmp SetSamusData）：
@@ -1405,7 +1469,10 @@ mod tests_jump_chain {
         m.write_ram(crate::ram_map::SAMUS_ACCEL_Y, 0);
         m.write_ram(crate::ram_map::SAMUS_STATUS, 6);
         samus_jump_tail(&mut m);
-        assert_eq!(m.read_ram(crate::ram_map::SAMUS_STATUS), 4, "落地 PntJump⇒PntUp");
+        // 【2026-11-17 更正】旧期望 4(PntUp) 错：asm `SetSamusPntUp` 尾 `jsr ClearSamusMovementX`
+        // → `ldy #$00`（LDY 置 Z=1）→ 返回后 `bne Lx023` 永不跳 ⇒ **落地必落 SetSamusStand**。
+        // 100% 录像 f3577 实证：emu 落地 `status=00/anim=08`。
+        assert_eq!(m.read_ram(crate::ram_map::SAMUS_STATUS), 0, "落地必回 Stand（原版 Z 标志 quirk）");
         // 空中（AccY≠0）+无 UP⇒status 不动
         let mut m = jmp_mem();
         m.write_ram(crate::ram_map::SAMUS_ACCEL_Y, 0x18);
