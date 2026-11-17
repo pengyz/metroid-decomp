@@ -16,6 +16,9 @@ mod sd {
 
 const BLOB_BASE: u16 = 0x8572;
 
+/// `ExplodeRotationTbl ; 07:DC8B`（ROM 实测 `00 80 C0 40`）——爆炸时每帧旋转精灵。
+const EXPLODE_ROTATION: [u8; 4] = [0x00, 0x80, 0xC0, 0x40];
+
 /// blob 内字节（指针→偏移——**OOB→0xFF**（环终止形——r26 安全化））。
 fn blob(addr: u16) -> u8 {
     sd::data()
@@ -137,6 +140,49 @@ pub(crate) fn draw_sprite_stream(mem: &mut crate::frame::Manager, s: SpriteStrea
     mem.set_sprite_page_pos(x_sprite as u8); // SpritePagePos 推进
 }
 
+/// `ObjDrawFrame` 的 Samus 爆炸特例（`$DE62-$DE8B`）——纯判据面，便于单测。
+///
+/// asm 逐字：
+/// ```text
+/// lda IsSamus / beq LDEBC           ; 只对 Samus（对象 0 号槽）
+/// cpx #_id_ObjPlace7*2 / bne LDEBC  ; X=(ctrl&$0F)*2 ⇒ 位件 7＝爆炸
+/// inc ObjectCounter                 ; 每帧 +1
+/// ... and #~(VFLIP|HFLIP) / ora ExplodeRotationTbl,x / sta Temp05_Cntrl
+/// cmp #$19 / bne LDEBC
+///   lda #sa_Dead2 / sta status ; lda #$28 / sta animDelay
+///   pla/pla ⇒ 本帧不画（直接返回调用者）
+/// ```
+/// `ExplodeRotationTbl ; 07:DC8B` = `00 80 C0 40`（ROM 实测）。
+pub(crate) enum ExplodeDraw {
+    /// 非 Samus 爆炸帧——按常规绘制。
+    NotExploding,
+    /// 满 25 帧：已切 `sa_Dead2` 并装 `animDelay=$28`，**本帧不画**。
+    Skip,
+    /// 旋转后的 OAM attr。
+    Attr(u8),
+}
+
+pub(crate) fn samus_explode_draw(
+    mem: &mut crate::frame::Manager,
+    page_index: u8,
+    ctrl_byte: u8,
+    cntrl05: u8,
+) -> ExplodeDraw {
+    if page_index != 0 || (ctrl_byte & 0x0F) != 7 {
+        return ExplodeDraw::NotExploding;
+    }
+    let counter = mem.object_counter().wrapping_add(1);
+    mem.set_object_counter(counter);
+    if counter == 0x19 {
+        mem.samus()
+            .set_status(crate::samus::state::SamusStatus::Dead2);
+        mem.samus().set_anim_delay(0x28);
+        mem.clear_obj_cntrl();
+        return ExplodeDraw::Skip;
+    }
+    ExplodeDraw::Attr((cntrl05 & 0x3F) | EXPLODE_ROTATION[(counter & 0x03) as usize])
+}
+
 pub fn obj_draw_frame(mem: &mut crate::frame::Manager, page_index: u8) {
     let px = page_index as u16;
     // 只读 animFrame（动画更新在 update_obj_anim——此处不写 $0303/$0304/$0306）
@@ -171,6 +217,23 @@ pub fn obj_draw_frame(mem: &mut crate::frame::Manager, page_index: u8) {
     let place_idx = (ctrl_byte & 0x0F) as u16 * 2;
     let pptr = (sd::data()[sd::OBJ_PLACE_PTR_TABLE as usize + place_idx as usize] as u16)
         | ((sd::data()[sd::OBJ_PLACE_PTR_TABLE as usize + place_idx as usize + 1] as u16) << 8);
+    // ---- ObjDrawFrame 特例：Samus 爆炸（$DE62-$DE8B）----
+    // asm 逐字（prg7_engine.asm，`ObjDrawFrame ; 07:DE4A` 内）：
+    //   lda IsSamus / beq LDEBC           ; 只对 Samus
+    //   cpx #_id_ObjPlace7*2 / bne LDEBC  ; X=(ctrl&$0F)*2 ⇒ 位件 7＝爆炸
+    //   inc ObjectCounter                 ; 每帧 +1
+    //   lda ObjectCounter / and #$03 / tax
+    //   lda Temp05_Cntrl / and #~(VFLIP|HFLIP) / ora ExplodeRotationTbl,x / sta Temp05_Cntrl
+    //   cmp #$19 / bne LDEBC              ; 满 25 帧切下一段
+    //   lda #sa_Dead2 / sta Objects.0.status,x
+    //   lda #$28 / sta Objects.0.animDelay,x
+    //   pla/pla => **本帧不画**（直接返回调用者）
+    // ExplodeRotationTbl ; 07:DC8B = 00 80 C0 40（ROM 实测）。
+    match samus_explode_draw(mem, page_index, ctrl_byte, cntrl05) {
+        ExplodeDraw::Skip => return,
+        ExplodeDraw::Attr(a) => cntrl05 = a,
+        ExplodeDraw::NotExploding => {}
+    }
     // 半径（帧数据 1/2 字节）
     // 【径源重模卡（2026-11-06——findings §19）】帧格式字节 1/2=radiusY/X（敌径写源
     // 6294 同式）——但 asm **DE4A 全径无径写**（Samus 径=init 15/4+roll 瞬态（D0E1
@@ -450,5 +513,57 @@ mod tests_sprite_stream {
         );
         assert_eq!(m.read_ram(0x0201), 0xCE, "跳过一位件后才画");
         assert_eq!(m.read_ram(0x0203), 0x6C, "x=100+8（用了第 2 组的 dx）");
+    }
+}
+/// Samus 爆炸特例（`$DE62-$DE8B`）的三条硬断言：计帧 / 旋转位 / 第 25 帧切换。
+#[cfg(test)]
+mod tests_samus_explode_draw {
+    use super::*;
+    use crate::samus::state::SamusStatus;
+
+    #[test]
+    fn increments_counter_and_rotates_attr() {
+        let mut m = crate::frame::Manager::default();
+        // 第 1 帧：counter 0→1 ⇒ 旋转表[1]=0x80
+        match samus_explode_draw(&mut m, 0, 0x07, 0x20) {
+            ExplodeDraw::Attr(a) => assert_eq!(a, 0x20 | 0x80, "剥翻转位后 OR 表[1]"),
+            _ => panic!("应走旋转径"),
+        }
+        assert_eq!(m.object_counter(), 1);
+        // 第 2 帧：表[2]=0xC0
+        match samus_explode_draw(&mut m, 0, 0x07, 0x20) {
+            ExplodeDraw::Attr(a) => assert_eq!(a, 0x20 | 0xC0),
+            _ => panic!(),
+        }
+        assert_eq!(m.object_counter(), 2);
+    }
+
+    #[test]
+    fn frame_25_switches_to_dead2_and_skips_draw() {
+        let mut m = crate::frame::Manager::default();
+        m.set_object_counter(0x18); // 下一帧即 0x19
+        assert!(matches!(
+            samus_explode_draw(&mut m, 0, 0x07, 0x20),
+            ExplodeDraw::Skip
+        ));
+        assert_eq!(m.object_counter(), 0x19);
+        assert_eq!(m.samus().status(), Some(SamusStatus::Dead2));
+        assert_eq!(m.samus().anim_delay(), 0x28);
+        assert_eq!(m.obj_cntrl(), 0, "ClearObjectCntrl");
+    }
+
+    #[test]
+    fn non_explode_frames_untouched() {
+        let mut m = crate::frame::Manager::default();
+        // 非 Samus 页 / 非位件 7 ⇒ 不计数
+        assert!(matches!(
+            samus_explode_draw(&mut m, 1, 0x07, 0x20),
+            ExplodeDraw::NotExploding
+        ));
+        assert!(matches!(
+            samus_explode_draw(&mut m, 0, 0x03, 0x20),
+            ExplodeDraw::NotExploding
+        ));
+        assert_eq!(m.object_counter(), 0);
     }
 }

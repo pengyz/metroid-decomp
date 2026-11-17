@@ -1011,6 +1011,16 @@
       "diff": 6,
       "blocked": 0,
       "cells_total": 132
+    },
+    {
+      "ts": "2026-11-17T05:36:48+00:00",
+      "kind": "anchor",
+      "evidence": "",
+      "reason": "Samus 爆炸绘制特例 + 死亡链 status 8 判据（100% 录像 f3939/f3979/f4023 三处归零）",
+      "match": 126,
+      "diff": 6,
+      "blocked": 0,
+      "cells_total": 132
     }
   ]
 }

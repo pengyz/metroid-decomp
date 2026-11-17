@@ -221,6 +221,30 @@ mod tests_prepare_game_over {
         assert_ne!(m.read_ram(0x00FE), 0x1E, "不得点屏");
         assert_eq!(m.render.ppumask, 0x06, "真 PPUMASK 同形落地");
     }
+
+    /// 死亡链触发判据（`LC95F`）：`status==sa_Dead2(8)` **且** `animDelay==0` 才转
+    /// GameOver。旧形误比 `0xFD` ⇒ 永不触发 ⇒ `samus_dead2` 每帧继续 `dec`
+    /// （B0 回绕 FF/FE…），emu 停在 0。100% 录像 f3979 起的分歧即此。
+    #[test]
+    fn death_chain_fires_on_status_eight_and_zero_delay() {
+        let mut m = Manager::default();
+        m.write_ram(ram_map::MAIN_ROUTINE, 3);
+        m.samus().set_status(crate::samus::state::SamusStatus::Dead2);
+        // 真序列：`UpdateWorld`（Dead2 handler `dec animDelay`）先跑，1→0，随后死链读到 0。
+        m.samus().set_anim_delay(1);
+        game_engine(&mut m);
+        assert_eq!(m.read_ram(ram_map::MAIN_ROUTINE), 9, "SetTimer ⇒ MainRoutine←WaitTimer(9)");
+        assert_eq!(m.read_ram(0x0020), 4, "NextRoutine←PrepareGameOver(4)");
+        assert_eq!(m.read_ram(ram_map::TIMER3), 0x04);
+
+        // 对照：还有延时 ⇒ 不转（否则死亡爆炸会被提前截断）
+        let mut m2 = Manager::default();
+        m2.write_ram(ram_map::MAIN_ROUTINE, 3);
+        m2.samus().set_status(crate::samus::state::SamusStatus::Dead2);
+        m2.samus().set_anim_delay(5);
+        game_engine(&mut m2);
+        assert_eq!(m2.read_ram(ram_map::MAIN_ROUTINE), 3);
+    }
 }
 
 
@@ -623,8 +647,12 @@ pub fn game_engine(mem: &mut Manager) {
         mem.write_ram(crate::ram_map::MAIN_ROUTINE, 9); // _id_WaitTimer
     }
     // 死亡链（Samus.status==sa_Dead2(=$FD?) 且 animDelay==0⇒SilenceMusic+GameOver）
+    // 【2026-11-17 修】旧形比 `0xFD`（错值）⇒ 死亡链永不触发：Samus 停在 sa_Dead2 而
+    // `samus_dead2` 每帧继续 `dec`（B0 回绕 FF/FE…），emu 则在 `animDelay==0` 这一帧
+    // 就转 GameOver（`inc/SetTimer`）→ MainRoutine 离开 3 → 死亡 handler 不再分派
+    // ⇒ animDelay 停在 0。100% 录像 f3979 起的分歧即此（每帧差 1 的累计形）。
     let status = mem.read_ram(0x0300);
-    if status == 0xFD && mem.read_ram(0x0304) == 0 {
+    if status == 8 && mem.read_ram(0x0304) == 0 {
         // SilenceMusic（$B283 族——SFXNoiseInitFlags|=sfxNoise_SilenceMusic）
         let f = mem.read_ram(0x0684) | 0x01;
         mem.write_ram(0x0684, f);
