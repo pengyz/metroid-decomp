@@ -495,7 +495,7 @@ pub(crate) fn subtract_health(mem: &mut crate::frame::Manager) {
     let hp = mem.samus().health();
     let (h0, h1) = (hp as u8, (hp >> 8) as u8);
     let (r0, borrow) = bcd_sub(h0, a);
-    let (r1, _) = bcd_sub(h1, if borrow { b.wrapping_add(1) } else { b });
+    let (r1, borrow2) = bcd_sub(h1, if borrow { b.wrapping_add(1) } else { b });
     mem.samus().set_health(u16::from_le_bytes([r0, r1]));
     // 【bcd 掩码审计卡 2026-11-10】Health+1 全字节落写（asm :3233 `sta Health+1`
     // 无掩码）：高位 nibble 参与借位/回绕运算（$02+0x10 借位补、负结果 +$A0 调整
@@ -508,7 +508,14 @@ pub(crate) fn subtract_health(mem: &mut crate::frame::Manager) {
     //   非死径才 `bcs AddHealth@GotoClearHealthChange`（清 HealthChange）；**死径不清**。
     // 实测（100% 录像 f3889）：两侧 Health 都已为 0，emu 转 Dead(7) 并起爆炸，rust 仍在 Run
     // ⇒ 此后 Samus 精灵/物理全岔（f3890 起 34px 起跳，级联到 f4000 的 461px）。
-    let dead = (r0 & 0xF0) == 0 && r1 == 0;
+    // asm 的判死**两条并集**：`beq @endIf_D`（Health&$F0|Health+1 == 0）与
+    // `bcs AddHealth@GotoClearHealthChange`（**进位=1 才不是死**）——后者是
+    // `Base10Subtract ; 07:C3FB` 的返回进位：高半字节 `sbc` 借位时 `clc` 清零 ⇒
+    // **扣穿（借位）也算死，即使回绕结果非 0**。
+    // 实测（100% 录像 f3889）：Health=0x0060、HealthChange=0x0080 ⇒ BCD 回绕成 0x9980，
+    // 但借位 ⇒ emu 判死、Health 清零、HealthChange 保留 0x80；旧 rust 只看「结果非 0」⇒ 不死。
+    let zero_health = (r0 & 0xF0) == 0 && r1 == 0;
+    let dead = zero_health || borrow2;
     if dead {
         mem.samus().set_health(0);
         mem.samus()

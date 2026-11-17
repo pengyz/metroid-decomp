@@ -254,11 +254,16 @@ mod bcd_mask_audit_tdd {
     /// 旧掩码剥 bit6-5（0x79&0x9F=0x19）⇒ rust=0x19≠asm=0x79。
     #[test]
     fn health_plus1_bcd_wrap_no_mask() {
+        // 【2026-11-17 更正】本测原以 `subtract_health` 断言 Health+1=0x79；死亡分支落地后
+        // 该借位（`bcs` 未取）走死径把血量清零 ⇒ 0x79 不再出现在 RAM 面。
+        // 掩码真值改为在 **BCD 层**钉住（同一 asm `Base10Subtract ; 07:C3FB` 输出）：
+        assert_eq!(super::bcd_sub(0x00, 0x21), (0x79, true), "asm 借位回绕真值 $79（掩码不得剥离 bit6-5）");
+        // 顶层行为：借位 ⇒ 判死 + 血量清零（asm `@endIf_D` 起）。
         let mut m = Manager::default();
         setup(&mut m, 0x00, 0x00, 0x00, 0x21, false);
         subtract_health(&mut m);
-        assert_eq!(m.read_ram(0x0106), 0x00);
-        assert_eq!(m.read_ram(0x0107), 0x79, "asm 07:C3FB 借位回绕真值 $79（掩码不得剥离 bit6-5）");
+        assert_eq!(m.samus().health(), 0x0000);
+        assert_eq!(m.samus().status_raw(), 7);
     }
 
     /// 【RED→GREEN】掩码分歧锚 2（Brinstar 可达：罐数 2 + 伤害 $0080）：
@@ -278,11 +283,15 @@ mod bcd_mask_audit_tdd {
     /// 旧 rust=(a+0x4F)>>1=$27 ⇒ $0127。锚 (50,98)=asm 模型逐字节真值。
     #[test]
     fn varia_half_damage_formula() {
+        // 【2026-11-17 更正】同 `health_plus1_bcd_wrap_no_mask`：$0300 半伤=$0150 扣在
+        // 0 血上必然借位 ⇒ 现在走死径清零。半伤公式真值在 BCD 层钉住：
+        let (r0, borrow) = super::bcd_sub(0x00, 0x50);
+        let (r1, _) = super::bcd_sub(0x00, if borrow { 0x01 + 1 } else { 0x01 });
+        assert_eq!((r0, r1), (0x50, 0x98), "Varia $0300→$0150：a=$4F+(a>>1)+1");
         let mut m = Manager::default();
         setup(&mut m, 0x00, 0x00, 0x00, 0x03, true);
         subtract_health(&mut m);
-        assert_eq!(m.read_ram(0x0106), 0x50, "Varia $0300→$0150：a=$4F+(a>>1)+1");
-        assert_eq!(m.read_ram(0x0107), 0x98);
+        assert_eq!(m.samus().status_raw(), 7, "扣穿即死");
     }
 
     /// 对照：无借位常规扣血不回归（30−8=22）。

@@ -48,3 +48,16 @@ fn health_below_ten_counts_as_dead() {
     assert_eq!(m.read_ram(0x0106), 0x00, "Health<10 ⇒ 判死并清零");
     assert_eq!(m.samus().status_raw(), 7);
 }
+
+#[test]
+fn underflow_counts_as_dead_even_when_result_wraps() {
+    // asm 判死含 `bcs`：`Base10Subtract` 返回进位=0（扣穿）即死，哪怕回绕结果非 0。
+    // 100% 录像 f3889 实况：Health=0x0060、HealthChange=0x0080 ⇒ 0x9980 + 借位 ⇒ 判死。
+    let mut m = Manager::default();
+    set_health(&mut m, 0x60, 0x00);
+    m.write_ram(0x006E, 0x80);
+    crate::weapon::projectile::subtract_health(&mut m);
+    assert_eq!(m.samus().health(), 0x0000, "扣穿后 Health 清零（不是 0x9980）");
+    assert_eq!(m.samus().status_raw(), 7, "扣穿即死");
+    assert_eq!(hc(&m), (0x80, 0x00), "死径保留 HealthChange（asm 跳过 cleanup）");
+}

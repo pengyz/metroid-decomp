@@ -1001,6 +1001,16 @@
       "diff": 6,
       "blocked": 0,
       "cells_total": 132
+    },
+    {
+      "ts": "2026-11-17T04:07:29+00:00",
+      "kind": "anchor",
+      "evidence": "",
+      "reason": "100% 录像驱动的两处死亡径修复（SubtractHealth 死亡分支 + 扣穿借位判死）",
+      "match": 126,
+      "diff": 6,
+      "blocked": 0,
+      "cells_total": 132
     }
   ]
 }
