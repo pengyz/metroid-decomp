@@ -409,6 +409,8 @@ impl<'a> Samus<'a> {
         if let Some(v) = self.mem.samus.get_byte(addr) {
             return v;
         }
+        #[cfg(test)]
+        crate::memmap::verify_shim::note_read(addr);
         self.mem.ram()[(addr as usize) & 0x7FF]
     }
 
@@ -417,6 +419,8 @@ impl<'a> Samus<'a> {
         if self.mem.samus.set_byte(addr, v) {
             return;
         }
+        #[cfg(test)]
+        crate::memmap::verify_shim::note_write(addr);
         self.mem.ram_mut()[(addr as usize) & 0x7FF] = v;
     }
 

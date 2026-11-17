@@ -250,6 +250,34 @@ pub fn spec_face() -> [NesSpan; 2] {
     ]
 }
 
+/// 全部 `NesMapped` 实体的 `(实体名, SPANS)`（**单一**遍历口）。
+///
+/// `dump_json`（静态腿/门禁）与动态腿（`verify_shim`）共用本表：新增实体只改这里，
+/// 避免两份类型清单漂移导致动态证据覆盖不到新声明。
+pub fn entity_spans() -> [(&'static str, &'static [(NesSpan, SpanKey)]); 11] {
+    [
+        ("SamusState", crate::samus::state::SamusState::SPANS),
+        ("HealthChange", crate::samus::health_change::HealthChange::SPANS),
+        ("SoundInitFlags", crate::sound::state::SoundInitFlags::SPANS),
+        ("OamShadow", crate::render::oam_shadow::OamShadow::SPANS),
+        ("ObjectGlobals", crate::world::object_globals::ObjectGlobals::SPANS),
+        ("ScrollBlocks", crate::world::scroll_blocks::ScrollBlocks::SPANS),
+        ("Enemy", <crate::enemy::state::Enemy<'static> as NesMapped>::SPANS),
+        ("Object", <crate::world::object::Object<'static> as NesMapped>::SPANS),
+        ("Room", <crate::world::room_ram::Room<'static> as NesMapped>::SPANS),
+        ("Camera", <crate::world::camera::Camera<'static> as NesMapped>::SPANS),
+        ("Explosion", <crate::enemy::explosion::Explosion<'static> as NesMapped>::SPANS),
+    ]
+}
+
+/// 全部声明的扁平并集（含重复 Owner——不做去重/合并，判定在调用方）。
+pub fn all_spans() -> Vec<(NesSpan, SpanKey)> {
+    entity_spans()
+        .iter()
+        .flat_map(|(_, spans)| spans.iter().copied())
+        .collect()
+}
+
 /// 静态腿出口：把六份 `NesMapped::SPANS` + 比对面机械导出成单行 JSON。
 ///
 /// 消费端 = `tools/nes_map_check.py`（判定权在门禁，不在本函数）。本函数只遍历
@@ -288,14 +316,12 @@ pub fn dump_json() -> Result<String, Vec<String>> {
         }
     }
 
-    fn push_entity<T: NesMapped>(
-        out: &mut Vec<String>,
-        entity: &str,
-        all: &mut Vec<(NesSpan, SpanKey)>,
-    ) {
-        for (span, key) in T::SPANS {
-            let (k, note) = key_json(key);
-            out.push(format!(
+    let mut spans: Vec<String> = Vec::new();
+    let mut all: Vec<(NesSpan, SpanKey)> = Vec::new();
+    for (entity, entity_spans) in entity_spans() {
+        for &(span, key) in entity_spans {
+            let (k, note) = key_json(&key);
+            spans.push(format!(
                 "{{\"entity\":{},\"start\":{},\"len\":{},\"key\":{},\"note\":{}}}",
                 json_str(entity),
                 span.start,
@@ -303,23 +329,9 @@ pub fn dump_json() -> Result<String, Vec<String>> {
                 json_str(k),
                 note
             ));
-            all.push((*span, *key));
+            all.push((span, key));
         }
     }
-
-    let mut spans: Vec<String> = Vec::new();
-    let mut all: Vec<(NesSpan, SpanKey)> = Vec::new();
-    push_entity::<crate::samus::state::SamusState>(&mut spans, "SamusState", &mut all);
-    push_entity::<crate::samus::health_change::HealthChange>(&mut spans, "HealthChange", &mut all);
-    push_entity::<crate::sound::state::SoundInitFlags>(&mut spans, "SoundInitFlags", &mut all);
-    push_entity::<crate::render::oam_shadow::OamShadow>(&mut spans, "OamShadow", &mut all);
-    push_entity::<crate::world::object_globals::ObjectGlobals>(&mut spans, "ObjectGlobals", &mut all);
-    push_entity::<crate::world::scroll_blocks::ScrollBlocks>(&mut spans, "ScrollBlocks", &mut all);
-    push_entity::<crate::enemy::state::Enemy<'static>>(&mut spans, "Enemy", &mut all);
-    push_entity::<crate::world::object::Object<'static>>(&mut spans, "Object", &mut all);
-    push_entity::<crate::world::room_ram::Room<'static>>(&mut spans, "Room", &mut all);
-    push_entity::<crate::world::camera::Camera<'static>>(&mut spans, "Camera", &mut all);
-    push_entity::<crate::enemy::explosion::Explosion<'static>>(&mut spans, "Explosion", &mut all);
 
     let coverage = coverage(&all)?;
     let face = spec_face();

@@ -22,6 +22,8 @@ use crate::state::Manager;
 impl Manager {
     /// RAM 读（2KB 镜像归一）。
     pub fn read_ram(&self, addr: u16) -> u8 {
+        #[cfg(test)]
+        crate::memmap::verify_shim::note_read(addr);
         // 【typed 域辖】Samus 的已 typed 化字段真相在 `Manager.samus`（`samus::state::SamusState`），
         // 字节数组不再持有它们；地址面保持不变（兼容辖），逐域迁完后此分支即"读取口"唯一实现。
         // 【read_ram 映射修（2026-11-06 全链根——$6877 读 255 垃圾破案）】$6000-$7FFF
@@ -64,6 +66,8 @@ impl Manager {
 
     /// RAM 写（2KB 镜像归一）。
     pub fn write_ram(&mut self, addr: u16, v: u8) {
+        #[cfg(test)]
+        crate::memmap::verify_shim::note_write(addr);
         // 【typed 域辖】同 read_ram：已 typed 化地址落 typed 状态，不落字节数组。
         // 【read_ram 映射修同族（2026-11-06）】WRAM 分派（写径同读径）——必须先于 typed，
         // 理由同读径（`0x6B00` 的镜像别名等于 `$0300`）。
@@ -102,6 +106,8 @@ impl Manager {
 
     /// WRAM 读（$6000-$7FFF 字节偏移面）。
     pub fn read_wram(&self, addr: u16) -> u8 {
+        #[cfg(test)]
+        crate::memmap::verify_shim::note_read(addr);
         // 【typed 域辖】敌槽 `EnsExtra` 前 7 字节真相在 `Manager.enemies`。
         if let Some((slot, off)) = crate::enemy::state::split_ens_extra(addr) {
             if let Some(v) = self.enemies[slot].get_byte(off) {
@@ -113,6 +119,8 @@ impl Manager {
 
     /// WRAM 写。
     pub fn write_wram(&mut self, addr: u16, v: u8) {
+        #[cfg(test)]
+        crate::memmap::verify_shim::note_write(addr);
         if let Some((slot, off)) = crate::enemy::state::split_ens_extra(addr) {
             if self.enemies[slot].set_byte(off, v) {
                 return;

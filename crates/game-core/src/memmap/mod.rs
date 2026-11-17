@@ -22,3 +22,5 @@ pub mod observe;
 pub mod world_map;
 pub mod raw;
 pub mod nesmap;
+#[cfg(test)]
+pub(crate) mod verify_shim;
