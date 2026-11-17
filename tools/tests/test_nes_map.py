@@ -136,6 +136,57 @@ def test_reason_must_point_at_code_location():
 def test_reason_with_code_pointer_is_accepted():
     assert nm.violations([span("A", 0, 4)], FACE, ledger_of([span("A", 0, 4)])) == []
 
+def _line_of(path: str, predicate) -> int:
+    """在真实文件里找满足谓词的行号（1 基），供行级校验测试使用。"""
+    lines = (ROOT / path).read_text(encoding="utf-8", errors="replace").splitlines()
+    for i, text in enumerate(lines, start=1):
+        if predicate(text):
+            return i
+    raise AssertionError(f"{path} 找不到满足谓词的行")
+
+
+def _reason_errs(reason: str) -> list[str]:
+    """把 reason 塞进账本空段（0..4 有主、4..8 是洞），返回 `bad-reason` 类错误。"""
+    spans = [span("A", 0, 4)]
+    ledger = ledger_of(spans)
+    ledger["undeclared"][0]["reason"] = reason
+    return [e for e in nm.violations(spans, FACE, ledger) if "bad-reason" in e]
+
+
+def test_reason_pointer_to_empty_line_is_rejected():
+    # Fix round 1 机制加固：指针必须落在**真实代码行**上；空行不是证据。
+    lineno = _line_of("crates/game-core/src/world/update.rs", lambda t: not t.strip())
+    errs = _reason_errs(f"见 world/update.rs:{lineno}")
+    assert any("指向空行" in e for e in errs), errs
+
+
+def test_reason_pointer_to_comment_line_is_rejected():
+    # 纯注释行不是证据（`//` 起始行）：这正是旧 reason 把“文档注释”当生产读点的破口。
+    lineno = _line_of("crates/game-core/src/world/update.rs",
+                      lambda t: t.strip().startswith("//"))
+    errs = _reason_errs(f"见 world/update.rs:{lineno}")
+    assert any("指向纯注释行" in e for e in errs), errs
+
+
+def test_reason_pointer_out_of_range_is_rejected():
+    lines = (ROOT / "crates/game-core/src/world/update.rs").read_text(
+        encoding="utf-8", errors="replace").splitlines()
+    errs = _reason_errs(f"见 world/update.rs:{len(lines) + 5}")
+    assert any("行号越界" in e for e in errs), errs
+
+
+def test_reason_pointer_without_line_is_rejected():
+    # 只给文件名等于没给证据（旧判据 `\.(rs|py)\b` 的免检口）。
+    errs = _reason_errs("写点分散在 world/update.rs 与 frame/nmi.rs")
+    assert any("缺 `path:line`" in e for e in errs), errs
+
+
+def test_asm_pointer_requires_prefix_and_accepts_comment_line():
+    # refs/ 下汇编必须带 `asm:` 前缀；汇编注释行（`;` 起始）本身承载地址锚，算证据。
+    assert nm.reason_pointer_errors("命名见 refs/m1disasm/SRC/constants_ram.asm:568") != []
+    assert nm.reason_pointer_errors(
+        "命名见 asm:refs/m1disasm/SRC/constants_ram.asm:568") == []
+
 
 # ---------------- 5. 四态恒等式 ----------------
 
@@ -260,12 +311,11 @@ def test_real_dump_matches_ledger():
     ledger = json.loads(ledger_path.read_text(encoding="utf-8"))
     assert nm.violations(dump["spans"], dump["face"], ledger) == []
     assert sum(f["len"] for f in dump["face"]) == 2272
-    assert sum(ledger["owner_bytes"]) == 107
+    # 绝对值不写死：Owner 随 typed 域增长，恒等式才是判据（旧账 107/612/1553 已随 Task 5 变化）。
     assert ledger["view_bytes"] == 23
     assert ledger["view_only_bytes"] == 0
-    assert ledger["unmodeled_total"] == 612
-    assert ledger["undeclared_total"] == 1553
-    assert sum(ledger["owner_bytes"]) + ledger["view_only_bytes"] + ledger["unmodeled_total"] + ledger["undeclared_total"] == 2272
+    assert (sum(ledger["owner_bytes"]) + ledger["view_only_bytes"]
+            + ledger["unmodeled_total"] + ledger["undeclared_total"]) == 2272
 
 
 def test_real_unmodeled_notes_have_code_pointers():
@@ -273,7 +323,7 @@ def test_real_unmodeled_notes_have_code_pointers():
     notes = [s["note"] for s in dump["spans"] if s["key"] == "unmodeled"]
     assert notes, "真 dump 应有 Unmodeled 段"
     for note in notes:
-        assert nm.CODE_POINTER_RE.search(note or ""), note
+        assert nm.reason_pointer_errors(note) == [], note
 
 
 def test_real_ledger_owner_spans_match_dump():
@@ -282,8 +332,11 @@ def test_real_ledger_owner_spans_match_dump():
         pytest.skip("账本尚未建立")
     dump = nm.load_dump()
     ledger = json.loads(ledger_path.read_text(encoding="utf-8"))
-    expected = [{"start": s["start"], "len": s["len"]} for s in dump["spans"] if s["key"] == "owner"]
-    assert ledger["owner_spans"] == expected
+    expected = sorted(
+        ({"start": s["start"], "len": s["len"]} for s in dump["spans"] if s["key"] == "owner"),
+        key=lambda e: (e["start"], e["len"]),
+    )
+    assert sorted(ledger["owner_spans"], key=lambda e: (e["start"], e["len"])) == expected
 
 
 def test_real_ledger_unmodeled_matches_dump():

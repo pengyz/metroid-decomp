@@ -60,50 +60,140 @@ PLACEHOLDER_REASONS = {
     "", "todo", "tbd", "fixme", "unknown", "n/a", "na", "?", "??",
     "待定", "未知", "不详", "待补", "无", "none", "null",
 }
-# reason 必须指向真实代码位置（可 grep 的 file.rs / file.py）；单说“没人管”不算。
-CODE_POINTER_RE = re.compile(r"\.(rs|py)\b")
+# reason 必须指向**真实代码行**（不只“像指针”）：文件在、行号在文件内、该行非空且非纯注释。
+# · `path.rs:123` / `path.py:123-130`：源码证据（行必须是代码，不许是空行/注释）；
+# · `asm:refs/...asm:123`：汇编证据（`refs/` 下，必须带 `asm:` 前缀；`;` 注释行也算证据，
+#   因为 m1disasm 的注释常是地址/语义锚）。
+CODE_POINTER_RE = re.compile(
+    r"(?P<asm>asm:)?(?P<path>[A-Za-z0-9_./-]+\.(?:rs|py|asm))"
+    r"(?::(?P<line>\d+)(?:-(?P<end>\d+))?)?"
+)
+
+# reason 里的短路径（如 `world/update.rs`）按这些前缀依次解析到仓库内文件。
+_POINTER_PREFIXES = (
+    "",
+    "crates/game-core/src/",
+    "crates/game-core/",
+    "crates/",
+    "tools/",
+    "gates/",
+)
+
+
+def _resolve_pointer_path(raw: str):
+    """把 reason 里的路径解析成仓库内真实文件；解析不到返回 None。"""
+    p = Path(raw)
+    if p.is_absolute():
+        return p if p.is_file() else None
+    for prefix in _POINTER_PREFIXES:
+        cand = (ROOT / prefix / raw).resolve()
+        if cand.is_file():
+            return cand
+    return None
+
+
+def _line_problem(path: Path, lineno: int, *, asm: bool) -> str | None:
+    """行级校验：越界 / 空行 / 纯注释 ⇒ 返回原因，通过返回 None。"""
+    lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+    if lineno < 1 or lineno > len(lines):
+        return f"行号越界（文件仅 {len(lines)} 行）"
+    text = lines[lineno - 1].strip()
+    if not text:
+        return "指向空行"
+    if asm:
+        # 汇编注释行（`;` 起始）本身承载地址/语义锚，算证据。
+        return None
+    for marker in ("//", "/*", "*/", "*", "#", "--"):
+        if text.startswith(marker):
+            return f"指向纯注释行（{text[:28]}…）"
+    return None
+
+
+def reason_pointer_errors(reason) -> list[str]:
+    """校验 reason 的每个代码指针都指向真实代码行；返回错误列表（空=通过）。
+
+    规则（Fix round 1 机制加固）：
+    1. 至少一个带行号的指针（`path.rs:123`）——单给文件名等于没给证据；
+    2. 文件必须存在（按 `_POINTER_PREFIXES` 解析）；
+    3. 行号必须在该文件行数内；
+    4. 该行必须非空、非纯注释（asm 例外：`;` 注释行算证据）；
+    5. `refs/` 下的 `.asm` 指针必须带 `asm:` 前缀，避免把汇编当源码混证。
+    """
+    if not isinstance(reason, str) or not reason.strip():
+        return ["reason 为空"]
+    errs: list[str] = []
+    matches = list(CODE_POINTER_RE.finditer(reason))
+    located = [m for m in matches if m.group("line")]
+    if not located:
+        return ["reason 缺 `path:line` 形式的代码行指针（只给文件名不算证据）"]
+    for m in located:
+        raw = m.group("path")
+        is_asm = bool(m.group("asm")) or raw.endswith(".asm")
+        if raw.endswith(".asm") and not m.group("asm"):
+            errs.append(f"{raw}: 汇编指针必须带 `asm:` 前缀")
+            continue
+        if raw.startswith("refs/") and not m.group("asm"):
+            errs.append(f"{raw}: refs/ 下的汇编证据必须带 `asm:` 前缀")
+            continue
+        if is_asm and not raw.startswith("refs/") and not m.group("asm"):
+            errs.append(f"{raw}: 汇编指针必须带 `asm:` 前缀")
+            continue
+        path = _resolve_pointer_path(raw)
+        if path is None:
+            errs.append(f"{raw}: 文件不存在（reason 指向了不存在的代码）")
+            continue
+        span = [int(m.group("line"))]
+        if m.group("end"):
+            span.append(int(m.group("end")))
+        for lineno in span:
+            why = _line_problem(path, lineno, asm=is_asm)
+            if why:
+                errs.append(f"{raw}:{lineno}: {why}")
+    return errs
 
 # 建账时每段 Undeclared 的初始 reason（真实代码指针，可 grep 验证）。
 # Fix round 1 把原 `$0108-$02FF` 的 504 B 拆成三段：延时旗 / 6502 栈页 / OAM 影子页，
 # 不再用一句“整页写入”盖住半真半假的 504 B。
 DEFAULT_REASONS = [
+    # 创世建账用（`--write` 无旧账本时）。每条都必须指向**真实代码行**（Fix round 1 加固）；
+    # 边界沿用创世快照，正文随事实更正（reason 由 `--write` 继承到现行账本）。
     (0x0000, 0x0033,
-     "零页系统面（Joy1Status=$14/Joy2Status=$15/GameMode=$1D/FrameCount=$2D 等），"
-     "常量与证据见 crates/game-core/src/ram_map.rs，写者分散在 world/update.rs、frame/nmi.rs"),
+     "零页系统面（Joy1Status=$14/Joy2Status=$15/GameMode=$1D/FrameCount=$2D）："
+     "常量见 ram_map.rs:70/:73/:26/:34，比对面边界见 memmap/observe/frame_face.rs:32；"
+     "写者分散在 world/update.rs（输入/帧计数）与 frame/nmi.rs（模式切换），未逐字节收族"),
     (0x0034, 0x0003,
-     "RoomPtr hi=$34 由 world/room_load.rs:236 写；$35/$36 为随证临时量（Room 声明只覆盖 $33/$37-$3A）"),
+     "RoomPtr hi=$34 由 world/room_load.rs:240 写；$35/$36 为随证临时量"
+     "（Room 声明只覆盖 $33/$37-$3A）"),
     (0x003B, 0x000E,
-     "AreaPointers_RAM $3B-$48 由 world/room_load.rs:169 copy_area_pointers 写（14 B）"),
+     "AreaPointers_RAM $3B-$48 由 world/room_load.rs:167 copy_area_pointers 写"
+     "（循环体 :169、写点 :173，14 B）"),
     (0x004A, 0x0005,
-     "PAGE_INDEX=$4B/SAMUS_DIR=$4D/SAMUS_DOOR_DIR=$4E 由 world/object_globals.rs:26 读写"
-     "（常量见 crates/game-core/src/ram_map.rs；ScrollDir=$49 已由 Camera 声明）"),
+     "$4A TempScrollDir：world/room_draw.rs:726 写、world/camera/scroll.rs:63 读；"
+     "$4D SAMUS_DIR 由 samus/handler.rs:161 写、:322 读；$4E SAMUS_DOOR_DIR 由 "
+     "samus/physics.rs:1690 写、world/door.rs:40 读；$4C 无 Rust 读写点"),
     (0x0053, 0x0019,
-     "对象/房间门名面：world/object_globals.rs:26-57 写 PAGE_INDEX/ROOM_NUMBER=$5A/"
-     "SPRITE_PAGE_POS=$5B/OBJECT_CNTRL=$6B；title/state.rs:70 写 IS_SAMUS=$55；"
-     "world/room_load.rs:247 写 RoomPalette=$68"),
+     "对象/房间门名面 $53-$6B：$53 WalkSoundDelay（asm:refs/m1disasm/SRC/constants_ram.asm:568）；"
+     "$55 IS_SAMUS 由 samus/handler.rs:84 写；$56 DoorEntryStatus 读见 world/room_draw.rs:511；"
+     "$5C/$5D DoorRoomPtr 见 world/door.rs:12；RoomPalette=$68 由 world/room_load.rs:247 写；"
+     "其余未逐字节收族"),
     (0x006D, 0x008F,
-     "Samus/滚动零散面：world/room_load.rs:175 读 $6C/$6D ScrollBlock；"
-     "samus/state.rs:942 写 HEALTH_CHANGE=$6E；world/elevator.rs:424 写 METROID_ON_SAMUS=$92；"
-     "world/update.rs:75 写 MIRROR_CNTRL=$FA；$FC/$FD 已由 Camera 声明，不在本段"),
+     "Samus/滚动零散面 $6D-$FB：$6D ScrollBlockOnNameTable0 由 world/room_load.rs:45 区域初始清 0、"
+     "world/room_draw.rs:261 置位；$92 METROID_ON_SAMUS 由 world/elevator.rs:424 清；"
+     "$FA MIRROR_CNTRL 由 world/update.rs:75 写 0x47；$FC/$FD 已由 Camera 声明，不在本段"),
     (0x00FE, 0x0008,
-     "PPU 零页镜像 PPUMASK_ZP=$FE/PPUCTRL_ZP=$FF（render/mod.rs:128、frame/nmi.rs）"
-     "与 $0100-$0105 的 6502 栈；栈由 frame/nmi.rs 的 JSR/中断路径使用"),
+     "PPU 影子镜像 PPUMASK_ZP=$FE/PPUCTRL_ZP=$FF（world/room_load.rs:32 的 ScreenOff 写 $FE、"
+     "render/vram.rs:35 写 $FF）与 $0100-$0105 栈底（Rust 不模拟 JSR/RTS 栈字节）"),
     (0x0108, 0x0002,
      "MiniBossKillDelayFlag=$0108/PowerUpDelayFlag=$0109 由 frame/tick.rs:637 读写"
-     "（asm C4AA SetTimer 路径，constants_ram:809-810）"),
+     "（asm C4AA SetTimer 路径）"),
     (0x010A, 0x00F6,
-     "6502 硬件栈页剩余部分（$0100-$01FF）；Rust 侧不模拟 JSR/RTS 的栈字节，"
-     "frame/boot.rs:581 断言 $01FF 不被触碰；$0108/$0109 是原版借栈页放的延时旗，已单列"),
-    (0x0200, 0x0100,
-     "OAM 影子页：frame/boot.rs:144 erase_all_sprites 整页 256 B 填 $F0；"
-     "render/oam.rs:107 draw_sprite_stream 按 SpritePagePos 写四元组（最远 $02FF）；"
-     "frame/nmi.rs 读 OAM"),
+     "$010A/$010B 为 MissileCount BCD（ui/hud.rs:47 读）；$010C-$01FF 为 6502 硬件栈页——"
+     "Rust 不模拟 JSR/RTS 栈字节，MSS 整面直映见 frame/memory.rs:195"),
     (0x04E0, 0x0320,
-     "声引擎/房间绘制/VRAM 缓冲工作区：sound/state.rs:25 的 SFX_PAUSED=$0602/SFX_NOISE_INIT=$0680/"
-     "MUSIC_INIT=$0685、sound/hook.rs:314 写 $068D；world/room_draw.rs:324-326 的 MEM0700/"
-     "PIPE_BUG_HOLES=$0728/POWER_UPS=$0748；pickup/spawn.rs:24 的 POWERUPS_BASE=$0748；"
-     "title/intro.rs:80-113 与 frame/nmi.rs:116 的 VRAMStructBuffer=$07A0；"
-     "$04E0-$05FF 原版未用保留面（Mesen2 RAM dump 恒 0，比对面由 memmap/observe/dump.rs 界定）"),
+     "声引擎/房间绘制/VRAM 缓冲工作区 $04E0-$07FF：SFX_PAUSED=$0602 见 sound/mod.rs:25、"
+     "MUSIC_INIT=$0685 见 ram_map.rs:102（写点 frame/tick.rs:600）；$068D 由 sound/hook.rs:314 写；"
+     "world/room_draw.rs:324 的 MEM0700/PIPE_BUG_HOLES=$0728、pickup/spawn.rs:24 的 POWERUPS_BASE=$0748；"
+     "frame/nmi.rs:116 的 VRAMStructBuffer=$07A0；$04E0-$05FF 为原版未用保留面"),
 ]
 
 
@@ -144,10 +234,10 @@ def _segments(addrs) -> list[dict]:
 
 
 def _is_placeholder(reason) -> bool:
+    """占位判定（空/TODO 类）。代码指针的行级校验见 `reason_pointer_errors`。"""
     if not isinstance(reason, str):
         return True
-    text = reason.strip()
-    return text.lower() in PLACEHOLDER_REASONS or not CODE_POINTER_RE.search(text)
+    return reason.strip().lower() in PLACEHOLDER_REASONS
 
 
 def geometry_sha256(entries) -> str:
@@ -265,11 +355,11 @@ def _structure_errors(spans) -> list[str]:
             )
         if span.get("key") == "unmodeled":
             note = span.get("note")
-            if _is_placeholder(note):
+            note_errs = reason_pointer_errors(note) if not _is_placeholder(note) else ["占位/TODO"]
+            if note_errs:
                 errs.append(
                     f"bad-unmodeled-note ${int(span.get('start', 0)):04X}: {entity} 的 Unmodeled "
-                    f"必须带非占位、可 grep 的代码指针（*.rs/*.py），不接受 TODO/unknown/"
-                    f"整段未建模——整段标 Unmodeled 不是免检通道"
+                    f"必须带指向真实代码行的指针（{'; '.join(note_errs)}）"
                 )
         if not isinstance(span.get("len"), int) or int(span["len"]) <= 0:
             errs.append(
@@ -418,9 +508,12 @@ def _validate_ledger(ledger, part: dict, face) -> list[str]:
             errs.append("ledger: unmodeled 每项必须是对象")
             continue
         start = int(entry.get("start", -1))
-        if _is_placeholder(entry.get("reason")):
+        text = entry.get("reason")
+        note_errs = reason_pointer_errors(text) if not _is_placeholder(text) else ["占位/TODO"]
+        if note_errs:
             errs.append(
-                f"bad-unmodeled-note ${start:04X}: 账本 Unmodeled 的 reason 必须带可 grep 的代码指针"
+                f"bad-unmodeled-note ${start:04X}: 账本 Unmodeled 的 reason 必须指向真实代码行"
+                f"（{'; '.join(note_errs)}）"
             )
     if unmodeled != part["unmodeled"]:
         errs.append(
@@ -447,10 +540,12 @@ def _validate_ledger(ledger, part: dict, face) -> list[str]:
             continue
         if any(a not in _face_bytes(face) for a in range(start, start + length)):
             errs.append(f"ledger: undeclared ${start:04X}-${start + length - 1:04X} 越出比对面")
-        if _is_placeholder(entry.get("reason")):
+        text = entry.get("reason")
+        note_errs = reason_pointer_errors(text) if not _is_placeholder(text) else ["占位/TODO"]
+        if note_errs:
             errs.append(
-                f"bad-reason ${start:04X}: Undeclared 的 reason 必须非空、非 TODO/unknown，"
-                f"且指向真实代码位置（如 world/update.rs 的符号）"
+                f"bad-reason ${start:04X}: Undeclared 的 reason 必须指向真实代码行"
+                f"（{'; '.join(note_errs)}）"
             )
     ordered = sorted(entries, key=lambda e: int(e.get("start", 0)))
     for prev, cur in zip(ordered, ordered[1:]):
@@ -696,6 +791,12 @@ def make_ledger(dump, old=None, reason=None) -> dict | None:
                 raise ValueError(
                     f"新洞 ${piece['start']:04X}-${piece['start'] + piece['len'] - 1:04X} 无 reason："
                     f"Undeclared 每段必须写明真实代码位置（不接受 TODO/unknown）"
+                )
+            bad = reason_pointer_errors(text)
+            if bad:
+                raise ValueError(
+                    f"新洞 ${piece['start']:04X}-${piece['start'] + piece['len'] - 1:04X} 的 reason "
+                    f"未指向真实代码行（{'; '.join(bad)}）"
                 )
             entries.append({"start": piece["start"], "len": piece["len"], "reason": text})
     total = sum(e["len"] for e in entries)
