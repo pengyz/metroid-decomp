@@ -60,3 +60,61 @@ f4018 单独一帧仍有 12404px：两侧 `$FE` 同为 `0x06`（BG/OBJ 关），
 即给 `write_io(0x2001)` 加调用点标记（`ScreenOff` 直写 vs `apply_deferred_screen_on` 队列兑现），
 并用 1190 / 4018 两帧对照，确认是「写入发生在 NMI 前后」而非「mask 值差」。
 在拿到这个区分之前，不得再用「活体 mask」一刀切（已两次被矩阵否决）。
+
+## 六、取证小件：`$2001` 写入面清点（2026-11-17）
+
+### 6.1 手段
+`Manager` 加诊断旗 `trace_mask`（`--trace mask` 启动参数，非逻辑层钩子），在 `write_io(0x2001)`
+逐次打印 `seq`（累计写入序号）/`fc`（`$002D`）/新值/`Location::caller()`；采集点再打印
+`seam`（缝快照 mask）/`live`（收口活体）/`fe`（影子）。取完即回滚（工作树 clean）。
+
+### 6.2 结果：真寄存器只有三个写入点
+
+| 写入者 | 语义 | 频率 |
+|---|---|---|
+| `crates/game-core/src/frame/nmi.rs:343` | `WritePPUCtrl ; 07:C44D` 的 `sta PPUMASK` | 每帧一次（主路径） |
+| `crates/game-core/src/world/room_load.rs:117` | `screen_nmi_off`（`ScreenNmiOff ; 07:C45D` 的同 tick 近似） | 换区/进场/密码进场 |
+| `crates/game-core/src/frame/tick.rs:395` | `prepare_game_over`（`ScreenOff` 的同 tick 近似） | 死亡→GameOver |
+
+后两处都是**主线程内的「NMI 落点近似」**（注释已写明：asm 只写影子 `$FE`，真寄存器由下一个
+NMI 的 `WritePPUCtrl` 落；本层原子执行，故此刻即写真寄存器）。
+
+### 6.3 两个样本的逐次序列（关屏那一次）
+
+```
+# case-password-justin（emu f1190 = 亮）
+seq=1186 fc=153 v=0x1e  nmi.rs:343        # 上一帧的 NMI 落影
+seq=1187 fc=154 v=0x1e  nmi.rs:343
+seq=1188 fc=154 v=0x06  room_load.rs:117  # ← 关屏（主线程近似）
+seq=1189 fc=155 v=0x06  nmi.rs:343        # 下一个 NMI 再写同值
+seq=1190 fc=155 v=0x06  room_load.rs:117
+
+# case-movie-100p-b26（emu f4018 = 黑）
+seq=4002 fc=151 v=0x1e  nmi.rs:343
+seq=4003 fc=151 v=0x06  tick.rs:395       # ← 关屏（主线程近似）
+seq=4004 fc=152 v=0x06  nmi.rs:343        # 下一个 NMI 再写同值
+```
+
+### 6.4 定谳：这两个样本在我们的模型里**不可区分**
+
+采集点打印：
+
+```
+case-password-justin  cap frame=1190 seam=1e live=06 fe=06
+case-movie-100p-b26   cap frame=4018 seam=1e live=06 fe=06
+```
+
+三个维度全同：①写入者都是「主线程近似 NMI 落点」②关屏后都有一次 NMI 重写同值
+③`seam/live/fe` 三元组一致。而 emu 真值相反（1190 亮、4018 黑）。
+⇒ **判别信息不在 rust 侧的可见状态里**，必须从 emu 侧取（帧末 `$2001` 真值），
+或改模型本身（见 6.5）。
+
+### 6.5 下一步的两个候选（都需先证后改）
+
+1. **去掉两处「同 tick 近似」**，让 `$2001` 只由 NMI 的 `WritePPUCtrl` 写（与 asm 同构）。
+   代价：暗窗建模（`deferred_screen_on`、elevprobe f1206/f1207 的 61440 px 证据）可能回退，
+   须逐格验证「换区暗窗 / 密码进场 / GameOver 屏」三类转场。
+2. **给 emu 腿补帧末 `$2001` 采样**（`analysis/traces` 的 `ppu.hex` 尾 3 字节当前恒 0），
+   用真值判定「该帧关屏是否已生效」，再据此定采样相位。
+
+约束（沿用第五节）：在候选实现前后都不得用「活体 mask 一刀切」——已两次被矩阵否决。
