@@ -389,6 +389,24 @@ impl<'a> Enemy<'a> {
     pub fn set_pos_x(&mut self, v: u8) {
         self.set(ens::X, v);
     }
+    /// `$6AFE EnsExtra.accelY`（i8）。
+    pub fn accel_y(&self) -> i8 {
+        self.getx(ens_extra::ACCEL_Y) as i8
+    }
+
+    pub fn set_accel_y(&mut self, v: i8) {
+        self.setx(ens_extra::ACCEL_Y, v as u8);
+    }
+
+    /// `$6AFF EnsExtra.accelX`（i8）。
+    pub fn accel_x(&self) -> i8 {
+        self.getx(ens_extra::ACCEL_X) as i8
+    }
+
+    pub fn set_accel_x(&mut self, v: i8) {
+        self.setx(ens_extra::ACCEL_X, v as u8);
+    }
+
     pub fn speed_y(&self) -> i8 {
         self.get(ens::SPEED_Y) as i8
     }

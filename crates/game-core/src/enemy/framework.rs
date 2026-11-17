@@ -30,15 +30,14 @@ pub(crate) fn try_becoming_active(mem: &mut crate::frame::Manager, x: u8) {
     // 【2026-10-31 原地写修】asm `dec Ens.0.delay`（F7BA `DE 09 04`）=**原地写**：
     // dec 结果先落内存（激活径 delay=0——emu f798 实录 delay=00；旧形激活径不写回⇒
     // delay 恒 1 残留）；bit3=0 径 `inc` 退回=写回原值。
-    let e = 0x0400 + x as u16 + 9; // Ens.delay（ROM F7BA 实测 $0409）
-    let d = mem.read_ram(e);
-    mem.write_ram(e, d.wrapping_sub(1)); // dec 原地（asm DE 09 04）
+    let d = mem.enemy(slot_of(x)).delay(); // Ens.delay（ROM F7BA 实测 $0409）
+    mem.enemy(slot_of(x)).set_delay(d.wrapping_sub(1)); // dec 原地（asm DE 09 04）
     if d.wrapping_sub(1) != 0 {
         return;
     }
     let d5 = mem.enemy(slot_of(x)).data05();
     if d5 & 0x08 == 0 {
-        mem.write_ram(e, d); // inc 退回（asm F7C6 `EE 09 04`——undo）
+        mem.enemy(slot_of(x)).set_delay(d); // inc 退回（asm F7C6 `EE 09 04`——undo）
         return;
     }
     // @becomeActive
@@ -86,10 +85,8 @@ pub(crate) fn try_becoming_active(mem: &mut crate::frame::Manager, x: u8) {
         // 再按朝向翻转符号。四表在 ROM 里连续（accelY/accelX/speedY/speedX 各 20 B），
         // asm 各自 base+y 查表（y 越界即读进下一张表）——故这里用同一 80 B 窗按 base 索引。
         if game_data::assets::enemy_facing(area)[ti] & 0x40 != 0 {
-            let e = 0x0400 + x as u16;
-            let xa = 0x6AF4 + x as u16;
-            mem.write_ram(e + 6, 0); // Ens.speedSubPixelY（$0406）
-            mem.write_ram(e + 7, 0); // Ens.speedSubPixelX（$0407）
+            mem.enemy(slot_of(x)).set_data06(0); // Ens.speedSubPixelY（$0406）
+            mem.enemy(slot_of(x)).set_speed_subpixel_x(0); // Ens.speedSubPixelX（$0407）
             let w = game_data::assets::en_accel_speed_window(area);
             let mi = mov_idx as usize;
             let load = |off: usize| -> u8 {
@@ -101,33 +98,33 @@ pub(crate) fn try_becoming_active(mem: &mut crate::frame::Manager, x: u8) {
                     }
                 }
             };
-            mem.write_wram(xa + 10, load(0)); // EnsExtra.accelY（$6AFE）
-            mem.write_wram(xa + 11, load(20)); // EnsExtra.accelX（$6AFF）
-            mem.write_ram(e + 2, load(40)); // Ens.speedY（$0402）
-            mem.write_ram(e + 3, load(60)); // Ens.speedX（$0403）
+            mem.enemy(slot_of(x)).set_accel_y(load(0) as i8); // EnsExtra.accelY（$6AFE）
+            mem.enemy(slot_of(x)).set_accel_x(load(20) as i8); // EnsExtra.accelX（$6AFF）
+            mem.enemy(slot_of(x)).set_speed_y(load(40) as i8); // Ens.speedY（$0402）
+            mem.enemy(slot_of(x)).set_speed_x(load(60) as i8); // Ens.speedX（$0403）
             // 朝向：data05 bit7=0 ⇒ 水平（bit0=1 表示朝左，需翻 X）；
             //       bit7=1 ⇒ 垂直（bit2=1 表示朝下，需翻 Y）。asm 07:F832。
-            let d5b = mem.read_ram(e + 5);
+            let d5b = mem.enemy(slot_of(x)).data05();
             let bank = crate::frame::area_bank(area);
             let no_flip = game_data::assets::rom_table_968b(bank as usize, t) & 0x20 != 0;
             if d5b & 0x80 == 0 {
                 if d5b & 0x01 != 0 && !no_flip {
                     // EnemyIfMoveFailedHorizontal_Bounce@flipSpeedAndAccel（$81D1）
-                    let a = mem.read_wram(xa + 11);
-                    mem.write_wram(xa + 11, a.wrapping_neg()); // TwosComplement
-                    let s = mem.read_ram(e + 3);
-                    mem.write_ram(e + 3, s.wrapping_neg());
-                    let sp = mem.read_ram(e + 7);
-                    mem.write_ram(e + 7, sp.wrapping_neg());
+                    let a = mem.enemy(slot_of(x)).accel_x();
+                    mem.enemy(slot_of(x)).set_accel_x(a.wrapping_neg()); // TwosComplement
+                    let sp = mem.enemy(slot_of(x)).speed_x();
+                    mem.enemy(slot_of(x)).set_speed_x(sp.wrapping_neg());
+                    let sub = mem.enemy(slot_of(x)).speed_subpixel_x();
+                    mem.enemy(slot_of(x)).set_speed_subpixel_x(sub.wrapping_neg());
                 }
             } else if d5b & 0x04 != 0 && !no_flip {
                 // EnemyIfMoveFailedVertical_Bounce@flipSpeedAndAccel（$8206）
-                let a = mem.read_wram(xa + 10);
-                mem.write_wram(xa + 10, a.wrapping_neg());
-                let s = mem.read_ram(e + 2);
-                mem.write_ram(e + 2, s.wrapping_neg());
-                let sp = mem.read_ram(e + 6);
-                mem.write_ram(e + 6, sp.wrapping_neg());
+                let a = mem.enemy(slot_of(x)).accel_y();
+                mem.enemy(slot_of(x)).set_accel_y(a.wrapping_neg());
+                let sp = mem.enemy(slot_of(x)).speed_y();
+                mem.enemy(slot_of(x)).set_speed_y(sp.wrapping_neg());
+                let sub = mem.enemy(slot_of(x)).data06();
+                mem.enemy(slot_of(x)).set_data06(sub.wrapping_neg());
             }
         }
         // 【asm 07:F839】`lda #~$20 ; jmp AndEnData05` ⇒ 清 data05 bit5（解除休止标记）。
@@ -143,15 +140,14 @@ pub(crate) fn init_en_active_anim_index(mem: &mut crate::frame::Manager, x: u8) 
     let y = enemy_type_times2_plus_facing(mem, x);
     let area = crate::frame::cur_area(mem);
     let idx = AnimIdx::at(area, game_data::assets::enemy_active_anim(area)[y as usize & 0x1F]);
-    let sq = 0x6AF4 + x as u16;
-    if idx.off() != mem.read_wram(sq + 5) {
-        mem.write_wram(sq + 5, idx.off()); // resetAnimIndex
-        mem.write_wram(sq + 6, idx.off()); // animIndex
-        mem.write_wram(sq + 4, 0);
-        let t = mem.read_wram(sq + 14) as usize & 0x0F;
+    if idx.off() != mem.enemy(slot_of(x)).reset_anim_index() {
+        mem.enemy(slot_of(x)).set_reset_anim_index(idx.off()); // resetAnimIndex
+        mem.enemy(slot_of(x)).set_anim_index(idx.off()); // animIndex
+        mem.enemy(slot_of(x)).set_anim_delay(0);
+        let t = mem.enemy(slot_of(x)).enemy_type() as usize & 0x0F;
         let off = game_data::assets::enemy_active_anim_init_offset(area)[t] & 0x7F;
         // InitOffset 递减只在**本区**内（`AnimIdx` 不换区）
-        mem.write_wram(sq + 6, idx.back_within_area(off).off());
+        mem.enemy(slot_of(x)).set_anim_index(idx.back_within_area(off).off());
     }
 }
 
