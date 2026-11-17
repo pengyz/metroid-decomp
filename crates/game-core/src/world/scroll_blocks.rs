@@ -17,7 +17,7 @@
 //! asm 锚：
 //! - `MoreInit ; 07:C81D`（`prg7_engine.asm:1876-1877`）：`stx ScrollBlockOnNameTable3 /
 //!   stx ScrollBlockOnNameTable0`（X=0）——区域初始化双清；
-//! - `GetRoomNum ; 07:E720`（`room_load.rs:185` 的 `$6C+y`）：按 `PPUCTRL_ZP&3` 选表，
+//! - `GetRoomNum ; 07:E720`（`room_load.rs:189` 的 `$6C+y`）：按 `PPUCTRL_ZP&3` 选表，
 //!   门挡位置位 ⇒ 不滚不载房；
 //! - `DrawDoor`（`room_draw.rs:261`）：按左右门置位 `cur | block`。
 

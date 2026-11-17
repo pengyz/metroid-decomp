@@ -200,137 +200,218 @@
     {
       "start": 51,
       "len": 1,
-      "reason": "房间游标未 typed：小端指针与房间号真相在字节面（crates/game-core/src/world/room_ram.rs:156）"
+      "kind": "unmodeled",
+      "refs": [
+        "crates/game-core/src/world/room_ram.rs:156"
+      ]
     },
     {
       "start": 55,
       "len": 2,
-      "reason": "房间游标未 typed：小端指针与房间号真相在字节面（crates/game-core/src/world/room_ram.rs:156）"
+      "kind": "unmodeled",
+      "refs": [
+        "crates/game-core/src/world/room_ram.rs:156"
+      ]
     },
     {
       "start": 57,
       "len": 2,
-      "reason": "房间游标未 typed：小端指针与房间号真相在字节面（crates/game-core/src/world/room_ram.rs:156）"
+      "kind": "unmodeled",
+      "refs": [
+        "crates/game-core/src/world/room_ram.rs:156"
+      ]
     },
     {
       "start": 73,
       "len": 1,
-      "reason": "相机域未 typed：滚动/地图位/屏幕位真相在字节面（crates/game-core/src/world/camera/mod.rs:96 的访问器族）；$6C 已归 world/scroll_blocks.rs"
+      "kind": "unmodeled",
+      "refs": [
+        "crates/game-core/src/world/camera/mod.rs:96"
+      ]
     },
     {
       "start": 79,
       "len": 1,
-      "reason": "相机域未 typed：滚动/地图位/屏幕位真相在字节面（crates/game-core/src/world/camera/mod.rs:96 的访问器族）；$6C 已归 world/scroll_blocks.rs"
+      "kind": "unmodeled",
+      "refs": [
+        "crates/game-core/src/world/camera/mod.rs:96"
+      ]
     },
     {
       "start": 80,
       "len": 1,
-      "reason": "相机域未 typed：滚动/地图位/屏幕位真相在字节面（crates/game-core/src/world/camera/mod.rs:96 的访问器族）；$6C 已归 world/scroll_blocks.rs"
+      "kind": "unmodeled",
+      "refs": [
+        "crates/game-core/src/world/camera/mod.rs:96"
+      ]
     },
     {
       "start": 81,
       "len": 1,
-      "reason": "相机域未 typed：滚动/地图位/屏幕位真相在字节面（crates/game-core/src/world/camera/mod.rs:96 的访问器族）；$6C 已归 world/scroll_blocks.rs"
+      "kind": "unmodeled",
+      "refs": [
+        "crates/game-core/src/world/camera/mod.rs:96"
+      ]
     },
     {
       "start": 82,
       "len": 1,
-      "reason": "相机域未 typed：滚动/地图位/屏幕位真相在字节面（crates/game-core/src/world/camera/mod.rs:96 的访问器族）；$6C 已归 world/scroll_blocks.rs"
+      "kind": "unmodeled",
+      "refs": [
+        "crates/game-core/src/world/camera/mod.rs:96"
+      ]
     },
     {
       "start": 252,
       "len": 1,
-      "reason": "相机域未 typed：滚动/地图位/屏幕位真相在字节面（crates/game-core/src/world/camera/mod.rs:96 的访问器族）；$6C 已归 world/scroll_blocks.rs"
+      "kind": "unmodeled",
+      "refs": [
+        "crates/game-core/src/world/camera/mod.rs:96"
+      ]
     },
     {
       "start": 253,
       "len": 1,
-      "reason": "相机域未 typed：滚动/地图位/屏幕位真相在字节面（crates/game-core/src/world/camera/mod.rs:96 的访问器族）；$6C 已归 world/scroll_blocks.rs"
+      "kind": "unmodeled",
+      "refs": [
+        "crates/game-core/src/world/camera/mod.rs:96"
+      ]
     },
     {
       "start": 262,
       "len": 2,
-      "reason": "血量两字节未 typed：health()/set_health() 仍走字节面（$0106 低 / $0107 高；crates/game-core/src/samus/state.rs:615）"
+      "kind": "unmodeled",
+      "refs": [
+        "crates/game-core/src/samus/state.rs:615"
+      ]
     },
     {
       "start": 791,
       "len": 233,
-      "reason": "对象池未 typed：门/子弹/道具字段的真相仍在字节面（本池只是读写视图；crates/game-core/src/world/object.rs:11）"
+      "kind": "unmodeled",
+      "refs": [
+        "crates/game-core/src/world/object.rs:11"
+      ]
     },
     {
       "start": 1024,
       "len": 192,
-      "reason": "敌域主面未 typed：字段真相在字节面（EnsFace 只读视图；crates/game-core/src/enemy/state.rs:283）"
+      "kind": "unmodeled",
+      "refs": [
+        "crates/game-core/src/enemy/state.rs:283"
+      ]
     },
     {
       "start": 1216,
       "len": 32,
-      "reason": "爆炸主面未 typed：y/x/data05/delay/quantity 真相在字节面（crates/game-core/src/enemy/explosion.rs:285）"
+      "kind": "unmodeled",
+      "refs": [
+        "crates/game-core/src/enemy/explosion.rs:285"
+      ]
     },
     {
       "start": 27387,
       "len": 9,
-      "reason": "EnsExtra 尾 9 B 未 typed：accelY/jumpDsplcmnt/type/data1F 等仍在字节面（crates/game-core/src/enemy/state.rs:814）"
+      "kind": "unmodeled",
+      "refs": [
+        "crates/game-core/src/enemy/state.rs:814"
+      ]
     },
     {
       "start": 27403,
       "len": 9,
-      "reason": "EnsExtra 尾 9 B 未 typed：accelY/jumpDsplcmnt/type/data1F 等仍在字节面（crates/game-core/src/enemy/state.rs:814）"
+      "kind": "unmodeled",
+      "refs": [
+        "crates/game-core/src/enemy/state.rs:814"
+      ]
     },
     {
       "start": 27419,
       "len": 9,
-      "reason": "EnsExtra 尾 9 B 未 typed：accelY/jumpDsplcmnt/type/data1F 等仍在字节面（crates/game-core/src/enemy/state.rs:814）"
+      "kind": "unmodeled",
+      "refs": [
+        "crates/game-core/src/enemy/state.rs:814"
+      ]
     },
     {
       "start": 27435,
       "len": 9,
-      "reason": "EnsExtra 尾 9 B 未 typed：accelY/jumpDsplcmnt/type/data1F 等仍在字节面（crates/game-core/src/enemy/state.rs:814）"
+      "kind": "unmodeled",
+      "refs": [
+        "crates/game-core/src/enemy/state.rs:814"
+      ]
     },
     {
       "start": 27451,
       "len": 9,
-      "reason": "EnsExtra 尾 9 B 未 typed：accelY/jumpDsplcmnt/type/data1F 等仍在字节面（crates/game-core/src/enemy/state.rs:814）"
+      "kind": "unmodeled",
+      "refs": [
+        "crates/game-core/src/enemy/state.rs:814"
+      ]
     },
     {
       "start": 27467,
       "len": 9,
-      "reason": "EnsExtra 尾 9 B 未 typed：accelY/jumpDsplcmnt/type/data1F 等仍在字节面（crates/game-core/src/enemy/state.rs:814）"
+      "kind": "unmodeled",
+      "refs": [
+        "crates/game-core/src/enemy/state.rs:814"
+      ]
     },
     {
       "start": 27483,
       "len": 9,
-      "reason": "EnsExtra 尾 9 B 未 typed：accelY/jumpDsplcmnt/type/data1F 等仍在字节面（crates/game-core/src/enemy/state.rs:814）"
+      "kind": "unmodeled",
+      "refs": [
+        "crates/game-core/src/enemy/state.rs:814"
+      ]
     },
     {
       "start": 27499,
       "len": 9,
-      "reason": "EnsExtra 尾 9 B 未 typed：accelY/jumpDsplcmnt/type/data1F 等仍在字节面（crates/game-core/src/enemy/state.rs:814）"
+      "kind": "unmodeled",
+      "refs": [
+        "crates/game-core/src/enemy/state.rs:814"
+      ]
     },
     {
       "start": 27515,
       "len": 9,
-      "reason": "EnsExtra 尾 9 B 未 typed：accelY/jumpDsplcmnt/type/data1F 等仍在字节面（crates/game-core/src/enemy/state.rs:814）"
+      "kind": "unmodeled",
+      "refs": [
+        "crates/game-core/src/enemy/state.rs:814"
+      ]
     },
     {
       "start": 27531,
       "len": 9,
-      "reason": "EnsExtra 尾 9 B 未 typed：accelY/jumpDsplcmnt/type/data1F 等仍在字节面（crates/game-core/src/enemy/state.rs:814）"
+      "kind": "unmodeled",
+      "refs": [
+        "crates/game-core/src/enemy/state.rs:814"
+      ]
     },
     {
       "start": 27547,
       "len": 9,
-      "reason": "EnsExtra 尾 9 B 未 typed：accelY/jumpDsplcmnt/type/data1F 等仍在字节面（crates/game-core/src/enemy/state.rs:814）"
+      "kind": "unmodeled",
+      "refs": [
+        "crates/game-core/src/enemy/state.rs:814"
+      ]
     },
     {
       "start": 27563,
       "len": 9,
-      "reason": "EnsExtra 尾 9 B 未 typed：accelY/jumpDsplcmnt/type/data1F 等仍在字节面（crates/game-core/src/enemy/state.rs:814）"
+      "kind": "unmodeled",
+      "refs": [
+        "crates/game-core/src/enemy/state.rs:814"
+      ]
     },
     {
       "start": 27572,
       "len": 32,
-      "reason": "爆炸额外面未 typed：status/animFrame/animDelay/resetAnimIndex/animIndex/hi 真相在字节面（crates/game-core/src/enemy/explosion.rs:288）"
+      "kind": "unmodeled",
+      "refs": [
+        "crates/game-core/src/enemy/explosion.rs:288"
+      ]
     }
   ],
   "undeclared_total": 1287,
@@ -338,72 +419,174 @@
     {
       "start": 0,
       "len": 51,
-      "reason": "零页系统面（Joy1Status=$14/Joy2Status=$15/GameMode=$1D/FrameCount=$2D）：常量见 ram_map.rs:70/:73/:26/:34，比对面边界见 memmap/observe/frame_face.rs:32；写者分散在 world/update.rs（输入/帧计数）与 frame/nmi.rs（模式切换），未逐字节收族"
+      "kind": "undeclared",
+      "refs": [
+        "ram_map.rs:70",
+        "ram_map.rs:73",
+        "ram_map.rs:26",
+        "ram_map.rs:34",
+        "memmap/observe/frame_face.rs:32"
+      ]
     },
     {
       "start": 52,
       "len": 3,
-      "reason": "RoomPtr hi=$34 由 world/room_load.rs:240 写；$35/$36 为随证临时量（Room 声明只覆盖 $33/$37-$3A）"
+      "kind": "undeclared",
+      "refs": [
+        "world/room_load.rs:240"
+      ]
     },
     {
       "start": 59,
       "len": 14,
-      "reason": "AreaPointers_RAM $3B-$48 由 world/room_load.rs:167 copy_area_pointers 写（循环体 :169、写点 :173，14 B）"
+      "kind": "undeclared",
+      "refs": [
+        "world/room_load.rs:167",
+        "world/room_load.rs:172",
+        "world/room_load.rs:173"
+      ]
     },
     {
       "start": 74,
       "len": 1,
-      "reason": "$4A TempScrollDir：world/room_draw.rs:726 写（TempScrollDir←ScrollDir 径汇），world/camera/scroll.rs:63/:73 读；$49 ScrollDir 已由 Camera 声明不在本段"
+      "kind": "undeclared",
+      "refs": [
+        "world/room_draw.rs:726",
+        "world/camera/scroll.rs:63"
+      ]
     },
     {
       "start": 76,
       "len": 3,
-      "reason": "$4C 无 Rust 侧读写点（随证临时量）；$4D SAMUS_DIR 由 samus/handler.rs:161/:323 与 samus/physics.rs:236 写、samus/handler.rs:274/:322 读；$4E SAMUS_DOOR_DIR 由 samus/physics.rs:1690 写、world/door.rs:40 读"
+      "kind": "undeclared",
+      "refs": [
+        "samus/handler.rs:161",
+        "samus/physics.rs:236",
+        "samus/handler.rs:274",
+        "samus/physics.rs:1690",
+        "world/door.rs:40"
+      ]
     },
     {
       "start": 83,
       "len": 7,
-      "reason": "$53 WalkSoundDelay（asm 命名见 asm:refs/m1disasm/SRC/constants_ram.asm:568）——MoreInit 旧形误写 0、Fix1 已改回清 $6C/$6D，Rust 侧现无读写点（步音延时未建模）；$55 IS_SAMUS 由 samus/handler.rs:84/:86 写；$56 DoorEntryStatus 读点自 world/room_draw.rs:511 起；$54/$57-$59 未逐字节收族"
+      "kind": "undeclared",
+      "refs": [
+        "asm:refs/m1disasm/SRC/constants_ram.asm:568",
+        "samus/handler.rs:84",
+        "world/room_draw.rs:511"
+      ]
     },
     {
       "start": 92,
       "len": 9,
-      "reason": "$5C-$64：$5C/$5D DoorRoomPtr lo/hi（world/door.rs:12-13）；$5E-$64 未逐字节收族（门绘制游标临时量）"
+      "kind": "undeclared",
+      "refs": [
+        "world/door.rs:12-13"
+      ]
     },
     {
       "start": 102,
       "len": 5,
-      "reason": "$66-$6A：RoomPalette=$68 由 world/room_load.rs:247 写；其余（$66/$67/$69/$6A）未逐字节收族"
+      "kind": "undeclared",
+      "refs": [
+        "world/room_load.rs:247"
+      ]
     },
     {
       "start": 112,
       "len": 140,
-      "reason": "Samus/滚动零散面 $70-$FB：world/elevator.rs:424 写 METROID_ON_SAMUS=$92；world/update.rs:75/:83 写 MIRROR_CNTRL（$FA）0x47；world/elevator.rs:159-160/:345-346/:552 增删 MIRROR_CNTRL 的 $08 位；$FC/$FD 已由 Camera 声明不在本段；其余（$70-$91/$93-$F9）为 asm 临时量与未逐字节收族的零散面"
+      "kind": "undeclared",
+      "refs": [
+        "world/elevator.rs:424",
+        "world/update.rs:75",
+        "world/elevator.rs:159-160"
+      ]
     },
     {
       "start": 254,
       "len": 8,
-      "reason": "PPU 影子镜像 PPUMASK_ZP=$FE/PPUCTRL_ZP=$FF（world/room_load.rs:32-33 的 ScreenOff 写 $FE、render/vram.rs:35 写 $FF）与 $0100-$0105 栈底（Rust 不模拟 JSR/RTS 栈字节，MSS 整面直映见 frame/memory.rs:195）"
+      "kind": "undeclared",
+      "refs": [
+        "world/room_load.rs:32",
+        "render/vram.rs:35",
+        "frame/memory.rs:195"
+      ]
     },
     {
       "start": 264,
       "len": 2,
-      "reason": "MiniBossKillDelayFlag=$0108/PowerUpDelayFlag=$0109 由 frame/tick.rs:637 读写（asm C4AA SetTimer 路径，asm:refs/m1disasm/SRC/constants_ram.asm:809）"
+      "kind": "undeclared",
+      "refs": [
+        "frame/tick.rs:637"
+      ]
     },
     {
       "start": 266,
       "len": 246,
-      "reason": "$010A/$010B 为 MissileCount BCD（ui/hud.rs:47/:53 读）；$010C-$01FF 为 6502 硬件栈页——Rust 不模拟 JSR/RTS 栈字节，MSS 整面直映见 frame/memory.rs:195；$0108/$0109 是原版借栈页放的延时旗，已单列"
+      "kind": "undeclared",
+      "refs": [
+        "ui/hud.rs:47",
+        "frame/memory.rs:195"
+      ]
     },
     {
       "start": 1248,
-      "len": 419,
-      "reason": "声引擎其余旗标面 $04E0-$0682：SFX_PAUSED=$0602 定义见 sound/mod.rs:25、SFX_NOISE_INIT=$0680 见 sound/mod.rs:33；$04E0-$05FF 为原版未用保留面（Rust 无读写点；MSS 整面直映见 frame/memory.rs:195）；$0603-$067F 为未逐字节收族的零散面"
+      "len": 16,
+      "kind": "undeclared",
+      "refs": [
+        "asm:refs/m1disasm/SRC/constants_ram.asm:975"
+      ]
+    },
+    {
+      "start": 1264,
+      "len": 16,
+      "kind": "undeclared",
+      "refs": [
+        "asm:refs/m1disasm/SRC/constants_ram.asm:976"
+      ]
+    },
+    {
+      "start": 1280,
+      "len": 208,
+      "kind": "undeclared",
+      "refs": [
+        "asm:refs/m1disasm/SRC/constants_ram.asm:986",
+        "world/statue.rs:30",
+        "world/room_draw.rs:381"
+      ]
+    },
+    {
+      "start": 1488,
+      "len": 48,
+      "kind": "undeclared",
+      "refs": [
+        "asm:refs/m1disasm/SRC/constants_ram.asm:991"
+      ]
+    },
+    {
+      "start": 1536,
+      "len": 131,
+      "kind": "undeclared",
+      "refs": [
+        "sound/mod.rs:25",
+        "sound/mod.rs:33",
+        "asm:refs/m1disasm/SRC/constants_ram.asm:1001"
+      ]
     },
     {
       "start": 1669,
       "len": 379,
-      "reason": "声引擎旗标/房间绘制/VRAM 缓冲工作区 $0685-$07FF：MUSIC_INIT=$0685 常量见 ram_map.rs:102、写点 frame/tick.rs:600、读点 frame/nmi.rs:191；$068D 由 sound/hook.rs:314 写；world/room_draw.rs:324-326 的 MEM0700/PIPE_BUG_HOLES=$0728/POWER_UPS=$0748；pickup/spawn.rs:24 的 POWERUPS_BASE=$0748；title/intro.rs:80/:113 与 frame/nmi.rs:116 的 VRAMStructBuffer=$07A0"
+      "kind": "undeclared",
+      "refs": [
+        "ram_map.rs:102",
+        "frame/tick.rs:600",
+        "frame/nmi.rs:191",
+        "sound/hook.rs:314",
+        "world/room_draw.rs:324",
+        "pickup/spawn.rs:24",
+        "title/intro.rs:80"
+      ]
     }
   ],
   "history": [
@@ -494,6 +677,17 @@
       "undeclared_total": 1287,
       "state_sha256": "76c4467fe04fe1ff49c2c79923468fccbc68113c14ad708ffd40ad3379fbcbc5",
       "prev_sha256": "1987eabea14f87cb322c1a3008c33c5d645803e894b90451eecf4b91adcf793e"
+    },
+    {
+      "ts": "2026-11-17T20:32:32+08:00",
+      "reason": "下调 Undeclared 1287 → 1287 B / Unmodeled 611 → 611 B",
+      "owner_total": 374,
+      "view_bytes": 23,
+      "view_only_bytes": 0,
+      "unmodeled_total": 611,
+      "undeclared_total": 1287,
+      "state_sha256": "b2e9b9804079fb58db8773999425f60c9ec2f440ab4dc13a96ec9f93146eeab7",
+      "prev_sha256": "4b81dd0e5478e510e806ce00841f320454632636589772e28167b8313fce667d"
     }
   ]
 }

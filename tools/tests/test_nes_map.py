@@ -39,8 +39,8 @@ def dump_of(spans: list[dict], face=FACE) -> dict:
             "coverage": [0, 0]}
 
 
-def ledger_of(spans: list[dict], face=FACE, reason: str = PTR) -> dict:
-    return nm.make_ledger(dump_of(spans, face), reason=reason)
+def ledger_of(spans: list[dict], face=FACE, refs: list[str] | None = None) -> dict:
+    return nm.make_ledger(dump_of(spans, face), refs=refs or [PTR])
 
 
 # ---------------- 1. 结构：Owner 重叠 / View 有主 ----------------
@@ -121,16 +121,16 @@ def test_ledger_stale_hole_is_rejected():
 @pytest.mark.parametrize("reason", ["", "   ", "TODO", "unknown", "待定", "?"])
 def test_placeholder_reason_is_rejected(reason):
     ledger = ledger_of([span("A", 0, 4)])
-    ledger["undeclared"][0]["reason"] = reason
+    ledger["undeclared"][0]["refs"] = [reason]
     errs = nm.violations([span("A", 0, 4)], FACE, ledger)
-    assert any("bad-reason $0004" in e for e in errs), errs
+    assert any("bad-refs $0004" in e for e in errs), errs
 
 
-def test_reason_must_point_at_code_location():
+def test_refs_must_point_at_code_location():
     ledger = ledger_of([span("A", 0, 4)])
-    ledger["undeclared"][0]["reason"] = "这里没人管"
+    ledger["undeclared"][0]["refs"] = ["这里没人管"]
     errs = nm.violations([span("A", 0, 4)], FACE, ledger)
-    assert any("bad-reason $0004" in e for e in errs), errs
+    assert any("bad-refs $0004" in e for e in errs), errs
 
 
 def test_reason_with_code_pointer_is_accepted():
@@ -146,11 +146,11 @@ def _line_of(path: str, predicate) -> int:
 
 
 def _reason_errs(reason: str) -> list[str]:
-    """把 reason 塞进账本空段（0..4 有主、4..8 是洞），返回 `bad-reason` 类错误。"""
+    """把一个 ref 塞进账本空段（0..4 有主、4..8 是洞），返回 `bad-refs` 类错误。"""
     spans = [span("A", 0, 4)]
     ledger = ledger_of(spans)
-    ledger["undeclared"][0]["reason"] = reason
-    return [e for e in nm.violations(spans, FACE, ledger) if "bad-reason" in e]
+    ledger["undeclared"][0]["refs"] = [reason]
+    return [e for e in nm.violations(spans, FACE, ledger) if "bad-refs" in e]
 
 
 def test_reason_pointer_to_empty_line_is_rejected():
@@ -183,8 +183,8 @@ def test_reason_pointer_without_line_is_rejected():
 
 def test_asm_pointer_requires_prefix_and_accepts_comment_line():
     # refs/ 下汇编必须带 `asm:` 前缀；汇编注释行（`;` 起始）本身承载地址锚，算证据。
-    assert nm.reason_pointer_errors("命名见 refs/m1disasm/SRC/constants_ram.asm:568") != []
-    assert nm.reason_pointer_errors(
+    assert nm.pointer_errors("命名见 refs/m1disasm/SRC/constants_ram.asm:568") != []
+    assert nm.pointer_errors(
         "命名见 asm:refs/m1disasm/SRC/constants_ram.asm:568") == []
 
 
@@ -210,20 +210,20 @@ def test_write_refuses_unmodeled_increase():
     old = ledger_of([span("A", 0, 8)])  # 无空洞、无 Unmodeled
     new_dump = dump_of([span("Legacy", 0, 8, "unmodeled", PTR)])
     with pytest.raises(ValueError, match="Unmodeled 只减不增"):
-        nm.make_ledger(new_dump, old, reason="试图整段标 Unmodeled")
+        nm.make_ledger(new_dump, old, refs=[PTR])
 
 
 def test_write_refuses_undeclared_to_unmodeled_shift():
     old = ledger_of([span("A", 0, 4)])  # 4 B Undeclared
     new_dump = dump_of([span("A", 0, 4), span("Legacy", 4, 4, "unmodeled", PTR)])
     with pytest.raises(ValueError, match="Unmodeled 只减不增"):
-        nm.make_ledger(new_dump, old, reason="平移")
+        nm.make_ledger(new_dump, old, refs=[PTR])
 
 
 def test_write_allows_unmodeled_to_owner():
     old = ledger_of([span("A", 4, 4), span("Legacy", 0, 4, "unmodeled", PTR)])
     new_dump = dump_of([span("A", 4, 4), span("B", 0, 2), span("Legacy", 2, 2, "unmodeled", PTR)])
-    new = nm.make_ledger(new_dump, old, reason="typed 化")
+    new = nm.make_ledger(new_dump, old, refs=[PTR])
     assert new["unmodeled_total"] == 2
     assert sum(new["owner_bytes"]) == 6
     assert new["undeclared_total"] == 0
@@ -234,13 +234,13 @@ def test_write_refuses_widening_existing_owner_span():
     old = ledger_of([span("A", 0, 4)])  # 洞 4..8
     new_dump = dump_of([span("A", 0, 8)])  # 加宽 Owner 吞洞
     with pytest.raises(ValueError, match="既有 Owner span 消失/变形"):
-        nm.make_ledger(new_dump, old, reason="加宽")
+        nm.make_ledger(new_dump, old, refs=[PTR])
 
 
 def test_write_allows_new_owner_span_from_undeclared():
     old = ledger_of([span("A", 0, 4)])
     new_dump = dump_of([span("A", 0, 4), span("B", 4, 4)])
-    new = nm.make_ledger(new_dump, old, reason="新增 typed 字段")
+    new = nm.make_ledger(new_dump, old, refs=[PTR])
     assert new["undeclared_total"] == 0
     assert sum(new["owner_bytes"]) == 8
 
@@ -248,16 +248,17 @@ def test_write_allows_new_owner_span_from_undeclared():
 def test_write_refuses_new_hole_without_reason():
     old = ledger_of([span("A", 0, 8)])
     new_dump = dump_of([span("A", 0, 4)])
-    with pytest.raises(ValueError, match="无 reason"):
-        nm.make_ledger(new_dump, old, reason=None)
+    with pytest.raises(ValueError, match="无 refs"):
+        nm.make_ledger(new_dump, old)
 
 
 def test_write_carries_reason_when_hole_shrinks():
     old = ledger_of([span("A", 0, 4)])
     # 洞 4..8 缩小到 6..8：新增 Owner span 4..2 盖住洞的前半，旧 Owner span (0,4) 不变。
     new_dump = dump_of([span("A", 0, 4), span("B", 4, 2)])
-    new = nm.make_ledger(new_dump, old, reason=None)
-    assert new["undeclared"] == [{"start": 6, "len": 2, "reason": old["undeclared"][0]["reason"]}]
+    new = nm.make_ledger(new_dump, old)
+    assert new["undeclared"] == [{"start": 6, "len": 2, "kind": "undeclared",
+                                  "refs": old["undeclared"][0]["refs"]}]
     assert new["undeclared_total"] == 2
     assert len(new["history"]) == 2
     assert new["history"][-1]["prev_sha256"] == nm.entry_sha256(new["history"][0])
@@ -267,8 +268,9 @@ def test_write_carries_reason_when_hole_shrinks():
 # ---------------- 7. history 防手工改账 ----------------
 
 def test_history_tamper_is_detected():
+    # 手工改「状态」（字节归谁）必须被 history 尾条抓到；改 refs/措辞不算状态（散文不是事实）。
     ledger = ledger_of([span("A", 0, 4)])
-    ledger["undeclared"][0]["reason"] = PTR + "（改）"
+    ledger["view_only_bytes"] = int(ledger["view_only_bytes"]) + 1
     errs = nm.violations([span("A", 0, 4)], FACE, ledger)
     assert any("state_sha256" in e or "history" in e for e in errs), errs
 
@@ -283,7 +285,7 @@ def test_history_missing_is_rejected():
 def test_history_prev_sha_chain_is_checked():
     old = ledger_of([span("A", 0, 4)])
     new_dump = dump_of([span("A", 0, 4), span("B", 4, 4)])
-    new = nm.make_ledger(new_dump, old, reason="typed 化")
+    new = nm.make_ledger(new_dump, old, refs=[PTR])
     new["history"][-1]["prev_sha256"] = "f" * 64
     errs = nm.violations(new_dump["spans"], FACE, new)
     assert any("prev_sha256" in e for e in errs), errs
@@ -293,7 +295,7 @@ def test_history_unmodeled_increase_is_rejected():
     ledger = ledger_of([span("A", 0, 4)])
     entry = copy.deepcopy(ledger["history"][-1])
     entry["unmodeled_total"] += 1
-    entry["reason"] = "手工加 Unmodeled"
+    entry["refs"] = [PTR]
     entry["prev_sha256"] = nm.entry_sha256(ledger["history"][-1])
     entry["state_sha256"] = "f" * 64
     ledger["history"].append(entry)
@@ -323,7 +325,7 @@ def test_real_unmodeled_notes_have_code_pointers():
     notes = [s["note"] for s in dump["spans"] if s["key"] == "unmodeled"]
     assert notes, "真 dump 应有 Unmodeled 段"
     for note in notes:
-        assert nm.reason_pointer_errors(note) == [], note
+        assert nm.pointer_errors(note) == [], note
 
 
 def test_real_ledger_owner_spans_match_dump():
@@ -346,5 +348,5 @@ def test_real_ledger_unmodeled_matches_dump():
     dump = nm.load_dump()
     ledger = json.loads(ledger_path.read_text(encoding="utf-8"))
     # 账本只登记比对面内的 Unmodeled（面外 Room $6000 缓冲不参与 P2 四态）。
-    expected = nm._partition(dump["spans"], dump["face"])["unmodeled"]
+    expected = nm._unmodeled_entries(nm._partition(dump["spans"], dump["face"]))
     assert ledger["unmodeled"] == expected

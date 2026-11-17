@@ -7,7 +7,7 @@
 * **Owner / View / Unmodeled**：`NesMapped::SPANS` 里有声明（Owner 是 typed 真源，
   View 是同一批字节的第二解释，Unmodeled 是“已声明但尚未 typed”的面）。
 * **Undeclared**：比对面内**没有任何声明**的字节。登记进 `data/status/nes_map.json`，
-  每段必须带指向真实代码位置的 `reason`。
+  每段只存机器事实：`start`/`len`/`kind`/`refs`（可定位指针）。散文不进账本。
 * **四态恒等式**：`Owner + View(only) + Unmodeled + Undeclared == face_total`
   （byte 级；账本与 history 每一条都要成立）。
 * **Unmodeled 只减不增**：与 Undeclared 同一条棘轮；`--write` 只允许两者下降，
@@ -110,6 +110,10 @@ def _line_problem(path: Path, lineno: int, *, asm: bool) -> str | None:
 
 
 def reason_pointer_errors(reason) -> list[str]:
+    return pointer_errors(reason)
+
+
+def pointer_errors(reason) -> list[str]:
     """校验 reason 的每个代码指针都指向真实代码行；返回错误列表（空=通过）。
 
     规则（Fix round 1 机制加固）：
@@ -151,49 +155,39 @@ def reason_pointer_errors(reason) -> list[str]:
                 errs.append(f"{raw}:{lineno}: {why}")
     return errs
 
-# 建账时每段 Undeclared 的初始 reason（真实代码指针，可 grep 验证）。
+# 账本分段边界 + 创世建账的 refs（只存指针，不存解释文字）。
 # Fix round 1 把原 `$0108-$02FF` 的 504 B 拆成三段：延时旗 / 6502 栈页 / OAM 影子页，
 # 不再用一句“整页写入”盖住半真半假的 504 B。
-DEFAULT_REASONS = [
-    # 创世建账用（`--write` 无旧账本时）。每条都必须指向**真实代码行**（Fix round 1 加固）；
-    # 边界沿用创世快照，正文随事实更正（reason 由 `--write` 继承到现行账本）。
-    (0x0000, 0x0033,
-     "零页系统面（Joy1Status=$14/Joy2Status=$15/GameMode=$1D/FrameCount=$2D）："
-     "常量见 ram_map.rs:70/:73/:26/:34，比对面边界见 memmap/observe/frame_face.rs:32；"
-     "写者分散在 world/update.rs（输入/帧计数）与 frame/nmi.rs（模式切换），未逐字节收族"),
-    (0x0034, 0x0003,
-     "RoomPtr hi=$34 由 world/room_load.rs:240 写；$35/$36 为随证临时量"
-     "（Room 声明只覆盖 $33/$37-$3A）"),
-    (0x003B, 0x000E,
-     "AreaPointers_RAM $3B-$48 由 world/room_load.rs:167 copy_area_pointers 写"
-     "（循环体 :169、写点 :173，14 B）"),
-    (0x004A, 0x0005,
-     "$4A TempScrollDir：world/room_draw.rs:726 写、world/camera/scroll.rs:63 读；"
-     "$4D SAMUS_DIR 由 samus/handler.rs:161 写、:322 读；$4E SAMUS_DOOR_DIR 由 "
-     "samus/physics.rs:1690 写、world/door.rs:40 读；$4C 无 Rust 读写点"),
-    (0x0053, 0x0019,
-     "对象/房间门名面 $53-$6B：$53 WalkSoundDelay（asm:refs/m1disasm/SRC/constants_ram.asm:568）；"
-     "$55 IS_SAMUS 由 samus/handler.rs:84 写；$56 DoorEntryStatus 读见 world/room_draw.rs:511；"
-     "$5C/$5D DoorRoomPtr 见 world/door.rs:12；RoomPalette=$68 由 world/room_load.rs:247 写；"
-     "其余未逐字节收族"),
-    (0x006D, 0x008F,
-     "Samus/滚动零散面 $6D-$FB：$6D ScrollBlockOnNameTable0 由 world/room_load.rs:45 区域初始清 0、"
-     "world/room_draw.rs:261 置位；$92 METROID_ON_SAMUS 由 world/elevator.rs:424 清；"
-     "$FA MIRROR_CNTRL 由 world/update.rs:75 写 0x47；$FC/$FD 已由 Camera 声明，不在本段"),
-    (0x00FE, 0x0008,
-     "PPU 影子镜像 PPUMASK_ZP=$FE/PPUCTRL_ZP=$FF（world/room_load.rs:32 的 ScreenOff 写 $FE、"
-     "render/vram.rs:35 写 $FF）与 $0100-$0105 栈底（Rust 不模拟 JSR/RTS 栈字节）"),
-    (0x0108, 0x0002,
-     "MiniBossKillDelayFlag=$0108/PowerUpDelayFlag=$0109 由 frame/tick.rs:637 读写"
-     "（asm C4AA SetTimer 路径）"),
-    (0x010A, 0x00F6,
-     "$010A/$010B 为 MissileCount BCD（ui/hud.rs:47 读）；$010C-$01FF 为 6502 硬件栈页——"
-     "Rust 不模拟 JSR/RTS 栈字节，MSS 整面直映见 frame/memory.rs:195"),
-    (0x04E0, 0x0320,
-     "声引擎/房间绘制/VRAM 缓冲工作区 $04E0-$07FF：SFX_PAUSED=$0602 见 sound/mod.rs:25、"
-     "MUSIC_INIT=$0685 见 ram_map.rs:102（写点 frame/tick.rs:600）；$068D 由 sound/hook.rs:314 写；"
-     "world/room_draw.rs:324 的 MEM0700/PIPE_BUG_HOLES=$0728、pickup/spawn.rs:24 的 POWERUPS_BASE=$0748；"
-     "frame/nmi.rs:116 的 VRAMStructBuffer=$07A0；$04E0-$05FF 为原版未用保留面"),
+PIECES = [
+    # 账本分段的唯一边界表 + 创世建账用 refs。**只存机器事实**：字节区间 + 指针，
+    # 不存任何解释性文字（散文不可验证，解释放 docs/findings/）。
+    # 边界沿用创世快照；$04E0-$05FF 按 asm 符号切成 4 段（敌人槽 E/F、TileBlasts、wave beam）。
+    (0x0000, 0x0033, ["ram_map.rs:70", "ram_map.rs:73", "ram_map.rs:26",
+                      "ram_map.rs:34", "memmap/observe/frame_face.rs:32"]),
+    (0x0034, 0x0003, ["world/room_load.rs:240"]),
+    (0x003B, 0x000E, ["world/room_load.rs:167", "world/room_load.rs:172",
+                      "world/room_load.rs:173"]),
+    (0x004A, 0x0005, ["world/room_draw.rs:726", "world/camera/scroll.rs:63",
+                      "world/camera/scroll.rs:73"]),
+    (0x0053, 0x0019, ["asm:refs/m1disasm/SRC/constants_ram.asm:568",
+                      "samus/handler.rs:84", "world/room_draw.rs:511"]),
+    (0x006D, 0x008F, ["world/room_load.rs:45", "world/room_draw.rs:261",
+                      "world/elevator.rs:424", "world/update.rs:75"]),
+    (0x00FE, 0x0008, ["world/room_load.rs:32", "render/vram.rs:35", "frame/memory.rs:195"]),
+    (0x0108, 0x0002, ["frame/tick.rs:637"]),
+    (0x010A, 0x00F6, ["ui/hud.rs:47", "frame/memory.rs:195"]),
+    (0x0200, 0x0100, ["render/oam_shadow.rs:1"]),
+    (0x04E0, 0x0010, ["asm:refs/m1disasm/SRC/constants_ram.asm:975"]),
+    (0x04F0, 0x0010, ["asm:refs/m1disasm/SRC/constants_ram.asm:976"]),
+    (0x0500, 0x00D0, ["asm:refs/m1disasm/SRC/constants_ram.asm:986",
+                      "world/statue.rs:30", "world/room_draw.rs:381"]),
+    (0x05D0, 0x0030, ["asm:refs/m1disasm/SRC/constants_ram.asm:991"]),
+    (0x0600, 0x0083, ["sound/mod.rs:25", "sound/mod.rs:33",
+                      "asm:refs/m1disasm/SRC/constants_ram.asm:1001"]),
+    (0x0683, 0x0002, ["sound/state.rs:1"]),
+    (0x0685, 0x017B, ["ram_map.rs:102", "frame/tick.rs:600", "frame/nmi.rs:191",
+                      "sound/hook.rs:314", "world/room_draw.rs:324",
+                      "pickup/spawn.rs:24", "title/intro.rs:80"]),
 ]
 
 
@@ -233,6 +227,26 @@ def _segments(addrs) -> list[dict]:
     return out
 
 
+POINTER_TOKEN_RE = re.compile(r"(?:asm:)?[A-Za-z0-9_./-]+\.(?:rs|py|asm)(?::\d+(?:-\d+)?)?")
+
+
+def extract_refs(text) -> list[str]:
+    """从既有文字里机械提取指针 token（迁移用；不再生成新文字）。"""
+    if not isinstance(text, str):
+        return []
+    return [t for t in POINTER_TOKEN_RE.findall(text)]
+
+
+def refs_errors(refs) -> list[str]:
+    """逐个 ref 必须是可定位的真实代码行/汇编行；至少一条。不校验文字事实。"""
+    if not isinstance(refs, list) or not refs:
+        return ["缺 refs（至少一条 path:line 指针）"]
+    errs: list[str] = []
+    for raw in refs:
+        errs += pointer_errors(str(raw))
+    return errs
+
+
 def _is_placeholder(reason) -> bool:
     """占位判定（空/TODO 类）。代码指针的行级校验见 `reason_pointer_errors`。"""
     if not isinstance(reason, str):
@@ -249,14 +263,30 @@ def geometry_sha256(entries) -> str:
     return hashlib.sha256(canon.encode("utf-8")).hexdigest()
 
 
+def _bytes_of(entries) -> list[int]:
+    """条目集合 → 排序后的字节列表（分段方式不进指纹）。"""
+    addrs: set[int] = set()
+    for e in entries or []:
+        if not isinstance(e, dict):
+            continue
+        start, length = int(e.get("start", 0)), int(e.get("len", 0))
+        addrs.update(range(start, start + length))
+    return sorted(addrs)
+
+
 def state_sha256(ledger: dict) -> str:
-    """四态状态指纹：Owner span 几何 + View 计数 + Unmodeled/Undeclared（含 reason）。"""
+    """四态状态指纹：只取**机器事实**（Owner span 几何 + View 计数 + Unmodeled/Undeclared 字节集合）。
+
+    refs/说明文字与分段方式不进指纹——散文不可验证，也不该让「账的状态」跟着措辞漂移；
+    闸门仍由 totals 棘轮 + 字节集合 + Owner 几何把住。
+    """
     payload = {
-        "owner_spans": ledger.get("owner_spans"),
+        "owner_spans": [[int(e["start"]), int(e["len"])]
+                        for e in (ledger.get("owner_spans") or [])],
         "view_bytes": ledger.get("view_bytes"),
         "view_only_bytes": ledger.get("view_only_bytes"),
-        "unmodeled": ledger.get("unmodeled"),
-        "undeclared": ledger.get("undeclared"),
+        "unmodeled": _bytes_of(ledger.get("unmodeled")),
+        "undeclared": _bytes_of(ledger.get("undeclared")),
     }
     canon = json.dumps(payload, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
     return hashlib.sha256(canon.encode("utf-8")).hexdigest()
@@ -271,6 +301,19 @@ def undeclared_segments(spans, face) -> list[dict]:
     """比对面内**任何键都没有声明**的字节，合并成极大连续段。"""
     part = _partition(spans, face)
     return part["undeclared"]
+
+
+def _unmodeled_entries(part) -> list[dict]:
+    """Unmodeled 账本条目：只保留几何 + 从 SPANS note 机械提取的指针（不存散文）。"""
+    out: list[dict] = []
+    for piece in part["unmodeled"]:
+        out.append({
+            "start": int(piece["start"]),
+            "len": int(piece["len"]),
+            "kind": "unmodeled",
+            "refs": extract_refs(piece.get("reason")),
+        })
+    return out
 
 
 def _owner_bytes(spans, face) -> list[int]:
@@ -508,18 +551,21 @@ def _validate_ledger(ledger, part: dict, face) -> list[str]:
             errs.append("ledger: unmodeled 每项必须是对象")
             continue
         start = int(entry.get("start", -1))
-        text = entry.get("reason")
-        note_errs = reason_pointer_errors(text) if not _is_placeholder(text) else ["占位/TODO"]
-        if note_errs:
+        bad = refs_errors(entry.get("refs"))
+        if bad:
             errs.append(
-                f"bad-unmodeled-note ${start:04X}: 账本 Unmodeled 的 reason 必须指向真实代码行"
-                f"（{'; '.join(note_errs)}）"
+                f"bad-unmodeled-refs ${start:04X}: Unmodeled 的 refs 必须可定位"
+                f"（{'; '.join(bad)}）"
             )
-    if unmodeled != part["unmodeled"]:
-        errs.append(
-            "unmodeled: 账本 Unmodeled 段/理由与 dump 声明不一致"
-            "（未 typed 面必须与 Rust 侧 SPANS 逐段同源）"
-        )
+    expected_unm = [(int(e["start"]), int(e["len"])) for e in part["unmodeled"]]
+    actual_unm = [(int(e.get("start", -1)), int(e.get("len", 0))) for e in unmodeled]
+    if actual_unm != expected_unm:
+        # 段边界必须与 Rust 侧 SPANS 同源；但**一个 SPANS 段可拆多段**，故比字节集合。
+        if set(_bytes_of(unmodeled)) != set(_bytes_of(part["unmodeled"])):
+            errs.append(
+                "unmodeled: 账本 Unmodeled 字节集合与 dump 声明不一致"
+                "（未 typed 面必须与 Rust 侧 SPANS 同源）"
+            )
     unmodeled_total = sum(int(e.get("len", 0)) for e in unmodeled if isinstance(e, dict))
     if int(ledger.get("unmodeled_total", -1)) != unmodeled_total:
         errs.append(f"ledger: unmodeled_total={ledger.get('unmodeled_total')!r}，实际 {unmodeled_total}")
@@ -540,12 +586,11 @@ def _validate_ledger(ledger, part: dict, face) -> list[str]:
             continue
         if any(a not in _face_bytes(face) for a in range(start, start + length)):
             errs.append(f"ledger: undeclared ${start:04X}-${start + length - 1:04X} 越出比对面")
-        text = entry.get("reason")
-        note_errs = reason_pointer_errors(text) if not _is_placeholder(text) else ["占位/TODO"]
-        if note_errs:
+        bad_refs = refs_errors(entry.get("refs"))
+        if bad_refs:
             errs.append(
-                f"bad-reason ${start:04X}: Undeclared 的 reason 必须指向真实代码行"
-                f"（{'; '.join(note_errs)}）"
+                f"bad-refs ${start:04X}: Undeclared 的 refs 必须可定位"
+                f"（{'; '.join(bad_refs)}）"
             )
     ordered = sorted(entries, key=lambda e: int(e.get("start", 0)))
     for prev, cur in zip(ordered, ordered[1:]):
@@ -724,11 +769,11 @@ def violations(spans, face=None, ledger=None) -> list[str]:
 
 
 def _split_by_defaults(hole: dict) -> list[dict]:
-    """把一个极大空洞按 DEFAULT_REASONS 的边界切开（reason 粒度可细于空洞粒度）。"""
+    """把一个极大空洞按 PIECES 的边界切开（一个空洞可登记为多段，各带自己的 refs）。"""
     lo = int(hole["start"])
     hi = lo + int(hole["len"])
     cuts = {lo, hi}
-    for start, length, _ in DEFAULT_REASONS:
+    for start, length, _ in PIECES:
         end = start + length
         if lo < start < hi:
             cuts.add(start)
@@ -738,25 +783,30 @@ def _split_by_defaults(hole: dict) -> list[dict]:
     return [{"start": a, "len": b - a} for a, b in zip(points, points[1:]) if b > a]
 
 
-def _default_reason(hole: dict) -> str | None:
-    for start, length, reason in DEFAULT_REASONS:
-        if hole["start"] == start and hole["len"] == length:
-            return reason
-    for start, length, reason in DEFAULT_REASONS:
-        if start <= hole["start"] and hole["start"] + hole["len"] <= start + length:
-            return reason
+def _default_refs(piece: dict) -> list[str] | None:
+    for start, length, refs in PIECES:
+        if piece["start"] == start and piece["len"] == length:
+            return list(refs)
+    for start, length, refs in PIECES:
+        if start <= piece["start"] and piece["start"] + piece["len"] <= start + length:
+            return list(refs)
     return None
 
 
-def _inherited_reason(hole: dict, old_entries) -> str | None:
+def _inherited_refs(piece: dict, old_entries) -> list[str] | None:
     best = None
     best_overlap = 0
     for entry in old_entries:
-        lo = max(int(entry["start"]), hole["start"])
-        hi = min(int(entry["start"]) + int(entry["len"]), hole["start"] + hole["len"])
+        if not isinstance(entry, dict):
+            continue
+        lo = max(int(entry["start"]), piece["start"])
+        hi = min(int(entry["start"]) + int(entry["len"]), piece["start"] + piece["len"])
         if hi - lo > best_overlap:
+            refs = entry.get("refs")
+            if not isinstance(refs, list):
+                refs = extract_refs(entry.get("reason"))
             best_overlap = hi - lo
-            best = entry.get("reason")
+            best = list(refs) if refs else None
     return best
 
 
@@ -767,7 +817,7 @@ def _old_bytes(entries) -> set[int]:
     return out
 
 
-def make_ledger(dump, old=None, reason=None) -> dict | None:
+def make_ledger(dump, old=None, reason=None, refs=None) -> dict | None:
     """由 dump 重算账本。只许下调：上调 / 等长改账 / Owner span 变形 / 新洞无 reason 均抛 ValueError。"""
     face = dump["face"]
     spans = dump["spans"]
@@ -781,24 +831,27 @@ def make_ledger(dump, old=None, reason=None) -> dict | None:
     entries = []
     for hole in part["undeclared"]:
         for piece in _split_by_defaults(hole):
-            text = _inherited_reason(piece, old_entries)
-            if text is None and old is None:
-                # 内置 reason 只用于创世建账；后续任何新洞必须显式 --reason 或继承旧洞。
-                text = _default_reason(piece)
-            if text is None and isinstance(reason, str):
-                text = reason
-            if not isinstance(text, str) or not text.strip():
+            ref = _inherited_refs(piece, old_entries)
+            if ref is None and old is None:
+                # 内置 refs 只用于创世建账；后续任何新洞必须显式 refs 或继承旧洞。
+                ref = _default_refs(piece)
+            if ref is None and isinstance(refs, list) and refs:
+                ref = list(refs)
+            if ref is None and isinstance(reason, str):
+                ref = extract_refs(reason)
+            if not ref:
                 raise ValueError(
-                    f"新洞 ${piece['start']:04X}-${piece['start'] + piece['len'] - 1:04X} 无 reason："
-                    f"Undeclared 每段必须写明真实代码位置（不接受 TODO/unknown）"
+                    f"新洞 ${piece['start']:04X}-${piece['start'] + piece['len'] - 1:04X} 无 refs："
+                    f"Undeclared 每段必须给出至少一条可定位指针"
                 )
-            bad = reason_pointer_errors(text)
+            bad = refs_errors(ref)
             if bad:
                 raise ValueError(
-                    f"新洞 ${piece['start']:04X}-${piece['start'] + piece['len'] - 1:04X} 的 reason "
-                    f"未指向真实代码行（{'; '.join(bad)}）"
+                    f"新洞 ${piece['start']:04X}-${piece['start'] + piece['len'] - 1:04X} 的 refs "
+                    f"不可定位（{'; '.join(bad)}）"
                 )
-            entries.append({"start": piece["start"], "len": piece["len"], "reason": text})
+            entries.append({"start": piece["start"], "len": piece["len"],
+                            "kind": "undeclared", "refs": ref})
     total = sum(e["len"] for e in entries)
 
     if isinstance(old, dict):
@@ -866,7 +919,7 @@ def make_ledger(dump, old=None, reason=None) -> dict | None:
             "view_bytes": part["view_bytes"],
             "view_only_bytes": part["view_only_bytes"],
             "unmodeled_total": part["unmodeled_total"],
-            "unmodeled": part["unmodeled"],
+            "unmodeled": _unmodeled_entries(part),
             "undeclared_total": total,
             "undeclared": entries,
             "history": list(old.get("history") or []),
@@ -877,7 +930,14 @@ def make_ledger(dump, old=None, reason=None) -> dict | None:
                 f"等长改账拒绝：Undeclared/Unmodeled 总量未下降但几何/理由变化"
                 f"（{old_state[:12]} → {new_state[:12]}）——同长换洞不是下调"
             )
-        if total == old_total and part["unmodeled_total"] == old_unmodeled_total and new_state == old_state:
+        tail = (old.get("history") or [{}])[-1] if isinstance(old, dict) else {}
+        tail_stale = bool(tail) and tail.get("state_sha256") != old_state
+        if (
+            total == old_total
+            and part["unmodeled_total"] == old_unmodeled_total
+            and new_state == old_state
+            and not tail_stale
+        ):
             return None
 
     history = list(old.get("history") or []) if isinstance(old, dict) else []
@@ -906,7 +966,7 @@ def make_ledger(dump, old=None, reason=None) -> dict | None:
         "view_bytes": part["view_bytes"],
         "view_only_bytes": part["view_only_bytes"],
         "unmodeled_total": part["unmodeled_total"],
-        "unmodeled": part["unmodeled"],
+        "unmodeled": _unmodeled_entries(part),
         "undeclared_total": total,
         "undeclared": entries,
         "history": history + [history_entry],
@@ -953,11 +1013,12 @@ def cmd_list() -> int:
     )
     for hole in part["undeclared"]:
         mark = "账本" if (hole["start"], hole["len"]) in recorded else "未登记"
-        reason = recorded.get((hole["start"], hole["len"]), {}).get("reason", "（无）")
-        print(f"[{mark}] ${hole['start']:04X}-${hole['start'] + hole['len'] - 1:04X} ({hole['len']} B): {reason}")
+        refs = recorded.get((hole["start"], hole["len"]), {}).get("refs", [])
+        shown = ", ".join(refs) if refs else "（无）"
+        print(f"[{mark}] ${hole['start']:04X}-${hole['start'] + hole['len'] - 1:04X} ({hole['len']} B): {shown}")
     for entry in part["unmodeled"]:
         print(f"[Unmodeled] ${entry['start']:04X}-${entry['start'] + entry['len'] - 1:04X} "
-              f"({entry['len']} B): {entry['reason']}")
+              f"({entry['len']} B): {', '.join(entry.get('refs') or ['（无）'])}")
     if ledger:
         print(
             f"[INFO] 账本 Undeclared={ledger.get('undeclared_total')} B / "
@@ -966,11 +1027,11 @@ def cmd_list() -> int:
     return 0
 
 
-def cmd_write(reason: str | None) -> int:
+def cmd_write(reason: str | None, refs: list[str] | None = None) -> int:
     dump = load_dump()
     old = load_ledger()
     try:
-        new = make_ledger(dump, old, reason=reason)
+        new = make_ledger(dump, old, reason=reason, refs=refs)
     except ValueError as exc:
         print(f"[FAIL] --write 拒绝：{exc}")
         return 1
@@ -1018,12 +1079,14 @@ def main(argv=None) -> int:
     group = parser.add_mutually_exclusive_group()
     group.add_argument("--list", action="store_true", help="列出实际空洞/Unmodeled 与账本 reason")
     group.add_argument("--write", action="store_true", help="把实际空洞写入账本（只许下调）")
-    parser.add_argument("--reason", default=None, help="--write 时新洞的 reason（缺省用内置真实代码指针）")
+    parser.add_argument("--reason", default=None, help="--write 时新洞的指针（逗号分隔；缺省用内置 refs）")
+    parser.add_argument("--refs", default=None, help="同 --reason：path:line 指针列表，逗号分隔")
     args = parser.parse_args(argv)
     if args.list:
         return cmd_list()
     if args.write:
-        return cmd_write(args.reason)
+        refs = [x.strip() for x in args.refs.split(",") if x.strip()] if args.refs else None
+        return cmd_write(args.reason, refs)
     return cmd_check()
 
 

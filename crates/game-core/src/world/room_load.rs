@@ -268,7 +268,7 @@ mod tests_room_load {
 
     /// Fix1-B 回归：MoreInit 清的是 `$6C/$6D`（门挡），**不是** `$5A RoomNumber` /
     /// `$53 WalkSoundDelay`——旧形写错地址 ⇒ 区域切换后门挡位残留 ⇒ `get_room_num`
-    /// 读 `$6C+y` 命中门挡位即拒滚（`room_load.rs:185`）。
+    /// 读 `$6C+y` 命中门挡位即拒滚（`room_load.rs:189`）。
     #[test]
     fn more_init_clears_door_scroll_blocks() {
         let mut m = Manager::default();
@@ -283,5 +283,34 @@ mod tests_room_load {
         assert_eq!(m.read_ram(crate::ram_map::SCROLL_BLOCK_NT0), 0);
         assert_eq!(m.room_number(), 0x5A, "MoreInit 不清 RoomNumber（后段才写 $FF）");
         assert_eq!(m.read_ram(0x0053), 0x07, "MoreInit 不碰 WalkSoundDelay=$53");
+    }
+
+    /// Fix2-B：**打穿 `more_init` 本体**（不是只测 helper）——残留门挡位必须在
+    /// 区域初始化里被清掉，而 `$53 WalkSoundDelay` 保持原值。
+    ///
+    /// asm 锚：`MoreInit ; 07:C81D`（`prg7_engine.asm:1876-1877`）
+    /// `stx ScrollBlockOnNameTable3 / stx ScrollBlockOnNameTable0`（X=0）。
+    #[test]
+    fn more_init_clears_stale_scroll_blocks_through_entry() {
+        let mut m = Manager::default();
+        crate::frame::boot::copy_map(&mut m); // WorldMap（boot 链件），与 frame::tests 同前置
+        m.write_ram(crate::ram_map::MAIN_ROUTINE, 1);
+        m.write_ram(crate::ram_map::IN_AREA, 0);
+        m.set_scroll_block_nt3(0x02); // 上次区域的残留门挡位（bit1=右门）
+        m.set_scroll_block_nt0(0x01); // bit0=左门
+        m.write_ram(0x0053, 0x07); // WalkSoundDelay：MoreInit 不得触碰
+        super::more_init(&mut m);
+        assert_eq!(
+            (m.scroll_block_nt3(), m.scroll_block_nt0()),
+            (0, 0),
+            "MoreInit 必须清 $6C/$6D（asm 07:C81D 的 stx 双清）"
+        );
+        assert_eq!(
+            m.read_ram(crate::ram_map::SCROLL_BLOCK_NT3)
+                | m.read_ram(crate::ram_map::SCROLL_BLOCK_NT0),
+            0,
+            "typed 域与 RAM 面一致（$6C/$6D 走 typed，不再落 storage）"
+        );
+        assert_eq!(m.read_ram(0x0053), 0x07, "MoreInit 不清 WalkSoundDelay=$53");
     }
 }
