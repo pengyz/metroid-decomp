@@ -12,10 +12,30 @@
   ],
   "face_total": 2272,
   "owner_bytes": [
-    283,
+    288,
     84
   ],
   "owner_spans": [
+    {
+      "start": 75,
+      "len": 1
+    },
+    {
+      "start": 90,
+      "len": 1
+    },
+    {
+      "start": 91,
+      "len": 1
+    },
+    {
+      "start": 101,
+      "len": 1
+    },
+    {
+      "start": 107,
+      "len": 1
+    },
     {
       "start": 110,
       "len": 2
@@ -314,7 +334,7 @@
       "reason": "爆炸额外面未 typed：status/animFrame/animDelay/resetAnimIndex/animIndex/hi 真相在字节面（crates/game-core/src/enemy/explosion.rs:288）"
     }
   ],
-  "undeclared_total": 1293,
+  "undeclared_total": 1288,
   "undeclared": [
     {
       "start": 0,
@@ -329,27 +349,42 @@
     {
       "start": 59,
       "len": 14,
-      "reason": "AreaPointers_RAM $3B-$48 由 world/room_load.rs:169 copy_area_pointers 写（14 B）"
+      "reason": "AreaPointers_RAM $3B-$48 由 world/room_load.rs:163 copy_area_pointers 写（循环写见 :170，14 B）"
     },
     {
       "start": 74,
-      "len": 5,
-      "reason": "PAGE_INDEX=$4B/SAMUS_DIR=$4D/SAMUS_DOOR_DIR=$4E 由 world/object_globals.rs:26 读写（常量见 crates/game-core/src/ram_map.rs；ScrollDir=$49 已由 Camera 声明）"
+      "len": 1,
+      "reason": "$4A TempScrollDir：world/room_draw.rs:726 写（TempScrollDir←ScrollDir 径汇），world/camera/scroll.rs:63/:73 读；$49 ScrollDir 已由 Camera 声明不在本段"
+    },
+    {
+      "start": 76,
+      "len": 3,
+      "reason": "$4C 无 Rust 侧读写点（随证临时量）；$4D SAMUS_DIR 由 samus/handler.rs:161/:323 与 samus/physics.rs:236 写、samus/handler.rs:274/:322 读；$4E SAMUS_DOOR_DIR 由 samus/physics.rs:1690 写、world/door.rs:40 读"
     },
     {
       "start": 83,
-      "len": 25,
-      "reason": "对象/房间门名面：world/object_globals.rs:26-57 写 PAGE_INDEX/ROOM_NUMBER=$5A/SPRITE_PAGE_POS=$5B/OBJECT_CNTRL=$6B；title/state.rs:70 写 IS_SAMUS=$55；world/room_load.rs:247 写 RoomPalette=$68"
+      "len": 7,
+      "reason": "$53 ScrollBlockOnNameTable0 由 world/room_load.rs:41 清 0；$55 IS_SAMUS 由 samus/handler.rs:84/:86 写；$56 DoorEntryStatus 读点自 world/room_draw.rs:511 起（门块绘制）；$54/$57-$59 未逐字节收族（Room 声明只覆盖 $33/$37-$3A）"
+    },
+    {
+      "start": 92,
+      "len": 9,
+      "reason": "$5C-$64：$5C/$5D DoorRoomPtr lo/hi（world/door.rs:12-13）；$5E-$64 未逐字节收族（门绘制游标临时量）"
+    },
+    {
+      "start": 102,
+      "len": 5,
+      "reason": "$66-$6A：RoomPalette=$68 由 world/room_load.rs:243 写；其余（$66/$67/$69/$6A）未逐字节收族"
     },
     {
       "start": 109,
       "len": 1,
-      "reason": "ScrollBlockOnNameTable0=$6D：world/update.rs:63 写 0、world/update.rs:229 写 $33；读在 world/room_load.rs:175 的 GetRoomNum 门（现存唯一读写族，未 typed）"
+      "reason": "ScrollBlockOnNameTable0=$6D：world/update.rs:63 写 0、world/update.rs:229 写 $33（生产面仅此两写点；Rust 侧暂无读点，asm 读径未单独收族）；$006C 已由 Camera 声明不在本段"
     },
     {
       "start": 112,
       "len": 140,
-      "reason": "Samus/滚动零散面 $70-$FB：world/elevator.rs:424 写 METROID_ON_SAMUS=$92；world/update.rs:75 写 MIRROR_CNTRL=$FA；$FC/$FD 已由 Camera 声明不在本段；其余（$70-$91/$93-$F9）为 asm 临时量与未逐字节收族的零散面"
+      "reason": "Samus/滚动零散面 $70-$FB：world/elevator.rs:424 写 METROID_ON_SAMUS=$92；world/update.rs:75/:83 写 MIRROR_CNTRL（$FA）0x47；world/elevator.rs:159-160/:345-346/:552 增删 MIRROR_CNTRL 的 $08 位；$FC/$FD 已由 Camera 声明不在本段；其余（$70-$91/$93-$F9）为 asm 临时量与未逐字节收族的零散面"
     },
     {
       "start": 254,
@@ -421,6 +456,39 @@
       "undeclared_total": 1293,
       "state_sha256": "56237aec1fa03ffa3df978b86935c589834bbc732e41e3f26138535112e6080a",
       "prev_sha256": "f9ab398f3c75a9d252183574276589f92cfbed60b29b18b09253ab85912d4668"
+    },
+    {
+      "ts": "2026-11-17T19:14:24+08:00",
+      "reason": "下调 Undeclared 1293 → 1290 B / Unmodeled 612 → 612 B",
+      "owner_total": 370,
+      "view_bytes": 23,
+      "view_only_bytes": 0,
+      "unmodeled_total": 612,
+      "undeclared_total": 1290,
+      "state_sha256": "0f91cb32ef451826c0968cb3292b71f87e06241104fc29a25afdaeeac524b0a3",
+      "prev_sha256": "dff7d5f7374a398bc58b6308458e58513fa8f79cf71bccc17b9e3ab4cfff1ce6"
+    },
+    {
+      "ts": "2026-11-17T19:15:37+08:00",
+      "reason": "下调 Undeclared 1290 → 1289 B / Unmodeled 612 → 612 B",
+      "owner_total": 371,
+      "view_bytes": 23,
+      "view_only_bytes": 0,
+      "unmodeled_total": 612,
+      "undeclared_total": 1289,
+      "state_sha256": "b156ffad82006d7d03e7f27ee1ecc0b86331a44d0f3950ed3d090ca1624af988",
+      "prev_sha256": "08b8f7f49dbcda595a13d3a9e15567362a5a191e48b2f70539324e2475880ece"
+    },
+    {
+      "ts": "2026-11-17T19:16:52+08:00",
+      "reason": "下调 Undeclared 1289 → 1288 B / Unmodeled 612 → 612 B",
+      "owner_total": 372,
+      "view_bytes": 23,
+      "view_only_bytes": 0,
+      "unmodeled_total": 612,
+      "undeclared_total": 1288,
+      "state_sha256": "c240f7fcd5f5c0f262e9e3607adf01599ab2eba57f1c2a75940809ab707d58da",
+      "prev_sha256": "b217d3d36b99f77496d92a7a4f605cbac35f363b1f1c55c6a0812afcdb6185a2"
     }
   ]
 }

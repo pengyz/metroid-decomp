@@ -166,6 +166,7 @@ impl TypedRestoreManifest {
             .copied()
             .chain(crate::samus::health_change::HealthChange::ADDRS)
             .chain(crate::sound::state::SoundInitFlags::ADDRS)
+            .chain(crate::world::object_globals::ObjectGlobals::ADDRS)
             .chain(crate::render::oam_shadow::OamShadow::addrs())
     }
 
@@ -207,6 +208,12 @@ impl Manager {
             assert!(
                 mem.sound_init.set_byte(a, ram[a as usize & 0x7FF]),
                 "`SoundInitFlags` 地址必须在 typed 域内"
+            );
+        }
+        for a in crate::world::object_globals::ObjectGlobals::ADDRS {
+            assert!(
+                mem.object_globals.set_byte(a, ram[a as usize & 0x7FF]),
+                "`ObjectGlobals` 地址必须在 typed 域内"
             );
         }
         // OAM 可整页拷贝（`OamShadow::from_page`）——比逐址 set_byte 少 255 次分派。

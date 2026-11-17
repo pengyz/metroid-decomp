@@ -47,6 +47,10 @@ impl Manager {
         if let Some(v) = self.sound_init.get_byte(a) {
             return v;
         }
+        // 对象全局伪寄存器（`$4B/$5A/$5B`）：typed 真源在 `Manager.object_globals`。
+        if let Some(v) = self.object_globals.get_byte(a) {
+            return v;
+        }
         // OAM 页（`$0200-$02FF`）：typed 真源在 `Manager.oam`。
         if let Some(v) = self.oam.get_byte(a) {
             return v;
@@ -74,6 +78,10 @@ impl Manager {
         }
         // 声引擎 init 旗（`$0683/$0684`）：写径同读径，落 typed 真相。
         if self.sound_init.set_byte(a, v) {
+            return;
+        }
+        // 对象全局伪寄存器（`$4B/$5A/$5B`）：写径同读径，落 typed 真相。
+        if self.object_globals.set_byte(a, v) {
             return;
         }
         // OAM 页（`$0200-$02FF`）：写径同读径，落 typed 真相。

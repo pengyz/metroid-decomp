@@ -67,6 +67,12 @@ impl Manager {
                 img.ram[a as usize & 0x7FF] = v;
             }
         }
+        // 对象全局伪寄存器（`$4B/$5A/$5B`）typed 域投影。
+        for a in crate::world::object_globals::ObjectGlobals::ADDRS {
+            if let Some(v) = self.object_globals.get_byte(a) {
+                img.ram[a as usize & 0x7FF] = v;
+            }
+        }
         // OAM 整页（`$0200-$02FF`）typed 域投影（64 槽 × 4 B）。
         img.ram[0x200..0x300].copy_from_slice(self.oam.page());
         // 敌槽 typed 域（`EnsExtra` 前 7 字节）：`$6AF4` 在 WRAM 面 ⇒ 投影到 `wram`。
@@ -94,6 +100,9 @@ pub struct Manager {
     pub(crate) health_change: crate::samus::health_change::HealthChange,
     /// 声引擎 init 旗（`$0683/$0684`）typed 状态。真相面；`snapshot_nes()` 投影回字节面。
     pub(crate) sound_init: crate::sound::state::SoundInitFlags,
+    /// 对象全局伪寄存器（`$4B PageIndex/$5A RoomNumber/$5B SpritePagePos`）typed 状态。
+    /// 真相面；`snapshot_nes()` 投影回字节面。
+    pub(crate) object_globals: crate::world::object_globals::ObjectGlobals,
     /// OAM 整页（`$0200-$02FF`）typed 状态。真相面；`snapshot_nes()` 投影回字节面。
     pub(crate) oam: crate::render::oam_shadow::OamShadow,
     /// 敌槽 typed 状态（`EnsExtra` 前 7 字节 × 12 槽）。真相面；`snapshot_nes()` 投影回
@@ -155,7 +164,7 @@ pub struct Manager {
 
 impl Default for Manager {
     fn default() -> Self {
-        Self { storage: crate::memmap::storage::NesStorage::default(), samus: Default::default(), health_change: Default::default(), sound_init: Default::default(), oam: Default::default(), enemies: Default::default(), regs: Registers::default(), nmi_enabled: false,
+        Self { storage: crate::memmap::storage::NesStorage::default(), samus: Default::default(), health_change: Default::default(), sound_init: Default::default(), object_globals: Default::default(), oam: Default::default(), enemies: Default::default(), regs: Registers::default(), nmi_enabled: false,
                title_cursor: 0, title_cursor_phase: 0, title_spin: 0, check_password_pending: false, deferred_screen_on: false, title_no_return: false,
                iter_gates: Vec::new(), iter_span_left: 0, iter_span_fc: false, fc_inced_this_tick: false,
                apu_log: Vec::new(), work_cycles: 0,
