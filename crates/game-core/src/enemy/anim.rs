@@ -11,6 +11,16 @@ use crate::ram_map;
 /// ClearObjectCntrl；帧指针（EnFramePtrTable1/2——animFrame bit7 carry 选表！）→
 /// GetSpriteCntrlData→位指针（EnPlacePtrTable）→sprite 管线写（place_disp/四元组）。
 pub(crate) fn draw_enemy(mem: &mut crate::frame::Manager, x: u8) {
+    draw_at(mem, x);
+}
+
+/// 爆炸池绘制入口（`AnimDrawEnemy ; 07:F97E` 的 `jmp DrawEnemy` 一半）。
+pub(crate) fn draw_explosion(mem: &mut crate::frame::Manager, slot: u8) {
+    let x = crate::enemy::explosion::ens_offset(slot);
+    draw_at(mem, x);
+}
+
+fn draw_at(mem: &mut crate::frame::Manager, x: u8) {
     // 【goal-轮73 draw 调用直证】双写源（n=803 清→置双写）。
     use game_data::assets;
     // 【②回装（2026-10-29）】asm :6156-6168：帧记字 1/2→EnsExtra.radiusY/X（IsObject-
@@ -99,6 +109,23 @@ pub(crate) fn draw_enemy(mem: &mut crate::frame::Manager, x: u8) {
 /// EN_ANIM_TABLE[animIndex]（区表——Brinstar $9D6A）：FF⇒animIndex←reset 续走；
 /// 否则 animFrame(+3)←表值、animIndex+1。调用形：CrawlerAI @exit `lda #3/jsr $800C`。
 pub(crate) fn update_enemy_anim(mem: &mut crate::frame::Manager, x: u8, a: u8) {
+    update_anim_at(mem, x, a);
+}
+
+/// 爆炸池的同一例程入口（`UpdateEnemyExplosion` 尾件 `jmp AnimDrawEnemy` 的
+/// `jsr UpdateEnemyAnim` 一半）。**槽号入参**，基址换算收在 `explosion::ens_offset`。
+///
+/// 【为什么要有这两个入口】`UpdateEnemyAnim` 是 asm 里被敌池与爆炸池共用的例程：
+/// 敌槽 `x` 16 步长、爆炸槽 `x` 8 步长，而 `$6AF4 + $C0` 恰等于爆炸池额外面基址
+/// `$6BB4`。此前调用方直接把爆炸偏移喂给"敌函数"，靠朴素的加法巧合生效——
+/// 一旦有人把内部改成 `slot_of(x)` 就整条静默错位（2026-11-17 试改即被池测抓出）。
+/// 现在两个池各有具名入口，巧合被关在 `update_anim_at` 里且有 pin 测守着。
+pub(crate) fn update_explosion_anim(mem: &mut crate::frame::Manager, slot: u8, a: u8) {
+    let x = crate::enemy::explosion::ens_offset(slot);
+    update_anim_at(mem, x, a);
+}
+
+fn update_anim_at(mem: &mut crate::frame::Manager, x: u8, a: u8) {
     // 【2026-11-17 结构发现，勿"顺手句柄化"】`x` 在这里**不是槽偏移**，而是 asm 的
     // "Ens 基址 + x" 索引：敌槽用 `0..=0xAF`（16 步长），**爆炸池用 `0xC0..=0xD8`（8 步长）**
     // ——因为 `$6AF4 + $C0` 恰等于 `$6BB4`（爆炸池额外面基址，见 `explosion::ens_offset`）。

@@ -195,3 +195,42 @@ mod tests_explosion_pool {
         assert_eq!(m.explosion(2).delay(), 0x0A, "free 只清 status，不动 delay");
     }
 }
+
+
+#[cfg(test)]
+mod tests_pool_separation {
+    use super::*;
+    use crate::frame::Manager;
+
+    /// **爆炸槽 1–3 的动画面必须读写自己的额外面**（`$6BBC`/`$6BC4`/`$6BCC`，8 步长）。
+    /// 旧形按 16 步长构造句柄 ⇒ 槽 0 因 `0*16==0*8` 恰好对，槽 1 起全错位；此测是那次
+    /// 真错的回归钉（`b5c34f18` 更正 EXTRA_STRIDE 16→8 的后续覆盖）。
+    #[test]
+    fn each_slot_animates_its_own_extra_face() {
+        for slot in 0..SLOT_COUNT {
+            let mut m = Manager::default();
+            m.explosion(slot).occupy();
+            m.explosion(slot).set_anim(0x00); // resetAnim/animIndex 同写、delay 归零
+            // A=1 ⇒ 第一跳走表，animFrame 取表值、animIndex 自增
+            crate::enemy::anim::update_explosion_anim(&mut m, slot, 1);
+            let base = EXTRA_BASE + slot as u16 * EXTRA_STRIDE;
+            assert_eq!(
+                m.read_wram(base + explx::ANIM_DELAY),
+                1,
+                "槽 {slot} 的 animDelay 必须写在自己的额外面（{base:#06X}）"
+            );
+            assert!(
+                m.read_wram(base + explx::ANIM_FRAME) != 0xFF,
+                "槽 {slot} 的 animFrame 必须被走表推进"
+            );
+        }
+    }
+
+    /// 两池步长不同这件事本身就是最容易写错的地方：敌槽 16、爆炸槽 8。
+    #[test]
+    fn explosion_stride_differs_from_enemy_stride() {
+        assert_eq!(STRIDE, 8);
+        assert_eq!(EXTRA_STRIDE, 8, "额外面与主面同步长（asm EnExplosionExtra 8 字节）");
+        assert_ne!(STRIDE, crate::enemy::state::ENEMY_STRIDE, "敌池 16 / 爆炸池 8");
+    }
+}

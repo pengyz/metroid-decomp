@@ -2,7 +2,7 @@
 //!
 //! asm 根：`UpdateEnemy_*` 07:F3BE..F57D；`UpdateEnemyCommon` 三入口 07:F410。
 
-use crate::enemy::anim::draw_enemy;
+use crate::enemy::anim::{draw_enemy, draw_explosion, update_explosion_anim};
 use crate::enemy::crawler::crawler_ai;
 use crate::enemy::motion::*;
 use crate::enemy::prep::*;
@@ -307,8 +307,8 @@ fn update_enemy_explosion(mem: &mut crate::frame::Manager, slot: u8, x: u8) {
     // `AnimDrawEnemy ; 07:F97E` = `jsr UpdateEnemyAnim` + `jmp DrawEnemy`；
     // `DrawEnemy ; 07:DD8B` 先比 `animFrame == _id_FrameNone($FF)` ⇒ 空帧转 ClearObjectCntrl。
     mem.write_ram(0x006B, 0x80); // ObjectCntrl（覆盖形：非 MSB 位作调色板/优先级）
-    update_enemy_anim(mem, x, 0x03);
-    draw_enemy(mem, x);
+    update_explosion_anim(mem, slot, 0x03);
+    draw_explosion(mem, slot);
 }
 
 /// `@applySpeed`（`ApplySpeedToPosition ; 07:FD8F` 的敌侧入口）。失败（carry clear）

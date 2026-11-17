@@ -218,6 +218,9 @@ impl SlotState {
 /// `EnsExtra` 基址（`$6AF4`，16 字节/槽）——句柄内部的唯一定义处。
 pub(crate) const ENS_EXTRA_BASE: u16 = 0x6AF4;
 
+/// 敌槽步长（16 字节/槽；爆炸池是 8，两者不可混用）。
+pub(crate) const ENEMY_STRIDE: u16 = 16;
+
 /// 敌槽字节偏移 → 槽号。asm 例程普遍以 `x = slot*16` 作索引，句柄化时在此换算一次。
 /// 【2026-11-17 上移】原在 `enemy/framework.rs`，因 `enemy/anim.rs` 也要用而收进本模块。
 #[inline]
