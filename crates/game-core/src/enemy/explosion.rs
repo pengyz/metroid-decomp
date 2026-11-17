@@ -255,7 +255,7 @@ mod tests_pool_separation {
             m.explosion(slot).occupy();
             m.explosion(slot).set_anim(0x00); // resetAnim/animIndex 同写、delay 归零
             // A=1 ⇒ 第一跳走表，animFrame 取表值、animIndex 自增
-            crate::enemy::anim::update_explosion_anim(&mut m, slot, 1);
+            crate::enemy::anim_tick::update_explosion_anim(&mut m, slot, 1);
             let base = EXTRA_BASE + slot as u16 * EXTRA_STRIDE;
             assert_eq!(
                 m.read_wram(base + explx::ANIM_DELAY),

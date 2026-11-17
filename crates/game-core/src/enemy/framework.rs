@@ -2,7 +2,8 @@
 //!
 //! asm 根：`UpdateEnemy_*` 07:F3BE..F57D；`UpdateEnemyCommon` 三入口 07:F410。
 
-use crate::enemy::anim::{draw_enemy, draw_explosion, update_explosion_anim};
+use crate::enemy::anim_tick::update_explosion_anim;
+use crate::render::enemy_sprite::{draw_enemy, draw_explosion};
 use crate::enemy::crawler::crawler_ai;
 use crate::enemy::motion::*;
 use crate::enemy::prep::*;

@@ -255,6 +255,9 @@ impl SlotState {
     }
 }
 
+/// `Ens` 主面基址（`$0400`，16 字节/槽）——句柄内部的唯一定义处。
+pub(crate) const ENS_BASE: u16 = 0x0400;
+
 /// `EnsExtra` 基址（`$6AF4`，16 字节/槽）——句柄内部的唯一定义处。
 pub(crate) const ENS_EXTRA_BASE: u16 = 0x6AF4;
 
@@ -267,6 +270,66 @@ pub(crate) const ENEMY_STRIDE: u16 = 16;
 pub(crate) fn slot_of(x: u8) -> u8 {
     debug_assert_eq!(x % 16, 0, "敌槽偏移必须是 16 的倍数，收到 {x:#04X}");
     x / 16
+}
+
+/// **「`Ens` 基址 + asm 偏移」面**：共用例程（`UpdateEnemyAnim ; 07:E094` /
+/// `DrawEnemy ; 07:DD8B`）的入参 `x` 不是槽号，而是「`Ens` 基址 + 偏移」索引。
+///
+/// 敌池 `x` 步长 16（`0..=0xAF`），爆炸池步长 8（`0xC0..=0xD8`），两池靠
+/// `$6AF4 + $C0 == $6BB4` 恰好接上——所以**不能用 `slot_of(x)` 换算**（槽 0 之外会整条错位，
+/// 2026-11-17 实测被池测抓出）。本句柄的职责就是把这条偏移算术关在一处，
+/// 让共用例程不必各自写 `$6AF4 + x + 3` 这类字面量。
+pub(crate) struct EnsFace<'a> {
+    mem: &'a mut Manager,
+    x: u8,
+}
+
+impl Manager {
+    /// 派生共用例程的字段面（`x` = asm 的「`Ens` 基址 + 偏移」，两池通用）。
+    pub(crate) fn ens_face(&mut self, x: u8) -> EnsFace<'_> {
+        EnsFace { mem: self, x }
+    }
+}
+
+impl<'a> EnsFace<'a> {
+    #[inline]
+    fn extra(&self, off: u16) -> u16 {
+        ENS_EXTRA_BASE + self.x as u16 + off
+    }
+
+    #[inline]
+    fn main(&self, off: u16) -> u16 {
+        ENS_BASE + self.x as u16 + off
+    }
+
+    /// `EnsExtra.animFrame`（+3）。
+    pub(crate) fn anim_frame(&self) -> u8 {
+        self.mem.read_wram(self.extra(ensx::ANIM_FRAME as u16))
+    }
+
+    /// 帧记录携带的半径（`asm :6156-6168` 帧记字 1/2 → `EnsExtra.radiusY/X`）。
+    pub(crate) fn set_radius_y(&mut self, v: u8) {
+        self.mem.write_wram(self.extra(ensx::RADIUS_Y as u16), v);
+    }
+    pub(crate) fn set_radius_x(&mut self, v: u8) {
+        self.mem.write_wram(self.extra(ensx::RADIUS_X as u16), v);
+    }
+
+    /// `Ens.data05`（+5）——`bit1` 是 `IsObjectVisible` 的逐帧闩。
+    pub(crate) fn data05(&self) -> u8 {
+        self.mem.read_ram(self.main(5))
+    }
+    pub(crate) fn set_data05(&mut self, v: u8) {
+        self.mem.write_ram(self.main(5), v);
+    }
+
+    /// `Ens.y`（+0）/ `Ens.x`（+1）——房内坐标（非屏位）。
+    pub(crate) fn y(&self) -> u8 {
+        self.mem.read_ram(self.main(0))
+    }
+    pub(crate) fn x_pos(&self) -> u8 {
+        self.mem.read_ram(self.main(1))
+    }
 }
 
 /// **一个敌槽的语义句柄**（短生命周期，由 `Manager::enemy(slot)` 派生）。

@@ -5,7 +5,7 @@
 //! 3 Explode / 4 Frozen / 5 Pickup / 6 Hurt / ≥7 RemoveEnemy）、以及两个已端口的 AI
 //! 派发（`skree_ai` / `crawler_ai`）与其辅助件。
 
-use crate::enemy::{framework::*, anim::*, skree::*, crawler::*};
+use crate::enemy::{framework::*, anim_tick::*, skree::*, crawler::*};
 use crate::enemy::prep::*;
 use crate::frame::tick::*;
 use crate::ram_map;

@@ -1472,6 +1472,7 @@ mod tests_enemy_screen_pos {
     //! 判径（sprite.rs 勘误注（$25/$26=MMC1CTRL_ZP 误读（ScrollX=$FD）））：敌屏位
     //! x=房位−ScrollX($FD)——旧形减 0x26（SpareMem26）⇒不减镜头⇒随镜恒距。
     use super::*;
+    use crate::render::enemy_sprite::draw_enemy;
     use crate::frame::Manager;
 
     /// 滚动关系锚：ScrollX+10⇒OAM 屏位−10（place 微调不变（房位同））——旧形减 $26
@@ -1505,6 +1506,7 @@ mod tests_enemy_palette_override {
     //! 旧形只读 $6B bit4 做镜像、忽略 MSB ⇒ tough/冻结敌调色板覆盖从未生效。
     use super::*;
     use crate::frame::Manager;
+    use crate::render::enemy_sprite::draw_enemy;
 
     fn attr_with_obj_cntrl(v: u8) -> u8 {
         let mut m = Manager::default();

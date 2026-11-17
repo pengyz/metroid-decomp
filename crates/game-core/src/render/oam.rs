@@ -55,7 +55,7 @@ pub(crate) fn new_ctrl_byte(c: u8, obj_cntrl: u8) -> u8 {
 }
 
 /// **帧流环唯一实现**（`DrawSpriteObject ; $DF19`）——对象（`obj_draw_frame`）与
-/// 敌人（`crate::enemy::anim::draw_enemy`）共用。
+/// 敌人（`crate::render::enemy_sprite::draw_enemy`）共用。
 ///
 /// 历史教训：本环曾在三处各自复制（对象活件 / 敌活件 / 死件），三次漏分支各造成一个
 /// 像素缺陷——`0xFC` 偏移只跳过不叠加（case-002 220px）、`0xFD` 覆盖形缺失

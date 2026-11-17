@@ -23,7 +23,7 @@ pub mod slot_cycle;
 pub mod tables;
 pub mod framework;
 pub(crate) mod explosion;
-pub mod anim;
+pub(crate) mod anim_tick;
 pub(crate) mod anim_idx;
 pub mod skree;
 pub mod sidehopper;

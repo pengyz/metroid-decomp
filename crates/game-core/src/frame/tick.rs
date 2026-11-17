@@ -4,7 +4,7 @@
 //! `GoMainRoutine ; 07:C114`、`MainRoutinePtrTable 07:C141`、`UpdateTimer ; 07:C266`、
 //! `IsEngineRunning ; 07:CA18`。
 
-pub(crate) use crate::enemy::{framework::*, anim::*, skree::*, crawler::*};
+pub(crate) use crate::enemy::{framework::*, anim_tick::*, skree::*, crawler::*};
 pub(crate) use crate::enemy::prep::*;
 pub(crate) use crate::enemy::motion::*;
 pub(crate) use crate::enemy::slot_cycle::*;
