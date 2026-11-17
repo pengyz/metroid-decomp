@@ -1,0 +1,79 @@
+{
+  "schema": "nes-map-v1",
+  "face": [
+    {
+      "start": 0,
+      "len": 2048
+    },
+    {
+      "start": 27380,
+      "len": 224
+    }
+  ],
+  "face_total": 2272,
+  "owner_bytes": [
+    23,
+    84
+  ],
+  "undeclared": [
+    {
+      "start": 0,
+      "len": 51,
+      "reason": "零页系统面（Joy1Status=$14/Joy2Status=$15/GameMode=$1D/FrameCount=$2D 等），常量与证据见 crates/game-core/src/ram_map.rs，写者分散在 world/update.rs、frame/nmi.rs"
+    },
+    {
+      "start": 52,
+      "len": 3,
+      "reason": "RoomPtr hi=$34 由 world/room_load.rs:236 写；$35/$36 为随证临时量（Room 声明只覆盖 $33/$37-$3A）"
+    },
+    {
+      "start": 59,
+      "len": 14,
+      "reason": "AreaPointers_RAM $3B-$48 由 world/room_load.rs:169 copy_area_pointers 写（14 B）"
+    },
+    {
+      "start": 74,
+      "len": 5,
+      "reason": "ScrollDir=$49 之外：PAGE_INDEX=$4B/SAMUS_DIR=$4D/SAMUS_DOOR_DIR=$4E 由 world/object_globals.rs:26 读写（常量见 crates/game-core/src/ram_map.rs）"
+    },
+    {
+      "start": 83,
+      "len": 25,
+      "reason": "对象/房间门名面：world/object_globals.rs:26-57 写 PAGE_INDEX/ROOM_NUMBER=$5A/SPRITE_PAGE_POS=$5B/OBJECT_CNTRL=$6B；title/state.rs:70 写 IS_SAMUS=$55；world/room_load.rs:247 写 RoomPalette=$68"
+    },
+    {
+      "start": 109,
+      "len": 143,
+      "reason": "Samus/滚动零散面：world/room_load.rs:175 读 $6C/$6D ScrollBlock；samus/state.rs:942 写 HEALTH_CHANGE=$6E；world/elevator.rs:424 写 METROID_ON_SAMUS=$92；world/update.rs:75 写 MIRROR_CNTRL=$FA；render/oam.rs:257 写 SCROLL_X=$FD/SCROLL_Y=$FC"
+    },
+    {
+      "start": 254,
+      "len": 8,
+      "reason": "PPU 零页镜像 PPUMASK_ZP=$FE/PPUCTRL_ZP=$FF（render/mod.rs:128、frame/nmi.rs）与 $0100-$0105 的 6502 栈；栈由 frame/nmi.rs 的 JSR/中断路径使用"
+    },
+    {
+      "start": 264,
+      "len": 504,
+      "reason": "6502 栈 $0108-$01FF 与 OAM 影子 $0200-$02FF（render/oam.rs 整页写入）；原版把栈与 OAM 当硬件面，未进 NesMapped typed 表"
+    },
+    {
+      "start": 1248,
+      "len": 800,
+      "reason": "声引擎/房间绘制/VRAM 缓冲工作区：sound/state.rs:25 的 SFX_PAUSED=$0602/SFX_NOISE_INIT=$0680/MUSIC_INIT=$0685、sound/hook.rs:314 写 $068D；world/room_draw.rs:324-326 的 MEM0700/PIPE_BUG_HOLES=$0728/POWER_UPS=$0748；pickup/spawn.rs:24 的 POWERUPS_BASE=$0748；title/intro.rs:80-113 与 frame/nmi.rs:116 的 VRAMStructBuffer=$07A0；$04E0-$05FF 原版未用保留面（Mesen2 RAM dump 恒 0，比对面由 memmap/observe/dump.rs 界定）"
+    }
+  ],
+  "undeclared_total": 1553,
+  "history": [
+    {
+      "ts": "2026-11-17T18:00:47+08:00",
+      "total": 1553,
+      "geometry_sha256": "4419dc40f5014cd559499bc56eba56399864e0d9c20eb40e0aea7b6ffecb3304",
+      "owner_bytes": [
+        23,
+        84
+      ],
+      "reason": "genesis：Task 4 建账（P2 比对面内尚无声明的字节）",
+      "prev_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    }
+  ]
+}

@@ -82,6 +82,7 @@
 | `routine-inventory` | 例程清单：`unported` 只减不增 + 分母指纹不漂移（`tools/routine_inventory.py --check`） | 启用（结构驱动） |
 | `bankvars` | 按区变量账本：`pending` 只减不增 + `covered` 必须带按区访问器（`tools/bankvars.py`） | 启用（结构驱动） |
 | `no-raw-addr` | typed 绕过面只减不增（字面量识别含 `u16` 后缀与大小写变体；**不含 `0x400` 短形**——它同时是名表段长，会产生假阳）：**生产面**裸地址字面量 + `ram_map::X` 具名常量（`tools/no_raw_addr.py`，双账本；测试面单独统计不参与棘轮——测试钉 NES 字节是断言，用 typed 视图会让断言读回自己） | 启用（typed 域） |
+| `nes-map` | 静态腿三态（P2）：比对面 = `$0000-$07FF ∪ $6AF4-$6BD3`（2272 B，与 `memmap/observe/dump.rs` 的 `DUMP_LEN` 同源）；Owner 每字节恰一个、View 必须叠在 Owner 上、Unmodeled 不得抢已声明位；比对面内无任何声明 = Undeclared，登记 `data/status/nes_map.json` 且**只减不增**、每段 reason 指向真实代码位置；重叠/跨域冲突/账本外新空洞 = FAIL（`tools/nes_map_check.py`） | 启用（P2 收尾） |
 | `raw-surface` | 裸字节读写面（`memmap/raw.rs`）**文件级**棘轮：新文件不许接入、总量只减不增（`tools/raw_surface.py`）。与 `no-raw-addr` 互补——本门管整片裸面、`no-raw-addr` 管受监控地址族的字面量 | 启用（typed 域） |
 
 ### proof-checks（证书防腐 v2，2026-10-15）

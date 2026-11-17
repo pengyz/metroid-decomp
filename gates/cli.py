@@ -2303,6 +2303,41 @@ def gate_raw_surface() -> tuple[str, str]:
     return PASS, last
 
 
+NES_MAP_LEDGER_REL = Path("data/status/nes_map.json")
+NES_MAP_TIMEOUT_S = 240
+
+
+def gate_nes_map() -> tuple[str, str]:
+    """`nes-map` 静态腿（P2 收尾）：Owner/View/Unmodeled/Undeclared 三态。
+
+    比对面 = `$0000-$07FF ∪ $6AF4-$6BD3`（2272 B，与 `memmap/observe/dump.rs` 的
+    `DUMP_LEN` 同源）。**空洞的真相不来自账本**：每次跑
+    `cargo run -q -p game-core --bin nesmap-dump`，由 Rust 侧 `NesMapped::SPANS` 与
+    `EXTRA_RANGE` 机械重算；`data/status/nes_map.json` 只是「已批准的空洞清单」，被逐段
+    与重算结果**精确比对**（账本外新空洞 / 已声明却仍记账 ⇒ 双向 FAIL）。
+
+    判据：Owner 每字节恰一个（D-03）、View 必须叠在 Owner 上、Unmodeled 不得抢
+    Owner/View/其他 Unmodeled 的位；比对面内无任何声明 = Undeclared，必须登记、
+    每段带真实代码指针的 reason、总长只减不增（`tools/nes_map_check.py --write` 才可下调）。
+    """
+    if not (ROOT / NES_MAP_LEDGER_REL).is_file():
+        return FAIL, f"缺 {NES_MAP_LEDGER_REL.as_posix()}（先跑 python3 tools/nes_map_check.py --write）"
+    try:
+        proc = subprocess.run(
+            [sys.executable, "tools/nes_map_check.py"],
+            cwd=ROOT, capture_output=True, text=True, encoding="utf-8", errors="replace",
+            env=_child_env(), timeout=NES_MAP_TIMEOUT_S,
+        )
+    except subprocess.TimeoutExpired:
+        return FAIL, f"nes-map 校验超时（>{NES_MAP_TIMEOUT_S}s）"
+    out = ((proc.stdout or "") + (proc.stderr or "")).strip()
+    if proc.returncode != 0:
+        bad = [ln for ln in out.splitlines() if ln.strip()][-8:]
+        return FAIL, "nes-map 三态违规：\n  - " + "\n  - ".join(bad)
+    last = out.splitlines()[-1] if out else ""
+    return PASS, last
+
+
 PACK_REL = Path("assets") / "metroid.pack"
 ASSET_PACK_TIMEOUT_S = 240
 
@@ -2403,6 +2438,9 @@ GATES: list[tuple[str, str, str, str, object]] = [
     ("no-raw-addr", "启用（typed 域）", "check",
      "typed 绕过面只减不增：裸地址字面量 + ram_map 具名常量（tools/no_raw_addr.py）",
      gate_no_raw_addr),
+    ("nes-map", "启用（P2 收尾）", "check",
+     "静态腿三态：Owner 无重叠/View 有主/Unmodeled 不抢位 + Undeclared 账本只减不增（tools/nes_map_check.py）",
+     gate_nes_map),
     ("raw-surface", "启用（typed 域）", "check",
      "裸字节读写面文件级棘轮：新文件不许接入 + 总量只减不增（tools/raw_surface.py）",
      gate_raw_surface),
