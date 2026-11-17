@@ -30,13 +30,13 @@ pub(crate) fn hex_to_dec(n: u8) -> (u8, u8, u8) {
 
 pub(crate) fn uw_display_bar(mem: &mut crate::frame::Manager) {
     // ① 拷表（E0C7 循环：40B→OAM[X..X+40)，$5B←X+40，pla 恢复原 X）
-    let x0 = mem.read_ram(0x005B);
+    let x0 = mem.sprite_page_pos();
     let mut x = x0;
     for i in 0..40usize {
         mem.write_ram(0x0200u16 + x as u16, DATA_DISPLAY_TBL[i]);
         x = x.wrapping_add(1);
     }
-    mem.write_ram(0x005B, x);
+    mem.set_sprite_page_pos(x);
     x = x0;
     // ② 健康 2 位（E0E0 区：lda Health+1/and #$0F → SPRWriteDigit；lda Health/Adiv16 → ）
     spr_write_digit(mem, x, mem.read_ram(0x0107) & 0x0F);
@@ -80,7 +80,7 @@ pub(crate) fn uw_display_bar(mem: &mut crate::frame::Manager) {
         // bne LE14A
     }
     // ④ LE14A 能量罐
-    let mut x = mem.read_ram(0x005B); // 重读 $5B（追加后位置）
+    let mut x = mem.sprite_page_pos(); // 重读 $5B（追加后位置）
     let tanks = mem.read_ram(0x6877);
     if tanks == 0 {
         return; // RTS_E172
@@ -110,5 +110,5 @@ pub(crate) fn uw_display_bar(mem: &mut crate::frame::Manager) {
             break;
         }
     }
-    mem.write_ram(0x005B, x);
+    mem.set_sprite_page_pos(x);
 }

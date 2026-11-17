@@ -102,7 +102,7 @@ pub fn draw_room(mem: &mut crate::frame::Manager, room: u8) -> bool {
                 return true;
             }
             0xFE => {
-                mem.write_ram(0x005A, 0xFE); // 空对象占位（LEABC）
+                mem.set_room_number(0xFE); // 空对象占位（LEABC）
                 i += 1;
             }
             0xFD => {
@@ -291,7 +291,7 @@ fn draw_door(mem: &mut crate::frame::Manager, x_off: u8) {
     }
     let mut cntrl = ty | 0x80 | 0x20;
     cntrl |= (x_off & 0x10) ^ 0x10; // 槽位 flip（$80/$A0 镜像）
-    mem.write_ram(0x006B, cntrl);
+    mem.set_obj_cntrl(cntrl);
     mem.write_ram(0x030A + x_off as u16, 0); // isHit←0
     // 【r14 双调根修】DE47 形=单走表（旧形显式走表+anim_draw_object 内再走=双调 ✗）
     crate::render::oam::anim_draw_object(mem, x_off, 6); // AnimDrawObject（DE47——A=6 单走）
@@ -717,7 +717,7 @@ fn load_elevator(mem: &mut crate::frame::Manager, info: u8) {
 
 /// EndOfRoom（$EAF4）——RoomNumber←$F0（属性表尾命令——SetupRoom 环续面）。
 pub fn end_of_room(mem: &mut crate::frame::Manager) {
-    mem.write_ram(0x005A, 0xF0);
+    mem.set_room_number(0xF0);
     // 【根因修（2026-10-28（scroll-column-streaming.md））】asm $EAF4 双写面：
     // TempScrollDir($4A)←ScrollDir（列流防重判基准——旧漏写⇒$4A 恒 0⇒
     // check_update_name_table 防重判永跳⇒左列空根因）+滚向尾径（首列/行流送 kick
@@ -821,9 +821,9 @@ pub fn init_tables(mem: &mut crate::frame::Manager) {
 /// AttribTableWrite（$EA13）——$F0-$F4 命令链（RoomNumber 低半字节=行索引；inc 自进）：
 /// 0/2=no-op、1/3=WritePPUAttribTbl（属性行→PPU）、4=RoomFinished（$FF）。
 pub fn attrib_table_write(mem: &mut crate::frame::Manager) -> bool {
-    let room = mem.read_ram(0x005A);
+    let room = mem.room_number();
     let row = (room & 0x0F) as u16;
-    mem.write_ram(0x005A, room.wrapping_add(1)); // inc RoomNumber
+    mem.set_room_number(room.wrapping_add(1)); // inc RoomNumber
     match row {
         1 | 3 => {
             // WritePPUAttribTbl（$E5E2）：RoomRAM 属性行→PPU 属性表。
@@ -848,7 +848,7 @@ pub fn attrib_table_write(mem: &mut crate::frame::Manager) -> bool {
             true
         }
         4 => {
-            mem.write_ram(0x005A, 0xFF); // RoomFinished
+            mem.set_room_number(0xFF); // RoomFinished
             true
         }
         _ => true, // 0/2=ExitSub

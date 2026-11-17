@@ -16,6 +16,7 @@
     "enemy/explosion.rs": "爆炸池本体：两半存储（$04C0 8 B / $6BB4 16 B）基址与步长的唯一定义处",
     "state.rs": "`Manager` 本体：存储字段与 `restore_mss` 回灌（字节面→typed 的唯一入口）",
     "memmap/storage.rs": "存储层（字节面本体）",
+    "memmap/raw.rs": "裸字节读写面本体（read_ram/write_ram/read_wram/write_wram 的唯一实现=过渡层，删除点）",
     "memmap/mod.rs": "存储层导出面",
     "ram_map.rs": "符号→地址的唯一定义处",
     "frame/memory.rs": "read_ram/write_ram 兼容辖（迁移完成后收口）"

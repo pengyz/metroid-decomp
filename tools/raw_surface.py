@@ -35,6 +35,7 @@ EXEMPT = {
     "frame/memory.rs": "兼容辖（`restore_mss` 回灌 / `write_io` 寄存器面 / 快照投影）",
     "state.rs": "`Manager` 本体（typed 字段 + 域句柄的持有者）",
     "bin/rust_screenshot.rs": "二进制边界（`--state-out` / ram.hex dump 的产出端）",
+    "world/object_globals.rs": "对象全局伪寄存器（$4B/$5A/$5B/$6B）的唯一实现面",
     "tests.rs": "测试面",
 }
 

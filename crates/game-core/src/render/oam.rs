@@ -90,7 +90,7 @@ pub(crate) fn draw_sprite_stream(mem: &mut crate::frame::Manager, s: SpriteStrea
     let mut place_i: u16 = 0;
     let mut sx = s.screen_x as i16;
     let mut sy = s.screen_y as i16;
-    let mut x_sprite = mem.read_ram(0x005B) as u16; // SpritePagePos
+    let mut x_sprite = mem.sprite_page_pos() as u16; // SpritePagePos
     loop {
         let b = (s.frame_byte)(frame_i);
         if b < 0xFC {
@@ -133,8 +133,8 @@ pub(crate) fn draw_sprite_stream(mem: &mut crate::frame::Manager, s: SpriteStrea
     // 这一步**不能省**：`$6B` 是「下一个对象/下一枚精灵」的覆盖状态，敌侧
     // `@setHurtPalette`/tough/冻结写入后必须由本环收尾清掉，否则会泄漏给
     // 同一帧后续敌人（录像 f2137：槽 0 的爬虫被槽 1 的受伤调色板污染）。
-    mem.write_ram(0x006B, 0);
-    mem.write_ram(0x005B, x_sprite as u8); // SpritePagePos 推进
+    mem.set_obj_cntrl(0);
+    mem.set_sprite_page_pos(x_sprite as u8); // SpritePagePos 推进
 }
 
 pub fn obj_draw_frame(mem: &mut crate::frame::Manager, page_index: u8) {
@@ -151,7 +151,7 @@ pub fn obj_draw_frame(mem: &mut crate::frame::Manager, page_index: u8) {
     let flip = ctrl_byte & 0xC0;
     cntrl05 |= flip | 0x20; // PRIORITY 位恒置（sprite 在 BG 后）
     // ObjectCntrl($6B) 镜像位（bit2→bit6 翻转）
-    let obj_cntrl = mem.read_ram(0x006B);
+    let obj_cntrl = mem.obj_cntrl();
     // 【物品闪帧相位卡·SpriteAttrsOverride（E038）】GetSpriteCntrlData（DCC3）尾：
     // ObjectCntrl **MSB=1⇒attr=(ctrl_byte&0xC0)|ObjectCntrl**（低 2 位=闪帧调色板
     // ((FC>>1)&3——UpdateOnePowerUp :5547-5554 每帧写 $6B；PRIORITY 位不入覆盖形
@@ -220,7 +220,7 @@ pub fn obj_draw_frame(mem: &mut crate::frame::Manager, page_index: u8) {
     };
     mem.write_ram(0x030B + px, visible as u8); // onScreen
     if !visible {
-        mem.write_ram(0x006B, 0); // ClearObjectCntrl（$DF2D）
+        mem.set_obj_cntrl(0); // ClearObjectCntrl（$DF2D）
         return;
     }
     // ---- DrawSpriteObject（$DF19）帧流环——**唯一实现**见 draw_sprite_stream ----
@@ -235,7 +235,7 @@ pub fn obj_draw_frame(mem: &mut crate::frame::Manager, page_index: u8) {
             screen_y,
         },
     );
-    mem.write_ram(0x006B, 0); // 尾 ClearObjectCntrl（$DF2D）
+    mem.set_obj_cntrl(0); // 尾 ClearObjectCntrl（$DF2D）
 }
 
 /// 位移符号形（Y/XDisplacement 正常径——翻转=二补-8（$DFB1 `eor #$FF/adc #$F8`））。

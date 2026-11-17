@@ -37,7 +37,7 @@ pub fn more_init(mem: &mut Manager) {
     mem.iter_wait();
     crate::frame::boot::clear_name_tables(mem); // ClearNameTables（已折）
     crate::frame::boot::erase_all_sprites(mem); // EraseAllSprites（已折）
-    mem.write_ram(0x005A, 0); // ScrollBlockOnNameTable3
+    mem.set_room_number(0); // ScrollBlockOnNameTable3
     mem.write_ram(0x0053, 0); // ScrollBlockOnNameTable0
     mem.write_ram(0x0030, 1); // SpareMem30
     mem.write_ram(crate::ram_map::SCROLL_DIR, 2); // ScrollDir=2（横房）——【勘误修】$49！
@@ -50,14 +50,14 @@ pub fn more_init(mem: &mut Manager) {
     let pt = game_data::assets::area_pal_toggle(mem.read_ram(crate::ram_map::IN_AREA))
         .unwrap_or_else(|| crate::unported!("bank07:CA30-pal-toggle"));
     mem.write_ram(0x0076, pt); // PaletteToggle（constants_ram:609）
-    mem.write_ram(0x005A, 0xFF); // RoomNumber=$FF（constants_ram:567——undefined room）
+    mem.set_room_number(0xFF); // RoomNumber=$FF（constants_ram:567——undefined room）
     copy_area_pointers(mem); // C8B0（已端口）
     get_room_num(mem); // E720（已端口——壳）
     // 【r25 对拍根】asm LC86F 房间环：`jsr SetupRoom/ldy RoomNumber/iny/bne LC86F`
     // ——循环至 RoomNumber==FF（多房装载序）。
     loop {
         setup_room(mem); // EA2B（DrawRoom 未端口面=fail-loud 随爆）
-        if mem.read_ram(0x005A).wrapping_add(1) == 0 {
+        if mem.room_number().wrapping_add(1) == 0 {
             break;
         }
     }
@@ -195,7 +195,7 @@ pub fn get_room_num(mem: &mut Manager) -> bool {
     if room == 0xFF {
         return false; // 未用房间（CF=1——不能滚/不载房）
     }
-    mem.write_ram(0x005A, room); // RoomNumber
+    mem.set_room_number(room); // RoomNumber
     true
 }
 
@@ -210,7 +210,7 @@ pub fn setup_room(mem: &mut Manager) {
     // `lda RoomNumber / cmp #$FF beq RTS / cmp #$FE beq DrawRoom / cmp #$F0 bcs AttribTableWrite`
     // → `jsr DeleteOffscreenRoomSprites` → `jsr ScanForItems`。
     // 旧形把 ScanForItems 提到最前——未定义房（$FF）也会先吃一次特项扫描（错序）。
-    let room = mem.read_ram(0x005A);
+    let room = mem.room_number();
     if room == 0xFF {
         return; // 未定义房（RTS）
     }

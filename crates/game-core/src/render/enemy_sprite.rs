@@ -84,12 +84,12 @@ fn draw_at(mem: &mut crate::frame::Manager, x: u8, view: View) {
     let d5 = mem.ens_face(x).data05();
     mem.ens_face(x).set_data05((d5 & 0xFD) | ((visible as u8) << 1));
     if !visible {
-        mem.write_ram(ram_map::OBJECT_CNTRL, 0);
+        mem.set_obj_cntrl(0);
         return;
     }
     let frame = mem.ens_face(x).anim_frame();
     if frame == 0xFF {
-        mem.write_ram(ram_map::OBJECT_CNTRL, 0);
+        mem.set_obj_cntrl(0);
         return;
     }
     let table2 = frame & 0x80 != 0;
@@ -108,7 +108,7 @@ fn draw_at(mem: &mut crate::frame::Manager, x: u8, view: View) {
     // +镜像映射交叉（bit6→0x80）⇒四精灵翻位成 X 形（金=星芒——贴图错根）。
     // 正解：attr=Temp05 ^（ObjectCntrl bit4<<2 & HFLIP($40)）（asm :6324-6328）；
     // 镜像面 Temp04=ctrl ^ 同源（GetSpriteCntrlData :5913-5920）。
-    let obj_mirror = mem.read_ram(ram_map::OBJECT_CNTRL) & 0x10; // bit4=水平镜像控制
+    let obj_mirror = mem.obj_cntrl() & 0x10; // bit4=水平镜像控制
     let _ = obj_mirror;
     let place_idx = ((ctrl & 0x0F) as usize).min(127);
     let (po, pl) = assets::enemy_place_off(area, place_idx).unwrap_or((0, 0));
@@ -133,7 +133,7 @@ fn draw_at(mem: &mut crate::frame::Manager, x: u8, view: View) {
     // 早已证）））——走滚径写 $FD（scroll_right）而 0x26 停旧值⇒敌屏位不减镜头⇒
     // **随镜恒距**（用户截图症（爬虫悬空错位））。
     let sx = xpos.wrapping_sub(view.scroll_x) as i16;
-    let obj_cntrl = mem.read_ram(ram_map::OBJECT_CNTRL);
+    let obj_cntrl = mem.obj_cntrl();
     // GetSpriteCntrlData（$DCC3）尾：ObjectCntrl **MSB=1 ⇒ SpriteAttrsOverride（E038）
     // `Temp05=(ctrl&$C0)|(ObjectCntrl&$7F)`**——敌侧同样适用：`UpdateEnemyCommon@noMoveNoAnim`
     // （$F419）给 tough 敌写 `$80|$03|PRIORITY`、`UpdateEnemy_Frozen`（$F443）给冻结敌写

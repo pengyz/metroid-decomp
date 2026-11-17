@@ -29,7 +29,7 @@ pub(crate) fn check_update_name_table(mem: &mut Manager) {
     // （asm prg7:251）。FC 不走 iter_span_fc（滚动迭代=普通游戏迭代——main_loop_iter 尾
     // inc 即该迭代唯一一次；emu 实录 f915=132→f918=133→f919=134 每 iteration 单 inc；
     // span_fc 只适用于工作拍 FC 被冻结的 title 臂形——双加=+1 相位差根因，f918 实录）。
-    let rn = mem.read_ram(0x005A);
+    let rn = mem.room_number();
     let is_load = rn != 0xFF && rn < 0xF0;
     if is_load {
         mem.work_cycles = 0; // 周期累加起点（载房工作量——room.rs LOAD_* 模型）
@@ -48,7 +48,7 @@ pub(crate) fn check_update_name_table(mem: &mut Manager) {
         // 【case-002 归因卡·临时探针（2026-11-05）】载房工作量+计数实测。
         mem.iter_bogged(dropped.min(255) as u8);
     }
-    if mem.read_ram(0x005A).wrapping_add(1) != 0 {
+    if mem.room_number().wrapping_add(1) != 0 {
         return; // RoomNumber≠FF：装载任务未竟
     }
     let dir = mem.read_ram(crate::ram_map::SCROLL_DIR);

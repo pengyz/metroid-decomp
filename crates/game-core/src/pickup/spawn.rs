@@ -135,7 +135,7 @@ fn spawn_power_up(mem: &mut Manager, item: &game_data::area::items::SpecialItem)
 pub fn update_all_power_ups(mem: &mut Manager) -> Option<u8> {
     // 【卡 E D2-1 端口】asm UpdateAllPowerUps 循环头（prg7_engine.asm:5502-5504）：
     // `lda #$40 / sta PageIndex`——双槽显示面共用 $340 槽（r14 dossier §3.3「漏端口」补）。
-    mem.write_ram(0x004B, 0x40);
+    mem.set_page_index(0x40);
     for slot in [0u16, 8u16] {
         let type_ = mem.read_ram(POWERUPS_BASE + slot);
         if type_ == 0xFF {
@@ -161,16 +161,16 @@ pub fn update_all_power_ups(mem: &mut Manager) -> Option<u8> {
         let anim_frame = (type_ & 0x0F) | 0x50; // _id_ObjFrame_BombItem=$50（位 4+6）
         mem.write_ram(POWERUP_DRAW_BASE + 0x03, anim_frame);
         let fc = mem.read_ram(crate::ram_map::FRAME_COUNT);
-        mem.write_ram(0x006B, ((fc >> 1) & 0x03) | 0x80); // ObjectCntrl
+        mem.set_obj_cntrl(((fc >> 1) & 0x03) | 0x80); // ObjectCntrl
         // 【卡 E D2-1】asm :5555-5561 `jsr ObjDrawFrame`（DE4A **纯绘**）——旧形
         // anim_draw_object（DE47=走表+绘）⇒**幻影走表**（r14 dossier §2.1 双 item 槽
         // a_in=0 走表实录）+走表错落 Samus 槽（$4B 漏设时代）。
         // 【:5555-5566 块随件勘误】`lda SpritePagePos/pha…pla/cmp SpritePagePos`=
         // **$5B**（constants_ram:568——OAM 填充计数）非 $4B（PageIndex）——旧形误读 $4B
         // 致「未绘出」恒真⇒拾取授予径永不可达。
-        let sp0 = mem.read_ram(0x005B); // SpritePagePos
+        let sp0 = mem.sprite_page_pos(); // SpritePagePos
         crate::render::oam::obj_draw_frame(mem, 0x40);
-        if mem.read_ram(0x005B) == sp0 {
+        if mem.sprite_page_pos() == sp0 {
             continue; // 未绘出（:5563-5566 cmp/beq Exit9）
         }
         // AreObjectsTouching（DC7F——X=0（Samus）/Y=$40（物）；同名表近距判）

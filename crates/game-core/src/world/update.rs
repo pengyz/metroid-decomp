@@ -102,7 +102,7 @@ fn toggle_scroll_and_finish(mem: &mut Manager, x: u8) {
 /// DisplayBar($E0C1)/PipeBugHoles/CheckMissileToggle/UpdateAllPowerUps($DB37)/
 /// UpdateTourianItems($FDE3)/尾清 sprite RAM（$F4 填）。
 pub fn update_world(mem: &mut crate::frame::Manager) {
-    mem.write_ram(0x005B, 0); // SpritePagePos←0
+    mem.set_sprite_page_pos(0); // SpritePagePos←0
     update_all_enemies(mem); // F345（敌环——槽×6+状态 dispatch）
     // UpdateSamusProjectiles（D4BF——随件）
     update_samus_projectiles(mem); // D4BF（弹件环——3 槽状态机）
@@ -127,7 +127,7 @@ pub fn update_world(mem: &mut crate::frame::Manager) {
         uw_all_power_ups(mem); // $DB37（吃能力！）
         uw_tourian_items(mem); // $FDE3
         // 尾清 sprite RAM（$F4 填——asm CB6A 环）
-        let mut x = mem.read_ram(0x005B);
+        let mut x = mem.sprite_page_pos();
         while x != 0 {
             mem.write_ram(0x0200 + x as u16, 0xF4);
             x = x.wrapping_add(4);

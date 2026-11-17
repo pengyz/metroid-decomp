@@ -209,6 +209,8 @@ pub const RANDOM2: u16 = 0x002F;
 
 /// PageIndex=$4B（constants_ram 内容锚「Index to object data」）。
 pub const PAGE_INDEX: u16 = 0x004B;
+/// `$5A RoomNumber`——当前房间号（`constants_ram.asm:567`；`$FF`=未定义房间）。
+pub const ROOM_NUMBER: u16 = 0x005A;
 
 /// IsSamus=$55（constants_ram 内容锚「1=Samus object being accessed, 0=not Samus」）。
 pub const IS_SAMUS: u16 = 0x0055;

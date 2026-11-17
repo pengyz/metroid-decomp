@@ -21,7 +21,7 @@ pub fn update_all_enemies(mem: &mut crate::frame::Manager) {
         // 【goal-轮45 可见位直证】敌B bit1（金方冻结=离屏）。
     // 【goal-轮97 updateAll 径直证】敌更新调用（金方冻径）。
     // 【goal-轮144 updateAll 遍历径直证】敌更新调用链（paradox 解）。
-    mem.write_ram(0x004B, x); // PageIndex
+    mem.set_page_index(x); // PageIndex
         let status = mem.read_wram(0x6AF4 + x as u16); // EnsExtra.0.status
         // CheckIfVisible（$F37F——不可见⇒双返跳过该敌）
         // 【敌槽生成/位形卡（2026-11-05）】asm F351 适用域=**status 1|2（Resting|Active）**

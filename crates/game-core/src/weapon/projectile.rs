@@ -26,7 +26,7 @@ pub fn samus_projectile_hit_door_or_statue(
             if mem.read_ram(0x0300 + y as u16) != 0 {
                 // 门存在——类型门（DoorType=$307+y（lsr/奇=蓝））
                 let door_type = mem.read_ram(0x0307 + y as u16);
-                let pi = mem.read_ram(0x004B) as u16; // PageIndex（弹槽偏移）
+                let pi = mem.page_index() as u16; // PageIndex（弹槽偏移）
                 let pstat = mem.read_ram(0x0300 + pi);
                 let hit = if door_type & 1 != 0 {
                     true // 蓝/音乐蓝：任意弹伤
@@ -63,7 +63,7 @@ pub fn samus_projectile_hit_door_or_statue(
 /// 1=Bullet/2=Wave/3=Ice/4=Explode/5-10=Bomb 族/11=Missile（打敌人流程件——随件）。
 pub fn update_samus_projectiles(mem: &mut crate::frame::Manager) {
     for slot in [0xD0u8, 0xE0, 0xF0] {
-        mem.write_ram(0x004B, slot); // PageIndex（DoOneSamusProjectile（$D4CB））
+        mem.set_page_index(slot); // PageIndex（DoOneSamusProjectile（$D4CB））
         let status = mem.read_ram(0x0300 + slot as u16);
         match status {
             0 => {} // ExitSub
@@ -85,7 +85,7 @@ pub fn update_samus_projectiles(mem: &mut crate::frame::Manager) {
 /// 弹爆径（UpdateBullet_Explode（$D5E4（audit §8）））：anim←BulletHit(0x1D)
 /// （导弹⇒MissileExplode(0x91)）+status←wa_BulletExplode(4)。
 pub(crate) fn bullet_explode(mem: &mut crate::frame::Manager) {
-    let x = mem.read_ram(0x004B) as u16;
+    let x = mem.page_index() as u16;
     let base = 0x0300u16 + x;
     let st = mem.read_ram(base);
     if st == 4 {
@@ -100,7 +100,7 @@ pub(crate) fn bullet_explode(mem: &mut crate::frame::Manager) {
 
 /// 弹移动（UpdateBullet_Move（$D624（audit §8）））：speedX/Y→位移（wrapping）。
 pub(crate) fn bullet_move(mem: &mut crate::frame::Manager) {
-    let x = mem.read_ram(0x004B) as u16;
+    let x = mem.page_index() as u16;
     let base = 0x0300u16 + x;
     let sx = mem.read_ram(base + 9);
     let sy = mem.read_ram(base + 8);
@@ -113,7 +113,7 @@ pub(crate) fn bullet_move(mem: &mut crate::frame::Manager) {
 /// （空气（≥$A0）⇒移+免撞；实心⇒爆（$4E 门瓦⇒任务卡 2 径复用））/时寿 dec（长束免）/
 /// DrawBullet（AnimDrawObject(A=1)）。
 pub(crate) fn update_bullet(mem: &mut crate::frame::Manager) {
-    let x = mem.read_ram(0x004B) as u16;
+    let x = mem.page_index() as u16;
     let base = 0x0300u16 + x;
     mem.write_ram(0x0071, 1);
     // DeleteIfOffScreen（$D5FC）：onScreen bit0 清⇒删
@@ -164,21 +164,21 @@ pub(crate) fn update_bullet(mem: &mut crate::frame::Manager) {
     // DrawBullet（$D517）：AnimDrawObject(A=1)（动画推进面 A=1）
     // 【goal-轮103 双调修】asm AnimDrawObject(DE47)=UpdateObjAnim+ObjDrawFrame 单含——
     // 旧形显式 update_obj_anim(1)+anim_draw_object 补调=双调 ✗⇒删显式（补调覆盖）。
-    crate::render::oam::anim_draw_object(mem, mem.read_ram(0x004B), 1); // DrawBullet A=1
+    crate::render::oam::anim_draw_object(mem, mem.page_index(), 1); // DrawBullet A=1
     mem.write_ram(0x0071, 0);
 }
 
 /// UpdateBulletExplode（$D5C8）：animFrame==_id_FrameNone($F7)（动画尽）⇒清；
 /// DrawBullet。
 pub(crate) fn update_bullet_explode(mem: &mut crate::frame::Manager) {
-    let x = mem.read_ram(0x004B) as u16;
+    let x = mem.page_index() as u16;
     let base = 0x0300u16 + x;
     mem.write_ram(0x0071, 1);
     if mem.read_ram(base + 3) == 0xF7 {
         mem.write_ram(base, 0);
     }
     // 【goal-轮103 双调修】同上（爆径 AnimDrawObject 单含）。
-    crate::render::oam::anim_draw_object(mem, mem.read_ram(0x004B), 1); // DrawBullet A=1
+    crate::render::oam::anim_draw_object(mem, mem.page_index(), 1); // DrawBullet A=1
     mem.write_ram(0x0071, 0);
 }
 
@@ -188,7 +188,7 @@ pub(crate) fn update_bullet_explode(mem: &mut crate::frame::Manager) {
 pub(crate) fn uw_skree_projectiles(mem: &mut crate::frame::Manager) {
     // 【卡 E D2-2 端口】asm UpdateAllSkreeProjectiles 循环头（prg7_engine.asm:12146-
     // 12148）：`lda #$40 / sta PageIndex`——显示面共用 PowerUpDraw($340) 槽。
-    mem.write_ram(0x004B, 0x40);
+    mem.set_page_index(0x40);
     const SPEED: [(i8, i8); 4] = [(0, -5), (-5, -2), (-5, 2), (0, 5)]; // FC5D 逐字
     for yy in [12u16, 8, 4, 0] {
         // 【2026-11-16 修：case-002 f1250】速度表按**槽号**索引（asm 更新循环 `ldy` 从 0 递增，

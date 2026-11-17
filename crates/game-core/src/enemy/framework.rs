@@ -272,7 +272,7 @@ pub(crate) fn explode_enemy(mem: &mut crate::frame::Manager, x: u8) {
 pub(crate) fn update_all_enemy_explosions(mem: &mut crate::frame::Manager) {
     for slot in 0..crate::enemy::explosion::SLOT_COUNT {
         let x = crate::enemy::explosion::ens_offset(slot);
-        mem.write_ram(0x004B, x); // PageIndex（asm `stx PageIndex`）
+        mem.set_page_index(x); // PageIndex（asm `stx PageIndex`）
         if mem.explosion(slot).is_free() {
             continue;
         }
@@ -307,7 +307,7 @@ fn update_enemy_explosion(mem: &mut crate::frame::Manager, slot: u8, x: u8) {
     // 尾件（07:FAE1）：`lda #$80 / sta ObjectCntrl / lda #$03 / jmp AnimDrawEnemy`
     // `AnimDrawEnemy ; 07:F97E` = `jsr UpdateEnemyAnim` + `jmp DrawEnemy`；
     // `DrawEnemy ; 07:DD8B` 先比 `animFrame == _id_FrameNone($FF)` ⇒ 空帧转 ClearObjectCntrl。
-    mem.write_ram(0x006B, 0x80); // ObjectCntrl（覆盖形：非 MSB 位作调色板/优先级）
+    mem.set_obj_cntrl(0x80); // ObjectCntrl（覆盖形：非 MSB 位作调色板/优先级）
     update_explosion_anim(mem, slot, 0x03);
     draw_explosion(mem, slot);
 }
@@ -427,7 +427,7 @@ pub(crate) fn update_enemy_hurt(mem: &mut crate::frame::Manager, x: u8) {
     }
     // @exit：受伤敌调色板覆盖（$80|$00|PRIORITY）——置 MSB 后 @noMoveNoAnim 的
     // tough 判据（`lda ObjectCntrl / bmi`）自然跳过，等价于 asm 直跳 @setHurtPalette。
-    mem.write_ram(0x006B, 0x80 | 0x20);
+    mem.set_obj_cntrl(0x80 | 0x20);
     update_enemy_common_no_move_no_anim(mem, x);
 }
 
@@ -465,7 +465,7 @@ pub(crate) fn update_enemy_pickup(mem: &mut crate::frame::Manager, x: u8) {
     // 闪色（`07:F4E2`）：`lda FrameCount / and #$02 / lsr / ora #$80|OAMDATA_PRIORITY /
     // sta ObjectCntrl` ⇒ 覆盖态在 0x80（调色板 0）与 0xA1（调色板 1）间每 2 帧交替。
     let fc = mem.read_ram(crate::ram_map::FRAME_COUNT);
-    mem.write_ram(0x006B, ((fc & 0x02) >> 1) | 0x80 | 0x20);
+    mem.set_obj_cntrl(((fc & 0x02) >> 1) | 0x80 | 0x20);
     update_enemy_common_no_move_no_anim(mem, x);
 }
 
@@ -626,9 +626,9 @@ pub(crate) fn update_enemy_common_no_move_anim(mem: &mut crate::frame::Manager, 
 pub(crate) fn update_enemy_common_no_move_no_anim(mem: &mut crate::frame::Manager, x: u8) {
     let special = mem.enemy(slot_of(x)).special_attribs(); // specialAttribs=+15
     if special & 0x80 != 0 {
-        let oc = mem.read_ram(0x006B);
+        let oc = mem.obj_cntrl();
         if oc & 0x80 == 0 {
-            mem.write_ram(0x006B, 0x80 | 0x03 | 0x20);
+            mem.set_obj_cntrl(0x80 | 0x03 | 0x20);
         }
     }
     if mem.read_wram(0x6AF4 + x as u16) != 0 {
