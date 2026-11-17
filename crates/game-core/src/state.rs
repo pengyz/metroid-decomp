@@ -147,14 +147,6 @@ pub struct Manager {
     /// 跨帧时迭代未完成⇒FC 不自增；emu 上电 f4-6/title→menu f311-313 各冻 3 帧实录。
     /// 桥侧按相位（$00/$01/$15/$1B=内旋族）置位，main_loop_iter 消费后清）。
     pub title_no_return: bool,
-    /// **BankSwitch 尾跳后的 bank-init 体挂起项**（asm 结构锚）：`CheckBankSwitch ; 07:C4DE`
-    /// 命中 `$24` 时 `jsr CheckBankSwitch_OK` 尾接 **`jmp GoBankInit`**（`07:C510`）——
-    /// 该迭代**永不执行 `jsr UpdateTimer`**（`prg7_engine.asm:191-207`：UpdateTimer 在
-    /// CheckBankSwitch 之后），而是在 bank-init 体内 `WaitNMIPass` 自旋跨帧；唤醒拍
-    /// （NMI 唤醒 → InitBankX 体 → `jmp NMIOn` 的 `rts`）才把控制还回
-    /// `jsr UpdateTimer`。`Some(idx)`=「本迭代以尾跳结束，唤醒拍要跑 idx 的 post-spin 体
-    /// 再 Update」。实证：100% 录像 lua f4019 无 C266 执行、f4020 才有（C531/C45D/487 序）。
-    pub bank_init_pending: Option<u8>,
     /// 迭代内帧门队列（move-drift 定谳 R2/R3——findings/move-drift-iteration-scheduling.md）：
     /// 1=帧等待（WaitNMIPass/WriteAndWait 族——下一 tick NMI 内块全跑含 ReadJoyPads）/
     /// 0=bogged 重活帧（NMIStatus 跳过门（asm prg7:251）——内块跳过=掉帧窗，D4 保真）。
@@ -184,7 +176,6 @@ impl Default for Manager {
     fn default() -> Self {
         Self { storage: crate::memmap::storage::NesStorage::default(), samus: Default::default(), health_change: Default::default(), sound_init: Default::default(), object_globals: Default::default(), scroll_blocks: Default::default(), oam: Default::default(), enemies: Default::default(), regs: Registers::default(), nmi_enabled: false,
                title_cursor: 0, title_cursor_phase: 0, title_spin: 0, check_password_pending: false, deferred_screen_on: false, title_no_return: false,
-               bank_init_pending: None,
                iter_gates: Vec::new(), iter_span_left: 0, iter_span_fc: false, fc_inced_this_tick: false,
                apu_log: Vec::new(), work_cycles: 0,
                joy1: 0, joy2: 0,
