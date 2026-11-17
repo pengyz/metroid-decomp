@@ -125,14 +125,19 @@ local function readRange(fromAddr, toAddr)
   return table.concat(parts)
 end
 
--- 【zp span bug 修（2026-11-02）】EnsExtra 附加（$6AF4-$6B73）原误入 readRange 尾
--- ⇒**全 range 读污染**（zp watch 256B+128=384B=0x180（manifest 不符实锤））——
+-- 【zp span bug 修（2026-11-02）】EnsExtra 附加（$6AF4-$6BD3）原误入 readRange 尾
+-- ⇒**全 range 读污染**（zp watch 256B+128B=384B=0x180（manifest 不符实锤））——
 -- 收进 dumpRam（L4 .ram.hex 面专用（wram watch 6000-7fff 已覆 6AF4（冗余无害）））。
+-- 【2026-11-17 尾段同源（双向锚）】本区间与 rust 侧
+-- `crates/game-core/src/memmap/observe/dump.rs::EXTRA_RANGE` 同源
+-- （$6AF4-$6BD3 = EnsExtra 12×16B + 爆炸池 4×8B），**改一边必须改另一边**。
+-- 产物长度：新 2272B / 4544 hex（含换行 4545）；旧缓存只到 $6B73 =
+-- 2176B / 4352 hex（含换行 4353）——下游按行尾长度判别新旧，不重采历史用例。
 local function readRangeWithEnsExtra(fromAddr, toAddr)
   return readRange(fromAddr, toAddr) ..
     (function()
       local parts = {}
-      for a = 0x6AF4, 0x6B73 do parts[#parts + 1] = hex2(readByte(a)) end
+      for a = 0x6AF4, 0x6BD3 do parts[#parts + 1] = hex2(readByte(a)) end
       return table.concat(parts)
     end)()
 end
