@@ -37,8 +37,12 @@ pub fn more_init(mem: &mut Manager) {
     mem.iter_wait();
     crate::frame::boot::clear_name_tables(mem); // ClearNameTables（已折）
     crate::frame::boot::erase_all_sprites(mem); // EraseAllSprites（已折）
-    mem.set_room_number(0); // ScrollBlockOnNameTable3
-    mem.write_ram(0x0053, 0); // ScrollBlockOnNameTable0
+    // 名表门挡双清（`stx ScrollBlockOnNameTable3` / `stx ScrollBlockOnNameTable0`，
+    // X=0——prg7_engine.asm:1876-1877）。旧形误写 `$5A RoomNumber` 与 `$53 WalkSoundDelay`：
+    // `$5A` 在本函数后段反正写 `$FF`（无差），`$53` 是步音延时计数器、MoreInit 不碰它；
+    // 真正的 `$6C/$6D` 则整场没人清 ⇒ 区域切换后残留门挡位，`get_room_num` 读 `$6C+y`
+    // 命中门挡位即拒滚（Fix1-B）。
+    clear_scroll_blocks(mem);
     mem.write_ram(0x0030, 1); // SpareMem30
     mem.write_ram(crate::ram_map::SCROLL_DIR, 2); // ScrollDir=2（横房）——【勘误修】$49！
     // AreaMapPosX/Y（各 area bank $95D7/$95D8）——**走区头段**，不再有 Rust 抄本。
@@ -247,3 +251,37 @@ pub fn setup_room(mem: &mut Manager) {
     }
 }
 
+
+/// `MoreInit` 的名表门挡双清（`stx ScrollBlockOnNameTable3` / `stx ScrollBlockOnNameTable0`，
+/// X=0——`refs/m1disasm/SRC/prg7_engine.asm:1876-1877`）。
+///
+/// 单独成函数是为了**可测**：`more_init` 整体会进 SetupRoom 环（含 fail-loud 未端口面），
+/// 单测只钉这一段 asm 的写面。
+fn clear_scroll_blocks(mem: &mut Manager) {
+    mem.set_scroll_block_nt3(0);
+    mem.set_scroll_block_nt0(0);
+}
+
+#[cfg(test)]
+mod tests_room_load {
+    use crate::frame::Manager;
+
+    /// Fix1-B 回归：MoreInit 清的是 `$6C/$6D`（门挡），**不是** `$5A RoomNumber` /
+    /// `$53 WalkSoundDelay`——旧形写错地址 ⇒ 区域切换后门挡位残留 ⇒ `get_room_num`
+    /// 读 `$6C+y` 命中门挡位即拒滚（`room_load.rs:185`）。
+    #[test]
+    fn more_init_clears_door_scroll_blocks() {
+        let mut m = Manager::default();
+        // 模拟区域切换前的残留门挡位（bit0/bit1）。
+        m.set_scroll_block_nt3(0x02);
+        m.set_scroll_block_nt0(0x01);
+        m.set_room_number(0x5A); // 旧形误写目标：值必须保持不变
+        m.write_ram(0x0053, 0x07); // 旧形误写目标：步音延时必须保持不变
+        super::clear_scroll_blocks(&mut m);
+        assert_eq!((m.scroll_block_nt3(), m.scroll_block_nt0()), (0, 0));
+        assert_eq!(m.read_ram(crate::ram_map::SCROLL_BLOCK_NT3), 0);
+        assert_eq!(m.read_ram(crate::ram_map::SCROLL_BLOCK_NT0), 0);
+        assert_eq!(m.room_number(), 0x5A, "MoreInit 不清 RoomNumber（后段才写 $FF）");
+        assert_eq!(m.read_ram(0x0053), 0x07, "MoreInit 不碰 WalkSoundDelay=$53");
+    }
+}

@@ -314,6 +314,7 @@ pub fn dump_json() -> Result<String, Vec<String>> {
     push_entity::<crate::sound::state::SoundInitFlags>(&mut spans, "SoundInitFlags", &mut all);
     push_entity::<crate::render::oam_shadow::OamShadow>(&mut spans, "OamShadow", &mut all);
     push_entity::<crate::world::object_globals::ObjectGlobals>(&mut spans, "ObjectGlobals", &mut all);
+    push_entity::<crate::world::scroll_blocks::ScrollBlocks>(&mut spans, "ScrollBlocks", &mut all);
     push_entity::<crate::enemy::state::Enemy<'static>>(&mut spans, "Enemy", &mut all);
     push_entity::<crate::world::object::Object<'static>>(&mut spans, "Object", &mut all);
     push_entity::<crate::world::room_ram::Room<'static>>(&mut spans, "Room", &mut all);
@@ -393,7 +394,7 @@ mod tests {
             "dump 必须带 schema 头：{}",
             &json[..json.len().min(80)]
         );
-        assert!(json.contains("\"coverage\":[288,84]"), "owner 字节数锚点");
+        assert!(json.contains("\"coverage\":[290,84]"), "owner 字节数锚点");
     }
 
     /// 每条 Unmodeled 说明都必须带可 grep 的代码指针（`*.rs`），否则
@@ -464,7 +465,7 @@ mod tests {
             NesSpan::value(MAP_POS_Y, 1),
             NesSpan::value(SAMUS_SCR_X, 1),
             NesSpan::value(SAMUS_SCR_Y, 1),
-            NesSpan::value(crate::ram_map::SCROLL_BLOCK_NT3, 1),
+            // `$6C` 已归 `world::scroll_blocks::ScrollBlocks`（与 `$6D` 同一逻辑量，Task 5 Fix1）
         ]
     }
 
@@ -677,10 +678,19 @@ mod tests {
         );
         assert_eq!(
             unowned_bytes(cam, &cdom),
-            [8, 0],
-            "相机 8 B 全未 typed（含 ScrollBlockOnNameTable3）"
+            [7, 0],
+            "相机 7 B 全未 typed（`$6C` 已随 `$6D` 收进 ScrollBlocks）"
         );
         assert_eq!(coverage(cam).expect("无 Owner 段 ⇒ 无冲突"), [0, 0]);
+
+        // 门挡字（`$6C/$6D`）：一段相邻 2 B Owner，无空洞。
+        let sb = spans_of::<crate::world::scroll_blocks::ScrollBlocks>();
+        let sdom = crate::world::scroll_blocks::SCROLL_BLOCK_ADDRS;
+        assert_eq!(sb.len(), 1, "门挡字是一个 2 B Owner 段");
+        assert_eq!(sb[0].0.start, sdom[0]);
+        assert_eq!(sb[0].0.len, 2);
+        assert!(gaps(sb, &[NesSpan::value(sdom[0], 2)]).is_empty());
+        assert_eq!(coverage(sb).expect("无冲突"), [2, 0]);
     }
 
     /// 爆炸域两面：无空洞、全未 typed。

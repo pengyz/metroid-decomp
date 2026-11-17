@@ -51,6 +51,10 @@ impl Manager {
         if let Some(v) = self.object_globals.get_byte(a) {
             return v;
         }
+        // 名表门挡字（`$6C/$6D`）：typed 真源在 `Manager.scroll_blocks`。
+        if let Some(v) = self.scroll_blocks.get_byte(a) {
+            return v;
+        }
         // OAM 页（`$0200-$02FF`）：typed 真源在 `Manager.oam`。
         if let Some(v) = self.oam.get_byte(a) {
             return v;
@@ -82,6 +86,10 @@ impl Manager {
         }
         // 对象全局伪寄存器（`$4B/$5A/$5B`）：写径同读径，落 typed 真相。
         if self.object_globals.set_byte(a, v) {
+            return;
+        }
+        // 名表门挡字（`$6C/$6D`）：写径同读径，落 typed 真相。
+        if self.scroll_blocks.set_byte(a, v) {
             return;
         }
         // OAM 页（`$0200-$02FF`）：写径同读径，落 typed 真相。

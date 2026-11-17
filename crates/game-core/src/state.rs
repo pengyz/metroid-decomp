@@ -73,6 +73,12 @@ impl Manager {
                 img.ram[a as usize & 0x7FF] = v;
             }
         }
+        // 名表门挡字（`$6C/$6D`）typed 域投影。
+        for a in crate::world::scroll_blocks::ScrollBlocks::ADDRS {
+            if let Some(v) = self.scroll_blocks.get_byte(a) {
+                img.ram[a as usize & 0x7FF] = v;
+            }
+        }
         // OAM 整页（`$0200-$02FF`）typed 域投影（64 槽 × 4 B）。
         img.ram[0x200..0x300].copy_from_slice(self.oam.page());
         // 敌槽 typed 域（`EnsExtra` 前 7 字节）：`$6AF4` 在 WRAM 面 ⇒ 投影到 `wram`。
@@ -103,6 +109,10 @@ pub struct Manager {
     /// 对象全局伪寄存器（`$4B PageIndex/$5A RoomNumber/$5B SpritePagePos`）typed 状态。
     /// 真相面；`snapshot_nes()` 投影回字节面。
     pub(crate) object_globals: crate::world::object_globals::ObjectGlobals,
+    /// 名表门挡字（`$6C/$6D` ScrollBlockOnNameTable3/0）typed 状态。真相面；
+    /// `snapshot_nes()` 投影回字节面。原 `$6C` 在 Camera 的 Unmodeled 面、`$6D` 在
+    /// Undeclared 面——两半属于同一逻辑量（门挡位），故收成一个 2 B Owner。
+    pub(crate) scroll_blocks: crate::world::scroll_blocks::ScrollBlocks,
     /// OAM 整页（`$0200-$02FF`）typed 状态。真相面；`snapshot_nes()` 投影回字节面。
     pub(crate) oam: crate::render::oam_shadow::OamShadow,
     /// 敌槽 typed 状态（`EnsExtra` 前 7 字节 × 12 槽）。真相面；`snapshot_nes()` 投影回
@@ -164,7 +174,7 @@ pub struct Manager {
 
 impl Default for Manager {
     fn default() -> Self {
-        Self { storage: crate::memmap::storage::NesStorage::default(), samus: Default::default(), health_change: Default::default(), sound_init: Default::default(), object_globals: Default::default(), oam: Default::default(), enemies: Default::default(), regs: Registers::default(), nmi_enabled: false,
+        Self { storage: crate::memmap::storage::NesStorage::default(), samus: Default::default(), health_change: Default::default(), sound_init: Default::default(), object_globals: Default::default(), scroll_blocks: Default::default(), oam: Default::default(), enemies: Default::default(), regs: Registers::default(), nmi_enabled: false,
                title_cursor: 0, title_cursor_phase: 0, title_spin: 0, check_password_pending: false, deferred_screen_on: false, title_no_return: false,
                iter_gates: Vec::new(), iter_span_left: 0, iter_span_fc: false, fc_inced_this_tick: false,
                apu_log: Vec::new(), work_cycles: 0,

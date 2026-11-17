@@ -167,6 +167,7 @@ impl TypedRestoreManifest {
             .chain(crate::samus::health_change::HealthChange::ADDRS)
             .chain(crate::sound::state::SoundInitFlags::ADDRS)
             .chain(crate::world::object_globals::ObjectGlobals::ADDRS)
+            .chain(crate::world::scroll_blocks::ScrollBlocks::ADDRS)
             .chain(crate::render::oam_shadow::OamShadow::addrs())
     }
 
@@ -202,6 +203,12 @@ impl Manager {
             assert!(
                 mem.health_change.set_byte(a, ram[a as usize & 0x7FF]),
                 "`HealthChange` 地址必须在 typed 域内"
+            );
+        }
+        for a in crate::world::scroll_blocks::ScrollBlocks::ADDRS {
+            assert!(
+                mem.scroll_blocks.set_byte(a, ram[a as usize & 0x7FF]),
+                "`ScrollBlocks` 地址必须在 typed 域内"
             );
         }
         for a in crate::sound::state::SoundInitFlags::ADDRS {

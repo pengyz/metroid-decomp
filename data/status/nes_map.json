@@ -12,7 +12,7 @@
   ],
   "face_total": 2272,
   "owner_bytes": [
-    288,
+    290,
     84
   ],
   "owner_spans": [
@@ -35,6 +35,10 @@
     {
       "start": 107,
       "len": 1
+    },
+    {
+      "start": 108,
+      "len": 2
     },
     {
       "start": 110,
@@ -191,7 +195,7 @@
   ],
   "view_bytes": 23,
   "view_only_bytes": 0,
-  "unmodeled_total": 612,
+  "unmodeled_total": 611,
   "unmodeled": [
     {
       "start": 51,
@@ -211,42 +215,37 @@
     {
       "start": 73,
       "len": 1,
-      "reason": "相机域未 typed：滚动/地图位/屏幕位真相在字节面（crates/game-core/src/world/camera/mod.rs:124）"
+      "reason": "相机域未 typed：滚动/地图位/屏幕位真相在字节面（crates/game-core/src/world/camera/mod.rs:96 的访问器族）；$6C 已归 world/scroll_blocks.rs"
     },
     {
       "start": 79,
       "len": 1,
-      "reason": "相机域未 typed：滚动/地图位/屏幕位真相在字节面（crates/game-core/src/world/camera/mod.rs:124）"
+      "reason": "相机域未 typed：滚动/地图位/屏幕位真相在字节面（crates/game-core/src/world/camera/mod.rs:96 的访问器族）；$6C 已归 world/scroll_blocks.rs"
     },
     {
       "start": 80,
       "len": 1,
-      "reason": "相机域未 typed：滚动/地图位/屏幕位真相在字节面（crates/game-core/src/world/camera/mod.rs:124）"
+      "reason": "相机域未 typed：滚动/地图位/屏幕位真相在字节面（crates/game-core/src/world/camera/mod.rs:96 的访问器族）；$6C 已归 world/scroll_blocks.rs"
     },
     {
       "start": 81,
       "len": 1,
-      "reason": "相机域未 typed：滚动/地图位/屏幕位真相在字节面（crates/game-core/src/world/camera/mod.rs:124）"
+      "reason": "相机域未 typed：滚动/地图位/屏幕位真相在字节面（crates/game-core/src/world/camera/mod.rs:96 的访问器族）；$6C 已归 world/scroll_blocks.rs"
     },
     {
       "start": 82,
       "len": 1,
-      "reason": "相机域未 typed：滚动/地图位/屏幕位真相在字节面（crates/game-core/src/world/camera/mod.rs:124）"
-    },
-    {
-      "start": 108,
-      "len": 1,
-      "reason": "相机域未 typed：滚动/地图位/屏幕位真相在字节面（crates/game-core/src/world/camera/mod.rs:124）"
+      "reason": "相机域未 typed：滚动/地图位/屏幕位真相在字节面（crates/game-core/src/world/camera/mod.rs:96 的访问器族）；$6C 已归 world/scroll_blocks.rs"
     },
     {
       "start": 252,
       "len": 1,
-      "reason": "相机域未 typed：滚动/地图位/屏幕位真相在字节面（crates/game-core/src/world/camera/mod.rs:124）"
+      "reason": "相机域未 typed：滚动/地图位/屏幕位真相在字节面（crates/game-core/src/world/camera/mod.rs:96 的访问器族）；$6C 已归 world/scroll_blocks.rs"
     },
     {
       "start": 253,
       "len": 1,
-      "reason": "相机域未 typed：滚动/地图位/屏幕位真相在字节面（crates/game-core/src/world/camera/mod.rs:124）"
+      "reason": "相机域未 typed：滚动/地图位/屏幕位真相在字节面（crates/game-core/src/world/camera/mod.rs:96 的访问器族）；$6C 已归 world/scroll_blocks.rs"
     },
     {
       "start": 262,
@@ -334,22 +333,22 @@
       "reason": "爆炸额外面未 typed：status/animFrame/animDelay/resetAnimIndex/animIndex/hi 真相在字节面（crates/game-core/src/enemy/explosion.rs:288）"
     }
   ],
-  "undeclared_total": 1288,
+  "undeclared_total": 1287,
   "undeclared": [
     {
       "start": 0,
       "len": 51,
-      "reason": "零页系统面（Joy1Status=$14/Joy2Status=$15/GameMode=$1D/FrameCount=$2D 等），常量与证据见 crates/game-core/src/ram_map.rs，写者分散在 world/update.rs、frame/nmi.rs"
+      "reason": "零页系统面（Joy1Status=$14/Joy2Status=$15/GameMode=$1D/FrameCount=$2D）：常量见 ram_map.rs:70/:73/:26/:34，比对面边界见 memmap/observe/frame_face.rs:32；写者分散在 world/update.rs（输入/帧计数）与 frame/nmi.rs（模式切换），未逐字节收族"
     },
     {
       "start": 52,
       "len": 3,
-      "reason": "RoomPtr hi=$34 由 world/room_load.rs:236 写；$35/$36 为随证临时量（Room 声明只覆盖 $33/$37-$3A）"
+      "reason": "RoomPtr hi=$34 由 world/room_load.rs:240 写；$35/$36 为随证临时量（Room 声明只覆盖 $33/$37-$3A）"
     },
     {
       "start": 59,
       "len": 14,
-      "reason": "AreaPointers_RAM $3B-$48 由 world/room_load.rs:163 copy_area_pointers 写（循环写见 :170，14 B）"
+      "reason": "AreaPointers_RAM $3B-$48 由 world/room_load.rs:167 copy_area_pointers 写（循环体 :169、写点 :173，14 B）"
     },
     {
       "start": 74,
@@ -364,7 +363,7 @@
     {
       "start": 83,
       "len": 7,
-      "reason": "$53 ScrollBlockOnNameTable0 由 world/room_load.rs:41 清 0；$55 IS_SAMUS 由 samus/handler.rs:84/:86 写；$56 DoorEntryStatus 读点自 world/room_draw.rs:511 起（门块绘制）；$54/$57-$59 未逐字节收族（Room 声明只覆盖 $33/$37-$3A）"
+      "reason": "$53 WalkSoundDelay（asm 命名见 asm:refs/m1disasm/SRC/constants_ram.asm:568）——MoreInit 旧形误写 0、Fix1 已改回清 $6C/$6D，Rust 侧现无读写点（步音延时未建模）；$55 IS_SAMUS 由 samus/handler.rs:84/:86 写；$56 DoorEntryStatus 读点自 world/room_draw.rs:511 起；$54/$57-$59 未逐字节收族"
     },
     {
       "start": 92,
@@ -374,12 +373,7 @@
     {
       "start": 102,
       "len": 5,
-      "reason": "$66-$6A：RoomPalette=$68 由 world/room_load.rs:243 写；其余（$66/$67/$69/$6A）未逐字节收族"
-    },
-    {
-      "start": 109,
-      "len": 1,
-      "reason": "ScrollBlockOnNameTable0=$6D：world/update.rs:63 写 0、world/update.rs:229 写 $33（生产面仅此两写点；Rust 侧暂无读点，asm 读径未单独收族）；$006C 已由 Camera 声明不在本段"
+      "reason": "$66-$6A：RoomPalette=$68 由 world/room_load.rs:247 写；其余（$66/$67/$69/$6A）未逐字节收族"
     },
     {
       "start": 112,
@@ -389,27 +383,27 @@
     {
       "start": 254,
       "len": 8,
-      "reason": "PPU 零页镜像 PPUMASK_ZP=$FE/PPUCTRL_ZP=$FF（render/mod.rs:128、frame/nmi.rs）与 $0100-$0105 的 6502 栈；栈由 frame/nmi.rs 的 JSR/中断路径使用"
+      "reason": "PPU 影子镜像 PPUMASK_ZP=$FE/PPUCTRL_ZP=$FF（world/room_load.rs:32-33 的 ScreenOff 写 $FE、render/vram.rs:35 写 $FF）与 $0100-$0105 栈底（Rust 不模拟 JSR/RTS 栈字节，MSS 整面直映见 frame/memory.rs:195）"
     },
     {
       "start": 264,
       "len": 2,
-      "reason": "MiniBossKillDelayFlag=$0108/PowerUpDelayFlag=$0109 由 frame/tick.rs:637 读写（asm C4AA SetTimer 路径，constants_ram:809-810）"
+      "reason": "MiniBossKillDelayFlag=$0108/PowerUpDelayFlag=$0109 由 frame/tick.rs:637 读写（asm C4AA SetTimer 路径，asm:refs/m1disasm/SRC/constants_ram.asm:809）"
     },
     {
       "start": 266,
       "len": 246,
-      "reason": "6502 硬件栈页剩余部分（$0100-$01FF）；Rust 侧不模拟 JSR/RTS 的栈字节，frame/boot.rs:581 断言 $01FF 不被触碰；$0108/$0109 是原版借栈页放的延时旗，已单列"
+      "reason": "$010A/$010B 为 MissileCount BCD（ui/hud.rs:47/:53 读）；$010C-$01FF 为 6502 硬件栈页——Rust 不模拟 JSR/RTS 栈字节，MSS 整面直映见 frame/memory.rs:195；$0108/$0109 是原版借栈页放的延时旗，已单列"
     },
     {
       "start": 1248,
       "len": 419,
-      "reason": "声引擎其余旗标面 $04E0-$0682：sound/state.rs:25 的 SFX_PAUSED=$0602/SFX_NOISE_INIT=$0680；$04E0-$05FF 原版未用保留面（Mesen2 RAM dump 恒 0，比对面由 memmap/observe/dump.rs 界定）；$0603-$067F 为未逐字节收族的零散面"
+      "reason": "声引擎其余旗标面 $04E0-$0682：SFX_PAUSED=$0602 定义见 sound/mod.rs:25、SFX_NOISE_INIT=$0680 见 sound/mod.rs:33；$04E0-$05FF 为原版未用保留面（Rust 无读写点；MSS 整面直映见 frame/memory.rs:195）；$0603-$067F 为未逐字节收族的零散面"
     },
     {
       "start": 1669,
       "len": 379,
-      "reason": "声引擎旗标/房间绘制/VRAM 缓冲工作区 $0685-$07FF：sound/state.rs:25 的 MUSIC_INIT=$0685、sound/hook.rs:314 写 $068D；world/room_draw.rs:324-326 的 MEM0700/PIPE_BUG_HOLES=$0728/POWER_UPS=$0748；pickup/spawn.rs:24 的 POWERUPS_BASE=$0748；title/intro.rs:80-113 与 frame/nmi.rs:116 的 VRAMStructBuffer=$07A0"
+      "reason": "声引擎旗标/房间绘制/VRAM 缓冲工作区 $0685-$07FF：MUSIC_INIT=$0685 常量见 ram_map.rs:102、写点 frame/tick.rs:600、读点 frame/nmi.rs:191；$068D 由 sound/hook.rs:314 写；world/room_draw.rs:324-326 的 MEM0700/PIPE_BUG_HOLES=$0728/POWER_UPS=$0748；pickup/spawn.rs:24 的 POWERUPS_BASE=$0748；title/intro.rs:80/:113 与 frame/nmi.rs:116 的 VRAMStructBuffer=$07A0"
     }
   ],
   "history": [
@@ -489,6 +483,17 @@
       "undeclared_total": 1288,
       "state_sha256": "c240f7fcd5f5c0f262e9e3607adf01599ab2eba57f1c2a75940809ab707d58da",
       "prev_sha256": "b217d3d36b99f77496d92a7a4f605cbac35f363b1f1c55c6a0812afcdb6185a2"
+    },
+    {
+      "ts": "2026-11-17T20:02:18+08:00",
+      "reason": "下调 Undeclared 1288 → 1287 B / Unmodeled 612 → 611 B",
+      "owner_total": 374,
+      "view_bytes": 23,
+      "view_only_bytes": 0,
+      "unmodeled_total": 611,
+      "undeclared_total": 1287,
+      "state_sha256": "76c4467fe04fe1ff49c2c79923468fccbc68113c14ad708ffd40ad3379fbcbc5",
+      "prev_sha256": "1987eabea14f87cb322c1a3008c33c5d645803e894b90451eecf4b91adcf793e"
     }
   ]
 }

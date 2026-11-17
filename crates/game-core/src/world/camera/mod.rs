@@ -91,13 +91,14 @@ impl Camera<'_> {
         self.mem.write_ram(crate::ram_map::SAMUS_SCR_Y, v);
     }
 
-    /// 名表切换计数（`ScrollBlockOnNameTable3`）：横滚奇偶决定写哪张名表。
+    /// 名表门挡位（`ScrollBlockOnNameTable3`）：横滚奇偶决定写哪张名表。
+    /// 真相已收进 `world::scroll_blocks::ScrollBlocks`（`$6C/$6D` 同一逻辑量）。
     pub fn block_nt3(&self) -> u8 {
-        self.mem.read_ram(crate::ram_map::SCROLL_BLOCK_NT3)
+        self.mem.scroll_block_nt3()
     }
 
     pub fn set_block_nt3(&mut self, v: u8) {
-        self.mem.write_ram(crate::ram_map::SCROLL_BLOCK_NT3, v);
+        self.mem.set_scroll_block_nt3(v);
     }
 }
 
@@ -121,12 +122,13 @@ mod tests_camera {
 // ─────────────────────────── P2：`NesMapped` 声明 ───────────────────────────
 
 /// 相机域未 typed 的缺口说明。
-const CAM_UNMODELED: &str = "相机域未 typed：滚动/地图位/屏幕位真相在字节面（crates/game-core/src/world/camera/mod.rs:124）";
+const CAM_UNMODELED: &str = "相机域未 typed：滚动/地图位/屏幕位真相在字节面（crates/game-core/src/world/camera/mod.rs:96 的访问器族）；$6C 已归 world/scroll_blocks.rs";
 
-/// 相机域 `NesMapped` 声明：8 个访问器各 1 B，全部未 typed（0 个 owner）。
+/// 相机域 `NesMapped` 声明：7 个访问器各 1 B，全部未 typed（0 个 owner）。
 ///
-/// 这 8 B 散在零页（`$0049`/`$004F-$0052`/`$006C`/`$00FC-$00FD`），不在对象/敌域任何槽里——
+/// 这 7 B 散在零页（`$0049`/`$004F-$0052`/`$00FC-$00FD`），不在对象/敌域任何槽里——
 /// 所以必须显式登记，否则它们就是"没人解释的字节"（覆盖度门的空洞）。
+/// `$6C` 原在此列，Task 5 Fix1 起归 `world::scroll_blocks::ScrollBlocks`（与 `$6D` 同一逻辑量）。
 impl<'a> crate::memmap::nesmap::NesMapped for Camera<'a> {
     const DISCRIMINATOR: Option<u16> = None;
 
@@ -157,10 +159,6 @@ impl<'a> crate::memmap::nesmap::NesMapped for Camera<'a> {
         ),
         (
             NesSpan::value(SAMUS_SCR_Y, 1),
-            SpanKey::Unmodeled(CAM_UNMODELED),
-        ),
-        (
-            NesSpan::value(SCROLL_BLOCK_NT3, 1),
             SpanKey::Unmodeled(CAM_UNMODELED),
         ),
     ];
