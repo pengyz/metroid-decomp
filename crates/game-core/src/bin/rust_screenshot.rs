@@ -28,6 +28,7 @@ use std::path::PathBuf;
 use std::sync::Mutex;
 
 use game_core::frame::{FrameEngine, Manager, Registers};
+use game_core::memmap::observe::dump::ram_dump_hex;
 use game_core::render::render_frame;
 use game_core::state::RenderState;
 
@@ -464,24 +465,10 @@ fn main() {
             hex.push('\n');
             let fname = format!("{}_f{:05}_{}.ppu.hex", plan.name, frame, tag);
             fs::write(out.join(&fname), hex).expect("写 PPU dump");
-            // WRAM 2KB dump（与 scenario_capture.lua::dumpRam 同构（0000-07FF hex）
-            // +敌 extra 面 $6AF4-$6B73（②终钉（EnsExtra（双侧同构）））
-            {
-                let mut ram_hex = String::new();
-                // 【取投影不取裸存储】typed 化后的字段（Samus.status/speed/pos 等）真相在
-                // `Manager.samus`，`ram()` 是未迁字段的原始面；dump 必须走 `snapshot_nes()`，
-                // 否则 typed 值不出现在 ram.hex 里（capture_seam 锚测当场红过）。
-                let img = engine.mem.snapshot_nes();
-                for i in 0..0x800usize {
-                    ram_hex.push_str(&format!("{:02X}", img.ram.get(i).copied().unwrap_or(0)));
-                }
-                for i in 0x6AF4u16..=0x6B73 {
-                    ram_hex.push_str(&format!("{:02X}", engine.mem.read_wram(i)));
-                }
-                ram_hex.push('\n');
-                let fname = format!("{}_f{:05}_{}.ram.hex", plan.name, frame, tag);
-                fs::write(out.join(&fname), ram_hex).expect("写 RAM dump");
-            }
+            // RAM 整面 dump（2KB 镜像 + 额外面 $6AF4-$6BD3：敌槽 0-11 + 爆炸槽 0-3）。
+            // 唯一来源 = `snapshot_nes()`（typed 字段已投影），见 observe::dump 模块头。
+            let fname = format!("{}_f{:05}_{}.ram.hex", plan.name, frame, tag);
+            fs::write(out.join(&fname), ram_dump_hex(&engine.mem)).expect("写 RAM dump");
         }
         eprintln!("[rust]   capture f{:05} {} → {}", frame, tag, fname);
         produced.push((frame, tag.to_string(), fname));
