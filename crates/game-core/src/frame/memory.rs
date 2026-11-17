@@ -368,13 +368,57 @@ mod tests_mss {
         manifest.sort_unstable();
         assert_eq!(bypass, manifest, "RAM 面：读径绕过 storage 的地址集合 != typed 清单");
 
-        let mut wbypass: Vec<u16> = (0x6AF4u16..0x6AF4 + crate::enemy::state::SLOT_COUNT as u16 * 16)
+        // 【I-1】**扫全 WRAM 面**（$6000-$7FFF），不是只扫敌槽窗：
+        // 旧窗右端 `$6AF4+SLOT_COUNT*16` 是左闭右开、恰好顶到爆炸额外面基址 `$6BB4` 之前，
+        // 于是「$6BB4 被 typed 化但漏接清单」在该窗内看不见（identity 映射时 storage 与
+        // read 同值），只能靠全脸往返测兜底——那正是本计划要消灭的静默漂移。
+        let mut wbypass: Vec<u16> = (0x6000u16..0x8000)
             .filter(|&a| mem.read_wram(a) != mem.wram()[((a - 0x6000) & 0x1FFF) as usize])
             .collect();
         let mut wmanifest: Vec<u16> = TypedRestoreManifest::wram_addrs().collect();
         wbypass.sort_unstable();
         wmanifest.sort_unstable();
-        assert_eq!(wbypass, wmanifest, "WRAM 面：敌槽 typed 清单 != 读径绕过集合");
+        assert_eq!(
+            wbypass, wmanifest,
+            "WRAM 面：读径绕过 storage 的地址集合 != typed 清单（全 $6000-$7FFF）"
+        );
+    }
+
+    /// **I-1 回归**：爆炸额外面（`enemy::explosion::EXTRA_BASE + slot*EXTRA_STRIDE + off`）
+    /// **不是** typed 域——它必须留在字节面，且不得落进「读径绕过 storage」集合。
+    ///
+    /// 区间一律从 `enemy::explosion` 常量推导（不手写 `$6BB4`），并断言它**紧跟**敌槽 typed 面
+    /// 末格（`ENS_EXTRA_BASE + SLOT_COUNT*16 - 1`）：两域相邻，任何一侧步长/槽数改动都会红。
+    /// 旧形把扫描窗右端截在 `$6BB4` 之前，故「$6BB4 被 typed 化但漏接清单」在窗内不可见。
+    #[test]
+    fn explosion_extra_face_stays_outside_typed_manifest() {
+        use crate::enemy::explosion::{EXTRA_BASE, EXTRA_STRIDE, SLOT_COUNT as EX_SLOTS};
+        let face: Vec<u16> = (0..EX_SLOTS as u16)
+            .flat_map(|slot| (0..EXTRA_STRIDE).map(move |off| EXTRA_BASE + slot * EXTRA_STRIDE + off))
+            .collect();
+
+        let manifest: Vec<u16> = TypedRestoreManifest::wram_addrs().collect();
+        let overlap: Vec<u16> = face.iter().copied().filter(|a| manifest.contains(a)).collect();
+        assert!(overlap.is_empty(), "爆炸额外面与敌槽 typed 清单重叠：{overlap:?}");
+
+        let ens_end = crate::enemy::state::ENS_EXTRA_BASE
+            + crate::enemy::state::SLOT_COUNT as u16 * 16
+            - 1;
+        assert_eq!(face[0], ens_end + 1, "爆炸额外面必须紧接敌槽 typed 面末格");
+        assert_eq!(
+            *face.last().unwrap(),
+            EXTRA_BASE + EX_SLOTS as u16 * EXTRA_STRIDE - 1,
+            "额外面末格必须由 base+slots*stride 推出"
+        );
+
+        let ram = nonzero_face(0x800);
+        let wram = nonzero_face(0x2000);
+        let mem = Manager::restore_mss(&ram, &wram, Registers::default());
+        for a in face {
+            let i = ((a - 0x6000) & 0x1FFF) as usize;
+            assert_eq!(mem.wram()[i], wram[i], "{a:#06X}：爆炸额外面是未迁族，必须留在字节面");
+            assert_eq!(mem.read_wram(a), wram[i], "{a:#06X}：爆炸额外面读径不得绕过 storage");
+        }
     }
 
     /// 对抗问 4：既有行为不得被改掉——非 typed 字节逐字节原样恢复，
