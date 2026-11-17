@@ -64,3 +64,16 @@ impl Manager {
         self.set_obj_cntrl(0);
     }
 }
+
+/// `ObjectCounter ; $65`：全屏对象循环的**断环计数器**（`SamusSetExplode` 清零、
+/// `SamusMoveHorizontally` 置 1 断环、`samus/state.rs` 递减）。它不是实体状态，
+/// 而是「本帧对象循环提前结束」的全局信号 ⇒ 归 object_globals。
+impl Manager {
+    pub(crate) fn object_counter(&self) -> u8 {
+        self.read_ram(crate::ram_map::OBJECT_COUNTER)
+    }
+
+    pub(crate) fn set_object_counter(&mut self, v: u8) {
+        self.write_ram(crate::ram_map::OBJECT_COUNTER, v);
+    }
+}

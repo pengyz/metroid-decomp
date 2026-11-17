@@ -468,6 +468,18 @@ fn set_samus_jump_anim(mem: &mut Manager, anim: u8) {
                   if gear & crate::ram_map::gear::HIGHJUMP != 0 { 0x12 } else { 0x18 });
 }
 
+/// `SetSamusExplode ; 07:CC8B`：**死亡爆炸起手**——`SamusJumpDsplcmnt←$50`（asm 自注
+/// "this write doesn't serve any purpose" 但保真）/ `SetSamusAnim(ObjAnim_SamusExplode)`
+/// （`$85A4 - $8572 = $32`：reset←$32、index←$32、delay←0）/ `ObjectCounter←0`。
+/// 调用方（`SubtractHealth`）已先写 `status←sa_Dead(7)` 与 `SFX_SamusDie`。
+pub fn set_samus_explode(mem: &mut Manager) {
+    mem.samus().set_jump_displacement(0x50);
+    mem.samus().set_anim_reset_index(0x32);
+    mem.samus().set_anim_index(0x32);
+    mem.samus().set_anim_delay(0);
+    mem.set_object_counter(0);
+}
+
 /// SetSamusRun（**asm 内容锚** `SetSamusRun: ; 07:CC98`）：WalkSoundDelay←9/转身动画
 /// （Stand⇒Run、PntUp⇒RunPntUp、其余（原跑动）⇒Front 过渡）/Run 动画置位+加速。
 fn set_samus_run(mem: &mut Manager) {

@@ -492,16 +492,33 @@ pub(crate) fn subtract_health(mem: &mut crate::frame::Manager) {
     }
     // Base10Subtract（BCD 逐位减——$C3FB 族简化形：半字节借位）。第二调用 carry-in=
     // 首调用 carry-out（asm :3231-3235 第二次 jsr 前**无 sec**）⇒ borrow 作 +1 并入 b。
-    let h0 = mem.read_ram(0x0106);
-    let h1 = mem.read_ram(0x0107);
+    let hp = mem.samus().health();
+    let (h0, h1) = (hp as u8, (hp >> 8) as u8);
     let (r0, borrow) = bcd_sub(h0, a);
     let (r1, _) = bcd_sub(h1, if borrow { b.wrapping_add(1) } else { b });
-    mem.write_ram(0x0106, r0);
+    mem.samus().set_health(u16::from_le_bytes([r0, r1]));
     // 【bcd 掩码审计卡 2026-11-10】Health+1 全字节落写（asm :3233 `sta Health+1`
     // 无掩码）：高位 nibble 参与借位/回绕运算（$02+0x10 借位补、负结果 +$A0 调整
     // 合法改写 bit6-5），掩码剥离=分歧（asm $79→旧 rust $19）。证据见
     // docs/findings/bcd-mask-audit-subtracthealth.md。
-    mem.write_ram(0x0107, r1);
+    // 【asm `SubtractHealth ; 07:CECC` 死亡分支（`prg7_engine.asm:3259-3275`）】旧形缺整支：
+    //   `lda Health / and #$F0 / ora Health+1 / beq @dead`（BCD 十位域与高位**同时**为 0
+    //   ⇒ 判死；`and #$F0` 让 Health<10 也算死 = 原版 quirk）
+    //   `@dead: Health←0 / Health+1←0 / status←sa_Dead / jsr SFX_SamusDie / jmp SetSamusExplode`
+    //   非死径才 `bcs AddHealth@GotoClearHealthChange`（清 HealthChange）；**死径不清**。
+    // 实测（100% 录像 f3889）：两侧 Health 都已为 0，emu 转 Dead(7) 并起爆炸，rust 仍在 Run
+    // ⇒ 此后 Samus 精灵/物理全岔（f3890 起 34px 起跳，级联到 f4000 的 461px）。
+    let dead = (r0 & 0xF0) == 0 && r1 == 0;
+    if dead {
+        mem.samus().set_health(0);
+        mem.samus()
+            .set_status(crate::samus::state::SamusStatus::Dead);
+        // SFX_SamusDie（`:CBE2` = `lda #sfxTri_SamusDie($80)` → SetSFXTriInitFlag）
+        let f = mem.tri_init_flags() | 0x80;
+        mem.set_tri_init_flags(f);
+        crate::samus::handler::set_samus_explode(mem);
+        return;
+    }
     mem.write_ram(0x006E, 0);
     mem.write_ram(0x006F, 0);
 }

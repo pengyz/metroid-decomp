@@ -1,7 +1,7 @@
 {
   "schema": "raw-surface-v1",
   "note": "裸字节读写的**文件级**棘轮（只减不增）。语义视图已覆盖 Samus/敌槽/爆炸池/对象池/相机/房间；剩余族（asm Temp、OAM 影子、声音旗标、PageIndex 等伪寄存器）尚未视图化。",
-  "total": 1164,
+  "total": 1160,
   "files": {
     "enemy/anim_tick.rs": 2,
     "enemy/crawler.rs": 24,
@@ -29,7 +29,7 @@
     "title/bridge.rs": 30,
     "title/intro.rs": 22,
     "ui/hud.rs": 36,
-    "weapon/projectile.rs": 116,
+    "weapon/projectile.rs": 112,
     "world/camera/mod.rs": 16,
     "world/camera/scroll.rs": 38,
     "world/door.rs": 9,

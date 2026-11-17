@@ -164,6 +164,9 @@ pub const SAMUS_KNOCKBACK_IS_BOMB77: u16 = 0x0077;
 pub const SAMUS_IN_LAVA: u16 = 0x0064;
 
 /// HealthChange=$6E（内容锚「Amount to add/subtract from Health」——dw 双字节）。
+/// `Samus` 血量低位（`constants_ram.asm:806` `Health`）；高字节 = `+1`。BCD。
+/// 属 Samus 资源面（`$0106/$0107` 在 `Samus` 结构体之外，与 `$0316` 同理）。
+pub const SAMUS_HEALTH: u16 = 0x0106;
 pub const HEALTH_CHANGE: u16 = 0x006E;
 
 /// MetroidOnSamus=$92（constants_ram 内容锚「#\$01=Metroid on Samus, #\$00=Metroid not
