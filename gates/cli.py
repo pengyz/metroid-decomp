@@ -2233,6 +2233,9 @@ def gate_bankvars() -> tuple[str, str]:
 
 
 NO_RAW_ADDR_LEDGER_REL = Path("data/status/no_raw_addr.json")
+RAW_SURFACE_LEDGER_REL = Path("data/status/raw_surface.json")
+RAW_SURFACE_TIMEOUT_S = 120
+
 NO_RAW_ADDR_TIMEOUT_S = 120
 
 
@@ -2263,6 +2266,39 @@ def gate_no_raw_addr() -> tuple[str, str]:
     if proc.returncode != 0:
         bad = [ln for ln in out.splitlines() if ln.strip()][-8:]
         return FAIL, "裸地址字面量超出账本：\n  - " + "\n  - ".join(bad)
+    last = out.splitlines()[-1] if out else ""
+    return PASS, last
+
+
+def gate_raw_surface() -> tuple[str, str]:
+    """裸字节读写面的**文件级**棘轮（`raw-surface`）：不硬推，只止增量。
+
+    `crates/game-core/src/memmap/raw.rs` 是 `read_ram/write_ram/read_wram/write_wram`
+    的唯一实现，也是 typed 域迁完那天要删的入口点。但仍有约 630 处落在**未 typed 化**的
+    地址族（asm 临时量 `$00-$0F`、OAM 影子 `$0200-$02FF`、声音旗标、`PageIndex` 等伪寄存器），
+    一次性改写=盲改，所以本门禁只做两件事：
+
+    1. **不许长新面**：账本里没有的文件调用裸面 ⇒ FAIL（新代码应直接用
+       `mem.samus()/enemy(slot)/camera()/room()/ens_face(x)`）。
+    2. **总量不许涨**：全仓计数上涨 ⇒ FAIL。
+
+    调用点变少不 FAIL——迁完一批跑 `tools/raw_surface.py --write` 往下压，即「只减不增」。
+    这条门与 `no-raw-addr` 互补：后者管**受监控地址族的字面量**，本门管**整片裸面**。
+    """
+    if not (ROOT / RAW_SURFACE_LEDGER_REL).is_file():
+        return FAIL, f"缺 {RAW_SURFACE_LEDGER_REL.as_posix()}（先跑 python3 tools/raw_surface.py --write）"
+    try:
+        proc = subprocess.run(
+            [sys.executable, "tools/raw_surface.py"],
+            cwd=ROOT, capture_output=True, text=True, encoding="utf-8", errors="replace",
+            env=_child_env(), timeout=RAW_SURFACE_TIMEOUT_S,
+        )
+    except subprocess.TimeoutExpired:
+        return FAIL, f"raw-surface 校验超时（>{RAW_SURFACE_TIMEOUT_S}s）"
+    out = ((proc.stdout or "") + (proc.stderr or "")).strip()
+    if proc.returncode != 0:
+        bad = [ln for ln in out.splitlines() if ln.strip()][-8:]
+        return FAIL, "裸字节面超出账本：\n  - " + "\n  - ".join(bad)
     last = out.splitlines()[-1] if out else ""
     return PASS, last
 
@@ -2367,6 +2403,9 @@ GATES: list[tuple[str, str, str, str, object]] = [
     ("no-raw-addr", "启用（typed 域）", "check",
      "typed 绕过面只减不增：裸地址字面量 + ram_map 具名常量（tools/no_raw_addr.py）",
      gate_no_raw_addr),
+    ("raw-surface", "启用（typed 域）", "check",
+     "裸字节读写面文件级棘轮：新文件不许接入 + 总量只减不增（tools/raw_surface.py）",
+     gate_raw_surface),
 ]
 
 
