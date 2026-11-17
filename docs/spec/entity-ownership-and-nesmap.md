@@ -18,7 +18,7 @@
 
 | # | 复核发现 | 事实核对 | 对方案的修改 |
 |---|---|---|---|
-| R1 | ram.hex 尾段只到 `$6B73`（128 B = 敌槽 0–7），敌池有 12 槽（`SLOT_COUNT=12`，末尾 `$6BB3`），爆炸额外面从 `$6BB4` 起 | `crates/game-core/src/bin/rust_screenshot.rs:472-480` 实测：前段取 `snapshot_nes()`、尾段取 `read_wram()`，**两来源同文件**；`enemy/state.rs:122` SLOT_COUNT=12 | 比较面改 `$0000-$07FF + $6AF4-$6BD3`（2240 B），**整面单一来源**；先补 dump 尾段再谈覆盖度 |
+| R1 | ram.hex 尾段只到 `$6B73`（128 B = 敌槽 0–7），敌池有 12 槽（`SLOT_COUNT=12`，末尾 `$6BB3`），爆炸额外面从 `$6BB4` 起 | `crates/game-core/src/bin/rust_screenshot.rs:472-480` 实测：前段取 `snapshot_nes()`、尾段取 `read_wram()`，**两来源同文件**；`enemy/state.rs:122` SLOT_COUNT=12 | 比较面改 `$0000-$07FF + $6AF4-$6BD3`（2272 B），**整面单一来源**；先补 dump 尾段再谈覆盖度 |
 | R2 | 「每字节恰一认领」在当前布局下**不可满足**：`$0307` 同时是 `SamusOnElevator`（`samus/state.rs`）与对象槽 `data07`／门槽 `DoorType`（`world/object.rs`） | 两处常量表并存，且门绘制按对象槽读同址 | 判据降级为 **「每字节恰一个 owner + N 个声明 view」**；`ObjectPool` 持 `$0300-$03FF`，Samus 是 slot0 的 typed overlay（与现状等价） |
 | R3 | `restore_mss` 无条件拷回 `0x800`，typed 格在 `storage.ram` 留下副本 ⇒ 直接读 `ram()` 会拿到 stale，而测试仍绿 | `frame/memory.rs:154-176`；`memmap/storage.rs:80` 只在全新 Manager 上断言 | restore 末尾对 typed 地址清零 + 断言；导出只有一个出口（`snapshot_nes()`） |
 | R4 | 「字段分借 + systems」不足以覆盖真正跨域例程（同一函数交错写 Samus/敌/弹/声旗标，且每敌循环重置 `$010F`） | `weapon/projectile.rs:369-395`、`samus/physics.rs:943` | systems **只换签名不改写入顺序**；跨槽一律 `CollisionCtx<'a>{ mem: &mut Manager }` + 槽索引，禁止 `(&mut samus, &mut enemies[i])` |
@@ -70,7 +70,7 @@ pub trait NesMapped {
 | **P7** | `read_ram/write_ram` 降为 `memmap` 内部件（`raw-surface` 生产面 = 0） | 门读数归零 | 保留 shim 一版 |
 
 **删 `NesStorage` 的五条硬条件**：①`raw_surface` 生产面=0 且 files 空；②`no_raw_addr` 受监控族=0；
-③`nes-map` 静态并集=2240 B、动态腿零冲突；④capture/restore 全状态字节同；⑤`storage.ram|wram` 只在 `memmap` 内出现。
+③`nes-map` 静态并集=2272 B、动态腿零冲突；④capture/restore 全状态字节同；⑤`storage.ram|wram` 只在 `memmap` 内出现。
 
 ## 6. 测试清单（每条都写明"防自证"手段）
 

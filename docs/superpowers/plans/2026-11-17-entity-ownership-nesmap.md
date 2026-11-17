@@ -40,8 +40,8 @@
 - Test: `crates/game-core/src/memmap/observe/dump.rs`（`#[cfg(test)] mod tests`）
 
 **Interfaces1:**
-- Produces: `pub fn ram_dump_hex(mem: &crate::state::Manager) -> String`（2176 字节 → 4352 个十六进制字符 + `\n`，全量取 `snapshot_nes()`，段序 `$0000-$07FF` 后接 `$6AF4-$6BD3`）
-- Produces: `pub const DUMP_LEN: usize = 2176;`、`pub const EXTRA_RANGE: (u16, u16) = (0x6AF4, 0x6BD3);`
+- Produces: `pub fn ram_dump_hex(mem: &crate::state::Manager) -> String`（2272 字节 → 4544 个十六进制字符 + `\n`，全量取 `snapshot_nes()`，段序 `$0000-$07FF` 后接 `$6AF4-$6BD3`）
+- Produces: `pub const DUMP_LEN: usize = 2272;`、`pub const EXTRA_RANGE: (u16, u16) = (0x6AF4, 0x6BD3);`
 
 - [ ] **Step 1·1:** 写失败测试**
 
