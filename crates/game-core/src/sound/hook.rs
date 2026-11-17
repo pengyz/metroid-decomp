@@ -47,16 +47,16 @@ const RTS_TERMINAL: u16 = 0xB4EE;
 
 /// 装载器→(flag 址, block 窗址) 图（字节自证：各 `lda 旗/ldx #block` 体）。
 const LOADER_MAP: &[(u16, u16, u16)] = &[
-    (0xB31B, 0x0680, 0xB289), // NoiseInit
+    (0xB31B, crate::sound::addrs::NOISE_INIT, 0xB289), // NoiseInit
     (0xB322, 0x0688, 0xB28E), // NoiseCont
-    (0xB329, 0x0681, 0xB293), // SQ1Init
+    (0xB329, crate::sound::addrs::SQ1_INIT, 0xB293), // SQ1Init
     (0xB330, 0x0689, 0xB298), // SQ1Cont
-    (0xB33D, 0x0683, 0xB29D), // TriInit
+    (0xB33D, crate::sound::addrs::TRI_INIT, 0xB29D), // TriInit
     (0xB344, 0x068B, 0xB2A2), // TriCont
-    (0xB34B, 0x0684, 0xB2A7), // MultiInit（双步特例）
+    (0xB34B, crate::sound::addrs::MULTI_INIT, 0xB2A7), // MultiInit（双步特例）
     (0xB35C, 0x068C, 0xB2AC), // MultiCont
     (0xBC36, 0x065D, 0xB2B6), // MusicLoop（temp flag Music）
-    (0xB364, 0x0681, 0xB293), // GotoRunSFXSQ1InitRoutine（跳板：jsr B329/rts——字节自证 `20 29 b3 60`）
+    (0xB364, crate::sound::addrs::SQ1_INIT, 0xB293), // GotoRunSFXSQ1InitRoutine（跳板：jsr B329/rts——字节自证 `20 29 b3 60`）
 ];
 
 /// 区内取址（窗址→区偏移）。
@@ -131,8 +131,8 @@ pub fn sound_dispatch_chain(mem: &mut Manager, flag_addr: u16, block_win: u16, d
     // 契约：`sound::<fn>(params) -> HandlerOutcome{ram_events, apu_events, a/x/y_out}`
     // （纯函数；我供输入（RAM 面）/应用结果（RAM+APU+regs））。
     {
-        let ct = mem.read_ram(0x065C);
-        let flags = mem.read_ram(0x064D);
+        let ct = mem.channel_type();
+        let flags = mem.current_sound_flags();
         let out: Option<sound::HandlerOutcome> = match ptr {
             0xB673 => Some(sound::samus_hit_sfx_init(mem.read_ram(0x002E), ct, flags)),
             0xB834 => Some(sound::samus_to_ball_sfx_init(ct, flags)),
@@ -183,7 +183,7 @@ pub fn sound_dispatch_chain(mem: &mut Manager, flag_addr: u16, block_win: u16, d
                 // CheckMusicFlags（$B3FC）：MusicContFlags==CurrentSoundFlags⇒同曲重开；
                 // 异曲⇒InitializeSoundAddresses（$B404）全清（f16 $068D←00(B404)+
                 // $065D←00(B40A) 双写实证——同值写也是事件）
-                if !sound::check_music_flags(mem.read_ram(0x068D), mem.read_ram(0x064D)) {
+                if !sound::check_music_flags(mem.read_ram(0x068D), mem.current_sound_flags()) {
                     let (r, a) = sound::initialize_sound_addresses();
                     ram.extend(r);
                     apu.extend(a);
@@ -194,10 +194,10 @@ pub fn sound_dispatch_chain(mem: &mut Manager, flag_addr: u16, block_win: u16, d
                 ram.push((0x0649, 0x7F));
                 ram.push((0x0628, dx)); // MusicSQ1Duty（形参 X）
                 ram.push((0x0629, dy)); // MusicSQ2Duty（形参 Y）
-                let cur = mem.read_ram(0x064D);
+                let cur = mem.current_sound_flags();
                 // InitializeMusic（$BF19）：MusicContFlags←CurrentSoundFlags + 13B 曲头
                 // （SongHeaderOffsetTable[MusicInitIndex]——$065E=曲号，0x0B=Intro）
-                let idx = mem.read_ram(0x065E) as usize;
+                let idx = mem.music_init_index() as usize;
                 let off = *game_data::assets::song_header_offsets().get(idx).unwrap_or(&0) as usize;
                 let mut header = [0u8; 13];
                 if off + 13 <= game_data::assets::song_headers().len() {

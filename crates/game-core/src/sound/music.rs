@@ -69,7 +69,7 @@ pub fn continue_music_gate(music_cont_flags: u8) -> bool {
 
 /// shim 写集适配（step4）：MusicInitIndex→$065E 写回（None=$FF 保真）。
 pub fn music_init_index_writes(index: Option<u8>) -> Vec<(u16, u8)> {
-    vec![(0x065E, index.unwrap_or(0xFF))]
+    vec![(crate::sound::addrs::MUSIC_INIT_INDEX, index.unwrap_or(0xFF))]
 }
 
 #[cfg(test)]

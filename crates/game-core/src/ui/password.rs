@@ -43,7 +43,7 @@ pub fn go_password(display_password_id: u8, sfx_noise_init_flags: u8) -> Passwor
 
 /// GoPassword shim 写集（step4）：$1F/$24/$0680 写回。
 pub fn go_password_writes(h: &PasswordHandoff) -> Vec<(u16, u8)> {
-    vec![(0x001F, h.title_routine), (0x0024, h.bank_switch_pending), (0x0680, h.sfx_noise_init_flags)]
+    vec![(0x001F, h.title_routine), (0x0024, h.bank_switch_pending), (crate::sound::addrs::NOISE_INIT, h.sfx_noise_init_flags)]
 }
 
 /// UniqueItemFound（00:8BB5）物品位掩码——idx=item#>>3（Adiv8）／bit=item#&7（减法径）／

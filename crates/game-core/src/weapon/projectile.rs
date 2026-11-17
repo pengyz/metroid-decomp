@@ -40,8 +40,8 @@ pub fn samus_projectile_hit_door_or_statue(
                     if door_type & 1 == 0 {
                         // @hitByMissile：SFXTriInitFlags($0683)|=sfxTri_SamusBall(2)
                         // 【写径面校】SFXTriInitFlags($0683)=2KB RAM 镜像（非 wram）
-                        let f = mem.read_ram(0x0683);
-                        mem.write_ram(0x0683, f | 0x02);
+                        let f = mem.tri_init_flags();
+                        mem.set_tri_init_flags(f | 0x02);
                     }
                     // @blueDoor：isHit[$30A+y]←$04（bit2=被弹击（constants:919））
                     mem.write_ram(0x030A + y as u16, 0x04);

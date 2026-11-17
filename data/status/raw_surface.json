@@ -1,7 +1,7 @@
 {
   "schema": "raw-surface-v1",
   "note": "裸字节读写的**文件级**棘轮（只减不增）。语义视图已覆盖 Samus/敌槽/爆炸池/对象池/相机/房间；剩余族（asm Temp、OAM 影子、声音旗标、PageIndex 等伪寄存器）尚未视图化。",
-  "total": 1294,
+  "total": 1287,
   "files": {
     "enemy/anim_tick.rs": 2,
     "enemy/crawler.rs": 24,
@@ -25,11 +25,11 @@
     "render/vram.rs": 4,
     "samus/handler.rs": 112,
     "samus/physics.rs": 9,
-    "sound/hook.rs": 36,
+    "sound/hook.rs": 31,
     "title/bridge.rs": 30,
     "title/intro.rs": 22,
     "ui/hud.rs": 36,
-    "weapon/projectile.rs": 118,
+    "weapon/projectile.rs": 116,
     "world/camera/mod.rs": 16,
     "world/camera/scroll.rs": 38,
     "world/door.rs": 9,
@@ -48,6 +48,7 @@
     "frame/memory.rs": "兼容辖（`restore_mss` 回灌 / `write_io` 寄存器面 / 快照投影）",
     "state.rs": "`Manager` 本体（typed 字段 + 域句柄的持有者）",
     "bin/rust_screenshot.rs": "二进制边界（`--state-out` / ram.hex dump 的产出端）",
+    "sound/state.rs": "声引擎旗标面（$0602/$064D/$065C/$065E/$0680-$0684）的唯一实现面",
     "world/object_globals.rs": "对象全局伪寄存器（$4B/$5A/$5B/$6B）的唯一实现面",
     "tests.rs": "测试面"
   }

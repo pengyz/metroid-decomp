@@ -11,6 +11,8 @@
 //! 主循环四调用序=NoiseInit→MultiInit→TriInit→MusicLoop→**fallthrough ClearInitFlags
 //! 6 旗清**（$B3D6）⑤静音旗=SFXNoiseInitFlags 位0（`lsr/bcs` 分路）。
 
+pub(crate) mod state;
+
 /// 声域地址面（A 级内容锚 constants_ram.asm:761-769/982/1069-1127 逐址）。
 pub mod addrs {
     /// SoundRoutineTablePtr=$E0/E1（zp 对——表目 4B 装载面）。
