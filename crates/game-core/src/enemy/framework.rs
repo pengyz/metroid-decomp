@@ -79,7 +79,7 @@ pub(crate) fn try_becoming_active(mem: &mut crate::frame::Manager, x: u8) {
                 0
             }
         };
-        mem.write_ram(0x0400 + x as u16 + 8, mov_idx); // Ens.movementIndex（$0408）
+        mem.enemy(slot_of(x)).set_movement_index(mov_idx); // Ens.movementIndex（$0408）
 
         // 【asm 07:F81A-07:F839】`jsr LoadTableAt977B`（= L977B[type]<<1）：bit7 置位
         // ⇒ 该敌型走「加速度+速度+子像素」模型 ⇒ 按 movementIndex 从四张表初始化，
@@ -132,7 +132,7 @@ pub(crate) fn try_becoming_active(mem: &mut crate::frame::Manager, x: u8) {
         }
         // 【asm 07:F839】`lda #~$20 ; jmp AndEnData05` ⇒ 清 data05 bit5（解除休止标记）。
         let d5c = mem.enemy(slot_of(x)).data05();
-        mem.write_ram(0x0400 + x as u16 + 5, d5c & 0xDF);
+        mem.enemy(slot_of(x)).set_data05(d5c & 0xDF);
     }
 }
 
@@ -165,24 +165,24 @@ pub(crate) fn enemy_react_to_projectile(mem: &mut crate::frame::Manager, x: u8) 
     if mem.read_ram(e4) & 0x20 == 0 {
         return; // 非被弹⇒RTS
     }
-    let sa = mem.read_ram(0x0400 + px + 0x0F); // specialAttribs（Lx321 prevStatus 记账）
+    let sa = mem.enemy(slot_of(px as u8)).special_attribs(); // specialAttribs（Lx321 prevStatus 记账）
     let st0 = mem.enemy(slot_of(x)).status_raw(); // EnsExtra.status（保存面）
     // 【goal-轮31 保存式修】prevStatus←**status 低6|sa 高2**（asm Lx321 语义：恢复=status
     // &$3F+sa&$C0 逆向）——旧形 psc|sa 缺 status 面⇒恢复 status=0 ✗。
     mem.write_ram(0x0400 + px + 0x0C, (st0 & 0x3F) | (sa & 0xC0)); // prevStatus
-    let wa = mem.read_ram(0x0400 + px + 0x0E); // weaponAction
+    let wa = mem.enemy(slot_of(px as u8)).weapon_action(); // weaponAction
     let miniboss = sa & 0x40 != 0;
     // 冰冻臂（IceBeam=wa 3（constants.asm:104！旧形误 2=Wave）+非 miniboss+非冻）
     // ——status 4=冻结
     let st = mem.enemy(slot_of(x)).status_raw(); // EnsExtra.status
     if wa == 3 && !miniboss && st != 4 {
         mem.enemy(slot_of(x)).set_status(EnemyStatus::Frozen); // status←Frozen
-        mem.write_ram(0x0400 + px + 0x0D, 0x40); // data0D←$40（冻计时）
+        mem.enemy(slot_of(px as u8)).set_data0d(0x40); // data0D←$40（冻计时）
         mem.write_ram(e4, 0); // isHit 清
         return;
     }
     // Lx317：HP==$FF⇒无效（SFX（声=桩）+清 isHit/weaponAction）
-    let hp = mem.read_ram(0x0400 + px + 0x0B); // health（trace +0B）
+    let hp = mem.enemy(slot_of(px as u8)).health(); // health（trace +0B）
     if hp == 0xFF {
         mem.write_ram(e4, 0);
         mem.write_ram(0x0400 + px + 0x0E, 0);
@@ -200,7 +200,7 @@ pub(crate) fn enemy_react_to_projectile(mem: &mut crate::frame::Manager, x: u8) 
     // HP dec（波=2/束=1（Lx324/325））⇒0⇒爆
     let dec = if wa == 2 { 2u8 } else { 1u8 }; // wa_WaveBeam=2（constants.asm:103！旧形误 4）
     let nhp = hp.wrapping_sub(dec);
-    mem.write_ram(0x0400 + px + 0x0B, nhp);
+    mem.enemy(slot_of(px as u8)).set_health(nhp);
     mem.write_ram(e4, 0);
     if nhp == 0 {
         explode_enemy(mem, x);
@@ -219,13 +219,13 @@ pub(crate) fn explode_enemy(mem: &mut crate::frame::Manager, x: u8) {
     // 旧形无此分支 ⇒ 一律播 0x40 帧爆炸动画，掉落物晚 ~64 帧出现（录像 f2151：emu status=5
     // 画掉落帧、rust status=3 画爆散帧 ⇒ OAM 多/少各 4 枚精灵）。
     // 注意 asm **不 return**：随后仍执行 InitEnAnimIndex + `sta chunkyExplosionTimer`。
-    let sa_x = mem.read_ram(0x0400 + px + 0x0F); // specialAttribs
-    let wa_x = mem.read_ram(0x0400 + px + 0x0E); // weaponAction
+    let sa_x = mem.enemy(slot_of(px as u8)).special_attribs(); // specialAttribs
+    let wa_x = mem.enemy(slot_of(px as u8)).weapon_action(); // weaponAction
     if sa_x & 0x40 == 0 && wa_x < 0x02 {
         enemy_complete_death(mem, x);
     }
-    let ty = mem.read_wram(0x6AF4 + px + 14) as usize & 0x1F;
-    let d05 = mem.read_ram(0x0400 + px + 5);
+    let ty = mem.enemy(slot_of(px as u8)).enemy_type() as usize & 0x1F;
+    let d05 = mem.enemy(slot_of(px as u8)).data05();
     let facing: usize = if d05 & 0x80 != 0 { ((d05 >> 3) & 1) as usize } else { (d05 & 1) as usize };
     let idx = ((ty << 1) | facing) & 0x1F;
     // `EnemyDeathAnimIndex ; 各 bank $960B`（32 B = type×2+朝向）——**按区不同**：
@@ -237,7 +237,7 @@ pub(crate) fn explode_enemy(mem: &mut crate::frame::Manager, x: u8) {
     // `InitEnAnimIndex` 的落点：reset/index 同写、delay 归零——三件是一个动画切换动作。
     let frame = mem.enemy(slot_of(px as u8)).anim_frame();
     mem.enemy(slot_of(px as u8)).set_anim(crate::enemy::state::Anim { frame, delay: 0, reset: anim, index: anim });
-    mem.write_ram(0x0400 + px + 6, anim); // chunkyExplosionTimer←A（asm `sta`（+06））
+    mem.enemy(slot_of(px as u8)).set_data06(anim); // chunkyExplosionTimer←A（asm `sta`（+06））
 
     // 【步骤 1/3：只做 spawn，update/draw 未接】`ExplodeEnemy` 尾件 07:F62E-07:F673：
     // 在 `EnExplosions` 池（`$04C0`，4 槽 × 8 B，额外面 `$6BB4`）里找第一个 status==0 的槽，
@@ -373,9 +373,9 @@ pub(crate) fn update_enemy_explode(mem: &mut crate::frame::Manager, x: u8) {
     let px = x as u16;
     update_enemy_anim(mem, x, 3);
     update_enemy_common_no_move_no_anim(mem, x);
-    let timer = mem.read_ram(0x0400 + px + 6); // chunkyExplosionTimer（trace +06）
+    let timer = mem.enemy(slot_of(px as u8)).data06(); // chunkyExplosionTimer（trace +06）
     if timer > 0 {
-        mem.write_ram(0x0400 + px + 6, timer - 1);
+        mem.enemy(slot_of(px as u8)).set_data06(timer - 1);
     } else {
         enemy_complete_death(mem, x);
     }
@@ -385,9 +385,9 @@ pub(crate) fn update_enemy_explode(mem: &mut crate::frame::Manager, x: u8) {
 pub(crate) fn update_enemy_frozen(mem: &mut crate::frame::Manager, x: u8) {
     let px = x as u16;
     update_enemy_common_no_move_no_anim(mem, x);
-    let d = mem.read_ram(0x0400 + px + 0x0D);
+    let d = mem.enemy(slot_of(px as u8)).data0d();
     if d > 0 {
-        mem.write_ram(0x0400 + px + 0x0D, d - 1);
+        mem.enemy(slot_of(px as u8)).set_data0d(d - 1);
     } else {
         mem.enemy(slot_of(x)).set_status(EnemyStatus::Active); // 回 Active
     }
@@ -404,12 +404,12 @@ pub(crate) fn update_enemy_hurt(mem: &mut crate::frame::Manager, x: u8) {
     // 旧形把「画」放在递减之前 ⇒ ①hitstun 结束那一帧仍按受伤态画（晚一帧恢复）
     // ②从不写 $6B ⇒ 受伤敌的调色板取自帧记录（录像 f2137 实证 attr=A2 vs A0）。
     let px = x as u16;
-    let d = mem.read_ram(0x0400 + px + 0x0F); // specialAttribs=+0x0F（hitstun 延）
+    let d = mem.enemy(slot_of(px as u8)).special_attribs(); // specialAttribs=+0x0F（hitstun 延）
     let nd = d.wrapping_sub(1); // dec 环绕（asm DE 0F 04）
     mem.write_ram(0x0400 + px + 0x0F, nd);
     if nd == 0 {
         // hitstun over：prevStatus(+0x0C) 高 2 位→specialAttribs/低 6 位→status
-        let prev = mem.read_ram(0x0400 + px + 0x0C); // prevStatus
+        let prev = mem.enemy(slot_of(px as u8)).prev_status(); // prevStatus
         mem.write_ram(0x0400 + px + 0x0F, prev & 0xC0); // 高 2 位回
         mem.enemy(slot_of(x))
         .set_status(EnemyStatus::from_byte(prev & 0x3F)); // status←prevStatus&$3F（asm :10810-10812）
@@ -436,7 +436,7 @@ pub(crate) fn update_enemy_hurt(mem: &mut crate::frame::Manager, x: u8) {
 pub(crate) fn update_enemy_pickup(mem: &mut crate::frame::Manager, x: u8) {
     let px = x as u16;
     // 碰触判**先于**显面（静态面尾清 isHit（+4←0）——序正（asm F483 先判后显））
-    let hit = mem.read_ram(0x0400 + px + 4);
+    let hit = mem.enemy(slot_of(px as u8)).is_hit();
     if hit & 0x24 != 0 {
         // 碰触⇒回血/弹+移除
         let frame = mem.enemy(slot_of(px as u8)).anim_frame();
@@ -456,8 +456,8 @@ pub(crate) fn update_enemy_pickup(mem: &mut crate::frame::Manager, x: u8) {
     // `@pickupWasNotTouched ; 07:F4D4`：`lda FrameCount / and #$03 / bne @endIf_D` ⇒
     // **每 4 帧**才递减 data0D；`dec data0D / bne @endIf_D` ⇒ 减后为 0 才 RemoveEnemy。
     if mem.read_ram(crate::ram_map::FRAME_COUNT) & 0x03 == 0 {
-        let d = mem.read_ram(0x0400 + px + 0x0D).wrapping_sub(1);
-        mem.write_ram(0x0400 + px + 0x0D, d);
+        let d = mem.enemy(slot_of(px as u8)).data0d().wrapping_sub(1);
+        mem.enemy(slot_of(px as u8)).set_data0d(d);
         if d == 0 {
             mem.enemy(slot_of(x)).set_status(EnemyStatus::NoEnemy); // RemoveEnemy（到期）
         }
@@ -475,7 +475,7 @@ pub(crate) fn update_enemy_pickup(mem: &mut crate::frame::Manager, x: u8) {
 pub(crate) fn enemy_complete_death(mem: &mut crate::frame::Manager, x: u8) {
     let px = x as u16;
     mem.enemy(slot_of(x)).set_status(EnemyStatus::Pickup); // status←Pickup
-    mem.write_ram(0x0400 + px + 0x0D, 0x60); // data0D←$60（拾取计时）
+    mem.enemy(slot_of(px as u8)).set_data0d(0x60); // data0D←$60（拾取计时）
     let r = mem.read_ram(crate::ram_map::RANDOM1);
     if r < 0x10 {
         // 1/16 无掉⇒移除（LDD5B 非 Tourian）
@@ -488,7 +488,7 @@ pub(crate) fn enemy_complete_death(mem: &mut crate::frame::Manager, x: u8) {
     // 原字节 bit4，置位写 $20）。这一步不能省——紧随其后的
     // `jsr GetEnemyTypeTimes2PlusFacingDirection` 用的是**覆盖后的 type**：
     // 录像 f2152 实证 om 掉它会让死亡动画索引从 0x27 变成 0x41（OAM/调色板全错）。
-    let t_idx = (mem.read_wram(0x6AF4 + px + 14) & 0x3F) as usize;
+    let t_idx = (mem.enemy(slot_of(px as u8)).enemy_type() & 0x3F) as usize;
     let facing_bit = if t_idx < 64 {
         game_data::assets::enemy_facing(crate::frame::cur_area(mem))[t_idx] & 0x20
     } else { 0 };
@@ -531,7 +531,7 @@ pub(crate) fn enemy_resting(mem: &mut crate::frame::Manager, x: u8) {
     if d & 0x40 == 0 {
         // 30fps 标 clear⇒全件（bit6 set 时跳过=30fps 节拍）
         mem.write_wram(0x6AF4 + x as u16 + 13, 0); // jumpDsplcmnt←0
-        mem.write_ram(0x0400 + x as u16 + 7, 0); // movementInstrIndex←0
+        mem.enemy(slot_of(x)).set_speed_subpixel_x(0); // movementInstrIndex←0
         mem.write_ram(0x0400 + x as u16 + 10, 0); // data0A←0
         enemy_force_speed(mem, x); // F6B9（件序首——速向萨姆斯力）
         enemy_distance_threshold(mem, x); // F75B（件序 2——阈距判）
@@ -558,7 +558,7 @@ pub(crate) fn enemy_active(mem: &mut crate::frame::Manager, x: u8) {
             // bit5 set⇒delay←EnemyInitDelayTbl[type]；status Active→Resting
             let t = mem.enemy(slot_of(x)).enemy_type(); // EnsExtra.type
             let delay = game_data::assets::enemy_init_delay(crate::frame::cur_area(mem)).get(t as usize).copied().unwrap_or(0);
-            mem.write_ram(0x0400 + x as u16 + 9, delay); // Ens.delay(+9)
+            mem.enemy(slot_of(x)).set_delay(delay); // Ens.delay(+9)
             mem.enemy(slot_of(x)).dec_status(); // Active→Resting（asm `dec`）
             // 【goal-轮17 Resting 转换标记】Active→Resting（bit5 静息径）。
         } else {
@@ -579,7 +579,7 @@ pub(crate) fn enemy_remove_if_in_lava(mem: &mut crate::frame::Manager, x: u8) {
     if scroll_dir < 2 {
         return; // 竖滚房⇒exit（asm cmp #$02/bcc）
     }
-    let y = mem.read_ram(0x0400 + x as u16); // Ens.y
+    let y = mem.enemy(slot_of(x)).y(); // Ens.y
     if y < 0xEC {
         return; // 熔岩上方⇒exit
     }
@@ -635,7 +635,7 @@ pub(crate) fn update_enemy_common_no_move_no_anim(mem: &mut crate::frame::Manage
         // 【goal-轮39 绘径可见旗写件】（asm :6178-6186 逐字：`and #$FD/ora (flag<<1)/sta
         // data05`——**bit1=可见旗**）——绘径写面（flag=可见判定 ✓）。
         let d5 = mem.enemy(slot_of(x)).data05();
-        mem.write_ram(0x0400 + x as u16 + 5, (d5 & 0xFD) | 0x02); // 绘⇒可见旗置
+        mem.enemy(slot_of(x)).set_data05((d5 & 0xFD) | 0x02); // 绘⇒可见旗置
         draw_enemy(mem, x);
     }
     mem.write_ram(0x0400 + x as u16 + 4, 0); // isHit=+4

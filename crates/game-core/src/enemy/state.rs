@@ -450,6 +450,14 @@ impl<'a> Enemy<'a> {
     pub fn data0a(&self) -> u8 {
         self.get(ens::DATA0A)
     }
+    /// 拾取物剩余寿命字节（`$040D`）——`UpdateEnemy_Pickup ; 07:F483` 每 4 帧递减。
+    pub fn data0d(&self) -> u8 {
+        self.get(ens::DATA0D)
+    }
+
+    pub fn set_data0d(&mut self, v: u8) {
+        self.set(ens::DATA0D, v);
+    }
     /// 击杀武器（`$040E`）——`<= $01` 即普通束（见 `ExplodeEnemy ; 07:F611`）。
     pub fn weapon_action(&self) -> u8 {
         self.get(ens::WEAPON_ACTION)
