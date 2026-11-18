@@ -1,0 +1,19 @@
+{
+  "window": [
+    20,
+    30000
+  ],
+  "anchors": {
+    "addr": "$0014",
+    "changes": 13
+  },
+  "offsets": {
+    "biz_to_mesen": 2,
+    "rust_to_mesen": 1
+  },
+  "agree_rate": {
+    "biz": 0.927835,
+    "rust": 0.9375
+  },
+  "verdict": "aligned"
+}
