@@ -1,0 +1,22 @@
+# 尾窗探针：570 帧之后 rust 的 Samus 精灵面与 Mesen2 分叉（145px，OAM 槽 8-13 逐字节不同）。
+# 用途=让该分歧可复跑（证据：docs/findings/mechanism-scene-morphball.md §7）。
+name case-morphball-tail-probe
+# 机制级最小重现：变形球进入 → 滚行 → 退出（str_ 三态，600 帧内）
+# 时间基（实测 movies/eien86-6725M.inputlog + analysis/traces/_probe-axis.frames.jsonl）：
+#   f0..470 MainRoutine=8 SamusIntro（Timer3=$2C 每 10 帧减 1，按键被吞）；f480 MainRoutine=3、
+#   SamusStatus=$FF→$00（f501 归 0，全程无 $01）⇒ 可操作点 f≈480。
+# 能力前提：fixture 注入 SamusGear($6878) bit4 = gr_MARUMARI（变形球）——这是**前提**，
+# 不是被判定字段（判定只看 status/room）；注入语义与 emu/rust 两腿同构（各只注入一次）。
+frames 600
+snapshot none
+press 22 start
+press 26 start
+fixture 470 6878 10
+capture 476 pre
+hold 500-506 down
+hold 512-556 right
+hold 562-568 up
+capture 576 tail576
+capture 588 tail588
+endFrame 600
+watch 0014 Joy1Latch
