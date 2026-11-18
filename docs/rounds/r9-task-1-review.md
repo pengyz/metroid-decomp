@@ -354,3 +354,239 @@ H. changes 阈值探针（import 工具，只读）：`2 次按键(4 裸帧/2 �
 I. 测试：`python3 -m pytest tools/tests/test_align_legs.py -v` → `5 passed`。
 J. 属性核查：`git show --name-only 9b92c5e4` 恰 3 文件；`git check-ignore -v data/status/leg_offsets.json`
    → 空（未忽略）。
+
+---
+---
+
+# 第二轮复核（追加；被复核 commit `d3440ff9`，2026-11-18）
+
+> 第一轮内容原样保留（含其 `reject` 结论，那是当时交付物的真实状态）。本节只判"修复是否解决 P0、
+> 是否引入新问题"。复核员立场不变：证伪、非实施方。
+
+- 复核对象：`d3440ff9 fix(tools): 按状态面求帧偏移并单列锁存偏移`（5 文件：align_legs.py
+  799 行、test_align_legs.py 190 行、leg_offsets.json 256 行、spec、plan）
+- 独立测量脚本：`/tmp/verify7_r2.py`（自写解码，**不 import** `align_legs`）、
+  `/tmp/make_gap_synth.py`（合成轨迹逼出边界行为）。CLI 复跑仅用于复现交付物。
+- 未执行（约束禁止）：`gates/cli.py check`、`cargo test`、L4。
+
+## R2-1 主偏移是否已改为状态面 —— **PASS**
+
+`python3 tools/movie_ref/align_legs.py --bizhawk analysis/traces/bizhawk-6725M-post.jsonl
+--mesen analysis/traces/_probe-axis.frames.jsonl --rust /tmp/rust-states-t2.jsonl
+--out /tmp/leg_offsets_r2.json`，再 `diff -u data/status/leg_offsets.json /tmp/leg_offsets_r2.json`
+→ **IDENTICAL**；stderr：
+
+```
+OK biz->mesen: state_offset=+1 latch_offset=+2 state_agree=1096/1180 latch_agree=1169/1179
+OK rust->mesen: state_offset=+0 latch_offset=+1 state_agree=1154/1166 latch_agree=1160/1166
+```
+
+我用 `/tmp/verify7_r2.py` 从原始轨迹**独立重算**（a 侧 20..1199，b 侧 20..1200，自写 hex 解码）：
+
+| 量 | 本轮独立值 | 我上轮值 | 工具 JSON | 一致 |
+|---|---|---|---|---|
+| biz status | **+1** 1096/1180 = .928814 | +1 .9288 | +1 1096/1180 .928814 | ✓ |
+| biz room | **+1** 1158/1180 = .981356 | +1 .9814 | 同 | ✓ |
+| biz joint(status+room) | +1 1075/1180 = .911017 | 1074/1180* | 1075/1180 .911017 | ✓ |
+| rust status | **0** 1154/1166 = .989708 | 0 .9897 | 同 | ✓ |
+| rust room | **0** 1158/1166 = .993139 | 0 .9931 | 同 | ✓ |
+| rust joint | 0 1146/1166 = .982847 | 1146/1166 | 同 | ✓ |
+| latch biz | **+2** 90/97 (.991518 全帧 1169/1179) | +2 90/97 | +2 | ✓ |
+| latch rust | **+1** 90/96 (.994854 全帧 1160/1166) | +1 90/96 | +1 | ✓ |
+
+\* 上轮 joint 是 `status+room+scrolldir` 三字段（1074/1180）；工具与本节是 `status+room`
+两字段（1075/1180）。差 1 帧是字段集不同，不是算法差异。
+
+**地址解码对照实验**（证明 `$0300` 的 range 索引确实是 `2*0x200`，不是凭结果倒推）：
+
+| 解码方式 | 最优 k | 一致率 |
+|---|---|---|
+| status @ `0100-07ff[2*0x200]`（=`$0300`） | +1 | **1096/1180 = .928814** |
+| status @ `0100-07ff[2*0x300]`（=`$0400`，错址对照） | +2 | 10/1179 = .008482 |
+| status @ `0100-07ff[2*0x100]`（=`$0200`，错址对照） | -2 | 0/1178 = .000000 |
+| room @ `0000-00ff[2*0x5A]`（=`$005A`） | +1 | **1158/1180 = .981356** |
+| room @ `0000-00ff[2*0x15A]`（越界） | — | 我的脚本取到空串报错（该 range 只有 256 B；工具侧另有 `expected_len` 校验） |
+
+⇒ 错一个字节地址一致率立刻塌到 0.8%/0%，解码正确性被证伪式确认；`offsets` 已回到状态面，
+与我的独立测量逐位相同。**上轮 P0 已解决。**
+
+## R2-2 `latch = state + 1` 自校验 —— **PASS（附 finding：会把观测当律法，且会误杀）**
+
+**不是循环论证**：`state_offset` 来自 `$0300`/`$005A`，`latch_offset` 来自 `$0014`，两组字节
+不相交，各自独立拟合后才比较（align_legs.py:516-534）；没有用 `state+1` 去构造 `latch`。
+这是"两个独立测量的相对相位一致性检查"。
+
+**但它的检验力被高估**：它只验证**相对相位**，对**共同整体平移**不敏感——若两腿轨迹整体错 1 帧，
+状态 offset 与锁存 offset 同时 -1，gap 仍是 +1，断言照样通过。所以它不能证明绝对帧映射正确，
+只能抓"把锁存偏移当帧偏移"这一类错误（正是上轮 P0）。绝对锚仍然是状态面本身。
+
+**误杀实证**（`/tmp/make_gap_synth.py`）：80 帧合成，状态 offset=+1、锁存 offset=+1（gap=0，
+其余完全合法、状态面 100% 可解）：
+
+```
+FAIL biz->mesen: latch-state gap anomaly on biz: latch_offset=+1 != state_offset+1=+2
+FAIL rust->mesen: latch-state gap anomaly on rust: latch_offset=+1 != state_offset+1=+2
+VERDICT: latch-state-gap-anomaly
+EXIT=1
+```
+
+输出 JSON：`offsets={"biz_to_mesen":null,"rust_to_mesen":null}`、`per_field={}`、
+`agree_rate={"biz":null,"rust":null}`。**一个完全可解的状态面偏移被连带丢弃**——这就是"把观测
+当律法"的后果。诚然它 fail-closed 不产生错误数字，但把主交付物清零。
+
+**同族耦合**：`_extract_state` 对 mesen **无条件**调用 `_extract_latch`（align_legs.py:349），
+所以缺 `Joy1Latch` 的轨迹连状态 offset 都出不来。用本仓库归档的旧轨迹实测：
+
+```
+$ ... --mesen analysis/traces/.archive/_probe-axis-20261118-140420/_probe-axis.frames.jsonl ...
+ValueError: ...:1: mesen row missing w['Joy1Latch'] (Mesen2 leg must watch $0014; ...)
+PYEXIT=1
+```
+
+可它的 `0000-00ff`/`0100-07ff` 本来就在，工具自己的 `_mesen_state_byte`（align_legs.py:290-320）
+就是从 range 解状态字节的。**状态面不该被锁存面绑架。**
+
+判定：本轮真实轨迹 gap 均为 +1、交付物正确，故不判 FAIL；但设计风险成立，列 finding（中）。
+修复见 R2-8-1/2。
+
+## R2-3 口径是否仍有偷换 —— **PASS（两处低风险残余）**
+
+- **双计数已落地**：`anchors.change_frames=97`、`change_runs=13`、
+  `by_leg={biz:{97,13}, rust:{96,13}}`；`per_field` 每个字段也各自带 `change_frames/change_runs`。
+  我独立复算：biz 97/13、rust 96/13，与 JSON 一致。
+- **`fit_window [20,1199]` 与 `effective_end 1200` 自洽**：a 侧截到 `effective_end-1`，
+  保证 b 至少能提供 `+1` 帧（align_legs.py:674-683 有注释说明）；`window=[20,1200]` 是可比范围。
+  实测 biz 在 k=+1 下参与者 1180、k=+2 下 1179，与代码截窗行为吻合。
+- **tie → ambiguous 仍在**：`_fit`（align_legs.py:196-197）仍抛 `ambiguous offset`，测试覆盖。
+- 残余 1（低）：状态面多解时 `_field_resolution` 抛 `AlignmentError(..., "field-disagreement")`
+  （align_legs.py:466-469），把"多解"和"字段分歧"混成一个 verdict；`_fit` 那边却是
+  `ambiguous offset`。语义应分开。
+- 残余 2（低）：`_allframe_score` 按**原始 matches** 取最大（align_legs.py:174-176），
+  而 participants 随 offset 变（+1 是 1180、+2 是 1179），不是一致率或固定分母。本轮按一致率
+  复算最优不变（我脚本即按率选，结果相同），但小窗口/边缘 case 可能翻盘。
+
+## R2-4 实施方两条"更正" —— **① 成立；② 半成立（我确有笔误，但不在 mesen）**
+
+**① 残差 10 vs 7：成立。** 我上轮的 7 是"**变化帧拟合口径**"（97 个参与者里的失配）；
+工具 JSON 的 10 是"**全帧口径**"，与 `latch_agree_rate 1169/1179` 自洽。我独立复算：
+
+- 全帧失配 10：`[661,663,665,667,669,671,672,673,1132,1133]`
+- 其中变化帧失配 7：`[661,663,665,667,669,671,672]`；多出 `673/1132/1133`
+- `1132/1133` 对应我上轮已记录的 p1 9→1 锁存滞后 2 帧（f=1132 输入已变、锁存到 1134 才跟）
+
+⇒ 我上轮"残差全部连成 661..672 一段"**只对变化帧口径成立**；全帧口径下 673/1132/1133 在段外。
+表述缺分母限定，下方"第一轮更正"已标注。
+
+**② `2*0x300` 笔误：对了一半。** 复核档 §8-F1 的 **mesen** 公式原文是
+`w["0100-07ff"][2*(0x300-0x100):+2]`（= `2*0x200`，**正确**，与实现 `STATUS_ADDR - IRAM_BASE`
+一致）。真正的笔误在同一段的 **rust 分支**：我写成 `zp[2*0x300:+2]`、`zp[2*0x106:+2]`——
+`$0300/$0106` 不在 zp（`$0000-$00FF`），应为 `iram[2*(addr-0x100):+2]`。实施方把位置指到了
+mesen，但**实施代码本身两处都对**（mesen 用 `0x200`、rust 用 `iram`/`zp` 分窗口），没有被我的
+笔误带偏。⇒ 更正"有笔误"成立，更正"是 mesen 公式"不成立。
+
+## R2-5 文档改动 —— **PASS**
+
+- `docs/spec/oracle-verification-chain.md:27` 规则 5 已从经验句升级为**实测恒等式**
+  `latch_offset == state_offset + 1`，列出四组配对，并**登记事故**（Task 1 首次交付把 +2/+1
+  当帧偏移、被复核 reject、代价 biz +8 / rust +53 失配帧）。
+- 同文件新增 **§3.1.1 帧映射规约**：state 全帧一致数、`offsets` vs `latch_offsets` 分工、
+  双计数、`change_runs<3` 不可对齐、事故登记。
+- `docs/superpowers/plans/2026-11-18-three-leg-oracle-alignment.md`：
+  `:7` Architecture、`:16` 地址具名常量、`:30` Review Focus、`:43`（删掉错误的 gitignored）、
+  `:48/:49/:52` Interfaces、`:80` Step 3、`:90` Step 5、`:171/:175` R6 —— 全部统一为
+  "状态面求 offsets + 锁存面单列 corroboration"；Expected 已是 `+1/0` 与 `+2/+1`。
+- grep 全文 `锁存/$0014/changes/gitignore` 未发现残留矛盾。
+
+## R2-6 测试是否被削弱 —— **PASS**
+
+`python3 -m pytest tools/tests/test_align_legs.py -q` → **13 passed in 0.02s**；
+`grep -nE "skip|xfail|pragma|environ|getenv|monkeypatch|DSH_"` → **无命中**。
+13 = 5 旧（计划原文用例 + 多解 + 两个 load_latch）+ 8 新。抽查 3 条新用例：
+
+- `test_resolve_leg_state_offset_and_latch_gap`（合成 4 次脉冲，state=1/latch=2）：断言
+  `state_offset==1`、`latch_offset==2`、state `participants==len(a)`（全帧 60）、
+  `change_frames==8`/`change_runs==4`、latch `matches==len(a)`、`fit_participants==8`
+  ⇒ **真在考"状态面全帧、锁存面变化帧拟合"两套口径**，不是自证。
+- `test_resolve_leg_rejects_field_disagreement`（room_offset=0 vs status=1）⇒ 真考字段分歧拒绝。
+- `test_resolve_leg_rejects_latch_state_gap`（latch_offset=1=state）⇒ 真考 gap 断言；
+  但它同时把"gap=0 的合法场景"钉死为错误，与 R2-2 的 finding 同源。
+- 另有 3 条状态解码用例（mesen range、mesen 命名键、rust zp/iram）与 2 条缺键报错用例，
+  都是真行为；多解 fixture 未被改动（仍是我上轮独立复算过的 `{0,+4}` 并列）。
+
+## R2-7 总 verdict：`pass-with-findings`
+
+| # | 检查点 | 判定 |
+|---|---|---|
+| 1 | 主偏移改为状态面 | **PASS**（独立复算逐位一致；错址对照证伪式确认解码） |
+| 2 | `latch=state+1` 自校验 | PASS + finding（非循环，但把观测当律法、会误杀状态偏移） |
+| 3 | 口径（双计数/fit_window/ambiguous） | PASS（2 处低风险残余） |
+| 4 | 对复核数据的两条更正 | ① 成立；② 半成立（笔误真实但在 rust，不在 mesen） |
+| 5 | 文档与实测一致 | **PASS** |
+| 6 | 测试未削弱 | **PASS** |
+
+P0 已解决：`offsets` 与我的独立测量一致，交付物可直接喂 Task 2。剩余是一类**设计耦合**
+（锁存面异常/缺失会连带清空状态面结论），不产生错误数字，但会在别的录像上失败。
+
+## R2-8 修复清单（可直接执行）
+
+1. `tools/movie_ref/align_legs.py:534` `assert_latch_gap(...)` 改为**非致命**：捕获
+   `AlignmentError("latch-state-gap-anomaly")` 后保留 `resolve_leg` 已算出的 state 结果，
+   令 `latch_offset=None`、`latch_gap_anomaly=true`；`main` 侧仍可写 `verdict=`
+   `latch-state-gap-anomaly` 并 `return 1`，但 `offsets`/`per_field` 必须是状态面的真实值
+   （当前实现把它们写成 null，见 R2-2 合成实验）。
+2. `tools/movie_ref/align_legs.py:349` `_extract_state` 不再无条件 `_extract_latch`：
+   mesen 行缺 `Joy1Latch` 时 `latch=None`，只在计算 latch 的路径 fail-loud。否则归档轨迹
+   （range 齐全、只缺 latch watch）无法产出状态偏移（R2-2 实测 `ValueError` + exit 1）。
+3. `tools/movie_ref/align_legs.py:466-469` 状态面多解的 verdict 从 `field-disagreement`
+   改为 `ambiguous-offset`（或新增子类），与 `_fit` 的 `ambiguous offset` 文案统一。
+4. `tools/movie_ref/align_legs.py:174-176` `_allframe_score` 改按**一致率**（或固定
+   participants 交集）排序，避免分母随 offset 变化；否则小窗口下偏移可能因参与者多寡翻盘。
+5. `data/status/leg_offsets.json` 增加分母说明（或用两组字段分开）：
+   `residuals.biz/rust` 是**全帧**（10/1179、6/1166），`anchors.change_frames` 是**变化帧**（97/96），
+   `per_field.*.matches/participants` 是**全帧**。三者混在同一层 JSON 容易被误读成同一分母。
+6. 本档更正（见下）：rust 公式 `zp[2*0x300]` → `iram[2*(0x300-0x100)]`；
+   "残差 7 帧连续"限定为变化帧口径。
+
+## 第一轮更正（2026-11-18，第二轮复核发现）
+
+> 【2026-11-18 更正】§8-F1 的 rust 分支原写 `$0300 → zp[2*0x300:+2]`、
+> `$0106 → zp[2*0x106:+2]` 有误：`$0300/$0106` 属 IRAM（`$0100-$07FF`），不在 zp；
+> 正确写法是 `iram[2*(0x300-0x100):+2]`、`iram[2*(0x106-0x100):+2]`。mesen 分支
+> `2*(0x300-0x100)` 原本就是对的。实施方代码两处均正确，未被此笔误影响。
+>
+> 【2026-11-18 更正】§5 "7 个残差全部连成 f=661..672" 应限定为**变化帧拟合口径**
+> （97 个参与者）；按**全帧**口径，在 latch offset=+2 下 biz 有 **10** 个失配帧
+> `[661,663,665,667,669,671,672,673,1132,1133]`（1132/1133 即已知 p1→latch 2 帧滞后）。
+> 两种口径都不假，但必须写明分母。
+
+## 附录 B：第二轮命令与关键输出
+
+1. `git log --oneline -3` → HEAD `d3440ff9`，父 `ca2fba07`（第一轮复核档入库）。
+2. `git show --stat d3440ff9` → 5 文件：json 256+、spec 19、plan 23、align_legs 672+、test 133+。
+3. `python3 -m pytest tools/tests/test_align_legs.py -q` → `13 passed in 0.02s`。
+4. `python3 /tmp/verify7_r2.py` → R2-1 全表（biz/rust 状态与锁存逐 k、change_frames/runs、
+   全帧与变化帧两套残差）。
+5. CLI 复跑 + `diff` → IDENTICAL；stderr 两行 OK 见 R2-1。
+6. 错址对照实验（§R2-1 表）：`$0400` 10/1179、`$0200` 0/1178。
+7. `python3 /tmp/make_gap_synth.py` + CLI → `verdict=latch-state-gap-anomaly`、
+   `offsets` 全 null、`per_field={}`、exit 1（R2-2 误杀实证）。
+8. 归档无 latch 轨迹跑 CLI → `ValueError: ... mesen row missing w['Joy1Latch']`、exit 1、
+   无 JSON 产出（R2-2 耦合实证）。
+9. 文档 diff：`git show d3440ff9 -- docs/spec/oracle-verification-chain.md
+   docs/superpowers/plans/2026-11-18-three-leg-oracle-alignment.md`（R2-5 各条）。
+10. `git status --porcelain` → 本档 `M`（追加小节）+ 旧 docs 改动 + 未跟踪 `compare_cores.py`；
+    未触碰 `tools/` `crates/` `data/` `gates/`。
+
+---
+
+**第三轮终审：pass，Task 1 完成**（2026-11-18，被复核 commit `da8a8fe6`）。
+
+- 误杀实验两条均通过：gap=0 合成 → `verdict=latch-state-gap-anomaly`、`offsets={biz:1,rust:1}` 保留、
+  `per_field` 两字段保留、`latch_offsets=null`、exit 1；无 `Joy1Latch` 归档轨迹 →
+  `verdict=latch-unavailable`、`offsets={biz:1,rust:0}`、`latch_offsets=null`、exit 1。
+- 交付物无旧值漂移：新 JSON 与我第二轮自算 `/tmp/leg_offsets_r2.json` 逐键 diff → **NONE**；
+  仅新增 `denominators/latch_errors/latch_gap_anomaly/latch_missing`。
+- 18 passed，无 skip/xfail/环境开关；抽查 `test_resolve_leg_keeps_state_on_latch_gap`、
+  `test_cli_keeps_state_when_mesen_latch_missing`、`test_allframe_score_ranks_by_agreement_rate` 均真考行为。
+- 判据未放松：`insufficient anchor changes/matches`、`ambiguous offset` 与 `ambiguous-offset`
+  verdict 均保留，`MIN_ANCHOR_CHANGES=3`、`DEFAULT_MAX_LAG=4`、`--start>=20` 未动。

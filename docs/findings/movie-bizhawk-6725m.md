@@ -640,3 +640,113 @@ python3 tools/movie_ref/pixel_shift_probe.py --oracle-dir shots --rust-dir /tmp/
 **不作的承诺**：§6.2 之后的全片数字不代表「Rust 到此为止都正确」；f1132 之后两腿已不同场景，
 该段的失配计数只说明「分岔已发生」，不能逐字段归因。像素面只覆盖 f=20..1200（10 帧步长 + 门过渡带逐帧），
 f>1200 的像素面**未做**。
+
+## 11. 跨模拟器互证 quickerNES ↔ Mesen2（同输入 f=20..1000，2026-11-18 补做）
+
+**目的**：既有全部分析基线（`data/status/baselines/`、L3/L4 结论、`§6` 的 Rust 对拍）都是
+**Mesen2 语境**下取得的；本次取证换成了 quickerNES。若两核在同输入下不一致，则旧基线不可迁移到
+新语境，§6 的「失配 10 帧」也要重新解释。本节给出可复现的判定。
+
+### 11.1 两侧轨迹与工具
+
+| 侧 | 产出 | 生成方式 |
+|---|---|---|
+| quickerNES（BizHawk） | `analysis/traces/bizhawk-6725M.jsonl` | `tools/movie_ref/bizhawk_ref.lua`，见 §4/§8 |
+| Mesen2 | `/tmp/tmpaxis2.jsonl`（`w.{Health,SamusStatus,RoomNumber,Joy1Latch}`） | 临时用例 `/tmp/tmpaxis2.txt`：`frames 1000` + `snapshot none` + `inputlog movies/eien86-6725M.inputlog` + 4 个 `watch`；`python3 tools/scenario_run.py run /tmp/tmpaxis2.txt` |
+
+比对工具（本次新增，可复跑）：`tools/movie_ref/compare_cores.py`。它只做**字段映射 + 统计**，
+不裁定谁对；帧轴差异必须用 `--shift` 显式声明（语义 `biz f = mesen f - shift`），
+`--latch-align` 用 `$0014` 锁存序列反解 shift。
+
+### 11.2 帧轴：shift=0 是游戏内正解，boot 段有 1~2 帧原生相位差
+
+`--latch-align` 在 f20..1000 上给出 **shift=0**（`$0014` 一致率 **0.9786**）。但 boot 段两核并不同步：
+
+| 事件 | Mesen2 f | quickerNES f | 差 |
+|---|---|---|---|
+| `$5A→09`（boot） | 24 | 26 | −2 |
+| `$0300→$20` | 28 | 30 | −2 |
+| `$0300→21` | 166 | 166 | 0 |
+| `$0300→22` | 266 | 266 | 0 |
+
+⇒ boot 相位差在 ~f40 前自愈，**f≥40 起同帧号可比**。这也解释了 §6.1 为何把比对窗口起点定在 f20
+（再往前是上电填充差异，不是游戏行为差异）。
+
+### 11.3 结果（f=40..1000，961 个可比帧）
+
+```
+$ python3 tools/movie_ref/compare_cores.py \
+    --bizhawk analysis/traces/bizhawk-6725M.jsonl --mesen /tmp/tmpaxis2.jsonl \
+    --start 40 --end 1000 --shift 0 --json-out /tmp/cores.json
+窗口 f=40..1000，shift=0，可比 961 帧
+逐字段失配：health_lo=0  health_hi=0  status=2  room=13  scrolldir=0
+含失配帧 15；分组 {"attrib-672": 5, "attrib-944": 10}
+```
+
+**关键结构**：15 个失配帧**全部**落在两处 `$005A` attrib 链窗口内
+（f672..679 共 5 帧、f944..953 共 10 帧）；**窗口之外 0 失配**。
+
+| 字段 | 失配帧 | 位置 | 性质 |
+|---|---|---|---|
+| `health_lo` / `health_hi` | **0** | — | 两核完全一致 |
+| `scrolldir($49)` | **0** | — | 两核完全一致 |
+| `status($0300)` | 2（f952、f953） | attrib-944 窗口尾 | 门过渡 `01→00→03` 慢 1 帧 |
+| `room($5A)` | 13 | attrib-672 / attrib-944 | 链成员采样不同（下） |
+
+`$5A` 链成员的**核间差异形状**（同一段过渡，两核采到的中间值不同）：
+
+| 窗口 | Mesen2 采到的链 | quickerNES 采到的链 |
+|---|---|---|
+| f672.. | `8 → F0 → F1 → F3 → F4 → FF` | `8 → F0 → F2 → F3 → FF` |
+| f944.. | `9 → F0 → F1 → F3 → F4 → FF` | `9 → F1 → F2 → F4 → FF` |
+
+即两核**端点一致**（`FF`/`8`/`9`/`F0` 起点），但 `F1..F4` 中间值落在哪一帧不同 —— 因为
+`EA19` 的 `inc` 推进速率与帧采样相位在两核不同（§3 已记：boot 段一帧可连推 4 格，游戏内一帧一格）。
+⇒ `$5A` 的**中间值不可作跨核帧级证据**，只有「链是否出现 / 端点值」是机制级可比的。
+
+### 11.4 对既有结论的三点影响
+
+1. **Mesen2 基线可迁移**（限这五个字段）：`health_lo/health_hi/scrolldir` 零失配，
+   `room` 在**非过渡期**零失配 ⇒ 旧基线与本次 quickerNES 轨迹不冲突，§6 的结论不需要因换核而重做。
+2. **`$005A` 过渡期必须单列**：两核在过渡窗口内必然不等（采样相位），任何跨核比对都必须把
+   attrib 链窗口排除或改为「端点比对」，否则会把相位差误判成逻辑差 —— 这正是 §4.1 的教训。
+3. **强化 §5 裁定**：两核都在帧边界上出现过 `$5A=09`（Mesen f946/947、quickerNES f944/945），
+   而 Rust 从未在 tick 收口相位出现过 `09` ⇒ 「`09` 未落帧边界」这条**不是**单核观测假象，
+   是 Rust 侧真实差异形态（但**仍未证**是否被同 tick 覆写，见 §5.2 反证条件 1）。
+
+### 11.5 边界与未做
+
+- 只覆盖 f=20..1000、单个录像、单个房间过渡簇；`f>1000` 未做跨核互证。
+- `shift` 由 `$0014` 反解，而 `$0014` 本身在 boot 段有 1~2 帧相位差 ⇒ f<40 的跨核结论**不可用**。
+- 未做像素/音频面跨核比对（本次只做 RAM 面）。
+- 两核的 CPU/PPU 时序差异未考证（属「为什么相位差 1~2 帧」，不在本次范围）。
+
+### 11.6 复现命令
+
+```bash
+# 1) Mesen2 侧（临时用例，跑完即删，不入 cases/）
+cat > /tmp/tmpaxis2.txt <<'CASE'
+name tmpaxis2
+frames 1000
+snapshot none
+inputlog movies/eien86-6725M.inputlog
+watch 0300 SamusStatus
+watch 005A RoomNumber
+watch 0106 Health
+watch 0014 Joy1Latch
+endFrame 1000
+CASE
+timeout 900 python3 tools/scenario_run.py run /tmp/tmpaxis2.txt
+cp analysis/traces/tmpaxis2.frames.jsonl /tmp/tmpaxis2.jsonl
+rm -f analysis/traces/tmpaxis2*
+
+# 2) 比对
+python3 tools/movie_ref/compare_cores.py \
+  --bizhawk analysis/traces/bizhawk-6725M.jsonl --mesen /tmp/tmpaxis2.jsonl \
+  --start 40 --end 1000 --shift 0 --json-out /tmp/cores.json
+
+# 3) 帧轴标定（若怀疑 shift；参数顺序与上一步不同，便于 grep 区分）
+python3 tools/movie_ref/compare_cores.py \
+  --mesen /tmp/tmpaxis2.jsonl --bizhawk analysis/traces/bizhawk-6725M.jsonl \
+  --start 20 --end 1000 --latch-align
+```

@@ -300,7 +300,14 @@ python3 tools/scenario_run.py run --scenario /tmp/core-cmp-1000.sched --out /tmp
 Expected: 产出逐帧 jsonl（或 `*.frames.jsonl`），帧数 ≥1000。
 （`scenario_run.py run` 的确切参数以 `python3 tools/scenario_run.py run --help` 为准；DSL 语义见 `oracle/scenarios/README`。）
 
-- [ ] **Step 3: 逐帧比两侧（同帧号直接比，协议同 findings §6.1）**
+- [x] **Step 3（改道执行）**：同帧号直接比在 boot 段与 `$5A` 链窗口**不成立**；改为先用 `$0014`
+      反解 shift（`compare_cores.py --latch-align`，正解 shift=0、一致率 0.9786），再在 f≥40 比对。
+      结果见 `movie-bizhawk-6725m.md` §11.3：961 可比帧，health/scrolldir **0** 失配，
+      15 个失配帧全部落在两处 attrib 链窗口内。
+- [x] **Step 4（判定）**：归因**观测协议/核相位**（不是逻辑差）——两核 `$5A` 链采到的中间值不同但端点同。
+- [x] **Step 5（findings）**：已写入 §11；未新增 KB 条目（结论属本录像局部，未达「可迁移教训」门槛：
+      跨核相位差 1~2 帧是可迁移的，但其机制未考证，先留在 findings）。
+- [ ] **Step 3（原始）: 逐帧比两侧（同帧号直接比，协议同 findings §6.1）**
 
 ```bash
 python3 tools/movie_ref/compare_cores.py --a analysis/traces/bizhawk-6725M.jsonl \
