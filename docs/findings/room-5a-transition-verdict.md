@@ -129,13 +129,13 @@ endFrame 1000
 
 ## 4. 三方帧级对照（watch 轴）
 
-| f | Mesen2 `$5A`（watch，帧边界） | BizHawk `$5A`（帧边界） | Rust `$5A`（seam = pre-work；capture(f+1) = **tick f 收口**） |
+| f | Mesen2 `$5A`（watch，帧边界） | BizHawk `$5A`（帧边界） | Rust `$5A`（`capture(f)=seam(f)` = **tick `f-1` 的 pre-work**） |
 |---|---|---|---|
 | 941 | `09` 前身：`FF` | `FF` | `FF` |
 | 944 | `FF` | **`09`** | `FF` |
 | 945 | `FF` | **`09`** | `FF`（tick-close 已 `F1`） |
-| 946 | **`09`** | `F1` | 无行（seam） |
-| 947 | **`09`** | `F2` | 无行（seam） |
+| 946 | **`09`** | `F1` | **`F1`** |
+| 947 | **`09`** | `F2` | **`F1`** |
 | 948 | `F0` | `F4` | **`F1`** |
 | 949 | `F1` | `FF` | **`F2`** |
 | 950 | `F3` | `FF` | **`F4`** |
@@ -146,6 +146,11 @@ endFrame 1000
 > `capture(N)` = `seam(N)` = tick `N-1` 的 **pre-work**，而 `capture(N+1)` 才是 tick `N` 的 **post-work 收口**。
 > 因此下文凡引用「f945 capture = F1」都应读作「tick 944 收口 = F1」。这条错位直接导致上一版把
 > 「请求 +1 帧」误读成「+2 平移」（见 §5 更正）。
+>
+> 【2026-11-18 复审更正（r9 第二轮 P1-B）】本表 Rust 列此前还有两处错：①表头写 `capture(f+1)`、值却取
+> `capture(f)`（已改表头）；②946/947 曾标「无行（seam）」，实际 **`capture(946)=F1`、`capture(947)=F1`
+> 都存在**（`capture(946)` 正是 tick 945 收口 = `F1`，也就是「Rust 在 tick 945 内已到 F1」的那行证据），
+> 补上后 Rust 列为 `944 FF / 945 FF / 946 F1 / 947 F1 / 948 F1 / 949 F2 / 950 F4 / 951 FF`。
 
 **读数**（三条独立事实）：
 1. **`09` 确实被写过**，且在 ROM 侧可存活 **2 个帧边界**（Mesen 946/947；Biz 944/945）。
@@ -198,7 +203,7 @@ f944 窗口漂到 2–3 帧。⇒
 | Rust 是否**写错**房间号 | **否** | 三方 `$5A` 取值集合一致；Rust 也在 `F0→F1→F2→F4→FF` 推进（`crates/game-core/src/world/room_draw.rs:720,826,851`） |
 | Rust 的 `f944/945 = FF` 而 BizHawk `= 09` | **时机/结构差**：请求 **+1 帧**（Rust tick 945 ↔ Biz frame 944）**+ ROM 的「`09` 存活 2 帧」驻留未建模** | BizHawk `09` 落 944/945；Rust tick 944 收口仍是 `FF`、tick 945 收口已是 `F1` ⇒ `09` 只存在于 tick 945 内部（⇒ 下一行） |
 | Rust 的 `09` 是否「没写」 | **已证：写了，但从不在帧边界**——`FF→09→F0→F1` 在**同一 tick 内**折叠完成 | 反向推理：`capture(946)=F1` 而 `capture(945)=FF`；`F1` 的前态必是 `F0`（`room_draw.rs:826` 每步 `+1`），`F0` 只能由 `EndOfRoom` 的 `stx #$F0`（`prg7_engine.asm:8878` / `room_draw.rs:720`）产生 ⇒ tick 945 内必然走完 `09→F0→F1`。复核方独立复核同一结论：`docs/rounds/r9-task-5a-transition-review.md` §3 |
-| Rust `F1..FF` 与 Biz 的关系 | **不是平移**：是**步进节律不同**——Rust 在 `F1` 停 3 个 tick；Biz 一帧一档（`F1/F2/F4/FF`） | 上一版「f948..f951 = f946..f949 的 +2 平移」是把「seam 比 Biz 边界慢 1 帧 + 946/947 无 seam 行」两处叠加误读成 +2（F4 更正）；真正的差是节律+到达时刻 |
+| Rust `F1..FF` 与 Biz 的关系 | **不是平移**：是**步进节律不同**——Rust 在 `F1` 停 3 个 tick；Biz 一帧一档（`F1/F2/F4/FF`）。更准确的分解（复核 §10）：**attrib 首步 `F1→F2` 延迟 2 tick，其后 1 tick/格**，故不是「均匀慢」 | 上一版「f948..f951 = f946..f949 的 +2 平移」是把「seam 比 Biz 边界慢 1 帧 + 946/947 无 seam 行」两处叠加误读成 +2（F4 更正）；真正的差是节律+到达时刻 |
 | 哪个是「基准」 | `09` 由 ROM 写、且能被帧边界观测 ⇒ **Rust 缺的是「`09` 存活 2 个帧边界」这条驻留**（结构与节律），不是值、也不只是相位 | §3（`09@f960 → F0@f962` 真 2 帧驻留）+ §5 第二行 |
 
 ### 5.1 三分类
@@ -206,7 +211,9 @@ f944 窗口漂到 2–3 帧。⇒
 - **缺写**：无证据支持（值集合一致）。
 - **结构差（主因，A 级）**：ROM 的「`09` 存活 2 个帧边界再 `EndOfRoom`」这条**驻留**未在 Rust 建模，
   ⇒ `09` 与 `F0/F1` 在同一 tick 内折叠，帧边界永远看不到 `09`（§5 第二行已证）。
-- **时机差（次因，B→A 级）**：请求本身 **+1 帧**（tick 945 vs Biz frame 944）。
+- **时机差（次因，B 级）**：请求本身 **+1 帧**（Rust tick 945 ↔ Biz frame 944）。注意方向：Rust 到 `F1`
+  比 Biz **早 1 tick**（不是单调落后），因此不要把这行读成「Rust 整体慢」——「落后」只出现在「`09` 驻留
+  这一档没见过」这个意义上。
 - **采样相位（仅解释读数，不解释行为）**：上一版的「+2 平移」是 seam/capture 差 1 帧 + 空洞跨 2 帧的读数假象；
   `F` 链「跳格」则是各核每帧 `inc` 次数不同的采样结果（见 §4 读数 3）。
   **本裁定不再声称「Rust 整体晚 2 帧」。**
@@ -304,11 +311,18 @@ for f in range(938, 956):
 > 前提：`/tmp/rustshots-full` 是**可再生**临时产物（`--capture` 段输出，不入库）；若已清理，
 > 按本文 §7 的 `rust_screenshot … --capture` 命令重跑 938..955 段即可复算。
 
-## 8. evidence 摘要（供 commit message 引用）
+## 9. evidence 摘要（供 commit message 引用）
 
-- BizHawk(quickerNES) 内存回调不可用：5 种注册全 ok、120 帧触发 0 次（`/tmp/probe-api2.log`）。
-- Mesen2 `$005A` 写点：`E758`（写 `09`）、`EAF8`（`EndOfRoom` 写 `F0`）、`EA19`（`inc`，逐帧 +1）。
-  asm 锚：`refs/m1disasm/SRC/prg7_engine.asm:8673-8675`、`:8878`、`:8687`、`:7703`；
+- BizHawk(quickerNES) **Lua 内存回调通道**不可用：`QuickNES.get_MemoryCallbacks()` 抛
+  `NotImplementedException`（`[FeatureNotImplemented]`），`EventsLuaLibrary.OnBusWrite` 捕获后返回
+  **空 GUID**；5 个 API 注册返回空 GUID、`$5A` 阳性对照 0 命中。**判据是空 GUID，不是「`ok=true`」**
+  （`ok` 只表示 pcall 未抛异常）。限定为「Lua 回调」，QuickNES 的 `ITraceable` 仍在。
+- Mesen2 `$005A` 写点：`E758`（写 `09`）、`EAF8`（`EndOfRoom` 写 `F0`）、`EA19`（`inc`，**随相位**：
+  boot 段一帧可多格，过渡段 1 tick/格）。asm 锚：`refs/m1disasm/SRC/prg7_engine.asm:8673-8675`（`and #$0F / inc`）、
+  `:8877 ldx #$F0` / `:8878 stx RoomNumber`、`:8687`（`RoomFinished` 落 `FF`）、`:7702` 标签 / `:7703 jsr SetupRoom`；
   RAM 锚：`crates/game-core/src/ram_map.rs:216`（`$005A`）。
 - Rust 写点：`crates/game-core/src/world/room_load.rs:57,202`、`world/room_draw.rs:720,826,851`。
-- 裁定：**时机错（房间请求晚 ~2 帧；`F` 链随之整体 +2 平移）**；「缺写」无证据；`09` 缺失可能是同 tick 覆写（未证）。
+- 裁定（**已按复核改判**）：**不是缺写**；差异 = ①**ROM 的 `09` 在帧边界存活 2 帧（驻留）未建模**（主）
+  ②房间请求相位差（Rust 到 `F1` 比 Biz 早 1 tick，不是单调落后）③`F` 链步进形状不同（attrib 首步
+  `F1→F2` 延迟 2 tick，其后 1 tick/格）。「采样相位」只解释 `+2` 的**读数假象**，不解释行为差异；
+  **`09` 被同 tick 覆写：已证**（`capture(945)=FF`、`capture(946)=F1`，而到 `F1` 必先经 `F0`）。
