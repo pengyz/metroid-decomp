@@ -1,0 +1,111 @@
+{
+  "schema": "mechanism-scene-prefix/v1",
+  "doc": "变体球机制场景（case-mechanism-morphball，600 帧声明窗）的**修前/修后对照**机器档。用途=给 docs/findings/mechanism-scene-morphball.md §7 的『145 px』结论做可复现证据（复核 097733e1 P1：原结论只有工作区观测、无入库产物）。字段直读 L4 腿落盘的 ram.hex（$0000-$07FF 共 2048 B + $6AF4-$6BD3 128 B = 2272 B），不另行采集。",
+  "case": "cases/case-mechanism-morphball.txt",
+  "rom_sha256": "e6e6b7014685adae447ebb3833242815747bc1e5df83ade79f693fb67cf565b6",
+  "field_addrs": {
+    "status": "$0300",
+    "animFrame": "$0303",
+    "animDelay": "$0304",
+    "animResetIndex": "$0305",
+    "animIndex": "$0306"
+  },
+  "reproduce": {
+    "step1": "把 crates/game-core/src/samus/handler.rs 的 samus_pnt_up 尾件临时改回修前形态：`if mem.samus().status_raw() == 6 { set_samus_jump_pnt_up(mem); }`（= HEAD 22f24c10 的真实形态；**注意**不能用无条件调用——那会让 status=0 也跑 SetSamusJumpPntUp，得到错的 animReset=$35，是 2026-11-18 一次失败复现的成因）",
+    "step2": "cargo build -p game-core --bin rust_screenshot",
+    "step3": "python3 tools/l4_diff_run.py run case-mechanism-morphball",
+    "step4": "还原代码并重建，同命令复跑 ⇒ 4 采集点全 0 px"
+  },
+  "prefix": {
+    "captures": [
+      {
+        "frame": 476,
+        "tag": "pre",
+        "diff_pixels": 0
+      },
+      {
+        "frame": 570,
+        "tag": "ball-exit",
+        "diff_pixels": 0,
+        "rust": {
+          "status": "0x0",
+          "animFrame": "0x2b",
+          "animDelay": "0x1",
+          "animResetIndex": "0x27",
+          "animIndex": "0x28"
+        },
+        "mesen": {
+          "status": "0x0",
+          "animFrame": "0x2b",
+          "animDelay": "0x0",
+          "animResetIndex": "0x7",
+          "animIndex": "0x7"
+        }
+      },
+      {
+        "frame": 588,
+        "tag": "tail588",
+        "diff_pixels": 145,
+        "rust": {
+          "status": "0x0",
+          "animFrame": "0x2b",
+          "animDelay": "0x3",
+          "animResetIndex": "0x27",
+          "animIndex": "0x28"
+        },
+        "mesen": {
+          "status": "0x0",
+          "animFrame": "0x8",
+          "animDelay": "0x3",
+          "animResetIndex": "0x7",
+          "animIndex": "0x8"
+        }
+      },
+      {
+        "frame": 600,
+        "tag": "end",
+        "diff_pixels": 145
+      }
+    ],
+    "reading": "f570 像素仍 0 px 但三个动画面字段已不同（$0305/$0306 = $27/$28 vs $07/$07、animDelay $01 vs $00）；f588/600 因动画帧号继续前进而显形为 145 px。即分岔起点在 f570（status 4→0 那一拍），不是 f588。"
+  },
+  "fixed": {
+    "captures": [
+      {
+        "frame": 476,
+        "tag": "pre",
+        "diff_pixels": 0
+      },
+      {
+        "frame": 570,
+        "tag": "ball-exit",
+        "diff_pixels": 0,
+        "rust": {
+          "status": "0x0",
+          "animFrame": "0x2b",
+          "animDelay": "0x0",
+          "animResetIndex": "0x7",
+          "animIndex": "0x7"
+        }
+      },
+      {
+        "frame": 588,
+        "tag": "tail588",
+        "diff_pixels": 0,
+        "rust": {
+          "status": "0x0",
+          "animFrame": "0x8",
+          "animDelay": "0x3",
+          "animResetIndex": "0x7",
+          "animIndex": "0x8"
+        }
+      },
+      {
+        "frame": 600,
+        "tag": "end",
+        "diff_pixels": 0
+      }
+    ],
+    "commit": "a3065dae"
+  }
+}

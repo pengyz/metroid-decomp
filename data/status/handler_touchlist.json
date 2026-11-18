@@ -4,7 +4,7 @@
   "source_run": "python3 tools/l4_diff_run.py run-all @ 2026-11-18（17 案；新增 0xCBEF/0xD150 由 case-morphball-tail-probe 触发）",
   "cases_covered": 17,
   "unique_addrs": 10,
-  "total_events": 74213,
+  "total_events": 74212,
   "entries": [
     {
       "addr": "0xB7E7",
@@ -31,7 +31,7 @@
       }
     },
     {
-      "addr": "0xcbef",
+      "addr": "0xCBEF",
       "asm_label": "SFX_SamusBall",
       "push_site": "crates/game-core/src/samus/handler.rs::set_samus_roll",
       "asm_ref": "refs/m1disasm/SRC/prg7_engine.asm:2668",
@@ -47,11 +47,9 @@
       "asm_label": "PowerUpMusic",
       "push_site": "frame/mainloop.rs:2928 (uw_all_power_ups 拾取音乐)",
       "asm_ref": "refs/m1disasm/SRC/prg7_engine.asm:2681",
-      "n_events": 1,
+      "n_events": 0,
       "first_tick": 1520,
-      "cases": {
-        "case-morphball-probe": 1
-      }
+      "cases": {}
     },
     {
       "addr": "0xCC36",
@@ -119,7 +117,7 @@
       }
     },
     {
-      "addr": "0xd150",
+      "addr": "0xD150",
       "asm_label": "CheckBombLaunch",
       "push_site": "crates/game-core/src/samus/handler.rs::samus_roll",
       "asm_ref": "refs/m1disasm/SRC/prg7_engine.asm:3685",

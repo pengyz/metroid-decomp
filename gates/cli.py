@@ -1273,16 +1273,42 @@ def l4_touchlist_violations(matrix: dict, sidecar_dir: Path,
     if len(sidecars) < cases_total:
         out.append(f"sidecar 缺失：期望 {cases_total} 件（每案一件），实有 {len(sidecars)} 件"
                    f"（{sidecar_dir}）——记账不得静默缺失")
+    observed: set[int] = set()
+    observed_events = 0
     for sp in sidecars:
         try:
             doc = json.loads(sp.read_text(encoding="utf-8"))
             for g in doc.get("gap_map") or []:
                 a = int(g["addr"])
+                n = int(g.get("n", 0))
+                observed.add(a)
+                observed_events += n
                 if a not in known:
-                    out.append(f"{sp.name}: 新记账 addr 0x{a:04X} ×{int(g.get('n', 0))} "
+                    out.append(f"{sp.name}: 新记账 addr 0x{a:04X} ×{n} "
                                f"不在触达清单（账外=红）")
         except Exception as exc:  # noqa: BLE001
             out.append(f"{sp.name} 解析失败: {exc!r}")
+    # 台账头聚合自校验（2026-11-18 复核 097733e1 的 P2）：头部的 cases_covered /
+    # total_events 必须能由 sidecar 重算出来，否则是"手改头数字"的静默漂移。
+    # （unique_addrs 是**白名单**条目数，可以含本次零事件的保留项，故只校验 entries 长度。）
+    try:
+        hdr_cases = int(tl.get("cases_covered"))
+        hdr_events = int(tl.get("total_events"))
+        hdr_unique = int(tl.get("unique_addrs"))
+    except Exception:  # noqa: BLE001
+        out.append(f"触达清单头部聚合字段缺失/非整数（{touchlist_path}）")
+        return out
+    if hdr_cases != len(sidecars):
+        out.append(f"触达清单 cases_covered={hdr_cases} ≠ sidecar 实有 {len(sidecars)}")
+    if hdr_events != observed_events:
+        out.append(f"触达清单 total_events={hdr_events} ≠ sidecar 实算 {observed_events}")
+    if hdr_unique != len(entries):
+        out.append(f"触达清单 unique_addrs={hdr_unique} ≠ entries 条数 {len(entries)}")
+    stale = sorted(a for a in known - observed
+                   if any(int(str(e["addr"]), 16) == a and int(e.get("n_events", 0)) > 0
+                          for e in entries))
+    for a in stale:
+        out.append(f"触达清单条目 0x{a:04X} 记着 n_events>0 但本次 sidecar 零事件（计数陈旧）")
     return out
 
 

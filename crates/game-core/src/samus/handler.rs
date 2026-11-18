@@ -874,6 +874,40 @@ mod tests {
         assert_eq!(m.read_ram(ANIM_RESET_INDEX - 1), 0, "SetSamusNextAnim ⇒ animDelay←0");
     }
 
+    /// 表项 3（`SetSamusRoll`）两条分支各钉一条（复核 097733e1 的 P3）。
+    /// asm `SetSamusRoll ; 07:D0B5`（`prg7_engine.asm:3591`）：无 `gr_MARUMARI` 或
+    /// `SamusAccelY≠0` ⇒ `Lx030`（status←sa_Stand）；否则置球动画并**保持球态**。
+    ///
+    /// 直接测 Setter 而不是经 `samus_pnt_up` 全链：后者会跑 `set_samus_data` 的物理链
+    /// （`lava_and_move_check` 等在单测的零长度房间下强制回 Stand），会把本项语义掩盖掉。
+    #[test]
+    fn set_samus_roll_keeps_roll_with_morphball_on_ground() {
+        use crate::ram_map::{SAMUS_ACCEL_Y, SAMUS_GEAR, SAMUS_STATUS};
+        let mut m = Manager::default();
+        m.write_wram(SAMUS_GEAR, 0x10); // gr_MARUMARI（`constants.asm:74 gr_MARUMARI = %00010000`）
+        m.write_ram(SAMUS_ACCEL_Y, 0); // 地面
+        m.write_ram(SAMUS_STATUS, 3);
+        set_samus_roll(&mut m);
+        assert_eq!(m.read_ram(SAMUS_STATUS), 3, "有球+地面 ⇒ 留在 sa_Roll");
+        assert_eq!(
+            m.read_ram(ANIM_RESET_INDEX),
+            OBJ_ANIM_SAMUS_ROLL,
+            "⇒ animResetIndex←$16"
+        );
+    }
+
+    /// 表项 3 的另一半：无变形球 ⇒ `Lx030` 回 Stand（旧测原本钉的就是这一支）。
+    #[test]
+    fn set_samus_roll_without_morphball_falls_to_stand() {
+        use crate::ram_map::{SAMUS_ACCEL_Y, SAMUS_GEAR, SAMUS_STATUS};
+        let mut m = Manager::default();
+        m.write_wram(SAMUS_GEAR, 0);
+        m.write_ram(SAMUS_ACCEL_Y, 0);
+        m.write_ram(SAMUS_STATUS, 3);
+        set_samus_roll(&mut m);
+        assert_eq!(m.read_ram(SAMUS_STATUS), 0, "无 gr_MARUMARI ⇒ Lx030 回 sa_Stand");
+    }
+
     /// Dead2 微件（dec animDelay 全可端）。
     #[test]
     fn samus_dead2_decrements_anim_delay() {
