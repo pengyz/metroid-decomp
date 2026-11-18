@@ -212,9 +212,12 @@ pub struct SamusState {
     /// 跑过帧边界——asm 的像素写点 `07:E65E`/`07:E692` 在 `jsr ScrollLeft` **之后**，
     /// 必然落在装载窗结束那一帧）。**非 RAM 字段**：纯行为相位记账。
     pub load_consumed_frame: bool,
-    /// 被载房窗挂起的待兑像素（`false`=左移 1 px / `true`=右移 1 px）。
+    /// 被载房窗挂起的待兑水平位移（**带符号累计**：左移 −1 / 右移 +1，逐次相加）。
+    /// 「累计」而非「单槽」是必需的——asm 是每次 `MoveSamusLeft/Right` 调用各写 1 次
+    /// （`07:E65E`/`07:E692`），若装载窗跨多拍、每拍都走滚动径，挂起数必须等于写次数，
+    /// 否则会静默丢像素（复核 2026-11-19 P2-2）。
     /// 兑现点 = 迭代门队列排空那一拍（`Engine::end_of_tick_gate`）。
-    pub deferred_horz_px: Option<bool>,
+    pub deferred_horz_px: i16,
 }
 
 impl Default for SamusState {
@@ -235,7 +238,7 @@ impl Default for SamusState {
             sub: SubPixel::default(),
             horz_speed_max: 0,
             load_consumed_frame: false,
-            deferred_horz_px: None,
+            deferred_horz_px: 0,
         }
     }
 }
@@ -587,15 +590,15 @@ impl<'a> Samus<'a> {
         self.set(SAMUS_SCR_X, v);
     }
 
-    /// 被载房窗挂起的待兑水平像素（`false`=左移 1 px / `true`=右移 1 px）。
-    pub fn deferred_horz_px(&self) -> Option<bool> {
+    /// 被载房窗挂起的待兑水平位移（带符号累计；左 −1 / 右 +1）。
+    pub fn deferred_horz_px(&self) -> i16 {
         self.mem.samus.deferred_horz_px
     }
-    pub fn take_deferred_horz_px(&mut self) -> Option<bool> {
-        self.mem.samus.deferred_horz_px.take()
+    pub fn add_deferred_horz_px(&mut self, delta: i16) {
+        self.mem.samus.deferred_horz_px += delta;
     }
-    pub fn set_deferred_horz_px(&mut self, v: Option<bool>) {
-        self.mem.samus.deferred_horz_px = v;
+    pub fn take_deferred_horz_px(&mut self) -> i16 {
+        std::mem::take(&mut self.mem.samus.deferred_horz_px)
     }
 
     pub fn jump_displacement(&self) -> u8 {
@@ -664,7 +667,7 @@ impl<'a> Samus<'a> {
 }
 
 /// Samus 血量两字节未 typed 的缺口说明（`SPANS` 里唯一一条非 `Owner`）。
-const TODO: &str = "血量两字节未 typed：health()/set_health() 仍走字节面（$0106 低 / $0107 高；crates/game-core/src/samus/state.rs:656）";
+const TODO: &str = "血量两字节未 typed：health()/set_health() 仍走字节面（$0106 低 / $0107 高；crates/game-core/src/samus/state.rs:659）";
 
 impl crate::memmap::nesmap::NesMapped for SamusState {
     /// 判别字段：`status`（`$0300`，`sa_*` 十态）——同址按状态重解释时的判别源

@@ -282,7 +282,7 @@
       "len": 2,
       "kind": "unmodeled",
       "refs": [
-        "crates/game-core/src/samus/state.rs:423"
+        "crates/game-core/src/samus/state.rs:659"
       ]
     },
     {
@@ -460,11 +460,8 @@
       "len": 3,
       "kind": "undeclared",
       "refs": [
-        "samus/handler.rs:161",
-        "samus/physics.rs:247",
-        "samus/handler.rs:274",
-        "samus/physics.rs:1761",
-        "world/door.rs:40"
+        "crates/game-core/src/ram_map.rs:267",
+        "crates/game-core/src/samus/physics.rs:1761"
       ]
     },
     {

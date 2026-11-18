@@ -2027,6 +2027,26 @@ mod tests_camera_follow {
         assert_eq!(m.read_ram(0x030E), 0x7F, "房间 x−1");
     }
 
+    /// 【复核 P3-1：补回被挪走的覆盖】`ScrollX` 回绕径（asm `ScrollRight` 的
+    /// `inc ScrollX / bne Lx184 / jsr ToggleNameTable`）：`ScrollX=0xFF → 0x00` 时必须
+    /// 翻名表位（`$00FF ^= $03`），且仍走 `CheckUpdateNameTable`（列流送）。旧用例把起点
+    /// 挪到 `ScrollX=0x40` 后这条径在本文件没有断言了。
+    #[test]
+    fn scroll_right_wraps_scroll_x_and_toggles_name_table() {
+        let mut m = walkable_room();
+        m.samus().set_x(0x80);
+        m.write_ram(crate::ram_map::SCROLL_X, 0xFF);
+        m.write_ram(crate::ram_map::SAMUS_SCR_X, 0x8F); // 右滚界 ⇒ 走 ScrollRight
+        let before = m.read_ram(crate::ram_map::PPUCTRL_ZP);
+        assert!(move_samus_right(&mut m));
+        assert_eq!(m.read_ram(crate::ram_map::SCROLL_X), 0x00, "ScrollX 回绕 FF→00");
+        assert_eq!(
+            m.read_ram(crate::ram_map::PPUCTRL_ZP),
+            before ^ 0x03,
+            "回绕翻名表位（ToggleNameTable: $00FF ^= $03）"
+        );
+    }
+
     /// 界内（ScrX<$8F）：屏内 x+1 不滚（asm `bcc Lx183/inc SamusScrX`）。
     #[test]
     fn move_samus_right_inside_threshold_moves_screen_x() {
@@ -2565,6 +2585,13 @@ mod tests_lava_gate {
 /// 【f673 载房超帧卡（2026-11-19）】载房窗挂起像素的**兑现点**：迭代门队列排空那一拍
 /// （`Engine::end_of_tick_gate` 的 `iter_gates.is_empty()` 分支）落 1 px。
 ///
+/// **证据分级**：①顺序事实（像素写在 `jsr ScrollLeft` 之后）= **A 级**（asm 行 + ROM 字节，
+/// 见下）；②「兑现点 = 迭代门队列排空那一拍」= **B 级模型推断**——asm 只给顺序，没给
+/// 「窗末是第几拍」；本模型是从既有掉帧模型推出来的：`scroll.rs` 的 `dropped =
+/// (LOAD_BASE_CYCLES + work_cycles) / FRAME_CYCLES` 把工作量折成 N 个 `iter_gates`，队列
+/// 一拍排 1 项 ⇒ 「吃 N 拍 ⇒ 第 N 拍落 1 px」。**该 `dropped` 公式本次未改**，所以延迟是
+/// 从既有模型落出来的，不是为凑 f676 调的（复核 2026-11-19 认可这点，但要求标注分级）。
+///
 /// asm 依据（A 级）：`MoveSamusLeft ; 07:E626`（`prg7_engine.asm:7864`）`:7884 jsr
 /// ScrollLeft` → `CheckUpdateNameTable ; 07:E54A`（`:7702`，**首条指令 `jsr SetupRoom`**）
 /// → `SetupRoom/UpdateNameTable` 跑过帧边界；像素写点 `Lx180: ; 07:E65E`（`:7895-7896
@@ -2573,10 +2600,16 @@ mod tests_lava_gate {
 /// Rust 旧形把 `setup_room` 当同步调用、当帧 `set_x(x∓1)`，只用 `iter_bogged` 跳后续
 /// 迭代 ⇒ 1 px 提前 3 帧生效。
 pub fn apply_deferred_horz_px(mem: &mut Manager) {
-    if let Some(right) = mem.samus().take_deferred_horz_px() {
+    // **不变量**（复核 P2-1 要求）：兑现只许发生在迭代门队列**排空**那一拍。队列非空 =
+    // 装载窗还没走完，asm 也还没执行到 `07:E65E`/`07:E692`。
+    debug_assert!(
+        mem.iter_gates.is_empty(),
+        "兑现点必须在迭代门队列排空那一拍（队列非空=装载窗未走完）"
+    );
+    let d = mem.samus().take_deferred_horz_px();
+    if d != 0 {
         let x = mem.samus().x();
-        let nx = if right { x.wrapping_add(1) } else { x.wrapping_sub(1) };
-        mem.samus().set_x(nx);
+        mem.samus().set_x(x.wrapping_add(d as u8));
     }
 }
 
@@ -2587,7 +2620,8 @@ fn defer_if_load_consumed(mem: &mut Manager, right: bool) -> bool {
         return false;
     }
     mem.samus().set_load_consumed_frame(false);
-    mem.samus().set_deferred_horz_px(Some(right));
+    // 带符号累计（复核 P2-2：单槽会被同窗第二拍覆盖 ⇒ 丢像素）。
+    mem.samus().add_deferred_horz_px(if right { 1 } else { -1 });
     true
 }
 
@@ -2596,7 +2630,7 @@ fn defer_if_load_consumed(mem: &mut Manager, right: bool) -> bool {
 #[cfg(test)]
 mod tests_room_load_defer {
     use super::*;
-    use crate::{frame::Manager, ram_map};
+    use crate::frame::Manager;
 
     fn load_frame_manager() -> Manager {
         let mut m = Manager::default();
@@ -2620,19 +2654,43 @@ mod tests_room_load_defer {
             0x70,
             "载房超帧：07:E65E 的 dec 须推迟到装载窗末（emu f673 x=0x70 DECx=0）"
         );
-        assert_eq!(
-            m.samus().deferred_horz_px(),
-            Some(false),
-            "待兑像素挂起（false=左移 1 px）"
-        );
+        assert_eq!(m.samus().deferred_horz_px(), -1, "待兑像素挂起（−1=左移 1 px）");
+    }
+
+    /// **累计**（复核 P2-2）：装载窗跨两拍、每拍各写 1 px ⇒ 挂起 2 px、窗末落 2 px。
+    /// 单槽实现会在这里丢 1 px。
+    #[test]
+    fn two_defers_accumulate_and_land_two_pixels() {
+        let mut m = load_frame_manager();
+        for _ in 0..2 {
+            // 每「拍」重建一次吞帧标位（真实场景：check_update_name_table 每拍都会置位）
+            m.samus().set_load_consumed_frame(true);
+            samus_move_horizontally(&mut m, 0xFF); // 左 1 px ×2
+        }
+        assert_eq!(m.samus().x(), 0x70, "两拍都没落地");
+        assert_eq!(m.samus().deferred_horz_px(), -2, "累计 −2（不是单槽 −1）");
+        m.iter_gates.clear(); // 装载窗走完（真实场景=门队列一拍排 1 项）
+        apply_deferred_horz_px(&mut m);
+        assert_eq!(m.samus().x(), 0x6E, "窗末一次落 2 px");
+    }
+
+    /// **不变量**（复核 P2-1）：装载窗未走完（门队列非空）时不许兑现。
+    #[test]
+    #[should_panic(expected = "门队列排空")]
+    fn deferred_pixel_refuses_to_land_inside_iteration_window() {
+        let mut m = load_frame_manager();
+        samus_move_horizontally(&mut m, 0xFF);
+        m.iter_bogged(2); // 仍有 2 拍没走完
+        apply_deferred_horz_px(&mut m);
     }
 
     #[test]
     fn deferred_pixel_lands_at_completion() {
         let mut m = load_frame_manager();
         samus_move_horizontally(&mut m, 0xFF);
+        m.iter_gates.clear(); // 装载窗走完（真实场景=门队列一拍排 1 项）
         apply_deferred_horz_px(&mut m); // 门队列排空那一拍的兑现点
         assert_eq!(m.samus().x(), 0x6F, "装载窗末落 1 px（emu f676）");
-        assert_eq!(m.samus().deferred_horz_px(), None, "只兑一次");
+        assert_eq!(m.samus().deferred_horz_px(), 0, "只兑一次（累计清空）");
     }
 }
