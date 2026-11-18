@@ -50,6 +50,9 @@
 > `metrics` 快照 + `baseline_sha256` 链）。**历史文件是下界锚，禁止删除/清空**；新仓库 bootstrap
 > 需先落 genesis 记录（带 reason + metrics 快照），否则 baseline-integrity 按『历史缺失』FAIL。
 >
+> 覆盖台账 ratchet 锚 = `data/status/coverage_ledger.baseline.json`（`coverage-ratchet` 消费；
+> 唯一写入口 = `tools/coverage_ledger.py --seed`，只增不降；不进入中央 baseline metrics 键集）。
+>
 > L4 逐采集点 ratchet 锚 = `data/status/l4_ratchet_baseline.json`（`l4` 门禁消费；match 集合
 > 只增不减 + blocked 只减不增——**非**一致率百分比），唯一写入口 = `tools/baseline_update.py l4`
 > （只升不降 + 强制 `--reason` 留痕，判定单源=gates/cli.py `l4_ratchet_violations`）。
@@ -69,6 +72,7 @@
 | `visual-diff` | L4：截图逐像素（白名单外） | S6 启用 |
 | `l4` | L4 自动对拍：run-all 矩阵（用例×采集点三态）+ 逐采集点 ratchet（match 集合只增/blocked 只减，非聚合率） | 启用（Task 6） |
 | `completeness-ratchet` | 完备性矩阵覆盖只增不降 | 矩阵建立后启用 |
+| `coverage-ratchet` | 覆盖台账三态计数只增不降、条目 id 不减 | 台账建立后启用 |
 | `proof-checks` | int_x SMT 证明+公式↔Rust 桥接复跑（证书防腐） | 启用（按变更面触发；SMT+桥接内联；int_y 穷举留 CI/里程碑） |
 | `staged-surface` | 暂存面≡工作树（提交面一致性：门禁结论必须描述被提交的树） | 启用（W5） |
 | `tree-coherence` | Rust mod 引用⊆提交树（未跟踪件掩盖破树侦测） | 启用 |
