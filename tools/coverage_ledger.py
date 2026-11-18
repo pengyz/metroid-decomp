@@ -163,6 +163,20 @@ def _baseline_doc(items: list[dict], reason: str) -> dict:
 PROVENANCE_KEYS = ("reason", "updated_at")
 
 
+def _sync_anchors() -> None:
+    """写盘后同步 SHA256SUMS 状态锚点（唯一实现留在 gates/cli.py，此处只调用）。"""
+    import subprocess
+
+    proc = subprocess.run(
+        [sys.executable, str(ROOT / "gates" / "cli.py"), "sync-anchors"],
+        capture_output=True,
+        text=True,
+        cwd=str(ROOT),
+    )
+    if proc.returncode != 0:
+        raise LedgerError("锚点同步失败（gates/cli.py sync-anchors）：" + (proc.stderr or proc.stdout).strip())
+
+
 def _write_baseline(path: Path, doc: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
@@ -276,6 +290,7 @@ def init(ledger_path: str | Path = DEFAULT_LEDGER,
     ledger.save()
     baseline = _baseline_doc(ledger.items, "genesis: --init")
     _write_baseline(baseline_path, baseline)
+    _sync_anchors()
     return baseline
 
 
