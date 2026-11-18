@@ -150,30 +150,48 @@ def _allframe_score(
     seq_b: dict[int, int],
     max_lag: int = DEFAULT_MAX_LAG,
 ) -> dict:
-    """对 a 的**全部帧**逐 offset 计 a[f] == b[f+offset] 的一致数。
+    """对 a 的**全部帧**逐 offset 计 a[f] == b[f+offset] 的一致数/一致率。
 
     这是状态面（status/room）的口径：它们在大部分帧不变，只取变化帧会样本太少
-    （2026-11-18 复核的 1096/1180、1158/1180 等就是全帧口径）。锁存面仍用
-    _score 的变化帧口径；两者不可混用。
+    （2026-11-18 复核的 1096/1180、1158/1180 等就是全帧口径）。锁存面 offset
+    仍用 _score 的变化帧口径；两者不可混用。排序按 agree_rate 而非原始 matches，
+    避免两端 offset 因 participants 少而被 raw matches 系统性压低。
     """
     if max_lag < 0:
         raise ValueError("max_lag must be >= 0")
 
-    scored: list[dict[str, int]] = []
+    scored: list[dict] = []
     for offset in range(-max_lag, max_lag + 1):
         participants = [f for f in seq_a if (f + offset) in seq_b]
         matches = sum(1 for f in participants if seq_a[f] == seq_b[f + offset])
+        agree_rate = matches / len(participants) if participants else None
         scored.append(
             {
                 "offset": offset,
                 "matches": matches,
                 "participants": len(participants),
+                "agree_rate": agree_rate,
             }
         )
 
-    best = max((row["matches"] for row in scored), default=0)
-    winners = [row for row in scored if row["matches"] == best]
-    return {"rows": scored, "best": best, "winners": winners}
+    # 按一致率排序，不按原始 matches：offset 在两端时 participants 会少，
+    # 用 raw matches 排序会系统性偏向"能覆盖更多帧"的 offset（2026-11-18 复核 finding 4）。
+    best_rate = max(
+        (row["agree_rate"] for row in scored if row["agree_rate"] is not None),
+        default=None,
+    )
+    winners = [
+        row
+        for row in scored
+        if best_rate is not None and row["agree_rate"] == best_rate
+    ]
+    best = max((row["matches"] for row in winners), default=0)
+    return {
+        "rows": scored,
+        "best": best,
+        "best_rate": best_rate,
+        "winners": winners,
+    }
 
 
 def _fit(
@@ -287,6 +305,33 @@ def _extract_latch(row: dict, leg: str, path: str, lineno: int) -> int:
     return _hex_byte(zp, ANCHOR_ADDR, path, lineno, "rust w['zp'] $0014")
 
 
+def _extract_latch_optional(
+    row: dict, leg: str, path: str, lineno: int
+) -> int | None:
+    """读状态面时顺带取 $0014；缺键返回 None，不阻断状态面（finding 2）。
+
+    真正只算锁存面时仍走 _extract_latch：缺键/坏值一律 fail-loud。
+    """
+    if leg == "biz":
+        if "joy1_latch" not in row:
+            return None
+        return _byte_value(row["joy1_latch"], path, lineno, "joy1_latch")
+
+    w = row.get("w")
+    if not isinstance(w, dict):
+        raise ValueError(f"{path}:{lineno}: {leg} row missing object w")
+
+    if leg == "mesen":
+        if "Joy1Latch" not in w:
+            return None
+        return _byte_value(w["Joy1Latch"], path, lineno, "w['Joy1Latch']")
+
+    zp = w.get("zp")
+    if not isinstance(zp, str):
+        return None
+    return _hex_byte(zp, ANCHOR_ADDR, path, lineno, "rust w['zp'] $0014")
+
+
 def _mesen_state_byte(
     w: dict,
     name: str,
@@ -320,16 +365,18 @@ def _mesen_state_byte(
     )
 
 
-def _extract_state(row: dict, leg: str, path: str, lineno: int) -> dict[str, int]:
-    """读一行的状态面 + 锁存面：{status, room, latch}。"""
+def _extract_state(
+    row: dict, leg: str, path: str, lineno: int
+) -> dict[str, int | None]:
+    """读一行的状态面 + 锁存面：{status, room, latch}；latch 可缺失为 None。"""
     if leg == "biz":
-        for key in ("status", "room", "joy1_latch"):
+        for key in ("status", "room"):
             if key not in row:
                 raise ValueError(f"{path}:{lineno}: biz row missing {key}")
         return {
             "status": _byte_value(row["status"], path, lineno, "status"),
             "room": _byte_value(row["room"], path, lineno, "room"),
-            "latch": _byte_value(row["joy1_latch"], path, lineno, "joy1_latch"),
+            "latch": _extract_latch_optional(row, leg, path, lineno),
         }
 
     w = row.get("w")
@@ -346,7 +393,7 @@ def _extract_state(row: dict, leg: str, path: str, lineno: int) -> dict[str, int
                 w, "RoomNumber", MESEN_RAM_LOW, ROOM_ADDR,
                 "room", path, lineno,
             ),
-            "latch": _extract_latch(row, leg, path, lineno),
+            "latch": _extract_latch_optional(row, leg, path, lineno),
         }
 
     # rust：zp 覆盖 $0000-$00FF，iram 覆盖 $0100-$07FF；两段都必须是精确长度。
@@ -371,7 +418,7 @@ def _extract_state(row: dict, leg: str, path: str, lineno: int) -> dict[str, int
             iram, STATUS_ADDR - IRAM_BASE, path, lineno, "rust w['iram'] $0300"
         ),
         "room": _hex_byte(zp, ROOM_ADDR, path, lineno, "rust w['zp'] $005A"),
-        "latch": _hex_byte(zp, ANCHOR_ADDR, path, lineno, "rust w['zp'] $0014"),
+        "latch": _extract_latch_optional(row, leg, path, lineno),
     }
 
 
@@ -423,11 +470,12 @@ def load_latch(path: str, leg: str) -> dict[int, int]:
     return seq
 
 
-def load_state(path: str, leg: str) -> dict[int, dict[str, int]]:
+def load_state(path: str, leg: str) -> dict[int, dict[str, int | None]]:
     """读一条腿的 frame -> {"status","room","latch"}。
 
     biz 读顶层 status/room/joy1_latch；mesen 优先命名 watch，缺则读全 RAM range；
-    rust 读 w['zp'] 与 w['iram']。任何缺键/长度不符都 fail-loud。
+    rust 读 w['zp'] 与 w['iram']。状态字节缺键/长度不符 fail-loud；$0014 缺失
+    记为 None（不阻断状态面），真正只读锁存面请用 load_latch。
     """
     seq, _last_f, _rows = _read_leg(path, leg, _extract_state)
     return seq
@@ -438,8 +486,8 @@ def _window(seq: dict[int, int], start: int, end: int) -> dict[int, int]:
 
 
 def _window_records(
-    seq: dict[int, dict[str, int]], start: int, end: int
-) -> dict[int, dict[str, int]]:
+    seq: dict[int, dict[str, int | None]], start: int, end: int
+) -> dict[int, dict[str, int | None]]:
     return {f: rec for f, rec in seq.items() if start <= f <= end}
 
 
@@ -449,7 +497,10 @@ def _field_resolution(
     b_state: dict[int, dict[str, int]],
     max_lag: int,
 ) -> dict[str, int | float | None]:
-    """状态面字段：全帧一致数求 offset；变化帧/段数只作可解性闸门与诊断。"""
+    """状态面字段：全帧一致率求 offset；变化帧/段数只作可解性闸门与诊断。
+
+    多解（一致率并列）报 AlignmentError("ambiguous-offset")，不偷偷挑一个。
+    """
     a_field = {f: rec[field] for f, rec in a_state.items()}
     b_field = {f: rec[field] for f, rec in b_state.items()}
     changes = _change_frames(a_field)
@@ -465,7 +516,7 @@ def _field_resolution(
         )
     if len(scored["winners"]) != 1:
         raise AlignmentError(
-            f"ambiguous offset for {field}", "field-disagreement"
+            f"ambiguous offset for {field}", "ambiguous-offset"
         )
     winner = scored["winners"][0]
     participants = winner["participants"]
@@ -482,7 +533,11 @@ def _field_resolution(
 
 
 def assert_latch_gap(state_offset: int, latch_offset: int, leg: str) -> None:
-    """锁存面必须恒比状态面晚一行；不成立即 fail-loud（不许静默用锁存偏移）。"""
+    """锁存面必须恒比状态面晚一行；不成立即抛 AlignmentError。
+
+    调用方（resolve_leg）捕获后必须保留状态面结果，只把 latch_offset 置 None、
+    置 latch_gap_anomaly=True；本函数本身仍 fail-loud，不许静默用锁存偏移。
+    """
     if latch_offset != state_offset + 1:
         raise AlignmentError(
             f"latch-state gap anomaly on {leg}: latch_offset={latch_offset:+d} "
@@ -493,9 +548,10 @@ def assert_latch_gap(state_offset: int, latch_offset: int, leg: str) -> None:
 
 def resolve_leg(
     leg: str,
-    a_state: dict[int, dict[str, int]],
-    b_state: dict[int, dict[str, int]],
+    a_state: dict[int, dict[str, int | None]],
+    b_state: dict[int, dict[str, int | None]],
     max_lag: int = DEFAULT_MAX_LAG,
+    require_latch: bool = True,
 ) -> dict:
     """求一条腿相对 b 的状态面偏移、锁存面偏移、逐字段一致率与残差。
 
@@ -504,11 +560,15 @@ def resolve_leg(
       per_field {status: {offset,matches,participants,agree_rate}, room: ...},
       latch {offset,matches,participants,agree_rate,change_frames,change_runs},
       state_joint {matches,participants,agree_rate},
-      residuals {latch: [...], state: {status: [...], room: [...]}}
+      residuals {latch: [...] | None, state: {status: [...], room: [...]}},
+      latch_gap_anomaly, latch_missing, latch_error
 
     状态面 status/room 必须给出同一个 offset，否则 AlignmentError
-    ("field-disagreement")；锁存面必须等于状态面 + 1，否则
-    AlignmentError("latch-state-gap-anomaly")。
+    ("field-disagreement")；状态面字段多解 -> ("ambiguous-offset")。
+    锁存面是佐证面，不许一票否决状态面：gap 异常时保留状态结果，
+    latch_offset=None、latch_gap_anomaly=True；缺 $0014 时保留状态结果、
+    latch_offset=None、latch_missing=True（require_latch=True 时才抛
+    "latch-unavailable"）。
     """
     if leg not in LEGS:
         raise ValueError(f"unknown leg {leg!r}; expected one of {LEGS}")
@@ -525,29 +585,137 @@ def resolve_leg(
             "field-disagreement",
         )
     state_offset = per_field["status"]["offset"]
+    state_residuals = {
+        field: [
+            f
+            for f in a_state
+            if (f + state_offset) in b_state
+            and a_state[f][field] != b_state[f + state_offset][field]
+        ]
+        for field in STATE_FIELDS
+    }
+
+    def make_latch_info(
+        *,
+        offset: int | None = None,
+        matches: int | None = None,
+        participants: int | None = None,
+        agree_rate: float | None = None,
+        change_frames: int = 0,
+        change_runs: int = 0,
+        fit_matches: int | None = None,
+        fit_participants: int | None = None,
+    ) -> dict:
+        return {
+            "offset": offset,
+            "matches": matches,
+            "participants": participants,
+            "agree_rate": agree_rate,
+            "change_frames": change_frames,
+            "change_runs": change_runs,
+            "fit_matches": fit_matches,
+            "fit_participants": fit_participants,
+        }
 
     a_latch = {f: rec["latch"] for f, rec in a_state.items()}
     b_latch = {f: rec["latch"] for f, rec in b_state.items()}
-    latch_offset, _latch_runs, latch_matches, latch_participants = _fit(
-        a_latch, b_latch, max_lag
+    latch_missing = any(v is None for v in a_latch.values()) or any(
+        v is None for v in b_latch.values()
     )
-    assert_latch_gap(state_offset, latch_offset, leg)
-    latch_scored = _score(a_latch, b_latch, max_lag)
-    latch_all = _allframe_score(a_latch, b_latch, max_lag)
-    if len(latch_all["winners"]) != 1:
-        raise AlignmentError("ambiguous latch offset (all-frame)", "insufficient")
-    latch_winner = latch_all["winners"][0]
-    if latch_winner["offset"] != latch_offset:
+    if require_latch and latch_missing:
         raise AlignmentError(
-            "latch offset disagreement: change-frame "
-            f"{latch_offset:+d} vs all-frame {latch_winner['offset']:+d}",
-            "insufficient",
+            f"latch unavailable for {leg}: row missing $0014", "latch-unavailable"
         )
-    latch_agree = (
-        round(latch_winner["matches"] / latch_winner["participants"], 6)
-        if latch_winner["participants"]
-        else None
-    )
+
+    latch_offset: int | None = None
+    latch_gap_anomaly = False
+    latch_error: str | None = None
+    latch_residuals: list[int] | None = None
+    latch_info = make_latch_info()
+
+    if latch_missing:
+        latch_error = f"latch unavailable for {leg}: row missing $0014"
+    else:
+        latch_scored = _score(a_latch, b_latch, max_lag)
+        try:
+            (
+                latch_offset,
+                _latch_runs,
+                latch_matches,
+                latch_participants,
+            ) = _fit(a_latch, b_latch, max_lag)
+        except ValueError as exc:
+            latch_error = str(exc)
+            latch_info = make_latch_info(
+                change_frames=latch_scored["change_frames"],
+                change_runs=latch_scored["change_runs"],
+            )
+        else:
+            latch_all = _allframe_score(a_latch, b_latch, max_lag)
+            if len(latch_all["winners"]) != 1:
+                latch_error = "ambiguous latch offset (all-frame)"
+                latch_info = make_latch_info(
+                    change_frames=latch_scored["change_frames"],
+                    change_runs=latch_scored["change_runs"],
+                    fit_matches=latch_matches,
+                    fit_participants=latch_participants,
+                )
+                latch_offset = None
+            else:
+                latch_winner = latch_all["winners"][0]
+                if latch_winner["offset"] != latch_offset:
+                    latch_error = (
+                        "latch offset disagreement: change-frame "
+                        f"{latch_offset:+d} vs all-frame "
+                        f"{latch_winner['offset']:+d}"
+                    )
+                    latch_info = make_latch_info(
+                        change_frames=latch_scored["change_frames"],
+                        change_runs=latch_scored["change_runs"],
+                        fit_matches=latch_matches,
+                        fit_participants=latch_participants,
+                    )
+                    latch_offset = None
+                else:
+                    try:
+                        assert_latch_gap(state_offset, latch_offset, leg)
+                    except AlignmentError as exc:
+                        latch_gap_anomaly = True
+                        latch_error = str(exc)
+                        latch_info = make_latch_info(
+                            change_frames=latch_scored["change_frames"],
+                            change_runs=latch_scored["change_runs"],
+                            fit_matches=latch_matches,
+                            fit_participants=latch_participants,
+                        )
+                        latch_offset = None
+                    else:
+                        latch_agree = (
+                            round(
+                                latch_winner["matches"]
+                                / latch_winner["participants"],
+                                6,
+                            )
+                            if latch_winner["participants"]
+                            else None
+                        )
+                        latch_info = make_latch_info(
+                            offset=latch_offset,
+                            matches=latch_winner["matches"],
+                            participants=latch_winner["participants"],
+                            agree_rate=latch_agree,
+                            change_frames=latch_scored["change_frames"],
+                            change_runs=latch_scored["change_runs"],
+                            fit_matches=latch_matches,
+                            fit_participants=latch_participants,
+                        )
+                        latch_residuals = [
+                            f
+                            for f in a_state
+                            if (f + latch_offset) in b_state
+                            and a_state[f]["latch"]
+                            != b_state[f + latch_offset]["latch"]
+                        ]
 
     joint_participants = [
         f for f in a_state if (f + state_offset) in b_state
@@ -566,36 +734,14 @@ def resolve_leg(
         else None,
     }
 
-    latch_residuals = [
-        f
-        for f in a_state
-        if (f + latch_offset) in b_state
-        and a_state[f]["latch"] != b_state[f + latch_offset]["latch"]
-    ]
-    state_residuals = {
-        field: [
-            f
-            for f in a_state
-            if (f + state_offset) in b_state
-            and a_state[f][field] != b_state[f + state_offset][field]
-        ]
-        for field in STATE_FIELDS
-    }
-
     return {
         "state_offset": state_offset,
         "latch_offset": latch_offset,
+        "latch_gap_anomaly": latch_gap_anomaly,
+        "latch_missing": latch_missing,
+        "latch_error": latch_error,
         "per_field": per_field,
-        "latch": {
-            "offset": latch_offset,
-            "matches": latch_winner["matches"],
-            "participants": latch_winner["participants"],
-            "agree_rate": latch_agree,
-            "change_frames": latch_scored["change_frames"],
-            "change_runs": latch_scored["change_runs"],
-            "fit_matches": latch_matches,
-            "fit_participants": latch_participants,
-        },
+        "latch": latch_info,
         "state_joint": state_joint,
         "residuals": {"latch": latch_residuals, "state": state_residuals},
     }
@@ -686,7 +832,9 @@ def main(argv: list[str] | None = None) -> int:
     failures: dict[str, tuple[str, str]] = {}
     for leg, a_state in (("biz", a_biz), ("rust", a_rust)):
         try:
-            resolved[leg] = resolve_leg(leg, a_state, b_mesen)
+            resolved[leg] = resolve_leg(
+                leg, a_state, b_mesen, require_latch=False
+            )
         except AlignmentError as exc:
             failures[leg] = (str(exc), exc.verdict)
             print(f"FAIL {leg}->mesen: {exc}", file=sys.stderr)
@@ -695,13 +843,23 @@ def main(argv: list[str] | None = None) -> int:
             print(f"FAIL {leg}->mesen: {exc}", file=sys.stderr)
         else:
             result = resolved[leg]
+            latch_offset = result["latch_offset"]
+            latch_offset_text = (
+                f"{latch_offset:+d}" if latch_offset is not None else "None"
+            )
+            latch = result["latch"]
+            latch_agree_text = (
+                f"{latch['matches']}/{latch['participants']}"
+                if latch["matches"] is not None
+                and latch["participants"] is not None
+                else "None"
+            )
             print(
                 f"OK {leg}->mesen: state_offset={result['state_offset']:+d} "
-                f"latch_offset={result['latch_offset']:+d} "
+                f"latch_offset={latch_offset_text} "
                 f"state_agree={result['per_field']['status']['matches']}/"
                 f"{result['per_field']['status']['participants']} "
-                f"latch_agree={result['latch']['matches']}/"
-                f"{result['latch']['participants']}",
+                f"latch_agree={latch_agree_text}",
                 file=sys.stderr,
             )
 
@@ -750,16 +908,82 @@ def main(argv: list[str] | None = None) -> int:
             residuals[leg] = resolved[leg]["residuals"]["latch"]
             residuals["state"][leg] = resolved[leg]["residuals"]["state"]
 
-    verdicts = {verdict for _message, verdict in failures.values()}
-    if failures:
-        if "latch-state-gap-anomaly" in verdicts:
-            verdict = "latch-state-gap-anomaly"
-        elif "field-disagreement" in verdicts:
-            verdict = "field-disagreement"
-        else:
-            verdict = "insufficient"
+    latch_gap_anomaly = any(
+        result["latch_gap_anomaly"] for result in resolved.values()
+    )
+    latch_missing = any(result["latch_missing"] for result in resolved.values())
+    latch_errors = {
+        leg: result["latch_error"]
+        for leg, result in resolved.items()
+        if result["latch_error"] is not None
+    }
+
+    state_verdicts = {verdict for _message, verdict in failures.values()}
+    if "ambiguous-offset" in state_verdicts:
+        verdict = "ambiguous-offset"
+    elif "field-disagreement" in state_verdicts:
+        verdict = "field-disagreement"
+    elif state_verdicts:
+        verdict = "insufficient"
+    elif latch_gap_anomaly:
+        verdict = "latch-state-gap-anomaly"
+    elif latch_missing or latch_errors:
+        verdict = "latch-unavailable"
     else:
         verdict = "aligned"
+
+    denominators = {
+        "anchors": {
+            "basis": "change_frames",
+            "description": (
+                "$0014 变化帧口径：a 侧 f 与 f-1 比较；change_frames 为裸变化帧数，"
+                "change_runs 为最大连续段数"
+            ),
+            "by_leg": {
+                leg: {
+                    "change_frames": result["latch"]["change_frames"],
+                    "change_runs": result["latch"]["change_runs"],
+                }
+                for leg, result in resolved.items()
+            },
+        },
+        "per_field": {
+            "basis": "all_frames",
+            "description": (
+                "状态面 status/room 全帧口径：每个 a 侧可比帧计一次一致/不一致；"
+                "participants 是该 offset 下可映射到 b 的帧数"
+            ),
+            "by_leg": {
+                leg: {
+                    field: {
+                        "matches": result["per_field"][field]["matches"],
+                        "participants": result["per_field"][field]["participants"],
+                    }
+                    for field in STATE_FIELDS
+                }
+                for leg, result in resolved.items()
+            },
+        },
+        "residuals": {
+            "basis": "all_frames",
+            "description": (
+                "residuals[leg] 是锁存面全帧残差（latch_mismatch/latch_participants）；"
+                "residuals.state[leg][field] 是状态面全帧残差"
+            ),
+            "by_leg": {
+                leg: {
+                    "latch_mismatch": (
+                        len(result["residuals"]["latch"])
+                        if result["residuals"]["latch"] is not None
+                        else None
+                    ),
+                    "latch_participants": result["latch"]["participants"],
+                    "state_participants": result["state_joint"]["participants"],
+                }
+                for leg, result in resolved.items()
+            },
+        },
+    }
 
     result = {
         "window": [args.start, effective_end],
@@ -768,11 +992,15 @@ def main(argv: list[str] | None = None) -> int:
         "anchors": anchors,
         "offsets": offsets,
         "latch_offsets": latch_offsets,
+        "latch_gap_anomaly": latch_gap_anomaly,
+        "latch_missing": latch_missing,
+        "latch_errors": latch_errors,
         "per_field": per_field,
         "agree_rate": agree_rate,
         "state_joint_agree_rate": state_joint_agree_rate,
         "latch_agree_rate": latch_agree_rate,
         "residuals": residuals,
+        "denominators": denominators,
         "provenance": {
             leg: _provenance(
                 str(meta[leg]["path"]),

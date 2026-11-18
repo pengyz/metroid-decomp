@@ -68,6 +68,14 @@
   corroboration，不得单独产出整数帧偏移。
 - `change_frames` 与 `change_runs` 双计数；`change_runs < 3` 视为不可对齐。`offsets` 只用于状态面，
   `$0014` 只用于 `latch_offsets`。
+- 锁存面是**佐证面，不许一票否决状态面**：`latch != state + 1` 时仍保留 `offsets`/`per_field`，
+  只把 `latch_offset` 置 null、`latch_gap_anomaly=true`，verdict 仍可报
+  `latch-state-gap-anomaly` 并退出 1；Mesen2 行缺 `Joy1Latch` 时 `load_state` 的 `latch` 为 null
+  （`load_latch` 仍 fail-loud），CLI 保留状态面并报 `latch-unavailable`。
+- 状态面字段一致率并列时报 `ambiguous-offset`；`status`/`room` 各自最优 offset 不一致才是
+  `field-disagreement`。
+- JSON 的 `denominators` 小节显式记录三种口径：`anchors` = 变化帧（`change_frames`/`change_runs`），
+  `per_field` = 全帧，`residuals` = 全帧（锁存残差 biz 10/1179、rust 6/1166）。
 - 事故登记：2026-11-18 Task 1 首次交付把锁存面 +2/+1 写进 `offsets`，独立复核判 reject（P0）。
   代价是 biz 多 8 个、rust 多 53 个失配帧；Task 2 的 phase/value 分类会被假相位淹掉。本节即更正。
 

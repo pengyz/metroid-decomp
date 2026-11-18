@@ -12,7 +12,15 @@ import json
 
 import pytest
 
-from tools.movie_ref.align_legs import align, load_latch, load_state, resolve_leg
+from tools.movie_ref.align_legs import (
+    AlignmentError,
+    _allframe_score,
+    align,
+    load_latch,
+    load_state,
+    main,
+    resolve_leg,
+)
 
 
 def test_align_recovers_known_offset():
@@ -184,7 +192,170 @@ def test_resolve_leg_rejects_field_disagreement():
         resolve_leg("biz", a, b)
 
 
-def test_resolve_leg_rejects_latch_state_gap():
+def test_resolve_leg_keeps_state_on_latch_gap():
+    # 锁存面 gap=0 时不许一票否决状态面：状态结果必须保留，latch_offset=None。
     a, b = _pulse_pair(state_offset=1, latch_offset=1)
-    with pytest.raises(ValueError, match="latch-state gap"):
+    got = resolve_leg("biz", a, b)
+    assert got["state_offset"] == 1
+    assert got["latch_offset"] is None
+    assert got["latch_gap_anomaly"] is True
+    assert got["per_field"]["status"]["offset"] == 1
+    assert got["per_field"]["room"]["offset"] == 1
+    assert got["latch"]["change_frames"] == 8
+
+
+def test_resolve_leg_reports_ambiguous_offset():
+    # 周期 4 的满周期状态：+1 与 -3 一致率并列，必须报 ambiguous-offset。
+    a = {
+        f: {
+            "status": 0x10 if f % 4 == 0 else 0,
+            "room": 0x20 if f % 4 == 0 else 0,
+            "latch": 0,
+        }
+        for f in range(20, 81)
+    }
+    b = {
+        f: {
+            "status": 0x10 if f % 4 == 1 else 0,
+            "room": 0x20 if f % 4 == 1 else 0,
+            "latch": 0,
+        }
+        for f in range(16, 85)
+    }
+    with pytest.raises(AlignmentError, match="ambiguous offset") as excinfo:
         resolve_leg("biz", a, b)
+    assert excinfo.value.verdict == "ambiguous-offset"
+
+
+def test_allframe_score_ranks_by_agreement_rate():
+    # 常量数据：offset 0 是 11/11，+1 是 10/10；原始 matches 会只选 0，一致率口径两者并列。
+    a = {f: 0 for f in range(20, 31)}
+    b = {f: 0 for f in range(20, 31)}
+    scored = _allframe_score(a, b, max_lag=4)
+    winners = {row["offset"] for row in scored["winners"]}
+    assert 0 in winners
+    assert 1 in winners
+
+
+def test_load_state_mesen_missing_joy1latch_keeps_state(tmp_path):
+    low = bytearray(0x100)
+    high = bytearray(0x700)
+    low[0x5A] = 0x12
+    low[0x14] = 0x02
+    high[0x300 - 0x100] = 0x34
+    p = tmp_path / "mesen-nolatch.jsonl"
+    p.write_text(
+        json.dumps(
+            {"f": 1, "w": {"0000-00ff": low.hex(), "0100-07ff": high.hex()}}
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    assert load_state(str(p), "mesen") == {
+        1: {"status": 0x34, "room": 0x12, "latch": None}
+    }
+    # 真正读锁存面时仍然必须 fail-loud。
+    with pytest.raises(ValueError, match="Joy1Latch"):
+        load_latch(str(p), "mesen")
+
+
+def _write_cli_traces(
+    tmp_path, state_offset=1, latch_offset=2, include_joy1latch=True
+):
+    """写三腿最小轨迹；a 侧 biz/rust，b 侧 mesen 按给定偏移平移。"""
+    frames = range(20, 60)
+    pulses = (25, 33, 41, 50)
+    a = {f: {"status": 0, "room": 0, "latch": 0} for f in frames}
+    b = {f: {"status": 0, "room": 0, "latch": 0} for f in range(15, 65)}
+    for i, p in enumerate(pulses):
+        a[p] = {"status": 0x10 + i, "room": 0x20 + i, "latch": 0x30 + i}
+    for i, p in enumerate(pulses):
+        b[p + state_offset]["status"] = a[p]["status"]
+        b[p + state_offset]["room"] = a[p]["room"]
+        b[p + latch_offset]["latch"] = a[p]["latch"]
+
+    biz: list[dict] = []
+    mesen: list[dict] = []
+    rust: list[dict] = []
+    for f in frames:
+        rec = a[f]
+        biz.append(
+            {
+                "f": f,
+                "status": rec["status"],
+                "room": rec["room"],
+                "joy1_latch": rec["latch"],
+            }
+        )
+        zp = bytearray(0x100)
+        iram = bytearray(0x700)
+        zp[0x5A] = rec["room"]
+        zp[0x14] = rec["latch"]
+        iram[0x300 - 0x100] = rec["status"]
+        rust.append({"f": f, "w": {"zp": zp.hex(), "iram": iram.hex()}})
+    for f in range(15, 65):
+        rec = b[f]
+        low = bytearray(0x100)
+        high = bytearray(0x700)
+        low[0x5A] = rec["room"]
+        low[0x14] = rec["latch"]
+        high[0x300 - 0x100] = rec["status"]
+        w = {"0000-00ff": low.hex(), "0100-07ff": high.hex()}
+        if include_joy1latch:
+            w["Joy1Latch"] = rec["latch"]
+        mesen.append({"f": f, "w": w})
+
+    paths: dict[str, object] = {}
+    for name, rows in (("biz", biz), ("mesen", mesen), ("rust", rust)):
+        p = tmp_path / f"{name}.jsonl"
+        p.write_text(
+            "\n".join(json.dumps(row) for row in rows) + "\n", encoding="utf-8"
+        )
+        paths[name] = p
+    return paths
+
+
+def _run_cli(tmp_path, paths, out_name="leg_offsets.json"):
+    out = tmp_path / out_name
+    rc = main(
+        [
+            "--bizhawk",
+            str(paths["biz"]),
+            "--mesen",
+            str(paths["mesen"]),
+            "--rust",
+            str(paths["rust"]),
+            "--out",
+            str(out),
+            "--start",
+            "20",
+            "--end",
+            "60",
+        ]
+    )
+    return rc, json.loads(out.read_text(encoding="utf-8"))
+
+
+def test_cli_keeps_state_on_latch_gap(tmp_path):
+    paths = _write_cli_traces(tmp_path, state_offset=1, latch_offset=1)
+    rc, got = _run_cli(tmp_path, paths)
+    assert rc == 1
+    assert got["offsets"]["biz_to_mesen"] == 1
+    assert got["per_field"]["biz"]["status"]["offset"] == 1
+    assert got["latch_offsets"]["biz_to_mesen"] is None
+    assert got["latch_gap_anomaly"] is True
+    assert got["verdict"] == "latch-state-gap-anomaly"
+    assert {"anchors", "per_field", "residuals"} <= set(got["denominators"])
+
+
+def test_cli_keeps_state_when_mesen_latch_missing(tmp_path):
+    paths = _write_cli_traces(
+        tmp_path, state_offset=1, latch_offset=2, include_joy1latch=False
+    )
+    rc, got = _run_cli(tmp_path, paths)
+    assert rc == 1
+    assert got["offsets"]["biz_to_mesen"] == 1
+    assert got["per_field"]["biz"]["status"]["offset"] == 1
+    assert got["latch_offsets"]["biz_to_mesen"] is None
+    assert got["latch_missing"] is True
+    assert got["verdict"] == "latch-unavailable"

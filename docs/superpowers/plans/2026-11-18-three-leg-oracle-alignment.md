@@ -47,9 +47,9 @@
 - Produces (T1):
   - `align(seq_a: dict[int, int], seq_b: dict[int, int], max_lag: int = 4) -> tuple[int, int]` 返回 `(offset, changes)`，语义 `a[f] == b[f + offset]`；`changes` 为 a 侧变化帧的最大连续段数（与 Step 1 的 `(1, 4)` 一致）；裸变化帧数单列 `change_frames`，段数单列 `change_runs`；`change_runs < 3` 时抛 `ValueError("insufficient anchor changes")`。
   - `load_latch(path: str, leg: str) -> dict[int, int]`，`leg ∈ {"biz","mesen","rust"}`，返回 `frame -> $0014` 值。
-  - `load_state(path: str, leg: str) -> dict[int, dict[str, int]]`，返回 `frame -> {"status","room","latch"}`；缺键/长度不符一律 fail-loud。
+  - `load_state(path: str, leg: str) -> dict[int, dict[str, int | None]]`，返回 `frame -> {"status","room","latch"}`；状态字节缺键/长度不符 fail-loud，`$0014` 缺失记 `None`（不阻断状态面；`load_latch` 仍 fail-loud）。
   - CLI：`python3 tools/movie_ref/align_legs.py --bizhawk P --mesen P --rust P --out data/status/leg_offsets.json [--start 20] [--end 30000]`，输出 JSON：
-    `{"window":[start,effective_end],"effective_end":N,"fit_window":[start,N],"anchors":{"addr":"$0014","change_frames":N,"change_runs":N,"by_leg":{...}},"offsets":{"biz_to_mesen":int,"rust_to_mesen":int},"latch_offsets":{...},"per_field":{...},"agree_rate":{"biz":float,"rust":float},"state_joint_agree_rate":{...},"latch_agree_rate":{...},"residuals":{...},"provenance":{...},"verdict":"aligned"|"insufficient"|"field-disagreement"|"latch-state-gap-anomaly"}`（offsets 为状态面共识；latch_offsets 单列 $0014，恒等于状态面 +1）。
+    `{"window":[start,effective_end],"effective_end":N,"fit_window":[start,N],"anchors":{"addr":"$0014","change_frames":N,"change_runs":N,"by_leg":{...}},"offsets":{"biz_to_mesen":int,"rust_to_mesen":int},"latch_offsets":{...},"latch_gap_anomaly":bool,"latch_missing":bool,"per_field":{...},"agree_rate":{"biz":float,"rust":float},"state_joint_agree_rate":{...},"latch_agree_rate":{...},"residuals":{...},"denominators":{...},"provenance":{...},"verdict":"aligned"|"insufficient"|"ambiguous-offset"|"field-disagreement"|"latch-state-gap-anomaly"|"latch-unavailable"}`（offsets 为状态面共识；latch_offsets 单列 $0014，恒等于状态面 +1；锁存面异常时保留状态面、latch_offset=null）。
 
 - [ ] **Step 1 (T1): 写失败测试**
 
@@ -77,12 +77,12 @@ Expected: FAIL — `ModuleNotFoundError: tools.movie_ref.align_legs`
 
 - [ ] **Step 3 (T1): 实现**
 
-在 `tools/movie_ref/align_legs.py` 里实现 `align`：只在"值变化帧"集合上比较（`a[f] != a[f-1]` 的 f），对每个 `offset ∈ [-max_lag, max_lag]` 计一致数，取最大且唯一；`change_frames`/`change_runs` 双计数，`change_runs < 3` 或裸帧不足是多解/不足的拒绝条件。状态面 CLI 另用**全帧**一致数（status/room 大部分帧不变，只取变化帧样本太少）：`offsets` 取 status/room 共识，`$0014` 单列 `latch_offsets` 并断言 latch = state + 1。再实现 `load_latch`/`load_state` 与 CLI（`ram_map` 具名常量只用于文档字符串，工具侧硬编码 `$0014`/`$005A`/`$0300` 并注明来源）。
+在 `tools/movie_ref/align_legs.py` 里实现 `align`：只在"值变化帧"集合上比较（`a[f] != a[f-1]` 的 f），对每个 `offset ∈ [-max_lag, max_lag]` 计一致数，取最大且唯一；`change_frames`/`change_runs` 双计数，`change_runs < 3` 或裸帧不足是多解/不足的拒绝条件。状态面 CLI 另用**全帧一致率**（status/room 大部分帧不变，只取变化帧样本太少）：`offsets` 取 status/room 共识，`$0014` 单列 `latch_offsets` 并断言 latch = state + 1；gap 异常时保留状态面、只把 latch_offset 置 null。再实现 `load_latch`/`load_state` 与 CLI（`ram_map` 具名常量只用于文档字符串，工具侧硬编码 `$0014`/`$005A`/`$0300` 并注明来源）。
 
 - [ ] **Step 4 (T1): 跑测试确认绿**
 
 Run: `python3 -m pytest tools/tests/test_align_legs.py -v`
-Expected: PASS（2 passed）
+Expected: PASS（计划原 2 条 + 状态面/锁存面/多解/缺键回归，当前 18 passed）
 
 - [ ] **Step 5 (T1): 用真实轨迹生成偏移表**
 

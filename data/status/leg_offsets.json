@@ -31,6 +31,9 @@
     "biz_to_mesen": 2,
     "rust_to_mesen": 1
   },
+  "latch_gap_anomaly": false,
+  "latch_missing": false,
+  "latch_errors": {},
   "per_field": {
     "biz": {
       "status": {
@@ -240,6 +243,64 @@
           950,
           951
         ]
+      }
+    }
+  },
+  "denominators": {
+    "anchors": {
+      "basis": "change_frames",
+      "description": "$0014 变化帧口径：a 侧 f 与 f-1 比较；change_frames 为裸变化帧数，change_runs 为最大连续段数",
+      "by_leg": {
+        "biz": {
+          "change_frames": 97,
+          "change_runs": 13
+        },
+        "rust": {
+          "change_frames": 96,
+          "change_runs": 13
+        }
+      }
+    },
+    "per_field": {
+      "basis": "all_frames",
+      "description": "状态面 status/room 全帧口径：每个 a 侧可比帧计一次一致/不一致；participants 是该 offset 下可映射到 b 的帧数",
+      "by_leg": {
+        "biz": {
+          "status": {
+            "matches": 1096,
+            "participants": 1180
+          },
+          "room": {
+            "matches": 1158,
+            "participants": 1180
+          }
+        },
+        "rust": {
+          "status": {
+            "matches": 1154,
+            "participants": 1166
+          },
+          "room": {
+            "matches": 1158,
+            "participants": 1166
+          }
+        }
+      }
+    },
+    "residuals": {
+      "basis": "all_frames",
+      "description": "residuals[leg] 是锁存面全帧残差（latch_mismatch/latch_participants）；residuals.state[leg][field] 是状态面全帧残差",
+      "by_leg": {
+        "biz": {
+          "latch_mismatch": 10,
+          "latch_participants": 1179,
+          "state_participants": 1180
+        },
+        "rust": {
+          "latch_mismatch": 6,
+          "latch_participants": 1166,
+          "state_participants": 1166
+        }
       }
     }
   },
