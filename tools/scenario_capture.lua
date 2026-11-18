@@ -1033,11 +1033,18 @@ emu.addEventCallback(function()
   end
   -- 【2026-10-19 DSL 冲突消解】互斥键表（lead 裁定）：LEFT/RIGHT、UP/DOWN 同帧双真
   -- =后写覆盖（btnOrder 序——确定性）；同键多源 OR 保持（原语义不动）。
-  if btn.left and btn.right then
-    if (btnOrder.left or 0) < (btnOrder.right or 0) then btn.left = nil else btn.right = nil end
+  -- 【2026-11-19 更正】仅当两侧都来自有序源（nav/trigger 填 btnOrder）才消解。
+  -- schedule 原始位（录像/inputlog 的 p1 字节）不填 btnOrder，此前两处 btnOrder 皆 nil
+  -- ⇒ (nil or 0) < (nil or 0) 恒假 ⇒ 走 else 分支恒删 RIGHT / 恒删 DOWN：
+  -- 录像里 R+L 同按帧被改写成"仅 L"（0x03→0x02、0x43→0x42），致 SamusDir 反向、
+  -- $0311 亚像素相位漂移、$0300 写组整体错一帧（A 级证据见
+  -- docs/findings/input-conflict-resolution-2026-11-19.md）。真机把两键一起交给 ROM，
+  -- 由 ROM 自己的 BitScan（07:E1E1，最低位优先）决定，工具不得预先消解。
+  if btn.left and btn.right and btnOrder.left and btnOrder.right then
+    if btnOrder.left < btnOrder.right then btn.left = nil else btn.right = nil end
   end
-  if btn.up and btn.down then
-    if (btnOrder.up or 0) < (btnOrder.down or 0) then btn.up = nil else btn.down = nil end
+  if btn.up and btn.down and btnOrder.up and btnOrder.down then
+    if btnOrder.up < btnOrder.down then btn.up = nil else btn.down = nil end
   end
   local okIn, errIn = pcall(emu.setInput, btn, 0)
   if not okIn and not inputWarned then
