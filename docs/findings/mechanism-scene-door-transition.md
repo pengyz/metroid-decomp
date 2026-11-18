@@ -36,13 +36,22 @@ Rust 侧逐帧同值（482/483 属 `incomparable` 的 16 帧集合——那是 R
   `incomparable=16`、`informative=true`、`distinct{status:8, room:5}`。
   即 **整个窗口内两侧 `status`/`room` 逐帧相同**，不是只对上了采集点。
 
-## 4. 负对照（同窗口、零输入）
+## 4. 负对照（一条强、一条弱，都记账）
 
-`cases/case-mechanism-door-negative.txt` 不给任何输入 ⇒ `RoomNumber` 全程常量，
-`mechanism_scene.py` 报 `insufficient anchor changes (mesen=600 rust=596 changes=0/0)` 无法对齐。
-这正是对照要的结果：**房间写点不是自主/环境触发，而是输入驱动**。
+**强对照（机制级，主证据）**：`crates/game-core/src/samus/physics.rs` 的
+`samus_enter_door_not_triggered_without_door_data`——`DoorEntryStatus==0` 但
+`SamusDoorData($58)==0` 时全态不动（不置 `$56|=$80`、不改 status/`$59`/`$57`、不覆写 `$58`）。
+asm 依据 `SamusEnterDoor ; $8B13`（`areas_common.asm:1322-1325`）：
+`lda DoorEntryStatus / bne @RTS` 之后紧跟 `ldy SamusDoorData / beq @RTS` ⇒
+**「站在门格上」本身不足以触发门过渡**，必须由碰撞检测写 `$58`。这条证明房间写点是
+门事件驱动的，而不是「Samus 在房间里走动」的副产品。
 
-这条对照证明的是"输入驱动"，**不是**"路线唯一"——要证明后者需要第二条进房路线（未做）。
+**弱对照（场景级，辅助）**：`cases/case-mechanism-door-negative.txt` 同窗口零输入 ⇒
+`RoomNumber` 全程常量、三采点 `room=00 status=00`（机器还没离开标题屏），
+`mechanism_scene.py` 报 `insufficient anchor changes (changes=0/0)`。
+它只证明「没有输入就什么都不发生」，**不构成机制特异性证据**——真正承重的是上面那条单元级对照。
+
+两者都不证明"路线唯一"（另一条进房路线未做），也不证明其它门类型（竖门/蓝门）同构。
 
 ## 5. 局限（如实记账）
 

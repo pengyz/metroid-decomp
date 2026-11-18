@@ -625,6 +625,35 @@ mod tests {
         assert_eq!(m.read_ram(SAMUS_STATUS), 2, "status 不变");
     }
 
+    /// 【门过渡机制·负对照】`SamusDoorData($58)==0` ⇒ 全态不动。
+    ///
+    /// asm `SamusEnterDoor ; $8B13`（`areas_common.asm:1317-1325`）：
+    /// `lda DoorEntryStatus / bne @RTS` 之后紧跟 `ldy SamusDoorData / beq @RTS`
+    /// ——**「站在门格上」本身不足以触发门过渡**，必须由碰撞检测用门数据写 `$58`。
+    /// 这条正是 `cases/case-mechanism-door-transition` 的机制级负对照：它证明
+    /// 房间写点不是「Samus 在房间里晃」的副产品，而是门事件驱动的（比「零输入不动」
+    /// 那种弱对照强——弱对照只证明输入驱动）。
+    #[test]
+    fn samus_enter_door_not_triggered_without_door_data() {
+        use crate::ram_map::*;
+        let mut m = Manager::default();
+        m.write_ram(DOOR_ENTRY_STATUS, 0); // 门检开着
+        m.write_ram(SAMUS_DOOR_DATA, 0); // 但没有门数据（未与门碰撞）
+        m.write_ram(SAMUS_STATUS, 2);
+        m.write_ram(0x0059, 0x00);
+        m.write_ram(0x0057, 0x00);
+        samus_enter_door(&mut m);
+        assert_eq!(m.read_ram(DOOR_ENTRY_STATUS), 0, "EntryStatus 不得 |= $80");
+        assert_eq!(m.read_ram(SAMUS_STATUS), 2, "status 不动");
+        assert_eq!(m.read_ram(0x0059), 0, "DoorDelay 不动");
+        assert_eq!(m.read_ram(0x0057), 0, "DoorScrollStatus 不动");
+        assert_eq!(
+            m.read_ram(SAMUS_DOOR_DATA),
+            0,
+            "门数据不得被写成 (0<<4)|status"
+        );
+    }
+
     /// 【goal-r16 碰撞修·红测】判点 X 环绕（x<DistToCenterX，借位）⇒ asm E946：
     /// `lda PositionX/sec/sbc DistToCenterX` 后 `txa/adc #$00/beq RTS`——环绕时
     /// `inc Temp0B_PositionHi`（横滚）⇒ 查撞点读**另一张名表**。旧形仍读当前表⇒
