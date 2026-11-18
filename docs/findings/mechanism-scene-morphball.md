@@ -103,13 +103,16 @@ fixture 注入与状态的因果对应，而不是 runner 的常量窗检查。
 y=155..176`，OAM 槽 8..13；emu `(y,x,tile,attr)=(160,143,$14,$20)`，rust `(152,139,$69,$60)`）。
 与 `fixture` 无关（删 fixture 变体 146 px，同区域同形态）。**状态面 status/room 两侧相同**。
 
-**定位过程（全 A 级）**：
+**定位过程（A 级锚点 + 一处 B 级线索）**：修前/修后的四点对照见
+`data/status/mechanism_scene_morphball_prefix.json`，其同目录 `mechanism_scene_morphball_prefix_ram/`
+存着节点四份**修前 rust `ram.hex`**（2272 B，可直接逐字节复核，不必改代码）。
 
 1. 起点：`f570` 像素仍 0 px；`f588/600` 恒定 **145 px**。`f571→f572` 的逐帧起点来自一次性
    临时用例扫描（该用例已删）⇒ 此细节按 B 级线索记账，A 级锚点是入库对照档
    `data/status/mechanism_scene_morphball_prefix.json`（修前/修后各三点：476/570/588/600，
    含两腿 `$0300`/`$0303`-`$0306` 原值与复现配方）。
-2. 同帧 RAM 逐字节比（`ram.hex` 全 2048 B）：活跃 Samus 字段只有三处不同 ——
+2. 同帧 RAM 逐字节比（`ram.hex` 共 2272 B = `$0000-$07FF` 2048 B + `$6AF4-$6BD3` 128 B；
+   下文说「活跃 Samus 字段」只在这 5 个字节地址上比）：活跃 Samus 字段只有三处不同 ——
    `$0303`(animFrame) `emu $08 / rust $2B`、`$0305`(animResetIndex) `$07 / $27`、
    `$0306`(animIndex) `$07(→$08) / $28`。字段名锚：`refs/m1disasm/out/M1_NES_NTSC.sym:10265-10268`
    （`00000303 Samus.animFrame` / `00000305 Samus.animResetIndex` / `00000306 Samus.animIndex`）。

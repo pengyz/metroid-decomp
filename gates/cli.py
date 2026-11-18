@@ -1304,6 +1304,14 @@ def l4_touchlist_violations(matrix: dict, sidecar_dir: Path,
         out.append(f"触达清单 total_events={hdr_events} ≠ sidecar 实算 {observed_events}")
     if hdr_unique != len(entries):
         out.append(f"触达清单 unique_addrs={hdr_unique} ≠ entries 条数 {len(entries)}")
+    addrs = [int(str(e["addr"]), 16) for e in entries]
+    if len(set(addrs)) != len(addrs):
+        dup = sorted(a for a in set(addrs) if addrs.count(a) > 1)
+        out.append(f"触达清单有重复 addr 条目: {[f'0x{a:04X}' for a in dup]}"
+                   "（unique_addrs 会被条数掩盖）")
+    # 契约（复核 097733e1 P3）：某 addr 因**合法的**用例变更而不再触发时，本次 run 的 sidecar
+    # 会少掉它，本门按「计数陈旧」判红——这是预期行为，不是误伤。处置方式=在同一 commit 里
+    # 更新台账（把 n_events 改为 0 并写清成因，或删条目），不要放宽判据。
     stale = sorted(a for a in known - observed
                    if any(int(str(e["addr"]), 16) == a and int(e.get("n_events", 0)) > 0
                           for e in entries))

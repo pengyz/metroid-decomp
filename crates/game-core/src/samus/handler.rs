@@ -136,8 +136,13 @@ const OBJ_ANIM_SAMUS_RUN_PNT_UP: u8 = 0x37;
 
 /// SetSamusRunAccel（**asm 内容锚** `: 07:CCB7`——r26）：SamusAccelX←RunAccelerationTbl[x]
 /// （右=$30/左=$D0——$CCC0）。
+/// `RunAccelerationTbl ; 07:CCC0`（`prg7_engine.asm:2851`）= `.byte $30 / $D0`，按 `SamusDir`
+/// 索引（0=右 1=左）。ROM `bank7:CCC0` 实测 `30 D0`。旧形把两值写死成 `if x==0 {0x30} else {0xD0}`，
+/// 与表等价但**没有表可核**——复核 097733e1 的 P3③ 要求断言取自表，故按 asm 落表。
+const RUN_ACCELERATION_TBL: [u8; 2] = [0x30, 0xD0];
+
 fn set_samus_run_accel(mem: &mut Manager, x: u8) {
-    let v = if x == 0 { 0x30u8 } else { 0xD0 };
+    let v = RUN_ACCELERATION_TBL[x as usize & 1];
     mem.samus().set_accel_x(v as i8);
 }
 
@@ -892,8 +897,32 @@ mod tests {
         assert_eq!(
             m.read_ram(ANIM_RESET_INDEX),
             OBJ_ANIM_SAMUS_ROLL,
-            "⇒ animResetIndex←$16"
+            "⇒ animResetIndex←$16（asm :2859）"
         );
+        // asm 后半段（`prg7_engine.asm:3600-3606`）三项一并钉住，否则只测了 1/4 个 Setter。
+        assert_eq!(
+            m.read_ram(ANIM_RESET_INDEX + 1),
+            OBJ_ANIM_SAMUS_RUN_JUMP,
+            "⇒ animIndex←$13（objanim SamusRunJump）"
+        );
+        assert_eq!(m.read_ram(0x0686), 1, "⇒ ScrewAttack0686←1");
+        assert_eq!(m.samus().accel_x(), 0x30, "⇒ SamusAccelX←RunAccelerationTbl[dir=0]");
+        // 左向表项 $D0 只做**表级**断言（`$004D SamusDir` 未 typed，不在本测里写零页）：
+        assert_eq!(RUN_ACCELERATION_TBL, [0x30, 0xD0], "bank7:CCC0 = .byte $30/$D0");
+    }
+
+    /// 表项 3 的第三条分支：有球但**在空中** ⇒ 同样 `Lx030` 回 Stand
+    /// （asm `SetSamusRoll ; 07:D0B5` 的 `lda SamusAccelY / bne Lx030`）。
+    /// 复核 097733e1 P3① 点名：原两条测试只覆盖 gear 位，没覆盖 accelY 这一支。
+    #[test]
+    fn set_samus_roll_in_air_falls_to_stand() {
+        use crate::ram_map::{SAMUS_ACCEL_Y, SAMUS_GEAR, SAMUS_STATUS};
+        let mut m = Manager::default();
+        m.write_wram(SAMUS_GEAR, 0x10); // 有变形球
+        m.write_ram(SAMUS_ACCEL_Y, 0x18); // 空中（下坠加速）
+        m.write_ram(SAMUS_STATUS, 3);
+        set_samus_roll(&mut m);
+        assert_eq!(m.read_ram(SAMUS_STATUS), 0, "accelY≠0 ⇒ Lx030 回 sa_Stand");
     }
 
     /// 表项 3 的另一半：无变形球 ⇒ `Lx030` 回 Stand（旧测原本钉的就是这一支）。
