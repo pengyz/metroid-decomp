@@ -90,11 +90,15 @@ endFrame 1000
 `F4→F5` 后由 `RoomFinished`（`:8687` `lda #$FF / sta RoomNumber`）落 `FF`（该窗口被 `ctwindow`
 截断，`FF` 由帧级 `watch` 在 f952 观测到）。
 
-**关键语义（这是本次最重要的一条）**：`inc RoomNumber` 每帧只执行一次 —— 因为
-`CheckUpdateNameTable`（`:7703` `jsr SetupRoom`，`07:E54A`）每帧调一次 `SetupRoom`，而
+**关键语义**：`CheckUpdateNameTable`（`:7703` `jsr SetupRoom`，`07:E54A`）每帧调一次 `SetupRoom`，
 `AttribTableWrite` 每次调用只推进一格（`and #$0F` → `JumpEngine` 5 表项：
 `ExitSub / WritePPUAttribTbl / ExitSub / WritePPUAttribTbl / RoomFinished`）。
-⇒ `F0..F4` 是**逐帧可观测**的，不是一帧内跑完的黑箱。
+游戏内三处过渡（f482 / f672 / f946 窗口）实测**每帧一格**（§4 读数），故 `F0..F4` 逐帧可观测。
+
+> 【2026-11-18 更正】上一版此处写成「`inc RoomNumber` 每帧只执行一次」，**过强**：boot 段
+> 同一条 `EA19` 在一帧内连推 4 格（上表原文 `f=40` 有 `F0→F1→F2→F3→F4` 共 4 次 `inc`）。
+> 正确表述：**`EA19` 的推进速率随相位变化**——boot（无滚动/无 PPU 等待）一帧多格，
+> 游戏内一帧一格。该差别本身是「核/相位」现象，不是状态机分支。
 
 ### 3.1 帧轴标定（必须写明，否则读数会错位）
 
