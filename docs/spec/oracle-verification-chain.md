@@ -24,8 +24,11 @@
    - A 腿记录器现为「先 `frameadvance` 再读」⇒ 行 f = frame f 的**收工态**（旧版是开工前态，
      两者相差一行，混读会产生系统性的「漂移」假象）。
    - B 腿 watch 为帧边界读；C 腿状态行 = tick `N-1` 收口（`crates/game-core/src/memmap/observe/frame_face.rs` 契约）。
-5. **$0014 输入锁存面不得当帧轴判据**。它的最优点天然比状态面偏一行（两侧同属性），拿它对齐会
-   假阳性（2026-11-18 实测：Rust↔Mesen2 锁存最优 f↔f+1 1147/1153，而状态面最优 f↔f 1133/1153）。
+5. **$0014 输入锁存面不得当帧轴判据**。它的最优点天然比状态面偏一行（两侧同属性）。
+   2026-11-18 实测恒等式：**latch_offset == state_offset + 1**（biz post↔probe：状态 +1 / 锁存 +2；
+   rust↔probe：状态 0 / 锁存 +1；pre↔probe 与 pre↔tmpaxis2 四组配对一致）。跨腿 `offsets` 必须取
+   状态面（status/room 共识）；`$0014` 单列 `latch_offsets`。反例：把 +2/+1 当帧偏移会让 biz 多 8 个、
+   rust 多 53 个失配帧（2026-11-18 Task 1 首次交付，已被复核 reject，见 `docs/rounds/r9-task-1-review.md`）。
 
 ## 3. 噪声地板（A 腿不可用于归因的量化依据）
 
@@ -55,6 +58,18 @@
 1. 换相位**不会**改变任何行为结论（`rust[f]` ↔ `post[f-1]` 与 `rust[f]` ↔ `pre[f]` 同值）；
 2. 但**新旧文件绝不能混读**：混读会凭空产生「整体漂移一行」的假象——这正是 2026-11-18 那次
    「输入 +1」误判的形态。
+
+#### 3.1.1 帧映射规约（2026-11-18 实测）
+
+- `tools/movie_ref/align_legs.py` 的跨腿帧偏移由**状态面**（`$0300` SamusStatus + `$005A` RoomNumber）
+  的**全帧一致数**反解；产物 `data/status/leg_offsets.json`。状态面大部分帧不变，只取变化帧样本太少。
+- `offsets` = 状态面共识；`latch_offsets` = `$0014` 锁存面单列。实测
+  `latch_offset = state_offset + 1`（biz +1/+2，rust 0/+1，四组配对），因此锁存面只作 ±1
+  corroboration，不得单独产出整数帧偏移。
+- `change_frames` 与 `change_runs` 双计数；`change_runs < 3` 视为不可对齐。`offsets` 只用于状态面，
+  `$0014` 只用于 `latch_offsets`。
+- 事故登记：2026-11-18 Task 1 首次交付把锁存面 +2/+1 写进 `offsets`，独立复核判 reject（P0）。
+  代价是 biz 多 8 个、rust 多 53 个失配帧；Task 2 的 phase/value 分类会被假相位淹掉。本节即更正。
 
 ### 3.2 全片一致率只有 6.4%（级联，不是 28295 个缺陷）
 

@@ -4,7 +4,7 @@
 
 **Goal:** 把「A 路线腿(quickerNES) / B 仪器腿(Mesen2) / C 对照腿(Rust)」的逐帧对拍从手工脚本升级成有机械口径、可复跑、带棘轮的三件套工具链。
 
-**Architecture:** 帧映射不再靠"打分最优"猜，而是用 `$0014` 输入锁存这个帧内因果最紧的量做因果锚反解每腿偏移，写进 `data/status/leg_offsets.json`；在此口径下把失配聚合成 episode 并二分类（相位抖动 / 值差），加载窗（`$005A != $FF`）单列不进分母；判据口径写进 `docs/spec/oracle-verification-chain.md` §3.1 作为唯一真相源，覆盖台账加棘轮门防止回退。
+**Architecture:** 帧映射不再靠"打分最优"猜，而是用状态面（`$0300` `SamusStatus` + `$005A` `RoomNumber`）的全帧一致数反解每腿偏移，写进 `data/status/leg_offsets.json`；`$0014` 输入锁存面单列 `latch_offsets`，只作 ±1 自校验（2026-11-18 实测恒等于状态面 +1），不单独产出整数帧偏移；在此口径下把失配聚合成 episode 并二分类（相位抖动 / 值差），加载窗（`$005A != $FF`）单列不进分母；判据口径写进 `docs/spec/oracle-verification-chain.md` §3.1 作为唯一真相源，覆盖台账加棘轮门防止回退。
 
 **Tech Stack:** Python 3（tools/ 侧，无第三方依赖）、Rust（`crates/game-core` 只读消费，不改）、Mesen2 Lua（已有 `tools/scenario_run.py`）、BizHawk/Mono Lua（已有 `tools/movie_ref/run_bizhawk_trace.sh`）、项目门禁 `gates/cli.py`。
 
@@ -13,7 +13,7 @@
 ## Global Constraints
 
 - asm（`refs/m1disasm`）是唯一真相源；任何机制结论必须给 `bank:addr` 锚。
-- 字节地址一律用 `crates/game-core/src/ram_map.rs` 的具名常量，禁止在工具里新造魔法数（`$0014`=`JOY1_LATCH`、`$005A`=`ROOM_NUMBER`）。
+- 字节地址一律用 `crates/game-core/src/ram_map.rs` 的具名常量，禁止在工具里新造魔法数（`$0014`=`JOY1_STATUS`，计划/任务称 `JOY1_LATCH`；`$005A`=`ROOM_NUMBER`；`$0300`=`SAMUS_STATUS`）。
 - 判据不许调松：`--fail-on-mismatch` 之类的判定开关不得为过测而放宽；本计划的工具只做**映射与分类**，不裁定"谁对"。
 - 分歧点之后的帧不计入缺陷（级联不是缺陷）。
 - 跨腿帧号在未报相位的情况下不得直接比较。
@@ -27,7 +27,7 @@
 
 ## Review Focus
 
-- **锁存全不变的长窗口**（沉静关卡、暂停、暗屏）：因果锚没有跳变可对齐，工具必须明确报"无法反解"，而不是退回打分最优。
+- **状态面/锁存全不变的长窗口**（沉静关卡、暂停、暗屏）：状态面与锁存面都没有跳变可对齐，工具必须明确报"无法反解"，而不是退回打分最优。
 - **上电段 f0–f19**：两核 RAM 填充不同（quickerNES `0xFF` vs Rust `0x00`），任何对齐在 f<20 都不可信；窗口下界必须硬约束。
 - **加载窗**（`$005A != $FF`）：房间请求字节在三条腿里推进速度不同，中间值集合都不一样；这类帧必须被排除出分母，且排除后要报剩余分母。
 - **连续两帧以上的多值跳变**（电梯、死亡链）：单点锚定会解出"半帧"，需要连续跳变序列整体拟合。
@@ -40,15 +40,16 @@
 **Files (T1):**
 - Create: `tools/movie_ref/align_legs.py`
 - Test: `tools/tests/test_align_legs.py`
-- Output (gitignored): `data/status/leg_offsets.json`
+- Output: `data/status/leg_offsets.json`（in-repo status artifact，非 gitignore）
 
 **Interfaces (T1):**
-- Consumes: 三腿轨迹 JSONL。BizHawk 行 `{"f","status","room","scrolldir","joy1_latch",...}`；Mesen2 行 `{"f","w":{"Joy1Latch":..}}`；Rust 行 `{"f","w":{"zp":<hex>,"iram":<hex>}}`。
+- Consumes: 三腿轨迹 JSONL。BizHawk 行 `{"f","status","room","scrolldir","joy1_latch",...}`；Mesen2 行 `{"f","w":{"Joy1Latch":..,"0000-00ff":<hex>,"0100-07ff":<hex>}}`（命名键 `SamusStatus`/`RoomNumber` 可选，优先于 range）；Rust 行 `{"f","w":{"zp":<hex>,"iram":<hex>}}`（zp=$0000-$00FF，iram=$0100-$07FF，均扁平 hex）。
 - Produces (T1):
-  - `align(seq_a: dict[int, int], seq_b: dict[int, int], max_lag: int = 4) -> tuple[int, int]` 返回 `(offset, changes)`，语义 `a[f] == b[f + offset]`；`changes` 为参与拟合的跳变次数；`changes < 3` 时抛 `ValueError("insufficient anchor changes")`。
+  - `align(seq_a: dict[int, int], seq_b: dict[int, int], max_lag: int = 4) -> tuple[int, int]` 返回 `(offset, changes)`，语义 `a[f] == b[f + offset]`；`changes` 为 a 侧变化帧的最大连续段数（与 Step 1 的 `(1, 4)` 一致）；裸变化帧数单列 `change_frames`，段数单列 `change_runs`；`change_runs < 3` 时抛 `ValueError("insufficient anchor changes")`。
   - `load_latch(path: str, leg: str) -> dict[int, int]`，`leg ∈ {"biz","mesen","rust"}`，返回 `frame -> $0014` 值。
+  - `load_state(path: str, leg: str) -> dict[int, dict[str, int]]`，返回 `frame -> {"status","room","latch"}`；缺键/长度不符一律 fail-loud。
   - CLI：`python3 tools/movie_ref/align_legs.py --bizhawk P --mesen P --rust P --out data/status/leg_offsets.json [--start 20] [--end 30000]`，输出 JSON：
-    `{"window":[start,end],"anchors":{"addr":"$0014","changes":N},"offsets":{"biz_to_mesen":int,"rust_to_mesen":int},"agree_rate":{"biz":float,"rust":float},"verdict":"aligned"|"insufficient"}`
+    `{"window":[start,effective_end],"effective_end":N,"fit_window":[start,N],"anchors":{"addr":"$0014","change_frames":N,"change_runs":N,"by_leg":{...}},"offsets":{"biz_to_mesen":int,"rust_to_mesen":int},"latch_offsets":{...},"per_field":{...},"agree_rate":{"biz":float,"rust":float},"state_joint_agree_rate":{...},"latch_agree_rate":{...},"residuals":{...},"provenance":{...},"verdict":"aligned"|"insufficient"|"field-disagreement"|"latch-state-gap-anomaly"}`（offsets 为状态面共识；latch_offsets 单列 $0014，恒等于状态面 +1）。
 
 - [ ] **Step 1 (T1): 写失败测试**
 
@@ -76,7 +77,7 @@ Expected: FAIL — `ModuleNotFoundError: tools.movie_ref.align_legs`
 
 - [ ] **Step 3 (T1): 实现**
 
-在 `tools/movie_ref/align_legs.py` 里实现 `align`：只在"值变化帧"集合上比较（`a[f] != a[f-1]` 的 f），对每个 `offset ∈ [-max_lag, max_lag]` 计一致数，取最大且唯一；多解或 `changes < 3` 抛错。再实现 `load_latch` 与 CLI（`ram_map` 具名常量只用于文档字符串，工具侧硬编码 `$0014`/`$005A` 并注明来源）。
+在 `tools/movie_ref/align_legs.py` 里实现 `align`：只在"值变化帧"集合上比较（`a[f] != a[f-1]` 的 f），对每个 `offset ∈ [-max_lag, max_lag]` 计一致数，取最大且唯一；`change_frames`/`change_runs` 双计数，`change_runs < 3` 或裸帧不足是多解/不足的拒绝条件。状态面 CLI 另用**全帧**一致数（status/room 大部分帧不变，只取变化帧样本太少）：`offsets` 取 status/room 共识，`$0014` 单列 `latch_offsets` 并断言 latch = state + 1。再实现 `load_latch`/`load_state` 与 CLI（`ram_map` 具名常量只用于文档字符串，工具侧硬编码 `$0014`/`$005A`/`$0300` 并注明来源）。
 
 - [ ] **Step 4 (T1): 跑测试确认绿**
 
@@ -86,7 +87,7 @@ Expected: PASS（2 passed）
 - [ ] **Step 5 (T1): 用真实轨迹生成偏移表**
 
 Run: `python3 tools/movie_ref/align_legs.py --bizhawk analysis/traces/bizhawk-6725M-post.jsonl --mesen analysis/traces/_probe-axis.frames.jsonl --rust /tmp/rust-states-t2.jsonl --out data/status/leg_offsets.json`
-Expected: 打印 `offsets={"biz_to_mesen":+1|0,"rust_to_mesen":+1|0}` 且 `verdict=aligned`；把实际值与 agree_rate 记入本 task 的 commit body。
+Expected: 打印 `offsets={"biz_to_mesen":+1,"rust_to_mesen":0}` 与 `latch_offsets={"biz_to_mesen":+2,"rust_to_mesen":+1}` 且 `verdict=aligned`；把实际值与 agree_rate 记入本 task 的 commit body。offsets 只用于状态面；锁存面恒比状态面 +1，不得拿 latch_offsets 当帧轴。
 
 - [ ] **Step 6 (T1): 提交**
 
@@ -167,11 +168,11 @@ git commit -F /tmp/msg-task2.txt
 
 **Interfaces (T3):**
 - Consumes: Task 1 的 `data/status/leg_offsets.json` 实测值、Task 2 的 `analysis/traces/episodes.json` 计数。
-- Produces: spec 内新增两条可引用编号规则 `R6`（锁存因果锚定偏移，禁打分最优）与 `R7`（加载窗排除、分母须报剩余量），供后续所有取证引用。
+- Produces: spec 内新增两条可引用编号规则 `R6`（状态面帧映射 + 锁存面 ±1 corroboration，禁打分最优）与 `R7`（加载窗排除、分母须报剩余量），供后续所有取证引用。
 
 - [ ] **Step 1 (T3): 写规则 R6**
 
-在 §3.1 增加：跨腿帧映射由 `tools/movie_ref/align_legs.py` 用 `$0014` 跳变反解，结果存 `data/status/leg_offsets.json`；分辨率 ±1 帧；`changes < 3` 视为不可对齐。
+在 §3.1 增加：跨腿帧映射由 `tools/movie_ref/align_legs.py` 用状态面（`$0300` status + `$005A` room）全帧一致数反解，结果存 `data/status/leg_offsets.json`；`$0014` 锁存面单列 `latch_offsets`，实测恒等于状态面 +1，只作 corroboration；分辨率 ±1 帧；`change_runs < 3` 视为不可对齐。
 
 - [ ] **Step 2 (T3): 写规则 R7**
 

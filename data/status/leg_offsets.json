@@ -1,19 +1,267 @@
 {
   "window": [
     20,
-    30000
+    1200
+  ],
+  "effective_end": 1200,
+  "fit_window": [
+    20,
+    1199
   ],
   "anchors": {
     "addr": "$0014",
-    "changes": 13
+    "change_frames": 97,
+    "change_runs": 13,
+    "by_leg": {
+      "biz": {
+        "change_frames": 97,
+        "change_runs": 13
+      },
+      "rust": {
+        "change_frames": 96,
+        "change_runs": 13
+      }
+    }
   },
   "offsets": {
+    "biz_to_mesen": 1,
+    "rust_to_mesen": 0
+  },
+  "latch_offsets": {
     "biz_to_mesen": 2,
     "rust_to_mesen": 1
   },
+  "per_field": {
+    "biz": {
+      "status": {
+        "offset": 1,
+        "matches": 1096,
+        "participants": 1180,
+        "agree_rate": 0.928814,
+        "change_frames": 11,
+        "change_runs": 8
+      },
+      "room": {
+        "offset": 1,
+        "matches": 1158,
+        "participants": 1180,
+        "agree_rate": 0.981356,
+        "change_frames": 22,
+        "change_runs": 10
+      }
+    },
+    "rust": {
+      "status": {
+        "offset": 0,
+        "matches": 1154,
+        "participants": 1166,
+        "agree_rate": 0.989708,
+        "change_frames": 68,
+        "change_runs": 37
+      },
+      "room": {
+        "offset": 0,
+        "matches": 1158,
+        "participants": 1166,
+        "agree_rate": 0.993139,
+        "change_frames": 9,
+        "change_runs": 3
+      }
+    }
+  },
   "agree_rate": {
-    "biz": 0.927835,
-    "rust": 0.9375
+    "biz": 0.928814,
+    "rust": 0.989708
+  },
+  "state_joint_agree_rate": {
+    "biz": 0.911017,
+    "rust": 0.982847
+  },
+  "latch_agree_rate": {
+    "biz": 0.991518,
+    "rust": 0.994854
+  },
+  "residuals": {
+    "biz": [
+      661,
+      663,
+      665,
+      667,
+      669,
+      671,
+      672,
+      673,
+      1132,
+      1133
+    ],
+    "rust": [
+      662,
+      664,
+      666,
+      668,
+      670,
+      672
+    ],
+    "state": {
+      "biz": {
+        "status": [
+          27,
+          28,
+          951,
+          952,
+          1030,
+          1031,
+          1032,
+          1033,
+          1034,
+          1035,
+          1036,
+          1037,
+          1038,
+          1039,
+          1040,
+          1041,
+          1042,
+          1043,
+          1044,
+          1045,
+          1046,
+          1047,
+          1048,
+          1049,
+          1050,
+          1051,
+          1052,
+          1053,
+          1054,
+          1055,
+          1056,
+          1057,
+          1058,
+          1059,
+          1060,
+          1061,
+          1062,
+          1063,
+          1064,
+          1065,
+          1066,
+          1067,
+          1068,
+          1069,
+          1070,
+          1071,
+          1072,
+          1073,
+          1074,
+          1075,
+          1076,
+          1077,
+          1078,
+          1079,
+          1080,
+          1092,
+          1096,
+          1100,
+          1104,
+          1108,
+          1111,
+          1115,
+          1119,
+          1123,
+          1126,
+          1130,
+          1134,
+          1138,
+          1142,
+          1145,
+          1149,
+          1153,
+          1157,
+          1160,
+          1164,
+          1168,
+          1172,
+          1176,
+          1179,
+          1183,
+          1187,
+          1191,
+          1194,
+          1198
+        ],
+        "room": [
+          23,
+          24,
+          25,
+          26,
+          671,
+          674,
+          675,
+          676,
+          677,
+          943,
+          944,
+          945,
+          946,
+          947,
+          948,
+          949,
+          950,
+          1131,
+          1132,
+          1133,
+          1134,
+          1135
+        ]
+      },
+      "rust": {
+        "status": [
+          1108,
+          1109,
+          1123,
+          1124,
+          1142,
+          1143,
+          1157,
+          1158,
+          1176,
+          1177,
+          1191,
+          1192
+        ],
+        "room": [
+          672,
+          676,
+          677,
+          678,
+          948,
+          949,
+          950,
+          951
+        ]
+      }
+    }
+  },
+  "provenance": {
+    "biz": {
+      "path": "analysis/traces/bizhawk-6725M-post.jsonl",
+      "rows": 28408,
+      "last_f": 28407,
+      "mtime": "2026-11-18T12:14:38+08:00"
+    },
+    "mesen": {
+      "path": "analysis/traces/_probe-axis.frames.jsonl",
+      "rows": 1200,
+      "last_f": 1200,
+      "mtime": "2026-11-18T14:04:44+08:00"
+    },
+    "rust": {
+      "path": "/tmp/rust-states-t2.jsonl",
+      "rows": 1179,
+      "last_f": 1200,
+      "mtime": "2026-11-18T10:40:25+08:00"
+    }
   },
   "verdict": "aligned"
 }
