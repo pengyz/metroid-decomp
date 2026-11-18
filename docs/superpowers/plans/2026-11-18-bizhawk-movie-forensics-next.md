@@ -340,3 +340,15 @@ git commit -m "docs(findings): 跨核心互证 quickerNES↔Mesen2（同输入 f
 - **类型一致性**：字段名全程 `health_lo/health_hi/status/room/scrolldir/joy1_latch`（与 `bizhawk_ref.lua` 输出、`compare_bizhawk_rust.py` 的 `FIELDS`、`frame_face.rs` 契约一致）；帧轴协议全篇唯一。
 - **Review Focus**：5 条各自被钉到 Task 1 Step 3/4（提前结束、半行）、Task 2 Step 2/3（位序第二层）、Task 3 Step 4（写回调漏路径）、Task 1 Step 1（并发）。
 - **比例**：本计划约 250 行，配套 spec（findings 315 行）体量相当；无代码正文转写，只给签名/命令/断言。
+
+## 执行偏差登记（实施方回填，2026-11-18）
+
+- **Task 3 路线改道**：计划假设 `event.onmemorywrite` 可用，需「先探针」；探针结果=**不可用**
+  （quickerNES 不实现内存/执行回调：5 种注册全 ok、120 帧 0 触发；`memory.registerwrite` 为 nil）。
+  ⇒ 写序列改由 Mesen2 `ctwrite` 取证（D3：ROM + Mesen2 执行 = 最终真相），BizHawk 只提供帧边界读数。
+  产物：`docs/findings/room-5a-transition-verdict.md`（commit `0e4ba0bb`）。
+- **新发现（影响 Task 5 前置）**：Mesen2 的 `ctwrite`/`watch` 两套 `f` 轴恒差 14；且 Mesen 与 quickerNES
+  的 boot 相位差 1–2 帧（Mesen `f24 $5A=09` vs BizHawk `f26 $5A=09`）。
+  ⇒ Task 5 必须先做**帧轴标定**（同 inputlog 下取一个共同锚事件对齐），否则会把核心差异读成实现差异。
+- **Task 1/2 被并发 agent 覆盖**：`7895fff6`（§10 全片对拍）、`2b0431e8`（我的 §7 增补）、
+  `6f82cc7f`（§10.3 复核改正）。本计划的 Task 1 实测为等价复现（28408 行 + 末行逐字段一致 + 前缀逐字节相同）。
