@@ -111,7 +111,11 @@ def compare(mesen: Mapping[int, Mapping[str, object]],
                     first_diff = frame
         if bad_row:
             mismatch_frames.append(frame)
-    informative = any(len(values) >= 2 for values in distinct.values())
+    # latch 是帧轴对齐锚，不是被判定字段：若把它计入 distinct，状态面全常量的
+    # 常量窗会因 latch 变化被判 informative，空对空比较又会被放行。
+    informative = any(
+        len(values) >= 2 for field, values in distinct.items() if field != "latch"
+    )
     return {
         "informative": informative,
         "distinct_values": {f: len(v) for f, v in distinct.items()},
@@ -232,18 +236,23 @@ def _load_offsets() -> dict:
         raise ValueError(f"读不到 Task 1 偏移表 {OFFSETS_PATH}: {exc}") from exc
 
 
-def state_offset_from_latch(latch_offset_align: int, offsets_doc: dict) -> int:
+def state_offset_from_latch(latch_offset_align: int, offsets_doc: dict,
+                            leg: str = "rust") -> int:
     """把 align(mesen, rust) 的 latch offset 换成 state offset。
 
     入参口径必须是 ``align(mesen, rust)`` 的返回值（``mesen[f] == rust[f+o]``），
     不是 ``data/status/leg_offsets.json`` 的 ``rust_to_mesen`` 口径；两者符号约定
     相反。函数内用 Task 1 实测 gap 转换，并断言结果等于
-    ``-offsets.rust_to_mesen``，防止两套约定混用。
+    ``-offsets.<leg>_to_mesen``，防止两套约定混用。``leg`` 默认 ``rust``；
+    biz 腿的 align 口径是 ``mesen[f] == biz[f-2]`` 一类反向关系，调用方须显式传
+    ``leg="biz"`` 并自行确认符号，否则本函数会 fail-loud。
     """
-    gap = int(offsets_doc["latch_offsets"]["rust_to_mesen"]) - int(
-        offsets_doc["offsets"]["rust_to_mesen"])
+    if leg not in ("rust", "biz"):
+        raise ValueError(f"未知腿：{leg}（只接受 rust/biz）")
+    gap = int(offsets_doc["latch_offsets"][f"{leg}_to_mesen"]) - int(
+        offsets_doc["offsets"][f"{leg}_to_mesen"])
     state = int(latch_offset_align) + gap
-    expected = -int(offsets_doc["offsets"]["rust_to_mesen"])
+    expected = -int(offsets_doc["offsets"][f"{leg}_to_mesen"])
     if state != expected:
         raise ValueError(
             f"state offset 口径不一致：latch_offset_align={latch_offset_align} + gap={gap} "
@@ -351,11 +360,13 @@ def _cleanup_trace(out: dict) -> None:
     name = out.get("trace_name")
     if not name:
         return
-    for p in (ROOT / "analysis" / "traces").glob(f"{name}.*"):
-        try:
-            p.unlink()
-        except OSError:
-            pass
+    traces = ROOT / "analysis" / "traces"
+    for pattern in (f"{name}.*", f"{name}_f*"):
+        for p in traces.glob(pattern):
+            try:
+                p.unlink()
+            except OSError:
+                pass
 
 
 def main(argv: list[str] | None = None) -> int:

@@ -263,6 +263,7 @@ git commit -F /tmp/msg-task4-gate.txt
 - Produces (T5):
   - `run_scene(case_path: str, frames: int) -> dict`，返回 `{"mesen":dict[int,dict],"rust":dict[int,dict],"offset":int}`，实际调用两个已有 runner 后对齐。
   - CLI：`python3 tools/movie_ref/mechanism_scene.py --case cases/<name>.txt --frames 120 --json-out analysis/traces/scene-<name>.json`
+  - 退出码语义：`0` all-match（informative）/ `1` 有失配 / `2` 运行或参数错误 / `3` 常量窗（`informative=False`，无判别力；`--allow-constant` 可显式接受为 0）
 
 - [ ] **Step 1 (T5): 写失败测试**
 
@@ -293,7 +294,7 @@ Expected: PASS
 
 - [ ] **Step 5 (T5): 端到端跑一个现有短场景**
 
-Run: `python3 tools/movie_ref/mechanism_scene.py --case cases/case-morphball.txt --frames 120 --json-out analysis/traces/scene-morphball.json`
+Run（示例；`cases/case-morphball.txt` 不存在，实跑用下列命令之一）：`python3 tools/movie_ref/mechanism_scene.py --case cases/<实际存在的短 case>.txt --frames 120 --json-out /tmp/scene.json`
 Expected: 打印 `first_diff` 或 `all-match`；结果与 L4 矩阵 case-morphball 的既有结论不得矛盾（矛盾则如实记录为工具缺陷，不得改期望值）。
 
 注：`cases/case-morphball.txt` 与 `case-roll.txt` 都不存在；现有 case 均 >120 帧。
