@@ -2619,8 +2619,11 @@ fn defer_if_load_consumed(mem: &mut Manager, right: bool) -> bool {
     if !mem.samus().load_consumed_frame() {
         return false;
     }
-    mem.samus().set_load_consumed_frame(false);
-    // 带符号累计（复核 P2-2：单槽会被同窗第二拍覆盖 ⇒ 丢像素）。
+    // **不清标位**：asm 的 `MoveSamusLeft/Right` 是**逐像素循环**（`physics.rs` 的
+    // `samus_move_horizontally` 对每 1 px 调一次本函数），而装载窗把整个循环一起冻住
+    // ⇒ 窗内**每一个**像素都要挂起、窗末一起落，不是一个窗只挂 1 px。
+    // 清标位的唯一位置 = 装载窗排空那一拍（`engine.rs::end_of_tick_gate`）。
+    // （复核 2026-11-19 P1-A：旧形在第一次就清标 ⇒ `delta>=2` 时第 2..n px 当拍落地。）
     mem.samus().add_deferred_horz_px(if right { 1 } else { -1 });
     true
 }
@@ -2657,25 +2660,39 @@ mod tests_room_load_defer {
         assert_eq!(m.samus().deferred_horz_px(), -1, "待兑像素挂起（−1=左移 1 px）");
     }
 
-    /// **累计**（复核 P2-2）：装载窗跨两拍、每拍各写 1 px ⇒ 挂起 2 px、窗末落 2 px。
-    /// 单槽实现会在这里丢 1 px。
+    /// **累计（可达路径）**（复核 P1-A）：`samus_move_horizontally(delta=-2)` 是逐像素循环
+    /// ⇒ 窗内两 px 都要挂起、窗末一起落 2 px。旧形（第一次就清标位）第 2 px 当拍落地。
     #[test]
-    fn two_defers_accumulate_and_land_two_pixels() {
+    fn multi_pixel_move_defers_every_pixel_then_lands_all() {
         let mut m = load_frame_manager();
-        for _ in 0..2 {
-            // 每「拍」重建一次吞帧标位（真实场景：check_update_name_table 每拍都会置位）
-            m.samus().set_load_consumed_frame(true);
-            samus_move_horizontally(&mut m, 0xFF); // 左 1 px ×2
-        }
-        assert_eq!(m.samus().x(), 0x70, "两拍都没落地");
-        assert_eq!(m.samus().deferred_horz_px(), -2, "累计 −2（不是单槽 −1）");
+        samus_move_horizontally(&mut m, 0xFE); // −2 px，同一调用循环两次
+        assert_eq!(m.samus().x(), 0x70, "两 px 都没当拍落地");
+        assert_eq!(m.samus().deferred_horz_px(), -2, "累计 −2");
         m.iter_gates.clear(); // 装载窗走完（真实场景=门队列一拍排 1 项）
         apply_deferred_horz_px(&mut m);
         assert_eq!(m.samus().x(), 0x6E, "窗末一次落 2 px");
     }
 
-    /// **不变量**（复核 P2-1）：装载窗未走完（门队列非空）时不许兑现。
+    /// **跨拍累计**：装载窗跨多拍（每拍都在窗内）时，每拍写 1 px 也要累计，不许互相覆盖。
     #[test]
+    fn defers_across_ticks_accumulate_within_one_window() {
+        let mut m = load_frame_manager();
+        for _ in 0..2 {
+            m.samus().set_load_consumed_frame(true); // 窗仍是开的（真实场景=同一 window）
+            samus_move_horizontally(&mut m, 0xFF);
+        }
+        assert_eq!(m.samus().deferred_horz_px(), -2);
+        m.iter_gates.clear();
+        apply_deferred_horz_px(&mut m);
+        assert_eq!(m.samus().x(), 0x6E);
+    }
+
+    /// **不变量守护**（复核 P2-D）：`apply_deferred_horz_px` 的 `debug_assert!` 只在
+    /// debug 构建存在 ⇒ 本测也只在 debug 有效（`#[cfg(debug_assertions)]` 标注，避免
+    /// `cargo test --release` 假红）。release 下真正的防护是结构约束：`apply` 的唯一
+    /// 调用点就在 `engine.rs::end_of_tick_gate` 的 `iter_gates.is_empty()` 分支里。
+    #[test]
+    #[cfg(debug_assertions)]
     #[should_panic(expected = "门队列排空")]
     fn deferred_pixel_refuses_to_land_inside_iteration_window() {
         let mut m = load_frame_manager();

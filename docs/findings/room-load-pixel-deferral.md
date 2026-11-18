@@ -39,7 +39,10 @@ f672 `DECx=2 SETUP=2`；**f673 `DECx=0 SETUP=1`**（进例程、像素不落地�
 ## 修法
 
 - `SamusState` 增两个**非 RAM** 相位字段：`load_consumed_frame`、`deferred_horz_px: i16`
-  （带符号**累计**：asm 是每次 MoveSamus* 各写 1 次，单槽会被同窗第二拍覆盖 ⇒ 丢像素）。
+  （带符号**累计**）。累计的**真实动机**：`MoveSamusLeft/Right` 在 asm 里是**逐像素循环**
+  （`SamusMoveHorizontally` 每 1 px 调一次），而装载窗把整个循环一起冻住 ⇒ 窗内**每一个**
+  像素都要挂起、窗末一起落。所以「清标位」只能发生在装载窗排空那一拍，清早了则
+  `|delta|>=2` 时第 2..n 个像素当拍落地（这正是复核 2026-11-19 P1-A 抓到的漏洞，已修）。
 - `check_update_name_table` 的 `is_load` 分支置标位；`move_samus_left/right` 在 Scroll
   之后、`set_x` 之前把 ±1 累加进 `deferred_horz_px` 并 return。
 - `Engine::end_of_tick_gate` 在迭代门队列**排空**那一拍兑现（`debug_assert` 钉住：队列非空
@@ -64,6 +67,16 @@ state 级不变：**20 案 / 160 格 / match 148 · diff 12 · blocked 0**。
 **这不是「零回归」**：像素数确实动了两格，方向是变差。归因：deferral 把像素写从 f673 挪到
 f676（与 emu 的 x 相位对齐），于是 f673/f674 的 Samus 少差分 1 px、f676 多 1 px，在「载房
 相位本来就不同」的窗口里表现为 +4/−8 的此消彼长。真正的残差主体是未修的那张卡（见下）。
+
+## 两条曾被踩错的措辞（原地保留，供后续别再踩）
+
+1. **「单槽会被同窗第二拍覆盖」是不成立的动机**：`engine.rs:144-152` 的 span tick 不跑移动，
+   同一窗内「第二拍再置位」在真实引擎不可达（只有测试手工置位才能构造）。真正的动机是
+   上面那条「逐像素循环被整窗冻住」。
+2. **「`$004C/$004D` 在 Rust 侧无消费者」只对 `$004C` 成立**：`$004D` 就是 `SamusDir`
+   （`ram_map.rs:227 SAMUS_DIR = 0x004D`），消费点 15+ 处（`samus/handler.rs:166/279/327…`、
+   `samus/physics.rs:247/980…`）。`nes_map.json` 该 undeclared 段的 refs 已同时列
+   `$004D`（ram_map + handler.rs:166）与 `$004E`（ram_map + physics.rs:1761）。
 
 ## 未修（已登记，另开卡）
 
