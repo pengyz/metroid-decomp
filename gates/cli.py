@@ -1377,12 +1377,21 @@ def gate_completeness_ratchet() -> tuple[str, str]:
 
 COVERAGE_LEDGER_PATH = ROOT / "data" / "status" / "coverage_ledger.json"
 COVERAGE_BASELINE_PATH = ROOT / "data" / "status" / "coverage_ledger.baseline.json"
+COVERAGE_KINDS = ("mechanism",)
 COVERAGE_STATES = ("unobserved", "route-only", "verified")
 COVERAGE_STATE_RANK = {state: index for index, state in enumerate(COVERAGE_STATES)}
 
 
+def _coverage_counts(items: list[dict]) -> dict[str, int]:
+    return {state: sum(1 for item in items if item.get("state") == state) for state in COVERAGE_STATES}
+
+
+def _coverage_at_least(counts: dict[str, int], state: str) -> int:
+    return sum(counts[s] for s in COVERAGE_STATES[COVERAGE_STATE_RANK[state]:])
+
+
 def coverage_ratchet_violations(ledger: dict, baseline: dict) -> list[str]:
-    """覆盖台账只升不降：state 计数不减 + id 集合不减（并核逐条 rank 不回退）。"""
+    """覆盖台账只升不降：累计 state 计数不减 + id 集合不减 + 条目证据可机械核验。"""
     problems: list[str] = []
     items = ledger.get("items") if isinstance(ledger, dict) else None
     if not isinstance(items, list):
@@ -1403,6 +1412,19 @@ def coverage_ratchet_violations(ledger: dict, baseline: dict) -> list[str]:
             problems.append(f"台账 id 重复：{entry_id}")
             continue
         seen.add(entry_id)
+        kind = item.get("kind")
+        if kind not in COVERAGE_KINDS:
+            problems.append(f"台账 {entry_id} 的 kind 非法：{kind!r}")
+        evidence = item.get("evidence")
+        if not isinstance(evidence, list) or not evidence:
+            problems.append(f"evidence 缺失：{entry_id}")
+        elif not all(isinstance(path, str) and path for path in evidence):
+            problems.append(f"evidence 含非字符串/空路径：{entry_id}")
+        else:
+            for path in evidence:
+                target = ROOT / path
+                if not target.exists() or target.is_dir():
+                    problems.append(f"evidence 不存在：{entry_id} -> {path}")
         if state not in COVERAGE_STATE_RANK:
             problems.append(f"台账 {entry_id} 的 state 非法：{state!r}")
             continue
@@ -1411,13 +1433,21 @@ def coverage_ratchet_violations(ledger: dict, baseline: dict) -> list[str]:
     base_counts = baseline.get("counts") if isinstance(baseline, dict) else None
     if not isinstance(base_counts, dict):
         return problems + ["基线缺 counts 对象"]
-    for state in COVERAGE_STATES:
-        got = counts[state]
-        floor = base_counts.get(state, 0)
-        if not isinstance(floor, int) or isinstance(floor, bool) or floor < 0:
-            problems.append(f"基线 counts.{state} 非法：{floor!r}")
-        elif got < floor:
-            problems.append(f"state 计数回退：{state} {got} < 基线 {floor}")
+    for index, state in enumerate(COVERAGE_STATES):
+        got = sum(counts[s] for s in COVERAGE_STATES[index:])
+        floor = sum(
+            int(base_counts.get(s, 0)) for s in COVERAGE_STATES[index:]
+            if isinstance(base_counts.get(s, 0), int) and not isinstance(base_counts.get(s, 0), bool)
+        )
+        if any(
+            not isinstance(base_counts.get(s, 0), int) or isinstance(base_counts.get(s, 0), bool)
+            or base_counts.get(s, 0) < 0
+            for s in COVERAGE_STATES
+        ):
+            problems.append("基线 counts 含非法值")
+            break
+        if got < floor:
+            problems.append(f"state 累计计数回退：{state} {got} < 基线 {floor}")
     base_ids = baseline.get("ids")
     if not isinstance(base_ids, list) or not all(isinstance(x, str) for x in base_ids):
         problems.append("基线缺 ids 字符串列表")
@@ -1436,15 +1466,26 @@ def coverage_ratchet_violations(ledger: dict, baseline: dict) -> list[str]:
                 )
     return problems
 
-
-def gate_coverage_ratchet() -> tuple[str, str]:
-    if not COVERAGE_LEDGER_PATH.is_file():
-        return SKIP, "覆盖台账未建立（data/status/coverage_ledger.json；tools/coverage_ledger.py --seed 后启用）"
-    if not COVERAGE_BASELINE_PATH.is_file():
+def gate_coverage_ratchet(
+    ledger_path: Path | None = None,
+    baseline_path: Path | None = None,
+) -> tuple[str, str]:
+    ledger_path = ledger_path or COVERAGE_LEDGER_PATH
+    baseline_path = baseline_path or COVERAGE_BASELINE_PATH
+    ledger_exists = ledger_path.is_file()
+    baseline_exists = baseline_path.is_file()
+    if not ledger_exists and not baseline_exists:
+        return SKIP, "覆盖台账与基线均未建立（tools/coverage_ledger.py --init 后启用）"
+    if not ledger_exists:
+        return FAIL, (
+            "台账被删除（基线存在）：data/status/coverage_ledger.json 缺失；"
+            "删台账不算停用，必须恢复台账或显式裁定"
+        )
+    if not baseline_exists:
         return FAIL, "覆盖台账基线缺失（data/status/coverage_ledger.baseline.json）；拒绝无基线通过"
     try:
-        ledger = json.loads(COVERAGE_LEDGER_PATH.read_text(encoding="utf-8"))
-        baseline = json.loads(COVERAGE_BASELINE_PATH.read_text(encoding="utf-8"))
+        ledger = json.loads(ledger_path.read_text(encoding="utf-8"))
+        baseline = json.loads(baseline_path.read_text(encoding="utf-8"))
     except json.JSONDecodeError as exc:
         return FAIL, f"覆盖台账/基线 JSON 损坏：{exc}"
     problems = coverage_ratchet_violations(ledger, baseline)
@@ -1456,9 +1497,8 @@ def gate_coverage_ratchet() -> tuple[str, str]:
     return PASS, (
         f"覆盖条目 {len(ledger['items'])}（unobserved {counts['unobserved']} / "
         f"route-only {counts['route-only']} / verified {counts['verified']}）；"
-        "state 计数与 id 集合只增不降"
+        "累计 state 计数与 id 集合只增不降，evidence 路径存在"
     )
-
 
 # ---------------------------------------------------------------- proof-checks（证书防腐 v2）
 # int-x 复审遗留 3：证明证书（SMT unsat / 桥接 0 分歧 / 穷举 0 分歧）入库后若无机器复跑，
@@ -4068,32 +4108,57 @@ def cmd_selftest(_args) -> int:
                                                       encoding="utf-8")
         check("v2 fixture 体量任意变化 ⇒ 绿（不 ratchet）", data_boundary_violations(root) == [])
 
-    # 19) coverage-ratchet：state 计数只增不降 + id 集合不减 + 逐条 rank 不回退
+    # 19) coverage-ratchet：state 累计计数只增不降 + id 集合不减 + 逐条 rank 不回退
+    cov_ev = "docs/findings/movie-6725m-f1031-unroll.md"
     cov_base = {"counts": {"unobserved": 1, "route-only": 2, "verified": 0},
                 "ids": ["a", "b", "c"],
                 "states": {"a": "unobserved", "b": "route-only", "c": "route-only"}}
     good = {"items": [
-        {"id": "a", "kind": "mechanism", "state": "unobserved", "evidence": []},
-        {"id": "b", "kind": "mechanism", "state": "route-only", "evidence": []},
-        {"id": "c", "kind": "mechanism", "state": "route-only", "evidence": []},
+        {"id": "a", "kind": "mechanism", "state": "unobserved", "evidence": [cov_ev]},
+        {"id": "b", "kind": "mechanism", "state": "route-only", "evidence": [cov_ev]},
+        {"id": "c", "kind": "mechanism", "state": "route-only", "evidence": [cov_ev]},
     ]}
     check("coverage-ratchet 持平/新增条目 ⇒ 绿", coverage_ratchet_violations(good, cov_base) == [],
           str(coverage_ratchet_violations(good, cov_base)))
+    promoted = {"items": [
+        {"id": "a", "kind": "mechanism", "state": "unobserved", "evidence": [cov_ev]},
+        {"id": "b", "kind": "mechanism", "state": "verified", "evidence": [cov_ev]},
+        {"id": "c", "kind": "mechanism", "state": "route-only", "evidence": [cov_ev]},
+    ]}
+    check("coverage-ratchet 合法升级 route-only→verified ⇒ 绿（累计口径不误杀）",
+          coverage_ratchet_violations(promoted, cov_base) == [],
+          str(coverage_ratchet_violations(promoted, cov_base)))
     dropped = {"items": [
-        {"id": "a", "kind": "mechanism", "state": "unobserved", "evidence": []},
-        {"id": "c", "kind": "mechanism", "state": "route-only", "evidence": []},
+        {"id": "a", "kind": "mechanism", "state": "unobserved", "evidence": [cov_ev]},
+        {"id": "c", "kind": "mechanism", "state": "route-only", "evidence": [cov_ev]},
     ]}
     check("coverage-ratchet 删条目 id ⇒ 红",
           any("id 集合减少" in p for p in coverage_ratchet_violations(dropped, cov_base)),
           str(coverage_ratchet_violations(dropped, cov_base)))
     downgraded = {"items": [
-        {"id": "a", "kind": "mechanism", "state": "unobserved", "evidence": []},
-        {"id": "b", "kind": "mechanism", "state": "unobserved", "evidence": []},
-        {"id": "c", "kind": "mechanism", "state": "route-only", "evidence": []},
+        {"id": "a", "kind": "mechanism", "state": "unobserved", "evidence": [cov_ev]},
+        {"id": "b", "kind": "mechanism", "state": "unobserved", "evidence": [cov_ev]},
+        {"id": "c", "kind": "mechanism", "state": "route-only", "evidence": [cov_ev]},
     ]}
     check("coverage-ratchet 条目 rank 回退 ⇒ 红",
           any("state 回退" in p for p in coverage_ratchet_violations(downgraded, cov_base)),
           str(coverage_ratchet_violations(downgraded, cov_base)))
+    forged = {"items": [
+        {"id": "a", "kind": "mechanism", "state": "verified",
+         "evidence": ["docs/definitely-missing-coverage-evidence.md"]},
+    ]}
+    check("coverage-ratchet evidence 路径不存在 ⇒ 红",
+          any("evidence 不存在" in p for p in coverage_ratchet_violations(forged, cov_base)),
+          str(coverage_ratchet_violations(forged, cov_base)))
+    with tempfile.TemporaryDirectory() as td:
+        bp = Path(td) / "coverage_ledger.baseline.json"
+        bp.write_text(json.dumps(cov_base), encoding="utf-8")
+        v, d = gate_coverage_ratchet(Path(td) / "missing-ledger.json", bp)
+        check("coverage-ratchet 台账缺失但基线存在 ⇒ 红（删台账不算停用）",
+              v == FAIL and "台账被删除" in d, f"{v}: {d}")
+        v, d = gate_coverage_ratchet(Path(td) / "missing-ledger.json",
+                                     Path(td) / "missing-baseline.json")
+        check("coverage-ratchet 台账与基线均缺失 ⇒ SKIP", v == SKIP, f"{v}: {d}")
     v, d = gate_coverage_ratchet()
     check("coverage-ratchet 门禁实跑（本仓台账 vs 基线）", v == PASS, d)
 

@@ -51,7 +51,8 @@
 > 需先落 genesis 记录（带 reason + metrics 快照），否则 baseline-integrity 按『历史缺失』FAIL。
 >
 > 覆盖台账 ratchet 锚 = `data/status/coverage_ledger.baseline.json`（`coverage-ratchet` 消费；
-> 唯一写入口 = `tools/coverage_ledger.py --seed`，只增不降；不进入中央 baseline metrics 键集）。
+> 唯一写入口 = `tools/coverage_ledger.py --init`（仅首次建锚）/ `--update --reason TEXT`（只升不降），
+> 不进入中央 baseline metrics 键集。删除台账不算停用：基线存在而台账缺失 ⇒ 门禁 FAIL。
 >
 > L4 逐采集点 ratchet 锚 = `data/status/l4_ratchet_baseline.json`（`l4` 门禁消费；match 集合
 > 只增不减 + blocked 只减不增——**非**一致率百分比），唯一写入口 = `tools/baseline_update.py l4`
