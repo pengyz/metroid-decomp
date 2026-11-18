@@ -94,18 +94,42 @@ fixture 注入与状态的因果对应，而不是 runner 的常量窗检查。
 4. 帧轴对齐依赖状态面跳变（本场景 status 跳变 5 次、latch 跳变 ≥3 次）；若将来改输入
    导致跳变不足，runner 会 fail-loud（`change_runs < 3`）。
 
-## 7. 声明窗之外：f571+ 的 Samus 精灵面分歧（未修，已留探针）
+## 7. f571+ 的 Samus 精灵面分歧：已定位并修复（2026-11-18）
 
-声明窗在 f570 收尾，但同一输入继续跑下去会暴露一处**新的真分歧**：
+> 【2026-11-18 更正】本节此前写作「未修、待查」。根因已定谳为移植缺失并已修，声明窗随之
+> 恢复为 `frames 600`。
 
-- 探针 `cases/case-morphball-tail-probe.txt`（同输入，`frames 600`，采集 576/588/600）
-  L4 结果：**145 px / 61440**，三采集点恒定。
-- 与 fixture 无关：删掉 `fixture` 行的变体为 **146 px**（同区域、同形态）。
-- 差异区域 bbox `x=136..154, y=155..176`（Samus 精灵块）；OAM 影子槽 8..13（emu）
-  逐字节不同：emu `(y,x,tile,attr)` = `(160,143,$14,$20)`、`(160,135,$14,$20)`、
-  `(168,30→…,),…`；rust 同区域槽位多出 3 个候选且 tile 为 `$69` 等。
-- 判读：状态面（status/room）两侧相同而精灵砖不同 ⇒ 属**动画索引或 Samus 图形/绘制路径**
-  分歧，不是状态机分歧；已登记为待查（下一步工作项，未在本轮修复）。
+**现象**：同一输入继续跑到 f572 起，两腿恒定差 **145 px / 61440**（bbox `x=136..154,
+y=155..176`，OAM 槽 8..13；emu `(y,x,tile,attr)=(160,143,$14,$20)`，rust `(152,139,$69,$60)`）。
+与 `fixture` 无关（删 fixture 变体 146 px，同区域同形态）。**状态面 status/room 两侧相同**。
+
+**定位过程（全 A 级）**：
+
+1. 采集点扫描钉死起点：`f571` 0 px、`f572` 起恒定 145 px。
+2. 同帧 RAM 逐字节比（`ram.hex` 全 2048 B）：活跃 Samus 字段只有三处不同 ——
+   `$0303`(animFrame) `emu $08 / rust $2B`、`$0305`(animResetIndex) `$07 / $27`、
+   `$0306`(animIndex) `$07(→$08) / $28`。字段名锚：`refs/m1disasm/out/M1_NES_NTSC.sym:10265-10268`
+   （`00000303 Samus.animFrame` / `00000305 Samus.animResetIndex` / `00000306 Samus.animIndex`）。
+3. 时间线（`case-tmp-anim` 采样 558..576）：f564 起两侧同时进 `sa_PntUp`（`$0305/$0306=$27/$27`）；
+   **f570 status 4→0（Stand）时两侧分岔**——emu 把 `animResetIndex/animIndex` 重置为 `$07`
+   并在 f572 推进 animFrame 到 `$08`；rust 停在 PntUp 的 `$27/$28`。
+4. asm 定谳（`refs/m1disasm/SRC/prg7_engine.asm`）：`SamusPntUp ; 07:D198` 松开 UP 时只写
+   `Samus.status←sa_Stand`（`prg7_engine.asm:3744`），**真正的动画复位在尾件**：`lda Samus.status /
+   jsr JumpEngine` 的十项表（`prg7_engine.asm:3789-3800`），表项 0 = `SetSamusStand`
+   （`:3359`，动画置位指令在 `:3370`），其内部
+   `NoHorzMoveNoDelay` → `lda #ObjAnim_SamusStand - ObjectAnimIndexTbl.b` → `SetSamusAnim`
+   （`$0305←$07`）/ `SetSamusNextAnim`（`$0306←$07`、`$0304←0`）。
+5. rust 侧缺陷：`crates/game-core/src/samus/handler.rs::samus_pnt_up` 的尾件只实现了表项 6
+   （`SetSamusJumpPntUp`），**表项 0/1/3 被注释为「由各自径承担」而实际无人承担** ⇒ 站立动画
+   不复位。修复=按 asm 十项表补齐派发（0→`set_samus_stand`、1→`set_samus_run`、
+   3→`set_samus_roll`，其余 ExitSub）。
+
+**修复后**：`cases/case-morphball-tail-probe.txt` 576/588/600 **全 0 px**；机制场景声明窗恢复
+`frames 600`，4 个采集点（476/570/588/600）**全 0 px**，状态面 `compared=1168 mismatch=0`。
+
+**教训**：asm 尾件的 `JumpEngine` 分派是**行为的一部分**，不能因为「另有径负责」就只实现
+分支里当前用得上的那一项——注释里那句自我豁免（「改它们会移动已被 L4 冻结的行为」）本身就是
+把测试当成了真相源；L4 未覆盖的路径恰恰是它保护不了的地方。
 
 ## 8. 与台账的关系
 

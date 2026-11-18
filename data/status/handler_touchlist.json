@@ -1,20 +1,22 @@
 {
   "schema": "handler-touchlist/v1",
   "doc": "占位臂记账触达清单（L4 矩阵实录固化——增长即红白名单基线）。源=shots_rust/*.divergences.json（rust_screenshot 腿 DIVERGENCES sidecar，2026-11-13 新增）聚合 14 案。契约：sidecar 新增任何不在本清单的 addr=账外=红（须显式登记本清单才放行）——与 diff_traces.py:614 账外照红同语义的 L4 侧。",
-  "source_run": "python3 tools/l4_diff_run.py run-all --skip-emu @ 2026-11-13",
-  "cases_covered": 14,
-  "unique_addrs": 8,
-  "total_events": 31596,
+  "source_run": "python3 tools/l4_diff_run.py run-all @ 2026-11-18（17 案；新增 0xCBEF/0xD150 由 case-morphball-tail-probe 触发）",
+  "cases_covered": 17,
+  "unique_addrs": 10,
+  "total_events": 74213,
   "entries": [
     {
       "addr": "0xB7E7",
       "asm_label": "BeepSFXCont",
       "push_site": "sound_hook::_=>None",
       "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:1240",
-      "n_events": 526,
+      "n_events": 1333,
       "first_tick": 402,
       "cases": {
-        "case-password-justin": 526
+        "case-password-justin": 526,
+        "case-001-game-start-samus-interaction": 516,
+        "case-crawlprobe": 291
       }
     },
     {
@@ -26,6 +28,18 @@
       "first_tick": 618,
       "cases": {
         "case-password-justin": 109
+      }
+    },
+    {
+      "addr": "0xcbef",
+      "asm_label": "SFX_SamusBall",
+      "push_site": "crates/game-core/src/samus/handler.rs::set_samus_roll",
+      "asm_ref": "refs/m1disasm/SRC/prg7_engine.asm:2668",
+      "n_events": 2,
+      "first_tick": 505,
+      "cases": {
+        "case-mechanism-morphball": 1,
+        "case-morphball-tail-probe": 1
       }
     },
     {
@@ -44,22 +58,25 @@
       "asm_label": "SamusStand",
       "push_site": "samus/handler.rs:902",
       "asm_ref": "refs/m1disasm/SRC/prg7_engine.asm:2735",
-      "n_events": 2747,
-      "first_tick": 796,
+      "n_events": 5954,
+      "first_tick": 476,
       "cases": {
+        "case-jumpledge-probe": 334,
+        "case-killenemy-probe": 654,
         "case-password-justin": 962,
-        "case-001-game-start-samus-interaction": 347,
-        "case-killenemy-probe": 305,
-        "case-002-door-blue-interaction": 304,
-        "case-jumpledge-probe": 205,
-        "case-leftwalk-probe2": 138,
-        "case-walkfcprobe": 138,
-        "case-crawlprobe": 109,
-        "case-morphball-probe": 108,
-        "case-shootprobe-probe": 105,
-        "case-scrollseam-probe": 20,
-        "case-collide-probe": 5,
-        "case-leftwalk-probe": 1
+        "case-collide-probe": 208,
+        "case-walkfcprobe": 346,
+        "case-002-door-blue-interaction": 532,
+        "case-001-game-start-samus-interaction": 608,
+        "case-mechanism-morphball": 61,
+        "case-shootprobe-probe": 377,
+        "case-scrollseam-probe": 153,
+        "case-morphball-tail-probe": 61,
+        "case-crawlprobe": 377,
+        "case-leftwalk-probe": 187,
+        "case-elev-norfair-transition": 314,
+        "case-leftwalk-probe2": 346,
+        "case-morphball-probe": 434
       }
     },
     {
@@ -67,19 +84,24 @@
       "asm_label": "SetSamusRun",
       "push_site": "samus/physics.rs:1645",
       "asm_ref": "refs/m1disasm/SRC/prg7_engine.asm:2824",
-      "n_events": 3113,
-      "first_tick": 800,
+      "n_events": 8335,
+      "first_tick": 500,
       "cases": {
-        "case-morphball-probe": 720,
-        "case-leftwalk-probe2": 603,
-        "case-walkfcprobe": 603,
-        "case-001-game-start-samus-interaction": 397,
-        "case-002-door-blue-interaction": 319,
-        "case-crawlprobe": 159,
-        "case-collide-probe": 103,
-        "case-scrollseam-probe": 103,
-        "case-shootprobe-probe": 101,
-        "case-leftwalk-probe": 5
+        "case-jumpledge-probe": 547,
+        "case-killenemy-probe": 649,
+        "case-collide-probe": 459,
+        "case-walkfcprobe": 959,
+        "case-002-door-blue-interaction": 747,
+        "case-001-game-start-samus-interaction": 695,
+        "case-mechanism-morphball": 99,
+        "case-shootprobe-probe": 449,
+        "case-scrollseam-probe": 465,
+        "case-morphball-tail-probe": 99,
+        "case-crawlprobe": 455,
+        "case-leftwalk-probe": 359,
+        "case-elev-norfair-transition": 150,
+        "case-leftwalk-probe2": 959,
+        "case-morphball-probe": 1244
       }
     },
     {
@@ -87,10 +109,25 @@
       "asm_label": "IsSamusDead-chain(Lx005 死分支 jmp CheckHealthBeep)",
       "push_site": "samus/physics.rs:1005",
       "asm_ref": "refs/m1disasm/SRC/prg7_engine.asm:3108-3118 (Lx005@CE1E 内)",
-      "n_events": 1,
-      "first_tick": 1029,
+      "n_events": 6,
+      "first_tick": 961,
       "cases": {
-        "case-001-game-start-samus-interaction": 1
+        "case-002-door-blue-interaction": 1,
+        "case-001-game-start-samus-interaction": 2,
+        "case-crawlprobe": 2,
+        "case-elev-norfair-transition": 1
+      }
+    },
+    {
+      "addr": "0xd150",
+      "asm_label": "CheckBombLaunch",
+      "push_site": "crates/game-core/src/samus/handler.rs::samus_roll",
+      "asm_ref": "refs/m1disasm/SRC/prg7_engine.asm:3685",
+      "n_events": 108,
+      "first_tick": 506,
+      "cases": {
+        "case-mechanism-morphball": 54,
+        "case-morphball-tail-probe": 54
       }
     },
     {
@@ -98,10 +135,10 @@
       "asm_label": "SpawnElevator",
       "push_site": "pickup/spawn.rs:71 (ChooseSpawningRoutine 占位臂)",
       "asm_ref": "refs/m1disasm/SRC/prg7_engine.asm:9502",
-      "n_events": 6,
+      "n_events": 1,
       "first_tick": 1190,
       "cases": {
-        "case-password-justin": 6
+        "case-password-justin": 1
       }
     },
     {
@@ -109,22 +146,25 @@
       "asm_label": "InitEnemyFacingDirectionAxisAndDelay",
       "push_site": "frame/mainloop.rs:752 (敌移动 delay 记账)",
       "asm_ref": "refs/m1disasm/SRC/prg7_engine.asm:12062",
-      "n_events": 25093,
-      "first_tick": 796,
+      "n_events": 58364,
+      "first_tick": 476,
       "cases": {
+        "case-jumpledge-probe": 3061,
+        "case-killenemy-probe": 3388,
         "case-password-justin": 5772,
-        "case-morphball-probe": 3402,
-        "case-leftwalk-probe2": 3063,
-        "case-walkfcprobe": 3063,
-        "case-001-game-start-samus-interaction": 2125,
-        "case-002-door-blue-interaction": 1887,
-        "case-killenemy-probe": 1830,
-        "case-jumpledge-probe": 1230,
-        "case-crawlprobe": 935,
-        "case-shootprobe-probe": 630,
-        "case-collide-probe": 563,
-        "case-scrollseam-probe": 563,
-        "case-leftwalk-probe": 30
+        "case-collide-probe": 2667,
+        "case-walkfcprobe": 5527,
+        "case-002-door-blue-interaction": 3786,
+        "case-001-game-start-samus-interaction": 4451,
+        "case-mechanism-morphball": 666,
+        "case-shootprobe-probe": 2622,
+        "case-scrollseam-probe": 2679,
+        "case-morphball-tail-probe": 666,
+        "case-crawlprobe": 3251,
+        "case-leftwalk-probe": 2527,
+        "case-elev-norfair-transition": 4800,
+        "case-leftwalk-probe2": 5527,
+        "case-morphball-probe": 6974
       }
     }
   ],

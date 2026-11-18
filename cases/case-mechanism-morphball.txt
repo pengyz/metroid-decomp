@@ -1,11 +1,12 @@
 name case-mechanism-morphball
-# 机制级最小重现：变形球进入 → 滚行 → 退出（声明窗 f0..570；窗外分歧见 tail-probe）
+# 机制级最小重现：变形球进入 → 滚行 → 退出（声明窗 f0..600——f572 起的站立动画复位分歧
+# 已修（PntUp 尾件 JumpEngine 派发缺失），f600 与 f570 同为零差；见 findings §7）
 # 时间基（实测 movies/eien86-6725M.inputlog + analysis/traces/_probe-axis.frames.jsonl）：
 #   f0..470 MainRoutine=8 SamusIntro（Timer3=$2C 每 10 帧减 1，按键被吞）；f480 MainRoutine=3、
 #   SamusStatus=$FF→$00（f501 归 0，全程无 $01）⇒ 可操作点 f≈480。
 # 能力前提：fixture 注入 SamusGear($6878) bit4 = gr_MARUMARI（变形球）——这是**前提**，
 # 不是被判定字段（判定只看 status/room）；注入语义与 emu/rust 两腿同构（各只注入一次）。
-frames 570
+frames 600
 snapshot none
 press 22 start
 press 26 start
@@ -15,5 +16,6 @@ hold 500-506 down
 hold 512-556 right
 hold 562-568 up
 capture 570 ball-exit
-endFrame 570
+capture 588 tail588
+capture 600 end
 watch 0014 Joy1Latch

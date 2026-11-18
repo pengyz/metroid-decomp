@@ -1,9 +1,9 @@
 {
-  "anchor_field": "status",
+  "anchor_field": "latch(-1+gap)",
   "case": "cases/case-mechanism-morphball.txt",
   "compare": {
     "all_match": true,
-    "compared": 1108,
+    "compared": 1168,
     "distinct_values": {
       "room": 5,
       "status": 9
@@ -24,7 +24,7 @@
       "status": 0
     }
   },
-  "frames": 570,
+  "frames": 600,
   "mesen": {
     "1": {
       "latch": 0,
@@ -2875,6 +2875,156 @@
       "latch": 0,
       "room": 255,
       "status": 0
+    },
+    "571": {
+      "latch": 0,
+      "room": 255,
+      "status": 0
+    },
+    "572": {
+      "latch": 0,
+      "room": 255,
+      "status": 0
+    },
+    "573": {
+      "latch": 0,
+      "room": 255,
+      "status": 0
+    },
+    "574": {
+      "latch": 0,
+      "room": 255,
+      "status": 0
+    },
+    "575": {
+      "latch": 0,
+      "room": 255,
+      "status": 0
+    },
+    "576": {
+      "latch": 0,
+      "room": 255,
+      "status": 0
+    },
+    "577": {
+      "latch": 0,
+      "room": 255,
+      "status": 0
+    },
+    "578": {
+      "latch": 0,
+      "room": 255,
+      "status": 0
+    },
+    "579": {
+      "latch": 0,
+      "room": 255,
+      "status": 0
+    },
+    "580": {
+      "latch": 0,
+      "room": 255,
+      "status": 0
+    },
+    "581": {
+      "latch": 0,
+      "room": 255,
+      "status": 0
+    },
+    "582": {
+      "latch": 0,
+      "room": 255,
+      "status": 0
+    },
+    "583": {
+      "latch": 0,
+      "room": 255,
+      "status": 0
+    },
+    "584": {
+      "latch": 0,
+      "room": 255,
+      "status": 0
+    },
+    "585": {
+      "latch": 0,
+      "room": 255,
+      "status": 0
+    },
+    "586": {
+      "latch": 0,
+      "room": 255,
+      "status": 0
+    },
+    "587": {
+      "latch": 0,
+      "room": 255,
+      "status": 0
+    },
+    "588": {
+      "latch": 0,
+      "room": 255,
+      "status": 0
+    },
+    "589": {
+      "latch": 0,
+      "room": 255,
+      "status": 0
+    },
+    "590": {
+      "latch": 0,
+      "room": 255,
+      "status": 0
+    },
+    "591": {
+      "latch": 0,
+      "room": 255,
+      "status": 0
+    },
+    "592": {
+      "latch": 0,
+      "room": 255,
+      "status": 0
+    },
+    "593": {
+      "latch": 0,
+      "room": 255,
+      "status": 0
+    },
+    "594": {
+      "latch": 0,
+      "room": 255,
+      "status": 0
+    },
+    "595": {
+      "latch": 0,
+      "room": 255,
+      "status": 0
+    },
+    "596": {
+      "latch": 0,
+      "room": 255,
+      "status": 0
+    },
+    "597": {
+      "latch": 0,
+      "room": 255,
+      "status": 0
+    },
+    "598": {
+      "latch": 0,
+      "room": 255,
+      "status": 0
+    },
+    "599": {
+      "latch": 0,
+      "room": 255,
+      "status": 0
+    },
+    "600": {
+      "latch": 0,
+      "room": 255,
+      "status": 0
     }
   },
   "offset": 0,
@@ -5645,6 +5795,156 @@
       "status": 4
     },
     "570": {
+      "latch": 0,
+      "room": 255,
+      "status": 0
+    },
+    "571": {
+      "latch": 0,
+      "room": 255,
+      "status": 0
+    },
+    "572": {
+      "latch": 0,
+      "room": 255,
+      "status": 0
+    },
+    "573": {
+      "latch": 0,
+      "room": 255,
+      "status": 0
+    },
+    "574": {
+      "latch": 0,
+      "room": 255,
+      "status": 0
+    },
+    "575": {
+      "latch": 0,
+      "room": 255,
+      "status": 0
+    },
+    "576": {
+      "latch": 0,
+      "room": 255,
+      "status": 0
+    },
+    "577": {
+      "latch": 0,
+      "room": 255,
+      "status": 0
+    },
+    "578": {
+      "latch": 0,
+      "room": 255,
+      "status": 0
+    },
+    "579": {
+      "latch": 0,
+      "room": 255,
+      "status": 0
+    },
+    "580": {
+      "latch": 0,
+      "room": 255,
+      "status": 0
+    },
+    "581": {
+      "latch": 0,
+      "room": 255,
+      "status": 0
+    },
+    "582": {
+      "latch": 0,
+      "room": 255,
+      "status": 0
+    },
+    "583": {
+      "latch": 0,
+      "room": 255,
+      "status": 0
+    },
+    "584": {
+      "latch": 0,
+      "room": 255,
+      "status": 0
+    },
+    "585": {
+      "latch": 0,
+      "room": 255,
+      "status": 0
+    },
+    "586": {
+      "latch": 0,
+      "room": 255,
+      "status": 0
+    },
+    "587": {
+      "latch": 0,
+      "room": 255,
+      "status": 0
+    },
+    "588": {
+      "latch": 0,
+      "room": 255,
+      "status": 0
+    },
+    "589": {
+      "latch": 0,
+      "room": 255,
+      "status": 0
+    },
+    "590": {
+      "latch": 0,
+      "room": 255,
+      "status": 0
+    },
+    "591": {
+      "latch": 0,
+      "room": 255,
+      "status": 0
+    },
+    "592": {
+      "latch": 0,
+      "room": 255,
+      "status": 0
+    },
+    "593": {
+      "latch": 0,
+      "room": 255,
+      "status": 0
+    },
+    "594": {
+      "latch": 0,
+      "room": 255,
+      "status": 0
+    },
+    "595": {
+      "latch": 0,
+      "room": 255,
+      "status": 0
+    },
+    "596": {
+      "latch": 0,
+      "room": 255,
+      "status": 0
+    },
+    "597": {
+      "latch": 0,
+      "room": 255,
+      "status": 0
+    },
+    "598": {
+      "latch": 0,
+      "room": 255,
+      "status": 0
+    },
+    "599": {
+      "latch": 0,
+      "room": 255,
+      "status": 0
+    },
+    "600": {
       "latch": 0,
       "room": 255,
       "status": 0

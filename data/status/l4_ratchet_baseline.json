@@ -423,6 +423,31 @@
         }
       }
     },
+    "case-mechanism-morphball": {
+      "scenario_sha256": "3b5f8658e74caed05c2c3797c1072505d9f17a17da021c42dd2979e900546766",
+      "states": {
+        "476:pre": {
+          "state": "match",
+          "diff_pixels": 0,
+          "total_pixels": 61440
+        },
+        "570:ball-exit": {
+          "state": "match",
+          "diff_pixels": 0,
+          "total_pixels": 61440
+        },
+        "588:tail588": {
+          "state": "match",
+          "diff_pixels": 0,
+          "total_pixels": 61440
+        },
+        "600:end": {
+          "state": "match",
+          "diff_pixels": 0,
+          "total_pixels": 61440
+        }
+      }
+    },
     "case-morphball-probe": {
       "scenario_sha256": "33c772991bb69d424aaa4a4cc01311a1db001455c76592c2319912ac85b7ab14",
       "states": {
@@ -529,6 +554,31 @@
         "2160:end": {
           "state": "diff",
           "diff_pixels": 8,
+          "total_pixels": 61440
+        }
+      }
+    },
+    "case-morphball-tail-probe": {
+      "scenario_sha256": "946f6d59cc79a3ef486b0ff38cf0261925f0c3f095718efa039c1670a5954d03",
+      "states": {
+        "476:pre": {
+          "state": "match",
+          "diff_pixels": 0,
+          "total_pixels": 61440
+        },
+        "576:tail576": {
+          "state": "match",
+          "diff_pixels": 0,
+          "total_pixels": 61440
+        },
+        "588:tail588": {
+          "state": "match",
+          "diff_pixels": 0,
+          "total_pixels": 61440
+        },
+        "600:end": {
+          "state": "match",
+          "diff_pixels": 0,
           "total_pixels": 61440
         }
       }
@@ -1021,6 +1071,26 @@
       "diff": 6,
       "blocked": 0,
       "cells_total": 132
+    },
+    {
+      "ts": "2026-11-18T13:02:29+00:00",
+      "kind": "anchor",
+      "evidence": "",
+      "reason": "新增两个机制用例（case-mechanism-morphball 600 帧窗、case-morphball-tail-probe 护栏）；SamusPntUp 尾件 JumpEngine 派发补齐后 f572+ 精灵面 145px→0px，旧 15 案逐格无回退",
+      "match": 145,
+      "diff": 6,
+      "blocked": 0,
+      "cells_total": 151
+    },
+    {
+      "ts": "2026-11-18T13:04:51+00:00",
+      "kind": "rebase",
+      "evidence": "失误提交：单案调试用例 case-tmp-anim（临时探针，已删）被 run-case 写进 shots_rust/matrix.json，随后被误锚进基线。现以 run-all 的 17 案/140 格矩阵重基：旧 15 案逐采格全在且逐个 match 值不变（126→134 增量来自新增 case-mechanism-morphball 600 帧窗与 case-morphball-tail-probe 两个永久用例），diff 6 仍为既有债（morphball-probe 3×8px / password-justin 2 格 / scrollseam 274px）。证据=shots_rust/matrix.json + gates/cli.py l4 复跑。",
+      "reason": "移除误入基线的临时调试用例 case-tmp-anim（文件已删，无行为回退）",
+      "match": 134,
+      "diff": 6,
+      "blocked": 0,
+      "cells_total": 140
     }
   ]
 }

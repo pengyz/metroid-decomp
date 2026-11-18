@@ -21,7 +21,9 @@
         "data/status/mechanism_scene_morphball.json",
         "docs/findings/morphball-probe-route.md",
         "cases/case-morphball-probe.txt",
-        "docs/findings/movie-6725m-f1031-unroll.md"
+        "docs/findings/movie-6725m-f1031-unroll.md",
+        "cases/case-morphball-tail-probe.txt",
+        "shots_rust/case-morphball-tail-probe.l4report.json"
       ]
     },
     {

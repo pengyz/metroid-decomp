@@ -830,7 +830,11 @@ mod tests {
         assert_eq!(m.samus().anim_reset_index(), OBJ_ANIM_SAMUS_STAND);
     }
 
-    /// PntUp 松开回 Stand+方向转移（表 3B 界互核）。
+    /// PntUp 松开 + 方向转移：表[2]=sa_Roll，随后尾件 `JumpEngine` 派 `SetSamusRoll`。
+    /// 【2026-11-18 更正】旧断言「无球时也停在 3」钉的是**派发缺失**；asm 真值：
+    /// `SetSamusRoll ; 07:D0B5` 的 `Lx030`（无 `gr_MARUMARI` 或 `SamusAccelY≠0`）回 `sa_Stand`。
+    /// 本 micro 测试里 `SetSamusData` 已跑过移动链（accelY≠0，与 asm `LavaAndMoveCheck`
+    /// 同序），故两种能力态都落在 Stand——能钉住的只有「表[2] 确实被派发处理」。
     #[test]
     fn samus_pnt_up_release_and_direction() {
         use crate::ram_map::{JOY1_STATUS, SAMUS_STATUS};
@@ -838,7 +842,36 @@ mod tests {
         m.write_ram(JOY1_STATUS, 0x04); // DOWN（UP 松开）
         let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| samus_pnt_up(&mut m)));
         assert!(r.is_ok(), "pnt_up 链应全通（r26）: {:?}", r.err()); // SetSamusData 已端口
-        assert_eq!(m.read_ram(SAMUS_STATUS), 3); // 表[2]=Roll
+        assert_eq!(m.read_ram(SAMUS_STATUS), 0, "表[2]=Roll→SetSamusRoll 的 Lx030 回 Stand");
+    }
+
+    /// 【f571 精灵面锚测】PntUp 松开且无方向 ⇒ 尾件 `JumpEngine` 表项 0 = `SetSamusStand`，
+    /// 必须把动画重置到站立（`animResetIndex=animIndex=ObjAnim_SamusStand($07)`、
+    /// `animDelay=0`）。旧形只写 `status=0` 而**跳过整支派发**，动画停在 PntUp 的
+    /// `$27/$28` ⇒ 站立精灵整只画错（6725M 机制场景 f572 起恒定 145 px）。
+    #[test]
+    fn samus_pnt_up_release_resets_stand_animation() {
+        use crate::ram_map::{JOY1_STATUS, SAMUS_STATUS};
+        let mut m = Manager::default();
+        m.write_ram(SAMUS_STATUS, 4); // sa_PntUp
+        m.write_ram(ANIM_RESET_INDEX, OBJ_ANIM_SAMUS_PNT_UP);
+        m.write_ram(ANIM_RESET_INDEX + 1, OBJ_ANIM_SAMUS_PNT_UP + 1);
+        m.write_ram(ANIM_RESET_INDEX - 1, 0x2B); // animFrame（沿用 f568 实况）
+        m.write_ram(JOY1_STATUS, 0); // UP 松开，无其它方向键
+        let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| samus_pnt_up(&mut m)));
+        assert!(r.is_ok(), "pnt_up 链应全通: {:?}", r.err());
+        assert_eq!(m.read_ram(SAMUS_STATUS), 0, "松开 UP ⇒ sa_Stand");
+        assert_eq!(
+            m.read_ram(ANIM_RESET_INDEX),
+            OBJ_ANIM_SAMUS_STAND,
+            "表项 0 = SetSamusStand ⇒ animResetIndex 重置"
+        );
+        assert_eq!(
+            m.read_ram(ANIM_RESET_INDEX + 1),
+            OBJ_ANIM_SAMUS_STAND,
+            "SetSamusNextAnim ⇒ animIndex 重置"
+        );
+        assert_eq!(m.read_ram(ANIM_RESET_INDEX - 1), 0, "SetSamusNextAnim ⇒ animDelay←0");
     }
 
     /// Dead2 微件（dec animDelay 全可端）。
@@ -1242,7 +1275,8 @@ pub fn samus_roll(mem: &mut Manager) {
     // Lx033：SetSamusRunAccel（CCB7——球滚加速 30/D0）→LCF2E→CheckBombLaunch
     set_samus_run_accel(mem, mem.read_ram(crate::ram_map::SAMUS_DIR));
     solid_entity_response(mem); // LCF2E
-    // CheckBombLaunch（D150——炸弹发射件（吃炸弹能力后径）——随件记账）
+    // CheckBombLaunch（`prg7_engine.asm:3685 CheckBombLaunch: ; 07:D150`——炸弹发射件
+    // （吃炸弹能力后径）——随件记账）
     crate::frame::DIVERGENCES.with(|d| d.borrow_mut().push(0x0D150));
     if mem.read_ram(crate::ram_map::JOY1_STATUS) & (RIGHT | LEFT) == 0 {
         // 无右/左⇒StopHorzMovement（CFB7——停速）
@@ -1272,8 +1306,8 @@ fn set_samus_roll(mem: &mut Manager) {
     mem.write_ram(ANIM_RESET_INDEX + 1, OBJ_ANIM_SAMUS_RUN_JUMP); // $8585-$8572=0x13
     set_samus_run_accel(mem, dir); // CCB7
     mem.write_ram(0x0686, 1); // ScrewAttack0686（球化螺旋转旗面）
-    // SFX_SamusBall（声包随件记账）
-    crate::frame::DIVERGENCES.with(|d| d.borrow_mut().push(0x0CBF0));
+    // SFX_SamusBall（`prg7_engine.asm:2668 SFX_SamusBall: ; 07:CBEF`——声包随件记账）
+    crate::frame::DIVERGENCES.with(|d| d.borrow_mut().push(0x0CBEF));
 }
 
 // ==== 10 态肉·批4（PntUp/Dead/Dead2/Door/Elevator——轻仪式收尾）====
@@ -1324,8 +1358,16 @@ pub fn samus_pnt_up(mem: &mut Manager) {
     // （0 Stand / 1 Run / 3 Roll）在现架构下由各自径承担，改它们会移动已被 L4 冻结的行为
     // （`jump_tail_faces` / `samus_pnt_up_release_and_direction` 当场红）⇒ 留待单独取证，
     // 不在本条修复里顺带改。
-    if mem.samus().status_raw() == 6 {
-        set_samus_jump_pnt_up(mem);
+    // 【f571 修】表项全集按 asm 落实：0=SetSamusStand / 1=SetSamusRun / 3=SetSamusRoll /
+    // 6=SetSamusJumpPntUp，其余 ExitSub（`prg7_engine.asm:3786-3800` 十项）。
+    // 旧形只做表项 6，status=0 的站立复位被跳过 ⇒ `animResetIndex/animIndex` 停在 PntUp 的
+    // `$27/$28`、`animDelay` 不归零，站立精灵整只错（6725M 机制场景 f572 起恒定 145 px）。
+    match mem.samus().status_raw() {
+        0 => set_samus_stand(mem),
+        1 => set_samus_run(mem),
+        3 => set_samus_roll(mem),
+        6 => set_samus_jump_pnt_up(mem),
+        _ => {} // ExitSub（2/4/5/7/8/9）
     }
 }
 

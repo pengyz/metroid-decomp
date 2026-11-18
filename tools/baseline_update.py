@@ -74,6 +74,18 @@ def l4_update(matrix_path: Path, baseline_path: Path, reason: str, rebase: bool 
     if (not isinstance(matrix, dict)
             or matrix.get("generated_by") != "tools/l4_diff_run.py run-all"):
         raise ValueError(f"{matrix_path} 非 run-all 矩阵产物（拒更新——锚不可信）")
+    # 【2026-11-18 加固】临时调试用例污染防线：单案 run 会覆盖 shots_rust/matrix.json，
+    # 若此刻跑基线更新，临时 case 会被锚进 ratchet（实测事故：case-tmp-anim 混入基线后
+    # 需要语义重基才清得掉）。判据=矩阵里每个 case 必须有同名 `cases/<case>.txt`
+    # （临时探针文件叫 `_tmp-anim.txt`，内部 name 是 case-tmp-anim ⇒ 名称不等于文件名）。
+    cases_dir = ROOT / "cases"
+    names = [r.get("case") for r in (matrix.get("rows") or []) if isinstance(r, dict)]
+    missing = sorted(c for c in names
+                     if isinstance(c, str) and not (cases_dir / f"{c}.txt").is_file())
+    if missing:
+        raise ValueError(
+            "矩阵含 `cases/<case>.txt` 不存在的用例（临时调试用例不入 ratchet）: "
+            + ", ".join(missing[:6]) + ("…" if len(missing) > 6 else ""))
     old = None
     if baseline_path.is_file():
         old = gates_cli.load_l4_ratchet_baseline(baseline_path)
