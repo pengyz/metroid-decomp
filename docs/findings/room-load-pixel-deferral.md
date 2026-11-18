@@ -41,8 +41,13 @@ f672 `DECx=2 SETUP=2`；**f673 `DECx=0 SETUP=1`**（进例程、像素不落地�
 - `SamusState` 增两个**非 RAM** 相位字段：`load_consumed_frame`、`deferred_horz_px: i16`
   （带符号**累计**）。累计的**真实动机**：`MoveSamusLeft/Right` 在 asm 里是**逐像素循环**
   （`SamusMoveHorizontally` 每 1 px 调一次），而装载窗把整个循环一起冻住 ⇒ 窗内**每一个**
-  像素都要挂起、窗末一起落。所以「清标位」只能发生在装载窗排空那一拍，清早了则
-  `|delta|>=2` 时第 2..n 个像素当拍落地（这正是复核 2026-11-19 P1-A 抓到的漏洞，已修）。
+  像素都要挂起、窗末一起落。所以「清标位」只能发生在装载窗排空那一拍。
+
+  **阈值实测更正（复核 2026-11-19 第二轮，`|delta|>=2` 的说法被实验证伪）**：把
+  `defer_if_load_consumed` 回填成旧形（第一次即清标位）后，`|delta|=2` 仍然绿——因为窗内
+  每像素循环会再走一次 `check_update_name_table`，`is_load` 仍真时把标位重新置起；
+  **只有 `|delta|>=3` 才红**。因此旧形的真实后果是「一窗内第 3 个及以后的像素当拍落地」，
+  不是「第 2 个」。判别测 `three_pixel_move_defers_three_pixels` 钉的就是这个阈值。
 - `check_update_name_table` 的 `is_load` 分支置标位；`move_samus_left/right` 在 Scroll
   之后、`set_x` 之前把 ±1 累加进 `deferred_horz_px` 并 return。
 - `Engine::end_of_tick_gate` 在迭代门队列**排空**那一拍兑现（`debug_assert` 钉住：队列非空
@@ -84,6 +89,12 @@ f676（与 emu 的 x 相位对齐），于是 f673/f674 的 Samus 少差分 1 px
   `RoomRAMWorkPtr` 在写、FC 冻结；Rust 把整段压成单帧（f673 rust FC=144/Room=`F0`，
   emu FC=143/Room=`08`）。
 - f676 之后仍有 nametable 面残差（f678 16 B / f700 32 B）。
+- **快照相位丢失**：`Manager::restore_mss` 用 `Self::default()` 重建 ⇒ 窗中打快照/恢复会丢掉
+  `deferred_horz_px` 与标位（x 少 n px）。当前 20 案未触发。
+- **`dropped==0` 的同 tick 推迟**：`LOAD_BASE_CYCLES=29000 < FRAME_CYCLES=29780` ⇒ 存在
+  「`is_load` 为真但窗为空」的拍，像素被推到 tick 末兑现（同 tick 内 x 陈旧，幅度从 1 px 放大到 n px）。
+- **兑现基准**：兑现是把增量加到「tick 末的 x」上；若同 tick 后续有 `set_x`（门传送等），偏移会
+  落到新基准上。未证可达。
 - `ScrollX==0` 的跨格迁移径（`GetRoomNum` / `MapPosX±1` / `@atRightBound` 回滚）已由
   `scroll_right_wraps_scroll_x_and_toggles_name_table` 恢复覆盖，但 `GetRoomNum` 的分支
   仍无断言。

@@ -2673,6 +2673,21 @@ mod tests_room_load_defer {
         assert_eq!(m.samus().x(), 0x6E, "窗末一次落 2 px");
     }
 
+    /// **判别测（对旧形必红）**：`delta=-3` 时三 px 全挂起。复核实测（/tmp 副本回填
+    /// `6972bef0` 的旧形）只有 ≥3 px 才红——因为窗内每像素循环仍会走
+    /// `check_update_name_table`、`is_load` 为真时会把标位重新置起，旧形在 −2 时恰好「看起来对」。
+    /// 这条测把真实阈值钉住，别再写「≥2 就必红」。
+    #[test]
+    fn three_pixel_move_defers_three_pixels() {
+        let mut m = load_frame_manager();
+        samus_move_horizontally(&mut m, 0xFD); // −3 px
+        assert_eq!(m.samus().x(), 0x70, "三 px 都没当拍落地");
+        assert_eq!(m.samus().deferred_horz_px(), -3, "累计 −3");
+        m.iter_gates.clear();
+        apply_deferred_horz_px(&mut m);
+        assert_eq!(m.samus().x(), 0x6D, "窗末一次落 3 px");
+    }
+
     /// **跨拍累计**：装载窗跨多拍（每拍都在窗内）时，每拍写 1 px 也要累计，不许互相覆盖。
     #[test]
     fn defers_across_ticks_accumulate_within_one_window() {
@@ -2705,6 +2720,9 @@ mod tests_room_load_defer {
     fn deferred_pixel_lands_at_completion() {
         let mut m = load_frame_manager();
         samus_move_horizontally(&mut m, 0xFF);
+        // **「窗内不许提前落」的判别断言**（复核 P3-1）：删掉 defer 的变异会让 x 当拍就变
+        // 0x6F，这条断言因此必红；没有它就只剩「窗末 x==0x6F」，无法区分当拍落与窗末落。
+        assert_eq!(m.samus().x(), 0x70, "装载窗内不许提前落地");
         m.iter_gates.clear(); // 装载窗走完（真实场景=门队列一拍排 1 项）
         apply_deferred_horz_px(&mut m); // 门队列排空那一拍的兑现点
         assert_eq!(m.samus().x(), 0x6F, "装载窗末落 1 px（emu f676）");

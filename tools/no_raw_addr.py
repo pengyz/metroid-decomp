@@ -236,8 +236,9 @@ def check() -> int:
     named_old = json.loads(LEDGER_NAMED.read_text(encoding="utf-8"))
     lowered = (raw_old["total"] - sum(raw_now.values())) + (named_old["total"] - sum(named_now.values()))
     tail = f"；可下调账本 {lowered} 处（--write）" if lowered > 0 else ""
+    prod_total = raw_old["total"] - (sum(raw_now.values()) - sum(raw_prod.values()))
     print(
-        f"typed 绕过面在账内（**生产面**受棘轮）：裸地址 {sum(raw_prod.values())}/{raw_old['total']} 处 / {len(raw_prod)} 文件"
+        f"typed 绕过面在账内（**生产面**受棘轮）：裸地址 {sum(raw_prod.values())}/{prod_total} 处 / {len(raw_prod)} 文件"
         f"；测试面另计 {sum(raw_now.values()) - sum(raw_prod.values())} 处（不参与棘轮，见 _is_test_surface）"
         f"；具名常量 {sum(named_now.values())}/{named_old['total']} 处 / {len(named_now)} 文件"
         f"（受监控 {', '.join(raw_old['monitored'])}；豁免 {len(EXEMPT)} 个边界文件）{tail}"

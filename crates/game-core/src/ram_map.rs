@@ -224,6 +224,12 @@ pub const SAMUS_STATUS: u16 = 0x0300;
 
 /// SamusDir=$4D（asm 名；SamusStand `sta SamusDir`（「1=left, 0=right」注）+
 /// SamusRun `ldx SamusDir` 字节自证 `a6 4d`——【速核更正第 3 案】假设 $031A 作废）。
+/// `$004C` = `ItemIndex`（asm `constants_ram.asm:559 ItemIndex db ;$4C`）——**本仓无消费者**：
+/// Rust 侧道具扫描/唯一性判定都走 typed 视图，不经过这一格。`nes_map.json` 里它落在那条
+/// `$004C-$004E` 的 undeclared 段中，`$004D`/`$004E` 各有真读写点，`$004C` 没有。
+/// 见 `docs/findings/room-load-pixel-deferral.md`「两条曾被踩错的措辞」。
+pub const ITEM_INDEX_UNMODELED_NOTE: () = ();
+
 pub const SAMUS_DIR: u16 = 0x004D;
 
 /// SamusJumpDsplcmnt=$030F（字节自证 `ac 0f 03`（SamusRun `ldy SamusJumpDsplcmnt`）
