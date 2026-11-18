@@ -141,8 +141,10 @@ y=155..176`，OAM 槽 8..13；emu `(y,x,tile,attr)=(160,143,$14,$20)`，rust `(1
   窗外的 f571+ 分歧用独立探针留证、不计入本条目（见 §7）。
 - 基线经 `python3 tools/coverage_ledger.py --update --reason <text>` 抬高（只升不降），
   状态锚点走 `python3 gates/cli.py sync-anchors` 重签。
-- 如实记账：基线的 `reason` 文本仍是首次升级时写的「600 帧 / compared=1168」口径；
-  改成声明窗 570 后 `--update` 判 NO-OP（基线已是上界）不再写盘，故以本文件 §1/§4
-  的口径为准，基线 `updated_at` 标记其历史性。
+- 【2026-11-18 更正】声明窗曾因 §7 的 145 px 分歧临时收窄到 570 帧；§7 修复后已恢复
+  **600 帧**（4 个采集点 476/570/588/600 全 0 px，状态面 compared=1168 mismatch=0），
+  台账 evidence 另加 `cases/case-morphball-tail-probe.txt` 与其 L4 报告作永久护栏。
+  基线 `reason` 文本仍是首次升级时写的 600 帧口径（`--update` 判 NO-OP 不写盘），
+  `updated_at` 标记其历史性。
 - 覆盖面仍窄：台账 3 条只有 1 条 verified；`door-transition`、`room-load-chain` 仍是
   `route-only`，按同样方法（声明窗 + 负对照 + 0 px 指针）逐条推进。
