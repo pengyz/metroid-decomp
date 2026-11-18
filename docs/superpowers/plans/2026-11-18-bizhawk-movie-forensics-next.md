@@ -95,82 +95,61 @@ git commit -m "docs(findings): 6725M 全片轨迹导出（28409 行/末帧 28408
 
 ---
 
-### Task 2: inputlog 按修复后 `movie_import` 重生成 + 位序逐值断言
+### Task 2: inputlog 位序复核与冻结（跟踪产物 vs 修复后解析器）
+
+> 【2026-11-18 计划修订 Ruling】原 Task 2 假设 `movies/eien86-6725M.inputlog` 仍是旧实现产物，
+> 实测该文件 mtime `2026-11-18 09:38` 已由修复后解析器重生成（`diff` 0/28408），
+> 故本任务从「重生成」降级为「复核+冻结」，并补上被 §7 勘误过的行号偏移（9 行 `#` 头）。
 
 **Files（Task 2）:**
-- Modify: `movies/eien86-6725M.inputlog`（gitignored，重生成）
-- Modify: `movies/eien86-6725M.provenance.json`（gitignored，重生成）
-- Read: `tools/movie_import.py`（:88-160 `parse_bk2` + LogKey 解析）、`tools/tests/test_movie_import.py`
+- Verify（不修改）: `movies/eien86-6725M.inputlog`、`movies/eien86-6725M.provenance.json`
+- Read: `tools/movie_import.py`（`:47-48 BTN_ORDER_TEXT`、`:210 bits_from_text(s, order)`、`:316` 输出头注释）、`tools/tests/test_movie_import.py`
 
 **Interfaces（Task 2）:**
-- Consumes: `77302b66` 的 `parse_bk2`（读 `LogKey` 建列描述表）。
-- Produces: 修正位序后的 `.inputlog`（每行 `p1 p2 cmd` hex，UI 位形 A=bit7…Right=bit0）。Task 5 与所有 Mesen2/`scenario_run.py` 的 `inputlog` 用例消费它。
+- Consumes: `77302b66` 的 `parse_bk2`（读 `LogKey` 建列序）。
+- Produces: 复核后的 `.inputlog`（每行 `p1 p2 cmd` hex；**帧 f 位于第 `10+f` 行**，前 9 行是 `#` 元信息）。Task 5 与所有 `inputlog` 用例消费它。
 
-- [ ] **Step 1: 备份旧产物并重生成到新路径（先不覆盖）**
+- [ ] **Step 1: 全量恒等——跟踪产物必须与「现在跑解析器」逐帧相同**
 
 ```bash
 cd /home/peng/workspace/metroid-decomp
-cp movies/eien86-6725M.inputlog /tmp/inputlog-old.txt
-python3 tools/movie_import.py convert "/tmp/m6725/eien86,alyosha,the8bitbeast-metroid.bk2" \
-  -o /tmp/inputlog-new.txt --frames 1200
-wc -l /tmp/inputlog-old.txt /tmp/inputlog-new.txt
-```
-Expected: 两侧均为 1200 行（`--frames 1200` 截齐，便于逐行 diff）。
-
-- [ ] **Step 2: 逐值断言（Review Focus 3——不能只看行数）**
-
-```bash
-sed -n '229p;14p' /tmp/inputlog-new.txt
-```
-Expected: 第 229 行首字段 `02`（录像 f228 = `P1 Left`）、第 14 行首字段 `10`（录像 f13 = `P1 Start`）。
-若不符 ⇒ 立刻停：要么 LogKey 解析仍有错，要么帧基不同（f0 vs f1），记 findings 并回 `tools/tests/test_movie_import.py` 定位。
-
-- [ ] **Step 3: 统计新旧差异，确认「只有方向键相关行变化」**
-
-```bash
-diff <(cut -d' ' -f1 /tmp/inputlog-old.txt) <(cut -d' ' -f1 /tmp/inputlog-new.txt) | grep -c '^[<>]'
+python3 tools/movie_import.py convert "/tmp/m6725/eien86,alyosha,the8bitbeast-metroid.bk2" -o /tmp/inputlog-full.txt
 python3 - <<'PY1'
-old=[l.split()[0] for l in open('/tmp/inputlog-old.txt')]
-new=[l.split()[0] for l in open('/tmp/inputlog-new.txt')]
-import collections
-c=collections.Counter((int(o,16)^int(n,16)) for o,n in zip(old,new))
-print("xor histogram:", dict(sorted(c.items())))
+def frames(p): return [l.split() for l in open(p) if l.strip() and not l.startswith('#')]
+a, b = frames('movies/eien86-6725M.inputlog'), frames('/tmp/inputlog-full.txt')
+print("frames:", len(a), len(b), "diffs:", sum(1 for x,y in zip(a,b) if x!=y))
 PY1
 ```
-Expected: 非零 xor 只落在 `0x01/0x02/0x04/0x08` 的位（方向键错位），**不出现** `0x10/0x20/0x40/0x80`（Start/Select/B/A 位置本来就对）。出现后者 ⇒ 修复引入新错位，停。
+Expected: `frames: 28408 28408 diffs: 0`。非零 ⇒ 跟踪产物是旧实现残留，回 Task 2 原设计（重生成 + 覆盖），并把差异行号记进 ledger。
 
-- [ ] **Step 4: 覆盖产物并重生成 provenance**
-
-```bash
-python3 tools/movie_import.py convert "/tmp/m6725/eien86,alyosha,the8bitbeast-metroid.bk2" \
-  -o movies/eien86-6725M.inputlog --frames 1200
-python3 tools/movie_import.py inspect "/tmp/m6725/eien86,alyosha,the8bitbeast-metroid.bk2" | head -20
-```
-Expected: `inspect` 的 `frames_with_input`/`first_p1_frame` 与 findings §1 一致（19415 / 13）。
-
-- [ ] **Step 5: 用新 inputlog 跑 Rust 腿 + 比对，确认与 findings 的 10 帧失配一致**
+- [ ] **Step 2: 逐值锚（行号必须带 `+9` 头偏移）**
 
 ```bash
-python3 tools/movie_ref/movie_sched.py --inputlog movies/eien86-6725M.inputlog \
-  --frames 1200 --out /tmp/sched-fixed.sched
-cargo run -q -p game-core --bin rust_screenshot -- --schedule /tmp/sched-fixed.sched \
-  --out /tmp/rustshots-fixed --state-out /tmp/rust-states-fixed.jsonl
-python3 tools/movie_ref/compare_bizhawk_rust.py \
-  --bizhawk analysis/traces/bizhawk-6725M.jsonl --rust /tmp/rust-states-fixed.jsonl \
-  --inputlog movies/eien86-6725M.inputlog --fail-on-mismatch
+sed -n '23p;238p' movies/eien86-6725M.inputlog
 ```
-Expected: 失配集合 = findings §6.2 的 10 帧 `{27,28,29,940,944,945,948,949,950,952,953}`（`--fail-on-mismatch` 会以非零退出，这是**预期**：把非零当"与基线一致"的证据，不是失败）。**关键断言**：输入面 `joy1_latch` 失配数必须回到 **0/967**（旧 inputlog 时是 f229 起错位）。
-若 `movie_sched.py` 尚未入库（他人在写），改用 findings §8 的内联展开命令，并在 commit 里注明未用该工具。
+Expected: 第 23 行（= 帧 f13）首字段 `10`（`P1 Start`）；第 238 行（= 帧 f228）首字段 `02`（`P1 Left`）。
+（旧计划写的 `14p/229p` 漏了 9 行 `#` 头，是**计划缺陷已修正**，不是产物缺陷。）
 
-- [ ] **Step 6: Commit（只提交文档/工具，不提交 movies/）**
+- [ ] **Step 3: 用该 inputlog 喂 Rust 腿并复核对拍基线**
 
 ```bash
-git add docs/findings/movie-bizhawk-6725m.md
-git commit -m "docs(findings): inputlog 按修复后 movie_import 重生成——位序锚 f228/f13 逐值复核，输入面 0/967 失配"
+python3 tools/movie_ref/movie_sched.py --inputlog movies/eien86-6725M.inputlog --frames 1200 --out /tmp/sched-fixed.sched
+cargo run -q -p game-core --bin rust_screenshot -- --schedule /tmp/sched-fixed.sched   --out /tmp/rustshots-fixed --state-out /tmp/rust-states-fixed.jsonl
+python3 tools/movie_ref/compare_bizhawk_rust.py   --bizhawk analysis/traces/bizhawk-6725M.jsonl --rust /tmp/rust-states-fixed.jsonl   --inputlog movies/eien86-6725M.inputlog --start 20 --end 1000
 ```
-正文写明：旧产物错位映射、xor 直方图结论、修后与 findings §6 的 10 帧失配一致。
+Expected（实测已复现）：`可比帧 967` / `全同帧 957（四字段）` / `失配帧 11` / `输入面 $0014 锁存失配 0/967`、`inputlog↔BizHawk p1 失配 0`；失配段 = `f27..29 / f940 / f944..945 / f948..950 / f952..953`。
+若 `movie_sched.py`/`compare_bizhawk_rust.py` 仍未入库（他人未跟踪件），改用 findings §8 的内联等价命令，并在 commit 正文注明未用哪个工具。
 
----
+- [ ] **Step 4: 把复核结论写回 findings §7（不改历史主张，追加日期更正行）**
+
+`docs/findings/movie-bizhawk-6725m.md` §7 追加：跟踪产物 mtime、全量 0/28408 diff、锚点行号（带 `+9` 说明）、输入面 0/967、以及「旧产物 535 帧失配」实验的输入文件已不可复现（被覆盖）这一事实。
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add docs/findings/movie-bizhawk-6725m.md docs/superpowers/plans/2026-11-18-bizhawk-movie-forensics-next.md
+git commit -m "docs(findings): inputlog 位序复核冻结——全量 0/28408 diff、锚点行号含 +9 头偏移、输入面 0/967"
+```
 
 ### Task 3: `$005A` 写序列真值（模拟器侧插桩）
 
