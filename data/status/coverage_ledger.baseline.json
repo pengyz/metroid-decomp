@@ -2,8 +2,8 @@
   "schema": "coverage-ledger-baseline/v1",
   "counts": {
     "unobserved": 0,
-    "route-only": 3,
-    "verified": 0
+    "route-only": 2,
+    "verified": 1
   },
   "ids": [
     "door-transition",
@@ -12,9 +12,9 @@
   ],
   "states": {
     "door-transition": "route-only",
-    "morphball-unroll": "route-only",
+    "morphball-unroll": "verified",
     "room-load-chain": "route-only"
   },
-  "reason": "补引 morphball-unroll 的 f1031 退球证据；只升不降，无条目删除/降级",
-  "updated_at": "2026-11-18T08:54:48+00:00"
+  "reason": "morphball-unroll 升 verified：600 帧机制场景两腿 all-match（compared=1168/mismatch=0，informative status9/room5），证据=case+机制 JSON+findings；只升不降",
+  "updated_at": "2026-11-18T11:27:05+00:00"
 }

@@ -13,8 +13,11 @@
     {
       "id": "morphball-unroll",
       "kind": "mechanism",
-      "state": "route-only",
+      "state": "verified",
       "evidence": [
+        "docs/findings/mechanism-scene-morphball.md",
+        "cases/case-mechanism-morphball.txt",
+        "data/status/mechanism_scene_morphball.json",
         "docs/findings/morphball-probe-route.md",
         "cases/case-morphball-probe.txt",
         "shots_rust/case-morphball-probe.l4report.json",
