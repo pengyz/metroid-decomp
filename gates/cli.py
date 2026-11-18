@@ -261,6 +261,8 @@ def baseline_payload(data: dict) -> str:
 STATE_ANCHOR_FILES = (
     "data/status/baselines/baseline.json",
     "data/status/baselines/baseline_history.jsonl",
+    # 覆盖台账基线（coverage-ratchet 的锚）：与中央基线同档，手改即 rom-integrity FAIL
+    "data/status/coverage_ledger.baseline.json",
 )
 
 
@@ -597,6 +599,10 @@ def gate_rom_integrity() -> tuple[str, str]:
         problems.append("data/status/baselines/baseline.json 未纳入 sha 锚点管理（t10 R1）")
     if "data/status/baselines/baseline_history.jsonl" not in entries:
         problems.append("data/status/baselines/baseline_history.jsonl 未纳入 sha 锚点管理（t14 F1）")
+    if "data/status/coverage_ledger.baseline.json" not in entries:
+        problems.append(
+            "data/status/coverage_ledger.baseline.json 未纳入 sha 锚点管理（覆盖 ratchet 锚可手改）"
+        )
     for rpath, want in sorted(entries.items()):
         p = ROOT / rpath
         if not p.is_file():
@@ -4205,6 +4211,10 @@ def build_parser() -> argparse.ArgumentParser:
         p = sub.add_parser(cmd_name, help=f"单门禁 {gate_name}")
         p.set_defaults(func=cmd_single(cmd_name, gate_name))
     sub.add_parser("all", help="全量：所有门禁 + selftest").set_defaults(func=cmd_all)
+    sub.add_parser(
+        "sync-anchors",
+        help="把 STATE_ANCHOR_FILES 的 sha256 重新登记进 SHA256SUMS（状态文件写盘后调用）",
+    ).set_defaults(func=cmd_sync_anchors)
     sub.add_parser("selftest", help="门禁工具链自证（ratchet/commit-msg/SKIP 打印/清单对齐）").set_defaults(func=cmd_selftest)
 
     p_base = sub.add_parser("baseline", help="基线管理（只升不降 + 强制说明）")
@@ -4240,6 +4250,13 @@ def parser_command_names() -> set[str]:
         if isinstance(action, argparse._SubParsersAction):  # noqa: SLF001
             names.update(action.choices.keys())
     return names
+
+
+def cmd_sync_anchors(args) -> int:
+    """状态文件由 sanctioned CLI 写盘后，同步 SHA256SUMS 锚点（唯一实现：sync_state_anchors）。"""
+    sync_state_anchors()
+    print(f"ANCHORS: 已同步 {len(STATE_ANCHOR_FILES)} 个状态锚点 → data/status/baselines/SHA256SUMS")
+    return 0
 
 
 def main() -> int:

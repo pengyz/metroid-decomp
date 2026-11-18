@@ -19,6 +19,7 @@
 | `python3 gates/cli.py l4` | L4 自动对拍：run-all 矩阵（用例×采集点三态）+ 逐采集点 ratchet（match 集合只增/blocked 只减，非聚合率） | 改 game-core/渲染后、里程碑收尾 |
 | `python3 gates/cli.py all` | 全量（所有门禁 + selftest） | 里程碑收尾 |
 | `python3 gates/cli.py selftest` | 工具链自证：ratchet 只升不降 / 基线↔历史完整性（历史下界·快照覆盖·sha 链·状态锚点）/ commit-msg 证据门禁（含 ProofDeferred）/ SKIP·TOLERATED 显式打印 / 注册表↔本文件清单 + 命令面双向相等 / proof 证书标记校验 + 触发判定 + DEFERRED 欠账（突变打回用例）/ L4 逐采集点 ratchet 反向打回（match 缩水·新增 blocked·9/10 换坏） | 改门禁后；`all` 内含 |
+| `python3 gates/cli.py sync-anchors` | 状态文件由 sanctioned CLI 写盘后，把 `STATE_ANCHOR_FILES` 的 sha256 重新登记进 `data/status/baselines/SHA256SUMS`（唯一实现 `sync_state_anchors`） | 改基线/台账基线写盘后（工具自动调用） |
 | `python3 gates/cli.py baseline show\|update\|tolerate` | 基线管理：show=基线+历史；update=只升不降+强制 `--reason` 留痕；tolerate=登记显式 TOLERATED（强制 `--bug` BUG-xxx） | 基线/tolerance 变更 |
 | `python3 gates/cli.py commit-msg <msgfile>` | commit-msg 钩子入口（证据门禁本体） | 钩子自动调用 |
 
