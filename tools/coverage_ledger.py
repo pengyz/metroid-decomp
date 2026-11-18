@@ -160,6 +160,9 @@ def _baseline_doc(items: list[dict], reason: str) -> dict:
     }
 
 
+PROVENANCE_KEYS = ("reason", "updated_at")
+
+
 def _write_baseline(path: Path, doc: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
@@ -291,6 +294,12 @@ def update(ledger_path: str | Path = DEFAULT_LEDGER,
     if problems:
         raise LedgerError("拒绝降级（未写盘）：" + "；".join(problems))
     baseline = _merged_doc(old, ledger.items, reason)
+    # 内容等价（除 reason/updated_at 外逐键相同）⇒ 不写盘，避免无意义 diff。
+    if {k: v for k, v in old.items() if k not in PROVENANCE_KEYS} == {
+        k: v for k, v in baseline.items() if k not in PROVENANCE_KEYS
+    }:
+        print("NO-OP: 基线已是上界，未写盘", file=sys.stderr)
+        return old
     _write_baseline(baseline_path, baseline)
     return baseline
 
