@@ -2,8 +2,8 @@
   "schema": "coverage-ledger-baseline/v1",
   "counts": {
     "unobserved": 0,
-    "route-only": 2,
-    "verified": 1
+    "route-only": 1,
+    "verified": 2
   },
   "ids": [
     "door-transition",
@@ -11,10 +11,10 @@
     "room-load-chain"
   ],
   "states": {
-    "door-transition": "route-only",
+    "door-transition": "verified",
     "morphball-unroll": "verified",
     "room-load-chain": "route-only"
   },
-  "reason": "morphball-unroll 升 verified：600 帧机制场景两腿 all-match（compared=1168/mismatch=0，informative status9/room5），证据=case+机制 JSON+findings；只升不降",
-  "updated_at": "2026-11-18T11:27:05+00:00"
+  "reason": "door-transition: route-only→verified（机制场景 600 帧 L4 6/6 全 0px + mechanism_scene compared=1168 mismatch=0 + 零输入负对照 changes=0/0）",
+  "updated_at": "2026-11-18T14:15:39+00:00"
 }

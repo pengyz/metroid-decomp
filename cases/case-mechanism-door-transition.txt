@@ -1,0 +1,15 @@
+# 机制场景：门过渡（door transition）+ 房间重载链
+# 输入来源 = 6725M any% 录像的前 600 帧（作者真实操作：标题→进游戏→右行入门→邻房载入）。
+# 为什么不是自造按键：本作开场演出 440 帧吞输入（SamusInit 07:C8D1 置 Timer3=$2C），
+# 自造路线容易在"还没进游戏"的阶段空转（变形球场景第一版即栽在此）。
+# 机制窗口 = f481（RoomNumber 写目标房）→ f486（载入链走完回 $FF）→ f560 后已在邻房。
+name case-mechanism-door-transition
+frames 600
+snapshot none
+inputlog movies/eien86-6725M.inputlog
+capture 470 approach
+capture 481 door-trigger
+capture 486 load-chain
+capture 500 transition
+capture 560 in-room
+capture 600 end

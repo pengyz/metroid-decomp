@@ -1,0 +1,5953 @@
+{
+  "anchor_field": "status",
+  "case": "cases/case-mechanism-door-transition.txt",
+  "compare": {
+    "all_match": true,
+    "compared": 1168,
+    "distinct_values": {
+      "room": 5,
+      "status": 8
+    },
+    "fields": [
+      "status",
+      "room"
+    ],
+    "first_diff": null,
+    "incomparable": 16,
+    "incomparable_fields": 0,
+    "incomparable_frames": 16,
+    "informative": true,
+    "mismatch": 0,
+    "mismatch_frames": [],
+    "per_field": {
+      "room": 0,
+      "status": 0
+    }
+  },
+  "frames": 600,
+  "mesen": {
+    "1": {
+      "latch": 0,
+      "room": 0,
+      "status": 0
+    },
+    "2": {
+      "latch": 0,
+      "room": 0,
+      "status": 0
+    },
+    "3": {
+      "latch": 0,
+      "room": 0,
+      "status": 0
+    },
+    "4": {
+      "latch": 0,
+      "room": 0,
+      "status": 0
+    },
+    "5": {
+      "latch": 0,
+      "room": 0,
+      "status": 0
+    },
+    "6": {
+      "latch": 0,
+      "room": 0,
+      "status": 0
+    },
+    "7": {
+      "latch": 0,
+      "room": 0,
+      "status": 0
+    },
+    "8": {
+      "latch": 0,
+      "room": 0,
+      "status": 0
+    },
+    "9": {
+      "latch": 0,
+      "room": 0,
+      "status": 0
+    },
+    "10": {
+      "latch": 0,
+      "room": 0,
+      "status": 0
+    },
+    "11": {
+      "latch": 0,
+      "room": 0,
+      "status": 0
+    },
+    "12": {
+      "latch": 0,
+      "room": 0,
+      "status": 0
+    },
+    "13": {
+      "latch": 0,
+      "room": 0,
+      "status": 0
+    },
+    "14": {
+      "latch": 0,
+      "room": 0,
+      "status": 0
+    },
+    "15": {
+      "latch": 16,
+      "room": 0,
+      "status": 0
+    },
+    "16": {
+      "latch": 0,
+      "room": 0,
+      "status": 0
+    },
+    "17": {
+      "latch": 0,
+      "room": 0,
+      "status": 0
+    },
+    "18": {
+      "latch": 0,
+      "room": 0,
+      "status": 0
+    },
+    "19": {
+      "latch": 16,
+      "room": 0,
+      "status": 0
+    },
+    "20": {
+      "latch": 0,
+      "room": 0,
+      "status": 0
+    },
+    "21": {
+      "latch": 0,
+      "room": 0,
+      "status": 0
+    },
+    "22": {
+      "latch": 0,
+      "room": 0,
+      "status": 0
+    },
+    "23": {
+      "latch": 0,
+      "room": 0,
+      "status": 0
+    },
+    "24": {
+      "latch": 0,
+      "room": 9,
+      "status": 0
+    },
+    "25": {
+      "latch": 0,
+      "room": 9,
+      "status": 0
+    },
+    "26": {
+      "latch": 0,
+      "room": 255,
+      "status": 0
+    },
+    "27": {
+      "latch": 0,
+      "room": 255,
+      "status": 0
+    },
+    "28": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "29": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "30": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "31": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "32": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "33": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "34": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "35": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "36": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "37": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "38": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "39": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "40": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "41": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "42": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "43": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "44": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "45": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "46": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "47": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "48": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "49": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "50": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "51": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "52": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "53": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "54": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "55": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "56": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "57": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "58": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "59": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "60": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "61": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "62": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "63": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "64": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "65": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "66": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "67": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "68": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "69": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "70": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "71": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "72": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "73": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "74": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "75": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "76": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "77": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "78": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "79": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "80": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "81": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "82": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "83": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "84": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "85": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "86": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "87": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "88": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "89": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "90": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "91": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "92": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "93": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "94": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "95": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "96": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "97": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "98": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "99": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "100": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "101": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "102": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "103": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "104": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "105": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "106": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "107": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "108": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "109": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "110": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "111": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "112": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "113": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "114": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "115": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "116": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "117": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "118": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "119": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "120": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "121": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "122": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "123": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "124": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "125": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "126": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "127": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "128": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "129": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "130": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "131": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "132": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "133": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "134": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "135": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "136": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "137": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "138": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "139": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "140": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "141": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "142": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "143": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "144": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "145": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "146": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "147": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "148": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "149": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "150": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "151": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "152": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "153": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "154": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "155": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "156": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "157": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "158": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "159": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "160": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "161": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "162": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "163": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "164": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "165": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "166": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "167": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "168": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "169": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "170": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "171": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "172": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "173": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "174": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "175": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "176": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "177": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "178": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "179": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "180": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "181": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "182": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "183": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "184": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "185": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "186": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "187": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "188": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "189": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "190": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "191": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "192": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "193": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "194": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "195": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "196": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "197": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "198": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "199": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "200": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "201": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "202": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "203": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "204": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "205": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "206": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "207": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "208": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "209": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "210": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "211": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "212": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "213": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "214": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "215": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "216": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "217": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "218": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "219": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "220": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "221": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "222": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "223": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "224": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "225": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "226": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "227": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "228": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "229": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "230": {
+      "latch": 2,
+      "room": 255,
+      "status": 21
+    },
+    "231": {
+      "latch": 2,
+      "room": 255,
+      "status": 21
+    },
+    "232": {
+      "latch": 2,
+      "room": 255,
+      "status": 21
+    },
+    "233": {
+      "latch": 2,
+      "room": 255,
+      "status": 21
+    },
+    "234": {
+      "latch": 2,
+      "room": 255,
+      "status": 21
+    },
+    "235": {
+      "latch": 2,
+      "room": 255,
+      "status": 21
+    },
+    "236": {
+      "latch": 2,
+      "room": 255,
+      "status": 21
+    },
+    "237": {
+      "latch": 2,
+      "room": 255,
+      "status": 21
+    },
+    "238": {
+      "latch": 2,
+      "room": 255,
+      "status": 21
+    },
+    "239": {
+      "latch": 2,
+      "room": 255,
+      "status": 21
+    },
+    "240": {
+      "latch": 2,
+      "room": 255,
+      "status": 21
+    },
+    "241": {
+      "latch": 2,
+      "room": 255,
+      "status": 21
+    },
+    "242": {
+      "latch": 2,
+      "room": 255,
+      "status": 21
+    },
+    "243": {
+      "latch": 2,
+      "room": 255,
+      "status": 21
+    },
+    "244": {
+      "latch": 2,
+      "room": 255,
+      "status": 21
+    },
+    "245": {
+      "latch": 2,
+      "room": 255,
+      "status": 21
+    },
+    "246": {
+      "latch": 2,
+      "room": 255,
+      "status": 21
+    },
+    "247": {
+      "latch": 2,
+      "room": 255,
+      "status": 21
+    },
+    "248": {
+      "latch": 2,
+      "room": 255,
+      "status": 21
+    },
+    "249": {
+      "latch": 2,
+      "room": 255,
+      "status": 21
+    },
+    "250": {
+      "latch": 2,
+      "room": 255,
+      "status": 21
+    },
+    "251": {
+      "latch": 2,
+      "room": 255,
+      "status": 21
+    },
+    "252": {
+      "latch": 2,
+      "room": 255,
+      "status": 21
+    },
+    "253": {
+      "latch": 2,
+      "room": 255,
+      "status": 21
+    },
+    "254": {
+      "latch": 2,
+      "room": 255,
+      "status": 21
+    },
+    "255": {
+      "latch": 2,
+      "room": 255,
+      "status": 21
+    },
+    "256": {
+      "latch": 2,
+      "room": 255,
+      "status": 21
+    },
+    "257": {
+      "latch": 2,
+      "room": 255,
+      "status": 21
+    },
+    "258": {
+      "latch": 2,
+      "room": 255,
+      "status": 21
+    },
+    "259": {
+      "latch": 2,
+      "room": 255,
+      "status": 21
+    },
+    "260": {
+      "latch": 2,
+      "room": 255,
+      "status": 21
+    },
+    "261": {
+      "latch": 2,
+      "room": 255,
+      "status": 21
+    },
+    "262": {
+      "latch": 2,
+      "room": 255,
+      "status": 21
+    },
+    "263": {
+      "latch": 2,
+      "room": 255,
+      "status": 21
+    },
+    "264": {
+      "latch": 2,
+      "room": 255,
+      "status": 21
+    },
+    "265": {
+      "latch": 2,
+      "room": 255,
+      "status": 21
+    },
+    "266": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "267": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "268": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "269": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "270": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "271": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "272": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "273": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "274": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "275": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "276": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "277": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "278": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "279": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "280": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "281": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "282": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "283": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "284": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "285": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "286": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "287": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "288": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "289": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "290": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "291": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "292": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "293": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "294": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "295": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "296": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "297": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "298": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "299": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "300": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "301": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "302": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "303": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "304": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "305": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "306": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "307": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "308": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "309": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "310": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "311": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "312": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "313": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "314": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "315": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "316": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "317": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "318": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "319": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "320": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "321": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "322": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "323": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "324": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "325": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "326": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "327": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "328": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "329": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "330": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "331": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "332": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "333": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "334": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "335": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "336": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "337": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "338": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "339": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "340": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "341": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "342": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "343": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "344": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "345": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "346": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "347": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "348": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "349": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "350": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "351": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "352": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "353": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "354": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "355": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "356": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "357": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "358": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "359": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "360": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "361": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "362": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "363": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "364": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "365": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "366": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "367": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "368": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "369": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "370": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "371": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "372": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "373": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "374": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "375": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "376": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "377": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "378": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "379": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "380": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "381": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "382": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "383": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "384": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "385": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "386": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "387": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "388": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "389": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "390": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "391": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "392": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "393": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "394": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "395": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "396": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "397": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "398": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "399": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "400": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "401": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "402": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "403": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "404": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "405": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "406": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "407": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "408": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "409": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "410": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "411": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "412": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "413": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "414": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "415": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "416": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "417": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "418": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "419": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "420": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "421": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "422": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "423": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "424": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "425": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "426": {
+      "latch": 2,
+      "room": 255,
+      "status": 24
+    },
+    "427": {
+      "latch": 2,
+      "room": 255,
+      "status": 24
+    },
+    "428": {
+      "latch": 2,
+      "room": 255,
+      "status": 24
+    },
+    "429": {
+      "latch": 2,
+      "room": 255,
+      "status": 24
+    },
+    "430": {
+      "latch": 2,
+      "room": 255,
+      "status": 24
+    },
+    "431": {
+      "latch": 2,
+      "room": 255,
+      "status": 24
+    },
+    "432": {
+      "latch": 2,
+      "room": 255,
+      "status": 24
+    },
+    "433": {
+      "latch": 2,
+      "room": 255,
+      "status": 24
+    },
+    "434": {
+      "latch": 2,
+      "room": 255,
+      "status": 24
+    },
+    "435": {
+      "latch": 2,
+      "room": 255,
+      "status": 24
+    },
+    "436": {
+      "latch": 2,
+      "room": 255,
+      "status": 24
+    },
+    "437": {
+      "latch": 2,
+      "room": 255,
+      "status": 24
+    },
+    "438": {
+      "latch": 2,
+      "room": 255,
+      "status": 24
+    },
+    "439": {
+      "latch": 2,
+      "room": 255,
+      "status": 24
+    },
+    "440": {
+      "latch": 2,
+      "room": 255,
+      "status": 24
+    },
+    "441": {
+      "latch": 2,
+      "room": 255,
+      "status": 24
+    },
+    "442": {
+      "latch": 2,
+      "room": 255,
+      "status": 24
+    },
+    "443": {
+      "latch": 2,
+      "room": 255,
+      "status": 24
+    },
+    "444": {
+      "latch": 2,
+      "room": 255,
+      "status": 24
+    },
+    "445": {
+      "latch": 2,
+      "room": 255,
+      "status": 24
+    },
+    "446": {
+      "latch": 2,
+      "room": 255,
+      "status": 24
+    },
+    "447": {
+      "latch": 2,
+      "room": 255,
+      "status": 24
+    },
+    "448": {
+      "latch": 2,
+      "room": 255,
+      "status": 24
+    },
+    "449": {
+      "latch": 2,
+      "room": 255,
+      "status": 24
+    },
+    "450": {
+      "latch": 2,
+      "room": 255,
+      "status": 24
+    },
+    "451": {
+      "latch": 2,
+      "room": 255,
+      "status": 24
+    },
+    "452": {
+      "latch": 2,
+      "room": 255,
+      "status": 24
+    },
+    "453": {
+      "latch": 2,
+      "room": 255,
+      "status": 24
+    },
+    "454": {
+      "latch": 2,
+      "room": 255,
+      "status": 24
+    },
+    "455": {
+      "latch": 2,
+      "room": 255,
+      "status": 24
+    },
+    "456": {
+      "latch": 2,
+      "room": 255,
+      "status": 24
+    },
+    "457": {
+      "latch": 2,
+      "room": 255,
+      "status": 24
+    },
+    "458": {
+      "latch": 2,
+      "room": 255,
+      "status": 24
+    },
+    "459": {
+      "latch": 2,
+      "room": 255,
+      "status": 24
+    },
+    "460": {
+      "latch": 2,
+      "room": 255,
+      "status": 24
+    },
+    "461": {
+      "latch": 2,
+      "room": 255,
+      "status": 24
+    },
+    "462": {
+      "latch": 2,
+      "room": 255,
+      "status": 24
+    },
+    "463": {
+      "latch": 2,
+      "room": 255,
+      "status": 24
+    },
+    "464": {
+      "latch": 2,
+      "room": 255,
+      "status": 24
+    },
+    "465": {
+      "latch": 2,
+      "room": 255,
+      "status": 24
+    },
+    "466": {
+      "latch": 2,
+      "room": 255,
+      "status": 255
+    },
+    "467": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "468": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "469": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "470": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "471": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "472": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "473": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "474": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "475": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "476": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "477": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "478": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "479": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "480": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "481": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "482": {
+      "latch": 2,
+      "room": 23,
+      "status": 1
+    },
+    "483": {
+      "latch": 2,
+      "room": 23,
+      "status": 1
+    },
+    "484": {
+      "latch": 2,
+      "room": 241,
+      "status": 1
+    },
+    "485": {
+      "latch": 2,
+      "room": 242,
+      "status": 1
+    },
+    "486": {
+      "latch": 2,
+      "room": 244,
+      "status": 1
+    },
+    "487": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "488": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "489": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "490": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "491": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "492": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "493": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "494": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "495": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "496": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "497": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "498": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "499": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "500": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "501": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "502": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "503": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "504": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "505": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "506": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "507": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "508": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "509": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "510": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "511": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "512": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "513": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "514": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "515": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "516": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "517": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "518": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "519": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "520": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "521": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "522": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "523": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "524": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "525": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "526": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "527": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "528": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "529": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "530": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "531": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "532": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "533": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "534": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "535": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "536": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "537": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "538": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "539": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "540": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "541": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "542": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "543": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "544": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "545": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "546": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "547": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "548": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "549": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "550": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "551": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "552": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "553": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "554": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "555": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "556": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "557": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "558": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "559": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "560": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "561": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "562": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "563": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "564": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "565": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "566": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "567": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "568": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "569": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "570": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "571": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "572": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "573": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "574": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "575": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "576": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "577": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "578": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "579": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "580": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "581": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "582": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "583": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "584": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "585": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "586": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "587": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "588": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "589": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "590": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "591": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "592": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "593": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "594": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "595": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "596": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "597": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "598": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "599": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "600": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    }
+  },
+  "offset": 0,
+  "rust": {
+    "1": {
+      "latch": 0,
+      "room": 0,
+      "status": 0
+    },
+    "3": {
+      "latch": 0,
+      "room": 0,
+      "status": 0
+    },
+    "7": {
+      "latch": 0,
+      "room": 0,
+      "status": 0
+    },
+    "8": {
+      "latch": 0,
+      "room": 0,
+      "status": 0
+    },
+    "9": {
+      "latch": 0,
+      "room": 0,
+      "status": 0
+    },
+    "10": {
+      "latch": 0,
+      "room": 0,
+      "status": 0
+    },
+    "11": {
+      "latch": 0,
+      "room": 0,
+      "status": 0
+    },
+    "12": {
+      "latch": 0,
+      "room": 0,
+      "status": 0
+    },
+    "13": {
+      "latch": 0,
+      "room": 0,
+      "status": 0
+    },
+    "14": {
+      "latch": 16,
+      "room": 0,
+      "status": 0
+    },
+    "18": {
+      "latch": 16,
+      "room": 0,
+      "status": 0
+    },
+    "19": {
+      "latch": 0,
+      "room": 0,
+      "status": 0
+    },
+    "27": {
+      "latch": 0,
+      "room": 255,
+      "status": 0
+    },
+    "28": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "29": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "30": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "31": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "32": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "33": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "34": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "35": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "36": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "37": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "38": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "39": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "40": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "41": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "42": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "43": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "44": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "45": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "46": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "47": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "48": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "49": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "50": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "51": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "52": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "53": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "54": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "55": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "56": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "57": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "58": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "59": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "60": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "61": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "62": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "63": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "64": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "65": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "66": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "67": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "68": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "69": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "70": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "71": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "72": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "73": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "74": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "75": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "76": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "77": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "78": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "79": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "80": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "81": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "82": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "83": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "84": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "85": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "86": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "87": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "88": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "89": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "90": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "91": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "92": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "93": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "94": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "95": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "96": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "97": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "98": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "99": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "100": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "101": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "102": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "103": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "104": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "105": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "106": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "107": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "108": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "109": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "110": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "111": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "112": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "113": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "114": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "115": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "116": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "117": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "118": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "119": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "120": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "121": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "122": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "123": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "124": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "125": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "126": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "127": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "128": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "129": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "130": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "131": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "132": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "133": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "134": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "135": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "136": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "137": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "138": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "139": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "140": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "141": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "142": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "143": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "144": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "145": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "146": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "147": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "148": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "149": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "150": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "151": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "152": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "153": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "154": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "155": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "156": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "157": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "158": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "159": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "160": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "161": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "162": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "163": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "164": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "165": {
+      "latch": 0,
+      "room": 255,
+      "status": 20
+    },
+    "166": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "167": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "168": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "169": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "170": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "171": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "172": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "173": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "174": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "175": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "176": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "177": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "178": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "179": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "180": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "181": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "182": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "183": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "184": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "185": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "186": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "187": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "188": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "189": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "190": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "191": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "192": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "193": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "194": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "195": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "196": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "197": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "198": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "199": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "200": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "201": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "202": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "203": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "204": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "205": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "206": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "207": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "208": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "209": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "210": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "211": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "212": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "213": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "214": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "215": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "216": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "217": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "218": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "219": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "220": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "221": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "222": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "223": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "224": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "225": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "226": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "227": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "228": {
+      "latch": 0,
+      "room": 255,
+      "status": 21
+    },
+    "229": {
+      "latch": 2,
+      "room": 255,
+      "status": 21
+    },
+    "230": {
+      "latch": 2,
+      "room": 255,
+      "status": 21
+    },
+    "231": {
+      "latch": 2,
+      "room": 255,
+      "status": 21
+    },
+    "232": {
+      "latch": 2,
+      "room": 255,
+      "status": 21
+    },
+    "233": {
+      "latch": 2,
+      "room": 255,
+      "status": 21
+    },
+    "234": {
+      "latch": 2,
+      "room": 255,
+      "status": 21
+    },
+    "235": {
+      "latch": 2,
+      "room": 255,
+      "status": 21
+    },
+    "236": {
+      "latch": 2,
+      "room": 255,
+      "status": 21
+    },
+    "237": {
+      "latch": 2,
+      "room": 255,
+      "status": 21
+    },
+    "238": {
+      "latch": 2,
+      "room": 255,
+      "status": 21
+    },
+    "239": {
+      "latch": 2,
+      "room": 255,
+      "status": 21
+    },
+    "240": {
+      "latch": 2,
+      "room": 255,
+      "status": 21
+    },
+    "241": {
+      "latch": 2,
+      "room": 255,
+      "status": 21
+    },
+    "242": {
+      "latch": 2,
+      "room": 255,
+      "status": 21
+    },
+    "243": {
+      "latch": 2,
+      "room": 255,
+      "status": 21
+    },
+    "244": {
+      "latch": 2,
+      "room": 255,
+      "status": 21
+    },
+    "245": {
+      "latch": 2,
+      "room": 255,
+      "status": 21
+    },
+    "246": {
+      "latch": 2,
+      "room": 255,
+      "status": 21
+    },
+    "247": {
+      "latch": 2,
+      "room": 255,
+      "status": 21
+    },
+    "248": {
+      "latch": 2,
+      "room": 255,
+      "status": 21
+    },
+    "249": {
+      "latch": 2,
+      "room": 255,
+      "status": 21
+    },
+    "250": {
+      "latch": 2,
+      "room": 255,
+      "status": 21
+    },
+    "251": {
+      "latch": 2,
+      "room": 255,
+      "status": 21
+    },
+    "252": {
+      "latch": 2,
+      "room": 255,
+      "status": 21
+    },
+    "253": {
+      "latch": 2,
+      "room": 255,
+      "status": 21
+    },
+    "254": {
+      "latch": 2,
+      "room": 255,
+      "status": 21
+    },
+    "255": {
+      "latch": 2,
+      "room": 255,
+      "status": 21
+    },
+    "256": {
+      "latch": 2,
+      "room": 255,
+      "status": 21
+    },
+    "257": {
+      "latch": 2,
+      "room": 255,
+      "status": 21
+    },
+    "258": {
+      "latch": 2,
+      "room": 255,
+      "status": 21
+    },
+    "259": {
+      "latch": 2,
+      "room": 255,
+      "status": 21
+    },
+    "260": {
+      "latch": 2,
+      "room": 255,
+      "status": 21
+    },
+    "261": {
+      "latch": 2,
+      "room": 255,
+      "status": 21
+    },
+    "262": {
+      "latch": 2,
+      "room": 255,
+      "status": 21
+    },
+    "263": {
+      "latch": 2,
+      "room": 255,
+      "status": 21
+    },
+    "264": {
+      "latch": 2,
+      "room": 255,
+      "status": 21
+    },
+    "265": {
+      "latch": 2,
+      "room": 255,
+      "status": 21
+    },
+    "266": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "267": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "268": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "269": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "270": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "271": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "272": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "273": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "274": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "275": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "276": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "277": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "278": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "279": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "280": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "281": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "282": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "283": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "284": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "285": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "286": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "287": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "288": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "289": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "290": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "291": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "292": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "293": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "294": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "295": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "296": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "297": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "298": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "299": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "300": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "301": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "302": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "303": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "304": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "305": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "306": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "307": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "308": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "309": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "310": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "311": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "312": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "313": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "314": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "315": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "316": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "317": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "318": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "319": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "320": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "321": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "322": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "323": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "324": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "325": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "326": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "327": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "328": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "329": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "330": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "331": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "332": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "333": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "334": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "335": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "336": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "337": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "338": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "339": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "340": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "341": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "342": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "343": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "344": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "345": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "346": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "347": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "348": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "349": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "350": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "351": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "352": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "353": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "354": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "355": {
+      "latch": 2,
+      "room": 255,
+      "status": 22
+    },
+    "356": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "357": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "358": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "359": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "360": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "361": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "362": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "363": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "364": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "365": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "366": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "367": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "368": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "369": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "370": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "371": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "372": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "373": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "374": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "375": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "376": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "377": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "378": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "379": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "380": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "381": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "382": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "383": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "384": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "385": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "386": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "387": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "388": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "389": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "390": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "391": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "392": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "393": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "394": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "395": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "396": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "397": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "398": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "399": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "400": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "401": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "402": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "403": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "404": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "405": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "406": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "407": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "408": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "409": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "410": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "411": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "412": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "413": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "414": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "415": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "416": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "417": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "418": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "419": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "420": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "421": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "422": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "423": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "424": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "425": {
+      "latch": 2,
+      "room": 255,
+      "status": 23
+    },
+    "426": {
+      "latch": 2,
+      "room": 255,
+      "status": 24
+    },
+    "427": {
+      "latch": 2,
+      "room": 255,
+      "status": 24
+    },
+    "428": {
+      "latch": 2,
+      "room": 255,
+      "status": 24
+    },
+    "429": {
+      "latch": 2,
+      "room": 255,
+      "status": 24
+    },
+    "430": {
+      "latch": 2,
+      "room": 255,
+      "status": 24
+    },
+    "431": {
+      "latch": 2,
+      "room": 255,
+      "status": 24
+    },
+    "432": {
+      "latch": 2,
+      "room": 255,
+      "status": 24
+    },
+    "433": {
+      "latch": 2,
+      "room": 255,
+      "status": 24
+    },
+    "434": {
+      "latch": 2,
+      "room": 255,
+      "status": 24
+    },
+    "435": {
+      "latch": 2,
+      "room": 255,
+      "status": 24
+    },
+    "436": {
+      "latch": 2,
+      "room": 255,
+      "status": 24
+    },
+    "437": {
+      "latch": 2,
+      "room": 255,
+      "status": 24
+    },
+    "438": {
+      "latch": 2,
+      "room": 255,
+      "status": 24
+    },
+    "439": {
+      "latch": 2,
+      "room": 255,
+      "status": 24
+    },
+    "440": {
+      "latch": 2,
+      "room": 255,
+      "status": 24
+    },
+    "441": {
+      "latch": 2,
+      "room": 255,
+      "status": 24
+    },
+    "442": {
+      "latch": 2,
+      "room": 255,
+      "status": 24
+    },
+    "443": {
+      "latch": 2,
+      "room": 255,
+      "status": 24
+    },
+    "444": {
+      "latch": 2,
+      "room": 255,
+      "status": 24
+    },
+    "445": {
+      "latch": 2,
+      "room": 255,
+      "status": 24
+    },
+    "446": {
+      "latch": 2,
+      "room": 255,
+      "status": 24
+    },
+    "447": {
+      "latch": 2,
+      "room": 255,
+      "status": 24
+    },
+    "448": {
+      "latch": 2,
+      "room": 255,
+      "status": 24
+    },
+    "449": {
+      "latch": 2,
+      "room": 255,
+      "status": 24
+    },
+    "450": {
+      "latch": 2,
+      "room": 255,
+      "status": 24
+    },
+    "451": {
+      "latch": 2,
+      "room": 255,
+      "status": 24
+    },
+    "452": {
+      "latch": 2,
+      "room": 255,
+      "status": 24
+    },
+    "453": {
+      "latch": 2,
+      "room": 255,
+      "status": 24
+    },
+    "454": {
+      "latch": 2,
+      "room": 255,
+      "status": 24
+    },
+    "455": {
+      "latch": 2,
+      "room": 255,
+      "status": 24
+    },
+    "456": {
+      "latch": 2,
+      "room": 255,
+      "status": 24
+    },
+    "457": {
+      "latch": 2,
+      "room": 255,
+      "status": 24
+    },
+    "458": {
+      "latch": 2,
+      "room": 255,
+      "status": 24
+    },
+    "459": {
+      "latch": 2,
+      "room": 255,
+      "status": 24
+    },
+    "460": {
+      "latch": 2,
+      "room": 255,
+      "status": 24
+    },
+    "461": {
+      "latch": 2,
+      "room": 255,
+      "status": 24
+    },
+    "462": {
+      "latch": 2,
+      "room": 255,
+      "status": 24
+    },
+    "463": {
+      "latch": 2,
+      "room": 255,
+      "status": 24
+    },
+    "464": {
+      "latch": 2,
+      "room": 255,
+      "status": 24
+    },
+    "465": {
+      "latch": 2,
+      "room": 255,
+      "status": 24
+    },
+    "466": {
+      "latch": 2,
+      "room": 255,
+      "status": 255
+    },
+    "467": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "468": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "469": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "470": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "471": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "472": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "473": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "474": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "475": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "476": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "477": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "478": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "479": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "480": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "481": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "484": {
+      "latch": 2,
+      "room": 241,
+      "status": 1
+    },
+    "485": {
+      "latch": 2,
+      "room": 242,
+      "status": 1
+    },
+    "486": {
+      "latch": 2,
+      "room": 244,
+      "status": 1
+    },
+    "487": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "488": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "489": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "490": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "491": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "492": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "493": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "494": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "495": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "496": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "497": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "498": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "499": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "500": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "501": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "502": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "503": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "504": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "505": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "506": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "507": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "508": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "509": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "510": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "511": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "512": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "513": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "514": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "515": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "516": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "517": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "518": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "519": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "520": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "521": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "522": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "523": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "524": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "525": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "526": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "527": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "528": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "529": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "530": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "531": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "532": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "533": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "534": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "535": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "536": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "537": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "538": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "539": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "540": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "541": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "542": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "543": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "544": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "545": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "546": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "547": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "548": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "549": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "550": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "551": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "552": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "553": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "554": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "555": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "556": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "557": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "558": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "559": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "560": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "561": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "562": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "563": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "564": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "565": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "566": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "567": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "568": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "569": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "570": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "571": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "572": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "573": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "574": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "575": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "576": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "577": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "578": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "579": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "580": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "581": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "582": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "583": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "584": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "585": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "586": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "587": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "588": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "589": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "590": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "591": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "592": {
+      "latch": 130,
+      "room": 255,
+      "status": 1
+    },
+    "593": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "594": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "595": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "596": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "597": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "598": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "599": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    },
+    "600": {
+      "latch": 2,
+      "room": 255,
+      "status": 1
+    }
+  }
+}

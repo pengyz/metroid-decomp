@@ -2,9 +2,9 @@
   "schema": "handler-touchlist/v1",
   "doc": "占位臂记账触达清单（L4 矩阵实录固化——增长即红白名单基线）。源=shots_rust/*.divergences.json（rust_screenshot 腿 DIVERGENCES sidecar，2026-11-13 新增）聚合 14 案。契约：sidecar 新增任何不在本清单的 addr=账外=红（须显式登记本清单才放行）——与 diff_traces.py:614 账外照红同语义的 L4 侧。",
   "source_run": "python3 tools/l4_diff_run.py run-all @ 2026-11-18（17 案；新增 0xCBEF/0xD150 由 case-morphball-tail-probe 触发）",
-  "cases_covered": 17,
+  "cases_covered": 19,
   "unique_addrs": 10,
-  "total_events": 74212,
+  "total_events": 75040,
   "entries": [
     {
       "addr": "0xB7E7",
@@ -57,7 +57,7 @@
       "asm_label": "SamusStand",
       "push_site": "samus/handler.rs:902",
       "asm_ref": "refs/m1disasm/SRC/prg7_engine.asm:2735",
-      "n_events": 5954,
+      "n_events": 5955,
       "first_tick": 476,
       "cases": {
         "case-jumpledge-probe": 334,
@@ -75,7 +75,8 @@
         "case-leftwalk-probe": 187,
         "case-elev-norfair-transition": 314,
         "case-leftwalk-probe2": 346,
-        "case-morphball-probe": 434
+        "case-morphball-probe": 434,
+        "case-mechanism-door-transition": 1
       }
     },
     {
@@ -83,7 +84,7 @@
       "asm_label": "SetSamusRun",
       "push_site": "samus/physics.rs:1645",
       "asm_ref": "refs/m1disasm/SRC/prg7_engine.asm:2824",
-      "n_events": 8335,
+      "n_events": 8468,
       "first_tick": 500,
       "cases": {
         "case-jumpledge-probe": 547,
@@ -100,7 +101,8 @@
         "case-leftwalk-probe": 359,
         "case-elev-norfair-transition": 150,
         "case-leftwalk-probe2": 959,
-        "case-morphball-probe": 1244
+        "case-morphball-probe": 1244,
+        "case-mechanism-door-transition": 133
       }
     },
     {
@@ -145,7 +147,7 @@
       "asm_label": "InitEnemyFacingDirectionAxisAndDelay",
       "push_site": "frame/mainloop.rs:752 (敌移动 delay 记账)",
       "asm_ref": "refs/m1disasm/SRC/prg7_engine.asm:12062",
-      "n_events": 58364,
+      "n_events": 59058,
       "first_tick": 476,
       "cases": {
         "case-jumpledge-probe": 3061,
@@ -163,7 +165,8 @@
         "case-leftwalk-probe": 2527,
         "case-elev-norfair-transition": 4800,
         "case-leftwalk-probe2": 5527,
-        "case-morphball-probe": 6974
+        "case-morphball-probe": 6974,
+        "case-mechanism-door-transition": 694
       }
     }
   ],

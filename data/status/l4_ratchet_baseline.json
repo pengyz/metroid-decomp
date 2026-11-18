@@ -423,6 +423,61 @@
         }
       }
     },
+    "case-mechanism-door-negative": {
+      "scenario_sha256": "42fade2f74ded5fdc5e2c0dcd07e1780a88121e5c20ed306da5bd87f5dffbfc5",
+      "states": {
+        "470:approach": {
+          "state": "match",
+          "diff_pixels": 0,
+          "total_pixels": 61440
+        },
+        "481:door-trigger": {
+          "state": "match",
+          "diff_pixels": 0,
+          "total_pixels": 61440
+        },
+        "600:end": {
+          "state": "match",
+          "diff_pixels": 0,
+          "total_pixels": 61440
+        }
+      }
+    },
+    "case-mechanism-door-transition": {
+      "scenario_sha256": "564703505642aeac9bfe73c2dfe65ac250b6d49e41492fcc94b2dcccd85558f2",
+      "states": {
+        "470:approach": {
+          "state": "match",
+          "diff_pixels": 0,
+          "total_pixels": 61440
+        },
+        "481:door-trigger": {
+          "state": "match",
+          "diff_pixels": 0,
+          "total_pixels": 61440
+        },
+        "486:load-chain": {
+          "state": "match",
+          "diff_pixels": 0,
+          "total_pixels": 61440
+        },
+        "500:transition": {
+          "state": "match",
+          "diff_pixels": 0,
+          "total_pixels": 61440
+        },
+        "560:in-room": {
+          "state": "match",
+          "diff_pixels": 0,
+          "total_pixels": 61440
+        },
+        "600:end": {
+          "state": "match",
+          "diff_pixels": 0,
+          "total_pixels": 61440
+        }
+      }
+    },
     "case-mechanism-morphball": {
       "scenario_sha256": "3b5f8658e74caed05c2c3797c1072505d9f17a17da021c42dd2979e900546766",
       "states": {
@@ -1091,6 +1146,16 @@
       "diff": 6,
       "blocked": 0,
       "cells_total": 140
+    },
+    {
+      "ts": "2026-11-18T14:16:46+00:00",
+      "kind": "anchor",
+      "evidence": "",
+      "reason": "新增两个永久机制用例：case-mechanism-door-transition（门过渡 600 帧 6 采点全 0px）与 case-mechanism-door-negative（零输入负对照 3 采点全 0px）；匹配格 134→143，总格 140→149，diff 仍 6（全为既有债），无回退",
+      "match": 143,
+      "diff": 6,
+      "blocked": 0,
+      "cells_total": 149
     }
   ]
 }

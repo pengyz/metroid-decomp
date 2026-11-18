@@ -532,8 +532,17 @@ def parse_scenario(path: Path) -> dict:
     # 流正确）被误 WARN。不变量=「前 700 帧内至少一次 start press」（菜单必在早期发生）；
     # 零 start 仍 WARN（真误删形态）。非门禁弱化：WARN 非阻塞、判据收紧为不变量级。
     if plan.get("frames", 0) > 500 and not plan.get("bundle_load"):
+        # 【2026-11-18 扩口径】除 `press` 外也认 `inputlog` 带来的 Start 位——门过渡机制场景
+        # 直接用录像前 600 帧当输入（作者在 f22/f26 按 Start），静态数 `presses` 会误 WARN。
+        # 判据仍是机械的：**展开后的前 700 帧里至少有一次 Start 按下**（press 与 inputlog 同一口径）。
         _menu = any(p.get("frame", 10**9) <= 700 for p in plan.get("presses", [])
                     if any(str(b).lower() == "start" for b in p.get("buttons", [])))
+        if not _menu and plan.get("input_log"):
+            try:
+                _pads = expand_pads(plan)[0]
+                _menu = any((bits >> 4) & 1 for f, bits in _pads.items() if f <= 700)
+            except ScenarioError:
+                _menu = False
         if not _menu:
             print(f"[scenario-lint] WARN {path.name}: 长场景前 700 帧无 start press——"
                   f"疑菜单误删（教训四犯机械拦）——正写全清核查", file=sys.stderr)

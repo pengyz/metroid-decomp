@@ -3,11 +3,16 @@
     {
       "id": "door-transition",
       "kind": "mechanism",
-      "state": "route-only",
+      "state": "verified",
       "evidence": [
         "docs/findings/case-002-three-roots.md",
         "shots_rust/case-002-door-blue-interaction.sched",
-        "shots_rust/case-002-door-blue-interaction.l4report.json"
+        "shots_rust/case-002-door-blue-interaction.l4report.json",
+        "cases/case-mechanism-door-transition.txt",
+        "shots_rust/case-mechanism-door-transition.l4report.json",
+        "data/status/mechanism_scene_door_transition.json",
+        "docs/findings/mechanism-scene-door-transition.md",
+        "cases/case-mechanism-door-negative.txt"
       ]
     },
     {

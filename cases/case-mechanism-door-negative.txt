@@ -1,0 +1,9 @@
+# 机制场景负对照：与 case-mechanism-door-transition 同窗口、**不给任何输入**。
+# 用途：证明 f481 的房间写点不是自主/环境触发（无输入时 RoomNumber 全程 $FF、不出现载入链）。
+# 注意：本对照证明的是"输入驱动"，不是"路线唯一"（后者需另一条进房路线，未做）。
+name case-mechanism-door-negative
+frames 600
+snapshot none
+capture 470 approach
+capture 481 door-trigger
+capture 600 end
