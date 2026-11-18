@@ -12,7 +12,7 @@
 | 问题 | 结论 | 级 |
 |---|---|---|
 | 帧偏移是多少 | 状态面 `biz_to_mesen=+1`、`rust_to_mesen=0`；锁存面 `+2/+1`（恒比状态面偏一行） | A |
-| f20..1199 有多少段失配 | **43 段**：phase 6 / transient 31 / value 6 / undecidable 0 | A |
+| 窗口 f20..1199（1180 帧）里有多少段失配 | **43 段**：phase 6 / transient 31 / value 6 / undecidable 0 | A |
 | 其中几段是干净的行为差 | **1 段**：`biz f1031..1081 status`（= mesen 轴 `f1031..1081`，biz 行 `1030..1080`） | A |
 | `f943..952` 那一簇是什么 | `kind=value` 但 `during_load=true` ⇒ 按 R7 不进归因分母，成因未定 | A（分类）/C（成因） |
 | 进不进机制级复现 | `f1031..1081` 进（唯一候选）；`f943..952` 不进 | B |
@@ -24,22 +24,25 @@
 |---|---|---|---|---|---|---|
 | `1030..1080` | `1031..1081` | `status($0300)` | **value** | false | **是** | 51 帧持续、无任何公共位移 k∈[-2,2] 能对齐、对面 ±5 帧内不存在该值序列；落在 `$005A=0xFF` 干净窗内 |
 | `944..953` | `945..954` | `room($005A)` + `status` | value | **true** | 否 | 该段 `$005A≠0xFF`，属房间加载瞬态；按 R7 不进归因分母（仍逐帧列账） |
-| `24..29` | `25..30` | room/scrolldir/status/health_hi | phase | true | 否 | 上电入场段，`f<40` 跨腿相位不可用（§11.2 更正） |
-| `672` / `675..678` / `676..678` | 同行 +1 | room | transient / phase | true | 否 | 单帧尖峰或位移可对齐；加载窗内 |
-| `940` | `941` | scrolldir | transient | false | 否 | 单帧尖峰，对面窗口仅一帧异值 |
-| `1131..1136` | `1132..1137` | status+room | phase | true | 否 | 位移可对齐 + 加载窗 |
-| `1176..1177` / `1191..1192` | 同行 +1 | status | transient | false | 否 | 单帧尖峰（rust 侧），无持续值差 |
+| `24..29` | `25..30` | room/scrolldir/status/health_hi | phase（shift −2） | true | 否 | 上电入场段，`f<40` 跨腿相位不可用（§11.2 更正） |
+| `672`（biz）/ `672`（rust） | 同行 +1 | room | phase（shift −1） | true | 否 | 单帧，位移可对齐；加载窗内 |
+| `675..678`（biz）/ `676..678`（rust） | `676..679` / `677..679` | room | **value**（shift 0） | true | 否 | 整段无公共位移；加载窗内 ⇒ 不进分母 |
+| `940`（biz） | `941` | scrolldir | **phase（shift +1）** | false | 否 | 单帧位移可对齐（对面 ±1 有同值） |
+| `1131..1136`（biz） | `1132..1137` | status+room | **value**（shift 0） | true | 否 | 无公共位移，但加载窗内 ⇒ 不进分母 |
+| `1176..1177`（rust）/ `1191..1192`（rust） | 同行 +1 | status | **phase**（shift 0） | false | 否 | 两帧位移可对齐；非加载窗但不构成持续值差 |
+| `1108..1109` / `1123..1124` / `1142..1143` / `1157..1158`（rust） | 同行 +1 | status | transient | false | 否 | 单帧尖峰：对面窗口只有一帧异值 |
 
-其余 30 余段的逐条记录在 `data/status/leg_episodes.json` 的 `episodes[]`，本表只列代表项。
+其余各段的逐条记录在 `data/status/leg_episodes.json` 的 `episodes[]`（`class`/`evidence.shift` 为准），
+本表只列代表项；`kind` 一律以 JSON 为准，本表任一行与 JSON 冲突时以 JSON 为真相。
 
 ## 2. 分母怎么算（R7 要求三数）
 
 | 项 | 值 | 来源 |
 |---|---|---|
-| 总帧 | 1200 | 窗口 f20..1199 |
-| 可比帧 | 1180 | Task 2 `denominators.total` |
+| 窗口总帧 | 1180 | f20..1199（含 20 与 1199） |
+| 可比帧 | 1180 | Task 2 `denominators.total_frames` |
 | 排除：加载窗 | 33 | `$005A != $FF`（含 14 个缺行） |
-| 进分母 | **1147**（rust 腿 1155） | Task 2 `denominators.compared` |
+| 进分母 | **1147**（rust 腿 1155） | Task 2 `denominators.in_denominator` |
 | 进分母后的干净差 | 1 段 / 51 帧 | 上一节 |
 
 纪律：排除帧必须**逐帧列账**（`leg_episodes.json` 每条带 `during_load` 标记），不是「不计入就丢掉」。
@@ -49,9 +52,12 @@
 1. **不是逐例程判据错**（A）：`docs/findings/movie-6725m-f1031-unroll.md` 已证 `SamusRoll ; 07:D0E1`
    与 `ObjectCheckMoveVertical` 两侧判据、地址换算、瓦分类一致，Rust 在**自己的 x 上**回滚动是对的。
 2. **现在也不是「输入 +1 帧」**（A）：该假说源自旧轨迹文件的行内不一致；相位改写后
-   `post[f] == pre[f-1]` 28 388/28 388 全等，状态面 `rust_to_mesen=0`，两腿同帧号可比。
-3. **三方仲裁后的归属**（A）：`f1030..1080` 上 Mesen2 与 Rust 均为 `status=03`（Roll），
-   quickerNES 为 `04`（退球）⇒ 该差异是 **quickerNES ↔ Mesen2 的核心差**，不是移植错。
+   `post[f] == pre[f+1]` **28407/28407** 全等（新行 f ≡ 旧行 f+1，`pre[f-1]` 仅 1115/1201），
+   且状态面实测 `rust_to_mesen = 0` ⇒ 两腿同帧号可比。
+3. **三方仲裁后的归属**（A，2026-11-18 复核更正）：`status=04`（退球）在 quickerNES 上**只出现于
+   biz 行 f1030 一帧**；从 biz 行 1031 起 quickerNES 已是 `01`（站立），而 Mesen2 与 Rust 在
+   `mesen 1031..1081` 整段维持 `03`（Roll）。⇒ 仍是**核心差**（quickerNES 早一帧退出 Roll，
+   随后两腿同相位），不是移植错，但「A 腿整段记 04」的旧表述不成立。
 4. 因此进机制级复现的目的**不是修移植**，而是把「同输入下退球时机」做成可判定的短场景，
    以便后续若出现同类分歧时能用 Mesen2 腿独立裁定（Task 5 的 `informative` 门槛就是为此设的）。
 
@@ -75,11 +81,24 @@
 ## 6. 复现命令
 
 ```bash
-python3 tools/movie_ref/align_legs.py --json-out /tmp/off.json          # 状态面 +1/0、锁存面 +2/+1
-python3 tools/movie_ref/classify_episodes.py --json-out /tmp/eps.json   # 43 段三分类与分母
+# 状态面 +1/0、锁存面 +2/+1（--bizhawk 是「行 f = frame f 收工态」的新文件）
+python3 tools/movie_ref/align_legs.py \
+    --bizhawk analysis/traces/bizhawk-6725M-post.jsonl \
+    --mesen analysis/traces/_probe-axis.frames.jsonl \
+    --rust /tmp/rust-states-t2.jsonl --out /tmp/off.json
+
+# 43 段三分类与分母（--offsets 读 Task 1 产物，不重算偏移）
+python3 tools/movie_ref/classify_episodes.py \
+    --bizhawk analysis/traces/bizhawk-6725M-post.jsonl \
+    --mesen analysis/traces/_probe-axis.frames.jsonl \
+    --rust /tmp/rust-states-t2.jsonl --offsets data/status/leg_offsets.json --out /tmp/eps.json
+
 python3 tools/movie_ref/mechanism_scene.py --case cases/case-password-justin.txt --frames 600
 # ⇒ RESULT: uninformative（常量窗，无判别力）, exit 3 —— 常量窗不得当证据
 ```
+注：`/tmp/rust-states-t2.jsonl` 是 Rust 全片状态转储（临时件，重放命令见
+`docs/findings/movie-6725m-f1031-unroll.md` §9）；两条脚本的最新实测产物已提交在
+`data/status/leg_offsets.json` 与 `data/status/leg_episodes.json`。
 
 ## 7. 未证与未做
 

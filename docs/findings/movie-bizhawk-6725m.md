@@ -674,10 +674,11 @@ f>1200 的像素面**未做**。
 
 > 【2026-11-18 更正】本节结论建立在一个**行内不一致的旧轨迹文件**上：当时 `bizhawk_ref.lua`
 > 先读 RAM 再 `emu.frameadvance()`，行 f 记「frame f 开工态」而行内 `p1` 是 frame f 输入。
-> 改写为「先 advance 再读」（行 f = frame f 收工态）后实测 `post[f] == pre[f-1]` 28 388/28 388
-> 全等 —— 相位改写是**重新编号不是物理位移**，故本节「shift=0」的实测口径作废；按新文件的
-> 正确映射，状态面 `biz_to_mesen = +1`（锁存面 +2，恒偏一行），见
-> `data/status/leg_offsets.json` 与 `docs/spec/oracle-verification-chain.md` R6。
+> 改写为「先 advance 再读」（行 f = frame f 收工态）后实测 `post[f] == pre[f+1]`
+> **28407/28407** 全等（`pre[f-1]` 仅 1115/1201）—— 相位改写是**重新编号不是物理位移**
+> （新行 f ≡ 旧行 f+1），故本节「shift=0」的实测口径作废；按新文件的正确映射，状态面
+> `biz_to_mesen = +1`（锁存面 +2，恒偏一行），见 `data/status/leg_offsets.json` 与
+> `docs/spec/oracle-verification-chain.md` R6。
 > 上表 boot 段的 −2 仍是两侧原生相位差（这一条没被推翻）。
 
 ### 11.3 结果（f=40..1000，961 个可比帧）
@@ -696,8 +697,8 @@ $ python3 tools/movie_ref/compare_cores.py \
 
 > 【2026-11-18 更正】上表的 961 可比帧/15 失配帧是**旧文件 + shift=0** 口径的读数。按新文件
 > 与状态面偏移重算（f20..1199、可比 1180、进分母 1147）得 **43 段**失配：phase 6 / transient 31 /
-> value 6 / undecidable 0，其中**唯一干净持续值差是 `biz f1031..1081 status`**（= mesen 轴
-> 1031..1081）；「窗口之外 0 失配」不再成立（新口径下窗口外至少有 f1030..1080 这一段）。
+> value 6 / undecidable 0，其中**唯一干净持续值差是 biz 行 `1030..1080` 的 `status`**
+> （= mesen 轴 `1031..1081`）；「窗口之外 0 失配」不再成立（新口径下窗口外至少有这一段）。
 > 逐段判定见 `docs/findings/movie-6725m-residual-episodes.md`。
 
 | 字段 | 失配帧 | 位置 | 性质 |
