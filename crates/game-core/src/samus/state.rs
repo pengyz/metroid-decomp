@@ -14,7 +14,7 @@
 use crate::memmap::nesmap::{NesSpan, SpanKey};
 use crate::ram_map::{
     SAMUS_ACCEL_X, SAMUS_ACCEL_Y, SAMUS_ANIM_FRAME, SAMUS_HI, SAMUS_IS_HIT, SAMUS_JUMP_DISP,
-    SAMUS_ON_ELEVATOR, SAMUS_RADIUS_X, SAMUS_RADIUS_Y, SAMUS_SPEED_SUBPIXEL_X,
+    SAMUS_ON_ELEVATOR, SAMUS_RADIUS_X, SAMUS_RADIUS_Y, SAMUS_SCR_X, SAMUS_SPEED_SUBPIXEL_X,
     SAMUS_SPEED_SUBPIXEL_Y, SAMUS_SPEED_X_INT, SAMUS_SPEED_Y_INT, SAMUS_STATUS, SAMUS_SUBPIXEL_X,
     SAMUS_SUBPIXEL_Y, SAMUS_X, SAMUS_Y,
 };
@@ -208,6 +208,13 @@ pub struct SamusState {
     sub: SubPixel,
     /// `SamusHorizontalSpeedMax`（`$0316`）——跑速上限（0x18=1.5px/帧）。
     horz_speed_max: u8,
+    /// 本拍是否被载房窗吞掉（`CheckUpdateNameTable ; 07:E54A` 首件 `jsr SetupRoom`
+    /// 跑过帧边界——asm 的像素写点 `07:E65E`/`07:E692` 在 `jsr ScrollLeft` **之后**，
+    /// 必然落在装载窗结束那一帧）。**非 RAM 字段**：纯行为相位记账。
+    pub load_consumed_frame: bool,
+    /// 被载房窗挂起的待兑像素（`false`=左移 1 px / `true`=右移 1 px）。
+    /// 兑现点 = 迭代门队列排空那一拍（`Engine::end_of_tick_gate`）。
+    pub deferred_horz_px: Option<bool>,
 }
 
 impl Default for SamusState {
@@ -227,6 +234,8 @@ impl Default for SamusState {
             jump_disp: 0,
             sub: SubPixel::default(),
             horz_speed_max: 0,
+            load_consumed_frame: false,
+            deferred_horz_px: None,
         }
     }
 }
@@ -561,6 +570,34 @@ impl<'a> Samus<'a> {
         self.set(SAMUS_X, v);
     }
 
+    /// 本拍是否被载房窗吞掉（**非 RAM 字段**——纯行为相位记账；asm 依据见
+    /// `crates/game-core/src/samus/physics.rs::apply_deferred_horz_px` 的文档注释）。
+    pub fn load_consumed_frame(&self) -> bool {
+        self.mem.samus.load_consumed_frame
+    }
+    pub fn set_load_consumed_frame(&mut self, v: bool) {
+        self.mem.samus.load_consumed_frame = v;
+    }
+
+    /// `SamusScrX`（`$0051`）——萨姆斯在屏幕内的 x（`x − ScrollX`）。
+    pub fn scr_x(&self) -> u8 {
+        self.get(SAMUS_SCR_X)
+    }
+    pub fn set_scr_x(&mut self, v: u8) {
+        self.set(SAMUS_SCR_X, v);
+    }
+
+    /// 被载房窗挂起的待兑水平像素（`false`=左移 1 px / `true`=右移 1 px）。
+    pub fn deferred_horz_px(&self) -> Option<bool> {
+        self.mem.samus.deferred_horz_px
+    }
+    pub fn take_deferred_horz_px(&mut self) -> Option<bool> {
+        self.mem.samus.deferred_horz_px.take()
+    }
+    pub fn set_deferred_horz_px(&mut self, v: Option<bool>) {
+        self.mem.samus.deferred_horz_px = v;
+    }
+
     pub fn jump_displacement(&self) -> u8 {
         self.get(SAMUS_JUMP_DISP)
     }
@@ -627,7 +664,7 @@ impl<'a> Samus<'a> {
 }
 
 /// Samus 血量两字节未 typed 的缺口说明（`SPANS` 里唯一一条非 `Owner`）。
-const TODO: &str = "血量两字节未 typed：health()/set_health() 仍走字节面（$0106 低 / $0107 高；crates/game-core/src/samus/state.rs:615）";
+const TODO: &str = "血量两字节未 typed：health()/set_health() 仍走字节面（$0106 低 / $0107 高；crates/game-core/src/samus/state.rs:656）";
 
 impl crate::memmap::nesmap::NesMapped for SamusState {
     /// 判别字段：`status`（`$0300`，`sa_*` 十态）——同址按状态重解释时的判别源

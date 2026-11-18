@@ -47,6 +47,12 @@ pub(crate) fn check_update_name_table(mem: &mut Manager) {
             / crate::world::room_draw::FRAME_CYCLES;
         // 【case-002 归因卡·临时探针（2026-11-05）】载房工作量+计数实测。
         mem.iter_bogged(dropped.min(255) as u8);
+        // 【f673 载房超帧卡（2026-11-19）】本帧被载房窗吞掉：asm 的像素写点
+        // （`Lx180: ; 07:E65E` / `inc Samus.x ; go right` = `07:E692`）在 `jsr ScrollLeft`
+        // **之后**，故该写必然落到装载窗结束那一帧（emu 探针 f673 DECx=0、f674/f675 纯
+        // lag、f676 DECx=1 落地）。标位由 `move_samus_left/right` 消费（挂起 1 px），
+        // 由 `Engine::end_of_tick_gate` 门队列排空那一拍兑现。
+        mem.samus().set_load_consumed_frame(true);
     }
     if mem.room_number().wrapping_add(1) != 0 {
         return; // RoomNumber≠FF：装载任务未竟

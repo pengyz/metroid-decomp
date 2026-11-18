@@ -165,6 +165,11 @@ impl FrameEngine {
             // 此刻才把 MoreInit 尾的 ScreenOn 影写落到 $FE（下一 tick 的 WritePPUCtrl
             // 写真 PPUMASK，与 asm 两段等待同相位）。
             super::tick::apply_deferred_screen_on(&mut self.mem);
+            // 【f673 载房超帧卡（2026-11-19）】迭代完成拍=载房窗结束那一帧：兑现被挂起的
+            // 水平像素（asm `07:E65E`/`07:E692` 在 `jsr ScrollLeft` 之后——见
+            // `samus::physics::apply_deferred_horz_px` 的逐帧探针实录）。同时清吞帧标位。
+            crate::samus::physics::apply_deferred_horz_px(&mut self.mem);
+            self.mem.samus().set_load_consumed_frame(false);
             self.mem.write_ram(crate::ram_map::NMI_STATUS, 0);
             // 【根修③（2026-11-02）】span_fc 收口 inc（**defer 单增唯一源**（span 尾
             // skip 期 tail 不 inc（title_no_return）））——收口 tick 尾 inc 跳（fc_inced

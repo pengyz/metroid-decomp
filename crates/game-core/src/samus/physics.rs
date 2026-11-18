@@ -1666,6 +1666,10 @@ fn move_samus_left(mem: &mut Manager) -> bool {
     if x == 0 && mem.read_ram(crate::ram_map::SCROLL_DIR) & 0x02 != 0 {
         toggle_samus_hi(mem); // 环绕 00（dec 前判——E650）
     }
+    // 【07:E65E 相位】载房窗吞帧 ⇒ asm 尚未执行到 dec Samus.x（挂起到装载窗末）。
+    if defer_if_load_consumed(mem, false) {
+        return true;
+    }
     mem.samus().set_x(x.wrapping_sub(1));
     // 【E63F 卡·写后探针（临时——2026-11-05）】写 X 后值（一击钉定覆写者）。
     true
@@ -1699,6 +1703,10 @@ fn move_samus_right(mem: &mut Manager) -> bool {
     } else {
         mem.write_ram(crate::ram_map::SAMUS_SCR_X,
                       mem.read_ram(crate::ram_map::SAMUS_SCR_X).wrapping_add(1));
+    }
+    // 【07:E692 相位】载房窗吞帧 ⇒ asm 尚未执行到 inc Samus.x（挂起到装载窗末）。
+    if defer_if_load_consumed(mem, true) {
+        return true;
     }
     let nx = x.wrapping_add(1);
     mem.samus().set_x(nx);
@@ -1969,9 +1977,17 @@ mod tests_camera_follow {
         for a in 0x6000u16..0x6400 {
             m.write_wram(a, 0xFF);
         }
-        m.write_ram(crate::ram_map::SCROLL_DIR, 2); // ScrollDir=2（横房——$49！勘误修）
+        m.camera().set_dir(crate::world::camera::dir::LEFT); // ScrollDir=2（横房——$49！勘误修）
         m.write_ram(crate::ram_map::SAMUS_RADIUS_X, 8);
         m.write_ram(0x030D, 0x50); // y
+        // 【2026-11-19 更正】fixture 的**真实前置态** = 「房间已载入、无待办请求」：
+        // 先按 asm 载一次房（RoomRAM/碰撞面来自真实房流），再把 `RoomNumber` 置 `$FF`
+        // （`constants_ram.asm:589` `RoomNumber ; #$FF=no room requested`）。旧形留
+        // `Default` 的 0 ⇒ `is_load` 恒真、逐像素都走「邻房装载」径（同步跑完仍落像素），
+        // 把载房窗误当普通移动；`f673 卡` 的像素写点相位修正后该误用显形（3 条断言红）。
+        m.set_room_number(0x00);
+        crate::frame::tick::setup_room(&mut m);
+        m.set_room_number(0xFF);
         m
     }
 
@@ -1981,10 +1997,17 @@ mod tests_camera_follow {
     fn move_samus_right_scrolls_camera_at_threshold() {
         let mut m = walkable_room();
         m.write_ram(0x030E, 0x80); // x（x+rx=0x88 &7=0⇒门检（RoomRAM FF 可走））
+        // 【2026-11-19 更正】`ScrollX=0x40`：房内中段（非地图格边界）——`ScrollX==0` 是
+        // asm 的 `GetRoomNum`/`MapPosX` 迁移径（`prg7_engine.asm` `ScrollRight` E6D4+：
+        // 只有到格边界才 inc MapPosX，且可能触发邻房装载），与本用例要钉的「ScrX 到界
+        // ⇒滚摄像机而非动屏内 x」无关。跨格迁移另由滚动用例覆盖。
+        m.write_ram(crate::ram_map::SCROLL_X, 0x40);
         m.write_ram(crate::ram_map::SAMUS_SCR_X, 0x8F); // 右滚界
         assert!(move_samus_right(&mut m));
-        assert_eq!(m.read_ram(crate::ram_map::SCROLL_X), 1, "ScrollX+1（摄像机跟随）");
-        assert_eq!(m.read_ram(crate::ram_map::MAP_POS_X), 4, "MapPosX+1（3→4 新图格）");
+        assert_eq!(m.read_ram(crate::ram_map::SCROLL_X), 0x41, "ScrollX+1（摄像机跟随）");
+        // asm `ScrollRight ; 07:E6D2` 首件：ScrollDir 由 2（左）翻成 3（右）时
+        // `inc MapPosX`（方向翻转即右移一格图坐标）——与 ScrollX 是否为 0 无关。
+        assert_eq!(m.read_ram(crate::ram_map::MAP_POS_X), 4, "转向右：inc MapPosX（E6D4+）");
         assert_eq!(m.read_ram(crate::ram_map::SAMUS_SCR_X), 0x8F, "屏内 x 不动（滚动代替）");
         assert_eq!(m.read_ram(0x030E), 0x81, "房间 x+1");
     }
@@ -1994,9 +2017,12 @@ mod tests_camera_follow {
     fn move_samus_left_scrolls_camera_at_threshold() {
         let mut m = walkable_room();
         m.write_ram(0x030E, 0x80); // x−rx=0x78 &7=0⇒门检
+        // 【2026-11-19 更正】同上：`ScrollX=0x40` 房内中段，避开 `ScrollX==0` 的
+        // `GetRoomNum`/`MapPosX` 迁移径（那是邻房装载径，不是本用例的被测面）。
+        m.write_ram(crate::ram_map::SCROLL_X, 0x40);
         m.write_ram(crate::ram_map::SAMUS_SCR_X, 0x70); // 左滚界（<$71）
         assert!(move_samus_left(&mut m));
-        assert_eq!(m.read_ram(crate::ram_map::SCROLL_X), 0xFF, "ScrollX−1（wrapping）");
+        assert_eq!(m.read_ram(crate::ram_map::SCROLL_X), 0x3F, "ScrollX−1（摄像机跟随）");
         assert_eq!(m.read_ram(crate::ram_map::SAMUS_SCR_X), 0x70, "屏内 x 不动（滚动代替）");
         assert_eq!(m.read_ram(0x030E), 0x7F, "房间 x−1");
     }
@@ -2533,5 +2559,80 @@ mod tests_lava_gate {
         elev.write_ram(ram_map::SAMUS_IN_LAVA, 0x7F);
         lava_and_move_check(&mut elev);
         assert_eq!(elev.read_ram(ram_map::SAMUS_IN_LAVA), 0, "电梯态不被当死人挡掉");
+    }
+}
+
+/// 【f673 载房超帧卡（2026-11-19）】载房窗挂起像素的**兑现点**：迭代门队列排空那一拍
+/// （`Engine::end_of_tick_gate` 的 `iter_gates.is_empty()` 分支）落 1 px。
+///
+/// asm 依据（A 级）：`MoveSamusLeft ; 07:E626`（`prg7_engine.asm:7864`）`:7884 jsr
+/// ScrollLeft` → `CheckUpdateNameTable ; 07:E54A`（`:7702`，**首条指令 `jsr SetupRoom`**）
+/// → `SetupRoom/UpdateNameTable` 跑过帧边界；像素写点 `Lx180: ; 07:E65E`（`:7895-7896
+/// dec Samus.x`）严格在其后 ⇒ 载房窗吞帧时该写必然落到**装载窗结束那一帧**。逐帧探针
+/// 实录：emu f673 进例程但 DECx=0（像素不落地）、f674/f675 纯 lag、f676 DECx=1 落地。
+/// Rust 旧形把 `setup_room` 当同步调用、当帧 `set_x(x∓1)`，只用 `iter_bogged` 跳后续
+/// 迭代 ⇒ 1 px 提前 3 帧生效。
+pub fn apply_deferred_horz_px(mem: &mut Manager) {
+    if let Some(right) = mem.samus().take_deferred_horz_px() {
+        let x = mem.samus().x();
+        let nx = if right { x.wrapping_add(1) } else { x.wrapping_sub(1) };
+        mem.samus().set_x(nx);
+    }
+}
+
+/// 【f673 卡】载房窗吞帧时把像素写挂起（asm 尚未走到 E65E/E692）。返回 `true`=已挂起，
+/// 调用方**不得**再执行 `set_x`。`right`：`false`=左移（E65E）、`true`=右移（E692）。
+fn defer_if_load_consumed(mem: &mut Manager, right: bool) -> bool {
+    if !mem.samus().load_consumed_frame() {
+        return false;
+    }
+    mem.samus().set_load_consumed_frame(false);
+    mem.samus().set_deferred_horz_px(Some(right));
+    true
+}
+
+/// 【f673 载房超帧卡 TDD（2026-11-19）】修前必红/修后必绿：
+/// `room_load_frame_defers_pixel` 断言载房窗当帧**不落**像素（emu f673 x=0x70）。
+#[cfg(test)]
+mod tests_room_load_defer {
+    use super::*;
+    use crate::{frame::Manager, ram_map};
+
+    fn load_frame_manager() -> Manager {
+        let mut m = Manager::default();
+        // typed 面直设（`no-raw-addr` 门：本文件的具名常量引用只减不增——视图已存在
+        // 就不许再走 `ram_map::*` 兼容面）。
+        m.camera().set_dir(crate::world::camera::dir::LEFT); // 左滚
+        m.camera().set_scroll_x(0x01); // ≠0 ⇒ 不触 GetRoomNum（免房间表依赖）
+        m.set_room_number(0x08); // emu f673 实录（邻房装载任务未竟）
+        m.samus().set_radius_x(0x04); // (x-rx)&7=4 ⇒ 8px 门不取
+        m.samus().set_x(0x70);
+        m.samus().set_scr_x(0x70); // ScrX<$71 ⇒ 走 ScrollLeft 径
+        m
+    }
+
+    #[test]
+    fn room_load_frame_defers_pixel() {
+        let mut m = load_frame_manager();
+        samus_move_horizontally(&mut m, 0xFF); // 左 1 px
+        assert_eq!(
+            m.samus().x(),
+            0x70,
+            "载房超帧：07:E65E 的 dec 须推迟到装载窗末（emu f673 x=0x70 DECx=0）"
+        );
+        assert_eq!(
+            m.samus().deferred_horz_px(),
+            Some(false),
+            "待兑像素挂起（false=左移 1 px）"
+        );
+    }
+
+    #[test]
+    fn deferred_pixel_lands_at_completion() {
+        let mut m = load_frame_manager();
+        samus_move_horizontally(&mut m, 0xFF);
+        apply_deferred_horz_px(&mut m); // 门队列排空那一拍的兑现点
+        assert_eq!(m.samus().x(), 0x6F, "装载窗末落 1 px（emu f676）");
+        assert_eq!(m.samus().deferred_horz_px(), None, "只兑一次");
     }
 }
