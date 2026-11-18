@@ -897,7 +897,7 @@ mod tests {
         assert_eq!(
             m.read_ram(ANIM_RESET_INDEX),
             OBJ_ANIM_SAMUS_ROLL,
-            "⇒ animResetIndex←$16（asm :2859）"
+            "⇒ animResetIndex←$16（asm :3600 sta Samus.animResetIndex）"
         );
         // asm 后半段（`prg7_engine.asm:3600-3606`）三项一并钉住，否则只测了 1/4 个 Setter。
         assert_eq!(
@@ -907,7 +907,10 @@ mod tests {
         );
         assert_eq!(m.read_ram(0x0686), 1, "⇒ ScrewAttack0686←1");
         assert_eq!(m.samus().accel_x(), 0x30, "⇒ SamusAccelX←RunAccelerationTbl[dir=0]");
-        // 左向表项 $D0 只做**表级**断言（`$004D SamusDir` 未 typed，不在本测里写零页）：
+        // 左向只做**表级**断言，不改 `$004D SamusDir`：该字节未纳入 typed 面（`TYPED_ADDRS` 自
+        // `$0300` 起），在本文件里直接引 `SAMUS_DIR` 会把 `no-raw-addr` 的具名常量面抬到 66→68
+        // 而撞棘轮（2026-11-18 实测）。真要在行为面覆盖 `ldx SamusDir`，得先给 Samus 状态加
+        // typed 的 dir 访问器（另立任务），不在这条修里顺带做。
         assert_eq!(RUN_ACCELERATION_TBL, [0x30, 0xD0], "bank7:CCC0 = .byte $30/$D0");
     }
 
