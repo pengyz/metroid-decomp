@@ -71,3 +71,23 @@ asm 规定：`SamusEnterDoor` 一旦命中必然留下三件签名——`DoorDel
 3. 文档按实测重写（不写「门过渡已验证」，改写成「滚动房号查找 + 载入链」）。
 4. 未做（登记为后续任务）：把 `$56/$58/$59` 加进 `FIELD_ADDRS`/`STATE_FIELDS`，
    并补一个**真实**门窗口（status 出现 5 且 `$59=$12`）才能重提 `door-transition`。
+
+## 第二轮复核（返工后）：pass-with-findings
+
+复核员逐条核了返工，P0 全关；新 P1 是实测的：
+- **已通过**：①撤回 route-only + `reverts[]` + 基线同步（verified 1 / route-only 2）②证据改挂
+  `room-load-chain` 且该条目仍 route-only（不过标）③文档更正（「482 逐帧一致」「整窗逐帧相同」
+  「`$005B`」三处已无残留）④反升级路径（revert 只降不升；`--update` 在降级后 NO-OP）⑤§4 对照记账
+  （单测只证函数契约）⑥touchlist 头部按 19 案更正 ⑦revert 三测真打穿（14 passed）。
+- **新 P1（已修，commit `27898510`）**：`_entry()` 丢字段 ⇒ **任何 load→save 都会抹掉 `reverts[]`**
+  （实测再 revert 一条后前一条 1→0），与「可审计降级」承诺冲突。修法：`_entry/load` 透传 +
+  `_validate_item` 校验 `REVERT_KEYS` + 新测 `test_reverts_survive_a_second_revert`。
+- **新 P2（已修）**：`revert()` 用 `_baseline_doc(ledger.items, …)` 重建基线，基线里存在而台账
+  缺失的 id 会被静默清除 ⇒ 增收缩守卫（`缺基线中的条目`）+ 测
+  `test_revert_refuses_to_shrink_ledger`（断言消息而非仅 raise）。
+- **P2（记录，未修）**：基线 `reason` 是单槽，后续写盘会覆盖本次降级说明——持久记录以
+  `reverts[]` 为准，这是设计取舍。
+- **P2（记录，未修）**：仍无 `promote` CLI，升级只能手改台账；`_validate_item` 不校验 evidence
+  文件存在 ⇒ 降级被机械化+审计、升级仍是裸手改，通道不对称（下一步应补 `--promote`）。
+- **P3（已做）**：`door-transition` 的 revert 记录加 `note`，标注「已判非门过渡、证据归属
+  room-load-chain，保留仅供追溯」。
