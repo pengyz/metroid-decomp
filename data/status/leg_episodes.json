@@ -2301,6 +2301,28 @@
         "max": 4,
         "within_2_rate": 0.9230769230769231,
         "within_5_rate": 1.0
+      },
+      "nearest_equal_distance_note": "q95=4 是诊断量，不参与 W 推导；W 由实测滞后分布 max_abs=1 导出、上界 2。",
+      "sensitivity": {
+        "W=2": {
+          "phase": 6,
+          "transient": 31,
+          "value": 6,
+          "undecidable": 0
+        },
+        "W=3": {
+          "phase": 18,
+          "transient": 15,
+          "value": 6,
+          "undecidable": 4
+        },
+        "W=4": {
+          "phase": 37,
+          "transient": 0,
+          "value": 6,
+          "undecidable": 0
+        },
+        "note": "W=4 会让 transient 类整体消失，故不采用。"
       }
     },
     "phase_count": 6,
@@ -2517,6 +2539,28 @@
         "max": 4,
         "within_2_rate": 0.9230769230769231,
         "within_5_rate": 1.0
+      },
+      "nearest_equal_distance_note": "q95=4 是诊断量，不参与 W 推导；W 由实测滞后分布 max_abs=1 导出、上界 2。",
+      "sensitivity": {
+        "W=2": {
+          "phase": 6,
+          "transient": 31,
+          "value": 6,
+          "undecidable": 0
+        },
+        "W=3": {
+          "phase": 18,
+          "transient": 15,
+          "value": 6,
+          "undecidable": 4
+        },
+        "W=4": {
+          "phase": 37,
+          "transient": 0,
+          "value": 6,
+          "undecidable": 0
+        },
+        "note": "W=4 会让 transient 类整体消失，故不采用。"
       }
     }
   }

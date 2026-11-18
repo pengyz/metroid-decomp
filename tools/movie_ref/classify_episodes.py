@@ -29,6 +29,7 @@ import json
 import os
 import shutil
 import sys
+from collections import Counter
 from datetime import datetime
 from pathlib import Path
 
@@ -861,7 +862,36 @@ def _phase_window_provenance(
         "nearest_equal_distance": _nearest_equal_distance(
             legs, offsets, episodes
         ),
+        "nearest_equal_distance_note": (
+            "q95=4 是诊断量，不参与 W 推导；W 由实测滞后分布 max_abs=1 "
+            "导出、上界 2。"
+        ),
     }
+
+
+def _sensitivity(
+    legs: dict[str, dict[int, dict]],
+    offsets: dict[str, int],
+    fields: tuple[str, ...],
+    start: int,
+    end: int,
+    load_key: str,
+) -> dict:
+    """W 敏感性实测：只改分类窗，不改任何判据阈值。"""
+    out: dict[str, dict] = {}
+    for window in (2, 3, 4):
+        episodes = classify(
+            legs, offsets, fields, start, end, load_key, window=window
+        )
+        counts = Counter(episode["class"] for episode in episodes)
+        out[f"W={window}"] = {
+            "phase": counts.get("phase", 0),
+            "transient": counts.get("transient", 0),
+            "value": counts.get("value", 0),
+            "undecidable": counts.get("undecidable", 0),
+        }
+    out["note"] = "W=4 会让 transient 类整体消失，故不采用。"
+    return out
 
 
 def _add_provenance(path: str, seq: dict, archive: bool = False) -> dict:
@@ -953,6 +983,9 @@ def main(argv: list[str] | None = None) -> int:
         histogram = _lag_histogram(args.bizhawk, start, end)
         phase_window = _phase_window_provenance(
             legs, offsets, episodes_for_window, histogram
+        )
+        phase_window["sensitivity"] = _sensitivity(
+            legs, offsets, args.fields, start, end, args.load_key
         )
         report = build_report(
             legs, offsets, args.fields, start, end, args.load_key,

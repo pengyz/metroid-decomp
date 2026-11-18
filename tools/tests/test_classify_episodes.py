@@ -12,7 +12,7 @@ from pathlib import Path
 import pytest
 
 from tools.movie_ref.align_legs import load_state
-from tools.movie_ref.classify_episodes import build_report, classify
+from tools.movie_ref.classify_episodes import _sensitivity, build_report, classify
 
 ROOT = Path(__file__).resolve().parents[2]
 REAL = {
@@ -180,6 +180,14 @@ def test_load_state_decodes_extended_fields(tmp_path):
                 "latch": 2,
             }
         }
+
+
+def test_sensitivity_reports_windows_and_note():
+    legs = _legs()
+    out = _sensitivity(legs, {"mesen": 0, "rust": 0}, ("status",), 20, 39, "room")
+    assert set(out) == {"W=2", "W=3", "W=4", "note"}
+    assert out["note"] == "W=4 会让 transient 类整体消失，故不采用。"
+    assert set(out["W=2"]) == {"phase", "transient", "value", "undecidable"}
 
 
 def test_real_traces_smoke_reads_offsets_and_finds_value_segment():
