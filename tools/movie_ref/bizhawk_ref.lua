@@ -60,9 +60,15 @@ local function movie_pad(f, port)
   return v
 end
 
+-- 【2026-11-18 相位修正】旧实现在 `emu.frameadvance()` **之前**读 RAM ⇒ 行 f 记的是
+-- 「frame f 开工前」的状态（= frame f-1 的收工态），而同行的 `p1` 取 `movie.getinput(f)`（frame f 的输入）
+-- ⇒ 轨迹文件**内部**状态与输入错一行。三方实测（f40..1200，四字段）：biz[f] ↔ Mesen2[f] 1061/1160、
+-- biz[f] ↔ Mesen2[f±1] 更差（1053/1053）、而 Rust[f] ↔ Mesen2[f] 1133/1153 ⇒ 错位在**记录器**不在 Rust。
+-- 现在改为「先 frameadvance 再读」：行 f = frame f 的**收工态**，与同行 `p1`=input(f) 同相位。
 local fh = assert(io.open(OUT_PATH, "w"))
 local n = 0
 for frame = 0, TOTAL_FRAMES - 1 do
+  emu.frameadvance()
   local lo = memory.read_u8(0x0106, "RAM")
   local hi = memory.read_u8(0x0107, "RAM")
   local st = memory.read_u8(0x0300, "RAM")
@@ -77,7 +83,6 @@ for frame = 0, TOTAL_FRAMES - 1 do
     frame, lo, hi, st, rm, sd, p1, p2, j1, j2))
   n = n + 1
   if (frame % 100) == 0 then fh:flush() end
-  emu.frameadvance()
 end
 fh:flush()
 fh:close()
