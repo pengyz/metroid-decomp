@@ -119,8 +119,7 @@ skipped = 未跑（带 skip_reason）
 | `area_unknown` | 区号不在 0..4 |
 | `room_index_out_of_range` | 房号越界（如 Brinstar 只有 0..46） |
 | `room_number_not_ff` | 注入后 `$005A` 未走完 F0→…→FF ⇒ 房号未被接受 ⇒ 像素结果**不计入结论** |
-| `entry_preset_unverified_area` | 该区的 `entry_preset` 未用反证实验定稿（目前只有 area 0 定稿），
-整区按房逐个跳过而不是产出可疑数据（§8.1） |
+| `entry_preset_unverified_area` | 该区 `entry_preset` 未用反证实验定稿（目前只有 area 0）；整区按房逐个跳过，不产出可疑数据（§8.1） |
 
 每个被跳过的房**单独一行**（`room` 具体到房号）⇒ `planned = ran + skipped` 机械可核。
 
@@ -146,7 +145,10 @@ rust `shots_rust/<case>_f*_<tag>.ppu.hex`；格式 `$0000-$2FFF`（CHR 8KB + 名
 | `chr` | `$0000-$1FFF` | 图案表（tile 像素来源） |
 | `nt0..nt3` | `$2000-$2FFF` | 名表（含属性表 `$23C0`/`$27C0`/`$2BC0`/`$2FC0`）⇒ **房间数据面** |
 | `palette` | `$3F00-$3F1F` | 调色板 |
-| `sprite` | 推理层 | 以上全同、像素仍有差 ⇒ 只能来自 OAM（OAM 未 dump，故为**排除法**） |
+| `scroll_drift` | 推理层 | 以上全同、但整屏平移 `dx/dy ∈ [-4,4]` 后残差 ≤ 50% ⇒ **滚动相位差一个 tick** |
+| `sprite` | 推理层 | 以上全同、平移也解释不了 ⇒ 只能来自 OAM（OAM 未 dump，故为**排除法**） |
+| `clean` | — | 像素 0 且 PPU 各区间全同 |
+| `unknown` | — | 缺 PPU dump（采集点被 `blocked`/`error`） |
 
 > 尾 3B（scrollX/scrollY/ppuCtrl）**不参与比对**：emu 侧 `emu.getState()` 字段名不匹配
 > （`tools/scenario_capture.lua` `dumpPpu` 对 `ppu.scrollX`/`ppu.scroll_x` 双形容错），实测恒为 `0,0,0`，
