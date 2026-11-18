@@ -1,0 +1,18 @@
+{
+  "schema": "coverage-ledger-baseline/v1",
+  "counts": {
+    "unobserved": 0,
+    "route-only": 3,
+    "verified": 0
+  },
+  "ids": [
+    "door-transition",
+    "morphball-unroll",
+    "room-load-chain"
+  ],
+  "states": {
+    "door-transition": "route-only",
+    "morphball-unroll": "route-only",
+    "room-load-chain": "route-only"
+  }
+}

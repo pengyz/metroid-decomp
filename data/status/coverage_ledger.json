@@ -1,0 +1,34 @@
+{
+  "items": [
+    {
+      "id": "door-transition",
+      "kind": "mechanism",
+      "state": "route-only",
+      "evidence": [
+        "docs/findings/case-002-three-roots.md",
+        "shots_rust/case-002-door-blue-interaction.sched",
+        "shots_rust/case-002-door-blue-interaction.l4report.json"
+      ]
+    },
+    {
+      "id": "morphball-unroll",
+      "kind": "mechanism",
+      "state": "route-only",
+      "evidence": [
+        "docs/findings/morphball-probe-route.md",
+        "cases/case-morphball-probe.txt",
+        "shots_rust/case-morphball-probe.l4report.json"
+      ]
+    },
+    {
+      "id": "room-load-chain",
+      "kind": "mechanism",
+      "state": "route-only",
+      "evidence": [
+        "data/status/leg_episodes.json",
+        "docs/findings/movie-bizhawk-6725m.md",
+        "data/status/leg_offsets.json"
+      ]
+    }
+  ]
+}
