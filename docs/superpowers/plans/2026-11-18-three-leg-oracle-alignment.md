@@ -280,7 +280,7 @@ def test_compare_reports_first_diff():
 - [ ] **Step 2 (T5): 跑测试确认红**
 
 Run: `python3 -m pytest tools/tests/test_mechanism_scene.py -v`
-Expected: FAIL — `ImportError: cannot import name Ledger`
+Expected: FAIL — `ModuleNotFoundError: No module named 'tools.movie_ref.mechanism_scene'`（原稿 `ImportError: cannot import name Ledger` 是复制错）
 
 - [ ] **Step 3 (T5): 实现**
 
@@ -295,6 +295,8 @@ Expected: PASS
 
 Run: `python3 tools/movie_ref/mechanism_scene.py --case cases/case-morphball.txt --frames 120 --json-out analysis/traces/scene-morphball.json`
 Expected: 打印 `first_diff` 或 `all-match`；结果与 L4 矩阵 case-morphball 的既有结论不得矛盾（矛盾则如实记录为工具缺陷，不得改期望值）。
+
+注：`cases/case-morphball.txt` 与 `case-roll.txt` 都不存在；现有 case 均 >120 帧，且 ≤120 帧内没有 ≥3 次状态面跳变。实际测试用临时 120 帧 case（用完删除），另外用现有 `case-password-justin.txt` 600 帧复核。
 
 - [ ] **Step 6 (T5): 提交**
 
