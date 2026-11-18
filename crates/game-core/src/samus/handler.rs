@@ -738,6 +738,67 @@ mod tests {
         assert_eq!(m.read_ram(SAMUS_STATUS), 0, "SetSamusStand（站姿）");
     }
 
+    /// 【6725M f1031 锚测】球态退球（`SamusRoll ; 07:D0E1` → `ObjectCheckMoveUp ; 07:E7A2`
+    /// → `CheckMoveVertical ; 07:E7BD`）：撞点 y−radiusY−8 与 8px 块边界**不对齐**时，
+    /// asm `lda Temp00_CollisionPointYMod8 / bne Lx202` ⇒ `Lx202: sec / rts`（无碰撞）⇒
+    /// **必须退球**（哪怕撞点所在块整行固实）。
+    /// 几何取球态实况（radiusY=8/radiusX=4、x=0x06），y 取 0xCB(203) 使撞点=179 非对齐。
+    /// **注意**：6725M f1030 实况 y=$C8 ⇒ 撞点 176 **对齐**，故本测是 asm 语义锚，
+    /// 不是 f1031 的复现（f1031 真因见 docs/findings/movie-6725m-f1031-unroll.md）。
+    #[test]
+    fn samus_roll_unrolls_when_check_point_not_block_aligned() {
+        use crate::ram_map::{
+            JOY1_CHANGE, JOY1_STATUS, SAMUS_RADIUS_X, SAMUS_RADIUS_Y, SAMUS_STATUS, SAMUS_Y,
+        };
+        let mut m = Manager::default();
+        for a in 0x6000u16..0x6800 {
+            m.write_wram(a, 0xFF);
+        }
+        // 176 行整行固实（含未对齐撞点 179 所在块）——asm 未对齐时根本不取瓦
+        for col in 0..32u16 {
+            let idx = ((176u16 & 0xF8) << 2) | col;
+            m.write_wram(0x6000 | idx, 0x00);
+        }
+        m.write_ram(JOY1_CHANGE, 0x08); // UP 新按下（asm `and #BUTTON_UP / bne Lx031`）
+        m.write_ram(JOY1_STATUS, 0x09); // UP+Right（无 DOWN）
+        m.write_ram(SAMUS_RADIUS_X, 4); // 球态 radiusX
+        m.write_ram(SAMUS_RADIUS_Y, 0x08); // 球态 radiusY（asm 退球前 adc #$08）
+        m.write_ram(SAMUS_STATUS, 3); // 球态
+        m.write_ram(SAMUS_Y, 0xCB); // 撞点 = 203−8−8−8 = 179（&7=3）
+        let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| samus_roll(&mut m)));
+        assert!(r.is_ok(), "退球径应全通: {:?}", r.err());
+        assert_ne!(m.read_ram(SAMUS_STATUS), 3, "非块对齐 ⇒ 退球成功（离开球态）");
+        assert_eq!(m.read_ram(SAMUS_STATUS), 4, "退球尾件 SetSamusData(A=$04) ⇒ sa_PntUp");
+        assert_eq!(m.read_ram(SAMUS_Y), 0xCBu8.wrapping_sub(0x0B), "退球上移 11px");
+    }
+
+    /// 【6725M f1031 锚测·反面】同一块行、几何改为**块对齐** ⇒ asm 取瓦读到固实 ⇒
+    /// `bcc Lx032` 回滚动保持 ⇒ 留在球里（这不是 bug，是 asm 真值）。
+    #[test]
+    fn samus_roll_stays_ball_when_aligned_and_ceiling_solid() {
+        use crate::ram_map::{
+            JOY1_CHANGE, JOY1_STATUS, SAMUS_RADIUS_X, SAMUS_RADIUS_Y, SAMUS_STATUS, SAMUS_Y,
+        };
+        let mut m = Manager::default();
+        for a in 0x6000u16..0x6800 {
+            m.write_wram(a, 0xFF);
+        }
+        for col in 0..32u16 {
+            let idx = ((176u16 & 0xF8) << 2) | col;
+            m.write_wram(0x6000 | idx, 0x00);
+        }
+        m.write_ram(JOY1_CHANGE, 0x08);
+        m.write_ram(JOY1_STATUS, 0x09);
+        m.write_ram(SAMUS_RADIUS_X, 4);
+        m.write_ram(SAMUS_RADIUS_Y, 0x08);
+        m.write_ram(SAMUS_STATUS, 3);
+        m.write_ram(SAMUS_Y, 0xC8); // 撞点 = 200−24 = 176（&7=0 对齐）
+        let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| samus_roll(&mut m)));
+        assert!(r.is_ok(), "滚动保持径应全通: {:?}", r.err());
+        assert_eq!(m.read_ram(SAMUS_STATUS), 3, "块对齐且上方固实 ⇒ 留球");
+        assert_eq!(m.read_ram(SAMUS_Y), 0xC8, "留球⇒不上移");
+    }
+
     /// 【100% 录像 f3536】PntUp 帧按 A ⇒ `sa_PntJump`，且 asm 尾件 `JumpEngine` 落到
     /// `SetSamusJumpPntUp`（`animReset=0x35/animIndex=0x34/animDelay=4/accelY=$18`）。
     #[test]
@@ -1906,3 +1967,4 @@ mod tests_door_chain {
         assert_eq!(m.read_ram(crate::ram_map::METROID_ON_SAMUS), 0x01);
     }
 }
+

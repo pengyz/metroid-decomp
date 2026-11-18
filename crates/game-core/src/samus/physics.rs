@@ -54,6 +54,17 @@ fn object_check_move_vertical(mem: &mut Manager) -> bool {
     if rx == 0 {
         return true; // asm CheckMoveVertical `bne Lx198/sec/rts`（radiusX=0⇒跳过检）
     }
+    // 【块对齐闸（2026-11-18）】asm CheckMoveVertical ; 07:E7DE（`lda Temp00_CollisionPointYMod8`
+    // `/ bne Lx202`）——原注 "skip collision if object boundary is not at block boundary"：
+    // 撞点 Y **不与块边界（8px）对齐 ⇒ 直接 sec/rts（= 无碰撞）**，不进 LE7E6 取瓦环。
+    // Temp00 = (PositionY − DistToCenterY) & 7（`CalculateFirstBGCollisionPoint ; 07:E90F`
+    // 的 `jsr LE95F / and #$07 / sta Temp00_CollisionPointYMod8`）——`adc #$0F`(+carry=+0x10)
+    // 的调整量是 8 的倍数 ⇒ mod8 前后不变，故用未调整 check_y 判定与原版等价。
+    // 旧形缺此闸 ⇒ 未对齐帧也取瓦 ⇒ 空中/贴地误判（E37A 调用点本身已有同式对齐门，
+    // 内闸与它等价，见 MoveSamusDown ; 07:E4A3 的 `adc radiusY / and #$07 / bne Lx157`）。
+    if check_y & 0x07 != 0 {
+        return true; // asm Lx202：sec / rts（无碰撞）
+    }
     // 【实锤①修（2026-10-29）】asm CheckMoveVertical（$E7BD）=x−radiusX 起
     // **x 全距走环**（左界余块+1（步 8（GetNumBlocksToCheck）））——旧形单点（x 中心）
     // ⇒台缘（心过空/缘叠砖）漏检⇒沉入台面下（用户①嵌砖）。horizontal_span_rows 同构。
@@ -66,16 +77,16 @@ fn object_check_move_vertical(mem: &mut Manager) -> bool {
     let scroll_dir = mem.read_ram(crate::ram_map::SCROLL_DIR);
     // 【Y 段回卷修（2026-11-14）】asm `CalculateFirstBGCollisionPoint ; 07:E90F` 的 Y 段
     // （向下查：Temp02_DistToCenterY = −radiusY = 0xF1，`bpl` 不取 ⇒ 走 `Lx212/LE934`）：
-    //   jsr LE95F              ; X = y − Temp02 = y+radiusY（sbc 借位意味 y < 256−radiusY）
-    //   bcs Lx212              ; 无借位（y ≥ 256−radiusY）⇒ 必调整
-    //   cpx #$F0 / bcc Lx214   ; 否则边界值 ≥$F0 才调整
-    //   Lx212: txa / adc #$0F  ; X += 0x0F（越过 240 行后回卷到名表顶部）
+    //   jsr LE95F              ; X = y − Temp02 = y+radiusY（C=1 ⇔ y ≥ 256−radiusY）
+    //   bcs Lx212              ; C=1（底部越 256）⇒ 必调整
+    //   cpx #$F0 / bcc Lx214   ; 否则边界值 ≥$F0 才调整（C=1 落空到 Lx212）
+    //   Lx212: txa / adc #$0F  ; **C 恒为 1**（两条入场径都要求 C=1）⇒ X += 0x10（非 0x0F）
     //   LE934: lda ScrollDir / and #$02 / bne Lx214 / inc Temp0B_PositionHi
     //          ; 竖滚房才换名表页（横滚房"允许回绕"，只改行号）
-    // 旧形只在 y+ry 上做 8 位回绕 ⇒ y≥0xF0 时读到**本页顶行**（空瓦）⇒ 误判可走 ⇒
-    // Samus 穿地板（跳落后 Y 一直涨到回绕、随后伪上升，jumpledge f1190+ 根因）。
+    // 【+0x10 更正（2026-11-18）】旧形写 +0x0F（漏 ADC 的 carry）⇒ 对齐帧上回卷行错一块：
+    // 例 X=0xF8：asm 0x08（行 8）vs 旧形 0x07（行 0）——两者落在**不同** 8px 行。
     if y >= 0u8.wrapping_sub(ry) || check_y >= 0xF0 {
-        check_y = check_y.wrapping_add(0x0F);
+        check_y = check_y.wrapping_add(0x10);
         if scroll_dir & 0x02 == 0 {
             hi_eff ^= 1;
         }
@@ -383,9 +394,12 @@ mod tests {
         // ——旧形单点径无此门（本测未设 rx 隐 0）——设 rx=8（Y 语义本位不变）。
         m.write_ram(crate::ram_map::SAMUS_RADIUS_X, 8);
         assert!(!object_check_move_down(&mut m), "y=177（y+ry=192 撞地板）应阻挡");
-        // y=176 → y+ry=191（184 行=空）→ 可走（未及地板）
-        m.write_ram(SAMUS_Y, 176);
-        assert!(object_check_move_down(&mut m), "y=176（y+ry=191 未及地板）应可走");
+        // y=169 → y+ry=184（184 行=空）→ 可走（未及地板）
+        // 【块对齐闸（2026-11-18）】旧用例用 y=176（y+ry=191，&7=7）——asm CheckMoveVertical
+        //  ; 07:E7DE 对未对齐撞点**不判碰撞**（Lx202 sec/rts），故"未对齐⇒可走"已不再由
+        // 地板行决定；此处改用对齐几何（184）保持"差 8px 未及地板"的原意图。
+        m.write_ram(SAMUS_Y, 169);
+        assert!(object_check_move_down(&mut m), "y=169（y+ry=184 未及地板）应可走");
     }
 
     /// 【X 左界回绕修·红测（2026-11-14）】asm `CalculateFirstBGCollisionPoint ; 07:E93D`
@@ -426,24 +440,25 @@ mod tests {
     /// 【Y 段回卷修·红测（2026-11-14）】asm `CalculateFirstBGCollisionPoint ; 07:E90F`
     /// 向下查（Temp02=−radiusY）：`jsr LE95F` 得 X=y+radiusY 与借位；`bcs Lx212`
     /// （无借位）或 `cpx #$F0 / bcc`（<$F0 直接用）都未命中 ⇒ `txa / adc #$0F`：
-    /// **X += 0x0F**（越过 240 行回卷到名表顶部）；`LE934` 仅竖滚房 `inc Temp0B_PositionHi`。
-    /// 旧形只做 8 位回绕 ⇒ y≥0xF0 时读到本页顶行（空瓦）⇒ 穿地板。
+    /// **X += 0x10**（`adc #$0F` 且 C 恒为 1——两条入场径都要求 C=1；越 240 行回卷到名表顶部）；
+    /// `LE934` 仅竖滚房 `inc Temp0B_PositionHi`。旧形写 +0x0F（漏 carry）⇒ 对齐帧上回卷行差一块。
     #[test]
     fn object_check_move_down_wraps_row_when_bottom_boundary_passes_240() {
         use crate::ram_map::{SAMUS_HI, SAMUS_RADIUS_X, SAMUS_RADIUS_Y, SAMUS_X, SAMUS_Y};
-        // y=0xE7 / ry=0x0F ⇒ 边界 0xF6 ≥ 0xF0 ⇒ asm 回卷成 0x05（行 0）
+        // y=0xE9 / ry=0x0F ⇒ 边界 y+ry=0xF8（&7=0 ⇒ 过块对齐闸）≥ 0xF0
+        // ⇒ asm `txa / adc #$0F`（C=1）＝ 0xF8+0x10＝0x08（行 8）；旧形 +0x0F 落 0x07（行 0）。
         let solid: u8 = 0x5C; // 固实瓦（<0x80 ⇒ 阻挡）
         let empty: u8 = 0xFF; // 空瓦
-        let build = |row0_solid: u8, row_f0_solid: u8, scroll_dir: u8| {
+        let build = |row8: u8, row_f8: u8, row0: u8, scroll_dir: u8| {
             let mut m = Manager::default();
             for i in 0..0x800u16 {
                 m.write_wram(0x6000 | i, 0xFF);
             }
-            let idx0 = ((0x05u16 & 0xF8) << 2) | (0x80u16 >> 3);
-            let idxf0 = ((0xF6u16 & 0xF8) << 2) | (0x80u16 >> 3);
-            m.write_wram(0x6000 | idx0, row0_solid);
-            m.write_wram(0x6000 | idxf0, row_f0_solid);
-            m.write_ram(SAMUS_Y, 0xE7);
+            let idx = |row: u16| 0x6000u16 | (((row & 0xF8) << 2) | (0x80u16 >> 3));
+            m.write_wram(idx(0x08), row8); // asm 回卷目标行（X=0x08）
+            m.write_wram(idx(0xF8), row_f8); // 未回卷的原始边界行
+            m.write_wram(idx(0x00), row0); // 旧形 +0x0F 的落点行（X=0x07）——须**不被读**
+            m.write_ram(SAMUS_Y, 0xE9);
             m.write_ram(SAMUS_RADIUS_Y, 0x0F);
             m.write_ram(SAMUS_X, 0x80);
             m.write_ram(SAMUS_RADIUS_X, 8);
@@ -451,24 +466,29 @@ mod tests {
             m.write_ram(crate::ram_map::SCROLL_DIR, scroll_dir);
             m
         };
-        // 回卷目标行（0x05）固实、原始边界行（0xF6）空 ⇒ 必须阻挡
-        let mut m = build(solid, empty, 3);
+        // 回卷目标行（0x08）固实、其余空 ⇒ 必须阻挡
+        let mut m = build(solid, empty, empty, 3);
         assert!(
             !object_check_move_down(&mut m),
-            "边界越过 240 行应回卷到行 0 查（那里固实 ⇒ 阻挡）"
+            "边界越过 240 行应回卷到行 8 查（那里固实 ⇒ 阻挡）"
         );
-        // 反之 ⇒ 可走
-        let mut m = build(empty, solid, 3);
+        // 原始边界行 0xF8 固实、目标行空 ⇒ 可走（不得读未回卷行）
+        let mut m = build(empty, solid, empty, 3);
         assert!(
             object_check_move_down(&mut m),
-            "回卷目标行空 ⇒ 可走（旧形会读到 0xF6 行的固实 ⇒ 误阻挡）"
+            "回卷目标行空 ⇒ 可走（旧形会读到 0xF8 行的固实 ⇒ 误阻挡）"
+        );
+        // 【+0x10 钉死（2026-11-18）】只有行 0 固实（= 旧形 +0x0F 的落点行）⇒ 必须可走
+        let mut m = build(empty, empty, solid, 3);
+        assert!(
+            object_check_move_down(&mut m),
+            "0xF8 回卷应落行 8（X+0x10）；行 0 是 +0x0F 的错误落点，不该被读"
         );
         // 竖滚房（ScrollDir&2==0）⇒ 另换名表页 1
-        let mut m = build(empty, solid, 0);
-        // 只在页 1 的 0x05 行放固实
-        let idx0 = ((0x05u16 & 0xF8) << 2) | (0x80u16 >> 3);
-        m.write_wram(0x6000 | 0x400 | idx0, solid);
-        assert!(!object_check_move_down(&mut m), "竖滚房回卷应读邻页（页 1 固实 ⇒ 阻挡）");
+        let mut m = build(empty, empty, empty, 0);
+        let idx8 = ((0x08u16 & 0xF8) << 2) | (0x80u16 >> 3);
+        m.write_wram(0x6000 | 0x400 | idx8, solid);
+        assert!(!object_check_move_down(&mut m), "竖滚房回卷应读邻页（页 1 行 8 固实 ⇒ 阻挡）");
     }
 
     /// 【goal-r16 碰撞修·红测】水平查撞必须扫 **Y 跨度覆盖的每一行块**
@@ -660,23 +680,25 @@ mod tests {
     #[test]
     fn object_check_move_up_checks_ceiling_at_y_minus_radiusy_minus_8() {
         use crate::ram_map::{SAMUS_HI, SAMUS_RADIUS_Y, SAMUS_Y};
-        // 上方查撞点 y−ry−8=77 行（tile row 72）→ idx=((72)<<2)|(128>>3)=288|16=304
-        let ceil_idx = 0x6000u16 | 304;
+        // 上方查撞点 y−ry−8=80 行（tile row 80，&7=0 过块对齐闸）→ idx=((80)<<2)|(128>>3)=320|16=336
+        // 【块对齐闸（2026-11-18）】旧几何 y=100 ⇒ 撞点 77（&7=5）——asm CheckMoveVertical
+        //  ; 07:E7DE 对未对齐撞点不判碰撞，故改用对齐几何 80（y=103）保持"查撞点行固实⇒阻挡"原意图。
+        let ceil_idx = 0x6000u16 | 336;
         let mut m = Manager::default();
         for i in 0..1024u16 {
             m.write_wram(0x6000 | i, 0xFF);
         }
         m.write_wram(ceil_idx, 0x5C); // 固实天花板（<0x80=阻挡）
-        m.write_ram(SAMUS_Y, 100); // y=100 → y−ry−8=77 → 撞天花板行
+        m.write_ram(SAMUS_Y, 103); // y=103 → y−ry−8=80 → 撞天花板行
         m.write_ram(SAMUS_RADIUS_Y, 15);
         m.write_ram(0x030E, 128);
         m.write_ram(SAMUS_HI, 0);
         // 【证伪更正（2026-10-29）】radiusX 须非 0（asm `bne Lx198/sec/rts`（0⇒跳过））
         m.write_ram(crate::ram_map::SAMUS_RADIUS_X, 8);
-        assert!(!object_check_move_up(&mut m), "y=100（y−ry−8=77 撞天花板）应阻挡");
-        // y=110 → y−ry−8=87（80 行=空）→ 可走（未及天花板）
-        m.write_ram(SAMUS_Y, 110);
-        assert!(object_check_move_up(&mut m), "y=110（y−ry−8=87 未及天花板）应可走");
+        assert!(!object_check_move_up(&mut m), "y=103（y−ry−8=80 撞天花板）应阻挡");
+        // y=111 → y−ry−8=88（88 行=空）→ 可走（未及天花板；88&7=0 仍起作用）
+        m.write_ram(SAMUS_Y, 111);
+        assert!(object_check_move_up(&mut m), "y=111（y−ry−8=88 未及天花板）应可走");
     }
 
     /// VertAccelerate 头：空中跳过+地面 maxspeed 初始化+对齐检测引爆。
@@ -774,6 +796,18 @@ pub fn object_check_move_up(mem: &mut Manager) -> bool {
     // 侧顶砖）漏检⇒**跳不上去**（用户截图②）。radiusX=0⇒跳过（`bne Lx198/sec/rts`）。
     if rx == 0 {
         return true;
+    }
+    // 【块对齐闸（2026-11-18）】asm CheckMoveVertical ; 07:E7DE（`lda Temp00_CollisionPointYMod8`
+    // `/ bne Lx202`）——原注 "skip collision if object boundary is not at block boundary"：
+    // 撞点 Y 不与 8px 块边界对齐 ⇒ `Lx202: sec / rts`（无碰撞），不进取瓦环。
+    // Temp00 = (y − DistToCenterY) & 7 = (y − (radiusY+8)) & 7（`CalculateFirstBGCollisionPoint
+    // ; 07:E90F` 的 Lx213 支）——−0x10 回卷不改 mod8 ⇒ 用未调整 check_y 等价。
+    // 缺此闸的后果（一般形）：未对齐帧仍去取瓦，读到"看似固实"的块 ⇒ 误判顶头。
+    // 【6725M f1031 不属此因（2026-11-18 取证）】该帧球态 y=$C8/radiusY=8+8 ⇒ 撞点
+    // 200−24=176，176&7=0 **是块对齐的**，闸不改变判定；f1031 退球失败的真因在
+    // 上游输入/帧轴相位（见 docs/findings/movie-6725m-f1031-unroll.md）。
+    if check_y & 0x07 != 0 {
+        return true; // asm Lx202：sec / rts（无碰撞）
     }
     let (left, n) = vertical_span_cols(x, rx);
     for i in 0..n {
@@ -2143,6 +2177,93 @@ mod tests_up_span {
         let base = ((0x50u16 & 0xF8) << 2) | (0x41u16 >> 3);
         m.write_wram(0x6000 + base, 0x40);
         assert!(!object_check_move_up(&mut m), "侧顶砖⇒碰撞（跳不上去）");
+    }
+}
+
+// ===== 块对齐闸锚测（TDD（6725M f1031 退球分歧根因锚））=====
+#[cfg(test)]
+mod tests_block_align_gate {
+    //! asm 锚：`CheckMoveVertical ; 07:E7BD` 在取瓦环前有
+    //! `lda Temp00_CollisionPointYMod8 / bne Lx202`（原注 "skip collision if object boundary
+    //! is not at block boundary"）——**撞点 Y 不与 8px 块边界对齐 ⇒ Lx202: sec/rts = 无碰撞**。
+    //! Temp00 由 `CalculateFirstBGCollisionPoint ; 07:E90F` 的 `jsr LE95F / and #$07 /
+    //! sta Temp00_CollisionPointYMod8` 给出 = (y − DistToCenterY) & 7。
+    //!
+    //! 两条锚测复刻 6725M f1030 的球态退球几何（`SamusRoll ; 07:D0E1` → `ObjectCheckMoveUp
+    //! ; 07:E7A2` → ObjectCheckMoveVertical ; 07:E7B5）：球 radiusY=8，退球前 `adc #$08`
+    //! ⇒ radiusY=16 ⇒ ObjectCheckMoveUp 再 `adc #$08` ⇒ DistToCenterY=24 ⇒ 撞点 y−24。
+    //! **注意**（2026-11-18 取证更正）：6725M 实况 f1030 的 y=$C8 ⇒ 撞点 176 **是对齐的**，
+    //! 故 f1031 退球失败并非本闸所致；本闸是 asm `07:E7DE` 的独立保真修（未对齐语义）。
+    use super::*;
+    use crate::ram_map::{SAMUS_HI, SAMUS_RADIUS_X, SAMUS_RADIUS_Y, SAMUS_X, SAMUS_Y, SCROLL_DIR};
+    use crate::state::Manager;
+
+    /// 球态几何（radiusY=8+8、radiusX=4）在 y=0xCB 处：撞点 y−24=179（&7=3，非块对齐）
+    /// ⇒ 即使 176 行整行为固实瓦，也**必须判"可站"**（asm Lx202 不取瓦）。
+    /// 旧形（无此闸）会读到 176 行的固实瓦 ⇒ 误判顶头（与 f1031 无关，见模块头注）。
+    fn ball_mem(y: u8) -> Manager {
+        let mut m = Manager::default();
+        // 176 行（含撞点 179）整行固实——未对齐时不该被读；对齐时必被读到
+        for col in 0..32u16 {
+            let idx = ((176u16 & 0xF8) << 2) | col;
+            m.write_wram(0x6000 | idx, 0x00); // $00 = 地板砖（<0x80 固实）
+        }
+        m.write_ram(SAMUS_Y, y);
+        m.write_ram(SAMUS_RADIUS_Y, 0x10); // 退球时的瞬态 radiusY（球 8 + asm adc #$08）
+        m.write_ram(SAMUS_RADIUS_X, 4); // 球态 radiusX
+        m.write_ram(SAMUS_X, 0x06); // 6725M f1030 实况 x
+        m.write_ram(SAMUS_HI, 0);
+        m.write_ram(SCROLL_DIR, 3); // 横滚房
+        m
+    }
+
+    #[test]
+    fn up_check_skipped_when_collision_point_not_block_aligned() {
+        // y=0xCB(203) ⇒ 撞点 203−24=179 ⇒ 179&7=3 ⇒ 非块对齐 ⇒ asm 不判碰撞
+        let mut m = ball_mem(0xCB);
+        assert!(
+            object_check_move_up(&mut m),
+            "非块对齐撞点（179&7=3）⇒ asm Lx202 sec/rts 无碰撞 ⇒ 必须判可站"
+        );
+    }
+
+    #[test]
+    fn up_check_reports_solid_when_collision_point_block_aligned() {
+        // y=0xC8(200) ⇒ 撞点 200−24=176 ⇒ 176&7=0 ⇒ 块对齐 ⇒ 取瓦 ⇒ $00 固实 ⇒ 碰撞
+        let mut m = ball_mem(0xC8);
+        assert!(
+            !object_check_move_up(&mut m),
+            "块对齐撞点（176&7=0）且该行固实 ⇒ 必须判碰撞（留球）"
+        );
+    }
+
+    /// 下行臂同闸：y+ry 非对齐 ⇒ 不判碰撞（asm 同一 LE7DE）。
+    #[test]
+    fn down_check_skipped_when_collision_point_not_block_aligned() {
+        let mut m = Manager::default();
+        for i in 0..0x400u16 {
+            m.write_wram(0x6000 | i, 0xFF); // 全可走
+        }
+        // 192 行（对齐撞点行）与 184 行（未对齐撞点 191 所在行）都整行固实
+        // ——未对齐时必须**不取瓦**（否则读到 184 行的固实 ⇒ 误判落地）
+        for row in [184u16, 192u16] {
+            for col in 0..32u16 {
+                let idx = ((row & 0xF8) << 2) | col;
+                m.write_wram(0x6000 | idx, 0x00);
+            }
+        }
+        m.write_ram(SAMUS_RADIUS_Y, 0x0F);
+        m.write_ram(SAMUS_RADIUS_X, 8);
+        m.write_ram(SAMUS_X, 0x80);
+        m.write_ram(SAMUS_HI, 0);
+        m.write_ram(SCROLL_DIR, 3);
+        m.write_ram(SAMUS_Y, 177); // y+ry=192 ⇒ 对齐 ⇒ 阻挡
+        assert!(!object_check_move_down(&mut m), "对齐撞点（192）撞地板 ⇒ 阻挡");
+        m.write_ram(SAMUS_Y, 176); // y+ry=191 ⇒ &7=7 ⇒ 未对齐 ⇒ asm 不判
+        assert!(
+            object_check_move_down(&mut m),
+            "非块对齐撞点（191&7=7）⇒ asm Lx202 无碰撞 ⇒ 必须判可走"
+        );
     }
 }
 

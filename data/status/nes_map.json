@@ -461,9 +461,9 @@
       "kind": "undeclared",
       "refs": [
         "samus/handler.rs:161",
-        "samus/physics.rs:236",
+        "samus/physics.rs:247",
         "samus/handler.rs:274",
-        "samus/physics.rs:1690",
+        "samus/physics.rs:1722",
         "world/door.rs:40"
       ]
     },
