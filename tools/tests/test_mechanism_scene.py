@@ -167,3 +167,18 @@ def test_state_offset_from_latch_rejects_doc_convention():
     doc = {"offsets": {"rust_to_mesen": 0}, "latch_offsets": {"rust_to_mesen": 1}}
     with pytest.raises(ValueError, match="口径不一致"):
         state_offset_from_latch(1, doc)  # 传了 doc 口径的 +1，不是 align 口径的 -1
+
+
+def test_run_scene_missing_rust_binary_raises(monkeypatch, tmp_path):
+    import tools.movie_ref.mechanism_scene as ms
+    case = tmp_path / "x.txt"
+    case.write_text("name x\nframes 10\nsnapshot none\n", encoding="utf-8")
+    monkeypatch.setattr(ms, "_shorten_case",
+                        lambda path, frames: ("fixed", "name fixed\nframes 10\nsnapshot none\n"))
+    monkeypatch.setattr(ms, "_run", lambda *a, **k: None)
+    monkeypatch.setattr(ms, "ROOT", tmp_path)
+    trace = tmp_path / "analysis" / "traces" / "fixed.frames.jsonl"
+    trace.parent.mkdir(parents=True)
+    trace.write_text("{}\n", encoding="utf-8")
+    with pytest.raises(FileNotFoundError, match="缺 Rust 腿二进制"):
+        ms.run_scene(str(case), 10)
