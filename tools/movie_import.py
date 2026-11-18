@@ -47,6 +47,33 @@ ROM = ROOT / "rom" / "Metroid (USA).nes"
 # 与 tools/scenario_run.py::BUTTON_BITS 同序（RLDUTSBA == bit0..bit7）
 BTN_ORDER_TEXT = "RLDUTSBA"
 
+# 字符 → PadState 位（与 crates/game-platform PadState 同一约定：A=bit7 … Right=bit0）。
+# 为什么需要它：**列序不等于位序**。fm2 的列序恰好是 RLDUTSBA（== bit0..bit7，
+# 所以"第 i 列 = bit i"在 fm2 上成立），但 bk2 的列序由 `Input Log.txt` 的
+# `LogKey:` 行声明，实测 6725M 为 `#Reset|Power|#P1 Up|P1 Down|P1 Left|P1 Right|
+# P1 Start|P1 Select|P1 B|P1 A|…`（= UDLRTSBA）——按 fm2 位序硬解会把四个方向
+# 全搬错一格（Up↔Right、Down↔Left），其余四键因 Start/Select/B/A 恰好落在同一
+# 位而"看起来正确"，是典型的静默错误。
+BTN_BIT = {
+    "Right": 0,
+    "Left": 1,
+    "Down": 2,
+    "Up": 3,
+    "Start": 4,
+    "Select": 5,
+    "B": 6,
+    "A": 7,
+}
+
+ORDER_ALIAS = {
+    "R": "Right",
+    "L": "Left",
+    "D": "Down",
+    "U": "Up",
+    "T": "Start",
+    "S": "Select",
+}
+
 CMD_SOFT_RESET = 0x01
 CMD_HARD_RESET = 0x02
 
@@ -85,6 +112,67 @@ def _read_zip_members(path: Path) -> tuple[str, str]:
     raise MovieError(f"{path}: ZIP 内找不到 Header.txt/Input Log.txt（成员: {names[:6]}）")
 
 
+def _bk2_tokens(path: Path, log_text: str) -> list[str]:
+    """取 `Input Log.txt` 的 `LogKey:` 列名表（fail-loud：没有就拒绝，不猜位序）。"""
+    for raw in log_text.splitlines():
+        s = raw.strip()
+        if s.lower().startswith("logkey:"):
+            body = s.split(":", 1)[1]
+            toks = [t.strip() for t in body.split("|") if t.strip()]
+            if toks:
+                return toks
+    raise MovieError(f"{path}: `Input Log.txt` 缺 LogKey 行（列序未知 ⇒ 拒绝解析）")
+
+
+def _bk2_columns(path: Path, log_text: str) -> list[tuple[str, int, str]]:
+    """LogKey → 列描述表 `[("cmd",0,name) | ("pad",port,btn), ...]`。
+
+    注意 **LogKey 的 `|` 是列分隔符**，而数据行的 `|` 是分组符（组内每字符一列），
+    两者不是一回事：数据行 `|..|........|........|` 展开为 18 列，与 LogKey 的 18 项
+    一一对应。按分组数比列数会直接误判成"格式异常"。
+    """
+    desc: list[tuple[str, int, str]] = []
+    seen_pad = False
+    for tok in _bk2_tokens(path, log_text):
+        name = tok.lstrip("#").strip()
+        if name in ("Reset", "Power"):
+            if seen_pad:
+                raise MovieError(f"{path}: 命令列出现在按键列之后（LogKey={tok!r}）")
+            desc.append(("cmd", 0, name))
+            continue
+        m = re.match(r"P(\d)\s+(.+)$", name)
+        if not m:
+            raise MovieError(f"{path}: 无法识别的 LogKey 列名 {tok!r}")
+        port, btn = int(m.group(1)), m.group(2).strip()
+        if port not in (1, 2):
+            raise MovieError(f"{path}: 只支持 P1/P2，LogKey 出现 P{port}")
+        if btn not in BTN_BIT:
+            raise MovieError(f"{path}: 未知按键 {btn!r}（LogKey={tok!r}）")
+        seen_pad = True
+        desc.append(("pad", port, btn))
+    if not any(k == "cmd" for k, _, _ in desc):
+        raise MovieError(f"{path}: LogKey 缺命令列")
+    for port in (1, 2):
+        if not any(k == "pad" and pt == port for k, pt, _ in desc):
+            raise MovieError(f"{path}: LogKey 缺 P{port} 按键列")
+    return desc
+
+
+def _bk2_apply(desc: list[tuple[str, int, str]], resp: str) -> tuple[int, int, int]:
+    """按列描述把一行的扁平字符解成 (p1, p2, cmd)。"""
+    cmd = p1 = p2 = 0
+    for ch, (kind, port, name) in zip(resp, desc, strict=True):
+        if ch in ". ":
+            continue
+        if kind == "cmd":
+            cmd |= CMD_HARD_RESET if name == "Power" else CMD_SOFT_RESET
+        elif port == 1:
+            p1 |= 1 << BTN_BIT[name]
+        else:
+            p2 |= 1 << BTN_BIT[name]
+    return p1, p2, cmd
+
+
 def parse_bk2(path: Path) -> dict:
     header_text, log_text = _read_zip_members(path)
     header: dict[str, str] = {}
@@ -96,22 +184,17 @@ def parse_bk2(path: Path) -> dict:
         header[k] = v.strip()
 
     frames: list[tuple[int, int, int]] = []
+    desc = _bk2_columns(path, log_text)
     for raw in log_text.splitlines():
         line = raw.strip()
         if not line.startswith("|"):
             continue
-        groups = line.strip("|").split("|")
-        if len(groups) != 3:
-            raise MovieError(f"{path}: input log 行分组异常（期望 3 组）: {line!r}")
-        creg, p1, p2 = groups
-        if len(creg) != 2 or len(p1) != 8 or len(p2) != 8:
-            raise MovieError(f"{path}: input log 位宽异常: {line!r}")
-        cmd = 0
-        if creg[0] not in ". ":
-            cmd |= CMD_HARD_RESET  # BizHawk 首列 Power
-        if creg[1] not in ". ":
-            cmd |= CMD_SOFT_RESET  # 次列 Reset
-        frames.append((bits_from_text(p1), bits_from_text(p2), cmd))
+        resp = "".join(line.strip("|").split("|"))
+        if len(resp) != len(desc):
+            raise MovieError(
+                f"{path}: 输入行列数 {len(resp)} 与 LogKey {len(desc)} 不符: {line!r}"
+            )
+        frames.append(_bk2_apply(desc, resp))
     return {
         "format": "bk2",
         "header": header,
@@ -124,12 +207,21 @@ def parse_bk2(path: Path) -> dict:
     }
 
 
-def bits_from_text(s: str) -> int:
-    """RLDUTSBA 八字符 → 位域（非 '.'/' ' 即按下）。"""
+def bits_from_text(s: str, order: str = BTN_ORDER_TEXT) -> int:
+    """按列序 `order` 把八字符文本解成位域（非 '.'/' ' 即按下）。
+
+    `order` 的第 i 个字符 = 第 i 列对应的按键（`T`=Start、`S`=Select）。
+    """
     out = 0
-    for i, ch in enumerate(s):
-        if ch not in ". ":
-            out |= 1 << i
+    if len(s) != len(order):
+        raise MovieError(f"按键文本宽度 {len(s)} 与列序 {order!r} 不符: {s!r}")
+    for ch, name in zip(s, order, strict=True):
+        if ch in ". ":
+            continue
+        key = ORDER_ALIAS.get(name, name)
+        if key not in BTN_BIT:
+            raise MovieError(f"未知按键列 {name!r}（列序 {order!r}）")
+        out |= 1 << BTN_BIT[key]
     return out
 
 
