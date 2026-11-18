@@ -379,6 +379,39 @@ def update(ledger_path: str | Path = DEFAULT_LEDGER,
     return baseline
 
 
+def promote(ledger_path: str | Path = DEFAULT_LEDGER,
+            baseline_path: str | Path = DEFAULT_BASELINE,
+            entry_id: str = "", state: str = "", reason: str = "",
+            evidence: list[str] | str = "") -> dict:
+    """升级通道（`--promote`）：与 `--revert` 对称——都要 reason，且证据文件必须存在。
+
+    升级不写 `reverts[]`（那是降级审计链），但同样落台账+基线并把理由写进基线 reason；
+    降级仍只能走 `--revert`（`Ledger.promote` 内部拒绝降级）。
+    """
+    if not reason.strip():
+        raise LedgerError("promote 必须给 --reason（凭什么升级）")
+    paths = [e for e in ([evidence] if isinstance(evidence, str) else list(evidence)) if e.strip()]
+    if not paths:
+        raise LedgerError("promote 必须给 --evidence（支撑升级的证据文件）")
+    missing = [e for e in paths if not (ROOT / e).is_file()]
+    if missing:
+        raise LedgerError(f"promote 的 evidence 不存在：{missing}")
+    ledger = Ledger(ledger_path)
+    try:
+        for ev in paths:
+            ledger.promote(entry_id, state, ev)
+    except ValueError as exc:
+        raise LedgerError(str(exc)) from exc
+    old = _load_baseline(Path(baseline_path))
+    shrunk = sorted(set(old.get("states", {})) - {item["id"] for item in ledger.items})
+    if shrunk:
+        raise LedgerError(f"拒绝：台账缺基线中的条目 {shrunk}（promote 不得顺手收缩台账）")
+    ledger.save()
+    baseline = _baseline_doc(ledger.items, f"promote {entry_id} -> {state}：{reason.strip()}")
+    _write_baseline(Path(baseline_path), baseline)
+    return baseline
+
+
 def revert(ledger_path: str | Path = DEFAULT_LEDGER,
            baseline_path: str | Path = DEFAULT_BASELINE,
            entry_id: str = "", state: str = "", reason: str = "",
@@ -429,6 +462,7 @@ def main(argv: list[str] | None = None) -> int:
     group.add_argument("--update", action="store_true", help="从旧基线逐项取 max（只升不降）")
     group.add_argument("--check", action="store_true", help="只读检查当前台账是否低于基线")
     group.add_argument("--revert", default="", metavar="ID", help="唯一降级通道：撤回某条目的状态")
+    group.add_argument("--promote", default="", metavar="ID", help="升级通道：状态只升不降，须 reason+证据")
     parser.add_argument("--to", default="", help="--revert 必填：目标状态")
     parser.add_argument("--evidence", default="", help="--revert 必填：推翻原升级的证据文件")
     parser.add_argument("--reason", default="", help="--update 必填：确认无回退的说明")
@@ -442,6 +476,11 @@ def main(argv: list[str] | None = None) -> int:
             if not args.reason.strip():
                 parser.error("--update 必须 --reason")
             baseline = update(args.ledger, args.baseline, args.reason)
+        elif args.promote:
+            if not args.to.strip() or not args.reason.strip() or not args.evidence.strip():
+                parser.error("--promote 必须 --to / --reason / --evidence")
+            baseline = promote(args.ledger, args.baseline, args.promote, args.to,
+                               args.reason, [e.strip() for e in args.evidence.split(",")])
         elif args.revert:
             if not args.to.strip() or not args.reason.strip() or not args.evidence.strip():
                 parser.error("--revert 必须 --to / --reason / --evidence")

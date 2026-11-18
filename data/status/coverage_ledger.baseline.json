@@ -15,6 +15,6 @@
     "morphball-unroll": "verified",
     "room-load-chain": "route-only"
   },
-  "reason": "revert door-transition route-only：独立复核 reject：该 600 帧窗口内 SamusEnterDoor($8B13) 未执行（$56/$58/$59 全 0、status 从不出现 5），f482 写点走滚动房号查找 GetRoomNum/LE733，非门过渡；决定性写点 482/483 不在观察面",
-  "updated_at": "2026-11-18T14:39:21+00:00"
+  "reason": "promote morphball-unroll -> verified：三腿对拍体系落地后的基线重签：morphball-unroll 维持 verified（机制场景 600 帧 + L4 4/4 0px），door-transition 已于 2026-11-18 撤回 route-only（复核 reject）",
+  "updated_at": "2026-11-18T14:50:30+00:00"
 }

@@ -222,3 +222,65 @@ class RevertPathTest(unittest.TestCase):
         with self.assertRaises(coverage_ledger.LedgerError) as ctx:
             coverage_ledger.revert(self.ledger, self.baseline, "m", "route-only", "刀", str(self.evidence))
         self.assertIn("缺基线中的条目", str(ctx.exception))
+
+
+class PromotePathTest(unittest.TestCase):
+    """`--promote` 与 `--revert` 对称：要 reason、要证据文件存在、只升不降。"""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        d = Path(self.tmp.name)
+        self.ledger = d / "ledger.json"
+        self.baseline = d / "baseline.json"
+        # evidence 走仓内绝对路径校验（ROOT / e），所以用真实存在的仓内文件
+        self.evidence = "docs/findings/mechanism-scene-morphball.md"
+        ledger = coverage_ledger.Ledger(self.ledger)
+        ledger.add("m", "mechanism", "route-only", [])
+        ledger.save()
+        coverage_ledger._write_baseline(
+            self.baseline, coverage_ledger._baseline_doc(ledger.items, "genesis")
+        )
+
+    def test_promote_raises_state_and_appends_evidence(self):
+        coverage_ledger.promote(self.ledger, self.baseline, "m", "verified",
+                                "L4 4/4 0px", [self.evidence])
+        ledger = json.loads(self.ledger.read_text(encoding="utf-8"))
+        baseline = json.loads(self.baseline.read_text(encoding="utf-8"))
+        self.assertEqual(ledger["items"][0]["state"], "verified")
+        self.assertIn(self.evidence, ledger["items"][0]["evidence"])
+        self.assertEqual(baseline["states"]["m"], "verified")
+        self.assertEqual(baseline["counts"]["verified"], 1)
+        self.assertIn("L4 4/4 0px", baseline["reason"])
+        self.assertEqual(coverage_ledger.check(self.ledger, self.baseline), 0)
+
+    def test_promote_requires_reason(self):
+        with self.assertRaises(coverage_ledger.LedgerError) as ctx:
+            coverage_ledger.promote(self.ledger, self.baseline, "m", "verified", "  ", [self.evidence])
+        self.assertIn("--reason", str(ctx.exception))
+
+    def test_promote_requires_existing_evidence(self):
+        with self.assertRaises(coverage_ledger.LedgerError) as ctx:
+            coverage_ledger.promote(self.ledger, self.baseline, "m", "verified", "x",
+                                    ["docs/findings/does-not-exist.md"])
+        self.assertIn("不存在", str(ctx.exception))
+
+    def test_promote_refuses_downgrade(self):
+        coverage_ledger.promote(self.ledger, self.baseline, "m", "verified", "x", [self.evidence])
+        with self.assertRaises(coverage_ledger.LedgerError) as ctx:
+            coverage_ledger.promote(self.ledger, self.baseline, "m", "route-only", "x", [self.evidence])
+        self.assertIn("downgrade refused", str(ctx.exception))
+
+    def test_promote_refuses_to_shrink_ledger(self):
+        ledger = coverage_ledger.Ledger(self.ledger)
+        ledger.add("x", "mechanism", "route-only", [])
+        ledger.save()
+        coverage_ledger._write_baseline(
+            self.baseline, coverage_ledger._baseline_doc(ledger.items, "genesis")
+        )
+        gh = coverage_ledger.Ledger(self.ledger)
+        gh.items = [item for item in gh.items if item["id"] != "x"]
+        gh.save()
+        with self.assertRaises(coverage_ledger.LedgerError) as ctx:
+            coverage_ledger.promote(self.ledger, self.baseline, "m", "verified", "x", [self.evidence])
+        self.assertIn("缺基线中的条目", str(ctx.exception))

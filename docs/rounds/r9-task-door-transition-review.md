@@ -87,7 +87,9 @@ asm 规定：`SamusEnterDoor` 一旦命中必然留下三件签名——`DoorDel
   `test_revert_refuses_to_shrink_ledger`（断言消息而非仅 raise）。
 - **P2（记录，未修）**：基线 `reason` 是单槽，后续写盘会覆盖本次降级说明——持久记录以
   `reverts[]` 为准，这是设计取舍。
-- **P2（记录，未修）**：仍无 `promote` CLI，升级只能手改台账；`_validate_item` 不校验 evidence
-  文件存在 ⇒ 降级被机械化+审计、升级仍是裸手改，通道不对称（下一步应补 `--promote`）。
+- **P2（已修，commit `c8b1e4a6`-前身）：`--promote` CLI 补齐**——与 `--revert` 对称：须 `--reason`、
+  须证据文件存在（`ROOT / e` 校验）、只升不降（`Ledger.promote` 内部拒绝降级）、不得顺手收缩台账、
+  落台账+基线并把理由写进基线 reason；5 条测试（升级/缺 reason/证据不存在/降级/收缩）。
+  仍未做：`_validate_item` 不校验既有 evidence 路径存在（读盘宽容，写盘严格——这是取舍，不是漏）。
 - **P3（已做）**：`door-transition` 的 revert 记录加 `note`，标注「已判非门过渡、证据归属
   room-load-chain，保留仅供追溯」。
