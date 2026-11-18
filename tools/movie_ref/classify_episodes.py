@@ -967,6 +967,13 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         offsets_doc = json.loads(Path(args.offsets).read_text(encoding="utf-8"))
+        # Task 1 在偏移不唯一时会写出一份带 verdict!=aligned 的 JSON；这种产物不得被消费，
+        # 否则「多解/不同步」会被当成合法偏移继续分类（复核 r9 的三腿对齐档 §1.2）。
+        verdict_doc = offsets_doc.get("verdict")
+        if verdict_doc is not None and verdict_doc != "aligned":
+            raise ValueError(
+                f"offsets JSON verdict={verdict_doc!r}：帧偏移未被唯一确定，拒绝据此分类"
+            )
         raw_offsets = offsets_doc.get("offsets")
         if not isinstance(raw_offsets, dict):
             raise ValueError("offsets JSON missing object offsets")

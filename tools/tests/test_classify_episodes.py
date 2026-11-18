@@ -241,3 +241,25 @@ def test_real_traces_smoke_reads_offsets_and_finds_value_segment():
     assert all("class" in e and "kind" in e and "during_load" in e for e in report["episodes"])
     assert "phase_window" in report["summary"]
     assert report["summary"]["phase_window"]["upper_bound"] == 2
+
+
+def test_main_rejects_offsets_with_non_aligned_verdict(tmp_path):
+    """产物守卫：verdict != aligned 的 offsets JSON 不得被消费（否则多解被当合法偏移）。"""
+    import pytest
+
+    from tools.movie_ref import classify_episodes
+
+    offsets = json.loads((ROOT / "data/status/leg_offsets.json").read_text())
+    offsets["verdict"] = "ambiguous-offset"
+    bad = tmp_path / "offsets.json"
+    bad.write_text(json.dumps(offsets), encoding="utf-8")
+    argv = [
+        "--bizhawk", str(REAL["biz"]),
+        "--mesen", str(REAL["mesen"]),
+        "--rust", str(REAL["rust"]),
+        "--offsets", str(bad),
+        "--json-out", str(tmp_path / "eps.json"),
+    ]
+    rc = classify_episodes.main(argv)
+    assert rc == 2
+    assert not (tmp_path / "eps.json").exists()
