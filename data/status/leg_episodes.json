@@ -2278,9 +2278,13 @@
     "phase_window": {
       "value": 2,
       "upper_bound": 2,
-      "derivation": "W derived from measured p1->latch / latch->p1 lag distribution (max_abs=1); state transient displacement <=1; upper bound 2",
+      "derivation": "W = max(forward p1->latch lag) = 2; state transient displacement <=1; upper bound 2",
       "lag_histogram": {
-        "p1_to_latch": {
+        "forward": {
+          "0": 96,
+          "2": 1
+        },
+        "nearest": {
           "0": 96,
           "-1": 1
         },
@@ -2290,7 +2294,10 @@
         },
         "p1_changes": 97,
         "latch_changes": 97,
-        "max_abs": 1
+        "forward_skipped": 0,
+        "max_abs_forward": 2,
+        "max_abs_nearest": 1,
+        "note": "forward 用于导出 W；nearest 仅诊断，不参与 W。"
       },
       "nearest_equal_distance": {
         "count": 52,
@@ -2302,7 +2309,7 @@
         "within_2_rate": 0.9230769230769231,
         "within_5_rate": 1.0
       },
-      "nearest_equal_distance_note": "q95=4 是诊断量，不参与 W 推导；W 由实测滞后分布 max_abs=1 导出、上界 2。",
+      "nearest_equal_distance_note": "q95=4 是诊断量，不参与 W 推导；W 由实测前向滞后分布 max(forward)=2 导出、上界 2。",
       "sensitivity": {
         "W=2": {
           "phase": 6,
@@ -2516,9 +2523,13 @@
     "phase_window": {
       "value": 2,
       "upper_bound": 2,
-      "derivation": "W derived from measured p1->latch / latch->p1 lag distribution (max_abs=1); state transient displacement <=1; upper bound 2",
+      "derivation": "W = max(forward p1->latch lag) = 2; state transient displacement <=1; upper bound 2",
       "lag_histogram": {
-        "p1_to_latch": {
+        "forward": {
+          "0": 96,
+          "2": 1
+        },
+        "nearest": {
           "0": 96,
           "-1": 1
         },
@@ -2528,7 +2539,10 @@
         },
         "p1_changes": 97,
         "latch_changes": 97,
-        "max_abs": 1
+        "forward_skipped": 0,
+        "max_abs_forward": 2,
+        "max_abs_nearest": 1,
+        "note": "forward 用于导出 W；nearest 仅诊断，不参与 W。"
       },
       "nearest_equal_distance": {
         "count": 52,
@@ -2540,7 +2554,7 @@
         "within_2_rate": 0.9230769230769231,
         "within_5_rate": 1.0
       },
-      "nearest_equal_distance_note": "q95=4 是诊断量，不参与 W 推导；W 由实测滞后分布 max_abs=1 导出、上界 2。",
+      "nearest_equal_distance_note": "q95=4 是诊断量，不参与 W 推导；W 由实测前向滞后分布 max(forward)=2 导出、上界 2。",
       "sensitivity": {
         "W=2": {
           "phase": 6,

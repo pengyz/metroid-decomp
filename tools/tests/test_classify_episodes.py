@@ -12,7 +12,13 @@ from pathlib import Path
 import pytest
 
 from tools.movie_ref.align_legs import load_state
-from tools.movie_ref.classify_episodes import _sensitivity, build_report, classify
+from tools.movie_ref.classify_episodes import (
+    _lag_histogram,
+    _phase_window_provenance,
+    _sensitivity,
+    build_report,
+    classify,
+)
 
 ROOT = Path(__file__).resolve().parents[2]
 REAL = {
@@ -188,6 +194,36 @@ def test_sensitivity_reports_windows_and_note():
     assert set(out) == {"W=2", "W=3", "W=4", "note"}
     assert out["note"] == "W=4 会让 transient 类整体消失，故不采用。"
     assert set(out["W=2"]) == {"phase", "transient", "value", "undecidable"}
+
+
+def test_lag_histogram_forward_not_nearest(tmp_path):
+    """W 必须取 p1 变化之后首个 latch 变化；最近邻会把滞后 2 记成 -1。"""
+    path = tmp_path / "biz-lag.jsonl"
+    rows = []
+    p1 = 0
+    latch = 0
+    for frame in range(1, 16):
+        if frame == 9:
+            latch = 1
+        if frame == 10:
+            p1 = 1
+        if frame == 12:
+            latch = 2
+        rows.append({"f": frame, "p1": p1, "joy1_latch": latch})
+    path.write_text("".join(json.dumps(row) + "\n" for row in rows), encoding="utf-8")
+    hist = _lag_histogram(str(path), 1, 20)
+    assert hist["forward"] == {"2": 1}
+    assert hist["nearest"] == {"-1": 1}
+    assert hist["max_abs_forward"] == 2
+    assert hist["max_abs_nearest"] == 1
+    provenance = _phase_window_provenance(
+        {"biz": {}, "mesen": {}, "rust": {}},
+        {"biz": 1, "mesen": 0, "rust": 0},
+        [],
+        hist,
+    )
+    assert provenance["value"] == 2
+    assert "max(forward" in provenance["derivation"]
 
 
 def test_real_traces_smoke_reads_offsets_and_finds_value_segment():

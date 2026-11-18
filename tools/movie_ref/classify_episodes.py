@@ -748,7 +748,13 @@ def _sha256(path: str) -> str:
 
 
 def _lag_histogram(path: str, start: int, end: int) -> dict:
-    """实测 p1 -> latch 的最近变化间隔分布（只用于导出 W，不参与判定）。"""
+    """实测 p1 -> latch 滞后分布。
+
+    forward 是用于导出 W 的口径：每个 p1 变化帧找其后（含同帧）第一个 latch
+    变化帧，滞后 = 差值；没有后续 latch 变化则跳过并计数。
+    nearest 是最近邻口径，只作诊断：它会把「隔 2 帧才变」误记成前一个 -1。
+    latch_to_p1 是反向口径，保留作独立诊断。
+    """
     rows: list[dict] = []
     with open(path, encoding="utf-8") as handle:
         for line in handle:
@@ -766,23 +772,33 @@ def _lag_histogram(path: str, start: int, end: int) -> dict:
         if current.get("joy1_latch") != previous.get("joy1_latch"):
             latch_changes.append(current["f"])
     forward: dict[str, int] = {}
+    nearest: dict[str, int] = {}
     backward: dict[str, int] = {}
+    forward_skipped = 0
     for frame in p1_changes:
+        later = [g for g in latch_changes if g >= frame]
+        if later:
+            first = min(later)
+            forward[str(first - frame)] = forward.get(str(first - frame), 0) + 1
+        else:
+            forward_skipped += 1
         if latch_changes:
-            nearest = min(latch_changes, key=lambda g: (abs(g - frame), g))
-            forward[str(nearest - frame)] = forward.get(str(nearest - frame), 0) + 1
+            close = min(latch_changes, key=lambda g: (abs(g - frame), g))
+            nearest[str(close - frame)] = nearest.get(str(close - frame), 0) + 1
     for frame in latch_changes:
         if p1_changes:
-            nearest = min(p1_changes, key=lambda g: (abs(g - frame), g))
-            backward[str(nearest - frame)] = backward.get(str(nearest - frame), 0) + 1
+            close = min(p1_changes, key=lambda g: (abs(g - frame), g))
+            backward[str(close - frame)] = backward.get(str(close - frame), 0) + 1
     return {
-        "p1_to_latch": forward,
+        "forward": forward,
+        "nearest": nearest,
         "latch_to_p1": backward,
         "p1_changes": len(p1_changes),
         "latch_changes": len(latch_changes),
-        "max_abs": max(
-            [abs(int(key)) for key in list(forward) + list(backward)] or [0]
-        ),
+        "forward_skipped": forward_skipped,
+        "max_abs_forward": max([abs(int(key)) for key in forward] or [0]),
+        "max_abs_nearest": max([abs(int(key)) for key in nearest] or [0]),
+        "note": "forward 用于导出 W；nearest 仅诊断，不参与 W。",
     }
 
 
@@ -848,14 +864,14 @@ def _phase_window_provenance(
     episodes: list[dict],
     histogram: dict,
 ) -> dict:
-    measured_max = histogram.get("max_abs", 0)
+    measured_max = histogram.get("max_abs_forward", 0)
     upper = max(PHASE_WINDOW_UPPER_BOUND, measured_max)
     return {
         "value": upper,
         "upper_bound": upper,
         "derivation": (
-            "W derived from measured p1->latch / latch->p1 lag distribution "
-            f"(max_abs={measured_max}); state transient displacement <=1; "
+            "W = max(forward p1->latch lag) = "
+            f"{measured_max}; state transient displacement <=1; "
             f"upper bound {upper}"
         ),
         "lag_histogram": histogram,
@@ -863,8 +879,8 @@ def _phase_window_provenance(
             legs, offsets, episodes
         ),
         "nearest_equal_distance_note": (
-            "q95=4 是诊断量，不参与 W 推导；W 由实测滞后分布 max_abs=1 "
-            "导出、上界 2。"
+            "q95=4 是诊断量，不参与 W 推导；W 由实测前向滞后分布 "
+            "max(forward)=2 导出、上界 2。"
         ),
     }
 
