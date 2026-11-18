@@ -14,5 +14,7 @@
     "door-transition": "route-only",
     "morphball-unroll": "route-only",
     "room-load-chain": "route-only"
-  }
+  },
+  "reason": "补引 morphball-unroll 的 f1031 退球证据；只升不降，无条目删除/降级",
+  "updated_at": "2026-11-18T08:54:48+00:00"
 }

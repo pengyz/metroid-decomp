@@ -17,7 +17,8 @@
       "evidence": [
         "docs/findings/morphball-probe-route.md",
         "cases/case-morphball-probe.txt",
-        "shots_rust/case-morphball-probe.l4report.json"
+        "shots_rust/case-morphball-probe.l4report.json",
+        "docs/findings/movie-6725m-f1031-unroll.md"
       ]
     },
     {

@@ -204,7 +204,7 @@ git commit -F /tmp/msg-task3.txt   # 必须含 Evidence: 指向 leg_offsets.json
 - Test: `tools/tests/test_coverage_ledger.py`
 
 **Interfaces (T4):**
-- Consumes: `analysis/traces/episodes.json`（Task 2）与 `docs/knowledge/` 现有房间/敌人清单之外的最小单元表（先只做"机制"面，房间/敌人面留后续）。
+- Consumes: `data/status/leg_episodes.json`（Task 2）与 `docs/knowledge/` 现有房间/敌人清单之外的最小单元表（先只做"机制"面，房间/敌人面留后续）。
 - Produces (T4):
   - 台账条目：`{"id":str,"kind":"mechanism","state":"unobserved"|"route-only"|"verified","evidence":list[str]}`。
   - `promote(entry_id: str, state: str, evidence: str) -> None`（只许升级：`unobserved→route-only→verified`，降级抛错）。
@@ -227,22 +227,27 @@ def test_promote_is_monotonic(tmp_path):
 - [ ] **Step 2 (T4): 跑测试确认红**
 
 Run: `python3 -m pytest tools/tests/test_coverage_ledger.py -v`
-Expected: FAIL — `ImportError: cannot import name classify`
+Expected: FAIL — 本仓实测 `ImportError: cannot import name 'init'`（CLI 用例先行；若模块尚未创建则为 ModuleNotFoundError，以真实输出为准）
 
 - [ ] **Step 3 (T4): 实现台账与门**
 
-实现 `Ledger`（`add/promote/load/save`，JSON 稳定排序）；在 `gates/cli.py` 加 `gate_coverage_ratchet()` 读台账并核对与 `data/status/coverage_ledger.baseline.json` 的计数关系，注册到 `check` 的快层；写 `tools/coverage_ledger.py --seed` 生成初始条目（先收 `morphball-unroll`、`room-load-chain`、`door-transition` 三条，state 全 `unobserved`）。
+实现 `Ledger`（`add/promote/load/save`，JSON 稳定排序）；在 `gates/cli.py` 加 `gate_coverage_ratchet()` 读台账并核对与 `data/status/coverage_ledger.baseline.json` 的累计计数/id 集合关系，注册到 `check` 的快层；写 `tools/coverage_ledger.py --init` 生成初始条目（先收 `morphball-unroll`、`room-load-chain`、`door-transition` 三条，均按已有证据落 `route-only`；`verified` 门槛=机制级最小重现 + Rust 同场景 0px 可复跑指针，当前无条目满足）。
 
 - [ ] **Step 4 (T4): 跑测试确认绿 + 门自检**
 
 Run: `python3 -m pytest tools/tests/test_coverage_ledger.py -v && python3 gates/cli.py check`
-Expected: 1 passed；`check` 出现 `coverage-ratchet PASS`
+Expected: `11 passed`；`check` 出现 `coverage-ratchet PASS`；`selftest` 全绿。
 
 - [ ] **Step 5 (T4): 提交**
 
 ```bash
-git add tools/coverage_ledger.py tools/tests/test_coverage_ledger.py data/status/coverage_ledger.json data/status/coverage_ledger.baseline.json gates/cli.py
-git commit -F /tmp/msg-task4.txt   # 门禁改动单独 commit，body 写基线影响
+# commit 1：台账/工具/测试/数据（不碰 gates/）
+git add tools/coverage_ledger.py tools/tests/test_coverage_ledger.py data/status/coverage_ledger.json data/status/coverage_ledger.baseline.json docs/superpowers/plans/2026-11-18-three-leg-oracle-alignment.md
+git commit -F /tmp/msg-task4-ledger.txt   # body 带裸行 Evidence:/Confidence:
+
+# commit 2：门禁单独 commit（AGENTS 要求；body 写基线影响与自检结果）
+git add gates/cli.py gates/README.md
+git commit -F /tmp/msg-task4-gate.txt
 ```
 
 ---
