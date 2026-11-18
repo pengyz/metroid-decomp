@@ -1,25 +1,33 @@
 #!/usr/bin/env python3
-"""Task 2：把三腿逐帧失配聚合成 episode，并二分类为 phase / value。
+"""Task 2：把三腿逐帧失配聚合成 episode，并三分类为 phase / transient / value。
 
 帧轴：Mesen2。`offsets` 语义来自 Task 1（`a[f] == b[f + offset]`），因此 Mesen2
 帧 g 对应另一腿的帧 `g - offset[leg]`。偏移**只从** `data/status/leg_offsets.json`
 读，不在本文件里硬编码。
 
-分类判据（按 Task 2 补充口径的逐帧 ±2；计划 Step 3 写的是段窗
-[start-2, end+2]，本实现取更严的逐帧口径，窗宽固定 2，不得调）：
-- 段内任一帧任一失配字段，若该腿的值出现在 Mesen2 同字段 [g-2, g+2] 内，该帧该字段为 phase；
-- 一段只要有一个失配帧/字段是 value，整段记 value；phase_fields 只保留全段均为 phase 的字段。
-- `during_load`：段内任一帧任一条腿的 `$005A`（ROOM_NUMBER）!= 0xFF。
+分类判据（第二轮的整段序列口径，取代首轮的逐帧查值）：
+- phase：存在 k ∈ [-W, W]，使本腿整段的每个字段值序列等于 Mesen2 平移 k 后的
+  序列；命中 k 写入 evidence.shift。W 由实测 p1→latch 滞后分布导出，不硬编码；
+  W 的上界是 2（实测 max_abs=1，状态瞬态错位最多 1 帧）。
+- transient：段 ≤ 2 帧，且对面 ±W 内恰好出现 1 帧不同的值（一帧尖峰）。
+- value：找不到任何 k，且分歧持续 ≥ 3 帧，或该值在对面 ±5 内完全不存在。
+- undecidable：字段在整报告窗内两边各自只有一个值且不相等（如恒定的 health_lo），
+  不默认判成 phase。
+
+`during_load`：段内任一帧任一条腿的 `$005A`（ROOM_NUMBER）!= 0xFF。
 
 加载窗帧按计划 R7 不进分母，但**仍然**聚合成 episode 并打 `during_load` 标记；
-denominators 里显式给出总帧 / 分母 / 排除帧及原因，不许静默丢。
+denominators 显式给出总帧 / 分母 / 排除帧及原因（load / missing / 二者重叠），
+不许静默丢。同分歧跨腿各记一次，shared_with 与 merged_episode_count 负责链接。
 """
 
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
+import shutil
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -33,7 +41,13 @@ if str(_ROOT) not in sys.path:
 from tools.movie_ref.align_legs import LEGS, load_state
 
 FIELDS = ("status", "room", "health_lo", "health_hi", "scrolldir")
+# W 的上界由实测滞后分布导出（见 build_report 的 phase_window 证据）；
+# 分类逻辑只使用 phase_window["value"]，不把 2 当无来源常量。
 PHASE_WINDOW = 2
+PHASE_WINDOW_UPPER_BOUND = 2
+TRANSIENT_MAX_FRAMES = 2
+VALUE_MIN_SUSTAINED = 3
+VALUE_NEAR_RADIUS = 5
 LOAD_ROOM = 0xFF
 DEFAULT_START = 20
 
@@ -100,6 +114,7 @@ def _classify_one_leg(
     start: int,
     end: int,
     load_key: str,
+    window: int,
 ) -> list[dict]:
     offset = offsets.get(leg)
     if offset is None:
@@ -120,7 +135,8 @@ def _classify_one_leg(
         frames = current.pop("_frames")
         current["frames"] = len(frames)
         current["evidence"] = _build_evidence(
-            leg, legs, offsets, fields, frames, load_key, current["fields"]
+            leg, legs, offsets, frames, load_key, current["fields"], window,
+            start, end,
         )
         current["class"] = _episode_class(current["evidence"])
         current["kind"] = current["class"]
@@ -159,69 +175,276 @@ def _classify_one_leg(
     return episodes
 
 
+def _constant_mismatch(
+    legs: dict[str, dict[int, dict]],
+    leg: str,
+    offsets: dict[str, int],
+    start: int,
+    end: int,
+    field: str,
+) -> bool:
+    """整个比较窗内两侧都只取一个值且不相等 —— 常量字段，不做 phase/value 归因。"""
+    leg_values: set[int] = set()
+    mesen_values: set[int] = set()
+    for g in range(start, end + 1):
+        leg_row = legs[leg].get(g - offsets[leg])
+        mesen_row = legs["mesen"].get(g)
+        if (
+            leg_row is None
+            or mesen_row is None
+            or field not in leg_row
+            or field not in mesen_row
+        ):
+            return False
+        leg_values.add(leg_row[field])
+        mesen_values.add(mesen_row[field])
+    return (
+        len(leg_values) == 1
+        and len(mesen_values) == 1
+        and leg_values != mesen_values
+    )
+
+
+def _sequence_for_field(
+    legs: dict[str, dict[int, dict]],
+    leg: str,
+    offsets: dict[str, int],
+    start: int,
+    end: int,
+    field: str,
+) -> tuple[list[int], list[int]] | None:
+    """取整段（含匹配帧）的 leg 值序列与 Mesen2 值序列；缺帧/缺字段返回 None。"""
+    leg_values: list[int] = []
+    mesen_values: list[int] = []
+    for g in range(start, end + 1):
+        leg_row = legs[leg].get(g - offsets[leg])
+        mesen_row = legs["mesen"].get(g)
+        if (
+            leg_row is None
+            or mesen_row is None
+            or field not in leg_row
+            or field not in mesen_row
+        ):
+            return None
+        leg_values.append(leg_row[field])
+        mesen_values.append(mesen_row[field])
+    return leg_values, mesen_values
+
+
+def _match_shift(
+    leg_values: list[int],
+    mesen_rows: dict[int, dict],
+    start: int,
+    field: str,
+    shift: int,
+) -> bool:
+    """整段逐帧比较：leg[g] == mesen[g + shift]；缺帧即不匹配。"""
+    for i, g in enumerate(range(start, start + len(leg_values))):
+        mesen_row = mesen_rows.get(g + shift)
+        if mesen_row is None or mesen_row.get(field) != leg_values[i]:
+            return False
+    return True
+
+
+def _choose_shift(
+    leg_values: list[int],
+    mesen_rows: dict[int, dict],
+    start: int,
+    field: str,
+    window: int,
+) -> int | None:
+    matches = [
+        shift
+        for shift in range(-window, window + 1)
+        if _match_shift(leg_values, mesen_rows, start, field, shift)
+    ]
+    if not matches:
+        return None
+    return min(matches, key=lambda shift: (abs(shift), shift))
+
+
+def _single_spike(
+    leg_values: list[int],
+    mesen_rows: dict[int, dict],
+    start: int,
+    end: int,
+    field: str,
+    window: int,
+) -> bool:
+    """段窗内恰有 1 帧出现「本段值集合之外」的值（对面尖峰）。"""
+    leg_set = set(leg_values)
+    different = 0
+    for g in range(start - window, end + window + 1):
+        row = mesen_rows.get(g)
+        if row is None or field not in row:
+            continue
+        if row[field] not in leg_set:
+            different += 1
+    return different == 1
+
+
+def _value_within(
+    mesen_rows: dict[int, dict],
+    frame: int,
+    field: str,
+    value: int,
+    radius: int,
+) -> bool:
+    for g in range(frame - radius, frame + radius + 1):
+        row = mesen_rows.get(g)
+        if row is not None and row.get(field) == value:
+            return True
+    return False
+
+
+def _nearest_same_distance(
+    mesen_rows: dict[int, dict],
+    frame: int,
+    field: str,
+    value: int,
+    max_distance: int = 50,
+) -> int | None:
+    for distance in range(max_distance + 1):
+        for g in (frame - distance, frame + distance):
+            row = mesen_rows.get(g)
+            if row is not None and row.get(field) == value:
+                return distance
+    return None
+
+
 def _build_evidence(
     leg: str,
     legs: dict[str, dict[int, dict]],
     offsets: dict[str, int],
-    fields: tuple[str, ...],
     frames: list[int],
     load_key: str,
     episode_fields: list[str],
+    window: int,
+    scan_start: int,
+    scan_end: int,
 ) -> dict:
     offset = offsets[leg]
     mesen_rows = legs["mesen"]
-    phase_fields: set[str] = set()
-    value_fields: set[str] = set()
-    examples: list[dict] = []
+    start, end = frames[0], frames[-1]
 
-    for g in frames:
-        mesen_row = mesen_rows.get(g)
-        leg_row = legs[leg].get(g - offset)
-        if mesen_row is None or leg_row is None:
+    sequences: dict[str, tuple[list[int], list[int]]] = {}
+    constant_fields: list[str] = []
+    incomplete_fields: list[str] = []
+    for field in episode_fields:
+        if _constant_mismatch(
+            legs, leg, offsets, scan_start, scan_end, field
+        ):
+            constant_fields.append(field)
             continue
-        for field in episode_fields:
-            leg_value = leg_row.get(field)
-            if leg_value == mesen_row.get(field):
-                continue
-            opposite = []
-            for gg in range(g - PHASE_WINDOW, g + PHASE_WINDOW + 1):
-                row = mesen_rows.get(gg)
-                if row is not None:
-                    opposite.append(row.get(field))
-            found = leg_value in opposite
-            if found:
-                phase_fields.add(field)
-            else:
-                value_fields.add(field)
-                if len(examples) < 3:
-                    examples.append(
-                        {
-                            "frame": g,
-                            "field": field,
-                            "leg_value": leg_value,
-                            "opposite_values": opposite,
-                        }
-                    )
+        seq = _sequence_for_field(legs, leg, offsets, start, end, field)
+        if seq is None:
+            incomplete_fields.append(field)
+            continue
+        sequences[field] = seq
 
-    during = _during_load_frames(
-        legs, offsets, frames[0], frames[-1], load_key
+    # 1 帧/2 帧尖峰优先于相位：避免把采样错位洗成 phase 或 value。
+    transient_fields: list[str] = []
+    for field, (leg_values, _mesen_values) in sequences.items():
+        if (end - start + 1) <= TRANSIENT_MAX_FRAMES and _single_spike(
+            leg_values, mesen_rows, start, end, field, window
+        ):
+            transient_fields.append(field)
+
+    shifts: dict[str, int] = {}
+    if not transient_fields:
+        for field, (leg_values, _mesen_values) in sequences.items():
+            shift = _choose_shift(
+                leg_values, mesen_rows, start, field, window
+            )
+            if shift is not None:
+                shifts[field] = shift
+    common_shift: int | None = None
+    if shifts and len(shifts) == len(sequences) and len(set(shifts.values())) == 1:
+        common_shift = next(iter(shifts.values()))
+    phase_fields = list(sequences) if common_shift is not None else []
+
+    value_fields: list[str] = []
+    value_examples: list[dict] = []
+    if not transient_fields and common_shift is None:
+        for field, (leg_values, _mesen_values) in sequences.items():
+            sustained = (end - start + 1) >= VALUE_MIN_SUSTAINED
+            absent = False
+            for g in frames:
+                leg_row = legs[leg].get(g - offset)
+                mesen_row = mesen_rows.get(g)
+                if leg_row is None or mesen_row is None:
+                    continue
+                leg_value = leg_row.get(field)
+                mesen_value = mesen_row.get(field)
+                if leg_value == mesen_value:
+                    continue
+                if not _value_within(
+                    mesen_rows, g, field, leg_value, VALUE_NEAR_RADIUS
+                ):
+                    absent = True
+                    if len(value_examples) < 3:
+                        value_examples.append(
+                            {
+                                "frame": g,
+                                "field": field,
+                                "leg_value": leg_value,
+                                "opposite_values": [
+                                    mesen_rows[gg].get(field)
+                                    for gg in range(
+                                        g - window, g + window + 1
+                                    )
+                                    if gg in mesen_rows
+                                ],
+                            }
+                        )
+                    break
+            if sustained or absent:
+                value_fields.append(field)
+
+    undecidable_fields = sorted(
+        set(constant_fields)
+        | set(incomplete_fields)
+        | (
+            set(sequences)
+            - set(phase_fields)
+            - set(transient_fields)
+            - set(value_fields)
+        )
     )
+    during = _during_load_frames(legs, offsets, start, end, load_key)
     return {
-        "rule": "phase iff for every mismatched frame/field the leg value "
-                f"occurs in mesen within +-{PHASE_WINDOW} frames",
-        "mesen_frame_window": [frames[0], frames[-1]],
-        "leg_frame_window": [frames[0] - offset, frames[-1] - offset],
+        "rule": (
+            "phase iff whole segment equals mesen shifted by one common k in "
+            f"[-{window},{window}]; transient iff <=2 frames and mesen window has "
+            "exactly one value outside the leg segment values; value iff no common "
+            "k and (sustained>=3 frames or leg value absent in mesen +-5); "
+            "otherwise undecidable"
+        ),
+        "phase_window": window,
+        "mesen_frame_window": [start, end],
+        "leg_frame_window": [start - offset, end - offset],
         "leg_offset": offset,
         "mismatch_frames": frames,
-        "phase_fields": [f for f in episode_fields if f not in value_fields],
-        "value_fields": [f for f in episode_fields if f in value_fields],
-        "value_examples": examples,
+        "shift": common_shift,
+        "field_shifts": shifts,
+        "phase_fields": phase_fields,
+        "transient": bool(transient_fields),
+        "transient_fields": transient_fields,
+        "value_fields": value_fields,
+        "undecidable_fields": undecidable_fields,
+        "value_examples": value_examples,
         "during_load_frames": during,
     }
 
 
 def _episode_class(evidence: dict) -> str:
-    return "value" if evidence["value_fields"] else "phase"
+    if evidence["transient"]:
+        return "transient"
+    if evidence["phase_fields"]:
+        return "phase"
+    if evidence["value_fields"]:
+        return "value"
+    return "undecidable"
 
 
 def classify(
@@ -231,17 +454,20 @@ def classify(
     start: int,
     end: int,
     load_key: str = "room",
+    window: int = PHASE_WINDOW,
 ) -> list[dict]:
     """把三腿逐帧失配聚合成 episode。返回按 (start, leg) 排序的段列表。
 
     legs 必须含 mesen；另含 biz/rust。offsets 可传 {"biz":1,...} 或
-    {"biz_to_mesen":1,...}。每个 episode 同时带 `class` 与 `kind`（同值），
-    兼容计划接口与 Task 2 补充口径。
+    {"biz_to_mesen":1,...}。每个 episode 同时带 `class` 与 `kind`（同值）。
+    window 由 build_report 的 phase_window 证据传入，不由本函数硬编码。
     """
     if start > end:
         raise ValueError(f"start {start} > end {end}")
     if "mesen" not in legs:
         raise ValueError("legs must include mesen")
+    if window < 0:
+        raise ValueError(f"window must be >= 0, got {window}")
     fields = tuple(fields)
     if not fields:
         raise ValueError("fields must not be empty")
@@ -257,11 +483,30 @@ def classify(
                 raise ValueError(f"offsets missing leg {leg!r}")
             episodes.extend(
                 _classify_one_leg(
-                    leg, legs, normalized, fields, start, end, load_key
+                    leg, legs, normalized, fields, start, end, load_key, window
                 )
             )
     episodes.sort(key=lambda e: (e["start"], e["leg"]))
+    _link_shared_episodes(episodes)
     return episodes
+
+
+def _link_shared_episodes(episodes: list[dict]) -> None:
+    """同一跨腿分歧在 biz/rust 各记一次时，用 shared_with 互相链接，不丢行。"""
+    for episode in episodes:
+        episode["shared_with"] = [
+            {
+                "leg": other["leg"],
+                "start": other["start"],
+                "end": other["end"],
+                "fields": other["fields"],
+            }
+            for other in episodes
+            if other["leg"] != episode["leg"]
+            and not (
+                other["end"] < episode["start"] or other["start"] > episode["end"]
+            )
+        ]
 
 
 def _denominators(
@@ -307,22 +552,55 @@ def _denominators(
         }
 
     excluded_union = load_frames | missing_frames
+    missing_within_load = missing_frames & load_frames
+    common_in_denominator = total - len(excluded_union)
     return {
         "total_frames": total,
-        "in_denominator": total - len(excluded_union),
+        "in_denominator": common_in_denominator,
+        "common_in_denominator": common_in_denominator,
         "excluded": {
             "load": len(load_frames),
             "missing": len(missing_frames),
+            "missing_within_load": len(missing_within_load),
+            "missing_outside_load": len(missing_frames - load_frames),
             "union": len(excluded_union),
             "load_frames": sorted(load_frames),
             "missing_frames": sorted(missing_frames),
             "reasons": {
                 "load": f"任一侧 ${0x005A:04X} != 0xFF（ROOM_NUMBER，加载窗；计划 R7）",
                 "missing": "该 Mesen2 帧或该腿映射帧缺失（状态行缝），无可比样本",
+                "missing_within_load": "missing 与 load 的重叠，单列避免 union==load 的误读",
             },
         },
         "by_leg": per_leg,
     }
+
+
+def _merged_episode_count(episodes: list[dict]) -> int:
+    """跨腿合并：帧区间重叠且字段有交集的两个 leg 段视为同一分歧。"""
+    parent = list(range(len(episodes)))
+
+    def find(index: int) -> int:
+        while parent[index] != index:
+            parent[index] = parent[parent[index]]
+            index = parent[index]
+        return index
+
+    def union(left: int, right: int) -> None:
+        left, right = find(left), find(right)
+        if left != right:
+            parent[right] = left
+
+    for i, left in enumerate(episodes):
+        for j in range(i + 1, len(episodes)):
+            right = episodes[j]
+            if left["leg"] == right["leg"]:
+                continue
+            if left["end"] < right["start"] or right["end"] < left["start"]:
+                continue
+            if set(left["fields"]) & set(right["fields"]):
+                union(i, j)
+    return len({find(index) for index in range(len(episodes))})
 
 
 def build_report(
@@ -332,13 +610,22 @@ def build_report(
     start: int,
     end: int,
     load_key: str = "room",
+    window: int = PHASE_WINDOW,
+    phase_window: dict | None = None,
 ) -> dict:
     """分类 + 分母 + 摘要，不读文件；CLI 负责 provenance。"""
     normalized = _normalize_offsets(offsets)
-    episodes = classify(legs, normalized, fields, start, end, load_key)
+    episodes = classify(legs, normalized, fields, start, end, load_key, window)
     denominators = _denominators(legs, normalized, start, end, load_key)
+    if phase_window is None:
+        phase_window = {
+            "value": window,
+            "upper_bound": PHASE_WINDOW_UPPER_BOUND,
+            "derivation": "default: upper bound 2; CLI supplies measured lag distribution",
+        }
 
-    by_class = {"phase": 0, "value": 0}
+    classes = ("phase", "transient", "value", "undecidable")
+    by_class = {name: 0 for name in classes}
     by_leg: dict[str, int] = {}
     by_leg_class: dict[str, dict[str, int]] = {}
     by_leg_load: dict[str, dict[str, int]] = {}
@@ -347,25 +634,30 @@ def build_report(
         cls = episode["class"]
         by_class[cls] += 1
         by_leg[leg] = by_leg.get(leg, 0) + 1
-        slot = by_leg_class.setdefault(leg, {"phase": 0, "value": 0})
+        slot = by_leg_class.setdefault(leg, {name: 0 for name in classes})
         slot[cls] += 1
         load_slot = by_leg_load.setdefault(leg, {"during_load": 0, "clean": 0})
         key = "during_load" if episode["during_load"] else "clean"
         load_slot[key] += 1
 
-    value_episodes = [e for e in episodes if e["class"] == "value"]
-    value_rows = [
-        {
-            "leg": e["leg"],
-            "start": e["start"],
-            "end": e["end"],
-            "frames": e["frames"],
-            "fields": e["fields"],
-            "example": e["evidence"]["value_examples"][:1],
-        }
-        for e in value_episodes[:3]
-    ]
+    def rows(kind: str, limit: int = 3) -> list[dict]:
+        out = []
+        for episode in [e for e in episodes if e["class"] == kind][:limit]:
+            out.append(
+                {
+                    "leg": episode["leg"],
+                    "start": episode["start"],
+                    "end": episode["end"],
+                    "frames": episode["frames"],
+                    "fields": episode["fields"],
+                    "shift": episode["evidence"].get("shift"),
+                    "transient": episode["class"] == "transient",
+                    "example": episode["evidence"]["value_examples"][:1],
+                }
+            )
+        return out
 
+    merged_count = _merged_episode_count(episodes)
     report = {
         "window": {
             "start": start,
@@ -382,6 +674,11 @@ def build_report(
         "fields": list(fields),
         "denominators": denominators,
         "episodes": episodes,
+        "comparison": {
+            "axis": "mesen",
+            "pairs": [["biz", "mesen"], ["rust", "mesen"]],
+            "symmetry": "每个非 mesen 腿都对 mesen 检查；shared_with 链接同分歧跨腿重复",
+        },
         "summary": {
             "total_episodes": len(episodes),
             "by_class": by_class,
@@ -390,9 +687,16 @@ def build_report(
             "by_leg_load": by_leg_load,
             "during_load": sum(1 for e in episodes if e["during_load"]),
             "clean": sum(1 for e in episodes if not e["during_load"]),
-            "value_count": len(value_episodes),
+            "phase_window": phase_window,
             "phase_count": by_class["phase"],
-            "value_episodes": value_rows,
+            "transient_count": by_class["transient"],
+            "value_count": by_class["value"],
+            "undecidable_count": by_class["undecidable"],
+            "merged_episode_count": merged_count,
+            "phase_episodes": rows("phase"),
+            "transient_episodes": rows("transient"),
+            "value_episodes": rows("value"),
+            "undecidable_episodes": rows("undecidable"),
         },
     }
     return report
@@ -434,21 +738,157 @@ def _default_window(offsets_doc: dict) -> tuple[int, int, int]:
     return start, end, effective
 
 
-def _add_provenance(path: str, seq: dict) -> dict:
-    frames = sorted(seq)
+def _sha256(path: str) -> str:
+    digest = hashlib.sha256()
+    with open(path, "rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _lag_histogram(path: str, start: int, end: int) -> dict:
+    """实测 p1 -> latch 的最近变化间隔分布（只用于导出 W，不参与判定）。"""
+    rows: list[dict] = []
+    with open(path, encoding="utf-8") as handle:
+        for line in handle:
+            line = line.strip()
+            if not line:
+                continue
+            row = json.loads(line)
+            if start <= row.get("f", -1) <= end:
+                rows.append(row)
+    p1_changes: list[int] = []
+    latch_changes: list[int] = []
+    for previous, current in zip(rows, rows[1:]):
+        if current.get("p1") != previous.get("p1"):
+            p1_changes.append(current["f"])
+        if current.get("joy1_latch") != previous.get("joy1_latch"):
+            latch_changes.append(current["f"])
+    forward: dict[str, int] = {}
+    backward: dict[str, int] = {}
+    for frame in p1_changes:
+        if latch_changes:
+            nearest = min(latch_changes, key=lambda g: (abs(g - frame), g))
+            forward[str(nearest - frame)] = forward.get(str(nearest - frame), 0) + 1
+    for frame in latch_changes:
+        if p1_changes:
+            nearest = min(p1_changes, key=lambda g: (abs(g - frame), g))
+            backward[str(nearest - frame)] = backward.get(str(nearest - frame), 0) + 1
     return {
+        "p1_to_latch": forward,
+        "latch_to_p1": backward,
+        "p1_changes": len(p1_changes),
+        "latch_changes": len(latch_changes),
+        "max_abs": max(
+            [abs(int(key)) for key in list(forward) + list(backward)] or [0]
+        ),
+    }
+
+
+def _nearest_equal_distance(
+    legs: dict[str, dict[int, dict]],
+    offsets: dict[str, int],
+    episodes: list[dict],
+) -> dict:
+    """失配帧/字段到对面最近同值帧的距离分位数（给 W 的实测依据）。"""
+    distances: list[int] = []
+    for episode in episodes:
+        if episode["class"] in ("value", "undecidable"):
+            continue
+        offset = offsets[episode["leg"]]
+        for g in episode["evidence"]["mismatch_frames"]:
+            for field in episode["fields"]:
+                leg_row = legs[episode["leg"]].get(g - offset)
+                mesen_row = legs["mesen"].get(g)
+                if leg_row is None or mesen_row is None:
+                    continue
+                leg_value = leg_row.get(field)
+                if leg_value == mesen_row.get(field):
+                    continue
+                for distance in range(0, 51):
+                    found = False
+                    for gg in (g - distance, g + distance):
+                        row = legs["mesen"].get(gg)
+                        if row is not None and row.get(field) == leg_value:
+                            found = True
+                            break
+                    if found:
+                        distances.append(distance)
+                        break
+    distances.sort()
+
+    def quantile(q: float) -> int | None:
+        if not distances:
+            return None
+        index = min(len(distances) - 1, max(0, int(q * len(distances))))
+        return distances[index]
+
+    return {
+        "count": len(distances),
+        "q50": quantile(0.5),
+        "q90": quantile(0.9),
+        "q95": quantile(0.95),
+        "q99": quantile(0.99),
+        "max": distances[-1] if distances else None,
+        "within_2_rate": (
+            sum(1 for d in distances if d <= 2) / len(distances)
+            if distances else None
+        ),
+        "within_5_rate": (
+            sum(1 for d in distances if d <= 5) / len(distances)
+            if distances else None
+        ),
+    }
+
+
+def _phase_window_provenance(
+    legs: dict[str, dict[int, dict]],
+    offsets: dict[str, int],
+    episodes: list[dict],
+    histogram: dict,
+) -> dict:
+    measured_max = histogram.get("max_abs", 0)
+    upper = max(PHASE_WINDOW_UPPER_BOUND, measured_max)
+    return {
+        "value": upper,
+        "upper_bound": upper,
+        "derivation": (
+            "W derived from measured p1->latch / latch->p1 lag distribution "
+            f"(max_abs={measured_max}); state transient displacement <=1; "
+            f"upper bound {upper}"
+        ),
+        "lag_histogram": histogram,
+        "nearest_equal_distance": _nearest_equal_distance(
+            legs, offsets, episodes
+        ),
+    }
+
+
+def _add_provenance(path: str, seq: dict, archive: bool = False) -> dict:
+    frames = sorted(seq)
+    out = {
         "path": path,
         "rows": len(seq),
         "last_f": frames[-1] if frames else None,
         "mtime": datetime.fromtimestamp(os.path.getmtime(path))
         .astimezone()
         .isoformat(timespec="seconds"),
+        "sha256": _sha256(path),
     }
+    if archive:
+        archive_dir = Path("analysis/traces/.archive")
+        archive_dir.mkdir(parents=True, exist_ok=True)
+        archive_path = archive_dir / "rust-states-t2.jsonl"
+        if Path(path).resolve() != archive_path.resolve():
+            shutil.copy2(path, archive_path)
+        out["archive_path"] = str(archive_path)
+        out["archive_sha256"] = _sha256(str(archive_path))
+    return out
 
 
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="把三腿失配聚合成 phase/value episode（帧轴 = Mesen2）"
+        description="把三腿失配聚合成 phase/transient/value/undecidable episode（帧轴 = Mesen2）"
     )
     parser.add_argument("--bizhawk", required=True, help="biz 轨迹 JSONL")
     parser.add_argument("--mesen", required=True, help="mesen 轨迹 JSONL")
@@ -507,8 +947,16 @@ def main(argv: list[str] | None = None) -> int:
             "mesen": load_state(args.mesen, "mesen", fields=args.fields),
             "rust": load_state(args.rust, "rust", fields=args.fields),
         }
-        report = build_report(
+        episodes_for_window = classify(
             legs, offsets, args.fields, start, end, args.load_key
+        )
+        histogram = _lag_histogram(args.bizhawk, start, end)
+        phase_window = _phase_window_provenance(
+            legs, offsets, episodes_for_window, histogram
+        )
+        report = build_report(
+            legs, offsets, args.fields, start, end, args.load_key,
+            window=phase_window["value"], phase_window=phase_window,
         )
         report["offsets"]["source"] = args.offsets
         report["window"]["fit_window"] = [start, end]
@@ -517,7 +965,8 @@ def main(argv: list[str] | None = None) -> int:
         report["provenance"] = {
             "biz": _add_provenance(args.bizhawk, legs["biz"]),
             "mesen": _add_provenance(args.mesen, legs["mesen"]),
-            "rust": _add_provenance(args.rust, legs["rust"]),
+            "rust": _add_provenance(args.rust, legs["rust"], archive=True),
+            "phase_window": phase_window,
         }
 
         out = Path(args.json_out)
@@ -528,35 +977,54 @@ def main(argv: list[str] | None = None) -> int:
         )
 
         summary = report["summary"]
+        classes = summary["by_class"]
         print(
-            "EPISODES total={total} phase={phase} value={value} "
-            "during_load={load}".format(
+            "EPISODES total={total} phase={phase} transient={transient} "
+            "value={value} undecidable={undecidable} during_load={load}".format(
                 total=summary["total_episodes"],
-                phase=summary["by_class"]["phase"],
-                value=summary["by_class"]["value"],
+                phase=classes["phase"],
+                transient=classes["transient"],
+                value=classes["value"],
+                undecidable=classes["undecidable"],
                 load=summary["during_load"],
             )
         )
+        excluded = report["denominators"]["excluded"]
+        by_leg = report["denominators"]["by_leg"]
         print(
-            "DENOMINATORS total={total} in={inside} load={load} missing={missing} "
-            "union={union}".format(
+            "DENOMINATORS total={total} common_in={inside} "
+            "(load {load} union missing {missing}, overlap {overlap}) "
+            "biz_in={biz} rust_in={rust}".format(
                 total=report["denominators"]["total_frames"],
                 inside=report["denominators"]["in_denominator"],
-                load=report["denominators"]["excluded"]["load"],
-                missing=report["denominators"]["excluded"]["missing"],
-                union=report["denominators"]["excluded"]["union"],
+                load=excluded["load"],
+                missing=excluded["missing"],
+                overlap=excluded["missing_within_load"],
+                biz=by_leg.get("biz", {}).get("in_denominator"),
+                rust=by_leg.get("rust", {}).get("in_denominator"),
             )
         )
-        for row in summary["value_episodes"]:
-            print(
-                "VALUE {leg} f{start}..{end} frames={frames} fields={fields}".format(
-                    leg=row["leg"],
-                    start=row["start"],
-                    end=row["end"],
-                    frames=row["frames"],
-                    fields=",".join(row["fields"]),
-                )
+        print(
+            "PHASE_WINDOW value={value} upper_bound={upper} lag={lag}".format(
+                value=summary["phase_window"]["value"],
+                upper=summary["phase_window"]["upper_bound"],
+                lag=summary["phase_window"]["lag_histogram"],
             )
+        )
+        for kind in ("phase", "transient", "value", "undecidable"):
+            for row in summary[f"{kind}_episodes"]:
+                print(
+                    "{kind} {leg} f{start}..{end} frames={frames} "
+                    "fields={fields} shift={shift}".format(
+                        kind=kind.upper(),
+                        leg=row["leg"],
+                        start=row["start"],
+                        end=row["end"],
+                        frames=row["frames"],
+                        fields=",".join(row["fields"]),
+                        shift=row.get("shift"),
+                    )
+                )
         return 0
     except (ValueError, OSError, json.JSONDecodeError) as exc:
         print(f"ERROR: {exc}", file=sys.stderr)

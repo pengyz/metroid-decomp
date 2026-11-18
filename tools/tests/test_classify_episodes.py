@@ -30,13 +30,13 @@ def _legs():
     }
 
 
-def test_transient_is_phase():
+def test_transient_spike_is_transient():
     legs = _legs()
     legs["mesen"][25] = {"status": 4, "room": 0xFF}
     eps = classify(legs, {"mesen": 0, "rust": 0}, ("status",), 20, 39)
     assert len(eps) == 1
-    assert eps[0]["kind"] == "phase"
-    assert eps[0]["class"] == "phase"
+    assert eps[0]["class"] == "transient"
+    assert eps[0]["evidence"]["transient"] is True
     assert eps[0]["leg"] == "rust"
     assert eps[0]["start"] == 25 and eps[0]["end"] == 25
 
@@ -60,15 +60,41 @@ def test_persistent_value_difference_is_value():
     assert eps[0]["class"] == "value"
 
 
-def test_phase_value_must_be_near_the_mismatch_frame():
-    """phase 判据是逐帧 ±2；同段远处的值不能把 value 洗成 phase。"""
+def test_phase_sequence_recovers_shift():
+    """phase 必须是整段序列平移匹配，不是「值集合里出现过」。"""
+    mesen = {f: {"status": val, "room": 0xFF} for f, val in zip(range(20, 30), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10])}
+    rust = {f: {"status": mesen[f + 1]["status"], "room": 0xFF} for f in range(20, 29)}
+    eps = classify(
+        {"mesen": mesen, "rust": rust}, {"mesen": 0, "rust": 0},
+        ("status",), 20, 28,
+    )
+    assert len(eps) == 1
+    assert eps[0]["class"] == "phase"
+    assert eps[0]["evidence"]["shift"] == 1
+
+
+def test_long_value_not_washed_by_one_coincidental_value():
+    """51 帧持续差 + 中途一次巧合同值，仍必须是 value（段窗判据的反例）。"""
     legs = _legs()
-    legs["mesen"] = {f: {"status": 3, "room": 0xFF} for f in range(20, 40)}
-    legs["rust"] = {f: {"status": 3, "room": 0xFF} for f in range(20, 40)}
-    legs["rust"][20] = {"status": 7, "room": 0xFF}
-    legs["mesen"][30] = {"status": 7, "room": 0xFF}
-    eps = classify(legs, {"mesen": 0, "rust": 0}, ("status",), 20, 39)
-    assert [e["class"] for e in eps if e["start"] == 20] == ["value"]
+    legs["mesen"] = {f: {"status": 3, "room": 0xFF} for f in range(20, 70)}
+    legs["rust"] = {f: {"status": 8, "room": 0xFF} for f in range(20, 70)}
+    legs["rust"][43] = {"status": 9, "room": 0xFF}
+    legs["mesen"][43] = {"status": 8, "room": 0xFF}  # 段内巧合值 8，但 f43 仍失配
+    legs["mesen"][44] = {"status": 9, "room": 0xFF}  # 段内巧合值 9
+    eps = classify(legs, {"mesen": 0, "rust": 0}, ("status",), 20, 65)
+    assert len(eps) == 1
+    assert eps[0]["class"] == "value"
+
+
+def test_constant_field_is_undecidable():
+    """health_lo 这类常量字段不默认 phase，标 undecidable。"""
+    legs = _legs()
+    legs["mesen"] = {f: {"status": 3, "health_lo": 1} for f in range(20, 30)}
+    legs["rust"] = {f: {"status": 3, "health_lo": 0} for f in range(20, 30)}
+    eps = classify(legs, {"mesen": 0, "rust": 0}, ("health_lo",), 20, 29)
+    assert len(eps) == 1
+    assert eps[0]["class"] == "undecidable"
+    assert eps[0]["evidence"]["undecidable_fields"] == ["health_lo"]
 
 
 def test_denominators_report_load_and_missing_frames():
@@ -85,6 +111,9 @@ def test_denominators_report_load_and_missing_frames():
     assert den["in_denominator"] == den["total_frames"] - len(
         set(den["excluded"]["load_frames"]) | set(den["excluded"]["missing_frames"])
     )
+    assert den["common_in_denominator"] == den["in_denominator"]
+    assert "missing_within_load" in den["excluded"]
+    assert "missing_outside_load" in den["excluded"]
 
 
 def test_summary_lists_first_three_value_episodes():
@@ -166,3 +195,5 @@ def test_real_traces_smoke_reads_offsets_and_finds_value_segment():
     assert report["summary"]["total_episodes"] > 0
     assert report["summary"]["by_class"]["value"] >= 1
     assert all("class" in e and "kind" in e and "during_load" in e for e in report["episodes"])
+    assert "phase_window" in report["summary"]
+    assert report["summary"]["phase_window"]["upper_bound"] == 2
