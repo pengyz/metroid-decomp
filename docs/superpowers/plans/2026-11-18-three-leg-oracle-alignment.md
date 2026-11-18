@@ -21,6 +21,10 @@
 - 修复完成必须 commit 并 push；commit message 禁裸反引号，触账本须带 `Evidence:` 与 `Confidence:`。
 - 每个 task 结束前跑 `python3 gates/cli.py check`，任一 FAIL 不进下一个 task。
 
+## 执行契约（用户 2026-11-18 裁定，优先级高于本文件其余流程描述）
+
+每个 task 完成后**不得直接进入下一个 task**：必须先派一名未参与实施的子代理做**对抗性复核**（证伪立场：假设该 task 的结论是错的，独立重导证据、独立复跑命令），复核 verdict 为 pass 才算该 task 完成；若复核指出问题，实施方修复后**重跑复核**，直到 pass。复核档存 `docs/rounds/r9-task-<task>-review.md` 并入库。
+
 ## Review Focus
 
 - **锁存全不变的长窗口**（沉静关卡、暂停、暗屏）：因果锚没有跳变可对齐，工具必须明确报"无法反解"，而不是退回打分最优。
