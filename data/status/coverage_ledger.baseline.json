@@ -2,8 +2,8 @@
   "schema": "coverage-ledger-baseline/v1",
   "counts": {
     "unobserved": 0,
-    "route-only": 1,
-    "verified": 2
+    "route-only": 2,
+    "verified": 1
   },
   "ids": [
     "door-transition",
@@ -11,10 +11,10 @@
     "room-load-chain"
   ],
   "states": {
-    "door-transition": "verified",
+    "door-transition": "route-only",
     "morphball-unroll": "verified",
     "room-load-chain": "route-only"
   },
-  "reason": "door-transition: route-only→verified（机制场景 600 帧 L4 6/6 全 0px + mechanism_scene compared=1168 mismatch=0 + 零输入负对照 changes=0/0）",
-  "updated_at": "2026-11-18T14:15:39+00:00"
+  "reason": "revert door-transition route-only：独立复核 reject：该 600 帧窗口内 SamusEnterDoor($8B13) 未执行（$56/$58/$59 全 0、status 从不出现 5），f482 写点走滚动房号查找 GetRoomNum/LE733，非门过渡；决定性写点 482/483 不在观察面",
+  "updated_at": "2026-11-18T14:39:21+00:00"
 }

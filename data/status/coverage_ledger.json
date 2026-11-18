@@ -3,7 +3,7 @@
     {
       "id": "door-transition",
       "kind": "mechanism",
-      "state": "verified",
+      "state": "route-only",
       "evidence": [
         "docs/findings/case-002-three-roots.md",
         "shots_rust/case-002-door-blue-interaction.sched",
@@ -12,7 +12,17 @@
         "shots_rust/case-mechanism-door-transition.l4report.json",
         "data/status/mechanism_scene_door_transition.json",
         "docs/findings/mechanism-scene-door-transition.md",
-        "cases/case-mechanism-door-negative.txt"
+        "cases/case-mechanism-door-negative.txt",
+        "docs/rounds/r9-task-door-transition-review.md"
+      ],
+      "reverts": [
+        {
+          "from": "verified",
+          "to": "route-only",
+          "reason": "独立复核 reject：该 600 帧窗口内 SamusEnterDoor($8B13) 未执行（$56/$58/$59 全 0、status 从不出现 5），f482 写点走滚动房号查找 GetRoomNum/LE733，非门过渡；决定性写点 482/483 不在观察面",
+          "evidence": "docs/rounds/r9-task-door-transition-review.md",
+          "ts": "2026-11-18T14:39:21+00:00"
+        }
       ]
     },
     {
@@ -38,7 +48,11 @@
       "evidence": [
         "data/status/leg_episodes.json",
         "docs/findings/movie-bizhawk-6725m.md",
-        "data/status/leg_offsets.json"
+        "data/status/leg_offsets.json",
+        "cases/case-mechanism-door-transition.txt",
+        "data/status/mechanism_scene_door_transition.json",
+        "docs/findings/mechanism-scene-door-transition.md",
+        "docs/rounds/r9-task-door-transition-review.md"
       ]
     }
   ]

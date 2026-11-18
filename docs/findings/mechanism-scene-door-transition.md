@@ -1,78 +1,70 @@
-# 机制场景：门过渡（door transition）+ 房间载入链
+# 机制场景：600 帧「滚动房号查找 + SetupRoom 载入链」（**不是**门过渡）
 
-- 用例：`cases/case-mechanism-door-transition.txt`（600 帧，输入=6725M any% 录像前 600 帧）
-- 负对照：`cases/case-mechanism-door-negative.txt`（同窗口、零输入）
-- 机器报告：`data/status/mechanism_scene_door_transition.json`
-- 台账：`data/status/coverage_ledger.json` 的 `door-transition`（route-only → verified）
+> 【2026-11-18 更正】本文件初版标题写「门过渡机制场景」并把覆盖台账 `door-transition`
+> 升为 verified。独立复核（`docs/rounds/r9-task-door-transition-review.md`）证明该结论错：
+> 窗口内 `SamusEnterDoor($8B13)` 根本没跑过。已撤回升级，文件名保留以便追溯，正文按实测重写。
 
-## 1. 为什么用录像输入而不是自造按键
+## 0. 场景与结论
 
-本作开场有 440 帧演出吞输入（`SamusInit ; 07:C8D1` 置 `Timer3=$2C`，`UpdateTimer ; 07:C266`
-每 10 帧减 1），自造路线很容易在"还没进游戏"的阶段空转——变形球机制场景第一版就栽在
-`press 100/140 start` 上（当时 status 停在标题阶梯 `$14..$18`、`RoomNumber` 恒 `$FF`）。
-门过渡需要"进游戏 → 走到门 → 进门"三段连续成立，录像前 600 帧正好覆盖，且是作者真实操作。
+- 场景：`cases/case-mechanism-door-transition.txt`，600 帧，输入 = `movies/eien86-6725M.inputlog`
+  前 600 帧（作者真实操作：标题 → 进游戏 → 右行 → 触边滚屏 → 邻房载入 → 邻房渲染）。
+- 机制：`GetRoomNum / LE733`（`refs/m1disasm/SRC/prg7_engine.asm:8049,8062-8095`，
+  `$005A ← WorldMapRAM[MapY*32+MapX]`）+ `SetupRoom ; 07:EA2B` + `CopyAreaPointers ; 07:C8B0`
+  载入链。
+- 机器报告：`data/status/mechanism_scene_door_transition.json`。
+- 覆盖台账：本场景作为 **`room-load-chain`** 的补充证据，该条目**仍是 `route-only`**。
 
-## 2. 机制时间线（两侧逐帧一致）
+## 1. 为什么用录像输入
 
-`RoomNumber`（`$005A`，`constants_ram.asm:589` `#$FF = no room requested`）的写入链：
+开场 440 帧演出吞输入（`SamusInit ; 07:C8D1` 置 `Timer3=$2C`，`UpdateTimer ; 07:C266` 每 10 帧减 1），
+自造按键（`press 100 start` 之类）会落在标题阶梯 `$14..$18` 上——变形球场景第一版就栽在这。
+本场景直接用录像前 600 帧，起手即作者操作。注意：inputlog 的 Start 在第 14/18 行，且落在吞输入窗内
+（`tools/scenario_run.py` 的 lint 只是 WARN 级提示，别把它当「菜单一定到位」的证据）。
 
-| 帧 | 值 | 含义 |
+## 2. 观测到的时间线（mesen 轴，逐帧）
+
+| 帧 | `$005A RoomNumber` | 含义 |
 |---|---|---|
-| 482 | `$17`（23） | 写入目标房（进门的瞬间） |
-| 484 | `$F1`（241） | 载入链第 1 步 |
-| 485 | `$F2`（242） | 第 2 步 |
-| 486 | `$F4`（244） | 第 3 步 |
-| 487 | `$FF` | 载入完成、清位 |
+| 24 | `09` | 游戏内房号 |
+| 26 | `FF` | 稳定态（无载入请求） |
+| 482 | `17` | 房号查找写入目标房 |
+| 484 / 485 / 486 | `F1` / `F2` / `F4` | 载入链阶段计数（`prg7_engine.asm:8673` 起 `inc RoomNumber`） |
+| 487 | `FF` | 载入完成 |
 
-Rust 侧逐帧同值（482/483 属 `incomparable` 的 16 帧集合——那是 Rust 侧 iteration span 不产状态行的帧，
-不是分歧）。载入链之后房间已经是新房间（`f560` 起像素与状态面全同）。
+rust 侧行 `484=F1 / 485=F2 / 486=F4 / 487=255` 与 mesen 一致；**482/483 不在观察面**
+（房间载入期是 iteration span，不产状态行，见 `crates/game-core/src/frame/engine.rs:107-120`）。
 
-## 3. 证据
+## 3. 证据（能说什么、不能说什么）
 
-- **像素面**：`tools/l4_diff_run.py run case-mechanism-door-transition` ⇒ **6/6 全 0 px**
-  （470 approach / 481 door-trigger / 486 load-chain / 500 transition / 560 in-room / 600 end）。
-- **状态面**：`tools/movie_ref/mechanism_scene.py --case … --frames 600` ⇒
-  `OFFSET +0（anchor=status）`、`compared=1168`（584 可比帧 ×2）、`mismatch=0`、
-  `incomparable=16`、`informative=true`、`distinct{status:8, room:5}`。
-  即 **整个窗口内两侧 `status`/`room` 逐帧相同**，不是只对上了采集点。
+**能说**：
+- 像素面：`l4_diff_run.py run case-mechanism-door-transition` ⇒ 6/6 全 0 px
+  （470/481/486/500/560/600；486 在载入链中段、500/560/600 在邻房）。
+- 状态面：`mechanism_scene.py --case … --frames 600` ⇒ `OFFSET +0`、`compared=1168`、
+  `mismatch=0`、`incomparable=16`。
 
-## 4. 负对照（一条强、一条弱，都记账）
+**不能说**：
+- 不能说「门过渡已验证」：窗口内 `$0056/$0058/$0059/$004E` 六采点全 `00`、status 从不出现 5
+  （`SamusEnterDoor` 的三件签名：`$59←$12`、`$56|=$80`、status←5，
+  `areas_common.asm:1385-1398`、`:1410-1413`）。
+- 不能说「决定性写点两侧一致」：`$5A=$17` 只在 482/483，而这两帧不在任何观察面内；
+  报告里的 `distinct{room:5}` 实为 `{00,FF,F1,F2,F4}`，**不含 0x17**。
+- 不能说「载入链中间值有意义」：`F1/F2/F4` 是阶段计数，本仓已裁定加载链中间值的帧级比较无意义
+  （`docs/findings/movie-6725m-residual-episodes.md:66-69`）。
 
-**强对照（机制级，主证据）**：`crates/game-core/src/samus/physics.rs` 的
-`samus_enter_door_not_triggered_without_door_data`——`DoorEntryStatus==0` 但
-`SamusDoorData($58)==0` 时全态不动（不置 `$56|=$80`、不改 status/`$59`/`$57`、不覆写 `$58`）。
-asm 依据 `SamusEnterDoor ; $8B13`（`areas_common.asm:1322-1325`）：
-`lda DoorEntryStatus / bne @RTS` 之后紧跟 `ldy SamusDoorData / beq @RTS` ⇒
-**「站在门格上」本身不足以触发门过渡**，必须由碰撞检测写 `$58`。这条证明房间写点是
-门事件驱动的，而不是「Samus 在房间里走动」的副产品。
+## 4. 对照强弱记账
 
-**弱对照（场景级，辅助）**：`cases/case-mechanism-door-negative.txt` 同窗口零输入 ⇒
-`RoomNumber` 全程常量、三采点 `room=00 status=00`（机器还没离开标题屏），
-`mechanism_scene.py` 报 `insufficient anchor changes (changes=0/0)`。
-它只证明「没有输入就什么都不发生」，**不构成机制特异性证据**——真正承重的是上面那条单元级对照。
+- **机制级**：单测 `samus_enter_door_not_triggered_without_door_data`
+  （`crates/game-core/src/samus/physics.rs`）钉住 asm `areas_common.asm:1322-1325` 的
+  「`DoorEntryStatus==0` 且 `SamusDoorData!=0` 才触发」判据。它证明**函数契约**，
+  **不能**证明本场景里发生过门事件——本场景确实没发生。
+- **场景级（弱）**：`cases/case-mechanism-door-negative.txt` 零输入 ⇒ 三采点 `room=00/status=00`
+  （机器停在标题屏）。只能证明「没输入就不动」，对「门过渡需不需要进门动作」零判别力。
 
-两者都不证明"路线唯一"（另一条进房路线未做），也不证明其它门类型（竖门/蓝门）同构。
+## 5. 局限 / 后续（未做）
 
-## 5. 局限（如实记账）
-
-1. 只覆盖**一条门**（目标房 `$17`）；蓝门/红门/导弹门与竖门未在本场景内区分。
-2. 窗口含 470 帧前置（标题 + 行走），是**能跑通的最短录像片段**，不是理论上最小帧数。
-3. 像素面只取 6 个采集点；状态面覆盖 584 帧。
-4. 末态 `doorEntry`（`$005B`）在两侧的取值随相位变化，本场景只用 `status`/`room` 做判据
-   （`DoorEntryStatus` 的语义锚见 `SamusEnterDoor`）。
-
-## 6. asm 锚
-
-- `SamusEnterDoor ; $8B13`（`refs/m1disasm/SRC/areas_common.asm:1317`）：判据=`DoorEntryStatus`
-  为 0 且 `SamusDoorData` 非 0 ⇒ 刚进门；随后重置导弹/能量拾取计数、按 `PPUCTRL_ZP` 位擦名表门数据、
-  按 `ScrollDir & $02` 分横/纵滚。
-- `SetupRoom ; 07:EA2B` / `CopyAreaPointers ; 07:C8B0`：载入链入口（见
-  `docs/findings/per-bank-assets.md` 的按区指针表）。
-- `RoomNumber` 的 `$FF = no room requested` 语义：`constants_ram.asm:589`。
-
-## 7. 顺带修的工具问题
-
-`tools/scenario_run.py` 的长场景 lint 原来只数 `press ... start`，用 `inputlog` 输入的用例会被误
-WARN（"疑菜单误删"）。扩口径为"**展开后的前 700 帧里至少有一次 Start 位**"（press 与 inputlog
-同一判据，仍机械可判），并补 `tools/tests/test_scenario_lint.py` 三条测试（press 路径 / inputlog
-路径 / 零输入仍 WARN）。
+1. 要重提 `door-transition`，必须补一个**真实门窗口**：status 出现 5 且 `$59=$12`、`$56≠0`，
+   并把 `$0056/$0058/$0059` 加进 `tools/movie_ref/align_legs.py::FIELD_ADDRS` 与
+   `mechanism_scene.py::STATE_FIELDS`（现在只有 status/room/health/scrolldir，结构上记不了门寄存器）。
+2. `room-load-chain` 要升 verified，需先解决「决定性写点 482/483 不在观察面」——
+   要么让采样面覆盖 iteration span，要么换一个写点落在可比帧上的窗口。
+3. 采集点稀疏（6 点）不足以覆盖载入链每一拍。

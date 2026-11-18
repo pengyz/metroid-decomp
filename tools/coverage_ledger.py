@@ -8,6 +8,12 @@ JSON 采用固定键序 + 按 id 排序 + indent=2 + LF，避免无意义 diff�
 - --init：只在基线不存在时建立 genesis 锚；基线已存在即 exit 2。
 - --update --reason TEXT：从旧基线逐项取 max（counts/ids/states），
   当前台账任一项低于旧基线即 exit 2 且不写盘；reason 与 updated_at 入基线。
+- --revert ID --to STATE --reason TEXT --evidence PATH：**唯一**的降级通道。
+  只在「证据被复核推翻」时用：条目记 `reverts[]`（from/to/reason/evidence/ts），
+  基线按当前台账重建并把 reason 并入，事后可审计「谁因为什么降的级」。
+  反例（2026-11-18）：`door-transition` 被升级到 verified，独立复核证明该 600 帧窗口里
+  `SamusEnterDoor($8B13)` 根本没跑（`$56/$58/$59` 全 0、status 从不出现 5），
+  写点走的是滚动房号查找 `GetRoomNum/LE733`——于是必须撤回，而不是留着过标的绿。
 """
 from __future__ import annotations
 
@@ -142,6 +148,34 @@ class Ledger:
         item["state"] = state
         if evidence and evidence not in item["evidence"]:
             item["evidence"].append(evidence)
+
+
+    def revert(self, entry_id: str, state: str, reason: str, evidence: str) -> None:
+        """证据被推翻时的**唯一**降级入口（事后审计可见：`reverts[]`）。"""
+        if state not in STATE_RANK:
+            raise ValueError(f"state must be one of {STATES}")
+        item = next((item for item in self.items if item["id"] == entry_id), None)
+        if item is None:
+            raise ValueError(f"unknown id: {entry_id}")
+        old = item["state"]
+        if STATE_RANK[state] >= STATE_RANK[old]:
+            raise ValueError(f"revert 只用于降级：{entry_id} {old} -> {state}")
+        if not reason.strip():
+            raise ValueError("revert 必须给 reason（为什么降级）")
+        if not evidence.strip():
+            raise ValueError("revert 必须给 evidence（推翻原升级的证据文件）")
+        item["state"] = state
+        item.setdefault("reverts", []).append(
+            {
+                "from": old,
+                "to": state,
+                "reason": reason.strip(),
+                "evidence": evidence.strip(),
+                "ts": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            }
+        )
+        if evidence.strip() not in item["evidence"]:
+            item["evidence"].append(evidence.strip())
 
 
 def _counts(items: list[dict]) -> dict[str, int]:
@@ -319,6 +353,30 @@ def update(ledger_path: str | Path = DEFAULT_LEDGER,
     return baseline
 
 
+def revert(ledger_path: str | Path = DEFAULT_LEDGER,
+           baseline_path: str | Path = DEFAULT_BASELINE,
+           entry_id: str = "", state: str = "", reason: str = "",
+           evidence: str = "") -> dict:
+    """降级单条并同步基线（基线 reason 并入本次降级说明）。"""
+    ledger_path = Path(ledger_path)
+    baseline_path = Path(baseline_path)
+    ev = Path(evidence) if evidence else None
+    if ev is not None and not ev.is_absolute():
+        ev = ROOT / ev
+    if ev is None or not ev.exists() or ev.is_dir():
+        raise LedgerError(f"--revert 的 --evidence 必须是存在的文件：{evidence!r}")
+    ledger = Ledger(ledger_path)
+    try:
+        ledger.revert(entry_id, state, reason, evidence)
+    except ValueError as exc:
+        raise LedgerError(str(exc)) from exc
+    ledger.save()  # 先落台账再落基线（_write_baseline 只写基线）
+    merged_reason = f"revert {entry_id} {state}：{reason.strip()}"
+    baseline = _baseline_doc(ledger.items, merged_reason)
+    _write_baseline(baseline_path, baseline)
+    return baseline
+
+
 def check(ledger_path: str | Path = DEFAULT_LEDGER,
           baseline_path: str | Path = DEFAULT_BASELINE) -> int:
     """只读自检：当前台账相对基线是否有降级。"""
@@ -338,6 +396,9 @@ def main(argv: list[str] | None = None) -> int:
     group.add_argument("--init", action="store_true", help="仅在基线不存在时建立 genesis 锚")
     group.add_argument("--update", action="store_true", help="从旧基线逐项取 max（只升不降）")
     group.add_argument("--check", action="store_true", help="只读检查当前台账是否低于基线")
+    group.add_argument("--revert", default="", metavar="ID", help="唯一降级通道：撤回某条目的状态")
+    parser.add_argument("--to", default="", help="--revert 必填：目标状态")
+    parser.add_argument("--evidence", default="", help="--revert 必填：推翻原升级的证据文件")
     parser.add_argument("--reason", default="", help="--update 必填：确认无回退的说明")
     parser.add_argument("--ledger", default=str(DEFAULT_LEDGER))
     parser.add_argument("--baseline", default=str(DEFAULT_BASELINE))
@@ -349,6 +410,11 @@ def main(argv: list[str] | None = None) -> int:
             if not args.reason.strip():
                 parser.error("--update 必须 --reason")
             baseline = update(args.ledger, args.baseline, args.reason)
+        elif args.revert:
+            if not args.to.strip() or not args.reason.strip() or not args.evidence.strip():
+                parser.error("--revert 必须 --to / --reason / --evidence")
+            baseline = revert(args.ledger, args.baseline, args.revert,
+                              args.to, args.reason, args.evidence)
         else:
             return check(args.ledger, args.baseline)
     except LedgerError as exc:

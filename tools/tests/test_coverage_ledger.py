@@ -1,10 +1,13 @@
 """覆盖台账的单调性、基线与 evidence 校验测试。"""
 import json
+import tempfile
+import unittest
 from pathlib import Path
 
 import pytest
 
 from tools.coverage_ledger import Ledger, init, main, update
+from tools import coverage_ledger
 
 
 def _read(path):
@@ -144,3 +147,47 @@ def test_update_promotes_and_records_reason(tmp_path):
     assert baseline["states"]["door-transition"] == "verified"
     assert baseline["counts"]["verified"] == 1
     assert baseline["reason"] == "door-transition 机制级最小重现已复跑"
+
+
+class RevertPathTest(unittest.TestCase):
+    """`--revert` 是唯一降级通道：必须同时落台账+基线，且要 reason/evidence。"""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        d = Path(self.tmp.name)
+        self.ledger = d / "ledger.json"
+        self.baseline = d / "baseline.json"
+        self.evidence = d / "proof.md"
+        self.evidence.write_text("# proof\n", encoding="utf-8")
+        ledger = coverage_ledger.Ledger(self.ledger)
+        ledger.add("m", "mechanism", "verified", ["proof.md"])
+        ledger.save()
+        coverage_ledger._write_baseline(
+            self.baseline, coverage_ledger._baseline_doc(ledger.items, "genesis")
+        )
+
+    def test_revert_lowers_both_ledger_and_baseline(self):
+        coverage_ledger.revert(
+            self.ledger, self.baseline, "m", "route-only", "复核推翻", str(self.evidence)
+        )
+        ledger = json.loads(self.ledger.read_text(encoding="utf-8"))
+        baseline = json.loads(self.baseline.read_text(encoding="utf-8"))
+        self.assertEqual(ledger["items"][0]["state"], "route-only")
+        self.assertEqual(baseline["states"]["m"], "route-only")
+        self.assertEqual(baseline["counts"]["verified"], 0)
+        self.assertEqual(len(ledger["items"][0]["reverts"]), 1)
+        self.assertIn("复核推翻", ledger["items"][0]["reverts"][0]["reason"])
+        self.assertEqual(coverage_ledger.check(self.ledger, self.baseline), 0)
+
+    def test_revert_requires_reason_and_existing_evidence(self):
+        with self.assertRaises(coverage_ledger.LedgerError):
+            coverage_ledger.revert(self.ledger, self.baseline, "m", "route-only", "  ", str(self.evidence))
+        with self.assertRaises(coverage_ledger.LedgerError):
+            coverage_ledger.revert(
+                self.ledger, self.baseline, "m", "route-only", "x", str(Path(self.tmp.name) / "nope.md")
+            )
+
+    def test_revert_refuses_upgrade(self):
+        with self.assertRaises(coverage_ledger.LedgerError):
+            coverage_ledger.revert(self.ledger, self.baseline, "m", "verified", "x", str(self.evidence))

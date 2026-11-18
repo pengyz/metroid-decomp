@@ -1,7 +1,7 @@
 {
   "schema": "handler-touchlist/v1",
-  "doc": "占位臂记账触达清单（L4 矩阵实录固化——增长即红白名单基线）。源=shots_rust/*.divergences.json（rust_screenshot 腿 DIVERGENCES sidecar，2026-11-13 新增）聚合 14 案。契约：sidecar 新增任何不在本清单的 addr=账外=红（须显式登记本清单才放行）——与 diff_traces.py:614 账外照红同语义的 L4 侧。",
-  "source_run": "python3 tools/l4_diff_run.py run-all @ 2026-11-18（17 案；新增 0xCBEF/0xD150 由 case-morphball-tail-probe 触发）",
+  "doc": "占位臂记账触达清单（L4 矩阵实录固化——增长即红白名单基线）。源=shots_rust/*.divergences.json（rust_screenshot 腿 DIVERGENCES sidecar，2026-11-13 新增）聚合矩阵内的全部案（当前 19 案，`cases_covered` 为准）。契约：sidecar 新增任何不在本清单的 addr=账外=红（须显式登记本清单才放行）——与 diff_traces.py:614 账外照红同语义的 L4 侧。",
+  "source_run": "python3 tools/l4_diff_run.py run-all @ 2026-11-18（19 案；新增 0xCBEF/0xD150 由 case-morphball-tail-probe 触发；case-mechanism-door-* 使 0xCC98 +133、0xFB7B +694，无新 addr）",
   "cases_covered": 19,
   "unique_addrs": 10,
   "total_events": 75040,
