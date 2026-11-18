@@ -21,7 +21,8 @@
           "to": "route-only",
           "reason": "独立复核 reject：该 600 帧窗口内 SamusEnterDoor($8B13) 未执行（$56/$58/$59 全 0、status 从不出现 5），f482 写点走滚动房号查找 GetRoomNum/LE733，非门过渡；决定性写点 482/483 不在观察面",
           "evidence": "docs/rounds/r9-task-door-transition-review.md",
-          "ts": "2026-11-18T14:39:21+00:00"
+          "ts": "2026-11-18T14:39:21+00:00",
+          "note": "已判非门过渡（2026-11-18 复核 reject）：本条目引用的 600 帧场景只证明滚动房号查找+载入链，现归属 room-load-chain；此处保留 evidence 仅供追溯"
         }
       ]
     },

@@ -60,13 +60,24 @@ SEED = (
 )
 
 
-def _entry(entry_id: str, kind: str, state: str, evidence: list[str] | None = None) -> dict:
-    return {
+REVERT_KEYS = ("from", "to", "reason", "evidence", "ts")
+
+
+def _entry(entry_id: str, kind: str, state: str,
+           evidence: list[str] | None = None,
+           reverts: list[dict] | None = None) -> dict:
+    """构造条目。`reverts[]`（降级审计链）**必须透传**——否则任何 load→save
+    都会把上一条降级的历史静默抹掉（2026-11-18 复核实测：再 revert 一条后
+    前一条的 reverts 从 1 变 0）。"""
+    item = {
         "id": entry_id,
         "kind": kind,
         "state": state,
         "evidence": list(evidence or []),
     }
+    if reverts:
+        item["reverts"] = [dict(rec) for rec in reverts]
+    return item
 
 
 def _validate_item(item: dict) -> None:
@@ -81,6 +92,18 @@ def _validate_item(item: dict) -> None:
     evidence = item.get("evidence")
     if not isinstance(evidence, list) or not all(isinstance(x, str) for x in evidence):
         raise ValueError(f"ledger item {item.get('id')!r}: evidence must be a list of strings")
+    relog = item.get("reverts")
+    if relog is not None:
+        if not isinstance(relog, list):
+            raise ValueError(f"ledger item {item.get('id')!r}: reverts must be a list")
+        for rec in relog:
+            if not isinstance(rec, dict):
+                raise ValueError(f"ledger item {item.get('id')!r}: revert record must be an object")
+            missing = [k for k in REVERT_KEYS if not str(rec.get(k, "")).strip()]
+            if missing:
+                raise ValueError(
+                    f"ledger item {item.get('id')!r}: revert record missing {missing}"
+                )
 
 
 class Ledger:
@@ -108,7 +131,10 @@ class Ledger:
             if item["id"] in seen:
                 raise ValueError(f"duplicate id in ledger: {item['id']}")
             seen.add(item["id"])
-            items.append(_entry(item["id"], item["kind"], item["state"], item.get("evidence")))
+            items.append(
+                _entry(item["id"], item["kind"], item["state"],
+                       item.get("evidence"), item.get("reverts"))
+            )
         self.items = items
         return self.items
 
@@ -370,6 +396,12 @@ def revert(ledger_path: str | Path = DEFAULT_LEDGER,
         ledger.revert(entry_id, state, reason, evidence)
     except ValueError as exc:
         raise LedgerError(str(exc)) from exc
+    # 收缩守卫：基线里存在、台账里没有的 id 会被 _baseline_doc 静默清除，
+    # 而 _downgrade_problems 只看「台账低于基线」，抓不到"条目凭空消失"这条路径。
+    old = _load_baseline(baseline_path)
+    missing = sorted(set(old.get("states", {})) - {item["id"] for item in ledger.items})
+    if missing:
+        raise LedgerError(f"拒绝：台账缺基线中的条目 {missing}（revert 不得顺手收缩台账）")
     ledger.save()  # 先落台账再落基线（_write_baseline 只写基线）
     merged_reason = f"revert {entry_id} {state}：{reason.strip()}"
     baseline = _baseline_doc(ledger.items, merged_reason)

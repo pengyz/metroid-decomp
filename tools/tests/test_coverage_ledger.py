@@ -191,3 +191,34 @@ class RevertPathTest(unittest.TestCase):
     def test_revert_refuses_upgrade(self):
         with self.assertRaises(coverage_ledger.LedgerError):
             coverage_ledger.revert(self.ledger, self.baseline, "m", "verified", "x", str(self.evidence))
+
+    def test_reverts_survive_a_second_revert(self):
+        """审减链必须持久：第二次 revert 不得抹掉前一条的 reverts[]。"""
+        ledger = coverage_ledger.Ledger(self.ledger)
+        ledger.add("n", "mechanism", "verified", ["proof.md"])
+        ledger.save()
+        coverage_ledger._write_baseline(
+            self.baseline, coverage_ledger._baseline_doc(ledger.items, "genesis")
+        )
+        coverage_ledger.revert(self.ledger, self.baseline, "m", "route-only", "第一刀", str(self.evidence))
+        coverage_ledger.revert(self.ledger, self.baseline, "n", "route-only", "第二刀", str(self.evidence))
+        doc = json.loads(self.ledger.read_text(encoding="utf-8"))
+        by_id = {item["id"]: item for item in doc["items"]}
+        self.assertEqual(len(by_id["m"]["reverts"]), 1, "第一条的降级记录被抹掉了")
+        self.assertIn("第一刀", by_id["m"]["reverts"][0]["reason"])
+        self.assertEqual(len(by_id["n"]["reverts"]), 1)
+
+    def test_revert_refuses_to_shrink_ledger(self):
+        """基线里有、台账里被删的 id ⇒ revert 必须拒绝（不得顺手收缩）。"""
+        ledger = coverage_ledger.Ledger(self.ledger)
+        ledger.add("x", "mechanism", "route-only", ["proof.md"])
+        ledger.save()
+        coverage_ledger._write_baseline(
+            self.baseline, coverage_ledger._baseline_doc(ledger.items, "genesis")
+        )
+        gh = coverage_ledger.Ledger(self.ledger)
+        gh.items = [item for item in gh.items if item["id"] != "x"]
+        gh.save()
+        with self.assertRaises(coverage_ledger.LedgerError) as ctx:
+            coverage_ledger.revert(self.ledger, self.baseline, "m", "route-only", "刀", str(self.evidence))
+        self.assertIn("缺基线中的条目", str(ctx.exception))
