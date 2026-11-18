@@ -72,6 +72,19 @@ ANCHOR_ADDR_NAME = "$0014"
 ROOM_ADDR = 0x005A
 # $0300 = SAMUS_STATUS（ram_map.rs:223）。
 STATUS_ADDR = 0x0300
+# $0106/$0107 = SAMUS_HEALTH 低/高字节（ram_map.rs:169 SAMUS_HEALTH = 0x0106）。
+HEALTH_LO_ADDR = 0x0106
+HEALTH_HI_ADDR = 0x0107
+# $0049 = SCROLL_DIR（ram_map.rs:59）。
+SCROLL_DIR_ADDR = 0x0049
+# $005A = ROOM_NUMBER（ram_map.rs:216）；分类器用它判加载窗。
+FIELD_ADDRS = {
+    "status": STATUS_ADDR,
+    "room": ROOM_ADDR,
+    "health_lo": HEALTH_LO_ADDR,
+    "health_hi": HEALTH_HI_ADDR,
+    "scrolldir": SCROLL_DIR_ADDR,
+}
 # Rust iram 覆盖 $0100-$07FF；zp 覆盖 $0000-$00FF。
 IRAM_BASE = 0x0100
 IRAM_END = 0x0800
@@ -332,22 +345,19 @@ def _extract_latch_optional(
     return _hex_byte(zp, ANCHOR_ADDR, path, lineno, "rust w['zp'] $0014")
 
 
-def _mesen_state_byte(
+def _mesen_range_byte(
     w: dict,
-    name: str,
     range_key: str,
     offset: int,
     field: str,
     path: str,
     lineno: int,
 ) -> int:
-    """Mesen2 状态面字节：优先命名 watch，缺则从全 RAM range 的固定偏移取。"""
-    if name in w:
-        return _byte_value(w[name], path, lineno, f"w[{name!r}]")
+    """从 Mesen2 全 RAM range 的固定偏移取一个字节。"""
     rng = w.get(range_key)
     if not isinstance(rng, str):
         raise ValueError(
-            f"{path}:{lineno}: mesen row missing w[{range_key!r}] or w[{name!r}] "
+            f"{path}:{lineno}: mesen row missing w[{range_key!r}] "
             f"for state field {field}"
         )
     expected = (
@@ -365,36 +375,74 @@ def _mesen_state_byte(
     )
 
 
-def _extract_state(
-    row: dict, leg: str, path: str, lineno: int
+def _mesen_state_byte(
+    w: dict,
+    name: str,
+    range_key: str,
+    offset: int,
+    field: str,
+    path: str,
+    lineno: int,
+) -> int:
+    """Mesen2 状态面字节：优先命名 watch，缺则从全 RAM range 的固定偏移取。"""
+    if name in w:
+        return _byte_value(w[name], path, lineno, f"w[{name!r}]")
+    return _mesen_range_byte(w, range_key, offset, field, path, lineno)
+
+
+def _extract_state_fields(
+    row: dict,
+    leg: str,
+    path: str,
+    lineno: int,
+    fields: tuple[str, ...],
 ) -> dict[str, int | None]:
-    """读一行的状态面 + 锁存面：{status, room, latch}；latch 可缺失为 None。"""
+    """读一行的状态面 + 锁存面；fields 为请求的字段名。"""
+    for field in fields:
+        if field not in FIELD_ADDRS:
+            raise ValueError(
+                f"{path}:{lineno}: unknown state field {field!r}; "
+                f"expected one of {tuple(FIELD_ADDRS)}"
+            )
+
     if leg == "biz":
-        for key in ("status", "room"):
-            if key not in row:
-                raise ValueError(f"{path}:{lineno}: biz row missing {key}")
-        return {
-            "status": _byte_value(row["status"], path, lineno, "status"),
-            "room": _byte_value(row["room"], path, lineno, "room"),
-            "latch": _extract_latch_optional(row, leg, path, lineno),
-        }
+        out: dict[str, int | None] = {}
+        for field in fields:
+            if field not in row:
+                raise ValueError(f"{path}:{lineno}: biz row missing {field}")
+            out[field] = _byte_value(row[field], path, lineno, field)
+        out["latch"] = _extract_latch_optional(row, leg, path, lineno)
+        return out
 
     w = row.get("w")
     if not isinstance(w, dict):
         raise ValueError(f"{path}:{lineno}: {leg} row missing object w")
 
     if leg == "mesen":
-        return {
-            "status": _mesen_state_byte(
-                w, "SamusStatus", MESEN_RAM_HIGH, STATUS_ADDR - IRAM_BASE,
-                "status", path, lineno,
-            ),
-            "room": _mesen_state_byte(
-                w, "RoomNumber", MESEN_RAM_LOW, ROOM_ADDR,
-                "room", path, lineno,
-            ),
-            "latch": _extract_latch_optional(row, leg, path, lineno),
-        }
+        out = {}
+        for field in fields:
+            if field == "status":
+                out[field] = _mesen_state_byte(
+                    w, "SamusStatus", MESEN_RAM_HIGH,
+                    STATUS_ADDR - IRAM_BASE, field, path, lineno,
+                )
+            elif field == "room":
+                out[field] = _mesen_state_byte(
+                    w, "RoomNumber", MESEN_RAM_LOW,
+                    ROOM_ADDR, field, path, lineno,
+                )
+            else:
+                addr = FIELD_ADDRS[field]
+                if addr < IRAM_BASE:
+                    out[field] = _mesen_range_byte(
+                        w, MESEN_RAM_LOW, addr, field, path, lineno
+                    )
+                else:
+                    out[field] = _mesen_range_byte(
+                        w, MESEN_RAM_HIGH, addr - IRAM_BASE, field, path, lineno
+                    )
+        out["latch"] = _extract_latch_optional(row, leg, path, lineno)
+        return out
 
     # rust：zp 覆盖 $0000-$00FF，iram 覆盖 $0100-$07FF；两段都必须是精确长度。
     zp = w.get("zp")
@@ -413,13 +461,27 @@ def _extract_state(
             f"{path}:{lineno}: rust w['iram'] must be "
             f"{2 * (IRAM_END - IRAM_BASE)} hex chars, got {len(iram)}"
         )
-    return {
-        "status": _hex_byte(
-            iram, STATUS_ADDR - IRAM_BASE, path, lineno, "rust w['iram'] $0300"
-        ),
-        "room": _hex_byte(zp, ROOM_ADDR, path, lineno, "rust w['zp'] $005A"),
-        "latch": _extract_latch_optional(row, leg, path, lineno),
-    }
+    out = {}
+    for field in fields:
+        addr = FIELD_ADDRS[field]
+        if addr < IRAM_BASE:
+            out[field] = _hex_byte(
+                zp, addr, path, lineno, f"rust w['zp'] ${addr:04X}"
+            )
+        else:
+            out[field] = _hex_byte(
+                iram, addr - IRAM_BASE, path, lineno,
+                f"rust w['iram'] ${addr:04X}",
+            )
+    out["latch"] = _extract_latch_optional(row, leg, path, lineno)
+    return out
+
+
+def _extract_state(
+    row: dict, leg: str, path: str, lineno: int
+) -> dict[str, int | None]:
+    """读一行的状态面 + 锁存面：{status, room, latch}；latch 可缺失为 None。"""
+    return _extract_state_fields(row, leg, path, lineno, STATE_FIELDS)
 
 
 def _read_leg(path: str, leg: str, extractor) -> tuple[dict, int, int]:
@@ -470,14 +532,25 @@ def load_latch(path: str, leg: str) -> dict[int, int]:
     return seq
 
 
-def load_state(path: str, leg: str) -> dict[int, dict[str, int | None]]:
-    """读一条腿的 frame -> {"status","room","latch"}。
+def load_state(
+    path: str,
+    leg: str,
+    fields: tuple[str, ...] = STATE_FIELDS,
+) -> dict[int, dict[str, int | None]]:
+    """读一条腿的 frame -> 状态字段，默认 {"status","room"}，另含 "latch"。
 
-    biz 读顶层 status/room/joy1_latch；mesen 优先命名 watch，缺则读全 RAM range；
-    rust 读 w['zp'] 与 w['iram']。状态字节缺键/长度不符 fail-loud；$0014 缺失
-    记为 None（不阻断状态面），真正只读锁存面请用 load_latch。
+    fields 可扩展为 health_lo/health_hi/scrolldir（地址见 FIELD_ADDRS）；
+    请求的状态字节缺键/长度不符 fail-loud。$0014 缺失记为 None（不阻断状态面），
+    真正只读锁存面请用 load_latch。
     """
-    seq, _last_f, _rows = _read_leg(path, leg, _extract_state)
+    fields = tuple(fields)
+    if not fields:
+        raise ValueError("fields must not be empty")
+
+    def extractor(row: dict, leg: str, path: str, lineno: int) -> dict:
+        return _extract_state_fields(row, leg, path, lineno, fields)
+
+    seq, _last_f, _rows = _read_leg(path, leg, extractor)
     return seq
 
 
