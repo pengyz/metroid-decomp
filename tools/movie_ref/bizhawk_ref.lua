@@ -17,7 +17,15 @@
 --     --chromeless --lua tools/movie_ref/bizhawk_ref.lua \
 --     --movie <movie>.bk2 "rom/Metroid (USA).nes"
 
-local OUT_PATH = "/home/peng/workspace/metroid-decomp/analysis/traces/bizhawk-6725M.jsonl"
+-- 输出路径：默认 analysis/traces/bizhawk-6725M.jsonl；用环境变量 BH_OUT 覆盖为其它绝对路径。
+-- （BizHawk 启动器会 cd 到 /tmp/bh，相对路径会落错地方 ⇒ 这里只接受绝对路径。）
+local function env_str(name, dflt)
+  local ok, v = pcall(function() return os.getenv(name) end)
+  if ok and type(v) == "string" and v ~= "" then return v end
+  return dflt
+end
+local OUT_PATH = env_str("BH_OUT",
+  "/home/peng/workspace/metroid-decomp/analysis/traces/bizhawk-6725M.jsonl")
 -- 帧数：默认 1200（0..1200 行，够前 1000 帧比对 + 对齐余量）；
 -- 全片导出（28408 帧）用环境变量 `BH_FRAMES=28408` 覆盖，不必改脚本。
 -- 注意：`--userdata k:v` + `client.getuserdata` 在本构建实测会挂死（见 findings），故用 os.getenv。

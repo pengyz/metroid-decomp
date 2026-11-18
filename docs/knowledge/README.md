@@ -69,6 +69,7 @@
 | [gotcha-windows-unix-only-apis-and-locale-pipes.md](gotcha-windows-unix-only-apis-and-locale-pipes.md) | gotcha | Windows 工具链双坑——Unix-only 进程 API 断跑 + 管道 locale 解码把真因换成二次 TypeError（本仓 Windows 适配实证） |
 | [gotcha-mesen2-windows-headless-testrunner.md](gotcha-mesen2-windows-headless-testrunner.md) | gotcha | Mesen2 Windows 采集三坑与 headless 配方——io 沙箱/CWD 偷换/弹窗扰民，`--testRunner` 全解（跨模式字节确定性实证） |
 | [gotcha-bundles-are-machine-local-fake-red.md](gotcha-bundles-are-machine-local-fake-red.md) | gotcha | analysis/ 机器本地态缺失伪造 L3 确定性红——判别程序+bundle 恢复配方（三案 sha 逐字节实证，换机必踩） |
+| [gotcha-bizhawk-headless-mono-setup.md](gotcha-bizhawk-headless-mono-setup.md) | gotcha | BizHawk 2.10(mono) Linux 无头三坑——OpenAL 卡死/X11 BadMatch/137 自杀退出，ALSOFT_DRIVERS=null 全解 |
 
 ## 迁移条目来源声明（2026-10-14 修订版；AGENTS §8 合规）
 

@@ -73,6 +73,13 @@ NesHawk/QuickNES 上游版的核心不完全对齐问题）。唯一残留不确
   `BizHawk has completed its shutdown routines, killing process...` 但进程不退出，
   被外层 `timeout` 杀掉（shell `exit=137`）。**轨迹在杀之前已 `flush`+`close` 完整落盘**
   （见 §5 的确定性复现：两次运行产物逐字节相同）。
+
+  > 【2026-11-18 更正】「被外层 timeout 杀掉」是当时的误判。用
+  > `tools/movie_ref/run_bizhawk_trace.sh` 做 20 帧计时实测：**整体 wall 1.9 s**（`timeout 300`
+  > 远未到期）却已 `exit=137`，且 stderr 紧接 `killing process...` 打印 shell 的 `Killed`
+  > ⇒ 137 是 **BizHawk 自己在 shutdown routines 末尾对本进程 SIGKILL**（`killing process` 就是
+  > 它的原话），不是 timeout 干的。正确表述：**进程「自杀式」退出（137）+ 产物完整**；
+  > 外层 `timeout` 只是保险，不是退出原因。判定成功永远看产物行数，不看退出码。
 - **`--userdata`/`client.getuserdata` 在本构建上不可用**：`--help` 确认参数格式为
   `--userdata k1:v1;k2:v2`，但带 `--userdata frames:50` 运行时 180 s 内既不产轨迹也不退出
   （挂死，被 timeout 杀）；改用环境变量 `BH_FRAMES` 后正常。根因未定位（疑与 `comm.socket*` IPC
@@ -242,6 +249,13 @@ LogKey:#Reset|Power|#P1 Up|P1 Down|P1 Left|P1 Right|P1 Start|P1 Select|P1 B|P1 A
 （= 录像真值）**作为「同一份逐帧输入」喂 Rust 腿，故 §6 的结论不受该缺陷影响。
 **待办**：`movie_import.parse_bk2` 应改为按 `LogKey` 动态建列映射；修后需重跑依赖 bk2 inputlog 的
 既有对拍基线（单独 commit）。
+
+> 【2026-11-18 后续】该待办已由 commit `77302b66` 完成（`parse_bk2` 改为解析 `LogKey` 建列描述表，
+> 缺 `LogKey` 即 fail-loud 拒绝；`bits_from_text` 加列序参数，fm2 仍 RLDUTSBA；新增合成位序锚
+> `tools/tests/test_movie_import.py`）。本节保留当时「未修改」的历史主张不改；§6 的比对与结论
+> 不受影响（本轮一直用 BizHawk 轨迹 `p1/p2` 作真值输入，未用该 inputlog）。
+> 仍在的待办：`movies/eien86-6725M.inputlog` 是旧实现产物 ⇒ 需按修复后工具**重新生成**，
+> 并重跑所有依赖它的对拍基线（属"重生成产物 + 基线"，与本节取证结论无关）。
 
 ## 8. 复现命令
 
