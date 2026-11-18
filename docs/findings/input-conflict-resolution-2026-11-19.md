@@ -25,13 +25,20 @@ schedule 来源时 `btnOrder.left == nil`、`btnOrder.right == nil`，两个 `(n
 
 ## 2. 影响面（A 级实测）
 
-`movies/eien86-6725M.inputlog` 共 28 408 行，其中 **R+L 同帧 31 帧**（首个 f670=`0x03`，
-其后 f672/f674/f676 同为 `0x03`，f678/f680 为 `0x43`）、**D+U 同帧 15 帧**。
-这些帧在 emu 腿上被降为单向键。
+`movies/eien86-6725M.inputlog` 共 28 408 个**数据行**，其中 **R+L 同帧 31 帧**、
+**D+U 同帧 15 帧**。这些帧在 emu 腿上被降为单向键。
+
+> 【2026-11-19 更正（独立复核 `9bcd3c76` C 项）】帧号口径原先整体 **+8**——把 inputlog 的
+> 9 行注释也算进了下标。按「数据行 1-based」口径的真值：**首个 R+L = f662（`0x03`）**，
+> 序列 f662/664/666/668=`0x03`、**f670/f672=`0x43`**、f671=`0x42`、f663=`0x02`；
+> `0x49` 在 **f1292**（f1293=`0x09`）；**首个 D+U = f17906**。口径可由
+> `analysis/_gen/case-tmp-phase-1294.lua` 的 `schedule` 表直接核对
+> （`[662]=3, [663]=2, [670]=67, [1292]=73, [1293]=9`）。影响面结论不变：
+> 600 帧窗口 < f662，故当时的矩阵用例未受影响。
 
 诱发链（取证子代理 `4f221313` 逐帧写序 + 反事实实验）：
 
-1. f663 帧 R+L 同按被改成「仅 L」⇒ `SamusDir` 反向、`SetSamusRunAccel`
+1. f670 帧（`0x43`=R+L+B）与 f672 帧的 R+L 同按被改成「仅 L」⇒ `SamusDir` 反向、`SetSamusRunAccel`
    （`07:CCB7`）查 `RunAccelerationTbl`（`07:CCC0` = `$30,$D0`）得 `accX=0xD0`
    而非 `0x30`；
 2. `$0311 SamusSubPixelX` 的累加相位随之漂移（窗口入口 rust `0x70` / emu `0x50`，差 `0x20`）；
@@ -63,11 +70,38 @@ schedule 原始位因此不再被工具改写，冲突交由 ROM 的 BitScan 决
 ## 5. 未定谳 / 待独立验证
 
 - f1294 的 **215 px 不是这次 status 互换造成的**：注入器修复后 `$0300` 在 f1293/f1294
-  已与 emu 相同（`04`/`01`），215 px 仍在。真因是 **f1293 `$0303 animFrame`**
+  已与 emu 相同（`04`/`01`），215 px 仍在。**首个未解释的差异在 f1293 `$0303 animFrame`**
   （emu `0x46` / rust `0x22`，同帧 `animResetIndex/animIndex/animDelay` 全同），
-  需另起一轮（`SetSamusAnim ; 07:CF6B` 系列与 `$0303` 写点）。
+  需另起一轮（`SetSamusAnim ; 07:CF6B` 系列与 `$0303` 写点）——「animFrame 是根因」
+  本身**尚未证明**，目前只能说到「首个未解释差异在这里」。
 - f1294..f1298 的其余像素残差（33/163/184/167/1302=128）：9 个 Samus 字段已全同，
   OAM 影子区仍有差（f1294 5 B、f1295 60 B，集中在 slot 0..3）；**仅为假设（B/C 级）**：
   f1293 输入 `0x49` 含 B 键 ⇒ `FireSamusProjectile ; 07:D1EE` 的投射物精灵差异，未做单点隔离。
-- 本修复落地后必须重跑 L4 矩阵（唯一使用 `inputlog` 的用例是
-  `cases/case-mechanism-door-transition.txt`）并更新 ratchet 基线；修复前不得视为完成。
+- **覆盖率（本段已补，复核 `9bcd3c76` E 项）**：修复当时 149 格里没有任何一格跨过
+  冲突帧（唯一 `inputlog` 用例 `case-mechanism-door-transition.txt` 窗口 600 < 662），
+  这是一条「改了但没被差分验证」的改动。现已入库永久用例
+  `cases/case-mechanism-input-conflict.txt`（`frames 700` + 同一 inputlog，
+  采点 661/662/670/671/672/673/674/676/678/680/700），它真正穿过 f662/f670/f672。
+  该用例首次运行即暴露一个新分歧（f673 起，见 §6），说明这条覆盖是有效的。
+- **混合来源语义（复核 A 项）**：运行时 nav/trigger 与录像原始位仍可在同一帧对向相撞。
+  本工具的裁定是**不消解、交给 ROM 的 BitScan（`07:E1E1`，最低位优先）**，因此 RIGHT/DOWN
+  恒胜；若将来需要「nav 覆盖录像位」，必须改成显式来源优先级，不得依赖 `btnOrder` 残留。
+  `btnOrder` 已改为**每帧重置**（`tools/scenario_capture.lua`），否则跨帧陈旧序会让守卫在
+  纯录像帧上误真、按旧序删掉原始位。
+- 复现命令：`python3 tools/l4_diff_run.py run case-mechanism-input-conflict`（需
+  `movies/eien86-6725M.inputlog`，不入库）。
+
+## 6. 新分歧（本用例首次运行发现，未定谳）
+
+f661..f672 全 0 px；**f673 起失配（326 px）**。两腿同帧 RAM 对比（2272 B 全量）：
+
+| f | status `$0300` | dir `$030B` | speed_i `$0309` | subpix `$0311` | accelX `$030F` | x `$030E` |
+|---|---|---|---|---|---|---|
+| 671 | 01=01 | 01=01 | FE=FE | 30=30 | 14=14 | 72=72 |
+| 672 | 01=01 | 01=01 | FE=FE | B0=B0 | 11=11 | 70=70 |
+| 673 | 01=01 | 01=01 | FE=FE | 60=60 | 0E=0E | **70≠6F** |
+
+速度/亚像素/方向/加速度**逐字节相同**，只有整数 `x` 少 1 ⇒ 不是积分算术，也不是输入面，
+指向逐像素环里的挡判或滚动补偿（`MoveSamusLeft ; 07:E626` / `ObjectCheckMoveLeft ; 07:E7F0`
+/ `ScrollLeft` 失败补偿）。1 px 之差随后把 `$005A` 的载入链推错一帧（f674：emu `08` /
+rust `F0`），像素差级联到 326 px。定位进行中。

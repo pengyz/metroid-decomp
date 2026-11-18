@@ -478,6 +478,66 @@
         }
       }
     },
+    "case-mechanism-input-conflict": {
+      "scenario_sha256": "3f3e31f8f7dfffb52ea94c88587a6f11065dcc9d6785e09c7e5692d5a5c31680",
+      "states": {
+        "661:pre-conflict": {
+          "state": "match",
+          "diff_pixels": 0,
+          "total_pixels": 61440
+        },
+        "662:first-rl": {
+          "state": "match",
+          "diff_pixels": 0,
+          "total_pixels": 61440
+        },
+        "670:rl-plus-b": {
+          "state": "match",
+          "diff_pixels": 0,
+          "total_pixels": 61440
+        },
+        "671:c671": {
+          "state": "match",
+          "diff_pixels": 0,
+          "total_pixels": 61440
+        },
+        "672:c672": {
+          "state": "match",
+          "diff_pixels": 0,
+          "total_pixels": 61440
+        },
+        "673:c673": {
+          "state": "diff",
+          "diff_pixels": 84,
+          "total_pixels": 61440
+        },
+        "674:c674": {
+          "state": "diff",
+          "diff_pixels": 326,
+          "total_pixels": 61440
+        },
+        "676:c676": {
+          "state": "diff",
+          "diff_pixels": 326,
+          "total_pixels": 61440
+        },
+        "678:c678": {
+          "state": "diff",
+          "diff_pixels": 106,
+          "total_pixels": 61440
+        },
+        "680:after-conflict": {
+          "state": "diff",
+          "diff_pixels": 112,
+          "total_pixels": 61440
+        },
+        "700:end": {
+          "state": "diff",
+          "diff_pixels": 27,
+          "total_pixels": 61440
+        }
+      }
+    },
     "case-mechanism-morphball": {
       "scenario_sha256": "3b5f8658e74caed05c2c3797c1072505d9f17a17da021c42dd2979e900546766",
       "states": {
@@ -1156,6 +1216,16 @@
       "diff": 6,
       "blocked": 0,
       "cells_total": 149
+    },
+    {
+      "ts": "2026-11-18T18:45:47+00:00",
+      "kind": "anchor",
+      "evidence": "",
+      "reason": "新增永久用例 case-mechanism-input-conflict（700 帧 inputlog，穿过 R+L 冲突帧 f662/f670/f672）以让 517a8ff4 的注入器修复进入分母；11 格=5 match+6 diff（f673 起新分歧，已登记）。旧 19 案逐格不变（143→148 全为新增 5 格 all-match；diff 6→12 全为新增 6 格）",
+      "match": 148,
+      "diff": 12,
+      "blocked": 0,
+      "cells_total": 160
     }
   ]
 }

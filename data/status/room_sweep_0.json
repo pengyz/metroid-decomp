@@ -49,7 +49,11 @@
   "timeout": 0,
   "skipped": 0,
   "denominator_note": "denominator = planned（计划扫的房数），不是 ran",
-  "distinct_rust_capture_sha256": 92
+  "distinct_rust_capture_sha256": 92,
+  "unverified_identity": 0,
+  "left_gameengine": 0,
+  "stale_report": 0,
+  "field_note": "unverified_identity/left_gameengine/stale_report 是 2026-11-19 判据收紧后新增的 summary 字段；本轮 47 房由旧判据跑出，未检查这三项，故缺省补 0。ok=15 等既有分数未重算（仅 room 0/1 复跑同判 ok，见 docs/findings/room-sweep.md §0 更正）。"
  },
  "skips": [],
  "rooms": [
@@ -11454,5 +11458,82 @@
   }
  ],
  "elapsed_s": 1349.6,
- "note_rerun": "room 29 首轮因本工具第二个实例启动清理残留时误删在飞用例而报 error，已单独重跑覆盖（同一 preset/窗口）。"
+ "note_rerun": "room 29 首轮因本工具第二个实例启动清理残留时误删在飞用例而报 error，已单独重跑覆盖（同一 preset/窗口）。",
+ "criteria_version": "pre-2026-11-19-fix",
+ "ok_definition_current": "两腿都跑完（无 error/blocked/timeout）且每采集点 diff==0 且注入房号被接受（$005A 走完 F0→…→FF 且有目标房身份证据：$33/$34 RoomPtr 落在该房房流区间内，或采到 $005A==目标房号）且 f900..f906 $001E MainRoutine 全为 3（GameEngine）",
+ "manual_note": true,
+ "clues": {
+  "source": "tools/movie_ref/room_sweep_stats.py",
+  "tile_points_total": 38,
+  "tile_points_col2": 28,
+  "tile_points_col29": 14,
+  "tile_points_both": 5,
+  "tile_points_only_col2": 23,
+  "tile_points_only_col29": 9,
+  "tile_unique_bytes": 204,
+  "tile_pair_4e_to_ff": 162,
+  "tile_bytes_by_col": {
+   "2": 84,
+   "14": 12,
+   "29": 108
+  },
+  "attr_unique_bytes_mismatch_rooms": 369,
+  "attr_emu_uniform": 323,
+  "attr_emu_hist": {
+   "00": 33,
+   "02": 2,
+   "08": 2,
+   "0A": 4,
+   "20": 2,
+   "55": 159,
+   "5A": 4,
+   "5F": 4,
+   "65": 1,
+   "66": 2,
+   "6A": 1,
+   "95": 1,
+   "99": 3,
+   "A0": 2,
+   "A5": 9,
+   "A6": 3,
+   "AA": 78,
+   "AF": 1,
+   "BB": 1,
+   "F5": 1,
+   "FA": 3,
+   "FF": 53
+  },
+  "attr_rust_four_distinct": 21,
+  "attr_only_points": 19,
+  "ok_rooms_with_nametable_bytes": [
+   0,
+   1,
+   3,
+   4,
+   18,
+   19,
+   26,
+   44,
+   45
+  ],
+  "layers": {
+   "clean": 15,
+   "nametable": 61,
+   "scroll_drift": 10,
+   "sprite": 6,
+   "unknown": 2
+  },
+  "shift_dx": [
+   2
+  ],
+  "shift_residual_pct_min": 2.27,
+  "shift_residual_pct_max": 7.09,
+  "review_unreproducible": {
+   "attr_296_of_349": "复核稿数字；入库 dump 同口径为 323/369；review 分母差 20 B，未给出可复算脚本",
+   "tile_col2_114_col29_78": "复核稿把 room 37 f120 整列 30 B 归 col2；off%32 自然口径为 col2 84 / col29 108"
+  }
+ },
+ "clues_generated_by": "tools/movie_ref/room_sweep_stats.py",
+ "note_source": "manual_merge",
+ "manual_note_detail": "note_rerun 为手工合并（room 29 首轮被旧版启动清理误删在飞用例后单独重跑），不是工具产出；工具已支持 --note 并在重跑时保留 note/note_rerun 与本标记。"
 }

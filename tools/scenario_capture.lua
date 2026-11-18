@@ -962,8 +962,13 @@ end
 
 emu.addEventCallback(function()
   frame = frame + 1
+  -- 【2026-11-19】每帧重置来源序：btnOrder 只在帧内有意义。若不重置，跨帧残留的
+  -- 序会让"两侧都来自有序源"的守卫在纯录像帧上误真，按陈旧序删掉一个录像原始位
+  -- （复核 9bcd3c76 A 项）。
+  btnOrder = {}
   -- 消费预展开 joy1（位解码为按钮表——算术式取位，勿引入 Lua 版本位运算依赖）。
-  -- 静态对向键已在 expand_schedule 消解（后写覆盖）；btn 内仅条件输入可再现冲突。
+  -- 静态对向键已在 expand_schedule 消解（后写覆盖）；本帧内 nav/trigger 与录像原始位
+  -- 仍可对向相撞，此时按 ROM 语义交给 BitScan 07:E1E1（最低位优先），工具不消解。
   local joy = schedule[frame] or 0
   local joy2 = schedule2[frame] or 0
   local btn = {}

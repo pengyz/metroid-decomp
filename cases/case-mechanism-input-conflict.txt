@@ -1,0 +1,20 @@
+# 机制场景：录像原始位内的对向键（R+L / D+U）不被注入器预先消解
+# 目的：让 517a8ff4 的修复真正进入 L4 分母——此前 149 格里没有任何一格跨过冲突帧。
+# 输入来源 = 6725M any% 录像前 700 帧（首个 R+L 在 f662=0x03，f670/f672=0x43；首个 D+U 在 f17906，不在窗内）。
+# 判据 = 像素零容差（与矩阵同源）；本用例只裁"注入器改动是否破坏/未修复输入面"，
+# 不裁 f1293 $0303 animFrame 那一支（独立分歧，见 docs/findings/input-conflict-resolution-2026-11-19.md §5）。
+name case-mechanism-input-conflict
+frames 700
+snapshot none
+inputlog movies/eien86-6725M.inputlog
+capture 661 pre-conflict
+capture 662 first-rl
+capture 670 rl-plus-b
+capture 671 c671
+capture 672 c672
+capture 673 c673
+capture 674 c674
+capture 676 c676
+capture 678 c678
+capture 680 after-conflict
+capture 700 end
