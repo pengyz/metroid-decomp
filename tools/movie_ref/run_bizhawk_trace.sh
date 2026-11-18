@@ -9,16 +9,16 @@
 # 用法：
 #   tools/movie_ref/run_bizhawk_trace.sh <movie.bk2> [frames] [out.jsonl]
 #     movie.bk2   录像绝对/相对路径（必填）
-#     frames      导出帧数，默认 1200（产出 frames+1 行，f=0..frames）
+#     frames      导出帧数，默认 1200（产出 frames 行，f=0..frames-1）
 #     out.jsonl   输出路径，默认 analysis/traces/bizhawk-6725M.jsonl
 #
 # 可用环境变量覆盖：
 #   BIZHAWK_DIR=/tmp/bh           BizHawk 解包目录（含 EmuHawkMono.sh）
 #   ROM=rom/Metroid\ \(USA\).nes  ROM 路径
 #   LUA=tools/movie_ref/bizhawk_ref.lua
-#   TIMEOUT=240                   外层超时秒数（全片 28408 帧约需 30 min ⇒ 传 2000+）
+#   TIMEOUT=240                   外层超时秒数（全片 28408 帧实测约 8 min ⇒ 传 2000+）
 #
-# 判成功的标准：输出行数 == frames + 1。**不要看退出码**：
+# 判成功的标准：输出行数 == frames。**不要看退出码**：
 #   BizHawk 在 shutdown routines 末尾会自己 SIGKILL 本进程（日志原话
 #   "BizHawk has completed its shutdown routines, killing process..."）⇒ 退出码 137，
 #   20 帧实测 wall 1.9s 就已 137，与 timeout 无关。属预期，不是失败。
@@ -59,7 +59,7 @@ echo "== BizHawk 取证 =="
 echo "  core     : 由 $BIZHAWK_DIR/config.ini 的 PreferredCores 决定（NES=quickerNES，见 findings §2）"
 echo "  movie    : $MOVIE_ABS"
 echo "  rom      : $ROM_ABS"
-echo "  frames   : $FRAMES  → 期望 $((FRAMES + 1)) 行"
+echo "  frames   : $FRAMES  → 期望 $FRAMES 行（f=0..$((FRAMES - 1))）"
 echo "  out      : $OUT_ABS"
 echo "  timeout  : ${TIMEOUT}s"
 
@@ -77,9 +77,9 @@ rows=0
 [ -f "$OUT_ABS" ] && rows=$(wc -l <"$OUT_ABS")
 echo "== 结果 =="
 echo "  退出码   : $rc  （137 = BizHawk shutdown 后自杀，预期；124 = timeout 兜底生效）"
-echo "  输出行数 : $rows  （期望 $((FRAMES + 1))）"
+echo "  输出行数 : $rows  （期望 $FRAMES）"
 
-if [ "$rows" -eq $((FRAMES + 1)) ]; then
+if [ "$rows" -eq "$FRAMES" ]; then
   echo "  STATUS: OK（产物完整；退出码不参与判定——137 是 BizHawk 自杀）"
   exit 0
 elif [ "$rows" -gt 0 ]; then

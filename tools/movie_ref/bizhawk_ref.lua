@@ -26,8 +26,12 @@ local function env_str(name, dflt)
 end
 local OUT_PATH = env_str("BH_OUT",
   "/home/peng/workspace/metroid-decomp/analysis/traces/bizhawk-6725M.jsonl")
--- 帧数：默认 1200（0..1200 行，够前 1000 帧比对 + 对齐余量）；
--- 全片导出（28408 帧）用环境变量 `BH_FRAMES=28408` 覆盖，不必改脚本。
+-- 帧数：默认 1200 ⇒ 导出 f=0..1199 共 1200 行（够前 1000 帧比对 + 对齐余量）；
+-- 全片导出（录像 28408 帧）用环境变量 `BH_FRAMES=28408` 覆盖，不必改脚本。
+-- 【2026-11-18 修正】旧实现是 `for frame = 0, TOTAL_FRAMES`（**闭区间**）⇒ BH_FRAMES=N 实际
+-- 导出 N+1 行；当 N 等于录像帧数（28408）时会去迭代越界帧 28408，Lua 报错触发模态窗 ⇒
+-- 无头进程僵死（实测 STAT Sl、CPU 53.9%、输出文件停止增长），且 io.write 只每 100 帧 flush
+-- 一次 ⇒ 末 7 行留在缓冲里丢失（28401 行 / 期望 28408）。现改半开区间：BH_FRAMES=N ⇒ f=0..N-1。
 -- 注意：`--userdata k:v` + `client.getuserdata` 在本构建实测会挂死（见 findings），故用 os.getenv。
 local function env_num(name, dflt)
   local ok, v = pcall(function() return os.getenv(name) end)
@@ -58,7 +62,7 @@ end
 
 local fh = assert(io.open(OUT_PATH, "w"))
 local n = 0
-for frame = 0, TOTAL_FRAMES do
+for frame = 0, TOTAL_FRAMES - 1 do
   local lo = memory.read_u8(0x0106, "RAM")
   local hi = memory.read_u8(0x0107, "RAM")
   local st = memory.read_u8(0x0300, "RAM")
