@@ -1488,6 +1488,15 @@ def gate_coverage_ratchet(
         baseline = json.loads(baseline_path.read_text(encoding="utf-8"))
     except json.JSONDecodeError as exc:
         return FAIL, f"覆盖台账/基线 JSON 损坏：{exc}"
+    provenance = [
+        key for key in ("reason", "updated_at")
+        if not isinstance(baseline.get(key), str) or not baseline.get(key).strip()
+    ]
+    if provenance:
+        return FAIL, (
+            "覆盖台账基线缺 CLI 留痕（" + "/".join(provenance) + "）：基线只能由 "
+            "tools/coverage_ledger.py --init|--update --reason 产生，手工编辑不可采信"
+        )
     problems = coverage_ratchet_violations(ledger, baseline)
     if problems:
         return FAIL, "覆盖 ratchet 违规：" + "；".join(problems)
@@ -2534,7 +2543,9 @@ GATES: list[tuple[str, str, str, str, object]] = [
     ("l4", "启用（Task 6）", "l4",
      "L4 自动对拍：run-all 矩阵（用例×采集点三态）+ 逐采集点 ratchet（match 集合只增/blocked 只减）", gate_l4),
     ("completeness-ratchet", "矩阵建立后启用", "all", "完备性矩阵覆盖只增不降", gate_completeness_ratchet),
-    ("coverage-ratchet", "台账建立后启用", "check", "覆盖台账三态计数只增不降、条目 id 不减", gate_coverage_ratchet),
+    ("coverage-ratchet", "台账建立后启用", "check",
+     "覆盖台账累计计数（rank≥state）只增不降、条目 id 不减、逐条 rank 不回退、evidence 路径须存在",
+     gate_coverage_ratchet),
     ("proof-checks", "启用（按变更面触发；SMT+桥接内联；int_y 穷举留 CI/里程碑）", "check",
      "int_x SMT 证明+公式↔Rust 桥接复跑（证书防腐，int-y 穷举 GATES_PROOF_FULL=1）", gate_proof_checks),
     ("staged-surface", "启用（W5）", "check",
@@ -4159,6 +4170,12 @@ def cmd_selftest(_args) -> int:
         v, d = gate_coverage_ratchet(Path(td) / "missing-ledger.json",
                                      Path(td) / "missing-baseline.json")
         check("coverage-ratchet 台账与基线均缺失 ⇒ SKIP", v == SKIP, f"{v}: {d}")
+        bare = {k: v for k, v in cov_base.items() if k not in ("reason", "updated_at")}
+        bp.write_text(json.dumps(bare), encoding="utf-8")
+        (Path(td) / "led.json").write_text(json.dumps(good), encoding="utf-8")
+        v, d = gate_coverage_ratchet(Path(td) / "led.json", bp)
+        check("coverage-ratchet 基线缺 CLI 留痕（手编辑）⇒ 红",
+              v == FAIL and "CLI 留痕" in d, f"{v}: {d}")
     v, d = gate_coverage_ratchet()
     check("coverage-ratchet 门禁实跑（本仓台账 vs 基线）", v == PASS, d)
 
