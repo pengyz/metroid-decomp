@@ -3,7 +3,20 @@
 - 日期：2026-11-18
 - 触发：`docs/superpowers/plans/2026-11-18-bizhawk-movie-forensics-next.md` Task 3/4
 - 上游证据：`docs/findings/movie-bizhawk-6725m.md` §6.4（帧级过渡表）、§10（全片对拍）
-- 结论等级：机制结论 A 级（写点 PC + asm 行号双锚）；「Rust 是否在同 tick 内写过 09」为**未证**
+- 结论等级：机制结论 A 级（写点 PC + asm 行号双锚）；「Rust 是否在同 tick 内写过 09」已由复核证实（见下）
+- **状态：2026-11-18 一轮独立复核 = reject（打点一/二 PASS、打点三 FAIL）⇒ 本文已按复核改判**，
+  复核报告：`docs/rounds/r9-task-5a-transition-review.md`。历史主张一律原地保留 + 日期更正，不删除。
+
+> 【2026-11-18 复核拒收 → 改判摘要】原裁定「Rust 房间请求晚约 2 帧、`F` 链与 Biz 整体 +2 平移」
+> **不成立**，两处根因：
+> ① **采样相位读错一帧**：`capture(N)` 的 `ram.hex` 是 **tick `N-1` 收口**
+> （`crates/game-core/src/bin/rust_screenshot.rs:411` 原注释），上一版把它当 tick `N` 收口，
+> 于是把 `capture(946)` 的值记到 f945 行，凭空读出 +2（复核 F4）；
+> ② **「同 tick 覆写」分支已被证实**：`capture(945)=FF`、`capture(946)=F1`，且到 `F1` 必先经 `F0`
+> （`EndOfRoom` 的 `stx #$F0`）⇒ `FF→09→F0→F1` 全在 **tick 945** 内完成，`09` 从不落帧边界（§5 第二行）。
+>
+> 新裁定：**不是缺写**；差异 = ①「ROM 的 `09` 存活 2 帧（驻留）未建模」为主 ②「请求 +1 帧」为次
+> ③ `F` 链步进节律不同。**「采样相位」只解释那个 +2 的读数假象，不解释行为差异。**
 - 本文不改任何游戏逻辑、不改阈值、不改门禁
 
 ## 1. 问题
@@ -40,9 +53,17 @@ onmemoryread    reg ok=true  err=nil
 mw=0 bw=0 ex=0 exa=0 mr=0          ← 120 帧内 5 种回调全部 0 次触发
 ```
 
-`memory.registerwrite` / `memory.registerexec` 在该构建为 `nil`（`attempt to call a nil value (field 'registerwrite')`）。
-另一路探针（只注册 `event.onmemorywrite`、300 帧内**不按地址过滤**）同样 `calls=0` ⇒ 不是地址域/参数顺序问题，
-而是 quickerNES 核心未实现回调接口。
+`memory.registerwrite` / `memory.registerexec` 报 `attempt to call a nil value (field 'registerwrite')`；
+> 【2026-11-18 更正·复核 F2】不是「2.10 移除了旧式 hook」，而是**这两个 API 名在 BizHawk 里从未存在**
+> （它们是 FCEUX Lua 风格）；`monodis` 反编译整个 `BizHawk.Client.Common.dll` 中 0 次出现该名字。
+> 另需限定：QuickNES **实现了 `ITraceable`**，所以正确的说法是「**Lua 内存回调通道**不可用」，
+> 而不是「该核心无法被插桩取证」。
+
+**`ok=true` 不是「注册成功」**：Lua 侧 `ok` 只表示 pcall 没抛异常，真实返回值是**空 GUID**
+（`Guid.Empty`）。静态证据（复核方 `monodis` 反编译，见 `docs/rounds/r9-task-5a-transition-review.md` §1.2）：
+`QuickNES::get_MemoryCallbacks` 标 `[FeatureNotImplemented]` 并 `throw NotImplementedException`；
+`EventsLuaLibrary::OnBusWrite` 捕获该异常后返回 `Guid.Empty`。
+另一路探针（只注册 `event.onmemorywrite`、300 帧内**不按地址过滤**）同样 `calls=0` ⇒ 不是地址域/参数顺序问题。
 
 **结论**：`$005A` 写序列**无法**在 BizHawk(quickerNES) 上取证。按 D3（ROM 字节 + Mesen2 执行 = 最终真相）
 改由 **Mesen2** 取证；BizHawk 只提供帧边界读数，两者在本文中显式区分。
@@ -108,7 +129,7 @@ endFrame 1000
 
 ## 4. 三方帧级对照（watch 轴）
 
-| f | Mesen2 `$5A` | BizHawk `$5A` | Rust `$5A`（seam/tick-close 合并） |
+| f | Mesen2 `$5A`（watch，帧边界） | BizHawk `$5A`（帧边界） | Rust `$5A`（seam = pre-work；capture(f+1) = **tick f 收口**） |
 |---|---|---|---|
 | 941 | `09` 前身：`FF` | `FF` | `FF` |
 | 944 | `FF` | **`09`** | `FF` |
@@ -120,6 +141,11 @@ endFrame 1000
 | 950 | `F3` | `FF` | **`F4`** |
 | 951 | `F4` | `FF` | **`FF`** |
 | 952 | `FF` | `FF` | `FF` |
+
+> 【2026-11-18 更正·复核 F4】上一版把 `capture` 列说成「tick `f-1` 收口」，**错位一帧**：实际
+> `capture(N)` = `seam(N)` = tick `N-1` 的 **pre-work**，而 `capture(N+1)` 才是 tick `N` 的 **post-work 收口**。
+> 因此下文凡引用「f945 capture = F1」都应读作「tick 944 收口 = F1」。这条错位直接导致上一版把
+> 「请求 +1 帧」误读成「+2 平移」（见 §5 更正）。
 
 **读数**（三条独立事实）：
 1. **`09` 确实被写过**，且在 ROM 侧可存活 **2 个帧边界**（Mesen 946/947；Biz 944/945）。
@@ -170,31 +196,38 @@ f944 窗口漂到 2–3 帧。⇒
 | 问题 | 裁定 | 依据 |
 |---|---|---|
 | Rust 是否**写错**房间号 | **否** | 三方 `$5A` 取值集合一致；Rust 也在 `F0→F1→F2→F4→FF` 推进（`crates/game-core/src/world/room_draw.rs:720,826,851`） |
-| Rust 的 `f944/945 = FF` 而 BizHawk `= 09` | **时机错（late，相对 BizHawk 轴）**：Rust 的房间请求晚 ~2 帧 | BizHawk `09` 落 944/945、Rust 同帧仍 `FF`；`09` 在 Rust 侧从未落到帧边界。Mesen 的 946/947 受跨核漂移影响（§4.1），不作帧级仲裁 |
-| Rust 的 `09` 是否「没写」 | **未证**：Rust 可能在同 tick 内写 `09` 后立刻被 `EndOfRoom` 覆盖（`room_load.rs:202` → `room_draw.rs:720` 同 tick） | Rust 帧边界无 `09`，但 tick-close 已是 `F1`（`f945` capture）⇒ 中间态不可见 |
-| Rust `F1..FF` 相对 Biz 晚 2 帧 | **时机错（late）**，与 U 曲线无关 | f948..f951 = f946..f949 的 +2 平移，序列形状完全一致 |
-| 哪个是「基准」 | `09` 由 ROM 写、且能被帧边界观测 ⇒ **Rust 缺的是「09 存活一个帧边界」的相位**，不是值 | §3 + §4 |
+| Rust 的 `f944/945 = FF` 而 BizHawk `= 09` | **时机/结构差**：请求 **+1 帧**（Rust tick 945 ↔ Biz frame 944）**+ ROM 的「`09` 存活 2 帧」驻留未建模** | BizHawk `09` 落 944/945；Rust tick 944 收口仍是 `FF`、tick 945 收口已是 `F1` ⇒ `09` 只存在于 tick 945 内部（⇒ 下一行） |
+| Rust 的 `09` 是否「没写」 | **已证：写了，但从不在帧边界**——`FF→09→F0→F1` 在**同一 tick 内**折叠完成 | 反向推理：`capture(946)=F1` 而 `capture(945)=FF`；`F1` 的前态必是 `F0`（`room_draw.rs:826` 每步 `+1`），`F0` 只能由 `EndOfRoom` 的 `stx #$F0`（`prg7_engine.asm:8878` / `room_draw.rs:720`）产生 ⇒ tick 945 内必然走完 `09→F0→F1`。复核方独立复核同一结论：`docs/rounds/r9-task-5a-transition-review.md` §3 |
+| Rust `F1..FF` 与 Biz 的关系 | **不是平移**：是**步进节律不同**——Rust 在 `F1` 停 3 个 tick；Biz 一帧一档（`F1/F2/F4/FF`） | 上一版「f948..f951 = f946..f949 的 +2 平移」是把「seam 比 Biz 边界慢 1 帧 + 946/947 无 seam 行」两处叠加误读成 +2（F4 更正）；真正的差是节律+到达时刻 |
+| 哪个是「基准」 | `09` 由 ROM 写、且能被帧边界观测 ⇒ **Rust 缺的是「`09` 存活 2 个帧边界」这条驻留**（结构与节律），不是值、也不只是相位 | §3（`09@f960 → F0@f962` 真 2 帧驻留）+ §5 第二行 |
 
 ### 5.1 三分类
 
 - **缺写**：无证据支持（值集合一致）。
-- **时机错**：**成立**——房间请求（`get_room_num` 径）Rust 晚 ~2 帧；`F` 链随之整体晚 2 帧。
-- **采样相位**：**部分成立**——`F` 链的「跳格」差异属相位；`09` 在 Rust 侧缺失亦可能是相位（同 tick 覆写），
-  但「请求晚 2 帧」不是相位能解释的（Biz/Mesen 两核都在 Rust 之前的帧上就已是 `09`）。
+- **结构差（主因，A 级）**：ROM 的「`09` 存活 2 个帧边界再 `EndOfRoom`」这条**驻留**未在 Rust 建模，
+  ⇒ `09` 与 `F0/F1` 在同一 tick 内折叠，帧边界永远看不到 `09`（§5 第二行已证）。
+- **时机差（次因，B→A 级）**：请求本身 **+1 帧**（tick 945 vs Biz frame 944）。
+- **采样相位（仅解释读数，不解释行为）**：上一版的「+2 平移」是 seam/capture 差 1 帧 + 空洞跨 2 帧的读数假象；
+  `F` 链「跳格」则是各核每帧 `inc` 次数不同的采样结果（见 §4 读数 3）。
+  **本裁定不再声称「Rust 整体晚 2 帧」。**
 
 ### 5.2 反证条件（谁能推翻本裁定）
 
-1. 若能在 Rust 侧证明 `get_room_num` 径在 f944 当帧就写了 `09`（需要 Rust 侧插桩或在
-   `rust_screenshot` 增加按帧转储 `$005A` 写序列的**启动参数**，不违反 §3.8 禁 env hook），
-   则「请求晚 2 帧」降级为「相位差」。
+1. ~~若能在 Rust 侧证明 `get_room_num` 径在 f944 当帧就写了 `09`，则「请求晚 2 帧」降级为「相位差」。~~
+   **【2026-11-18 已证伪/已闭合】** 该分支由复核方用既有 Rust capture 证实：`09` 与 `F0/F1` **同 tick**
+   （tick 945），从未落帧边界 ⇒ 既不是「没写」，也不是「晚 2 帧」，而是「请求 +1 帧 + 驻留同 tick 折叠」。
+   仍需 A 级钉死的唯一缺口：**Rust 写 `09` 的 tick 号**（需 `rust_screenshot --trace ram 005A` 启动参数），
+   设计见 `docs/rounds/r9-task-5a-transition-review.md` §3.4。
 2. 若 Mesen2 与 BizHawk 在同一 `inputlog` 下的**帧轴**存在系统性 ±2 偏移（本文件已见 boot 段
    Mesen `24=09` vs Biz `26=09`），则 §4 的跨核对照需先做帧轴标定再比较；此风险已登记（见 §6）。
 
 ## 6. 未做 / 已知缺口（不得当作已证）
 
 1. **未做**：Rust 侧 `$005A` 写序列插桩（需要新增 `rust_screenshot --trace-room` 类启动参数；属代码改动，未获批）。
-2. **未做**：跨核帧轴标定（Mesen vs quickerNES 的 boot 相位差 1–2 帧，见 §4 的 `24/26` 差异）；
-   在此之前，§4 的「±2 帧」结论只能按「相对窗口位移」读，不能当作绝对帧对齐。
+2. **已完成**：跨核帧轴标定（§4.1：boot `−2`、中段 `0`、门过渡 `+2`；复核方独立复现，见
+   `docs/rounds/r9-task-5a-transition-review.md` §5）。**剩余未做**：漂移的**原因**——两核对帧边界/掉帧的
+   定义不同（疑在 PPU vblank 等待与 `WritePPUAttribTbl` 的逐帧预算），属 Stage A 核心差异，不在本次范围。
+   因此 §4 的跨核对照一律按「相对窗口位移」读，不作绝对帧对齐。
 3. **未做**：`WritePPUAttribTbl` 的 vblank 等待为何在不同核上每帧推进格数不同（PPU 时序差，属 Stage A 核心差异）。
 4. 本文件的 `ctwrite` 证据来自 Mesen2；BizHawk 侧只有帧边界读数（证据等级不同，已在 §2/§3 标明）。
 
@@ -232,6 +265,44 @@ for r in rows:
     if v!=prev: print(r['f'], v); prev=v
 PY
 ```
+
+## 8. 复现命令
+
+### 8.1 附录：`capture(N)` 与 `seam(N)` 相位的可复算片段（复核 F7）
+
+`capture(N).ram.hex` = **tick `N-1` 收口**（`crates/game-core/src/bin/rust_screenshot.rs:411` 原注释），
+故 `capture(N) == seam(N)`；946/947 没有 seam 行（该 tick 无采样缝），只有 capture 可读 ——
+这正是必须用 capture 补这两帧的原因。
+
+```python
+import glob, json
+biz = {json.loads(l)["f"]: json.loads(l) for l in open("analysis/traces/bizhawk-6725M.jsonl")}
+for f in range(938, 956):
+    g = glob.glob(f"/tmp/rustshots-full/*_f{f:05d}_d{f}.ram.hex")
+    cap = int(open(g[0]).read().strip()[0x5A * 2:0x5A * 2 + 2], 16) if g else None
+    print(f, "capture(tick N-1 收口)=%s" % ("%02X" % cap if cap is not None else "-"),
+          "biz=%02X" % biz[f]["room"])
+```
+
+实测输出（2026-11-18，读 `/tmp/rustshots-full/*.ram.hex` + `analysis/traces/bizhawk-6725M.jsonl`）：
+
+| f | Rust `capture(f)`（= tick `f-1` 收口） | BizHawk `$5A`（帧边界） |
+|---|---|---|
+| 938..944 | `FF` | `FF`（944 = `09`） |
+| 945 | `FF` | `09` |
+| 946 | `F1` | `F1` |
+| 947 | `F1` | `F2` |
+| 948 | `F1` | `F4` |
+| 949 | `F2` | `FF` |
+| 950 | `F4` | `FF` |
+| 951 | `FF` | `FF` |
+| 952..955 | `FF` | `FF` |
+
+读法：`capture(945)=FF` 是 **tick 944 收口**，`capture(946)=F1` 是 **tick 945 收口** ⇒
+`FF→09→F0→F1` 的折叠发生在 tick 945 内部；`09` 因此不可能出现在任何帧边界上。
+
+> 前提：`/tmp/rustshots-full` 是**可再生**临时产物（`--capture` 段输出，不入库）；若已清理，
+> 按本文 §7 的 `rust_screenshot … --capture` 命令重跑 938..955 段即可复算。
 
 ## 8. evidence 摘要（供 commit message 引用）
 
