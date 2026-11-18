@@ -58,9 +58,13 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--case", required=True, help="现有 case DSL（或临时 case）路径")
     p.add_argument("--frames", type=int, default=120, help="实际运行帧数（1..600）")
     p.add_argument("--fields", default=",".join(DEFAULT_FIELDS),
-                   help="逗号分隔的比较字段，默认 status,room,latch")
+                   help="逗号分隔的比较字段，默认 status,room；latch 只作对齐锚")
     p.add_argument("--json-out", default=None, help="JSON 报告输出路径")
     p.add_argument("--timeout", type=float, default=300.0, help="Mesen2 腿超时（秒）")
+    p.add_argument("--allow-constant", action="store_true",
+                   help="常量窗（无判别力）也返回 0；默认 exit 3")
+    p.add_argument("--keep-trace", action="store_true",
+                   help="保留本次 analysis/traces 下的 Mesen 副产品；默认清理")
     return p
 
 
@@ -84,6 +88,7 @@ def compare(mesen: Mapping[int, Mapping[str, object]],
     incomparable_fields = 0
     mismatch_frames: list[int] = []
     first_diff: int | None = None
+    distinct: dict[str, set] = {f: set() for f in fields}
     for frame in frames:
         left = mesen.get(frame)
         right = rust.get(frame)
@@ -96,6 +101,8 @@ def compare(mesen: Mapping[int, Mapping[str, object]],
                 incomparable_fields += 1
                 continue
             compared += 1
+            distinct[field].add(left[field])
+            distinct[field].add(right[field])
             if left[field] != right[field]:
                 mismatch += 1
                 per_field[field] += 1
@@ -104,7 +111,10 @@ def compare(mesen: Mapping[int, Mapping[str, object]],
                     first_diff = frame
         if bad_row:
             mismatch_frames.append(frame)
+    informative = any(len(values) >= 2 for values in distinct.values())
     return {
+        "informative": informative,
+        "distinct_values": {f: len(v) for f, v in distinct.items()},
         "first_diff": first_diff,
         "mismatch": mismatch,
         "per_field": per_field,
@@ -214,25 +224,32 @@ def _run(cmd: list[str], timeout: float, what: str) -> None:
         raise RuntimeError(f"{what} 失败 rc={proc.returncode}: {tail}")
 
 
-def _load_latch_gap() -> int:
-    """Task 1 已实测的 latch→state 帧差；只从 leg_offsets.json 读，不硬编码 1。"""
+def _load_offsets() -> dict:
+    """读 Task 1 的 leg_offsets.json；缺文件/缺字段一律 fail-loud。"""
     try:
-        doc = json.loads(OFFSETS_PATH.read_text(encoding="utf-8"))
-        return int(doc["latch_offsets"]["rust_to_mesen"]) - int(doc["offsets"]["rust_to_mesen"])
-    except (OSError, KeyError, TypeError, ValueError) as exc:
+        return json.loads(OFFSETS_PATH.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
         raise ValueError(f"读不到 Task 1 偏移表 {OFFSETS_PATH}: {exc}") from exc
 
 
-def state_offset_from_latch(latch_offset: int, offsets_doc: dict) -> int:
-    """把 mesen↔rust 的 latch offset 换成 state offset（用 Task 1 实测 gap）。
+def state_offset_from_latch(latch_offset_align: int, offsets_doc: dict) -> int:
+    """把 align(mesen, rust) 的 latch offset 换成 state offset。
 
-    Task 1：latch_offsets.rust_to_mesen - offsets.rust_to_mesen = +1 帧
-    （锁存面比状态面晚一行）。align(mesen, rust) 得到 latch_offset 后，
-    state offset = latch_offset + gap。
+    入参口径必须是 ``align(mesen, rust)`` 的返回值（``mesen[f] == rust[f+o]``），
+    不是 ``data/status/leg_offsets.json`` 的 ``rust_to_mesen`` 口径；两者符号约定
+    相反。函数内用 Task 1 实测 gap 转换，并断言结果等于
+    ``-offsets.rust_to_mesen``，防止两套约定混用。
     """
     gap = int(offsets_doc["latch_offsets"]["rust_to_mesen"]) - int(
         offsets_doc["offsets"]["rust_to_mesen"])
-    return int(latch_offset) + gap
+    state = int(latch_offset_align) + gap
+    expected = -int(offsets_doc["offsets"]["rust_to_mesen"])
+    if state != expected:
+        raise ValueError(
+            f"state offset 口径不一致：latch_offset_align={latch_offset_align} + gap={gap} "
+            f"= {state}，但 leg_offsets 期望 {expected}"
+        )
+    return state
 
 
 def _choose_anchor(mesen: dict, rust: dict, fields: tuple[str, ...]):
@@ -264,7 +281,7 @@ def _choose_anchor(mesen: dict, rust: dict, fields: tuple[str, ...]):
         raise ValueError(
             f"状态面字段跳变不足，latch 也无法对齐（{last_error or '无可用字段'}；latch: {exc}）"
         ) from exc
-    return latch_offset + _load_latch_gap(), f"latch({latch_offset:+d}+gap)"
+    return state_offset_from_latch(latch_offset, _load_offsets()), f"latch({latch_offset:+d}+gap)"
 def run_scene(case_path: str, frames: int) -> dict:
     """跑一个短 case：Mesen2 + Rust，返回归一后的两腿状态与对齐偏移。
 
@@ -321,11 +338,24 @@ def run_scene(case_path: str, frames: int) -> dict:
             mesen = load_state(str(trace), "mesen", fields=STATE_FIELDS)
             rust = load_state(str(state_out), "rust", fields=STATE_FIELDS)
             offset, anchor = _choose_anchor(mesen, rust, DEFAULT_FIELDS)
-            return {"mesen": mesen, "rust": rust, "offset": offset, "anchor_field": anchor}
+            return {"mesen": mesen, "rust": rust, "offset": offset,
+                    "anchor_field": anchor, "trace_name": plan["name"]}
         finally:
             # 临时 case 不留在 cases/；trace/state 在 analysis（gitignored）中留作证据
             if temp_case.exists():
                 temp_case.unlink()
+
+
+def _cleanup_trace(out: dict) -> None:
+    """删本次 run 在 analysis/traces 下的 Mesen 副产品（默认；--keep-trace 保留）。"""
+    name = out.get("trace_name")
+    if not name:
+        return
+    for p in (ROOT / "analysis" / "traces").glob(f"{name}.*"):
+        try:
+            p.unlink()
+        except OSError:
+            pass
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -348,10 +378,20 @@ def main(argv: list[str] | None = None) -> int:
     print(f"COMPARE: compared={cmp['compared']} mismatch={cmp['mismatch']} "
           f"incomparable={cmp['incomparable']} first_diff={cmp['first_diff']}")
     print(f"FIELDS: {', '.join(fields)}")
-    if cmp["all_match"]:
+    if not cmp["informative"]:
+        if not args.allow_constant:
+            print("RESULT: uninformative（常量窗，无判别力）")
+            print("提示：常量窗没有对照信息量；确需接受请加 --allow-constant", file=sys.stderr)
+            result_code = 3
+        else:
+            print("RESULT: uninformative（常量窗，无判别力；--allow-constant 显式接受）")
+            result_code = 0 if cmp["all_match"] else 1
+    elif cmp["all_match"]:
         print("RESULT: all-match")
+        result_code = 0
     else:
         print(f"RESULT: DIFF first_diff={cmp['first_diff']} per_field={cmp['per_field']}")
+        result_code = 1
     report = {
         "case": str(args.case),
         "frames": args.frames,
@@ -367,7 +407,9 @@ def main(argv: list[str] | None = None) -> int:
         p.write_text(json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
                      encoding="utf-8")
         print(f"JSON: {p}")
-    return 0 if cmp["all_match"] else 1
+    if not args.keep_trace:
+        _cleanup_trace(out)
+    return result_code
 
 
 if __name__ == "__main__":

@@ -296,7 +296,12 @@ Expected: PASS
 Run: `python3 tools/movie_ref/mechanism_scene.py --case cases/case-morphball.txt --frames 120 --json-out analysis/traces/scene-morphball.json`
 Expected: 打印 `first_diff` 或 `all-match`；结果与 L4 矩阵 case-morphball 的既有结论不得矛盾（矛盾则如实记录为工具缺陷，不得改期望值）。
 
-注：`cases/case-morphball.txt` 与 `case-roll.txt` 都不存在；现有 case 均 >120 帧，且 ≤120 帧内没有 ≥3 次状态面跳变。实际测试用临时 120 帧 case（用完删除），另外用现有 `case-password-justin.txt` 600 帧复核。
+注：`cases/case-morphball.txt` 与 `case-roll.txt` 都不存在；现有 case 均 >120 帧。
+
+Step 5 证据链状态（2026-11-18，Task 5 复核后）：
+- `case-password-justin.txt` 600 帧是**常量窗**：mesen/rust 的 status、room 全 0，`compared=1180` 比的是 0==0，**无判别力**；不作为「all-match」对照证据。
+- 可复跑、且窗口内 status 有 ≥3 次跳变的 ≤120 帧 case **未落地**：input-only 120 帧（start 10/40 + down 60-115）只能得到 status 0→20 一次跳变；morphball 流程的 status 20→21 在 start+146 帧、21→22 在 +246，120 帧内不足 3 次。没有用 fixture 伪造状态面来凑数。
+- 本 task 只声称 runner 的 informative 判据与轻量 all-match 在有判别力的合成窗口上成立；不声称已有真实短 case 覆盖机制。
 
 - [ ] **Step 6 (T5): 提交**
 
