@@ -109,8 +109,9 @@ pub(crate) fn bullet_explode(mem: &mut crate::frame::Manager) {
 /// - 越界且方向允许时 `inc Temp0B_PositionHi`（$FDAC/$FDD0）。
 /// - `LoadObjectPositionFromTemp` 写回 y/x 后 `lda Temp0B_PositionHi / and #$01 /
 ///   sta Objects.0.hi,x` ⇒ **hi 必须落写**（旧形从不写，hi 恒为生成时的值）。
-pub(crate) fn bullet_move(mem: &mut crate::frame::Manager) {
+pub(crate) fn bullet_move(mem: &mut crate::frame::Manager) -> bool {
     let slot = mem.page_index() / 16;
+    debug_assert_eq!(mem.page_index() % 16, 0, "槽号由 x 字节偏移反推，必须 16 的倍数");
     let (mut py, mut px, mut phi, sy, sx) = {
         let o = mem.object(slot);
         (o.y(), o.x(), o.hi(), o.speed_y(), o.speed_x())
@@ -177,13 +178,14 @@ pub(crate) fn bullet_move(mem: &mut crate::frame::Manager) {
     }
     if failed {
         mem.object(slot).set_status(0); // Lx078：SetObjectXSlotStatus ← #$00（越界删弹）
-        return;
+        return false;
     }
     // LoadObjectPositionFromTemp（$D638）：写回 y/x 且 hi←Temp0B & $01
     let mut o = mem.object(slot);
     o.set_y(py);
     o.set_x(px);
     o.set_hi(phi & 0x01);
+    true
 }
 
 /// UpdateBullet（$D4EB（audit §8——Z 射真缺口面（2026-10-28 全链通读端口）））：
@@ -194,6 +196,7 @@ pub(crate) fn update_bullet(mem: &mut crate::frame::Manager) {
     let x = mem.page_index() as u16;
     let base = 0x0300u16 + x;
     let slot = mem.page_index() / 16;
+    let mut deleted = false;
     mem.write_ram(0x0071, 1);
     // DeleteIfOffScreen（$D5FC）：onScreen bit0 清⇒删
     if mem.read_ram(base + 0x0B) & 1 == 0 {
@@ -226,7 +229,12 @@ pub(crate) fn update_bullet(mem: &mut crate::frame::Manager) {
         let (lo, hi) = (ptr as u8, (ptr >> 8) as u8);
         let tile = mem.read_wram(ptr);
         if tile >= 0xA0 {
-            bullet_move(mem); // 空气⇒移（carry=1（免撞））
+            // 空气⇒移；`ApplySpeedToPosition` 失败（越界且滚动方向不允许）⇒ carry 清 ⇒
+            // 调用方 `CheckBulletStat` 走 @collided 且 status==0 ⇒ `beq Lx069` **跳过**
+            // `dec dieDelay` 与 `AnimDrawObject`（复核 F1）。
+            if !bullet_move(mem) {
+                deleted = true;
+            }
         } else {
             if tile == 0x4E {
                 // 门瓦⇒任务卡 2 弹击径（复用（isHit&4 写））+爆（carry=0）
@@ -238,7 +246,9 @@ pub(crate) fn update_bullet(mem: &mut crate::frame::Manager) {
         }
     }
     // CheckBulletStat（$D4F8）
-    if !collided {
+    if deleted {
+        // status==0 ⇒ `beq Lx069`：连 DrawBullet 一起跳过
+    } else if !collided {
         let d = mem.read_ram(base + 0x0F).wrapping_sub(1);
         mem.write_ram(base + 0x0F, d);
         if d == 0 {
@@ -247,10 +257,12 @@ pub(crate) fn update_bullet(mem: &mut crate::frame::Manager) {
     } else if mem.read_ram(base) != 0 {
         bullet_explode(mem); // 撞⇒爆（status≠0 时）
     }
-    // DrawBullet（$D517）：AnimDrawObject(A=1)（动画推进面 A=1）
-    // 【goal-轮103 双调修】asm AnimDrawObject(DE47)=UpdateObjAnim+ObjDrawFrame 单含——
-    // 旧形显式 update_obj_anim(1)+anim_draw_object 补调=双调 ✗⇒删显式（补调覆盖）。
-    crate::render::oam::anim_draw_object(mem, mem.page_index(), 1); // DrawBullet A=1
+    // DrawBullet（$D517）：`@collided` 且 status==0 时 asm `beq Lx069` 跳过绘制。
+    if !deleted && !(collided && mem.read_ram(base) == 0) {
+        // 【goal-轮103 双调修】asm AnimDrawObject(DE47)=UpdateObjAnim+ObjDrawFrame 单含——
+        // 旧形显式 update_obj_anim(1)+anim_draw_object 补调=双调 ✗⇒删显式（补调覆盖）。
+        crate::render::oam::anim_draw_object(mem, mem.page_index(), 1); // DrawBullet A=1
+    }
     mem.write_ram(0x0071, 0);
 }
 
@@ -739,6 +751,7 @@ mod tests_bullet_hi_page {
         m.write_ram(crate::ram_map::SCROLL_DIR, 0x03); // 横滚
         bullet_move(&mut m);
         assert_eq!(m.object(3).hi(), 0x01, "hi 应 ++1 并落写");
+        assert_eq!(m.object(3).x(), 0x08, "x 应回绕到 0x08（0xF8+0x10 取低字节）");
         assert_eq!(m.object(3).status(), 1, "横滚越界不删弹");
     }
 
@@ -757,7 +770,9 @@ mod tests_bullet_hi_page {
             o.set_speed_x(0x10);
         }
         m.write_ram(crate::ram_map::SCROLL_DIR, 0x01); // 竖滚
-        bullet_move(&mut m);
+        assert!(!bullet_move(&mut m), "竖滚下 x 越界 ⇒ 返回失败");
         assert_eq!(m.object(3).status(), 0, "竖滚下 x 越界 ⇒ 弹删");
+        assert_eq!((m.object(3).y(), m.object(3).x(), m.object(3).hi()), (0x50, 0xF8, 0x00),
+                   "失败帧不得写回坐标/hi（asm 在 @exit_failure 前就 jmp，不落写）");
     }
 }
