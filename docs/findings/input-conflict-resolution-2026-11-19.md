@@ -105,3 +105,18 @@ f661..f672 全 0 px；**f673 起失配（326 px）**。两腿同帧 RAM 对比�
 指向逐像素环里的挡判或滚动补偿（`MoveSamusLeft ; 07:E626` / `ObjectCheckMoveLeft ; 07:E7F0`
 / `ScrollLeft` 失败补偿）。1 px 之差随后把 `$005A` 的载入链推错一帧（f674：emu `08` /
 rust `F0`），像素差级联到 326 px。定位进行中。
+
+
+## 【2026-11-19 复核更正】Evidence 指针与 ppu.hex 同源盲区（r9 review-display-set-r2）
+
+复核（pass-with-findings）抓出两处记账更正：
+
+1. **PNG 证据指针错**：269d079c message 写「emu f673/f674/f676 三帧 PNG 逐字节相同」取自
+   `shots_rust/…png`——实际成立的是 **emu 腿 `shots/case-mechanism-input-conflict_f0067*.png`**
+   （f673/f674/f676 sha 全等 `472b8dd8ce846cb7`、f672↔f673 逐像素复算 13526px）；
+   `shots_rust/` 里 f676 与 f673 **不**相同（`d8cf2ac4` vs `2e4e5872`）。本条更正后证据成立、
+   指针归位。
+2. **ppu.hex 窗内同源盲区**：269d079c 之后，载房窗内（phase==1）ppu.hex 快照派生自缝快照
+   （实测 f673==f674 的 ppu.hex 全等）⇒ 窗内「四区全等」对 NT/palette 失去独立 oracle 性质。
+   观测量收敛为：ram.hex（活体，独立）+ 窗尾 phase==2 帧的 ppu.hex。本案采集点已含
+   676/678/680/700 四个窗尾/后续点，盲区被覆盖；后续新用例须保证窗尾有采集点。

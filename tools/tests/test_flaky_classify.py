@@ -49,6 +49,21 @@ class BlockedIsNotFlakyEvidence(unittest.TestCase):
     def test_below_min_runs_is_not_flaky(self):
         self.assertEqual(l4.classify_flaky(obs(["match", "diff"])), {})
 
+    def test_blocked_fills_min_runs_gate_so_disagreement_escaped_no_more(self):
+        """P2-1（复核 findings）：blocked 计入观测总数门槛但不是分歧证据。
+
+        场景=blocked×4 + match + diff：按"只数非 blocked"口径有效观测只有 2 条
+        < min_runs ⇒ 真分歧逃逸 flaky 且按当前 run 的 state 进分母。正确行为=
+        n_total=6 ≥ 3 且非 blocked verdicts {match,diff} 不一致 ⇒ flaky。"""
+        got = l4.classify_flaky(obs(["blocked", "blocked", "blocked", "blocked", "match", "diff"]))
+        self.assertIn(("c", 100, "t"), got, "blocked 抬高门槛后真分歧不得逃逸")
+        self.assertEqual(got[("c", 100, "t")]["n"], 6)
+        self.assertEqual(set(got[("c", 100, "t")]["verdicts"]), {"match", "diff"})
+
+    def test_all_blocked_stays_out_of_flaky(self):
+        """全 blocked（纯基础设施失败）≠ 判定分歧，不得判 flaky。"""
+        self.assertEqual(l4.classify_flaky(obs(["blocked", "blocked", "blocked"])), {})
+
 
 if __name__ == "__main__":
     unittest.main()

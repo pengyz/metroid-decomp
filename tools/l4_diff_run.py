@@ -873,22 +873,32 @@ def classify_flaky(observations: list, min_runs: int = 3) -> dict:
         verdict = str(o.get("verdict"))
         if verdict == "blocked":
             # 【2026-11-19 修（blocked 不是判定分歧）】blocked=基础设施失败（锚不符/
-            # 腿未跑成），不是"同一输入两次判定不同"的证据。把它算进 flaky 会让一次
-            # 环境性失败把整案 11 格移出分母（实测：case-mechanism-input-conflict 4 次
-            # 锚不符 blocked + 1 次正常 ⇒ 11 格判 flaky、分母 160→149），属分母静默缩水。
-            # 保留历史行不删，只排除出判定（与旧账无码态同处置）。
+            # 腿未跑成），不是"同一输入两次判定不同"的证据。把它算进不一致集合会让
+            # 一次环境性失败把整案 11 格移出分母（实测：case-mechanism-input-conflict
+            # 4 次锚不符 blocked + 1 次正常 ⇒ 11 格判 flaky、分母 160→149）。
+            # 但观测**总数**仍计数（P2-1：否则 blocked×k+match+diff 只剩 2 条有效
+            # 观测 < min_runs，真分歧逃逸 flaky 且按当前 run 的 state 进分母）。
+            key = (str(o.get("case")), o.get("frame"), str(o.get("tag")), str(cs))
+            g = groups.setdefault(key, {"verdicts": [], "runs": [], "n_total": 0})
+            g["n_total"] += 1
+            g["runs"].append(str(o.get("run_id")))
             continue
         key = (str(o.get("case")), o.get("frame"), str(o.get("tag")), str(cs))
-        g = groups.setdefault(key, {"verdicts": [], "runs": []})
+        g = groups.setdefault(key, {"verdicts": [], "runs": [], "n_total": 0})
         g["verdicts"].append(verdict)
         g["runs"].append(str(o.get("run_id")))
+        g["n_total"] += 1
     out = {}
     for key in sorted(groups, key=lambda k: (k[0], k[1] if isinstance(k[1], int) else 1 << 30, k[2], k[3])):
         g = groups[key]
-        if len(g["verdicts"]) >= min_runs and len(set(g["verdicts"])) >= 2:
+        # 【2026-11-19 P2-1（复核 findings）】观测总数按含 blocked 的全量计——否则
+        # 「blocked×k + match + diff」的有效观测只剩 2 条 < min_runs，真分歧逃逸 flaky
+        # 且按当前 run 的 state 进分母。判定不一致仍只看非 blocked verdicts（blocked
+        # 不是"同一输入两答"的证据，见上面的排除理由）。
+        if g["n_total"] >= min_runs and len(set(g["verdicts"])) >= 2:
             # 输出键=格三元组（同码态多态组取格名——码态留 runs 内可溯）
             cell = key[:3]
-            out[cell] = {"verdicts": g["verdicts"], "runs": g["runs"], "n": len(g["verdicts"]),
+            out[cell] = {"verdicts": g["verdicts"], "runs": g["runs"], "n": g["n_total"],
                          "code_state": key[3]}
     return out
 
