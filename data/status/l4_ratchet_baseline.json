@@ -513,7 +513,7 @@
         },
         "674:c674": {
           "state": "diff",
-          "diff_pixels": 330,
+          "diff_pixels": 84,
           "total_pixels": 61440
         },
         "676:c676": {
@@ -1242,6 +1242,16 @@
       "kind": "anchor",
       "evidence": "",
       "reason": "多帧载房任务机 A-lite 落地：match 148→151 / diff 12→9（case-morphball-probe 2080/2110/2160 三格 8px→0px，即原挂账的 morphball 3×8px 债）；其余 157 格逐格不变",
+      "match": 151,
+      "diff": 9,
+      "blocked": 0,
+      "cells_total": 160
+    },
+    {
+      "ts": "2026-11-19T03:17:54+00:00",
+      "kind": "anchor",
+      "evidence": "",
+      "reason": "2026-11-19：载房窗显示集修复后 case-mechanism-input-conflict 674:330→84（其余 159 格逐格不变）；分母修复后恢复正常 160 格（151 match / 9 diff / 0 blocked）",
       "match": 151,
       "diff": 9,
       "blocked": 0,

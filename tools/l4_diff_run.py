@@ -870,9 +870,17 @@ def classify_flaky(observations: list, min_runs: int = 3) -> dict:
             legacy += 1
             continue  # 【2026-11-05】旧格式键（仅 HEAD 无 worktree 指纹）=排除出判定
                       # （保留作历史痕迹不删；同 HEAD 混账根除——键粒度改进件）
+        verdict = str(o.get("verdict"))
+        if verdict == "blocked":
+            # 【2026-11-19 修（blocked 不是判定分歧）】blocked=基础设施失败（锚不符/
+            # 腿未跑成），不是"同一输入两次判定不同"的证据。把它算进 flaky 会让一次
+            # 环境性失败把整案 11 格移出分母（实测：case-mechanism-input-conflict 4 次
+            # 锚不符 blocked + 1 次正常 ⇒ 11 格判 flaky、分母 160→149），属分母静默缩水。
+            # 保留历史行不删，只排除出判定（与旧账无码态同处置）。
+            continue
         key = (str(o.get("case")), o.get("frame"), str(o.get("tag")), str(cs))
         g = groups.setdefault(key, {"verdicts": [], "runs": []})
-        g["verdicts"].append(str(o.get("verdict")))
+        g["verdicts"].append(verdict)
         g["runs"].append(str(o.get("run_id")))
     out = {}
     for key in sorted(groups, key=lambda k: (k[0], k[1] if isinstance(k[1], int) else 1 << 30, k[2], k[3])):
