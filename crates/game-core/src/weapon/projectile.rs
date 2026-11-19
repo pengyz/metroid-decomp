@@ -98,14 +98,92 @@ pub(crate) fn bullet_explode(mem: &mut crate::frame::Manager) {
     mem.write_ram(base, 4);
 }
 
-/// 弹移动（UpdateBullet_Move（$D624（audit §8）））：speedX/Y→位移（wrapping）。
+/// 弹移动（`UpdateBullet_Move ; 07:D624`）：`StoreObjectPositionToTemp` →
+/// `ApplySpeedToPosition ; 07:FD8F` → `LoadObjectPositionFromTemp ; 07:D638`。
+///
+/// 【2026-11-20 复核 P1 修】旧形只做 y/x 的 wrapping 加，**既不管越界失败**，也
+/// **不维护 `Objects.0.hi`**。asm 真形：
+/// - `ApplySpeedToPosition` 的越界分支（y≥$F0 / 和进借位 / x 进位）在有**不允许的
+///   滚动方向**（y 越界要竖滚、x 越界要横滚）时 `clc` 返回失败；
+///   `UpdateBullet_Move` 的 `bcc Lx078` ⇒ **弹 status←0（删）**。
+/// - 越界且方向允许时 `inc Temp0B_PositionHi`（$FDAC/$FDD0）。
+/// - `LoadObjectPositionFromTemp` 写回 y/x 后 `lda Temp0B_PositionHi / and #$01 /
+///   sta Objects.0.hi,x` ⇒ **hi 必须落写**（旧形从不写，hi 恒为生成时的值）。
 pub(crate) fn bullet_move(mem: &mut crate::frame::Manager) {
-    let x = mem.page_index() as u16;
-    let base = 0x0300u16 + x;
-    let sx = mem.read_ram(base + 9);
-    let sy = mem.read_ram(base + 8);
-    mem.write_ram(base + 0x0E, mem.read_ram(base + 0x0E).wrapping_add(sx));
-    mem.write_ram(base + 0x0D, mem.read_ram(base + 0x0D).wrapping_add(sy));
+    let slot = mem.page_index() / 16;
+    let (mut py, mut px, mut phi, sy, sx) = {
+        let o = mem.object(slot);
+        (o.y(), o.x(), o.hi(), o.speed_y(), o.speed_x())
+    };
+    // Temp02_ScrollDir = ScrollDir & $02（bit1 = 横滚）
+    let hscroll = mem.read_ram(crate::ram_map::SCROLL_DIR) & 0x02 != 0;
+    let mut failed = false;
+    // —— y 轴（$FD95-$FDBF）——
+    if sy >= 0 {
+        if sy != 0 {
+            let (ny, carry) = py.overflowing_add(sy as u8);
+            if carry || ny >= 0xF0 {
+                // $FDA4：+$10（两条进入路径的 carry 都使 ADC #$0F 实际加 $10）
+                if hscroll {
+                    failed = true;
+                } else {
+                    phi = phi.wrapping_add(1);
+                    py = ny.wrapping_add(0x10);
+                }
+            } else {
+                py = ny;
+            }
+        }
+    } else {
+        let (ny, carry) = py.overflowing_add(sy as u8);
+        if carry {
+            py = ny;
+        } else if hscroll {
+            // $FDB5：<$00 回绕 ⇒ −$10；只有竖滚允许
+            failed = true;
+        } else {
+            phi = phi.wrapping_add(1);
+            py = ny.wrapping_sub(0x10);
+        }
+    }
+    // —— x 轴（$FDC6-$FDDD）——
+    if !failed {
+        if sx >= 0 {
+            if sx != 0 {
+                let (nx, carry) = px.overflowing_add(sx as u8);
+                if carry {
+                    // $FDCB：x≥$100 ⇒ 只允许横滚
+                    if hscroll {
+                        phi = phi.wrapping_add(1);
+                        px = nx;
+                    } else {
+                        failed = true;
+                    }
+                } else {
+                    px = nx;
+                }
+            }
+        } else {
+            let (nx, carry) = px.overflowing_add(sx as u8);
+            if carry {
+                px = nx;
+            } else if hscroll {
+                phi = phi.wrapping_add(1);
+                px = nx;
+            } else {
+                failed = true;
+            }
+        }
+    }
+    if failed {
+        mem.object(slot).set_status(0); // Lx078：SetObjectXSlotStatus ← #$00（越界删弹）
+        return;
+    }
+    // LoadObjectPositionFromTemp（$D638）：写回 y/x 且 hi←Temp0B & $01
+    let mut o = mem.object(slot);
+    o.set_y(py);
+    o.set_x(px);
+    o.set_hi(phi & 0x01);
 }
 
 /// UpdateBullet（$D4EB（audit §8——Z 射真缺口面（2026-10-28 全链通读端口）））：
@@ -115,6 +193,7 @@ pub(crate) fn bullet_move(mem: &mut crate::frame::Manager) {
 pub(crate) fn update_bullet(mem: &mut crate::frame::Manager) {
     let x = mem.page_index() as u16;
     let base = 0x0300u16 + x;
+    let slot = mem.page_index() / 16;
     mem.write_ram(0x0071, 1);
     // DeleteIfOffScreen（$D5FC）：onScreen bit0 清⇒删
     if mem.read_ram(base + 0x0B) & 1 == 0 {
@@ -135,8 +214,15 @@ pub(crate) fn update_bullet(mem: &mut crate::frame::Manager) {
     let mut collided = false;
     {
         // CollisionWithBG（$D609）：瓦判（GetObjRoomRAMPtr 同核 = Room::addr）
-        let ptr = crate::world::room_ram::Room::addr(
-            mem.read_ram(base + 0x0D), mem.read_ram(base + 0x0E), mem.read_ram(base + 0x0C));
+        // 【2026-11-20 复核 P1 修】`GetObjRoomRAMPtr ; 07:D79F` → `MakeRoomRAMPtr ;
+        // 07:E96A`（`lda Temp0B_PositionHi / asl / asl / and #$04`）⇒ 对象 hi 是
+        // **名表号 0/1**，必须换成页选位。旧形直传 hi ⇒ `& $04` 恒 0 ⇒ 弹的 BG
+        // 碰撞永远读 A 页（B 页的固实瓦、门瓦 $4E 全部读不到）。
+        let (oy, ox, ohi) = {
+            let o = mem.object(slot);
+            (o.y(), o.x(), o.hi())
+        };
+        let ptr = crate::enemy::motion::make_room_ram_ptr(mem, oy, ox, ohi);
         let (lo, hi) = (ptr as u8, (ptr >> 8) as u8);
         let tile = mem.read_wram(ptr);
         if tile >= 0xA0 {
@@ -594,5 +680,84 @@ mod tests_bullet_explode_order {
         super::update_bullet(&mut m);
         assert_eq!(m.read_ram(0x0300), 4, "固实⇒爆");
         assert_eq!(m.read_ram(0x030E), 0xD0, "固实⇒不移");
+    }
+}
+
+#[cfg(test)]
+mod tests_bullet_hi_page {
+    //! 【复核 P1 锚（2026-11-20）】`GetObjRoomRAMPtr ; 07:D79F` → `MakeRoomRAMPtr ; 07:E96A`
+    //! 把对象 `hi`（名表号 0/1）按 `asl / asl / and #$04` 换成页选位；`UpdateBullet_Move`
+    //! 的 `LoadObjectPositionFromTemp` 还会把 `Temp0B_PositionHi & $01` 落写回
+    //! `Objects.0.hi`（越界且滚动方向允许时 `inc Temp0B_PositionHi`）。
+    use super::*;
+
+    /// hi=0 读 A 页、hi=1 读 B 页：两页同一 (y,x) 放「门瓦 vs 空气」，看哪一页被读到。
+    #[test]
+    fn bg_collision_reads_page_selected_by_object_hi() {
+        for (hi, a_page_tile, b_page_tile) in [(0u8, 0x4Eu8, 0xA0u8), (1u8, 0xA0u8, 0x4Eu8)] {
+            let mut m = crate::frame::Manager::default();
+            m.set_page_index(0x30); // 弹槽 = PowerUpDraw 面（$0330）
+            {
+                let mut o = m.object(3);
+                o.set_status(1); // 存活
+                o.set_is_hit(0); // 不触发撞敌爆
+                o.set_on_screen(1); // 未出界
+                o.set_hi(hi);
+                o.set_y(0x50);
+                o.set_x(0x10);
+                o.set_speed_y(0);
+                o.set_speed_x(0);
+            }
+            let a = crate::world::room_ram::Room::addr(0x50, 0x10, 0x00);
+            let b = crate::world::room_ram::Room::addr(0x50, 0x10, 0x04);
+            assert_ne!(a, b);
+            m.write_wram(a, a_page_tile);
+            m.write_wram(b, b_page_tile);
+            update_bullet(&mut m);
+            // 读到 $4E（门瓦）⇒ 爆：status←4；读到空气则保持 1
+            assert_eq!(m.object(3).status(), 4,
+                       "hi={} 应读到页内门瓦并爆（A={a:#06X} B={b:#06X}）", hi);
+        }
+    }
+
+    /// 横滚越界（x 和进位）⇒ `Temp0B_PositionHi ++1` 且 hi 落写 bit0。
+    #[test]
+    fn x_wrap_increments_and_stores_object_hi() {
+        let mut m = crate::frame::Manager::default();
+        m.set_page_index(0x30);
+        {
+            let mut o = m.object(3);
+            o.set_status(1);
+            o.set_is_hit(0);
+            o.set_on_screen(1);
+            o.set_hi(0x00);
+            o.set_y(0x50);
+            o.set_x(0xF8);
+            o.set_speed_y(0);
+            o.set_speed_x(0x10); // +16 ⇒ 0xF8+0x10 进位
+        }
+        m.write_ram(crate::ram_map::SCROLL_DIR, 0x03); // 横滚
+        bullet_move(&mut m);
+        assert_eq!(m.object(3).hi(), 0x01, "hi 应 ++1 并落写");
+        assert_eq!(m.object(3).status(), 1, "横滚越界不删弹");
+    }
+
+    /// 竖滚时 x 越界 ⇒ 失败 ⇒ 弹删除（asm `bcc Lx078` ⇒ status←0）。
+    #[test]
+    fn x_wrap_fails_and_deletes_bullet_when_vertical_scroll() {
+        let mut m = crate::frame::Manager::default();
+        m.set_page_index(0x30);
+        {
+            let mut o = m.object(3);
+            o.set_status(1);
+            o.set_hi(0x00);
+            o.set_y(0x50);
+            o.set_x(0xF8);
+            o.set_speed_y(0);
+            o.set_speed_x(0x10);
+        }
+        m.write_ram(crate::ram_map::SCROLL_DIR, 0x01); // 竖滚
+        bullet_move(&mut m);
+        assert_eq!(m.object(3).status(), 0, "竖滚下 x 越界 ⇒ 弹删");
     }
 }

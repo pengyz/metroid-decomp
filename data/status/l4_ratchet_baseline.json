@@ -518,22 +518,22 @@
         },
         "676:c676": {
           "state": "diff",
-          "diff_pixels": 330,
+          "diff_pixels": 303,
           "total_pixels": 61440
         },
         "678:c678": {
-          "state": "diff",
-          "diff_pixels": 106,
+          "state": "match",
+          "diff_pixels": 0,
           "total_pixels": 61440
         },
         "680:after-conflict": {
-          "state": "diff",
-          "diff_pixels": 112,
+          "state": "match",
+          "diff_pixels": 0,
           "total_pixels": 61440
         },
         "700:end": {
-          "state": "diff",
-          "diff_pixels": 27,
+          "state": "match",
+          "diff_pixels": 0,
           "total_pixels": 61440
         }
       }
@@ -1254,6 +1254,16 @@
       "reason": "2026-11-19：载房窗显示集修复后 case-mechanism-input-conflict 674:330→84（其余 159 格逐格不变）；分母修复后恢复正常 160 格（151 match / 9 diff / 0 blocked）",
       "match": 151,
       "diff": 9,
+      "blocked": 0,
+      "cells_total": 160
+    },
+    {
+      "ts": "2026-11-19T16:18:57+00:00",
+      "kind": "anchor",
+      "evidence": "",
+      "reason": "子弹 hi→页选位与 hi 维护修复（GetObjRoomRAMPtr/MakeRoomRAMPtr 同式 + ApplySpeedToPosition 越界/滚动方向语义）：match 151→154、diff 9→6，逐格无回退",
+      "match": 154,
+      "diff": 6,
       "blocked": 0,
       "cells_total": 160
     }
