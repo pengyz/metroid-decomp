@@ -545,6 +545,18 @@ fn main() {
                 if trace_flags.iter().any(|t| t == "fc") {
                     eprintln!("[fc] {} {} {}", frame, mem.read_ram(0x2D), mem.read_ram(0x1F));
                 }
+                // `--trace load`：载房窗相位面（dropped/冻结帧数定位——房扫 dx=2 族取证）。
+                if trace_flags.iter().any(|t| t == "load") {
+                    eprintln!(
+                        "[load] f{} rn={:02X} phase={} tail={} work={} sx={}",
+                        frame,
+                        mem.read_ram(0x5A),
+                        mem.room_load_phase,
+                        mem.room_load_tail,
+                        mem.work_cycles,
+                        mem.read_ram(0xFD)
+                    );
+                }
                 if want_state {
                     state_rows.push(state_row(frame, mem));
                 }
