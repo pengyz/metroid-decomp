@@ -162,7 +162,14 @@ fn draw_struct(
         let mut row_ptr = work + x_off;
         let mut counter = count;
         loop {
-            // DrawMetatile
+            // DrawMetatile —— asm 首件边界守卫（`prg7_engine.asm:9729-9741`）：
+            // `lda Temp00_RoomRAMPtr+1 / cmp #>(RoomRAMA+$03C0) / beq @checkLowByte /
+            //  cmp #>(RoomRAMB+$03C0) / bcc @checkSuccess / beq @checkLowByte / rts`
+            // `@checkLowByte: lda Temp00_RoomRAMPtr / cmp #<($03C0-$20) / bcc @checkSuccess / rts`
+            // ⇒ 指针进入属性区（页内 $03C0 起）或越过 RoomRAMB 属性页 ⇒ **整件 rts**。
+            if metatile_out_of_bounds(row_ptr) {
+                return;
+            }
             let Some(&mt) = data.get(idx) else { return };
             idx += 1;
             // 【周期累加】UpdateAttrib 早退径（调色板同）/全径（asm EF9E 判入口）
@@ -198,6 +205,25 @@ fn draw_struct(
         // AdvanceRow（$EF78）：work+=$40（下一行）
         work = work.wrapping_add(0x40);
     }
+}
+
+
+/// asm `@DrawMetatile ; 07:EF2B` 的 RoomRAM 边界守卫（`prg7_engine.asm:9729-9741`）。
+///
+/// 真值：RoomRAMA=$60xx / RoomRAMB=$64xx，各自 tile 区到页内 `$03C0` 为止（属性区
+/// `$03C0-$03FF`）。asm 比较的是**绝对页字节** `>(RoomRAMA+$03C0)=$63` 与
+/// `>(RoomRAMB+$03C0)=$67`：`hi<$63` 放行、`hi∈{$63,$67}` 需 `lo<($03C0-$20)=$A0`、
+/// `hi∈{$64..$66}` 放行、`hi>$67` 拒绝。命中即 `rts`（**整件结构停画**，不是跳过该元 tile）。
+fn metatile_out_of_bounds(ptr: u16) -> bool {
+    let hi = (ptr >> 8) as u8;
+    let lo = ptr as u8;
+    if hi < 0x63 {
+        return false;
+    }
+    if hi == 0x63 || hi == 0x67 {
+        return lo >= 0xA0;
+    }
+    hi > 0x67
 }
 
 
@@ -847,10 +873,16 @@ pub fn attrib_table_write(mem: &mut crate::frame::Manager) -> bool {
             // `jsr GetNameAddrs`（$E564）`ora #$03` ⇒ "$23 for attrib table 0, #$2F for
             // attrib table 3"（PPUAddrs[$20/$2C]|3 动态按 NT）、`lda #$20` **32B 整行**、
             // 源=$00=RoomRAM 属性区（$x3C0/$x3E0）。
-            let hi = (mem.room().room_ptr() >> 8) as u8;
+            // 【2026-11-20 修（房扫 47 房 32 失配诊断）】asm `WritePPUAttribTbl ; 07:E5E2`
+            // 先 `jsr GetNameAddrs ; 07:E564`——**NT 与 RoomRAM 页由同一个 y 决定**：
+            // `GetNameTableAtScrollDir ; 07:EB85` = `(PPUCTRL_ZP ^ ScrollDir) & $01`，
+            // 再取 `PPUAddrs[y]`（$20/$2C）与 `RoomRAMAddrs[y]`（$60/$64），两处各 `ora #$03`。
+            // 旧形用 `room_ptr` 的高字节反推（那是 `SelectRoomRAM` **载入时**的快照）⇒ 一旦
+            // 载入后 `PPUCTRL/ScrollDir` 变了，NT 与源页就双双指错：实测 room 5/7/46 等 16 房
+            // 出现「rust 把属性行写进 emu 从未写的那张 NT（emu 仍 $FF）」。
+            let (nt_hi, src_hi) = mem.room().attrib_write_pages();
             let row_off: u16 = (row - 1) * 0x10; // row1→$00 / row3→$20（$C0/$E0 基址）
-            let src = ((hi as u16 + 3) << 8) | (0xC0 + row_off);
-            let nt_hi: u16 = if (hi >> 2) & 1 == 0 { 0x23 } else { 0x2F }; // PPUAddrs[$20/$2C]|3
+            let src = (src_hi << 8) | (0xC0 + row_off);
             let dst = (nt_hi << 8) | (0xC0 + row_off);
             for k in 0..0x20u16 {
                 let b = mem.read_wram(src + k);
@@ -905,6 +937,45 @@ mod tests {
     use super::*;
     use crate::frame::Manager;
 
+    /// asm `@DrawMetatile ; 07:EF2B` 边界守卫：指针落在属性区（页内 `$03C0` 起）⇒
+    /// **整件结构停画**（一个 tile 都不写）。真值见 `prg7_engine.asm:9729-9741`。
+    #[test]
+    fn draw_struct_stops_at_attribute_boundary() {
+        let mut m = Manager::default();
+        m.write_ram(crate::ram_map::IN_AREA, 0); // Brinstar
+        for a in 0x63A0u16..0x6400 {
+            m.write_wram(a, 0xAA);
+        }
+        for a in 0x67C0u16..0x6800 {
+            m.write_wram(a, 0xBB);
+        }
+        // struct[0]（`08 01×8 08 00×8 ff`）两行各 8 元 tile；指针 $63A0 = 属性区首
+        draw_struct(&mut m, 0x63A0, 0, 3, 3);
+        assert!(
+            (0x63A0..0x6400).all(|a| m.read_wram(a) == 0xAA),
+            "属性区（$63A0-$63FF）不得被结构写（asm 守卫 rts）"
+        );
+        assert!(
+            (0x67C0..0x6800).all(|a| m.read_wram(a) == 0xBB),
+            "B 页属性区同样不得被写"
+        );
+    }
+
+    /// 同一结构的**正控**：指针在 tile 区内（$6380，行尾还剩 $20 字节）⇒ 正常落 tile。
+    #[test]
+    fn draw_struct_writes_inside_tile_area() {
+        let mut m = Manager::default();
+        m.write_ram(crate::ram_map::IN_AREA, 0);
+        for a in 0x6380u16..0x63A0 {
+            m.write_wram(a, 0xAA);
+        }
+        draw_struct(&mut m, 0x6380, 0, 3, 3);
+        assert!(
+            (0x6380..0x63A0).any(|a| m.read_wram(a) != 0xAA),
+            "tile 区（$6380-$639F）应被结构写入"
+        );
+    }
+
     /// 起始房（房 9）绘制形：RoomRAM 有 tile 落+敌门环通（双 Zoomer 条目——type=1）。
     #[test]
     fn draw_start_room_writes_tiles() {
@@ -958,10 +1029,40 @@ mod tests {
     /// 【2026-11-09 病灶钉】原径 `dst = 0x23C0 + (row-1)*0x20` + 8B 直写：row3 ⇒ dst=$2400
     /// （**NT B 瓦面 row0**——f950/f960/f1000/f1150 46px 角病灶）+ src+0x40 溢出属性区 +
     /// 8B≠32B + NT 恒 A（NT B 属性表永留清填 FF）。
+    /// 【2026-11-20 病灶锚（房扫 16 房）】`room_ptr` 只是 `SelectRoomRAM` 的**载入时快照**；
+    /// `WritePPUAttribTbl ; 07:E5E2` 的 NT 与源页都由 `GetNameAddrs ; 07:E564`
+    /// （`(PPUCTRL_ZP ^ ScrollDir) & $01`）**现算**。旧形拿 `room_ptr` 高字节反推 ⇒ 快照
+    /// 与当前 PPUCTRL 不一致时，属性行会写进另一张 NT、并从另一页取源。
+    #[test]
+    fn attrib_table_write_follows_ppuctrl_not_room_ptr_snapshot() {
+        let mut m = Manager::default();
+        m.room().set_room_ptr(0x6400); // 快照=B 页
+        m.write_ram(crate::ram_map::PPUCTRL_ZP, 0x00); // 但当前 y=0（A 页）
+        m.write_ram(crate::ram_map::SCROLL_DIR, 0x00);
+        for i in 0..0x20u16 {
+            m.write_wram(0x63C0 + i, 0x11); // A 页属性行 0
+            m.write_wram(0x67C0 + i, 0x77); // B 页属性行 0（不该被读）
+        }
+        m.write_ram(0x005A, 0xF1);
+        assert!(attrib_table_write(&mut m));
+        assert!(
+            m.render.nametable[0x3C0..0x3E0].iter().all(|&b| b == 0x11),
+            "y=0 ⇒ 目标 $23C0 且源 $63C0（不能跟 room_ptr 快照走）"
+        );
+        assert!(
+            m.render.nametable[0x7C0..0x7E0].iter().all(|&b| b != 0x77),
+            "y=0 ⇒ 绝不能把 B 页源写进 $2FC0"
+        );
+    }
+
     #[test]
     fn attrib_table_write_nt3_targets_mirror_attr_rows() {
         let mut m = Manager::default();
-        m.room().set_room_ptr(0x6400); // RoomRAMPtr=RoomRAMB（NT3——select_room_ram 语义）
+        // asm 真源：NT 与 RoomRAM 页由 `(PPUCTRL_ZP ^ ScrollDir) & $01` **在写属性表的时刻**决定
+        // （`GetNameAddrs ; 07:E564`）。要让 y=1（NT B / RoomRAMB），这里显式把 PPUCTRL bit0 置 1。
+        m.write_ram(crate::ram_map::PPUCTRL_ZP, 0x01);
+        m.write_ram(crate::ram_map::SCROLL_DIR, 0x00);
+        m.room().set_room_ptr(0x6400); // RoomRAMPtr=RoomRAMB（select_room_ram 的快照，与 y 一致）
         for i in 0..0x20u16 {
             m.write_wram(0x67C0 + i, 0x55); // 属性行 0（row1 源——55=ATDataTable[RoomPalette&3]）
             m.write_wram(0x67E0 + i, 0xF5); // 属性行 1（row3 源）

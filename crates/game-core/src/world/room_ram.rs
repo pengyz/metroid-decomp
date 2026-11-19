@@ -56,6 +56,23 @@ impl<'a> Room<'a> {
         ROOM_RAM_BASE + Self::offset(y, x, nt_hi)
     }
 
+    /// `WritePPUAttribTbl ; 07:E5E2` 的写目标页对：`(NT 高字节, RoomRAM 源页高字节)`。
+    ///
+    /// asm：`jsr GetNameAddrs ; 07:E564` → `GetNameTableAtScrollDir ; 07:EB85` =
+    /// `lda PPUCTRL_ZP / eor ScrollDir / and #$01` → `tay` →
+    /// `lda PPUAddrs,y`（`$20,$2C`，写尾 `ora #$03` ⇒ `$23/$2F`）+
+    /// `ldx RoomRAMAddrs,y`（`>RoomRAMA,>RoomRAMB` = `$60,$64`，写尾 `ora #$03` ⇒ `$63/$67`）。
+    /// ⇒ **NT 与 RoomRAM 页由同一个 y 现算**，不能用载房时的 `RoomRAMPtr` 快照反推
+    /// （`SelectRoomRAM` 之后 `PPUCTRL`/`ScrollDir` 可能已变）。
+    pub fn attrib_write_pages(&mut self) -> (u16, u16) {
+        let y = (self.mem.read_ram(crate::ram_map::PPUCTRL_ZP)
+            ^ self.mem.read_ram(crate::ram_map::SCROLL_DIR))
+            & 0x01;
+        let nt_hi = if y == 0 { 0x23 } else { 0x2F };
+        let src_hi = if y == 0 { 0x63 } else { 0x67 };
+        (nt_hi, src_hi)
+    }
+
     /// 读瓦片 id（越界行/列由调用方保证，asm 同）。
     pub fn tile(&self, y: u8, x: u8, nt_hi: u8) -> u8 {
         let a = Self::addr(y, x, nt_hi);
@@ -142,7 +159,7 @@ mod tests {
 /// 房间缓冲（WRAM 瓦片矩阵）未 typed 的缺口说明。
 const ROOM_BUF_UNMODELED: &str = "房间缓冲未 typed：瓦片真相在 WRAM 字节面（$6000 起 2 KB；crates/game-core/src/world/room_ram.rs:17）";
 /// 房间游标（`RoomPtr`/`RoomRAMWorkPtr`/`RoomNumber`）未 typed 的缺口说明。
-const ROOM_CURSOR_UNMODELED: &str = "房间游标未 typed：小端指针与房间号真相在字节面（crates/game-core/src/world/room_ram.rs:156）";
+const ROOM_CURSOR_UNMODELED: &str = "房间游标未 typed：小端指针与房间号真相在字节面（crates/game-core/src/world/room_ram.rs:162）";
 
 /// 房间域 `NesMapped` 声明：WRAM 房间缓冲整块 + 三个游标，全部未 typed（0 个 owner）。
 ///

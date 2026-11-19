@@ -202,7 +202,7 @@
       "len": 1,
       "kind": "unmodeled",
       "refs": [
-        "crates/game-core/src/world/room_ram.rs:156"
+        "crates/game-core/src/world/room_ram.rs:162"
       ]
     },
     {
@@ -210,7 +210,7 @@
       "len": 2,
       "kind": "unmodeled",
       "refs": [
-        "crates/game-core/src/world/room_ram.rs:156"
+        "crates/game-core/src/world/room_ram.rs:162"
       ]
     },
     {
@@ -218,7 +218,7 @@
       "len": 2,
       "kind": "unmodeled",
       "refs": [
-        "crates/game-core/src/world/room_ram.rs:156"
+        "crates/game-core/src/world/room_ram.rs:162"
       ]
     },
     {
@@ -451,7 +451,7 @@
       "len": 1,
       "kind": "undeclared",
       "refs": [
-        "world/room_draw.rs:726",
+        "world/room_draw.rs:758",
         "world/camera/scroll.rs:237"
       ]
     },
