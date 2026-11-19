@@ -491,13 +491,15 @@ fn main() {
     // 收口 ⇒ 图像/名表/滚动 latch 晚一拍（walkfcprobe f820：+1 面+dx=+2/12085px 根因）。
     let mut seam_snap: Option<(usize, RenderState, Vec<u8>)> = None; // (tick, render, oam)
     // fixture 注入去重表（逐条）——与 emu 腿 `fixtureAppliedAt[i]` 同构：
-    // 触发条件 `frame >= fx.frame`（跳帧也不丢），once 语义（注入一次后不再重放）。
+    // 触发条件见 `game_core::frame::fixture::fixture_due`（同帧注入=显示帧对齐；
+    // **不要**改成 `frame > trigger`，会让整屏落后一帧——findings/room-sweep-fixture-phase.md），
+    // once 语义（注入一次后不再重放）。
     let mut fixture_applied: Vec<bool> = vec![false; plan.fixtures.len()];
     for frame in 1..=plan.frames {
         // ——fixture 注入（须先于本帧采集发射：emu 侧在帧回调里、采样之前注入，
         //    轨迹实证 f900 那一行已含注入值；旧形放在发射之后 ⇒ 两侧差 1 个采集索引）——
         for (i, (ff, fa, fv)) in plan.fixtures.iter().enumerate() {
-            if !fixture_applied[i] && frame >= *ff {
+            if !fixture_applied[i] && game_core::frame::fixture::fixture_due(frame, *ff) {
                 engine.mem.write_ram(*fa, *fv);
                 fixture_applied[i] = true;
             }
