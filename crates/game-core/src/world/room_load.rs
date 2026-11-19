@@ -245,6 +245,21 @@ pub fn room_load_gate_step(mem: &mut Manager) -> bool {
         }
         2 => {
             advance_room_load_tail(mem);
+            // 【载房完成帧的「剩余滚动调用」补偿（2026-11-19 尾游标修复）】
+            // asm：装载工作在 `jsr SetupRoom` 的**那一次滚动调用**内完成并置 `$F0`
+            // （`DrawRoom → EndOfRoom ; 07:EAF4`），该帧**剩余的滚动调用**继续推尾游标
+            // （`CheckUpdateNameTable ; 07:E54A` 首件 `jsr SetupRoom` → `>= $F0` 走
+            // `AttribTableWrite ; 07:EA13` 一步/调用，且在 `RoomNumber+1==0` 守卫**之前**）。
+            // Rust：冻结窗按整拍吞迭代 ⇒ 完成帧的剩余调用一个都不发生，尾游标相对
+            // `ScrollX` 永久晚一格。后果：门入场滚动（`$0056 != 0`，`ScrollX` 每帧 +2）在
+            // `ScrollX=8`（`idx=(ScrollX&$F8)>>3=1` 的**唯一** kick 窗）那次调用里守卫仍见
+            // `$F3` ⇒ 名表第 1 列永不写入 ⇒ Brinstar 47 房扫里 35 房（B 类）的属性/tile 缺列。
+            // 故在尾段第一拍补推一格（等价于那次被吞掉的调用）。
+            // 判据=门入场滚动在跑：`case-morphball-probe` 载房完成帧 `$0056=0`、其后 17 帧
+            // `ScrollX` 恒 1（emu 停在 `$F0`，无任何滚动调用）⇒ 不补，基线逐格不变。
+            if mem.room_load_tail == 2 && mem.read_ram(crate::ram_map::DOOR_ENTRY_STATUS) != 0 {
+                advance_room_load_tail(mem);
+            }
             if mem.room_load_tail >= 3 {
                 mem.room_load_phase = 0;
                 mem.room_load_room = 0xFF;
@@ -437,6 +452,46 @@ mod tests_room_load_task {
         ram_idle[crate::ram_map::ROOM_NUMBER as usize & 0x7FF] = 0xFF; // 正常游玩态=无请求
         let m2 = Manager::restore_mss(&ram_idle, &vec![0u8; 0x2000], crate::frame::memory::Registers::default());
         assert_eq!(m2.room_load_phase, 0, "$5A=$FF（无请求）按空闲重建");
+    }
+
+    /// 【尾游标补偿 TDD（2026-11-19）】门入场滚动在跑时，尾段第一拍必须**多推一格**
+    /// （=补回被冻结窗吞掉的那次滚动调用）。
+    ///
+    /// 判据来源：`CheckUpdateNameTable ; 07:E54A` 首件 `jsr SetupRoom` → `>=$F0` 走
+    /// `AttribTableWrite ; 07:EA13`，一步/调用且**在 `RoomNumber+1==0` 守卫之前**；装载在
+    /// `EndOfRoom ; 07:EAF4` 置 `$F0` 后，同帧剩余调用继续推进。Rust 冻结窗整拍吞迭代 ⇒
+    /// 少一次调用。副作用可观测：`ScrollX=8`（`idx=1` 唯一 kick 窗）错过 ⇒ 名表第 1 列缺。
+    #[test]
+    fn door_scroll_compensates_one_tail_step() {
+        // 门入场滚动在跑（$0056=01）：尾段第一拍多推一格 ⇒ F1 → FF（跳两格）。
+        let mut m = Manager::default();
+        m.room_load_phase = 1;
+        m.room_load_room = 0;
+        m.room().set_room_ptr(0x6000);
+        m.set_room_number(0xF0);
+        m.write_ram(crate::ram_map::DOOR_ENTRY_STATUS, 1);
+        super::room_load_gate_step(&mut m); // 窗末：F0 → F1（原有第一格）
+        assert_eq!(m.room_number(), 0xF1, "窗末第一格 F1");
+        super::room_load_gate_step(&mut m); // 尾段第一拍：F1 → F3（原有）→ 补偿 → FF
+        assert_eq!(
+            m.room_number(),
+            0xFF,
+            "门入场滚动在跑 ⇒ 尾段第一拍补推一格（F3 → FF）"
+        );
+
+        // 非门入场（$0056=00）：不补偿，逐格推进（基线行为不变）。
+        let mut n = Manager::default();
+        n.room_load_phase = 1;
+        n.room_load_room = 0;
+        n.room().set_room_ptr(0x6000);
+        n.set_room_number(0xF0);
+        n.write_ram(crate::ram_map::DOOR_ENTRY_STATUS, 0);
+        super::room_load_gate_step(&mut n);
+        assert_eq!(n.room_number(), 0xF1, "窗末第一格 F1");
+        super::room_load_gate_step(&mut n);
+        assert_eq!(n.room_number(), 0xF3, "非门入场 ⇒ 不补，仍 F3");
+        super::room_load_gate_step(&mut n);
+        assert_eq!(n.room_number(), 0xFF, "第三格 FF");
     }
 
     /// 尾段落完后任务机必须回空闲，否则下一次真实载房会被 `is_load` 的相位闸永久挡住。
