@@ -272,7 +272,13 @@ const DOOR_HP_TABLE: [u8; 4] = [5, 1, 10, 1]; // $8BD1（红/蓝/导弹/音乐�
 /// （y=(slot Adiv8)&6（$80..$B0→0/2/4/6））。
 fn write_door_bg_tiles(mem: &mut crate::frame::Manager, x_off: u8, tile: u8) {
     let x_pos = DOOR_X_TABLE[((x_off >> 4) & 1) as usize];
-    let nt = mem.object(x_off / 16).hi();
+    // 【名表页选（2026-11-19 定谳）】`Objects.0.hi` 存的是**名表号 0/1**
+    // （`GetNameTableAtScrollDir ; 07:EB85`：`lda PPUCTRL_ZP / eor ScrollDir / and #$01`），
+    // 而 `Room::offset` 的第三参要的是「页选位」（`nt_hi & $04`）。asm 在
+    // `MakeRoomRAMPtr ; 07:E96A` 里做 `lda Temp0B_PositionHi / asl / asl / and #$04` 的换算，
+    // 这里必须同式 ⇒ 否则门的 6 个实瓦永远写进 A 页（`$60xx`），而列 kick 按
+    // `(PPUCTRL^ScrollDir)&1` 读 B 页（`$64xx`）⇒ 门框（tile `$4E`）在名表上恒为 `$FF`。
+    let nt = (mem.object(x_off / 16).hi() & 0x01) << 2;
     // 6 行纵写（行步 8 → 缓冲内 $20 步）：y=0x50,0x58,…,0x78
     for k in 0..6u8 {
         mem.room().set_tile(0x50u8.wrapping_add(k * 8), x_pos, nt, tile);
@@ -1084,6 +1090,31 @@ mod tests_load_door {
                     }
                 }
             }
+        }
+    }
+
+    /// 【名表页选·TDD 锚（2026-11-19）】`write_door_bg_tiles` 必须按
+    /// `MakeRoomRAMPtr ; 07:E96A` 的 `lda Temp0B_PositionHi / asl / asl / and #$04`
+    /// 把「名表号 0/1」换成「页选位 0/4」：hi=1 的 6 个实瓦落 `$64xx`（B 页），
+    /// hi=0 落 `$60xx`（A 页）。旧形直接传 hi（0/1）⇒ `nt_hi & $04` 恒 0 ⇒ 门框
+    /// 永远写 A 页，而列 kick 按 `(PPUCTRL^ScrollDir)&1` 读 B 页 ⇒ 名表恒 `$FF`
+    /// （room 0/11 的 rows10-15 col2 `$4E` 缺失即此）。
+    #[test]
+    fn door_bg_tiles_land_on_page_selected_by_nametable_bit() {
+        for (hi, base) in [(0u8, 0x6000u16), (1u8, 0x6400u16)] {
+            let mut m = Manager::default();
+            // 左门槽 0x90（x_off>>4&1=1 ⇒ DoorXTable[1]=0x10 ⇒ 列 2）
+            m.object(0x90 / 16).set_hi(hi);
+            write_door_bg_tiles(&mut m, 0x90, 0x4E);
+
+            for k in 0..6u8 {
+                let row = (0x50u16 + k as u16 * 8) >> 3; // 0x50→行 10 … 0x78→行 15
+                let a = base + (row / 8) * 0x100 + (row % 8) * 0x20 + 2;
+                assert_eq!(m.read_wram(a), 0x4E, "hi={} row={} addr={:#06X}", hi, row, a);
+            }
+            // 对页不得被写（防「同时写两页」的假通过）
+            let cross = if base == 0x6000 { 0x6542u16 } else { 0x6142 };
+            assert_eq!(m.read_wram(cross), 0x00, "对页 {:06X} 不应有门框", cross);
         }
     }
 

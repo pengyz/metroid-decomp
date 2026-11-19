@@ -584,7 +584,7 @@
         "frame/tick.rs:600",
         "frame/nmi.rs:191",
         "sound/hook.rs:314",
-        "world/room_draw.rs:324",
+        "world/room_draw.rs:325",
         "pickup/spawn.rs:24",
         "title/intro.rs:80"
       ]
