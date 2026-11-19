@@ -505,8 +505,18 @@ fn main() {
         // ——发射采集帧 frame（tick(frame-1) 相位）——
         while next_cap < caps.len() && caps[next_cap].0 == frame {
             let (_f, tag) = &caps[next_cap];
+            // 【lag 帧显示面（2026-11-19，f673 线取证）】载房窗/span 帧不跑主循环回调
+            // ⇒ 没有本帧缝快照；emu 在 lag 帧里 NMI 也停（无 OAM DMA、无写 PPU）⇒
+            // **显示面保持上一帧**（实测 emu f673/f674/f676 三帧 PNG 逐字节相同，而
+            // 活体 OAM 已更新到 x=127 ⇒ 旧形回退活体会画出下一帧的精灵，330px 根因）。
+            // 故缺缝时复用最近一次缝快照（=最后一次 NMI 的显示集），而不是活体。
+            // 显示集选择：正常帧=本帧缝快照（tick(frame-1)）；**载房窗内**（`room_load_phase==1`）
+            // 无本帧缝 ⇒ 复用最近缝（emu lag 帧不做 NMI/DMA/PPU 写，显示面保持——实测
+            // emu f673/f674/f676 三帧 PNG 逐字节相同）；其余 span（电梯换区等**会渲染**的
+            // lag）仍回退活体，否则会把陈旧帧当新帧（case-elev-norfair-transition f1207 13115px）。
             let snap = match &seam_snap {
                 Some((k, rs, oam)) if *k == frame.wrapping_sub(1) => Some((rs, oam.as_slice())),
+                Some((_, rs, oam)) if engine.mem.room_load_phase == 1 => Some((rs, oam.as_slice())),
                 _ => None,
             };
             render_capture(&engine, snap, frame, tag, &out, &mut produced);
