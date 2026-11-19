@@ -62,9 +62,12 @@ pub(crate) fn check_update_name_table(mem: &mut Manager) {
         // dropped=floor((基底+载房工作周期)/29780)（常量=asm 6502 逐条计数——
         // room.rs LOAD_* 注）。行为后果=消费端输入相位（同 FC 迭代喂 joy[label]——
         // 窗长差 1 ⇒转脚帧 accel 滞 1 帧（goal-轮134 下游链））。
-        // 【下界 1（2026-11-19 对抗复核 P2）】`LOAD_BASE_CYCLES=29000 < FRAME_CYCLES=29780`
-        // ⇒ 小房间会算出 0，而 Mesen 三房实录（room 0/23/8）冻结帧数最小为 **1**。
-        // 0 会让窗在同拍关闭、尾段整体提前一帧，故取实测下界。
+        // 【防御性下界 1（2026-11-19 复核 P3 校正理由）】`LOAD_BASE_CYCLES=29000 <
+        // FRAME_CYCLES=29780` 时公式**可能**得 0，但按现有周期常量**不可达**：
+        // `setup_room` 至少累加 `LOAD_INIT=9262` + `LOAD_SHELL=1300` = 10562 > 780（得 0 所需的
+        // work 上界）⇒ 真实载房 `dropped >= 1`，与本处 `.max(1)` 无关。
+        // 保留 `.max(1)` 只为把「0 ⇒ 窗同拍关闭、尾段整体提前一帧」这类症状挡在定义域外
+        // （Mesen 三房实录 room 0/23/8 冻结帧数最小也是 1）。
         let dropped = ((crate::world::room_draw::LOAD_BASE_CYCLES + mem.work_cycles)
             / crate::world::room_draw::FRAME_CYCLES)
             .max(1);

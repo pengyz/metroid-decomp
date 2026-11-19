@@ -58,3 +58,23 @@ L4 **20 案/160 格 · match 151 · diff 9 · blocked 0** 与复核前**逐格 0
   `$5A` 恒 `0`、无 panic（修复前 f=2 崩）。
 - 诚实说明：**没有**把 bundle 起跑做成 L4 像素用例——`restore_mss` 只回灌 RAM/WRAM/regs，
   bundle v1 不含 PPU 面，像素比较必然 61440/61440 全差（试过、已删）；该路径的守卫落在上面两条单测。
+
+## 第三轮复核（`922ff7e4`）：**pass-with-findings**（3×P3，无 P1/P2）
+
+- 三条 `$5A=$00` 现成 bundle（`title-recon` / `sc-password-entry3` / `sc-title-menu3`）实测 8 帧
+  `$5A` 恒 `00`、无 panic；阴性对照 `mid-move`（`$5A=$FF`、ptr `$6000`）零回归。
+- `attrib_table_write` 的 `room_ptr` 域校验不误炸：合法域由 `select_room_ram`（`room_draw.rs:801-803`）
+  钉死为 `$6000/$6400`，且它在 `draw_room`/尾段之前执行；`$FE` 短路径在 attrib 之前就 `unported!`。
+- 回归测真打穿（变异 M1「删 ptr 鉴别」⇒ 两条测试红；M2「删整块重建」⇒ 旧测红）：
+  两条测试互补覆盖「误报/漏重建」两向。
+- 49 个 bundle 实测分布：`$5A` = `{FF:44, 00:4, F1:1}`、`$39/$3A` = `{WRAM:45, 0000:4}`；
+  `$5A<$F0` 的 4 件全部 `ptr=$0000`（上电件）⇒ 新判据与真实数据一致，`sc-room-scroll`（`$5A=$F1`、ptr `$6400`）未被误判。
+- L4 逐格仍 20 案/160 格 match 151 · diff 9 · blocked 0，两侧零差异。
+
+### 第三轮遗留 P3（已处置/登记）
+
+| # | 项 | 处置 |
+|---|---|---|
+| P3-1 | `.max(1)` 注释理由曾是「小房间会算出 0」（不可达） | **已改**：注明按现有周期常量不可达（`INIT+SHELL=10562 > 780`），保留只为把「窗同拍关闭」挡在定义域外 |
+| P3-2 | 49 个 bundle 里没有 `$5A<$F0 ∧ ptr∈WRAM` 的真实「载房中段快照」 | **登记为 gap**：窗内重建只由单测构造值钉住；真实样本缺失，不 silent 假定 |
+| P3-3 | bundle 起跑仍在差分门禁之外（L4 全 `snapshot none`；bundle v1 无 PPU 面 ⇒ 像素比必全差） | **登记为 gap** + 采纳建议方向：改用**非像素判据**逐帧比 `$5A/$39/$3A` 与 `analysis/traces/title-recon.frames.jsonl`(f795-812) |

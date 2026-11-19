@@ -452,7 +452,7 @@
       "kind": "undeclared",
       "refs": [
         "world/room_draw.rs:726",
-        "world/camera/scroll.rs:69"
+        "world/camera/scroll.rs:237"
       ]
     },
     {
