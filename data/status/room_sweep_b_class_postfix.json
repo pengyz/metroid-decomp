@@ -1,0 +1,4184 @@
+{
+ "tool": "tools/movie_ref/room_sweep.py",
+ "entry_preset_version": "v1",
+ "entry_frame": 900,
+ "entry_preset": [
+  {
+   "addr": "005A",
+   "value": "00",
+   "persistence": "invariant"
+  },
+  {
+   "addr": "0049",
+   "value": "03",
+   "persistence": "invariant"
+  },
+  {
+   "addr": "00FD",
+   "value": "02",
+   "persistence": "invariant"
+  },
+  {
+   "addr": "0056",
+   "value": "01",
+   "persistence": "evolving"
+  }
+ ],
+ "generated_at": "2026-11-19T22:32:53+0800",
+ "args": {
+  "areas": [
+   0
+  ],
+  "rooms": "3,4,5,6,7,9,10,11,12,13,14,15",
+  "frames": 1020,
+  "captures": [
+   60,
+   960
+  ],
+  "timeout": 900.0,
+  "jobs": 1
+ },
+ "area": 0,
+ "area_name": "Brinstar",
+ "ok_definition": "两腿都跑完（无 error/blocked/timeout）且每采集点 diff==0 且注入房号被接受（$005A 走完 F0→…→FF 且有目标房身份证据：$33/$34 RoomPtr 落在该房房流区间内，或采到 $005A==目标房号）且 f900..f906 $001E MainRoutine 全为 3（GameEngine）",
+ "summary": {
+  "planned": 12,
+  "ran": 12,
+  "ok": 3,
+  "mismatch": 9,
+  "blocked": 0,
+  "error": 0,
+  "timeout": 0,
+  "skipped": 0,
+  "unverified_identity": 0,
+  "left_gameengine": 0,
+  "stale_report": 0,
+  "area_skips": 0,
+  "denominator_note": "denominator = planned（计划扫的房数），不是 ran",
+  "distinct_rust_capture_sha256": 34,
+  "arithmetic_ok": true,
+  "arithmetic_violations": []
+ },
+ "skips": [],
+ "rooms": [
+  {
+   "area": 0,
+   "area_name": "Brinstar",
+   "room": 3,
+   "status": "mismatch",
+   "ok": false,
+   "diff_pixels": {
+    "pre": 0,
+    "f60": 0,
+    "f960": 512,
+    "end": 512
+   },
+   "captures": [
+    {
+     "frame": 900,
+     "tag": "pre",
+     "status": "match",
+     "diff_pixels": 0,
+     "total_pixels": 61440,
+     "whitelist_hits": 0,
+     "file": "_tmp_sweep_477987-1795098209_a0_r03_f00900_pre.png",
+     "rust_sha256": "10a60c8a34913227800a6bc653cf6faab65094b9d4fd5492087d10fc0678b497",
+     "ppu": {
+      "chr": 0,
+      "nt0": 0,
+      "nt1": 0,
+      "nt2": 0,
+      "nt3": 0,
+      "palette": 0,
+      "rust_scroll": [
+       0,
+       0,
+       144
+      ]
+     },
+     "shift": null,
+     "layer": "clean"
+    },
+    {
+     "frame": 960,
+     "tag": "f60",
+     "status": "match",
+     "diff_pixels": 0,
+     "total_pixels": 61440,
+     "whitelist_hits": 0,
+     "file": "_tmp_sweep_477987-1795098209_a0_r03_f00960_f60.png",
+     "rust_sha256": "5a1c45fe8b27fc3b4887581bea6426625671673c3e558654592b0cc7f81915d4",
+     "ppu": {
+      "chr": 0,
+      "nt0": 0,
+      "nt1": 8,
+      "nt2": 0,
+      "nt3": 8,
+      "palette": 0,
+      "rust_scroll": [
+       116,
+       0,
+       144
+      ]
+     },
+     "shift": null,
+     "layer": "nametable"
+    },
+    {
+     "frame": 1860,
+     "tag": "f960",
+     "status": "diff",
+     "diff_pixels": 512,
+     "total_pixels": 61440,
+     "whitelist_hits": 0,
+     "file": "_tmp_sweep_477987-1795098209_a0_r03_f01860_f960.png",
+     "rust_sha256": "6eebf7a3048db880941c19f771442f44b53598060f61c7c5ec122ff2c89424a7",
+     "ppu": {
+      "chr": 0,
+      "nt0": 0,
+      "nt1": 581,
+      "nt2": 587,
+      "nt3": 14,
+      "palette": 0,
+      "rust_scroll": [
+       0,
+       0,
+       147
+      ]
+     },
+     "shift": {
+      "dx": 0,
+      "dy": 0,
+      "residual_px": 512,
+      "raw_px": 512,
+      "explains": false
+     },
+     "layer": "nametable"
+    },
+    {
+     "frame": 1920,
+     "tag": "end",
+     "status": "diff",
+     "diff_pixels": 512,
+     "total_pixels": 61440,
+     "whitelist_hits": 0,
+     "file": "_tmp_sweep_477987-1795098209_a0_r03_f01920_end.png",
+     "rust_sha256": "cb22a1d74a59749f36451d88f75839df11b3681b78c33bfa803bb51bad91fddf",
+     "ppu": {
+      "chr": 0,
+      "nt0": 0,
+      "nt1": 581,
+      "nt2": 587,
+      "nt3": 14,
+      "palette": 0,
+      "rust_scroll": [
+       0,
+       0,
+       147
+      ]
+     },
+     "shift": {
+      "dx": 0,
+      "dy": 0,
+      "residual_px": 512,
+      "raw_px": 512,
+      "explains": false
+     },
+     "layer": "nametable"
+    }
+   ],
+   "entry_preset_version": "v1",
+   "entry_frame": 900,
+   "notes": [
+    "最大失配 512 px"
+   ],
+   "l4_exit": 1,
+   "room_load": {
+    "trace": "analysis/traces/_tmp_sweep_477987-1795098209_a0_r03.frames.jsonl",
+    "accepted": true,
+    "load_chain": true,
+    "identity_basis": "room_ptr",
+    "identity_ok": true,
+    "expected_room_ptr": "A480",
+    "mr_at_entry": 3,
+    "mr_at_end": 3,
+    "mr_window_ok": true,
+    "room_at_end": 255,
+    "back_to_ff_frame": 905,
+    "room_frames": [
+     "901:03",
+     "902:F0",
+     "903:F1",
+     "904:F3",
+     "905:FF"
+    ],
+    "scroll_x_end": 0,
+    "scroll_x_post_entry": [
+     3,
+     3,
+     4,
+     6,
+     8,
+     10
+    ],
+    "mr_window": {
+     "900": 3,
+     "901": 3,
+     "902": 3,
+     "903": 3,
+     "904": 3,
+     "905": 3,
+     "906": 3
+    },
+    "mr_window_missing": [],
+    "left_gameengine_frames": [],
+    "ff_markers": [
+     "902:F0",
+     "903:F1",
+     "904:F3"
+    ],
+    "room_ptr_region": "A480..A4BB",
+    "room_ptr_hits": [
+     901,
+     902,
+     903,
+     904,
+     905,
+     906
+    ],
+    "room_number_hits": [
+     900,
+     901
+    ]
+   },
+   "identity_basis": "room_ptr",
+   "l4_summary": {
+    "match": 2,
+    "mismatch": 2,
+    "blocked": 0,
+    "error": 0
+   },
+   "stdout_tail": [
+    "     帧 tag              状态                 差异像素       /总像素",
+    "------------------------------------------------------------------------------",
+    "   900 pre              ✅一致                   0      61440",
+    "   960 f60              ✅一致                   0      61440",
+    "  1860 f960             ❌失配                 512      61440",
+    "  1920 end              ❌失配                 512      61440",
+    "------------------------------------------------------------------------------",
+    "汇总：一致 2 · 失配 2 · 缺口阻塞 0 · 错误 0（共 4）",
+    "总评：❌ 未全一致（2/4 通过，2 采集点像素失配）",
+    "=============================================================================="
+   ],
+   "anchors": {
+    "scenario_sha256": "08ff62919bfbd13dcbb3dfb4a66957a49b894e2eafdcf40bf3b5336f1bde3dea",
+    "rom_sha256": "e6e6b7014685adae447ebb3833242815747bc1e5df83ade79f693fb67cf565b6",
+    "sched_sha256": "98049fb11186c7fb9d15f80938db273eb17352b66738e980fce76e070b6e7411"
+   },
+   "layers": {
+    "pre": "clean",
+    "f60": "nametable",
+    "f960": "nametable",
+    "end": "nametable"
+   },
+   "ppu_diff": {
+    "pre": {
+     "chr": 0,
+     "nt0": 0,
+     "nt1": 0,
+     "nt2": 0,
+     "nt3": 0,
+     "palette": 0,
+     "rust_scroll": [
+      0,
+      0,
+      144
+     ]
+    },
+    "f60": {
+     "chr": 0,
+     "nt0": 0,
+     "nt1": 8,
+     "nt2": 0,
+     "nt3": 8,
+     "palette": 0,
+     "rust_scroll": [
+      116,
+      0,
+      144
+     ]
+    },
+    "f960": {
+     "chr": 0,
+     "nt0": 0,
+     "nt1": 581,
+     "nt2": 587,
+     "nt3": 14,
+     "palette": 0,
+     "rust_scroll": [
+      0,
+      0,
+      147
+     ]
+    },
+    "end": {
+     "chr": 0,
+     "nt0": 0,
+     "nt1": 581,
+     "nt2": 587,
+     "nt3": 14,
+     "palette": 0,
+     "rust_scroll": [
+      0,
+      0,
+      147
+     ]
+    }
+   },
+   "l4_pass": 2,
+   "l4_fail": 2,
+   "l4_gap": false,
+   "l4_captures": 4,
+   "mismatch": [
+    {
+     "frame": 1860,
+     "tag": "f960",
+     "status": "diff",
+     "diff_pixels": 512,
+     "total_pixels": 61440,
+     "whitelist_hits": 0,
+     "file": "_tmp_sweep_477987-1795098209_a0_r03_f01860_f960.png",
+     "rust_sha256": "6eebf7a3048db880941c19f771442f44b53598060f61c7c5ec122ff2c89424a7",
+     "ppu": {
+      "chr": 0,
+      "nt0": 0,
+      "nt1": 581,
+      "nt2": 587,
+      "nt3": 14,
+      "palette": 0,
+      "rust_scroll": [
+       0,
+       0,
+       147
+      ]
+     },
+     "shift": {
+      "dx": 0,
+      "dy": 0,
+      "residual_px": 512,
+      "raw_px": 512,
+      "explains": false
+     },
+     "layer": "nametable"
+    },
+    {
+     "frame": 1920,
+     "tag": "end",
+     "status": "diff",
+     "diff_pixels": 512,
+     "total_pixels": 61440,
+     "whitelist_hits": 0,
+     "file": "_tmp_sweep_477987-1795098209_a0_r03_f01920_end.png",
+     "rust_sha256": "cb22a1d74a59749f36451d88f75839df11b3681b78c33bfa803bb51bad91fddf",
+     "ppu": {
+      "chr": 0,
+      "nt0": 0,
+      "nt1": 581,
+      "nt2": 587,
+      "nt3": 14,
+      "palette": 0,
+      "rust_scroll": [
+       0,
+       0,
+       147
+      ]
+     },
+     "shift": {
+      "dx": 0,
+      "dy": 0,
+      "residual_px": 512,
+      "raw_px": 512,
+      "explains": false
+     },
+     "layer": "nametable"
+    }
+   ],
+   "wall_s": 46.6
+  },
+  {
+   "area": 0,
+   "area_name": "Brinstar",
+   "room": 4,
+   "status": "ok",
+   "ok": true,
+   "diff_pixels": {
+    "pre": 0,
+    "f60": 0,
+    "f960": 0,
+    "end": 0
+   },
+   "captures": [
+    {
+     "frame": 900,
+     "tag": "pre",
+     "status": "match",
+     "diff_pixels": 0,
+     "total_pixels": 61440,
+     "whitelist_hits": 0,
+     "file": "_tmp_sweep_477987-1795098209_a0_r04_f00900_pre.png",
+     "rust_sha256": "10a60c8a34913227800a6bc653cf6faab65094b9d4fd5492087d10fc0678b497",
+     "ppu": {
+      "chr": 0,
+      "nt0": 0,
+      "nt1": 0,
+      "nt2": 0,
+      "nt3": 0,
+      "palette": 0,
+      "rust_scroll": [
+       0,
+       0,
+       144
+      ]
+     },
+     "shift": null,
+     "layer": "clean"
+    },
+    {
+     "frame": 960,
+     "tag": "f60",
+     "status": "match",
+     "diff_pixels": 0,
+     "total_pixels": 61440,
+     "whitelist_hits": 0,
+     "file": "_tmp_sweep_477987-1795098209_a0_r04_f00960_f60.png",
+     "rust_sha256": "a60d5c1662cfbc9b518a6537b391f4c59a2058e091f635875462b2b0b4cb2f3c",
+     "ppu": {
+      "chr": 0,
+      "nt0": 0,
+      "nt1": 14,
+      "nt2": 0,
+      "nt3": 14,
+      "palette": 0,
+      "rust_scroll": [
+       116,
+       0,
+       144
+      ]
+     },
+     "shift": null,
+     "layer": "nametable"
+    },
+    {
+     "frame": 1860,
+     "tag": "f960",
+     "status": "match",
+     "diff_pixels": 0,
+     "total_pixels": 61440,
+     "whitelist_hits": 0,
+     "file": "_tmp_sweep_477987-1795098209_a0_r04_f01860_f960.png",
+     "rust_sha256": "58df3616798c463003a1ad4b02c2d3ba740520319e31cfaa060c7cf67204b78b",
+     "ppu": {
+      "chr": 0,
+      "nt0": 0,
+      "nt1": 568,
+      "nt2": 570,
+      "nt3": 14,
+      "palette": 0,
+      "rust_scroll": [
+       0,
+       0,
+       147
+      ]
+     },
+     "shift": null,
+     "layer": "nametable"
+    },
+    {
+     "frame": 1920,
+     "tag": "end",
+     "status": "match",
+     "diff_pixels": 0,
+     "total_pixels": 61440,
+     "whitelist_hits": 0,
+     "file": "_tmp_sweep_477987-1795098209_a0_r04_f01920_end.png",
+     "rust_sha256": "7a159ca7d6af228dc892957986b48bc44c38faf25aa862e4b170f6a28e4b757e",
+     "ppu": {
+      "chr": 0,
+      "nt0": 0,
+      "nt1": 568,
+      "nt2": 570,
+      "nt3": 14,
+      "palette": 0,
+      "rust_scroll": [
+       0,
+       0,
+       147
+      ]
+     },
+     "shift": null,
+     "layer": "nametable"
+    }
+   ],
+   "entry_preset_version": "v1",
+   "entry_frame": 900,
+   "notes": [],
+   "l4_exit": 0,
+   "room_load": {
+    "trace": "analysis/traces/_tmp_sweep_477987-1795098209_a0_r04.frames.jsonl",
+    "accepted": true,
+    "load_chain": true,
+    "identity_basis": "room_ptr",
+    "identity_ok": true,
+    "expected_room_ptr": "A4BB",
+    "mr_at_entry": 3,
+    "mr_at_end": 3,
+    "mr_window_ok": true,
+    "room_at_end": 255,
+    "back_to_ff_frame": 905,
+    "room_frames": [
+     "901:04",
+     "902:F1",
+     "903:F1",
+     "904:F3",
+     "905:FF"
+    ],
+    "scroll_x_end": 0,
+    "scroll_x_post_entry": [
+     3,
+     4,
+     4,
+     6,
+     8,
+     10
+    ],
+    "mr_window": {
+     "900": 3,
+     "901": 3,
+     "902": 3,
+     "903": 3,
+     "904": 3,
+     "905": 3,
+     "906": 3
+    },
+    "mr_window_missing": [],
+    "left_gameengine_frames": [],
+    "ff_markers": [
+     "902:F1",
+     "903:F1",
+     "904:F3"
+    ],
+    "room_ptr_region": "A4BB..A4ED",
+    "room_ptr_hits": [
+     901,
+     902,
+     903,
+     904,
+     905,
+     906
+    ],
+    "room_number_hits": [
+     900,
+     901
+    ]
+   },
+   "identity_basis": "room_ptr",
+   "l4_summary": {
+    "match": 4,
+    "mismatch": 0,
+    "blocked": 0,
+    "error": 0
+   },
+   "stdout_tail": [
+    "     帧 tag              状态                 差异像素       /总像素",
+    "------------------------------------------------------------------------------",
+    "   900 pre              ✅一致                   0      61440",
+    "   960 f60              ✅一致                   0      61440",
+    "  1860 f960             ✅一致                   0      61440",
+    "  1920 end              ✅一致                   0      61440",
+    "------------------------------------------------------------------------------",
+    "汇总：一致 4 · 失配 0 · 缺口阻塞 0 · 错误 0（共 4）",
+    "总评：✅ 全部一致（L4 帧对拍通过）",
+    "=============================================================================="
+   ],
+   "anchors": {
+    "scenario_sha256": "1a03a1b425ea1737e4dd94d7df48ef4521a3142c7de46e2989c9fbb5662f4de6",
+    "rom_sha256": "e6e6b7014685adae447ebb3833242815747bc1e5df83ade79f693fb67cf565b6",
+    "sched_sha256": "9e70f016d615a2fb4705cd321d3172944b87f9e63e6af0de3aa04fd363099b18"
+   },
+   "layers": {
+    "pre": "clean",
+    "f60": "nametable",
+    "f960": "nametable",
+    "end": "nametable"
+   },
+   "ppu_diff": {
+    "pre": {
+     "chr": 0,
+     "nt0": 0,
+     "nt1": 0,
+     "nt2": 0,
+     "nt3": 0,
+     "palette": 0,
+     "rust_scroll": [
+      0,
+      0,
+      144
+     ]
+    },
+    "f60": {
+     "chr": 0,
+     "nt0": 0,
+     "nt1": 14,
+     "nt2": 0,
+     "nt3": 14,
+     "palette": 0,
+     "rust_scroll": [
+      116,
+      0,
+      144
+     ]
+    },
+    "f960": {
+     "chr": 0,
+     "nt0": 0,
+     "nt1": 568,
+     "nt2": 570,
+     "nt3": 14,
+     "palette": 0,
+     "rust_scroll": [
+      0,
+      0,
+      147
+     ]
+    },
+    "end": {
+     "chr": 0,
+     "nt0": 0,
+     "nt1": 568,
+     "nt2": 570,
+     "nt3": 14,
+     "palette": 0,
+     "rust_scroll": [
+      0,
+      0,
+      147
+     ]
+    }
+   },
+   "l4_pass": 4,
+   "l4_fail": 0,
+   "l4_gap": false,
+   "l4_captures": 4,
+   "wall_s": 45.3
+  },
+  {
+   "area": 0,
+   "area_name": "Brinstar",
+   "room": 5,
+   "status": "mismatch",
+   "ok": false,
+   "diff_pixels": {
+    "pre": 0,
+    "f60": 289,
+    "f960": 801,
+    "end": 801
+   },
+   "captures": [
+    {
+     "frame": 900,
+     "tag": "pre",
+     "status": "match",
+     "diff_pixels": 0,
+     "total_pixels": 61440,
+     "whitelist_hits": 0,
+     "file": "_tmp_sweep_477987-1795098209_a0_r05_f00900_pre.png",
+     "rust_sha256": "10a60c8a34913227800a6bc653cf6faab65094b9d4fd5492087d10fc0678b497",
+     "ppu": {
+      "chr": 0,
+      "nt0": 0,
+      "nt1": 0,
+      "nt2": 0,
+      "nt3": 0,
+      "palette": 0,
+      "rust_scroll": [
+       0,
+       0,
+       144
+      ]
+     },
+     "shift": null,
+     "layer": "clean"
+    },
+    {
+     "frame": 960,
+     "tag": "f60",
+     "status": "diff",
+     "diff_pixels": 289,
+     "total_pixels": 61440,
+     "whitelist_hits": 0,
+     "file": "_tmp_sweep_477987-1795098209_a0_r05_f00960_f60.png",
+     "rust_sha256": "3f8be98a53eea80494d81249e4e317dacd07a61e4d4feac66f36607227fa0273",
+     "ppu": {
+      "chr": 0,
+      "nt0": 0,
+      "nt1": 22,
+      "nt2": 0,
+      "nt3": 22,
+      "palette": 0,
+      "rust_scroll": [
+       116,
+       0,
+       144
+      ]
+     },
+     "shift": {
+      "dx": 0,
+      "dy": 0,
+      "residual_px": 289,
+      "raw_px": 289,
+      "explains": false
+     },
+     "layer": "nametable"
+    },
+    {
+     "frame": 1860,
+     "tag": "f960",
+     "status": "diff",
+     "diff_pixels": 801,
+     "total_pixels": 61440,
+     "whitelist_hits": 0,
+     "file": "_tmp_sweep_477987-1795098209_a0_r05_f01860_f960.png",
+     "rust_sha256": "f1285156930babb54f8fcff562c71d7fb33afbb9a8647a38025d28046f7b5658",
+     "ppu": {
+      "chr": 0,
+      "nt0": 0,
+      "nt1": 560,
+      "nt2": 561,
+      "nt3": 28,
+      "palette": 0,
+      "rust_scroll": [
+       0,
+       0,
+       147
+      ]
+     },
+     "shift": {
+      "dx": 0,
+      "dy": 0,
+      "residual_px": 801,
+      "raw_px": 801,
+      "explains": false
+     },
+     "layer": "nametable"
+    },
+    {
+     "frame": 1920,
+     "tag": "end",
+     "status": "diff",
+     "diff_pixels": 801,
+     "total_pixels": 61440,
+     "whitelist_hits": 0,
+     "file": "_tmp_sweep_477987-1795098209_a0_r05_f01920_end.png",
+     "rust_sha256": "03c815f3e7c139b0af01cff1c5bd12db8e22216d5ee0aae33023dd24689ec84b",
+     "ppu": {
+      "chr": 0,
+      "nt0": 0,
+      "nt1": 560,
+      "nt2": 561,
+      "nt3": 28,
+      "palette": 0,
+      "rust_scroll": [
+       0,
+       0,
+       147
+      ]
+     },
+     "shift": {
+      "dx": 0,
+      "dy": 0,
+      "residual_px": 801,
+      "raw_px": 801,
+      "explains": false
+     },
+     "layer": "nametable"
+    }
+   ],
+   "entry_preset_version": "v1",
+   "entry_frame": 900,
+   "notes": [
+    "最大失配 801 px"
+   ],
+   "l4_exit": 1,
+   "room_load": {
+    "trace": "analysis/traces/_tmp_sweep_477987-1795098209_a0_r05.frames.jsonl",
+    "accepted": true,
+    "load_chain": true,
+    "identity_basis": "room_ptr",
+    "identity_ok": true,
+    "expected_room_ptr": "A4ED",
+    "mr_at_entry": 3,
+    "mr_at_end": 3,
+    "mr_window_ok": true,
+    "room_at_end": 255,
+    "back_to_ff_frame": 905,
+    "room_frames": [
+     "901:05",
+     "902:F1",
+     "903:F1",
+     "904:F3",
+     "905:FF"
+    ],
+    "scroll_x_end": 0,
+    "scroll_x_post_entry": [
+     3,
+     4,
+     4,
+     6,
+     8,
+     10
+    ],
+    "mr_window": {
+     "900": 3,
+     "901": 3,
+     "902": 3,
+     "903": 3,
+     "904": 3,
+     "905": 3,
+     "906": 3
+    },
+    "mr_window_missing": [],
+    "left_gameengine_frames": [],
+    "ff_markers": [
+     "902:F1",
+     "903:F1",
+     "904:F3"
+    ],
+    "room_ptr_region": "A4ED..A524",
+    "room_ptr_hits": [
+     901,
+     902,
+     903,
+     904,
+     905,
+     906
+    ],
+    "room_number_hits": [
+     900,
+     901
+    ]
+   },
+   "identity_basis": "room_ptr",
+   "l4_summary": {
+    "match": 1,
+    "mismatch": 3,
+    "blocked": 0,
+    "error": 0
+   },
+   "stdout_tail": [
+    "     帧 tag              状态                 差异像素       /总像素",
+    "------------------------------------------------------------------------------",
+    "   900 pre              ✅一致                   0      61440",
+    "   960 f60              ❌失配                 289      61440",
+    "  1860 f960             ❌失配                 801      61440",
+    "  1920 end              ❌失配                 801      61440",
+    "------------------------------------------------------------------------------",
+    "汇总：一致 1 · 失配 3 · 缺口阻塞 0 · 错误 0（共 4）",
+    "总评：❌ 未全一致（1/4 通过，3 采集点像素失配）",
+    "=============================================================================="
+   ],
+   "anchors": {
+    "scenario_sha256": "e36fa04f7babb57a5cd41d120fefad21ce875e9f082c1cec6f1abd1358e9be48",
+    "rom_sha256": "e6e6b7014685adae447ebb3833242815747bc1e5df83ade79f693fb67cf565b6",
+    "sched_sha256": "5ad9a3d32f079a368111d46737c73a0d334266180d71ce27429f78b7329c35a0"
+   },
+   "layers": {
+    "pre": "clean",
+    "f60": "nametable",
+    "f960": "nametable",
+    "end": "nametable"
+   },
+   "ppu_diff": {
+    "pre": {
+     "chr": 0,
+     "nt0": 0,
+     "nt1": 0,
+     "nt2": 0,
+     "nt3": 0,
+     "palette": 0,
+     "rust_scroll": [
+      0,
+      0,
+      144
+     ]
+    },
+    "f60": {
+     "chr": 0,
+     "nt0": 0,
+     "nt1": 22,
+     "nt2": 0,
+     "nt3": 22,
+     "palette": 0,
+     "rust_scroll": [
+      116,
+      0,
+      144
+     ]
+    },
+    "f960": {
+     "chr": 0,
+     "nt0": 0,
+     "nt1": 560,
+     "nt2": 561,
+     "nt3": 28,
+     "palette": 0,
+     "rust_scroll": [
+      0,
+      0,
+      147
+     ]
+    },
+    "end": {
+     "chr": 0,
+     "nt0": 0,
+     "nt1": 560,
+     "nt2": 561,
+     "nt3": 28,
+     "palette": 0,
+     "rust_scroll": [
+      0,
+      0,
+      147
+     ]
+    }
+   },
+   "l4_pass": 1,
+   "l4_fail": 3,
+   "l4_gap": false,
+   "l4_captures": 4,
+   "mismatch": [
+    {
+     "frame": 960,
+     "tag": "f60",
+     "status": "diff",
+     "diff_pixels": 289,
+     "total_pixels": 61440,
+     "whitelist_hits": 0,
+     "file": "_tmp_sweep_477987-1795098209_a0_r05_f00960_f60.png",
+     "rust_sha256": "3f8be98a53eea80494d81249e4e317dacd07a61e4d4feac66f36607227fa0273",
+     "ppu": {
+      "chr": 0,
+      "nt0": 0,
+      "nt1": 22,
+      "nt2": 0,
+      "nt3": 22,
+      "palette": 0,
+      "rust_scroll": [
+       116,
+       0,
+       144
+      ]
+     },
+     "shift": {
+      "dx": 0,
+      "dy": 0,
+      "residual_px": 289,
+      "raw_px": 289,
+      "explains": false
+     },
+     "layer": "nametable"
+    },
+    {
+     "frame": 1860,
+     "tag": "f960",
+     "status": "diff",
+     "diff_pixels": 801,
+     "total_pixels": 61440,
+     "whitelist_hits": 0,
+     "file": "_tmp_sweep_477987-1795098209_a0_r05_f01860_f960.png",
+     "rust_sha256": "f1285156930babb54f8fcff562c71d7fb33afbb9a8647a38025d28046f7b5658",
+     "ppu": {
+      "chr": 0,
+      "nt0": 0,
+      "nt1": 560,
+      "nt2": 561,
+      "nt3": 28,
+      "palette": 0,
+      "rust_scroll": [
+       0,
+       0,
+       147
+      ]
+     },
+     "shift": {
+      "dx": 0,
+      "dy": 0,
+      "residual_px": 801,
+      "raw_px": 801,
+      "explains": false
+     },
+     "layer": "nametable"
+    },
+    {
+     "frame": 1920,
+     "tag": "end",
+     "status": "diff",
+     "diff_pixels": 801,
+     "total_pixels": 61440,
+     "whitelist_hits": 0,
+     "file": "_tmp_sweep_477987-1795098209_a0_r05_f01920_end.png",
+     "rust_sha256": "03c815f3e7c139b0af01cff1c5bd12db8e22216d5ee0aae33023dd24689ec84b",
+     "ppu": {
+      "chr": 0,
+      "nt0": 0,
+      "nt1": 560,
+      "nt2": 561,
+      "nt3": 28,
+      "palette": 0,
+      "rust_scroll": [
+       0,
+       0,
+       147
+      ]
+     },
+     "shift": {
+      "dx": 0,
+      "dy": 0,
+      "residual_px": 801,
+      "raw_px": 801,
+      "explains": false
+     },
+     "layer": "nametable"
+    }
+   ],
+   "wall_s": 50.3
+  },
+  {
+   "area": 0,
+   "area_name": "Brinstar",
+   "room": 6,
+   "status": "ok",
+   "ok": true,
+   "diff_pixels": {
+    "pre": 0,
+    "f60": 0,
+    "f960": 0,
+    "end": 0
+   },
+   "captures": [
+    {
+     "frame": 900,
+     "tag": "pre",
+     "status": "match",
+     "diff_pixels": 0,
+     "total_pixels": 61440,
+     "whitelist_hits": 0,
+     "file": "_tmp_sweep_477987-1795098209_a0_r06_f00900_pre.png",
+     "rust_sha256": "10a60c8a34913227800a6bc653cf6faab65094b9d4fd5492087d10fc0678b497",
+     "ppu": {
+      "chr": 0,
+      "nt0": 0,
+      "nt1": 0,
+      "nt2": 0,
+      "nt3": 0,
+      "palette": 0,
+      "rust_scroll": [
+       0,
+       0,
+       144
+      ]
+     },
+     "shift": null,
+     "layer": "clean"
+    },
+    {
+     "frame": 960,
+     "tag": "f60",
+     "status": "match",
+     "diff_pixels": 0,
+     "total_pixels": 61440,
+     "whitelist_hits": 0,
+     "file": "_tmp_sweep_477987-1795098209_a0_r06_f00960_f60.png",
+     "rust_sha256": "4cf069bfcb30bea666675aceeb1be01c5a58c075ad9d4947d7d978d01466ea0a",
+     "ppu": {
+      "chr": 0,
+      "nt0": 0,
+      "nt1": 0,
+      "nt2": 0,
+      "nt3": 0,
+      "palette": 0,
+      "rust_scroll": [
+       116,
+       0,
+       144
+      ]
+     },
+     "shift": null,
+     "layer": "clean"
+    },
+    {
+     "frame": 1860,
+     "tag": "f960",
+     "status": "match",
+     "diff_pixels": 0,
+     "total_pixels": 61440,
+     "whitelist_hits": 0,
+     "file": "_tmp_sweep_477987-1795098209_a0_r06_f01860_f960.png",
+     "rust_sha256": "55ac20c04a5ed771f11af72cc665dfa13648fcbce5bb54ba9e76554c042529cd",
+     "ppu": {
+      "chr": 0,
+      "nt0": 0,
+      "nt1": 573,
+      "nt2": 573,
+      "nt3": 0,
+      "palette": 0,
+      "rust_scroll": [
+       0,
+       0,
+       147
+      ]
+     },
+     "shift": null,
+     "layer": "nametable"
+    },
+    {
+     "frame": 1920,
+     "tag": "end",
+     "status": "match",
+     "diff_pixels": 0,
+     "total_pixels": 61440,
+     "whitelist_hits": 0,
+     "file": "_tmp_sweep_477987-1795098209_a0_r06_f01920_end.png",
+     "rust_sha256": "e46ddbc8b116cf4f12db39ab661870e10c9f0b23e98c85463d61464640949a25",
+     "ppu": {
+      "chr": 0,
+      "nt0": 0,
+      "nt1": 573,
+      "nt2": 573,
+      "nt3": 0,
+      "palette": 0,
+      "rust_scroll": [
+       0,
+       0,
+       147
+      ]
+     },
+     "shift": null,
+     "layer": "nametable"
+    }
+   ],
+   "entry_preset_version": "v1",
+   "entry_frame": 900,
+   "notes": [],
+   "l4_exit": 0,
+   "room_load": {
+    "trace": "analysis/traces/_tmp_sweep_477987-1795098209_a0_r06.frames.jsonl",
+    "accepted": true,
+    "load_chain": true,
+    "identity_basis": "room_ptr",
+    "identity_ok": true,
+    "expected_room_ptr": "A524",
+    "mr_at_entry": 3,
+    "mr_at_end": 3,
+    "mr_window_ok": true,
+    "room_at_end": 255,
+    "back_to_ff_frame": 905,
+    "room_frames": [
+     "901:06",
+     "902:F1",
+     "903:F1",
+     "904:F3",
+     "905:FF"
+    ],
+    "scroll_x_end": 0,
+    "scroll_x_post_entry": [
+     3,
+     4,
+     4,
+     6,
+     8,
+     10
+    ],
+    "mr_window": {
+     "900": 3,
+     "901": 3,
+     "902": 3,
+     "903": 3,
+     "904": 3,
+     "905": 3,
+     "906": 3
+    },
+    "mr_window_missing": [],
+    "left_gameengine_frames": [],
+    "ff_markers": [
+     "902:F1",
+     "903:F1",
+     "904:F3"
+    ],
+    "room_ptr_region": "A524..A55A",
+    "room_ptr_hits": [
+     901,
+     902,
+     903,
+     904,
+     905,
+     906
+    ],
+    "room_number_hits": [
+     900,
+     901
+    ]
+   },
+   "identity_basis": "room_ptr",
+   "l4_summary": {
+    "match": 4,
+    "mismatch": 0,
+    "blocked": 0,
+    "error": 0
+   },
+   "stdout_tail": [
+    "     帧 tag              状态                 差异像素       /总像素",
+    "------------------------------------------------------------------------------",
+    "   900 pre              ✅一致                   0      61440",
+    "   960 f60              ✅一致                   0      61440",
+    "  1860 f960             ✅一致                   0      61440",
+    "  1920 end              ✅一致                   0      61440",
+    "------------------------------------------------------------------------------",
+    "汇总：一致 4 · 失配 0 · 缺口阻塞 0 · 错误 0（共 4）",
+    "总评：✅ 全部一致（L4 帧对拍通过）",
+    "=============================================================================="
+   ],
+   "anchors": {
+    "scenario_sha256": "529825cce34188d874fd2c0f48bee3722b838cdc534f33c4e071eec1cc8d0070",
+    "rom_sha256": "e6e6b7014685adae447ebb3833242815747bc1e5df83ade79f693fb67cf565b6",
+    "sched_sha256": "28cb1498bcc4e171272d08a74ad1f0846c9648b626e603d27713882a5985a69e"
+   },
+   "layers": {
+    "pre": "clean",
+    "f60": "clean",
+    "f960": "nametable",
+    "end": "nametable"
+   },
+   "ppu_diff": {
+    "pre": {
+     "chr": 0,
+     "nt0": 0,
+     "nt1": 0,
+     "nt2": 0,
+     "nt3": 0,
+     "palette": 0,
+     "rust_scroll": [
+      0,
+      0,
+      144
+     ]
+    },
+    "f60": {
+     "chr": 0,
+     "nt0": 0,
+     "nt1": 0,
+     "nt2": 0,
+     "nt3": 0,
+     "palette": 0,
+     "rust_scroll": [
+      116,
+      0,
+      144
+     ]
+    },
+    "f960": {
+     "chr": 0,
+     "nt0": 0,
+     "nt1": 573,
+     "nt2": 573,
+     "nt3": 0,
+     "palette": 0,
+     "rust_scroll": [
+      0,
+      0,
+      147
+     ]
+    },
+    "end": {
+     "chr": 0,
+     "nt0": 0,
+     "nt1": 573,
+     "nt2": 573,
+     "nt3": 0,
+     "palette": 0,
+     "rust_scroll": [
+      0,
+      0,
+      147
+     ]
+    }
+   },
+   "l4_pass": 4,
+   "l4_fail": 0,
+   "l4_gap": false,
+   "l4_captures": 4,
+   "wall_s": 48.6
+  },
+  {
+   "area": 0,
+   "area_name": "Brinstar",
+   "room": 7,
+   "status": "mismatch",
+   "ok": false,
+   "diff_pixels": {
+    "pre": 0,
+    "f60": 41,
+    "f960": 148,
+    "end": 148
+   },
+   "captures": [
+    {
+     "frame": 900,
+     "tag": "pre",
+     "status": "match",
+     "diff_pixels": 0,
+     "total_pixels": 61440,
+     "whitelist_hits": 0,
+     "file": "_tmp_sweep_477987-1795098209_a0_r07_f00900_pre.png",
+     "rust_sha256": "10a60c8a34913227800a6bc653cf6faab65094b9d4fd5492087d10fc0678b497",
+     "ppu": {
+      "chr": 0,
+      "nt0": 0,
+      "nt1": 0,
+      "nt2": 0,
+      "nt3": 0,
+      "palette": 0,
+      "rust_scroll": [
+       0,
+       0,
+       144
+      ]
+     },
+     "shift": null,
+     "layer": "clean"
+    },
+    {
+     "frame": 960,
+     "tag": "f60",
+     "status": "diff",
+     "diff_pixels": 41,
+     "total_pixels": 61440,
+     "whitelist_hits": 0,
+     "file": "_tmp_sweep_477987-1795098209_a0_r07_f00960_f60.png",
+     "rust_sha256": "8f26d959f83f49a172ce89aee766db07e98dc5478fa52d22adb72d4611fe8c62",
+     "ppu": {
+      "chr": 0,
+      "nt0": 0,
+      "nt1": 8,
+      "nt2": 0,
+      "nt3": 8,
+      "palette": 0,
+      "rust_scroll": [
+       116,
+       0,
+       144
+      ]
+     },
+     "shift": {
+      "dx": 0,
+      "dy": 0,
+      "residual_px": 41,
+      "raw_px": 41,
+      "explains": false
+     },
+     "layer": "nametable"
+    },
+    {
+     "frame": 1860,
+     "tag": "f960",
+     "status": "diff",
+     "diff_pixels": 148,
+     "total_pixels": 61440,
+     "whitelist_hits": 0,
+     "file": "_tmp_sweep_477987-1795098209_a0_r07_f01860_f960.png",
+     "rust_sha256": "d41abbfa00154e548dca895b4d0d393f09a1b38a0a0e57d1e0d95daa696d9a7b",
+     "ppu": {
+      "chr": 0,
+      "nt0": 0,
+      "nt1": 460,
+      "nt2": 456,
+      "nt3": 8,
+      "palette": 0,
+      "rust_scroll": [
+       0,
+       0,
+       147
+      ]
+     },
+     "shift": {
+      "dx": 0,
+      "dy": 0,
+      "residual_px": 148,
+      "raw_px": 148,
+      "explains": false
+     },
+     "layer": "nametable"
+    },
+    {
+     "frame": 1920,
+     "tag": "end",
+     "status": "diff",
+     "diff_pixels": 148,
+     "total_pixels": 61440,
+     "whitelist_hits": 0,
+     "file": "_tmp_sweep_477987-1795098209_a0_r07_f01920_end.png",
+     "rust_sha256": "5b5891fe446487b3a627c8566dc5fcd88592a1014de92a7011f0816217025442",
+     "ppu": {
+      "chr": 0,
+      "nt0": 0,
+      "nt1": 460,
+      "nt2": 456,
+      "nt3": 8,
+      "palette": 0,
+      "rust_scroll": [
+       0,
+       0,
+       147
+      ]
+     },
+     "shift": {
+      "dx": 0,
+      "dy": 0,
+      "residual_px": 148,
+      "raw_px": 148,
+      "explains": false
+     },
+     "layer": "nametable"
+    }
+   ],
+   "entry_preset_version": "v1",
+   "entry_frame": 900,
+   "notes": [
+    "最大失配 148 px"
+   ],
+   "l4_exit": 1,
+   "room_load": {
+    "trace": "analysis/traces/_tmp_sweep_477987-1795098209_a0_r07.frames.jsonl",
+    "accepted": true,
+    "load_chain": true,
+    "identity_basis": "room_ptr",
+    "identity_ok": true,
+    "expected_room_ptr": "A55A",
+    "mr_at_entry": 3,
+    "mr_at_end": 3,
+    "mr_window_ok": true,
+    "room_at_end": 255,
+    "back_to_ff_frame": 905,
+    "room_frames": [
+     "901:07",
+     "902:F1",
+     "903:F1",
+     "904:F3",
+     "905:FF"
+    ],
+    "scroll_x_end": 0,
+    "scroll_x_post_entry": [
+     3,
+     4,
+     4,
+     6,
+     8,
+     10
+    ],
+    "mr_window": {
+     "900": 3,
+     "901": 3,
+     "902": 3,
+     "903": 3,
+     "904": 3,
+     "905": 3,
+     "906": 3
+    },
+    "mr_window_missing": [],
+    "left_gameengine_frames": [],
+    "ff_markers": [
+     "902:F1",
+     "903:F1",
+     "904:F3"
+    ],
+    "room_ptr_region": "A55A..A587",
+    "room_ptr_hits": [
+     901,
+     902,
+     903,
+     904,
+     905,
+     906
+    ],
+    "room_number_hits": [
+     900,
+     901
+    ]
+   },
+   "identity_basis": "room_ptr",
+   "l4_summary": {
+    "match": 1,
+    "mismatch": 3,
+    "blocked": 0,
+    "error": 0
+   },
+   "stdout_tail": [
+    "     帧 tag              状态                 差异像素       /总像素",
+    "------------------------------------------------------------------------------",
+    "   900 pre              ✅一致                   0      61440",
+    "   960 f60              ❌失配                  41      61440",
+    "  1860 f960             ❌失配                 148      61440",
+    "  1920 end              ❌失配                 148      61440",
+    "------------------------------------------------------------------------------",
+    "汇总：一致 1 · 失配 3 · 缺口阻塞 0 · 错误 0（共 4）",
+    "总评：❌ 未全一致（1/4 通过，3 采集点像素失配）",
+    "=============================================================================="
+   ],
+   "anchors": {
+    "scenario_sha256": "65ecd305a99e8a608c289c2fb2163c6001d594ef43e815928ffcfd1101b56bfd",
+    "rom_sha256": "e6e6b7014685adae447ebb3833242815747bc1e5df83ade79f693fb67cf565b6",
+    "sched_sha256": "b702c041dd21f8cc9dccb4c47986dfa2f017745c5552c28e840eb509eaf2de6a"
+   },
+   "layers": {
+    "pre": "clean",
+    "f60": "nametable",
+    "f960": "nametable",
+    "end": "nametable"
+   },
+   "ppu_diff": {
+    "pre": {
+     "chr": 0,
+     "nt0": 0,
+     "nt1": 0,
+     "nt2": 0,
+     "nt3": 0,
+     "palette": 0,
+     "rust_scroll": [
+      0,
+      0,
+      144
+     ]
+    },
+    "f60": {
+     "chr": 0,
+     "nt0": 0,
+     "nt1": 8,
+     "nt2": 0,
+     "nt3": 8,
+     "palette": 0,
+     "rust_scroll": [
+      116,
+      0,
+      144
+     ]
+    },
+    "f960": {
+     "chr": 0,
+     "nt0": 0,
+     "nt1": 460,
+     "nt2": 456,
+     "nt3": 8,
+     "palette": 0,
+     "rust_scroll": [
+      0,
+      0,
+      147
+     ]
+    },
+    "end": {
+     "chr": 0,
+     "nt0": 0,
+     "nt1": 460,
+     "nt2": 456,
+     "nt3": 8,
+     "palette": 0,
+     "rust_scroll": [
+      0,
+      0,
+      147
+     ]
+    }
+   },
+   "l4_pass": 1,
+   "l4_fail": 3,
+   "l4_gap": false,
+   "l4_captures": 4,
+   "mismatch": [
+    {
+     "frame": 960,
+     "tag": "f60",
+     "status": "diff",
+     "diff_pixels": 41,
+     "total_pixels": 61440,
+     "whitelist_hits": 0,
+     "file": "_tmp_sweep_477987-1795098209_a0_r07_f00960_f60.png",
+     "rust_sha256": "8f26d959f83f49a172ce89aee766db07e98dc5478fa52d22adb72d4611fe8c62",
+     "ppu": {
+      "chr": 0,
+      "nt0": 0,
+      "nt1": 8,
+      "nt2": 0,
+      "nt3": 8,
+      "palette": 0,
+      "rust_scroll": [
+       116,
+       0,
+       144
+      ]
+     },
+     "shift": {
+      "dx": 0,
+      "dy": 0,
+      "residual_px": 41,
+      "raw_px": 41,
+      "explains": false
+     },
+     "layer": "nametable"
+    },
+    {
+     "frame": 1860,
+     "tag": "f960",
+     "status": "diff",
+     "diff_pixels": 148,
+     "total_pixels": 61440,
+     "whitelist_hits": 0,
+     "file": "_tmp_sweep_477987-1795098209_a0_r07_f01860_f960.png",
+     "rust_sha256": "d41abbfa00154e548dca895b4d0d393f09a1b38a0a0e57d1e0d95daa696d9a7b",
+     "ppu": {
+      "chr": 0,
+      "nt0": 0,
+      "nt1": 460,
+      "nt2": 456,
+      "nt3": 8,
+      "palette": 0,
+      "rust_scroll": [
+       0,
+       0,
+       147
+      ]
+     },
+     "shift": {
+      "dx": 0,
+      "dy": 0,
+      "residual_px": 148,
+      "raw_px": 148,
+      "explains": false
+     },
+     "layer": "nametable"
+    },
+    {
+     "frame": 1920,
+     "tag": "end",
+     "status": "diff",
+     "diff_pixels": 148,
+     "total_pixels": 61440,
+     "whitelist_hits": 0,
+     "file": "_tmp_sweep_477987-1795098209_a0_r07_f01920_end.png",
+     "rust_sha256": "5b5891fe446487b3a627c8566dc5fcd88592a1014de92a7011f0816217025442",
+     "ppu": {
+      "chr": 0,
+      "nt0": 0,
+      "nt1": 460,
+      "nt2": 456,
+      "nt3": 8,
+      "palette": 0,
+      "rust_scroll": [
+       0,
+       0,
+       147
+      ]
+     },
+     "shift": {
+      "dx": 0,
+      "dy": 0,
+      "residual_px": 148,
+      "raw_px": 148,
+      "explains": false
+     },
+     "layer": "nametable"
+    }
+   ],
+   "wall_s": 49.3
+  },
+  {
+   "area": 0,
+   "area_name": "Brinstar",
+   "room": 9,
+   "status": "ok",
+   "ok": true,
+   "diff_pixels": {
+    "pre": 0,
+    "f60": 0,
+    "f960": 0,
+    "end": 0
+   },
+   "captures": [
+    {
+     "frame": 900,
+     "tag": "pre",
+     "status": "match",
+     "diff_pixels": 0,
+     "total_pixels": 61440,
+     "whitelist_hits": 0,
+     "file": "_tmp_sweep_477987-1795098209_a0_r09_f00900_pre.png",
+     "rust_sha256": "10a60c8a34913227800a6bc653cf6faab65094b9d4fd5492087d10fc0678b497",
+     "ppu": {
+      "chr": 0,
+      "nt0": 0,
+      "nt1": 0,
+      "nt2": 0,
+      "nt3": 0,
+      "palette": 0,
+      "rust_scroll": [
+       0,
+       0,
+       144
+      ]
+     },
+     "shift": null,
+     "layer": "clean"
+    },
+    {
+     "frame": 960,
+     "tag": "f60",
+     "status": "match",
+     "diff_pixels": 0,
+     "total_pixels": 61440,
+     "whitelist_hits": 0,
+     "file": "_tmp_sweep_477987-1795098209_a0_r09_f00960_f60.png",
+     "rust_sha256": "303c47ba15fe8776643a8d9b1ffb0b6032463cdfa68632cc7586a23b058ed895",
+     "ppu": {
+      "chr": 0,
+      "nt0": 0,
+      "nt1": 0,
+      "nt2": 0,
+      "nt3": 0,
+      "palette": 0,
+      "rust_scroll": [
+       116,
+       0,
+       144
+      ]
+     },
+     "shift": null,
+     "layer": "clean"
+    },
+    {
+     "frame": 1860,
+     "tag": "f960",
+     "status": "match",
+     "diff_pixels": 0,
+     "total_pixels": 61440,
+     "whitelist_hits": 0,
+     "file": "_tmp_sweep_477987-1795098209_a0_r09_f01860_f960.png",
+     "rust_sha256": "34d4c2bd06a595dc6dcadbbed6d00fafff4aae053b1de6a976fd27c90d67862b",
+     "ppu": {
+      "chr": 0,
+      "nt0": 0,
+      "nt1": 0,
+      "nt2": 0,
+      "nt3": 0,
+      "palette": 0,
+      "rust_scroll": [
+       0,
+       0,
+       147
+      ]
+     },
+     "shift": null,
+     "layer": "clean"
+    },
+    {
+     "frame": 1920,
+     "tag": "end",
+     "status": "match",
+     "diff_pixels": 0,
+     "total_pixels": 61440,
+     "whitelist_hits": 0,
+     "file": "_tmp_sweep_477987-1795098209_a0_r09_f01920_end.png",
+     "rust_sha256": "34d4c2bd06a595dc6dcadbbed6d00fafff4aae053b1de6a976fd27c90d67862b",
+     "ppu": {
+      "chr": 0,
+      "nt0": 0,
+      "nt1": 0,
+      "nt2": 0,
+      "nt3": 0,
+      "palette": 0,
+      "rust_scroll": [
+       0,
+       0,
+       147
+      ]
+     },
+     "shift": null,
+     "layer": "clean"
+    }
+   ],
+   "entry_preset_version": "v1",
+   "entry_frame": 900,
+   "notes": [],
+   "l4_exit": 0,
+   "room_load": {
+    "trace": "analysis/traces/_tmp_sweep_477987-1795098209_a0_r09.frames.jsonl",
+    "accepted": true,
+    "load_chain": true,
+    "identity_basis": "room_ptr",
+    "identity_ok": true,
+    "expected_room_ptr": "A5B9",
+    "mr_at_entry": 3,
+    "mr_at_end": 3,
+    "mr_window_ok": true,
+    "room_at_end": 255,
+    "back_to_ff_frame": 905,
+    "room_frames": [
+     "901:09",
+     "902:F0",
+     "903:F1",
+     "904:F3",
+     "905:FF"
+    ],
+    "scroll_x_end": 0,
+    "scroll_x_post_entry": [
+     3,
+     3,
+     4,
+     6,
+     8,
+     10
+    ],
+    "mr_window": {
+     "900": 3,
+     "901": 3,
+     "902": 3,
+     "903": 3,
+     "904": 3,
+     "905": 3,
+     "906": 3
+    },
+    "mr_window_missing": [],
+    "left_gameengine_frames": [],
+    "ff_markers": [
+     "902:F0",
+     "903:F1",
+     "904:F3"
+    ],
+    "room_ptr_region": "A5B9..A5DD",
+    "room_ptr_hits": [
+     900,
+     901,
+     902,
+     903,
+     904,
+     905
+    ],
+    "room_number_hits": [
+     900,
+     901
+    ]
+   },
+   "identity_basis": "room_ptr",
+   "l4_summary": {
+    "match": 4,
+    "mismatch": 0,
+    "blocked": 0,
+    "error": 0
+   },
+   "stdout_tail": [
+    "     帧 tag              状态                 差异像素       /总像素",
+    "------------------------------------------------------------------------------",
+    "   900 pre              ✅一致                   0      61440",
+    "   960 f60              ✅一致                   0      61440",
+    "  1860 f960             ✅一致                   0      61440",
+    "  1920 end              ✅一致                   0      61440",
+    "------------------------------------------------------------------------------",
+    "汇总：一致 4 · 失配 0 · 缺口阻塞 0 · 错误 0（共 4）",
+    "总评：✅ 全部一致（L4 帧对拍通过）",
+    "=============================================================================="
+   ],
+   "anchors": {
+    "scenario_sha256": "52e4173bd778efee219c0a072e7dbf2ad77be43c7aa03fd1790aa3eb48aa38bd",
+    "rom_sha256": "e6e6b7014685adae447ebb3833242815747bc1e5df83ade79f693fb67cf565b6",
+    "sched_sha256": "8287ba9b2b8aa72ff54bcfd1fa3af3231087e8a2ded407cb6fafbdc44a757344"
+   },
+   "layers": {
+    "pre": "clean",
+    "f60": "clean",
+    "f960": "clean",
+    "end": "clean"
+   },
+   "ppu_diff": {
+    "pre": {
+     "chr": 0,
+     "nt0": 0,
+     "nt1": 0,
+     "nt2": 0,
+     "nt3": 0,
+     "palette": 0,
+     "rust_scroll": [
+      0,
+      0,
+      144
+     ]
+    },
+    "f60": {
+     "chr": 0,
+     "nt0": 0,
+     "nt1": 0,
+     "nt2": 0,
+     "nt3": 0,
+     "palette": 0,
+     "rust_scroll": [
+      116,
+      0,
+      144
+     ]
+    },
+    "f960": {
+     "chr": 0,
+     "nt0": 0,
+     "nt1": 0,
+     "nt2": 0,
+     "nt3": 0,
+     "palette": 0,
+     "rust_scroll": [
+      0,
+      0,
+      147
+     ]
+    },
+    "end": {
+     "chr": 0,
+     "nt0": 0,
+     "nt1": 0,
+     "nt2": 0,
+     "nt3": 0,
+     "palette": 0,
+     "rust_scroll": [
+      0,
+      0,
+      147
+     ]
+    }
+   },
+   "l4_pass": 4,
+   "l4_fail": 0,
+   "l4_gap": false,
+   "l4_captures": 4,
+   "wall_s": 46.9
+  },
+  {
+   "area": 0,
+   "area_name": "Brinstar",
+   "room": 10,
+   "status": "mismatch",
+   "ok": false,
+   "diff_pixels": {
+    "pre": 0,
+    "f60": 0,
+    "f960": 184,
+    "end": 184
+   },
+   "captures": [
+    {
+     "frame": 900,
+     "tag": "pre",
+     "status": "match",
+     "diff_pixels": 0,
+     "total_pixels": 61440,
+     "whitelist_hits": 0,
+     "file": "_tmp_sweep_477987-1795098209_a0_r10_f00900_pre.png",
+     "rust_sha256": "10a60c8a34913227800a6bc653cf6faab65094b9d4fd5492087d10fc0678b497",
+     "ppu": {
+      "chr": 0,
+      "nt0": 0,
+      "nt1": 0,
+      "nt2": 0,
+      "nt3": 0,
+      "palette": 0,
+      "rust_scroll": [
+       0,
+       0,
+       144
+      ]
+     },
+     "shift": null,
+     "layer": "clean"
+    },
+    {
+     "frame": 960,
+     "tag": "f60",
+     "status": "match",
+     "diff_pixels": 0,
+     "total_pixels": 61440,
+     "whitelist_hits": 0,
+     "file": "_tmp_sweep_477987-1795098209_a0_r10_f00960_f60.png",
+     "rust_sha256": "fbf511979ece01fbc7b85c0d27121c5ac0a1dd7b99d62202722641c86e9f71b1",
+     "ppu": {
+      "chr": 0,
+      "nt0": 0,
+      "nt1": 8,
+      "nt2": 0,
+      "nt3": 8,
+      "palette": 0,
+      "rust_scroll": [
+       116,
+       0,
+       144
+      ]
+     },
+     "shift": null,
+     "layer": "nametable"
+    },
+    {
+     "frame": 1860,
+     "tag": "f960",
+     "status": "diff",
+     "diff_pixels": 184,
+     "total_pixels": 61440,
+     "whitelist_hits": 0,
+     "file": "_tmp_sweep_477987-1795098209_a0_r10_f01860_f960.png",
+     "rust_sha256": "da1373338ecfa4ddd542774037a866c4baed5130c7e6dd097a44132bef84697b",
+     "ppu": {
+      "chr": 0,
+      "nt0": 0,
+      "nt1": 734,
+      "nt2": 740,
+      "nt3": 14,
+      "palette": 0,
+      "rust_scroll": [
+       0,
+       0,
+       147
+      ]
+     },
+     "shift": {
+      "dx": 0,
+      "dy": 0,
+      "residual_px": 184,
+      "raw_px": 184,
+      "explains": false
+     },
+     "layer": "nametable"
+    },
+    {
+     "frame": 1920,
+     "tag": "end",
+     "status": "diff",
+     "diff_pixels": 184,
+     "total_pixels": 61440,
+     "whitelist_hits": 0,
+     "file": "_tmp_sweep_477987-1795098209_a0_r10_f01920_end.png",
+     "rust_sha256": "da1373338ecfa4ddd542774037a866c4baed5130c7e6dd097a44132bef84697b",
+     "ppu": {
+      "chr": 0,
+      "nt0": 0,
+      "nt1": 734,
+      "nt2": 740,
+      "nt3": 14,
+      "palette": 0,
+      "rust_scroll": [
+       0,
+       0,
+       147
+      ]
+     },
+     "shift": {
+      "dx": 0,
+      "dy": 0,
+      "residual_px": 184,
+      "raw_px": 184,
+      "explains": false
+     },
+     "layer": "nametable"
+    }
+   ],
+   "entry_preset_version": "v1",
+   "entry_frame": 900,
+   "notes": [
+    "最大失配 184 px"
+   ],
+   "l4_exit": 1,
+   "room_load": {
+    "trace": "analysis/traces/_tmp_sweep_477987-1795098209_a0_r10.frames.jsonl",
+    "accepted": true,
+    "load_chain": true,
+    "identity_basis": "room_ptr",
+    "identity_ok": true,
+    "expected_room_ptr": "A5DD",
+    "mr_at_entry": 3,
+    "mr_at_end": 3,
+    "mr_window_ok": true,
+    "room_at_end": 255,
+    "back_to_ff_frame": 905,
+    "room_frames": [
+     "901:0A",
+     "902:0A",
+     "903:F1",
+     "904:F3",
+     "905:FF"
+    ],
+    "scroll_x_end": 0,
+    "scroll_x_post_entry": [
+     3,
+     3,
+     4,
+     6,
+     8,
+     10
+    ],
+    "mr_window": {
+     "900": 3,
+     "901": 3,
+     "902": 3,
+     "903": 3,
+     "904": 3,
+     "905": 3,
+     "906": 3
+    },
+    "mr_window_missing": [],
+    "left_gameengine_frames": [],
+    "ff_markers": [
+     "903:F1",
+     "904:F3"
+    ],
+    "room_ptr_region": "A5DD..A615",
+    "room_ptr_hits": [
+     901,
+     902,
+     903,
+     904,
+     905,
+     906
+    ],
+    "room_number_hits": [
+     900,
+     901,
+     902
+    ]
+   },
+   "identity_basis": "room_ptr",
+   "l4_summary": {
+    "match": 2,
+    "mismatch": 2,
+    "blocked": 0,
+    "error": 0
+   },
+   "stdout_tail": [
+    "     帧 tag              状态                 差异像素       /总像素",
+    "------------------------------------------------------------------------------",
+    "   900 pre              ✅一致                   0      61440",
+    "   960 f60              ✅一致                   0      61440",
+    "  1860 f960             ❌失配                 184      61440",
+    "  1920 end              ❌失配                 184      61440",
+    "------------------------------------------------------------------------------",
+    "汇总：一致 2 · 失配 2 · 缺口阻塞 0 · 错误 0（共 4）",
+    "总评：❌ 未全一致（2/4 通过，2 采集点像素失配）",
+    "=============================================================================="
+   ],
+   "anchors": {
+    "scenario_sha256": "f9c74a0b754493800bf275c6207c3e78e8b5b0a69360d4b811f3c3c912e22838",
+    "rom_sha256": "e6e6b7014685adae447ebb3833242815747bc1e5df83ade79f693fb67cf565b6",
+    "sched_sha256": "f58abefc646d5366e7ba6356e0fe74a3dc9ea153a318c9db3ec58653a2b22666"
+   },
+   "layers": {
+    "pre": "clean",
+    "f60": "nametable",
+    "f960": "nametable",
+    "end": "nametable"
+   },
+   "ppu_diff": {
+    "pre": {
+     "chr": 0,
+     "nt0": 0,
+     "nt1": 0,
+     "nt2": 0,
+     "nt3": 0,
+     "palette": 0,
+     "rust_scroll": [
+      0,
+      0,
+      144
+     ]
+    },
+    "f60": {
+     "chr": 0,
+     "nt0": 0,
+     "nt1": 8,
+     "nt2": 0,
+     "nt3": 8,
+     "palette": 0,
+     "rust_scroll": [
+      116,
+      0,
+      144
+     ]
+    },
+    "f960": {
+     "chr": 0,
+     "nt0": 0,
+     "nt1": 734,
+     "nt2": 740,
+     "nt3": 14,
+     "palette": 0,
+     "rust_scroll": [
+      0,
+      0,
+      147
+     ]
+    },
+    "end": {
+     "chr": 0,
+     "nt0": 0,
+     "nt1": 734,
+     "nt2": 740,
+     "nt3": 14,
+     "palette": 0,
+     "rust_scroll": [
+      0,
+      0,
+      147
+     ]
+    }
+   },
+   "l4_pass": 2,
+   "l4_fail": 2,
+   "l4_gap": false,
+   "l4_captures": 4,
+   "mismatch": [
+    {
+     "frame": 1860,
+     "tag": "f960",
+     "status": "diff",
+     "diff_pixels": 184,
+     "total_pixels": 61440,
+     "whitelist_hits": 0,
+     "file": "_tmp_sweep_477987-1795098209_a0_r10_f01860_f960.png",
+     "rust_sha256": "da1373338ecfa4ddd542774037a866c4baed5130c7e6dd097a44132bef84697b",
+     "ppu": {
+      "chr": 0,
+      "nt0": 0,
+      "nt1": 734,
+      "nt2": 740,
+      "nt3": 14,
+      "palette": 0,
+      "rust_scroll": [
+       0,
+       0,
+       147
+      ]
+     },
+     "shift": {
+      "dx": 0,
+      "dy": 0,
+      "residual_px": 184,
+      "raw_px": 184,
+      "explains": false
+     },
+     "layer": "nametable"
+    },
+    {
+     "frame": 1920,
+     "tag": "end",
+     "status": "diff",
+     "diff_pixels": 184,
+     "total_pixels": 61440,
+     "whitelist_hits": 0,
+     "file": "_tmp_sweep_477987-1795098209_a0_r10_f01920_end.png",
+     "rust_sha256": "da1373338ecfa4ddd542774037a866c4baed5130c7e6dd097a44132bef84697b",
+     "ppu": {
+      "chr": 0,
+      "nt0": 0,
+      "nt1": 734,
+      "nt2": 740,
+      "nt3": 14,
+      "palette": 0,
+      "rust_scroll": [
+       0,
+       0,
+       147
+      ]
+     },
+     "shift": {
+      "dx": 0,
+      "dy": 0,
+      "residual_px": 184,
+      "raw_px": 184,
+      "explains": false
+     },
+     "layer": "nametable"
+    }
+   ],
+   "wall_s": 47.4
+  },
+  {
+   "area": 0,
+   "area_name": "Brinstar",
+   "room": 11,
+   "status": "mismatch",
+   "ok": false,
+   "diff_pixels": {
+    "pre": 0,
+    "f60": 256,
+    "f960": 256,
+    "end": 256
+   },
+   "captures": [
+    {
+     "frame": 900,
+     "tag": "pre",
+     "status": "match",
+     "diff_pixels": 0,
+     "total_pixels": 61440,
+     "whitelist_hits": 0,
+     "file": "_tmp_sweep_477987-1795098209_a0_r11_f00900_pre.png",
+     "rust_sha256": "10a60c8a34913227800a6bc653cf6faab65094b9d4fd5492087d10fc0678b497",
+     "ppu": {
+      "chr": 0,
+      "nt0": 0,
+      "nt1": 0,
+      "nt2": 0,
+      "nt3": 0,
+      "palette": 0,
+      "rust_scroll": [
+       0,
+       0,
+       144
+      ]
+     },
+     "shift": null,
+     "layer": "clean"
+    },
+    {
+     "frame": 960,
+     "tag": "f60",
+     "status": "diff",
+     "diff_pixels": 256,
+     "total_pixels": 61440,
+     "whitelist_hits": 0,
+     "file": "_tmp_sweep_477987-1795098209_a0_r11_f00960_f60.png",
+     "rust_sha256": "8ee20e4b4386bfc438779530a60b355c3048004a7520b50385bc9af098207584",
+     "ppu": {
+      "chr": 0,
+      "nt0": 0,
+      "nt1": 16,
+      "nt2": 0,
+      "nt3": 16,
+      "palette": 0,
+      "rust_scroll": [
+       116,
+       0,
+       144
+      ]
+     },
+     "shift": {
+      "dx": 0,
+      "dy": 0,
+      "residual_px": 256,
+      "raw_px": 256,
+      "explains": false
+     },
+     "layer": "nametable"
+    },
+    {
+     "frame": 1860,
+     "tag": "f960",
+     "status": "diff",
+     "diff_pixels": 256,
+     "total_pixels": 61440,
+     "whitelist_hits": 0,
+     "file": "_tmp_sweep_477987-1795098209_a0_r11_f01860_f960.png",
+     "rust_sha256": "21e89e23c8b890a4b31594bb930e35906bf83bbdf2ca5007ef4736de33f8617a",
+     "ppu": {
+      "chr": 0,
+      "nt0": 0,
+      "nt1": 587,
+      "nt2": 597,
+      "nt3": 16,
+      "palette": 0,
+      "rust_scroll": [
+       0,
+       0,
+       147
+      ]
+     },
+     "shift": {
+      "dx": 0,
+      "dy": 0,
+      "residual_px": 256,
+      "raw_px": 256,
+      "explains": false
+     },
+     "layer": "nametable"
+    },
+    {
+     "frame": 1920,
+     "tag": "end",
+     "status": "diff",
+     "diff_pixels": 256,
+     "total_pixels": 61440,
+     "whitelist_hits": 0,
+     "file": "_tmp_sweep_477987-1795098209_a0_r11_f01920_end.png",
+     "rust_sha256": "21e89e23c8b890a4b31594bb930e35906bf83bbdf2ca5007ef4736de33f8617a",
+     "ppu": {
+      "chr": 0,
+      "nt0": 0,
+      "nt1": 587,
+      "nt2": 597,
+      "nt3": 16,
+      "palette": 0,
+      "rust_scroll": [
+       0,
+       0,
+       147
+      ]
+     },
+     "shift": {
+      "dx": 0,
+      "dy": 0,
+      "residual_px": 256,
+      "raw_px": 256,
+      "explains": false
+     },
+     "layer": "nametable"
+    }
+   ],
+   "entry_preset_version": "v1",
+   "entry_frame": 900,
+   "notes": [
+    "最大失配 256 px"
+   ],
+   "l4_exit": 1,
+   "room_load": {
+    "trace": "analysis/traces/_tmp_sweep_477987-1795098209_a0_r11.frames.jsonl",
+    "accepted": true,
+    "load_chain": true,
+    "identity_basis": "room_ptr",
+    "identity_ok": true,
+    "expected_room_ptr": "A615",
+    "mr_at_entry": 3,
+    "mr_at_end": 3,
+    "mr_window_ok": true,
+    "room_at_end": 255,
+    "back_to_ff_frame": 905,
+    "room_frames": [
+     "901:0B",
+     "902:F1",
+     "903:F1",
+     "904:F3",
+     "905:FF"
+    ],
+    "scroll_x_end": 0,
+    "scroll_x_post_entry": [
+     3,
+     4,
+     4,
+     6,
+     8,
+     10
+    ],
+    "mr_window": {
+     "900": 3,
+     "901": 3,
+     "902": 3,
+     "903": 3,
+     "904": 3,
+     "905": 3,
+     "906": 3
+    },
+    "mr_window_missing": [],
+    "left_gameengine_frames": [],
+    "ff_markers": [
+     "902:F1",
+     "903:F1",
+     "904:F3"
+    ],
+    "room_ptr_region": "A615..A635",
+    "room_ptr_hits": [
+     901,
+     902,
+     903,
+     904,
+     905,
+     906
+    ],
+    "room_number_hits": [
+     900,
+     901
+    ]
+   },
+   "identity_basis": "room_ptr",
+   "l4_summary": {
+    "match": 1,
+    "mismatch": 3,
+    "blocked": 0,
+    "error": 0
+   },
+   "stdout_tail": [
+    "     帧 tag              状态                 差异像素       /总像素",
+    "------------------------------------------------------------------------------",
+    "   900 pre              ✅一致                   0      61440",
+    "   960 f60              ❌失配                 256      61440",
+    "  1860 f960             ❌失配                 256      61440",
+    "  1920 end              ❌失配                 256      61440",
+    "------------------------------------------------------------------------------",
+    "汇总：一致 1 · 失配 3 · 缺口阻塞 0 · 错误 0（共 4）",
+    "总评：❌ 未全一致（1/4 通过，3 采集点像素失配）",
+    "=============================================================================="
+   ],
+   "anchors": {
+    "scenario_sha256": "73fcd907eec683a0dbd45bdc8e36afbebf3c6ad23023ee6f50a2a3a8044a4833",
+    "rom_sha256": "e6e6b7014685adae447ebb3833242815747bc1e5df83ade79f693fb67cf565b6",
+    "sched_sha256": "84bea6578693a226d9cf51661aaed35ab8b0e50f1b61e66aecb4276f7693b815"
+   },
+   "layers": {
+    "pre": "clean",
+    "f60": "nametable",
+    "f960": "nametable",
+    "end": "nametable"
+   },
+   "ppu_diff": {
+    "pre": {
+     "chr": 0,
+     "nt0": 0,
+     "nt1": 0,
+     "nt2": 0,
+     "nt3": 0,
+     "palette": 0,
+     "rust_scroll": [
+      0,
+      0,
+      144
+     ]
+    },
+    "f60": {
+     "chr": 0,
+     "nt0": 0,
+     "nt1": 16,
+     "nt2": 0,
+     "nt3": 16,
+     "palette": 0,
+     "rust_scroll": [
+      116,
+      0,
+      144
+     ]
+    },
+    "f960": {
+     "chr": 0,
+     "nt0": 0,
+     "nt1": 587,
+     "nt2": 597,
+     "nt3": 16,
+     "palette": 0,
+     "rust_scroll": [
+      0,
+      0,
+      147
+     ]
+    },
+    "end": {
+     "chr": 0,
+     "nt0": 0,
+     "nt1": 587,
+     "nt2": 597,
+     "nt3": 16,
+     "palette": 0,
+     "rust_scroll": [
+      0,
+      0,
+      147
+     ]
+    }
+   },
+   "l4_pass": 1,
+   "l4_fail": 3,
+   "l4_gap": false,
+   "l4_captures": 4,
+   "mismatch": [
+    {
+     "frame": 960,
+     "tag": "f60",
+     "status": "diff",
+     "diff_pixels": 256,
+     "total_pixels": 61440,
+     "whitelist_hits": 0,
+     "file": "_tmp_sweep_477987-1795098209_a0_r11_f00960_f60.png",
+     "rust_sha256": "8ee20e4b4386bfc438779530a60b355c3048004a7520b50385bc9af098207584",
+     "ppu": {
+      "chr": 0,
+      "nt0": 0,
+      "nt1": 16,
+      "nt2": 0,
+      "nt3": 16,
+      "palette": 0,
+      "rust_scroll": [
+       116,
+       0,
+       144
+      ]
+     },
+     "shift": {
+      "dx": 0,
+      "dy": 0,
+      "residual_px": 256,
+      "raw_px": 256,
+      "explains": false
+     },
+     "layer": "nametable"
+    },
+    {
+     "frame": 1860,
+     "tag": "f960",
+     "status": "diff",
+     "diff_pixels": 256,
+     "total_pixels": 61440,
+     "whitelist_hits": 0,
+     "file": "_tmp_sweep_477987-1795098209_a0_r11_f01860_f960.png",
+     "rust_sha256": "21e89e23c8b890a4b31594bb930e35906bf83bbdf2ca5007ef4736de33f8617a",
+     "ppu": {
+      "chr": 0,
+      "nt0": 0,
+      "nt1": 587,
+      "nt2": 597,
+      "nt3": 16,
+      "palette": 0,
+      "rust_scroll": [
+       0,
+       0,
+       147
+      ]
+     },
+     "shift": {
+      "dx": 0,
+      "dy": 0,
+      "residual_px": 256,
+      "raw_px": 256,
+      "explains": false
+     },
+     "layer": "nametable"
+    },
+    {
+     "frame": 1920,
+     "tag": "end",
+     "status": "diff",
+     "diff_pixels": 256,
+     "total_pixels": 61440,
+     "whitelist_hits": 0,
+     "file": "_tmp_sweep_477987-1795098209_a0_r11_f01920_end.png",
+     "rust_sha256": "21e89e23c8b890a4b31594bb930e35906bf83bbdf2ca5007ef4736de33f8617a",
+     "ppu": {
+      "chr": 0,
+      "nt0": 0,
+      "nt1": 587,
+      "nt2": 597,
+      "nt3": 16,
+      "palette": 0,
+      "rust_scroll": [
+       0,
+       0,
+       147
+      ]
+     },
+     "shift": {
+      "dx": 0,
+      "dy": 0,
+      "residual_px": 256,
+      "raw_px": 256,
+      "explains": false
+     },
+     "layer": "nametable"
+    }
+   ],
+   "wall_s": 47.0
+  },
+  {
+   "area": 0,
+   "area_name": "Brinstar",
+   "room": 12,
+   "status": "mismatch",
+   "ok": false,
+   "diff_pixels": {
+    "pre": 0,
+    "f60": 2885,
+    "f960": 3166,
+    "end": 3166
+   },
+   "captures": [
+    {
+     "frame": 900,
+     "tag": "pre",
+     "status": "match",
+     "diff_pixels": 0,
+     "total_pixels": 61440,
+     "whitelist_hits": 0,
+     "file": "_tmp_sweep_477987-1795098209_a0_r12_f00900_pre.png",
+     "rust_sha256": "10a60c8a34913227800a6bc653cf6faab65094b9d4fd5492087d10fc0678b497",
+     "ppu": {
+      "chr": 0,
+      "nt0": 0,
+      "nt1": 0,
+      "nt2": 0,
+      "nt3": 0,
+      "palette": 0,
+      "rust_scroll": [
+       0,
+       0,
+       144
+      ]
+     },
+     "shift": null,
+     "layer": "clean"
+    },
+    {
+     "frame": 960,
+     "tag": "f60",
+     "status": "diff",
+     "diff_pixels": 2885,
+     "total_pixels": 61440,
+     "whitelist_hits": 0,
+     "file": "_tmp_sweep_477987-1795098209_a0_r12_f00960_f60.png",
+     "rust_sha256": "13097948ba657aedce992d94ca8db0d2d3667343b3c476116b334c4cd48fe236",
+     "ppu": {
+      "chr": 0,
+      "nt0": 0,
+      "nt1": 14,
+      "nt2": 0,
+      "nt3": 14,
+      "palette": 0,
+      "rust_scroll": [
+       116,
+       0,
+       144
+      ]
+     },
+     "shift": {
+      "dx": 0,
+      "dy": 0,
+      "residual_px": 2885,
+      "raw_px": 2885,
+      "explains": false
+     },
+     "layer": "nametable"
+    },
+    {
+     "frame": 1860,
+     "tag": "f960",
+     "status": "diff",
+     "diff_pixels": 3166,
+     "total_pixels": 61440,
+     "whitelist_hits": 0,
+     "file": "_tmp_sweep_477987-1795098209_a0_r12_f01860_f960.png",
+     "rust_sha256": "4c7863b77b79416a70fc8402b56b4fdd330b333d8189fd145975bce36e5d5fbc",
+     "ppu": {
+      "chr": 0,
+      "nt0": 0,
+      "nt1": 545,
+      "nt2": 551,
+      "nt3": 14,
+      "palette": 0,
+      "rust_scroll": [
+       0,
+       0,
+       147
+      ]
+     },
+     "shift": {
+      "dx": 0,
+      "dy": 0,
+      "residual_px": 3166,
+      "raw_px": 3166,
+      "explains": false
+     },
+     "layer": "nametable"
+    },
+    {
+     "frame": 1920,
+     "tag": "end",
+     "status": "diff",
+     "diff_pixels": 3166,
+     "total_pixels": 61440,
+     "whitelist_hits": 0,
+     "file": "_tmp_sweep_477987-1795098209_a0_r12_f01920_end.png",
+     "rust_sha256": "84ad6052ed3e627bdc60a5c9421bf9122df3b388c065414572a1481da9db1196",
+     "ppu": {
+      "chr": 0,
+      "nt0": 0,
+      "nt1": 545,
+      "nt2": 551,
+      "nt3": 14,
+      "palette": 0,
+      "rust_scroll": [
+       0,
+       0,
+       147
+      ]
+     },
+     "shift": {
+      "dx": 0,
+      "dy": 0,
+      "residual_px": 3166,
+      "raw_px": 3166,
+      "explains": false
+     },
+     "layer": "nametable"
+    }
+   ],
+   "entry_preset_version": "v1",
+   "entry_frame": 900,
+   "notes": [
+    "最大失配 3166 px"
+   ],
+   "l4_exit": 1,
+   "room_load": {
+    "trace": "analysis/traces/_tmp_sweep_477987-1795098209_a0_r12.frames.jsonl",
+    "accepted": true,
+    "load_chain": true,
+    "identity_basis": "room_ptr",
+    "identity_ok": true,
+    "expected_room_ptr": "A635",
+    "mr_at_entry": 3,
+    "mr_at_end": 3,
+    "mr_window_ok": true,
+    "room_at_end": 255,
+    "back_to_ff_frame": 905,
+    "room_frames": [
+     "901:0C",
+     "902:F1",
+     "903:F1",
+     "904:F3",
+     "905:FF"
+    ],
+    "scroll_x_end": 0,
+    "scroll_x_post_entry": [
+     3,
+     4,
+     4,
+     6,
+     8,
+     10
+    ],
+    "mr_window": {
+     "900": 3,
+     "901": 3,
+     "902": 3,
+     "903": 3,
+     "904": 3,
+     "905": 3,
+     "906": 3
+    },
+    "mr_window_missing": [],
+    "left_gameengine_frames": [],
+    "ff_markers": [
+     "902:F1",
+     "903:F1",
+     "904:F3"
+    ],
+    "room_ptr_region": "A635..A661",
+    "room_ptr_hits": [
+     901,
+     902,
+     903,
+     904,
+     905,
+     906
+    ],
+    "room_number_hits": [
+     900,
+     901
+    ]
+   },
+   "identity_basis": "room_ptr",
+   "l4_summary": {
+    "match": 1,
+    "mismatch": 3,
+    "blocked": 0,
+    "error": 0
+   },
+   "stdout_tail": [
+    "     帧 tag              状态                 差异像素       /总像素",
+    "------------------------------------------------------------------------------",
+    "   900 pre              ✅一致                   0      61440",
+    "   960 f60              ❌失配                2885      61440",
+    "  1860 f960             ❌失配                3166      61440",
+    "  1920 end              ❌失配                3166      61440",
+    "------------------------------------------------------------------------------",
+    "汇总：一致 1 · 失配 3 · 缺口阻塞 0 · 错误 0（共 4）",
+    "总评：❌ 未全一致（1/4 通过，3 采集点像素失配）",
+    "=============================================================================="
+   ],
+   "anchors": {
+    "scenario_sha256": "a0f101648768df8dbf231c3063be86d07ce1578543570de467eb6680addbb1b8",
+    "rom_sha256": "e6e6b7014685adae447ebb3833242815747bc1e5df83ade79f693fb67cf565b6",
+    "sched_sha256": "b10e88ab58d0aa6d6050624a36d075b16555f9e404682fa158222ec288b10acc"
+   },
+   "layers": {
+    "pre": "clean",
+    "f60": "nametable",
+    "f960": "nametable",
+    "end": "nametable"
+   },
+   "ppu_diff": {
+    "pre": {
+     "chr": 0,
+     "nt0": 0,
+     "nt1": 0,
+     "nt2": 0,
+     "nt3": 0,
+     "palette": 0,
+     "rust_scroll": [
+      0,
+      0,
+      144
+     ]
+    },
+    "f60": {
+     "chr": 0,
+     "nt0": 0,
+     "nt1": 14,
+     "nt2": 0,
+     "nt3": 14,
+     "palette": 0,
+     "rust_scroll": [
+      116,
+      0,
+      144
+     ]
+    },
+    "f960": {
+     "chr": 0,
+     "nt0": 0,
+     "nt1": 545,
+     "nt2": 551,
+     "nt3": 14,
+     "palette": 0,
+     "rust_scroll": [
+      0,
+      0,
+      147
+     ]
+    },
+    "end": {
+     "chr": 0,
+     "nt0": 0,
+     "nt1": 545,
+     "nt2": 551,
+     "nt3": 14,
+     "palette": 0,
+     "rust_scroll": [
+      0,
+      0,
+      147
+     ]
+    }
+   },
+   "l4_pass": 1,
+   "l4_fail": 3,
+   "l4_gap": false,
+   "l4_captures": 4,
+   "mismatch": [
+    {
+     "frame": 960,
+     "tag": "f60",
+     "status": "diff",
+     "diff_pixels": 2885,
+     "total_pixels": 61440,
+     "whitelist_hits": 0,
+     "file": "_tmp_sweep_477987-1795098209_a0_r12_f00960_f60.png",
+     "rust_sha256": "13097948ba657aedce992d94ca8db0d2d3667343b3c476116b334c4cd48fe236",
+     "ppu": {
+      "chr": 0,
+      "nt0": 0,
+      "nt1": 14,
+      "nt2": 0,
+      "nt3": 14,
+      "palette": 0,
+      "rust_scroll": [
+       116,
+       0,
+       144
+      ]
+     },
+     "shift": {
+      "dx": 0,
+      "dy": 0,
+      "residual_px": 2885,
+      "raw_px": 2885,
+      "explains": false
+     },
+     "layer": "nametable"
+    },
+    {
+     "frame": 1860,
+     "tag": "f960",
+     "status": "diff",
+     "diff_pixels": 3166,
+     "total_pixels": 61440,
+     "whitelist_hits": 0,
+     "file": "_tmp_sweep_477987-1795098209_a0_r12_f01860_f960.png",
+     "rust_sha256": "4c7863b77b79416a70fc8402b56b4fdd330b333d8189fd145975bce36e5d5fbc",
+     "ppu": {
+      "chr": 0,
+      "nt0": 0,
+      "nt1": 545,
+      "nt2": 551,
+      "nt3": 14,
+      "palette": 0,
+      "rust_scroll": [
+       0,
+       0,
+       147
+      ]
+     },
+     "shift": {
+      "dx": 0,
+      "dy": 0,
+      "residual_px": 3166,
+      "raw_px": 3166,
+      "explains": false
+     },
+     "layer": "nametable"
+    },
+    {
+     "frame": 1920,
+     "tag": "end",
+     "status": "diff",
+     "diff_pixels": 3166,
+     "total_pixels": 61440,
+     "whitelist_hits": 0,
+     "file": "_tmp_sweep_477987-1795098209_a0_r12_f01920_end.png",
+     "rust_sha256": "84ad6052ed3e627bdc60a5c9421bf9122df3b388c065414572a1481da9db1196",
+     "ppu": {
+      "chr": 0,
+      "nt0": 0,
+      "nt1": 545,
+      "nt2": 551,
+      "nt3": 14,
+      "palette": 0,
+      "rust_scroll": [
+       0,
+       0,
+       147
+      ]
+     },
+     "shift": {
+      "dx": 0,
+      "dy": 0,
+      "residual_px": 3166,
+      "raw_px": 3166,
+      "explains": false
+     },
+     "layer": "nametable"
+    }
+   ],
+   "wall_s": 47.6
+  },
+  {
+   "area": 0,
+   "area_name": "Brinstar",
+   "room": 13,
+   "status": "mismatch",
+   "ok": false,
+   "diff_pixels": {
+    "pre": 0,
+    "f60": 0,
+    "f960": 5189,
+    "end": 5189
+   },
+   "captures": [
+    {
+     "frame": 900,
+     "tag": "pre",
+     "status": "match",
+     "diff_pixels": 0,
+     "total_pixels": 61440,
+     "whitelist_hits": 0,
+     "file": "_tmp_sweep_477987-1795098209_a0_r13_f00900_pre.png",
+     "rust_sha256": "10a60c8a34913227800a6bc653cf6faab65094b9d4fd5492087d10fc0678b497",
+     "ppu": {
+      "chr": 0,
+      "nt0": 0,
+      "nt1": 0,
+      "nt2": 0,
+      "nt3": 0,
+      "palette": 0,
+      "rust_scroll": [
+       0,
+       0,
+       144
+      ]
+     },
+     "shift": null,
+     "layer": "clean"
+    },
+    {
+     "frame": 960,
+     "tag": "f60",
+     "status": "match",
+     "diff_pixels": 0,
+     "total_pixels": 61440,
+     "whitelist_hits": 0,
+     "file": "_tmp_sweep_477987-1795098209_a0_r13_f00960_f60.png",
+     "rust_sha256": "c66988ec4b359d94267b2d847afc8d16842a4cb7585ff7995694bb3b49646c26",
+     "ppu": {
+      "chr": 0,
+      "nt0": 0,
+      "nt1": 16,
+      "nt2": 0,
+      "nt3": 16,
+      "palette": 0,
+      "rust_scroll": [
+       116,
+       0,
+       144
+      ]
+     },
+     "shift": null,
+     "layer": "nametable"
+    },
+    {
+     "frame": 1860,
+     "tag": "f960",
+     "status": "diff",
+     "diff_pixels": 5189,
+     "total_pixels": 61440,
+     "whitelist_hits": 0,
+     "file": "_tmp_sweep_477987-1795098209_a0_r13_f01860_f960.png",
+     "rust_sha256": "c8c893feb51ae7c842ed16405f8df92d0cc1c685540de1b7c290eb4e66b1f956",
+     "ppu": {
+      "chr": 0,
+      "nt0": 0,
+      "nt1": 536,
+      "nt2": 542,
+      "nt3": 22,
+      "palette": 0,
+      "rust_scroll": [
+       0,
+       0,
+       147
+      ]
+     },
+     "shift": {
+      "dx": 0,
+      "dy": 0,
+      "residual_px": 5189,
+      "raw_px": 5189,
+      "explains": false
+     },
+     "layer": "nametable"
+    },
+    {
+     "frame": 1920,
+     "tag": "end",
+     "status": "diff",
+     "diff_pixels": 5189,
+     "total_pixels": 61440,
+     "whitelist_hits": 0,
+     "file": "_tmp_sweep_477987-1795098209_a0_r13_f01920_end.png",
+     "rust_sha256": "2b5e9d4d6892fcabfb6a634ac21da2cdb73e65576aeda31d2eb32afe37ff1ac5",
+     "ppu": {
+      "chr": 0,
+      "nt0": 0,
+      "nt1": 536,
+      "nt2": 542,
+      "nt3": 22,
+      "palette": 0,
+      "rust_scroll": [
+       0,
+       0,
+       147
+      ]
+     },
+     "shift": {
+      "dx": 0,
+      "dy": 0,
+      "residual_px": 5189,
+      "raw_px": 5189,
+      "explains": false
+     },
+     "layer": "nametable"
+    }
+   ],
+   "entry_preset_version": "v1",
+   "entry_frame": 900,
+   "notes": [
+    "最大失配 5189 px"
+   ],
+   "l4_exit": 1,
+   "room_load": {
+    "trace": "analysis/traces/_tmp_sweep_477987-1795098209_a0_r13.frames.jsonl",
+    "accepted": true,
+    "load_chain": true,
+    "identity_basis": "room_ptr",
+    "identity_ok": true,
+    "expected_room_ptr": "A661",
+    "mr_at_entry": 3,
+    "mr_at_end": 3,
+    "mr_window_ok": true,
+    "room_at_end": 255,
+    "back_to_ff_frame": 905,
+    "room_frames": [
+     "901:0D",
+     "902:F1",
+     "903:F1",
+     "904:F3",
+     "905:FF"
+    ],
+    "scroll_x_end": 0,
+    "scroll_x_post_entry": [
+     3,
+     4,
+     4,
+     6,
+     8,
+     10
+    ],
+    "mr_window": {
+     "900": 3,
+     "901": 3,
+     "902": 3,
+     "903": 3,
+     "904": 3,
+     "905": 3,
+     "906": 3
+    },
+    "mr_window_missing": [],
+    "left_gameengine_frames": [],
+    "ff_markers": [
+     "902:F1",
+     "903:F1",
+     "904:F3"
+    ],
+    "room_ptr_region": "A661..A68D",
+    "room_ptr_hits": [
+     901,
+     902,
+     903,
+     904,
+     905,
+     906
+    ],
+    "room_number_hits": [
+     900,
+     901
+    ]
+   },
+   "identity_basis": "room_ptr",
+   "l4_summary": {
+    "match": 2,
+    "mismatch": 2,
+    "blocked": 0,
+    "error": 0
+   },
+   "stdout_tail": [
+    "     帧 tag              状态                 差异像素       /总像素",
+    "------------------------------------------------------------------------------",
+    "   900 pre              ✅一致                   0      61440",
+    "   960 f60              ✅一致                   0      61440",
+    "  1860 f960             ❌失配                5189      61440",
+    "  1920 end              ❌失配                5189      61440",
+    "------------------------------------------------------------------------------",
+    "汇总：一致 2 · 失配 2 · 缺口阻塞 0 · 错误 0（共 4）",
+    "总评：❌ 未全一致（2/4 通过，2 采集点像素失配）",
+    "=============================================================================="
+   ],
+   "anchors": {
+    "scenario_sha256": "aecbe2ea74469fcb9e61d26d36e6f31cf6477921e961d7c52349a6894f4989f4",
+    "rom_sha256": "e6e6b7014685adae447ebb3833242815747bc1e5df83ade79f693fb67cf565b6",
+    "sched_sha256": "75e2bf47210f0770e3c0bc0ac5fe4251e9efd3ee955f8050ed8553e65cdd42dc"
+   },
+   "layers": {
+    "pre": "clean",
+    "f60": "nametable",
+    "f960": "nametable",
+    "end": "nametable"
+   },
+   "ppu_diff": {
+    "pre": {
+     "chr": 0,
+     "nt0": 0,
+     "nt1": 0,
+     "nt2": 0,
+     "nt3": 0,
+     "palette": 0,
+     "rust_scroll": [
+      0,
+      0,
+      144
+     ]
+    },
+    "f60": {
+     "chr": 0,
+     "nt0": 0,
+     "nt1": 16,
+     "nt2": 0,
+     "nt3": 16,
+     "palette": 0,
+     "rust_scroll": [
+      116,
+      0,
+      144
+     ]
+    },
+    "f960": {
+     "chr": 0,
+     "nt0": 0,
+     "nt1": 536,
+     "nt2": 542,
+     "nt3": 22,
+     "palette": 0,
+     "rust_scroll": [
+      0,
+      0,
+      147
+     ]
+    },
+    "end": {
+     "chr": 0,
+     "nt0": 0,
+     "nt1": 536,
+     "nt2": 542,
+     "nt3": 22,
+     "palette": 0,
+     "rust_scroll": [
+      0,
+      0,
+      147
+     ]
+    }
+   },
+   "l4_pass": 2,
+   "l4_fail": 2,
+   "l4_gap": false,
+   "l4_captures": 4,
+   "mismatch": [
+    {
+     "frame": 1860,
+     "tag": "f960",
+     "status": "diff",
+     "diff_pixels": 5189,
+     "total_pixels": 61440,
+     "whitelist_hits": 0,
+     "file": "_tmp_sweep_477987-1795098209_a0_r13_f01860_f960.png",
+     "rust_sha256": "c8c893feb51ae7c842ed16405f8df92d0cc1c685540de1b7c290eb4e66b1f956",
+     "ppu": {
+      "chr": 0,
+      "nt0": 0,
+      "nt1": 536,
+      "nt2": 542,
+      "nt3": 22,
+      "palette": 0,
+      "rust_scroll": [
+       0,
+       0,
+       147
+      ]
+     },
+     "shift": {
+      "dx": 0,
+      "dy": 0,
+      "residual_px": 5189,
+      "raw_px": 5189,
+      "explains": false
+     },
+     "layer": "nametable"
+    },
+    {
+     "frame": 1920,
+     "tag": "end",
+     "status": "diff",
+     "diff_pixels": 5189,
+     "total_pixels": 61440,
+     "whitelist_hits": 0,
+     "file": "_tmp_sweep_477987-1795098209_a0_r13_f01920_end.png",
+     "rust_sha256": "2b5e9d4d6892fcabfb6a634ac21da2cdb73e65576aeda31d2eb32afe37ff1ac5",
+     "ppu": {
+      "chr": 0,
+      "nt0": 0,
+      "nt1": 536,
+      "nt2": 542,
+      "nt3": 22,
+      "palette": 0,
+      "rust_scroll": [
+       0,
+       0,
+       147
+      ]
+     },
+     "shift": {
+      "dx": 0,
+      "dy": 0,
+      "residual_px": 5189,
+      "raw_px": 5189,
+      "explains": false
+     },
+     "layer": "nametable"
+    }
+   ],
+   "wall_s": 46.4
+  },
+  {
+   "area": 0,
+   "area_name": "Brinstar",
+   "room": 14,
+   "status": "mismatch",
+   "ok": false,
+   "diff_pixels": {
+    "pre": 0,
+    "f60": 9132,
+    "f960": 488,
+    "end": 291
+   },
+   "captures": [
+    {
+     "frame": 900,
+     "tag": "pre",
+     "status": "match",
+     "diff_pixels": 0,
+     "total_pixels": 61440,
+     "whitelist_hits": 0,
+     "file": "_tmp_sweep_477987-1795098209_a0_r14_f00900_pre.png",
+     "rust_sha256": "10a60c8a34913227800a6bc653cf6faab65094b9d4fd5492087d10fc0678b497",
+     "ppu": {
+      "chr": 0,
+      "nt0": 0,
+      "nt1": 0,
+      "nt2": 0,
+      "nt3": 0,
+      "palette": 0,
+      "rust_scroll": [
+       0,
+       0,
+       144
+      ]
+     },
+     "shift": null,
+     "layer": "clean"
+    },
+    {
+     "frame": 960,
+     "tag": "f60",
+     "status": "diff",
+     "diff_pixels": 9132,
+     "total_pixels": 61440,
+     "whitelist_hits": 0,
+     "file": "_tmp_sweep_477987-1795098209_a0_r14_f00960_f60.png",
+     "rust_sha256": "a63ae7f924c92bead0cfb258d6667f9c45f96054c4fb5bde3b04e4e2e28d54c4",
+     "ppu": {
+      "chr": 0,
+      "nt0": 0,
+      "nt1": 0,
+      "nt2": 0,
+      "nt3": 0,
+      "palette": 0,
+      "rust_scroll": [
+       118,
+       0,
+       144
+      ]
+     },
+     "shift": {
+      "dx": 2,
+      "dy": 0,
+      "residual_px": 253,
+      "raw_px": 9132,
+      "explains": true
+     },
+     "layer": "scroll_drift"
+    },
+    {
+     "frame": 1860,
+     "tag": "f960",
+     "status": "diff",
+     "diff_pixels": 488,
+     "total_pixels": 61440,
+     "whitelist_hits": 0,
+     "file": "_tmp_sweep_477987-1795098209_a0_r14_f01860_f960.png",
+     "rust_sha256": "0fde2aa6c6fe693b369d9bdbfec70e8ad1a43e3d1bb3d06690fc6fdeb748e7b6",
+     "ppu": {
+      "chr": 0,
+      "nt0": 0,
+      "nt1": 476,
+      "nt2": 476,
+      "nt3": 0,
+      "palette": 0,
+      "rust_scroll": [
+       0,
+       0,
+       147
+      ]
+     },
+     "shift": {
+      "dx": 0,
+      "dy": 0,
+      "residual_px": 488,
+      "raw_px": 488,
+      "explains": false
+     },
+     "layer": "nametable"
+    },
+    {
+     "frame": 1920,
+     "tag": "end",
+     "status": "diff",
+     "diff_pixels": 291,
+     "total_pixels": 61440,
+     "whitelist_hits": 0,
+     "file": "_tmp_sweep_477987-1795098209_a0_r14_f01920_end.png",
+     "rust_sha256": "21b0aa252c924cb211f22a5abc6c35d2a3fb80938108b9c1ea61a0cf19dfa1e3",
+     "ppu": {
+      "chr": 0,
+      "nt0": 0,
+      "nt1": 476,
+      "nt2": 476,
+      "nt3": 0,
+      "palette": 0,
+      "rust_scroll": [
+       0,
+       0,
+       147
+      ]
+     },
+     "shift": {
+      "dx": 0,
+      "dy": 0,
+      "residual_px": 291,
+      "raw_px": 291,
+      "explains": false
+     },
+     "layer": "nametable"
+    }
+   ],
+   "entry_preset_version": "v1",
+   "entry_frame": 900,
+   "notes": [
+    "最大失配 9132 px"
+   ],
+   "l4_exit": 1,
+   "room_load": {
+    "trace": "analysis/traces/_tmp_sweep_477987-1795098209_a0_r14.frames.jsonl",
+    "accepted": true,
+    "load_chain": true,
+    "identity_basis": "room_ptr",
+    "identity_ok": true,
+    "expected_room_ptr": "A68D",
+    "mr_at_entry": 3,
+    "mr_at_end": 3,
+    "mr_window_ok": true,
+    "room_at_end": 255,
+    "back_to_ff_frame": 905,
+    "room_frames": [
+     "901:0E",
+     "902:F1",
+     "903:F1",
+     "904:F3",
+     "905:FF"
+    ],
+    "scroll_x_end": 0,
+    "scroll_x_post_entry": [
+     3,
+     4,
+     4,
+     6,
+     8,
+     10
+    ],
+    "mr_window": {
+     "900": 3,
+     "901": 3,
+     "902": 3,
+     "903": 3,
+     "904": 3,
+     "905": 3,
+     "906": 3
+    },
+    "mr_window_missing": [],
+    "left_gameengine_frames": [],
+    "ff_markers": [
+     "902:F1",
+     "903:F1",
+     "904:F3"
+    ],
+    "room_ptr_region": "A68D..A6B1",
+    "room_ptr_hits": [
+     901,
+     902,
+     903,
+     904,
+     905,
+     906
+    ],
+    "room_number_hits": [
+     900,
+     901
+    ]
+   },
+   "identity_basis": "room_ptr",
+   "l4_summary": {
+    "match": 1,
+    "mismatch": 3,
+    "blocked": 0,
+    "error": 0
+   },
+   "stdout_tail": [
+    "     帧 tag              状态                 差异像素       /总像素",
+    "------------------------------------------------------------------------------",
+    "   900 pre              ✅一致                   0      61440",
+    "   960 f60              ❌失配                9132      61440",
+    "  1860 f960             ❌失配                 488      61440",
+    "  1920 end              ❌失配                 291      61440",
+    "------------------------------------------------------------------------------",
+    "汇总：一致 1 · 失配 3 · 缺口阻塞 0 · 错误 0（共 4）",
+    "总评：❌ 未全一致（1/4 通过，3 采集点像素失配）",
+    "=============================================================================="
+   ],
+   "anchors": {
+    "scenario_sha256": "893b7a721562f582a1c837ce175e44c92713d1349cc61a1b24d083e87db28687",
+    "rom_sha256": "e6e6b7014685adae447ebb3833242815747bc1e5df83ade79f693fb67cf565b6",
+    "sched_sha256": "ef9e2488bd06a7906a7f40f45aa6ae9dcfedf2762b19bc4c8e19ad90f66d0105"
+   },
+   "layers": {
+    "pre": "clean",
+    "f60": "scroll_drift",
+    "f960": "nametable",
+    "end": "nametable"
+   },
+   "ppu_diff": {
+    "pre": {
+     "chr": 0,
+     "nt0": 0,
+     "nt1": 0,
+     "nt2": 0,
+     "nt3": 0,
+     "palette": 0,
+     "rust_scroll": [
+      0,
+      0,
+      144
+     ]
+    },
+    "f60": {
+     "chr": 0,
+     "nt0": 0,
+     "nt1": 0,
+     "nt2": 0,
+     "nt3": 0,
+     "palette": 0,
+     "rust_scroll": [
+      118,
+      0,
+      144
+     ]
+    },
+    "f960": {
+     "chr": 0,
+     "nt0": 0,
+     "nt1": 476,
+     "nt2": 476,
+     "nt3": 0,
+     "palette": 0,
+     "rust_scroll": [
+      0,
+      0,
+      147
+     ]
+    },
+    "end": {
+     "chr": 0,
+     "nt0": 0,
+     "nt1": 476,
+     "nt2": 476,
+     "nt3": 0,
+     "palette": 0,
+     "rust_scroll": [
+      0,
+      0,
+      147
+     ]
+    }
+   },
+   "l4_pass": 1,
+   "l4_fail": 3,
+   "l4_gap": false,
+   "l4_captures": 4,
+   "mismatch": [
+    {
+     "frame": 960,
+     "tag": "f60",
+     "status": "diff",
+     "diff_pixels": 9132,
+     "total_pixels": 61440,
+     "whitelist_hits": 0,
+     "file": "_tmp_sweep_477987-1795098209_a0_r14_f00960_f60.png",
+     "rust_sha256": "a63ae7f924c92bead0cfb258d6667f9c45f96054c4fb5bde3b04e4e2e28d54c4",
+     "ppu": {
+      "chr": 0,
+      "nt0": 0,
+      "nt1": 0,
+      "nt2": 0,
+      "nt3": 0,
+      "palette": 0,
+      "rust_scroll": [
+       118,
+       0,
+       144
+      ]
+     },
+     "shift": {
+      "dx": 2,
+      "dy": 0,
+      "residual_px": 253,
+      "raw_px": 9132,
+      "explains": true
+     },
+     "layer": "scroll_drift"
+    },
+    {
+     "frame": 1860,
+     "tag": "f960",
+     "status": "diff",
+     "diff_pixels": 488,
+     "total_pixels": 61440,
+     "whitelist_hits": 0,
+     "file": "_tmp_sweep_477987-1795098209_a0_r14_f01860_f960.png",
+     "rust_sha256": "0fde2aa6c6fe693b369d9bdbfec70e8ad1a43e3d1bb3d06690fc6fdeb748e7b6",
+     "ppu": {
+      "chr": 0,
+      "nt0": 0,
+      "nt1": 476,
+      "nt2": 476,
+      "nt3": 0,
+      "palette": 0,
+      "rust_scroll": [
+       0,
+       0,
+       147
+      ]
+     },
+     "shift": {
+      "dx": 0,
+      "dy": 0,
+      "residual_px": 488,
+      "raw_px": 488,
+      "explains": false
+     },
+     "layer": "nametable"
+    },
+    {
+     "frame": 1920,
+     "tag": "end",
+     "status": "diff",
+     "diff_pixels": 291,
+     "total_pixels": 61440,
+     "whitelist_hits": 0,
+     "file": "_tmp_sweep_477987-1795098209_a0_r14_f01920_end.png",
+     "rust_sha256": "21b0aa252c924cb211f22a5abc6c35d2a3fb80938108b9c1ea61a0cf19dfa1e3",
+     "ppu": {
+      "chr": 0,
+      "nt0": 0,
+      "nt1": 476,
+      "nt2": 476,
+      "nt3": 0,
+      "palette": 0,
+      "rust_scroll": [
+       0,
+       0,
+       147
+      ]
+     },
+     "shift": {
+      "dx": 0,
+      "dy": 0,
+      "residual_px": 291,
+      "raw_px": 291,
+      "explains": false
+     },
+     "layer": "nametable"
+    }
+   ],
+   "wall_s": 44.6
+  },
+  {
+   "area": 0,
+   "area_name": "Brinstar",
+   "room": 15,
+   "status": "mismatch",
+   "ok": false,
+   "diff_pixels": {
+    "pre": 0,
+    "f60": 990,
+    "f960": 1302,
+    "end": 1302
+   },
+   "captures": [
+    {
+     "frame": 900,
+     "tag": "pre",
+     "status": "match",
+     "diff_pixels": 0,
+     "total_pixels": 61440,
+     "whitelist_hits": 0,
+     "file": "_tmp_sweep_477987-1795098209_a0_r15_f00900_pre.png",
+     "rust_sha256": "10a60c8a34913227800a6bc653cf6faab65094b9d4fd5492087d10fc0678b497",
+     "ppu": {
+      "chr": 0,
+      "nt0": 0,
+      "nt1": 0,
+      "nt2": 0,
+      "nt3": 0,
+      "palette": 0,
+      "rust_scroll": [
+       0,
+       0,
+       144
+      ]
+     },
+     "shift": null,
+     "layer": "clean"
+    },
+    {
+     "frame": 960,
+     "tag": "f60",
+     "status": "diff",
+     "diff_pixels": 990,
+     "total_pixels": 61440,
+     "whitelist_hits": 0,
+     "file": "_tmp_sweep_477987-1795098209_a0_r15_f00960_f60.png",
+     "rust_sha256": "edfd17c4dddf616d6b52f7cff6390de12cf2a23e179d17978a9ebbf4628f2662",
+     "ppu": {
+      "chr": 0,
+      "nt0": 0,
+      "nt1": 4,
+      "nt2": 0,
+      "nt3": 4,
+      "palette": 0,
+      "rust_scroll": [
+       116,
+       0,
+       144
+      ]
+     },
+     "shift": {
+      "dx": 0,
+      "dy": 0,
+      "residual_px": 990,
+      "raw_px": 990,
+      "explains": false
+     },
+     "layer": "nametable"
+    },
+    {
+     "frame": 1860,
+     "tag": "f960",
+     "status": "diff",
+     "diff_pixels": 1302,
+     "total_pixels": 61440,
+     "whitelist_hits": 0,
+     "file": "_tmp_sweep_477987-1795098209_a0_r15_f01860_f960.png",
+     "rust_sha256": "b4b8263667f5fe246914ec11736ff7e7b3f20e9a3768c4f9dbd59004136fa31a",
+     "ppu": {
+      "chr": 0,
+      "nt0": 0,
+      "nt1": 472,
+      "nt2": 471,
+      "nt3": 4,
+      "palette": 0,
+      "rust_scroll": [
+       0,
+       0,
+       147
+      ]
+     },
+     "shift": {
+      "dx": 0,
+      "dy": 0,
+      "residual_px": 1302,
+      "raw_px": 1302,
+      "explains": false
+     },
+     "layer": "nametable"
+    },
+    {
+     "frame": 1920,
+     "tag": "end",
+     "status": "diff",
+     "diff_pixels": 1302,
+     "total_pixels": 61440,
+     "whitelist_hits": 0,
+     "file": "_tmp_sweep_477987-1795098209_a0_r15_f01920_end.png",
+     "rust_sha256": "a607473c6baba5fd616aed137f433422cdb9ee27c031a351ae9361b8dc57aa56",
+     "ppu": {
+      "chr": 0,
+      "nt0": 0,
+      "nt1": 472,
+      "nt2": 471,
+      "nt3": 4,
+      "palette": 0,
+      "rust_scroll": [
+       0,
+       0,
+       147
+      ]
+     },
+     "shift": {
+      "dx": 0,
+      "dy": 0,
+      "residual_px": 1302,
+      "raw_px": 1302,
+      "explains": false
+     },
+     "layer": "nametable"
+    }
+   ],
+   "entry_preset_version": "v1",
+   "entry_frame": 900,
+   "notes": [
+    "最大失配 1302 px"
+   ],
+   "l4_exit": 1,
+   "room_load": {
+    "trace": "analysis/traces/_tmp_sweep_477987-1795098209_a0_r15.frames.jsonl",
+    "accepted": true,
+    "load_chain": true,
+    "identity_basis": "room_ptr",
+    "identity_ok": true,
+    "expected_room_ptr": "A6B1",
+    "mr_at_entry": 3,
+    "mr_at_end": 3,
+    "mr_window_ok": true,
+    "room_at_end": 255,
+    "back_to_ff_frame": 905,
+    "room_frames": [
+     "901:0F",
+     "902:F1",
+     "903:F1",
+     "904:F3",
+     "905:FF"
+    ],
+    "scroll_x_end": 0,
+    "scroll_x_post_entry": [
+     3,
+     4,
+     4,
+     6,
+     8,
+     10
+    ],
+    "mr_window": {
+     "900": 3,
+     "901": 3,
+     "902": 3,
+     "903": 3,
+     "904": 3,
+     "905": 3,
+     "906": 3
+    },
+    "mr_window_missing": [],
+    "left_gameengine_frames": [],
+    "ff_markers": [
+     "902:F1",
+     "903:F1",
+     "904:F3"
+    ],
+    "room_ptr_region": "A6B1..A6DB",
+    "room_ptr_hits": [
+     901,
+     902,
+     903,
+     904,
+     905,
+     906
+    ],
+    "room_number_hits": [
+     900,
+     901
+    ]
+   },
+   "identity_basis": "room_ptr",
+   "l4_summary": {
+    "match": 1,
+    "mismatch": 3,
+    "blocked": 0,
+    "error": 0
+   },
+   "stdout_tail": [
+    "     帧 tag              状态                 差异像素       /总像素",
+    "------------------------------------------------------------------------------",
+    "   900 pre              ✅一致                   0      61440",
+    "   960 f60              ❌失配                 990      61440",
+    "  1860 f960             ❌失配                1302      61440",
+    "  1920 end              ❌失配                1302      61440",
+    "------------------------------------------------------------------------------",
+    "汇总：一致 1 · 失配 3 · 缺口阻塞 0 · 错误 0（共 4）",
+    "总评：❌ 未全一致（1/4 通过，3 采集点像素失配）",
+    "=============================================================================="
+   ],
+   "anchors": {
+    "scenario_sha256": "2d5136ee97169f36ba35c99d9ce2de569ec2ca21b09e589d62e80194753ffc54",
+    "rom_sha256": "e6e6b7014685adae447ebb3833242815747bc1e5df83ade79f693fb67cf565b6",
+    "sched_sha256": "e5a7183ec88b635c349dba8f2f079bf4aca7e9a603b37f3a04396e54ad2fd58a"
+   },
+   "layers": {
+    "pre": "clean",
+    "f60": "nametable",
+    "f960": "nametable",
+    "end": "nametable"
+   },
+   "ppu_diff": {
+    "pre": {
+     "chr": 0,
+     "nt0": 0,
+     "nt1": 0,
+     "nt2": 0,
+     "nt3": 0,
+     "palette": 0,
+     "rust_scroll": [
+      0,
+      0,
+      144
+     ]
+    },
+    "f60": {
+     "chr": 0,
+     "nt0": 0,
+     "nt1": 4,
+     "nt2": 0,
+     "nt3": 4,
+     "palette": 0,
+     "rust_scroll": [
+      116,
+      0,
+      144
+     ]
+    },
+    "f960": {
+     "chr": 0,
+     "nt0": 0,
+     "nt1": 472,
+     "nt2": 471,
+     "nt3": 4,
+     "palette": 0,
+     "rust_scroll": [
+      0,
+      0,
+      147
+     ]
+    },
+    "end": {
+     "chr": 0,
+     "nt0": 0,
+     "nt1": 472,
+     "nt2": 471,
+     "nt3": 4,
+     "palette": 0,
+     "rust_scroll": [
+      0,
+      0,
+      147
+     ]
+    }
+   },
+   "l4_pass": 1,
+   "l4_fail": 3,
+   "l4_gap": false,
+   "l4_captures": 4,
+   "mismatch": [
+    {
+     "frame": 960,
+     "tag": "f60",
+     "status": "diff",
+     "diff_pixels": 990,
+     "total_pixels": 61440,
+     "whitelist_hits": 0,
+     "file": "_tmp_sweep_477987-1795098209_a0_r15_f00960_f60.png",
+     "rust_sha256": "edfd17c4dddf616d6b52f7cff6390de12cf2a23e179d17978a9ebbf4628f2662",
+     "ppu": {
+      "chr": 0,
+      "nt0": 0,
+      "nt1": 4,
+      "nt2": 0,
+      "nt3": 4,
+      "palette": 0,
+      "rust_scroll": [
+       116,
+       0,
+       144
+      ]
+     },
+     "shift": {
+      "dx": 0,
+      "dy": 0,
+      "residual_px": 990,
+      "raw_px": 990,
+      "explains": false
+     },
+     "layer": "nametable"
+    },
+    {
+     "frame": 1860,
+     "tag": "f960",
+     "status": "diff",
+     "diff_pixels": 1302,
+     "total_pixels": 61440,
+     "whitelist_hits": 0,
+     "file": "_tmp_sweep_477987-1795098209_a0_r15_f01860_f960.png",
+     "rust_sha256": "b4b8263667f5fe246914ec11736ff7e7b3f20e9a3768c4f9dbd59004136fa31a",
+     "ppu": {
+      "chr": 0,
+      "nt0": 0,
+      "nt1": 472,
+      "nt2": 471,
+      "nt3": 4,
+      "palette": 0,
+      "rust_scroll": [
+       0,
+       0,
+       147
+      ]
+     },
+     "shift": {
+      "dx": 0,
+      "dy": 0,
+      "residual_px": 1302,
+      "raw_px": 1302,
+      "explains": false
+     },
+     "layer": "nametable"
+    },
+    {
+     "frame": 1920,
+     "tag": "end",
+     "status": "diff",
+     "diff_pixels": 1302,
+     "total_pixels": 61440,
+     "whitelist_hits": 0,
+     "file": "_tmp_sweep_477987-1795098209_a0_r15_f01920_end.png",
+     "rust_sha256": "a607473c6baba5fd616aed137f433422cdb9ee27c031a351ae9361b8dc57aa56",
+     "ppu": {
+      "chr": 0,
+      "nt0": 0,
+      "nt1": 472,
+      "nt2": 471,
+      "nt3": 4,
+      "palette": 0,
+      "rust_scroll": [
+       0,
+       0,
+       147
+      ]
+     },
+     "shift": {
+      "dx": 0,
+      "dy": 0,
+      "residual_px": 1302,
+      "raw_px": 1302,
+      "explains": false
+     },
+     "layer": "nametable"
+    }
+   ],
+   "wall_s": 44.3
+  }
+ ],
+ "note": "post-tailfix",
+ "note_source": "cli",
+ "elapsed_s": 564.5
+}
