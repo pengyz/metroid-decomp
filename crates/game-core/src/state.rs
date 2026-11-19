@@ -164,6 +164,14 @@ pub struct Manager {
     /// §12：掉帧窗=工作超帧跨 NMI 数（载房域 E54A-F034 零显式 Wait 实证）；各工作
     /// 单元按 asm 6502 逐条计数累加（常量见 frame/room.rs LOAD_*）。
     pub work_cycles: u32,
+    /// 【多帧载房任务机（2026-11-19 A-lite，findings/room-load-pixel-deferral.md §任务机）】
+    /// 相位：`0`=空闲 / `1`=冻结窗（`dropped` 帧，`RoomNumber` 保持**要载的房号**）/
+    /// `2`=属性表尾段（帧边界 `F1 → F3 → FF`，见 `world::room_load::room_load_gate_step`）。
+    pub room_load_phase: u8,
+    /// 任务机当前房号（窗内 `RoomNumber` 的保持值；相位 0 时无意义）。
+    pub room_load_room: u8,
+    /// 尾段已推进格数（0..3）。
+    pub room_load_tail: u8,
     /// 手柄 1 输入面（场景驱动；boot-title=无输入 0）。
     pub joy1: u8,
     /// 手柄 2 输入面。
@@ -177,7 +185,7 @@ impl Default for Manager {
         Self { storage: crate::memmap::storage::NesStorage::default(), samus: Default::default(), health_change: Default::default(), sound_init: Default::default(), object_globals: Default::default(), scroll_blocks: Default::default(), oam: Default::default(), enemies: Default::default(), regs: Registers::default(), nmi_enabled: false,
                title_cursor: 0, title_cursor_phase: 0, title_spin: 0, check_password_pending: false, deferred_screen_on: false, title_no_return: false,
                iter_gates: Vec::new(), iter_span_left: 0, iter_span_fc: false, fc_inced_this_tick: false,
-               apu_log: Vec::new(), work_cycles: 0,
+               apu_log: Vec::new(), work_cycles: 0, room_load_phase: 0, room_load_room: 0xFF, room_load_tail: 0,
                joy1: 0, joy2: 0,
                render: RenderState::default() }
     }

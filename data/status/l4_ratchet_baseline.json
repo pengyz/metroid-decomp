@@ -657,18 +657,18 @@
           "total_pixels": 61440
         },
         "2080:on-pedestal": {
-          "state": "diff",
-          "diff_pixels": 8,
+          "state": "match",
+          "diff_pixels": 0,
           "total_pixels": 61440
         },
         "2110:after-pickup": {
-          "state": "diff",
-          "diff_pixels": 8,
+          "state": "match",
+          "diff_pixels": 0,
           "total_pixels": 61440
         },
         "2160:end": {
-          "state": "diff",
-          "diff_pixels": 8,
+          "state": "match",
+          "diff_pixels": 0,
           "total_pixels": 61440
         }
       }
@@ -1234,6 +1234,16 @@
       "reason": "载房窗像素写点相位修复（72b15719+本发）：state 级 20 案/160 格/match 148·diff 12 不变；diff_pixels 3 格实测变动——case-mechanism-input-conflict 674:c674 326→330、676:c676 326→330（各 +4，恶化），case-scrollseam-probe 1100:scroll-r180 274→266（−8，改善）。归因=deferral 让像素改在装载窗末落地（f676 起 x 与 emu 同相位），残差主体是未修的多帧载房任务机。",
       "match": 148,
       "diff": 12,
+      "blocked": 0,
+      "cells_total": 160
+    },
+    {
+      "ts": "2026-11-19T00:35:14+00:00",
+      "kind": "anchor",
+      "evidence": "",
+      "reason": "多帧载房任务机 A-lite 落地：match 148→151 / diff 12→9（case-morphball-probe 2080/2110/2160 三格 8px→0px，即原挂账的 morphball 3×8px 债）；其余 157 格逐格不变",
+      "match": 151,
+      "diff": 9,
       "blocked": 0,
       "cells_total": 160
     }

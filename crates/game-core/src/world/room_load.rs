@@ -203,6 +203,73 @@ pub fn get_room_num(mem: &mut Manager) -> bool {
     true
 }
 
+/// 【多帧载房任务机（A-lite）】开窗：把 `RoomNumber` 的「载房请求」升格为跨帧任务。
+///
+/// asm 依据（`prg7_engine.asm:8693 SetupRoom ; 07:EA2B` + `:8672 AttribTableWrite ; 07:EA13`
+/// + `:8876 EndOfRoom ; 07:EAF4`）：`DrawRoom` 的装载循环与随后的属性表写点都在**同一次
+/// `SetupRoom` 调用**里，而这次调用跨过 NMI（Mesen 逐帧实测 room0/23/8 = 冻结 1/2/3 帧，
+/// `RoomNumber` 在整个窗里保持**要载的房号**，`$33/$34 RoomPtr` 每帧前进一截）。
+/// 窗结束后进入固定三段尾段：帧边界 `F1 → F3 → FF`（`F0` 那格是空转 `ExitSub`）。
+///
+/// 本函数只登记任务相位；真正的装载仍由 [`setup_room`] 一次跑完（`RoomPtr` 分块是已登记
+/// 缺口，见 findings 同节「未修清单」）。
+pub fn begin_room_load_window(mem: &mut Manager, room: u8) {
+    mem.room_load_phase = 1;
+    mem.room_load_room = room;
+    mem.room_load_tail = 0;
+}
+
+/// 任务机一次「帧门排空」步进（`Engine::end_of_tick_gate` 的 `iter_gates.is_empty()` 分支调用）。
+///
+/// 返回 true 表示本拍推进了任务机（调用方无需其它处理）。
+pub fn room_load_gate_step(mem: &mut Manager) -> bool {
+    match mem.room_load_phase {
+        1 => {
+            // 冻结窗结束：`DrawRoom` 尾巴的 `EndOfRoom ; 07:EAF4` 把 RoomNumber 置 $F0
+            // （`draw_room` 已经做过，但窗内被我们改回房号）
+            // ⇒ 窗末那一帧的边界值是 $F0 的**第一格进度**，即 F1（`F0` 走空转 ExitSub）。
+            mem.room_load_phase = 2;
+            mem.room_load_tail = 0;
+            mem.set_room_number(0xF0);
+            advance_room_load_tail(mem);
+            true
+        }
+        2 => {
+            advance_room_load_tail(mem);
+            if mem.room_load_tail >= 3 {
+                mem.room_load_phase = 0;
+                mem.room_load_room = 0xFF;
+            }
+            true
+        }
+        _ => false,
+    }
+}
+
+/// 尾段一格（帧边界目标：第 1 格 → `F1`、第 2 格 → `F3`、第 3 格 → `FF`）。
+///
+/// asm：`AttribTableWrite` 先 `inc RoomNumber` 再按 `and #$0F` 查 5 项表
+/// （`ExitSub / WritePPUAttribTbl / ExitSub / WritePPUAttribTbl / RoomFinished`）
+/// ⇒ 一「格」= 一串连续调用，直到游标抵达该格的目标值。
+fn advance_room_load_tail(mem: &mut Manager) {
+    let target: u8 = match mem.room_load_tail {
+        0 => 0xF1,
+        1 => 0xF3,
+        _ => 0xFF,
+    };
+    // 每格最多 2 次调用（F0→F1；F1→F3；F3→FF），用 3 做硬上界，越界说明状态机与 asm 脱钩。
+    for _ in 0..3 {
+        if mem.room_number() == target {
+            break;
+        }
+        if !crate::world::room_draw::attrib_table_write(mem) {
+            break;
+        }
+    }
+    debug_assert_eq!(mem.room_number(), target, "尾段游标未达目标值");
+    mem.room_load_tail = mem.room_load_tail.saturating_add(1);
+}
+
 /// SetupRoom 壳（**asm 内容锚** `SetupRoom: ; 07:EA2B`）：RoomNumber 分支（$FF=RTS/
 /// $FE=占位跳/≥$F0=AttribTableWrite/其余=载房）→RoomPtrTable 查表（**AreaPointers_RAM
 /// .RoomPtrTable=$3B/$3C 间接**——`lda (AreaPointers_RAM.RoomPtrTable),y`）→RoomPtr($33/$34)
@@ -260,6 +327,63 @@ pub fn setup_room(mem: &mut Manager) {
 fn clear_scroll_blocks(mem: &mut Manager) {
     mem.set_scroll_block_nt3(0);
     mem.set_scroll_block_nt0(0);
+}
+
+#[cfg(test)]
+mod tests_room_load_task {
+    use crate::frame::Manager;
+
+    /// 【任务机 TDD 1】窗内 `RoomNumber` 必须是**要载的房号**，不是 `$F0`。
+    ///
+    /// 修前（2026-11-19 之前）：`draw_room` 尾巴 `EndOfRoom ; 07:EAF4` 当即把 RoomNumber
+    /// 置 `$F0`，于是 Rust 帧边界看到 `F0`，而 Mesen 三房实录窗内恒为房号（room8 f900–f903
+    /// 恒 `8`）⇒ 此断言在旧形必红。
+    #[test]
+    fn window_holds_requested_room_number() {
+        let mut m = Manager::default();
+        m.set_room_number(8);
+        super::begin_room_load_window(&mut m, 8);
+        m.set_room_number(8); // scroll 侧的「改回房号」动作（与真实调用同序）
+        assert_eq!(m.room_number(), 8, "窗内保持房号");
+        assert_eq!(m.room_load_phase, 1);
+        assert_eq!(m.room_load_room, 8);
+    }
+
+    /// 【任务机 TDD 2】尾段三格的帧边界依次是 `F1 → F3 → FF`（Mesen room0/23/8 三房实录）。
+    #[test]
+    fn tail_walks_f1_f3_ff() {
+        let mut m = Manager::default();
+        m.room_load_phase = 1;
+        m.room_load_room = 8;
+        m.room().set_room_ptr(0x6000); // 真实流里由 setup_room 的 SelectRoomRAM 写入
+        m.set_room_number(0xF0); // 窗末：EndOfRoom 的 $F0 起点
+
+        assert!(super::room_load_gate_step(&mut m)); // 窗结束那一拍 = 尾段第 1 格
+        assert_eq!(m.room_number(), 0xF1, "第 1 格边界 F1");
+
+        super::room_load_gate_step(&mut m);
+        assert_eq!(m.room_number(), 0xF3, "第 2 格边界 F3（同拍推进两格）");
+
+        super::room_load_gate_step(&mut m);
+        assert_eq!(m.room_number(), 0xFF, "第 3 格边界 FF（RoomFinished）");
+        assert_eq!(m.room_load_phase, 0, "任务机归位");
+    }
+
+    /// 尾段落完后任务机必须回空闲，否则下一次真实载房会被 `is_load` 的相位闸永久挡住。
+    #[test]
+    fn task_returns_to_idle_and_allows_next_load() {
+        let mut m = Manager::default();
+        m.room_load_phase = 1;
+        m.room_load_room = 23;
+        m.room().set_room_ptr(0x6400);
+        m.set_room_number(0xF0);
+        for _ in 0..3 {
+            super::room_load_gate_step(&mut m);
+        }
+        assert_eq!((m.room_load_phase, m.room_load_tail), (0, 3));
+        assert_eq!(m.room_number(), 0xFF);
+        assert!(!super::room_load_gate_step(&mut m), "空闲态不推进");
+    }
 }
 
 #[cfg(test)]

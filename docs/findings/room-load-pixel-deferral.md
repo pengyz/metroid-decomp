@@ -98,3 +98,40 @@ f676（与 emu 的 x 相位对齐），于是 f673/f674 的 Samus 少差分 1 px
 - `ScrollX==0` 的跨格迁移径（`GetRoomNum` / `MapPosX±1` / `@atRightBound` 回滚）已由
   `scroll_right_wraps_scroll_x_and_toggles_name_table` 恢复覆盖，但 `GetRoomNum` 的分支
   仍无断言。
+
+## 多帧载房任务机（A-lite，2026-11-19 落地）
+
+### 取证（Mesen 逐帧 `$2D/$5A/$33-$34`，用例由 `tools/movie_ref/room_sweep.py::build_case` 生成，f900 注入 `$005A=<room>`）
+
+| room | 冻结帧（FC 不动） | 冻结期 RoomNumber | 帧边界尾段 | 注入→`FF` |
+|---|---|---|---|---|
+| 0 | f900–f901 | 恒 `0` | f902=`F1` / f903=`F3` / f904=`FF` | 4 帧 |
+| 23 | f900–f902 | 恒 `23` | f903=`F1` / f904=`F3` / f905=`FF` | 5 帧 |
+| 8 | f900–f903 | 恒 `8` | f904=`F1` / f905=`F3` / f906=`FF` | 6 帧 |
+
+room8 冻结期 `RoomPtr` 逐帧 `A58E → A5A0 → A5B2`（末尾 A5B8）⇒ 画房循环被切在帧边界。
+三条结论：①冻结帧数 == 既有 `dropped`（room23=2 / room8=3 / room0=1，与 `LOAD_BASE_CYCLES`
+标定一致 ⇒ **不存在与掉帧模型重复计算**，`dropped` 就是任务机的帧数）②冻结期 `RoomNumber`
+保持**要载的房号**（不是 `$F0`）③尾段固定三格 `F1 → F3 → FF`（`F0` 是空转 `ExitSub`，
+`F2/F4` 在同拍内被跨过，故帧边界看不到）。
+
+### 实现
+
+- `Manager` 三个非 RAM 相位字段：`room_load_phase`（0 空闲 / 1 冻结窗 / 2 尾段）、
+  `room_load_room`、`room_load_tail`（`state.rs`）。
+- `world/room_load.rs::begin_room_load_window` / `room_load_gate_step` / `advance_room_load_tail`：
+  窗由 `iter_gates` 计数（`dropped` 帧），帧门排空那一拍切进尾段，尾段每拍推进一格到目标值
+  （`F1` / `F3` / `FF`），格内用 while 循环调到目标值（硬上界 3，越界 `debug_assert` 炸）。
+- `world/camera/scroll.rs`：`is_load` 加相位闸 `&& room_load_phase == 0`（否则窗内每个像素
+  都会重触发整房装载）；装载后 `begin_room_load_window` + 把 `RoomNumber` 改回房号。
+- `frame/engine.rs::end_of_tick_gate`：门队列排空分支调用 `room_load_gate_step`。
+
+### 效果（L4）
+
+`match 148→151 / diff 12→9`：`case-morphball-probe` 的 `2080/2110/2160` 三格 **8px → 0px**
+（即此前挂账的「morphball 3×8px」债），其余 157 格逐格不变、零回归。
+
+### 仍未建模（已登记）
+
+`draw_room` 的 `RoomPtr` 分块：emu 冻结期每帧前进一截，Rust 仍一次跑完（`RoomPtr` 冻结期不动、
+窗末即为终值）。像素面目前不受影响（上表 L4 结果），但这是任务机里唯一还压平的部分。

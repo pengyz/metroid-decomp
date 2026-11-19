@@ -170,6 +170,11 @@ impl FrameEngine {
             // `samus::physics::apply_deferred_horz_px` 的逐帧探针实录）。同时清吞帧标位。
             crate::samus::physics::apply_deferred_horz_px(&mut self.mem);
             self.mem.samus().set_load_consumed_frame(false);
+            // 【多帧载房任务机（2026-11-19 A-lite）】帧门排空=载房冻结窗结束那一拍：此后进入
+            // 固定三段尾段（帧边界 F1 → F3 → FF——Mesen 三房实录，见
+            // `docs/findings/room-load-pixel-deferral.md`）。任务机相位与 `iter_gates` 是同一条
+            // 时间轴上的两个刻度：窗用门队列计数，尾段用相位计数。
+            crate::world::room_load::room_load_gate_step(&mut self.mem);
             self.mem.write_ram(crate::ram_map::NMI_STATUS, 0);
             // 【根修③（2026-11-02）】span_fc 收口 inc（**defer 单增唯一源**（span 尾
             // skip 期 tail 不 inc（title_no_return）））——收口 tick 尾 inc 跳（fc_inced

@@ -30,11 +30,20 @@ pub(crate) fn check_update_name_table(mem: &mut Manager) {
     // inc 即该迭代唯一一次；emu 实录 f915=132→f918=133→f919=134 每 iteration 单 inc；
     // span_fc 只适用于工作拍 FC 被冻结的 title 臂形——双加=+1 相位差根因，f918 实录）。
     let rn = mem.room_number();
-    let is_load = rn != 0xFF && rn < 0xF0;
+    // 【多帧载房任务机（2026-11-19 A-lite）】窗内 `RoomNumber` 保持**要载的房号**（emu 帧边界
+    // 实录），所以「是否又是载房请求」不能只看 `RoomNumber`——必须叠加任务机相位：窗已开时
+    // 后续像素的 `check_update_name_table` 不得再次触发整房装载。
+    let is_load = rn != 0xFF && rn < 0xF0 && mem.room_load_phase == 0;
     if is_load {
         mem.work_cycles = 0; // 周期累加起点（载房工作量——room.rs LOAD_* 模型）
     }
     crate::frame::tick::setup_room(mem);
+    if is_load {
+        // 开窗：`draw_room` 尾巴的 `EndOfRoom ; 07:EAF4` 把 RoomNumber 置了 $F0，但 emu 在整个
+        // 冻结窗里保持**房号**（room8：f900–f903 恒 8）⇒ 这里改回房号，$F0 留到窗末。
+        crate::world::room_load::begin_room_load_window(mem, rn);
+        mem.set_room_number(rn);
+    }
     if is_load {
         // 【缝会计卡·掉帧窗模型（2026-11-05——findings/morphball-trajectory-root.md
         // §12）】旧形硬编码 2——emu 实测随工作量变（room23（504 tile）=2 / room8
