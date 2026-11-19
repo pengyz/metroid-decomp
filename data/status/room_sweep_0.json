@@ -612,7 +612,8 @@
    "entry_preset_version": "v1",
    "entry_frame": 900,
    "notes": [
-    "最大失配 10381 px"
+    "最大失配 10381 px",
+    "known-limitation: 载入窗超帧调度模型（整帧跳过 vs 周期驱动）——见 docs/findings/room-sweep-fixture-phase.md §4c；不属移植错"
    ],
    "l4_exit": 1,
    "room_load": {
@@ -3404,7 +3405,8 @@
    "entry_preset_version": "v1",
    "entry_frame": 900,
    "notes": [
-    "最大失配 9132 px"
+    "最大失配 9132 px",
+    "known-limitation: 载入窗超帧调度模型（整帧跳过 vs 周期驱动）——见 docs/findings/room-sweep-fixture-phase.md §4c；不属移植错"
    ],
    "l4_exit": 1,
    "room_load": {
@@ -5904,7 +5906,8 @@
    "entry_preset_version": "v1",
    "entry_frame": 900,
    "notes": [
-    "最大失配 12868 px"
+    "最大失配 12868 px",
+    "known-limitation: 载入窗超帧调度模型（整帧跳过 vs 周期驱动）——见 docs/findings/room-sweep-fixture-phase.md §4c；不属移植错"
    ],
    "l4_exit": 1,
    "room_load": {
@@ -6210,7 +6213,8 @@
    "entry_preset_version": "v1",
    "entry_frame": 900,
    "notes": [
-    "最大失配 13005 px"
+    "最大失配 13005 px",
+    "known-limitation: 载入窗超帧调度模型（整帧跳过 vs 周期驱动）——见 docs/findings/room-sweep-fixture-phase.md §4c；不属移植错"
    ],
    "l4_exit": 1,
    "room_load": {
@@ -7009,7 +7013,8 @@
    "entry_preset_version": "v1",
    "entry_frame": 900,
    "notes": [
-    "最大失配 9573 px"
+    "最大失配 9573 px",
+    "known-limitation: 载入窗超帧调度模型（整帧跳过 vs 周期驱动）——见 docs/findings/room-sweep-fixture-phase.md §4c；不属移植错"
    ],
    "l4_exit": 1,
    "room_load": {
@@ -7315,7 +7320,8 @@
    "entry_preset_version": "v1",
    "entry_frame": 900,
    "notes": [
-    "最大失配 14407 px"
+    "最大失配 14407 px",
+    "known-limitation: 载入窗超帧调度模型（整帧跳过 vs 周期驱动）——见 docs/findings/room-sweep-fixture-phase.md §4c；不属移植错"
    ],
    "l4_exit": 1,
    "room_load": {
@@ -7621,7 +7627,8 @@
    "entry_preset_version": "v1",
    "entry_frame": 900,
    "notes": [
-    "最大失配 14102 px"
+    "最大失配 14102 px",
+    "known-limitation: 载入窗超帧调度模型（整帧跳过 vs 周期驱动）——见 docs/findings/room-sweep-fixture-phase.md §4c；不属移植错"
    ],
    "l4_exit": 1,
    "room_load": {
@@ -9412,7 +9419,8 @@
    "entry_preset_version": "v1",
    "entry_frame": 900,
    "notes": [
-    "最大失配 13057 px"
+    "最大失配 13057 px",
+    "known-limitation: 载入窗超帧调度模型（整帧跳过 vs 周期驱动）——见 docs/findings/room-sweep-fixture-phase.md §4c；不属移植错"
    ],
    "l4_exit": 1,
    "room_load": {
@@ -9722,7 +9730,8 @@
    "entry_preset_version": "v1",
    "entry_frame": 900,
    "notes": [
-    "最大失配 12239 px"
+    "最大失配 12239 px",
+    "known-limitation: 载入窗超帧调度模型（整帧跳过 vs 周期驱动）——见 docs/findings/room-sweep-fixture-phase.md §4c；不属移植错"
    ],
    "l4_exit": 1,
    "room_load": {
@@ -10599,7 +10608,8 @@
    "entry_preset_version": "v1",
    "entry_frame": 900,
    "notes": [
-    "最大失配 10069 px"
+    "最大失配 10069 px",
+    "known-limitation: 载入窗超帧调度模型（整帧跳过 vs 周期驱动）——见 docs/findings/room-sweep-fixture-phase.md §4c；不属移植错"
    ],
    "l4_exit": 1,
    "room_load": {
