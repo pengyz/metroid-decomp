@@ -323,8 +323,13 @@ impl Manager {
         // 第二遍（重复掉帧窗 + `delete_offscreen_room_sprites`/`scan_for_items` 二次副作用）。
         // 精度边界：剩余窗长（`iter_gates`）本身也不在 MSS 面，故只能恢复相位、不能恢复剩余拍数。
         {
+            // 判据（对抗复核 P1 修正）：`$5A < $F0` **且** `$33/$34` 已落在 WRAM（`$6000-$7FFF`）
+            // 才算「窗内」。只看 `$5A` 会把**上电初值 `$5A=$00`**（标题屏/密码屏 bundle 里就是它，
+            // `analysis/bundles/title-recon.json` 等 4 件）误判成「正在装 0 号房」⇒ 开局幻影尾段
+            // （`$5A` 被改成 `F0→F1→F3→FF`）与 `attrib_table_write` 在 `room_ptr=$0000` 上下溢。
             let rn = mem.ram()[crate::ram_map::ROOM_NUMBER as usize & 0x7FF];
-            if rn != 0xFF && rn < 0xF0 {
+            let ptr = mem.room().room_ptr();
+            if rn != 0xFF && rn < 0xF0 && (0x6000..0x8000).contains(&ptr) {
                 mem.room_load_phase = 1;
                 mem.room_load_room = rn;
                 mem.room_load_tail = 0;

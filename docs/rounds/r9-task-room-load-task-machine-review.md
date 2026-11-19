@@ -35,3 +35,26 @@
 
 修复后 `cargo test --workspace` **771 passed / 0 failed**、`gates/cli.py check` **PASS=23**、
 L4 **20 案/160 格 · match 151 · diff 9 · blocked 0** 与复核前**逐格 0 变动**（行为中性）。
+
+## 第二轮复核（`922ff7e4`）：**reject**（新洞）→ 修复
+
+第一轮 5 条 findings 逐条 PASS 关闭，但复核员用仓库预编译二进制实测出**本轮新引入的真洞**：
+
+- **P1（新洞）**：`restore_mss` 按 `$005A` 重建相位的启发式把「上电/标题/密码屏 `$5A=$00`」
+  （`analysis/bundles/title-recon.json`、`sc-password-entry.json`、`sc-password-entry3.json`、
+  `sc-title-menu3.json` 四件真夹具都是这个值）误判成「正在装 0 号房」⇒ 开局**幻影尾段**
+  （`$5A` 被推成 `00→F1→F3→FF`，与 oracle 恒 `00` 不符），并在 `room_ptr=$0000` 上让
+  `attrib_table_write` 的 `read_wram` 下溢 **panic（f=2）**。
+- **P2（覆盖盲区）**：20 案矩阵的 `snapshot` 全为 `none` ⇒ 快照恢复路径零门禁覆盖。
+- **P3**：`dropped.max(1)` 的理由不可达（`LOAD_INIT+LOAD_SHELL=10562 > 780`），行为无害但注释失真。
+
+修复（提交见下）：
+- 相位重建加**正向鉴别**：`$5A < $F0` **且** `$33/$34 ∈ [$6000,$8000)` 才算窗内（上电 `$0000` ⇒ 空闲）。
+- `attrib_table_write` 前置校验 `room_ptr` 域，越界 `unported!("bank07:EA13-attrib-ptr")`——D7 fail-loud，
+  不再 panic/静默写脏属性表。
+- 新增回归测 `power_on_restore_leaves_task_idle_and_gate_step_is_noop`（上电面恢复 ⇒ 相位空闲、
+  门步不动 `$5A`）；`restore_mss_rebuilds_window_phase_from_room_number` 补 `$5A=$00`+`$33/$34=$00` 边界。
+- 实测（仓库二进制）：`./target/debug/rust_screenshot --bundle analysis/bundles/title-recon` 8 帧
+  `$5A` 恒 `0`、无 panic（修复前 f=2 崩）。
+- 诚实说明：**没有**把 bundle 起跑做成 L4 像素用例——`restore_mss` 只回灌 RAM/WRAM/regs，
+  bundle v1 不含 PPU 面，像素比较必然 61440/61440 全差（试过、已删）；该路径的守卫落在上面两条单测。

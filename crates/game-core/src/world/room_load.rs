@@ -402,6 +402,20 @@ mod tests_room_load_task {
         assert!(super::is_new_load_request(&m, 9));
     }
 
+    /// 【bundle 起跑回归（第二轮复核 P1）】上电/标题 bundle 的 `$005A=$00`+`$33/$34=$0000`
+    /// 曾被启发式误判成「正在装 0 号房」⇒ 开局幻影尾段（`$5A` 被推成 `F0→F1→F3→FF`）。
+    /// 这条钉住：恢复后任务机必须是**空闲**，且门步不得动 `$5A`。
+    #[test]
+    fn power_on_restore_leaves_task_idle_and_gate_step_is_noop() {
+        let mut ram = vec![0u8; 0x800]; // 全 0 = 上电初值（$5A=0、$33/$34=0）
+        let m = Manager::restore_mss(&ram, &vec![0u8; 0x2000], crate::frame::memory::Registers::default());
+        assert_eq!(m.room_load_phase, 0, "上电初值不得被判成窗内");
+        ram[0x5A] = 0; // 显式重申
+        let mut m = Manager::restore_mss(&ram, &vec![0u8; 0x2000], crate::frame::memory::Registers::default());
+        assert!(!super::room_load_gate_step(&mut m), "空闲态门步不推进");
+        assert_eq!(m.room_number(), 0, "门步不得改写 $5A（幻影尾段的症状）");
+    }
+
     /// 【P2 修正 TDD】`restore_mss` 必须从 `$005A` 重建窗相位：窗内 RAM 里是**房号**，
     /// 恢复后若相位仍为 0，`is_load` 会立刻为真 ⇒ 同一房间被装载第二遍（重复掉帧窗 +
     /// 敌人/道具重新扫描的二次副作用）。
@@ -410,9 +424,15 @@ mod tests_room_load_task {
         let ram = vec![0u8; 0x800];
         let mut ram_window = ram.clone();
         ram_window[crate::ram_map::ROOM_NUMBER as usize & 0x7FF] = 8;
+        ram_window[crate::world::room_ram::ROOM_PTR as usize & 0x7FF] = 0x00; // RoomRAMPtr 低
+        ram_window[(crate::world::room_ram::ROOM_PTR + 1) as usize & 0x7FF] = 0x60; // ⇒ $6000（WRAM 域）
         let m = Manager::restore_mss(&ram_window, &vec![0u8; 0x2000], crate::frame::memory::Registers::default());
         assert_eq!(m.room_load_phase, 1, "窗内快照 ⇒ 恢复为窗相位");
         assert_eq!(m.room_load_room, 8);
+        // 【上电初值边界（复核 P1）】`$5A=$00` 且 `$33/$34=$00`（标题屏/密码屏 bundle 的实值）
+        // 不是「正在装 0 号房」——必须重建为**空闲**，否则开局幻影尾段。
+        let m3 = Manager::restore_mss(&ram, &vec![0u8; 0x2000], crate::frame::memory::Registers::default());
+        assert_eq!(m3.room_load_phase, 0, "$5A=0 且 room_ptr=0（上电初值）按空闲重建");
         let mut ram_idle = ram.clone();
         ram_idle[crate::ram_map::ROOM_NUMBER as usize & 0x7FF] = 0xFF; // 正常游玩态=无请求
         let m2 = Manager::restore_mss(&ram_idle, &vec![0u8; 0x2000], crate::frame::memory::Registers::default());

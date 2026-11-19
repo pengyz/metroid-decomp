@@ -821,6 +821,13 @@ pub fn init_tables(mem: &mut crate::frame::Manager) {
 /// AttribTableWrite（$EA13）——$F0-$F4 命令链（RoomNumber 低半字节=行索引；inc 自进）：
 /// 0/2=no-op、1/3=WritePPUAttribTbl（属性行→PPU）、4=RoomFinished（$FF）。
 pub fn attrib_table_write(mem: &mut crate::frame::Manager) -> bool {
+    // 【D7 fail-loud（2026-11-19 对抗复核 P1）】属性行读的是 RoomRAM 的 32B 行——`room_ptr`
+    // 不在 WRAM（`$6000-$7FFF`）时 `read_wram` 会下溢/读到垃圾（旧形在 `$0000` 上 panic
+    // "attempt to subtract with overflow"）。上游（`SetupRoom`/`DrawRoom`）正常会先 `SelectRoomRAM`，
+    // 走到这里说明任务机被外来 `RoomNumber` 击穿 ⇒ 当场炸在 bank:addr，不许静默写脏属性表。
+    if !(0x6000..0x8000).contains(&mem.room().room_ptr()) {
+        crate::unported!("bank07:EA13-attrib-ptr");
+    }
     let room = mem.room_number();
     let row = (room & 0x0F) as u16;
     mem.set_room_number(room.wrapping_add(1)); // inc RoomNumber
