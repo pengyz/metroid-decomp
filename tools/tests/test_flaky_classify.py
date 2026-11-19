@@ -40,8 +40,8 @@ class BlockedIsNotFlakyEvidence(unittest.TestCase):
 
     def test_real_disagreement_is_still_flaky(self):
         got = l4.classify_flaky(obs(["match", "diff", "match"]))
-        self.assertIn(("c", 100, "t"), got, "真分歧（match/diff 交替）必须仍判 flaky")
-        self.assertEqual(got[("c", 100, "t")]["n"], 3)
+        self.assertIn(("c", 100, "t", CS), got, "真分歧（match/diff 交替）必须仍判 flaky")
+        self.assertEqual(got[("c", 100, "t", CS)]["n"], 3)
 
     def test_single_verdict_repeated_is_not_flaky(self):
         self.assertEqual(l4.classify_flaky(obs(["match", "match", "match"])), {})
@@ -56,13 +56,25 @@ class BlockedIsNotFlakyEvidence(unittest.TestCase):
         < min_runs ⇒ 真分歧逃逸 flaky 且按当前 run 的 state 进分母。正确行为=
         n_total=6 ≥ 3 且非 blocked verdicts {match,diff} 不一致 ⇒ flaky。"""
         got = l4.classify_flaky(obs(["blocked", "blocked", "blocked", "blocked", "match", "diff"]))
-        self.assertIn(("c", 100, "t"), got, "blocked 抬高门槛后真分歧不得逃逸")
-        self.assertEqual(got[("c", 100, "t")]["n"], 6)
-        self.assertEqual(set(got[("c", 100, "t")]["verdicts"]), {"match", "diff"})
+        self.assertIn(("c", 100, "t", CS), got, "blocked 抬高门槛后真分歧不得逃逸")
+        self.assertEqual(got[("c", 100, "t", CS)]["n"], 6)
+        self.assertEqual(set(got[("c", 100, "t", CS)]["verdicts"]), {"match", "diff"})
 
     def test_all_blocked_stays_out_of_flaky(self):
         """全 blocked（纯基础设施失败）≠ 判定分歧，不得判 flaky。"""
         self.assertEqual(l4.classify_flaky(obs(["blocked", "blocked", "blocked"])), {})
+
+    def test_two_code_states_same_cell_do_not_collide(self):
+        """P3-2（复核 findings）：同格在两个不同 code_state 下都判 flaky 时，
+        输出键含 code_state ⇒ 两组互不覆盖、观测记录都不丢。"""
+        a = obs(["match", "diff", "match"], cs=CS)
+        b = obs(["diff", "match", "diff"], cs="ffff0011+cafecafe")
+        got = l4.classify_flaky(a + b)
+        self.assertEqual(len(got), 2, "两码态两组必须都保留")
+        self.assertIn(("c", 100, "t", CS), got)
+        self.assertIn(("c", 100, "t", "ffff0011+cafecafe"), got)
+        self.assertEqual(got[(("c"), 100, "t", CS)]["n"], 3)
+        self.assertEqual(got[("c", 100, "t", "ffff0011+cafecafe")]["n"], 3)
 
 
 if __name__ == "__main__":

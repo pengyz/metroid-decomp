@@ -896,10 +896,12 @@ def classify_flaky(observations: list, min_runs: int = 3) -> dict:
         # 且按当前 run 的 state 进分母。判定不一致仍只看非 blocked verdicts（blocked
         # 不是"同一输入两答"的证据，见上面的排除理由）。
         if g["n_total"] >= min_runs and len(set(g["verdicts"])) >= 2:
-            # 输出键=格三元组（同码态多态组取格名——码态留 runs 内可溯）
-            cell = key[:3]
-            out[cell] = {"verdicts": g["verdicts"], "runs": g["runs"], "n": g["n_total"],
-                         "code_state": key[3]}
+            # 输出键=格三元组+码态（【2026-11-19 P3-2 复核 findings】同格在两个不同
+            # code_state 下都判 flaky 时，旧键 (case,frame,tag) 会让后者覆盖前者、
+            # 丢一条观测记录；并入 code_state 后组间互不覆盖，build_matrix 的
+            # flaky 查找键同步改为 (case,frame,tag,code_state) 四元组）
+            out[key] = {"verdicts": g["verdicts"], "runs": g["runs"], "n": g["n_total"],
+                        "code_state": key[3]}
     return out
 
 
@@ -918,9 +920,11 @@ def build_matrix(rows: list, flaky: dict | None = None) -> dict:
         roms.add(row["rom_sha256"])
         for c in row["cells"]:
             key = (row["case"], c["frame"], c["tag"])
-            if key in flaky:
+            hit = next((v for k, v in flaky.items()
+                        if k[:3] == key), None)
+            if hit is not None:
                 c["state"] = "flaky"
-                c["observations"] = flaky[key]
+                c["observations"] = hit
                 flaky_n += 1
             elif c["state"] == "match":
                 match += 1
