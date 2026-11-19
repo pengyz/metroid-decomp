@@ -509,7 +509,9 @@ fn main() {
             // ⇒ 没有本帧缝快照；emu 在 lag 帧里 NMI 也停（无 OAM DMA、无写 PPU）⇒
             // **显示面保持上一帧**（实测 emu f673/f674/f676 三帧 PNG 逐字节相同，而
             // 活体 OAM 已更新到 x=127 ⇒ 旧形回退活体会画出下一帧的精灵，330px 根因）。
-            // 故缺缝时复用最近一次缝快照（=最后一次 NMI 的显示集），而不是活体。
+            // 故缺缝时复用最近一次缝快照（复核 review-fullchain-r1 P3-2 更正：快照
+            // 每 tick 被活体重写 ⇒ 载房窗内取到的是「上一 tick 活体」≈1 帧显示滞后；
+            // 84px 残差正是精灵仍早一帧的体现，彻底归零需 OAM-DMA 时刻模型）。
             // 显示集选择：正常帧=本帧缝快照（tick(frame-1)）；**载房窗内**（`room_load_phase==1`）
             // 无本帧缝 ⇒ 复用最近缝（emu lag 帧不做 NMI/DMA/PPU 写，显示面保持——实测
             // emu f673/f674/f676 三帧 PNG 逐字节相同）；其余 span（电梯换区等**会渲染**的
@@ -547,7 +549,8 @@ fn main() {
                 // 缝快照（修径 a 图像/PPU 面——=state 行同缝，findings §2c 之②）：
                 // post-NMI(frame)/pre-work(frame) 的 RenderState ——供采集帧 frame+1
                 // 的 png+ppu.hex（滚动=state-row(frame)、名表≤work(frame-1) 冲刷）。
-                // OAM 不入快照（收口活体——探针定谳 f1128 0 差）。
+                // OAM 随快照存（复核 review-fullchain-r1 P3-2 更正：f1128 探针定谳
+                // 是「收口活体与快照同相位」的特例，非通用语义；oam_shadow 每帧入快照）。
                 if next_cap < caps.len() {
                     seam_snap = Some((
                         frame,

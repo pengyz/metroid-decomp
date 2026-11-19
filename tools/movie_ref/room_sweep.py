@@ -518,10 +518,13 @@ def run_room(area: int, room: int, frames: int, captures: list[int],
             rec["notes"].append("注入后 $005A 未走完 F0→…→FF（房号未被接受/载入链未跑完）"
                                 "——像素结果不计入结论")
             return rec
-        # b) 对拍器退出码非 0：腿失败，报告可能缺失/陈旧，无论如何不能判 ok。
-        if rec.get("l4_exit") not in (0, None):
+        # b) 对拍器退出码：exit 1 = 报告正常生成且 fail>0（有失配格，l4_diff_run.py:1336
+        #    `sys.exit(0 if rep["fail"] == 0 else 1)`）⇒ 是正常判定输入，交给下面的
+        #    报告解析与采集点判定；报告新鲜度由 parse_report 把关。非 0/1 才是腿失败
+        #    或参数错（exit 2 族），报告不可信 ⇒ error。
+        if rec.get("l4_exit") not in (0, 1, None):
             rec["status"] = "error"
-            rec["notes"].append(f"l4_diff_run 退出码 {rec['l4_exit']}（腿失败）")
+            rec["notes"].append(f"l4_diff_run 退出码 {rec['l4_exit']}（腿失败/参数错）")
             return rec
         # c) 没有任何目标房身份证据：diff 再 0 也不能证明「扫的是目标房」。
         if not ent.get("identity_ok"):
