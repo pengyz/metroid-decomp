@@ -317,6 +317,19 @@ impl Manager {
         assert!(wram.len() >= 0x2000, "MSS WRAM 面不足 $2000");
         let mut mem = Self::default();
         mem.ram_mut().copy_from_slice(&ram[..0x800]);
+        // 【多帧载房任务机（2026-11-19 A-lite）】任务机相位不在 RAM 面（非 RAM 相位字段），
+        // 但可以从 `$005A RoomNumber` 的语义**重建**：窗内 RAM 里就是**要载的房号**
+        // （`< $F0 && != $FF`）⇒ 恢复后按「窗已开」重建，避免把 `RoomNumber` 当成新请求重装
+        // 第二遍（重复掉帧窗 + `delete_offscreen_room_sprites`/`scan_for_items` 二次副作用）。
+        // 精度边界：剩余窗长（`iter_gates`）本身也不在 MSS 面，故只能恢复相位、不能恢复剩余拍数。
+        {
+            let rn = mem.ram()[crate::ram_map::ROOM_NUMBER as usize & 0x7FF];
+            if rn != 0xFF && rn < 0xF0 {
+                mem.room_load_phase = 1;
+                mem.room_load_room = rn;
+                mem.room_load_tail = 0;
+            }
+        }
         mem.wram_mut().copy_from_slice(&wram[..0x2000]);
         // typed 域辖字段从字节面回灌（MSS 是外部真相面，恢复后必须重建 typed 状态）。
         // 枚举源=`TypedRestoreManifest`——下面清零用的是同一份清单（回灌/清零禁各写一份）。

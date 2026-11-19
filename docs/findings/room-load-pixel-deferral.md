@@ -119,9 +119,21 @@ room8 冻结期 `RoomPtr` 逐帧 `A58E → A5A0 → A5B2`（末尾 A5B8）⇒ �
 
 - `Manager` 三个非 RAM 相位字段：`room_load_phase`（0 空闲 / 1 冻结窗 / 2 尾段）、
   `room_load_room`、`room_load_tail`（`state.rs`）。
+- `world/room_load.rs::is_new_load_request`（**对抗复核 P1 修正**）：判据 = 房号 `< $F0` 且
+  （任务机空闲 **或** 房号 ≠ 在装房号）。窗内同房号不算新请求（不重装）；尾段游标 `$F0..$FE`
+  不满足 `< $F0`（尾段由 `room_load_gate_step` 独占驱动，避免与主循环双驱动）；尾段期间真来的
+  新请求（`GetRoomNum ; 07:E808` 重写 `$5A`／门传送／电梯）**抢占**旧任务且照常记账掉帧窗
+  （旧形用 `phase == 0` 单条件会把这次装载的 `dropped`/`work_cycles` 静默丢掉）。
 - `world/room_load.rs::begin_room_load_window` / `room_load_gate_step` / `advance_room_load_tail`：
   窗由 `iter_gates` 计数（`dropped` 帧），帧门排空那一拍切进尾段，尾段每拍推进一格到目标值
-  （`F1` / `F3` / `FF`），格内用 while 循环调到目标值（硬上界 3，越界 `debug_assert` 炸）。
+  （`F1` / `F3` / `FF`），格内用 while 循环调到目标值；**硬上界 3 用尽仍不达目标 ⇒
+  `unported!("bank07:EA13-tail-cursor")` fail-loud**（对抗复核 P2：原 `debug_assert` 在 release
+  被编译掉，会把游标走成一个看似合法的房号，下一帧再整房重载）。
+- 掉帧窗长度取 **`.max(1)`**（复核 P2）：`LOAD_BASE_CYCLES=29000 < FRAME_CYCLES=29780` 时公式
+  得 0，而 Mesen 三房实测最小冻结帧数 = 1（`room_draw.rs:1493` 的测试也自证 BASE/FRAME==0）。
+- `frame/memory.rs::restore_mss` 从 `$005A` **重建窗相位**（复核 P2）：窗内 RAM 里就是房号
+  （`< $F0 && != $FF`）⇒ 恢复后置相位 1，避免把同一房间装载第二遍。精度边界：剩余窗长
+  （`iter_gates`）本身不在 MSS 面，只能恢复相位、不能恢复剩余拍数。
 - `world/camera/scroll.rs`：`is_load` 加相位闸 `&& room_load_phase == 0`（否则窗内每个像素
   都会重触发整房装载）；装载后 `begin_room_load_window` + 把 `RoomNumber` 改回房号。
 - `frame/engine.rs::end_of_tick_gate`：门队列排空分支调用 `room_load_gate_step`。

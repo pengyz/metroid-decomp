@@ -30,19 +30,29 @@ pub(crate) fn check_update_name_table(mem: &mut Manager) {
     // inc 即该迭代唯一一次；emu 实录 f915=132→f918=133→f919=134 每 iteration 单 inc；
     // span_fc 只适用于工作拍 FC 被冻结的 title 臂形——双加=+1 相位差根因，f918 实录）。
     let rn = mem.room_number();
-    // 【多帧载房任务机（2026-11-19 A-lite）】窗内 `RoomNumber` 保持**要载的房号**（emu 帧边界
-    // 实录），所以「是否又是载房请求」不能只看 `RoomNumber`——必须叠加任务机相位：窗已开时
-    // 后续像素的 `check_update_name_table` 不得再次触发整房装载。
-    let is_load = rn != 0xFF && rn < 0xF0 && mem.room_load_phase == 0;
+    // 【多帧载房任务机（2026-11-19 A-lite）】`RoomNumber` 在冻结窗内保持**要载的房号**
+    // （emu 帧边界实录），所以「这是不是一次载房请求」不能只看 `RoomNumber < $F0`——
+    // 必须叠加任务机相位，否则窗内每个像素都会重触发整房装载。
+    //
+    // 判据（对抗复核 P1 修正）：**请求新 = 房号 < $F0 且（任务机空闲 或 房号 != 在装房号）**。
+    // · 窗内（相位 1）：同一房号 ⇒ 不是新请求 ⇒ 连 `setup_room` 都不调（否则重装一遍）。
+    // · 尾段（相位 2）：`RoomNumber` 是游标 $F0..$FE ⇒ 不满足 < $F0 ⇒ 不调；尾段由
+    //   `room_load_gate_step` 独占驱动（避免「主循环 + 门步」双驱动的步进耦合）。
+    // · 尾段期间真来了新请求（`GetRoomNum ; 07:E808` 重写 `$5A`／门传送／电梯）⇒ 房号
+    //   与在装房号不同 ⇒ 按新请求处理并**抢占**旧任务（旧任务的掉帧窗作废——emu 侧这次
+    //   装载同样会重新冻结，故不丢相位）。
+    let is_load = crate::world::room_load::is_new_load_request(mem, rn);
     if is_load {
         mem.work_cycles = 0; // 周期累加起点（载房工作量——room.rs LOAD_* 模型）
-    }
-    crate::frame::tick::setup_room(mem);
-    if is_load {
+        mem.room_load_phase = 0; // 抢占旧任务：让 setup_room 走完整装载径
+        crate::frame::tick::setup_room(mem);
         // 开窗：`draw_room` 尾巴的 `EndOfRoom ; 07:EAF4` 把 RoomNumber 置了 $F0，但 emu 在整个
         // 冻结窗里保持**房号**（room8：f900–f903 恒 8）⇒ 这里改回房号，$F0 留到窗末。
         crate::world::room_load::begin_room_load_window(mem, rn);
         mem.set_room_number(rn);
+    } else if mem.room_load_phase == 0 {
+        // 无任务在跑：保留旧径（`$FF` 早退 / `$FE` / `>= $F0` 的属性表步进）——这些分支不装载。
+        crate::frame::tick::setup_room(mem);
     }
     if is_load {
         // 【缝会计卡·掉帧窗模型（2026-11-05——findings/morphball-trajectory-root.md
@@ -52,8 +62,12 @@ pub(crate) fn check_update_name_table(mem: &mut Manager) {
         // dropped=floor((基底+载房工作周期)/29780)（常量=asm 6502 逐条计数——
         // room.rs LOAD_* 注）。行为后果=消费端输入相位（同 FC 迭代喂 joy[label]——
         // 窗长差 1 ⇒转脚帧 accel 滞 1 帧（goal-轮134 下游链））。
-        let dropped = (crate::world::room_draw::LOAD_BASE_CYCLES + mem.work_cycles)
-            / crate::world::room_draw::FRAME_CYCLES;
+        // 【下界 1（2026-11-19 对抗复核 P2）】`LOAD_BASE_CYCLES=29000 < FRAME_CYCLES=29780`
+        // ⇒ 小房间会算出 0，而 Mesen 三房实录（room 0/23/8）冻结帧数最小为 **1**。
+        // 0 会让窗在同拍关闭、尾段整体提前一帧，故取实测下界。
+        let dropped = ((crate::world::room_draw::LOAD_BASE_CYCLES + mem.work_cycles)
+            / crate::world::room_draw::FRAME_CYCLES)
+            .max(1);
         // 【case-002 归因卡·临时探针（2026-11-05）】载房工作量+计数实测。
         mem.iter_bogged(dropped.min(255) as u8);
         // 【f673 载房超帧卡（2026-11-19）】本帧被载房窗吞掉：asm 的像素写点

@@ -219,6 +219,15 @@ pub fn begin_room_load_window(mem: &mut Manager, room: u8) {
     mem.room_load_tail = 0;
 }
 
+/// 「这一次 `check_update_name_table` 是不是一次**新的**载房请求」。
+///
+/// 判据（对抗复核 P1）：房号 `< $F0` **且**（任务机空闲 **或** 房号 ≠ 在装房号）。
+/// 于是窗内（相位 1、房号保持不变）不算新请求；尾段（相位 2，游标 `$F0..$FE`）自然不满足
+/// `< $F0`；尾段期间真来的新请求（门传送/电梯/`GetRoomNum` 重写 `$5A`）会**抢占**旧任务。
+pub fn is_new_load_request(mem: &Manager, rn: u8) -> bool {
+    rn != 0xFF && rn < 0xF0 && (mem.room_load_phase == 0 || rn != mem.room_load_room)
+}
+
 /// 任务机一次「帧门排空」步进（`Engine::end_of_tick_gate` 的 `iter_gates.is_empty()` 分支调用）。
 ///
 /// 返回 true 表示本拍推进了任务机（调用方无需其它处理）。
@@ -257,16 +266,20 @@ fn advance_room_load_tail(mem: &mut Manager) {
         1 => 0xF3,
         _ => 0xFF,
     };
-    // 每格最多 2 次调用（F0→F1；F1→F3；F3→FF），用 3 做硬上界，越界说明状态机与 asm 脱钩。
-    for _ in 0..3 {
-        if mem.room_number() == target {
-            break;
+    // 每格最多 2 次调用（F0→F1；F1→F3；F3→FF），用 3 做硬上界。
+    //
+    // 【fail-loud（2026-11-19 对抗复核 P2）】上界用尽仍未达目标 = 游标不在 F0..F4 格点上
+    // （外来改写 `RoomNumber`、`room_ptr` 未设等）⇒ 按仓库 D7 纪律**当场炸在 bank:addr**，
+    // 不许 `debug_assert` 在 release 里被编译掉、把游标走成一个看似合法的房号（那样下一帧
+    // `is_load` 会真的再整房重载，症状离根因极远）。
+    let mut calls = 0;
+    while mem.room_number() != target {
+        if calls == 3 {
+            crate::unported!("bank07:EA13-tail-cursor");
         }
-        if !crate::world::room_draw::attrib_table_write(mem) {
-            break;
-        }
+        crate::world::room_draw::attrib_table_write(mem);
+        calls += 1;
     }
-    debug_assert_eq!(mem.room_number(), target, "尾段游标未达目标值");
     mem.room_load_tail = mem.room_load_tail.saturating_add(1);
 }
 
@@ -367,6 +380,43 @@ mod tests_room_load_task {
         super::room_load_gate_step(&mut m);
         assert_eq!(m.room_number(), 0xFF, "第 3 格边界 FF（RoomFinished）");
         assert_eq!(m.room_load_phase, 0, "任务机归位");
+    }
+
+    /// 【P1 修正 TDD】尾段期间真来的新载房请求必须被识别为「新请求」（抢占旧任务），
+    /// 而窗内同一房号不算新请求。旧形（`phase == 0` 单条件）在尾段会把新请求判成「非请求」
+    /// ⇒ `setup_room` 装载了新房却丢掉掉帧窗与 `work_cycles` 清零（复核 P1 的反例）。
+    #[test]
+    fn new_request_predicate_handles_window_and_tail() {
+        let mut m = Manager::default();
+        // 空闲：任何房号请求都算新请求
+        assert!(super::is_new_load_request(&m, 8));
+        // 窗内（相位 1，在装 8）：同一房号不算、不同房号算
+        super::begin_room_load_window(&mut m, 8);
+        assert!(!super::is_new_load_request(&m, 8), "窗内同房号不是新请求");
+        assert!(super::is_new_load_request(&m, 9), "窗内换房号=新请求（抢占）");
+        // 尾段（相位 2）：游标 >= $F0 不算请求
+        m.room_load_phase = 2;
+        assert!(!super::is_new_load_request(&m, 0xF1));
+        assert!(!super::is_new_load_request(&m, 0xFF));
+        // 尾段期间真来新房号 → 新请求
+        assert!(super::is_new_load_request(&m, 9));
+    }
+
+    /// 【P2 修正 TDD】`restore_mss` 必须从 `$005A` 重建窗相位：窗内 RAM 里是**房号**，
+    /// 恢复后若相位仍为 0，`is_load` 会立刻为真 ⇒ 同一房间被装载第二遍（重复掉帧窗 +
+    /// 敌人/道具重新扫描的二次副作用）。
+    #[test]
+    fn restore_mss_rebuilds_window_phase_from_room_number() {
+        let ram = vec![0u8; 0x800];
+        let mut ram_window = ram.clone();
+        ram_window[crate::ram_map::ROOM_NUMBER as usize & 0x7FF] = 8;
+        let m = Manager::restore_mss(&ram_window, &vec![0u8; 0x2000], crate::frame::memory::Registers::default());
+        assert_eq!(m.room_load_phase, 1, "窗内快照 ⇒ 恢复为窗相位");
+        assert_eq!(m.room_load_room, 8);
+        let mut ram_idle = ram.clone();
+        ram_idle[crate::ram_map::ROOM_NUMBER as usize & 0x7FF] = 0xFF; // 正常游玩态=无请求
+        let m2 = Manager::restore_mss(&ram_idle, &vec![0u8; 0x2000], crate::frame::memory::Registers::default());
+        assert_eq!(m2.room_load_phase, 0, "$5A=$FF（无请求）按空闲重建");
     }
 
     /// 尾段落完后任务机必须回空闲，否则下一次真实载房会被 `is_load` 的相位闸永久挡住。
