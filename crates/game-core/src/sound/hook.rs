@@ -464,3 +464,24 @@ mod w3_wiring_tests {
         assert_eq!(m2.regs.y, 0x96);
     }
 }
+
+#[cfg(test)]
+mod tests_multi_init_intro_music {
+    use super::*;
+
+    /// `SamusInit ; 07:C8D1`（`prg7_engine.asm:1982`）写完 `Timer3=$2C` 后 `jsr IntroMusic ; ($CBFD)`，
+    /// `IntroMusic` 置 `SFXMultiInitFlags |= sfxMulti_IntroMusic (0x10)`。
+    /// 该旗由 NMI 第 3 cycle（`MultiInit ; $B2A7`）消费：
+    ///   `FindMusicInitIndex ; $BC53`（FF 起算、inc 先于 asl）对 bit4 得 idx=3；
+    ///   `MusicInitIndexAdd8 ; $BC64` ⇒ idx=0x0B（=「Intro music」，见 `:2124-2127` 索引注释）；
+    ///   `SFXMultiInitRoutineTbl[$BC06]` 第 3 项 `GotoMusic01Init` ⇒ `Music01Init ; $BCA4` 写 `$B6/$F6`。
+    /// 这是「Intro 用 Music01」的 asm 事实，**不是** Brinstar 的 Music03（`$34`）。
+    #[test]
+    fn sfx_multi_intro_music_lands_on_music01_init() {
+        let mut m = crate::state::Manager::default();
+        m.write_ram(crate::ram_map::SFX_MULTI_INIT, 0x10);
+        let _ = sound_dispatch_chain(&mut m, crate::ram_map::SFX_MULTI_INIT, 0xB2A7, 0);
+        assert_eq!(m.read_ram(0x0628), 0xB6, "sfxMulti_IntroMusic 走 GotoMusic01Init（$BCA4 写 SQ1=$B6）");
+        assert_eq!(m.read_ram(0x0629), 0xF6, "同上，SQ2=$F6");
+    }
+}
