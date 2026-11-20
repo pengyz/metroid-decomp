@@ -46,9 +46,9 @@ const SAMUS_BASE: u8 = 12 * 4;
 const HFLIP: u8 = 0x40;
 
 /// `LoadWaveSprites ; 00:9C7F`：把 `end_wave()[table*8 ..]` 的 `count` 字节拷进 OAM。
-pub(crate) fn load_wave_sprites(mem: &mut Manager, table: u8, count: u8) {
+pub(crate) fn load_wave_sprites(mem: &mut Manager, src_off: u8, count: u8) {
     let src = game_data::assets::end_wave();
-    let off = (table as usize) * 8;
+    let off = src_off as usize;
     for i in 0..count as usize {
         let Some(&v) = src.get(off + i) else { break };
         mem.set_oam_byte(WAVE_BASE.wrapping_add(i as u8), v);
@@ -81,7 +81,7 @@ mod tests_ending_sprites {
     }
 
     #[test]
-    fn wave_loader_copies_from_table_base() {
+    fn wave_loader_copies_from_src_offset_zero() {
         let mut m = mgr();
         load_wave_sprites(&mut m, 0, 8);
         let src = game_data::assets::end_wave();
@@ -91,12 +91,14 @@ mod tests_ending_sprites {
     }
 
     #[test]
-    fn wave_loader_table_one_starts_eight_bytes_in() {
+    fn wave_loader_honours_byte_offset() {
+        // `WaveSpritePointer` 是**字节偏移**（0/4 选表，再 +2 换手型），不是表序号：
+        // ROM $9D1A/$9D2A/$9D3A/$9D4A 四表各 16 B，故表 1 从 +0x10 起。
         let mut m = mgr();
-        load_wave_sprites(&mut m, 1, 8);
+        load_wave_sprites(&mut m, 0x10, 8);
         let src = game_data::assets::end_wave();
         for i in 0..8 {
-            assert_eq!(m.oam_shadow()[WAVE_BASE as usize + i], src[8 + i]);
+            assert_eq!(m.oam_shadow()[WAVE_BASE as usize + i], src[0x10 + i]);
         }
     }
 

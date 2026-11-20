@@ -242,6 +242,12 @@ fn exec_shell_call(mem: &mut Manager, sc: &crate::title::ShellCall) {
             }
         }
         PrepareVram(addr) => prepare_vram(mem, *addr),
+        LoadEndSamusSprites { idx, count } => {
+            crate::title::ending_sprites::load_end_samus_sprites(mem, *idx, *count)
+        }
+        LoadWaveSprites { off, count } => {
+            crate::title::ending_sprites::load_wave_sprites(mem, *off, *count)
+        }
         // DisplayInputCharacters（00:940B，prg0_title.asm:2933-2949）：密码屏字符网格。
         DisplayInputCharacters => display_input_characters(mem),
         // spin 等待段（r23：计数面——main_title_routine 入口消费）

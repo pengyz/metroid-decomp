@@ -812,6 +812,10 @@ pub enum ShellCall {
     /// CalculatePassword（`00:8C7A`：ProcessUniqueItems→母亲脑惩罚→区域/装备/导弹/
     /// 雕像/SamusAge/随机 4 LSB→校验和+置乱→24 字符；0 spin，纯 RAM 面）。
     CalculatePassword,
+    /// `LoadEndSamusSprites ; 00:9C9A`（OAM 写面——段1-4 共用）。
+    LoadEndSamusSprites { idx: u8, count: u8 },
+    /// `LoadWaveSprites ; 00:9C7F`（OAM 写面——段3 挥手）。
+    LoadWaveSprites { off: u8, count: u8 },
     /// PasswordToScreen（`00:93C6`：WaitNMIPass + 4×6 字符名表写 $21A9/$21B0/$21E9/$21F0）。
     PasswordToScreen,
 }
@@ -1126,13 +1130,47 @@ pub fn dispatch_step(face: &TitleFace) -> TitleStep {
                         jumped: None, unported: None, next_cursor: 0,
                     }
                 }
-                // 段3-6 未实现（行为缺失，非等价未验证）：记账后停在本步，
+                // 段3 `SamusWave ; 00:9B93`：160 帧挥手（每 8 帧换手型），尽则换调色板进段4。
+                (3, _) => {
+                    let t3 = r(crate::title::state::TIMER3);
+                    let mut events = o.writes;
+                    let mut shell = vec![];
+                    if t3 == 0 {
+                        events.push((crate::title::state::TIMER3, 0x10)); // 160 帧（2.6s）
+                        events.push((crate::ram_map::PALETTE_PENDING, 8)); // _id_EndGamePalette07+1
+                        events.push((0x0033, room_ptr.wrapping_add(1))); // inc RoomPtr ⇒ 段4
+                    } else {
+                        let ending_type = r(0x0F);
+                        if ending_type < 0x04 {
+                            // 有服结局：整套 Samus 精灵不动，只重载帧（`jmp LoadEndSamusSprites`）。
+                            shell.push(ShellCall::LoadEndSamusSprites {
+                                idx: r(0x10),
+                                count: r(0x11),
+                            });
+                        } else {
+                            // 无服/比基尼：`WaveSpritePointer=(EndingType-4)*4`，bit3 门换手型。
+                            let mut ptr = ending_type.wrapping_sub(0x04) << 2;
+                            if face.frame_count & 0x08 != 0 {
+                                ptr = ptr.wrapping_add(2); // 抬手位（两次 inc）
+                            }
+                            shell.push(ShellCall::LoadWaveSprites { off: ptr, count: 0x10 });
+                            // `WaveSpritePointer/WaveSpriteCounter/SpriteByteCounter` 三格是纯派生量
+                            // （每帧由 EndingType+FrameCount 重算），故不落 RAM 面——见 §4 注。
+                        }
+                    }
+                    TitleStep {
+                        events, shell, a_out: Some(o.a_out),
+                        x_out: o.x_out.or(Some(face.x)), y_out: o.y_out.or(Some(face.y)),
+                        jumped: None, unported: None, next_cursor: 0,
+                    }
+                }
+                // 段4-6 未实现（行为缺失，非等价未验证）：记账后停在本步，
                 // 见 docs/findings/ending-sequence.md §4。
                 _ => TitleStep {
                     events: o.writes, shell: vec![], a_out: Some(o.a_out),
                     x_out: o.x_out.or(Some(face.x)), y_out: o.y_out.or(Some(face.y)),
                     jumped: None,
-                    unported: Some(0x9B93), next_cursor: 0,
+                    unported: Some(0x9BCD), next_cursor: 0,
                 },
             }
         }
