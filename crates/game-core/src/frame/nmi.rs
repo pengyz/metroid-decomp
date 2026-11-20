@@ -610,14 +610,15 @@ mod tests {
         sound_engine(&mut m);
         assert_eq!(m.read_ram(0x068D), 0x80, "MusicContFlags←CurrentSoundFlags（BC90 面）");
         assert_eq!(m.read_ram(0x0628), 0xB3, "Music04Init duty 同值（BC89）");
-        // 未接 handler 记账化（2026-11-01 长脚本验收收口——占位臂模式）：NoiseCont 链
-        // （$0688=0x40 位6→字节偏移 y=2=表目1=B539 未接件）⇒**不炸**+DIVERGENCES 记账
+        // NoiseCont 链（$0688=0x40 位6→字节偏移 y=2=表目1=B539）：
+        // 【task-SFX-1】ScrewAttackCont 已接线——**不再记账**，零 DIVERGENCES；
+        // cont 面执行（帧推进 $0665 写事件，len=0⇒帧 1≠0 不终）
         let mut m2 = Manager::default();
         m2.write_ram(0x0688, 0x40);
         let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| sound_engine(&mut m2)));
-        assert!(r.is_ok(), "声 handler 记账化（不炸——长脚本验收收口）: {:?}", r.err());
+        assert!(r.is_ok(), "声 handler 接线（不炸）: {:?}", r.err());
         let rec = crate::frame::DIVERGENCES.with(|d| d.borrow().clone());
-        assert!(rec.contains(&0xB539), "handler 记账点失准: {rec:?}");
+        assert!(!rec.contains(&0xB539), "B539 已接线不应记账: {rec:?}");
     }
 
     /// 静音径 TDD（**asm 内容锚** sound_engine.asm `SoundEngine_SilenceMusic: ; $B3EB`）：

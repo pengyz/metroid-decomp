@@ -133,19 +133,20 @@ pub fn sound_dispatch_chain(mem: &mut Manager, flag_addr: u16, block_win: u16, d
     {
         let ct = mem.channel_type();
         let flags = mem.current_sound_flags();
+        // 帧/长读 glue（$0665+ct / $0660+ct——multi 槽 ct=4 自动落 $0669/$0664）；
+        // 裸读出口收敛到 sound/state.rs（raw-surface 唯一实现面纪律）。
+        let (fr, ln) = (mem.sfx_frame(ct), mem.sfx_length(ct));
         let out: Option<sound::HandlerOutcome> = match ptr {
-            0xB673 => Some(sound::samus_hit_sfx_init(mem.read_ram(0x002E), ct, flags)),
+            0xB673 => Some(sound::samus_hit_sfx_init(mem.random_number1(), ct, flags)),
             0xB834 => Some(sound::samus_to_ball_sfx_init(ct, flags)),
             0xB650 => Some(sound::samus_hit_sfx_cont(
-                mem.read_ram(0x002E), ct,
-                mem.read_ram(0x0665u16 + ct as u16),
-                mem.read_ram(0x0660u16 + ct as u16),
+                mem.random_number1(), ct, fr, ln,
             )),
-            0xB598 => Some(sound::samus_walk_sfx_init(mem.read_ram(0x0688), ct, flags)),
+            0xB598 => Some(sound::samus_walk_sfx_init(mem.sfx_cont_flags(0), ct, flags)),
             0xB710 => Some(sound::enemy_hit_sfx_init(ct, flags)),
-            0xB716 => sound::bullet_fire_sfx_init(
-                mem.read_ram(0x061F), mem.read_ram(0x0689), ct, flags,
-            ), // Option（None=ice/long 变体分支——钩按分支标）
+            0xB716 => Some(sound::bullet_fire_sfx_init(
+                mem.has_beam_sfx(), mem.sfx_cont_flags(1), ct, flags,
+            )), // 【task-SFX-1 更正】asm jmp 形：ice/long=内部 jmp 目标（返 HandlerOutcome——旧 Option-None 形退役，A 级=B716 `lsr/bcs`+`asl/bcs`）
             0xB56E => Some(sound::missile_launch_sfx_init(ct, flags)),
             0xB6CD => Some(sound::missile_pickup_sfx_init(ct, flags)),
             0xB6E7 => Some(sound::energy_pickup_sfx_init(ct, flags)),
@@ -154,18 +155,75 @@ pub fn sound_dispatch_chain(mem: &mut Manager, flag_addr: u16, block_win: u16, d
             0xB583 => Some(sound::bomb_explode_sfx_init(ct, flags)),
             0xB5EC => Some(sound::boss_hit_sfx_init(ct, flags)),
             0xB695 => Some(sound::incorrect_password_sfx_init(ct, flags)),
-            0xB703 => Some(sound::samus_jump_sfx_init(mem.read_ram(0x068D), ct, flags)),
+            0xB703 => Some(sound::samus_jump_sfx_init(mem.music_cont_flags(), ct, flags)),
             0xB7AC => Some(sound::door_open_close_sfx_init(ct, flags)),
             0xB7EF => Some(sound::big_enemy_hit_sfx_init(ct, flags)),
             0xB878 => Some(sound::bomb_launch_sfx_init(ct, flags)),
-            0xB8A7 => Some(sound::metroid_hit_sfx_init(mem.read_ram(0x002E), ct, flags)),
+            0xB8A7 => Some(sound::metroid_hit_sfx_init(mem.random_number1(), ct, flags)),
             0xB921 => Some(sound::statue_raise_sfx_init(ct, flags)),
-            0xB7D9 => Some(sound::beep_sfx_init(mem.read_ram(0x068B), flags, ct)),
+            0xB7D9 => Some(sound::beep_sfx_init(mem.sfx_cont_flags(3), flags, ct)),
             0xB8D2 => {
-                // ⚠️InitializeSoundAddresses 全清前置（清单注）
-                sound::initialize_sound_addresses();
-                Some(sound::samus_die_sfx_init(ct, flags))
+                // InitializeSoundAddresses 全清前置（$B8D2 asm `jsr $B404` 首指令）。
+                // 【task-SFX-1 修正】旧形丢返回值（全清未落）——按 asm 事件落 RAM+APU
+                let (mut ram, mut apu) = sound::initialize_sound_addresses();
+                let die = sound::samus_die_sfx_init(ct, flags);
+                ram.extend(die.ram_events);
+                apu.extend(die.apu_events);
+                Some(sound::HandlerOutcome { ram_events: ram, apu_events: apu,
+                                             a_out: die.a_out, x_out: die.x_out, y_out: die.y_out })
             }
+            // ===== cont 全族接线（task-SFX-1：noise 4/sq1 5/tri 8/multi 2+已有 samus_hit）=====
+            // cont 装载器形（$B322 族 asm 逐字）=`jmp RunSoundRoutine` → handler 直接
+            // RTS——无 UpdateContFlags 后置。
+            0xB516 => Some(sound::spit_flame_sfx_cont(
+                mem.sfx_var(0, 0), fr, ln)),
+            0xB539 => Some(sound::screw_attack_sfx_cont(
+                mem.sfx_var(0, 0), mem.sfx_var(1, 0), mem.sfx_var(2, 0), fr, ln)),
+            0xB57B => Some(sound::missile_launch_sfx_cont(
+                mem.sfx_var(0, 0), fr, ln)),
+            0xB58A => Some(sound::noise_sfx_cont(fr, ln)),
+            0xB6B0 => Some(sound::missile_pickup_sfx_cont(
+                mem.sfx_var(0, 1), fr, ln)),
+            0xB6D3 => Some(sound::energy_pickup_sfx_cont(
+                mem.sfx_var(0, 1), fr, ln)),
+            0xB6ED => Some(sound::sq1_sfx_cont(fr, ln)),
+            0xB74F => Some(sound::bullet_fire_sfx_cont(
+                mem.has_beam_sfx(), mem.sfx_var(0, 1), fr, ln)),
+            0xB781 => Some(sound::wave_beam_sfx_cont(
+                mem.sfx_var(0, 1), mem.sfx_var(1, 1), fr, ln)),
+            0xB7CB => {
+                let (plo, phi, clo, chi) = mem.sfx_tri_period_and_change();
+                Some(sound::door_open_close_sfx_cont(plo, phi, clo, chi, fr, ln))
+            }
+            0xB7E7 => Some(sound::beep_sfx_cont(fr, ln)),
+            0xB80E => {
+                let (plo, phi, clo, chi) = mem.sfx_tri_period_and_change();
+                Some(sound::big_enemy_hit_sfx_cont(
+                    mem.random_number1(), plo, phi, clo, chi, fr, ln))
+            }
+            0xB84F => {
+                let (plo, phi, clo, chi) = mem.sfx_tri_period_and_change();
+                Some(sound::samus_to_ball_sfx_cont(
+                    mem.sfx_tri_divisor(), plo, phi, clo, chi, fr, ln))
+            }
+            0xB87F => Some(sound::bomb_launch_sfx_cont(
+                mem.sfx_var(0, 3), fr, ln)),
+            0xB8B1 => Some(sound::metroid_hit_sfx_cont(
+                mem.random_number1(), mem.sfx_var(0, 3), fr, ln)),
+            0xB8ED => {
+                let (plo, phi, clo, chi) = mem.sfx_tri_period_and_change();
+                Some(sound::samus_die_sfx_cont(
+                    mem.sfx_tri_divisor(), mem.sfx_var(0, 3), plo, phi, clo, chi, fr, ln))
+            }
+            0xB940 => {
+                let (plo, phi, clo, chi) = mem.sfx_tri_period_and_change();
+                Some(sound::statue_raise_sfx_cont(
+                    mem.sfx_var(0, 3), plo, phi, clo, chi, fr, ln))
+            }
+            0xB5F6 => Some(sound::boss_hit_sfx_cont(
+                mem.random_number1(),
+                mem.sfx_var(0, 1), mem.sfx_var(1, 1), mem.sfx_var(2, 1))),
+            0xB6A1 => Some(sound::incorrect_password_sfx_cont(fr, ln)),
             // ===== 音乐 init 组合臂（BC77-BC86 GotoMusicNNInit 族——f16 发射序实证；
             // r17 复核后首件）=====
             0xBC77 | 0xBC7A | 0xBC7D | 0xBC80 | 0xBC83 | 0xBC86 => {
@@ -183,7 +241,7 @@ pub fn sound_dispatch_chain(mem: &mut Manager, flag_addr: u16, block_win: u16, d
                 // CheckMusicFlags（$B3FC）：MusicContFlags==CurrentSoundFlags⇒同曲重开；
                 // 异曲⇒InitializeSoundAddresses（$B404）全清（f16 $068D←00(B404)+
                 // $065D←00(B40A) 双写实证——同值写也是事件）
-                if !sound::check_music_flags(mem.read_ram(0x068D), mem.current_sound_flags()) {
+                if !sound::check_music_flags(mem.music_cont_flags(), mem.current_sound_flags()) {
                     let (r, a) = sound::initialize_sound_addresses();
                     ram.extend(r);
                     apu.extend(a);

@@ -72,6 +72,71 @@ impl Manager {
         self.write_ram(addrs::SQ1_INIT, v);
     }
 
+    // ===== SFX 数据面访问器（task-SFX-1——hook.rs cont/init 臂的唯一裸读出口）=====
+
+    /// `$061F HasBeamSFX`（bit7=LongBeam / bit0=IceBeam）。
+    pub(crate) fn has_beam_sfx(&self) -> u8 {
+        self.read_ram(addrs::HAS_BEAM_SFX)
+    }
+
+    /// `SFXNoiseFrame + ct`（$0665+ct——multi 槽 ct=4→$0669）。
+    pub(crate) fn sfx_frame(&self, ct: u8) -> u8 {
+        self.read_ram(addrs::SFX_FRAME_BASE + ct as u16)
+    }
+
+    /// `SFXNoiseLength + ct`（$0660+ct——multi 槽 ct=4→$0664）。
+    pub(crate) fn sfx_length(&self, ct: u8) -> u8 {
+        self.read_ram(addrs::SFX_LENGTH_BASE + ct as u16)
+    }
+
+    /// `SFXNoiseVar{0,1,2} + ct`（$0670/$0674/$0678 + ct——slot 0..2）。
+    pub(crate) fn sfx_var(&self, slot: u8, ct: u8) -> u8 {
+        let base = match slot {
+            0 => addrs::SFX_VAR0_BASE,
+            1 => addrs::SFX_VAR1_BASE,
+            _ => addrs::SFX_VAR2_BASE,
+        };
+        self.read_ram(base + ct as u16)
+    }
+
+    /// `SFXTriPeriodLow/High`（$0610/$0611）。
+    pub(crate) fn sfx_tri_period(&self) -> (u8, u8) {
+        (
+            self.read_ram(addrs::TRI_PERIOD_LOW),
+            self.read_ram(addrs::TRI_PERIOD_HIGH),
+        )
+    }
+
+    /// `SFXTriChangeLow/High`（$0612/$0613）。
+    pub(crate) fn sfx_tri_change(&self) -> (u8, u8) {
+        (
+            self.read_ram(addrs::TRI_CHANGE_LOW),
+            self.read_ram(addrs::TRI_CHANGE_HIGH),
+        )
+    }
+
+    /// `SFXTriDivisor`（$0616）。
+    pub(crate) fn sfx_tri_divisor(&self) -> u8 {
+        self.read_ram(addrs::TRI_DIVISOR)
+    }
+
+    /// Tri 四元组（PeriodLow/High + ChangeLow/High——tri cont 臂一次读全）。
+    pub(crate) fn sfx_tri_period_and_change(&self) -> (u8, u8, u8, u8) {
+        let (plo, phi) = self.sfx_tri_period();
+        let (clo, chi) = self.sfx_tri_change();
+        (plo, phi, clo, chi)
+    }
+
+    /// `$068D MusicContFlags`。
+    pub(crate) fn music_cont_flags(&self) -> u8 {
+        self.read_ram(addrs::MUSIC_CONT_FLAGS)
+    }
+
+    /// `$0688+ct SFX*ContFlags`。
+    pub(crate) fn sfx_cont_flags(&self, ct: u8) -> u8 {
+        self.read_ram(addrs::CONT_FLAGS_BASE + ct as u16)
+    }
+
     /// `$0683 SFXTriInitFlags`（岩浆伤径的 `SFX_SamusJump` 落点）。
     pub(crate) fn tri_init_flags(&self) -> u8 {
         self.sound_init.tri()
