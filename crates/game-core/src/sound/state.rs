@@ -128,6 +128,10 @@ impl Manager {
     }
 
     /// `$068D MusicContFlags`。
+    /// `$0607 LoadMusicSQ1SQ2PeriodsFlag`（End*SFX 的 inc 计数器——复核 F6 读面）。
+    pub(crate) fn load_music_sq12_periods_flag(&self) -> u8 {
+        self.read_ram(addrs::LOAD_MUSIC_PERIODS_FLAG)
+    }
     pub(crate) fn music_cont_flags(&self) -> u8 {
         self.read_ram(addrs::MUSIC_CONT_FLAGS)
     }

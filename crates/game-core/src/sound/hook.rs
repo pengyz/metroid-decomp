@@ -162,6 +162,12 @@ pub fn sound_dispatch_chain(mem: &mut Manager, flag_addr: u16, block_win: u16, d
             0xB8A7 => Some(sound::metroid_hit_sfx_init(mem.random_number1(), ct, flags)),
             0xB921 => Some(sound::statue_raise_sfx_init(ct, flags)),
             0xB7D9 => Some(sound::beep_sfx_init(mem.sfx_cont_flags(3), flags, ct)),
+            // 【复核 F4 补接线】三臂实现已在 mod.rs，此前未接 dispatch（触发落 DIVERGENCES 记账）。
+            // asm 锚：`SoundRoutinePtr` 面目（sound_engine.asm B4CA 跳表）；Metal=$B735 /
+            // OutOfPipe=$B73C / WaveBeam=$B77A。
+            0xB735 => Some(sound::metal_sfx_init(ct, flags)),
+            0xB73C => Some(sound::out_of_pipe_sfx_init(mem.music_cont_flags(), ct, flags)),
+            0xB77A => Some(sound::wave_beam_sfx_init(ct, flags)),
             0xB8D2 => {
                 // InitializeSoundAddresses 全清前置（$B8D2 asm `jsr $B404` 首指令）。
                 // 【task-SFX-1 修正】旧形丢返回值（全清未落）——按 asm 事件落 RAM+APU
@@ -183,14 +189,16 @@ pub fn sound_dispatch_chain(mem: &mut Manager, flag_addr: u16, block_win: u16, d
                 mem.sfx_var(0, 0), fr, ln)),
             0xB58A => Some(sound::noise_sfx_cont(fr, ln)),
             0xB6B0 => Some(sound::missile_pickup_sfx_cont(
-                mem.sfx_var(0, 1), fr, ln)),
+                mem.sfx_var(0, 1), fr, ln, mem.load_music_sq12_periods_flag())),
             0xB6D3 => Some(sound::energy_pickup_sfx_cont(
-                mem.sfx_var(0, 1), fr, ln)),
-            0xB6ED => Some(sound::sq1_sfx_cont(fr, ln)),
+                mem.sfx_var(0, 1), fr, ln, mem.load_music_sq12_periods_flag())),
+            0xB6ED => Some(sound::sq1_sfx_cont(fr, ln, mem.load_music_sq12_periods_flag())),
             0xB74F => Some(sound::bullet_fire_sfx_cont(
-                mem.has_beam_sfx(), mem.sfx_var(0, 1), fr, ln)),
+                mem.has_beam_sfx(), mem.sfx_var(0, 1), fr, ln,
+                mem.load_music_sq12_periods_flag())),
             0xB781 => Some(sound::wave_beam_sfx_cont(
-                mem.sfx_var(0, 1), mem.sfx_var(1, 1), fr, ln)),
+                mem.sfx_var(0, 1), mem.sfx_var(1, 1), fr, ln,
+                mem.load_music_sq12_periods_flag())),
             0xB7CB => {
                 let (plo, phi, clo, chi) = mem.sfx_tri_period_and_change();
                 Some(sound::door_open_close_sfx_cont(plo, phi, clo, chi, fr, ln))
@@ -222,8 +230,10 @@ pub fn sound_dispatch_chain(mem: &mut Manager, flag_addr: u16, block_win: u16, d
             }
             0xB5F6 => Some(sound::boss_hit_sfx_cont(
                 mem.random_number1(),
-                mem.sfx_var(0, 1), mem.sfx_var(1, 1), mem.sfx_var(2, 1))),
-            0xB6A1 => Some(sound::incorrect_password_sfx_cont(fr, ln)),
+                mem.sfx_var(0, 1), mem.sfx_var(1, 1), mem.sfx_var(2, 1),
+                mem.load_music_sq12_periods_flag())),
+            0xB6A1 => Some(sound::incorrect_password_sfx_cont(
+                fr, ln, mem.load_music_sq12_periods_flag())),
             // ===== 音乐 init 组合臂（BC77-BC86 GotoMusicNNInit 族——f16 发射序实证；
             // r17 复核后首件）=====
             0xBC77 | 0xBC7A | 0xBC7D | 0xBC80 | 0xBC83 | 0xBC86 => {

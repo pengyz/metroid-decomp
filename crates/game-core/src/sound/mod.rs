@@ -1202,8 +1202,11 @@ pub fn bomb_launch_sfx_init(ct: u8, flags: u8) -> HandlerOutcome {
 /// TRI_HI←(rng&1)|$F8——APU 随机周期）。
 pub fn metroid_hit_sfx_init(rng1: u8, ct: u8, flags: u8) -> HandlerOutcome {
     let mut o = sfx_data_init(3, sfx4(0xB271), 0xB271, ct, flags);
-    o.apu_events.push((0x4008, rng1 | 0x6C));
-    o.apu_events.push((0x400A, (rng1 & 1) | 0xF8));
+    // asm RndTriPeriods ; $B8C3（sound_engine.asm:1402-1410）：
+    //   ora #$6C / sta TRI_LO($400A)；and #$01 / ora #$F8 / sta TRI_HI($400B)
+    // 【复核 F1 更正】旧形写 $4008/$400A 整体错位一格（hardware.asm:69 TRI_LO=$400A）。
+    o.apu_events.push((0x400A, rng1 | 0x6C));
+    o.apu_events.push((0x400B, (rng1 & 1) | 0xF8));
     o.a_out = (rng1 & 1) | 0xF8;
     o
 }
@@ -1238,8 +1241,8 @@ mod w4_tests {
         assert_eq!(o.a_out, 0x3B & 7);
         assert_eq!(bomb_launch_sfx_init(0, 0x40).ram_events.iter().find(|a| a.0 == 0x0660).unwrap().1, 4);
         let o = metroid_hit_sfx_init(0x55, 2, 0x40);
-        assert!(o.apu_events.contains(&(0x4008, 0x55 | 0x6C)));
-        assert!(o.apu_events.contains(&(0x400A, 0x55 & 1 | 0xF8)));
+        assert!(o.apu_events.contains(&(0x400A, 0x55 | 0x6C))); // 复核 F1：TRI_LO=$400A
+        assert!(o.apu_events.contains(&(0x400B, 0x55 & 1 | 0xF8))); // 复核 F1：TRI_HI=$400B
         assert!(samus_die_sfx_init(2, 0x40).ram_events.contains(&(0x0616, 0x15)));
         assert!(statue_raise_sfx_init(2, 0x40).ram_events.contains(&(0x0613, 0)));
     }
@@ -1411,10 +1414,11 @@ pub fn end_noise_sfx(ct: u8) -> (Vec<(u16, u8)>, Vec<(u16, u8)>) {
 
 /// `EndSQ1SFX ; $B6F2`：`SQ1_VOL←$10` → `SQ1UsedBySFX←0` → ClearFlags →
 /// `inc LoadMusicSQ1SQ2PeriodsFlag`（asm 序）。
-pub fn end_sq1_sfx(ct: u8) -> (Vec<(u16, u8)>, Vec<(u16, u8)>) {
+pub fn end_sq1_sfx(ct: u8, music_flag: u8) -> (Vec<(u16, u8)>, Vec<(u16, u8)>) {
     let mut ram = vec![(0x0653, 0)];
     ram.extend(clear_current_sound_flags_and_cont_flags(ct));
-    ram.push((0x0607, 1)); // inc（占用清后恒 0→1；asm 无读用）
+    // asm `inc LoadMusicSQ1SQ2PeriodsFlag`【复核 F6】旧形恒写 1（连续 End 未消费时真值 2）
+    ram.push((0x0607, music_flag.wrapping_add(1)));
     (ram, vec![(0x4000, 0x10)])
 }
 
@@ -1429,12 +1433,12 @@ pub fn end_tri_sfx(ct: u8) -> (Vec<(u16, u8)>, Vec<(u16, u8)>) {
 
 /// `EndMultiSFX ; $B5CD`：双 VOL 静音+双 SWEEP 禁（APU 面）→ ClearFlags →
 /// SQ1/SQ2 占用清 → `inc LoadMusicSQ1SQ2PeriodsFlag`。
-pub fn end_multi_sfx(ct: u8) -> (Vec<(u16, u8)>, Vec<(u16, u8)>) {
+pub fn end_multi_sfx(ct: u8, music_flag: u8) -> (Vec<(u16, u8)>, Vec<(u16, u8)>) {
     let apu = vec![(0x4000, 0x10), (0x4004, 0x10), (0x4001, 0x7F), (0x4005, 0x7F)];
     let mut ram = clear_current_sound_flags_and_cont_flags(ct);
     ram.push((0x0653, 0));
     ram.push((0x0654, 0));
-    ram.push((0x0607, 1));
+    ram.push((0x0607, music_flag.wrapping_add(1))); // inc【复核 F6】
     (ram, apu)
 }
 
@@ -1458,8 +1462,9 @@ pub fn decrease_sfx_tri_period(plo: u8, phi: u8, clo: u8, chi: u8)
 /// `DivideSFXTriPeriod ; $B9A0`：16bit 移位减除（restoring division，除数=SFXTriPeriodDivisor）。
 /// 【进位入注】入口 carry 实跑恒 0（三条调用路径都从 `IncrementSFXFrame` 未终帧
 /// `cmp` 出——frame'<length⇒carry=0），初轮 `rol Period` 移入 0。
-/// 返回（DividedLow, DividedHigh）。
-pub fn divide_sfx_tri_period(divisor: u8, plo: u8, phi: u8) -> (u8, u8) {
+/// 返回（DividedLow, DividedHigh, Remainder）。Remainder=$0617 终值
+/// 【复核 F3 补】asm :1557 `sta #$00`+每轮 `rol/sbc/sta`，残值留在 RAM。
+pub fn divide_sfx_tri_period(divisor: u8, plo: u8, phi: u8) -> (u8, u8, u8) {
     let mut p = ((phi as u16) << 8) | plo as u16;
     let mut rem: u8 = 0;
     // 初轮 `rol SFXTriPeriodLow / rol SFXTriPeriodHigh`：C(入口)→p b0、p b15→C。
@@ -1482,7 +1487,7 @@ pub fn divide_sfx_tri_period(divisor: u8, plo: u8, phi: u8) -> (u8, u8) {
         p = ((p << 1) | (c as u16)) & 0xFFFF;
         c = out;
     }
-    ((p & 0xFF) as u8, (p >> 8) as u8)
+    ((p & 0xFF) as u8, (p >> 8) as u8, rem)
 }
 
 /// `WriteSFXTriPeriod ; $B869`：`TRI_LO←PeriodLow / TRI_HI($400B)←PeriodHigh|0x08`。
@@ -1605,9 +1610,10 @@ pub fn bullet_fire_sfx_init(has_beam: u8, sq1_cont: u8, ct: u8, flags: u8)
 // （SamusDie B8ED/Door B7CB/MetroidHit B8B1/StatueRaise B940/Beep B7E7/BigEnemyHit B80E/
 // SamusToBall B84F/BombLaunch B87F）；`SFXMultiContRoutineTbl ; $BC16`
 // （SamusHit B650/BossHit B5F6/IncorrectPassword B6A1）。
-// 框架序（`RunSFXNoiseCont ; $B322` 族）：占奏→Y=length→X=ct→jsr handler→
-// `UpdateContFlags`（写 cont 旗）→ `RTS`——本文件 cont 函数只产 handler 面
-// （含 handler 内 UpdateContFlags 调用点的旗写），框架旗写/装载在 hook.rs。
+// 【复核 F5 更正】框架序（`RunSFXNoiseContRoutine ; $B322` 族，sound_engine.asm:223-245）：
+// `lda ContFlags / ldx #<data / bne RunSoundRoutine($B337)` → `jsr GetSoundRoutine($B4BD)` →
+// `jmp (SoundRoutinePtr)`——**无后置 UpdateContFlags**；cont 旗只由 handler 内部写。
+// 本文件 cont 函数只产 handler 面；装载/分派在 hook.rs。
 
 /// `SpitFlameSFXCont ; $B516`：终帧⇒EndNoiseSFX；否则 `NOISE_VOL←SpitFlamesTbl[Var0]`、
 /// `Var0+1`（asm 序：lda tbl[y]→sta NOISE_VOL→inc Var0）。
@@ -1697,7 +1703,7 @@ pub fn noise_sfx_cont(frame: u8, length: u8) -> HandlerOutcome {
 /// `Var0+1→BossHitSFXDataTbl→SQ1_VOL+SQ2_VOL 双写`；==0x14⇒EndMulti；
 /// `>=6`⇒`Var2←(rng|0x10)&0x7F`（cmp#6 carry=1，`rol Var2`→`Var1=Var2*2+1`）；
 /// 否则 `Var1+=2/Var2+=2`；两支都落 `WriteSQ1SQ2PeriodLow`（SQ2_LO←Var1/SQ1_LO←Var2）。
-pub fn boss_hit_sfx_cont(rng1: u8, var0: u8, var1: u8, var2: u8) -> HandlerOutcome {
+pub fn boss_hit_sfx_cont(rng1: u8, var0: u8, var1: u8, var2: u8, music_flag: u8) -> HandlerOutcome {
     let ct = 4u8;
     let nv0 = var0.wrapping_add(1);
     let mut ram = vec![(0x0671, nv0)]; // `inc SFXSQ1Var0`（BossHit 用 SQ1 槽固定址）
@@ -1706,7 +1712,7 @@ pub fn boss_hit_sfx_cont(rng1: u8, var0: u8, var1: u8, var2: u8) -> HandlerOutco
     apu.push((0x4000, v));
     apu.push((0x4004, v));
     if nv0 == 0x14 {
-        let (r, a) = end_multi_sfx(ct);
+        let (r, a) = end_multi_sfx(ct, music_flag);
         ram.extend(r);
         apu.extend(a);
         return HandlerOutcome { ram_events: ram, apu_events: apu, a_out: 0, x_out: 0, y_out: 0 };
@@ -1729,12 +1735,12 @@ pub fn boss_hit_sfx_cont(rng1: u8, var0: u8, var1: u8, var2: u8) -> HandlerOutco
 }
 
 /// `IncorrectPasswordSFXCont ; $B6A1`：等结束⇒EndMultiSFX。
-pub fn incorrect_password_sfx_cont(frame: u8, length: u8) -> HandlerOutcome {
+pub fn incorrect_password_sfx_cont(frame: u8, length: u8, music_flag: u8) -> HandlerOutcome {
     let ct = 4u8;
     let (mut ram, ended) = increment_sfx_frame(ct, frame, length);
     let mut apu: Vec<(u16, u8)> = Vec::new();
     if ended {
-        let (r, a) = end_multi_sfx(ct);
+        let (r, a) = end_multi_sfx(ct, music_flag);
         ram.extend(r);
         apu.extend(a);
         return HandlerOutcome { ram_events: ram, apu_events: apu, a_out: 0, x_out: 0, y_out: 0 };
@@ -1744,14 +1750,14 @@ pub fn incorrect_password_sfx_cont(frame: u8, length: u8) -> HandlerOutcome {
 
 /// `MissilePickupSFXCont ; $B6B0`：未终⇒RTS；终：`tbl[Var0]==0⇒EndSQ1SFX`；
 /// 否则 `SQ1_LO←tbl[Var0] / SQ1_HI←data[3]=0x28 / Var0+1`。
-pub fn missile_pickup_sfx_cont(var0: u8, frame: u8, length: u8) -> HandlerOutcome {
+pub fn missile_pickup_sfx_cont(var0: u8, frame: u8, length: u8, music_flag: u8) -> HandlerOutcome {
     let ct = 1u8;
     let (mut ram, ended) = increment_sfx_frame(ct, frame, length);
     let mut apu: Vec<(u16, u8)> = Vec::new();
     if ended {
         let v = missile_pickup_sfx_tbl()[var0 as usize];
         if v == 0 {
-            let (r, a) = end_sq1_sfx(ct);
+            let (r, a) = end_sq1_sfx(ct, music_flag);
             ram.extend(r);
             apu.extend(a);
             return HandlerOutcome { ram_events: ram, apu_events: apu, a_out: 0, x_out: 0, y_out: 0 };
@@ -1766,7 +1772,7 @@ pub fn missile_pickup_sfx_cont(var0: u8, frame: u8, length: u8) -> HandlerOutcom
 
 /// `EnergyPickupSFXCont ; $B6D3`：未终⇒RTS；终：`Var0+1==3⇒EndSQ1SFX`；
 /// 否则 `LoadSFXData@SQ1 EnergyPickup($B23D)`（4B 重载 4000 面）。
-pub fn energy_pickup_sfx_cont(var0: u8, frame: u8, length: u8) -> HandlerOutcome {
+pub fn energy_pickup_sfx_cont(var0: u8, frame: u8, length: u8, music_flag: u8) -> HandlerOutcome {
     let ct = 1u8;
     let (mut ram, ended) = increment_sfx_frame(ct, frame, length);
     let mut apu: Vec<(u16, u8)> = Vec::new();
@@ -1774,7 +1780,7 @@ pub fn energy_pickup_sfx_cont(var0: u8, frame: u8, length: u8) -> HandlerOutcome
         let nv0 = var0.wrapping_add(1);
         ram.push((0x0671, nv0));
         if nv0 == 3 {
-            let (r, a) = end_sq1_sfx(ct);
+            let (r, a) = end_sq1_sfx(ct, music_flag);
             ram.extend(r);
             apu.extend(a);
             return HandlerOutcome { ram_events: ram, apu_events: apu, a_out: 0, x_out: 0, y_out: 0 };
@@ -1788,12 +1794,12 @@ pub fn energy_pickup_sfx_cont(var0: u8, frame: u8, length: u8) -> HandlerOutcome
 }
 
 /// `SQ1SFXCont ; $B6ED`：等结束⇒EndSQ1SFX（SQ1 init 表 4/5/6 目）。
-pub fn sq1_sfx_cont(frame: u8, length: u8) -> HandlerOutcome {
+pub fn sq1_sfx_cont(frame: u8, length: u8, music_flag: u8) -> HandlerOutcome {
     let ct = 1u8;
     let (mut ram, ended) = increment_sfx_frame(ct, frame, length);
     let mut apu: Vec<(u16, u8)> = Vec::new();
     if ended {
-        let (r, a) = end_sq1_sfx(ct);
+        let (r, a) = end_sq1_sfx(ct, music_flag);
         ram.extend(r);
         apu.extend(a);
         return HandlerOutcome { ram_events: ram, apu_events: apu, a_out: 0, x_out: 0, y_out: 0 };
@@ -1803,12 +1809,12 @@ pub fn sq1_sfx_cont(frame: u8, length: u8) -> HandlerOutcome {
 
 /// `HasIceBeamSFXCont ; $B765`：终⇒EndSQ1SFX；否则
 /// `SQ1_LO←@IceBeamTbl[Var0&1]($93/$81)`→`LoadSQ1PeriodLow($B7A0: sta/Var0+1)`。
-pub fn has_ice_beam_sfx_cont(var0: u8, frame: u8, length: u8) -> HandlerOutcome {
+pub fn has_ice_beam_sfx_cont(var0: u8, frame: u8, length: u8, music_flag: u8) -> HandlerOutcome {
     let ct = 1u8;
     let (mut ram, ended) = increment_sfx_frame(ct, frame, length);
     let mut apu: Vec<(u16, u8)> = Vec::new();
     if ended {
-        let (r, a) = end_sq1_sfx(ct);
+        let (r, a) = end_sq1_sfx(ct, music_flag);
         ram.extend(r);
         apu.extend(a);
         return HandlerOutcome { ram_events: ram, apu_events: apu, a_out: 0, x_out: 0, y_out: 0 };
@@ -1820,16 +1826,17 @@ pub fn has_ice_beam_sfx_cont(var0: u8, frame: u8, length: u8) -> HandlerOutcome 
 }
 
 /// `BulletFireSFXCont ; $B74F`：ice 位⇒HasIceBeamSFXCont（jmp）；否则等结束⇒EndSQ1SFX。
-pub fn bullet_fire_sfx_cont(has_beam: u8, var0: u8, frame: u8, length: u8) -> HandlerOutcome {
+pub fn bullet_fire_sfx_cont(has_beam: u8, var0: u8, frame: u8, length: u8, music_flag: u8)
+    -> HandlerOutcome {
     if has_beam & 0x01 != 0 {
-        return has_ice_beam_sfx_cont(var0, frame, length);
+        return has_ice_beam_sfx_cont(var0, frame, length, music_flag);
     }
-    sq1_sfx_cont(frame, length)
+    sq1_sfx_cont(frame, length, music_flag)
 }
 
 /// `WaveBeamSFXCont ; $B781`：终⇒`SQ1_VOL←WaveBeamSFXVolumeTbl[Var1]($93/$91/$00)`、
 /// `Var1+1`，音量 `$00`⇒EndSQ1SFX；未终⇒`SQ1_LO←LoTbl[Var0&1]($58/$6F)`/`Var0+1`。
-pub fn wave_beam_sfx_cont(var0: u8, var1: u8, frame: u8, length: u8) -> HandlerOutcome {
+pub fn wave_beam_sfx_cont(var0: u8, var1: u8, frame: u8, length: u8, music_flag: u8) -> HandlerOutcome {
     let ct = 1u8;
     let (mut ram, ended) = increment_sfx_frame(ct, frame, length);
     let mut apu: Vec<(u16, u8)> = Vec::new();
@@ -1838,7 +1845,7 @@ pub fn wave_beam_sfx_cont(var0: u8, var1: u8, frame: u8, length: u8) -> HandlerO
         apu.push((0x4000, vol));
         ram.push((0x0675, var1.wrapping_add(1)));
         if vol == 0 {
-            let (r, a) = end_sq1_sfx(ct);
+            let (r, a) = end_sq1_sfx(ct, music_flag);
             ram.extend(r);
             apu.extend(a);
             return HandlerOutcome { ram_events: ram, apu_events: apu, a_out: 0, x_out: 0, y_out: 0 };
@@ -1899,6 +1906,9 @@ pub fn big_enemy_hit_sfx_cont(rng1: u8, plo: u8, phi: u8, clo: u8, chi: u8,
     }
     let (nplo, nphi, ev) = increase_sfx_tri_period(plo, phi, clo, chi);
     ram.extend(ev);
+    // asm（sound_engine.asm:1276-1278）：`lda RandomNumber1 / and #$3C / sta SFXTriVar0($0673)`
+    // 【复核 F2 补】RAM 面事件此前缺失。
+    ram.push((0x0673, rng1 & 0x3C));
     apu.push((0x400A, (nplo & 0xC3) | (rng1 & 0x3C)));
     apu.push((0x400B, nphi | 0x40));
     HandlerOutcome { ram_events: ram, apu_events: apu, a_out: nphi, x_out: ct, y_out: length }
@@ -1917,7 +1927,8 @@ pub fn samus_to_ball_sfx_cont(divisor: u8, plo: u8, phi: u8, clo: u8, chi: u8,
         apu.extend(a);
         return HandlerOutcome { ram_events: ram, apu_events: apu, a_out: 0, x_out: 0, y_out: 0 };
     }
-    let (dlo, dhi) = divide_sfx_tri_period(divisor, plo, phi);
+    let (dlo, dhi, rem) = divide_sfx_tri_period(divisor, plo, phi);
+    ram.push((0x0617, rem)); // SFXTriPeriodRemainder 终值【复核 F3】
     ram.push((0x0614, dlo));
     ram.push((0x0615, dhi));
     ram.push((0x0612, dlo)); // `sta ChangeLow / sta ChangeHigh`
@@ -1985,7 +1996,7 @@ pub fn samus_die_sfx_cont(divisor: u8, var0: u8, plo: u8, phi: u8, clo: u8, chi:
     let (mut ram, ended) = increment_sfx_frame(ct, frame, length);
     let mut apu: Vec<(u16, u8)> = Vec::new();
     if !ended {
-        let (dlo, dhi) = divide_sfx_tri_period(divisor, plo, phi);
+        let (dlo, dhi, _) = divide_sfx_tri_period(divisor, plo, phi);
         ram.push((0x0614, dlo));
         ram.push((0x0615, dhi));
         ram.push((0x0612, dlo));
@@ -2128,7 +2139,7 @@ mod task_sfx1_tests {
         let (lo, hi, _) = decrease_sfx_tri_period(0x18, 0x42, 0x0F, 0x00);
         assert_eq!((lo, hi), (0x09, 0x42));
         // divide：4020h(=16416) / 15h(=21) = 781=30Dh——SamusDie 初始周期形
-        let (dlo, dhi) = divide_sfx_tri_period(0x15, 0x20, 0x40);
+        let (dlo, dhi, _) = divide_sfx_tri_period(0x15, 0x20, 0x40);
         assert_eq!((dlo, dhi), (0x0D, 0x03)); // 16416/21=781
         // write 面：TRI_LO←plo / TRI_HI($400B)←phi|0x08
         assert_eq!(write_sfx_tri_period(0x2A, 0x42), vec![(0x400A, 0x2A), (0x400B, 0x4A)]);
@@ -2138,10 +2149,10 @@ mod task_sfx1_tests {
     #[test]
     fn wave_beam_volume_ladder() {
         // 终帧+Var1=0 → VOL←$93；Var1=2 → VOL←$00 ⇒ EndSQ1SFX
-        let o = wave_beam_sfx_cont(0, 0, 7, 8);
+        let o = wave_beam_sfx_cont(0, 0, 7, 8, 0);
         assert!(o.apu_events.contains(&(0x4000, 0x93)));
         assert!(o.ram_events.contains(&(0x0675, 1)));
-        let o = wave_beam_sfx_cont(0, 2, 7, 8);
+        let o = wave_beam_sfx_cont(0, 2, 7, 8, 0);
         assert!(o.apu_events.contains(&(0x4000, 0x00)));
         assert!(o.ram_events.contains(&(0x0689, 0))); // SQ1Cont 旗清（$0688+1）
         assert!(o.apu_events.contains(&(0x4000, 0x10))); // EndSQ1 静音在 VOL 写后
@@ -2154,13 +2165,13 @@ mod task_sfx1_tests {
         let rng = 0x21u8;
         let v2 = (rng | 0x10) & 0x7F; // 0x31
         let v1 = (v2 << 1) | 1;       // 0x63
-        let o = boss_hit_sfx_cont(rng, 5, 0x30, 0x2E);
+        let o = boss_hit_sfx_cont(rng, 5, 0x30, 0x2E, 0);
         let vol = boss_hit_sfx_data_tbl()[6];
         assert!(o.apu_events.contains(&(0x4000, vol)) && o.apu_events.contains(&(0x4004, vol)));
         assert!(o.ram_events.contains(&(0x0671, 6)));
         assert!(o.apu_events.contains(&(0x4006, v1)) && o.apu_events.contains(&(0x4002, v2)));
         // Var0=0x14 → EndMultiSFX
-        let o = boss_hit_sfx_cont(rng, 0x13, 0, 0);
+        let o = boss_hit_sfx_cont(rng, 0x13, 0, 0, 0);
         assert!(o.apu_events.contains(&(0x4001, 0x7F)));
         assert!(o.ram_events.contains(&(0x068C, 0)));
     }
