@@ -136,7 +136,10 @@ fn main() {
         for _ in 0..CYCLES_PER_FRAME {
             apu.clock_cpu();
         }
-        pcm.extend_from_slice(&apu.take_samples());
+        let frame_pcm = apu.take_samples();
+        if f >= start {
+            pcm.extend_from_slice(&frame_pcm);
+        }
     }
 
     if let Err(e) = write_wav(&out, &pcm) {
@@ -145,7 +148,7 @@ fn main() {
     }
     let nonzero = pcm.iter().filter(|&&v| v != 0).count();
     eprintln!(
-        "[apu_dump] frames={end} pcm={} ({:.2}s) 非零={nonzero} 寄存器写={writes_total} → {}",
+        "[apu_dump] 区间=[{start},{end}) pcm={} ({:.2}s) 非零={nonzero} 寄存器写={writes_total} → {}",
         pcm.len(),
         pcm.len() as f32 / SAMPLE_RATE as f32,
         out.display()
