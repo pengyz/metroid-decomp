@@ -55,7 +55,8 @@ const LOADER_MAP: &[(u16, u16, u16)] = &[
     (0xB344, 0x068B, 0xB2A2), // TriCont
     (0xB34B, crate::sound::addrs::MULTI_INIT, 0xB2A7), // MultiInit（双步特例）
     (0xB35C, 0x068C, 0xB2AC), // MultiCont
-    (0xBC36, 0x065D, 0xB2B6), // MusicLoop（temp flag Music）
+    (0xBC36, 0x065D, 0xB2B6), // MusicLoop（temp flag Music——RunMusicLoopRoutine $BC36 9th cycle）
+    (0xBC3D, crate::sound::addrs::MUSIC_INIT_FLAGS, 0xB2B1), // MusicInit（RunMusicInitRoutine $BC3D 10th cycle——B2B6 默认链续）
     (0xB364, crate::sound::addrs::SQ1_INIT, 0xB293), // GotoRunSFXSQ1InitRoutine（跳板：jsr B329/rts——字节自证 `20 29 b3 60`）
 ];
 
@@ -430,5 +431,36 @@ mod w3_wiring_tests {
         // $EA 终值=末通道事件流末写（噪无 $EA⇒Tri 面）——mem 态=0/10/B6 族之一
         let ea = m.read_ram(0x00EA);
         assert!(ea == 0xB6 || ea == 0x10 || ea == 0x00, "$EA 落值={ea:02X}");
+    }
+
+    /// 接线-3（task-music-2）：MusicLoop 周期（$BC36，9th，B2B6）——$065D≠0 ⇒
+    /// MusicRoutineTbl 派发命中 GotoMusicNNInit 臂（Ridley=index0→BC83 duty $B3）。
+    #[test]
+    fn music_loop_cycle_dispatches_music_init() {
+        let mut m = crate::frame::Manager::default();
+        m.write_ram(0x065D, 0x80); // bit7 → FindMusicInitIndex=0（Ridley→GotoMusic04Init）
+        sound_dispatch_chain(&mut m, 0x065D, 0xB2B6, 0);
+        assert_eq!(m.read_ram(0x064D), 0x80, "B2B6 周期旗副本（asm sta CurrentSoundFlags）");
+        assert_eq!(m.read_ram(0x065E), 0x00, "FindMusicInitIndex=0");
+        assert_eq!(m.regs.x, 0xB3, "Music04Init duty X（asm BC89 lda #$B3）");
+        assert_eq!(m.regs.y, 0xB3);
+    }
+
+    /// 接线-4（task-music-2）：$065D=0 ⇒ 默认链续 RunMusicInitRoutine（$BC3D）→
+    /// B2B1 周期（$0685 派发；本测走 handler 记账外链——$0685=0 ⇒ BC4B continue 门）。
+    #[test]
+    fn music_loop_zero_falls_to_music_init_cycle() {
+        let mut m = crate::frame::Manager::default();
+        // 两旗全 0：B2B6→BC3D→B2B1→BC4B（continue 门零写收束）
+        sound_dispatch_chain(&mut m, 0x065D, 0xB2B6, 0);
+        assert_eq!(m.read_ram(0x068D), 0, "无音路零写");
+        // $0685≠0：B2B1 周期派发（0x10=bit4→index3 Kraid→GotoMusic00Init BC77 duty $92/$96）
+        let mut m2 = crate::frame::Manager::default();
+        m2.write_ram(crate::ram_map::MUSIC_INIT, 0x10);
+        sound_dispatch_chain(&mut m2, 0x065D, 0xB2B6, 0);
+        assert_eq!(m2.read_ram(0x064D), 0x10, "B2B1 周期旗副本覆盖");
+        assert_eq!(m2.read_ram(0x065E), 0x03, "index=3（无 Add8——asm BC46 路无 Add8）");
+        assert_eq!(m2.regs.x, 0x92, "Music00Init duty X（asm BCAA ldx #$92）");
+        assert_eq!(m2.regs.y, 0x96);
     }
 }

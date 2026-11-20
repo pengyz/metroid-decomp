@@ -460,9 +460,9 @@
       "len": 3,
       "kind": "undeclared",
       "refs": [
-        "crates/game-core/src/ram_map.rs:242",
+        "crates/game-core/src/ram_map.rs:243",
         "crates/game-core/src/samus/handler.rs:166",
-        "crates/game-core/src/ram_map.rs:282",
+        "crates/game-core/src/ram_map.rs:285",
         "crates/game-core/src/samus/physics.rs:1757"
       ]
     },
@@ -583,7 +583,7 @@
         "ram_map.rs:102",
         "frame/tick.rs:600",
         "frame/nmi.rs:191",
-        "sound/hook.rs:314",
+        "sound/hook.rs:59",
         "world/room_draw.rs:325",
         "pickup/spawn.rs:24",
         "title/intro.rs:80"

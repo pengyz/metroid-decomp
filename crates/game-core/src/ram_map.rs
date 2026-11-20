@@ -104,6 +104,9 @@ pub const SFX_TRI_INIT: u16 = 0x0683;
 pub const SFX_MULTI_INIT: u16 = 0x0684;
 /// MusicInitFlags=$0685（「Music init flags」）。
 pub const MUSIC_INIT: u16 = 0x0685;
+/// MusicLoopFlags=$065D（「Stores flags of music to loop」——9th SFX cycle 临时旗；
+/// `EndOrLoopMusic: ; $B3F0` 曲终重复径写入，`RunMusicLoopRoutine: ; $BC36` 消费）。
+pub const MUSIC_LOOP: u16 = 0x065D;
 
 /// SamusAge=$687D（asm 名；constants_ram 内容锚「ds 4 ;$687D ;In-game time used for
 /// ending. Units of 256 frames」+ $687E/$687F/$6880 进位族——**WRAM 面 4 字节**；

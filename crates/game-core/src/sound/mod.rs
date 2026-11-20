@@ -29,6 +29,8 @@ pub mod addrs {
     pub const CHANNEL_TYPE: u16 = 0x065C;
     /// MusicInitIndex=$065E（Multi 特例索引面）。
     pub const MUSIC_INIT_INDEX: u16 = 0x065E;
+    /// MusicInitFlags=$0685（音乐 init 旗——RunMusicInitRoutine $BC3D 周期）。
+    pub const MUSIC_INIT_FLAGS: u16 = 0x0685;
     /// SFXNoiseInitFlags=$0680（**位0=静音音乐**——SoundEngine 分路）。
     pub const NOISE_INIT: u16 = 0x0680;
     /// SFXSQ1InitFlags=$0681。

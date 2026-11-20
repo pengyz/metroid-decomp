@@ -265,12 +265,17 @@ pub fn sound_engine(mem: &mut Manager) {
     }
     mem.write_ram(crate::ram_map::SFX_PAUSED, 0); // `sta SFXPaused`
     // 四 init 子件：flags=0 短路（RunSoundRoutine 分派出口）；非零=域件桩
-    // 四 init 链走分派（B31B 行清偿——port2 分派核会师接点）
+    // 五 cycle 链走分派（B31B 行清偿——port2 分派核会师接点）。
+    // 【task-music-2 补 MusicLoop 周期】asm `SoundEngine`（sound_engine.asm:400-403）
+    // 序=NoiseInit→MultiInit→TriInit→**RunMusicLoopRoutine（$BC36，9th，$065D/B2B6）**→
+    // （B2B6 默认链续=RunMusicInitRoutine $BC3D→$0685/B2B1，10th）。旧形缺 $065D 周期
+    // ——`EndOrLoopMusic`（$B3F0）曲终重复写 $065D 后无人消费=重复重启死径。
     for (flag, block) in [
         (crate::ram_map::SFX_NOISE_INIT, 0xB289u16),
         (crate::ram_map::SFX_MULTI_INIT, 0xB2A7),
         (crate::ram_map::SFX_TRI_INIT, 0xB29D),
-        (crate::ram_map::MUSIC_INIT, 0xB2B1), // MusicInit（BC36 两步 else：$065D=0→B2B1）
+        (crate::ram_map::MUSIC_LOOP, 0xB2B6), // MusicLoop（9th——BC36；旗 0⇒BC3D 链续）
+        (crate::ram_map::MUSIC_INIT, 0xB2B1), // MusicInit（10th——BC3D 周期本体）
     ] {
         crate::sound::hook::sound_dispatch_chain(mem, flag, block, 0);
     }
