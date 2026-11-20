@@ -983,10 +983,8 @@ impl<'a> Samus<'a> {
             return;
         }
         self.mem.write_ram(crate::ram_map::SAMUS_KNOCKBACK_DIR, 0xFF);
-        self.mem.write_ram(crate::ram_map::HEALTH_CHANGE, 0);
-        self.mem.write_ram(crate::ram_map::HEALTH_CHANGE + 1, 0);
-        self.mem
-            .write_ram(crate::ram_map::SAMUS_INVINCIBLE_DELAY, 0x32);
+        self.mem.set_health_change(0);
+        self.mem.set_samus_invincible_delay(0x32);
         let fc = self.mem.read_ram(crate::ram_map::FRAME_COUNT);
         if fc & 0x03 == 0 {
             // SFX_SamusJump（constants.asm:160 `sfxSQ1_SamusJump = %00000010`）
@@ -998,7 +996,8 @@ impl<'a> Samus<'a> {
             let has_varia = self.mem.read_ram(crate::ram_map::SAMUS_GEAR) & 0x20 != 0;
             let carry = fc & 0x01 != 0; // asm `lda FrameCount / lsr` 的进位
             if !has_varia || carry {
-                self.mem.write_ram(crate::ram_map::HEALTH_CHANGE, 0x07);
+                let hc = (self.mem.health_change() & 0xFF00) | 0x0007;
+                self.mem.set_health_change(hc);
                 crate::weapon::projectile::subtract_health(&mut *self.mem);
             }
         }
@@ -1022,5 +1021,20 @@ impl<'a> Samus<'a> {
         }
         crate::samus::handler::set_samus_stand(&mut *self.mem); // jmp SetSamusStand（CF55）
         true
+    }
+}
+
+impl crate::state::Manager {
+    /// `SamusInvincibleDelay`（`$0070`，`constants_ram.asm`「# frames of invincibility」）——
+    /// 受击径置 `$32`、岩浆径置 `$32`、`CheckHealthStatus ; 07:CDF1` 的 `Lx006` 逐帧递减、
+    /// 弹体碰撞径 `07:F0DA` 读 0 门。**`$70` 不在 `Samus` 结构体（`$0300-$0316`）内**，与
+    /// `$0106/$0107`（`Field RAM`）同类，故与 `HealthChange` 一样提供域访问器，
+    /// 让调用点不再各写一遍裸面（`no-raw-addr`/`raw-surface` 棘轮）。
+    pub fn samus_invincible_delay(&self) -> u8 {
+        self.read_ram(crate::ram_map::SAMUS_INVINCIBLE_DELAY)
+    }
+
+    pub fn set_samus_invincible_delay(&mut self, v: u8) {
+        self.write_ram(crate::ram_map::SAMUS_INVINCIBLE_DELAY, v);
     }
 }

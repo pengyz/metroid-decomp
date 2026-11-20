@@ -156,8 +156,11 @@ pub(crate) fn uw_mellows(_mem: &mut crate::frame::Manager) {}
 /// UpdateAllTileBlasts（瓦片爆/复原——空态跳过）。
 pub(crate) fn uw_tile_blasts(_mem: &mut crate::frame::Manager) {}
 
-/// UpdateAllEnProjectiles（敌弹族——槽空⇒跳过）。
-pub(crate) fn uw_en_projectiles(_mem: &mut crate::frame::Manager) {}
+/// UpdateAllEnProjectiles（敌弹族——asm UpdateWorld 07:CB29 环位 :2507；槽空 status=0 ⇒
+/// UpdateEnProjectile@RTS 恒空径）。
+pub(crate) fn uw_en_projectiles(mem: &mut crate::frame::Manager) {
+    crate::enemy::en_projectile::update_all_en_projectiles(mem);
+}
 
 /// SamusEnterDoor（$8B13——过门检）：全径实现=physics::samus_enter_door（goal-r29）。
 pub(crate) fn uw_samus_enter_door(mem: &mut crate::frame::Manager) {

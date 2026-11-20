@@ -1220,6 +1220,49 @@ pub fn squeept_speed_y(area: u8) -> &'static [u8] {
     b
 }
 
+// ---- 敌弹移动串窗（**按区**）——`EnProjectileMovementPtrTable ; $97A7` 的字指针目标 ----
+//
+// asm `EnProjectileMovement0..3_{AREA}`（prg1_brinstar.asm:117-125 等 `{AREA}` 宏五区实例化）。
+// 记录对：`[时长][符号幅值速度字节]`（SignMagSpeed 宏：高半=dy 符号<<3|幅值，低半=dx 同构），
+// `$FF`=串尾（UpdateEnProjectile_Active@processMovementInstruction 07:F9A4-F9C0 读）。
+// 指针目标可能落在窗内任意偏移（Tourian/Ridley 的 M0 与 M1 同址别名），
+// 故窗界取「四指针目标的并集」，寻址=`指针字 - 窗基址`。
+
+/// 各区移动串窗的 ROM 基址（`en_projectile_move_str(area)` 返回窗的起点地址）。
+pub fn en_projectile_move_str_base(area: u8) -> u16 {
+    match area_idx(area) {
+        Some(0) => 0x9965, // bank01 EnProjectileMovement0
+        Some(1) => 0x97F7, // bank02
+        Some(2) => 0x98C9, // bank04（Kraid 排在区序 2——bank04）
+        Some(3) => 0x97D5, // bank03（Tourian 区序 3——bank03）
+        Some(4) => 0x97FD, // bank05
+        _ => panic!("敌弹移动串：非法区号 area={area:#04X}（InArea&$0F 应为 0..=4）"),
+    }
+}
+
+/// 敌弹移动串窗（长度见 pack.rs `Area{Br,No,To,Kr,Ri}EnProjMoveStr` 注释）。
+pub fn en_projectile_move_str(area: u8) -> &'static [u8] {
+    let key = match area_idx(area) {
+        Some(0) => PackKey::AreaBrEnProjMoveStr,
+        Some(1) => PackKey::AreaNoEnProjMoveStr,
+        Some(2) => PackKey::AreaKrEnProjMoveStr,
+        Some(3) => PackKey::AreaToEnProjMoveStr,
+        Some(4) => PackKey::AreaRiEnProjMoveStr,
+        _ => panic!("敌弹移动串：非法区号 area={area:#04X}（InArea&$0F 应为 0..=4）"),
+    };
+    pack::get(key)
+}
+
+/// `AreaEnProjectileFallingAnimIndex ; $95E0`（word）按 `data0A` **字节**直索引
+/// （prg7_engine.asm:11986-11989 `ldy Ens.0.data0A,x / lda AreaEnProjectileFallingAnimIndex,y`）——
+/// `data0A∈{0,1}` 落 word 低/高字节；`data0A∈{2,3}` 原版会继续读进
+/// `AreaEnProjectileSplatterAnimIndex`（$95E2 word）的低/高字节——窗口内忠实保留该读法。
+/// `data0A≥4` 越出 `$95DC-$95E4` 窗 ⇒ fail-loud（无调用方）。
+pub fn en_projectile_falling_anim_byte(area: u8, y: u8) -> u8 {
+    assert!(y < 4, "敌弹下落动画索引越窗（data0A={y}≥4，$95E5 之后无登记数据）");
+    en_anim_idx(area)[4 + y as usize]
+}
+
 // ---- `$95DC-$95E4`（9 B）：弹体/爆炸/梅洛姆**动画索引**（按区） ----
 //
 // asm `prg1_brinstar.asm:142-152`（`{AREA}` 宏五区实例化，五区同址）：

@@ -241,6 +241,18 @@ pub enum PackKey {
     /// `SqueeptSpeedYTable ; 02:9AD2`（4 B：`F6 F8 F6 FA`——Squeept 跳起初速按
     /// movementIndex 查）。asm 侧 `squeept.asm` 只被 prg2_norfair.asm include ⇒ 仅 Norfair。
     AreaNoSqueeptSpeedY = 185,
+    /// `EnProjectileMovement0..3 ; 各 bank $97xx`（**按区**的敌弹移动串窗）——
+    /// `EnProjectileMovementPtrTable ; $97A7`（已在包内）的 4 个字指针指向本窗内地址。
+    /// 窗界=各区 4 串（或别名）的并集：
+    /// Br bank01:$9965(60B) / No bank02:$97F7(60B) / To bank03:$97D5(7B，M0/M1 同址别名)
+    /// / Kr bank04:$98C9(60B) / Ri bank05:$97FD(45B，M0 同址别名)。
+    /// asm 依据：prg1_brinstar.asm:117-125 等（`{AREA}` 宏五区实例化）+
+    /// prg7_engine.asm:11915（`lda EnProjectileMovementPtrTable,y` → `lda (Temp0A),y`）。
+    AreaBrEnProjMoveStr = 186,
+    AreaNoEnProjMoveStr = 187,
+    AreaToEnProjMoveStr = 188,
+    AreaKrEnProjMoveStr = 189,
+    AreaRiEnProjMoveStr = 190,
     // 敌死亡动画索引表 `EnemyDeathAnimIndex ; 各 bank $960B`（32 B = type×2+facing）。
     // **按区不同**（bank1 `27 27 29 29…` vs bank3 `08 08 08 08…`）——先前 Rust 侧是单常量
     // 取 bank1，等于让其余四区的爆体帧全用 Brinstar 的表。
@@ -488,6 +500,11 @@ impl PackKey {
             PackKey::AreaToEnMovChoices => "area.to.en_mov_choices",
             PackKey::AreaRiEnMovChoices => "area.ri.en_mov_choices",
             PackKey::AreaNoSqueeptSpeedY => "area.no.squeept_speed_y",
+            PackKey::AreaBrEnProjMoveStr => "area.br.en_proj_move_str",
+            PackKey::AreaNoEnProjMoveStr => "area.no.en_proj_move_str",
+            PackKey::AreaToEnProjMoveStr => "area.to.en_proj_move_str",
+            PackKey::AreaKrEnProjMoveStr => "area.kr.en_proj_move_str",
+            PackKey::AreaRiEnProjMoveStr => "area.ri.en_proj_move_str",
             PackKey::BrEnSprites => "area.br.en_sprites",
             PackKey::NoEnSprites => "area.no.en_sprites",
             PackKey::KrEnSprites => "area.kr.en_sprites",
@@ -685,6 +702,11 @@ impl PackKey {
             183 => PackKey::AreaToEnMovChoices,
             184 => PackKey::AreaRiEnMovChoices,
             185 => PackKey::AreaNoSqueeptSpeedY,
+            186 => PackKey::AreaBrEnProjMoveStr,
+            187 => PackKey::AreaNoEnProjMoveStr,
+            188 => PackKey::AreaToEnProjMoveStr,
+            189 => PackKey::AreaKrEnProjMoveStr,
+            190 => PackKey::AreaRiEnProjMoveStr,
             _ => return None,
         })
     }

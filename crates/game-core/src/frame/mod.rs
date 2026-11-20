@@ -46,6 +46,12 @@ pub fn cur_area(mem: &Manager) -> u8 {
     mem.read_ram(crate::ram_map::IN_AREA) & 0x0F
 }
 
+/// `InArea`（`$0074`）**原值**（不剥 `$10` 位）——`$10` 参与 asm 判据的地方要用它：
+/// `CheckBlastTile ; 07:D651`（`cpy #$10` 判 Brinstar）与敌弹的 Norfair 判（`cmp #$11`）。
+pub fn in_area_raw(mem: &Manager) -> u8 {
+    mem.read_ram(crate::ram_map::IN_AREA)
+}
+
 /// 区序号 → MMC1 bank 号（`BankTable ; 07:CA30` = `02 03 05 04 06` 减一）。
 ///
 /// 0=Br→1 / 1=No→2 / 2=Kr→4 / 3=To→3 / 4=Ri→5。**注意 Kr/To 的 bank 序与区序相反**，

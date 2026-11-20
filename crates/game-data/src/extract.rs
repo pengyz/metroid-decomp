@@ -63,6 +63,115 @@ pub fn sections(rom: &[u8]) -> Result<Vec<Section>, String> {
     out.extend(extract_en_anim_idx(prg)?);
     out.extend(extract_en_mov_choices(prg)?);
     out.extend(extract_squeept_speed_y(prg)?);
+    out.extend(extract_en_proj_move_str(prg)?);
+    Ok(out)
+}
+
+/// 敌弹移动串窗（**按区**）——`EnProjectileMovementPtrTable ; $97A7` 的字指针目标并集。
+/// asm 依据：prg1_brinstar.asm:117-125 等（`{AREA}` 宏五区实例化，`EnProjectileMovement0..3`）；
+/// 消费点 prg7_engine.asm:11915-11930（`lda EnProjectileMovementPtrTable,y` → `lda (Temp0A),y`
+/// 读 `[时长][符号幅值速度字节]` 对，`$FF`=串尾重启）。
+/// 窗界（ROM 实证 bank*0x4000+addr-0x8000 偏移逐字节对拍）：
+/// Br bank01:$9965(60B) / No bank02:$97F7(60B) / To bank03:$97D5(7B，M0/M1 同址别名)
+/// / Kr bank04:$98C9(60B) / Ri bank05:$97FD(45B，M0 同址别名)。
+struct EnProjMoveStrSpec {
+    key: PackKey,
+    bank: u8,
+    addr: u16,
+    len: usize,
+    rom: &'static str,
+    want: &'static [u8],
+}
+
+const EN_PROJ_MOVE_STR_SPECS: [EnProjMoveStrSpec; 5] = [
+    // Br：fireball 首对=04 B3（时长4，dy=-5，dx=+3）。 机械自检改采样锚（前两字节 + 中位锚 + 尾字节）：全窗 60 B 不再
+    // 进仓（data-boundary 阈值 200）；addr/len + pack verify（段==ROM 重算）+ 采样锚
+    // 三重机械锚定，全窗字节已用 python 文件偏移公式（16+bank*0x4000+addr-0x8000）
+    // 逐字节人工对拍过（commit Evidence 留痕）。
+    EnProjMoveStrSpec {
+        key: PackKey::AreaBrEnProjMoveStr,
+        bank: 1,
+        addr: 0x9965,
+        len: 60,
+        rom: "bank01:$9965",
+        want: &[0x04, 0xB3, 0x07, 0xC2, 0x72, 0xFF],
+    },
+    // Norfair fireball 首对=0A D3（时长10，dy=-6，dx=+3）。 机械自检改采样锚（前两字节 + 中位锚 + 尾字节）：全窗 60 B 不再
+    // 进仓（data-boundary 阈值 200）；addr/len + pack verify（段==ROM 重算）+ 采样锚
+    // 三重机械锚定，全窗字节已用 python 文件偏移公式（16+bank*0x4000+addr-0x8000）
+    // 逐字节人工对拍过（commit Evidence 留痕）。
+    EnProjMoveStrSpec {
+        key: PackKey::AreaNoEnProjMoveStr,
+        bank: 2,
+        addr: 0x97F7,
+        len: 60,
+        rom: "bank02:$97F7",
+        want: &[0x0A, 0xD3, 0x07, 0xC2, 0x72, 0xFF],
+    },
+    // Tourian：M0/M1 同址别名（$97D5），窗=50 22 FF 50 30 FF FF。 机械自检改采样锚（前两字节 + 中位锚 + 尾字节）：全窗 60 B 不再
+    // 进仓（data-boundary 阈值 200）；addr/len + pack verify（段==ROM 重算）+ 采样锚
+    // 三重机械锚定，全窗字节已用 python 文件偏移公式（16+bank*0x4000+addr-0x8000）
+    // 逐字节人工对拍过（commit Evidence 留痕）。
+    EnProjMoveStrSpec {
+        key: PackKey::AreaToEnProjMoveStr,
+        bank: 3,
+        addr: 0x97D5,
+        len: 7,
+        rom: "bank03:$97D5",
+        want: &[0x50, 0x22, 0x50, 0x30, 0xFF, 0xFF],
+    },
+    // Kraid 区：与 Brinstar 同字节（ROM 对拍证实）。 机械自检改采样锚（前两字节 + 中位锚 + 尾字节）：全窗 60 B 不再
+    // 进仓（data-boundary 阈值 200）；addr/len + pack verify（段==ROM 重算）+ 采样锚
+    // 三重机械锚定，全窗字节已用 python 文件偏移公式（16+bank*0x4000+addr-0x8000）
+    // 逐字节人工对拍过（commit Evidence 留痕）。
+    EnProjMoveStrSpec {
+        key: PackKey::AreaKrEnProjMoveStr,
+        bank: 4,
+        addr: 0x98C9,
+        len: 60,
+        rom: "bank04:$98C9",
+        want: &[0x04, 0xB3, 0x07, 0xC2, 0x72, 0xFF],
+    },
+    // Ridley 区：M0 空别名到 M1（$97FD），三串 polyp 15B。 机械自检改采样锚（前两字节 + 中位锚 + 尾字节）：全窗 60 B 不再
+    // 进仓（data-boundary 阈值 200）；addr/len + pack verify（段==ROM 重算）+ 采样锚
+    // 三重机械锚定，全窗字节已用 python 文件偏移公式（16+bank*0x4000+addr-0x8000）
+    // 逐字节人工对拍过（commit Evidence 留痕）。
+    EnProjMoveStrSpec {
+        key: PackKey::AreaRiEnProjMoveStr,
+        bank: 5,
+        addr: 0x97FD,
+        len: 45,
+        rom: "bank05:$97FD",
+        want: &[0x09, 0xC2, 0x12, 0x06, 0x72, 0xFF],
+    },
+];
+
+fn extract_en_proj_move_str(prg: &[u8]) -> Result<Vec<Section>, String> {
+    let mut out = Vec::new();
+    for spec in &EN_PROJ_MOVE_STR_SPECS {
+        let body = bank_slice(prg, spec.bank, spec.addr, spec.len)?;
+        // 机械自检（采样锚形）：首两字节（时长+速度对，SignMagSpeed 宏展开错位即全错）
+        // + 中位锚 + 尾两字节。addr/len 定位 + pack verify（段==ROM 重算）共同锚定全窗。
+        let w = spec.want;
+        let n = w.len();
+        let m = spec.len / 2;
+        let ok = body.len() == spec.len
+            && w.len() == 6
+            && body[0] == w[0]
+            && body[1] == w[1]
+            && body[m] == w[2]
+            && body[m + 1] == w[3]
+            && body[spec.len - 2] == w[4]
+            && body[spec.len - 1] == w[5]
+            && w[5] == 0xFF;
+        if !ok {
+            return Err(format!(
+                "{} 敌弹移动串采样锚不符：head={:02X}{:02X} mid@{m}={:02X}{:02X} tail={:02X}{:02X} != asm 锚 {:02X?}",
+                spec.rom, body[0], body[1], body[m], body[m + 1], body[spec.len - 2], body[spec.len - 1], w
+            ));
+        }
+        out.push(Section { key: spec.key, data: body.to_vec() });
+    }
     Ok(out)
 }
 
@@ -596,6 +705,11 @@ fn seg_meta() -> Vec<SegMeta> {
         SegMeta { key: PackKey::AreaToEnMovChoices, kind: "bytes", elem: 1, count: 30, rom: "bank03:$97D1", note: "移动索引候选集（表长 4）" },
         SegMeta { key: PackKey::AreaRiEnMovChoices, kind: "bytes", elem: 1, count: 30, rom: "bank05:$97D1", note: "移动索引候选集（表长 28）" },
         SegMeta { key: PackKey::AreaNoSqueeptSpeedY, kind: "bytes", elem: 1, count: 4, rom: "bank02:$9AD2", note: "SqueeptSpeedYTable（跳起初速 F6 F8 F6 FA；asm 仅 prg2 include）" },
+        SegMeta { key: PackKey::AreaBrEnProjMoveStr, kind: "bytes", elem: 1, count: 60, rom: "bank01:$9965", note: "敌弹移动串 M0-M3（fireball 04 B3… / polyp 09 C2…；$FF=尾）" },
+        SegMeta { key: PackKey::AreaNoEnProjMoveStr, kind: "bytes", elem: 1, count: 60, rom: "bank02:$97F7", note: "敌弹移动串 M0-M3（fireball 0A D3…）" },
+        SegMeta { key: PackKey::AreaToEnProjMoveStr, kind: "bytes", elem: 1, count: 7, rom: "bank03:$97D5", note: "敌弹移动串（M0/M1 同址别名；50 22 FF 50 30 FF FF）" },
+        SegMeta { key: PackKey::AreaKrEnProjMoveStr, kind: "bytes", elem: 1, count: 60, rom: "bank04:$98C9", note: "敌弹移动串 M0-M3（同 Brinstar 字节）" },
+        SegMeta { key: PackKey::AreaRiEnProjMoveStr, kind: "bytes", elem: 1, count: 45, rom: "bank05:$97FD", note: "敌弹移动串（M0 同址别名；polyp 三串）" },
     ];
     v
 }

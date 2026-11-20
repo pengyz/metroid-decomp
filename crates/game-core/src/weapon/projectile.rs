@@ -503,7 +503,7 @@ pub(crate) fn uw_collision_detection(mem: &mut crate::frame::Manager) {
             // Temp10_DistHi（F1FA 构建，槽序「X=Samus、Y=敌」⇒ dy/dx 取「敌 减 Sam」——
             // emu f1112 `isHit=0x05`/`Samus.isHit=0x30` 反推）：0x04 | (dy<0)<<1 | (dx<0)。
             let dist_hi: u8 = {
-                let vertical = mem.read_ram(crate::ram_map::SCROLL_DIR) & 0x02 == 0;
+                let vertical = mem.camera().dir() & 0x02 == 0;
                 let (yy, yx, yh) = (sry_y_raw, srx_x_raw, s_hi as i32);
                 let (ey_i, ex_i, ehi_i) = (ey as i32, ex as i32, e_hi as i32);
                 let dyf: i32 = if vertical {
@@ -552,6 +552,68 @@ pub(crate) fn uw_collision_detection(mem: &mut crate::frame::Manager) {
                     mem.write_ram(crate::ram_map::SAMUS_IS_HIT, cur_s | dist_hi.wrapping_shl(3));
                     // 【goal-轮40 isHit 写者标记】mainloop:2284（敌撞置 hit）。
                 }
+            }
+        }
+    }
+    // ==== 弹体×萨姆斯（@exitLoop_Enemy 07:F0ED-F112 + ReactToCollision 07:F2ED）====
+    // 敌槽环走完后接弹体池（EnProjectiles=$60 起 6 槽）：跳过 status==0/Pickup(5)、
+    // i 帧（$70≠0）、萨姆斯死亡（07:F0DA IsSamusDead 门，全环一次）。
+    // 命中 ⇒ SetEnIsHit（isHit|=DistHi）+ IsScrewAttackActive 分岔：螺旋转有效⇒仅此
+    // （弹体下帧 Resting 径拾取化）；无效⇒SamusHurt($010F)←$80 + Samus.isHit|=
+    // (DistHi^3)<<3（GetEnemyIsHitFlags F332+F340+Amul8）+ HealthChange←AreaEnemyDamage
+    // （区头 $95CE word，随件 LF306）。
+    if mem.samus_invincible_delay() == 0 {
+        // GetObjectXSlotPosition(Samus)（07:F172）：X 槽=Objects.0（=Samus typed 视图）。
+        let s = mem.samus();
+        let samus_status = s.status_raw();
+        let (sy, sx) = (s.y() as i16, s.x() as i16);
+        let (sry, srx) = (s.radius_y() as i16, s.radius_x() as i16);
+        let s_hi = s.hi() & 1;
+        let samus_is_hit = s.is_hit();
+        drop(s);
+        if !(samus_status == 7 || samus_status == 8 || samus_status == 0xFF) {
+            for i in 0..crate::enemy::en_projectile::SLOT_COUNT {
+                let slot = crate::enemy::en_projectile::base_slot(i);
+                let st = mem.enemy(slot).status_raw();
+                if st == 0 || st == 5 {
+                    continue; // :10198-10200
+                }
+                let p = mem.enemy(slot);
+                let (py, px_, p_hi) = (p.y(), p.pos_x(), p.hi() & 1);
+                let (pry, prx) = (p.radius_y() as i16, p.radius_x() as i16);
+                // CheckCollisionOfXSlotAndYSlot（07:F1FA）：hi 差 ⇒ 距 +$100（F21B/F25B
+                // @positionHi_notEqual；同前述敌×萨 hi 调勘误同构）。
+                let dy_raw = (sy - py as i16).unsigned_abs() as i16;
+                let dx_raw = (sx - px_ as i16).unsigned_abs() as i16;
+                let dy = if s_hi != p_hi { dy_raw + 0x100 } else { dy_raw };
+                let dx = if s_hi != p_hi { dx_raw + 0x100 } else { dx_raw };
+                if dy >= sry + pry || dx >= srx + prx {
+                    continue; // carry 置=无重叠 ⇒ F2ED bcs @RTS
+                }
+                // Temp10_DistHi（F1FA 构建）：0x04 | dy 符号<<1 | dx 符号（「弹在萨姆斯
+                // 下/右」置位——槽序 X=Samus、Y=弹）。
+                let vertical = mem.camera().dir() & 0x02 == 0;
+                let dyf: i32 = if vertical { (p_hi as i32 * 240 + py as i32) - (s_hi as i32 * 240 + sy as i32) } else { py as i32 - sy as i32 };
+                let dxf: i32 = if vertical { px_ as i32 - sx as i32 } else { (p_hi as i32 * 256 + px_ as i32) - (s_hi as i32 * 256 + sx as i32) };
+                let dist_hi: u8 =
+                    0x04 | (if dyf < 0 { 0x02 } else { 0 }) | (if dxf < 0 { 0x01 } else { 0 });
+                // SetEnIsHit（07:F2DF）：弹 isHit |= DistHi。
+                let mut p = mem.enemy(slot);
+                p.set_is_hit(p.is_hit() | dist_hi);
+                // 螺旋转有效（carry 清）⇒ jmp SetHealthChangeToAreaEnemyDamage@RTS——
+                // 不伤萨姆斯（isHit 已置，弹体自身下帧拾取化）。
+                if crate::samus::physics::is_screw_attack_active(mem) {
+                    continue;
+                }
+                mem.write_ram(crate::ram_map::SAMUS_HURT_010F, 0x80); // SamusHurt010F（07:F313）
+                // GetEnemyIsHitFlags（F332：DistHi eor 3）+ Amul8 → Samus.isHit。
+                let flags = samus_is_hit | (dist_hi ^ 0x03).wrapping_shl(3);
+                mem.samus().set_is_hit(flags);
+                // SetHealthChangeToAreaEnemyDamage（LF306）：HealthChange←AreaEnemyDamage
+                // （区头 $95CE word——ROM 面直读，RAM $6C/$6D 是门挡位不相干）。
+                let area = crate::frame::cur_area(mem);
+                let dmg = game_data::assets::area_header(area).enemy_damage;
+                mem.set_health_change(dmg);
             }
         }
     }

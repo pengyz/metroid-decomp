@@ -1115,7 +1115,7 @@ pub fn check_health_status(mem: &mut Manager) {
     let is_hit = mem.read_ram(0x030A); // Samus.isHit（struct 权威）
     if is_hit & 0x20 != 0 {
         // 受击面
-        mem.write_ram(crate::ram_map::SAMUS_INVINCIBLE_DELAY, 0x32); // 50 帧
+        mem.set_samus_invincible_delay(0x32); // 50 帧
         // 【goal-轮39 伤害源标记】physics:977（伤害触发径）。
         mem.write_ram(crate::ram_map::SAMUS_KNOCKBACK_DIR, 0xFF);
         let bomb = mem.read_ram(crate::ram_map::SAMUS_KNOCKBACK_IS_BOMB);
@@ -1136,9 +1136,9 @@ pub fn check_health_status(mem: &mut Manager) {
     // 全谱端口（消 CE52 占位臂））：A=i帧(pre-dec)>>4（Adiv16=C2BF 逐字 lsr×4）→
     // <3 且 AccelX≠0⇒跳过写（Lx009）/AccelX==0⇒LCF4E（speedX/F←0）→向位（kb72==0⇒
     // TwosComplement 取负=推左/≠0⇒推右）→`sta Samus.speedX`。
-    let delay = mem.read_ram(crate::ram_map::SAMUS_INVINCIBLE_DELAY);
+    let delay = mem.samus_invincible_delay();
     if delay != 0 {
-        mem.write_ram(crate::ram_map::SAMUS_INVINCIBLE_DELAY, delay - 1);
+        mem.set_samus_invincible_delay(delay - 1);
         let dir = mem.read_ram(crate::ram_map::SAMUS_KNOCKBACK_DIR);
         if dir.wrapping_add(1) != 0 {
             let mut a = delay >> 4; // Adiv16（i帧(pre-dec)/16）

@@ -428,6 +428,9 @@ impl<'a> Enemy<'a> {
     pub fn is_hit(&self) -> u8 {
         self.get(ens::IS_HIT)
     }
+    pub fn set_is_hit(&mut self, v: u8) {
+        self.set(ens::IS_HIT, v);
+    }
     pub fn data05(&self) -> u8 {
         self.get(ens::DATA05)
     }
@@ -472,6 +475,9 @@ impl<'a> Enemy<'a> {
     /// `Ens.data0A`（`$040A`）——无独立语义名（`_todo_`），按 asm 用途保留裸字段。
     pub fn data0a(&self) -> u8 {
         self.get(ens::DATA0A)
+    }
+    pub fn set_data0a(&mut self, v: u8) {
+        self.set(ens::DATA0A, v);
     }
     /// 拾取物剩余寿命字节（`$040D`）——`UpdateEnemy_Pickup ; 07:F483` 每 4 帧递减。
     pub fn data0d(&self) -> u8 {

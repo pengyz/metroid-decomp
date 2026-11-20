@@ -30,6 +30,7 @@ pub mod sidehopper;
 
 pub(crate) mod waver;
 pub(crate) mod pipe_bug;
+pub(crate) mod en_projectile;
 pub(crate) mod rio;
 pub(crate) mod squeept;
 pub(crate) mod swooper;

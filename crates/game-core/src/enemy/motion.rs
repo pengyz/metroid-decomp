@@ -685,11 +685,25 @@ pub(crate) fn apply_speed_to_position_parts(
     dx: i8,
 ) -> (bool, u8, u8, u8) {
     let slot = x / 16;
-    let horizontal = mem.read_ram(crate::ram_map::SCROLL_DIR) & 0x02 != 0;
     let e = mem.enemy(slot);
-    let y0 = e.y();
-    let x0 = e.pos_x();
-    let hi0 = e.hi();
+    let (y0, x0, hi0) = (e.y(), e.pos_x(), e.hi());
+    apply_speed_to_position_raw(mem, y0, x0, hi0, dy, dx)
+}
+
+/// `ApplySpeedToPosition`（`07:FD8F`）的**原始三元组变体**：不读敌面，直接对给定
+/// `(y,x,hi)` 计算环绕修正——asm 里 `Temp08/09/0B` 是纯暂存（`StoreEnemyPositionToTemp`
+/// 之后才落 `ApplySpeedToPosition`），敌弹出生定位（07:F91D `SetEnProjectilePosition`：
+/// temp=射主位置，偏移量施加后 `LoadEnemyPositionFromTemp` 写入**弹体**槽）走的就是
+/// 暂存面而非敌面。
+pub(crate) fn apply_speed_to_position_raw(
+    mem: &mut crate::frame::Manager,
+    y0: u8,
+    x0: u8,
+    hi0: u8,
+    dy: i8,
+    dx: i8,
+) -> (bool, u8, u8, u8) {
+    let horizontal = mem.read_ram(crate::ram_map::SCROLL_DIR) & 0x02 != 0;
     let mut hi = hi0;
     let mut ny = y0;
     let mut nx = x0;

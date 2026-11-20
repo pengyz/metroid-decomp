@@ -181,6 +181,11 @@ pub const SAMUS_IN_LAVA: u16 = 0x0064;
 pub const SAMUS_HEALTH: u16 = 0x0106;
 pub const HEALTH_CHANGE: u16 = 0x006E;
 
+/// SamusHurt010F=$010F（`constants_ram.asm:841`「never read. takes on different values
+/// depending on how samus was hit.」）——**原版只写不读的 quirk**，D4 保真保留：
+/// `CollisionDetectionEnProjectile_ReactToCollisionWithSamus ; 07:F2ED` 非螺旋转写 `$80`。
+pub const SAMUS_HURT_010F: u16 = 0x010F;
+
 /// MetroidOnSamus=$92（constants_ram 内容锚「#\$01=Metroid on Samus, #\$00=Metroid not
 /// on Samus」——蓝化面（CD6D 链尾件））。
 pub const METROID_ON_SAMUS: u16 = 0x0092;
