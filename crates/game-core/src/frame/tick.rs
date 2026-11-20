@@ -816,3 +816,46 @@ mod tests_bank_switch_same_iteration {
         assert_eq!(m.read_ram(ram_map::NMI_STATUS), 0, "迭代尾清 NMIStatus（spin 入口）");
     }
 }
+
+#[cfg(test)]
+mod tests_music_init_chain {
+    //! 音乐 init 链路端到端钉测（f346 分歧取证用）：start_music → $0685 → dispatch → duty。
+    #[test]
+    fn brinstar_music_flag_reaches_music03_init() {
+        let mut m = crate::state::Manager::default();
+        m.write_ram(crate::ram_map::IN_AREA, 0x00); // Brinstar
+        crate::frame::tick::start_music(&mut m);
+        assert_eq!(
+            m.read_ram(crate::ram_map::MUSIC_INIT),
+            0x01,
+            "AreaMusicFlag[Brinstar]=0x01（constants.asm:188 music_Brinstar）应进 $0685"
+        );
+        // 旗 $01 ⇒ FindMusicInitIndex 走 FF 回绕 8 步 ⇒ idx7 ⇒ Music03Init(lda #$34)
+        crate::sound::hook::sound_dispatch_chain(
+            &mut m,
+            crate::ram_map::MUSIC_LOOP,
+            0xB2B6,
+            0,
+        );
+        assert_eq!(m.read_ram(0x0628), 0x34, "Music03Init 应写 MusicSQ1DutyEnvelope=$34");
+    }
+}
+
+#[cfg(test)]
+mod tests_samus_intro_music {
+    //! SamusIntro 淡入收尾那一拍必须起乐（f346 分歧取证：emu 在 f346 切 Brinstar 音乐）。
+    #[test]
+    fn fade_end_starts_area_music_and_enters_game_engine() {
+        let mut m = crate::state::Manager::default();
+        m.write_ram(crate::ram_map::TIMER3, 0x00); // 淡入完成
+        m.write_ram(crate::ram_map::MAIN_ROUTINE, 0x08); // SamusIntro
+        m.write_ram(crate::ram_map::IN_AREA, 0x00); // Brinstar
+        crate::frame::tick::samus_intro(&mut m);
+        assert_eq!(
+            m.read_ram(crate::ram_map::MUSIC_INIT),
+            0x01,
+            "SamusIntro 收尾应写 MusicInitFlags=AreaMusicFlag(Brinstar)=0x01"
+        );
+        assert_eq!(m.read_ram(crate::ram_map::MAIN_ROUTINE), 3, "应收尾进 GameEngine");
+    }
+}
