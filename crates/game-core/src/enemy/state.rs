@@ -145,6 +145,8 @@ pub mod ensx {
     pub const RESET_ANIM_INDEX: u16 = 5;
     /// `EnsExtra.animIndex`。
     pub const ANIM_INDEX: u16 = 6;
+    /// `EnsExtra.hi`（+7，`$6AFB`）——母脑/生成器的名表号。
+    pub const HI: u16 = 7;
     /// typed 面的字节上界（0..=6 归 typed，7 起仍是字节面）。
     pub const TYPED_MAX: u16 = ANIM_INDEX;
 }
@@ -312,12 +314,28 @@ impl<'a> EnsFace<'a> {
         self.mem.read_wram(self.extra(ensx::ANIM_FRAME as u16))
     }
 
+    /// 字节面写口（`Ens` 主面）——本文件唯一写入口，避免每加一个字段多一处裸面。
+    #[inline]
+    fn putm(&mut self, off: u16, v: u8) {
+        self.mem.write_ram(self.main(off), v);
+    }
+    /// 字节面写口（`EnsExtra` 面）。
+    #[inline]
+    fn putx(&mut self, off: u16, v: u8) {
+        self.mem.write_wram(self.extra(off), v);
+    }
+    /// 字节面读口（`EnsExtra` 面）。
+    #[inline]
+    fn getx_(&self, off: u16) -> u8 {
+        self.mem.read_wram(self.extra(off))
+    }
+
     /// 帧记录携带的半径（`asm :6156-6168` 帧记字 1/2 → `EnsExtra.radiusY/X`）。
     pub(crate) fn set_radius_y(&mut self, v: u8) {
-        self.mem.write_wram(self.extra(ensx::RADIUS_Y as u16), v);
+        self.putx(ensx::RADIUS_Y as u16, v);
     }
     pub(crate) fn set_radius_x(&mut self, v: u8) {
-        self.mem.write_wram(self.extra(ensx::RADIUS_X as u16), v);
+        self.putx(ensx::RADIUS_X as u16, v);
     }
 
     /// `Ens.data05`（+5）——`bit1` 是 `IsObjectVisible` 的逐帧闩。
@@ -325,7 +343,7 @@ impl<'a> EnsFace<'a> {
         self.mem.read_ram(self.main(5))
     }
     pub(crate) fn set_data05(&mut self, v: u8) {
-        self.mem.write_ram(self.main(5), v);
+        self.putm(5, v);
     }
 
     /// `Ens.y`（+0）/ `Ens.x`（+1）——房内坐标（非屏位）。
@@ -334,6 +352,28 @@ impl<'a> EnsFace<'a> {
     }
     pub(crate) fn x_pos(&self) -> u8 {
         self.mem.read_ram(self.main(1))
+    }
+    pub(crate) fn set_y(&mut self, v: u8) {
+        self.putm(0, v);
+    }
+    pub(crate) fn set_pos_x(&mut self, v: u8) {
+        self.putm(1, v);
+    }
+    /// `EnsExtra.hi`（+7）——母脑/生成器把名表号写这里。
+    pub(crate) fn set_hi(&mut self, v: u8) {
+        self.putx(ensx::HI as u16, v);
+    }
+    /// `EnsExtra.animFrame`（+3）写侧。
+    pub(crate) fn set_anim_frame(&mut self, v: u8) {
+        self.putx(ensx::ANIM_FRAME as u16, v);
+    }
+    /// `EnsExtra.status`（+0）读侧（字节面，含 `Undefined` 保真）。
+    pub(crate) fn status(&self) -> EnemyStatus {
+        EnemyStatus::from_byte(self.getx_(ensx::STATUS as u16))
+    }
+    /// `EnsExtra.status`（+0）写侧（字节自增以外的整体赋值，如母脑清场）。
+    pub(crate) fn set_status(&mut self, v: EnemyStatus) {
+        self.putx(ensx::STATUS as u16, v.to_byte());
     }
 }
 
@@ -858,9 +898,9 @@ mod tests_anim_step {
 // ─────────────────────────── P2：`NesMapped` 声明（域级） ───────────────────────────
 
 /// 敌域主面（`Ens`）未 typed 的缺口说明。
-const ENS_MAIN_UNMODELED: &str = "敌域主面未 typed：字段真相在字节面（EnsFace 只读视图；crates/game-core/src/enemy/state.rs:275）";
+const ENS_MAIN_UNMODELED: &str = "敌域主面未 typed：字段真相在字节面（EnsFace 只读视图；crates/game-core/src/enemy/state.rs:277）";
 /// 敌域额外面（`EnsExtra`）尾 9 B 未 typed 的缺口说明。
-const ENSX_TAIL: &str = "EnsExtra 尾 9 B 未 typed：accelY/jumpDsplcmnt/type/data1F 等仍在字节面（crates/game-core/src/enemy/state.rs:287）";
+const ENSX_TAIL: &str = "EnsExtra 尾 9 B 未 typed：accelY/jumpDsplcmnt/type/data1F 等仍在字节面（crates/game-core/src/enemy/state.rs:289）";
 
 /// `EnsExtra` 第 `slot` 槽的槽首地址（`$6AF4 + slot*16`）——只从既有常量推导。
 const fn ensx_slot(slot: u16) -> u16 {

@@ -79,6 +79,14 @@ impl Object<'_> {
         self.mem.write_ram(self.addr(obj::ON_SCREEN), v);
     }
 
+    /// `radiusY`（`$0301`）——门槽同址多义为 `DoorHitPoints`（`SpawnDoor` 写 `$01`）。
+    pub fn radius_y(&self) -> u8 {
+        self.mem.read_ram(self.addr(obj::RADIUS_Y))
+    }
+    pub fn set_radius_y(&mut self, v: u8) {
+        self.mem.write_ram(self.addr(obj::RADIUS_Y), v);
+    }
+
     pub fn y(&self) -> u8 {
         self.mem.read_ram(self.addr(obj::Y))
     }

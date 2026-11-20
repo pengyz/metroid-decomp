@@ -420,5 +420,25 @@ pub const FLASH_SCREEN: u16 = 0x00C0;
 /// 「直接 GameOver」还是「40 帧后 GameOver」（`prg7_engine.asm:2063-2080`）。
 pub const MOTHER_BRAIN_STATUS: u16 = 0x0098;
 
+/// `MotherBrainQtyHits`（`$0099`，`constants_ram.asm:717`）——union 同址三义：
+/// 存活期=命中计数（32 击死）、消融期=`DeathStringID`、已死期=`TimeBombCounter`（`-$80`→0）。
+pub const MOTHER_BRAIN_QTY_HITS: u16 = 0x0099;
+/// `MotherBrainAnimBrainDelay`（`$009A`）——union：消融期同址为 `DeathInstrID`。
+pub const MOTHER_BRAIN_BRAIN_DELAY: u16 = 0x009A;
+/// `MotherBrainAnimEyeDelay`（`$009B`，bit7=眼闭）。
+pub const MOTHER_BRAIN_EYE_DELAY: u16 = 0x009B;
+/// `MotherBrainAnimFrameTableID`（`$009C`）。
+pub const MOTHER_BRAIN_FRAME_ID: u16 = 0x009C;
+/// `MotherBrainHi`（`$009D`）。
+pub const MOTHER_BRAIN_HI: u16 = 0x009D;
+/// `MotherBrainIsHit`（`$009E`）。
+pub const MOTHER_BRAIN_IS_HIT: u16 = 0x009E;
+/// `MotherBrainFlashDelay`（`$009F`）——受击闪烁/消融批次共用的延时。
+pub const MOTHER_BRAIN_FLASH_DELAY: u16 = 0x009F;
+/// `EndTimerEnemyHi`（`$010C`，`constants_ram.asm:837`）。
+pub const END_TIMER_ENEMY_HI: u16 = 0x010C;
+/// `EndTimerEnemyIsEnabled`（`$010D`，`constants_ram.asm:838`）。
+pub const END_TIMER_ENEMY_ENABLED: u16 = 0x010D;
+
 /// RoomRAM 高字节里的名表页位（$6000/$6400 两页之差 = $0400）。
 pub const NAMETABLE_BIT: u16 = 0x0400;

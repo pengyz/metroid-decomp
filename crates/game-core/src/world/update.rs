@@ -148,10 +148,15 @@ pub(crate) fn uw_area_routine(mem: &mut crate::frame::Manager) {
     if crate::frame::in_area_raw(mem) & 0x0F != 3 {
         return; // 非 Tourian：其余四区 AreaRoutine 尚无专径（Brinstar 空态已实证）
     }
-    // UpdateAllCannons / MotherBrainStatusHandler / UpdateEndTimer / DrawEndTimerEnemy
-    // / UpdateAllRinkaSpawners —— 未端口（缺口卡 G-3/G-5/G-6）
-    crate::frame::DIVERGENCES.with(|d| d.borrow_mut().push(0x9B26));
+    // `AreaRoutine_Tourian ; 03:9B25` 件序：UpdateAllCannons → MotherBrainStatusHandler
+    // → UpdateEndTimer → DrawEndTimerEnemy → UpdateAllZebetites → UpdateAllRinkaSpawners。
+    // 已端口：母脑（G-5）、屏障（G-4）；炮台（G-3）/逃逸计时（G-6）/Rinka 生成器仍记账。
+    crate::frame::DIVERGENCES.with(|d| d.borrow_mut().push(0x9B26)); // UpdateAllCannons（G-3）
+    crate::enemy::mother_brain::status_handler(mem);
+    crate::frame::DIVERGENCES.with(|d| d.borrow_mut().push(0xA1E7)); // UpdateEndTimer（G-6）
+    crate::frame::DIVERGENCES.with(|d| d.borrow_mut().push(0xA238)); // DrawEndTimerEnemy（G-6）
     crate::enemy::zebetite::update_all_zebetites(mem);
+    crate::frame::DIVERGENCES.with(|d| d.borrow_mut().push(0xA15E)); // UpdateAllRinkaSpawners（G-6）
 }
 
 /// UpdateElevator（`$D7B3`）——电梯十态（`frame::elevator`；槽空 status=0 ⇒ ExitSub 恒空径）。

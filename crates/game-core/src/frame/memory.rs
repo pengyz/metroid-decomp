@@ -506,6 +506,121 @@ impl Manager {
     /// fail-loud，不静默回绕。
     /// `EndTimer+1`（`$010B`）——逃逸计时器高字节。`MetroidAIRoutine ; 03:97F9` 用它判断
     /// 「逃逸序列是否进行中」（`ldy EndTimer+1 / iny / beq`：`$FF` 表示未启动）。
+    // ---- MotherBrain 面（`$0098-$009F`，`constants_ram.asm:708-733`）----
+    /// `MotherBrainStatus`（`$0098`）。
+    pub fn mb_status(&self) -> u8 {
+        self.read_ram(crate::ram_map::MOTHER_BRAIN_STATUS)
+    }
+    pub fn set_mb_status(&mut self, v: u8) {
+        self.write_ram(crate::ram_map::MOTHER_BRAIN_STATUS, v);
+    }
+    /// `MotherBrainQtyHits`（`$0099`）——union：消融期 `DeathStringID`、已死期 `TimeBombCounter`。
+    pub fn mb_qty_hits(&self) -> u8 {
+        self.read_ram(crate::ram_map::MOTHER_BRAIN_QTY_HITS)
+    }
+    pub fn set_mb_qty_hits(&mut self, v: u8) {
+        self.write_ram(crate::ram_map::MOTHER_BRAIN_QTY_HITS, v);
+    }
+    /// `MotherBrainAnimBrainDelay`（`$009A`）——union：消融期 `DeathInstrID`。
+    pub fn mb_brain_delay(&self) -> u8 {
+        self.read_ram(crate::ram_map::MOTHER_BRAIN_BRAIN_DELAY)
+    }
+    pub fn set_mb_brain_delay(&mut self, v: u8) {
+        self.write_ram(crate::ram_map::MOTHER_BRAIN_BRAIN_DELAY, v);
+    }
+    /// `MotherBrainAnimEyeDelay`（`$009B`，bit7=眼闭）。
+    pub fn mb_eye_delay(&self) -> u8 {
+        self.read_ram(crate::ram_map::MOTHER_BRAIN_EYE_DELAY)
+    }
+    pub fn set_mb_eye_delay(&mut self, v: u8) {
+        self.write_ram(crate::ram_map::MOTHER_BRAIN_EYE_DELAY, v);
+    }
+    /// `MotherBrainAnimFrameTableID`（`$009C`）。
+    pub fn mb_frame_id(&self) -> u8 {
+        self.read_ram(crate::ram_map::MOTHER_BRAIN_FRAME_ID)
+    }
+    pub fn set_mb_frame_id(&mut self, v: u8) {
+        self.write_ram(crate::ram_map::MOTHER_BRAIN_FRAME_ID, v);
+    }
+    /// `MotherBrainHi`（`$009D`）。
+    pub fn mb_hi(&self) -> u8 {
+        self.read_ram(crate::ram_map::MOTHER_BRAIN_HI)
+    }
+    pub fn set_mb_hi(&mut self, v: u8) {
+        self.write_ram(crate::ram_map::MOTHER_BRAIN_HI, v);
+    }
+    /// `MotherBrainIsHit`（`$009E`）。
+    pub fn mb_is_hit(&self) -> u8 {
+        self.read_ram(crate::ram_map::MOTHER_BRAIN_IS_HIT)
+    }
+    pub fn set_mb_is_hit(&mut self, v: u8) {
+        self.write_ram(crate::ram_map::MOTHER_BRAIN_IS_HIT, v);
+    }
+    /// `MotherBrainFlashDelay`（`$009F`）。
+    pub fn mb_flash_delay(&self) -> u8 {
+        self.read_ram(crate::ram_map::MOTHER_BRAIN_FLASH_DELAY)
+    }
+    pub fn set_mb_flash_delay(&mut self, v: u8) {
+        self.write_ram(crate::ram_map::MOTHER_BRAIN_FLASH_DELAY, v);
+    }
+    /// `EndTimerEnemyHi`（`$010C`）/`EndTimerEnemyIsEnabled`（`$010D`）。
+    pub fn end_timer_enemy_hi(&self) -> u8 {
+        self.read_ram(crate::ram_map::END_TIMER_ENEMY_HI)
+    }
+    pub fn set_end_timer_enemy_hi(&mut self, v: u8) {
+        self.write_ram(crate::ram_map::END_TIMER_ENEMY_HI, v);
+    }
+    pub fn end_timer_enemy_enabled(&self) -> u8 {
+        self.read_ram(crate::ram_map::END_TIMER_ENEMY_ENABLED)
+    }
+    pub fn set_end_timer_enemy_enabled(&mut self, v: u8) {
+        self.write_ram(crate::ram_map::END_TIMER_ENEMY_ENABLED, v);
+    }
+    /// `SFXMultiInitFlags`（`$0684`）的或写（asm 里各处 `ora #bit / sta`）。
+    pub fn or_sfx_multi_init(&mut self, bit: u8) {
+        let v = self.read_ram(crate::ram_map::SFX_MULTI_INIT) | bit;
+        self.write_ram(crate::ram_map::SFX_MULTI_INIT, v);
+    }
+    /// `MusicInitFlags`（`$0692`）的或写（`music_Escape` 等）。
+    pub fn or_music_init_flags(&mut self, bit: u8) {
+        let v = self.read_ram(crate::sound::addrs::MUSIC_INIT_FLAGS) | bit;
+        self.write_ram(crate::sound::addrs::MUSIC_INIT_FLAGS, v);
+    }
+    /// `EndTimer`（`$010A-$010B`，BCD 四位 `9999`）双字节写。
+    pub fn set_end_timer_pair(&mut self, v: u8) {
+        self.write_ram(crate::ram_map::END_TIMER, v);
+        self.write_ram(crate::ram_map::END_TIMER + 1, v);
+    }
+    pub fn end_timer(&self) -> (u8, u8) {
+        (
+            self.read_ram(crate::ram_map::END_TIMER),
+            self.read_ram(crate::ram_map::END_TIMER + 1),
+        )
+    }
+    /// `MapPosX/MapPosY`（`$004F/$0050`）——母脑造门选槽与特项扫描共用。
+    pub fn map_pos(&self) -> (u8, u8) {
+        (
+            self.read_ram(crate::ram_map::MAP_POS_X),
+            self.read_ram(crate::ram_map::MAP_POS_Y),
+        )
+    }
+    pub fn set_map_pos(&mut self, x: u8, y: u8) {
+        self.write_ram(crate::ram_map::MAP_POS_X, x);
+        self.write_ram(crate::ram_map::MAP_POS_Y, y);
+    }
+    /// `Timer3`（`$002C`，每 10 帧减 1）。
+    pub fn timer3(&self) -> u8 {
+        self.read_ram(crate::ram_map::TIMER3)
+    }
+
+    /// `PaletteDataPending`（`$001C`）——NMI 期按它（值 = 调色板 id + 1）挑 VRAM 结构。
+    pub fn set_palette_pending(&mut self, v: u8) {
+        self.write_ram(crate::ram_map::PALETTE_PENDING, v);
+    }
+    pub fn palette_pending(&self) -> u8 {
+        self.read_ram(crate::ram_map::PALETTE_PENDING)
+    }
+
     pub fn end_timer_hi(&mut self) -> u8 {
         self.read_ram(crate::ram_map::END_TIMER + 1)
     }
