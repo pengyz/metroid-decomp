@@ -1164,13 +1164,50 @@ pub fn dispatch_step(face: &TitleFace) -> TitleStep {
                         jumped: None, unported: None, next_cursor: 0,
                     }
                 }
-                // 段4-6 未实现（行为缺失，非等价未验证）：记账后停在本步，
+                // 段4 `EndFadeOut ; 00:9BCD`：每 8 帧推进一格调色板直到 $0C，完成进段5。
+                (4, _) => {
+                    let mut events = o.writes;
+                    let mut shell = vec![];
+                    if r(crate::title::state::TIMER3) == 0 {
+                        if r(0x17) == 0 {
+                            // `lda #_id_EndGamePalette07+1.b / sta PaletteDataPending / inc IsCredits`
+                            // （asm 注释：这段"appears not to be used"，但按 ROM 照做）
+                            events.push((crate::ram_map::PALETTE_PENDING, 8));
+                            events.push((0x17, 0x01));
+                        }
+                        if face.frame_count & 0x07 == 0 {
+                            // 每 8 帧 +1，到 $0C 淡出完成 ⇒ Timer3←$10 + inc RoomPtr（进段5）
+                            let pend = r(crate::ram_map::PALETTE_PENDING).wrapping_add(1);
+                            events.push((crate::ram_map::PALETTE_PENDING, pend));
+                            if pend == 0x0C {
+                                events.push((crate::title::state::TIMER3, 0x10));
+                                events.push((0x0033, room_ptr.wrapping_add(1)));
+                            }
+                        }
+                    }
+                    // 段尾（无条件）：有服 ⇒ 重载 Samus 帧；无服 ⇒ 重载挥手表。
+                    if r(0x0F) < 0x04 {
+                        shell.push(ShellCall::LoadEndSamusSprites { idx: r(0x10), count: r(0x11) });
+                    } else {
+                        let mut ptr = r(0x0F).wrapping_sub(0x04) << 2;
+                        if face.frame_count & 0x08 != 0 {
+                            ptr = ptr.wrapping_add(2);
+                        }
+                        shell.push(ShellCall::LoadWaveSprites { off: ptr, count: 0x10 });
+                    }
+                    TitleStep {
+                        events, shell, a_out: Some(o.a_out),
+                        x_out: o.x_out.or(Some(face.x)), y_out: o.y_out.or(Some(face.y)),
+                        jumped: None, unported: None, next_cursor: 0,
+                    }
+                }
+                // 段5-6 未实现（行为缺失，非等价未验证）：记账后停在本步，
                 // 见 docs/findings/ending-sequence.md §4。
                 _ => TitleStep {
                     events: o.writes, shell: vec![], a_out: Some(o.a_out),
                     x_out: o.x_out.or(Some(face.x)), y_out: o.y_out.or(Some(face.y)),
                     jumped: None,
-                    unported: Some(0x9BCD), next_cursor: 0,
+                    unported: Some(0x9BFC), next_cursor: 0,
                 },
             }
         }
