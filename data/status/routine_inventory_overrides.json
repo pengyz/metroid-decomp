@@ -195,6 +195,901 @@
       "status": "ported",
       "rust": "crates/game-core/src/enemy/framework.rs:157",
       "note": "asm 07:FBCA：activeAnim[y]!=resetAnimIndex 才写 reset/animIndex←idx、animDelay←0；与 F699 版差=无 InitOffset 递减（multiviola 用）"
+    },
+    "MainTitleRoutine": {
+      "status": "ported",
+      "rust": "crates/game-core/src/title/bridge.rs:27",
+      "note": "同名 snake_case fn + asm 地址锚 00:8000 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "LoadSparkleData": {
+      "status": "ported",
+      "rust": "crates/game-core/src/title/sparkle.rs:488",
+      "note": "同名 snake_case fn + asm 地址锚 00:87AB 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "StarPaletteSwitch": {
+      "status": "ported",
+      "rust": "crates/game-core/src/title/intro.rs:42",
+      "note": "同名 snake_case fn + asm 地址锚 00:8AC7 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "ProcessUniqueItems": {
+      "status": "ported",
+      "rust": "crates/game-core/src/title/bridge.rs:328",
+      "note": "同名 snake_case fn + asm 地址锚 00:8B79 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "LoadUniqueItems": {
+      "status": "ported",
+      "rust": "crates/game-core/src/title/bridge.rs:755",
+      "note": "同名 snake_case fn + asm 地址锚 00:8BD4 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "CheckPassword": {
+      "status": "ported",
+      "rust": "crates/game-core/src/ui/password.rs:217",
+      "note": "同名 snake_case fn + asm 地址锚 00:8C5E 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "CalculatePassword": {
+      "status": "ported",
+      "rust": "crates/game-core/src/title/bridge.rs:376",
+      "note": "同名 snake_case fn + asm 地址锚 00:8C7A 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "LoadPasswordData": {
+      "status": "ported",
+      "rust": "crates/game-core/src/title/bridge.rs:736",
+      "note": "同名 snake_case fn + asm 地址锚 00:8D12 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "LoadTanksAndMissiles": {
+      "status": "ported",
+      "rust": "crates/game-core/src/title/bridge.rs:777",
+      "note": "同名 snake_case fn + asm 地址锚 00:8D3D 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "ValidatePassword": {
+      "status": "ported",
+      "rust": "crates/game-core/src/ui/password.rs:206",
+      "note": "同名 snake_case fn + asm 地址锚 00:8DDE 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "PasswordChecksum": {
+      "status": "ported",
+      "rust": "crates/game-core/src/ui/password.rs:129",
+      "note": "同名 snake_case fn + asm 地址锚 00:8E21 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "UnscramblePassword": {
+      "status": "ported",
+      "rust": "crates/game-core/src/ui/password.rs:168",
+      "note": "同名 snake_case fn + asm 地址锚 00:8E4E 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "InitializeGame": {
+      "status": "ported",
+      "rust": "crates/game-core/src/title/bridge.rs:675",
+      "note": "同名 snake_case fn + asm 地址锚 00:92D4 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "PasswordToScreen": {
+      "status": "ported",
+      "rust": "crates/game-core/src/title/bridge.rs:438",
+      "note": "同名 snake_case fn + asm 地址锚 00:93C6 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "DisplayInputCharacters": {
+      "status": "ported",
+      "rust": "crates/game-core/src/title/bridge.rs:286",
+      "note": "同名 snake_case fn + asm 地址锚 00:940B 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "NMIScreenWrite": {
+      "status": "ported",
+      "rust": "crates/game-core/src/frame/nmi.rs:65",
+      "note": "同名 snake_case fn + asm 地址锚 00:9A07 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "LoadWaveSprites": {
+      "status": "ported",
+      "rust": "crates/game-core/src/title/ending_sprites.rs:49",
+      "note": "同名 snake_case fn + asm 地址锚 00:9C7F 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "LoadEndSamusSprites": {
+      "status": "ported",
+      "rust": "crates/game-core/src/title/ending_sprites.rs:59",
+      "note": "同名 snake_case fn + asm 地址锚 00:9C9A 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "CopyMap": {
+      "status": "ported",
+      "rust": "crates/game-core/src/frame/boot.rs:421",
+      "note": "同名 snake_case fn + asm 地址锚 00:A93E 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "GotoClearAllMetroidLatches": {
+      "status": "ported",
+      "rust": "crates/game-core/src/samus/handler.rs:1553",
+      "note": "同名 snake_case fn + asm 地址锚 03:95AB 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "UpdateAllCannons": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/cannon.rs:69",
+      "note": "同名 snake_case fn + asm 地址锚 03:9B37 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "UpdateCannon": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/cannon.rs:86",
+      "note": "同名 snake_case fn + asm 地址锚 03:9B4C 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "UpdateAllRinkaSpawners": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/rinka.rs:363",
+      "note": "同名 snake_case fn + asm 地址锚 03:A15E 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "UpdateEndTimer": {
+      "status": "ported",
+      "rust": "crates/game-core/src/world/end_timer.rs:22",
+      "note": "同名 snake_case fn + asm 地址锚 03:A1E7 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "DrawEndTimerEnemy": {
+      "status": "ported",
+      "rust": "crates/game-core/src/world/end_timer.rs:51",
+      "note": "同名 snake_case fn + asm 地址锚 03:A238 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "UpdateAllZebetites": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/zebetite.rs:38",
+      "note": "同名 snake_case fn + asm 地址锚 03:A28B 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "UpdateZebetite": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/zebetite.rs:51",
+      "note": "同名 snake_case fn + asm 地址锚 03:A29B 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "IncrementRoutine": {
+      "status": "ported",
+      "rust": "crates/game-core/src/frame/tick.rs:499",
+      "note": "同名 snake_case fn + asm 地址锚 07:C155 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "ClearNameTables": {
+      "status": "ported",
+      "rust": "crates/game-core/src/frame/boot.rs:110",
+      "note": "同名 snake_case fn + asm 地址锚 07:C158 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "EraseAllSprites": {
+      "status": "ported",
+      "rust": "crates/game-core/src/frame/boot.rs:142",
+      "note": "同名 snake_case fn + asm 地址锚 07:C1A3 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "ReadJoyPads": {
+      "status": "ported",
+      "rust": "crates/game-core/src/frame/nmi.rs:304",
+      "note": "同名 snake_case fn + asm 地址锚 07:C215 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "WriteScroll": {
+      "status": "ported",
+      "rust": "crates/game-core/src/frame/nmi.rs:370",
+      "note": "同名 snake_case fn + asm 地址锚 07:C29A 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "VRAMStructWrite": {
+      "status": "ported",
+      "rust": "crates/game-core/src/frame/nmi.rs:135",
+      "note": "同名 snake_case fn + asm 地址锚 07:C30C 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "WriteVRAMString": {
+      "status": "ported",
+      "rust": "crates/game-core/src/title/intro.rs:295",
+      "note": "同名 snake_case fn + asm 地址锚 07:C328 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "EndVRAMStruct": {
+      "status": "ported",
+      "rust": "crates/game-core/src/title/intro.rs:281",
+      "note": "同名 snake_case fn + asm 地址锚 07:C376 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "PrepPPUPaletteString": {
+      "status": "ported",
+      "rust": "crates/game-core/src/title/intro.rs:78",
+      "note": "同名 snake_case fn + asm 地址锚 07:C37E 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "WritePPUCtrl": {
+      "status": "ported",
+      "rust": "crates/game-core/src/frame/nmi.rs:352",
+      "note": "同名 snake_case fn + asm 地址锚 07:C44D 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "PrepVertMirror": {
+      "status": "ported",
+      "rust": "crates/game-core/src/frame/boot.rs:164",
+      "note": "同名 snake_case fn + asm 地址锚 07:C4B2 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "SetPPUMirror": {
+      "status": "ported",
+      "rust": "crates/game-core/src/frame/boot.rs:213",
+      "note": "同名 snake_case fn + asm 地址锚 07:C4B6 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "CheckBankSwitch": {
+      "status": "ported",
+      "rust": "crates/game-core/src/frame/boot.rs:231",
+      "note": "同名 snake_case fn + asm 地址锚 07:C4DE 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "InitBank1": {
+      "status": "ported",
+      "rust": "crates/game-core/src/frame/boot.rs:360",
+      "note": "同名 snake_case fn + asm 地址锚 07:C552 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "InitBank2": {
+      "status": "ported",
+      "rust": "crates/game-core/src/frame/boot.rs:282",
+      "note": "同名 snake_case fn + asm 地址锚 07:C583 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "InitBank3": {
+      "status": "ported",
+      "rust": "crates/game-core/src/frame/boot.rs:303",
+      "note": "同名 snake_case fn + asm 地址锚 07:C590 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "InitBank4": {
+      "status": "ported",
+      "rust": "crates/game-core/src/frame/boot.rs:327",
+      "note": "同名 snake_case fn + asm 地址锚 07:C5B6 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "InitBank5": {
+      "status": "ported",
+      "rust": "crates/game-core/src/frame/boot.rs:342",
+      "note": "同名 snake_case fn + asm 地址锚 07:C5C3 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "LoadSamusGFX": {
+      "status": "ported",
+      "rust": "crates/game-core/src/render/gfx.rs:132",
+      "note": "同名 snake_case fn + asm 地址锚 07:C5DC 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "InitNorfairGFX": {
+      "status": "ported",
+      "rust": "crates/game-core/src/render/gfx.rs:81",
+      "note": "同名 snake_case fn + asm 地址锚 07:C622 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "InitTourianGFX": {
+      "status": "ported",
+      "rust": "crates/game-core/src/render/gfx.rs:91",
+      "note": "同名 snake_case fn + asm 地址锚 07:C645 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "InitKraidGFX": {
+      "status": "ported",
+      "rust": "crates/game-core/src/render/gfx.rs:112",
+      "note": "同名 snake_case fn + asm 地址锚 07:C677 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "InitRidleyGFX": {
+      "status": "ported",
+      "rust": "crates/game-core/src/render/gfx.rs:121",
+      "note": "同名 snake_case fn + asm 地址锚 07:C69F 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "AreaInit": {
+      "status": "ported",
+      "rust": "crates/game-core/src/frame/tick.rs:508",
+      "note": "同名 snake_case fn + asm 地址锚 07:C801 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "MoreInit": {
+      "status": "ported",
+      "rust": "crates/game-core/src/world/room_load.rs:16",
+      "note": "同名 snake_case fn + asm 地址锚 07:C81D 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "CopyAreaPointers": {
+      "status": "ported",
+      "rust": "crates/game-core/src/world/room_load.rs:167",
+      "note": "同名 snake_case fn + asm 地址锚 07:C8B0 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "DestroyEnemies": {
+      "status": "ported",
+      "rust": "crates/game-core/src/world/elevator.rs:413",
+      "note": "同名 snake_case fn + asm 地址锚 07:C8BB 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "SamusInit": {
+      "status": "ported",
+      "rust": "crates/game-core/src/frame/tick.rs:529",
+      "note": "同名 snake_case fn + asm 地址锚 07:C8D1 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "GameEngine": {
+      "status": "ported",
+      "rust": "crates/game-core/src/frame/tick.rs:655",
+      "note": "同名 snake_case fn + asm 地址锚 07:C92B 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "UpdateAge": {
+      "status": "ported",
+      "rust": "crates/game-core/src/frame/nmi.rs:385",
+      "note": "同名 snake_case fn + asm 地址锚 07:C97E 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "PrepareGameOver": {
+      "status": "ported",
+      "rust": "crates/game-core/src/frame/tick.rs:422",
+      "note": "同名 snake_case fn + asm 地址锚 07:C9A6 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "GoPassword": {
+      "status": "ported",
+      "rust": "crates/game-core/src/frame/tick.rs:489",
+      "note": "同名 snake_case fn + asm 地址锚 07:C9C4 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "SamusIntro": {
+      "status": "ported",
+      "rust": "crates/game-core/src/frame/tick.rs:575",
+      "note": "同名 snake_case fn + asm 地址锚 07:C9D7 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "IsEngineRunning": {
+      "status": "ported",
+      "rust": "crates/game-core/src/frame/tick.rs:712",
+      "note": "同名 snake_case fn + asm 地址锚 07:CA18 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "ChooseEnding": {
+      "status": "ported",
+      "rust": "crates/game-core/src/title/mod.rs:1938",
+      "note": "同名 snake_case fn + asm 地址锚 07:CAF5 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "UpdateWorld": {
+      "status": "ported",
+      "rust": "crates/game-core/src/world/update.rs:104",
+      "note": "同名 snake_case fn + asm 地址锚 07:CB29 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "SelectSamusPalette": {
+      "status": "ported",
+      "rust": "crates/game-core/src/frame/tick.rs:640",
+      "note": "同名 snake_case fn + asm 地址锚 07:CB73 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "SilenceMusic": {
+      "status": "ported",
+      "rust": "crates/game-core/src/sound/hook.rs:31",
+      "note": "同名 snake_case fn + asm 地址锚 07:CB8E 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "PauseMusic": {
+      "status": "ported",
+      "rust": "crates/game-core/src/sound/hook.rs:36",
+      "note": "同名 snake_case fn + asm 地址锚 07:CB92 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "GoSamusHandler": {
+      "status": "ported",
+      "rust": "crates/game-core/src/samus/handler.rs:90",
+      "note": "同名 snake_case fn + asm 地址锚 07:CC1A 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "SamusStand": {
+      "status": "ported",
+      "rust": "crates/game-core/src/samus/handler.rs:1161",
+      "note": "同名 snake_case fn + asm 地址锚 07:CC36 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "SetSamusExplode": {
+      "status": "ported",
+      "rust": "crates/game-core/src/samus/handler.rs:552",
+      "note": "同名 snake_case fn + asm 地址锚 07:CC8B 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "SetSamusRun": {
+      "status": "ported",
+      "rust": "crates/game-core/src/samus/handler.rs:562",
+      "note": "同名 snake_case fn + asm 地址锚 07:CC98 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "SetSamusRunAccel": {
+      "status": "ported",
+      "rust": "crates/game-core/src/samus/handler.rs:144",
+      "note": "同名 snake_case fn + asm 地址锚 07:CCB7 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "SamusRun": {
+      "status": "ported",
+      "rust": "crates/game-core/src/samus/handler.rs:226",
+      "note": "同名 snake_case fn + asm 地址锚 07:CCC2 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "SetSamusData": {
+      "status": "ported",
+      "rust": "crates/game-core/src/samus/physics.rs:998",
+      "note": "同名 snake_case fn + asm 地址锚 07:CD6D 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "SamusRun_SetAnim": {
+      "status": "ported",
+      "rust": "crates/game-core/src/samus/handler.rs:339",
+      "note": "同名 snake_case fn + asm 地址锚 07:CDBF 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "CheckHealthBeep": {
+      "status": "ported",
+      "rust": "crates/game-core/src/samus/physics.rs:979",
+      "note": "同名 snake_case fn + asm 地址锚 07:CE66 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "SubtractHealth": {
+      "status": "ported",
+      "rust": "crates/game-core/src/weapon/projectile.rs:640",
+      "note": "同名 snake_case fn + asm 地址锚 07:CE92 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "SetSamusStand": {
+      "status": "ported",
+      "rust": "crates/game-core/src/samus/handler.rs:1126",
+      "note": "同名 snake_case fn + asm 地址锚 07:CF55 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "SetSamusPntUp": {
+      "status": "ported",
+      "rust": "crates/game-core/src/samus/handler.rs:1135",
+      "note": "同名 snake_case fn + asm 地址锚 07:CF77 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "SamusRun_CheckHorzMovementMidair": {
+      "status": "ported",
+      "rust": "crates/game-core/src/samus/handler.rs:152",
+      "note": "同名 snake_case fn + asm 地址锚 07:CF88 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "SetSamusJumpPntUp": {
+      "status": "ported",
+      "rust": "crates/game-core/src/samus/handler.rs:528",
+      "note": "同名 snake_case fn + asm 地址锚 07:CFBE 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "SamusJump_CheckHorzMovement": {
+      "status": "ported",
+      "rust": "crates/game-core/src/samus/handler.rs:1266",
+      "note": "同名 snake_case fn + asm 地址锚 07:D055 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "SamusJump_CheckFire": {
+      "status": "ported",
+      "rust": "crates/game-core/src/samus/handler.rs:1299",
+      "note": "同名 snake_case fn + asm 地址锚 07:D09C 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "SetSamusRoll": {
+      "status": "ported",
+      "rust": "crates/game-core/src/samus/handler.rs:1433",
+      "note": "同名 snake_case fn + asm 地址锚 07:D0B5 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "SamusRoll": {
+      "status": "ported",
+      "rust": "crates/game-core/src/samus/handler.rs:1381",
+      "note": "同名 snake_case fn + asm 地址锚 07:D0E1 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "CheckBombLaunch": {
+      "status": "ported",
+      "rust": "crates/game-core/src/weapon/bomb.rs:39",
+      "note": "同名 snake_case fn + asm 地址锚 07:D150 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "FireSamusProjectile": {
+      "status": "ported",
+      "rust": "crates/game-core/src/samus/handler.rs:415",
+      "note": "同名 snake_case fn + asm 地址锚 07:D1EE 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "FireSamusProjectileUpwards": {
+      "status": "ported",
+      "rust": "crates/game-core/src/samus/handler.rs:478",
+      "note": "同名 snake_case fn + asm 地址锚 07:D275 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "SamusDoor": {
+      "status": "ported",
+      "rust": "crates/game-core/src/samus/handler.rs:1574",
+      "note": "同名 snake_case fn + asm 地址锚 07:D3A8 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "MoveOutDoor": {
+      "status": "ported",
+      "rust": "crates/game-core/src/world/door.rs:39",
+      "note": "同名 snake_case fn + asm 地址锚 07:D3F7 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "SamusElevator": {
+      "status": "ported",
+      "rust": "crates/game-core/src/samus/handler.rs:1630",
+      "note": "同名 snake_case fn + asm 地址锚 07:D423 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "Door_DeleteOffscreenEnemies": {
+      "status": "ported",
+      "rust": "crates/game-core/src/world/door.rs:65",
+      "note": "同名 snake_case fn + asm 地址锚 07:D48C 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "UpdateSamusProjectiles": {
+      "status": "ported",
+      "rust": "crates/game-core/src/weapon/projectile.rs:64",
+      "note": "同名 snake_case fn + asm 地址锚 07:D4BF 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "BombInit": {
+      "status": "ported",
+      "rust": "crates/game-core/src/weapon/bomb.rs:71",
+      "note": "同名 snake_case fn + asm 地址锚 07:D65E 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "DrawBomb": {
+      "status": "ported",
+      "rust": "crates/game-core/src/weapon/bomb.rs:131",
+      "note": "同名 snake_case fn + asm 地址锚 07:D66B 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "BombCountdown": {
+      "status": "ported",
+      "rust": "crates/game-core/src/weapon/bomb.rs:86",
+      "note": "同名 snake_case fn + asm 地址锚 07:D670 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "BombExplode": {
+      "status": "ported",
+      "rust": "crates/game-core/src/weapon/bomb.rs:116",
+      "note": "同名 snake_case fn + asm 地址锚 07:D691 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "BombExplosion_CollisionWithBG": {
+      "status": "ported",
+      "rust": "crates/game-core/src/weapon/bomb.rs:146",
+      "note": "同名 snake_case fn + asm 地址锚 07:D6A7 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "BombCurrentTile": {
+      "status": "ported",
+      "rust": "crates/game-core/src/weapon/bomb.rs:224",
+      "note": "同名 snake_case fn + asm 地址锚 07:D76A 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "UpdateElevator": {
+      "status": "ported",
+      "rust": "crates/game-core/src/world/elevator.rs:92",
+      "note": "同名 snake_case fn + asm 地址锚 07:D7B3 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "ElevScrollRoom": {
+      "status": "ported",
+      "rust": "crates/game-core/src/world/elevator.rs:231",
+      "note": "同名 snake_case fn + asm 地址锚 07:D892 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "StartMusic": {
+      "status": "ported",
+      "rust": "crates/game-core/src/frame/tick.rs:622",
+      "note": "同名 snake_case fn + asm 地址锚 07:D92C 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "SamusCollisionWithSolidEntities": {
+      "status": "ported",
+      "rust": "crates/game-core/src/samus/physics.rs:847",
+      "note": "同名 snake_case fn + asm 地址锚 07:D976 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "UpdateAllStatues": {
+      "status": "ported",
+      "rust": "crates/game-core/src/world/statue.rs:76",
+      "note": "同名 snake_case fn + asm 地址锚 07:D9D4 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "UpdateStatue": {
+      "status": "ported",
+      "rust": "crates/game-core/src/world/statue.rs:175",
+      "note": "同名 snake_case fn + asm 地址锚 07:DA1A 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "UpdateStatue_Raise": {
+      "status": "ported",
+      "rust": "crates/game-core/src/world/statue.rs:127",
+      "note": "同名 snake_case fn + asm 地址锚 07:DA3D 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "UpdateStatue_StartRaising": {
+      "status": "ported",
+      "rust": "crates/game-core/src/world/statue.rs:152",
+      "note": "同名 snake_case fn + asm 地址锚 07:DA7C 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "UpdateStatueBGTiles": {
+      "status": "ported",
+      "rust": "crates/game-core/src/world/statue.rs:114",
+      "note": "同名 snake_case fn + asm 地址锚 07:DAB0 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "UpdateAllPowerUps": {
+      "status": "ported",
+      "rust": "crates/game-core/src/pickup/powerup.rs:58",
+      "note": "同名 snake_case fn + asm 地址锚 07:DB37 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "UpdateOnePowerUp": {
+      "status": "ported",
+      "rust": "crates/game-core/src/pickup/powerup.rs:35",
+      "note": "同名 snake_case fn + asm 地址锚 07:DB42 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "GetItemXYPos": {
+      "status": "ported",
+      "rust": "crates/game-core/src/pickup/spawn.rs:147",
+      "note": "同名 snake_case fn + asm 地址锚 07:DC1C 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "EnemyCompleteDeath": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/framework.rs:486",
+      "note": "同名 snake_case fn + asm 地址锚 07:DCF5 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "DrawEnemy": {
+      "status": "ported",
+      "rust": "crates/game-core/src/render/enemy_sprite.rs:47",
+      "note": "同名 snake_case fn + asm 地址锚 07:DD8B 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "ObjDrawFrame": {
+      "status": "ported",
+      "rust": "crates/game-core/src/render/oam.rs:186",
+      "note": "同名 snake_case fn + asm 地址锚 07:DE4A 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "UpdateEnemyAnim": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/anim_tick.rs:18",
+      "note": "同名 snake_case fn + asm 地址锚 07:E094 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "HexToDec": {
+      "status": "ported",
+      "rust": "crates/game-core/src/ui/hud.rs:24",
+      "note": "同名 snake_case fn + asm 地址锚 07:E198 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "BitScan": {
+      "status": "ported",
+      "rust": "crates/game-core/src/samus/handler.rs:1144",
+      "note": "同名 snake_case fn + asm 地址锚 07:E1E1 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "ScrollDoor": {
+      "status": "ported",
+      "rust": "crates/game-core/src/world/update.rs:24",
+      "note": "同名 snake_case fn + asm 地址锚 07:E1F1 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "VerticalRoomCentered": {
+      "status": "ported",
+      "rust": "crates/game-core/src/world/update.rs:58",
+      "note": "同名 snake_case fn + asm 地址锚 07:E21B 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "DoOneDoorScroll": {
+      "status": "ported",
+      "rust": "crates/game-core/src/world/update.rs:70",
+      "note": "同名 snake_case fn + asm 地址锚 07:E22C 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "ToggleSamusHi": {
+      "status": "ported",
+      "rust": "crates/game-core/src/samus/physics.rs:1333",
+      "note": "同名 snake_case fn + asm 地址锚 07:E249 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "IsSamusInLava": {
+      "status": "ported",
+      "rust": "crates/game-core/src/samus/physics.rs:1188",
+      "note": "同名 snake_case fn + asm 地址锚 07:E25D 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "SamusMoveHorizontally": {
+      "status": "ported",
+      "rust": "crates/game-core/src/samus/physics.rs:1710",
+      "note": "同名 snake_case fn + asm 地址锚 07:E31A 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "CheckStopHorzMvmt": {
+      "status": "ported",
+      "rust": "crates/game-core/src/samus/state.rs:1009",
+      "note": "同名 snake_case fn + asm 地址锚 07:E365 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "ScrollDown": {
+      "status": "ported",
+      "rust": "crates/game-core/src/world/camera/scroll.rs:279",
+      "note": "同名 snake_case fn + asm 地址锚 07:E519 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "CheckUpdateNameTable": {
+      "status": "ported",
+      "rust": "crates/game-core/src/world/camera/scroll.rs:21",
+      "note": "同名 snake_case fn + asm 地址锚 07:E54A 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "MoveSamusLeft": {
+      "status": "ported",
+      "rust": "crates/game-core/src/samus/physics.rs:1631",
+      "note": "同名 snake_case fn + asm 地址锚 07:E626 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "MoveSamusRight": {
+      "status": "ported",
+      "rust": "crates/game-core/src/samus/physics.rs:1673",
+      "note": "同名 snake_case fn + asm 地址锚 07:E668 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "ScrollLeft": {
+      "status": "ported",
+      "rust": "crates/game-core/src/world/camera/scroll.rs:166",
+      "note": "同名 snake_case fn + asm 地址锚 07:E6A7 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "ScrollRight": {
+      "status": "ported",
+      "rust": "crates/game-core/src/world/camera/scroll.rs:200",
+      "note": "同名 snake_case fn + asm 地址锚 07:E6D2 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "GetRoomNum": {
+      "status": "ported",
+      "rust": "crates/game-core/src/world/room_load.rs:182",
+      "note": "同名 snake_case fn + asm 地址锚 07:E720 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "EnemyCheckMoveUp": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/motion.rs:763",
+      "note": "同名 snake_case fn + asm 地址锚 07:E770 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "EnemyCheckMoveDown": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/motion.rs:790",
+      "note": "同名 snake_case fn + asm 地址锚 07:E77B 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "EnemyCheckMoveVertical": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/movement.rs:66",
+      "note": "同名 snake_case fn + asm 地址锚 07:E783 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "ObjectCheckMoveUp": {
+      "status": "ported",
+      "rust": "crates/game-core/src/samus/physics.rs:783",
+      "note": "同名 snake_case fn + asm 地址锚 07:E7A2 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "ObjectCheckMoveVertical": {
+      "status": "ported",
+      "rust": "crates/game-core/src/samus/physics.rs:47",
+      "note": "同名 snake_case fn + asm 地址锚 07:E7B5 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "SamusProjectileHitDoorOrStatue": {
+      "status": "ported",
+      "rust": "crates/game-core/src/weapon/projectile.rs:10",
+      "note": "同名 snake_case fn + asm 地址锚 07:E81E 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "ObjectCheckMoveLeft": {
+      "status": "ported",
+      "rust": "crates/game-core/src/samus/physics.rs:1468",
+      "note": "同名 snake_case fn + asm 地址锚 07:E880 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "ObjectCheckMoveRight": {
+      "status": "ported",
+      "rust": "crates/game-core/src/samus/physics.rs:1479",
+      "note": "同名 snake_case fn + asm 地址锚 07:E88B 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "EnemyCheckMoveLeft": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/motion.rs:819",
+      "note": "同名 snake_case fn + asm 地址锚 07:E8F1 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "EnemyCheckMoveRight": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/motion.rs:845",
+      "note": "同名 snake_case fn + asm 地址锚 07:E8FC 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "EnemyCheckMoveHorizontalBranch": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/movement.rs:92",
+      "note": "同名 snake_case fn + asm 地址锚 07:E904 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "MakeRoomRAMPtr": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/motion.rs:549",
+      "note": "同名 snake_case fn + asm 地址锚 07:E96A 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "ToggleNameTable": {
+      "status": "ported",
+      "rust": "crates/game-core/src/world/camera/scroll.rs:313",
+      "note": "同名 snake_case fn + asm 地址锚 07:E9B7 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "AttribTableWrite": {
+      "status": "ported",
+      "rust": "crates/game-core/src/world/room_draw.rs:856",
+      "note": "同名 snake_case fn + asm 地址锚 07:EA13 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "SetupRoom": {
+      "status": "ported",
+      "rust": "crates/game-core/src/world/room_load.rs:306",
+      "note": "同名 snake_case fn + asm 地址锚 07:EA2B 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "LoadElevator": {
+      "status": "ported",
+      "rust": "crates/game-core/src/world/room_draw.rs:731",
+      "note": "同名 snake_case fn + asm 地址锚 07:EC04 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "LoadStatues": {
+      "status": "ported",
+      "rust": "crates/game-core/src/world/statue.rs:191",
+      "note": "同名 snake_case fn + asm 地址锚 07:EC2F 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "DeleteOffscreenRoomSprites": {
+      "status": "ported",
+      "rust": "crates/game-core/src/world/room_draw.rs:351",
+      "note": "同名 snake_case fn + asm 地址锚 07:EC9B 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "ScanForItems": {
+      "status": "ported",
+      "rust": "crates/game-core/src/pickup/spawn.rs:38",
+      "note": "同名 snake_case fn + asm 地址锚 07:ED98 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "CheckForItem": {
+      "status": "ported",
+      "rust": "crates/game-core/src/pickup/spawn.rs:136",
+      "note": "同名 snake_case fn + asm 地址锚 07:EE4A 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "SpawnZebetite": {
+      "status": "ported",
+      "rust": "crates/game-core/src/pickup/spawn.rs:87",
+      "note": "同名 snake_case fn + asm 地址锚 07:EECA 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "SpawnRinkaSpawner": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/rinka.rs:320",
+      "note": "同名 snake_case fn + asm 地址锚 07:EEEE 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "UpdateAllEnemies": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/slot_cycle.rs:18",
+      "note": "同名 snake_case fn + asm 地址锚 07:F345 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "UpdateEnemy_Explode": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/framework.rs:383",
+      "note": "同名 snake_case fn + asm 地址锚 07:F40D 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "UpdateEnemy_Pickup": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/framework.rs:447",
+      "note": "同名 snake_case fn + asm 地址锚 07:F483 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "UpdateEnemy_Hurt": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/framework.rs:411",
+      "note": "同名 snake_case fn + asm 地址锚 07:F4EE 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "FreezeEnemy": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/en_projectile.rs:292",
+      "note": "同名 snake_case fn + asm 地址锚 07:F518 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "ExplodeEnemy": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/framework.rs:224",
+      "note": "同名 snake_case fn + asm 地址锚 07:F611 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "InitEnRestingAnimIndex": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/prep.rs:242",
+      "note": "同名 snake_case fn + asm 地址锚 07:F682 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "InitEnActiveAnimIndex": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/framework.rs:138",
+      "note": "同名 snake_case fn + asm 地址锚 07:F699 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "SpawnEnProjectile": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/en_projectile.rs:41",
+      "note": "同名 snake_case fn + asm 地址锚 07:F870 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "UpdateAllEnProjectiles": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/en_projectile.rs:126",
+      "note": "同名 snake_case fn + asm 地址锚 07:F93B 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "UpdateEnProjectile": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/en_projectile.rs:136",
+      "note": "同名 snake_case fn + asm 地址锚 07:F949 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "UpdateEnProjectile_Resting": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/en_projectile.rs:156",
+      "note": "同名 snake_case fn + asm 地址锚 07:F96A 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "AnimDrawEnemyWithAnimDelay1": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/en_projectile.rs:351",
+      "note": "同名 snake_case fn + asm 地址锚 07:F97C 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "UpdateEnProjectile_Active": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/en_projectile.rs:173",
+      "note": "同名 snake_case fn + asm 地址锚 07:F991 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "EnemyBGCollideOrApplySpeed": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/en_projectile.rs:317",
+      "note": "同名 snake_case fn + asm 地址锚 07:FA1E 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "EnemyBecomePickupIfHit": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/en_projectile.rs:297",
+      "note": "同名 snake_case fn + asm 地址锚 07:FA5B 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "EnemyBecomePickup": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/en_projectile.rs:305",
+      "note": "同名 snake_case fn + asm 地址锚 07:FA60 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "UpdateEnProjectile_Frozen": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/en_projectile.rs:262",
+      "note": "同名 snake_case fn + asm 地址锚 07:FA6B 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "UpdateEnProjectile_Pickup": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/en_projectile.rs:277",
+      "note": "同名 snake_case fn + asm 地址锚 07:FA91 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "UpdateAllEnemyExplosions": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/framework.rs:283",
+      "note": "同名 snake_case fn + asm 地址锚 07:FA9D 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "UpdateEnemyExplosion": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/framework.rs:299",
+      "note": "同名 snake_case fn + asm 地址锚 07:FAB4 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "ApplySpeedToPosition": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/motion.rs:659",
+      "note": "同名 snake_case fn + asm 地址锚 07:FD8F 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "UpdateTourianItems": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/zebetite.rs:335",
+      "note": "同名 snake_case fn + asm 地址锚 07:FDE3 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "UpdateAllTileBlasts": {
+      "status": "ported",
+      "rust": "crates/game-core/src/world/tile_blast.rs:95",
+      "note": "同名 snake_case fn + asm 地址锚 07:FE1B 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "UpdateTileBlast": {
+      "status": "ported",
+      "rust": "crates/game-core/src/world/tile_blast.rs:104",
+      "note": "同名 snake_case fn + asm 地址锚 07:FE27 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "SetTileAnim": {
+      "status": "ported",
+      "rust": "crates/game-core/src/world/tile_blast.rs:141",
+      "note": "同名 snake_case fn + asm 地址锚 07:FE6D 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "UpdateTileBlastAnim": {
+      "status": "ported",
+      "rust": "crates/game-core/src/world/tile_blast.rs:148",
+      "note": "同名 snake_case fn + asm 地址锚 07:FF54 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
     }
   }
 }
