@@ -13,6 +13,7 @@
 //! - 输入：`InputSource::poll` 出 NES 手柄位形（$4016 串行位序）；
 //! - 音频：`AudioSink` 收 APU 寄存器写流（$4000-$4017）+帧界（壳侧合成）。
 
+pub mod apu;
 pub mod runtime;
 pub use runtime::{run_frame, run_game, GameDriver};
 
