@@ -15,6 +15,10 @@ pub const PPUCTRL_ZP: u16 = 0x00FF;
 
 /// NMIStatus=$1A（constants_ram.asm:474「0=NMI in progress. anything else, NMI not in
 /// progress」）——**成环标志同源**（decomp e3f2473：$C0C9 清/NMI 端置，C0CC 轮询）。
+/// `EnemyStatusPreAI`（`constants_ram.asm:633`，zp `$81`）——`UpdateEnemy` 在
+/// `JumpEngine` 分派前写入的 status 快照；**AI 例程读它，不是现役 `EnsExtra.status`**。
+pub const ENEMY_STATUS_PRE_AI: u16 = 0x0081;
+
 pub const NMI_STATUS: u16 = 0x001A;
 
 /// TitleRoutine=$1F（constants_ram.asm:479「Stores title routine number currently

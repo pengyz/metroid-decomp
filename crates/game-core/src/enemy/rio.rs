@@ -1,4 +1,4 @@
-//! Rio —— `refs/m1disasm/SRC/enemies/rio.asm`（25 行，逐行对读）。
+//! Rio —— `refs/m1disasm/SRC/enemies/rio.asm`（54 行 / 26 条指令，逐行对读）。
 //!
 //! asm 原文（bank1 `01:9AF5`；**只有 Brinstar include 本件**——
 //! `refs/m1disasm/SRC/prg1_brinstar.asm:905 .include "enemies/rio.asm"`）：
@@ -36,18 +36,20 @@ use crate::ram_map;
 
 /// `EnemyStatusPreAI`（`$0081`）的两个取值（asm `cmp #enemyStatus_Resting|Explode`）。
 ///
-/// 读径说明：asm 读 `$0081`，本仓读 `mem.enemy(slot).status_raw()`——两者在 AI 入口
-/// **恒等**，因为 `enemy/slot_cycle.rs` 是 `$0081` 的**唯一写点**且在分派前
-/// 把 status 写进 `$0081`（asm `prg7:10511 lda EnsExtra.0.status / sta EnemyStatusPreAI`），
-/// 其后到 `choose_enemy_ai` 之间没有任何 status 写入。这样既保持语义，又不给
-/// 新模块引入裸面读数（`raw-surface` 门：新文件不许接入裸口）。
+/// 读径说明（**复核 B 项更正**）：asm 读 `$0081`，而 `$0081` 是 `UpdateEnemy` 在
+/// `JumpEngine` 分派前写下的**快照**（asm `prg7:10511 lda EnsExtra.0.status /
+/// sta EnemyStatusPreAI`）。分派之后、AI 之前仍会改现役 status：
+/// `try_becoming_active`（1→2）、`dec_status`（2→1）、`react_to_projectile`（→3/4/6），
+/// 因此读现役 `status_raw()` 会在**激活帧 / Active→Resting 帧 / 中弹冻结帧**三类可达帧上
+/// 与 asm 分叉（旧形即此错，`docs/rounds/r9-task-rio-review.md` B 项有直证）。
+/// 现统一走 `mem.enemy_status_pre_ai()`（裸读收口在 `frame/memory.rs`，`raw-surface` 豁免辖）。
 const PRE_RESTING: u8 = 1;
 const PRE_EXPLODE: u8 = 3;
 
 /// `RioAIRoutine`（`enemies/rio.asm`，仅 Brinstar 生成）。
 pub(crate) fn rio_ai(mem: &mut crate::frame::Manager, x: u8) {
     let slot = x / 16;
-    let pre = mem.enemy(slot).status_raw();
+    let pre = mem.enemy_status_pre_ai();
     if pre == PRE_RESTING {
         // RioExit_Resting：`lda #$08 / jmp CommonJump_UpdateEnemyCommon_noMove`
         framework::update_enemy_common_no_move_anim(mem, x, 0x08);
@@ -90,6 +92,9 @@ mod tests_rio {
         game_data::pack::init_from_env().ok();
         m.write_ram(ram_map::IN_AREA, 0); // Brinstar
         m.write_wram(ens_addr(X, ENS_F_STATUS), pre);
+        // AI 读的是分派前快照 `$0081`（asm `lda EnemyStatusPreAI`）——同步写入，
+        // 其余测试与 asm 语义一致。
+        m.write_ram(ram_map::ENEMY_STATUS_PRE_AI, pre);
         m.write_wram(ens_addr(X, ENS_F_TYPE), 6); // Rio
         m.write_ram(en_addr(X, 0), ey);
         m.write_ram(en_addr(X, 1), 0x50);
@@ -155,6 +160,33 @@ mod tests_rio {
             rio_ai(&mut m, X);
             assert_eq!(m.enemy(X / 16).accel_y(), 7, "pre={pre} 不应改 accelY");
         }
+    }
+
+    /// **复核 B 项回归测**：AI 必须读 `$0081` 快照而非现役 status。
+    ///
+    /// 激活帧形态（`try_becoming_active` 把现役 status 1→2 之后才调 AI，而 asm 的
+    /// `$0081` 仍是 1）⇒ asm 走 Resting 出口（anim8 + noMove，**不写 accelY**）。
+    /// 旧形读现役 status 会走 Active 径写 −128（复核直证 `left: -128, right: 7`）。
+    #[test]
+    fn ai_reads_pre_ai_snapshot_not_live_status() {
+        let mut m = Manager::default();
+        stage(&mut m, 0x01, 1, 0x10, 0x80, 0x80);
+        // 现役 status 已被框架改成 Active(2)，但分派前快照仍是 Resting(1)。
+        m.write_wram(ens_addr(X, ENS_F_STATUS), 0x02);
+        m.enemy(X / 16).set_accel_y(7);
+        rio_ai(&mut m, X);
+        assert_eq!(
+            m.enemy(X / 16).accel_y(),
+            7,
+            "pre=$0081 为 Resting 时不得写重力（读快照，不读现役 status）"
+        );
+        // 反向对照：快照为 Active ⇒ 写 −128。
+        let mut m2 = Manager::default();
+        // data05 bit4=0 ⇒ 不判 Samus 距离，重力保持（对照只验证"快照 Active 会写重力"）。
+        stage(&mut m2, 0x02, 1, 0x00, 0x80, 0x80);
+        m2.enemy(X / 16).set_accel_y(7);
+        rio_ai(&mut m2, X);
+        assert_eq!(m2.enemy(X / 16).accel_y(), -128, "快照 Active ⇒ 写重力");
     }
 
     /// dispatch 级接线：type 6（Brinstar Rio）走真实链 `update_all_enemies`。

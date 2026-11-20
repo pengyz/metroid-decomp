@@ -485,6 +485,20 @@ impl Manager {
     pub fn enemy(&mut self, slot: u8) -> crate::enemy::state::Enemy<'_> {
         crate::enemy::state::Enemy::new(self, slot)
     }
+
+    /// `EnemyStatusPreAI`（`$0081`，`constants_ram.asm`）——**AI 例程读的就是这一格**。
+    ///
+    /// `UpdateEnemy`（asm `prg7:10511 lda EnsExtra.0.status / sta EnemyStatusPreAI`）在
+    /// `JumpEngine` 分派前把当时 status 快照进 `$0081`；其后 `try_becoming_active`
+    /// （1→2）、`dec_status`（2→1）、`react_to_projectile`（→3/4/6）都会改写现役
+    /// `EnsExtra.status`，**但 `$0081` 保持分派前的值**。因此 AI 例程若读现役 status 就会
+    /// 在三类可达帧上与 asm 分叉（激活帧 / Active→Resting 帧 / 中弹冻结帧）——
+    /// 这正是 `crawler.rs`、`skree.rs`、`update_enemy_common_decide` 都读本格的原因。
+    ///
+    /// 由 `frame/memory.rs`（`raw-surface` 豁免的兼容辖）收口裸读，新 AI 模块直接调用即可。
+    pub fn enemy_status_pre_ai(&mut self) -> u8 {
+        self.read_ram(crate::ram_map::ENEMY_STATUS_PRE_AI)
+    }
 }
 
 /// **P1·R3 断言组**：`restore_mss` 之后 typed 格不得在 `storage` 里留副本。
