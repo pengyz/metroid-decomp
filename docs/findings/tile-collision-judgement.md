@@ -50,3 +50,14 @@
 
 - 可炸瓦的"炸开"副作用（弹命中后把瓦置空 + 爆散动画）尚未端口；当前子弹径只记账
   `DIVERGENCES`，不销毁瓦。属独立任务卡。
+
+## 5. 同族「框架捷径」登记（复核 info，非本判据缺陷）
+
+- **Rio 的 Explode 出口在 Rust 是死代码**：`framework.rs` 的 `update_enemy_explode` 直接
+  `anim3 + no_move_no_anim + 计时 + CompleteDeath`，**不调** `choose_enemy_ai`；而 asm
+  `prg7:10795 UpdateEnemy_Explode: jmp ChooseEnemyAIRoutine` 仍会进 AI（Rio 走
+  `CommonJump_UpdateEnemyCommon_noMoveNoAnim`）。⇒ status=3 帧上 asm 只 noMoveNoAnim、
+  Rust 走通用爆炸径（多 anim3+计时）。
+- 影响面：仅 status=3 的过渡帧，且不影响当前矩阵（160 格逐格同）。
+- 归属：框架级（`enemy/framework.rs` 的爆炸分派），非某个 AI 端口的缺陷；修复需先给
+  `update_enemy_explode` 补「AI 仍会被调用一次」的语义，属独立任务卡。
