@@ -502,12 +502,16 @@ fn fire_samus_projectile_upwards(mem: &mut Manager) {
     mem.write_ram(base + 8, 0xFC); // speedY←$FC（上）
     mem.write_ram(base + 9, 0); // speedX←0
     mem.write_ram(base + 0x0B, 1);
-    // 纵臂炮位放（BulletUpwardsOffsetXTable[Dir]（$00/$00）/UpwardsOffsetYTable[status&1]
-    // （-$08/-$04（表值（audit §7 面）））——Samus 位+偏移
+    // 纵臂炮位放：`BulletUpwardsOffsetXTable ; 07:D2E7 = [$01, -$01]`（按 SamusDir）、
+    // `BulletUpwardsOffsetYTable ; 07:D2E9 = [-$14, -$10]`（按 status&1）——两表都由
+    // `PlaceBulletAtArmCannon ; 07:D306` 以 `ApplySpeedToPosition` 加一次。
+    // 【r9 修】旧形写 ±$04 / −$08,−$04（把 speedS 当偏移表），竖射出生点因此低 12px、
+    // 右 3px：emu f1293 弹 (77,177)=Samus(76,193)+($01,−$10) 命中槽 $0454 isHit=0x20，
+    // rust 弹 (80,189) 差 21px 打不到 ⇒ any% 首分歧（0001 frame divergence）。
     let dir = mem.read_ram(crate::ram_map::SAMUS_DIR) & 1;
     let status = mem.read_ram(base);
-    let off_x: u8 = if dir == 0 { 0x04 } else { 0xFC }; // UpwardsOffsetX[Dir]（±$04）
-    let off_y: u8 = if status & 1 == 0 { 0xF8 } else { 0xFC }; // UpwardsOffsetY[status&1]
+    let off_x: u8 = if dir == 0 { 0x01 } else { 0xFF }; // UpwardsOffsetX[Dir] = $01/-$01
+    let off_y: u8 = if status & 1 == 0 { 0xEC } else { 0xF0 }; // UpwardsOffsetY[status&1] = -$14/-$10
     let sy = mem.read_ram(crate::ram_map::SAMUS_Y);
     let sx = mem.read_ram(0x030E);
     let shi = mem.read_ram(crate::ram_map::SAMUS_HI);
@@ -2148,3 +2152,26 @@ mod tests_door_chain {
     }
 }
 
+#[cfg(test)]
+mod tests_upwards_bullet_spawn {
+    use crate::ram_map::{SAMUS_DIR, SAMUS_HI, SAMUS_Y};
+    use crate::state::Manager;
+
+    /// `FireSamusProjectileUpwards ; 07:D275` 的出生点：
+    /// `BulletUpwardsOffsetXTable ; 07:D2E7 = [$01,-$01]`（按 SamusDir）、
+    /// `BulletUpwardsOffsetYTable ; 07:D2E9 = [-$14,-$10]`（按 status&1）。
+    /// 真值校验来源：emu f1293 Samus(76,193) ⇒ 弹(tile 1) (77,177) 且槽5 isHit=0x20。
+    #[test]
+    fn upwards_bullet_spawns_at_rom_offsets() {
+        let mut m = Manager::default();
+        m.samus().set_y(193);
+        m.samus().set_x(76);
+        m.write_ram(SAMUS_HI, 0);
+        m.write_ram(SAMUS_DIR, 0);
+        super::fire_samus_projectile_upwards(&mut m);
+        let base = crate::world::object::OBJECTS_BASE + 0xD0;
+        assert_eq!(m.read_ram(base), 1, "status 应为常规光束 1");
+        assert_eq!(m.read_ram(base + 0x0D), 177, "y = Samus.y − $14 (=193−20)");
+        assert_eq!(m.read_ram(base + 0x0E), 77, "x = Samus.x + $01");
+    }
+}
