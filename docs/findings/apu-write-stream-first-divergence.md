@@ -45,3 +45,21 @@
 - 对读 `MusicSQ1Init`/`UpdateMusicChannel` 的 `SQ1_VOL` 写点（`sound_engine.asm`
   的 `$B3xx-$BCxx` 区）与 `crates/game-core/src/sound/music.rs` 的 `c0` 计算链。
 - 判据不许放宽：APU 写流等价是"声音对不对"的硬判据，像素面 0px 不能替代它。
+
+## 5 后续取证（2026-11-20 补）
+
+1. **活路径已核实无误**：`UpdateAllMusicChannels ; $BAA5` 在四通道轮完后 `beq
+   GotoUpdateAllVolumeEnvelopes` → `jsr UpdateAllVolumeEnvelopes($BA37)`；我方对应
+   `crates/game-core/src/sound/music.rs::update_all_music_channels` 的包络尾
+   `update_volume_envelope_frame`，公式已正确实现
+   `(duty & 0xF0) | 包络字节`（`music.rs:589`）。⇒ **公式不是分歧点**。
+2. 因此 `$4000 = $B6` 只能解释为 `duty` 原始值本身是 `$B6` 且包络字节恰为 `$06`
+   （`$B6 & 0xF0 | $06 = $B6`）；而原版是 `duty=$3?`、包络字节 `$04`。⇒ 分歧在
+   **duty 来源与包络步进起点**，不是写回逻辑。
+3. `sound/mod.rs::update_volume_envelope`（旧占位版，取 `env_bytes` 末字节当音量）**不是
+   活路径**（生产代码无调用者，只有单测）——已按真实表读取修正（`env_idx-1` 选表、
+   `volume_index` 选步），并更正单测期望 `$9C→$9D`（第 3 张包络表首字节 `00 0D 09 07…`
+   的 index=1 是 `$0D`）。**注意：该修改对实际音频无影响**（导出 WAV 逐字节不变，
+   md5 `331c4f8e…` 前后相同）——不要把它当成"修好了声音"。
+4. 下一步（未做）：逐帧 dump 两侧 `MusicSQ1DutyEnvelope($0628)`、`MusicSQ1VolumeEnvelopeIndex
+   ($062E)`、`MusicSQ1VolumeIndex($066A)`，定位是「duty 字节来源」还是「包络起点差一」。

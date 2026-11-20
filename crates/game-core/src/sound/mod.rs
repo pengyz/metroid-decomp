@@ -1087,9 +1087,12 @@ pub fn update_volume_envelope(x: u8, env_idx: u8, volume_data: u8, duty: u8,
     let lo = env_bytes.get(ptr_i).copied().unwrap_or(0);
     let hi = env_bytes.get(ptr_i + 1).copied().unwrap_or(0);
     ram.push((0x00EC, lo)); ram.push((0x00ED, hi)); // VolumeEnvelopePtr
-    let vol_byte = env_bytes.get(256.min(env_bytes.len().saturating_sub(1))).copied().unwrap_or(0);
-    // 注：真实取数=ptr+VolumeIndex 间接读（表烘焙面）——此处以 env_bytes 尾位示意；
-    //   L2 案以 fixture 注入实际音量字节
+    // 真实取数：`ldy MusicSQ1VolumeIndex,x / lda (VolumeEnvelopePtr),y`
+    // （sound_engine.asm:1676-1680）——`env_idx-1` 选表，`volume_index` 选步。
+    // 旧实现取 `env_bytes` 末字节当音量（占位），会让 $4000 的 duty/音量组合失真。
+    let _ = env_bytes; // 参数保留：包络体单源在 game_data（assets::volume_envelope）
+    let env = game_data::assets::volume_envelope(env_idx.wrapping_sub(1) as usize);
+    let vol_byte = env.get(volume_index as usize).copied().unwrap_or(0);
     let dispatch = if vol_byte == 0xFF {
         VolEnvByte::KeepPrev
     } else if vol_byte == 0xF0 {
@@ -1142,11 +1145,14 @@ mod w1_tail_tests {
     /// 包络字节三分派+占用门+VolumeIndex 递增。
     #[test]
     fn vol_env_dispatch() {
-        // 常规路（duty 高 4 位合并）
+        // 常规路（duty 高 4 位 + **真实包络字节**）
+        // 音量字节来自 `VolumeEnvelopePtrTable[env_idx-1]` 表体的 `volume_index` 位：
+        // env_idx=3 ⇒ 第 3 张表（ROM 实读首字节 `00 0D 09 07 …`），index=1 ⇒ `$0D`
+        // ⇒ `$90 | $0D = $9D`。旧期望 `$9C` 是「取 env_bytes 末字节」占位实现的残留。
         let (ram, apu, d) = update_volume_envelope(0, 3, 0x30, 0x90, 1, 0, &[0x11, 0x22, 0x0C]);
-        assert_eq!(d, Some(VolEnvByte::Normal(0x9C)));
+        assert_eq!(d, Some(VolEnvByte::Normal(0x9D)));
         assert!(ram.contains(&(0x066A, 2)));
-        assert!(apu.contains(&(0x4000, 0x9C)));
+        assert!(apu.contains(&(0x4000, 0x9D)));
         // 占用门（SFX 占通道⇒不写）
         let (_, apu, _) = update_volume_envelope(0, 3, 0x30, 0x90, 1, 1, &[0x11, 0x22, 0x0C]);
         assert!(apu.is_empty());
