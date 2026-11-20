@@ -667,6 +667,9 @@ fn seg_meta() -> Vec<SegMeta> {
         SegMeta { key: PackKey::PalSelect, kind: "title-tbl", elem: 1, count: 13, rom: "bank00:$8A9A", note: "PalSelect" },
         SegMeta { key: PackKey::StartCont, kind: "title-tbl", elem: 1, count: 2, rom: "bank00:$9118", note: "StartContTbl" },
         SegMeta { key: PackKey::EndStar, kind: "title-tbl", elem: 1, count: 156, rom: "bank00:$9EB8", note: "EndStar" },
+        SegMeta { key: PackKey::EndBackground, kind: "vram-struct", elem: 1, count: 360, rom: "bank00:$A052", note: "EndBackground（hi==0 终止含尾）" },
+        SegMeta { key: PackKey::EndPalettes, kind: "offs+blob", elem: 1, count: 0, rom: "bank00:$9F9B", note: "EndGamePalette00..0A（11×u16 + 183 B 结构体，长度不齐）" },
+        SegMeta { key: PackKey::EndCredits, kind: "offs+blob", elem: 1, count: 0, rom: "bank00:$A2E9", note: "CreditsPtrTable 六页（6×u16 + 102 B 页体）" },
         SegMeta { key: PackKey::PwErr, kind: "title-tbl", elem: 1, count: 15, rom: "bank00:$8759", note: "PwErrMsg" },
         SegMeta { key: PackKey::PwRows, kind: "title-tbl", elem: 1, count: 10, rom: "bank00:$9998", note: "PasswordRowTbl 5×u16" },
         SegMeta { key: PackKey::PwGrid, kind: "title-tbl", elem: 1, count: 65, rom: "bank00:$99A2", note: "PasswordRow 网格 5×13" },
@@ -1050,11 +1053,13 @@ const SONG_HEADERS_LEN: usize = N_SONGS * 13; // 156
 /// `[hi,lo,ctrl,…]`、`hi==0` 终止、ctrl bit7=增量32/bit6=RLE/低 6 位计数(0⇒256)）。
 /// 四态各自自界（含终止符），故按段独立（不再拼接，消费侧无需偏移表）。
 /// 表址：`$82F4`/`$9984`/`$99E3`/`$93B9`——均 bank0 平铺。
-const TITLE_VRAM: [(PackKey, u16, usize, &str); 4] = [
+const TITLE_VRAM: [(PackKey, u16, usize, &str); 5] = [
     (PackKey::VramIntro, 0x82F4, 1066, "INTRO_BG $82F4"),
     (PackKey::VramStart, 0x9984, 20, "START_CONTINUE $9984"),
     (PackKey::VramPass, 0x99E3, 36, "PASSWORD_PLEASE $99E3"),
     (PackKey::VramOver, 0x93B9, 13, "GAME_OVER $93B9"),
+    // 结局背景 `VRAMStruct_EndBackground ; 00:A052`：17 条记录 + 终止符 = 360 B。
+    (PackKey::EndBackground, 0xA052, 360, "END_BACKGROUND $A052"),
 ];
 
 /// Samus 三张小表（bank7 固定窗 `$C000` ⇒ `addr` 直接过 `bank_slice(prg, 7, …)`）。
@@ -1133,6 +1138,92 @@ fn extract_samus_tables(prg: &[u8]) -> Result<Vec<Section>, String> {
         out.push(Section { key, data: bank_slice(prg, 7, addr, len).map_err(|e| format!("{label}: {e}"))? });
     }
     Ok(out)
+}
+
+/// 结局职员表：`CreditsPtrTable ; 00:A291` 六指针（`$A2E9/$A2FB/$A31A/$A31B/$A32D/$A339`）
+/// ⇒ 页体 `$A2E9..$A34F` = **102 B**（页 2 只有终止符 `00`，长度 1 B）。段布局 =
+/// 6×u16 相对偏移 + 页体；每页都以 `hi==0` 自界（提取时逐页核，防越界）。
+const CREDITS_BASE: u16 = 0xA2E9;
+const CREDITS_PAGES: [u16; 6] = [0xA2E9, 0xA2FB, 0xA31A, 0xA31B, 0xA32D, 0xA339];
+const CREDITS_END: u16 = 0xA34F;
+
+/// 结局调色板 11 张（`EndGamePalette00..0A ; 00:9F9B..A052`）。**长度不齐**（每张是
+/// `$3F00` 写结构，记录数不同：36/12/12/12/…/27/21 B），故按「逐张 hi==0 扫描」求偏移，
+/// 段布局 = 11×u16 相对偏移 + 183 B 页体；消费侧按 `PaletteDataPending-1` 取第 N 张。
+const END_PAL_BASE: u16 = 0x9F9B;
+const END_PAL_END: u16 = 0xA052;
+const END_PAL_COUNT: usize = 11;
+
+fn extract_end_palettes(prg: &[u8]) -> Result<Section, String> {
+    let mut offs: Vec<u16> = Vec::new();
+    let mut p = END_PAL_BASE;
+    while p < END_PAL_END {
+        offs.push(p - END_PAL_BASE);
+        loop {
+            let hi = bank_slice(prg, 0, p, 1)?[0];
+            if hi == 0 { p += 1; break; }
+            let ctrl = bank_slice(prg, 0, p + 2, 1)?[0];
+            let n = if ctrl & 0x3F == 0 { 256u16 } else { (ctrl & 0x3F) as u16 };
+            let step = 3 + if ctrl & 0x40 != 0 { 1 } else { n };
+            p = p.checked_add(step).ok_or("结局调色板越界")?;
+            if p > END_PAL_END { return Err("结局调色板结构越界".into()); }
+        }
+    }
+    if offs.len() != END_PAL_COUNT {
+        return Err(format!("结局调色板张数 {} ≠ {}", offs.len(), END_PAL_COUNT));
+    }
+    let total = (END_PAL_END - END_PAL_BASE) as usize;
+    let body = bank_slice(prg, 0, END_PAL_BASE, total)?;
+    let mut data = Vec::with_capacity(offs.len() * 2 + body.len());
+    for o in offs { data.extend_from_slice(&o.to_le_bytes()); }
+    data.extend_from_slice(&body);
+    Ok(Section { key: PackKey::EndPalettes, data })
+}
+
+fn extract_end_credits(prg: &[u8]) -> Result<Section, String> {
+    let mut offs: Vec<u16> = Vec::with_capacity(CREDITS_PAGES.len());
+    let mut blob: Vec<u8> = Vec::new();
+    for (i, &page) in CREDITS_PAGES.iter().enumerate() {
+        offs.push((page - CREDITS_BASE) + (page - CREDITS_BASE != 0 && false) as u16); // 占位（下行重算）
+        offs[i] = page - CREDITS_BASE;
+        // 逐页自界：扫到 hi==0（含尾）。
+        let mut p = page;
+        let mut len = 0usize;
+        loop {
+            let hi = bank_slice(prg, 0, p, 1)?[0];
+            if hi == 0 {
+                len += 1;
+                break;
+            }
+            let ctrl = bank_slice(prg, 0, p + 2, 1)?[0];
+            let n = if ctrl & 0x3F == 0 { 256usize } else { (ctrl & 0x3F) as usize };
+            let step = 3 + if ctrl & 0x40 != 0 { 1 } else { n };
+            p = p
+                .checked_add(step as u16)
+                .ok_or_else(|| format!("职员表页 {i} 越界"))?;
+            len += step;
+            if len > 4096 {
+                return Err(format!("职员表页 {i} 未自界（>4096 B）"));
+            }
+        }
+        let want = if i + 1 < CREDITS_PAGES.len() {
+            (CREDITS_PAGES[i + 1] - page) as usize
+        } else {
+            (CREDITS_END - page) as usize
+        };
+        if len != want {
+            return Err(format!("职员表页 {i} 长度 {len} ≠ 指针区间 {want}"));
+        }
+    }
+    let total = (CREDITS_END - CREDITS_BASE) as usize;
+    let page_data = bank_slice(prg, 0, CREDITS_BASE, total)?;
+    blob.extend_from_slice(&page_data);
+    let mut data = Vec::with_capacity(offs.len() * 2 + blob.len());
+    for o in offs {
+        data.extend_from_slice(&o.to_le_bytes());
+    }
+    data.extend_from_slice(&blob);
+    Ok(Section { key: PackKey::EndCredits, data })
 }
 
 fn extract_title_vram(prg: &[u8]) -> Result<Vec<Section>, String> {

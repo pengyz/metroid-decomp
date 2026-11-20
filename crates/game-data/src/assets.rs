@@ -1196,6 +1196,46 @@ pub fn vram_string_ptrs(area: u8) -> &'static [u8] { en_aux_slice(area, 148, 34)
 /// （最后一串到段尾）。提取侧的连续性自检保证了「偏移差 == 上一串尺寸」。
 ///
 /// 消费点 `GetVRAMStringPtr ; 07:FECC`（`lda VRAMStringPtrTable,y`）。
+/// 结局背景名表（`VRAMStruct_EndBackground ; 00:A052`，360 B，`hi==0` 自带终止）。
+pub fn end_background() -> &'static [u8] {
+    crate::pack::get(crate::pack::PackKey::EndBackground)
+}
+
+/// 结局调色板第 `n` 张（`EndGamePalette00..0A ; 00:9F9B`，长度不齐 ⇒ 段内 11×u16 偏移表）。
+/// `PaletteDataPending-1` 即 n（`EndGamePaletteWrite 00:9F54` 的取法）。
+pub fn end_palette(n: u8) -> Option<&'static [u8]> {
+    let seg = crate::pack::get(crate::pack::PackKey::EndPalettes);
+    let cnt = 11usize;
+    if n as usize >= cnt || seg.len() < cnt * 2 {
+        return None;
+    }
+    let off = |i: usize| u16::from_le_bytes([seg[i * 2], seg[i * 2 + 1]]) as usize;
+    let body = cnt * 2;
+    let start = body + off(n as usize);
+    let end = if (n as usize) + 1 < cnt { body + off(n as usize + 1) } else { seg.len() };
+    if end < start || end > seg.len() {
+        return None;
+    }
+    Some(&seg[start..end])
+}
+
+/// 结局职员表页（`CreditsPtrTable ; 00:A291`，6 页；页 2 只有终止符故长度为 1）。
+pub fn end_credits(page: u8) -> Option<&'static [u8]> {
+    let seg = crate::pack::get(crate::pack::PackKey::EndCredits);
+    let n = 6usize;
+    if page as usize >= n || seg.len() < n * 2 {
+        return None;
+    }
+    let off = |i: usize| u16::from_le_bytes([seg[i * 2], seg[i * 2 + 1]]) as usize;
+    let body = n * 2;
+    let start = body + off(page as usize);
+    let end = if (page as usize) + 1 < n { body + off(page as usize + 1) } else { seg.len() };
+    if end < start || end > seg.len() {
+        return None;
+    }
+    Some(&seg[start..end])
+}
+
 pub fn vram_string(area: u8, id: u8) -> Option<&'static [u8]> {
     const K: [PackKey; 5] = [
         PackKey::AreaBrVramStrings,

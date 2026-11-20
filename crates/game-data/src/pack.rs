@@ -262,6 +262,14 @@ pub enum PackKey {
     AreaToVramStrings = 193,
     AreaKrVramStrings = 194,
     AreaRiVramStrings = 195,
+    /// 结局背景名表（`VRAMStruct_EndBackground ; 00:A052`，`hi==0` 自界 **360 B**）。
+    EndBackground = 196,
+    /// 结局调色板 11 张（`EndGamePalette00..0A ; 00:9F9B..A052`，每张 36 B 的
+    /// `$3F00` 写结构；`EndGamePaletteWrite 00:9F54` 按 `PaletteDataPending-1` 取）。
+    EndPalettes = 197,
+    /// 结局职员表六页（`CreditsPtrTable ; 00:A291` 六指针 ⇒ 页体 $A2E9..$A34F =
+    /// **102 B**；段布局 = 6×u16 相对偏移 + 页体，页 2 只有终止符 `00`（1 B））。
+    EndCredits = 198,
     // 敌死亡动画索引表 `EnemyDeathAnimIndex ; 各 bank $960B`（32 B = type×2+facing）。
     // **按区不同**（bank1 `27 27 29 29…` vs bank3 `08 08 08 08…`）——先前 Rust 侧是单常量
     // 取 bank1，等于让其余四区的爆体帧全用 Brinstar 的表。
@@ -519,6 +527,9 @@ impl PackKey {
             PackKey::AreaToVramStrings => "area.to.vram_strings",
             PackKey::AreaKrVramStrings => "area.kr.vram_strings",
             PackKey::AreaRiVramStrings => "area.ri.vram_strings",
+            PackKey::EndBackground => "title.end_background",
+            PackKey::EndPalettes => "title.end_palettes",
+            PackKey::EndCredits => "title.end_credits",
             PackKey::BrEnSprites => "area.br.en_sprites",
             PackKey::NoEnSprites => "area.no.en_sprites",
             PackKey::KrEnSprites => "area.kr.en_sprites",
@@ -726,6 +737,9 @@ impl PackKey {
             193 => PackKey::AreaToVramStrings,
             194 => PackKey::AreaKrVramStrings,
             195 => PackKey::AreaRiVramStrings,
+            196 => PackKey::EndBackground,
+            197 => PackKey::EndPalettes,
+            198 => PackKey::EndCredits,
             _ => return None,
         })
     }
