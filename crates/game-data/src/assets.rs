@@ -1236,6 +1236,33 @@ pub fn end_credits(page: u8) -> Option<&'static [u8]> {
     Some(&seg[start..end])
 }
 
+/// 结局 Samus 第 `idx` 帧精灵数据（`EndSamusAddrTbl ; 00:9D5A` 六指针 → 每帧 54 B）。
+/// 段布局 = `6 x u16`（相对帧体起点偏移）+ 帧体，故 `idx` 的切片由相邻偏移差给出。
+/// 消费点 `LoadEndSamusSprites ; 00:9C9A`（按 `SpritePointerIndex` 取帧）。
+pub fn end_samus(idx: u8) -> Option<&'static [u8]> {
+    let seg = crate::pack::get(crate::pack::PackKey::EndSamus);
+    const N: usize = 6;
+    if idx as usize >= N || seg.len() < N * 2 {
+        return None;
+    }
+    let off = |i: usize| u16::from_le_bytes([seg[i * 2], seg[i * 2 + 1]]) as usize;
+    let body = N * 2;
+    let start = body + off(idx as usize);
+    let end = if (idx as usize) + 1 < N { body + off(idx as usize + 1) } else { seg.len() };
+    if end < start || end > seg.len() {
+        return None;
+    }
+    Some(&seg[start..end])
+}
+
+/// 结局挥手手型四表（`WavePointerTable ; 00:9D12` 四指针 → 表体连续，段共 64 B）。
+/// 消费点 `LoadWaveSprites ; 00:9C7F`：`ldx WaveSpritePointer` 取表，逐字节拷
+/// `WaveSpriteCounter` 个字节到 `SpriteRAM.8`（`$0220`）。**四表紧密相邻**，故返回整段
+/// 让调用方按 `table*8` 定位（每表 4 项 × 2 B），避免在这里二次切分引入口径漂移。
+pub fn end_wave() -> &'static [u8] {
+    crate::pack::get(crate::pack::PackKey::EndWave)
+}
+
 pub fn vram_string(area: u8, id: u8) -> Option<&'static [u8]> {
     const K: [PackKey; 5] = [
         PackKey::AreaBrVramStrings,
@@ -1552,5 +1579,32 @@ mod tests_rom_queries {
     fn nametable_hi_is_the_four_screen_bases() {
         boot();
         assert_eq!(nametable_hi(), &[0x20, 0x24, 0x28, 0x2C]);
+    }
+}
+
+#[cfg(test)]
+mod tests_end_sprites {
+    use super::*;
+
+    /// `EndSamusAddrTbl ; 00:9D5A` 六指针：段内偏移表首项应为 0（第一帧紧跟表后），
+    /// 六帧各 54 B ⇒ 表体 12 B + 6×54 = 336… 实为 338 B（首帧 56 B，末帧按段尾）。
+    #[test]
+    fn end_samus_frames_are_sliced_by_pointer_table() {
+        let f0 = end_samus(0).expect("frame 0");
+        assert!(f0.len() >= 50 && f0.len() <= 60, "frame0 len={}", f0.len());
+        assert!(end_samus(6).is_none(), "越界必须 None");
+        // 六帧长度合计 == 段尾 - 表体
+        let total: usize = (0..6).filter_map(|i| end_samus(i)).map(|f| f.len()).sum();
+        assert_eq!(total, 338, "六帧合计应与 SegMeta 的 338 B 帧体一致");
+    }
+
+    /// `WavePointerTable ; 00:9D12` 四表紧密相邻（段 64 B = 4 表 × 4 项 × 2 B × 2）。
+    #[test]
+    fn end_wave_is_four_adjacent_tables() {
+        let w = end_wave();
+        assert_eq!(w.len(), 64);
+        // 每表 4 项 u16，首项应指向表体之后（$9D1A + 32 = $9D3A 区的第一项数据）
+        let first = u16::from_le_bytes([w[0], w[1]]);
+        assert!(first >= 32, "首项偏移 {first:#06X} 应落在表体之后");
     }
 }
