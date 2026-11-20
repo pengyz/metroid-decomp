@@ -499,6 +499,18 @@ impl Manager {
     pub fn enemy_status_pre_ai(&mut self) -> u8 {
         self.read_ram(crate::ram_map::ENEMY_STATUS_PRE_AI)
     }
+
+    /// `FrameCount`（`$002D`，`constants_ram.asm`）——**全局帧计数器**，asm AI 例程把它当
+    /// 免费的周期计数器用（Dragon `lda FrameCount / and #$1F`＝每 32 帧一次、
+    /// Polyp `adc FrameCount` 做 8/64 帧相序）。
+    ///
+    /// 【为什么要有这个入口】`$002D` 不属于任何 typed 域（它既不是敌槽也不是萨姆斯），
+    /// 但新 AI 模块（`enemy/dragon.rs`、`enemy/polyp.rs`）按 `raw-surface` 纪律**不许**
+    /// 新接入裸字节面——不带这个收集口，移植方只能二选一：破门禁或伪造计时。
+    /// 与 `random_number1()` 同族（同一类 asm 全局量），收口在本豁免文件。
+    pub fn frame_count(&self) -> u8 {
+        self.read_ram(crate::ram_map::FRAME_COUNT)
+    }
 }
 
 /// **P1·R3 断言组**：`restore_mss` 之后 typed 格不得在 `storage` 里留副本。

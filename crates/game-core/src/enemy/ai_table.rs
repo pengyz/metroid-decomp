@@ -48,6 +48,11 @@ pub(crate) enum Routine {
     Swooper01,
     /// `MultiviolaAIRoutine`（bank2 `02:9A??`；bank5 同件，本卡只接 Norfair）。
     Multiviola,
+    /// `DragonAIRoutine`（bank2 `02:9AE9`，**仅 Norfair include**——`prg2_norfair.asm:683`）。
+    Dragon,
+    /// `PolypAIRoutine`（Norfair `02:9B64` / Ridley `05:9B16`，`prg2_norfair.asm:687` +
+    /// `prg5_ridley.asm:658` 各 include 一份；两支行为不同，本卡只接 Norfair）。
+    Polyp,
     /// `RemoveEnemy ; 07:FA18`——清槽。
     RemoveEnemy,
     /// `RTS_95CB`——直接返回，什么都不做（Kraid bank4 占位）。
@@ -95,11 +100,13 @@ const NORFAIR: [Routine; 16] = [
     RemoveEnemy,
     Squeept,
     Multiviola,
-    // Dragon/Polyp 射弹径依赖 EnProjectile 子系统（SpawnEnProjectile 07:F870 +
-    // UpdateAllEnProjectiles 07:F93B 未端口，本仓无 en_projectile 模块）——
-    // 自行 spawn 而无 update 循环＝发明行为，按 D7 缺口纪律留 Unported 记账。
-    Unported("DragonAIRoutine"),
-    Unported("PolypAIRoutine"),
+    // Dragon/Polyp 射弹径依赖 EnProjectile 子系统（SpawnEnProjectile `07:F870` +
+    // UpdateAllEnProjectiles `07:F93B`）——该子系统已端口（`enemy::en_projectile`），
+    // 故本区这两格由 `Unported` 换成实变体。
+    // 注意：0x0D/0x0E 在 **Ridley 表**里是另外的语义（bank5 另有 Polyp 一份、行为不同）——
+    // 本卡只改 Norfair 这张表。
+    Dragon,
+    Polyp,
     RemoveEnemy,
 ];
 
@@ -217,9 +224,21 @@ mod tests_ai_table {
         assert_eq!(routine_for(1, 0x0C), Multiviola);
         assert_eq!(routine_for(1, 0x00), Swooper00);
         assert_eq!(routine_for(1, 0x01), Swooper01);
-        // Dragon/Polyp：EnProjectile 子系统缺口（见 NORFAIR 表注释），保持 Unported。
-        assert_eq!(routine_for(1, 0x0D), Unported("DragonAIRoutine"));
-        assert_eq!(routine_for(1, 0x0E), Unported("PolypAIRoutine"));
+        // Dragon/Polyp：EnProjectile 子系统已端口 ⇒ Norfair 这两格换成实变体。
+        // **同一 type 号在 Ridley 表里语义不同**：bank5 的 0x0E 是另 include 的一份 Polyp
+        // （门算式不同，见 `enemy::polyp` 模块注释），故 Ridley 侧仍是 `Unported`。
+        assert_eq!(routine_for(1, 0x0D), Dragon);
+        assert_eq!(routine_for(1, 0x0E), Polyp);
+        assert_eq!(
+            routine_for(4, 0x0E),
+            Unported("PolypAIRoutine"),
+            "Ridley 的 0x0E 是 `prg5_ridley.asm:178` 那份 Polyp（asm 注 unused），本卡不接线"
+        );
+        assert_eq!(
+            routine_for(4, 0x0D),
+            RemoveEnemy,
+            "Ridley 的 0x0D 是 RemoveEnemy（`prg5_ridley.asm:177`）——与 Norfair 的 Dragon 不同语义"
+        );
 
         // Tourian：00=Metroid、04=Rinka
         assert_eq!(routine_for(3, 0), Unported("MetroidAIRoutine"));

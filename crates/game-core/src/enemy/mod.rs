@@ -35,3 +35,5 @@ pub(crate) mod rio;
 pub(crate) mod squeept;
 pub(crate) mod swooper;
 pub(crate) mod multiviola;
+pub(crate) mod dragon;
+pub(crate) mod polyp;
