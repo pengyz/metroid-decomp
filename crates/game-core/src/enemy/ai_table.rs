@@ -40,6 +40,14 @@ pub(crate) enum Routine {
     Rio,
     /// `PipeBugAIRoutine`（bank1/2/4/5 各一份，速度表按区不同）。
     PipeBug,
+    /// `SqueeptAIRoutine`（bank2 `02:9A64`，仅 Norfair）。
+    Squeept,
+    /// `SwooperAIRoutine00`（bank2/5 共件 `02:95E5` 0 号；本卡只接 Norfair）。
+    Swooper00,
+    /// `SwooperAIRoutine01`（同件 1 号；本卡只接 Norfair）。
+    Swooper01,
+    /// `MultiviolaAIRoutine`（bank2 `02:9A??`；bank5 同件，本卡只接 Norfair）。
+    Multiviola,
     /// `RemoveEnemy ; 07:FA18`——清槽。
     RemoveEnemy,
     /// `RTS_95CB`——直接返回，什么都不做（Kraid bank4 占位）。
@@ -74,8 +82,8 @@ const BRINSTAR: [Routine; 16] = [
 
 /// `prg2_norfair.asm:157-172`（`02:95E5`）。
 const NORFAIR: [Routine; 16] = [
-    Unported("SwooperAIRoutine00"),
-    Unported("SwooperAIRoutine01"),
+    Swooper00,
+    Swooper01,
     RipperII,
     RemoveEnemy,
     RemoveEnemy,
@@ -85,8 +93,11 @@ const NORFAIR: [Routine; 16] = [
     RemoveEnemy,
     RemoveEnemy,
     RemoveEnemy,
-    Unported("SqueeptAIRoutine"),
-    Unported("MultiviolaAIRoutine"),
+    Squeept,
+    Multiviola,
+    // Dragon/Polyp 射弹径依赖 EnProjectile 子系统（SpawnEnProjectile 07:F870 +
+    // UpdateAllEnProjectiles 07:F93B 未端口，本仓无 en_projectile 模块）——
+    // 自行 spawn 而无 update 循环＝发明行为，按 D7 缺口纪律留 Unported 记账。
     Unported("DragonAIRoutine"),
     Unported("PolypAIRoutine"),
     RemoveEnemy,
@@ -202,8 +213,13 @@ mod tests_ai_table {
         // Norfair：02=Ripper II、04=RemoveEnemy（旧实现会误跑 Skree）、0B=Squeept
         assert_eq!(routine_for(1, 2), RipperII);
         assert_eq!(routine_for(1, 4), RemoveEnemy);
-        assert_eq!(routine_for(1, 0x0B), Unported("SqueeptAIRoutine"));
-        assert_eq!(routine_for(1, 0x0C), Unported("MultiviolaAIRoutine"));
+        assert_eq!(routine_for(1, 0x0B), Squeept);
+        assert_eq!(routine_for(1, 0x0C), Multiviola);
+        assert_eq!(routine_for(1, 0x00), Swooper00);
+        assert_eq!(routine_for(1, 0x01), Swooper01);
+        // Dragon/Polyp：EnProjectile 子系统缺口（见 NORFAIR 表注释），保持 Unported。
+        assert_eq!(routine_for(1, 0x0D), Unported("DragonAIRoutine"));
+        assert_eq!(routine_for(1, 0x0E), Unported("PolypAIRoutine"));
 
         // Tourian：00=Metroid、04=Rinka
         assert_eq!(routine_for(3, 0), Unported("MetroidAIRoutine"));

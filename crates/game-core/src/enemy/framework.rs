@@ -151,6 +151,21 @@ pub(crate) fn init_en_active_anim_index(mem: &mut crate::frame::Manager, x: u8) 
     }
 }
 
+/// `InitEnActiveAnimIndex_NoInitOffset`（**asm 内容锚** `07:FBCA`，multiviola 用）：
+/// 与 F699 同径但**不做** InitOffset 递减——resetAnimIndex/animIndex 都直接置
+/// `EnemyActiveAnimIndex[y]`，animDelay 清零（`SetEnAnimIndex 07:F690` + `ClearEnAnimDelay`）。
+pub(crate) fn init_en_active_anim_index_no_init_offset(mem: &mut crate::frame::Manager, x: u8) {
+    use crate::enemy::anim_idx::AnimIdx;
+    let y = enemy_type_times2_plus_facing(mem, x);
+    let area = crate::frame::cur_area(mem);
+    let idx = AnimIdx::at(area, game_data::assets::enemy_active_anim(area)[y as usize & 0x1F]);
+    if idx.off() != mem.enemy(slot_of(x)).reset_anim_index() {
+        mem.enemy(slot_of(x)).set_reset_anim_index(idx.off());
+        mem.enemy(slot_of(x)).set_anim_index(idx.off());
+        mem.enemy(slot_of(x)).set_anim_delay(0);
+    }
+}
+
 /// EnemyReactToSamusProjectile（**asm 内容锚** `: 07:F536`——r26）：isHit(+4) bit5=0⇒
 /// RTS（未中弹径——移动对拍主径）；中弹径=冰冻/伤害族（打敌人流程件——随件）。
 pub(crate) fn enemy_react_to_projectile(mem: &mut crate::frame::Manager, x: u8) {
@@ -511,6 +526,10 @@ pub(crate) fn choose_enemy_ai(mem: &mut crate::frame::Manager, x: u8) {
         Routine::Waver => crate::enemy::waver::waver_ai(mem, x),
         Routine::Rio => crate::enemy::rio::rio_ai(mem, x),
         Routine::PipeBug => crate::enemy::pipe_bug::pipe_bug_ai(mem, x),
+        Routine::Squeept => crate::enemy::squeept::squeept_ai(mem, x),
+        Routine::Swooper00 => crate::enemy::swooper::swooper_ai_00(mem, x),
+        Routine::Swooper01 => crate::enemy::swooper::swooper_ai_01(mem, x),
+        Routine::Multiviola => crate::enemy::multiviola::multiviola_ai(mem, x),
         // `RemoveEnemy ; 07:FA18`：`lda #enemyStatus_NoEnemy / sta EnsExtra.0.status,x / rts`
         Routine::RemoveEnemy => mem.enemy(slot_of(x)).set_status(EnemyStatus::NoEnemy),
         // `RTS_95CB`：Kraid bank4 的占位项，asm 直接 `rts`——什么都不做。
@@ -595,16 +614,24 @@ pub(crate) fn update_enemy_common_anim_move(mem: &mut crate::frame::Manager, x: 
 /// `UpdateEnemyCommon_Decide`（prg1_brinstar.asm:863）：按 `EnemyStatusPreAI` 选入口；
 /// 活动态 anim 索引取 `$00`、休止态取 `$01`（均由调用者预设）。
 pub(crate) fn update_enemy_common_decide(mem: &mut crate::frame::Manager, x: u8) {
+    let active = mem.read_ram(0x0000);
+    let resting = mem.read_ram(0x0001);
+    update_enemy_common_decide_with_beats(mem, x, active, resting);
+}
+
+/// Decide 的**节拍直传**变体：asm 调用方（Squeept/Swooper/Multiviola 等）在尾件前
+/// `lda #n / sta $00 / sta $01`，Decide 随即原样读回——零页槽是纯中间量，本变体把
+/// 两个即时量直接作参数传入（行为等价，避免新增零页裸写）。
+pub(crate) fn update_enemy_common_decide_with_beats(
+    mem: &mut crate::frame::Manager,
+    x: u8,
+    active: u8,
+    resting: u8,
+) {
     match mem.read_ram(0x0081) {
-        1 => {
-            let anim = mem.read_ram(0x0001);
-            update_enemy_common_no_move_anim(mem, x, anim);
-        }
+        1 => update_enemy_common_no_move_anim(mem, x, resting),
         3 => update_enemy_common_no_move_no_anim(mem, x),
-        _ => {
-            let anim = mem.read_ram(0x0000);
-            update_enemy_common_anim_move(mem, x, anim);
-        }
+        _ => update_enemy_common_anim_move(mem, x, active),
     }
 }
 

@@ -62,7 +62,27 @@ pub fn sections(rom: &[u8]) -> Result<Vec<Section>, String> {
     out.extend(extract_en_aux(prg)?);
     out.extend(extract_en_anim_idx(prg)?);
     out.extend(extract_en_mov_choices(prg)?);
+    out.extend(extract_squeept_speed_y(prg)?);
     Ok(out)
+}
+
+/// `SqueeptSpeedYTable ; 02:9AD2`（4 B：`F6 F8 F6 FA`）。
+/// asm 依据：`squeept.asm`（`SqueeptAIRoutine 02:9A64` 内 `lda SqueeptSpeedYTable,y`）
+/// **只被 prg2_norfair.asm:675 include** ⇒ 仅 Norfair bank 有此段，按区单段不循环五区。
+const SQUEEPT_SPEED_Y_ADDR: u16 = 0x9AD2;
+const SQUEEPT_SPEED_Y_LEN: usize = 4;
+
+fn extract_squeept_speed_y(prg: &[u8]) -> Result<Vec<Section>, String> {
+    let body = bank_slice(prg, 2, SQUEEPT_SPEED_Y_ADDR, SQUEEPT_SPEED_Y_LEN)?;
+    // 机械自检：asm 标注的字节逐一对拍（表只有 4 项，错位即全错）。
+    const WANT: [u8; 4] = [0xF6, 0xF8, 0xF6, 0xFA];
+    if body != WANT {
+        return Err(format!(
+            "bank02:$9AD2 SqueeptSpeedYTable 字节不符：{:02X?} != asm 标注 {:02X?}",
+            body, WANT
+        ));
+    }
+    Ok(vec![Section { key: PackKey::AreaNoSqueeptSpeedY, data: body.to_vec() }])
 }
 
 /// `GFXInfo`（`07:C6E0`，29 项 × 7 B）——原样字节。
@@ -575,6 +595,7 @@ fn seg_meta() -> Vec<SegMeta> {
         SegMeta { key: PackKey::AreaKrEnMovChoices, kind: "bytes", elem: 1, count: 30, rom: "bank04:$97D1", note: "移动索引候选集（表长 24）" },
         SegMeta { key: PackKey::AreaToEnMovChoices, kind: "bytes", elem: 1, count: 30, rom: "bank03:$97D1", note: "移动索引候选集（表长 4）" },
         SegMeta { key: PackKey::AreaRiEnMovChoices, kind: "bytes", elem: 1, count: 30, rom: "bank05:$97D1", note: "移动索引候选集（表长 28）" },
+        SegMeta { key: PackKey::AreaNoSqueeptSpeedY, kind: "bytes", elem: 1, count: 4, rom: "bank02:$9AD2", note: "SqueeptSpeedYTable（跳起初速 F6 F8 F6 FA；asm 仅 prg2 include）" },
     ];
     v
 }

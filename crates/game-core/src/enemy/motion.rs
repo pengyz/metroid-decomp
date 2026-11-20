@@ -662,13 +662,37 @@ pub(crate) fn apply_speed_to_position(
     dy: i8,
     dx: i8,
 ) -> bool {
+    let (ok, ny, nx, hi) = apply_speed_to_position_parts(mem, x, dy, dx);
+    if ok {
+        let slot = x / 16;
+        mem.enemy(slot).set_y(ny);
+        mem.enemy(slot).set_pos_x(nx);
+        mem.enemy(slot).set_hi(hi);
+    }
+    ok
+}
+
+/// `ApplySpeedToPosition`（`07:FD8F`）的**拆分变体**：只算 Temp08/09/0B 三个暂存值
+/// （`(ok, ny, nx, hi)`），**不写回**敌面。`apply_speed_to_position` = ok 时落盘。
+///
+/// 需要「失败也执行 `LoadEnemyPositionFromTemp`」的调用方（Squeept 熔岩回吸，
+/// `02:9ABD @then_C` 后 `02:9AC7 jsr LoadEnemyPositionFromTemp` 恒执行——
+/// 越界时 asm 把环绕修正后的暂存值写回敌面）用本变体自行落盘。
+pub(crate) fn apply_speed_to_position_parts(
+    mem: &mut crate::frame::Manager,
+    x: u8,
+    dy: i8,
+    dx: i8,
+) -> (bool, u8, u8, u8) {
     let slot = x / 16;
     let horizontal = mem.read_ram(crate::ram_map::SCROLL_DIR) & 0x02 != 0;
-    let y0 = mem.enemy(slot).y();
-    let x0 = mem.enemy(slot).pos_x();
-    let hi0 = mem.enemy(slot).hi();
+    let e = mem.enemy(slot);
+    let y0 = e.y();
+    let x0 = e.pos_x();
+    let hi0 = e.hi();
     let mut hi = hi0;
     let mut ny = y0;
+    let mut nx = x0;
     if dy != 0 {
         if dy > 0 {
             let (v, carry) = y0.overflowing_add(dy as u8);
@@ -676,7 +700,7 @@ pub(crate) fn apply_speed_to_position(
             if carry || ny >= 0xF0 {
                 ny = ny.wrapping_add(0x10);
                 if horizontal {
-                    return false;
+                    return (false, ny, nx, hi);
                 }
                 hi = hi.wrapping_add(1);
             }
@@ -686,20 +710,19 @@ pub(crate) fn apply_speed_to_position(
             if !carry {
                 ny = ny.wrapping_sub(0x10);
                 if horizontal {
-                    return false;
+                    return (false, ny, nx, hi);
                 }
                 hi = hi.wrapping_add(1);
             }
         }
     }
-    let mut nx = x0;
     if dx != 0 {
         if dx > 0 {
             let (v, carry) = x0.overflowing_add(dx as u8);
             nx = v;
             if carry {
                 if !horizontal {
-                    return false;
+                    return (false, ny, nx, hi);
                 }
                 hi = hi.wrapping_add(1);
             }
@@ -708,16 +731,13 @@ pub(crate) fn apply_speed_to_position(
             nx = v;
             if !carry {
                 if !horizontal {
-                    return false;
+                    return (false, ny, nx, hi);
                 }
                 hi = hi.wrapping_add(1);
             }
         }
     }
-    mem.enemy(slot).set_y(ny);
-    mem.enemy(slot).set_pos_x(nx);
-    mem.enemy(slot).set_hi(hi);
-    true
+    (true, ny, nx, hi)
 }
 
 /// EnemyCheckMoveUp（**asm 内容锚** `: 07:E770`→EnemyCheckMoveVertical `07:E783`→

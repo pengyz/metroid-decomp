@@ -238,6 +238,9 @@ pub enum PackKey {
     AreaKrEnMovChoices = 182,
     AreaToEnMovChoices = 183,
     AreaRiEnMovChoices = 184,
+    /// `SqueeptSpeedYTable ; 02:9AD2`（4 B：`F6 F8 F6 FA`——Squeept 跳起初速按
+    /// movementIndex 查）。asm 侧 `squeept.asm` 只被 prg2_norfair.asm include ⇒ 仅 Norfair。
+    AreaNoSqueeptSpeedY = 185,
     // 敌死亡动画索引表 `EnemyDeathAnimIndex ; 各 bank $960B`（32 B = type×2+facing）。
     // **按区不同**（bank1 `27 27 29 29…` vs bank3 `08 08 08 08…`）——先前 Rust 侧是单常量
     // 取 bank1，等于让其余四区的爆体帧全用 Brinstar 的表。
@@ -484,6 +487,7 @@ impl PackKey {
             PackKey::AreaKrEnMovChoices => "area.kr.en_mov_choices",
             PackKey::AreaToEnMovChoices => "area.to.en_mov_choices",
             PackKey::AreaRiEnMovChoices => "area.ri.en_mov_choices",
+            PackKey::AreaNoSqueeptSpeedY => "area.no.squeept_speed_y",
             PackKey::BrEnSprites => "area.br.en_sprites",
             PackKey::NoEnSprites => "area.no.en_sprites",
             PackKey::KrEnSprites => "area.kr.en_sprites",
@@ -680,6 +684,7 @@ impl PackKey {
             182 => PackKey::AreaKrEnMovChoices,
             183 => PackKey::AreaToEnMovChoices,
             184 => PackKey::AreaRiEnMovChoices,
+            185 => PackKey::AreaNoSqueeptSpeedY,
             _ => return None,
         })
     }

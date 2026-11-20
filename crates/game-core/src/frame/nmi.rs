@@ -232,6 +232,18 @@ fn sound_engine_game_is_paused(mem: &mut Manager) {
     mem.write_ram(PAUSE_SFX_STATUS, 0); // `sta PauseSFXStatus`（A=0）
 }
 
+/// SoundEngine 的 jsr 周期表（asm `SoundEngine ; $B3B4`，sound_engine.asm:400-403
+/// 的 jsr 序：NoiseInit→MultiInit→TriInit→RunMusicLoopRoutine）。**只有四项**——
+/// 10th cycle（RunMusicInitRoutine $BC3D/$0685/B2B1）不是独立 jsr 入口，只作
+/// B2B6 的默认链续（hook.rs LOADER_MAP 的 BC3D 臂）；多加一项会双推进音乐流
+/// （reviewer-music F1）。测试钉此表形状（tests_sound_chain_shape）。
+const SOUND_CYCLES: [(u16, u16); 4] = [
+    (crate::ram_map::SFX_NOISE_INIT, 0xB289), // 7th
+    (crate::ram_map::SFX_MULTI_INIT, 0xB2A7), // 8th
+    (crate::ram_map::SFX_TRI_INIT, 0xB29D),   // …
+    (crate::ram_map::MUSIC_LOOP, 0xB2B6),     // 9th（旗 0⇒BC3D 链续 10th）
+];
+
 pub fn sound_engine(mem: &mut Manager) {
     mem.write_io(0x4017, 0x40 | 0x80); // APU_5STEP|IRQDISABLE（JOY2 口——APU 帧配置）
     // 静音径（**asm 内容锚** sound_engine.asm:415 `SoundEngine_SilenceMusic: ; $B3EB`）：
@@ -265,18 +277,14 @@ pub fn sound_engine(mem: &mut Manager) {
     }
     mem.write_ram(crate::ram_map::SFX_PAUSED, 0); // `sta SFXPaused`
     // 四 init 子件：flags=0 短路（RunSoundRoutine 分派出口）；非零=域件桩
-    // 五 cycle 链走分派（B31B 行清偿——port2 分派核会师接点）。
-    // 【task-music-2 补 MusicLoop 周期】asm `SoundEngine`（sound_engine.asm:400-403）
-    // 序=NoiseInit→MultiInit→TriInit→**RunMusicLoopRoutine（$BC36，9th，$065D/B2B6）**→
-    // （B2B6 默认链续=RunMusicInitRoutine $BC3D→$0685/B2B1，10th）。旧形缺 $065D 周期
-    // ——`EndOrLoopMusic`（$B3F0）曲终重复写 $065D 后无人消费=重复重启死径。
-    for (flag, block) in [
-        (crate::ram_map::SFX_NOISE_INIT, 0xB289u16),
-        (crate::ram_map::SFX_MULTI_INIT, 0xB2A7),
-        (crate::ram_map::SFX_TRI_INIT, 0xB29D),
-        (crate::ram_map::MUSIC_LOOP, 0xB2B6), // MusicLoop（9th——BC36；旗 0⇒BC3D 链续）
-        (crate::ram_map::MUSIC_INIT, 0xB2B1), // MusicInit（10th——BC3D 周期本体）
-    ] {
+    // 四 cycle 链走分派（B31B 行清偿——port2 分派核会师接点）。
+    // 【task-music-2 + 复核 F1 修】asm `SoundEngine`（sound_engine.asm:400-403）
+    // 的 jsr 序只有四条：NoiseInit→MultiInit→TriInit→RunMusicLoopRoutine（$BC36，
+    // 9th，$065D/B2B6）。10th cycle（RunMusicInitRoutine $BC3D→$0685/B2B1）**不是
+    // 独立 jsr 入口**——只作为 B2B6 的默认链续被触达（hook.rs LOADER_MAP 的 BC3D
+    // 臂）。曾把 (MUSIC_INIT,B2B1) 错加成第 5 个无条件链项 ⇒ 音乐流每帧双推进
+    // （reviewer-music F1，探针实证 delay $0640-43 双递减）。
+    for (flag, block) in SOUND_CYCLES {
         crate::sound::hook::sound_dispatch_chain(mem, flag, block, 0);
     }
     // ClearInitFlags（$B3D6）：6 旗清（同值写事件）
@@ -596,6 +604,28 @@ mod tests {
         m.write_ram(FRAME_COUNT, 0);
         update_age(&mut m);
         assert_eq!(m.read_wram(SAMUS_AGE), 1); // minor age+1（$687D）
+    }
+
+    /// 【reviewer-music F4】SoundEngine 周期表形状钉测：jsr 序恰四项
+    /// （sound_engine.asm:400-403），**不含** 10th cycle（B2B1/BC3D）——它只是
+    /// B2B6 的默认链续（hook.rs `music_loop_zero_falls_to_music_init_cycle`
+    /// 已钉该续链）。F1 回归（错加第 5 项 ⇒ 音乐流每帧双推进）由此拦下。
+    #[test]
+    fn sound_chain_shape_matches_asm_jsr_sequence() {
+        use crate::ram_map::{MUSIC_INIT, MUSIC_LOOP, SFX_MULTI_INIT, SFX_NOISE_INIT, SFX_TRI_INIT};
+        assert_eq!(
+            SOUND_CYCLES,
+            [
+                (SFX_NOISE_INIT, 0xB289),
+                (SFX_MULTI_INIT, 0xB2A7),
+                (SFX_TRI_INIT, 0xB29D),
+                (MUSIC_LOOP, 0xB2B6),
+            ]
+        );
+        assert!(
+            SOUND_CYCLES.iter().all(|(f, _)| *f != MUSIC_INIT),
+            "10th cycle (B2B1/BC3D) 不是独立 jsr 入口，禁止入表"
+        );
     }
 
     /// SoundEngine boot 面（全短路+6 旗同值写事件）+音乐 init 正面（r17 组合臂接线）+

@@ -1209,6 +1209,17 @@ pub fn enemy_movement_choices(area: u8) -> &'static [u8] {
     b
 }
 
+/// `SqueeptSpeedYTable ; 02:9AD2`（4 B：`F6 F8 F6 FA`）——Squeept 跳起初速按
+/// movementIndex 查。asm 侧仅 Norfair bank 有（`squeept.asm` 只被 prg2 include）。
+pub fn squeept_speed_y(area: u8) -> &'static [u8] {
+    if area_idx(area) != Some(1) {
+        panic!("Squeept 速度表只存在于 Norfair（bank02:$9AD2），area={area:#04X} 无此段");
+    }
+    let b = pack::get(PackKey::AreaNoSqueeptSpeedY);
+    assert_eq!(b.len(), 4, "Squeept 速度表段长应为 4 B");
+    b
+}
+
 // ---- `$95DC-$95E4`（9 B）：弹体/爆炸/梅洛姆**动画索引**（按区） ----
 //
 // asm `prg1_brinstar.asm:142-152`（`{AREA}` 宏五区实例化，五区同址）：
