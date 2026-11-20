@@ -59,6 +59,8 @@ pub(crate) enum Routine {
     KraidLint,
     /// `KraidNailAIRoutine`（bank4 `04:9B2C`）——asm 正文只有 `jmp KraidLintAIRoutine`。
     KraidNail,
+    /// `RinkaAIRoutine`（bank3 `03:9A2C`，仅 Tourian include；`SetRinkaSpeed_{AREA}` 按区）。
+    Rinka,
     /// `RemoveEnemy ; 07:FA18`——清槽。
     RemoveEnemy,
     /// `RTS_95CB`——直接返回，什么都不做（Kraid bank4 占位）。
@@ -122,7 +124,7 @@ const TOURIAN: [Routine; 16] = [
     Unported("MetroidAIRoutine"),
     Unported("L9A27"),
     RemoveEnemy,
-    Unported("RinkaAIRoutine"),
+    Rinka,
     RemoveEnemy,
     RemoveEnemy,
     RemoveEnemy,
@@ -248,7 +250,7 @@ mod tests_ai_table {
 
         // Tourian：00=Metroid、04=Rinka
         assert_eq!(routine_for(3, 0), Unported("MetroidAIRoutine"));
-        assert_eq!(routine_for(3, 4), Unported("RinkaAIRoutine"));
+        assert_eq!(routine_for(3, 4), Rinka, "Tourian 0x04 = RinkaAIRoutine（本卡端口）");
         assert_eq!(routine_for(3, 5), RemoveEnemy);
 
         // Kraid：02/06/0B–0F 是 RTS_95CB（什么都不做），08=Kraid

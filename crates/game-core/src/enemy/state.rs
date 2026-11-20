@@ -477,6 +477,17 @@ impl<'a> Enemy<'a> {
     pub fn set_speed_subpixel_x(&mut self, v: u8) {
         self.set(ens::SPEED_SUBPIXEL_X, v);
     }
+    /// `Ens.speedSubPixelY`（`$0406`）——竖速小数位。
+    ///
+    /// **同址三名之一**（见 [`ens::DATA06_ALIASES`]）：`chunkyExplosionTimer` /
+    /// `movementInstrIndex` / `speedSubPixelY`。`RinkaAIRoutine ; 03:9A2C` 与
+    /// `ClearRinkaAcceleration` 走的是这个语义（8.4 定点的竖速小数）。
+    pub fn speed_subpixel_y(&self) -> u8 {
+        self.get(ens::DATA06)
+    }
+    pub fn set_speed_subpixel_y(&mut self, v: u8) {
+        self.set(ens::DATA06, v);
+    }
     /// `Ens.data0A`（`$040A`）——无独立语义名（`_todo_`），按 asm 用途保留裸字段。
     pub fn data0a(&self) -> u8 {
         self.get(ens::DATA0A)
