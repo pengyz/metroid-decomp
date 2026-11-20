@@ -995,12 +995,79 @@ pub fn dispatch_step(face: &TitleFace) -> TitleStep {
                         jumped: if o.jumped { Some(0x8C5E) } else { None }, unported: None, next_cursor: 0 }
         }
         0x1D => {
+            // EndGame ; 00:9AA7：每帧头（星精灵+调色板循环）+ `lda RoomPtr / JumpEngine`
+            // 七段（LoadEndGFX/ShowEndSamus/EndSamusFlash/SamusWave/EndFadeOut/
+            // RollCredits/Restart，prg0_title.asm:3712-3730）。
+            // 批 A 已实现段0（LoadEndGFX 的 ClearAll①②+体③）；段1-6 记账待做。
             let r = |a: u16| face.ram[a as usize & 0x7FF];
             let o = end_game(r(0x007B), r(crate::ram_map::FRAME_COUNT),
                              r(crate::ram_map::PALETTE_PENDING), r(0x0033), face.x, face.y);
-            TitleStep { events: o.writes, shell: vec![], a_out: Some(o.a_out),
-                        x_out: o.x_out.or(Some(face.x)), y_out: o.y_out.or(Some(face.y)),
-                        jumped: if o.jumped { Some(0x9AD5) } else { None }, unported: None, next_cursor: 0 }
+            let pm = face.ram[0x00FE & 0x7FF];
+            let ff = face.ram[0x00FF & 0x7FF];
+            let room_ptr = r(0x0033);
+            match (room_ptr, face.cursor) {
+                // 段0 `LoadEndGFX ; 00:9AD5`：`jsr ClearAll`（三段自旋）。
+                (0, 0) => TitleStep {
+                    events: clear_all_seg0_events(pm),
+                    shell: vec![ShellCall::ScreenOff, ShellCall::SpinWait(1)],
+                    a_out: None, x_out: None, y_out: None,
+                    jumped: None, unported: None, next_cursor: 1,
+                },
+                (0, 1) => TitleStep {
+                    events: clear_all_seg1_events(&face.ram, &face.wram, face.frame_count,
+                                                  face.phase, ff),
+                    shell: vec![ShellCall::ClearNameTables, ShellCall::EraseAllSprites,
+                                ShellCall::WaitNMIPass],
+                    a_out: None, x_out: None, y_out: None,
+                    jumped: None, unported: None, next_cursor: 2,
+                },
+                (0, _) => {
+                    // ClearAll ③ 之后：`InitEndGFX`（GameMode←1、InitGFX6）+
+                    // `EndingType←(JustInBailey?$04:0)`、`SpritePointerIndex←EndingType*2` +
+                    // `PreparePPUProcess(VRAMStruct_EndBackground=$A052)` + `NMIOn` +
+                    // `SFXMultiInit|=$80`（EndMusic）+ `Timer3←$60` + `SpriteByteCounter←$36` +
+                    // 清 SpriteAttribByte/ColorCntIndex/IsCredits/EndMsgWrite/HideShowEndMsg/
+                    // CreditPageNumber + `PaletteDataPending←1` + `ClrChangeCounter←$08` +
+                    // `inc RoomPtr` + `ScreenOn`。
+                    let mut events = clear_all_seg2_events(ff & 0xFB & 0xFC);
+                    events.push((crate::ram_map::GAME_MODE, 0x01));
+                    // `lda JustInBailey ; $69B3 / beq + ; lda #$04`（constants_ram.asm:1286）
+                    let suitless = if face.wram[0x69B3 - 0x6000] != 0 { 0x04 } else { 0x00 };
+                    events.push((0x0F, suitless));           // EndingType
+                    events.push((0x10, suitless.wrapping_mul(2))); // SpritePointerIndex
+                    events.push((crate::title::state::TIMER3, 0x60));
+                    events.push((0x11, 0x36));               // SpriteByteCounter
+                    events.push((0x12, 0x00));               // SpriteAttribByte
+                    events.push((0x13, 0x00));               // ColorCntIndex
+                    events.push((0x14, 0x00));               // IsCredits
+                    events.push((0x15, 0x00));               // EndMsgWrite
+                    events.push((0x16, 0x00));               // HideShowEndMsg
+                    events.push((0x17, 0x00));               // CreditPageNumber
+                    events.push((crate::ram_map::PALETTE_PENDING, 0x01));
+                    events.push((0x18, 0x08));               // ClrChangeCounter
+                    events.push((0x0033, room_ptr.wrapping_add(1)));
+                    events.push((crate::ram_map::SFX_MULTI_INIT, r(crate::ram_map::SFX_MULTI_INIT) | 0x80));
+                    events.push((0x00FF, (ff & 0xFB & 0xFC & !0x84) | 0x80)); // NMIOn
+                    events.push((0x00FE, pm | 0x1E));                          // ScreenOn
+                    events.push((0x001A, 0));
+                    TitleStep {
+                        events, shell: vec![ShellCall::VBOffAndHorzWrite,
+                                            ShellCall::PrepareVram(0xA052),
+                                            ShellCall::NMIOn, ShellCall::ScreenOn,
+                                            ShellCall::SpinWait(1)],
+                        a_out: None, x_out: None, y_out: None,
+                        jumped: None, unported: None, next_cursor: 0,
+                    }
+                }
+                // 段1-6 未实现（行为缺失，非等价未验证）：记账后停在本步，
+                // 见 docs/findings/ending-sequence.md §4。
+                _ => TitleStep {
+                    events: o.writes, shell: vec![], a_out: Some(o.a_out),
+                    x_out: o.x_out.or(Some(face.x)), y_out: o.y_out.or(Some(face.y)),
+                    jumped: None,
+                    unported: Some(0x9B1C), next_cursor: 0,
+                },
+            }
         }
         // ---- 批6b 深路径：12 TitleScreenOff（模式件——1 spin 2 段跨帧）----
         // 段0=$FE 镜像面（ScreenOff 前置）+ScreenOff spin；段1=inc 相位（完成）。
