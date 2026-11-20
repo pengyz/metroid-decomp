@@ -484,4 +484,18 @@ mod tests_multi_init_intro_music {
         assert_eq!(m.read_ram(0x0628), 0xB6, "sfxMulti_IntroMusic 走 GotoMusic01Init（$BCA4 写 SQ1=$B6）");
         assert_eq!(m.read_ram(0x0629), 0xF6, "同上，SQ2=$F6");
     }
+
+    /// `IntroMusic ; 07:CBFD`（prg7_engine.asm:2685）写的是 `sfxMulti_Intro = %10000000 (0x80)`，
+    /// **不是** `sfxMulti_IntroMusic(0x10)`（后者是 title 屏引子乐，`prg0_title.asm:184`）。
+    /// `FindMusicInitIndex`（`$BC53`，FF 起算）对 bit7 得 idx=0，`Add8` 后 idx=8，
+    /// `SFXMultiInitRoutineTbl[$BC06]` 第 0 项 `GotoMusic03Init` ⇒ `Music03Init ; $BC96` 写 `$34/$34`。
+    /// emu 写者见证：`f=374 addr=0684 val=80 pc=CBEE`（`prg7_engine.asm:2693 SetSoundInitFlag`）。
+    #[test]
+    fn sfx_multi_intro_lands_on_goto_music03_init() {
+        let mut m = crate::state::Manager::default();
+        m.write_ram(crate::ram_map::SFX_MULTI_INIT, 0x80);
+        let _ = sound_dispatch_chain(&mut m, crate::ram_map::SFX_MULTI_INIT, 0xB2A7, 0);
+        assert_eq!(m.read_ram(0x0628), 0x34, "sfxMulti_Intro 走 GotoMusic03Init（$BC96 写 $34）");
+        assert_eq!(m.read_ram(0x0629), 0x34);
+    }
 }

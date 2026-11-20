@@ -530,7 +530,13 @@ pub fn samus_init(mem: &mut Manager) {
     use crate::ram_map::{IN_AREA, MIRROR_CNTRL, MAIN_ROUTINE, SAMUS_STATUS, SAMUS_Y};
     mem.write_ram(MAIN_ROUTINE, 8); // SamusIntro（下一帧——表序 _id_SamusIntro=8（r25 正））
     mem.write_ram(0x002C, 0x2C); // Timer3（440 帧淡入）
-    mem.write_ram(crate::ram_map::SFX_MULTI_INIT, 0x10); // IntroMusic（$CBFD）
+    // `SamusInit ; 07:C8D1` 尾 `jsr IntroMusic ; ($CBFD)`：
+    //   IntroMusic: lda #sfxMulti_Intro(%10000000) / ldx #SFXMultiInitFlags-SFXNoiseInitFlags
+    //   → SetSoundInitFlag: ora/sta $0684
+    // 注意 sfxMulti_Intro(0x80) ≠ sfxMulti_IntroMusic(0x10)（后者是 title 屏自己的引子乐，
+    // 见 prg0_title.asm:184）。写 0x10 会经 MultiInit 落到 GotoMusic01Init（$B6/音乐01），
+    // 而 0x80 落到 SFXMultiInitRoutineTbl[0]=GotoMusic03Init（$34/淡入乐）——emu 实测 f375 为 $34。
+    mem.write_ram(crate::ram_map::SFX_MULTI_INIT, 0x80); // IntroMusic（$CBFD，sfxMulti_Intro）
     mem.write_ram(SAMUS_STATUS, 0x14); // _id_Palette13+1（淡入态）
     mem.write_ram(0x0070, 0); // SamusInvincibleDelay
     for a in [0x0728u16, 0x0730, 0x0732, 0x0738] {
@@ -857,5 +863,21 @@ mod tests_samus_intro_music {
             "SamusIntro 收尾应写 MusicInitFlags=AreaMusicFlag(Brinstar)=0x01"
         );
         assert_eq!(m.read_ram(crate::ram_map::MAIN_ROUTINE), 3, "应收尾进 GameEngine");
+    }
+}
+
+#[cfg(test)]
+mod tests_samus_init_intro_flag {
+    /// `SamusInit ; 07:C8D1` 尾 `jsr IntroMusic ; ($CBFD)` 写的是 `sfxMulti_Intro(0x80)`
+    /// （`prg7_engine.asm:2685-2693` + `constants.asm:172`），不是 `sfxMulti_IntroMusic(0x10)`。
+    #[test]
+    fn samus_init_sets_sfx_multi_intro_flag() {
+        let mut m = crate::state::Manager::default();
+        crate::frame::tick::samus_init(&mut m);
+        assert_eq!(
+            m.read_ram(crate::ram_map::SFX_MULTI_INIT) & 0x80,
+            0x80,
+            "IntroMusic($CBFD)=sfxMulti_Intro(0x80)"
+        );
     }
 }
