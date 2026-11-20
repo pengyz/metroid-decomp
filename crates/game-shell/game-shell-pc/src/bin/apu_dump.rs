@@ -42,6 +42,47 @@ fn parse(text: &str) -> Plan {
     Plan { frames, joy }
 }
 
+/// 跑 `[start, end)` 区间并把该区间的 APU 输出收成 PCM。
+///
+/// 契约：前 `start` 帧**照跑但丢弃输出**（保持时序/寄存器状态一致），因此
+/// `dump_pcm(t, s, e)` 必须是 `dump_pcm(t, 0, e)` 的后缀——这条不变式就是
+/// 「`--start` 真的跳帧」的机械判据（此前 bug：只推 end 不跳帧，两份导出相同）。
+fn dump_pcm(text: &str, start: u64, end: u64) -> (Vec<i16>, u64) {
+    let plan = parse(text);
+    let mut engine = FrameEngine::new();
+    let mut apu = Apu::new();
+    let mut pcm: Vec<i16> = Vec::new();
+    let mut cur_joy = 0u8;
+    let mut writes_total = 0u64;
+    let mut cursor = 0usize;
+
+    for f in 0..end {
+        if let Some(v) = plan.joy.get(&f) {
+            cur_joy = *v;
+        }
+        engine.mem.joy1 = cur_joy;
+        let mut pending: Vec<(u16, u8)> = Vec::new();
+        engine.tick_frame_with(|m| {
+            pending.extend_from_slice(&m.apu_log[cursor..]);
+            cursor = m.apu_log.len();
+        });
+        let writes_this_frame = pending.len() as u64;
+        for (addr, v) in pending {
+            apu.write_reg(addr, v);
+        }
+        const CYCLES_PER_FRAME: u32 = CPU_HZ / 60;
+        for _ in 0..CYCLES_PER_FRAME {
+            apu.clock_cpu();
+        }
+        let frame_pcm = apu.take_samples();
+        if f >= start {
+            writes_total += writes_this_frame; // 只计窗口内（证据口径=这段音频的寄存器写）
+            pcm.extend_from_slice(&frame_pcm);
+        }
+    }
+    (pcm, writes_total)
+}
+
 fn write_wav(path: &PathBuf, pcm: &[i16]) -> std::io::Result<()> {
     use std::io::Write;
     let mut f = std::io::BufWriter::new(fs::File::create(path)?);
@@ -106,42 +147,7 @@ fn main() {
     let plan = parse(&text);
     let end = limit.map_or(plan.frames, |n| start.saturating_add(n));
 
-    let mut engine = FrameEngine::new();
-    let mut apu = Apu::new();
-    let mut pcm: Vec<i16> = Vec::new();
-    let mut cur_joy = 0u8;
-    let mut cursor = 0usize;
-    let mut writes_total = 0u64;
-    let mut pending: Vec<(u16, u8)> = Vec::new();
-
-    for f in 0..end {
-        if let Some(v) = plan.joy.get(&f) {
-            cur_joy = *v;
-        }
-        engine.mem.joy1 = cur_joy; // 与 rust_screenshot.rs:564 同口径（逐帧稀疏注入）
-        pending.clear();
-        let c = cursor;
-        engine.tick_frame_with(|m| {
-            if m.apu_log.len() > c {
-                pending.extend_from_slice(&m.apu_log[c..]);
-            }
-        });
-        cursor += pending.len();
-        for &(addr, v) in &pending {
-            apu.write_reg(addr, v);
-        }
-        writes_total += pending.len() as u64;
-
-        const CYCLES_PER_FRAME: u32 = CPU_HZ / 60;
-        for _ in 0..CYCLES_PER_FRAME {
-            apu.clock_cpu();
-        }
-        let frame_pcm = apu.take_samples();
-        if f >= start {
-            pcm.extend_from_slice(&frame_pcm);
-        }
-    }
-
+    let (pcm, writes_total) = dump_pcm(&text, start, end);
     if let Err(e) = write_wav(&out, &pcm) {
         eprintln!("写 WAV 失败: {e}");
         std::process::exit(1);
@@ -153,4 +159,34 @@ fn main() {
         pcm.len() as f32 / SAMPLE_RATE as f32,
         out.display()
     );
+}
+
+#[cfg(test)]
+mod tests {
+    use super::dump_pcm;
+
+    const SCHED: &str = "name t\nframes 400\njoy 30 00\n";
+
+    /// **回归测（用户实测抓出的 bug）**：`--start` 必须真的跳帧——不同区间的输出
+    /// 不能相同。此前实现只把 end 往前推，两份导出逐字节相等。
+    #[test]
+    fn different_windows_produce_different_audio() {
+        let (a, _) = dump_pcm(SCHED, 0, 120);
+        let (b, _) = dump_pcm(SCHED, 200, 320);
+        assert_eq!(a.len(), b.len(), "同长度区间应产出同长度 PCM");
+        assert_ne!(a, b, "不同起点必须得到不同音频（--start 未跳帧时这里会相等）");
+        let nonzero = a.iter().filter(|&&v| v != 0).count();
+        assert!(nonzero > 0, "上电前 120 帧应有真实 APU 输出，否则本测会变成空对空");
+    }
+
+    /// 契约：`dump_pcm(t, s, e)` 是 `dump_pcm(t, 0, e)` 的**后缀**（前 s 帧照跑丢弃）。
+    #[test]
+    fn window_is_suffix_of_longer_run() {
+        let (full, w_full) = dump_pcm(SCHED, 0, 300);
+        let (tail, w_tail) = dump_pcm(SCHED, 150, 300);
+        assert!(tail.len() < full.len(), "跳帧后 PCM 必须更短");
+        let off = full.len() - tail.len();
+        assert_eq!(&full[off..], &tail[..], "跳帧窗口必须是长跑的后缀（同一确定性执行）");
+        assert!(w_tail < w_full, "前 150 帧的寄存器写不应计入跳帧窗口");
+    }
 }
