@@ -450,10 +450,19 @@ pub(crate) fn uw_collision_detection(mem: &mut crate::frame::Manager) {
     for s in 0..6u16 {
         let x = s * 16; // 字节偏移约定（Ens/EnsExtra 步距 16——asm 6 槽环 :10021 Xminus16）
         let st = mem.read_wram(0x6AF4 + x);
-        if st == 0 || st == 3 || st == 5 {
-            continue; // 空/爆中/Pickup（:9975-9986）
+        // asm :10140-10147 只跳过 0（空）与 3（Explode）；**Pickup(5) 不跳出环**——
+        // 它只跳过「弹×敌」子环（:10150-10155 `cmp #enemyStatus_Pickup / beq
+        // @endIf_EnemyProjectile`），后面的「敌×Samus」子环照跑（:10176-10182），
+        // 拾取物的触碰位（isHit bit2）就由那里写入。旧形连 5 一起 continue ⇒ 道具永不
+        // 置触碰位 ⇒ UpdateEnemy_Pickup 的 `isHit & $24` 永不成立 ⇒ 永不拾取
+        // （any% f1464/f1465 能量包丢失的根因）。
+        if st == 0 || st == 3 {
+            continue; // 空/爆中（:10140-10147）
         }
         for py in [0x03D0u16, 0x03E0, 0x03F0] {
+            if st == 5 {
+                break; // Pickup：跳过弹×敌子环（asm :10150 `beq @endIf_EnemyProjectile`）
+            }
             let pstat = mem.read_ram(py);
             // asm 弹型过滤（:9991-10000）：<wa_BulletExplode(4)（1/2/3=束族）∨7∨0A∨0B
             if !matches!(pstat, 1 | 2 | 3 | 7 | 0x0A | 0x0B) {
@@ -875,5 +884,42 @@ mod tests_enemy_is_hit_flags {
         assert_eq!(enemy_is_hit_flags(4), 0x38, "distHi=4（下方+右侧）⇒ $38");
         assert_eq!(enemy_is_hit_flags(5), 0x30, "distHi=5（下方+左侧）⇒ $30");
         assert_eq!(enemy_is_hit_flags(6), 0x28, "distHi=6（上方+右侧）⇒ $28");
+    }
+}
+
+#[cfg(test)]
+mod tests_pickup_touch_flag {
+    use super::*;
+    use crate::enemy::state::EnemyStatus;
+    use crate::frame::Manager;
+
+    /// 【any% f1464 定谳】asm `CollisionDetection ; 07:F034` 的敌人环头只跳过
+    /// `status==0`（`:10144 beq`）与 `status==Explode`（`:10147 beq`）；
+    /// **Pickup(5) 不跳出环**，它只跳过「弹×敌」子环（`:10150-10155`
+    /// `cmp #enemyStatus_Pickup / beq @endIf_EnemyProjectile`），「敌×Samus」子环
+    /// （`:10176-10182`）照跑并调 `SetEnemyTouchingSamusFlags ; 07:F2E8` ⇒ 写
+    /// `isHit |= (distHi^3)`（bit2=触碰）。旧形环头把 5 一起 continue ⇒ 道具永不
+    /// 置触碰位 ⇒ `UpdateEnemy_Pickup ; 07:F483` 的 `isHit & #$24` 永不成立 ⇒
+    /// 道具永不拾取（f1465 能量包丢失的根因）。
+    #[test]
+    fn pickup_gets_touch_flag_from_samus_branch() {
+        let mut m = Manager::default();
+        m.write_ram(crate::ram_map::SCROLL_DIR, 0x03); // 横滚（dir&2!=0）
+        m.write_ram(crate::ram_map::SAMUS_INVINCIBLE_DELAY, 0);
+        m.samus().set_status(crate::samus::state::SamusStatus::Run);
+        m.samus().set_y(185);
+        m.samus().set_x(76);
+        m.samus().set_radius_y(15);
+        m.samus().set_radius_x(4);
+        // 拾取物：status=Pickup，位置在 Samus 上方 17px（radii 和 19 ⇒ 触碰）
+        m.enemy(5).set_status(EnemyStatus::Pickup);
+        m.enemy(5).set_y(168);
+        m.enemy(5).set_pos_x(76);
+        m.enemy(5).set_radius_y(4);
+        m.enemy(5).set_radius_x(4);
+        uw_collision_detection(&mut m);
+        let hit = m.enemy(5).is_hit();
+        assert_ne!(hit & 0x04, 0, "拾取物必须由敌×Samus 子环写上触碰位（bit2），实测 {:02X}", hit);
+        assert_eq!(hit & 0x80, 0, "弹×敌子环必须跳过（bit7 是武器命中面），实测 {:02X}", hit);
     }
 }
