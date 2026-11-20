@@ -534,6 +534,11 @@ pub(crate) fn choose_enemy_ai(mem: &mut crate::frame::Manager, x: u8) {
         // Ridley `05:9B16`，本卡只接 Norfair 表项）。两者都自吐 EnProjectile。
         Routine::Dragon => crate::enemy::dragon::dragon_ai(mem, x),
         Routine::Polyp => crate::enemy::polyp::polyp_ai(mem, x),
+        // `KraidAIRoutine` / `KraidLintAIRoutine` / `KraidNailAIRoutine`
+        // （bank4 `04:9AB4/9AE4/9B2C`，`prg4_kraid.asm:757` include）。
+        Routine::Kraid => crate::enemy::kraid::kraid_ai(mem, x),
+        Routine::KraidLint => crate::enemy::kraid::kraid_lint_ai(mem, x),
+        Routine::KraidNail => crate::enemy::kraid::kraid_nail_ai(mem, x),
         // `RemoveEnemy ; 07:FA18`：`lda #enemyStatus_NoEnemy / sta EnsExtra.0.status,x / rts`
         Routine::RemoveEnemy => mem.enemy(slot_of(x)).set_status(EnemyStatus::NoEnemy),
         // `RTS_95CB`：Kraid bank4 的占位项，asm 直接 `rts`——什么都不做。

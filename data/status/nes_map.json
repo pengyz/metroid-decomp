@@ -314,7 +314,7 @@
       "len": 9,
       "kind": "unmodeled",
       "refs": [
-        "crates/game-core/src/enemy/state.rs:814"
+        "crates/game-core/src/enemy/state.rs:824"
       ]
     },
     {
@@ -322,7 +322,7 @@
       "len": 9,
       "kind": "unmodeled",
       "refs": [
-        "crates/game-core/src/enemy/state.rs:814"
+        "crates/game-core/src/enemy/state.rs:824"
       ]
     },
     {
@@ -330,7 +330,7 @@
       "len": 9,
       "kind": "unmodeled",
       "refs": [
-        "crates/game-core/src/enemy/state.rs:814"
+        "crates/game-core/src/enemy/state.rs:824"
       ]
     },
     {
@@ -338,7 +338,7 @@
       "len": 9,
       "kind": "unmodeled",
       "refs": [
-        "crates/game-core/src/enemy/state.rs:814"
+        "crates/game-core/src/enemy/state.rs:824"
       ]
     },
     {
@@ -346,7 +346,7 @@
       "len": 9,
       "kind": "unmodeled",
       "refs": [
-        "crates/game-core/src/enemy/state.rs:814"
+        "crates/game-core/src/enemy/state.rs:824"
       ]
     },
     {
@@ -354,7 +354,7 @@
       "len": 9,
       "kind": "unmodeled",
       "refs": [
-        "crates/game-core/src/enemy/state.rs:814"
+        "crates/game-core/src/enemy/state.rs:824"
       ]
     },
     {
@@ -362,7 +362,7 @@
       "len": 9,
       "kind": "unmodeled",
       "refs": [
-        "crates/game-core/src/enemy/state.rs:814"
+        "crates/game-core/src/enemy/state.rs:824"
       ]
     },
     {
@@ -370,7 +370,7 @@
       "len": 9,
       "kind": "unmodeled",
       "refs": [
-        "crates/game-core/src/enemy/state.rs:814"
+        "crates/game-core/src/enemy/state.rs:824"
       ]
     },
     {
@@ -378,7 +378,7 @@
       "len": 9,
       "kind": "unmodeled",
       "refs": [
-        "crates/game-core/src/enemy/state.rs:814"
+        "crates/game-core/src/enemy/state.rs:824"
       ]
     },
     {
@@ -386,7 +386,7 @@
       "len": 9,
       "kind": "unmodeled",
       "refs": [
-        "crates/game-core/src/enemy/state.rs:814"
+        "crates/game-core/src/enemy/state.rs:824"
       ]
     },
     {
@@ -394,7 +394,7 @@
       "len": 9,
       "kind": "unmodeled",
       "refs": [
-        "crates/game-core/src/enemy/state.rs:814"
+        "crates/game-core/src/enemy/state.rs:824"
       ]
     },
     {
@@ -402,7 +402,7 @@
       "len": 9,
       "kind": "unmodeled",
       "refs": [
-        "crates/game-core/src/enemy/state.rs:814"
+        "crates/game-core/src/enemy/state.rs:824"
       ]
     },
     {
@@ -421,10 +421,10 @@
       "len": 51,
       "kind": "undeclared",
       "refs": [
-        "ram_map.rs:70",
-        "ram_map.rs:77",
-        "ram_map.rs:26",
-        "ram_map.rs:34",
+        "ram_map.rs:82",
+        "ram_map.rs:89",
+        "ram_map.rs:38",
+        "ram_map.rs:46",
         "memmap/observe/frame_face.rs:32"
       ]
     },
@@ -460,9 +460,9 @@
       "len": 3,
       "kind": "undeclared",
       "refs": [
-        "crates/game-core/src/ram_map.rs:250",
+        "crates/game-core/src/ram_map.rs:262",
         "crates/game-core/src/samus/handler.rs:166",
-        "crates/game-core/src/ram_map.rs:310",
+        "crates/game-core/src/ram_map.rs:322",
         "crates/game-core/src/samus/physics.rs:1757"
       ]
     },
@@ -580,7 +580,7 @@
       "len": 379,
       "kind": "undeclared",
       "refs": [
-        "ram_map.rs:102",
+        "ram_map.rs:114",
         "frame/tick.rs:600",
         "frame/nmi.rs:191",
         "sound/hook.rs:59",

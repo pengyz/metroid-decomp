@@ -465,6 +465,11 @@ impl<'a> Enemy<'a> {
     pub fn prev_status(&self) -> u8 {
         self.get(ens::PREV_STATUS)
     }
+    /// 写 `Ens.prevStatus`（`$040C`）——`KraidUpdateProjectile ; 04:9B3C` 的「冻前状态」
+    /// 判据读它；测试需要构造冻前态，故与读侧配对给出写侧。
+    pub fn set_prev_status(&mut self, v: u8) {
+        self.set(ens::PREV_STATUS, v);
+    }
     /// `Ens.speedSubPixelX`（`$0407`）——横速小数位。
     pub fn speed_subpixel_x(&self) -> u8 {
         self.get(ens::SPEED_SUBPIXEL_X)
@@ -494,6 +499,11 @@ impl<'a> Enemy<'a> {
     /// 特殊属性（`$040F`）——bit6 = miniboss。
     pub fn special_attribs(&self) -> u8 {
         self.get(ens::SPECIAL_ATTRIBS)
+    }
+    /// 写 `Ens.specialAttribs`（`$040F`）——`KraidUpdateProjectile@remove` 清它；
+    /// health 计算按 bit7 决定是否翻倍（见 `InitEnemyForceSpeedTowardsSamusDelayAndHealth`）。
+    pub fn set_special_attribs(&mut self, v: u8) {
+        self.set(ens::SPECIAL_ATTRIBS, v);
     }
     /// 跳跃位移（`$6B01`）。
     pub fn jump_dsplcmnt(&self) -> u8 {

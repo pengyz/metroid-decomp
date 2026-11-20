@@ -511,6 +511,29 @@ impl Manager {
     pub fn frame_count(&self) -> u8 {
         self.read_ram(crate::ram_map::FRAME_COUNT)
     }
+
+    /// `KraidLintCounter`（`$007E`，`constants_ram.asm:649`）——Kraid 的 Lint 发射周期
+    /// 计数器（`KraidTryToLaunchLint ; 04:9BE0` 每 2 帧减 1）。asm 注释：Ridley 也误用它。
+    ///
+    /// 【为什么收口在本文件】与 [`Self::frame_count`] 同族：`$7E` 既不是敌槽也不是
+    /// Samus 字段，`enemy/` 下的新 AI 模块按 `raw-surface` 纪律不许新接入裸字节面。
+    pub fn kraid_lint_counter(&self) -> u8 {
+        self.read_ram(crate::ram_map::KRAID_LINT_COUNTER)
+    }
+
+    pub fn set_kraid_lint_counter(&mut self, v: u8) {
+        self.write_ram(crate::ram_map::KRAID_LINT_COUNTER, v);
+    }
+
+    /// `KraidNailCounter`（`$007F`，`constants_ram.asm:650`）——Nail 发射周期计数器
+    /// （`KraidTryToLaunchNail ; 04:9C19`）。见 [`Self::kraid_lint_counter`] 的收口理由。
+    pub fn kraid_nail_counter(&self) -> u8 {
+        self.read_ram(crate::ram_map::KRAID_NAIL_COUNTER)
+    }
+
+    pub fn set_kraid_nail_counter(&mut self, v: u8) {
+        self.write_ram(crate::ram_map::KRAID_NAIL_COUNTER, v);
+    }
 }
 
 /// **P1·R3 断言组**：`restore_mss` 之后 typed 格不得在 `storage` 里留副本。

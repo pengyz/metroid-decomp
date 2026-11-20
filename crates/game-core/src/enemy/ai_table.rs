@@ -53,6 +53,12 @@ pub(crate) enum Routine {
     /// `PolypAIRoutine`（Norfair `02:9B64` / Ridley `05:9B16`，`prg2_norfair.asm:687` +
     /// `prg5_ridley.asm:658` 各 include 一份；两支行为不同，本卡只接 Norfair）。
     Polyp,
+    /// `KraidAIRoutine`（bank4 `04:9AB4`，`prg4_kraid.asm:757` include）。
+    Kraid,
+    /// `KraidLintAIRoutine`（bank4 `04:9AE4`）——Kraid 的手部弹体（槽 1..5）。
+    KraidLint,
+    /// `KraidNailAIRoutine`（bank4 `04:9B2C`）——asm 正文只有 `jmp KraidLintAIRoutine`。
+    KraidNail,
     /// `RemoveEnemy ; 07:FA18`——清槽。
     RemoveEnemy,
     /// `RTS_95CB`——直接返回，什么都不做（Kraid bank4 占位）。
@@ -75,9 +81,9 @@ const BRINSTAR: [Routine; 16] = [
     Crawler,
     Rio,
     PipeBug,
-    Unported("KraidAIRoutine"),
-    Unported("KraidLintAIRoutine"),
-    Unported("KraidNailAIRoutine"),
+    Kraid,
+    KraidLint,
+    KraidNail,
     Null,
     Null,
     Null,
@@ -140,9 +146,9 @@ const KRAID: [Routine; 16] = [
     Crawler,
     Rts95CB,
     PipeBug,
-    Unported("KraidAIRoutine"),
-    Unported("KraidLintAIRoutine"),
-    Unported("KraidNailAIRoutine"),
+    Kraid,
+    KraidLint,
+    KraidNail,
     Rts95CB,
     Rts95CB,
     Rts95CB,
@@ -248,7 +254,9 @@ mod tests_ai_table {
         // Kraid：02/06/0B–0F 是 RTS_95CB（什么都不做），08=Kraid
         assert_eq!(routine_for(2, 2), Rts95CB);
         assert_eq!(routine_for(2, 6), Rts95CB);
-        assert_eq!(routine_for(2, 8), Unported("KraidAIRoutine"));
+        assert_eq!(routine_for(2, 8), Kraid);
+        assert_eq!(routine_for(2, 9), KraidLint);
+        assert_eq!(routine_for(2, 10), KraidNail);
 
         // Ridley：02/03=Sidehopper 家族（Dessgeega）、09=Ridley
         assert_eq!(routine_for(4, 2), SidehopperFloor);

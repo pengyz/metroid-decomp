@@ -19,6 +19,18 @@ pub const PPUCTRL_ZP: u16 = 0x00FF;
 /// `JumpEngine` 分派前写入的 status 快照；**AI 例程读它，不是现役 `EnsExtra.status`**。
 pub const ENEMY_STATUS_PRE_AI: u16 = 0x0081;
 
+/// `KraidLintCounter`（`constants_ram.asm:649`，zp `$7E`）——Kraid 的 Lint 发射周期计数器
+/// （每 2 帧减 1；`$40..=$7F` 是 128 帧停顿段）。asm 注释：**Ridley 也误用了它**。
+pub const KRAID_LINT_COUNTER: u16 = 0x007E;
+
+/// `KraidNailCounter`（`constants_ram.asm:650`，zp `$7F`）——Kraid 的 Nail 发射周期计数器
+/// （与 Lint 同构，初值 `$60`、低 nibble 判据为 0）。
+pub const KRAID_NAIL_COUNTER: u16 = 0x007F;
+
+/// `RidleyFireballCounter`（`constants_ram.asm:651`，zp `$80`）——Ridley 火球周期计数器
+/// （Ridley 卡接入时用；与 [`KRAID_LINT_COUNTER`] 同族 asm 全局量）。
+pub const RIDLEY_FIREBALL_COUNTER: u16 = 0x0080;
+
 pub const NMI_STATUS: u16 = 0x001A;
 
 /// TitleRoutine=$1F（constants_ram.asm:479「Stores title routine number currently
