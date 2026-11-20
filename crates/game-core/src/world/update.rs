@@ -151,7 +151,7 @@ pub(crate) fn uw_area_routine(mem: &mut crate::frame::Manager) {
     // `AreaRoutine_Tourian ; 03:9B25` 件序：UpdateAllCannons → MotherBrainStatusHandler
     // → UpdateEndTimer → DrawEndTimerEnemy → UpdateAllZebetites → UpdateAllRinkaSpawners。
     // 已端口：母脑（G-5）、屏障（G-4）；炮台（G-3）/逃逸计时（G-6）/Rinka 生成器仍记账。
-    crate::frame::DIVERGENCES.with(|d| d.borrow_mut().push(0x9B26)); // UpdateAllCannons（G-3）
+    crate::enemy::cannon::update_all_cannons(mem);
     crate::enemy::mother_brain::status_handler(mem);
     crate::world::end_timer::update_end_timer(mem);
     crate::world::end_timer::draw_end_timer_enemy(mem);

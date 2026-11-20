@@ -622,6 +622,23 @@ impl Manager {
         self.read_ram(crate::ram_map::TIMER3)
     }
 
+    /// `PPUCTRL_ZP`（`$00FF`）——NMI 影子 PPUCTRL（bit0=名表基、bit2=VRAM 增量）。
+    pub fn ppuctrl_zp(&self) -> u8 {
+        self.read_ram(crate::ram_map::PPUCTRL_ZP)
+    }
+    pub fn set_ppuctrl_zp(&mut self, v: u8) {
+        self.write_ram(crate::ram_map::PPUCTRL_ZP, v);
+    }
+
+    /// `Cannons`（`$6BF4-$6C73`，16 槽 ×8 B：status/y/x/hi/instrListID/angle/instrDelay/instrID）。
+    /// 字段偏移由 `enemy::cannon::f` 定义——这里只提供按偏移的字节面，避免新文件接入裸面。
+    pub fn cannon_byte(&self, index: u8, off: u16) -> u8 {
+        self.read_wram(0x6BF4 + (index as u16) * 8 + off)
+    }
+    pub fn set_cannon_byte(&mut self, index: u8, off: u16, v: u8) {
+        self.write_wram(0x6BF4 + (index as u16) * 8 + off, v);
+    }
+
     /// `RinkaSpawners`（`$008B-$0090`，2 槽 ×3 B：status/hi/posIndex）——Tourian 母脑房
     /// 的 Rinka 生成器（`.struct RinkaSpawner`，`constants_ram.asm:10-16`）。
     fn rinka_spawner_addr(slot: u8, off: u8) -> u16 {

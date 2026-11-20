@@ -41,4 +41,5 @@ pub(crate) mod swooper;
 pub(crate) mod multiviola;
 pub(crate) mod dragon;
 pub(crate) mod polyp;
+pub(crate) mod cannon;
 pub(crate) mod kraid;
