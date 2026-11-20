@@ -1077,13 +1077,61 @@ pub fn dispatch_step(face: &TitleFace) -> TitleStep {
                         jumped: None, unported: None, next_cursor: 0,
                     }
                 }
-                // 段2-6 未实现（行为缺失，非等价未验证）：记账后停在本步，
+                // 段2 `EndSamusFlash ; 00:9B34`（prg0_title.asm:3790-3857）：
+                // `FrameCount&$1F==0` ⇒ `inc ColorCntIndex`；`==8` ⇒ ChooseEnding +
+                // CalculatePassword + SpritePointerIndex/SpriteByteCounter；
+                // `==$10` ⇒ `Timer3←$10`、`SpriteAttribByte←(EndingType>=$04)`、
+                // `inc RoomPtr`、EraseAllSprites 退；否则 `dec ClrChangeCounter` 到 0 时
+                // 取 `PaletteChangeTable[ColorCntIndex]` 并推进 SpriteAttribByte（到 3 归 0）。
+                // 尾件 `LoadEndSamusSprites`（OAM 六帧）未接——见 ending-sequence.md §5。
+                (2, _) => {
+                    let mut events = o.writes;
+                    let mut tail = false;
+                    if face.frame_count & 0x1F == 0 {
+                        let mut cnt = r(0x13).wrapping_add(1);
+                        events.push((0x13, cnt));
+                        if cnt == 0x08 {
+                            let (kind, _suit) = choose_ending([face.wram[0x69B0], face.wram[0x69B1], face.wram[0x69B2]]);
+                            events.push((0x0F, kind));
+                            events.push((0x10, kind.wrapping_mul(2)));
+                            events.push((0x11, 0x36));
+                        }
+                        if cnt == 0x10 {
+                            events.push((crate::title::state::TIMER3, 0x10));
+                            let att = if r(0x0F) >= 0x04 { 0x01 } else { 0x00 };
+                            events.push((0x12, att));
+                            events.push((0x0033, room_ptr.wrapping_add(1)));
+                            tail = true;
+                        }
+                    }
+                    if !tail {
+                        let cc = r(0x18).wrapping_sub(1);
+                        if cc == 0 {
+                            const PAL_TBL: [u8; 16] =
+                                [8, 7, 6, 5, 4, 3, 2, 1, 1, 2, 3, 4, 5, 6, 7, 8];
+                            let idx = (r(0x13) as usize) & 0x0F;
+                            events.push((0x18, PAL_TBL[idx]));
+                            let mut att = r(0x12).wrapping_add(1);
+                            if att == 3 { att = 0; }
+                            events.push((0x12, att));
+                        } else {
+                            events.push((0x18, cc));
+                        }
+                    }
+                    TitleStep {
+                        events, shell: if tail { vec![ShellCall::EraseAllSprites] } else { vec![] },
+                        a_out: Some(o.a_out),
+                        x_out: o.x_out.or(Some(face.x)), y_out: o.y_out.or(Some(face.y)),
+                        jumped: None, unported: None, next_cursor: 0,
+                    }
+                }
+                // 段3-6 未实现（行为缺失，非等价未验证）：记账后停在本步，
                 // 见 docs/findings/ending-sequence.md §4。
                 _ => TitleStep {
                     events: o.writes, shell: vec![], a_out: Some(o.a_out),
                     x_out: o.x_out.or(Some(face.x)), y_out: o.y_out.or(Some(face.y)),
                     jumped: None,
-                    unported: Some(0x9B34), next_cursor: 0,
+                    unported: Some(0x9B93), next_cursor: 0,
                 },
             }
         }
