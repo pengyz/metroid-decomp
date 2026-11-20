@@ -462,7 +462,7 @@
       "refs": [
         "crates/game-core/src/ram_map.rs:262",
         "crates/game-core/src/samus/handler.rs:166",
-        "crates/game-core/src/ram_map.rs:322",
+        "crates/game-core/src/ram_map.rs:304",
         "crates/game-core/src/samus/physics.rs:1757"
       ]
     },
@@ -552,7 +552,7 @@
       "refs": [
         "asm:refs/m1disasm/SRC/constants_ram.asm:986",
         "asm:refs/m1disasm/out/M1_NES_NTSC.sym:11708",
-        "world/statue.rs:30",
+        "world/statue.rs:114",
         "world/room_draw.rs:381"
       ]
     },

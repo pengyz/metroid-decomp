@@ -745,6 +745,62 @@ impl Manager {
         debug_assert!(slot < 13, "TileBlasts 槽号越界：{slot}");
         0x0500 + slot as u16 * 16 + off
     }
+    //-------------------------------------------------- Statue（`$0360` 槽 + 双像状态字）
+    // `UpdateAllStatues ; 07:D9D4` 族的字节面收口（`constants_ram.asm:922-933` 别名字段）：
+    // Object 布局 status+0/hi+0C/y+0D/x+0E/data0F+0F ⇒ RaiseState `$0364/$0365`、
+    // IsHit `$0366/$0367`、KraidY `$036F`、RidleyY `$0370`；状态字 `$687B/$687C`。
+
+    /// `Statue.status`（`$0360`）。
+    pub fn statue_status(&self) -> u8 { self.read_ram(0x0360) }
+    /// 设 `Statue.status`。
+    pub fn set_statue_status(&mut self, v: u8) { self.write_ram(0x0360, v); }
+    /// `Statue.hi`（`$036C`）。
+    pub fn statue_hi(&self) -> u8 { self.read_ram(0x036C) }
+    /// 设 `Statue.hi`。
+    pub fn set_statue_hi(&mut self, v: u8) { self.write_ram(0x036C, v); }
+    /// `Statue.y`（`$036D`）。
+    pub fn statue_y(&self) -> u8 { self.read_ram(0x036D) }
+    /// 设 `Statue.y`。
+    pub fn set_statue_y(&mut self, v: u8) { self.write_ram(0x036D, v); }
+    /// `Statue.x`（`$036E`）。
+    pub fn statue_x(&self) -> u8 { self.read_ram(0x036E) }
+    /// 设 `Statue.x`。
+    pub fn set_statue_x(&mut self, v: u8) { self.write_ram(0x036E, v); }
+    /// `Statue.animFrame`（`$0363`）。
+    pub fn set_statue_anim_frame(&mut self, v: u8) { self.write_ram(0x0363, v); }
+    /// 像的 RaiseState（idx 0=Kraid `$0364` / 1=Ridley `$0365`）。
+    pub fn statue_raise_state(&self, idx: u8) -> u8 { self.read_ram(0x0364 + (idx & 1) as u16) }
+    /// 设 RaiseState。
+    pub fn set_statue_raise_state(&mut self, idx: u8, v: u8) { self.write_ram(0x0364 + (idx & 1) as u16, v); }
+    /// 像的 IsHit（`$0366/$0367`）。
+    pub fn statue_is_hit(&self, idx: u8) -> u8 { self.read_ram(0x0366 + (idx & 1) as u16) }
+    /// 设 IsHit。
+    pub fn set_statue_is_hit(&mut self, idx: u8, v: u8) { self.write_ram(0x0366 + (idx & 1) as u16, v); }
+    /// 像的当前 Y（Kraid `$036F` / Ridley `$0370`）。
+    pub fn statue_raise_y(&self, idx: u8) -> u8 {
+        self.read_ram(if idx == 0 { 0x036F } else { 0x0370 })
+    }
+    /// 设像的 Y。
+    pub fn set_statue_raise_y(&mut self, idx: u8, v: u8) {
+        self.write_ram(if idx == 0 { 0x036F } else { 0x0370 }, v);
+    }
+    /// 像的状态字（`KraidStatueStatus=$687B` / `RidleyStatueStatus=$687C`，bit7=up）。
+    pub fn statue_status_word(&self, idx: u8) -> u8 {
+        self.read_ram(if idx == 0 { crate::ram_map::KRAID_STATUE_STATUS } else { crate::ram_map::RIDLEY_STATUE_STATUS })
+    }
+    /// 设像的状态字。
+    pub fn set_statue_status_word(&mut self, idx: u8, v: u8) {
+        let a = if idx == 0 { crate::ram_map::KRAID_STATUE_STATUS } else { crate::ram_map::RIDLEY_STATUE_STATUS };
+        self.write_ram(a, v);
+    }
+    /// `DoorEntryStatus`（`$0056`，非 0=正在门转场）。
+    pub fn door_entry_status(&self) -> u8 { self.read_ram(crate::ram_map::DOOR_ENTRY_STATUS) }
+
+    /// `StatuesBridgeIsSpawned`（`$0054`）。
+    pub fn statues_bridge_spawned(&self) -> u8 { self.read_ram(crate::ram_map::STATUES_BRIDGE_SPAWNED) }
+    /// 设 `StatuesBridgeIsSpawned`。
+    pub fn set_statues_bridge_spawned(&mut self, v: u8) { self.write_ram(crate::ram_map::STATUES_BRIDGE_SPAWNED, v); }
+
     /// 槽内 `routine`。
     pub fn tb_routine(&self, slot: u8) -> u8 { self.read_ram(Self::tb_addr(slot, 0)) }
     /// 设 `routine`。

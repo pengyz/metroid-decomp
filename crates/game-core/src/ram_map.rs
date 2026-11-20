@@ -145,6 +145,8 @@ pub const SAMUS_STAT0B: u16 = 0x6881;
 /// KraidStatueStatus=$687B/RidleyStatueStatus=$687C（constants_ram.asm:1212-1213）。
 pub const KRAID_STATUE_STATUS: u16 = 0x687B;
 pub const RIDLEY_STATUE_STATUS: u16 = 0x687C;
+/// `StatuesBridgeIsSpawned`（`constants_ram.asm:1334`，bit7=桥已生成）。
+pub const STATUES_BRIDGE_SPAWNED: u16 = 0x0054;
 /// NumberOfUniqueItems=$6886/UniqueItemHistory=$6887 ds $100（constants_ram.asm:1234-1237）。
 pub const NUMBER_OF_UNIQUE_ITEMS: u16 = 0x6886;
 pub const UNIQUE_ITEM_HISTORY: u16 = 0x6887;

@@ -694,14 +694,15 @@ fn enemy_loop(
                 load_elevator(mem, stream.get(i + 1).copied().unwrap_or(0));
                 i += 2; // 梯=2（SpawnElevatorRoutine 尾 `lda #$02/rts`）
             }
-            6 | 7 => {
-                let addr = if ty == 6 {
-                    0xEC2F // LoadStatues
-                } else {
-                    0xEC57 // LoadPipeBugHole
-                };
-                crate::frame::DIVERGENCES.with(|d| d.borrow_mut().push(addr));
-                i += 3; // 像/虫=3（待考）
+            6 => {
+                // `LoadStatues ; 07:EC2F`：只吃 type 一个字节，随后 `jmp EnemyLoop`。
+                crate::world::statue::load_statues(mem);
+                i += 1;
+            }
+            7 => {
+                // `LoadPipeBugHole ; 07:EC57`：type+2 数据字节。
+                crate::frame::DIVERGENCES.with(|d| d.borrow_mut().push(0xEC57));
+                i += 3;
             }
             _ => return false,
         }
