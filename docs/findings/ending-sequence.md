@@ -56,16 +56,24 @@ Rust 侧已在 `crates/game-core/src/world/elevator.rs` 的 `elev_transition` �
 `assets.rs` 访问器：`end_background()` / `end_palette(n)` / `end_credits(page)` /
 `end_samus(idx)` / `end_wave(table)`。`prepare_vram` 已有 `0xA052` 臂。
 
-## 4. Rust 侧现状（**未完成**，如实记录）
+## 4. Rust 侧现状（段 0-2 已实现，段 3-6 未实现）
 
-`crates/game-core/src/title/mod.rs` 的 `0x1D` 臂当前只实现「每帧头」：
+`crates/game-core/src/title/mod.rs` 的 `0x1D` 臂已从「单拍跳转」改为按 `RoomPtr` +
+`cursor` 的多段状态机：
 
-- 装载 `title_end_star()` 156 B；
-- 调色板循环（`IsCredits==0 && FC&0x0F==0` ⇒ `inc $1C`，到 9 回 1）；
-- **然后按 `RoomPtr` 直接 `jumped = Some(目标)`**，`targets = [0x9AD5, 0x9B1C, 0x9B34, 0x9B93, 0x9BCD]`
-  —— 只有 5 项，段 5（`RollCredits` = `0x9BFC`）与段 6（`Restart` = `0x9A39`）**连目标都没有**。
+| 段 | 状态 | 实现要点 |
+|---|---|---|
+| 0 `LoadEndGFX` | **已实现**（cursor 0/1/2 三段） | `ClearAll` ①②③ + `GameMode←1` + `EndingType←(JustInBailey?4:0)`（`$69B3`）+ `SpritePointerIndex` + `PrepareVram(0xA052)` + `Timer3←$60` + 计数器清零 + `PaletteDataPending←1` + `ClrChangeCounter←$08` + `SFXMultiInit|=$80` + `inc RoomPtr` |
+| 1 `ShowEndSamus` | **已实现** | `Timer3==0 ⇒ inc RoomPtr`；`==$50 && EndMsgWrite==0 ⇒ EndMsgWrite←1`；`==$01 ⇒ HideShowEndMsg←1` |
+| 2 `EndSamusFlash` | **已实现** | `FC&$1F==0 ⇒ inc ColorCntIndex`；`==8 ⇒ choose_ending()`（`07:CAF5` 已端口）+ `SpritePointerIndex`/`SpriteByteCounter`；`==$10 ⇒ Timer3←$10`+`SpriteAttribByte`+`inc RoomPtr`+`EraseAllSprites`；否则 `ClrChangeCounter`/`PaletteChangeTable` 闪色节拍 |
+| 3 `SamusWave` | 未实现 | 落 `unported: Some(0x9B93)` |
+| 4 `EndFadeOut` | 未实现 | 同上 |
+| 5 `RollCredits` | 未实现 | 同上（目标地址此前连 `targets` 表都没有） |
+| 6 `Restart` | 未实现 | 同上 |
 
-⇒ 七段例程体一个都没执行：结局流程会停在段 0 的入口。
+**仍未接的共用件**：`LoadEndSamusSprites ; 00:9C9A`（六帧，`title.end_samus` 已在包内）与
+`LoadWaveSprites ; 00:9C7F`（四表，`title.end_wave`）——它们写 OAM，属渲染面，段 1-4 共用，
+应一次抽出装载件而不是逐段重写。
 
 ## 5. 施工顺序（下一步）
 
