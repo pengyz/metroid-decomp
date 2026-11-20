@@ -496,6 +496,39 @@ impl Manager {
     /// 这正是 `crawler.rs`、`skree.rs`、`update_enemy_common_decide` 都读本格的原因。
     ///
     /// 由 `frame/memory.rs`（`raw-surface` 豁免的兼容辖）收口裸读，新 AI 模块直接调用即可。
+    /// `MetroidLatch0400+slot*$10`（`$77F8+slot`，六槽）——Metroid 吸附 Samus 的
+    /// 锁存字节：bits0-3 = 吸附进度帧计数（到 `$0C` 满）、bits4-6 = 炸弹命中计数
+    /// （到 5 次脱离）、bit7 = 吸附时 x 速度符号。
+    ///
+    /// asm 锚：`LoadEnemySlotIDIntoY ; 03:99B7`（`txa / jsr Adiv16_ / tay`）⇒ 下标是**槽号**
+    /// 而不是字节偏移；`InitBank3 ; 07:C59A` 把 `MetroidData` 的 6 个 `$00` 拷到
+    /// `$77F8-$77FD`。槽号越界（≥6）在原版是读 `$77FE` 之后的 `MetroidAccel` 表 —— 这里
+    /// fail-loud，不静默回绕。
+    /// `EndTimer+1`（`$010B`）——逃逸计时器高字节。`MetroidAIRoutine ; 03:97F9` 用它判断
+    /// 「逃逸序列是否进行中」（`ldy EndTimer+1 / iny / beq`：`$FF` 表示未启动）。
+    pub fn end_timer_hi(&mut self) -> u8 {
+        self.read_ram(crate::ram_map::END_TIMER + 1)
+    }
+
+    /// `MetroidOnSamus`（`$92`）——有 Metroid 完全吸附并正在吸血。
+    pub fn metroid_on_samus(&mut self) -> u8 {
+        self.read_ram(crate::ram_map::METROID_ON_SAMUS)
+    }
+
+    pub fn set_metroid_on_samus(&mut self, v: u8) {
+        self.write_ram(crate::ram_map::METROID_ON_SAMUS, v);
+    }
+
+    pub fn metroid_latch(&mut self, slot: u8) -> u8 {
+        assert!(slot < 6, "MetroidLatch 只有 6 槽（$77F8-$77FD），越界是原版表尾读：{slot}");
+        self.read_ram(0x77F8 + slot as u16)
+    }
+
+    pub fn set_metroid_latch(&mut self, slot: u8, v: u8) {
+        assert!(slot < 6, "MetroidLatch 只有 6 槽（$77F8-$77FD），越界是原版表尾读：{slot}");
+        self.write_ram(0x77F8 + slot as u16, v);
+    }
+
     pub fn enemy_status_pre_ai(&mut self) -> u8 {
         self.read_ram(crate::ram_map::ENEMY_STATUS_PRE_AI)
     }

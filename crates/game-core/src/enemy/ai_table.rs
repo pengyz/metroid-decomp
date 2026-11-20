@@ -61,6 +61,8 @@ pub(crate) enum Routine {
     KraidNail,
     /// `RinkaAIRoutine`（bank3 `03:9A2C`，仅 Tourian include；`SetRinkaSpeed_{AREA}` 按区）。
     Rinka,
+    /// `MetroidAIRoutine`（bank3 `03:97F9`，仅 Tourian include；Tourian 表 00/01 = 红/绿 Metroid）。
+    Metroid,
     /// `RemoveEnemy ; 07:FA18`——清槽。
     RemoveEnemy,
     /// `RTS_95CB`——直接返回，什么都不做（Kraid bank4 占位）。
@@ -120,8 +122,8 @@ const NORFAIR: [Routine; 16] = [
 
 /// `prg3_tourian.asm:166-181`（`03:95E5`）。
 const TOURIAN: [Routine; 16] = [
-    Unported("MetroidAIRoutine"),
-    Unported("MetroidAIRoutine"),
+    Metroid,
+    Metroid,
     Unported("L9A27"),
     RemoveEnemy,
     Rinka,
@@ -249,7 +251,8 @@ mod tests_ai_table {
         );
 
         // Tourian：00=Metroid、04=Rinka
-        assert_eq!(routine_for(3, 0), Unported("MetroidAIRoutine"));
+        assert_eq!(routine_for(3, 0), Metroid, "Tourian 0x00 = 红 Metroid（本卡端口）");
+        assert_eq!(routine_for(3, 1), Metroid, "Tourian 0x01 = 绿 Metroid（同件，行为差异在 movementIndex）");
         assert_eq!(routine_for(3, 4), Rinka, "Tourian 0x04 = RinkaAIRoutine（本卡端口）");
         assert_eq!(routine_for(3, 5), RemoveEnemy);
 

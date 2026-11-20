@@ -504,6 +504,10 @@ impl<'a> Enemy<'a> {
         self.set(ens::DATA0D, v);
     }
     /// 击杀武器（`$040E`）——`<= $01` 即普通束（见 `ExplodeEnemy ; 07:F611`）。
+    /// 写 `Ens.weaponAction`（`$040E`）——测试与 `ExplodeEnemy` 前置都要构造击杀武器类型。
+    pub fn set_weapon_action(&mut self, v: u8) {
+        self.set(ens::WEAPON_ACTION, v);
+    }
     pub fn weapon_action(&self) -> u8 {
         self.get(ens::WEAPON_ACTION)
     }

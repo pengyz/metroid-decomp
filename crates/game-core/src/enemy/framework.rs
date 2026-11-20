@@ -527,6 +527,7 @@ pub(crate) fn choose_enemy_ai(mem: &mut crate::frame::Manager, x: u8) {
         Routine::Rio => crate::enemy::rio::rio_ai(mem, x),
         Routine::PipeBug => crate::enemy::pipe_bug::pipe_bug_ai(mem, x),
         Routine::Rinka => crate::enemy::rinka::rinka_ai(mem, x),
+        Routine::Metroid => crate::enemy::metroid::metroid_ai(mem, x),
         Routine::Squeept => crate::enemy::squeept::squeept_ai(mem, x),
         Routine::Swooper00 => crate::enemy::swooper::swooper_ai_00(mem, x),
         Routine::Swooper01 => crate::enemy::swooper::swooper_ai_01(mem, x),
