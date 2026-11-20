@@ -147,6 +147,11 @@ pub const OBJECT_CNTRL: u16 = 0x006B;
 /// docs/findings/move-drift-iteration-scheduling.md 随件。
 pub const BANK_SWITCH_PENDING: u16 = 0x0024;
 
+/// UpdatingSamusProjectile=$71（constants_ram:600 内容锚「0=not updating, 1=updating
+/// samus projectile」——`IsBlastTile ; 07:E9BE` 首件 `ldy UpdatingSamusProjectile / beq @RTS`
+/// 的门：**非弹更新径下可炸瓦（$80-$9F）一律固实**）。
+pub const UPDATING_SAMUS_PROJECTILE: u16 = 0x0071;
+
 /// InArea=$74（constants_ram 内容锚「Samus is in the following area」）。
 pub const IN_AREA: u16 = 0x0074;
 

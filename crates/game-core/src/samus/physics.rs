@@ -127,19 +127,14 @@ pub(crate) fn vertical_span_cols(x: u8, rx: u8) -> (u8, u32) {
 }
 
 /// collision_point_ok（**asm 内容锚** CheckMoveVertical `: 07:E7BD`——r26 共享）：
-/// tile 值类：<$80=固实（碰撞！）/$4E=门像/≥$80=可走。
+/// tile 值类见 `world::room_ram::tile_blocks_movement`（判据单源：`$4E` 固实 /
+/// 固实阈值 Brinstar `$80`、其余区 `$70` / `>=$A0` 可走 / 可炸瓦对非弹对象固实）。
 fn collision_point_ok(mem: &mut Manager, y: u8, x: u8, hi: u8) -> bool {
     let idx = (((y & 0xF8) as u16) << 2) | ((x >> 3) as u16);
     let page = if hi & 1 != 0 { 0x0400u16 } else { 0x0000 };
     let ptr = 0x6000 | page | (idx & 0x3FF);
     let tile = mem.read_wram(ptr);
-    if tile == 0x4E {
-        return false;
-    }
-    if tile < 0x80 {
-        return false;
-    }
-    true
+    !crate::world::room_ram::tile_blocks_non_projectile(tile)
 }
 
 pub fn vert_accelerate(mem: &mut Manager) {

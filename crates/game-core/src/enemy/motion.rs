@@ -555,20 +555,13 @@ pub(crate) fn make_room_ram_ptr(_mem: &mut crate::frame::Manager, y: u8, x: u8, 
 }
 
 /// 碰撞核（**asm 内容锚** `CheckMoveVertical: ; 07:E7BD`/Horizontal $E89B——r26）：
-/// 逐点（块界）→MakeRoomRAMPtr→tile 值类：**<$80=固实（碰撞！）**/$4E=固实空（门/像）/
-/// $80-$9F=可炸/≥$A0=可走。返回 carry（可走=true）。
+/// 逐点（块界）→MakeRoomRAMPtr→`world::room_ram::tile_blocks_movement`（判据单源）：
+/// `$4E`=门/像固实；`<$80`（Brinstar）/`<$70`（其余区）=固实；`>=$A0`=可走；
+/// 可炸瓦 `$80-$9F`（Brinstar）/`$70-$9F`（其余区）**对非弹对象固实**。返回 carry（可走=true）。
 pub(crate) fn collision_point_ok(mem: &mut crate::frame::Manager, y: u8, x: u8, hi: u8) -> bool {
     let ptr = make_room_ram_ptr(mem, y, x, hi);
     let tile = mem.read_wram(ptr);
-    if tile == 0x4E {
-        return false; // 固实空（门/像——碰撞！）
-    }
-    if tile < 0x80 {
-        return false; // 固实 tile（< $80）——碰撞！
-    }
-    // $80-$9F=可炸（可走性=IsBlastTile 判——简化径：视为可走）
-    // ≥$A0=可走（$A0/$A1=门 tile（Samus 专用判——随件））
-    true
+    !crate::world::room_ram::tile_blocks_non_projectile(tile)
 }
 
 /// EnemyCheckMoveUp（**asm 内容锚** `: 07:E770`→EnemyCheckMoveVertical `07:E783`→
