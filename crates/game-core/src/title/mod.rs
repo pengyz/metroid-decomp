@@ -20,6 +20,7 @@
 //! ClearSpareMem 只写 $C9 低字节（`85 c9` zp 单址）——写面以字节为准。
 
 pub mod sparkle;
+pub(crate) mod ending_sprites;
 pub(crate) mod step_glue;
 /// 状态机骨架（批1 建形，枚举臂随批2-6 逐簇补）：TitleRoutine 相位面。
 /// _id 表序=分发序（StartContinueScreen15=0x15 / EndGame=0x1D 锚——128e0a6 自数证）。
