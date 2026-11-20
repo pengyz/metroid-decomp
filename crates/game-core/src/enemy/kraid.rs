@@ -517,6 +517,26 @@ mod tests_kraid {
         e.set_data0d(0x22);
     }
 
+    /// 本文件就地锚定的四个串偏移必须与**资产包**的指针表逐个相等（防未来漂移：
+    /// 指针表 2026-11-20 由 36 B 修成 72 B，此后两处口径必须一致）。
+    #[test]
+    fn hardcoded_offsets_agree_with_pack_pointer_table() {
+        let ptrs = game_data::assets::enemy_movement_ptrs(2); // area 2 = Kraid（InArea 序）
+        assert_eq!(ptrs.len(), 72, "18 索引 × R/L × 2 B");
+        for (mov_idx, right, left) in KRAID_MOV_STR_OFFSETS {
+            for (facing, want) in [(0usize, right), (1usize, left)] {
+                let rolled = (mov_idx as usize) * 2 + facing;
+                let e = rolled * 2;
+                let ptr = u16::from_le_bytes([ptrs[e], ptrs[e + 1]]) as usize;
+                assert_eq!(
+                    ptr.wrapping_sub(0x97EF),
+                    want,
+                    "movIdx {mov_idx:#04X} facing {facing}：包内指针 {ptr:#06X} 与就地锚定 {want:#04X} 不一致"
+                );
+            }
+        }
+    }
+
     // ---- KraidAIRoutine（asm:4-34）-------------------------------------------
 
     /// `KraidBranch_Explode`（asm:14-22）清的是**绝对** `EnsExtra.1..5.status`：

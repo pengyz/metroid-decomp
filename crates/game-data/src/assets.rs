@@ -958,17 +958,21 @@ mod palette_tests {
     }
 
     /// 敌移动面三件（`areas_common.asm:555 LoadEnemyMovementPtr`）：
-    /// 指针表真表 **36 B**（9 索引 × R/L×2），旧烘焙 138 项=过度读；
+    /// 指针表 **36 项 = 72 B**（18 索引 × R/L×2）——2026-11-20 更正：旧注释「真表 36 B」
+    /// 把「36 项」写成了字节数，实际只提取了一半，索引 9..17 全部缺指针
+    /// （见 `docs/findings/enemy-movement-ptr-truncation.md`）。旧烘焙 138 项仍是过度读。
     /// 串区 `$97EF..$99EF`；`L977B` 复用已迁的 `BrEnemyFacing`（同 64 B）。
     #[test]
     fn enemy_movement_segments_match_asm_anchors() {
         let ptrs = enemy_movement_ptrs(0);
-        assert_eq!(ptrs.len(), 36, "EnemyMovementPtrs 9×R/L×u16");
+        assert_eq!(ptrs.len(), 72, "EnemyMovementPtrs 18×R/L×u16 = 36 项");
+        // 18 索引 × 2 朝向，每一项都必须是串区内的合法指针（无 0、无越界）。
+        assert_eq!(ptrs.len() % 4, 0, "每索引 2 个 u16（R/L）");
         let first = u16::from_le_bytes([ptrs[0], ptrs[1]]);
         assert_eq!(first, 0x97EF, "首个指针 = 串区起点 $97EF");
         assert!(ptrs.chunks(2).all(|w| {
             let p = u16::from_le_bytes([w[0], w[1]]) as usize;
-            (0x97EF..=0x98C0 + 24).contains(&p)
+            (0x97EF..0x97EF + 512).contains(&p) // 串区窗 512 B（$97EF..$99EF）
         }), "全部指针落在串区内");
         assert_eq!(enemy_movement_strings(0).len(), 512);
         // L977B 与朝向段同源（迁移只改来源不改字节）。

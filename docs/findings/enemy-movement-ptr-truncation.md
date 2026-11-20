@@ -69,7 +69,15 @@ Kraid 家族不受影响：`enemy/kraid.rs` 用 asm 标签就地锚定的偏移�
    若出现回退，说明原实现依赖了错误的回落串（补偿巧合），需逐格归因而不是回退修复。
 5. `routine_inventory` / `nes_map` 不动（不是代码面变化）。
 
-## 5. 为什么这次不修
+## 5. 已修（2026-11-20，同一轮）
+
+`ENEMY_TABLE_LAYOUT` 的 `(0x96DB, 36)` 改为 `(0x96DB, 72)`，五个
+`Area*EnMovPtrs` 段重建后 72 B；`pack-tool verify` 183 段全过；`kraid.rs` 新增
+`hardcoded_offsets_agree_with_pack_pointer_table` 把就地锚定偏移与包内指针逐项钉住。
+L4 全矩阵 **154/6/0 逐格不变**（无回归），说明现有 20 个用例没有走到
+movIdx≥9 的可见路径——这是覆盖缺口，不是「改对了」的证明。
+
+## 6. 原始判断：为什么当时不混进 Kraid 卡
 
 Kraid 卡的范围是 AI 例程；修数据段会连带改变已有敌人的位移语义，必须有
 L4 直裁（零容差）单独一轮。混在 AI 卡里提交等于把两类风险绑在一起。

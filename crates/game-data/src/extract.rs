@@ -556,7 +556,7 @@ fn seg_meta() -> Vec<SegMeta> {
         SegMeta { key: PackKey::BrEnemyDistanceThreshold, kind: "bytes", elem: 1, count: 16, rom: "bank01:96AB", note: "DistanceThreshold（asm 标签间距见 note）" },
         SegMeta { key: PackKey::BrEnemyInitDelay, kind: "bytes", elem: 1, count: 64, rom: "bank01:96BB", note: "InitDelay（asm 标签间距见 note）" },
         SegMeta { key: PackKey::BrEnemyFacing, kind: "bytes", elem: 1, count: 64, rom: "bank01:977B", note: "Facing（asm 标签间距见 note）" },
-        SegMeta { key: PackKey::BrEnMovPtrs, kind: "words", elem: 2, count: 18, rom: "bank01:96DB", note: "EnemyMovementPtrs 9×R/L（旧烘焙 138 项=过度读，真表 36 B）" },
+        SegMeta { key: PackKey::BrEnMovPtrs, kind: "words", elem: 2, count: 36, rom: "bank01:96DB", note: "EnemyMovementPtrs 18 索引 × R/L = 36 项 (72 B)；idx36 起全 $0000（见 docs/findings/enemy-movement-ptr-truncation.md）" },
         SegMeta { key: PackKey::BrEnMovStr, kind: "bytes", elem: 1, count: 512, rom: "bank01:97EF", note: "移动指令串窗 $97EF..$99EF（覆盖被引用上界）" },
         // ---- Kr（bank4）房流与敌表 ----
         SegMeta { key: PackKey::KrRoomPtrs, kind: "u16-table", elem: 2, count: 37, rom: "bank04:A1D5", note: "RoomPtrTable" },
@@ -575,7 +575,7 @@ fn seg_meta() -> Vec<SegMeta> {
         SegMeta { key: PackKey::KrEnemyDistanceThreshold, kind: "bytes", elem: 1, count: 16, rom: "bank04:96AB", note: "EnemyDistanceToSamusThreshold" },
         SegMeta { key: PackKey::KrEnemyInitDelay, kind: "bytes", elem: 1, count: 64, rom: "bank04:96BB", note: "EnemyInitDelayTbl（窗口；语义 32）" },
         SegMeta { key: PackKey::KrEnemyFacing, kind: "bytes", elem: 1, count: 64, rom: "bank04:977B", note: "L977B 朝向表" },
-        SegMeta { key: PackKey::KrEnMovPtrs, kind: "bytes", elem: 1, count: 36, rom: "bank04:96DB", note: "EnemyMovementPtrs（9×R/L×2B）" },
+        SegMeta { key: PackKey::KrEnMovPtrs, kind: "words", elem: 2, count: 36, rom: "bank04:96DB", note: "EnemyMovementPtrs 18 索引 × R/L = 36 项 (72 B)" },
         SegMeta { key: PackKey::KrEnMovStr, kind: "bytes", elem: 1, count: 512, rom: "bank04:97EF", note: "移动指令串窗" },
         // ---- To（bank3）房流与敌表 ----
         SegMeta { key: PackKey::ToRoomPtrs, kind: "u16-table", elem: 2, count: 21, rom: "bank03:A7D1", note: "RoomPtrTable" },
@@ -594,7 +594,7 @@ fn seg_meta() -> Vec<SegMeta> {
         SegMeta { key: PackKey::ToEnemyDistanceThreshold, kind: "bytes", elem: 1, count: 16, rom: "bank03:96AB", note: "EnemyDistanceToSamusThreshold" },
         SegMeta { key: PackKey::ToEnemyInitDelay, kind: "bytes", elem: 1, count: 64, rom: "bank03:96BB", note: "EnemyInitDelayTbl（窗口；语义 32）" },
         SegMeta { key: PackKey::ToEnemyFacing, kind: "bytes", elem: 1, count: 64, rom: "bank03:977B", note: "L977B 朝向表" },
-        SegMeta { key: PackKey::ToEnMovPtrs, kind: "bytes", elem: 1, count: 36, rom: "bank03:96DB", note: "EnemyMovementPtrs（9×R/L×2B）" },
+        SegMeta { key: PackKey::ToEnMovPtrs, kind: "words", elem: 2, count: 36, rom: "bank03:96DB", note: "EnemyMovementPtrs 18 索引 × R/L = 36 项 (72 B)" },
         SegMeta { key: PackKey::ToEnMovStr, kind: "bytes", elem: 1, count: 512, rom: "bank03:97EF", note: "移动指令串窗" },
         // ---- Ri（bank5）房流与敌表 ----
         SegMeta { key: PackKey::RiRoomPtrs, kind: "u16-table", elem: 2, count: 42, rom: "bank05:A17F", note: "RoomPtrTable" },
@@ -613,7 +613,7 @@ fn seg_meta() -> Vec<SegMeta> {
         SegMeta { key: PackKey::RiEnemyDistanceThreshold, kind: "bytes", elem: 1, count: 16, rom: "bank05:96AB", note: "EnemyDistanceToSamusThreshold" },
         SegMeta { key: PackKey::RiEnemyInitDelay, kind: "bytes", elem: 1, count: 64, rom: "bank05:96BB", note: "EnemyInitDelayTbl（窗口；语义 32）" },
         SegMeta { key: PackKey::RiEnemyFacing, kind: "bytes", elem: 1, count: 64, rom: "bank05:977B", note: "L977B 朝向表" },
-        SegMeta { key: PackKey::RiEnMovPtrs, kind: "bytes", elem: 1, count: 36, rom: "bank05:96DB", note: "EnemyMovementPtrs（9×R/L×2B）" },
+        SegMeta { key: PackKey::RiEnMovPtrs, kind: "words", elem: 2, count: 36, rom: "bank05:96DB", note: "EnemyMovementPtrs 18 索引 × R/L = 36 项 (72 B)" },
         SegMeta { key: PackKey::RiEnMovStr, kind: "bytes", elem: 1, count: 512, rom: "bank05:97EF", note: "移动指令串窗" },
         // ---- Norfair 敌表（bank02，同址布局）----
         SegMeta { key: PackKey::NoEnemyHealth, kind: "bytes", elem: 1, count: 64, rom: "bank02:962B", note: "EnemyHealthTbl（窗口；语义 16）" },
@@ -625,7 +625,7 @@ fn seg_meta() -> Vec<SegMeta> {
         SegMeta { key: PackKey::NoEnemyDistanceThreshold, kind: "bytes", elem: 1, count: 16, rom: "bank02:96AB", note: "EnemyDistanceToSamusThreshold" },
         SegMeta { key: PackKey::NoEnemyInitDelay, kind: "bytes", elem: 1, count: 64, rom: "bank02:96BB", note: "EnemyInitDelayTbl（窗口；语义 32）" },
         SegMeta { key: PackKey::NoEnemyFacing, kind: "bytes", elem: 1, count: 64, rom: "bank02:977B", note: "L977B 朝向表" },
-        SegMeta { key: PackKey::NoEnMovPtrs, kind: "bytes", elem: 1, count: 36, rom: "bank02:96DB", note: "EnemyMovementPtrs（9×R/L×2B）" },
+        SegMeta { key: PackKey::NoEnMovPtrs, kind: "words", elem: 2, count: 36, rom: "bank02:96DB", note: "EnemyMovementPtrs 18 索引 × R/L = 36 项 (72 B)" },
         SegMeta { key: PackKey::NoEnMovStr, kind: "bytes", elem: 1, count: 512, rom: "bank02:97EF", note: "移动指令串窗" },
         SegMeta { key: PackKey::RomTable968B, kind: "bytes", elem: 0x80, count: 8, rom: "各 bank $968B", note: "窗口参数化属性表 8×128B" },
         SegMeta { key: PackKey::RomVec95CE, kind: "bytes", elem: 2, count: 8, rom: "各 bank $95CE", note: "F2ED 流向量 [lo,hi]×8" },
@@ -866,7 +866,7 @@ fn extract_area(prg: &[u8], a: &AreaSpec) -> Result<Vec<Section>, String> {
 /// 长度按 asm 标签间距/字节数机械给出，见 `docs/findings/enemy-table-extent.md`）：
 /// health 16（$962B→$963B）/ resting 32 / active 32 / init-offset 16 / force-attribs 16 /
 /// force-speed 16（$969B→$96AB）/ distance 16 / init-delay 32（$96BB→$96DB）/
-/// facing 64（$977B 起，窗口）/ mov-ptrs 36 / mov-str 512。
+/// facing 64（$977B 起，窗口）/ mov-ptrs 72（36 项 × 2 B）/ mov-str 512。
 const ENEMY_TABLE_LAYOUT: [(u16, usize); 12] = [
     // **表长 vs 窗口**（enemy-table-extent 疑点定谳）：asm 标签间距给的是**语义表长**
     // （health 16 / force-speed 16 / init-delay 32），但 `LoadEnemy` 用 `type & $3F`
@@ -882,7 +882,7 @@ const ENEMY_TABLE_LAYOUT: [(u16, usize); 12] = [
     (0x96AB, 16), // EnemyDistanceToSamusThreshold
     (0x96BB, 64), // EnemyInitDelayTbl（语义 32；窗口 64）
     (0x977B, 64), // L977B 朝向表（窗口）
-    (0x96DB, 36), // EnemyMovementPtrs（9 索引 × R/L × 2 B）
+    (0x96DB, 72), // EnemyMovementPtrs（18 索引 × R/L × 2 B = 36 项；idx36 起全 $0000）
     (0x97EF, 512), // 移动指令串窗
     (0x960B, 32), // EnemyDeathAnimIndex（**按区不同**：bank1/3 首字节 0x27/0x08）
 
