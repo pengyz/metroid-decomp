@@ -36,6 +36,8 @@ pub(crate) enum Routine {
     RipperII,
     Skree,
     Crawler,
+    /// `RioAIRoutine`（bank1 `01:9AF5`，仅 Brinstar 生成）。
+    Rio,
     /// `RemoveEnemy ; 07:FA18`——清槽。
     RemoveEnemy,
     /// `RTS_95CB`——直接返回，什么都不做（Kraid bank4 占位）。
@@ -56,7 +58,7 @@ const BRINSTAR: [Routine; 16] = [
     RipperI,
     Skree,
     Crawler,
-    Unported("RioAIRoutine"),
+    Rio,
     Unported("PipeBugAIRoutine"),
     Unported("KraidAIRoutine"),
     Unported("KraidLintAIRoutine"),

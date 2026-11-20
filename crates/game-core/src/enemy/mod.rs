@@ -29,3 +29,4 @@ pub mod skree;
 pub mod sidehopper;
 
 pub(crate) mod waver;
+pub(crate) mod rio;
