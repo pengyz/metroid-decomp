@@ -238,11 +238,188 @@ impl Pulse {
     }
 }
 
-/// APU 顶层（当前=两路 pulse；triangle/noise 见模块文档的增量计划）。
+
+/// 三角波 32 步序列（15→0→15，硬件表）。
+const TRI_SEQUENCE: [u8; 32] = [
+    15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11,
+    12, 13, 14, 15,
+];
+
+/// NTSC 噪声周期表（`$400E` 低 4 位索引）。
+pub const NOISE_PERIODS: [u16; 16] = [
+    4, 8, 16, 32, 64, 96, 128, 160, 202, 254, 380, 508, 762, 1016, 2034, 4068,
+];
+
+/// 三角波声道。
+///
+/// 硬件坑（本模块显式建模）：`$400B` bit7 是**控制/长度 halt**，它同时决定
+/// linear counter 的 reload 标志是否在半帧被清除——两者耦合，不是独立两个开关。
+#[derive(Clone, Copy, Debug, Default)]
+pub struct Triangle {
+    control: u8,
+    timer_period: u16,
+    timer: u16,
+    sequencer: u8,
+    length: u8,
+    linear: u8,
+    reload: bool,
+    enabled: bool,
+}
+
+impl Triangle {
+    /// `$4008-$400B`。
+    pub fn write_reg(&mut self, addr: u16, value: u8) {
+        match addr {
+            0x4008 => {
+                self.control = value;
+                self.reload = true;
+            }
+            0x400A => self.timer_period = (self.timer_period & 0x700) | value as u16,
+            0x400B => {
+                self.timer_period = (self.timer_period & 0x0FF) | (((value as u16) & 0x07) << 8);
+                if self.enabled {
+                    self.length = LENGTH_TABLE[(value >> 3) as usize];
+                }
+                self.reload = true;
+            }
+            _ => {}
+        }
+    }
+
+    pub fn set_enabled(&mut self, on: bool) {
+        self.enabled = on;
+        if !on {
+            self.length = 0;
+        }
+    }
+
+    /// quarter-frame：linear counter 装载/递减。
+    pub fn clock_quarter(&mut self) {
+        if self.reload {
+            self.linear = self.control & 0x7F;
+        } else if self.linear > 0 {
+            self.linear -= 1;
+        }
+    }
+
+    /// half-frame：长度计数 + （控制位 bit7 为 0 时）清 reload 标志。
+    pub fn clock_half(&mut self) {
+        if self.enabled && self.length > 0 && (self.control & 0x80) == 0 {
+            self.length -= 1;
+        }
+        if self.control & 0x80 == 0 {
+            self.reload = false;
+        }
+    }
+
+    /// 三角波定时器每 CPU 周期走一步（不是每 2 周期——与 pulse 不同）。
+    pub fn clock_cpu(&mut self) {
+        if self.timer == 0 {
+            self.timer = self.timer_period;
+            self.sequencer = (self.sequencer + 1) & 0x1F;
+        } else {
+            self.timer -= 1;
+        }
+    }
+
+    pub fn output(&self) -> u8 {
+        if self.length == 0 || self.linear == 0 {
+            return 0;
+        }
+        TRI_SEQUENCE[self.sequencer as usize]
+    }
+}
+
+/// 噪声声道（15 位 LFSR）。
+#[derive(Clone, Copy, Debug)]
+pub struct Noise {
+    pub envelope: Envelope,
+    timer_period: u16,
+    timer: u16,
+    shift: u16,
+    mode_short: bool,
+    length: u8,
+    enabled: bool,
+}
+
+impl Default for Noise {
+    fn default() -> Self {
+        Self {
+            envelope: Envelope::default(),
+            timer_period: NOISE_PERIODS[0],
+            timer: NOISE_PERIODS[0],
+            shift: 1,
+            mode_short: false,
+            length: 0,
+            enabled: false,
+        }
+    }
+}
+
+impl Noise {
+    /// `$400C-$400F`。
+    pub fn write_reg(&mut self, addr: u16, value: u8) {
+        match addr {
+            0x400C => self.envelope.write(value),
+            0x400E => {
+                self.mode_short = value & 0x80 != 0;
+                self.timer_period = NOISE_PERIODS[(value & 0x0F) as usize];
+            }
+            0x400F => {
+                if self.enabled {
+                    self.length = LENGTH_TABLE[(value >> 3) as usize];
+                }
+                self.envelope.restart();
+            }
+            _ => {}
+        }
+    }
+
+    pub fn set_enabled(&mut self, on: bool) {
+        self.enabled = on;
+        if !on {
+            self.length = 0;
+        }
+    }
+
+    pub fn clock_half(&mut self) {
+        if self.enabled && self.length > 0 && !self.envelope.loop_flag {
+            self.length -= 1;
+        }
+    }
+
+    /// 定时器每 CPU 周期一步；到点时钟 LFSR。
+    pub fn clock_cpu(&mut self) {
+        if self.timer == 0 {
+            self.timer = self.timer_period;
+            let tap = if self.mode_short { 6 } else { 1 };
+            let feedback = (self.shift & 1) ^ ((self.shift >> tap) & 1);
+            self.shift = (self.shift >> 1) | (feedback << 14);
+        } else {
+            self.timer -= 1;
+        }
+    }
+
+    /// 当前 LFSR 位（bit0 为输出）。
+    pub fn lfsr(&self) -> u16 {
+        self.shift
+    }
+
+    pub fn output(&self) -> u8 {
+        if self.length == 0 || self.shift & 1 != 0 {
+            return 0;
+        }
+        self.envelope.output()
+    }
+}
+
+/// APU 顶层（pulse×2 + triangle + noise；DMC 本游戏不用）。
 #[derive(Clone, Debug)]
 pub struct Apu {
     pub pulse1: Pulse,
     pub pulse2: Pulse,
+    pub triangle: Triangle,
+    pub noise: Noise,
     /// `$4015` 原始值（读回/使能位）。
     pub status: u8,
     /// `$4017` bit7 置 = 五步序列（不做 IRQ）。
@@ -265,6 +442,8 @@ impl Apu {
         Self {
             pulse1: Pulse::new(true),
             pulse2: Pulse::new(false),
+            triangle: Triangle::default(),
+            noise: Noise::default(),
             status: 0,
             five_step: false,
             cycles: 0,
@@ -278,10 +457,14 @@ impl Apu {
         match addr {
             0x4000..=0x4003 => self.pulse1.write_reg(0x4000, addr, value),
             0x4004..=0x4007 => self.pulse2.write_reg(0x4004, addr, value),
+            0x4008..=0x400B => self.triangle.write_reg(addr, value),
+            0x400C..=0x400F => self.noise.write_reg(addr, value),
             0x4015 => {
                 self.status = value;
                 self.pulse1.set_enabled(value & 0x01 != 0);
                 self.pulse2.set_enabled(value & 0x02 != 0);
+                self.triangle.set_enabled(value & 0x04 != 0);
+                self.noise.set_enabled(value & 0x08 != 0);
             }
             0x4017 => self.five_step = value & 0x80 != 0,
             _ => {}
@@ -293,6 +476,8 @@ impl Apu {
         let even = self.cycles % 2 == 0;
         self.pulse1.clock_cpu(even);
         self.pulse2.clock_cpu(even);
+        self.triangle.clock_cpu();
+        self.noise.clock_cpu();
 
         // frame counter：240 Hz 四步序列（quarter=7457，half=14913 周期处）。
         let step = self.cycles % 7457;
@@ -300,9 +485,13 @@ impl Apu {
             let q = (self.cycles / 7457) % 4;
             self.pulse1.envelope.clock();
             self.pulse2.envelope.clock();
+            self.noise.envelope.clock();
+            self.triangle.clock_quarter();
             if q % 2 == 1 {
                 self.pulse1.clock_half();
                 self.pulse2.clock_half();
+                self.triangle.clock_half();
+                self.noise.clock_half();
             }
         }
 
@@ -325,12 +514,16 @@ impl Apu {
     /// pulse 支路混音（2A03 非线性公式；triangle/noise 尚未接入）。
     fn mix(&self) -> i16 {
         let p = self.pulse1.output() as f32 + self.pulse2.output() as f32;
-        let v = if p == 0.0 {
+        let pulse_out = if p == 0.0 { 0.0 } else { 95.88 / (8128.0 / p + 100.0) };
+        let t = self.triangle.output() as f32;
+        let n = self.noise.output() as f32;
+        let tnd = if t == 0.0 && n == 0.0 {
             0.0
         } else {
-            95.88 / (8128.0 / p + 100.0)
+            159.79 / (1.0 / (t / 8227.0 + n / 12241.0) + 100.0)
         };
-        (v / 3.0 * i16::MAX as f32) as i16
+        let v = pulse_out + tnd;
+        (v.clamp(0.0, 1.0) * i16::MAX as f32) as i16
     }
 }
 
@@ -417,6 +610,105 @@ mod tests {
         assert_eq!(&seq[..4], &[14, 13, 12, 11], "逐 quarter 递减，实得 {seq:?}");
         assert_eq!(seq[14], 0, "第 15 个 quarter 到 0，实得 {seq:?}");
         assert_eq!(seq[15], 15, "loop 置位 ⇒ 到底后回到 15，实得 {seq:?}");
+    }
+
+
+    /// 三角波 linear counter：halt 位（`$4008` bit7）置位时计数器不递减。
+    #[test]
+    fn triangle_linear_counter_halt_holds_value() {
+        let mut t = Triangle::default();
+        t.set_enabled(true);
+        t.write_reg(0x4008, 0x8A); // halt=1、reload=10
+        t.write_reg(0x400A, 0x40);
+        t.write_reg(0x400B, 0x00);
+        t.clock_quarter();
+        assert_eq!(t.linear, 10);
+        for _ in 0..5 {
+            t.clock_quarter();
+            t.clock_half();
+        }
+        assert_eq!(t.linear, 10, "halt 置位 ⇒ 装载后不再递减");
+
+        let mut t2 = Triangle::default();
+        t2.set_enabled(true);
+        t2.write_reg(0x4008, 0x0A); // halt=0
+        t2.write_reg(0x400B, 0x00);
+        t2.clock_quarter();
+        assert_eq!(t2.linear, 10);
+        for _ in 0..3 {
+            t2.clock_quarter();
+            t2.clock_half();
+        }
+        assert!(t2.linear < 10, "halt 清 ⇒ 逐 quarter 递减，实得 {}", t2.linear);
+    }
+
+    /// 三角波出声：linear/length 都非零时输出非零，且序列在 15→0→15 之间摆动。
+    #[test]
+    fn triangle_produces_waveform() {
+        let mut a = Apu::new();
+        a.write_reg(0x4015, 0x07);
+        a.write_reg(0x4008, 0xFF); // halt + reload 满
+        a.write_reg(0x400A, 0x40); // 周期 $40 ⇒ 序列步进快
+        a.write_reg(0x400B, 0x08); // 长度 254
+        let mut seen_low = false;
+        let mut seen_high = false;
+        for _ in 0..2000 {
+            a.clock_cpu();
+            let v = a.triangle.output();
+            if v == 0 {
+                seen_low = true;
+            }
+            if v >= 14 {
+                seen_high = true;
+            }
+        }
+        assert!(seen_high, "应出现 14/15 档");
+        assert!(seen_low, "应出现 0 档（32 步序列走完一轮）");
+    }
+
+    /// 噪声 LFSR：短模式（tap=6）周期远短于长模式（tap=1）。
+    #[test]
+    fn noise_lfsr_short_mode_cycles_faster() {
+        fn period_steps(short: bool) -> usize {
+            let mut n = Noise::default();
+            n.set_enabled(true);
+            n.write_reg(0x400C, 0x3F); // 无 loop、恒定音量
+            n.write_reg(0x400E, if short { 0x80 } else { 0x00 }); // 最快周期、mode
+            n.write_reg(0x400F, 0x08); // 长度 254
+            let start = n.lfsr();
+            // 返回「LFSR 时钟次数」，换算成 CPU 周期（timer 周期 4 ⇒ 5 周期/步）。
+            let mut steps = 0usize;
+            for _ in 1..200_000 {
+                n.clock_cpu();
+                if n.timer == 4 {
+                    // timer 刚被重装 ⇒ 说明发生了一次 LFSR 时钟
+                    steps += 1;
+                    if n.lfsr() == start {
+                        return steps;
+                    }
+                }
+            }
+            usize::MAX
+        }
+        let s = period_steps(true);
+        let l = period_steps(false);
+        assert!(s < 200, "短模式周期应 ≈93 步，实得 {s}");
+        assert!(l > 20_000, "长模式周期应 ≈32767 步（远大于短模式），实得 {l}");
+    }
+
+    /// 三角波单独也能出声（混音公式 tnd 支路接上了）。
+    #[test]
+    fn triangle_alone_mixes_to_nonzero() {
+        let mut a = Apu::new();
+        a.write_reg(0x4015, 0x07);
+        a.write_reg(0x4008, 0xFF);
+        a.write_reg(0x400A, 0x40);
+        a.write_reg(0x400B, 0x08);
+        for _ in 0..CPU_HZ / 20 {
+            a.clock_cpu();
+        }
+        let s = a.take_samples();
+        assert!(s.iter().any(|&v| v > 0), "三角波应产生非零采样");
     }
 
     /// sweep 静音硬门：目标周期越界 ⇒ 声道静音。
