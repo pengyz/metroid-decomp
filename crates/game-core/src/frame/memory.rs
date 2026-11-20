@@ -630,6 +630,21 @@ impl Manager {
         self.write_ram(crate::ram_map::PPUCTRL_ZP, v);
     }
 
+    /// `EnemyFlipAfterDisplacementAnimIndex`（`$0085/$0086`）——位移后翻转用的动画索引。
+    pub fn flip_anim_index(&self, left: bool) -> u8 {
+        self.read_ram(0x0085 + left as u16)
+    }
+    pub fn set_flip_anim_index(&mut self, left: bool, v: u8) {
+        self.write_ram(0x0085 + left as u16, v);
+    }
+    /// `RidleyFireballCounter`（`$0080`）——Ridley 吐火球的帧计数器。
+    pub fn ridley_fireball_counter(&self) -> u8 {
+        self.read_ram(crate::ram_map::RIDLEY_FIREBALL_COUNTER)
+    }
+    pub fn set_ridley_fireball_counter(&mut self, v: u8) {
+        self.write_ram(crate::ram_map::RIDLEY_FIREBALL_COUNTER, v);
+    }
+
     /// `Cannons`（`$6BF4-$6C73`，16 槽 ×8 B：status/y/x/hi/instrListID/angle/instrDelay/instrID）。
     /// 字段偏移由 `enemy::cannon::f` 定义——这里只提供按偏移的字节面，避免新文件接入裸面。
     pub fn cannon_byte(&self, index: u8, off: u16) -> u8 {

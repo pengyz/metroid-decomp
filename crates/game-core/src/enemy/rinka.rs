@@ -340,7 +340,7 @@ fn init_rinka_position(mem: &mut crate::frame::Manager, x: u8, byte: u8) {
 /// `CommonJump_0E ; 07:EB6E` 的净效果（`asl data05` + `InitEnemyFacing…` 的 `ror`）：
 /// `data05 ← (d05 & $7F) | (L977B[type].bit7 << 7)`、`delay ← EnemyInitDelayTbl[type]`、
 /// `data0D ← ForceSpeedDelay[type]`、`health ← HealthTbl[type]`（`specialAttribs` bit7 时双倍）。
-fn common_jump_0e(mem: &mut crate::frame::Manager, x: u8) {
+pub(crate) fn common_jump_0e(mem: &mut crate::frame::Manager, x: u8) {
     let slot = x / 16;
     let t = mem.enemy(slot).enemy_type();
     let area = crate::frame::cur_area(mem);

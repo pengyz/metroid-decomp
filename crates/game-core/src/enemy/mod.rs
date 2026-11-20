@@ -33,6 +33,7 @@ pub(crate) mod pipe_bug;
 pub(crate) mod en_projectile;
 pub(crate) mod metroid;
 pub(crate) mod mother_brain;
+pub(crate) mod ridley;
 pub(crate) mod rinka;
 pub(crate) mod zebetite;
 pub(crate) mod rio;

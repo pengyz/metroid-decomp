@@ -59,6 +59,10 @@ pub(crate) enum Routine {
     KraidLint,
     /// `KraidNailAIRoutine`（bank4 `04:9B2C`）——asm 正文只有 `jmp KraidLintAIRoutine`。
     KraidNail,
+    /// `RidleyAIRoutine`（bank5 `05:9A13`）——Ridley 本体（槽 0）。
+    Ridley,
+    /// `RidleyFireballAIRoutine`（bank5 `05:9A4A`）——Ridley 吐出的火球（槽 1-5）。
+    RidleyFireball,
     /// `RinkaAIRoutine`（bank3 `03:9A2C`，仅 Tourian include；`SetRinkaSpeed_{AREA}` 按区）。
     Rinka,
     /// `MetroidAIRoutine`（bank3 `03:97F9`，仅 Tourian include；Tourian 表 00/01 = 红/绿 Metroid）。
@@ -171,8 +175,8 @@ const RIDLEY: [Routine; 16] = [
     Crawler,
     PipeBug,
     RemoveEnemy,
-    Unported("RidleyAIRoutine"),
-    Unported("RidleyFireballAIRoutine"),
+    Ridley,
+    RidleyFireball,
     RemoveEnemy,
     Unported("MultiviolaAIRoutine"),
     RemoveEnemy,
@@ -266,7 +270,8 @@ mod tests_ai_table {
         // Ridley：02/03=Sidehopper 家族（Dessgeega）、09=Ridley
         assert_eq!(routine_for(4, 2), SidehopperFloor);
         assert_eq!(routine_for(4, 3), SidehopperCeiling);
-        assert_eq!(routine_for(4, 9), Unported("RidleyAIRoutine"));
+        assert_eq!(routine_for(4, 9), Ridley);
+        assert_eq!(routine_for(4, 10), RidleyFireball);
     }
 
     /// 越界 type（原版 `JumpEngine` 读表外）⇒ `Null`，由调用方 fail-loud 而非静默。
