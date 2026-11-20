@@ -608,11 +608,29 @@ impl Manager {
         self.write_ram(crate::ram_map::MAP_POS_X, x);
         self.write_ram(crate::ram_map::MAP_POS_Y, y);
     }
+    /// `EndTimer` 双字节写（`UpdateEndTimer` 的 BCD 递减落盘）。
+    pub fn store_end_timer(&mut self, lo: u8, hi: u8) {
+        self.write_ram(crate::ram_map::END_TIMER, lo);
+        self.write_ram(crate::ram_map::END_TIMER + 1, hi);
+    }
+    pub fn set_timer3(&mut self, v: u8) {
+        self.write_ram(crate::ram_map::TIMER3, v);
+    }
+
     /// `Timer3`（`$002C`，每 10 帧减 1）。
     pub fn timer3(&self) -> u8 {
         self.read_ram(crate::ram_map::TIMER3)
     }
 
+    /// 精灵 RAM（`$0200-$02FF`）单字节写——`DrawEndTimerEnemy` 直接改已画精灵的 tile 字节。
+    pub fn set_oam_byte(&mut self, off: u8, v: u8) {
+        self.write_ram(0x0200 + off as u16, v);
+    }
+    /// `SFXSQ1InitFlags`（`$0681`）的或写。
+    pub fn or_sfx_sq1_init(&mut self, bit: u8) {
+        let v = self.read_ram(crate::sound::addrs::SQ1_INIT) | bit;
+        self.write_ram(crate::sound::addrs::SQ1_INIT, v);
+    }
     /// `PaletteDataPending`（`$001C`）——NMI 期按它（值 = 调色板 id + 1）挑 VRAM 结构。
     pub fn set_palette_pending(&mut self, v: u8) {
         self.write_ram(crate::ram_map::PALETTE_PENDING, v);
