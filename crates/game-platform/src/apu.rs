@@ -428,6 +428,9 @@ pub struct Apu {
     cycles: u64,
     /// 重采样累加器（CPU 周期 / 采样）。
     sample_acc: u32,
+    /// 直流阻断器状态（硬件输出经耦合电容；2A03 混音结果本身是单极性的）。
+    hp_x: f32,
+    hp_y: f32,
     samples: Vec<i16>,
 }
 
@@ -448,6 +451,8 @@ impl Apu {
             five_step: false,
             cycles: 0,
             sample_acc: 0,
+            hp_x: 0.0,
+            hp_y: 0.0,
             samples: Vec::new(),
         }
     }
@@ -512,7 +517,7 @@ impl Apu {
     }
 
     /// pulse 支路混音（2A03 非线性公式；triangle/noise 尚未接入）。
-    fn mix(&self) -> i16 {
+    fn mix(&mut self) -> i16 {
         let p = self.pulse1.output() as f32 + self.pulse2.output() as f32;
         let pulse_out = if p == 0.0 { 0.0 } else { 95.88 / (8128.0 / p + 100.0) };
         let t = self.triangle.output() as f32;
@@ -522,8 +527,13 @@ impl Apu {
         } else {
             159.79 / (1.0 / (t / 8227.0 + n / 12241.0) + 100.0)
         };
-        let v = pulse_out + tnd;
-        (v.clamp(0.0, 1.0) * i16::MAX as f32) as i16
+        // 2A03 混音输出是单极性（0..1）；硬件后级靠耦合电容隔直，等价于高通。
+        // 一阶高通：y[n] = x[n] - x[n-1] + R*y[n-1]（R≈0.995 ⇒ 转折 ~35 Hz）。
+        let x = pulse_out + tnd;
+        let y = x - self.hp_x + 0.995 * self.hp_y;
+        self.hp_x = x;
+        self.hp_y = y;
+        (y.clamp(-1.0, 1.0) * i16::MAX as f32) as i16
     }
 }
 
