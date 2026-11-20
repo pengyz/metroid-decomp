@@ -435,6 +435,12 @@ pub(crate) fn uw_skree_projectiles(mem: &mut crate::frame::Manager) {
 /// （F140：半径和（EnsExtra+Objects）+屏距）→F2CA（弹 status→weaponAction+弹 isHit 位
 /// +敌 isHit 标志）→下帧 EnemyReactToSamusProjectile（F536——伤害/爆亡 ✓已端口）。
 /// 注：SamusCollisionWithSolidEntities（D976）在 physics 链（不动）。
+/// `GetEnemyIsHitFlags ; 07:F332`（`GetEnemyDistHi ; 07:F340` = `Temp10_DistHi eor #$03`
+/// → `Amul8 ; 07:C2xx`）：`(distHi ^ 3) << 3`。bit5（被武器命中）只在 `distHi==7` 时出现。
+pub(crate) fn enemy_is_hit_flags(dist_hi: u8) -> u8 {
+    (dist_hi ^ 0x03) << 3
+}
+
 pub(crate) fn uw_collision_detection(mem: &mut crate::frame::Manager) {
     // 【goal-轮20 碰撞环头件】CollisionDetection（F034-F038 逐字）：`lda #$FF/sta
     // SamusKnockbackIsBomb($73)/sta SamusHurt010F($010F)`——**每环重置 kb73=$FF**（无此
@@ -470,14 +476,15 @@ pub(crate) fn uw_collision_detection(mem: &mut crate::frame::Manager) {
             // ==== F2CA 命中面（:10391-10407）====
             mem.write_ram(0x0400 + x + 0x0E, pstat); // weaponAction←弹 status
             mem.write_ram(py + 0x0A, mem.read_ram(py + 0x0A) | 0x20); // 弹 isHit（SetSamusProjectileIsHit）
-            // GetEnemyIsHitFlags（方向位：bit5=被武器/bit4=自顶/bit3=自左——简化形）→or isHit
-            let mut flags = 0x20u8;
-            if ey < py_y {
-                flags |= 0x10;
-            }
-            if ex < py_x {
-                flags |= 0x08;
-            }
+            // [r9 修] `GetEnemyIsHitFlags ; 07:F332` = `GetEnemyDistHi ; 07:F340`
+            // （`Temp10_DistHi eor #$03`）+ `Amul8` ⇒ **只有 `(distHi^3)<<3` 一项**，
+            // bit5(命中) 是 distHi==7 的产物，不是恒置位。旧形「恒 0x20 + 位置比较加
+            // bit4/bit3」是自造规则：emu f1293 为 `0x20`（distHi=7），旧形给 `0x38`。
+            // distHi 构建（F1FA，槽序 Y=敌/X=弹）：`0x04 | (Δy<0)<<1 | (Δx<0)`。
+            let dist_hi: u8 = 0x04
+                | (((ey - py_y) < 0) as u8) << 1
+                | ((ex - py_x) < 0) as u8;
+            let flags: u8 = enemy_is_hit_flags(dist_hi);
             let cur = mem.read_ram(0x0400 + x + 4);
             mem.write_ram(0x0400 + x + 4, cur | flags);
         }
@@ -853,5 +860,20 @@ mod tests_bullet_hi_page {
         assert_eq!(m.object(3).status(), 0, "竖滚下 x 越界 ⇒ 弹删");
         assert_eq!((m.object(3).y(), m.object(3).x(), m.object(3).hi()), (0x50, 0xF8, 0x00),
                    "失败帧不得写回坐标/hi（asm 在 @exit_failure 前就 jmp，不落写）");
+    }
+}
+
+#[cfg(test)]
+mod tests_enemy_is_hit_flags {
+    use super::enemy_is_hit_flags;
+
+    /// `GetEnemyIsHitFlags ; 07:F332`：`(distHi^3)<<3`（`Amul8`）。
+    /// 真值校验：emu 6725M f1293 槽5 `isHit=$20` ⇒ distHi=7（敌在弹的左上方）。
+    #[test]
+    fn flags_are_dist_hi_xor_three_times_eight() {
+        assert_eq!(enemy_is_hit_flags(7), 0x20, "distHi=7（上方+左侧）⇒ 只有 bit5");
+        assert_eq!(enemy_is_hit_flags(4), 0x38, "distHi=4（下方+右侧）⇒ $38");
+        assert_eq!(enemy_is_hit_flags(5), 0x30, "distHi=5（下方+左侧）⇒ $30");
+        assert_eq!(enemy_is_hit_flags(6), 0x28, "distHi=6（上方+右侧）⇒ $28");
     }
 }
