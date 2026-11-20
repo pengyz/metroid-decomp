@@ -512,6 +512,99 @@ impl Manager {
         self.read_ram(crate::ram_map::FRAME_COUNT)
     }
 
+    // ---- TileBlasts 池（`$0500`，13 槽 × 16 B；`constants_ram.asm:986`）----
+    // 【为什么收口在本文件】与 [`Self::frame_count`]/[`Self::kraid_lint_counter`] 同族：
+    // `$0500` 不属于任何 typed 域（既不是敌槽也不是 RoomRAM），`world/tile_blast.rs`
+    // 按 `raw-surface` 纪律不许新接入裸字节面，故池内字节读写统一走这里。
+    // 字段偏移由 `world/tile_blast.rs` 的 asm 结构化访问（`TileBlasts.0.<field>,x`）钉住。
+
+    /// TileBlasts 槽基址。
+    fn tb_addr(slot: u8, off: u16) -> u16 {
+        debug_assert!(slot < 13, "TileBlasts 槽号越界：{slot}");
+        0x0500 + slot as u16 * 16 + off
+    }
+    /// 槽内 `routine`。
+    pub fn tb_routine(&self, slot: u8) -> u8 { self.read_ram(Self::tb_addr(slot, 0)) }
+    /// 设 `routine`。
+    pub fn set_tb_routine(&mut self, slot: u8, v: u8) { self.write_ram(Self::tb_addr(slot, 0), v); }
+    /// 槽内 `delay`。
+    pub fn tb_delay(&self, slot: u8) -> u8 { self.read_ram(Self::tb_addr(slot, 7)) }
+    /// 设 `delay`。
+    pub fn set_tb_delay(&mut self, slot: u8, v: u8) { self.write_ram(Self::tb_addr(slot, 7), v); }
+    /// 槽内 `roomRAMPtr`（两个字节合成 u16）。
+    pub fn tb_ptr(&self, slot: u8) -> u16 {
+        (self.read_ram(Self::tb_addr(slot, 10)) as u16) << 8 | self.read_ram(Self::tb_addr(slot, 9)) as u16
+    }
+    /// 设 `roomRAMPtr`。
+    pub fn set_tb_ptr(&mut self, slot: u8, v: u16) {
+        self.write_ram(Self::tb_addr(slot, 9), v as u8);
+        self.write_ram(Self::tb_addr(slot, 10), (v >> 8) as u8);
+    }
+    /// 槽内 `type`（碎块类型 —— 4×4 小泡/1×1/2×2 分组）。
+    pub fn tb_type(&self, slot: u8) -> u8 { self.read_ram(Self::tb_addr(slot, 11)) }
+    /// 设 `type`。
+    pub fn set_tb_type(&mut self, slot: u8, v: u8) { self.write_ram(Self::tb_addr(slot, 11), v); }
+    /// 槽内 `animFrame`（= VRAM 字符串 id）。
+    pub fn tb_anim_frame(&self, slot: u8) -> u8 { self.read_ram(Self::tb_addr(slot, 12)) }
+    /// 设 `animFrame`。
+    pub fn set_tb_anim_frame(&mut self, slot: u8, v: u8) { self.write_ram(Self::tb_addr(slot, 12), v); }
+    /// 槽内 `animIndex`。
+    pub fn tb_anim_index(&self, slot: u8) -> u8 { self.read_ram(Self::tb_addr(slot, 13)) }
+    /// 设 `animIndex`。
+    pub fn set_tb_anim_index(&mut self, slot: u8, v: u8) { self.write_ram(Self::tb_addr(slot, 13), v); }
+    /// 槽内 `animDelay`。
+    pub fn tb_anim_delay(&self, slot: u8) -> u8 { self.read_ram(Self::tb_addr(slot, 14)) }
+    /// 设 `animDelay`。
+    pub fn set_tb_anim_delay(&mut self, slot: u8, v: u8) { self.write_ram(Self::tb_addr(slot, 14), v); }
+    /// 槽内 `spare05`（原版把 `animIndex` 镜一份进来，`UpdateTileBlastAnim` 回滚用）。
+    pub fn tb_spare05(&self, slot: u8) -> u8 { self.read_ram(Self::tb_addr(slot, 15)) }
+    /// 设 `spare05`。
+    pub fn set_tb_spare05(&mut self, slot: u8, v: u8) { self.write_ram(Self::tb_addr(slot, 15), v); }
+
+    /// `VRAMStructBufferIndex`（`$07A0`）——PPU 写缓冲游标（>= `$1F` 视为满）。
+    pub fn vram_struct_index(&self) -> u8 {
+        self.read_ram(crate::ram_map::VRAM_STRUCT_INDEX)
+    }
+
+    /// `Temp00/Temp01`（`$0000/$0001`）这对零页临时量——`DrawTileBlast` 用它们
+    /// 把「RoomRAM 源地址 / 名表目标高字节」传给 `write_vram_string`。
+    pub fn set_ptr00_lo_hi(&mut self, lo: u8, hi: u8) {
+        self.write_ram(0x0000, lo);
+        self.write_ram(0x0001, hi);
+    }
+
+    /// 设 `SamusGear`（测试/装配面）。
+    pub fn set_samus_gear(&mut self, v: u8) {
+        self.write_wram(crate::ram_map::SAMUS_GEAR, v);
+    }
+
+    /// 设 `FrameCount`（`$002D`）——测试里摆帧相序用。
+    pub fn set_frame_count(&mut self, v: u8) {
+        self.write_ram(crate::ram_map::FRAME_COUNT, v);
+    }
+
+    /// 设 `Joy1Change`（`$0012`）——测试里模拟「本帧刚按下」。
+    pub fn set_joy1_change(&mut self, v: u8) {
+        self.write_ram(crate::ram_map::JOY1_CHANGE, v);
+    }
+
+    /// `SamusGear`（`$6878`，WRAM 装备位图）——`CheckBombLaunch ; 07:D150` 读 bit1
+    /// （有没有炸弹）。它不在 16 字节 Samus 结构内，按同族收口在本豁免文件。
+    pub fn samus_gear(&self) -> u8 {
+        self.read_wram(crate::ram_map::SAMUS_GEAR)
+    }
+
+    /// `Joy1Change`（`$0012`）——「本帧刚按下」的按键位图（`CheckBombLaunch` 读它）。
+    /// 与 [`Self::frame_count`] 同族收口（非任何 typed 域的字段）。
+    pub fn joy1_change(&self) -> u8 {
+        self.read_ram(crate::ram_map::JOY1_CHANGE)
+    }
+
+    /// `Joy1Retrig`（`$0016`）——连发重触发位图（与 `Joy1Change` 同判 FIRE）。
+    pub fn joy1_retrig(&self) -> u8 {
+        self.read_ram(crate::title::state::JOY1_RETRIG)
+    }
+
     /// `KraidLintCounter`（`$007E`，`constants_ram.asm:649`）——Kraid 的 Lint 发射周期
     /// 计数器（`KraidTryToLaunchLint ; 04:9BE0` 每 2 帧减 1）。asm 注释：Ridley 也误用它。
     ///

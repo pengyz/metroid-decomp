@@ -1189,6 +1189,36 @@ pub fn en_projectile_pos_offset_y(area: u8) -> &'static [u8] { en_aux_slice(area
 pub fn en_projectile_movement_ptrs(area: u8) -> &'static [u8] { en_aux_slice(area, 140, 8) }
 /// `VRAMStringPtrTable ; $97AF`（34 B，`PtrTableEntryArea` 记录）。
 pub fn vram_string_ptrs(area: u8) -> &'static [u8] { en_aux_slice(area, 148, 34) }
+
+/// 瓦片爆用的第 `id` 条 VRAM 字符串（`VRAMStringPtrTable` 下标，0..16）。
+///
+/// 段布局：`17 x u16`（相对串体起点的偏移）+ 串体；串长由 `(id+1)` 的偏移差给出
+/// （最后一串到段尾）。提取侧的连续性自检保证了「偏移差 == 上一串尺寸」。
+///
+/// 消费点 `GetVRAMStringPtr ; 07:FECC`（`lda VRAMStringPtrTable,y`）。
+pub fn vram_string(area: u8, id: u8) -> Option<&'static [u8]> {
+    const K: [PackKey; 5] = [
+        PackKey::AreaBrVramStrings,
+        PackKey::AreaNoVramStrings,
+        PackKey::AreaToVramStrings,
+        PackKey::AreaKrVramStrings,
+        PackKey::AreaRiVramStrings,
+    ];
+    const COUNT: usize = 17;
+    let seg = pack::get(K[area_idx(area)? as usize]);
+    let body = seg.get(COUNT * 2..)?;
+    let rel = |i: usize| -> Option<usize> {
+        let b = seg.get(i * 2..i * 2 + 2)?;
+        Some(u16::from_le_bytes([b[0], b[1]]) as usize)
+    };
+    let id = id as usize;
+    if id >= COUNT {
+        return None;
+    }
+    let start = rel(id)?;
+    let end = if id + 1 < COUNT { rel(id + 1)? } else { body.len() };
+    body.get(start..end)
+}
 /// `EnAccelY/X` + `EnSpeedY/X` **连续 80 B 窗**（各 20 B）——asm 用同一 `y` 分别查四表，
 /// `y` 越界时会读进下一张表，故必须按同一窗口索引而不是切成四个独立切片。
 pub fn en_accel_speed_window(area: u8) -> &'static [u8] { en_aux_slice(area, 16, 80) }

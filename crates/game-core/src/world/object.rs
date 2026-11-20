@@ -35,6 +35,8 @@ pub(crate) mod obj {
     pub(crate) const X: u16 = 0x0E;
     /// 已上屏标记（`onScreen`）：`Doors_RemoveIfOffScreen ; 07:ED65` 读 `$030B,x`。
     pub(crate) const ON_SCREEN: u16 = 0x0B;
+    /// `SamusProjectileDieDelay`（`$030F` 族）——炸弹引信/爆炸相位计数。
+    pub(crate) const DIE_DELAY: u16 = 0x0F;
     /// `isHit`（`$030A`）。
     pub(crate) const IS_HIT: u16 = 0x0A;
     /// `hi`（`$030C`，名表号高位 / 目标名表）。
@@ -120,6 +122,56 @@ impl Object<'_> {
     }
 
     /// `$030A isHit`（门绘制前清零；子弹命中标记）。
+    /// `SamusProjectileDieDelay`（`$030F` 族）——炸弹引信剩余帧数 / 爆炸相位计数。
+    pub fn die_delay(&self) -> u8 {
+        self.mem.read_ram(self.addr(obj::DIE_DELAY))
+    }
+
+    /// 设 `SamusProjectileDieDelay`。
+    pub fn set_die_delay(&mut self, v: u8) {
+        self.mem.write_ram(self.addr(obj::DIE_DELAY), v);
+    }
+
+    /// `animFrame`（`$0303` 族）——当前显示帧。
+    pub fn anim_frame(&self) -> u8 {
+        self.mem.read_ram(self.addr(obj::ANIM_FRAME))
+    }
+
+    /// 设 `animFrame`。
+    pub fn set_anim_frame(&mut self, v: u8) {
+        self.mem.write_ram(self.addr(obj::ANIM_FRAME), v);
+    }
+
+    /// `animDelay`（`$0304` 族）——帧间隔计数。
+    pub fn anim_delay(&self) -> u8 {
+        self.mem.read_ram(self.addr(obj::ANIM_DELAY))
+    }
+
+    /// 设 `animDelay`。
+    pub fn set_anim_delay(&mut self, v: u8) {
+        self.mem.write_ram(self.addr(obj::ANIM_DELAY), v);
+    }
+
+    /// `animResetIndex`（`$0305` 族）——动画回绕点。
+    pub fn anim_reset_index(&self) -> u8 {
+        self.mem.read_ram(self.addr(obj::ANIM_RESET))
+    }
+
+    /// 设 `animResetIndex`。
+    pub fn set_anim_reset_index(&mut self, v: u8) {
+        self.mem.write_ram(self.addr(obj::ANIM_RESET), v);
+    }
+
+    /// `animIndex`（`$0306` 族）——动画序列表游标。
+    pub fn anim_index(&self) -> u8 {
+        self.mem.read_ram(self.addr(obj::ANIM_INDEX))
+    }
+
+    /// 设 `animIndex`。
+    pub fn set_anim_index(&mut self, v: u8) {
+        self.mem.write_ram(self.addr(obj::ANIM_INDEX), v);
+    }
+
     pub fn is_hit(&self) -> u8 {
         self.mem.read_ram(self.addr(obj::IS_HIT))
     }

@@ -209,6 +209,38 @@ mod tests_prepare_game_over {
         assert_eq!(m.read_ram(ram_map::GAME_MODE), 1, "InitBank0 置 GameMode←1");
     }
 
+    /// `LC95F` 的分支址：asm 读 **`MotherBrainStatus ; $0098`**（`constants_ram.asm:708`），
+    /// `cmp #$0A` 相等 ⇒ `inc MainRoutine`（立即 GameOver），否则 40 帧计时器。
+    ///
+    /// 旧形读 `$687B`（= KraidStatueStatus）——本测同时钉住两点：①`$0098=#$0A` 走立即
+    /// 分支；②`$687B=#$0A` 不得影响分支（防再次用错址）。
+    #[test]
+    fn death_chain_branches_on_mother_brain_status_not_kraid_statue() {
+        let mut m = Manager::default();
+        m.write_ram(ram_map::MAIN_ROUTINE, 3);
+        m.samus().set_status(crate::samus::state::SamusStatus::Dead2);
+        m.samus().set_anim_delay(1);
+        m.write_ram(ram_map::MOTHER_BRAIN_STATUS, 0x0A);
+        m.write_ram(0x687B, 0x00); // 雕像状态与判据无关
+        game_engine(&mut m);
+        assert_eq!(
+            m.read_ram(ram_map::MAIN_ROUTINE), 4,
+            "MB 已死 ⇒ inc MainRoutine 直接到 PrepareGameOver"
+        );
+        assert_eq!(m.read_ram(0x0020), 0, "不得写 NextRoutine（那条是 40 帧径）");
+
+        // 反向：MB 未死但雕像状态是 $0A ⇒ 必须走 40 帧计时器那条
+        let mut n = Manager::default();
+        n.write_ram(ram_map::MAIN_ROUTINE, 3);
+        n.samus().set_status(crate::samus::state::SamusStatus::Dead2);
+        n.samus().set_anim_delay(1);
+        n.write_ram(ram_map::MOTHER_BRAIN_STATUS, 0x01);
+        n.write_ram(0x687B, 0x0A);
+        game_engine(&mut n);
+        assert_eq!(n.read_ram(ram_map::MAIN_ROUTINE), 9, "走 WaitTimer 径");
+        assert_eq!(n.read_ram(0x0020), 4);
+    }
+
     /// 对照（防空对照）：只清 BG/OBJ 两位（`and #~$18`），**其余位保持**，
     /// 且绝不把 `$1E` 写回（那是 ScreenOn 的形）——防「用点屏冒充关屏」的假绿。
     #[test]
@@ -656,8 +688,12 @@ pub fn game_engine(mem: &mut Manager) {
         // SilenceMusic（$B283 族——SFXNoiseInitFlags|=sfxNoise_SilenceMusic）
         let f = mem.read_ram(0x0684) | 0x01;
         mem.write_ram(0x0684, f);
-        if mem.read_ram(0x687B) == 0x0A {
-            // MotherBrainStatus==0x0A⇒inc MainRoutine（→GameOver）
+        // 【2026-11-20 修】旧形读 `$687B`（= KraidStatueStatus）当 MotherBrainStatus：
+        // asm `GameEngine ; 07:C92A`（`prg7_engine.asm:2063-2080`）读的是
+        // `MotherBrainStatus ; $0098`（`constants_ram.asm:708`）。用错址 ⇒「MB 已死 ⇒
+        // 立即 GameOver」这条边永不触发，进 Tourian 死亡必走 40 帧计时器。
+        if mem.read_ram(crate::ram_map::MOTHER_BRAIN_STATUS) == 0x0A {
+            // MotherBrainStatus==0x0A ⇒ inc MainRoutine（→GameOver）
             let mr = mem.read_ram(crate::ram_map::MAIN_ROUTINE);
             mem.write_ram(crate::ram_map::MAIN_ROUTINE, mr.wrapping_add(1));
         } else {

@@ -8,6 +8,7 @@ pub(crate) mod room_ram;
 pub(crate) mod update;
 pub(crate) mod camera;
 pub(crate) mod object;
+pub(crate) mod tile_blast;
 pub(crate) mod object_globals;
 pub(crate) mod scroll_blocks;
 pub(crate) mod room_draw;

@@ -112,6 +112,19 @@ impl<'a> Room<'a> {
         self.mem.write_wram(a, v);
     }
 
+    /// 按 RoomRAM **字节地址**读瓦片（`$6000-$67FF` 直址）。
+    ///
+    /// 消费点是瓦片爆的绘制径（`DrawTileBlast ; 07:FEDC`：`(Temp00_RoomRAMPtr),y`），
+    /// 那里拿到的是逐行推进的裸地址而不是 (y,x) 对，所以不经 `addr()` 换算。
+    pub fn tile_raw(&self, a: u16) -> u8 {
+        self.mem.read_wram(a)
+    }
+
+    /// 按 RoomRAM **字节地址**写瓦片（同上，`DrawTileBlast` 的 `sta (Temp00),y`）。
+    pub fn set_tile_raw(&mut self, a: u16, v: u8) {
+        self.mem.write_wram(a, v);
+    }
+
     /// 顺序写游标 `RoomRAMWorkPtr`。
     pub fn work_ptr(&self) -> u16 {
         u16::from_le_bytes([self.mem.read_ram(WORK_PTR), self.mem.read_ram(WORK_PTR + 1)])

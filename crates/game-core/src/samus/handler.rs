@@ -1341,9 +1341,9 @@ pub fn samus_roll(mem: &mut Manager) {
     // Lx033：SetSamusRunAccel（CCB7——球滚加速 30/D0）→LCF2E→CheckBombLaunch
     set_samus_run_accel(mem, mem.read_ram(crate::ram_map::SAMUS_DIR));
     solid_entity_response(mem); // LCF2E
-    // CheckBombLaunch（`prg7_engine.asm:3685 CheckBombLaunch: ; 07:D150`——炸弹发射件
-    // （吃炸弹能力后径）——随件记账）
-    crate::frame::DIVERGENCES.with(|d| d.borrow_mut().push(0x0D150));
+    // CheckBombLaunch（`prg7_engine.asm:3685 CheckBombLaunch: ; 07:D150`）——
+    // 滚球态按 B 埋弹（三槽 D/E/F 依次找空位）。
+    crate::weapon::bomb::check_bomb_launch(mem);
     if mem.read_ram(crate::ram_map::JOY1_STATUS) & (RIGHT | LEFT) == 0 {
         // 无右/左⇒StopHorzMovement（CFB7——停速）
         mem.write_ram(crate::ram_map::SAMUS_ACCEL_X, 0);

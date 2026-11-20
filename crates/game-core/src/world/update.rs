@@ -154,7 +154,9 @@ pub(crate) fn uw_enemy_explosions(mem: &mut crate::frame::Manager) {
 pub(crate) fn uw_mellows(_mem: &mut crate::frame::Manager) {}
 
 /// UpdateAllTileBlasts（瓦片爆/复原——空态跳过）。
-pub(crate) fn uw_tile_blasts(_mem: &mut crate::frame::Manager) {}
+pub(crate) fn uw_tile_blasts(mem: &mut crate::frame::Manager) {
+    crate::world::tile_blast::update_all_tile_blasts(mem);
+}
 
 /// UpdateAllEnProjectiles（敌弹族——asm UpdateWorld 07:CB29 环位 :2507；槽空 status=0 ⇒
 /// UpdateEnProjectile@RTS 恒空径）。

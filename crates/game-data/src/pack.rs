@@ -253,6 +253,15 @@ pub enum PackKey {
     AreaToEnProjMoveStr = 188,
     AreaKrEnProjMoveStr = 189,
     AreaRiEnProjMoveStr = 190,
+    /// 瓦片爆的 17 条 VRAM 字符串（**按区**的碎块图案）——`VRAMStringPtrTable ; 各 bank $97AF`
+    /// （已在 `en_aux` 段内，34 B = 17 × u16）指向的串体。
+    /// 每段 = `17 × u16`（相对本段字节体起点的偏移）+ 串体（各串 `1 + height*width` 字节，
+    /// 头字节 %hhhhwwww）。消费点 `DrawTileBlast ; 07:FEDC`（`GetVRAMStringPtr ; 07:FECC`）。
+    AreaBrVramStrings = 191,
+    AreaNoVramStrings = 192,
+    AreaToVramStrings = 193,
+    AreaKrVramStrings = 194,
+    AreaRiVramStrings = 195,
     // 敌死亡动画索引表 `EnemyDeathAnimIndex ; 各 bank $960B`（32 B = type×2+facing）。
     // **按区不同**（bank1 `27 27 29 29…` vs bank3 `08 08 08 08…`）——先前 Rust 侧是单常量
     // 取 bank1，等于让其余四区的爆体帧全用 Brinstar 的表。
@@ -505,6 +514,11 @@ impl PackKey {
             PackKey::AreaToEnProjMoveStr => "area.to.en_proj_move_str",
             PackKey::AreaKrEnProjMoveStr => "area.kr.en_proj_move_str",
             PackKey::AreaRiEnProjMoveStr => "area.ri.en_proj_move_str",
+            PackKey::AreaBrVramStrings => "area.br.vram_strings",
+            PackKey::AreaNoVramStrings => "area.no.vram_strings",
+            PackKey::AreaToVramStrings => "area.to.vram_strings",
+            PackKey::AreaKrVramStrings => "area.kr.vram_strings",
+            PackKey::AreaRiVramStrings => "area.ri.vram_strings",
             PackKey::BrEnSprites => "area.br.en_sprites",
             PackKey::NoEnSprites => "area.no.en_sprites",
             PackKey::KrEnSprites => "area.kr.en_sprites",
@@ -707,6 +721,11 @@ impl PackKey {
             188 => PackKey::AreaToEnProjMoveStr,
             189 => PackKey::AreaKrEnProjMoveStr,
             190 => PackKey::AreaRiEnProjMoveStr,
+            191 => PackKey::AreaBrVramStrings,
+            192 => PackKey::AreaNoVramStrings,
+            193 => PackKey::AreaToVramStrings,
+            194 => PackKey::AreaKrVramStrings,
+            195 => PackKey::AreaRiVramStrings,
             _ => return None,
         })
     }

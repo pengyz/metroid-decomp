@@ -74,8 +74,12 @@ pub fn update_samus_projectiles(mem: &mut crate::frame::Manager) {
                 crate::frame::DIVERGENCES.with(|d| d.borrow_mut().push(0xD522)); // 轨迹面（记账）
                 update_bullet(mem);
             }
+            // Bomb 族（`DoOneSamusProjectile ; 07:D4CB` 表项 5/8=BombInit、
+            // 6/9=BombCountdown、7/10=BombExplode——两套半程各一份，asm 原样）
+            5 | 8 => crate::weapon::bomb::bomb_init(mem),
+            6 | 9 => crate::weapon::bomb::bomb_countdown(mem),
+            7 | 10 => crate::weapon::bomb::bomb_explode(mem),
             _ => {
-                // Bomb 族（5-10（埋弹触发面（不在本卡判据））——记账 no-op（防爆）
                 crate::frame::DIVERGENCES.with(|d| d.borrow_mut().push(0xD4CB));
             }
         }

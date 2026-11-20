@@ -58,6 +58,7 @@ pub fn sections(rom: &[u8]) -> Result<Vec<Section>, String> {
     out.extend(extract_title_tables(prg)?);
     out.extend(extract_tourian_metroid_data(prg)?);
     out.extend(extract_area_pal_toggle(prg)?);
+    out.extend(extract_area_vram_strings(prg)?);
     out.extend(extract_area_headers(prg)?);
     out.extend(extract_en_aux(prg)?);
     out.extend(extract_en_anim_idx(prg)?);
@@ -710,6 +711,16 @@ fn seg_meta() -> Vec<SegMeta> {
         SegMeta { key: PackKey::AreaToEnProjMoveStr, kind: "bytes", elem: 1, count: 7, rom: "bank03:$97D5", note: "敌弹移动串（M0/M1 同址别名；50 22 FF 50 30 FF FF）" },
         SegMeta { key: PackKey::AreaKrEnProjMoveStr, kind: "bytes", elem: 1, count: 60, rom: "bank04:$98C9", note: "敌弹移动串 M0-M3（同 Brinstar 字节）" },
         SegMeta { key: PackKey::AreaRiEnProjMoveStr, kind: "bytes", elem: 1, count: 45, rom: "bank05:$97FD", note: "敌弹移动串（M0 同址别名；polyp 三串）" },
+        SegMeta { key: PackKey::AreaBrVramStrings, kind: "offs+blob", elem: 1, count: 0,
+                  rom: "bank01:$97AF->串体", note: "Brinstar 瓦片爆 17 串（头 34B 偏移 + 串体）" },
+        SegMeta { key: PackKey::AreaNoVramStrings, kind: "offs+blob", elem: 1, count: 0,
+                  rom: "bank02:$97AF->串体", note: "Norfair 瓦片爆 17 串" },
+        SegMeta { key: PackKey::AreaToVramStrings, kind: "offs+blob", elem: 1, count: 0,
+                  rom: "bank03:$97AF->串体", note: "Tourian 瓦片爆 17 串" },
+        SegMeta { key: PackKey::AreaKrVramStrings, kind: "offs+blob", elem: 1, count: 0,
+                  rom: "bank04:$97AF->串体", note: "Kraid 瓦片爆 17 串" },
+        SegMeta { key: PackKey::AreaRiVramStrings, kind: "offs+blob", elem: 1, count: 0,
+                  rom: "bank05:$97AF->串体", note: "Ridley 瓦片爆 17 串" },
     ];
     v
 }
@@ -1169,6 +1180,85 @@ pub fn area_banks(prg: &[u8]) -> Result<[u8; 5], String> {
             return Err(format!("BankTable[{i}] = 0（应 = bank+1）"));
         }
         out[i] = b - 1;
+    }
+    Ok(out)
+}
+
+/// 瓦片爆的 VRAM 字符串（**按区**）——`VRAMStringPtrTable ; 各 bank $97AF`（17 项 u16）
+/// 指向的串体，`DrawTileBlast ; 07:FEDC` 经 `GetVRAMStringPtr ; 07:FECC` 取用。
+///
+/// 段布局（每区一段）：`17 x u16`（相对**串体起点**的偏移，LE）+ 串体。
+/// 串体界 = `ptr[0]` 到 `ptr[16] + 1 + height*width`（头字节 `%hhhhwwww`）。
+/// 提取侧三条机械自检：①指针单调不减 ②每串头字节高/低半字节非 0
+/// ③相邻串必须首尾相接（asm 里就是顺序排布，错位即整块图案错）。
+const VRAM_STRING_PTR_ADDR: u16 = 0x97AF;
+const VRAM_STRING_COUNT: usize = 17;
+
+fn extract_area_vram_strings(prg: &[u8]) -> Result<Vec<Section>, String> {
+    let banks = area_banks(prg)?;
+    let keys = [
+        PackKey::AreaBrVramStrings,
+        PackKey::AreaNoVramStrings,
+        PackKey::AreaToVramStrings,
+        PackKey::AreaKrVramStrings,
+        PackKey::AreaRiVramStrings,
+    ];
+    let mut out = Vec::with_capacity(5);
+    for (area, bank) in banks.iter().enumerate() {
+        let tbl = bank_slice(prg, *bank, VRAM_STRING_PTR_ADDR, VRAM_STRING_COUNT * 2)
+            .map_err(|e| format!("VRAMStringPtrTable area{area} bank{bank}: {e}"))?;
+        let mut ptrs = [0u16; VRAM_STRING_COUNT];
+        for (i, p) in ptrs.iter_mut().enumerate() {
+            *p = u16::from_le_bytes([tbl[i * 2], tbl[i * 2 + 1]]);
+        }
+        let base = ptrs[0];
+        let mut rels = [0u16; VRAM_STRING_COUNT];
+        let mut body: Vec<u8> = Vec::new();
+        let mut aliased = false;
+        for i in 0..VRAM_STRING_COUNT {
+            let p = ptrs[i];
+            if aliased {
+                // 表尾的别名项（原版把越界 id 指到字符串区之后，运行时读到别表）——
+                // 记成零长（相对偏移 = 串体长），`assets::vram_string` 返回空切片。
+                rels[i] = body.len() as u16;
+                continue;
+            }
+            let hdr = bank_slice(prg, *bank, p, 1)
+                .map_err(|e| format!("VRAMString area{area} id{i} 头字节 ${p:04X}: {e}"))?[0];
+            let (h, w) = ((hdr >> 4) as usize, (hdr & 0x0F) as usize);
+            if h == 0 || w == 0 {
+                // 别名起点：此后所有项都必须指向同一地址（表尾同址别名），否则是坏数据。
+                for q in ptrs.iter().skip(i) {
+                    if *q != p {
+                        return Err(format!(
+                            "VRAMString area{area} id{i} 起为别名（${p:04X}）但后续指针不同（${q:04X}）"
+                        ));
+                    }
+                }
+                aliased = true;
+                rels[i] = body.len() as u16;
+                continue;
+            }
+            if i > 0 {
+                let prev_end = base as usize + body.len();
+                if p as usize != prev_end {
+                    return Err(format!(
+                        "VRAMString area{area} id{i} ${p:04X} 与前串末尾（${prev_end:04X}）不连续"
+                    ));
+                }
+            }
+            rels[i] = (p - base) as u16;
+            let size = 1 + h * w;
+            let bytes = bank_slice(prg, *bank, p, size)
+                .map_err(|e| format!("VRAMString area{area} id{i} 体 ${p:04X}+{size}: {e}"))?;
+            body.extend_from_slice(&bytes);
+        }
+        let mut data = Vec::with_capacity(VRAM_STRING_COUNT * 2 + body.len());
+        for r in rels.iter() {
+            data.extend_from_slice(&r.to_le_bytes());
+        }
+        data.extend_from_slice(&body);
+        out.push(Section { key: keys[area], data });
     }
     Ok(out)
 }

@@ -48,6 +48,10 @@ pub fn cur_area(mem: &Manager) -> u8 {
 
 /// `InArea`（`$0074`）**原值**（不剥 `$10` 位）——`$10` 参与 asm 判据的地方要用它：
 /// `CheckBlastTile ; 07:D651`（`cpy #$10` 判 Brinstar）与敌弹的 Norfair 判（`cmp #$11`）。
+pub fn set_in_area_raw(mem: &mut Manager, v: u8) {
+    mem.write_ram(crate::ram_map::IN_AREA, v);
+}
+
 pub fn in_area_raw(mem: &Manager) -> u8 {
     mem.read_ram(crate::ram_map::IN_AREA)
 }

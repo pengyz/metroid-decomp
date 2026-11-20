@@ -414,3 +414,11 @@ mod tests {
 
 /// FlashScreen=$C0（:734「#$01=Flash screen during crosshairs routine」）。
 pub const FLASH_SCREEN: u16 = 0x00C0;
+
+/// `MotherBrainStatus`（`$0098`，`constants_ram.asm:708`）——`$00`=MB 不在房内、
+/// `$01`=在房内…`#$0A`=已死。`GameEngine ; 07:C92A` 的死亡收尾读它决定
+/// 「直接 GameOver」还是「40 帧后 GameOver」（`prg7_engine.asm:2063-2080`）。
+pub const MOTHER_BRAIN_STATUS: u16 = 0x0098;
+
+/// RoomRAM 高字节里的名表页位（$6000/$6400 两页之差 = $0400）。
+pub const NAMETABLE_BIT: u16 = 0x0400;
