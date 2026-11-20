@@ -79,6 +79,11 @@ impl Manager {
         self.read_ram(addrs::HAS_BEAM_SFX)
     }
 
+    /// `$061F HasBeamSFX` 写侧（冰束命中置 bit0；long beam 走 bit7）。
+    pub(crate) fn set_has_beam_sfx(&mut self, v: u8) {
+        self.write_ram(addrs::HAS_BEAM_SFX, v);
+    }
+
     /// `SFXNoiseFrame + ct`（$0665+ct——multi 槽 ct=4→$0669）。
     pub(crate) fn sfx_frame(&self, ct: u8) -> u8 {
         self.read_ram(addrs::SFX_FRAME_BASE + ct as u16)

@@ -679,6 +679,17 @@ impl Manager {
     }
 
     /// 精灵 RAM（`$0200-$02FF`）单字节写——`DrawEndTimerEnemy` 直接改已画精灵的 tile 字节。
+    /// `WeaponWaveDir=$0502`/`WeaponWaveInstrTimer=$0501`/`WeaponWaveInstrID=$0500`（按弹槽 y 索引）。
+    pub fn weapon_wave_dir(&self, y: u8) -> u8 {
+        self.read_wram(0x0502 + y as u16)
+    }
+    pub fn set_weapon_wave_dir(&mut self, y: u8, v: u8) {
+        self.write_wram(0x0502 + y as u16, v);
+    }
+    pub fn set_weapon_wave_instr(&mut self, y: u8, timer: u8, id: u8) {
+        self.write_wram(0x0501 + y as u16, timer);
+        self.write_wram(0x0500 + y as u16, id);
+    }
     /// `SamusDir=$004D`——0=右 1=左（大地图方向位）。
     pub fn samus_dir(&self) -> u8 {
         self.read_ram(crate::ram_map::SAMUS_DIR)

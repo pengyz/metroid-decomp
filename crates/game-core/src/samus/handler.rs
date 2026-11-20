@@ -360,6 +360,39 @@ fn samus_run_set_anim(mem: &mut Manager) -> bool {
 /// `CheckMissileLaunchCommon ; 07:D323`：导弹模式下的弹改成导弹（横 `HorizontalMissileAnims[SamusDir]`
 /// =0x8D/0x8B、竖 0x8F）、`status←wa_Missile($0B)`、`DieDelay←$FF`、`dec MissileCount`；
 /// 减到 0 ⇒ 退普通弹模式（`dec MissileToggle`）+ `SelectSamusPalette`。
+
+/// `CheckHorizontalWaveBulletFire ; 07:D359` / `CheckVerticalWaveBulletFire ; 07:D38A`：
+/// 有波束且非导弹模式 ⇒ `WeaponWaveDir←dir(横 SamusDir/竖 $02)`、`InstrTimer←0`、`animDelay←0`、
+/// `InstrID←(y<32 ? $0C : 0)`、`status←wa_WaveBeam($02)`、`anim←ObjAnim_WaveBeam($7D)` + `SFX_WaveFire`。
+fn apply_wave_beam(mem: &mut Manager, slot: u8, base: u16, dir: u8) {
+    if mem.samus_gear() & 0x40 == 0 || mem.missile_toggle() != 0 {
+        return;
+    }
+    mem.set_weapon_wave_dir(slot, dir);
+    let id = if (slot as u16) < 32 { 0x0C } else { 0x00 }; // `tya / jsr Adiv32 / bcs ⇒ 0`
+    mem.set_weapon_wave_instr(slot, 0, id);
+    {
+        let mut o = mem.object(slot);
+        o.set_anim_delay(0);
+        o.set_status(0x02); // wa_WaveBeam
+        o.set_anim_index(0x7D); // ObjAnim_WaveBeam($85EF-$8572)
+        o.set_anim_reset_index(0x7D);
+    }
+    mem.or_sfx_sq1_init(0x04); // SFX_WaveFire（sfxSQ1_WaveFire）
+}
+
+/// `CheckIceBulletFire ; 07:D38E`：非导弹模式 + 有冰束 ⇒ `status←wa_IceBeam($03)`、
+/// `HasBeamSFX|=1`、`SFX_BulletFire`。
+fn apply_ice_beam(mem: &mut Manager, slot: u8) {
+    if mem.missile_toggle() != 0 || mem.samus_gear() & 0x80 == 0 {
+        return;
+    }
+    mem.object(slot).set_status(0x03);
+    let v = mem.has_beam_sfx() | 0x01;
+    mem.set_has_beam_sfx(v);
+    mem.or_sfx_sq1_init(0x01); // SFX_BulletFire（sfxSQ1_BulletFire）
+}
+
 fn apply_missile_launch(mem: &mut Manager, slot: u8, anim: u8) {
     let count = mem.missile_count().wrapping_sub(1);
     {
@@ -403,6 +436,9 @@ fn fire_samus_projectile(mem: &mut Manager) {
     mem.write_ram(base + 5, 0x1B); // RegularBullet（$858D-$8572（弹形态 ① 修））
     mem.write_ram(base + 6, 0x1B); // animIndex
     mem.write_ram(base + 4, 0); // animDelay
+    // 束形态：波束/冰束先于导弹判定（asm 序 InitBullet→Wave→Ice→…→Missile）
+    apply_wave_beam(mem, slot, base, mem.samus_dir() & 1);
+    apply_ice_beam(mem, slot);
     // MissileToggle≠0 ⇒ 本次发射是导弹（`CheckHorizontalMissileLaunch ; 07:D315`）
     if mem.missile_toggle() != 0 {
         let d = mem.samus_dir() & 1;
@@ -455,6 +491,8 @@ fn fire_samus_projectile_upwards(mem: &mut Manager) {
     mem.write_ram(base + 5, 0x1B); // RegularBullet（$858D-$8572（弹形态 ① 修））
     mem.write_ram(base + 6, 0x1B);
     mem.write_ram(base + 4, 0);
+    apply_wave_beam(mem, slot, base, 0x02); // 竖发：dir=$02
+    apply_ice_beam(mem, slot);
     // MissileToggle≠0 ⇒ 竖发导弹（`CheckVerticalMissileLaunch ; 07:D340`，anim=0x8F）
     if mem.missile_toggle() != 0 {
         apply_missile_launch(mem, slot, 0x8F);
