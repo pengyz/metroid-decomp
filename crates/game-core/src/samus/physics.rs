@@ -353,7 +353,7 @@ mod tests {
     #[test]
     fn object_check_move_down_detonates_at_nested() {
         let mut m = Manager::default();
-        let _ = object_check_move_down(&mut m); // 零爆（collision_point_ok 全径）
+        let _ = object_check_move_down(&mut m); // 零爆（`object_check_move_vertical` 全径）
     }
 
     /// ObjectCheckMoveDown 查撞点=**y+radiusY**（下方——asm E7AD `sbc radiusY`→
@@ -771,7 +771,7 @@ pub fn tile_class(t: u8) -> TileClass {
 pub fn object_check_move_down(mem: &mut Manager) -> bool {
     // 壳：A = -radiusY（向下偏移）——几何面
     let _ry = mem.samus().radius_y();
-    // ObjectCheckMoveVertical（E7B5——同构敌径（collision_point_ok））
+    // ObjectCheckMoveVertical（E7B5——同构敌径 `enemy::motion::collision_point_ok`）
     object_check_move_vertical(mem)
 }
 
@@ -1355,13 +1355,14 @@ pub(crate) fn horizontal_span_rows(y: u8, ry: u8) -> (u8, u32) {
 }
 
 /// 水平查撞（asm CheckMoveHorizontal→LE7E6 全径）：判点 X 固定，Y 自顶界逐 +8 行扫
-/// N 行（对象 Y 跨度覆盖的每一行块）。任一行固实(<$80)⇒阻挡。
+/// N 行（对象 Y 跨度覆盖的每一行块）。任一行固实(<$A0，含可炸带 `$80-$9F`)⇒阻挡。
 /// 【goal-r16 修】判点 X 环绕（x<dist 借位）⇒ asm E946 `txa/adc #$00/bne →
 /// inc Temp0B_PositionHi`（横滚限定）——查撞点落**另一张名表**。旧形仍读当前表⇒
 /// 左走到底判点绕 0xF8 读错表 ⇒ 穿墙（emu 在 x=4 被挡、rust 穿到 252 实录）。
 /// 碰撞点 Samus 门数据副作用（**asm 内容锚** `IsWalkableTile: ; 07:E7FB`——LE7E6 循环
 /// 对 Samus（IsSamus≠0）的写点）：可走瓦（≥$A0）时写 SamusDoorData($58)——
-/// $A0(竖滚门)→1、$A1(横滚门)→2、其余→0。$4E/<$80 固实不写（blocked）。
+/// $A0(竖滚门)→1、$A1(横滚门)→2、其余→0。固实瓦（`<$A0`，含 `$4E` 与可炸带
+/// `$80-$9F`）不写（blocked）。
 fn collision_point_samus(mem: &mut Manager, y: u8, x: u8, hi: u8) -> bool {
     let idx = (((y & 0xF8) as u16) << 2) | ((x >> 3) as u16);
     let page = if hi & 1 != 0 { 0x0400u16 } else { 0x0000 };
@@ -1952,7 +1953,7 @@ fn scroll_right_column_draw_bogs_two_frames() {
 mod tests_camera_follow {
     //! 【playability P0】摄像机跟随根件 TDD（asm E668/E626/E6D2/E6A7——渲染目检定谳：
     //! 金腿摄像机随行/我方画面静止+x 绕回）。RoomRAM 0xFF=可走预置（collision_point_ok
-    //！ tile 类判：≥$80 可走）。
+    //! tile 类判：≥$A0 可走）。
 
     use super::*;
 
@@ -2759,6 +2760,40 @@ mod tests_samus_tile_collision {
         put_tile(&mut m, 0x50, 0x40, 0, 0xA1);
         assert!(collision_point_samus(&mut m, 0x50, 0x40, 0));
         assert_eq!(m.read_ram(crate::ram_map::SAMUS_DOOR_DATA), 2, "横滚门 = 2");
+    }
+
+    /// **消费路径级（复核 N3）**：走 `object_check_move_down` 外壳（Samus 真实下落判），
+    /// 在 `y + radiusY` 所在行放可炸瓦 `$82` ⇒ 必须判"受阻"。
+    /// 这层外壳能抓到"判据被绕过/被改错"的回归，而直接调 `collision_point_samus` 抓不到。
+    #[test]
+    fn object_check_move_down_is_blocked_by_blastable_tile() {
+        let mut m = Manager::default();
+        // 半径面显式给值（默认 Manager 里为 0 ⇒ `radiusX==0` 会让整件直接 sec/rts）。
+        m.samus().set_radius_x(0x05);
+        m.samus().set_radius_y(0x08);
+        let ry = m.samus().radius_y();
+        // 判点 = y + radiusY，且**必须 8 像素对齐**（asm `lda Temp00_CollisionPointYMod8 /
+        // bne Lx202` ⇒ 未对齐直接 sec/rts=无碰撞）——取满足对齐的 y。
+        let mut y = 0x40u8;
+        while y.wrapping_add(ry) & 0x07 != 0 {
+            y = y.wrapping_add(1);
+        }
+        m.samus().set_y(y);
+        m.samus().set_x(0x40);
+        let probe_y = y.wrapping_add(ry);
+        // 整行预置可走瓦（未写过的 RoomRAM=0 ⇒ 会被判固实，污染对照）。
+        for col in 0..32u16 {
+            let idx = (((probe_y & 0xF8) as u16) << 2) | col;
+            m.write_wram(0x6000 | (idx & 0x3FF), 0xC0);
+        }
+        put_tile(&mut m, probe_y, 0x40, 0, 0x82);
+        assert!(
+            !object_check_move_down(&mut m),
+            "$82 可炸瓦应让 Samus 下落判受阻（消费路径级）"
+        );
+        // 对照：换成可走瓦 `$C0` ⇒ 不阻。
+        put_tile(&mut m, probe_y, 0x40, 0, 0xC0);
+        assert!(object_check_move_down(&mut m), "$C0 可走瓦不应阻挡");
     }
 
     /// `$4E` 门/像瓦恒固实（`SamusProjectileHitDoorOrStatue` 非弹径 clc）。

@@ -463,7 +463,7 @@
         "crates/game-core/src/ram_map.rs:238",
         "crates/game-core/src/samus/handler.rs:166",
         "crates/game-core/src/ram_map.rs:278",
-        "crates/game-core/src/samus/physics.rs:1756"
+        "crates/game-core/src/samus/physics.rs:1757"
       ]
     },
     {
