@@ -156,7 +156,7 @@ pub(crate) fn uw_area_routine(mem: &mut crate::frame::Manager) {
     crate::world::end_timer::update_end_timer(mem);
     crate::world::end_timer::draw_end_timer_enemy(mem);
     crate::enemy::zebetite::update_all_zebetites(mem);
-    crate::frame::DIVERGENCES.with(|d| d.borrow_mut().push(0xA15E)); // UpdateAllRinkaSpawners（G-6）
+    crate::enemy::rinka::update_all_rinka_spawners(mem);
 }
 
 /// UpdateElevator（`$D7B3`）——电梯十态（`frame::elevator`；槽空 status=0 ⇒ ExitSub 恒空径）。

@@ -51,6 +51,10 @@ fn spawn_item(mem: &mut Manager, item: &game_data::area::items::SpecialItem) {
     match item.item_type & 0x0F {
         0x02 => spawn_power_up(mem, item),
         0x07 => spawn_zebetite(mem, item), // SpawnZebetite（07:EECA）
+        0x08 => {
+            // SpawnRinkaSpawner（07:EEEE）→ SpawnRinkaSpawnerRoutine（03:9D6C）
+            crate::enemy::rinka::spawn_rinka_spawner(mem, item.item_type);
+        }
         // 【占位臂记账】Squeept/Mellow/Elevator/MBCannon/MB/Zebetite/Rinka/Door/Palette
         // 装载件（打敌人/门/电梯包随件）——记账不炸（房间装载径保持可跑）。
         t => {
@@ -61,7 +65,6 @@ fn spawn_item(mem: &mut Manager, item: &game_data::area::items::SpecialItem) {
                     0x04 => 0xEEA1, // SpawnElevator
                     0x05 => 0xEEA6, // SpawnCannon
                     0x06 => 0xEEAE, // SpawnMotherBrain
-                    0x08 => 0xEEEE, // SpawnRinkaSpawner
                     0x09 => 0xEEF4, // SpawnDoor
                     _ => 0xEEFA,     // SpawnPalette
                 })

@@ -622,6 +622,30 @@ impl Manager {
         self.read_ram(crate::ram_map::TIMER3)
     }
 
+    /// `RinkaSpawners`（`$008B-$0090`，2 槽 ×3 B：status/hi/posIndex）——Tourian 母脑房
+    /// 的 Rinka 生成器（`.struct RinkaSpawner`，`constants_ram.asm:10-16`）。
+    fn rinka_spawner_addr(slot: u8, off: u8) -> u16 {
+        0x008B + (slot as u16) * 3 + off as u16
+    }
+    pub fn rinka_spawner_status(&self, slot: u8) -> u8 {
+        self.read_ram(Self::rinka_spawner_addr(slot, 0))
+    }
+    pub fn set_rinka_spawner_status(&mut self, slot: u8, v: u8) {
+        self.write_ram(Self::rinka_spawner_addr(slot, 0), v);
+    }
+    pub fn rinka_spawner_hi(&self, slot: u8) -> u8 {
+        self.read_ram(Self::rinka_spawner_addr(slot, 1))
+    }
+    pub fn set_rinka_spawner_hi(&mut self, slot: u8, v: u8) {
+        self.write_ram(Self::rinka_spawner_addr(slot, 1), v);
+    }
+    pub fn rinka_spawner_pos_index(&self, slot: u8) -> u8 {
+        self.read_ram(Self::rinka_spawner_addr(slot, 2))
+    }
+    pub fn set_rinka_spawner_pos_index(&mut self, slot: u8, v: u8) {
+        self.write_ram(Self::rinka_spawner_addr(slot, 2), v);
+    }
+
     /// 精灵 RAM（`$0200-$02FF`）单字节写——`DrawEndTimerEnemy` 直接改已画精灵的 tile 字节。
     pub fn set_oam_byte(&mut self, off: u8, v: u8) {
         self.write_ram(0x0200 + off as u16, v);

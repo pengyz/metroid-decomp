@@ -298,3 +298,249 @@ mod tests_rinka {
         assert_eq!(RINKA_ANIM_BEAT, 8);
     }
 }
+
+//==============================================================================
+// Rinka 生成器（`UpdateAllRinkaSpawners ; 03:A15E` + `SpawnRinkaSpawnerRoutine ; 03:9D6C`）
+//==============================================================================
+
+/// `RinkaSpawnPosTbl ; 03:A1DB`：12 B = 2 生成器 × 6 位置，每字节高 nibble=Y、低 nibble=X
+/// （`SpawnRinka_InitPositionXY ; 03:9EE7` 把高 nibble 映射成 `(hi<<4)|7`、低 nibble 映射成
+/// `(lo<<4)|7`）。生成器 `status` 选偶/奇列（0⇒偶、1⇒奇）。
+const SPAWN_POS_TBL: [u8; 12] = [
+    0x22, 0x2A, 0x2A, 0xBA, 0xB2, 0x2A, 0xC4, 0x2A, 0xC8, 0xBA, 0xBA, 0xBA,
+];
+
+/// 生成器槽数（`RinkaSpawners instanceof RinkaSpawner 2`）。
+pub(crate) const SPAWNER_COUNT: u8 = 2;
+
+/// `RinkaSpawnSpawner ; 07:EEEE` + `SpawnRinkaSpawnerRoutine ; 03:9D6C`：
+/// 先试生成器 1、再试 0；`status` 的 bit7 置（`$FF`）表示空闲 ⇒ 写入
+/// `status ← 特项字节 >> 4`（0/1，选偶数/奇数列）、`hi ← (PPUCTRL_ZP ^ ScrollDir) & 1`。
+/// 返回 `$FF`（特项消耗），与 asm 出口 A 一致。
+pub(crate) fn spawn_rinka_spawner(mem: &mut crate::frame::Manager, item_type: u8) -> u8 {
+    for slot in [1u8, 0u8] {
+        if mem.rinka_spawner_status(slot) < 0x80 {
+            continue; // `bpl @RTS`：已有生成器（或本轮已建）⇒ 换下一个
+        }
+        mem.set_rinka_spawner_status(slot, item_type >> 4);
+        let nt = (mem.read_ram(crate::ram_map::PPUCTRL_ZP) ^ mem.read_ram(crate::ram_map::SCROLL_DIR)) & 0x01;
+        mem.set_rinka_spawner_hi(slot, nt);
+        break;
+    }
+    0xFF
+}
+
+/// `SpawnRinka_InitPositionXY ; 03:9EE7`：`y = (byte & $F0) | $07`、`x = (byte << 4) | $07`。
+fn init_rinka_position(mem: &mut crate::frame::Manager, x: u8, byte: u8) {
+    let slot = x / 16;
+    mem.enemy(slot).set_y((byte & 0xF0) | 0x07);
+    mem.enemy(slot).set_pos_x(byte.wrapping_shl(4) | 0x07);
+}
+
+/// `CommonJump_0E ; 07:EB6E` 的净效果（`asl data05` + `InitEnemyFacing…` 的 `ror`）：
+/// `data05 ← (d05 & $7F) | (L977B[type].bit7 << 7)`、`delay ← EnemyInitDelayTbl[type]`、
+/// `data0D ← ForceSpeedDelay[type]`、`health ← HealthTbl[type]`（`specialAttribs` bit7 时双倍）。
+fn common_jump_0e(mem: &mut crate::frame::Manager, x: u8) {
+    let slot = x / 16;
+    let t = mem.enemy(slot).enemy_type();
+    let area = crate::frame::cur_area(mem);
+    let raw977b = game_data::assets::enemy_facing(area)[(t & 0x3F) as usize];
+    let d5 = (mem.enemy(slot).data05() & 0x7F) | if raw977b & 0x80 != 0 { 0x80 } else { 0 };
+    mem.enemy(slot).set_data05(d5);
+    mem.enemy(slot).set_delay(game_data::assets::enemy_init_delay(area)[t as usize]);
+    mem.enemy(slot).set_data0d(game_data::assets::enemy_force_speed_delay(area)[t as usize]);
+    let mut hp = game_data::assets::enemy_health(area)[t as usize];
+    if mem.enemy(slot).special_attribs() & 0x80 != 0 {
+        hp = hp.wrapping_shl(1);
+    }
+    mem.enemy(slot).set_health(hp);
+}
+
+/// `UpdateAllRinkaSpawners ; 03:A15E`：逃脱计时器停用（`EndTimer+1 == $FF`）时才跑；
+/// 先处理生成器 1（`y=$03`）再处理 0；每个生成器四道门（`status` bit7 / `hi ^ FrameCount`
+/// bit0 交替 / `MotherBrainStatus >= 4` / `FrameCount & $06`），命中就找前三个敌槽
+/// （`x=$20,$10,$00`，空槽或不可见槽可复用）生成一枚 Rinka。
+pub(crate) fn update_all_rinka_spawners(mem: &mut crate::frame::Manager) {
+    if mem.end_timer_hi().wrapping_add(1) != 0 {
+        return; // 计时器活动中：不再生成
+    }
+    for slot in [1u8, 0u8] {
+        update_one_spawner(mem, sheet_off(slot));
+    }
+}
+
+/// asm `PageIndex`：生成器 1 用 `$03`、生成器 0 用 `$00`（`RinkaSpawners.0.status,y` 的 y）。
+fn sheet_off(slot: u8) -> u8 {
+    if slot == 1 {
+        0x03
+    } else {
+        0x00
+    }
+}
+
+fn update_one_spawner(mem: &mut crate::frame::Manager, page_off: u8) {
+    // `PageIndex = page_off` 时这些地址就是 `RinkaSpawners.{slot}.{status,hi,posIndex}`
+    let slot = page_off / 3;
+    let status = mem.read_ram(0x008B + page_off as u16);
+    if status & 0x80 != 0 {
+        return; // 生成器未启用
+    }
+    // `hi ^ FrameCount` 的 bit0：两生成器交替
+    if (mem.rinka_spawner_hi(slot) ^ mem.frame_count()) & 0x01 == 0 {
+        return;
+    }
+    if mem.mb_status() >= 0x04 {
+        return; // 母脑将死/已死
+    }
+    if mem.frame_count() & 0x06 != 0 {
+        return;
+    }
+    // 找空槽：status==0 或 data05 bit1 清（不可见）
+    let mut target: Option<u8> = None;
+    for x in [0x20u8, 0x10, 0x00] {
+        let s = mem.ens_face(x).status();
+        if s == crate::enemy::state::EnemyStatus::NoEnemy {
+            target = Some(x);
+            break;
+        }
+        if mem.ens_face(x).data05() & 0x02 == 0 {
+            target = Some(x);
+            break;
+        }
+    }
+    let Some(x) = target else { return };
+    let s = x / 16;
+    // `@slotFound`：Resting + type=4(Rinka) + specialAttribs=0 + isHit=0
+    mem.enemy(s).set_status(crate::enemy::state::EnemyStatus::Resting);
+    mem.enemy(s).set_enemy_type(0x04);
+    mem.enemy(s).set_special_attribs(0x00);
+    mem.enemy(s).set_is_hit(0x00);
+    common_jump_0e(mem, x);
+    // `animFrame = _id_FrameNone`（逐渐淡入）
+    mem.ens_face(x).set_anim_frame(0xF7);
+    // `hi ← spawner.hi`、位置由 (posIndex*2 | status) 索引位表
+    let hi = mem.rinka_spawner_hi(slot);
+    mem.ens_face(x).set_hi(hi);
+    let idx = mem.rinka_spawner_pos_index(slot);
+    let byte = SPAWN_POS_TBL[((idx << 1) | (status & 0x01)) as usize];
+    init_rinka_position(mem, x, byte);
+    // posIndex 递增，到 6 回绕
+    let next = idx.wrapping_add(1);
+    mem.set_rinka_spawner_pos_index(slot, if next == 6 { 0 } else { next });
+}
+
+#[cfg(test)]
+mod tests_rinka_spawners {
+    use crate::enemy::state::EnemyStatus;
+    use crate::frame::Manager;
+
+    fn mgr() -> Manager {
+        let mut m = Manager::default();
+        m.write_ram(crate::ram_map::IN_AREA, 0x13); // Tourian
+        m.write_ram(crate::ram_map::END_TIMER + 1, 0xFF); // 计时器停用
+        m.write_ram(crate::ram_map::PPUCTRL_ZP, 0x00);
+        m.write_ram(crate::ram_map::SCROLL_DIR, 0x00);
+        m
+    }
+
+    fn arm(m: &mut Manager, slot: u8, status: u8, hi: u8) {
+        m.set_rinka_spawner_status(slot, status);
+        m.set_rinka_spawner_hi(slot, hi);
+        m.set_rinka_spawner_pos_index(slot, 0);
+    }
+
+    /// 生成器创建：先占 1 号、再占 0 号；`status` 取特项字节高 nibble。
+    #[test]
+    fn spawn_creates_generator_one_first() {
+        let mut m = mgr();
+        m.set_rinka_spawner_status(0, 0xFF);
+        m.set_rinka_spawner_status(1, 0xFF);
+        assert_eq!(super::spawn_rinka_spawner(&mut m, 0x18), 0xFF);
+        assert_eq!(m.rinka_spawner_status(1), 0x01, "先占 1 号，status=byte>>4");
+        assert_eq!(m.rinka_spawner_status(0), 0xFF, "0 号仍未启用");
+        assert_eq!(m.rinka_spawner_hi(1), 0x00, "hi=(PPUCTRL^ScrollDir)&1");
+    }
+
+    /// `hi ^ FrameCount` bit0 为 0 ⇒ 该帧不处理（两生成器交替）。
+    #[test]
+    fn generators_alternate_on_frame_count_bit0() {
+        let mut m = mgr();
+        arm(&mut m, 0, 0x00, 0x00); // hi=0
+        m.write_ram(crate::ram_map::FRAME_COUNT, 0x00); // 0^0=0 ⇒ 跳过
+        super::update_all_rinka_spawners(&mut m);
+        assert_eq!(m.ens_face(0x20).status(), EnemyStatus::NoEnemy, "未生成");
+        m.write_ram(crate::ram_map::FRAME_COUNT, 0x02); // 0^2 bit0=1 ⇒ 处理；且 &6==2 ⇒ 仍被门挡
+        super::update_all_rinka_spawners(&mut m);
+        assert_eq!(m.ens_face(0x20).status(), EnemyStatus::NoEnemy, "FrameCount&6 挡");
+        m.write_ram(crate::ram_map::FRAME_COUNT, 0x01); // bit0=1 且 &6==0 ⇒ 生成
+        super::update_all_rinka_spawners(&mut m);
+        assert_eq!(m.ens_face(0x20).status(), EnemyStatus::Resting, "生成 Rinka");
+        assert_eq!(m.enemy(2).enemy_type(), 0x04, "type=4");
+    }
+
+    /// `MotherBrainStatus >= 4` ⇒ 不再生成（母脑将死）。
+    #[test]
+    fn no_spawn_when_mother_brain_is_dying() {
+        let mut m = mgr();
+        arm(&mut m, 0, 0x00, 0x00);
+        m.write_ram(crate::ram_map::FRAME_COUNT, 0x01);
+        m.set_mb_status(0x04);
+        super::update_all_rinka_spawners(&mut m);
+        assert_eq!(m.ens_face(0x20).status(), EnemyStatus::NoEnemy);
+    }
+
+    /// 逃脱计时器活动中（`EndTimer+1 != $FF`）整件跳过。
+    #[test]
+    fn timer_active_blocks_all_spawning() {
+        let mut m = mgr();
+        arm(&mut m, 0, 0x00, 0x00);
+        m.write_ram(crate::ram_map::FRAME_COUNT, 0x01);
+        m.store_end_timer(0x99, 0x99);
+        super::update_all_rinka_spawners(&mut m);
+        assert_eq!(m.ens_face(0x20).status(), EnemyStatus::NoEnemy);
+    }
+
+    /// 位置来自位表：`posIndex=0,status=0 ⇒ $22` ⇒ y=`$27`、x=`$27`；status=1 ⇒ `$2A`。
+    #[test]
+    fn position_comes_from_spawn_table() {
+        let mut m = mgr();
+        arm(&mut m, 0, 0x00, 0x00);
+        m.write_ram(crate::ram_map::FRAME_COUNT, 0x01);
+        super::update_all_rinka_spawners(&mut m);
+        assert_eq!(m.enemy(2).y(), 0x27, "(0x22 & $F0)|7");
+        assert_eq!(m.enemy(2).pos_x(), 0x27, "(0x22<<4)|7");
+        assert_eq!(m.rinka_spawner_pos_index(0), 1, "posIndex 递增");
+
+        let mut m2 = mgr();
+        arm(&mut m2, 0, 0x01, 0x00); // status=1 ⇒ 奇数列
+        m2.write_ram(crate::ram_map::FRAME_COUNT, 0x01);
+        super::update_all_rinka_spawners(&mut m2);
+        assert_eq!(m2.enemy(2).y(), 0x27, "表项 $2A 的 Y");
+        assert_eq!(m2.enemy(2).pos_x(), 0xA7, "表项 $2A 的 X=(0xA<<4)|7");
+    }
+
+    /// `posIndex` 到 6 回绕到 0。
+    #[test]
+    fn pos_index_wraps_at_six() {
+        let mut m = mgr();
+        arm(&mut m, 0, 0x00, 0x00);
+        m.set_rinka_spawner_pos_index(0, 5);
+        m.write_ram(crate::ram_map::FRAME_COUNT, 0x01);
+        super::update_all_rinka_spawners(&mut m);
+        assert_eq!(m.rinka_spawner_pos_index(0), 0);
+    }
+
+    /// 屏幕内已占用槽（data05 bit1 置）被跳过；三槽都占用则不生成。
+    #[test]
+    fn occupied_visible_slots_block_spawn() {
+        let mut m = mgr();
+        arm(&mut m, 0, 0x00, 0x00);
+        m.write_ram(crate::ram_map::FRAME_COUNT, 0x01);
+        for slot in 0..3u8 {
+            m.enemy(slot).set_status(EnemyStatus::Active);
+            m.enemy(slot).set_data05(0x02);
+        }
+        super::update_all_rinka_spawners(&mut m);
+        assert_eq!(m.enemy(2).enemy_type(), 0x00, "槽 2 未被覆写");
+    }
+}
