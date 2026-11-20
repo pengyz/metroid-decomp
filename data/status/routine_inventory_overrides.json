@@ -1090,6 +1090,811 @@
       "status": "ported",
       "rust": "crates/game-core/src/world/tile_blast.rs:148",
       "note": "同名 snake_case fn + asm 地址锚 07:FF54 落在该 fn ±45 行内（tools/routine_inventory.py 可复算）"
+    },
+    "ClearMetroidLatch": {
+      "status": "ported",
+      "rust": "crates/game-core/src/samus/handler.rs:1550",
+      "note": "asm label 名出现在代码 crates/game-core/src/samus/handler.rs:1550，且地址锚 03:99B1 落在该行 ±6 行内（工具可复算）"
+    },
+    "LoadEnemySlotIDIntoY": {
+      "status": "ported",
+      "rust": "crates/game-core/src/frame/memory.rs:503",
+      "note": "asm label 名出现在代码 crates/game-core/src/frame/memory.rs:503，且地址锚 03:99B7 落在该行 ±6 行内（工具可复算）"
+    },
+    "ClearMetroidSpeed": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/metroid.rs:194",
+      "note": "asm label 名出现在代码 crates/game-core/src/enemy/metroid.rs:194，且地址锚 03:99C3 落在该行 ±6 行内（工具可复算）"
+    },
+    "GetMetroidAccel": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/metroid.rs:45",
+      "note": "asm label 名出现在代码 crates/game-core/src/enemy/metroid.rs:45，且地址锚 03:9A06 落在该行 ±6 行内（工具可复算）"
+    },
+    "GetMetroidRepelSpeed": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/metroid.rs:42",
+      "note": "asm label 名出现在代码 crates/game-core/src/enemy/metroid.rs:42，且地址锚 03:9A10 落在该行 ±6 行内（工具可复算）"
+    },
+    "SparkleUpdate": {
+      "status": "ported",
+      "rust": "crates/game-core/src/title/sparkle.rs:4",
+      "note": "asm label 名出现在代码 crates/game-core/src/title/sparkle.rs:4，且地址锚 00:87D9 落在该行 ±6 行内（工具可复算）"
+    },
+    "DoFadeOut": {
+      "status": "ported",
+      "rust": "crates/game-data/src/extract.rs:1091",
+      "note": "asm label 名出现在代码 crates/game-data/src/extract.rs:1091，且地址锚 00:8B5F 落在该行 ±6 行内（工具可复算）"
+    },
+    "UniqueItemSearch": {
+      "status": "ported",
+      "rust": "crates/game-core/src/ui/password.rs:15",
+      "note": "asm label 名出现在代码 crates/game-core/src/ui/password.rs:15，且地址锚 00:8B9C 落在该行 ±6 行内（工具可复算）"
+    },
+    "UniqueItemFound": {
+      "status": "ported",
+      "rust": "crates/game-core/src/ui/password.rs:7",
+      "note": "asm label 名出现在代码 crates/game-core/src/ui/password.rs:7，且地址锚 00:8BB5 落在该行 ±6 行内（工具可复算）"
+    },
+    "PasswordScramble": {
+      "status": "ported",
+      "rust": "crates/game-core/src/ui/password.rs:173",
+      "note": "asm label 名出现在代码 crates/game-core/src/ui/password.rs:173，且地址锚 00:8E2D 落在该行 ±6 行内（工具可复算）"
+    },
+    "LoadPasswordScreen": {
+      "status": "ported",
+      "rust": "crates/game-core/src/title/bridge.rs:34",
+      "note": "asm label 名出现在代码 crates/game-core/src/title/bridge.rs:34，且地址锚 00:911A 落在该行 ±6 行内（工具可复算）"
+    },
+    "InitializeStats": {
+      "status": "ported",
+      "rust": "crates/game-core/src/ram_map.rs:132",
+      "note": "asm label 名出现在代码 crates/game-core/src/ram_map.rs:132，且地址锚 00:932B 落在该行 ±6 行内（工具可复算）"
+    },
+    "DisplayPassword": {
+      "status": "ported",
+      "rust": "crates/game-core/src/title/mod.rs:902",
+      "note": "asm label 名出现在代码 crates/game-core/src/title/mod.rs:902，且地址锚 00:9359 落在该行 ±6 行内（工具可复算）"
+    },
+    "LoadPasswordCharToVRAMStringRAM": {
+      "status": "ported",
+      "rust": "crates/game-core/src/title/bridge.rs:431",
+      "note": "asm label 名出现在代码 crates/game-core/src/title/bridge.rs:431，且地址锚 00:93F9 落在该行 ±6 行内（工具可复算）"
+    },
+    "Restart": {
+      "status": "ported",
+      "rust": "crates/game-core/src/title/mod.rs:1248",
+      "note": "asm label 名出现在代码 crates/game-core/src/title/mod.rs:1248，且地址锚 00:9A39 落在该行 ±6 行内（工具可复算）"
+    },
+    "LoadEndGFX": {
+      "status": "ported",
+      "rust": "crates/game-core/src/title/mod.rs:1016",
+      "note": "asm label 名出现在代码 crates/game-core/src/title/mod.rs:1016，且地址锚 00:9AD5 落在该行 ±6 行内（工具可复算）"
+    },
+    "ShowEndSamus": {
+      "status": "ported",
+      "rust": "crates/game-core/src/title/mod.rs:1069",
+      "note": "asm label 名出现在代码 crates/game-core/src/title/mod.rs:1069，且地址锚 00:9B1C 落在该行 ±6 行内（工具可复算）"
+    },
+    "EndSamusFlash": {
+      "status": "ported",
+      "rust": "crates/game-core/src/title/mod.rs:1087",
+      "note": "asm label 名出现在代码 crates/game-core/src/title/mod.rs:1087，且地址锚 00:9B34 落在该行 ±6 行内（工具可复算）"
+    },
+    "SamusWave": {
+      "status": "ported",
+      "rust": "crates/game-core/src/title/mod.rs:1135",
+      "note": "asm label 名出现在代码 crates/game-core/src/title/mod.rs:1135，且地址锚 00:9B93 落在该行 ±6 行内（工具可复算）"
+    },
+    "EndFadeOut": {
+      "status": "ported",
+      "rust": "crates/game-core/src/title/mod.rs:1169",
+      "note": "asm label 名出现在代码 crates/game-core/src/title/mod.rs:1169，且地址锚 00:9BCD 落在该行 ±6 行内（工具可复算）"
+    },
+    "RollCredits": {
+      "status": "ported",
+      "rust": "crates/game-core/src/title/mod.rs:1206",
+      "note": "asm label 名出现在代码 crates/game-core/src/title/mod.rs:1206，且地址锚 00:9BFC 落在该行 ±6 行内（工具可复算）"
+    },
+    "LoadCredits": {
+      "status": "ported",
+      "rust": "crates/game-core/src/frame/nmi.rs:71",
+      "note": "asm label 名出现在代码 crates/game-core/src/frame/nmi.rs:71，且地址锚 00:9C45 落在该行 ±6 行内（工具可复算）"
+    },
+    "EndGamePaletteWrite": {
+      "status": "ported",
+      "rust": "crates/game-core/src/frame/nmi.rs:78",
+      "note": "asm label 名出现在代码 crates/game-core/src/frame/nmi.rs:78，且地址锚 00:9F54 落在该行 ±6 行内（工具可复算）"
+    },
+    "GotoDeleteOffscreenRoomSprites_Tourian": {
+      "status": "ported",
+      "rust": "crates/game-core/src/world/room_draw.rs:476",
+      "note": "asm label 名出现在代码 crates/game-core/src/world/room_draw.rs:476，且地址锚 03:95AE 落在该行 ±6 行内（工具可复算）"
+    },
+    "AreaRoutine_Tourian": {
+      "status": "ported",
+      "rust": "crates/game-core/src/world/update.rs:140",
+      "note": "asm label 名出现在代码 crates/game-core/src/world/update.rs:140，且地址锚 03:9B25 落在该行 ±6 行内（工具可复算）"
+    },
+    "UpdateCannon_RunInstructions": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/cannon.rs:126",
+      "note": "asm label 名出现在代码 crates/game-core/src/enemy/cannon.rs:126，且地址锚 03:9B70 落在该行 ±6 行内（工具可复算）"
+    },
+    "Cannon_ShootEnProjectile": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/cannon.rs:162",
+      "note": "asm label 名出现在代码 crates/game-core/src/enemy/cannon.rs:162，且地址锚 03:9BAF 落在该行 ±6 行内（工具可复算）"
+    },
+    "DrawCannon_Normal": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/cannon.rs:216",
+      "note": "asm label 名出现在代码 crates/game-core/src/enemy/cannon.rs:216，且地址锚 03:9C2B 落在该行 ±6 行内（工具可复算）"
+    },
+    "UpdateCannon_CheckIfOnScreen": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/cannon.rs:106",
+      "note": "asm label 名出现在代码 crates/game-core/src/enemy/cannon.rs:106，且地址锚 03:9C4D 落在该行 ±6 行内（工具可复算）"
+    },
+    "SpawnZebetiteRoutine": {
+      "status": "ported",
+      "rust": "crates/game-core/src/pickup/spawn.rs:81",
+      "note": "asm label 名出现在代码 crates/game-core/src/pickup/spawn.rs:81，且地址锚 03:9D3D 落在该行 ±6 行内（工具可复算）"
+    },
+    "GetRoomRAMPtrHi": {
+      "status": "ported",
+      "rust": "crates/game-core/src/pickup/spawn.rs:84",
+      "note": "asm label 名出现在代码 crates/game-core/src/pickup/spawn.rs:84，且地址锚 03:9D64 落在该行 ±6 行内（工具可复算）"
+    },
+    "SpawnRinkaSpawnerRoutine": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/rinka.rs:303",
+      "note": "asm label 名出现在代码 crates/game-core/src/enemy/rinka.rs:303，且地址锚 03:9D6C 落在该行 ±6 行内（工具可复算）"
+    },
+    "MotherBrainStatusHandler": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/mother_brain.rs:1",
+      "note": "asm label 名出现在代码 crates/game-core/src/enemy/mother_brain.rs:1，且地址锚 03:9DD4 落在该行 ±6 行内（工具可复算）"
+    },
+    "MotherBrain_Idle_CollideWithSamus": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/mother_brain.rs:75",
+      "note": "asm label 名出现在代码 crates/game-core/src/enemy/mother_brain.rs:75，且地址锚 03:9DF2 落在该行 ±6 行内（工具可复算）"
+    },
+    "MotherBrain_Idle": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/mother_brain.rs:65",
+      "note": "asm label 名出现在代码 crates/game-core/src/enemy/mother_brain.rs:65，且地址锚 03:9E22 落在该行 ±6 行内（工具可复算）"
+    },
+    "MotherBrain_Hurt": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/mother_brain.rs:173",
+      "note": "asm label 名出现在代码 crates/game-core/src/enemy/mother_brain.rs:173，且地址锚 03:9E36 落在该行 ±6 行内（工具可复算）"
+    },
+    "UpdateMotherBrainFlashDelay": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/mother_brain.rs:163",
+      "note": "asm label 名出现在代码 crates/game-core/src/enemy/mother_brain.rs:163，且地址锚 03:9E43 落在该行 ±6 行内（工具可复算）"
+    },
+    "MotherBrain_Killed": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/mother_brain.rs:181",
+      "note": "asm label 名出现在代码 crates/game-core/src/enemy/mother_brain.rs:181，且地址锚 03:9E52 落在该行 ±6 行内（工具可复算）"
+    },
+    "MotherBrain_Disappear": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/mother_brain.rs:211",
+      "note": "asm label 名出现在代码 crates/game-core/src/enemy/mother_brain.rs:211，且地址锚 03:9E86 落在该行 ±6 行内（工具可复算）"
+    },
+    "SpawnRinka_InitPositionXY": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/rinka.rs:307",
+      "note": "asm label 名出现在代码 crates/game-core/src/enemy/rinka.rs:307，且地址锚 03:9EE7 落在该行 ±6 行内（工具可复算）"
+    },
+    "MotherBrain_TimeBombMessage": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/mother_brain.rs:280",
+      "note": "asm label 名出现在代码 crates/game-core/src/enemy/mother_brain.rs:280，且地址锚 03:9F02 落在该行 ±6 行内（工具可复算）"
+    },
+    "MotherBrain_SetTimeBomb": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/mother_brain.rs:307",
+      "note": "asm label 名出现在代码 crates/game-core/src/enemy/mother_brain.rs:307，且地址锚 03:9F49 落在该行 ±6 行内（工具可复算）"
+    },
+    "MotherBrain_SpawnDoor": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/mother_brain.rs:324",
+      "note": "asm label 名出现在代码 crates/game-core/src/enemy/mother_brain.rs:324，且地址锚 03:9F69 落在该行 ±6 行内（工具可复算）"
+    },
+    "MotherBrain_TimeBombExploded": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/mother_brain.rs:350",
+      "note": "asm label 名出现在代码 crates/game-core/src/enemy/mother_brain.rs:350，且地址锚 03:9FC0 落在该行 ±6 行内（工具可复算）"
+    },
+    "MotherBrain_Idle_HandleBeingHit": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/mother_brain.rs:97",
+      "note": "asm label 名出现在代码 crates/game-core/src/enemy/mother_brain.rs:97，且地址锚 03:9FED 落在该行 ±6 行内（工具可复算）"
+    },
+    "MotherBrain_Idle_UpdateAnimBrain": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/mother_brain.rs:119",
+      "note": "asm label 名出现在代码 crates/game-core/src/enemy/mother_brain.rs:119，且地址锚 03:A01B 落在该行 ±6 行内（工具可复算）"
+    },
+    "MotherBrain_Idle_UpdateAnimEye": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/mother_brain.rs:131",
+      "note": "asm label 名出现在代码 crates/game-core/src/enemy/mother_brain.rs:131，且地址锚 03:A02E 落在该行 ±6 行内（工具可复算）"
+    },
+    "MotherBrain_DrawSprites": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/mother_brain.rs:143",
+      "note": "asm label 名出现在代码 crates/game-core/src/enemy/mother_brain.rs:143，且地址锚 03:A041 落在该行 ±6 行内（工具可复算）"
+    },
+    "MotherBrain_Disappear_Disintegrate": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/mother_brain.rs:252",
+      "note": "asm label 名出现在代码 crates/game-core/src/enemy/mother_brain.rs:252，且地址锚 03:A072 落在该行 ±6 行内（工具可复算）"
+    },
+    "UpdateBullet_CollisionWithZebetiteAndMotherBrainGlass": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/zebetite.rs:4",
+      "note": "asm label 名出现在代码 crates/game-core/src/enemy/zebetite.rs:4，且地址锚 03:A0C6 落在该行 ±6 行内（工具可复算）"
+    },
+    "ClearAllMetroidLatches": {
+      "status": "ported",
+      "rust": "crates/game-core/src/samus/handler.rs:1547",
+      "note": "asm label 名出现在代码 crates/game-core/src/samus/handler.rs:1547，且地址锚 03:A315 落在该行 ±6 行内（工具可复算）"
+    },
+    "MainLoop": {
+      "status": "ported",
+      "rust": "crates/game-core/src/bin/rust_screenshot.rs:511",
+      "note": "asm label 名出现在代码 crates/game-core/src/bin/rust_screenshot.rs:511，且地址锚 07:C0BC 落在该行 ±6 行内（工具可复算）"
+    },
+    "PreparePPUProcess": {
+      "status": "ported",
+      "rust": "crates/game-core/src/title/bridge.rs:457",
+      "note": "asm label 名出现在代码 crates/game-core/src/title/bridge.rs:457，且地址锚 07:C20E 落在该行 ±6 行内（工具可复算）"
+    },
+    "ReadOnePad": {
+      "status": "ported",
+      "rust": "crates/game-core/src/frame/nmi.rs:296",
+      "note": "asm label 名出现在代码 crates/game-core/src/frame/nmi.rs:296，且地址锚 07:C21F 落在该行 ±6 行内（工具可复算）"
+    },
+    "CheckVRAMStructBufferWrite": {
+      "status": "ported",
+      "rust": "crates/game-core/src/frame/nmi.rs:100",
+      "note": "asm label 名出现在代码 crates/game-core/src/frame/nmi.rs:100，且地址锚 07:C2CA 落在该行 ±6 行内（工具可复算）"
+    },
+    "VRAMStructWriteData": {
+      "status": "ported",
+      "rust": "crates/game-core/src/render/vram.rs:6",
+      "note": "asm label 名出现在代码 crates/game-core/src/render/vram.rs:6，且地址锚 07:C2E4 落在该行 ±6 行内（工具可复算）"
+    },
+    "SetPPUInc": {
+      "status": "ported",
+      "rust": "crates/game-core/src/render/vram.rs:8",
+      "note": "asm label 名出现在代码 crates/game-core/src/render/vram.rs:8，且地址锚 07:C318 落在该行 ±6 行内（工具可复算）"
+    },
+    "WritePPUByte": {
+      "status": "ported",
+      "rust": "crates/game-core/src/title/mod.rs:1609",
+      "note": "asm label 名出现在代码 crates/game-core/src/title/mod.rs:1609，且地址锚 07:C36B 落在该行 ±6 行内（工具可复算）"
+    },
+    "NextPPUByte": {
+      "status": "ported",
+      "rust": "crates/game-core/src/title/intro.rs:71",
+      "note": "asm label 名出现在代码 crates/game-core/src/title/intro.rs:71，且地址锚 07:C36E 落在该行 ±6 行内（工具可复算）"
+    },
+    "SeparateControlBits": {
+      "status": "ported",
+      "rust": "crates/game-core/src/title/intro.rs:72",
+      "note": "asm label 名出现在代码 crates/game-core/src/title/intro.rs:72，且地址锚 07:C3C6 落在该行 ±6 行内（工具可复算）"
+    },
+    "Base10Subtract": {
+      "status": "ported",
+      "rust": "crates/game-core/src/world/end_timer.rs:4",
+      "note": "asm label 名出现在代码 crates/game-core/src/world/end_timer.rs:4，且地址锚 07:C3FB 落在该行 ±6 行内（工具可复算）"
+    },
+    "ExtractNibbles": {
+      "status": "ported",
+      "rust": "crates/game-core/src/frame/tests.rs:227",
+      "note": "asm label 名出现在代码 crates/game-core/src/frame/tests.rs:227，且地址锚 07:C41D 落在该行 ±6 行内（工具可复算）"
+    },
+    "ClearNMIStat": {
+      "status": "ported",
+      "rust": "crates/game-core/src/frame/memory.rs:181",
+      "note": "asm label 名出现在代码 crates/game-core/src/frame/memory.rs:181，且地址锚 07:C434 落在该行 ±6 行内（工具可复算）"
+    },
+    "WriteAndWait": {
+      "status": "ported",
+      "rust": "crates/game-core/src/world/room_load.rs:95",
+      "note": "asm label 名出现在代码 crates/game-core/src/world/room_load.rs:95，且地址锚 07:C43D 落在该行 ±6 行内（工具可复算）"
+    },
+    "WaitNMIPass_": {
+      "status": "ported",
+      "rust": "crates/game-core/src/world/elevator.rs:13",
+      "note": "asm label 名出现在代码 crates/game-core/src/world/elevator.rs:13，且地址锚 07:C43F 落在该行 ±6 行内（工具可复算）"
+    },
+    "CheckBankSwitch_OK": {
+      "status": "ported",
+      "rust": "crates/game-core/src/frame/boot.rs:225",
+      "note": "asm label 名出现在代码 crates/game-core/src/frame/boot.rs:225，且地址锚 07:C4E8 落在该行 ±6 行内（工具可复算）"
+    },
+    "GoBankInit": {
+      "status": "ported",
+      "rust": "crates/game-core/src/frame/tick.rs:774",
+      "note": "asm label 名出现在代码 crates/game-core/src/frame/tick.rs:774，且地址锚 07:C510 落在该行 ±6 行内（工具可复算）"
+    },
+    "InitBrinstarGFX": {
+      "status": "ported",
+      "rust": "crates/game-core/src/render/gfx.rs:27",
+      "note": "asm label 名出现在代码 crates/game-core/src/render/gfx.rs:27，且地址锚 07:C604 落在该行 ±6 行内（工具可复算）"
+    },
+    "CopyGFXBlock": {
+      "status": "ported",
+      "rust": "crates/game-core/src/render/ppu.rs:4",
+      "note": "asm label 名出现在代码 crates/game-core/src/render/ppu.rs:4，且地址锚 07:C7D5 落在该行 ±6 行内（工具可复算）"
+    },
+    "Lx002": {
+      "status": "ported",
+      "rust": "crates/game-core/src/frame/tick.rs:547",
+      "note": "asm label 名出现在代码 crates/game-core/src/frame/tick.rs:547，且地址锚 07:C908 落在该行 ±6 行内（工具可复算）"
+    },
+    "LoadGameData": {
+      "status": "ported",
+      "rust": "crates/game-core/src/render/ppu.rs:104",
+      "note": "asm label 名出现在代码 crates/game-core/src/render/ppu.rs:104，且地址锚 07:CA72 落在该行 ±6 行内（工具可复算）"
+    },
+    "SFX_BombExplode": {
+      "status": "ported",
+      "rust": "crates/game-core/src/weapon/bomb.rs:110",
+      "note": "asm label 名出现在代码 crates/game-core/src/weapon/bomb.rs:110，且地址锚 07:CB9A 落在该行 ±6 行内（工具可复算）"
+    },
+    "SetSFXNoiseInitFlag": {
+      "status": "ported",
+      "rust": "crates/game-core/src/sound/hook.rs:18",
+      "note": "asm label 名出现在代码 crates/game-core/src/sound/hook.rs:18，且地址锚 07:CBA0 落在该行 ±6 行内（工具可复算）"
+    },
+    "SFX_OutOfPipe": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/framework.rs:46",
+      "note": "asm label 名出现在代码 crates/game-core/src/enemy/framework.rs:46，且地址锚 07:CBA4 落在该行 ±6 行内（工具可复算）"
+    },
+    "SFX_BombLaunch": {
+      "status": "ported",
+      "rust": "crates/game-core/src/weapon/bomb.rs:65",
+      "note": "asm label 名出现在代码 crates/game-core/src/weapon/bomb.rs:65，且地址锚 07:CBA8 落在该行 ±6 行内（工具可复算）"
+    },
+    "SFX_SamusBall": {
+      "status": "ported",
+      "rust": "crates/game-core/src/samus/handler.rs:1447",
+      "note": "asm label 名出现在代码 crates/game-core/src/samus/handler.rs:1447，且地址锚 07:CBEF 落在该行 ±6 行内（工具可复算）"
+    },
+    "NoHorzMoveNoDelay": {
+      "status": "ported",
+      "rust": "crates/game-core/src/samus/handler.rs:1092",
+      "note": "asm label 名出现在代码 crates/game-core/src/samus/handler.rs:1092，且地址锚 07:CF81 落在该行 ±6 行内（工具可复算）"
+    },
+    "Lx021": {
+      "status": "ported",
+      "rust": "crates/game-core/src/samus/handler.rs:1340",
+      "note": "asm label 名出现在代码 crates/game-core/src/samus/handler.rs:1340，且地址锚 07:D03C 落在该行 ±6 行内（工具可复算）"
+    },
+    "PlaceBulletAtArmCannon": {
+      "status": "ported",
+      "rust": "crates/game-core/src/samus/handler.rs:455",
+      "note": "asm label 名出现在代码 crates/game-core/src/samus/handler.rs:455，且地址锚 07:D306 落在该行 ±6 行内（工具可复算）"
+    },
+    "CheckHorizontalMissileLaunch": {
+      "status": "ported",
+      "rust": "crates/game-core/src/samus/handler.rs:442",
+      "note": "asm label 名出现在代码 crates/game-core/src/samus/handler.rs:442，且地址锚 07:D315 落在该行 ±6 行内（工具可复算）"
+    },
+    "CheckMissileLaunchCommon": {
+      "status": "ported",
+      "rust": "crates/game-core/src/samus/handler.rs:360",
+      "note": "asm label 名出现在代码 crates/game-core/src/samus/handler.rs:360，且地址锚 07:D323 落在该行 ±6 行内（工具可复算）"
+    },
+    "CheckVerticalMissileLaunch": {
+      "status": "ported",
+      "rust": "crates/game-core/src/samus/handler.rs:496",
+      "note": "asm label 名出现在代码 crates/game-core/src/samus/handler.rs:496，且地址锚 07:D340 落在该行 ±6 行内（工具可复算）"
+    },
+    "CheckHorizontalWaveBulletFire": {
+      "status": "ported",
+      "rust": "crates/game-core/src/samus/handler.rs:364",
+      "note": "asm label 名出现在代码 crates/game-core/src/samus/handler.rs:364，且地址锚 07:D359 落在该行 ±6 行内（工具可复算）"
+    },
+    "CheckVerticalWaveBulletFire": {
+      "status": "ported",
+      "rust": "crates/game-core/src/samus/handler.rs:364",
+      "note": "asm label 名出现在代码 crates/game-core/src/samus/handler.rs:364，且地址锚 07:D38A 落在该行 ±6 行内（工具可复算）"
+    },
+    "CheckIceBulletFire": {
+      "status": "ported",
+      "rust": "crates/game-core/src/samus/handler.rs:384",
+      "note": "asm label 名出现在代码 crates/game-core/src/samus/handler.rs:384，且地址锚 07:D38E 落在该行 ±6 行内（工具可复算）"
+    },
+    "Lx057": {
+      "status": "ported",
+      "rust": "crates/game-core/src/world/elevator.rs:714",
+      "note": "asm label 名出现在代码 crates/game-core/src/world/elevator.rs:714，且地址锚 07:D440 落在该行 ±6 行内（工具可复算）"
+    },
+    "Lx060": {
+      "status": "ported",
+      "rust": "crates/game-core/src/world/elevator.rs:739",
+      "note": "asm label 名出现在代码 crates/game-core/src/world/elevator.rs:739，且地址锚 07:D460 落在该行 ±6 行内（工具可复算）"
+    },
+    "DoOneSamusProjectile": {
+      "status": "ported",
+      "rust": "crates/game-core/src/weapon/projectile.rs:77",
+      "note": "asm label 名出现在代码 crates/game-core/src/weapon/projectile.rs:77，且地址锚 07:D4CB 落在该行 ±6 行内（工具可复算）"
+    },
+    "UpdateBullet_Move": {
+      "status": "ported",
+      "rust": "crates/game-core/src/weapon/projectile.rs:105",
+      "note": "asm label 名出现在代码 crates/game-core/src/weapon/projectile.rs:105，且地址锚 07:D624 落在该行 ±6 行内（工具可复算）"
+    },
+    "LoadObjectPositionFromTemp": {
+      "status": "ported",
+      "rust": "crates/game-core/src/weapon/projectile.rs:106",
+      "note": "asm label 名出现在代码 crates/game-core/src/weapon/projectile.rs:106，且地址锚 07:D638 落在该行 ±6 行内（工具可复算）"
+    },
+    "CheckBlastTile": {
+      "status": "ported",
+      "rust": "crates/game-core/src/world/room_ram.rs:29",
+      "note": "asm label 名出现在代码 crates/game-core/src/world/room_ram.rs:29，且地址锚 07:D651 落在该行 ±6 行内（工具可复算）"
+    },
+    "GetObjRoomRAMPtr": {
+      "status": "ported",
+      "rust": "crates/game-core/src/weapon/projectile.rs:226",
+      "note": "asm label 名出现在代码 crates/game-core/src/weapon/projectile.rs:226，且地址锚 07:D79F 落在该行 ±6 行内（工具可复算）"
+    },
+    "ElevatorIdle": {
+      "status": "ported",
+      "rust": "crates/game-core/src/world/elevator.rs:127",
+      "note": "asm label 名出现在代码 crates/game-core/src/world/elevator.rs:127，且地址锚 07:D7D1 落在该行 ±6 行内（工具可复算）"
+    },
+    "ElevatorScrollXToCenter": {
+      "status": "ported",
+      "rust": "crates/game-core/src/world/elevator.rs:154",
+      "note": "asm label 名出现在代码 crates/game-core/src/world/elevator.rs:154，且地址锚 07:D80E 落在该行 ±6 行内（工具可复算）"
+    },
+    "ElevatorMove": {
+      "status": "ported",
+      "rust": "crates/game-core/src/world/elevator.rs:180",
+      "note": "asm label 名出现在代码 crates/game-core/src/world/elevator.rs:180，且地址锚 07:D83D 落在该行 ±6 行内（工具可复算）"
+    },
+    "ElevatorScrollY": {
+      "status": "ported",
+      "rust": "crates/game-core/src/world/elevator.rs:213",
+      "note": "asm label 名出现在代码 crates/game-core/src/world/elevator.rs:213，且地址锚 07:D870 落在该行 ±6 行内（工具可复算）"
+    },
+    "ElevatorFade": {
+      "status": "ported",
+      "rust": "crates/game-core/src/world/elevator.rs:240",
+      "note": "asm label 名出现在代码 crates/game-core/src/world/elevator.rs:240，且地址锚 07:D8A3 落在该行 ±6 行内（工具可复算）"
+    },
+    "ElevatorD8BF": {
+      "status": "ported",
+      "rust": "crates/game-core/src/world/elevator.rs:267",
+      "note": "asm label 名出现在代码 crates/game-core/src/world/elevator.rs:267，且地址锚 07:D8BF 落在该行 ±6 行内（工具可复算）"
+    },
+    "ElevatorStop": {
+      "status": "ported",
+      "rust": "crates/game-core/src/world/elevator.rs:328",
+      "note": "asm label 名出现在代码 crates/game-core/src/world/elevator.rs:328，且地址锚 07:D94E 落在该行 ±6 行内（工具可复算）"
+    },
+    "UpdateAllStatues_Bridge": {
+      "status": "ported",
+      "rust": "crates/game-core/src/world/statue.rs:20",
+      "note": "asm label 名出现在代码 crates/game-core/src/world/statue.rs:20，且地址锚 07:DADA 落在该行 ±6 行内（工具可复算）"
+    },
+    "MapScrollRoutine": {
+      "status": "ported",
+      "rust": "crates/game-core/src/pickup/spawn.rs:148",
+      "note": "asm label 名出现在代码 crates/game-core/src/pickup/spawn.rs:148，且地址锚 07:DC1E 落在该行 ±6 行内（工具可复算）"
+    },
+    "AddItemToHistory": {
+      "status": "ported",
+      "rust": "crates/game-core/src/frame/memory.rs:65",
+      "note": "asm label 名出现在代码 crates/game-core/src/frame/memory.rs:65，且地址锚 07:DC54 落在该行 ±6 行内（工具可复算）"
+    },
+    "ClearObjectCntrl": {
+      "status": "ported",
+      "rust": "crates/game-core/src/render/oam.rs:135",
+      "note": "asm label 名出现在代码 crates/game-core/src/render/oam.rs:135，且地址锚 07:DF2D 落在该行 ±6 行内（工具可复算）"
+    },
+    "SpriteAttrsOverride": {
+      "status": "ported",
+      "rust": "crates/game-core/src/world/object_globals.rs:19",
+      "note": "asm label 名出现在代码 crates/game-core/src/world/object_globals.rs:19，且地址锚 07:E038 落在该行 ±6 行内（工具可复算）"
+    },
+    "Xplus4": {
+      "status": "ported",
+      "rust": "crates/game-core/src/samus/physics.rs:5",
+      "note": "asm label 名出现在代码 crates/game-core/src/samus/physics.rs:5，且地址锚 07:E193 落在该行 ±6 行内（工具可复算）"
+    },
+    "ToggleScroll": {
+      "status": "ported",
+      "rust": "crates/game-core/src/world/update.rs:87",
+      "note": "asm label 名出现在代码 crates/game-core/src/world/update.rs:87，且地址锚 07:E252 落在该行 ±6 行内（工具可复算）"
+    },
+    "SamusMoveVertically": {
+      "status": "ported",
+      "rust": "crates/game-core/src/samus/physics.rs:1222",
+      "note": "asm label 名出现在代码 crates/game-core/src/samus/physics.rs:1222，且地址锚 07:E2A9 落在该行 ±6 行内（工具可复算）"
+    },
+    "MoveSamusDown": {
+      "status": "ported",
+      "rust": "crates/game-core/src/samus/physics.rs:64",
+      "note": "asm label 名出现在代码 crates/game-core/src/samus/physics.rs:64，且地址锚 07:E4A3 落在该行 ±6 行内（工具可复算）"
+    },
+    "GetNameAddrs": {
+      "status": "ported",
+      "rust": "crates/game-core/src/world/room_ram.rs:88",
+      "note": "asm label 名出现在代码 crates/game-core/src/world/room_ram.rs:88，且地址锚 07:E564 落在该行 ±6 行内（工具可复算）"
+    },
+    "CheckUpdateNameTableVertical": {
+      "status": "ported",
+      "rust": "crates/game-core/src/world/camera/scroll.rs:88",
+      "note": "asm label 名出现在代码 crates/game-core/src/world/camera/scroll.rs:88，且地址锚 07:E571 落在该行 ±6 行内（工具可复算）"
+    },
+    "EndOfRoomVertical": {
+      "status": "ported",
+      "rust": "crates/game-core/src/world/camera/scroll.rs:138",
+      "note": "asm label 名出现在代码 crates/game-core/src/world/camera/scroll.rs:138，且地址锚 07:E57C 落在该行 ±6 行内（工具可复算）"
+    },
+    "UpdateNameTable": {
+      "status": "ported",
+      "rust": "crates/game-core/src/world/camera/scroll.rs:138",
+      "note": "asm label 名出现在代码 crates/game-core/src/world/camera/scroll.rs:138，且地址锚 07:E590 落在该行 ±6 行内（工具可复算）"
+    },
+    "WritePPUAttribTbl": {
+      "status": "ported",
+      "rust": "crates/game-core/src/world/room_ram.rs:86",
+      "note": "asm label 名出现在代码 crates/game-core/src/world/room_ram.rs:86，且地址锚 07:E5E2 落在该行 ±6 行内（工具可复算）"
+    },
+    "Lx180": {
+      "status": "ported",
+      "rust": "crates/game-core/src/world/camera/scroll.rs:77",
+      "note": "asm label 名出现在代码 crates/game-core/src/world/camera/scroll.rs:77，且地址锚 07:E65E 落在该行 ±6 行内（工具可复算）"
+    },
+    "StoreEnemyPositionToTemp": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/movement.rs:7",
+      "note": "asm label 名出现在代码 crates/game-core/src/enemy/movement.rs:7，且地址锚 07:E792 落在该行 ±6 行内（工具可复算）"
+    },
+    "CheckMoveVertical": {
+      "status": "ported",
+      "rust": "crates/game-core/src/world/room_ram.rs:28",
+      "note": "asm label 名出现在代码 crates/game-core/src/world/room_ram.rs:28，且地址锚 07:E7BD 落在该行 ±6 行内（工具可复算）"
+    },
+    "CheckMoveHorizontal": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/motion.rs:816",
+      "note": "asm label 名出现在代码 crates/game-core/src/enemy/motion.rs:816，且地址锚 07:E89B 落在该行 ±6 行内（工具可复算）"
+    },
+    "CalculateFirstBGCollisionPoint": {
+      "status": "ported",
+      "rust": "crates/game-core/src/samus/physics.rs:43",
+      "note": "asm label 名出现在代码 crates/game-core/src/samus/physics.rs:43，且地址锚 07:E90F 落在该行 ±6 行内（工具可复算）"
+    },
+    "IsBlastTile": {
+      "status": "ported",
+      "rust": "crates/game-core/src/ram_map.rs:174",
+      "note": "asm label 名出现在代码 crates/game-core/src/ram_map.rs:174，且地址锚 07:E9BE 落在该行 ±6 行内（工具可复算）"
+    },
+    "GetEnemyData": {
+      "status": "ported",
+      "rust": "crates/game-core/src/frame/cycles.rs:224",
+      "note": "asm label 名出现在代码 crates/game-core/src/frame/cycles.rs:224，且地址锚 07:EB0C 落在该行 ±6 行内（工具可复算）"
+    },
+    "GetEnemyType": {
+      "status": "ported",
+      "rust": "crates/game-core/src/frame/cycles.rs:230",
+      "note": "asm label 名出现在代码 crates/game-core/src/frame/cycles.rs:230，且地址锚 07:EB28 落在该行 ±6 行内（工具可复算）"
+    },
+    "IsSlotTaken": {
+      "status": "ported",
+      "rust": "crates/game-core/src/world/room_draw.rs:774",
+      "note": "asm label 名出现在代码 crates/game-core/src/world/room_draw.rs:774，且地址锚 07:EB7A 落在该行 ±6 行内（工具可复算）"
+    },
+    "SpawnElevatorRoutine": {
+      "status": "ported",
+      "rust": "crates/game-core/src/world/room_draw.rs:712",
+      "note": "asm label 名出现在代码 crates/game-core/src/world/room_draw.rs:712，且地址锚 07:EC09 落在该行 ±6 行内（工具可复算）"
+    },
+    "LoadPipeBugHole": {
+      "status": "ported",
+      "rust": "crates/game-core/src/world/room_draw.rs:703",
+      "note": "asm label 名出现在代码 crates/game-core/src/world/room_draw.rs:703，且地址锚 07:EC57 落在该行 ±6 行内（工具可复算）"
+    },
+    "Doors_RemoveIfOffScreen": {
+      "status": "ported",
+      "rust": "crates/game-core/src/world/object.rs:36",
+      "note": "asm label 名出现在代码 crates/game-core/src/world/object.rs:36，且地址锚 07:ED65 落在该行 ±6 行内（工具可复算）"
+    },
+    "ChooseSpawningRoutine": {
+      "status": "ported",
+      "rust": "crates/game-core/src/pickup/spawn.rs:5",
+      "note": "asm label 名出现在代码 crates/game-core/src/pickup/spawn.rs:5，且地址锚 07:EDD6 落在该行 ±6 行内（工具可复算）"
+    },
+    "PrepareItemID": {
+      "status": "ported",
+      "rust": "crates/game-core/src/frame/memory.rs:157",
+      "note": "asm label 名出现在代码 crates/game-core/src/frame/memory.rs:157，且地址锚 07:EE3D 落在该行 ±6 行内（工具可复算）"
+    },
+    "SpawnMellows": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/mod.rs:18",
+      "note": "asm label 名出现在代码 crates/game-core/src/enemy/mod.rs:18，且地址锚 07:EE63 落在该行 ±6 行内（工具可复算）"
+    },
+    "SpawnMellow": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/mod.rs:18",
+      "note": "asm label 名出现在代码 crates/game-core/src/enemy/mod.rs:18，且地址锚 07:EE86 落在该行 ±6 行内（工具可复算）"
+    },
+    "DrawStructRow": {
+      "status": "ported",
+      "rust": "crates/game-core/src/frame/cycles.rs:211",
+      "note": "asm label 名出现在代码 crates/game-core/src/frame/cycles.rs:211，且地址锚 07:EF13 落在该行 ±6 行内（工具可复算）"
+    },
+    "FillRoomRAM": {
+      "status": "ported",
+      "rust": "crates/game-core/src/frame/cycles.rs:81",
+      "note": "asm label 名出现在代码 crates/game-core/src/frame/cycles.rs:81，且地址锚 07:F01C 落在该行 ±6 行内（工具可复算）"
+    },
+    "GetObjectXSlotPosition": {
+      "status": "ported",
+      "rust": "crates/game-core/src/samus/physics.rs:1525",
+      "note": "asm label 名出现在代码 crates/game-core/src/samus/physics.rs:1525，且地址锚 07:F172 落在该行 ±6 行内（工具可复算）"
+    },
+    "GetObjectYSlotPosition": {
+      "status": "ported",
+      "rust": "crates/game-core/src/samus/physics.rs:1526",
+      "note": "asm label 名出现在代码 crates/game-core/src/samus/physics.rs:1526，且地址锚 07:F186 落在该行 ±6 行内（工具可复算）"
+    },
+    "Xminus16": {
+      "status": "ported",
+      "rust": "crates/game-core/src/samus/physics.rs:4",
+      "note": "asm label 名出现在代码 crates/game-core/src/samus/physics.rs:4，且地址锚 07:F1F4 落在该行 ±6 行内（工具可复算）"
+    },
+    "CheckCollisionOfXSlotAndYSlot": {
+      "status": "ported",
+      "rust": "crates/game-core/src/samus/physics.rs:1507",
+      "note": "asm label 名出现在代码 crates/game-core/src/samus/physics.rs:1507，且地址锚 07:F1FA 落在该行 ±6 行内（工具可复算）"
+    },
+    "SetEnemyTouchingSamusFlags": {
+      "status": "ported",
+      "rust": "crates/game-core/src/frame/tests.rs:1715",
+      "note": "asm label 名出现在代码 crates/game-core/src/frame/tests.rs:1715，且地址锚 07:F2E8 落在该行 ±6 行内（工具可复算）"
+    },
+    "CollisionDetectionEnProjectile_ReactToCollisionWithSamus": {
+      "status": "ported",
+      "rust": "crates/game-core/src/ram_map.rs:202",
+      "note": "asm label 名出现在代码 crates/game-core/src/ram_map.rs:202，且地址锚 07:F2ED 落在该行 ±6 行内（工具可复算）"
+    },
+    "SetSamusIsHitByEnemy": {
+      "status": "ported",
+      "rust": "crates/game-core/src/frame/tests.rs:1760",
+      "note": "asm label 名出现在代码 crates/game-core/src/frame/tests.rs:1760，且地址锚 07:F338 落在该行 ±6 行内（工具可复算）"
+    },
+    "UpdateEnemy_CheckIfVisible": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/slot_cycle.rs:57",
+      "note": "asm label 名出现在代码 crates/game-core/src/enemy/slot_cycle.rs:57，且地址锚 07:F37F 落在该行 ±6 行内（工具可复算）"
+    },
+    "UpdateEnemy_UpdateEnData05Bit6": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/slot_cycle.rs:138",
+      "note": "asm label 名出现在代码 crates/game-core/src/enemy/slot_cycle.rs:138，且地址锚 07:F3AA 落在该行 ±6 行内（工具可复算）"
+    },
+    "UpdateEnemy_Resting": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/framework.rs:558",
+      "note": "asm label 名出现在代码 crates/game-core/src/enemy/framework.rs:558，且地址锚 07:F3BE 落在该行 ±6 行内（工具可复算）"
+    },
+    "UpdateEnemy_Active": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/framework.rs:579",
+      "note": "asm label 名出现在代码 crates/game-core/src/enemy/framework.rs:579，且地址锚 07:F3E6 落在该行 ±6 行内（工具可复算）"
+    },
+    "UpdateEnemyCommon": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/motion.rs:1",
+      "note": "asm label 名出现在代码 crates/game-core/src/enemy/motion.rs:1，且地址锚 07:F410 落在该行 ±6 行内（工具可复算）"
+    },
+    "RemoveEnemyIfItIsInLava": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/framework.rs:606",
+      "note": "asm label 名出现在代码 crates/game-core/src/enemy/framework.rs:606，且地址锚 07:F51E 落在该行 ±6 行内（工具可复算）"
+    },
+    "EnemyReactToSamusProjectile": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/framework.rs:169",
+      "note": "asm label 名出现在代码 crates/game-core/src/enemy/framework.rs:169，且地址锚 07:F536 落在该行 ±6 行内（工具可复算）"
+    },
+    "UpdateEnemy_Resting_UpdateEnData1F": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/framework.rs:16",
+      "note": "asm label 名出现在代码 crates/game-core/src/enemy/framework.rs:16，且地址锚 07:F676 落在该行 ±6 行内（工具可复算）"
+    },
+    "SetEnAnimIndex": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/framework.rs:156",
+      "note": "asm label 名出现在代码 crates/game-core/src/enemy/framework.rs:156，且地址锚 07:F690 落在该行 ±6 行内（工具可复算）"
+    },
+    "UpdateEnemy_ForceSpeedTowardsSamus": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/slot_cycle.rs:178",
+      "note": "asm label 名出现在代码 crates/game-core/src/enemy/slot_cycle.rs:178，且地址锚 07:F6B9 落在该行 ±6 行内（工具可复算）"
+    },
+    "LoadEnHiToYAndLoadEorHiToCarry": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/slot_cycle.rs:183",
+      "note": "asm label 名出现在代码 crates/game-core/src/enemy/slot_cycle.rs:183，且地址锚 07:F752 落在该行 ±6 行内（工具可复算）"
+    },
+    "UpdateEnemy_EnData05DistanceToSamusThreshold": {
+      "status": "ported",
+      "rust": "crates/game-core/src/frame/tests.rs:770",
+      "note": "asm label 名出现在代码 crates/game-core/src/frame/tests.rs:770，且地址锚 07:F75B 落在该行 ±6 行内（工具可复算）"
+    },
+    "UpdateEnemy_Resting_TryBecomingActive": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/framework.rs:24",
+      "note": "asm label 名出现在代码 crates/game-core/src/enemy/framework.rs:24，且地址锚 07:F7BA 落在该行 ±6 行内（工具可复算）"
+    },
+    "GetEnemyTypeTimes2PlusFacingDirection": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/common.rs:199",
+      "note": "asm label 名出现在代码 crates/game-core/src/enemy/common.rs:199，且地址锚 07:F844 落在该行 ±6 行内（工具可复算）"
+    },
+    "InitEnemyForceSpeedTowardsSamusDelayAndHealth": {
+      "status": "ported",
+      "rust": "crates/game-core/src/frame/cycles.rs:243",
+      "note": "asm label 名出现在代码 crates/game-core/src/frame/cycles.rs:243，且地址锚 07:F85A 落在该行 ±6 行内（工具可复算）"
+    },
+    "AnimDrawEnemy": {
+      "status": "ported",
+      "rust": "crates/game-core/src/render/enemy_sprite.rs:1",
+      "note": "asm label 名出现在代码 crates/game-core/src/render/enemy_sprite.rs:1，且地址锚 07:F97E 落在该行 ±6 行内（工具可复算）"
+    },
+    "InitEnemyFacingDirectionAxisAndDelay": {
+      "status": "ported",
+      "rust": "crates/game-core/src/frame/cycles.rs:238",
+      "note": "asm label 名出现在代码 crates/game-core/src/frame/cycles.rs:238，且地址锚 07:FB7B 落在该行 ±6 行内（工具可复算）"
+    },
+    "UpdateSkreeProjectile": {
+      "status": "ported",
+      "rust": "crates/game-core/src/weapon/projectile.rs:300",
+      "note": "asm label 名出现在代码 crates/game-core/src/weapon/projectile.rs:300，且地址锚 07:FBEC 落在该行 ±6 行内（工具可复算）"
+    },
+    "CheckZebetite": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/zebetite.rs:333",
+      "note": "asm label 名出现在代码 crates/game-core/src/enemy/zebetite.rs:333，且地址锚 07:FE05 落在该行 ±6 行内（工具可复算）"
+    },
+    "UpdateTileBlast_Respawned": {
+      "status": "ported",
+      "rust": "crates/game-core/src/world/tile_blast.rs:226",
+      "note": "asm label 名出现在代码 crates/game-core/src/world/tile_blast.rs:226，且地址锚 07:FE83 落在该行 ±6 行内（工具可复算）"
+    },
+    "GetVRAMStringPtr": {
+      "status": "ported",
+      "rust": "crates/game-data/src/pack.rs:259",
+      "note": "asm label 名出现在代码 crates/game-data/src/pack.rs:259，且地址锚 07:FECC 落在该行 ±6 行内（工具可复算）"
+    },
+    "DrawTileBlast": {
+      "status": "ported",
+      "rust": "crates/game-core/src/world/room_ram.rs:117",
+      "note": "asm label 名出现在代码 crates/game-core/src/world/room_ram.rs:117，且地址锚 07:FEDC 落在该行 ±6 行内（工具可复算）"
+    },
+    "GetPosAtNameTableAddr": {
+      "status": "ported",
+      "rust": "crates/game-core/src/world/tile_blast.rs:251",
+      "note": "asm label 名出现在代码 crates/game-core/src/world/tile_blast.rs:251，且地址锚 07:FF3C 落在该行 ±6 行内（工具可复算）"
     }
   }
 }
