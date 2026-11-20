@@ -679,6 +679,20 @@ impl Manager {
     }
 
     /// 精灵 RAM（`$0200-$02FF`）单字节写——`DrawEndTimerEnemy` 直接改已画精灵的 tile 字节。
+    /// `PasswordByte` 18 B（`$6988` 起，`constants_ram.asm`）——`InitializeGame` 的输入面。
+    pub fn password_bytes(&self) -> [u8; 18] {
+        let mut pw = [0u8; 18];
+        for (i, b) in pw.iter_mut().enumerate() {
+            *b = self.read_ram(crate::ram_map::PASSWORD_BYTE + i as u16);
+        }
+        pw
+    }
+
+    /// `$69B2`：NARPASSWORD 判定字节（非 0 ⇒ `InitializeGame` 跳过 LoadPasswordData）。
+    pub fn nar_password_flag(&self) -> bool {
+        self.read_ram(0x69B2) != 0
+    }
+
     pub fn set_oam_byte(&mut self, off: u8, v: u8) {
         self.write_ram(0x0200 + off as u16, v);
     }

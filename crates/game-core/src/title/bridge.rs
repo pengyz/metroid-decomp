@@ -242,6 +242,12 @@ fn exec_shell_call(mem: &mut Manager, sc: &crate::title::ShellCall) {
             }
         }
         PrepareVram(addr) => prepare_vram(mem, *addr),
+        InitializeGame => {
+            let pw = mem.password_bytes();
+            // `$69B2` = NARPASSWORD 判定字节（非 0 ⇒ 跳过 LoadPasswordData，quirk 保真）。
+            let nar = mem.nar_password_flag();
+            initialize_game(mem, &pw, nar);
+        }
         LoadEndSamusSprites { idx, count } => {
             crate::title::ending_sprites::load_end_samus_sprites(mem, *idx, *count)
         }

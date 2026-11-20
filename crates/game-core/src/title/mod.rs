@@ -816,6 +816,8 @@ pub enum ShellCall {
     LoadEndSamusSprites { idx: u8, count: u8 },
     /// `LoadWaveSprites ; 00:9C7F`（OAM 写面——段3 挥手）。
     LoadWaveSprites { off: u8, count: u8 },
+    /// InitializeGame（`jmp InitializeGame ; 00:92D4`——读 RAM 里的 PasswordByte 重开一局）。
+    InitializeGame,
     /// PasswordToScreen（`00:93C6`：WaitNMIPass + 4×6 字符名表写 $21A9/$21B0/$21E9/$21F0）。
     PasswordToScreen,
 }
@@ -1243,7 +1245,34 @@ pub fn dispatch_step(face: &TitleFace) -> TitleStep {
                         jumped: None, unported: None, next_cursor: 0,
                     }
                 }
-                // 段6 未实现（行为缺失，非等价未验证）：记账后停在本步，
+                // 段6 `Restart ; 00:9A39`：按 START ⇒ 清密码/道具史 → 存装备 → InitializeGame。
+                (6, _) => {
+                    let mut events = o.writes;
+                    let mut shell = vec![];
+                    if r(crate::ram_map::JOY1_STATUS) & 0x10 != 0 {
+                        // BUTTON_START：清 PasswordByte00-11 与 UniqueItemHistory 全页
+                        for i in 0..0x12u16 {
+                            events.push((crate::ram_map::PASSWORD_BYTE + i, 0));
+                        }
+                        for i in 0..0x100u16 {
+                            events.push((crate::ram_map::UNIQUE_ITEM_HISTORY + i, 0));
+                        }
+                        // `PasswordByte+$09 ← SamusGear`；`+$08 ← JustInBailey?$80:0`
+                        events.push((crate::ram_map::PASSWORD_BYTE + 9, r(0x6878)));
+                        let suitless = if face.wram[0x69B3 - 0x6000] != 0 { 0x80 } else { 0x00 };
+                        events.push((crate::ram_map::PASSWORD_BYTE + 8, suitless));
+                        shell.push(ShellCall::InitializeGame);
+                        // 缺口（明示，见 docs/findings/ending-sequence.md §4）：
+                        // MaruMari/Bombs/Varia/HighJump/ScrewAttack 五件的 `ItemData@XXX`
+                        // 位投影未端口（需 ItemData 表逐项考证）⇒ NG+ 装备继承暂不生效。
+                    }
+                    TitleStep {
+                        events, shell, a_out: Some(o.a_out),
+                        x_out: o.x_out.or(Some(face.x)), y_out: o.y_out.or(Some(face.y)),
+                        jumped: None, unported: None, next_cursor: 0,
+                    }
+                }
+                // 兜底（room_ptr>6 等异常态）：记账后停在本步，
                 // 见 docs/findings/ending-sequence.md §4。
                 _ => TitleStep {
                     events: o.writes, shell: vec![], a_out: Some(o.a_out),
