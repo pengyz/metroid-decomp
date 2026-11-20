@@ -53,6 +53,10 @@ pub mod ens_extra {
     pub const RESET_ANIM_INDEX: u16 = 5;
     pub const ANIM_INDEX: u16 = 6;
     pub const HI: u16 = 7;
+    /// 竖速小数（`$6AFC`）——`EnemyGetDeltaY_UsingAcceleration` 的累加面。
+    pub const SUB_PIXEL_Y: u16 = 8;
+    /// 横速小数（`$6AFD`）。
+    pub const SUB_PIXEL_X: u16 = 9;
     /// 竖加速（`$6AFE`）。
     pub const ACCEL_Y: u16 = 10;
     /// 横加速（`$6AFF`）。
@@ -596,6 +600,20 @@ impl<'a> Enemy<'a> {
         }
     }
 
+    /// `$6AFC EnsExtra.subPixelY`（竖速小数）。
+    pub fn subpixel_y(&self) -> u8 {
+        self.getx(ens_extra::SUB_PIXEL_Y)
+    }
+    pub fn set_subpixel_y(&mut self, v: u8) {
+        self.setx(ens_extra::SUB_PIXEL_Y, v);
+    }
+    /// `$6AFD EnsExtra.subPixelX`（横速小数）。
+    pub fn subpixel_x(&self) -> u8 {
+        self.getx(ens_extra::SUB_PIXEL_X)
+    }
+    pub fn set_subpixel_x(&mut self, v: u8) {
+        self.setx(ens_extra::SUB_PIXEL_X, v);
+    }
     pub fn hi(&self) -> u8 {
         self.getx(ens_extra::HI)
     }
@@ -809,9 +827,9 @@ mod tests_anim_step {
 // ─────────────────────────── P2：`NesMapped` 声明（域级） ───────────────────────────
 
 /// 敌域主面（`Ens`）未 typed 的缺口说明。
-const ENS_MAIN_UNMODELED: &str = "敌域主面未 typed：字段真相在字节面（EnsFace 只读视图；crates/game-core/src/enemy/state.rs:283）";
+const ENS_MAIN_UNMODELED: &str = "敌域主面未 typed：字段真相在字节面（EnsFace 只读视图；crates/game-core/src/enemy/state.rs:275）";
 /// 敌域额外面（`EnsExtra`）尾 9 B 未 typed 的缺口说明。
-const ENSX_TAIL: &str = "EnsExtra 尾 9 B 未 typed：accelY/jumpDsplcmnt/type/data1F 等仍在字节面（crates/game-core/src/enemy/state.rs:814）";
+const ENSX_TAIL: &str = "EnsExtra 尾 9 B 未 typed：accelY/jumpDsplcmnt/type/data1F 等仍在字节面（crates/game-core/src/enemy/state.rs:287）";
 
 /// `EnsExtra` 第 `slot` 槽的槽首地址（`$6AF4 + slot*16`）——只从既有常量推导。
 const fn ensx_slot(slot: u16) -> u16 {

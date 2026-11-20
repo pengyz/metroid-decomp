@@ -126,17 +126,6 @@ pub(crate) fn vertical_span_cols(x: u8, rx: u8) -> (u8, u32) {
     (left, n)
 }
 
-/// collision_point_ok（**asm 内容锚** CheckMoveVertical `: 07:E7BD`——r26 共享）：
-/// tile 值类见 `world::room_ram::tile_blocks_movement`（判据单源：`$4E` 固实 /
-/// 固实阈值 Brinstar `$80`、其余区 `$70` / `>=$A0` 可走 / 可炸瓦对非弹对象固实）。
-fn collision_point_ok(mem: &mut Manager, y: u8, x: u8, hi: u8) -> bool {
-    let idx = (((y & 0xF8) as u16) << 2) | ((x >> 3) as u16);
-    let page = if hi & 1 != 0 { 0x0400u16 } else { 0x0000 };
-    let ptr = 0x6000 | page | (idx & 0x3FF);
-    let tile = mem.read_wram(ptr);
-    !crate::world::room_ram::tile_blocks_non_projectile(tile)
-}
-
 pub fn vert_accelerate(mem: &mut Manager) {
     if mem.read_ram(SAMUS_ACCEL_Y) != 0 {
         return; // 空中——`bne @dontStartFalling`
@@ -1378,7 +1367,10 @@ fn collision_point_samus(mem: &mut Manager, y: u8, x: u8, hi: u8) -> bool {
     let page = if hi & 1 != 0 { 0x0400u16 } else { 0x0000 };
     // 【墙顶角卡·瓦片级探针（临时——2026-11-05）】f1030-1045 查撞输入/瓦片/结果。
     let tile = mem.read_wram(0x6000 | page | (idx & 0x3FF));
-    let ok = tile != 0x4E && tile >= 0x80;
+    // asm 判据单源：`$4E`/固实带/可炸带 `$80-$9F` 一律阻挡，`>=$A0` 可走
+    // （`CheckBlastTile`/`IsBlastTile` 两径出口都是碰撞——见 room_ram 的 doc）。
+    // 旧形 `tile != 0x4E && tile >= 0x80` 把可炸瓦当可走 ⇒ Samus 穿可炸瓦（复核 F1）。
+    let ok = !crate::world::room_ram::tile_blocks_non_projectile(tile);
     if ok {
         // asm E7FB：`dey/sty SamusDoorData`（清 0）→ $A0 beq Lx200(inc 1 次=1)；
         // $A1 inc（=1）落入 Lx200 再 inc（=2）
@@ -2722,5 +2714,58 @@ mod tests_room_load_defer {
         apply_deferred_horz_px(&mut m); // 门队列排空那一拍的兑现点
         assert_eq!(m.samus().x(), 0x6F, "装载窗末落 1 px（emu f676）");
         assert_eq!(m.samus().deferred_horz_px(), 0, "只兑一次（累计清空）");
+    }
+}
+
+#[cfg(test)]
+mod tests_samus_tile_collision {
+    use super::*;
+
+    /// 直接落瓦：`collision_point_samus` 的地址式 `idx=((y&0xF8)<<2)|(x>>3)`、
+    /// 页选位 `hi&1`（`$6000|$0400`）。
+    fn put_tile(m: &mut Manager, y: u8, x: u8, hi: u8, tile: u8) {
+        let idx = (((y & 0xF8) as u16) << 2) | ((x >> 3) as u16);
+        let page = if hi & 1 != 0 { 0x0400u16 } else { 0x0000 };
+        m.write_wram(0x6000 | page | (idx & 0x3FF), tile);
+    }
+
+    /// **复核 F1 回归**：Samus 的真实查撞径把可炸瓦 `$80-$9F` 当固实（旧形 `tile >= $80`
+    /// 当可走 ⇒ 穿可炸瓦）。asm：`IsBlastTile ; 07:E9BE` 非弹径 `beq @RTS`，CF 仍来自
+    /// `cmp #$A0` ⇒ 碰撞。
+    #[test]
+    fn samus_blocks_blastable_tiles() {
+        let mut m = Manager::default();
+        for t in [0x80u8, 0x82, 0x9F] {
+            put_tile(&mut m, 0x50, 0x40, 0, t);
+            assert!(
+                !collision_point_samus(&mut m, 0x50, 0x40, 0),
+                "${t:02X} 可炸瓦应阻挡 Samus（旧形会放行）"
+            );
+        }
+    }
+
+    /// `>=$A0` 可走，且 `$A0/$A1` 仍写 `SamusDoorData`（asm `IsWalkableTile ; 07:E7FB` 副作用）。
+    #[test]
+    fn samus_walks_walkable_and_records_door() {
+        let mut m = Manager::default();
+        put_tile(&mut m, 0x50, 0x40, 0, 0xC0);
+        assert!(collision_point_samus(&mut m, 0x50, 0x40, 0));
+        assert_eq!(m.read_ram(crate::ram_map::SAMUS_DOOR_DATA), 0, "普通可走瓦清 0");
+
+        put_tile(&mut m, 0x50, 0x40, 0, 0xA0);
+        assert!(collision_point_samus(&mut m, 0x50, 0x40, 0));
+        assert_eq!(m.read_ram(crate::ram_map::SAMUS_DOOR_DATA), 1, "竖滚门 = 1");
+
+        put_tile(&mut m, 0x50, 0x40, 0, 0xA1);
+        assert!(collision_point_samus(&mut m, 0x50, 0x40, 0));
+        assert_eq!(m.read_ram(crate::ram_map::SAMUS_DOOR_DATA), 2, "横滚门 = 2");
+    }
+
+    /// `$4E` 门/像瓦恒固实（`SamusProjectileHitDoorOrStatue` 非弹径 clc）。
+    #[test]
+    fn samus_blocks_door_tile() {
+        let mut m = Manager::default();
+        put_tile(&mut m, 0x50, 0x40, 0, 0x4E);
+        assert!(!collision_point_samus(&mut m, 0x50, 0x40, 0));
     }
 }

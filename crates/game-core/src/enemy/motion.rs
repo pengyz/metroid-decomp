@@ -555,13 +555,169 @@ pub(crate) fn make_room_ram_ptr(_mem: &mut crate::frame::Manager, y: u8, x: u8, 
 }
 
 /// 碰撞核（**asm 内容锚** `CheckMoveVertical: ; 07:E7BD`/Horizontal $E89B——r26）：
-/// 逐点（块界）→MakeRoomRAMPtr→`world::room_ram::tile_blocks_movement`（判据单源）：
+/// 逐点（块界）→MakeRoomRAMPtr→`world::room_ram::tile_blocks_non_projectile`（判据单源）：
 /// `$4E`=门/像固实；`<$80`（Brinstar）/`<$70`（其余区）=固实；`>=$A0`=可走；
 /// 可炸瓦 `$80-$9F`（Brinstar）/`$70-$9F`（其余区）**对非弹对象固实**。返回 carry（可走=true）。
 pub(crate) fn collision_point_ok(mem: &mut crate::frame::Manager, y: u8, x: u8, hi: u8) -> bool {
     let ptr = make_room_ram_ptr(mem, y, x, hi);
     let tile = mem.read_wram(ptr);
     !crate::world::room_ram::tile_blocks_non_projectile(tile)
+}
+
+/// `EnemyGetDeltaY_UsingAcceleration ; $833F`（`areas_common.asm`）——PipeBug 等
+/// 加速径敌专用：把 `accelY` 积分进 `speedY/speedSubPixelY`、按 ±14 钳位，再把
+/// 小数累进 `subPixelY`，返回本帧 Δy（含进位）。
+///
+/// asm 逐段：`ldy #$0E`（正极速）→ `lda accelY / bmi @else_A`；正加速 `clc/adc
+/// speedSubPixelY/sta`+`lda speedY/adc #$00/sta`；负加速先 `TwosComplement` 取
+/// |accel| 再 16 位减；两径汇合后 `bpl @endIf_B`（速度仍负 ⇒ `TwosComplement` 取
+/// 绝对速度、`ldy #$F2`＝−14）→ `cmp #$0E / bcc @endIf_C`（|speed| ≥ 14 ⇒ 钳位：
+/// `speedSubPixelY←0`、`speedY←Y`）→ `subPixelY += speedSubPixelY`（进位链）→
+/// `Delta = speedY + carry`。
+pub(crate) fn enemy_get_delta_y_using_acceleration(
+    mem: &mut crate::frame::Manager,
+    x: u8,
+) -> i8 {
+    let slot = x / 16;
+    let accel = mem.enemy(slot).accel_y();
+    let mut sub = mem.enemy(slot).data06(); // $0406 == speedSubPixelY（三名同址）
+    let mut sp = mem.enemy(slot).speed_y() as u8;
+    if accel >= 0 {
+        let t = sub as u16 + accel as u16;
+        sub = t as u8;
+        sp = sp.wrapping_add((t >> 8) as u8);
+    } else {
+        let a = (accel as u8).wrapping_neg(); // TwosComplement(|accel|)
+        let t = (sub as i16) - (a as i16);
+        sub = t as u8;
+        if t < 0 {
+            sp = sp.wrapping_sub(1);
+        }
+    }
+    let mut cap: u8 = 0x0E;
+    let mut abs = sp;
+    if (sp as i8) < 0 {
+        abs = (sp as i8).wrapping_neg() as u8;
+        cap = 0xF2;
+    }
+    if abs >= 0x0E {
+        sub = 0;
+        sp = cap;
+    }
+    // `subPixelY += speedSubPixelY`（进位链）⇒ Delta = speedY + carry
+    let (nsub, carry) = mem.enemy(slot).subpixel_y().overflowing_add(sub);
+    mem.enemy(slot).set_subpixel_y(nsub);
+    mem.enemy(slot).set_data06(sub);
+    mem.enemy(slot).set_speed_y(sp as i8);
+    (sp as i8).wrapping_add(carry as i8)
+}
+
+/// `EnemyGetDeltaX_UsingAcceleration ; $8395`（`areas_common.asm`）——与 Y 件同构，
+/// 但用**有符号 16 位对**比较：`speedSubPixelX += accelX`（`accelX<0` 时高字节
+/// `adc #$FF` 符号扩展）⇒ 负速取绝对值与 `(0x00,0x0E)` 比 ⇒ 超限钳 `±0x0E`。
+pub(crate) fn enemy_get_delta_x_using_acceleration(
+    mem: &mut crate::frame::Manager,
+    x: u8,
+) -> i8 {
+    let slot = x / 16;
+    let accel = mem.enemy(slot).accel_x();
+    let mut sub = mem.enemy(slot).speed_subpixel_x();
+    let t = sub as u16 + (accel as i8 as i16 as u16);
+    sub = t as u8;
+    let mut sp = (mem.enemy(slot).speed_x() as i16).wrapping_add((t >> 8) as i16);
+    let sp8 = sp as u8;
+    // 绝对速度 vs 绝对极速（(0x00,0x0E) 或 (0xFF,0xF2) 的绝对值同为 0x0E）
+    let abs_sp: u16 = if sp < 0 {
+        (0u16).wrapping_sub(sp as u16) & 0x00FF | ((sp as u8 == 0) as u16 * 0)
+    } else {
+        sp as u16 & 0x00FF
+    };
+    let _ = abs_sp;
+    // 简化等价：|speedX|（含小数进位后）≥ 14 ⇒ 钳位到 ±0x0E（小数清零）。
+    let abs_int = if sp < 0 { (-sp) as u16 } else { sp as u16 };
+    let abs_pair = (abs_int << 8) | sub as u16; // 高=整数绝对值，低=小数
+    if abs_pair >= (0x0E << 8) {
+        sub = 0;
+        sp = if sp < 0 { -0x0E } else { 0x0E };
+    }
+    let (nsub, carry) = mem.enemy(slot).subpixel_x().overflowing_add(sub);
+    mem.enemy(slot).set_subpixel_x(nsub);
+    mem.enemy(slot).set_speed_subpixel_x(sub);
+    mem.enemy(slot).set_speed_x(sp as i8);
+    let _ = sp8;
+    (sp as i8).wrapping_add(carry as i8)
+}
+
+/// `ApplySpeedToPosition ; 07:FD8F`（`prg7_engine.asm:12693`）——把整段 Δ 一次性
+/// 加到位（**不是逐像素碰撞**：此径只判屏幕边界回绕）。返回 true=成功。
+///
+/// asm 逐段：`ScrollDir&$02 → Temp02`（横滚标志）；y 正：`adc y`，`bcs || y>=$F0`
+/// ⇒ `adc #$0F`（进位恒置＝+$10）且**横滚则失败**否则 `hi++`；y 负：`adc y`，
+/// 无进位 ⇒ `sbc #$0F`（＝−$10）且横滚则失败否则 `hi++`；x 正：`adc x`，进位 ⇒
+/// 竖滚则失败否则 `hi++`；x 负：无进位 ⇒ 同上。失败时**位置不写回**（asm 只改
+/// Temp08/09/0B，敌面位置由调用方的 `LoadEnemyPositionFromTemp` 落盘）。
+pub(crate) fn apply_speed_to_position(
+    mem: &mut crate::frame::Manager,
+    x: u8,
+    dy: i8,
+    dx: i8,
+) -> bool {
+    let slot = x / 16;
+    let horizontal = mem.read_ram(crate::ram_map::SCROLL_DIR) & 0x02 != 0;
+    let y0 = mem.enemy(slot).y();
+    let x0 = mem.enemy(slot).pos_x();
+    let hi0 = mem.enemy(slot).hi();
+    let mut hi = hi0;
+    let mut ny = y0;
+    if dy != 0 {
+        if dy > 0 {
+            let (v, carry) = y0.overflowing_add(dy as u8);
+            ny = v;
+            if carry || ny >= 0xF0 {
+                ny = ny.wrapping_add(0x10);
+                if horizontal {
+                    return false;
+                }
+                hi = hi.wrapping_add(1);
+            }
+        } else {
+            let (v, carry) = y0.overflowing_add(dy as u8);
+            ny = v;
+            if !carry {
+                ny = ny.wrapping_sub(0x10);
+                if horizontal {
+                    return false;
+                }
+                hi = hi.wrapping_add(1);
+            }
+        }
+    }
+    let mut nx = x0;
+    if dx != 0 {
+        if dx > 0 {
+            let (v, carry) = x0.overflowing_add(dx as u8);
+            nx = v;
+            if carry {
+                if !horizontal {
+                    return false;
+                }
+                hi = hi.wrapping_add(1);
+            }
+        } else {
+            let (v, carry) = x0.overflowing_add(dx as u8);
+            nx = v;
+            if !carry {
+                if !horizontal {
+                    return false;
+                }
+                hi = hi.wrapping_add(1);
+            }
+        }
+    }
+    mem.enemy(slot).set_y(ny);
+    mem.enemy(slot).set_pos_x(nx);
+    mem.enemy(slot).set_hi(hi);
+    true
 }
 
 /// EnemyCheckMoveUp（**asm 内容锚** `: 07:E770`→EnemyCheckMoveVertical `07:E783`→

@@ -29,4 +29,5 @@ pub mod skree;
 pub mod sidehopper;
 
 pub(crate) mod waver;
+pub(crate) mod pipe_bug;
 pub(crate) mod rio;

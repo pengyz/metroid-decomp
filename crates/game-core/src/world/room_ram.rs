@@ -26,43 +26,28 @@ pub const ROOM_PTR: u16 = 0x0039;
 pub const ROOM_NUMBER: u16 = 0x0033;
 
 /// 瓦片"是否阻挡移动"判据（**asm 内容锚** `CheckMoveVertical ; 07:E7BD` 的瓦判链 →
-/// `CheckBlastTile ; 07:D651` + `IsBlastTile ; 07:E9BE`）。
+/// `CheckBlastTile ; 07:D651` + `IsBlastTile ; 07:E9BE`，逐行读 `refs/m1disasm/SRC/prg7_engine.asm`）。
 ///
-/// asm 三件合起来的语义（逐行读 `refs/m1disasm/SRC/prg7_engine.asm`）：
-/// - `cmp #$4E / beq SamusProjectileHitDoorOrStatue`：门/像瓦——非弹更新径一律碰撞；
-/// - `CheckBlastTile`：**固实阈值按区分**——Brinstar（`InArea==$10`）`cmp #$80`、
-///   其余区 `cmp #$70`；低于阈值 ⇒ CF=0 ⇒ 固实；
-/// - `cmp #$A0 / bcs IsWalkableTile`：`>=$A0` 可走（含 `$A0/$A1` 门瓦，Samus 另有判）；
-/// - 余下 `[$80,$9F]`（Brinstar）/ `[$70,$9F]`（其余区）⇒ `IsBlastTile`：
-///   `ldy UpdatingSamusProjectile / beq @RTS` ⇒ **非弹更新径直接 rts，CF 仍是
-///   上一条 `cmp #$A0` 的 0 ⇒ 碰撞**；只有弹更新径才继续找空槽破坏瓦（CF=1 ⇒ 可走）。
+/// **asm 两径的出口都是"碰撞"**（对抗复核 F2 更正）：`IsBlastTile` 的非弹径
+/// `ldy UpdatingSamusProjectile / beq @RTS` 直接 rts，CF 仍是上一条 `cmp #$A0`
+/// 对 `$80-$9F` 产生的 0；弹更新径走完"找空槽→破坏瓦"后也落到 `@exit: clc`。
+/// ⇒ 区阈值（`CheckBlastTile` 的 Brinstar `$80` / 其余 `$70`）**只决定要不要执行
+/// "炸瓦"副作用**，不改变"这一格能不能过"——过不过恒为 `tile < $A0`。
 ///
-/// 旧实现把 `>=$80` 一律当可走（注释「$80-$9F 可炸⇒简化视为可走」）——**错**：
-/// 可炸瓦对 Samus/敌等非弹对象是固实块（要炸开才能过）。room 15 的 Waver 即因此
-/// 提前 2 像素（emu 撞在 `$82/$83`，rust 放行）。
-pub fn tile_blocks_movement(tile: u8, in_area: u8, updating_projectile: bool) -> bool {
-    if tile == 0x4E {
-        return true;
-    }
-    let solid_below = if in_area == 0x10 { 0x80 } else { 0x70 };
-    if tile < solid_below {
-        return true;
-    }
-    if tile >= 0xA0 {
-        return false;
-    }
-    !updating_projectile
-}
-
-/// 非弹对象（Samus/敌）的可走性判据——[`tile_blocks_movement`] 在
-/// `updating_projectile == false` 时的**等价化简**：`tile < $A0` 即固实。
+/// 旧实现把 `>=$80` 一律当可走（注释「$80-$9F 可炸⇒简化视为可走」）是错的：
+/// 可炸瓦对 Samus/敌是固实块（要炸开才能过）。room 15 的 Waver 即因此提前 2 像素
+/// （emu 撞在 `$82/$83`，rust 放行）。
+/// 瓦片阻挡判据的**唯一实现**：`tile < $A0` ⇒ 阻挡（`$4E` 门瓦、固实带、可炸带
+/// `$80-$9F` 全在内）；`>=$A0` ⇒ 可走。
 ///
-/// 理由（asm 直接推得，非近似）：可炸瓦 `$80-$9F`（Brinstar）/`$70-$9F`（其余区）
-/// 在非弹更新径一律走 `IsBlastTile` 的 `beq @RTS` 支 ⇒ 碰撞；而 `>=$A0` 一律
-/// `bcs IsWalkableTile` ⇒ 可走。于是区阈值（`$80` vs `$70`）只影响弹更新径，
-/// 对非弹对象整个判据塌成一条：`tile < $A0`。
-/// 这样 Samus/敌的移动径不必读 `InArea`/`UpdatingSamusProjectile` 两个 RAM 字节
-/// （也避免在移动热路径上增加裸口读数）。
+/// 这是 asm 判据链（见上）在"两径出口都是碰撞"这一事实下的**精确化简**，不是近似：
+/// 区阈值只影响弹更新径是否执行"炸瓦"副作用，不改变可走性。因此 Samus/敌的移动
+/// 热路径不必读 `InArea`/`UpdatingSamusProjectile` 两个 RAM 字节。
+///
+/// 消费者：`enemy::motion::collision_point_ok`（敌径）、`samus::physics::collision_point_samus`
+/// （Samus 径，保留 `$A0/$A1` 写 `SamusDoorData` 的副作用）。
+/// `weapon::projectile` 的 BG 碰撞另需"门/像命中"与"炸瓦"副作用，故仍自持一份
+/// 判据并在该处注明分叉（不共用本函数，避免把副作用塞进纯判据）。
 pub fn tile_blocks_non_projectile(tile: u8) -> bool {
     tile < 0xA0
 }
@@ -235,59 +220,44 @@ impl<'a> crate::memmap::nesmap::NesMapped for Room<'a> {
 
 #[cfg(test)]
 mod tests_tile_blocks {
-    use super::tile_blocks_movement;
+    use super::tile_blocks_non_projectile;
 
-    /// asm `CheckBlastTile ; 07:D651`：固实阈值按区分（Brinstar `$80` / 其余 `$70`）。
+    /// asm 判据边界：`$4E` 门瓦、固实带（`<$A0`）一律阻挡；`$A0/$A1` 门瓦与 `>=$A0`
+    /// 可走。区阈值（`$70` vs `$80`）**不进判据**——见函数 doc（两径出口都是碰撞）。
     #[test]
-    fn solid_threshold_depends_on_area() {
-        // Brinstar（InArea=$10）：$7F 固实、$80 进可炸判
-        assert!(tile_blocks_movement(0x7F, 0x10, false));
-        assert!(tile_blocks_movement(0x80, 0x10, false));
-        // 其余区：$6F 固实、$70 进可炸判
-        assert!(tile_blocks_movement(0x6F, 0x11, false));
-        assert!(tile_blocks_movement(0x70, 0x11, false));
-        // 交叉：$70 在 Brinstar 是"可炸"（非固实阈值以上），非弹下仍碰撞；
-        // 但 $7F 在非 Brinstar 已是可炸带 ⇒ 弹更新径可走
-        assert!(!tile_blocks_movement(0x7F, 0x11, true));
+    fn asm_ladder_boundary_is_a0() {
+        for t in [0x00u8, 0x4E, 0x6F, 0x70, 0x7F, 0x80, 0x82, 0x9F] {
+            assert!(tile_blocks_non_projectile(t), "${t:02X} 应阻挡");
+        }
+        for t in [0xA0u8, 0xA1, 0xC0, 0xFF] {
+            assert!(!tile_blocks_non_projectile(t), "${t:02X} 应可走");
+        }
     }
 
-    /// asm `IsBlastTile ; 07:E9BE` 首件：**非弹更新径 ⇒ 可炸瓦碰撞**（CF 来自 `cmp #$A0`）。
+    /// `IsBlastTile ; 07:E9BE`：可炸瓦（`$80-$9F`）对非弹对象**固实**——room 15 的
+    /// Waver 撞 `$82/$83` 应被挡（此前 rust 放行 ⇒ 提前 2px）。
     #[test]
     fn blastable_tiles_block_non_projectiles() {
         for t in [0x80u8, 0x82, 0x83, 0x9F] {
-            assert!(tile_blocks_movement(t, 0x10, false), "Brinstar ${t:02X} 非弹应固实");
-            assert!(!tile_blocks_movement(t, 0x10, true), "Brinstar ${t:02X} 弹更新径可走");
-        }
-        for t in [0x70u8, 0x76, 0x9F] {
-            assert!(tile_blocks_movement(t, 0x11, false), "Norfair ${t:02X} 非弹应固实");
-            assert!(!tile_blocks_movement(t, 0x11, true), "Norfair ${t:02X} 弹更新径可走");
+            assert!(tile_blocks_non_projectile(t), "Brinstar ${t:02X} 非弹应固实");
         }
     }
 
-    /// `>=$A0` 恒可走（`cmp #$A0 / bcs IsWalkableTile`）；`$4E` 门/像恒固实。
+    /// `cmp #$A0 / bcs IsWalkableTile` ⇒ `>=$A0` 恒可走；`$4E` 门/像恒固实。
     #[test]
     fn walkable_and_door_tiles() {
         for t in [0xA0u8, 0xA1, 0xFF] {
-            assert!(!tile_blocks_movement(t, 0x10, false));
-            assert!(!tile_blocks_movement(t, 0x11, true));
+            assert!(!tile_blocks_non_projectile(t));
         }
-        assert!(tile_blocks_movement(0x4E, 0x10, false));
-        assert!(tile_blocks_movement(0x4E, 0x11, true));
+        assert!(tile_blocks_non_projectile(0x4E));
     }
 
-    /// 化简等式：非弹径下 `tile_blocks_movement(t, area, false) == tile < $A0`
-    /// 对全部 256 个 tile 与两个区阈值都成立（不是近似，是可证的等价）。
+    /// 判据对全 256 瓦恰好是 `tile < $A0`（没有第二个分支被漏掉）。
     #[test]
-    fn non_projectile_specialization_is_exact() {
+    fn predicate_covers_all_256_tiles() {
         for t in 0u16..=0xFF {
             let t = t as u8;
-            for area in [0x10u8, 0x11] {
-                assert_eq!(
-                    tile_blocks_movement(t, area, false),
-                    super::tile_blocks_non_projectile(t),
-                    "tile=${t:02X} area=${area:02X}"
-                );
-            }
+            assert_eq!(tile_blocks_non_projectile(t), t < 0xA0, "tile=${t:02X}");
         }
     }
 }

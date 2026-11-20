@@ -38,6 +38,8 @@ pub(crate) enum Routine {
     Crawler,
     /// `RioAIRoutine`（bank1 `01:9AF5`，仅 Brinstar 生成）。
     Rio,
+    /// `PipeBugAIRoutine`（bank1/2/4/5 各一份，速度表按区不同）。
+    PipeBug,
     /// `RemoveEnemy ; 07:FA18`——清槽。
     RemoveEnemy,
     /// `RTS_95CB`——直接返回，什么都不做（Kraid bank4 占位）。
@@ -59,7 +61,7 @@ const BRINSTAR: [Routine; 16] = [
     Skree,
     Crawler,
     Rio,
-    Unported("PipeBugAIRoutine"),
+    PipeBug,
     Unported("KraidAIRoutine"),
     Unported("KraidLintAIRoutine"),
     Unported("KraidNailAIRoutine"),
@@ -79,7 +81,7 @@ const NORFAIR: [Routine; 16] = [
     RemoveEnemy,
     RemoveEnemy,
     Crawler,
-    Unported("PipeBugAIRoutine"),
+    PipeBug,
     RemoveEnemy,
     RemoveEnemy,
     RemoveEnemy,
@@ -119,7 +121,7 @@ const KRAID: [Routine; 16] = [
     Skree,
     Crawler,
     Rts95CB,
-    Unported("PipeBugAIRoutine"),
+    PipeBug,
     Unported("KraidAIRoutine"),
     Unported("KraidLintAIRoutine"),
     Unported("KraidNailAIRoutine"),
@@ -139,7 +141,7 @@ const RIDLEY: [Routine; 16] = [
     RemoveEnemy,
     RemoveEnemy,
     Crawler,
-    Unported("PipeBugAIRoutine"),
+    PipeBug,
     RemoveEnemy,
     Unported("RidleyAIRoutine"),
     Unported("RidleyFireballAIRoutine"),

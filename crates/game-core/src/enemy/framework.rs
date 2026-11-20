@@ -510,6 +510,7 @@ pub(crate) fn choose_enemy_ai(mem: &mut crate::frame::Manager, x: u8) {
         Routine::RipperII => ripper_ii_ai(mem, x),
         Routine::Waver => crate::enemy::waver::waver_ai(mem, x),
         Routine::Rio => crate::enemy::rio::rio_ai(mem, x),
+        Routine::PipeBug => crate::enemy::pipe_bug::pipe_bug_ai(mem, x),
         // `RemoveEnemy ; 07:FA18`：`lda #enemyStatus_NoEnemy / sta EnsExtra.0.status,x / rts`
         Routine::RemoveEnemy => mem.enemy(slot_of(x)).set_status(EnemyStatus::NoEnemy),
         // `RTS_95CB`：Kraid bank4 的占位项，asm 直接 `rts`——什么都不做。

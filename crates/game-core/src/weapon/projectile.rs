@@ -228,6 +228,10 @@ pub(crate) fn update_bullet(mem: &mut crate::frame::Manager) {
         let ptr = crate::enemy::motion::make_room_ram_ptr(mem, oy, ox, ohi);
         let (lo, hi) = (ptr as u8, (ptr >> 8) as u8);
         let tile = mem.read_wram(ptr);
+        // 【判据分叉登记（复核 F3）】瓦判的单源是 `world::room_ram::tile_blocks_non_projectile`
+        // （`tile < $A0` ⇒ 阻挡）。子弹径不共用它：这里还要分"门瓦 `$4E` ⇒ 开槽"与
+        // "可炸瓦 `$80-$9F` ⇒ 记 DIVERGENCES 并爆"两条副作用，而可走性结论与单源一致
+        // （只有 `>=$A0` 才 move）。
         if tile >= 0xA0 {
             // 空气⇒移；`ApplySpeedToPosition` 失败（越界且滚动方向不允许）⇒ carry 清 ⇒
             // 调用方 `CheckBulletStat` 走 @collided 且 status==0 ⇒ `beq Lx069` **跳过**

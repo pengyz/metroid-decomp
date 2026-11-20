@@ -298,7 +298,7 @@
       "len": 192,
       "kind": "unmodeled",
       "refs": [
-        "crates/game-core/src/enemy/state.rs:283"
+        "crates/game-core/src/enemy/tables.rs:34"
       ]
     },
     {
