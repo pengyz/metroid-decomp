@@ -317,6 +317,16 @@ fn state_row(frame: usize, mem: &Manager) -> String {
     format!("{{\"f\":{frame},\"w\":{{{}}}}}", parts.join(","))
 }
 
+/// APU 寄存器写桶文本（判据仪器 2026-11-20）——apu_log[start..end] 切片 → 逐行
+/// "%04X %02X"（emu 腿 tools/scenario_capture.lua 同格式；tools/apu_diff.py 消费面）。
+fn apu_bucket_lines(log: &[(u16, u8)], start: usize, end: usize) -> String {
+    let mut body = String::new();
+    for (a, v) in &log[start..end.min(log.len())] {
+        body.push_str(&format!("{:04X} {:02X}\n", a, v));
+    }
+    body
+}
+
 // ---------------- 主流程 ----------------
 
 fn main() {
@@ -490,6 +500,31 @@ fn main() {
     // 发射点=迭代 frame 头（=tick(frame-1) 收口，先于 joy 注入）。旧径整取 tick(frame)
     // 收口 ⇒ 图像/名表/滚动 latch 晚一拍（walkfcprobe f820：+1 面+dx=+2/12085px 根因）。
     let mut seam_snap: Option<(usize, RenderState, Vec<u8>)> = None; // (tick, render, oam)
+    // APU 寄存器面采集（声音判据仪器 2026-11-20；emu 侧 tools/scenario_capture.lua
+    // 同缝同帧号同格式落盘 <name>_f%05d_<tag>.apu.hex）。
+    //
+    // **采集相位选择与依据**（本仪器核心裁定，findings/walk-fc-capture-seam.md §2c
+    // 双相位模型）：桶界 = on_spin_exit 缝界（engine.rs $C0D3 对齐缝——NMI 后/帧工作前）。
+    // 一桶 = [缝(N-1), 缝(N)] = work(N) + NMI(N) 的全部 $4000-$4017 写。asm 锚：NMI
+    // `NMI: ; 07:C0D9`（prg7_engine.asm:233）内块序 …→ReadJoyPads→SoundEngine
+    // （refs/m1disasm/SRC/sound_engine.asm，入口 B3B4）——SoundEngine 写全部发生在缝
+    // 触发前；帧工作（MainLoop 体 07:C0BC）的 APU 写（SFX 触发等）也在本桶内。
+    // 相位陷阱注记：ram.hex=tick 收口活体、png=seam 快照（tick(N-1)）——APU 桶与
+    // png 相位**不同**（apu f N = 缝 N 界桶），但 emu 腿按同一规则（缝处 frame 变量
+    // 已=N：inputPolled 在 NMI 内 ReadJoyPads 递增，先于 SoundEngine）落盘同帧号
+    // ⇒ 双腿帧号/相位逐帧可对齐（state 层 0 差已证缝对齐）。
+    // 对拍集合 = 显式 capture 点（caps）——capture_every 不进 APU 面（rust .sched
+    // 无 capture_every 展开面，两腿集合必须同源对称；emu 侧同裁）。
+    //
+    // **结构裁定**（任务二选一之说明）：不改 Manager、不新增 apu_frames 字段——理由：
+    // ① tick_frame_with 缝回调签名 FnMut(&Manager)（engine API 被多处测试/调用点冻结，
+    //    drain 式 apu_close_frame 需 &mut，波及面大）；② apu_log 须保持 append-only
+    //    语义（frame/nmi.rs:652「本帧最新写」反查 + game-shell drain_apu 消费契约）。
+    //    ⇒ 分桶 = **纯观测面**：apu_cut 游标按 apu_log 偏移切片，零逻辑行为变化
+    //    （无逻辑层钩子——no-env-hooks 门纪律；采集只发生在本 bin）。
+    let mut apu_cut = 0usize;
+    let cap_map: HashMap<usize, String> =
+        caps.iter().map(|(f, t)| (*f, t.clone())).collect();
     // fixture 注入去重表（逐条）——与 emu 腿 `fixtureAppliedAt[i]` 同构：
     // 触发条件见 `game_core::frame::fixture::fixture_due`（同帧注入=显示帧对齐；
     // **不要**改成 `frame > trigger`，会让整屏落后一帧——findings/room-sweep-fixture-phase.md），
@@ -571,6 +606,19 @@ fn main() {
                         mem.render.clone(),
                         mem.oam_shadow().to_vec(),
                     ));
+                }
+                // APU 桶收口（缝界——见上 apu_cut 注）：切片 [apu_cut..apu_log.len()]
+                // =本桶写序；采集帧直接落盘（emu 侧 onSpinExitSeam 同位同规则；空桶也
+                // 写空文件——两腿「缺文件≠空桶」语义对称，apu_diff 逐帧对齐消费）。
+                {
+                    let start = apu_cut;
+                    let end = mem.apu_log.len();
+                    apu_cut = end;
+                    if let Some(tag) = cap_map.get(&frame) {
+                        let body = apu_bucket_lines(&mem.apu_log, start, end);
+                        let fname = format!("{}_f{:05}_{}.apu.hex", plan.name, frame, tag);
+                        fs::write(out.join(&fname), body).expect("写 APU dump");
+                    }
                 }
             });
         }));
@@ -793,5 +841,16 @@ mod tests {
         let (rs, oam) = capture_inputs(None, &live_rs, &live_oam);
         assert!(std::ptr::eq(rs, &live_rs), "缺缝 rs=活体回退");
         assert!(std::ptr::eq(oam, live_oam.as_slice()), "缺缝 OAM=活体回退");
+    }
+
+    /// APU 桶切片（判据仪器）：偏移窗逐写 "%04X %02X"；end 越界夹紧；空桶=空串
+    /// （空桶也落空文件——双腿「缺文件≠空桶」对称语义的 rust 侧锚）。
+    #[test]
+    fn apu_bucket_lines_slices_offset_window() {
+        let log: Vec<(u16, u8)> = vec![(0x4000, 0x0F), (0x4015, 0x01), (0x4014, 0x02)];
+        assert_eq!(apu_bucket_lines(&log, 0, 2), "4000 0F\n4015 01\n");
+        assert_eq!(apu_bucket_lines(&log, 2, 3), "4014 02\n");
+        assert_eq!(apu_bucket_lines(&log, 3, 3), "", "空桶=空串");
+        assert_eq!(apu_bucket_lines(&log, 2, 99), "4014 02\n", "end 越界夹紧");
     }
 }

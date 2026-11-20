@@ -93,6 +93,54 @@ for _, e in ipairs(PLAN.captures) do capAt[e.frame] = e.tag end
 local everyN = PLAN.capture_every and PLAN.capture_every.n or 0
 local everyTag = PLAN.capture_every and PLAN.capture_every.tag or "auto"
 
+-- ---------------- APU 寄存器面采集（声音判据仪器 2026-11-20） ----------------
+-- 判据哲学：音频对拍不"听"——逐帧 APU 寄存器写序列（addr,value）对拍（寄存器面等价
+-- ⇒ 波形输出等价，强判据）。桶相位 = spin-exit 缝界（findings/walk-fc-capture-seam.md
+-- §2c 双相位模型；rust 侧 rust_screenshot.rs on_spin_exit 缝同界）：
+--   一桶 = [缝(N-1), 缝(N)] = work(N)+NMI(N) 的全部 $4000-$4017 写。asm 锚：NMI
+--   `NMI: ; 07:C0D9`（prg7_engine.asm:233）内块序 …→ReadJoyPads→SoundEngine
+--   （sound_engine.asm 入口 B3B4）——SoundEngine 写全落在缝前；缝处 Mesen frame 变量
+--   已=N（inputPolled 在 NMI 内 ReadJoyPads 递增，先于 SoundEngine）。
+-- 落盘 = <out_dir>/<name>_f%05d_<tag>.apu.hex，逐行 "%04X %02X"（与 rust 腿同格式同
+-- 帧号同缝；tools/apu_diff.py 消费）。对拍集合 = 显式 capture 点（capAt）——
+-- capture_every 不进 APU 面（rust .sched 无 capture_every 展开面，两腿集合必须同源
+-- 对称）。每缝恒清桶（防跨帧混桶——缺缝帧/span 帧与 $C0D3 不执行同形，写累积到
+-- 下一缝一并落盘，双腿同形）。空桶也写空文件（「缺文件≠空桶」语义对称）。
+-- API 纪律（r3 教训）：必须 emu.callbackType.write 整数枚举（字符串 "write" 静默落
+-- read 域=零命中）；回调实参=(addr, value)（T1 定谳 :326-327）。
+local apuBuf, apuCut = {}, false
+local APU_CAP = 65536
+if next(capAt) ~= nil then
+  local okA = pcall(emu.addMemoryCallback, function(address, value)
+    if not apuCut then
+      if #apuBuf >= APU_CAP then
+        apuCut = true
+        log("APU-CUT: 本桶写触顶 " .. tostring(APU_CAP) .. "（显式标记；本桶数据自此截断）")
+      else
+        apuBuf[#apuBuf + 1] = string.format("%04X %02X", address, value or 0)
+      end
+    end
+  end, emu.callbackType.write, 0x4000, 0x4017)
+  log("apu 写钩 @4000-4017 注册: " .. tostring(okA))
+end
+
+-- APU 桶收口（onSpinExitSeam 尾调用；注册条件同缝——capAt 非空 ⇒ 缝必已注册）。
+local function apuFlushBucket()
+  if next(capAt) == nil then return end
+  local tag = capAt[frame]
+  if tag then
+    local p = string.format("%s/%s_f%05d_%s.apu.hex", PLAN.out_dir, name, frame, tag)
+    local f = io.open(p, "wb")
+    if f then
+      f:write(table.concat(apuBuf, "\n"))
+      if #apuBuf > 0 then f:write("\n") end
+      f:close()
+    end
+  end
+  apuBuf = {}
+  apuCut = false
+end
+
 -- ---------------- 内存读取
 local function readByte(addr)
   local ok, v = pcall(emu.read, addr, MEMTYPE)
@@ -1183,6 +1231,9 @@ local function onSpinExitSeam()
   if pendingShot and pendingShot.frame == frame then
     fulfillShot("spin-exit-seam")
   end
+  -- APU 桶收口（判据仪器）：置回调尾——此时 SoundEngine(N) 写已全部累积（NMI 完成
+  -- 后才到 $C0D3 缝）；先落盘（本缝帧为采集点时）后恒清桶（防跨帧混桶——见上块注）。
+  apuFlushBucket()
 end
 if samplePoint == "spin-exit" or next(capAt) ~= nil or everyN > 0 then
   -- spin 出口缝：$C0D3 指令入口（callbackType.exec 真执行，r3 语义）
