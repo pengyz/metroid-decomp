@@ -22,14 +22,19 @@ pub(crate) const SLOT: u16 = 16;
 pub(crate) const SLOTS: u8 = 13;
 
 // 槽内字段偏移（asm 的 `TileBlasts.0.<field>,x` 结构化访问）。
+// 【口径更正 2026-11-20】`TileBlast` 结构真身是 `constants_ram.asm:36-47` 的
+// `.struct TileBlast`（routine0 / spare01:1 / animFrame3 / animDelay4 / spare05:5 /
+// animIndex6 / delay7 / roomRAMPtr:8 / type10 / spare0B:11-15），本文件早前把
+// `roomRAMPtr` 记成 +9/+10、`type` +11、动画三项 +12..+14 —— 全部偏一位且动画项错位，
+// 属结构性错读（无像素证据期未被 L4 抓到）。下面按 struct 定义钉死。
 const F_ROUTINE: u16 = 0;
+const F_ANIM_FRAME: u16 = 3;
+const F_ANIM_DELAY: u16 = 4;
+const F_SPARE05: u16 = 5;
+const F_ANIM_INDEX: u16 = 6;
 const F_DELAY: u16 = 7;
-const F_PTR: u16 = 9;
-const F_TYPE: u16 = 11;
-const F_ANIM_FRAME: u16 = 12;
-const F_ANIM_INDEX: u16 = 13;
-const F_ANIM_DELAY: u16 = 14;
-const F_SPARE05: u16 = 15;
+const F_PTR: u16 = 8;
+const F_TYPE: u16 = 10;
 
 /// `TileBlastAnim ; 07:FF86`（10 项 × 4 B，`$FE` = 该段串尾）。
 ///
@@ -163,7 +168,7 @@ fn update_tile_blast_anim(mem: &mut Manager, slot: u8, delay_reset: u8) -> bool 
         }
         mem.set_tb_anim_frame(slot, id);
         mem.set_tb_anim_index(slot, y.wrapping_add(1) as u8);
-        if draw_tile_blast(mem, slot) {
+        if draw_tile_blast_slot(mem, slot) {
             return false; // 画成功即返回
         }
         // 缓冲满：撤销 animIndex 自增，下帧重试（asm 注释自承是缺陷，保真）
@@ -176,7 +181,7 @@ fn update_tile_blast_anim(mem: &mut Manager, slot: u8, delay_reset: u8) -> bool 
 
 /// `DrawTileBlast ; 07:FEDC`：帧字符串写进 RoomRAM **并**排一次 PPU 写。
 /// 返回 `false` = `VRAMStructBufferIndex >= $1F`（缓冲满，调用方回滚）。
-fn draw_tile_blast(mem: &mut Manager, slot: u8) -> bool {
+pub(crate) fn draw_tile_blast_slot(mem: &mut Manager, slot: u8) -> bool {
     if mem.vram_struct_index() >= 0x1F {
         return false;
     }
@@ -185,8 +190,12 @@ fn draw_tile_blast(mem: &mut Manager, slot: u8) -> bool {
     let area = crate::frame::cur_area(mem);
     let src = match game_data::assets::vram_string(area, anim_frame) {
         Some(s) => s,
-        None => crate::unported!("bank07:FF3C-vram-string"),
+        None => return false, // 资产包缺该区串 ⇒ 画不出来（调用方按"重绘失败"处理）
     };
+    // 表尾同址别名（`VRAMStringPtrTable` 尾部项）折叠为零长 ⇒ 该 id 无图案，画不出来。
+    if src.is_empty() {
+        return false;
+    }
     let packed = src[0];
     let width = (packed & 0x0F) as u16;
     let height = (packed >> 4) as u16;

@@ -196,6 +196,9 @@ pub(crate) fn bullet_move(mem: &mut crate::frame::Manager) -> bool {
 /// UpdatingSamusProjectile($71)←1/删除（onScreen 清）/精灵撞（isHit）/BG 撞
 /// （空气（≥$A0）⇒移+免撞；实心⇒爆（$4E 门瓦⇒任务卡 2 径复用））/时寿 dec（长束免）/
 /// DrawBullet（AnimDrawObject(A=1)）。
+/// `wa_Missile`（`constants.asm:118-127`）。
+pub(crate) const WA_MISSILE: u8 = 0x0B;
+
 pub(crate) fn update_bullet(mem: &mut crate::frame::Manager) {
     let x = mem.page_index() as u16;
     let base = 0x0300u16 + x;
@@ -243,6 +246,12 @@ pub(crate) fn update_bullet(mem: &mut crate::frame::Manager) {
             if !bullet_move(mem) {
                 deleted = true;
             }
+        } else if crate::frame::in_area_raw(mem) & 0x0F == 3 {
+            // Tourian：`jsr GotoUpdateBullet_CollisionWithMotherBrain` 在固实瓦判之后、
+            // `cmp #$4E` 之前（`07:D609-07:D616`），而 `03:A0C6` 的出口是
+            // `pla / pla / clc / rts`（双返回）⇒ 跳过 $4E 与可炸瓦后续处理、CF=0 即碰撞。
+            crate::enemy::zebetite::tourian_bullet_hit(mem, slot as u8, tile, lo, hi);
+            collided = true;
         } else {
             if tile == 0x4E {
                 // 门瓦⇒任务卡 2 弹击径（复用（isHit&4 写））+爆（carry=0）

@@ -566,33 +566,69 @@ impl Manager {
     pub fn set_tb_delay(&mut self, slot: u8, v: u8) { self.write_ram(Self::tb_addr(slot, 7), v); }
     /// 槽内 `roomRAMPtr`（两个字节合成 u16）。
     pub fn tb_ptr(&self, slot: u8) -> u16 {
-        (self.read_ram(Self::tb_addr(slot, 10)) as u16) << 8 | self.read_ram(Self::tb_addr(slot, 9)) as u16
+        (self.read_ram(Self::tb_addr(slot, 9)) as u16) << 8 | self.read_ram(Self::tb_addr(slot, 8)) as u16
     }
     /// 设 `roomRAMPtr`。
     pub fn set_tb_ptr(&mut self, slot: u8, v: u16) {
-        self.write_ram(Self::tb_addr(slot, 9), v as u8);
-        self.write_ram(Self::tb_addr(slot, 10), (v >> 8) as u8);
+        self.write_ram(Self::tb_addr(slot, 8), v as u8);
+        self.write_ram(Self::tb_addr(slot, 9), (v >> 8) as u8);
     }
     /// 槽内 `type`（碎块类型 —— 4×4 小泡/1×1/2×2 分组）。
-    pub fn tb_type(&self, slot: u8) -> u8 { self.read_ram(Self::tb_addr(slot, 11)) }
+    pub fn tb_type(&self, slot: u8) -> u8 { self.read_ram(Self::tb_addr(slot, 10)) }
     /// 设 `type`。
-    pub fn set_tb_type(&mut self, slot: u8, v: u8) { self.write_ram(Self::tb_addr(slot, 11), v); }
+    pub fn set_tb_type(&mut self, slot: u8, v: u8) { self.write_ram(Self::tb_addr(slot, 10), v); }
     /// 槽内 `animFrame`（= VRAM 字符串 id）。
-    pub fn tb_anim_frame(&self, slot: u8) -> u8 { self.read_ram(Self::tb_addr(slot, 12)) }
+    pub fn tb_anim_frame(&self, slot: u8) -> u8 { self.read_ram(Self::tb_addr(slot, 3)) }
     /// 设 `animFrame`。
-    pub fn set_tb_anim_frame(&mut self, slot: u8, v: u8) { self.write_ram(Self::tb_addr(slot, 12), v); }
+    pub fn set_tb_anim_frame(&mut self, slot: u8, v: u8) { self.write_ram(Self::tb_addr(slot, 3), v); }
     /// 槽内 `animIndex`。
-    pub fn tb_anim_index(&self, slot: u8) -> u8 { self.read_ram(Self::tb_addr(slot, 13)) }
+    pub fn tb_anim_index(&self, slot: u8) -> u8 { self.read_ram(Self::tb_addr(slot, 6)) }
     /// 设 `animIndex`。
-    pub fn set_tb_anim_index(&mut self, slot: u8, v: u8) { self.write_ram(Self::tb_addr(slot, 13), v); }
+    pub fn set_tb_anim_index(&mut self, slot: u8, v: u8) { self.write_ram(Self::tb_addr(slot, 6), v); }
     /// 槽内 `animDelay`。
-    pub fn tb_anim_delay(&self, slot: u8) -> u8 { self.read_ram(Self::tb_addr(slot, 14)) }
+    pub fn tb_anim_delay(&self, slot: u8) -> u8 { self.read_ram(Self::tb_addr(slot, 4)) }
     /// 设 `animDelay`。
-    pub fn set_tb_anim_delay(&mut self, slot: u8, v: u8) { self.write_ram(Self::tb_addr(slot, 14), v); }
+    pub fn set_tb_anim_delay(&mut self, slot: u8, v: u8) { self.write_ram(Self::tb_addr(slot, 4), v); }
     /// 槽内 `spare05`（原版把 `animIndex` 镜一份进来，`UpdateTileBlastAnim` 回滚用）。
-    pub fn tb_spare05(&self, slot: u8) -> u8 { self.read_ram(Self::tb_addr(slot, 15)) }
+    pub fn tb_spare05(&self, slot: u8) -> u8 { self.read_ram(Self::tb_addr(slot, 5)) }
     /// 设 `spare05`。
-    pub fn set_tb_spare05(&mut self, slot: u8, v: u8) { self.write_ram(Self::tb_addr(slot, 15), v); }
+    pub fn set_tb_spare05(&mut self, slot: u8, v: u8) { self.write_ram(Self::tb_addr(slot, 5), v); }
+
+    // ---- Zebetites（`$0758`，5 槽 × 8 B）----
+    //
+    // `constants_ram.asm:76-83` 的 `.struct Zebetite`：status0 / roomRAMPtr1-2 /
+    // qtyHits3 / healingDelay4 / isHit5 / unused6-7。Tourian 专用（`UpdateZebetite`）。
+
+    fn zeb_addr(slot: u8, off: u16) -> u16 {
+        debug_assert!(slot < 5, "Zebetites 槽号越界：{slot}");
+        0x0758 + slot as u16 * 8 + off
+    }
+    /// 槽内 `status`（bit0=活、bit1=已死停更新、bit7=重绘失败标记）。
+    pub fn zeb_status(&self, slot: u8) -> u8 { self.read_ram(Self::zeb_addr(slot, 0)) }
+    pub fn set_zeb_status(&mut self, slot: u8, v: u8) { self.write_ram(Self::zeb_addr(slot, 0), v); }
+    /// 槽内 `roomRAMPtr`（左上角瓦的 RoomRAM 地址）。
+    pub fn zeb_ptr(&self, slot: u8) -> u16 {
+        (self.read_ram(Self::zeb_addr(slot, 2)) as u16) << 8 | self.read_ram(Self::zeb_addr(slot, 1)) as u16
+    }
+    pub fn set_zeb_ptr(&mut self, slot: u8, v: u16) {
+        self.write_ram(Self::zeb_addr(slot, 1), v as u8);
+        self.write_ram(Self::zeb_addr(slot, 2), (v >> 8) as u8);
+    }
+    /// 槽内 `qtyHits`（8 击死）。
+    pub fn zeb_qty_hits(&self, slot: u8) -> u8 { self.read_ram(Self::zeb_addr(slot, 3)) }
+    pub fn set_zeb_qty_hits(&mut self, slot: u8, v: u8) { self.write_ram(Self::zeb_addr(slot, 3), v); }
+    /// 槽内 `healingDelay`（`$40`→0 自愈 1 击）。
+    pub fn zeb_healing_delay(&self, slot: u8) -> u8 { self.read_ram(Self::zeb_addr(slot, 4)) }
+    pub fn set_zeb_healing_delay(&mut self, slot: u8, v: u8) { self.write_ram(Self::zeb_addr(slot, 4), v); }
+    /// `UpdatingSamusProjectile`（`$0071`）——非 0 表示当前在跑萨姆斯弹件环
+    /// （`IsBlastTile ; 07:E9BE` 的门；Tourian 弹撞瓦钩也用它）。
+    pub fn updating_samus_projectile(&self) -> u8 {
+        self.read_ram(crate::ram_map::UPDATING_SAMUS_PROJECTILE)
+    }
+
+    /// 槽内 `isHit`（本帧被导弹命中）。
+    pub fn zeb_is_hit(&self, slot: u8) -> u8 { self.read_ram(Self::zeb_addr(slot, 5)) }
+    pub fn set_zeb_is_hit(&mut self, slot: u8, v: u8) { self.write_ram(Self::zeb_addr(slot, 5), v); }
 
     /// `VRAMStructBufferIndex`（`$07A0`）——PPU 写缓冲游标（>= `$1F` 视为满）。
     pub fn vram_struct_index(&self) -> u8 {

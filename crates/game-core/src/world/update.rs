@@ -135,9 +135,23 @@ pub fn update_world(mem: &mut crate::frame::Manager) {
     }
 }
 
-/// AreaRoutine（区 bank $95C3——区专径：液面/滚屏特效族）。
-pub(crate) fn uw_area_routine(_mem: &mut crate::frame::Manager) {
-    // Brinstar 区专径（空态无液面——首房间实证；活性随件）
+/// AreaRoutine（区 bank $95C3——区专径）。
+///
+/// `AreaRoutine_Tourian ; 03:9B25`（`prg3_tourian.asm:566-575`）件序：
+/// `jsr UpdateAllCannons` → `jsr MotherBrainStatusHandler` → `jsr UpdateEndTimer` →
+/// `jsr DrawEndTimerEnemy` → `jsr UpdateAllZebetites` → `jmp UpdateAllRinkaSpawners`。
+/// 本卡只落 **UpdateAllZebetites**；另外四件仍是缺口（炮台/MB 态/逃逸计时/生成器），
+/// 用 `DIVERGENCES` 记账（fail-loud 但不阻断主循环），待 G-3/G-5/G-6 卡接入。
+pub(crate) fn uw_area_routine(mem: &mut crate::frame::Manager) {
+    // 【区号口径】`InArea & $0F`：0=Brinstar、1=Norfair、**2=Kraid、3=Tourian**、4=Ridley
+    // （`BankSwitchPending` 表 `07:CA30` = `02 03 05 04 06` ⇒ idx3→bank3=Tourian）。
+    if crate::frame::in_area_raw(mem) & 0x0F != 3 {
+        return; // 非 Tourian：其余四区 AreaRoutine 尚无专径（Brinstar 空态已实证）
+    }
+    // UpdateAllCannons / MotherBrainStatusHandler / UpdateEndTimer / DrawEndTimerEnemy
+    // / UpdateAllRinkaSpawners —— 未端口（缺口卡 G-3/G-5/G-6）
+    crate::frame::DIVERGENCES.with(|d| d.borrow_mut().push(0x9B26));
+    crate::enemy::zebetite::update_all_zebetites(mem);
 }
 
 /// UpdateElevator（`$D7B3`）——电梯十态（`frame::elevator`；槽空 status=0 ⇒ ExitSub 恒空径）。
