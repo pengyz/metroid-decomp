@@ -1201,13 +1201,55 @@ pub fn dispatch_step(face: &TitleFace) -> TitleStep {
                         jumped: None, unported: None, next_cursor: 0,
                     }
                 }
-                // 段5-6 未实现（行为缺失，非等价未验证）：记账后停在本步，
+                // 段5 `RollCredits ; 00:9BFC`：职员表每 4 帧滚一行，六页后进段6。
+                (5, _) => {
+                    let t3 = r(crate::title::state::TIMER3);
+                    let mut events = o.writes;
+                    let mut shell = vec![];
+                    if t3 != 0 {
+                        if t3 == 0x02 {
+                            // 剩 20 帧 ⇒ 清屏换职员表调色板（`_id_EndGamePalette0B+1+1 = $0D`）
+                            shell.push(ShellCall::ScreenOff);
+                            shell.push(ShellCall::ClearNameTables);
+                            shell.push(ShellCall::EraseAllSprites);
+                            events.push((crate::ram_map::PALETTE_PENDING, 0x0D));
+                            shell.push(ShellCall::ScreenOn);
+                            shell.push(ShellCall::WaitNMIPass);
+                        }
+                    } else {
+                        if r(0x19) == 0 {
+                            events.push((0x19, 0x01)); // CreditPageNumber ← 1
+                        }
+                        // 最后一页且滚到 $88 ⇒ 进段6
+                        if r(0x19) == 0x06 && r(crate::ram_map::SCROLL_Y) >= 0x88 {
+                            events.push((0x0033, room_ptr.wrapping_add(1)));
+                        } else if face.frame_count & 0x03 == 0 {
+                            // 每 4 帧滚一行
+                            let sy = r(crate::ram_map::SCROLL_Y).wrapping_add(1);
+                            if sy == 0xF0 {
+                                // 到底 ⇒ 换名表（PPUCTRL bit1 翻转）+ 翻页 + ScrollY 归零
+                                events.push((0x19, r(0x19).wrapping_add(1)));
+                                events.push((crate::ram_map::SCROLL_Y, 0x00));
+                                let c = r(crate::ram_map::PPUCTRL_ZP) ^ 0x02;
+                                events.push((crate::ram_map::PPUCTRL_ZP, c));
+                            } else {
+                                events.push((crate::ram_map::SCROLL_Y, sy));
+                            }
+                        }
+                    }
+                    TitleStep {
+                        events, shell, a_out: Some(o.a_out),
+                        x_out: o.x_out.or(Some(face.x)), y_out: o.y_out.or(Some(face.y)),
+                        jumped: None, unported: None, next_cursor: 0,
+                    }
+                }
+                // 段6 未实现（行为缺失，非等价未验证）：记账后停在本步，
                 // 见 docs/findings/ending-sequence.md §4。
                 _ => TitleStep {
                     events: o.writes, shell: vec![], a_out: Some(o.a_out),
                     x_out: o.x_out.or(Some(face.x)), y_out: o.y_out.or(Some(face.y)),
                     jumped: None,
-                    unported: Some(0x9BFC), next_cursor: 0,
+                    unported: Some(0x9A39), next_cursor: 0,
                 },
             }
         }
