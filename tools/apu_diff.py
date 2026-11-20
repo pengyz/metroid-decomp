@@ -29,9 +29,16 @@ FRAME_RE = re.compile(r"_f(\d+)_")
 LINE_RE = re.compile(r"^([0-9A-Fa-f]{4}) ([0-9A-Fa-f]{2})$")
 
 
+# 已知非声域写：Mesen 的 `emu.callbackType.write` 会把 CPU 写**所有**地址都抛回来，
+# `$4016` 是手柄 strobe 端口（`ReadJoyPads ; 07:C215` 每帧写两次），它不产生声音，
+# 保留下来只会把「仪器噪声」冒充分歧。`$4017` 是真 APU 帧计数器，照实比较。
+NOISE_ADDRS = {0x4016}
+
+
 def parse_apu_text(text: str, src: str) -> list[tuple[int, int]]:
     """逐行解析 "%04X %02X"；格式漂移 fail-loud（ValueError——调用方归 exit 2）。"""
     writes: list[tuple[int, int]] = []
+    dropped = 0
     for ln, raw in enumerate(text.splitlines(), 1):
         line = raw.strip()
         if not line:
@@ -39,7 +46,13 @@ def parse_apu_text(text: str, src: str) -> list[tuple[int, int]]:
         m = LINE_RE.match(line)
         if not m:
             raise ValueError(f"{src}:{ln}: 格式漂移（须 '%04X %02X'）: {raw!r}")
-        writes.append((int(m.group(1), 16), int(m.group(2), 16)))
+        addr = int(m.group(1), 16)
+        if addr in NOISE_ADDRS:
+            dropped += 1
+            continue
+        writes.append((addr, int(m.group(2), 16)))
+    if dropped:
+        print(f"[信息] {src}: 过滤已知非声域写 {dropped} 条（地址 {sorted(NOISE_ADDRS)}，见 NOISE_ADDRS 注）")
     return writes
 
 
@@ -100,6 +113,13 @@ def frame_summary(emu: list[tuple[int, int]], rust: list[tuple[int, int]]) -> st
         lines.append("emu 独有地址写: " + ", ".join(f"{a:04X}x{n}" for a, n in Counter(only_emu).most_common(8)))
     if only_rust:
         lines.append("rust 独有地址写: " + ", ".join(f"{a:04X}x{n}" for a, n in Counter(only_rust).most_common(8)))
+    # 地址写次数对照（判「每帧都写」还是「音符边界才写」的关键读数）
+    both = sorted({a for a, _ in emu} | {a for a, _ in rust})
+    rows = [f"  {a:04X}: emu={ca.get(a, 0)} rust={cb.get(a, 0)}" for a in both
+            if ca.get(a, 0) != cb.get(a, 0) and 0x4000 <= a <= 0x4017]
+    if rows:
+        lines.append("  地址写次数对照:")
+        lines.extend(rows[:10])
     k = max(len(emu), len(rust))
     shown = 0
     for i in range(k):
