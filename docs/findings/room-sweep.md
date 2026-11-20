@@ -486,8 +486,31 @@ room 0/1/3/4/18/19/26/44/45 判 `ok`（像素零差），但它们的 PPU 名表
 比对确认两腿都画的是 Norfair 内容且像素为 0；④ 通过后把 1 加进 `PRESET_VERIFIED_AREAS`
 并升 `entry_preset_version` 到 v2——**首轮 Brinstar 数据保持 v1 不动**，两者在 JSON 里可区分。
 
-> 现状：未做（本轮分数只覆盖 Brinstar）。这是 8.1 唯一的硬阻塞。
-> 有了 ④ 这一处常量开关，`--areas 0,1` 的默认值就真的能跑两区。
+> **【2026-11-20 实测更正】按上述①②做过两轮，两轮都失败，且失败模式已定谳：
+> 这不是「缺一条注入」，而是注入法对非 0 区**结构性不可用**。负结果留档如下（代码已回退，
+> `tools/movie_ref/room_sweep.py` 保持 v1 单区形态）。**
+> - **第一轮（同帧注入 `$0074` + 14 B 区指针块）**：三房全部 `$005A` 走不完链。逐帧读
+>   `frames.jsonl`：`$005A` 到 `$F1` 后**整机冻结**（`ScrollX` 也停止递增）⇒ CPU 不是在等，
+>   是跑进了垃圾代码。根因可解释：注入帧上 `$8000` 窗口里**映射的还是 Brinstar 的 bank**，
+>   而区指针块写的是**本区 ROM 地址**（如 Norfair `$A21B`）⇒ `(RoomPtrTable),y` 用本区地址
+>   去读旧 bank 的数据，取到垃圾房指针 ⇒ `DrawRoom` 在无 `$FF` 终止符的数据上走飞。
+> - **第二轮（拆两段：t=0 注入 `$0074`，t=+2 再注入房号 + 指针块）**：链推进到 `$F3` 后
+>   再次冻结（`$005A=243`、`ScrollX` 卡在 10）。说明「等 `CheckBankSwitch` 换完 bank」
+>   并不成立：`CheckBankSwitch ; 07:C4DE` + `InitBankN` 只负责 bank/图形/调色板，
+>   **`CopyAreaPointers ; 07:C8B0` 全仓只有两个调用点**——`AreaInit ; 07:C875-1891`
+>   （`MainRoutine=0` 的区初始化）与电梯到达径（`prg7_engine.asm:5038`）。
+>   从 `GameEngine` 直接改 `InArea` 永远追不到这两条岸。
+> - **第三轮（合成电梯对象面把 bank 换过去再注房号）**：同样走不完链。电梯对象的目标区与
+>   落点在 `LoadElevator ; 07:EC04` 时由**当前房流**写入，在别的房里凭空合成它没有可依据的
+>   字段值 ⇒ 又是「伪造状态」。
+
+> **结论**：非 0 区的房扫，**只有在真实到达该区之后**才有合法观测窗口。可行路径只剩两条：
+> ①用 `cases/case-elev-norfair-transition.txt` 那条已验证的电梯径**先进 Norfair**，到达后再
+> 注房号（需要把电梯径的 fixture 面按真实房流逐房重放，成本高）；②**放弃注入法**，改用
+> TAS 录像 inputlog 走进真实房间（与 `docs/spec/acceptance-paradigm.md` 的验收范式同源）。
+> 在此之前，`--areas 1..4` 继续逐房记 `entry_preset_unverified_area` 跳过——**不造假分数**。
+
+> 现状：未做（Brinstar 47 房的数据仍是唯一有区身份证据的房扫账）。
 
 ### 8.2 Kraid / Tourian / Ridley（area 2/3/4）——卡在**工具白名单**，不是区派发
 
