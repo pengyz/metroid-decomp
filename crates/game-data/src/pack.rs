@@ -270,6 +270,12 @@ pub enum PackKey {
     /// 结局职员表六页（`CreditsPtrTable ; 00:A291` 六指针 ⇒ 页体 $A2E9..$A34F =
     /// **102 B**；段布局 = 6×u16 相对偏移 + 页体，页 2 只有终止符 `00`（1 B））。
     EndCredits = 198,
+    /// 结局 Samus 六帧精灵（`EndSamusAddrTbl ; 00:9D5A` 六指针 + 数据 `$9D66..$9EB8` =
+    /// **338 B**；段布局 = 6×u16 相对偏移 + 数据）。
+    EndSamus = 199,
+    /// 结局挥手手型四表（`WavePointerTable ; 00:9D12` 四指针 → `$9D1A..$9D5A`，
+    /// 每表 4 精灵 × 4 B ⇒ 整段 **64 B**）。
+    EndWave = 200,
     // 敌死亡动画索引表 `EnemyDeathAnimIndex ; 各 bank $960B`（32 B = type×2+facing）。
     // **按区不同**（bank1 `27 27 29 29…` vs bank3 `08 08 08 08…`）——先前 Rust 侧是单常量
     // 取 bank1，等于让其余四区的爆体帧全用 Brinstar 的表。
@@ -530,6 +536,8 @@ impl PackKey {
             PackKey::EndBackground => "title.end_background",
             PackKey::EndPalettes => "title.end_palettes",
             PackKey::EndCredits => "title.end_credits",
+            PackKey::EndSamus => "title.end_samus",
+            PackKey::EndWave => "title.end_wave",
             PackKey::BrEnSprites => "area.br.en_sprites",
             PackKey::NoEnSprites => "area.no.en_sprites",
             PackKey::KrEnSprites => "area.kr.en_sprites",
@@ -740,6 +748,8 @@ impl PackKey {
             196 => PackKey::EndBackground,
             197 => PackKey::EndPalettes,
             198 => PackKey::EndCredits,
+            199 => PackKey::EndSamus,
+            200 => PackKey::EndWave,
             _ => return None,
         })
     }

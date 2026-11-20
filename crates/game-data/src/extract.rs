@@ -666,6 +666,8 @@ fn seg_meta() -> Vec<SegMeta> {
         SegMeta { key: PackKey::Fade, kind: "title-tbl", elem: 1, count: 12, rom: "bank00:$8B6D", note: "FadeOutPaletteData" },
         SegMeta { key: PackKey::PalSelect, kind: "title-tbl", elem: 1, count: 13, rom: "bank00:$8A9A", note: "PalSelect" },
         SegMeta { key: PackKey::StartCont, kind: "title-tbl", elem: 1, count: 2, rom: "bank00:$9118", note: "StartContTbl" },
+        SegMeta { key: PackKey::EndSamus, kind: "offs+blob", elem: 1, count: 0, rom: "bank00:$9D5A->$9D66", note: "EndSamusAddrTbl 六指针 + 338 B 帧体" },
+        SegMeta { key: PackKey::EndWave, kind: "bytes", elem: 1, count: END_WAVE_LEN, rom: "bank00:$9D1A", note: "挥手手型四表 $9D1A..$9D5A" },
         SegMeta { key: PackKey::EndStar, kind: "title-tbl", elem: 1, count: 156, rom: "bank00:$9EB8", note: "EndStar" },
         SegMeta { key: PackKey::EndBackground, kind: "vram-struct", elem: 1, count: 360, rom: "bank00:$A052", note: "EndBackground（hi==0 终止含尾）" },
         SegMeta { key: PackKey::EndPalettes, kind: "offs+blob", elem: 1, count: 0, rom: "bank00:$9F9B", note: "EndGamePalette00..0A（11×u16 + 183 B 结构体，长度不齐）" },
@@ -1178,6 +1180,38 @@ fn extract_end_palettes(prg: &[u8]) -> Result<Section, String> {
     for o in offs { data.extend_from_slice(&o.to_le_bytes()); }
     data.extend_from_slice(&body);
     Ok(Section { key: PackKey::EndPalettes, data })
+}
+
+/// 结局 Samus 六帧精灵：`EndSamusAddrTbl ; 00:9D5A` 六指针（`$9D66/$9D9C/$9DD2/$9E08/$9E3E/$9E74`）
+/// ⇒ 帧体 `$9D66..$9EB8` = **338 B**（每帧 54 B，8 组 y/pattern + 终止）。段布局 =
+/// 6×u16 相对偏移 + 帧体；每帧自身以 `$FF` 界（提取时只核区间端点，不重解语义）。
+const END_SAMUS_TBL: u16 = 0x9D5A;
+const END_SAMUS_FRAMES: [u16; 6] = [0x9D66, 0x9D9C, 0x9DD2, 0x9E08, 0x9E3E, 0x9E74];
+const END_SAMUS_END: u16 = 0x9EB8;
+
+fn extract_end_samus(prg: &[u8]) -> Result<Section, String> {
+    let mut data = Vec::new();
+    for &f in END_SAMUS_FRAMES.iter() {
+        data.extend_from_slice(&(f - END_SAMUS_FRAMES[0]).to_le_bytes());
+    }
+    data.extend_from_slice(&bank_slice(prg, 0, END_SAMUS_FRAMES[0], (END_SAMUS_END - END_SAMUS_FRAMES[0]) as usize)?);
+    // 表本身必须是六条指针且与帧体一致（fail-loud）。
+    for (i, &f) in END_SAMUS_FRAMES.iter().enumerate() {
+        let raw = bank_slice(prg, 0, END_SAMUS_TBL + (i as u16) * 2, 2)?;
+        let ptr = u16::from_le_bytes([raw[0], raw[1]]);
+        if ptr != f {
+            return Err(format!("EndSamusAddrTbl[{i}] = {ptr:04X} ≠ 期望 {f:04X}"));
+        }
+    }
+    Ok(Section { key: PackKey::EndSamus, data })
+}
+
+/// 结局挥手手型四表：`$9D1A..$9D5A` = 64 B（每表 4 精灵 × 4 B）。
+const END_WAVE_ADDR: u16 = 0x9D1A;
+const END_WAVE_LEN: usize = 0x40;
+
+fn extract_end_wave(prg: &[u8]) -> Result<Section, String> {
+    Ok(Section { key: PackKey::EndWave, data: bank_slice(prg, 0, END_WAVE_ADDR, END_WAVE_LEN)? })
 }
 
 fn extract_end_credits(prg: &[u8]) -> Result<Section, String> {
