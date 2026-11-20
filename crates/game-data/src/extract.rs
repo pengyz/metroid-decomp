@@ -1062,6 +1062,8 @@ const TITLE_VRAM: [(PackKey, u16, usize, &str); 5] = [
     (PackKey::VramOver, 0x93B9, 13, "GAME_OVER $93B9"),
     // 结局背景 `VRAMStruct_EndBackground ; 00:A052`：17 条记录 + 终止符 = 360 B。
     (PackKey::EndBackground, 0xA052, 360, "END_BACKGROUND $A052"),
+    // 结局调色板 11 张（`EndGamePalette00..0A ; 00:9F9B..A052`）：长度不齐 ⇒ 走
+    // `extract_end_palettes` 的偏移表，故不进本表。
 ];
 
 /// Samus 三张小表（bank7 固定窗 `$C000` ⇒ `addr` 直接过 `bank_slice(prg, 7, …)`）。
@@ -1270,6 +1272,10 @@ fn extract_title_vram(prg: &[u8]) -> Result<Vec<Section>, String> {
         }
         out.push(Section { key, data });
     }
+    out.push(extract_end_palettes(prg)?);
+    out.push(extract_end_credits(prg)?);
+    out.push(extract_end_samus(prg)?);
+    out.push(extract_end_wave(prg)?);
     Ok(out)
 }
 
