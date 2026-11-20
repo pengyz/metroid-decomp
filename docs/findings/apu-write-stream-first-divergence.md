@@ -63,3 +63,26 @@
    md5 `331c4f8e…` 前后相同）——不要把它当成"修好了声音"。
 4. 下一步（未做）：逐帧 dump 两侧 `MusicSQ1DutyEnvelope($0628)`、`MusicSQ1VolumeEnvelopeIndex
    ($062E)`、`MusicSQ1VolumeIndex($066A)`，定位是「duty 字节来源」还是「包络起点差一」。
+
+## 6 定谳进展：首个音乐状态分歧在 f346，rust 漏了第二次曲目 init（2026-11-20）
+
+样本：`cases/case-tmp-apu-env.txt`（`case-crawlprobe` 副本 + `watch_range 0620-0670`，L4 仍 6/6 0px）。
+两侧逐帧对读 `$0628/$0629`(DutyEnvelope) `$062E/$062F`(VolumeEnvelopeIndex) `$066A/$066B`(VolumeIndex)：
+
+| 帧 | emu | rust |
+|---|---|---|
+| 343–345 | d1=`B6` d2=`F6` e1=`02` e2=`05` | 同 emu |
+| **346 起** | d1=`34` d2=`34` **e1=`02` e2=`00`** | 仍 `B6/F6/02/05` |
+
+⇒ **f346 原版执行了一次新的曲目 init**（`SetVolumeAndDisableSweep` 装载 X=Y=`$34`、
+SQ2 音量包络清零），rust **没有执行**，整个音乐状态块就停在上一首的状态上。此前
+`$4000` 的 `$34` vs `$B6` 分歧只是这条的**下游症状**。
+
+`crates/game-core/src/sound/hook.rs:246` 的 `Music03Init => (0x34,0x34)` 映射本身是有的
+（`BC96 lda #$34`），所以问题在**派发条件**（`$065E` 曲号 / `$0685` init 旗 / 10th cycle
+时序），不在表值。
+
+## 7 下一步（具体）
+1. 在 f340–350 窗内对读 `$065E`(FindMusicInitIndex)、`$0685`(MusicInitFlags)、
+   `$065D`(MusicLoop) 三面，定谳 rust 为何没进第二次 `Music03Init`。
+2. 判据不变：修好后同一桶的 `$4000-$400F` 写序列应逐写相等（`tools/apu_diff.py` 报全等）。
