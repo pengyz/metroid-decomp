@@ -1059,13 +1059,31 @@ pub fn dispatch_step(face: &TitleFace) -> TitleStep {
                         jumped: None, unported: None, next_cursor: 0,
                     }
                 }
-                // 段1-6 未实现（行为缺失，非等价未验证）：记账后停在本步，
+                // 段1 `ShowEndSamus ; 00:9B1C`：`jsr LoadEndSamusSprites` + 三个 Timer3 门。
+                // 精灵装载走 OAM（`EndSamusAddrTbl` 六帧已在包内），本轮只实现门与标志位。
+                (1, _) => {
+                    let t3 = r(crate::title::state::TIMER3);
+                    let mut events = o.writes;
+                    if t3 == 0x00 {
+                        events.push((0x0033, room_ptr.wrapping_add(1))); // Timer3 尽 ⇒ 进段2
+                    } else if t3 == 0x50 && r(0x15) == 0 {
+                        events.push((0x15, 0x01)); // Timer3==$50 ⇒ EndMsgWrite←1
+                    } else if t3 == 0x01 {
+                        events.push((0x16, 0x01)); // Timer3==1 ⇒ HideShowEndMsg←1
+                    }
+                    TitleStep {
+                        events, shell: vec![], a_out: Some(o.a_out),
+                        x_out: o.x_out.or(Some(face.x)), y_out: o.y_out.or(Some(face.y)),
+                        jumped: None, unported: None, next_cursor: 0,
+                    }
+                }
+                // 段2-6 未实现（行为缺失，非等价未验证）：记账后停在本步，
                 // 见 docs/findings/ending-sequence.md §4。
                 _ => TitleStep {
                     events: o.writes, shell: vec![], a_out: Some(o.a_out),
                     x_out: o.x_out.or(Some(face.x)), y_out: o.y_out.or(Some(face.y)),
                     jumped: None,
-                    unported: Some(0x9B1C), next_cursor: 0,
+                    unported: Some(0x9B34), next_cursor: 0,
                 },
             }
         }
