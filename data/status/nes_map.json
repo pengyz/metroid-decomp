@@ -460,9 +460,9 @@
       "len": 3,
       "kind": "undeclared",
       "refs": [
-        "crates/game-core/src/ram_map.rs:262",
+        "crates/game-core/src/ram_map.rs:264",
         "crates/game-core/src/samus/handler.rs:166",
-        "crates/game-core/src/ram_map.rs:304",
+        "crates/game-core/src/ram_map.rs:306",
         "crates/game-core/src/samus/physics.rs:1757"
       ]
     },

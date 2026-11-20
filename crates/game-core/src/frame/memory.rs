@@ -679,6 +679,26 @@ impl Manager {
     }
 
     /// 精灵 RAM（`$0200-$02FF`）单字节写——`DrawEndTimerEnemy` 直接改已画精灵的 tile 字节。
+    /// `SamusDir=$004D`——0=右 1=左（大地图方向位）。
+    pub fn samus_dir(&self) -> u8 {
+        self.read_ram(crate::ram_map::SAMUS_DIR)
+    }
+
+    /// `MissileCount=$6879`（WRAM）。
+    pub fn missile_count(&self) -> u8 {
+        self.read_ram(crate::ram_map::MISSILE_COUNT)
+    }
+    pub fn set_missile_count(&mut self, v: u8) {
+        self.write_ram(crate::ram_map::MISSILE_COUNT, v);
+    }
+    /// `MissileToggle=$010E`：0=普通弹 1=导弹（`constants_ram.asm:840`）。
+    pub fn missile_toggle(&self) -> u8 {
+        self.read_ram(crate::ram_map::MISSILE_TOGGLE)
+    }
+    pub fn set_missile_toggle(&mut self, v: u8) {
+        self.write_ram(crate::ram_map::MISSILE_TOGGLE, v);
+    }
+
     /// `PasswordByte` 18 B（`$6988` 起，`constants_ram.asm`）——`InitializeGame` 的输入面。
     pub fn password_bytes(&self) -> [u8; 18] {
         let mut pw = [0u8; 18];

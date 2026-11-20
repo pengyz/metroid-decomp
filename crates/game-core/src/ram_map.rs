@@ -138,6 +138,8 @@ pub const SAMUS_GEAR: u16 = 0x6878;
 pub const SAMUS_STAT00: u16 = 0x6876;
 pub const ENERGY_TANK_COUNT: u16 = 0x6877;
 pub const MISSILE_COUNT: u16 = 0x6879;
+/// `MissileToggle=$010E`（`constants_ram.asm:840`）：0=普通弹 1=导弹。
+pub const MISSILE_TOGGLE: u16 = 0x010E;
 pub const MAX_MISSILES: u16 = 0x687A;
 pub const AT_ENDING: u16 = 0x6883;
 /// SamusStat0B dw=$6881（死亡/通关计数——InitializeGame 每次 inc）。

@@ -356,6 +356,29 @@ fn samus_run_set_anim(mem: &mut Manager) -> bool {
 /// FireSamusProjectile（**asm 内容锚** `FireSamusProjectile: ; 07:D1EE`——goal-r10 端口）：
 /// SearchOpenSlot（D1F7）→InitBullet（D2EB）→speedX（BulletSpeedXTable）→speedY=0/onScreen=1。
 /// 射弹槽=0xD0/0xE0/0xF0（Objects.status 0x03D0/03E0/03F0）。
+
+/// `CheckMissileLaunchCommon ; 07:D323`：导弹模式下的弹改成导弹（横 `HorizontalMissileAnims[SamusDir]`
+/// =0x8D/0x8B、竖 0x8F）、`status←wa_Missile($0B)`、`DieDelay←$FF`、`dec MissileCount`；
+/// 减到 0 ⇒ 退普通弹模式（`dec MissileToggle`）+ `SelectSamusPalette`。
+fn apply_missile_launch(mem: &mut Manager, slot: u8, anim: u8) {
+    let count = mem.missile_count().wrapping_sub(1);
+    {
+        let mut o = mem.object(slot);
+        o.set_anim_index(anim);
+        o.set_anim_reset_index(anim);
+        o.set_anim_delay(0);
+        o.set_status(0x0B); // wa_Missile
+        o.set_die_delay(0xFF); // SamusProjectileDieDelay
+    }
+    crate::sound::hook::set_sfx_noise_init(mem, 0x02); // SFX_MissileLaunch
+    mem.set_missile_count(count);
+    if count == 0 {
+        let t = mem.missile_toggle();
+        mem.set_missile_toggle(t.wrapping_sub(1));
+        crate::frame::tick::select_samus_palette(mem); // 回普通弹模式并换配色
+    }
+}
+
 fn fire_samus_projectile(mem: &mut Manager) {
     // FireSamusProjectile（**asm 内容锚** `: 07:D1EE`）：UP（Joy1Status bit2）⇒Upwards/
     // 否则 Forwards（分派器——audit §7）。
@@ -380,8 +403,14 @@ fn fire_samus_projectile(mem: &mut Manager) {
     mem.write_ram(base + 5, 0x1B); // RegularBullet（$858D-$8572（弹形态 ① 修））
     mem.write_ram(base + 6, 0x1B); // animIndex
     mem.write_ram(base + 4, 0); // animDelay
-    // DieDelay=0x0C
-    mem.write_ram(base + 0x0F, 0x0C);
+    // MissileToggle≠0 ⇒ 本次发射是导弹（`CheckHorizontalMissileLaunch ; 07:D315`）
+    if mem.missile_toggle() != 0 {
+        let d = mem.samus_dir() & 1;
+        apply_missile_launch(mem, slot, if d == 0 { 0x8D } else { 0x8B });
+    } else {
+        // DieDelay=0x0C
+        mem.write_ram(base + 0x0F, 0x0C);
+    }
     // speedX=BulletSpeedXTable[SamusDir]（±4）
     let dir = mem.read_ram(crate::ram_map::SAMUS_DIR);
     mem.write_ram(base + 9, if dir & 1 == 0 { 4 } else { 0xFC }); // speedX
@@ -426,7 +455,12 @@ fn fire_samus_projectile_upwards(mem: &mut Manager) {
     mem.write_ram(base + 5, 0x1B); // RegularBullet（$858D-$8572（弹形态 ① 修））
     mem.write_ram(base + 6, 0x1B);
     mem.write_ram(base + 4, 0);
-    mem.write_ram(base + 0x0F, 0x0C);
+    // MissileToggle≠0 ⇒ 竖发导弹（`CheckVerticalMissileLaunch ; 07:D340`，anim=0x8F）
+    if mem.missile_toggle() != 0 {
+        apply_missile_launch(mem, slot, 0x8F);
+    } else {
+        mem.write_ram(base + 0x0F, 0x0C);
+    }
     mem.write_ram(base + 8, 0xFC); // speedY←$FC（上）
     mem.write_ram(base + 9, 0); // speedX←0
     mem.write_ram(base + 0x0B, 1);
