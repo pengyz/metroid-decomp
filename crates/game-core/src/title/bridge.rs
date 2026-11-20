@@ -471,6 +471,11 @@ fn prepare_vram(mem: &mut Manager, addr: u16) {
         // 不扩资产包 PackKey（三处同源+包重建代价）：按 `INTRO_STARS_DATA` 先例在
         // game-core 内以 const 烘焙（doc 注释即字节锚，`tests` 中断言前 3 字节）。
         0x937F => crate::render::vram::vram_struct_write(mem, &PASS_WORD_VRAM),
+        // VRAMStruct_EndBackground ; 00:A052（EndGame 段0 `LoadEndGFX :9AD5` 的
+        // `PreparePPUProcess`）：结局背景名表 17 条记录 + 终止符（360 B，入包段
+        // `title.end_background`）。
+        0xA052 => crate::render::vram::vram_struct_write(
+            mem, game_data::assets::end_background()),
         other => crate::unported!(&format!("bank00:{other:04X}-PrepareVram")),
     }
 }
