@@ -210,7 +210,9 @@ pub(crate) fn uw_all_power_ups(mem: &mut crate::frame::Manager) {
 }
 
 /// UpdateTourianItems（$FDE3——Tourian 专件）。
-pub(crate) fn uw_tourian_items(_mem: &mut crate::frame::Manager) {}
+pub(crate) fn uw_tourian_items(mem: &mut crate::frame::Manager) {
+    crate::enemy::zebetite::update_tourian_items(mem);
+}
 
 
 #[cfg(test)]

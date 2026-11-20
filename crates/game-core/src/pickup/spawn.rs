@@ -50,6 +50,7 @@ pub fn scan_for_items(mem: &mut Manager) {
 fn spawn_item(mem: &mut Manager, item: &game_data::area::items::SpecialItem) {
     match item.item_type & 0x0F {
         0x02 => spawn_power_up(mem, item),
+        0x07 => spawn_zebetite(mem, item), // SpawnZebetite（07:EECA）
         // 【占位臂记账】Squeept/Mellow/Elevator/MBCannon/MB/Zebetite/Rinka/Door/Palette
         // 装载件（打敌人/门/电梯包随件）——记账不炸（房间装载径保持可跑）。
         t => {
@@ -60,13 +61,47 @@ fn spawn_item(mem: &mut Manager, item: &game_data::area::items::SpecialItem) {
                     0x04 => 0xEEA1, // SpawnElevator
                     0x05 => 0xEEA6, // SpawnCannon
                     0x06 => 0xEEAE, // SpawnMotherBrain
-                    0x07 => 0xEECA, // SpawnZebetite
                     0x08 => 0xEEEE, // SpawnRinkaSpawner
                     0x09 => 0xEEF4, // SpawnDoor
                     _ => 0xEEFA,     // SpawnPalette
                 })
             });
         }
+    }
+}
+
+#[cfg(test)]
+pub(crate) fn spawn_zebetite_for_test(mem: &mut Manager, item: &game_data::area::items::SpecialItem) {
+    spawn_zebetite(mem, item);
+}
+
+/// `SpawnZebetite ; 07:EECA` + `SpawnZebetiteRoutine ; 03:9D3D`（Tourian）：
+/// 特项字节高 nibble 定槽（`and #$F0 / lsr` ⇒ `x = (byte&$F0)>>1` = Zebetites 字节偏移），
+/// `x*2 & $10 ^ $10 | $84` 是屏障左上瓦的 RoomRAM 低字节（`$84`/`$94` 交替），高字节由
+/// `GetRoomRAMPtrHi ; 03:9D64`（`GetNameTableAtScrollDir_<<2 | (>RoomRAMA)+1`）给出 = `$61`/`$65`。
+/// 之后 `CheckForItem(ui_ZEBETITE1 + 槽号)`：已收集（上次来过打过）⇒ 直接置"已死"形态
+/// `status=$81 / isHit=1 / qtyHits=7`（看起来只剩一层）。
+fn spawn_zebetite(mem: &mut Manager, item: &game_data::area::items::SpecialItem) {
+    let byte = item.item_type;
+    let slot = ((byte & 0xF0) >> 1) / 8;
+    if slot >= crate::enemy::zebetite::COUNT {
+        crate::unported!("bank03:9D3D-zebetite-slot");
+    }
+    // `asl / and #$10 / eor #$10 / ora #$84`
+    let lo = (((byte & 0xF0) as u16) & 0x10 ^ 0x10) as u8 | 0x84;
+    // `GetRoomRAMPtrHi`：名表号 = `(PPUCTRL_ZP ^ ScrollDir) & 1`
+    let nt = (mem.read_ram(crate::ram_map::PPUCTRL_ZP) ^ mem.read_ram(crate::ram_map::SCROLL_DIR)) & 1;
+    let hi = (nt << 2) | 0x61; // (>RoomRAMA)+1 = $61
+    mem.set_zeb_ptr(slot, (hi as u16) << 8 | lo as u16);
+    mem.set_zeb_status(slot, 1);
+    mem.set_zeb_qty_hits(slot, 0);
+    mem.set_zeb_healing_delay(slot, 0);
+    mem.set_zeb_is_hit(slot, 0);
+    // `txa / lsr / adc #>ui_ZEBETITE1` ⇒ id = ($00, $3C + slot*4)
+    if check_for_item(mem, (0x00, 0x3C + slot * 4)) {
+        mem.set_zeb_status(slot, 0x81);
+        mem.set_zeb_is_hit(slot, 1);
+        mem.set_zeb_qty_hits(slot, 7);
     }
 }
 
@@ -349,5 +384,48 @@ mod tests {
         assert_eq!(m.read_wram(crate::ram_map::SAMUS_GEAR) & 1, 1, "能力位 bit0 授予");
         assert_eq!(m.read_ram(POWERUPS_BASE), 0xFF, "槽清（:5646-5658）");
         assert_eq!(m.read_ram(POWER_UP_DELAY_FLAG), 0xFF, "PowerUpDelayFlag←FF");
+    }
+}
+
+#[cfg(test)]
+mod tests_spawn_zebetite {
+    use crate::frame::Manager;
+
+    fn item(byte: u8) -> game_data::area::items::SpecialItem {
+        // 只用到 item_type（asm 的高 nibble 定槽），坐标/其它字段置 0。
+        game_data::area::items::SpecialItem { map_y: 0, map_x: 0, item_type: byte, args: [0; 3] }
+    }
+
+    /// `SpawnZebetiteRoutine`：槽 = 高 nibble/8；ptr.lo 在 `$84/$94` 间交替；
+    /// ptr.hi = `$61`（名表 0）或 `$65`（名表 3）。
+    #[test]
+    fn spawn_sets_pointer_by_nibble() {
+        let mut m = Manager::default();
+        m.write_ram(crate::ram_map::IN_AREA, 0x13);
+        crate::pickup::spawn::spawn_zebetite_for_test(&mut m, &item(0x00));
+        assert_eq!(m.zeb_status(0), 1, "槽 0 活");
+        assert_eq!(m.zeb_ptr(0) & 0xFF, 0x94, "高 nibble 0 ⇒ lo=$94");
+        assert_eq!((m.zeb_ptr(0) >> 8) as u8, 0x61, "名表 0 ⇒ $61");
+        crate::pickup::spawn::spawn_zebetite_for_test(&mut m, &item(0x10));
+        assert_eq!(m.zeb_ptr(1) & 0xFF, 0x84, "高 nibble 1 ⇒ lo=$84");
+        // 名表位翻转 ⇒ hi=$65
+        let mut m2 = Manager::default();
+        m2.write_ram(crate::ram_map::IN_AREA, 0x13);
+        m2.write_ram(crate::ram_map::PPUCTRL_ZP, 0x01);
+        m2.write_ram(crate::ram_map::SCROLL_DIR, 0x00);
+        crate::pickup::spawn::spawn_zebetite_for_test(&mut m2, &item(0x20));
+        assert_eq!((m2.zeb_ptr(2) >> 8) as u8, 0x65, "名表 3 ⇒ $65");
+    }
+
+    /// 已收集（历史里有 `ui_ZEBETITE1+槽*4`）⇒ 生成即"已死"形态 `$81 / qty7 / isHit1`。
+    #[test]
+    fn already_collected_zebetite_spawns_dead() {
+        let mut m = Manager::default();
+        m.write_ram(crate::ram_map::IN_AREA, 0x13);
+        m.unique_item_push((0x00, 0x3C + 4 * 4)); // 槽 4
+        crate::pickup::spawn::spawn_zebetite_for_test(&mut m, &item(0x40));
+        assert_eq!(m.zeb_status(4), 0x81);
+        assert_eq!(m.zeb_qty_hits(4), 7);
+        assert_eq!(m.zeb_is_hit(4), 1);
     }
 }

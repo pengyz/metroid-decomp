@@ -324,3 +324,77 @@ mod tests_zebetite {
         assert_eq!(m.zeb_is_hit(3), 0, "不登记");
     }
 }
+
+/// `UpdateTourianItems ; 07:FDE3`（`prg7_engine.asm:12783`）——Tourian 两件"记史"副作用：
+///
+/// 1. 逃逸计时器**第一帧**（`EndTimer+1 == $99` 且 `clc / sbc EndTimer` 为 0）⇒ 把
+///    `ui_MOTHERBRAIN`（`%001110<<10` ⇒ id `($00,$38)`）写进唯一物历史。
+/// 2. 循环 Zebetite 槽（`x = $20/$18/$10/$08`，`sbc #8 / bne` 使槽 0 不参与）调
+///    `CheckZebetite ; 07:FE05`：`status == 2`（`UpdateZebetite` 的 8 击置的 bit1）⇒
+///    `status ← 3` 并把 `ui_ZEBETITE1 + 槽号`（`($00, $3C + slot*4)`）写进历史。
+pub(crate) fn update_tourian_items(mem: &mut Manager) {
+    // `lda EndTimer+1 / cmp #$99 / bne` ⇒ 之后 `clc / sbc EndTimer` 判低字节为 0
+    if mem.end_timer_hi() == 0x99 && mem.read_ram(crate::ram_map::END_TIMER) == 0 {
+        mem.unique_item_push((0x00, 0x38)); // ui_MOTHERBRAIN
+    }
+    let mut x: u8 = 0x20;
+    loop {
+        check_zebetite_defeated(mem, x);
+        x = x.wrapping_sub(8);
+        if x == 0 {
+            return;
+        }
+    }
+}
+
+/// `CheckZebetite ; 07:FE05`：`status-2 == 0` 才动作（`sec / sbc #$02 / bne @RTS`）。
+fn check_zebetite_defeated(mem: &mut Manager, x: u8) {
+    let slot = x / 8;
+    if mem.zeb_status(slot).wrapping_sub(2) != 0 {
+        return;
+    }
+    mem.set_zeb_status(slot, 3); // `inc status`
+    mem.unique_item_push((0x00, 0x3C + slot * 4)); // ui_ZEBETITE1 + slot
+}
+
+#[cfg(test)]
+mod tests_tourian_items {
+    use crate::frame::Manager;
+
+    fn mgr() -> Manager {
+        let mut m = Manager::default();
+        m.write_ram(crate::ram_map::IN_AREA, 0x13); // Tourian
+        m
+    }
+
+    /// `UpdateTourianItems`：8 击后的 `status=2` 被改成 3，并把 `ui_ZEBETITE1+槽*4` 记史。
+    #[test]
+    fn defeated_zebetites_are_recorded_once() {
+        let mut m = mgr();
+        m.set_zeb_status(4, 2); // 槽 4（x=$20）
+        m.set_zeb_qty_hits(4, 8);
+        super::update_tourian_items(&mut m);
+        assert_eq!(m.zeb_status(4), 3, "status 2→3");
+        // 历史里应出现 ($00,$3C+16=$4C) = ui_ZEBETITE5
+        assert!(m.unique_item_find((0x00, 0x4C)), "ui_ZEBETITE5 入史");
+        // 幂等：再跑一次不会重复入史（status 已不是 2）
+        super::update_tourian_items(&mut m);
+        assert_eq!(m.zeb_status(4), 3);
+    }
+
+    /// 逃逸计时器第一帧（`EndTimer+1=$99` 且低字节 0）⇒ `ui_MOTHERBRAIN` 入史。
+    #[test]
+    fn end_timer_first_frame_records_mother_brain() {
+        let mut m = mgr();
+        m.write_ram(crate::ram_map::END_TIMER + 1, 0x99);
+        m.write_ram(crate::ram_map::END_TIMER, 0x00);
+        super::update_tourian_items(&mut m);
+        assert!(m.unique_item_find((0x00, 0x38)), "ui_MOTHERBRAIN 入史");
+        // 低字节非 0 ⇒ 不是第一帧
+        let mut m2 = mgr();
+        m2.write_ram(crate::ram_map::END_TIMER + 1, 0x99);
+        m2.write_ram(crate::ram_map::END_TIMER, 0x99);
+        super::update_tourian_items(&mut m2);
+        assert!(!m2.unique_item_find((0x00, 0x38)), "99.99 之后的帧不重复记");
+    }
+}
