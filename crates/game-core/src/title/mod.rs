@@ -1723,3 +1723,67 @@ mod display_password_tests {
         assert_eq!(rows.map(|r| r.1), [0x05, 0x0B, 0x11, 0x17]);
     }
 }
+
+/// `ChooseEnding ; 07:CAF5`（`prg7_engine.asm:2439-2467`）：按游戏时长选结局 1..5
+/// （5=最好），并写 `JustInBailey`（有服/无服）。
+///
+/// asm 逐行：
+/// ```text
+/// ldy #$01
+/// @loop: lda SamusAge+2 / bne @endingFound      ; 非 0 ⇒ 超过 37 小时（最差）
+///        lda SamusAge+1 / cmp AgeTable-1,y / bcs @endingFound
+///        iny / cpy #$05 / bne @loop
+/// @endingFound: sty EndingType
+///        lda #$00 / cpy #$04 / bcc @endIf_A / lda #$01
+/// @endIf_A: sta JustInBailey
+/// ```
+/// **原版 bug（D4 保真）**：注释自承「Should be checking SamusAge+3 here too」——
+/// 只查 `SamusAge+2`，高字节溢出到 `+3` 时不会被判成最差结局。
+/// `AgeTable ; 07:CB18 = [7A(37h), 16(6.7h), 0A(3.0h), 04(1.2h)]`。
+pub fn choose_ending(samus_age: [u8; 3]) -> (u8, u8) {
+    const AGE_TABLE: [u8; 4] = [0x7A, 0x16, 0x0A, 0x04];
+    let mut y: u8 = 1;
+    loop {
+        if samus_age[2] != 0 {
+            break; // 最差结局（>37h）
+        }
+        if samus_age[1] >= AGE_TABLE[y as usize - 1] {
+            break;
+        }
+        y += 1;
+        if y == 5 {
+            break;
+        }
+    }
+    let suitless = if y >= 4 { 1 } else { 0 };
+    (y, suitless)
+}
+
+#[cfg(test)]
+mod tests_choose_ending {
+    use super::choose_ending;
+
+    #[test]
+    fn slowest_run_gets_ending_one() {
+        // SamusAge+2 非 0 ⇒ 立刻定结局 1（最差），有服
+        assert_eq!(choose_ending([0x00, 0x00, 0x01]), (1, 0));
+    }
+
+    #[test]
+    fn age_table_thresholds_select_ending() {
+        // +1 高字节 0 恒 < 表首项 ⇒ 一路到 cpy #$05 ⇒ 结局 5（最好），无服
+        assert_eq!(choose_ending([0x00, 0x00, 0x00]), (5, 1));
+        // +1 = $7A 命中首项 ⇒ 结局 1；$16 命中第二项 ⇒ 2；$0A ⇒ 3；$04 ⇒ 4（无服）
+        assert_eq!(choose_ending([0x00, 0x7A, 0x00]), (1, 0));
+        assert_eq!(choose_ending([0x00, 0x16, 0x00]), (2, 0));
+        assert_eq!(choose_ending([0x00, 0x0A, 0x00]), (3, 0));
+        assert_eq!(choose_ending([0x00, 0x04, 0x00]), (4, 1));
+    }
+
+    #[test]
+    fn rom_overflow_bug_is_preserved() {
+        // asm 只查 SamusAge+2；+3 非 0 不被检查 ⇒ 结局仍按 +1 判定（D4 保真）
+        assert_eq!(choose_ending([0x00, 0x00, 0x00]), (5, 1));
+        assert_eq!(choose_ending([0x00, 0x00, 0xFF]), (1, 0));
+    }
+}
