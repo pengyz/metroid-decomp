@@ -1,200 +1,200 @@
 {
- "schema": 1,
- "note": "例程清单人工映射：asm label -> Rust 符号。candidate 升 ported 必须按 asm 逐行复核（输入/输出/副作用/边界）。",
- "labels": {
-  "RandomNumbers": {
-   "status": "ported",
-   "rust": "crates/game-core/src/frame/mainloop.rs:74",
-   "note": "asm 07:C000 循环 5×(n1+=5,n2+=0x13)=每调 +0x19/+0x5F；Rust 直接加合成值并置 A=n1，等价（注×5 互证）"
-  },
-  "UpdateTimer": {
-   "status": "ported",
-   "rust": "crates/game-core/src/frame/mainloop.rs:3162",
-   "note": "asm 07:C266 TimerDelay 预分频（dec/bpl，归零重置 9 并含 Timer3）+ 非零递减；Rust 同形且保留 X=$FF 残迹"
-  },
-  "GoMainRoutine": {
-   "status": "ported",
-   "rust": "crates/game-core/src/frame/mainloop.rs:3184",
-   "note": "asm 07:C114 GameMode≠0 ⇒ jmp MainTitleRoutine，否则主例程分发；Rust 同形"
-  },
-  "ScreenNmiOff": {
-   "status": "ported",
-   "rust": "crates/game-core/src/frame/mainloop.rs:3010",
-   "note": "asm 07:C45D 影子 $FE 清 BG/OBJ → WriteAndWait → $FF 清 VBLKNMI → sta PPUCTRL；Rust 同形（WriteAndWait 按同 tick 近似，注释已记）"
-  },
-  "CheckPaletteWrite": {
-   "status": "ported",
-   "rust": "crates/game-core/src/frame/nmi.rs:83",
-   "note": "asm 07:C1E0 四路（EndGame/待写/StarPalette/RTS）；Rust 四路齐备，EndGame 支显式 unported(bank00:9F54)"
-  },
-  "NMIOn": {
-   "status": "ported",
-   "rust": "crates/game-core/src/frame/boot.rs:188",
-   "note": "asm 07:C487 等 VBlank 结束后 $FF|=VBLKNMI 并写 PPUCTRL；Rust 同形但**未建模轮询**（按帧采集不可观测，注释列反例条件）"
-  },
-  "SkreeAIRoutine": {
-   "status": "ported",
-   "rust": "crates/game-core/src/frame/mainloop.rs:1470",
-   "note": "enemies/skree.asm 全文（5 个 label）与 Rust `skree_ai` 逐段对应：入口 PreAI 分流（1⇒Resting/3⇒Explode）、instr>=0x11⇒爆体（jumpDsplcmnt 倒数、清槽、4 弹 dieDelay=$0A+y/x/hi）、0x0F..0x10⇒设 $3A、其余⇒坠落（bit6+Active 双门 + $FC/$FE 串步进）"
-  },
-  "SkreeBlowUpIntoProjectiles": {
-   "status": "ported",
-   "rust": "crates/game-core/src/frame/mainloop.rs:1470",
-   "note": "enemies/skree.asm 全文（5 个 label）与 Rust `skree_ai` 逐段对应：入口 PreAI 分流（1⇒Resting/3⇒Explode）、instr>=0x11⇒爆体（jumpDsplcmnt 倒数、清槽、4 弹 dieDelay=$0A+y/x/hi）、0x0F..0x10⇒设 $3A、其余⇒坠落（bit6+Active 双门 + $FC/$FE 串步进）"
-  },
-  "SkreeExit_Active": {
-   "status": "ported",
-   "rust": "crates/game-core/src/frame/mainloop.rs:1470",
-   "note": "enemies/skree.asm 全文（5 个 label）与 Rust `skree_ai` 逐段对应：入口 PreAI 分流（1⇒Resting/3⇒Explode）、instr>=0x11⇒爆体（jumpDsplcmnt 倒数、清槽、4 弹 dieDelay=$0A+y/x/hi）、0x0F..0x10⇒设 $3A、其余⇒坠落（bit6+Active 双门 + $FC/$FE 串步进）"
-  },
-  "SkreeExit_Resting": {
-   "status": "ported",
-   "rust": "crates/game-core/src/frame/mainloop.rs:1470",
-   "note": "enemies/skree.asm 全文（5 个 label）与 Rust `skree_ai` 逐段对应：入口 PreAI 分流（1⇒Resting/3⇒Explode）、instr>=0x11⇒爆体（jumpDsplcmnt 倒数、清槽、4 弹 dieDelay=$0A+y/x/hi）、0x0F..0x10⇒设 $3A、其余⇒坠落（bit6+Active 双门 + $FC/$FE 串步进）"
-  },
-  "SkreeExit_Explode": {
-   "status": "ported",
-   "rust": "crates/game-core/src/frame/mainloop.rs:1470",
-   "note": "enemies/skree.asm 全文（5 个 label）与 Rust `skree_ai` 逐段对应：入口 PreAI 分流（1⇒Resting/3⇒Explode）、instr>=0x11⇒爆体（jumpDsplcmnt 倒数、清槽、4 弹 dieDelay=$0A+y/x/hi）、0x0F..0x10⇒设 $3A、其余⇒坠落（bit6+Active 双门 + $FC/$FE 串步进）"
-  },
-  "CrawlerAIRoutine": {
-   "status": "ported",
-   "rust": "crates/game-core/src/frame/mainloop.rs:1601",
-   "note": "enemies/crawler.asm 与 `crawler_ai`/`crawler_outside_corner_check`/`crawler_reorient_sprite` 对应：F852 门（6/8 帧）、PreAI 三门（Bank1/4 走 skree 共享出口、Bank2/5 自有）、岩浆折返（y=$E4 阈，asm BUG 保真）、JumpByRTS 四例程（idx=(orient*2+dir) match 内联）、内/外角检、ReorientSprite"
-  },
-  "CrawlerExit_Explode": {
-   "status": "ported",
-   "rust": "crates/game-core/src/frame/mainloop.rs:1601",
-   "note": "enemies/crawler.asm 与 `crawler_ai`/`crawler_outside_corner_check`/`crawler_reorient_sprite` 对应：F852 门（6/8 帧）、PreAI 三门（Bank1/4 走 skree 共享出口、Bank2/5 自有）、岩浆折返（y=$E4 阈，asm BUG 保真）、JumpByRTS 四例程（idx=(orient*2+dir) match 内联）、内/外角检、ReorientSprite"
-  },
-  "CrawlerExit_Resting": {
-   "status": "ported",
-   "rust": "crates/game-core/src/frame/mainloop.rs:1601",
-   "note": "enemies/crawler.asm 与 `crawler_ai`/`crawler_outside_corner_check`/`crawler_reorient_sprite` 对应：F852 门（6/8 帧）、PreAI 三门（Bank1/4 走 skree 共享出口、Bank2/5 自有）、岩浆折返（y=$E4 阈，asm BUG 保真）、JumpByRTS 四例程（idx=(orient*2+dir) match 内联）、内/外角检、ReorientSprite"
-  },
-  "CrawlerInsideCornerCheck": {
-   "status": "ported",
-   "rust": "crates/game-core/src/frame/mainloop.rs:1601",
-   "note": "enemies/crawler.asm 与 `crawler_ai`/`crawler_outside_corner_check`/`crawler_reorient_sprite` 对应：F852 门（6/8 帧）、PreAI 三门（Bank1/4 走 skree 共享出口、Bank2/5 自有）、岩浆折返（y=$E4 阈，asm BUG 保真）、JumpByRTS 四例程（idx=(orient*2+dir) match 内联）、内/外角检、ReorientSprite"
-  },
-  "CrawlerFlipDirection": {
-   "status": "ported",
-   "rust": "crates/game-core/src/frame/mainloop.rs:1601",
-   "note": "enemies/crawler.asm 与 `crawler_ai`/`crawler_outside_corner_check`/`crawler_reorient_sprite` 对应：F852 门（6/8 帧）、PreAI 三门（Bank1/4 走 skree 共享出口、Bank2/5 自有）、岩浆折返（y=$E4 阈，asm BUG 保真）、JumpByRTS 四例程（idx=(orient*2+dir) match 内联）、内/外角检、ReorientSprite"
-  },
-  "JumpByRTSToMovementRoutine": {
-   "status": "ported",
-   "rust": "crates/game-core/src/frame/mainloop.rs:1601",
-   "note": "enemies/crawler.asm 与 `crawler_ai`/`crawler_outside_corner_check`/`crawler_reorient_sprite` 对应：F852 门（6/8 帧）、PreAI 三门（Bank1/4 走 skree 共享出口、Bank2/5 自有）、岩浆折返（y=$E4 阈，asm BUG 保真）、JumpByRTS 四例程（idx=(orient*2+dir) match 内联）、内/外角检、ReorientSprite"
-  },
-  "CrawlerOutsideCornerCheck": {
-   "status": "ported",
-   "rust": "crates/game-core/src/frame/mainloop.rs:1700",
-   "note": "enemies/crawler.asm 与 `crawler_ai`/`crawler_outside_corner_check`/`crawler_reorient_sprite` 对应：F852 门（6/8 帧）、PreAI 三门（Bank1/4 走 skree 共享出口、Bank2/5 自有）、岩浆折返（y=$E4 阈，asm BUG 保真）、JumpByRTS 四例程（idx=(orient*2+dir) match 内联）、内/外角检、ReorientSprite"
-  },
-  "CrawlerOutsideCornerGetNextOrientation": {
-   "status": "ported",
-   "rust": "crates/game-core/src/frame/mainloop.rs:1700",
-   "note": "enemies/crawler.asm 与 `crawler_ai`/`crawler_outside_corner_check`/`crawler_reorient_sprite` 对应：F852 门（6/8 帧）、PreAI 三门（Bank1/4 走 skree 共享出口、Bank2/5 自有）、岩浆折返（y=$E4 阈，asm BUG 保真）、JumpByRTS 四例程（idx=(orient*2+dir) match 内联）、内/外角检、ReorientSprite（next orientation=(o+1)&3 内联）"
-  },
-  "CrawlerReorientSprite": {
-   "status": "ported",
-   "rust": "crates/game-core/src/frame/mainloop.rs:1747",
-   "note": "asm `lda data05/lsr`+`lda data0A/and #3/rol`+`CrawlerAnimIndexTable,y` ⇒ 索引=(orient<<1)|dir；Rust 同形"
-  },
-  "CrawlerAnimIndexTable": {
-   "status": "data",
-   "note": "8 字节动画索引表（.byte 组，被 .if 包住致分析器判 code）；数据面，非例程"
-  },
-  "SidehopperFloorAIRoutine": {
-   "status": "ported",
-   "rust": "crates/game-core/src/enemy/sidehopper.rs:78",
-   "note": "asm enemies/sidehopper.asm:4-16（anim 偏移→FlipAnimIndex $85/$86 → status≠Explode 走 EnemyFlipAfterDisplacement → $00=6/$01=8 → Decide）；Rust sidehopper_ai(ceiling=false) 逐行同形，动画偏移按各 bank EnAnimTable 基址算得（bank1 $09 / bank5 $42）"
-  },
-  "SidehopperCeilingAIRoutine": {
-   "status": "ported",
-   "rust": "crates/game-core/src/enemy/sidehopper.rs:78",
-   "note": "asm sidehopper.asm:26-32 仅换 Ceiling 动画偏移（bank1 $0F / bank5 $48），其余同尾件；Rust sidehopper_ai(ceiling=true)"
-  },
-  "RipperAIRoutine": {
-   "status": "ported",
-   "rust": "crates/game-core/src/enemy/sidehopper.rs:126",
-   "note": "asm enemies/ripper.asm：status≠Explode 走 InitEnActiveAnimIndex_NoInitOffset；bank1/4 jmp CommonEnemyStub2（Sidehopper 尾件），bank2 是 Ripper II（$00=$01=3）；Rust ripper_ai 同形"
-  },
-  "EnemyFlipAfterDisplacement": {
-   "status": "ported",
-   "rust": "crates/game-core/src/enemy/sidehopper.rs:52",
-   "note": "asm 07:FB88：|jumpDsplcmnt| 负则二补；<8 回休止动画、8..15 切 hopping（animIndex=idx-1/resetAnimIndex=idx/清 delay）、≥16 不动；Rust 同形"
-  },
-  "InitEnActiveAnimIndex_NoInitOffset": {
-   "status": "ported",
-   "rust": "crates/game-core/src/enemy/sidehopper.rs:112",
-   "note": "asm 07:FBCA：resetAnimIndex≠表值才写三件，且不递减 InitOffset（与 InitEnActiveAnimIndex 的差别）；Rust 同形"
-  },
-  "WaverAIRoutine": {
-   "status": "ported",
-   "rust": "crates/game-core/src/enemy/waver.rs:60",
-   "note": "asm enemies/waver.asm（bank1 01:99E5，12 行）：$85←Waver2_R、$86←Waver2_L（Brinstar 01:9D8B/01:9D88 − EnAnimTable 01:9D6A ⇒ $21/$1E；Kraid 同值）；status≠Explode 走 EnemyFlipAfterDisplacement；尾件 $00←$06、$01←$08 → Decide。Rust waver_ai 逐行同形，dispatch type=2 已接线"
-  },
-  "ChooseEnemyAIRoutine": {
-   "status": "ported",
-   "rust": "crates/game-core/src/enemy/ai_table.rs:1",
-   "note": "asm 每区一份跳表（prg1/2/3/4/5 的 $95E5，各 16 项 .word）。Rust 侧 ai_table.rs 逐区转写五张表并按 (area,type) 派发；此前是单张全局 match（在 Brinstar 恰好正确，Norfair type4 等会误派）。未端口项与空指针记账后走占位臂，Rts95CB 直接 rts。"
-  },
-  "RemoveEnemy": {
-   "status": "ported",
-   "rust": "crates/game-core/src/enemy/framework.rs:choose_enemy_ai",
-   "note": "asm 07:FA18 = lda #enemyStatus_NoEnemy / sta EnsExtra.0.status,x / rts；Rust 在派发表 RemoveEnemy 项清槽"
-  },
-  "SqueeptAIRoutine": {
-   "status": "ported",
-   "rust": "crates/game-core/src/enemy/squeept.rs:57",
-   "note": "asm 02:9A64 全径：激活帧查 SqueeptSpeedYTable(02:9AD2, assets 段 id=185)+accelY=$40；爆走 Resting 出口 anim2；pre 路由；活动径 dy/anim 0x1D(9BF7)/0x20(9BFA)；ApplySpeed 拆分变体(07:FD8F parts)+熔岩 $E8 bcc/bcs 判+data05 bit5；LoadEnemyPositionFromTemp 恒执行"
-  },
-  "SqueeptExit_Resting": {
-   "status": "ported",
-   "rust": "crates/game-core/src/enemy/squeept.rs:103",
-   "note": "asm squeept.asm Exit_Resting：lda #2 + CommonJump_UpdateEnemyCommon_noMove（update_enemy_common_no_move_anim(2)）"
-  },
-  "SqueeptExit_Explode": {
-   "status": "ported",
-   "rust": "crates/game-core/src/enemy/squeept.rs:106",
-   "note": "asm Exit_Explode：CommonJump_UpdateEnemyCommon_noMoveNoAnim（update_enemy_common_no_move_no_anim）"
-  },
-  "SwooperAIRoutine00": {
-   "status": "ported",
-   "rust": "crates/game-core/src/enemy/swooper.rs:77",
-   "note": "asm 02:9694 Norfair 实例：$00=3/$01=8 节拍（decide_with_beats 直传）；Resting+data05 bit4→SwooperChangeEnemyType(1)；尾 UpdateSwooperAnim+Decide"
-  },
-  "SwooperAIRoutine01": {
-   "status": "ported",
-   "rust": "crates/game-core/src/enemy/swooper.rs:93",
-   "note": "asm 01 号：pre 快照路由（Resting→noMove anim8/Explode→noMoveNoAnim）；现役 Resting→ChangeEnemyType(0)；Swoop 径 accelY=$80(−128)+对齐停重力"
-  },
-  "SwooperExit_Resting": {
-   "status": "ported",
-   "rust": "crates/game-core/src/enemy/swooper.rs:97",
-   "note": "asm Exit_Resting：noMove anim8（update_enemy_common_no_move_anim(8)）"
-  },
-  "SwooperAIRoutine01_Swoop": {
-   "status": "ported",
-   "rust": "crates/game-core/src/enemy/swooper.rs:115",
-   "note": "asm Swoop 径：accelY=−128；speedY≥0+bit4+|Δy|<$10→accelY=0；尾 UpdateSwooperAnim+anim_move(3)"
-  },
-  "SwooperExit_Explode": {
-   "status": "ported",
-   "rust": "crates/game-core/src/enemy/swooper.rs:100",
-   "note": "asm Exit_Explode：noMoveNoAnim"
-  },
-  "MultiviolaAIRoutine": {
-   "status": "ported",
-   "rust": "crates/game-core/src/enemy/multiviola.rs:29",
-   "note": "asm 02:9704：现役 Active→InitEnActiveAnimIndex_NoInitOffset(07:FBCA，framework.rs no_init_offset 变体)；节拍 2/2 直传 Decide"
-  },
-  "CommonJump_InitEnActiveAnimIndex_NoInitOffset": {
-   "status": "ported",
-   "rust": "crates/game-core/src/enemy/framework.rs:157",
-   "note": "asm 07:FBCA：activeAnim[y]!=resetAnimIndex 才写 reset/animIndex←idx、animDelay←0；与 F699 版差=无 InitOffset 递减（multiviola 用）"
+  "schema": 1,
+  "note": "例程清单人工映射：asm label -> Rust 符号。candidate 升 ported 必须按 asm 逐行复核（输入/输出/副作用/边界）。",
+  "labels": {
+    "RandomNumbers": {
+      "status": "ported",
+      "rust": "crates/game-core/src/frame/tick.rs:336",
+      "note": "asm 07:C000 循环 5×(n1+=5,n2+=0x13)=每调 +0x19/+0x5F；Rust 直接加合成值并置 A=n1，等价（注×5 互证）"
+    },
+    "UpdateTimer": {
+      "status": "ported",
+      "rust": "crates/game-core/src/frame/tick.rs:730",
+      "note": "asm 07:C266 TimerDelay 预分频（dec/bpl，归零重置 9 并含 Timer3）+ 非零递减；Rust 同形且保留 X=$FF 残迹"
+    },
+    "GoMainRoutine": {
+      "status": "ported",
+      "rust": "crates/game-core/src/frame/tick.rs:752",
+      "note": "asm 07:C114 GameMode≠0 ⇒ jmp MainTitleRoutine，否则主例程分发；Rust 同形"
+    },
+    "ScreenNmiOff": {
+      "status": "ported",
+      "rust": "crates/game-core/src/world/room_load.rs:118",
+      "note": "asm 07:C45D 影子 $FE 清 BG/OBJ → WriteAndWait → $FF 清 VBLKNMI → sta PPUCTRL；Rust 同形（WriteAndWait 按同 tick 近似，注释已记）"
+    },
+    "CheckPaletteWrite": {
+      "status": "ported",
+      "rust": "crates/game-core/src/frame/nmi.rs:83",
+      "note": "asm 07:C1E0 四路（EndGame/待写/StarPalette/RTS）；Rust 四路齐备，EndGame 支显式 unported(bank00:9F54)"
+    },
+    "NMIOn": {
+      "status": "ported",
+      "rust": "crates/game-core/src/frame/boot.rs:188",
+      "note": "asm 07:C487 等 VBlank 结束后 $FF|=VBLKNMI 并写 PPUCTRL；Rust 同形但**未建模轮询**（按帧采集不可观测，注释列反例条件）"
+    },
+    "SkreeAIRoutine": {
+      "status": "ported",
+      "rust": "crates/game-core/src/frame/mainloop.rs:1470",
+      "note": "enemies/skree.asm 全文（5 个 label）与 Rust `skree_ai` 逐段对应：入口 PreAI 分流（1⇒Resting/3⇒Explode）、instr>=0x11⇒爆体（jumpDsplcmnt 倒数、清槽、4 弹 dieDelay=$0A+y/x/hi）、0x0F..0x10⇒设 $3A、其余⇒坠落（bit6+Active 双门 + $FC/$FE 串步进）"
+    },
+    "SkreeBlowUpIntoProjectiles": {
+      "status": "ported",
+      "rust": "crates/game-core/src/frame/mainloop.rs:1470",
+      "note": "enemies/skree.asm 全文（5 个 label）与 Rust `skree_ai` 逐段对应：入口 PreAI 分流（1⇒Resting/3⇒Explode）、instr>=0x11⇒爆体（jumpDsplcmnt 倒数、清槽、4 弹 dieDelay=$0A+y/x/hi）、0x0F..0x10⇒设 $3A、其余⇒坠落（bit6+Active 双门 + $FC/$FE 串步进）"
+    },
+    "SkreeExit_Active": {
+      "status": "ported",
+      "rust": "crates/game-core/src/frame/mainloop.rs:1470",
+      "note": "enemies/skree.asm 全文（5 个 label）与 Rust `skree_ai` 逐段对应：入口 PreAI 分流（1⇒Resting/3⇒Explode）、instr>=0x11⇒爆体（jumpDsplcmnt 倒数、清槽、4 弹 dieDelay=$0A+y/x/hi）、0x0F..0x10⇒设 $3A、其余⇒坠落（bit6+Active 双门 + $FC/$FE 串步进）"
+    },
+    "SkreeExit_Resting": {
+      "status": "ported",
+      "rust": "crates/game-core/src/frame/mainloop.rs:1470",
+      "note": "enemies/skree.asm 全文（5 个 label）与 Rust `skree_ai` 逐段对应：入口 PreAI 分流（1⇒Resting/3⇒Explode）、instr>=0x11⇒爆体（jumpDsplcmnt 倒数、清槽、4 弹 dieDelay=$0A+y/x/hi）、0x0F..0x10⇒设 $3A、其余⇒坠落（bit6+Active 双门 + $FC/$FE 串步进）"
+    },
+    "SkreeExit_Explode": {
+      "status": "ported",
+      "rust": "crates/game-core/src/frame/mainloop.rs:1470",
+      "note": "enemies/skree.asm 全文（5 个 label）与 Rust `skree_ai` 逐段对应：入口 PreAI 分流（1⇒Resting/3⇒Explode）、instr>=0x11⇒爆体（jumpDsplcmnt 倒数、清槽、4 弹 dieDelay=$0A+y/x/hi）、0x0F..0x10⇒设 $3A、其余⇒坠落（bit6+Active 双门 + $FC/$FE 串步进）"
+    },
+    "CrawlerAIRoutine": {
+      "status": "ported",
+      "rust": "crates/game-core/src/frame/mainloop.rs:1601",
+      "note": "enemies/crawler.asm 与 `crawler_ai`/`crawler_outside_corner_check`/`crawler_reorient_sprite` 对应：F852 门（6/8 帧）、PreAI 三门（Bank1/4 走 skree 共享出口、Bank2/5 自有）、岩浆折返（y=$E4 阈，asm BUG 保真）、JumpByRTS 四例程（idx=(orient*2+dir) match 内联）、内/外角检、ReorientSprite"
+    },
+    "CrawlerExit_Explode": {
+      "status": "ported",
+      "rust": "crates/game-core/src/frame/mainloop.rs:1601",
+      "note": "enemies/crawler.asm 与 `crawler_ai`/`crawler_outside_corner_check`/`crawler_reorient_sprite` 对应：F852 门（6/8 帧）、PreAI 三门（Bank1/4 走 skree 共享出口、Bank2/5 自有）、岩浆折返（y=$E4 阈，asm BUG 保真）、JumpByRTS 四例程（idx=(orient*2+dir) match 内联）、内/外角检、ReorientSprite"
+    },
+    "CrawlerExit_Resting": {
+      "status": "ported",
+      "rust": "crates/game-core/src/frame/mainloop.rs:1601",
+      "note": "enemies/crawler.asm 与 `crawler_ai`/`crawler_outside_corner_check`/`crawler_reorient_sprite` 对应：F852 门（6/8 帧）、PreAI 三门（Bank1/4 走 skree 共享出口、Bank2/5 自有）、岩浆折返（y=$E4 阈，asm BUG 保真）、JumpByRTS 四例程（idx=(orient*2+dir) match 内联）、内/外角检、ReorientSprite"
+    },
+    "CrawlerInsideCornerCheck": {
+      "status": "ported",
+      "rust": "crates/game-core/src/frame/mainloop.rs:1601",
+      "note": "enemies/crawler.asm 与 `crawler_ai`/`crawler_outside_corner_check`/`crawler_reorient_sprite` 对应：F852 门（6/8 帧）、PreAI 三门（Bank1/4 走 skree 共享出口、Bank2/5 自有）、岩浆折返（y=$E4 阈，asm BUG 保真）、JumpByRTS 四例程（idx=(orient*2+dir) match 内联）、内/外角检、ReorientSprite"
+    },
+    "CrawlerFlipDirection": {
+      "status": "ported",
+      "rust": "crates/game-core/src/frame/mainloop.rs:1601",
+      "note": "enemies/crawler.asm 与 `crawler_ai`/`crawler_outside_corner_check`/`crawler_reorient_sprite` 对应：F852 门（6/8 帧）、PreAI 三门（Bank1/4 走 skree 共享出口、Bank2/5 自有）、岩浆折返（y=$E4 阈，asm BUG 保真）、JumpByRTS 四例程（idx=(orient*2+dir) match 内联）、内/外角检、ReorientSprite"
+    },
+    "JumpByRTSToMovementRoutine": {
+      "status": "ported",
+      "rust": "crates/game-core/src/frame/mainloop.rs:1601",
+      "note": "enemies/crawler.asm 与 `crawler_ai`/`crawler_outside_corner_check`/`crawler_reorient_sprite` 对应：F852 门（6/8 帧）、PreAI 三门（Bank1/4 走 skree 共享出口、Bank2/5 自有）、岩浆折返（y=$E4 阈，asm BUG 保真）、JumpByRTS 四例程（idx=(orient*2+dir) match 内联）、内/外角检、ReorientSprite"
+    },
+    "CrawlerOutsideCornerCheck": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/crawler.rs:127",
+      "note": "enemies/crawler.asm 与 `crawler_ai`/`crawler_outside_corner_check`/`crawler_reorient_sprite` 对应：F852 门（6/8 帧）、PreAI 三门（Bank1/4 走 skree 共享出口、Bank2/5 自有）、岩浆折返（y=$E4 阈，asm BUG 保真）、JumpByRTS 四例程（idx=(orient*2+dir) match 内联）、内/外角检、ReorientSprite"
+    },
+    "CrawlerOutsideCornerGetNextOrientation": {
+      "status": "ported",
+      "rust": "crates/game-core/src/frame/mainloop.rs:1700",
+      "note": "enemies/crawler.asm 与 `crawler_ai`/`crawler_outside_corner_check`/`crawler_reorient_sprite` 对应：F852 门（6/8 帧）、PreAI 三门（Bank1/4 走 skree 共享出口、Bank2/5 自有）、岩浆折返（y=$E4 阈，asm BUG 保真）、JumpByRTS 四例程（idx=(orient*2+dir) match 内联）、内/外角检、ReorientSprite（next orientation=(o+1)&3 内联）"
+    },
+    "CrawlerReorientSprite": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/crawler.rs:150",
+      "note": "asm `lda data05/lsr`+`lda data0A/and #3/rol`+`CrawlerAnimIndexTable,y` ⇒ 索引=(orient<<1)|dir；Rust 同形"
+    },
+    "CrawlerAnimIndexTable": {
+      "status": "data",
+      "note": "8 字节动画索引表（.byte 组，被 .if 包住致分析器判 code）；数据面，非例程"
+    },
+    "SidehopperFloorAIRoutine": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/sidehopper.rs:78",
+      "note": "asm enemies/sidehopper.asm:4-16（anim 偏移→FlipAnimIndex $85/$86 → status≠Explode 走 EnemyFlipAfterDisplacement → $00=6/$01=8 → Decide）；Rust sidehopper_ai(ceiling=false) 逐行同形，动画偏移按各 bank EnAnimTable 基址算得（bank1 $09 / bank5 $42）"
+    },
+    "SidehopperCeilingAIRoutine": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/sidehopper.rs:78",
+      "note": "asm sidehopper.asm:26-32 仅换 Ceiling 动画偏移（bank1 $0F / bank5 $48），其余同尾件；Rust sidehopper_ai(ceiling=true)"
+    },
+    "RipperAIRoutine": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/sidehopper.rs:126",
+      "note": "asm enemies/ripper.asm：status≠Explode 走 InitEnActiveAnimIndex_NoInitOffset；bank1/4 jmp CommonEnemyStub2（Sidehopper 尾件），bank2 是 Ripper II（$00=$01=3）；Rust ripper_ai 同形"
+    },
+    "EnemyFlipAfterDisplacement": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/sidehopper.rs:52",
+      "note": "asm 07:FB88：|jumpDsplcmnt| 负则二补；<8 回休止动画、8..15 切 hopping（animIndex=idx-1/resetAnimIndex=idx/清 delay）、≥16 不动；Rust 同形"
+    },
+    "InitEnActiveAnimIndex_NoInitOffset": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/sidehopper.rs:112",
+      "note": "asm 07:FBCA：resetAnimIndex≠表值才写三件，且不递减 InitOffset（与 InitEnActiveAnimIndex 的差别）；Rust 同形"
+    },
+    "WaverAIRoutine": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/waver.rs:60",
+      "note": "asm enemies/waver.asm（bank1 01:99E5，12 行）：$85←Waver2_R、$86←Waver2_L（Brinstar 01:9D8B/01:9D88 − EnAnimTable 01:9D6A ⇒ $21/$1E；Kraid 同值）；status≠Explode 走 EnemyFlipAfterDisplacement；尾件 $00←$06、$01←$08 → Decide。Rust waver_ai 逐行同形，dispatch type=2 已接线"
+    },
+    "ChooseEnemyAIRoutine": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/ai_table.rs:1",
+      "note": "asm 每区一份跳表（prg1/2/3/4/5 的 $95E5，各 16 项 .word）。Rust 侧 ai_table.rs 逐区转写五张表并按 (area,type) 派发；此前是单张全局 match（在 Brinstar 恰好正确，Norfair type4 等会误派）。未端口项与空指针记账后走占位臂，Rts95CB 直接 rts。"
+    },
+    "RemoveEnemy": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/framework.rs:choose_enemy_ai",
+      "note": "asm 07:FA18 = lda #enemyStatus_NoEnemy / sta EnsExtra.0.status,x / rts；Rust 在派发表 RemoveEnemy 项清槽"
+    },
+    "SqueeptAIRoutine": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/squeept.rs:57",
+      "note": "asm 02:9A64 全径：激活帧查 SqueeptSpeedYTable(02:9AD2, assets 段 id=185)+accelY=$40；爆走 Resting 出口 anim2；pre 路由；活动径 dy/anim 0x1D(9BF7)/0x20(9BFA)；ApplySpeed 拆分变体(07:FD8F parts)+熔岩 $E8 bcc/bcs 判+data05 bit5；LoadEnemyPositionFromTemp 恒执行"
+    },
+    "SqueeptExit_Resting": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/squeept.rs:103",
+      "note": "asm squeept.asm Exit_Resting：lda #2 + CommonJump_UpdateEnemyCommon_noMove（update_enemy_common_no_move_anim(2)）"
+    },
+    "SqueeptExit_Explode": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/squeept.rs:106",
+      "note": "asm Exit_Explode：CommonJump_UpdateEnemyCommon_noMoveNoAnim（update_enemy_common_no_move_no_anim）"
+    },
+    "SwooperAIRoutine00": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/swooper.rs:77",
+      "note": "asm 02:9694 Norfair 实例：$00=3/$01=8 节拍（decide_with_beats 直传）；Resting+data05 bit4→SwooperChangeEnemyType(1)；尾 UpdateSwooperAnim+Decide"
+    },
+    "SwooperAIRoutine01": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/swooper.rs:93",
+      "note": "asm 01 号：pre 快照路由（Resting→noMove anim8/Explode→noMoveNoAnim）；现役 Resting→ChangeEnemyType(0)；Swoop 径 accelY=$80(−128)+对齐停重力"
+    },
+    "SwooperExit_Resting": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/swooper.rs:97",
+      "note": "asm Exit_Resting：noMove anim8（update_enemy_common_no_move_anim(8)）"
+    },
+    "SwooperAIRoutine01_Swoop": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/swooper.rs:115",
+      "note": "asm Swoop 径：accelY=−128；speedY≥0+bit4+|Δy|<$10→accelY=0；尾 UpdateSwooperAnim+anim_move(3)"
+    },
+    "SwooperExit_Explode": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/swooper.rs:100",
+      "note": "asm Exit_Explode：noMoveNoAnim"
+    },
+    "MultiviolaAIRoutine": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/multiviola.rs:29",
+      "note": "asm 02:9704：现役 Active→InitEnActiveAnimIndex_NoInitOffset(07:FBCA，framework.rs no_init_offset 变体)；节拍 2/2 直传 Decide"
+    },
+    "CommonJump_InitEnActiveAnimIndex_NoInitOffset": {
+      "status": "ported",
+      "rust": "crates/game-core/src/enemy/framework.rs:157",
+      "note": "asm 07:FBCA：activeAnim[y]!=resetAnimIndex 才写 reset/animIndex←idx、animDelay←0；与 F699 版差=无 InitOffset 递减（multiviola 用）"
+    }
   }
- }
 }
