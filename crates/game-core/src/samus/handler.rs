@@ -576,10 +576,17 @@ fn set_samus_run(mem: &mut Manager) {
     } else if cur == OBJ_ANIM_SAMUS_PNT_UP {
         1
     } else {
-        // 原跑动⇒转身过渡（SetSamusNextAnim(Front)——CF6E：animIndex←A+animDelay←0）
+        // 原跑动⇒转身过渡（asm `LCCB3`：`lda #ObjAnim_SamusFront / jsr SetSamusNextAnim`）
+        // 【A 级定谳 2026-11-21】asm 的 `inx` 在 `cmp PntUp` **之前**且不回退 ⇒ 落到本支时
+        // X **恒为 1**，随后的 `LCCBX: lda RunAnimationTbl,x / sta Samus.animResetIndex`
+        // 写的是 `RunAnimationTbl[1]=RunPntUp(0x37)`，**不是 Run(0x00)**；本支只额外把
+        // `animIndex` 设成 Front（`SetSamusNextAnim` 子件写 animIndex+animDelay，**不写
+        // reset**）。旧形 `x=0` 让 reset 变 0x00 ⇒ emu/rust 在 f1548 起 `$0305` 差 0x37/0x00，
+        // 进而 `SetSamusRunAccel` 节奏差 0x30、f1794 dx2、f6263 死亡（证据
+        // docs/findings/anyp-first-divergence-f1548.md）。
         mem.samus().set_anim_index(OBJ_ANIM_SAMUS_FRONT);
-        mem.samus().set_anim_delay(0); // animDelay←0（H1 修——漏写致走表延迟）
-        0
+        mem.samus().set_anim_delay(0); // animDelay←0（CF6E 尾件）
+        1
     };
     let anim = [OBJ_ANIM_SAMUS_RUN, OBJ_ANIM_SAMUS_RUN_PNT_UP][x];
     mem.samus().set_anim_reset_index(anim);
@@ -593,6 +600,23 @@ pub const ANIM_RESET_INDEX: u16 = 0x0305;
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// SetSamusRun 的「转身过渡」支：asm `LCCB3` 落穿时 X 恒为 1（`inx` 在
+    /// `cmp PntUp` 之前且不回退）⇒ `RunAnimationTbl[1]`=RunPntUp(0x37) 写进
+    /// animResetIndex，只有 animIndex 被设成 Front(0x05)。
+    /// 旧形给 x=0 ⇒ reset=Run(0x00)，与 emu 在 f1548 起逐帧相差 0x37/0x00。
+    #[test]
+    fn turnaround_keeps_x_one_and_writes_run_pnt_up_reset() {
+        use crate::ram_map::SAMUS_DIR;
+        let mut m = Manager::default();
+        m.samus().set_anim_reset_index(0x01); // 既非 Stand(0x07) 也非 PntUp(0x27) ⇒ 走本支
+        m.write_ram(SAMUS_DIR, 1);
+        set_samus_run(&mut m);
+        assert_eq!(m.samus().anim_index(), OBJ_ANIM_SAMUS_FRONT, "animIndex←Front");
+        assert_eq!(m.samus().anim_delay(), 0, "animDelay←0");
+        assert_eq!(m.samus().anim_reset_index(), OBJ_ANIM_SAMUS_RUN_PNT_UP, "reset←RunPntUp(0x37)");
+        assert_eq!(m.samus().accel_x() as u8, RUN_ACCELERATION_TBL[1], "accel 取 dir=1");
+    }
 
     /// 10 态表序自证（from_index 全覆盖）+分发引爆面。
     #[test]
