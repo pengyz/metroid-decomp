@@ -405,6 +405,48 @@ def ppu_layer_diff(stem: str, frame: int, tag: str) -> dict | None:
     return out
 
 
+def sanity_probe(stem: str, frame: int, tag: str) -> dict | None:
+    """渲染健全性体检（**不参与判据/ratchet**，只防"空对空"）。
+
+    `diff==0` 既可能是"两腿都对"，也可能是"两腿都黑/都是垃圾"。这里给出三个
+    与人眼判断相关的量，让报告能回答「这张图是不是真东西」：
+      - `colors`：调色板实际用了几种颜色（正常房间 8–16 色，全黑屏=1）
+      - `non_black`：非黑像素占比
+      - `shift_best` / `shift_residual`：±4px 内最优平移与残差（相位差 vs 内容差）
+    """
+    pair = _png_pair(stem, frame, tag)
+    if pair is None:
+        return None
+    try:
+        import numpy as np
+        from PIL import Image
+    except ImportError:
+        return None
+    try:
+        a = np.asarray(Image.open(pair[0]).convert("RGB"))
+        b = np.asarray(Image.open(pair[1]).convert("RGB"))
+    except OSError:
+        return None
+    if a.shape != b.shape:
+        return {"error": f"尺寸不一致 {a.shape}/{b.shape}"}
+    non_black = float((a.sum(axis=2) > 0).mean())
+    colors = int(len(np.unique(a.reshape(-1, 3), axis=0)))
+    base = float((a.astype(int) != b.astype(int)).any(axis=2).mean())
+    best = (0, base)
+    for dx in (-4, -3, -2, -1, 1, 2, 3, 4):
+        shifted = np.roll(b, dx, axis=1)
+        r = float((a.astype(int) != shifted.astype(int)).any(axis=2).mean())
+        if r < best[1]:
+            best = (dx, r)
+    out = {"colors": colors, "non_black": round(non_black, 4),
+           "shift_best": best[0], "shift_residual": round(best[1], 4)}
+    # 健全性判读（只做旁注，不进 layer 判据）
+    if colors <= 2 or non_black < 0.02:
+        out["note"] = "suspicious_blank"
+    elif best[1] < base * 0.2 and best[0]:
+        out["note"] = f"shift_explains_{best[0]}px"
+    return out
+
 def _png_pair(stem: str, frame: int, tag: str):
     """取两腿同一采集点的 PNG（emu 在 shots/，rust 在 shots_rust/）。"""
     a = ROOT / "shots" / f"{stem}_f{frame:05d}_{tag}.png"
@@ -633,6 +675,8 @@ def run_room(area: int, room: int, frames: int, captures: list[int],
                   if r.get("frame") is not None and r.get("tag") else None)
             cap["ppu"] = ppu
             cap["shift"] = sh
+            cap["sanity"] = (sanity_probe(stem, int(r["frame"]), str(r["tag"]))
+                             if r.get("frame") is not None and r.get("tag") else None)
             cap["layer"] = classify_layer(px_n, ppu, sh)
             results.append(cap)
             if r.get("tag"):
