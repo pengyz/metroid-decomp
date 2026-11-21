@@ -1415,7 +1415,10 @@ mod tests_kill_chain {
         assert_eq!(m.read_wram(0x6AF4 + x as u16), 5, "⇒拾取（status5）");
     }
 
-    /// 弹药拾取（animFrame=0x80）⇒+5 弹+槽释。
+    /// 弹药拾取（animFrame=0x80）⇒**+2** 弹（asm `07:F4B7 lda #$02`）+槽释。
+    ///
+    /// 旧断言是「+5 弹」，与 asm 不符（那是别处的自造数）——`MaxMissiles` 也必须
+    /// 先摆上：asm `cmp MaxMissiles / bcc @dontCap`，默认 0 会把结果封顶成 0。
     #[test]
     fn pickup_missile_restores() {
         let mut m = Manager::default();
@@ -1424,9 +1427,29 @@ mod tests_kill_chain {
         m.write_wram(0x6AF4 + x as u16 + 3, 0x80); // animFrame=MissilePickup
         m.write_ram(0x0400 + x as u16 + 4, 0x24); // 碰触（isHit&24）
         m.write_wram(crate::ram_map::MISSILE_COUNT, 3);
+        m.write_ram(crate::ram_map::MAX_MISSILES, 10);
         update_enemy_pickup(&mut m, x);
-        assert_eq!(m.read_wram(crate::ram_map::MISSILE_COUNT), 8, "+5 弹");
+        assert_eq!(m.read_wram(crate::ram_map::MISSILE_COUNT), 5, "+2 弹");
         assert_eq!(m.read_wram(0x6AF4 + x as u16), 0, "槽释");
+    }
+
+    /// 血量拾取三档 + `AddHealth`（`07:F4A5`/`07:CEF9`）：
+    /// 小能量 `animFrame=$89` ⇒ `HealthChange=$0050`；大能量 ⇒ `$0200`；metroid ⇒ `$0300`。
+    /// 上限 = `(EnergyTankCount<<4)|$0F`，越界 ⇒ `Health+1 ← max&$F9`、`Health ← $99`。
+    #[test]
+    fn pickup_health_uses_health_change_units() {
+        for (frame, etype, hc) in [(0x81u8, 0u8, 0x0050u16), (0x89, 0, 0x0200), (0x89, 2, 0x0300)] {
+            let mut m = Manager::default();
+            let x = 0x40u8;
+            m.write_wram(0x6AF4 + x as u16, 5);
+            m.write_wram(0x6AF4 + x as u16 + 3, frame);
+            m.write_wram(0x6AF4 + x as u16 + 14, etype);
+            m.write_ram(0x0400 + x as u16 + 4, 0x24);
+            m.write_wram(crate::ram_map::ENERGY_TANK_COUNT, 9);
+            update_enemy_pickup(&mut m, x);
+            assert_eq!(m.health_change(), 0, "AddHealth 尾件清 HealthChange");
+            assert_eq!(m.samus().health(), hc, "frame={frame:#04x} type={etype} ⇒ {hc:#06x}");
+        }
     }
 
     /// 【击杀链接线】碰撞环（uw_collision_detection）：弹到位→命中标志→F536 扣血→爆。

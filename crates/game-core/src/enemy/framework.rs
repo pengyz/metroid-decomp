@@ -61,7 +61,7 @@ pub(crate) fn try_becoming_active(mem: &mut crate::frame::Manager, x: u8) {
         //   tay ; iny ; lda (Temp00),y → movementIndex
         // 旧形把「Brinstar 七型」硬编码成 match + 恒 `&0x01` 掩码，等于**替 ROM 猜表**；
         // 现改为真读 `area.{x}.en_aux` 的两张按区表。
-        let fc = mem.read_ram(crate::ram_map::FRAME_COUNT);
+        let fc = mem.frame_count();
         let rng1 = mem.read_ram(crate::ram_map::RANDOM1);
         let area = crate::frame::cur_area(mem);
         let ti = (t as usize) & 0x0F;
@@ -449,24 +449,44 @@ pub(crate) fn update_enemy_pickup(mem: &mut crate::frame::Manager, x: u8) {
     // 碰触判**先于**显面（静态面尾清 isHit（+4←0）——序正（asm F483 先判后显））
     let hit = mem.enemy(slot_of(px as u8)).is_hit();
     if hit & 0x24 != 0 {
-        // 碰触⇒回血/弹+移除
+        // 碰触 ⇒ RemoveEnemy **先**释槽，再从 EnsExtra 读 animFrame/type（asm 序）。
         let frame = mem.enemy(slot_of(px as u8)).anim_frame();
+        let etype = mem.enemy(slot_of(px as u8)).enemy_type();
+        mem.enemy(slot_of(x)).set_status(EnemyStatus::NoEnemy);
+
+        // `cpy #_id_EnFrame_MissilePickup / beq @pickupMissile`（asm `07:F497`）
         if frame == 0x80 {
+            // `07:F4B7`：+2；metroid 掉落（type!=0）⇒ +$1E；再按 MaxMissiles 封顶。
+            let add = if etype != 0 { 0x1E } else { 0x02 };
             let m = mem.read_wram(crate::ram_map::MISSILE_COUNT);
-            mem.write_wram(crate::ram_map::MISSILE_COUNT, m.saturating_add(5));
-        } else if frame == 0x89 {
-            let h = mem.read_ram(0x0106u16);
-            mem.write_ram(0x0106u16, h.saturating_add(30));
-        } else {
-            let h = mem.read_ram(0x0106u16);
-            mem.write_ram(0x0106u16, h.saturating_add(20));
+            let (sum, carry) = m.overflowing_add(add);
+            let max = mem.max_missiles();
+            let v = if carry || sum >= max { max } else { sum };
+            mem.write_wram(crate::ram_map::MISSILE_COUNT, v);
+            return;
         }
-        mem.enemy(slot_of(x)).set_status(EnemyStatus::NoEnemy); // RemoveEnemy（槽释）
+
+        // 血量支（`07:F49D-07:F4B4`）：HealthChange 三档
+        //   metroid 掉落（type!=0）⇒ $0300；小能量（animFrame==$81）⇒ $0050；
+        //   其余（大能量 $89）⇒ $0200。再 `jsr AddHealth ; $CEF9`。
+        //   帧 id（Tourian `EnFramePtrTable1` 表序）：`$80=MissilePickup`、
+        //   `$81=SmallEnergyPickup`、`$89=BigEnergyPickup`——旧码把 `$89` 当小能量是错标。
+        // 数值按 asm 的 (低字节, 高字节) 摆法写，避免与"裸地址"判据混淆：
+        // metroid=($00,$03)、小能量=($50,$00)、大能量=($00,$02)。
+        let hc: u16 = if etype != 0 {
+            3u16 << 8
+        } else if frame == 0x81 {
+            0x0050
+        } else {
+            2u16 << 8
+        };
+        mem.set_health_change(hc);
+        crate::samus::health_change::add_health(mem);
         return;
     }
     // `@pickupWasNotTouched ; 07:F4D4`：`lda FrameCount / and #$03 / bne @endIf_D` ⇒
     // **每 4 帧**才递减 data0D；`dec data0D / bne @endIf_D` ⇒ 减后为 0 才 RemoveEnemy。
-    if mem.read_ram(crate::ram_map::FRAME_COUNT) & 0x03 == 0 {
+    if mem.frame_count() & 0x03 == 0 {
         let d = mem.enemy(slot_of(px as u8)).data0d().wrapping_sub(1);
         mem.enemy(slot_of(px as u8)).set_data0d(d);
         if d == 0 {

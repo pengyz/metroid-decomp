@@ -112,6 +112,33 @@ mod tests {
     }
 }
 
+
+/// `AddHealth ; 07:CEF9`（`refs/m1disasm/SRC/prg7_engine.asm:3282-3328`）。
+///
+/// 语义（逐行对齐）：
+/// 1. `Health` 低字节 BCD 加 `HealthChange` 低字节；高字节同法，**各自独立进位丢弃**；
+/// 2. 上限 = `(EnergyTankCount << 4) | 0x0F`（`Amul16` = asl×4 ⇒ ×16，再 `ora #$0F`）；
+///    `max >= Health+1` ⇒ 不变；否则 `Health+1 ← max & #$F9`、`Health ← #$99`；
+/// 3. 尾件 `jmp ClearHealthChange`（把 `$006E/$006F` 清零）。
+pub fn add_health(mem: &mut crate::state::Manager) {
+    use crate::weapon::projectile::bcd_add;
+
+    let hc = mem.health_change();
+    let h = mem.samus().health();
+    let (lo, _) = bcd_add((h & 0xFF) as u8, (hc & 0xFF) as u8);
+    let (hi, _) = bcd_add((h >> 8) as u8, (hc >> 8) as u8);
+
+    let max_hi = (mem.read_wram(crate::ram_map::ENERGY_TANK_COUNT) << 4) | 0x0F;
+    let (hi, lo) = if max_hi >= hi {
+        (hi, lo)
+    } else {
+        (max_hi & 0xF9, 0x99)
+    };
+
+    mem.samus().set_health(u16::from(lo) | (u16::from(hi) << 8));
+    mem.set_health_change(0);
+}
+
 impl crate::state::Manager {
     /// `HealthChange`（`$006E/$006F`）——扣血/回血量的 typed 视图。
     pub fn health_change(&self) -> u16 {

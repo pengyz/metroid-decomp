@@ -724,6 +724,23 @@ pub(crate) fn subtract_health(mem: &mut crate::frame::Manager) {
 }
 
 /// BCD 半字节减（Base10Subtract 简化形）：返回 (结果, 借位)。
+/// `Base10Add ; 07:C3DA`：BCD 逐位相加（低半字节→高半字节），返回 `(结果, 进位)`。
+pub(crate) fn bcd_add(v: u8, add: u8) -> (u8, bool) {
+    let mut carry = false;
+    let mut out = 0u8;
+    for shift in [0u32, 4] {
+        let mut d = ((v >> shift) & 0x0F) as i16 + ((add >> shift) & 0x0F) as i16 + carry as i16;
+        if d > 9 {
+            d -= 10;
+            carry = true;
+        } else {
+            carry = false;
+        }
+        out |= (d as u8) << shift;
+    }
+    (out, carry)
+}
+
 pub(crate) fn bcd_sub(v: u8, sub: u8) -> (u8, bool) {
     let mut borrow = false;
     let mut out = 0u8;

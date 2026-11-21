@@ -1156,3 +1156,10 @@ mod tests_mss {
         assert_eq!(mem.snapshot_nes().wram[(0x6AF4 - 0x6000) as usize], 4);
     }
 }
+impl crate::state::Manager {
+    /// `MaxMissiles`（`$687A`）——导弹上限。消费端 `UpdateEnemy_Pickup ; 07:F4C3`
+    /// （`cmp MaxMissiles / bcc @dontCapMissiles`）需要它做封顶。
+    pub fn max_missiles(&self) -> u8 {
+        self.read_ram(crate::ram_map::MAX_MISSILES)
+    }
+}
