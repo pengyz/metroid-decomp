@@ -190,3 +190,29 @@ Rust 同帧只做了 1px 且方向相反（x 73→72）。
 同一帧、同 `speedX=F7`、同 `status=0` 却出现「向上+向右」对「向左 1px」，
 说明分歧在**更上游的方向/碰撞判定**（谁能走、往哪走），不在位移循环本身。
 下一步：对读该位置两侧 RoomRAM 瓦片 + `MoveSamusLeft/Right` 的碰撞回退点。
+
+### 8.5 决定性读数：emu 的 `ScrollX` 在 f2249 开始推进，Rust 的**冻结不动**
+
+同一窗口（脚本帧 2244–2252）两侧 `$00FD ScrollX` / `$0051 SamusScrX`：
+
+| f | emu ScrollX | rust ScrollX | emu SamusScrX | rust SamusScrX |
+|---|---|---|---|---|
+| 2244–2248 | `1EE4` | `E4` | `8F` | `00` |
+| 2249 | `1EE6` | `E4` | `8F` | `00` |
+| 2250 | `1EE7` | `E4` | `8F` | `00` |
+| 2252 | `1EEA` | `E4` | `8F` | `00` |
+
+⇒ **分叉的第一现场是"滚屏没发生"**：emu 从 f2249 起 ScrollX 逐帧 +1~+2，
+Rust 的 `$FD` 恒为 `E4`。表观上的 `Samus.x +2 / y −3` 是 `MoveSamusRight`
+（`$E695: inc SamusScrX / inc Samus.x`）与 `MoveSamusUp`（`$E49E: dec Samus.y`）
+这些**滚动联动件**的产物，不是独立位移。
+
+另注意：Rust 的 `$0051 SamusScrX` 恒 `00`（emu `8F`）——该字节在 Rust 侧可能
+根本未建模（或语义不同），需一并核。
+
+### 8.6 下一步
+1. 读 `ScrollRight ; 07:E6D2` 与 `GetRoomNum ; 07:E720` 的**全部**出口条件，
+   重点是 `ScrollBlockOnNameTable`（门挡路）与"到右边界"判；
+2. 对读两侧 `$0049 ScrollDir` / `$004A TempScrollDir` / `$0056 DoorEntryStatus` /
+   `$004E SamusDir` 在该帧的取值；
+3. 顺带核 `$0051 SamusScrX` 在 Rust 侧是否有写点（当前观测恒 0）。
