@@ -41,6 +41,44 @@ import l4_diff_run  # noqa: E402
 import scenario_run  # noqa: E402
 
 
+def validate_inputlog(inputlog: Path) -> None:
+    """inputlog ↔ 影片输入表零容差自检（防"旧解码产物"复发）。
+
+    provenance：inputlog 头部 `# source <path>` 指向 bk2；该 bk2 仍存在就必须逐帧
+    零容差（`tools/movie_check.py` 同源判据）。缺失/不一致 ⇒ fail-loud，绝不静默使用。
+    """
+    src = None
+    for raw in inputlog.read_text(encoding="utf-8", errors="replace").splitlines():
+        if not raw.startswith("#"):
+            break
+        if raw.startswith("# source "):
+            src = raw.split(" ", 2)[2].strip()
+            break
+    if not src:
+        raise SystemExit(f"{inputlog}: 缺 `# source` provenance（无法自检，拒绝使用）")
+    bk2 = Path(src)
+    if not bk2.is_absolute():
+        bk2 = ROOT / bk2
+    if not bk2.exists():
+        print(f"[movie_sched] 跳过输入自检：源影片不存在（{bk2}）")
+        return
+    sys.path.insert(0, str(ROOT / "tools"))
+    import movie_check  # noqa: E402
+
+    truth = movie_check.p1_truth(str(bk2))
+    got = [
+        int(l.split()[0], 16)
+        for l in inputlog.read_text(encoding="utf-8", errors="replace").splitlines()
+        if l.strip() and not l.startswith("#")
+    ]
+    if len(truth) != len(got):
+        raise SystemExit(f"{inputlog}: 行数 {len(got)} ≠ 影片 {len(truth)}（旧产物或截断）")
+    bad = [i for i in range(len(truth)) if truth[i] != got[i]]
+    if bad:
+        raise SystemExit(f"{inputlog}: {len(bad)}/{len(truth)} 帧与影片不符（首错 f={bad[0]}）")
+    print(f"[movie_sched] 输入自检 OK：{len(truth)} 帧与影片零容差")
+
+
 def build_plan(inputlog: Path, frames: int, name: str) -> dict:
     """最小 plan：只有录像输入表（无 press/hold/trigger/nav ⇒ 两腿输入面恒等）。"""
     return {
@@ -87,6 +125,7 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     name = args.name or inputlog.stem
+    validate_inputlog(Path(args.inputlog))
     plan = build_plan(inputlog, args.frames, name)
     joy, joy2 = scenario_run.expand_pads(plan)  # 唯一展开源（1P 来自 p1、2P 只来自 p2）
 
