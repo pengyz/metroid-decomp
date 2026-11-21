@@ -87,3 +87,50 @@ jmp SetSamusData_3FrameAnimDelay   ; 瞄准态变化 ⇒ 跳过 samL09~L12
 `tools/l4_diff_run.py::emu_cache_hit` 只看锚（输入 sha），不看观察面；
 改 `watch_range` 后可能复用旧 trace，得到 `w:{}` 空字典。已加 mtime 新鲜度闸
 （`e90b7b91`），改动观察面自动重跑 Mesen。
+
+## 7. 挂账裁定：known-residual（帧内顺序差，1px）
+
+按验收范式（`docs/spec/acceptance-paradigm.md`，用户 m41866 裁定：判据=能通关 + 人看录像无异常，
+放弃逐帧强一致），本条 **不进 ratchet、不阻塞通关**，记 known-residual。
+
+### 7.1 残缺链（已逐层实测）
+
+1. 输入 `$14` 相同、`SamusDir` 相同，但 **samL12 的判据 `bit_scan(input) != SamusDir` 两侧结论相反**：
+   emu 判「不等」，执行 `sta $4D<-01`、`jsr SetSamusRun($CC98)`（其内 `sta $0305<-0x37`）；
+   rust 判「相等」，两者都不写，`$4D=00`、`$0305=00`。
+2. 下一帧 `SamusRun_SetAnim($CDBF)` 拿 `RunAnimationTbl[0]=0x00` 与 `$0305` 比：
+   emu 因 `0x37 != 0x00` 走 `SetSamusAnim` 清 0 并 `pla/pla` 短路（跳过 samL09-L12）；
+   rust 因 `0x00 == 0x00` 不短路，照常走到 samL12 翻转。
+3. `SetSamusRunAccel($CCB7)` 取 `RunAccelerationTbl[dir]`：`$30` / `$D0` 正负相反。
+4. 亚像素累加后 x 差 1px（rust 1549 起与 emu 1550 对齐对比可见）。
+
+### 7.2 已排除（逐字节核对，均一致）
+
+- `SetSamusRun($CC98)` / `RunAnimationTbl($CCBE)` / `SetSamusRunAccel($CCB7)` /
+  `RunAccelerationTbl($CCC0={30,D0})` —— rust 实现与 asm 逐件相同（`crates/game-core/src/samus/handler.rs:566`）；
+- `SetSamusRun` 的调用次数：`cputrace CC98` 在窗口 1546-1550 内每转身帧**只命中一次**
+  ⇒ 排除「被调两次」的假设（Mesen `f=1562 a=01`、`f=1564 a=00`）；
+- 输入源：`.sched` 与 `inputlog` 由同一函数 `movie_import.read_inputlog` 生成（单源），
+  且 `tools/phase_align_check.py` 实测 `$0014` 在 `rust f=N ≡ emu f=N+1` 下 **1326 帧零失配**。
+
+### 7.3 未定（真缺口所在）
+
+分歧点在 **`samL12` 的进入条件**（`bit_scan(input) != SamusDir`）或 **`samL11` 的提前返回**
+（输入无 `RIGHT|LEFT` ⇒ `SetSamusStand` 后 return）。两侧该帧 `$14` 相同、`SamusDir` 相同，
+故差只能来自「本帧是否走到 samL11/samL12」这层**帧内顺序**。
+
+### 7.4 为什么难修（方法论结论，供后续复用时参考）
+
+1. **无帧内事件面**：现有仪器只有帧末状态（ram/state 行）、写点/PC（`ctwrite`/`cputrace`，
+   且 `ctwindow` 与 trace 帧号差 +15）、像素（最下游）。帧内顺序只能间接推断。
+2. **每一环单独都"对"**：逐个函数对 asm 都能过，只有"这一帧进没进那段"是错的，逐行 diff 查不出。
+3. **验证成本**：一次干净 Mesen 取证 ≈ 45s 且必须 `--fresh-emu`；一个假设两侧各跑一次。
+
+### 7.5 若要让它变便宜（唯一可行方向）
+
+做「帧内写序列 diff」仪器：两侧都记录每帧 `(pc, addr, val)` 写序列，按帧对齐后逐条 diff。
+这样此类 bug 从"挖三轮"变成"看一次 diff"，也是让逐帧强一致重新可行的前提。**本轮不做。**
+
+Evidence: 逐层实测见 §7.1-§7.4（`ctwrite` 四条写点 PC、`cputrace CC98` 两次命中、
+`phase_align_check` 1326 帧零失配、`RunAccelerationTbl=$30/$D0` ROM 实读）。
+Confidence: 85
