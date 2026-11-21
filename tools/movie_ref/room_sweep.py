@@ -93,7 +93,7 @@ ENTRY_FRAME = 900
 # 目标区、AreaPointers_RAM 已就绪）再注入 $005A，走的与 area 0 同一条 SetupRoom 正则链。
 # 依据：cases/case-elev-norf-room-load.txt（12 采点全 0px）。
 ELEVATOR_AREAS = {1: 1}  # area -> ElevType（1=Norfair，实测 InArea=$02/CurBank=2）
-ELEVATOR_ENTRY_FRAME = 1400
+ELEVATOR_ENTRY_FRAME = 1600
 
 ENTRY_PRESET_VERSION = "v1"
 
@@ -137,6 +137,7 @@ def build_case(area: int, room: int, frames: int, captures: list[int]) -> str:
         "watch 0049 ScrollDir",
         "watch 00FD ScrollX",
         "watch 0056 DoorEntryStatus",
+        "watch 0074 InArea",
         "snapshot none",
         "press 310 start",
         "press 350 start",
@@ -153,6 +154,10 @@ def build_case(area: int, room: int, frames: int, captures: list[int]) -> str:
             "fixture 920 030E 80 evolving",
             "fixture 920 030D 74 evolving",
             "fixture 920 0308 00 evolving",
+            # 按下「下」让 Samus 踏上电梯（缺这条则电梯对象合成后永不激活，
+            # InArea 恒 0 —— 曾把 Norfair 扫成 Brinstar）。依据 cases/case-elev-norf-room-load.txt
+            # 的 `joy 960 04 / joy 961 04`。
+            "press 960 down",
             f"capture {ELEVATOR_ENTRY_FRAME - 200} arrived",
         ]
     for addr, val, persist in _preset(room):
@@ -324,18 +329,29 @@ def analyse_trace(stem: str, area: int, room: int) -> dict:
                               if region else None)
     ptr_hits: list[int] = []
     rn_hits: list[int] = []
+    ia_hits: list[int] = []
     for f, w in rows:
         if f < ENTRY_FRAME:
             continue
         if w.get("RoomNumber") == room:
             rn_hits.append(f)
+        ia = w.get("InArea")
+        if ia is not None and (ia & 0x0F) == area:
+            ia_hits.append(f)
         lo, hi = w.get("RoomPtrLo"), w.get("RoomPtrHi")
         if region is not None and lo is not None and hi is not None:
             base, ln = region
             if base <= (lo | (hi << 8)) < base + ln:
                 ptr_hits.append(f)
+    out["inarea_hits"] = ia_hits[:6]
     out["room_ptr_hits"] = ptr_hits[:6]
     out["room_number_hits"] = rn_hits[:6]
+    if area != 0 and not ia_hits:
+        # 目标区没进去 ⇒ 测的其实是起点区同一房号的房间（曾发生：两区数字几乎相同）
+        out["identity_basis"] = "area_mismatch"
+        out["identity_ok"] = False
+        out["accepted"] = False
+        return out
     if ptr_hits:
         out["identity_basis"] = "room_ptr"
     elif rn_hits:
