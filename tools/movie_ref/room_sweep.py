@@ -88,6 +88,12 @@ PRESET_VERIFIED_AREAS = (0,)
 # 开场演出期间按键被吞（见 cases/case-001 头部注释）。900 帧 > 演出 440 + 标题/选单
 # 输入 ~40，留足余量；case-001 首个有效动作在 f910。
 ENTRY_FRAME = 900
+# 电梯过区入口（B 线，2026-11-21）：非 0 区冷启动注入不可用（arena pointers 未由
+# CopyAreaPointers ; 07:C8B0 建立）。改用合成电梯对象跑完十态过区，落地后（InArea 已是
+# 目标区、AreaPointers_RAM 已就绪）再注入 $005A，走的与 area 0 同一条 SetupRoom 正则链。
+# 依据：cases/case-elev-norf-room-load.txt（12 采点全 0px）。
+ELEVATOR_AREAS = {1: 1}  # area -> ElevType（1=Norfair，实测 InArea=$02/CurBank=2）
+ELEVATOR_ENTRY_FRAME = 1400
 
 ENTRY_PRESET_VERSION = "v1"
 
@@ -115,12 +121,13 @@ def case_name(area: int, room: int) -> str:
 def build_case(area: int, room: int, frames: int, captures: list[int]) -> str:
     """生成临时用例文本。captures = 相对注入帧的偏移（落 DSL 绝对帧 = ENTRY_FRAME + c）。"""
     stem = case_name(area, room)
+    entry = ELEVATOR_ENTRY_FRAME if area in ELEVATOR_AREAS else ENTRY_FRAME
     lines = [
         f"name {stem}",
         "# room sweep 临时用例（tools/movie_ref/room_sweep.py 生成，跑完即删）",
         f"# area={area}({AREA_NAMES.get(area, '?')}) room={room} "
-        f"entry=f{ENTRY_FRAME} preset={ENTRY_PRESET_VERSION}",
-        f"frames {ENTRY_FRAME + frames}",
+        f"entry=f{entry} preset={ENTRY_PRESET_VERSION}",
+        f"frames {entry + frames}",
         # 载入链观测量：$005A 是否走完 F0→FF（房号被接受）、$001E 是否留在 3（GameEngine）、
         # $33/$34 RoomPtr 是否落在资产包里该房房流区间内（目标房身份证据）。
         "watch 001E MainRoutine",
@@ -133,13 +140,26 @@ def build_case(area: int, room: int, frames: int, captures: list[int]) -> str:
         "snapshot none",
         "press 310 start",
         "press 350 start",
-        f"capture {ENTRY_FRAME} pre",
+        f"capture {entry} pre",
     ]
+    if area in ELEVATOR_AREAS:
+        lines += [
+            "# 合成电梯对象（LoadElevator 字段面）：十态跑完后落地到目标区",
+            "fixture 900 0320 01 evolving",
+            "fixture 900 032F 01 evolving",
+            "fixture 900 032D 83 evolving",
+            "fixture 900 032E 80 evolving",
+            "fixture 900 0323 23 evolving",
+            "fixture 920 030E 80 evolving",
+            "fixture 920 030D 74 evolving",
+            "fixture 920 0308 00 evolving",
+            f"capture {ELEVATOR_ENTRY_FRAME - 200} arrived",
+        ]
     for addr, val, persist in _preset(room):
-        lines.append(f"fixture {ENTRY_FRAME} {addr:04X} {val:02X} {persist}")
+        lines.append(f"fixture {entry} {addr:04X} {val:02X} {persist}")
     for c in captures:
-        lines.append(f"capture {ENTRY_FRAME + c} f{c}")
-    lines.append(f"endFrame {ENTRY_FRAME + frames}")
+        lines.append(f"capture {entry + c} f{c}")
+    lines.append(f"endFrame {entry + frames}")
     return "\n".join(lines) + "\n"
 
 
@@ -651,7 +671,7 @@ def expand_rooms(spec: str, area: int) -> tuple[list[int], list[dict]]:
         return [], skips + [{"area": area, "room": r,
                              "skip_reason": "area_not_in_tool_allowlist",
                              "detail": detail} for r in want]
-    if area in PRESET_VERIFIED_AREAS:
+    if area in PRESET_VERIFIED_AREAS or area in ELEVATOR_AREAS:
         return want, skips if not (spec.strip().lower() in ("all", "*", "")) else []
     detail = ("entry_preset 只在 area 0 用反证实验定稿过。扩到本区须补两条注入："
               "$0074 InArea 与 CopyAreaPointers ; 07:C8B0 的区指针块——只注区号时 "
