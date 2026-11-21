@@ -284,14 +284,32 @@ def emu_artifacts_complete(name: str, caps: list) -> bool:
     return (ROOT / "analysis" / "traces" / f"{name}.frames.jsonl").is_file()
 
 
-def emu_cache_hit(name: str, anchors: dict, caps: list) -> bool:
+def emu_cache_hit(name: str, anchors: dict, caps: list,
+                  scen_path: Path | None = None, sched: Path | None = None) -> bool:
     """emu 腿是否可整腿复用：emu 产物只依赖（用例 DSL, ROM, 展开调度），三者都在锚里。
 
     rust 代码改动不使 emu 产物失效——这正是矩阵从"18 分钟"降到"只跑 rust"的关键。
+
+    【watch 陷阱】锚只认「输入」；观察面（`watch_range` 列表）写在同一份 DSL 里，
+    但**改动观察面时若用例文件被归档/复原、或同名用例被复用**，锚可能仍然相等，
+    于是拿到一份"没有新观察键"的旧 trace，表现为 `w:{}` 空字典（本轮被误导两次）。
+    因此追加**新鲜度闸**：trace 的 mtime 必须不早于用例与调度表——
+    观察面只可能在用例文本里变，用例比 trace 新 ⇒ 一定拒复用。
     """
     if not emu_artifacts_complete(name, caps):
         return False
-    return check_reuse("emu", name, anchors) is None
+    if check_reuse("emu", name, anchors) is not None:
+        return False
+    trace = ROOT / "analysis" / "traces" / f"{name}.frames.jsonl"
+    try:
+        t = trace.stat().st_mtime
+        for ref in (scen_path, sched):
+            if ref is not None and ref.is_file() and ref.stat().st_mtime > t:
+                print(f"[emu-cache] 拒复用：trace 早于 {ref.name}（观察面可能已变）")
+                return False
+    except OSError:
+        return False
+    return True
 
 
 def run_rust(name: str, sched: Path, out_dir: Path,
@@ -1140,7 +1158,8 @@ def _do_run_all(args) -> int:
             print(f"[!] {exc}", file=sys.stderr)
             return 2
         reuse_emu = (not args.skip_emu) and (not getattr(args, "fresh_emu", False)) \
-            and emu_cache_hit(name, anchors, caps)
+            and emu_cache_hit(name, anchors, caps,
+                              scen_path=cf, sched=SHOTS_RUST / f"{name}.sched")
         out = execute_case(name=name, scen_path=cf, frames=frames, joy=joy, caps=caps, joy2=joy2,
                            fixtures=plan.get("fixtures"),
                            snap=snap, anchors=anchors, skip_rust=args.skip_rust,

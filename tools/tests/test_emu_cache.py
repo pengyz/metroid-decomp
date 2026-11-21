@@ -54,3 +54,26 @@ def test_cache_miss_without_provenance():
     _touch_emu_artifacts(name, CAPS)
     l4.prov_path("emu", name).unlink(missing_ok=True)
     assert l4.emu_cache_hit(name, ANCHORS, CAPS) is False
+
+
+def test_cache_rejects_stale_trace_older_than_case(tmp_path):
+    """新鲜度闸：用例比 trace 新 ⇒ 拒复用。
+
+    病根（2026-11-21 实测）：观察面 `watch_range` 写在用例文本里，而锚只看输入；
+    改观察面后一旦锚恰好相等，就会拿到"没有新观察键"的旧 trace（`w:{}` 空字典），
+    表现为"改了观察面却看不到数据"。mtime 闸把这条堵死。
+    """
+    name = "case-cache-stale"
+    _touch_emu_artifacts(name, CAPS)
+    _write_prov("emu", name, dict(ANCHORS))
+    scen = tmp_path / "case-cache-stale.txt"
+    scen.write_text("frames 10\n", encoding="utf-8")
+    trace = l4.ROOT / "analysis" / "traces" / f"{name}.frames.jsonl"
+    import os
+    import time
+
+    os.utime(trace, (time.time() - 100, time.time() - 100))
+    assert l4.emu_cache_hit(name, ANCHORS, CAPS, scen_path=scen) is False
+    # 用例比 trace 旧 ⇒ 放行（正常缓存命中路径不受影响）
+    os.utime(scen, (time.time() - 200, time.time() - 200))
+    assert l4.emu_cache_hit(name, ANCHORS, CAPS, scen_path=scen) is True
