@@ -216,3 +216,21 @@ Rust 的 `$FD` 恒为 `E4`。表观上的 `Samus.x +2 / y −3` 是 `MoveSamusRi
 2. 对读两侧 `$0049 ScrollDir` / `$004A TempScrollDir` / `$0056 DoorEntryStatus` /
    `$004E SamusDir` 在该帧的取值；
 3. 顺带核 `$0051 SamusScrX` 在 Rust 侧是否有写点（当前观测恒 0）。
+
+### 8.7 更正与重新定界（2026-11-21，读 asm 后）
+- **§8.5 的「Rust 未建模 `$0051`」是错的**：Rust 在 `crates/game-core/src/samus/physics.rs:1725`
+  有 `SAMUS_SCR_X = x - ScrollX`（asm `E31A` 的 `E31D`），逐字节同式。
+  我先前读到「恒 0」是因为**把 `$0051`（零页）当成 `iram`（`$0100+`）去索引**——
+  改读 `zp` 后 f2244–2248 的 Rust `ScrX` 也是 `8F`，与 emu 一致。
+- 因此「滚屏没发生」的**直接原因不在 ScrX 判据本身**，而在**谁调用了位移链**。
+- asm 结构（`refs/m1disasm/SRC/prg7_engine.asm`）：
+  - `SamusMoveVertically` 的 `@loop_up`（`:7180-7210`）按 `ObjectCounter=delta` 逐像素
+    调 `MoveSamusUp`（`:7202`），受阻则 `sec/ror speedY` 反向并 `jmp SamusMoveHorizontally`；
+  - `MoveSamusUp`（`:7538`）内 `$E49E: dec Samus.y`；
+  - `MoveSamusRight`（`:7908`）内 `$E690: inc SamusScrX` / `$E692: inc Samus.x`，
+    且仅当 `SamusScrX >= 0x8F` 时先试 `ScrollRight`；
+  - `MoveSamusLeft`（`:7864`）对称：`SamusScrX < 0x71` 时先试 `ScrollLeft`，否则 `dec SamusScrX`。
+- 现存的**硬矛盾**（未解释，不许据此下结论）：脚本帧 2249–2252，emu 的
+  `Joy1Status` 全为 `00`、`SamusDir` 为 `01`（左），却执行了 `MoveSamusUp`×3 与
+  `MoveSamusRight`×2（`ScrollX` 同步推进）。⇒ 要么 `ctwrite` 的帧基（+15）映射有偏，
+  要么 emu 在该帧走的是"无输入也有位移"的径（动量/滚动联动）。
