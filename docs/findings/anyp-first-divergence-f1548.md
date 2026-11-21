@@ -234,3 +234,27 @@ Rust 的 `$FD` 恒为 `E4`。表观上的 `Samus.x +2 / y −3` 是 `MoveSamusRi
   `Joy1Status` 全为 `00`、`SamusDir` 为 `01`（左），却执行了 `MoveSamusUp`×3 与
   `MoveSamusRight`×2（`ScrollX` 同步推进）。⇒ 要么 `ctwrite` 的帧基（+15）映射有偏，
   要么 emu 在该帧走的是"无输入也有位移"的径（动量/滚动联动）。
+
+### 8.8 帧基钉死（`$004D` 双向对齐）与 `speedX` 逐帧全等
+用 `$004D` 的离散写入做双向对齐：`dir←00` @Mesen2258 ↔ trace 2244、`dir←01` @2261 ↔ 2247、
+`dir←00` @2267 ↔ 2253 ⇒ **Mesen 帧 = 脚本帧 + 14**（此前用 +15，差一帧，是 §8.5/§8.7
+「无输入还移动」假矛盾的来源；现已撤回）。
+
+按 +14 对齐后（emu 取该帧最后一次写入值，rust 取帧末状态）：
+
+| f | emu `spX` | rust `spX` | emu `x` | rust `x` |
+|---|---|---|---|---|
+| 2246–2248 | `08` | `08` | `73` | `73` |
+| **2249** | **`F7`** | **`F7`** | **`75`** | **`72`** |
+| 2251 | `F7` | `F7` | `78` | `6F` |
+| 2253 | `F7` | `F7` | `7B` | `6C` |
+
+⇒ **`speedX` 两侧逐帧完全一致（含 `08/F7` 交替的相位）**，分歧只在「这一帧到底移动了几像素、
+朝哪边」。asm 侧 `SamusMoveHorizontally`（`:7296-7345`）的循环是
+`MoveSamusLeft/Right 1px → CheckStopHorzMvmt → dec ObjectCounter`，
+**循环体内不取反**；取反发生在 `MoveSamusLeft/Right` 的受阻支（`Lx181`/`Lx186`）里，
+取反后由 `CheckStopHorzMvmt` 令 `ObjectCounter=1` 破环。
+
+⇒ 待定项收敛为一句话：**同一 `speedX` 下 rust 的「首像素方向/可走像素数」与 emu 不同**
+（emu 向右走 2px，rust 向左走 1px），而两侧进入该帧的 `speedX` 相同 ⇒ 疑点落在
+`HorzAccelerate` 的 delta 符号或 `CheckStopHorzMvmt` 的破环条件，不是 speed 本身。
