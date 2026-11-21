@@ -193,6 +193,71 @@
         }
       }
     },
+    "case-elev-norf-room-load": {
+      "scenario_sha256": "9da73def9d53c958e1217d4fa98ea9cd395db4e42e017c784fa454599d314a9a",
+      "states": {
+        "800:intro-end": {
+          "state": "match",
+          "diff_pixels": 0,
+          "total_pixels": 61440
+        },
+        "960:armed": {
+          "state": "match",
+          "diff_pixels": 0,
+          "total_pixels": 61440
+        },
+        "1040:idle-check": {
+          "state": "match",
+          "diff_pixels": 0,
+          "total_pixels": 61440
+        },
+        "1120:activate": {
+          "state": "match",
+          "diff_pixels": 0,
+          "total_pixels": 61440
+        },
+        "1200:moving": {
+          "state": "match",
+          "diff_pixels": 0,
+          "total_pixels": 61440
+        },
+        "1207:transition-core": {
+          "state": "match",
+          "diff_pixels": 0,
+          "total_pixels": 61440
+        },
+        "1300:fading": {
+          "state": "match",
+          "diff_pixels": 0,
+          "total_pixels": 61440
+        },
+        "1420:transition": {
+          "state": "match",
+          "diff_pixels": 0,
+          "total_pixels": 61440
+        },
+        "1560:settle": {
+          "state": "match",
+          "diff_pixels": 0,
+          "total_pixels": 61440
+        },
+        "1600:end": {
+          "state": "match",
+          "diff_pixels": 0,
+          "total_pixels": 61440
+        },
+        "1620:load": {
+          "state": "match",
+          "diff_pixels": 0,
+          "total_pixels": 61440
+        },
+        "1700:done": {
+          "state": "match",
+          "diff_pixels": 0,
+          "total_pixels": 61440
+        }
+      }
+    },
     "case-elev-norfair-transition": {
       "scenario_sha256": "87f0cbdf935afe23f5f2a74f988c9276cb5cdad9e10261b4614136ed07ca0025",
       "states": {
@@ -1266,6 +1331,16 @@
       "diff": 6,
       "blocked": 0,
       "cells_total": 160
+    },
+    {
+      "ts": "2026-11-21T13:24:44+00:00",
+      "kind": "anchor",
+      "evidence": "",
+      "reason": "新增 case-elev-norf-room-load（12 格全 match）：电梯过区后注入 Norfair 房间解锁非 Brinstar 验证",
+      "match": 166,
+      "diff": 6,
+      "blocked": 0,
+      "cells_total": 172
     }
   ]
 }
