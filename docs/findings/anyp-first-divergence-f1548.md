@@ -88,7 +88,7 @@ jmp SetSamusData_3FrameAnimDelay   ; 瞄准态变化 ⇒ 跳过 samL09~L12
 改 `watch_range` 后可能复用旧 trace，得到 `w:{}` 空字典。已加 mtime 新鲜度闸
 （`e90b7b91`），改动观察面自动重跑 Mesen。
 
-## 7. 挂账裁定：known-residual（帧内顺序差，1px）
+## 7. 【2026-11-21 更正】本项不是 1px 残差，是整条死亡链的根因（待修）
 
 按验收范式（`docs/spec/acceptance-paradigm.md`，用户 m41866 裁定：判据=能通关 + 人看录像无异常，
 放弃逐帧强一致），本条 **不进 ratchet、不阻塞通关**，记 known-residual。
@@ -134,3 +134,21 @@ jmp SetSamusData_3FrameAnimDelay   ; 瞄准态变化 ⇒ 跳过 samL09~L12
 Evidence: 逐层实测见 §7.1-§7.4（`ctwrite` 四条写点 PC、`cputrace CC98` 两次命中、
 `phase_align_check` 1326 帧零失配、`RunAccelerationTbl=$30/$D0` ROM 实读）。
 Confidence: 85
+
+### 7.6 更正：从 1px 到死亡链（2026-11-21）
+
+当日全片复跑 + 逐字段对拍后，证据显示本项不是可挂账的 1px 残差，而是下文整条链的根：
+
+1. `SetSamusRunAccel($CCB7)` 在 emu 的调用次数呈 `1,1,2,2,1,1,2,2…`（`ctwindow 1788 1797` + `cputrace CCB7`；
+   双调用帧=该帧发生 dir 翻转：samL07 调一次、samL12 内 SetSamusRun 再调一次）。
+2. 因 dir 翻转时点差一帧，两侧 `1/2 次` 的节奏错开，亚像素累加立刻出现恰好 `0x30`
+   （`RunAccelerationTbl[0]` 的刻度）的差：f1790 起可见，f1794 显形为 x 差 2px。
+3. 该差每几帧叠加一次：f4000 达 12px、f6000 达 100px 且 status 不同，f6263 rust 首次死亡。
+
+结论：按验收三分法（渲染/功能/相位），本项属**功能异常**，必须修；先前挂 known-residual 系误判
+（只看单帧 1px、未看它是种子）。修复目标=samL12 的进入条件（`bit_scan(input) != SamusDir`）
+或 samL11 的提前返回，两者仍属帧内顺序，需 `--trace` 侧打印 `JOY1_STATUS/bit_scan/SAMUS_DIR` 定谳。
+
+Evidence: `cputrace CCB7` 窗口 1788-1797 计数 1,1,2,2,1,1,2,2；`case-tmp-b7k` trace 上 f1790 起
+subx 差恒 0x30、f1794 x 差 2px、f4000 差 12px、f6000 差 100px、f6263 死亡（`/tmp/stf.jsonl`）。
+Confidence: 88
