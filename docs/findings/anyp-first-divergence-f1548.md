@@ -152,3 +152,41 @@ Confidence: 85
 Evidence: `cputrace CCB7` 窗口 1788-1797 计数 1,1,2,2,1,1,2,2；`case-tmp-b7k` trace 上 f1790 起
 subx 差恒 0x30、f1794 x 差 2px、f4000 差 12px、f6000 差 100px、f6263 死亡（`/tmp/stf.jsonl`）。
 Confidence: 88
+
+## 8. 修复后：首分歧推到 f2249（2026-11-21）
+
+### 8.1 f1548 已修（commit `e03921bb`）
+`SetSamusRun ; 07:CC98`（`:2824-2841`）的「转身过渡」支，asm 的 `inx` 在 `cmp PntUp`
+**之前**且不回退 ⇒ 落该支时 **X 恒为 1**，`LCCBX: lda RunAnimationTbl,x` 写进
+`animResetIndex` 的是 `RunPntUp=0x37`（本支只额外把 `animIndex` 设成 `Front`）。
+旧 Rust 给 `x=0` ⇒ 写 `Run=0x00`。修复后 f1544/f1547/f1548/f1550 的
+`animFrame/animDelay/animReset/animIndex` 与 emu 逐帧完全一致。
+
+### 8.2 新首分歧 f2249（位置面 offset 0 对齐）
+位置面对齐标定：`rust f=N` ↔ `emu f=N`（698/698 命中，f1500–2200），
+`$0014` latch 面才是 `+1`。
+
+| f | rust (status, spY, spX, y, x) | emu |
+|---|---|---|
+| 2248 | `00, 04, 08, C1, 73` | `00, 04, 08, C1, 73` |
+| 2249 | `00, 04, F7, FE, C1, 72` | `00, 04, F7, BE, 75` |
+
+### 8.3 emu 侧写者（`ctwrite`，Mesen 帧 = 脚本帧 +15）
+```
+f=2263 addr=30D val=C1/C0/BF pc=E49E    ← 同帧连减 3
+f=2263 addr=30E val=73/74/75 pc=E695    ← 同帧连加 2
+f=2264 addr=30D val=BE/BD/BC pc=E49E
+f=2264 addr=30E val=75/76 pc=E695
+```
+两条 PC 落在：
+- `$E49E` = `MoveSamusUp ; 07:E457` 的 `Lx155`（`CE 0D 03` = `dec Samus.y`）；
+- `$E695` = `MoveSamusRight ; 07:E668` 的 `Lx183/Lx184`（`E6 51` = `inc SamusScrX`，
+  `EE 0E 03` = `inc Samus.x`）。
+
+⇒ emu 在该帧执行了 **MoveSamusUp(3 步) + MoveSamusRight(2 步)**，都是 1px 一循环；
+Rust 同帧只做了 1px 且方向相反（x 73→72）。
+
+### 8.4 未定谳
+同一帧、同 `speedX=F7`、同 `status=0` 却出现「向上+向右」对「向左 1px」，
+说明分歧在**更上游的方向/碰撞判定**（谁能走、往哪走），不在位移循环本身。
+下一步：对读该位置两侧 RoomRAM 瓦片 + `MoveSamusLeft/Right` 的碰撞回退点。
