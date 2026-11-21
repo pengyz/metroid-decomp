@@ -554,3 +554,16 @@ emu 腿是串行的（`analysis/.scenario.lock`）⇒ `--jobs > 1` 基本不提�
 - **room 43 的 `$FD` 敌兵段未解码**：只影响 §2 的实测边界统计用了 46/47 房（格式上限本身不受影响）。
 - **room 43 被 `blocked`**：该房在对拍器中命中 `unported` 缺口（报告 `gap/blocked` 计数 2），属**已知缺口**而非本工具问题；按对拍器纪律不算通过。
 
+
+## 8.2 更正：非 0 区注入**在过区之后可用**（2026-11-21）
+
+§8.1 的结论「注入法对非 0 区结构性不可用」只在**冷启动注入**（`InArea` 直接改、
+`CopyAreaPointers ; 07:C8B0` 从未跑）时成立。经合法电梯过区后情况不同：
+`ElevatorDestination` 路径会跑 `InitBankN` + `CopyAreaPointers`，此后 `InArea=$02`、
+`AreaPointers_RAM($3B-$48)` 已是 Norfair 的真值，再注入 `$005A` 走的是同一条
+`SetupRoom` 正则装载链。
+
+实测（`cases/case-elev-norf-room-load.txt`，12 采集点全 **0px**）：
+合成电梯对象 → 电梯十态跑完 → 落地后 `fixture 1500 005a 00` → f1620/f1700
+两帧与 emu 逐像素一致。⇒ **非 Brinstar 的像素验证有正规入口**，
+`room_sweep` 可按「先过区、再注房号」扩展，不必走 TAS inputlog。
