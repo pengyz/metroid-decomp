@@ -347,6 +347,38 @@ def analyse_trace(stem: str, area: int, room: int) -> dict:
     return out
 
 
+def _nt_pages(buf: bytes) -> list[bytes]:
+    """取 4 张名表（各 1 KB）。"""
+    return [buf[0x2000 + i * 0x400: 0x2400 + i * 0x400] for i in range(4)]
+
+
+def _mirror_pages(pages: list[bytes]) -> tuple[list[bytes], str]:
+    """按 dump 自身内容判定镜像布局，返回规范化后的两个物理页。
+
+    NES 的 2 KB CIRAM 只有两种接法：
+      - 水平镜像：$2000≡$2400、$2800≡$2C00 ⇒ 物理页 = [p0, p2]
+      - 竖直镜像：$2000≡$2800、$2400≡$2C00 ⇒ 物理页 = [p0, p1]
+    两腿的 dump 布局可能不同（emu 与 rust 各自一张），直接按页号比会把
+    「同一物理页的不同镜像位」当成名表差异——这正是伪 `nametable` 层的来源。
+    """
+    if pages[0] == pages[1] and pages[2] == pages[3]:
+        return [pages[0], pages[2]], "horizontal"
+    if pages[0] == pages[2] and pages[1] == pages[3]:
+        return [pages[0], pages[1]], "vertical"
+    return pages, "unknown"
+
+
+def _nt_diff_normalized(a: bytes, b: bytes) -> tuple[int, str, str]:
+    """名表差异（镜像归一化后）：先各自归到 2 个物理页，再逐字节比。"""
+    pa, ma = _mirror_pages(_nt_pages(a))
+    pb, mb = _mirror_pages(_nt_pages(b))
+    if ma == "unknown" or mb == "unknown":
+        # 布局判不出（如页面内容全不同）⇒ 退回按页号比，并标记不可信
+        return (sum(1 for i in range(0x2000, 0x3000) if a[i] != b[i]),
+                f"{ma}/{mb}", False)
+    n = sum(1 for x, y in zip(pa, pb) for i in range(0x400) if x[i] != y[i])
+    return n, f"{ma}/{mb}", True
+
 def ppu_layer_diff(stem: str, frame: int, tag: str) -> dict | None:
     """对比两腿同帧 PPU dump，把差异分解到层（名表=房间数据 / CHR / 调色板 / 滚动）。"""
     emu = TRACES / f"{stem}_f{frame:05d}_{tag}.ppu.hex"
@@ -364,6 +396,11 @@ def ppu_layer_diff(stem: str, frame: int, tag: str) -> dict | None:
     for name, lo, hi in PPU_REGIONS:
         n = sum(1 for i in range(lo, min(hi, len(a))) if a[i] != b[i])
         out[name] = n
+    # 名表差异必须按**物理页**比（两腿 dump 的镜像布局可能不同，见 _mirror_pages）
+    nt_norm, layouts, trusted = _nt_diff_normalized(a, b)
+    out["nt_norm"] = nt_norm
+    out["nt_layout"] = layouts
+    out["nt_trusted"] = trusted
     out["rust_scroll"] = list(b[0x3020:0x3023]) if len(b) >= 0x3023 else None
     return out
 
@@ -426,7 +463,12 @@ def classify_layer(px: int, ppu: dict | None, shift: dict | None = None) -> str:
         return "unknown"
     if ppu.get("chr"):
         return "chr"
-    if (ppu.get("nt0", 0) + ppu.get("nt1", 0) + ppu.get("nt2", 0)
+    # 名表判据用**镜像归一化后**的差（`nt_norm`）；旧形按页号直比会把同一物理页的
+    # 不同镜像位当成名表差（伪 `nametable` 层，会把修复引到错误的子系统）。
+    if "nt_norm" in ppu:
+        if ppu.get("nt_norm"):
+            return "nametable_notmirror" if not ppu.get("nt_trusted") else "nametable"
+    elif (ppu.get("nt0", 0) + ppu.get("nt1", 0) + ppu.get("nt2", 0)
             + ppu.get("nt3", 0)):
         return "nametable"
     if ppu.get("palette"):

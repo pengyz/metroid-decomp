@@ -567,3 +567,17 @@ emu 腿是串行的（`analysis/.scenario.lock`）⇒ `--jobs > 1` 基本不提�
 合成电梯对象 → 电梯十态跑完 → 落地后 `fixture 1500 005a 00` → f1620/f1700
 两帧与 emu 逐像素一致。⇒ **非 Brinstar 的像素验证有正规入口**，
 `room_sweep` 可按「先过区、再注房号」扩展，不必走 TAS inputlog。
+
+## 8.3 比较器缺陷更正：名表差异必须按**物理页**比（2026-11-22）
+
+`ppu_layer_diff` 原先按 dump 页号直比 `nt0..nt3`，而两腿 dump 的 CIRAM 布局可能不同
+（emu 水平镜像 `$2000≡$2400`、rust 竖直镜像 `$2000≡$2800`）⇒ **同一物理页的不同镜像位
+被判成名表差异**，`classify_layer` 因此在名表字节差 >0 时抢先返回 `nametable`。
+
+实证（Norfair room 15 / f1600）：原始 `nt1=471, nt2=471`，但按物理页归并后 **`nt_norm=0`**
+（`nt_layout=horizontal/vertical`）⇒ 该房从来不是"名表 bug"，此前 `nametable 37/47`、
+`20` 这类层统计**不可信**，需在修好的比较器上重算。
+
+修正：新增 `_nt_pages/_mirror_pages/_nt_diff_normalized`，`ppu_layer_diff` 增加
+`nt_norm/nt_layout/nt_trusted`；`classify_layer` 改用 `nt_norm`，布局判不出时返回
+`nametable_notmirror`（显式标不可信）。锚测 `tools/tests/test_nt_mirror.py`（3 条）。
