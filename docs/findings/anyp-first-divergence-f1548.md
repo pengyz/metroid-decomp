@@ -258,3 +258,17 @@ Rust 的 `$FD` 恒为 `E4`。表观上的 `Samus.x +2 / y −3` 是 `MoveSamusRi
 ⇒ 待定项收敛为一句话：**同一 `speedX` 下 rust 的「首像素方向/可走像素数」与 emu 不同**
 （emu 向右走 2px，rust 向左走 1px），而两侧进入该帧的 `speedX` 相同 ⇒ 疑点落在
 `HorzAccelerate` 的 delta 符号或 `CheckStopHorzMvmt` 的破环条件，不是 speed 本身。
+
+## 9. 现状裁定：f2249 挂账，主线转「能不能通关」（2026-11-21）
+
+- **已修**：f1548（`SetSamusRun` 转身支 `X` 恒 1 ⇒ `animResetIndex←RunPntUp(0x37)`），
+  commit `e03921bb`。
+- **未修、转 known-residual**：f2249 位置漂移。已确证的事实：
+  1. `ctwrite` 帧基 = 脚本帧 **+14**（`$004D` 双向对齐）；
+  2. 两侧 `$0303 speedX` **逐帧全等**（含 `08/F7` 交替相位）；
+  3. emu 该帧 `ObjectCounter` 序列 = `E2C4` 起 `3→0`（向上 3px）+ `E352` 起 `2→0`（向右 2px）；
+  4. rust 同帧 `y` 不变、`x` 递减 ⇒ 垂直 delta=0、水平 delta 符号为负。
+  ⇒ 未完的一步：拿到 rust 侧 f2247–2252 的 `vert_integrate/horz_integrate` delta 真值
+  （需帧号计数器探针，`$2D` 低 8 位溢出不可用作窗口过滤）。
+- **按用户裁定（B）**：优先"能不能通关"主线（区域切换 / Boss / 结局），本项挂账，
+  不进 ratchet、不阻塞通关；待主线打通后再回来收。
