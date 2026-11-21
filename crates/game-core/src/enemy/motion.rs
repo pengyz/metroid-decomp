@@ -499,6 +499,7 @@ pub(crate) fn enemy_move_one_pixel_left(mem: &mut crate::frame::Manager, x: u8) 
     }
     // @success（:1201-1208）：data05 bit7 置⇒jumpDsplcmnt inc
     if mem.read_ram(0x0400 + x as u16 + 5) & 0x80 != 0 {
+        // asm `@success ; $84F4`：`lda data05 / bpl / **inc** jumpDsplcmnt`（左移）。
         let j = mem.read_wram(0x6AF4 + x as u16 + 13);
         mem.write_wram(0x6AF4 + x as u16 + 13, j.wrapping_add(1));
     }
@@ -534,8 +535,11 @@ pub(crate) fn enemy_move_one_pixel_right(mem: &mut crate::frame::Manager, x: u8)
         return false;
     }
     if mem.read_ram(0x0400 + x as u16 + 5) & 0x80 != 0 {
+        // asm `@success ; $8550`：`lda data05 / bpl @endIf_E / **dec** jumpDsplcmnt`
+        // ——右移与左移（`$84F4` inc）**方向相反**；旧形照抄成 inc，竖直朝向的敌
+        // 右移时位移记账符号反了。
         let j = mem.read_wram(0x6AF4 + x as u16 + 13);
-        mem.write_wram(0x6AF4 + x as u16 + 13, j.wrapping_add(1));
+        mem.write_wram(0x6AF4 + x as u16 + 13, j.wrapping_sub(1));
     }
     true
 }
@@ -862,5 +866,37 @@ pub(crate) fn enemy_check_move_right(mem: &mut crate::frame::Manager, x: u8) -> 
             }
             true
         }
+    }
+}
+
+#[cfg(test)]
+mod tests_jump_dsplcmnt_signs {
+    use super::*;
+    use crate::enemy::tables::{en_addr, ens_addr};
+
+    fn stage(m: &mut crate::frame::Manager, x: u8) {
+        m.write_ram(en_addr(x, 1), 0x20); // x 位置
+        m.write_ram(en_addr(x, 5), 0x80); // data05 bit7 置
+        m.write_wram(ens_addr(x, 2), 0x00); // radiusX=0 ⇒ 不触发块界判
+        m.enemy(1).set_jump_dsplcmnt(0x00);
+    }
+
+    /// asm `$84F4 @success`：`lda data05 / bpl / **inc** jumpDsplcmnt`（左移）。
+    #[test]
+    fn left_move_increments_jump() {
+        let mut m = crate::frame::Manager::default();
+        stage(&mut m, 0x10);
+        assert!(super::enemy_move_one_pixel_left(&mut m, 0x10));
+        assert_eq!(m.enemy(1).jump_dsplcmnt(), 0x01);
+    }
+
+    /// asm `$8550 @success`：同形但 **dec**（右移）——旧形照抄左移的 inc，
+    /// 竖直朝向敌人右移时位移记账符号反了。
+    #[test]
+    fn right_move_decrements_jump() {
+        let mut m = crate::frame::Manager::default();
+        stage(&mut m, 0x10);
+        assert!(super::enemy_move_one_pixel_right(&mut m, 0x10));
+        assert_eq!(m.enemy(1).jump_dsplcmnt(), 0xFF);
     }
 }
