@@ -608,9 +608,10 @@ pub(crate) fn enemy_move_one_pixel_left(mem: &mut crate::frame::Manager, x: u8) 
             return false;
         }
     }
-    // @success（asm $84F4 逐字）：`lda data05 / bpl @endIf_E` ⇒ **bit7 清**才 inc。
-    // 【2026-11-22 修】旧形判 `& 0x80 != 0`（极性反）⇒ 竖直朝向的敌左移时记账缺失。
-    if mem.read_ram(0x0400 + x as u16 + 5) & 0x80 == 0 {
+    // @success（asm $84F4 逐字）：`lda data05 / bpl @endIf_E` ⇒ `bpl` 在 bit7 **清**时跳过，
+    // 即 **bit7 置**才 inc jumpDsplcmnt。
+    // 【2026-11-23 更正】上一版误读 `bpl` 为「bit7 清才 inc」并翻转了极性 ⇒ 已回退。
+    if mem.read_ram(0x0400 + x as u16 + 5) & 0x80 != 0 {
         // asm `@success ; $84F4`：`lda data05 / bpl / **inc** jumpDsplcmnt`（左移）。
         let j = mem.read_wram(0x6AF4 + x as u16 + 13);
         mem.write_wram(0x6AF4 + x as u16 + 13, j.wrapping_add(1));
@@ -646,9 +647,8 @@ pub(crate) fn enemy_move_one_pixel_right(mem: &mut crate::frame::Manager, x: u8)
         mem.write_ram(0x00, 1);
         return false;
     }
-    if mem.read_ram(0x0400 + x as u16 + 5) & 0x80 == 0 {
-        // asm `@success ; $8550`：`lda data05 / bpl @endIf_E / **dec** jumpDsplcmnt`
-        // —— bit7 清才 dec（【2026-11-22 修】旧形判 `!= 0` 极性反）。
+    if mem.read_ram(0x0400 + x as u16 + 5) & 0x80 != 0 {
+        // asm `@success ; $8550`：`lda data05 / bpl @endIf_E` ⇒ **bit7 置**才 dec jumpDsplcmnt。
         // ——右移与左移（`$84F4` inc）**方向相反**；旧形照抄成 inc，竖直朝向的敌
         // 右移时位移记账符号反了。
         let j = mem.read_wram(0x6AF4 + x as u16 + 13);
@@ -989,7 +989,7 @@ mod tests_jump_dsplcmnt_signs {
 
     fn stage(m: &mut crate::frame::Manager, x: u8) {
         m.write_ram(en_addr(x, 1), 0x20); // x 位置
-        m.write_ram(en_addr(x, 5), 0x00); // data05 bit7 清（asm `bpl` 才记账）
+        m.write_ram(en_addr(x, 5), 0x80); // data05 bit7 置（左右移 `bpl` 跳过 ⇒ 记账路径）
         m.write_wram(ens_addr(x, 2), 0x00); // radiusX=0 ⇒ 不触发块界判
         m.enemy(1).set_jump_dsplcmnt(0x00);
     }

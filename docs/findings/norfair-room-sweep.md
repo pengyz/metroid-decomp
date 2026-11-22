@@ -123,6 +123,11 @@ rust 旧形两处都不合：`nx == rx` 恒回滚失败（不看 `ScrollX`/名�
 新增两条锚测（`left_move_wraps_when_scroll_x_and_nametable_differ`、
 `left_move_rolls_back_when_scroll_x_is_zero`），红证：把成功径临时改成恒失败 ⇒ 前者 FAILED。
 
+> 【2026-11-23 更正】同一 commit 里我还「顺手」翻了左/右移 `jumpDsplcmnt` 记账的极性，
+> 理由是误读了 `bpl`（`bpl` 在 N=0 时跳=bit7 **清**时跳过）。四件 asm 的真实极性是：
+> 左/右 `bpl @endIf_E` ⇒ **bit7 置**才 inc/dec；上/下 `bmi @endIf_D` ⇒ **bit7 清**才
+> inc/dec。原实现四件都对，那次翻转已回退（见下一条 commit）。
+
 同批发现但**未修**（各自独立，留待单独一轮）：
 
 - `EnemyMoveOnePixelRight` 的对应两处（`x == 0` 与 `x + radiusX == $FF`，判等方向与左移相反）
