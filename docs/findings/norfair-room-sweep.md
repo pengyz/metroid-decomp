@@ -28,8 +28,18 @@
 
 - **f120/prevend 才出现 57–220 px（6 房：10/11/19/24/30/40）**：`arrived`/`pre`/`f60` 全 clean
   ⇒ 载房后 ~120 帧内后出现的敌/弹/爆炸差，不是静态房数据。
-- **f60 就出现（2 房：22/34）**：22 = 单槽 `EnsExtra+4 animDelay` emu 2 / rust 3（Crawler，
-  其余 31 字节全等）；34 待解剖。
+- **f60 就出现（2 房：22/34）**：两房同签名——单槽 tough Crawler（`type=06`）的
+  `EnsExtra+4 animDelay` emu `2` / rust `3`，该槽其余 **31 字节全等**（`Ens` 16 B 全等、
+  `EnsExtra` 仅 delay 差），PNG 差 52/84 px 全落该精灵的 16×16 块。
+  逐帧表（`probe-r22mid` 采点 1644–1675，步长 1）：两腿的 delay 周期同为 `3→2→1→3`、
+  `animIndex`/`animFrame` 取值集合也相同（`6A/58`、`6B/59` 交替、`reset=69` 相同），
+  但**相位恒差 1 拍**（`r.delay = (e.delay+1) mod 3`、`r.frame` = `e.frame` 的前一拍）
+  ⇒ 每 3 帧里有 1 帧画出不同的动画格（≈50 px）。
+  交叉帧对齐检验（`probe-r22phase`）：`emu[1660]` vs `rust[1659]/[1660]/[1661]` = 11320 /
+  **52** / 11307 px ⇒ **不是采样缝**，同帧对齐是对的，属行为面 1 拍滞后。根因未定谳
+  （候选：Crawler 在该区的「静止出口 `CommonJump_UpdateEnemyCommon_noMove` 的 A 值」
+  与 `@exit` 的 `lda #$03` 谁在多算一拍；两腿 `animIndex` 全程相同排除了"beat 不同导致
+  索引偏移"，故更像**调用次数**差）。
 - **`scroll_drift`（1 房：45）**：`dx=±2` 族且取小后仍 11011–11280 px ⇒ 另有内容差。
 - **blocked（28/31/32）**：`f120` 采集 blocked（模拟器侧采集缺失），需重采而非修代码。
 - 继续解剖时优先取 `f60` 就先分叉的房（先 22/34），因为它们不依赖"后出现的敌人"。
