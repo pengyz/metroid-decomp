@@ -65,7 +65,12 @@ pub(crate) fn crawler_ai(mem: &mut crate::frame::Manager, x: u8) {
             update_enemy_anim(mem, x, 8);
             update_enemy_common_no_move_no_anim(mem, x);
         } else {
-            update_enemy_common_no_move_anim(mem, x, 0x02);
+            // `CrawlerExit_Resting_{AREA} ; 02:99D9` 本体只有 `jmp CommonJump_UpdateEnemyCommon_noMove`，
+            // **不自己 `lda` 动画节拍** ⇒ `UpdateEnemyCommon@noMove` 的 `jsr UpdateEnemyAnim`
+            // 拿到的是进入本出口时 A 里剩的值 = `lda EnemyStatusPreAI` 读到的状态号（=1 Resting）。
+            // 旧形写死 `0x02` ⇒ 激活那一帧的 `animDelay←A` 落成 2（emu 落 1）⇒ 该槽的动画
+            // 相位此后恒差 1 拍（每 3 帧有 1 帧画出不同的动画格，实测 room 22/34 各 52/84 px）。
+            update_enemy_common_no_move_anim(mem, x, pre_ai);
         }
         return;
     }
@@ -213,6 +218,36 @@ mod tests {
                 assert!(crawler_move_gate(x, fc) <= 3);
             }
         }
+    }
+
+    /// 静止出口的动画节拍 = **进入出口时 A 里剩的值**，不是写死的常数。
+    ///
+    /// asm `crawler.asm:8-14`（bank2/5 分支）只 `beq CrawlerExit_Resting`，而
+    /// `CrawlerExit_Resting_{AREA} ; 02:99D9` 本体是 `jmp CommonJump_UpdateEnemyCommon_noMove`
+    /// ——**不自己 `lda` 节拍**；`UpdateEnemyCommon@noMove` 的 `jsr UpdateEnemyAnim` 因此拿到
+    /// 的是 `lda EnemyStatusPreAI` 读到的状态号（本分支恒 = 1 Resting）。旧形写死 `$02`
+    /// ⇒ 激活那一帧 `animDelay←A` 落成 2（emu 落 1）⇒ 该槽动画相位此后恒差 1 拍。
+    #[test]
+    fn resting_exit_anim_beat_is_pre_ai_status() {
+        let _ = game_data::pack::init_from_env();
+        let mut m = Manager::default();
+        m.set_in_area(0x01); // Norfair（bank2/5 分支）
+        let x = 0x10u8;
+        m.set_enemy_status_pre_ai(1); // EnemyStatusPreAI = Resting
+        let mut e = m.enemy(crate::enemy::state::slot_of(x));
+        e.set_status(crate::enemy::state::EnemyStatus::Resting);
+        e.set_anim_delay(0);
+        e.set_reset_anim_index(0x69);
+        e.set_anim_index(0x69);
+        m.write_ram(crate::ram_map::FRAME_COUNT, 0); // gate=(x>>3)+bit2=2 ⇒ 非 0
+        crawler_ai(&mut m, x);
+        let e = m.enemy(crate::enemy::state::slot_of(x));
+        assert_eq!(
+            e.anim().delay,
+            1,
+            "animDelay 必须等于 EnemyStatusPreAI（1），不是写死的 2"
+        );
+        assert_eq!(e.anim().index, 0x6A, "animIndex 应前进一格");
     }
 
     /// `CrawlerReorientSprite`：`idx=朝向*2+方向位` 取 ROM `$9AA0` 表，

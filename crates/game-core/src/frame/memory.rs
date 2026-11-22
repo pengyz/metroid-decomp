@@ -823,6 +823,13 @@ impl Manager {
         self.write_ram(0x77F8 + slot as u16, v);
     }
 
+    /// 写 `$0081 EnemyStatusPreAI`（`UpdateEnemy ; 07:F351` 每槽进入 AI 前快照，
+    /// `crawler.asm:8` 等「按 AI 前状态选出口」的分支读它）。具名 setter 只为测试/工具面，
+    /// 生产路径上它恒由 `UpdateEnemy` 写。
+    pub fn set_enemy_status_pre_ai(&mut self, v: u8) {
+        self.write_ram(crate::ram_map::ENEMY_STATUS_PRE_AI, v);
+    }
+
     pub fn enemy_status_pre_ai(&mut self) -> u8 {
         self.read_ram(crate::ram_map::ENEMY_STATUS_PRE_AI)
     }

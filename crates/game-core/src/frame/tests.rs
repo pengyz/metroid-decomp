@@ -990,6 +990,12 @@ mod r30_enemy_spawn_delay_tdd {
 #[test]
 fn crawler_reorient_sets_anim_index_from_orientation() {
     let mut m = crate::frame::Manager::default();
+    // 资产包必须就绪：`crawler_reorient_sprite` 走按区表（`crawler_anim_table`），
+    // 包未初始化时 `try_get` 返回 `None` 会被当「该区无表」fail-loud —— 本测试原本
+    // 依赖别的测试先初始化包（测试顺序耦合，单跑必红）。
+    let _ = game_data::pack::init_from_env();
+    // 默认 `$0074 InArea=3`（Tourian，无该表）⇒ 显式钉成 Brinstar。
+    m.set_in_area(0x00);
     // slot4：data05=0x18（flip=bit0=0）、data0A(orientation)=1（沿壁向下）
     m.write_ram(0x0445, 0x18); // slot4 data05（flip=bit0=0）
     m.write_ram(0x044A, 0x01); // slot4 data0A（orient=1 沿壁向下）
