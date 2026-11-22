@@ -11,16 +11,30 @@
 |---|---|---|---|---|
 | 镜像修复后（`mirrorfix-area1`） | 13 | 27 | 6 | 名表镜像动态化前 |
 | Crawler 按区 + Squeept 尾件后（`crawlerfix-area1`） | 14 | 29 | 3 | |
-| **电梯换区帧会计后（`fcalign-area1`）** | **21** | **22** | 3 | 本次（+7 房，零回退） |
+| 电梯换区帧会计后（`fcalign-area1`） | 21 | 22 | 3 | +7 房，零回退 |
+| **移动串区基址 + 加速径两修后（`movstr-accel-area1`）** | **34** | **9** | 3 | 本次（+13 房，零回退） |
 
-本次转绿（7 房）：**15 / 23 / 29 / 38 / 41 / 42 / 43**；`lost = []`（无回退）。
-耗时 1928.6 s（41 s/房）。
+本版转绿（13 房）：**08 / 12 / 14 / 15 / 16 / 18 / 21 / 23 / 26 / 27 / 33 / 35 / 37 / 43**
+等（逐房见台账 `captures[].diff_pixels`），`lost = []`（无回退）；耗时 1872.8 s。
+两轮累计从 21 → 34 ok。本版两处机制修复：`$97EF` 只是 Brinstar 的串基址
+（`docs/findings/enemy-movement-ptr-truncation.md`）、加速类 Δx/Δy 走积分件 +
+`$0406` 三名互斥（`docs/findings/enemy-acceleration-path.md`）。
 
 机制：这些房里有「按 `FrameCount` 取模/移位做门」的敌人（Crawler 38 槽 / Swooper 族）。
 换区迭代多烧 2 帧 ⇒ `FrameCount` 常差 2 ⇒ 位移节拍相位错 1 拍。
 修复与证据见 `docs/findings/bank-switch-frame-accounting.md`。
 
-## 2. 剩余 22 房 mismatch 的分层画像
+## 2. 剩余 9 房 mismatch 的分层画像（`movstr-accel-area1` 版）
+
+- **f120/prevend 才出现 57–220 px（6 房：10/11/19/24/30/40）**：`arrived`/`pre`/`f60` 全 clean
+  ⇒ 载房后 ~120 帧内后出现的敌/弹/爆炸差，不是静态房数据。
+- **f60 就出现（2 房：22/34）**：22 = 单槽 `EnsExtra+4 animDelay` emu 2 / rust 3（Crawler，
+  其余 31 字节全等）；34 待解剖。
+- **`scroll_drift`（1 房：45）**：`dx=±2` 族且取小后仍 11011–11280 px ⇒ 另有内容差。
+- **blocked（28/31/32）**：`f120` 采集 blocked（模拟器侧采集缺失），需重采而非修代码。
+- 继续解剖时优先取 `f60` 就先分叉的房（先 22/34），因为它们不依赖"后出现的敌人"。
+
+## 2b. 上一版（22 房）的分层画像（历史）
 
 - **`clean`→`sprite` 型（17 房）**：`arrived`/`pre`/`f60` 全 clean，`prevend`/`f120`
   才出现 57–697 px 精灵层差（8/9/10/11/12/14/16/18/19/21/22/24/26/27/30/33/35/37/40）。
