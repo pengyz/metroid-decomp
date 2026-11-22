@@ -151,6 +151,33 @@ $8563: BD FB 6A | 45 FF | 29 01 | 60              ; GetOtherNameTableIndex: (hi^
   `ScrollDir & 2 != 0` 才 `inc hi`。试过一次性加进四个 `enemy_check_move_*` ⇒
   **分叉反而提前到 1713**，已整体回退，改为单独一轮逐步量测。
 
+### 1f. room 19 的第二层：碰撞点行走（`CalculateFirstBGCollisionPoint` / `…Next…`）（2026-11-23）
+
+上一轮修完左移换名表后 room19 只剩 `prevend/f120 217/209`。逐帧（`case-probe-r19d05`）
+再定位：1714 起 emu `y=0x34`（继续上升）而 rust `y=0x38` 卡住、`data05 bit5` 置（竖直失败）
+⇒ rust 的**上行块撞判**在 y=$38 处判到了、emu 判没撞。
+
+插桩 print 出该次检查：`row=$28 hi=$01→$01 left=$FE n=3`，`col=$FE ok=false`。
+两根因：
+
+1. **X 段回绕修正缺失**：垂直查里 `distX = radiusX`，`posX−distX` 借位（`posX < radiusX`）
+   且 `ScrollDir & $02` 置 ⇒ 邻名表页 ⇒ `Temp0B_PositionHi ^= 1`。敌径此前完全没有这段
+   （Samus 侧有），于是 `x=6/radiusX=8` 时读的是本页 `$FE` 列。
+2. **下一个碰撞点也要调页**：`CalculateNextBGCollisionPoint ; 07:E98E` 的 X 半在
+   `col += $08` **进位**时（横滚房）同样 `inc hi`；Y 半在 `row ≥ $F0` 时 `row += $10`
+   且竖滚房换页。等价地：一次跨列行走可能**逐点落在不同名表页**——旧形整段共用一个页号，
+   `$FE` 列（页 0）与 `$06` 列（页 1）用同一页读，必有一列读错。
+
+实现（`crates/game-core/src/enemy/motion.rs`）：`first_bg_point_x` / `first_bg_point_y` /
+`next_point_x` / `next_point_y` 四个纯函数 + 两处 span 循环改成**逐点行走**
+（垂直查每步 Y+0/X+8，水平查每步 Y+8/X+0，与 asm `ldx #$00/ldy #$08` 的偏移对一致）。
+
+实测：room19 `prevend/f120` **217/209 → 17/9**（探针窗 1690–1741 只剩 1717–1723 的 4–26px）；
+Brinstar 47 房复扫仍 **47/47 ok**（无回退）；L4 矩阵 166/172 逐格不变。
+
+剩余残差与 Samus 侧同源：`$0310 SamusYSub` emu `$50` / rust `$10`（与 `PPUCTRL_ZP` bit2
+`SetPPUInc` 长期挂账 #8 同一批线索），另 1717–1723 的 4–26px 未逐像素归因。
+
 ## 2. 剩余 9 房 mismatch 的分层画像（`movstr-accel-area1` 版，历史）
 
 - **f120/prevend 才出现 57–220 px（6 房：10/11/19/24/30/40）**：`arrived`/`pre`/`f60` 全 clean

@@ -36,6 +36,58 @@ fn enemy_trigger_resting_clear_accel_x(mem: &mut crate::frame::Manager, x: u8) {
 
 
 
+/// `CalculateFirstBGCollisionPoint ; 07:E90F` 的 **X 段**（水平查与垂直查都用）。
+/// asm：`ldx #$00 / lda distX / bmi`（distX 负 ⇒ X 保持 0，否则 `dex` ⇒ X=$FF）→
+/// `col = posX − distX` → `txa / adc #$00` 非零 ⇒ 回绕 ⇒ `ScrollDir & $02` 非零才 `inc hi`。
+fn first_bg_point_x(pos_x: u8, dist_x: u8, hi: u8, scroll_dir: u8) -> (u8, u8) {
+    let col = pos_x.wrapping_sub(dist_x);
+    let negative = dist_x & 0x80 != 0;
+    let borrow = pos_x < dist_x;
+    let adjust = if negative { !borrow } else { borrow };
+    if adjust && scroll_dir & 0x02 != 0 { (col, hi ^ 1) } else { (col, hi) }
+}
+
+/// `CalculateFirstBGCollisionPoint ; 07:E90F` 的 **Y 段**（垂直查）。
+/// asm：distY≥0（上查）⇒ `row = posY − distY`，**借位** ⇒ `row −= $10`，且
+/// `ScrollDir & $02 == 0`（竖滚房）才 `inc hi`；distY<0（下查）⇒ 无借位或 `row ≥ $F0`
+/// ⇒ `row += $10`，同条件换页。
+fn first_bg_point_y(pos_y: u8, dist_y: u8, hi: u8, scroll_dir: u8) -> (u8, u8) {
+    let row = pos_y.wrapping_sub(dist_y);
+    let negative = dist_y & 0x80 != 0;
+    let borrow = pos_y < dist_y;
+    let adjust = if negative { !borrow || row >= 0xF0 } else { borrow };
+    if adjust {
+        let row2 = if negative { row.wrapping_add(0x10) } else { row.wrapping_sub(0x10) };
+        let hi2 = if scroll_dir & 0x02 == 0 { hi ^ 1 } else { hi };
+        (row2, hi2)
+    } else {
+        (row, hi)
+    }
+}
+
+/// `CalculateNextBGCollisionPoint ; 07:E98E` 的 **Y 半**：`row += offset`；
+/// `row ≥ $F0`（或越 256）⇒ `row += $10`，且 `ScrollDir & $02 == 0` 才 `inc hi`
+/// （横滚房允许回绕、不换页）。
+fn next_point_y(row: u8, offset: u8, hi: u8, scroll_dir: u8) -> (u8, u8) {
+    let (r, carry) = row.overflowing_add(offset);
+    if carry || r >= 0xF0 {
+        // asm `Lx212: txa / adc #$0F`——两条径进入时 carry 都是 1（adc 自身进位，
+        // 或 `cpx #$F0` 在 X≥$F0 时置位）⇒ 实际是 `+ $10`。
+        let r2 = r.wrapping_add(0x10);
+        let hi2 = if scroll_dir & 0x02 == 0 { hi ^ 1 } else { hi };
+        (r2, hi2)
+    } else {
+        (r, hi)
+    }
+}
+
+/// `CalculateNextBGCollisionPoint ; 07:E98E` 的 **X 半**：`col += offset`，越 256（进位）⇒
+/// `ScrollDir & $02` 非零才 `inc hi`（竖滚房不换页）。
+fn next_point_x(col: u8, offset: u8, hi: u8, scroll_dir: u8) -> (u8, u8) {
+    let (c, carry) = col.overflowing_add(offset);
+    if carry && scroll_dir & 0x02 != 0 { (c, hi ^ 1) } else { (c, hi) }
+}
+
 /// `GetOtherNameTableIndex ; $8563`（`prg7_engine.asm`，`:1294`）：`A = (EnsExtra.hi ^ PPUCTRL_ZP) & $01`。
 /// Z 置 ⇔ 该敌名表与屏幕当前名表**相同**；四个 `EnemyMoveOnePixel*` 的换名表分支据此判定
 /// （原版语义：与屏上名表**不同**才允许换——左右上下的判等方向各不相同，逐点忠实）。
@@ -887,13 +939,24 @@ pub(crate) fn enemy_check_move_up(mem: &mut crate::frame::Manager, x: u8) -> boo
     match crate::enemy::movement::check_move_boundary(st, false) {
         crate::enemy::movement::MoveCheckOutcome::NoCollision => true,
         crate::enemy::movement::MoveCheckOutcome::NeedsBgCollision(st) => {
-            let row = st.pos_y.wrapping_sub(st.dist_to_center_y);
+            let sd = mem.read_ram(crate::ram_map::SCROLL_DIR);
+            let (mut row, hi0) = first_bg_point_y(st.pos_y, st.dist_to_center_y, st.pos_hi, sd);
             let (left, n) = crate::samus::physics::vertical_span_cols(st.pos_x, st.radius_x);
-            // 【goal-轮11 块判结果直证】逐列 collision_point_ok 结果。
+            // 垂直查的 X 段另有一次回绕修正（distX = radiusX）：左边界借位且 `ScrollDir & $02`
+            // 置 ⇒ 邻页。`first_bg_point_x` 就是这段（col 起点 = left）。
+            let (mut col, mut hi_eff) = first_bg_point_x(st.pos_x, st.radius_x, hi0, sd);
+            let _ = left;
             for i in 0..n {
-                let col = left.wrapping_add((i as u8).wrapping_mul(8));
-                if !collision_point_ok(mem, row, col, st.pos_hi) {
+                if !collision_point_ok(mem, row, col, hi_eff) {
                     return false;
+                }
+                if i + 1 < n {
+                    // 垂直查：Y 每步 +0（Temp06=0）、X 每步 +8（Temp07=8）
+                    let (r2, h2) = next_point_y(row, 0, hi_eff, sd);
+                    let (c2, h3) = next_point_x(col, 8, h2, sd);
+                    row = r2;
+                    col = c2;
+                    hi_eff = h3;
                 }
             }
             true
@@ -915,13 +978,24 @@ pub(crate) fn enemy_check_move_down(mem: &mut crate::frame::Manager, x: u8) -> b
     match crate::enemy::movement::check_move_boundary(st, false) {
         crate::enemy::movement::MoveCheckOutcome::NoCollision => true,
         crate::enemy::movement::MoveCheckOutcome::NeedsBgCollision(st) => {
-            let row = st.pos_y.wrapping_sub(st.dist_to_center_y);
+            let sd = mem.read_ram(crate::ram_map::SCROLL_DIR);
+            let (mut row, hi0) = first_bg_point_y(st.pos_y, st.dist_to_center_y, st.pos_hi, sd);
             let (left, n) = crate::samus::physics::vertical_span_cols(st.pos_x, st.radius_x);
-            // 【goal-轮11 块判结果直证】逐列 collision_point_ok 结果。
+            // 垂直查的 X 段另有一次回绕修正（distX = radiusX）：左边界借位且 `ScrollDir & $02`
+            // 置 ⇒ 邻页。`first_bg_point_x` 就是这段（col 起点 = left）。
+            let (mut col, mut hi_eff) = first_bg_point_x(st.pos_x, st.radius_x, hi0, sd);
+            let _ = left;
             for i in 0..n {
-                let col = left.wrapping_add((i as u8).wrapping_mul(8));
-                if !collision_point_ok(mem, row, col, st.pos_hi) {
+                if !collision_point_ok(mem, row, col, hi_eff) {
                     return false;
+                }
+                if i + 1 < n {
+                    // 垂直查：Y 每步 +0（Temp06=0）、X 每步 +8（Temp07=8）
+                    let (r2, h2) = next_point_y(row, 0, hi_eff, sd);
+                    let (c2, h3) = next_point_x(col, 8, h2, sd);
+                    row = r2;
+                    col = c2;
+                    hi_eff = h3;
                 }
             }
             true
@@ -943,12 +1017,21 @@ pub(crate) fn enemy_check_move_left(mem: &mut crate::frame::Manager, x: u8) -> b
     match crate::enemy::movement::check_move_boundary(st, true) {
         crate::enemy::movement::MoveCheckOutcome::NoCollision => true,
         crate::enemy::movement::MoveCheckOutcome::NeedsBgCollision(st) => {
-            let col = st.pos_x.wrapping_sub(st.dist_to_center_x);
+            let sd = mem.read_ram(crate::ram_map::SCROLL_DIR);
+            let (col, hi0) = first_bg_point_x(st.pos_x, st.dist_to_center_x, st.pos_hi, sd);
+            let (mut row, mut hi_eff) = first_bg_point_y(st.pos_y, st.radius_y, hi0, sd);
             let (top, n) = crate::samus::physics::horizontal_span_rows(st.pos_y, st.radius_y);
+            let _ = top;
             for i in 0..n {
-                let row = top.wrapping_add((i as u8).wrapping_mul(8));
-                if !collision_point_ok(mem, row, col, st.pos_hi) {
+                if !collision_point_ok(mem, row, col, hi_eff) {
                     return false;
+                }
+                if i + 1 < n {
+                    // 水平查：Y 每步 +8（Temp06=8）、X 每步 +0（Temp07=0）
+                    let (r2, h2) = next_point_y(row, 8, hi_eff, sd);
+                    let (_c2, h3) = next_point_x(col, 0, h2, sd);
+                    row = r2;
+                    hi_eff = h3;
                 }
             }
             true
@@ -969,12 +1052,21 @@ pub(crate) fn enemy_check_move_right(mem: &mut crate::frame::Manager, x: u8) -> 
     match crate::enemy::movement::check_move_boundary(st, true) {
         crate::enemy::movement::MoveCheckOutcome::NoCollision => true,
         crate::enemy::movement::MoveCheckOutcome::NeedsBgCollision(st) => {
-            let col = st.pos_x.wrapping_sub(st.dist_to_center_x);
+            let sd = mem.read_ram(crate::ram_map::SCROLL_DIR);
+            let (col, hi0) = first_bg_point_x(st.pos_x, st.dist_to_center_x, st.pos_hi, sd);
+            let (mut row, mut hi_eff) = first_bg_point_y(st.pos_y, st.radius_y, hi0, sd);
             let (top, n) = crate::samus::physics::horizontal_span_rows(st.pos_y, st.radius_y);
+            let _ = top;
             for i in 0..n {
-                let row = top.wrapping_add((i as u8).wrapping_mul(8));
-                if !collision_point_ok(mem, row, col, st.pos_hi) {
+                if !collision_point_ok(mem, row, col, hi_eff) {
                     return false;
+                }
+                if i + 1 < n {
+                    // 水平查：Y 每步 +8（Temp06=8）、X 每步 +0（Temp07=0）
+                    let (r2, h2) = next_point_y(row, 8, hi_eff, sd);
+                    let (_c2, h3) = next_point_x(col, 0, h2, sd);
+                    row = r2;
+                    hi_eff = h3;
                 }
             }
             true
@@ -1124,5 +1216,59 @@ mod tests_jump_dsplcmnt_signs {
         m.set_scroll_dir(0x03);
         assert!(!super::enemy_move_one_pixel_left(&mut m, 0x10));
         assert_eq!(m.enemy(1).pos_x(), 0x09, "必须回滚到原位");
+    }
+}
+
+/// `CalculateFirstBGCollisionPoint ; 07:E90F` / `CalculateNextBGCollisionPoint ; 07:E98E`
+/// 的像素点行走语义（Norfair room 19：x=6/radiusX=8 的垂直查在 x=$FE 列撞出**假碰撞**，
+/// 原因是此前完全没有「回绕判 + 换名表页」这段）。
+mod tests_bg_collision_point {
+    use super::*;
+
+    /// 上查且左边界借位（posY < distY）⇒ `row −= $10`；竖滚房（`ScrollDir & 2 == 0`）
+    /// 才换页——横滚房允许回绕，不动 hi。
+    #[test]
+    fn first_point_y_up_borrow_shifts_row_and_page_only_in_vertical_rooms() {
+        // posY=4, distY=16 ⇒ 借位
+        assert_eq!(super::first_bg_point_y(0x04, 0x10, 0x01, 0x00), (0xE4, 0x00));
+        // 横滚房（ScrollDir=2）：同一借位只移行、不换页
+        assert_eq!(super::first_bg_point_y(0x04, 0x10, 0x01, 0x02), (0xE4, 0x01));
+        // 无借位：两个字段都不变
+        assert_eq!(super::first_bg_point_y(0x40, 0x10, 0x01, 0x00), (0x30, 0x01));
+    }
+
+    /// 下查（distY 为负）：结果越 256 或 ≥ $F0 ⇒ `row += $10`，竖滚房才换页。
+    #[test]
+    fn first_point_y_down_adjusts_only_near_bottom_edge() {
+        assert_eq!(super::first_bg_point_y(0xE8, 0xF8, 0x01, 0x00), (0x00, 0x00));
+        assert_eq!(super::first_bg_point_y(0x10, 0xF8, 0x01, 0x00), (0x18, 0x01));
+    }
+
+    /// X 段：distX 正（左查）⇒ 借位即回绕；distX 负（右查）⇒ 越界（无借位）才回绕；
+    /// 只有 `ScrollDir & 2` 置（横滚房）才换页。
+    #[test]
+    fn first_point_x_wraps_on_borrow_for_left_and_on_carry_for_right() {
+        assert_eq!(super::first_bg_point_x(0x06, 0x10, 0x01, 0x03), (0xF6, 0x00));
+        assert_eq!(super::first_bg_point_x(0x06, 0x10, 0x01, 0x00), (0xF6, 0x01));
+        assert_eq!(super::first_bg_point_x(0x30, 0x10, 0x01, 0x03), (0x20, 0x01));
+        // 右查：radiusX=8 ⇒ distX=$F8，posX=$F8 时 posX+8 越 256 ⇒ 回绕
+        assert_eq!(super::first_bg_point_x(0xF8, 0xF8, 0x01, 0x03), (0x00, 0x00));
+    }
+
+    /// 下一个碰撞点：X 每步 +8，进位且横滚房 ⇒ 换页（room 19 的第二列正是这样）。
+    #[test]
+    fn next_point_x_carry_switches_page_when_scrolling_horizontally() {
+        assert_eq!(super::next_point_x(0xFE, 0x08, 0x00, 0x03), (0x06, 0x01));
+        assert_eq!(super::next_point_x(0xFE, 0x08, 0x00, 0x00), (0x06, 0x00));
+        assert_eq!(super::next_point_x(0x10, 0x08, 0x00, 0x03), (0x18, 0x00));
+    }
+
+    /// 下一个碰撞点：Y 每步 +8；`row ≥ $F0` ⇒ `row += $10`，竖滚房才换页。
+    #[test]
+    fn next_point_y_adjusts_bottom_edge_and_page() {
+        assert_eq!(super::next_point_y(0xE8, 0x08, 0x01, 0x00), (0x00, 0x00));
+        assert_eq!(super::next_point_y(0x10, 0x08, 0x01, 0x00), (0x18, 0x01));
+        // 越 256（进位）⇒ 同样走调整径
+        assert_eq!(super::next_point_y(0xF8, 0x10, 0x01, 0x02), (0x18, 0x01));
     }
 }
