@@ -305,14 +305,17 @@ fn elev_transition(mem: &mut Manager) {
     // 本模型无「迭代中途挂起/续跑」机制（iter_wait 只记帧账）⇒ **就地兑现该段 NMI**
     // （相位早 ≤1 tick；像素面 f1300+ 归零——见 docs/findings/elevator-evidence.md）。
     mem.write_ram(NMI_STATUS, 1);
-    mem.iter_wait();
+    // 【帧会计】不额外烧帧：本段的等 NMI 与 `init_bank2` 的 `ScreenNmiOff`(1 帧)、
+    // 本件的 `ScreenOn`(1 帧) 落在同一迭代的连续 NMI 窗口——emu 实测该迭代共冻结 3 帧
+    // （f1206-f1208），而 `init_bank2` 已挂 3 门；再烧 2 帧会让 `FrameCount` 落后 2
+    // （读 FC 做门的敌人全体错相位）。见 docs/findings/bank-switch-frame-accounting.md。
     crate::frame::nmi::check_palette_write(mem);
     crate::frame::tick::select_samus_palette(mem);
     crate::frame::tick::start_music(mem);
     // jsr ScreenOn（$C447）——影子 |= $1E，真 PPUMASK 由 NMI 落（延迟落影同族形）。
     mem.deferred_screen_on = true;
     mem.write_ram(NMI_STATUS, 1);
-    mem.iter_wait();
+    // ScreenOn 的等待同上：并入本迭代已挂的 3 门，不再单独计帧。
     crate::frame::tick::copy_area_pointers(mem);
     destroy_enemies(mem);
     // 淡入动画 + status+1（⇒ 7 Fade）+ Timer1←$40
@@ -481,6 +484,33 @@ mod tests {
 
     fn m() -> Manager {
         Manager::default()
+    }
+
+    /// 换区帧会计（**A 级锚**，见 `docs/findings/bank-switch-frame-accounting.md`）：
+    /// `elev_transition` 的等待全在同一迭代的连续 NMI 窗口内——emu 实测 f1206-f1208
+    /// 只冻结 3 帧（`ScreenNmiOff` 1 + `WaitNMIPass_` 1 + `ScreenOn` 1），而
+    /// `init_bank2` 自己已挂 3 门（`iter_wait` + `iter_bogged(2)`）⇒ 电梯侧**不得再烧帧**，
+    /// 否则整迭代 5 帧、`FrameCount` 落后 2（room 38 Crawler 等读 FC 的敌人全部错相位）。
+    /// 判据：`elev_transition` 前后 `iter_gates` 增量 == `init_bank2` 单独挂的门数。
+    #[test]
+    fn transition_burns_no_extra_frame_gates() {
+        let _ = game_data::pack::init_from_env();
+        let mut base = m();
+        base.write_ram(crate::ram_map::MAIN_ROUTINE, 3);
+        base.write_ram(crate::ram_map::BANK_SWITCH_PENDING, 2);
+        crate::frame::boot::check_bank_switch(&mut base);
+        let bank_only = base.iter_gates.len();
+        assert_eq!(bank_only, 3, "InitBank2 = iter_wait(1) + iter_bogged(2)");
+
+        let mut mem = m();
+        mem.write_ram(crate::ram_map::MAIN_ROUTINE, 3);
+        mem.write_ram(ELEVATOR + F_TYPE, 0x01); // 下行且低半字节=1 ⇒ 目的 Norfair（bank2）
+        elev_transition(&mut mem);
+        assert_eq!(
+            mem.iter_gates.len(),
+            bank_only,
+            "电梯换区迭代只烧 InitBank 自己的门（WaitNMIPass_/ScreenOn 落在同窗，不额外计帧）"
+        );
     }
 
     /// 十态表宽度自证：JumpEngine 表 10 项（0..=9），越界静默（不臆造指针）。
