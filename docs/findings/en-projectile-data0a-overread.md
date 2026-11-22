@@ -52,12 +52,41 @@ Norfair room 28 在 f1692 触发：某弹 `data0A=6` ⇒ `resetAnimIndex = $95E6
 > `unported @ bank07:E0BC-wrap idx=4E reset=02 len=138`，而 f1692 的槽面 6/7 是 `reset=4D`，
 > 说明报 gap 的**不是这两个槽**（explosion 池 `$6BB4` 的槽也在走 `Anim::step`）。
 
-### 3.2 仍待定位
+### 3.2 定谳与修复（2026-11-23 02:32，commit `74ca17b8`）
 
-- 报 gap 的对象身份未取：`Anim::step` 的 `Broken{idx,reset,len}` 目前只带三个数，
-  需在 `Broken` 里再带**槽号/池名**（否则同一个 `idx=4E/reset=02` 无法指认是谁）。
-- 候选：explosion 池槽（`crates/game-core/src/enemy/explosion.rs:187` 的调用点）
-  用了与敌槽不同的 `resetAnimIndex` 来源。
+拿到槽标识后缺口指向 **slot 6（敌弹槽）**：`x=60 type=00 status=02`，
+`idx=4E reset=02`。f1692 两侧槽面一致（`reset=0x4D`），说明 **reset 是被写坏的**，
+不是表读错。追 asm 得根因：
 
-**下一步**：给 `AnimStep::Broken` 增槽标识（一步小改，测试可钉），再复跑 room 28 取身份；
-身份定了才谈表基/语义。
+```asm
+    ; 07:F9DA
+    tay
+    lda Ens.0.data0A,x
+    lsr
+    php
+    bcc @endIf_B        ; bit0 ⇒ x 速度取反
+    ...
+    ; 07:F9DF「branch if this is not the first movement string」
+    plp
+    bne @endIf_C
+        ; 首串（dragon fireball）且 speedY>0 ⇒ 用 falling 动画
+        ldy Ens.0.data0A,x
+        lda AreaEnProjectileFallingAnimIndex,y
+        sta EnsExtra.0.resetAnimIndex,x
+```
+
+`plp` 恢复的是 **`lsr data0A` 之后的标志** ⇒ 「首串」⟺ `data0A>>1 == 0`
+（`data0A ∈ {0,1}`）。旧实现写的是 `d0a & 0x01 == 0`，两个方向都错：
+
+- 漏掉左向首串（`data0A=1`）；
+- 把 Movement1/2/3 弹（`data0A ∈ {2,4,6}`）当首串 ⇒ 把它们的 `resetAnimIndex`
+  写成 `$95E0+data0A` 越读到的**表外字节**（`data0A=6 ⇒ 0x02`）⇒ 动画链
+  `EnAnimTable[2] == $FF` ⇒ 16 次回绕 ⇒ `unported @ bank07:E0BC-wrap`。
+
+修复：`is_first_movement_string(d0a) = d0a >> 1 == 0`（`crates/game-core/src/enemy/en_projectile.rs`），
+并给 `AnimStep::Broken` 的两处 panic 加上**槽/池标识**（`x`/`type`/`status` 与 `pool=explosion slot`），
+否则同一个 `idx/reset` 无法指认是谁。
+
+效果：room 28 / 31 由 blocked 转 **ok**；room 32 由 blocked 转为 mismatch（新的可见面：
+`prevend/f120` 全屏 16391–16394 px、`shift dx=4 explains=False`、`layer=nametable`——另案）。
+
