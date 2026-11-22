@@ -238,7 +238,8 @@ pub(crate) fn enemy_distance_threshold(mem: &mut crate::frame::Manager, x: u8) {
 }
 
 /// InitEnRestingAnimIndex（**asm 内容锚** `: 07:F682`——r26）：type×2+facing 索引→
-/// ENEMY_RESTING_ANIM[y]；≠resetAnimIndex⇒写 resetAnimIndex/animIndex+animDelay←0。
+/// ENEMY_RESTING_ANIM[y]；≠resetAnimIndex⇒写 resetAnimIndex/animIndex+animDelay←0；
+/// **=resetAnimIndex⇒直接 rts（delay 保留）**。
 pub(crate) fn init_en_resting_anim_index(mem: &mut crate::frame::Manager, x: u8) {
     use crate::enemy::anim_idx::AnimIdx;
     let y = enemy_type_times2_plus_facing(mem, x);
@@ -246,8 +247,9 @@ pub(crate) fn init_en_resting_anim_index(mem: &mut crate::frame::Manager, x: u8)
     let idx = AnimIdx::at(area, game_data::assets::enemy_resting_anim(area)[y as usize & 0x1F]);
     let slot = crate::enemy::state::slot_of(x);
     if idx.off() == mem.enemy(slot).reset_anim_index() {
-        // asm `beq ClearEnAnimDelay@RTS` —— 相等时**仍清 animDelay**（旧实现直接 return，漏了这一步）
-        mem.enemy(slot).set_anim_delay(0);
+        // asm `07:F68B: F0 0B` ⇒ 跳到 `07:F698`，即 `ClearEnAnimDelay@RTS`（sym:8526）的 **rts**。
+        // 相等 ⇒ 直接返回：不写 resetAnimIndex/animIndex，**也不清 animDelay**。
+        // （`ClearEnAnimDelay` 本身在 F693，`ClearEnAnimDelay@RTS` 是它尾部的 rts —— 两者不是同一处。）
         return;
     }
     mem.enemy(slot).set_reset_anim_index(idx.off()); // resetAnimIndex
@@ -275,3 +277,82 @@ pub(crate) fn twos(v: u8) -> u8 {
 }
 
 
+
+#[cfg(test)]
+mod tests_en_resting_anim_index {
+    use super::*;
+    use crate::enemy::state::EnemyStatus;
+
+    /// 按区取 `EnemyRestingAnimIndex[y]`，y = type*2 + facing（facing: data05 bit7）
+    fn expected(m: &mut crate::frame::Manager, x: u8) -> u8 {
+        let y = enemy_type_times2_plus_facing(m, x);
+        let area = crate::frame::cur_area(m);
+        game_data::assets::enemy_resting_anim(area)[y as usize & 0x1F]
+    }
+
+    fn setup() -> crate::frame::Manager {
+        let mut m = crate::frame::Manager::default();
+        crate::frame::set_in_area_raw(&mut m, 0x10); // Brinstar（InArea&$0F==0）
+        m.enemy(0).set_status(EnemyStatus::Resting);
+        m.enemy(0).set_data05(0x00); // 朝右
+        m.enemy(0).set_enemy_type(6); // Rio
+        m
+    }
+
+    /// asm `07:F68B F0 0B` → `07:F698`（`ClearEnAnimDelay@RTS` 的 rts）：
+    /// 相等 ⇒ **不写 reset/animIndex、不清 animDelay**。
+    #[test]
+    fn equal_resting_index_preserves_delay_and_index() {
+        let mut m = setup();
+        let want = expected(&mut m, 0);
+        m.enemy(0).set_reset_anim_index(want);
+        m.enemy(0).set_anim_index(0x49);
+        m.enemy(0).set_anim_delay(5);
+        init_en_resting_anim_index(&mut m, 0);
+        assert_eq!(m.enemy(0).reset_anim_index(), want, "reset 不得被写");
+        assert_eq!(m.enemy(0).anim_index(), 0x49, "animIndex 不得被写");
+        assert_eq!(m.enemy(0).anim_delay(), 5, "animDelay 必须保留（相等支不清）");
+    }
+
+    /// 不等 ⇒ 写 resetAnimIndex/animIndex 并把 animDelay 清 0。
+    #[test]
+    fn different_resting_index_writes_index_and_clears_delay() {
+        let mut m = setup();
+        let want = expected(&mut m, 0);
+        m.enemy(0).set_reset_anim_index(want.wrapping_add(1));
+        m.enemy(0).set_anim_index(0x22);
+        m.enemy(0).set_anim_delay(5);
+        init_en_resting_anim_index(&mut m, 0);
+        assert_eq!(m.enemy(0).reset_anim_index(), want);
+        assert_eq!(m.enemy(0).anim_index(), want);
+        assert_eq!(m.enemy(0).anim_delay(), 0);
+    }
+
+    /// 节奏锚：从 `(reset,index,delay)=(t,t,0)` 起，每帧 `advance_anim(table,8)`，
+    /// 且每隔一帧插入一次 `init_en_resting_anim_index`（30FPS bit6 门下的真实调用形），
+    /// delay 必须呈 `8,7,6,5,4,3,2,1` 的逐帧递减，只有走完 8 帧才推进 index。
+    ///
+    /// 变异：把相等支改回「也 set_anim_delay(0)」⇒ delay 变 `8,7,8,7…`、index 每 2 帧跳一次 ⇒ 红。
+    #[test]
+    fn resting_anim_cadence_is_eight_frames_not_two() {
+        let mut m = setup();
+        let want = expected(&mut m, 0);
+        m.enemy(0).set_status(EnemyStatus::Resting);
+        m.enemy(0).set_reset_anim_index(want);
+        m.enemy(0).set_anim_index(want);
+        m.enemy(0).set_anim_delay(0);
+        let table = {
+            let area = crate::frame::cur_area(&m);
+            game_data::assets::enemy_anim_table(area)
+        };
+        let mut delays = Vec::new();
+        for f in 0..8 {
+            if f % 2 == 0 {
+                init_en_resting_anim_index(&mut m, 0);
+            }
+            m.enemy(0).advance_anim(table, 0x08);
+            delays.push(m.enemy(0).anim_delay());
+        }
+        assert_eq!(delays, vec![8, 7, 6, 5, 4, 3, 2, 1], "delay 必须逐帧递减（不是 8,7 振荡）");
+    }
+}
