@@ -38,6 +38,22 @@ Norfair room 28 在 f1692 触发：某弹 `data0A=6` ⇒ `resetAnimIndex = $95E6
 现有 `Anim::step` 在 16 次回落后报 `Broken{idx,reset,len}` 并 `unported!("bank07:E0BC-wrap")`，
 把这条未决路径变成 fail-loud（正确做法：不猜）。
 
-**下一步判据**：先取 emu 该帧（f1692）弹槽 `Ens+12`（`data0A`）实测值。
-若 emu=6 ⇒ 走 (2)，去读 `AnimDrawEnemy` 的表基；若 emu≠6 ⇒ 走 (1)，比 RNG 与
-`polyp` 的 `RandomNumber1` 演化。
+### 3.1 已定谳（2026-11-23 02:20，探针 `case-probe-r28d0a`）
+
+逐帧（1684–1695）读 emu 12 个敌槽的 `Ens+12`（`data0A`）与 `EnsExtra+0`（status）：
+
+| f | 活跃槽 (status, data0A, y) |
+|---|---|
+| 1690 | slot6 (2, **0**, 0x2E) / slot7 (2, **0**, 0x1E) |
+| 1692 | slot6 (2, **0**, 0x32) / slot7 (2, **0**, 0x22) |
+
+⇒ **emu 的弹体 `data0A = 0`**（即 `EnData0A=0, facing=0` = **Dragon 径**
+`dragon.asm` 写死 `#$00`），而 rust 走到了 `data0A=6`（= `EnData0A=3` = **Polyp 径**）。
+所以不是"越读要不要保真"的问题，而是**同一敌槽两侧派发到了不同 AI**：
+emu 是 Dragon 在吐弹，rust 是 Polyp 在吐弹。
+
+下一步（下轮）：比对 room 28 的敌槽 `type` 与 `NORFAIR[type]` 表项，确认是
+`ai_table` 映射错、还是 `polyp`/`dragon` 的触发条件（`movement`/帧相位）判据不同。
+
+（越读窗 12 B 的实作仍然正确且必要——`(RNG>>1)&3` 三点取值确实可达；本节的结论只是说
+room 28 这一处不是它。）
