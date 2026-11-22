@@ -224,9 +224,13 @@ fn update_en_projectile_active(mem: &mut crate::frame::Manager, i: usize) {
     }
     mem.enemy(slot).set_speed_y(dy);
     mem.enemy(slot).set_speed_x(dx);
-    // 首串（data0A bit0 清）且 speedY>0（严格正）⇒ 下落动画
-    // （07:F9E3-F9F1；`bmi/beq @endIf_C` 双门）。
-    if d0a & 0x01 == 0 && dy > 0 {
+    // 首串且 speedY>0（严格正）⇒ 下落动画（07:F9DF-F9F1）。
+    // 「首串」的门是 `plp / bne @endIf_C`——`plp` 取的是 `lsr data0A` 后的 Z，
+    // 所以条件是 **`data0A >> 1 == 0`（即 data0A ∈ {0,1}）**，不是 `bit0 清`：
+    // data0A ∈ {2,4,6} 是 Movement1/2/3 的「非首串」弹，**不写** resetAnimIndex。
+    // （旧形写 `d0a & 0x01 == 0` ⇒ 既漏了左侧弹(1)、又把 2/4/6 当成首串，
+    //   导致 resetAnimIndex 被写成表外字节——room 28 的 `idx=4E reset=02` 缺口即此。）
+    if is_first_movement_string(d0a) && dy > 0 {
         let fall = game_data::assets::en_projectile_falling_anim_byte(area, d0a);
         mem.enemy(slot).set_reset_anim_index(fall);
     }
@@ -252,6 +256,13 @@ fn update_en_projectile_active(mem: &mut crate::frame::Manager, i: usize) {
     freeze_enemy(mem, slot);
     mem.enemy(slot).set_delay(0x0A);
     anim_draw_enemy_with_anim_delay1(mem, i);
+}
+
+
+/// `plp / bne @endIf_C`（07:F9DF）的门：`plp` 取的是 `lsr data0A` 之后的 Z，
+/// 所以「首串」⟺ `data0A >> 1 == 0`（`data0A ∈ {0,1}`）。
+fn is_first_movement_string(d0a: u8) -> bool {
+    d0a >> 1 == 0
 }
 
 /// `UpdateEnProjectile_Frozen ; 07:FA6B`：animFrame≠$F7（id_FrameNone）才倒计时；
@@ -429,6 +440,16 @@ mod tests {
         if game_data::pack::init_from_env().is_err() {
             eprintln!("SKIP（显式）：未加载资产包——先跑 pack-tool extract");
             std::process::exit(0);
+        }
+    }
+
+    #[test]
+    fn first_movement_string_gate_is_data0a_shifted_not_bit0() {
+        // 首串 = data0A>>1==0 ⇒ 只有 0 与 1（右/左朝向的 Dragon 弹）。
+        assert!(super::is_first_movement_string(0));
+        assert!(super::is_first_movement_string(1));
+        for d in 2..8u8 {
+            assert!(!super::is_first_movement_string(d), "data0A={d} 是 Movement 弹，不是首串");
         }
     }
 

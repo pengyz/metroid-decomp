@@ -674,8 +674,15 @@ impl<'a> Enemy<'a> {
             }
             AnimStep::Broken { idx, reset, len } => {
                 {
+                    // 带槽标识：同一 `idx/reset` 在多个槽/池里都可能出现，没有 x/type 就无法指认。
                     crate::gap::record("bank07:E0BC-wrap");
-                    panic!("unported @ bank07:E0BC-wrap idx={idx:02X} reset={reset:02X} len={len}");
+                    panic!(
+                        "unported @ bank07:E0BC-wrap idx={idx:02X} reset={reset:02X} len={len} \
+                         x={:02X} type={:02X} status={:02X}",
+                        self.x(),
+                        self.getx(ens_extra::TYPE),
+                        self.status_raw()
+                    );
                 }
             }
         }

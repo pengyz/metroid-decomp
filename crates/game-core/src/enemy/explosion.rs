@@ -196,8 +196,13 @@ impl Explosion<'_> {
             }
             crate::enemy::state::AnimStep::Broken { idx, reset, len } => {
                 {
+                    // 带池槽标识（explosion 池与敌槽共用 `Anim::step`，没有槽号无法指认是谁）。
                     crate::gap::record("bank07:E0BC-wrap");
-                    panic!("unported @ bank07:E0BC-wrap idx={idx:02X} reset={reset:02X} len={len}");
+                    panic!(
+                        "unported @ bank07:E0BC-wrap idx={idx:02X} reset={reset:02X} len={len} \
+                         pool=explosion slot={:02X}",
+                        self.slot
+                    );
                 }
             }
         }
