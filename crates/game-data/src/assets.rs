@@ -361,6 +361,21 @@ mod tests_per_area_tables {
     /// 敌动画索引窗 `$95DC-$95E5` 五区锚（ROM `bank*0x4000` 实读）。
     ///
     /// `killed` 五区同为 `0x03`；`explosion` Br `0x43` / Kr `0x43` / To `0x21` / No `0x77` / Ri `0x58`。
+    /// 越读保真：`data0A ∈ 0..7` 时 `$95E0+y` 会读进 splatter/mellow/**AI 表头**
+    /// （ROM bank2 实读 `$95DC..$95E7` = `03 77 53 57 55 59 5b 4f 32 bd 02 6b`）。
+    #[test]
+    fn falling_anim_byte_reads_past_the_two_entry_word_faithfully() {
+        assert_eq!(en_projectile_falling_anim_byte(1, 0), 0x55);
+        assert_eq!(en_projectile_falling_anim_byte(1, 1), 0x59);
+        assert_eq!(en_projectile_falling_anim_byte(1, 2), 0x5B);
+        assert_eq!(en_projectile_falling_anim_byte(1, 6), 0x02); // $95E6：`lda EnsExtra.0.type,x` 的 02
+        assert_eq!(en_projectile_falling_anim_byte(1, 7), 0x6B); // $95E7
+        // 溅落径：`y = data0A>>1 ∈ 0..3`（`$95E2+y`）
+        assert_eq!(en_projectile_splatter_anim_byte(1, 0), 0x5B);
+        assert_eq!(en_projectile_splatter_anim_byte(1, 1), 0x4F);
+        assert_eq!(en_projectile_splatter_anim_byte(1, 3), 0xBD); // $95E5：`lda` 的 BD
+    }
+
     /// **Norfair 的 `falling/splatter` 非零**（`0x5955/0x4F5B`）——这正是它必须按区的原因：
     /// 若有人换回单表，Norfair 的弹体动画会退化成 Brinstar 的 `0`。
     #[test]
@@ -1410,10 +1425,18 @@ pub fn en_projectile_move_str(area: u8) -> &'static [u8] {
 /// （prg7_engine.asm:11986-11989 `ldy Ens.0.data0A,x / lda AreaEnProjectileFallingAnimIndex,y`）——
 /// `data0A∈{0,1}` 落 word 低/高字节；`data0A∈{2,3}` 原版会继续读进
 /// `AreaEnProjectileSplatterAnimIndex`（$95E2 word）的低/高字节——窗口内忠实保留该读法。
-/// `data0A≥4` 越出 `$95DC-$95E4` 窗 ⇒ fail-loud（无调用方）。
+/// `data0A ∈ 0..7`（`07:F8FB` 的 `& $07`）⇒ 偏移 4..11，全部落在 12 B 窗内；
+/// `y ≥ 8` 才会越过 `$95E7`，属调用方错误 ⇒ fail-loud。
 pub fn en_projectile_falling_anim_byte(area: u8, y: u8) -> u8 {
-    assert!(y < 4, "敌弹下落动画索引越窗（data0A={y}≥4，$95E5 之后无登记数据）");
+    assert!(y < 8, "敌弹下落动画索引越窗（data0A={y}≥8，超出 $95DC-$95E7 窗）");
     en_anim_idx(area)[4 + y as usize]
+}
+
+/// `AreaEnProjectileSplatterAnimIndex ; $95E2` 的**字节**直索引（`y = data0A>>1 ∈ 0..3`，
+/// `07:FA01-FA07` 的 `lsr / beq / iny`），与 `en_projectile_falling_anim_byte` 同窗。
+pub fn en_projectile_splatter_anim_byte(area: u8, dir: u8) -> u8 {
+    assert!(dir < 4, "敌弹溅落动画索引越窗（data0A>>1={dir}≥4，超出 $95E2-$95E5）");
+    en_anim_idx(area)[6 + dir as usize]
 }
 
 // ---- `$95DC-$95E4`（9 B）：弹体/爆炸/梅洛姆**动画索引**（按区） ----
@@ -1441,7 +1464,7 @@ fn en_anim_idx(area: u8) -> &'static [u8] {
     let key = en_anim_idx_key(area)
         .unwrap_or_else(|| panic!("敌动画索引：非法区号 area={area:#04X}（InArea&$0F 应为 0..=4）"));
     let b = pack::get(key);
-    assert_eq!(b.len(), 9, "敌动画索引段长应为 9 B");
+    assert_eq!(b.len(), 12, "敌动画索引段长应为 12 B（含 AI 表头 3 B）");
     b
 }
 

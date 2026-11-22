@@ -244,12 +244,9 @@ fn update_en_projectile_active(mem: &mut crate::frame::Manager, i: usize) {
     // 溅落动画：y=data0A>>1（07:FA01-FA07 lsr/beq-iny），InitEnAnimIndex + FreezeEnemy
     // （status←Frozen）+ delay←$0A（07:F9FC-FA14）。
     let dir = d0a >> 1;
-    assert!(
-        dir < 2,
-        "敌弹溅落动画索引越表（data0A>>1={dir}≥2）——现役弹型 data0A≤3，若越此界请先考证表外读"
-    );
-    let sp = game_data::assets::en_projectile_splatter_anim(area).to_le_bytes();
-    let idx = sp[dir as usize];
+    // asm 是**字节直索引** `AreaEnProjectileSplatterAnimIndex,y`（`y = data0A>>1`），
+    // `data0A∈0..7` ⇒ `dir∈0..3`；窗内已含 `$95E2..$95E5`（见 assets 的 12 B 说明）。
+    let idx = game_data::assets::en_projectile_splatter_anim_byte(area, dir);
     let frame = mem.enemy(slot).anim_frame();
     mem.enemy(slot).set_anim(Anim { frame, delay: 0, reset: idx, index: idx });
     freeze_enemy(mem, slot);

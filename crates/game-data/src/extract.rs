@@ -705,11 +705,11 @@ fn seg_meta() -> Vec<SegMeta> {
         SegMeta { key: PackKey::AreaKrEnAux, kind: "bytes", elem: 1, count: 0, rom: "bank04:$96CB+$972B", note: "Kraid 敌辅助表" },
         SegMeta { key: PackKey::AreaToEnAux, kind: "bytes", elem: 1, count: 0, rom: "bank03:$96CB+$972B", note: "Tourian 敌辅助表" },
         SegMeta { key: PackKey::AreaRiEnAux, kind: "bytes", elem: 1, count: 0, rom: "bank05:$96CB+$972B", note: "Ridley 敌辅助表" },
-        SegMeta { key: PackKey::AreaBrEnAnimIdx, kind: "bytes", elem: 1, count: 9, rom: "bank01:$95DC", note: "弹体/爆炸/梅洛姆动画索引" },
-        SegMeta { key: PackKey::AreaNoEnAnimIdx, kind: "bytes", elem: 1, count: 9, rom: "bank02:$95DC", note: "弹体/爆炸/梅洛姆动画索引" },
-        SegMeta { key: PackKey::AreaKrEnAnimIdx, kind: "bytes", elem: 1, count: 9, rom: "bank04:$95DC", note: "弹体/爆炸/梅洛姆动画索引" },
-        SegMeta { key: PackKey::AreaToEnAnimIdx, kind: "bytes", elem: 1, count: 9, rom: "bank03:$95DC", note: "弹体/爆炸/梅洛姆动画索引" },
-        SegMeta { key: PackKey::AreaRiEnAnimIdx, kind: "bytes", elem: 1, count: 9, rom: "bank05:$95DC", note: "弹体/爆炸/梅洛姆动画索引" },
+        SegMeta { key: PackKey::AreaBrEnAnimIdx, kind: "bytes", elem: 1, count: 12, rom: "bank01:$95DC", note: "弹体/爆炸/梅洛姆动画索引 + AI 表头 3 B（data0A 越读保真）" },
+        SegMeta { key: PackKey::AreaNoEnAnimIdx, kind: "bytes", elem: 1, count: 12, rom: "bank02:$95DC", note: "弹体/爆炸/梅洛姆动画索引 + AI 表头 3 B（data0A 越读保真）" },
+        SegMeta { key: PackKey::AreaKrEnAnimIdx, kind: "bytes", elem: 1, count: 12, rom: "bank04:$95DC", note: "弹体/爆炸/梅洛姆动画索引 + AI 表头 3 B（data0A 越读保真）" },
+        SegMeta { key: PackKey::AreaToEnAnimIdx, kind: "bytes", elem: 1, count: 12, rom: "bank03:$95DC", note: "弹体/爆炸/梅洛姆动画索引 + AI 表头 3 B（data0A 越读保真）" },
+        SegMeta { key: PackKey::AreaRiEnAnimIdx, kind: "bytes", elem: 1, count: 12, rom: "bank05:$95DC", note: "弹体/爆炸/梅洛姆动画索引 + AI 表头 3 B（data0A 越读保真）" },
         SegMeta { key: PackKey::AreaBrEnMovChoices, kind: "bytes", elem: 1, count: 30, rom: "bank01:$97D1", note: "移动索引候选集（表长 30）" },
         SegMeta { key: PackKey::AreaNoEnMovChoices, kind: "bytes", elem: 1, count: 30, rom: "bank02:$97D1", note: "移动索引候选集（表长 22）" },
         SegMeta { key: PackKey::AreaKrEnMovChoices, kind: "bytes", elem: 1, count: 30, rom: "bank04:$97D1", note: "移动索引候选集（表长 24）" },
@@ -1527,10 +1527,20 @@ fn extract_en_aux(prg: &[u8]) -> Result<Vec<Section>, String> {
     Ok(out)
 }
 
-/// 每区 `$95DC-$95E4`（9 B）：`killed(1) explosion(1) pad(2) falling(2) splatter(2) mellow(1)`。
+/// 每区 `$95DC-$95E7`（**12 B**）：`killed(1) explosion(1) pad(2) falling(2) splatter(2)
+/// mellow(1)` + 其后 3 字节。
 /// asm 依据 `prg1_brinstar.asm:142-152`（`{AREA}` 宏五区实例化，五区同址）。
+///
+/// 为什么要多取 3 字节：`EnProjectileSpawn ; 07:F8FB` 的 `data0A ← (EnData0A*2+facing) & $07`
+/// 使 `data0A ∈ 0..7`，而 `prg7_engine.asm:11986-11989` 用它**字节直索引**
+/// `AreaEnProjectileFallingAnimIndex,y`（`$95E0+y`）⇒ `y∈{2..7}` 会读进
+/// `$95E2`(splatter)/`$95E4`(mellow)/`$95E5` 之后的 `ChooseEnemyAIRoutine` 指令字节；
+/// 同一例程的溅落径 `AreaEnProjectileSplatterAnimIndex,y`（`y=data0A>>1 ∈ 0..3`）
+/// 读 `$95E2+y`。两径最大偏移 = `$95DC+11`。ROM 实读（bank2）：
+/// `03 77 53 57 55 59 5b 4f 32 | bd 02 6b`——即 `$95E5:BD $95E6:02 $95E7:6B`
+/// （`lda EnsExtra.0.type,x` = `BD 02 6B`）。原版就是拿这些字节当动画索引（D4 保真）。
 const EN_ANIM_IDX_ADDR: u16 = 0x95DC;
-const EN_ANIM_IDX_LEN: usize = 9;
+const EN_ANIM_IDX_LEN: usize = 12;
 
 fn en_anim_idx_keys(area: usize) -> PackKey {
     match area {
@@ -1548,7 +1558,7 @@ fn extract_en_anim_idx(prg: &[u8]) -> Result<Vec<Section>, String> {
     for (area, &bank) in banks.iter().enumerate() {
         let body = bank_slice(prg, bank, EN_ANIM_IDX_ADDR, EN_ANIM_IDX_LEN)?;
         if body.len() != EN_ANIM_IDX_LEN {
-            return Err(format!("bank{bank}:$95DC 段长 {} != 9", body.len()));
+            return Err(format!("bank{bank}:$95DC 段长 {} != 12", body.len()));
         }
         out.push(Section { key: en_anim_idx_keys(area), data: body.to_vec() });
     }
