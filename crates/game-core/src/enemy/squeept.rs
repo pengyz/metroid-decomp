@@ -117,6 +117,11 @@ pub(crate) fn squeept_ai(mem: &mut crate::frame::Manager, x: u8) {
     mem.enemy(slot).set_pos_x(nx);
     mem.enemy(slot).set_hi(hi);
     let _ = ok;
+    // 【尾件（2026-11-22 修）】asm `SqueeptExit_Resting ; 02:9ACA`：活动径落盘后
+    // **直落**该出口——`lda #$02 / jmp CommonJump_UpdateEnemyCommon_noMove`（`$02`=动画
+    // 每 2 帧一步）。旧形活动径到此直接结束 ⇒ 槽既不走 anim 也不绘制 ⇒ Norfair 多房里
+    // Squeept 整只不显示（sprite 层小面差、RAM 面 animDelay 停在 $02/animIndex 差 1）。
+    framework::update_enemy_common_no_move_anim(mem, x, 0x02);
 }
 
 #[cfg(test)]
@@ -236,6 +241,25 @@ mod tests_squeept {
         squeept_ai(&mut m, X);
         assert_eq!(m.enemy(X / 16).y(), 0xE8);
         assert_eq!(m.enemy(X / 16).data05() & 0x20, 0, "恰等 ⇒ 不置 bit5");
+    }
+
+    /// 活动径尾件（asm `SqueeptExit_Resting ; 02:9ACA` 的 `lda #$02 / jmp
+    /// CommonJump_UpdateEnemyCommon_noMove`）：活动径必须**穿过**该出口——证据是绘径写的
+    /// `data05` bit1 可见旗 + OAM 有实际写入。旧形活动径直接结束 ⇒ 两者皆无。
+    #[test]
+    fn active_path_falls_through_to_no_move_tail() {
+        let mut m = Manager::default();
+        game_data::pack::init_from_env().ok();
+        stage(&mut m, ENEMY_ACTIVE, ENEMY_ACTIVE, 1);
+        m.write_ram(ram_map::SCROLL_X, 0);
+        m.write_ram(ram_map::SCROLL_DIR, 0x02); // 横滚房
+        m.enemy(X / 16).set_anim_frame(0); // 有效帧（0xFF 会被绘径直接跳过）
+        m.enemy(X / 16).set_speed_y(4);
+        m.enemy(X / 16).set_data06(0);
+        m.enemy(X / 16).set_data05(0);
+        squeept_ai(&mut m, X);
+        assert_eq!(m.enemy(X / 16).data05() & 0x02, 0x02, "绘径可见旗 bit1 置");
+        assert_ne!(m.read_ram(0x0200), 0, "OAM 有实际写入（y 字节非 0）");
     }
 
     /// dispatch 级接线：type 0x0B（Norfair Squeept）走真实链。
