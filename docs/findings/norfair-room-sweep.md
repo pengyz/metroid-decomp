@@ -175,8 +175,10 @@ $8563: BD FB 6A | 45 FF | 29 01 | 60              ; GetOtherNameTableIndex: (hi^
 实测：room19 `prevend/f120` **217/209 → 17/9**（探针窗 1690–1741 只剩 1717–1723 的 4–26px）；
 Brinstar 47 房复扫仍 **47/47 ok**（无回退）；L4 矩阵 166/172 逐格不变。
 
-剩余残差与 Samus 侧同源：`$0310 SamusYSub` emu `$50` / rust `$10`（与 `PPUCTRL_ZP` bit2
-`SetPPUInc` 长期挂账 #8 同一批线索），另 1717–1723 的 4–26px 未逐像素归因。
+剩余残差：逐字段对读 1717–1723 只剩 `$0310`（**Object 槽 1 的字段**，见
+`docs/findings/object-type-face.md:44`；不是 Samus 的亚像素）emu `$50` / rust `$10`，
+以及 1720 一帧的 `data05 bit0`；像素差 4–26px 未逐像素归因。
+（更正：本段初版把 `$0310` 写成 `SamusYSub`，与 `object-type-face.md` 冲突，已按证据改。）
 
 ## 2. 剩余 9 房 mismatch 的分层画像（`movstr-accel-area1` 版，历史）
 
