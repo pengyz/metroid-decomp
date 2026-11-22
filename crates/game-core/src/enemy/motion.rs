@@ -187,7 +187,7 @@ fn enemy_delta_for_move(mem: &mut crate::frame::Manager, x: u8) -> (i8, i8) {
     let d1f = mem.read_wram(ens_addr(x, ENS_F_DATA1F));
     let can_up = enemy_check_move_up(mem, x);
     let can_down = enemy_check_move_down(mem, x);
-    let (dy, dx, ndelay, ninstr, nd1f, trig) = crate::enemy::common::enemy_get_delta_xy(
+    let (dy, dx_chain, ndelay, ninstr, nd1f, trig) = crate::enemy::common::enemy_get_delta_xy(
         crate::frame::cur_area(mem),
         type_,
         d05,
@@ -201,6 +201,21 @@ fn enemy_delta_for_move(mem: &mut crate::frame::Manager, x: u8) -> (i8, i8) {
         can_up,
         can_down,
     );
+    // `EnemyGetDeltaX ; $8318`：加速类 `jmp EnemyGetDeltaX_UsingAcceleration`
+    // （`$8395`，speedX/accelX 积分面）。`enemy_get_delta_xy` 的加速径只积分 Y 并
+    // 把 Δx 恒置 0（串径才读 `(movPtr),y` 的第二字节）——旧形因此让**任何非零
+    // speedX 的加速类敌人永不横移**（Norfair room 19 的 slot5 = Swooper01，
+    // emu x `48→3C→3A→…→00`，rust 恒 0x4C）。asm 调序=先 Y 后 X，此处同序。
+    let area_now = crate::frame::cur_area(mem);
+    let l977b_x = game_data::assets::enemy_facing(area_now)
+        .get((type_ & 0x3F) as usize)
+        .copied()
+        .unwrap_or(0);
+    let dx = if l977b_x & 0x40 != 0 {
+        enemy_get_delta_x_using_acceleration(mem, x)
+    } else {
+        dx_chain
+    };
     mem.write_wram(ens_addr(x, ENS_F_DATA1F), nd1f);
     mem.write_ram(en_addr(x, EN_DELAY), ndelay);
     mem.write_ram(en_addr(x, EN_INSTR), ninstr);
@@ -313,6 +328,28 @@ mod tests_enemy_move_shell {
         m.write_ram(en_addr(0x10, 0), 0x50);
         enemy_move(&mut m, 0x10);
         assert_eq!(m.read_ram(en_addr(0x10, 0)), 0x50, "非 Active 不移动");
+    }
+
+    /// `EnemyGetDeltaX ; $8318` 的加速类分支：加速类（`L977B` bit6）必须用
+    /// `EnemyGetDeltaX_UsingAcceleration`（speedX/accelX 积分面）算 Δx。
+    /// 旧形在 `enemy_get_delta_xy` 的加速径把 Δx **恒置 0**（只有串径才读
+    /// `(movPtr),y` 的第二字节）⇒ 非零 speedX 的敌人永不横移（Norfair room 19
+    /// slot5 = Swooper01：emu x `48→3C→3A→…→00`，rust 恒 0x4C）。
+    #[test]
+    fn accel_class_x_delta_comes_from_speed_x_integrator() {
+        let mut m = Manager::default();
+        if !game_data::pack::is_ready() {
+            let _ = game_data::pack::init_from_env();
+        }
+        stage(&mut m, 0x10, 0, 0x00, 0x02);
+        let Some(t) = find_type(&mut m, |r| r & 0x40 != 0) else {
+            eprintln!("SKIP（显式）：本区 L977B 没有加速类类型");
+            return;
+        };
+        m.write_wram(ens_addr(0x10, ENS_F_TYPE), t);
+        m.enemy(1).set_speed_x(0x10); // +16 px/s ⇒ 本帧 Δx 必须非 0
+        let (_, dx) = enemy_delta_for_move(&mut m, 0x10);
+        assert_ne!(dx, 0, "加速类敌人的 Δx 必须来自 speedX 积分（旧形恒 0）");
     }
 
     /// `data1F=$40` + 竖直朝向 + 加速类 ⇒ Up 径：16 位 `sec/ror` 减半且向上。
