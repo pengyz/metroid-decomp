@@ -53,8 +53,12 @@ pub(crate) fn pipe_bug_ai(mem: &mut crate::frame::Manager, x: u8) {
         }
     }
     // @applySpeed
-    // `lda data05 / asl / bmi @exit`——bit7 置 ⇒ 只播动画不移动。
-    if mem.enemy(slot).data05() & 0x80 != 0 {
+    // `lda data05 / asl / bmi @exit`（ROM 01:9B74 `0A` / 01:9B75 `30`）——ASL 先把 bit7
+    // 移进 C 丢弃，BMI 读的 N 来自**原 bit6** ⇒ 判的是 bit6（`UpdateEnemy_EnData05Bit6 ;
+    // 07:F3AA` 每帧翻转 ⇒ 该敌位移按 30FPS 半速）。
+    // 【2026-11-22 更正】旧形判 bit7（并照抄 pipe_bug.asm:48 的第三方误注"bit 7"）——
+    // bit7 对本敌不可达 ⇒ 门永不命中 ⇒ 每帧都落 4px（房扫 room21 f75 起 204px 的根因）。
+    if mem.enemy(slot).data05() & 0x40 != 0 {
         framework::update_enemy_common_no_move_anim(mem, x, 0x03);
         return;
     }
@@ -152,15 +156,27 @@ mod tests_pipe_bug {
         assert_eq!(m.enemy(SLOT).speed_y(), 2, "不得清 speedY");
     }
 
-    /// `data05 bit7` 置 ⇒ 只播动画、不移动。
+    /// `0A/30`（ROM 01:9B74/9B75）判的是 **bit6**：ASL 把 bit7 移进 C 丢弃，BMI 读原 bit6。
+    /// bit6 由 `UpdateEnemy_EnData05Bit6 ; 07:F3AA` 每帧翻转 ⇒ 该敌位移 30FPS 半速。
+    /// 旧测用 `data05=0x80`（对 PipeBug 不可达）把错误极性固化成了规格。
     #[test]
-    fn frozen_by_data05_bit7_does_not_move() {
+    fn data05_bit6_is_the_move_gate_not_bit7() {
         let mut m = Manager::default();
-        stage(&mut m, 2, 0x04, 0x7F, 2);
-        m.enemy(SLOT).set_data05(0x80);
-        let x0 = m.enemy(SLOT).pos_x();
+        stage(&mut m, 2, 0, 0, -4); // Active、speedX=0、accelY=0、speedY=-4
+        m.samus().set_y(0x40 + 0x40); // 差 ≥ $40 ⇒ accelY 保持 0
+
+        m.enemy(SLOT).set_data05(0x00); // bit6=0 ⇒ 本帧执行位移（dy=-4）
         pipe_bug_ai(&mut m, X);
-        assert_eq!(m.enemy(SLOT).pos_x(), x0);
+        assert_eq!(m.enemy(SLOT).y(), 0x3C, "bit6=0 帧必须 -4");
+
+        m.enemy(SLOT).set_data05(0x40); // bit6=1 ⇒ 跳到 @exit，整帧不移动
+        pipe_bug_ai(&mut m, X);
+        assert_eq!(m.enemy(SLOT).y(), 0x3C, "bit6=1 帧必须整帧不移动（每 2 帧 4px）");
+        assert_eq!(m.enemy(SLOT).data06(), 0, "跳过帧不得推进 speedSubPixelY");
+
+        m.enemy(SLOT).set_data05(0x80); // bit7 与本门无关（ASL 已丢弃）
+        pipe_bug_ai(&mut m, X);
+        assert_eq!(m.enemy(SLOT).y(), 0x38, "bit7 置不得冻结移动（旧测极性是错的）");
     }
 
     /// 非 Active ⇒ 不移动。
