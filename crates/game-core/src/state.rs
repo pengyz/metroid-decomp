@@ -210,6 +210,10 @@ pub struct RenderState {
     pub scroll_x: u8,
     /// PPUSCROLL Y（$2005 次写）。
     pub scroll_y: u8,
+    /// 名表镜像排布（`MirrorCntrl($FA)` bit3：置=横镜（竖滚房 `$2000≡$2400`）、
+    /// 清=竖镜（横滚房 `$2000≡$2800`））。【2026-11-22】渲染层此前固定按竖镜排布，
+    /// 使竖滚房（Norfair 竖井/电梯房）第二竖屏不可见——见 `render::nt_offset`。
+    pub mirror: bool,
     /// PPUMASK（$2001）寄存器面——bit3=BG 可见、bit4=精灵可见（asm `WritePPUCtrl`
     /// `lda PPUMASK_ZP / sta PPUMASK`（prg7_engine.asm:517）落点；`ScreenOff`/
     /// `ScreenNmiOff` 只改影子 $FE，真寄存器等 NMI 里 WritePPUCtrl 才落）。
@@ -224,6 +228,8 @@ impl Default for RenderState {
                scroll_x: 0, scroll_y: 0,
                // 渲染开（BG|OBJ|左 8 掩码=$1E 面）；测试面默认，真实路径由 $2001 写同步。
                ppumask: 0x1E,
-               palette: [0x0F; 32], ppuctrl: 0 }
+               palette: [0x0F; 32], ppuctrl: 0,
+               // 默认竖镜排布（横滚房 `$2000/$2400` 对）——与既有 47 房 Brinstar 行为一致。
+               mirror: false }
     }
 }

@@ -13,15 +13,31 @@ use crate::state::RenderState;
 
 /// 名表区映射（NT 号→frame/render.rs nametable vec 偏移——垂直镜像 NT2→0/NT3→1）。
 fn nt_offset(nt_plus1: u8) -> usize {
+    nt_offset_with(nt_plus1, false)
+}
+
+/// 名表逻辑页→物理 2KB 内偏移（`MirrorCntrl($FA)` bit3 决定排布，A 级锚
+/// `constants_ram.asm:811-813` + `prg7_engine.asm:1250-1290 SetPPUMirror`）。
+///
+/// - `mirror=false`（bit3 清 = asm 注释的 "vertical mirroring"，横滚房）：
+///   NT0→A、NT1→B、NT2→A、NT3→B（`$2000≡$2800`）——本仓既有行为。
+/// - `mirror=true`（bit3 置 = "horizontal mirroring"，竖滚房）：
+///   NT0→A、NT1→A、NT2→B、NT3→B（`$2000≡$2400`）——emu 实测
+///   `a1_r00` 的 ppu.hex 四页 `p0==p1`、`p2==p3` 即此排布。
+pub fn nt_offset_with(nt_plus1: u8, mirror: bool) -> usize {
     let nt = nt_plus1.wrapping_sub(1) as usize;
-    (nt & 1) * 0x400
+    if mirror {
+        ((nt >> 1) & 1) * 0x400
+    } else {
+        (nt & 1) * 0x400
+    }
 }
 
 /// ClearNameTable（$C175）：单名表填充环（名表+属性整块 $400B←fill）+
 /// RAM 面（$00←fill/$01←NT+1/$FF&=~$04——PPUCTRL INCR_DOWN 清）。
 pub fn clear_name_table(rs: &mut RenderState, nt_plus1: u8, fill: u8, ppuctrl: u8)
     -> (Vec<(u16, u8)>, u8) {
-    let off = nt_offset(nt_plus1);
+    let off = nt_offset_with(nt_plus1, rs.mirror);
     for b in rs.nametable[off..off + 0x400].iter_mut() {
         *b = fill;
     }
@@ -89,11 +105,23 @@ pub use game_data::render::render_data::NES_PALETTE;
 /// ring_x=wx mod 512⇒(nt_off=(nt0+wx/256)&1)*0x400+列；wy mod 240⇒行。
 /// 返回 (名表偏移, tile 索引位置, fine x/y)。
 fn bg_lookup(rs: &RenderState, x: usize, y: usize) -> (usize, usize, (usize, usize)) {
-    let wx = x + rs.scroll_x as usize;
-    let wy = (y + rs.scroll_y as usize) % 240;
-    let nt0 = (rs.ppuctrl & 1) as usize * 0x400;
-    let nt = (nt0 + (wx / 256) * 0x400) & 0x7FF;
-    let col = (wx % 256) / 8;
+    let wx_full = x + rs.scroll_x as usize;
+    let wy_full = y + rs.scroll_y as usize;
+    // 【2026-11-22 修正】页选择分两形（此前只按 X 选页 ⇒ 竖滚房第二竖屏永不可见）：
+    // - 横滚房（`mirror=false`）：环宽 512，`wx/256` 翻元表 bit0（`$2000`↔`$2400`）。
+    // - 竖滚房（`mirror=true`）：环高 480，`wy/240` 翻元表 bit1（`$2000`↔`$2800`）——
+    //   硬件上粗 Y 溢出 240 时 `inc` PPUCTRL bit1 并清零粗 Y（`stream_row_kick`
+    //   写 `$2000`/`$2C00` 两页即此形，`world/camera/scroll.rs:142-156`）。
+    let mut page = (rs.ppuctrl & 0x03) as usize;
+    if rs.mirror {
+        page ^= ((wy_full / 240) & 1) << 1;
+    } else {
+        page ^= (wx_full / 256) & 1;
+    }
+    let nt = nt_offset_with((page as u8).wrapping_add(1), rs.mirror);
+    let wx = wx_full & 0xFF;
+    let wy = wy_full % 240;
+    let col = wx / 8;
     let row = wy / 8;
     let idx = nt + row * 32 + col;
     (nt, idx, ((wx & 7), (wy & 7)))

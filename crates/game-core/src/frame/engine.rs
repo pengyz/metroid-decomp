@@ -175,6 +175,11 @@ impl FrameEngine {
             // `docs/findings/room-load-pixel-deferral.md`）。任务机相位与 `iter_gates` 是同一条
             // 时间轴上的两个刻度：窗用门队列计数，尾段用相位计数。
             crate::world::room_load::room_load_gate_step(&mut self.mem);
+            // 【名表镜像同步（2026-11-22）】`MirrorCntrl($FA)` bit3 置=横镜（竖滚房
+            // `$2000≡$2400`）、清=竖镜（横滚房 `$2000≡$2800`）——渲染层按此选物理页
+            // （`render::nt_offset_with` / `bg_lookup` / `write_ppudata`）。asm 侧由
+            // `SetPPUMirror ; 07:C4B6` 串行写 MMC1CTRL 生效。
+            self.mem.sync_mirroring();
             self.mem.write_ram(crate::ram_map::NMI_STATUS, 0);
             // 【根修③（2026-11-02）】span_fc 收口 inc（**defer 单增唯一源**（span 尾
             // skip 期 tail 不 inc（title_no_return）））——收口 tick 尾 inc 跳（fc_inced

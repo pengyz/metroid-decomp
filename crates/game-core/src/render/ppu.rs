@@ -11,6 +11,7 @@
 /// G11 类型下沉（r19）：RenderState 定义归 `crate::state`——本件保留 re-export（兼容径）
 /// +方法实现（write_ppuaddr/write_reg_2006/write_ppudata——同 crate 跨模块 impl）。
 pub use crate::state::RenderState;
+use crate::render::nt_offset_with;
 
 impl RenderState {
     /// $2006 双写（hi/lo flip-flop——先 hi 后 lo）。
@@ -57,9 +58,12 @@ impl RenderState {
                 }
             }
             0x2000..=0x2FFF => {
-                // 【V1 摄像机】名表镜像映射（竖镜=$2000/$2800 同 A、$2400/$2C00 同 B——
-                // &0x7FF 归一：$2C00→0x400（第二屏）——ToggleNameTable^=3 双屏径）。
-                let i = (self.ppuaddr - 0x2000) as usize & 0x7FF;
+                // 【2026-11-22】名表镜像映射按 `RenderState.mirror`（`MirrorCntrl($FA)` bit3）：
+                // 竖镜（横滚房）= $2000/$2800 同 A、$2400/$2C00 同 B（既有行为）；
+                // 横镜（竖滚房）= $2000/$2400 同 A、$2800/$2C00 同 B（emu `a1_r00` 实测）。
+                let rel = (self.ppuaddr - 0x2000) as usize;
+                let idx = (rel >> 10) & 0x03;
+                let i = nt_offset_with((idx as u8) + 1, self.mirror) + (rel & 0x3FF);
                 if i < self.nametable.len() {
                     self.nametable[i] = v;
                 }

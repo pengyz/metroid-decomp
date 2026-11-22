@@ -455,14 +455,13 @@ fn main() {
             for i in 0..0x2000usize {
                 hex.push_str(&format!("{:02X}", rs.chr.get(i).copied().unwrap_or(0)));
             }
-            for i in 0..0x800usize {
-                hex.push_str(&format!("{:02X}", rs.nametable.get(i).copied().unwrap_or(0)));
-            }
-            for i in 0..0x400usize {
-                hex.push_str(&format!("{:02X}", rs.nametable.get(i).copied().unwrap_or(0)));
-            }
-            for i in 0x400..0x800usize {
-                hex.push_str(&format!("{:02X}", rs.nametable.get(i).copied().unwrap_or(0)));
+            // 【2026-11-22】四页按 `MirrorCntrl` 排布展开（与 emu `dumpPpu` 经 PPU 总线
+            // 读 $2000-$2FFF 同构）：竖镜=[A,B,A,B]、横镜=[A,A,B,B]。
+            for page in 0..4usize {
+                let off = game_core::render::nt_offset_with((page as u8) + 1, rs.mirror);
+                for i in 0..0x400usize {
+                    hex.push_str(&format!("{:02X}", rs.nametable.get(off + i).copied().unwrap_or(0)));
+                }
             }
             // palette RAM（$3F00-$3F1F（32B（与 lua dumpPpu 同构）））
             for i in 0..32usize {

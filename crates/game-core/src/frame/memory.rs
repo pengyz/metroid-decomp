@@ -1115,6 +1115,13 @@ impl Manager {
     }
 
     /// 设 `InArea`（`$0074`，`$10`=Brinstar … `$14`=Ridley）。
+    /// `MirrorCntrl($FA)` bit3 → `RenderState.mirror`（`constants_ram.asm:811-813`：
+    /// 置=横镜（竖滚房 `$2000≡$2400`）、清=竖镜（横滚房 `$2000≡$2800`））。渲染层
+    /// 与 ppu.hex 出口都按此选物理页——见 `render::nt_offset_with`。
+    pub fn sync_mirroring(&mut self) {
+        self.render.mirror = self.read_ram(crate::ram_map::MIRROR_CNTRL) & 0x08 != 0;
+    }
+
     pub fn set_in_area(&mut self, v: u8) { self.write_ram(crate::ram_map::IN_AREA, v); }
     /// 设 `ScrollDir`（`$0049`）。
     pub fn set_scroll_dir(&mut self, v: u8) { self.write_ram(crate::ram_map::SCROLL_DIR, v); }
