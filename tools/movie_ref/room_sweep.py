@@ -44,6 +44,7 @@ ROOT = Path(__file__).resolve().parents[2]
 L4 = ROOT / "tools" / "l4_diff_run.py"
 CASES = ROOT / "cases"
 SHOTS_RUST = ROOT / "shots_rust"
+SHOTS_EMU = ROOT / "shots"
 TRACES = ROOT / "analysis" / "traces"
 PACK = ROOT / "assets" / "metroid.pack"
 
@@ -164,6 +165,10 @@ def build_case(area: int, room: int, frames: int, captures: list[int]) -> str:
         lines.append(f"fixture {entry} {addr:04X} {val:02X} {persist}")
     for c in captures:
         lines.append(f"capture {entry + c} f{c}")
+        # 跨腿对齐采点：rust capture(N)=tick(N-1) ⇒ emu[f_c] 的对应物是 rust[f_c-1]
+        if entry + c - 1 > 0:
+            lines.append(f"capture {entry + c - 1} prev{c}")
+    lines.append(f"capture {entry + frames - 1} prevend")
     lines.append(f"endFrame {entry + frames}")
     return "\n".join(lines) + "\n"
 
@@ -470,6 +475,36 @@ def _png_pair(stem: str, frame: int, tag: str):
     return (a, b) if (a.exists() and b.exists()) else None
 
 
+def aligned_diff(stem: str, frame: int, tag: str) -> int | None:
+    """emu[f] ↔ rust[f-1] 的像素差；缺失产物返回 None。
+
+    背景：`rust capture(N) = tick(N-1)`，故 emu 第 f 帧的画面等于 rust 第 f-1 帧；
+    房扫历史上按同名文件成对，恒比相邻两帧 ⇒ 滚动每帧 ~2px，图上恒 dx=2。
+    """
+    if tag.startswith("f"):
+        prev = tag.replace("f", "prev", 1)
+    elif tag == "end":
+        prev = "prevend"
+    else:
+        prev = None
+    if not prev:
+        return None
+    a = SHOTS_EMU / f"{stem}_f{frame:05}_{tag}.png"
+    b = SHOTS_RUST / f"{stem}_f{frame - 1:05}_{prev}.png"
+    if not (a.is_file() and b.is_file()):
+        return None
+    try:
+        import numpy as np
+        from PIL import Image
+    except Exception:
+        return None
+    x = np.asarray(Image.open(a).convert("RGB")).astype(np.int16)
+    y = np.asarray(Image.open(b).convert("RGB")).astype(np.int16)
+    if x.shape != y.shape:
+        return None
+    return int((x != y).any(axis=2).sum())
+
+
 def shift_probe(stem: str, frame: int, tag: str, raw_px: int,
                 max_shift: int = 4) -> dict | None:
     """PPU 全同但像素有差时，测「整屏平移几像素」能否解释差异。
@@ -694,6 +729,9 @@ def run_room(area: int, room: int, frames: int, captures: list[int],
             cap["sanity"] = (sanity_probe(stem, int(r["frame"]), str(r["tag"]))
                              if r.get("frame") is not None and r.get("tag") else None)
             cap["layer"] = classify_layer(px_n, ppu, sh)
+            if r.get("tag") and r.get("frame") is not None:
+                cap["aligned_diff_pixels"] = aligned_diff(
+                    stem, int(r["frame"]), str(r["tag"]))
             results.append(cap)
             if r.get("tag"):
                 rec["diff_pixels"][str(r["tag"])] = r.get("diff_pixels")
@@ -715,8 +753,31 @@ def run_room(area: int, room: int, frames: int, captures: list[int],
             rec["notes"].append("采集点 error/blocked："
                                 + ", ".join(f"{c['tag']}={c['status']}" for c in bad))
             return rec
+        auth = []
+        for c in results:
+            same = c["diff_pixels"] or 0
+            al = c.get("aligned_diff_pixels")
+            if al is None:
+                c["best_pairing"] = "same"
+                c["best_diff_pixels"] = same
+            else:
+                c["best_pairing"] = "same" if same <= al else "shift1"
+                c["best_diff_pixels"] = min(same, al)
+            if c["tag"] == "pre":
+                continue
+            auth.append((c["tag"], c["best_diff_pixels"]))
         diffs = [(c["diff_pixels"] or 0) for c in results]
-        if results and all(d == 0 for d in diffs):
+        if auth and all(v == 0 for _, v in auth):
+            rec["status"] = "ok"
+            rec["ok"] = True
+            rec["aligned"] = True
+            rec["aligned_offset"] = -1
+            rec["notes"].append("取帧等价判定（same|shift1 逐点取小）：全采集点 0px")
+        elif auth:
+            rec["status"] = "mismatch"
+            rec["mismatch"] = [{"tag": t, "best_diff_pixels": v} for t, v in auth if v]
+            rec["notes"].append(f"取小后最大失配 {max(v for _, v in auth)} px")
+        elif results and all(d == 0 for d in diffs):
             rec["status"] = "ok"
             rec["ok"] = True
         else:
