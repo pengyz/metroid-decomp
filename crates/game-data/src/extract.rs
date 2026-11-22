@@ -43,6 +43,7 @@ pub fn sections(rom: &[u8]) -> Result<Vec<Section>, String> {
         out.extend(extract_area(prg, spec)?);
     }
     out.extend(extract_enemy_tables_all(prg)?);
+    out.extend(extract_crawler_anim_tables(prg)?);
     out.extend(extract_rom_tables(prg)?);
     out.extend(extract_music_tables(prg)?);
     out.extend(extract_music_streams(prg)?);
@@ -548,6 +549,10 @@ fn seg_meta() -> Vec<SegMeta> {
         SegMeta { key: PackKey::KrEnemyDeathAnim, kind: "bytes", elem: 1, count: 32, rom: "bank04:960B", note: "EnemyDeathAnimIndex（type×2+向；按区不同）" },
         SegMeta { key: PackKey::ToEnemyDeathAnim, kind: "bytes", elem: 1, count: 32, rom: "bank03:960B", note: "EnemyDeathAnimIndex（type×2+向；按区不同）" },
         SegMeta { key: PackKey::RiEnemyDeathAnim, kind: "bytes", elem: 1, count: 32, rom: "bank05:960B", note: "EnemyDeathAnimIndex（type×2+向；按区不同）" },
+        SegMeta { key: PackKey::BrCrawlerAnim, kind: "bytes", elem: 1, count: 8, rom: "bank01:9AA0", note: "CrawlerAnimIndexTable（orient×2+flip；按区不同）" },
+        SegMeta { key: PackKey::NoCrawlerAnim, kind: "bytes", elem: 1, count: 8, rom: "bank02:99ED", note: "CrawlerAnimIndexTable（Nova 表；按区不同）" },
+        SegMeta { key: PackKey::KrCrawlerAnim, kind: "bytes", elem: 1, count: 8, rom: "bank04:99EF", note: "CrawlerAnimIndexTable（Zeela 表；按区不同）" },
+        SegMeta { key: PackKey::RiCrawlerAnim, kind: "bytes", elem: 1, count: 8, rom: "bank05:99BE", note: "CrawlerAnimIndexTable（Viola 表；按区不同）" },
         SegMeta { key: PackKey::BrEnemyHealth, kind: "bytes", elem: 1, count: 64, rom: "bank01:962B", note: "EnemyHealthTbl（asm 标签间距见 note）" },
         SegMeta { key: PackKey::BrEnemyRestingAnim, kind: "bytes", elem: 1, count: 32, rom: "bank01:963B", note: "EnemyRestingAnimIndex（asm 标签间距见 note）" },
         SegMeta { key: PackKey::BrEnemyActiveAnim, kind: "bytes", elem: 1, count: 32, rom: "bank01:965B", note: "EnemyActiveAnimIndex（asm 标签间距见 note）" },
@@ -1404,6 +1409,41 @@ fn extract_area_pal_toggle(prg: &[u8]) -> Result<Vec<Section>, String> {
         body.push(b[0]);
     }
     Ok(vec![Section { key: PackKey::AreaPalToggle, data: body }])
+}
+
+/// `CrawlerAnimIndexTable_{AREA}`（8 B，`Y = orientation*2 + direction` 索引）。
+///
+/// **值随区不同**：每一项是 `EnAnim_X - EnAnimTable_{AREA}`，而各区 `EnAnimTable` 基址/内容
+/// 不同（bank1 `9D6A` / bank2 `9BDA` / bank4 `9C86` / bank5 `9B85`）——同一"墙上爬"语义
+/// 在五区拿到的是不同帧号。旧形把 bank1（Zoomer）的 `35 35 3E 38 3B 3B 38 3E` 写死在
+/// `crawler.rs` ⇒ 非 Brinstar 的 Crawler 重取向写错 `animIndex/resetAnimIndex`（实测
+/// Norfair room 42 f120：emu `$72/$74` vs rust `$3E/$40`，OAM 8 项全错、87 px）。
+///
+/// **Tourian 无段**：`prg3_tourian.asm` 的 AI 表没有 Crawler 类型（该区 Crawler 不可达），
+/// 不为它编造数据；消费侧按 `Option` fail-loud。
+fn extract_crawler_anim_tables(prg: &[u8]) -> Result<Vec<Section>, String> {
+    // (area 序 = InArea&$0F, bank, 表址)——地址取自各区 `enemy_sprite_data.asm` 标签。
+    const SPEC: [(usize, u8, u16, PackKey); 4] = [
+        (0, 1, 0x9AA0, PackKey::BrCrawlerAnim),
+        (1, 2, 0x99ED, PackKey::NoCrawlerAnim),
+        (2, 4, 0x99EF, PackKey::KrCrawlerAnim),
+        (4, 5, 0x99BE, PackKey::RiCrawlerAnim),
+    ];
+    let banks = area_banks(prg)?;
+    let mut out = Vec::with_capacity(SPEC.len());
+    for (area, bank, addr, key) in SPEC {
+        // 机械自检：区→bank 映射必须与 `BankTable 07:CA30` 推导一致（防手抄错区）。
+        if banks[area] != bank {
+            return Err(format!(
+                "CrawlerAnimTable area{area}: bank 期望 {bank}，BankTable 给 {}",
+                banks[area]
+            ));
+        }
+        let data = bank_slice(prg, bank, addr, 8)
+            .map_err(|e| format!("CrawlerAnimTable area{area} bank{bank} ${addr:04X}: {e}"))?;
+        out.push(Section { key, data });
+    }
+    Ok(out)
 }
 
 /// 区头参数窗 `$95CD-$95D9`（13 B）——**消费点全在 bank7**（固定 bank 读当前映射区）：

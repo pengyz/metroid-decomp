@@ -43,6 +43,9 @@ pub(crate) fn crawler_ai(mem: &mut crate::frame::Manager, x: u8) {
     // /emu=帧末，同帧差一次更新）⇒真根=走位首动帧差（f798 早 1px）。
     // 【H3 测试缝（findings/h3-enemy-slot-residual.md）】gate 公式抽函数
     // crawler_move_gate（行为随形——H3 TDD 红靶：FC−1 相位补偿）。
+    // 按区语义（bank 1/4 vs bank 2/5 在 `crawler.asm` 里是多处 `.if BANK` 分支）：三处
+    // 按区分叉共用这一个区号（岩浆折返阈值 `$E4/$EB`、Resting 出口带不带 anim、重取向表）。
+    let area = crate::frame::cur_area(mem);
     let gate = crawler_move_gate(x, mem.read_ram(crate::ram_map::FRAME_COUNT));
     // 【goal-轮15 gate 值直证】F852 门值逐帧（金方 2 帧跳 vs 我方移动模式）。
     if gate == 0 {
@@ -53,9 +56,17 @@ pub(crate) fn crawler_ai(mem: &mut crate::frame::Manager, x: u8) {
     // EnemyStatusPreAI 三连门（crawler.asm:8-22 逐条——激活帧拦 Resting=本修核心）。
     let pre_ai = mem.read_ram(0x0081);
     if pre_ai == 1 {
-        // SkreeExit_Resting（bank1/4 共享——skree.asm:62 `lda #8/noMove`）
-        update_enemy_anim(mem, x, 8);
-        update_enemy_common_no_move_no_anim(mem, x);
+        // 【按区出口（2026-11-22 修）】asm `crawler.asm:8-14`：
+        // `.if BANK == 1 || BANK == 4 ⇒ beq SkreeExit_Resting`（`lda #$08` +
+        // `UpdateEnemyCommon_noMove`，动画每 8 帧一步）；`.elif BANK == 2 || BANK == 5 ⇒
+        // beq CrawlerExit_Resting`（`jmp UpdateEnemyCommon_noMove`，**不带 anim**）。
+        // 旧形对五区一律走 anim 8 ⇒ Norfair/Ridley 的静止 Crawler 动画节拍与帧号错。
+        if area == 0 || area == 2 {
+            update_enemy_anim(mem, x, 8);
+            update_enemy_common_no_move_no_anim(mem, x);
+        } else {
+            update_enemy_common_no_move_anim(mem, x, 0x02);
+        }
         return;
     }
     if pre_ai == 3 {
@@ -79,7 +90,12 @@ pub(crate) fn crawler_ai(mem: &mut crate::frame::Manager, x: u8) {
     // orientation==1（下墙径）∧ y==$E4（BANK1/4 阈——BANK2/5=$EB）⇒FlipDirection+
     // orientation←3（上墙）+跳过本帧移动（@afterLavaTurnAround 直入外角检）。
     let ey = mem.read_ram(0x0400 + x as u16 + 0);
-    if orientation == 1 && ey == 0xE4 {
+    // 【按区阈值（2026-11-22 修）】asm `crawler.asm:40-46`：
+    // `.if BANK == 1 || BANK == 4 ⇒ cpy #$E4` / `.elif BANK == 2 || BANK == 5 ⇒ cpy #$EB`。
+    // 即 Brinstar(bank1)/Kraid(bank4) 用 `$E4`，Norfair(bank2)/Ridley(bank5) 用 `$EB`；
+    // 旧形恒用 `$E4` ⇒ 后两区的 Crawler 提前 7px 折返。
+    let lava_y = if area == 1 || area == 4 { 0xEB } else { 0xE4 };
+    if orientation == 1 && ey == lava_y {
         let d = mem.read_ram(0x0400 + x as u16 + 5);
         mem.write_ram(0x0400 + x as u16 + 5, d ^ 0x01); // CrawlerFlipDirection
         mem.write_ram(0x0400 + x as u16 + 10, 0x03); // orientation←3（上墙）
@@ -148,13 +164,21 @@ pub(crate) fn crawler_outside_corner_check(mem: &mut crate::frame::Manager, x: u
 /// `lda $9AA0,y / jmp InitEnAnimIndex`（F68D：reset/index←A、animDelay←0）。
 /// 旧形「随件占位」⇒ 敌 animFrame 恒 0 ⇒ 画错帧（emu tile CA/CB/DA/DB vs rust 14）。
 pub(crate) fn crawler_reorient_sprite(mem: &mut crate::frame::Manager, x: u8) {
-    const CRAWLER_SPRITE_ANIM_TBL: [u8; 8] =
-        [0x35, 0x35, 0x3E, 0x38, 0x3B, 0x3B, 0x38, 0x3E]; // ROM $9AA0（orient*2+flip）
+    // 【按区表（2026-11-22 修）】asm `CrawlerAnimIndexTable_{AREA}` 五区各一份、值不同：
+    // bank1 `01:9AA0`（Zoomer）=`35 35 3E 38 3B 3B 38 3E`、bank2 `02:99ED`（Nova）
+    // =`69 69 72 6C 6F 6F 6C 72`、bank4 `04:99EF`（Zeela）同 bank1、bank5 `05:99BE`
+    // （Viola）=`4A 4A 53 4D 50 50 4D 53`。旧形硬编码 bank1 ⇒ 非 Brinstar 的 Crawler
+    // 重取向写错 animIndex/resetAnimIndex（实测 Norfair room 42 f120：emu `$72`/`$74`
+    // vs rust `$3E`/`$40`）。Tourian 无该表（该区 AI 表无 Crawler）⇒ fail-loud。
+    let area = crate::frame::cur_area(mem);
+    let Some(tbl) = game_data::assets::crawler_anim_table(area) else {
+        crate::unported!("bank03:crawler-anim-tbl");
+    };
     let d05 = mem.read_ram(0x0400 + x as u16 + 5);
     let flip = d05 & 0x01; // lsr→carry=bit0
     let orient = (mem.read_ram(0x0400 + x as u16 + 10) & 0x03) as usize;
     let idx = ((orient << 1) | flip as usize) & 0x07;
-    let v = CRAWLER_SPRITE_ANIM_TBL[idx];
+    let v = tbl[idx];
     // 【goal-轮86 reorient idx 直证】reset 源（帧面差源）。
     // InitEnAnimIndex(F68D)
     mem.write_wram(0x6AF4 + x as u16 + 5, v); // resetAnimIndex
@@ -195,10 +219,14 @@ mod tests {
     /// 写入 `resetAnimIndex` 与 `animIndex`、`animDelay←0`。
     #[test]
     fn reorient_writes_rom_table_entry() {
+        game_data::pack::init_from_env().ok();
+        // bank1 `01:9AA0`（Zoomer 序）——按区表见 `crawler_anim_table_differs_per_area`。
         const TBL: [u8; 8] = [0x35, 0x35, 0x3E, 0x38, 0x3B, 0x3B, 0x38, 0x3E];
         for orient in 0u8..4 {
             for flip in 0u8..2 {
                 let mut m = Manager::default();
+                // `Manager::default()` 的 `$0074 InArea`=3（Tourian）——本测钉 bank1 表。
+                m.set_in_area(0x00);
                 let x = 0x10u8;
                 let en = 0x0400 + x as u16;
                 m.write_ram(en + 5, flip); // data05 方向位
@@ -216,8 +244,10 @@ mod tests {
     /// 转角径写面：`data05` bit2/1 清、bit0（方向）与 bit6 保留。
     #[test]
     fn reorient_clears_bit2_and_bit1_keeps_others() {
+        game_data::pack::init_from_env().ok();
         for d5 in [0x1Au8, 0x5A, 0x7F] {
             let mut m = Manager::default();
+            m.set_in_area(0x00); // Brinstar（默认 $74=3）
             let x = 0x10u8;
             let en = 0x0400 + x as u16;
             m.write_ram(en + 5, d5);

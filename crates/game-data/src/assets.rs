@@ -324,6 +324,22 @@ pub fn enemy_movement_strings(area: u8) -> &'static [u8] { enemy_table(area, 10)
 /// `EnemyDeathAnimIndex ; 各 bank $960B`（32 B，`type*2+朝向` 索引）——**按区不同**。
 pub fn enemy_death_anim(area: u8) -> &'static [u8] { enemy_table(area, 11) }
 
+/// `CrawlerAnimIndexTable_{AREA}`（8 B，`orientation*2 + direction` 索引）——**按区不同**。
+///
+/// 表项是 `EnAnim_X - EnAnimTable_{AREA}`，而五区 anim 表基址/内容各不相同，故同一"墙上爬"
+/// 语义在不同区落到不同帧号。**Tourian 无该表**（`prg3_tourian.asm` 的 AI 表无 Crawler
+/// 类型）⇒ 返回 `None`，消费侧 fail-loud（不编造数据）。
+pub fn crawler_anim_table(area: u8) -> Option<&'static [u8]> {
+    let key = match area {
+        0 => PackKey::BrCrawlerAnim,
+        1 => PackKey::NoCrawlerAnim,
+        2 => PackKey::KrCrawlerAnim,
+        4 => PackKey::RiCrawlerAnim,
+        _ => return None,
+    };
+    pack::try_get(key)
+}
+
 
 /// ## 按区表必须带区：`EnemyDeathAnimIndex` 的回归锚
 #[cfg(test)]
@@ -451,6 +467,30 @@ mod tests_per_area_tables {
 
     /// `EnemyDeathAnimIndex ; 各 bank $960B` **按区不同**（A 级：ROM 逐字节）。
     /// 旧形是单常量取 bank1 ⇒ 其余四区爆体帧错表。此测钉住五区首字节与长度。
+    /// `CrawlerAnimIndexTable` 五区锚（ROM 逐字节）：**只有 Tourian 无此表**。
+    ///
+    /// bank1/bank4 同为 Zoomer/Zeela 值域但表址不同（`01:9AA0` / `04:99EF`），Norfair 是
+    /// Nova、Ridley 是 Viola——旧形硬编码 bank1 ⇒ 非 Brinstar 的 Crawler 重取向取错帧。
+    #[test]
+    fn crawler_anim_table_differs_per_area() {
+        init_from_env().ok();
+        // 五区首项（`orientation=0,direction=0` = 地面正行）与长度：值来自 ROM 逐字节
+        // 实读（`01:9AA0` / `02:99ED` / `04:99EF` / `05:99BE`），此处只钉首项与整表互异
+        // ——完整 8 B 表在包里，逐字节由 `pack-tool verify` 对 ROM 校验。
+        let br = crawler_anim_table(0).unwrap();
+        let no = crawler_anim_table(1).unwrap();
+        let kr = crawler_anim_table(2).unwrap();
+        let ri = crawler_anim_table(4).unwrap();
+        for t in [br, no, kr, ri] {
+            assert_eq!(t.len(), 8, "CrawlerAnimIndexTable 8 B（orientation×2+direction）");
+        }
+        assert_eq!((br[0], no[0], kr[0], ri[0]), (0x35, 0x69, 0x35, 0x4A));
+        assert_ne!(br, no, "Norfair 是 Nova 表（≠ Zoomer）");
+        assert_ne!(no, ri, "Norfair 与 Ridley 的表必须不同");
+        assert_eq!(br, kr, "bank1 与 bank4 的 Zoomer/Zeela 表同值（表址不同）");
+        assert!(crawler_anim_table(3).is_none(), "Tourian 无 CrawlerAnimIndexTable（AI 表无该 type）");
+    }
+
     #[test]
     fn enemy_death_anim_differs_per_area() {
         init_from_env().ok();

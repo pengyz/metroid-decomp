@@ -293,6 +293,14 @@ pub enum PackKey {
     KrEnSprites = 162,
     ToEnSprites = 163,
     RiEnSprites = 164,
+    // ---- 敌人「重新取向」动画索引表（**按区**；`CrawlerAnimIndexTable_{AREA}` 8 B）----
+    // 值 = `EnAnim_X - EnAnimTable`，随各区 anim 表不同而不同；旧形硬编码 bank1
+    // （Zoomer）⇒ 非 Brinstar 的 Crawler 重取向取错帧（证据：ROM 02:99ED / 05:99BE）。
+    // **Tourian 无 Crawler**（`prg3_tourian.asm` 的 AI 表无该 type）⇒ 该区不给段。
+    BrCrawlerAnim = 207,
+    NoCrawlerAnim = 208,
+    KrCrawlerAnim = 209,
+    RiCrawlerAnim = 210,
 }
 
 /// 敌帧/位复合段头长（6 × u32：anim_len / fptr_entries / place_cnt / frames_len / places_len / pad）。
@@ -543,6 +551,10 @@ impl PackKey {
             PackKey::KrEnSprites => "area.kr.en_sprites",
             PackKey::ToEnSprites => "area.to.en_sprites",
             PackKey::RiEnSprites => "area.ri.en_sprites",
+            PackKey::BrCrawlerAnim => "area.br.crawler_anim",
+            PackKey::NoCrawlerAnim => "area.no.crawler_anim",
+            PackKey::KrCrawlerAnim => "area.kr.crawler_anim",
+            PackKey::RiCrawlerAnim => "area.ri.crawler_anim",
         }
     }
 
@@ -712,6 +724,10 @@ impl PackKey {
             162 => PackKey::KrEnSprites,
             163 => PackKey::ToEnSprites,
             164 => PackKey::RiEnSprites,
+            207 => PackKey::BrCrawlerAnim,
+            208 => PackKey::NoCrawlerAnim,
+            209 => PackKey::KrCrawlerAnim,
+            210 => PackKey::RiCrawlerAnim,
             153 => PackKey::TourianMetroidData,
             154 => PackKey::AreaPalToggle,
             165 => PackKey::AreaBrHeader,
