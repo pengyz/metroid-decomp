@@ -98,8 +98,11 @@ pub(crate) fn metroid_ai(mem: &mut Manager, x: u8) {
     }
 
     // asm:9-16 —— 三条早退径（动画参数 $0F/$0F 已在下面两处尾件里直传）
+    // 【2026-11-22 更正】`asl / bmi`（ROM 03:97FB `0A` / 03:97FC `30`）判的是**原 bit6**：
+    // ASL 先把 bit7 移进 C 丢弃，BMI 读的 N 来自 bit6（同 PipeBug 族，见 pipe_bug.rs）。
+    // 旧形判 bit7 ⇒ 门永不命中 ⇒ 早退径失效（该位由 UpdateEnemy_EnData05Bit6 每帧翻转）。
     let data05 = mem.enemy(slot).data05();
-    if data05 & 0x80 != 0 {
+    if data05 & 0x40 != 0 {
         update_enemy_common_decide_with_beats(mem, x, ANIM_BEAT, ANIM_BEAT);
         return;
     }
@@ -286,14 +289,25 @@ mod tests_metroid {
         assert_eq!(m.enemy(0).status_raw(), 0, "逃逸计时器进行中 ⇒ status=0");
     }
 
-    /// asm:14-16 —— `data05` bit7 置位（爆散帧）⇒ 早退，不碰锁存/血量。
+    /// asm:14-16 —— `lda data05 / asl / bmi`（ROM 03:97FB/03:97FC）判的是**原 bit6** ⇒ bit6 置
+    /// 走早退径。旧测用 bit7（对 Metroid 不可达）把错误极性固化成规格。
     #[test]
-    fn data05_bit7_early_exit() {
+    fn data05_bit6_is_the_early_exit_not_bit7() {
+        let mut m = mgr();
+        m.enemy(0).set_data05(0x40);
+        m.enemy(0).set_health(1);
+        metroid_ai(&mut m, 0);
+        assert_eq!(m.enemy(0).health(), 1, "bit6 置 ⇒ 早退径，不得写无敌血");
+
         let mut m = mgr();
         m.enemy(0).set_data05(0x80);
         m.enemy(0).set_health(1);
         metroid_ai(&mut m, 0);
-        assert_eq!(m.enemy(0).health(), 1, "早退径不得把血量改成无敌值");
+        assert_eq!(
+            m.enemy(0).health(),
+            0xFF,
+            "bit7 与本门无关（ASL 已丢弃）⇒ 不得早退"
+        );
     }
 
     /// asm:19-21 —— `status == Explode` ⇒ 早退。
