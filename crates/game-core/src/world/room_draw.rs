@@ -57,9 +57,9 @@ fn find_item_in_history(y0: u8, v06: u8, v07: u8, item_lo: &[u8], item_hi: &[u8]
 // 每笔非 0 残差在 `cycles::UNEXPLAINED` 里有一条待查登记）。
 // 再导出保持既有调用面不变（本文件 6 处累加 + 测试 + physics.rs 消费）。
 pub(crate) use crate::frame::cycles::{
-    LOAD_ENEMY as LOAD_ENEMY_CYCLES, LOAD_INIT as LOAD_INIT_CYCLES, LOAD_MT_FAST,
-    LOAD_MT_FULL, LOAD_OBJ as LOAD_OBJ_CYCLES, LOAD_ROW as LOAD_ROW_CYCLES,
-    LOAD_SHELL as LOAD_SHELL_CYCLES, LOAD_Y_UNIT as LOAD_YLOOP_CYCLES,
+    LOAD_ENEMY as LOAD_ENEMY_CYCLES, LOAD_INIT as LOAD_INIT_CYCLES, LOAD_MT_FAST, LOAD_MT_FULL,
+    LOAD_OBJ as LOAD_OBJ_CYCLES, LOAD_ROW as LOAD_ROW_CYCLES, LOAD_SHELL as LOAD_SHELL_CYCLES,
+    LOAD_Y_UNIT as LOAD_YLOOP_CYCLES,
 };
 pub(crate) const LOAD_BASE_CYCLES: u32 = 29000;
 pub(crate) const FRAME_CYCLES: u32 = 29780;
@@ -68,8 +68,7 @@ pub fn draw_room(mem: &mut crate::frame::Manager, room: u8) -> bool {
     // 房流按区分发（asm `SetupRoom` 经 $3B/$3C 间接查当前区 RoomPtrTable——
     // 表值=ROM 当前区 bank；0=Brinstar/1=Norfair，其余区 unported fail-loud D7）。
     let area = mem.read_ram(crate::ram_map::IN_AREA) & 0x0F;
-    let Some(stream) = game_data::assets::room_streams(area)
-        .and_then(|ss| ss.get(room as usize))
+    let Some(stream) = game_data::assets::room_streams(area).and_then(|ss| ss.get(room as usize))
     else {
         if game_data::assets::room_streams(area).is_none() {
             crate::unported!("bank07:959A-room_streams-area");
@@ -79,7 +78,11 @@ pub fn draw_room(mem: &mut crate::frame::Manager, room: u8) -> bool {
     // 【V2-lite】SelectRoomRAM（$EA05）：缓冲按名表位（EB85：PPUCTRL^ScrollDir）&1
     // ——名表 0→RoomRAMA($6000)/名表 3→RoomRAMB($6400)（双屏邻房径）。旧形硬编码 $6000
     // 致邻房装载落错缓冲（碰撞读 $6400 空=tile 00 固实——移动冻结根）。
-    let base = if (mem.read_ram(crate::ram_map::PPUCTRL_ZP) ^ mem.read_ram(crate::ram_map::SCROLL_DIR)) & 1 != 0 {
+    let base = if (mem.read_ram(crate::ram_map::PPUCTRL_ZP)
+        ^ mem.read_ram(crate::ram_map::SCROLL_DIR))
+        & 1
+        != 0
+    {
         0x6400u16
     } else {
         0x6000u16
@@ -91,7 +94,9 @@ pub fn draw_room(mem: &mut crate::frame::Manager, room: u8) -> bool {
     let room_palette = stream.first().copied().unwrap_or(0); // RoomPalette（首字节——SetupRoom 读）
     let mut i = 1usize; // 对象环起点=首字节后（RoomPalette 已消费——asm 形）
     loop {
-        let Some(&b) = stream.get(i) else { return false };
+        let Some(&b) = stream.get(i) else {
+            return false;
+        };
         match b {
             0xFF => {
                 // 【径汇修正（2026-10-28（scroll-content-mapping.md））】EndOfRoom（$EAF4）
@@ -111,7 +116,7 @@ pub fn draw_room(mem: &mut crate::frame::Manager, room: u8) -> bool {
             }
             _ => {
                 mem.work_cycles = mem.work_cycles.wrapping_add(LOAD_OBJ_CYCLES); // DrawObject 壳
-                // DrawObject：pos/struct 索引/属性 3B
+                                                                                 // DrawObject：pos/struct 索引/属性 3B
                 let pos = b;
                 let yu = (pos >> 4) as u32;
                 mem.work_cycles = mem.work_cycles.wrapping_add(LOAD_YLOOP_CYCLES * yu);
@@ -143,7 +148,9 @@ fn draw_struct(
         crate::unported!("bank07:959A-structures-area");
     };
     let _ = game_data::assets::struct_ptrs(area); // asm 查 StructPtrTable（值未用——DrawStruct 直吃结构流）
-    let Some(data) = structures.get(struct_idx as usize) else { return };
+    let Some(data) = structures.get(struct_idx as usize) else {
+        return;
+    };
     let mut idx = 0usize;
     let mut work = work;
     loop {
@@ -153,7 +160,7 @@ fn draw_struct(
         }
         idx += 1;
         mem.work_cycles = mem.work_cycles.wrapping_add(LOAD_ROW_CYCLES); // DrawStructRow 行壳
-        // DrawStructRow：行头（低半字节=元 tile 计（0=16）/高半字节=x 偏移）
+                                                                         // DrawStructRow：行头（低半字节=元 tile 计（0=16）/高半字节=x 偏移）
         let count = match head & 0x0F {
             0 => 16u8,
             n => n,
@@ -173,8 +180,13 @@ fn draw_struct(
             let Some(&mt) = data.get(idx) else { return };
             idx += 1;
             // 【周期累加】UpdateAttrib 早退径（调色板同）/全径（asm EF9E 判入口）
-            mem.work_cycles = mem.work_cycles.wrapping_add(
-                if obj_palette == room_palette { LOAD_MT_FAST } else { LOAD_MT_FULL });
+            mem.work_cycles = mem
+                .work_cycles
+                .wrapping_add(if obj_palette == room_palette {
+                    LOAD_MT_FAST
+                } else {
+                    LOAD_MT_FULL
+                });
             let mt_base = (mt as usize) * 4;
             // 元 tile 按区分发（asm DrawMetatile 经 $3F/$40 间接查当前区 MetatileDefs——
             // 0=Brinstar $AEF0/1=Norfair $AEEC，其余区 unported D7）。
@@ -182,10 +194,7 @@ fn draw_struct(
                 crate::unported!("bank07:959A-metatile-area");
             };
             for k in 0..4u16 {
-                let tile = metatile
-                    .get(mt_base + k as usize)
-                    .copied()
-                    .unwrap_or(0);
+                let tile = metatile.get(mt_base + k as usize).copied().unwrap_or(0);
                 let at = row_ptr.wrapping_add(TILE_POS[k as usize]);
                 mem.write_wram(at, tile);
             }
@@ -207,7 +216,6 @@ fn draw_struct(
     }
 }
 
-
 /// asm `@DrawMetatile ; 07:EF2B` 的 RoomRAM 边界守卫（`prg7_engine.asm:9729-9741`）。
 ///
 /// 真值：RoomRAMA=$60xx / RoomRAMB=$64xx，各自 tile 区到页内 `$03C0` 为止（属性区
@@ -226,7 +234,6 @@ fn metatile_out_of_bounds(ptr: u16) -> bool {
     hi > 0x67
 }
 
-
 /// 门对象槽系统·任务卡 1——LoadDoor/SpawnDoorRoutine（$EB8C/$EB92
 /// （findings/door-system-audit.md 任务卡 1 实录（A 级全文）））：
 /// 棋盘槽选（y=((MapPosX+MapPosY)&1)<<1|side（side=info bit4（Amul16 CF=bit4））；
@@ -243,18 +250,25 @@ fn load_door(mem: &mut crate::frame::Manager, info: u8) {
     const DOOR_XS: [u8; 2] = [0xF0, 0x10]; // $EBFC（右/左）
     const DOOR_SCROLL_BLOCKS: [u8; 2] = [0x02, 0x01]; // $EBFE（右/左）
     let side = (info >> 4) & 1; // Amul16 CF=bit4（audit 实录（双径互证））
-    let sum = mem.read_ram(MAP_POS_X).wrapping_add(mem.read_ram(MAP_POS_Y));
+    let sum = mem
+        .read_ram(MAP_POS_X)
+        .wrapping_add(mem.read_ram(MAP_POS_Y));
     let y_idx = (((sum & 1) << 1) | side) as usize;
     let x_off = DOOR_SLOTS[y_idx] as u16;
     let door_type = info & 3;
-    mem.object(((0x80 + x_off) / 16) as u8).set_door_type(door_type); // DoorType（data07）
+    mem.object(((0x80 + x_off) / 16) as u8)
+        .set_door_type(door_type); // DoorType（data07）
     let init = match door_type {
         1 | 3 => true, // 蓝/音乐蓝（@if_B 直入）
         _ => {
             // 红/导弹径：$09←$0A + LEE41 + CheckForItem（已收⇒跳 init）
             mem.write_ram(0x0009, 0x0A);
             let map_x = mem.read_ram(MAP_POS_X);
-            let item_x = if x_off >= 0x10 { map_x.wrapping_sub(1) } else { map_x };
+            let item_x = if x_off >= 0x10 {
+                map_x.wrapping_sub(1)
+            } else {
+                map_x
+            };
             let item_y = mem.read_ram(MAP_POS_Y); // LEE41（$06←MapPosY）
             let y0 = mem.read_wram(0x6886); // NumberOfUniqueItems（计数（含红门））
             let mut lo = [0u8; 0x100];
@@ -276,10 +290,10 @@ fn load_door(mem: &mut crate::frame::Manager, info: u8) {
     if init {
         mem.object(((0x80 + x_off) / 16) as u8).set_status(1); // status←1（Init 态）
     }
-    let nt = get_name_table_at_scroll_dir(
-        mem.read_ram(PPUCTRL_ZP), mem.read_ram(SCROLL_DIR));
+    let nt = get_name_table_at_scroll_dir(mem.read_ram(PPUCTRL_ZP), mem.read_ram(SCROLL_DIR));
     mem.object(((0x80 + x_off) / 16) as u8).set_hi(nt); // hi
-    mem.object(((0x80 + x_off) / 16) as u8).set_x(DOOR_XS[side as usize]); // x
+    mem.object(((0x80 + x_off) / 16) as u8)
+        .set_x(DOOR_XS[side as usize]); // x
     mem.object(((0x80 + x_off) / 16) as u8).set_y(0x68); // y（恒 $68）
     let block = DOOR_SCROLL_BLOCKS[side as usize];
     let other = (nt ^ 1) as u16;
@@ -287,12 +301,10 @@ fn load_door(mem: &mut crate::frame::Manager, info: u8) {
     mem.write_ram(SCROLL_BLOCK_NT3 + other, cur | block);
 }
 
-
 // ==== 任务卡 3：UpdateDoor 7 态状态机（$8B79/areas_common:1415-1750（audit 实录））====
 
 const DOOR_X_TABLE: [u8; 2] = [0xE8, 0x10]; // $8D3A（右/左 bg 瓦列像素）
 const DOOR_HP_TABLE: [u8; 4] = [5, 1, 10, 1]; // $8BD1（红/蓝/导弹/音乐蓝）
-
 
 /// WriteDoorBGTiles（$8CF7-8D33）——6 瓦纵写（y 步 $20）+DoorRoomRAMPtr 写站
 /// （y=(slot Adiv8)&6（$80..$B0→0/2/4/6））。
@@ -307,7 +319,8 @@ fn write_door_bg_tiles(mem: &mut crate::frame::Manager, x_off: u8, tile: u8) {
     let nt = (mem.object(x_off / 16).hi() & 0x01) << 2;
     // 6 行纵写（行步 8 → 缓冲内 $20 步）：y=0x50,0x58,…,0x78
     for k in 0..6u8 {
-        mem.room().set_tile(0x50u8.wrapping_add(k * 8), x_pos, nt, tile);
+        mem.room()
+            .set_tile(0x50u8.wrapping_add(k * 8), x_pos, nt, tile);
     }
     let ptr = crate::world::room_ram::Room::addr(0x50, x_pos, nt);
     // 列索引 = (x_off>>3)&6 的字节偏移 ÷ 2（lo/hi 交织）⇒ 等价 (x_off>>4)&3
@@ -325,7 +338,7 @@ fn draw_door(mem: &mut crate::frame::Manager, x_off: u8) {
     cntrl |= (x_off & 0x10) ^ 0x10; // 槽位 flip（$80/$A0 镜像）
     mem.set_obj_cntrl(cntrl);
     mem.object(x_off / 16).set_is_hit(0); // isHit←0
-    // 【r14 双调根修】DE47 形=单走表（旧形显式走表+anim_draw_object 内再走=双调 ✗）
+                                          // 【r14 双调根修】DE47 形=单走表（旧形显式走表+anim_draw_object 内再走=双调 ✗）
     crate::render::oam::anim_draw_object(mem, x_off, 6); // AnimDrawObject（DE47——A=6 单走）
 }
 
@@ -423,9 +436,7 @@ pub fn delete_offscreen_room_sprites(mem: &mut crate::frame::Manager) {
     // ⑦ Samus 弹三槽（D/E/F）：非束族（status >= wa_BulletExplode+1）且在该名表 ⇒ 清。
     for off in [0xD0u8, 0xE0, 0xF0] {
         let o = 0x0300 + off as u16;
-        if mem.read_ram(o) >= WA_BULLET_EXPLODE + 1
-            && (nt ^ mem.read_ram(o + 0x0C)) & 1 == 0
-        {
+        if mem.read_ram(o) >= WA_BULLET_EXPLODE + 1 && (nt ^ mem.read_ram(o + 0x0C)) & 1 == 0 {
             mem.write_ram(o, 0);
         }
     }
@@ -501,7 +512,8 @@ pub fn update_door(mem: &mut crate::frame::Manager, x_off: u8) {
         0 => {} // ExitSub（无门）
         1 => {
             // Init（$8B9D）：status++/anim（$30 双写+Delay0）/实瓦/HP←表→DrawDoor
-            mem.object((x / 16) as u8).set_status(status.wrapping_add(1));
+            mem.object((x / 16) as u8)
+                .set_status(status.wrapping_add(1));
             mem.write_ram(0x0305 + x, 0x30); // InitObjectXSlotAnimIndex（D2FA：Reset+Index）
             mem.write_ram(0x0306 + x, 0x30);
             mem.write_ram(0x0304 + x, 0);
@@ -605,8 +617,10 @@ pub fn update_door(mem: &mut crate::frame::Manager, x_off: u8) {
                 mem.write_ram(0x0091, 0); // DoorPaletteChangeDir 清
                 if mem.read_ram(0x0307 + x) == 3 {
                     // 音乐蓝：Amul16（CF=slot bit4）——右⇒Tourian/左⇒MotherBrain
-                    crate::frame::DIVERGENCES
-                        .with(|d| d.borrow_mut().push(if x_off & 0x10 == 0 { 0x8C9E } else { 0x8CC0 }));
+                    crate::frame::DIVERGENCES.with(|d| {
+                        d.borrow_mut()
+                            .push(if x_off & 0x10 == 0 { 0x8C9E } else { 0x8CC0 })
+                    });
                 }
             }
             draw_door(mem, x_off); // L8CC3
@@ -664,7 +678,9 @@ fn enemy_loop(
         if guard > 256 {
             return false; // 环护栏（asm 形数据不环——防死环）
         }
-        let Some(&b) = stream.get(i) else { return false };
+        let Some(&b) = stream.get(i) else {
+            return false;
+        };
         // 【goal-实质对表】敌门环解析轨迹（i/b/ty/stride 逐条目）。
         if b == 0xFF {
             end_of_room(mem);
@@ -675,8 +691,12 @@ fn enemy_loop(
             0 | 3 | 5 => i += ty as usize, // ExitSub（asm：A=type——推进形）
             1 => {
                 mem.work_cycles = mem.work_cycles.wrapping_add(LOAD_ENEMY_CYCLES); // LoadEnemy 族
-                if !load_enemy(mem, b, stream.get(i + 1).copied().unwrap_or(0),
-                               stream.get(i + 2).copied().unwrap_or(0)) {
+                if !load_enemy(
+                    mem,
+                    b,
+                    stream.get(i + 1).copied().unwrap_or(0),
+                    stream.get(i + 2).copied().unwrap_or(0),
+                ) {
                     return false;
                 }
                 i += 3;
@@ -700,8 +720,13 @@ fn enemy_loop(
                 i += 1;
             }
             7 => {
-                // `LoadPipeBugHole ; 07:EC57`：type+2 数据字节。
-                crate::frame::DIVERGENCES.with(|d| d.borrow_mut().push(0xEC57));
+                // `LoadPipeBugHole ; 07:EC57`：吃 `type`+2 数据字节（`lda #$03`）。
+                crate::enemy::pipe_bug_hole::load_pipe_bug_hole(
+                    mem,
+                    stream.get(i).copied().unwrap_or(0),
+                    stream.get(i + 1).copied().unwrap_or(0),
+                    stream.get(i + 2).copied().unwrap_or(0),
+                );
                 i += 3;
             }
             _ => return false,
@@ -771,11 +796,11 @@ fn load_enemy(mem: &mut crate::frame::Manager, b0: u8, etype: u8, pos: u8) -> bo
     let x = (b0 & 0xF0) as u16; // 对象槽（×16 步）
     let en = 0x0400u16 + x; // Ens=2KB RAM 面（write_ram）
     let ex = 0x6AF4u16 + x; // EnsExtra=WRAM 面（write_wram）
-    // IsSlotTaken（**asm 内容锚** `IsSlotTaken: ; 07:EB7A`）：`lda status/beq RTS`（=0 返 0）
-    // +`lda data05/and #$02`——返回 A=status==0 ? 0 : data05 bit1；调用方 `jsr/bne` ⇒
-    // **A≠0（status≠0 且可见 bit1 置）=占用跳过**。【2026-10-31 反条件勘误】旧形 bit1==0
-    // ⇒占用——把可见活敌判为空槽覆写（滚动载房重载时在屏爬虫被刷掉——crawlprobe f916
-    // 根因）；asm 语义=经典槽回收：**屏外敌（不可见）可回收、屏内敌保护**。
+                            // IsSlotTaken（**asm 内容锚** `IsSlotTaken: ; 07:EB7A`）：`lda status/beq RTS`（=0 返 0）
+                            // +`lda data05/and #$02`——返回 A=status==0 ? 0 : data05 bit1；调用方 `jsr/bne` ⇒
+                            // **A≠0（status≠0 且可见 bit1 置）=占用跳过**。【2026-10-31 反条件勘误】旧形 bit1==0
+                            // ⇒占用——把可见活敌判为空槽覆写（滚动载房重载时在屏爬虫被刷掉——crawlprobe f916
+                            // 根因）；asm 语义=经典槽回收：**屏外敌（不可见）可回收、屏内敌保护**。
     if mem.read_wram(ex) != 0 && mem.read_ram(en + 5) & 0x02 != 0 {
         return true;
     }
@@ -783,26 +808,26 @@ fn load_enemy(mem: &mut crate::frame::Manager, b0: u8, etype: u8, pos: u8) -> bo
     // Zoomer 型 bit6=0 不入（asm asl/bpl 形））
     mem.write_ram(en + 0x0F, etype & 0xC0); // specialAttribs(+0xF)（ROM 真值——旧 +0x11 越界）
     mem.write_wram(ex + 0x0E, etype & 0x3F); // EnsExtra.type
-    // LEB4D（$EB4D）：y←(pos&$F0)|8；x←(pos<<4)|$0C；status←Resting(1)；isHit←0；hi←名表
+                                             // LEB4D（$EB4D）：y←(pos&$F0)|8；x←(pos<<4)|$0C；status←Resting(1)；isHit←0；hi←名表
     let ty = mem.read_wram(ex + 0x0E);
     mem.write_ram(en, (pos & 0xF0) | 0x08); // Ens.y
     mem.write_ram(en + 1, pos.wrapping_shl(4) | 0x0C); // Ens.x
     mem.write_wram(ex, 0x01); // EnsExtra.status←enemyStatus_Resting（constants.asm:121）
     mem.write_ram(en + 4, 0x00); // Ens.isHit
-    // GetNameTableAtScrollDir（$EB85）：(PPUCTRL_ZP^ScrollDir)&1
+                                 // GetNameTableAtScrollDir（$EB85）：(PPUCTRL_ZP^ScrollDir)&1
     let hi = mem.read_ram(crate::ram_map::PPUCTRL_ZP) ^ mem.read_ram(crate::ram_map::SCROLL_DIR);
     // 【goal-轮65 装载帧 hi 直证】PPUCTRL^ScrollDir（金 hi=1/我 hi=0 源）。
     mem.write_wram(ex + 0x07, hi & 0x01); // EnsExtra.hi
-    // LEB6E：data05←shl（facing 位旋入 bit7）；InitEnemyFacing（$FB7B）：ror（L977B 位7）
-    // +delay←InitDelayTbl；InitForce（$F85A）：data0D←ForceTbl；health←HealthTbl（tough×2）
-    // 【goal-轮44 修错勘误】轮41 facing→bit7 **错**（asm :12048 注「asl to compensate for
-    // the ror」——**asl+ror 组合=facing→bit0**（0/1→0/2→ror→bit0）+axis→bit7 ✓）——
-    // 金腿实证（d05=0x53：bit0=1（facing）/bit7=0 ✓）。修正：facing→bit0。
-    // 【A 级勘误 2026-11-14】`asl $0405,x`（ROM `EB7E`=`1E 05 04`）+ `ror`（`FB7B`
-    // =`20 B0 80`/`7E 05 04`）净效果：`d05' = (L977B[type].bit7<<7) | (d05 & $7F)`——
-    // **bit0 保持旧值**，出生径无「按 ScrollDir 置 bit0」的写点（bit0 由运行期
-    // `EnemyForceSpeedTowardsSamus` 的 x 轴力 F6DF 段写）。旧形用
-    // `EnsExtra.status & ScrollDir & 1` 塞 bit0，是缺失 x 轴力时的补偿。
+                                          // LEB6E：data05←shl（facing 位旋入 bit7）；InitEnemyFacing（$FB7B）：ror（L977B 位7）
+                                          // +delay←InitDelayTbl；InitForce（$F85A）：data0D←ForceTbl；health←HealthTbl（tough×2）
+                                          // 【goal-轮44 修错勘误】轮41 facing→bit7 **错**（asm :12048 注「asl to compensate for
+                                          // the ror」——**asl+ror 组合=facing→bit0**（0/1→0/2→ror→bit0）+axis→bit7 ✓）——
+                                          // 金腿实证（d05=0x53：bit0=1（facing）/bit7=0 ✓）。修正：facing→bit0。
+                                          // 【A 级勘误 2026-11-14】`asl $0405,x`（ROM `EB7E`=`1E 05 04`）+ `ror`（`FB7B`
+                                          // =`20 B0 80`/`7E 05 04`）净效果：`d05' = (L977B[type].bit7<<7) | (d05 & $7F)`——
+                                          // **bit0 保持旧值**，出生径无「按 ScrollDir 置 bit0」的写点（bit0 由运行期
+                                          // `EnemyForceSpeedTowardsSamus` 的 x 轴力 F6DF 段写）。旧形用
+                                          // `EnsExtra.status & ScrollDir & 1` 塞 bit0，是缺失 x 轴力时的补偿。
     let t = ty as usize & 0x3F;
     let d5_prev = mem.read_ram(en + 5);
     // `LoadTableAt977B` 返回 asl 后的值；asl 的 carry 是**原字节 bit7** ⇒ 取原表。
@@ -812,8 +837,14 @@ fn load_enemy(mem: &mut crate::frame::Manager, b0: u8, etype: u8, pos: u8) -> bo
     // 【goal-r16 复核修正 G1'】字段偏移 +2 错位修正（ROM 真值：FB7B `sta $0409`=delay+9，
     // F85A `sta $040D`=data0D+0xD / `sta $040B`=health+0xB）。旧形 delay→+0x0B（写进 health
     // 槽）⇒delay(+9) 恒 0⇒F3BE beq 跳过 TryBecomingActive⇒敌人恒 Resting 不激活。
-    mem.write_ram(en + 0x09, game_data::assets::enemy_init_delay(crate::frame::cur_area(mem))[t]); // Ens.delay(+9)
-    mem.write_ram(en + 0x0D, game_data::assets::enemy_force_speed_delay(crate::frame::cur_area(mem))[t]); // data0D(+0xD)
+    mem.write_ram(
+        en + 0x09,
+        game_data::assets::enemy_init_delay(crate::frame::cur_area(mem))[t],
+    ); // Ens.delay(+9)
+    mem.write_ram(
+        en + 0x0D,
+        game_data::assets::enemy_force_speed_delay(crate::frame::cur_area(mem))[t],
+    ); // data0D(+0xD)
     let mut hp = game_data::assets::enemy_health(crate::frame::cur_area(mem))[t];
     // 【对抗复核收敛④（2026-11-01）】movementIndex=+8 播种（EnemyMovementChoice——
     // prg1:97D1 逐字）：每型移动索引初值（多值型 RNG 掩选——现取首值（确定形））：
@@ -832,7 +863,10 @@ fn load_enemy(mem: &mut crate::frame::Manager, b0: u8, etype: u8, pos: u8) -> bo
 
 /// SelectRoomRAM（$EA05）：名表 0→$6000/名表 3→$6400（RoomRAMPtr 高字节）。
 pub fn select_room_ram(mem: &mut crate::frame::Manager) {
-    let hi = 0x60u8 | ((mem.read_ram(crate::ram_map::PPUCTRL_ZP) ^ mem.read_ram(crate::ram_map::SCROLL_DIR)) & 1) << 2;
+    let hi = 0x60u8
+        | ((mem.read_ram(crate::ram_map::PPUCTRL_ZP) ^ mem.read_ram(crate::ram_map::SCROLL_DIR))
+            & 1)
+            << 2;
     mem.room().set_room_ptr((hi as u16) << 8); // RoomRAMPtr lo=$00 / hi（址勘误 r28-1）
 }
 
@@ -840,7 +874,7 @@ pub fn select_room_ram(mem: &mut crate::frame::Manager) {
 pub fn init_tables(mem: &mut crate::frame::Manager) {
     mem.work_cycles = mem.work_cycles.wrapping_add(LOAD_INIT_CYCLES); // FillRoomRAM+AttribFill 壳
     let hi = (mem.room().room_ptr() >> 8) as u8; // RoomRAMPtr hi（$60/$64——址勘误 r28-1）
-    // FillRoomRAM（$F01C）：$FF 填 3 页半（tile 区 $000-$3BF）
+                                                 // FillRoomRAM（$F01C）：$FF 填 3 页半（tile 区 $000-$3BF）
     for i in 0..0x3C0u16 {
         mem.write_wram(((hi as u16) << 8) | i, 0xFF);
     }
@@ -900,12 +934,7 @@ pub fn attrib_table_write(mem: &mut crate::frame::Manager) -> bool {
         _ => true, // 0/2=ExitSub
     }
 }
-fn update_attrib(
-    mem: &mut crate::frame::Manager,
-    ptr: u16,
-    obj_palette: u8,
-    room_palette: u8,
-) {
+fn update_attrib(mem: &mut crate::frame::Manager, ptr: u16, obj_palette: u8, room_palette: u8) {
     if obj_palette == room_palette {
         return; // 同室调色⇒无改（asm @RTS）
     }
@@ -981,10 +1010,17 @@ mod tests {
     #[test]
     fn draw_start_room_writes_tiles() {
         let mut m = Manager::default();
-        assert!(draw_room(&mut m, 9), "房 9 全径通（对象环+敌门环+EndOfRoom）");
+        assert!(
+            draw_room(&mut m, 9),
+            "房 9 全径通（对象环+敌门环+EndOfRoom）"
+        );
         let tiles: Vec<u8> = (0..0x3C0u16).map(|i| m.read_wram(0x6000 + i)).collect();
         assert!(tiles.iter().any(|&t| t != 0), "RoomRAM 有 tile 落");
-        assert_eq!(m.read_ram(0x0450 + 0x0B), game_data::assets::enemy_health(crate::frame::cur_area(&m))[5], "Zoomer 血量（槽 5——条目 51 形；health=+0xB ROM F85A）");
+        assert_eq!(
+            m.read_ram(0x0450 + 0x0B),
+            game_data::assets::enemy_health(crate::frame::cur_area(&m))[5],
+            "Zoomer 血量（槽 5——条目 51 形；health=+0xB ROM F85A）"
+        );
     }
 
     /// 属性位公式形（掩码对——x 位对清+置）。
@@ -1009,7 +1045,10 @@ mod tests {
         m.write_ram(en + 5, 0x5A); // bit1 置（可见）
         m.write_ram(en, 0x74);
         m.write_ram(en + 1, 0xC8);
-        assert!(load_enemy(&mut m, 0x41, 0x05, 0x2B), "条目消费（返回 true）");
+        assert!(
+            load_enemy(&mut m, 0x41, 0x05, 0x2B),
+            "条目消费（返回 true）"
+        );
         assert_eq!(m.read_ram(en), 0x74, "可见敌 y 保护（不被重载覆写）");
         assert_eq!(m.read_ram(en + 1), 0xC8, "可见敌 x 保护");
         // 不可见敌：status=2+bit1 清 ⇒ 回收（重载落位）
@@ -1134,8 +1173,16 @@ mod tests_load_elevator {
             assert_eq!(m.read_ram(ELEVATOR + 0x0F), 0x81, "ElevatorType←info 字节");
             assert_eq!(m.read_ram(ELEVATOR + 0x0D), 0x83, "y←$83");
             assert_eq!(m.read_ram(ELEVATOR + 0x0E), 0x80, "x←$80");
-            assert_eq!(m.read_ram(ELEVATOR + 0x0C), want_hi, "hi←GetNameTableAtScrollDir");
-            assert_eq!(m.read_ram(ELEVATOR + 0x03), 0x23, "animFrame←_id_ObjFrame_Elevator");
+            assert_eq!(
+                m.read_ram(ELEVATOR + 0x0C),
+                want_hi,
+                "hi←GetNameTableAtScrollDir"
+            );
+            assert_eq!(
+                m.read_ram(ELEVATOR + 0x03),
+                0x23,
+                "animFrame←_id_ObjFrame_Elevator"
+            );
         }
     }
 
@@ -1183,12 +1230,18 @@ mod tests_load_door {
                         load_door(&mut m, (side << 4) | dtype);
                         let y_idx = ((((mx.wrapping_add(my)) & 1) << 1) | side) as usize;
                         let x_off = [0x00u16, 0x30, 0x20, 0x10][y_idx];
-                        assert_eq!(m.read_ram(0x0387 + x_off), dtype,
-                                   "DoorType@{:03X}（mx={} my={} side={} t={})",
-                                   0x0387 + x_off, mx, my, side, dtype);
+                        assert_eq!(
+                            m.read_ram(0x0387 + x_off),
+                            dtype,
+                            "DoorType@{:03X}（mx={} my={} side={} t={})",
+                            0x0387 + x_off,
+                            mx,
+                            my,
+                            side,
+                            dtype
+                        );
                         // 1|3⇒status←1；0|2 空史（未收）⇒status←1
-                        assert_eq!(m.read_ram(0x0380 + x_off), 1,
-                                   "status init（t={}）", dtype);
+                        assert_eq!(m.read_ram(0x0380 + x_off), 1, "status init（t={}）", dtype);
                     }
                 }
             }
@@ -1212,7 +1265,14 @@ mod tests_load_door {
             for k in 0..6u8 {
                 let row = (0x50u16 + k as u16 * 8) >> 3; // 0x50→行 10 … 0x78→行 15
                 let a = base + (row / 8) * 0x100 + (row % 8) * 0x20 + 2;
-                assert_eq!(m.read_wram(a), 0x4E, "hi={} row={} addr={:#06X}", hi, row, a);
+                assert_eq!(
+                    m.read_wram(a),
+                    0x4E,
+                    "hi={} row={} addr={:#06X}",
+                    hi,
+                    row,
+                    a
+                );
             }
             // 对页不得被写（防「同时写两页」的假通过）
             let cross = if base == 0x6000 { 0x6542u16 } else { 0x6142 };
@@ -1230,12 +1290,17 @@ mod tests_load_door {
                 m.write_wram(0x6886, 2); // count（y0=2）
                 let item_x = if side == 1 { 4 } else { 5 }; // 左门=MapPosX-1
                 m.write_wram(0x6886 + 2, item_x); // hi[y=2]
-                m.write_wram(0x6885 + 2, 7);      // lo[y=2]=MapPosY
+                m.write_wram(0x6885 + 2, 7); // lo[y=2]=MapPosY
                 load_door(&mut m, (side << 4) | dtype);
                 let y_idx = ((((5u8.wrapping_add(7)) & 1) << 1) | side) as usize;
                 let x_off = [0x00u16, 0x30, 0x20, 0x10][y_idx];
-                assert_eq!(m.read_ram(0x0380 + x_off), 0,
-                           "已开（史含）⇒status 保持 0（side={} t={}）", side, dtype);
+                assert_eq!(
+                    m.read_ram(0x0380 + x_off),
+                    0,
+                    "已开（史含）⇒status 保持 0（side={} t={}）",
+                    side,
+                    dtype
+                );
             }
         }
     }
@@ -1249,14 +1314,23 @@ mod tests_load_door {
             load_door(&mut m, (side << 4) | 1); // 蓝门（免 item 检）
             let x_off = if side == 1 { 0x30u16 } else { 0x00 }; // 白格（mx+my=0）
             let nt = get_name_table_at_scroll_dir(
-                m.read_ram(crate::ram_map::PPUCTRL_ZP), m.read_ram(crate::ram_map::SCROLL_DIR));
+                m.read_ram(crate::ram_map::PPUCTRL_ZP),
+                m.read_ram(crate::ram_map::SCROLL_DIR),
+            );
             assert_eq!(m.read_ram(0x038C + x_off), nt, "hi（名表）");
-            assert_eq!(m.read_ram(0x038E + x_off), if side == 1 { 0x10 } else { 0xF0 }, "x（DoorXs）");
+            assert_eq!(
+                m.read_ram(0x038E + x_off),
+                if side == 1 { 0x10 } else { 0xF0 },
+                "x（DoorXs）"
+            );
             assert_eq!(m.read_ram(0x038D + x_off), 0x68, "y（恒 $68）");
             let other = (nt ^ 1) as u16;
             let want = if side == 1 { 0x01 } else { 0x02 };
-            assert_eq!(m.read_ram(crate::ram_map::SCROLL_BLOCK_NT3 + other) & want, want,
-                       "ScrollBlock OR（另一名表）");
+            assert_eq!(
+                m.read_ram(crate::ram_map::SCROLL_BLOCK_NT3 + other) & want,
+                want,
+                "ScrollBlock OR（另一名表）"
+            );
         }
         // 红门径 $09←$0A
         let mut m = mem_with(0, 0);
@@ -1295,15 +1369,28 @@ mod tests_update_door {
             let mut m = door_mem(1, dtype);
             update_door(&mut m, 0x80);
             assert_eq!(m.read_ram(0x0300 + 0x80), 2, "status→2（t={}）", dtype);
-            assert_eq!(m.read_ram(0x038F), [5u8, 1, 10, 1][dtype as usize], "HP←表（t={}）", dtype);
+            assert_eq!(
+                m.read_ram(0x038F),
+                [5u8, 1, 10, 1][dtype as usize],
+                "HP←表（t={}）",
+                dtype
+            );
             assert_eq!(m.read_ram(0x0305 + 0x80), 0x30, "animReset←DoorClose_Reset");
             // DrawDoor→AnimDrawObject→UpdateObjAnim（$DC8F）在 Init 末尾就地走一格：
             // animDelay←A($06)、animIndex $30→$31、animFrame←ObjectAnimIndexTbl[$30]。
             // 【2026-11-14 更正】旧断言写 `animIndex==$30 / animDelay==0`——那是
             // `update_door` 漏写 `PageIndex`（$8B87 首件 `stx PageIndex`）时的观测值：
             // 走表打到了上一个 PageIndex 的槽，门自己从不前进（emu 实测 $31/4）。
-            assert_eq!(m.read_ram(0x0304 + 0x80), 0x06, "animDelay←A=6（UpdateObjAnim）");
-            assert_eq!(m.read_ram(0x0306 + 0x80), 0x31, "animIndex 前进一格（$30→$31）");
+            assert_eq!(
+                m.read_ram(0x0304 + 0x80),
+                0x06,
+                "animDelay←A=6（UpdateObjAnim）"
+            );
+            assert_eq!(
+                m.read_ram(0x0306 + 0x80),
+                0x31,
+                "animIndex 前进一格（$30→$31）"
+            );
             assert_eq!(
                 m.read_ram(0x0303 + 0x80),
                 game_data::assets::sprite_data()[0x30],
@@ -1312,10 +1399,16 @@ mod tests_update_door {
             assert_eq!(m.read_ram(0x030A + 0x80), 0, "isHit←0（DrawDoor）");
             // 实瓦（$4E×6 纵写（ptr=make_room_ram_ptr($50,$E8,0)））+DoorRoomRAMPtr
             let ptr = crate::world::room_ram::Room::addr(0x50, 0xE8, 0);
-    let (lo, hi) = (ptr as u8, (ptr >> 8) as u8);
+            let (lo, hi) = (ptr as u8, (ptr >> 8) as u8);
             let base = ((hi as u16) << 8) | lo as u16;
             for k in 0..6u16 {
-                assert_eq!(m.read_wram(base.wrapping_add(k * 0x20)), 0x4E, "实瓦[{}]（t={}）", k, dtype);
+                assert_eq!(
+                    m.read_wram(base.wrapping_add(k * 0x20)),
+                    0x4E,
+                    "实瓦[{}]（t={}）",
+                    k,
+                    dtype
+                );
             }
             assert_eq!(m.read_ram(0x005C), lo, "DoorRoomRAMPtr lo");
             assert_eq!(m.read_ram(0x005D), hi, "DoorRoomRAMPtr hi");
@@ -1345,7 +1438,11 @@ mod tests_update_door {
         assert_eq!(m.read_ram(0x0300 + 0x80), 3, "status←3（Open）");
         assert_eq!(m.read_ram(0x038F), 0x50, "HP←$50（重关延迟）");
         assert_eq!(m.read_ram(0x0305 + 0x80), 0x2C, "animReset←DoorOpen_Reset");
-        assert_eq!(m.read_ram(0x0306 + 0x80), 0x29, "animIndex←DoorOpen base（8C7E）");
+        assert_eq!(
+            m.read_ram(0x0306 + 0x80),
+            0x29,
+            "animIndex←DoorOpen base（8C7E）"
+        );
     }
 
     /// 【音乐蓝门控】type=3：EndTimer+1≠$FF（escape 活）⇒不开；==$FF⇒开。
@@ -1357,8 +1454,13 @@ mod tests_update_door {
             m.write_ram(0x030A + 0x80, 0x04);
             m.write_ram(0x010B, et); // EndTimer+1
             update_door(&mut m, 0x80);
-            assert_eq!(m.read_ram(0x0300 + 0x80), if expect_open { 3 } else { 2 },
-                       "EndTimer+1={:02X}（开={}）", et, expect_open);
+            assert_eq!(
+                m.read_ram(0x0300 + 0x80),
+                if expect_open { 3 } else { 2 },
+                "EndTimer+1={:02X}（开={}）",
+                et,
+                expect_open
+            );
         }
     }
 
@@ -1379,7 +1481,7 @@ mod tests_update_door {
         update_door(&mut m, 0x80);
         assert_eq!(m.read_ram(0x0300 + 0x80), 0, "导弹门永久开（status←0）");
         let ptr = crate::world::room_ram::Room::addr(0x50, 0xE8, 0);
-    let (lo, hi) = (ptr as u8, (ptr >> 8) as u8);
+        let (lo, hi) = (ptr as u8, (ptr >> 8) as u8);
         let base = ((hi as u16) << 8) | lo as u16;
         assert_eq!(m.read_wram(base), 0xFF, "Air 瓦（首开帧）");
         // 蓝门首开帧⇒Air+HP 递减径（偶帧 dec）
@@ -1395,13 +1497,25 @@ mod tests_update_door {
     #[test]
     fn make_room_ram_ptr_formula() {
         for &(y, x, nt, el, eh) in &[
-            (0x50u8, 0xE8u8, 0u8, ((0x50 & 0x38) << 2) | (0xE8 >> 3), 0x60u8 | 1),
+            (
+                0x50u8,
+                0xE8u8,
+                0u8,
+                ((0x50 & 0x38) << 2) | (0xE8 >> 3),
+                0x60u8 | 1,
+            ),
             (0x50, 0x10, 0, ((0x50 & 0x38) << 2) | (0x10 >> 3), 0x60 | 1),
             (0x00, 0x00, 4, 0x00, 0x60 | 4),
-            (0xFF, 0xF8, 4, ((0xFF & 0x38) << 2) | (0xF8 >> 3), 0x60 | 2 | 1 | 4),
+            (
+                0xFF,
+                0xF8,
+                4,
+                ((0xFF & 0x38) << 2) | (0xF8 >> 3),
+                0x60 | 2 | 1 | 4,
+            ),
         ] {
             let ptr = crate::world::room_ram::Room::addr(y, x, nt);
-    let (lo, hi) = (ptr as u8, (ptr >> 8) as u8);
+            let (lo, hi) = (ptr as u8, (ptr >> 8) as u8);
             assert_eq!((lo, hi), (el, eh), "y={:02X} x={:02X} nt={}", y, x, nt);
         }
     }
@@ -1435,24 +1549,49 @@ mod tests_door_bg_tiles {
             write_door_bg_tiles(&mut m, x_off, 0x4E);
             let x_pos = if x_off == 0x80 { 0xE8 } else { 0x10 };
             let ptr = crate::world::room_ram::Room::addr(0x50, x_pos, 0);
-    let (lo, hi) = (ptr as u8, (ptr >> 8) as u8);
+            let (lo, hi) = (ptr as u8, (ptr >> 8) as u8);
             let base = ((hi as u16) << 8) | lo as u16;
             // Solid 面（6 瓦全 $4E）+DoorRoomRAMPtr（共径（指针恒同））
             for k in 0..6u16 {
-                assert_eq!(m.read_wram(base.wrapping_add(k * 0x20)), 0x4E, "Solid[{}]（x={:02X}）", k, x_off);
+                assert_eq!(
+                    m.read_wram(base.wrapping_add(k * 0x20)),
+                    0x4E,
+                    "Solid[{}]（x={:02X}）",
+                    k,
+                    x_off
+                );
             }
             let yi = ((x_off >> 3) & 6) as u16;
-            assert_eq!((m.read_ram(0x005C + yi), m.read_ram(0x005D + yi)), (lo, hi), "ptr 恒同");
+            assert_eq!(
+                (m.read_ram(0x005C + yi), m.read_ram(0x005D + yi)),
+                (lo, hi),
+                "ptr 恒同"
+            );
             // Air 面（翻转 $FF（仅瓦字节差））
             write_door_bg_tiles(&mut m, x_off, 0xFF);
             for k in 0..6u16 {
-                assert_eq!(m.read_wram(base.wrapping_add(k * 0x20)), 0xFF, "Air[{}]（x={:02X}）", k, x_off);
+                assert_eq!(
+                    m.read_wram(base.wrapping_add(k * 0x20)),
+                    0xFF,
+                    "Air[{}]（x={:02X}）",
+                    k,
+                    x_off
+                );
             }
-            assert_eq!((m.read_ram(0x005C + yi), m.read_ram(0x005D + yi)), (lo, hi), "ptr 恒同（Air）");
+            assert_eq!(
+                (m.read_ram(0x005C + yi), m.read_ram(0x005D + yi)),
+                (lo, hi),
+                "ptr 恒同（Air）"
+            );
             // 回封（Solid 复写）
             write_door_bg_tiles(&mut m, x_off, 0x4E);
             for k in 0..6u16 {
-                assert_eq!(m.read_wram(base.wrapping_add(k * 0x20)), 0x4E, "回封[{}]", k);
+                assert_eq!(
+                    m.read_wram(base.wrapping_add(k * 0x20)),
+                    0x4E,
+                    "回封[{}]",
+                    k
+                );
             }
         }
     }
@@ -1462,7 +1601,7 @@ mod tests_door_bg_tiles {
     fn state_cycle_tile_faces() {
         let x_pos = 0xE8u8;
         let ptr = crate::world::room_ram::Room::addr(0x50, x_pos, 0);
-    let (lo, hi) = (ptr as u8, (ptr >> 8) as u8);
+        let (lo, hi) = (ptr as u8, (ptr >> 8) as u8);
         let base = ((hi as u16) << 8) | lo as u16;
         // Init⇒Solid
         let mut m = door_mem(1, 1);
@@ -1516,18 +1655,38 @@ mod tests_door_transition_chain {
             if entry < 5 {
                 assert_eq!(m.read_ram(0x0300 + 0x80), 5, "→Scroll（e={}）", entry);
                 assert_eq!(m.read_ram(0x0091), 0, "dir 清（e={}）", entry);
-                assert_eq!(m.read_ram(0x0305 + 0x80), 0x30, "闭 anim Reset（e={}）", entry);
+                assert_eq!(
+                    m.read_ram(0x0305 + 0x80),
+                    0x30,
+                    "闭 anim Reset（e={}）",
+                    entry
+                );
                 // 【2026-11-14 更正】base=$2E 后 DrawDoor 的 UpdateObjAnim 就地走一格 ⇒ $2F。
-                assert_eq!(m.read_ram(0x0306 + 0x80), 0x2F, "闭 anim base 走一格（$2E→$2F（e={}）", entry);
+                assert_eq!(
+                    m.read_ram(0x0306 + 0x80),
+                    0x2F,
+                    "闭 anim base 走一格（$2E→$2F（e={}）",
+                    entry
+                );
                 let ptr = crate::world::room_ram::Room::addr(0x50, 0xE8, 0);
-    let (lo, hi) = (ptr as u8, (ptr >> 8) as u8);
+                let (lo, hi) = (ptr as u8, (ptr >> 8) as u8);
                 let base = ((hi as u16) << 8) | lo as u16;
                 assert_eq!(m.read_wram(base), 0x4E, "回封 Solid（e={}）", entry);
             } else {
-                assert_eq!(m.read_ram(0x0300 + 0x80), 4, "仅 Draw（status 不动（e={}））", entry);
+                assert_eq!(
+                    m.read_ram(0x0300 + 0x80),
+                    4,
+                    "仅 Draw（status 不动（e={}））",
+                    entry
+                );
                 assert_eq!(m.read_ram(0x0091), 2, "dir 不动（e={}）", entry);
             }
-            assert_eq!(m.read_ram(0x030A + 0x80), 0, "isHit 清（Draw（e={}））", entry);
+            assert_eq!(
+                m.read_ram(0x030A + 0x80),
+                0,
+                "isHit 清（Draw（e={}））",
+                entry
+            );
         }
     }
 
@@ -1579,7 +1738,7 @@ mod tests_door_transition_chain {
                 assert_eq!(m.read_ram(0x0300 + 0x80), 2, "8C61 重关（e={}）", entry);
                 assert_eq!(m.read_ram(0x038F), 1, "HP←1（e={}）", entry);
                 let ptr = crate::world::room_ram::Room::addr(0x50, 0xE8, 0);
-    let (lo, hi) = (ptr as u8, (ptr >> 8) as u8);
+                let (lo, hi) = (ptr as u8, (ptr >> 8) as u8);
                 let base = ((hi as u16) << 8) | lo as u16;
                 assert_eq!(m.read_wram(base), 0x4E, "实瓦回封（e={}）", entry);
             } else {
@@ -1630,13 +1789,23 @@ mod tests_stream_content_mapping {
         for (work, want, name) in POINTS {
             assert_eq!((LOAD_BASE_CYCLES + work) / FRAME_CYCLES, want, "{name}");
         }
-        assert_eq!(LOAD_BASE_CYCLES / FRAME_CYCLES, 0, "常规帧 0 掉帧（定上界）");
+        assert_eq!(
+            LOAD_BASE_CYCLES / FRAME_CYCLES,
+            0,
+            "常规帧 0 掉帧（定上界）"
+        );
 
         // 可行区间断言（多点夹逼的机械形式）：下界由 room20 定、上界由常规帧定。
         let lo = 2 * FRAME_CYCLES - 31446; // = 28114
         let hi = FRAME_CYCLES; // = 29780
-        assert!(LOAD_BASE_CYCLES >= lo, "BASE 须 ≥ 下界 {lo}（否则 room20 掉帧数变 1）");
-        assert!(LOAD_BASE_CYCLES < hi, "BASE 须 < 上界 {hi}（否则常规帧掉 1 帧）");
+        assert!(
+            LOAD_BASE_CYCLES >= lo,
+            "BASE 须 ≥ 下界 {lo}（否则 room20 掉帧数变 1）"
+        );
+        assert!(
+            LOAD_BASE_CYCLES < hi,
+            "BASE 须 < 上界 {hi}（否则常规帧掉 1 帧）"
+        );
     }
 
     fn draw_room_ff_path_writes_temp_scroll_dir() {
@@ -1644,9 +1813,16 @@ mod tests_stream_content_mapping {
         m.write_ram(crate::ram_map::SCROLL_DIR, 3);
         m.write_ram(crate::ram_map::PPUCTRL_ZP, 0);
         // ROOM_STREAMS[1]=[02 07 02 02 87 02 02 FF]——palette+对象环+0xFF 直终（被修径）
-        assert!(super::draw_room(&mut m, 1), "0xFF 直终房应走 EndOfRoom 返回");
+        assert!(
+            super::draw_room(&mut m, 1),
+            "0xFF 直终房应走 EndOfRoom 返回"
+        );
         assert_eq!(m.read_ram(0x005A), 0xF0, "RoomNumber←$F0（asm :8728-8730）");
-        assert_eq!(m.read_ram(0x004A), 3, "TempScrollDir←ScrollDir（径汇面（asm :8731-8732））");
+        assert_eq!(
+            m.read_ram(0x004A),
+            3,
+            "TempScrollDir←ScrollDir（径汇面（asm :8731-8732））"
+        );
     }
 }
 
@@ -1705,7 +1881,11 @@ mod tests_delete_offscreen_room_sprites {
         let slot = 0x50u16; // Ens 槽 5
         put(&mut m, slot, 0x02, 0x00, 0x00); // hi=0 同目标名表、d05 bit1=0
         delete_offscreen_room_sprites(&mut m);
-        assert_eq!(m.read_wram(0x6AF4 + slot), 0, "目标名表内不可见敌应被清 status");
+        assert_eq!(
+            m.read_wram(0x6AF4 + slot),
+            0,
+            "目标名表内不可见敌应被清 status"
+        );
     }
 
     #[test]
@@ -1714,7 +1894,11 @@ mod tests_delete_offscreen_room_sprites {
         let slot = 0x40u16;
         put(&mut m, slot, 0x02, 0x00, 0x02); // bit1=1 可见
         delete_offscreen_room_sprites(&mut m);
-        assert_eq!(m.read_wram(0x6AF4 + slot), 2, "可见敌不得被清（asm `and #$02 / bne`）");
+        assert_eq!(
+            m.read_wram(0x6AF4 + slot),
+            2,
+            "可见敌不得被清（asm `and #$02 / bne`）"
+        );
     }
 
     #[test]
@@ -1723,7 +1907,11 @@ mod tests_delete_offscreen_room_sprites {
         let slot = 0x30u16;
         put(&mut m, slot, 0x02, 0x01, 0x00); // hi bit0 = 1（异名表）
         delete_offscreen_room_sprites(&mut m);
-        assert_eq!(m.read_wram(0x6AF4 + slot), 2, "异名表敌不删（判据是「在目标名表」）");
+        assert_eq!(
+            m.read_wram(0x6AF4 + slot),
+            2,
+            "异名表敌不删（判据是「在目标名表」）"
+        );
     }
 
     /// **判据必须是 `hi`(+7) 而不是 `status`(+0)**：status=2 的 bit0 恒 0，若误读
@@ -1735,7 +1923,8 @@ mod tests_delete_offscreen_room_sprites {
         put(&mut m, slot, 0x02, 0x01, 0x00); // status=2(Active)、hi=1、不可见
         delete_offscreen_room_sprites(&mut m);
         assert_eq!(
-            m.read_wram(0x6AF4 + slot), 2,
+            m.read_wram(0x6AF4 + slot),
+            2,
             "hi=1 与 nt=0 不同名表 ⇒ 必须保留（误读 status 会清掉它）"
         );
     }
@@ -1747,10 +1936,18 @@ mod tests_delete_offscreen_room_sprites {
         m.write_ram(0x006C, 0xFF);
         m.write_ram(0x006D, 0xFF);
         delete_offscreen_room_sprites(&mut m);
-        assert_eq!(m.read_ram(0x006C), 0x00, "EraseScrollBlock 清 nt^1 槽（=$6C）");
+        assert_eq!(
+            m.read_ram(0x006C),
+            0x00,
+            "EraseScrollBlock 清 nt^1 槽（=$6C）"
+        );
         // UpdateDoorData 形 = `(ScrollDir-1) ^ 3 & 旧值`（**取交集而非清位**）：
         // dir=3 ⇒ x_dir=2 ⇒ 2^3=1 ⇒ 只剩 bit0 ⇒ $6D 变 1（原版语义，照录）。
-        assert_eq!(m.read_ram(0x006D), 0x01, "UpdateDoorData = (x^3) & 旧值（取交集）");
+        assert_eq!(
+            m.read_ram(0x006D),
+            0x01,
+            "UpdateDoorData = (x^3) & 旧值（取交集）"
+        );
     }
 
     #[test]

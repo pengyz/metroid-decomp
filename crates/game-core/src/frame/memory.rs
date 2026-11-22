@@ -15,18 +15,22 @@ impl Manager {
         match addr {
             0x2000 => {
                 self.nmi_enabled = v & 0x80 != 0; // PPUCTRL bit7=NMI（hardware.asm:28）
-                self.render.ppuctrl = v;          // 全寄存器面（图案表选 bit3/4——渲染腿）
+                self.render.ppuctrl = v; // 全寄存器面（图案表选 bit3/4——渲染腿）
             }
             // $2001 PPUMASK 真寄存器面（asm `WritePPUCtrl: ; 07:C44D` 的
             // `lda PPUMASK_ZP / sta PPUMASK`（prg7_engine.asm:517）落点——NMI 内每帧落一次；
             // ScreenOff/ScreenNmiOff 只改影子 $FE，「渲染关」由本写进 RenderState 生效。
             0x2001 => self.render.ppumask = v,
-            0x2005 => self.render.write_reg_2005(v),   // PPUSCROLL（V1 摄像机——双写锁存）
-            0x2006 => self.render.write_reg_2006(v),   // PPUADDR flip-flop（S6-10 接线）
+            0x2005 => self.render.write_reg_2005(v), // PPUSCROLL（V1 摄像机——双写锁存）
+            0x2006 => self.render.write_reg_2006(v), // PPUADDR flip-flop（S6-10 接线）
             0x2007 => {
                 // PPUDATA→RenderState 喂入（S6-10 ①——840ad00 建模件运行时喂入面）
                 // 增量位=PPUCTRL bit2（1/32）——从 ram $FF 读
-                let inc = if self.ram()[0x00FF] & 0x04 != 0 { 32u16 } else { 1u16 };
+                let inc = if self.ram()[0x00FF] & 0x04 != 0 {
+                    32u16
+                } else {
+                    1u16
+                };
                 self.render.write_ppudata(v, inc);
             }
             _ => {
@@ -145,7 +149,10 @@ impl Manager {
             r(crate::ram_map::MISSILE_COUNT),
             r(crate::ram_map::KRAID_STATUE_STATUS),
             r(crate::ram_map::RIDLEY_STATUE_STATUS),
-            age[0], age[1], age[2], age[3],
+            age[0],
+            age[1],
+            age[2],
+            age[3],
         ]
     }
 
@@ -185,7 +192,8 @@ impl Manager {
 
     pub fn title_continuation(&self) -> bool {
         let c = self.title_cursor;
-        (c > 0 && c != 0xFF
+        (c > 0
+            && c != 0xFF
             && self.title_cursor_phase == self.read_ram(crate::ram_map::TITLE_ROUTINE))
             || c == 0xFF
             || self.title_spin > 0
@@ -198,30 +206,41 @@ impl Manager {
     pub fn watch_snapshot(&self) -> Vec<(&'static str, String)> {
         let img = self.snapshot_nes();
         vec![
-            ("zp", crate::memmap::observe::frame_face::encode_zp(&img.ram)),
-            ("iram", crate::memmap::observe::frame_face::encode_iram(&img.ram)),
-            ("wram", crate::memmap::observe::frame_face::encode_wram(&img.wram)),
-            ("pw", crate::memmap::observe::frame_face::encode_pw(&img.wram)),
+            (
+                "zp",
+                crate::memmap::observe::frame_face::encode_zp(&img.ram),
+            ),
+            (
+                "iram",
+                crate::memmap::observe::frame_face::encode_iram(&img.ram),
+            ),
+            (
+                "wram",
+                crate::memmap::observe::frame_face::encode_wram(&img.wram),
+            ),
+            (
+                "pw",
+                crate::memmap::observe::frame_face::encode_pw(&img.wram),
+            ),
         ]
     }
 }
 
-
-    /// 【S6-10 接线】write_io PPU 面喂入 RenderState（$2006 flip-flop+$2007 分域）。
-    #[test]
-    fn write_io_feeds_render_state() {
-        let mut m = Manager::default();
-        m.write_io(0x2006, 0x10); // hi
-        m.write_io(0x2006, 0x00); // lo → $1000
-        m.write_io(0x2007, 0xAB); // CHR 写
-        assert_eq!(m.render.chr[0x1000], 0xAB);
-        m.write_io(0x2006, 0x20);
-        m.write_io(0x2006, 0x00); // $2000
-        m.ram_mut()[0x00FF] = 0x04; // 32 增量
-        m.write_io(0x2007, 0xCD); // 名表写+32 步进
-        assert_eq!(m.render.nametable[0], 0xCD);
-        assert_eq!(m.render.ppuaddr, 0x2020);
-    }
+/// 【S6-10 接线】write_io PPU 面喂入 RenderState（$2006 flip-flop+$2007 分域）。
+#[test]
+fn write_io_feeds_render_state() {
+    let mut m = Manager::default();
+    m.write_io(0x2006, 0x10); // hi
+    m.write_io(0x2006, 0x00); // lo → $1000
+    m.write_io(0x2007, 0xAB); // CHR 写
+    assert_eq!(m.render.chr[0x1000], 0xAB);
+    m.write_io(0x2006, 0x20);
+    m.write_io(0x2006, 0x00); // $2000
+    m.ram_mut()[0x00FF] = 0x04; // 32 增量
+    m.write_io(0x2007, 0xCD); // 名表写+32 步进
+    assert_eq!(m.render.nametable[0], 0xCD);
+    assert_eq!(m.render.ppuaddr, 0x2020);
+}
 #[cfg(test)]
 mod tests {
     /// 【read_ram 映射修 TDD（2026-11-06）】$6877（WRAM $6000+0x877）读=wram[0x877]
@@ -233,7 +252,11 @@ mod tests {
         assert_eq!(m.read_ram(0x6877), 3, "WRAM 分派（$6877→wram[0x877]）");
         m.write_ram(0x6877, 5);
         assert_eq!(m.wram()[0x877], 5, "写径同分派");
-        assert_eq!(m.read_ram(0x0077), m.ram()[0x077], "ram[0x077] 不受影响（镜像归一保持）");
+        assert_eq!(
+            m.read_ram(0x0077),
+            m.ram()[0x077],
+            "ram[0x077] 不受影响（镜像归一保持）"
+        );
     }
 
     use super::*;
@@ -262,7 +285,10 @@ mod tests {
         assert_eq!(snap[1].0, "iram");
         assert_eq!(snap[1].1.len(), 3584);
         assert!(snap[0].1.starts_with("AB"));
-        assert!(snap[0].1.chars().all(|c| c.is_ascii_uppercase() || c.is_ascii_digit()));
+        assert!(snap[0]
+            .1
+            .chars()
+            .all(|c| c.is_ascii_uppercase() || c.is_ascii_digit()));
     }
 }
 
@@ -421,10 +447,18 @@ mod mss_map_tests {
         mem.write_ram(0x0308, 0xFE); // speedY = -2
         mem.write_ram(0x030E, 0xD8); // x
         let (ram, wram, regs) = mem.capture_mss();
-        assert_eq!((ram[0x0300], ram[0x0308], ram[0x030E]), (9, 0xFE, 0xD8), "投影必须含 typed 字段");
+        assert_eq!(
+            (ram[0x0300], ram[0x0308], ram[0x030E]),
+            (9, 0xFE, 0xD8),
+            "投影必须含 typed 字段"
+        );
 
         let mut back = Manager::restore_mss(&ram, &wram, regs);
-        assert_eq!(back.samus().status_raw(), 9, "restore 后 status 必须回灌 typed");
+        assert_eq!(
+            back.samus().status_raw(),
+            9,
+            "restore 后 status 必须回灌 typed"
+        );
         assert_eq!(back.samus().speed_y(), -2);
         assert_eq!(back.samus().x(), 0xD8);
         assert_eq!(back.snapshot_nes().ram[0x0300], 9, "再次投影一致");
@@ -443,9 +477,21 @@ mod mss_map_tests {
         let (ram, wram, regs) = mem.capture_mss();
         let back = Manager::restore_mss(&ram, &wram, regs);
         for slot in 0..crate::enemy::state::SLOT_COUNT as usize {
-            assert_eq!(back.enemies[slot].get_byte(0), Some(slot as u8 + 1), "槽 {slot} status");
-            assert_eq!(back.enemies[slot].get_byte(3), Some(slot as u8 + 0x20), "槽 {slot} animFrame");
-            assert_eq!(back.enemies[slot].get_byte(6), Some(slot as u8 + 0x40), "槽 {slot} animIndex");
+            assert_eq!(
+                back.enemies[slot].get_byte(0),
+                Some(slot as u8 + 1),
+                "槽 {slot} status"
+            );
+            assert_eq!(
+                back.enemies[slot].get_byte(3),
+                Some(slot as u8 + 0x20),
+                "槽 {slot} animFrame"
+            );
+            assert_eq!(
+                back.enemies[slot].get_byte(6),
+                Some(slot as u8 + 0x40),
+                "槽 {slot} animIndex"
+            );
         }
     }
 
@@ -459,7 +505,14 @@ mod mss_map_tests {
         ram[0x00FF] = 0x90;
         let mut wram = vec![0u8; 0x2000];
         wram[0x1234] = 0xAB;
-        let regs = Registers { a: 1, x: 2, y: 3, sp: 4, pc: 0x8000, p: 0x24 }; // MSS ps↔p（status 同义）
+        let regs = Registers {
+            a: 1,
+            x: 2,
+            y: 3,
+            sp: 4,
+            pc: 0x8000,
+            p: 0x24,
+        }; // MSS ps↔p（status 同义）
         let mem = Manager::restore_mss(&ram, &wram, regs);
         assert_eq!(mem.read_ram(0x001A), 1);
         assert_eq!(mem.read_wram(0x7234), 0xAB);
@@ -727,7 +780,8 @@ impl Manager {
     pub fn set_oam_byte(&mut self, off: u8, v: u8) {
         self.write_ram(0x0200 + off as u16, v);
     }
-    /// `SFXSQ1InitFlags`（`$0681`）的或写。
+    /// `SFXSQ1InitFlags`（`$0681`）的或写——`SetSoundInitFlag ; 07:CBE8`（`ora / sta`），
+    /// 被 `SFX_*` 宏族调用（如 `SFX_OutOfPipe ; 07:CBA4` 的 `lda #$08`）。
     pub fn or_sfx_sq1_init(&mut self, bit: u8) {
         let v = self.read_ram(crate::sound::addrs::SQ1_INIT) | bit;
         self.write_ram(crate::sound::addrs::SQ1_INIT, v);
@@ -754,12 +808,18 @@ impl Manager {
     }
 
     pub fn metroid_latch(&mut self, slot: u8) -> u8 {
-        assert!(slot < 6, "MetroidLatch 只有 6 槽（$77F8-$77FD），越界是原版表尾读：{slot}");
+        assert!(
+            slot < 6,
+            "MetroidLatch 只有 6 槽（$77F8-$77FD），越界是原版表尾读：{slot}"
+        );
         self.read_ram(0x77F8 + slot as u16)
     }
 
     pub fn set_metroid_latch(&mut self, slot: u8, v: u8) {
-        assert!(slot < 6, "MetroidLatch 只有 6 槽（$77F8-$77FD），越界是原版表尾读：{slot}");
+        assert!(
+            slot < 6,
+            "MetroidLatch 只有 6 槽（$77F8-$77FD），越界是原版表尾读：{slot}"
+        );
         self.write_ram(0x77F8 + slot as u16, v);
     }
 
@@ -796,31 +856,57 @@ impl Manager {
     // IsHit `$0366/$0367`、KraidY `$036F`、RidleyY `$0370`；状态字 `$687B/$687C`。
 
     /// `Statue.status`（`$0360`）。
-    pub fn statue_status(&self) -> u8 { self.read_ram(0x0360) }
+    pub fn statue_status(&self) -> u8 {
+        self.read_ram(0x0360)
+    }
     /// 设 `Statue.status`。
-    pub fn set_statue_status(&mut self, v: u8) { self.write_ram(0x0360, v); }
+    pub fn set_statue_status(&mut self, v: u8) {
+        self.write_ram(0x0360, v);
+    }
     /// `Statue.hi`（`$036C`）。
-    pub fn statue_hi(&self) -> u8 { self.read_ram(0x036C) }
+    pub fn statue_hi(&self) -> u8 {
+        self.read_ram(0x036C)
+    }
     /// 设 `Statue.hi`。
-    pub fn set_statue_hi(&mut self, v: u8) { self.write_ram(0x036C, v); }
+    pub fn set_statue_hi(&mut self, v: u8) {
+        self.write_ram(0x036C, v);
+    }
     /// `Statue.y`（`$036D`）。
-    pub fn statue_y(&self) -> u8 { self.read_ram(0x036D) }
+    pub fn statue_y(&self) -> u8 {
+        self.read_ram(0x036D)
+    }
     /// 设 `Statue.y`。
-    pub fn set_statue_y(&mut self, v: u8) { self.write_ram(0x036D, v); }
+    pub fn set_statue_y(&mut self, v: u8) {
+        self.write_ram(0x036D, v);
+    }
     /// `Statue.x`（`$036E`）。
-    pub fn statue_x(&self) -> u8 { self.read_ram(0x036E) }
+    pub fn statue_x(&self) -> u8 {
+        self.read_ram(0x036E)
+    }
     /// 设 `Statue.x`。
-    pub fn set_statue_x(&mut self, v: u8) { self.write_ram(0x036E, v); }
+    pub fn set_statue_x(&mut self, v: u8) {
+        self.write_ram(0x036E, v);
+    }
     /// `Statue.animFrame`（`$0363`）。
-    pub fn set_statue_anim_frame(&mut self, v: u8) { self.write_ram(0x0363, v); }
+    pub fn set_statue_anim_frame(&mut self, v: u8) {
+        self.write_ram(0x0363, v);
+    }
     /// 像的 RaiseState（idx 0=Kraid `$0364` / 1=Ridley `$0365`）。
-    pub fn statue_raise_state(&self, idx: u8) -> u8 { self.read_ram(0x0364 + (idx & 1) as u16) }
+    pub fn statue_raise_state(&self, idx: u8) -> u8 {
+        self.read_ram(0x0364 + (idx & 1) as u16)
+    }
     /// 设 RaiseState。
-    pub fn set_statue_raise_state(&mut self, idx: u8, v: u8) { self.write_ram(0x0364 + (idx & 1) as u16, v); }
+    pub fn set_statue_raise_state(&mut self, idx: u8, v: u8) {
+        self.write_ram(0x0364 + (idx & 1) as u16, v);
+    }
     /// 像的 IsHit（`$0366/$0367`）。
-    pub fn statue_is_hit(&self, idx: u8) -> u8 { self.read_ram(0x0366 + (idx & 1) as u16) }
+    pub fn statue_is_hit(&self, idx: u8) -> u8 {
+        self.read_ram(0x0366 + (idx & 1) as u16)
+    }
     /// 设 IsHit。
-    pub fn set_statue_is_hit(&mut self, idx: u8, v: u8) { self.write_ram(0x0366 + (idx & 1) as u16, v); }
+    pub fn set_statue_is_hit(&mut self, idx: u8, v: u8) {
+        self.write_ram(0x0366 + (idx & 1) as u16, v);
+    }
     /// 像的当前 Y（Kraid `$036F` / Ridley `$0370`）。
     pub fn statue_raise_y(&self, idx: u8) -> u8 {
         self.read_ram(if idx == 0 { 0x036F } else { 0x0370 })
@@ -831,32 +917,55 @@ impl Manager {
     }
     /// 像的状态字（`KraidStatueStatus=$687B` / `RidleyStatueStatus=$687C`，bit7=up）。
     pub fn statue_status_word(&self, idx: u8) -> u8 {
-        self.read_ram(if idx == 0 { crate::ram_map::KRAID_STATUE_STATUS } else { crate::ram_map::RIDLEY_STATUE_STATUS })
+        self.read_ram(if idx == 0 {
+            crate::ram_map::KRAID_STATUE_STATUS
+        } else {
+            crate::ram_map::RIDLEY_STATUE_STATUS
+        })
     }
     /// 设像的状态字。
     pub fn set_statue_status_word(&mut self, idx: u8, v: u8) {
-        let a = if idx == 0 { crate::ram_map::KRAID_STATUE_STATUS } else { crate::ram_map::RIDLEY_STATUE_STATUS };
+        let a = if idx == 0 {
+            crate::ram_map::KRAID_STATUE_STATUS
+        } else {
+            crate::ram_map::RIDLEY_STATUE_STATUS
+        };
         self.write_ram(a, v);
     }
     /// `DoorEntryStatus`（`$0056`，非 0=正在门转场）。
-    pub fn door_entry_status(&self) -> u8 { self.read_ram(crate::ram_map::DOOR_ENTRY_STATUS) }
+    pub fn door_entry_status(&self) -> u8 {
+        self.read_ram(crate::ram_map::DOOR_ENTRY_STATUS)
+    }
 
     /// `StatuesBridgeIsSpawned`（`$0054`）。
-    pub fn statues_bridge_spawned(&self) -> u8 { self.read_ram(crate::ram_map::STATUES_BRIDGE_SPAWNED) }
+    pub fn statues_bridge_spawned(&self) -> u8 {
+        self.read_ram(crate::ram_map::STATUES_BRIDGE_SPAWNED)
+    }
     /// 设 `StatuesBridgeIsSpawned`。
-    pub fn set_statues_bridge_spawned(&mut self, v: u8) { self.write_ram(crate::ram_map::STATUES_BRIDGE_SPAWNED, v); }
+    pub fn set_statues_bridge_spawned(&mut self, v: u8) {
+        self.write_ram(crate::ram_map::STATUES_BRIDGE_SPAWNED, v);
+    }
 
     /// 槽内 `routine`。
-    pub fn tb_routine(&self, slot: u8) -> u8 { self.read_ram(Self::tb_addr(slot, 0)) }
+    pub fn tb_routine(&self, slot: u8) -> u8 {
+        self.read_ram(Self::tb_addr(slot, 0))
+    }
     /// 设 `routine`。
-    pub fn set_tb_routine(&mut self, slot: u8, v: u8) { self.write_ram(Self::tb_addr(slot, 0), v); }
+    pub fn set_tb_routine(&mut self, slot: u8, v: u8) {
+        self.write_ram(Self::tb_addr(slot, 0), v);
+    }
     /// 槽内 `delay`。
-    pub fn tb_delay(&self, slot: u8) -> u8 { self.read_ram(Self::tb_addr(slot, 7)) }
+    pub fn tb_delay(&self, slot: u8) -> u8 {
+        self.read_ram(Self::tb_addr(slot, 7))
+    }
     /// 设 `delay`。
-    pub fn set_tb_delay(&mut self, slot: u8, v: u8) { self.write_ram(Self::tb_addr(slot, 7), v); }
+    pub fn set_tb_delay(&mut self, slot: u8, v: u8) {
+        self.write_ram(Self::tb_addr(slot, 7), v);
+    }
     /// 槽内 `roomRAMPtr`（两个字节合成 u16）。
     pub fn tb_ptr(&self, slot: u8) -> u16 {
-        (self.read_ram(Self::tb_addr(slot, 9)) as u16) << 8 | self.read_ram(Self::tb_addr(slot, 8)) as u16
+        (self.read_ram(Self::tb_addr(slot, 9)) as u16) << 8
+            | self.read_ram(Self::tb_addr(slot, 8)) as u16
     }
     /// 设 `roomRAMPtr`。
     pub fn set_tb_ptr(&mut self, slot: u8, v: u16) {
@@ -864,25 +973,45 @@ impl Manager {
         self.write_ram(Self::tb_addr(slot, 9), (v >> 8) as u8);
     }
     /// 槽内 `type`（碎块类型 —— 4×4 小泡/1×1/2×2 分组）。
-    pub fn tb_type(&self, slot: u8) -> u8 { self.read_ram(Self::tb_addr(slot, 10)) }
+    pub fn tb_type(&self, slot: u8) -> u8 {
+        self.read_ram(Self::tb_addr(slot, 10))
+    }
     /// 设 `type`。
-    pub fn set_tb_type(&mut self, slot: u8, v: u8) { self.write_ram(Self::tb_addr(slot, 10), v); }
+    pub fn set_tb_type(&mut self, slot: u8, v: u8) {
+        self.write_ram(Self::tb_addr(slot, 10), v);
+    }
     /// 槽内 `animFrame`（= VRAM 字符串 id）。
-    pub fn tb_anim_frame(&self, slot: u8) -> u8 { self.read_ram(Self::tb_addr(slot, 3)) }
+    pub fn tb_anim_frame(&self, slot: u8) -> u8 {
+        self.read_ram(Self::tb_addr(slot, 3))
+    }
     /// 设 `animFrame`。
-    pub fn set_tb_anim_frame(&mut self, slot: u8, v: u8) { self.write_ram(Self::tb_addr(slot, 3), v); }
+    pub fn set_tb_anim_frame(&mut self, slot: u8, v: u8) {
+        self.write_ram(Self::tb_addr(slot, 3), v);
+    }
     /// 槽内 `animIndex`。
-    pub fn tb_anim_index(&self, slot: u8) -> u8 { self.read_ram(Self::tb_addr(slot, 6)) }
+    pub fn tb_anim_index(&self, slot: u8) -> u8 {
+        self.read_ram(Self::tb_addr(slot, 6))
+    }
     /// 设 `animIndex`。
-    pub fn set_tb_anim_index(&mut self, slot: u8, v: u8) { self.write_ram(Self::tb_addr(slot, 6), v); }
+    pub fn set_tb_anim_index(&mut self, slot: u8, v: u8) {
+        self.write_ram(Self::tb_addr(slot, 6), v);
+    }
     /// 槽内 `animDelay`。
-    pub fn tb_anim_delay(&self, slot: u8) -> u8 { self.read_ram(Self::tb_addr(slot, 4)) }
+    pub fn tb_anim_delay(&self, slot: u8) -> u8 {
+        self.read_ram(Self::tb_addr(slot, 4))
+    }
     /// 设 `animDelay`。
-    pub fn set_tb_anim_delay(&mut self, slot: u8, v: u8) { self.write_ram(Self::tb_addr(slot, 4), v); }
+    pub fn set_tb_anim_delay(&mut self, slot: u8, v: u8) {
+        self.write_ram(Self::tb_addr(slot, 4), v);
+    }
     /// 槽内 `spare05`（原版把 `animIndex` 镜一份进来，`UpdateTileBlastAnim` 回滚用）。
-    pub fn tb_spare05(&self, slot: u8) -> u8 { self.read_ram(Self::tb_addr(slot, 5)) }
+    pub fn tb_spare05(&self, slot: u8) -> u8 {
+        self.read_ram(Self::tb_addr(slot, 5))
+    }
     /// 设 `spare05`。
-    pub fn set_tb_spare05(&mut self, slot: u8, v: u8) { self.write_ram(Self::tb_addr(slot, 5), v); }
+    pub fn set_tb_spare05(&mut self, slot: u8, v: u8) {
+        self.write_ram(Self::tb_addr(slot, 5), v);
+    }
 
     // ---- Zebetites（`$0758`，5 槽 × 8 B）----
     //
@@ -894,22 +1023,35 @@ impl Manager {
         0x0758 + slot as u16 * 8 + off
     }
     /// 槽内 `status`（bit0=活、bit1=已死停更新、bit7=重绘失败标记）。
-    pub fn zeb_status(&self, slot: u8) -> u8 { self.read_ram(Self::zeb_addr(slot, 0)) }
-    pub fn set_zeb_status(&mut self, slot: u8, v: u8) { self.write_ram(Self::zeb_addr(slot, 0), v); }
+    pub fn zeb_status(&self, slot: u8) -> u8 {
+        self.read_ram(Self::zeb_addr(slot, 0))
+    }
+    pub fn set_zeb_status(&mut self, slot: u8, v: u8) {
+        self.write_ram(Self::zeb_addr(slot, 0), v);
+    }
     /// 槽内 `roomRAMPtr`（左上角瓦的 RoomRAM 地址）。
     pub fn zeb_ptr(&self, slot: u8) -> u16 {
-        (self.read_ram(Self::zeb_addr(slot, 2)) as u16) << 8 | self.read_ram(Self::zeb_addr(slot, 1)) as u16
+        (self.read_ram(Self::zeb_addr(slot, 2)) as u16) << 8
+            | self.read_ram(Self::zeb_addr(slot, 1)) as u16
     }
     pub fn set_zeb_ptr(&mut self, slot: u8, v: u16) {
         self.write_ram(Self::zeb_addr(slot, 1), v as u8);
         self.write_ram(Self::zeb_addr(slot, 2), (v >> 8) as u8);
     }
     /// 槽内 `qtyHits`（8 击死）。
-    pub fn zeb_qty_hits(&self, slot: u8) -> u8 { self.read_ram(Self::zeb_addr(slot, 3)) }
-    pub fn set_zeb_qty_hits(&mut self, slot: u8, v: u8) { self.write_ram(Self::zeb_addr(slot, 3), v); }
+    pub fn zeb_qty_hits(&self, slot: u8) -> u8 {
+        self.read_ram(Self::zeb_addr(slot, 3))
+    }
+    pub fn set_zeb_qty_hits(&mut self, slot: u8, v: u8) {
+        self.write_ram(Self::zeb_addr(slot, 3), v);
+    }
     /// 槽内 `healingDelay`（`$40`→0 自愈 1 击）。
-    pub fn zeb_healing_delay(&self, slot: u8) -> u8 { self.read_ram(Self::zeb_addr(slot, 4)) }
-    pub fn set_zeb_healing_delay(&mut self, slot: u8, v: u8) { self.write_ram(Self::zeb_addr(slot, 4), v); }
+    pub fn zeb_healing_delay(&self, slot: u8) -> u8 {
+        self.read_ram(Self::zeb_addr(slot, 4))
+    }
+    pub fn set_zeb_healing_delay(&mut self, slot: u8, v: u8) {
+        self.write_ram(Self::zeb_addr(slot, 4), v);
+    }
     /// `UpdatingSamusProjectile`（`$0071`）——非 0 表示当前在跑萨姆斯弹件环
     /// （`IsBlastTile ; 07:E9BE` 的门；Tourian 弹撞瓦钩也用它）。
     pub fn updating_samus_projectile(&self) -> u8 {
@@ -917,8 +1059,69 @@ impl Manager {
     }
 
     /// 槽内 `isHit`（本帧被导弹命中）。
-    pub fn zeb_is_hit(&self, slot: u8) -> u8 { self.read_ram(Self::zeb_addr(slot, 5)) }
-    pub fn set_zeb_is_hit(&mut self, slot: u8, v: u8) { self.write_ram(Self::zeb_addr(slot, 5), v); }
+    pub fn zeb_is_hit(&self, slot: u8) -> u8 {
+        self.read_ram(Self::zeb_addr(slot, 5))
+    }
+    pub fn set_zeb_is_hit(&mut self, slot: u8, v: u8) {
+        self.write_ram(Self::zeb_addr(slot, 5), v);
+    }
+
+    // ---- PipeBugHoles（`$0728`，4 槽 × 8 B）----
+    //
+    // `constants_ram.asm:56-63` 的 `.struct PipeBugHole`：status0（bit0-3=要生出的敌型、
+    // bit7=strong、`$FF`=无洞）/ enemySlot1 / y2 / x3 / hi4 / unused5-7
+    // （`:1177 PipeBugHoles instanceof PipeBugHole 4 startfrom 0`）。
+    // 装载 `LoadPipeBugHole ; 07:EC57`、更新 `UpdatePipeBugHole ; 07:FAFF`。
+
+    fn pbh_addr(slot: u8, off: u16) -> u16 {
+        debug_assert!(slot < 4, "PipeBugHoles 槽号越界：{slot}");
+        0x0728 + slot as u16 * 8 + off
+    }
+    /// 槽内 `status`（`$FF`=空槽；否则低半字节=要生出的敌型、bit7=strong）。
+    pub fn pbh_status(&self, slot: u8) -> u8 {
+        self.read_ram(Self::pbh_addr(slot, 0))
+    }
+    pub fn set_pbh_status(&mut self, slot: u8, v: u8) {
+        self.write_ram(Self::pbh_addr(slot, 0), v);
+    }
+    /// 槽内 `enemySlot`（`$0400+x` 的对象槽偏移，`b0 & $F0`）。
+    pub fn pbh_enemy_slot(&self, slot: u8) -> u8 {
+        self.read_ram(Self::pbh_addr(slot, 1))
+    }
+    pub fn set_pbh_enemy_slot(&mut self, slot: u8, v: u8) {
+        self.write_ram(Self::pbh_addr(slot, 1), v);
+    }
+    /// 槽内 `y`（`(b2 & $F0) | $08`）。
+    pub fn pbh_y(&self, slot: u8) -> u8 {
+        self.read_ram(Self::pbh_addr(slot, 2))
+    }
+    pub fn set_pbh_y(&mut self, slot: u8, v: u8) {
+        self.write_ram(Self::pbh_addr(slot, 2), v);
+    }
+    /// 槽内 `x`（`b2 * 16`）。
+    pub fn pbh_x(&self, slot: u8) -> u8 {
+        self.read_ram(Self::pbh_addr(slot, 3))
+    }
+    pub fn set_pbh_x(&mut self, slot: u8, v: u8) {
+        self.write_ram(Self::pbh_addr(slot, 3), v);
+    }
+    /// 槽内 `hi`（名表位，`GetNameTableAtScrollDir`）。
+    pub fn pbh_hi(&self, slot: u8) -> u8 {
+        self.read_ram(Self::pbh_addr(slot, 4))
+    }
+    pub fn set_pbh_hi(&mut self, slot: u8, v: u8) {
+        self.write_ram(Self::pbh_addr(slot, 4), v);
+    }
+
+    /// 设 `InArea`（`$0074`，`$10`=Brinstar … `$14`=Ridley）。
+    pub fn set_in_area(&mut self, v: u8) { self.write_ram(crate::ram_map::IN_AREA, v); }
+    /// 设 `ScrollDir`（`$0049`）。
+    pub fn set_scroll_dir(&mut self, v: u8) { self.write_ram(crate::ram_map::SCROLL_DIR, v); }
+
+    /// `ScrollDir`（`$0049`，0=Up/1=Down/2=Left/3=Right）。
+    pub fn scroll_dir(&self) -> u8 {
+        self.read_ram(crate::ram_map::SCROLL_DIR)
+    }
 
     /// `VRAMStructBufferIndex`（`$07A0`）——PPU 写缓冲游标（>= `$1F` 视为满）。
     pub fn vram_struct_index(&self) -> u8 {
@@ -1003,13 +1206,18 @@ mod tests_mss {
     #[test]
     fn restore_leaves_no_typed_copy_in_storage() {
         let mut src = crate::state::Manager::default();
-        src.samus().set_status(crate::samus::state::SamusStatus::Roll);
-        src.enemy(3).set_status(crate::enemy::state::EnemyStatus::Active);
+        src.samus()
+            .set_status(crate::samus::state::SamusStatus::Roll);
+        src.enemy(3)
+            .set_status(crate::enemy::state::EnemyStatus::Active);
         let (ram, wram, regs) = src.capture_mss();
         let mut restored = crate::state::Manager::restore_mss(&ram, &wram, regs);
         assert_eq!(restored.ram()[0x0300], 0, "storage 不得保留 typed 副本");
         assert_eq!(restored.read_ram(0x0300), 3, "读径仍走 typed");
-        assert_eq!(restored.enemy(3).status(), crate::enemy::state::EnemyStatus::Active);
+        assert_eq!(
+            restored.enemy(3).status(),
+            crate::enemy::state::EnemyStatus::Active
+        );
     }
 
     /// 全非零字节面（`i%255+1` ∈ 1..=255）。**非零是判据的一部分**：typed 格若留在
@@ -1047,7 +1255,10 @@ mod tests_mss {
         let mut manifest: Vec<u16> = TypedRestoreManifest::ram_addrs().collect();
         bypass.sort_unstable();
         manifest.sort_unstable();
-        assert_eq!(bypass, manifest, "RAM 面：读径绕过 storage 的地址集合 != typed 清单");
+        assert_eq!(
+            bypass, manifest,
+            "RAM 面：读径绕过 storage 的地址集合 != typed 清单"
+        );
 
         // 【I-1】**扫全 WRAM 面**（$6000-$7FFF），不是只扫敌槽窗：
         // 旧窗右端 `$6AF4+SLOT_COUNT*16` 是左闭右开、恰好顶到爆炸额外面基址 `$6BB4` 之前，
@@ -1075,16 +1286,24 @@ mod tests_mss {
     fn explosion_extra_face_stays_outside_typed_manifest() {
         use crate::enemy::explosion::{EXTRA_BASE, EXTRA_STRIDE, SLOT_COUNT as EX_SLOTS};
         let face: Vec<u16> = (0..EX_SLOTS as u16)
-            .flat_map(|slot| (0..EXTRA_STRIDE).map(move |off| EXTRA_BASE + slot * EXTRA_STRIDE + off))
+            .flat_map(|slot| {
+                (0..EXTRA_STRIDE).map(move |off| EXTRA_BASE + slot * EXTRA_STRIDE + off)
+            })
             .collect();
 
         let manifest: Vec<u16> = TypedRestoreManifest::wram_addrs().collect();
-        let overlap: Vec<u16> = face.iter().copied().filter(|a| manifest.contains(a)).collect();
-        assert!(overlap.is_empty(), "爆炸额外面与敌槽 typed 清单重叠：{overlap:?}");
+        let overlap: Vec<u16> = face
+            .iter()
+            .copied()
+            .filter(|a| manifest.contains(a))
+            .collect();
+        assert!(
+            overlap.is_empty(),
+            "爆炸额外面与敌槽 typed 清单重叠：{overlap:?}"
+        );
 
-        let ens_end = crate::enemy::state::ENS_EXTRA_BASE
-            + crate::enemy::state::SLOT_COUNT as u16 * 16
-            - 1;
+        let ens_end =
+            crate::enemy::state::ENS_EXTRA_BASE + crate::enemy::state::SLOT_COUNT as u16 * 16 - 1;
         assert_eq!(face[0], ens_end + 1, "爆炸额外面必须紧接敌槽 typed 面末格");
         assert_eq!(
             *face.last().unwrap(),
@@ -1097,8 +1316,16 @@ mod tests_mss {
         let mem = Manager::restore_mss(&ram, &wram, Registers::default());
         for a in face {
             let i = ((a - 0x6000) & 0x1FFF) as usize;
-            assert_eq!(mem.wram()[i], wram[i], "{a:#06X}：爆炸额外面是未迁族，必须留在字节面");
-            assert_eq!(mem.read_wram(a), wram[i], "{a:#06X}：爆炸额外面读径不得绕过 storage");
+            assert_eq!(
+                mem.wram()[i],
+                wram[i],
+                "{a:#06X}：爆炸额外面是未迁族，必须留在字节面"
+            );
+            assert_eq!(
+                mem.read_wram(a),
+                wram[i],
+                "{a:#06X}：爆炸额外面读径不得绕过 storage"
+            );
         }
     }
 
@@ -1110,7 +1337,14 @@ mod tests_mss {
     fn restore_preserves_untyped_bytes_and_roundtrips_whole_face() {
         let ram = nonzero_face(0x800);
         let wram = nonzero_face(0x2000);
-        let regs = Registers { a: 7, x: 9, y: 11, sp: 0xFD, pc: 0xC0DE, p: 0x31 };
+        let regs = Registers {
+            a: 7,
+            x: 9,
+            y: 11,
+            sp: 0xFD,
+            pc: 0xC0DE,
+            p: 0x31,
+        };
         let mem = Manager::restore_mss(&ram, &wram, regs);
 
         let typed_ram: Vec<u16> = TypedRestoreManifest::ram_addrs().collect();
@@ -1128,7 +1362,11 @@ mod tests_mss {
                 continue;
             }
             let i = (a - 0x6000) as usize;
-            assert_eq!(mem.wram()[i], wram[i], "{a:#06X}：WRAM 未迁族必须留在字节面");
+            assert_eq!(
+                mem.wram()[i],
+                wram[i],
+                "{a:#06X}：WRAM 未迁族必须留在字节面"
+            );
             assert_eq!(mem.read_wram(a), wram[i], "{a:#06X}：WRAM 未迁族读径同值");
         }
 

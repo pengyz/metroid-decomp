@@ -87,6 +87,14 @@ impl Object<'_> {
         self.mem.write_ram(self.addr(obj::RADIUS_Y), v);
     }
 
+    /// `radiusX`（`$0302`）——门槽同址多义为 `DoorRoomRAMPtr` 低字节。
+    pub fn radius_x(&self) -> u8 {
+        self.mem.read_ram(self.addr(obj::RADIUS_X))
+    }
+    pub fn set_radius_x(&mut self, v: u8) {
+        self.mem.write_ram(self.addr(obj::RADIUS_X), v);
+    }
+
     pub fn y(&self) -> u8 {
         self.mem.read_ram(self.addr(obj::Y))
     }

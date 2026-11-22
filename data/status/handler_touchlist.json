@@ -1,466 +1,471 @@
 {
-  "schema": "handler-touchlist/v1",
-  "doc": "占位臂记账触达清单（L4 矩阵实录固化——增长即红白名单基线）。源=shots_rust/*.divergences.json（rust_screenshot 腿 DIVERGENCES sidecar，2026-11-13 新增）聚合矩阵内的全部案（当前 19 案，`cases_covered` 为准）。契约：sidecar 新增任何不在本清单的 addr=账外=红（须显式登记本清单才放行）——与 diff_traces.py:614 账外照红同语义的 L4 侧。",
-  "source_run": "python3 tools/l4_diff_run.py run-all @ 2026-11-18（19 案；新增 0xCBEF/0xD150 由 case-morphball-tail-probe 触发；case-mechanism-door-* 使 0xCC98 +133、0xFB7B +694，无新 addr）",
-  "cases_covered": 19,
-  "unique_addrs": 10,
-  "total_events": 75040,
-  "entries": [
-    {
-      "addr": "0xB7E7",
-      "asm_label": "BeepSFXCont",
-      "push_site": "sound_hook::_=>None",
-      "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:1240",
-      "n_events": 1333,
-      "first_tick": 402,
-      "cases": {
-        "case-password-justin": 526,
-        "case-001-game-start-samus-interaction": 516,
-        "case-crawlprobe": 291
-      }
-    },
-    {
-      "addr": "0xB87F",
-      "asm_label": "BombLaunchSFXCont",
-      "push_site": "sound_hook::_=>None",
-      "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:1345",
-      "n_events": 109,
-      "first_tick": 618,
-      "cases": {
-        "case-password-justin": 109
-      }
-    },
-    {
-      "addr": "0xCBEF",
-      "asm_label": "SFX_SamusBall",
-      "push_site": "crates/game-core/src/samus/handler.rs::set_samus_roll",
-      "asm_ref": "refs/m1disasm/SRC/prg7_engine.asm:2668",
-      "n_events": 2,
-      "first_tick": 505,
-      "cases": {
-        "case-mechanism-morphball": 1,
-        "case-morphball-tail-probe": 1
-      }
-    },
-    {
-      "addr": "0xCBF9",
-      "asm_label": "PowerUpMusic",
-      "push_site": "crates/game-core/src/world/update.rs:187-188",
-      "asm_ref": "refs/m1disasm/SRC/prg7_engine.asm:2681",
-      "n_events": 0,
-      "cases": {},
-      "stale_since": "2026-11-13",
-      "stale_note": "原 n_events=1/first_tick=1520 是 a880789f 那一批的一次性观测，其 sidecar 已不在仓库；自 ffe3fba3 起 17 案矩阵重算均为零事件（a3065dae 那次是原样搬运，未重算，不在此证范围），属**陈旧记账**而非行为回退（gap_map 无该 addr）。代码路径仍在（world/update.rs:187-188 拾取音乐），当前无用例覆盖 ⇒ 这是覆盖率缺口，登记于此而不是静默删条目。"
-    },
-    {
-      "addr": "0xCC36",
-      "asm_label": "SamusStand",
-      "push_site": "samus/handler.rs:902",
-      "asm_ref": "refs/m1disasm/SRC/prg7_engine.asm:2735",
-      "n_events": 5955,
-      "first_tick": 476,
-      "cases": {
-        "case-jumpledge-probe": 334,
-        "case-killenemy-probe": 654,
-        "case-password-justin": 962,
-        "case-collide-probe": 208,
-        "case-walkfcprobe": 346,
-        "case-002-door-blue-interaction": 532,
-        "case-001-game-start-samus-interaction": 608,
-        "case-mechanism-morphball": 61,
-        "case-shootprobe-probe": 377,
-        "case-scrollseam-probe": 153,
-        "case-morphball-tail-probe": 61,
-        "case-crawlprobe": 377,
-        "case-leftwalk-probe": 187,
-        "case-elev-norfair-transition": 314,
-        "case-leftwalk-probe2": 346,
-        "case-morphball-probe": 434,
-        "case-mechanism-door-transition": 1
-      }
-    },
-    {
-      "addr": "0xCC98",
-      "asm_label": "SetSamusRun",
-      "push_site": "samus/physics.rs:1645",
-      "asm_ref": "refs/m1disasm/SRC/prg7_engine.asm:2824",
-      "n_events": 8468,
-      "first_tick": 500,
-      "cases": {
-        "case-jumpledge-probe": 547,
-        "case-killenemy-probe": 649,
-        "case-collide-probe": 459,
-        "case-walkfcprobe": 959,
-        "case-002-door-blue-interaction": 747,
-        "case-001-game-start-samus-interaction": 695,
-        "case-mechanism-morphball": 99,
-        "case-shootprobe-probe": 449,
-        "case-scrollseam-probe": 465,
-        "case-morphball-tail-probe": 99,
-        "case-crawlprobe": 455,
-        "case-leftwalk-probe": 359,
-        "case-elev-norfair-transition": 150,
-        "case-leftwalk-probe2": 959,
-        "case-morphball-probe": 1244,
-        "case-mechanism-door-transition": 133
-      }
-    },
-    {
-      "addr": "0xCE25",
-      "asm_label": "IsSamusDead-chain(Lx005 死分支 jmp CheckHealthBeep)",
-      "push_site": "samus/physics.rs:1005",
-      "asm_ref": "refs/m1disasm/SRC/prg7_engine.asm:3108-3118 (Lx005@CE1E 内)",
-      "n_events": 6,
-      "first_tick": 961,
-      "cases": {
-        "case-002-door-blue-interaction": 1,
-        "case-001-game-start-samus-interaction": 2,
-        "case-crawlprobe": 2,
-        "case-elev-norfair-transition": 1
-      }
-    },
-    {
-      "addr": "0xD150",
-      "asm_label": "CheckBombLaunch",
-      "push_site": "crates/game-core/src/samus/handler.rs::samus_roll",
-      "asm_ref": "refs/m1disasm/SRC/prg7_engine.asm:3685",
-      "n_events": 108,
-      "first_tick": 506,
-      "cases": {
-        "case-mechanism-morphball": 54,
-        "case-morphball-tail-probe": 54
-      }
-    },
-    {
-      "addr": "0xEEA1",
-      "asm_label": "SpawnElevator",
-      "push_site": "pickup/spawn.rs:71 (ChooseSpawningRoutine 占位臂)",
-      "asm_ref": "refs/m1disasm/SRC/prg7_engine.asm:9502",
-      "n_events": 1,
-      "first_tick": 1190,
-      "cases": {
-        "case-password-justin": 1
-      }
-    },
-    {
-      "addr": "0xFB7B",
-      "asm_label": "InitEnemyFacingDirectionAxisAndDelay",
-      "push_site": "frame/mainloop.rs:752 (敌移动 delay 记账)",
-      "asm_ref": "refs/m1disasm/SRC/prg7_engine.asm:12062",
-      "n_events": 59058,
-      "first_tick": 476,
-      "cases": {
-        "case-jumpledge-probe": 3061,
-        "case-killenemy-probe": 3388,
-        "case-password-justin": 5772,
-        "case-collide-probe": 2667,
-        "case-walkfcprobe": 5527,
-        "case-002-door-blue-interaction": 3786,
-        "case-001-game-start-samus-interaction": 4451,
-        "case-mechanism-morphball": 666,
-        "case-shootprobe-probe": 2622,
-        "case-scrollseam-probe": 2679,
-        "case-morphball-tail-probe": 666,
-        "case-crawlprobe": 3251,
-        "case-leftwalk-probe": 2527,
-        "case-elev-norfair-transition": 4800,
-        "case-leftwalk-probe2": 5527,
-        "case-morphball-probe": 6974,
-        "case-mechanism-door-transition": 694
-      }
-    }
-  ],
-  "handler_arms_total": 28,
-  "handler_arms_touched": 4,
-  "handler_arms_untouched": 24,
-  "sound_trace_probe": "DSH_SOUND_TRACE=1（sound_hook::sound_trace——kind=handler/unhandled，含 fc/ptr/depth）",
-  "sound_trace_source_run": "DSH_SOUND_TRACE=1 rust_screenshot 逐案（15 sched，2026-11-13）",
-  "handlers": [
-    {
-      "addr": "0xB50F",
-      "asm_label": "SpitFlameSFXInit",
-      "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:626",
-      "probe": "DSH_SOUND_TRACE kind=handler",
-      "n_events": 0,
-      "first_tick": null,
-      "cases": {}
-    },
-    {
-      "addr": "0xB52B",
-      "asm_label": "ScrewAttackSFXInit",
-      "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:650",
-      "probe": "DSH_SOUND_TRACE kind=handler",
-      "n_events": 0,
-      "first_tick": null,
-      "cases": {}
-    },
-    {
-      "addr": "0xB56E",
-      "asm_label": "MissileLaunchSFXInit",
-      "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:705",
-      "probe": "DSH_SOUND_TRACE kind=handler",
-      "n_events": 0,
-      "first_tick": null,
-      "cases": {}
-    },
-    {
-      "addr": "0xB583",
-      "asm_label": "BombExplodeSFXInit",
-      "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:726",
-      "probe": "DSH_SOUND_TRACE kind=handler",
-      "n_events": 0,
-      "first_tick": null,
-      "cases": {}
-    },
-    {
-      "addr": "0xB598",
-      "asm_label": "SamusWalkSFXInit",
-      "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:752",
-      "probe": "DSH_SOUND_TRACE kind=handler",
-      "n_events": 0,
-      "first_tick": null,
-      "cases": {}
-    },
-    {
-      "addr": "0xB5EC",
-      "asm_label": "BossHitSFXInit",
-      "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:806",
-      "probe": "DSH_SOUND_TRACE kind=handler",
-      "n_events": 0,
-      "first_tick": null,
-      "cases": {}
-    },
-    {
-      "addr": "0xB650",
-      "asm_label": "SamusHitSFXCont",
-      "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:869",
-      "probe": "DSH_SOUND_TRACE kind=handler",
-      "n_events": 0,
-      "first_tick": null,
-      "cases": {}
-    },
-    {
-      "addr": "0xB673",
-      "asm_label": "SamusHitSFXInit",
-      "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:896",
-      "probe": "DSH_SOUND_TRACE kind=handler",
-      "n_events": 0,
-      "first_tick": null,
-      "cases": {}
-    },
-    {
-      "addr": "0xB695",
-      "asm_label": "IncorrectPasswordSFXInit",
-      "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:924",
-      "probe": "DSH_SOUND_TRACE kind=handler",
-      "n_events": 0,
-      "first_tick": null,
-      "cases": {}
-    },
-    {
-      "addr": "0xB6CD",
-      "asm_label": "MissilePickupSFXInit",
-      "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:971",
-      "probe": "DSH_SOUND_TRACE kind=handler",
-      "n_events": 0,
-      "first_tick": null,
-      "cases": {}
-    },
-    {
-      "addr": "0xB6E7",
-      "asm_label": "EnergyPickupSFXInit",
-      "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:994",
-      "probe": "DSH_SOUND_TRACE kind=handler",
-      "n_events": 0,
-      "first_tick": null,
-      "cases": {}
-    },
-    {
-      "addr": "0xB703",
-      "asm_label": "SamusJumpSFXInit",
-      "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:1024",
-      "probe": "DSH_SOUND_TRACE kind=handler",
-      "n_events": 0,
-      "first_tick": null,
-      "cases": {}
-    },
-    {
-      "addr": "0xB710",
-      "asm_label": "EnemyHitSFXInit",
-      "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:1037",
-      "probe": "DSH_SOUND_TRACE kind=handler",
-      "n_events": 0,
-      "first_tick": null,
-      "cases": {}
-    },
-    {
-      "addr": "0xB716",
-      "asm_label": "BulletFireSFXInit",
-      "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:1045",
-      "probe": "DSH_SOUND_TRACE kind=handler",
-      "n_events": 0,
-      "first_tick": null,
-      "cases": {}
-    },
-    {
-      "addr": "0xB7AC",
-      "asm_label": "DoorOpenCloseSFXInit",
-      "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:1195",
-      "probe": "DSH_SOUND_TRACE kind=handler",
-      "n_events": 0,
-      "first_tick": null,
-      "cases": {}
-    },
-    {
-      "addr": "0xB7D9",
-      "asm_label": "BeepSFXInit",
-      "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:1227",
-      "probe": "DSH_SOUND_TRACE kind=handler",
-      "n_events": 130,
-      "first_tick": 2,
-      "cases": {
-        "case-password-justin": 130
-      }
-    },
-    {
-      "addr": "0xB7EF",
-      "asm_label": "BigEnemyHitSFXInit",
-      "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:1247",
-      "probe": "DSH_SOUND_TRACE kind=handler",
-      "n_events": 0,
-      "first_tick": null,
-      "cases": {}
-    },
-    {
-      "addr": "0xB834",
-      "asm_label": "SamusToBallSFXInit",
-      "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:1290",
-      "probe": "DSH_SOUND_TRACE kind=handler",
-      "n_events": 0,
-      "first_tick": null,
-      "cases": {}
-    },
-    {
-      "addr": "0xB878",
-      "asm_label": "BombLaunchSFXInit",
-      "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:1336",
-      "probe": "DSH_SOUND_TRACE kind=handler",
-      "n_events": 24,
-      "first_tick": 30,
-      "cases": {
-        "case-password-justin": 24
-      }
-    },
-    {
-      "addr": "0xB8A7",
-      "asm_label": "MetroidHitSFXInit",
-      "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:1378",
-      "probe": "DSH_SOUND_TRACE kind=handler",
-      "n_events": 0,
-      "first_tick": null,
-      "cases": {}
-    },
-    {
-      "addr": "0xB8D2",
-      "asm_label": "SamusDieSFXInit",
-      "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:1414",
-      "probe": "DSH_SOUND_TRACE kind=handler",
-      "n_events": 0,
-      "first_tick": null,
-      "cases": {}
-    },
-    {
-      "addr": "0xB921",
-      "asm_label": "StatueRaiseSFXInit",
-      "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:1463",
-      "probe": "DSH_SOUND_TRACE kind=handler",
-      "n_events": 0,
-      "first_tick": null,
-      "cases": {}
-    },
-    {
-      "addr": "0xBC77",
-      "asm_label": "GotoMusic00Init",
-      "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:2162",
-      "probe": "DSH_SOUND_TRACE kind=handler",
-      "n_events": 0,
-      "first_tick": null,
-      "cases": {}
-    },
-    {
-      "addr": "0xBC7A",
-      "asm_label": "GotoMusic01Init",
-      "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:2165",
-      "probe": "DSH_SOUND_TRACE kind=handler",
-      "n_events": 28,
-      "first_tick": 1,
-      "cases": {
-        "case-001-game-start-samus-interaction": 2,
-        "case-002-door-blue-interaction": 2,
-        "case-collide-probe": 2,
-        "case-crawlprobe": 2,
-        "case-fcprobe": 2,
-        "case-jumpledge-probe": 2,
-        "case-killenemy-probe": 2,
-        "case-leftwalk-probe": 2,
-        "case-leftwalk-probe2": 2,
-        "case-morphball-probe": 2,
-        "case-password-justin": 2,
-        "case-scrollseam-probe": 2,
-        "case-shootprobe-probe": 2,
-        "case-walkfcprobe": 2
-      }
-    },
-    {
-      "addr": "0xBC7D",
-      "asm_label": "GotoMusic02Init",
-      "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:2168",
-      "probe": "DSH_SOUND_TRACE kind=handler",
-      "n_events": 0,
-      "first_tick": null,
-      "cases": {}
-    },
-    {
-      "addr": "0xBC80",
-      "asm_label": "GotoMusic03Init",
-      "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:2171",
-      "probe": "DSH_SOUND_TRACE kind=handler",
-      "n_events": 14,
-      "first_tick": 13,
-      "cases": {
-        "bundle-ff": 1,
-        "case-001-game-start-samus-interaction": 1,
-        "case-002-door-blue-interaction": 1,
-        "case-collide-probe": 1,
-        "case-crawlprobe": 1,
-        "case-jumpledge-probe": 1,
-        "case-killenemy-probe": 1,
-        "case-leftwalk-probe": 1,
-        "case-leftwalk-probe2": 1,
-        "case-morphball-probe": 1,
-        "case-password-justin": 1,
-        "case-scrollseam-probe": 1,
-        "case-shootprobe-probe": 1,
-        "case-walkfcprobe": 1
-      }
-    },
-    {
-      "addr": "0xBC83",
-      "asm_label": "GotoMusic04Init",
-      "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:2174",
-      "probe": "DSH_SOUND_TRACE kind=handler",
-      "n_events": 0,
-      "first_tick": null,
-      "cases": {}
-    },
-    {
-      "addr": "0xBC86",
-      "asm_label": "GotoMusic05Init",
-      "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:2177",
-      "probe": "DSH_SOUND_TRACE kind=handler",
-      "n_events": 0,
-      "first_tick": null,
-      "cases": {}
-    }
-  ]
+ "schema": "handler-touchlist/v1",
+ "doc": "占位臂记账触达清单（L4 矩阵实录固化——增长即红白名单基线）。源=shots_rust/*.divergences.json（rust_screenshot 腿 DIVERGENCES sidecar，2026-11-13 新增）聚合矩阵内的全部案（当前 21 案，`cases_covered` 为准）。契约：sidecar 新增任何不在本清单的 addr=账外=红（须显式登记本清单才放行）——与 diff_traces.py:614 账外照红同语义的 L4 侧。",
+ "source_run": "python3 tools/l4_diff_run.py run-all @ 2026-11-22（21 案/172 格；新增 case-elev-norf-room-load 与 case-mechanism-input-conflict；刷新前基线为 19 案/75040 事件）",
+ "cases_covered": 21,
+ "unique_addrs": 10,
+ "total_events": 81614,
+ "entries": [
+  {
+   "addr": "0xB7E7",
+   "asm_label": "BeepSFXCont",
+   "push_site": "sound_hook::_=>None",
+   "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:1240",
+   "n_events": 0,
+   "first_tick": 402,
+   "cases": {},
+   "stale_since": "2026-11-22",
+   "stale_note": "本次 21 案矩阵 sidecar 零事件（推点仍在但当前无用例覆盖）⇒ 覆盖率缺口，保留登记不静默删。"
+  },
+  {
+   "addr": "0xB87F",
+   "asm_label": "BombLaunchSFXCont",
+   "push_site": "sound_hook::_=>None",
+   "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:1345",
+   "n_events": 0,
+   "first_tick": 618,
+   "cases": {},
+   "stale_since": "2026-11-22",
+   "stale_note": "本次 21 案矩阵 sidecar 零事件（推点仍在但当前无用例覆盖）⇒ 覆盖率缺口，保留登记不静默删。"
+  },
+  {
+   "addr": "0xCBEF",
+   "asm_label": "SFX_SamusBall",
+   "push_site": "crates/game-core/src/samus/handler.rs::set_samus_roll",
+   "asm_ref": "refs/m1disasm/SRC/prg7_engine.asm:2668",
+   "n_events": 2,
+   "first_tick": 1000000000,
+   "cases": {
+    "case-mechanism-morphball": 1,
+    "case-morphball-tail-probe": 1
+   }
+  },
+  {
+   "addr": "0xCBF9",
+   "asm_label": "PowerUpMusic",
+   "push_site": "crates/game-core/src/world/update.rs:187-188",
+   "asm_ref": "refs/m1disasm/SRC/prg7_engine.asm:2681",
+   "n_events": 1,
+   "cases": {
+    "case-mechanism-input-conflict": 1
+   },
+   "first_tick": 1000000000
+  },
+  {
+   "addr": "0xCC36",
+   "asm_label": "SamusStand",
+   "push_site": "samus/handler.rs:902",
+   "asm_ref": "refs/m1disasm/SRC/prg7_engine.asm:2735",
+   "n_events": 6470,
+   "first_tick": 1000000000,
+   "cases": {
+    "case-001-game-start-samus-interaction": 608,
+    "case-002-door-blue-interaction": 532,
+    "case-collide-probe": 208,
+    "case-crawlprobe": 377,
+    "case-elev-norf-room-load": 514,
+    "case-elev-norfair-transition": 314,
+    "case-jumpledge-probe": 334,
+    "case-killenemy-probe": 654,
+    "case-leftwalk-probe": 187,
+    "case-leftwalk-probe2": 346,
+    "case-mechanism-door-transition": 1,
+    "case-mechanism-input-conflict": 1,
+    "case-mechanism-morphball": 61,
+    "case-morphball-probe": 434,
+    "case-morphball-tail-probe": 61,
+    "case-password-justin": 962,
+    "case-scrollseam-probe": 153,
+    "case-shootprobe-probe": 377,
+    "case-walkfcprobe": 346
+   }
+  },
+  {
+   "addr": "0xCC98",
+   "asm_label": "SetSamusRun",
+   "push_site": "samus/physics.rs:1645",
+   "asm_ref": "refs/m1disasm/SRC/prg7_engine.asm:2824",
+   "n_events": 9033,
+   "first_tick": 1000000000,
+   "cases": {
+    "case-001-game-start-samus-interaction": 695,
+    "case-002-door-blue-interaction": 747,
+    "case-collide-probe": 459,
+    "case-crawlprobe": 455,
+    "case-elev-norf-room-load": 350,
+    "case-elev-norfair-transition": 150,
+    "case-jumpledge-probe": 547,
+    "case-killenemy-probe": 649,
+    "case-leftwalk-probe": 359,
+    "case-leftwalk-probe2": 959,
+    "case-mechanism-door-transition": 133,
+    "case-mechanism-input-conflict": 215,
+    "case-mechanism-morphball": 99,
+    "case-morphball-probe": 1244,
+    "case-morphball-tail-probe": 99,
+    "case-scrollseam-probe": 465,
+    "case-shootprobe-probe": 449,
+    "case-walkfcprobe": 959
+   }
+  },
+  {
+   "addr": "0xCE25",
+   "asm_label": "IsSamusDead-chain(Lx005 死分支 jmp CheckHealthBeep)",
+   "push_site": "samus/physics.rs:1005",
+   "asm_ref": "refs/m1disasm/SRC/prg7_engine.asm:3108-3118 (Lx005@CE1E 内)",
+   "n_events": 7,
+   "first_tick": 1000000000,
+   "cases": {
+    "case-001-game-start-samus-interaction": 2,
+    "case-002-door-blue-interaction": 1,
+    "case-crawlprobe": 2,
+    "case-elev-norf-room-load": 1,
+    "case-elev-norfair-transition": 1
+   }
+  },
+  {
+   "addr": "0xD150",
+   "asm_label": "CheckBombLaunch",
+   "push_site": "crates/game-core/src/samus/handler.rs::samus_roll",
+   "asm_ref": "refs/m1disasm/SRC/prg7_engine.asm:3685",
+   "n_events": 0,
+   "first_tick": 506,
+   "cases": {},
+   "stale_since": "2026-11-22",
+   "stale_note": "本次 21 案矩阵 sidecar 零事件（推点仍在但当前无用例覆盖）⇒ 覆盖率缺口，保留登记不静默删。"
+  },
+  {
+   "addr": "0xEEA1",
+   "asm_label": "SpawnElevator",
+   "push_site": "pickup/spawn.rs:71 (ChooseSpawningRoutine 占位臂)",
+   "asm_ref": "refs/m1disasm/SRC/prg7_engine.asm:9502",
+   "n_events": 1,
+   "first_tick": 1000000000,
+   "cases": {
+    "case-password-justin": 1
+   }
+  },
+  {
+   "addr": "0xFB7B",
+   "asm_label": "InitEnemyFacingDirectionAxisAndDelay",
+   "push_site": "frame/mainloop.rs:752 (敌移动 delay 记账)",
+   "asm_ref": "refs/m1disasm/SRC/prg7_engine.asm:12062",
+   "n_events": 66100,
+   "first_tick": 1000000000,
+   "cases": {
+    "case-001-game-start-samus-interaction": 4451,
+    "case-002-door-blue-interaction": 3786,
+    "case-collide-probe": 2667,
+    "case-crawlprobe": 3251,
+    "case-elev-norf-room-load": 6000,
+    "case-elev-norfair-transition": 4800,
+    "case-jumpledge-probe": 3061,
+    "case-killenemy-probe": 3388,
+    "case-leftwalk-probe": 2527,
+    "case-leftwalk-probe2": 5527,
+    "case-mechanism-door-transition": 694,
+    "case-mechanism-input-conflict": 1042,
+    "case-mechanism-morphball": 666,
+    "case-morphball-probe": 6974,
+    "case-morphball-tail-probe": 666,
+    "case-password-justin": 5772,
+    "case-scrollseam-probe": 2679,
+    "case-shootprobe-probe": 2622,
+    "case-walkfcprobe": 5527
+   }
+  }
+ ],
+ "handler_arms_total": 28,
+ "handler_arms_touched": 4,
+ "handler_arms_untouched": 24,
+ "sound_trace_probe": "DSH_SOUND_TRACE=1（sound_hook::sound_trace——kind=handler/unhandled，含 fc/ptr/depth）",
+ "sound_trace_source_run": "DSH_SOUND_TRACE=1 rust_screenshot 逐案（15 sched，2026-11-13）",
+ "handlers": [
+  {
+   "addr": "0xB50F",
+   "asm_label": "SpitFlameSFXInit",
+   "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:626",
+   "probe": "DSH_SOUND_TRACE kind=handler",
+   "n_events": 0,
+   "first_tick": null,
+   "cases": {}
+  },
+  {
+   "addr": "0xB52B",
+   "asm_label": "ScrewAttackSFXInit",
+   "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:650",
+   "probe": "DSH_SOUND_TRACE kind=handler",
+   "n_events": 0,
+   "first_tick": null,
+   "cases": {}
+  },
+  {
+   "addr": "0xB56E",
+   "asm_label": "MissileLaunchSFXInit",
+   "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:705",
+   "probe": "DSH_SOUND_TRACE kind=handler",
+   "n_events": 0,
+   "first_tick": null,
+   "cases": {}
+  },
+  {
+   "addr": "0xB583",
+   "asm_label": "BombExplodeSFXInit",
+   "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:726",
+   "probe": "DSH_SOUND_TRACE kind=handler",
+   "n_events": 0,
+   "first_tick": null,
+   "cases": {}
+  },
+  {
+   "addr": "0xB598",
+   "asm_label": "SamusWalkSFXInit",
+   "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:752",
+   "probe": "DSH_SOUND_TRACE kind=handler",
+   "n_events": 0,
+   "first_tick": null,
+   "cases": {}
+  },
+  {
+   "addr": "0xB5EC",
+   "asm_label": "BossHitSFXInit",
+   "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:806",
+   "probe": "DSH_SOUND_TRACE kind=handler",
+   "n_events": 0,
+   "first_tick": null,
+   "cases": {}
+  },
+  {
+   "addr": "0xB650",
+   "asm_label": "SamusHitSFXCont",
+   "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:869",
+   "probe": "DSH_SOUND_TRACE kind=handler",
+   "n_events": 0,
+   "first_tick": null,
+   "cases": {}
+  },
+  {
+   "addr": "0xB673",
+   "asm_label": "SamusHitSFXInit",
+   "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:896",
+   "probe": "DSH_SOUND_TRACE kind=handler",
+   "n_events": 0,
+   "first_tick": null,
+   "cases": {}
+  },
+  {
+   "addr": "0xB695",
+   "asm_label": "IncorrectPasswordSFXInit",
+   "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:924",
+   "probe": "DSH_SOUND_TRACE kind=handler",
+   "n_events": 0,
+   "first_tick": null,
+   "cases": {}
+  },
+  {
+   "addr": "0xB6CD",
+   "asm_label": "MissilePickupSFXInit",
+   "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:971",
+   "probe": "DSH_SOUND_TRACE kind=handler",
+   "n_events": 0,
+   "first_tick": null,
+   "cases": {}
+  },
+  {
+   "addr": "0xB6E7",
+   "asm_label": "EnergyPickupSFXInit",
+   "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:994",
+   "probe": "DSH_SOUND_TRACE kind=handler",
+   "n_events": 0,
+   "first_tick": null,
+   "cases": {}
+  },
+  {
+   "addr": "0xB703",
+   "asm_label": "SamusJumpSFXInit",
+   "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:1024",
+   "probe": "DSH_SOUND_TRACE kind=handler",
+   "n_events": 0,
+   "first_tick": null,
+   "cases": {}
+  },
+  {
+   "addr": "0xB710",
+   "asm_label": "EnemyHitSFXInit",
+   "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:1037",
+   "probe": "DSH_SOUND_TRACE kind=handler",
+   "n_events": 0,
+   "first_tick": null,
+   "cases": {}
+  },
+  {
+   "addr": "0xB716",
+   "asm_label": "BulletFireSFXInit",
+   "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:1045",
+   "probe": "DSH_SOUND_TRACE kind=handler",
+   "n_events": 0,
+   "first_tick": null,
+   "cases": {}
+  },
+  {
+   "addr": "0xB7AC",
+   "asm_label": "DoorOpenCloseSFXInit",
+   "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:1195",
+   "probe": "DSH_SOUND_TRACE kind=handler",
+   "n_events": 0,
+   "first_tick": null,
+   "cases": {}
+  },
+  {
+   "addr": "0xB7D9",
+   "asm_label": "BeepSFXInit",
+   "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:1227",
+   "probe": "DSH_SOUND_TRACE kind=handler",
+   "n_events": 130,
+   "first_tick": 2,
+   "cases": {
+    "case-password-justin": 130
+   }
+  },
+  {
+   "addr": "0xB7EF",
+   "asm_label": "BigEnemyHitSFXInit",
+   "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:1247",
+   "probe": "DSH_SOUND_TRACE kind=handler",
+   "n_events": 0,
+   "first_tick": null,
+   "cases": {}
+  },
+  {
+   "addr": "0xB834",
+   "asm_label": "SamusToBallSFXInit",
+   "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:1290",
+   "probe": "DSH_SOUND_TRACE kind=handler",
+   "n_events": 0,
+   "first_tick": null,
+   "cases": {}
+  },
+  {
+   "addr": "0xB878",
+   "asm_label": "BombLaunchSFXInit",
+   "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:1336",
+   "probe": "DSH_SOUND_TRACE kind=handler",
+   "n_events": 24,
+   "first_tick": 30,
+   "cases": {
+    "case-password-justin": 24
+   }
+  },
+  {
+   "addr": "0xB8A7",
+   "asm_label": "MetroidHitSFXInit",
+   "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:1378",
+   "probe": "DSH_SOUND_TRACE kind=handler",
+   "n_events": 0,
+   "first_tick": null,
+   "cases": {}
+  },
+  {
+   "addr": "0xB8D2",
+   "asm_label": "SamusDieSFXInit",
+   "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:1414",
+   "probe": "DSH_SOUND_TRACE kind=handler",
+   "n_events": 0,
+   "first_tick": null,
+   "cases": {}
+  },
+  {
+   "addr": "0xB921",
+   "asm_label": "StatueRaiseSFXInit",
+   "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:1463",
+   "probe": "DSH_SOUND_TRACE kind=handler",
+   "n_events": 0,
+   "first_tick": null,
+   "cases": {}
+  },
+  {
+   "addr": "0xBC77",
+   "asm_label": "GotoMusic00Init",
+   "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:2162",
+   "probe": "DSH_SOUND_TRACE kind=handler",
+   "n_events": 0,
+   "first_tick": null,
+   "cases": {}
+  },
+  {
+   "addr": "0xBC7A",
+   "asm_label": "GotoMusic01Init",
+   "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:2165",
+   "probe": "DSH_SOUND_TRACE kind=handler",
+   "n_events": 28,
+   "first_tick": 1,
+   "cases": {
+    "case-001-game-start-samus-interaction": 2,
+    "case-002-door-blue-interaction": 2,
+    "case-collide-probe": 2,
+    "case-crawlprobe": 2,
+    "case-fcprobe": 2,
+    "case-jumpledge-probe": 2,
+    "case-killenemy-probe": 2,
+    "case-leftwalk-probe": 2,
+    "case-leftwalk-probe2": 2,
+    "case-morphball-probe": 2,
+    "case-password-justin": 2,
+    "case-scrollseam-probe": 2,
+    "case-shootprobe-probe": 2,
+    "case-walkfcprobe": 2
+   }
+  },
+  {
+   "addr": "0xBC7D",
+   "asm_label": "GotoMusic02Init",
+   "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:2168",
+   "probe": "DSH_SOUND_TRACE kind=handler",
+   "n_events": 0,
+   "first_tick": null,
+   "cases": {}
+  },
+  {
+   "addr": "0xBC80",
+   "asm_label": "GotoMusic03Init",
+   "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:2171",
+   "probe": "DSH_SOUND_TRACE kind=handler",
+   "n_events": 14,
+   "first_tick": 13,
+   "cases": {
+    "bundle-ff": 1,
+    "case-001-game-start-samus-interaction": 1,
+    "case-002-door-blue-interaction": 1,
+    "case-collide-probe": 1,
+    "case-crawlprobe": 1,
+    "case-jumpledge-probe": 1,
+    "case-killenemy-probe": 1,
+    "case-leftwalk-probe": 1,
+    "case-leftwalk-probe2": 1,
+    "case-morphball-probe": 1,
+    "case-password-justin": 1,
+    "case-scrollseam-probe": 1,
+    "case-shootprobe-probe": 1,
+    "case-walkfcprobe": 1
+   }
+  },
+  {
+   "addr": "0xBC83",
+   "asm_label": "GotoMusic04Init",
+   "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:2174",
+   "probe": "DSH_SOUND_TRACE kind=handler",
+   "n_events": 0,
+   "first_tick": null,
+   "cases": {}
+  },
+  {
+   "addr": "0xBC86",
+   "asm_label": "GotoMusic05Init",
+   "asm_ref": "refs/m1disasm/SRC/sound_engine.asm:2177",
+   "probe": "DSH_SOUND_TRACE kind=handler",
+   "n_events": 0,
+   "first_tick": null,
+   "cases": {}
+  }
+ ]
 }

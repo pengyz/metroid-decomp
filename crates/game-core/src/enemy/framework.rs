@@ -13,6 +13,9 @@ use crate::frame::tick::*;
 use crate::enemy::state::{slot_of, EnemyStatus};
 use crate::ram_map;
 
+/// `sfxSQ1_OutOfPipe`（`constants.asm:172` 族）——`SFX_OutOfPipe ; 07:CBA4` 的 `lda #$08`。
+const SFX_SQ1_OUT_OF_PIPE: u8 = 0x08;
+
 /// UpdateEnemy_Resting_UpdateEnData1F（**asm 内容锚** `: 07:F676`——r26）：
 /// L977B 条目×2→再 asl×3→and #$C0→data1F（**bit2-3→bit6-7**）。
 pub(crate) fn update_en_data1f(mem: &mut crate::frame::Manager, x: u8) {
@@ -43,9 +46,12 @@ pub(crate) fn try_becoming_active(mem: &mut crate::frame::Manager, x: u8) {
     // @becomeActive
     let t = mem.enemy(slot_of(x)).enemy_type();
     if t == 7 {
-        crate::unported!("bank07:CBA4"); // SFX_OutOfPipe（声事件——出声面）
+        // asm `SFX_OutOfPipe ; 07:CBA4`：`lda #sfxSQ1_OutOfPipe($08)`;
+        // `ldx #(SFXSQ1InitFlags - SFXNoiseInitFlags = 1)`; `jmp SetSoundInitFlag`
+        // ⇒ `ora SFXSQ1InitFlags,x / sta`（`:2664-2667` 逐字）。
+        mem.or_sfx_sq1_init(SFX_SQ1_OUT_OF_PIPE);
+        // asm 在 `jsr SFX_OutOfPipe` 后 `ldx PageIndex` 复原槽索引（子程序用 X）。
     }
-    #[allow(unreachable_code)]
     {
         mem.enemy(slot_of(x)).inc_status(); // status→Active（asm `inc`，非枚举映射）
         // 【goal-轮14 激活帧直证】status→Active 写点（首动 1 帧差源）。
@@ -701,6 +707,41 @@ pub(crate) fn update_enemy_common_no_move_no_anim(mem: &mut crate::frame::Manage
 }
 
 #[cfg(test)]
+mod tests_pipe_bug_out_of_pipe_sfx {
+    use super::*;
+    use crate::frame::Manager;
+
+    /// asm `@becomeActive ; 07:F7CA`：`cmp #$07 / bne @endIf_A` ⇒ 仅 PipeBug 触发
+    /// `SFX_OutOfPipe`（`07:CBA4` `lda #$08` → `SetSoundInitFlag` 的
+    /// `ora SFXSQ1InitFlags / sta`，`$0681`）。这里锁死「只有 type7 写、其它一律不写」。
+    fn stage_active(m: &mut Manager, slot: u8, ty: u8) {
+        m.enemy(slot).set_enemy_type(ty);
+        m.enemy(slot).set_delay(0x01); // dec → 0 才走 @becomeActive
+        m.enemy(slot).set_data05(0x08); // bit3 ⇒ 不退回
+        m.enemy(slot).set_status(EnemyStatus::Resting); // $6AF4+slot*16+1（视图）
+    }
+
+    #[test]
+    fn pipe_bug_activation_sets_sq1_out_of_pipe_flag() {
+        let mut m = Manager::default();
+        stage_active(&mut m, 1, 7);
+        try_becoming_active(&mut m, 0x10);
+        assert_eq!(
+            m.read_ram(crate::ram_map::SFX_SQ1_INIT) & SFX_SQ1_OUT_OF_PIPE,
+            0x08,
+            "asm 07:CBA4 `lda #sfxSQ1_OutOfPipe($08)` 必须或进 SFXSQ1InitFlags($0681)"
+        );
+    }
+
+    #[test]
+    fn non_pipe_bug_activation_leaves_sq1_flag_clear() {
+        let mut m = Manager::default();
+        stage_active(&mut m, 1, 5); // Zoomer
+        try_becoming_active(&mut m, 0x10);
+        assert_eq!(m.read_ram(crate::ram_map::SFX_SQ1_INIT), 0x00);
+    }
+}
+
 mod tests {
     use super::*;
     use crate::frame::Manager;
