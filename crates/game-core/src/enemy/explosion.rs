@@ -194,7 +194,9 @@ impl Explosion<'_> {
                 self.write_anim(crate::enemy::state::Anim { frame, delay, reset, index });
                 true
             }
-            crate::enemy::state::AnimStep::Broken => crate::unported!("bank07:E0BC-wrap"),
+            crate::enemy::state::AnimStep::Broken { idx, reset, len } => {
+                crate::unported!("bank07:E0BC-wrap idx={idx:02X} reset={reset:02X} len={len}")
+            }
         }
     }
 
@@ -282,10 +284,10 @@ mod tests_pool_separation {
 // ─────────────────────────── P2：`NesMapped` 声明 ───────────────────────────
 
 /// 爆炸主面未 typed 的缺口说明。
-const EXPL_MAIN_UNMODELED: &str = "爆炸主面未 typed：y/x/data05/delay/quantity 真相在字节面（crates/game-core/src/enemy/explosion.rs:285）";
+const EXPL_MAIN_UNMODELED: &str = "爆炸主面未 typed：y/x/data05/delay/quantity 真相在字节面（crates/game-core/src/enemy/explosion.rs:53）";
 /// 爆炸额外面未 typed 的缺口说明。
 const EXPL_EXTRA_UNMODELED: &str =
-    "爆炸额外面未 typed：status/animFrame/animDelay/resetAnimIndex/animIndex/hi 真相在字节面（crates/game-core/src/enemy/explosion.rs:288）";
+    "爆炸额外面未 typed：status/animFrame/animDelay/resetAnimIndex/animIndex/hi 真相在字节面（crates/game-core/src/enemy/explosion.rs:53）";
 
 /// 爆炸域两面（`$04C0-$04DF` 主面 + `$6BB4-$6BD3` 额外面，各 4 槽 × 8 B）的声明。
 ///

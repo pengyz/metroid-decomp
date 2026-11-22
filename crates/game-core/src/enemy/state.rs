@@ -174,8 +174,9 @@ pub(crate) enum AnimStep {
     Tick(u8),
     /// delay 归零 ⇒ 重灌 `a` 并走表：`animFrame` 取表值、`animIndex` 自增
     Advance { delay: u8, frame: u8, index: u8 },
-    /// 走表不变量破裂（`$FF` 连撞 16 次）——调用方 fail-loud
-    Broken,
+    /// 走表不变量破裂（`$FF` 连撞 16 次）——调用方 fail-loud，
+    /// 带 `idx`(当前动画索引) / `reset`(回绕索引) / `len`(表长) 便于定位
+    Broken { idx: u8, reset: u8, len: u8 },
 }
 
 impl Anim {
@@ -203,7 +204,11 @@ impl Anim {
                 _ => idx = self.reset,
             }
         }
-        AnimStep::Broken
+        // asm `@resetAnimIndex ; 07:E0BC` 是 `ldy resetAnimIndex,x / bcs @getAnimFrame` 的
+        // **无条件回跳**：reset 处的字节若又是 FrameEnd，ROM 里就是死循环 —— 也就是说
+        // 走到这里必然是我们的 `resetAnimIndex`/表基址与 ROM 不一致（不是"该回绕"）。
+        // 带上 idx/reset/表长，便于在 trace 里直接指认是哪个敌槽哪张表。
+        AnimStep::Broken { idx: self.index, reset: self.reset, len: table.len() as u8 }
     }
 }
 
@@ -667,7 +672,9 @@ impl<'a> Enemy<'a> {
                 self.set_anim(Anim { frame, delay, reset: self.reset_anim_index(), index });
                 true
             }
-            AnimStep::Broken => crate::unported!("bank07:E0BC-wrap"),
+            AnimStep::Broken { idx, reset, len } => {
+                crate::unported!("bank07:E0BC-wrap idx={idx:02X} reset={reset:02X} len={len}")
+            }
         }
     }
 
@@ -884,7 +891,7 @@ mod tests_anim_step {
     #[test]
     fn broken_when_reset_also_points_at_ff() {
         let a = Anim { frame: 0x00, delay: 1, reset: 1, index: 1 };
-        assert_eq!(a.step(&TBL, 5), AnimStep::Broken);
+        assert!(matches!(a.step(&TBL, 5), AnimStep::Broken { .. }));
     }
 
     /// 越界索引等同 `$FF`（不 panic、按回卷处理）——与 `AnimIdx::resolve` 的 None 同义。
@@ -898,9 +905,9 @@ mod tests_anim_step {
 // ─────────────────────────── P2：`NesMapped` 声明（域级） ───────────────────────────
 
 /// 敌域主面（`Ens`）未 typed 的缺口说明。
-const ENS_MAIN_UNMODELED: &str = "敌域主面未 typed：字段真相在字节面（EnsFace 只读视图；crates/game-core/src/enemy/state.rs:277）";
+const ENS_MAIN_UNMODELED: &str = "敌域主面未 typed：字段真相在字节面（EnsFace 只读视图；crates/game-core/src/enemy/state.rs:282）";
 /// 敌域额外面（`EnsExtra`）尾 9 B 未 typed 的缺口说明。
-const ENSX_TAIL: &str = "EnsExtra 尾 9 B 未 typed：accelY/jumpDsplcmnt/type/data1F 等仍在字节面（crates/game-core/src/enemy/state.rs:289）";
+const ENSX_TAIL: &str = "EnsExtra 尾 9 B 未 typed：accelY/jumpDsplcmnt/type/data1F 等仍在字节面（crates/game-core/src/enemy/state.rs:294）";
 
 /// `EnsExtra` 第 `slot` 槽的槽首地址（`$6AF4 + slot*16`）——只从既有常量推导。
 const fn ensx_slot(slot: u16) -> u16 {

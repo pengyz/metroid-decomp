@@ -306,7 +306,7 @@
       "len": 32,
       "kind": "unmodeled",
       "refs": [
-        "crates/game-core/src/enemy/explosion.rs:285"
+        "crates/game-core/src/enemy/explosion.rs:53"
       ]
     },
     {
@@ -314,7 +314,7 @@
       "len": 9,
       "kind": "unmodeled",
       "refs": [
-        "crates/game-core/src/enemy/state.rs:277"
+        "crates/game-core/src/enemy/state.rs:282"
       ]
     },
     {
@@ -322,7 +322,7 @@
       "len": 9,
       "kind": "unmodeled",
       "refs": [
-        "crates/game-core/src/enemy/state.rs:277"
+        "crates/game-core/src/enemy/state.rs:282"
       ]
     },
     {
@@ -330,7 +330,7 @@
       "len": 9,
       "kind": "unmodeled",
       "refs": [
-        "crates/game-core/src/enemy/state.rs:277"
+        "crates/game-core/src/enemy/state.rs:282"
       ]
     },
     {
@@ -338,7 +338,7 @@
       "len": 9,
       "kind": "unmodeled",
       "refs": [
-        "crates/game-core/src/enemy/state.rs:277"
+        "crates/game-core/src/enemy/state.rs:282"
       ]
     },
     {
@@ -346,7 +346,7 @@
       "len": 9,
       "kind": "unmodeled",
       "refs": [
-        "crates/game-core/src/enemy/state.rs:277"
+        "crates/game-core/src/enemy/state.rs:282"
       ]
     },
     {
@@ -354,7 +354,7 @@
       "len": 9,
       "kind": "unmodeled",
       "refs": [
-        "crates/game-core/src/enemy/state.rs:277"
+        "crates/game-core/src/enemy/state.rs:282"
       ]
     },
     {
@@ -362,7 +362,7 @@
       "len": 9,
       "kind": "unmodeled",
       "refs": [
-        "crates/game-core/src/enemy/state.rs:277"
+        "crates/game-core/src/enemy/state.rs:282"
       ]
     },
     {
@@ -370,7 +370,7 @@
       "len": 9,
       "kind": "unmodeled",
       "refs": [
-        "crates/game-core/src/enemy/state.rs:277"
+        "crates/game-core/src/enemy/state.rs:282"
       ]
     },
     {
@@ -378,7 +378,7 @@
       "len": 9,
       "kind": "unmodeled",
       "refs": [
-        "crates/game-core/src/enemy/state.rs:277"
+        "crates/game-core/src/enemy/state.rs:282"
       ]
     },
     {
@@ -386,7 +386,7 @@
       "len": 9,
       "kind": "unmodeled",
       "refs": [
-        "crates/game-core/src/enemy/state.rs:277"
+        "crates/game-core/src/enemy/state.rs:282"
       ]
     },
     {
@@ -394,7 +394,7 @@
       "len": 9,
       "kind": "unmodeled",
       "refs": [
-        "crates/game-core/src/enemy/state.rs:277"
+        "crates/game-core/src/enemy/state.rs:282"
       ]
     },
     {
@@ -402,7 +402,7 @@
       "len": 9,
       "kind": "unmodeled",
       "refs": [
-        "crates/game-core/src/enemy/state.rs:277"
+        "crates/game-core/src/enemy/state.rs:282"
       ]
     },
     {
@@ -410,7 +410,7 @@
       "len": 32,
       "kind": "unmodeled",
       "refs": [
-        "crates/game-core/src/enemy/explosion.rs:288"
+        "crates/game-core/src/enemy/explosion.rs:53"
       ]
     }
   ],
