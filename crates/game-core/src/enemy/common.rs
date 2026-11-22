@@ -126,7 +126,11 @@ pub fn enemy_get_delta_xy(
         .get(idx / 2 * 2..idx / 2 * 2 + 2)
         .map(|b| u16::from_le_bytes([b[0], b[1]]) as usize)
         .unwrap_or(0x97F5);
-    let str_off = ptr_full.wrapping_sub(0x97EF); // 窗址→字符串体偏移（全指针）
+    // 窗址→字符串体偏移：**基址按区不同**（`$97D1 + choices_len`：Br `$97EF` / No `$97E7` /
+    // Kr `$97E9` / To `$97D5` / Ri `$97ED`）。旧形硬编码 `$97EF` ⇒ 非 Br 区指针小于基址，
+    // `wrapping_sub` 下溢到巨大值，`get()` 全 None ⇒ 回落 `$FF`（重启）⇒ **敌不移动**。
+    let str_base = game_data::assets::enemy_movement_string_base(area) as usize;
+    let str_off = ptr_full.wrapping_sub(str_base); // 窗址→字符串体偏移（全指针）
     // 【对抗复核收敛③⑤（2026-11-01）】走表全谱（asm $8244-:631 逐字）：
     // ①bit5 静息门（:588-591 `and #$20/eor #$20/beq Store`——Δ=0）
     // 【goal-轮62 $8318 合规矩】EnemyGetDeltaX 全径对表：LoadTableAt977B（加速径分流）
@@ -304,5 +308,56 @@ mod tests_movement_cadence {
             enemy_get_delta_xy(0, 4, 0x00, 7, 2, 1, 0, 0, 0, 0x00, false, true);
         assert_eq!((dy, dx), (2, 2), "到期当帧必须发下一条指令的 Δ（0x22 ⇒ y+2/x+2），不是旧指令 0x42 的 y+4");
         assert_eq!((dly, ii, trig), (1, 4, false), "延续下一条指令：delay=1 / instr=4");
+    }
+}
+
+#[cfg(test)]
+mod tests_movement_string_base {
+    use super::*;
+
+    /// 移动串区基址**按区不同**：`$97D1 + EnemyMovementChoices 语义表长`。
+    /// 旧形一律减 `$97EF` ⇒ No/Kr/To/Ri 的指针小于基址、`wrapping_sub` 下溢 ⇒
+    /// `get()` 全 None 回落 `$FF`（Restart）⇒ `dx=0`，四区用移动串的敌人永不移动
+    /// （room 09 的 RipperII 就冻在出生点）。
+    #[test]
+    fn string_base_matches_per_area_choice_table_len() {
+        if !game_data::pack::is_ready() {
+            let _ = game_data::pack::init_from_env();
+        }
+        if !game_data::pack::is_ready() {
+            eprintln!("SKIP（显式）：未加载资产包——先跑 pack-tool extract");
+            return;
+        }
+        for (area, want) in [(0u8, 0x97EFu16), (1, 0x97E7), (2, 0x97E9), (3, 0x97D5), (4, 0x97ED)] {
+            assert_eq!(game_data::assets::enemy_movement_string_base(area), want, "area{area} 串区基址");
+            let strs = game_data::assets::enemy_movement_strings(area);
+            // 窗尾五区一致 `$99EF`：段长 = 窗尾 − 基址。
+            assert_eq!(strs.len() as u16 + want, 0x99EF, "area{area} 段长必须补到公共上界 $99EF");
+            // 每个指针都必须落在本区串窗内（否则消费侧下溢/越界）。
+            let ptrs = game_data::assets::enemy_movement_ptrs(area);
+            for w in ptrs.chunks(2) {
+                let p = u16::from_le_bytes([w[0], w[1]]);
+                if p == 0 { continue; }
+                assert!(p >= want && p < 0x99EF, "area{area} 指针 {p:#06X} 越出串窗 {want:#06X}..$99EF");
+            }
+        }
+    }
+
+    /// Norfair（type 2 = RipperII，`data05=$1E`/`movIdx=0`）现在能取到移动串：
+    /// 串 `SignMagSpeed $20, 2, 2` ⇒ Δx=+2 量级（非 0），旧形恒 0。
+    #[test]
+    fn norfair_ripper_resolves_movement_string() {
+        if !game_data::pack::is_ready() {
+            let _ = game_data::pack::init_from_env();
+        }
+        if !game_data::pack::is_ready() {
+            eprintln!("SKIP（显式）：未加载资产包——先跑 pack-tool extract");
+            return;
+        }
+        let (_, dx, ..) = enemy_get_delta_xy(1, 2, 0x1E, 0, 0, 0, 1, 0, 0, 0, true, false);
+        assert_ne!(dx, 0, "Norfair RipperII 必须沿移动串产生 Δx（旧形基址错 ⇒ 恒 0）");
+        // Brinstar 同 type 仍走 bit0 朝向（回归护栏）：面右 ⇒ 正、面左 ⇒ 负或零。
+        let (_, dx_right, ..) = enemy_get_delta_xy(0, 2, 0x00, 0, 0, 0, 1, 0, 0, 0, true, false);
+        assert_ne!(dx_right, 0, "Brinstar 移动串仍须有效（基址 $97EF 未变）");
     }
 }

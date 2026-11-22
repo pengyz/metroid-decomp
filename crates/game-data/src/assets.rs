@@ -320,6 +320,18 @@ pub fn enemy_distance_threshold(area: u8) -> &'static [u8] { enemy_table(area, 6
 pub fn enemy_init_delay(area: u8) -> &'static [u8] { enemy_table(area, 7) }
 pub fn enemy_facing(area: u8) -> &'static [u8] { enemy_table(area, 8) }
 pub fn enemy_movement_ptrs(area: u8) -> &'static [u8] { enemy_table(area, 9) }
+
+/// `EnemyMovementChoices` 的**语义表长**（按区不同，asm 标签间距机械给定）：
+/// Br 30 / No 22 / Kr 24 / To 4 / Ri 28（`$97D1` 起，表尾即移动指令串起点）。
+pub const EN_MOV_CHOICES_LEN: [usize; 5] = [30, 22, 24, 4, 28];
+
+/// 移动指令串区**基址**（按区不同）：`$97D1 + EN_MOV_CHOICES_LEN[area]`。
+/// 即 Br `$97EF` / No `$97E7` / Kr `$97E9` / To `$97D5` / Ri `$97ED`——旧形一律按
+/// `$97EF` 取窗与算偏移，No/Kr/To/Ri 的首 6–26 B 被切掉且指针减基址下溢 ⇒
+/// 这四区的移动串全部落空（`enemy_get_delta_xy` 读到 `$FF` 回落 ⇒ 敌不移动）。
+pub fn enemy_movement_string_base(area: u8) -> u16 {
+    0x97D1 + EN_MOV_CHOICES_LEN[(area as usize).min(4)] as u16
+}
 pub fn enemy_movement_strings(area: u8) -> &'static [u8] { enemy_table(area, 10) }
 /// `EnemyDeathAnimIndex ; 各 bank $960B`（32 B，`type*2+朝向` 索引）——**按区不同**。
 pub fn enemy_death_anim(area: u8) -> &'static [u8] { enemy_table(area, 11) }

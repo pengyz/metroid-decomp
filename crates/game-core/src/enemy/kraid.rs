@@ -295,11 +295,13 @@ fn kraid_lint_main(mem: &mut Manager, x: u8) {
 /// （见回报的诚实边界）。Kraid 家族的 0x0E-0x11 串只含 `SignMagSpeed` + `$FF`（ROM
 /// 字节 `0x9839..0x98C3` 逐字节核对），故这里按 asm 标签就地锚定偏移、用同一串区走
 /// 同一套 SignMagSpeed 语义，行为与 asm 一致。
-const KRAID_MOV_STR_OFFSETS: [(u8, usize, usize); 4] = [
-    (0x0E, 0x4A, 0x4D),
-    (0x0F, 0x50, 0x67),
-    (0x10, 0x7E, 0x95),
-    (0x11, 0xAC, 0xC3),
+/// 四个索引的串**绝对 ROM 地址**（asm 标签；R/L 各一）。消费侧减去区基址
+/// `assets::enemy_movement_string_base(area)` 得窗内偏移——Kraid 区基址为 `$97E9`。
+const KRAID_MOV_STR_ADDRS: [(u8, u16, u16); 4] = [
+    (0x0E, 0x9839, 0x983C),
+    (0x0F, 0x983F, 0x9856),
+    (0x10, 0x986D, 0x9884),
+    (0x11, 0x989B, 0x98B2),
 ];
 
 /// `SignMagSpeed` 打包字节的 Δy（高 nibble，bit7=符号）。
@@ -336,8 +338,9 @@ fn lint_movement_delta(mem: &mut Manager, x: u8) -> (i8, i8) {
     }
     // 朝向（data05 bit7=0 时取 bit0；lint/nail 的 L977B 字节为 0 ⇒ 恒 bit0）。
     let facing_left = d05 & 0x01 != 0;
-    let off = match KRAID_MOV_STR_OFFSETS.iter().find(|e| e.0 == mov_idx) {
-        Some(e) => if facing_left { e.2 } else { e.1 },
+    let base = game_data::assets::enemy_movement_string_base(area);
+    let off = match KRAID_MOV_STR_ADDRS.iter().find(|e| e.0 == mov_idx) {
+        Some(e) => (if facing_left { e.2 } else { e.1 }).wrapping_sub(base) as usize,
         // 不会发生（lint=0x0E / nail=0x0F-0x11）；fail-safe 不产生位移。
         None => return (0, 0),
     };
@@ -523,16 +526,18 @@ mod tests_kraid {
     fn hardcoded_offsets_agree_with_pack_pointer_table() {
         let ptrs = game_data::assets::enemy_movement_ptrs(2); // area 2 = Kraid（InArea 序）
         assert_eq!(ptrs.len(), 72, "18 索引 × R/L × 2 B");
-        for (mov_idx, right, left) in KRAID_MOV_STR_OFFSETS {
+        let base = game_data::assets::enemy_movement_string_base(2); // Kraid 区基址 $97E9
+        for (mov_idx, right, left) in KRAID_MOV_STR_ADDRS {
             for (facing, want) in [(0usize, right), (1usize, left)] {
                 let rolled = (mov_idx as usize) * 2 + facing;
                 let e = rolled * 2;
                 let ptr = u16::from_le_bytes([ptrs[e], ptrs[e + 1]]) as usize;
                 assert_eq!(
-                    ptr.wrapping_sub(0x97EF),
-                    want,
-                    "movIdx {mov_idx:#04X} facing {facing}：包内指针 {ptr:#06X} 与就地锚定 {want:#04X} 不一致"
+                    ptr,
+                    want as usize,
+                    "movIdx {mov_idx:#04X} facing {facing}：包内指针 {ptr:#06X} 与 asm 标签 {want:#06X} 不一致"
                 );
+                assert!(ptr >= base as usize, "指针必须落在区基址之后");
             }
         }
     }

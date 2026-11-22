@@ -563,7 +563,7 @@ fn seg_meta() -> Vec<SegMeta> {
         SegMeta { key: PackKey::BrEnemyInitDelay, kind: "bytes", elem: 1, count: 64, rom: "bank01:96BB", note: "InitDelay（asm 标签间距见 note）" },
         SegMeta { key: PackKey::BrEnemyFacing, kind: "bytes", elem: 1, count: 64, rom: "bank01:977B", note: "Facing（asm 标签间距见 note）" },
         SegMeta { key: PackKey::BrEnMovPtrs, kind: "words", elem: 2, count: 36, rom: "bank01:96DB", note: "EnemyMovementPtrs 18 索引 × R/L = 36 项 (72 B)；idx36 起全 $0000（见 docs/findings/enemy-movement-ptr-truncation.md）" },
-        SegMeta { key: PackKey::BrEnMovStr, kind: "bytes", elem: 1, count: 512, rom: "bank01:97EF", note: "移动指令串窗 $97EF..$99EF（覆盖被引用上界）" },
+        SegMeta { key: PackKey::BrEnMovStr, kind: "bytes", elem: 1, count: 512, rom: "bank01:97EF", note: "移动串窗 $97EF..$99EF（区基址= $97D1+30）" },
         // ---- Kr（bank4）房流与敌表 ----
         SegMeta { key: PackKey::KrRoomPtrs, kind: "u16-table", elem: 2, count: 37, rom: "bank04:A1D5", note: "RoomPtrTable" },
         SegMeta { key: PackKey::KrStructPtrs, kind: "u16-table", elem: 2, count: 39, rom: "bank04:A21F", note: "StructPtrTable" },
@@ -582,7 +582,7 @@ fn seg_meta() -> Vec<SegMeta> {
         SegMeta { key: PackKey::KrEnemyInitDelay, kind: "bytes", elem: 1, count: 64, rom: "bank04:96BB", note: "EnemyInitDelayTbl（窗口；语义 32）" },
         SegMeta { key: PackKey::KrEnemyFacing, kind: "bytes", elem: 1, count: 64, rom: "bank04:977B", note: "L977B 朝向表" },
         SegMeta { key: PackKey::KrEnMovPtrs, kind: "words", elem: 2, count: 36, rom: "bank04:96DB", note: "EnemyMovementPtrs 18 索引 × R/L = 36 项 (72 B)" },
-        SegMeta { key: PackKey::KrEnMovStr, kind: "bytes", elem: 1, count: 512, rom: "bank04:97EF", note: "移动指令串窗" },
+        SegMeta { key: PackKey::KrEnMovStr, kind: "bytes", elem: 1, count: 518, rom: "bank04:97E9", note: "移动串窗 $97E9..$99EF（区基址= $97D1+24）" },
         // ---- To（bank3）房流与敌表 ----
         SegMeta { key: PackKey::ToRoomPtrs, kind: "u16-table", elem: 2, count: 21, rom: "bank03:A7D1", note: "RoomPtrTable" },
         SegMeta { key: PackKey::ToStructPtrs, kind: "u16-table", elem: 2, count: 32, rom: "bank03:A7FB", note: "StructPtrTable" },
@@ -601,7 +601,7 @@ fn seg_meta() -> Vec<SegMeta> {
         SegMeta { key: PackKey::ToEnemyInitDelay, kind: "bytes", elem: 1, count: 64, rom: "bank03:96BB", note: "EnemyInitDelayTbl（窗口；语义 32）" },
         SegMeta { key: PackKey::ToEnemyFacing, kind: "bytes", elem: 1, count: 64, rom: "bank03:977B", note: "L977B 朝向表" },
         SegMeta { key: PackKey::ToEnMovPtrs, kind: "words", elem: 2, count: 36, rom: "bank03:96DB", note: "EnemyMovementPtrs 18 索引 × R/L = 36 项 (72 B)" },
-        SegMeta { key: PackKey::ToEnMovStr, kind: "bytes", elem: 1, count: 512, rom: "bank03:97EF", note: "移动指令串窗" },
+        SegMeta { key: PackKey::ToEnMovStr, kind: "bytes", elem: 1, count: 538, rom: "bank03:97D5", note: "移动串窗 $97D5..$99EF（区基址= $97D1+4）" },
         // ---- Ri（bank5）房流与敌表 ----
         SegMeta { key: PackKey::RiRoomPtrs, kind: "u16-table", elem: 2, count: 42, rom: "bank05:A17F", note: "RoomPtrTable" },
         SegMeta { key: PackKey::RiStructPtrs, kind: "u16-table", elem: 2, count: 29, rom: "bank05:A1D3", note: "StructPtrTable" },
@@ -620,7 +620,7 @@ fn seg_meta() -> Vec<SegMeta> {
         SegMeta { key: PackKey::RiEnemyInitDelay, kind: "bytes", elem: 1, count: 64, rom: "bank05:96BB", note: "EnemyInitDelayTbl（窗口；语义 32）" },
         SegMeta { key: PackKey::RiEnemyFacing, kind: "bytes", elem: 1, count: 64, rom: "bank05:977B", note: "L977B 朝向表" },
         SegMeta { key: PackKey::RiEnMovPtrs, kind: "words", elem: 2, count: 36, rom: "bank05:96DB", note: "EnemyMovementPtrs 18 索引 × R/L = 36 项 (72 B)" },
-        SegMeta { key: PackKey::RiEnMovStr, kind: "bytes", elem: 1, count: 512, rom: "bank05:97EF", note: "移动指令串窗" },
+        SegMeta { key: PackKey::RiEnMovStr, kind: "bytes", elem: 1, count: 514, rom: "bank05:97ED", note: "移动串窗 $97ED..$99EF（区基址= $97D1+28）" },
         // ---- Norfair 敌表（bank02，同址布局）----
         SegMeta { key: PackKey::NoEnemyHealth, kind: "bytes", elem: 1, count: 64, rom: "bank02:962B", note: "EnemyHealthTbl（窗口；语义 16）" },
         SegMeta { key: PackKey::NoEnemyRestingAnim, kind: "bytes", elem: 1, count: 32, rom: "bank02:963B", note: "EnemyRestingAnimIndex" },
@@ -632,7 +632,7 @@ fn seg_meta() -> Vec<SegMeta> {
         SegMeta { key: PackKey::NoEnemyInitDelay, kind: "bytes", elem: 1, count: 64, rom: "bank02:96BB", note: "EnemyInitDelayTbl（窗口；语义 32）" },
         SegMeta { key: PackKey::NoEnemyFacing, kind: "bytes", elem: 1, count: 64, rom: "bank02:977B", note: "L977B 朝向表" },
         SegMeta { key: PackKey::NoEnMovPtrs, kind: "words", elem: 2, count: 36, rom: "bank02:96DB", note: "EnemyMovementPtrs 18 索引 × R/L = 36 项 (72 B)" },
-        SegMeta { key: PackKey::NoEnMovStr, kind: "bytes", elem: 1, count: 512, rom: "bank02:97EF", note: "移动指令串窗" },
+        SegMeta { key: PackKey::NoEnMovStr, kind: "bytes", elem: 1, count: 520, rom: "bank02:97E7", note: "移动串窗 $97E7..$99EF（区基址= $97D1+22）" },
         SegMeta { key: PackKey::RomTable968B, kind: "bytes", elem: 0x80, count: 8, rom: "各 bank $968B", note: "窗口参数化属性表 8×128B" },
         SegMeta { key: PackKey::RomVec95CE, kind: "bytes", elem: 2, count: 8, rom: "各 bank $95CE", note: "F2ED 流向量 [lo,hi]×8" },
         SegMeta { key: PackKey::NametableHi, kind: "bytes", elem: 1, count: 4, rom: "bank07:$C19F", note: "NT 高位表 20/24/28/2C" },
@@ -904,7 +904,7 @@ const ENEMY_TABLE_LAYOUT: [(u16, usize); 12] = [
     (0x96BB, 64), // EnemyInitDelayTbl（语义 32；窗口 64）
     (0x977B, 64), // L977B 朝向表（窗口）
     (0x96DB, 72), // EnemyMovementPtrs（18 索引 × R/L × 2 B = 36 项；idx36 起全 $0000）
-    (0x97EF, 512), // 移动指令串窗
+    (0x97EF, 512), // 移动指令串窗（**按区不同**：见 EN_MOV_STR_END / enemy_movement_choices_len）
     (0x960B, 32), // EnemyDeathAnimIndex（**按区不同**：bank1/3 首字节 0x27/0x08）
 
 ];
@@ -949,7 +949,16 @@ fn extract_enemy_tables_all(prg: &[u8]) -> Result<Vec<Section>, String> {
     for (i, bank) in [1u8, 2, 4, 3, 5].into_iter().enumerate() {
         let keys = enemy_keys(i);
         for (j, (addr, len)) in ENEMY_TABLE_LAYOUT.iter().enumerate() {
-            out.push(Section { key: keys[j], data: bank_slice(prg, bank, *addr, *len)? });
+            // 移动指令串窗的**起点按区不同**（表尾= `$97D1 + EN_MOV_CHOICES_LEN[area]`），
+            // 上界五区一致 `$99EF`。旧形一律从 `$97EF` 切 ⇒ No/Kr/To/Ri 丢首 6–26 B，
+            // 且消费侧按 `$97EF` 减基址会下溢 ⇒ 四区移动串全落空。
+            let (a, l) = if j == 10 {
+                let base = EN_MOV_CHOICES_ADDR + crate::assets::EN_MOV_CHOICES_LEN[i] as u16;
+                (base, (EN_MOV_STR_END - base) as usize)
+            } else {
+                (*addr, *len)
+            };
+            out.push(Section { key: keys[j], data: bank_slice(prg, bank, a, l)? });
         }
     }
     Ok(out)
@@ -1550,6 +1559,8 @@ fn extract_en_anim_idx(prg: &[u8]) -> Result<Vec<Section>, String> {
 /// 表长按 asm 标签机械自证（每条记录 `1 + mask + 1` 字节）：
 /// Br 30（$97EF 起是移动串）/ No 22（$97E7）/ Kr 24（$97E9）/ To 4（$97D5）/ Ri 28（$97ED）。
 const EN_MOV_CHOICES_ADDR: u16 = 0x97D1;
+/// 移动指令串窗的**公共上界**（五区一致：Br `$97EF`+512 = `$99EF`）。
+const EN_MOV_STR_END: u16 = 0x99EF;
 const EN_MOV_CHOICES_LEN: usize = 30;
 
 fn en_mov_choices_keys(area: usize) -> PackKey {
@@ -1569,13 +1580,7 @@ fn extract_en_mov_choices(prg: &[u8]) -> Result<Vec<Section>, String> {
         let body = bank_slice(prg, bank, EN_MOV_CHOICES_ADDR, EN_MOV_CHOICES_LEN)?;
         // 机械自检：由偏移表推出的表尾必须与 asm 标签给出的位置一致（Br 30/No 22/Kr 24/To 4/Ri 28）
         let offs = bank_slice(prg, bank, 0x96CB, 16)?;
-        let want = match area {
-            0 => 30,
-            1 => 22,
-            2 => 24,
-            3 => 4,
-            _ => 28,
-        };
+        let want = crate::assets::EN_MOV_CHOICES_LEN[area];
         let mut end = 0usize;
         for &o in offs.iter() {
             let o = o as usize;

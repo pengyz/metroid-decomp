@@ -85,3 +85,45 @@ L4 直裁（零容差）单独一轮。混在 AI 卡里提交等于把两类风�
 Evidence: ROM 五 bank `$96DB` 直读 36×u16 表（`idx36+` 全 `$0000`）+ 包内五段
 长度 36 B；`extract.rs` 历史注释把「36 项」写成「36 B」的误记已定位。
 Confidence: 90（表长与截断是字节级事实；影响面的像素后果未实测）
+
+> 【2026-11-22 追加：串区基址也是按区的，`$97EF` 只是 Brinstar】
+
+同一片数据还有第二个按区假设：**移动指令串区的基址**。`EnemyMovementPtrs`
+里的指针是绝对地址，五区串区起点各不相同（表尾 = `$97D1 + EnemyMovementChoices`
+语义表长）：
+
+| 区 | bank | choices 语义表长 | 串区基址 | 串窗（到 `$99EF`） |
+|---|---|---|---|---|
+| Brinstar | 1 | 30 | `$97EF` | 512 B |
+| Norfair | 2 | 22 | `$97E7` | 520 B |
+| Kraid | 4 | 24 | `$97E9` | 518 B |
+| Tourian | 3 | 4 | `$97D5` | 538 B |
+| Ridley | 5 | 28 | `$97ED` | 514 B |
+
+ROM 直读（`prg = bank*0x4000 + (addr-0x8000)`，`$96DB` 首 12 B）：
+bank1 `ef 97 f2 97 f5 97 …`、bank2 `e7 97 e7 97 e7 97 …`、bank4 `e9 97 ec 97 …`、
+bank5 `ed 97 ed 97 …`。
+
+旧形把窗起点与减数都写死 `$97EF`，后果有两重：
+
+1. **取窗截断**：No/Kr/To/Ri 的表头被切掉 6–26 B（To 丢 26 B）。
+2. **消费侧下溢**：`common.rs` 的 `str_off = ptr.wrapping_sub(0x97EF)` 对非 Br 区的
+   首几个指针变成巨大 `usize` ⇒ `get()` 全 `None` ⇒ 回落 `$FF`
+   （`EnemyMovementInstr_Restart`）⇒ **Δx 恒 0**，凡走"移动串"径而非"加速"径的
+   非 Brinstar 敌人**一生不移动**。
+
+实测：Norfair room 09 的 slot1（type 2 = RipperII，`data05=$1E` ⇒ 走串径）
+`x` 在 rust 侧恒为出生点 92，而 emu `135→129→…→45→40→46→…`。
+修复后 `enemy_get_delta_xy(1,2,0x1E,…)` 返回 `dx=3`（串 `SignMagSpeed $20,2,2`；
+emu 平均 1.5 px/帧 = 3 px 每 2 帧，因 `data05` bit6 每帧翻转使 `EnemyMove` 隔帧跳过）。
+
+修复面：`assets::enemy_movement_string_base(area)`（`$97D1 + EN_MOV_CHOICES_LEN[area]`）
++ `extract.rs` 按区切窗（公共上界 `$99EF`）+ `common.rs`/`kraid.rs` 减去该基址
+（Kraid 的四个串改为绝对 ROM 地址 `$9839/$983C/$983F/$9856/$986D/$9884/$989B/$98B2`）。
+
+L4 全矩阵 **166/6/0 逐格不变**（无回归）；Norfair room 09 `f60` 18→**0**、
+`f120` 61→**0**。
+
+Evidence: ROM 五 bank `$96DB` 直读首指针 + `pack-tool verify` 五区 mov_str
+`512/520/518/538/514 B` 全 OK + room 09 房扫 0 px；`enemy_get_delta_xy` 单测 `dx=3`。
+Confidence: 95（基址是字节级事实；像素后果已在 room 09 实测）
