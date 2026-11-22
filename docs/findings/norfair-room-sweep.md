@@ -12,19 +12,34 @@
 | 镜像修复后（`mirrorfix-area1`） | 13 | 27 | 6 | 名表镜像动态化前 |
 | Crawler 按区 + Squeept 尾件后（`crawlerfix-area1`） | 14 | 29 | 3 | |
 | 电梯换区帧会计后（`fcalign-area1`） | 21 | 22 | 3 | +7 房，零回退 |
-| **移动串区基址 + 加速径两修后（`movstr-accel-area1`）** | **34** | **9** | 3 | 本次（+13 房，零回退） |
+| 移动串区基址 + 加速径两修后（`movstr-accel-area1`） | 34 | 9 | 3 | +13 房，零回退 |
+| **Crawler 静止出口动画节拍修正后（`animbeat-area1`）** | **41** | **2** | 3 | 本次（+7 房，零回退） |
 
-本版转绿（13 房）：**08 / 12 / 14 / 15 / 16 / 18 / 21 / 23 / 26 / 27 / 33 / 35 / 37 / 43**
-等（逐房见台账 `captures[].diff_pixels`），`lost = []`（无回退）；耗时 1872.8 s。
-两轮累计从 21 → 34 ok。本版两处机制修复：`$97EF` 只是 Brinstar 的串基址
-（`docs/findings/enemy-movement-ptr-truncation.md`）、加速类 Δx/Δy 走积分件 +
-`$0406` 三名互斥（`docs/findings/enemy-acceleration-path.md`）。
+`movstr-accel-area1` 转绿 13 房（08/12/14/15/16/18/21/23/26/27/33/35/37/43），
+两处机制：`$97EF` 只是 Brinstar 的串基址（`docs/findings/enemy-movement-ptr-truncation.md`）、
+加速类 Δx/Δy 走积分件 + `$0406` 三名互斥（`docs/findings/enemy-acceleration-path.md`）。
+
+`animbeat-area1`（1870.7 s）再 +7 房（10/11/22/24/30/34/40），`lost = []`。机制：
+Crawler 静止出口的动画节拍必须取 `EnemyStatusPreAI`（1），写死 `2` 会让该槽动画相位
+此后恒差 1 拍（每 3 帧 1 帧画出不同动画格）。逐帧取证见下一节。累计 21 → 41 ok。
 
 机制：这些房里有「按 `FrameCount` 取模/移位做门」的敌人（Crawler 38 槽 / Swooper 族）。
 换区迭代多烧 2 帧 ⇒ `FrameCount` 常差 2 ⇒ 位移节拍相位错 1 拍。
 修复与证据见 `docs/findings/bank-switch-frame-accounting.md`。
 
-## 2. 剩余 9 房 mismatch 的分层画像（`movstr-accel-area1` 版）
+## 1b. 剩余 2 房 + blocked 3 房（`animbeat-area1` 版）
+
+- **room 19**（`prevend 220` / `f120 212`）：单槽 `slot5`（`type=00`、`status=01` Resting）
+  字段面 14 处不同（`y/x/speedX/isHit/speedSubPixelX`、`EnsExtra.status/rY/rX/animFrame/
+  animDelay/resetAnim/jumpDsplcmnt` 等），其余 11 槽全等；`ScrollX` 两腿同为 `238`、
+  `FC` 同为 `164` ⇒ 不是帧相位，是该槽自身行为差（待解剖）。
+- **room 45**（`prev60/f60≈11280`、`prevend/f120≈11011`）：**整屏**差 + `FC` 105/104、
+  `ScrollX` 120/118 ⇒ rust 慢 1 帧；6 个空槽的 `data05` 也差（bit6 每帧翻转的相位面）。
+  该房是 `DoorEntryStatus=1` 的自滚房（emu 载入尾段 f1600 `RoomNumber=45` → f1601 `F1`
+  → f1602 `F3` → f1603 `FF`，`ScrollX` 每帧 +2），载房帧会计疑差 1 帧。
+- blocked 3 房（28/31/32）仍为采集侧缺失。
+
+## 2. 剩余 9 房 mismatch 的分层画像（`movstr-accel-area1` 版，历史）
 
 - **f120/prevend 才出现 57–220 px（6 房：10/11/19/24/30/40）**：`arrived`/`pre`/`f60` 全 clean
   ⇒ 载房后 ~120 帧内后出现的敌/弹/爆炸差，不是静态房数据。
