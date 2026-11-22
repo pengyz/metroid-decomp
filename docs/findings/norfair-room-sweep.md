@@ -39,6 +39,47 @@ Crawler 静止出口的动画节拍必须取 `EnemyStatusPreAI`（1），写死 
   → f1602 `F3` → f1603 `FF`，`ScrollX` 每帧 +2），载房帧会计疑差 1 帧。
 - blocked 3 房（28/31/32）仍为采集侧缺失。
 
+
+### 1c. 剩余 2 房的逐帧取证（2026-11-22 收口）
+
+**room 45 = 载房窗帧会计（cycle 模型刃口），不是行为差。**
+逐帧探针（`/tmp/case-probe-r45step.txt`，1599–1625 每帧一采，`watch 002D FrameCount`）：
+
+| f | 1599 | 1600 | 1601 | 1602 | 1603 | 1604 |
+|---|---|---|---|---|---|---|
+| emu `FrameCount` | 45 | 46 | **46** | 47 | 48 | 49 |
+| rust `FrameCount` | 45 | 46 | 47 | **47** | **47** | 48 |
+| emu `ScrollX` | 0 | 2 | 3 | 4 | 6 | 8 |
+| rust `ScrollX` | 0 | 2 | 4 | 4 | 4 | 6 |
+
+即：emu 在换房后**只冻结 1 帧**（1601），rust 冻结 **2 帧**（1601–1602 被吞，`--trace load`
+直证 f1601/f1602 无 trace 行），此后 FC/ScrollX 恒差 1 帧 ⇒ 整屏 2px 相位差（11 280 px）。
+
+对照审计（`tools/movie_ref/room_sweep.build_case` + `watch 002D FrameCount`，entry=1600）：
+
+| room | emu 冻结帧 | rust 吞帧 | 一致？ |
+|---|---|---|---|
+| 22 | 1601,1602 | 1601,1602 | ✅ |
+| 10 | 1601,1602,1603 | 1601,1602,1603 | ✅ |
+| 45 | 1601 | 1601,1602 | ❌ 多烧 1 帧 |
+
+`--trace load` 直读：room45 载房 `work_cycles=30766`，`dropped=(29000+30766)/29780=2`；
+而 1 帧的上界是 `work ≤ 30060`——**超界 706 cycles**。room 45 是 `DoorEntryStatus=1`
+的自滚房（`ScrollX` 每帧 +2），其载房工作量与滚动调用交织，`LOAD_BASE_CYCLES` 的整块
+记账把「本可摊在多拍里的工作」算成一次超帧。**修法不是调常数**（那是阈值拟合），而是把
+载房工作量按 `CheckUpdateNameTable` 的每次滚动调用记账（待做）。
+
+**room 19 = Swooper01 的静息回切时机（`data05` bit5 置位晚）。**
+- 槽级：`slot5`（Norfair `type=0x01` Swooper01）在 `f60` 两腿**逐字节相同**，`f120` 时
+  emu 已 `status=1(Resting)` 且 `type` 读回 `0`，rust 仍 `status=2(Active)`、`type=1`。
+- emu 逐帧（`watch 6B44 S5Status` + `watch 6B52 S5Type`）：`f1602 status=1/type=0` →
+  `f1603 type=1` → **`f1642 status=2`（激活）** → **`f1720 status=1,type=0`（静息回切）**。
+- rust 在 `f1720` 仍 Active，但其 `data05=0x2A` 已含 bit5（`0x20`）⇒
+  `enemy_active` 的 `d & 0x20 != 0 ⇒ dec_status()` 下一帧才会回切 ⇒ **rust 的
+  bit5 置位比 emu 晚**（`data05` 两腿差 `0x2B` vs `0x2A`，只差 bit0）。
+- 结论：这不是 `enemy_active` 的分支错（分支已按 asm 接），而是 **bit5 的置位时机**
+  （Swooper 距离阈值径）待对齐；下一轮在该径上做逐帧取证。
+
 ## 2. 剩余 9 房 mismatch 的分层画像（`movstr-accel-area1` 版，历史）
 
 - **f120/prevend 才出现 57–220 px（6 房：10/11/19/24/30/40）**：`arrived`/`pre`/`f60` 全 clean
