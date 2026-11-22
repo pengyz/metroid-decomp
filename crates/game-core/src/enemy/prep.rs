@@ -244,12 +244,15 @@ pub(crate) fn init_en_resting_anim_index(mem: &mut crate::frame::Manager, x: u8)
     let y = enemy_type_times2_plus_facing(mem, x);
     let area = crate::frame::cur_area(mem);
     let idx = AnimIdx::at(area, game_data::assets::enemy_resting_anim(area)[y as usize & 0x1F]);
-    if idx.off() == mem.read_wram(0x6AF4 + x as u16 + 5) {
-        return; // 已同⇒RTS（animDelay 不清）
+    let slot = crate::enemy::state::slot_of(x);
+    if idx.off() == mem.enemy(slot).reset_anim_index() {
+        // asm `beq ClearEnAnimDelay@RTS` —— 相等时**仍清 animDelay**（旧实现直接 return，漏了这一步）
+        mem.enemy(slot).set_anim_delay(0);
+        return;
     }
-    mem.write_wram(0x6AF4 + x as u16 + 5, idx.off()); // resetAnimIndex
-    mem.write_wram(0x6AF4 + x as u16 + 6, idx.off()); // animIndex
-    mem.write_wram(0x6AF4 + x as u16 + 4, 0); // animDelay←0
+    mem.enemy(slot).set_reset_anim_index(idx.off()); // resetAnimIndex
+    mem.enemy(slot).set_anim_index(idx.off()); // animIndex
+    mem.enemy(slot).set_anim_delay(0); // animDelay←0
 }
 
 /// `XorEnData05 ; $856B`。
