@@ -1068,7 +1068,8 @@ impl Manager {
 
     // ---- PipeBugHoles（`$0728`，4 槽 × 8 B）----
     //
-    // `constants_ram.asm:56-63` 的 `.struct PipeBugHole`：status0（bit0-3=要生出的敌型、
+    // `constants_ram.asm:56-63` 的 `.struct PipeBugHole`：status0（bit0-5=要生出的敌型
+    // （生敌处掩 `&$3F`；原 asm 第三方注只写 bit0-3）、
     // bit7=strong、`$FF`=无洞）/ enemySlot1 / y2 / x3 / hi4 / unused5-7
     // （`:1177 PipeBugHoles instanceof PipeBugHole 4 startfrom 0`）。
     // 装载 `LoadPipeBugHole ; 07:EC57`、更新 `UpdatePipeBugHole ; 07:FAFF`。

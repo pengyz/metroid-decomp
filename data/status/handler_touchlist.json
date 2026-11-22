@@ -15,7 +15,7 @@
    "first_tick": 402,
    "cases": {},
    "stale_since": "2026-11-22",
-   "stale_note": "本次 21 案矩阵 sidecar 零事件（推点仍在但当前无用例覆盖）⇒ 覆盖率缺口，保留登记不静默删。"
+   "stale_note": "本次 21 案矩阵 sidecar 零事件；推点已接线（sound/hook.rs:207 / :218、weapon/bomb.rs:35）故不再记账——不是覆盖率缺口，也不代表行为回退。"
   },
   {
    "addr": "0xB87F",
@@ -26,7 +26,7 @@
    "first_tick": 618,
    "cases": {},
    "stale_since": "2026-11-22",
-   "stale_note": "本次 21 案矩阵 sidecar 零事件（推点仍在但当前无用例覆盖）⇒ 覆盖率缺口，保留登记不静默删。"
+   "stale_note": "本次 21 案矩阵 sidecar 零事件；推点已接线（sound/hook.rs:207 / :218、weapon/bomb.rs:35）故不再记账——不是覆盖率缺口，也不代表行为回退。"
   },
   {
    "addr": "0xCBEF",
@@ -132,7 +132,7 @@
    "first_tick": 506,
    "cases": {},
    "stale_since": "2026-11-22",
-   "stale_note": "本次 21 案矩阵 sidecar 零事件（推点仍在但当前无用例覆盖）⇒ 覆盖率缺口，保留登记不静默删。"
+   "stale_note": "本次 21 案矩阵 sidecar 零事件；推点已接线（sound/hook.rs:207 / :218、weapon/bomb.rs:35）故不再记账——不是覆盖率缺口，也不代表行为回退。"
   },
   {
    "addr": "0xEEA1",

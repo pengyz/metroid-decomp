@@ -701,11 +701,11 @@ fn enemy_loop(
                 }
                 i += 3;
             }
-            // 【占位臂记账】LoadElevator($EC04)/LoadStatues($EC2F)/LoadPipeBugHole($EC57)
-            // ——梯/像/虫装载深件（随件）。既有占位臂模式（DIVERGENCES 记账非 panic）。
-            // 【任务卡 1】type 2=LoadDoor（$EB8C→SpawnDoorRoutine（A 级（audit 实录）））
-            // ——门对象槽 init 已端口（stride 2（`lda #$02/rts`（:8853）））。
-            // 【stride 校】门/梯=2（EBE5/E962 `lda #$02/rts`）；像/虫=3（待考（下批 A 级核））。
+            // 【已端口】type 2=LoadDoor（$EB8C→SpawnDoorRoutine）、type 1=LoadEnemy、
+            // type 6=LoadStatues（$EC2F）、type 7=LoadPipeBugHole（$EC57）。
+            // 【占位臂记账】仅剩 type 0=LoadElevator（$EC04）——梯装载深件未端口，
+            // 既有占位臂模式（DIVERGENCES 记账非 panic）。
+            // 【stride 校】门/梯=2（EBE5/E962 `lda #$02/rts`）；像=1（EC2F 尾 `lda #$01/rts`）；虫=3。
             2 => {
                 load_door(mem, stream.get(i + 1).copied().unwrap_or(0));
                 i += 2;

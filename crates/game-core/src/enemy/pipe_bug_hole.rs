@@ -263,9 +263,12 @@ mod tests_pipe_bug_hole {
         m.enemy(1).set_status(EnemyStatus::Active);
         m.enemy(1).set_data05(0x02);
         m.enemy(1).set_delay(0x05);
+        m.enemy(1).set_is_hit(0x01);
         update_pipe_bug_hole(&mut m, 3);
         assert_eq!(m.enemy(1).delay(), 0x05, "未递减");
         assert_eq!(m.enemy(1).enemy_type(), 0x00, "未改写 type");
+        // 载荷断言：占用径必须在 `sta Ens.0.isHit,x` 之前返回（变异把它提前会翻红）。
+        assert_eq!(m.enemy(1).is_hit(), 0x01, "占用径不得清 isHit");
     }
 
     /// 更新：`type != $FF` ⇒ **先清槽**（type←$FF、delay←1、RemoveEnemy），本帧不生。
@@ -325,6 +328,77 @@ mod tests_pipe_bug_hole {
             m.enemy(1).delay(),
             game_data::assets::enemy_init_delay(0)[7]
         );
+    }
+
+    /// 装载：`hi ← GetNameTableAtScrollDir`（`lda PPUCTRL_ZP / eor #$01 / and #$01`）——
+    /// 旧 fixture 用 `ppuctrl=0, ScrollDir=2`（偶）使该项恒为 0，属零覆盖。
+    #[test]
+    fn load_hi_follows_ppuctrl_xor_scroll_dir() {
+        let mut m = Manager::default();
+        boot_area0(&mut m);
+        m.set_ppuctrl_zp(0x00);
+        m.set_scroll_dir(0x01); // 奇 ⇒ hi = (0^1)&1 = 1
+        for s in 0..4 {
+            m.set_pbh_status(s, 0xFF); // 显式空槽（`status+1==0` 才是空）
+        }
+        load_pipe_bug_hole(&mut m, 0x30, 0x07, 0x99);
+        assert_eq!(m.pbh_hi(3), 0x01, "ScrollDir 奇 ⇒ 名表 1");
+
+        let mut m = Manager::default();
+        boot_area0(&mut m);
+        m.set_ppuctrl_zp(0x01); // 1^1 = 0 ⇒ hi = 0
+        m.set_scroll_dir(0x01);
+        for s in 0..4 {
+            m.set_pbh_status(s, 0xFF);
+        }
+        load_pipe_bug_hole(&mut m, 0x30, 0x07, 0x99);
+        assert_eq!(m.pbh_hi(3), 0x00, "PPUCTRL 参与异或");
+    }
+
+    /// 更新：`status` bit7（strong）× `specialAttribs` bit7 ⇒ 血量 `asl` 双倍；
+    /// 且 `data05` 的 bit0 取 `ScrollDir & 1`（旧 fixture ScrollDir=2 使该项恒 0）。
+    #[test]
+    fn spawn_strong_hole_doubles_health_and_keeps_scroll_bit() {
+        let mut m = Manager::default();
+        boot_area0(&mut m);
+        m.set_scroll_dir(0x01);
+        // b1=0x87：bit7=strong、低 6 位=7（PipeBug）。
+        stage_hole(&mut m, 3, 0x87, 0x10, 0x18, 0x40, 0x00);
+        m.enemy(1).set_enemy_type(0xFF);
+        m.enemy(1).set_delay(0x01);
+        m.object(0).set_y(0x80);
+        m.object(0).set_x(0x40);
+        m.object(0).set_radius_y(0x08);
+        m.object(0).set_radius_x(0x08);
+        update_pipe_bug_hole(&mut m, 3);
+        let base = game_data::assets::enemy_health(0)[7];
+        assert_eq!(m.enemy(1).health(), base.wrapping_shl(1), "strong ⇒ 双血");
+        assert_ne!(m.enemy(1).health(), base, "不得等于单倍值");
+        assert_eq!(m.enemy(1).data05() & 0x01, 0x01, "ScrollDir 奇 ⇒ bit0=1");
+        assert_eq!(
+            m.enemy(1).data0d(),
+            game_data::assets::enemy_force_speed_delay(0)[7],
+            "data0D ← ForceSpeedTowardsSamusDelayTbl"
+        );
+    }
+
+    /// 件序：`update_all_pipe_bug_holes` 只跑槽 3/2/1（asm `ldy #24 / sbc #8 / bne`）——
+    /// 用**独立** `enemySlot` 直接钉住"槽 0 不被处理"，不再靠生/清奇偶间接观测（复核 P2-2）。
+    #[test]
+    fn update_all_skips_slot_zero_with_distinct_enemy_slot() {
+        let mut m = Manager::default();
+        boot_area0(&mut m);
+        // 槽 0：type 有效、delay=1 ⇒ 若被处理必然走到"清槽"（type→$FF）。
+        stage_hole(&mut m, 0, 0x07, 0x20, 0x18, 0x40, 0x00);
+        m.enemy(2).set_enemy_type(0x07);
+        m.enemy(2).set_delay(0x01);
+        // 槽 1-3：无洞，避免干扰。
+        for s in 1..4 {
+            m.set_pbh_status(s, 0xFF);
+        }
+        update_all_pipe_bug_holes(&mut m);
+        assert_eq!(m.pbh_status(0), 0x07, "槽 0 的 pbh.status 不得被改写");
+        assert_eq!(m.enemy(2).enemy_type(), 0x07, "槽 0 指向的敌槽不得被清");
     }
 
     /// 更新：Samus 与洞重叠 ⇒ **本帧放弃生敌**（asm `bcc …@RTS`）。

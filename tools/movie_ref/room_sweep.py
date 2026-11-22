@@ -746,12 +746,22 @@ def run_room(area: int, room: int, frames: int, captures: list[int],
             rec["l4_captures"] = rep["captures"]
 
         # ---- 采集点层判定 ----
-        bad = [c for c in results if c["status"] in ("error", "blocked")]
+        # `pre`/`prev*` 是诊断用参考帧（判定面排除见下），它们的采集失败不应把整房判 error
+        # （真实成因多为 lag 帧取不到截图 `缺模拟器截图`）；单独记 warn 并保留可见性。
+        warn_only = [c for c in results
+                     if c["tag"] != "pre" and not c["tag"].startswith("prev")]
+        bad = [c for c in results
+               if c["status"] in ("error", "blocked") and c in warn_only]
+        soft = [c for c in results
+                if c["status"] in ("error", "blocked") and c not in bad]
         if bad:
             rec["status"] = ("blocked" if all(c["status"] == "blocked" for c in bad)
                              else "error")
             rec["notes"].append("采集点 error/blocked："
                                 + ", ".join(f"{c['tag']}={c['status']}" for c in bad))
+            if soft:
+                rec["notes"].append("参考帧采集失败（不参与判定，4db31751）："
+                                    + ", ".join(f"{c['tag']}={c['status']}" for c in soft))
             return rec
         auth = []
         for c in results:
@@ -785,6 +795,9 @@ def run_room(area: int, room: int, frames: int, captures: list[int],
             rec["status"] = "mismatch"
             rec["mismatch"] = [c for c in results if (c["diff_pixels"] or 0) != 0]
             rec["notes"].append(f"最大失配 {max(diffs or [0])} px")
+        if soft:
+            rec["notes"].append("参考帧采集失败（不参与判定，4db31751）："
+                                + ", ".join(f"{c['tag']}={c['status']}" for c in soft))
         return rec
     except Exception as exc:  # 单房失败不得中断整批
         rec["status"] = "error"
