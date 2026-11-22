@@ -1031,6 +1031,86 @@ mod tests_jump_dsplcmnt_signs {
         assert_eq!(m.enemy(1).hi(), 0x01, "成功径不改 hi");
     }
 
+    /// asm `$84DA-$84F0` 的第三种组合：`ScrollX != 0` 但**名表相同**
+    /// （`GetOtherNameTableIndex == 0`）⇒ 回滚失败。
+    #[test]
+    fn left_move_rolls_back_when_nametable_is_same() {
+        let mut m = crate::frame::Manager::default();
+        stage(&mut m, 0x10);
+        m.write_wram(ens_addr(0x10, 2), 0x08);
+        m.enemy(1).set_pos_x(0x09);
+        m.enemy(1).set_hi(0x01);
+        m.set_ppuctrl_zp(0x01); // (1 ^ 1) & 1 == 0 ⇒ 名表相同
+        m.set_scroll_x(0x40);
+        m.set_scroll_dir(0x03);
+        assert!(!super::enemy_move_one_pixel_left(&mut m, 0x10));
+        assert_eq!(m.enemy(1).pos_x(), 0x09, "必须回滚到原位");
+    }
+
+    /// asm `$84C0-$84D8` 的 `x == 0` 分支：`ScrollDir < 2`（竖滚房）⇒ **整段跳过**
+    /// （既不失败也不换名表），随后正常 `dec x` 回绕到 `$FF`。
+    #[test]
+    fn left_move_x_zero_skips_nametable_when_vertical_scroll() {
+        let mut m = crate::frame::Manager::default();
+        stage(&mut m, 0x10);
+        m.write_wram(ens_addr(0x10, 2), 0x01); // radiusX=1 ⇒ (0-1)&7 != 0 ⇒ 跳过块判
+        m.enemy(1).set_pos_x(0x00);
+        m.enemy(1).set_hi(0x01);
+        m.set_ppuctrl_zp(0x01); // 名表相同（若误入换表径就会失败）
+        m.set_scroll_x(0x00);
+        m.set_scroll_dir(0x01); // < 2 ⇒ 跳过
+        assert!(super::enemy_move_one_pixel_left(&mut m, 0x10));
+        assert_eq!(m.enemy(1).pos_x(), 0xFF);
+        assert_eq!(m.enemy(1).hi(), 0x01, "竖滚房不动 hi");
+    }
+
+    /// asm 同上分支：`ScrollX == 0` ⇒ 移动失败（x 保持 0、不改 hi）。
+    #[test]
+    fn left_move_x_zero_fails_when_scroll_x_is_zero() {
+        let mut m = crate::frame::Manager::default();
+        stage(&mut m, 0x10);
+        m.write_wram(ens_addr(0x10, 2), 0x01);
+        m.enemy(1).set_pos_x(0x00);
+        m.enemy(1).set_hi(0x01);
+        m.set_ppuctrl_zp(0x00);
+        m.set_scroll_x(0x00);
+        m.set_scroll_dir(0x03);
+        assert!(!super::enemy_move_one_pixel_left(&mut m, 0x10));
+        assert_eq!(m.enemy(1).pos_x(), 0x00);
+        assert_eq!(m.enemy(1).hi(), 0x01);
+    }
+
+    /// asm 同上分支：名表**相同**（`GetOtherNameTableIndex == 0`）⇒ 失败（「屏外换表」）。
+    #[test]
+    fn left_move_x_zero_fails_when_nametable_is_same() {
+        let mut m = crate::frame::Manager::default();
+        stage(&mut m, 0x10);
+        m.write_wram(ens_addr(0x10, 2), 0x01);
+        m.enemy(1).set_pos_x(0x00);
+        m.enemy(1).set_hi(0x01);
+        m.set_ppuctrl_zp(0x01);
+        m.set_scroll_x(0x40);
+        m.set_scroll_dir(0x03);
+        assert!(!super::enemy_move_one_pixel_left(&mut m, 0x10));
+        assert_eq!(m.enemy(1).pos_x(), 0x00);
+    }
+
+    /// asm 同上分支的成功形：`ScrollX != 0` 且名表不同 ⇒ `hi ^= 1` 后继续 `dec x`。
+    #[test]
+    fn left_move_x_zero_switches_nametable_when_different() {
+        let mut m = crate::frame::Manager::default();
+        stage(&mut m, 0x10);
+        m.write_wram(ens_addr(0x10, 2), 0x01);
+        m.enemy(1).set_pos_x(0x00);
+        m.enemy(1).set_hi(0x01);
+        m.set_ppuctrl_zp(0x00); // (1 ^ 0) & 1 == 1 ⇒ 不同
+        m.set_scroll_x(0x40);
+        m.set_scroll_dir(0x03);
+        assert!(super::enemy_move_one_pixel_left(&mut m, 0x10));
+        assert_eq!(m.enemy(1).hi(), 0x00, "SwitchEnemyNameTable: hi ^= 1");
+        assert_eq!(m.enemy(1).pos_x(), 0xFF);
+    }
+
     /// asm 同径的另一半：`ScrollX == 0` ⇒ 回滚失败（x 不变、返回 false）。
     #[test]
     fn left_move_rolls_back_when_scroll_x_is_zero() {

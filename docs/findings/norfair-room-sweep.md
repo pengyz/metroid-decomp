@@ -123,6 +123,18 @@ rust 旧形两处都不合：`nx == rx` 恒回滚失败（不看 `ScrollX`/名�
 新增两条锚测（`left_move_wraps_when_scroll_x_and_nametable_differ`、
 `left_move_rolls_back_when_scroll_x_is_zero`），红证：把成功径临时改成恒失败 ⇒ 前者 FAILED。
 
+ROM 直读（A 级，PRG bank1，文件偏移 `16 + 0x4000 + (addr-0x8000)`）：
+
+```
+$84F4: BD 05 04 | 10 03 | FE 01 6B | 38 | 60      ; lda $0405,X / bpl→$84FC / inc $6B01,X
+$8550: BD 05 04 | 10 03 | DE 01 6B | 38 | 60      ; 右移同形，dec $6B01,X
+$855A: BD FB 6A | 49 01 | 9D FB 6A | 60           ; SwitchEnemyNameTable: hi ^= 1
+$8563: BD FB 6A | 45 FF | 29 01 | 60              ; GetOtherNameTableIndex: (hi^PPUCTRL_ZP)&1
+```
+
+（`a75a142a` 的 commit message 里曾写过一行 `bank07:$84F4 附近 0A 10 0B`——**那是错的**，
+全仓无此串，`$84F4` 也不在 bank7。以上四行是更正后的直读锚。）
+
 > 【2026-11-23 更正】同一 commit 里我还「顺手」翻了左/右移 `jumpDsplcmnt` 记账的极性，
 > 理由是误读了 `bpl`（`bpl` 在 N=0 时跳=bit7 **清**时跳过）。四件 asm 的真实极性是：
 > 左/右 `bpl @endIf_E` ⇒ **bit7 置**才 inc/dec；上/下 `bmi @endIf_D` ⇒ **bit7 清**才
