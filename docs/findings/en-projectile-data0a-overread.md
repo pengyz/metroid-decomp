@@ -38,22 +38,26 @@ Norfair room 28 在 f1692 触发：某弹 `data0A=6` ⇒ `resetAnimIndex = $95E6
 现有 `Anim::step` 在 16 次回落后报 `Broken{idx,reset,len}` 并 `unported!("bank07:E0BC-wrap")`，
 把这条未决路径变成 fail-loud（正确做法：不猜）。
 
-### 3.1 已定谳（2026-11-23 02:20，探针 `case-probe-r28d0a`）
+### 3.1 探针实测（`case-probe-r28d0a`，1684–1695 逐帧）
 
-逐帧（1684–1695）读 emu 12 个敌槽的 `Ens+12`（`data0A`）与 `EnsExtra+0`（status）：
+读 emu 与 rust 两侧 12 个敌槽的 `EnsExtra+0`(status)/`+14`(type)、`Ens+12`(data0A)：
 
-| f | 活跃槽 (status, data0A, y) |
-|---|---|
-| 1690 | slot6 (2, **0**, 0x2E) / slot7 (2, **0**, 0x1E) |
-| 1692 | slot6 (2, **0**, 0x32) / slot7 (2, **0**, 0x22) |
+- f1690–1692 活跃弹槽（6/7）**两侧 `data0A` 都是 `0`**，`type` 都是 `0`，status 都是 2；
+- f1692 两侧 slot6/7 的 `resetAnimIndex=0x4D`、`animIndex=0x4E`、`animFrame=0x42`、
+  `animDelay=0x01` **完全一致**。
 
-⇒ **emu 的弹体 `data0A = 0`**（即 `EnData0A=0, facing=0` = **Dragon 径**
-`dragon.asm` 写死 `#$00`），而 rust 走到了 `data0A=6`（= `EnData0A=3` = **Polyp 径**）。
-所以不是"越读要不要保真"的问题，而是**同一敌槽两侧派发到了不同 AI**：
-emu 是 Dragon 在吐弹，rust 是 Polyp 在吐弹。
+> 【2026-11-23 02:25 更正】上一版把 room 28 的挂起点写成「派发差（emu 走 Dragon、rust 走 Polyp）」——
+> **该结论是错的**：两侧 `data0A` 同为 0，槽面逐字节一致。错因是我拿**上一轮（12 B 窗之前）**的
+> 失败信息（`data0A=6` 触发 falling 越读断言）当成了本轮失败信息；本轮的实际 gap 已经变成
+> `unported @ bank07:E0BC-wrap idx=4E reset=02 len=138`，而 f1692 的槽面 6/7 是 `reset=4D`，
+> 说明报 gap 的**不是这两个槽**（explosion 池 `$6BB4` 的槽也在走 `Anim::step`）。
 
-下一步（下轮）：比对 room 28 的敌槽 `type` 与 `NORFAIR[type]` 表项，确认是
-`ai_table` 映射错、还是 `polyp`/`dragon` 的触发条件（`movement`/帧相位）判据不同。
+### 3.2 仍待定位
 
-（越读窗 12 B 的实作仍然正确且必要——`(RNG>>1)&3` 三点取值确实可达；本节的结论只是说
-room 28 这一处不是它。）
+- 报 gap 的对象身份未取：`Anim::step` 的 `Broken{idx,reset,len}` 目前只带三个数，
+  需在 `Broken` 里再带**槽号/池名**（否则同一个 `idx=4E/reset=02` 无法指认是谁）。
+- 候选：explosion 池槽（`crates/game-core/src/enemy/explosion.rs:187` 的调用点）
+  用了与敌槽不同的 `resetAnimIndex` 来源。
+
+**下一步**：给 `AnimStep::Broken` 增槽标识（一步小改，测试可钉），再复跑 room 28 取身份；
+身份定了才谈表基/语义。
