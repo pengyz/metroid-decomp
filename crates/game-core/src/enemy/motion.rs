@@ -211,6 +211,14 @@ fn enemy_delta_for_move(mem: &mut crate::frame::Manager, x: u8) -> (i8, i8) {
         .get((type_ & 0x3F) as usize)
         .copied()
         .unwrap_or(0);
+    // 加速类：Y 面同样必须走积分件（`$833F` 把 accelY 累进 speedY/speedSubPixelY 并写回
+    // 敌面）——`enemy_get_delta_xy` 的加速径只是在纯函数里算了局部值、**从不写回**，
+    // 等价于"加速度全丢"。asm 调序：先 EnemyGetDeltaY（写面）后 EnemyGetDeltaX。
+    let dy = if l977b_x & 0x40 != 0 {
+        enemy_get_delta_y_using_acceleration(mem, x)
+    } else {
+        dy
+    };
     let dx = if l977b_x & 0x40 != 0 {
         enemy_get_delta_x_using_acceleration(mem, x)
     } else {
@@ -218,7 +226,14 @@ fn enemy_delta_for_move(mem: &mut crate::frame::Manager, x: u8) -> (i8, i8) {
     };
     mem.write_wram(ens_addr(x, ENS_F_DATA1F), nd1f);
     mem.write_ram(en_addr(x, EN_DELAY), ndelay);
-    mem.write_ram(en_addr(x, EN_INSTR), ninstr);
+    // `$0406` 一字节三名（`chunkyExplosionTimer` / `movementInstrIndex` / `speedSubPixelY`，
+    // `refs/m1disasm/out/M1_NES_NTSC.sym:11118-11120`）：串径用 `movementInstrIndex`，
+    // 加速径用 `speedSubPixelY`，**两者互斥**（原版不会同时用）。加速径若照串径回写
+    // `ninstr`（=纯函数返回的入参，通常 0），会把刚积分出来的 `speedSubPixelY` 清零
+    // ⇒ 亚像素全丢（room 19 slot5 的 `Ens+6` emu 0x80 / rust 0x00）。
+    if l977b_x & 0x40 == 0 {
+        mem.write_ram(en_addr(x, EN_INSTR), ninstr);
+    }
     if trig {
         // `EnemyGetDeltaY@fail ; $82FB`（areas_common.asm:773-797）：`L968B[type]` bit5 置 ⇒
         // `data05 = ((data05 ^ $05) | L968B) & $1F`（清 bits6-7；bit5 随后由 TriggerResting 置）。
@@ -328,6 +343,36 @@ mod tests_enemy_move_shell {
         m.write_ram(en_addr(0x10, 0), 0x50);
         enemy_move(&mut m, 0x10);
         assert_eq!(m.read_ram(en_addr(0x10, 0)), 0x50, "非 Active 不移动");
+    }
+
+    /// `EnemyGetDeltaY ; $82ED` 的加速类分支：加速类必须用
+    /// `EnemyGetDeltaY_UsingAcceleration`（`$833F`，accelY 积分进 speedY/speedSubPixelY）。
+    /// 旧形在 `enemy_get_delta_xy` 里**算完就丢**（局部 `sub`/`sp` 从不写回敌面，
+    /// 只把 `sp` 当 Δ 返回）⇒ 速度恒定、加速度完全失效（Norfair room 19 slot5
+    /// Swooper01：emu speedY `0C→…→07` 且 speedSubPixelY 累到 `$80`，rust 恒 `0C`/`00`）。
+    #[test]
+    fn accel_class_y_delta_integrates_speed_y() {
+        let mut m = Manager::default();
+        if !game_data::pack::is_ready() {
+            let _ = game_data::pack::init_from_env();
+        }
+        stage(&mut m, 0x10, 0, 0x00, 0x02);
+        let Some(t) = find_type(&mut m, |r| r & 0x40 != 0) else {
+            eprintln!("SKIP（显式）：本区 L977B 没有加速类类型");
+            return;
+        };
+        m.write_wram(ens_addr(0x10, ENS_F_TYPE), t);
+        m.enemy(1).set_speed_y(0x0C);
+        m.enemy(1).set_accel_y(-128); // Swooper01：朝天花板重力
+        m.enemy(1).set_data06(0x00); // speedSubPixelY（$0406）
+        let _ = enemy_delta_for_move(&mut m, 0x10);
+        // 加速度必须落盘：speedY 变小（12 → 11）且 speedSubPixelY 累到 $80。
+        assert!(
+            (m.enemy(1).speed_y() as i16) < 0x0C,
+            "加速类敌人的 speedY 必须被积分（旧形恒 {:#04X}）",
+            m.enemy(1).speed_y()
+        );
+        assert_eq!(m.enemy(1).data06(), 0x80, "speedSubPixelY 必须累加 accelY 的低字节");
     }
 
     /// `EnemyGetDeltaX ; $8318` 的加速类分支：加速类（`L977B` bit6）必须用
