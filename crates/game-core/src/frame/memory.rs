@@ -1132,8 +1132,13 @@ impl Manager {
     pub fn set_in_area(&mut self, v: u8) { self.write_ram(crate::ram_map::IN_AREA, v); }
     /// 设 `ScrollDir`（`$0049`）。
     pub fn set_scroll_dir(&mut self, v: u8) { self.write_ram(crate::ram_map::SCROLL_DIR, v); }
+    /// 测试/诊断用：写 `ScrollX($00FD)`（`no-raw-addr` 门要求经访问器而非裸地址）。
+    pub fn set_scroll_x(&mut self, v: u8) { self.write_ram(crate::ram_map::SCROLL_X, v); }
 
     /// `ScrollDir`（`$0049`，0=Up/1=Down/2=Left/3=Right）。
+    /// `ScrollX($00FD)`——垂直/水平滚动的列像素（敌换名表判据要读它）。
+    pub fn scroll_x(&self) -> u8 { self.read_ram(crate::ram_map::SCROLL_X) }
+
     pub fn scroll_dir(&self) -> u8 {
         self.read_ram(crate::ram_map::SCROLL_DIR)
     }

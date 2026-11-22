@@ -99,6 +99,41 @@ room23 `46456`→2、room8 `71946`→3、room45 `30766`→1，常规帧 `work=0`
 
 判据不变：room45 房扫 `prev60/f60/prevend/f120` 全部 0 px（修前 11280/11280/11011/11016）。
 
+### 1e. room 19 的第一层：`EnemyMoveOnePixelLeft` 的换名表分支（2026-11-22）
+
+room 19 的 `f60` 早已 0 px，残差从 `prevend/f120` 起（修前 220/212）。逐帧探针
+（`case-probe-r19d05`，1690–1730 每帧一采，slot5 = Norfair type `$01` Swooper01）显示：
+1690–1709 两腿逐字节相同，**1710 起 rust 的 `data05 bit0` 翻转**（`0B`→`0A`）且
+`speedX` 由 `$FE`（−2）变 `$02`（+2）⇒ 走了「水平失败反弹」；emu 继续向左到 `x=0`。
+
+asm 逐字（`refs/m1disasm/SRC/areas_common.asm` 的 `EnemyMoveOnePixelLeft ; $84A7`）：
+
+- `dec x` 后 `x == radiusX` 这一径：`ScrollX == 0` ⇒ `inc x` 回滚失败；否则
+  `jsr GetOtherNameTableIndex`（`$8563`，`A = (hi ^ PPUCTRL_ZP) & 1`，Z 置=与屏上名表相同）
+  **非零（不同）⇒ `bne @success`**——允许跨名表继续左移。
+- `x == 0` 那一径：只有 `ScrollDir >= 2` 才处理；`ScrollX == 0` ⇒ 失败；
+  `GetOtherNameTableIndex == 0` ⇒ 失败（「试图在屏外换名表」）；否则
+  `jsr SwitchEnemyNameTable`（`$855A`，`hi ^= 1`）。
+
+rust 旧形两处都不合：`nx == rx` 恒回滚失败（不看 `ScrollX`/名表），`x == 0` 恒 `hi ^= 1`
+且从不失败。room 19 命中的是前者。
+
+修后探针 `1710/1711/1712 = 0 px`（此前 108/132 px），room19 复扫 `prevend/f120`
+`220→217`、`212→209`——**只降了 3 px，说明反弹不再是这一臂，但还有别的机制**。
+新增两条锚测（`left_move_wraps_when_scroll_x_and_nametable_differ`、
+`left_move_rolls_back_when_scroll_x_is_zero`），红证：把成功径临时改成恒失败 ⇒ 前者 FAILED。
+
+同批发现但**未修**（各自独立，留待单独一轮）：
+
+- `EnemyMoveOnePixelRight` 的对应两处（`x == 0` 与 `x + radiusX == $FF`，判等方向与左移相反）
+  仍是旧形，且界判写成了 `nx + rx == 0`（asm 是 `== $FF`）。
+- `EnemyMoveOnePixelUp/Down` 的 `y == 0` / `y == $EF` 换名表径同样未移植。
+- `CalculateFirstBGCollisionPoint ; 07:E90F` 的回绕修正敌径从未实现（Samus 侧在
+  `crates/game-core/src/samus/physics.rs:40` 有）：Y 段借位 ⇒ `row −= $10` 且
+  `ScrollDir & 2 == 0` 才 `inc hi`；X 段借位（distX 正）/ 越界（distX 负）⇒
+  `ScrollDir & 2 != 0` 才 `inc hi`。试过一次性加进四个 `enemy_check_move_*` ⇒
+  **分叉反而提前到 1713**，已整体回退，改为单独一轮逐步量测。
+
 ## 2. 剩余 9 房 mismatch 的分层画像（`movstr-accel-area1` 版，历史）
 
 - **f120/prevend 才出现 57–220 px（6 房：10/11/19/24/30/40）**：`arrived`/`pre`/`f60` 全 clean

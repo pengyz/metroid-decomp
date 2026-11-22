@@ -36,6 +36,18 @@ fn enemy_trigger_resting_clear_accel_x(mem: &mut crate::frame::Manager, x: u8) {
 
 
 
+/// `GetOtherNameTableIndex ; $8563`（`prg7_engine.asm`，`:1294`）：`A = (EnsExtra.hi ^ PPUCTRL_ZP) & $01`。
+/// Z 置 ⇔ 该敌名表与屏幕当前名表**相同**；四个 `EnemyMoveOnePixel*` 的换名表分支据此判定
+/// （原版语义：与屏上名表**不同**才允许换——左右上下的判等方向各不相同，逐点忠实）。
+fn other_name_table_index(hi: u8, ctrl: u8) -> u8 {
+    (hi ^ ctrl) & 0x01
+}
+
+/// `SwitchEnemyNameTable ; $855A`：`EnsExtra.hi ^= $01`。
+fn switch_enemy_name_table(hi: u8) -> u8 {
+    hi ^ 1
+}
+
 /// `EnemyIfMoveFailedVertical_Bounce($81FC)` / `_Horizontal_Bounce($81C7)`。
 fn enemy_if_move_failed_bounce(mem: &mut crate::frame::Manager, x: u8, vertical: bool) {
     // 1. `LoadBit5ofTableAt968B` 置 ⇒ 该类型不反弹。
@@ -553,6 +565,7 @@ pub(crate) fn enemy_move_one_pixel_down(mem: &mut crate::frame::Manager, x: u8) 
 /// ③dec x ④左界==0（x==radiusX）⇒**失败+回滚**（inc x——旧形缺回滚！）⑤@success：
 /// jumpDsplcmnt inc（data05 bit7 置时）。
 pub(crate) fn enemy_move_one_pixel_left(mem: &mut crate::frame::Manager, x: u8) -> bool {
+    let slot = x / 16;
     let xpos = mem.read_ram(0x0400 + x as u16 + 1); // x=+1
     let rx = mem.read_wram(0x6AF4 + x as u16 + 2); // radiusX=+2
     if xpos.wrapping_sub(rx) & 0x07 == 0 {
@@ -562,10 +575,19 @@ pub(crate) fn enemy_move_one_pixel_left(mem: &mut crate::frame::Manager, x: u8) 
         }
     }
     mem.write_ram(0x00, 1); // $00=1（移动进行——inc $00（:1161））
-    // x==0⇒名表换（:1162-1180——横滚房 ScrollX/GetOtherNameTableIndex 族简化=hi 翻）
+    // x==0 的换名表分支（asm $84C0-$84DA 逐字）：**仅横滚房**（`ScrollDir >= 2`）处理；
+    // `ScrollX == 0` ⇒ 失败；`GetOtherNameTableIndex == 0`（与屏上名表相同）⇒ 失败
+    // （「试图在屏外换名表」）；否则 `SwitchEnemyNameTable`。
+    // 【2026-11-22 修（Norfair room 19 f1710）】旧形无条件 `hi ^= 1` 且**从不失败**。
     if xpos == 0 {
-        let hi = mem.read_wram(0x6AF4 + x as u16 + 7);
-        mem.write_wram(0x6AF4 + x as u16 + 7, hi ^ 1); // SwitchEnemyNameTable（简化形）
+        let sd = mem.scroll_dir();
+        if sd >= 0x02 {
+            let hi = mem.enemy(slot).hi();
+            if mem.scroll_x() == 0 || other_name_table_index(hi, mem.ppuctrl_zp()) == 0 {
+                return false;
+            }
+            mem.enemy(slot).set_hi(switch_enemy_name_table(hi));
+        }
     }
     let nx = xpos.wrapping_sub(1);
     mem.write_ram(0x0400 + x as u16 + 1, nx);
@@ -575,12 +597,20 @@ pub(crate) fn enemy_move_one_pixel_left(mem: &mut crate::frame::Manager, x: u8) 
     // 而瓦撞径才是 `ldy #$00 / sty $00`（=0）。调用方 `CrawlerInsideCornerCheck` 正是用
     // `lda $00 / bne` 区分「翻向」与「贴墙转角」——旧形在此写 0 ⇒ 爬虫总走贴墙 ⇒ 位置分叉。
     if nx == rx {
-        mem.write_ram(0x0400 + x as u16 + 1, xpos); // inc x（回滚）
-        mem.write_ram(0x00, 1);
-        return false;
+        // asm $84DA-$84F0 逐字：`ScrollX == 0` ⇒ 失败；否则 `GetOtherNameTableIndex`
+        // **非零（与屏上名表不同）⇒ 成功**（允许跨名表继续左移），相同才回滚失败。
+        // 【2026-11-22 修（Norfair room 19 f1710）】旧形无条件回滚失败 ⇒ ScrollX≠0 且名表
+        // 不同时误判撞墙，触发水平反弹（`data05 bit0` 翻转 + speedX 取负）⇒ 该敌从此右移。
+        let hi = mem.enemy(slot).hi();
+        if mem.scroll_x() == 0 || other_name_table_index(hi, mem.ppuctrl_zp()) == 0 {
+            mem.enemy(slot).set_pos_x(xpos); // inc x（回滚）
+            mem.write_ram(0x00, 1);
+            return false;
+        }
     }
-    // @success（:1201-1208）：data05 bit7 置⇒jumpDsplcmnt inc
-    if mem.read_ram(0x0400 + x as u16 + 5) & 0x80 != 0 {
+    // @success（asm $84F4 逐字）：`lda data05 / bpl @endIf_E` ⇒ **bit7 清**才 inc。
+    // 【2026-11-22 修】旧形判 `& 0x80 != 0`（极性反）⇒ 竖直朝向的敌左移时记账缺失。
+    if mem.read_ram(0x0400 + x as u16 + 5) & 0x80 == 0 {
         // asm `@success ; $84F4`：`lda data05 / bpl / **inc** jumpDsplcmnt`（左移）。
         let j = mem.read_wram(0x6AF4 + x as u16 + 13);
         mem.write_wram(0x6AF4 + x as u16 + 13, j.wrapping_add(1));
@@ -616,8 +646,9 @@ pub(crate) fn enemy_move_one_pixel_right(mem: &mut crate::frame::Manager, x: u8)
         mem.write_ram(0x00, 1);
         return false;
     }
-    if mem.read_ram(0x0400 + x as u16 + 5) & 0x80 != 0 {
+    if mem.read_ram(0x0400 + x as u16 + 5) & 0x80 == 0 {
         // asm `@success ; $8550`：`lda data05 / bpl @endIf_E / **dec** jumpDsplcmnt`
+        // —— bit7 清才 dec（【2026-11-22 修】旧形判 `!= 0` 极性反）。
         // ——右移与左移（`$84F4` inc）**方向相反**；旧形照抄成 inc，竖直朝向的敌
         // 右移时位移记账符号反了。
         let j = mem.read_wram(0x6AF4 + x as u16 + 13);
@@ -958,7 +989,7 @@ mod tests_jump_dsplcmnt_signs {
 
     fn stage(m: &mut crate::frame::Manager, x: u8) {
         m.write_ram(en_addr(x, 1), 0x20); // x 位置
-        m.write_ram(en_addr(x, 5), 0x80); // data05 bit7 置
+        m.write_ram(en_addr(x, 5), 0x00); // data05 bit7 清（asm `bpl` 才记账）
         m.write_wram(ens_addr(x, 2), 0x00); // radiusX=0 ⇒ 不触发块界判
         m.enemy(1).set_jump_dsplcmnt(0x00);
     }
@@ -980,5 +1011,38 @@ mod tests_jump_dsplcmnt_signs {
         stage(&mut m, 0x10);
         assert!(super::enemy_move_one_pixel_right(&mut m, 0x10));
         assert_eq!(m.enemy(1).jump_dsplcmnt(), 0xFF);
+    }
+
+    /// asm `$84DA-$84F0`：`dec x` 后 `x == radiusX`——`ScrollX != 0` 且
+    /// `GetOtherNameTableIndex != 0`（本敌名表 ≠ 屏上名表）⇒ **移动成功**、不回滚。
+    /// 修前此径无条件回滚失败 ⇒ 水平反弹（Norfair room 19 f1710 的根因）。
+    #[test]
+    fn left_move_wraps_when_scroll_x_and_nametable_differ() {
+        let mut m = crate::frame::Manager::default();
+        stage(&mut m, 0x10);
+        m.write_wram(ens_addr(0x10, 2), 0x08); // radiusX=8
+        m.enemy(1).set_pos_x(0x09); // dec 后 x == radiusX
+        m.enemy(1).set_hi(0x01);
+        m.set_ppuctrl_zp(0x00); // (1 ^ 0) & 1 == 1 ⇒ 名表不同
+        m.set_scroll_x(0x40);
+        m.set_scroll_dir(0x03);
+        assert!(super::enemy_move_one_pixel_left(&mut m, 0x10));
+        assert_eq!(m.enemy(1).pos_x(), 0x08, "不应回滚");
+        assert_eq!(m.enemy(1).hi(), 0x01, "成功径不改 hi");
+    }
+
+    /// asm 同径的另一半：`ScrollX == 0` ⇒ 回滚失败（x 不变、返回 false）。
+    #[test]
+    fn left_move_rolls_back_when_scroll_x_is_zero() {
+        let mut m = crate::frame::Manager::default();
+        stage(&mut m, 0x10);
+        m.write_wram(ens_addr(0x10, 2), 0x08);
+        m.enemy(1).set_pos_x(0x09);
+        m.enemy(1).set_hi(0x01);
+        m.set_ppuctrl_zp(0x00);
+        m.set_scroll_x(0x00);
+        m.set_scroll_dir(0x03);
+        assert!(!super::enemy_move_one_pixel_left(&mut m, 0x10));
+        assert_eq!(m.enemy(1).pos_x(), 0x09, "必须回滚到原位");
     }
 }
