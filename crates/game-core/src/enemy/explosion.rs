@@ -195,7 +195,10 @@ impl Explosion<'_> {
                 true
             }
             crate::enemy::state::AnimStep::Broken { idx, reset, len } => {
-                crate::unported!("bank07:E0BC-wrap idx={idx:02X} reset={reset:02X} len={len}")
+                {
+                    crate::gap::record("bank07:E0BC-wrap");
+                    panic!("unported @ bank07:E0BC-wrap idx={idx:02X} reset={reset:02X} len={len}");
+                }
             }
         }
     }
