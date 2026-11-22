@@ -13,7 +13,8 @@
 | Crawler 按区 + Squeept 尾件后（`crawlerfix-area1`） | 14 | 29 | 3 | |
 | 电梯换区帧会计后（`fcalign-area1`） | 21 | 22 | 3 | +7 房，零回退 |
 | 移动串区基址 + 加速径两修后（`movstr-accel-area1`） | 34 | 9 | 3 | +13 房，零回退 |
-| **Crawler 静止出口动画节拍修正后（`animbeat-area1`）** | **41** | **2** | 3 | 本次（+7 房，零回退） |
+| Crawler 静止出口动画节拍修正后（`animbeat-area1`） | 41 | 2 | 3 | +7 房，零回退 |
+| **载房 BASE 第六点收窄后（`baserecal-area1`）** | **42** | **1** | 3 | 本次（room45 转绿，零回退） |
 
 `movstr-accel-area1` 转绿 13 房（08/12/14/15/16/18/21/23/26/27/33/35/37/43），
 两处机制：`$97EF` 只是 Brinstar 的串基址（`docs/findings/enemy-movement-ptr-truncation.md`）、
@@ -79,6 +80,24 @@ Crawler 静止出口的动画节拍必须取 `EnemyStatusPreAI`（1），写死 
   bit5 置位比 emu 晚**（`data05` 两腿差 `0x2B` vs `0x2A`，只差 bit0）。
 - 结论：这不是 `enemy_active` 的分支错（分支已按 asm 接），而是 **bit5 的置位时机**
   （Swooper 距离阈值径）待对齐；下一轮在该径上做逐帧取证。
+
+
+### 1d. room 45 收口：`LOAD_BASE_CYCLES` 第六点收窄（2026-11-22）
+
+turn 的机制结论（§1c）指向「载房工作量记账过松」，但更精确的读法是**代价更低的那个
+自由参数才是刃口**：`dropped = (BASE + work) / FRAME`，其中 `BASE`（载房以外的常规迭代
+周期）在旧标定里只被夹在 `[28114, 29780)`，宽 1666c（5.6% 帧）。
+
+新增第六点 emu 实录：**room45 `work=30766`，实测掉 1 帧**
+（`(BASE + 30766) < 2×29780` ⇒ `BASE < 28794`），与 room20 的下界 `28114` 取交 ⇒
+可行区间窄到 `[28114, 28794)`（680c），取中点 **28454**（旧值 29000 落在区间外）。
+
+六点全部复核通过：room20 `work=31446`→2、room19 `36620`→2、room9 `43378`→2、
+room23 `46456`→2、room8 `71946`→3、room45 `30766`→1，常规帧 `work=0`→0。
+锚测 `world::room_draw::tests::load_window_model_calibrated` 的可行区间断言同步改成
+`[28114, 28794)`（上界来源从「常规帧」换成 room45——它更紧）。
+
+判据不变：room45 房扫 `prev60/f60/prevend/f120` 全部 0 px（修前 11280/11280/11011/11016）。
 
 ## 2. 剩余 9 房 mismatch 的分层画像（`movstr-accel-area1` 版，历史）
 

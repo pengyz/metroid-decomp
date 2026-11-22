@@ -451,7 +451,7 @@
       "len": 1,
       "kind": "undeclared",
       "refs": [
-        "world/room_draw.rs:758",
+        "world/room_draw.rs:794",
         "world/camera/scroll.rs:237"
       ]
     },
@@ -473,7 +473,7 @@
       "refs": [
         "asm:refs/m1disasm/SRC/constants_ram.asm:568",
         "samus/handler.rs:84",
-        "world/room_draw.rs:511"
+        "world/room_load.rs:534"
       ]
     },
     {
@@ -580,11 +580,10 @@
       "len": 379,
       "kind": "undeclared",
       "refs": [
-        "ram_map.rs:114",
-        "frame/tick.rs:600",
+        "ram_map.rs:118",
+        "frame/tick.rs:638",
         "frame/nmi.rs:191",
         "sound/hook.rs:59",
-        "world/room_draw.rs:325",
         "pickup/spawn.rs:24",
         "title/intro.rs:80"
       ]

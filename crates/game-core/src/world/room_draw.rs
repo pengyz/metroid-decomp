@@ -61,7 +61,17 @@ pub(crate) use crate::frame::cycles::{
     LOAD_OBJ as LOAD_OBJ_CYCLES, LOAD_ROW as LOAD_ROW_CYCLES, LOAD_SHELL as LOAD_SHELL_CYCLES,
     LOAD_Y_UNIT as LOAD_YLOOP_CYCLES,
 };
-pub(crate) const LOAD_BASE_CYCLES: u32 = 29000;
+/// 载房以外的「常规迭代」周期估计（`dropped = (BASE + work) / FRAME`）。
+///
+/// 【2026-11-22 第六点收窄】旧值 29000 只被五个点夹在 `[28114, 29780)`（宽 1666c）。
+/// 本轮 emu 实录新增第六点：**Norfair room 45（`work=30766`）实测只掉 1 帧**
+/// （`FrameCount` 46→46@f1601；逐帧探针见 `docs/findings/norfair-room-sweep.md` §1c）
+/// ⇒ `(BASE + 30766) < 2*29780` ⇒ `BASE < 28794`。与 room20 的下界 `28114` 取交后
+/// 可行区间 = `[28114, 28794)`（宽 680c），取中点 **28454**。
+///
+/// 这不是调阈值拟合：每个点都是 emu 的**掉帧数实测**，约束是区间而非目标值；
+/// 六点全部满足（room20 2 / room19 2 / room9 2 / room23 2 / room8 3 / room45 1）。
+pub(crate) const LOAD_BASE_CYCLES: u32 = 28454;
 pub(crate) const FRAME_CYCLES: u32 = 29780;
 
 pub fn draw_room(mem: &mut crate::frame::Manager, room: u8) -> bool {
@@ -1779,12 +1789,15 @@ mod tests_stream_content_mapping {
     #[test]
     fn load_window_model_calibrated() {
         // 五点 emu 实录（work_cycles, 实测掉帧数）
-        const POINTS: [(u32, u32, &str); 5] = [
+        const POINTS: [(u32, u32, &str); 6] = [
             (31446, 2, "room20（case-002 邻房）"),
             (36620, 2, "room19（probe-loadwin f1067）"),
             (43378, 2, "room9（probe-loadwin f1286）"),
             (46456, 2, "room23（morphball 走廊）"),
             (71946, 3, "room8（morphball 球房）"),
+            // 2026-11-22 新增：Norfair room45（自滚房，`--trace load` 读 work=30766）
+            // 实测只掉 1 帧 ⇒ 同时给出**上界** 28794（旧上界 29780 太松，导致本房多烧一帧）。
+            (30766, 1, "room45（Norfair 自滚房）"),
         ];
         for (work, want, name) in POINTS {
             assert_eq!((LOAD_BASE_CYCLES + work) / FRAME_CYCLES, want, "{name}");
@@ -1796,16 +1809,20 @@ mod tests_stream_content_mapping {
         );
 
         // 可行区间断言（多点夹逼的机械形式）：下界由 room20 定、上界由常规帧定。
+        // 下界由 room20（work=31446 需 2 帧）定，上界由 room45（work=30766 需 1 帧）定
+        // ——2026-11-22 起 room45 比「常规帧 work=0」更紧。
         let lo = 2 * FRAME_CYCLES - 31446; // = 28114
-        let hi = FRAME_CYCLES; // = 29780
+        let hi = 2 * FRAME_CYCLES - 30766; // = 28794
         assert!(
             LOAD_BASE_CYCLES >= lo,
             "BASE 须 ≥ 下界 {lo}（否则 room20 掉帧数变 1）"
         );
         assert!(
             LOAD_BASE_CYCLES < hi,
-            "BASE 须 < 上界 {hi}（否则常规帧掉 1 帧）"
+            "BASE 须 < 上界 {hi}（否则 room45 掉 2 帧）"
         );
+        // 常规帧仍须 0 掉帧（BASE < FRAME_CYCLES，被上面的上界蕴含）
+        assert!(LOAD_BASE_CYCLES < FRAME_CYCLES);
     }
 
     fn draw_room_ff_path_writes_temp_scroll_dir() {
