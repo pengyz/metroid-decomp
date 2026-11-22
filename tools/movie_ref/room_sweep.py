@@ -763,8 +763,9 @@ def run_room(area: int, room: int, frames: int, captures: list[int],
             else:
                 c["best_pairing"] = "same" if same <= al else "shift1"
                 c["best_diff_pixels"] = min(same, al)
-            if c["tag"] == "pre":
-                continue
+            t = c["tag"]
+            if t == "pre" or t.startswith("prev"):
+                continue  # prev* 只作 rust 参考帧，不参与判定
             auth.append((c["tag"], c["best_diff_pixels"]))
         diffs = [(c["diff_pixels"] or 0) for c in results]
         if auth and all(v == 0 for _, v in auth):
