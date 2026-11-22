@@ -61,6 +61,47 @@ pub fn clear_name_tables(rs: &mut RenderState, game_mode: u8, title_routine: u8,
 mod tests {
     use super::*;
 
+    /// 【镜像两形（2026-11-22）】`nt_offset_with` 按 `MirrorCntrl($FA)` bit3 给两套映射：
+    /// 竖镜 `NT0/2←A、NT1/3←B`；横镜 `NT0/1←A、NT2/3←B`（锚 `constants_ram.asm:811-813`）。
+    #[test]
+    fn nt_offset_with_has_two_mirroring_forms() {
+        // 竖镜（横滚房）：$2000≡$2800 落 A、$2400≡$2C00 落 B
+        for nt in [1u8, 2, 3, 4] {
+            assert_eq!(nt_offset_with(nt, false), nt_offset(nt), "竖镜形应与旧映射逐项相同");
+        }
+        assert_eq!(nt_offset_with(1, false), 0x000);
+        assert_eq!(nt_offset_with(2, false), 0x400);
+        assert_eq!(nt_offset_with(3, false), 0x000);
+        assert_eq!(nt_offset_with(4, false), 0x400);
+        // 横镜（竖滚房）：$2000≡$2400 落 A、$2800≡$2C00 落 B
+        assert_eq!(nt_offset_with(1, true), 0x000);
+        assert_eq!(nt_offset_with(2, true), 0x000);
+        assert_eq!(nt_offset_with(3, true), 0x400);
+        assert_eq!(nt_offset_with(4, true), 0x400);
+        // 回绕形（$00 视为第 0 页）不许 panic
+        assert_eq!(nt_offset_with(0, true), 0x400);
+        assert_eq!(nt_offset_with(0, false), 0x400);
+    }
+
+    /// 【清屏走镜像位】同一 `nt_plus1=2` 在两形下落到不同物理页 ⇒ 证明 `clear_name_table`
+    /// 真的读 `RenderState.mirror`，不是恒用旧形。
+    #[test]
+    fn clear_name_table_respects_mirror_bit() {
+        // 两页先填哨兵（`RenderState::default()` 的初值是 0xFF，不能当"未写"证据）
+        let mut vert = RenderState::default();
+        vert.nametable[0..0x800].iter_mut().for_each(|b| *b = 0xAA);
+        clear_name_table(&mut vert, 2, 0xFF, 0);
+        assert_eq!(vert.nametable[0x400], 0xFF, "竖镜 NT1→B");
+        assert_eq!(vert.nametable[0x000], 0xAA, "竖镜 NT1 不碰 A");
+
+        let mut horz = RenderState::default();
+        horz.mirror = true;
+        horz.nametable[0..0x800].iter_mut().for_each(|b| *b = 0xAA);
+        clear_name_table(&mut horz, 2, 0xFF, 0);
+        assert_eq!(horz.nametable[0x000], 0xFF, "横镜 NT1→A");
+        assert_eq!(horz.nametable[0x400], 0xAA, "横镜 NT1 不碰 B");
+    }
+
     /// 名表清屏双面（NT0 恒清+模式分路+镜像映射）。
     #[test]
     fn clear_name_tables_dispatch() {
