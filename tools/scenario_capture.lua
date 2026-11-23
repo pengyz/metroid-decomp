@@ -82,6 +82,7 @@ local schedule = PLAN.schedule or {}
 -- 2P 通道（2026-11-16）：只来自录像 p2 列（PLAN.schedule2）。asm 消费点
 -- `PauseMode ; 07:C9B1` 读 Joy2Status($15) 的 A|UP（放弃进度回密码屏，原版 quirk）。
 local schedule2 = PLAN.schedule2 or {}
+local warnedJoy2 = false
 local btnBits = PLAN.btn_bits or {}
 
 -- sc-loop 导航速度估计表（navPrev[key]={x}）
@@ -1105,15 +1106,19 @@ emu.addEventCallback(function()
     log("setInput FAILED: " .. tostring(errIn))
   end
   -- 2P（端口 1）：无 2P 的用例 joy2 恒 0（空按键表=全部松开），行为与旧形等价。
-  if joy2 ~= 0 or next(schedule2) ~= nil then
-    local btn2 = {}
-    for b, bit in pairs(btnBits) do
-      if math.floor(joy2 / bit) % 2 == 1 then btn2[b] = true end
-    end
-    local okIn2, errIn2 = pcall(emu.setInput, btn2, 1)
-    if not okIn2 and not inputWarned2 then
-      inputWarned2 = true
-      log("setInput(port1) FAILED: " .. tostring(errIn2))
+  -- 【2026-11-23 定谳：Mesen 腿无法驱动端口 2】实测 emu.setInput(btn2,1)/ (btn2,2)/
+  -- (btn2,1,0) 三种写法全部落到端口 1（getInput(0) 返回 up+left、getInput(1) 恒空），
+  -- $4017 永远读不到 2P 键；把 settings.json 的 Nes.Port2.Type 由 None 改
+  -- NesController、AutoConfigureInput=false 亦不变（内置文档称第二参为 port，行为不符）。
+  -- 旧形把 2P 键 OR 进端口 1（A 级：p1=02+p2=08 ⇒ emu Joy1Status=0A），污染 6725M
+  -- 影片 f3266 起整段裁定（f3268「rust 起跳/emu 不起跳」是伪分歧）。
+  -- 处置：不喂端口 2。ROM 对 Joy2Status 的唯一消费点是 PauseMode 的 A+UP 退出
+  -- （prg7_engine.asm:2141），本腿造不出该组合；用例显式声明 require_joy2 才报错。
+  if joy2 ~= 0 and not warnedJoy2 then
+    warnedJoy2 = true
+    log("WARN 2P: Mesen 腿无法驱动端口 2（setInput 恒落端口 1）；p2 列被忽略")
+    if PLAN.require_joy2 then
+      error("用例声明 require_joy2，但 Mesen 腿不支持端口 2 输入")
     end
   end
 end, "inputPolled")
