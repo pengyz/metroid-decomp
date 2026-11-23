@@ -291,8 +291,6 @@ mod tests_pool_separation {
 
 // ─────────────────────────── P2：`NesMapped` 声明 ───────────────────────────
 
-/// 爆炸主面未 typed 的缺口说明。
-const EXPL_MAIN_UNMODELED: &str = "爆炸主面未 typed：y/x/data05/delay/quantity 真相在字节面（crates/game-core/src/enemy/explosion.rs:53）";
 /// 爆炸额外面未 typed 的缺口说明。
 const EXPL_EXTRA_UNMODELED: &str =
     "爆炸额外面未 typed：status/animFrame/animDelay/resetAnimIndex/animIndex/hi 真相在字节面（crates/game-core/src/enemy/explosion.rs:53）";
@@ -305,10 +303,9 @@ impl<'a> crate::memmap::nesmap::NesMapped for Explosion<'a> {
     const DISCRIMINATOR: Option<u16> = None;
 
     const SPANS: &'static [(NesSpan, SpanKey)] = &[
-        (
-            NesSpan::value(BASE, SLOT_COUNT as u16 * STRIDE),
-            SpanKey::Unmodeled(EXPL_MAIN_UNMODELED),
-        ),
+        // 主面（`$04C0-$04DF`，4 槽 × 8 B）：B1-c 起改由
+        // `crate::memmap::object_slot_face::ObjectSlotFace` 以 typed `Owner` 声明，
+        // 本域不再重复登记（同一批字节双声明会破坏四态恒等式）。
         (
             NesSpan::value(EXTRA_BASE, SLOT_COUNT as u16 * EXTRA_STRIDE),
             SpanKey::Unmodeled(EXPL_EXTRA_UNMODELED),

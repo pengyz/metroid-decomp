@@ -26,6 +26,10 @@ pub mod nesmap;
 pub mod tile_blast_face;
 /// B1-b：房间精灵表面（`$0700-$077F`：Mem0700 / PipeBugHoles / PowerUps / Zebetites）的 typed 声明层。
 pub mod room_sprite_table_face;
+/// B1-c 第二批：声引擎 RAM 面（`$0600-$068D`，音乐/SFX 常驻状态）的 typed 声明层。
+pub mod sound_ram_face;
+/// B1-c：对象槽面（`$0400-$04FF`：Ens/EnProjectiles 12×16 + EnExplosions 4×8 + MotherBrain/MellowHandler 各 16）的 typed 声明层。
+pub mod object_slot_face;
 /// B1-b：PPU 写缓冲面（`$0780-$0786` + `$07A0-$07EF`：VRAM 字符串与 VRAMStruct 队列）的 typed 声明层。
 pub mod vram_buffer_face;
 #[cfg(test)]

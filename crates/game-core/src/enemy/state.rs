@@ -928,8 +928,6 @@ mod tests_anim_step {
 
 // ─────────────────────────── P2：`NesMapped` 声明（域级） ───────────────────────────
 
-/// 敌域主面（`Ens`）未 typed 的缺口说明。
-const ENS_MAIN_UNMODELED: &str = "敌域主面未 typed：字段真相在字节面（EnsFace 只读视图；crates/game-core/src/enemy/state.rs:282）";
 /// 敌域额外面（`EnsExtra`）尾 9 B 未 typed 的缺口说明。
 const ENSX_TAIL: &str = "EnsExtra 尾 9 B 未 typed：accelY/jumpDsplcmnt/type/data1F 等仍在字节面（crates/game-core/src/enemy/state.rs:294）";
 
@@ -954,11 +952,9 @@ impl<'a> crate::memmap::nesmap::NesMapped for Enemy<'a> {
     const DISCRIMINATOR: Option<u16> = None;
 
     const SPANS: &'static [(NesSpan, SpanKey)] = &[
-        // 主面整脸（12 槽 × 16 B）：未 typed。
-        (
-            NesSpan::value(ENS_BASE, SLOT_COUNT as u16 * ENEMY_STRIDE),
-            SpanKey::Unmodeled(ENS_MAIN_UNMODELED),
-        ),
+        // 主面整脸（12 槽 × 16 B，`$0400-$04BF`）：B1-c 起改由
+        // `crate::memmap::object_slot_face::ObjectSlotFace` 以 typed `Owner` 声明，
+        // 本域不再重复登记（同一批字节双声明会破坏四态恒等式）。
         // 额外面：逐槽 typed 7 B + 未 typed 尾 9 B（手写 12 对，不循环生成）。
     (NesSpan::value(ensx_slot(0), ensx::TYPED_MAX + 1), SpanKey::Owner),
     (NesSpan::value(ensx_slot(0) + ensx::TYPED_MAX + 1, ENSX_TAIL_LEN), SpanKey::Unmodeled(ENSX_TAIL)),

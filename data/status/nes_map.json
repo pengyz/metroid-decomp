@@ -12,7 +12,7 @@
   ],
   "face_total": 2272,
   "owner_bytes": [
-    713,
+    1109,
     84
   ],
   "owner_spans": [
@@ -141,6 +141,78 @@
       "len": 1
     },
     {
+      "start": 1024,
+      "len": 16
+    },
+    {
+      "start": 1040,
+      "len": 16
+    },
+    {
+      "start": 1056,
+      "len": 16
+    },
+    {
+      "start": 1072,
+      "len": 16
+    },
+    {
+      "start": 1088,
+      "len": 16
+    },
+    {
+      "start": 1104,
+      "len": 16
+    },
+    {
+      "start": 1120,
+      "len": 16
+    },
+    {
+      "start": 1136,
+      "len": 16
+    },
+    {
+      "start": 1152,
+      "len": 16
+    },
+    {
+      "start": 1168,
+      "len": 16
+    },
+    {
+      "start": 1184,
+      "len": 16
+    },
+    {
+      "start": 1200,
+      "len": 16
+    },
+    {
+      "start": 1216,
+      "len": 8
+    },
+    {
+      "start": 1224,
+      "len": 8
+    },
+    {
+      "start": 1232,
+      "len": 8
+    },
+    {
+      "start": 1240,
+      "len": 8
+    },
+    {
+      "start": 1248,
+      "len": 16
+    },
+    {
+      "start": 1264,
+      "len": 16
+    },
+    {
       "start": 1280,
       "len": 16
     },
@@ -193,8 +265,16 @@
       "len": 16
     },
     {
+      "start": 1536,
+      "len": 131
+    },
+    {
       "start": 1667,
       "len": 2
+    },
+    {
+      "start": 1669,
+      "len": 9
     },
     {
       "start": 1792,
@@ -335,7 +415,7 @@
   ],
   "view_bytes": 23,
   "view_only_bytes": 0,
-  "unmodeled_total": 611,
+  "unmodeled_total": 387,
   "unmodeled": [
     {
       "start": 51,
@@ -431,22 +511,6 @@
       "kind": "unmodeled",
       "refs": [
         "crates/game-core/src/world/object.rs:11"
-      ]
-    },
-    {
-      "start": 1024,
-      "len": 192,
-      "kind": "unmodeled",
-      "refs": [
-        "crates/game-core/src/enemy/state.rs:282"
-      ]
-    },
-    {
-      "start": 1216,
-      "len": 32,
-      "kind": "unmodeled",
-      "refs": [
-        "crates/game-core/src/enemy/explosion.rs:53"
       ]
     },
     {
@@ -554,7 +618,7 @@
       ]
     }
   ],
-  "undeclared_total": 864,
+  "undeclared_total": 692,
   "undeclared": [
     {
       "start": 0,
@@ -670,22 +734,6 @@
       ]
     },
     {
-      "start": 1248,
-      "len": 16,
-      "kind": "undeclared",
-      "refs": [
-        "asm:refs/m1disasm/SRC/constants_ram.asm:975"
-      ]
-    },
-    {
-      "start": 1264,
-      "len": 16,
-      "kind": "undeclared",
-      "refs": [
-        "asm:refs/m1disasm/SRC/constants_ram.asm:976"
-      ]
-    },
-    {
       "start": 1488,
       "len": 48,
       "kind": "undeclared",
@@ -695,18 +743,8 @@
       ]
     },
     {
-      "start": 1536,
-      "len": 131,
-      "kind": "undeclared",
-      "refs": [
-        "sound/mod.rs:25",
-        "sound/mod.rs:33",
-        "asm:refs/m1disasm/SRC/constants_ram.asm:1001"
-      ]
-    },
-    {
-      "start": 1669,
-      "len": 123,
+      "start": 1678,
+      "len": 114,
       "kind": "undeclared",
       "refs": [
         "ram_map.rs:118",
@@ -865,6 +903,17 @@
       "undeclared_total": 864,
       "state_sha256": "85498aeef8421ba7c2f9e5cfbbc1e718858b74cdfef41fefcd2ab00e4b9fba62",
       "prev_sha256": "2be9998529cd0218517f472411044220cd1f7eb72a2237a33e3df377f27734f8"
+    },
+    {
+      "ts": "2026-11-24T01:57:29+08:00",
+      "reason": "下调 Undeclared 864 → 692 B / Unmodeled 611 → 387 B",
+      "owner_total": 1193,
+      "view_bytes": 23,
+      "view_only_bytes": 0,
+      "unmodeled_total": 387,
+      "undeclared_total": 692,
+      "state_sha256": "713a0c26b1e9e4ddef0863cc29ba36875e9a70b21d8327f8f454fe77f617245a",
+      "prev_sha256": "bd2359a470972e6b0e4ae5634691d68d5eb03ea5bf1a9b61557a2b7976d42e19"
     }
   ]
 }

@@ -254,7 +254,7 @@ pub fn spec_face() -> [NesSpan; 2] {
 ///
 /// `dump_json`（静态腿/门禁）与动态腿（`verify_shim`）共用本表：新增实体只改这里，
 /// 避免两份类型清单漂移导致动态证据覆盖不到新声明。
-pub fn entity_spans() -> [(&'static str, &'static [(NesSpan, SpanKey)]); 14] {
+pub fn entity_spans() -> [(&'static str, &'static [(NesSpan, SpanKey)]); 16] {
     [
         ("SamusState", crate::samus::state::SamusState::SPANS),
         ("HealthChange", crate::samus::health_change::HealthChange::SPANS),
@@ -279,6 +279,19 @@ pub fn entity_spans() -> [(&'static str, &'static [(NesSpan, SpanKey)]); 14] {
         ),
         // B1-b 第二批：PPU 写缓冲面（`$0780-$0786` VRAM 字符串 + `$07A0-$07EF` VRAMStruct
         // 队列）。行为仍在 `title`（`WritePPUByte`/`EndVRAMStruct`），本实体只提供布局与声明。
+        // B1-c：对象槽面（`$0400-$04FF`：Ens/EnProjectiles 12×16 + EnExplosions 4×8
+        // + EnMotherBrain/EnMellowHandler 各 16）的 typed 声明层。行为仍在 `enemy::state`
+        // 与 `enemy::explosion`（裸地址读写），本实体只提供字段布局与声明。
+        // B1-c 第二批：声引擎 RAM 面（`$0600-$068D`）= 音乐 4 通道 + SFX 5 路 + 暂停/任务标志。
+        // 行为仍在 `sound/`（裸地址读写），本实体只提供字段布局与声明。
+        (
+            "SoundRam",
+            crate::memmap::sound_ram_face::SoundRamFace::SPANS,
+        ),
+        (
+            "ObjectSlots",
+            crate::memmap::object_slot_face::ObjectSlotFace::SPANS,
+        ),
         (
             "VramBuffers",
             crate::memmap::vram_buffer_face::VramBufferFace::SPANS,
@@ -426,7 +439,11 @@ mod tests {
         // B1-b（2026-11-23）再新增 `RoomSpriteTables` 128 B + `VramBuffers` 87 B
         // （RAM 面 498 → 713；额外面 84 不变）。断言形态不弱化——仍是「dump 必须带这两个
         // 数」，只是随访声明增长；713 = 498 + 128 + 87 可逐项复算。
-        assert!(json.contains("\"coverage\":[713,84]"), "owner 字节数锚点");
+        // B1-c：对象槽面 `$0400-$04FF`（256 B）由 `ObjectSlotFace` 升格为 Owner。
+        // 713 + 256 = 969（RAM 面），额外面 84 不变。
+        // B1-c：对象槽面 256 B + 声引擎面 140 B（两段，$0683/$0684 归 SoundInitFlags）
+        // 升格为 Owner ⇒ 713 + 256 + 140 = 1109；额外面 84 不变。
+        assert!(json.contains("\"coverage\":[1109,84]"), "owner 字节数锚点");
     }
 
     /// 每条 Unmodeled 说明都必须带可 grep 的代码指针（`*.rs`），否则
@@ -620,16 +637,20 @@ mod tests {
     fn enemy_declares_both_faces_without_holes() {
         let c = coverage(Enemy::SPANS).expect("无重叠");
         assert_eq!(c, [0, 84], "敌域 owner = 12 槽 × 7 B，全在 WRAM 面");
+        // B1-c 起主面（`$0400-$04BF`）由 `ObjectSlotFace` 以 typed Owner 声明：
+        // 「两面无空洞」按**联合声明**核，敌域自己不再重复登记主面。
+        let mut union: Vec<(NesSpan, SpanKey)> = Enemy::SPANS.to_vec();
+        union.extend_from_slice(crate::memmap::object_slot_face::ObjectSlotFace::SPANS);
         let dom = enemy_domain();
         assert!(
-            gaps(Enemy::SPANS, &dom).is_empty(),
+            gaps(&union, &dom).is_empty(),
             "敌域两面必须被声明全覆盖，空洞：{:?}",
-            gaps(Enemy::SPANS, &dom)
+            gaps(&union, &dom)
         );
         assert_eq!(
-            unowned_bytes(Enemy::SPANS, &dom),
-            [192, 108],
-            "未 typed 债：主面 192 B（RAM）+ 额外尾 9 B × 12 槽（WRAM）"
+            unowned_bytes(&union, &dom),
+            [0, 108],
+            "未 typed 债：主面 0 B（已 typed）+ 额外尾 9 B × 12 槽（WRAM）"
         );
     }
 
@@ -728,19 +749,25 @@ mod tests {
     /// 爆炸域两面：无空洞、全未 typed。
     #[test]
     fn explosion_declares_both_faces_without_holes() {
-        let spans = spans_of::<explosion::Explosion<'static>>();
+        // B1-c 起主面（`$04C0-$04DF`）由 `ObjectSlotFace` 声明；「无空洞」按联合声明核。
+        let mut union: Vec<(NesSpan, SpanKey)> = spans_of::<explosion::Explosion<'static>>()
+            .to_vec();
+        union.extend_from_slice(crate::memmap::object_slot_face::ObjectSlotFace::SPANS);
         let dom = explosion_domain();
         assert!(
-            gaps(spans, &dom).is_empty(),
+            gaps(&union, &dom).is_empty(),
             "爆炸域空洞：{:?}",
-            gaps(spans, &dom)
+            gaps(&union, &dom)
         );
         assert_eq!(
-            unowned_bytes(spans, &dom),
-            [32, 32],
-            "主面 32 B + 额外面 32 B 全未 typed"
+            unowned_bytes(&union, &dom),
+            [0, 32],
+            "主面 0 B（已 typed）+ 额外面 32 B 全未 typed"
         );
-        assert_eq!(coverage(spans).expect("无 Owner 段 ⇒ 无冲突"), [0, 0]);
+        assert_eq!(
+            coverage(spans_of::<explosion::Explosion<'static>>()).expect("无 Owner 段 ⇒ 无冲突"),
+            [0, 0]
+        );
     }
 
     /// 六份声明合并：owner 集合无冲突，总数 = Samus 23 + 敌 84。
@@ -753,9 +780,12 @@ mod tests {
         all.extend_from_slice(spans_of::<Room<'static>>());
         all.extend_from_slice(spans_of::<Camera<'static>>());
         all.extend_from_slice(spans_of::<explosion::Explosion<'static>>());
+        all.extend_from_slice(crate::memmap::object_slot_face::ObjectSlotFace::SPANS);
+        all.extend_from_slice(crate::memmap::sound_ram_face::SoundRamFace::SPANS);
         assert_eq!(
             coverage(&all).expect("六份声明之间不得有 owner 重叠"),
-            [23, 84]
+            // B1-c：对象槽面 256 B + 声引擎面 140 B（RAM）升格为 Owner ⇒ 23 + 256 + 140；额外面仍 84。
+            [419, 84]
         );
     }
 

@@ -94,6 +94,11 @@ pub(crate) fn draw_sprite_stream(mem: &mut crate::frame::Manager, s: SpriteStrea
     let mut sx = s.screen_x as i16;
     let mut sy = s.screen_y as i16;
     let mut x_sprite = mem.sprite_page_pos() as u16; // SpritePagePos
+    // 【#27 v14c】载房窗内（draw_interrupted 且不是载房起拍）：对象**照走帧流**
+    // 消耗页槽，但不写 OAM——`SpritePagePos` 照常进位。像素判据见
+    // `docs/spec/scroll-work-accounting.md` §9.11：scrollseam f1100 266→0、
+    // input-conflict c676 303→0、c678 32→0，door 六格维持 0；机制解释为 C 级。
+    let dry = mem.draw_interrupted && !mem.load_started_this_frame;
     loop {
         let b = (s.frame_byte)(frame_i);
         if b < 0xFC {
@@ -104,10 +109,12 @@ pub(crate) fn draw_sprite_stream(mem: &mut crate::frame::Manager, s: SpriteStrea
             let ox = (sx as i16 + dx as i16) as u8;
             let attr = cntrl05 ^ mirror;
             if x_sprite + 4 <= 0x100 {
-                mem.write_ram(0x0200u16.wrapping_add(x_sprite), oy);
-                mem.write_ram(0x0201u16.wrapping_add(x_sprite), b);
-                mem.write_ram(0x0202u16.wrapping_add(x_sprite), attr);
-                mem.write_ram(0x0203u16.wrapping_add(x_sprite), ox);
+                if !dry {
+                    mem.write_ram(0x0200u16.wrapping_add(x_sprite), oy);
+                    mem.write_ram(0x0201u16.wrapping_add(x_sprite), b);
+                    mem.write_ram(0x0202u16.wrapping_add(x_sprite), attr);
+                    mem.write_ram(0x0203u16.wrapping_add(x_sprite), ox);
+                }
                 x_sprite = x_sprite.wrapping_add(4);
             }
             place_i += 2;
@@ -184,10 +191,6 @@ pub(crate) fn samus_explode_draw(
 }
 
 pub fn obj_draw_frame(mem: &mut crate::frame::Manager, page_index: u8) {
-    // 【#27 v14b】载房在 Samus 段抬起后，本帧后续对象不再写精灵页（SetupRoom 未返回）。
-    if mem.draw_interrupted && !(mem.load_started_this_frame && mem.door_entry_status() != 0) {
-        return;
-    }
     let px = page_index as u16;
     // 只读 animFrame（动画更新在 update_obj_anim——此处不写 $0303/$0304/$0306）
     let anim_frame = mem.read_ram(0x0303 + px);
