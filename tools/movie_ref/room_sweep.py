@@ -169,12 +169,22 @@ def build_case(area: int, room: int, frames: int, captures: list[int]) -> str:
         ]
     for addr, val, persist in _preset(room):
         lines.append(f"fixture {entry} {addr:04X} {val:02X} {persist}")
+    # 采点帧号必须互不相同：Lua 侧 `capAt` 以帧号为键，同帧两个 tag 会**后写覆盖前写**
+    # （历史上 192/192 个 error 采集点即由此产生：prev{c} 恰等于 f{c-1}，prevend 恰等于
+    # 末个 prev{frames}）。这里按优先级 f{c} > prev{c} > prevend 去重。
+    taken = set()
     for c in captures:
         lines.append(f"capture {entry + c} f{c}")
+        taken.add(entry + c)
+    for c in captures:
         # 跨腿对齐采点：rust capture(N)=tick(N-1) ⇒ emu[f_c] 的对应物是 rust[f_c-1]
-        if entry + c - 1 > 0:
-            lines.append(f"capture {entry + c - 1} prev{c}")
-    lines.append(f"capture {entry + frames - 1} prevend")
+        f = entry + c - 1
+        if f > 0 and f not in taken:
+            lines.append(f"capture {f} prev{c}")
+            taken.add(f)
+    f_end = entry + frames - 1
+    if f_end not in taken:
+        lines.append(f"capture {f_end} prevend")
     lines.append(f"endFrame {entry + frames}")
     return "\n".join(lines) + "\n"
 
