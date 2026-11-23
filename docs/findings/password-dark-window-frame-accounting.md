@@ -93,6 +93,10 @@ emu 侧用既有 `analysis/traces/case-password-justin.frames.jsonl` 的 `w.FC`�
 （f1430 bbox x121–134 / y94–125，rust 多画 `(92,0,126)` 76 px + `(11,72,0)` 55 px + `(86,29,0)` 38 px，emu 该区全黑）。
 ⇒ 想同时绿，必须先补 piece④ NT B 模型；仅调帧门不可能。
 
+> 【2026-11-24 更正，#36】本节「NT B 未写」结论**作废**：169px 已定谳为「错 FC 相位下的出场闪烁采样差」
+> （见 §7：f1430 的 PPU dump 四页名表/palette/CHR 全 0 差、OAM 8 条逐项同、capture 1426–1432 逐帧逐像素差 0）。
+> HEAD 上 f1430=0，「piece④ NT B 写入缺口」不成立，#36 以否证结案。本节保留作历史主张，不得再作为后继依据。
+
 ### 4.2 为什么 `iter_bogged(2)` 不能单边改
 
 `crates/game-core/src/world/room_load.rs:72` 的 `iter_bogged(2)` 是**共享门**，
@@ -103,6 +107,9 @@ emu 侧用既有 `analysis/traces/case-password-justin.frames.jsonl` 的 `w.FC`�
 
 1. **f1191 的病因已定谳**：入口迭代帧会计少 1 + `ClearAll` 窗多 1，两侧叠加。
 2. **本卡范围内无法同时满足「f1191=0 且 f1430=0 且无回归」**：三者互锁，缺的是 piece④ NT B 模型。
+
+   > 【2026-11-24 更正，#36】本条的「缺 piece④ NT B 模型」**作废**：f1430 在 HEAD 上本来就是 0，
+   > 不构成第三个互锁条件。实际只剩 f1191 一项（见 §5.1 与 §7.3）。
 3. 后继改动（任何一张新卡）必须同时满足：
    - `case-password-justin` 14/14（f1191 与 f1430 同时 0）；
    - `case-elev-norfair-transition` 保持 **10/10**（本卡实测过的回归面）；
@@ -110,7 +117,8 @@ emu 侧用既有 `analysis/traces/case-password-justin.frames.jsonl` 的 `w.FC`�
    - 验收前按 `docs/findings/bank-switch-frame-accounting.md §7` 的读法纪律核 FC——**FC 是下游门控变量，
      先查 FC 常差再查内容层**。
 4. 建议拆分（不在本卡）：
-   - **piece④ NT B 写入建模**（f1430 的正解，属新模型不是调参）；
+   - ~~**piece④ NT B 写入建模**（f1430 的正解，属新模型不是调参）~~ ——【2026-11-24 更正，#36】**作废**：
+     该缺口经实测不成立（§7），无后继卡需要做；
    - **`room_load` 门按径拆分**（把 `iter_bogged(2)` 的"载房窗"与"转入窗"分成两套门，
      避免共享门单边调打穿另一条径）。
 
@@ -119,6 +127,7 @@ emu 侧用既有 `analysis/traces/case-password-justin.frames.jsonl` 的 `w.FC`�
 - 只取了 f1188–f1200 一段；提交前的 `UnscramblePassword` 忙循环在更早帧的相位未单独测量。
 - emu 侧 FC 取自既有 `frames.jsonl`（watch 字段），未逐帧重采 OAM/名表；内容面对齐用的是自采探针截图。
 - piece④ NT B 的 asm 写入点未考证（属后继卡）。
+  > 【2026-11-24 更正，#36】本条**作废**：NT B 写入本身两侧逐字节一致（§7.1），无需再考证。
 
 ## 7. 【2026-11-24 补充】f1430 的 169 px 是变体实验读数，不是 HEAD 残差
 
