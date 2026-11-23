@@ -163,3 +163,50 @@ Skree 命中必须经 SetSamusIsHitByEnemy 置 bit5，实测 00`。
 f2249 已不再是分歧点，6600 帧内的变现面**全部一致**。下一步是**把裁定腿向后推**
 （f6600 → f12000 → 全片 28 690 帧），逐段把首分歧继续往后顶；
 在那里暴露的才是 new：此项工作不需要再动 f2249 的假设。
+
+## 10. 第二轮：复核 P1 修正后把裁定腿推到 f6300
+
+### 10.1 复核抓到的问题与修正（commit `a4cfe0bc`）
+独立复核（verdict=needs_revision）指出第一版 `d5a02caf` 有两处 P1：
+
+- **P1-1 跨页折算错**：第一版写 `|Δlow| + $100`，使跨页距离恒 ≥256 ⇒ 跨页小距离命中被
+  永久抹掉（相对旧形「忽略 hi」是回归）。asm 折的是**按页大小的有符号差**——竖滚 y 页
+  240、横滚 x 页 256（`sec / lda Temp01_DiffHi / bne @RTS` 只在 |差| ≥ $100 时才拒）。
+  可达例：竖滚房 Samus y=235/hi=0 与弹 y=5/hi=1 折后差 10。
+- **P1-2 hi 未归一**：asm 对两槽 hi 都做 `eor PPUCTRL_ZP / and #$01`
+  （`GetXSlotPosition_Common :10275-10279`、`GetYSlotPosition_Common :10287-10291`），
+  `$FF` 是活影子（`ToggleNameTable ; 07:E9B7`）。漏掉它一旦 P1-1 放开就会让 `dist_hi` 的
+  bit4/bit3（击退方向）翻错。
+
+另修两条文档错：`SamusKnockbackIsBomb` 语义（0=同列垂直、1=斜向，asm `:10622` 附注文字与
+代码相反）；`AreObjectsTouching` 的槽位（`ldy #Samus` / `ldx #PowerUpDraw` ⇒ Y 槽=Samus）。
+
+### 10.2 测试脚手架的两条实测事实（写下来免得再踩）
+- 槽 3（字节偏移 12）速度 `(0,+5)`（x 加 5、y 不变）、槽 0 是 `(0,-5)`（asm `txa/lsr/tay`
+  得表索引 6 / 0）；`uw_skree_projectiles` **先 `ApplySpeedToPosition` 再把新位置写进
+  `PowerUpDraw`** ⇒ 造测试必须按「移动后」摆并反推写入值。
+- `PowerUpDraw` 的 radiusY/X（`$0341/$0342`）**会在绘制该帧时被
+  `crates/game-core/src/render/oam.rs` 从帧数据 blob 字节 1/2 写入**（实测 Skree 帧给
+  radiusY=4）⇒ 半径和不是「Samus 半径 + 0」，边界值取决于帧数据，锚测不宜钉死等号，
+  只钉「明显超出不碰」。
+
+### 10.3 修正后的效果
+- 裁定腿 `/tmp/judge.txt`（3 采点）：c1000/c3000/c6000 **仍全 0px**（修正未回归）。
+- 测试 1084 passed / 0 failed；L4 21 案/172 格 match 166 · diff 6 · blocked 0；
+  `gates/cli.py check` PASS=23。
+
+### 10.4 新前沿：f6300（本轮未定谳）
+- 逐段二分：f6240–f6290 **全 0px**，**f6300 = 635px**（c6310=387px），与本次改动无关
+  （第一版修复前后同值）。
+- 差分 bbox `x24-197 / y33-207`，集中在两条 16px 带（行 2 与 行 10-11）。
+- **字段面全同**：GameMode/MainRoutine/MapPosX/ScrollDir/RoomNumber/InArea/Samus 全套
+  （status/isHit/animFrame/animIndex/y/x/health/inv/knockback）/EnemyCount 在两腿逐帧相同
+  （shift 0 与 1 都无差）。
+- **敌槽面全同**：`watch_range 0400-04bf`（`Ens` 12 槽）与 `watch_range 6af4-6bd3`
+  （`EnsExtra` 12 槽）逐字节相同。
+- **OAM 影子全同**：`watch_range 0200-02ff` 逐字节相同。
+⇒ 结论：分歧**不在 RAM 面**，而在 PPU 面（名表/CHR/调色板/`PPUMASK`/镜像选页）。
+下一轮入口：给 emu 腿开 `snapshot` 取 `ppu.hex` 逐区比（CHR 8K / NT 4K / palette 32B /
+regs 3B），并对 `$2000-$2FFF` 四页做 `$FF` 计数与互等性检查（`nametable-mirroring-dynamic.md`
+的判据），先用「两带 1-2 tile 行」的形状判断是列/行流送（`stream_column_kick` /
+`stream_row_kick`）还是属性表窗口（`AttribTableWrite`）。
