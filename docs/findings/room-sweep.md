@@ -709,6 +709,27 @@ Brinstar 不丢帧是线索：要么对象/瓦片更少，要么 bank1 的滚动
    契约写明这是 C 级拟合 + 可证伪判据（其它区换入后节奏仍须是 5 帧）。
 3. 验收红线：本族 7 房 `dFC==0` 且像素归零；**Brinstar 47 房不得出现新丢帧**。
 
+### 追加定界（同日）：丢帧帧**恰好落在 ScrollX 的 8 倍数**上
+Kraid 31 的丢帧帧与同帧 `ScrollX`：
+
+| 丢帧帧 | ScrollX | /8 |
+|---|---|---|
+| 1705 | 208 | 26 |
+| 1710 | 216 | 27 |
+| 1715 | 224 | 28 |
+| 1720 | 232 | 29 |
+
+即**每一列名表流送的那一帧就是丢帧帧**（`CheckUpdateNameTableHorizontal ; 07:E55B` →
+`UpdateNameTable ; 07:E590` 组 32 字节 VRAM 串、置 `PPUDataPending`）。
+所以「1.2× 工作量」应改为更窄的表述：**流送列的那一帧多耗一帧**；其余帧正常。
+（asm 里该径**没有** `WaitNMIPass_`——不是显式等待，是那一帧的工作量真超帧预算。）
+
+仍未定谳：为什么 Brinstar 的滚动房不丢帧。候选：①bank1 的 `AreaRoutine` 每帧工作更轻
+②Brinstar 房的对象/结构更少 ③本次对照房（a0 r5）在采样窗内并未流送列。
+下一个判据实验：在 a0 的**确定滚动房**（如 room 21，f960 时 `ScrollX=118`）跑 150 帧逐帧 FC，
+看是否也在 8 倍数处丢帧——若丢，则「每区都丢、只是 Brinstar 采样窗没踩到」；若不丢，
+则差异在 bank1 与 bank2/3/4/5 的每帧工作内容，需要 diff `AreaRoutine_*` 的工作面。
+
 ### 探针复现
 `tools.movie_ref.room_sweep.build_case(area, room, 130, [60,120])` + 插 `watch 002D FC`
 + `name` 改成**非** `_tmp_sweep_` 前缀（否则产物被房扫清理）⇒ `tools/l4_diff_run.py run <name>`；
