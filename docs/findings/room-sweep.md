@@ -646,3 +646,32 @@ InArea 1..5 → bank 2/3/5/4/6）⇒ bank3 的表写进了 `KrEnSprites`、bank4
 意义：**这是同一类「area 序 ≠ bank 序」错误在本抽取器的第二次出现**（第一次是
 `extract_enemy_tables_all` 的迭代序，见 `docs/findings/per-bank-assets.md`）。两次都只在
 「该区第一次被真正观测」时暴露 —— 这正是补三区分母的直接回报：Norfair 44/46 全绿时这个 bug 完全隐形。
+
+## 8.6 加速径 X 的两处真 bug（2026-11-23，Tourian 房扫当场抓到）
+
+Tourian 21 房里 8 房（6/7/8/10/11/12/19/20）在四个判定采点全 `blocked`，rust 腿报
+`attempt to add with overflow`。给 `rust_screenshot` 的 panic 钩子补 `info.location()` 后一次定位到
+`crates/game-core/src/enemy/motion.rs:794`（`enemy_get_delta_x_using_acceleration`）：
+
+```
+let t = sub as u16 + (accel as i8 as i16 as u16);
+```
+
+`accelX` 为负（`$FC`）时符号扩成 `$FFFC`，与 `sub` 相加越过 `u16` 上限 ⇒ debug 构建 panic、
+整案 blocked。asm 这条加法本就是 **16 位二补数相加、进位出界丢弃** ⇒ 改 `wrapping_add`。
+
+顺着同一条链又抓到**第二处（行为错，不只是 panic）**：
+
+```
+let mut sp = (speed_x as i16).wrapping_add((t >> 8) as i16);   // 旧形
+```
+
+高字节 `$FF` 被当成 **+255** 加进 `speedX`（asm 负加速径是 `adc #$FF` = −1）⇒ 负加速敌人被算成
+`+0x0E` 并被 ±0x0E 钳位。改为 `(t >> 8) as u8 as i8 as i16`。
+
+锚测（`crates/game-core/src/enemy/motion.rs::tests_accel_x_overflow`）：
+
+- `negative_accel_x_does_not_overflow`：`accel=$FC, sub=05` ⇒ `subPixelX 01`、`speedX 00`（不 panic）；
+- `negative_accel_x_borrows_into_speed_x`：`accel=$FC, sub=00` ⇒ `subPixelX=$FC`、`speedX=$FF`。
+
+修前第二条实测 `speed_subpixel_x()==0`（被钳位成 +0x0E 后清零）——据此定谳旧形行为错。

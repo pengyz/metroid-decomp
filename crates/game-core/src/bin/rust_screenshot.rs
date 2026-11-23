@@ -47,6 +47,12 @@ fn install_panic_hook() {
             .cloned()
             .or_else(|| info.payload().downcast_ref::<&str>().map(|s| s.to_string()))
             .unwrap_or_else(|| "panic".into());
+        // 带上 panic 位置（2026-11-23）：缺口消息此前只有 payload 文本（"attempt to add
+        // with overflow" 这种没有位置就无法定位）。位置是本工具的诊断面，不进游戏逻辑。
+        let msg = match info.location() {
+            Some(l) => format!("{msg} @ {}:{}", l.file(), l.line()),
+            None => msg,
+        };
         if let Ok(mut g) = PANIC_MSG.lock() {
             *g = Some(msg);
         }

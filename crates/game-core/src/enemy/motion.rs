@@ -791,9 +791,18 @@ pub(crate) fn enemy_get_delta_x_using_acceleration(
     let slot = x / 16;
     let accel = mem.enemy(slot).accel_x();
     let mut sub = mem.enemy(slot).speed_subpixel_x();
-    let t = sub as u16 + (accel as i8 as i16 as u16);
+    // 【2026-11-23 修】此处必须 `wrapping_add`：`accel` 按 asm 符号扩成 16 位
+    // （`accelX=$FC` ⇒ `$FFFC`），与 `sub` 相加会越过 `u16` 上限（debug 构建
+    // **panic: attempt to add with overflow** —— Tourian room 6 f1644 实测，
+    // 整案被记 blocked）。asm 里这条加法本就是 16 位二补数相加、进位出界丢弃：
+    // `sub=5, accel=$FC` ⇒ `$10001` ⇒ lo=`$01`、hi=`$00`（speedX 不进位）。
+    let t = (sub as u16).wrapping_add(accel as i8 as i16 as u16);
     sub = t as u8;
-    let mut sp = (mem.enemy(slot).speed_x() as i16).wrapping_add((t >> 8) as i16);
+    // 【2026-11-23 修·第二处】高字节必须**按有符号字节**解释：asm 负加速径是
+    // `adc #$FF`（即 -1），旧形 `(t >> 8) as i16` 把 `$FF` 当 **+255** 加进 speedX，
+    // 于是负加速敌人被算出 `+0x0E` 并被钳位（行为错，非仅溢出）。
+    let mut sp = (mem.enemy(slot).speed_x() as i16)
+        .wrapping_add((t >> 8) as u8 as i8 as i16);
     let sp8 = sp as u8;
     // 绝对速度 vs 绝对极速（(0x00,0x0E) 或 (0xFF,0xF2) 的绝对值同为 0x0E）
     let abs_sp: u16 = if sp < 0 {
@@ -1270,5 +1279,52 @@ mod tests_bg_collision_point {
         assert_eq!(super::next_point_y(0x10, 0x08, 0x01, 0x00), (0x18, 0x01));
         // 越 256（进位）⇒ 同样走调整径
         assert_eq!(super::next_point_y(0xF8, 0x10, 0x01, 0x02), (0x18, 0x01));
+    }
+}
+
+#[cfg(test)]
+mod tests_accel_x_overflow {
+    use super::*;
+
+    fn slot_of(x: u8) -> u8 {
+        x / 16
+    }
+
+    /// 【2026-11-23】`accelX` 为负时 16 位相加越过 `u16` 上限：debug 构建曾
+    /// `panic: attempt to add with overflow`（Tourian room 6 f1644 整案 blocked）。
+    /// asm 语义=16 位二补数相加、进位出界丢弃 ⇒ 必须 `wrapping_add`。
+    ///
+    /// 期望值来自 asm 逐步推：`sub=05, accel=$FC(-4)` ⇒ `$10001` ⇒ lo=`$01`、
+    /// 高字节 `$00`（speedX 不进位）⇒ speedX 维持、subPixelX 由 0 加 1。
+    #[test]
+    fn negative_accel_x_does_not_overflow() {
+        let mut m = crate::frame::Manager::default();
+        let x = 0x10u8;
+        let slot = slot_of(x);
+        m.enemy(slot).set_accel_x(0xFCu8 as i8);
+        m.enemy(slot).set_speed_subpixel_x(0x05);
+        m.enemy(slot).set_speed_x(0x00);
+        m.enemy(slot).set_subpixel_x(0x00);
+        let d = enemy_get_delta_x_using_acceleration(&mut m, x);
+        assert_eq!(m.enemy(slot).speed_subpixel_x(), 0x01);
+        assert_eq!(m.enemy(slot).speed_x(), 0x00);
+        assert_eq!(m.enemy(slot).subpixel_x(), 0x01);
+        assert_eq!(d, 0x00);
+    }
+
+    /// 对照：`accelX=$FC` 且 `sub=00` ⇒ lo=`$FC`、hi=`$FF`（speedX 减 1、Δx=-1）。
+    #[test]
+    fn negative_accel_x_borrows_into_speed_x() {
+        let mut m = crate::frame::Manager::default();
+        let x = 0x10u8;
+        let slot = slot_of(x);
+        m.enemy(slot).set_accel_x(0xFCu8 as i8);
+        m.enemy(slot).set_speed_subpixel_x(0x00);
+        m.enemy(slot).set_speed_x(0x00);
+        m.enemy(slot).set_subpixel_x(0x00);
+        let d = enemy_get_delta_x_using_acceleration(&mut m, x);
+        assert_eq!(m.enemy(slot).speed_subpixel_x(), 0xFC);
+        assert_eq!(m.enemy(slot).speed_x(), 0xFFu8 as i8);
+        let _ = d;
     }
 }
