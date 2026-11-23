@@ -382,3 +382,46 @@ emu 走 Forwards 分支确定。
 - 下一步：把 animFrame=7 的帧流与 place 字节 dump 出来（或对 `draw_sprite_stream` 临时插桩
   打印 `frame_i/place_i/stream 字节/attr/x`），与 asm `DrawSpriteObject ; 07:DF19` 的
   `Temp11_FrameIndex`/`Temp0F_PlaceIndex` 推进逐拍对照。
+
+## 11.7 位件面复盘：走表代码无错，差异在「绘制时刻的输入」（2026-11-23）
+
+用临时单测（已删）以 f1792 的实测输入（`animFrame=07`、`hi=01`、`y=C1`、
+`x=14`、`ScrollX=8F`、`ScrollDir=03`、`PPUCTRL_ZP=94`、`ObjectCntrl=00`）直接调
+`obj_draw_frame(page=0)`，rust 自产 OAM 为：
+
+```
+B0/09/20/7D  B0/09/60/85  B8/19/20/7D  B8/1A/20/85
+C0/29/20/7D  C0/2A/20/85  C8/39/20/7D  C8/39/60/85
+```
+
+`tile` 序 `09 09 19 1A 29 2A 39 39`、`attr` 序 `20 60 20 20 20 20 20 60`、
+`dy` 序 `F0 F0 F8 F8 00 00 08 08` 与 emu 逐项一致 ⇒ **走表（`$FD`/`$FE`/place 推进）
+与 `place_disp` 的翻转口径都没有错**。
+
+帧流/位件表（`fptr=$8802`、`pptr=$8701`，`ctrl=00`）留档备用：
+
+```
+frame = 00 0F 04 09 FD 60 09 FD 20 FE 19 1A FD 20 29 2A FE 39 FD 60 39 FF
+place = F0 F8 F0 00 F8 F0 F8 F8 F8 00 00 F8 00 00 00 08 08 F8 08 00 08 08 F4
+```
+
+那么 1792 的 70px 只能来自「绘制那一刻喂进去的输入不同」。两条实测事实：
+
+| 帧 | emu `$0200` 槽 9/10 | rust `$0200` 槽 9/10 | `$004D SamusDir`（帧末） |
+|---|---|---|---|
+| c1791 | `20@87`、`60@8F` | `60@8F`、`20@87`（**同对、顺序反**） | 两腿都 `01` |
+| c1792 | `20@87`、`60@8F` | `20@87`、`60@8F`（**全同**） | 两腿都 `00` |
+
+⇒ rust 在 c1791 用的是**镜像变体帧**（首位件 `attr=60`），emu 用的是非镜像变体；
+到 c1792 两腿又一致。`SamusDir=1`（朝左）时 `SetMirrorCntrlBit ; 07:CD92`
+（`lda SamusDir / jsr Amul16 / ora ObjectCntrl / sta ObjectCntrl`）确实把 `$6B` 的
+bit4 置上，`WriteSpriteRAM ; 07:DEE6` 的 `attr = ((ObjectCntrl<<2)&$40) ^ Temp05`
+会把**同组位件整体 xor $40**、且 `XDisplacement` 的 `bit Temp04 / bmi` 让 dx 取负——
+形态与 c1791 的「同对、顺序反」完全吻合。
+
+**因此待定谳的是「`SamusDir`/`$6B` 位 4 的相对时刻」**，不是走表代码：
+rust 可能在 `stx SamusDir`（`prg7_engine.asm:2960` / `:3409`）之后立刻进入
+`SetSamusData`→`SetMirrorCntrlBit`→`ObjDrawFrame`，而 emu 该帧的绘制发生在
+dir 更新之前（或镜像位在 `GetSpriteCntrlData` 之后才落）。下一步：在 live run 里对
+`obj_draw_frame(page=0)` 打 `(FrameCount, animFrame, ctrl_byte, ObjectCntrl, SamusDir)`
+五元组，与 emu 同帧 `$0200` 的 attr 极性逐帧对表。
