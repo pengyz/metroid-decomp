@@ -81,6 +81,7 @@
 | `doc-sync` | 双写片段逐字同文（pipeline↔design，F3 类漂移拦截） | 启用 |
 | `shared-inode-locks` | CARGO_HOME 锁文件跨家共享 inode 机检（事故③护栏——硬链快照忘删锁复发面拦截） | 启用（事故③护栏） |
 | `arch-contract` | analysis/ 不入库红线（G11 依赖方向判据已按 m21400 移除，重构期放开；拆分完成后再立新门禁） | 启用（r19→m21400 裁剪） |
+| `arch-coupling` | 业务层禁止新增 FC 内存结构直接依赖（字面量地址/`ram_map` 符号进访问器、绕过访问器直接索引 `.ram`/`.wram`/`.oam`/`.io`）；存量以 `data/status/arch_coupling_allowlist.json` 放行，账本 `file+kind+指纹+count` 只减不增 | 启用（B0） |
 | `data-boundary` | 数据边界 v2：三分母（`data` 只减不增 / `fixture` 禁进包 / `symbol` 免检，账本 `data/status/data_boundary_allowlist.json`）+ 全字面量形识别（十进制/元组/结构体）+ `assets/*.pack` 不入库 | 启用（W1/v2） |
 | `tools-boundary` | 工具边界：`rom: &[u8]` 只允许出现在 `extract.rs` / `pack-tool`（运行期不读 ROM） | 启用（W1） |
 | `asset-pack` | 资产包自证：包内每段 == 从 ROM 重算（`pack-tool verify`；缺 rom/pack 显式 SKIP） | 启用（W4） |
@@ -158,6 +159,42 @@ baseline 更新本就强制 `--reason`，摩擦可接受。
 
 钩子本体是 `gates/hooks/pre-commit`、`gates/hooks/commit-msg` 薄封装，只 `exec python3 gates/cli.py …`；
 扫描/裁定逻辑唯一存在于 `gates/cli.py`（无第二套扫描逻辑）。挂接幂等，外来 hook 自动备份。
+
+## arch-coupling（B0 架构止血）口径
+
+**要解决的问题**：FC 内存投影（$0000–$07FF、PPU 寄存器、bank 窗口、OAM）是保真手段，不是业务
+API。存量业务层大量以字面量地址「直接摸内存」，重构期若继续新增，等于边改边加债。本门禁只回答
+一个问题：**业务层有没有新增对 FC 内存结构的直接依赖**（依赖方向），不回答地址取值对不对。
+
+**扫描面**：`crates/game-core/src/` 下 12 个业务目录（`samus` `weapon` `enemy` `world` `object`
+`render` `title` `ui` `sound` `pickup` `input` `ending`）。允许面是 `memmap/` 边界与访问器内部；
+业务层应走 typed 字段或域句柄（见 `docs/design/fc-memory-projection-architecture.md` §2.1）。
+
+**三类命中**（注释内不算，复用 `strip_rust_comments`）：
+
+| kind | 形态 | 例 |
+|---|---|---|
+| `lit` | 字面量地址进访问器 | `mem.read_ram(0x0302)` / `mem.write_wram(0x6014)` |
+| `sym` | `ram_map` 符号进访问器 | `mem.read_ram(ram_map::SAMUS_X)` |
+| `direct` | 绕过访问器直接索引投影 | `out.ram[lo] = self.tri;` |
+
+`sym` 与 `lit` 同权：符号只是地址的另一种写法，否则「把字面量改写成符号」即可绕过门禁。
+
+**账本形状**：`data/status/arch_coupling_allowlist.json`，每条 = `file + kind + 归一化指纹 + count`。
+指纹 = 行内空白折叠 + `0xNN`/`$NN`/十进制地址归一化为 `HEX` ⇒ **插行、改地址取值都不改变账本**，
+账本只描述依赖形状。不带行号（行号随插行抖动，会让每次无关改动都红）。
+
+**报告口径（lead 2026-11-23 裁定）**：新增类违规报 `file:line + kind + 指纹`（行号可用于定位）；`count` 上调类只报 `file + kind + count 变化`，**行号不作判据**（同一指纹多处出现，首行行号只作参考）。
+
+**只减不增的机械判据**：
+- 扫描出（file, kind, 指纹）不在账本 ⇒ **红**（新增直接依赖）；
+- 在账本但 `count` 大于账本值 ⇒ **红**（同一语句多了一处）；
+- 账本条目多于扫描结果 ⇒ **绿**（修掉一处后允许保留多余条目，由人手工删）；
+- 从账本删掉一条但代码仍在 ⇒ **红**（删账本不等于修代码，这正是 ratchet 的牙齿）。
+
+**盲区（明写，不许当成已覆盖）**：地址取值的正确性、typed 字段是否真的对上 ROM 语义、运行时
+行为差异——本门禁一概不管，由 L4 对拍与单测覆盖。基线在门禁合入时生成；并行未提交的改动会让
+它红，属预期（提交面一致性由 `staged-surface` 门禁另行约束）。
 
 ## backlog（低优先）
 

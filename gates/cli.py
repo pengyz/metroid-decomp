@@ -2020,6 +2020,82 @@ def gate_arch_contract() -> tuple[str, str]:
         return ("FAIL", "；".join(problems[:6]))
     return ("PASS", "analysis/ 不入库红线在位（G11 依赖方向判据已按 m21400 移除，重构期放开）")
 
+# --- B0 架构止血（业务层不得新增 FC 内存结构直接依赖；存量 allowlist 只减不增）---------
+# 边界定义：docs/design/fc-memory-projection-architecture.md（915763b9）§2.1「业务代码只能写
+# typed 字段，不得以地址为 API」；形状先例同 data-boundary（声明 + 逐段校验 + 只减不增）。
+ARCH_COUPLING_REL = "data/status/arch_coupling_allowlist.json"
+ARCH_COUPLING_SRC = "crates/game-core/src"
+ARCH_COUPLING_DIRS = [
+    "samus", "weapon", "enemy", "world", "object", "render",
+    "title", "ui", "sound", "pickup", "input", "ending",
+]
+_AC_ACCESSORS = r"(?:read_ram|write_ram|read_wram|write_wram)"
+_AC_CALL_RE = re.compile(rf"\b{_AC_ACCESSORS}\s*\(\s*([^,)]+)")
+_AC_LIT_RE = re.compile(r"^(?:0x[0-9A-Fa-f]{1,4}|\$[0-9A-Fa-f]{2,4}|[0-9]{1,5})\b")
+_AC_SYM_RE = re.compile(r"(?:crate::)?ram_map::[A-Za-z_][A-Za-z0-9_]*")
+_AC_DIRECT_RE = re.compile(r"\.(?:ram|wram|oam|io)\s*\[")
+
+
+def arch_coupling_fingerprint(snippet: str) -> str:
+    """行内空白折叠 + 地址值归一化（插行、改地址取值不改指纹 ⇒ 判据只管依赖形状）。"""
+    s = re.sub(r"\s+", " ", snippet.strip())
+    s = re.sub(r"0x[0-9A-Fa-f]+", "HEX", s)
+    s = re.sub(r"\$[0-9A-Fa-f]{2,4}", "HEX", s)
+    return s
+
+
+def arch_coupling_scan(root: Path) -> dict[tuple[str, str, str], list[int]]:
+    """扫业务层目录，返回 {(相对文件, kind, 指纹): [行号…]}。"""
+    hits: dict[tuple[str, str, str], list[int]] = {}
+    base = Path(root) / ARCH_COUPLING_SRC
+    for d in ARCH_COUPLING_DIRS:
+        for f in sorted((base / d).rglob("*.rs")):
+            rel = str(f.relative_to(root))
+            text = strip_rust_comments(f.read_text(encoding="utf-8", errors="ignore"))
+            for lineno, line in enumerate(text.splitlines(), 1):
+                m = _AC_CALL_RE.search(line)
+                if m:
+                    arg = m.group(1).strip()
+                    if _AC_LIT_RE.match(arg):
+                        kind = "lit"
+                    elif _AC_SYM_RE.search(arg):
+                        kind = "sym"
+                    else:
+                        continue
+                    hits.setdefault((rel, kind, arch_coupling_fingerprint(line)), []).append(lineno)
+                elif _AC_DIRECT_RE.search(line):
+                    hits.setdefault((rel, "direct", arch_coupling_fingerprint(line)), []).append(lineno)
+    return hits
+
+
+def gate_arch_coupling() -> tuple[str, str]:
+    """G-AC：业务层新增 FC 内存结构直接依赖 ⇒ 红；存量以账本放行、只减不增。
+
+    三类命中：lit（字面量地址进访问器）/ sym（ram_map 符号进访问器）/ direct（绕过访问器
+    直接索引 .ram/.wram/.oam/.io）。改地址**取值**不触发（0xNN 归一化为 HEX）——本门禁管
+    依赖形状，取值正确性由 L4 与单测覆盖（口径页 gates/README.md）。
+    """
+    try:
+        allow = json.loads((ROOT / ARCH_COUPLING_REL).read_text(encoding="utf-8"))
+    except OSError as exc:
+        return FAIL, f"账本不可读（fail-loud）: {ARCH_COUPLING_REL}: {exc}"
+    baseline = {(e["file"], e["kind"], e["fingerprint"]): e["count"] for e in allow["entries"]}
+    hits = arch_coupling_scan(ROOT)
+    problems: list[str] = []
+    for (f, k, fp), lines in sorted(hits.items()):
+        have = baseline.get((f, k, fp))
+        if have is None:
+            problems.append(f"{f}:{lines[0]} 新增直接依赖（kind={k}, count={len(lines)}）：{fp}")
+        elif len(lines) > have:
+            problems.append(f"{f}:{lines[0]} 依赖点数上调（kind={k}, {have}→{len(lines)}）：{fp}")
+    if problems:
+        tail = "" if len(problems) <= 20 else f"\n  … 其余 {len(problems) - 20} 处省略"
+        return FAIL, (f"业务层新增 FC 内存结构直接依赖 {len(problems)} 处"
+                      "（typed 字段/域句柄是允许面，见 docs/design/fc-memory-projection-architecture.md §2.1）：\n  - "
+                      + "\n  - ".join(problems[:20]) + tail)
+    return PASS, (f"基线 {len(baseline)} 指纹 / {allow['total_points']} 点，当前 {len(hits)} 指纹 / "
+                  f"{sum(len(v) for v in hits.values())} 点，无新增")
+
 
 # ---------------------------------------------------------------- 门禁注册表
 # readme_state 必须与 gates/README.md「门禁清单」表的"状态"列逐字一致（selftest 自动比对）。
@@ -2598,6 +2674,9 @@ GATES: list[tuple[str, str, str, str, object]] = [
      "CARGO_HOME 锁文件跨家共享 inode 机检（硬链快照忘删锁=挂死复发面拦截）", gate_shared_inode_locks),
     ("arch-contract", "启用（r19→m21400 裁剪）", "check",
      "analysis/ 不入库红线（G11 依赖方向判据已按用户裁定移除，重构期放开）", gate_arch_contract),
+    ("arch-coupling", "启用（B0）", "check",
+     "业务层禁止新增 FC 内存结构直接依赖（file+kind+指纹+count 账本，只减不增）",
+     gate_arch_coupling),
     ("data-boundary", "启用（W1/v2）", "check",
      "数据边界 v2：三分母（data 只减不增/fixture 禁进包/symbol 免检）+ 全字面量形识别 + assets/*.pack 不入库",
      gate_data_boundary),
