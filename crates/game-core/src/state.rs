@@ -171,6 +171,17 @@ pub struct Manager {
     /// 当前是否处在 `update_world` 的对象环内：进入置位、正常返回复位。
     /// 结构性旗（载房窗判定的正确性依赖它不复用旧值，见 `world/update.rs` 尾注）。
     pub in_update_world: bool,
+    /// 载房窗把精灵页写切开：本迭代绘制被中止（保留 `sprite_page_pos` 断点）。
+    pub draw_interrupted: bool,
+    /// 本拍正在跑 `UpdateSamus`（门链/电梯链的载房不得置打断：那些件序在 Samus 之后，
+    /// 误置会把门精灵一起拦掉——#27 f486 的 98px 即此）。
+    pub in_samus_update: bool,
+    /// 本拍的载房请求是不是「这一拍才抬起」（进入本拍时 phase==0）。区分它对错判很关键：
+    /// 门转场的载房在 `SamusEnterDoor`/门链里抬起，起拍仍要把门精灵画完；
+    /// 窗后续写拍（进入时 phase!=0）才该停笔。
+    pub load_started_this_frame: bool,
+    /// 窗后第一个迭代不重置 `sprite_page_pos`（从断点续写）。
+    pub sprite_resume_pending: bool,
     /// 【多帧载房任务机（2026-11-19 A-lite，findings/room-load-pixel-deferral.md §任务机）】
     /// 相位：`0`=空闲 / `1`=冻结窗（`dropped` 帧，`RoomNumber` 保持**要载的房号**）/
     /// `2`=属性表尾段（帧边界 `F1 → F3 → FF`，见 `world::room_load::room_load_gate_step`）。
@@ -192,7 +203,7 @@ impl Default for Manager {
         Self { storage: crate::memmap::storage::NesStorage::default(), samus: Default::default(), health_change: Default::default(), sound_init: Default::default(), object_globals: Default::default(), scroll_blocks: Default::default(), oam: Default::default(), enemies: Default::default(), regs: Registers::default(), nmi_enabled: false,
                title_cursor: 0, title_cursor_phase: 0, title_spin: 0, check_password_pending: false, deferred_screen_on: false, title_no_return: false,
                iter_gates: Vec::new(), iter_span_left: 0, iter_span_fc: false, fc_inced_this_tick: false,
-               apu_log: Vec::new(), work_cycles: 0, frame_streamed: false, in_update_world: false, room_load_phase: 0, room_load_room: 0xFF, room_load_tail: 0,
+               apu_log: Vec::new(), work_cycles: 0, frame_streamed: false, in_update_world: false, draw_interrupted: false, in_samus_update: false, load_started_this_frame: false, sprite_resume_pending: false, room_load_phase: 0, room_load_room: 0xFF, room_load_tail: 0,
                joy1: 0, joy2: 0,
                render: RenderState::default() }
     }

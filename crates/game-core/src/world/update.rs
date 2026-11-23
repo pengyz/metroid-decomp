@@ -101,14 +101,38 @@ fn toggle_scroll_and_finish(mem: &mut Manager, x: u8) {
 /// DisplayBar($E0C1)/PipeBugHoles/CheckMissileToggle/UpdateAllPowerUps($DB37)/
 /// UpdateTourianItems($FDE3)/尾清 sprite RAM（$F4 填）。
 pub fn update_world(mem: &mut crate::frame::Manager) {
+    // 【#27 v14】SpritePagePos←0 每帧照旧：冻结窗那两拍根本不执行本函数（span 吞迭代），
+    // 所以断点游标天然停在窗内值；窗后第一拍从 0 重画全页，与 emu f1100 `$5B=0x58` 一致。
+    let was_loading = mem.room_load_phase != 0;
     mem.set_sprite_page_pos(0); // SpritePagePos←0
     mem.in_update_world = true;
+    mem.draw_interrupted = false;
     update_all_enemies(mem); // F345（敌环——槽×6+状态 dispatch）
                              // UpdateSamusProjectiles（D4BF——随件）
     update_samus_projectiles(mem); // D4BF（弹件环——3 槽状态机）
     #[allow(unreachable_code)]
     {
+        mem.load_started_this_frame = false;
+        mem.in_samus_update = true; // 只在这一段允许「载房打断绘制」
         crate::samus::update_samus(mem); // UpdateSamus（CC0D——samus 域件会师）
+        mem.in_samus_update = false;
+        mem.load_started_this_frame = !was_loading && mem.room_load_phase != 0;
+        // 【#27 v14b】若载房请求是**在 Samus 段**抬起的（`in_samus_update` 已在 scroll 里门控），
+        // ROM 的 `jsr SetupRoom` 在 `RoomFinished` 之前不返回 ⇒ 本帧 Samus 之后的件序（雕像/门/
+        // 区域例程/尾清）都不执行；门链/电梯链抬起的载房照跑（它们本身就靠后续 `uw_*` 推进，
+        // v13 在这里一刀切才把 f486 打成 369）。
+        let door_start = mem.load_started_this_frame && mem.door_entry_status() != 0;
+        if mem.draw_interrupted && !door_start {
+            mem.in_update_world = false;
+            return;
+        }
+        // 【#27 v14】载房请求在 Samus 滚动调用里抬起（ROM `Scroll*`→`CheckUpdateNameTable`
+        // `07:E54A`→`jsr SetupRoom` `07:EA2B`；`RoomFinished` `07:EA26` 后 rts 回调用点）。
+        // **不 return**：v13 在这里截断，把 AreaRoutine/门链/尾清全部跳过，door 560/600
+        // 才整屏回归（§9.9 已更正）。ROM 只做两件事不同：①本帧不再有新对象被绘制
+        // （写由 `render::oam::obj_draw_frame` 的 `draw_interrupted` 守卫拦）；②尾清不做
+        // （`$F4` 填是唯一把剩余槽写白的路径，emu f1097 写计数 30 = 仅 slot0-4 即证）。
+        // 其余件序照跑。
         crate::world::statue::update_all_statues(mem); // UpdateAllStatues（D9D4 会师）
                                                        // ---- r26 dispatch 壳补齐（复核 C blocker——asm 件序 5-20 逐件！）----
         uw_area_routine(mem); // $95C3（区专径）
@@ -127,7 +151,13 @@ pub fn update_world(mem: &mut crate::frame::Manager) {
         uw_all_power_ups(mem); // $DB37（吃能力！）
         uw_tourian_items(mem); // $FDE3
                                // 尾清 sprite RAM（$F4 填——asm CB6A 环）
-        let mut x = mem.sprite_page_pos();
+        // 【#27 v14】载房打断拍不尾清：emu f1097 只有 30 次精灵页写（=slot0-4），
+        // 若照清会把 slot5..63 写 F4、窗后续写就丢旧字节。
+        let mut x = if mem.draw_interrupted {
+            0
+        } else {
+            mem.sprite_page_pos()
+        };
         while x != 0 {
             mem.write_ram(0x0200 + x as u16, 0xF4);
             x = x.wrapping_add(4);

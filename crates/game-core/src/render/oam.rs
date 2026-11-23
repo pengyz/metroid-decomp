@@ -184,6 +184,10 @@ pub(crate) fn samus_explode_draw(
 }
 
 pub fn obj_draw_frame(mem: &mut crate::frame::Manager, page_index: u8) {
+    // 【#27 v14b】载房在 Samus 段抬起后，本帧后续对象不再写精灵页（SetupRoom 未返回）。
+    if mem.draw_interrupted && !(mem.load_started_this_frame && mem.door_entry_status() != 0) {
+        return;
+    }
     let px = page_index as u16;
     // 只读 animFrame（动画更新在 update_obj_anim——此处不写 $0303/$0304/$0306）
     let anim_frame = mem.read_ram(0x0303 + px);

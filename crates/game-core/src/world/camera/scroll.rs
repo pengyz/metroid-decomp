@@ -50,6 +50,10 @@ pub(crate) fn check_update_name_table(mem: &mut Manager) {
         // 冻结窗里保持**房号**（room8：f900–f903 恒 8）⇒ 这里改回房号，$F0 留到窗末。
         crate::world::room_load::begin_room_load_window(mem, rn);
         mem.set_room_number(rn);
+        // 【#27 原型】对象环中途抬起的载房 ⇒ 中止本帧剩余绘制并保留精灵页游标。
+        if mem.in_update_world && mem.in_samus_update {
+            mem.draw_interrupted = true;
+        }
     } else if mem.room_load_phase == 0 {
         // 无任务在跑：保留旧径（`$FF` 早退 / `$FE` / `>= $F0` 的属性表步进）——这些分支不装载。
         crate::frame::tick::setup_room(mem);
