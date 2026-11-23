@@ -186,15 +186,60 @@ API。存量业务层大量以字面量地址「直接摸内存」，重构期�
 
 **报告口径（lead 2026-11-23 裁定）**：新增类违规报 `file:line + kind + 指纹`（行号可用于定位）；`count` 上调类只报 `file + kind + count 变化`，**行号不作判据**（同一指纹多处出现，首行行号只作参考）。
 
-**只减不增的机械判据**：
-- 扫描出（file, kind, 指纹）不在账本 ⇒ **红**（新增直接依赖）；
-- 在账本但 `count` 大于账本值 ⇒ **红**（同一语句多了一处）；
-- 账本条目多于扫描结果 ⇒ **绿**（修掉一处后允许保留多余条目，由人手工删）；
-- 从账本删掉一条但代码仍在 ⇒ **红**（删账本不等于修代码，这正是 ratchet 的牙齿）。
+**账本 `count` 的语义（唯一口径）**：`count` = **该指纹（同一表达式）在本文件出现的点数**，
+不是行号、不是最大行号，也不是「出现过几次」以外的任何量。账本必须自洽：
+`sum(count) == total_points`，且同一 `(file, kind, 指纹)` 只允许一条。
+（历史上 `analysis/_probe/gate15_apply_and_verify.sh` 曾用 `max(v)`（v 是行号列表）生成 `count`，
+把 ratchet 变成「涨到最大行号才红」；该脚本不入库，重生成一律按下面「如何重生成账本」一节做。）
+
+**基线的取法（2026-11-24 加固，#28）**：基线**只认已提交的账本** `git show HEAD:data/status/arch_coupling_allowlist.json`，
+工作树账本不作基线。理由：以工作树为基线时，「代码里新增一条依赖 + 同一 commit 往账本追加一条匹配
+条目」可自证清白（对影 2026-11-24 实测的绕过路径，`write_wram(0x00AB,7)` + 追加条目 ⇒ 旧实现 PASS）。
+HEAD 缺账本时退到暂存区（`:路径`）并**显式打印**「首次落地例外」；暂存区也没有则 **红**（fail-loud），
+不接受以工作树自适应为基线。
+
+**只减不增的机械判据**（四条，互斥、可代入复算）：
+- 工作树账本不自洽（重复条目 / `count<1` / `sum(count) != total_points`）⇒ **红**；
+- 工作树账本出现基线（HEAD）里没有的条目、或同键 `count` 大于基线值 ⇒ **红**（账本侧放宽）；
+- 扫描出（file, kind, 指纹）不在**工作树账本** ⇒ **红**（新增直接依赖；也覆盖「删账本但代码仍在」——
+  删账本不等于修代码，这正是 ratchet 的牙齿）；
+- 扫描出该指纹的处数大于工作树账本 `count` ⇒ **红**（同一语句多了一处）；
+- 账本条目多于扫描结果 ⇒ **绿**（修掉一处后允许保留旧条目，报告里显式写「账本比当前树多 N 条，
+  可 `--write` 下调，不阻塞」）。
 
 **盲区（明写，不许当成已覆盖）**：地址取值的正确性、typed 字段是否真的对上 ROM 语义、运行时
 行为差异——本门禁一概不管，由 L4 对拍与单测覆盖。基线在门禁合入时生成；并行未提交的改动会让
 它红，属预期（提交面一致性由 `staged-surface` 门禁另行约束）。
+
+**如何重生成账本（唯一口径，替代 `analysis/_probe` 的旧交接脚本）**：
+
+```bash
+python3 - <<'PY'
+import importlib.util, json, pathlib
+root = pathlib.Path(".").resolve()
+spec = importlib.util.spec_from_file_location("g", root / "gates/cli.py")
+m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+hits = m.arch_coupling_scan(root)
+entries = [{"file": f, "kind": k, "fingerprint": fp, "count": len(v)}   # count = 出现点数，不是行号
+           for (f, k, fp), v in sorted(hits.items())]
+doc = {"schema": 1,
+       "note": "B0 架构止血基线：业务层 FC 内存结构直接依赖。账本 file + kind + 归一化指纹 + count"
+               "（count=该指纹出现点数），只减不增；改地址取值不触发（0xNN 已归一化为 HEX），"
+               "取值正确性由 L4/单测覆盖。",
+       "scan_dirs": list(m.ARCH_COUPLING_DIRS),
+       "kinds": {"lit": "字面量地址进访问器", "sym": "ram_map 符号进访问器",
+                 "direct": "绕过访问器直接索引 .ram/.wram/.oam/.io"},
+       "total_points": sum(len(v) for v in hits.values()),
+       "entries": entries}
+assert doc["total_points"] == sum(e["count"] for e in entries), "自检：sum(count) 必须等于总点数"
+(root / m.ARCH_COUPLING_REL).write_text(json.dumps(doc, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+print(f"账本已写：{len(entries)} 指纹 / {doc['total_points']} 点")
+PY
+```
+
+生成后必须留在同一 commit 里，并遵守两条：账本条目对 HEAD **只减不增**（新增代码依赖会先红，
+不要用重生成把红冲掉）；`sum(count)==total_points` 自检通过。**不要**用工作树账本当基线，
+也不要为了过门禁手工删条目——删账本不删代码，判据 3 仍会红。
 
 ## backlog（低优先）
 

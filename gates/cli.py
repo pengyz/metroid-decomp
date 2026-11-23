@@ -2068,33 +2068,131 @@ def arch_coupling_scan(root: Path) -> dict[tuple[str, str, str], list[int]]:
     return hits
 
 
+def arch_coupling_git_blob(spec: str) -> bytes | None:
+    """读 git 对象（`HEAD:<rel>` / `:<rel>`=暂存区）；对象不存在或非 git 仓返回 None。
+
+    门禁的**基线取自已提交树**，不取工作树——否则「改代码 + 同 commit 往账本追加一条匹配条目」
+    即可自证清白（对影 2026-11-24 实测的绕过路径）。
+    """
+    try:
+        proc = subprocess.run(["git", "show", spec], cwd=ROOT, capture_output=True)
+    except OSError:
+        return None
+    return proc.stdout if proc.returncode == 0 else None
+
+
+def arch_coupling_parse_ledger(raw: bytes, where: str) -> tuple[dict[tuple[str, str, str], int] | None, str | None]:
+    """解析账本并做自洽校验：键唯一、count 为正整数、sum(count)==total_points。
+
+    count 语义 = **同一表达式（指纹）在本文件出现的点数**，不是行号、不是最大行号
+    （analysis/_probe 旧交接脚本曾写 `max(v)`，会把 ratchet 变成「涨到最大行号才红」）。
+    """
+    try:
+        doc = json.loads(raw.decode("utf-8"))
+        entries = doc["entries"]
+        total = int(doc["total_points"])
+    except (ValueError, KeyError, TypeError) as exc:
+        return None, f"{where} 账本解析失败（fail-loud）: {exc}"
+    out: dict[tuple[str, str, str], int] = {}
+    dup: list[str] = []
+    for e in entries:
+        try:
+            key = (e["file"], e["kind"], e["fingerprint"])
+            cnt = int(e["count"])
+        except (KeyError, TypeError, ValueError):
+            return None, f"{where} 账本条目缺字段（fail-loud）: {e!r}"
+        if key in out:
+            dup.append(f"{key[0]} {key[1]} {key[2]}")
+        out[key] = cnt
+        if cnt < 1:
+            return None, f"{where} 账本 count<1（fail-loud）: {key[0]} {key[1]} {key[2]}"
+    if dup:
+        return None, f"{where} 账本重复条目 {len(dup)} 条（fail-loud）: {dup[0]}"
+    if sum(out.values()) != total:
+        return None, (f"{where} 账本 count 语义自洽失败：sum(count)={sum(out.values())} != "
+                      f"total_points={total}（count 应为该指纹出现点数）")
+    return out, None
+
+
+def arch_coupling_ledger_deltas(work: dict[tuple[str, str, str], int],
+                               base: dict[tuple[str, str, str], int]) -> list[str]:
+    """账本相对基线的放宽清单（空 = 只减不增）。
+
+    这是堵「改代码 + 同一 commit 往账本追加匹配条目」的判据：基线取自已提交树，
+    因此新条目/上调 count 都会在这里现形，而不是被工作树账本自证清白。
+    """
+    problems: list[str] = []
+    for (f, k, fp), cnt in sorted(work.items()):
+        have = base.get((f, k, fp))
+        if have is None:
+            problems.append(f"{f} 账本新增条目（kind={k}, count={cnt}）：{fp}")
+        elif cnt > have:
+            problems.append(f"{f} 账本 count 上调（kind={k}, {have}→{cnt}）：{fp}")
+    return problems
+
+
 def gate_arch_coupling() -> tuple[str, str]:
-    """G-AC：业务层新增 FC 内存结构直接依赖 ⇒ 红；存量以账本放行、只减不增。
+    """G-AC：业务层新增 FC 内存结构直接依赖 ⇒ 红；存量以**已提交账本**放行、只减不增。
 
     三类命中：lit（字面量地址进访问器）/ sym（ram_map 符号进访问器）/ direct（绕过访问器
     直接索引 .ram/.wram/.oam/.io）。改地址**取值**不触发（0xNN 归一化为 HEX）——本门禁管
     依赖形状，取值正确性由 L4 与单测覆盖（口径页 gates/README.md）。
+
+    四条机械判据（全部互斥、可代入复算）：
+      1. 工作树账本自洽：键唯一、count≥1、`sum(count)==total_points`；
+      2. 基线取 `git show HEAD:<账本>`：工作树账本条目集合必须 ⊆ 基线集合（新增条目 ⇒ 红），
+         同键 count 必须 ≤ 基线（上调 ⇒ 红）——堵「改代码+追加账本条目」自证清白；
+      3. 扫描结果必须被工作树账本覆盖：扫出的指纹不在账本 ⇒ 红（删账本不等于修代码），
+         count 大于账本 ⇒ 红（同一语句多了一处）；
+      4. 账本条目多于扫描结果 ⇒ **绿**（修掉一处后允许留多余条目，由人 `--write` 下调）。
     """
+    wt_raw = None
     try:
-        allow = json.loads((ROOT / ARCH_COUPLING_REL).read_text(encoding="utf-8"))
+        wt_raw = (ROOT / ARCH_COUPLING_REL).read_bytes()
     except OSError as exc:
         return FAIL, f"账本不可读（fail-loud）: {ARCH_COUPLING_REL}: {exc}"
-    baseline = {(e["file"], e["kind"], e["fingerprint"]): e["count"] for e in allow["entries"]}
+    work, err = arch_coupling_parse_ledger(wt_raw, "工作树")
+    if err:
+        return FAIL, err
+
+    base_raw = arch_coupling_git_blob(f"HEAD:{ARCH_COUPLING_REL}")
+    base_where = "HEAD"
+    if base_raw is None:
+        base_raw = arch_coupling_git_blob(f":{ARCH_COUPLING_REL}")
+        base_where = "暂存区（HEAD 无账本：首次落地例外，后续必须已提交）"
+    if base_raw is None:
+        return FAIL, (f"基准不可读（fail-loud）：HEAD 与暂存区都没有 {ARCH_COUPLING_REL}。"
+                      "B0 门禁要求基线账本先入库（`git add` 该文件后随门禁一起提交），"
+                      "不接受以工作树自适应为基线")
+    base, err = arch_coupling_parse_ledger(base_raw, f"基线[{base_where}]")
+    if err:
+        return FAIL, err
+
     hits = arch_coupling_scan(ROOT)
     problems: list[str] = []
+
+    # 判据 2：账本相对已提交基线只减不增。
+    problems.extend(arch_coupling_ledger_deltas(work, base))
+
+    # 判据 3：当前代码必须被工作树账本覆盖（删账本 ≠ 修代码）。
     for (f, k, fp), lines in sorted(hits.items()):
-        have = baseline.get((f, k, fp))
+        have = work.get((f, k, fp))
         if have is None:
             problems.append(f"{f}:{lines[0]} 新增直接依赖（kind={k}, count={len(lines)}）：{fp}")
         elif len(lines) > have:
             problems.append(f"{f}:{lines[0]} 依赖点数上调（kind={k}, {have}→{len(lines)}）：{fp}")
+
     if problems:
         tail = "" if len(problems) <= 20 else f"\n  … 其余 {len(problems) - 20} 处省略"
-        return FAIL, (f"业务层新增 FC 内存结构直接依赖 {len(problems)} 处"
+        return FAIL, (f"B0 架构耦合判据失败 {len(problems)} 处"
                       "（typed 字段/域句柄是允许面，见 docs/design/fc-memory-projection-architecture.md §2.1）：\n  - "
                       + "\n  - ".join(problems[:20]) + tail)
-    return PASS, (f"基线 {len(baseline)} 指纹 / {allow['total_points']} 点，当前 {len(hits)} 指纹 / "
-                  f"{sum(len(v) for v in hits.values())} 点，无新增")
+
+    scanned = sum(len(v) for v in hits.values())
+    stale = len(set(work) - set(hits))
+    note = f"；账本比当前树多 {stale} 条（可 --write 下调，不阻塞）" if stale else ""
+    return PASS, (f"基线 {len(base)} 指纹 / {sum(base.values())} 点（{base_where}），"
+                  f"账本 {len(work)} 指纹 / {sum(work.values())} 点，当前扫描 {len(hits)} 指纹 / {scanned} 点，无新增{note}")
 
 
 # ---------------------------------------------------------------- 门禁注册表
@@ -3379,6 +3477,30 @@ def cmd_selftest(_args) -> int:
         detected = entries.get("x.bin") != sha256_file(f)
         check("SHA256SUMS 篡改可检出", ok and detected, "一致→通过，改 1 字节→检出不符")
 
+    # 7b) arch-coupling：count 语义自洽 + 账本对基线只减不增（#28 加固，堵「改代码+加账本条目」）
+    good = {"entries": [{"file": "f.rs", "kind": "lit", "fingerprint": "m.read_ram(HEX)",
+                         "count": 2}], "total_points": 2}
+    ok, _err = arch_coupling_parse_ledger(json.dumps(good).encode(), "自测")
+    check("arch-coupling 账本自洽（sum(count)==total_points）", ok is not None)
+    bad_sum = {"entries": good["entries"], "total_points": 3}
+    bad, err = arch_coupling_parse_ledger(json.dumps(bad_sum).encode(), "自测")
+    check("arch-coupling 拒绝 sum(count)!=total_points", bad is None and "自洽失败" in (err or ""), err or "")
+    dup = {"entries": good["entries"] + good["entries"], "total_points": 4}
+    bad, err = arch_coupling_parse_ledger(json.dumps(dup).encode(), "自测")
+    check("arch-coupling 拒绝重复条目", bad is None and "重复条目" in (err or ""), err or "")
+    #    账本相对基线只减不增（#28 加固核心，纯函数可测）
+    base4 = {("f.rs", "lit", "m.read_ram(HEX)"): 2, ("g.rs", "sym", "m.read_ram(X)"): 1}
+    widened = {("f.rs", "lit", "m.read_ram(HEX)"): 2, ("g.rs", "sym", "m.read_ram(X)"): 1,
+               ("ui/hud.rs", "sym", "m.write_wram(HEX, 7);"): 1}
+    probs = arch_coupling_ledger_deltas(widened, base4)
+    check("arch-coupling 拒绝账本新增条目（对影绕过路径）",
+          len(probs) == 1 and "账本新增条目" in probs[0], "；".join(probs) or "未查出新增条目")
+    probs = arch_coupling_ledger_deltas({("f.rs", "lit", "m.read_ram(HEX)"): 3}, base4)
+    check("arch-coupling 拒绝账本 count 上调（同时删条目=收缩，合法）",
+          len(probs) == 1 and "count 上调" in probs[0], "；".join(probs))
+    probs = arch_coupling_ledger_deltas({}, base4)
+    check("arch-coupling 允许账本收缩/删除", not probs, "；".join(probs) or "收缩合法")
+
     # 8) proof-checks 证书输出标记校验（防静默退化 + 突变敏感性：假想缺陷必须被打回）
     good_x = ("SMT PROOF: int_x ≡ bank07:E3E5-E448 指令语义（BV8 miter）——反例不存在（unsat）\n"
               "BRIDGE: 公式↔Rust 66976 采样点（含钳位阈值边界族），分歧 0\n")
@@ -3951,6 +4073,7 @@ def cmd_selftest(_args) -> int:
             # 【止血件1·增长即红】fixture 面补齐：触达清单 + 该案 sidecar（gap_map 空=无记账）
             (tmp / "data" / "status" / "handler_touchlist.json").write_text(
                 json.dumps({"schema": "handler-touchlist/v1",
+                            "cases_covered": 1, "total_events": 0, "unique_addrs": 1,
                             "entries": [{"addr": "0xB7E7", "who": "fixture"}]},
                            ensure_ascii=False), encoding="utf-8")
             (tmp / "shots_rust" / "c.divergences.json").write_text(
@@ -4003,17 +4126,30 @@ def cmd_selftest(_args) -> int:
             sd = tmp / "shots_rust"
             sd.mkdir()
             tl = tmp / "handler_touchlist.json"
-            tl.write_text(json.dumps(
-                {"schema": "handler-touchlist/v1",
-                 "entries": [{"addr": "0xB7E7"}, {"addr": "0xB87F"}]},
-                ensure_ascii=False), encoding="utf-8")
+            _tl_entries = [{"addr": "0xB7E7"}, {"addr": "0xB87F"}]
+
+            def _tl() -> None:
+                """头部聚合字段按当前 sidecar 重算（2026-11-18 的自校验要求三者可复算）。"""
+                scs = sorted(sd.glob("*.divergences.json"))
+                ev = 0
+                for f in scs:
+                    for g in (json.loads(f.read_text(encoding="utf-8")).get("gap_map") or []):
+                        ev += int(g.get("n", 0))
+                tl.write_text(json.dumps(
+                    {"schema": "handler-touchlist/v1", "cases_covered": len(scs),
+                     "total_events": ev, "unique_addrs": len(_tl_entries),
+                     "entries": _tl_entries},
+                    ensure_ascii=False), encoding="utf-8")
+
             mtx = {"cases_total": 1}
 
             def _sc(name: str, gap: list) -> None:
                 (sd / name).write_text(json.dumps(
                     {"gap_map": gap, "events": [], "count": 0, "unique": len(gap)},
                     ensure_ascii=False), encoding="utf-8")
+                _tl()
 
+            _tl()
             _sc("a.divergences.json", [])                       # 无记账
             v_ok = l4_touchlist_violations(mtx, sd, tl)
             check("T1① 清单内 addr/无记账 ⇒ 零违规（正对照）", v_ok == [], f"{v_ok}")
@@ -4136,8 +4272,11 @@ def cmd_selftest(_args) -> int:
             fl = _l4.classify_flaky(obs)
             obs2 = [dict(o, run_id=f"s{i}", code_state="h1+w2", verdict="match") for i, o in enumerate(obs)]
             fl2 = _l4.classify_flaky(obs2)
+            # 分组键含码态（classify_flaky 2026-11-04 起按 (case, frame, tag, code_state) 分组）
+            key_c = ("c", 1, "t", "h1+w1")
+            key2 = ("c", 1, "t", "h1+w2")
             check("G② 同键 ≥3 不一致→flaky / 一致→清",
-                  ("c", 1, "t") in fl and ("c", 1, "t") not in fl2)
+                  key_c in fl and key2 not in fl2 and key_c not in fl2)
         except Exception as exc:  # noqa: BLE001
             check("G② 同键 ≥3 不一致→flaky / 一致→清", False, str(exc))
         # ③旧键组（无 worktree 指纹）不参与新判定（历史保留不删）
