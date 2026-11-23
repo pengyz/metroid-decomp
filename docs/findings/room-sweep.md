@@ -709,6 +709,31 @@ Brinstar 不丢帧是线索：要么对象/瓦片更少，要么 bank1 的滚动
    契约写明这是 C 级拟合 + 可证伪判据（其它区换入后节奏仍须是 5 帧）。
 3. 验收红线：本族 7 房 `dFC==0` 且像素归零；**Brinstar 47 房不得出现新丢帧**。
 
+### 追加对照（同日）：**区 0/1 不丢帧，区 2/3/4 丢帧** —— 三条候选已被排除
+在相同探针形态下（entry、`press 310/350 start`、滚动 2px/帧）再测两房：
+
+| 区/房 | 滚动 | 丢帧 | 像素 |
+|---|---|---|---|
+| a0 r21 (Brinstar) | ScrollX 118→190（40 帧，2px/帧） | **0** | 全 0px |
+| a1 r03 (Norfair，走电梯入口) | ScrollX 98→130（16 帧，2px/帧） | **0** | 全 0px |
+| a2 r31 / a3 r10 / a4 r37 | 2px/帧 | 每 5 帧 1 次 | 15–18K px |
+
+⇒ 与「入口路径」无关（Norfair 也走电梯合成却零丢帧），与「是否流送列」也无关
+（Brinstar/Norfair 的滚动房同样每 4 帧跨一次 8px 列边界）。
+
+已排除的候选：
+1. **对象/敌数**：a2 r31 活跃敌 6 / a0 r5 敌 4 / a3 r10 敌 3 —— Tourian 最少却照丢。
+2. **`AreaRoutine`**：`prg1_brinstar.asm:118 AreaRoutine ; 01:95C3` 与
+   `prg4_kraid.asm:113 AreaRoutine ; 04:95C3` 都是 `jmp AreaRoutineStub`（纯 RTS），
+   `prg2_norfair.asm:110 AreaRoutine ; 02:95C3` 是 `jmp RTS_Polyp`（纯 RTS）⇒
+   区专径既不能解释 Kraid 的丢帧，也不能解释 Brinstar 的不丢帧。
+3. **`PPUDataPending` 忙等**：`CheckVRAMStructBufferWrite ; 07:C2CA` 只查一次就整体写出、
+   写完即清，全仓无 `PPUDataPending` 自旋。
+
+剩下的强候选（下一轮从这条查起）：**bank3/4/5 的每帧敌人/绘制路径更重**——
+Kraid 房常见 Crawler/Ripper 族（6 个活跃槽），Tourian 有 Rinka/炮台，Ridley 有 Kraid 族；
+断点式查法：在 a2 r31 里 fixture 把所有敌槽 `status=0`（清空敌人）后重测丢帧是否消失。
+
 ### 追加定界（同日）：丢帧帧**恰好落在 ScrollX 的 8 倍数**上
 Kraid 31 的丢帧帧与同帧 `ScrollX`：
 
