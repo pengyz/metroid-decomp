@@ -196,17 +196,40 @@ f2249 已不再是分歧点，6600 帧内的变现面**全部一致**。下一�
   `gates/cli.py check` PASS=23。
 
 ### 10.4 新前沿：f6300（本轮未定谳）
+
 - 逐段二分：f6240–f6290 **全 0px**，**f6300 = 635px**（c6310=387px），与本次改动无关
   （第一版修复前后同值）。
-- 差分 bbox `x24-197 / y33-207`，集中在两条 16px 带（行 2 与 行 10-11）。
-- **字段面全同**：GameMode/MainRoutine/MapPosX/ScrollDir/RoomNumber/InArea/Samus 全套
-  （status/isHit/animFrame/animIndex/y/x/health/inv/knockback）/EnemyCount 在两腿逐帧相同
-  （shift 0 与 1 都无差）。
-- **敌槽面全同**：`watch_range 0400-04bf`（`Ens` 12 槽）与 `watch_range 6af4-6bd3`
-  （`EnsExtra` 12 槽）逐字节相同。
-- **OAM 影子全同**：`watch_range 0200-02ff` 逐字节相同。
-⇒ 结论：分歧**不在 RAM 面**，而在 PPU 面（名表/CHR/调色板/`PPUMASK`/镜像选页）。
-下一轮入口：给 emu 腿开 `snapshot` 取 `ppu.hex` 逐区比（CHR 8K / NT 4K / palette 32B /
-regs 3B），并对 `$2000-$2FFF` 四页做 `$FF` 计数与互等性检查（`nametable-mirroring-dynamic.md`
-的判据），先用「两带 1-2 tile 行」的形状判断是列/行流送（`stream_column_kick` /
-`stream_row_kick`）还是属性表窗口（`AttribTableWrite`）。
+- 差分 bbox `x24-197 / y33-207`，像素对全部是「emu 黑 / rust 有色」（270 橙、109 红…）
+  ⇒ **rust 多画了精灵**，emu 该处为黑。
+- **PPU 面逐区比对**（`ppu.hex`：CHR 8K + NT 4K + palette 32 + regs 3）：
+  CHR **0 差**、NT **0 差**（四页 `$FF` 计数与互等性两腿一致）、palette **0 差**；
+  唯一差异是 regs 末字节（emu 的 `ppu.ctrl` 取 `getState` 字段失败回落 0，属 dump 伪影）。
+
+### 10.5 【2026-11-23 更正】「字段面全同」是假的——两次比较都读错了键
+
+第 10.4 节最初写「标量字段/敌槽/OAM 逐帧全同 ⇒ 分歧只在 PPU 面」，**这是错的**，原因两层：
+
+1. `rust_screenshot --state-out` 的每行是**整面内存 blob**（`{"f":N,"w":{"zp":…,"iram":…,
+   "wram":…,"pw":…}}`），不是 `watch` 标签；而 emu 侧 `frames.jsonl` 的 `w` 是**标签字典**。
+   按 rust 的键去 `emu.get(k)` 恒为 `None` ⇒ 全部 `continue` ⇒ 假「无差」。
+2. 正确读法：`addr < 0x100 ⇒ zp[addr]`，`addr < 0x800 ⇒ iram[addr-0x100]`（`wram` 是
+   `$6000+`）。改判后立刻出现差异。
+
+**真实的字段面首差（限制 f≥6200 之后）**：
+
+| 帧 | 字段 | rust | emu |
+|---|---|---|---|
+| f6256 | `SamusStatus($0300)` | `18` | `17` |
+| f6296 | `SamusStatus` | **`FF`** | `18` |
+| f6299 | `SamusStatus` | `00` | **`FF`** |
+| f6303 | `SamusStatus` | `00` | `00`（重新合流） |
+
+即：`$0300` 的 `18 → FF` 这段 dwell（4 帧）在 rust 侧**整体提前 3 帧**，f6303 起两腿重新同值。
+期间 `HealthLo/Hi=00`、`isHit=00`、`Invincible=00`、`animIndex/animFrame` 亦随之错拍
+（f6299–f6302 rust `animIndex=0A/animFrame=22`，emu 仍是 `05/07`）。
+
+**处置**：本节结论以「`SamusStatus` 的 `18→FF` 提前 3 帧」为准；PPU 面全同是**真**的
+（CHR/NT/palette 逐字节），f6300 的 635px 是该状态错拍的下游。
+下一轮入口：查 `$0300` 写 `FF` 的写点（死亡/爆炸链）为何提前 3 帧——先看 f6256 那次
+`17→18` 的 3 帧领先是否同源（同一种「提前 3 帧」形态在 40 帧内出现两次，指向一个**周期性**
+的相位差而非一次性事件）。
