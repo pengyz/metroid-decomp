@@ -8,18 +8,20 @@
 > 字节归属规格：[docs/spec/entity-ownership-and-nesmap.md](docs/spec/entity-ownership-and-nesmap.md)；
 > 进度看板：[docs/master-plan.md](docs/master-plan.md)。
 
-## 当前状态（截至 2026-11-17）
+## 当前状态（截至 2026-11-23）
+
+> 除标注「未重测」的行外，下列读数均为 2026-11-23 实测（采样时 HEAD `495426ae`；其后 HEAD 前进到 `915763b9`，只新增 `docs/design/` 一份文档，未触及代码/门禁/基线，故读数仍成立）；取证命令与新旧值对照见 [master-plan 的文档口径同步记录](docs/master-plan.md#文档口径同步记录2026-11-23)。
 
 | 轴 | 数字 | 说明 |
 |---|---|---|
-| L4 像素对拍 | 15 案 / 132 格 · **match 126 · diff 6 · blocked 0** | 逐像素零容差；矩阵只防回退 |
-| 100% 录像 | 连续 0px 到 **f4017 / 120540**（3.3%） | 输入来自社区 TAS，唯一持续产出真缺陷的仪器 |
-| any% 录像 | f1039 / 28690（3.6%） | 2P 通道已通，段未推完 |
-| 测试 | **741 passed / 0 failed** | 运行时 + 静态双基线 |
-| 门禁 | **PASS=22**，selftest 156/156，全量约 6s | l4/visual 慢层不进 hook |
+| L4 像素对拍 | 21 案 / 172 格 · **match 166 · diff 6 · blocked 0** | 2026-11-23 21:15 独跑 `python3 tools/l4_diff_run.py run-all`（采样时 HEAD `495426ae`，产物 `shots_rust/matrix.json`）；逐像素零容差，矩阵只防回退 |
+| 100% 录像 | 连续 0px 到 **f4017 / 120540**（3.3%） | 输入来自社区 TAS，唯一持续产出真缺陷的仪器；2026-11-17 读数，本轮未重测。机器账本口径见 `data/status/movie_ledger.json`（当前记 `frames_synced` 3889 / 首分歧 f3890），两个数是不同轮读段，重测以 ledger 为准 |
+| any% 录像 | f1039 / 28690（3.6%） | 2P 通道已通，段未推完；2026-11-17 读数，本轮未重测 |
+| 测试 | **1,087 passed / 0 failed** | `cargo test --workspace`；门禁 rust-tests 基线 1,087 |
+| 门禁 | 27 项：**PASS=23 · FAIL=0 · SKIP=3 · TOLERATED=1** | `python3 gates/cli.py status`；`check` 空载实测 8.1–8.4s（2026-11-23 本机两次：8.13s / 8.42s；与 emu 采集并行会显著变慢）；l4/visual 慢层不进 hook |
 | 字节归属 | 面 2272 B：Owner **374** / Unmodeled 611 / Undeclared **1287** | 静态声明 |
-| 动态触达 | **964 / 2272（42%）** | 三场景实测，见 findings |
-| 例程分母 | code 1135 / ported 30 / **unported 880** | 结构分母，非完备性证明 |
+| 动态触达 | **964 / 2272（42%）** | 三场景实测（2026-11-17，本轮未重测），见 findings |
+| 例程分母 | code 1135 / ported 380 / **candidate 152** / unported 603 | 结构分母，非完备性证明（`python3 tools/routine_inventory.py --stats`）；candidate=仅命中 Rust 符号名、未按 asm 复核行为等价，不计入已端口（1135 = 380+152+603） |
 
 ## 红线（版权口径）
 
@@ -40,7 +42,7 @@
 | `crates/game-data/` | 资产消费端（包格式、`assets` 唯一访问面）；`extract` feature 只服务提取侧 | ✅ |
 | `crates/pack-tool/` | `extract` / `verify` / `list`（BYO-ROM 提取器与逐段校验） | ✅ |
 | `docs/` | 方法论、管线、findings 考证、rounds 对抗复核、knowledge 知识库、spec 规格 | ✅ |
-| `gates/` | 22 门禁 + ratchet 基线 + git hooks（`python3 gates/cli.py status`） | ✅ |
+| `gates/` | 27 门禁 + ratchet 基线 + git hooks（`python3 gates/cli.py status`） | ✅ |
 | `tools/` | 可再生工具链（seed 归一化、场景驱动、L4 对拍、覆盖/分母工具） | ✅ |
 | `reference/seed/` | **冻结投影**：规范化 6502 反汇编（sha 锚定） | ✅ |
 | `refs/` | 社区参考源码（**submodule 钉死**，只作线索，D5 命名不背书） | ✅ gitlink |
@@ -50,8 +52,9 @@
 
 ```bash
 python3 gates/cli.py status      # 只读预检（SKIP/TOLERATED 显式打印）
-python3 gates/cli.py check       # 快层总闸（约 6s）
-python3 tools/l4_diff_run.py run-all            # 权威矩阵（emu 腿按锚缓存，二次约 4s）
+python3 gates/cli.py check       # 快层总闸（实测约 8–9s）
+python3 tools/l4_diff_run.py run-all            # 权威矩阵（遍历 cases/ 全用例；emu 腿按锚缓存复用）
+#   ⚠️ 跑 run-all 时勿并行 cargo/门禁等重任务：emu 腿对 CPU 负载敏感，会采集失步（见 master-plan 同步记录）
 python3 tools/l4_diff_run.py run movies/cases/x.txt --timeout 1800   # 单案长跑
 python3 tools/raw_execution_report.py --check   # 字节面动态触达报告
 cargo test --workspace                          # 全量测试
