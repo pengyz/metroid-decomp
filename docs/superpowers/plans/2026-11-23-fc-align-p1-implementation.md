@@ -445,3 +445,25 @@ python3 tools/movie_ref/fc_judge.py --area 2 --room 31 --show-pairs
 （`sample_point spin-exit` 或 Lua 的 `SHOT-SEAM at=`），即「同一迭代取缝那一帧」；
 否则 ~700px 的渲染残差会以每 4 帧一次的频率混进判定。这也解释了为何 `prev*`（重复帧）
 在房扫里本来就被排除（`room_sweep.py:784`）。
+
+## P1.0d 残差定谳（复核 r9-fc-approach-review 佐证 + 自验）
+
+同帧（rust c=1721 / emu g=1726）三面实测：
+
+| 面 | 结果 |
+|---|---|
+| `ram.hex` 的 OAM 影子（64 槽 × 4B） | **0 槽不同** |
+| `ScrollX($00FD)` / `FC($002D)` | 均相同（0xF0 / 165） |
+| `ppu.hex`（CHR 8K + NT 4K + palette 32） | **完全相同**；仅尾 3B regs 差（emu 侧恒 `000000` 的 dump 伪影） |
+| PNG | 699px，两簇：门 x32–46（230px）+ Kraid x180–226（469px）；背景带 x0–32 / x46–180 / x226– 全 0px |
+| 全屏 roll ±2/±4 | 不收敛（11792 / 10850 / 13768 …）⇒ 不是整屏位移 |
+
+⇒ **渲染输入（OAM/CHR/NT/palette/scroll）全部相同，输出却在两个精灵簇上偏 2px，背景 0px**。
+唯一自洽解释就是复核指出的**采集双相位**：`crates/game-core/src/bin/rust_screenshot.rs:544-566`
+里 PNG/PPU 取 `seam_snap(key=N-1)`（上一 tick 的工作前缝），`ram.hex` 取活体（本 tick 工作后）；
+背景用绘制时刻的活体 `ScrollX`，精灵用缝里的旧 OAM ⇒ 精灵相对背景偏一帧滚动量（2px/帧）。
+
+因此**撤销 P1.0c 的「显示晚一拍」定谳**（那条把仪器相位说成了显示滞后），
+并确认：这 699px **不是内容差、也不是显示滞后**，是**采集相位不一致**产生的伪残差。
+下一步（决定性、约 1 天）：让单帧采集单相位（PNG 与 OAM/scroll 同一时刻），重跑
+c=1721/1725/1729；归零 ⇒ 仪器 bug 结案；不归零 ⇒ 才开 Rust 精灵相位卡。
