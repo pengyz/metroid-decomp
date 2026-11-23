@@ -581,3 +581,68 @@ emu 腿是串行的（`analysis/.scenario.lock`）⇒ `--jobs > 1` 基本不提�
 修正：新增 `_nt_pages/_mirror_pages/_nt_diff_normalized`，`ppu_layer_diff` 增加
 `nt_norm/nt_layout/nt_trusted`；`classify_layer` 改用 `nt_norm`，布局判不出时返回
 `nametable_notmirror`（显式标不可信）。锚测 `tools/tests/test_nt_mirror.py`（3 条）。
+
+## 8.4 三区（Kraid/Tourian/Ridley）入口：**电梯类型 = 目标区号**（2026-11-23）
+
+非 0 区的注入法已由 §8.2 证明可用（过区之后注入 `$005A`），本节的增量是**如何到达另三区**。
+
+asm（`refs/m1disasm/SRC/prg7_engine.asm:4997-5010`，`ElevatorD8BF ; 07:D8BF` 落地段）：
+
+```
+tya
+bpl @endIf_B          ; bit7 清 = 下行 ⇒ A 的低半字节**就是目标区号**
+ldy #$00              ; 上行：默认 Brinstar
+cmp #$84
+bne @endIf_C
+iny                   ; $84 ⇒ Norfair
+@endIf_C
+tya
+@endIf_B
+ora #$10              ; InArea 形态（bit4 = 游戏引擎内）
+jsr IsEngineRunning    ; → SwitchBank(07:CA23)：sta InArea + BankTable,y(07:CA30)
+```
+
+⇒ **下行电梯 `ElevatorType` 的低半字节 = 目标区号**：`1=Norfair / 2=Kraid / 3=Tourian / 4=Ridley`；
+上行电梯只可能是 Brinstar(`≠$84`) 或 Norfair(`=$84`)。落地后 `ora #$10` 得 `InArea = $1n`，
+紧接着 `CopyAreaPointers ; 07:C8B0` 建区指针块——这正是 §8.1 缺的那两条注入，电梯链自动完成。
+
+工具改动（`tools/movie_ref/room_sweep.py`）：
+
+- `ELEVATOR_AREAS = {1: 1, 2: 2, 3: 3, 4: 4}`（area → ElevType），fixture 由写死 `01` 改成按区取；
+- 启动打印 `entry=` 之前恒报 `f900`（误导），改为 `elev=1600` / `plain=900`。
+
+反证（各 41 s，`--frames 120`、采点 `arrived(1400)/pre(1600)/prev60(1659)/f60(1660)/prevend(1719)/f120(1720)`）：
+
+| 区 | room 0 | 备注 |
+|---|---|---|
+| Kraid(2) | **0px**（6/6） | `id=room_ptr` 命中 `A345` |
+| Tourian(3) | **0px**（6/6） | |
+| Ridley(4) | **0px**（6/6） | |
+
+五房冒烟（rooms 0–4）：Tourian **5/5 ok**、Ridley **5/5 ok**、Kraid 3 ok / 2 blocked——blocked 的真因见 §8.5。
+
+## 8.5 敌帧表复合段的 **bank→key 错配**（2026-11-23，三区扩展当场抓到的真 bug）
+
+现象：Kraid room 3/4 在 `prev60/f60/prevend/f120` 全 `blocked`，gap 为
+`unported @ bank07:E0BC-wrap idx=35 reset=35 len=38 x=40 type=05 status=02`。
+
+判读：`Anim::step` 的 `Broken{len}` 是**实际传入表的项数**。Kraid 的 `EnAnimTable` 应有 **113** 项，
+而报错说 38 —— 38 是 **Tourian** 的表长（见 `docs/findings/per-bank-assets.md` 五区基址表）。
+
+取证（包内段头，`Entry 20B`，复合段头 6×u32 = anim/fptr/place/frames/places/…）：
+
+| 段 | 修前 len / 头 | 修后 len / 头 |
+|---|---|---|
+| `KrEnSprites`(162) | 3305 / `(38,138,16,…)` ← **Tourian 的** | 3694 / `(113,151,16,…)` |
+| `ToEnSprites`(163) | 3694 / `(113,151,16,…)` ← **Kraid 的** | 3305 / `(38,138,16,…)` |
+
+根因（`crates/game-data/src/extract.rs::extract_enemy_sprites_all`）：`ENEMY_SPRITES` 按 **bank 升序**
+（`bank1/2/3/4/5`）排列，而键表写成 `KEYS[i]` 用**枚举下标**取键，键表却是 **InArea 序**
+（`[Br,No,Kr,To,Ri]`）。Kraid=bank4、Tourian=bank3（`BankInitTable ; 07:CA30 = 02 03 05 04 06` 即
+InArea 1..5 → bank 2/3/5/4/6）⇒ bank3 的表写进了 `KrEnSprites`、bank4 的写进了 `ToEnSprites`。
+
+修法：新增 `KEYS_BY_BANK = [Br, No, To, Kr, Ri]`（它就是 bank1..5 序），按 `spec.bank - 1` 取键。
+
+意义：**这是同一类「area 序 ≠ bank 序」错误在本抽取器的第二次出现**（第一次是
+`extract_enemy_tables_all` 的迭代序，见 `docs/findings/per-bank-assets.md`）。两次都只在
+「该区第一次被真正观测」时暴露 —— 这正是补三区分母的直接回报：Norfair 44/46 全绿时这个 bug 完全隐形。

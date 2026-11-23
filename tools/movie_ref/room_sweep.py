@@ -77,7 +77,7 @@ ROOM_COUNTS = {0: 47, 1: 46, 2: 37, 3: 21, 4: 42}
 # 的 `unported!` 只在 assets 返回 `None` 时触发，对 0–4 区永不触发。
 # 2/3/4 区未实测的原因是 entry_preset 只在 area 0 定稿（见 PRESET_VERIFIED_AREAS），
 # 不是区派发没移植。room 43 blocked 的真实原因是 `bank07:EAD4`（敌兵路径 unported）。
-PORTED_AREAS = (0, 1)
+PORTED_AREAS = (0, 1, 2, 3, 4)  # 【临时扩白名单】P1 三区反证中，验证通过后固化
 # entry_preset 已用实验定稿的区号。0 之外的区需要额外注入「区号 + 区指针块」
 # （InArea=$74 与 CopyAreaPointers ; 07:C8B0），否则 emu 腿仍用旧区的
 # struct/metatile 指针、rust 腿却按新区的资产表绘制 ⇒ 两腿数据源不一致，
@@ -93,7 +93,13 @@ ENTRY_FRAME = 900
 # CopyAreaPointers ; 07:C8B0 建立）。改用合成电梯对象跑完十态过区，落地后（InArea 已是
 # 目标区、AreaPointers_RAM 已就绪）再注入 $005A，走的与 area 0 同一条 SetupRoom 正则链。
 # 依据：cases/case-elev-norf-room-load.txt（12 采点全 0px）。
-ELEVATOR_AREAS = {1: 1}  # area -> ElevType（1=Norfair，实测 InArea=$02/CurBank=2）
+# area -> ElevType。asm `ElevatorD8BF ; 07:D8BF` 的落地段（`prg7_engine.asm:4997-5010`）：
+#   `tya / bpl @endIf_B`——bit7 清（**下行**）时 A 的低半字节**就是目标区号**；
+#   bit7 置（上行）时默认 Brinstar，仅 `cmp #$84` 时取 Norfair。
+# ⇒ 下行电梯 `ElevatorType = <目标区号>`：1=Norfair / 2=Kraid / 3=Tourian / 4=Ridley。
+# 之后 `ora #$10` → `jsr IsEngineRunning`（`SwitchBank ; 07:CA23` 内 `sta InArea` +
+# `BankTable,y` 查表）⇒ InArea=$12/$13/$14，再 `CopyAreaPointers ; 07:C8B0` 建区指针。
+ELEVATOR_AREAS = {1: 1, 2: 2, 3: 3, 4: 4}
 ELEVATOR_ENTRY_FRAME = 1600
 
 ENTRY_PRESET_VERSION = "v1"
@@ -148,7 +154,7 @@ def build_case(area: int, room: int, frames: int, captures: list[int]) -> str:
         lines += [
             "# 合成电梯对象（LoadElevator 字段面）：十态跑完后落地到目标区",
             "fixture 900 0320 01 evolving",
-            "fixture 900 032F 01 evolving",
+            f"fixture 900 032F {ELEVATOR_AREAS[area]:02X} evolving",
             "fixture 900 032D 83 evolving",
             "fixture 900 032E 80 evolving",
             "fixture 900 0323 23 evolving",
@@ -1044,7 +1050,9 @@ def main(argv=None) -> int:
         print(f"缺对拍器 {L4}", file=sys.stderr)
         return 2
 
-    print(f"room sweep：areas={args.areas} rooms={args.rooms} entry=f{ENTRY_FRAME} "
+    entry_hint = (f"elev={ELEVATOR_ENTRY_FRAME}" if any(a in ELEVATOR_AREAS for a in args.areas)
+                  else f"plain={ENTRY_FRAME}")
+    print(f"room sweep：areas={args.areas} rooms={args.rooms} entry={entry_hint} "
           f"frames={args.frames} captures={args.captures} "
           f"preset={ENTRY_PRESET_VERSION} jobs={args.jobs} token={TOKEN}", flush=True)
     all_skips: list[dict] = []

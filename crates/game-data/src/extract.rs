@@ -328,16 +328,24 @@ pub const ENEMY_SPRITES: [EnemySpriteSpec; 5] = [
 /// 敌人的 `animIndex` 去查了 Brinstar 的表：Ridley 的 Dessgeega 取 `0x42`，`bank1[0x42]`
 /// 是 `0xFF` ⇒ 16 次原地回绕，落 `unported!("bank07:E0BC-wrap")`。
 fn extract_enemy_sprites_all(prg: &[u8]) -> Result<Vec<Section>, String> {
-    const KEYS: [PackKey; 5] = [
-        PackKey::BrEnSprites,
-        PackKey::NoEnSprites,
-        PackKey::KrEnSprites,
-        PackKey::ToEnSprites,
-        PackKey::RiEnSprites,
+    // 【2026-11-23 修】键必须按 **bank** 取，不能按 `ENEMY_SPRITES` 的下标取：
+    // `ENEMY_SPRITES` 是按 bank 升序排的（`bank1/2/3/4/5`），而 Kraid=bank4、
+    // Tourian=bank3（`BankInitTable ; 07:CA30 = 02 03 05 04 06` 的 InArea 序与
+    // bank 序不同）。旧形 `KEYS[i]` 让 `bank3`(38 项动画表) 落到 `KrEnSprites`、
+    // `bank4`(113 项) 落到 `ToEnSprites` ⇒ Kraid 敌人查 38 项表、
+    // `animIndex>=38` 就 16 次回绕落 `bank07:E0BC-wrap`（Kraid room 3/4 实测）。
+    // 这是同一类「area 序 ≠ bank 序」错误在本抽取器的第二次出现。
+    const KEYS_BY_BANK: [PackKey; 5] = [
+        PackKey::BrEnSprites, // bank1
+        PackKey::NoEnSprites, // bank2
+        PackKey::ToEnSprites, // bank3
+        PackKey::KrEnSprites, // bank4
+        PackKey::RiEnSprites, // bank5
     ];
     let mut out = Vec::with_capacity(5);
     for (i, spec) in ENEMY_SPRITES.iter().enumerate() {
         let b = spec.bank;
+        let key = KEYS_BY_BANK[(b as usize).checked_sub(1).ok_or("敌帧表 bank 越界")?];
         // 机械自检：表长与相邻标签地址一致（防手抄漂移；不等即拒出包）。
         let anim_end = spec.anim.wrapping_add(spec.anim_len as u16);
         if anim_end != spec.fptr {
@@ -423,7 +431,8 @@ fn extract_enemy_sprites_all(prg: &[u8]) -> Result<Vec<Section>, String> {
         blob.extend_from_slice(&places);
         blob.extend_from_slice(&foffs);
         blob.extend_from_slice(&poffs);
-        out.push(Section { key: KEYS[i], data: blob });
+        let _ = i;
+        out.push(Section { key, data: blob });
     }
     Ok(out)
 }
