@@ -675,3 +675,42 @@ let mut sp = (speed_x as i16).wrapping_add((t >> 8) as i16);   // 旧形
 - `negative_accel_x_borrows_into_speed_x`：`accel=$FC, sub=00` ⇒ `subPixelX=$FC`、`speedX=$FF`。
 
 修前第二条实测 `speed_subpixel_x()==0`（被钳位成 +0x0E 后清零）——据此定谳旧形行为错。
+
+## 8.7 三区房间的「滚动期掉帧」节奏（2026-11-23 实测，未修）
+
+### 现象族
+`data/status/room_sweep_{2,3,4}.json` 里 7 房（Kraid 29/31、Tourian 6/10、Ridley 29/34/37/38）
+在 `layer=nametable`、`shift.dx=4`、`explains=False`、15–18K px。同帧 `SamusX` 两侧相同，
+`ScrollX` 差 = 像素偏移量（Kraid 31：emu `E8` / rust `EE`；numpy roll 搜索显示真偏移 **6px**，
+dx=+6 时残差 920px，其余 dx 均 ≥8k）⇒ **是相机领先，不是瓦片写错**（`nt_norm` 仅 12 B）。
+
+### 决定性读数（`watch 002D FC` 逐帧，entry=1600，载入后 ScrollX 每帧 +2）
+
+| 区/房 | 载入窗冻结 | 滚动期丢帧（前 5 个） | 节奏 |
+|---|---|---|---|
+| a2 r31 (Kraid) | 1600,1601 | 1704, 1709, 1714, 1719, 1724 | 每 5 帧 |
+| a4 r37 (Ridley) | 1600,1601,1602 | 1701, 1706, 1711, 1716, 1721 | 每 5 帧 |
+| a3 r10 (Tourian) | 1600,1601,1602 | 1694, 1707, 1712, 1717, 1722, 1727 | 每 5 帧 |
+| a0 r05 (Brinstar, 对照) | — | **无** | 不丢帧 |
+
+对应 `dFC>0 且 dscroll ≈ dFC × 1.5`：a2 r31 160/164 (+6)、a4 r37 159/164 (+10)、
+a3 r10 159/164 (+10)、a4 r34 156/164 (+16)、a2 r29 152/163 (+20)。
+
+### 机理（推断，未定谳）
+滚动期每帧工作量 ≈ 1.2 × `FRAME_CYCLES`(29780) ⇒ 每 5 帧累积出一整帧 ⇒ 丢一帧且该帧
+`ScrollX` 不推进（实测 1705 帧 emu `scr` 与 1704 相同）。rust 只在**载入窗**记 `work_cycles`
+（`LOAD_BASE_CYCLES` + 各 `LOAD_*_CYCLES`），滚动/绘制期不记 ⇒ 永不丢帧。
+Brinstar 不丢帧是线索：要么对象/瓦片更少，要么 bank1 的滚动路径更轻。
+
+### 实现前提（下一轮）
+1. 把 `work_cycles` 从「仅载入窗」扩到**每帧**（`ScrollLeft/Right` + 列流 + 对象更新计费），
+   累计 ≥ `FRAME_CYCLES` 时丢一帧并扣减。
+2. 计费常量先用**单一标定量**（滚动列成本），以本表 4 房为标定点（每 5 帧 1 次、Brinstar 0 次）；
+   契约写明这是 C 级拟合 + 可证伪判据（其它区换入后节奏仍须是 5 帧）。
+3. 验收红线：本族 7 房 `dFC==0` 且像素归零；**Brinstar 47 房不得出现新丢帧**。
+
+### 探针复现
+`tools.movie_ref.room_sweep.build_case(area, room, 130, [60,120])` + 插 `watch 002D FC`
++ `name` 改成**非** `_tmp_sweep_` 前缀（否则产物被房扫清理）⇒ `tools/l4_diff_run.py run <name>`；
+emu 逐帧 FC 读 `analysis/traces/<name>.frames.jsonl`，rust 侧 `--trace fc`（其数值是**十进制**）。
+另外：`build_case` 的 `capture 1600 pre` 与 `f0`/`prev1` 撞帧会报「缺模拟器截图」⇒ 探针里删掉 pre 行。
