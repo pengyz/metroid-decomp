@@ -563,7 +563,14 @@ fn main() {
             // 无本帧缝 ⇒ 复用最近缝（emu lag 帧不做 NMI/DMA/PPU 写，显示面保持——实测
             // emu f673/f674/f676 三帧 PNG 逐字节相同）；其余 span（电梯换区等**会渲染**的
             // lag）仍回退活体，否则会把陈旧帧当新帧（case-elev-norfair-transition f1207 13115px）。
-            let snap = match if capture_live { None } else { seam_snap.as_ref() } {
+            // `--capture-live` 只覆盖「正常帧」那一支：载房窗（`room_load_phase==1`）仍走
+            // 「复用最近缝」——活体在窗内已推进、显示未推进，强行用活体会画错帧（Kraid31
+            // f1729 实测 24818px）。
+            let snap = match if capture_live && engine.mem.room_load_phase != 1 {
+                None
+            } else {
+                seam_snap.as_ref()
+            } {
                 None => None,
                 Some((k, rs, oam)) if *k == frame.wrapping_sub(1) => Some((rs, oam.as_slice())),
                 Some((_, rs, oam)) if engine.mem.room_load_phase == 1 => Some((rs, oam.as_slice())),
