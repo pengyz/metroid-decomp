@@ -520,6 +520,22 @@ impl<'a> Samus<'a> {
         self.get(ON_SCREEN)
     }
 
+    /// `SamusHurt010F`（`$010F`，Field RAM）——受击标记，`KnockSamusBackIfCollided ; 07:F311`
+    /// 置 `$E0`（`07:F313`）。不在 `Samus` 结构体内，同 `$0070` 属域访问器。
+    pub fn hurt(&self) -> u8 {
+        self.get(crate::ram_map::SAMUS_HURT_010F)
+    }
+    pub fn set_hurt(&mut self, v: u8) {
+        self.set(crate::ram_map::SAMUS_HURT_010F, v);
+    }
+    /// `SamusKnockbackIsBomb`（`$0073`）：`KnockSamusBackIfCollided` 依 `Temp0F_DistX`
+    /// 置 1（同列=垂直击退）/0（斜向）。
+    pub fn knockback_is_bomb(&self) -> u8 {
+        self.get(crate::ram_map::SAMUS_KNOCKBACK_IS_BOMB)
+    }
+    pub fn set_knockback_is_bomb(&mut self, v: u8) {
+        self.set(crate::ram_map::SAMUS_KNOCKBACK_IS_BOMB, v);
+    }
     pub fn hi(&self) -> u8 {
         self.get(SAMUS_HI)
     }
@@ -667,7 +683,7 @@ impl<'a> Samus<'a> {
 }
 
 /// Samus 血量两字节未 typed 的缺口说明（`SPANS` 里唯一一条非 `Owner`）。
-const TODO: &str = "血量两字节未 typed：health()/set_health() 仍走字节面（$0106 低 / $0107 高；crates/game-core/src/samus/state.rs:659）";
+const TODO: &str = "血量两字节未 typed：health()/set_health() 仍走字节面（$0106 低 / $0107 高；crates/game-core/src/samus/state.rs:676）";
 
 impl crate::memmap::nesmap::NesMapped for SamusState {
     /// 判别字段：`status`（`$0300`，`sa_*` 十态）——同址按状态重解释时的判别源

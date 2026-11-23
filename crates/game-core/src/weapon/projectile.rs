@@ -408,22 +408,72 @@ pub(crate) fn uw_skree_projectiles(mem: &mut crate::frame::Manager) {
         // ——循环头 `lda #$40/sta PageIndex`（:12146-12148）；旧形 anim_draw_object
         // ((base&0xFF),0)（DE47 幻影走表+错绘 Door 槽 $3A0+yy）。
         crate::render::oam::obj_draw_frame(mem, 0x40);
-        // Samus 5 伤害（:12214-12232）
-        if mem.read_ram(crate::ram_map::SAMUS_INVINCIBLE_DELAY) == 0 {
-            let sy = mem.read_ram(0x030D) as i16;
-            let sx = mem.read_ram(0x030E) as i16;
-            let sry = mem.read_ram(0x0301) as i16;
-            let srx = mem.read_ram(0x0302) as i16;
-            let dy = (sy - py as i16).unsigned_abs() as u16;
-            let dx = (sx - px as i16).unsigned_abs() as u16;
-            if dy < sry as u16 + 4 && dx < srx as u16 + 4 {
-                if !crate::samus::physics::is_screw_attack_active(mem) {
-                    mem.write_ram(0x010F, 0x80);
-                    mem.write_ram(crate::ram_map::SAMUS_INVINCIBLE_DELAY, 0x32);
-                    // 【goal-轮39 伤害源标记】mainloop:2193（敌撞伤害）。
-                    mem.write_ram(0x006E, 0x50); // HealthChange←$50（5 伤害）
-                    mem.write_ram(0x006F, 0x00);
-                }
+        // Samus 被 Skree 弹击中（asm `UpdateSkreeProjectile ; 07:FBEC` 尾段 :12410-12431）：
+        // `lda SamusInvincibleDelay / bne @endIf_A` ⇒ i 帧内跳过；
+        // `AreObjectsTouching(Samus, PowerUpDraw)`（X 槽=Samus、Y 槽=$340，**Object 半径和**）；
+        // `IsScrewAttackActive / bcc @endIf_A` ⇒ 螺旋转有效跳过；
+        // 否则 `jsr KnockSamusBackIfCollided`（07:F311）→ `HealthChange←$50` → `SubtractHealth`。
+        //
+        // 【2026-11-23 修·f2249 根因】旧形是本径的**简化替身**：硬编码半径 `+4`（非 Object
+        // 半径和）、并**直写** `SamusInvincibleDelay←$32` 绕过 `KnockSamusBackIfCollided` ⇒
+        // `Samus.isHit` bit5 从未置、下一帧 `CheckHealthStatus` 的击退链（`speedY←$FD`/
+        // `AccelY←$38`/`KnockbackDir`）整条不跑。实测后果：6725M any% f2249 受伤击退缺失
+        // （mesen `isHit=0x28`→inv 49/speedY FD/向右上飞；rust 无 knockback、继续左行）。
+        if mem.samus_invincible_delay() == 0 {
+            // PowerUpDraw（$340）= Object 槽 4（`$0300 + 4*16`）。
+            const POWERUP_DRAW_SLOT: u8 = 4;
+            let (sy, sx, s_ry, s_rx, s_hi) = {
+                let s = mem.samus();
+                (s.y() as i16, s.x() as i16, s.radius_y() as i16, s.radius_x() as i16, s.hi() & 0x01)
+            };
+            let (py2, px2, p_ry, p_rx, p_hi) = {
+                let o = mem.object(POWERUP_DRAW_SLOT);
+                (
+                    o.y() as i16,
+                    o.x() as i16,
+                    o.radius_y() as i16,
+                    o.radius_x() as i16,
+                    o.hi() & 0x01,
+                )
+            };
+            // CheckCollisionOfXSlotAndYSlot（07:F1FA）的 hi 折算规则是**分轴、按房间朝向**：
+            //  · Y 轴只在竖滚房（`ScrollDir&2==0`）折 `+$100`；
+            //  · X 轴只在横滚房（`ScrollDir&2!=0`）折 `+$100`。
+            // （asm：`lda Temp03_ScrollDir / bne @else_sameHiY` 与 `lda Temp03_ScrollDir /
+            //  beq @else_sameHiX`——不可滚的轴永不比 hi。）
+            let vertical = mem.camera().dir() & 0x02 == 0;
+            let hi_diff = s_hi != p_hi;
+            let dy_raw = (sy - py2).unsigned_abs() as i16;
+            let dx_raw = (sx - px2).unsigned_abs() as i16;
+            let dy = if vertical && hi_diff { dy_raw + 0x100 } else { dy_raw };
+            let dx = if !vertical && hi_diff { dx_raw + 0x100 } else { dx_raw };
+            let touching = dy < s_ry + p_ry && dx < s_rx + p_rx;
+            // 螺旋转有效（IsScrewAttackActive carry 清）⇒ 跳过伤害。
+            if touching && !crate::samus::physics::is_screw_attack_active(mem) {
+                // KnockSamusBackIfCollided（07:F311）：SamusHurt010F←$E0；
+                // SetSamusIsHitByEnemy（isHit |= DistHi<<3）；KnockbackIsBomb←(DistX≠0)。
+                mem.samus().set_hurt(0xE0);
+                let dist_hi: u8 = {
+                    let dyf: i32 = if vertical {
+                        (p_hi as i32 * 240 + py2 as i32) - (s_hi as i32 * 240 + sy as i32)
+                    } else {
+                        py2 as i32 - sy as i32
+                    };
+                    let dxf: i32 = if vertical {
+                        px2 as i32 - sx as i32
+                    } else {
+                        (p_hi as i32 * 256 + px2 as i32) - (s_hi as i32 * 256 + sx as i32)
+                    };
+                    0x04u8 | (if dyf < 0 { 0x02 } else { 0 }) | (if dxf < 0 { 0x01 } else { 0 })
+                };
+                let cur = mem.samus().is_hit();
+                mem.samus().set_is_hit(cur | dist_hi.wrapping_shl(3));
+                // `lda Temp0F_DistX / beq`——低字节差为 0 ⇒ 同列 ⇒ 垂直击退（0）。
+                let same_x = sx.wrapping_sub(px2) == 0;
+                mem.samus().set_knockback_is_bomb(if same_x { 0x00 } else { 0x01 });
+                // HealthChange←$50（5 伤害）→ SubtractHealth。
+                mem.set_health_change(0x50);
+                subtract_health(mem);
             }
         }
     }
@@ -938,5 +988,50 @@ mod tests_pickup_touch_flag {
         let hit = m.enemy(5).is_hit();
         assert_ne!(hit & 0x04, 0, "拾取物必须由敌×Samus 子环写上触碰位（bit2），实测 {:02X}", hit);
         assert_eq!(hit & 0x80, 0, "弹×敌子环必须跳过（bit7 是武器命中面），实测 {:02X}", hit);
+    }
+}
+
+#[cfg(test)]
+mod tests_skree_projectile_damage {
+    use super::*;
+    use crate::frame::Manager;
+
+    /// Skree 弹×Samus（asm `UpdateSkreeProjectile ; 07:FBEC` 尾段 :12416-12431）：
+    /// `AreObjectsTouching`（Object 半径和）→ `IsScrewAttackActive` → `KnockSamusBackIfCollided`
+    /// （`07:F311`）→ `HealthChange←$50` + `SubtractHealth`。
+    ///
+    /// 【2026-11-23 修·6725M any% f2249 根因】旧形是简化替身：硬编码半径 `+4`、并**直写**
+    /// `SamusInvincibleDelay←$32` 绕过 `KnockSamusBackIfCollided` ⇒ `Samus.isHit` bit5 从不置
+    /// ⇒ 下一帧 `CheckHealthStatus ; 07:CDFA` 的击退链（`speedY←$FD`/`AccelY←$38`/
+    /// `KnockbackDir`）整条不跑（mesen f2249 向右上飞，rust 继续左行、y 不动）。
+    #[test]
+    fn skree_hit_sets_is_hit_bit5_and_does_not_touch_invincible_delay() {
+        let mut m = Manager::default();
+        m.write_ram(crate::ram_map::SCROLL_DIR, 0x03); // 横滚（dir&2!=0）
+        m.samus().set_status(crate::samus::state::SamusStatus::Run);
+        m.samus().set_y(185);
+        m.samus().set_x(76);
+        m.samus().set_radius_y(15);
+        m.samus().set_radius_x(4);
+        m.write_ram(crate::ram_map::SAMUS_INVINCIBLE_DELAY, 0);
+        // Skree 弹：槽 0（$00A0）dieDelay≠0，位置压在 Samus 身上。
+        m.write_ram(0x00A0, 0x10); // 槽 0 dieDelay
+        m.write_ram(0x00A0 + 1, 185); // y
+        m.write_ram(0x00A0 + 2, 76); // x
+        // PowerUpDraw（$340）也要压在 Samus 上，且半径取 Object 面。
+        m.write_ram(0x0340 + 0x0D, 185);
+        m.write_ram(0x0340 + 0x0E, 76);
+        m.write_ram(0x0340 + 0x01, 8); // radiusY
+        m.write_ram(0x0340 + 0x02, 8); // radiusX
+        uw_skree_projectiles(&mut m);
+        let hit = m.samus().is_hit();
+        assert_ne!(hit & 0x20, 0, "Skree 命中必须经 SetSamusIsHitByEnemy 置 bit5，实测 {:02X}", hit);
+        assert_eq!(
+            m.samus_invincible_delay(),
+            0,
+            "i 帧必须留给下一帧 CheckHealthStatus 置（旧形直写 $32 = f2249 根因）"
+        );
+        assert_eq!(m.samus().hurt(), 0xE0, "采样 hurt 位 07:F313");
+        assert_eq!(m.read_ram(0x006E), 0x50, "HealthChange←$50");
     }
 }

@@ -102,3 +102,64 @@ Samus 死亡门（status≠7/8/FF）。
 2. 与裁定腿的首分歧是 **f2249 受伤击退未触发**，属历史挂账帧，不是新缺陷。
 3. 下一轮：按 §4 两个候选做判定时刻/半径来源的对照实验，定谳后修，再用全片 + 6600 帧裁定腿复核首分歧是否后移。
 4. 其后才是 P1（Kraid/Tourian/Ridley 三区房扫补分母）——在 f2249 未修前，全片对照无法提供新的有效信号。
+
+## 7. f2249 定谳（2026-11-23 收口）
+
+> 【2026-11-23 更正】§4 的两条候选（判定时刻差 / 半径来源差）**都不是根因**。
+> 真因在 **rust 侧**：`crates/game-core/src/weapon/projectile.rs` 的 `uw_skree_projectiles`
+> 尾部「Samus 5 伤害」是这条径的**简化替身**，它
+
+1. 用硬编码半径 `+4`（`dy < sry+4 && dx < srx+4`）代替 `AreObjectsTouching` 的
+   **Object 半径和**（`$0301/$0302` + `$0341/$0342`）；
+2. 命中后**直写** `SamusInvincibleDelay←$32`、`$010F←$80`、`HealthChange←$50`，
+   **跳过 `KnockSamusBackIfCollided ; 07:F311`** ⇒ `Samus.isHit` bit5 从不置位 ⇒
+   下一帧 `CheckHealthStatus ; 07:CDFA` 的整条击退链（`speedY←$FD` / `AccelY←$38` /
+   `KnockbackDir←(isHit&8)>>3`）不跑。
+
+这同时解释了实测的三个现象：i 帧**早一帧**、Samus **不上升**、方向位**恒反**。
+
+asm 真形（`refs/m1disasm/SRC/prg7_engine.asm:12410-12431`）：
+
+```
+    lda SamusInvincibleDelay
+    bne @endIf_A                    ; i 帧内跳过
+    ldy #Samus - Objects
+    ldx #PowerUpDraw - Objects
+    jsr AreObjectsTouching          ; 07:DC7F（Object 半径和 + CheckCollisionOfXSlotAndYSlot）
+    bcs @endIf_A
+    jsr IsScrewAttackActive         ; 07:CD9C（carry 清 = 有效 ⇒ 跳过）
+    ldy #Samus - Objects
+    bcc @endIf_A
+        clc
+        jsr KnockSamusBackIfCollided ; 07:F311
+        lda #$50
+        sta HealthChange
+        jsr SubtractHealth
+```
+
+`KnockSamusBackIfCollided ; 07:F311`：`SamusHurt010F←$E0`（`07:F313`）；
+`SetSamusIsHitByEnemy`（`Samus.isHit |= DistHi<<3`）；
+`SamusKnockbackIsBomb←(Temp0F_DistX≠0 ? 1 : 0)`。
+
+另一处 A 级细节：`CheckCollisionOfXSlotAndYSlot ; 07:F1FA` 的 hi 折算**分轴、按房间朝向**
+——Y 轴只在竖滚房（`ScrollDir&2==0`）折 `+$100`，X 轴只在横滚房折 `+$100`
+（asm `lda Temp03_ScrollDir / bne @else_sameHiY` 与 `lda Temp03_ScrollDir / beq @else_sameHiX`）；
+不可滚的轴永不比 hi。旧形（以及本次修的第一版）两个轴一起折，会漏掉同屏跨页命中。
+
+## 8. 修复效果（同轮实测）
+
+| 判据 | 修前 | 修后 |
+|---|---|---|
+| 6725M 前 6600 帧（裁定腿 3 采点） | c3000=591px · c6000=14687px | **c1000/c3000/c6000 全 0px** |
+| L4 矩阵（21 案/172 格） | match 166 · diff 6 · blocked 0 | 同（逐格不变） |
+| Norfair 房扫 | ok 44 / mismatch 2 / blocked 0 | 未复扫（本修不动房内行为） |
+| 测试 | 1078 | **1079**（+1 锚测 `skree_hit_sets_is_hit_bit5_and_does_not_touch_invincible_delay`） |
+
+锚测的红证：把命中径改回「直写 inv、不置 isHit」⇒ `assertion left != right failed:
+Skree 命中必须经 SetSamusIsHitByEnemy 置 bit5，实测 00`。
+
+## 9. 下一轮入口
+
+f2249 已不再是分歧点，6600 帧内的变现面**全部一致**。下一步是**把裁定腿向后推**
+（f6600 → f12000 → 全片 28 690 帧），逐段把首分歧继续往后顶；
+在那里暴露的才是 new：此项工作不需要再动 f2249 的假设。

@@ -282,7 +282,7 @@
       "len": 2,
       "kind": "unmodeled",
       "refs": [
-        "crates/game-core/src/samus/state.rs:659"
+        "crates/game-core/src/samus/state.rs:675"
       ]
     },
     {
