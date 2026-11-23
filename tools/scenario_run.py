@@ -858,7 +858,7 @@ def mesen_home() -> Path:
     return Path(os.environ.get("GUNNAC_MESEN_HOME", str(isolated)))
 
 
-def clear_mesen_resume_state(rom: Path) -> list:
+def clear_mesen_resume_state(rom: Path, xdg_config: Path | None = None) -> list:
     """清除 Mesen2 的 recent-game resume 状态（跨 run/跨项目污染源）。
 
     Mesen2 GUI 退出时把 resume state 内嵌写进 `RecentGames/<rom>.rgd`（内含 Savestate.mss），
@@ -867,7 +867,7 @@ def clear_mesen_resume_state(rom: Path) -> list:
     返回被删除文件（报告留痕）。删除失败 fail-closed 抛错（不许静默放过污染源）。
     参考：GuardicGaidenRemake/tools/scenario_run.py（clear_mesen_resume_state（585-600 行））
     """
-    home = mesen_home()
+    home = (xdg_config / "Mesen2") if xdg_config is not None else mesen_home()
     removed = []
     for pat in (home / "RecentGames" / f"{rom.stem}.rgd",):
         if pat.is_file():
@@ -904,7 +904,111 @@ def mesen_isolated_home() -> Path:
     return fake
 
 
-def kill_orphan_mesen(mesen: Path) -> int:
+# ---------------------------------------------------------------- 每 run 环境域（2026-11-24 #26）
+RUNS_ROOT = ROOT / "analysis" / ".mesen-runs"
+
+
+def run_id_of(name: str) -> str:
+    """本 run 的唯一 id（场景名 + 驱动 pid）——并发两实例各自独立，互不覆盖。"""
+    return f"{name}-{os.getpid()}"
+
+
+def prepare_run_dirs(run_id: str) -> dict:
+    """为本 run 建独立 HOME / XDG_CONFIG_HOME / XDG_CACHE_HOME / TMPDIR。
+
+    三个共享面（各自踩踏的根因）：
+    - `$XDG_CONFIG_HOME/Mesen2/mesen.lock`：Mesen2 的单实例锁按配置域落盘——共享配置域 =
+      后启进程把参数转发给先启进程后 exit_group(0)（rc=0、无产物），即「静默退出」现象；
+    - `/tmp/CoreFxPipe_<固定 GUID>`：Mono 命名管道按 TMPDIR 落盘——同 TMPDIR = 同一根管道
+      （后连者 `Pipe hasn't been connected yet` → InvalidOperationException → 退出）；
+    - RecentGames/<rom>.rgd：resume 快照跨 run 污染。
+
+    settings.json 从模板域（mesen_home()）拷入：空配置域会弹「initial setup」向导并**阻塞**
+    （实测：Mesen 窗口 400x515 停在 Configuration 对话框，0 帧、无日志）。
+    """
+    root = RUNS_ROOT / run_id
+    home = root / "home"
+    xdg = root / "xdg-config"
+    cache = root / "xdg-cache"
+    tmp = root / "tmp"
+    for d in (home, xdg / "Mesen2", cache, tmp):
+        d.mkdir(parents=True, exist_ok=True)
+    tpl = mesen_home() / "settings.json"
+    dst = xdg / "Mesen2" / "settings.json"
+    if tpl.is_file() and not dst.exists():
+        shutil.copy2(tpl, dst)
+    return {"run_id": run_id, "root": root, "home": home, "xdg_config": xdg,
+            "xdg_cache": cache, "tmp": tmp, "template": mesen_home()}
+
+
+def inject_run_env(env: dict, dirs: dict) -> dict:
+    """把 per-run 环境注入子进程（POSIX 与 Windows 同口径；Windows 用 TEMP/TMP）。"""
+    env["HOME"] = str(dirs["home"])
+    env["XDG_CONFIG_HOME"] = str(dirs["xdg_config"])
+    env["XDG_CACHE_HOME"] = str(dirs["xdg_cache"])
+    env["XDG_DATA_HOME"] = str(dirs["home"] / ".local" / "share")
+    env["TMPDIR"] = str(dirs["tmp"])
+    env["TMP"] = str(dirs["tmp"])
+    env["TEMP"] = str(dirs["tmp"])
+    # 自有标记：孤儿清扫只认同一 run id 的进程（不误杀并发实例/他人 worktree）
+    env["MESEN_RUN_ID"] = str(dirs["run_id"])
+    return env
+
+
+def _runtime_version() -> str:
+    """运行时版本（bad_cast 这类平台故障的第一手信息）：mono 优先，其次 dotnet。"""
+    for cmd in (["mono", "--version"], ["dotnet", "--list-runtimes"]):
+        try:
+            r = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+        except (OSError, subprocess.SubprocessError):
+            continue
+        out = (r.stdout or "").strip()
+        if r.returncode == 0 and out:
+            return out.splitlines()[0]
+    return "未找到 mono/dotnet"
+
+
+def _gl_info() -> str:
+    """显示/GL 渲染器（平台故障第二手信息）；无 glxinfo 时退化为 libGL 存在性。"""
+    disp = os.environ.get("DISPLAY") or "（未设置）"
+    try:
+        r = subprocess.run(["glxinfo", "-B"], capture_output=True, text=True, timeout=10)
+        line = next((ln.strip() for ln in (r.stdout or "").splitlines()
+                     if "OpenGL renderer" in ln), "")
+        if line:
+            return f"DISPLAY={disp}；{line}"
+    except (OSError, subprocess.SubprocessError):
+        pass
+    libs = sorted(Path("/usr/lib/x86_64-linux-gnu").glob("libGL.so*"))
+    tail = f"libGL={libs[0].name}" if libs else "libGL 未找到"
+    return f"DISPLAY={disp}；（无 glxinfo）{tail}"
+
+
+def run_diag(dirs: dict, log_path: Path, rc, timed_out: bool) -> str:
+    """失败路径诊断块（不再 rc=0 静默）：退出码 / 配置域 / 管道 / 日志尾。"""
+    log_tail = ""
+    try:
+        lines = log_path.read_text(encoding="utf-8", errors="replace").splitlines()
+        log_tail = "\n".join("    " + ln for ln in lines[-8:])
+    except OSError:
+        pass
+    pipes = sorted(p.name for p in dirs["tmp"].glob("CoreFxPipe_*"))
+    hint = ""
+    if "PassArgumentsToFirstInstance" in log_tail or "Pipe hasn't been connected" in log_tail:
+        hint = ("\n    诊断：命中 Mesen 单实例转发路径（配置域/管道未隔离）——"
+                "检查 XDG_CONFIG_HOME/TMPDIR 是否按 run 分开")
+    elif rc == 0 and not timed_out:
+        hint = "\n    诊断：rc=0 但无 DONE = 静默退出（多半是单实例握手/启动期崩溃，看日志尾）"
+    return (f"  [诊断] rc={rc} timed_out={timed_out}\n"
+            f"    运行时: {_runtime_version()}\n"
+            f"    显示/GL: {_gl_info()}\n"
+            f"    XDG_CONFIG_HOME={dirs['xdg_config']}\n"
+            f"    TMPDIR={dirs['tmp']}\n"
+            f"    Mesen 管道: {pipes or '（未创建）'}\n"
+            f"    日志尾:\n{log_tail or '    （空）'}{hint}")
+
+
+def kill_orphan_mesen(mesen: Path, run_id: str) -> int:
     """t54 F3 根因防护：清扫驱动锁罩不到的孤儿 Mesen（驱动崩溃/被强杀后残留，
     与后续运行争写同一批产物）。返回清除数。
 
@@ -941,15 +1045,19 @@ def kill_orphan_mesen(mesen: Path) -> int:
     # r9 实测：复核 worktree /tmp/verify-r9 的 Mesen 被主树清扫 SIGKILL（互杀产品=
     # blocked 4/flaky 10 假象）。只杀 cmdline 含本 worktree 根（Mesen）或 cwd 在本
     # worktree（Xvfb）的进程；/proc 不可读时保守跳过（宁可漏杀不误杀）。
-    root = str(ROOT)
+    # 【2026-11-24 #26 并发改造】按 MESEN_RUN_ID 归属清扫，不再按 worktree 根：
+    # 同 worktree 的并发实例 cmdline 完全一样，按 root 匹配会互杀；按 run id 只清
+    # 本 run 自己的残留（env 是进程私有，不会被别的实例继承）。
+    marker = f"MESEN_RUN_ID={run_id}".encode()
     scoped = []
     for pid in pids:
         try:
+            envb = open(f"/proc/{pid}/environ", "rb").read()
             cl = open(f"/proc/{pid}/cmdline", "rb").read().decode("utf-8", "replace")
             cwd = os.path.realpath(f"/proc/{pid}/cwd")
         except OSError:
             continue  # 进程已退或 /proc 不可用——跳过，不杀
-        if root in cl or cwd == root or cwd.startswith(root + os.sep):
+        if marker in envb and (str(ROOT) in cl or cwd.startswith(str(ROOT))):
             scoped.append(pid)
     n = 0
     for pid in scoped:
@@ -969,11 +1077,16 @@ def run_scenario(name_or_path: str, timeout_s: float = 1800.0, keep_gen: bool = 
     if not mesen.is_file():
         raise ScenarioError(f"Mesen2 未就绪: {mesen}（BYO 工具，见 docs/methodology.md；GUNNAC_MESEN 可覆盖）")
     # 串行锁（t24 事故）：同一时刻只允许一个 Mesen 场景运行（Unix flock / Windows msvcrt）
-    lock = ScenarioLock(ROOT / "analysis" / ".scenario.lock")
+    # 【2026-11-24 #26】锁粒度从「全仓一把」改为「按场景名一把」：同名场景仍串行
+    # （archive_existing/产物名相同，必须互斥）；不同场景各写各的 name.* 产物，可并发。
+    slug = re.sub(r"[^A-Za-z0-9._-]+", "_", name)
+    lock = ScenarioLock(ROOT / "analysis" / f".scenario-{slug}.lock")
     lock.acquire()
     # t54 F3 根因防护：串行锁只罩驱动进程——驱动崩溃/被强杀后 Mesen/Xvfb 孤儿仍在跑，
     # 与后续运行争显示/写同一批产物（实测 trace 交错、DONE 不落、30x 变慢）。启动前显式清扫。
-    n_stale = kill_orphan_mesen(mesen)
+    run_id = run_id_of(name)
+    dirs = prepare_run_dirs(run_id)
+    n_stale = kill_orphan_mesen(mesen, run_id)
     if n_stale:
         print(f"  [清场] 清除孤儿 Mesen/Xvfb {n_stale} 个（驱动侧锁覆盖不到的残留）")
     archived = archive_existing(name)
@@ -1010,7 +1123,7 @@ def run_scenario(name_or_path: str, timeout_s: float = 1800.0, keep_gen: bool = 
 
     # 【2026-10-27 隔离根治】跨 run/跨项目 resume 污染防护：删 Mesen2 recent-game
     # resume 状态（RecentGames/<rom>.rgd（内含 Savestate.mss（auto-resume 污染源）））。
-    removed_states = clear_mesen_resume_state(ROM)
+    removed_states = clear_mesen_resume_state(ROM, dirs["xdg_config"])
     if removed_states:
         print(f"  [清场] 删除 Mesen2 resume 状态: {', '.join(Path(p).name for p in removed_states)}")
 
@@ -1032,10 +1145,12 @@ def run_scenario(name_or_path: str, timeout_s: float = 1800.0, keep_gen: bool = 
         #   （默认沙箱禁写）；Mesen 启动后把 CWD 切到 HomeFolder ⇒ Lua 产物必须绝对路径（PLAN 已是）。
         #   /DoNotSaveSettings、Xvfb/DISPLAY 仅 GUI 模式需要（Unix 侧沿用已验证路径）。
         env = dict(os.environ)
-        # 【2026-10-27 隔离根治】把隔离 HOME 注入子进程 env（Mesen 用隔离配置域
-        # Mesen2-metroid（配置零共享（单实例劫持+resume 污染根治）））——照 Guardic 模式。
-        env["HOME"] = str(mesen_isolated_home())
-        env["GUNNAC_MESEN_HOME"] = str(mesen_home())
+        # 【2026-11-24 #26】per-run 四个域全隔离（配置域/缓存/TMPDIR/标记）：
+        # 配置域决定 mesen.lock（单实例），TMPDIR 决定 CoreFxPipe（命名管道）。
+        # 旧实现只把 HOME 指向 fake home，但 Mesa/Mono 用的是 XDG_CONFIG_HOME——
+        # 宿主的 XDG_CONFIG_HOME 一继承，两个实例仍然共享 ~/.config/Mesen2/mesen.lock。
+        env = inject_run_env(env, dirs)
+        env["GUNNAC_MESEN_HOME"] = str(dirs["template"])
         if IS_WINDOWS:
             proc = subprocess.Popen(
                 [str(mesen), "--testRunner", str(lua_path), str(ROM),
@@ -1047,6 +1162,7 @@ def run_scenario(name_or_path: str, timeout_s: float = 1800.0, keep_gen: bool = 
             xvfb = subprocess.Popen(
                 ["Xvfb", display, "-screen", "0", "1280x1024x24", "-nolisten", "tcp"],
                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True,
+                env=env,
             )
             wait_for_x(display, xvfb)
             env["DISPLAY"] = display
@@ -1140,6 +1256,8 @@ def run_scenario(name_or_path: str, timeout_s: float = 1800.0, keep_gen: bool = 
         "generated_lua_sha256": lua_sha,
         "frames": plan["frames"],
         "sample_point": plan.get("sample_point") or "endFrame",
+        "mesen_run": {"run_id": run_id, "xdg_config": str(dirs["xdg_config"].relative_to(ROOT)),
+                      "tmp": str(dirs["tmp"].relative_to(ROOT))},
         "fixtures": plan.get("fixtures") or [],
         "bundle_capture": plan.get("bundle_capture"),
         "bundle_load": plan.get("bundle_load"),
@@ -1176,7 +1294,9 @@ def run_scenario(name_or_path: str, timeout_s: float = 1800.0, keep_gen: bool = 
     print(f"  trace: {manifest['outputs']['trace']}")
     print(f"  run清单: {mpath.relative_to(ROOT).as_posix()}")
     if not ok:
-        print(f"  !! 未完成（timed_out={timed_out}, done={done_info is not None}, trace_lines={n_lines}）")
+        rc = proc.returncode if proc is not None else None
+        print(f"  !! 未完成（timed_out={timed_out}, done={done_info is not None}, trace_lines={n_lines}, rc={rc}）")
+        print(run_diag(dirs, TRACES_DIR / f"{name}.mesen.log", rc, timed_out))
     return manifest
 
 
