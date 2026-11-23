@@ -413,12 +413,26 @@ fn apply_missile_launch(mem: &mut Manager, slot: u8, anim: u8) {
 }
 
 fn fire_samus_projectile(mem: &mut Manager) {
-    // FireSamusProjectile（**asm 内容锚** `: 07:D1EE`）：UP（Joy1Status bit2）⇒Upwards/
-    // 否则 Forwards（分派器——audit §7）。
+    // FireSamusProjectile（**asm 内容锚** `: 07:D1EE`）：UP（Joy1Status bit3）⇒Upwards/
+    // 否则落 FireSamusProjectileForwards。
+    //
+    // 【2026-11-23 修】这里必须只是**分派器**：asm `FireSamusProjectile ; 07:D1EE`
+    // 前两条指令就是 `lda Joy1Status / and #BUTTON_UP / beq FireSamusProjectileForwards`，
+    // 而空中开火径 `SamusJump_CheckFire ; 07:D09C` 的 `@notAimingUp` 分支是
+    // `jsr FireSamusProjectileForwards`（**直接跳向 Forwards，不经过 UP 判**）。
+    // 旧形把 Forwards 的实体写在分派器里、空中径改调分派器 ⇒ 空中按住 UP 射击被
+    // 错判成竖射（6725M f1784 弹道分叉：emu 向右飞 / rust 向上飞）。
     if mem.read_ram(crate::ram_map::JOY1_STATUS) & 0x08 != 0 {
         fire_samus_projectile_upwards(mem);
         return;
     }
+    fire_samus_projectile_forwards(mem);
+}
+
+/// FireSamusProjectileForwards（**asm 内容锚** `: 07:D210`）：搜空槽→InitBullet→
+/// 波/冰→DieDelay $0C→speedX=BulletSpeedXTable[SamusDir]→speedY=0→onScreen=1→
+/// 导弹→arm cannon 偏移(BulletForwardsOffsetXTable, Y−$06)→@exit animIndex=StandFire。
+fn fire_samus_projectile_forwards(mem: &mut Manager) {
     // SearchOpenSamusProjectileslot（D1F7）：找 status==0 槽
     let mut slot: Option<u8> = None;
     for s in [0xD0u8, 0xE0, 0xF0] {
@@ -1334,7 +1348,9 @@ pub fn samus_jump_check_fire(mem: &mut Manager) {
     if mem.read_ram(ANIM_RESET_INDEX) == OBJ_ANIM_SAMUS_JUMP_PNT_UP {
         fire_samus_projectile_upwards(mem);
     } else {
-        fire_samus_projectile(mem); // Forwards（D1EE 分派）——exit 写 StandFire(0x09)
+        // asm `@notAimingUp: jsr FireSamusProjectileForwards`（$D0AD）——**不经 UP 判**，
+        // 所以空中按住 UP 也是横射（见 fire_samus_projectile 的 2026-11-23 修注）。
+        fire_samus_projectile_forwards(mem); // exit 写 StandFire(0x09)
         // SetSamusAnim(JumpFire)（audit §6（全形（Reset+Index 双写 0x20（$8592-$8572）））
         mem.write_ram(ANIM_RESET_INDEX, 0x20);
         mem.write_ram(ANIM_RESET_INDEX + 1, 0x20);
@@ -1726,6 +1742,22 @@ mod tests_jump_chain {
         m.write_ram(ANIM_RESET_INDEX, OBJ_ANIM_SAMUS_JUMP_PNT_UP);
         samus_jump_check_fire(&mut m);
         assert_eq!(m.read_ram(0x03D8), 0xFC, "Upwards（speedY=$FC）");
+    }
+
+    /// 【D09C @notAimingUp】**空中按住 UP 开火必须横射**：asm 该分支是
+    /// `jsr FireSamusProjectileForwards`，**不经过** `FireSamusProjectile ; 07:D1EE`
+    /// 的 `and #BUTTON_UP` 判。旧形改调分派器 ⇒ 空中 UP+B 被错判成竖射
+    /// （6725M f1784：emu 弹 speedX=+4 向右 / rust speedY=$FC 向上）。
+    #[test]
+    fn jump_fire_ignores_up_button() {
+        let mut m = jmp_mem();
+        m.write_ram(crate::ram_map::JOY1_CHANGE, 0x40); // B 新按
+        m.write_ram(crate::ram_map::JOY1_STATUS, 0x48); // UP 按住 + B
+        m.write_ram(ANIM_RESET_INDEX, 0x0C); // SamusJump（≠ JumpPntUp 0x35）
+        samus_jump_check_fire(&mut m);
+        assert_eq!(m.read_ram(0x03D0), 1, "B⇒弹生");
+        assert_eq!(m.read_ram(0x03D9), 4, "空中 UP+B⇒横射 speedX=+4（向右，Dir=0）");
+        assert_eq!(m.read_ram(0x03D8), 0, "横射 speedY=0（不是 Upwards 的 $FC）");
     }
 
     /// 【D015 尾】UP⇒status←6+anim 0x35；落地（AccY==0）⇒Stand(0)（status≠6）/

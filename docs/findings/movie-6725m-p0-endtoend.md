@@ -279,3 +279,69 @@ f5980–6040 回到 0 px 是因为两腿都死亡重来（`MainRoutine=8` SamusI
 2. 判据：模型要让 f3276/3277 产生「2 帧冻结」，且不动其他已对齐窗口
    （`LOAD_BASE_CYCLES` 的六点锚测是现成的回归网）。
 3. 若工作量证据不足，则退一步只建模「滚动边界帧」，并在 findings 里标明这是**拟合**而非机制推导。
+
+## 11. 第三轮：2P 仪器缺陷 + 空中开火弹道（2026-11-23）
+
+### 11.1 §10.7 的 lag 假设撤回（仪器缺陷，非引擎差）
+
+§10.7 依据「emu 有 FC 不前推的帧」推测 lag 模型。该推测**被推翻**：
+
+- Mesen2 腿的 2P 按键被 OR 进端口 1。受控实验（`p1=0` + `p2=0x08`）实测 emu
+  `Joy1Status=$14=0x08`、`Joy2Status=$15=0x00`；`p1=0x02 & p2=0x08` 实测 `$14=0x0A`、
+  `$15=0x00`。三种写法（`setInput(btn2,1)` / `(btn2,2)` / `(btn2,1,0)`）与
+  `settings.json` 的 `Nes.Port2.Type` 改动**全部无效** ⇒ 该构建的 Lua 端口参数不可用。
+- 因此 6725M 影片 f3265 起的 242 帧 2P 输入污染了裁定腿：emu 收到 `0x8A`（P1|P2）、rust 收到 `0x82`。
+- 处置（`c363480d`）：裁定腿**不再喂端口 2**（WARN 一次；用例声明 `require_joy2` 时 fail-loud）。
+  ROM 对 `Joy2Status` 的唯一消费点是 PauseMode 的 2P `A+UP` 退出，本影片那 242 帧只按 `Up`，
+  真机行为等同「2P 不按」⇒ 不影响保真。
+- 修后 f3268 的伪分歧（288px）归零，`§10.7` 的「lag 帧」结论作废。
+  详见 `docs/findings/mesen-2p-input-unsupported.md`。
+
+### 11.2 2P 干净后的真首分歧：f1785→1790
+
+二分（每 40 帧 → 每 5 帧）：`1000–1785` 全 0px，**1785=0 / 1790=64 / 1795=64 / 1800=102**。
+
+### 11.3 定谳：`SamusJump_CheckFire@notAimingUp` 调错了入口
+
+asm（`refs/m1disasm/SRC/prg7_engine.asm`）：
+
+- `FireSamusProjectile ; 07:D1EE` = **纯分派器**：`lda Joy1Status / and #BUTTON_UP / beq
+  FireSamusProjectileForwards / jmp FireSamusProjectileUpwards`。
+- `SamusJump_CheckFire ; 07:D09C`（空中开火）：`lda Joy1Change / ora Joy1Retrig / asl / bpl rts`
+  → `lda Samus.animResetIndex / cmp #ObjAnim_SamusJumpPntUp - ObjectAnimIndexTbl.b`；
+  相等 ⇒ `jmp FireSamusProjectileUpwards`；**不等 ⇒ `@notAimingUp: jsr
+  FireSamusProjectileForwards`（$D0AD）——直接进 Forwards，不经过 UP 判**。
+
+rust 旧形把 Forwards 的实体写在分派器 `fire_samus_projectile` 内部，而 `samus_jump_check_fire`
+的 else 分支调的是**分派器** ⇒ 空中按住 UP 射击时被分派器判成 Upwards。
+
+逐帧证据（探针 `cases/case-tmp-anyp-fire.txt`，输入 `movies/eien86-6725M.inputlog`）：
+
+| 帧 | 两腿共同字段 | emu 弹 | rust 弹 |
+|---|---|---|---|
+| 1783 | `$14=0x0A`、`status=01`、`animReset=0x0C`(SamusJump) | 槽 D status=0 | 同 |
+| 1784 | `$14=0x49`(Right+Up+B)、`animReset=0x20`(SamusJumpFire) | `spd=(00,04)` y=AF x=11 | `spd=(FC,00)` y=A5 x=0A |
+
+位置反推：emu 弹 = f1783 Samus(B5,09) −6 /+8（Forwards 的 arm cannon 偏移）；
+rust 弹 = B5−0x10 / 09+1（Upwards 偏移）。`animReset=0x20` 只有 `@notAimingUp` 会写 ⇒
+emu 走 Forwards 分支确定。
+
+### 11.4 修复与验证
+
+- `crates/game-core/src/samus/handler.rs`：`fire_samus_projectile` 还原为纯分派器；新增
+  `fire_samus_projectile_forwards`（原 Forwards 实体）；`samus_jump_check_fire` 的 else 分支改调
+  `fire_samus_projectile_forwards`。
+- 锚测 `jump_fire_ignores_up_button`（`JOY1_STATUS=0x48` UP+B、`ANIM_RESET_INDEX=0x0C`
+  ⇒ 弹 `speedX=+4`、`speedY=0`）；红证：else 分支改回分派器 ⇒ FAILED。
+- 效果：探针 1780/1784/1785/1786/1790 **5/5 全 0px**（修前 1790=64px）；
+  4000 帧裁定腿 `1785=0 · 1790=0`（修前 1790=64）。
+- 回归：`cargo test --workspace` **1085 passed / 0 failed**（基线 1084→1085）；
+  L4 矩阵 **21 案/172 格 match 166 · diff 6 · blocked 0**（逐格同基线）；`gates check` PASS=23。
+
+### 11.5 残余（本轮未收口）
+
+- 探针 1785–1800 逐帧：**1792/1796/1800 各 70px**（周期 4 帧），bbox 恒 `(135,188)-(150,196)`，
+  差分像素**颜色多重集两侧完全一致**（精灵整体位移/换格，不是画错）。
+  该窗口内 `$0300-$0316`（Samus 全字段）、`$0200` OAM 影子 0-29 项、`ppu.hex` 的
+  chr/NT/palette **两腿全等** ⇒ 与已挂账的「显示集/OAM DMA 时刻」族同源，待单独定谳。
+- 裁定腿其余分歧：`2000=120`、`3900=433`、`4000=8611`（在 1792 之后，属级联/另一机制）。
