@@ -68,15 +68,26 @@ fn metroid_repel_speed(accel: i8) -> i8 {
     METROID_REPEL_SPEED[((accel as u8 >> 6) & 0x01) as usize]
 }
 
-/// 速度钳位（`MetroidAIRoutine` 的 y/x 两段）。
+/// 速度钳位（`MetroidAIRoutine` 的 y/x 两段，`03:9839-986D`）。
 ///
-/// 负速度径：`lda #$00 / cmp subPixel / sbc speed` 得 16 位补码 `|speed|`，**只比较低字节**；
+/// 负速度径（`03:9840-9848` / `03:9859-985F`）：
+/// ```text
+/// lda #$00
+/// cmp Ens.0.speedSubPixelX,x   ; 只置 C，A 不变（仍为 0）
+/// sbc Ens.0.speedX,x           ; A = 0 - speed - (1-C) = -speed - (sub != 0)
+/// ```
+/// **CMP 不写 A** ⇒ 幅值低字节 = `0u8 - speed - (sub != 0)`，小数字节只通过借位影响结果。
+/// 【2026-11-23 更正】旧实现按 16 位真幅值 `0 - (speed<<8 | sub)` 取低字节，等价于
+/// `0u8 - sub`（CMP 被当成写入 A=0 的减法），`speed=$FF/sub=$D0` 时得 `$30` 而 ROM 得 `$00`
+/// ⇒ 原版不钳位、Rust 钳位并清小数速度（Tourian10 首分歧，见
+/// docs/findings/sprite-residual-tourian10-ridley37.md §4）。
 /// 正速度径：直接比较速度字节。`>= max` 时把速度设为带符号的 max、小数位清 0。
 /// 低字节比较是原版 quirk（整数速度恰好 ≥ max 时可能逃过钳位），按 asm 保留。
 fn clamp_axis(speed: i8, sub: u8, max: u8) -> (i8, u8) {
     let magnitude_low = if speed < 0 {
-        // 0 - (speed:sub) 的低字节
-        (0u16).wrapping_sub(((speed as i16 as u16) << 8) | sub as u16) as u8
+        // lda #$00 / cmp sub（只置 C）/ sbc speed ⇒ 0 - speed - (sub != 0) 的低字节
+        0u8.wrapping_sub(speed as u8)
+            .wrapping_sub((sub != 0) as u8)
     } else {
         speed as u8
     };
@@ -331,19 +342,46 @@ mod tests_metroid {
         assert_eq!(m.enemy(0).speed_subpixel_y(), 0, "钳位同时清小数位");
     }
 
-    /// asm:52-57 —— **原版 quirk**：负速度径的 `|speed|` **只比较低字节**。
-    /// `speedY = -3`、小数 0 ⇒ `0 - $FD00 = $0300`，低字节 0 < max(2) ⇒ **不钳位**。
+    /// asm:52-57 —— 负速度径的幅值低字节 = `0u8 - speed - (sub != 0)`（CMP 只置 C、不写 A）。
+    ///
+    /// 【2026-11-23 更正】旧测宣称「`speedY=-3`、小数 0 ⇒ 低字节 0 ⇒ 不钳位」，
+    /// 那是把 CMP 当成 `A ← 0 - sub` 的错算；ROM 实际得 `0 - $FD - 0 = $03 ≥ 2` ⇒ **钳到 -2**。
     #[test]
-    fn negative_speed_low_byte_quirk_is_preserved() {
+    fn negative_speed_low_byte_follows_rom_borrow_chain() {
         let mut m = mgr();
         m.enemy(0).set_speed_y(-3);
         m.enemy(0).set_speed_subpixel_y(0);
         metroid_ai(&mut m, 0);
         assert_eq!(
             m.enemy(0).speed_y(),
-            -3,
-            "低字节为 0 时逃过钳位（原版 quirk，不许改成 i16 比较）"
+            -2,
+            "$FD(sub=0) ⇒ 幅值低字节 $03 ≥ max 2 ⇒ 钳位（不许改成 i16 真幅值）"
         );
+    }
+
+    /// 同上，卡面矢量：`speedY=-1`、小数 `$D0` ⇒ `0 - $FF - 1 = 0` ⇒ **不钳位**、小数保留。
+    /// （Tourian10 首分歧的字段形态：旧实现在这里得 `$30`，多钳一次并清掉小数速度。）
+    #[test]
+    fn negative_speed_with_subpixel_can_escape_clamp() {
+        let mut m = mgr();
+        m.enemy(0).set_speed_x(-1);
+        m.enemy(0).set_speed_subpixel_x(0xD0);
+        metroid_ai(&mut m, 0);
+        assert_eq!(m.enemy(0).speed_x(), -1, "幅值低字节 $00 < max ⇒ 不钳位");
+        assert_eq!(
+            m.enemy(0).speed_subpixel_x(),
+            0xD0,
+            "未钳位 ⇒ 小数字节原样保留（ROM 不在未钳位径清小数）"
+        );
+    }
+
+    /// 纯函数级矢量：`clamp_axis(-1, $D0, 2) == (-1, $D0)`；`clamp_axis(-3, 0, 2) == (-2, 0)`。
+    #[test]
+    fn clamp_axis_byte_form_vectors() {
+        assert_eq!(clamp_axis(-1, 0xD0, 2), (-1, 0xD0));
+        assert_eq!(clamp_axis(-3, 0, 2), (-2, 0));
+        assert_eq!(clamp_axis(-1, 0, 2), (-1, 0), "$FF/0 ⇒ 幅值 $01 < 2 ⇒ 不钳位");
+        assert_eq!(clamp_axis(5, 0x80, 2), (2, 0), "正速径不受影响");
     }
 
     /// asm:96-107 —— 横加速用 `data05` bit0、竖加速用 bit2；red 的 ±$30。

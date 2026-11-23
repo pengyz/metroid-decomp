@@ -16,7 +16,7 @@
 //! bank5(Ridley) `$9B85` 基 → floor `$9BC7`−基=**$42**、ceiling `$9BCD`−基=**$48**。
 
 use crate::enemy::anim_idx::AnimIdx;
-use crate::enemy::{framework, prep, tables};
+use crate::enemy::{framework, prep, state, tables};
 
 const ENS: u16 = 0x6AF4;
 const F_STATUS: u16 = 0;
@@ -24,6 +24,10 @@ const F_ANIM_DELAY: u16 = 4;
 const F_RESET_ANIM: u16 = 5;
 const F_ANIM_INDEX: u16 = 6;
 const F_JUMP_DSPL: u16 = 13;
+/// `EnsExtra.0.data1F`（槽 0 落在 `$6B03`；`prep::ENS_F_DATA1F`）。
+/// 生产面用 typed 访问器 `Enemy::data1f()`；本常量只服务于测试的播种。
+#[cfg(test)]
+const F_DATA1F: u16 = prep::ENS_F_DATA1F;
 /// `EnemyFlipAfterDisplacementAnimIndex dw ;$85`（`constants_ram.asm:639`）——
 /// 右朝向在 `$85`、左朝向在 `$86`（sidehopper 两条写同值）。
 pub(crate) const FLIP_ANIM_IDX: u16 = 0x0085;
@@ -44,14 +48,35 @@ fn hopping_anim(area: u8, ceiling: bool) -> u8 {
 }
 
 /// `EnemyFlipAfterDisplacement ; 07:FB88`（逐行）：
-/// 取 `|jumpDsplcmnt|`（负则二补）——
+/// 取 `|jumpDsplcmnt|`（判定为负则二补）——
 /// `< $08` ⇒ 回到休止动画（`InitEnAnimIndex` 径）；
 /// `$08..=$0F` ⇒ 切到 hopping 动画（`animIndex←idx-1`、`resetAnimIndex←idx`、清 delay）；
 /// `≥ $10` ⇒ 什么都不做（保留当前动画）。
+///
+/// **符号由谁决定**（`07:FB8F-07:FB99`，{2026-11-23 补}）：
+/// ```text
+/// lda EnsExtra.0.jumpDsplcmnt,x
+/// inc EnsExtra.0.data1F,x      ; 只为对 data1F 置 Z/N（inc+dec 后值不变）
+/// dec EnsExtra.0.data1F,x
+/// bne @endIf_A                 ; data1F != 0 ⇒ 跳过下面两行，N 保持 = data1F bit7
+///     pha                      ; data1F == 0 ⇒ A 换回 jumpDsplcmnt
+///     pla
+/// @endIf_A:
+/// bpl @endIf_B                 ; 判定非负 ⇒ 不取补
+/// jsr TwosComplement
+/// ```
+/// 即：`data1F != 0` 时看 **data1F bit7**（`$40`→正、`$80/$C0`→负），
+/// 只有 `data1F == 0` 时才回落到 **jump 自身 bit7**。
+/// 【2026-11-23 更正】旧实现只看 jump 自身符号 ⇒ `data1F=$C0, jump=$08` 被当成 `+8`
+/// 而切动画（Ridley37 首分歧，见 docs/findings/sprite-residual-tourian10-ridley37.md §5）。
 pub(crate) fn enemy_flip_after_displacement(mem: &mut crate::frame::Manager, x: u8) {
     let sq = ENS + x as u16;
     let mut d = mem.read_wram(sq + F_JUMP_DSPL);
-    if (d as i8) < 0 {
+    // typed 视图：符号判据（data1F bit7 优先、为零时回落 jump）收在 `Enemy` 句柄内
+    let negative = mem
+        .enemy(state::slot_of(x))
+        .flip_displacement_is_negative(d);
+    if negative {
         d = (!d).wrapping_add(1); // TwosComplement（$C3D4）
     }
     if d < 0x08 {
@@ -226,6 +251,70 @@ mod tests_sidehopper {
         m.write_wram(ens_addr(0x20, F_JUMP_DSPL), 0xF6); // -10
         enemy_flip_after_displacement(&mut m, 0x20);
         assert_eq!(m.read_wram(ens_addr(0x20, F_RESET_ANIM)), 0x09);
+    }
+
+    /// `data1F=$C0` 决定符号（N=1）⇒ `jump=$08` 被取补成 `$F8`（248）≥ `$10` ⇒ **不切动画**。
+    /// 旧实现只看 jump 自身符号（`$08` 为正）⇒ 误切到 hopping（Ridley37 首分歧形态）。
+    #[test]
+    fn data1f_c0_forces_negative_so_small_jump_does_not_switch() {
+        let mut m = Manager::default();
+        stage(&mut m, 0x20, 0, 2);
+        m.write_ram(crate::ram_map::IN_AREA, 4); // Ridley：ceiling dessgeega 的 $48
+        m.write_wram(ens_addr(0x20, F_RESET_ANIM), 0x48);
+        m.write_wram(ens_addr(0x20, F_ANIM_INDEX), 0x47);
+        m.write_wram(ens_addr(0x20, F_ANIM_DELAY), 0x05);
+        m.write_wram(ens_addr(0x20, F_JUMP_DSPL), 0x08);
+        m.write_wram(ens_addr(0x20, F_DATA1F), 0xC0);
+        enemy_flip_after_displacement(&mut m, 0x20);
+        assert_eq!(m.read_wram(ens_addr(0x20, F_RESET_ANIM)), 0x48, "动画不变");
+        assert_eq!(m.read_wram(ens_addr(0x20, F_ANIM_INDEX)), 0x47, "动画帧不变");
+        assert_eq!(m.read_wram(ens_addr(0x20, F_ANIM_DELAY)), 0x05, "delay 不清");
+    }
+
+    /// 同一组 `jump=$0B`（正），但 `data1F=$C0` ⇒ N=1 ⇒ 取补成 `$F5`（245）⇒ **不切**。
+    /// 这是「符号来源」的判别矢量：旧实现会切，ROM 不切。
+    #[test]
+    fn data1f_sign_beats_jump_sign() {
+        let mut m = Manager::default();
+        stage(&mut m, 0x20, 0, 2);
+        m.write_ram(crate::ram_map::IN_AREA, 0);
+        m.write_ram(FLIP_ANIM_IDX, 0x09);
+        m.write_ram(FLIP_ANIM_IDX + 1, 0x09);
+        m.write_wram(ens_addr(0x20, F_RESET_ANIM), 0x01);
+        m.write_wram(ens_addr(0x20, F_JUMP_DSPL), 0x0B);
+        m.write_wram(ens_addr(0x20, F_DATA1F), 0xC0);
+        enemy_flip_after_displacement(&mut m, 0x20);
+        assert_eq!(m.read_wram(ens_addr(0x20, F_RESET_ANIM)), 0x01, "不得切动画");
+    }
+
+    /// `data1F=$00` ⇒ 回落到 jump 自身符号：`jump=$F8`（-8）⇒ 取补成 8 ⇒ 切 hopping。
+    #[test]
+    fn data1f_zero_falls_back_to_jump_sign() {
+        let mut m = Manager::default();
+        stage(&mut m, 0x20, 0, 2);
+        m.write_ram(crate::ram_map::IN_AREA, 0);
+        m.write_ram(FLIP_ANIM_IDX, 0x09);
+        m.write_ram(FLIP_ANIM_IDX + 1, 0x09);
+        m.write_wram(ens_addr(0x20, F_RESET_ANIM), 0x01);
+        m.write_wram(ens_addr(0x20, F_JUMP_DSPL), 0xF8);
+        m.write_wram(ens_addr(0x20, F_DATA1F), 0x00);
+        enemy_flip_after_displacement(&mut m, 0x20);
+        assert_eq!(m.read_wram(ens_addr(0x20, F_RESET_ANIM)), 0x09, "abs($F8)=8 ⇒ 切");
+    }
+
+    /// 卡面矢量：`data1F=$00` + `jump=$0B` ⇒ 直接落在 8..15 ⇒ 切 hopping。
+    #[test]
+    fn data1f_zero_positive_8_to_15_switches() {
+        let mut m = Manager::default();
+        stage(&mut m, 0x20, 0, 2);
+        m.write_ram(crate::ram_map::IN_AREA, 0);
+        m.write_ram(FLIP_ANIM_IDX, 0x09);
+        m.write_ram(FLIP_ANIM_IDX + 1, 0x09);
+        m.write_wram(ens_addr(0x20, F_RESET_ANIM), 0x01);
+        m.write_wram(ens_addr(0x20, F_JUMP_DSPL), 0x0B);
+        enemy_flip_after_displacement(&mut m, 0x20);
+        assert_eq!(m.read_wram(ens_addr(0x20, F_RESET_ANIM)), 0x09);
+        assert_eq!(m.read_wram(ens_addr(0x20, F_ANIM_INDEX)), 0x08);
     }
 
     /// `RipperAIRoutine`（bank1）复用 Sidehopper 尾件 ⇒ 与 floor 同形。

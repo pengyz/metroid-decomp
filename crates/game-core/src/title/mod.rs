@@ -1693,10 +1693,11 @@ pub fn enter_password_body(ram: &[u8], wram: &[u8], frame_count: u8, joy: u8, jo
     }
     // ⑧ dpad（Joy1Retrig 低半字节门）：beep+行/列回绕+CharSelect 精灵（位3 门）
     let dpad = joy_retrig & 0x0F;
+    // InputRow/InputColumn 先取 RAM：无按键时 CharSelect 表仍按**当前**行列索引（asm L9297）
+    let mut row = ram[0x0321 & 0x7FF];
+    let mut col = ram[0x0322 & 0x7FF];
     if dpad != 0 {
         e.push((0x0683, ram[0x0683 & 0x7FF] | 0x08)); // beep（门内——注释 ✓）
-        let mut row = ram[0x0321 & 0x7FF];
-        let mut col = ram[0x0322 & 0x7FF];
         if dpad & 0x01 != 0 { // right
             col = col.wrapping_add(1);
             if col == 0x0D { col = 0; row = row.wrapping_add(1); if row == 5 { row = 0; } }
@@ -1715,12 +1716,14 @@ pub fn enter_password_body(ram: &[u8], wram: &[u8], frame_count: u8, joy: u8, jo
             row = if row == 0 { 4 } else { row.wrapping_sub(1) };
             e.push((0x0321, row));
         }
-        if frame_count & 0x08 != 0 {
-            e.push((0x0208, title_charsel_y().get(row as usize % 5).copied().unwrap_or(0x77)));
-            e.push((0x0209, 0x6E));
-            e.push((0x020A, 0x20));
-            e.push((0x020B, title_charsel_x().get(col as usize % 13).copied().unwrap_or(0x20)));
-        }
+    }
+    // CharSelect 精灵（SpriteRAM.2）**不在 dpad 门内**：asm L9297 位于
+    // `and #$0F / beq L9297` 目标之后，仅受 `FrameCount & $08` 门 ⇒ 每次调用都写。
+    if frame_count & 0x08 != 0 {
+        e.push((0x0208, title_charsel_y().get(row as usize % 5).copied().unwrap_or(0x77)));
+        e.push((0x0209, 0x6E));
+        e.push((0x020A, 0x20));
+        e.push((0x020B, title_charsel_x().get(col as usize % 13).copied().unwrap_or(0x20)));
     }
     (e, None)
 }

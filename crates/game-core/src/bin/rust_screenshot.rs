@@ -566,6 +566,17 @@ fn main() {
             // 故缺缝时复用最近一次缝快照（复核 review-fullchain-r1 P3-2 更正：快照
             // 每 tick 被活体重写 ⇒ 载房窗内取到的是「上一 tick 活体」≈1 帧显示滞后；
             // 84px 残差正是精灵仍早一帧的体现，彻底归零需 OAM-DMA 时刻模型）。
+            // 【2026-11-23 更正·实测（analysis/scratch-shots/probe673/，游丝）】上面
+            // 「emu 在 lag 帧里 NMI 也停（无 OAM DMA、无写 PPU）」**不成立**：$4014 写钩
+            // 实录 1801/1801 帧每帧恰好 1 次 DMA，载房窗内 NMI 与 OAM DMA 照常发生。
+            // emu f673/f674/f676 三帧 PNG 逐字节相同的真因是**精灵页被切开写**：ROM 在
+            // frame672 只写 slot0,1、frame673/674 零写、frame675 补写 slot2..63 ⇒ 显示页
+            // 673–676 是「新 slot0,1 + 旧 slot2..」的混合页（NMI 入口页快照
+            // probe_nmi_page.py 实证）。故 f674/f676 的 84/303px 不是相位差而是 rust 侧
+            // 精灵页内容不符（work672 一次写完整页）；定谳实验：把 emu 混合页 fixture 注入
+            // capture676 渲染 ⇒ 对 emu673/676 均 0px（mk_hybrid.py）。另：基线 c673 的
+            // emu 参考图实拍的是显示帧 674（SHOT-SEAM f=673 at=674 late-seam-fallback）；
+            // 正确缝位 NMI(673) posted 缓冲与 rust c673 输出 0px 差（probe_seam_shot.py）。
             // 显示集选择：正常帧=本帧缝快照（tick(frame-1)）；**载房窗内**（`room_load_phase==1`）
             // 无本帧缝 ⇒ 复用最近缝（emu lag 帧不做 NMI/DMA/PPU 写，显示面保持——实测
             // emu f673/f674/f676 三帧 PNG 逐字节相同）；其余 span（电梯换区等**会渲染**的

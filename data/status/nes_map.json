@@ -12,7 +12,7 @@
   ],
   "face_total": 2272,
   "owner_bytes": [
-    290,
+    713,
     84
   ],
   "owner_spans": [
@@ -141,8 +141,148 @@
       "len": 1
     },
     {
+      "start": 1280,
+      "len": 16
+    },
+    {
+      "start": 1296,
+      "len": 16
+    },
+    {
+      "start": 1312,
+      "len": 16
+    },
+    {
+      "start": 1328,
+      "len": 16
+    },
+    {
+      "start": 1344,
+      "len": 16
+    },
+    {
+      "start": 1360,
+      "len": 16
+    },
+    {
+      "start": 1376,
+      "len": 16
+    },
+    {
+      "start": 1392,
+      "len": 16
+    },
+    {
+      "start": 1408,
+      "len": 16
+    },
+    {
+      "start": 1424,
+      "len": 16
+    },
+    {
+      "start": 1440,
+      "len": 16
+    },
+    {
+      "start": 1456,
+      "len": 16
+    },
+    {
+      "start": 1472,
+      "len": 16
+    },
+    {
       "start": 1667,
       "len": 2
+    },
+    {
+      "start": 1792,
+      "len": 6
+    },
+    {
+      "start": 1798,
+      "len": 6
+    },
+    {
+      "start": 1804,
+      "len": 6
+    },
+    {
+      "start": 1810,
+      "len": 6
+    },
+    {
+      "start": 1816,
+      "len": 6
+    },
+    {
+      "start": 1822,
+      "len": 6
+    },
+    {
+      "start": 1828,
+      "len": 4
+    },
+    {
+      "start": 1832,
+      "len": 8
+    },
+    {
+      "start": 1840,
+      "len": 8
+    },
+    {
+      "start": 1848,
+      "len": 8
+    },
+    {
+      "start": 1856,
+      "len": 8
+    },
+    {
+      "start": 1864,
+      "len": 8
+    },
+    {
+      "start": 1872,
+      "len": 8
+    },
+    {
+      "start": 1880,
+      "len": 8
+    },
+    {
+      "start": 1888,
+      "len": 8
+    },
+    {
+      "start": 1896,
+      "len": 8
+    },
+    {
+      "start": 1904,
+      "len": 8
+    },
+    {
+      "start": 1912,
+      "len": 8
+    },
+    {
+      "start": 1920,
+      "len": 1
+    },
+    {
+      "start": 1921,
+      "len": 6
+    },
+    {
+      "start": 1952,
+      "len": 1
+    },
+    {
+      "start": 1953,
+      "len": 79
     },
     {
       "start": 27380,
@@ -298,7 +438,7 @@
       "len": 192,
       "kind": "unmodeled",
       "refs": [
-        "crates/game-core/src/enemy/tables.rs:34"
+        "crates/game-core/src/enemy/state.rs:282"
       ]
     },
     {
@@ -314,7 +454,7 @@
       "len": 9,
       "kind": "unmodeled",
       "refs": [
-        "crates/game-core/src/enemy/state.rs:282"
+        "crates/game-core/src/enemy/state.rs:294"
       ]
     },
     {
@@ -322,7 +462,7 @@
       "len": 9,
       "kind": "unmodeled",
       "refs": [
-        "crates/game-core/src/enemy/state.rs:282"
+        "crates/game-core/src/enemy/state.rs:294"
       ]
     },
     {
@@ -330,7 +470,7 @@
       "len": 9,
       "kind": "unmodeled",
       "refs": [
-        "crates/game-core/src/enemy/state.rs:282"
+        "crates/game-core/src/enemy/state.rs:294"
       ]
     },
     {
@@ -338,7 +478,7 @@
       "len": 9,
       "kind": "unmodeled",
       "refs": [
-        "crates/game-core/src/enemy/state.rs:282"
+        "crates/game-core/src/enemy/state.rs:294"
       ]
     },
     {
@@ -346,7 +486,7 @@
       "len": 9,
       "kind": "unmodeled",
       "refs": [
-        "crates/game-core/src/enemy/state.rs:282"
+        "crates/game-core/src/enemy/state.rs:294"
       ]
     },
     {
@@ -354,7 +494,7 @@
       "len": 9,
       "kind": "unmodeled",
       "refs": [
-        "crates/game-core/src/enemy/state.rs:282"
+        "crates/game-core/src/enemy/state.rs:294"
       ]
     },
     {
@@ -362,7 +502,7 @@
       "len": 9,
       "kind": "unmodeled",
       "refs": [
-        "crates/game-core/src/enemy/state.rs:282"
+        "crates/game-core/src/enemy/state.rs:294"
       ]
     },
     {
@@ -370,7 +510,7 @@
       "len": 9,
       "kind": "unmodeled",
       "refs": [
-        "crates/game-core/src/enemy/state.rs:282"
+        "crates/game-core/src/enemy/state.rs:294"
       ]
     },
     {
@@ -378,7 +518,7 @@
       "len": 9,
       "kind": "unmodeled",
       "refs": [
-        "crates/game-core/src/enemy/state.rs:282"
+        "crates/game-core/src/enemy/state.rs:294"
       ]
     },
     {
@@ -386,7 +526,7 @@
       "len": 9,
       "kind": "unmodeled",
       "refs": [
-        "crates/game-core/src/enemy/state.rs:282"
+        "crates/game-core/src/enemy/state.rs:294"
       ]
     },
     {
@@ -394,7 +534,7 @@
       "len": 9,
       "kind": "unmodeled",
       "refs": [
-        "crates/game-core/src/enemy/state.rs:282"
+        "crates/game-core/src/enemy/state.rs:294"
       ]
     },
     {
@@ -402,7 +542,7 @@
       "len": 9,
       "kind": "unmodeled",
       "refs": [
-        "crates/game-core/src/enemy/state.rs:282"
+        "crates/game-core/src/enemy/state.rs:294"
       ]
     },
     {
@@ -414,7 +554,7 @@
       ]
     }
   ],
-  "undeclared_total": 1287,
+  "undeclared_total": 864,
   "undeclared": [
     {
       "start": 0,
@@ -546,17 +686,6 @@
       ]
     },
     {
-      "start": 1280,
-      "len": 208,
-      "kind": "undeclared",
-      "refs": [
-        "asm:refs/m1disasm/SRC/constants_ram.asm:986",
-        "asm:refs/m1disasm/out/M1_NES_NTSC.sym:11708",
-        "world/statue.rs:114",
-        "world/room_draw.rs:381"
-      ]
-    },
-    {
       "start": 1488,
       "len": 48,
       "kind": "undeclared",
@@ -577,7 +706,33 @@
     },
     {
       "start": 1669,
-      "len": 379,
+      "len": 123,
+      "kind": "undeclared",
+      "refs": [
+        "ram_map.rs:118",
+        "frame/tick.rs:638",
+        "frame/nmi.rs:191",
+        "sound/hook.rs:59",
+        "pickup/spawn.rs:24",
+        "title/intro.rs:80"
+      ]
+    },
+    {
+      "start": 1927,
+      "len": 25,
+      "kind": "undeclared",
+      "refs": [
+        "ram_map.rs:118",
+        "frame/tick.rs:638",
+        "frame/nmi.rs:191",
+        "sound/hook.rs:59",
+        "pickup/spawn.rs:24",
+        "title/intro.rs:80"
+      ]
+    },
+    {
+      "start": 2032,
+      "len": 16,
       "kind": "undeclared",
       "refs": [
         "ram_map.rs:118",
@@ -688,6 +843,28 @@
       "undeclared_total": 1287,
       "state_sha256": "b2e9b9804079fb58db8773999425f60c9ec2f440ab4dc13a96ec9f93146eeab7",
       "prev_sha256": "4b81dd0e5478e510e806ce00841f320454632636589772e28167b8313fce667d"
+    },
+    {
+      "ts": "2026-11-23T22:58:17+08:00",
+      "reason": "下调 Undeclared 1287 → 1079 B / Unmodeled 611 → 611 B",
+      "owner_total": 582,
+      "view_bytes": 23,
+      "view_only_bytes": 0,
+      "unmodeled_total": 611,
+      "undeclared_total": 1079,
+      "state_sha256": "4585420912ff96adba119b036e5655328109fe2ed8d21a259de195a18f542d17",
+      "prev_sha256": "e4fcd07a571c32c23b3ca3995094a362fb1117ca5dabfc4f65523607cb5edfc4"
+    },
+    {
+      "ts": "2026-11-23T23:49:44+08:00",
+      "reason": "下调 Undeclared 1079 → 864 B / Unmodeled 611 → 611 B",
+      "owner_total": 797,
+      "view_bytes": 23,
+      "view_only_bytes": 0,
+      "unmodeled_total": 611,
+      "undeclared_total": 864,
+      "state_sha256": "85498aeef8421ba7c2f9e5cfbbc1e718858b74cdfef41fefcd2ab00e4b9fba62",
+      "prev_sha256": "2be9998529cd0218517f472411044220cd1f7eb72a2237a33e3df377f27734f8"
     }
   ]
 }

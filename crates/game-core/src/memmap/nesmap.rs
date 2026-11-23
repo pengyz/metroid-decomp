@@ -254,7 +254,7 @@ pub fn spec_face() -> [NesSpan; 2] {
 ///
 /// `dump_json`（静态腿/门禁）与动态腿（`verify_shim`）共用本表：新增实体只改这里，
 /// 避免两份类型清单漂移导致动态证据覆盖不到新声明。
-pub fn entity_spans() -> [(&'static str, &'static [(NesSpan, SpanKey)]); 11] {
+pub fn entity_spans() -> [(&'static str, &'static [(NesSpan, SpanKey)]); 14] {
     [
         ("SamusState", crate::samus::state::SamusState::SPANS),
         ("HealthChange", crate::samus::health_change::HealthChange::SPANS),
@@ -267,6 +267,22 @@ pub fn entity_spans() -> [(&'static str, &'static [(NesSpan, SpanKey)]); 11] {
         ("Room", <crate::world::room_ram::Room<'static> as NesMapped>::SPANS),
         ("Camera", <crate::world::camera::Camera<'static> as NesMapped>::SPANS),
         ("Explosion", <crate::enemy::explosion::Explosion<'static> as NesMapped>::SPANS),
+        // B1-a 首批：TileBlasts 状态面（`$0500-$05CF`，13 槽 × 16 B）的 typed 声明层。
+        // 行为仍在 `world::tile_blast`（裸地址读写），本实体只提供字段布局与声明。
+        ("TileBlasts", crate::memmap::tile_blast_face::TileBlastFace::SPANS),
+        // B1-b 首批：房间精灵表面（`$0700-$077F`，Mem0700 6×6 / PipeBugHoles 4×8 /
+        // PowerUps 2×8 / Zebetites 5×8）的 typed 声明层。行为仍在 `world::room_draw`
+        // 与 `enemy::zebetite`（裸地址读写），本实体只提供字段布局与声明。
+        (
+            "RoomSpriteTables",
+            crate::memmap::room_sprite_table_face::RoomSpriteTablesFace::SPANS,
+        ),
+        // B1-b 第二批：PPU 写缓冲面（`$0780-$0786` VRAM 字符串 + `$07A0-$07EF` VRAMStruct
+        // 队列）。行为仍在 `title`（`WritePPUByte`/`EndVRAMStruct`），本实体只提供布局与声明。
+        (
+            "VramBuffers",
+            crate::memmap::vram_buffer_face::VramBufferFace::SPANS,
+        ),
     ]
 }
 
@@ -406,7 +422,11 @@ mod tests {
             "dump 必须带 schema 头：{}",
             &json[..json.len().min(80)]
         );
-        assert!(json.contains("\"coverage\":[290,84]"), "owner 字节数锚点");
+        // owner 字节数锚点：B1-a（2026-11-23）新增 `TileBlasts` 面 208 B（RAM 面 290 → 498）；
+        // B1-b（2026-11-23）再新增 `RoomSpriteTables` 128 B + `VramBuffers` 87 B
+        // （RAM 面 498 → 713；额外面 84 不变）。断言形态不弱化——仍是「dump 必须带这两个
+        // 数」，只是随访声明增长；713 = 498 + 128 + 87 可逐项复算。
+        assert!(json.contains("\"coverage\":[713,84]"), "owner 字节数锚点");
     }
 
     /// 每条 Unmodeled 说明都必须带可 grep 的代码指针（`*.rs`），否则

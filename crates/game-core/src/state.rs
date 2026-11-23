@@ -164,6 +164,13 @@ pub struct Manager {
     /// §12：掉帧窗=工作超帧跨 NMI 数（载房域 E54A-F034 零显式 Wait 实证）；各工作
     /// 单元按 asm 6502 逐条计数累加（常量见 frame/room.rs LOAD_*）。
     pub work_cycles: u32,
+    /// 本拍是否做了「流送列/行写」（`world/camera/scroll.rs` 的 `stream_*_kick` 置位）。
+    /// 每帧工作量计费 V1（`docs/spec/scroll-work-accounting.md` F2）叠加 `COLUMN_STREAM_CYCLES`。
+    /// `game_engine` 每拍起清、尾读。
+    pub frame_streamed: bool,
+    /// 当前是否处在 `update_world` 的对象环内：进入置位、正常返回复位。
+    /// 结构性旗（载房窗判定的正确性依赖它不复用旧值，见 `world/update.rs` 尾注）。
+    pub in_update_world: bool,
     /// 【多帧载房任务机（2026-11-19 A-lite，findings/room-load-pixel-deferral.md §任务机）】
     /// 相位：`0`=空闲 / `1`=冻结窗（`dropped` 帧，`RoomNumber` 保持**要载的房号**）/
     /// `2`=属性表尾段（帧边界 `F1 → F3 → FF`，见 `world::room_load::room_load_gate_step`）。
@@ -185,7 +192,7 @@ impl Default for Manager {
         Self { storage: crate::memmap::storage::NesStorage::default(), samus: Default::default(), health_change: Default::default(), sound_init: Default::default(), object_globals: Default::default(), scroll_blocks: Default::default(), oam: Default::default(), enemies: Default::default(), regs: Registers::default(), nmi_enabled: false,
                title_cursor: 0, title_cursor_phase: 0, title_spin: 0, check_password_pending: false, deferred_screen_on: false, title_no_return: false,
                iter_gates: Vec::new(), iter_span_left: 0, iter_span_fc: false, fc_inced_this_tick: false,
-               apu_log: Vec::new(), work_cycles: 0, room_load_phase: 0, room_load_room: 0xFF, room_load_tail: 0,
+               apu_log: Vec::new(), work_cycles: 0, frame_streamed: false, in_update_world: false, room_load_phase: 0, room_load_room: 0xFF, room_load_tail: 0,
                joy1: 0, joy2: 0,
                render: RenderState::default() }
     }

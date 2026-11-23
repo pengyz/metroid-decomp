@@ -114,6 +114,7 @@ pub(crate) fn check_update_name_table(mem: &mut Manager) {
 /// GetNameAddrs（GetNT=(PPUCTRL^ScrollDir)&1→PPU $20/$2C+RoomRAM $60/$64）；
 /// 30 行竖写（dst+idx+row*32（PPU inc=32 形））。
 pub fn stream_column_kick(mem: &mut Manager) {
+    mem.frame_streamed = true; // 每帧工作量计费 V1：本拍含流送列写
     // 【证伪更正（2026-10-28）】goal-r22「列写=PPU 重活⇒NMI bogged 2 帧」=**误归因**
     // ——emu 实测 f916-917/f1064-1065 各停 2 帧=**载房窗 bog**（GetRoomNum 越界载房
     // （more_init 序列 [1,0,0,1] 已模））非逐列写 bog。逐列写 bog⇒移动相移：
@@ -140,6 +141,7 @@ pub fn stream_column_kick(mem: &mut Manager) {
 /// 给 NT 高低字节；control byte = `@controlBitsTable[ScrollDir>>1]` = **$20**
 /// （PPU inc=1、长度 32）⇒ 竖滚一次写**一整行 32 字节线性**（与横滚的 30 行竖写对偶）。
 pub fn stream_row_kick(mem: &mut Manager) {
+    mem.frame_streamed = true; // 每帧工作量计费 V1：本拍含流送行写
     mem.render.reset_addr_latch();
     let dir = mem.read_ram(crate::ram_map::SCROLL_DIR);
     let off = ((mem.read_ram(crate::ram_map::SCROLL_Y) & 0xF8) as u16) << 2;

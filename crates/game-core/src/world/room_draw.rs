@@ -74,6 +74,24 @@ pub(crate) use crate::frame::cycles::{
 pub(crate) const LOAD_BASE_CYCLES: u32 = 28454;
 pub(crate) const FRAME_CYCLES: u32 = 29780;
 
+/// 每帧工作量计费 V1（`docs/spec/scroll-work-accounting.md` §4 F2 拟合值）：
+/// 一帧的保底开销（主循环 + 19 件环的非敌人部分，不含流送列）。
+pub(crate) const BASE_FRAME_CYCLES: u32 = 18000;
+/// 流送一列/一行的 PPU 写开销（30 行竖写=30×(2 地址字节+1 数据字节)×PPU 慢/快周期折算）。
+pub(crate) const COLUMN_STREAM_CYCLES: u32 = 8200;
+
+/// 单只敌人每帧的开销权重（V1 只标定 Kraid 三型；其余给保底 **未标定** 值）。
+/// 标定来源：`docs/spec/scroll-work-accounting.md` §4 表 `w[8]=300 / w[9]=800 / w[10]=600`。
+pub(crate) fn enemy_frame_cost(t: u8) -> u32 {
+    match t {
+        8 => 300,
+        9 => 800,
+        10 => 600,
+        // 未标定类型：按 spec §4 的保底权重（=最便宜的已标定型），契约里标注「未标定」。
+        _ => 300,
+    }
+}
+
 pub fn draw_room(mem: &mut crate::frame::Manager, room: u8) -> bool {
     // 房流按区分发（asm `SetupRoom` 经 $3B/$3C 间接查当前区 RoomPtrTable——
     // 表值=ROM 当前区 bank；0=Brinstar/1=Norfair，其余区 unported fail-loud D7）。

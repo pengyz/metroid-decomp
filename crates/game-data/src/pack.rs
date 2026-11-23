@@ -955,9 +955,24 @@ pub fn init_from_env() -> Result<(), PackError> {
     Err(PackError::NotFound { path: cands.join(" | ") })
 }
 
-/// 是否已就绪。
+/// 是否已就绪（**只查状态，不触发加载**）。
+///
+/// 注意：本函数回答的是「此刻是否已就绪」，而不是「这个包能不能加载」。把它当作
+/// 测试的前置门会引入**执行序依赖**——先跑的测试若取过段，`is_ready()` 事后为真；
+/// 没跑过则为假，同一个测试因此在并行/单线程下表现不同。测试前置门应改用
+/// [`ensure_ready`]。
 pub fn is_ready() -> bool {
     PACK.get().is_some()
+}
+
+/// 先按 [`init_from_env`] 的同一候选路径表惰性加载一次，再回答是否就绪。
+///
+/// 与各取段访问器（`get` → `ensure_loaded`）走同一条加载路径且幂等，因此它的返回值
+/// **只取决于包文件是否存在**，与「本次运行中是否已有别的代码取过段」无关。测试前置门
+/// 用它而不是 [`is_ready`]，才能让同一测试在串行与并行下得到同一个判定。
+pub(crate) fn ensure_ready() -> bool {
+    ensure_loaded();
+    is_ready()
 }
 
 /// 惰性初始化：首次取段时若未就绪，尝试 [`init_from_env`]。

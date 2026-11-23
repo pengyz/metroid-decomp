@@ -659,6 +659,7 @@ pub fn select_samus_palette(mem: &mut Manager) {
 /// （CB29——19 件环：敌人/弹/萨姆斯/区域/梯/像/爆/虫/门/瓦碰/状态栏/能力件）/
 /// 延时旗（MiniBossKill/PowerUp→SetTimer 240 帧）/死亡链（SilenceMusic→GameOver）。
 pub fn game_engine(mem: &mut Manager) {
+    mem.frame_streamed = false; // 每帧工作量计费 V1：本拍流送旗起清
     scroll_door(mem); // E1F1×2（双速滚门——2 调=2 px/帧）
     scroll_door(mem);
     if mem.read_ram(0x69B2) != 0 {
@@ -708,6 +709,36 @@ pub fn game_engine(mem: &mut Manager) {
             mem.write_ram(0x0020, 4); // NextRoutine←4（_id_PrepareGameOver）
             mem.write_ram(crate::ram_map::MAIN_ROUTINE, 9); // _id_WaitTimer
         }
+    }
+    account_iteration_work(mem); // 每帧工作量计费 V1（超帧预算 ⇒ 下一拍 bogged）
+}
+
+/// 每帧工作量计费 V1（`docs/spec/scroll-work-accounting.md` §4 F2 模型）：
+/// `work = BASE_FRAME + Σw[type] + COLUMN_COST(本拍流送列/行)`；`work > FRAME_CYCLES`
+/// ⇒ 原版「本帧干不完、下一拍 NMI 跳过内块」（`iter_bogged(1)`，D4 保真保留）。
+///
+/// 只在游戏引擎拍计费：载房窗（`room_load_phase != 0`）由 `check_update_name_table`
+/// 的 `is_load` 分支按 `dropped` 自行 bog，不重复计。
+fn account_iteration_work(mem: &mut Manager) {
+    use crate::world::room_draw::{
+        enemy_frame_cost, BASE_FRAME_CYCLES, COLUMN_STREAM_CYCLES, FRAME_CYCLES,
+    };
+    if mem.room_load_phase != 0 {
+        return;
+    }
+    let mut work = BASE_FRAME_CYCLES;
+    if mem.frame_streamed {
+        work = work.saturating_add(COLUMN_STREAM_CYCLES);
+    }
+    for slot in 0..crate::enemy::state::SLOT_COUNT {
+        let e = mem.enemy(slot);
+        if e.status_raw() == 0 {
+            continue;
+        }
+        work = work.saturating_add(enemy_frame_cost(e.enemy_type()));
+    }
+    if work > FRAME_CYCLES {
+        mem.iter_bogged(1);
     }
 }
 

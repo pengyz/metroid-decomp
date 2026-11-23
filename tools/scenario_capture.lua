@@ -1240,6 +1240,19 @@ local function onSpinExitSeam()
   -- 后才到 $C0D3 缝）；先落盘（本缝帧为采集点时）后恒清桶（防跨帧混桶——见上块注）。
   apuFlushBucket()
 end
+-- 【2026-11-23 修·采集相位（task #11）】NMI 入口截取缝（$C0D9）。
+-- 根因（A 级）：`analysis/scratch-shots/probe673/REPORT.md` —— 端帧界兜底
+-- `late-seam-fallback` 在渲染面翻转竞态窗内取像；takeStableShot 的「连续两次一致」
+-- 只能证明**读是稳的**，不能证明**是本帧的像**。实录 `SHOT-SEAM f=673 at=674` 拿到
+-- 显示帧 674 的内容（84px 假差）；缝位正确的 `seam_f00673.png` 与 rust 逐像素 0 差。
+-- 修径：截图在 **NMI($C0D9) 入口**兑现 —— 此刻上一帧已完整渲染、渲染面已翻转且稳定。
+-- 守卫沿用 `pendingShot.frame == frame`（与 spin-exit 缝同口径：请求登记帧=N，下一个
+-- NMI 执行时帧计数仍为 N；帧计数在端帧界回调首行 +1，见本文件帧界块）。
+local function onNmiEntryShot()
+  if pendingShot and pendingShot.frame == frame then
+    fulfillShot("nmi-entry")
+  end
+end
 if samplePoint == "spin-exit" or next(capAt) ~= nil or everyN > 0 then
   -- spin 出口缝：$C0D3 指令入口（callbackType.exec 真执行，r3 语义）
   -- （截取缝兑现（fade-blink 修径 C）同挂此缝——有采集点即注册）
@@ -1252,6 +1265,16 @@ if samplePoint == "spin-exit" or next(capAt) ~= nil or everyN > 0 then
     ok = pcall(emu.addMemoryCallback, onSpinExitSeam, 2, 0xC0D3, 0xC0D3)
   end
   log("spin-exit 缝 @C0D3 注册(sample=" .. samplePoint .. "): " .. tostring(ok))
+  -- 【2026-11-23 修】NMI 入口截取缝（优先兑现点；spin-exit 缝保留=同帧兜底）
+  local okN = false
+  if emu.callbackType and emu.callbackType.exec then
+    okN = pcall(emu.addMemoryCallback, onNmiEntryShot,
+      emu.callbackType.exec, 0xC0D9, 0xC0D9)
+  end
+  if not okN then
+    okN = pcall(emu.addMemoryCallback, onNmiEntryShot, 2, 0xC0D9, 0xC0D9)
+  end
+  log("nmi-entry 缝 @C0D9 注册: " .. tostring(okN))
 end
 
 -- task-28 ①：夹具写入（F_a 帧执行——设计 §3 注入模型；断言面在 diff_traces）
@@ -1305,8 +1328,18 @@ emu.addEventCallback(function()
   -- 请求帧内容（A 级实录：probe f=1190 at=1191 reason=seam-miss-fallback → 4 色
   -- 与 rust 逐像素 0 差；若不即时兜底则要等到下一采集请求，f1190 会搭到 at=1200
   -- 捕到游戏面）。
+  -- 【2026-11-23 更正】上面的「滞后一帧恰为请求帧内容」只在**请求帧与下一帧画面相同**
+  -- 时成立（1190 的密码屏在 1191 未变，故 0 差）。c673 反例：请求帧 673 与 674 画面
+  -- 差 84px，兜底拿到的是 674 的像 ⇒ 造出 84px 假差（probe673/REPORT.md）。故本支
+  -- 不再落盘，见下条。
+  -- 【2026-11-23 修·采集相位（task #11）】迟缝兜底改「只留痕、不落盘」：
+  -- NMI 入口缝（$C0D9）已覆盖每一帧，本支只在 NMI 未触发/被跳过的异常帧可达；
+  -- 此刻渲染面已翻到本帧，落盘必得到**错帧的像**（c673 的 84px 假差即此径产物）。
+  -- 拒绝用「假参考图」掩盖真实分歧：只记 SHOT-SEAM-MISS，下游按缺图处理。
   if pendingShot and pendingShot.frame < frame then
-    fulfillShot("late-seam-fallback")
+    log(string.format("SHOT-SEAM-MISS f=%d at=%d tag=%s reason=late-seam-drop",
+      pendingShot.frame, frame, tostring(pendingShot.tag)))
+    pendingShot = nil
   end
 
   if samplePoint ~= "spin-exit" then

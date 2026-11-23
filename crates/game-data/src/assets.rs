@@ -19,9 +19,18 @@ pub fn init_from_env() -> Result<(), pack::PackError> {
     pack::init_from_env()
 }
 
-/// 资产包是否已就绪（未就绪时任何取段都会 fail-loud）。
+/// 资产包是否已就绪（**只查状态，不触发加载**）。
 pub fn is_ready() -> bool {
     pack::is_ready()
+}
+
+/// 先按同一候选路径表惰性加载一次，再回答是否就绪。
+///
+/// 与取段访问器走同一条加载路径且幂等 ⇒ 返回值只取决于包文件是否存在，与「先跑者
+/// 有没有取过段」无关。测试前置门必须用它（用 [`is_ready`] 会让同一测试在串行/并行下
+/// 走出不同的 SKIP/执行分支，即执行序敏感）。
+pub fn ensure_ready() -> bool {
+    pack::ensure_ready()
 }
 
 // ---- gfx（`GFXInfo` 29 项 + 数据体）-----------------------------------------------
@@ -579,7 +588,7 @@ mod tests {
     /// 包未就绪时也算通过的形状测试集（各段长度自洽）。
     #[test]
     fn segments_have_expected_shapes() {
-        if !is_ready() {
+        if !ensure_ready() {
             eprintln!("SKIP（显式）：资产包未加载——先跑 pack-tool extract");
             return;
         }
@@ -593,7 +602,7 @@ mod tests {
     /// GFX：描述子尺寸和 == 数据体长度，且偏移连续（形状自洽）。
     #[test]
     fn gfx_offsets_are_contiguous_and_complete() {
-        if !is_ready() {
+        if !ensure_ready() {
             eprintln!("SKIP（显式）：资产包未加载——先跑 pack-tool extract");
             return;
         }
@@ -610,7 +619,7 @@ mod tests {
     /// GFX：描述子尺寸和 == 数据体长度（段与描述子自洽；包/代码版本不一致即红）。
     #[test]
     fn gfx_data_len_matches_info_sizes() {
-        if !is_ready() {
+        if !ensure_ready() {
             eprintln!("SKIP（显式）：资产包未加载——先跑 pack-tool extract");
             return;
         }
@@ -625,13 +634,22 @@ mod tests {
     /// （`docs/findings/per-bank-assets.md` §1；旧形是 bank1 单表）。
     #[test]
     fn enemy_segments_shape_matches_table_extent() {
-        if !is_ready() {
+        if !ensure_ready() {
             eprintln!("SKIP（显式）：资产包未加载——先跑 pack-tool extract");
             return;
         }
-        // anim 长 / 帧指针项数 / 位件项数（Br/No/Kr/To/Ri）
-        let anim = [118usize, 138, 38, 113, 107];
-        let fptr = [151usize, 138, 138, 151, 138];
+        // anim 长 / 帧指针项数 / 位件项数，**按区号 0..4 = Br/No/Kr/To/Ri 排**
+        //（`area = InArea & $0F` 是区号，不是 bank 序号）。
+        //
+        // 取证：docs/findings/per-bank-assets.md §1 按 bank 1..5 列为
+        // Br(118/151/16)、No(138/138/14)、**To(38/138/16)**、**Kr(113/151/16)**、Ri(107/138/15)；
+        // 区号序与之不同的只有中间两行——Tourian 是区 3、Kraid 是区 2。
+        // 本仓库 `assets/metroid.pack` 的 anim 段逐字节可在 ROM 中定位到
+        // file bank2 $9D6A(118B) / bank3 $9BDA(138B) / bank5 $9C86(113B) / bank4 $A406(38B) / bank6 $9B85(107B)，
+        // 即 KrEnSprites=bank5(Kraid,113)、ToEnSprites=bank4(Tourian,38)。
+        // 旧表把这两区写反（按 bank 行序当成区号序），单线程真跑时 `area 2 anim 长 113 != 38` 即此。
+        let anim = [118usize, 138, 113, 38, 107];
+        let fptr = [151usize, 138, 151, 138, 138];
         let pptr = [16usize, 14, 16, 16, 15];
         for a in 0..5u8 {
             let s = enemy_sprites(a);
@@ -654,7 +672,7 @@ mod tests {
     /// 曾经误用 `rec[0]` 当尺寸，本断言会红）。
     #[test]
     fn first_entry_size_reads_descriptor_size_column() {
-        if !is_ready() {
+        if !ensure_ready() {
             eprintln!("SKIP（显式）：资产包未加载——先跑 pack-tool extract");
             return;
         }
@@ -669,7 +687,7 @@ mod tests {
     /// 表长定谳的机械判据（旧 128/128/128 读法会产生 34/44 个伪值）。
     #[test]
     fn enemy_pointers_are_legal_rom_pointers() {
-        if !is_ready() {
+        if !ensure_ready() {
             eprintln!("SKIP（显式）：资产包未加载——先跑 pack-tool extract");
             return;
         }
@@ -694,7 +712,7 @@ mod tests {
     /// 敌面项表自洽 + 帧流末字节恒 `$FF`（防「空对空」假绿）——五区逐区。
     #[test]
     fn enemy_offsets_fit_and_streams_end_with_ff() {
-        if !is_ready() {
+        if !ensure_ready() {
             eprintln!("SKIP（显式）：资产包未加载——先跑 pack-tool extract");
             return;
         }

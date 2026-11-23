@@ -102,6 +102,7 @@ fn toggle_scroll_and_finish(mem: &mut Manager, x: u8) {
 /// UpdateTourianItems($FDE3)/尾清 sprite RAM（$F4 填）。
 pub fn update_world(mem: &mut crate::frame::Manager) {
     mem.set_sprite_page_pos(0); // SpritePagePos←0
+    mem.in_update_world = true;
     update_all_enemies(mem); // F345（敌环——槽×6+状态 dispatch）
                              // UpdateSamusProjectiles（D4BF——随件）
     update_samus_projectiles(mem); // D4BF（弹件环——3 槽状态机）
@@ -132,6 +133,10 @@ pub fn update_world(mem: &mut crate::frame::Manager) {
             x = x.wrapping_add(4);
         }
     }
+    // 正常路径必须复位：否则首帧之后该旗恒 true，后续任何帧界门链载房
+    // （tick.rs scroll_door→scroll_left/right→check_update_name_table）都会被误判成
+    // 「对象环中途打断」，f486 的 369px 回归即由此来（对影 seq5 定位）。
+    mem.in_update_world = false;
 }
 
 /// AreaRoutine（区 bank $95C3——区专径）。
@@ -279,5 +284,16 @@ mod tests_scroll_door {
         scroll_door(&mut m);
         assert_eq!(m.read_ram(ram_map::DOOR_ENTRY_STATUS), 0);
         assert_eq!(m.read_ram(ram_map::DOOR_DELAY), 0);
+    }
+
+    /// `in_update_world` 必须在正常返回后复位：它若复用旧值，帧界门链载房
+    /// （`tick.rs` scroll_door → scroll_left/right → check_update_name_table）会被
+    /// 误判成「对象环中途打断」（#24 对影 seq5 定位的 f486 回归来源）。
+    #[test]
+    fn in_update_world_is_cleared_after_normal_return() {
+        let mut m = crate::frame::Manager::default();
+        m.in_update_world = true; // 模拟上一拍遗留的旧值
+        update_world(&mut m);
+        assert!(!m.in_update_world, "正常返回后 in_update_world 必须为 false");
     }
 }

@@ -573,6 +573,20 @@ impl<'a> Enemy<'a> {
         self.setx(ens_extra::JUMP_DSPLCMNT, v);
     }
 
+    /// `EnemyFlipAfterDisplacement` 的符号判定（`07:FB8F-07:FB99`）：
+    /// `data1F != 0` 时 N 旗来自 `data1F` bit7（`inc`/`dec` 只为置 Z/N，值不变），
+    /// 只有 `data1F == 0` 时才回落到 `jumpDsplcmnt` 自身 bit7。
+    ///
+    /// 业务层只调本方法，字节掩码关在 typed 面内（`raw-surface` 只减不增）。
+    pub fn flip_displacement_is_negative(&self, jump_dsplcmnt: u8) -> bool {
+        let d1f = self.getx(ens_extra::DATA1F);
+        if d1f != 0 {
+            d1f & 0x80 != 0
+        } else {
+            jump_dsplcmnt & 0x80 != 0
+        }
+    }
+
     // ---- EnsExtra 面 ----
     /// `EnsExtra.status` 原始字节（判 `>6` 这类数值序时用；语义判据请用 [`Self::status`]）。
     pub fn status_raw(&self) -> u8 {

@@ -22,5 +22,11 @@ pub mod observe;
 pub mod world_map;
 pub mod raw;
 pub mod nesmap;
+/// B1-a：TileBlasts 状态面（`$0500-$05CF`）的 typed 声明层。
+pub mod tile_blast_face;
+/// B1-b：房间精灵表面（`$0700-$077F`：Mem0700 / PipeBugHoles / PowerUps / Zebetites）的 typed 声明层。
+pub mod room_sprite_table_face;
+/// B1-b：PPU 写缓冲面（`$0780-$0786` + `$07A0-$07EF`：VRAM 字符串与 VRAMStruct 队列）的 typed 声明层。
+pub mod vram_buffer_face;
 #[cfg(test)]
 pub(crate) mod verify_shim;

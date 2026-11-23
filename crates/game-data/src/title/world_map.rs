@@ -20,7 +20,7 @@ mod tests {
     /// 数据已迁资产包（`assets::world_map()`）⇒ 无包时**显式 SKIP**（不静默通过）。
     #[test]
     fn world_map_rom_anchor() {
-        if !crate::assets::is_ready() {
+        if !crate::assets::ensure_ready() {
             eprintln!("SKIP（显式）：资产包未加载——先跑 pack-tool extract");
             return;
         }
