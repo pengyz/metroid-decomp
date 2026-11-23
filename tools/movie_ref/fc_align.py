@@ -76,6 +76,8 @@ def parse_rust_state(path: Path) -> dict[int, State]:
             zp = (row.get("w") or {}).get("zp")
             if not zp:
                 continue
+            if len(zp) != 512:
+                raise ValueError(f"zp 长度应为 512（$0000-$00FF 全零页），实得 {len(zp)}，帧 {row.get('f')}")
             fc = int(zp[FC_ADDR * 2 : FC_ADDR * 2 + 2], 16)
             sx = int(zp[SCROLL_X_ADDR * 2 : SCROLL_X_ADDR * 2 + 2], 16)
             out[int(row["f"])] = State(int(row["f"]), fc, sx)
@@ -122,12 +124,22 @@ def choose_phase(g: int, emu_png: dict[int, Path], room_load: bool = False) -> s
     return "live" if is_duplicate_second(g, emu_png) else "seam"
 
 
-def _png(dir_path: Path, case: str, frame: int, tag: str | None) -> Path | None:
-    pat = f"{case}_f{frame:05d}_"
-    if tag:
-        pat += f"{tag}."
-    hits = [p for p in glob.glob(str(dir_path / (pat + "*.png"))) if ".diff." not in p]
-    return Path(hits[0]) if hits else None
+def _png(dir_path: Path, case: str, frame: int, tag: str) -> Path | None:
+    """按**精确 tag** 取产物；同帧多 tag（`f{c}`/`prev{c}`/`prevend` 历史上会撞帧）不得歧义。
+
+    只认判定采点 `f{c}`：`pre`/`prev*`/`prevend` 是参考帧，`room_sweep.py:792-793` 明确
+    不参与判定；早期版本用 `tag=None` 的 glob 会把它们当判定点，导致 `ok` 全来自参考帧。
+    """
+    hits = sorted(
+        p
+        for p in glob.glob(str(dir_path / f"{case}_f{frame:05d}_{tag}.png"))
+        if ".diff." not in p
+    )
+    if not hits:
+        return None
+    if len(hits) > 1:
+        raise ValueError(f"同帧多产物，tag 歧义：{hits}")
+    return Path(hits[0])
 
 
 def diff_pixels(a: Path, b: Path) -> int:
@@ -153,15 +165,35 @@ def align_case(
 ) -> dict:
     """对一房逐帧算「FC 对齐后的像素差」。room_load_frames 里的 rust 帧按载房窗处理。"""
     load = room_load_frames or set()
+    # 目录一次索引（按 `_fNNNNN_<tag>.png` 解析），避免逐帧 glob（实测占 62.8s 中的绝大部分）。
     emu_png: dict[int, Path] = {}
-    for g in emu:
-        p = _png(emu_dir, case, g, None)
-        if p is not None:
-            emu_png[g] = p
+    seam_png: dict[int, Path] = {}
+    for p in sorted(emu_dir.glob(f"{case}_f*.png")):
+        if ".diff." in p.name:
+            continue
+        rest = p.name[len(case) + 3 :]
+        digits, _, tagp = rest.partition("_")
+        if digits.isdigit() and tagp.startswith("f"):
+            emu_png[int(digits)] = p
+    for p in sorted(seam_dir.glob(f"{case}_f*.png")):
+        if ".diff." in p.name:
+            continue
+        rest = p.name[len(case) + 3 :]
+        digits, _, tagp = rest.partition("_")
+        if digits.isdigit() and tagp.startswith("f"):
+            seam_png[int(digits)] = p
+    live_png: dict[int, Path] = {}
+    for p in sorted(live_dir.glob(f"{case}_f*.png")):
+        if ".diff." in p.name:
+            continue
+        rest = p.name[len(case) + 3 :]
+        digits, _, tagp = rest.partition("_")
+        if digits.isdigit() and tagp.startswith("f"):
+            live_png[int(digits)] = p
     rows = []
     for c in sorted(rust_state):
-        if _png(seam_dir, case, c, None) is None:
-            continue  # 该帧不是采集点
+        if c not in seam_png:
+            continue  # 该帧不是判定采点（只认 f{c}）
         rs = rust_state[c]
         try:
             g = pair_frame(emu, rs, horizon)
@@ -172,18 +204,20 @@ def align_case(
             rows.append({"c": c, "g": None, "phase": None, "diff": None, "error": "no_candidate"})
             continue
         phase = choose_phase(g, emu_png, room_load=c in load)
-        ep = _png(emu_dir, case, g, None)
-        rp = _png(seam_dir if phase == "seam" else live_dir, case, c, None)
+        ep = emu_png.get(g)
+        rp = (seam_png if phase == "seam" else live_png).get(c)
         if ep is None or rp is None:
             rows.append({"c": c, "g": g, "phase": phase, "diff": None, "error": "missing_png"})
             continue
         rows.append({"c": c, "g": g, "phase": phase, "diff": diff_pixels(ep, rp), "error": None})
     diffs = [r["diff"] for r in rows if r["diff"] is not None]
+    errors = [r for r in rows if r["error"]]
     return {
         "case": case,
         "frames": len(rows),
         "ok": sum(1 for d in diffs if d == 0),
         "nonzero": sum(1 for d in diffs if d),
+        "errors": len(errors),
         "max_diff": max(diffs) if diffs else None,
         "rows": rows,
     }
@@ -219,11 +253,17 @@ def main(argv: list[str] | None = None) -> int:
     text = json.dumps(res, ensure_ascii=False, indent=1)
     if args.out:
         Path(args.out).write_text(text + "\n")
-    print(f"{res['case']}: frames={res['frames']} ok={res['ok']} nonzero={res['nonzero']} max={res['max_diff']}")
+    print(
+        f"{res['case']}: frames={res['frames']} ok={res['ok']} nonzero={res['nonzero']} "
+        f"errors={res['errors']} max={res['max_diff']}"
+    )
     for r in res["rows"]:
-        if r["diff"]:
+        if r["error"]:
+            print(f"  c={r['c']} g={r['g']} ERROR {r['error']}")
+        elif r["diff"]:
             print(f"  c={r['c']} g={r['g']} phase={r['phase']} diff={r['diff']}")
-    return 0
+    # 判定面「看得见全部失配」：有任何 error 或非零差都以非零码退出，避免恒 0 静默通过。
+    return 1 if (res["errors"] or res["nonzero"]) else 0
 
 
 if __name__ == "__main__":
