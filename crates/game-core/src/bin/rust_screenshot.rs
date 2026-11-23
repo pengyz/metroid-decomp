@@ -343,6 +343,10 @@ fn main() {
     let mut bundle_cli: Option<String> = None;
     let mut state_out: Option<String> = None;
     let mut trace_flags: Vec<String> = Vec::new();
+    // 诊断开关（--capture-live）：强制采集单相位——PNG/PPU/OAM 与 ram 都取「本 tick 工作后」
+    // 的活体，不用 tick(N-1) 的缝快照。用于判定『精灵相对背景偏一帧滚动量』是否由
+    // 双相位采集产生（见 docs/superpowers/plans/2026-11-23-fc-align-p1-implementation.md P1.0d）。
+    let mut capture_live = false;
     let mut i = 1;
     while i < args.len() {
         match args[i].as_str() {
@@ -351,6 +355,7 @@ fn main() {
             "--bundle" => { bundle_cli = args.get(i + 1).cloned(); i += 2; } // Task 4 snapshot 起跑
             "--state-out" => { state_out = args.get(i + 1).cloned(); i += 2; } // 对齐验收状态行
             // 诊断面（启动参数，非逻辑层钩子）：`--trace oam:<f0>-<f1>` 打印采集帧 OAM。
+            "--capture-live" => { capture_live = true; i += 1; }
             "--trace" => {
                 for f in args.get(i + 1).map(|s| s.as_str()).unwrap_or("").split(',') {
                     if !f.is_empty() { trace_flags.push(f.to_string()); }
@@ -558,7 +563,8 @@ fn main() {
             // 无本帧缝 ⇒ 复用最近缝（emu lag 帧不做 NMI/DMA/PPU 写，显示面保持——实测
             // emu f673/f674/f676 三帧 PNG 逐字节相同）；其余 span（电梯换区等**会渲染**的
             // lag）仍回退活体，否则会把陈旧帧当新帧（case-elev-norfair-transition f1207 13115px）。
-            let snap = match &seam_snap {
+            let snap = match if capture_live { None } else { seam_snap.as_ref() } {
+                None => None,
                 Some((k, rs, oam)) if *k == frame.wrapping_sub(1) => Some((rs, oam.as_slice())),
                 Some((_, rs, oam)) if engine.mem.room_load_phase == 1 => Some((rs, oam.as_slice())),
                 _ => None,
