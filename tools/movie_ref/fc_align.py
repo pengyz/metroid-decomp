@@ -30,6 +30,9 @@ SHOTS_RUST = TOOLS / "shots_rust"
 TRACES = TOOLS / "analysis" / "traces"
 
 FC_ADDR = 0x2D
+
+# `--state-out` 的 `rl` 顶层键 → 该 rust 帧是否落在载房窗（相位 1）。见 rust_screenshot::state_row。
+ROOM_LOAD: dict[int, int] = {}
 SCROLL_X_ADDR = 0xFD
 
 
@@ -80,7 +83,10 @@ def parse_rust_state(path: Path) -> dict[int, State]:
                 raise ValueError(f"zp 长度应为 512（$0000-$00FF 全零页），实得 {len(zp)}，帧 {row.get('f')}")
             fc = int(zp[FC_ADDR * 2 : FC_ADDR * 2 + 2], 16)
             sx = int(zp[SCROLL_X_ADDR * 2 : SCROLL_X_ADDR * 2 + 2], 16)
-            out[int(row["f"])] = State(int(row["f"]), fc, sx)
+            st = State(int(row["f"]), fc, sx)
+            out[st.frame] = st
+            if row.get("rl") is not None:
+                ROOM_LOAD[st.frame] = int(row["rl"])
     return out
 
 
@@ -164,7 +170,7 @@ def align_case(
     horizon: int = 40,
 ) -> dict:
     """对一房逐帧算「FC 对齐后的像素差」。room_load_frames 里的 rust 帧按载房窗处理。"""
-    load = room_load_frames or set()
+    load = set(room_load_frames or ()) | {f for f, ph in ROOM_LOAD.items() if ph == 1}
     # 目录一次索引（按 `_fNNNNN_<tag>.png` 解析），避免逐帧 glob（实测占 62.8s 中的绝大部分）。
     emu_png: dict[int, Path] = {}
     seam_png: dict[int, Path] = {}

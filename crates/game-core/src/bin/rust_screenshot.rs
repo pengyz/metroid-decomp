@@ -320,7 +320,14 @@ fn load_bundle(prefix: &str) -> Result<Bundle, String> {
 fn state_row(frame: usize, mem: &Manager) -> String {
     let snap = mem.watch_snapshot();
     let parts: Vec<String> = snap.iter().map(|(k, v)| format!("\"{k}\":\"{v}\"")).collect();
-    format!("{{\"f\":{frame},\"w\":{{{}}}}}", parts.join(","))
+    // `rl` = 载房窗相位（0/1/2），rust 侧专有顶层键：`w` 仍与 emu 腿同形，
+    // 而 `tools/movie_ref/fc_align.py` 需要它来判「载房窗强制 seam 相位」——
+    // 否则缺省时要人工传 `--room-load`，漏传会把载房帧误判成 live（实测 24818px 假差）。
+    format!(
+        "{{\"f\":{frame},\"rl\":{},\"w\":{{{}}}}}",
+        mem.room_load_phase,
+        parts.join(",")
+    )
 }
 
 /// APU 寄存器写桶文本（判据仪器 2026-11-20）——apu_log[start..end] 切片 → 逐行
@@ -825,8 +832,9 @@ mod tests {
         engine.restore_mss(&b.ram, &b.wram, b.regs);
         let hex = |x: &[u8]| x.iter().map(|v| format!("{v:02X}")).collect::<String>();
         // 期望首帧：zp/iram/wram 全面+pw（$6988-$698F 密码面）——frame_face 唯一编码
+        // `rl`（载房窗相位）是本轮新增的顶层键：boot 首帧恒 0，故期望值固定为 0。
         let expected = format!(
-            "{{\"f\":1,\"w\":{{\"zp\":\"{}\",\"iram\":\"{}\",\"wram\":\"{}\",\"pw\":\"{}\"}}}}",
+            "{{\"f\":1,\"rl\":0,\"w\":{{\"zp\":\"{}\",\"iram\":\"{}\",\"wram\":\"{}\",\"pw\":\"{}\"}}}}",
             hex(&ram[0x000..0x100]), hex(&ram[0x100..0x800]), hex(&wram[0x0000..0x2000]),
             hex(&wram[0x0988..0x0990]));
         let mut row = String::new();

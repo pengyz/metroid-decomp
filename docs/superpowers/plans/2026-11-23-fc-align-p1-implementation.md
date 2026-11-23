@@ -529,3 +529,15 @@ c=1721/1725/1729；归零 ⇒ 仪器 bug 结案；不归零 ⇒ 才开 Rust 精�
 
 注：重跑相位判定需要 emu 侧 `(FC,ScrollX)` 相邻比较，故这条规则属于**判定工具**（房扫/`fc_align`）
 而非引擎；引擎侧只需同时可供两相位产物（现有 `--capture-live` 已够），不需要引入 cycle 模型。
+
+## P1.0g 复核三条收口 + `rl` 顶层键（`8ab49d31`、本 commit）
+
+- 复核 verdict「需改后可用（仅诊断面）」；三条必改全落：tag 只认 `f{c}`（禁止把
+  `pre`/`prev*` 当判定点，实测曾让 `ok` 全部来自参考帧）、三目录一次索引 + `zp` 长度断言、
+  失败可见（`errors` 计数 + 逐条打印 + rc=1）。Kraid31 因此由「13 ok」修正为
+  `frames=21 ok=11 nonzero=1 errors=9`。
+- `--state-out` 新增顶层键 `rl`（`mem.room_load_phase`）：`w` 仍与 emu 腿同形，`rl` 专供
+  `fc_align` 判「载房窗强制 seam」，不再依赖人工 `--room-load`。
+- **out-of-sample 验证未完成**：Tourian 10 只有 2 个采点（c=1660/1720），配对帧 g=1661 未被
+  采集 ⇒ `missing_png`。结论：出样本验证要求**采点覆盖 `[c, c+lag_max]`**（本房 lag 可到 5–13），
+  即判定采点必须成段（如 60..140 连续）而不是稀疏两点。这是 `fc_align` 跑批前的硬前置。
