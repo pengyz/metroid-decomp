@@ -366,5 +366,19 @@ emu 走 Forwards 分支确定。
   attr 的 `0x20` 是 `GetSpriteCntrlData ; 07:DCC3` 恒置的 PRIORITY 位，`0x40` 是该位件自身的
   HFLIP —— 所以「翻转位配错半边」只在**图案非对称的位件 + 与 BG 重叠**处才可见，
   正好解释「周期 4 帧（换格时腿形才非对称）、70px、其余帧 0px」。
-- 下一步：读 `crates/game-core/src/render/oam.rs` 的位件走表段（`:307 flip_bit` 与 place 表遍历）
-  与 asm `ObjDrawFrame ; 07:DE4A` 的位件序，定谳是「左右半边顺序反」还是「翻转位取自错误表项」。
+- **候选机制（2026-11-23 追加，尚未定谳）**：
+  1. `$6B` 镜像位泄漏——`WriteSpriteRAM ; 07:DEE6` 的 attr 是
+     `((ObjectCntrl<<2)&$40) ^ Temp05_Cntrl`，且 `$6B` bit4 同时参与
+     `XDisplacement/YDisplacement` 的负位移（`eor #$FF/adc #$F8`）。若同一帧里
+     更早的对象/敌人给 `$6B` 置了 bit4，Samus 的这批位件会**整组 xor 0x40 且 dx 取负**，
+     表现正是「(attr,x) 配对整体反转」。抓拍时 `$006B==0`（绘制后被 `ClearObjectCntrl`
+     清掉），所以 `$6B` 的**绘制时刻**值必须插桩才能排除。
+  2. 帧流 `$FD`（GetNewControlByte）在两位件之间的落点差一位——`$FD` 是 raw 赋值
+     （`Temp05_Cntrl ← 流字节`），rust 的 `new_ctrl_byte` 同语义；若索引推进差一位，
+     两位件的 attr 就互换。
+- 已排除：`animFrame`/`animReset`/`animIndex`/`hi`/`$00FF`/`ObjectCntrl` 两腿全等
+  （f1791/f1792 均为 `animFrame=07 animReset=37(SamusRunPntUp) animIndex=05 hi=01`）⇒
+  **不是「换了姿势」而是同一帧流的两位件配对反了**。
+- 下一步：把 animFrame=7 的帧流与 place 字节 dump 出来（或对 `draw_sprite_stream` 临时插桩
+  打印 `frame_i/place_i/stream 字节/attr/x`），与 asm `DrawSpriteObject ; 07:DF19` 的
+  `Temp11_FrameIndex`/`Temp0F_PlaceIndex` 推进逐拍对照。
