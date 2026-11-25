@@ -22,7 +22,7 @@
 
 | 产物 | 落盘者 | 必带字段 |
 |---|---|---|
-| `shots_rust/matrix.json` | `tools/l4_diff_run.py run-all` | 顶层 `head`(40 位) + `at`(ISO)，且 **`rows[]` 每行同值** |
+| `shots_rust/matrix.json` | `tools/l4_diff_run.py run-all` | 顶层 `head`(40 位) + `at`(ISO)；**`rows[]` 每行、`rows[].cells[]` 每个帧级 cell 同值**（172 格逐个可引用） |
 | `analysis/tas-100/coverage.json` | `tools/tas_replay_diff.py`（`env` 段） | `env.git_head`(40 位) + `env.at`(ISO) |
 
 约定：
@@ -56,6 +56,25 @@ python3 tools/evidence_bind.py verify -f shots_rust/matrix.json --expect-head "$
 | `verify` OK 且 `--expect-head` 等于当前 HEAD | 这份数字就是当前这棵树的 |
 | `verify` OK 但 head ≠ 当前 HEAD | 是**历史树**的数字：可当基线，不可当「当前状态」 |
 | `verify` FAIL（缺字段/不可解析/非祖先） | 数字**来历不明**，不得引用为判据 |
+
+### 2.1 提交之后：要 `--expect-head` OK 必须先 rebind
+
+产物签在 `A`，之后又提交了 `B`（哪怕只改注释）——此时产物 head 仍是 `A`，
+`--expect-head $(git rev-parse HEAD)` **必然 FAIL**，而且这是**正确**行为（产物确实出自 `A` 那棵树）。
+所以：
+
+- **当基线读**（最常见）：只跑 `verify`，看 OK 即可，别加 `--expect-head`；
+- **要证明「就是当前这棵树」**：先重签，再验：
+
+  ```bash
+  python3 tools/evidence_bind.py sign -f shots_rust/matrix.json --rebind   # 旧 head 记入 head_rebound_from
+  python3 tools/evidence_bind.py verify -f shots_rust/matrix.json --expect-head "$(git rev-parse HEAD)"
+  ```
+
+2026-11-25 现场：matrix 签在 `0cf5af8d`、随后提交 `f7da5517`（按内容兜底判类型），
+我第一次给复核人的清单把「`--expect-head` 期望 OK」写成验收命令 —— 那一步当时应 FAIL。
+重签后 `head=f7da5517…`、`head_rebound_from=0cf5af8d…`，两种验法才都成立。
+**这类口径错误会直接让复核人对不上账，必须在文档里写死操作顺序，而不是靠记性。**
 
 ## 3. 规则三：lane 产物 pick 回主线后必须重签
 
@@ -98,14 +117,17 @@ rc=1        # ← 不是祖先：该 lane 提交未进入主线历史
 | `tools/l4_diff_run.py run-all`（矩阵生产） | 落盘前调用 `evidence_bind.stamp_matrix()`；脏树 ⇒ fail-loud（退出码 2），`--allow-dirty` 放行并留痕 |
 | `tools/tas_replay_diff.py`（覆盖率生产） | `_env_fingerprint()` 直接产出 40 位 `git_head` + `at` |
 | `gates/cli.py check`（24 项） | **未新增门禁项**（卡面要求 PASS=24 不变）；绑定校验由 producers + `verify` 承担 |
-| `selftest`（`tools/evidence_bind.py selftest`） | 11 组断言：正常签名、伪造 sha、null 时间、未签名、期望不一致、短 sha 升级、非祖先来源、幂等、`--deterministic` 无 at 拒绝、脏树判定 |
+| `selftest`（`tools/evidence_bind.py selftest`） | 17 组断言：正常签名、伪造 sha、null 时间、未签名、期望不一致、短 sha 升级、非祖先来源、幂等、`--deterministic` 无 at 拒绝、换树未 `--rebind` 被拒、`--rebind` 保留旧值、cells 逐格写入 head/at、cells 绑定后可验、漏格 head 被拒、脏树判定 |
 
 ## 6. 复现命令（验收用）
 
 ```bash
-python3 tools/evidence_bind.py selftest                      # 11 组断言
+python3 tools/evidence_bind.py selftest                      # 17 组断言
 python3 tools/evidence_bind.py rules                         # 规则摘要
 python3 tools/l4_diff_run.py run-all                         # 矩阵落盘即带 head/at
+python3 tools/evidence_bind.py verify -f shots_rust/matrix.json            # 当基线读：只验不比对 HEAD
+# 要「就是当前这棵树」，先重签再验（顺序不能反，见 §2.1）：
+python3 tools/evidence_bind.py sign -f shots_rust/matrix.json --rebind
 python3 tools/evidence_bind.py verify -f shots_rust/matrix.json --expect-head "$(git rev-parse HEAD)"
 python3 tools/evidence_bind.py verify -f analysis/tas-100/coverage.json   # 现件会 FAIL（§4）
 ```

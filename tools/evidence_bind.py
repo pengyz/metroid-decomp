@@ -177,18 +177,22 @@ def sign_matrix(doc: dict, sha: str, at: str, allow_dirty: bool, rebind: bool) -
         doc["untracked"] = ut
     else:
         doc.pop("untracked", None)
-    # 每格也要能被单独引用：行级 head 与顶层一致（不重复存时间，省体积）
+    # 行级与帧级都写：`rows[i]` 与 `rows[i].cells[j]` 各自可被单独引用
+    # （2026-11-25 白砚退回项：checklist ①「每格必带」按字面指 172 个帧级 cell）
     rows = doc.get("rows")
     if isinstance(rows, list):
         for i, row in enumerate(rows):
             if not isinstance(row, dict):
                 raise BindError(f"matrix.rows[{i}] 不是对象")
             row["head"] = sha
-            at_old = row.get("at")
-            if isinstance(at_old, str) and ISO_RE.match(at_old):
-                row["at"] = at
-            else:
-                row["at"] = at
+            row["at"] = at
+            cells = row.get("cells")
+            if isinstance(cells, list):
+                for j, cell in enumerate(cells):
+                    if not isinstance(cell, dict):
+                        raise BindError(f"matrix.rows[{i}].cells[{j}] 不是对象")
+                    cell["head"] = sha
+                    cell["at"] = at
     return doc
 
 
@@ -290,6 +294,21 @@ def verify_matrix(doc: dict, expect: str | None) -> list[str]:
             probs.append(f"rows[{i}].at 缺失或不是 ISO 时间：{ra!r}")
         if expect and isinstance(rh, str) and rh != expect:
             probs.append(f"rows[{i}].head 与期望 HEAD 不一致：{rh[:12]} != {expect[:12]}")
+        cells = row.get("cells")
+        if isinstance(cells, list):
+            for j, cell in enumerate(cells):
+                if not isinstance(cell, dict):
+                    probs.append(f"rows[{i}].cells[{j}] 不是对象")
+                    continue
+                ch, ca = cell.get("head"), cell.get("at")
+                if not isinstance(ch, str) or not FULL_SHA.match(ch):
+                    probs.append(f"rows[{i}].cells[{j}].head 缺失或不是 40 位：{ch!r}")
+                elif isinstance(head, str) and ch != head:
+                    probs.append(f"rows[{i}].cells[{j}].head 与顶层不一致：{ch[:12]} != {str(head)[:12]}")
+                if not isinstance(ca, str) or not ISO_RE.match(ca):
+                    probs.append(f"rows[{i}].cells[{j}].at 缺失或不是 ISO 时间：{ca!r}")
+                if expect and isinstance(ch, str) and ch != expect:
+                    probs.append(f"rows[{i}].cells[{j}].head 与期望 HEAD 不一致：{ch[:12]} != {expect[:12]}")
     if isinstance(head, str) and FULL_SHA.match(head) and resolve_commit(head) is None:
         probs.append(f"matrix.head 在本仓解析不到提交：{head}")
     if expect and isinstance(head, str) and head != expect:
@@ -446,6 +465,26 @@ def cmd_selftest(args) -> int:
         finally:
             pass
 
+    # 10b) 提交之后：不带 --rebind 改签另一棵树必须被拒（文档 §2.1 的机械守护）
+    d6 = sign_matrix(json.loads(json.dumps(base_matrix)), sha, at, False, False)
+    try:
+        sign_matrix(d6, "1" * 40, at, False, False)   # 换 head 但没 --rebind
+        ok("换树未 --rebind 被拒", False, "竟然签成功")
+    except BindError as e:
+        ok("换树未 --rebind 被拒", "换树重签请加 --rebind" in str(e), str(e))
+    d7 = sign_matrix(json.loads(json.dumps(d6)), "1" * 40, at, False, True)
+    ok("--rebind 后保留旧值", d7.get("head_rebound_from") == sha, str(d7.get("head_rebound_from")))
+
+    # 10c) 帧级 cells 也带绑定（2026-11-25 白砚退回项：checklist ①「每格」= 172 帧级 cell）
+    with_cells = {"rows": [{"case": "c1", "cells": [{"frame": 1}, {"frame": 2}]}]}
+    dc = sign_matrix(json.loads(json.dumps(with_cells)), sha, at, False, False)
+    ok("cells 逐格写入 head", all(c["head"] == sha for c in dc["rows"][0]["cells"]), "")
+    ok("cells 逐格写入 at", all(c["at"] == at for c in dc["rows"][0]["cells"]), "")
+    ok("cells 绑定后可验", verify_matrix(dc, sha) == [], str(verify_matrix(dc, sha)))
+    dc2 = json.loads(json.dumps(dc))
+    dc2["rows"][0]["cells"][1].pop("head")
+    ok("漏格 head 被拒", any("cells[1].head" in p for p in verify_matrix(dc2, None)), str(verify_matrix(dc2, None)))
+
     # 11) 脏树拒绝（真实工作树若脏则验证拒绝逻辑；干净则跳过并说明）
     dirty = dirty_paths()
     if dirty:
@@ -461,7 +500,7 @@ def cmd_selftest(args) -> int:
         for f in fails:
             print("  -", f)
         return 1
-    print(f"SELFTEST: 全部通过（断言组 11；HEAD={sha[:12]}；工作树脏文件 {len(dirty)} 个）")
+    print(f"SELFTEST: 全部通过（断言组 17；HEAD={sha[:12]}；工作树脏文件 {len(dirty)} 个）")
     return 0
 
 
