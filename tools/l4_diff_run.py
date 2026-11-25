@@ -1185,6 +1185,16 @@ def _do_run_all(args) -> int:
     # B 径：flaky 判定（判据=多 run N 次观测记录）——处置进矩阵（不计分母不锚值+留痕）
     flaky = classify_flaky(load_cell_observations())
     m = build_matrix(rows, flaky=flaky)
+    # 证据↔代码树绑定（tools/evidence_bind.py）：head=40 位提交号、at=ISO 时间。
+    # 脏树默认拒签（本次落盘不可复现），--allow-dirty 才放行并把脏文件清单写进 matrix.dirty。
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import evidence_bind  # noqa: E402  （同目录工具，producers 落盘前调用）
+    try:
+        m = evidence_bind.stamp_matrix(m, allow_dirty=bool(getattr(args, "allow_dirty", False)))
+    except evidence_bind.BindError as e:
+        print(f"[fail-loud] {e}", file=sys.stderr)
+        print("[提示] 清掉工作树里的未提交改动，或显式加 --allow-dirty", file=sys.stderr)
+        sys.exit(2)
     if flaky:
         print(f"[flaky] {len(flaky)} 格判 flaky（多 run 观测记录不一致）——"
               f"不计分母不锚值，观测记录随格留痕（matrix.flaky_cells）")
@@ -1222,6 +1232,9 @@ def main():
                     help="跳过模拟器运行（复用已有 shots/——复用前校验锚，不符/无锚 exit 2）")
     ap.add_argument("--skip-rust", action="store_true",
                     help="跳过 Rust 运行（复用已有 shots_rust/——复用前校验锚，不符/无锚 exit 2）")
+    ap.add_argument("--allow-dirty", action="store_true",
+                    help="[run-all] 允许在脏树上落盘矩阵（默认 fail-loud：证据必须绑定可复现树，"
+                         "脏文件清单会写进 matrix.dirty）")
     ap.add_argument("--bundle", default=None,
                     help="[align] 显式快照前缀（覆盖用例 snapshot——造不对齐 case 实验面（验收③））")
     ap.add_argument("--emu-trace", default=None,

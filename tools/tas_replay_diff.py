@@ -25,6 +25,7 @@ import shutil
 import subprocess
 import time
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -742,14 +743,20 @@ def run_segments(args, inputlog: Path, have: int, frames: int, seed: int) -> int
 
 
 def _env_fingerprint() -> dict:
-    """记录报告产出时的代码环境，便于判断两份 coverage 是否同口径。"""
+    """记录报告产出时的代码环境，便于判断两份 coverage 是否同口径。
+
+    2026-11-25（#72）：`git_head` 由 12 位短 sha 改为 **40 位提交号**，并补 `at`（ISO 时间）——
+    短 sha 无法判断「这份报告是哪棵树跑的」，lane 树与主线在前 12 位之外分叉时尤其危险。
+    规则见 `docs/design/evidence-binding.md`。
+    """
     import hashlib
     import subprocess
     env: dict = {}
     try:
         env["git_head"] = subprocess.run(["git", "rev-parse", "HEAD"], cwd=ROOT,
                                          capture_output=True, text=True,
-                                         timeout=10).stdout.strip()[:12]
+                                         timeout=10).stdout.strip()
+        env["at"] = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
         env["git_dirty_crates"] = subprocess.run(
             ["git", "status", "--porcelain", "--", "crates/"], cwd=ROOT,
             capture_output=True, text=True, timeout=10).stdout.strip().splitlines()
