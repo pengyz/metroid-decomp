@@ -114,12 +114,24 @@ def now_iso() -> str:
 # 产物读写
 # ---------------------------------------------------------------------------
 def detect_kind(path: Path) -> str:
+    """按文件名判定；文件名被改过（如复核时复制成 m.json）则按内容特征兜底。"""
     n = path.name
     if n == "matrix.json":
         return "matrix"
     if n == "coverage.json":
         return "coverage"
-    raise BindError(f"无法判定产物类型（只认 matrix.json / coverage.json）：{path.name}")
+    try:
+        doc = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        doc = None
+    if isinstance(doc, dict):
+        if isinstance(doc.get("rows"), list):
+            return "matrix"
+        if isinstance(doc.get("env"), dict):
+            return "coverage"
+    raise BindError(
+        f"无法判定产物类型（文件名不是 matrix.json/coverage.json，内容也不像）：{path.name}"
+        f"——可用 --kind matrix|coverage 显式指定")
 
 
 def load(path: Path) -> tuple[dict, str]:
