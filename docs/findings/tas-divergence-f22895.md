@@ -214,3 +214,54 @@ lane tests 1091/0、check PASS24/FAIL1/SKIP3、run-all 171/1/0）。据此更正
 3. `wc -l` 实际 200（含末尾空行），提交说明写的 199 是少算空行；`$0445/$0455` 除 bit6 外低 5 位也不同（§3 表已注）。
 
 未达成项不变（f22895 未全相等、整片 120540 未跑）——按卡面 ③ / PMO seq5-③ 定界停手，修法留给 follow-up 卡（§7）。
+
+---
+
+## 11 修复落地：A-1（#71，2026-11-25）
+
+**结论**：A-1「死亡重开后敌槽不清」已按 §7-1 修好并验证——f22895 的 11 字节差降到 8 字节，
+`$0400`/`$0401`/`$040A`（槽0 y/x/data0A）全部归零；剩下 8 字节全是 A-2（重开相位，卡 #72），本卡不碰。
+
+### 11.1 改动（1 行生产代码 + 1 个单测）
+
+| 位置 | 内容 |
+|---|---|
+| `crates/game-core/src/world/room_load.rs:39` | `erase_all_sprites(mem);` 后**同一行**调 `crate::world::elevator::destroy_enemies(mem)`（复用既有等价实现，不复制第二份） |
+| `crates/game-core/src/world/room_load.rs` 文件尾 `mod tests_more_init_enemies` | 新增 `more_init_destroys_enemies_on_restart`：构造槽0 `status=2`/`type=5`、槽4 `status=1`、`Samus.status=Dead2`，跑 `more_init` 后断言槽0–3 的 `status/type/animFrame/hi/data1F` 归零 + `Samus.status` 归零 |
+
+**为什么把调用写在同一行**：`data/status/nes_map.json` 的 `$003B refs` 与 `arch-coupling`/`no-raw-addr`
+账本按「文件:行」记账；在 `:39` 插入独立行会把后续行号整体推移，既有 ref 落到注释行 ⇒ 三门齐红
+（第一版实测 `PASS=21 FAIL=4`）。写面禁改 `data/`，正确做法是让 diff 零行偏移，而不是改账本。
+
+**单测为什么不做「槽0–5 全零」**：ROM `DestroyEnemies` 清完整块后，`MoreInit` 立刻进 `SetupRoom` 环，
+新房间的 `load_enemy` 会往槽4/5 重新装载（emu f22462 槽4/5 `status=1/type=5`，§6）——槽4/5 非零是
+原版顺序。断言只钉「上一房残留的槽0–3」。
+
+### 11.2 复跑读数（lanes，`--frames 30000 --segments 10000`，与 §2 同口径）
+
+```bash
+# lane=/home/peng/workspace/wt-roll，CARGO_TARGET_DIR=/home/peng/workspace/wt-roll-target
+GUNNAC_MESEN=/home/peng/workspace/metroid-decomp/tools/mesen2/Mesen \
+python3 tools/tas_replay_diff.py replay --inputlog movies/lordtom-metroid-100p.inputlog \
+  --frames 30000 --segments 10000 --allow-rust-missing --out analysis/tas-r71b --timeout 1800
+```
+
+- 分段：seg0/seg1 `pass`（diverge 0）、seg2 `diverge 7085`（修前 7086）。
+- 全局首分歧：`{frame:22895, field:'$0405', offset:5, emu:0x5a(90), rust:0x1a(26), diff_bytes:8}`。
+- 逐帧差字节数：f22893=0、f22894=0、**f22895=8**、f22896=3、f22897=1（修前依次 0/0/11/5/4）。
+- f22895 的 8 个字节：`$0405`、`$0415`、`$0425`、`$0435`、`$0445`、`$0449`、`$044A`、`$0455`
+  ——`$0400`/`$0401`/`$040A` 已消失（与 §5 实验补调读数 11→8/5→3/4→1 逐项一致）。
+
+### 11.3 门禁与回归
+
+| 项 | 读数 |
+|---|---|
+| `cargo test -q -p game-core` | 14 target，**1092 passed / 0 failed**（1091 + 新增 1） |
+| `gates/cli.py check` | `PASS=24 FAIL=1 SKIP=3 TOLERATED=0`；唯一 FAIL=`trace-diff`（oracle 腿缓存 sha，`game-core 腿未启用`，与 §10 同项）；WARN `ratchet:rust_test_count` 基线 1175→现值 1176（新增单测；基线上调需改 `data/status/`，写面禁区，留主线处理） |
+| `tools/l4_diff_run.py run-all --skip-emu` | `cases 21 · cells 172 · match 171 · diff 1 · blocked 0`，唯一 diff `case-mechanism-input-conflict` c674（与 §10 基线一致） |
+| TDD | 修前红在 `EnsExtra 槽0 +0xe 必须被 DestroyEnemies 清 0 / left: 5`；修后绿 |
+
+### 11.4 未覆盖
+
+- 整片 120540 帧未跑（卡面与 PMO seq4 明令只跑覆盖 f22440–22900 的分段）。
+- A-2（`$0405` 等六槽 bit6 差 2 帧，重开相位）本卡不动，留给 #72；本卡只把「幽灵槽」这一组消掉。

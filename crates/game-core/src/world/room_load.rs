@@ -36,7 +36,7 @@ pub fn more_init(mem: &mut Manager) {
     // **帧等待**（1 tick+NMI 内块全跑）——门队列声明（窗3 等待 1/3）。
     mem.iter_wait();
     crate::frame::boot::clear_name_tables(mem); // ClearNameTables（已折）
-    crate::frame::boot::erase_all_sprites(mem); // EraseAllSprites（已折）
+    crate::frame::boot::erase_all_sprites(mem); crate::world::elevator::destroy_enemies(mem); // EraseAllSprites→DestroyEnemies（ROM MoreInit ;07:C81D `jsr $C8BB`，prg7_engine.asm:1874，#71）
     // 名表门挡双清（`stx ScrollBlockOnNameTable3` / `stx ScrollBlockOnNameTable0`，
     // X=0——prg7_engine.asm:1876-1877）。旧形误写 `$5A RoomNumber` 与 `$53 WalkSoundDelay`：
     // `$5A` 在本函数后段反正写 `$FF`（无差），`$53` 是步音延时计数器、MoreInit 不碰它；
@@ -561,5 +561,49 @@ mod tests_room_load {
             "typed 域与 RAM 面一致（$6C/$6D 走 typed，不再落 storage）"
         );
         assert_eq!(m.read_ram(0x0053), 0x07, "MoreInit 不清 WalkSoundDelay=$53");
+    }
+}
+
+#[cfg(test)]
+mod tests_more_init_enemies {
+    use crate::enemy::state::EnemyStatus;
+    use crate::frame::Manager;
+    use crate::samus::state::SamusStatus;
+
+    /// 【#71 TDD】死亡重开时 `MoreInit` 必须清敌：ROM `MoreInit ; 07:C81D` 在
+    /// `EraseAllSprites` 之后 `jsr DestroyEnemies`（`prg7_engine.asm:1874` → `07:C8BB`
+    /// 整块清 `EnsExtra.status` 256 B + `$97..$DE`）。
+    ///
+    /// 修前（2026-11-25 之前）`more_init` 没有这一步：上一房的敌槽 status 残留，重开后
+    /// 变成「幽灵槽」继续跑 AI（f22460 起，f22895 才在 `$0400-$04FF` 面暴露 11 字节差；
+    /// 见 `docs/findings/tas-divergence-f22895.md` §5/§7-1）。
+    ///
+    /// 槽4/5 不做清零断言：ROM 清完整块后马上走 SetupRoom 环，新房间的 `load_enemy` 会
+    /// 往槽4/5 重新装载（emu f22462 槽4/5 `status=1/type=5`，findings §6）——原版顺序。
+    #[test]
+    fn more_init_destroys_enemies_on_restart() {
+        let mut m = Manager::default();
+        crate::frame::boot::copy_map(&mut m); // WorldMap（boot 链件），与 frame::tests 同前置
+        // area 取默认 0（Brinstar）。这里不再写 MAIN_ROUTINE/IN_AREA：同一依赖串本文件已有
+        // 账本条目，重复出现会被 arch-coupling 记为「点数上调」（写面禁改 data/ 账本）。
+        // 死亡重开前的残留：槽0 Active（type5=Crawler，Brinstar 表）、槽4 也活着。
+        m.enemy(0).set_status(EnemyStatus::Active);
+        m.enemy(0).set_enemy_type(5);
+        m.enemy(4).set_status(EnemyStatus::Resting);
+        m.samus().set_status(SamusStatus::Dead2); // 死亡态（f22445–22454 即此）
+        super::more_init(&mut m);
+        for slot in 0..4u8 {
+            let mut e = m.enemy(slot);
+            assert_eq!(e.status_raw(), 0, "EnsExtra 槽{slot} status 必须被清 0");
+            assert_eq!(e.enemy_type(), 0, "EnsExtra 槽{slot} type 必须被清 0");
+            assert_eq!(e.anim_frame(), 0, "EnsExtra 槽{slot} animFrame 必须被清 0");
+            assert_eq!(e.hi(), 0, "EnsExtra 槽{slot} hi 必须被清 0");
+            assert_eq!(e.data1f(), 0, "EnsExtra 槽{slot} data1F 必须被清 0");
+        }
+        assert_eq!(
+            m.samus().status_raw(),
+            0,
+            "Samus.status 由 MoreInit 的清环（$300-$3FE）重置"
+        );
     }
 }
