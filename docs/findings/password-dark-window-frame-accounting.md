@@ -176,3 +176,65 @@ x=120/128，tile 09/19/1A/29/2A/39，attr 20/60）在两侧逐字节相同，att
 
 f1430 无需修复；§5 的后继判据中「f1430=0」这一条在 HEAD 已自然成立。真正剩下的只有
 f1191（2063 px，已登记于 §4.1/§5），以及 §5.4 列的两件后继工作。
+
+---
+
+## 8. #37 取证补记：入场忙等 3 帧（A 级）与「span ≠ 门数」硬约束（2026-11-25）
+
+### 8.1 入场那次迭代 = 1 拍消费 + 3 拍纯 CPU 忙等（A 级，逐帧 PWByte）
+
+数据源：`analysis/traces/case-password-justin.frames.jsonl` 的 `w` 字段（emu 每帧 watch 快照）。
+复算命令：
+```bash
+python3 - <<'PY'
+import json
+for line in open('analysis/traces/case-password-justin.frames.jsonl'):
+    r=json.loads(line); w=r.get('w') or {}
+    f=r.get('f');
+    if f and 1186<=f<=1193: print(f, w.get('FC'), w.get('PW'), w.get('JIB'), w.get('InArea'))
+PY
+```
+| f | `FC` | `PWByte00-03` | `PWByte04-05` | `JIB` / `InArea` |
+|---|---|---|---|---|
+| 1188 | 153 | `00 00 00 00` | `00 00` | 0 / 0 |
+| 1189 | 153 | `FF FF FF FF` | `00 00` | 0 / 0 |
+| 1190 | 153 | `FF FF FF FF` | `FF FF` | 0 / 0 |
+| 1191 | 153 | `A6 F3 8E A4` | `B9 65` | **1 / 17** |
+| 1192 | 154 | 同上 | 同上 | 1 / 17 |
+
+判读：`ConsolidatePassword`/`UnscramblePassword` 的双层滚字节循环**逐帧推进 3 帧**
+（f1189 / f1190 / f1191 各推一段），`InitializeGame` 在同一迭代内完成（f1191 已
+`JIB=1`、`InArea=$11`）。⇒ 入口那次迭代 = **1 拍 START 消费 + 3 拍忙等 = 4 帧**
+（`FC=153` 跨 f1188–f1191）。这**推翻**了 `title/bridge.rs` 旧注释「Unscramble 跨 2 tick」
+的说法；忙等是纯 CPU（NMI 内块被跳），语义上是 bogged 而非等待门。
+
+### 8.2 硬约束：`iter_span_left` 不能单独偏移（引擎结构，实测）
+
+`crates/game-core/src/frame/engine.rs` 里两个计数器**不同源**：
+
+- `iter_gates`：逐 tick 弹一项的队列（`end_of_tick_gate` 的 `else` 支
+  `let g = self.mem.iter_gates.remove(0);`，约 :195）；
+- `iter_span_left`：自减计数，只用于「是否在 span 内」的判定（`in_span()`）；
+- 迭代真正的结束判据是 **`iter_gates.is_empty()`**（:165 那个分支=排空点）。
+
+实测后果：把 span 改成「门数-2」后 span 先归零而队列仍剩 2 项 ⇒ 引擎判「不在 span」⇒
+又跑一次 `main_loop_iter`，新迭代撞上仍为 `true` 的 `deferred_screen_on`，把声明拍的
+`FC-1` 再执行一遍 ⇒ 采集表尾巴出现 `FC=153/152` 的掉值。复算：`[T37]` 逐 tick 打印
+（临时，已撤）显示 `n=1197 span=0 gates=1`、`n=1198 fc=0x99`。
+
+**结论**：任何「只调 span 长度」的修法都会与门队列脱同步；要改变关屏窗长度必须让
+「窗长」与 `iter_gates` 同源派生，或引入独立的显式窗长量。
+
+### 8.3 剩余 1 帧的精确落点（本卡未达成部分）
+
+- 入场忙等做出来后，熄灯点可精确落在 `n=1191`（capture f1192 暗），与 emu 一致；
+- 仍差的 1 帧在 **ClearAll 迭代的最后一门**：`iter_gates` = 7 项 ⇒ 暗窗 8 帧（emu 7 帧）。
+  要让最后一帧亮起，等价于「ScreenOn 自己的 `iter_wait`（`crates/game-core/src/world/room_load.rs:105`）
+  不再额外占 1 帧」；
+- 该门是**共享门**：`#31` 已实测单边改 `iter_bogged(2)` 会把 `case-elev-norfair-transition`
+  从 10/10 打穿到 2/10（见 §4.2），因此本卡不动它。
+
+后继判据（给下一张卡）：在**不动** `room_load` 共享门的前提下，若能让关屏窗长与
+`iter_gates` 同源派生（例如把窗长声明为该迭代门数的函数并显式记录），则应满足：
+`run cases/case-password-justin.txt` 14/14 全 0、`run cases/case-elev-norfair-transition.txt`
+10/10、`run-all` 不新增。
