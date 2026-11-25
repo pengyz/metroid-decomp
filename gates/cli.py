@@ -3189,15 +3189,26 @@ def doc_dup_line_violation(diff_text: str, path_filter=r"^(?:docs/|.*\.md$)") ->
     pf = re.compile(path_filter)
     counts: dict[str, int] = {}
     cur_ok = False
+    in_fence = False
     for ln in diff_text.splitlines():
         if ln.startswith("+++ "):
             m = re.search(r" b/(\S+)$", ln)
             cur_ok = bool(m and pf.search(m.group(1)))
+            in_fence = False
             continue
         if ln.startswith("+") and not ln.startswith("+++"):
             s = ln[1:].strip()
-            if cur_ok and s and not _MD_STRUCT.match(s):
-                counts[s] = counts.get(s, 0) + 1
+            if not cur_ok or not s:
+                continue
+            # 【2026-11-25 F③ 代码块豁免（Human 批准 A 方案）】取证脚本体（heredoc 标记、
+            # 同一行 replay 命令、asm 片段）在 fenced code block 内重复是文档本身需要的，
+            # 不属「逐字对表散文污染」；围栏外的重复仍全量计数。
+            if s.startswith("```") or s.startswith("~~~"):
+                in_fence = not in_fence
+                continue
+            if in_fence or _MD_STRUCT.match(s):
+                continue
+            counts[s] = counts.get(s, 0) + 1
     return [ln for ln, n in counts.items() if n > 2]
 
 
@@ -4223,6 +4234,18 @@ def cmd_selftest(_args) -> int:
                   "+~~~\n+~~~\n+~~~\n")
         ok8, d8 = goal_loop_gate("docs: 表格文档", struct)
         check("F③ markdown 结构行 ×3 放行（结构排除锚）", ok8, d8)
+        # 【2026-11-25 代码块豁免（Human 批准 A）】围栏内重复×3 放行；围栏外同文×3 仍拒。
+        fenced = ("--- a/docs/z.md\n+++ b/docs/z.md\n"
+                  "+```bash\n+python3 - <<'PY'\n+PY\n+```\n"
+                  "+正文\n"
+                  "+```bash\n+python3 - <<'PY'\n+PY\n+```\n")
+        ok9, d9 = goal_loop_gate("docs: 取证文档", fenced)
+        check("F③ fenced 代码块内重复放行（2026-11-25）", ok9, d9)
+        mixed = ("--- a/docs/w.md\n+++ b/docs/w.md\n"
+                 "+```bash\n+python3 - <<'PY'\n+```\n"
+                 "+围栏外重复行\n+围栏外重复行\n+围栏外重复行\n")
+        ok10, d10 = goal_loop_gate("docs: 取证文档", mixed)
+        check("F③ 围栏外重复仍拒（豁免不打洞）", not ok10, d10)
     except Exception as exc:  # noqa: BLE001
         check("F③ 文档重复行 lint", False, str(exc))
 
