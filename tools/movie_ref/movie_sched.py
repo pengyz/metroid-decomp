@@ -44,8 +44,12 @@ import scenario_run  # noqa: E402
 def validate_inputlog(inputlog: Path) -> None:
     """inputlog ↔ 影片输入表零容差自检（防"旧解码产物"复发）。
 
-    provenance：inputlog 头部 `# source <path>` 指向 bk2；该 bk2 仍存在就必须逐帧
-    零容差（`tools/movie_check.py` 同源判据）。缺失/不一致 ⇒ fail-loud，绝不静默使用。
+    provenance：inputlog 头部 `# source <path>` 指向原影片；该影片仍存在就必须逐帧
+    零容差。判据按格式分派（两种影片的 P1 列解析不同，不能共用一套）：
+    - `.bk2`/zip ⇒ `tools/movie_check.py::p1_truth`（按 `Input Log.txt` 的 `LogKey:` 列序）；
+    - `.fm2`     ⇒ `tools/movie_import.py::load_movie` 的 `frames[i][0]`（port0=P1；
+       fm2 列序 RLDUTSBA 与位序同构，由 movie_import 唯一实现，本处不重写位表）。
+    缺 provenance / 影片缺失 / 解析失败 / 逐帧不符 ⇒ fail-loud，绝不静默使用。
     """
     src = None
     for raw in inputlog.read_text(encoding="utf-8", errors="replace").splitlines():
@@ -56,16 +60,26 @@ def validate_inputlog(inputlog: Path) -> None:
             break
     if not src:
         raise SystemExit(f"{inputlog}: 缺 `# source` provenance（无法自检，拒绝使用）")
-    bk2 = Path(src)
-    if not bk2.is_absolute():
-        bk2 = ROOT / bk2
-    if not bk2.exists():
-        print(f"[movie_sched] 跳过输入自检：源影片不存在（{bk2}）")
+    movie = Path(src)
+    if not movie.is_absolute():
+        movie = ROOT / movie
+    if not movie.exists():
+        print(f"[movie_sched] 跳过输入自检：源影片不存在（{movie}）")
         return
     sys.path.insert(0, str(ROOT / "tools"))
-    import movie_check  # noqa: E402
+    if movie.suffix.lower() == ".fm2":
+        import movie_import  # noqa: E402
 
-    truth = movie_check.p1_truth(str(bk2))
+        try:
+            truth = [f[0] for f in movie_import.load_movie(movie)["frames"]]
+        except Exception as exc:  # noqa: BLE001
+            raise SystemExit(f"{movie}: fm2 解析失败（拒绝使用 inputlog）: {exc}") from exc
+        how = "fm2/P1 列"
+    else:
+        import movie_check  # noqa: E402
+
+        truth = movie_check.p1_truth(str(movie))
+        how = "bk2/Input Log.txt"
     got = [
         int(l.split()[0], 16)
         for l in inputlog.read_text(encoding="utf-8", errors="replace").splitlines()
@@ -76,7 +90,7 @@ def validate_inputlog(inputlog: Path) -> None:
     bad = [i for i in range(len(truth)) if truth[i] != got[i]]
     if bad:
         raise SystemExit(f"{inputlog}: {len(bad)}/{len(truth)} 帧与影片不符（首错 f={bad[0]}）")
-    print(f"[movie_sched] 输入自检 OK：{len(truth)} 帧与影片零容差")
+    print(f"[movie_sched] 输入自检 OK（{how}）：{len(truth)} 帧与影片零容差")
 
 
 def build_plan(inputlog: Path, frames: int, name: str) -> dict:

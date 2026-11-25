@@ -170,6 +170,7 @@ def parse_scenario(path: Path) -> dict:
         "fixtures": [],  # task-28 ①: {frame, addr, value, persistence}——F_a 注入（设计 v9/v11）
         "bundle_capture": None,  # task-32 收官: {frame, out}——MSS+三直映采集
         "bundle_load": None,     # task-32 收官: {path}——任意起点装载
+        "resume_at": None,       # task-45: 装载后把 harness 帧计数器置到该帧（续跑）
         "watch_ranges": [],
         "ramframe": False,
         "coverage": False,
@@ -370,6 +371,12 @@ def parse_scenario(path: Path) -> dict:
             if len(args) != 2 or not args[0].isdigit():
                 raise err("bundle_capture 用法: bundle_capture <帧> <输出前缀>")
             plan["bundle_capture"] = {"frame": int(args[0]), "out": args[1]}
+        elif op == "resume_at":
+            # task-45：续跑帧号——`resume_at <F>` 与 `snapshot <前缀>` 配对使用：
+            # 装载第 F 帧末存档后把 harness 帧计数器置 F，schedule 从 F+1 继续喂。
+            if len(args) != 1 or not args[0].isdigit():
+                raise err("resume_at 用法: resume_at <帧号>")
+            plan["resume_at"] = int(args[0])
         elif op in ("snapshot", "bundle_load"):
             # task-2 语义决议：snapshot <前缀> 为规范名，≡ bundle_load（别名保留防破坏
             # 既有 scenario）——三要素②「待加载存档」声明（首 spin 出口 loadSavestate）。
@@ -525,6 +532,14 @@ def parse_scenario(path: Path) -> dict:
     for e in plan["captures"]:
         if not 1 <= e["frame"] <= frames:
             raise ScenarioError(f"{path}: capture 帧 {e['frame']} 超出 1..{frames}")
+    # task-45：续跑帧号只与存档装载配对使用；越界/孤立一律 fail-loud（防「以为续跑了、
+    # 其实还是从第 1 帧喂输入」的静默错位）。
+    if plan.get("resume_at") is not None:
+        if not plan.get("bundle_load"):
+            raise ScenarioError(f"{path}: resume_at 需要 `snapshot <前缀>` 指定存档（任意起点）")
+        if not 1 <= plan["resume_at"] < frames:
+            raise ScenarioError(
+                f"{path}: resume_at {plan['resume_at']} 越界：应落在 1..{frames - 1}（末帧 {frames}）")
     # scenario 编辑 lint（教训四犯——机械拦）：长场景须有菜单起点或 bundle_load
     # （任意起点案）——防前缀滤波误删菜单。
     # 【启发式放宽（2026-11-12，WARN 假阳修正）】旧形硬找 `press 540 start` 恰一帧——

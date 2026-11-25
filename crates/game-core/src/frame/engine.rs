@@ -39,6 +39,11 @@ pub struct FrameEngine {
     /// 【Task 4 snapshot 续跑面】restore 装载点=spin 出口（post-NMI 相位 P，$1A=1）——
     /// 该帧 NMI 已发生，**首 tick 跳过 NMI** 续跑从帧工作起（emu bundle-ff f=1 行语义锚）。
     skip_next_nmi: bool,
+    /// 【#47·f1191】点亮拍之后那一拍主循环体不再自增 `FrameCount`（`title_no_return`
+    /// 语境），把这次自增挪到**下一拍开头**执行：与 emu 的 `155@1199 / 156@1200` 对齐。
+    pending_fc_inc: bool,
+    /// 【#47·按径区分】密码进场径已 arm（置真于 START 消费拍），ClearAll 收口时清假。
+    title_entry_mode: bool,
 }
 
 impl Default for FrameEngine {
@@ -56,6 +61,8 @@ impl FrameEngine {
             rng: GameRng::new(),
             phase: BootPhase::PreSpin,
             skip_next_nmi: false,
+            pending_fc_inc: false,
+            title_entry_mode: false,
         }
     }
 
@@ -87,6 +94,14 @@ impl FrameEngine {
     /// （`inc FrameCount`（asm prg7:207）延至此+唤醒门）。
     pub fn tick_frame_with<F: FnMut(&Manager)>(&mut self, mut on_spin_exit: F) {
         self.clock.tick();
+        if self.pending_fc_inc {
+            self.pending_fc_inc = false;
+            self.title_entry_mode = false;
+            // typed 面：`frame/memory.rs:845/1164` 的 `frame_count/set_frame_count`
+            // （裸 `read_ram/write_ram` 会被 `raw-surface` 计为新面）。
+            let fc = self.mem.frame_count().wrapping_add(1);
+            self.mem.set_frame_count(fc);
+        }
         // 【Step 1 boot 行索引修复】（frame-alignment-plan.md §4/Step 1——map-v2 §2 f1 行
         // 缺口）：tick1=完整 boot 帧——boot_pre 内联在 NMI#1 **之前**（严格序），原 tick2
         // 内容（NMI+boot_post+缝行+首迭代）原样落在 tick1，消除 PreSpin 空耗帧（rust
@@ -140,6 +155,31 @@ impl FrameEngine {
                 }
             }
             BootPhase::PostSpin | BootPhase::MainLoop => {
+                // 【#47 入口忙等 3 帧】`UnscramblePassword` 的双层滚字节循环是纯 CPU 忙等
+                // （emu frames.jsonl：PWByte00-03 在 f1189/f1190/f1191 逐帧推进、FC 跨
+                // f1188–1191 恒 153）——迭代在 GoMainRoutine 里就跨了 3 拍，期间 MainLoop
+                // 的 `inc FrameCount`（prg7:207）还没执行。用 title_spin 作忙等倒计时（已是
+                // 既有字段），忙等拍不跑主循环体、也不自增 FC。
+                if !in_span && self.mem.title_spin == 0 && self.mem.check_password_pending {
+                    // arm 发生在 START 已被消费的那一拍（桥把 pending 置真）：该拍仍属
+                    // UnscramblePassword 的忙等窗，MainLoop 的 `inc FrameCount`（prg7:207）
+                    // 还没执行 ⇒ 撤销本拍尾 inc，再数 2 拍忙等，第 3 拍（含 ScreenNmiOff
+                    // 等 NMI）由主循环体执行并与 `inc FrameCount` 同拍。
+                    self.mem.title_spin = 0x80 | 2;
+            self.title_entry_mode = true;
+                    let fc = self.mem.frame_count().wrapping_sub(1);
+                    self.mem.set_frame_count(fc);
+                }
+                if !in_span && (self.mem.title_spin & 0x80) != 0 {
+                    let n = self.mem.title_spin & 0x7F;
+                    if n > 0 {
+                        self.mem.title_spin = 0x80 | (n - 1);
+                        self.mem.write_ram(crate::ram_map::NMI_STATUS, 1);
+                        self.phase = BootPhase::MainLoop;
+                        return;
+                    }
+                    self.mem.title_spin = 0; // 忙等结束，本拍交回主循环体
+                }
                 if in_span {
                     // span tick：迭代工作中（四件/臂冻结——等待帧/bogged 帧见门队列语义）
                     self.mem.iter_span_left -= 1;
@@ -159,42 +199,60 @@ impl FrameEngine {
     /// tick 尾 NMI 门（描述**下一 tick** NMI 内块是否跑——asm prg7:251 `lda NMIStatus/
     /// bne @endIf_A` 门的预置）：门队列非空=按门项（1 等待帧→0 全跑 / 0 bogged→1 跳过）；
     /// 排空=迭代完成点（唤醒门 NMIStatus←0（asm :210-211）+`inc FrameCount` 延迟收尾）。
+    /// 迭代完成点的收尾动作（原 `end_of_tick_gate` 的排空分支体，抽出以便「末门同拍」复用）。
+    fn settle_iteration(&mut self) {
+        // 【转场暗窗建模】迭代完成点=本迭代全部 WaitNMIPass 已兑现（帧门排空）——
+        // 此刻才把 MoreInit 尾的 ScreenOn 影写落到 $FE（下一 tick 的 WritePPUCtrl
+        // 写真 PPUMASK，与 asm 两段等待同相位）。
+        super::tick::apply_deferred_screen_on(&mut self.mem);
+        // 【f673 载房超帧卡（2026-11-19）】迭代完成拍=载房窗结束那一帧：兑现被挂起的
+        // 水平像素（asm `07:E65E`/`07:E692` 在 `jsr ScrollLeft` 之后——见
+        // `samus::physics::apply_deferred_horz_px` 的逐帧探针实录）。同时清吞帧标位。
+        crate::samus::physics::apply_deferred_horz_px(&mut self.mem);
+        self.mem.samus().set_load_consumed_frame(false);
+        // 【多帧载房任务机（2026-11-19 A-lite）】帧门排空=载房冻结窗结束那一拍：此后进入
+        // 固定三段尾段（帧边界 F1 → F3 → FF——Mesen 三房实录，见
+        // `docs/findings/room-load-pixel-deferral.md`）。任务机相位与 `iter_gates` 是同一条
+        // 时间轴上的两个刻度：窗用门队列计数，尾段用相位计数。
+        crate::world::room_load::room_load_gate_step(&mut self.mem);
+        // 【名表镜像同步（2026-11-22）】`MirrorCntrl($FA)` bit3 置=横镜（竖滚房
+        // `$2000≡$2400`）、清=竖镜（横滚房 `$2000≡$2800`）——渲染层按此选物理页
+        // （`render::nt_offset_with` / `bg_lookup` / `write_ppudata`）。asm 侧由
+        // `SetPPUMirror ; 07:C4B6` 串行写 MMC1CTRL 生效。
+        self.mem.sync_mirroring();
+        self.mem.write_ram(crate::ram_map::NMI_STATUS, 0);
+        // 【根修③（2026-11-02）】span_fc 收口 inc（**defer 单增唯一源**（span 尾
+        // skip 期 tail 不 inc（title_no_return）））——收口 tick 尾 inc 跳（fc_inced
+        // 旗（mainloop:67 门）——旧收口 inc+尾 inc 同 tick=+2（±1 陀螺源（B2 签名））
+        // ——TDD tests_fc_per_iter::span_fc_drain_tick_single_inc（红→绿）。
+        if self.mem.iter_span_fc {
+            self.mem.iter_span_fc = false;
+            let fc = self.mem.frame_count().wrapping_add(1);
+            self.mem.set_frame_count(fc);
+            self.mem.fc_inced_this_tick = true; // 尾 inc 跳（单增（收口覆盖））
+        }
+    }
+
     fn end_of_tick_gate(&mut self) {
         if self.mem.iter_gates.is_empty() {
-            // 【转场暗窗建模】迭代完成点=本迭代全部 WaitNMIPass 已兑现（帧门排空）——
-            // 此刻才把 MoreInit 尾的 ScreenOn 影写落到 $FE（下一 tick 的 WritePPUCtrl
-            // 写真 PPUMASK，与 asm 两段等待同相位）。
-            super::tick::apply_deferred_screen_on(&mut self.mem);
-            // 【f673 载房超帧卡（2026-11-19）】迭代完成拍=载房窗结束那一帧：兑现被挂起的
-            // 水平像素（asm `07:E65E`/`07:E692` 在 `jsr ScrollLeft` 之后——见
-            // `samus::physics::apply_deferred_horz_px` 的逐帧探针实录）。同时清吞帧标位。
-            crate::samus::physics::apply_deferred_horz_px(&mut self.mem);
-            self.mem.samus().set_load_consumed_frame(false);
-            // 【多帧载房任务机（2026-11-19 A-lite）】帧门排空=载房冻结窗结束那一拍：此后进入
-            // 固定三段尾段（帧边界 F1 → F3 → FF——Mesen 三房实录，见
-            // `docs/findings/room-load-pixel-deferral.md`）。任务机相位与 `iter_gates` 是同一条
-            // 时间轴上的两个刻度：窗用门队列计数，尾段用相位计数。
-            crate::world::room_load::room_load_gate_step(&mut self.mem);
-            // 【名表镜像同步（2026-11-22）】`MirrorCntrl($FA)` bit3 置=横镜（竖滚房
-            // `$2000≡$2400`）、清=竖镜（横滚房 `$2000≡$2800`）——渲染层按此选物理页
-            // （`render::nt_offset_with` / `bg_lookup` / `write_ppudata`）。asm 侧由
-            // `SetPPUMirror ; 07:C4B6` 串行写 MMC1CTRL 生效。
-            self.mem.sync_mirroring();
-            self.mem.write_ram(crate::ram_map::NMI_STATUS, 0);
-            // 【根修③（2026-11-02）】span_fc 收口 inc（**defer 单增唯一源**（span 尾
-            // skip 期 tail 不 inc（title_no_return）））——收口 tick 尾 inc 跳（fc_inced
-            // 旗（mainloop:67 门）——旧收口 inc+尾 inc 同 tick=+2（±1 陀螺源（B2 签名））
-            // ——TDD tests_fc_per_iter::span_fc_drain_tick_single_inc（红→绿）。
-            if self.mem.iter_span_fc {
-                self.mem.iter_span_fc = false;
-                let fc = self.mem.read_ram(crate::ram_map::FRAME_COUNT).wrapping_add(1);
-                self.mem.write_ram(crate::ram_map::FRAME_COUNT, fc);
-                self.mem.fc_inced_this_tick = true; // 尾 inc 跳（单增（收口覆盖））
-            }
+            self.settle_iteration();
         } else {
             let g = self.mem.iter_gates.remove(0); // 队列 ≤8 项（窗长界）——O(n) 无碍
             self.mem
                 .write_ram(crate::ram_map::NMI_STATUS, if g != 0 { 0 } else { 1 });
+            // 【#47 末门同拍】ScreenOn 的 iter_wait 是本次迭代最后一个门时，`$00FE` 影写与
+            // `inc FrameCount` 在同一拍兑现（asm：WriteAndWait 自旋退出即回到 MainLoop
+            // prg7:207 的 inc，属同一迭代尾）——不再等下一拍的排空分支，暗窗因此少 1 帧。
+            // 【#47·按径区分】末门同拍+尾自增只对**密码进场径**（`MainRoutine==_id_MoreInit`，
+        // asm `InitializeGame 00:92D4` 置位）生效；载房/电梯径保持原语义（否则
+        // `case-elev-norfair-transition` 由 10/10 掉到 5/10，实测）。
+        if self.mem.iter_gates.is_empty() && self.mem.deferred_screen_on && self.title_entry_mode {
+                self.settle_iteration();
+                // 末门同拍收口发生在 span 拍（该拍没跑 main_loop_iter、其尾部的
+                // `fc_inced_this_tick = false` 未执行）：不清位会把下一拍的 `inc FC` 也吞掉。
+                self.mem.fc_inced_this_tick = false;
+                self.pending_fc_inc = true;
+            }
         }
     }
 

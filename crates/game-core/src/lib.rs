@@ -15,6 +15,7 @@ pub mod memmap;
 pub mod ram_map;
 pub mod samus;
 pub mod rng;
+pub mod arith;
 pub mod world;
 pub mod pickup;
 pub mod input;

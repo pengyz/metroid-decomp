@@ -1129,10 +1129,13 @@ local samplePoint = PLAN.sample_point or "endFrame"
 local lastSampled = -1
 -- task-32 收官：bundle 采集/装载（**exec 回调上下文**——createSavestate/loadSavestate
 -- 约束实录：须主 CPU exec 内存回调内；sampleTrace 即该上下文（$C0D3 缝））
-local bundleDone = false
+-- task-45：装载与采集是**两个独立一次性动作**——装过档的 run 仍然要在段末落下一段入口
+-- 检查点。旧版共用一个 bundleDone，装载即置真 ⇒ 续跑的段永远采不到 checkpoint，
+-- 分段链从第二段起就断（实测 seg1 无 cp-1400）。
+local bundleLoadDone = false
+local bundleCaptureDone = false
 local function bundleOps()
-  if bundleDone then return end
-  if PLAN.bundle_load and frame >= 1 then
+  if PLAN.bundle_load and not bundleLoadDone and frame >= 1 then
     local f = io.open(PLAN.bundle_load.path .. ".mss", "rb")
     if f then
       local blob = f:read("*a")
@@ -1140,7 +1143,15 @@ local function bundleOps()
       local okl, errl = pcall(emu.loadSavestate, blob)
       log(string.format("bundle load f=%d bytes=%d ok=%s err=%s",
         frame, #blob, tostring(okl), tostring(errl)))
-      bundleDone = true
+      bundleLoadDone = true
+      -- task-45：续跑帧号偏移——装载的存档是**第 F 帧末**状态，harness 的 frame 却仍从 0 计，
+      -- 直接续跑会把录像第 1 帧输入再喂一遍。置到 F 后 schedule[F+1..] 才对应正确影片帧。
+      if PLAN.resume_at and PLAN.resume_at >= 1 then
+        frame = PLAN.resume_at
+        lastSampled = -1
+        log(string.format("bundle resume：帧计数器置 %d（schedule 从 %d 继续，末帧 %d）",
+          frame, frame + 1, frames))
+      end
     else
       log("bundle load FAILED: " .. PLAN.bundle_load.path .. ".mss 不可读——fail-loud")
       error("bundle load 失败（缺 .mss）")
@@ -1149,7 +1160,8 @@ local function bundleOps()
   end
   -- F_a 采样对齐=**首个 ≥ 目标帧的 spin 出口**（缺帧稳健——f=900 缺帧实录：
   -- 严格相等错过，task-32 实战修正）
-  if PLAN.bundle_capture and frame >= PLAN.bundle_capture.frame then
+  if PLAN.bundle_load and not bundleLoadDone then return end -- 装载未完成前不采集
+  if not bundleCaptureDone and PLAN.bundle_capture and frame >= PLAN.bundle_capture.frame then
     local oka, blob = pcall(emu.createSavestate)
     if not oka or type(blob) ~= "string" then
       log("bundle capture FAILED: " .. tostring(blob))
@@ -1180,13 +1192,15 @@ local function bundleOps()
     jf:close()
     log(string.format("bundle captured f=%d（目标 %d，首个 ≥ 采样点）mss=%dB → %s.{mss,json}",
       frame, PLAN.bundle_capture.frame, #blob, out))
-    bundleDone = true
+    bundleCaptureDone = true
   end
 end
 
 local function sampleTrace()
   if frame < 1 or frame > frames then return end
   bundleOps() -- exec 回调上下文（约束满足）
+  -- task-45：装载前那几帧是 emu 自检/上电预热，不属于录像时间线 ⇒ 不落 trace 行
+  if PLAN.bundle_load and not bundleLoadDone then return end
   if lastSampled == frame then return end -- once-per-frame 守卫（spin 多次进环防重）
   lastSampled = frame
 

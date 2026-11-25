@@ -1281,7 +1281,10 @@ def main():
           f"snapshot={snap or 'none(上电起跑)'}")
 
     # 三 sha 锚（H4）：scenario/rom/sched——报告与复用校验同源（sched 文本含 snapshot 行）
-    sched_text = schedule_text(name, frames, joy, caps, snap, plan.get("fixtures"))
+    # gotcha（#39）：这里必须与 run-all 路径（本文件 do_run_all）传同一组参数，含 joy2。
+    # 漏传 joy2 ⇒ 锚 ≠ 实际写盘的 .sched（锚少 242 行 2P 帧）⇒ emu 缓存永不命中、
+    # run-all 与单案对同一格给出不同锚/不同像素数。新增采样字段时两条路径必须成对改。
+    sched_text = schedule_text(name, frames, joy, caps, snap, plan.get("fixtures"), joy2)
     try:
         anchors = compute_anchors(scen_path, sched_text)
     except FileNotFoundError as exc:
