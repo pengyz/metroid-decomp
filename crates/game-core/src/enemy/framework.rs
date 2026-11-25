@@ -667,7 +667,7 @@ pub(crate) fn update_enemy_common_decide_with_beats(
     active: u8,
     resting: u8,
 ) {
-    match mem.read_ram(0x0081) {
+    match mem.enemy_status_pre_ai() {
         1 => update_enemy_common_no_move_anim(mem, x, resting),
         3 => update_enemy_common_no_move_no_anim(mem, x),
         _ => update_enemy_common_anim_move(mem, x, active),
@@ -695,15 +695,17 @@ pub(crate) fn update_enemy_common_no_move_no_anim(mem: &mut crate::frame::Manage
             mem.set_obj_cntrl(0x80 | 0x03 | 0x20);
         }
     }
-    if mem.read_wram(0x6AF4 + x as u16) != 0 {
+    // 【B3 typed 化】asm `lda EnsExtra.status,X / beq @endIf_B`：原始地址不是业务字段入口，
+    // 走实体状态访问器（同一字节 $6AF4+x，仅把「+0 = status」的语义收进 typed 面）。
+    if mem.enemy(slot_of(x)).status_raw() != 0 {
         // 【goal-轮39 绘径可见旗写件】（asm :6178-6186 逐字：`and #$FD/ora (flag<<1)/sta
         // data05`——**bit1=可见旗**）——绘径写面（flag=可见判定 ✓）。
         let d5 = mem.enemy(slot_of(x)).data05();
         mem.enemy(slot_of(x)).set_data05((d5 & 0xFD) | 0x02); // 绘⇒可见旗置
         draw_enemy(mem, x);
     }
-    mem.write_ram(0x0400 + x as u16 + 4, 0); // isHit=+4
-    mem.write_ram(0x0400 + x as u16 + 14, 0); // weaponAction=+14
+    mem.enemy(slot_of(x)).set_is_hit(0); // Ens.isHit=+4
+    mem.enemy(slot_of(x)).set_weapon_action(0); // Ens.weaponAction=+14
 }
 
 #[cfg(test)]
@@ -985,5 +987,128 @@ mod tests_pickup_flicker {
             super::update_enemy_pickup(&mut m, x);
             assert_eq!(m.read_ram(0x0400 + x as u16 + 0x0D), want, "FrameCount={fc}");
         }
+    }
+}
+
+#[cfg(test)]
+mod tests_b3_common_paths {
+    //! B3 落地（`docs/spec/enemy-common.md`）：三条路径的字段级单测。
+    //! 断言到 `Ens.animFrame/animDelay/animIndex/x/y/isHit/weaponAction` 与 `ObjectCntrl`，
+    //! 不测「不 panic」——每例都钉住写入的目标字段与值。
+    use super::*;
+    use crate::enemy::state::EnemyStatus;
+    use crate::frame::Manager;
+
+    /// 建一个「干净槽 1（x=0x10）、Brinstar、位置在屏幕中央」的 Manager。
+    fn stage(m: &mut Manager) {
+        // 走 typed 面（arch-coupling 只放行 typed 字段/域句柄）。
+        m.set_in_area(0x00); // Brinstar
+        m.enemy(slot_of(0x10)).set_y(0x40);
+        m.enemy(slot_of(0x10)).set_pos_x(0x40);
+        m.enemy(slot_of(0x10)).set_enemy_type(2);
+    }
+
+    /// ① animation 路径：`animDelay=0` ⇒ 写入入口 A 作为新延时，并取 `animIndex` 指向的帧；
+    /// `animDelay>0` ⇒ 只递减、换帧。
+    #[test]
+    fn animation_path_writes_delay_frame_and_index() {
+        let mut m = Manager::default();
+        stage(&mut m);
+        let table = game_data::assets::enemy_anim_table(0);
+        m.enemy(slot_of(0x10)).set_status(EnemyStatus::Active);
+        m.enemy(slot_of(0x10)).set_anim_delay(0);
+        m.enemy(slot_of(0x10)).set_anim_index(0);
+
+        update_enemy_common_no_move_anim(&mut m, 0x10, 3);
+
+        assert_eq!(m.enemy(slot_of(0x10)).anim_delay(), 3, "animDelay←A（入口节拍）");
+        assert_eq!(m.enemy(slot_of(0x10)).anim_frame(), table[0], "animFrame←table[0]");
+        assert_eq!(m.enemy(slot_of(0x10)).anim_index(), 1, "animIndex 前进一格");
+    }
+
+    /// ①b 延时未到：递减 3→2 且**不换帧**（这条区分「写回 RAM」与「局部递减」）。
+    #[test]
+    fn animation_path_decrements_delay_without_reloading_frame() {
+        let mut m = Manager::default();
+        stage(&mut m);
+        let table = game_data::assets::enemy_anim_table(0);
+        m.enemy(slot_of(0x10)).set_status(EnemyStatus::Active);
+        m.enemy(slot_of(0x10)).set_anim_delay(3);
+        m.enemy(slot_of(0x10)).set_anim_index(0);
+        m.enemy(slot_of(0x10)).set_anim_frame(table[0]);
+
+        update_enemy_common_no_move_anim(&mut m, 0x10, 0);
+
+        assert_eq!(m.enemy(slot_of(0x10)).anim_delay(), 2, "递减写回（DEC abs,X 语义）");
+        assert_eq!(m.enemy(slot_of(0x10)).anim_frame(), table[0], "延时未到不换帧");
+        assert_eq!(m.enemy(slot_of(0x10)).anim_index(), 0, "animIndex 不动");
+    }
+
+    /// ② velocity 路径：加速类（`L977B` bit6=1）用 `speedX` 直接积分，`enemy_move` 逐像素移动；
+    /// 同一帧里 `data05.bit6` 置位则整件跳过。
+    #[test]
+    fn velocity_path_moves_by_speed_and_skips_on_bit6() {
+        let mut m = Manager::default();
+        stage(&mut m);
+        let facing = game_data::assets::enemy_facing(0);
+        let accel_type = (0u8..16)
+            .find(|t| facing.get(*t as usize).copied().unwrap_or(0) & 0x40 != 0)
+            .expect("Brinstar 应有加速类敌人");
+        m.enemy(slot_of(0x10)).set_enemy_type(accel_type);
+        m.enemy(slot_of(0x10)).set_status(EnemyStatus::Active);
+        m.enemy(slot_of(0x10)).set_data05(0x00);
+        m.enemy(slot_of(0x10)).set_speed_x(2); // speedX=2
+        m.enemy(slot_of(0x10)).set_speed_subpixel_x(0);
+
+        let x0 = m.enemy(slot_of(0x10)).pos_x();
+        enemy_move(&mut m, 0x10);
+        assert_eq!(m.enemy(slot_of(0x10)).pos_x(), x0.wrapping_add(2), "速度 2 ⇒ 右移 2 像素");
+
+        // data05.bit6（30FPS 半速帧）⇒ 整件跳过。
+        m.enemy(slot_of(0x10)).set_data05(0x40);
+        let x1 = m.enemy(slot_of(0x10)).pos_x();
+        enemy_move(&mut m, 0x10);
+        assert_eq!(m.enemy(slot_of(0x10)).pos_x(), x1, "bit6 置位帧不移动");
+    }
+
+    /// ③ noMove/noAnim 路径：不推进动画、不动位置；`status=0` 不绘制但 `isHit/weaponAction`
+    /// 仍清零；tough（`specialAttribs.bit7`）在 `ObjectCntrl.bit7=0` 时写 `$A3`。
+    #[test]
+    fn no_move_no_anim_clears_flags_and_sets_tough_palette() {
+        let mut m = Manager::default();
+        stage(&mut m);
+        m.enemy(slot_of(0x10)).set_status(EnemyStatus::NoEnemy);
+        m.enemy(slot_of(0x10)).set_anim_delay(7);
+        m.enemy(slot_of(0x10)).set_anim_frame(0x11);
+        m.enemy(slot_of(0x10)).set_is_hit(1);
+        m.enemy(slot_of(0x10)).set_weapon_action(5);
+        m.enemy(slot_of(0x10)).set_special_attribs(0x80);
+        m.set_obj_cntrl(0x00);
+        let x0 = m.enemy(slot_of(0x10)).pos_x();
+        let y0 = m.enemy(slot_of(0x10)).y();
+
+        update_enemy_common_no_move_no_anim(&mut m, 0x10);
+
+        assert_eq!(m.enemy(slot_of(0x10)).anim_delay(), 7, "noAnim 不改动画延时");
+        assert_eq!(m.enemy(slot_of(0x10)).anim_frame(), 0x11, "noAnim 不改动画帧");
+        assert_eq!(m.enemy(slot_of(0x10)).is_hit(), 0, "isHit 每帧清零");
+        assert_eq!(m.enemy(slot_of(0x10)).weapon_action(), 0, "weaponAction 每帧清零");
+        assert_eq!(m.enemy(slot_of(0x10)).pos_x(), x0, "不移动 x");
+        assert_eq!(m.enemy(slot_of(0x10)).y(), y0, "不移动 y");
+        assert_eq!(m.obj_cntrl(), 0x80 | 0x03 | 0x20, "tough ⇒ 调色板 3 + 优先级");
+    }
+
+    /// ③b `ObjectCntrl.bit7` 已置 ⇒ 不再重写 tough 调色板（避免每帧覆写）。
+    #[test]
+    fn tough_palette_not_rewritten_when_bit7_already_set() {
+        let mut m = Manager::default();
+        stage(&mut m);
+        // status=0 ⇒ 不绘制；否则 `draw_enemy` 末件的 ClearObjectCntrl 会把本字段清 0，
+        // 读不到「是否重写 tough 调色板」这一步。
+        m.enemy(slot_of(0x10)).set_status(EnemyStatus::NoEnemy);
+        m.enemy(slot_of(0x10)).set_special_attribs(0x80);
+        m.set_obj_cntrl(0x80 | 0x0A);
+        update_enemy_common_no_move_no_anim(&mut m, 0x10);
+        assert_eq!(m.obj_cntrl(), 0x8A, "bit7 已置 ⇒ 保持调用方调色板");
     }
 }

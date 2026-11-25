@@ -189,10 +189,11 @@ pub(crate) fn crawler_reorient_sprite(mem: &mut crate::frame::Manager, x: u8) {
     mem.write_wram(0x6AF4 + x as u16 + 5, v); // resetAnimIndex
     mem.write_wram(0x6AF4 + x as u16 + 6, v); // animIndex
     mem.write_wram(0x6AF4 + x as u16 + 4, 0); // animDelay←0
-    // 【goal-轮42 bit2/1 清源件】金腿实证（f1838 转角径 d05 0x1A→0x58——bit2/1(0x06)
-    // 清+bit6 置）——转角径写面：d05 bit2/1 清（朝向/轴位重组——constants 无注余项位）。
-    let d5c = mem.read_ram(0x0400 + x as u16 + 5);
-    mem.write_ram(0x0400 + x as u16 + 5, d5c & 0xF9); // bit2/1 清（0x06）
+    // 【B4/#55】此处**不写 data05**：asm `CrawlerReorientSprite ; 01:9A8F` 只
+    // `lda data05/lsr`（读 bit0 进进位）后写 EnsExtra(+5/+6/+4)，全程无 data05 写。
+    // 旧形额外 `d5c & 0xF9` 清 bit2/bit1 是误加：原注释引的「f1838 0x1A→0x58」与
+    // `& 0xF9` 不相容（0x1A&0xF9=0x18，且 0x58 需 bit6 置），属读数混了别的写面；
+    // 实测 TAS f2084 槽1 因此差 0x04（emu 0x1E / rust 0x1A）。
 }
 
 #[cfg(test)]
@@ -276,11 +277,13 @@ mod tests {
         }
     }
 
-    /// 转角径写面：`data05` bit2/1 清、bit0（方向）与 bit6 保留。
+    /// 转角径**不写** `data05`：asm `CrawlerReorientSprite ; 01:9A8F` 只读 bit0 当 flip、
+    /// 写 EnsExtra(+5/+6/+4)；`data05` 的 bit1（可见旗）由 `DrawEnemy` 维护、bit2 由
+    /// `EnemyIfMoveFailedUp/Down` 翻转，本径都不碰。
     #[test]
-    fn reorient_clears_bit2_and_bit1_keeps_others() {
+    fn reorient_leaves_data05_untouched() {
         game_data::pack::init_from_env().ok();
-        for d5 in [0x1Au8, 0x5A, 0x7F] {
+        for d5 in [0x1Eu8, 0x1A, 0x5A, 0x7F] {
             let mut m = Manager::default();
             m.set_in_area(0x00); // Brinstar（默认 $74=3）
             let x = 0x10u8;
@@ -288,8 +291,8 @@ mod tests {
             m.write_ram(en + 5, d5);
             m.write_ram(en + 10, 2);
             crawler_reorient_sprite(&mut m, x);
-            let got = m.read_ram(en + 5);
-            assert_eq!(got, d5 & 0xF9, "data05 {d5:#04x} ⇒ 只清 bit2/1");
+            assert_eq!(m.read_ram(en + 5), d5, "data05 {d5:#04x} 必须原样保留");
+            assert_eq!(m.enemy(x / 16).anim_delay(), 0, "animDelay←0 仍要发生");
         }
     }
 }

@@ -104,6 +104,68 @@ impl Manager {
         self.read_ram(base + ct as u16)
     }
 
+    /// `$0652+ct Noise/SQ1/SQ2/Tri UsedBySFX`（谁占用了该通道）。
+    pub(crate) fn sfx_used(&self, ct: u8) -> u8 {
+        self.read_ram(addrs::NOISE_USED_BY_SFX + ct as u16)
+    }
+    pub(crate) fn set_sfx_used(&mut self, ct: u8, v: u8) {
+        self.write_ram(addrs::NOISE_USED_BY_SFX + ct as u16, v);
+    }
+
+    /// `SFXNoiseLength + ct`（$0660+ct）写侧——`InitSFXData` 的「本段多少帧」。
+    pub(crate) fn set_sfx_length(&mut self, ct: u8, v: u8) {
+        self.write_ram(addrs::SFX_LENGTH_BASE + ct as u16, v);
+    }
+
+    /// `SFXNoiseFrame + ct`（$0665+ct）写侧。
+    pub(crate) fn set_sfx_frame(&mut self, ct: u8, v: u8) {
+        self.write_ram(addrs::SFX_FRAME_BASE + ct as u16, v);
+    }
+
+    /// `SFXNoiseVar{0,1,2} + ct`（$0670/$0674/$0678+ct）写侧。
+    pub(crate) fn set_sfx_var(&mut self, slot: u8, ct: u8, v: u8) {
+        let base = match slot {
+            0 => addrs::SFX_VAR0_BASE,
+            1 => addrs::SFX_VAR1_BASE,
+            _ => addrs::SFX_VAR2_BASE,
+        };
+        self.write_ram(base + ct as u16, v);
+    }
+
+    /// `$0688+ct SFX*ContFlags` 写侧（`UpdateContFlags ; $B493`）。
+    pub(crate) fn set_sfx_cont_flags(&mut self, ct: u8, v: u8) {
+        self.write_ram(addrs::CONT_FLAGS_BASE + ct as u16, v);
+    }
+
+    /// `$0607 LoadMusicSQ1SQ2PeriodsFlag` 写侧（`InitSFXData` 尾部清零）。
+    pub(crate) fn set_load_music_periods_flag(&mut self, v: u8) {
+        self.write_ram(addrs::LOAD_MUSIC_PERIODS_FLAG, v);
+    }
+
+    /// `$00E0/$00E1 APURegisterPtr`（`LoadSFXData@*` 写的 APU 目标址）。
+    pub(crate) fn apu_register_ptr(&self) -> (u8, u8) {
+        (
+            self.read_ram(addrs::TABLE_PTR),
+            self.read_ram(addrs::TABLE_PTR + 1),
+        )
+    }
+    pub(crate) fn set_apu_register_ptr(&mut self, lo: u8, hi: u8) {
+        self.write_ram(addrs::TABLE_PTR, lo);
+        self.write_ram(addrs::TABLE_PTR + 1, hi);
+    }
+
+    /// `$00E2/$00E3 SFXDataPtr`（`$B2:low`——高字节恒 `$B2`）。
+    pub(crate) fn sfx_data_ptr(&self) -> (u8, u8) {
+        (
+            self.read_ram(addrs::TABLE_PTR + 2),
+            self.read_ram(addrs::TABLE_PTR + 3),
+        )
+    }
+    pub(crate) fn set_sfx_data_ptr(&mut self, lo: u8, hi: u8) {
+        self.write_ram(addrs::TABLE_PTR + 2, lo);
+        self.write_ram(addrs::TABLE_PTR + 3, hi);
+    }
+
     /// `SFXTriPeriodLow/High`（$0610/$0611）。
     pub(crate) fn sfx_tri_period(&self) -> (u8, u8) {
         (

@@ -32,5 +32,7 @@ pub mod sound_ram_face;
 pub mod object_slot_face;
 /// B1-b：PPU 写缓冲面（`$0780-$0786` + `$07A0-$07EF`：VRAM 字符串与 VRAMStruct 队列）的 typed 声明层。
 pub mod vram_buffer_face;
+/// B1-d：未命名尾段面（`$068E-$06FF` + `$0787-$079F` + `$07F0-$07FF`，合计 155 B，全 C 级）的 typed 声明层。
+pub mod spare_face;
 #[cfg(test)]
 pub(crate) mod verify_shim;

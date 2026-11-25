@@ -254,7 +254,7 @@ pub fn spec_face() -> [NesSpan; 2] {
 ///
 /// `dump_json`（静态腿/门禁）与动态腿（`verify_shim`）共用本表：新增实体只改这里，
 /// 避免两份类型清单漂移导致动态证据覆盖不到新声明。
-pub fn entity_spans() -> [(&'static str, &'static [(NesSpan, SpanKey)]); 16] {
+pub fn entity_spans() -> [(&'static str, &'static [(NesSpan, SpanKey)]); 17] {
     [
         ("SamusState", crate::samus::state::SamusState::SPANS),
         ("HealthChange", crate::samus::health_change::HealthChange::SPANS),
@@ -288,6 +288,8 @@ pub fn entity_spans() -> [(&'static str, &'static [(NesSpan, SpanKey)]); 16] {
             "SoundRam",
             crate::memmap::sound_ram_face::SoundRamFace::SPANS,
         ),
+        // B1-d：未命名尾段面（`$068E-$06FF` 114 B + `$0787-$079F` 25 B + `$07F0-$07FF` 16 B）。
+        ("SpareScratch", crate::memmap::spare_face::SpareFace::SPANS),
         (
             "ObjectSlots",
             crate::memmap::object_slot_face::ObjectSlotFace::SPANS,
@@ -443,7 +445,7 @@ mod tests {
         // 713 + 256 = 969（RAM 面），额外面 84 不变。
         // B1-c：对象槽面 256 B + 声引擎面 140 B（两段，$0683/$0684 归 SoundInitFlags）
         // 升格为 Owner ⇒ 713 + 256 + 140 = 1109；额外面 84 不变。
-        assert!(json.contains("\"coverage\":[1109,84]"), "owner 字节数锚点");
+        assert!(json.contains("\"coverage\":[1264,84]"), "owner 字节数锚点");
     }
 
     /// 每条 Unmodeled 说明都必须带可 grep 的代码指针（`*.rs`），否则

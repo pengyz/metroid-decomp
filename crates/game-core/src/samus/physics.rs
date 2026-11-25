@@ -45,10 +45,11 @@ pub fn x_plus_4(x: u8) -> u8 {
 /// 查撞点 Y=y−(−radiusY)=y+radiusY（下方））。旧形误用 `y−ry+8`（上方）→地板在下方读到
 /// 空瓦→穿地（L4 f820 发散根因）。仅向下查撞用（@loop_down）；上/横各有独立点。
 fn object_check_move_vertical(mem: &mut Manager) -> bool {
-    let y = mem.samus().y();
+    let pos = store_object_position_to_temp(mem); // asm `;07:E7B5` 首件 jsr StoreObjectPositionToTemp（后续位置读走 Temp08/09/0B）
+    let y = pos.y;
     let ry = mem.read_ram(0x0301); // Objects.radiusY
-    let x = mem.samus().x();
-    let hi = mem.samus().hi(); // Samus.hi（$30C——Object 结构字节锚 F186 `BD 0C 03`）
+    let x = pos.x;
+    let hi = pos.hi; // Samus.hi（$30C——Object 结构字节锚 F186 `BD 0C 03`）
     let rx = mem.read_ram(crate::ram_map::SAMUS_RADIUS_X);
     let mut check_y = y.wrapping_add(ry); // 向下查撞点=y+radiusY（asm E7AD/E90F）
     if rx == 0 {
@@ -1127,10 +1128,9 @@ pub fn check_health_status(mem: &mut Manager) {
         }
         mem.write_ram(SAMUS_SPEED_Y_I, 0xFD); // 击退上抛
         mem.write_ram(SAMUS_ACCEL_Y, 0x38); // 击退重力
-        // 【碰撞爆点收口（2026-11-01 用户报「碰撞直接触发 unsupport」——isHit($30) 下帧
-        // 引爆本桩！）】IsSamusDead/CheckHealthBeep（CE25 链）=占位臂记账（死亡链/低血
-        // 蜂鸣深件随件）——碰撞伤害面（击退+i 帧+扣血）保持可跑（playability 底座）。
-        crate::frame::DIVERGENCES.with(|d| d.borrow_mut().push(0x0CE25));
+        // 【B4-b（#54）消 0x0CE25】asm `;07:CE1E-CE2A`：① speedY←$FD/AccelY←$38（上两行，在判死前）
+        //   ② jsr IsSamusDead / bne；死 ⇒ jmp CheckHealthBeep（跳过 i 帧倒数与击退 X 速）
+        if super::death::is_samus_dead(mem) { check_health_beep(mem); return; }
     }
     // Lx006：无敌倒数（i-frames 帧驱动击退衰减）+**击退 X 速**（CE30-CE52——goal-轮20
     // 全谱端口（消 CE52 占位臂））：A=i帧(pre-dec)>>4（Adiv16=C2BF 逐字 lsr×4）→
@@ -2802,5 +2802,34 @@ mod tests_samus_tile_collision {
         let mut m = Manager::default();
         put_tile(&mut m, 0x50, 0x40, 0, 0x4E);
         assert!(!collision_point_samus(&mut m, 0x50, 0x40, 0));
+    }
+}
+
+/// 对象位置快照（`StoreObjectPositionToTemp ; 07:E8BE` 的 typed 等价物）。
+///
+/// asm 原形把当前对象（对象槽 0 = Samus）的 `hi/y/x` 三个字节拷进零页
+/// `Temp0B_PositionHi($0B)`/`Temp08_PositionY($08)`/`Temp09_PositionX($09)`，后续件
+/// （如 `CalculateFirstBGCollisionPoint ; 07:E90F`）从零页读回。
+///
+/// **已知差异（spec 里也记）**：Rust 侧不物化这三个零页临时槽——临时槽不在 typed 面，
+/// 且本件写点与所有读点之间没有别的件写它们，故以「一次取值快照」代替。读取时点与
+/// asm 的 `jsr StoreObjectPositionToTemp` 完全一致（`ObjectCheckMoveVertical ; 07:E7B5`
+/// 的首件），因此行为等价而零页字节面不出现这三个中间值。
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ObjectPositionTemp {
+    /// `Temp0B_PositionHi`（`$0B`）
+    pub hi: u8,
+    /// `Temp08_PositionY`（`$08`）
+    pub y: u8,
+    /// `Temp09_PositionX`（`$09`）
+    pub x: u8,
+}
+
+/// `StoreObjectPositionToTemp ; 07:E8BE`：把对象槽 0（Samus）的位置三字节取成快照。
+pub fn store_object_position_to_temp(mem: &mut Manager) -> ObjectPositionTemp {
+    ObjectPositionTemp {
+        hi: mem.samus().hi(),
+        y: mem.samus().y(),
+        x: mem.samus().x(),
     }
 }

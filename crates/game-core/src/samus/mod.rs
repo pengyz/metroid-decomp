@@ -6,6 +6,7 @@
 
 pub mod state;
 pub mod health_change;
+pub mod death; // B4-b（#54）：`IsSamusDead ; 07:CE84` 谓词 + CE1E 死门
 pub mod handler;
 pub mod physics;
 pub mod integrators; // 【G6 归位（r19）】原 crate::integrators（int_y/int_x 物理积分件）

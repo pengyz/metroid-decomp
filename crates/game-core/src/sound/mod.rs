@@ -12,6 +12,7 @@
 //! 6 旗清**（$B3D6）⑤静音旗=SFXNoiseInitFlags 位0（`lsr/bcs` 分路）。
 
 pub(crate) mod state;
+pub mod sfx;
 
 /// 声域地址面（A 级内容锚 constants_ram.asm:761-769/982/1069-1127 逐址）。
 pub mod addrs {
@@ -282,7 +283,7 @@ mod tests {
 /// SFXData@SamusHitSQ1SQ2（bank 窗 $B225 4B——`c1 89 02 0f`）。
 /// SFX 4B 记录取件（ROM `$B211..$B289` 窗内绝对址；`InitSFXData` 的 src 参数
 /// 就是 ROM 址，故这里以地址而非数组索引定位——地址即 asm 锚）。
-fn sfx4(addr: u16) -> &'static [u8; 4] {
+pub(crate) fn sfx4(addr: u16) -> &'static [u8; 4] {
     game_data::assets::sfx_record4(addr)
         .unwrap_or_else(|| panic!("SFX 记录址 ${addr:04X} 不在 $B20D..$B289 窗内"))
 }
