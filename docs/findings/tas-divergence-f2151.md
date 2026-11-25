@@ -117,7 +117,7 @@ cargo run -q -p game-core --bin rust_screenshot -- \
 1. `framework.rs:262`：`set_data06(0)`（注释引 `07:F68D-07:F698` 的 A 清零）；
 2. `update_enemy_explode`（`framework.rs:394-407`）：改为
    `if timer >= 0x19 { enemy_complete_death } else { set_data06(timer + 1) }`；
-3. `crates/game-core/src/frame/tests.rs:1415`（PMO 授权的写面例外，单独 commit）：
+3. `crates/game-core/src/frame/tests.rs:1417-1420`（PMO 授权的写面例外，单独 commit；断言实际在 :1420，卡面/PMO 转录作 :1415 为行号偏移）：
    `assert!(timer > 0, ...)` → `assert_eq!(timer, 0, ...)`，去掉「循环跑到拾取」的旧断言，
    保留 `assert_eq!(status_wram, 5)`。
 
