@@ -1413,12 +1413,12 @@ mod tests_kill_chain {
         assert_eq!(m.read_wram(0x6AF4 + x as u16), 5, "普通束杀⇒立刻变掉落物（status5）");
         assert_eq!(m.read_ram(0x0400 + x as u16 + 0x0D), 0x60, "拾取计时 $60");
         let timer = m.read_ram(0x0400 + x as u16 + 6);
-        assert!(timer > 0, "chunky 计时仍写（asm 不 return，+06）");
-        // 计时走尽⇒CompleteDeath⇒Pickup
-        for _ in 0..=timer {
-            update_enemy_explode(&mut m, x);
-        }
-        assert_eq!(m.read_wram(0x6AF4 + x as u16), 5, "⇒拾取（status5）");
+        // 【asm 07:F68D-07:F698 更正】`jsr InitEnAnimIndex` 尾条 `lda #$00`（写 animDelay）
+        // 把 A 清成 0，故 `sta chunkyExplosionTimer,x` 存 0——旧断言 `>0` 是错假设
+        // （TAS f2151：emu `$0406`=0x00 / rust 旧形 0x27）。本径（普通束杀）已直接变掉落物，
+        // chunky 计时不再被消费；计时方向（0→$19）由 `enemy::framework` 的单测覆盖。
+        assert_eq!(timer, 0, "A 被 InitEnAnimIndex 清零 ⇒ +06 写 0");
+        assert_eq!(m.read_wram(0x6AF4 + x as u16), 5, "普通束杀⇒掉落物（status5）");
     }
 
     /// 弹药拾取（animFrame=0x80）⇒**+2** 弹（asm `07:F4B7 lda #$02`）+槽释。
