@@ -254,7 +254,12 @@ pub(crate) fn explode_enemy(mem: &mut crate::frame::Manager, x: u8) {
     // `InitEnAnimIndex` 的落点：reset/index 同写、delay 归零——三件是一个动画切换动作。
     let frame = mem.enemy(slot_of(px as u8)).anim_frame();
     mem.enemy(slot_of(px as u8)).set_anim(crate::enemy::state::Anim { frame, delay: 0, reset: anim, index: anim });
-    mem.enemy(slot_of(px as u8)).set_data06(anim); // chunkyExplosionTimer←A（asm `sta`（+06））
+    // 【07:F68D-07:F698：A 被清零】`jsr InitEnAnimIndex` 的实现是
+    // `sta resetAnimIndex / sta animIndex / lda #$00 / sta animDelay / rts`——最后那条
+    // `lda #$00` 把 A 清成 0，所以紧接着的 `sta Ens.0.chunkyExplosionTimer,x`
+    // 存的是 **0**，不是传进去的 anim 索引（旧形存 anim ⇒ TAS f2151 `$0406`
+    // emu 0x00 / rust 0x27 的首分歧）。
+    mem.enemy(slot_of(px as u8)).set_data06(0); // chunkyExplosionTimer←A（A 已被 InitEnAnimIndex 清 0）
 
     // 【步骤 1/3：只做 spawn，update/draw 未接】`ExplodeEnemy` 尾件 07:F62E-07:F673：
     // 在 `EnExplosions` 池（`$04C0`，4 槽 × 8 B，额外面 `$6BB4`）里找第一个 status==0 的槽，
@@ -390,11 +395,14 @@ pub(crate) fn update_enemy_explode(mem: &mut crate::frame::Manager, x: u8) {
     let px = x as u16;
     update_enemy_anim(mem, x, 3);
     update_enemy_common_no_move_no_anim(mem, x);
+    // 【asm 07:DDDF-07:DE03 的方向】`DrawEnemy` 在 place==EnPlace1（正在爆散）时
+    // `inc Ens.0.chunkyExplosionTimer,x` 再 `cmp #$19`：**从 0 往上加到 $19(25) 才死**，
+    // 不是倒计时。旧形「init=anim 索引、每帧减 1」两个都反了（init 见上一条修正）。
     let timer = mem.enemy(slot_of(px as u8)).data06(); // chunkyExplosionTimer（trace +06）
-    if timer > 0 {
-        mem.enemy(slot_of(px as u8)).set_data06(timer - 1);
-    } else {
+    if timer >= 0x19 {
         enemy_complete_death(mem, x);
+    } else {
+        mem.enemy(slot_of(px as u8)).set_data06(timer + 1);
     }
 }
 
@@ -1110,5 +1118,36 @@ mod tests_b3_common_paths {
         m.set_obj_cntrl(0x80 | 0x0A);
         update_enemy_common_no_move_no_anim(&mut m, 0x10);
         assert_eq!(m.obj_cntrl(), 0x8A, "bit7 已置 ⇒ 保持调用方调色板");
+    }
+}
+
+mod tests_chunky_explode_timer {
+    use super::*;
+    use crate::frame::Manager;
+
+    /// `chunkyExplosionTimer` 的**方向**：asm `DrawEnemy ; 07:DDDF` 是 `inc` 后
+    /// `cmp #$19`（0→25），`ExplodeEnemy ; 07:F611` 初始化存 0（A 被
+    /// `InitEnAnimIndex` 尾条 `lda #$00` 清零）。本测钉住「0 起、每帧 +1、到 $19 变掉落物」。
+    #[test]
+    fn timer_increments_from_zero() {
+        // asm 07:F68D 的 `lda #$00` 使 init 存 0，之后由 DrawEnemy 07:DDDF 每帧 `inc`
+        let mut m = Manager::default();
+        let x = 0x40u8;
+        m.enemy(slot_of(x)).set_status(EnemyStatus::Explode);
+        m.enemy(slot_of(x)).set_data06(0);
+        update_enemy_explode(&mut m, x);
+        assert_eq!(m.enemy(slot_of(x)).data06(), 1, "0 → 1（不是递减、不是 0x27）");
+    }
+
+    #[test]
+    fn timer_reaching_0x19_completes_death() {
+        // `cmp #$19` 相等 ⇒ EnemyCompleteDeath；后续状态取决于 1/16 掉落判，
+        // 故只断言「不再是 Explode」，不把 RNG 前提写进测试。
+        let mut m = Manager::default();
+        let x = 0x40u8;
+        m.enemy(slot_of(x)).set_status(EnemyStatus::Explode);
+        m.enemy(slot_of(x)).set_data06(0x19);
+        update_enemy_explode(&mut m, x);
+        assert_ne!(m.enemy(slot_of(x)).status_raw(), 3, "$19 ⇒ EnemyCompleteDeath");
     }
 }
