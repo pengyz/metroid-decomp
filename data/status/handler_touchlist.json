@@ -1,10 +1,10 @@
 {
  "schema": "handler-touchlist/v1",
  "doc": "占位臂记账触达清单（L4 矩阵实录固化——增长即红白名单基线）。源=shots_rust/*.divergences.json（rust_screenshot 腿 DIVERGENCES sidecar，2026-11-13 新增）聚合矩阵内的全部案（当前 21 案，`cases_covered` 为准）。契约：sidecar 新增任何不在本清单的 addr=账外=红（须显式登记本清单才放行）——与 diff_traces.py:614 账外照红同语义的 L4 侧。",
- "source_run": "python3 tools/l4_diff_run.py run-all @ 2026-11-23（21 案/172 格，match 166·diff 6·blocked 0；本版刷新来源=Skree 伤害径两轮 + 空中开火分派 + 敌帧表 bank→key 修正后的事件重算；0xFB7B/0xCC98/0xCC36/0xCE25 计数上升，无新增 addr）",
+ "source_run": "tools/l4_diff_run.py run-all（21 案 / 172 格，match 171·diff 1·blocked 0）；重生成：T1⑥ 漂移修复：0xCE25 推点接线转 stale；0xCC36 -2 / 0xFB7B -12 来自 case-password-justin（#47 暗窗相位修复后该案迭代帧数变化）。差异来源=接线（CE25）+ 用例行为变化（CC36/FB7B），无新增/删除 addr。",
  "cases_covered": 21,
  "unique_addrs": 10,
- "total_events": 81647,
+ "total_events": 81625,
  "entries": [
   {
    "addr": "0xB7E7",
@@ -56,7 +56,7 @@
    "asm_label": "SamusStand",
    "push_site": "samus/handler.rs:902",
    "asm_ref": "refs/m1disasm/SRC/prg7_engine.asm:2735",
-   "n_events": 6474,
+   "n_events": 6472,
    "first_tick": 1000000000,
    "cases": {
     "case-001-game-start-samus-interaction": 608,
@@ -74,7 +74,7 @@
     "case-mechanism-morphball": 61,
     "case-morphball-probe": 434,
     "case-morphball-tail-probe": 61,
-    "case-password-justin": 962,
+    "case-password-justin": 960,
     "case-scrollseam-probe": 153,
     "case-shootprobe-probe": 377,
     "case-walkfcprobe": 346
@@ -113,15 +113,11 @@
    "asm_label": "IsSamusDead-chain(Lx005 死分支 jmp CheckHealthBeep)",
    "push_site": "samus/physics.rs:1005",
    "asm_ref": "refs/m1disasm/SRC/prg7_engine.asm:3108-3118 (Lx005@CE1E 内)",
-   "n_events": 8,
+   "n_events": 0,
    "first_tick": 1000000000,
-   "cases": {
-    "case-001-game-start-samus-interaction": 2,
-    "case-002-door-blue-interaction": 2,
-    "case-crawlprobe": 2,
-    "case-elev-norf-room-load": 1,
-    "case-elev-norfair-transition": 1
-   }
+   "cases": {},
+   "stale_since": "2026-11-25",
+   "stale_note": "推点已接线：samus/physics.rs:1005 check_health_status（CDFA 链三件）已端口，CE25 占位桩不再被记账——不是覆盖率缺口，也不代表行为回退。"
   },
   {
    "addr": "0xD150",
@@ -150,7 +146,7 @@
    "asm_label": "InitEnemyFacingDirectionAxisAndDelay",
    "push_site": "frame/mainloop.rs:752 (敌移动 delay 记账)",
    "asm_ref": "refs/m1disasm/SRC/prg7_engine.asm:12062",
-   "n_events": 66124,
+   "n_events": 66112,
    "first_tick": 1000000000,
    "cases": {
     "case-001-game-start-samus-interaction": 4451,
@@ -168,7 +164,7 @@
     "case-mechanism-morphball": 666,
     "case-morphball-probe": 6974,
     "case-morphball-tail-probe": 666,
-    "case-password-justin": 5772,
+    "case-password-justin": 5760,
     "case-scrollseam-probe": 2679,
     "case-shootprobe-probe": 2622,
     "case-walkfcprobe": 5527
