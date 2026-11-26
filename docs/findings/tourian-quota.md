@@ -94,10 +94,20 @@ running 7 tests .......  test result: ok. 7 passed; 0 failed; 0 ignored; 1130 fi
 回归（本工作树，含挂钩）：
 
 ```console
-$ cargo test --workspace            # 汇总 1257 passed / 0 failed（逐二进制结果相加）
-$ python3 gates/cli.py check        # 见提交说明（PASS/FAIL/SKIP/TOLERATED 计数）
-$ tools/l4_diff_run.py run-all      # 见提交说明（21 案/172 格）
+$ cargo test --workspace
+（聚合所有 test binary）1257 passed / 0 failed
+
+$ python3 gates/cli.py check
+SUMMARY: PASS=24 FAIL=0 SKIP=3 TOLERATED=1
+CHECK: PASS
+
+$ python3 tools/l4_diff_run.py run-all
+用例 21 · 采集点格 172 · match 171 · diff 1 · blocked 0 · pass 171/172
+唯一 diff = case-mechanism-input-conflict（f674 已知伪差，与基线同值）
 ```
+
+提交：`04d52017`（lane/117，8 files +382/−6；含两处写面外扩展与 baseline 上调，理由见提交正文与
+#117 thread seq1/seq2/seq4）。
 
 ## 6. 未覆盖 / 后续
 
