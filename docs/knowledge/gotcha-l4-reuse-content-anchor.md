@@ -5,10 +5,6 @@ date: 2026-11-26
 status: confirmed
 ---
 
----
-type: gotcha
----
-
 ## 现象
 
 同一棵树、同一用例、同一输入（scenario/ROM/sched 三 sha 全同），`case-password-justin` 的
