@@ -83,9 +83,87 @@ pub struct StartRoom {
     /// `Some(n)` = 同时把 `InArea`（`$0074`）低 4 位设为 n（0=Brinstar 1=Norfair 2=Kraid
     /// 3=Tourian 4=Ridley）。区号决定载房用哪张区表，所以必须与 `room` 同一帧写。
     pub area: Option<u8>,
-    /// 坐标落笔帧（`--start-pos-frame`）。`None` = 旧行为：`frame > s.frame` 且任务机空闲的第一帧。
+    /// 坐标落笔帧（`--start-pos-frame`）。`None` = 旧行为：`frame > s.frame`、房号已就位且
+    /// 载房机连续空闲 `POS_SETTLE_FRAMES` 帧的第一帧（`None` 时还要再等一拍站稳验证）。
     /// 用于「先靠滚动把目标房载进来、载完再把 Samus 摆到门台」的场景。
     pub pos_frame: Option<u64>,
+    /// 与房号同帧写入的固化条件（`--start-preset` 用），空 = 无。
+    ///
+    /// 只写「已证实的世界状态」（雕像 bit7、桥未生成标志等），不改游戏逻辑；
+    /// 目的同 `Poke`：把「已经通过正常流程能得到的状态」摆到位，再观察下游链。
+    pub fixtures: &'static [(u16, u8)],
+    /// 预设路径自带开机按键（START 两次进 GameEngine）：`--start-preset` 没有外部脚本，
+    /// 不按键则引擎停在标题/初始例程，物理与滚屏都不跑（实测 main_routine=0 时写房号
+    /// 只改了 RAM 数字，`check_update_name_table` 永不被调用）。普通 `--start-room`
+    /// 由调用方脚本负责按 START，这里保持 false。
+    pub auto_start: bool,
+}
+
+/// 坐标落笔需要连续观察到的「载房机空闲」帧数。
+///
+/// 实测（`--start-room 0x2C`）：房号在 f900 写入、引擎同一帧装载完（`room_load_phase` 仍 0），
+/// 但别的房要走过 `SetupRoom` 的若干尾帧；只等「phase==0 的第一帧」会把坐标写进装载中途，
+/// 随后被出生点覆盖（#116 §8.3 的 0xF1/0xF3/0xFF 链就是这样起的）。改为连续 3 帧空闲再落笔，
+/// 并在落笔后再观察 2 帧确认没被覆盖（被覆盖则重写，最多 3 次）。
+pub const POS_SETTLE_FRAMES: u64 = 3;
+/// 起动帧之后强制按 RIGHT 的帧数：只为触发一次真正的房间装载（见 `run_scripted` 注释）。
+pub const NUDGE_RIGHT_FRAMES: u64 = 60;
+
+/// 找一个「右邻格仍是目标房」的世界图格：滚动 nudge 需要它，否则 `GetRoomNum`
+/// 会按 #61 的 `inc MapPosX` 特径把邻房载进来。世界图里同一房常占多格
+/// （例：0x2B 在 (y15,x24)，右邻 (y15,x25) 也是 0x2B）。
+fn nudge_cell(room: u8) -> Option<(u8, u8)> {
+    let map = game_core::memmap::world_map::world_map();
+    for y in 0..32u8 {
+        for x in 0..31u8 {
+            let i = (y as usize) * 32 + x as usize;
+            if map[i] == room && map[i + 1] == room {
+                return Some((x, y));
+            }
+        }
+    }
+    None
+}
+
+
+/// 坐标落笔的等待上限（帧）：超过就判失败（exit 8），不再静默忽略。
+pub const POS_DEADLINE_FRAMES: u64 = 300;
+
+/// 固化起点预设（`--start-preset`）：一组「房间 + 世界状态」的可复跑起点。
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct StartPreset {
+    pub name: &'static str,
+    pub room: u8,
+    pub map: (u8, u8),
+    pub pos: (u8, u8),
+    pub area: u8,
+    /// 与房号同帧写的世界状态（`(地址, 值)`）。
+    pub fixtures: &'static [(u16, u8)],
+}
+
+/// `bridge-tourian`：双 Boss 已死 + 两座石像已抬（`$687B/$687C` 的 bit7）+ 站在桥房。
+///
+/// 位定义来自 `docs/spec/statue-bridge-chain.md`（#76）：bit0=已击败、bit7=石像抬到位；
+/// 桥的生成判据是两值 bit7 相与（`07:DADA`），`$0054` bit7=桥已生成（这里显式清 0，
+/// 让桥在本帧重新生成，等同「刚抬完像走进桥房」）。房间=Brinstar `Room2B`（世界图 2,4），
+/// 坐标取桥房左段（`$E0,$6F`，同 #116 §8.3 尝试 B）。
+pub const PRESET_BRIDGE_TOURIAN: StartPreset = StartPreset {
+    name: "bridge-tourian",
+    room: 0x2B,
+    map: (4, 2),
+    pos: (0xE0, 0x6F),
+    area: 0,
+    fixtures: &[(0x687B, 0x81), (0x687C, 0x82), (0x0054, 0x00)],
+};
+
+/// 解析 `--start-preset` 的名字。
+pub fn parse_preset(name: &str) -> Result<StartPreset, String> {
+    match name.trim() {
+        "bridge-tourian" => Ok(PRESET_BRIDGE_TOURIAN),
+        other => Err(format!(
+            "未知预设 {other:?}；可用：bridge-tourian（双 Boss 已死+石像已抬+桥房起点）"
+        )),
+    }
 }
 
 /// 只改 `InArea($0074)` 的低 4 位（区号），高 4 位保留。
@@ -252,6 +330,11 @@ fn state_row(driver: &CoreDriver, frame: u64, pad: PadState) -> String {
         probe_tile(m),
         door_tiles(m),
         r(game_core::ram_map::IN_AREA),
+    ) + &format!(
+        ",{:02X},{:02X},{:02X}",
+        r(0x0054),
+        r(0x687B),
+        r(0x687C)
     )
 }
 
@@ -300,6 +383,22 @@ pub struct RunReport {
     pub states: Vec<(u64, u8, u8, u8)>, // (frame, room, mapx, mapy) 每次变化
     /// 启动定位结果：(目标房号, 引擎是否装载成功)。`None` = 本次未用 `--start-room`。
     pub start_room: Option<(u8, bool)>,
+    /// 坐标落笔结果：`None` = 本次未用 `--start-pos`；`Some(true)` = 落笔并站稳；
+    /// `Some(false)` = 在 `POS_DEADLINE_FRAMES` 内没落成（调用方必须 fail-loud）。
+    pub pos: Option<bool>,
+}
+
+/// 坐标落笔的小状态机（等空闲 → 落笔 → 站稳验证，被覆盖就重写）。
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum PosPhase {
+    /// 等「载房机连续空闲」。
+    Wait,
+    /// 已落笔，正在核对接下来两帧是否保持目标坐标。
+    Verify { left: u8, retries: u8 },
+    /// 落成（或无需落笔）。
+    Done,
+    /// 超时未落成。
+    Failed,
 }
 
 /// 无窗口跑 `frames` 帧：逐帧喂脚本按键、落状态 CSV、在指定帧落 PPM。
@@ -321,17 +420,40 @@ pub fn run_scripted(
     };
     writeln!(
         sink,
-        "frame,joy,game_mode,main_routine,room,map_x,map_y,scroll_x,scroll_y,door_entry,door_delay,samus_xy,samus_status,load_phase,door_data,door_scroll_status,door_slots,probe_tile,door_tiles,in_area"
+        "frame,joy,game_mode,main_routine,room,map_x,map_y,scroll_x,scroll_y,door_entry,door_delay,samus_xy,samus_status,load_phase,door_data,door_scroll_status,door_slots,probe_tile,door_tiles,in_area,bridge,statue_kraid,statue_ridley"
     )?;
     if shot_dir.is_some() {
         std::fs::create_dir_all(shot_dir.unwrap())?;
     }
-    let mut report = RunReport { frames: 0, rooms: Vec::new(), states: Vec::new(), start_room: None };
+    let mut report =
+        RunReport { frames: 0, rooms: Vec::new(), states: Vec::new(), start_room: None, pos: None };
     let mut last = (u8::MAX, u8::MAX, u8::MAX);
     let mut start_seen = false;
-    let mut pos_applied = start.map(|s| s.pos.is_none()).unwrap_or(true);
+    let mut pos_phase = match start {
+        Some(s) if s.pos.is_some() => PosPhase::Wait,
+        _ => PosPhase::Done,
+    };
+    let mut idle_streak = 0u64;
+    let mut nudge_right_until = 0u64;
+    let mut nudge_restore_map = false;
+    let mut nudge_done = false;
+    let mut nudge_started = false;
+    let mut nudge_loaded = false;
+    let mut start_applied: Option<u64> = None;
     for frame in 1..=frames {
-        let pad = script.pad_at(frame);
+        let mut pad = script.pad_at(frame);
+        // 预设路径没有外部脚本：自己按两次 START（9/18 帧）进 GameEngine。否则引擎停在
+        // 初始例程，写房号只改 RAM 数字（实测 main_routine=0，check_update_name_table 不跑）。
+        if start.is_some_and(|s| s.auto_start)
+            && start_applied.is_none()
+            && (frame == 9 || frame == 18 || frame % 60 == 0)
+        {
+            pad.bits |= 0x10; // START：推进开场/标题，直到进 GameEngine
+        }
+        let scroll_x_before = driver.engine.mem.read_ram(game_core::ram_map::SCROLL_X);
+        if frame <= nudge_right_until && !nudge_done {
+            pad.bits |= 0x01; // RIGHT：触发 scroll_right → check_update_name_table 的真实装载径
+        }
         for p in pokes.iter().filter(|p| p.frame == frame) {
             driver.engine.mem.write_ram(p.addr, p.value);
         }
@@ -340,7 +462,13 @@ pub fn run_scripted(
         // 028/06F，f27 装载完成后被改成 080/0B0）。所以房号在 `frame` 写一次，坐标在
         // 「房号已就位 + 任务机空闲 + 主例程在游戏内」后的第一帧写一次。
         if let Some(s) = start {
-            if s.frame == frame {
+            // 只进 GameEngine（MainRoutine=3）之后才落「载房起点」：标题/初始化例程里写房号
+            // 不会走装载径。预设自带 START；普通 --start-room 由调用方脚本保证已进游戏。
+            if start_applied.is_none()
+                && frame >= s.frame
+                && driver.engine.mem.read_ram(game_core::ram_map::MAIN_ROUTINE) == 3
+            {
+                start_applied = Some(frame);
                 let mem = &mut driver.engine.mem;
                 // 区号必须先写：载房用哪张区表由 InArea 低 4 位决定（room_load::area_idx），
                 // 同一帧写进去，引擎在下一拍的载房判据里才会用新区的房间表。
@@ -352,35 +480,147 @@ pub fn run_scripted(
                     // 这里复用同一支已端口的函数，保持「换区 = 重拷区表」的语义。
                     game_core::frame::tick::copy_area_pointers(mem);
                 }
-                if let Some(r) = s.room {
-                    mem.write_ram(game_core::ram_map::ROOM_NUMBER, r);
-                }
                 if let Some((mx, my)) = s.map {
                     mem.write_ram(game_core::ram_map::MAP_POS_X, mx);
                     mem.write_ram(game_core::ram_map::MAP_POS_Y, my);
                 }
-            }
-            if !pos_applied && frame > s.frame {
-                let mem = &mut driver.engine.mem;
-                let ready = match s.pos_frame {
-                    Some(pf) => frame >= pf && mem.room_load_phase == 0,
-                    None => {
-                        s.room
-                            .map(|r| mem.read_ram(game_core::ram_map::ROOM_NUMBER) == r)
-                            .unwrap_or(true)
-                            && mem.room_load_phase == 0
+                if let Some(r) = s.room {
+                    mem.write_ram(game_core::ram_map::ROOM_NUMBER, r);
+                    // 只写房号**不会装载房间对象**：装载由 `check_update_name_table` 在
+                    // **滚屏调用**里做（`world/camera/scroll.rs` 的 `is_new_load_request`
+                    // 分支；`scroll_left/right` 是 pub(crate)，shell 调不到）。
+                    // 实测 `--start-room 0x13` 后 `door_slots=0/0/0/0`、门瓦 0；
+                    // 正常滚屏进同房时 `door_slots=2/0/5/2`、门瓦 36。
+                    // 故这里只做「让引擎自己滚一格」的前置：先把 ScrollX 抬离 0，
+                    // 避免 ScrollX==0 的 `inc MapPosX + GetRoomNum` 特径（#61）把
+                    // MapPos 推到邻格载错房；随后 4 帧强制按 RIGHT，
+                    // 由 `scroll_right` 触发的 `check_update_name_table` 走真正的装载径。
+                    mem.write_ram(game_core::ram_map::SCROLL_X, 0x00);
+                    // 只按 RIGHT 不会滚：滚屏条件是 SamusScrX≥$8F（physics::move_samus_right
+                    // 的 `ScrX>=0x8F ⇒ scroll_right`）——站在房中间时 ScrX 远小于阈值，
+                    // 之前「4 帧 RIGHT 触发装载」的假设因此不成立（复核实测 door_slots 全 0）。
+                    // 故把 Samus 摆到右边界、ScrX 抬过阈值：下一帧 RIGHT 必然调 scroll_right
+                    // → check_update_name_table → 真装载。y 选非门行（门恒 y=$68），避免撞门。
+                    mem.write_ram(game_core::ram_map::SAMUS_X, 0x90);
+                    mem.write_ram(game_core::ram_map::SAMUS_Y, 0xB0);
+                    mem.write_ram(game_core::ram_map::SAMUS_SCR_X, 0x90);
+                    // 滚动 nudge 会让 `scroll_right` 在 ScrollX==0 时先 `inc MapPosX` 再
+                    // `GetRoomNum`（#61 特径）——若右邻格不是同一房，就会载成邻房。
+                    // 故先把 MapPos 摆到**右邻格仍是同一房**的地图格（世界图里同一房可占
+                    // 多格，如 0x2B 在 (15,24) 的右邻 (15,25) 仍是 0x2B），滚一格后
+                    // GetRoomNum 得到同一房号 ⇒ 引擎照常装载目标房。载完后（pos 核对阶段）
+                    // 再把 MapPos 恢复成调用方要求的格。
+                    if let Some((nx, ny)) = nudge_cell(r) {
+                        mem.write_ram(game_core::ram_map::MAP_POS_X, nx);
+                        mem.write_ram(game_core::ram_map::MAP_POS_Y, ny);
+                        nudge_right_until = frame + NUDGE_RIGHT_FRAMES;
+                        nudge_restore_map = s.map.is_some();
                     }
-                };
-                if ready {
-                    if let Some((x, y)) = s.pos {
-                        mem.write_ram(game_core::ram_map::SAMUS_X, x);
-                        mem.write_ram(game_core::ram_map::SAMUS_Y, y);
-                    }
-                    pos_applied = true;
                 }
+                // 预设固化状态：与房号同帧写，保证载房判据（雕像门/桥生成）看到的是这套世界状态。
+                for &(addr, value) in s.fixtures {
+                    mem.write_ram(addr, value);
+                }
+            }
+            let applied_at = start_applied.unwrap_or(s.frame);
+            match pos_phase {
+                PosPhase::Wait if frame > applied_at => {
+                    let mem = &mut driver.engine.mem;
+                    let idle = mem.room_load_phase == 0;
+                    // nudge 装载路径下，载房任务机会把 RoomNumber 走到 $F0..$FF（尾游标），
+                    // 不能再用「房号==目标」判就位；改用「任务机空闲 + 已观测到载房窗开过」
+                    // ——窗开过就证明引擎确实按目标房号执行了装载（MapPos 预置在右邻同房的格）。
+                    let room_ok = s
+                        .room
+                        .map(|r| mem.read_ram(game_core::ram_map::ROOM_NUMBER) == r)
+                        .unwrap_or(true)
+                        || (nudge_loaded && mem.room_load_phase == 0);
+                    // nudge 路径要等「载房窗确实开过又关上」才允许落位/恢复地图格：
+                    // 窗还没开就恢复 MapPos，会让下一帧的 RIGHT 从 4/2 推到 5/2，载成邻房。
+                    // 只要请求了房号，就等到「真的装载过」才允许落位：否则 pos 会写在
+                    // 载房前，随后被房间出生点/物理顶掉（复核实测 B 路径 f904 就落笔、
+                    // f919 已漂到 0x7A）。装载证据 = 滚屏触发过 nudge 或载房窗开过。
+                    let load_ok = s.room.is_none() || nudge_loaded;
+                    if idle && room_ok && load_ok {
+                        if nudge_restore_map {
+                            if let Some((mx, my)) = s.map {
+                                mem.write_ram(game_core::ram_map::MAP_POS_X, mx);
+                                mem.write_ram(game_core::ram_map::MAP_POS_Y, my);
+                            }
+                            nudge_restore_map = false;
+                        }
+                        idle_streak += 1;
+                    } else {
+                        idle_streak = 0;
+                    }
+                    if let Some(pf) = s.pos_frame {
+                        // 显式落笔帧：用户已算好载房耗时，仍要求该帧载房机空闲。
+                        if frame >= pf && idle {
+                            if let Some((x, y)) = s.pos {
+                                mem.write_ram(game_core::ram_map::SAMUS_X, x);
+                                mem.write_ram(game_core::ram_map::SAMUS_Y, y);
+                            }
+                            pos_phase = PosPhase::Verify { left: 2, retries: 0 };
+                        }
+                    } else if idle_streak >= POS_SETTLE_FRAMES {
+                        if let Some((x, y)) = s.pos {
+                            mem.write_ram(game_core::ram_map::SAMUS_X, x);
+                            mem.write_ram(game_core::ram_map::SAMUS_Y, y);
+                        }
+                        idle_streak = 0;
+                        pos_phase = PosPhase::Verify { left: 2, retries: 0 };
+                    }
+                    // 起点还没落（`start_applied=None`）时不要计时：预设要先等引擎进
+                    // GameEngine（实测到 f466），用 s.frame 计会在这之前就判超时。
+                    if start_applied.is_some() && frame > applied_at + POS_DEADLINE_FRAMES {
+                        pos_phase = PosPhase::Failed;
+                    }
+                }
+                PosPhase::Verify { left, retries } => {
+                    let mem = &mut driver.engine.mem;
+                    let target = s.pos.unwrap_or((0, 0));
+                    let cur = (
+                        mem.read_ram(game_core::ram_map::SAMUS_X),
+                        mem.read_ram(game_core::ram_map::SAMUS_Y),
+                    );
+                    if cur == target {
+                        if nudge_restore_map {
+                            if let Some((mx, my)) = s.map {
+                                mem.write_ram(game_core::ram_map::MAP_POS_X, mx);
+                                mem.write_ram(game_core::ram_map::MAP_POS_Y, my);
+                            }
+                            nudge_restore_map = false;
+                        }
+                        pos_phase = if left <= 1 {
+                            PosPhase::Done
+                        } else {
+                            PosPhase::Verify { left: left - 1, retries }
+                        };
+                    } else if retries < 3 {
+                        // 被出生点/物理回弹覆盖：再写一次，最多 3 次。
+                        mem.write_ram(game_core::ram_map::SAMUS_X, target.0);
+                        mem.write_ram(game_core::ram_map::SAMUS_Y, target.1);
+                        pos_phase = PosPhase::Verify { left: 2, retries: retries + 1 };
+                    } else {
+                        pos_phase = PosPhase::Failed;
+                    }
+                }
+                _ => {}
             }
         }
         driver.step(pad.bits, 0);
+        // nudge 的退出条件：载房任务机开窗（`room_load_phase != 0`）**或**本帧真的滚了
+        // （SCROLL_X 0→非 0）。后者是必须的：滚屏调用里 `check_update_name_table` 会当场
+        // `setup_room`，载房窗可能同拍开完，壳层每帧采样看不到 `phase!=0`——只认 phase
+        // 会让 `nudge_started` 永远为 false（复核阻断 A 的根因）。滚动发生即证明
+        // `check_update_name_table` 跑过且 `is_load` 为真（启动帧写入的房号 <$F0）。
+        let scroll_x_after = driver.engine.mem.read_ram(game_core::ram_map::SCROLL_X);
+        let scrolled = scroll_x_before == 0 && scroll_x_after != 0;
+        if !nudge_done && nudge_right_until > 0 && (driver.engine.mem.room_load_phase != 0 || scrolled) {
+            nudge_done = true;
+            nudge_started = true;
+            nudge_loaded = true;
+        }
         writeln!(sink, "{}", state_row(driver, frame, pad))?;
         let m = &driver.engine.mem;
         let now = (
@@ -411,6 +651,22 @@ pub fn run_scripted(
     }
     sink.flush()?;
     report.start_room = start.and_then(|s| s.room.map(|r| (r, start_seen)));
+    report.pos = start.and_then(|s| {
+        s.pos.map(|_| match pos_phase {
+            PosPhase::Done => true,
+            _ => false,
+        })
+    });
+    // fail-loud：帧数不够/一直没进 GameEngine 时，起点从未写过——不能报「坐标被覆盖」，
+    // 那是另一类故障。这里给出可执行的诊断，调用方仍按 pos=Some(false) 退 8。
+    if let Some(s) = start {
+        if s.pos.is_some() && start_applied.is_none() {
+            eprintln!(
+                "[start] {} 帧内没有进入 GameEngine（MainRoutine=3），起点从未落笔；加大 --frames 或检查 START 是否被吃掉",
+                report.frames
+            );
+        }
+    }
     Ok(report)
 }
 

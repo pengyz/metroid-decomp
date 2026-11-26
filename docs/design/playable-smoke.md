@@ -204,3 +204,77 @@ tools/playable_door_smoke.sh --self-test     # rc=0 ⇒ 四态判定与退出码
 排除机制：这些房间的门瓦在行 10-15、站立面行 16，而房间主地面在行 22-24；
 「从下层地面跳上去」被台底固实瓦截断（跳峰实测 34px，高差 63px），
 所以只能靠「从门的另一侧走进来」把 Samus 放到门台上——这正是本卡采用的回程路径。
+
+## 阶段 3（#118）：起点定位的两处修正与「桥房」固定起点
+
+### 3.1 `--start-pos` 改成状态机（不再「写一次就完」）
+
+旧实现在起动帧写一次坐标就撒手，之后被载房出生点/物理回弹改掉也无人知晓。现在：
+
+1. 先等引擎进 `MainRoutine==3`（GameEngine）：起动帧只是「最早可写帧」，标题/初始化例程里写房号
+   只改 RAM 数字，装载与物理都不会跑（实测预设要到 f466 才进 GameEngine）。`--start-*` 会自带
+   START（9/18 帧，之后每 60 帧一次，直到进游戏），没有外部脚本也能落起点；
+2. 等「房号就位 **且** 载房任务机 `room_load_phase==0`」**连续 3 帧**（`POS_SETTLE_FRAMES`）；
+   请求了房号时还要等「真的装载过」（滚屏触发过 nudge 或载房窗开过），否则坐标会被出生点顶掉；
+3. 落笔后**核对 2 帧**，被覆盖则重写（最多 3 次）；
+4. **从落起点那帧起** 300 帧（`POS_DEADLINE_FRAMES`）仍未站稳 ⇒ stderr 说明 + **exit 8**
+   （fail-loud）；帧数不够、根本没进 GameEngine 时另给一条可读诊断，同样 exit 8。
+
+计时基准容易写错：窗口与超时都必须用「实际落起点的那一帧」，用 `--start-frame` 会在落点前就判超时
+（旧版因此在 f361 假失败）。
+
+### 3.2 `--start-room` 以前只写房号、不装载房间
+
+`RoomNumber` 写进去只是一个数字：真正的装载在 `check_update_name_table`
+（`crates/game-core/src/world/camera/scroll.rs`）里由 `scroll_left/right` 触发，而这两个函数是
+`pub(crate)`，`world::room_load` 模块同样私有（shell 直接调会 `E0603`）。实测对比：
+
+| 路径 | `door_slots` | 门瓦 |
+|---|---|---|
+| `--start-room 0x13`（只写房号） | `0/0/0/0` | 0 |
+| 正常滚屏走进同房 | `2/0/5/2` | 36 |
+
+修法（壳层内，不改引擎）：把 MapPos 摆到**右邻格仍是同一房**的世界图格（世界图里同一房常占多格，
+如 `0x2B` 在 `(y15,x24)`，右邻 `(15,x25)` 也是 `0x2B`），然后把 Samus 摆到右边界并把
+`SamusScrX($51)` 抬到 `0x90`——`move_samus_right` 只在 `ScrX>=0x8F` 时调 `scroll_right`，
+只按方向键站在房中间是不会滚的（这是上一版的错误假设，复核实测 `door_slots` 全 0）。
+滚屏触发后 `scroll_right → check_update_name_table` 走**真的装载径**。
+
+退出判据不能只看 `room_load_phase!=0`：滚屏调用里 `setup_room` 当场执行，载房窗可能同拍开完，
+壳层每帧采样看不到窗口。现在把「本帧 `ScrollX` 0→非 0」也当作装载已触发。
+窗口期结束后把 MapPos 恢复成调用方要求的格、落坐标。
+
+验收读数（`--start-preset bridge-tourian`，1400 帧）：f466 落起点（进 GameEngine）→ f470 装载完成
+（`door_slots=1/0/0/1`、门瓦 24、`load_phase=1`）→ f473 桥生成（`$0054`←`0x80`）→
+f475 MapPos 复位 `4/2` → f477 坐标落笔 `0xE0/0x6F` → rc=0。
+**帧数下限**：预设需要约 500 帧才进 GameEngine；`--frames 400` 会 fail-loud（exit 8，报「没有进入
+GameEngine」），这是有意行为，不是卡死。
+
+### 3.3 固定起点 `--start-preset bridge-tourian`
+
+```bash
+target/debug/game-shell-pc --headless --frames 1400 \
+  --start-preset bridge-tourian --state-out /tmp/bridge.csv
+```
+
+不需要外部脚本：预设会自己按 START 进游戏（见 3.1）。
+
+预设 = 房 `0x2B`、MapPos `4/2`、坐标 `(0xE0,0x6F)`、area 0、fixture `$687B=0x81 $687C=0x82 $0054=0x00`
+（双 Boss 已死 + 双像已抬 + 桥待生成）。显式 `--start-*` 参数可覆盖预设字段。
+
+### 3.4 顺带修掉的引擎缺陷（桥一生成就 panic）
+
+`UpdateAllStatues_Bridge`（asm `prg7_engine.asm:5416-5432`）除 routine/delay/type 外还写
+`roomRAMPtr` 两字节：`roomRAMPtr ← y*2+8`、`roomRAMPtr+1 ← (Statue.hi<<2)|$62`。
+Rust 侧漏了这两笔，槽里的指针是 0；等 delay 走完进入「复原」态，`DrawTileBlast` 拿 0 当 RoomRAM
+地址写 ⇒ `write_wram` 下溢 panic（`memmap/raw.rs:129`）。已在 `world/statue.rs` 补齐 + 单测。
+
+### 3.5 已知缺口（未验完，别当成已通过）
+
+- 桥**瓦面**的像素一致性还没验过：临时用例（在正常走进的房里用 fixture 摆 `$0360=3`/双像 bit7）在
+  f960/1000/1100 三个采集点各有 1104/1519/1516 像素差，差异区 `x∈[80,191], y∈[0,143]`（石像/桥位置），
+  说明桥的瓦片绘制与 emu 仍不一致。该用例**未**入库（新用例必须零 diff 才能进矩阵）；
+  根因待查（`statue.rs` 的 TileBlast 生成/绘制面）。
+- 因此「桥房固定起点」目前只到「状态与桥生成正确（`$0054=0x80`）」，**像素级可走性**另卡承接。
+- 处理决定（PMO，2026-11-27）：卡面第 4 条改为「本卡只交付起点态 + 一条可复跑命令」，桥瓦绘制缺口
+  由后续卡承接；本节的临时用例草案保留在文档里（不删痕迹），等绘制修好后按零 diff 规则入库。

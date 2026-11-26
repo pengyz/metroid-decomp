@@ -26,6 +26,7 @@ fn main() {
     let mut start_area: Option<u8> = None;
     let mut start_frame: u64 = 60;
     let mut start_pos_frame: Option<u64> = None;
+    let mut start_preset_spec: Option<String> = None;
     let mut args = std::env::args().skip(1);
     while let Some(a) = args.next() {
         match a.as_str() {
@@ -51,6 +52,7 @@ fn main() {
                     }
                 }
             }
+            "--start-preset" => start_preset_spec = args.next(),
             "--start-pos-frame" => {
                 start_pos_frame = Some(args.next().and_then(|v| v.parse().ok()).unwrap_or_else(|| {
                     eprintln!("--start-pos-frame 需要正整数帧号");
@@ -79,6 +81,7 @@ fn main() {
                 println!("game-shell-pc [--scale N] [--fps N] [--frames N]");
                 println!("  --headless --script FILE [--state-out FILE] [--shot-frames a,b] [--shot-dir DIR]");
                 println!("  --start-room 0x1E [--start-map X,Y] [--start-pos X,Y] [--start-frame N]");
+                println!("  --start-preset bridge-tourian   # 双 Boss 已死+石像已抬+桥房（Room2B）起点");
                 return;
             }
             other => {
@@ -138,15 +141,33 @@ fn main() {
                 },
             }
         };
+        // 预设展开成同一套 StartRoom：预设给的字段优先，显式参数覆盖（便于在预设上调坐标）。
+        let preset = match start_preset_spec.as_deref() {
+            None => None,
+            Some(name) => match game_shell_pc::script::parse_preset(name) {
+                Ok(p) => {
+                    println!(
+                        "[start] 预设 {}：房 {:#04X} MapPos {}/{} 坐标 {:#04X}/{:#04X} area={} fixtures={}",
+                        p.name, p.room, p.map.0, p.map.1, p.pos.0, p.pos.1, p.area, p.fixtures.len()
+                    );
+                    Some(p)
+                }
+                Err(e) => {
+                    eprintln!("[start] {e}");
+                    std::process::exit(2);
+                }
+            },
+        };
         let start = if start_room_spec.is_none()
             && start_pos_spec.is_none()
             && start_map_spec.is_none()
             && start_area.is_none()
+            && preset.is_none()
         {
             None
         } else {
             let room = match start_room_spec.as_deref() {
-                None => None,
+                None => preset.map(|p| p.room),
                 Some(spec) => match game_shell_pc::script::parse_room(spec) {
                     Ok(r) => Some(r),
                     Err(e) => {
@@ -155,15 +176,19 @@ fn main() {
                     }
                 },
             };
-            let map = parse_pair_opt(start_map_spec.as_deref(), "--start-map");
-            let pos = parse_pair_opt(start_pos_spec.as_deref(), "--start-pos");
+            let map = parse_pair_opt(start_map_spec.as_deref(), "--start-map")
+                .or_else(|| preset.map(|p| p.map));
+            let pos = parse_pair_opt(start_pos_spec.as_deref(), "--start-pos")
+                .or_else(|| preset.map(|p| p.pos));
             Some(game_shell_pc::script::StartRoom {
                 frame: start_frame,
                 room,
                 map,
                 pos,
-                area: start_area,
+                area: start_area.or_else(|| preset.map(|p| p.area)),
                 pos_frame: start_pos_frame,
+                fixtures: preset.map(|p| p.fixtures).unwrap_or(&[]),
+                auto_start: true, // 任何 --start-* 都要自己推进开场：没有 START 时引擎停在标题，写态不生效
             })
         };
         let n = frames.unwrap_or(600);
@@ -199,6 +224,17 @@ fn main() {
                     r.states.len(),
                     r.states
                 );
+                if let Some(ok) = r.pos {
+                    if ok {
+                        println!("[start] 坐标已落笔并站稳");
+                    } else {
+                        eprintln!(
+                            "[start] 坐标没有被落成：落笔后 {} 帧内被出生点/物理覆盖或载房一直忙（检查 --start-room/--start-map 是否一致、坐标是否在碰撞体内）",
+                            game_shell_pc::script::POS_DEADLINE_FRAMES
+                        );
+                        std::process::exit(8);
+                    }
+                }
                 if let Some((room, accepted)) = r.start_room {
                     if accepted {
                         println!("[start] 房号 {room:#04X} 已被引擎装载");

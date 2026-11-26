@@ -219,10 +219,17 @@ pub fn update_statues_bridge(mem: &mut Manager) {
     }
     mem.set_statues_bridge_spawned(0x80); // 置位
     // 8×TileBlasts 生成（routine=3 待重生/delay=y*2（y=8..1）/type=4 generic shot）
+    // asm（`UpdateAllStatues_Bridge`，prg7_engine.asm:5416-5432）除 routine/delay/type
+    // 外还写 roomRAMPtr 两个字节：`roomRAMPtr ← y*2+8`、`roomRAMPtr+1 ← (Statue.hi<<2)|$62`。
+    // 缺这两笔时槽里的指针是 0，等 delay 走完进「复原」态 `DrawTileBlast` 会拿 0 当
+    // RoomRAM 地址写（`write_wram` 下溢 panic）——桥一生成就炸。
+    let ptr_hi = (mem.statue_hi() << 2) | 0x62;
     for j in 0..8u16 {
-        let base = TILE_BLASTS + j * SLOT;
+        let y = 8 - j; // asm 的 y 从 8 递减到 1
+        let ptr_lo = (y as u8).wrapping_mul(2).wrapping_add(8);
+        mem.set_tb_ptr(j as u8, ((ptr_hi as u16) << 8) | ptr_lo as u16);
         mem.set_tb_routine(j as u8, 0x03);
-        mem.set_tb_delay(j as u8, ((8 - j) as u8).wrapping_mul(2));
+        mem.set_tb_delay(j as u8, (y as u8).wrapping_mul(2));
         mem.set_tb_type(j as u8, 0x04);
     }
 }
@@ -249,6 +256,14 @@ mod tests {
         assert_eq!(m.read_ram(TILE_BLASTS + 7), 16);
         assert_eq!(m.read_ram(TILE_BLASTS + 10), 0x04);
         assert_eq!(m.read_ram(TILE_BLASTS + 7 * SLOT + 7), 2); // slot7 delay=2
+        // roomRAMPtr 两字节（asm 5416-5432）：缺它时 delay 走完进复原态会拿 0 当
+        // RoomRAM 地址写（write_wram 下溢 panic）。hi=(Statue.hi<<2)|$62，lo=y*2+8。
+        assert_eq!(m.tb_ptr(0), 0x6218, "slot0: y=8 ⇒ lo=8*2+8=0x18，hi=$62");
+        assert_eq!(m.tb_ptr(7), 0x620A, "slot7: y=1 ⇒ lo=0x0A");
+        m.set_statue_hi(1);
+        m.write_ram(BRIDGE_SPAWNED, 0);
+        update_statues_bridge(&mut m);
+        assert_eq!(m.tb_ptr(0), 0x6618, "hi=$62|(Statue.hi<<2)=$66");
     }
 
     /// 【全仪式·raise 状态机】1px/call 到 16 界→bit7=up 双址置。
