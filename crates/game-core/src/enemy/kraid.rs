@@ -64,8 +64,8 @@ use crate::frame::Manager;
 
 /// `KraidProjectileOffsetY`（`04:9BCC`，5 B，槽 1..5）。
 const PROJECTILE_OFFSET_Y: [i8; 5] = [-11, -3, 5, -10, -2];
-/// `KraidProjectileOffsetX`（`04:9BD1`，每槽 2 B = [朝右, 朝左]）。
-const PROJECTILE_OFFSET_X: [i8; 10] = [10, -10, 12, -12, 14, -14, -8, 8, -12, 12];
+// `KraidProjectileOffsetX`（`04:9BD1`，每槽 2 B = [朝右, 朝左]）已迁到资产包
+// （`game_data::assets::kraid_projectile_offset_x()`；源表见 `extract.rs::ENEMY_ROM_TABLES`）。
 /// `KraidProjectileType`（`04:9BDB`，5 B）——前三个 Lint、后两个 Nail。
 const PROJECTILE_TYPE: [u8; 5] = [0x09, 0x09, 0x09, 0x0A, 0x0A];
 
@@ -209,7 +209,7 @@ fn kraid_projectile_resting(mem: &mut Manager, x: u8) {
     mem.enemy(slot).set_enemy_type(PROJECTILE_TYPE[idx - 1]);
     // asm:165-170 `tya / plp / rol / tay` ⇒ y = 槽号*2 + 朝向 bit；
     // `lda KraidProjectileOffsetX-2,y`。
-    let off_x = PROJECTILE_OFFSET_X[(idx - 1) * 2 + facing_left as usize];
+    let off_x = game_data::assets::kraid_projectile_offset_x()[(idx - 1) * 2 + facing_left as usize] as i8;
     // asm:174-186 `StoreEnemyPositionToTemp`（bank4 用 `ldx #$00` 取 Kraid 槽，
     // 无 bank1 的 PageIndex BUG）→ `CommonJump_ApplySpeedToPosition`。
     let (ky, kx, khi) = {

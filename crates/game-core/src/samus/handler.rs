@@ -285,15 +285,8 @@ pub fn samus_run(mem: &mut Manager) {
         return;
     }
     // 走 SFX 节拍（CD2B——WalkSoundDelay dec→归零重载 9+SFX_SamusWalk）。
-    // 【占位臂记账】SFX 件（B 声音包随件）：计数面保留。
-    let wd_addr = 0x010F; // WalkSoundDelay（constants 随核）
-    let wd = mem.read_ram(wd_addr);
-    if wd.wrapping_sub(1) == 0 {
-        mem.write_ram(wd_addr, 0x09);
-        crate::frame::DIVERGENCES.with(|d| d.borrow_mut().push(0xCBAC));
-    } else {
-        mem.write_ram(wd_addr, wd.wrapping_sub(1));
-    }
+    // 【占位臂记账】SFX 件（B 声音包随件）：计数面保留在真址 `$53`。
+    walk_sound_tick(mem);
     // samL09：LCF2E（固实实体反应）
     solid_entity_response(mem);
     // JUMP 判（CD39：`lda Joy1Change/bpl samL10`）⇒LCD40 起跳
@@ -336,6 +329,40 @@ pub fn samus_run(mem: &mut Manager) {
 /// X=(Joy1Status&UP)>>3⇒anim=RunAnimationTbl[X]（Run=0x00/RunPntUp=0x37）≠animResetIndex
 /// ⇒SetSamusAnim+**尾跳** SetSamusData_3FrameAnimDelay（pla/pla——跳过 samus_run 余段）。
 /// 返回 true=尾跳（调用方即收链）。
+/// `WalkSoundDelay`（`constants_ram.asm:568` `db ;$53`）——走路音效节拍计数器。
+///
+/// 地址面说明：`$53` 在 `$0000-$007F` 的 Unmodeled 区（`data/status/nes_map.json` 的
+/// undeclared 段），没有 typed 域可挂；`ram_map.rs` 也无法新增常量（该文件的
+/// `undeclared.refs` 按行号定位，插行会让 `nes-map` 门禁误报）。故地址收敛在本文件单点，
+/// 只经下面两个 helper 访问，不散落裸字面量。
+const WALK_SOUND_DELAY: u16 = 0x0053;
+
+/// `07:CD2B`（`samL08` 尾件）：`dec WalkSoundDelay`；归零帧重载 9 并应 `jsr SFX_SamusWalk`
+/// （SFX 未端口 ⇒ 只记 DIVERGENCES 锚 `$CBAC`，计数面保真）。
+fn walk_sound_tick(mem: &mut Manager) {
+    let addr = WALK_SOUND_DELAY;
+    let wd = mem.read_ram(addr);
+    if wd.wrapping_sub(1) == 0 {
+        mem.write_ram(addr, 0x09);
+        crate::frame::DIVERGENCES.with(|d| d.borrow_mut().push(0xCBAC));
+    } else {
+        mem.write_ram(addr, wd.wrapping_sub(1));
+    }
+}
+
+/// `SetSamusRun` 的 `lda #$09 / sta WalkSoundDelay`（`prg7_engine.asm:2825-2826`）。
+fn set_walk_sound_delay(mem: &mut Manager, v: u8) {
+    let addr = WALK_SOUND_DELAY;
+    mem.write_ram(addr, v);
+}
+
+/// 供单测读回（生产路径无需读点：原版该字节只自读自写）。
+#[cfg(test)]
+fn walk_sound_delay(mem: &Manager) -> u8 {
+    let addr = WALK_SOUND_DELAY;
+    mem.ram()[addr as usize & 0x7FF]
+}
+
 fn samus_run_set_anim(mem: &mut Manager) -> bool {
     use button::*;
     let x = if mem.read_ram(crate::ram_map::JOY1_STATUS) & UP != 0 { 1usize } else { 0 };
@@ -583,7 +610,7 @@ fn set_samus_run(mem: &mut Manager) {
     // （Stand→Run(X=0)/PntUp→RunPntUp(X=1)/否则 Front 转身过渡+Run）/accelX=
     // RunAccelTbl[Dir]（30 右/D0 左）——**三件面全合规** ✓✓（f1200 状态分叉根=调用点
     // （samus_stand 转换条件）面——非本件 ✗）。
-    mem.write_ram(0x010F, 0x09); // WalkSoundDelay（constants 随核）
+    set_walk_sound_delay(mem, 0x09); // $53 WalkSoundDelay
     let cur = mem.samus().anim_reset_index();
     let x = if cur == OBJ_ANIM_SAMUS_STAND {
         0usize
@@ -2229,5 +2256,47 @@ mod tests_upwards_bullet_spawn {
         assert_eq!(m.read_ram(base), 1, "status 应为常规光束 1");
         assert_eq!(m.read_ram(base + 0x0D), 177, "y = Samus.y − $14 (=193−20)");
         assert_eq!(m.read_ram(base + 0x0E), 77, "x = Samus.x + $01");
+    }
+}
+
+#[cfg(test)]
+mod tests_walk_sound_delay {
+    use super::*;
+
+    #[test]
+    fn walk_sound_tick_decrements_53_and_never_touches_hurt_byte() {
+        let mut m = Manager::default();
+        m.write_ram(WALK_SOUND_DELAY, 0x09);
+        m.samus().set_hurt(0x80);
+        walk_sound_tick(&mut m);
+        assert_eq!(walk_sound_delay(&m), 0x08);
+        assert_eq!(m.samus().hurt(), 0x80, "Hurt010F 是受击记录，不应被走音计时覆盖");
+    }
+
+    #[test]
+    fn walk_sound_tick_reloads_9_on_zero_frame() {
+        let mut m = Manager::default();
+        m.write_ram(WALK_SOUND_DELAY, 0x01); // 本帧 dec→0 才触发重载
+        m.samus().set_hurt(0xE0);
+        walk_sound_tick(&mut m);
+        assert_eq!(walk_sound_delay(&m), 0x09, "归零帧重载 9（asm :2929）");
+        assert_eq!(m.samus().hurt(), 0xE0);
+    }
+
+    #[test]
+    fn hurt_write_does_not_disturb_walk_counter() {
+        let mut m = Manager::default();
+        m.write_ram(WALK_SOUND_DELAY, 0x05);
+        m.samus().set_hurt(0x80);
+        assert_eq!(walk_sound_delay(&m), 0x05, "$010F 写点不得串到 $53");
+    }
+
+    #[test]
+    fn set_samus_run_writes_walk_delay_9_not_hurt_byte() {
+        let mut m = Manager::default();
+        m.samus().set_hurt(0x00);
+        set_walk_sound_delay(&mut m, 0x09);
+        assert_eq!(walk_sound_delay(&m), 0x09);
+        assert_eq!(m.samus().hurt(), 0x00, "SetSamusRun 只写 $53");
     }
 }

@@ -156,3 +156,20 @@ Rust 腿也能吃同一张节点表：`tas_replay_diff.py` 的 Rust 腿产物 `r
 | L1/L2 两处断链 | 通关链物理断开 | 已有 `docs/spec/game-progress.md` §1.4/§1.2 的逐指令规格，可直接派实现卡（写面 `crates/game-core/src/enemy/` + `world/`） |
 | S6/S7 判据为 B 级 | Zebetite 清空与母脑死亡态的观测值未逐态对拍 | 后继在 Tourian 场景拿到像素/OAM 证据后升 A |
 | `$010A` 在密码进场后读 0xFF | 疑未初始化哨兵，S8 的 `require_seen` 已规避误判 | 留在 `docs/spec/game-progress.md` §6 假设区，不在此处下结论 |
+
+## 状态同步（2026-11-26，HEAD `4e7ce4de`）
+
+本文写作时 HEAD `cde7d1b9`（2026-11-25）。**9 节点与 5 条链路未变，两处断链仍在**：
+
+```
+$ python3 tools/stage_a_nodes.py links
+[链路] 进度链静态校验：5 条，断链 2 条
+  [断链] L1 Boss 击杀结算写雕像状态（prevStatus bit7 → LDD75） —— 缺模式：0x687B|KRAID_STATUE_STATUS
+  [断链] L2 Boss 房重生门读雕像状态（GetEnemyType bit6 跳生成） —— 缺模式：0x687B|KRAID_STATUE_STATUS
+  [OK  ] L3 雕像升起（命中计数 + 逐帧上移 + 置 bit7） —— crates/game-core/src/world/statue.rs:93
+  [OK  ] L4 桥生成（两座雕像 bit7 ⇒ StatuesBridgeIsSpawned） —— crates/game-core/src/world/statue.rs:38
+  [OK  ] L5 结局电梯触发（etype 0x8F ⇒ AtEnding） —— crates/game-core/src/world/elevator.rs:18
+```
+
+**结论不变**：现在**不能通关**，第一个断点在 S1（打死 Boss 后雕像状态写不进去）。复跑命令：`python3 tools/stage_a_nodes.py links`（静态，秒级）、`python3 tools/stage_a_nodes.py selftest`（判据自检）。
+

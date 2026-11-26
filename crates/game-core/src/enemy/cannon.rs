@@ -18,14 +18,8 @@ const COUNT: u8 = 16;
 const INSTR_DELAY: [u8; 5] = [0x28; 5];
 /// `CannonInstrListsOffset ; 03:9D94`。
 const INSTR_OFFSET: [u8; 5] = [0, 11, 22, 33, 39];
-/// `CannonInstrLists ; 03:9D99`（五张表首尾相接；`$FF`=回表头，$F0-$FE=开火）。
-const INSTR_LISTS: [u8; 45] = [
-    0x00, 0x01, 0x02, 0xFD, 0x03, 0x04, 0xFD, 0x03, 0x02, 0x01, 0xFF, // list0
-    0x00, 0x07, 0x06, 0xFE, 0x05, 0x04, 0xFE, 0x05, 0x06, 0x07, 0xFF, // list1
-    0x02, 0x03, 0xFC, 0x04, 0x05, 0x06, 0x05, 0xFC, 0x04, 0x03, 0xFF, // list2
-    0x02, 0x03, 0xFC, 0x04, 0x03, 0xFF, // list3
-    0x06, 0x05, 0xFC, 0x04, 0x05, 0xFF, // list4
-];
+// `CannonInstrLists ; 03:9D99`（五张表首尾相接；`$FF`=回表头，$F0-$FE=开火）已迁到
+// 资产包（`game_data::assets::cannon_instr_lists()`；45 B = 11+11+11+6+6）。
 /// `CannonAnimFrameTable ; 03:9DC6`（角度 0..7 ⇒ `_id_EnFrame_CannonUp..UpRight`）。
 /// Tourian `EnFramePtrTable1` 表序：`CannonUp=6`、`UpLeft=7`、`Left=8`、`DownLeft=9`、
 /// `Down=10`、`DownRight=11`、`Right=12`、`UpRight=13`。
@@ -138,9 +132,10 @@ fn run_instructions(mem: &mut Manager, index: u8) {
 
     // `@getInstruction`：取指令并按类分派（角度 / 开火 / 回表头）
     let base = INSTR_OFFSET[list_id] as usize;
+    let lists = game_data::assets::cannon_instr_lists();
     loop {
         let id = get(mem, index, f::INSTR_ID);
-        let Some(&instr) = INSTR_LISTS.get(base + id as usize) else {
+        let Some(&instr) = lists.get(base + id as usize) else {
             return;
         };
         if instr & 0x80 == 0 {

@@ -303,12 +303,10 @@ mod tests_rinka {
 // Rinka 生成器（`UpdateAllRinkaSpawners ; 03:A15E` + `SpawnRinkaSpawnerRoutine ; 03:9D6C`）
 //==============================================================================
 
-/// `RinkaSpawnPosTbl ; 03:A1DB`：12 B = 2 生成器 × 6 位置，每字节高 nibble=Y、低 nibble=X
-/// （`SpawnRinka_InitPositionXY ; 03:9EE7` 把高 nibble 映射成 `(hi<<4)|7`、低 nibble 映射成
-/// `(lo<<4)|7`）。生成器 `status` 选偶/奇列（0⇒偶、1⇒奇）。
-const SPAWN_POS_TBL: [u8; 12] = [
-    0x22, 0x2A, 0x2A, 0xBA, 0xB2, 0x2A, 0xC4, 0x2A, 0xC8, 0xBA, 0xBA, 0xBA,
-];
+// `RinkaSpawnPosTbl ; 03:A1DB`：12 B = 2 生成器 × 6 位置，每字节高 nibble=Y、低 nibble=X
+// （`SpawnRinka_InitPositionXY ; 03:9EE7` 把高 nibble 映射成 `(hi<<4)|7`、低 nibble 映射成
+// `(lo<<4)|7`）。生成器 `status` 选偶/奇列（0⇒偶、1⇒奇）。
+// 表体已迁到资产包（`game_data::assets::rinka_spawn_pos()`）。
 
 /// 生成器槽数（`RinkaSpawners instanceof RinkaSpawner 2`）。
 pub(crate) const SPAWNER_COUNT: u8 = 2;
@@ -422,7 +420,7 @@ fn update_one_spawner(mem: &mut crate::frame::Manager, page_off: u8) {
     let hi = mem.rinka_spawner_hi(slot);
     mem.ens_face(x).set_hi(hi);
     let idx = mem.rinka_spawner_pos_index(slot);
-    let byte = SPAWN_POS_TBL[((idx << 1) | (status & 0x01)) as usize];
+    let byte = game_data::assets::rinka_spawn_pos()[((idx << 1) | (status & 0x01)) as usize];
     init_rinka_position(mem, x, byte);
     // posIndex 递增，到 6 回绕
     let next = idx.wrapping_add(1);

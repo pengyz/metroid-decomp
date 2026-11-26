@@ -301,6 +301,15 @@ pub enum PackKey {
     NoCrawlerAnim = 208,
     KrCrawlerAnim = 209,
     RiCrawlerAnim = 210,
+    // ---- 敌人专属常量表（ROM 裸表，迁移自 `game-core/src/enemy/` 硬编码）----
+    /// `KraidProjectileOffsetX ; 04:9BD1` 10×i8（5 槽 × [朝右, 朝左]；`01:9CBD` 同字节副本）。
+    KrProjOffsetX = 211,
+    /// `MetroidLatchOffsetY ; 03:99D8` 12×i8（吸附后相对 Samus 的 y 偏移）。
+    MetroidLatchOffsetY = 212,
+    /// `CannonInstrLists ; 03:9D99` 45 B（五张指令表首尾相接）。
+    CannonInstrLists = 213,
+    /// `RinkaSpawnPosTbl ; 03:A1DB` 12 B（2 生成器 × 6 位置，高 nibble=Y 低 nibble=X）。
+    RinkaSpawnPos = 214,
 }
 
 /// 敌帧/位复合段头长（6 × u32：anim_len / fptr_entries / place_cnt / frames_len / places_len / pad）。
@@ -555,6 +564,10 @@ impl PackKey {
             PackKey::NoCrawlerAnim => "area.no.crawler_anim",
             PackKey::KrCrawlerAnim => "area.kr.crawler_anim",
             PackKey::RiCrawlerAnim => "area.ri.crawler_anim",
+            PackKey::KrProjOffsetX => "enemy.kr.proj_offset_x",
+            PackKey::MetroidLatchOffsetY => "enemy.metroid.latch_offset_y",
+            PackKey::CannonInstrLists => "enemy.cannon.instr_lists",
+            PackKey::RinkaSpawnPos => "enemy.rinka.spawn_pos",
         }
     }
 
@@ -728,6 +741,10 @@ impl PackKey {
             208 => PackKey::NoCrawlerAnim,
             209 => PackKey::KrCrawlerAnim,
             210 => PackKey::RiCrawlerAnim,
+            211 => PackKey::KrProjOffsetX,
+            212 => PackKey::MetroidLatchOffsetY,
+            213 => PackKey::CannonInstrLists,
+            214 => PackKey::RinkaSpawnPos,
             153 => PackKey::TourianMetroidData,
             154 => PackKey::AreaPalToggle,
             165 => PackKey::AreaBrHeader,

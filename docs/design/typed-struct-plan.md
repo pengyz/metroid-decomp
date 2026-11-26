@@ -9,12 +9,12 @@
 
 ## 0. 一页结论
 
-1. **现状不是「没结构」，而是「结构是派生的」**：`crates/game-core/src/samus/state.rs:182` 已有 `pub struct SamusState`（含 `Position`/`Anim`/`Radius`/`SubPixel` 四个子结构），但它每帧从 RAM 组装出来 —— **RAM 是权威，struct 是视图**。本计划要反过来。
+1. **现状不是「没结构」，而是「结构是派生的」**：`crates/game-core/src/samus/state.rs:182` 已有 `pub struct SamusState`（含 `Position`/`Anim`/`Radius`/`SubPixel` 四个子结构）。> 【2026-11-26 更正】**这句话描述的 2026-11-25 现状已被后续实现推翻**：`samus/state.rs:292-340` 的 `get_byte/set_byte` 已把 `$0300-$0316`（`TYPED_ADDRS` 23 项）与 `$0106/$0107` 分派到 typed 字段，`memmap/raw.rs` 的 `read_ram/write_ram` 在镜像归一时先走 typed 分派，单测 `raw_byte_write_does_not_override_typed_truth`（`state.rs:816-822`）断言「直接写 RAM 不改 typed 真相」。⇒ **对 `read_ram/write_ram` 这条唯一读写口径而言，typed 已是权威、字节数组不再持有这些格**（`snapshot_nes` 反向往 RAM 校验面投影）。原判据与批次划分保留不动，但「RAM 权威」只对**未 typed 的**字节面成立。**[2026-11-26 更新，依据 `sed -n '285,345p' crates/game-core/src/samus/state.rs`、`sed -n '20,80p' crates/game-core/src/memmap/raw.rs`]**
    > 口径提示：卡面提到的 `room_sweep` 在 `tools/` 下不存在（实测 `ls tools/ | grep sweep` 只有 `decode_sweep.py`、`decode_sweep_dyn.py`），本计划一律用后者。
-2. **投影 API 已经存在**：`crates/game-core/src/memmap/nesmap.rs` 的 `NesMapped::project(&self, out: &mut NesImage)` 就是「struct → 字节面」的写出口，6 个 typed 面已经在用（`$0400`/`$0500`/`$0600`/`$0700`/`$0780` 等）。缺的不是机制，是**把业务层的读写点接到它上面**。
-3. **最小可行 slice 已选定**：`SamusVitals`（`$006E-$006F` 生命变更 + `$0106-$0107` 当前血量 + `$0301/$0302` 半径）—— 字节数小（6 B）、写点集中、`$0106-$0107` 当前还是 25 段 Unmodeled 里唯一带「health() 仍走字节面」注释的缺口，做它能**同时**验证「权威翻转」和「降 Unmodeled」两件事。
+2. **投影 API 已经存在**：`crates/game-core/src/memmap/nesmap.rs` 的 `NesMapped::project(&self, out: &mut NesImage)` 就是「struct → 字节面」的写出口，15 个 typed 面已经在用（`$0000` 零页、`$0400` 对象槽、`$0500` TileBlast、`$0600` 声引擎、`$0700` 房间精灵表、`$0780` VRAM 缓冲、`$068E/$0787/$07F0` 暂存、`$0106` 血量、`$0300` Samus、`$6AFB` 敌、`$6BB4` 敌爆散、`$0400` 与 `$6AFB` 额外面、`$0100-$017F` OAM 影子、`$6B34` 对象全局、`$037A` 滚动块、`$006E` 生命变更） **[2026-11-26 更新，依据 `python3 tools/nes_map_check.py --list` / `grep -rln 'NesMapped for'`：现 Owner 1401 / Unmodeled 385（24 段）/ Undeclared 486（11 段）/ 15 个 typed 面]**。缺的不是机制，是**把业务层的读写点接到它上面**。
+3. **最小可行 slice 已选定**：`SamusVitals`（`$006E-$006F` 生命变更 + `$0106-$0107` 当前血量 + `$0301/$0302` 半径）—— 字节数小（6 B）、写点集中、`$0106-$0107` 写作时是 25 段 Unmodeled 里唯一带「health() 仍走字节面」注释的缺口（现 24 段），做它能**同时**验证「权威翻转」和「降 Unmodeled」两件事。
 4. **四批按「读多写少 → 热路径」排序**，每批的入场券都是「行为不变」：`cargo test -p game-core` 全绿、L4 171/172 不回退、`run-all` 不新增 diff、`check` PASS24。任一批做不到就回滚该批，不带着红灯进下一批。
-5. **本计划不承诺一轮吃完**：剩余 537 B Undeclared / 387 B Unmodeled 的分布见 §1.2，人工与门禁成本都在计划里列了，按批派卡。
+5. **本计划不承诺一轮吃完**：剩余 486 B Undeclared / 385 B Unmodeled 的分布见 §1.2 **[2026-11-26 更新，依据 `python3 tools/nes_map_check.py --list` / `grep -rln 'NesMapped for'`：现 Owner 1401 / Unmodeled 385（24 段）/ Undeclared 486（11 段）/ 15 个 typed 面]**，人工与门禁成本都在计划里列了，按批派卡。
 
 ---
 
@@ -59,14 +59,14 @@ python3 gates/cli.py check 2>&1 | grep -E "nes-map|raw-surface|no-raw-addr|arch-
 ```
 
 ```
-[PASS] nes-map：比对面 2272 B / Owner 1348 B / View 23 B（only 0）/ Unmodeled 387 B / Undeclared 537 B（12 段）；四态恒等式成立
+[PASS] nes-map：比对面 2272 B / Owner 1401 B / View 23 B（only 0）/ Unmodeled 385 B / Undeclared 486 B（11 段）；四态恒等式成立 **[2026-11-26 更新，依据 `python3 tools/nes_map_check.py --list` / `grep -rln 'NesMapped for'`：现 Owner 1401 / Unmodeled 385（24 段）/ Undeclared 486（11 段）/ 15 个 typed 面]**
 [PASS] raw-surface：裸字节面 1087/1160 处 / 35 文件（新文件不许接入、总量只减不增）；可下调账本 73 处
 [PASS] no-raw-addr：裸地址 513/524 处 / 23 文件；具名常量 151/151 处 / 6 文件；可下调账本 11 处
 [PASS] arch-coupling：基线 1312 指纹 / 1893 点（HEAD），当前扫描 1306 指纹 / 1887 点，无新增；账本比当前树多 6 条
 ```
 
-- 恒等式：**`Owner + Unmodeled + Undeclared == 2272`**（`1348 + 387 + 537 = 2272`）。View 的 23 B 与 Owner 重叠，**不参与求和**（`View(only)` = 0）。
-- `D` 面（数据/声明）还剩 **537 B Undeclared 落在 12 段**、**387 B Unmodeled 落在 25 段**，逐段清单：
+- 恒等式：**`Owner + Unmodeled + Undeclared == 2272`**（`1401 + 385 + 486 = 2272`） **[2026-11-26 更新，依据 `python3 tools/nes_map_check.py --list` / `grep -rln 'NesMapped for'`：现 Owner 1401 / Unmodeled 385（24 段）/ Undeclared 486（11 段）/ 15 个 typed 面]**。View 的 23 B 与 Owner 重叠，**不参与求和**（`View(only)` = 0）。
+- `D` 面（数据/声明）还剩 **486 B Undeclared 落在 11 段**、**385 B Unmodeled 落在 24 段** **[2026-11-26 更新，依据 `python3 tools/nes_map_check.py --list` / `grep -rln 'NesMapped for'`：现 Owner 1401 / Unmodeled 385（24 段）/ Undeclared 486（11 段）/ 15 个 typed 面]**，逐段清单：
   ```bash
   python3 tools/nes_map_check.py --list | grep -E "^\[账本\]|^\[未登记\]|^\[Unmodeled\]"
   ```
@@ -129,7 +129,7 @@ frame 1196 · samus 1051 · world 844 · enemy 697 · title 175 · render 118 ·
 | 新 struct | `crates/game-core/src/samus/vitals.rs`：`pub struct SamusVitals { health: u16, health_change: u8, radius: Radius }`（`health` 用 `u16` 承接 `$0106 低 / $0107 高`） |
 | 权威翻转点 | **`crates/game-core/src/samus/state.rs:678` 的 `health()` 与 `:682` 的 `set_health()`**（这两个函数就是「血量读写」的现有入口，`frame/memory.rs` 里 `grep health` 只命中 `HealthChange::ADDRS` 的转发行 :317/:370，**不是**权威点）；外加 `crates/game-core/src/samus/physics.rs:50`、`:981-982`（`read_ram(0x0107)`/`read_ram(0x0106)`）、`:1442` 三处直读改为读 struct。`0x0302` 在业务层**没有读点**（`samus/` 下只在 `state.rs:857` 的测试断言里出现），所以 Radius 的翻转只涉及 `$0301` 的 2 处读（`:50`/`:1442`）与 1 处写（`:2199` 测试）|
 | 写回 | `impl NesMapped for SamusVitals`，`project()` 只写这 6 B；由 §2.1 的 `project_all` 每帧调一次 |
-| 预期账面 | `SamusState` unmodeled 2 → 0；**Unmodeled 387 → 385**，Owner 1348 → 1350（`$0106-$0107` 从 unmodeled 变 owner）；`Undeclared 537` 不变 |
+| 预期账面 | `SamusState` unmodeled 2 → 0；**Unmodeled 385 → 383**，Owner 1401 → 1403（`$0106-$0107` 从 unmodeled 变 owner）；`Undeclared 486` 不变 **[2026-11-26 更新：本行原写 387→385 / 1348→1350 / 537，是写作时读数；该批已实现，实测已到 1401/385/486]** |
 | 入场券 | `cargo test -p game-core` 全绿、L4 `171/172` 不回退、`run-all` diff 不新增、`check` PASS24 |
 
 > 注意：这一批**只降 Unmodeled，不降 Undeclared**——因为那 2 B 已在账本里登记为 unmodeled。这是刻意的：先证明「翻转机制」可用，再去做真正降 Undeclared 的批次。
@@ -144,7 +144,7 @@ frame 1196 · samus 1051 · world 844 · enemy 697 · title 175 · render 118 ·
 
 - 文件：新增 `crates/game-core/src/samus/vitals.rs`；改 **`crates/game-core/src/samus/state.rs`**（`health()`/`set_health()` :678/:682 的权威翻转）、`crates/game-core/src/samus/physics.rs`（:50/:981-982/:1442 三处直读）、`crates/game-core/src/memmap/{mod,nesmap}.rs`。`frame/memory.rs` 只在 `HealthChange::ADDRS` 的转发面上受影响（:317/:370），按实现需要决定是否动。**`samus/handler.rs` 不在本批**：它 :439/:495/:1923 读的是 `0x0300 + s` 状态槽，属 B2 的 `$0300-$0316`，不在 `$0106/$0107/$0301/$0302` 这 6 B 里。
 - 判据：`cargo test -p game-core` 全绿（**不设自造门槛**，跟门禁读数比：`check` 的 `rust-tests` 行当前为「测试数 1175（基线 1175）」）；`python3 tools/l4_diff_run.py run cases/case-password-justin.txt` 仍 14/14；`run-all` 仍 `171/172`；`check` PASS=24。
-- 回滚：`git revert` 单个 commit 即回到「struct 派生、RAM 权威」，无数据迁移。
+- 回滚：`git revert` 单个 commit 即回到「RAM 权威」形态（B1 的血量 2 B 与 B2 的位姿 23 B 各自一个 commit，可单独回滚），无数据迁移。 **[2026-11-26 更新]**
 - 耦合：`data/status/nes_map.json` 的 `entity_spans` 计数 17 → 18（若新建实体）或 `SamusState` spans 24 → 22（若并入）；`arch_coupling_allowlist.json` 若在 `samus/` 内新增直接内存调用则会涨点——本批是**减少**调用，预期不涨。
 
 ### B2 · Samus 位置/速度热路径（`$0300-$0316` 余下 23 B）
@@ -203,3 +203,20 @@ frame 1196 · samus 1051 · world 844 · enemy 697 · title 175 · render 118 ·
 1. **`project_all` 的落点**：放在 `frame/engine.rs` 的 tick 收口（每帧一次），还是每个 face 自己管？本计划推荐前者（唯一入口），但这会动 `frame/`，属 B4 范围——需要确认「B1 阶段可以先在 `frame/memory.rs` 内联 project，等 B4 再统一」。
 2. **`SamusVitals` 是并入 `SamusState` 还是独立文件**：并入则 `entity_spans` 计数不变、但 `SamusState` 面变成「混合权威」；独立则账面清晰、但多一次 project 调用。本计划推荐**独立文件**（B1 少动既有结构）。
 3. **B3 的 `$0317-$03FF`（233 B）是否需要先补 asm 取证**：该段是每区状态数组尾，`nesmap-dump` 没有 note。若 PMO 要求「无 A 级证据不得 typed」，则 B3 拆成「先取证卡 + 后实现卡」。
+
+## 状态同步（2026-11-26，HEAD `4e7ce4de`）
+
+本文写作时（#74，2026-11-25）是计划；现在按实际进度回填**状态**，不改上面任何判据与批次划分。
+
+| 批次 | 状态 | 事实（可复跑） |
+|---|---|---|
+| B1 `SamusVitals` 6 B | **已完成** | 实际只收了可收的 2 B：`$0106/$0107`（asm `Health`，`refs/m1disasm/SRC/constants_ram.asm:806`）。已落 `crates/game-core/src/memmap/samus_vitals_face.rs` + `samus/state.rs` 权威翻转（`bdba1b0f`，#77）。卡面另两个字段经验伪：`$006E/$006F` 是 `HealthChange`（早已 typed）、`$0301/$0302` 是 `radiusY/radiusX`（属 B2 的 23 B） |
+| B1 其余声明面（原计划未细分） | **已完成 6 个面** | `ZeroPage` `$0000-$0032` 51 B（`d2070cb7`，#81）、`ObjectSlots` 256 B + `SoundRam` 140 B（#29）、`SpareScratch` 155 B（#52）、`TileBlasts` 208 B、`RoomSpriteTables` 128 B + `VramBuffers` 87 B。运行时核：`python3 tools/nes_map_check.py --list` → `Owner 1,401 / Unmodeled 385 / Undeclared 486` |
+| B2 Samus 位姿 23 B | **已完成（读写口径），剩「业务层直读点收口」** | `samus/state.rs:292-340` 的 `get_byte/set_byte` 已分派 `$0300-$0316` 全部 23 项；`memmap/raw.rs` 的 `read_ram/write_ram` 先走 typed 分派，单测 `raw_byte_write_does_not_override_typed_truth`（`state.rs:816-822`）钉死「typed 是真相」；**未完成的部分**是业务层仍有 `samus/physics.rs` 等处的直读点（走 `read_ram` 已自动 typed，但少一层类型），以及 `$0301/$0302` 的语义命名在 `Radius` 里。 **[2026-11-26 更新，依据 `grep -n 'TYPED_ADDRS' -A3 crates/game-core/src/samus/state.rs`、`sed -n '20,80p' crates/game-core/src/memmap/raw.rs`]** |
+| B3 敌人槽/`$0317-$03FF` | **未开工（仅声明层完成）** | `Enemy` 额外面 84 B 与 `Enemy`/`Explosion` 主面已由 `object_slot_face.rs` 与 `enemy/state.rs` 声明，但 `$0317-$03FF` 233 B 仍是 Unmodeled（AGENTS §3.2 要求先取证再命名，PMO 已裁定） |
+| B4 帧骨架与零页 | **部分（零页已完成）** | `$0000-$0032` 51 B 已 typed；`$0108-$01FF` 248 B 是 6502 栈区，只能当 Ephemeral，不参与 Undeclared 降幅 |
+
+**`project_all` 尚未落地**（§6 待决 1 的现状）：现在没有统一入口，实际接线是两处手工链——`crates/game-core/src/frame/memory.rs` 的 `TypedRestoreManifest::ram_addrs()`（回灌）+ `crates/game-core/src/state.rs` 的 `Manager::snapshot_nes`（投影）。每次新增 face 要在这两处各加一段，**这是 B4 之前已知的维护成本**，PMO 在 #77 裁定「B1 可先内联，B4 再统一入口」。
+
+**复跑命令**：`python3 tools/nes_map_check.py --list`（四态）、`cargo test --workspace`（1,193，ratchet 基线 1,189）、`python3 gates/cli.py check`（PASS24/0/3/1）。
+

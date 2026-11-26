@@ -18,12 +18,12 @@
 | git HEAD | `495426ae` | `git rev-parse --short HEAD` |
 | 读数时间 | 2026-11-23T20:31+08:00 | `date -Iseconds` |
 | 门禁总览 | 27 项：PASS 23 / FAIL 0 / SKIP 3 / TOLERATED 1，`STATUS: OK` | `python3 gates/cli.py status` |
-| 测试数 | 1,087（基线 1,087） | 同上，`rust-tests` 项 |
+| 测试数 | **1,193**（`cargo test --workspace` 汇总；ratchet 基线 1,189） | 同上，`rust-tests` 项 **[2026-11-26 更新]** |
 | 例程分母 | 1,135，未移植 **603** | 同上，`routine-inventory` 项 |
 | 字节比对面 | 2,272 B | 同上，`nes-map` 项 |
 | 裸字节面 | 1,094 / 1,160 处 / 35 文件（可下调 66） | 同上，`raw-surface` 项 |
 | 裸地址（生产面） | 518 / 524 处 / 23 文件；测试面另 175 处 | 同上，`no-raw-addr` 项 |
-| L4 基线账 | 21 案 / 172 采集点（match 166、diff 6） | 读 `data/status/l4_ratchet_baseline.json`，**未跑 `gates/cli.py l4`** |
+| L4 基线账 | 21 案 / 172 采集点（match 171 · diff 1） | 读 `shots_rust/matrix.json`（`head=b1e33a6d`、`at=2026-11-25T12:45:01Z`），**未跑 `gates/cli.py l4`** |
 | L3 game-core 腿 | **未启用**（只有 oracle 腿） | `status` 的 `trace-diff` 项原文 |
 | 依赖方向门 | G11 判据已按 m21400 移除，`arch-contract` 只留 `analysis/` 不入库 | `status` 的 `arch-contract` 项原文 |
 
@@ -68,16 +68,34 @@ PPU 址空间、PPU 寄存器、APU、手柄都已经是**独立结构体或事�
 
 | 四态 | 字节 | 构成 |
 |---|---|---|
-| Owner | 374 | OAM 256 + Samus 23 + 敌额外面 84（12×7）+ zp 9（`$4B/$5A/$5B/$65/$6B/$6C-$6D/$6E-$6F`）+ 声 init 2（`$0683-$0684`） |
+| Owner | **1,401** | 15 个 typed 面之和，逐面对照见下方「Owner 逐面清单」。旧口径 374 B（OAM 256 + Samus 23 + 敌额外面 84 + zp 9 + 声 init 2）已被 B1 批次的声明层追加取代 **[2026-11-26 更新，依据 `cargo run -p game-core --bin nesmap-dump` 按 entity 聚合]** |
 | View（与 Owner 重叠） | 23 | 对象池 0 号槽对 Samus typed 面的只读视图（`crates/game-core/src/world/object.rs:244-263`：`impl NesMapped`，`SPANS` 的 `View(&["SamusState"])` 段在 `:248-251`）。**这 23 B 同时被 Samus 的 Owner 段覆盖**，gate 报的是「View 23 B（only 0）」——only-view=0 B，**不参与求和** |
-| Unmodeled | 611（27 段，逐段见 `--list`） | 按大小：`$0317-$03FF` 233 B（对象池 `$0300-$03FF` 16 槽 × 16 B 扣掉 23 B View 后的尾部；`world/object.rs:241` 自述「其余 233 B 未 typed ⇒ `Unmodeled`」，声明在 `:252-258`）、`$0400-$04BF` 192 B（敌主面整脸，12 槽 × 16 B）、`$04C0-$04DF` 32 B、敌额外面尾 12 段 × 9 B（槽 k 起点 = `$6AFB+16k`，最后一段终到 `$6BB3`；每槽前 7 B 已 typed，这 9 B 是尾部）、`$6BB4-$6BD3` 32 B、其余 11 段小空洞共 14 B |
-| Undeclared | 1,287（13 段） | 账本已登记 11 段共 620 B + **完全未登记 2 段共 667 B**（`$0108-$01FF` 248 B、`$04E0-$0682` 419 B） |
+| Unmodeled | **385**（**24 段**，逐段见 `--list`） **[2026-11-26 更新]** | 按大小：`$0317-$03FF` 233 B（对象池 `$0300-$03FF` 16 槽 × 16 B 扣掉 23 B View 后的尾部；`world/object.rs:241` 自述「其余 233 B 未 typed ⇒ `Unmodeled`」，声明在 `:252-258`）、`$0400-$04BF` 192 B（敌主面整脸，12 槽 × 16 B）、`$04C0-$04DF` 32 B、敌额外面尾 12 段 × 9 B（槽 k 起点 = `$6AFB+16k`，最后一段终到 `$6BB3`；每槽前 7 B 已 typed，这 9 B 是尾部）、`$6BB4-$6BD3` 32 B、其余 **10 段小空洞共 12 B** |
+| Undeclared | **486**（**11 段**＝10 段账本 238 B + 1 段未登记 248 B） | 账本已登记 **10 段共 238 B** + **完全未登记 1 段 248 B**（`$0108-$01FF`，6502 栈区）。`$04E0-$0682` 那 419 B 已被 B1 批次的 `ObjectSlots`/`SoundRam` 声明吸收 **[2026-11-26 更新，依据 `python3 tools/nes_map_check.py --list`]** |
 
 复跑：`python3 tools/nes_map_check.py --list`（输出逐段列出，含"未登记（无）"两行）。
 
-**求和校验（复核人一定会做，这里先给出）**：Owner 374 + Unmodeled 611 + Undeclared 1,287 = **2,272 B** = 比对面
+**求和校验（复核人一定会做，这里先给出）**：Owner 1,401 + Unmodeled 385 + Undeclared 486 = **2,272 B** = 比对面 （旧口径 374 + 611 + 1,287 同样成立，只是三项数值已随声明层推进而变；**[2026-11-26 更新]**）
 （`$0000-$07FF` 2,048 + `$6AF4-$6BD3` 224）。View 的 23 B 与 Owner 段重叠、only-view 为 0，**不在求和里**；
 若照表格行数机械相加会得到 2,295，差的就是这 23 B。
+
+**Owner 逐面清单（1,401 B，2026-11-26）**：复跑 `CARGO_TARGET_DIR=/tmp/t cargo run -q -p game-core --bin nesmap-dump | python3 -c "import json,sys,collections;d=json.load(sys.stdin);a=collections.defaultdict(int);[a.__setitem__(s['entity'],a[s['entity']]+s['len']) for s in d['spans'] if s['key']=='owner'];print(sorted(a.items(),key=lambda kv:-kv[1]))"`
+
+| 面 | 字节 | span | 声明位置 |
+|---|---|---|---|
+| `OamShadow` | 256 | 1 | `crates/game-core/src/render/oam_shadow.rs` |
+| `ObjectSlots`（敌槽/爆散/mother/mellow） | 256 | 18 | `crates/game-core/src/memmap/object_slot_face.rs`（#29） |
+| `TileBlasts`（`$0500-$05CF`，13×16 B） | 208 | 13 | `crates/game-core/src/memmap/tile_blast_face.rs`（B1-a） |
+| `SpareScratch`（`$068E-$06FF`+`$0787-$079F`+`$07F0-$07FF`） | 155 | 3 | `crates/game-core/src/memmap/spare_face.rs`（#52） |
+| `SoundRam`（`$0600-$0682`+`$0685-$068D`） | 140 | 2 | `crates/game-core/src/memmap/sound_ram_face.rs`（#29） |
+| `RoomSpriteTables`（`$0700-$077F`） | 128 | 18 | `crates/game-core/src/memmap/room_sprite_table_face.rs`（B1-b 第一批） |
+| `VramBuffers`（`$0780-$0786`+`$07A0-$07EF`） | 87 | 4 | `crates/game-core/src/memmap/vram_buffer_face.rs` |
+| `Enemy`（12 槽 × 7 B 额外面） | 84 | 12 | `crates/game-core/src/enemy/state.rs` |
+| `ZeroPage`（`$0000-$0032`） | 51 | 1 | `crates/game-core/src/memmap/zero_page_face.rs`（#81） |
+| `SamusState`（`$0300-$0316`） | 23 | 23 | `crates/game-core/src/samus/state.rs` |
+| `ObjectGlobals` | 5 | 5 | `crates/game-core/src/world/object_globals.rs` |
+| `HealthChange` / `SamusVitals` / `SoundInitFlags` / `ScrollBlocks` | 2+2+2+2 | 4 | `samus/health_change.rs`、`memmap/samus_vitals_face.rs`（#77）、`sound/`、`world/` |
+| **合计** | **1,401** | 103 | — |
 
 **注意盲区**：比对面 = `$0000-$07FF`（2,048 B）+ `$6AF4-$6BD3`（224 B），
 定义在 `crates/game-core/src/memmap/nesmap.rs:245-251`，并有单测锚定（同文件 `:375-390`）。
@@ -111,10 +129,10 @@ WRAM 共 8,192 B，**其中 7,968 B 在比对面之外**（`$6000-$6AF3` 与 `$6
 
 | # | 失败路径 | 机制 | 现状防线 | 缺口 |
 |---|---|---|---|---|
-| F1 | **双真相** | 绕过 `read_ram/write_ram` 直写 `ram_mut()` 或直读 `ram()` 的 typed 格，typed 与字节各说各话 | `write_path_does_not_mirror_typed_bytes_into_storage`（`memmap/storage.rs:87`）、`mirrored_alias_does_not_bypass_typed`（`:101`） | 只对已 typed 的 374 B 有效；`ram()` 仍是 `pub`，`frame/memory.rs:29,416` 就直读 `ram()[0x00FF]` |
+| F1 | **双真相** | 绕过 `read_ram/write_ram` 直写 `ram_mut()` 或直读 `ram()` 的 typed 格，typed 与字节各说各话 | `write_path_does_not_mirror_typed_bytes_into_storage`（`memmap/storage.rs:87`）、`mirrored_alias_does_not_bypass_typed`（`:101`） | 只对已 typed 的 1,401 B 有效 **[2026-11-26 更新]**；`ram()` 仍是 `pub`，`frame/memory.rs:29,416` 就直读 `ram()[0x00FF]` |
 | F2 | **导出漏投影** | 新导出直读字节面而非 `snapshot_nes()`，typed 字段 dump 成 0（假绿） | `observe/dump.rs` 单一来源声明（`crates/game-core/src/memmap/observe/dump.rs:1-12,39`）；`docs/findings/typed-domain-migration.md` §3.5 列了 5 个必须走投影的出口 | 靠纪律与文档，无机械检查（无门禁断言"新导出不得直读 ram()"） |
 | F3 | **回灌漏项** | `restore_mss` 少回灌一族，MSS 往返丢字段 | `frame/memory.rs:341` 末尾清零 + `debug_assert`；capture 走 `snapshot_nes`（`:433`） | 单份手写清单，新增 typed 域时靠人记；无"每个 typed 域必须被 restore"的机械断言 |
-| F4 | **无主字节** | 1,287 B 无 owner；其中 667 B 连指针都没有 | `nes-map` 锁死 Undeclared 不许增长 | 无主 ≠ 没人用：2026-11-17 三场景实测（`docs/knowledge/decision-static-vs-dynamic-coverage.md`）面内触达 964 B，其中 Undeclared 343 B 被真实读写。**该读数本次未重跑** |
+| F4 | **无主字节** | 486 B 无 owner；其中 248 B（`$0108-$01FF` 栈区）连指针都没有 **[2026-11-26 更新]** | `nes-map` 锁死 Undeclared 不许增长 | 无主 ≠ 没人用：2026-11-17 三场景实测（`docs/knowledge/decision-static-vs-dynamic-coverage.md`）面内触达 964 B，其中 Undeclared 343 B 被真实读写。**该读数本次未重跑** |
 | F5 | **比对面盲区** | WRAM 7,968 B 不在字节对拍面（§1.3） | `verify_shim` 单独计面外触碰 | 房间装载/图案数据的字节级错误只能靠像素 diff 或单测发现 |
 
 ---
@@ -211,13 +229,13 @@ Rust 语义类型              NesImage / ram.hex            Mesen2 执行 + ROM
 
 | 门禁 | 读数 | 对"大改"的含义 |
 |---|---|---|
-| `rust-tests` | 1,087（基线 1,087） | 每个迁移批次必须不降；现有测试是唯一快速回归网 |
-| `nes-map` | 面 2,272 / Owner 374 / Unmodeled 611 / Undeclared 1,287，四态恒等式成立 | 静态腿已就位，**可用**（补声明能被机械检出） |
+| `rust-tests` | 1,193（ratchet 基线 1,189） **[2026-11-26 更新]** | 每个迁移批次必须不降；现有测试是唯一快速回归网 |
+| `nes-map` | 面 2,272 / Owner 1,401 / Unmodeled 385 / Undeclared 486（View 23 only 0 不计入求和），四态恒等式成立 **[2026-11-26 更新]** | 静态腿已就位，**可用**（补声明能被机械检出） |
 | `raw-surface` | 1,094/1,160 / 35 文件 | 新文件接裸面即红，**可用** |
 | `no-raw-addr` | 518/524 / 23 文件；具名 151/151 | 只监控 5 个族，覆盖窄 |
 | `routine-inventory` | 1,135 / 未移植 603 | **53% 的行为还没搬**：目标形状仍在生长 |
 | `trace-diff`（L3） | game-core 腿**未启用** | **没有逐帧跨机裁判**——这是"不能大改"的最硬理由 |
-| `l4` | 21 案 / 166 match / 6 diff（读账本，未跑） | 采集点少、慢层不进 hook；大改的回归信号弱 |
+| `l4` | 21 案 / 172 格 / 171 match / 1 diff（读 `shots_rust/matrix.json`，未跑） | 采集点少、慢层不进 hook；大改的回归信号弱 |
 | `visual-diff` | SKIP | 渲染面变化无法在本轮被机械看见 |
 | `arch-contract` | G11 已裁 | 重构期没有依赖方向门 |
 | `completeness-ratchet` | 57 格（基线 57） | 行为面分母是声明的，不是机械的 |
@@ -228,9 +246,9 @@ Rust 语义类型              NesImage / ram.hex            Mesen2 执行 + ROM
 判定只看「现状」列的两个数，任何人都能复算；**S/M/L 表示"整域迁移是多大一摊"，不表示本稿主张现在做**（本稿现在主张的 A/B/C 三件见 §4.1，它们本身不是域级迁移）。
 数据来源（全部**递归**，含子目录）：LoC=`find crates/game-core/src/<dir> -name '*.rs' -print0 | xargs -0 cat | wc -l`；文件数=`find crates/game-core/src/<dir> -name '*.rs' | wc -l`；测试=`grep -rn "#\[test\]" crates/game-core/src/<dir> | wc -l`；
 裸面=`data/status/raw_surface.json` 账本口径（非实时重算）。
-测试数分解校验：13 个域目录 970 + 根文件 6（`crates/game-core/src/ram_map.rs` 2、`rng.rs` 4）+ `bin/` 7 = 983（game-core `src/`）；
-加 `game-core/tests/` 20、`game-data` 65、`game-platform` 14、`game-shell` 5（`crates/game-shell/game-shell-pc/src/lib.rs` 3 + `src/bin/apu_dump.rs` 2），
-合计 **1,087**，与 `cargo test --workspace` 汇总一致（§0 的 `rust-tests` 读数）。
+测试数分解校验（递归口径）：`grep -rn "#\[test\]" crates --include=*.rs | wc -l` = **1,193**，与 `cargo test --workspace` 的 passed 汇总同数。
+分解：`game-core/src/`（非 bin）**1,082** + `game-core/src/bin/` **7** + `game-core/tests/` **20** = game-core **1,109**；加 `game-data` **65** + `game-platform` **14** + `game-shell`（`game-shell-pc` lib 3 + `apu_dump` 2）**5** = **1,193**。 **[2026-11-26 更新] 上一版把 game-shell 记作「计 0」，实测 `grep -rn "#\[test\]" crates/game-shell --include=*.rs | wc -l` = 5，故 1,082+7+20+65+14+5=1,193。**
+旧分解「970+6+7 / +20+65+14+5 = 1,087」是 2026-11-25 读数，已随 #77/#81 等新增单测变化 **[2026-11-26 更新，依据上面两条命令]**。
 
 **先给结论**：按现状体量，**除 `pickup/`（M）、`ui/`（M）、`input/`（S）、`ending/`（S）外，每个域都是 L**。
 这正是结论选「分阶段重构」而不是「现在整体重构」的量化理由——任何一域的整体迁移都是跨多文件、上千行的改动，
@@ -255,7 +273,7 @@ Rust 语义类型              NesImage / ram.hex            Mesen2 执行 + ROM
 ### 3.3 为什么"立即整体重构"不成立（逐条对门禁）
 
 1. **没有跨机裁判**：L3 game-core 腿未启用（§3.1），49k 行改动无法证明行为不变。
-   现有唯一强信号是 1,087 条单测 + 21 案像素账——不足以兜住一次目录级重排。
+   现有唯一强信号是 1,193 条单测 + 21 案像素账 **[2026-11-26 更新]**——不足以兜住一次目录级重排。
 2. **目标形状仍在生长**：53% 例程未移植；现在定死的所有权/目录，会在剩下 603 个例程搬迁时被反复推翻。
 3. **搬迁被棘轮门挡**：新文件接裸面即 FAIL、总量上涨即 FAIL（`raw-surface` 行），
    而 `raw-surface` 现在有 1,094 处——**先归零才能搬**（spec R5 同结论）。
@@ -264,7 +282,7 @@ Rust 语义类型              NesImage / ram.hex            Mesen2 执行 + ROM
 
 ### 3.4 为什么"暂缓"也不成立
 
-`nes-map` 的 Undeclared 有 **667 B 连指针都没有**（§1.3），且业务代码每天在加新的裸地址写法
+`nes-map` 的 Undeclared 有 **248 B 连指针都没有**（§1.3） **[2026-11-26 更新]**，且业务代码每天在加新的裸地址写法
 （`raw-surface` 基线 1,160、现 1,094，只降了 66）。**每多移植一个例程，就把一处地址写法固化进新代码**：
 今天补声明是"加声明"，等 603 个例程搬完再补就是"全仓改"。所以纯暂缓会让成本单调上升。
 
@@ -274,14 +292,14 @@ Rust 语义类型              NesImage / ram.hex            Mesen2 执行 + ROM
 
 **判定：分阶段重构。不立即整体重构，也不暂缓。**
 
-理由一句话：**方向已对、地基已浇筑 16.5%（Owner 374 B / 比对面 2,272 B），缺的是机械判据与覆盖率，不是再来一次设计**；
+理由一句话：**方向已对、地基已浇筑 61.7%（Owner 1,401 B / 比对面 2,272 B） **[2026-11-26 更新]**，缺的是机械判据与覆盖率，不是再来一次设计**；
 而"再加一次大设计"的代价（失去裁判、目标漂移、门槛撞车）远高于收益。
 
 ### 4.1 现在做（本稿主张立卡的三件事，均不动行为）
 
 | # | 动作 | 判据（机械可查） | 风险 | 建议 owner 面 |
 |---|---|---|---|---|
-| A | **补 Undeclared 声明**：1,287 B → 0（先补 667 B 无指针段） | `python3 tools/nes_map_check.py --list` 不再出现"未登记"；`nes-map` PASS；`cargo test` 1,087 不降 | 零行为变化（只加声明/指针） | `memmap/nesmap.rs` + 各域 `SPANS`（写路径分散，按域切分） |
+| A | **补 Undeclared 声明**：486 B → 0（先补 248 B 无指针段 $ **[2026-11-26 更新]** 余 238 B 有账本指针） | `python3 tools/nes_map_check.py --list` 不再出现"未登记"；`nes-map` PASS；`cargo test` 1,193 不降 | 零行为变化（只加声明/指针） | `memmap/nesmap.rs` + 各域 `SPANS`（写路径分散，按域切分） |
 | B | **动态腿扩面**：现有 3 个手搭场景（title/walk/door，`memmap/verify_shim.rs:388`）→ 21 个 L4 案采集点 | 每案 `assert_owner_unique` 零冲突；`tools/raw_execution_report.py` 覆盖 21 案 | 测试面改动，不碰生产逻辑 | `memmap/verify_shim.rs` + `data/status/` 账本 |
 | C | **新代码 typed-first 入规**：`no-raw-addr` 监控族从 5 族扩到"本批移植涉及的族"；`raw-surface` 加"每批净下降"约束 | 门禁红即停；`raw-surface` 每批总量 ≤ 上批 | 会拖慢移植节奏——需负责人拍板 | `gates/`（单独 commit） |
 
@@ -408,3 +426,22 @@ print(f'pointers ok={ok} bad={bad}')
 
 另把 §5 的「指针机械校验」脚本换成能解析本文简写指针的版本，当前输出见 §5（`pointers ok=…`）。
 复核人复现的那次 `-p game-data --lib` 瞬时失败与本方一致，双方均判并发/构建竞态，不作为退回理由。
+
+## 状态同步（2026-11-26）
+
+写作时 HEAD `495426ae`（2026-11-23）的读数，与当前 HEAD `4e7ce4de`（2026-11-26）已不同。下面只列变化与复跑命令，**不改本文章节结论**；正文里被改到的数字都已就地标注。
+
+| 项 | 写作时（2026-11-23） | 现在（2026-11-26） | 取数命令 |
+|---|---|---|---|
+| Owner | 374 B | **1,401 B** | `python3 tools/nes_map_check.py --list` |
+| View（only 0，不计入求和） | 23 B | 23 B | 同上 |
+| Unmodeled | 611 B（27 段） | **385 B（24 段）** | 同上 |
+| Undeclared | 1,287 B（13 段） | **486 B（11 段）** | 同上 |
+| 合计 | 2,272 B | 2,272 B（1,401+385+486） | 同上 |
+| `impl NesMapped` 文件数 | 3 | **两个口径，分别给清单**：①`grep -rl "impl NesMapped" crates --include=*.rs \| wc -l` = **13** = `memmap/{object_slot,room_sprite_table,samus_vitals,sound_ram,spare,tile_blast,vram_buffer,zero_page}_face.rs`（8 个面）+ `render/oam_shadow.rs` + `samus/health_change.rs` + `sound/state.rs` + `world/object_globals.rs` + `world/scroll_blocks.rs`；②`grep -rln "NesMapped for" crates --include=*.rs \| wc -l` = **19**（上面 13 个里除 5 个面用全限定写法外，另含 `enemy/explosion.rs`、`enemy/state.rs`、`samus/state.rs`、`world/camera/mod.rs`、`world/object.rs`、`world/room_ram.rs`） **[2026-11-26 更新：上一版把 `world_map.rs`/`nesmap.rs` 也列进来，它俩其实没有实现；此处按两条命令的逐字输出改正]** | 两条 `grep` 命令 |
+| 单测 | 1,087 | **1,193**（`--workspace`；ratchet 基线 1,189） | `cargo test --workspace` |
+
+**这批声明层对应的卡**（都已验收，可 `git log --oneline` 复核）：`ObjectSlots`+`SoundRam`（#29，`2bf74902`）、`SpareScratch`（#52）、`TileBlasts`/`RoomSpriteTables`/`VramBuffers`（#22 一带）、`SamusVitals`（#77，`bdba1b0f`，**唯一做过权威翻转的 2 B**）、`ZeroPage`（#81，`d2070cb7`）。
+
+**还剩什么**（与 §4 的候选一致，未变）：Undeclared 486 B 中 238 B 有账本指针（10 段）、248 B 是 6502 栈区（`$0108-$01FF`，只能 Ephemeral，不参与降幅）；Unmodeled 385 B 里最大两块是 `$0317-$03FF` 233 B（对象池尾部）与 `$6BB4-$6BD3` 32 B。
+

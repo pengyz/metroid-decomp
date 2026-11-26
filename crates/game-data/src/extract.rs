@@ -57,6 +57,7 @@ pub fn sections(rom: &[u8]) -> Result<Vec<Section>, String> {
     out.extend(extract_samus_tables(prg)?);
     out.extend(extract_intro_star_palettes(prg)?);
     out.extend(extract_title_tables(prg)?);
+    out.extend(extract_enemy_rom_tables(prg)?);
     out.extend(extract_tourian_metroid_data(prg)?);
     out.extend(extract_area_pal_toggle(prg)?);
     out.extend(extract_area_vram_strings(prg)?);
@@ -740,6 +741,14 @@ fn seg_meta() -> Vec<SegMeta> {
                   rom: "bank04:$97AF->串体", note: "Kraid 瓦片爆 17 串" },
         SegMeta { key: PackKey::AreaRiVramStrings, kind: "offs+blob", elem: 1, count: 0,
                   rom: "bank05:$97AF->串体", note: "Ridley 瓦片爆 17 串" },
+        SegMeta { key: PackKey::KrProjOffsetX, kind: "enemy-tbl", elem: 1, count: 10,
+                  rom: "bank04:$9BD1", note: "KraidProjectileOffsetX 5 槽×[朝右,朝左]（i8）" },
+        SegMeta { key: PackKey::MetroidLatchOffsetY, kind: "enemy-tbl", elem: 1, count: 12,
+                  rom: "bank03:$99D8", note: "MetroidLatchOffsetY（i8）" },
+        SegMeta { key: PackKey::CannonInstrLists, kind: "enemy-tbl", elem: 1, count: 45,
+                  rom: "bank03:$9D99", note: "CannonInstrLists 五串 11+11+11+6+6（$FF=回表头，$F0-$FE=开火）" },
+        SegMeta { key: PackKey::RinkaSpawnPos, kind: "enemy-tbl", elem: 1, count: 12,
+                  rom: "bank03:$A1DB", note: "RinkaSpawnPosTbl 2 生成器×6（高 nibble=Y 低 nibble=X）" },
     ];
     v
 }
@@ -1148,6 +1157,31 @@ fn extract_title_tables(prg: &[u8]) -> Result<Vec<Section>, String> {
     let mut out = Vec::with_capacity(TITLE_TABLES.len());
     for (key, addr, len, label) in TITLE_TABLES {
         out.push(Section { key, data: bank_slice(prg, 0, addr, len).map_err(|e| format!("{label}: {e}"))? });
+    }
+    Ok(out)
+}
+
+/// 敌人专属 ROM 常量表（`(key, bank, cpu addr, len, label)`）。
+///
+/// 这些表原以裸数组抄在 `crates/game-core/src/enemy/` 里；按 D 面纪律「ROM 数据由工具
+/// 导出、Rust 不内嵌」，改由本提取器打进资产包。表长由 asm 相邻标签间距机械给定：
+/// `KrProjOffsetX $9BD1+10=$9BDB`（= `KraidProjectileType`）、`MetroidLatchOffsetY`
+/// `$99D8+12=$99E4`、`CannonInstrLists $9D99+45=$9DC6`（= `CannonAnimFrameTable`）、
+/// `RinkaSpawnPosTbl $A1DB+12=$A1E7`。
+const ENEMY_ROM_TABLES: &[(PackKey, u8, u16, usize, &str)] = &[
+    (PackKey::KrProjOffsetX, 4, 0x9BD1, 10, "KraidProjectileOffsetX"),
+    (PackKey::MetroidLatchOffsetY, 3, 0x99D8, 12, "MetroidLatchOffsetY"),
+    (PackKey::CannonInstrLists, 3, 0x9D99, 45, "CannonInstrLists"),
+    (PackKey::RinkaSpawnPos, 3, 0xA1DB, 12, "RinkaSpawnPosTbl"),
+];
+
+fn extract_enemy_rom_tables(prg: &[u8]) -> Result<Vec<Section>, String> {
+    let mut out = Vec::with_capacity(ENEMY_ROM_TABLES.len());
+    for &(key, bank, addr, len, label) in ENEMY_ROM_TABLES {
+        out.push(Section {
+            key,
+            data: bank_slice(prg, bank, addr, len).map_err(|e| format!("{label}: {e}"))?,
+        });
     }
     Ok(out)
 }

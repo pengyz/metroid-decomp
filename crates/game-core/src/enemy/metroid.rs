@@ -46,9 +46,8 @@ const METROID_REPEL_SPEED: [i8; 2] = [-8, 8];
 const METROID_ACCEL: [i8; 4] = [0x30, -0x30, 0x60, -0x60];
 /// `MetroidMaxSpeed ; 07:C5A8+6`（`$77F6/$77F7`）—— red=2、green=4。
 const METROID_MAX_SPEED: [u8; 2] = [2, 4];
-/// `MetroidLatchOffsetY ; 03:99D8`——吸附后相对 Samus 的 y 偏移（下标 = 进度计数器 - 1）。
-const METROID_LATCH_OFFSET_Y: [i8; 12] =
-    [0x00, -4, -7, -9, -10, -10, -11, -11, -11, -10, -10, -8];
+// `MetroidLatchOffsetY ; 03:99D8`——吸附后相对 Samus 的 y 偏移（下标 = 进度计数器 - 1），
+// 已迁到资产包（`game_data::assets::metroid_latch_offset_y()`）。
 /// `OAMDATA_PRIORITY`（`refs/m1disasm/SRC/hardware.asm:49`）= `%00100000`。
 const OAMDATA_PRIORITY: u8 = 0x20;
 /// 吸附进度满值（`and #$0F / cmp #$0C`）。
@@ -227,7 +226,7 @@ pub(crate) fn metroid_ai(mem: &mut Manager, x: u8) {
             mem.set_metroid_latch(slot, latch);
         }
         // `MetroidLatchOffsetY-1,y`（y = 推进前的低 nibble）
-        let oy = METROID_LATCH_OFFSET_Y[(counter.saturating_sub(1)) as usize & 0x0F];
+        let oy = game_data::assets::metroid_latch_offset_y()[(counter.saturating_sub(1)) as usize & 0x0F] as i8;
         let mut ox = LATCH_FULL.wrapping_sub(counter);
         // `plp / bmi`：锁存 bit7 置位（速度负）时**不**取负
         if latch & 0x80 == 0 {

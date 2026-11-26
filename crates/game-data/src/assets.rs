@@ -345,6 +345,23 @@ pub fn enemy_movement_strings(area: u8) -> &'static [u8] { enemy_table(area, 10)
 /// `EnemyDeathAnimIndex ; 各 bank $960B`（32 B，`type*2+朝向` 索引）——**按区不同**。
 pub fn enemy_death_anim(area: u8) -> &'static [u8] { enemy_table(area, 11) }
 
+// ---- 敌人专属常量表（ROM 裸表；D 面纪律：Rust 不内嵌，只经本通道读）----------------
+//
+// 四张表原先以 `const [i8; N]` / `const [u8; N]` 抄在 `game-core/src/enemy/*.rs`。
+// 表长由 asm 相邻标签间距机械给定（见 `extract.rs` 的 `ENEMY_ROM_TABLES` 注）。
+
+/// `KraidProjectileOffsetX ; 04:9BD1` 10 B（i8；5 槽 × [朝右, 朝左]）。
+pub fn kraid_projectile_offset_x() -> &'static [u8] { pack::get(PackKey::KrProjOffsetX) }
+
+/// `MetroidLatchOffsetY ; 03:99D8` 12 B（i8）。
+pub fn metroid_latch_offset_y() -> &'static [u8] { pack::get(PackKey::MetroidLatchOffsetY) }
+
+/// `CannonInstrLists ; 03:9D99` 45 B（`$FF`=回表头，`$F0-$FE`=开火）。
+pub fn cannon_instr_lists() -> &'static [u8] { pack::get(PackKey::CannonInstrLists) }
+
+/// `RinkaSpawnPosTbl ; 03:A1DB` 12 B（高 nibble=Y、低 nibble=X）。
+pub fn rinka_spawn_pos() -> &'static [u8] { pack::get(PackKey::RinkaSpawnPos) }
+
 /// `CrawlerAnimIndexTable_{AREA}`（8 B，`orientation*2 + direction` 索引）——**按区不同**。
 ///
 /// 表项是 `EnAnim_X - EnAnimTable_{AREA}`，而五区 anim 表基址/内容各不相同，故同一"墙上爬"
