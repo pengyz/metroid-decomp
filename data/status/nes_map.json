@@ -12,10 +12,14 @@
   ],
   "face_total": 2272,
   "owner_bytes": [
-    1266,
+    1317,
     84
   ],
   "owner_spans": [
+    {
+      "start": 0,
+      "len": 51
+    },
     {
       "start": 75,
       "len": 1
@@ -626,20 +630,8 @@
       ]
     }
   ],
-  "undeclared_total": 537,
+  "undeclared_total": 486,
   "undeclared": [
-    {
-      "start": 0,
-      "len": 51,
-      "kind": "undeclared",
-      "refs": [
-        "ram_map.rs:82",
-        "ram_map.rs:89",
-        "ram_map.rs:38",
-        "ram_map.rs:46",
-        "memmap/observe/frame_face.rs:32"
-      ]
-    },
     {
       "start": 52,
       "len": 3,
@@ -905,6 +897,17 @@
       "undeclared_total": 537,
       "state_sha256": "34913092d25f43199f18208fc4946bc82fd6b0989f1ce74dcc6736f43ccd7876",
       "prev_sha256": "dd85e55239d2ab1841e3652aba2464ce71db9c1cf0b236c8089dcd93e417348d"
+    },
+    {
+      "ts": "2026-11-26T11:21:33+08:00",
+      "reason": "B1-b 零页 $0000-$0032（51 B）由 ZeroPageFace typed 认领（#81）",
+      "owner_total": 1401,
+      "view_bytes": 23,
+      "view_only_bytes": 0,
+      "unmodeled_total": 385,
+      "undeclared_total": 486,
+      "state_sha256": "ae50e59250b99cb179208df13d6532de2ed69692ddd57eae62d1d8df7667e2c5",
+      "prev_sha256": "2bc80deeec8f5489aeb891cb1abab588befce427c30844e1fa59cd1ed183944e"
     }
   ]
 }

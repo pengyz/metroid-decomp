@@ -24,6 +24,8 @@ pub mod raw;
 pub mod nesmap;
 /// B1-a：TileBlasts 状态面（`$0500-$05CF`）的 typed 声明层。
 pub mod tile_blast_face;
+/// B1-b 第二批：零页 `$0000-$0032`（51 B）typed 声明层（卡 #81）。
+pub mod zero_page_face;
 /// B1-b：房间精灵表面（`$0700-$077F`：Mem0700 / PipeBugHoles / PowerUps / Zebetites）的 typed 声明层。
 pub mod room_sprite_table_face;
 /// B1-c 第二批：声引擎 RAM 面（`$0600-$068D`，音乐/SFX 常驻状态）的 typed 声明层。
