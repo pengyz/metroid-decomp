@@ -127,3 +127,62 @@ common=sorted(set(E)&set(R))
 print('first FC-diff', next((f for f in common if E[f]!=R[f]), None))
 PY
 ```
+
+## §7 2026-11-26 追加：A-2 首因定谳（FC 增量时机）+ 五种修法实测与两案互斥证据（卡 #82）
+
+### 7.1 首因（A 级，两条独立读数）
+1. **emu 探针**：`analysis/probe-go/scenario.txt`（`frames 4300`、`inputlog movies/lordtom-metroid-100p.inputlog`、`sample_point spin-exit`、watch `001e/001f/001a/002d/0029/00fe/00ff`），`python3 tools/scenario_run.py run analysis/probe-go/scenario.txt` → `analysis/probe-go/traces/probe-go.frames.jsonl`（4264 行）。读数：
+   `f4017 TR=16 FC=151` → `f4019 TR=1C FC=152`（`$00FE`=06 熄屏）→ f4020–4023 无采样（阻塞 4 帧）→ `f4024 TR=19 FC=153`（`$00FE`=1E）；第二段 `f4181 TR=19 FC=54` → f4182–4186 阻塞 → `f4187 TR=1A FC=55`。
+   ⇒ **整个 GameOver（0x1C）通过只推进 1 次迭代**（跨 5 帧）。
+2. **asm**：`GameOver ; 00:939E`（`refs/m1disasm/SRC/prg0_title.asm:2861-2876`）= `jsr ClearAll` → `PreparePPUProcess_` → `InitPasswordFontGFX` → `NMIOn` → `Timer3←$10` → `jmp ScreenOn`。其中 `ClearAll ; 00:909F`（`:2320`）含 ScreenOff 的 `WriteAndWait→WaitNMIPass_ ;07:C43F` 与 `jsr WaitNMIPass`（2 次等待），`ScreenOn ; 07:C447` = `PPUMASK|=0x1E` 后 `WriteAndWait`（1 次等待），`InitPasswordFontGFX ; 07:C6D6` 内两次 `CopyGFXBlock ; 07:C7D5` 只写 `$2007` 不等 NMI。这些等待**都在同一次 MainLoop 迭代内**，末尾 `inc FrameCount`（`prg7_engine.asm:207`，位于分发之前）**只发生一次**。
+3. **Rust 侧**：`crates/game-core/src/frame/tick.rs::main_loop_iter` 每拍尾声 `if !mem.title_no_return && !mem.fc_inced_this_tick { FC += 1 }`，而多段 title 链被拆成多拍 ⇒ GameOver 一次通过多推 4、随后再 +5（累计 +9）；下游 `UpdateEn_UpdateEnData05Bit6 ;07:F3AA`（`prg7_engine.asm:10729`）按 `(slot xor FrameCount)&1` 写 `$0405` bit6 ⇒ f22895 六槽整组反相（8 字节）。
+
+### 7.2 五种修法实测（全部本机实跑；判据=FC 漂移 + `run-all` + password 案）
+判 FC 漂移的方法：`replay`/`rust_screenshot --state-out` 的 `w.zp[0x2d]` 对 emu `analysis/probe-early/traces/probe-early.frames.jsonl` 的 `w.$002d`（同为同一 inputlog，f1–9964 逐帧）。
+
+| 变体 | 判据 | f4024 | f4187 | f10000 | f22450 | f22895 | password 案 | run-all |
+|---|---|---|---|---|---|---|---|---|
+| 基线 | 每拍尾声 inc | +4 | +9 | +9 | +9 | +7 | 14/14 | 171/172 |
+| v1 | 只判 `cursor>0 && phase==TITLE_ROUTINE` | +2 | +3 | — | — | — | — | — |
+| v2 | 只判 `cursor>0` | +1 | +2 | — | — | — | — | — |
+| **v3** | `cursor>0` 起点 **或** 本拍刚进链 ⇒ 不 inc | **0** | **0** | **0** | **0** | **-1** | **12/14**（f950 71 px、f1150 94 px） | **169/172** |
+| v4 | 链头抑制只在 `title_no_return` 起点为真 | — | — | +2 | — | +1 | — | — |
+| v5 | 链头抑制只在「本拍换相位」 | — | — | +1 | +1 | **0** | — | — |
+| v6 | inc 挪到迭代起始（对所有新迭代头） | — | — | — | — | — | **12/14**（f700 71 px、f1100 90 px） | — |
+
+### 7.3 两案互斥的证据（为什么本轮不能落 v3）
+- v3 让 FC 漂移全归零、`replay --frames 4300` 分歧 **0/4300**、`replay --frames 24000` 首分歧从 `$0405`（8 字节）后移到 `$0445`（4 字节：`$0445`/`$0455` bit1、`$0459`/`$045a`）——即「FC 相位」这条根因确已消除。
+- 但 `run-all` 由 171/172 退到 **169/172**：`case-password-justin` 的 `f950 mid-3` **71 px**、`f1150 pw-done` **94 px**（`--fresh-emu` 连跑两次稳定，非缓存）。
+- 这两帧的 FC 与 emu **相等**（f950 都是 160、f1150 都是 104）⇒ 不是「FC 又错」，而是 v3 让 FC 在**链内那几拍暂时低 1**：ROM 的 `inc FC` 在分发之前（迭代起始），链内各段读到的是**已自增**的值；v3 把这次自增留在链头拍尾，链内各段读到的是旧值。密码屏的闪烁/光标把当时读到的 FC 落进自身状态，事后 FC 对齐也回不来。
+- v6（把 inc 整体挪到迭代起始，最贴近 asm）反而把**另两格**打掉（f700/f1100），与既有 `main_loop_iter` 尾部注释记的「轮26 形重试被 L4 证伪」一致 ⇒ 不能靠单点移动时机解决，需要「链内 FC 相位」与「span 收口」一起重构。
+
+### 7.4 结论与后继判据
+- **首因已定谳**（不是 `$0405` 的写点问题，是 FC 增量时机与多段链的映射问题），**本轮不改码**（v3 会把 password 案打回 169/172，属「修好 A 必打穿 B」）。
+- 后继卡的验收必须**同时**满足：①`replay --frames 24000` 的 FC 漂移全程 0（含 f22895 前后）；②`run cases/case-password-justin.txt` 14/14（含 f950/f1150/f700/f1100）；③`run-all` ≥171/172；④`cargo test -p game-core` 全绿 + `check` PASS24。
+- 复算命令：
+```bash
+# 1) FC 漂移（rust 侧逐帧 state）
+cargo run -q -p game-core --bin rust_screenshot -- \
+  --schedule /tmp/g82b.sched --out /tmp/g82out --state-out /tmp/g82.jsonl
+python3 - <<'PY'
+import json
+from pathlib import Path
+def b(w,k):
+    v=w.get(k); return None if v is None else (v if isinstance(v,int) else bytes.fromhex(v)[0])
+E={}
+for line in Path('analysis/probe-early/traces/probe-early.frames.jsonl').read_text().splitlines():
+    d=json.loads(line); v=b(d['w'],'002d')
+    if v is not None: E[d['f']]=v
+R={}
+for line in Path('/tmp/g82.jsonl').read_text().splitlines():
+    d=json.loads(line); R[d['f']]=bytes.fromhex(d['w']['zp'])[0x2d]
+prev=None
+for f in sorted(set(E)&set(R)):
+    dd=(R[f]-E[f])%256
+    if prev is not None and dd!=prev: print('jump', f, prev, dd)
+    prev=dd
+PY
+# 2) 两案互斥的最小复现
+python3 tools/l4_diff_run.py run cases/case-password-justin.txt --fresh-emu
+python3 tools/l4_diff_run.py run-all
+```
