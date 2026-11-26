@@ -23,4 +23,5 @@ pub mod weapon;
 pub mod ui;
 pub mod render;
 pub mod sound;
+pub mod ending;
 pub mod title;
