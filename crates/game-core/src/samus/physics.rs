@@ -47,7 +47,7 @@ pub fn x_plus_4(x: u8) -> u8 {
 fn object_check_move_vertical(mem: &mut Manager) -> bool {
     let pos = store_object_position_to_temp(mem); // asm `;07:E7B5` 首件 jsr StoreObjectPositionToTemp（后续位置读走 Temp08/09/0B）
     let y = pos.y;
-    let ry = mem.read_ram(0x0301); // Objects.radiusY
+    let ry = mem.samus().radius_y(); // Objects.radiusY（typed 访问器）
     let x = pos.x;
     let hi = pos.hi; // Samus.hi（$30C——Object 结构字节锚 F186 `BD 0C 03`）
     let rx = mem.read_ram(crate::ram_map::SAMUS_RADIUS_X);
@@ -992,7 +992,7 @@ fn check_health_beep(mem: &mut Manager) {
         let f = mem.read_ram(0x0683) | 0x08;
         mem.write_ram(0x0683, f);
     }
-    mem.write_ram(0x030A, 0); // 【goal-r12 修】SamusIsHit←0（$030A——constants_ram:228）
+    mem.samus().set_is_hit(0); // 【goal-r12 修】SamusIsHit←0（addr 见 Samus::set_is_hit；constants_ram:228）
     // 旧形误写 $0308（=SAMUS_SPEED_Y_I 跳跃初速！）→清跳跃初速→跳不起来。
 }
 
@@ -1094,7 +1094,7 @@ pub fn is_screw_attack_active(mem: &Manager) -> bool {
     if mem.read_ram(crate::ram_map::SAMUS_GEAR) & 0x08 == 0 {
         return false;
     }
-    let anim = mem.read_ram(0x0305); // animResetIndex
+    let anim = mem.samus_read().anim_reset_index(); // animResetIndex（`&Manager` 只读径）
     if anim == 0x0E {
         return true; // Salto（翻滚）
     }
@@ -1113,7 +1113,7 @@ pub fn is_screw_attack_active(mem: &Manager) -> bool {
 /// （Adiv16=帧/16）））→CheckHealthBeep（低血蜂鸣——桩）。
 /// 嵌套件桩：SFX_SamusHit（音频面）/IsSamusDead/CheckHealthBeep。
 pub fn check_health_status(mem: &mut Manager) {
-    let is_hit = mem.read_ram(0x030A); // Samus.isHit（struct 权威）
+    let is_hit = mem.samus().is_hit(); // Samus.isHit（struct 权威；typed 访问器）
     if is_hit & 0x20 != 0 {
         // 受击面
         mem.set_samus_invincible_delay(0x32); // 50 帧
@@ -1439,7 +1439,7 @@ pub fn samus_enter_door(mem: &mut Manager) {
 
 fn object_check_move_horizontal(mem: &mut Manager, x: u8, dist: u8) -> bool {
     let y = mem.samus().y();
-    let ry = mem.read_ram(0x0301);
+    let ry = mem.samus().radius_y();
     // 【0xF7 quirk 卡·入口探针（临时——2026-11-06）】查撞 span 输入实证。
     let mut hi = mem.read_ram(crate::ram_map::SAMUS_HI);
     let (check_x, borrow) = x.overflowing_sub(dist);
@@ -2831,5 +2831,64 @@ pub fn store_object_position_to_temp(mem: &mut Manager) -> ObjectPositionTemp {
         hi: mem.samus().hi(),
         y: mem.samus().y(),
         x: mem.samus().x(),
+    }
+}
+
+
+/// 【#104】跳跃高度回归：`SetSamusJump`(07:CFC3) 置 `speedY=$FC`、`SamusJumpDsplcmnt=0`、
+/// `SamusAccelY=$18`（高跳 gear `$12`）；上升每帧 `VertAccelerate`(07:E37A) 用该 accel 积分，
+/// `MoveSamusUp`(07:E49B) 逐像素 `inc SamusJumpDsplcmnt`。
+///
+/// **`$20`(32px) 不是顶点**：`SamusJump`(07:D002) 的 `cmp #$20` 只在 **JUMP 未按住** 时
+/// 触发 `StopVertMovement`（"短跳"截断）；按住时一直升到速度归零 ⇒ 顶点由积分决定。
+/// 用 `integrators::int_y`（证明级，2^32 穷举）逐帧积分得：**按住 81px/35 帧、高跳 108px/46 帧**，
+/// 松开在第 9 帧（32px）截断。卡面「ROM ≈32px」是把这个截断阈值当成了顶点。
+#[cfg(test)]
+mod jump_apex_tests {
+    use crate::samus::integrators::{int_y, IntYState};
+
+    fn apex(accel: u8) -> (i32, u32) {
+        let mut st = IntYState { speed_i: 0xFC, speed_f: 0, subpix: 0 }; // SetSamusJump: speedY=-4
+        let mut rise = 0i32;
+        for f in 0..200u32 {
+            let out = int_y(&mut st, accel);
+            let d = out.disp as i8 as i32;
+            if d >= 0 {
+                return (rise, f + 1);
+            }
+            rise -= d;
+        }
+        (rise, 200)
+    }
+
+    #[test]
+    fn holding_jump_reaches_81px_apex() {
+        assert_eq!(apex(0x18), (81, 35), "普跳按住 JUMP：81 px / 35 帧到顶");
+    }
+
+    #[test]
+    fn high_jump_gear_reaches_108px_apex() {
+        assert_eq!(apex(0x12), (108, 46), "高跳 gear（accel=$12）：108 px / 46 帧");
+    }
+
+    #[test]
+    fn release_threshold_is_32px_not_apex() {
+        let mut st = IntYState { speed_i: 0xFC, speed_f: 0, subpix: 0 };
+        let mut rise = 0i32;
+        let mut frames = 0;
+        for f in 0..200u32 {
+            let out = int_y(&mut st, 0x18);
+            let d = out.disp as i8 as i32;
+            if d >= 0 {
+                break;
+            }
+            rise -= d;
+            frames = f + 1;
+            if rise >= 0x20 {
+                break; // SamusJump: dsplcmnt >= $20 且 JUMP 未按住 ⇒ StopVertMovement
+            }
+        }
+        assert_eq!(rise, 32, "松开截断点：恰好 32 px");
+        assert_eq!(frames, 9, "第 9 帧达到 $20");
     }
 }

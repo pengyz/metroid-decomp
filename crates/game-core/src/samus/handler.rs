@@ -192,7 +192,7 @@ fn samus_run_check_horz_movement_midair(mem: &mut Manager) {
 /// LCF2E（**asm 内容锚** `: 07:CF2E`——r26）：Samus.isHit 判（固实实体接触）→贴墙反应。
 fn solid_entity_response(mem: &mut Manager) {
     // 【goal-r13】SamusIsHit=$030A（constants_ram:228）——旧形误读 $0308（=speedY_I）。
-    let ishit = mem.read_ram(0x030A);
+    let ishit = mem.samus().is_hit(); // typed 访问器
     if (ishit >> 1) & 0x02 == 0 {
         return; // 未触固实实体——RTS_X014
     }
@@ -499,7 +499,7 @@ fn fire_samus_projectile_forwards(mem: &mut Manager) {
     // （wave=±$0C/power-ice-missile=±$08）；Y=−$06（Temp04_SpeedY）。
     // 【goal-r16 修】旧漏此径→子弹滞 (0,0)（emu 置 arm cannon 处移动）。
     let sy = mem.read_ram(crate::ram_map::SAMUS_Y);
-    let sx = mem.read_ram(0x030E); // Samus.x（Object 结构 $030E）
+    let sx = mem.samus().x(); // typed 访问器（Object 结构 x）
     let shi = mem.read_ram(crate::ram_map::SAMUS_HI);
     let status = mem.read_ram(base); // 子弹 status（status+=1 后——1=常规光束）
     let idx = (((status << 1) | (dir & 1)) & 3) as usize; // D210 asl/ora SamusDir/and #3
@@ -554,7 +554,7 @@ fn fire_samus_projectile_upwards(mem: &mut Manager) {
     let off_x: u8 = if dir == 0 { 0x01 } else { 0xFF }; // UpwardsOffsetX[Dir] = $01/-$01
     let off_y: u8 = if status & 1 == 0 { 0xEC } else { 0xF0 }; // UpwardsOffsetY[status&1] = -$14/-$10
     let sy = mem.read_ram(crate::ram_map::SAMUS_Y);
-    let sx = mem.read_ram(0x030E);
+    let sx = mem.samus().x();
     let shi = mem.read_ram(crate::ram_map::SAMUS_HI);
     mem.write_ram(base + 0x0D, sy.wrapping_add(off_y));
     mem.write_ram(base + 0x0E, sx.wrapping_add(off_x));
@@ -1169,25 +1169,25 @@ fn action_table() -> &'static [u8] {
 pub fn set_samus_stand_no_footstep(mem: &mut Manager) {
     let y = 0u8; // 链内 Y 终值=0（CF4C `ldy #$00` 先行——字节自证）
     // CF4C：speedX_i/speedX_f←0（`8c 09 03 8c 13 03`）
-    mem.write_ram(0x0309, 0);
-    mem.write_ram(0x0313, 0);
+    mem.samus().set_speed_x(0);
+    mem.samus().set_speed_sub_pixel_x(0);
     // CFB7：accelX←Y（`8c 15 03`）
-    mem.write_ram(0x0315, y);
+    mem.samus().set_accel_x(y as i8);
     // CF81：$0304←Y（`8c 04 03`）
-    mem.write_ram(0x0304, y);
+    mem.samus().set_anim_delay(y);
     // CF5D：status←Y（`8c 00 03`——stand=0）
     mem.write_ram(crate::ram_map::SAMUS_STATUS, y);
     if mem.read_ram(crate::ram_map::JOY1_STATUS) & button::UP != 0 {
         // SetSamusPntUp（CF77：`a9 04 8d 00 03 a9 27 20 6b cf`）
         mem.write_ram(crate::ram_map::SAMUS_STATUS, 4);
-        mem.write_ram(0x0305, 0x27);
-        mem.write_ram(0x0306, 0x27);
+        mem.samus().set_anim_reset_index(0x27);
+        mem.samus().set_anim_index(0x27);
     } else {
         // 站立动画（`a9 07 8d 05 03 8d 06 03`）
-        mem.write_ram(0x0305, 0x07);
-        mem.write_ram(0x0306, 0x07);
+        mem.samus().set_anim_reset_index(0x07);
+        mem.samus().set_anim_index(0x07);
     }
-    mem.write_ram(0x0304, 0); // SetSamusNextAnim 尾（`a9 00 8d 04 03`）
+    mem.samus().set_anim_delay(0); // SetSamusNextAnim 尾（`a9 00 8d 04 03`）
 }
 
 /// SetSamusStand（**asm 内容锚** `: 07:CF55`（audit §2 面））：AccelX≠0⇒NoFootstep；
@@ -1343,7 +1343,7 @@ pub fn samus_jump_check_horz_movement(mem: &mut Manager) {
         x = x.wrapping_sub(1); // X=0
         if joy & LEFT == 0 {
             // bcc Lx027（无向（X=0））
-            mem.write_ram(0x0309, x);
+            mem.samus().set_speed_x(x as i8);
             // 【goal-轮35 "3" 写者标记】handler 935。
             return;
         }
@@ -1360,7 +1360,7 @@ pub fn samus_jump_check_horz_movement(mem: &mut Manager) {
         mem.write_ram(ANIM_RESET_INDEX.wrapping_sub(1), 8); // animDelay←8（Lx026）
         mem.write_ram(crate::ram_map::SAMUS_DIR, y);
     }
-    mem.write_ram(0x0309, x); // speedX←X（向位）
+    mem.samus().set_speed_x(x as i8); // speedX←X（向位）
 }
 
 /// SamusJump_CheckFire（**asm 内容锚** `: 07:D09C`（audit §6））：B（Joy1Change|Retrig
@@ -1459,8 +1459,8 @@ pub fn samus_roll(mem: &mut Manager) {
         mem.write_ram(crate::ram_map::SAMUS_RADIUS_Y, ry);
         if super::physics::object_check_move_up(mem) {
             // 位移 11px 上（asm `lda #-$0B/sta Temp04_SpeedY`+ApplySpeedToPosition）
-            let y = mem.read_ram(0x030D);
-            mem.write_ram(0x030D, y.wrapping_sub(0x0B));
+            let y = mem.samus().y();
+            mem.samus().set_y(y.wrapping_sub(0x0B));
             set_samus_stand_no_footstep(mem); // CF5D（CF55 无脚步件折叠）
             // unroll anim（`dec Samus.animIndex`——asm :3643 BUG 注保真（up 未按时方真））
             let ai = mem.read_ram(ANIM_RESET_INDEX + 1);
@@ -1591,7 +1591,7 @@ pub fn samus_dead(mem: &mut Manager) {
 /// **全可端微件**（单写面）。
 pub fn samus_dead2(mem: &mut Manager) {
     let d = mem.read_ram(ANIM_RESET_INDEX.wrapping_sub(1)).wrapping_sub(1); // animDelay=$0304
-    mem.write_ram(0x0304, d);
+    mem.samus().set_anim_delay(d);
 }
 
 /// 敌槽基址（`Ens instanceof En $6 startfrom 0` ;$0400——constants_ram.asm:950）。

@@ -461,6 +461,13 @@ impl<'a> Samus<'a> {
         self.mem.samus.set_status(v);
     }
 
+    /// 原始字节写（`status_raw` 的对偶）：asm 直接 `sta Samus.status` 的字节路径
+    /// （`sa_Begin`=255 这类**非枚举值**、以及淡入步进 `inc` 的中间态）走这里，
+    /// 避免为了写一个字节先造 `SamusStatus` 再回来。
+    pub fn set_status_byte(&mut self, v: u8) {
+        self.mem.samus.set_status_byte(v);
+    }
+
     pub fn radius_y(&self) -> u8 {
         self.get(SAMUS_RADIUS_Y)
     }
@@ -999,6 +1006,57 @@ mod tests {
         assert!(SamusStatus::Dead.is_dead());
         assert!(SamusStatus::Dead2.is_dead());
         assert!(!SamusStatus::Elevator.is_dead());
+    }
+}
+
+/// 只读句柄：`mem.samus()` 要 `&mut self`，纯查询函数（`fn f(mem: &Manager)`）拿不到
+/// 可变借用。此视图只读同一份 typed 真相面（`SamusState::get_byte` 是唯一解码路径），
+/// 与 `Samus::x()` 同源同值，不引入第二套语义。
+pub struct SamusRead<'a> {
+    mem: &'a crate::frame::Manager,
+}
+
+impl crate::frame::Manager {
+    #[inline]
+    pub fn samus_read(&self) -> SamusRead<'_> {
+        SamusRead { mem: self }
+    }
+}
+
+impl<'a> SamusRead<'a> {
+    #[inline]
+    fn get(&self, addr: u16) -> u8 {
+        if let Some(v) = self.mem.samus.get_byte(addr) {
+            return v;
+        }
+        #[cfg(test)]
+        crate::memmap::verify_shim::note_read(addr);
+        self.mem.ram()[(addr as usize) & 0x7FF]
+    }
+
+    pub fn status_byte(&self) -> u8 {
+        self.get(SAMUS_STATUS)
+    }
+    pub fn hi(&self) -> u8 {
+        self.get(SAMUS_HI)
+    }
+    pub fn y(&self) -> u8 {
+        self.get(SAMUS_Y)
+    }
+    pub fn x(&self) -> u8 {
+        self.get(SAMUS_X)
+    }
+    pub fn radius_y(&self) -> u8 {
+        self.get(SAMUS_RADIUS_Y)
+    }
+    pub fn radius_x(&self) -> u8 {
+        self.get(SAMUS_RADIUS_X)
+    }
+    pub fn anim_delay(&self) -> u8 {
+        self.get(ANIM_DELAY)
+    }
+    pub fn anim_reset_index(&self) -> u8 {
+        self.get(ANIM_RESET_INDEX)
     }
 }
 

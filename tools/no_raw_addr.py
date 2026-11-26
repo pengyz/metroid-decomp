@@ -246,13 +246,136 @@ def check() -> int:
     return 0
 
 
+
+# ---- 按地址族出报表（2026-11-26 增，只读；不改棘轮口径、不改账本） ----
+# 起因：清理卡需要「Samus 族还剩多少」这个分母，而本门只按文件计数。
+# Samus 面按 `& 0x7FF` 归一（$0B00 与 $0300 同格）；槽基址按全值比
+# （$6AF4 & 0x7FF = $2F4，归一后会漏掉全部敌槽命中）。
+FAMILIES = [
+    ("samus", [(0x0300, 0x0316)], True),
+    ("enemy-slot", [(0x0400, 0x0400), (0x06AF4, 0x06AF4)], False),
+    ("explosion", [(0x04C0, 0x04C0), (0x06BB4, 0x06BB4)], False),
+]
+
+# `$0300` 在本仓还被当**槽基址**用：`read_ram(0x0300 + s as u16)`，s∈{0xD0,0xE0,0xF0}
+# ⇒ 实际 $03D0/$03E0/$03F0（子弹槽）；`world/room_draw.rs` 的门槽同形。凡「基址 + 变量/括号」
+# 都不属 Samus 面，单列为伪命中不计数（`0x0300 + 1` 这类字面量偏移仍是面内）。
+BASE_VAR_RE = re.compile(r"\b0x0?300\s*\+\s*(?!0x|\d)[A-Za-z_(]")
+
+
+def family_of(v: int) -> str | None:
+    for name, spans, mirror in FAMILIES:
+        probe = (v & 0x7FF) if mirror else v
+        if any(lo <= probe <= hi for lo, hi in spans):
+            return name
+    return None
+
+
+def _strip_code(text: str) -> str:
+    out = list(text); i, n = 0, len(text)
+    while i < n:
+        c = text[i]
+        if c == "/" and i + 1 < n and text[i + 1] == "/":
+            j = text.find("\n", i); j = n if j < 0 else j
+            for k in range(i, j):
+                if out[k] != "\n": out[k] = " "
+            i = j
+        elif c == "/" and i + 1 < n and text[i + 1] == "*":
+            j = text.find("*/", i + 2); j = n if j < 0 else j + 2
+            for k in range(i, j):
+                if out[k] != "\n": out[k] = " "
+            i = j
+        elif c == '"':
+            j = i + 1
+            while j < n:
+                if text[j] == "\\": j += 2; continue
+                if text[j] == '"': j += 1; break
+                j += 1
+            for k in range(i, j):
+                if out[k] != "\n": out[k] = " "
+            i = j
+        else:
+            i += 1
+    return "".join(out)
+
+
+def _block_end(code: str, brace: int) -> int:
+    d, i = 0, brace
+    while i < len(code):
+        if code[i] == "{": d += 1
+        elif code[i] == "}":
+            d -= 1
+            if d == 0: return i
+        i += 1
+    return len(code)
+
+
+def _test_spans(text: str) -> list[tuple[int, int]]:
+    """文件内测试模块的区间：`#[cfg(test)]` 块、`mod tests*` 块、`#[test]` fn 体。
+
+    本仓有 9 个 `mod tests*` 不带 `#[cfg(test)]`（`enemy/framework.rs:755` 的裸 `mod tests`
+    最典型），只按文件名剔测试面会把它们的断言算成生产。
+    """
+    code = _strip_code(text)
+    ln = lambda pos: code.count("\n", 0, pos) + 1
+    spans: list[tuple[int, int]] = []
+    for pat in (r"#\[cfg\(test\)\]", r"\bmod\s+(?:tests?\w*)\s*\{"):
+        for m in re.finditer(pat, code):
+            b = code.find("{", m.end())
+            if b >= 0:
+                spans.append((ln(m.start()), ln(_block_end(code, b))))
+    for m in re.finditer(r"#\[(?:tokio::)?test\]", code):
+        b = code.find("{", m.end())
+        if b >= 0:
+            spans.append((ln(m.start()), ln(_block_end(code, b))))
+    return spans
+
+
+def family_report(strict: bool) -> int:
+    per: dict[str, dict[str, int]] = {name: {} for name, _, _ in FAMILIES}
+    pseudo: list[tuple[str, int, str]] = []
+    for p in sorted(SRC.rglob("*.rs")):
+        r = rel(p)
+        if r in EXEMPT or r.startswith("bin/") or _is_test_surface(r):
+            continue
+        text = p.read_text(encoding="utf-8", errors="replace")
+        spans = _test_spans(text) if strict else []
+        for i, line in enumerate(text.splitlines(), 1):
+            if spans and any(a <= i <= b for a, b in spans):
+                continue
+            for m in ADDR_RE.finditer(line):
+                v = int(re.sub(r"_?u(?:16|32)$", "", m.group(0), flags=re.I), 16)
+                fam = family_of(v)
+                if fam is None:
+                    continue
+                if fam == "samus" and (v & 0x7FF) == 0x300 and BASE_VAR_RE.search(line):
+                    pseudo.append((r, i, line.strip()[:88]))
+                    continue
+                per[fam][r] = per[fam].get(r, 0) + 1
+    head = "严格口径（再剔文件内测试模块）" if strict else "门禁口径（只按文件名剔测试面）"
+    print(f"按地址族（{head}）：")
+    for name, _, _ in FAMILIES:
+        d = per[name]
+        print(f"  [{name}] {sum(d.values())} 处 / {len(d)} 文件")
+        for f, v in sorted(d.items(), key=lambda kv: (-kv[1], kv[0])):
+            print(f"    {v:5d}  {f}")
+    print(f"  伪命中（$0300 当槽基址，不计入 samus）{len(pseudo)} 处：")
+    for f, i, t in pseudo:
+        print(f"    {f}:{i}  {t}")
+    return 0
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="域代码裸地址字面量棘轮门")
     ap.add_argument("--write", action="store_true", help="重写账本（默认只允许下调）")
     ap.add_argument("--allow-raise", action="store_true", help="允许上调账本（需在 commit 里写明理由）")
     ap.add_argument("--list", action="store_true", help="打印每文件计数")
+    ap.add_argument("--family", action="store_true", help="按地址族打印（报表，不改账本）")
+    ap.add_argument("--family-strict", action="store_true", help="按地址族打印并剔文件内测试模块")
     args = ap.parse_args()
 
+    if args.family or args.family_strict:
+        return family_report(args.family_strict)
     if args.list:
         counts = scan()
         for f, n in sorted(counts.items(), key=lambda kv: (-kv[1], kv[0])):

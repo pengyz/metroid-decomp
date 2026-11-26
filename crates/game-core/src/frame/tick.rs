@@ -578,8 +578,9 @@ pub fn samus_init(mem: &mut Manager) {
     // AreaSamusY（各 area bank $95D9）——走区头段（旧形是 Rust 抄本 `AREA_SAMUS_Y`）。
     let y_pos = game_data::assets::area_header((mem.read_ram(IN_AREA) & 0x0F) as u8).samus_y;
     mem.write_ram(SAMUS_Y, y_pos);
-    mem.write_ram(0x030E, 0x80); // Samus.x
-    mem.write_ram(0x030C, mem.read_ram(crate::ram_map::PPUCTRL_ZP) & 0x01); // Samus.hi
+    mem.samus().set_x(0x80); // Samus.x
+    let hi = mem.read_ram(crate::ram_map::PPUCTRL_ZP) & 0x01;
+    mem.samus().set_hi(hi); // Samus.hi
     mem.write_ram(0x0106, 0x00);
     mem.write_ram(0x0107, 0x03); // Health=30
 }
@@ -592,13 +593,13 @@ pub fn samus_init(mem: &mut Manager) {
 /// 闪现：SetSamusAnim(SamusFront)+SpritePagePos←0+PageIndex←0+AnimDrawObject($DE47)。
 pub fn samus_intro(mem: &mut Manager) {
     crate::frame::boot::erase_all_sprites(mem); // EraseAllSprites（$C1A3）
-    let status = mem.read_ram(0x0300); // Samus.status（$300）
+    let status = mem.samus().status_raw(); // Samus.status（$300）
     let t3 = mem.read_ram(0x002C); // Timer3（$2C）
     if t3 == 0 {
         // 淡入完成（r26 端口——asm 逐字）：ItemRoomMusicStatus($79)←0/Samus.status←
         // sa_Begin(255)/StartMusic($D92C)/SelectSamusPalette($CB73)/MainRoutine←3
         mem.write_ram(0x0079, 0); // ItemRoomMusicStatus（constants:614）
-        mem.write_ram(0x0300, 0xFF); // sa_Begin（constants.asm:121 export=255）
+        mem.samus().set_status_byte(0xFF); // sa_Begin（constants.asm:121 export=255）
         start_music(mem); // $D92C
         select_samus_palette(mem); // $CB73
         mem.write_ram(crate::ram_map::MAIN_ROUTINE, 3);
@@ -611,16 +612,16 @@ pub fn samus_intro(mem: &mut Manager) {
     let idx = status.wrapping_sub(0x14) as usize;
     const FADE_TBL: [u8; 5] = [0x1E, 0x14, 0x0B, 0x04, 0xFF]; // $CA13 五值（ROM 锚）
     if idx < FADE_TBL.len() && t3 == FADE_TBL[idx] {
-        mem.write_ram(0x0300, status.wrapping_add(1));
+        mem.samus().set_status_byte(status.wrapping_add(1));
         mem.write_ram(crate::ram_map::PALETTE_PENDING, status); // sty（Y=status）
     }
     // 奇帧闪现（FC&1）——sprite 装载径（r25 端口：AnimDrawObject 全径）
     if mem.read_ram(crate::ram_map::FRAME_COUNT) & 1 == 1 {
         // SetSamusAnim(SamusFront)（$CF6B）：animResetIndex/animIndex←表偏 **4**
         // （ObjAnim_SamusFront $8576-$8572——common_sprite_data 1c）+animDelay←0
-        mem.write_ram(0x0305, 4);
-        mem.write_ram(0x0306, 4);
-        mem.write_ram(0x0304, 0);
+        mem.samus().set_anim_reset_index(4);
+        mem.samus().set_anim_index(4);
+        mem.samus().set_anim_delay(0);
         // 【r25 修】SpritePagePos($5B)/PageIndex($4B)←0（asm `lda #$00/sta`——每帧重置！
         // 漏写致 sprite 指针跨帧累加溢写 $300+（Samus.status 擦除根））
         mem.write_ram(0x005B, 0);
@@ -702,8 +703,8 @@ pub fn game_engine(mem: &mut Manager) {
     // `samus_dead2` 每帧继续 `dec`（B0 回绕 FF/FE…），emu 则在 `animDelay==0` 这一帧
     // 就转 GameOver（`inc/SetTimer`）→ MainRoutine 离开 3 → 死亡 handler 不再分派
     // ⇒ animDelay 停在 0。100% 录像 f3979 起的分歧即此（每帧差 1 的累计形）。
-    let status = mem.read_ram(0x0300);
-    if status == 8 && mem.read_ram(0x0304) == 0 {
+    let status = mem.samus().status_raw();
+    if status == 8 && mem.samus().anim_delay() == 0 {
         // SilenceMusic（$B283 族——SFXNoiseInitFlags|=sfxNoise_SilenceMusic）
         let f = mem.read_ram(0x0684) | 0x01;
         mem.write_ram(0x0684, f);

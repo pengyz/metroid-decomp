@@ -146,7 +146,7 @@ pub(crate) fn enemy_force_speed(mem: &mut crate::frame::Manager, x: u8) {
     if dir < 0x02 {
         // 竖房：同名表判（简化径：y 比较）
         let en_y = mem.read_ram(0x0400 + x as u16 + 0);
-        let sam_y = mem.read_ram(0x030D);
+        let sam_y = mem.samus().y();
         if en_y != sam_y {
             en_under = en_y > sam_y; // carry=敌在萨姆斯下
         } else {
@@ -154,7 +154,7 @@ pub(crate) fn enemy_force_speed(mem: &mut crate::frame::Manager, x: u8) {
         }
     } else {
         let en_y = mem.read_ram(0x0400 + x as u16 + 0);
-        let sam_y = mem.read_ram(0x030D);
+        let sam_y = mem.samus().y();
         if en_y != sam_y {
             en_under = en_y > sam_y;
         } else {

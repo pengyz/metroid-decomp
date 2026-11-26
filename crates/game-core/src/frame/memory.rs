@@ -953,6 +953,12 @@ impl Manager {
         self.read_ram(crate::ram_map::DOOR_ENTRY_STATUS)
     }
 
+    /// `SamusDoorData`（`$0058`，踩到门格时由 `SamusDoorData` 分派写入：`$A0` 门 +1、`$A1` 门 +2）。
+    pub fn samus_door_data(&self) -> u8 {
+        self.read_ram(crate::ram_map::SAMUS_DOOR_DATA)
+    }
+
+
     /// `StatuesBridgeIsSpawned`（`$0054`）。
     pub fn statues_bridge_spawned(&self) -> u8 {
         self.read_ram(crate::ram_map::STATUES_BRIDGE_SPAWNED)

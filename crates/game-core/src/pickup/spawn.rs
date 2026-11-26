@@ -304,12 +304,12 @@ pub fn update_all_power_ups(mem: &mut Manager) -> Option<u8> {
 /// > （用户报「碰撞变形球物品后无法吃到」根因）——渲染径屏位=纯 x 差（hi 仅可见门），
 /// > 触碰同径（物 hi=1/人 hi=0 但同屏可视=屏距直比）。
 fn are_objects_touching(mem: &Manager) -> bool {
-    let sy = mem.read_ram(0x030D);
-    let sx = mem.read_ram(0x030E);
+    let sy = mem.samus_read().y();
+    let sx = mem.samus_read().x();
     let iy = mem.read_ram(POWERUP_DRAW_BASE + 0x0D);
     let ix = mem.read_ram(POWERUP_DRAW_BASE + 0x0E);
-    let ry = mem.read_ram(0x0301) as u16 + mem.read_ram(POWERUP_DRAW_BASE + 0x01) as u16;
-    let rx = mem.read_ram(0x0302) as u16 + mem.read_ram(POWERUP_DRAW_BASE + 0x02) as u16;
+    let ry = mem.samus_read().radius_y() as u16 + mem.read_ram(POWERUP_DRAW_BASE + 0x01) as u16;
+    let rx = mem.samus_read().radius_x() as u16 + mem.read_ram(POWERUP_DRAW_BASE + 0x02) as u16;
     let dy = (sy as i16 - iy as i16).unsigned_abs() as u16;
     let dx = (sx as i16 - ix as i16).unsigned_abs() as u16;
     dy < ry && dx < rx

@@ -566,14 +566,14 @@ pub(crate) fn uw_collision_detection(mem: &mut crate::frame::Manager) {
             // （$0300）恒 FF（sa_Begin"can't be hurt"淡入完成态）⇒beq 608/608 全走分支、
             // F0DF CheckWithObjectYSlot 0 次执行⇒emu 永不触发 hurt=原版真行为；
             // rust 缺此门⇒f986 误触发（30→22）——本门即根因修复。
-            let samus_status = mem.read_ram(0x0300);
+            let samus_status = mem.samus().status_raw();
             if samus_status == 7 || samus_status == 8 || samus_status == 0xFF {
                 continue;
             }
-            let sy = mem.read_ram(0x030D) as i16;
-            let sx = mem.read_ram(0x030E) as i16;
-            let sry = mem.read_ram(0x0301) as i16;
-            let srx = mem.read_ram(0x0302) as i16;
+            let sy = mem.samus().y() as i16;
+            let sx = mem.samus().x() as i16;
+            let sry = mem.samus().radius_y() as i16;
+            let srx = mem.samus().radius_x() as i16;
             let ey = mem.read_ram(0x0400 + x + 0) as i16;
             let ex = mem.read_ram(0x0400 + x + 1) as i16;
             let ery = mem.read_wram(0x6AF4 + x + 1) as i16;
@@ -582,7 +582,7 @@ pub(crate) fn uw_collision_detection(mem: &mut crate::frame::Manager) {
             let dx = (sx - ex).unsigned_abs() as i16;
             // 【goal-轮79 asm 合形修】F1FA hi（名表）距调——旧形无 hi 调=偏离（金方 hi 差
             // ⇒距+256⇒不撞）——hi 距调：hi 差⇒距+0x100（asm @positionHi_notEqual 语义）。
-            let s_hi = mem.read_ram(0x030C) & 1; // Samus.hi（Objects.0.hi——F193 勘误）
+            let s_hi = mem.samus().hi() & 1; // Samus.hi（Objects.0.hi——F193 勘误）
             let (sry_y_raw, srx_x_raw) = (sy as i32, sx as i32);
             let e_hi = mem.read_wram(0x6AF4 + x + 7) & 1; // EnsExtra.0.hi（F152 ✓）
             let dy_adj = if s_hi != e_hi { dy + 0x100 } else { dy };
@@ -722,7 +722,7 @@ pub(crate) fn subtract_health(mem: &mut crate::frame::Manager) {
     // sa_Dead2(8),sa_Begin(255)}⇒清 HealthChange 不扣血；门位在 Varia 半伤/BCD 扣减前。
     // 全部伤害径（:7049 熔岩/:10074 F13D 弹敌/:12232+12716 五伤/$8042←tourian）经本
     // 例程汇聚⇒一处门覆盖全谱；与 PENDING-001 敌碰径门（uw_collision_detection）幂等并存。
-    let samus_status = mem.read_ram(0x0300);
+    let samus_status = mem.samus().status_raw();
     if samus_status == 7 || samus_status == 8 || samus_status == 0xFF {
         mem.write_ram(0x006E, 0);
         mem.write_ram(0x006F, 0);

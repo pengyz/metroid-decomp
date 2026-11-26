@@ -578,8 +578,8 @@ pub fn update_door(mem: &mut crate::frame::Manager, x_off: u8) {
             // Open（$8C01）：进门判/首开帧（Air）/导弹门永久开/蓝门偶帧重关
             let door_hi = mem.read_ram(0x030C + x);
             let door_x = mem.read_ram(0x030E + x);
-            let samus_hi = mem.read_ram(0x030C); // Samus.hi（$30C）
-            let samus_x = mem.read_ram(0x030E); // Samus.x（$30E）
+            let samus_hi = mem.samus().hi(); // Samus.hi（$30C）
+            let samus_x = mem.samus().x(); // Samus.x（$30E）
             if mem.read_ram(0x0056) != 0 // DoorEntryStatus
                 && (samus_hi ^ door_hi) & 1 == 0
                 && (samus_x ^ door_x) & 0x80 == 0
