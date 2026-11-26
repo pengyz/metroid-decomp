@@ -41,8 +41,22 @@ def judge(csv_path, shot):
 
     trig = rows[trigger]
     before = (num(trig, 'room'), num(trig, 'map_x'), num(trig, 'map_y'))
+    # $56 非零序列（去重压缩：只记「值×连续帧数」），供卡面第 1 条核对方向码 1..5 的推进
+    seq = []
+    for r in rows[trigger:]:
+        v = num(r, 'door_entry')
+        if v == 0:
+            if seq:
+                break
+            continue
+        if seq and seq[-1][0] == v:
+            seq[-1][1] += 1
+        else:
+            seq.append([v, 1])
+    seq_txt = ' → '.join(f'{v}×{n}' for v, n in seq[:8]) + (' …' if len(seq) > 8 else '')
     print(f"[触发] f={num(trig, 'frame')} $56={num(trig, 'door_entry')} "
-          f"旧房间={before[0]} MapPos={before[1]}/{before[2]}")
+          f"$58={num(trig, 'door_data')} 旧房间={before[0]} MapPos={before[1]}/{before[2]}")
+    print(f"[方向码序列] $56: {seq_txt or '（无）'}")
 
     switch = None
     for r in rows[trigger:trigger + WINDOW]:
