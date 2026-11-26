@@ -14,3 +14,6 @@ pub mod integrators; // 【G6 归位（r19）】原 crate::integrators（int_y/i
 pub use handler::{update_samus, SamusHandler};
 pub use physics::{vert_accelerate, x_minus_16, x_plus_4};
 pub mod control;
+
+#[cfg(test)]
+mod tests;
