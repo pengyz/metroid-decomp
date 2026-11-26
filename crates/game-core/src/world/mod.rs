@@ -13,6 +13,7 @@ pub(crate) mod tile_blast;
 pub(crate) mod object_globals;
 pub(crate) mod scroll_blocks;
 pub(crate) mod room_draw;
+pub(crate) mod tourian_quota;
 
 /// 房 5 门格到达性验收（#104）——测试面文件，不计入 `no-raw-addr` 生产面。
 #[cfg(test)]

@@ -584,9 +584,23 @@ pub(crate) fn enemy_complete_death(mem: &mut crate::frame::Manager, x: u8) {
     mem.enemy(slot_of(px as u8)).set_data0d(0x60); // data0D←$60（拾取计时）
     let r = mem.read_ram(crate::ram_map::RANDOM1);
     if r < 0x10 {
-        // 1/16 无掉⇒移除（LDD5B 非 Tourian）
-        mem.enemy(slot_of(x)).set_status(EnemyStatus::NoEnemy);
-        return;
+        // `1/16` 无掉 ⇒ `bcc LDD5B`（`07:DD28`）。Tourian 支路复位掉落配额后回 `LDD30`
+        // 重试生成；非 Tourian 直接 `jmp RemoveEnemy`（`crate::world::tourian_quota`）。
+        use crate::world::tourian_quota::QuotaReset;
+        match crate::world::tourian_quota::ldd5b(mem, r) {
+            QuotaReset::Remove => {
+                mem.enemy(slot_of(x)).set_status(EnemyStatus::NoEnemy);
+                return;
+            }
+            QuotaReset::HungQuirk => {
+                // ROM 落 `LDD75` 后在 `LDD75↔LDD5B` 间死循环（见 `tourian_quota` 模块文档）。
+                // Stage A 不复刻挂死，按「当前槽回收 + 分歧记账」处理。
+                crate::frame::DIVERGENCES.with(|d| d.borrow_mut().push(0x0DD5B));
+                mem.enemy(slot_of(x)).set_status(EnemyStatus::NoEnemy);
+                return;
+            }
+            QuotaReset::Retry => {} // 配额已复位：继续下面的 `LDD30` 生成
+        }
     }
     // `jsr ReadTableAt968B / sta Temp00`（$968B 项存 Temp00，本径后续不读）→
     // `jsr LoadTableAt977B / and #$20 / sta EnsExtra.0.type,x`（07:DD1A-07:DD23）：

@@ -1155,6 +1155,32 @@ impl Manager {
     }
 
     pub fn set_in_area(&mut self, v: u8) { self.write_ram(crate::ram_map::IN_AREA, v); }
+
+    /// `InArea`（`$0074`）**原值**（不剥 `$10` 位）——`$10` 位参与判据的 asm（如
+    /// `LDD5B ; 07:DD5F` 的 `cmp #$13`）必须用它，不能走 `frame::cur_area`（那是 `& $0F`）。
+    pub fn in_area_raw(&self) -> u8 { self.read_ram(crate::ram_map::IN_AREA) }
+
+    /// `RandomNumber1`（`$0015`）——掉落/敌方 AI 的随机字节。
+    pub fn random1(&self) -> u8 { self.read_ram(crate::ram_map::RANDOM1) }
+    /// 写 `RandomNumber1`（`$0015`）——测试/诊断摆随机源用。
+    pub fn set_random1(&mut self, v: u8) { self.write_ram(crate::ram_map::RANDOM1, v); }
+
+    /// `MissilePickupQtyMax`（`$0093`）——本房导弹掉落上限（区初始化/门入场写）。
+    pub fn pickup_missile_qty_max(&self) -> u8 { self.read_ram(0x0093) }
+    /// 见 [`Self::pickup_missile_qty_max`]。
+    pub fn set_pickup_missile_qty_max(&mut self, v: u8) { self.write_ram(0x0093, v); }
+    /// `EnergyPickupQtyMax`（`$0094`）——本房能量掉落上限。
+    pub fn pickup_energy_qty_max(&self) -> u8 { self.read_ram(0x0094) }
+    /// 见 [`Self::pickup_energy_qty_max`]。
+    pub fn set_pickup_energy_qty_max(&mut self, v: u8) { self.write_ram(0x0094, v); }
+    /// `MissilePickupQtyCur`（`$0095`）——已生成导弹掉落数。
+    pub fn pickup_missile_qty_cur(&self) -> u8 { self.read_ram(0x0095) }
+    /// 见 [`Self::pickup_missile_qty_cur`]。
+    pub fn set_pickup_missile_qty_cur(&mut self, v: u8) { self.write_ram(0x0095, v); }
+    /// `EnergyPickupQtyCur`（`$0096`）——已生成能量掉落数。
+    pub fn pickup_energy_qty_cur(&self) -> u8 { self.read_ram(0x0096) }
+    /// 见 [`Self::pickup_energy_qty_cur`]。
+    pub fn set_pickup_energy_qty_cur(&mut self, v: u8) { self.write_ram(0x0096, v); }
     /// 设 `ScrollDir`（`$0049`）。
     pub fn set_scroll_dir(&mut self, v: u8) { self.write_ram(crate::ram_map::SCROLL_DIR, v); }
     /// 测试/诊断用：写 `ScrollX($00FD)`（`no-raw-addr` 门要求经访问器而非裸地址）。
