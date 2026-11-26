@@ -87,6 +87,22 @@ mem.write_ram(crate::ram_map::DOOR_ENTRY_STATUS, de | 0x80);
 3. 本 findings 的「为什么之前的证据都没抓到」保留：L4 的 door 6 格与 100% TAS
    都**不能**作为门链证据。
 
+## 修复后实测（2026-11-26，PMO 裁定 (a) 后落地）
+
+- 代码：`crates/game-core/src/samus/physics.rs` 的 `samus_enter_door` 改
+  `mem.write_ram(DOOR_ENTRY_STATUS, x | 0x80)`（`x` 是该函数里刚算出的方向码）；
+  测试 `samus_enter_door_keeps_direction_code_in_entry_status` 覆盖四方向
+  （横滚右 `0x82`、横滚左 `0x81`、竖滚默认 `0x84`、竖滚下行 `0x83`）。
+- `tools/door_entry_repro.sh 2400` → `[PASS]`：`$56=129`、`room=24 map=6/14`。
+- `cargo test --workspace` **1229 passed 0 failed**；`l4_diff_run.py run-all --skip-emu`
+  **21 案/172 格 match 171 diff 1**，door 相关用例（`case-002` 8 格、
+  `case-mechanism-door-transition` 6 格、`case-mechanism-door-negative` 3 格）
+  仍是 match——它们本来就没进门，`$58` 恒 0，本次修复对它们无影响（diff 未变化，
+  无需解释「变红/变绿」）。
+- emu 腿说明：本轮 `Mesen` 实例被主线任务占用（`ps` 见 PID 3545902），L4 用
+  `--skip-emu` 复用已验来源的 emu 产物；本次改动只影响 `$58!=0` 的门入场分支，
+  emu 侧输入里该分支从未触发。
+
 ## 待办（跨出 #102 写面）
 
 修复位置在 `crates/game-core/src/samus/physics.rs`，#102 的写面是

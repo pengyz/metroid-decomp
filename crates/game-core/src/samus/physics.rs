@@ -585,7 +585,7 @@ mod tests {
         m.write_ram(0x006D, 0x66);
         samus_enter_door(&mut m);
         assert_eq!(m.read_ram(0x0059), 0x12, "DoorDelay←18");
-        assert_eq!(m.read_ram(DOOR_ENTRY_STATUS), 0x80, "EntryStatus|=$80");
+        assert_eq!(m.read_ram(DOOR_ENTRY_STATUS), 0x82, "$56=X|$80（横滚右门 X=2）");
         assert_eq!(m.read_ram(SAMUS_STATUS), 5, "sa_Door");
         assert_eq!(m.read_ram(SAMUS_DOOR_DATA), (2 << 4) | 2, "动作保留高 4 位");
         assert_eq!(m.read_ram(0x0057), 2, "横滚右门 X=2");
@@ -595,6 +595,40 @@ mod tests {
         assert_eq!(m.read_ram(0x0096), 0, "EnergyCur 清");
         assert_eq!(m.read_ram(0x006D), 0, "对表(y=1)门块擦除");
         assert_eq!(m.read_ram(0x006C), 0x55, "同表不动");
+    }
+
+    /// 【#102 方向码】`SamusInDoor($8B74)` 的 `ora #$80` 操作数是方向码 X，不是 $56。
+    /// 四种方向都必须把 X 带进 $56：横滚右门 X=2⇒$82、横滚左门 X=1⇒$81、
+    /// 竖滚默认 X=4⇒$84、竖滚「下行」X=3⇒$83。写成常量 $80 时四种全错，
+    /// 门链会静默结束（ScrollDoor 比对 1..4 全不命中）。
+    #[test]
+    fn samus_enter_door_keeps_direction_code_in_entry_status() {
+        use crate::ram_map::SCROLL_DIR;
+        // (scroll_dir, scroll_y, ppuctrl, samus_hi, samus_x, want_dir)
+        let cases: &[(u8, u8, u8, u8, u8, u8)] = &[
+            (3, 0, 0, 0, 0x30, 2), // 横滚、x 高位 0 ⇒ 右门
+            (3, 0, 0, 0, 0xB0, 1), // 横滚、x 高位 1 ⇒ 左门
+            (0, 0, 0, 0, 0x80, 4), // 竖滚、ScrollY==0 ⇒ 4
+            (0, 1, 0, 1, 0x80, 3), // 竖滚、ScrollY!=0 且 (PPUCTRL^hi)&1=1 ⇒ 3
+        ];
+        let _ = SCROLL_DIR;
+        for &(sd, sy, ppu, hi, sx, want) in cases {
+            let mut m = Manager::default();
+            m.set_door_entry_status(0);
+            m.set_samus_door_data(2);
+            m.set_scroll_dir(sd);
+            m.set_scroll_y(sy);
+            m.set_ppuctrl_zp(ppu);
+            m.samus().set_hi(hi);
+            m.samus().set_x(sx);
+            m.samus().set_status(crate::samus::state::SamusStatus::Jump);
+            samus_enter_door(&mut m);
+            assert_eq!(
+                m.door_entry_status(),
+                want | 0x80,
+                "sd={sd} sy={sy} ⇒ $56=方向码|$80（不是常量 $80）"
+            );
+        }
     }
 
     /// 【goal-r29 红测】未触发径：DoorEntryStatus!=0 ⇒ 全态不动。
@@ -1390,7 +1424,7 @@ fn collision_point_samus(mem: &mut Manager, y: u8, x: u8, hi: u8) -> bool {
 /// SamusEnterDoor（**asm 内容锚** `SamusEnterDoor: ; $8B13` areas_common:1317——A 级全文）：
 /// 触发=$56==0 且 $58!=0；清拾取 Cur($95/$96)、Random1&0x0F→$93、asl|0x40→$94、
 /// 擦对表门块（$6C+(($FF^1)&1)←0）、DoorScrollStatus($57)←X（横滚 X=2−(x>>7)；
-/// 竖滚 X=4，ScrollY≠0 时 (PPUCTRL^hi)&1==0→4 / ==1→3）、$56|=$80、DoorDelay($59)←$12、
+/// 竖滚 X=4，ScrollY≠0 时 (PPUCTRL^hi)&1==0→4 / ==1→3）、$56←X|$80、DoorDelay($59)←$12、
 /// $58←($58<<4)|Samus.status（出门保留动作）、Samus.status←sa_Door(5)。
 pub fn samus_enter_door(mem: &mut Manager) {
     if mem.read_ram(crate::ram_map::DOOR_ENTRY_STATUS) != 0 {
@@ -1426,8 +1460,11 @@ pub fn samus_enter_door(mem: &mut Manager) {
         }
     };
     mem.write_ram(0x0057, x);
-    // SamusInDoor（$8B74）：$56|=$80
-    let de = mem.read_ram(crate::ram_map::DOOR_ENTRY_STATUS);
+    // SamusInDoor（$8B74 `ora #$80`）的 A 是上面 `txa` 出来的方向码 X（1..4），
+    // 不是 $56——函数入口已保证 $56==0，所以结果恒 = X|$80。
+    // 写成常量 `$80` 会让 ScrollDoor 的四次 `dex/bne` 全落 Exit15（一个像素都不滚），
+    // 随后 SamusDoor 的 `asl/lsr` 把 `$80` 清成 0：门开了、房间不换（#102）。
+    let de = x;
     mem.write_ram(crate::ram_map::DOOR_ENTRY_STATUS, de | 0x80);
     mem.write_ram(crate::ram_map::DOOR_DELAY, 0x12); // 18 帧
     // $58←($58<<4)|Samus.status（Amul16 形）；status←sa_Door(5)
