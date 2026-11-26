@@ -82,6 +82,8 @@ f1574 窗口：emu 丢 1572/1573/1574（3 帧） vs rust 丢 1572/1573（2 帧�
 
 读法：**窗口起点（f1571）两侧逐字节相同**，所以这 1 帧差不是「上游内容分歧的下游」，而是**载房窗本身少吞一拍**。emu 在 1572–1574 三帧里完成「门径载房 + 一次额外的 `AttribTableWrite`」，rust 在 1572–1573 两帧就结束（`$5A=0xF0` 在 1574 才出现）。
 
+> 【2026-11-27 更正】本节原把「`phase==2` 分支不推进」写成「注释里的补偿没有实现」。更正：**推进点是 2026-11-27 契约主动搬到每次滚动调用（`check_update_name_table → setup_room → advance_room_load_tail`）**，不是漏实现；`phase==2` 里那段「故在尾段第一拍补推一格」是**过期注释**。窗口仍短一帧的机制因此不在 `gate_step`，见 §8。
+
 ### 4.1 为什么 #121 没改变它（A 级代码证据）
 
 `crates/game-core/src/world/room_load.rs:234` 的 `room_load_gate_step`：
@@ -112,7 +114,7 @@ python3 tools/tas_replay_diff.py replay … --segments 10000 --out /tmp/r124/ful
 → seg 0..12 全部「已完成（diverge，--resume 跳过）」；段 13/13；首个真实分歧 f1301 $0454
 ```
 
-## 6. 下一条建议（只给一条，不扩范围）
+## 6. 下一条建议（只给一条，不扩范围；**机制表述已被 §8 更正，先看 §8 再动手**）
 
 **卡：门径载房窗补一次 `AttribTableWrite`（`world/room_load.rs`）**
 
@@ -128,3 +130,31 @@ python3 tools/tas_replay_diff.py replay … --segments 10000 --out /tmp/r124/ful
 - 本轮 `crates/` 零改动；只新增本文件。
 - 未使用 `--resume` 作为主跑（主跑从零起跑）；`--resume` 仅用于 §5 的第二次校验。
 - `f1301` 的内容分歧归属与取证路线引用 #122（`docs/findings/tas-divergence-f1301.md`），本文不重复。
+
+## 8. 【2026-11-27 更正】§4.1 的机制表述与 §6 的取证顺序
+
+对影验收时把 §4.1 的 grep 原样核了一遍，核出的结论与我的措辞有一处实质差别，必须原地更正：
+
+```
+$ grep -n '"'"'\b56\b'"'"' crates/game-core/src/world/room_load.rs
+20: ... 四清（DoorEntryStatus=$56/...）
+258/262: 注释里的 $0056（说明文字）
+469/471/473: 测试断言里的格式化串
+$ grep -rn "attrib_table_write" crates/game-core/src/
+crates/game-core/src/world/room_load.rs:278:    crate::world::room_draw::attrib_table_write(mem);
+crates/game-core/src/world/room_draw.rs:940: pub fn attrib_table_write(...)
+```
+
+`room_load.rs:278` 就是 `advance_room_load_tail` 里的那一次调用，它的调用者是 `setup_room`（`:304`），而 `setup_room` 由 `camera/scroll.rs` 的 `check_update_name_table` 在每次滚动调用里走——**推进点已经存在**，只是不在 `room_load_gate_step`。
+
+同一文件 `:459-473` 的测试 `tail_does_not_step_in_gate_step_even_for_door_scroll` 明确写着：> 【2026-11-27 契约更新：旧「门入场补偿 +1 格」已删除】……新契约把推进点搬到每次滚动调用。
+
+所以：
+
+1. **`phase==2` 分支只 `return true` 是设计，不是缺陷**；它上面那段「故在尾段第一拍补推一格（等价于那次被吞掉的调用）」是**没随契约更新删掉的过期注释**——这才是真正的「只有注释、没有行为」。
+2. f1574 窗口 `3 vs 2` 的机制因此改写为：**载房完成那一帧，emu 在该帧内多发生了一次滚动调用（多一步 `AttribTableWrite`），rust 少一次**。要定位它，第一步是**数调用次数**（在该窗口给 `check_update_name_table`/`setup_room` 加只读计数探针，或用 `$0A` 调用链 trace），确认少的那一次落在哪一帧，而不是先改 `gate_step`。
+3. §6 的原建议（在 `tail==2 && $0056!=0` 补一次 `AttribTableWrite`）保留为**候选修法之一**，但降级为「在 §8.2 的计数证据出来之后再选」；它现在的理由不再是「注释没实现」，而是「若证实缺的就是一次滚动调用，则补的位置应模拟那次调用，而不是塞在 gate_step 里」。
+4. 验证判据不变：窗口 3 帧 / `≤f1573` 27-27 保持 / 首分歧仍须 f1301 `$0454` 2 字节。
+
+> 更正依据：上文两条 grep 与 `:459-473` 的测试注释（同一 HEAD `911cc6ae`）。
+
