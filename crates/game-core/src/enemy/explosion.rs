@@ -292,26 +292,17 @@ mod tests_pool_separation {
 // ─────────────────────────── P2：`NesMapped` 声明 ───────────────────────────
 
 /// 爆炸额外面未 typed 的缺口说明。
-const EXPL_EXTRA_UNMODELED: &str =
-    "爆炸额外面未 typed：status/animFrame/animDelay/resetAnimIndex/animIndex/hi 真相在字节面（crates/game-core/src/enemy/explosion.rs:53）";
-
 /// 爆炸域两面（`$04C0-$04DF` 主面 + `$6BB4-$6BD3` 额外面，各 4 槽 × 8 B）的声明。
 ///
-/// 全部未 typed（0 个 owner）——与 `typed-domain-migration` 的 I-1 结论一致：爆炸池
-/// 是**故意**留在字节面的域（`Explosion` 句柄只做读写视图）。
+/// 主面自 B1-c 起由 `object_slot_face` 认领；额外面自 B2-b 起由
+/// `crate::memmap::enemy_extra_face::EnemyExtraFace` 以 typed `Owner` 认领（卡 #113）。
+/// 本域只剩**句柄视图**，不再重复登记任一面的字节。
 impl<'a> crate::memmap::nesmap::NesMapped for Explosion<'a> {
     const DISCRIMINATOR: Option<u16> = None;
 
-    const SPANS: &'static [(NesSpan, SpanKey)] = &[
-        // 主面（`$04C0-$04DF`，4 槽 × 8 B）：B1-c 起改由
-        // `crate::memmap::object_slot_face::ObjectSlotFace` 以 typed `Owner` 声明，
-        // 本域不再重复登记（同一批字节双声明会破坏四态恒等式）。
-        (
-            NesSpan::value(EXTRA_BASE, SLOT_COUNT as u16 * EXTRA_STRIDE),
-            SpanKey::Unmodeled(EXPL_EXTRA_UNMODELED),
-        ),
-    ];
+    /// 两面的字节都已有其他实体认领；本域不再登记（空声明是合法形态）。
+    const SPANS: &'static [(NesSpan, SpanKey)] = &[];
 
-    /// 0 个 `Owner` 段 ⇒ 无可投影的真相（爆炸池的真相在字节面）。
+    /// 0 个 `Owner` 段 ⇒ 无可投影的真相（爆炸池的真相在别的面的 typed 字段里）。
     fn project(&self, _out: &mut crate::memmap::storage::NesImage) {}
 }

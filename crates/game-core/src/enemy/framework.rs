@@ -514,11 +514,72 @@ pub(crate) fn update_enemy_pickup(mem: &mut crate::frame::Manager, x: u8) {
     update_enemy_common_no_move_no_anim(mem, x);
 }
 
-/// EnemyCompleteDeath（**asm 内容锚** `: 07:DCF5`）：status←Pickup+data0D←$60+
-/// 1/16 无掉+PickupTypeTable[rand&7]→animFrame（表 ROM $DE35=80 81 89）——qty 限
-/// 域=分卡（记账）。
+/// `LDD75 ; 07:DD75` + `LDD5B ; 07:DD5B`——小 Boss 击杀后的雕像闪烁与弹药奖励。
+///
+/// asm 原文（`prg7_engine.asm:10990-11020` 区段）：
+/// ```text
+/// LDD75:
+///     jsr PowerUpMusic
+///     lda InArea
+///     and #$0F
+///     sta MiniBossKillDelayFlag
+///     lsr
+///     tay
+///     sta KraidStatueStatus-1,y
+///     lda #75
+///     jsr AddToMaxMissiles
+///     bne LDD5B
+/// ```
+/// 写入的是 **1（Kraid）/ 2（Ridley）**，是「闪烁选择子」而不是「已击败位」：无符号判
+/// `beq/bmi` 只区分 0 与 bit7，1/2 都落「闪烁」；bit7 要等石像被击中抬到位，由
+/// `UpdateStatue_Raise ; 07:DA3D` 的 `ora #$80 / sta KraidStatueStatus-…` 置。
+/// `MiniBossKillDelayFlag=$0108`、`KraidStatueStatus-1=$687A`（`constants_ram.asm:830/1234`）。
+/// 以本文件局部常量承接地址（与 `world/statue.rs` 同形——B0 判据只认「字面量/sym 直进访问器」）。
+const MINI_BOSS_KILL_DELAY: u16 = 0x0108;
+const STATUE_STATUS_BASE: u16 = 0x687A;
+
+fn mini_boss_killed(mem: &mut crate::frame::Manager) {
+    // `jsr PowerUpMusic`（声包未端口——与 `world/update.rs` 的拾取音乐同口径记账）。
+    crate::frame::DIVERGENCES.with(|d| d.borrow_mut().push(0x0CBF9));
+    let area = crate::frame::cur_area(mem); // `lda InArea / and #$0F`（InArea 含 $10 位）
+    mem.write_ram(MINI_BOSS_KILL_DELAY, area); // MiniBossKillDelayFlag（$0108）← InArea&$0F
+    let y = area >> 1; // `lsr / tay`：Kraid→1、Ridley→2
+    // `sta KraidStatueStatus-1,y` ⇒ 基址 $687A(MaxMissiles)+y = 1→$687B、2→$687C。
+    mem.write_wram(STATUE_STATUS_BASE + y as u16, y);
+    add_to_max_missiles(mem, 75); // `lda #75 / jsr AddToMaxMissiles`（$DD97）
+}
+
+/// `AddToMaxMissiles ; 07:DD97`——同时加当前导弹数与上限，各自溢出时钉 `$FF`。
+fn add_to_max_missiles(mem: &mut crate::frame::Manager, add: u8) {
+    let cur = mem.missile_count(); // MissileCount=$6879
+    let (sum, carry) = cur.overflowing_add(add);
+    mem.set_missile_count(if carry { 0xFF } else { sum });
+    let max = mem.max_missiles(); // MaxMissiles=$687A
+    let (sum, carry) = max.overflowing_add(add);
+    mem.write_wram(STATUE_STATUS_BASE, if carry { 0xFF } else { sum });
+}
+
+/// EnemyCompleteDeath（**asm 内容锚** `: 07:DCF5`）：小 Boss 击杀支路（`LDD75`）优先，
+/// 否则 status←Pickup+data0D←$60+1/16 无掉+PickupTypeTable[rand&7]→animFrame
+/// （表 ROM $DE35=80 81 89）——qty 限域=分卡（记账）。
 pub(crate) fn enemy_complete_death(mem: &mut crate::frame::Manager, x: u8) {
     let px = x as u16;
+    // `lda Ens.0.prevStatus,x / asl / bmi LDD75`（`07:DCF5`→`07:DD75`）：prevStatus 的
+    // **bit6**（`asl` 后变 bit7）＝ `Temp0A_EnSpecialAttribs` 的小 Boss 位——由
+    // `EnemyReactToSamusProjectile ; 07:F5BA-07:F5C4` 把 `status|specialAttribs` 存进
+    // prevStatus 时带上（Kraid/Ridley 的 etype 高 2 位都是 `$40`）。命中 ⇒ 走
+    // 「小 Boss 击杀」支路，**不再转掉落物**（`LDD75` 末尾 `bne LDD5B` 恒真）。
+    if mem.enemy(slot_of(x)).prev_status() & 0x40 != 0 {
+        mini_boss_killed(mem);
+        // `LDD5B ; 07:DD5B`：非 Tourian ⇒ `RemoveEnemy`。Tourian 支路会重置掉落配额
+        // （`$93-$96`）后**不回收**，但该支路对 Kraid/Ridley 不可达（小 Boss 只在
+        // Brinstar/Norfair 出现），且配额变量本身尚未端口 ⇒ 记账后按 RemoveEnemy 处理。
+        if crate::frame::cur_area(mem) == 0x03 {
+            crate::frame::DIVERGENCES.with(|d| d.borrow_mut().push(0x0DD5B));
+        }
+        mem.enemy(slot_of(x)).set_status(EnemyStatus::NoEnemy);
+        return;
+    }
     mem.enemy(slot_of(x)).set_status(EnemyStatus::Pickup); // status←Pickup
     mem.enemy(slot_of(px as u8)).set_data0d(0x60); // data0D←$60（拾取计时）
     let r = mem.read_ram(crate::ram_map::RANDOM1);
@@ -1149,5 +1210,69 @@ mod tests_chunky_explode_timer {
         m.enemy(slot_of(x)).set_data06(0x19);
         update_enemy_explode(&mut m, x);
         assert_ne!(m.enemy(slot_of(x)).status_raw(), 3, "$19 ⇒ EnemyCompleteDeath");
+    }
+}
+
+#[cfg(test)]
+mod tests_mini_boss_kill {
+    use super::*;
+    use crate::frame::Manager;
+
+    const IN_AREA_ADDR: u16 = 0x0074; // `InArea`（constants_ram.asm:627）
+
+    fn area(m: &mut Manager, v: u8) {
+        m.write_ram(IN_AREA_ADDR, v);
+    }
+
+    /// `LDD75 ; 07:DD75`：Kraid（InArea 低半字节=2）死亡 ⇒ `y=1`、
+    /// `$687B←1`（闪烁选择子）、`$0108←2`、导弹/上限各 +75；且**不转掉落物**。
+    #[test]
+    fn kraid_kill_writes_statue_blink_and_missiles() {
+        let mut m = Manager::default();
+        let x = 0x40u8;
+        area(&mut m, 0x02);
+        m.enemy(slot_of(x)).set_status(EnemyStatus::Explode);
+        m.enemy(slot_of(x)).set_prev_status(0x41); // Resting | bit6（小 Boss 位）
+        m.set_missile_count(10);
+        m.write_wram(STATUE_STATUS_BASE, 20);
+        enemy_complete_death(&mut m, x);
+        assert_eq!(m.statue_status_word(0), 1, "Kraid $687B←1（不是 bit7）");
+        assert_eq!(m.statue_status_word(1), 0, "Ridley 槽不受影响");
+        assert_eq!(m.read_ram(MINI_BOSS_KILL_DELAY), 2, "MiniBossKillDelayFlag←InArea&$0F");
+        assert_eq!(m.missile_count(), 85, "10+75");
+        assert_eq!(m.read_wram(STATUE_STATUS_BASE), 95, "20+75");
+        assert_eq!(
+            m.enemy(slot_of(x)).status_raw(),
+            EnemyStatus::NoEnemy.to_byte(),
+            "LDD5B 非 Tourian ⇒ RemoveEnemy"
+        );
+    }
+
+    /// Ridley（InArea 低半字节=4）⇒ `y=2`、`$687C←2`。
+    #[test]
+    fn ridley_kill_writes_own_statue_slot() {
+        let mut m = Manager::default();
+        let x = 0x40u8;
+        area(&mut m, 0x04);
+        m.enemy(slot_of(x)).set_status(EnemyStatus::Explode);
+        m.enemy(slot_of(x)).set_prev_status(0x42);
+        enemy_complete_death(&mut m, x);
+        assert_eq!(m.statue_status_word(1), 2, "Ridley $687C←2");
+        assert_eq!(m.statue_status_word(0), 0, "Kraid 槽不受影响");
+    }
+
+    /// `asl / bmi` 判的是 **bit6**：只有 tough 位（$80）、没有小 Boss 位（$40）的普通敌
+    /// 死亡时走原掉落径，绝不碰雕像/加成。
+    #[test]
+    fn tough_non_miniboss_uses_pickup_path() {
+        let mut m = Manager::default();
+        let x = 0x40u8;
+        area(&mut m, 0x02);
+        m.enemy(slot_of(x)).set_status(EnemyStatus::Explode);
+        m.enemy(slot_of(x)).set_prev_status(0x81); // Resting | bit7（tough）
+        m.set_missile_count(10);
+        enemy_complete_death(&mut m, x);
+        assert_eq!(m.statue_status_word(0), 0, "bit6 未置 ⇒ 不写雕像");
+        assert_eq!(m.missile_count(), 10, "不加导弹");
     }
 }

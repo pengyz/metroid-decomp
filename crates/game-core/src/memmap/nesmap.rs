@@ -254,7 +254,7 @@ pub fn spec_face() -> [NesSpan; 2] {
 ///
 /// `dump_json`（静态腿/门禁）与动态腿（`verify_shim`）共用本表：新增实体只改这里，
 /// 避免两份类型清单漂移导致动态证据覆盖不到新声明。
-pub fn entity_spans() -> [(&'static str, &'static [(NesSpan, SpanKey)]); 21] {
+pub fn entity_spans() -> [(&'static str, &'static [(NesSpan, SpanKey)]); 22] {
     [
         // B1-b 第二批：零页 `$0000-$0032`（51 B：手柄位面 / NMI 握手 / 主循环号 / 帧计数 /
         // 随机数 / 备用）的 typed 声明层。行为仍在 frame/、input/、title/（裸地址读写）。
@@ -314,6 +314,12 @@ pub fn entity_spans() -> [(&'static str, &'static [(NesSpan, SpanKey)]); 21] {
         (
             "StackPage",
             crate::memmap::stack_page_face::StackPageFace::SPANS,
+        ),
+        // B2-b：敌人额外面 `$6AFB-$6BD3`（12 段 × 9 B 槽尾 + 4 段 × 8 B 爆炸槽，共 140 B）。
+        // 槽头 7 B 仍由 `Enemy` 面登记（`$6AF4-$6AFA` 等），本实体只认领尾部字节。
+        (
+            "EnemyExtra",
+            crate::memmap::enemy_extra_face::EnemyExtraFace::SPANS,
         ),
     ]
 }
@@ -464,9 +470,10 @@ mod tests {
         // 升格为 Owner ⇒ 713 + 256 + 140 = 1109；额外面 84 不变。
         // B1-c 第三批：wave beam 弹额外面 `$05D0-$05FF` 48 B（3 槽 × 16 B）⇒ 1317 + 48 = 1365。
         // B2-c：#97 页 1 变量面 `$0108-$010F` 8 B ⇒ 1365 + 8 = 1373（额外面 84 不变）。
+        // B2-b（#113）：敌人额外面 140 B（12×9 + 4×8，全在 WRAM 面）⇒ 额外面 84 → 224。
         assert!(
-            json.contains("\"coverage\":[1373,84]"),
-            "owner 字节数锚点（1365 + 页 1 变量 8 B）"
+            json.contains("\"coverage\":[1373,224]"),
+            "owner 字节数锚点（1365 + 页 1 变量 8 B；额外面 84 + 敌人额外 140 B）"
         );
     }
 
@@ -661,6 +668,8 @@ mod tests {
         // 「两面无空洞」按**联合声明**核，敌域自己不再重复登记主面。
         let mut union: Vec<(NesSpan, SpanKey)> = Enemy::SPANS.to_vec();
         union.extend_from_slice(crate::memmap::object_slot_face::ObjectSlotFace::SPANS);
+        // B2-b（#113）：额外面尾 9 B × 12 槽由 `EnemyExtraFace` 以 typed Owner 认领。
+        union.extend_from_slice(crate::memmap::enemy_extra_face::EnemyExtraFace::SPANS);
         let dom = enemy_domain();
         assert!(
             gaps(&union, &dom).is_empty(),
@@ -669,8 +678,8 @@ mod tests {
         );
         assert_eq!(
             unowned_bytes(&union, &dom),
-            [0, 108],
-            "未 typed 债：主面 0 B（已 typed）+ 额外尾 9 B × 12 槽（WRAM）"
+            [0, 0],
+            "未 typed 债清零：主面 0 B + 额外面（槽头 84 B + 尾 108 B 均已 typed）"
         );
     }
 
@@ -773,6 +782,8 @@ mod tests {
         let mut union: Vec<(NesSpan, SpanKey)> = spans_of::<explosion::Explosion<'static>>()
             .to_vec();
         union.extend_from_slice(crate::memmap::object_slot_face::ObjectSlotFace::SPANS);
+        // B2-b（#113）：额外面 32 B 由 `EnemyExtraFace` 以 typed Owner 认领。
+        union.extend_from_slice(crate::memmap::enemy_extra_face::EnemyExtraFace::SPANS);
         let dom = explosion_domain();
         assert!(
             gaps(&union, &dom).is_empty(),
@@ -781,8 +792,8 @@ mod tests {
         );
         assert_eq!(
             unowned_bytes(&union, &dom),
-            [0, 32],
-            "主面 0 B（已 typed）+ 额外面 32 B 全未 typed"
+            [0, 0],
+            "未 typed 债清零：主面 0 B + 额外面 32 B 已 typed"
         );
         assert_eq!(
             coverage(spans_of::<explosion::Explosion<'static>>()).expect("无 Owner 段 ⇒ 无冲突"),

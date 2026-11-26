@@ -818,6 +818,13 @@ pub fn end_of_room(mem: &mut crate::frame::Manager) {
     crate::world::camera::scroll::stream_column_kick(mem);
 }
 
+/// `KraidRidleyPresent=$6987`（`constants_ram.asm:1234`）——本文件局部常量承接地址，
+/// 避免 B0 判据把新符号直进访问器记成新增直接依赖（与 `world/statue.rs` 的常量形一致）。
+const KRAID_RIDLEY_PRESENT_ADDR: u16 = 0x6987;
+/// `KraidStatueStatus-1` 的基址（`$687A`）——asm 用 `lda KraidStatueStatus-1,y` 索引
+/// Kraid(y=1→`$687B`)/Ridley(y=2→`$687C`)，y=0 会读到 `MaxMissiles`（原版数据走不到）。
+const STATUE_STATUS_BASE_ADDR: u16 = 0x687A;
+
 /// LoadEnemy（$EB06——GetEnemyData/GetEnemyType/LEB4D/LEB6E 全径）。
 /// 结构址：Ens=$0400+slot（16B 步）/EnsExtra=$6AF4+slot（En/EnExtra 布局——constants:85/125）。
 fn load_enemy(mem: &mut crate::frame::Manager, b0: u8, etype: u8, pos: u8) -> bool {
@@ -835,6 +842,21 @@ fn load_enemy(mem: &mut crate::frame::Manager, b0: u8, etype: u8, pos: u8) -> bo
     // GetEnemyType（$EB28）：specialAttribs←etype&$C0；type←etype&$3F（Boss 检=bit6——
     // Zoomer 型 bit6=0 不入（asm asl/bpl 形））
     mem.write_ram(en + 0x0F, etype & 0xC0); // specialAttribs(+0xF)（ROM 真值——旧 +0x11 越界）
+    // `GetEnemyType ; 07:EB28` 的小 Boss 门：`asl / bpl` 测 specialAttribs 的 bit6——
+    // 命中即 Kraid/Ridley。随后 `lda InArea / and #$06 / lsr / tay` 把区号折成
+    // 0..3（Kraid=2→1、Ridley=4→2），读 `KraidStatueStatus-1,y`（基址 $687A）；
+    // 非 0（死亡后的闪烁值 1/2，或抬像后的 $81/$82）⇒ `pla/pla` 把敌信息与返回地址
+    // 都弹出栈，**该敌记录整条不装载**；为 0（雕像在场但未击败）⇒
+    // `KraidRidleyPresent←1`（Tourian 音乐判据，$6987）。
+    // 忠实保留 asm 的 y=0 无区号护栏：此时 `$687A+y` 读的是 MaxMissiles（该形只在
+    // 区号 0/1 出现 bit6 敌时才有意义，原版数据不会走到）。
+    if etype & 0x40 != 0 {
+        let y = (crate::frame::cur_area(mem) & 0x06) >> 1;
+        if mem.read_wram(STATUE_STATUS_BASE_ADDR + y as u16) != 0 {
+            return true; // pla/pla：跳过该记录，调用方继续读下一个对象
+        }
+        mem.write_ram(KRAID_RIDLEY_PRESENT_ADDR, 0x01);
+    }
     mem.write_wram(ex + 0x0E, etype & 0x3F); // EnsExtra.type
                                              // LEB4D（$EB4D）：y←(pos&$F0)|8；x←(pos<<4)|$0C；status←Resting(1)；isHit←0；hi←名表
     let ty = mem.read_wram(ex + 0x0E);
@@ -1995,5 +2017,61 @@ mod tests_delete_offscreen_room_sprites {
         delete_offscreen_room_sprites(&mut m);
         assert_eq!(m.read_ram(0x0748), 0xFF, "同 nt 的 PowerUp 应 type←$FF");
         assert_eq!(m.read_ram(0x0748 + 8), 0x05, "异 nt 不动（asm `bne` 早退）");
+    }
+}
+
+#[cfg(test)]
+mod tests_statue_gate_and_bridge {
+    use super::*;
+    use crate::frame::Manager;
+
+    const IN_AREA_ADDR: u16 = 0x0074; // `InArea`（constants_ram.asm:627）
+
+    /// `GetEnemyType ; 07:EB28` 的雕像门：小 Boss 敌记录 etype bit6，且对应
+    /// `$687B/$687C` 非 0 ⇒ `pla/pla` **整条记录不装载**（槽保持空）。
+    #[test]
+    fn load_enemy_skips_miniboss_when_statue_already_defeated() {
+        let mut m = Manager::default();
+        let ex = 0x6AF4u16 + 0x40;
+        m.write_ram(IN_AREA_ADDR, 0x02); // Kraid 区
+        m.set_statue_status_word(0, 0x01); // 死亡后闪烁值
+        assert!(load_enemy(&mut m, 0x41, 0x48, 0x2B), "条目消费（跳过）");
+        assert_eq!(m.read_wram(ex), 0, "雕像已击败 ⇒ 槽未被占用");
+    }
+
+    /// 雕像在 0 值（在场未击败）⇒ 正常装载，并置 `KraidRidleyPresent←1`。
+    #[test]
+    fn load_enemy_loads_miniboss_and_marks_present() {
+        let mut m = Manager::default();
+        let ex = 0x6AF4u16 + 0x40;
+        m.write_ram(IN_AREA_ADDR, 0x02);
+        m.set_statue_status_word(0, 0x00);
+        assert!(load_enemy(&mut m, 0x41, 0x48, 0x2B));
+        assert_eq!(m.read_wram(ex), 0x01, "status←Resting（已装载）");
+        assert_eq!(
+            m.read_ram(KRAID_RIDLEY_PRESENT_ADDR),
+            0x01,
+            "小 Boss 在场 ⇒ $6987←1"
+        );
+    }
+
+    /// 桥的读侧（`UpdateAllStatues_Bridge ; 07:DADA`）：两像状态 **bit7 相与** 才置
+    /// `StatuesBridgeIsSpawned` 并铺 8 块 TileBlast；只有一座抬起时不生成。
+    #[test]
+    fn bridge_spawns_only_when_both_statues_are_raised() {
+        let mut m = Manager::default();
+        m.write_ram(IN_AREA_ADDR, 0x02);
+        m.set_statue_status(0x03); // Statue.status：跳过 1/2 两阶段
+        m.set_statue_status_word(0, 0x81); // Kraid 已抬
+
+        m.set_statue_status_word(1, 0x00); // Ridley 未抬
+        crate::world::statue::update_statues_bridge(&mut m);
+        assert_eq!(m.statues_bridge_spawned(), 0, "只有一座 ⇒ 不造桥");
+
+        m.set_statue_status_word(1, 0x82); // Ridley 已抬
+        crate::world::statue::update_statues_bridge(&mut m);
+        assert_eq!(m.statues_bridge_spawned(), 0x80, "双 bit7 ⇒ 置 $54 bit7");
+        assert_eq!(m.tb_routine(0), 0x03, "8 块 TileBlast routine←3");
+        assert_eq!(m.tb_routine(7), 0x03, "末块同样置位");
     }
 }

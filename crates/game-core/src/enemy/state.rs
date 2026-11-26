@@ -928,16 +928,13 @@ mod tests_anim_step {
 
 // ─────────────────────────── P2：`NesMapped` 声明（域级） ───────────────────────────
 
-/// 敌域额外面（`EnsExtra`）尾 9 B 未 typed 的缺口说明。
-const ENSX_TAIL: &str = "EnsExtra 尾 9 B 未 typed：accelY/jumpDsplcmnt/type/data1F 等仍在字节面（crates/game-core/src/enemy/state.rs:294）";
+// 额外面尾 9 B 已由 `crate::memmap::enemy_extra_face::EnemyExtraFace` 以 typed `Owner`
+// 声明（卡 #113），本域不再重复登记那 108 B；见 `docs/spec/b2b-extra-6afb.md`。
 
 /// `EnsExtra` 第 `slot` 槽的槽首地址（`$6AF4 + slot*16`）——只从既有常量推导。
 const fn ensx_slot(slot: u16) -> u16 {
     ENS_EXTRA_BASE + slot * ENEMY_STRIDE
 }
-
-/// 每槽 `EnsExtra` 的**未 typed 尾巴**长度（`16 - 7 = 9` B）。
-const ENSX_TAIL_LEN: u16 = ENEMY_STRIDE - ensx::TYPED_MAX - 1;
 
 /// 敌域两面的 `NesMapped` 声明（**域级**：12 槽全脸；句柄级 `project` 只写本槽 7 B）。
 ///
@@ -955,31 +952,20 @@ impl<'a> crate::memmap::nesmap::NesMapped for Enemy<'a> {
         // 主面整脸（12 槽 × 16 B，`$0400-$04BF`）：B1-c 起改由
         // `crate::memmap::object_slot_face::ObjectSlotFace` 以 typed `Owner` 声明，
         // 本域不再重复登记（同一批字节双声明会破坏四态恒等式）。
-        // 额外面：逐槽 typed 7 B + 未 typed 尾 9 B（手写 12 对，不循环生成）。
-    (NesSpan::value(ensx_slot(0), ensx::TYPED_MAX + 1), SpanKey::Owner),
-    (NesSpan::value(ensx_slot(0) + ensx::TYPED_MAX + 1, ENSX_TAIL_LEN), SpanKey::Unmodeled(ENSX_TAIL)),
-    (NesSpan::value(ensx_slot(1), ensx::TYPED_MAX + 1), SpanKey::Owner),
-    (NesSpan::value(ensx_slot(1) + ensx::TYPED_MAX + 1, ENSX_TAIL_LEN), SpanKey::Unmodeled(ENSX_TAIL)),
-    (NesSpan::value(ensx_slot(2), ensx::TYPED_MAX + 1), SpanKey::Owner),
-    (NesSpan::value(ensx_slot(2) + ensx::TYPED_MAX + 1, ENSX_TAIL_LEN), SpanKey::Unmodeled(ENSX_TAIL)),
-    (NesSpan::value(ensx_slot(3), ensx::TYPED_MAX + 1), SpanKey::Owner),
-    (NesSpan::value(ensx_slot(3) + ensx::TYPED_MAX + 1, ENSX_TAIL_LEN), SpanKey::Unmodeled(ENSX_TAIL)),
-    (NesSpan::value(ensx_slot(4), ensx::TYPED_MAX + 1), SpanKey::Owner),
-    (NesSpan::value(ensx_slot(4) + ensx::TYPED_MAX + 1, ENSX_TAIL_LEN), SpanKey::Unmodeled(ENSX_TAIL)),
-    (NesSpan::value(ensx_slot(5), ensx::TYPED_MAX + 1), SpanKey::Owner),
-    (NesSpan::value(ensx_slot(5) + ensx::TYPED_MAX + 1, ENSX_TAIL_LEN), SpanKey::Unmodeled(ENSX_TAIL)),
-    (NesSpan::value(ensx_slot(6), ensx::TYPED_MAX + 1), SpanKey::Owner),
-    (NesSpan::value(ensx_slot(6) + ensx::TYPED_MAX + 1, ENSX_TAIL_LEN), SpanKey::Unmodeled(ENSX_TAIL)),
-    (NesSpan::value(ensx_slot(7), ensx::TYPED_MAX + 1), SpanKey::Owner),
-    (NesSpan::value(ensx_slot(7) + ensx::TYPED_MAX + 1, ENSX_TAIL_LEN), SpanKey::Unmodeled(ENSX_TAIL)),
-    (NesSpan::value(ensx_slot(8), ensx::TYPED_MAX + 1), SpanKey::Owner),
-    (NesSpan::value(ensx_slot(8) + ensx::TYPED_MAX + 1, ENSX_TAIL_LEN), SpanKey::Unmodeled(ENSX_TAIL)),
-    (NesSpan::value(ensx_slot(9), ensx::TYPED_MAX + 1), SpanKey::Owner),
-    (NesSpan::value(ensx_slot(9) + ensx::TYPED_MAX + 1, ENSX_TAIL_LEN), SpanKey::Unmodeled(ENSX_TAIL)),
-    (NesSpan::value(ensx_slot(10), ensx::TYPED_MAX + 1), SpanKey::Owner),
-    (NesSpan::value(ensx_slot(10) + ensx::TYPED_MAX + 1, ENSX_TAIL_LEN), SpanKey::Unmodeled(ENSX_TAIL)),
-    (NesSpan::value(ensx_slot(11), ensx::TYPED_MAX + 1), SpanKey::Owner),
-    (NesSpan::value(ensx_slot(11) + ensx::TYPED_MAX + 1, ENSX_TAIL_LEN), SpanKey::Unmodeled(ENSX_TAIL)),
+        // 额外面：逐槽 typed 7 B（槽头）；尾 9 B 由
+        // `crate::memmap::enemy_extra_face::EnemyExtraFace` 认领，本域不再登记。
+     (NesSpan::value(ensx_slot(0), ensx::TYPED_MAX + 1), SpanKey::Owner),
+     (NesSpan::value(ensx_slot(1), ensx::TYPED_MAX + 1), SpanKey::Owner),
+     (NesSpan::value(ensx_slot(2), ensx::TYPED_MAX + 1), SpanKey::Owner),
+     (NesSpan::value(ensx_slot(3), ensx::TYPED_MAX + 1), SpanKey::Owner),
+     (NesSpan::value(ensx_slot(4), ensx::TYPED_MAX + 1), SpanKey::Owner),
+     (NesSpan::value(ensx_slot(5), ensx::TYPED_MAX + 1), SpanKey::Owner),
+     (NesSpan::value(ensx_slot(6), ensx::TYPED_MAX + 1), SpanKey::Owner),
+     (NesSpan::value(ensx_slot(7), ensx::TYPED_MAX + 1), SpanKey::Owner),
+     (NesSpan::value(ensx_slot(8), ensx::TYPED_MAX + 1), SpanKey::Owner),
+     (NesSpan::value(ensx_slot(9), ensx::TYPED_MAX + 1), SpanKey::Owner),
+     (NesSpan::value(ensx_slot(10), ensx::TYPED_MAX + 1), SpanKey::Owner),
+     (NesSpan::value(ensx_slot(11), ensx::TYPED_MAX + 1), SpanKey::Owner),
     ];
 
     /// 只写**本槽** `EnsExtra` 的 7 个 typed 字节（`getx` = 该域自己的读径）。

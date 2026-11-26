@@ -267,3 +267,138 @@ python3 tools/l4_diff_run.py run-all
 - `cargo test -p game-core --lib` **单独跑**在该 lane 上有 6 个新增失败（cannon/dragon/crawler 各若干），但同一棵树上 `--workspace` 是 1198/0，且干净 HEAD 单独跑也有 6 个——属 lane 既有的独立运行差异，非本改动引入；卡面「`-p game-core --lib` 全绿（≥1198）」这个口径把 workspace 的计数写给了单 crate 命令，建议改判「`--workspace` 1198/0 且不新增失败」。
 - `run-all` → 21 案 / **172 格：match 171 · diff 1 · blocked 0**；唯一非 match `case-mechanism-input-conflict f674 c674` 84 px，与既有基线同（非本改动引入）。
 - 后继：把 §9.2 的逐迭代对比脚本入库，避免下次只能靠临时插桩。
+
+---
+
+## 10. 2026-11-27 追加：#110 A-2 收口（不可解 + 三变体反例 + 上游要求）
+
+> 卡：`#110`（`tsk_01M8C8SE4J7GG91PXQN3J7`）｜HEAD：`7fd77b53`（`rust_test_count` 基线
+> 1224→1240 之后，工作树干净起跑）｜写面：`crates/game-core/src/frame/`、本文件。
+> §7–§9 是 #82/#88 的结论（FC 增量时机、v10 落地），本节**不改写**它们，只回答
+> 「在 v10 已落地的 HEAD 上，A-2 剩余的 8 字节能不能在 `frame/` 写面内修掉」。
+
+### 10.1 结论（不可解，在本卡写面内）
+
+f22895 的 8 字节**不是**「某一拍相位错 1」，而是 **FrameCount 的帧丢弃记账整体偏少**：
+12 个检查点上 Rust 的 FC 一路领先 Emu，lag 差 −9(f12000) → −53(f120000) 单调扩大。
+`$0405` 的 bit6 是 FC 奇偶的观测面，所以它最先炸出来。`frame/` 内能改的只有「何时不
+inc」这类局部规则，实测三变体全部更差（§10.5）。真正修法在写面之外（§10.7）。
+
+### 10.2 复现（含必须绕开的读数陷阱）
+
+```sh
+cp -a analysis/tas-main-f22895 /tmp/a2-repro
+rm -f /tmp/a2-repro/rust/full.state.jsonl
+python3 tools/tas_replay_diff.py replay \
+  --inputlog movies/lordtom-metroid-100p.inputlog \
+  --frames 30000 --segments 12000 --resume \
+  --range 0400-04FF --tag ens --out /tmp/a2-repro
+# → rust 腿 18.3s；rust/full.state.jsonl 29946 行
+```
+
+**陷阱（与 §9.4/G8 同类）**：`--resume` 对 `status∈{pass,diverge}` 的段**直接复用
+coverage.json 的旧结论，不拿新 rust 腿重新比对**——改完代码再跑，工具仍会照抄
+「首个真实分歧 f22895」。本卡所有变体读数都用独立脚本重算窗口（按
+`iram[0x300:0x400]` 对 `w.ens`，逐段 12000 帧窗口记首个不等帧），未采信自报值。
+
+基线读数：`seg0 compared=11962 diverge=0`、`seg1 compared=11983 diverge=1100`、
+`seg2 compared=5986 diverge=5986`，合计 **compared=29931**，首分歧
+**f22895 `$0405` emu=`0x5A` rust=`0x1A`，8 字节**，偏移
+`$0405 $0415 $0425 $0435 $0445 $0449 $044A $0455`。
+
+### 10.3 逐帧演化（新证据）
+
+| f | `$0405` | `$0441`(slot4 x) | `$0445`(slot4 data05) | `$0449` | `$044A` | `$0451` | NDiff |
+|---|---|---|---|---|---|---|---|
+| 22894 | 5A/5A | BC/BC | 58/58 | 01/01 | 01/01 | 5C/5C | 0 |
+| 22895 | **5A/1A** | BC/BC | **58/1A** | **01/00** | **01/00** | 5C/5C | **8** |
+| 22896 | 5A/5A | BC/**BD** | 5A/5A | 01/00 | 01/00 | 5C/5C | 3 |
+| 22897 | 1A/1A | BC/**BE** | 1A/1A | 00/00 | 00/00 | 5D/5D | 1 |
+| 22898 | 5A/5A | BD/**BF** | 5A/5A | 00/00 | 00/00 | 5E/5E | 1 |
+| 22900 | 5A/5A | BF/**C1** | 5A/5A | 00/00 | 00/00 | 5E/5E | 1 |
+
+（`A/B` = emu/rust；取数=`rust/full.state.jsonl` 的 `iram[0x300:0x400]` 与
+`emu/seg-*.jsonl` 的 `w.ens`）
+
+读法：
+
+1. **两件事叠在同一帧**：5 个活槽的 bit6 因 FC 奇偶不同而整组反相（§2.3 已给生成式），
+   **同时** slot4 的 `data0A` 被清 0、`data05` 58→1A——即 slot4 的一次状态跃迁，
+   Rust 在 22895、emu 在 22897，**早 2 帧**。
+2. **22897 起 NDiff=1，但 `$0441` 永久差 2**（emu BC→BE，rust BD→BF…）：两侧速度相同，
+   只是 Rust 的 slot4 早 2 帧起步 ⇒ 恒定 2px 偏置，不是速度差。
+3. 22913 起再增 `$0425`/`$0440`/`$044A`，是同一偏置向别的槽传播。
+
+### 10.4 FrameCount 漂移（决定性证据）
+
+lag 定义：`lag(f) = (f mod 256 − FC(f) + 256) mod 256`（到第 f 帧为止「少 inc」的次数）。
+emu 取 `checkpoints/cp-NNNNNN.json` 的 `ram` 4096 hex（FC 在 `ram[0x2D]`），rust 取
+`rust/full.state.jsonl` 的 `zp[0x2D]`：
+
+| f | emu FC | rust FC | lag(emu) | lag(rust) | Δ(rust−emu) |
+|---|---|---|---|---|---|
+| 12000 | BC | C5 | 36 | 27 | **−9** |
+| 24000 | 90 | 98 | 48 | 40 | −8 |
+| 36000 | 66 | 77 | 58 | 41 | −17 |
+| 48000 | 35 | 49 | 75 | 55 | −20 |
+| 60000 | 10 | 29 | 80 | 55 | −25 |
+| 72000 | CD | ED | 115 | 83 | −32 |
+| 84000 | 95 | B5 | 139 | 107 | −32 |
+| 96000 | 72 | 92 | 142 | 110 | −32 |
+| 108000 | 3A | 5E | 166 | 130 | −36 |
+| 120000 | FA | 2F | 198 | 145 | **−53** |
+
+- **f12000 就已经差 9 帧**——差不是从 f22895 开始的，那里只是它第一次「被看得见」。
+- 差值单调扩大但**每万帧增量不均**（−9→−8 有一格收窄）⇒ 两侧丢帧点落在不同事件上
+  （boot / title / 载房 / 卡死转场）。**单条「何时不 inc」规则不可能同时匹配 12 个
+  检查点**，这是本节判据的核心。
+- Rust 侧 FC 几乎每个 captured row 都 +1（29946 行里 zero_delta=2、nonunit=6）。
+
+### 10.5 反例矩阵（三条 `frame/` 局部规则，全部实测）
+
+每条都在 `7fd77b53` 上改 `crates/game-core/src/frame/tick.rs`、重建 rust 腿、用
+§10.2 的独立脚本重算，跑完即还原（`git diff` 为空）。
+
+| 变体 | 改法 | 位置 | 首分歧 | seg0 分歧帧 |
+|---|---|---|---|---|
+| **C0 基线** | 不动 | — | **f22895** `$0405`（8 B） | 0 |
+| C1 | `mem.room_load_phase != 0` ⇒ 本拍不 inc FC | `tick.rs` FC 尾 | **f485** `$0405`（6 B） | 11152 |
+| C2 | FC inc 整体提到 `go_main_routine` 之前（删尾 inc） | `tick.rs:305` 前后 | **f470** `$0451`（1 B） | 11983 |
+| C3 | 任意链上 `iter_gates` 非空即不 inc（v9 形） | `tick.rs:329` | **f467** `$0405`（8 B） | 11505 |
+
+三条都把首分歧从 22895 **拉到 467–485**（提前 2 万帧），C2 的 seg0 直接整段崩。
+方向明确：**在现有机制上再加「少 inc」只会更差**；与 §7.2/§8 里 v3/v7/v8/v9 全灭的
+结论同向（#88 的 v10 已把「只对 title 链生效」收窄到极限，本卡收窄不出第四条路）。
+
+### 10.6 为什么在 `frame/` 写面内不可解
+
+1. 需要的丢帧**模式**由每个事件的实际耗时决定，分布在 boot / title / 房间载入 / 卡死
+   转场四类里；`frame/` 只能看到 `room_load_phase`、`iter_gates`、`title_cursor` 这些
+   粗粒度信号，看不到「本拍干了多少活」。
+2. 耗时模型已存在——`account_iteration_work`（`tick.rs:734`）按
+   `BASE_FRAME + Σw[type] + COLUMN_COST` 判超预算并 `iter_bogged(1)`，但它
+   **对 `room_load_phase != 0` 直接 return**（`:739`），载房窗的丢弃由
+   `check_update_name_table` 的 `is_load` 分支自计；两处口径分开，且都没覆盖
+   「卡死在 `RoomNumber=$FF` 时的反复尝试」。
+3. 因此对齐 FC 需要**逐事件丢弃模型**（至少把载房窗/卡死窗并入同一套预算），写面在
+   `world/room_draw` + `world/room_load`，不在本卡。
+
+### 10.7 需要上游做什么
+
+1. **先修卡死转场（最高优先）**：从 f22454 起 `RoomNumber($005A)` 恒 `$FF`（#101 §4），
+   `$005B`(SPRITE_PAGE_POS) 在 f22895 由 `0x20→0x60`（emu 在 22897）；f22895 的 slot4
+   跃迁正发生在这个卡死循环的一拍里。卡死本身不修，FC 对齐只是把误差搬到别的观测面。
+2. **把「丢弃」建成逐事件模型**：`account_iteration_work` 与载房窗 `is_dropped` 合成
+   一套预算（含卡死重试窗），用 §10.4 的 12 个检查点当回归锚——**lag 差在任意检查点
+   超过 ±1 即判回归**。只对首分歧帧下断言会被漂移绕过去。
+3. **给 `--resume` 加自校验**：校验 `rust 腿行数 ≥ frames` 且 sched/rom sha 与当前一致，
+   否则 fail；否则「改代码再跑」永远得到同一条「首个真实分歧」（§10.2）。
+
+### 10.8 交付面与自查
+
+- 本卡**未改生产代码**（三变体跑完即还原）；本节为唯一改动。
+- 回归（HEAD `7fd77b53`，工作树含其他成员在途改动，见提交说明）：
+  `cargo test -q --workspace` = **1250 passed / 0 failed**（≥1240）；
+  `gates/cli.py check` = **PASS=24 FAIL=0 SKIP=3 TOLERATED=1**（13.62s）；
+  `run-all --allow-dirty` = 21 案 / 172 格，**match 171 · diff 1 · blocked 0**（唯一
+  `case-mechanism-input-conflict f674` 84px，与既有基线同）。

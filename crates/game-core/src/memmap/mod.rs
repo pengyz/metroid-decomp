@@ -41,5 +41,7 @@ pub mod samus_vitals_face;
 pub mod spare_face;
 /// B2-c：页 1 `$0108-$010F`（8 B 具名变量）typed 声明层 + `$01D0-$01FF`（48 B）栈的显式 ephemeral 声明（卡 #97）。
 pub mod stack_page_face;
+/// B2-b：敌人额外面 `$6AFB-$6BD3`（13 段 × 9/8 B，共 140 B）的 typed 声明层（卡 #113）。
+pub mod enemy_extra_face;
 #[cfg(test)]
 pub(crate) mod verify_shim;
