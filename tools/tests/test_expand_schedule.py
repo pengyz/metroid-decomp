@@ -267,3 +267,25 @@ def test_sched_text_joy2_lines_only_when_present():
     with2 = l4.schedule_text("n", 5, {1: 0x41}, [(5, "cap")], joy2={2: 0x88})
     assert "joy2 2 88" in with2
     assert with2.replace("joy2 2 88\n", "") == base
+
+
+def test_expand_schedule_consumes_movie_reset_frame(tmp_path):
+    """复位帧消费（#111）：inputlog 的 cmd bit0/bit1 是软/硬复位，FCEUX 播片时该帧
+    只复位、不产生游戏输入帧 ⇒ 后续录像帧整体后移一帧（旧实现把复位帧当普通帧
+    喂进去，整卷输入晚一帧；A 级证据见 docs/findings/tas-injection-phase.md §11）。"""
+    log = tmp_path / "m.inputlog"
+    log.write_text("# frames 4\n00 00 01\n41 00 00\n42 00 00\n00 00 00\n",
+                   encoding="utf-8", newline="\n")
+    plan = synth_plan(presses=[])
+    plan["input_log"] = str(log)
+    joy1, joy2 = sr.expand_pads(plan)
+    # 帧1 是复位帧，被消费；原帧2/3 后移到帧3/4
+    assert joy1 == {3: 0x41, 4: 0x42}, joy1
+    assert joy2 == {}, joy2
+    # 无 cmd 的录像不受影响（锚不漂移）
+    log2 = tmp_path / "m2.inputlog"
+    log2.write_text("# frames 3\n41 00 00\n42 00 00\n00 00 00\n",
+                    encoding="utf-8", newline="\n")
+    plan2 = synth_plan(presses=[])
+    plan2["input_log"] = str(log2)
+    assert sr.expand_pads(plan2)[0] == {1: 0x41, 2: 0x42}

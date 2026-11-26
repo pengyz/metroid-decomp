@@ -263,3 +263,73 @@ PY
 - C1：H1 的「丢帧集合不同」是主因——目前只有 `$1A` 在 spin-exit 恒 1 的旁证，未取到 NMI 入口序列。
 - C2：FCEUX 与 Mesen 的 P1 采样窗口在本片前 660 帧内等价（`$0300-$030F` 除 1 帧相位外逐字节相同），故分歧起点在 f660 之后、f1759 之前。
 - C3：`movies/eien86-6725M.inputlog` 的 `# source`/`# core` 头部错标（写成 `metroid-anyp-3666.bk2` / NesHawk）与 provenance（`quickerNES`、`frames=28408`、sha `4421f6e3…`）矛盾，成因未展开；`movies/lagshift-plus1-f1756.inputlog` 同族产物也应一并复核。
+
+## 11. 【2026-11-27 更正】根因是录像复位帧未被消费（A 级），不是 NMI/APU/2P
+
+> 本节推翻 §3「注入相位不是根因」的结论与 §4「2P 缺口」对本次死亡的因果解释，按纪律原地保留原文。
+
+### 11.1 数据面事实（A 级，可机械复算）
+
+`movies/lordtom-metroid-100p.inputlog` 共 120540 行，**cmd 列（第 3 字段）非零的只有 1 行**：
+
+```
+python3 - <<'PY'
+rows=[l.split() for l in open('movies/lordtom-metroid-100p.inputlog') if l.strip() and not l.startswith('#')]
+print(len(rows), [(i+1,r) for i,r in enumerate(rows) if r[2]!='00'])
+PY
+# 120540 [(1, ['00', '00', '01'])]
+```
+
+即 **f1 的 `00 00 01` = 软复位帧**。`tools/movie_import.py` 把这个 cmd 写进 inputlog（写出端正确），
+但 `tools/scenario_run.py::expand_pads` 的消费循环写成
+`for f, (p1, _p2, _cmd) in log_table.items():` —— **`_cmd` 读而不用**，
+复位帧被当成普通输入帧喂给游戏。
+
+FCEUX 播 `.fm2` 时，复位帧只执行复位、**不产生一帧游戏输入**；后续每一帧录像输入
+都往后错开一帧。旧实现把这帧当输入 ⇒ **整卷输入相对影片晚一帧**，
+这就是「注入相位」的真实来源（在工具层，不在 Mesen 的 `inputPolled` 时机）。
+
+2P 与本死亡无关的旁证：p2 列**全片仅 11 帧非零、首帧 f22450**，晚于本次死亡帧 f3889。
+
+### 11.2 修法与前后对照（同一 scenario、只改这一处）
+
+`tools/scenario_run.py::expand_pads`：遇到 `cmd & 0x03`（软/硬复位）`reset_shift += 1` 并跳过该行，
+其余行写入 `shifted[f + reset_shift]`。`tools/l4_diff_run.py:1239/:1360` 都调本函数
+（唯一展开源），所以 Rust 腿 `.sched` 与 Lua 腿 `PLAN.schedule` 同享修正。
+
+```
+python3 tools/scenario_run.py run /tmp/r111/scn-fix.txt     # frames 6000
+# → analysis/traces/tas-111-fix.frames.jsonl
+```
+
+解 `hp=((hi&0x0F)*10)+(lo>>4)`：
+
+| 片源 | 首伤 | 第二伤 | 第三伤 | 死亡 |
+|---|---|---|---|---|
+| 旧实现（相位 0） | f1759 (22) | f2148 (14) | f3244 (6) | **f3889** |
+| 本修法（消费复位帧） | **f2192 (22)** | f2518 (17) | f4843 (9) | f5145 |
+| FCEUX 参照（`/tmp/fx_lordtom.log`，6000 帧不死） | **f2190 (22)** | f3080 (14) | f5411 (19) | 不死 |
+
+结论分两层：
+
+1. **首伤与 FCEUX 对齐到 2 帧**（2192 vs 2190；Δ2 是 `sample_point` 与 FCEUX `registerafter`
+   的采样约定差），证明「整卷晚一帧」这个系统性偏移被消除。f3889 / f4000 已能通过。
+2. **f2518 之后仍有残余分歧**（我们多掉 5 HP，并最终在 f5145 死亡）：输入相位不再是唯一差异，
+   剩余分歧属 H2/H3（CPU/PPU 上电对齐、APU/DMC 抢占）一类**模拟器执行语义**，
+   不是工具层一次性可解的；本卡不把「整片 6000 帧不死」当成已达成。
+
+### 11.3 §9 建议状态更新
+
+| 建议 | 状态 |
+|---|---|
+| ① `--input-phase <cycles>` 延后 `setInput` | **不需要**：根因是录像复位帧未消费，已在 `expand_pads` 修掉（这一处同时覆盖 emu/Rust 双腿） |
+| ② `--probe-lag` | 未做（残余分歧定层时仍可能有用） |
+| ③ `port: 2` 显式报错 | 未做；2P 与本死亡无关（p2 首帧 f22450） |
+| ④ inputlog 长度校验 | 未做（本片长度 120540 与 `movie_ledger` 记录的可用帧一致） |
+
+### 11.4 回归与影响面
+
+- `python3 -m pytest tools/tests/test_expand_schedule.py -q` → **27 passed**（新增
+  `test_expand_schedule_consumes_movie_reset_frame`：含 cmd 的录像后移一帧、无 cmd 的录像锚不漂移）。
+- 影响面：**只影响带 `input_log` 且含复位 cmd 的场景**（即 TAS 回放族）；手写 DSL 用例
+  schedule 字节不变。含录像的旧 trace/golden 会整体位移一帧，重跑后需重新绑定基线。

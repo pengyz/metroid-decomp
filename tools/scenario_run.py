@@ -624,6 +624,25 @@ def expand_pads(plan: dict) -> tuple[dict[int, int], dict[int, int]]:
             lp = ROOT / lp
         log_table = movie_import.read_inputlog(lp)
 
+    # 【#111 注入相位根因】录像**复位帧必须被消费**：inputlog 的 cmd bit0/bit1 是软/硬复位
+    # （tools/movie_import.py 写出端，FCEUX 影片首行恒为复位）。FCEUX 播片时该帧只做复位、
+    # 不产生一帧游戏输入，后续录像帧整体后移一帧；旧实现把复位帧当普通输入帧喂进去
+    # （`_cmd` 读而不用），于是整卷输入相对影片**晚一帧**。
+    # A 级证据（docs/findings/tas-injection-phase.md §11）：lordtom 100% 首伤
+    # emu f1759 / FCEUX f2190；消费复位帧后 emu 首伤 f2192（Δ2=采样点约定），且
+    # f4000 前不再死亡（旧行为 f3889 即死）。
+    reset_shift = 0
+    if log_table:
+        shifted: dict[int, tuple[int, int, int]] = {}
+        for f in sorted(log_table):
+            p1, p2, cmd = log_table[f]
+            if cmd & 0x03:
+                reset_shift += 1
+                continue
+            shifted[f + reset_shift] = (p1, p2, cmd)
+        if reset_shift:
+            log_table = shifted
+
     joy: dict[int, int] = {}
     for f in sorted(per_frame):
         d = per_frame[f]
