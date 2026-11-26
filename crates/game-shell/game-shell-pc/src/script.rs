@@ -25,6 +25,50 @@ pub struct Script {
     windows: Vec<KeyWindow>,
 }
 
+/// 单帧 RAM 注入（`--poke 帧:地址=值`）。
+///
+/// 只用于「把某个已证实的输入条件摆到位」再观察下游链——例如直接写
+/// `SamusDoorData($58)` 模拟「Samus 已踩在门格瓦上」，从而把门过渡链与
+/// 「能不能走到门格」解耦。它不改游戏逻辑、不改判据，只做一次 `write_ram`。
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Poke {
+    pub frame: u64,
+    pub addr: u16,
+    pub value: u8,
+}
+
+/// 解析 `帧:地址=值`（帧 1-based；地址/值可写 `0x..` 或十进制）。
+pub fn parse_poke(spec: &str) -> Result<Poke, String> {
+    let (frame_s, rest) = spec
+        .split_once(':')
+        .ok_or_else(|| format!("poke 要写成 `帧:地址=值`：{spec:?}"))?;
+    let (addr_s, val_s) = rest
+        .split_once('=')
+        .ok_or_else(|| format!("poke 要写成 `帧:地址=值`：{spec:?}"))?;
+    let parse_num = |s: &str| -> Result<u32, String> {
+        let t = s.trim();
+        let (digits, radix) = if let Some(h) = t.strip_prefix("0x").or_else(|| t.strip_prefix("0X")) {
+            (h, 16)
+        } else {
+            (t, 10)
+        };
+        u32::from_str_radix(digits, radix).map_err(|_| format!("不是整数：{s:?}"))
+    };
+    let frame = u64::from(parse_num(frame_s)?);
+    if frame == 0 {
+        return Err("帧号从 1 开始（1-based）".into());
+    }
+    let addr = parse_num(addr_s)?;
+    let value = parse_num(val_s)?;
+    if addr > 0xFFFF {
+        return Err(format!("地址超过 $FFFF：{addr:#X}"));
+    }
+    if value > 0xFF {
+        return Err(format!("值超过 $FF：{value:#X}"));
+    }
+    Ok(Poke { frame, addr: addr as u16, value: value as u8 })
+}
+
 /// 解析一行 `起始-结束 KEYS`：
 /// - 帧号 1-based，`20-80` 闭区间；`20-` 表示开到脚本结束；
 /// - KEYS 用 `+` 分隔，如 `RIGHT+A`；`NONE` 表示显式无键（可省略）。
@@ -199,6 +243,7 @@ pub fn run_scripted(
     state_out: Option<&Path>,
     shot_frames: &[u64],
     shot_dir: Option<&Path>,
+    pokes: &[Poke],
 ) -> std::io::Result<RunReport> {
     let mut sink: Box<dyn Write> = match state_out {
         Some(p) => Box::new(BufWriter::new(std::fs::File::create(p)?)),
@@ -215,6 +260,9 @@ pub fn run_scripted(
     let mut last = (u8::MAX, u8::MAX, u8::MAX);
     for frame in 1..=frames {
         let pad = script.pad_at(frame);
+        for p in pokes.iter().filter(|p| p.frame == frame) {
+            driver.engine.mem.write_ram(p.addr, p.value);
+        }
         driver.step(pad.bits, 0);
         writeln!(sink, "{}", state_row(driver, frame, pad))?;
         let m = &driver.engine.mem;
@@ -278,5 +326,23 @@ mod tests {
         assert!(Script::parse("10 RIGHT").is_err());
         assert!(Script::parse("10-5 RIGHT").is_err());
         assert!(Script::parse("10-20 RIGHT+LEFTOVERS").is_err());
+    }
+}
+
+#[cfg(test)]
+mod tests_poke {
+    use super::*;
+
+    #[test]
+    fn parse_poke_hex_and_decimal() {
+        assert_eq!(parse_poke("700:0x58=2").unwrap(), Poke { frame: 700, addr: 0x58, value: 2 });
+        assert_eq!(parse_poke("12:88=255").unwrap(), Poke { frame: 12, addr: 88, value: 255 });
+    }
+
+    #[test]
+    fn parse_poke_rejects_bad_specs() {
+        for bad in ["700:0x58", "0:0x58=2", "700:0x10000=2", "700:0x58=0x100", "abc:0x58=2"] {
+            assert!(parse_poke(bad).is_err(), "{bad:?} 应被拒");
+        }
     }
 }

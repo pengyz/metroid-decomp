@@ -2,6 +2,7 @@
 //!
 //! 用法：`game-shell-pc [--scale N] [--fps N] [--frames N]`
 //! 无窗口验收：`--headless [--script FILE] [--state-out FILE] [--shot-frames 1,100] [--shot-dir DIR]`。
+//! 单帧 RAM 注入（只做一次 `write_ram`，用于把已证实的输入条件摆到位）：`--poke 700:0x58=2`。
 //! 注：重制=Rust 逻辑移植（非模拟器）——**运行不需 ROM**（rom/ 仅验证轨用（BYO-ROM））。
 
 use game_platform::runtime::run_game;
@@ -16,6 +17,7 @@ fn main() {
     let mut shot_dir: Option<String> = None;
     let mut shot_frames: Vec<u64> = Vec::new();
     let mut wram_out: Option<String> = None;
+    let mut poke_specs: Vec<String> = Vec::new();
     let mut args = std::env::args().skip(1);
     while let Some(a) = args.next() {
         match a.as_str() {
@@ -27,6 +29,7 @@ fn main() {
             "--state-out" => state_out = args.next(),
             "--shot-dir" => shot_dir = args.next(),
             "--wram-out" => wram_out = args.next(),
+            "--poke" => poke_specs.push(args.next().unwrap_or_default()),
             "--shot-frames" => {
                 let spec = args.next().unwrap_or_default();
                 for part in spec.split(',').filter(|s| !s.trim().is_empty()) {
@@ -79,6 +82,16 @@ fn main() {
             },
             None => game_shell_pc::script::Script::default(),
         };
+        let mut pokes = Vec::new();
+        for spec in &poke_specs {
+            match game_shell_pc::script::parse_poke(spec) {
+                Ok(p) => pokes.push(p),
+                Err(e) => {
+                    eprintln!("[poke] {spec:?} 解析失败：{e}");
+                    std::process::exit(2);
+                }
+            }
+        }
         let n = frames.unwrap_or(600);
         let state_out = state_out.as_deref().map(std::path::Path::new);
         let shot_dir = shot_dir.as_deref().map(std::path::Path::new);
@@ -89,6 +102,7 @@ fn main() {
             state_out,
             &shot_frames,
             shot_dir,
+            &pokes,
         ) {
             Ok(r) => {
                 if let Some(p) = wram_out.as_deref() {
