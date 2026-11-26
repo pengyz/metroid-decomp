@@ -5,22 +5,23 @@
 # 全程只用键盘脚本，验的是「玩家自己能不能走到门格并换房」这条完整链路。
 #
 # 用法（在 wt-roll 或主线检出里）：
-#   tools/playable_door_smoke.sh              # 跑阶段 1（横滚门，Brinstar map5 右门）
-#   tools/playable_door_smoke.sh --stage 2    # 跑阶段 2（另一方向门，需 #104 给可达门）
-#   tools/playable_door_smoke.sh --self-test  # 用合成样本验判定器本身（不跑游戏）
+#   tools/playable_door_smoke.sh                   # 阶段 1：Brinstar 房 5 右门（横滚，$81）
+#   tools/playable_door_smoke.sh --stage 2         # 阶段 2：Room24 左门回程（竖向上滚，$84）
+#   tools/playable_door_smoke.sh --self-test       # 合成样本验判定器本身（不跑游戏）
+#   tools/playable_door_smoke.sh --check-area      # --start-area 0/2 同房不同区表（区号反读+门瓦+WRAM）
+#   tools/playable_door_smoke.sh --check-invalid-room  # 非法房号必须被拒（rc≠0）
 #   DOOR_SHOTS=/tmp/smoke tools/playable_door_smoke.sh
 #
 # 退出码即结论（0 才算通过）：
 #   0  触发 → 换房 → 新房间可渲染
-#   3  NO_DOOR_TRIGGER：$56 全程 0（Samus 从未踩到门格 ⇒ 可进入性/门瓦问题）
+#   3  NO_DOOR_TRIGGER：$58 全程 0（Samus 从未踩到门格 ⇒ 可进入性/门瓦问题）
 #   4  NO_SWITCH：门事件已触发，但窗口内 RoomNumber/MapPos 未变（滚屏/SetupRoom 断链）
 #   5  BLACK_SCREEN：换房后首帧主体区非黑像素 < 5%（黑屏/未画房）
-#   6  STAGE_UNAVAILABLE：该阶段的门尚未确定（显式红，不静默跳过）
-#   1  运行失败（二进制/参数/读不到产物）
+#   6  WRONG_DIRECTION：门触发了但方向码不在本阶段期望集（阶段1 期望 1/2、阶段2 期望 3/4）
+#   1  运行失败（二进制/参数/读不到产物）；2 参数错
 #
-# 现状（lane/roll HEAD 5b85aeb8，即 #102 已修、#104 未落地）：
-#   阶段 1 预期 `NO_DOOR_TRIGGER`（map5 右门在中高台，跳峰 26px、门台高差约 63px，
-#   纯键盘到不了门格）。#104 落地后本脚本应转 0；转绿之前它一直是红灯，这是设计意图。
+# 现状（lane/roll HEAD e6a0d8e6）：两阶段均 PASS。门链修复在 #102（$56 方向码），
+# 可进入性/门台高度属世界面，本脚本只用 --start-pos 做启动定位，不主张「通电开局走到门」。
 set -uo pipefail
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
