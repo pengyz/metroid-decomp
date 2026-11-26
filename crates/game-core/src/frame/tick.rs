@@ -308,6 +308,14 @@ pub fn main_loop_iter(mem: &mut Manager) {
     }
     // 【Step 3 谓词单源】续段/完成拍/spin 判定=Manager::title_continuation（唯一实现
     // ——engine 缝抑制同源；0xFF 完成拍哨兵显式排除出续段，Step 4 启用）。
+    // 【#88 迭代边界（v10）】title 多段链的一次迭代可能在体内含多次 WaitNMIPass（asm
+    // `GameOver 00:939E` → `ClearAll 00:909F` 的 2 次等待 + `ScreenOn 07:C447` 的 1 次）。
+    // ROM 的 `inc FrameCount`（prg7:207）在这串等待**之后**才执行一次；Rust 每拍尾 inc，
+    // 于是把「等待拍」各算一次。判据只在 **title 链内** 生效（`title_cursor>0 && !=0xFF`）：
+    // 敌人/载房/引擎的帧门不是迭代边界（v9 把判据挂到所有门 ⇒ 13 个敌人测试被挪位）。
+    let title_chain_iter = mem.title_cursor > 0
+        && mem.title_cursor != 0xFF
+        && mem.read_ram(TITLE_ROUTINE) != 0;
     let continuation = mem.title_continuation();
     if !continuation {
         random_numbers(mem); // C000（唤醒后首件）
@@ -318,7 +326,11 @@ pub fn main_loop_iter(mem: &mut Manager) {
     // 【goal-轮56 证伪更正（§3.6）】FC 前置增量（轮26 形重试）L4 判定证伪——match 骤降
     // （1/13 等 vs 基线 55/97）⇒回退。金腿 FC=+1 恒差（ram.hex 直证）=**症状非根**——
     // FC 依赖行为（gate/toggle/相位）随移全错；真根=FC 读面各自的相位语义（非全局移）。
-    if !mem.title_no_return && !mem.fc_inced_this_tick {
+    if title_chain_iter && !mem.iter_gates.is_empty() {
+        // 本拍声明了等待门 ⇒ 迭代未结束：inc 推到排空拍（`settle_iteration` 的
+        // `iter_span_fc` 收口，单增不重）——与 asm「等待全部兑现后才 inc」同相。
+        mem.iter_span_fc = true;
+    } else if !mem.title_no_return && !mem.fc_inced_this_tick {
         mem.write_ram(FRAME_COUNT, mem.read_ram(FRAME_COUNT).wrapping_add(1));
     }
     mem.title_no_return = false;
