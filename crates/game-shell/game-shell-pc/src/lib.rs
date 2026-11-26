@@ -5,6 +5,8 @@
 //!
 //! 键位（NES 手柄形）：X/Z=A/B，Enter=Start，RShift=Select，方向键=方向，Esc=退出。
 
+pub mod script;
+
 use std::cell::RefCell;
 use std::rc::Rc;
 
