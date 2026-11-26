@@ -77,6 +77,16 @@ mem.write_ram(crate::ram_map::DOOR_ENTRY_STATUS, de | 0x80);
   map5 门在中高台，跳跃峰值比平台低），所以纯键盘脚本也复现不出「走进门」这一步；
   本 findings 用 `--poke $58` 越过这一步，直接验证门链本身。
 
+## 验收标准（建议按此三条，#102 原卡第 1 条按字面不可达）
+
+1. `tools/door_entry_repro.sh` 退出码 0：`$56` 带方向码（`0x81..0x84`）且注入后 40 帧内
+   RoomNumber 或 MapPos 变化；附注入前/后两帧截图。
+2. 回归不回退：`cargo test --workspace` ≥1229 全绿、`gates/cli.py check`
+   `PASS=24 FAIL=0 SKIP=3 TOLERATED=1`、`l4_diff_run.py run-all` **171/172**
+   （唯一 diff 仍是 `case-mechanism-input-conflict f674=84px`）。
+3. 本 findings 的「为什么之前的证据都没抓到」保留：L4 的 door 6 格与 100% TAS
+   都**不能**作为门链证据。
+
 ## 待办（跨出 #102 写面）
 
 修复位置在 `crates/game-core/src/samus/physics.rs`，#102 的写面是
