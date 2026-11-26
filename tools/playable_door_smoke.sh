@@ -7,6 +7,7 @@
 # 用法（在 wt-roll 或主线检出里）：
 #   tools/playable_door_smoke.sh              # 跑阶段 1（横滚门，Brinstar map5 右门）
 #   tools/playable_door_smoke.sh --stage 2    # 跑阶段 2（另一方向门，需 #104 给可达门）
+#   tools/playable_door_smoke.sh --self-test  # 用合成样本验判定器本身（不跑游戏）
 #   DOOR_SHOTS=/tmp/smoke tools/playable_door_smoke.sh
 #
 # 退出码即结论（0 才算通过）：
@@ -22,13 +23,78 @@
 #   纯键盘到不了门格）。#104 落地后本脚本应转 0；转绿之前它一直是红灯，这是设计意图。
 set -uo pipefail
 
+HERE="$(cd "$(dirname "$0")" && pwd)"
+JUDGE="$HERE/playable_door_judge.py"
 STAGE=1
+SELFTEST=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --stage) STAGE="${2:-1}"; shift 2 ;;
+    --self-test) SELFTEST=1; shift ;;
     *) echo "未知参数：$1" >&2; exit 2 ;;
   esac
 done
+
+# ── 判定器自检：合成样本覆盖 1 正 + 3 失败分支 ──────────────────────────────
+# 只验「判定规则对不对」，不碰游戏。合成 CSV 的列与 game-shell-pc 的 --state-out 一致。
+if [ "$SELFTEST" = 1 ]; then
+  T="$(mktemp -d)"
+  trap 'rm -rf "$T"' EXIT
+  hdr='frame,joy,game_mode,main_routine,room,map_x,map_y,scroll_x,scroll_y,door_entry,door_delay,samus_xy,samus_status,load_phase,door_data,door_scroll_status'
+
+  # 正样本：f1 无门、f2 触发门、f3 房间换到 24（MapPos 6/14）
+  {
+    echo "$hdr"
+    echo '1,0,0,2,255,5,14,0,0,0,0,080/0B0,0,32,0,0'
+    echo '2,0,0,2,255,5,14,0,0,129,18,0DC/0C1,32,32,2,0'
+    echo '3,0,0,2,24,6,14,0,0,1,0,0DC/0C1,0,32,2,1'
+  } > "$T/pos.csv"
+  # 负样本：门从未触发
+  {
+    echo "$hdr"
+    echo '1,0,0,2,255,5,14,0,0,0,0,080/0B0,0,32,0,0'
+    echo '2,0,0,2,255,5,14,0,0,0,0,0DC/0C1,32,32,0,0'
+  } > "$T/neg.csv"
+  # 截断样本：触发了门，但 90 帧内房间没换
+  {
+    echo "$hdr"
+    echo '1,0,0,2,255,5,14,0,0,129,18,0DC/0C1,32,32,2,0'
+    echo '2,0,0,2,255,5,14,0,0,1,0,0DC/0C1,0,32,2,1'
+  } > "$T/cut.csv"
+
+  # 两个 PPM：正常画面（主体铺 128 灰）与全黑
+  printf 'P6\n256 240\n255\n' > "$T/lit.ppm"
+  head -c $((256 * 240 * 3)) /dev/zero | tr '\0' '\200' >> "$T/lit.ppm"
+  printf 'P6\n256 240\n255\n' > "$T/black.ppm"
+  head -c $((256 * 240 * 3)) /dev/zero >> "$T/black.ppm"
+
+  fail=0
+  check() {  # check 名称 期望码 csv [ppm]
+    local name="$1" want="$2" csv="$3" ppm="${4:-}"
+    python3 "$JUDGE" "$T/$csv" ${ppm:+"$T/$ppm"} > "$T/out.txt" 2>&1
+    local got=$?
+    local line
+    line="$(grep -E '^\[' "$T/out.txt" | tail -1)"
+    if [ "$got" = "$want" ]; then
+      printf '  [ok]   %-22s rc=%s %s\n' "$name" "$got" "$line"
+    else
+      printf '  [FAIL] %-22s 期望 rc=%s 实得 rc=%s >>> %s\n' "$name" "$want" "$got" "$(tail -1 "$T/out.txt")"
+      fail=1
+    fi
+  }
+
+  echo "[自检] 判定器四态（合成样本，不跑游戏）"
+  check PASS 0 pos.csv lit.ppm
+  check NO_DOOR_TRIGGER 3 neg.csv
+  check NO_SWITCH 4 cut.csv
+  check BLACK_SCREEN 5 pos.csv black.ppm
+  if [ "$fail" = 0 ]; then
+    echo "[SELFTEST:PASS] 四态判定与退出码均符合预期"
+    exit 0
+  fi
+  echo "[SELFTEST:FAIL] 判定器与预期不符（见上）"
+  exit 1
+fi
 
 case "$STAGE" in
   1)
@@ -58,7 +124,7 @@ CSV="$OUT_DIR/state.csv"
 SHOTS="${DOOR_SHOTS:-$OUT_DIR/shots}"
 printf '%s\n' "$INPUT" > "$SCRIPT"
 
-cd "$(dirname "$0")/.." || exit 2
+cd "$HERE/.." || exit 2
 CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-target}" \
   cargo run -q -p game-shell-pc --bin game-shell-pc -- \
     --headless --script "$SCRIPT" --frames "$FRAMES" \
@@ -78,84 +144,5 @@ fi
 echo "[冒烟] 阶段 $STAGE：$DOOR_NAME"
 echo "[产物] csv=$CSV shots=$SHOTS"
 
-# 判定：全部逻辑放在一处（python），bash 只负责跑与透传退出码。
 last_shot="$(ls "$SHOTS"/*.ppm 2>/dev/null | tail -1)"
-python3 - "$CSV" "${last_shot:-}" <<'PY'
-import csv, sys
-
-SENTINEL = {255, 241, 243}      # 转场哨兵房间号，不算「新房间」
-WINDOW = 90                     # 门事件后允许多少帧完成换房
-MIN_NONBLACK = 0.05             # 主体区非黑像素占比下限（正常帧实测 0.155–0.169）
-TOP, BOTTOM = 32, 232           # 跳过顶部 HUD 带，只看画面主体
-
-csv_path, shot = sys.argv[1], sys.argv[2]
-
-def num(row, key):
-    try:
-        return int(str(row.get(key, '0')).strip(), 0)
-    except ValueError:
-        return 0
-
-rows = list(csv.DictReader(open(csv_path, newline='')))
-if not rows:
-    print('[FAIL:EMPTY_CSV] 逐帧状态为空')
-    sys.exit(1)
-
-trigger = next((i for i, r in enumerate(rows) if num(r, 'door_entry') != 0), None)
-door_data_max = max(num(r, 'door_data') for r in rows)
-
-if trigger is None:
-    print(f"[FAIL:NO_DOOR_TRIGGER] {len(rows)} 帧内 door_entry($56) 恒 0、"
-          f"door_data($58) 峰值={door_data_max} ⇒ Samus 从未踩到门格")
-    sys.exit(3)
-
-trig = rows[trigger]
-before = (num(trig, 'room'), num(trig, 'map_x'), num(trig, 'map_y'))
-print(f"[触发] f={num(trig, 'frame')} $56={num(trig, 'door_entry')} "
-      f"旧房间={before[0]} MapPos={before[1]}/{before[2]}")
-
-switch = None
-for r in rows[trigger:trigger + WINDOW]:
-    cur = (num(r, 'room'), num(r, 'map_x'), num(r, 'map_y'))
-    if cur == before:
-        continue
-    if cur[0] in SENTINEL and cur[1:] == before[1:]:
-        continue   # 装载中的哨兵号，不是新房间
-    switch = (num(r, 'frame'), cur)
-    break
-
-if switch is None:
-    print(f"[FAIL:NO_SWITCH] 门事件已触发，但 {WINDOW} 帧内 RoomNumber/MapPos 未变 "
-          f"⇒ 滚屏或 SetupRoom 断链")
-    sys.exit(4)
-
-frame, (room, mx, my) = switch
-print(f"[换房] f={frame} 新房间={room} MapPos={mx}/{my}")
-
-if not shot:
-    print('[FAIL:NO_SHOT] 没找到换房后的截图，无法判「新房间可渲染」')
-    sys.exit(5)
-
-data = open(shot, 'rb').read()
-body = data.split(b'\n', 3)[3]
-W = 256
-total = nonblack = 0
-seen = set()
-for y in range(TOP, BOTTOM):
-    base = y * W * 3
-    for x in range(W):
-        i = base + x * 3
-        px = (body[i], body[i + 1], body[i + 2])
-        total += 1
-        if px != (0, 0, 0):
-            nonblack += 1
-        seen.add(px)
-ratio = nonblack / total
-print(f"[渲染] {shot} 主体区非黑占比={ratio:.4f} 颜色数={len(seen)}")
-if ratio < MIN_NONBLACK:
-    print(f"[FAIL:BLACK_SCREEN] 换房后首帧主体区非黑像素 <{MIN_NONBLACK:.0%} ⇒ 黑屏/未画房")
-    sys.exit(5)
-
-print('[PASS] 走进门 → 触发门 → 换房 → 新房间可渲染')
-sys.exit(0)
-PY
+python3 "$JUDGE" "$CSV" "${last_shot:-}"

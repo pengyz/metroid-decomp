@@ -38,6 +38,25 @@ rc=3
 一道门对象，它在屏幕 y=80..127 的中高台、门台顶约 y=128，Samus 站立脚底约 y=193、跳峰 26px，
 纯键盘到不了。可进入性归 #104。
 
+## 判定器自检（不跑游戏）
+
+判定规则抽在 `tools/playable_door_judge.py`，脚本自带合成样本自检：
+
+```bash
+tools/playable_door_smoke.sh --self-test     # rc=0 ⇒ 四态判定与退出码都符合预期
+```
+
+```
+[自检] 判定器四态（合成样本，不跑游戏）
+  [ok]   PASS                   rc=0 [PASS] 走进门 → 触发门 → 换房 → 新房间可渲染
+  [ok]   NO_DOOR_TRIGGER        rc=3 [FAIL:NO_DOOR_TRIGGER] …
+  [ok]   NO_SWITCH              rc=4 [FAIL:NO_SWITCH] …
+  [ok]   BLACK_SCREEN           rc=5 [FAIL:BLACK_SCREEN] …
+[SELFTEST:PASS] 四态判定与退出码均符合预期
+```
+
+这样即使门链路还没通（阶段 1 现在就是红的），判定器本身也随时可验，不会悄悄退化成「永远 PASS」。
+
 ## 怎么验「判据本身是好的」
 
 用 #102 的 poke 版正样本（`--poke 1500:0x58=2`，等价「Samus 已踩在门格上」）跑同一个判定器，
