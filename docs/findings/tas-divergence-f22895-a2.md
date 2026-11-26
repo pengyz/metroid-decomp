@@ -135,6 +135,8 @@ PY
    `f4017 TR=16 FC=151` → `f4019 TR=1C FC=152`（`$00FE`=06 熄屏）→ f4020–4023 无采样（阻塞 4 帧）→ `f4024 TR=19 FC=153`（`$00FE`=1E）；第二段 `f4181 TR=19 FC=54` → f4182–4186 阻塞 → `f4187 TR=1A FC=55`。
    ⇒ **整个 GameOver（0x1C）通过只推进 1 次迭代**（跨 5 帧）。
 2. **asm**：`GameOver ; 00:939E`（`refs/m1disasm/SRC/prg0_title.asm:2861-2876`）= `jsr ClearAll` → `PreparePPUProcess_` → `InitPasswordFontGFX` → `NMIOn` → `Timer3←$10` → `jmp ScreenOn`。其中 `ClearAll ; 00:909F`（`:2320`）含 ScreenOff 的 `WriteAndWait→WaitNMIPass_ ;07:C43F` 与 `jsr WaitNMIPass`（2 次等待），`ScreenOn ; 07:C447` = `PPUMASK|=0x1E` 后 `WriteAndWait`（1 次等待），`InitPasswordFontGFX ; 07:C6D6` 内两次 `CopyGFXBlock ; 07:C7D5` 只写 `$2007` 不等 NMI。这些等待**都在同一次 MainLoop 迭代内**，末尾 `inc FrameCount`（`prg7_engine.asm:207`，位于分发之前）**只发生一次**。
+   > **【2026-11-26 更正（白砚复核，A 级）】上句「位于分发之前」写反了。**实测 `awk 'NR>=196&&NR<=214' refs/m1disasm/SRC/prg7_engine.asm`：`MainLoop: ; 07:C0BC` → `:203 jsr CheckBankSwitch` → `:204 jsr UpdateTimer` → **`:205 jsr GoMainRoutine`** → **`:207 inc FrameCount`** → `:209-214 lda #$00 / sta NMIStatus / @loop_waitNMIEnd` 自旋等 NMI；`grep -rn "inc FrameCount" refs/m1disasm/SRC/*.asm` 全仓仅 `prg7_engine.asm:207` 一处。
+   > ⇒ ROM 的一次迭代 = **例程体（可内含多次 NMI 等待）→ inc FC → 等下一次 NMI**；即 inc 在例程体**之后**，不在之前。"链内读到已自增的 FC"这一句因此作废。
 3. **Rust 侧**：`crates/game-core/src/frame/tick.rs::main_loop_iter` 每拍尾声 `if !mem.title_no_return && !mem.fc_inced_this_tick { FC += 1 }`，而多段 title 链被拆成多拍 ⇒ GameOver 一次通过多推 4、随后再 +5（累计 +9）；下游 `UpdateEn_UpdateEnData05Bit6 ;07:F3AA`（`prg7_engine.asm:10729`）按 `(slot xor FrameCount)&1` 写 `$0405` bit6 ⇒ f22895 六槽整组反相（8 字节）。
 
 ### 7.2 五种修法实测（全部本机实跑；判据=FC 漂移 + `run-all` + password 案）
@@ -153,8 +155,10 @@ PY
 ### 7.3 两案互斥的证据（为什么本轮不能落 v3）
 - v3 让 FC 漂移全归零、`replay --frames 4300` 分歧 **0/4300**、`replay --frames 24000` 首分歧从 `$0405`（8 字节）后移到 `$0445`（4 字节：`$0445`/`$0455` bit1、`$0459`/`$045a`）——即「FC 相位」这条根因确已消除。
 - 但 `run-all` 由 171/172 退到 **169/172**：`case-password-justin` 的 `f950 mid-3` **71 px**、`f1150 pw-done` **94 px**（`--fresh-emu` 连跑两次稳定，非缓存）。
-- 这两帧的 FC 与 emu **相等**（f950 都是 160、f1150 都是 104）⇒ 不是「FC 又错」，而是 v3 让 FC 在**链内那几拍暂时低 1**：ROM 的 `inc FC` 在分发之前（迭代起始），链内各段读到的是**已自增**的值；v3 把这次自增留在链头拍尾，链内各段读到的是旧值。密码屏的闪烁/光标把当时读到的 FC 落进自身状态，事后 FC 对齐也回不来。
-- v6（把 inc 整体挪到迭代起始，最贴近 asm）反而把**另两格**打掉（f700/f1100），与既有 `main_loop_iter` 尾部注释记的「轮26 形重试被 L4 证伪」一致 ⇒ 不能靠单点移动时机解决，需要「链内 FC 相位」与「span 收口」一起重构。
+- 这两帧的 FC 与 emu **相等**（f950 都是 160、f1150 都是 104）⇒ 不是「FC 又错」。
+- > **【2026-11-26 更正（白砚复核，A 级）】本段原把差因归为「ROM 的 inc 在分发之前、链内读已自增、v3 让链内读旧值」——该归因建立在写反的调用序上，作废。**按更正后的顺序（例程体 → inc → 等 NMI），v3「链内各段读旧值、链尾 inc 一次」才是与 ROM 同相的读法，故 v3 在 f950/f1150 引发 71/94 px 的**真实原因尚未查明**（假设待验区 A-2-a）。
+- 待验假设 A-2-a（可证伪）：v3 让链在 `cursor` 回 0（而非 0xFF 哨兵）时结束的那条路径**丢了那一次 inc**，于是链后第一拍的 FC 比 emu 低 1，而密码屏的闪烁/光标在这一拍采样就锁进自身状态（事后 FC 对齐也回不来）；验证命令=在 v3 上打印走到密码屏两次采样前一拍的 `FC` 与 `title_cursor`，与 emu `analysis/probe-pwd-dark` 同帧 `$002d` 比。
+- v6（把 inc 整体挪到迭代起始）反而把**另两格**打掉（f700/f1100），与既有 `main_loop_iter` 尾部注释记的「轮26 形重试被 L4 证伪」一致（> 【2026-11-26 更正】原文此处还写着「最贴近 asm」，按 §7.1 更正后的调用序，v6 把 inc 挪到迭代起始**恰恰是与 asm 相反**的动作；该措辞作废。） ⇒ 不能靠单点移动时机解决，需要「链内 FC 相位」与「span 收口」一起重构。
 
 ### 7.4 结论与后继判据
 - **首因已定谳**（不是 `$0405` 的写点问题，是 FC 增量时机与多段链的映射问题），**本轮不改码**（v3 会把 password 案打回 169/172，属「修好 A 必打穿 B」）。
@@ -186,3 +190,12 @@ PY
 python3 tools/l4_diff_run.py run cases/case-password-justin.txt --fresh-emu
 python3 tools/l4_diff_run.py run-all
 ```
+
+### 7.5 复核退回后的状态（2026-11-26，白砚 seq3 退回）
+
+| 退回项 | 我的处置 |
+|---|---|
+| ② 未达成 + 卡面无「否证交付」条款（零代码改动、基线首分歧仍是 f22895 `$0400`） | 未自行改口径；已请 PMO 在 thread 裁 Ⅰ（继续修）／Ⅱ（改 ② 口径或拆 findings 卡） |
+| A 级调用序写反（`inc FrameCount` 在 `:205 jsr GoMainRoutine` 之后、`:207`） | 已按 AGENTS §3.6 在 §7.1/§7.3 原文原地加日期更正（原文保留），并把基于该反向事实的两处归因（「链内读已自增」「v6 最贴近 asm」）标作废，新假设 A-2-a 给可证伪命令 |
+
+**对后续修法的影响（重要）**：既然 ROM 的 inc 在例程体之后，那么「多段链」的正确映射是**每拍不 inc、链结束的那一拍 inc 一次**（v3 的方向），而不是「链首前置自增」（我 seq4 提的 span 化方案里那句「FC 在 span 首 tick 前置一次」按此更正为：**span 首 tick 不自增，span 收口 tick 自增一次**）。下一步按 A-2-a 先测「链尾是否真的有那一次 inc」再决定改哪里。
