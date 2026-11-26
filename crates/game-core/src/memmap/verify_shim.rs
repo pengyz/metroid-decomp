@@ -547,19 +547,26 @@ mod tests {
     }
 
     #[test]
-    fn probe_sees_samus_untyped_fallback() {
-        // $0106/$0107 是 SamusState 的 Unmodeled 段（血量低字节），不经 typed 域，
-        // 必须由 `Samus::get/set` 回退处的探针记到——否则动态腿会漏掉它。
+    fn probe_sees_vitals_byte_access_only_on_compat_path() {
+        // B1 后 `$0106/$0107` 由 `SamusVitals` typed 认领（不再走 `Samus::get/set` 的
+        // 字节面回退），但**兼容辖** `read_ram/write_ram` 仍必须被探针记录——否则动态腿
+        // 会漏掉「还有谁在用裸面子读写血量」这条缺口线索。
         let mut engine = FrameEngine::new();
         engine.tick_frame();
+        arm();
+        let _ = engine.mem.read_ram(0x0106);
+        engine.mem.write_ram(0x0106, 0x21);
+        let snap = disarm();
+        assert_eq!(snap.bits_ram(0x0106), 3, "$0106 兼容辖读写仍被记录");
+        // 域内写径不走字节面（权威在 typed），因此不产生探针记录——这条差异是 B1 的
+        // 直接副作用，写在这里防止后人以为探针漏记。
         arm();
         {
             let mut s = engine.mem.samus();
             s.set_health(0x0121);
             assert_eq!(s.health(), 0x0121);
         }
-        let snap = disarm();
-        assert_eq!(snap.bits_ram(0x0106), 3, "$0106 应被读+写");
+        assert_eq!(disarm().bits_ram(0x0106), 0, "域内写径不经字节面");
     }
 
     #[test]

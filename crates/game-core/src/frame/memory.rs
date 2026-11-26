@@ -315,6 +315,9 @@ impl TypedRestoreManifest {
             .iter()
             .copied()
             .chain(crate::samus::health_change::HealthChange::ADDRS)
+            // 血量两字节（`$0106/$0107`）：B1 起由 `SamusVitals` typed 认领，
+            // MSS 回灌/清零必须一并覆盖（漏了它 = 存档丢血）。
+            .chain(crate::memmap::samus_vitals_face::SamusVitals::ADDRS)
             .chain(crate::sound::state::SoundInitFlags::ADDRS)
             .chain(crate::world::object_globals::ObjectGlobals::ADDRS)
             .chain(crate::world::scroll_blocks::ScrollBlocks::ADDRS)
@@ -371,6 +374,12 @@ impl Manager {
             assert!(
                 mem.health_change.set_byte(a, ram[a as usize & 0x7FF]),
                 "`HealthChange` 地址必须在 typed 域内"
+            );
+        }
+        for a in crate::memmap::samus_vitals_face::SamusVitals::ADDRS {
+            assert!(
+                mem.samus.vitals.set_byte(a, ram[a as usize & 0x7FF]),
+                "`SamusVitals` 地址必须在 typed 域内"
             );
         }
         for a in crate::world::scroll_blocks::ScrollBlocks::ADDRS {

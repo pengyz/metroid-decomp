@@ -55,12 +55,21 @@ mod tests {
 
     #[test]
     fn snapshot_nes_is_a_projection_not_a_second_truth() {
+        // B1 后血量两字节**权威在 typed 域**（`SamusVitals`）：写域 → 投影出字节；
+        // 反向（直接改字节面）不再回写域——这条正是「投影不是第二真相源」的双向证据。
         let mut m = Manager::default();
-        m.ram_mut()[0x0106] = 0x20;
-        m.ram_mut()[0x0107] = 0x01;
-        assert_eq!(m.samus().health(), 0x0120, "域视图读的是同一份存储");
+        m.samus().set_health(0x0120);
         let img = m.snapshot_nes();
-        assert_eq!((img.ram[0x0106], img.ram[0x0107]), (0x20, 0x01));
+        assert_eq!((img.ram[0x0106], img.ram[0x0107]), (0x20, 0x01), "域 → 字节投影");
+        assert_eq!(m.samus().health(), 0x0120, "域视图回读自己的值");
+        m.ram_mut()[0x0106] = 0x99;
+        m.ram_mut()[0x0107] = 0x02;
+        assert_eq!(
+            m.samus().health(),
+            0x0120,
+            "字节面直写不回写域（typed 才是权威，B1）"
+        );
+        assert_eq!(m.snapshot_nes().ram[0x0106], 0x20, "下次投影覆盖字节面直写");
     }
 
     #[test]

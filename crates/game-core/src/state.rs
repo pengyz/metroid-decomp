@@ -61,6 +61,12 @@ impl Manager {
                 img.ram[a as usize & 0x7FF] = v;
             }
         }
+        // 血量 face（`$0106/$0107`）typed 域投影——B1 权威翻转（`SamusVitals`）。
+        for a in crate::memmap::samus_vitals_face::SamusVitals::ADDRS {
+            if let Some(v) = self.samus.vitals.get_byte(a) {
+                img.ram[a as usize & 0x7FF] = v;
+            }
+        }
         // 声引擎 init 旗（`$0683/$0684`）typed 域投影。
         for a in crate::sound::state::SoundInitFlags::ADDRS {
             if let Some(v) = self.sound_init.get_byte(a) {

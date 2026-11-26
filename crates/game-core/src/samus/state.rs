@@ -208,6 +208,13 @@ pub struct SamusState {
     sub: SubPixel,
     /// `SamusHorizontalSpeedMax`（`$0316`）——跑速上限（0x18=1.5px/帧）。
     horz_speed_max: u8,
+    /// 血量两字节（`$0106` 低 / `$0107` 高）的 typed 真源——B1 权威翻转。
+    ///
+    /// 【为什么是独立 face 而不是第 24/25 个 typed 字节】`$0106/$0107` 与 `$0300-$0316`
+    /// 不连续，而 [`Self::TYPED_LEN`] 被 `world/object.rs:249` 当作对象池 slot0 的 `View`
+    /// 段长度（必须仍是 23）⇒ 血量按「同域第二个 face」收（`SamusVitals`），
+    /// 与本文件 `TYPED_ADDRS` 的连续性契约互不干扰。
+    pub vitals: crate::memmap::samus_vitals_face::SamusVitals,
     /// 本拍是否被载房窗吞掉（`CheckUpdateNameTable ; 07:E54A` 首件 `jsr SetupRoom`
     /// 跑过帧边界——asm 的像素写点 `07:E65E`/`07:E692` 在 `jsr ScrollLeft` **之后**，
     /// 必然落在装载窗结束那一帧）。**非 RAM 字段**：纯行为相位记账。
@@ -237,6 +244,7 @@ impl Default for SamusState {
             jump_disp: 0,
             sub: SubPixel::default(),
             horz_speed_max: 0,
+            vitals: crate::memmap::samus_vitals_face::SamusVitals::default(),
             load_consumed_frame: false,
             deferred_horz_px: 0,
         }
@@ -294,6 +302,8 @@ impl SamusState {
             SAMUS_SPEED_SUBPIXEL_Y => self.sub.speed_y,
             SAMUS_SPEED_SUBPIXEL_X => self.sub.speed_x,
             HORZ_SPEED_MAX => self.horz_speed_max,
+            // 血量两字节（`$0106/$0107`）：typed 真源在 `self.vitals`（B1 权威翻转）。
+            HEALTH_LO | HEALTH_HI => return self.vitals.get_byte(addr),
             _ => return None,
         })
     }
@@ -323,6 +333,8 @@ impl SamusState {
             SAMUS_SPEED_SUBPIXEL_Y => self.sub.speed_y = v,
             SAMUS_SPEED_SUBPIXEL_X => self.sub.speed_x = v,
             HORZ_SPEED_MAX => self.horz_speed_max = v,
+            // 血量两字节：写径同样落 typed 真源（`read_ram/write_ram` 经本表分派）。
+            HEALTH_LO | HEALTH_HI => return self.vitals.set_byte(addr, v),
             _ => return false,
         }
         true
@@ -676,25 +688,24 @@ impl<'a> Samus<'a> {
     /// 血量（`$0106` 低 + `$0107` 高）——`SamusHurt ; 07:F306` 的 `lda/sta` 两字节接力
     /// 就封在这里。
     pub fn health(&self) -> u16 {
-        u16::from(self.get(HEALTH_LO)) | (u16::from(self.get(HEALTH_HI)) << 8)
+        self.mem.samus.vitals.health()
     }
 
     pub fn set_health(&mut self, v: u16) {
-        self.set(HEALTH_LO, (v & 0x00FF) as u8);
-        self.set(HEALTH_HI, (v >> 8) as u8);
+        self.mem.samus.vitals.set_health(v);
     }
 }
-
-/// Samus 血量两字节未 typed 的缺口说明（`SPANS` 里唯一一条非 `Owner`）。
-const TODO: &str = "血量两字节未 typed：health()/set_health() 仍走字节面（$0106 低 / $0107 高；crates/game-core/src/samus/state.rs:678）";
 
 impl crate::memmap::nesmap::NesMapped for SamusState {
     /// 判别字段：`status`（`$0300`，`sa_*` 十态）——同址按状态重解释时的判别源
     /// （P3 的判别感知腿用；P2 只登记，不参与 `coverage` 计位）。
     const DISCRIMINATOR: Option<u16> = Some(SAMUS_STATUS);
 
-    /// **23 条逐字节 `Owner` 声明**（`$0300-$0316`，按地址升序）：typed 面每字节恰一个 owner；
-    /// 末尾 2 条是 `Unmodeled` 的血量两字节（`$0106-$0107`，仍在字节面）——共 25 条。
+    /// **23 条逐字节 `Owner` 声明**（`$0300-$0316`，按地址升序）：typed 面每字节恰一个 owner。
+    ///
+    /// 【B1 变更】血量两字节（`$0106/$0107`）不再以 `Unmodeled` 挂在本表末尾——它们已由
+    /// `memmap::samus_vitals_face::SamusVitals`（独立 face，2 B `Owner`）认领，本表回归
+    /// 「与 `TYPED_ADDRS` 逐地址相等」的单一契约（`nesmap.rs` 有断言守）。
     ///
     /// 手写而非循环生成——循环会让声明退化成 [`Self::TYPED_ADDRS`] 的回声，覆盖度核算
     /// 就变成自证（`docs/spec/entity-ownership-and-nesmap.md` §6 防自证）。地址取既有常量：
@@ -723,8 +734,6 @@ impl crate::memmap::nesmap::NesMapped for SamusState {
         (NesSpan::value(SAMUS_ACCEL_Y, 1), SpanKey::Owner),
         (NesSpan::value(SAMUS_ACCEL_X, 1), SpanKey::Owner),
         (NesSpan::value(HORZ_SPEED_MAX, 1), SpanKey::Owner),
-        // 血量两字节（`$0106` 低 / `$0107` 高）：**未 typed**——`health()` 走 `get()` 的字节面回退。
-        (NesSpan::value(HEALTH_LO, 2), SpanKey::Unmodeled(TODO)),
     ];
 
     /// 逐字节取 `get_byte`（typed 真相）写进 RAM 面——与 `snapshot_nes()` 同源同值。
@@ -744,6 +753,34 @@ impl crate::memmap::nesmap::NesMapped for SamusState {
 
 #[cfg(test)]
 mod tests {
+
+    /// **B1 权威翻转**：血量两字节（`$0106/$0107`）的真相在 `SamusVitals`，
+    /// 但三条路必须一致——域写→字节面读、字节面（兼容辖 `write_ram`）写→域读、投影落盘。
+    /// 三例边界：满血 299 / 1 点 / 受伤后 246（都是合法 BCD）。
+    #[test]
+    fn vitals_authority_round_trips_through_all_three_paths() {
+        for health in [0x0299u16, 0x0001, 0x0246] {
+            let mut m = crate::state::Manager::default();
+            // ① 域写 → 字节面读（`read_ram` 经 typed 分派回到 `SamusVitals`）
+            m.samus().set_health(health);
+            assert_eq!(m.samus().health(), health, "域内回读");
+            assert_eq!(
+                u16::from(m.read_ram(HEALTH_LO)) | (u16::from(m.read_ram(HEALTH_HI)) << 8),
+                health,
+                "域 → 字节面（低字节 $0106）"
+            );
+            // ② 字节面写（兼容辖 `write_ram`）→ 域读
+            m.write_ram(HEALTH_LO, (health & 0xFF) as u8);
+            m.write_ram(HEALTH_HI, (health >> 8) as u8);
+            assert_eq!(m.samus().health(), health, "字节面 → 域（同值往返）");
+            // ③ 投影口可调且不改域值（字节级「低字节在前」由 face 自己的
+            // `project_writes_exactly_the_two_vital_bytes` 断言——业务层不按地址索引内存面）
+            let img = m.snapshot_nes();
+            assert_eq!(img.ram.len(), 0x800, "投影面尺寸不变");
+            assert_eq!(m.samus().health(), health, "投影是只读投影，不改域值");
+        }
+    }
+
     use super::*;
     use crate::frame::Manager;
 
@@ -944,8 +981,13 @@ mod tests {
     fn health_spans_two_bytes() {
         let mut mem = m();
         mem.samus().set_health(0x0120);
-        assert_eq!(mem.ram()[0x0106], 0x20);
-        assert_eq!(mem.ram()[0x0107], 0x01);
+        // B1 后血量两字节的真相在 `SamusVitals`：**字节面（storage）不再持有**，
+        // 只能经兼容辖 `read_ram` 或投影 `snapshot_nes()` 看到。
+        assert_eq!(mem.read_ram(HEALTH_LO), 0x20, "低字节 $0106");
+        assert_eq!(mem.read_ram(HEALTH_HI), 0x01, "高字节 $0107");
+        assert_eq!(mem.ram()[HEALTH_LO as usize], 0, "storage 不持有 typed 字节");
+        let img = mem.snapshot_nes();
+        assert_eq!(img.ram.len(), 0x800, "投影面尺寸不变");
         assert_eq!(mem.samus().health(), 0x0120);
     }
 

@@ -254,10 +254,11 @@ pub fn spec_face() -> [NesSpan; 2] {
 ///
 /// `dump_json`（静态腿/门禁）与动态腿（`verify_shim`）共用本表：新增实体只改这里，
 /// 避免两份类型清单漂移导致动态证据覆盖不到新声明。
-pub fn entity_spans() -> [(&'static str, &'static [(NesSpan, SpanKey)]); 17] {
+pub fn entity_spans() -> [(&'static str, &'static [(NesSpan, SpanKey)]); 18] {
     [
         ("SamusState", crate::samus::state::SamusState::SPANS),
         ("HealthChange", crate::samus::health_change::HealthChange::SPANS),
+        ("SamusVitals", crate::memmap::samus_vitals_face::SamusVitals::SPANS),
         ("SoundInitFlags", crate::sound::state::SoundInitFlags::SPANS),
         ("OamShadow", crate::render::oam_shadow::OamShadow::SPANS),
         ("ObjectGlobals", crate::world::object_globals::ObjectGlobals::SPANS),
@@ -445,7 +446,7 @@ mod tests {
         // 713 + 256 = 969（RAM 面），额外面 84 不变。
         // B1-c：对象槽面 256 B + 声引擎面 140 B（两段，$0683/$0684 归 SoundInitFlags）
         // 升格为 Owner ⇒ 713 + 256 + 140 = 1109；额外面 84 不变。
-        assert!(json.contains("\"coverage\":[1264,84]"), "owner 字节数锚点");
+        assert!(json.contains("\"coverage\":[1266,84]"), "owner 字节数锚点（1264+血量 2 B）");
     }
 
     /// 每条 Unmodeled 说明都必须带可 grep 的代码指针（`*.rs`），否则
@@ -548,31 +549,27 @@ mod tests {
         for (span, key) in SamusState::SPANS {
             match key {
                 SpanKey::Owner => declared.extend(span.addrs()),
-                SpanKey::Unmodeled(_) => {
-                    assert_eq!(
-                        span.start,
-                        crate::samus::state::HEALTH_LO,
-                        "唯一未 typed 段=血量"
-                    );
-                    assert_eq!(span.len, 2, "血量两字节（低/高）");
-                }
-                other => panic!("Samus 声明里不该出现 {other:?}（只有 Owner + 血量 Unmodeled）"),
+                // B1 后本表**不再有** `Unmodeled`：血量两字节已由 `SamusVitals` 认领。
+                other => panic!("Samus 声明里不该出现 {other:?}（B1 后应全为 Owner）"),
             }
         }
-        // 漏一格的直接证据（先点名再对数）：typed 面内出现"没人声明"的字节。
+        // 漏一格的直接证据（先点名再对数）：Samus **全域**（`$0300` 段 + 血量两字节）
+        // 不得有"没人声明"的字节。B1 起血量由独立 face 认领，故这里按两 face 的**并集**核。
         let face = [
             NesSpan::value(SAMUS_STATUS, SamusState::TYPED_LEN),
             NesSpan::value(crate::samus::state::HEALTH_LO, 2),
         ];
+        let mut union: Vec<(NesSpan, SpanKey)> = SamusState::SPANS.to_vec();
+        union.extend_from_slice(crate::memmap::samus_vitals_face::SamusVitals::SPANS);
         assert!(
-            gaps(SamusState::SPANS, &face).is_empty(),
+            gaps(&union, &face).is_empty(),
             "Samus 全域有声明空洞：{:?}",
-            gaps(SamusState::SPANS, &face)
+            gaps(&union, &face)
         );
         assert_eq!(
-            unowned_bytes(SamusState::SPANS, &face),
-            [2, 0],
-            "Samus 全域只有血量两字节未 typed"
+            unowned_bytes(&union, &face),
+            [0, 0],
+            "B1 后 Samus 全域无未 typed 字节（血量两字节已由 SamusVitals 认领）"
         );
         assert_eq!(
             declared.len(),

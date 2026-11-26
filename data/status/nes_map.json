@@ -12,7 +12,7 @@
   ],
   "face_total": 2272,
   "owner_bytes": [
-    1264,
+    1266,
     84
   ],
   "owner_spans": [
@@ -42,6 +42,10 @@
     },
     {
       "start": 110,
+      "len": 2
+    },
+    {
+      "start": 262,
       "len": 2
     },
     {
@@ -427,7 +431,7 @@
   ],
   "view_bytes": 23,
   "view_only_bytes": 0,
-  "unmodeled_total": 387,
+  "unmodeled_total": 385,
   "unmodeled": [
     {
       "start": 51,
@@ -507,14 +511,6 @@
       "kind": "unmodeled",
       "refs": [
         "crates/game-core/src/world/camera/mod.rs:96"
-      ]
-    },
-    {
-      "start": 262,
-      "len": 2,
-      "kind": "unmodeled",
-      "refs": [
-        "crates/game-core/src/samus/state.rs:678"
       ]
     },
     {
@@ -898,6 +894,17 @@
       "undeclared_total": 537,
       "state_sha256": "7543f9360fb632a31b8eb0188aa4678e941deb8edadeea21d73a22bb258f62bf",
       "prev_sha256": "4071869dc1f88df54db7bde8825fb97659c5377fa6bd12e22035d2d2f82b33b7"
+    },
+    {
+      "ts": "2026-11-26T10:14:45+08:00",
+      "reason": "B1 血量两字节由 SamusVitals typed 认领（#77）",
+      "owner_total": 1350,
+      "view_bytes": 23,
+      "view_only_bytes": 0,
+      "unmodeled_total": 385,
+      "undeclared_total": 537,
+      "state_sha256": "34913092d25f43199f18208fc4946bc82fd6b0989f1ce74dcc6736f43ccd7876",
+      "prev_sha256": "dd85e55239d2ab1841e3652aba2464ce71db9c1cf0b236c8089dcd93e417348d"
     }
   ]
 }
