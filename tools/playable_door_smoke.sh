@@ -28,6 +28,7 @@ JUDGE="$HERE/playable_door_judge.py"
 STAGE=1
 SELFTEST=0
 INVALID_ROOM=0
+CHECK_AREA=0
 SCRIPT_OVERRIDE=""
 FRAMES_OVERRIDE=""
 SHOT_FRAMES_OVERRIDE=""
@@ -39,6 +40,7 @@ while [ $# -gt 0 ]; do
     --shot-frames) SHOT_FRAMES_OVERRIDE="${2:-}"; shift 2 ;;
     --self-test) SELFTEST=1; shift ;;
     --check-invalid-room) INVALID_ROOM=1; shift ;;
+    --check-area) CHECK_AREA=1; shift ;;
     *) echo "未知参数：$1" >&2; exit 2 ;;
   esac
 done
@@ -114,6 +116,38 @@ if [ "$SELFTEST" = 1 ]; then
 fi
 
 START_ARGS=""
+# ── `--start-area` 生效性对照：同房号/同 MapPos，只改区号，门瓦与区表必须不同 ──
+# 只写 InArea 不够：AreaPointers_RAM($3B-$48) 在 boot 已按 Brinstar 拷好，载房/绘制读那张表；
+# 原版在区切换（电梯）时重拷，shell 复用同一支 copy_area_pointers。
+if [ "$CHECK_AREA" = 1 ]; then
+  T="$(mktemp -d)"
+  trap 'rm -rf "$T"' EXIT
+  printf '9-9 START\n18-18 START\n120-700 RIGHT\n' > "$T/in.txt"
+  cd "$HERE/.." || exit 2
+  for A in 0 2; do
+    CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-target}" \
+      cargo run -q -p game-shell-pc --bin game-shell-pc -- \
+        --headless --script "$T/in.txt" --frames 700 \
+        --start-area "$A" --start-room 0x06 --start-map 0x1D,0x06 --start-frame 120 \
+        --state-out "$T/a$A.csv" --wram-out "$T/a$A.wram" >"$T/a$A.log" 2>&1
+    rc=$?
+    [ "$rc" = 0 ] || { echo "[CHECK:FAIL] area$A 运行失败 rc=$rc"; tail -3 "$T/a$A.log"; exit 1; }
+  done
+  tiles0=$(awk -F, 'END{print $19}' "$T/a0.csv")
+  tiles2=$(awk -F, 'END{print $19}' "$T/a2.csv")
+  area0=$(awk -F, 'END{print $20}' "$T/a0.csv")
+  area2=$(awk -F, 'END{print $20}' "$T/a2.csv")
+  m0=$(md5sum "$T/a0.wram" | cut -d" " -f1)
+  m2=$(md5sum "$T/a2.wram" | cut -d" " -f1)
+  echo "[area] in_area=$area0/$area2 door_tiles=$tiles0/$tiles2 wram=$m0/$m2"
+  if [ "$area0" = 0 ] && [ "$area2" = 2 ] && [ "$tiles0" != "$tiles2" ] && [ "$m0" != "$m2" ]; then
+    echo "[CHECK:PASS] --start-area 0/2 同房不同区表（门瓦 $tiles0 vs $tiles2）"
+    exit 0
+  fi
+  echo "[CHECK:FAIL] --start-area 没产生区表差异"
+  exit 1
+fi
+
 # ── 负对照：非法房号必须被拒绝（rc=7），不许静默当 0xFF 空房号 ──────────────
 if [ "$INVALID_ROOM" = 1 ]; then
   T="$(mktemp -d)"

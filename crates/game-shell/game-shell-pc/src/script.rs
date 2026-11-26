@@ -243,7 +243,7 @@ fn state_row(driver: &CoreDriver, frame: u64, pad: PadState) -> String {
         r(game_core::ram_map::DOOR_DELAY),
         format_args!("{sx:03X}/{sy:03X}"),
     ) + &format!(
-        ",{},{},{},{},{},{},{}",
+        ",{},{},{},{},{},{},{},{}",
         r(game_core::ram_map::SAMUS_STATUS),
         m.room_load_phase,
         r(game_core::ram_map::SAMUS_DOOR_DATA),
@@ -251,6 +251,7 @@ fn state_row(driver: &CoreDriver, frame: u64, pad: PadState) -> String {
         door_slots(m),
         probe_tile(m),
         door_tiles(m),
+        r(game_core::ram_map::IN_AREA),
     )
 }
 
@@ -320,7 +321,7 @@ pub fn run_scripted(
     };
     writeln!(
         sink,
-        "frame,joy,game_mode,main_routine,room,map_x,map_y,scroll_x,scroll_y,door_entry,door_delay,samus_xy,samus_status,load_phase,door_data,door_scroll_status,door_slots,probe_tile,door_tiles"
+        "frame,joy,game_mode,main_routine,room,map_x,map_y,scroll_x,scroll_y,door_entry,door_delay,samus_xy,samus_status,load_phase,door_data,door_scroll_status,door_slots,probe_tile,door_tiles,in_area"
     )?;
     if shot_dir.is_some() {
         std::fs::create_dir_all(shot_dir.unwrap())?;
@@ -346,6 +347,10 @@ pub fn run_scripted(
                 if let Some(a) = s.area {
                     let cur = mem.read_ram(game_core::ram_map::IN_AREA);
                     mem.write_ram(game_core::ram_map::IN_AREA, with_area(cur, a));
+                    // 只改 InArea 不够：AreaPointers_RAM（$3B-$48）在 boot 时已按 Brinstar 拷好，
+                    // 载房/绘制读的是那张表。原版在区切换（电梯）时调 CopyAreaPointers 重拷，
+                    // 这里复用同一支已端口的函数，保持「换区 = 重拷区表」的语义。
+                    game_core::frame::tick::copy_area_pointers(mem);
                 }
                 if let Some(r) = s.room {
                     mem.write_ram(game_core::ram_map::ROOM_NUMBER, r);

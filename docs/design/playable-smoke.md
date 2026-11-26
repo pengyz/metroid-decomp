@@ -116,14 +116,31 @@ tools/playable_door_smoke.sh --check-invalid-room
 `InArea($0074)` 低 4 位改掉，再写 `RoomNumber`/`MapPos`；载房仍走引擎判据
 `room_load::is_new_load_request`（`crates/game-core/src/world/room_load.rs:228`），不改游戏逻辑。
 
-硬证据：同一 MapPos `(29,6)`、同一 `--start-room 0x06`，只改 `--start-area`：
+**只写 `InArea` 不够**：`AreaPointers_RAM($3B-$48)` 在 boot（`InitBank0`→`CopyAreaPointers 07:C8B0`）已按
+Brinstar 拷好，载房与绘制读的是那张表。原版在区切换（电梯，`crates/game-core/src/world/elevator.rs:319`）
+时重拷，所以 shell 写完 `InArea` 后调用同一支已端口函数
+`game_core::frame::tick::copy_area_pointers`，保持「换区 = 重拷区表」的语义（不改游戏逻辑）。
 
-| area | 结果（700 帧后） |
-|---|---|
-| 0（Brinstar） | `door_slots=0/0/0/0`、`door_tiles=0/0`（Brinstar Room06 没有门对象） |
-| 2（Kraid） | `door_slots=2/0/0/2`、`door_tiles=24/0`（Kraid Room06 的 24 个 `$A0` 门瓦） |
+复跑命令（`--check-area`，约 10s）：
 
-两次的 WRAM dump md5 不同（`d7dec42b…` vs `29dff04c…`），说明换的是整张区表，不是只改了一个字节。
+```
+CARGO_TARGET_DIR=/home/peng/workspace/wt-roll-target \
+  bash tools/playable_door_smoke.sh --check-area
+```
+
+同一 MapPos `(29,6)`、同一 `--start-room 0x06`、同一 700 帧脚本，只改 `--start-area`：
+
+| area | `in_area` 反读 | `door_slots` | `door_tiles` | WRAM dump md5 |
+|---|---|---|---|---|
+| 0（Brinstar） | 0 | `0/0/0/0` | `0/0`（Brinstar Room06 没有门对象） | `d7dec42bf033f52597b2775b2df6942d` |
+| 2（Kraid） | 2 | `2/0/0/2` | `24/0`（Kraid Room06 的 24 个 `$A0` 门瓦） | `29dff04cad2b6c4bb6f4216a07efdb0a` |
+
+两次截图（f650）也不同；CSV 末列 `in_area` 是**反读证明**（不是我们自己记的命令行参数）。
+`--check-area` 把这四条断言（反读区号、门瓦差异、WRAM 差异）固化成 rc=0/1 的检查。
+
+> 【2026-11-26 更正】上一版提交（`06b7b880`）时，`--start-area` 只写了 `InArea`、没有重拷区表；
+> 在那一版 HEAD 上跑同样的 area0/area2 对照会得到**逐字节相同**的结果（对影复现）。现在的读数
+> 来自补了 `copy_area_pointers` 的提交，并新增 `--check-area` 让这条证据可被一条命令复核。
 
 ## 判定器自检（不跑游戏）
 
