@@ -30,6 +30,8 @@ pub mod zero_page_face;
 pub mod room_sprite_table_face;
 /// B1-c 第二批：声引擎 RAM 面（`$0600-$068D`，音乐/SFX 常驻状态）的 typed 声明层。
 pub mod sound_ram_face;
+/// B1-c 第三批：wave beam 弹额外面（`$05D0-$05FF`，3 槽 × 16 B）的 typed 声明层（卡 #83）。
+pub mod wave_beam_face;
 /// B1-c：对象槽面（`$0400-$04FF`：Ens/EnProjectiles 12×16 + EnExplosions 4×8 + MotherBrain/MellowHandler 各 16）的 typed 声明层。
 pub mod object_slot_face;
 /// B1-b：PPU 写缓冲面（`$0780-$0786` + `$07A0-$07EF`：VRAM 字符串与 VRAMStruct 队列）的 typed 声明层。

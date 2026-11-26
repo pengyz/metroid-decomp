@@ -12,7 +12,7 @@
   ],
   "face_total": 2272,
   "owner_bytes": [
-    1317,
+    1365,
     84
   ],
   "owner_spans": [
@@ -270,6 +270,18 @@
     },
     {
       "start": 1472,
+      "len": 16
+    },
+    {
+      "start": 1488,
+      "len": 16
+    },
+    {
+      "start": 1504,
+      "len": 16
+    },
+    {
+      "start": 1520,
       "len": 16
     },
     {
@@ -630,7 +642,7 @@
       ]
     }
   ],
-  "undeclared_total": 486,
+  "undeclared_total": 438,
   "undeclared": [
     {
       "start": 52,
@@ -731,15 +743,6 @@
       "refs": [
         "ui/hud.rs:47",
         "frame/memory.rs:198"
-      ]
-    },
-    {
-      "start": 1488,
-      "len": 48,
-      "kind": "undeclared",
-      "refs": [
-        "asm:refs/m1disasm/out/M1_NES_NTSC.sym:11847",
-        "asm:refs/m1disasm/out/M1_NES_NTSC.sym:11995"
       ]
     }
   ],
@@ -908,6 +911,17 @@
       "undeclared_total": 486,
       "state_sha256": "ae50e59250b99cb179208df13d6532de2ed69692ddd57eae62d1d8df7667e2c5",
       "prev_sha256": "2bc80deeec8f5489aeb891cb1abab588befce427c30844e1fa59cd1ed183944e"
+    },
+    {
+      "ts": "2026-11-26T11:43:54+08:00",
+      "reason": "B1-c 第三批：wave beam 弹额外面 $05D0-$05FF（48 B，3 槽 × 16 B）由 WaveBeamFace typed 认领（#83）",
+      "owner_total": 1449,
+      "view_bytes": 23,
+      "view_only_bytes": 0,
+      "unmodeled_total": 385,
+      "undeclared_total": 438,
+      "state_sha256": "c98b654d80be696a4af5fab9984f220983d6e991a60fa008e82cf9c788335bac",
+      "prev_sha256": "52c5db3aa64f2d21d9544ce8e32c66882240d6a75fa03d06ce44b1237d713d75"
     }
   ]
 }
