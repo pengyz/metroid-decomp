@@ -254,7 +254,7 @@ pub fn spec_face() -> [NesSpan; 2] {
 ///
 /// `dump_json`（静态腿/门禁）与动态腿（`verify_shim`）共用本表：新增实体只改这里，
 /// 避免两份类型清单漂移导致动态证据覆盖不到新声明。
-pub fn entity_spans() -> [(&'static str, &'static [(NesSpan, SpanKey)]); 20] {
+pub fn entity_spans() -> [(&'static str, &'static [(NesSpan, SpanKey)]); 21] {
     [
         // B1-b 第二批：零页 `$0000-$0032`（51 B：手柄位面 / NMI 握手 / 主循环号 / 帧计数 /
         // 随机数 / 备用）的 typed 声明层。行为仍在 frame/、input/、title/（裸地址读写）。
@@ -307,6 +307,13 @@ pub fn entity_spans() -> [(&'static str, &'static [(NesSpan, SpanKey)]); 20] {
         (
             "WaveBeams",
             crate::memmap::wave_beam_face::WaveBeamFace::SPANS,
+        ),
+        // B2-c：页 1 变量面 `$0108-$010F`（8 B，asm 具名）+ `$01D0-$01FF`（48 B，6502 栈）
+        // 的显式 ephemeral 声明。段 B `$0110-$01CF`（192 B 零写空档）故意不声明，留在
+        // Undeclared（见 `stack_page_face` 模块文档）。
+        (
+            "StackPage",
+            crate::memmap::stack_page_face::StackPageFace::SPANS,
         ),
     ]
 }
@@ -456,9 +463,10 @@ mod tests {
         // B1-c：对象槽面 256 B + 声引擎面 140 B（两段，$0683/$0684 归 SoundInitFlags）
         // 升格为 Owner ⇒ 713 + 256 + 140 = 1109；额外面 84 不变。
         // B1-c 第三批：wave beam 弹额外面 `$05D0-$05FF` 48 B（3 槽 × 16 B）⇒ 1317 + 48 = 1365。
+        // B2-c：#97 页 1 变量面 `$0108-$010F` 8 B ⇒ 1365 + 8 = 1373（额外面 84 不变）。
         assert!(
-            json.contains("\"coverage\":[1365,84]"),
-            "owner 字节数锚点（1317 + wave 弹 48 B）"
+            json.contains("\"coverage\":[1373,84]"),
+            "owner 字节数锚点（1365 + 页 1 变量 8 B）"
         );
     }
 

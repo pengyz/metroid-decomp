@@ -12,7 +12,7 @@
   ],
   "face_total": 2272,
   "owner_bytes": [
-    1365,
+    1373,
     84
   ],
   "owner_spans": [
@@ -51,6 +51,10 @@
     {
       "start": 262,
       "len": 2
+    },
+    {
+      "start": 264,
+      "len": 8
     },
     {
       "start": 512,
@@ -642,7 +646,7 @@
       ]
     }
   ],
-  "undeclared_total": 438,
+  "undeclared_total": 430,
   "undeclared": [
     {
       "start": 52,
@@ -729,16 +733,8 @@
       ]
     },
     {
-      "start": 264,
-      "len": 2,
-      "kind": "undeclared",
-      "refs": [
-        "frame/tick.rs:676"
-      ]
-    },
-    {
-      "start": 266,
-      "len": 246,
+      "start": 272,
+      "len": 240,
       "kind": "undeclared",
       "refs": [
         "ui/hud.rs:47",
@@ -922,6 +918,17 @@
       "undeclared_total": 438,
       "state_sha256": "c98b654d80be696a4af5fab9984f220983d6e991a60fa008e82cf9c788335bac",
       "prev_sha256": "52c5db3aa64f2d21d9544ce8e32c66882240d6a75fa03d06ce44b1237d713d75"
+    },
+    {
+      "ts": "2026-11-26T17:13:54+08:00",
+      "reason": "B2-c: 页1变量面 $0108-$010F(8B Owner) typed 化；段B零写192B与栈48B不声明（#97）",
+      "owner_total": 1457,
+      "view_bytes": 23,
+      "view_only_bytes": 0,
+      "unmodeled_total": 385,
+      "undeclared_total": 430,
+      "state_sha256": "0e642939d398cbf6a3a47a90592c86778eba6bc3957e200a14e4981ecdbb81f8",
+      "prev_sha256": "0b8e9c65b28bd647c4afffd4d3ea649e029cca5df39813cb3fa5d4bf9046fcf3"
     }
   ]
 }

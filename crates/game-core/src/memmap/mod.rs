@@ -39,5 +39,7 @@ pub mod vram_buffer_face;
 /// B1-d：未命名尾段面（`$068E-$06FF` + `$0787-$079F` + `$07F0-$07FF`，合计 155 B，全 C 级）的 typed 声明层。
 pub mod samus_vitals_face;
 pub mod spare_face;
+/// B2-c：页 1 `$0108-$010F`（8 B 具名变量）typed 声明层 + `$01D0-$01FF`（48 B）栈的显式 ephemeral 声明（卡 #97）。
+pub mod stack_page_face;
 #[cfg(test)]
 pub(crate) mod verify_shim;
