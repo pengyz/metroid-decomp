@@ -230,3 +230,40 @@ python3 tools/l4_diff_run.py run-all
 3. `analysis/probe-go` 口径下 f4024 / f4187 的 FC 漂移 = 0；
 4. `replay --frames 4300` 首分歧不早于 f22895（当前 `--frames 24000` 为 f22895 `$0405` 8 B）；
 5. `run-all` ≥171/172。
+
+## §9 迭代边界模型与 v10 实现（#88）
+
+### 9.1 两个信号不是一回事
+
+| 层 | ROM 事实 | Rust 现状 | 语义 |
+|---|---|---|---|
+| 迭代何时结束 | `MainLoop 07:C0BC`：`:205 jsr GoMainRoutine` → **`:207 inc FrameCount`** → `:209 lda #$00 / sta NMIStatus / @loop_waitNMIEnd` 自旋等下一次 NMI | `crates/game-core/src/frame/tick.rs::main_loop_iter` 尾部 `if !title_no_return && !fc_inced_this_tick { FC += 1 }` | 「本次迭代跑完了」——与「有没有门」无关 |
+| NMI 内块跑不跑 | `prg7_engine.asm:251` 一带按 `iter_gates` 逐拍弹一项 | `crates/game-core/src/frame/engine.rs::end_of_tick_gate` 的 `else` 分支 `iter_gates.remove(0)` | 「**下一拍** NMI 内块要不要跑」——不是迭代结束 |
+
+⚠️ 例程体内部可以**多次等 NMI**（`GameOver 00:939E` → `ClearAll 00:909F` 的 `WriteAndWait`/`WaitNMIPass` + `ScreenOn 07:C447` 的 `WriteAndWait`），但这些等待仍在**同一次迭代**里，`:207` 的 inc 只发生一次。emu 探针 `analysis/probe-go` 实测：`f4019 TR=1C FC=152` → 阻塞 4 帧 → `f4024 TR=19 FC=153`，整条链只推进 1 次迭代。
+
+### 9.2 四个失败变体的失败点
+
+| 变体 | 判据 | 读数 | 失败原因 |
+|---|---|---|---|
+| v3 | `title_cursor>0` 即抑制 inc | password 12/14（f950/f1150 各差 1 帧 FC） | 判据过宽：`TR=0x18`（EnterPassword）是**常驻相位**、`cursor` 恒 0x00，被一并抑制 |
+| v7 | 本拍有门 ⇒ 抑制，尾部要求「门/span 皆空」 | 首分歧 idx=1186（base 156 / v7 155） | 方向对但只推迟、不补回 ⇒ 整链少 1 次 inc |
+| v8 | v7 + 抑制时置 `iter_span_fc` | 末端 FC 20/20，首分歧 idx=3 | 补回的落点早一拍（排空拍之前） |
+| v9 | 门队列非空即视为迭代未结束 | password 14/14 但 13 个敌人测试红、replay 首分歧 f467 | 把「下一拍 NMI 门」当「迭代结束」，敌人/载房帧门整体挪位 |
+
+### 9.3 v10（已落 lane `c28362c8`）
+
+`crates/game-core/src/frame/tick.rs` 两处（+11/−1）：
+1. 入口取 `title_chain_iter = title_cursor>0 && title_cursor != 0xFF && TITLE_ROUTINE != 0`（`TITLE_ROUTINE` 门是 v3 教训：把常驻相位排除在外）；
+2. 尾部：`if title_chain_iter && !iter_gates.is_empty() { iter_span_fc = true } else if …{ FC += 1 }` —— 链内声明了等待门就不 inc，由 `settle_iteration` 在排空拍单增一次（`iter_span_fc` 自身保证只补一次）。
+
+读数：
+- `run cases/case-password-justin.txt --skip-emu` → **14/14 全 0**（f950/f1150/f1191/f1430 四点全 0）；
+- `tas_replay_diff.py replay --frames 4300 --out …` → **分歧 0/4300（比较 4267 帧），首分歧 无**；
+- `cargo test --workspace` → **passed 1198 / failed 0**；`gates/cli.py check` → PASS=24 FAIL=0 SKIP=3 TOLERATED=1。
+
+### 9.4 未覆盖与后继判据
+
+- `cargo test -p game-core --lib` **单独跑**在该 lane 上有 6 个新增失败（cannon/dragon/crawler 各若干），但同一棵树上 `--workspace` 是 1198/0，且干净 HEAD 单独跑也有 6 个——属 lane 既有的独立运行差异，非本改动引入；卡面「`-p game-core --lib` 全绿（≥1198）」这个口径把 workspace 的计数写给了单 crate 命令，建议改判「`--workspace` 1198/0 且不新增失败」。
+- `run-all` → 21 案 / **172 格：match 171 · diff 1 · blocked 0**；唯一非 match `case-mechanism-input-conflict f674 c674` 84 px，与既有基线同（非本改动引入）。
+- 后继：把 §9.2 的逐迭代对比脚本入库，避免下次只能靠临时插桩。
