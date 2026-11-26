@@ -280,6 +280,8 @@ PY
 # 120540 [(1, ['00', '00', '01'])]
 ```
 
+> 两个口径别混用：**120540 = 数据行总数**（含 p1/p2 全 0 的空闲帧）；`read_inputlog` 只把 p1/p2/cmd 任一非零的行收进表，所以展开表是 **106362 行**。两个数字都对，差别只是「文件行数」与「入表行数」。
+
 即 **f1 的 `00 00 01` = 软复位帧**。`tools/movie_import.py` 把这个 cmd 写进 inputlog（写出端正确），
 但 `tools/scenario_run.py::expand_pads` 的消费循环写成
 `for f, (p1, _p2, _cmd) in log_table.items():` —— **`_cmd` 读而不用**，
