@@ -1,4 +1,4 @@
-# 可玩端到端冒烟：开局 → 走进门 → 换房（#106）
+# 可玩端到端冒烟：走进门 → 换房（#106）
 
 这条冒烟回答一个对拍答不出来的问题：**玩家用键盘能不能自己走进门、把房间换掉。**
 它不注入任何内存（不用 `--poke`），只喂按键脚本，判据全落在逐帧状态 CSV 与换房后那一帧的截图上。
@@ -7,11 +7,13 @@
 
 ```bash
 # 在 wt-roll 或主线检出里（需要 assets/metroid.pack 存在）
-CARGO_TARGET_DIR=target tools/playable_door_smoke.sh          # 阶段 1：横滚门
+CARGO_TARGET_DIR=target tools/playable_door_smoke.sh          # 阶段 1：横滚门（当前 PASS）
 DOOR_SHOTS=/tmp/smoke tools/playable_door_smoke.sh            # 截图落指定目录
-tools/playable_door_smoke.sh --stage 2                        # 阶段 2：另一方向门
-# 换输入脚本而不改本文件（等 #104 给出真实可达路径时直接用）：
-tools/playable_door_smoke.sh --script /tmp/door_input.txt --frames 1800 --shot-frames 1470,1700
+tools/playable_door_smoke.sh --self-test                      # 判定器四态自检（不跑游戏）
+tools/playable_door_smoke.sh --check-invalid-room             # 负对照：非法房号必须被拒
+tools/playable_door_smoke.sh --stage 2                        # 阶段 2：另一方向门（当前显式红）
+# 换输入脚本而不改本文件：
+tools/playable_door_smoke.sh --script /tmp/door_input.txt --frames 1800 --shot-frames 1470
 ```
 
 `--script` 读不到时退出码 2 并打印路径；日志里会注明「脚本来自 xxx」，避免误以为跑的是内置脚本。
@@ -27,36 +29,67 @@ tools/playable_door_smoke.sh --script /tmp/door_input.txt --frames 1800 --shot-f
 | 6 | `STAGE_UNAVAILABLE` | 该阶段的门还没定（显式红，不静默跳过） |
 | 1 | 运行失败 | 二进制/参数/产物读取失败 |
 
-## 现在跑到什么程度（2026-11-26，lane/roll HEAD `5b85aeb8`）
+## 阶段 1：Brinstar 房 5 右门（当前 PASS，实测读数）
 
-阶段 1 是**红灯**，这是预期：
+脚本（内置，`--start-pos` 只把 Samus 摆到门台上，其余全键盘）：
 
 ```
-[冒烟] 阶段 1：Brinstar map5 右门（横滚门）
-[FAIL:NO_DOOR_TRIGGER] 2600 帧内 door_entry($56) 恒 0、door_data($58) 峰值=0 ⇒ Samus 从未踩到门格
-rc=3
+9-9 START
+18-18 START
+200-1700 RIGHT
+925-945 B          # 开锁蓝门：Closed($4E) → Open($FF) 才能走进去
 ```
 
-原因不在本脚本：#102 已修好「踩到门格之后」的门过渡链（`$56` 带方向码 → 滚屏 → 换房），
-而「**走到门格**」这一步还没通——开局步行可达的房间（map3/4/5 右行、map3/2 左行）里只有 map5
-一道门对象，它在屏幕 y=80..127 的中高台、门台顶约 y=128，Samus 站立脚底约 y=193。可进入性归 #104。
+```
+--start-pos 0xD0,0x6F --start-frame 900
+```
 
-2026-11-26 实测补充（修正早期「跳峰 26px」的说法）：在这一间里起跳会被头顶实体瓦截断——
-脚本 `200-1400 RIGHT` 后 `1401-1470 A+RIGHT`，`samus_xy` 由 `0DC/0C1` 升到 `0DC/09F`
-（离地 0x22 = 34px）即回落，`probe_tile` 在顶点读到 `4D`（上方碰到的瓦），横向 `x` 始终 `0DC`
-推不动，`$58`/`$56` 峰值为 0。所以即使跳跃积分正确，本间地面也到不了那道门；需要 #104 给出
-真实房间里的可达路径。
+实跑输出（A 级，`CARGO_TARGET_DIR=/home/peng/workspace/wt-roll-target`，约 15s）：
 
-另一条复核（2026-11-26）：用**全新 `CARGO_TARGET_DIR=/tmp/s106/fresh_target`**（不含任何旧产物）跑
-`tools/playable_door_smoke.sh --self-test` → `[SELFTEST:PASS]`；`--stage 1` → `[FAIL:NO_DOOR_TRIGGER]`
-rc=3，耗时 27.5s。说明脚本不依赖本机缓存状态，红是逻辑红而不是环境红。
+```
+[冒烟] 阶段 1：Brinstar 房 5 右门（横滚门，$56=$81）
+[触发] f=948 $56=129 $58=17 旧房间=255 MapPos=5/14
+[方向码序列] $56: 129×18 → 1×130 → 5×31
+[换房] f=967 新房间=24 MapPos=6/14
+[渲染] …/f01200.ppm 主体区非黑占比=0.2605 颜色数=13
+[PASS] 走进门 → 触发门 → 换房 → 新房间可渲染
+```
 
-## 回归基线（2026-11-26）
+逐项对应卡面验收：`$58≠0`（f948=0x11）→ `$56=129`（=$81，方向码 1=右横滚）→ `$56=1` 滚屏相位
+（f966）→ f967 房间号 255→24、MapPos 5/14→6/14 → f968 起 `ScrollX=2,4,6…` → 新房间首帧可渲染。
 
-`python3 tools/l4_diff_run.py run-all`（emu+rust 全跑）→ **21 案 / 172 格，match 171 / diff 1 / blocked 0**，
-唯一 diff 仍是 `case-mechanism-input-conflict`（10 match + 1 diff，历史基线同值）；三个 door 用例
-`case-002-door-blue-interaction` 8/0、`case-mechanism-door-transition` 6/0、`case-mechanism-door-negative` 3/0
-与改动前一致。注意：这些 door 用例采集帧里 `$56/$58` 恒 0（空跑），所以它们「绿」不代表门链通过。
+## 阶段 1 为什么需要 `--start-pos`
+
+真实路径「从通电开局走到这扇门」走不到：房 5 的门在屏幕 y=80..127 的中高台，门台顶约 y=128，
+Samus 站立脚底约 y=193；在本间起跳会被头顶实体瓦截断（`200-1400 RIGHT` + `1401-1470 A+RIGHT`：
+`samus_xy` 由 `0DC/0C1` 升到 `0DC/09F`，即离地 0x22 = 34px 就回落，`probe_tile` 顶点读到 `4D`），
+横向也推不动。可进入性本身归 #104/#108 另论（#108 已证起点可达区没有任何地面同层门）。
+
+因此本卡验收由主理人改写为「`--start-*` 只做启动定位，不改游戏逻辑」：参数在指定帧写
+`RoomNumber`/`MapPos`/`Samus` 坐标，载房仍走引擎自己的判据 `room_load::is_new_load_request`
+（`crates/game-core/src/world/room_load.rs:228`），坐标要等 `room_load_phase==0` 后才落，否则会被
+装载覆写（实测 f20 写 `028/06F` 被改回 `080/0B0`）。房号非法或 200 帧内未被装载 ⇒ 非 0 退出并打印
+「房间号不被接受」。
+
+```bash
+tools/playable_door_smoke.sh --check-invalid-room
+# [CHECK:PASS] --start-room 0xF5 被拒绝（rc=2，stderr 有「房间号不被接受」）
+```
+
+## 阶段 2（另一方向门）为什么显式红
+
+卡面要求「横滚门与另一方向门各一道」。另一方向门在当前可传送范围内选不出来，排除证据（都在
+`/tmp` 里跑过、均可复跑）：
+
+| 候选 | 结果 |
+|---|---|
+| 房 5 左门（`--start-pos 0x28/0x10,0x6F`） | 摆上去立刻掉到地板 `y=0xC1`：左门那面墙没有可站台面 |
+| 房 5 左门（地面层射后左走） | f705 map5→4、f720→3，先触发**普通滚屏**，`$56` 恒 0 |
+| Room1E（房 30，MapPos 19/14） | 载入正常（画面上左右各一扇蓝门），f515 左走 map19→18、右走 map19→20，边缘不是门格 |
+| Room24（房 24，MapPos 6/14） | 载入第 1 帧被相邻滚动带回 map5（`600 room24 → 601 map5`），摆位窗口被吞 |
+| Brinstar Room00 | 载入成功但 `door_slots=0/0/0/0`（无门对象），走到 map2 仍无门 |
+
+竖滚门需要「按 area 启动」或先修门台可达性 ⇒ 单独开卡，这里 `exit 6` 显式红，不静默跳过。
 
 ## 判定器自检（不跑游戏）
 
@@ -75,39 +108,17 @@ tools/playable_door_smoke.sh --self-test     # rc=0 ⇒ 四态判定与退出码
 [SELFTEST:PASS] 四态判定与退出码均符合预期
 ```
 
-这样即使门链路还没通（阶段 1 现在就是红的），判定器本身也随时可验，不会悄悄退化成「永远 PASS」。
-
-## 怎么验「判据本身是好的」
-
-用 #102 的 poke 版正样本（`--poke 1500:0x58=2`，等价「Samus 已踩在门格上」）跑同一个判定器，
-应当转绿——这证明红不是因为判据写坏：
-
-```
-[触发] f=1500 $56=129 $58=33 旧房间=255 MapPos=5/14
-[方向码序列] $56: 129×18 → 1×3
-[换房] f=1519 新房间=24 MapPos=6/14
-[渲染] …/f01520.ppm 主体区非黑占比=0.1530 颜色数=13
-[PASS] 走进门 → 触发门 → 换房 → 新房间可渲染
-```
-
-其余三条失败分支也各自验过：负样本 CSV（`$58` 峰值 0）→ `NO_DOOR_TRIGGER` rc=3；
-正样本截断在 f1511 → `NO_SWITCH` rc=4；正样本 + 全黑 PPM → `BLACK_SCREEN` rc=5。
-
 ## 判据背后的两个刻度（不是拍脑袋）
 
 - **黑屏判据**：跳过顶部 32 行 HUD，在 y=32..232 的主体区统计非黑像素占比。
   实测正常帧 0.1549、0.1555、0.1558、0.1689（7–13 色），全黑帧 0.0000 ⇒ 阈值取 5%，离正常值约 3 倍余量。
   不用 #102 的「颜色数 ≥2」：只有 HUD 的画面也有十几色，那个尺子分不出「黑屏」。
-- **换房窗口**：门事件后 90 帧。`$56` 从 `方向码|$80` 到 DoorDelay 归零、滚完屏、`SetupRoom` 落地实测 19 帧（f1500→f1519），90 帧留足 4 倍余量。
-
-## 阶段 2（另一方向门）为什么还没跑
-
-卡面要求「横滚门与另一方向门各一道」，但另一方向门的**目标房间**现在选不出来：
-可达房间里没有竖滚门（map2/3/4 的 `door_slots` 全 0），需要 #104 的到达性结论。
-脚本在该阶段显式 `exit 6`，不会假装通过。
+- **换房窗口**：门事件后 90 帧。`$56` 从 `方向码|$80` 到 DoorDelay 归零、滚完屏、`SetupRoom` 落地实测 19 帧（f948→f967），90 帧留足 4 倍余量。
 
 ## 边界
 
-- 只读：脚本只调用 `game-shell-pc` 的 `--headless/--script/--state-out/--shot-*`，不写 `--poke`、不改游戏逻辑。
+- 只读：脚本只调用 `game-shell-pc` 的 `--headless/--script/--start-*/--state-out/--shot-*`，不写 `--poke`、不改游戏逻辑。
+- `--start-*` 只做启动定位（改写验收口径），不是「玩家从通电开局可走到门」的证明；这一点在报告里与阶段 2 一起前置声明。
 - 产物落 `mktemp -d`，不污染仓库；`DOOR_SHOTS` 可指定截图目录。
 - 本冒烟只证明「可玩路径能穿门换房」，不替代 L4 像素对拍，也不构成「整机可玩性已验证」。
+- 历史提醒：L4 的 door 三案（`case-002` 8 格、`case-mechanism-door-transition` 6 格、`case-mechanism-door-negative` 3 格）采集帧里 `$56/$58` 恒 0（空跑），它们「绿」不代表门链通过。

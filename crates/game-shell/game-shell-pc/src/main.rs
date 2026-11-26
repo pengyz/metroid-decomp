@@ -3,6 +3,8 @@
 //! 用法：`game-shell-pc [--scale N] [--fps N] [--frames N]`
 //! 无窗口验收：`--headless [--script FILE] [--state-out FILE] [--shot-frames 1,100] [--shot-dir DIR]`。
 //! 单帧 RAM 注入（只做一次 `write_ram`，用于把已证实的输入条件摆到位）：`--poke 700:0x58=2`。
+//! 启动定位（只摆房号/MapPos/坐标，让引擎自己按载房判据装载；不是 `--poke`）：
+//! `--start-room 0x1E [--start-map 19,14] [--start-pos 0x20,0x20] [--start-frame 60]`。
 //! 注：重制=Rust 逻辑移植（非模拟器）——**运行不需 ROM**（rom/ 仅验证轨用（BYO-ROM））。
 
 use game_platform::runtime::run_game;
@@ -18,6 +20,10 @@ fn main() {
     let mut shot_frames: Vec<u64> = Vec::new();
     let mut wram_out: Option<String> = None;
     let mut poke_specs: Vec<String> = Vec::new();
+    let mut start_room_spec: Option<String> = None;
+    let mut start_map_spec: Option<String> = None;
+    let mut start_pos_spec: Option<String> = None;
+    let mut start_frame: u64 = 60;
     let mut args = std::env::args().skip(1);
     while let Some(a) = args.next() {
         match a.as_str() {
@@ -30,6 +36,15 @@ fn main() {
             "--shot-dir" => shot_dir = args.next(),
             "--wram-out" => wram_out = args.next(),
             "--poke" => poke_specs.push(args.next().unwrap_or_default()),
+            "--start-room" => start_room_spec = args.next(),
+            "--start-map" => start_map_spec = args.next(),
+            "--start-pos" => start_pos_spec = args.next(),
+            "--start-frame" => {
+                start_frame = args.next().and_then(|v| v.parse().ok()).unwrap_or_else(|| {
+                    eprintln!("--start-frame 需要正整数帧号");
+                    std::process::exit(2);
+                })
+            }
             "--shot-frames" => {
                 let spec = args.next().unwrap_or_default();
                 for part in spec.split(',').filter(|s| !s.trim().is_empty()) {
@@ -45,6 +60,7 @@ fn main() {
             "--help" | "-h" => {
                 println!("game-shell-pc [--scale N] [--fps N] [--frames N]");
                 println!("  --headless --script FILE [--state-out FILE] [--shot-frames a,b] [--shot-dir DIR]");
+                println!("  --start-room 0x1E [--start-map X,Y] [--start-pos X,Y] [--start-frame N]");
                 return;
             }
             other => {
@@ -92,6 +108,35 @@ fn main() {
                 }
             }
         }
+        let parse_pair_opt = |spec: Option<&str>, flag: &str| -> Option<(u8, u8)> {
+            match spec {
+                None => None,
+                Some(p) => match game_shell_pc::script::parse_pair(p) {
+                    Ok(v) => Some(v),
+                    Err(e) => {
+                        eprintln!("[start] {flag} {p:?} 解析失败：{e}");
+                        std::process::exit(2);
+                    }
+                },
+            }
+        };
+        let start = if start_room_spec.is_none() && start_pos_spec.is_none() && start_map_spec.is_none() {
+            None
+        } else {
+            let room = match start_room_spec.as_deref() {
+                None => None,
+                Some(spec) => match game_shell_pc::script::parse_room(spec) {
+                    Ok(r) => Some(r),
+                    Err(e) => {
+                        eprintln!("[start] {e}");
+                        std::process::exit(2);
+                    }
+                },
+            };
+            let map = parse_pair_opt(start_map_spec.as_deref(), "--start-map");
+            let pos = parse_pair_opt(start_pos_spec.as_deref(), "--start-pos");
+            Some(game_shell_pc::script::StartRoom { frame: start_frame, room, map, pos })
+        };
         let n = frames.unwrap_or(600);
         let state_out = state_out.as_deref().map(std::path::Path::new);
         let shot_dir = shot_dir.as_deref().map(std::path::Path::new);
@@ -103,6 +148,7 @@ fn main() {
             &shot_frames,
             shot_dir,
             &pokes,
+            start.as_ref(),
         ) {
             Ok(r) => {
                 if let Some(p) = wram_out.as_deref() {
@@ -124,6 +170,17 @@ fn main() {
                     r.states.len(),
                     r.states
                 );
+                if let Some((room, accepted)) = r.start_room {
+                    if accepted {
+                        println!("[start] 房号 {room:#04X} 已被引擎装载");
+                    } else {
+                        eprintln!(
+                            "[start] 房间号不被接受：引擎在 {} 帧内没有装载 {room:#04X}（检查 --start-frame 是否落在进游戏之后、--start-map 是否与该房号一致）",
+                            r.frames
+                        );
+                        std::process::exit(7);
+                    }
+                }
             }
             Err(e) => {
                 eprintln!("[headless] 运行/落盘失败：{e}");

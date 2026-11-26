@@ -27,6 +27,7 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 JUDGE="$HERE/playable_door_judge.py"
 STAGE=1
 SELFTEST=0
+INVALID_ROOM=0
 SCRIPT_OVERRIDE=""
 FRAMES_OVERRIDE=""
 SHOT_FRAMES_OVERRIDE=""
@@ -37,6 +38,7 @@ while [ $# -gt 0 ]; do
     --frames) FRAMES_OVERRIDE="${2:-}"; shift 2 ;;
     --shot-frames) SHOT_FRAMES_OVERRIDE="${2:-}"; shift 2 ;;
     --self-test) SELFTEST=1; shift ;;
+    --check-invalid-room) INVALID_ROOM=1; shift ;;
     *) echo "未知参数：$1" >&2; exit 2 ;;
   esac
 done
@@ -102,23 +104,53 @@ if [ "$SELFTEST" = 1 ]; then
   exit 1
 fi
 
+START_ARGS=""
+# ── 负对照：非法房号必须被拒绝（rc=7），不许静默当 0xFF 空房号 ──────────────
+if [ "$INVALID_ROOM" = 1 ]; then
+  T="$(mktemp -d)"
+  trap 'rm -rf "$T"' EXIT
+  printf '9-9 START\n' > "$T/in.txt"
+  cd "$HERE/.." || exit 2
+  CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-target}" \
+    cargo run -q -p game-shell-pc --bin game-shell-pc -- \
+      --headless --script "$T/in.txt" --frames 200 \
+      --start-room 0xF5 --start-frame 60 --state-out "$T/s.csv" \
+      >"$T/out.log" 2>"$T/err.log"
+  rc=$?
+  if [ "$rc" != 0 ] && grep -q '房间号不被接受' "$T/err.log"; then
+    echo "[CHECK:PASS] --start-room 0xF5 被拒绝（rc=$rc，stderr 有「房间号不被接受」）"
+    exit 0
+  fi
+  echo "[CHECK:FAIL] 期望 rc≠0 且报「房间号不被接受」，实得 rc=$rc"
+  tail -3 "$T/err.log"
+  exit 1
+fi
+
 case "$STAGE" in
   1)
-    # Brinstar：开局做 START，按住 RIGHT 走到底（路线上唯一的门对象在 map5 右缘）。
-    FRAMES=2600
+    # Brinstar 房 5（MapPos 5/14）右门：纯键盘版。
+    # 起点不在门台高度、且该房左右两端都是普通滚屏格，所以用 --start-pos 只把 Samus
+    # 摆到门台（y=0x6F）上，其余全部靠按键：B 开锁门 → RIGHT 走进去。
+    # 实测（A 级）：f940 门槽 0/0/3/0（Open）、f948 $56=129($81) $58=0x11、
+    # f967 RoomNumber 255→24、MapPos 5/14→6/14、f968 起 ScrollX=2,4,6…
+    FRAMES=1700
     INPUT=$(cat <<'EOF'
 9-9 START
 18-18 START
-200-2600 RIGHT
+200-1700 RIGHT
+925-945 B
 EOF
 )
-    SHOT_FRAMES="2400,2500"
-    DOOR_NAME="Brinstar map5 右门（横滚门）"
+    START_ARGS="--start-pos 0xD0,0x6F --start-frame 900"
+    SHOT_FRAMES="1200"
+    DOOR_NAME='Brinstar 房 5 右门（横滚门，\$56=\$81）'
     ;;
   2)
     echo "[STAGE_UNAVAILABLE] 阶段 2（另一方向门）尚未选到目标房间："
-    echo "  开局步行可达的房间（map3/4/5 右行、map3/2 左行）里只有 map5 一道门对象，"
-    echo "  竖滚门/另一方向门的可达路径要等 #104 的到达性结论。这里显式红，不静默跳过。"
+    echo "  已排除（都是普通滚屏，不是门格）：房 5 左门（门台无可站面，摆上去掉到 y=0xC1）、"
+    echo "  Room1E 左右缘（f515 map19→18 / 19→20）、Room24（载入第 1 帧被相邻滚动带回 map5）、"
+    echo "  Brinstar Room00（无门对象）。"
+    echo "  竖滚门需要「按 area 启动」或先修门台可达性 ⇒ 另开卡，这里显式红，不静默跳过。"
     exit 6
     ;;
   *) echo "阶段只能是 1 或 2（收到 $STAGE）" >&2; exit 2 ;;
@@ -145,7 +177,7 @@ printf '%s\n' "$INPUT" > "$SCRIPT"
 cd "$HERE/.." || exit 2
 CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-target}" \
   cargo run -q -p game-shell-pc --bin game-shell-pc -- \
-    --headless --script "$SCRIPT" --frames "$FRAMES" \
+    --headless --script "$SCRIPT" --frames "$FRAMES" $START_ARGS \
     --state-out "$CSV" --shot-frames "$SHOT_FRAMES" --shot-dir "$SHOTS" \
     >/dev/null 2>"$OUT_DIR/err.log"
 rc=$?

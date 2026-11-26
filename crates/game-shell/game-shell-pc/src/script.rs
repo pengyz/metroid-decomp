@@ -69,6 +69,58 @@ pub fn parse_poke(spec: &str) -> Result<Poke, String> {
     Ok(Poke { frame, addr: addr as u16, value: value as u8 })
 }
 
+/// 启动定位（`--start-room`）：**只在指定帧把「房号 / MapPos / Samus 坐标」摆到位**，
+/// 让引擎自己的载房判据（`room_load::is_new_load_request`：房号 `< $F0` 且与在装房号不同）
+/// 把目标房当成一次正常载房请求。由此把「走到门」从「先能走到那间房」里解耦——
+/// 不是 `--poke`（不写门相关状态 `$56/$57/$58`），也不改游戏逻辑。
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct StartRoom {
+    pub frame: u64,
+    /// `Some` = 同时请求载房（`--start-room`）；`None` = 只摆坐标/MapPos（`--start-pos` 单用）。
+    pub room: Option<u8>,
+    pub map: Option<(u8, u8)>,
+    pub pos: Option<(u8, u8)>,
+}
+
+/// 解析 `--start-room` 的房号（十进制或 `0x..`）；接受范围与引擎载房判据一致。
+pub fn parse_room(spec: &str) -> Result<u8, String> {
+    let t = spec.trim();
+    let (digits, radix) = if let Some(h) = t.strip_prefix("0x").or_else(|| t.strip_prefix("0X")) {
+        (h, 16)
+    } else {
+        (t, 10)
+    };
+    let v = u32::from_str_radix(digits, radix)
+        .map_err(|_| format!("房间号不被接受：{spec:?} 不是整数（写十进制或 0x..）"))?;
+    if v >= 0xF0 {
+        return Err(format!(
+            "房间号不被接受：{spec:?}={v:#X}；载房判据只认 < $F0（$F0..$FE 是载房尾段游标、$FF 是空房号）"
+        ));
+    }
+    Ok(v as u8)
+}
+
+/// 解析 `X,Y`（各自十进制或 `0x..`）。
+pub fn parse_pair(spec: &str) -> Result<(u8, u8), String> {
+    let (a, b) = spec
+        .split_once(',')
+        .ok_or_else(|| format!("要写成 `X,Y`：{spec:?}"))?;
+    let one = |s: &str| -> Result<u8, String> {
+        let t = s.trim();
+        let (digits, radix) = if let Some(h) = t.strip_prefix("0x").or_else(|| t.strip_prefix("0X")) {
+            (h, 16)
+        } else {
+            (t, 10)
+        };
+        let v = u32::from_str_radix(digits, radix).map_err(|_| format!("不是整数：{s:?}"))?;
+        if v > 0xFF {
+            return Err(format!("坐标超过 $FF：{s:?}"));
+        }
+        Ok(v as u8)
+    };
+    Ok((one(a)?, one(b)?))
+}
+
 /// 解析一行 `起始-结束 KEYS`：
 /// - 帧号 1-based，`20-80` 闭区间；`20-` 表示开到脚本结束；
 /// - KEYS 用 `+` 分隔，如 `RIGHT+A`；`NONE` 表示显式无键（可省略）。
@@ -231,6 +283,8 @@ pub struct RunReport {
     pub frames: u64,
     pub rooms: Vec<(u64, u8)>,
     pub states: Vec<(u64, u8, u8, u8)>, // (frame, room, mapx, mapy) 每次变化
+    /// 启动定位结果：(目标房号, 引擎是否装载成功)。`None` = 本次未用 `--start-room`。
+    pub start_room: Option<(u8, bool)>,
 }
 
 /// 无窗口跑 `frames` 帧：逐帧喂脚本按键、落状态 CSV、在指定帧落 PPM。
@@ -244,6 +298,7 @@ pub fn run_scripted(
     shot_frames: &[u64],
     shot_dir: Option<&Path>,
     pokes: &[Poke],
+    start: Option<&StartRoom>,
 ) -> std::io::Result<RunReport> {
     let mut sink: Box<dyn Write> = match state_out {
         Some(p) => Box::new(BufWriter::new(std::fs::File::create(p)?)),
@@ -256,12 +311,42 @@ pub fn run_scripted(
     if shot_dir.is_some() {
         std::fs::create_dir_all(shot_dir.unwrap())?;
     }
-    let mut report = RunReport { frames: 0, rooms: Vec::new(), states: Vec::new() };
+    let mut report = RunReport { frames: 0, rooms: Vec::new(), states: Vec::new(), start_room: None };
     let mut last = (u8::MAX, u8::MAX, u8::MAX);
+    let mut start_seen = false;
+    let mut pos_applied = start.map(|s| s.pos.is_none()).unwrap_or(true);
     for frame in 1..=frames {
         let pad = script.pad_at(frame);
         for p in pokes.iter().filter(|p| p.frame == frame) {
             driver.engine.mem.write_ram(p.addr, p.value);
+        }
+        // 启动定位：把目标房号摆进 RAM，让引擎按自己的载房判据重新装载（见 StartRoom 注释）。
+        // 坐标要等**载房完成之后**再摆：装载会把 Samus 放回该房的默认出生点（实测 f20 写入
+        // 028/06F，f27 装载完成后被改成 080/0B0）。所以房号在 `frame` 写一次，坐标在
+        // 「房号已就位 + 任务机空闲 + 主例程在游戏内」后的第一帧写一次。
+        if let Some(s) = start {
+            if s.frame == frame {
+                let mem = &mut driver.engine.mem;
+                if let Some(r) = s.room {
+                    mem.write_ram(game_core::ram_map::ROOM_NUMBER, r);
+                }
+                if let Some((mx, my)) = s.map {
+                    mem.write_ram(game_core::ram_map::MAP_POS_X, mx);
+                    mem.write_ram(game_core::ram_map::MAP_POS_Y, my);
+                }
+            }
+            if !pos_applied && frame > s.frame {
+                let mem = &mut driver.engine.mem;
+                let ready = s.room.map(|r| mem.read_ram(game_core::ram_map::ROOM_NUMBER) == r).unwrap_or(true)
+                    && mem.room_load_phase == 0;
+                if ready {
+                    if let Some((x, y)) = s.pos {
+                        mem.write_ram(game_core::ram_map::SAMUS_X, x);
+                        mem.write_ram(game_core::ram_map::SAMUS_Y, y);
+                    }
+                    pos_applied = true;
+                }
+            }
         }
         driver.step(pad.bits, 0);
         writeln!(sink, "{}", state_row(driver, frame, pad))?;
@@ -271,6 +356,14 @@ pub fn run_scripted(
             m.read_ram(game_core::ram_map::MAP_POS_X),
             m.read_ram(game_core::ram_map::MAP_POS_Y),
         );
+        if let Some(s) = start {
+            // 「被接受」= 起动帧之后引擎确实把该房号装过（窗内 RoomNumber 就是目标房号）。
+            match s.room {
+                Some(r) if now.0 == r && frame >= s.frame => start_seen = true,
+                None => start_seen = true,
+                _ => {}
+            }
+        }
         if now != last {
             report.rooms.push((frame, now.0));
             report.states.push((frame, now.0, now.1, now.2));
@@ -285,6 +378,7 @@ pub fn run_scripted(
         report.frames = frame;
     }
     sink.flush()?;
+    report.start_room = start.and_then(|s| s.room.map(|r| (r, start_seen)));
     Ok(report)
 }
 
@@ -343,6 +437,38 @@ mod tests_poke {
     fn parse_poke_rejects_bad_specs() {
         for bad in ["700:0x58", "0:0x58=2", "700:0x10000=2", "700:0x58=0x100", "abc:0x58=2"] {
             assert!(parse_poke(bad).is_err(), "{bad:?} 应被拒");
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests_start_room {
+    use super::*;
+
+    #[test]
+    fn parse_room_accepts_decimal_and_hex() {
+        assert_eq!(parse_room("30").unwrap(), 0x1E);
+        assert_eq!(parse_room("0x1E").unwrap(), 0x1E);
+        assert_eq!(parse_room("239").unwrap(), 0xEF);
+    }
+
+    /// 房号必须 < $F0：$F0..$FE 是载房尾段游标、$FF 是「空房号」，写进去只会被引擎当成
+    /// 无需载入，`--start-room` 就静默不生效——这里必须报错，不能当 0xFF 混过去。
+    #[test]
+    fn parse_room_rejects_loader_sentinels() {
+        for bad in ["0xF0", "255", "0xFF", "256", "-1", "abc"] {
+            let err = parse_room(bad).unwrap_err();
+            assert!(!err.is_empty(), "{bad:?} 的报错不能为空");
+        }
+        assert!(parse_room("0xF5").unwrap_err().contains("房间号不被接受"));
+    }
+
+    #[test]
+    fn parse_pair_reads_two_bytes() {
+        assert_eq!(parse_pair("0xD0,0x6F").unwrap(), (0xD0, 0x6F));
+        assert_eq!(parse_pair("208,111").unwrap(), (208, 111));
+        for bad in ["0xD0", "0xD0,", ",0x6F", "0xD0,0x6F,1", "zz,1"] {
+            assert!(parse_pair(bad).is_err(), "{bad:?} 应被拒");
         }
     }
 }
