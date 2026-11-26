@@ -44,7 +44,7 @@ mem.write_ram(crate::ram_map::DOOR_ENTRY_STATUS, de | 0x80);
 
 上一处已经算出了方向码 `x`（`mem.write_ram(0x0057, x)`），这里没有用它。
 
-### 3. 运行实验（可复跑）
+### 3. 运行实验（可复跑：`tools/door_entry_repro.sh`）
 
 `game-shell-pc --headless --script /tmp/s102/poke.txt --poke 1500:0x58=2`
 （脚本先按 TAS 开局，再一路 `RIGHT` 到 map5 的右门墙边；`--poke` 把
@@ -58,6 +58,13 @@ mem.write_ram(crate::ram_map::DOOR_ENTRY_STATUS, de | 0x80);
 
 同一份输入、同一份资产包，只有这一行不同 ⇒ 门链的其余件（`ScrollDoor`、
 `SamusDoor`、`check_update_name_table`、`setup_room`）都能把房间切过去。
+
+固化命令（`tools/door_entry_repro.sh [帧数]`，默认 2400）：
+
+- HEAD `c240e1b7`：`注入前 room=255 map=5/14；注入后首个门事件 $56=128` /
+  `注入后 40 帧内：房间号/MapPos 均未变化` ⇒ 退出码 1（`FAIL`）。
+- 打上本文件的修复补丁：`$56=129` / `注入后 40 帧内：room=24 map=6/14`
+  ⇒ 退出码 0（`PASS`）。
 
 ## 为什么之前的证据都没抓到
 
@@ -81,3 +88,8 @@ mem.write_ram(crate::ram_map::DOOR_ENTRY_STATUS, de | 0x80);
    ⇒ `$56==0x81`；`Samus.x` 高位为 0 ⇒ `$56==0x82`；
 3. 回归：`python3 gates/cli.py check`、`cargo test --workspace`、`tools/l4_diff_run.py run-all`
    （门 6 格若因此变化，按 §「为什么之前的证据都没抓到」先确认是变好还是变坏）。
+
+预演数字（在 lane 工作树上临时打过补丁、测完已还原）：`cargo test --workspace`
+**1229 passed 0 failed**（新增 1 条方向码正反例）；`l4_diff_run.py run-all --skip-emu`
+**21 案 / 172 格 match 171 diff 1**（与基线同，唯一 diff 仍是
+`case-mechanism-input-conflict f674=84px`）。
