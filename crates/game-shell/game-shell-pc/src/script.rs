@@ -105,7 +105,7 @@ pub struct StartRoom {
 /// 但别的房要走过 `SetupRoom` 的若干尾帧；只等「phase==0 的第一帧」会把坐标写进装载中途，
 /// 随后被出生点覆盖（#116 §8.3 的 0xF1/0xF3/0xFF 链就是这样起的）。改为连续 3 帧空闲再落笔，
 /// 并在落笔后再观察 2 帧确认没被覆盖（被覆盖则重写，最多 3 次）。
-pub const POS_SETTLE_FRAMES: u64 = 3;
+pub const POS_SETTLE_FRAMES: u64 = 30;
 /// 起动帧之后强制按 RIGHT 的帧数：只为触发一次真正的房间装载（见 `run_scripted` 注释）。
 pub const NUDGE_RIGHT_FRAMES: u64 = 60;
 
@@ -526,7 +526,7 @@ pub fn run_scripted(
             match pos_phase {
                 PosPhase::Wait if frame > applied_at => {
                     let mem = &mut driver.engine.mem;
-                    let idle = mem.room_load_phase == 0;
+                    let idle = mem.room_load_phase == 0 && door_tiles(mem) != "0/0";
                     // nudge 装载路径下，载房任务机会把 RoomNumber 走到 $F0..$FF（尾游标），
                     // 不能再用「房号==目标」判就位；改用「任务机空闲 + 已观测到载房窗开过」
                     // ——窗开过就证明引擎确实按目标房号执行了装载（MapPos 预置在右邻同房的格）。
@@ -620,6 +620,20 @@ pub fn run_scripted(
             nudge_done = true;
             nudge_started = true;
             nudge_loaded = true;
+            // 载房窗一开就把地图格与滚动位置收回目标格：不收回的话滚屏会继续走
+            // `GetRoomNum`（右邻格 (25,15) 已越出该房 cells），把房号写成 F1/F3/FF，
+            // 载房窗结束后就停在 255（未载房哨兵）——复核实测的「假装载」。
+            let mem = &mut driver.engine.mem;
+            if let Some(s) = start {
+                let cell = s.map.or_else(|| s.room.and_then(nudge_cell));
+                if let Some((mx, my)) = cell {
+                    mem.write_ram(game_core::ram_map::MAP_POS_X, mx);
+                    mem.write_ram(game_core::ram_map::MAP_POS_Y, my);
+                    nudge_restore_map = false; // 已经收回，无需后续再恢复
+                }
+                mem.write_ram(game_core::ram_map::SCROLL_X, 0x00);
+                mem.write_ram(game_core::ram_map::SCROLL_Y, 0x00);
+            }
         }
         writeln!(sink, "{}", state_row(driver, frame, pad))?;
         let m = &driver.engine.mem;
@@ -660,6 +674,21 @@ pub fn run_scripted(
     // fail-loud：帧数不够/一直没进 GameEngine 时，起点从未写过——不能报「坐标被覆盖」，
     // 那是另一类故障。这里给出可执行的诊断，调用方仍按 pos=Some(false) 退 8。
     if let Some(s) = start {
+        if let Some(r) = s.room {
+            let m = &driver.engine.mem;
+            let room = m.read_ram(game_core::ram_map::ROOM_NUMBER);
+            let tiles = door_tiles(m) != "0/0";
+            let loaded = room == r || (room == 0xFF && tiles);
+            if !loaded || m.room_load_phase != 0 || !tiles {
+                eprintln!(
+                    "[start] 结束态不是目标房：room=0x{room:02X}（目标 0x{r:02X}）、load_phase={}、门瓦非零={tiles}",
+                    m.room_load_phase
+                );
+                if s.pos.is_some() && report.pos != Some(true) {
+                    report.pos = Some(false);
+                }
+            }
+        }
         if s.pos.is_some() && start_applied.is_none() {
             eprintln!(
                 "[start] {} 帧内没有进入 GameEngine（MainRoutine=3），起点从未落笔；加大 --frames 或检查 START 是否被吃掉",

@@ -214,8 +214,13 @@ tools/playable_door_smoke.sh --self-test     # rc=0 ⇒ 四态判定与退出码
 1. 先等引擎进 `MainRoutine==3`（GameEngine）：起动帧只是「最早可写帧」，标题/初始化例程里写房号
    只改 RAM 数字，装载与物理都不会跑（实测预设要到 f466 才进 GameEngine）。`--start-*` 会自带
    START（9/18 帧，之后每 60 帧一次，直到进游戏），没有外部脚本也能落起点；
-2. 等「房号就位 **且** 载房任务机 `room_load_phase==0`」**连续 3 帧**（`POS_SETTLE_FRAMES`）；
-   请求了房号时还要等「真的装载过」（滚屏触发过 nudge 或载房窗开过），否则坐标会被出生点顶掉；
+2. 等「房号就位 **且** 载房任务机 `room_load_phase==0` **且** 门瓦非零」**连续 30 帧**
+   （`POS_SETTLE_FRAMES`）；请求了房号时还要等「真的装载过」（滚屏触发过 nudge 或载房窗开过），
+   否则坐标会被出生点顶掉；
+   **注意「房号就位」的判据**：`RoomFinished 07:EA26` 在装完后把 `$5A` 写成 `#$FF`
+   （asm 注释 "No more tasks to perform on current room"），`SetupRoom 07:EA2B` 见 `$FF` 直接 RTS
+   ——所以 `$5A==$FF` 是**装完后的正常稳态**，不是「没装载」。装载证据要用门瓦/门槽非零，
+   不能用 `$5A!=$FF`；`$F0` 段才是窗内临时房号。
 3. 落笔后**核对 2 帧**，被覆盖则重写（最多 3 次）；
 4. **从落起点那帧起** 300 帧（`POS_DEADLINE_FRAMES`）仍未站稳 ⇒ stderr 说明 + **exit 8**
    （fail-loud）；帧数不够、根本没进 GameEngine 时另给一条可读诊断，同样 exit 8。
@@ -247,6 +252,8 @@ tools/playable_door_smoke.sh --self-test     # rc=0 ⇒ 四态判定与退出码
 验收读数（`--start-preset bridge-tourian`，1400 帧）：f466 落起点（进 GameEngine）→ f470 装载完成
 （`door_slots=1/0/0/1`、门瓦 24、`load_phase=1`）→ f473 桥生成（`$0054`←`0x80`）→
 f475 MapPos 复位 `4/2` → f477 坐标落笔 `0xE0/0x6F` → rc=0。
+结束态（f1400）：`room=$FF`（装完哨兵）、`door_slots=2/0/0/2`、门瓦 `0/24`、`bridge=$80`、
+`statue 81/82`、坐标 `0E0/0C1`（站在地面）。`--start-room 0x2B`（不给 `--start-map`）结束时 MapPos 回到滚屏所在的同房格 `(24,15)`。
 **帧数下限**：预设需要约 500 帧才进 GameEngine；`--frames 400` 会 fail-loud（exit 8，报「没有进入
 GameEngine」），这是有意行为，不是卡死。
 
