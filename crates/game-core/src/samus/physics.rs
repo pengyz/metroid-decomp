@@ -617,7 +617,7 @@ mod tests {
             m.set_door_entry_status(0);
             m.set_samus_door_data(2);
             m.set_scroll_dir(sd);
-            m.set_scroll_y(sy);
+            m.camera().set_scroll_y(sy);
             m.set_ppuctrl_zp(ppu);
             m.samus().set_hi(hi);
             m.samus().set_x(sx);

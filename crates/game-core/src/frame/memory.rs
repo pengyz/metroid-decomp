@@ -958,6 +958,16 @@ impl Manager {
         self.read_ram(crate::ram_map::SAMUS_DOOR_DATA)
     }
 
+    /// `DoorEntryStatus` 的 typed 写入口（门链测试/转场状态机用）。
+    pub fn set_door_entry_status(&mut self, v: u8) {
+        self.write_ram(crate::ram_map::DOOR_ENTRY_STATUS, v);
+    }
+
+    /// `SamusDoorData` 的 typed 写入口（门链测试/触发源注入用）。
+    pub fn set_samus_door_data(&mut self, v: u8) {
+        self.write_ram(crate::ram_map::SAMUS_DOOR_DATA, v);
+    }
+
 
     /// `StatuesBridgeIsSpawned`（`$0054`）。
     pub fn statues_bridge_spawned(&self) -> u8 {
