@@ -10,7 +10,11 @@
 CARGO_TARGET_DIR=target tools/playable_door_smoke.sh          # 阶段 1：横滚门
 DOOR_SHOTS=/tmp/smoke tools/playable_door_smoke.sh            # 截图落指定目录
 tools/playable_door_smoke.sh --stage 2                        # 阶段 2：另一方向门
+# 换输入脚本而不改本文件（等 #104 给出真实可达路径时直接用）：
+tools/playable_door_smoke.sh --script /tmp/door_input.txt --frames 1800 --shot-frames 1470,1700
 ```
+
+`--script` 读不到时退出码 2 并打印路径；日志里会注明「脚本来自 xxx」，避免误以为跑的是内置脚本。
 
 退出码就是结论（0 才算通过），CI/回归直接看码：
 

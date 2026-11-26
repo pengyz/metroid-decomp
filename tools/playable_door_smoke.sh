@@ -27,9 +27,15 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 JUDGE="$HERE/playable_door_judge.py"
 STAGE=1
 SELFTEST=0
+SCRIPT_OVERRIDE=""
+FRAMES_OVERRIDE=""
+SHOT_FRAMES_OVERRIDE=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --stage) STAGE="${2:-1}"; shift 2 ;;
+    --script) SCRIPT_OVERRIDE="${2:-}"; shift 2 ;;
+    --frames) FRAMES_OVERRIDE="${2:-}"; shift 2 ;;
+    --shot-frames) SHOT_FRAMES_OVERRIDE="${2:-}"; shift 2 ;;
     --self-test) SELFTEST=1; shift ;;
     *) echo "未知参数：$1" >&2; exit 2 ;;
   esac
@@ -117,6 +123,18 @@ EOF
     ;;
   *) echo "阶段只能是 1 或 2（收到 $STAGE）" >&2; exit 2 ;;
 esac
+
+# 覆盖项：等 #104 给出真实可达路径的脚本后，可直接复用判定器而不改本文件。
+if [ -n "$SCRIPT_OVERRIDE" ]; then
+  if [ ! -r "$SCRIPT_OVERRIDE" ]; then
+    echo "[FAIL] --script 指定的文件不存在或不可读：$SCRIPT_OVERRIDE" >&2
+    exit 2
+  fi
+  INPUT="$(cat "$SCRIPT_OVERRIDE")"
+  DOOR_NAME="${DOOR_NAME}（脚本来自 $(basename "$SCRIPT_OVERRIDE")）"
+fi
+[ -n "$FRAMES_OVERRIDE" ] && FRAMES="$FRAMES_OVERRIDE"
+[ -n "$SHOT_FRAMES_OVERRIDE" ] && SHOT_FRAMES="$SHOT_FRAMES_OVERRIDE"
 
 OUT_DIR="$(mktemp -d)"
 SCRIPT="$OUT_DIR/input.txt"
