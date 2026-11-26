@@ -54,8 +54,10 @@ pub(crate) fn check_update_name_table(mem: &mut Manager) {
         if mem.in_update_world && mem.in_samus_update {
             mem.draw_interrupted = true;
         }
-    } else if mem.room_load_phase == 0 {
-        // 无任务在跑：保留旧径（`$FF` 早退 / `$FE` / `>= $F0` 的属性表步进）——这些分支不装载。
+    } else if mem.room_load_phase != 1 {
+        // 空闲，或尾段（相位 2）：ROM 每次滚动调用都 `jsr SetupRoom`(07:E54A 首件)——尾段
+        // `RoomNumber >= $F0` 时 `setup_room` 正是 `AttribTableWrite ; 07:EA13` 的一步。
+        // 冻结窗（相位 1）不调（窗内像素不重触发装载）。
         crate::frame::tick::setup_room(mem);
     }
     if is_load {

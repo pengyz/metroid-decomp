@@ -240,11 +240,15 @@ pub fn room_load_gate_step(mem: &mut Manager) -> bool {
             mem.room_load_phase = 2;
             mem.room_load_tail = 0;
             mem.set_room_number(0xF0);
-            advance_room_load_tail(mem);
+            // [EXP-119B] 变体 B：窗末那帧只置 $F0，不做 attrib 调用
             true
         }
         2 => {
-            advance_room_load_tail(mem);
+            if mem.room_number() == 0xFF {
+                mem.room_load_phase = 0;
+                mem.room_load_room = 0xFF;
+                return true;
+            }
             // 【载房完成帧的「剩余滚动调用」补偿（2026-11-19 尾游标修复）】
             // asm：装载工作在 `jsr SetupRoom` 的**那一次滚动调用**内完成并置 `$F0`
             // （`DrawRoom → EndOfRoom ; 07:EAF4`），该帧**剩余的滚动调用**继续推尾游标
@@ -257,13 +261,6 @@ pub fn room_load_gate_step(mem: &mut Manager) -> bool {
             // 故在尾段第一拍补推一格（等价于那次被吞掉的调用）。
             // 判据=门入场滚动在跑：`case-morphball-probe` 载房完成帧 `$0056=0`、其后 17 帧
             // `ScrollX` 恒 1（emu 停在 `$F0`，无任何滚动调用）⇒ 不补，基线逐格不变。
-            if mem.room_load_tail == 2 && mem.read_ram(crate::ram_map::DOOR_ENTRY_STATUS) != 0 {
-                advance_room_load_tail(mem);
-            }
-            if mem.room_load_tail >= 3 {
-                mem.room_load_phase = 0;
-                mem.room_load_room = 0xFF;
-            }
             true
         }
         _ => false,
@@ -276,25 +273,9 @@ pub fn room_load_gate_step(mem: &mut Manager) -> bool {
 /// （`ExitSub / WritePPUAttribTbl / ExitSub / WritePPUAttribTbl / RoomFinished`）
 /// ⇒ 一「格」= 一串连续调用，直到游标抵达该格的目标值。
 fn advance_room_load_tail(mem: &mut Manager) {
-    let target: u8 = match mem.room_load_tail {
-        0 => 0xF1,
-        1 => 0xF3,
-        _ => 0xFF,
-    };
-    // 每格最多 2 次调用（F0→F1；F1→F3；F3→FF），用 3 做硬上界。
-    //
-    // 【fail-loud（2026-11-19 对抗复核 P2）】上界用尽仍未达目标 = 游标不在 F0..F4 格点上
-    // （外来改写 `RoomNumber`、`room_ptr` 未设等）⇒ 按仓库 D7 纪律**当场炸在 bank:addr**，
-    // 不许 `debug_assert` 在 release 里被编译掉、把游标走成一个看似合法的房号（那样下一帧
-    // `is_load` 会真的再整房重载，症状离根因极远）。
-    let mut calls = 0;
-    while mem.room_number() != target {
-        if calls == 3 {
-            crate::unported!("bank07:EA13-tail-cursor");
-        }
-        crate::world::room_draw::attrib_table_write(mem);
-        calls += 1;
-    }
+    // [EXP-119B] 逐值状态机：一次调用只推一格（ROM `AttribTableWrite ; 07:EA13`
+    // = lda RoomNumber / and #$0F / inc RoomNumber / JumpEngine 5 项表）。
+    crate::world::room_draw::attrib_table_write(mem);
     mem.room_load_tail = mem.room_load_tail.saturating_add(1);
 }
 
@@ -317,8 +298,10 @@ pub fn setup_room(mem: &mut Manager) {
         crate::unported!("bank07:EA5D"); // 占位字节路
     }
     if room >= 0xF0 {
-        // AttribTableWrite（$EA13——r25 端口：$F0-$F4 命令链）
-        crate::world::room_draw::attrib_table_write(mem);
+        // AttribTableWrite（$EA13）——**逐值状态机唯一推进点**：本函数是 `jsr SetupRoom`
+        // 的端口，而 ROM 每次 `jsr SetupRoom` 只走一步（`07:EA13` 的 `inc RoomNumber` + 5 项表）。
+        // 调用点：`camera/scroll.rs::check_update_name_table`（尾段每次滚动调用一次）。
+        advance_room_load_tail(mem);
         return;
     }
     // DeleteOffscreenRoomSprites（$EC9B）——载房前清「正在进入视野的名表」里的陈旧对象。
@@ -377,23 +360,30 @@ mod tests_room_load_task {
         assert_eq!(m.room_load_room, 8);
     }
 
-    /// 【任务机 TDD 2】尾段三格的帧边界依次是 `F1 → F3 → FF`（Mesen room0/23/8 三房实录）。
+    /// 【任务机 TDD 2·2026-11-27 契约更新】尾段推进 = **每次 `jsr SetupRoom` 一格**，
+    /// 不是「每帧一格」（旧契约=窗末一拍推一格、之后每拍一格；emu 实测 f672 的
+    /// `F0 F1 F2 F3 F4 F4 FF` 有一帧不动、f1309 的 `F0 F2 F3 FF` 有一帧两步 ⇒ 帧边界
+    /// 不是推进单位）。ROM 依据：`CheckUpdateNameTable ; 07:E54A` 首件 `jsr SetupRoom`，
+    /// `SetupRoom ; 07:EA2B` 在 `RoomNumber >= $F0` 时 `bcs AttribTableWrite ; 07:EA13`
+    /// （`lda RoomNumber / and #$0F / inc RoomNumber / 5 项表`）——一次调用只走一步。
     #[test]
-    fn tail_walks_f1_f3_ff() {
+    fn tail_advances_one_step_per_setup_room_call() {
         let mut m = Manager::default();
         m.room_load_phase = 1;
         m.room_load_room = 8;
         m.room().set_room_ptr(0x6000); // 真实流里由 setup_room 的 SelectRoomRAM 写入
-        m.set_room_number(0xF0); // 窗末：EndOfRoom 的 $F0 起点
+        m.set_room_number(8); // 窗内保持房号（emu room8 f900-f903 实录）
 
-        assert!(super::room_load_gate_step(&mut m)); // 窗结束那一拍 = 尾段第 1 格
-        assert_eq!(m.room_number(), 0xF1, "第 1 格边界 F1");
+        assert!(super::room_load_gate_step(&mut m)); // 窗末：只置 $F0，不推进
+        assert_eq!(m.room_number(), 0xF0, "窗末只置 $F0（旧契约在这里就要推一格）");
+        assert_eq!(m.room_load_phase, 2);
 
-        super::room_load_gate_step(&mut m);
-        assert_eq!(m.room_number(), 0xF3, "第 2 格边界 F3（同拍推进两格）");
-
-        super::room_load_gate_step(&mut m);
-        assert_eq!(m.room_number(), 0xFF, "第 3 格边界 FF（RoomFinished）");
+        // 之后每次 SetupRoom 调一次走一步：F0→F1→F2→F3→F4→FF
+        for (i, want) in [0xF1u8, 0xF2, 0xF3, 0xF4, 0xFF].iter().enumerate() {
+            super::setup_room(&mut m);
+            assert_eq!(m.room_number(), *want, "第 {} 步", i + 1);
+        }
+        assert!(super::room_load_gate_step(&mut m), "FF ⇒ 收口");
         assert_eq!(m.room_load_phase, 0, "任务机归位");
     }
 
@@ -462,36 +452,26 @@ mod tests_room_load_task {
     /// `EndOfRoom ; 07:EAF4` 置 `$F0` 后，同帧剩余调用继续推进。Rust 冻结窗整拍吞迭代 ⇒
     /// 少一次调用。副作用可观测：`ScrollX=8`（`idx=1` 唯一 kick 窗）错过 ⇒ 名表第 1 列缺。
     #[test]
-    fn door_scroll_compensates_one_tail_step() {
-        // 门入场滚动在跑（$0056=01）：尾段第一拍多推一格 ⇒ F1 → FF（跳两格）。
-        let mut m = Manager::default();
-        m.room_load_phase = 1;
-        m.room_load_room = 0;
-        m.room().set_room_ptr(0x6000);
-        m.set_room_number(0xF0);
-        m.write_ram(crate::ram_map::DOOR_ENTRY_STATUS, 1);
-        super::room_load_gate_step(&mut m); // 窗末：F0 → F1（原有第一格）
-        assert_eq!(m.room_number(), 0xF1, "窗末第一格 F1");
-        super::room_load_gate_step(&mut m); // 尾段第一拍：F1 → F3（原有）→ 补偿 → FF
-        assert_eq!(
-            m.room_number(),
-            0xFF,
-            "门入场滚动在跑 ⇒ 尾段第一拍补推一格（F3 → FF）"
-        );
-
-        // 非门入场（$0056=00）：不补偿，逐格推进（基线行为不变）。
-        let mut n = Manager::default();
-        n.room_load_phase = 1;
-        n.room_load_room = 0;
-        n.room().set_room_ptr(0x6000);
-        n.set_room_number(0xF0);
-        n.write_ram(crate::ram_map::DOOR_ENTRY_STATUS, 0);
-        super::room_load_gate_step(&mut n);
-        assert_eq!(n.room_number(), 0xF1, "窗末第一格 F1");
-        super::room_load_gate_step(&mut n);
-        assert_eq!(n.room_number(), 0xF3, "非门入场 ⇒ 不补，仍 F3");
-        super::room_load_gate_step(&mut n);
-        assert_eq!(n.room_number(), 0xFF, "第三格 FF");
+    fn tail_does_not_step_in_gate_step_even_for_door_scroll() {
+        // 【2026-11-27 契约更新：旧「门入场补偿 +1 格」已删除】旧补偿存在的理由是
+        // 「窗末那一拍不推、整帧被吞 ⇒ 完成帧的剩余滚动调用丢失」，用「多推一格」近似。
+        // 新契约把推进点搬到每次滚动调用（`check_update_name_table` → `setup_room`），
+        // 因此门入场与非门入场**都不再由 gate_step 推进**，补偿失去对象：
+        // 每个调用点各自走一步，帧内多调用就多步（emu f1309 的 `F0 F2 F3 FF` 即此形态）。
+        for door in [0u8, 1u8] {
+            let mut m = Manager::default();
+            m.room_load_phase = 1;
+            m.room_load_room = 0;
+            m.room().set_room_ptr(0x6000);
+            m.set_room_number(0);
+            m.set_door_entry_status(door);
+            super::room_load_gate_step(&mut m); // 窗末：只置 $F0
+            assert_eq!(m.room_number(), 0xF0, "窗末不推进（$56={door}）");
+            super::room_load_gate_step(&mut m); // 相位 2：仍不推进
+            assert_eq!(m.room_number(), 0xF0, "相位 2 门步不推进（$56={door}）");
+            super::setup_room(&mut m); // 一次滚动调用 = 一步
+            assert_eq!(m.room_number(), 0xF1, "一次 SetupRoom 一步（$56={door}）");
+        }
     }
 
     /// 尾段落完后任务机必须回空闲，否则下一次真实载房会被 `is_load` 的相位闸永久挡住。
@@ -501,13 +481,20 @@ mod tests_room_load_task {
         m.room_load_phase = 1;
         m.room_load_room = 23;
         m.room().set_room_ptr(0x6400);
-        m.set_room_number(0xF0);
-        for _ in 0..3 {
-            super::room_load_gate_step(&mut m);
+        m.set_room_number(23);
+        super::room_load_gate_step(&mut m); // 窗末：置 $F0
+        assert_eq!(m.room_number(), 0xF0);
+        for want in [0xF1u8, 0xF2, 0xF3, 0xF4, 0xFF] {
+            super::setup_room(&mut m); // 五个滚动调用走完尾段
+            assert_eq!(m.room_number(), want);
         }
-        assert_eq!((m.room_load_phase, m.room_load_tail), (0, 3));
+        assert!(super::room_load_gate_step(&mut m), "FF ⇒ 收口那一拍");
+        assert_eq!((m.room_load_phase, m.room_load_tail), (0, 5), "尾段 5 步");
         assert_eq!(m.room_number(), 0xFF);
         assert!(!super::room_load_gate_step(&mut m), "空闲态不推进");
+        // 下一次真实载房仍可被识别（相位已归零）
+        m.set_room_number(9);
+        assert!(super::is_new_load_request(&m, 9), "收口后新请求可见");
     }
 }
 

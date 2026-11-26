@@ -252,7 +252,7 @@ tools/playable_door_smoke.sh --self-test     # rc=0 ⇒ 四态判定与退出码
 验收读数（`--start-preset bridge-tourian`，1400 帧）：f466 落起点（进 GameEngine）→ f470 装载完成
 （`door_slots=1/0/0/1`、门瓦 24、`load_phase=1`）→ f473 桥生成（`$0054`←`0x80`）→
 f475 MapPos 复位 `4/2` → f477 坐标落笔 `0xE0/0x6F` → rc=0。
-结束态（f1400）：`room=$FF`（装完哨兵）、`door_slots=2/0/0/2`、门瓦 `0/24`、`bridge=$80`、
+结束态（f1400）：`room=$FF`（`RoomFinished 07:EA26` 的装完稳态，不是「未装载」）、`door_slots=2/0/0/2`、门瓦 `0/24`、`bridge=$80`、
 `statue 81/82`、坐标 `0E0/0C1`（站在地面）。`--start-room 0x2B`（不给 `--start-map`）结束时 MapPos 回到滚屏所在的同房格 `(24,15)`。
 **帧数下限**：预设需要约 500 帧才进 GameEngine；`--frames 400` 会 fail-loud（exit 8，报「没有进入
 GameEngine」），这是有意行为，不是卡死。
