@@ -58,6 +58,7 @@ WATCH_KEYS = {
     "mb_status": "$0098 MotherBrainStatus",
     "end_timer": "$010A EndTimer",
     "at_ending": "$6883 AtEnding",
+    "in_tourian": "$0074 InArea 低 4 位 == 3（派生键：这一帧是否在 Tourian）",
 }
 
 NODES = [
@@ -75,7 +76,9 @@ NODES = [
     dict(id="S5", title="进入 Tourian", pred="(in_area & 0x0F) == 3",
          cited="docs/spec/game-progress.md §0#6, §2", confidence="A"),
     dict(id="S6", title="Zebetite 清空", pred="zeb0 == 0 and zeb1 == 0 and zeb2 == 0 and zeb3 == 0 and zeb4 == 0",
-         cited="docs/spec/game-progress.md §3.3（5 座各 8 击）", confidence="B"),
+         require_seen={"in_tourian": "gt0", "zeb0": "gt0", "zeb1": "gt0",
+                       "zeb2": "gt0", "zeb3": "gt0", "zeb4": "gt0"},
+         cited="docs/spec/game-progress.md §3.3（5 座各 8 击）；区域门：#98 §5（未进 Tourian 时 Zebetite 根本没生成，全 0 不是「已清空」）", confidence="B"),
     dict(id="S7", title="母脑击破", pred="mb_status == 7",
          cited="docs/spec/game-progress.md §3.2（11 态表；7=死亡态待核）", confidence="B"),
     dict(id="S8", title="逃逸计时耗尽", pred="end_timer == 0", require_seen={"end_timer": "gt0"},
@@ -116,14 +119,27 @@ WATCH_ADDR = {
     "bridge": ("zp", 0x0054),
     "in_area": ("zp", 0x0074),
     "mb_status": ("zp", 0x0098),
-    "end_timer": ("iram", 0x010A),
+    # 【iram 是 $0100-$07FF 的 1792 B 视图（不是 $0000-$07FF）】Rust 腿
+    # `rust.state.jsonl` 的 `w.iram` 由 `memmap/observe/frame_face.rs` 导出，
+    # 起点是 $0100、长度 0x700。因此这里的偏移一律写 `addr - 0x0100`；
+    # 写绝对地址会把 $010A 读成 $020A、把 $0758 读成越界（旧实现静默跳过
+    # ⇒ zeb0..4 键永不存在 ⇒ S6 永远不可能成立，见 #98 §4 / #99 G6）。
+    "end_timer": ("iram", 0x010A - 0x0100),
     "at_ending": ("wram", 0x6883 - 0x6000),
-    "zeb0": ("iram", 0x0758),
-    "zeb1": ("iram", 0x0760),
-    "zeb2": ("iram", 0x0768),
-    "zeb3": ("iram", 0x0770),
-    "zeb4": ("iram", 0x0778),
+    "zeb0": ("iram", 0x0758 - 0x0100),
+    "zeb1": ("iram", 0x0760 - 0x0100),
+    "zeb2": ("iram", 0x0768 - 0x0100),
+    "zeb3": ("iram", 0x0770 - 0x0100),
+    "zeb4": ("iram", 0x0778 - 0x0100),
 }
+
+# 每个整块 blob 的 CPU 地址起点（`iram` 不是从 $0000 起）。
+BLOB_BASE = {"zp": 0x0000, "iram": 0x0100, "wram": 0x6000, "pw": 0x6988}
+BLOB_LEN = {"zp": 0x100, "iram": 0x700, "wram": 0x2000, "pw": 0x2C}
+
+# 派生键：不进 WATCH_ADDR（没有独立地址），由其它键现算。
+# in_tourian = (in_area & 0x0F) == 3 —— S6 的区域门用它（#98 §5 假阳性）。
+DERIVED_KEYS = {"in_tourian"}
 
 
 class NodeError(RuntimeError):
@@ -131,19 +147,40 @@ class NodeError(RuntimeError):
 
 
 def _decode_blobs(w: dict) -> dict:
-    """从整块内存 hex 里取出 watch 键（只取存在的、且在块范围内的）。"""
+    """从整块内存 hex 里取出 watch 键；越界**fail-loud**（不静默跳过）。
+
+    旧实现在 `i + 2 > len(blob)` 时静默 continue，导致 `zeb0..4`（$0758，
+    相对 $0100 是 0x658）在唯一的 Rust 轨迹上永远取不到 ⇒ S6 恒不可达。
+    现在：块存在但键越界 ⇒ 抛 NodeError，报文带键名、绝对地址、块容量，
+    让「谁的生产者少导了一段」立刻可见（#99 G6）。
+    """
     out = {}
     for key, (space, off) in WATCH_ADDR.items():
         blob = w.get(space)
         if not isinstance(blob, str):
             continue
+        cap = len(blob) // 2
+        if off + 1 > cap:
+            base = BLOB_BASE.get(space, 0)
+            raise NodeError(
+                f"watch 键 {key} 越界：地址 ${base + off:04X}"
+                f"（{space} 偏移 {off:#06x}）超出块容量 {cap} B"
+                f"（{space} 期望 {BLOB_LEN.get(space, cap)} B）——"
+                f"检查导出方是否少导了这段内存"
+            )
         i = off * 2
-        if i + 2 <= len(blob):
-            try:
-                out[key] = int(blob[i:i + 2], 16)
-            except ValueError:
-                pass
-    return out
+        try:
+            out[key] = int(blob[i:i + 2], 16)
+        except ValueError as e:
+            raise NodeError(f"watch 键 {key} 的字节不是合法 hex（{space}[{off}]）：{e}") from e
+    return _derive(out)
+
+
+def _derive(vals: dict) -> dict:
+    """派生键：只要 in_area 在，就能算出 in_tourian（0/1）。"""
+    if "in_area" in vals:
+        vals["in_tourian"] = 1 if (int(vals["in_area"]) & 0x0F) == 3 else 0
+    return vals
 
 
 _ALLOWED = re.compile(r"^[\s0-9a-zA-Z_|&()<>=!+\-]*$")
@@ -182,7 +219,9 @@ def load_trace(path: Path) -> list[dict]:
 
 
 def _needed_keys(node: dict) -> set[str]:
-    return set(re.findall(r"[a-zA-Z_][a-zA-Z0-9_]*", node["pred"])) & set(WATCH_KEYS)
+    keys = set(re.findall(r"[a-zA-Z_][a-zA-Z0-9_]*", node["pred"])) & set(WATCH_KEYS)
+    keys |= set(node.get("require_seen") or {}) & set(WATCH_KEYS)
+    return keys
 
 
 def eval_trace(rows: list[dict]) -> dict:
@@ -193,12 +232,14 @@ def eval_trace(rows: list[dict]) -> dict:
     """
     arrived: list[dict] = []
     seen_ok = {k: False for node in NODES for k in (node.get("require_seen") or {})}
+    gate_reason = ""
     pending = list(NODES)
     for rec in rows:
         raw = rec["w"]
         vals = {k: int(v) for k, v in raw.items() if isinstance(v, (int, float))}
         for k, v in _decode_blobs(raw).items():
             vals.setdefault(k, v)
+        _derive(vals)
         for k in seen_ok:
             if not seen_ok[k] and vals.get(k, 0) > 0:
                 seen_ok[k] = True
@@ -209,7 +250,9 @@ def eval_trace(rows: list[dict]) -> dict:
             if not eval_pred(node["pred"], vals):
                 break
             req = node.get("require_seen") or {}
-            if any(not seen_ok.get(k) for k in req):
+            missing = [k for k in req if not seen_ok.get(k)]
+            if missing:
+                gate_reason = f"先决门未满足：{', '.join(missing)}（要求先出现过满足 {req[missing[0]]} 的值）"
                 break
             arrived.append(dict(id=node["id"], title=node["title"], frame=rec["f"]))
             pending.pop(0)
@@ -219,7 +262,8 @@ def eval_trace(rows: list[dict]) -> dict:
     if pending:
         n = pending[0]
         first_break = dict(id=n["id"], title=n["title"], pred=n["pred"],
-                           cited=n["cited"], confidence=n["confidence"])
+                           cited=n["cited"], confidence=n["confidence"],
+                           gate=gate_reason)
     return dict(frames=len(rows), arrived=arrived, first_break=first_break)
 
 
@@ -276,6 +320,8 @@ def cmd_trace(args) -> int:
             b = res["first_break"]
             print(f"  第一个断点：{b['id']} {b['title']}")
             print(f"    谓词 {b['pred']}")
+            if b.get("gate"):
+                print(f"    {b['gate']}")
             print(f"    依据 {b['cited']}")
         else:
             print("  全部节点按序到达。")
@@ -298,6 +344,8 @@ def cmd_report(args) -> int:
         if res["first_break"]:
             b = res["first_break"]
             print(f"第一个断点：{b['id']} {b['title']}（{b['cited']}）")
+            if b.get("gate"):
+                print(f"  {b['gate']}")
     if bad:
         print("判决：**不通关** —— 静态链路断在 "
               + "、".join(f"{r['id']}（{r['file']}）" for r in bad))
@@ -322,6 +370,48 @@ def cmd_nodes(args) -> int:
     print("\nwatch 键（生产者需按此命名逐帧导出）：")
     for k, v in WATCH_KEYS.items():
         print(f"  {k:<14} {v}")
+    return 0
+
+
+def check_convert(trace_path: Path, coverage_path: Path | None = None) -> dict:
+    """换算断言：`iram` 是 $0100 起的 1792 B 视图，$0400 必须落在偏移 0x300。
+
+    返回 `{frame, iram_0x300, cov_rust, ok}`；`ok` 要求
+    `iram[$0400-$0100] == coverage.first_divergence.rust`（同一帧同一字节）。
+    """
+    cov = None
+    if coverage_path and coverage_path.exists():
+        cov = json.loads(coverage_path.read_text(encoding="utf-8")).get("first_divergence")
+    res = dict(frame=None, iram_0x300=None, cov_rust=None, ok=False, iram_0x400=None)
+    target = (cov or {}).get("frame")
+    for rec in load_trace(trace_path):
+        if target is not None and rec["f"] != target:
+            continue
+        iram = (rec.get("w") or {}).get("iram")
+        if not isinstance(iram, str):
+            break
+        raw = bytes.fromhex(iram)
+        res["frame"] = rec["f"]
+        res["iram_0x300"] = raw[0x300] if len(raw) > 0x300 else None
+        res["iram_0x400"] = raw[0x400] if len(raw) > 0x400 else None
+        res["cov_rust"] = (cov or {}).get("rust")
+        res["ok"] = res["iram_0x300"] == res["cov_rust"] is not None
+        break
+    return res
+
+
+def cmd_verify_convert(args) -> int:
+    trace = Path(args.trace)
+    if not trace.exists():
+        print(f"[错误] 轨迹文件不存在：{trace}", file=sys.stderr)
+        return 2
+    r = check_convert(trace, Path(args.coverage) if args.coverage else None)
+    print(f"[换算] 帧 {r['frame']}：iram[0x0400-0x0100]=iram[0x300]={r['iram_0x300']}，"
+          f"coverage.rust={r['cov_rust']}（iram[0x400]={r['iram_0x400']}）")
+    if not r["ok"]:
+        print("[FAIL] iram 偏移换算与 coverage 不一致（期望 $0400 落在 0x300）", file=sys.stderr)
+        return 1
+    print("[PASS] iram 偏移换算与 coverage 一致")
     return 0
 
 
@@ -351,6 +441,7 @@ def cmd_selftest(args) -> int:
         dict(f=30, w=dict(kraid_status=0x81, ridley_status=0x82, in_area=0x00)),
         dict(f=40, w=dict(kraid_status=0x81, ridley_status=0x82, bridge=1)),
         dict(f=50, w=dict(bridge=1, in_area=0x03)),
+        dict(f=52, w=dict(in_area=0x03, zeb0=8, zeb1=8, zeb2=8, zeb3=8, zeb4=8)),
         dict(f=55, w=dict(in_area=0x03, **zeb)),
         dict(f=70, w=dict(in_area=0x03, mb_status=7)),
         dict(f=80, w=dict(end_timer=120)),
@@ -378,15 +469,46 @@ def cmd_selftest(args) -> int:
     r3 = eval_trace(nowatch)
     ok("Zebetite 未采集 ⇒ 断在 S6", r3["first_break"] and r3["first_break"]["id"] == "S6", str(r3["first_break"]))
 
-    # 4b) 整块内存 hex 形态（Rust 腿 rust.state.jsonl）能按偏移取出同一批键
-    zp = bytearray(0x100); iram = bytearray(0x800); wram = bytearray(0x2000)
-    zp[0x74] = 0x11; zp[0x54] = 1; zp[0x98] = 7; iram[0x10A] = 0xF0
-    iram[0x758] = 3; wram[0x87B] = 0x81; wram[0x87C] = 0x82; wram[0x883] = 1
+    # 4b) 整块内存 hex 形态（Rust 腿 rust.state.jsonl）能按偏移取出同一批键。
+    #     iram 是 $0100-$07FF 的 1792 B 视图：$010A ⇒ 偏移 0x0A、$0758 ⇒ 偏移 0x658。
+    zp = bytearray(0x100); iram = bytearray(0x700); wram = bytearray(0x2000)
+    zp[0x74] = 0x11; zp[0x54] = 1; zp[0x98] = 7
+    iram[0x010A - 0x0100] = 0xF0
+    iram[0x0758 - 0x0100] = 3
+    wram[0x687B - 0x6000] = 0x81; wram[0x687C - 0x6000] = 0x82; wram[0x6883 - 0x6000] = 1
     dec = _decode_blobs(dict(zp=zp.hex(), iram=iram.hex(), wram=wram.hex(), pw="00" * 16))
     ok("blob 解码 in_area", dec.get("in_area") == 0x11, str(dec))
     ok("blob 解码 kraid/ridley", dec.get("kraid_status") == 0x81 and dec.get("ridley_status") == 0x82, str(dec))
     ok("blob 解码 at_ending/bridge/mb", dec.get("at_ending") == 1 and dec.get("bridge") == 1 and dec.get("mb_status") == 7, str(dec))
-    ok("blob 越界按缺省（不抛、不臆造）", _decode_blobs(dict(iram=bytearray(0x100).hex())).get("zeb0", 0) == 0, "ok")
+    # 换算锁死：iram 偏移必须按 addr-$0100，$010A 读 iram[0x0A]、$0758 读 iram[0x658]
+    ok("iram 换算 $010A→0x0A", dec.get("end_timer") == 0xF0, str(dec.get("end_timer")))
+    ok("iram 换算 $0758→0x658", dec.get("zeb0") == 3, str(dec.get("zeb0")))
+    # 反例：把 $010A 当绝对偏移(0x10A)读，在 1792 B 块里会越过 $0758 区（这里直接 fail-loud）
+    try:
+        _decode_blobs(dict(iram=bytearray(0x700).hex()))
+        ok("右尺寸 iram 块可取到全部键", True)
+    except NodeError as e:
+        ok("右尺寸 iram 块可取到全部键", False, str(e))
+    # 越界必须 fail-loud（旧实现静默跳过 ⇒ S6 恒不可达）
+    try:
+        _decode_blobs(dict(iram=bytearray(0x100).hex()))
+        ok("iram 越界 fail-loud", False, "未抛 NodeError")
+    except NodeError as e:
+        ok("iram 越界 fail-loud", "越界" in str(e) and "zeb0" in str(e) or "zeb" in str(e), str(e))
+    # 派生键：in_tourian 只在 in_area 低 4 位 ==3 时为 1
+    dec3 = _decode_blobs(dict(zp=(lambda b: (b.__setitem__(0x74, 0x03), b.hex())[1])(bytearray(0x100))))
+    ok("派生 in_tourian 区号3=1", dec3.get("in_tourian") == 1, str(dec3.get("in_tourian")))
+    dec0 = _decode_blobs(dict(zp=(lambda b: (b.__setitem__(0x74, 0x00), b.hex())[1])(bytearray(0x100))))
+    ok("派生 in_tourian 区号0=0", dec0.get("in_tourian") == 0, str(dec0.get("in_tourian")))
+
+    # 4c) 真产物上的换算断言（有则锁死；无则显式 SKIP，不静默）
+    real_trace = ROOT / "analysis" / "tas-main-f22895" / "rust" / "full.state.jsonl"
+    real_cov = ROOT / "analysis" / "tas-main-f22895" / "coverage.json"
+    if real_trace.exists() and real_cov.exists():
+        rc = check_convert(real_trace, real_cov)
+        ok("真产物换算 f=22895", rc["ok"], str(rc))
+    else:
+        print(f"SELFTEST SKIP：无真产物（{real_trace}）——换算断言由 `verify-convert` 单独跑")
 
     # 5) end_timer 一直为 0 不算达成（require_seen）
     flat = [dict(f=b["f"], w=dict(b["w"])) for b in full]
@@ -394,6 +516,31 @@ def cmd_selftest(args) -> int:
         b["w"]["end_timer"] = 0
     r4 = eval_trace(flat)
     ok("end_timer 未曾>0 ⇒ 不算达成", r4["first_break"] and r4["first_break"]["id"] == "S8", str(r4["first_break"]))
+
+    # 5b) S6 区域门：Zebetite 全 0 但从未进 Tourian ⇒ 不得判到达（#98 §5 假阳性）
+    no_tourian = [
+        dict(f=20, w=dict(kraid_status=0x01, ridley_status=0x00, in_area=0x02)),
+        dict(f=25, w=dict(kraid_status=0x01, ridley_status=0x02, in_area=0x04)),
+        dict(f=30, w=dict(kraid_status=0x81, ridley_status=0x82, in_area=0x00)),
+        dict(f=40, w=dict(kraid_status=0x81, ridley_status=0x82, bridge=1, in_area=0x00)),
+        dict(f=50, w=dict(bridge=1, in_area=0x00, **zeb)),
+        dict(f=60, w=dict(in_area=0x00, **zeb)),
+    ]
+    r5 = eval_trace(no_tourian)
+    ok("未进 Tourian ⇒ S6 不判到达", r5["first_break"] and r5["first_break"]["id"] == "S5",
+       str(r5["first_break"]))
+    # 进过 Tourian 但 Zeb 一直是 0（从未生成）⇒ 曾非零门挡住，不得判「已清空」
+    entered_zero = no_tourian[:-1] + [dict(f=55, w=dict(in_area=0x03, **zeb))]
+    r6 = eval_trace(entered_zero)
+    ok("Zeb 从未非零 ⇒ S6 仍不判到达", not any(a["id"] == "S6" for a in r6["arrived"]), str(r6["arrived"]))
+    # 进过 Tourian 且 Zeb 曾非零、随后归零 ⇒ S6 到达
+    entered_ok = no_tourian[:-1] + [
+        dict(f=55, w=dict(in_area=0x03, in_tourian=None, zeb0=8, zeb1=8, zeb2=8, zeb3=8, zeb4=8)),
+        dict(f=60, w=dict(in_area=0x03, **zeb)),
+    ]
+    entered_ok = [{k: v for k, v in x["w"].items() if v is not None} and dict(f=x["f"], w={k: v for k, v in x["w"].items() if v is not None}) for x in entered_ok]
+    r7 = eval_trace(entered_ok)
+    ok("Zeb 曾非零后归零 ⇒ S6 到达", any(a["id"] == "S6" for a in r7["arrived"]), str(r7["arrived"]))
 
     # 6) 静态链路：真仓库上跑通（不强求全绿，只求不抛异常且结构完整）
     rows = check_links()
@@ -441,6 +588,11 @@ def main(argv=None) -> int:
 
     p = sub.add_parser("nodes", help="打印节点表 / 链路表 / watch 键")
     p.set_defaults(func=cmd_nodes)
+
+    p = sub.add_parser("verify-convert", help="校验 iram 偏移换算与 coverage 一致（$0400 ⇒ 0x300）")
+    p.add_argument("--trace", required=True)
+    p.add_argument("--coverage", default=None)
+    p.set_defaults(func=cmd_verify_convert)
 
     p = sub.add_parser("selftest", help="自测（不依赖仓库状态以外的输入）")
     p.set_defaults(func=cmd_selftest)
