@@ -199,3 +199,31 @@ python3 tools/l4_diff_run.py run-all
 | A 级调用序写反（`inc FrameCount` 在 `:205 jsr GoMainRoutine` 之后、`:207`） | 已按 AGENTS §3.6 在 §7.1/§7.3 原文原地加日期更正（原文保留），并把基于该反向事实的两处归因（「链内读已自增」「v6 最贴近 asm」）标作废，新假设 A-2-a 给可证伪命令 |
 
 **对后续修法的影响（重要）**：既然 ROM 的 inc 在例程体之后，那么「多段链」的正确映射是**每拍不 inc、链结束的那一拍 inc 一次**（v3 的方向），而不是「链首前置自增」（我 seq4 提的 span 化方案里那句「FC 在 span 首 tick 前置一次」按此更正为：**span 首 tick 不自增，span 收口 tick 自增一次**）。下一步按 A-2-a 先测「链尾是否真的有那一次 inc」再决定改哪里。
+
+## 8. 修法矩阵（2026-11-26，逐迭代实测；全部在 lane 上跑、跑完即 `git checkout --` 还原）
+
+判据候选与其失败点（同一 password 案 sched，2587 次迭代；基线=干净 HEAD 的逐迭代 FC 序列）：
+
+| 变体 | inc 判据 | 首分歧（vs 基线，迭代序号） | 末端 FC（base/v） | L4 password | 结论 |
+|---|---|---|---|---|---|
+| 基线 | 每拍尾 `inc` | — | 20/20 | 14/14 | 多推 4 次（f4024 +4 / f4187 +9） |
+| v3 | 游标非零即抑制 | idx=500（238/237） | 每拍 −1 | **12/14**（f950 71 px、f1150 94 px） | 过宽：`tr=0x17→0x18` 那条链每拍都是完整迭代 |
+| v7 | 本拍声明了 NMI 等待门则抑制 | idx=1186（156/155） | 20/19 | — | 方向对，但排空拍没有补回那 1 次 inc |
+| v8 | v7 + 抑制时置 `iter_span_fc` | idx=3（2/3） | 20/20 | — | 总量对、落点整体早一拍 |
+| v9 | v7 + 门队列非空才置 `iter_span_fc`，尾部 inc 加「门/span 皆空」门 | replay 4300 首分歧 **f467**（`$0405` 8 B） | — | **14/14** | password 过了，但 `cargo test -p game-core --lib` **13 个既存测试红**（cannon/crawler/dragon/ai_table 等），check FAIL |
+
+**v9 的读数说明**：`run cases/case-password-justin.txt --skip-emu` 14/14（f950/f1150 回 0、f1191/f1430 仍 0）；但同一棵树上 `replay --frames 4300 --allow-rust-missing` 首分歧从「无」劣化到 f467，且 13 个敌人侧单测红 ⇒ 「迭代尾 inc 的时机」不是一个可以只按 title/密码径改的局部判据，它同时是敌人 AI 帧门（`data05` bit6 等）的公共时钟。
+
+### 8.1 精确口径（供后继卡直接用）
+
+- ROM：**例程体（可内含多次 `WaitNMIPass_`）→ `inc FrameCount`（`prg7_engine.asm:207`）→ 等 NMI**（`:209-214`）。⇒ 一次迭代内所有等待帧共用一个 FC 值，迭代结束才 +1。
+- Rust 现状：`main_loop_iter` 每拍尾 `inc`；跨帧等待由 `iter_gates`/`iter_span_left` 表达、由 `engine::settle_iteration` 收口（`iter_span_fc` 单增唯一源 + `#47` 的末门同拍 `pending_fc_inc`）。
+- 因此正确的判据是「**迭代是否结束**」，而 `iter_gates` 只描述「下一拍 NMI 内块跑不跑」，两者**不同源**（v7 之所以只差 1 次、v9 之所以打穿敌人测试，都是把这两个信号当成同一个用）。
+
+### 8.2 后继判据（下一张卡必须同时满足）
+
+1. `run cases/case-password-justin.txt` 14/14（f950/f1150/f1191/f1430 全 0）；
+2. `cargo test -p game-core --lib` 全绿（≥1087，当前 lane 基线）；
+3. `analysis/probe-go` 口径下 f4024 / f4187 的 FC 漂移 = 0；
+4. `replay --frames 4300` 首分歧不早于 f22895（当前 `--frames 24000` 为 f22895 `$0405` 8 B）；
+5. `run-all` ≥171/172。
