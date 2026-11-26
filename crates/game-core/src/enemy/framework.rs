@@ -570,15 +570,18 @@ pub(crate) fn enemy_complete_death(mem: &mut crate::frame::Manager, x: u8) {
     // prevStatus 时带上（Kraid/Ridley 的 etype 高 2 位都是 `$40`）。命中 ⇒ 走
     // 「小 Boss 击杀」支路，**不再转掉落物**（`LDD75` 末尾 `bne LDD5B` 恒真）。
     if mem.enemy(slot_of(x)).prev_status() & 0x40 != 0 {
+        use crate::world::tourian_quota::QuotaReset;
         mini_boss_killed(mem);
-        // `LDD5B ; 07:DD5B`：非 Tourian ⇒ `RemoveEnemy`。Tourian 支路会重置掉落配额
-        // （`$93-$96`）后**不回收**，但该支路对 Kraid/Ridley 不可达（小 Boss 只在
-        // Brinstar/Norfair 出现），且配额变量本身尚未端口 ⇒ 记账后按 RemoveEnemy 处理。
-        if crate::frame::cur_area(mem) == 0x03 {
-            crate::frame::DIVERGENCES.with(|d| d.borrow_mut().push(0x0DD5B));
+        // `LDD75` 末尾 `bne LDD5B`（读 `jsr AddToMaxMissiles` 返回的 A）⇒ 正常情况下落 LDD5B：
+        // 非 Tourian 走 `jmp RemoveEnemy`，Tourian 复位配额后回到下面的掉落生成。
+        // 小 Boss 只出现在 Brinstar/Norfair，Tourian 臂实际不可达，但按 ROM 保留。
+        match crate::world::tourian_quota::ldd5b(mem) {
+            QuotaReset::Remove => {
+                mem.enemy(slot_of(x)).set_status(EnemyStatus::NoEnemy);
+                return;
+            }
+            QuotaReset::Retry => {}
         }
-        mem.enemy(slot_of(x)).set_status(EnemyStatus::NoEnemy);
-        return;
     }
     mem.enemy(slot_of(x)).set_status(EnemyStatus::Pickup); // status←Pickup
     mem.enemy(slot_of(px as u8)).set_data0d(0x60); // data0D←$60（拾取计时）
@@ -586,20 +589,13 @@ pub(crate) fn enemy_complete_death(mem: &mut crate::frame::Manager, x: u8) {
     if r < 0x10 {
         // `1/16` 无掉 ⇒ `bcc LDD5B`（`07:DD28`）。Tourian 支路复位掉落配额后回 `LDD30`
         // 重试生成；非 Tourian 直接 `jmp RemoveEnemy`（`crate::world::tourian_quota`）。
-        use crate::world::tourian_quota::QuotaReset;
-        match crate::world::tourian_quota::ldd5b(mem, r) {
-            QuotaReset::Remove => {
+        match crate::world::tourian_quota::ldd5b(mem) {
+            crate::world::tourian_quota::QuotaReset::Remove => {
                 mem.enemy(slot_of(x)).set_status(EnemyStatus::NoEnemy);
                 return;
             }
-            QuotaReset::HungQuirk => {
-                // ROM 落 `LDD75` 后在 `LDD75↔LDD5B` 间死循环（见 `tourian_quota` 模块文档）。
-                // Stage A 不复刻挂死，按「当前槽回收 + 分歧记账」处理。
-                crate::frame::DIVERGENCES.with(|d| d.borrow_mut().push(0x0DD5B));
-                mem.enemy(slot_of(x)).set_status(EnemyStatus::NoEnemy);
-                return;
-            }
-            QuotaReset::Retry => {} // 配额已复位：继续下面的 `LDD30` 生成
+            // Tourian：配额已复位，继续走 LDD30 生成掉落（`bne` 恒真，无第三出口）。
+            crate::world::tourian_quota::QuotaReset::Retry => {}
         }
     }
     // `jsr ReadTableAt968B / sta Temp00`（$968B 项存 Temp00，本径后续不读）→
