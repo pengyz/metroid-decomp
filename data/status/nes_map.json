@@ -12,7 +12,7 @@
   ],
   "face_total": 2272,
   "owner_bytes": [
-    1373,
+    1396,
     224
   ],
   "owner_spans": [
@@ -47,6 +47,10 @@
     {
       "start": 110,
       "len": 2
+    },
+    {
+      "start": 122,
+      "len": 23
     },
     {
       "start": 262,
@@ -594,7 +598,7 @@
       ]
     }
   ],
-  "undeclared_total": 430,
+  "undeclared_total": 407,
   "undeclared": [
     {
       "start": 52,
@@ -662,7 +666,17 @@
     },
     {
       "start": 112,
-      "len": 140,
+      "len": 10,
+      "kind": "undeclared",
+      "refs": [
+        "world/elevator.rs:425",
+        "world/update.rs:75",
+        "world/elevator.rs:159-160"
+      ]
+    },
+    {
+      "start": 145,
+      "len": 107,
       "kind": "undeclared",
       "refs": [
         "world/elevator.rs:425",
@@ -888,6 +902,17 @@
       "undeclared_total": 430,
       "state_sha256": "15cc3e0e51f4fb3947b915c5baeb3b59b9613121d164797c3a3fab40293ae493",
       "prev_sha256": "1cbe75e09b8d25e1b64e0f1f4e6cd0fe9b1524e9263192b4ddc53720f2e62cd1"
+    },
+    {
+      "ts": "2026-11-27T07:39:00+08:00",
+      "reason": "crates/game-core/src/memmap/enemy_ai_zero_page_face.rs:1",
+      "owner_total": 1620,
+      "view_bytes": 23,
+      "view_only_bytes": 0,
+      "unmodeled_total": 245,
+      "undeclared_total": 407,
+      "state_sha256": "2dba85aea1936e082748822954124f7fc6be3296120fb14303da173ab86286ad",
+      "prev_sha256": "ab23ca79e868993a8221721e67a629058d2b2eec37da1025909b587d6209bfb6"
     }
   ]
 }

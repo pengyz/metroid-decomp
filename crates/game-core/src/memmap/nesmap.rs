@@ -254,7 +254,7 @@ pub fn spec_face() -> [NesSpan; 2] {
 ///
 /// `dump_json`（静态腿/门禁）与动态腿（`verify_shim`）共用本表：新增实体只改这里，
 /// 避免两份类型清单漂移导致动态证据覆盖不到新声明。
-pub fn entity_spans() -> [(&'static str, &'static [(NesSpan, SpanKey)]); 22] {
+pub fn entity_spans() -> [(&'static str, &'static [(NesSpan, SpanKey)]); 23] {
     [
         // B1-b 第二批：零页 `$0000-$0032`（51 B：手柄位面 / NMI 握手 / 主循环号 / 帧计数 /
         // 随机数 / 备用）的 typed 声明层。行为仍在 frame/、input/、title/（裸地址读写）。
@@ -320,6 +320,13 @@ pub fn entity_spans() -> [(&'static str, &'static [(NesSpan, SpanKey)]); 22] {
         (
             "EnemyExtra",
             crate::memmap::enemy_extra_face::EnemyExtraFace::SPANS,
+        ),
+        // B2 收口第二批：零页敌 AI / 结局链 union 面 `$007A-$0090`（23 B，A 级具名）。
+        // 同一段地址在正常游戏是敌 AI 运行变量、在结局链被复用为结局脚本变量；
+        // 本实体只提供字段布局与声明（union 两侧名字都在 `SYMBOLS` 里），不接管访问。
+        (
+            "EnemyAiZeroPage",
+            crate::memmap::enemy_ai_zero_page_face::EnemyAiZeroPageFace::SPANS,
         ),
     ]
 }
@@ -471,9 +478,11 @@ mod tests {
         // B1-c 第三批：wave beam 弹额外面 `$05D0-$05FF` 48 B（3 槽 × 16 B）⇒ 1317 + 48 = 1365。
         // B2-c：#97 页 1 变量面 `$0108-$010F` 8 B ⇒ 1365 + 8 = 1373（额外面 84 不变）。
         // B2-b（#113）：敌人额外面 140 B（12×9 + 4×8，全在 WRAM 面）⇒ 额外面 84 → 224。
+        // B2 收口第二批（#131）：零页敌 AI / 结局链 union 面 `$007A-$0090` 23 B ⇒
+        // 1373 + 23 = 1396（额外面 224 不变）。
         assert!(
-            json.contains("\"coverage\":[1373,224]"),
-            "owner 字节数锚点（1365 + 页 1 变量 8 B；额外面 84 + 敌人额外 140 B）"
+            json.contains("\"coverage\":[1396,224]"),
+            "owner 字节数锚点（1373 + 敌 AI union 面 23 B；额外面 224）"
         );
     }
 

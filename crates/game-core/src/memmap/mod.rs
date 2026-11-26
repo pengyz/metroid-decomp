@@ -43,5 +43,7 @@ pub mod spare_face;
 pub mod stack_page_face;
 /// B2-b：敌人额外面 `$6AFB-$6BD3`（13 段 × 9/8 B，共 140 B）的 typed 声明层（卡 #113）。
 pub mod enemy_extra_face;
+/// B2 收口第二批：零页敌 AI / 结局链 union 面 `$007A-$0090`（23 B）typed 声明层（卡 #131）。
+pub mod enemy_ai_zero_page_face;
 #[cfg(test)]
 pub(crate) mod verify_shim;
