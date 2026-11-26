@@ -1,10 +1,15 @@
 ---
 type: gotcha
+title: L4 复用只验输入锚不验产物内容——不同源 emu 截图/trace 被静默复用
+date: 2026-11-26
+status: confirmed
 ---
 
-# gotcha：L4 复用只验输入锚不验产物内容 = 不同源产物混入（2026-11-26，#87）
+---
+type: gotcha
+---
 
-## 症状
+## 现象
 
 同一棵树、同一用例、同一输入（scenario/ROM/sched 三 sha 全同），`case-password-justin` 的
 失配格在不同 run 之间漂移：`f1430 spawn-t4s = 169px`、`f950 mid-3 = 71px`、
@@ -12,7 +17,7 @@ type: gotcha
 `shots/`、`shots_rust/`、`analysis/traces/case-password-justin*` 后连跑两次稳定 14/14
 （#83 期间的实测记录）。
 
-## 机制
+## 为什么
 
 `tools/l4_diff_run.py` 的 emu 腿缓存（`emu_cache_hit` → `check_reuse`）在 v1 里只验两件事：
 
@@ -28,7 +33,7 @@ type: gotcha
 放行后 `do_diff` 拿「这一轮的 rust 截图」对「来历不明的 emu 截图」，失配格就随
 哪份文件被覆盖而随机出现——表现为「输入没变、矩阵读数会飘」。
 
-## 修法（v2，2026-11-26）
+## 修法（v2）
 
 `l4_prov.json` 升到 `schema: 2`，在原有三输入锚之外追加：
 
@@ -45,7 +50,7 @@ type: gotcha
 拒复用的代价是重采一次该用例（emu 腿，分钟级）；静默复用的代价是矩阵读数不可信，
 后者更贵。
 
-## 负例自测（可复现）
+## 何时使用 / 复现自测
 
 ```bash
 cd <worktree>
@@ -58,7 +63,7 @@ printf '\n{"f":99999,"w":{}}\n' >> analysis/traces/case-password-justin.frames.j
 python3 tools/l4_diff_run.py diff case-password-justin; echo rc=$?    # rc=2，报 trace 内容不符
 ```
 
-## 判据边界
+## 证据指针与判据边界
 
 - v2 证明「产物字节 = 存证记录的字节」，不能证明「存证记录的字节一定来自 ROM 正确执行」；
   后者由 `l4report` 的 rom/scenario/sched 锚 + `scenario_run` 的隔离域负责。
