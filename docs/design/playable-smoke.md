@@ -51,6 +51,13 @@ rc=3
 `tools/playable_door_smoke.sh --self-test` → `[SELFTEST:PASS]`；`--stage 1` → `[FAIL:NO_DOOR_TRIGGER]`
 rc=3，耗时 27.5s。说明脚本不依赖本机缓存状态，红是逻辑红而不是环境红。
 
+## 回归基线（2026-11-26）
+
+`python3 tools/l4_diff_run.py run-all`（emu+rust 全跑）→ **21 案 / 172 格，match 171 / diff 1 / blocked 0**，
+唯一 diff 仍是 `case-mechanism-input-conflict`（10 match + 1 diff，历史基线同值）；三个 door 用例
+`case-002-door-blue-interaction` 8/0、`case-mechanism-door-transition` 6/0、`case-mechanism-door-negative` 3/0
+与改动前一致。注意：这些 door 用例采集帧里 `$56/$58` 恒 0（空跑），所以它们「绿」不代表门链通过。
+
 ## 判定器自检（不跑游戏）
 
 判定规则抽在 `tools/playable_door_judge.py`，脚本自带合成样本自检：
