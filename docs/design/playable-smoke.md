@@ -43,6 +43,10 @@ rc=3
 推不动，`$58`/`$56` 峰值为 0。所以即使跳跃积分正确，本间地面也到不了那道门；需要 #104 给出
 真实房间里的可达路径。
 
+另一条复核（2026-11-26）：用**全新 `CARGO_TARGET_DIR=/tmp/s106/fresh_target`**（不含任何旧产物）跑
+`tools/playable_door_smoke.sh --self-test` → `[SELFTEST:PASS]`；`--stage 1` → `[FAIL:NO_DOOR_TRIGGER]`
+rc=3，耗时 27.5s。说明脚本不依赖本机缓存状态，红是逻辑红而不是环境红。
+
 ## 判定器自检（不跑游戏）
 
 判定规则抽在 `tools/playable_door_judge.py`，脚本自带合成样本自检：
