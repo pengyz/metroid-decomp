@@ -240,9 +240,73 @@ def prov_path(side: str, name: str) -> Path:
     return base / f"{name}.l4prov.json"
 
 
-def write_prov(side: str, name: str, anchors: dict) -> None:
-    """腿成功生成产物后落锚存证（复用校验的对账依据）。"""
-    doc = {"side": side, "name": name, **{k: anchors[k] for k in ANCHOR_KEYS}}
+# 【2026-11-26 #87】锚存证 v2：产物内容锚。
+# 旧 v1 只验「三输入 sha + 文件存在」，不验**产物内容**——于是跨树拷来的/被别的 run 覆盖的/
+# 被杀进程写了一半的 emu 截图仍能通过校验被复用，矩阵出现随机失配格（#83 实测 f1430=169px /
+# f950=71px / f1150=94px 在「同一棵树、同一输入」下忽有忽无）。v2 在存证里落每个产物的 sha256
+# 与生成它的 emulator 二进制 sha；复用前逐件复算，内容不符即拒（fail-loud，不静默）。
+PROV_SCHEMA = 2
+
+
+def _rel(p: Path) -> str:
+    try:
+        return str(p.relative_to(ROOT))
+    except ValueError:
+        return str(p)
+
+
+def side_artifacts(side: str, name: str, caps: list) -> list[Path]:
+    """该腿的产物清单（存证与复算的唯一来源）：采集点截图 + 该腿 manifest/trace。"""
+    base = SHOTS_RUST if side == "rust" else SHOTS_EMU
+    arts = [base / f"{name}_f{f:05d}_{tag}.png" for f, tag in caps]
+    if side == "rust":
+        arts.append(SHOTS_RUST / f"{name}.rust.captures.json")
+        arts.append(SHOTS_RUST / f"{name}.sched")
+    else:
+        arts.append(ROOT / "analysis" / "traces" / f"{name}.frames.jsonl")
+        arts.append(ROOT / "analysis" / "traces" / f"{name}.captures.jsonl")
+    return arts
+
+
+def mesen_sha256() -> str | None:
+    """生成 emu 产物的模拟器二进制 sha（emu 腿的**真实**输入之一——跨树/换版本必须重采）。"""
+    try:
+        import importlib
+        sr = importlib.import_module("scenario_run")
+        p = sr.find_mesen()
+        return sha256_file(p) if p.is_file() else None
+    except Exception:  # noqa: BLE001 —— 取不到=不锚（check_reuse 会因缺键拒复用）
+        return None
+
+
+def git_head() -> str | None:
+    try:
+        out = subprocess.run(["git", "-C", str(ROOT), "rev-parse", "HEAD"],
+                             capture_output=True, text=True, timeout=10)
+        return out.stdout.strip() if out.returncode == 0 else None
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def write_prov(side: str, name: str, anchors: dict, caps: list | None = None) -> None:
+    """腿成功生成产物后落锚存证（复用校验的对账依据）。
+
+    v2 存证 = 三输入 sha（scenario/rom/sched）+ **每件产物的内容 sha256** + 生成者指纹
+    （emu 腿记 Mesen 二进制 sha；两腿都记 git HEAD 作审计面，不作为 emu 复用判据——
+    emu 产物只由 ROM/用例/调度/Mesen 决定，rust 代码改动不改变它）。
+    """
+    doc = {"schema": PROV_SCHEMA, "side": side, "name": name,
+           **{k: anchors[k] for k in ANCHOR_KEYS}}
+    if caps is not None:
+        arts = side_artifacts(side, name, caps)
+        doc["artifacts"] = {_rel(p): sha256_file(p) for p in arts if p.is_file()}
+    if side == "emu":
+        ms = mesen_sha256()
+        if ms:
+            doc["mesen_sha256"] = ms
+    h = git_head()
+    if h:
+        doc["git_head"] = h
     p = prov_path(side, name)
     p.parent.mkdir(parents=True, exist_ok=True)
     p.write_text(json.dumps(doc, ensure_ascii=False, indent=2) + "\n",
@@ -254,6 +318,8 @@ def check_reuse(side: str, name: str, anchors: dict) -> str | None:
 
     调度 hash（sched_sha256）为主锚——不符=输入调度已变，旧截图不可再代表当前用例；
     scenario/rom 锚同检（快照语义/ROM 变更同样使旧产物失效）。无锚存证=无锚可对 → 拒跑。
+    v2（#87）追加**产物内容锚**：逐件复算 sha256，与存证不符（被覆盖/拷错/写一半）即拒；
+    emu 腿另验 Mesen 二进制 sha（换了模拟器=换了解释器）。
     """
     p = prov_path(side, name)
     if not p.is_file():
@@ -269,6 +335,30 @@ def check_reuse(side: str, name: str, anchors: dict) -> str | None:
         if not isinstance(got, str) or got.lower() != want.lower():
             return (f"{side} 侧复用校验失败：{k} 不符（产物 {str(got)[:16]}… vs 当前 "
                     f"{want[:16]}…）——输入已变，旧产物拒复用（防假绿）")
+    if prov.get("schema") != PROV_SCHEMA:
+        return (f"{side} 侧锚存证是 v{prov.get('schema')}（只有输入锚、无产物内容锚）——"
+                f"无法证明现有文件就是这次输入产出的，拒复用；先完整跑一次生成 v{PROV_SCHEMA} 存证")
+    arts = prov.get("artifacts")
+    if not isinstance(arts, dict) or not arts:
+        return f"{side} 侧锚存证缺 artifacts（产物内容锚为空）——拒复用"
+    for rel, want_sha in arts.items():
+        fp = ROOT / rel
+        if not fp.is_file():
+            return f"{side} 侧产物缺件（{rel}）——存证里有、磁盘上没有，拒复用"
+        got_sha = sha256_file(fp)
+        if got_sha.lower() != str(want_sha).lower():
+            return (f"{side} 侧产物内容不符（{rel}: {got_sha[:16]}… vs 存证 "
+                    f"{str(want_sha)[:16]}…）——被覆盖/拷错/写一半，拒复用（防不同源产物混入）")
+    if side == "emu":
+        want_m = prov.get("mesen_sha256")
+        cur_m = mesen_sha256()
+        if not isinstance(want_m, str) or not want_m:
+            return "emu 侧存证缺 mesen_sha256——无法证明产物由当前模拟器产出，拒复用"
+        if cur_m is None:
+            return "取不到当前 Mesen 二进制 sha（BYO 工具缺失？）——无法验证 emu 产物来源，拒复用"
+        if cur_m.lower() != want_m.lower():
+            return (f"emu 侧模拟器版本不符（产物由 {want_m[:16]}… 产出，当前 {cur_m[:16]}…）"
+                    f"——换了解释器，旧产物拒复用")
     return None
 
 
@@ -298,7 +388,9 @@ def emu_cache_hit(name: str, anchors: dict, caps: list,
     """
     if not emu_artifacts_complete(name, caps):
         return False
-    if check_reuse("emu", name, anchors) is not None:
+    err = check_reuse("emu", name, anchors)
+    if err is not None:
+        print(f"[emu-cache] 拒复用：{err}")
         return False
     trace = ROOT / "analysis" / "traces" / f"{name}.frames.jsonl"
     try:
@@ -1056,7 +1148,7 @@ def execute_case(*, name: str, scen_path: Path, frames: int, joy: dict, caps: li
         if not run_rust(name, sched, SHOTS_RUST):
             return {"legs": legs, "report": None, "error": "Rust 腿运行失败",
                     "exit_code": 1}
-        write_prov("rust", name, anchors)  # 腿成功 → 落锚存证
+        write_prov("rust", name, anchors, caps=caps)  # 腿成功 → 落锚存证（v2 含产物内容锚）
         legs["rust"] = "fresh"
     if skip_emu:
         legs["emu"] = "reused"
@@ -1066,7 +1158,7 @@ def execute_case(*, name: str, scen_path: Path, frames: int, joy: dict, caps: li
         legs["emu"] = "reused"
     else:
         if run_emu(name, timeout, scen_path):
-            write_prov("emu", name, anchors)
+            write_prov("emu", name, anchors, caps=caps)
             legs["emu"] = "fresh"
         else:
             # 腿失败回落复用=同属复用路径 → 同样过锚校验（不静默）
