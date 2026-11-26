@@ -25,19 +25,35 @@ def num(row, key):
         return 0
 
 
-def judge(csv_path, shot):
+def door_code(row):
+    """`$56` 的方向码：低 7 位（未置 $80 旗时为 0，进门后置旗）。"""
+    return num(row, 'door_entry') & 0x7F
+
+
+def judge(csv_path, shot, expect_codes=None):
     rows = list(csv.DictReader(open(csv_path, newline='')))
     if not rows:
         print('[FAIL:EMPTY_CSV] 逐帧状态为空')
         return 1
 
-    trigger = next((i for i, r in enumerate(rows) if num(r, 'door_entry') != 0), None)
+    def ok(r):
+        if num(r, 'door_entry') == 0:
+            return False
+        return expect_codes is None or door_code(r) in expect_codes
+
+    trigger = next((i for i, r in enumerate(rows) if ok(r)), None)
     door_data_max = max(num(r, 'door_data') for r in rows)
 
     if trigger is None:
-        print(f"[FAIL:NO_DOOR_TRIGGER] {len(rows)} 帧内 door_entry($56) 恒 0、"
-              f"door_data($58) 峰值={door_data_max} ⇒ Samus 从未踩到门格")
-        return 3
+        if expect_codes is None:
+            print(f"[FAIL:NO_DOOR_TRIGGER] {len(rows)} 帧内 door_entry($56) 恒 0、"
+                  f"door_data($58) 峰值={door_data_max} ⇒ Samus 从未踩到门格")
+            return 3
+        else:
+            seen = sorted({door_code(r) for r in rows if num(r, 'door_entry') != 0})
+            print(f"[FAIL:WRONG_DIRECTION] 期望方向码 {sorted(expect_codes)}，实际只见到 {seen}"
+                  f"（$58 峰值={door_data_max}）⇒ 门触发了但方向不是这一档")
+        return 6
 
     trig = rows[trigger]
     before = (num(trig, 'room'), num(trig, 'map_x'), num(trig, 'map_y'))
@@ -74,7 +90,11 @@ def judge(csv_path, shot):
         return 4
 
     frame, (room, mx, my) = switch
-    print(f"[换房] f={frame} 新房间={room} MapPos={mx}/{my}")
+    code = door_code(trig)
+    if expect_codes is not None and code not in expect_codes:
+        print(f"[FAIL:WRONG_DIRECTION] 方向码 {code} 不在期望集合 {sorted(expect_codes)}")
+        return 6
+    print(f"[换房] f={frame} 新房间={room} MapPos={mx}/{my} 方向码={code}")
 
     if not shot:
         print('[FAIL:NO_SHOT] 没找到换房后的截图，无法判「新房间可渲染」')
@@ -104,10 +124,16 @@ def judge(csv_path, shot):
 
 
 def main(argv):
-    if len(argv) < 2:
-        print('用法：playable_door_judge.py <state.csv> [shot.ppm]', file=sys.stderr)
+    args = [a for a in argv[1:] if not a.startswith('--')]
+    expect = None
+    for a in argv[1:]:
+        if a.startswith('--expect-codes='):
+            expect = {int(x, 0) for x in a.split('=', 1)[1].split(',') if x.strip()}
+    if not args:
+        print('用法：playable_door_judge.py [--expect-codes=1,2] <state.csv> [shot.ppm]',
+              file=sys.stderr)
         return 2
-    return judge(argv[1], argv[2] if len(argv) > 2 else '')
+    return judge(args[0], args[1] if len(args) > 1 else '', expect)
 
 
 if __name__ == '__main__':

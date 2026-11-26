@@ -80,6 +80,20 @@ pub struct StartRoom {
     pub room: Option<u8>,
     pub map: Option<(u8, u8)>,
     pub pos: Option<(u8, u8)>,
+    /// `Some(n)` = 同时把 `InArea`（`$0074`）低 4 位设为 n（0=Brinstar 1=Norfair 2=Kraid
+    /// 3=Tourian 4=Ridley）。区号决定载房用哪张区表，所以必须与 `room` 同一帧写。
+    pub area: Option<u8>,
+    /// 坐标落笔帧（`--start-pos-frame`）。`None` = 旧行为：`frame > s.frame` 且任务机空闲的第一帧。
+    /// 用于「先靠滚动把目标房载进来、载完再把 Samus 摆到门台」的场景。
+    pub pos_frame: Option<u64>,
+}
+
+/// 只改 `InArea($0074)` 的低 4 位（区号），高 4 位保留。
+///
+/// 区号决定载房用哪张区表（`room_load::area_idx` 读低 4 位），所以换成别的区的房间时
+/// 必须与房号同一帧写进去。
+pub fn with_area(cur: u8, area: u8) -> u8 {
+    (cur & 0xF0) | (area & 0x0F)
 }
 
 /// 解析 `--start-room` 的房号（十进制或 `0x..`）；接受范围与引擎载房判据一致。
@@ -327,6 +341,12 @@ pub fn run_scripted(
         if let Some(s) = start {
             if s.frame == frame {
                 let mem = &mut driver.engine.mem;
+                // 区号必须先写：载房用哪张区表由 InArea 低 4 位决定（room_load::area_idx），
+                // 同一帧写进去，引擎在下一拍的载房判据里才会用新区的房间表。
+                if let Some(a) = s.area {
+                    let cur = mem.read_ram(game_core::ram_map::IN_AREA);
+                    mem.write_ram(game_core::ram_map::IN_AREA, with_area(cur, a));
+                }
                 if let Some(r) = s.room {
                     mem.write_ram(game_core::ram_map::ROOM_NUMBER, r);
                 }
@@ -337,8 +357,15 @@ pub fn run_scripted(
             }
             if !pos_applied && frame > s.frame {
                 let mem = &mut driver.engine.mem;
-                let ready = s.room.map(|r| mem.read_ram(game_core::ram_map::ROOM_NUMBER) == r).unwrap_or(true)
-                    && mem.room_load_phase == 0;
+                let ready = match s.pos_frame {
+                    Some(pf) => frame >= pf && mem.room_load_phase == 0,
+                    None => {
+                        s.room
+                            .map(|r| mem.read_ram(game_core::ram_map::ROOM_NUMBER) == r)
+                            .unwrap_or(true)
+                            && mem.room_load_phase == 0
+                    }
+                };
                 if ready {
                     if let Some((x, y)) = s.pos {
                         mem.write_ram(game_core::ram_map::SAMUS_X, x);
@@ -470,5 +497,13 @@ mod tests_start_room {
         for bad in ["0xD0", "0xD0,", ",0x6F", "0xD0,0x6F,1", "zz,1"] {
             assert!(parse_pair(bad).is_err(), "{bad:?} 应被拒");
         }
+    }
+
+    /// 区号只写低 4 位：高 4 位是同一个字节里的别的标志，不能被顺手清掉。
+    #[test]
+    fn with_area_only_touches_low_nibble() {
+        assert_eq!(with_area(0x30, 2), 0x32);
+        assert_eq!(with_area(0x05, 1), 0x01);
+        assert_eq!(with_area(0xA0, 0), 0xA0);
     }
 }

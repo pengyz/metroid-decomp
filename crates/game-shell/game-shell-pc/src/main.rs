@@ -23,7 +23,9 @@ fn main() {
     let mut start_room_spec: Option<String> = None;
     let mut start_map_spec: Option<String> = None;
     let mut start_pos_spec: Option<String> = None;
+    let mut start_area: Option<u8> = None;
     let mut start_frame: u64 = 60;
+    let mut start_pos_frame: Option<u64> = None;
     let mut args = std::env::args().skip(1);
     while let Some(a) = args.next() {
         match a.as_str() {
@@ -39,6 +41,22 @@ fn main() {
             "--start-room" => start_room_spec = args.next(),
             "--start-map" => start_map_spec = args.next(),
             "--start-pos" => start_pos_spec = args.next(),
+            "--start-area" => {
+                let raw = args.next().unwrap_or_default();
+                match raw.trim().parse::<u8>() {
+                    Ok(v) if v <= 4 => start_area = Some(v),
+                    _ => {
+                        eprintln!("--start-area 只接受 0=Brinstar 1=Norfair 2=Kraid 3=Tourian 4=Ridley（收到 {raw:?}）");
+                        std::process::exit(2);
+                    }
+                }
+            }
+            "--start-pos-frame" => {
+                start_pos_frame = Some(args.next().and_then(|v| v.parse().ok()).unwrap_or_else(|| {
+                    eprintln!("--start-pos-frame 需要正整数帧号");
+                    std::process::exit(2);
+                }))
+            }
             "--start-frame" => {
                 start_frame = args.next().and_then(|v| v.parse().ok()).unwrap_or_else(|| {
                     eprintln!("--start-frame 需要正整数帧号");
@@ -120,7 +138,11 @@ fn main() {
                 },
             }
         };
-        let start = if start_room_spec.is_none() && start_pos_spec.is_none() && start_map_spec.is_none() {
+        let start = if start_room_spec.is_none()
+            && start_pos_spec.is_none()
+            && start_map_spec.is_none()
+            && start_area.is_none()
+        {
             None
         } else {
             let room = match start_room_spec.as_deref() {
@@ -135,7 +157,14 @@ fn main() {
             };
             let map = parse_pair_opt(start_map_spec.as_deref(), "--start-map");
             let pos = parse_pair_opt(start_pos_spec.as_deref(), "--start-pos");
-            Some(game_shell_pc::script::StartRoom { frame: start_frame, room, map, pos })
+            Some(game_shell_pc::script::StartRoom {
+                frame: start_frame,
+                room,
+                map,
+                pos,
+                area: start_area,
+                pos_frame: start_pos_frame,
+            })
         };
         let n = frames.unwrap_or(600);
         let state_out = state_out.as_deref().map(std::path::Path::new);

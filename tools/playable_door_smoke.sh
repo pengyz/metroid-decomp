@@ -96,6 +96,15 @@ if [ "$SELFTEST" = 1 ]; then
   check NO_DOOR_TRIGGER 3 neg.csv
   check NO_SWITCH 4 cut.csv
   check BLACK_SCREEN 5 pos.csv black.ppm
+  # 方向不符：同一份「右横滚」样本按竖滚档（3,4）判，必须报 WRONG_DIRECTION 而不是 PASS
+  python3 "$JUDGE" --expect-codes=3,4 "$T/pos.csv" "$T/lit.ppm" > "$T/out.txt" 2>&1
+  got=$?
+  if [ "$got" = 6 ] && grep -q 'WRONG_DIRECTION' "$T/out.txt"; then
+    printf '  [ok]   %-22s rc=%s %s\n' WRONG_DIRECTION "$got" "$(tail -1 "$T/out.txt")"
+  else
+    printf '  [FAIL] %-22s 期望 rc=6 实得 rc=%s >>> %s\n' WRONG_DIRECTION "$got" "$(tail -1 "$T/out.txt")"
+    fail=1
+  fi
   if [ "$fail" = 0 ]; then
     echo "[SELFTEST:PASS] 四态判定与退出码均符合预期"
     exit 0
@@ -144,14 +153,27 @@ EOF
     START_ARGS="--start-pos 0xD0,0x6F --start-frame 900"
     SHOT_FRAMES="1200"
     DOOR_NAME='Brinstar 房 5 右门（横滚门，\$56=\$81）'
+    EXPECT_CODES="1,2"
     ;;
   2)
-    echo "[STAGE_UNAVAILABLE] 阶段 2（另一方向门）尚未选到目标房间："
-    echo "  已排除（都是普通滚屏，不是门格）：房 5 左门（门台无可站面，摆上去掉到 y=0xC1）、"
-    echo "  Room1E 左右缘（f515 map19→18 / 19→20）、Room24（载入第 1 帧被相邻滚动带回 map5）、"
-    echo "  Brinstar Room00（无门对象）。"
-    echo "  竖滚门需要「按 area 启动」或先修门台可达性 ⇒ 另开卡，这里显式红，不静默跳过。"
-    exit 6
+    # 同一对房间的回程门：房 5 右门进去到 Room24（MapPos 6/14），再从这个门走回来。
+    # 回程触发的方向码是 $84（=4|$80，竖向上滚），与阶段 1 的 $81（右横滚）不同向。
+    # 实测（A 级）：f2490 $56=132($84) $58=0x11、f2509 MapPos 6/14→5/14 房间 24→19。
+    FRAMES=2900
+    INPUT=$(cat <<'EOF'
+9-9 START
+18-18 START
+200-1700 RIGHT
+925-945 B
+1200-2400 LEFT
+2450-2470 B
+2480-2900 LEFT
+EOF
+)
+    START_ARGS="--start-pos 0xD0,0x6F --start-frame 900"
+    SHOT_FRAMES="2850"
+    DOOR_NAME='Room24 左门回程（竖向滚屏门，\$56=\$84）'
+    EXPECT_CODES="3,4"
     ;;
   *) echo "阶段只能是 1 或 2（收到 $STAGE）" >&2; exit 2 ;;
 esac
@@ -195,4 +217,4 @@ echo "[冒烟] 阶段 $STAGE：$DOOR_NAME"
 echo "[产物] csv=$CSV shots=$SHOTS"
 
 last_shot="$(ls "$SHOTS"/*.ppm 2>/dev/null | tail -1)"
-python3 "$JUDGE" "$CSV" "${last_shot:-}"
+python3 "$JUDGE" --expect-codes="$EXPECT_CODES" "$CSV" "${last_shot:-}"
