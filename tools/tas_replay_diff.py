@@ -316,7 +316,8 @@ def rebuild_report(out: Path, args) -> int:
     il = Path(inputlog)
     il = il if il.is_absolute() else ROOT / il
     write_coverage(out, il, old["total_frames"], old["segment_size"], args,
-                   old["segments"], old["ran_frames"], old["input"]["movie_frames"])
+                   old["segments"], old["ran_frames"], old["input"]["movie_frames"],
+                   rust_anchor=old.get("rust_anchor"))
     new = json.loads(path.read_text(encoding="utf-8"))
     fd = new.get("first_divergence")
     print(f"[tas] 报告已重建: {path} / {out / 'coverage.md'}"
@@ -620,6 +621,65 @@ def _run_emu_wait_lock(scen: Path, timeout: float, traces: Path, shots: Path,
     raise ReplayError(f"串行锁等待超时（{polls} 轮 × {wait_s:.0f}s）：{last}")
 
 
+def _current_rust_anchor(out: Path, frames: int) -> dict:
+    """段结论必须绑定的 rust 腿锚（#115）。
+
+    只记 HEAD 不够：同一 HEAD 上工作树带别人 WIP、或二进制被重建，逐帧 sha 都会变
+    （见 write_coverage 里的实测记录）。故锚 = HEAD + rust 二进制 sha + rust 帧表 sha + 帧数，
+    再取一个短指纹方便逐段比对。
+    """
+    env = _env_fingerprint()
+    trace = out / "rust" / "full.state.jsonl"
+    anchor = {
+        "git_head": env.get("git_head"),
+        "rust_binary_sha256": env.get("rust_screenshot_sha256"),
+        "frames": frames,
+        "rust_trace_sha256": (sha256_file(trace)
+                              if trace.exists() and trace.stat().st_size > 0 else None),
+    }
+    anchor["anchor_sha"] = _anchor_sha(anchor)
+    return anchor
+
+
+def _anchor_sha(anchor: dict) -> str:
+    import json as _json
+    payload = {k: v for k, v in anchor.items() if k != "anchor_sha"}
+    return sha256_bytes(_json.dumps(payload, sort_keys=True, ensure_ascii=False).encode())[:16]
+
+
+def _check_resume_anchor(old: dict, current: dict) -> None:
+    """`--resume` 前逐段校验 rust 腿锚；缺锚或锚不一致必须 fail-loud（#115）。
+
+    允许沿用的唯一情形：coverage.json 自带 rust_anchor，且每个 pass/diverge 段都带
+    同一 anchor_sha，且当前 HEAD/二进制/rust 帧表 sha 与记录一致。
+    """
+    old_anchor = old.get("rust_anchor")
+    if not isinstance(old_anchor, dict) or not old_anchor.get("anchor_sha"):
+        raise ReplayError(
+            "coverage.json 缺 rust 腿锚（rust_anchor）：无法判断旧段结论是否仍有效，"
+            "拒绝 --resume；请去掉 --resume 从头重跑（或先用带锚的版本重跑一次）")
+    for e in old.get("segments", []):
+        if e.get("status") not in ("pass", "diverge"):
+            continue
+        if not e.get("rust_anchor_sha"):
+            raise ReplayError(
+                f"coverage.json 段 {e.get('index')} [{e.get('from')},{e.get('to')}) 缺 rust 腿锚"
+                f"（rust_anchor_sha）：拒绝 --resume，需重跑该段")
+        if e["rust_anchor_sha"] != old_anchor["anchor_sha"]:
+            raise ReplayError(
+                f"coverage.json 段 {e.get('index')} 的 rust 腿锚 {e['rust_anchor_sha']} 与报告的 "
+                f"{old_anchor['anchor_sha']} 不一致：段结论失效、需重跑")
+    diffs = []
+    for key, label in (("git_head", "HEAD"), ("rust_binary_sha256", "rust 二进制 sha"),
+                       ("rust_trace_sha256", "rust 帧表 sha"), ("frames", "帧数")):
+        if old_anchor.get(key) != current.get(key):
+            diffs.append(f"{label} {old_anchor.get(key)} → {current.get(key)}")
+    if diffs:
+        raise ReplayError(
+            "段结论失效、需重跑：rust 腿锚变化（" + "；".join(diffs) + "）。"
+            "旧段是在另一份 rust 腿上跑的，沿用会得出「改了代码仍报旧首分歧」的假绿")
+
+
 def run_segments(args, inputlog: Path, have: int, frames: int, seed: int) -> int:
     rng = parse_range(args.range)
     out = Path(args.out) if Path(args.out).is_absolute() else ROOT / args.out
@@ -633,12 +693,14 @@ def run_segments(args, inputlog: Path, have: int, frames: int, seed: int) -> int
     if args.resume and cov_path.exists():
         try:
             old = json.loads(cov_path.read_text(encoding="utf-8"))
-            # 已完成 = pass 或 diverge（分歧是合法结论，段本身已跑完并落了下一段检查点）；
-            # 只有 fail/缺条目才需要重跑。否则中断一次就要把几十分钟的分段重跑一遍。
-            prior = {e["index"]: e for e in old.get("segments", [])
-                     if e.get("status") in ("pass", "diverge")}
-        except (json.JSONDecodeError, KeyError) as exc:
+        except json.JSONDecodeError as exc:
             raise ReplayError(f"coverage.json 不可解析，拒绝 --resume（{exc}）") from exc
+        # #115：段结论必须与当前 rust 腿同一锚，否则改代码后 --resume 会沿用旧结论（假绿）。
+        _check_resume_anchor(old, _current_rust_anchor(out, frames))
+        # 已完成 = pass 或 diverge（分歧是合法结论，段本身已跑完并落了下一段检查点）；
+        # 只有 fail/缺条目才需要重跑。否则中断一次就要把几十分钟的分段重跑一遍。
+        prior = {e["index"]: e for e in old.get("segments", [])
+                 if e.get("status") in ("pass", "diverge")}
     # rust 腿**不分段**：`restore_mss` 只恢复 ram/wram/regs，实测从第 700 帧存档续跑后
     # 第 922 帧起与连续跑分叉（476/697 帧不一致，见 docs/design/tas-replay-pipeline.md
     # 「已知限制」）⇒ 分段只作用于 emu 腿；rust 全片连续跑一次（成本低），按绝对帧对齐。
@@ -652,6 +714,8 @@ def run_segments(args, inputlog: Path, have: int, frames: int, seed: int) -> int
         run_rust(rust_sched_all, out / "rust" / "shots", rust_all)
         print(f"[tas] rust 腿完成 {round(time.time() - t_rust, 1)}s → {rust_all}")
     rust_rows = rust_rows_rel(rust_all, *rng)
+    # #115：段结论要带 rust 腿锚，写入时逐段盖同一个 anchor_sha。
+    rust_anchor = _current_rust_anchor(out, frames)
 
     entries: list[dict] = []
     ran_to = 0
@@ -674,6 +738,7 @@ def run_segments(args, inputlog: Path, have: int, frames: int, seed: int) -> int
         cp_out = cps / f"cp-{b:06d}"
         t0 = time.time()
         entry = {"index": idx, "from": a, "to": b, "status": "fail", "attempts": 1,
+                 "rust_anchor_sha": rust_anchor["anchor_sha"],
                  # --out 允许绝对路径（单段模式历来如此，/tmp 常见）；分段这边也要能算，
                  # 算不出相对路径就存绝对路径，别在 1.9s 就 ValueError 崩掉。
                  "checkpoint_out": (str(cp_out.relative_to(ROOT))
@@ -720,14 +785,16 @@ def run_segments(args, inputlog: Path, have: int, frames: int, seed: int) -> int
         entry["wall_s"] = round(time.time() - t0, 1)
         entries.append(entry)
         ran_to = b if entry["status"] != "fail" else a
-        write_coverage(out, inputlog, frames, seg, args, entries, ran_to, have)
+        write_coverage(out, inputlog, frames, seg, args, entries, ran_to, have,
+                       rust_anchor=rust_anchor)
         print(f"[tas] seg {idx} [{a},{b}) {entry['status']} {entry['wall_s']}s"
               + (f" 首分歧 {entry.get('first_divergence')}" if entry.get("first_divergence") else "")
               + (f" 失败 {entry['failure']['reason'][:120]}" if entry.get("failure") else ""))
         if entry["status"] == "fail":
             print("[tas] 该段失败：后续段依赖它的检查点，停止推进（可用 --resume 重试本段）")
             break
-    write_coverage(out, inputlog, frames, seg, args, entries, ran_to, have)
+    write_coverage(out, inputlog, frames, seg, args, entries, ran_to, have,
+                   rust_anchor=rust_anchor)
     # 「问题段」只算 fail（段没跑完）；diverge 是合法结论——分叉一旦发生不会自愈，
     # 后续段全都 diverge，按 fail 统计会把 13/13 报成「13 个问题」。
     fails = [e for e in entries if e["status"] == "fail"]
@@ -770,7 +837,8 @@ def _env_fingerprint() -> dict:
 
 
 def write_coverage(out: Path, inputlog: Path, frames: int, seg: int, args,
-                   entries: list[dict], ran_to: int, have: int) -> None:
+                   entries: list[dict], ran_to: int, have: int,
+                   rust_anchor: dict | None = None) -> None:
     # 分段各自报的「首分歧帧」在后继段里只会重复同一个已存在分歧（一旦分叉就不会自愈），
     # 直接用逐段数字当结论会误报成 N 个独立缺陷。这里标出全局首个真实分歧，并把其后的
     # 段标为 post_divergence（承接已分歧后的漂移），只作覆盖推进与漂移量参考。
@@ -785,6 +853,8 @@ def write_coverage(out: Path, inputlog: Path, frames: int, seg: int, args,
 
     payload = {
         "first_divergence": global_fd,
+        # #115：rust 腿锚。resume 时必须逐段比对，缺锚或锚变了一律拒绝沿用旧段结论。
+        "rust_anchor": rust_anchor,
         # 环境指纹：逐帧 sha 依赖 rust 二进制与树内代码，工作树被别人改过就会变
         # （实测：同一 HEAD、工作树带别人 WIP 时 sha 从 1bb9ddea 变成 a81abf70）。
         # 记下 HEAD 与二进制 sha，才能判断两次报告是不是同一口径。
