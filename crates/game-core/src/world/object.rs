@@ -250,9 +250,16 @@ impl<'a> crate::memmap::nesmap::NesMapped for Object<'a> {
             SpanKey::View(&["SamusState"]),
         ),
         (
+            // 末尾 48 B（槽 D/E/F，`$03D0-$03FF`）是 Samus 武器弹槽族，由
+            // `memmap::samus_projectile_face` 按 `Object` 结构逐字段 Owner 认领（卡 #138）；
+            // 本池的 Unmodeled 只覆盖中间未 typed 的槽 B/C（`$0317-$03CF`），
+            // 否则「未 typed 面」会包住 typed 真源，`nes_map_check` 的
+            // `unmodeled-contains-owner` 会拒。
             NesSpan::value(
                 OBJECTS_BASE + crate::samus::state::SamusState::TYPED_LEN,
-                SLOT_COUNT as u16 * SLOT_STRIDE - crate::samus::state::SamusState::TYPED_LEN,
+                SLOT_COUNT as u16 * SLOT_STRIDE
+                    - crate::samus::state::SamusState::TYPED_LEN
+                    - crate::memmap::samus_projectile_face::FACE_LEN,
             ),
             SpanKey::Unmodeled(OBJ_UNMODELED),
         ),

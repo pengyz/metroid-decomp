@@ -254,7 +254,7 @@ pub fn spec_face() -> [NesSpan; 2] {
 ///
 /// `dump_json`（静态腿/门禁）与动态腿（`verify_shim`）共用本表：新增实体只改这里，
 /// 避免两份类型清单漂移导致动态证据覆盖不到新声明。
-pub fn entity_spans() -> [(&'static str, &'static [(NesSpan, SpanKey)]); 23] {
+pub fn entity_spans() -> [(&'static str, &'static [(NesSpan, SpanKey)]); 24] {
     [
         // B1-b 第二批：零页 `$0000-$0032`（51 B：手柄位面 / NMI 握手 / 主循环号 / 帧计数 /
         // 随机数 / 备用）的 typed 声明层。行为仍在 frame/、input/、title/（裸地址读写）。
@@ -327,6 +327,13 @@ pub fn entity_spans() -> [(&'static str, &'static [(NesSpan, SpanKey)]); 23] {
         (
             "EnemyAiZeroPage",
             crate::memmap::enemy_ai_zero_page_face::EnemyAiZeroPageFace::SPANS,
+        ),
+        // B2 收口第三批：敌人弹槽族 `SamusProjectiles`（`$03D0-$03FF`，3 槽 × 16 B，A 级具名）。
+        // 槽布局就是 `Object` 结构本体（`constants_ram.asm:217-240`），实例见 `:877`；
+        // 本实体只提供字段布局与声明，不接管访问（`weapon/` 的弹状态机不动）。
+        (
+            "SamusProjectiles",
+            crate::memmap::samus_projectile_face::SamusProjectileFace::SPANS,
         ),
     ]
 }
@@ -479,9 +486,9 @@ mod tests {
         // B2-c：#97 页 1 变量面 `$0108-$010F` 8 B ⇒ 1365 + 8 = 1373（额外面 84 不变）。
         // B2-b（#113）：敌人额外面 140 B（12×9 + 4×8，全在 WRAM 面）⇒ 额外面 84 → 224。
         // B2 收口第二批（#131）：零页敌 AI / 结局链 union 面 `$007A-$0090` 23 B ⇒
-        // 1373 + 23 = 1396（额外面 224 不变）。
+        // 1373 + 23 + 48 = 1444（额外面 224 不变）。
         assert!(
-            json.contains("\"coverage\":[1396,224]"),
+            json.contains("\"coverage\":[1444,224]"),
             "owner 字节数锚点（1373 + 敌 AI union 面 23 B；额外面 224）"
         );
     }
@@ -717,17 +724,25 @@ mod tests {
     fn object_pool_declares_slot0_overlay_as_view() {
         let spans = spans_of::<crate::world::object::Object<'static>>();
         let dom = object_domain();
-        assert!(
-            gaps(spans, &dom).is_empty(),
-            "对象池整脸必须无空洞：{:?}",
-            gaps(spans, &dom)
+        // 整脸无空洞按「对象池 + 末尾弹槽族面」的并集算：`$03D0-$03FF`（#138）的 owner
+        // 在 `SamusProjectiles` 面，对象池只声明到 `$03CF` 为止（未 typed 面不许包住 typed 真源）。
+        let mut face = spans.to_vec();
+        face.extend(
+            crate::memmap::samus_projectile_face::SamusProjectileFace::SPANS
+                .iter()
+                .copied(),
         );
-        // 本池自己**没有** typed 字节：23 B overlay 的 owner 是 `SamusState`（`View` 不计位），
-        // 所以对象池的 typed 债是整脸 256 B——不是 233 B（233 是"本池未建模"的字节数）。
+        assert!(
+            gaps(&face, &dom).is_empty(),
+            "对象池整脸（含弹槽族面）必须无空洞：{:?}",
+            gaps(&face, &dom)
+        );
+        // 本池自己**没有** typed 字节：23 B overlay 的 owner 是 `SamusState`、末尾 48 B 的
+        // owner 是 `SamusProjectiles`（`View`/`Owner` 都不计本池位）⇒ 本池 typed 债仍是整脸 256 B。
         assert_eq!(
             unowned_bytes(spans, &dom),
             [256, 0],
-            "对象池自身 typed 债 = 整脸 256 B（overlay 归 Samus，不归本池）"
+            "对象池自身 typed 债 = 整脸 256 B（overlay 归 Samus、弹槽族归 SamusProjectiles）"
         );
         let views: Vec<NesSpan> = spans
             .iter()
@@ -741,6 +756,7 @@ mod tests {
             SamusState::TYPED_LEN,
             "View 长度 = Samus typed 面长度（不另立数字）"
         );
+
     }
 
     /// 房间域与相机域：声明无空洞；全部未 typed（`Unmodeled`），owner 为 0。
