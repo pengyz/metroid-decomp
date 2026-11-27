@@ -11,7 +11,7 @@
 
 - 现状 TAS 对拍以**视频帧号为唯一判等轴**，且 emu 腿采样缺帧**无记账**——#143 验收实测：真实首分歧
   f1574（$0406 1B）被静默右移报成 f1575（5B），两跑复现（/tmp/r143/post、/tmp/r143/post2 各 3962/4000 行，
-  缺 39 帧，f1572–f1574 缺）。对影独立复跑（/tmp/v143，--allow-rust-missing）证实 f1574 1B。
+  缺 38 帧，f1572–f1574 缺）。对影独立复跑（/tmp/v143，--allow-rust-missing）证实 f1574 1B。
   这是当前口径的最大风险，**建议第一批修（见 §3 B4 附带项）**。
 - B1/B2（更新轴 + 读键边界采集）是治本方向，但动判等语义；建议以 `--axis` 兼容开关并存落地，
   不破坏既有 13 段 / 120540 帧产物。
@@ -28,7 +28,7 @@
 | 判等面 | 单段 `$0400-$04FF` sha256；范围硬门禁只允许 `$0100-$07FF` | tools/tas_replay_diff.py:190–191；§6 复跑命令实测 | B4/B5 |
 | 缺帧记账 | **rust 腿**缺帧显式记 `coverage.rust_missing` 并在报告列出；**emu 腿**缺帧无任何记账，交集判等静默跳过 | tools/tas_replay_diff.py:194–196（rust 侧）；:203（交集） | B4 |
 | 采集契约 | emu 腿 `--format mesen2` + watch 面（`watch_range lo-hi tag`、`watch 0014 Joy1Status`）；帧号在 `inputPolled` 回调递增（第 N 次 poll=帧 N）；产物 traces/*.frames.jsonl/.captures.jsonl/_fNNNNN_<tag>.ram.hex（每采集点全量 2 KiB hex） | tools/tas_replay_diff.py:58（build_scenarios）、:153/:180；tools/scenario_run.py:18–40 | B2/B4 |
-| 环境指纹 | 报告记 git_head + rust 二进制 sha（同 HEAD 不同工作树可分辨） | tools/tas_replay_diff.py:830–836 | （已达标，保留） |
+| 环境指纹 | 报告记 git_head + rust 二进制 sha（同 HEAD 不同工作树可分辨） | tools/tas_replay_diff.py:812–836（_env_fingerprint 全函数，git_head :823） | （已达标，保留） |
 | 首分歧汇总 | 逐段 first_divergence 取全局最小帧，其后段标 post_divergence | tools/tas_replay_diff.py:845–852 | （已达标；但依赖交集判等 ⇒ 继承 B4 缺帧缺口） |
 | 自测 | 差异检测自测（合成面注入 1 字节差必须报出） | tools/tas_replay_diff.py:906（cmd_selftest） | B4 迁移可扩展 |
 | lag 建模 | Rust 侧显式模拟掉帧：`dropped=(BASE+work_cycles)/FRAME_CYCLES`；boot 多处 `iter_bogged(2)`（GFX 装载重活×2）；ledger 实测 3960 帧仅 25 个 lag、末个 f1756 | crates/game-core/src/frame/cycles.rs:5–6；crates/game-core/src/frame/boot.rs；data/status/movie_ledger.json:49 | B8 |
@@ -109,7 +109,7 @@
 2. **双轴并存的口径混乱** → 报告顶层强制 `axis` 字段；更新轴报告独立文件名；tas-round 文档写明当次用的轴。
 3. **XOR 差分编码 bug 导致假绿** → 往返自测进 cmd_selftest（合成面注入差必须复现）；新格式先跑
    4000 帧短程与旧格式全量逐字节对照后再切长程。
-4. **emu 缺帧根因未除（本方案只记账）** → 记账先堵口径漂移；采样器丢帧根因（Mesen 腿 39/4000 稳定缺）
+4. **emu 缺帧根因未除（本方案只记账）** → 记账先堵口径漂移；采样器丢帧根因（Mesen 腿 38/4000 稳定缺）
    单列待查项，不混入本卡验收。
 5. **lag 标志若需动 crates**（2.4 步骤 a 的兜底）→ 升级为 PMO 决策项（见 §5-6），默认方案用 `--trace`
    既有输出推导，crates 零改动。
