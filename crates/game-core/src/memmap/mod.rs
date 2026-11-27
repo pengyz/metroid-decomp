@@ -47,5 +47,6 @@ pub mod enemy_extra_face;
 pub mod enemy_ai_zero_page_face;
 pub mod samus_projectile_face;
 pub mod zero_page_extra_face;
+pub mod pickup_quota_face;
 #[cfg(test)]
 pub(crate) mod verify_shim;

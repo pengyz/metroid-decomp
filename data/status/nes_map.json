@@ -12,7 +12,7 @@
   ],
   "face_total": 2272,
   "owner_bytes": [
-    1496,
+    1500,
     224
   ],
   "owner_spans": [
@@ -87,6 +87,10 @@
     {
       "start": 122,
       "len": 23
+    },
+    {
+      "start": 147,
+      "len": 4
     },
     {
       "start": 262,
@@ -638,11 +642,21 @@
       ]
     }
   ],
-  "undeclared_total": 355,
+  "undeclared_total": 351,
   "undeclared": [
     {
       "start": 145,
-      "len": 107,
+      "len": 2,
+      "kind": "undeclared",
+      "refs": [
+        "world/elevator.rs:425",
+        "world/update.rs:75",
+        "world/elevator.rs:159-160"
+      ]
+    },
+    {
+      "start": 151,
+      "len": 101,
       "kind": "undeclared",
       "refs": [
         "world/elevator.rs:425",
@@ -901,6 +915,17 @@
       "undeclared_total": 355,
       "state_sha256": "a4653ac5bece0abec4e3508e500ead1f116c764403f2c767986b5f4e8c038700",
       "prev_sha256": "080322fe4e6ae103a25ed001cf6db864b44907ea2c91f0dfd204f28717fcdd1e"
+    },
+    {
+      "ts": "2026-11-27T11:17:49+08:00",
+      "reason": "下调 Undeclared 355 → 351 B / Unmodeled 197 → 197 B",
+      "owner_total": 1724,
+      "view_bytes": 23,
+      "view_only_bytes": 0,
+      "unmodeled_total": 197,
+      "undeclared_total": 351,
+      "state_sha256": "3f5183fab62d3dd7360a93a7c507fbcaf21b0721aeb8f57578f8f683c1dc5df1",
+      "prev_sha256": "e7881264acb5c6ae9bb49ea50e175b379c5c14b6929566d004a4257f6785ef1f"
     }
   ]
 }
