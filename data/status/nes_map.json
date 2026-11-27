@@ -12,7 +12,7 @@
   ],
   "face_total": 2272,
   "owner_bytes": [
-    1444,
+    1496,
     224
   ],
   "owner_spans": [
@@ -21,8 +21,32 @@
       "len": 51
     },
     {
+      "start": 52,
+      "len": 1
+    },
+    {
+      "start": 53,
+      "len": 2
+    },
+    {
+      "start": 59,
+      "len": 14
+    },
+    {
+      "start": 74,
+      "len": 1
+    },
+    {
       "start": 75,
       "len": 1
+    },
+    {
+      "start": 76,
+      "len": 3
+    },
+    {
+      "start": 83,
+      "len": 7
     },
     {
       "start": 90,
@@ -33,8 +57,16 @@
       "len": 1
     },
     {
+      "start": 92,
+      "len": 9
+    },
+    {
       "start": 101,
       "len": 1
+    },
+    {
+      "start": 102,
+      "len": 5
     },
     {
       "start": 107,
@@ -47,6 +79,10 @@
     {
       "start": 110,
       "len": 2
+    },
+    {
+      "start": 112,
+      "len": 10
     },
     {
       "start": 122,
@@ -602,82 +638,8 @@
       ]
     }
   ],
-  "undeclared_total": 407,
+  "undeclared_total": 355,
   "undeclared": [
-    {
-      "start": 52,
-      "len": 3,
-      "kind": "undeclared",
-      "refs": [
-        "world/room_load.rs:240"
-      ]
-    },
-    {
-      "start": 59,
-      "len": 14,
-      "kind": "undeclared",
-      "refs": [
-        "world/room_load.rs:167",
-        "world/room_load.rs:172",
-        "world/room_load.rs:173"
-      ]
-    },
-    {
-      "start": 74,
-      "len": 1,
-      "kind": "undeclared",
-      "refs": [
-        "world/room_draw.rs:794",
-        "world/camera/scroll.rs:237"
-      ]
-    },
-    {
-      "start": 76,
-      "len": 3,
-      "kind": "undeclared",
-      "refs": [
-        "crates/game-core/src/ram_map.rs:264",
-        "crates/game-core/src/samus/handler.rs:166",
-        "crates/game-core/src/ram_map.rs:306",
-        "crates/game-core/src/samus/physics.rs:1737"
-      ]
-    },
-    {
-      "start": 83,
-      "len": 7,
-      "kind": "undeclared",
-      "refs": [
-        "asm:refs/m1disasm/SRC/constants_ram.asm:568",
-        "samus/handler.rs:84",
-        "world/room_load.rs:534"
-      ]
-    },
-    {
-      "start": 92,
-      "len": 9,
-      "kind": "undeclared",
-      "refs": [
-        "world/door.rs:12-13"
-      ]
-    },
-    {
-      "start": 102,
-      "len": 5,
-      "kind": "undeclared",
-      "refs": [
-        "world/room_load.rs:247"
-      ]
-    },
-    {
-      "start": 112,
-      "len": 10,
-      "kind": "undeclared",
-      "refs": [
-        "world/elevator.rs:425",
-        "world/update.rs:75",
-        "world/elevator.rs:159-160"
-      ]
-    },
     {
       "start": 145,
       "len": 107,
@@ -928,6 +890,17 @@
       "undeclared_total": 407,
       "state_sha256": "ae31e325ee7d9d3575b2b1a1d0d97ea63768b6a2b73fc68c8490c2f2f204efb2",
       "prev_sha256": "71e77986c104cfcaa792a611495e18e07fd5440263bd8ff4a89de59c8f0e53df"
+    },
+    {
+      "ts": "2026-11-27T10:59:07+08:00",
+      "reason": "下调 Undeclared 407 → 355 B / Unmodeled 197 → 197 B",
+      "owner_total": 1720,
+      "view_bytes": 23,
+      "view_only_bytes": 0,
+      "unmodeled_total": 197,
+      "undeclared_total": 355,
+      "state_sha256": "a4653ac5bece0abec4e3508e500ead1f116c764403f2c767986b5f4e8c038700",
+      "prev_sha256": "080322fe4e6ae103a25ed001cf6db864b44907ea2c91f0dfd204f28717fcdd1e"
     }
   ]
 }

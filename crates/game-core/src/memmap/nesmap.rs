@@ -254,7 +254,7 @@ pub fn spec_face() -> [NesSpan; 2] {
 ///
 /// `dump_json`（静态腿/门禁）与动态腿（`verify_shim`）共用本表：新增实体只改这里，
 /// 避免两份类型清单漂移导致动态证据覆盖不到新声明。
-pub fn entity_spans() -> [(&'static str, &'static [(NesSpan, SpanKey)]); 24] {
+pub fn entity_spans() -> [(&'static str, &'static [(NesSpan, SpanKey)]); 25] {
     [
         // B1-b 第二批：零页 `$0000-$0032`（51 B：手柄位面 / NMI 握手 / 主循环号 / 帧计数 /
         // 随机数 / 备用）的 typed 声明层。行为仍在 frame/、input/、title/（裸地址读写）。
@@ -334,6 +334,13 @@ pub fn entity_spans() -> [(&'static str, &'static [(NesSpan, SpanKey)]); 24] {
         (
             "SamusProjectiles",
             crate::memmap::samus_projectile_face::SamusProjectileFace::SPANS,
+        ),
+        // B2 收口第四批（#125 收口/#139）：零页补面 `$0034-$0079` 的 9 段具名变量（52 B）。
+        // 段间不连续：`$0033/$0037-$003A/$0049/$004F-$0052` 已各自是 `Unmodeled`，
+        // `$0110-$01FF` 按 `stack_page_face` 裁定故意留在 `Undeclared`。
+        (
+            "ZeroPageExtra",
+            crate::memmap::zero_page_extra_face::ZeroPageExtraFace::SPANS,
         ),
     ]
 }
@@ -485,11 +492,16 @@ mod tests {
         // B1-c 第三批：wave beam 弹额外面 `$05D0-$05FF` 48 B（3 槽 × 16 B）⇒ 1317 + 48 = 1365。
         // B2-c：#97 页 1 变量面 `$0108-$010F` 8 B ⇒ 1365 + 8 = 1373（额外面 84 不变）。
         // B2-b（#113）：敌人额外面 140 B（12×9 + 4×8，全在 WRAM 面）⇒ 额外面 84 → 224。
-        // B2 收口第二批（#131）：零页敌 AI / 结局链 union 面 `$007A-$0090` 23 B ⇒
-        // 1373 + 23 + 48 = 1444（额外面 224 不变）。
+        // B2 收口第二批（#131）：零页敌 AI / 结局链 union 面 `$007A-$0090` 23 B。
+        // B2 收口第三批（#138）：弹槽族 `$03D0-$03FF` 48 B。
+        // B2 收口第四批（#139）：零页补面 `$0034-$0079` 9 段共 52 B。
+        // 1373 + 23 + 48 + 52 = 1496（额外面 224 不变）。算式逐项可复算，不写魔数。
+        let anchor = (1373 + 23 + 48 + 52, 224);
         assert!(
-            json.contains("\"coverage\":[1444,224]"),
-            "owner 字节数锚点（1373 + 敌 AI union 面 23 B；额外面 224）"
+            json.contains(&format!("\"coverage\":[{},{}]", anchor.0, anchor.1)),
+            "owner 字节数锚点（1373 + 敌 AI union 面 23 B + 弹槽族 48 B + 零页补面 52 B = {}；额外面 {}）",
+            anchor.0,
+            anchor.1
         );
     }
 

@@ -46,5 +46,6 @@ pub mod enemy_extra_face;
 /// B2 收口第二批：零页敌 AI / 结局链 union 面 `$007A-$0090`（23 B）typed 声明层（卡 #131）。
 pub mod enemy_ai_zero_page_face;
 pub mod samus_projectile_face;
+pub mod zero_page_extra_face;
 #[cfg(test)]
 pub(crate) mod verify_shim;
