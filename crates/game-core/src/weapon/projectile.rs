@@ -499,6 +499,38 @@ pub(crate) fn enemy_is_hit_flags(dist_hi: u8) -> u8 {
     (dist_hi ^ 0x03) << 3
 }
 
+/// ROM `CheckCollisionOfXSlotAndYSlot ; 07:F1FA` 的单轴距离（16 位语义）。
+///
+/// 调用约定（由调用方按 `ScrollDir & 2` 决定哪个轴是主轴）：
+/// * `use_hi`：`true` ⇒ 该轴比较 16 位（hi 不等时 `sbc` 的借位进 `dhi`）；`false` ⇒ 只比低字节；
+/// * `compensate_240`：纵向房 Y 轴的 240 行补偿（`lo -= 0x10`，借位则 `dhi -= 1`）。
+///
+/// 返回 `Some(dist)` 表示 `dhi==0`（ROM：`lda Temp01_DiffHi / bne @RTS` 才继续）；
+/// `None` 表示两槽跨页（≥256 px），一律判「不碰」。
+///
+/// 证据：`docs/spec/f1301-fix-plan.md` §4（#130 规格）、`prg7_engine.asm` 的 F1FA/F1B6。
+pub(crate) fn rom_axis_delta(a: u8, ha: u8, b: u8, hb: u8, use_hi: bool, compensate_240: bool) -> Option<u8> {
+    let (mut lo, borrow0) = a.overflowing_sub(b);
+    let mut dhi: i32 = if use_hi && ha != hb {
+        ha as i32 - hb as i32 - borrow0 as i32
+    } else {
+        -(borrow0 as i32)
+    };
+    if dhi < 0 {
+        let (nlo, borrow1) = 0u8.overflowing_sub(lo);
+        lo = nlo;
+        dhi = -dhi - borrow1 as i32;
+    }
+    if compensate_240 && use_hi && ha != hb {
+        let (nlo, borrow2) = lo.overflowing_sub(0x10);
+        lo = nlo;
+        if borrow2 {
+            dhi -= 1;
+        }
+    }
+    if dhi == 0 { Some(lo) } else { None }
+}
+
 pub(crate) fn uw_collision_detection(mem: &mut crate::frame::Manager) {
     // 【goal-轮20 碰撞环头件】CollisionDetection（F034-F038 逐字）：`lda #$FF/sta
     // SamusKnockbackIsBomb($73)/sta SamusHurt010F($010F)`——**每环重置 kb73=$FF**（无此
@@ -535,9 +567,31 @@ pub(crate) fn uw_collision_detection(mem: &mut crate::frame::Manager) {
             let py_x = mem.read_ram(py + 0x0E) as i16;
             let pry = mem.read_ram(py + 1) as i16;
             let prx = mem.read_ram(py + 2) as i16;
-            let dy = (ey - py_y).unsigned_abs() as i16;
-            let dx = (ex - py_x).unsigned_abs() as i16;
-            if dy >= ery + pry || dx >= erx + prx {
+            // 【#137 判盒 16 位重建】ROM CheckCollisionOfXSlotAndYSlot(07:F1FA)：
+            // 只有**主轴**比 hi（`ScrollDir & 2`：0=纵向房 Y 主轴、1=横向房 X 主轴），
+            // 另一轴仍只比低字节；跨页（dhi!=0）一律不碰。
+            // 旧形两轴都只比低字节 ⇒ f1301 把「敌在 nametable 0、弹在 nametable 1」的
+            // 262 px 当成 6 px，误入 F2CA 写 $0454/$045E（首分歧，见 docs/findings/tas-round6.md）。
+            // typed 句柄取位（B0 允许面）：相机朝向 / PPUCTRL 影子 / 敌与弹的 nametable 页号。
+            let vertical_room = mem.camera().dir() & 0x02 == 0;
+            let base = mem.ppuctrl_zp() & 0x01;
+            let e_hi = mem.enemy((x / 16) as u8).hi() ^ base;
+            let p_hi = mem.object(((py - 0x0300) / 16) as u8).hi() ^ base;
+            let (dy, dx) = if vertical_room {
+                (
+                    rom_axis_delta(ey as u8, e_hi, py_y as u8, p_hi, true, true),
+                    rom_axis_delta(ex as u8, e_hi, py_x as u8, p_hi, false, false),
+                )
+            } else {
+                (
+                    rom_axis_delta(ey as u8, e_hi, py_y as u8, p_hi, false, false),
+                    rom_axis_delta(ex as u8, e_hi, py_x as u8, p_hi, true, false),
+                )
+            };
+            let (Some(dy), Some(dx)) = (dy, dx) else {
+                continue; // 跨页（dhi!=0）⇒ 不碰
+            };
+            if dy as i16 >= ery + pry || dx as i16 >= erx + prx {
                 continue; // 未触碰（carry 置⇒F2CA bcs Lx293）
             }
             // ==== F2CA 命中面（:10391-10407）====
@@ -815,6 +869,46 @@ pub(crate) fn bcd_sub(v: u8, sub: u8) -> (u8, bool) {
     (out, borrow)
 }
 
+
+#[cfg(test)]
+mod tests_rom_axis_delta {
+    use super::rom_axis_delta;
+
+    /// #130 规格 §4 的四组向量（同 hi / 跨 hi 都覆盖）。
+    #[test]
+    fn four_vectors_from_spec() {
+        // f1301 场景：敌 120(hi0) vs 弹 126(hi1) ⇒ 262 px，跨页必不碰。
+        assert_eq!(rom_axis_delta(120, 0, 126, 1, true, false), None);
+        // 同 hi、两侧：借位进 dhi 后取补成 10。
+        assert_eq!(rom_axis_delta(120, 0, 130, 0, true, false), Some(10));
+        assert_eq!(rom_axis_delta(130, 0, 120, 0, true, false), Some(10));
+        assert_eq!(rom_axis_delta(0, 0, 0, 0, true, false), Some(0));
+    }
+
+    /// 纵向房 Y 轴的 240 行补偿：跨页时按 240 屏高折算（`lo -= 16`）。
+    #[test]
+    fn vertical_240_row_compensation() {
+        // 敌 y=5(hi0) vs 弹 y=245(hi1)：真实 240-5+... ⇒ 同页折回不碰？按 ROM：dhi!=0 ⇒ None。
+        assert_eq!(rom_axis_delta(5, 0, 245, 1, true, true), None);
+        // 同 hi 时补偿不生效（只有 hi 不等才做）。
+        assert_eq!(rom_axis_delta(5, 0, 15, 0, true, true), Some(10));
+    }
+
+    /// 改前判据（只比低字节，`unsigned_abs`）在这组向量上会给出「碰」，即负例在改前代码上红。
+    /// 保留为对照实现，防止有人把判盒又退化成低字节比较。
+    fn legacy_low_byte_delta(a: u8, b: u8) -> u8 {
+        a.abs_diff(b)
+    }
+
+    #[test]
+    fn legacy_low_byte_judge_box_is_the_pre_fix_bug() {
+        // 改前代码对 f1301 的判定值：|120-126| = 6（半径和 10 ⇒ 误判为碰）。
+        assert_eq!(legacy_low_byte_delta(120, 126), 6);
+        assert!(legacy_low_byte_delta(120, 126) < 10);
+        // 改后同一对（跨页）返回 None ⇒ 不碰。两者结论相反，正是 #137 修的差。
+        assert_eq!(rom_axis_delta(120, 0, 126, 1, true, false), None);
+    }
+}
 
 #[cfg(test)]
 mod tests_bullet_explode_order {
