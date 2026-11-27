@@ -353,9 +353,30 @@ def _xor_runs(prev: bytes, cur: bytes) -> list[list]:
 
 
 def _rows_content_sha(rows: list[dict]) -> str:
-    """行列表的 canonical 内容哈希（每行 sort_keys JSON，换行连接）。"""
+    """行列表的 canonical 内容哈希（每行 sort_keys JSON，换行连接）。
+
+    hex 面先经 `bytes.fromhex(v).hex()` 归一成小写再入哈希：真实产物里
+    rust 腿全大写、emu 腿混排（#150 复核 seq4 实测），decode 重建恒小写，
+    不归一则编码侧自校验对真实文件必挂。非 hex 字符串（如整型已 str 的值）
+    不满足 fromhex，原样保留。
+    """
+    def _canon(d: dict) -> dict:
+        w = d.get("w")
+        if not isinstance(w, dict):
+            return d
+        w2 = {}
+        for k, v in w.items():
+            if isinstance(v, str):
+                try:
+                    w2[k] = bytes.fromhex(v).hex()
+                except ValueError:
+                    w2[k] = v
+            else:
+                w2[k] = v
+        return {**d, "w": w2}
+
     return sha256_bytes("\n".join(
-        json.dumps(d, sort_keys=True, ensure_ascii=False) for d in rows).encode())
+        json.dumps(_canon(d), sort_keys=True, ensure_ascii=False) for d in rows).encode())
 
 
 def encode_compact_trace(rows: list[dict]) -> dict:

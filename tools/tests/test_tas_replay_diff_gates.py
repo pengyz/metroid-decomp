@@ -40,6 +40,25 @@ def test_compact_roundtrip(tmp_path: Path):
     assert trd._rows_content_sha(rt2) == trd._rows_content_sha(rows2)
 
 
+def test_compact_hex_case_normalized_in_content_sha():
+    """#150 复核 seq4：真实产物 hex 大小写混排（rust 全大写/emu 混排），
+    content sha 必须对大小写归一——大写变体的往返 sha 与原文一致。"""
+    rows = _mk_rows()
+    upper = [{**r, "w": {k: (v.upper() if isinstance(v, str) else v)
+                         for k, v in r["w"].items()}} for r in rows]
+    # 混排：逐行交替大小写（模拟 emu 侧 f=28 那种行内混排）
+    mixed = [{**r, "w": {k: (v.upper() if (i % 2 == 0 and isinstance(v, str)) else v)
+                         for k, v in r["w"].items()}}
+             for i, r in enumerate(rows)]
+    base = trd._rows_content_sha(rows)
+    assert trd._rows_content_sha(upper) == base
+    assert trd._rows_content_sha(mixed) == base
+    obj = trd.encode_compact_trace(upper)
+    assert trd.decode_compact_trace(obj) == rows  # 重建恒小写，等价于原文归一形态
+    obj_m = trd.encode_compact_trace(mixed)
+    assert trd.decode_compact_trace(obj_m) == rows
+
+
 def test_compact_tamper_caught(tmp_path: Path):
     obj = trd.encode_compact_trace(_mk_rows())
     for mutate in (
