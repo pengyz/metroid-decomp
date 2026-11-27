@@ -324,6 +324,11 @@ impl<'a> EnsFace<'a> {
     fn putm(&mut self, off: u16, v: u8) {
         self.mem.write_ram(self.main(off), v);
     }
+    /// 字节面读口（`Ens` 主面）——与 `putm` 配对，字段读侧不再各写一处裸面。
+    #[inline]
+    fn getm(&self, off: u16) -> u8 {
+        self.mem.read_ram(self.main(off))
+    }
     /// 字节面写口（`EnsExtra` 面）。
     #[inline]
     fn putx(&mut self, off: u16, v: u8) {
@@ -345,10 +350,22 @@ impl<'a> EnsFace<'a> {
 
     /// `Ens.data05`（+5）——`bit1` 是 `IsObjectVisible` 的逐帧闩。
     pub(crate) fn data05(&self) -> u8 {
-        self.mem.read_ram(self.main(5))
+        self.getm(5)
     }
     pub(crate) fn set_data05(&mut self, v: u8) {
         self.putm(5, v);
+    }
+
+    /// `Ens.data06`（+6，`$0400+x+6`）——asm 名 `chunkyExplosionTimer`，三语义共用：
+    /// ① 爆散计时（`DrawEnemy ; 07:DDDF` 每帧 `inc`，`$19` 到顶）；② `Resting` 期的
+    /// 初始化标记（`UpdateEnemy_Resting` 读 `data05&$40` 后清）；③ `ExplodeEnemy` 尾存 0。
+    /// **敌池** `x=slot*16`；爆散池 `x=0xC0+slot*8` 时 `$0400+$C0` 与敌槽 12 别名
+    /// （见 `docs/spec/f1574-fix-plan.md` §2.4）。
+    pub(crate) fn data06(&self) -> u8 {
+        self.getm(6)
+    }
+    pub(crate) fn set_data06(&mut self, v: u8) {
+        self.putm(6, v);
     }
 
     /// `Ens.y`（+0）/ `Ens.x`（+1）——房内坐标（非屏位）。

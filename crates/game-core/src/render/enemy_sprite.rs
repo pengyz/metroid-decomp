@@ -64,18 +64,63 @@ fn draw_at(mem: &mut crate::frame::Manager, x: u8, view: View) {
     // 爆亡链件已补（F40D/DCF5/F483 全径（415 测））⇒连锁闭环（§10 回装判据达成）。
     // **按区**取敌帧/位数据面（`docs/findings/per-bank-assets.md` §1：五区基址/表长各异）。
     let area = view.area;
+    // 【#152 顺序锚】asm `DrawEnemy ; 07:DD8B` 第一步是读 animFrame 并 `cmp #_id_FrameNone`
+    // （`$FF`），命中 **`jmp ClearObjectCntrl`**（07:DD8F-07:DD93）——半径(:6158)、
+    // IsObjectVisible(:6178)、`data05` bit1 闩(:6180) 全在它**之后**。所以 `$FF` 帧在这里
+    // 直接清 `$6B` 返回；**不要把这段挪回 visible 之后**（旧形在 visible 后才查 `$FF`，
+    // 会让终帧多写一次「可见」闩，与 asm 的分支顺序不符）。
     let frame0 = mem.ens_face(x).anim_frame();
-    if frame0 != 0xFF {
-        let fi0 = ((frame0 & 0x7F) as usize) + if frame0 & 0x80 != 0 { 128 } else { 0 };
-        let (fo0, fl0) = assets::enemy_frame_off(area, fi0).unwrap_or((0, 0));
-        // 【goal-轮94 fo0→radiusY 直证】帧面 radiusY（金方 1/9 vs 我 8）。
-        if fl0 > 2 {
-            let ry = assets::enemy_frames(area)[fo0 as usize + 1];
-            let rx = assets::enemy_frames(area)[fo0 as usize + 2];
-            let mut f = mem.ens_face(x);
-            f.set_radius_y(ry);
-            f.set_radius_x(rx);
+    if frame0 == 0xFF {
+        mem.set_obj_cntrl(0); // ClearObjectCntrl ; 07:DF2D（`lda #$00 / sta ObjectCntrl`）
+        return;
+    }
+    let table2 = frame0 & 0x80 != 0;
+    let fi = ((frame0 & 0x7F) as usize) + if table2 { 128 } else { 0 };
+    let (fo, fl) = assets::enemy_frame_off(area, fi).unwrap_or((0, 0));
+    let blob = |i: usize| -> u8 {
+        if fl == 0 || i >= fl as usize {
+            0
+        } else {
+            assets::enemy_frames(area)[fo as usize + i]
         }
+    };
+    let ctrl = blob(0);
+    let place_idx = ((ctrl & 0x0F) as usize).min(127);
+    // ---- place==EnPlace1：**绘制侧** inc `chunkyExplosionTimer`（`$0406`）----
+    // asm :6134-:6156 逐字：GetSpriteCntrlData ⇒ `cpx #_id_EnPlace1*2 / bne Lx146`；
+    // 命中则 `ldx PageIndex / inc Ens.0.chunkyExplosionTimer,x / lda … / pha /
+    // and #$03 / tax / lda Temp05_Cntrl / and #~(VFLIP|HFLIP) / ora ExplodeRotationTbl,x /
+    // sta Temp05_Cntrl / pla / cmp #$19 / bne Lx146 / jmp EnemyCompleteDeath`。
+    // 语义：每帧先 +1，再看**自增后**的值是否 == `$19`(25)；到 25 帧跳 CompleteDeath,
+    // 本帧**不绘制**（`jmp` 而非 `rts`）。此段在半径(:6158)/IsObjectVisible(:6178) 之前
+    // ⇒ **离屏爆散敌同样每帧自增**（自增不受可见性门控）。
+    if place_idx == 1 {
+        let t = mem.ens_face(x).data06().wrapping_add(1);
+        mem.ens_face(x).set_data06(t);
+        // 【已知缺口，非本卡范围】asm 同支还做 `ctrl = (ctrl & ~(VFLIP|HFLIP)) |
+        // ExplodeRotationTbl[t & $03]`（表 `00 80 C0 40`，07:DC8B）——敌侧这幅旋转混入
+        // 尚未实现（Samus 爆炸特例在 `render::oam::samus_explode_draw` 已实现），
+        // 本卡只钉计时/死亡，像素侧旋转待单独取证卡。
+        if t == 0x19 {
+            // 【折中，非 ROM 语义（规格 §2.4，docs/spec/f1574-fix-plan.md）】
+            // `enemy_complete_death` 用 `slot_of(x)`（`x/16`），只对敌池 `x<0xC0` 成立；
+            // 爆散池 `x=0xC0+slot*8` 会被折算成敌槽 12/13（`$0400+$C0` 恰是敌槽 12 的
+            // 地址）⇒ 先只在 `x<0xC0` 调用死亡。池侧（`x≥0xC0`）是否真的会走到 place==1
+            // 尚未证实（写点探针每地址只留 12 笔，tools/scenario_capture.lua:486），
+            // 待后续卡取证后决定补正还是保留护栏。
+            if x < 0xC0 {
+                crate::enemy::framework::enemy_complete_death(mem, x);
+            }
+            return; // jmp EnemyCompleteDeath：本帧不绘制
+        }
+    }
+    // 【goal-轮94 fo0→radiusY 直证】帧面 radiusY/X（`:6158-:6168` 帧记字 1/2）。
+    if fl > 2 {
+        let ry = assets::enemy_frames(area)[fo as usize + 1];
+        let rx = assets::enemy_frames(area)[fo as usize + 2];
+        let mut f = mem.ens_face(x);
+        f.set_radius_y(ry);
+        f.set_radius_x(rx);
     }
     // 【goal-轮75 asm 合形修】draw 走 fresh 检（:6177 `jsr IsObjectVisible` 逐字——
     // 旧形走闩径（免 fresh）=偏离）——闩径 F37F 在 update 面（非 draw）。
@@ -87,22 +132,6 @@ fn draw_at(mem: &mut crate::frame::Manager, x: u8, view: View) {
         mem.set_obj_cntrl(0);
         return;
     }
-    let frame = mem.ens_face(x).anim_frame();
-    if frame == 0xFF {
-        mem.set_obj_cntrl(0);
-        return;
-    }
-    let table2 = frame & 0x80 != 0;
-    let fi = ((frame & 0x7F) as usize) + if table2 { 128 } else { 0 };
-    let (fo, fl) = assets::enemy_frame_off(area, fi).unwrap_or((0, 0));
-    let blob = |i: usize| -> u8 {
-        if fl == 0 || i >= fl as usize {
-            0
-        } else {
-            assets::enemy_frames(area)[fo as usize + i]
-        }
-    };
-    let ctrl = blob(0);
     // 【X 形根修（2026-10-31 asm WriteSpriteRAM（DEE6）逐字）】$6B=**对象控制字节**
     // （SetMirrorCntrlBit/敌 tough 面写）**非帧 ctrl**——旧形 `sta $6B=帧ctrl` 覆写
     // +镜像映射交叉（bit6→0x80）⇒四精灵翻位成 X 形（金=星芒——贴图错根）。
@@ -110,7 +139,6 @@ fn draw_at(mem: &mut crate::frame::Manager, x: u8, view: View) {
     // 镜像面 Temp04=ctrl ^ 同源（GetSpriteCntrlData :5913-5920）。
     let obj_mirror = mem.obj_cntrl() & 0x10; // bit4=水平镜像控制
     let _ = obj_mirror;
-    let place_idx = ((ctrl & 0x0F) as usize).min(127);
     let (po, pl) = assets::enemy_place_off(area, place_idx).unwrap_or((0, 0));
     let pblob = |i: usize| -> u8 {
         if pl == 0 || i >= pl as usize {

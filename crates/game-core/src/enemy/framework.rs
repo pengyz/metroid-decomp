@@ -389,21 +389,17 @@ fn apply_explosion_speed(mem: &mut crate::frame::Manager, slot: u8, dy: u8, dx: 
     mem.explosion(slot).set_hi(hi & 0x01);
 }
 
-/// UpdateEnemy_Explode（**asm 内容锚** `: 07:F40D`（jmp ChooseEnemyAIRoutine（爆在 AI
-/// Exit 臂（noMoveNoAnim 显示）+chunkyExplosionTimer（+06）计时⇒CompleteDeath））。
+/// UpdateEnemy_Explode（**asm 内容锚** `: 07:F40D` → `ChooseEnemyAIRoutine` 的
+/// 爆散臂：noMoveNoAnim 显示（内部会调 `DrawEnemy`）+ `chunkyExplosionTimer`（+06））。
+///
+/// 【#152 A 级删改】asm 07:F40D 壳**本身不碰 `$0406`**：计时 `inc $0406,x` 与
+/// `cmp #$19 → EnemyCompleteDeath` 全部在 `DrawEnemy ; 07:DD8B` 的 place==EnPlace1
+/// 支内（:6134-:6156）。旧 Rust 形在 update 壳里自增——而 `no_move_no_anim` 内部
+/// 已经会 `draw_enemy`（本函数上方 `:840`）⇒ 旧形每帧 **+2**，且死亡判定提前，
+/// 正是 f1574 `$0406` emu=1 / rust=0 的根因。此段已整体删除，计时只剩绘制面一处。
 pub(crate) fn update_enemy_explode(mem: &mut crate::frame::Manager, x: u8) {
-    let px = x as u16;
     update_enemy_anim(mem, x, 3);
     update_enemy_common_no_move_no_anim(mem, x);
-    // 【asm 07:DDDF-07:DE03 的方向】`DrawEnemy` 在 place==EnPlace1（正在爆散）时
-    // `inc Ens.0.chunkyExplosionTimer,x` 再 `cmp #$19`：**从 0 往上加到 $19(25) 才死**，
-    // 不是倒计时。旧形「init=anim 索引、每帧减 1」两个都反了（init 见上一条修正）。
-    let timer = mem.enemy(slot_of(px as u8)).data06(); // chunkyExplosionTimer（trace +06）
-    if timer >= 0x19 {
-        enemy_complete_death(mem, x);
-    } else {
-        mem.enemy(slot_of(px as u8)).set_data06(timer + 1);
-    }
 }
 
 /// UpdateEnemy_Frozen（$F54D）：data0D 计时（×8（asm「frozen timer (* 8)」））⇒回 Active。
@@ -1256,30 +1252,198 @@ mod tests_chunky_explode_timer {
     use super::*;
     use crate::frame::Manager;
 
-    /// `chunkyExplosionTimer` 的**方向**：asm `DrawEnemy ; 07:DDDF` 是 `inc` 后
-    /// `cmp #$19`（0→25），`ExplodeEnemy ; 07:F611` 初始化存 0（A 被
-    /// `InitEnAnimIndex` 尾条 `lda #$00` 清零）。本测钉住「0 起、每帧 +1、到 $19 变掉落物」。
+    /// 构置「本帧不绘制」的爆散敌：`animFrame=$FF`（blank 帧 ⇒ `DrawEnemy` 第一步就
+    /// `jmp ClearObjectCntrl`），并用 `animDelay≠0` 冻住 `UpdateEnemyAnim` 的走表推进
+    /// （否则它会改写 animFrame）。
+    fn stage_blank_explode(m: &mut Manager, x: u8) {
+        m.enemy(slot_of(x)).set_status(EnemyStatus::Explode);
+        m.ens_face(x).set_anim_frame(0xFF);
+        m.enemy(slot_of(x)).set_anim_delay(0xFF);
+    }
+
+    /// 【#152 契约】`UpdateEnemy_Explode ; 07:F40D` 壳**自身不碰 `$0406`**：计时
+    /// `inc` 与 `cmp #$19` 全在 `DrawEnemy ; 07:DD8B` 的 place==EnPlace1 支
+    /// （:6134-:6156）。本测让本帧不绘制（blank 帧）⇒ update 跑完 `$0406` 必须原样
+    /// 不动。**旧形在这里 +1**，而真实路径里 `no_move_no_anim` 内部还会 draw 一次 ⇒
+    /// 旧形实际每帧 +2——这正是 f1574 `$0406` emu=1/rust=0 的根因。
     #[test]
-    fn timer_increments_from_zero() {
-        // asm 07:F68D 的 `lda #$00` 使 init 存 0，之后由 DrawEnemy 07:DDDF 每帧 `inc`
+    fn update_shell_does_not_increment_chunky_timer() {
         let mut m = Manager::default();
         let x = 0x40u8;
-        m.enemy(slot_of(x)).set_status(EnemyStatus::Explode);
+        stage_blank_explode(&mut m, x);
         m.enemy(slot_of(x)).set_data06(0);
         update_enemy_explode(&mut m, x);
-        assert_eq!(m.enemy(slot_of(x)).data06(), 1, "0 → 1（不是递减、不是 0x27）");
+        assert_eq!(
+            m.enemy(slot_of(x)).data06(),
+            0,
+            "update 壳不得自增（旧形 +1，叠加内部 draw ⇒ 每帧 +2）"
+        );
+    }
+
+    /// 对照：`$19` 的死亡判同样属绘制面，update 壳不得提前触发。
+    #[test]
+    fn update_shell_does_not_complete_death_at_0x19() {
+        let mut m = Manager::default();
+        let x = 0x40u8;
+        stage_blank_explode(&mut m, x);
+        m.enemy(slot_of(x)).set_data06(0x19);
+        update_enemy_explode(&mut m, x);
+        assert_eq!(
+            m.enemy(slot_of(x)).status_raw(),
+            3,
+            "$19 的 EnemyCompleteDeath 属 DrawEnemy，不在 update 壳"
+        );
+    }
+}
+
+/// 【#152 绘制侧 chunky 计时】asm `DrawEnemy`（07:DD8B）在 place==EnPlace1 支内
+/// `inc Ens.0.chunkyExplosionTimer` → 读回 → `cmp #$19` → 相等 `jmp EnemyCompleteDeath`
+/// （prg7_engine.asm:6134-6159，**inc 与死亡判都在 radius/IsObjectVisible 之前**）。
+/// 旧 Rust 形把这套计时放在 `update_enemy_explode`（07:F40D 壳），本组测试钉住
+/// 「计时属绘制面：draw 一次 +1、自增后 ==$19 才死、绘制不清零」。
+#[cfg(test)]
+mod tests_chunky_draw_inc {
+    use super::*;
+    use crate::frame::Manager;
+
+    /// 构置一个**可见**的爆散敌人：x=0x40（slot 4）、animFrame=0x37
+    /// （Brinstar 资产实测该帧 ctrl=0x21 ⇒ place==1，即 f1574 真实帧形态）。
+    /// 可见性按 `IsObjectVisible`（prep.rs，07:DFDF）横房同名表支构置：
+    /// SCROLL_DIR&$02=1、SCROLL_X=0、xpos>$radius（默认 0）、hi bit0 与 $00FF bit0 同（均 0）。
+    fn staged_explode(m: &mut Manager) {
+        let x = 0x40u8;
+        m.enemy(slot_of(x)).set_status(EnemyStatus::Explode);
+        m.ens_face(x).set_anim_frame(0x37); // place==1 帧（资产实测）
+        m.set_scroll_dir(0x02); // 横滚房
+        m.set_scroll_x(0x00);
+        m.ens_face(x).set_y(0x30); // Ens.y
+        m.ens_face(x).set_pos_x(0x50); // Ens.xpos > rx ⇒ 可见
+        m.ens_face(x).set_hi(0x00); // hi bit0=0（与 $00FF 同名表）
     }
 
     #[test]
-    fn timer_reaching_0x19_completes_death() {
-        // `cmp #$19` 相等 ⇒ EnemyCompleteDeath；后续状态取决于 1/16 掉落判，
-        // 故只断言「不再是 Explode」，不把 RNG 前提写进测试。
+    fn draw_increments_chunky_timer_each_frame() {
+        if !game_data::assets::ensure_ready() {
+            return; // 无资产包环境：place 位来自 ROM 帧面，缺包 SKIP
+        }
         let mut m = Manager::default();
-        let x = 0x40u8;
-        m.enemy(slot_of(x)).set_status(EnemyStatus::Explode);
-        m.enemy(slot_of(x)).set_data06(0x19);
-        update_enemy_explode(&mut m, x);
-        assert_ne!(m.enemy(slot_of(x)).status_raw(), 3, "$19 ⇒ EnemyCompleteDeath");
+        staged_explode(&mut m);
+        m.enemy(slot_of(0x40)).set_data06(0);
+        draw_enemy(&mut m, 0x40);
+        assert_eq!(
+            m.enemy(slot_of(0x40)).data06(),
+            1,
+            "place==1 帧 ⇒ draw 一次 +1（07:DDDF inc）"
+        );
+        draw_enemy(&mut m, 0x40);
+        assert_eq!(m.enemy(slot_of(0x40)).data06(), 2, "再 draw 一次再 +1");
+    }
+
+    #[test]
+    fn draw_reaching_0x19_completes_death() {
+        if !game_data::assets::ensure_ready() {
+            return;
+        }
+        let mut m = Manager::default();
+        staged_explode(&mut m);
+        // inc 后读回 cmp #$19：0x18+1==0x19 ⇒ EnemyCompleteDeath（07:DDF6-07:DDFA）。
+        // 后续状态取决于 1/16 掉落判，故只断言「不再是 Explode」，不把 RNG 前提写进测试。
+        m.enemy(slot_of(0x40)).set_data06(0x18);
+        draw_enemy(&mut m, 0x40);
+        assert_ne!(
+            m.enemy(slot_of(0x40)).status_raw(),
+            3,
+            "自增后 $19 ⇒ EnemyCompleteDeath"
+        );
+    }
+
+    /// `ExplodeEnemy`（07:F611→InitEnAnimIndex 尾 `lda #$00`）只在 spawn 时清零一次；
+    /// 绘制面不得清 $0406（否则每帧回 0，永远到不了 $19）。
+    #[test]
+    fn draw_never_resets_chunky_timer() {
+        if !game_data::assets::ensure_ready() {
+            return;
+        }
+        let mut m = Manager::default();
+        staged_explode(&mut m);
+        m.enemy(slot_of(0x40)).set_data06(7);
+        draw_enemy(&mut m, 0x40);
+        assert_eq!(
+            m.enemy(slot_of(0x40)).data06(),
+            8,
+            "draw 只 inc（7→8），不清零"
+        );
+    }
+
+    /// 端到端：`update_enemy_explode`（07:F40D 壳）一次 ⇒ `$0406` 只 +1。
+    /// 旧形壳内 +1 再加 `no_move_no_anim` 内部 draw 的 +1 = **每帧 +2**——本测是
+    /// f1574 `$0406` emu=1/rust=0 的直接回归。用 `animDelay≠0` 冻住走表推进，
+    /// 保证 draw 读到的是构置的 place==1 帧（0x37）。
+    #[test]
+    fn update_path_increments_once_per_frame() {
+        if !game_data::assets::ensure_ready() {
+            return;
+        }
+        let mut m = Manager::default();
+        staged_explode(&mut m);
+        m.enemy(slot_of(0x40)).set_anim_delay(0xFF); // 冻住 UpdateEnemyAnim 走表
+        m.enemy(slot_of(0x40)).set_data06(0);
+        update_enemy_explode(&mut m, 0x40);
+        assert_eq!(
+            m.enemy(slot_of(0x40)).data06(),
+            1,
+            "一帧一次 update ⇒ +1（旧形 +2）"
+        );
+        update_enemy_explode(&mut m, 0x40);
+        assert_eq!(m.enemy(slot_of(0x40)).data06(), 2, "两帧 ⇒ 2");
+    }
+
+    /// 【#152 spawn 不清 `$0406`】`LoadEnemy ; 07:EB06` 的 LEB4D 只写
+    /// y/x/status/isHit/hi（+data05/delay/data0D/health），全径无 `$0406` 写点——
+    /// f1573→f1574 的残值 1 正是跨 spawn 保留的。本测走**公开真实房流**
+    /// `draw_room`（含敌装载），先给敌池 12 槽播种 `$0406=0x2A`，装载后必须原样。
+    #[test]
+    fn room_spawn_does_not_clear_chunky_timer() {
+        if !game_data::assets::ensure_ready() {
+            return;
+        }
+        let mut m = Manager::default();
+        for slot in 0..12u8 {
+            m.ens_face(slot * 16).set_data06(0x2A);
+        }
+        assert!(
+            crate::world::room_draw::draw_room(&mut m, 5),
+            "Brinstar 房 5 应能装载（world/tests.rs 同口径）"
+        );
+        for slot in 0..12u8 {
+            assert_eq!(
+                m.ens_face(slot * 16).data06(),
+                0x2A,
+                "spawn 不得清写敌槽 {slot} 的 $0406"
+            );
+        }
+    }
+
+    /// 爆散池槽（x≥0xC0，8 步长）走同一 `draw_at`：规格 §2.4 的折中是**通用写法照常
+    /// inc**，只在 `t==$19` 时把死亡调用护栏在 `x<0xC0`——因为 `enemy_complete_death`
+    /// 用 `slot_of(x)`（x/16），`slot_of(0xC0)=12` 且 `$0400+$C0` 恰是**敌槽 12** 的
+    /// 地址，不护栏就会把敌槽 12 误杀。
+    #[test]
+    fn explosion_pool_draw_incs_but_does_not_kill_enemy_slot12() {
+        if !game_data::assets::ensure_ready() {
+            return;
+        }
+        let mut m = Manager::default();
+        m.ens_face(0xC0).set_anim_frame(0x37); // 池 slot0，place==1 形态（同敌池实测帧）
+        m.ens_face(0xC0).set_data06(0x18);
+        // 若没有 `x<0xC0` 护栏，`enemy_complete_death` 会用 `slot_of(0xC0)=12`
+        // 调 `mem.enemy(12)` ⇒ 越界 `debug_assert` panic。所以「不 panic」本身就是断言。
+        draw_explosion(&mut m, 0);
+        assert_eq!(
+            m.ens_face(0xC0).data06(),
+            0x19,
+            "池同样走通用 inc（$18 → $19），但死亡调用被 x<0xC0 护栏挡住"
+        );
     }
 }
 
