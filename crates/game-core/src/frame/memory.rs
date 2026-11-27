@@ -1471,4 +1471,11 @@ impl crate::state::Manager {
     pub fn max_missiles(&self) -> u8 {
         self.read_ram(crate::ram_map::MAX_MISSILES)
     }
+
+    /// 写 `MaxMissiles`（`$687A`）。与 `max_missiles` 成对的 typed 写入面；
+    /// 测试构置与掉落门链（07:DD41 `lda MaxMissiles / beq LDD5B`）经由它，
+    /// 避免 `write_wram(ram_map::…)` 直写（B0 判据：typed 字段/域句柄是允许面）。
+    pub fn set_max_missiles(&mut self, v: u8) {
+        self.write_ram(crate::ram_map::MAX_MISSILES, v)
+    }
 }

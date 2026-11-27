@@ -181,18 +181,22 @@ mod hook_tests {
         m
     }
 
-    /// Tourian + `r<0x10`（1/16 无掉）：配额复位 + 敌人转成拾取物（不再 NoEnemy）。
+    /// Tourian + `r<0x10`（1/16 无掉）：配额复位 + 重试生成拾取物（不再 NoEnemy）。
+    /// 【#143 契约迁移】旧取值 r=0x05（frame 0x89 大能量）在新门链下 Tourian 资格
+    /// 恒败（bank3 的 L968B 无 bit0=1 项，C1）⇒ 重试仍败清槽，原断言失效；改用
+    /// r=0x01（frame 0x81 小能量）保留原覆盖点「复位后重试生成拾取物」。
+    /// C1 截断路径由新增的 `tourian_big_energy_denied_truncates_c1` 覆盖。
     #[test]
     fn tourian_drop_failure_retries_pickup() {
         if !game_data::assets::ensure_ready() {
             eprintln!("SKIP：assets/metroid.pack 未就绪（敌表读取需要它）");
             return;
         }
-        let mut m = exploding_enemy(TOURIAN_IN_AREA, 0x05);
+        let mut m = exploding_enemy(TOURIAN_IN_AREA, 0x01);
         crate::enemy::framework::enemy_complete_death(&mut m, PX);
 
-        assert_eq!(m.pickup_missile_qty_cur(), 0, "$95 清");
-        assert_eq!(m.pickup_energy_qty_cur(), 0, "$96 清");
+        assert_eq!(m.pickup_missile_qty_cur(), 0, "$95 清后未走导弹支");
+        assert_eq!(m.pickup_energy_qty_cur(), 1, "$96 复位清零后重试 inc（07:DD4F）");
         assert_eq!(m.pickup_missile_qty_max(), 1, "$93←1");
         assert_eq!(m.pickup_energy_qty_max(), 1, "$94←1");
         assert_eq!(
@@ -200,7 +204,11 @@ mod hook_tests {
             EnemyStatus::Pickup.to_byte(),
             "重试生成 ⇒ status=Pickup（不是 NoEnemy）"
         );
-        assert_eq!(m.enemy(slot_of(PX)).anim_frame(), 0x89, "PickupTypeTable[0x05&7=5]");
+        assert_eq!(
+            m.enemy(slot_of(PX)).anim_frame(),
+            0x81,
+            "PickupTypeTable[0x01&7=1]=小能量（0x81）"
+        );
     }
 
     /// Tourian + `r==0`：仍走重试生成（旧实现误判成死循环的那个取值）。
@@ -211,14 +219,50 @@ mod hook_tests {
             return;
         }
         let mut m = exploding_enemy(TOURIAN_IN_AREA, 0x00);
+        // 【#143 门链迁移】导弹支新增判据 `lda MaxMissiles / beq LDD5B`（07:DD41）：
+        // 摆 $687A>0，让重试真的生成导弹拾取物（默认 0 会两次都判败）。
+        m.set_max_missiles(5); // 导弹支 07:DD41 判 MaxMissiles>0（typed 句柄）
         crate::enemy::framework::enemy_complete_death(&mut m, PX);
 
         assert_eq!(m.pickup_missile_qty_max(), 1, "$93←1（复位发生）");
         assert_eq!(m.pickup_energy_qty_max(), 1, "$94←1");
+        assert_eq!(m.pickup_missile_qty_cur(), 1, "重试导弹支 inc（07:DD4B）");
         assert_eq!(
             m.enemy(slot_of(PX)).status_raw(),
             EnemyStatus::Pickup.to_byte(),
             "ROM 里 bne 由 iny 决定 ⇒ Rnd=0 也回 LDD30 重试生成"
+        );
+        assert_eq!(m.enemy(slot_of(PX)).anim_frame(), 0x80, "PickupTypeTable[0]=导弹");
+    }
+
+    /// 【#143 新增】Tourian 大能量资格恒败：bank3 的 L968B 无任何 bit0=1 项 ⇒
+    /// ROM 原形 `LDD5B→LDD30` 死循环（C1 quirk，`docs/spec/f1551-fix-plan.md` §7）。
+    /// Stage A 按 C1 截断=复位后重试一次，仍败 ⇒ 记账 0x0DD5B + RemoveEnemy。
+    #[test]
+    fn tourian_big_energy_denied_truncates_c1() {
+        if !game_data::assets::ensure_ready() {
+            eprintln!("SKIP：assets/metroid.pack 未就绪（敌表读取需要它）");
+            return;
+        }
+        let mut m = exploding_enemy(TOURIAN_IN_AREA, 0x05); // r&7=5 ⇒ frame 0x89 大能量
+        crate::enemy::framework::enemy_complete_death(&mut m, PX);
+
+        assert_eq!(m.pickup_missile_qty_max(), 1, "复位发生");
+        assert_eq!(m.pickup_energy_qty_max(), 1, "复位发生");
+        assert_eq!(
+            m.pickup_energy_qty_cur(),
+            1,
+            "inc 先于资格检查（07:DD4F）：截断前最后一次重试已 inc"
+        );
+        assert_eq!(
+            m.enemy(slot_of(PX)).status_raw(),
+            EnemyStatus::NoEnemy.to_byte(),
+            "重试仍资格不符 ⇒ C1 截断：NoEnemy（不复刻 ROM 死循环）"
+        );
+        assert_eq!(
+            m.enemy(slot_of(PX)).anim_frame(),
+            0x89,
+            "大能量帧已写（资格检查发生在帧写入之后）"
         );
     }
 

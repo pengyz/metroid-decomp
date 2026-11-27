@@ -1406,6 +1406,10 @@ mod tests_kill_chain {
         m.write_ram(0x0400 + x as u16 + 4, 0x20); // isHit bit5（被弹）
         m.write_ram(0x0400 + x as u16 + 0x0E, 1); // weaponAction=弹（wa 1）
         m.write_ram(crate::ram_map::RANDOM1, 0x20); // RNG（>1/16（有掉））
+        // 【#143 门链迁移】配额门（07:DD3A/41）前置构置：Manager::default() 的 Max=0
+        // 与开机态不符（SamusInit 07:C900 写 $93/$94=$27/$2F），摆 1 保证束杀真的转掉落物。
+        m.set_pickup_missile_qty_max(1);
+        m.set_max_missiles(10);
         enemy_react_to_projectile(&mut m, x);
         // 【asm 更正（07:F617-F623）】被**普通束**打死的非 miniboss **跳过 chunky 爆炸动画**、
         // 立刻变掉落物（`jsr EnemyCompleteDeath@SkipChunkyExplosion`）⇒ status=5 而非 3。
@@ -1479,6 +1483,9 @@ mod tests_kill_chain {
         // `EnemyCompleteDeath` 的 1/16「不掉落」支（`lda RandomNumber1 / cmp #$10 / bcc`）⇒
         // 置 RNG≥$10 才有掉落物；否则 RemoveEnemy 把 status 清 0（那是正确行为，非失败）。
         m.write_ram(crate::ram_map::RANDOM1, 0x20);
+        // 【#143 门链迁移】配额门（07:DD3A/41）前置构置：对齐开机态（07:C900）。
+        m.set_pickup_missile_qty_max(1);
+        m.set_max_missiles(10);
         // ①碰撞环⇒命中标志
         uw_collision_detection(&mut m);
         assert_eq!(m.read_ram(0x0400 + x as u16 + 4) & 0x20, 0x20, "敌 isHit bit5（被弹）");

@@ -561,7 +561,9 @@ fn add_to_max_missiles(mem: &mut crate::frame::Manager, add: u8) {
 
 /// EnemyCompleteDeath（**asm 内容锚** `: 07:DCF5`）：小 Boss 击杀支路（`LDD75`）优先，
 /// 否则 status←Pickup+data0D←$60+1/16 无掉+PickupTypeTable[rand&7]→animFrame
-/// （表 ROM $DE35=80 81 89）——qty 限域=分卡（记账）。
+/// （表 ROM $DE35=80 81 89）+ 掉落资格门链（导弹/能量配额 + 大能量资格，
+/// `07:DD2A-07:DD53`）。门失败走 `LDD5B`：非 Tourian=RemoveEnemy 清槽；Tourian=
+/// 复位配额后同 r 重试（Stage A 按 C1 截断为重试一次，仍败记账+清槽）。
 pub(crate) fn enemy_complete_death(mem: &mut crate::frame::Manager, x: u8) {
     let px = x as u16;
     // `lda Ens.0.prevStatus,x / asl / bmi LDD75`（`07:DCF5`→`07:DD75`）：prevStatus 的
@@ -598,7 +600,14 @@ pub(crate) fn enemy_complete_death(mem: &mut crate::frame::Manager, x: u8) {
             crate::world::tourian_quota::QuotaReset::Retry => {}
         }
     }
-    // `jsr ReadTableAt968B / sta Temp00`（$968B 项存 Temp00，本径后续不读）→
+    // `jsr ReadTableAt968B / sta Temp00`（07:DD11）：L968B[orig_type] 在 type 被覆盖前
+    // 读取（type 全 8 位索引，表内按 &0x7F 取），Temp00 供下方大能量资格门
+    // `lsr Temp00 / bcs RTS_X137`（07:DD55）取 bit0——**先取后覆**。
+    let orig_type = mem.enemy(slot_of(px as u8)).enemy_type();
+    let l968b = game_data::assets::rom_table_968b(
+        crate::frame::area_bank(crate::frame::cur_area(mem)) as usize,
+        orig_type,
+    );
     // `jsr LoadTableAt977B / and #$20 / sta EnsExtra.0.type,x`（07:DD1A-07:DD23）：
     // **把 type 覆盖成 0 / $20**（`LoadTableAt977B` 返回 `val<<1` ⇒ `and #$20` 测的是
     // 原字节 bit4，置位写 $20）。这一步不能省——紧随其后的
@@ -612,6 +621,53 @@ pub(crate) fn enemy_complete_death(mem: &mut crate::frame::Manager, x: u8) {
     let tbl = [0x80u8, 0x81, 0x89, 0x80, 0x81, 0x89, 0x81, 0x89]; // PickupTypeTable（ROM $DE35）
     let frame = tbl[(r & 7) as usize];
     mem.enemy(slot_of(px as u8)).set_anim_frame(frame); // animFrame←掉落型
+
+    // ——掉落资格门链（07:DD2A-07:DD53；`cmp #_id_EnFrame_MissilePickup.b`=$80 分支）——
+    // 导弹支（07:DD3A-07:DD4D）：MissilePickupQtyMax==Cur ⇒ LDD5B；MaxMissiles($687A)==0
+    //   ⇒ LDD5B；否则 `inc MissilePickupQtyCur`（07:DD4B）后成功。
+    // 能量支（07:DD4E-07:DD59）：EnergyPickupQtyMax==Cur ⇒ LDD5B；`inc EnergyPickupQtyCur`
+    //   （07:DD4F，**先 inc 后判资格**）；非 0x89 帧直接成功；0x89（大能量）再
+    //   `lsr Temp00 / bcs RTS_X137`（07:DD55）——L968B[orig_type] bit0=1 才放行。
+    let gates_pass = |mem: &mut crate::frame::Manager| -> bool {
+        if frame == 0x80 {
+            let max = mem.pickup_missile_qty_max();
+            let cur = mem.pickup_missile_qty_cur();
+            if max == cur || mem.max_missiles() == 0 {
+                return false;
+            }
+            mem.set_pickup_missile_qty_cur(cur.wrapping_add(1)); // 07:DD4B inc
+            true
+        } else {
+            let max = mem.pickup_energy_qty_max();
+            let cur = mem.pickup_energy_qty_cur();
+            if max == cur {
+                return false;
+            }
+            mem.set_pickup_energy_qty_cur(cur.wrapping_add(1)); // 07:DD4F inc
+            frame != 0x89 || (l968b & 1) != 0 // 07:DD51 cmp #$89 / 07:DD55 lsr Temp00
+        }
+    };
+    if !gates_pass(mem) {
+        // `LDD5B`（07:DD5B）：`lda InArea / cmp #$13 / beq Lx140`——非 Tourian
+        // `jmp RemoveEnemy`；Tourian 复位配额（$96/$95←0、$93/$94←1）后 `bne LDD30`
+        // 恒跳，同 r 重算门链（animFrame 重写同值，无观察差异）。ROM 原形对
+        // 「重试仍败」是死循环（Tourian bank3 的 L968B 无任何 bit0=1 ⇒ 大能量资格
+        // 恒败），Stage A 按规格 §7 C1 截断：复位后重试一次，仍败记账 LDD5B 入口
+        // 0x0DD5B 并 RemoveEnemy，不复刻 hang（docs/spec/f1551-fix-plan.md §7）。
+        match crate::world::tourian_quota::ldd5b(mem) {
+            crate::world::tourian_quota::QuotaReset::Remove => {
+                mem.enemy(slot_of(px as u8)).set_status(EnemyStatus::NoEnemy);
+                return;
+            }
+            crate::world::tourian_quota::QuotaReset::Retry => {
+                if !gates_pass(mem) {
+                    crate::frame::DIVERGENCES.with(|d| d.borrow_mut().push(0x0DD5B));
+                    mem.enemy(slot_of(px as u8)).set_status(EnemyStatus::NoEnemy);
+                    return;
+                }
+            }
+        }
+    }
 }
 
 /// `ChooseEnemyAIRoutine`——**按区 bank** 的 16 项跳表（`prg{1,2,3,4,5}_*.asm` 各一份）。
@@ -929,6 +985,10 @@ mod tests_explode_regular_beam {
         m.write_ram(0x0400 + x + 0x0E, 0x01); // weaponAction = wa_RegularBeam
         m.write_ram(0x0400 + x + 0x0F, 0x00); // specialAttribs：非 miniboss
         m.write_ram(crate::ram_map::RANDOM1, 0x20); // ≥$10 ⇒ 有掉落
+        // 【#143 门链迁移】掉落物现在要过导弹配额门（07:DD3A `Max==Cur`、07:DD41
+        // `MaxMissiles==0`）：摆 Max>Cur 与 $687A>0，保持本测原覆盖点「束杀立刻变掉落物」。
+        m.set_pickup_missile_qty_max(1);
+        m.set_max_missiles(10); // MaxMissiles（typed 句柄）
         super::explode_enemy(&mut m, 0x10);
         assert_eq!(m.read_wram(0x6AF4 + x), 5, "status←Pickup（不等爆炸动画）");
         assert_eq!(m.read_ram(0x0400 + x + 0x0D), 0x60, "data0D←$60 拾取计时");
@@ -1284,5 +1344,131 @@ mod tests_mini_boss_kill {
         enemy_complete_death(&mut m, x);
         assert_eq!(m.statue_status_word(0), 0, "bit6 未置 ⇒ 不写雕像");
         assert_eq!(m.missile_count(), 10, "不加导弹");
+    }
+}
+
+#[cfg(test)]
+mod tests_drop_gates {
+    //! 掉落门链（EnemyCompleteDeath 三门之后的配额门+大能量资格门，07:DD2A-07:DD53）。
+    //! L968B 直读证据（bank n 文件偏移 16+n*0x4000+($968B-$8000)）：
+    //! bank1（Brinstar，area_bank(0)=1）= `01 01 01 00 86 04 89 80 81 00 00 00 82 00 00 00`；
+    //! bank3（Tourian）无任何 bit0=1 项 ⇒ 大能量资格恒败（C1，见 docs/spec/f1551-fix-plan.md §7）。
+    //! 全部用 area=0x00（Brinstar）命中 bank1 表。
+
+    use super::*;
+    use crate::frame::Manager;
+
+    const PX: u8 = 0x40;
+
+    fn staged(area: u8, rnd: u8) -> Manager {
+        let mut m = Manager::default();
+        m.set_in_area(area);
+        m.set_random1(rnd);
+        m.enemy(slot_of(PX)).set_status(EnemyStatus::Explode);
+        m.enemy(slot_of(PX)).set_prev_status(0x01); // Resting，无小 Boss 位（bit6）
+        m
+    }
+
+    /// 配额门·导弹支（07:DD3D `ldy MissilePickupQtyMax / cpy Cur / beq LDD5B`）：
+    /// Max==Cur（0==0）⇒ 失败 ⇒ 非 Tourian 清槽，且配额失败**不 inc** Cur。
+    #[test]
+    fn missile_quota_exhausted_clears_slot() {
+        if !game_data::assets::ensure_ready() {
+            eprintln!("SKIP：assets/metroid.pack 未就绪（rom_table_968b 需要它）");
+            return;
+        }
+        let mut m = staged(0x00, 0x20); // r&7=0 ⇒ frame 0x80 导弹
+        enemy_complete_death(&mut m, PX);
+        assert_eq!(
+            m.enemy(slot_of(PX)).status_raw(),
+            EnemyStatus::NoEnemy.to_byte(),
+            "导弹配额门失败 ⇒ RemoveEnemy 清槽（不留 Pickup）"
+        );
+        assert_eq!(m.pickup_missile_qty_cur(), 0, "配额失败不 inc Cur");
+    }
+
+    /// 配额门·能量支（07:DD4E `ldy EnergyPickupQtyMax / cpy Cur / beq LDD5B`）：
+    /// Max==Cur（0==0）⇒ 失败 ⇒ 清槽，且配额失败**不 inc** Cur。
+    #[test]
+    fn energy_quota_exhausted_clears_slot() {
+        if !game_data::assets::ensure_ready() {
+            eprintln!("SKIP：assets/metroid.pack 未就绪（rom_table_968b 需要它）");
+            return;
+        }
+        let mut m = staged(0x00, 0x21); // r&7=1 ⇒ frame 0x81 小能量
+        enemy_complete_death(&mut m, PX);
+        assert_eq!(
+            m.enemy(slot_of(PX)).status_raw(),
+            EnemyStatus::NoEnemy.to_byte(),
+            "能量配额门失败 ⇒ RemoveEnemy 清槽"
+        );
+        assert_eq!(m.pickup_energy_qty_cur(), 0, "配额失败不 inc Cur");
+    }
+
+    /// 大能量资格门（07:DD53 `lsr Temp00 / bcs RTS_X137`）：
+    /// 过配额（Max=2≠Cur=1）但 `L968B[bank1][3]=00` ⇒ bit0=0 ⇒ 资格不符 ⇒ 清槽。
+    /// **inc 在资格检查之前**（07:DD4F `inc EnergyPickupQtyCur`）⇒ 失败时 Cur 已 +1。
+    #[test]
+    fn big_energy_eligibility_denied_clears_slot() {
+        if !game_data::assets::ensure_ready() {
+            eprintln!("SKIP：assets/metroid.pack 未就绪（rom_table_968b 需要它）");
+            return;
+        }
+        let mut m = staged(0x00, 0x22); // r&7=2 ⇒ frame 0x89 大能量
+        m.set_pickup_energy_qty_max(2); // Max=2 ≠ Cur=1 ⇒ 过配额
+        m.set_pickup_energy_qty_cur(1); // 显式置 Cur=1（默认 0；锚定 inc 发生）
+        m.enemy(slot_of(PX)).set_enemy_type(3); // bank1[3]=00 ⇒ bit0=0
+        enemy_complete_death(&mut m, PX);
+        assert_eq!(
+            m.enemy(slot_of(PX)).status_raw(),
+            EnemyStatus::NoEnemy.to_byte(),
+            "大能量资格不符 ⇒ RemoveEnemy 清槽"
+        );
+        assert_eq!(
+            m.pickup_energy_qty_cur(),
+            2,
+            "inc 先于资格检查（07:DD4F）⇒ 失败时 Cur 已 +1"
+        );
+    }
+
+    /// 资格放行正例：`L968B[bank1][0]=01` ⇒ bit0=1 ⇒ `bcs RTS_X137` ⇒ 保持 Pickup。
+    #[test]
+    fn big_energy_eligibility_granted_keeps_pickup() {
+        if !game_data::assets::ensure_ready() {
+            eprintln!("SKIP：assets/metroid.pack 未就绪（rom_table_968b 需要它）");
+            return;
+        }
+        let mut m = staged(0x00, 0x22); // r&7=2 ⇒ frame 0x89
+        m.set_pickup_energy_qty_max(3); // Max=3 ≠ Cur=1 ⇒ 过配额
+        m.set_pickup_energy_qty_cur(1); // 显式置 Cur=1（默认 0；锚定 inc=1→2）
+        m.enemy(slot_of(PX)).set_enemy_type(0); // bank1[0]=01 ⇒ bit0=1
+        enemy_complete_death(&mut m, PX);
+        assert_eq!(
+            m.enemy(slot_of(PX)).status_raw(),
+            EnemyStatus::Pickup.to_byte(),
+            "资格放行 ⇒ 保持 Pickup"
+        );
+        assert_eq!(m.enemy(slot_of(PX)).anim_frame(), 0x89, "大能量帧不变");
+        assert_eq!(m.pickup_energy_qty_cur(), 2, "inc Cur=1→2");
+    }
+
+    /// 导弹支放行正例：Max=1≠Cur=0 且 MaxMissiles=$687A>0 ⇒ inc Cur 后保持 Pickup。
+    ///（07:DD41 `lda MaxMissiles / beq LDD5B`、07:DD4B `inc MissilePickupQtyCur`）
+    #[test]
+    fn missile_gate_passed_increments_cur() {
+        if !game_data::assets::ensure_ready() {
+            eprintln!("SKIP：assets/metroid.pack 未就绪（rom_table_968b 需要它）");
+            return;
+        }
+        let mut m = staged(0x00, 0x20); // r&7=0 ⇒ frame 0x80 导弹
+        m.set_pickup_missile_qty_max(1); // Cur=0 ⇒ 过配额
+        m.set_max_missiles(5); // MaxMissiles=$687A（constants_ram.asm:1234 族）
+        enemy_complete_death(&mut m, PX);
+        assert_eq!(
+            m.enemy(slot_of(PX)).status_raw(),
+            EnemyStatus::Pickup.to_byte(),
+            "两道导弹判据都过 ⇒ 保持 Pickup"
+        );
+        assert_eq!(m.pickup_missile_qty_cur(), 1, "inc MissilePickupQtyCur");
     }
 }
