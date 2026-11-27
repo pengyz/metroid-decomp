@@ -197,12 +197,31 @@ def rust_frames(path: Path, lo: int, hi: int, n: int) -> dict[int, dict[str, byt
 
 
 def compare(emu: dict[int, dict[str, bytes]], rust: dict[int, dict[str, bytes]],
-            lo: int, n: int) -> dict:
+            lo: int, n: int, axis: str = "frames",
+            update_frames: set[int] | None = None) -> dict:
     per = []
     first = None
-    common = sorted(set(emu) & set(rust))
-    if not common:
+    common_all = sorted(set(emu) & set(rust))
+    if not common_all:
         raise ReplayError("两侧无共同帧——空跑不得绿")
+    # emu_missing 记账（#150 / #149 B 批）：交集判等会把单侧缺帧静默退出比较，
+    # 首分歧可能被右移（#143 实测：emu 缺 f1572-1574 ⇒ 真实首分歧 f1574 被报成 f1575）。
+    # 这里把两侧缺帧都显式带出，报告必须标注「覆盖 M/N 帧、缺 k 帧」。
+    emu_missing = [f for f in range(1, n + 1) if f not in emu]
+    rust_missing_cmp = [f for f in range(1, n + 1) if f not in rust]
+    # B1 --axis updates（#150）：只比「inputlog 输入字变更帧」（B2 读键边界更新清单
+    # 未落地前的工具侧近似，见设计文档 §2.3）；no-input 帧显式记为设计内跳过，
+    # 与缺帧（意外不可比）分开，绝不静默。
+    if axis == "updates":
+        if not update_frames:
+            raise ReplayError("updates 轴缺更新帧清单（inputlog 全零输入？空跑不得绿）")
+        skipped_no_input = [f for f in common_all if f not in update_frames]
+        common = [f for f in common_all if f in update_frames]
+        if not common:
+            raise ReplayError("updates 轴下无可比更新帧——空跑不得绿")
+    else:
+        skipped_no_input = []
+        common = common_all
     for f in common:
         e, r = emu[f]["range"], rust[f]["range"]
         if len(e) != len(r):
@@ -230,6 +249,19 @@ def compare(emu: dict[int, dict[str, bytes]], rust: dict[int, dict[str, bytes]],
     return {"frames": per, "first_divergence": first,
             "diverge_frames": sum(1 for r in per if not r["equal"]),
             "compared": len(common),
+            "emu_missing_frames": emu_missing,
+            "rust_missing_frames": rust_missing_cmp,
+            "axis": axis,
+            "axis_skipped_no_input_frames": skipped_no_input,
+            "coverage_note": (f"判等覆盖 {len(common)}/{n} 帧"
+                              + (f"，emu 缺 {len(emu_missing)} 帧"
+                                 f"（前 5: {emu_missing[:5]}）" if emu_missing else "")
+                              + (f"，rust 缺 {len(rust_missing_cmp)} 帧"
+                                 f"（前 5: {rust_missing_cmp[:5]}）" if rust_missing_cmp else "")
+                              + ("；缺帧帧退出比较，首分歧可能右移"
+                                 if emu_missing or rust_missing_cmp else "")
+                              + (f"；updates 轴跳过 {len(skipped_no_input)} 个无输入变化帧"
+                                 if skipped_no_input else "")),
             "range": f"${lo:04X}-${lo + len(emu[common[0]]['range']) - 1:04X}"}
 
 
@@ -266,21 +298,234 @@ def collect_shots(prefix: str, pattern_dirs: list[Path]) -> dict[int, Path]:
     return got
 
 
+# ---------------------------------------------------------------------------
+# B4 紧凑轨迹（#149 路线一第一批 / #150）：初始全量 + 逐帧 XOR 差分 + 固定布局哈希。
+#
+# 压缩在工具侧：oracle/Mesen 与 Rust 腿的 jsonl 产物格式不变；本节把逐行
+# `{"f": N, "w": {面: hex, ...}}` 转成紧凑文件（首帧各面全量 + 其后每帧只存与上一帧
+# 的 XOR 差分段），解码还原出的行与原行在 JSON 语义上逐字节一致（canonical 序列化
+# 相等）。两个哈希各管一件事：`layout_sha256` 锁「面的名字与字节布局」，`content_sha256`
+# 锁「解码内容与编码输入一致」——后者是完整性校验，篡改/损坏必然解码失败。
+# 面向 ≤ 数十万行；GB 级整片请按 --segments 分段产物逐段 encode。
+COMPACT_FORMAT = "tas-compact-trace-v1"
+
+
+def _face_layout(rows: list[dict]) -> dict[str, int]:
+    """每行 w 里所有 hex 字符串面 → 固定布局 {面名: 字节长}；长度漂移/非 hex/嵌套值 fail-loud。"""
+    layout: dict[str, int] = {}
+    for d in rows:
+        w = d.get("w")
+        if not isinstance(w, dict):
+            raise ReplayError(f"compact: 行缺 w 对象: {str(d)[:120]}")
+        for k, v in w.items():
+            if isinstance(v, dict):
+                raise ReplayError(f"compact: 面 {k!r} 是嵌套对象，超出固定布局契约")
+            if isinstance(v, str):
+                if len(v) % 2 or any(c not in "0123456789abcdefABCDEF" for c in v):
+                    raise ReplayError(f"compact: 面 {k!r} 值不是 hex 字符串: {str(v)[:60]}")
+                n = len(v) // 2
+                if k in layout and layout[k] != n:
+                    raise ReplayError(
+                        f"compact: 面 {k!r} 字节长漂移 {layout[k]} → {n}（固定布局要求恒长）")
+                layout[k] = n
+    if not layout:
+        raise ReplayError("compact: 没有任何 hex 面可编码（w 全空？）")
+    return layout
+
+
+def _xor_runs(prev: bytes, cur: bytes) -> list[list]:
+    """相邻帧逐字节 XOR 的非零分段 [[offset, hex], ...]；等值帧返回 []。
+
+    相异字节 XOR 必非零、相同字节 XOR 必为零，故非零段恰为差异段，无需另存判定位。
+    """
+    runs: list[list] = []
+    i, n = 0, len(prev)
+    while i < n:
+        if prev[i] != cur[i]:
+            j = i
+            while j < n and prev[j] != cur[j]:
+                j += 1
+            runs.append([i, bytes(a ^ b for a, b in zip(prev[i:j], cur[i:j])).hex()])
+            i = j
+        else:
+            i += 1
+    return runs
+
+
+def _rows_content_sha(rows: list[dict]) -> str:
+    """行列表的 canonical 内容哈希（每行 sort_keys JSON，换行连接）。"""
+    return sha256_bytes("\n".join(
+        json.dumps(d, sort_keys=True, ensure_ascii=False) for d in rows).encode())
+
+
+def encode_compact_trace(rows: list[dict]) -> dict:
+    """rows（jsonl 已解析行）→ 紧凑 dict。首帧各面全量存 `initial`；其余帧只存 XOR 差分。"""
+    if not rows:
+        raise ReplayError("compact: 输入 0 行（空跑不得编码）")
+    for d in rows:
+        if not isinstance(d.get("f"), int):
+            raise ReplayError(f"compact: 行缺整数 f: {str(d)[:120]}")
+    layout = _face_layout(rows)
+    first_w = rows[0]["w"]
+    initial = {k: first_w[k] for k in layout}
+    frames = []
+    prev = {k: bytes.fromhex(initial[k]) for k in layout}
+    for d in rows:
+        w = d["w"]
+        x: dict[str, list[list]] = {}
+        cur = {}
+        for k in layout:
+            b = bytes.fromhex(w[k])
+            runs = _xor_runs(prev[k], b)
+            if runs:
+                x[k] = runs
+            cur[k] = b
+        row = {"f": d["f"], "x": x}
+        # 非 hex 的 w 值（如 emu 的 Joy1Status 整数）与行级附加键原样保留
+        extra_w = {k: v for k, v in w.items() if k not in layout}
+        if extra_w:
+            row["w_extra"] = extra_w
+        extra_top = {k: v for k, v in d.items() if k not in ("f", "w")}
+        if extra_top:
+            row["extra"] = extra_top
+        frames.append(row)
+        prev = cur
+    obj = {"format": COMPACT_FORMAT, "layout": layout,
+           "layout_sha256": sha256_bytes(json.dumps(layout, sort_keys=True).encode()),
+           "initial": initial, "frames": frames}
+    # 编码侧自校验：先写入内容哈希，再走同一条解码路径验证——这就是「新旧格式逐字节
+    # 对照」契约的机械执行点。
+    obj["content_sha256"] = _rows_content_sha(rows)
+    rows_rt = decode_compact_trace(obj)
+    if _rows_content_sha(rows_rt) != obj["content_sha256"]:
+        raise ReplayError("compact: 编码往返与输入不一致（内部错误，禁止交付）")
+    return obj
+
+
+def decode_compact_trace(obj: dict) -> list[dict]:
+    """紧凑 dict → 原始行列表；布局/内容哈希不符 fail-loud。"""
+    if obj.get("format") != COMPACT_FORMAT:
+        raise ReplayError(f"compact: format 不是 {COMPACT_FORMAT}: {obj.get('format')!r}")
+    layout = obj.get("layout")
+    if not isinstance(layout, dict) or not layout:
+        raise ReplayError("compact: 缺 layout")
+    if obj.get("layout_sha256") != sha256_bytes(json.dumps(layout, sort_keys=True).encode()):
+        raise ReplayError("compact: layout_sha256 与 layout 不一致（布局被篡改或跨版本）")
+    initial, frames = obj.get("initial"), obj.get("frames")
+    if not isinstance(initial, dict) or not isinstance(frames, list) or not frames:
+        raise ReplayError("compact: 缺 initial/frames 或 frames 为空")
+    for k, n in layout.items():
+        v = initial.get(k)
+        if not isinstance(v, str) or len(v) != n * 2:
+            raise ReplayError(f"compact: initial 面 {k!r} 长度不符（应 {n * 2} hex 字符）")
+    prev = {k: bytes.fromhex(v) for k, v in initial.items()}
+    rows: list[dict] = []
+    for fr in frames:
+        if not isinstance(fr.get("f"), int):
+            raise ReplayError(f"compact: 帧行缺整数 f: {str(fr)[:120]}")
+        w: dict = {}
+        cur = {}
+        for k, n in layout.items():
+            b = bytearray(prev[k])
+            for off, hx in (fr.get("x") or {}).get(k, []):
+                diff = bytes.fromhex(hx)
+                if off < 0 or off + len(diff) > n:
+                    raise ReplayError(
+                        f"compact: 帧 {fr['f']} 面 {k!r} 差分段越界 off={off} len={len(diff)} n={n}")
+                for i, db in enumerate(diff):
+                    b[off + i] ^= db
+            cur[k] = bytes(b)
+            w[k] = bytes(b).hex()
+        extra_w = fr.get("w_extra") or {}
+        overlap = set(extra_w) & set(layout)
+        if overlap:
+            raise ReplayError(f"compact: w_extra 与固定布局面冲突: {sorted(overlap)}")
+        w.update(extra_w)
+        row = {"f": fr["f"], "w": w}
+        row.update(fr.get("extra") or {})
+        rows.append(row)
+        prev = cur
+    want, got = obj.get("content_sha256"), _rows_content_sha(rows)
+    if want != got:
+        raise ReplayError(f"compact: content_sha256 不一致（内容被篡改或损坏）want={want} got={got}")
+    return rows
+
+
+def write_compact_trace(path: Path, obj: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload = json.dumps(obj, ensure_ascii=False, sort_keys=True, indent=1) + "\n"
+    if path.suffix == ".gz":
+        import gzip
+        with gzip.open(path, "wt", encoding="utf-8") as fh:
+            fh.write(payload)
+    else:
+        path.write_text(payload, encoding="utf-8")
+
+
+def read_compact_trace(path: Path) -> dict:
+    if not path.exists():
+        raise ReplayError(f"compact: 文件不存在: {path}")
+    if path.suffix == ".gz":
+        import gzip
+        with gzip.open(path, "rt", encoding="utf-8") as fh:
+            return json.load(fh)
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def cmd_compact(args) -> int:
+    if bool(args.encode) == bool(args.decode):
+        raise ReplayError("compact: --encode 与 --decode 必须二选一")
+    if args.encode:
+        src = Path(args.encode)
+        rows = load_jsonl(src if src.is_absolute() else ROOT / src)
+        obj = encode_compact_trace(rows)
+        dst = Path(args.out)
+        write_compact_trace(dst if dst.is_absolute() else ROOT / dst, obj)
+        print(f"[tas] compact encode: {len(rows)} 行 → {dst}"
+              f"（布局 {obj['layout']}；内容 sha {obj['content_sha256'][:12]}）")
+        return 0
+    src = Path(args.decode)
+    obj = read_compact_trace(src if src.is_absolute() else ROOT / src)
+    rows = decode_compact_trace(obj)
+    dst = Path(args.out)
+    dst = dst if dst.is_absolute() else ROOT / dst
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    dst.write_text("".join(json.dumps(d, ensure_ascii=False, sort_keys=True) + "\n"
+                           for d in rows), encoding="utf-8")
+    print(f"[tas] compact decode: {len(rows)} 行 ← {src}"
+          f"（内容 sha {obj['content_sha256'][:12]} 校验通过）")
+    return 0
+
+
 def write_report(out: Path, payload: dict) -> None:
     out.mkdir(parents=True, exist_ok=True)
     canon = json.dumps(payload, ensure_ascii=False, sort_keys=True, indent=2) + "\n"
     (out / "report.json").write_text(canon, encoding="utf-8")
+    cmp_ = payload["compare"]
+    cov = payload["coverage"]
+    # emu_missing 记账（#150）：缺帧清单从 compare 结果透传，报告显式标注「缺帧帧
+    # 退出比较、首分歧可能右移」（#143 实测 f1574→f1575 右移教训），不再静默交集。
+    emu_miss = cmp_.get("emu_missing_frames") or []
+    cmp_note = cmp_.get("coverage_note") or ""
     lines = ["# TAS 回放对拍报告", "",
              f"- inputlog: `{payload['input']['inputlog']}`",
              f"- frames: {payload['input']['frames']}",
-             f"- 判等面: `{payload['compare']['range']}`（逐帧 sha256）",
-             f"- 首分歧: {payload['compare']['first_divergence'] or '无'}",
-             f"- 分歧帧数: {payload['compare']['diverge_frames']}",
-             f"- 覆盖: emu {payload['coverage']['emu_frames']} 帧 / rust {payload['coverage']['rust_frames']} 帧 / "
-             f"可比 {payload['coverage']['compared']} 帧",
-             f"- rust 未 tick 帧（span/载房窗，一跳多帧；**记为不可比、不算一致**）: "
-             f"{len(payload['coverage']['rust_missing'])} 个"
-             + ("（本次以 --allow-rust-missing 放行）" if payload['coverage']['rust_missing'] else ""), "",
+             f"- 判等轴: `{payload['input'].get('axis', 'frames')}`"
+             + ("（更新号 = inputlog 输入字变更帧号；无输入变化帧标 no-input，"
+                "B2 读键边界更新清单未落地前的工具侧近似，见设计文档 §2.3）"
+                if payload['input'].get('axis') == 'updates' else ""),
+             f"- 判等面: `{cmp_['range']}`（逐帧 sha256）",
+             f"- 首分歧: {cmp_['first_divergence'] or '无'}",
+             f"- 分歧帧数: {cmp_['diverge_frames']}",
+             f"- 覆盖: emu {cov['emu_frames']} 帧 / rust {cov['rust_frames']} 帧 / "
+             f"可比 {cov['compared']} 帧",
+              f"- rust 未 tick 帧（span/载房窗，一跳多帧；**记为不可比、不算一致**）: "
+              f"{len(cov['rust_missing'])} 个"
+              + ("（本次以 --allow-rust-missing 放行）" if cov['rust_missing'] else ""),
+             f"- emu 缺帧（不可比，判等已跳过）: {len(emu_miss)} 个"
+             + (f"，前 10: {emu_miss[:10]}" if emu_miss else ""),
+             (f"- {cmp_note}" if cmp_note else "- 判等覆盖完整（无缺帧退出）"),
+             "",
              "> 按键列：emu 采的是**应用前**（inputlog 第 f−1 行），rust 是**应用后**（第 f 行）；"
              "表中已按 emu[f] ↔ rust[f−1] 对齐，`joy_raw_equal` 只作溯源、不是判据。", "",
              "| 帧 | 内存一致 | emu sha | rust sha | 按键对齐一致 |", "|---|---|---|---|---|"]
@@ -325,6 +570,28 @@ def rebuild_report(out: Path, args) -> int:
     return 0
 
 
+def input_change_frames(inputlog: Path, n: int) -> set[int]:
+    """B1 --axis updates 的更新帧清单（工具侧可算，零 crates/oracle 改动）。
+
+    inputlog 第 f 行 = Rust 帧 f 消费的输入（movie_sched.py:16 约定）。更新帧 = 输入字
+    (p1,p2,cmd) 相对上一行发生变化的帧号；零输入帧（read_inputlog 不入表，movie_import.py:321）
+    若与上一行同为全零则也不是更新帧。这是 B2 读键边界更新清单落地前的近似口径，
+    报告必须写明（设计文档 §2.3）。
+    """
+    import movie_import
+    table = movie_import.read_inputlog(inputlog)
+    changes: set[int] = set()
+    prev = (0, 0, 0)
+    for f in range(1, n + 1):
+        cur = table.get(f, (0, 0, 0))
+        if cur != prev:
+            changes.add(f)
+            prev = cur
+    if not changes:
+        raise ReplayError("inputlog 全程无输入变化——updates 轴无帧可比（空跑不得绿）")
+    return changes
+
+
 def cmd_replay(args) -> int:
     inputlog = Path(args.inputlog)
     if not inputlog.is_absolute():
@@ -336,6 +603,8 @@ def cmd_replay(args) -> int:
     frames = args.frames or have
     if frames < 1 or frames > have:
         raise ReplayError(f"--frames {frames} 越界：inputlog 只有 {have} 帧（movie 长度上限）")
+    axis = getattr(args, "axis", "frames")
+    update_frames = input_change_frames(inputlog, frames) if axis == "updates" else None
     if getattr(args, "report_only", False):
         out = Path(args.out)
         out = out if out.is_absolute() else ROOT / out
@@ -370,7 +639,7 @@ def cmd_replay(args) -> int:
         rust_jsonl = out / "rust.state.jsonl"
         emu = emu_frames(emu_jsonl, args.tag, "Joy1Status", frames)
         rust = rust_frames(rust_jsonl, *rng, frames)
-        cmp_ = compare(emu, rust, rng[0], frames)
+        cmp_ = compare(emu, rust, rng[0], frames, axis=axis, update_frames=update_frames)
         missing = [f for f in range(1, frames + 1) if f not in rust]
         if missing and not args.allow_rust_missing:
             raise ReplayError(
@@ -384,7 +653,9 @@ def cmd_replay(args) -> int:
         payload = {
             "input": {"inputlog": str(inputlog.relative_to(ROOT)), "frames": frames,
                       "start": start, "range": args.range, "tag": args.tag,
-                      "chunk": args.chunk or 0},
+                      "chunk": args.chunk or 0,
+                      "axis": axis,
+                      "update_frames": sorted(update_frames) if update_frames else None},
             "compare": cmp_,
             "coverage": {"emu_frames": len(emu), "rust_frames": len(rust),
                          "compared": len(set(emu) & set(rust)),
@@ -555,7 +826,8 @@ def rust_rows_rel(path: Path, lo: int, hi: int) -> dict[int, dict[str, bytes]]:
 
 
 def compare_window(emu: dict[int, dict[str, bytes]], rust_rel: dict[int, dict[str, bytes]],
-                   from_: int, lo: int, rust_base: int | None = None) -> dict:
+                   from_: int, lo: int, rust_base: int | None = None,
+                   axis: str = "frames", update_frames: set[int] | None = None) -> dict:
     """段内逐帧比：rust 行号 r ↔ 绝对帧 rust_base+r（emu 侧已是绝对帧）。
 
     `rust_base` 缺省 = `from_`（分段相对表）；rust 腿若为全片连续跑（行号即绝对帧），
@@ -564,9 +836,26 @@ def compare_window(emu: dict[int, dict[str, bytes]], rust_rel: dict[int, dict[st
     if rust_base is None:
         rust_base = from_
     per, first = [], None
-    common = sorted({rust_base + r for r in rust_rel} & set(emu))
-    if not common:
+    rust_abs = {rust_base + r for r in rust_rel}
+    common_all = sorted(rust_abs & set(emu))
+    if not common_all:
         raise ReplayError(f"段内无共同帧（emu={len(emu)} rust={len(rust_rel)}）——空跑不得绿")
+    # emu_missing 记账（#150）：交集判等会把单侧缺帧静默退出比较（#143 实测首分歧被
+    # 右移一帧）。这里在「两侧并集窗口」内显式列出各自缺的绝对帧号，报告必须标注。
+    window = sorted(set(emu) | rust_abs)
+    emu_missing = [f for f in window if f not in emu]
+    rust_missing = [f for f in window if (f - rust_base) not in rust_rel]
+    # B1 --axis updates（#150）：段内只比更新帧；无输入变化帧记 axis_skipped_no_input。
+    if axis == "updates":
+        if not update_frames:
+            raise ReplayError("updates 轴缺更新帧清单（空跑不得绿）")
+        skipped_no_input = [f for f in common_all if f not in update_frames]
+        common = [f for f in common_all if f in update_frames]
+        if not common:
+            raise ReplayError(f"段 [{from_},] 内 updates 轴无可比更新帧——空跑不得绿")
+    else:
+        skipped_no_input = []
+        common = common_all
     for ap in common:
         e = emu[ap]["range"]
         r = rust_rel[ap - rust_base]["range"]
@@ -582,9 +871,23 @@ def compare_window(emu: dict[int, dict[str, bytes]], rust_rel: dict[int, dict[st
                 first = {"frame": ap, "field": f"${lo + off:04X}", "offset": off,
                          "emu": e[off], "rust": r[off], "diff_bytes": row["diff_bytes"]}
         per.append(row)
+    window_total = len(window)
     return {"frames": per, "first_divergence": first,
             "compared": len(common),
             "diverge_frames": sum(1 for r in per if not r["equal"]),
+            "emu_missing_frames": emu_missing,
+            "rust_missing_frames": rust_missing,
+            "axis": axis,
+            "axis_skipped_no_input_frames": skipped_no_input,
+            "coverage_note": (f"判等覆盖 {len(common)}/{window_total} 帧"
+                              + (f"，emu 缺 {len(emu_missing)} 帧"
+                                 f"（前 5: {emu_missing[:5]}）" if emu_missing else "")
+                              + (f"，rust 缺 {len(rust_missing)} 帧"
+                                 f"（前 5: {rust_missing[:5]}）" if rust_missing else "")
+                              + ("；缺帧帧退出比较，首分歧可能右移"
+                                 if emu_missing or rust_missing else "")
+                              + (f"；updates 轴跳过 {len(skipped_no_input)} 个无输入变化帧"
+                                 if skipped_no_input else "")),
             "sha256_agg_emu": sha256_bytes(b"".join(emu[f]["range"] for f in common)),
             "sha256_agg_rust": sha256_bytes(b"".join(rust_rel[f - rust_base]["range"] for f in common))}
 
@@ -682,6 +985,8 @@ def _check_resume_anchor(old: dict, current: dict) -> None:
 
 def run_segments(args, inputlog: Path, have: int, frames: int, seed: int) -> int:
     rng = parse_range(args.range)
+    axis = getattr(args, "axis", "frames")
+    update_frames = input_change_frames(inputlog, frames) if axis == "updates" else None
     out = Path(args.out) if Path(args.out).is_absolute() else ROOT / args.out
     out.mkdir(parents=True, exist_ok=True)
     seg = args.segments
@@ -758,7 +1063,8 @@ def run_segments(args, inputlog: Path, have: int, frames: int, seed: int) -> int
                                    expect=emu_traces / f"{name}.frames.jsonl")
                 emu_jsonl = emu_traces / f"{name}.frames.jsonl"
                 emu = emu_rows_abs(emu_jsonl, args.tag, "Joy1Status")
-                cmp_ = compare_window(emu, rust_rows, a, rng[0], rust_base=0)
+                cmp_ = compare_window(emu, rust_rows, a, rng[0], rust_base=0,
+                                      axis=axis, update_frames=update_frames)
                 (out / "emu").mkdir(exist_ok=True)
                 shutil.copy2(emu_jsonl, out / "emu" / f"seg-{a:06d}-{b:06d}.jsonl")
                 entry.update({"status": "pass" if cmp_["diverge_frames"] == 0 else "diverge",
@@ -766,6 +1072,9 @@ def run_segments(args, inputlog: Path, have: int, frames: int, seed: int) -> int
                               "compared": cmp_["compared"],
                               "diverge_frames": cmp_["diverge_frames"],
                               "first_divergence": cmp_["first_divergence"],
+                              "emu_missing_frames": cmp_.get("emu_missing_frames") or [],
+                              "rust_missing_frames": cmp_.get("rust_missing_frames") or [],
+                              "axis_skipped_no_input_frames": cmp_.get("axis_skipped_no_input_frames") or [],
                               "sha256_agg_emu": cmp_["sha256_agg_emu"],
                               "sha256_agg_rust": cmp_["sha256_agg_rust"]})
             finally:
@@ -861,7 +1170,9 @@ def write_coverage(out: Path, inputlog: Path, frames: int, seg: int, args,
         "env": _env_fingerprint(),
         "input": {"inputlog": str(inputlog.relative_to(ROOT)) if str(inputlog).startswith(str(ROOT)) else str(inputlog),
                   "movie_frames": have, "total_frames": frames, "segment_size": seg,
-                  "range": args.range, "tag": args.tag},
+                  "range": args.range, "tag": args.tag,
+                  "axis": getattr(args, "axis", "frames"),
+                  "update_frames": (sorted(update_frames) if update_frames else None)},
         "total_frames": frames, "segment_size": seg, "ran_frames": ran_to,
         "coverage_pct": round(100.0 * ran_to / frames, 2),
         "segments": entries,
@@ -874,20 +1185,33 @@ def write_coverage(out: Path, inputlog: Path, frames: int, seg: int, args,
              f"- 影片: `{payload['input']['inputlog']}`（{have} 帧）",
              f"- 目标帧数: {frames}；段长: {seg}",
              f"- 已跑: {ran_to}/{frames}（{payload['coverage_pct']}%）",
+             f"- 判等轴: `{payload['input'].get('axis', 'frames')}`"
+             + ("（updates 轴 = inputlog 输入字变更帧，B2 更新清单落地前的工具侧近似）"
+                if payload['input'].get('axis') == 'updates' else ""),
              f"- 判等面: `{args.range}`（逐帧 sha256 聚合）", "",
-             "| 段 | 区间 | 判定 | 比较帧 | 分歧帧 | emu sha | rust sha | 耗时(s) |",
-             "|---|---|---|---|---|---|---|---|"]
+             "| 段 | 区间 | 判定 | 比较帧 | 分歧帧 | emu 缺帧 | rust 缺帧 | 无输入跳过 | emu sha | rust sha | 耗时(s) |",
+             "|---|---|---|---|---|---|---|---|---|---|---|"]
     for e in entries:
         mark = "（承接已分歧）" if e.get("post_divergence") else ""
+        em = e.get("emu_missing_frames") or []
+        rm = e.get("rust_missing_frames") or []
+        ns = e.get("axis_skipped_no_input_frames") or []
         lines.append(f"| {e['index']} | [{e['from']},{e['to']}) | {e['status']}{mark} | "
                      f"{e.get('compared', 0)} | {e.get('diverge_frames', 0)} | "
+                     f"{len(em) if em else ('0' if e.get('emu_rows') is not None else '-')}"
+                     f"{'（前5: ' + str(em[:5]) + '）' if em else ''} | "
+                     f"{len(rm) if rm else ('0' if e.get('rust_rows') is not None else '-')} | "
+                     f"{len(ns) if ns else ('0' if payload['input'].get('axis') == 'updates' else '-')} | "
                      f"`{str(e.get('sha256_agg_emu', '-'))[:12]}` | `{str(e.get('sha256_agg_rust', '-'))[:12]}` | "
                      f"{e.get('wall_s', '-')} |")
     if global_fd:
         lines += ["", "## 首个真实分歧", "",
                   f"- 帧 {global_fd['frame']} 字段 `{global_fd['field']}`：emu={global_fd['emu']:02X} / "
                   f"rust={global_fd['rust']:02X}（{global_fd['diff_bytes']} 字节）",
-                  "- 该帧之前的全部段逐帧一致；其后各段的分歧帧数只表示漂移规模，不是新增缺陷。"]
+                  "- 该帧之前的全部段逐帧一致；其后各段的分歧帧数只表示漂移规模，不是新增缺陷。",
+                  "- 缺帧记账口径：emu/rust 缺帧列 = 段窗口内未参与判等的帧数（交集判等会"
+                  "静默跳过它们，首分歧可能右移——#143 f1574→f1575 实测）；"
+                  "无输入跳过列仅 updates 轴有意义。"]
     fails = [e for e in entries if e.get("failure")]
     if fails:
         lines += ["", "## 失败点", ""]
@@ -919,6 +1243,45 @@ def cmd_selftest(_args) -> int:
     fd = rep["first_divergence"]
     if not fd or fd["frame"] != 33 or fd["field"] != f"${lo + 5:04X}":
         raise ReplayError(f"selftest 未指出注入差异: {fd}")
+    # 缺帧记账（#150）：emu 侧挖掉 3 帧，first_divergence 右移到注入帧之后的下一个可比帧
+    # 且 coverage_note 必须显式报缺帧数——静默交集=本卡要消灭的缺陷。
+    hole = {f: {k: bytes(v) for k, v in d.items()} for f, d in bad.items() if f not in (10, 20, 30)}
+    rep2 = compare(hole, dict(base), lo, n)
+    if len(rep2["emu_missing_frames"]) != 3 or rep2["emu_missing_frames"] != [10, 20, 30]:
+        raise ReplayError(f"selftest 缺帧记账失效: {rep2['emu_missing_frames']}")
+    if f"emu 缺 3 帧" not in rep2["coverage_note"]:
+        raise ReplayError(f"selftest coverage_note 未报缺帧: {rep2['coverage_note']}")
+    print("[selftest] OK 缺帧记账 emu_missing=[10,20,30] 显式入账")
+    # B4 紧凑轨迹往返（#150）：编码→解码必须与输入逐字节一致；篡改任何帧必被
+    # content_sha256 抓出。
+    rows = [{"f": f, "w": {"ens": bytes((f + i) & 0xFF for i in range(16)).hex(),
+                           "Joy1Status": 0x09}} for f in range(1, n + 1)]
+    obj = encode_compact_trace(rows)
+    rows_rt = decode_compact_trace(obj)
+    if _rows_content_sha(rows_rt) != _rows_content_sha(rows):
+        raise ReplayError("selftest B4 往返内容不一致")
+    if len(obj["frames"]) != n:
+        raise ReplayError(f"selftest B4 帧行数不符: {len(obj['frames'])}")
+    tampered = json.loads(json.dumps(obj))
+    tampered["frames"][32]["x"]["ens"] = [[0, "ff"]]
+    try:
+        decode_compact_trace(tampered)
+        raise ReplayError("selftest B4 篡改未被 content_sha256 抓出")
+    except ReplayError as exc:
+        if "content_sha256 不一致" not in str(exc):
+            raise ReplayError(f"selftest B4 篡改报错口径不对: {exc}")
+    print(f"[selftest] OK B4 往返 {n} 帧（initial+XOR {len(obj['frames'])} 行，"
+          f"内容 sha {obj['content_sha256'][:12]}）")
+    # updates 轴（#150 B1）：只比更新帧；无输入变化帧显式记 skipped，不静默。
+    upd = {11, 23}
+    rep3 = compare(dict(base), dict(base), lo, n, axis="updates", update_frames=upd)
+    if rep3["compared"] != len(upd & set(range(1, n + 1))) or rep3["axis"] != "updates":
+        raise ReplayError(f"selftest updates 轴比较帧数不对: {rep3['compared']}")
+    if len(rep3["axis_skipped_no_input_frames"]) != n - len(upd):
+        raise ReplayError(f"selftest updates 轴 no-input 跳帧未显式记账: "
+                          f"{len(rep3['axis_skipped_no_input_frames'])}")
+    print(f"[selftest] OK updates 轴：比较 {rep3['compared']}/{n} 帧，"
+          f"无输入跳过 {len(rep3['axis_skipped_no_input_frames'])} 帧显式入账")
     print(f"[selftest] OK 阴性 0 分歧；阳性首分歧 f{fd['frame']} {fd['field']} "
           f"emu={fd['emu']:02X} rust={fd['rust']:02X}")
     return 0
@@ -946,6 +1309,9 @@ def main(argv=None) -> int:
     r.add_argument("--out", required=True)
     r.add_argument("--range", default="0400-04FF")
     r.add_argument("--tag", default="ens")
+    r.add_argument("--axis", choices=["frames", "updates"], default="frames",
+                   help="判等轴：frames=逐帧全比（默认）；updates=只比 inputlog 输入字变更帧"
+                        "（B2 读键边界更新清单未落地前的工具侧近似，报告强制带 axis 字段）")
     r.add_argument("--name")
     r.add_argument("--capture", action="append", default=[])
     r.add_argument("--timeout", type=float, default=600)
@@ -954,6 +1320,11 @@ def main(argv=None) -> int:
     r.set_defaults(func=cmd_replay)
     st = sub.add_parser("selftest")
     st.set_defaults(func=cmd_selftest)
+    cp = sub.add_parser("compact", help="B4 紧凑轨迹：逐帧 XOR 差分编码/解码（tas-compact-trace-v1）")
+    cp.add_argument("--encode", help="输入 jsonl（相对路径按仓库根解析）")
+    cp.add_argument("--decode", help="输入紧凑轨迹（.json/.json.gz）")
+    cp.add_argument("--out", required=True, help="输出文件")
+    cp.set_defaults(func=cmd_compact)
     args = ap.parse_args(argv)
     try:
         return args.func(args)

@@ -51,6 +51,16 @@
   emu_missing 列。
 - **回滚点**：旧 hex 读取路径保留；emu_missing 只增字段不改判定 ⇒ 任一步可独立回退。
 - **依赖**：改 tools（2 文件）；oracle Lua **dump 格式不变**（压缩在工具侧后处理）；13 段产物不重生成。
+- **实现状态（#150 已交付，commit 待落）**：②已全量落地——`compare()`/`compare_window()` 在
+  **两侧并集窗口**内显式列 `emu_missing_frames`/`rust_missing_frames` 清单 + `coverage_note`
+  （tas_replay_diff.py:249/:874，报告行「emu 缺帧（不可比，判等已跳过）」）；write_coverage 表头增
+  emu 缺帧/rust 缺帧/无输入跳过 3 列；run_segments entry 带同字段。①紧凑轨迹 `encode_compact_trace`/
+  `decode_compact_trace`（initial 全量+逐帧 XOR+固定布局 sha256+content sha256 自校验，篡改必被
+  content sha 抓出）+ `write/read_compact_trace`（.gz）+ `cmd_compact` 子命令已入库；
+  往返自测已扩进 cmd_selftest（60 帧合成面）与 tools/tests/test_tas_replay_diff_gates.py（13 用例）。
+  真实旧产物对照：/tmp/r143/post 4000 帧 trace encode→decode 往返 content_sha 一致；
+  compare_window 在该产物上点名 emu_missing=[1574,1860,1903,1904,1928,…] 共 11 帧——含 f1574，
+  即 #143/#148 首分歧右移的帧，本记账直接覆盖该盲区。
 
 ### 2.2 B2 读键边界采集（emu 腿）
 
@@ -72,6 +82,12 @@
   d. 报告增 axis 字段与更新号列。
 - **回滚点**：`--axis` 缺省=帧轴，13 段产物口径完全不变；更新轴单独出报告文件。
 - **依赖**：改 tools（1 文件）；oracle 无新改动（用 2.2 产物）；不破坏既有产物。
+- **实现状态（#150 兼容模式已交付，完整版待 2.2）**：`--axis {frames,updates}` 已进 argparse
+  （缺省 frames，13 段产物口径不变）；updates 轴最小语义=**inputlog 输入字变更轴**
+  （`input_change_frames` 逐行比较 p1/p2/cmd 相邻变化，全零轨迹 fail-loud）——是 2.2 更新清单
+  落地前的工具侧近似，报告/coverage 均已标注该口径；axis_skipped_no_input_frames 显式入账
+  （跳过的无输入变化帧不进判等也不静默）；报告强制 axis 字段 + 判等轴行；空更新帧清单/空可比帧
+  fail-loud。120540 帧产物未重生成。
 
 ### 2.4 B8 lag 显式记账（不改行为，只加标记）
 
